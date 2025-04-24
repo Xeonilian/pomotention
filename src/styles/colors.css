@@ -1,0 +1,13 @@
+:root {  
+    
+    /* 中性色 */  
+    --color-text-primary: #333639;  
+    --color-text-secondary: #606266;  
+    --color-background: #ffffff;  
+
+    --bar-length: 175px;
+    --red-bar-percentage: 84%; 
+    --red-bar-left: 14px;
+    
+
+  }  
