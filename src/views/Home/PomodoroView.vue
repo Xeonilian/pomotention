@@ -5,7 +5,7 @@
 </template>  
 
 <script setup lang="ts">  
-import PomodoroTimer from '@/core/PomodoroTimer.vue';  
+import PomodoroTimer from '@/components/PomodoroTimer.vue';  
 
 
 

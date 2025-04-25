@@ -38,10 +38,10 @@
 <script setup lang="ts">  
 import { ref } from 'vue'  
 import { NButton } from 'naive-ui'  
-import ScheduleView from '../views/ScheduleView.vue'  
-import TodoView from '../views/TodoView.vue'  
-import TaskView from '../views/TaskView.vue'  
-import ActivityView from '../views/ActivityView.vue'  
+import ScheduleView from './Home/ScheduleView.vue'  
+import TodoView from './Home/TodoView.vue'  
+import TaskView from './Home/TaskView.vue'  
+import ActivityView from './Home/ActivityView.vue'  
 
 const showLeft = ref(true)  
 const showMiddleTop = ref(true)  
