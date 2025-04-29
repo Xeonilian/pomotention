@@ -14,10 +14,11 @@
 <script setup lang="ts">  
 import { ref, onMounted, onUnmounted,computed } from 'vue';  
 import type { CSSProperties } from 'vue';  
+import { CategoryColors } from '../../core/constants';
 
 interface Block {  
   id: string;  
-  category: string;  
+  category: keyof typeof CategoryColors;
   start: number;  
   end: number;  
 }  
@@ -26,11 +27,6 @@ const props = defineProps<{
   blocks: Block[]  
 }>();  
 
-const categoryColors: Record<string, string> = {  
-  living: '#4A90E2',  
-  sleeping: '#7ED321',  
-  working: '#D0021B',  
-};  
 
 const container = ref<HTMLElement | null>(null);  
 const containerHeight = ref(400); // 默认高度 400px  
@@ -68,7 +64,7 @@ const totalMinutes = computed(() => {
   return (timeRange.value.end - timeRange.value.start) / (1000 * 60);  
 });  
 
-function getVerticalBlockStyle(block: { start: number; end: number; category: string }): CSSProperties {  
+function getVerticalBlockStyle(block: Block): CSSProperties {  
   const startDate = new Date(block.start);  
   const endDate = new Date(block.end);  
   const earliestDate = new Date(timeRange.value.start);  
@@ -98,7 +94,7 @@ function getVerticalBlockStyle(block: { start: number; end: number; category: st
     transform: 'translateX(-50%)',  
     width: '30px',  
     height: adjustedHeightPx + 'px',  
-    backgroundColor: categoryColors[block.category] || '#ccc',  
+    backgroundColor: CategoryColors[block.category] || '#ccc',  
     color: '#fff',  
     fontSize: '10px',  
     textAlign: 'center',  
