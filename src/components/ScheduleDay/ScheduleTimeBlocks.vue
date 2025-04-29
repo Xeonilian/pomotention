@@ -31,7 +31,7 @@ const props = defineProps<{
 
 const categoryColors: Record<string, string> = {  
   living: '#4A90E2',  
-  resting: '#7ED321',  
+  sleeping: '#7ED321',  
   working: '#D0021B',  
 };  
 
