@@ -24,6 +24,8 @@ import ScheduleEditor from '../../components/ScheduleDay/ScheduleEditor.vue';
 import ScheduleTimeBlocks from '../../components/ScheduleDay/ScheduleTimeBlocks.vue';
 import ScheduleTry from '../../components/ScheduleDay/ScheduleTry.vue';
 import { getTimestampForTimeString } from '../../core/utils';  
+import { CategoryColors } from '../../core/constants';
+
 const showEditor = ref(false); // 控制弹窗显示  
 const buttonText = ref('设置日程'); 
 
@@ -34,7 +36,7 @@ const toggleDisplay = () => {
 
 interface Block {  
   id: string;  
-  category: string;  
+  category: keyof typeof CategoryColors;
   start: number;  
   end: number;  
 }  
@@ -45,9 +47,6 @@ const blocks = reactive<Block[]>([
   { id: '3', category: 'working', start:getTimestampForTimeString('12:00'), end: getTimestampForTimeString('24:00') },  
  
 ]);  
-
-
-
 </script>  
 
 <style scoped> 
