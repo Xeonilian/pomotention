@@ -37,10 +37,10 @@ interface Block {
 }  
 
 const blocks = reactive<Block[]>([  
-  { id: '1', category: 'resting', start: timeToMinutes('00:00'), end: timeToMinutes('06:00') },  
+  { id: '1', category: 'sleeping', start: timeToMinutes('00:00'), end: timeToMinutes('06:00') },  
   { id: '2', category: 'living', start: timeToMinutes('06:00'), end: timeToMinutes('10:00') },  
   { id: '3', category: 'working', start: timeToMinutes('10:00'), end: timeToMinutes('12:00') },  
-  { id: '4', category: 'resting', start: timeToMinutes('12:00'), end: timeToMinutes('13:00') },  
+  { id: '4', category: 'sleeping', start: timeToMinutes('12:00'), end: timeToMinutes('13:00') },  
 ]);  
 
 </script>  
