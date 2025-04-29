@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';  
 
-type Category = 'living' | 'resting' | 'working';  
+type Category = 'living' | 'sleeping' | 'working';  
 
 export interface ScheduleBlock {  
   id: string;  
@@ -17,7 +17,7 @@ export interface ScheduleTemplate {
 
 export const useScheduleStore = defineStore('schedule', {  
   state: () => ({  
-    categories: ['living', 'resting', 'working'] as Category[],  
+    categories: ['living', 'sleeping', 'working'] as Category[],  
     currentTemplate: <ScheduleTemplate>{  
       blocks: [],  
       pomodoroWorkLength: 25,  
@@ -27,12 +27,12 @@ export const useScheduleStore = defineStore('schedule', {
   actions: {  
     initSampleData() {  
       this.currentTemplate.blocks = [  
-        { id: '1', category: 'resting', start: '00:00', end: '06:00' },  
+        { id: '1', category: 'sleeping', start: '00:00', end: '06:00' },  
         { id: '2', category: 'living', start: '06:00', end: '10:00' },  
         { id: '3', category: 'working', start: '10:00', end: '12:00' },  
-        { id: '4', category: 'resting', start: '12:00', end: '13:00' },  
+        { id: '4', category: 'sleeping', start: '12:00', end: '13:00' },  
         { id: '5', category: 'working', start: '13:00', end: '15:00' },  
-        { id: '6', category: 'resting', start: '15:00', end: '15:15' },  
+        { id: '6', category: 'sleeping', start: '15:00', end: '15:15' },  
         { id: '7', category: 'working', start: '15:15', end: '17:15' },  
         { id: '8', category: 'living', start: '17:15', end: '19:15' },  
         { id: '9', category: 'working', start: '19:15', end: '21:15' },  

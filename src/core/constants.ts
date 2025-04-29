@@ -11,6 +11,6 @@ export const TimerStyleDefaults = {
 
 export const CategoryColors = {  
     living: '#4A90E2',  // 蓝色  
-    resting: '#7ED321',  // 绿色  
+    sleeping: '#7ED321',  // 绿色  
     working: '#D0021B',  // 红色  
   };  
