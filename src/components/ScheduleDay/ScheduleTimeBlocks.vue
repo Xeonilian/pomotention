@@ -6,7 +6,7 @@
       :style="getVerticalBlockStyle(block)"  
       class="time-block"  
     >  
-      {{ block.category }}  
+
     </div>  
   </div>  
 </template>  
@@ -94,9 +94,9 @@ function getVerticalBlockStyle(block: { start: number; end: number; category: st
   return {  
     position: 'absolute',  
     top: topPx + 'px',  
-    left: '100%',  
+    left: '0%',  
     transform: 'translateX(-50%)',  
-    width: '10px',  
+    width: '30px',  
     height: adjustedHeightPx + 'px',  
     backgroundColor: categoryColors[block.category] || '#ccc',  
     color: '#fff',  
