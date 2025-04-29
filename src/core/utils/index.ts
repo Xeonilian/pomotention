@@ -1,2 +1,4 @@
 export { timeToMinutes } from './timeToMinutes'
 export { minutesToTime } from './minutesToTime'
+export { getTimestampForTimeString } from './getTimestampForTimeString'
+export { timestampToTimeString } from './timestampToTimeString'
