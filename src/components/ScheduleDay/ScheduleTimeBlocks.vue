@@ -36,9 +36,11 @@ const categoryColors: Record<string, string> = {
 };  
 
 function getVerticalBlockStyle(block: { start: number; end: number; category: string }): CSSProperties {  
-  const startMinute = block.start;  
-  const endMinute = block.end;  
-  const duration = endMinute - startMinute;  
+  const startDate = new Date(block.start);  
+  const endDate = new Date(block.end);  
+  const startMinute = startDate.getHours() * 60 + startDate.getMinutes();  
+  const endMinute = endDate.getHours() * 60 + endDate.getMinutes();  
+  const duration = endMinute - startMinute;   
   const pxPerMinute = 720 / 1440; // 720px 表示全天24小时  
 
   const topPx = startMinute * pxPerMinute;  
