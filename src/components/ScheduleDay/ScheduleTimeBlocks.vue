@@ -12,7 +12,7 @@
 </template>  
 
 <script setup lang="ts">  
-import { ref, onMounted, onUnmounted } from 'vue';  
+import { ref, onMounted, onUnmounted,computed } from 'vue';  
 import type { CSSProperties } from 'vue';  
 
 interface Block {  
@@ -53,24 +53,40 @@ onUnmounted(() => {
   window.removeEventListener('resize', updateHeight);  
 });  
 
+// 计算最早开始时间和最晚结束时间  
+const timeRange = computed(() => {  
+  if (props.blocks.length === 0) {  
+    return { start: 0, end: 0 };  
+  }  
+  const start = Math.min(...props.blocks.map(block => block.start));  
+  const end = Math.max(...props.blocks.map(block => block.end));  
+  return { start, end };  
+});  
+
+// 计算总时间跨度（分钟）  
+const totalMinutes = computed(() => {  
+  return (timeRange.value.end - timeRange.value.start) / (1000 * 60);  
+});  
+
 function getVerticalBlockStyle(block: { start: number; end: number; category: string }): CSSProperties {  
   const startDate = new Date(block.start);  
   const endDate = new Date(block.end);  
+  const earliestDate = new Date(timeRange.value.start);  
 
-  // 计算分钟数（支持跨天）  
-  const startMinute = startDate.getHours() * 60 + startDate.getMinutes();  
-  let endMinute = endDate.getHours() * 60 + endDate.getMinutes();  
+  // 计算相对于最早开始时间的分钟数  
+  const startMinute = (startDate.getTime() - earliestDate.getTime()) / (1000 * 60);  
+  let endMinute = (endDate.getTime() - earliestDate.getTime()) / (1000 * 60);  
 
-  // 处理跨天的情况（例如 24:00 是次日的 0:00）  
-  if (endDate.getDate() !== startDate.getDate()) {  
+  // 处理跨天情况  
+  if (endMinute < startMinute) {  
     endMinute += 1440; // 加上一天的分钟数（24*60）  
   }  
 
-  const duration = endMinute - startMinute;   
-  const pxPerMinute = containerHeight.value / 1440; // 动态计算每分钟像素高度  
+  const duration = endMinute - startMinute;  
+  const pxPerMinute = containerHeight.value / totalMinutes.value;  
 
   const topPx = startMinute * pxPerMinute;  
-  const heightPx = duration * pxPerMinute;  
+  const heightPx = duration * pxPerMinute;   
 
   // 确保时间块不超出容器底部  
   const adjustedHeightPx = Math.min(heightPx, containerHeight.value - topPx);  
