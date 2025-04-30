@@ -1,9 +1,14 @@
 <template>  
   <div class="schedule-container">  
     <!-- 1 按钮 -->  
-    <n-button @click="toggleDisplay"  secondary type="default" strong class="schedule-button">
-      {{ buttonText }}
-    </n-button>  
+    <div class="schedule-view-button-container">  
+      <!-- 设置按钮 --> 
+      <n-button  @click="toggleDisplay" secondary round strong type="default" class="schedule-button">{{ buttonText }}</n-button>  
+      <!-- 工作日程 -->  
+      <n-button @click="resetToWork" secondary circle type="warning" title="默认工作日" >💰</n-button>
+      <!-- 娱乐日程 -->  
+      <n-button @click="resetToEntertainment" secondary circle type="warning" title="默认休息日">🏕️</n-button>
+    </div>
     <!-- 2 编辑区 -->  
     <div v-if="showEditor" class="schedule-editor">
 
@@ -41,19 +46,40 @@ interface Block {
 
  
 
-const blocks = ref<Block[]>([   
-  { id: '1', category: 'living', start:getTimestampForTimeString('06:00'), end: getTimestampForTimeString('09:00') }, 
-  { id: '2', category: 'working', start:getTimestampForTimeString('09:00'), end: getTimestampForTimeString('12:00') },  
-  { id: '3', category: 'living', start:getTimestampForTimeString('12:00'), end: getTimestampForTimeString('13:00') },  
-  { id: '4', category: 'working', start:getTimestampForTimeString('13:00'), end: getTimestampForTimeString('15:00') },  
-  { id: '5', category: 'living', start:getTimestampForTimeString('15:00'), end: getTimestampForTimeString('15:15') },  
-  { id: '6', category: 'working', start:getTimestampForTimeString('15:15'), end: getTimestampForTimeString('17:40') },  
-  { id: '7', category: 'living', start:getTimestampForTimeString('17:40'), end: getTimestampForTimeString('18:10') },  
-  { id: '8', category: 'working', start:getTimestampForTimeString('18:10'), end: getTimestampForTimeString('19:40') },  
-  { id: '9', category: 'living', start:getTimestampForTimeString('19:40'), end: getTimestampForTimeString('20:00') },
-  { id: '10', category: 'working', start:getTimestampForTimeString('20:00'), end: getTimestampForTimeString('22:00') }, 
- 
-]);  
+// 默认日程数据  
+const workBlocks: Block[] = [  
+  { id: '1', category: 'living', start: getTimestampForTimeString('06:00'), end: getTimestampForTimeString('09:00') },  
+  { id: '2', category: 'working', start: getTimestampForTimeString('09:00'), end: getTimestampForTimeString('12:00') },  
+  { id: '3', category: 'living', start: getTimestampForTimeString('12:00'), end: getTimestampForTimeString('13:00') },  
+  { id: '4', category: 'working', start: getTimestampForTimeString('13:00'), end: getTimestampForTimeString('15:00') },  
+  { id: '5', category: 'living', start: getTimestampForTimeString('15:00'), end: getTimestampForTimeString('15:15') },  
+  { id: '6', category: 'working', start: getTimestampForTimeString('15:15'), end: getTimestampForTimeString('17:40') },  
+  { id: '7', category: 'living', start: getTimestampForTimeString('17:40'), end: getTimestampForTimeString('18:10') },  
+  { id: '8', category: 'working', start: getTimestampForTimeString('18:10'), end: getTimestampForTimeString('19:40') },  
+  { id: '9', category: 'living', start: getTimestampForTimeString('19:40'), end: getTimestampForTimeString('20:00') },  
+  { id: '10', category: 'working', start: getTimestampForTimeString('20:00'), end: getTimestampForTimeString('22:00') },  
+];  
+
+const entertainmentBlocks: Block[] = [  
+  { id: '1', category: 'sleeping', start: getTimestampForTimeString('00:00'), end: getTimestampForTimeString('09:00') },  
+  { id: '2', category: 'living', start: getTimestampForTimeString('09:00'), end: getTimestampForTimeString('22:00') },  
+  { id: '3', category: 'sleeping', start: getTimestampForTimeString('22:00'), end: getTimestampForTimeString('24:00') },  
+
+]; 
+
+// 响应式日程数据，用默认数组初始化  
+const blocks = ref<Block[]>([...workBlocks]);  
+
+
+const resetToWork = () => {  
+  localStorage.removeItem('myScheduleBlocks');  
+  blocks.value = [...workBlocks];  
+}; 
+
+const resetToEntertainment = () => {  
+  localStorage.removeItem('myScheduleBlocks');  
+  blocks.value = [...entertainmentBlocks];  
+}; 
 
 onMounted(() => {  
   const localData = localStorage.getItem('myScheduleBlocks');  
@@ -86,12 +112,7 @@ watch(blocks, (newVal) => {
   height: 100%; 
   padding: 10px;
 }  
-
-.schedule-button {  
-  display: block; /* 让按钮独占一行 */  
-  margin: auto; /* 靠右对齐的关键！ */ 
-
-}   
+ 
 
 .schedule-time-block{
   margin : auto;
@@ -99,4 +120,17 @@ watch(blocks, (newVal) => {
   height: 100%; 
 
 }
+.schedule-view-button-container{
+  width: 100%; 
+  margin: auto;
+  text-align: center;
+  align-items: center;  
+  display: flex;
+  justify-content: center;
+  padding-top: 10px;
+  text-align: center;
+  flex-wrap: nowrap;
+  gap: 10px;
+}
+
 </style>
