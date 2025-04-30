@@ -5,7 +5,7 @@
       :key="block.id"  
       :style="getVerticalBlockStyle(block)"  
       class="time-block"  
-    >  
+    >  {{ block.category }}
 
     </div>  
   </div>  
@@ -39,9 +39,9 @@ const updateHeight = () => {
 };  
 
 onMounted(() => {  
-  console.log('容器 DOM:', container.value); // 检查是否为 null  
+  //console.log('容器 DOM:', container.value); // 检查是否为 null  
   updateHeight();  
-  console.log('容器高度:', containerHeight.value); // 调试输出  
+  //console.log('容器高度:', containerHeight.value); // 调试输出  
   window.addEventListener('resize', updateHeight);  
 });  
 
@@ -62,24 +62,25 @@ const timeRange = computed(() => {
 // 计算总时间跨度（分钟）  
 const totalMinutes = computed(() => {  
   return (timeRange.value.end - timeRange.value.start) / (1000 * 60);  
+ 
 });  
 
 function getVerticalBlockStyle(block: Block): CSSProperties {  
   const startDate = new Date(block.start);  
   const endDate = new Date(block.end);  
   const earliestDate = new Date(timeRange.value.start);  
+  
 
   // 计算相对于最早开始时间的分钟数  
   const startMinute = (startDate.getTime() - earliestDate.getTime()) / (1000 * 60);  
   let endMinute = (endDate.getTime() - earliestDate.getTime()) / (1000 * 60);  
-
-  // 处理跨天情况  
-  if (endMinute < startMinute) {  
-    endMinute += 1440; // 加上一天的分钟数（24*60）  
-  }  
+  
 
   const duration = endMinute - startMinute;  
   const pxPerMinute = containerHeight.value / totalMinutes.value;  
+  // console.log('containerHeight:', containerHeight.value);  
+
+  console.log('totalMinutes:', totalMinutes.value);  // 应该是1440 
 
   const topPx = startMinute * pxPerMinute;  
   const heightPx = duration * pxPerMinute;   
