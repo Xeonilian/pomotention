@@ -10,9 +10,9 @@ export const TimerStyleDefaults = {
 } 
 
 export const CategoryColors = {  
-    living: '#4A90E2',  // 蓝色  
-    sleeping: 'black',  // 绿色  
-    working: '#D0021B',  // 红色  
+    living: 'rgba(74, 144, 226, 0.5)',  // 蓝色  
+    sleeping: 'rgba(0, 0, 0, 0.5)',  // 灰色 
+    working: 'rgba(208, 2, 27, 0.5)',  // 红色  
   }as const; 
 
 export type CategoryColorKey = keyof typeof CategoryColors; 
