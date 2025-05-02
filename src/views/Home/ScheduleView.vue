@@ -15,7 +15,9 @@
       <ScheduleEditor v-model= "blocks" @update:modelValue="val => console.log('父组件事件收到数据:', val)"  />
     </div> 
     <!-- 3 显示区 -->  
-    <div v-else class="schedule-time-block"><ScheduleTimeBlocks :blocks="blocks" />   
+    <div v-else class="schedule-time-block" >
+      <ScheduleTimeBlocks :blocks="blocks" />    
+      <ScheduleMarks/>    
     </div>  
   </div>
 </template>  
@@ -26,6 +28,7 @@ import { ref, onMounted, watch  } from 'vue';
 import { NButton } from 'naive-ui';  
 import ScheduleEditor from '../../components/ScheduleDay/ScheduleEditor.vue';
 import ScheduleTimeBlocks from '../../components/ScheduleDay/ScheduleTimeBlocks.vue';
+import ScheduleMarks from '../../components/ScheduleDay/ScheduleMarks.vue';
 import { getTimestampForTimeString } from '../../core/utils';  
 import { CategoryColors } from '../../core/constants';
 

@@ -1,6 +1,6 @@
 <template>  
   <div class="schedule-bar-container" ref="container">  
-
+    <!-- HACK 只有在这里引用能成功不能从父组件传入 -->  
     <!-- 小时刻度线背景 -->  
     <div class="hour-ticks-container">  
       <div  
@@ -35,82 +35,79 @@
 </template>  
 
 <script setup lang="ts">  
-import { ref, onMounted, onUnmounted, computed } from 'vue';  
+import { ref, computed } from 'vue';  
 import type { CSSProperties } from 'vue';  
 import { CategoryColors } from '../../core/constants';  
+import { useScheduleBase } from './useScheduleBase'; //
 
+// 1 数据结构和传递
+// 定义 Block 接口，表示时间块的结构  
 interface Block {  
-  id: string;  
-  category: keyof typeof CategoryColors;  
-  start: number;  
-  end: number;  
+  id: string;                     // 每个块的唯一标识  
+  category: keyof typeof CategoryColors; // 类别，对应颜色字典的key  
+  start: number;                  // 开始时间（时间戳）  
+  end: number;                    // 结束时间（时间戳）  
 }  
 
+// 定义组件接收的 props，blocks 是 Block 类型数组  
 const props = defineProps<{  
   blocks: Block[]  
 }>();  
 
-const container = ref<HTMLElement | null>(null);  
-const containerHeight = ref(400);  
+const container = ref<HTMLElement | null>(null);  // HACK 如果把这个放到
 
-const updateHeight = () => {  
-  if (container.value) {  
-    containerHeight.value = container.value.clientHeight;  
-  }  
-};  
+// 2 容器高度获取
+// **传入 blocks 和 容器 Ref，调用你的Hook，得到响应式值**  
+const { timeRange, pxPerMinute, containerHeight } = useScheduleBase(props.blocks, container); 
 
-onMounted(() => {  
-  updateHeight();  
-  window.addEventListener('resize', updateHeight);  
-});  
 
-onUnmounted(() => {  
-  window.removeEventListener('resize', updateHeight);  
-});  
-
-const timeRange = computed(() => {  
-  if (props.blocks.length === 0) {  
-    return { start: 0, end: 0 };  
-  }  
-  const start = Math.min(...props.blocks.map(block => block.start));  
-  const end = Math.max(...props.blocks.map(block => block.end));  
-  return { start, end };  
-});  
-
-const totalMinutes = computed(() => {  
-  return (timeRange.value.end - timeRange.value.start) / (1000 * 60);  
-});  
-
+// 4 显示当前时间 [本函数特有]
+// timeRange.value.start
+// containerHeight.value
+// pxPerMinute
+// 当前时间戳，初始为当前时间  
 const now = ref(Date.now());  
 
+// 每隔一分钟更新当前时间，保证视图刷新当前时间线位置  
 setInterval(() => {  
   now.value = Date.now();  
 }, 60 * 1000);  
 
+// 计算当前时间线相对于容器顶部的像素位置
+// 超出时间区间时返回 -1 表示不显示  
 const currentTimeTop = computed(() => {  
   if (now.value < timeRange.value.start || now.value > timeRange.value.end) {  
     return -1;  
   }  
   const minutesFromStart = (now.value - timeRange.value.start) / (1000 * 60);  
-  const pxPerMinute = containerHeight.value / totalMinutes.value;  
-  return minutesFromStart * pxPerMinute;  
+  
+  return minutesFromStart * pxPerMinute.value;  
 });  
 
+// 判断是否展示当前时间线（只有当前时间在线范围内才显示）  
 const showCurrentLine = computed(() => currentTimeTop.value >= 0);  
 
+// 5 将Blocks根据时间对应到区域 [不重复使用] 
+// 输入是在Blocks里面的start end，
+// timeRange.value.start
+// containerHeight.value
+// pxPerMinute
+// 根据时间块数据，计算该块对应的样式（定位和尺寸）  
 function getVerticalBlockStyle(block: Block): CSSProperties {  
   const startDate = new Date(block.start);  
   const endDate = new Date(block.end);  
-  const earliestDate = new Date(timeRange.value.start);  
+  const earliestDate = new Date(timeRange.value.start);  // 作为从日期到分钟计算的锚点
 
+  // 计算开始与结束时间相对于区间起点的分钟数  
   const startMinute = (startDate.getTime() - earliestDate.getTime()) / (1000 * 60);  
   let endMinute = (endDate.getTime() - earliestDate.getTime()) / (1000 * 60);  
 
   const duration = endMinute - startMinute;  
-  const pxPerMinute = containerHeight.value / totalMinutes.value;  
 
-  const topPx = startMinute * pxPerMinute;  
-  const heightPx = duration * pxPerMinute;   
+  const topPx = startMinute * pxPerMinute.value;             // 顶部距离  
+  const heightPx = duration * pxPerMinute.value;             // 高度  
+  
+  // 修正高度，防止块超出容器底部  
   const adjustedHeightPx = Math.min(heightPx, containerHeight.value - topPx);  
 
   return {  
@@ -120,11 +117,11 @@ function getVerticalBlockStyle(block: Block): CSSProperties {
     transform: 'translateX(0%)',  
     width: '30px',  
     height: adjustedHeightPx + 'px',  
-    backgroundColor: CategoryColors[block.category] || '#ccc',  
+    backgroundColor: CategoryColors[block.category] || '#ccc', // 颜色根据类别  
     color: '#fff',  
     fontSize: '10px',  
     textAlign: 'center',  
-    lineHeight: adjustedHeightPx + 'px',  
+    lineHeight: adjustedHeightPx + 'px', // 文字垂直居中  
     userSelect: 'none',  
     borderRadius: '2px',  
     cursor: 'default',  
@@ -133,12 +130,14 @@ function getVerticalBlockStyle(block: Block): CSSProperties {
   } as CSSProperties;  
 }  
 
-// 生成从最早时间到最晚时间的按小时时间戳数组  
+// 6 刻度线绘制
+// timeRange.value.start timeRange.value.end 之间
+// 生成时间区间内每小时的时间戳数组，用于绘制小时刻度线  
 const hourStamps = computed(() => {  
   if (!timeRange.value.start || !timeRange.value.end) return [];  
 
   const startHour = new Date(timeRange.value.start);  
-  startHour.setMinutes(0, 0, 0); // 向下取整小时  
+  startHour.setMinutes(0, 0, 0); // 向下取整到整点小时  
 
   const endHour = new Date(timeRange.value.end);  
   endHour.setMinutes(0, 0, 0);  
@@ -147,25 +146,25 @@ const hourStamps = computed(() => {
   let current = startHour.getTime();  
   while (current <= endHour.getTime()) {  
     stamps.push(current);  
-    current += 1000 * 60 * 60; // 加一小时  
+    current += 1000 * 60 * 60; // 递增1小时  
   }  
   return stamps;  
 });  
 
-// 计算小时刻度的top位置  
-function getHourTickTop(timeStamp: number): number {  
-  const pxPerMinute = containerHeight.value / totalMinutes.value;  
+// 计算指定小时刻度对应的top像素位置  
+// pxPerMinute
+function getHourTickTop(timeStamp: number): number {   
   const minutesFromStart = (timeStamp - timeRange.value.start) / (1000 * 60);  
-  return minutesFromStart * pxPerMinute;  
+  return minutesFromStart * pxPerMinute.value;  
 }  
 
-// 格式化小时标签，比如 "09:00"  
+// 格式化小时标签，输出类似 "09:00"  
 function formatHour(timeStamp: number): string {  
   const dt = new Date(timeStamp);  
   const hh = dt.getHours().toString().padStart(2, '0');  
   return `${hh}:00`;  
 }  
-</script>  
+</script>   
 
 <style scoped>  
 .schedule-bar-container {  
