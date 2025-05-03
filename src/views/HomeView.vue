@@ -79,11 +79,11 @@ function buttonStyle(show: boolean) {
 } 
 
 .left {  
-  width: 280px;  
+  width: 240px;  
   background: #e1eaf3;  
   padding: 16px;  
   box-sizing: border-box;  
-  overflow: auto;  
+  overflow-y: hidden; /*BUG*/ 
   margin-right: 8px;
 }  
 
