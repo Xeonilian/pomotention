@@ -1,79 +1,150 @@
-//ActivitySheet.vue
 <template>  
-    <div class="activity-sheet">  
+  <!-- 按钮 -->  
+  <div class="activity-view-button-container">  
+    <n-button @click="pickActivity" secondary circle type="info" title="选择活动" >  
+      <template #icon>  
+        <n-icon><ChevronCircleLeft48Regular /></n-icon>  
+      </template>  
+    </n-button>  
+    <n-button @click="filterActivity" strong secondary circle type="info" title="筛选活动" >  
+      <template #icon>  
+        <n-icon><DocumentTableSearch24Regular/></n-icon>  
+      </template>
+    </n-button>
+    <n-button @click="addTaskRow" circle secondary type="success" title="添加任务">  
+      <template #icon><n-icon><AddCircle24Regular /></n-icon></template>  
+    </n-button> 
+    <n-button title="添加预约" @click="addScheduleRow" circle secondary type="warning">  
+      <template #icon><n-icon><BookAdd24Regular /></n-icon></template>  
+    </n-button> 
+     
+    <n-button title="删除活动" @click="deleteActiveRow" circle secondary type="error" :disabled="activeId === null">  
+      <template #icon><n-icon><Delete24Regular /></n-icon></template>  
+    </n-button>  
 
-      <!-- 所有活动行列表 -->  
-     </div>
-  </template>  
-  
+  </div>  
+  <!-- 数据区 -->  
+  <div v-for="item in activitySheet" :key="item.id" class="activity-row">  
+  <n-input v-model:value="item.title" type="text" placeholder="任务描述" style="flex:2"  
+           @focus="activeId = item.id" />  
+  <n-input v-if="item.class==='T'" v-model:value="item.estPomoI" placeholder="🍅" style="max-width:45px"  
+           @focus="activeId = item.id" />  
+  <!-- 单日期 -->  
+  <n-date-picker  
+    v-if="item.class==='T'"  
+    v-model:value="item.dueDate"  
+    type="date"  
+    style="max-width:125px"  
+    clearable  
+    format="MM-dd"  
+    @focus="activeId = item.id"  
+    title="死线日期"  
+  />  
+  <!-- 日期区间+时间 -->  
+  <n-date-picker  
+    v-else  
+    v-model:value="item.dueRange"  
+    type="datetimerange"  
+    style="max-width:170px"  
+    clearable  
+    format="HH:mm"  
+    @focus="activeId = item.id"  
+    title="约定时间"  
+  />  
+</div>  
+</template>  
+
 <script setup lang="ts">  
-import { ref, reactive, watch, computed } from 'vue';  
-import { NSelect, NTimePicker, NButton } from 'naive-ui'; 
-import type { PropType } from 'vue';  
+import { ref, watch } from 'vue'  
+import { NDatePicker, NInput, NButton, NIcon } from 'naive-ui'  
+import { AddCircle24Regular, Delete24Regular,ChevronCircleLeft48Regular,DocumentTableSearch24Regular, BookAdd24Regular } from '@vicons/fluent'  
 
 interface Activity {  
-  id: number;           // 生成时间戳  
-  estPomoI: number;     // 预估番茄钟数量  
-  class: 'U' | 'S' | '';  // 类别:U-计划外,S-预约任务, ''-无类别  
-  title: string;        // 活动内容  
-  dueStart?: number;    // 约定开始时间戳  
-  dueEnd?: number | null;  // 约定结束时间戳   
-  status?: '' | 'delay' | 'doing' | 'cancel' | 'done';  // 活动状态  
-  repeatParams?: string; // 重复参数  
-  category?: 'red' | 'yellow' | 'blue' | 'green' | 'white';  // 分类  
-  fourZone?: '1' | '2' | '3' | '4';  // 四象限  
+  id: number;  
+  title: string;  
+  class:  'S' | 'T';  
+  estPomoI?: string; 
+  dueDate?: number; 
+  dueRange?: [number,number]  
+  interruption?: 'I'|'E';
+  status?: '' | 'delay' | 'doing' | 'cancel' | 'done';  
+  repeatParams?: string;  
+  category?: 'red' | 'yellow' | 'blue' | 'green' | 'white';  
+  fourZone?: '1' | '2' | '3' | '4';  
 }  
-const activitySheet: Activity = [];
+ 
 
-//2 添加行组件
-//3 删除行以及内容
-//4 监控编辑信息持久化存储
+const STORAGE_KEY = 'activitySheet'  
+
+function load(): Activity[] {  
+  try {  
+    return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')  
+  } catch { return [] }  
+}  
+function save(sheet: Activity[]) {  
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(sheet))  
+}  
+
+const activitySheet = ref<Activity[]>(load().length ? load() : [  
+ 
+])  
+const activeId = ref<number | null>(null)  
+const activityClassTask = ref<boolean>(true)
+
+function addTaskRow() {  
+  activitySheet.value.push({  
+    id: Date.now(),  
+    class: 'T',  
+    title: '' , 
+    estPomoI: ''
+  })  
+}  
 
 
-</script>  
+function addScheduleRow() {  
+  activitySheet.value.push({  
+    id: Date.now(),  
+    class: 'S',  
+    title: '' , 
+    dueRange: [Date.now(),Date.now()]
+  })  
+} 
+function deleteActiveRow() {  
+  if (activeId.value == null) return  
+  const idx = activitySheet.value.findIndex(a => a.id === activeId.value)  
+  if (idx !== -1) {  
+    activitySheet.value.splice(idx, 1)  
+    activeId.value = null  
+  }  
+}  
+
+function filterActivity(){
+
+}
+
+
+function pickActivity(){
   
-  <style scoped>  
-  .activity-sheet {  
-    margin:auto;
-    /* 组件整体样式 */  
-  }  
-  .activity-row {  
-    display: flex;  
-    align-items: center;  
-    padding: 6px 0;  
-  }  
-  .category-dot {  
-    width: 24px;  
-    height: 24px;  
-    line-height: 24px;  
-    border-radius: 50%;  
-    background: #ddd;  
-    color: #333;  
-    text-align: center;  
-    margin-right: 8px;  
-    cursor: pointer;  
-    user-select: none;  
-  }  
-  .activity-content {  
-    flex: 1;  
-    display: flex;  
-    justify-content: space-between;  
-  }  
-  .activity-title {  
-    font-weight: 500;  
-  }  
-  .activity-duration {  
-    color: #666;  
-  }  
-  .edit-menu {  
-    margin-left: 12px;  
-    /* TODO: 编辑面板样式 */  
-  }  
-  .new-activity-input {  
-    margin-top: 12px;  
-    width: 100%;  
-    min-height: 40px;  
-    padding: 6px;  
-    resize: vertical;  
-  }  
-  </style>  
+}
+// 实时同步  
+watch(activitySheet, save, { deep: true })  
+</script>  
+
+<style scoped>  
+.activity-view-button-container {  
+  display: flex;  
+  justify-content: center;  
+  gap: 2px;  
+  margin: 5px 0 5px 0;  
+}  
+.activity-sheet { 
+  margin:auto; 
+  margin-top: 5px; }  
+  
+.activity-row { 
+  display: flex;
+  align-items: center; 
+  padding: 1px 0; 
+  gap: 0px; 
+  width:100%;}  
+</style>  
