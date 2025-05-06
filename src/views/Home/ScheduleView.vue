@@ -101,7 +101,7 @@ const containerHeight = ref(400);
 const updateHeight = () => {  
   if (container.value) {  
     containerHeight.value = container.value.clientHeight;  
-    console.log('容器高度:', containerHeight.value, '实际高度:', container.value.clientHeight)
+    //console.log('容器高度:', containerHeight.value, '实际高度:', container.value.clientHeight)
   }  
 };  
 

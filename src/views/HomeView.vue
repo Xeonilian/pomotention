@@ -11,21 +11,21 @@
             circle  secondary strong type = "info"
             @click="showLeft = !showLeft"  
             :style="buttonStyle(showLeft)"  
-            title="切换日程"  
+            title="切换日程视图"  
             >🗓️</n-button>  
           <n-button  
             size="small"  
             circle secondary strong type = "info" 
             @click="showMiddleTop = !showMiddleTop"  
             :style="buttonStyle(showMiddleTop)"  
-            title="切换待办"  
+            title="切换待办视图"  
             >🖊️</n-button>  
           <n-button  
             size="small"  
             circle  secondary strong type = "info"
             @click="showRight = !showRight"  
             :style="buttonStyle(showRight)"  
-            title="切换任务"  
+            title="切换活动视图"  
             >📋</n-button>  
       </div>  
           <TaskView /></div>  
