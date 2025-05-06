@@ -87,7 +87,7 @@ interface Activity {
   dueRange?: [number,number]  
   interruption?: 'I'|'E';
   status?: '' | 'delay' | 'doing' | 'cancel' | 'done';  
-  repeatParams?: string;  
+  repeatParams?: [number, number, string, string]  //开始日期，结束日期，重复方式：dayly, monthly, weakly, every x day|week|month, every mon tue thr sat, 是否包括周末 不是MVP，只把每天加入
   category?: 'red' | 'yellow' | 'blue' | 'green' | 'white';  
   fourZone?: '1' | '2' | '3' | '4';  
 }  
