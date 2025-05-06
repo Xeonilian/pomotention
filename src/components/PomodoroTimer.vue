@@ -227,7 +227,7 @@
     return 't';  
   });  
   
-  // 3-5 状态监听与反应  
+  // TODO 3-5 状态监听与反应  
   watch(currentPhase, (newPhase, oldPhase) => {  
     if (newPhase !== oldPhase) {  
       // 播放对应阶段变化的声音  

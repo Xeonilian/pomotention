@@ -1,3 +1,4 @@
+// useTimerStore.ts
 import { defineStore } from 'pinia';  
 import { ref, computed } from 'vue';  
 import { PomodoroDurations } from '../core/constants.ts'; 

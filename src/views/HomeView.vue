@@ -88,7 +88,7 @@ function buttonStyle(show: boolean) {
 }  
 
 .right {  
-  width: 280px;  
+  width: 360px;  
   background: #f0e9d8;  
   padding: 16px;  
   box-sizing: border-box;  
