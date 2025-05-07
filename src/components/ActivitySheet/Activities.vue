@@ -42,7 +42,7 @@
   <script setup lang="ts">
   import { NInput, NDatePicker, NIcon } from 'naive-ui'
   import { VideoPersonSparkle24Regular, VideoPersonCall24Regular } from '@vicons/fluent'
-  import type { Activity } from '../../core/types/activity'
+  import type { Activity } from '../../core/types/Activity'
   
  
   

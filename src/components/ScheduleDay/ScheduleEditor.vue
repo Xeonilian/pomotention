@@ -43,7 +43,7 @@ import { ref, watch, computed } from 'vue'
 import type { PropType } from 'vue';  
 import { NSelect, NTimePicker, NButton } from 'naive-ui';  
 import { getEndOfDayTimestamp, getTimestampForTimeString } from '../../core/utils';  
-import type { Block } from '../../core/types/block';
+import type { Block } from '../../core/types/Block';
 import { CategoryColors } from '../../core/constants';  
 
 // 1. 参数传递和定义 -----------------------------------------  

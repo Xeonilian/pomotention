@@ -41,7 +41,7 @@
 import { ref, computed } from 'vue';  
 import type { CSSProperties } from 'vue';  
 import { CategoryColors } from '../../core/constants';  
-import type { Block } from '../../core/types/block';
+import type { Block } from '../../core/types/Block';
 
 // 说明 Date 加上当天日期的时间戳毫秒 getTime变为分钟时间 HH:mm 时间字符串
 // 1 数据结构和传递

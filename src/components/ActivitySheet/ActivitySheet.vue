@@ -78,7 +78,7 @@
 import { ref, watch } from 'vue'  
 import { NDatePicker, NInput, NButton, NIcon, NDropdown } from 'naive-ui'  
 import { AddCircle24Regular, Delete24Regular,ChevronCircleLeft48Regular,DocumentTableSearch24Regular, BookAdd24Regular,VideoPersonSparkle24Regular, VideoPersonCall24Regular } from '@vicons/fluent'  
-import type { Activity } from '../../core/types/activity'
+import type { Activity } from '../../core/types/Activity'
 
  
 const filterOptions = [  

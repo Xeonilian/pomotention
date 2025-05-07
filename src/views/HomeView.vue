@@ -44,7 +44,7 @@ import ScheduleView from './Home/ScheduleView.vue'
 import TodoView from './Home/TodoView.vue'  
 import TaskView from './Home/TaskView.vue'  
 import ActivityView from './Home/ActivityView.vue' 
-import type { Activity } from '../core/types/activity' 
+import type { Activity } from '../core/types/Activity'
 
 // 1 数据定义
 const showLeft = ref(true)  
