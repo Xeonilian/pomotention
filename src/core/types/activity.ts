@@ -1,8 +1,9 @@
-// src/core/types/activity.ts
+// src/core/types/Activity.ts
 export interface Activity {
     id: number;
     title: string;
     class: 'S' | 'T';
+    projectId?: number;
     estPomoI?: string;
     dueDate?: number;
     dueRange?: [number, number];
