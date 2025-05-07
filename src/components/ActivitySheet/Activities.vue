@@ -51,7 +51,7 @@
     dueDate?: number;
     dueRange?: [number, number];
     interruption?: 'I' | 'E';
-    status?: '' | 'delay' | 'doing' | 'cancel' | 'done';
+    status?: '' | 'delayed' | 'ongoing' | 'cancelled' | 'done';
     category?: 'red' | 'yellow' | 'blue' | 'green' | 'white';
     fourZone?: '1' | '2' | '3' | '4';
   }
