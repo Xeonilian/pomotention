@@ -1,5 +1,5 @@
-// src/core/types/block.ts
-import { CategoryColors } from '../../core/constants';  
+// src/core/types/Block.ts
+import { CategoryColors } from '../constants';  
 export interface Block {  
     id: string;  
     category: keyof typeof CategoryColors;  
