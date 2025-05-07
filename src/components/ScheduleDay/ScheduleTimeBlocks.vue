@@ -41,17 +41,10 @@
 import { ref, computed } from 'vue';  
 import type { CSSProperties } from 'vue';  
 import { CategoryColors } from '../../core/constants';  
+import type { Block } from '../../core/types/block';
 
 // 说明 Date 加上当天日期的时间戳毫秒 getTime变为分钟时间 HH:mm 时间字符串
 // 1 数据结构和传递
-// 定义 Block 接口，表示时间块的结构  
-interface Block {  
-  id: string;                     // 每个块的唯一标识  
-  category: keyof typeof CategoryColors; // 类别，对应颜色字典的key  
-  start: number;                  // 开始时间（时间戳）  
-  end: number;                    // 结束时间（时间戳）  
-}  
-
 // 定义组件接收的 props，blocks 是 Block 类型数组  
 const props = defineProps<{  
   blocks: Block[],  

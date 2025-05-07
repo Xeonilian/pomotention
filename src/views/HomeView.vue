@@ -43,25 +43,14 @@ import { NButton } from 'naive-ui'
 import ScheduleView from './Home/ScheduleView.vue'  
 import TodoView from './Home/TodoView.vue'  
 import TaskView from './Home/TaskView.vue'  
-import ActivityView from './Home/ActivityView.vue'  
+import ActivityView from './Home/ActivityView.vue' 
+import type { Activity } from '../core/types/activity' 
 
 // 1 数据定义
 const showLeft = ref(true)  
 const showMiddleTop = ref(true)  
 const showRight = ref(true)  
 
-interface Activity {
-  id: number;
-  title: string;
-  class:  'S' | 'T';
-  estPomoI?: string;
-  dueDate?: number;
-  dueRange?: [number,number];
-  interruption?: 'I'|'E';
-  status?: '' | 'delayed' | 'ongoing' | 'cancelled' | 'done';
-  category?: 'red' | 'yellow' | 'blue' | 'green' | 'white';
-  fourZone?: '1' | '2' | '3' | '4';
-}
 
 // 选中任务
 const pickedActivity = ref<Activity | null>(null) // 类型可以指定为 Activity|null

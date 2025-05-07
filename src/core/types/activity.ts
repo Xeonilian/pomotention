@@ -1,0 +1,14 @@
+// src/core/types/activity.ts
+export interface Activity {
+    id: number;
+    title: string;
+    class: 'S' | 'T';
+    estPomoI?: string;
+    dueDate?: number;
+    dueRange?: [number, number];
+    interruption?: 'I' | 'E';
+    status?: '' | 'delayed' | 'ongoing' | 'cancelled' | 'done';
+    category?: 'red' | 'yellow' | 'blue' | 'green' | 'white';
+    fourZone?: '1' | '2' | '3' | '4';
+    repeatParams?: [number, number, string, string];  //开始日期，结束日期，重复方式：dayly, monthly, weakly, every x day|week|month, every mon tue thr sat, 是否包括周末 不是MVP，只把每天加入
+  }

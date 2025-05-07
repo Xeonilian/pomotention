@@ -42,19 +42,9 @@
   <script setup lang="ts">
   import { NInput, NDatePicker, NIcon } from 'naive-ui'
   import { VideoPersonSparkle24Regular, VideoPersonCall24Regular } from '@vicons/fluent'
+  import type { Activity } from '../../core/types/activity'
   
-  interface Activity {
-    id: number;
-    title: string;
-    class: 'S' | 'T';
-    estPomoI?: string;
-    dueDate?: number;
-    dueRange?: [number, number];
-    interruption?: 'I' | 'E';
-    status?: '' | 'delayed' | 'ongoing' | 'cancelled' | 'done';
-    category?: 'red' | 'yellow' | 'blue' | 'green' | 'white';
-    fourZone?: '1' | '2' | '3' | '4';
-  }
+ 
   
   defineProps<{
     displaySheet: Activity[],

@@ -43,16 +43,13 @@ import { ref, watch, computed } from 'vue'
 import type { PropType } from 'vue';  
 import { NSelect, NTimePicker, NButton } from 'naive-ui';  
 import { getEndOfDayTimestamp, getTimestampForTimeString } from '../../core/utils';  
+import type { Block } from '../../core/types/block';
+import { CategoryColors } from '../../core/constants';  
 
 // 1. 参数传递和定义 -----------------------------------------  
 
 // 1.1 定义时间块接口类型，描述每个时间段的属性  
-interface Block {  
-  id: string;        // 时间块唯一ID  
-  category: string;  // 时间块类别，例如生活、睡眠、工作  
-  start: number;     // 起始时间，以时间戳表示  
-  end: number;       // 结束时间，数字分钟  
-}  
+
 
 // 1.2 定义父组件传入的props，接收一个Block数组，使用Vue3的defineProps  
 const props = defineProps({  
@@ -110,7 +107,7 @@ const handleTimeChange = (val: number | null, idx: number, field: 'start' | 'end
 };  
 
 // 1.8 处理类型变化
-const handleCategoryChange = (val: string, idx: number) => {  
+const handleCategoryChange = (val: keyof typeof CategoryColors, idx: number) => {  
   Blocks.value[idx].category = val;  
   syncToParent();  
 }  

@@ -29,7 +29,7 @@ import { NButton } from 'naive-ui';
 import ScheduleEditor from '../../components/ScheduleDay/ScheduleEditor.vue';  
 import ScheduleTimeBlocks from '../../components/ScheduleDay/ScheduleTimeBlocks.vue';  
 import { getTimestampForTimeString } from '../../core/utils';  
-import { CategoryColors } from '../../core/constants';  
+import type { Block } from '../../core/types/block';
 
 // 1 按钮  
 const showEditor = ref(false);  
@@ -40,13 +40,6 @@ const toggleDisplay = () => {
   buttonText.value = showEditor.value ? '确认日程' : '设置日程';  
 };  
 
-// Block类型声明  
-interface Block {  
-  id: string;  
-  category: keyof typeof CategoryColors;  
-  start: number;  
-  end: number;  
-}  
 
 // 默认日程数据  
 const workBlocks: Block[] = [  
