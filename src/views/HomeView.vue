@@ -4,7 +4,7 @@
     <div class="content">  
       <div v-if="showLeft" class="left"><ScheduleView /></div>  
       <div class="middle">  
-        <div v-if="showMiddleTop" class="middle-top"><TodayView :pickedActivity="pickedActivity"/></div>  
+        <div v-if="showMiddleTop" class="middle-top"><TodayView :pickedTodoActivity="pickedTodoActivity"/></div>  
         <div class="middle-bottom">
         <div class="button-group">  
           <n-button  
@@ -53,10 +53,10 @@ const showRight = ref(true)
 
 
 // 选中任务
-const pickedActivity = ref<Activity | null>(null) // 类型可以指定为 Activity|null
+const pickedTodoActivity = ref<Activity | null>(null) 
 
 function passPickedActivity(activity: Activity) {
-  pickedActivity.value = activity
+  pickedTodoActivity.value = activity
 }
 
 function buttonStyle(show: boolean) {  

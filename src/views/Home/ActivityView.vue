@@ -25,7 +25,7 @@ import ActivitySheet from '@/components/ActivitySheet/Activities.vue'
 import type { Activity } from "../../core/types/Activity"
 
 
-const STORAGE_KEY = 'activitySheet'
+const STORAGE_KEY_ACTIVITY = 'activitySheet'
 
 const filterOptions = [
   { label: '今日到期', key: 'today' },
@@ -43,13 +43,13 @@ const emit = defineEmits<{ (e: 'pick-activity-todo', activity: Activity): void }
 
 // 调取数据
 function load(): Activity[] {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]') }
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY_ACTIVITY) || '[]') }
   catch { return [] }
 }
 
 // 保持数据
 function save(sheet: Activity[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(sheet))
+  localStorage.setItem(STORAGE_KEY_ACTIVITY, JSON.stringify(sheet))
 }
 
 // 监控变化
