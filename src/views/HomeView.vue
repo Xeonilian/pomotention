@@ -4,7 +4,7 @@
     <div class="content">  
       <div v-if="showLeft" class="left"><ScheduleView /></div>  
       <div class="middle">  
-        <div v-if="showMiddleTop" class="middle-top"><TodoView :pickedActivity="pickedActivity"/></div>  
+        <div v-if="showMiddleTop" class="middle-top"><TodayView :pickedActivity="pickedActivity"/></div>  
         <div class="middle-bottom">
         <div class="button-group">  
           <n-button  
@@ -41,7 +41,7 @@
 import { ref } from 'vue'  
 import { NButton } from 'naive-ui'  
 import ScheduleView from './Home/ScheduleView.vue'  
-import TodoView from './Home/TodoView.vue'  
+import TodayView from './Home/TodayView.vue'  
 import TaskView from './Home/TaskView.vue'  
 import ActivityView from './Home/ActivityView.vue' 
 import type { Activity } from '../core/types/Activity'
@@ -119,7 +119,7 @@ function buttonStyle(show: boolean) {
 }  
 
 .middle-top {  
-  height: 200px;  
+  height: 40%;  
   background: #f7f2f0;  
   margin-bottom: 12px;  
   overflow: auto;  
@@ -132,6 +132,7 @@ function buttonStyle(show: boolean) {
   background: #f7f2f0;  
   overflow: auto;  
   padding: 8px;  
-  box-sizing: border-box;  
+  box-sizing: border-box; 
+  height: 60%;  
 }  
 </style>  

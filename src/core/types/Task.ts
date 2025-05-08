@@ -1,5 +1,5 @@
 // src/core/types/Task.ts
-import type { Pomo } from "./pomo";
+import type { Pomo } from "./Pomo";
 export interface Task {
     id: number; // 唯一
     content: string;

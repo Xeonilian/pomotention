@@ -1,5 +1,6 @@
 // ActivityView.vue 
 <template>
+  <div class="activity-buttons-sticky">
   <ActivityButtons
     :filterOptions="filterOptions"
     :activeId="activeId"
@@ -9,6 +10,7 @@
     @add-schedule="addScheduleRow"
     @delete-active="deleteActiveRow"
   />
+  </div>
   <ActivitySheet
     :displaySheet="displaySheet"
     :getCountdownClass="getCountdownClass"
@@ -20,20 +22,8 @@
 import { ref, watch } from "vue"
 import ActivityButtons from '@/components/ActivitySheet/ActivityButtons.vue'
 import ActivitySheet from '@/components/ActivitySheet/Activities.vue'
+import type { Activity } from "../../core/types/Activity"
 
-// 1 定义数据
-interface Activity {
-  id: number;
-  title: string;
-  class:  'S' | 'T';
-  estPomoI?: string;
-  dueDate?: number;
-  dueRange?: [number,number];
-  interruption?: 'I'|'E';
-  status?: '' | 'delayed' | 'ongoing' | 'cancelled' | 'done';
-  category?: 'red' | 'yellow' | 'blue' | 'green' | 'white';
-  fourZone?: '1' | '2' | '3' | '4';
-}
 
 const STORAGE_KEY = 'activitySheet'
 
@@ -49,7 +39,7 @@ const displaySheet = ref<Activity[]>(activitySheet.value)
 // 选中的行
 const activeId = ref<number | null>(null)
 // 发射数据
-const emit = defineEmits<{ (e: 'pick-activity', activity: Activity): void }>()
+const emit = defineEmits<{ (e: 'pick-activityTodo', activity: Activity): void }>()
 
 // 调取数据
 function load(): Activity[] {
@@ -72,7 +62,7 @@ function pickActivity() {
     if (picked) {
       // 通知父组件并传递全部内容
       console.log(picked)
-      emit('pick-activity', picked)
+      emit('pick-activityTodo', picked)
     }
   }
 }
@@ -161,4 +151,21 @@ function getCountdownClass(dueDate: number | undefined | null): string {
 }
 
 </script>
+
+<style scoped>
+.activity-buttons-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  margin: 0 auto 10px auto;    /* 水平居中+下方间距 */
+  background-color: rgb(245, 245, 245);
+  border-radius: 15px;         /* 建议用像素，百分号效果容易变形 */
+  width: 200px;
+  height: 50px;
+  display: flex;               /* 加flex布局 */
+  align-items: center;         /* 垂直居中（高度方向） */
+  justify-content: center;     /* 水平居中内部内容 */
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05); /* 如需要阴影 */
+}
+</style>
  

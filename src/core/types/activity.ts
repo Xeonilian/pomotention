@@ -2,7 +2,7 @@
 export interface Activity {
     id: number;
     title: string;
-    class: 'S' | 'T';
+    class: 'S' | 'T'; // schedule todo
     projectId?: number;
     estPomoI?: string;
     dueDate?: number;
