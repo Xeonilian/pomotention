@@ -4,7 +4,7 @@
   <ActivityButtons
     :filterOptions="filterOptions"
     :activeId="activeId"
-    @pick-activity="pickActivity"
+    @pick-activity-todo="pickActivity"
     @filter="handleFilter"
     @add-task="addTaskRow"
     @add-schedule="addScheduleRow"
@@ -39,7 +39,7 @@ const displaySheet = ref<Activity[]>(activitySheet.value)
 // 选中的行
 const activeId = ref<number | null>(null)
 // 发射数据
-const emit = defineEmits<{ (e: 'pick-activityTodo', activity: Activity): void }>()
+const emit = defineEmits<{ (e: 'pick-activity-todo', activity: Activity): void }>()
 
 // 调取数据
 function load(): Activity[] {
@@ -62,7 +62,7 @@ function pickActivity() {
     if (picked) {
       // 通知父组件并传递全部内容
       console.log(picked)
-      emit('pick-activityTodo', picked)
+      emit('pick-activity-todo', picked)
     }
   }
 }

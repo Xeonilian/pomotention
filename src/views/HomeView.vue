@@ -31,7 +31,7 @@
       </div>  
           <TaskView /></div>  
       </div>  
-      <div v-if="showRight" class="right"><ActivityView  @pick-activity="passPickedActivity" /></div>  
+      <div v-if="showRight" class="right"><ActivityView  @pick-activity-todo="passPickedActivity" /></div>  
     </div>  
   </div>  
 </template>  

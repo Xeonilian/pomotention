@@ -1,6 +1,6 @@
 <template>
     <div class="activity-view-button-container">
-      <n-button @click="$emit('pick-activity')" secondary circle type="info" title="选择活动">
+      <n-button @click="$emit('pick-activity-todo')" secondary circle type="info" title="选择活动">
         <template #icon>
           <n-icon><ChevronCircleLeft48Regular /></n-icon>
         </template>
@@ -33,7 +33,7 @@
     activeId: number | null
   }>()
   
-  defineEmits(['pick-activity', 'filter', 'add-task', 'add-schedule', 'delete-active'])
+  defineEmits(['pick-activity-todo', 'filter', 'add-task', 'add-schedule', 'delete-active'])
   </script>
   
   <style scoped>

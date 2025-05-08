@@ -9,7 +9,6 @@ Emits:
 Parent: Home.vue
 -->
 <template>  
-按钮区域，1获取今日预约任务，2将选中的todo发送到task区域
   <div class="today-todo">  
     <TodayTodo :todos="todayTodos"  />
   </div>  
@@ -20,8 +19,8 @@ Parent: Home.vue
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
-import TodaySchedule from '../../components/TodoToday/TodaySchedule.vue';
-import TodayTodo from '../../components/TodoToday/TodayTodo.vue';
+import TodaySchedule from '../../components/TodayTSG/TodaySchedule.vue';
+import TodayTodo from '../../components/TodayTSG/TodayTodo.vue';
 import type { Activity } from '../../core/types/Activity';
 import type { Todo } from '../../core/types/Todo';
 import { isToday } from '../../core/utils';
