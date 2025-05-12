@@ -1,3 +1,10 @@
+<!--
+Component: ScheduleEditor.vue 
+Description: 编辑界面，接收数据，回传
+Props:
+Emits:
+Parent: HomeView.vue  
+-->
 <template>  
   <table class="compact-table">  
       <thead>  
@@ -40,26 +47,20 @@
 
 <script setup lang="ts">  
 import { ref, watch, computed } from 'vue'  
-import type { PropType } from 'vue';  
 import { NSelect, NTimePicker, NButton } from 'naive-ui';  
-import { getEndOfDayTimestamp, getTimestampForTimeString } from '../../core/utils';  
-import type { Block } from '../../core/types/Block';
-import { CategoryColors } from '../../core/constants';  
+import { getEndOfDayTimestamp, getTimestampForTimeString } from '@/core/utils';  
+import type { Block } from '@/core/types/Block';
+import { CategoryColors } from '@/core/constants';  
 
 // 1. 参数传递和定义 -----------------------------------------  
 
 // 1.1 定义时间块接口类型，描述每个时间段的属性  
-
+const STORAGE_KEY_SCHEDULE = 'myScheduleBlocks'
 
 // 1.2 定义父组件传入的props，接收一个Block数组，使用Vue3的defineProps  
-const props = defineProps({  
-  modelValue: {  
-    type: Array as PropType<Block[]>,  // 限定类型为Block数组  
-    required: true                      // 父组件必须传入该属性  
-  }  
-});  
+const props = defineProps<{ blocks: Block[] }>() 
 // 定义组件向父组件发送事件，更新modelValue  
-const emit = defineEmits(['update:modelValue']);  
+const emit = defineEmits<{ (e: 'update-blocks', val: Block[]): void }>()
 
 // 1.3 响应式变量Blocks，内部维护当前时间块列表，便于操作和绑定  
 const Blocks = ref<Block[]>([]);  
@@ -68,7 +69,7 @@ const Blocks = ref<Block[]>([]);
 let hasLoadedFromLocal = false;  
 
 // 1.5 优先从 localStorage 载入数据  
-const saved = localStorage.getItem('myScheduleBlocks');  
+const saved = localStorage.getItem('STORAGE_KEY_SCHEDULE');  
 if (saved) {  
   try {  
     const parsed = JSON.parse(saved);  
@@ -82,7 +83,7 @@ if (saved) {
 } 
 
 // 1.5 监听父组件传入的modelValue变化，及时更新内部Blocks数组  
-watch(() => props.modelValue, (newVal) => {  
+watch(() => props.blocks, (newVal) => {  
   if (!hasLoadedFromLocal && Array.isArray(newVal) && newVal.length) {  
     Blocks.value.splice(0, Blocks.value.length, ...newVal);  
     console.log('初始化：用父组件数据');  
@@ -113,15 +114,15 @@ const handleCategoryChange = (val: keyof typeof CategoryColors, idx: number) => 
 }  
 
 
-// 1.9 同步当前Blocks数据到父组件，触发v-model更新  
+// 1.9 同步当前Blocks数据到父组件  
 const syncToParent = () => {  
-  emit('update:modelValue', Blocks.value.map(b => ({  
+  emit('update-blocks', Blocks.value.map(b => ({  
     id: b.id,  
     category: b.category,  
     start: b.start,  
     end: b.end  
   }))); 
-  localStorage.setItem('myScheduleBlocks', JSON.stringify(Blocks.value));   
+  localStorage.setItem(STORAGE_KEY_SCHEDULE, JSON.stringify(Blocks.value));   
 };  
 
 // 2. 表格编辑相关逻辑 --------------------------------------  
@@ -131,7 +132,7 @@ let maxId = 0;
 
 
 // 2-2 监控传入的数据，初始化maxId并同步父组件的时间块到本地响应式Blocks  
-watch(() => props.modelValue, (blocks) => {  
+watch(() => props.blocks, (blocks) => {  
   if (blocks.length > 0) {  
     maxId = Math.max(...blocks.map(b => parseInt(b.id))); // 找到当前最大ID  
   }  

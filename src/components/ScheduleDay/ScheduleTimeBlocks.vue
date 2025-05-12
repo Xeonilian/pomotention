@@ -1,4 +1,13 @@
-// SchedualTimeBlocks.vue
+<!--
+  Component: SchedualTimeBlocks.vue
+  Description: 将时间范围渲染为图
+  Props:
+    - blocks: Block[],  
+    - timeRange: { start: number; end: number },  // 区域范围时间戳
+    - effectivePxPerMinute: number,  // 像素分钟比
+  Parent: ScheduleView.vue 
+-->
+  
 <template>  
   <div class="schedule-bar-container">  
     <!-- HACK 只有在这里引用能成功不能从父组件传入 -->  
@@ -40,8 +49,8 @@
 <script setup lang="ts">  
 import { ref, computed } from 'vue';  
 import type { CSSProperties } from 'vue';  
-import { CategoryColors } from '../../core/constants';  
-import type { Block } from '../../core/types/Block';
+import { CategoryColors } from '@/core/constants';  
+import type { Block } from '@/core/types/Block';
 
 // 说明 Date 加上当天日期的时间戳毫秒 getTime变为分钟时间 HH:mm 时间字符串
 // 1 数据结构和传递
