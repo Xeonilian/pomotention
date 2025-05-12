@@ -1,71 +1,41 @@
-<template>  
-  <div class="today-todo">  
-    <TodayTodo :todos="todayTodos" />  
-  </div>  
-  <div class="today-schedule">  
-    <TodaySchedule />  
-  </div>  
-</template>  
+<!-- 
+  Component: TodayView.vue
+  Description: 
+  今日待办事项的纯展示容器，仅负责：
+  1. 渲染父组件传入的Todo列表
+  2. 转发用户交互事件
 
-<script setup lang="ts">  
-import { ref, computed, watch } from 'vue'  
-import TodaySchedule from '../../components/TodayTSG/TodaySchedule.vue'  
-import TodayTodo from '../../components/TodayTSG/TodayTodo.vue'  
-import type { Activity } from '../../core/types/Activity'  
-import type { Todo } from '../../core/types/Todo'  
-import { isToday } from '../../core/utils'  
+  Props:
+    - todos: Todo[] - 处理好的今日待办列表（已由HomeView完成过滤/排序）
 
-const STORAGE_KEY_TODOS = 'todos'  
+  Emits:
+    - update-todo: 当用户修改Todo状态时向上传递
+    - delete-todo: 当用户删除Todo项时向上传递
 
+  Parent: HomeView.vue
+-->
+<template>
+  <div class="today-container">
+    <TodayTodo 
+      :todos="todoList"
+      @update-todo="$emit('update-todo', $event)"
+      @delete-todo="$emit('delete-todo', $event)"
+    />
+    <TodaySchedule />
+  </div>
+</template>
 
-// 父组件传入：已 pick 的 Activity（支持 undefined/null，类型安全）  
-const props = defineProps<{  
-  pickedTodoActivity?: Activity | null;  
-  scheduleActivity?: Activity | null;  
-}>()  
+<script setup lang="ts">
+import TodayTodo from '../../components/TodayTSG/TodayTodo.vue'
+import TodaySchedule from '../../components/TodayTSG/TodaySchedule.vue'
+import type { Todo } from '../../core/types/Todo'
 
-// 本地持久化  
-function loadTodos(): Todo[] {  
-  const saved = localStorage.getItem(STORAGE_KEY_TODOS)  
-  return saved ? JSON.parse(saved) : []  
-}  
-function saveTodos(todos: Todo[]) {  
-  localStorage.setItem(STORAGE_KEY_TODOS, JSON.stringify(todos))  
-}  
+defineProps<{
+  todoList: Todo[]
+}>()
 
-// 响应式 todos 列表  
-const todos = ref<Todo[]>(loadTodos())  
-
-// 监听 pickedTodoActivity，如有新 activity 就转成 Todo，并去重  
-watch(  
-  () => props.pickedTodoActivity,  
-  (activity) => {  
-    if (activity && activity.id) {  
-      // 已有同 activityId 并且是今天的不能重复加入  
-      const exists = todos.value.some(  
-        t => t.activityId === activity.id && isToday(t.id)  
-      )  
-      if (exists) return  
-
-      const now = Date.now()  
-      const newTodo: Todo = {  
-        id: now,  
-        activityId: activity.id,  
-        activityTitle: activity.title,
-          
-        // estPomoI 是字符串，比如 '1'，即最少为 [1]  
-        estPomo: [Number(activity.estPomoI || 1)],  
-        realPomo: [],  
-        status: ''  
-      }  
-      todos.value.unshift(newTodo)  
-      saveTodos(todos.value)  
-    }  
-  }  
-)  
-
-// 只取今天的 todo，用于传递  
-const todayTodos = computed(() =>  
-  todos.value.filter(todo => isToday(todo.id))  
-)  
-</script>  
+defineEmits<{
+  (e: 'update-todo', todo: Todo): void
+  (e: 'delete-todo', id: number): void
+}>()
+</script>

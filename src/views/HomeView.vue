@@ -13,7 +13,7 @@
         @reset-schedule="onScheduleReset"
          /></div>  
       <div class="middle">  
-        <div v-if="showMiddleTop" class="middle-top"><TodayView :pickedTodoActivity="pickedTodoActivity"/></div>  
+        <div v-if="showMiddleTop" class="middle-top"><TodayView :todoList="todoList" @update-todo="handleUpdateTodo"/></div>  
         <div class="middle-bottom">
         <div class="button-group">  
           <n-button  
@@ -40,7 +40,12 @@
       </div>  
           <TaskView /></div>  
       </div>  
-      <div v-if="showRight" class="right"><ActivityView  @pick-activity-todo="passPickedActivity" /></div>  
+      <div v-if="showRight" class="right">
+        <ActivityView  
+        :activities="activityList" 
+        @pick-activity-todo="passPickedActivity"
+        @add-activity="handleAddActivity"
+        @delete-activity="handleDeleteActivity" /></div>  
     </div>  
   </div>  
 </template>  
@@ -54,8 +59,9 @@ import TodayView from '@/views//Home/TodayView.vue'
 import TaskView from '@/views//Home/TaskView.vue'  
 import ActivityView from '@/views//Home/ActivityView.vue' 
 import type { Activity } from 'core/types/Activity'
-import { getTimestampForTimeString } from '@/core/utils';  
+import { getTimestampForTimeString } from '../core/utils';  
 import type { Block } from 'core/types/Block'
+import { Todo } from '@/core/types/Todo'
 
 // 1 界面控制参数定义
 const showLeft = ref(true)  
@@ -116,23 +122,112 @@ function onScheduleReset(type: 'work' | 'entertainment') {
   localStorage.removeItem(STORAGE_KEY_SCHEDULE) // 可选，重置时也清理
 }
 
-// 3 ActivityView 数据传递
-const pickedTodoActivity = ref<Activity | null>(null) 
+// 3 ActivityView 和 TodayView 数据管理
+const STORAGE_KEY_ACTIVITY = 'activitySheet'
+const STORAGE_KEY_TODAY = 'TodayTS'
+
+const activityList = ref<Activity[]>(loadActivities())
+const todoList = ref<Todo[]>(loadTodos())
+const pickedTodoActivity = ref<Activity | null>(null)
+
+// 加载数据
+function loadActivities(): Activity[] {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY_ACTIVITY) || '[]') }
+  catch { return [] }
+}
+
+function loadTodos(): Todo[] {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY_TODAY) || '[]') }
+  catch { return [] }
+}
+
+// 保存数据
+function saveActivities() {
+  localStorage.setItem(STORAGE_KEY_ACTIVITY, JSON.stringify(activityList.value))
+}
+
+function saveTodos() {
+  localStorage.setItem(STORAGE_KEY_TODAY, JSON.stringify(todoList.value))
+}
+
+// 监听数据变化
+watch(activityList, saveActivities, { deep: true })
+watch(todoList, saveTodos, { deep: true })
+
+// 处理 Activity 到 Todo 的转换
+function convertToTodo(activity: Activity): Todo {
+  return {
+    id: Date.now(),
+    activityId: activity.id,
+    activityTitle: activity.title,
+    taskId: activity.class === 'T' ? activity.id : undefined,
+    estPomo: activity.estPomoI ? [parseInt(activity.estPomoI)] : [],
+    status: activity.status || '',
+    projectName: activity.projectId ? `项目${activity.projectId}` : undefined
+  }
+}
+
+// 处理子组件事件
+function handleAddActivity(newActivity: Activity) {
+  activityList.value.push(newActivity)
+}
+
+function handleDeleteActivity(id: number) {
+  // 删除 Activity 时也删除关联的 Todo
+  todoList.value = todoList.value.filter(todo => todo.activityId !== id)
+  activityList.value = activityList.value.filter(item => item.id !== id)
+}
 
 function passPickedActivity(activity: Activity) {
+  // 将选中的 Activity 转换为 Todo 并添加到列表
+  const existingTodo = todoList.value.find(todo => todo.activityId === activity.id)
+  if (!existingTodo) {
+    todoList.value.push(convertToTodo(activity))
+  }
   pickedTodoActivity.value = activity
 }
 
+// 同步 Activity 修改到 Todo
+watch(activityList, (newActivities) => {
+  newActivities.forEach(activity => {
+    const relatedTodo = todoList.value.find(todo => todo.activityId === activity.id)
+    if (relatedTodo) {
+      relatedTodo.activityTitle = activity.title
+      relatedTodo.estPomo = activity.estPomoI ? [parseInt(activity.estPomoI)] : []
+      relatedTodo.status = activity.status || ''
+    }
+  })
+}, { deep: true })
+
+// 处理 Todo 更新（从 TodayView 发出）
+function handleUpdateTodo(updatedTodo: Todo) {
+  // 1. 更新 todoList
+  const index = todoList.value.findIndex(t => t.id === updatedTodo.id);
+  if (index !== -1) {
+    todoList.value[index] = updatedTodo;
+  }
+
+  // 2. 同步到关联的 Activity
+  const relatedActivity = activityList.value.find(a => a.id === updatedTodo.activityId);
+  if (relatedActivity) {
+    // 只同步需要的数据
+    relatedActivity.status = updatedTodo.status || '';
+    
+    // 如果是任务类型，同步番茄钟数据
+    if (relatedActivity.class === 'T' && updatedTodo.estPomo?.[0]) {
+      relatedActivity.estPomoI = updatedTodo.estPomo[0].toString();
+    }
+  }
+}
+// 5 TaskView 数据传递
+
+// 6 UI 函数
 function buttonStyle(show: boolean) {  
   return {  
     filter: show ? 'none' : 'grayscale(100%)',  
     opacity: show ? 1 : 0.6,  
   }  
-}  
-
-// 4 TodayView 数据传递
-
-// 5 TaskView 数据传递
+} 
 </script>  
 
 <style scoped>  
