@@ -7,7 +7,7 @@
 <template>  
   <div class="home-content">  
     <div class="content">  
-      <div v-if="showLeft" class="left"><ScheduleView
+      <div v-if="showLeft" class="left"><TimeTableView
         :blocks = "blocks"
         @update-blocks="onBlocksUpdate"
         @reset-schedule="onScheduleReset"
@@ -54,7 +54,7 @@
 
 import { ref, onMounted, watch } from 'vue'
 import { NButton } from 'naive-ui'  
-import ScheduleView from '@/views/Home/ScheduleView.vue'  
+import TimeTableView from '@/views/Home/TimeTableView.vue'  
 import TodayView from '@/views//Home/TodayView.vue'  
 import TaskView from '@/views//Home/TaskView.vue'  
 import ActivityView from '@/views//Home/ActivityView.vue' 
@@ -68,7 +68,7 @@ const showLeft = ref(true)
 const showMiddleTop = ref(true)  
 const showRight = ref(true)  
 
-// 2 ScheduleView 数据传递
+// 2 TimeTableView 数据传递
 const STORAGE_KEY_SCHEDULE = 'myScheduleBlocks'
 // 默认日程数据  
 const workBlocks: Block[] = [  
@@ -111,7 +111,7 @@ watch(blocks, (newVal) => {
   localStorage.setItem(STORAGE_KEY_SCHEDULE, JSON.stringify(newVal));  
 }, { deep: true });  
 
-/** ScheduleView 发出blocks修改事件，接管更新 */
+/** TimeTableView 发出blocks修改事件，接管更新 */
 function onBlocksUpdate(newBlocks: Block[]) {
   blocks.value = [...newBlocks]
 }

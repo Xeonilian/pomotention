@@ -1,5 +1,5 @@
 <!--
-Component: ScheduleEditor.vue 
+Component: TimeTableEditor.vue 
 Description: 编辑界面，接收数据，回传
 Props:
 Emits:

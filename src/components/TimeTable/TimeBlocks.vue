@@ -5,7 +5,7 @@
     - blocks: Block[],  
     - timeRange: { start: number; end: number },  // 区域范围时间戳
     - effectivePxPerMinute: number,  // 像素分钟比
-  Parent: ScheduleView.vue 
+  Parent: TimeTableView.vue 
 -->
   
 <template>  

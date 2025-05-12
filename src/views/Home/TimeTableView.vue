@@ -1,10 +1,10 @@
 <!-- 
-  Component: ScheduleView.vue 
+  Component: TimeTableView.vue 
   Description: 从Home收取数据并分发，按钮
   Props:
   Children:
-    - ScheduleEditor.vue
-    - ScheduleTimeBlocks.vue
+    - TimeTableEditor.vue
+    - TimeBlocks.vue
  Parent: HomeView.vue
 -->
 
@@ -21,11 +21,11 @@
     </div>
     <!-- 2 编辑区 -->  
     <div v-if="showEditor" class="schedule-editor">
-      <ScheduleEditor :blocks="blocks" @update-blocks="emitUpdate" />
+      <TimeTableEditor :blocks="blocks" @update-blocks="emitUpdate" />
     </div> 
     <!-- 3 显示区 -->  
     <div v-else class="schedule-time-block" ref="container">
-      <ScheduleTimeBlocks :blocks="blocks" :timeRange="timeRange" :effectivePxPerMinute="effectivePxPerMinute" /> 
+      <TimeBlocks :blocks="blocks" :timeRange="timeRange" :effectivePxPerMinute="effectivePxPerMinute" /> 
   
     </div>  
   </div>
@@ -35,8 +35,8 @@
 
 import { ref, onMounted, onUnmounted, watch, computed} from 'vue';  
 import { NButton } from 'naive-ui';  
-import ScheduleEditor from '@/components/ScheduleDay/ScheduleEditor.vue';  
-import ScheduleTimeBlocks from '@/components/ScheduleDay/ScheduleTimeBlocks.vue';  
+import TimeTableEditor from '@/components/TimeTable/TimeTableEditor.vue';  
+import TimeBlocks from '@/components/TimeTable/TimeBlocks.vue';  
 
 import type { Block } from 'core/types/Block';
 
