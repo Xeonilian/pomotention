@@ -1,3 +1,4 @@
+<!-- PomodoroView.vue -->
 <template>  
   <div class="pomodoro-view">  
     <PomodoroTimer  />  
@@ -5,7 +6,7 @@
 </template>  
 
 <script setup lang="ts">  
-import PomodoroTimer from '@/components/PomodoroTimer.vue';  
+import PomodoroTimer from '@/components/PomodoroTimer/PomodoroTimer.vue';  
 </script>  
 
 <style scoped>  

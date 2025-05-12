@@ -1,4 +1,4 @@
-// ActivityView.vue 
+<!-- ActivityView.vue  -->
 <template>
   <div class="activity-buttons-sticky">
   <ActivityButtons

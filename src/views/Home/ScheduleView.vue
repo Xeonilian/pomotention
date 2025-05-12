@@ -1,3 +1,4 @@
+<!-- ScheduleView.vue -->
 <template>  
   <div class="schedule-container">  
     <!-- 1 按钮 -->  

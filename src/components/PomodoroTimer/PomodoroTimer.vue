@@ -120,10 +120,10 @@
 
 <script setup lang="ts">  
   import { ref, computed, watch } from 'vue';  
-  import { useTimerStore } from '../stores/useTimerStore';   
+  import { useTimerStore } from '@/stores/useTimerStore.ts';   
   import { NText, NProgress, NButton, NDropdown } from 'naive-ui';  
-  import { clickStatsStore } from '../stores/useClickStatsStore'; 
-  import { useSettingStore } from '../stores/useSettingStore'  
+  import { clickStatsStore } from '@/stores/useClickStatsStore'; 
+  import { useSettingStore } from '@/stores/useSettingStore'  
 
 
   const clickStore = clickStatsStore();  

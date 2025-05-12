@@ -1,4 +1,6 @@
-// HomeView.vue
+<!-- HomeView.vue 
+ 界面控制，数据管理
+ parent-->
 <template>  
   <div class="home-content">  
     <div class="content">  
