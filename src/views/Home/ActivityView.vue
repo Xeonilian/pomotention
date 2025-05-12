@@ -15,6 +15,7 @@
     <ActivityButtons
       :filterOptions="filterOptions"
       :activeId="activeId"
+      :selectedClass="selectedActivity?.class"
       @pick-activity-todo="pickActivity"
       @filter="handleFilter"
       @add-task="addTaskRow"
@@ -52,15 +53,31 @@ const filterOptions = [
   { label: '显示全部', key: 'all' }
 ]
 const activeId = ref<number | null>(null)
+// 获取当前选中活动的 class
+const selectedActivity = computed(() => {
+  return props.activities.find(a => a.id === activeId.value)
+})
 const currentFilter = ref<string>('all')  
 
 // 2 pickActivity 可以进行父到子通信，或 emit 给更高级
 function pickActivity() {
-  if (activeId.value !== null) {
-    const picked = props.activities.find(a => a.id === activeId.value)
-    if (picked) emit('pick-activity-todo', picked)
-    activeId.value = null
+  // 1. 检查是否有选中的活动
+  if (activeId.value === null) return;
+
+  // 2. 查找对应的活动
+  const picked = props.activities.find(a => a.id === activeId.value);
+  if (!picked) return;
+
+  // 3. 检查活动类是否为 'T'，否则不允许选择
+  if (picked.class !== 'T') {
+    console.warn('只能选择类为 T 的活动');
+    activeId.value = null; // 重置选中状态
+    return;
   }
+
+  // 4. 触发事件并重置选中状态
+  emit('pick-activity-todo', picked);
+  activeId.value = null;
 }
 // 3 筛选3功能及下拉
 function handleFilter(key: string) {  
