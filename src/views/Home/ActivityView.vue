@@ -1,4 +1,49 @@
-<!-- ActivityView.vue  -->
+<!-- 
+  Component: ActivityView.vue
+  Description: 
+  该组件用于展示和管理活动（任务和预约）的列表，提供筛选、添加、删除等功能，并与子组件（ActivityButtons、ActivitySheet）进行交互，实现活动的显示、操作以及数据的传递。
+
+  Props:
+  无
+
+  Emits:
+  - pick-activity-todo (activity: Activity): 当用户选择一个活动时，向父组件传递该活动的全部内容。
+
+  Parent: ActivityView.vue （该组件自身作为父组件，与子组件进行交互）
+
+  Children:
+  - ActivityButtons: 用于显示活动相关的操作按钮，如筛选、添加任务、添加预约、删除活动等，并将用户的操作事件传递给父组件。
+  - ActivitySheet: 用于展示筛选后的活动列表，并将用户对活动行的操作事件（如聚焦某行）传递给父组件。
+
+  Data:
+  - activitySheet: 存储全部活动数据的数组，类型为 Activity[]，初始值通过从 localStorage 中加载数据获得。
+  - displaySheet: 存储筛选后的活动数据的数组，类型为 Activity[]，初始值为 activitySheet 的值。
+  - activeId: 存储当前选中的活动行的 id，类型为 number | null，初始值为 null。
+  - filterOptions: 存储筛选选项的数组，每个选项包含 label 和 key 属性，用于在 ActivityButtons 中显示筛选按钮。
+
+  Methods:
+  - load(): 从 localStorage 中加载活动数据，若加载失败则返回空数组。
+  - save(sheet: Activity[]): 将活动数据保存到 localStorage 中。
+  - pickActivity(): 当用户选择一个活动时，从全部活动数据中找到对应的活动，并通过 emit 通知父组件。
+  - handleFilter(key: string): 根据用户选择的筛选选项，调用 filterActivity 或 resetFilter 方法对活动数据进行筛选。
+  - filterActivity(type: 'today' | 'interrupt'): 根据筛选类型（今日到期或内外打扰），对活动数据进行筛选，并更新 displaySheet 的值。
+  - resetFilter(): 重置筛选，将 displaySheet 的值恢复为 activitySheet 的值。
+  - addScheduleRow(): 添加一个新的预约活动到 activitySheet 中。
+  - addTaskRow(): 添加一个新的任务活动到 activitySheet 中。
+  - deleteActiveRow(): 删除当前选中的活动行。
+  - handleFocusRow(id: number): 更新当前选中的活动行的 id。
+  - getCountdownClass(dueDate: number | undefined | null): 根据活动的到期日期，返回对应的倒计时颜色类名。
+
+  Watchers:
+  - activitySheet: 监控 activitySheet 的变化，当其值发生变化时，调用 save 方法将新的活动数据保存到 localStorage 中。
+
+  Usage:
+  该组件通常用于活动管理页面，用户可以通过它查看、筛选、添加、删除活动，以及对活动进行其他操作。
+
+  Example:
+  <ActivityView />
+  通过上述方式在页面中使用该组件，即可实现活动的展示和管理功能。
+-->
 <template>
   <div class="activity-buttons-sticky">
   <ActivityButtons
@@ -147,6 +192,7 @@ function getCountdownClass(dueDate: number | undefined | null): string {
   if (diff === 1) return 'countdown-deeporange'
   if (diff === 2) return 'countdown-orange'
   if (diff === 3) return 'countdown-yellow'
+  if (diff < 0 ) return 'countdown-blue'
   return ''
 }
 

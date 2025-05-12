@@ -116,7 +116,7 @@ const handleCategoryChange = (val: keyof typeof CategoryColors, idx: number) => 
 
 // 1.9 同步当前Blocks数据到父组件  
 const syncToParent = () => {  
-  emit('update-blocks', Blocks.value.map(b => ({  
+  emit('update-blocks', Blocks.value.map((b: Block) => ({  
     id: b.id,  
     category: b.category,  
     start: b.start,  

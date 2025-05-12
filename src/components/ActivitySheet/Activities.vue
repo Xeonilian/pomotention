@@ -1,3 +1,20 @@
+<!-- 
+  Component: Activities.vue 
+  Description: 
+  用于展示活动列表，包括任务和预约。支持编辑活动信息，并根据活动的截止日期或预约时间显示不同颜色背景。
+
+  Props:
+  - displaySheet: 活动数组，包含任务和预约的详细信息。
+  - getCountdownClass: 函数，根据日期返回颜色类名。
+
+  Emits:
+  - focus-row: 当用户聚焦某行时，发射事件并传入行的 ID。
+
+  Parent: ActivityView.vue
+
+  Usage:
+  <Activities :displaySheet="activitySheet" :getCountdownClass="getCountdownClass" @focus-row="handleFocusRow" />
+-->
 <template>
     <div v-for="item in displaySheet" :key="item.id" class="activity-row">
       <n-input
@@ -42,10 +59,10 @@
   <script setup lang="ts">
   import { NInput, NDatePicker, NIcon } from 'naive-ui'
   import { VideoPersonSparkle24Regular, VideoPersonCall24Regular } from '@vicons/fluent'
-  import type { Activity } from '../../core/types/Activity'
+  import type { Activity } from 'core/types/Activity'
   
  
-  
+  // 接收发射数据
   defineProps<{
     displaySheet: Activity[],
     getCountdownClass: (dueDate: number | undefined | null) => string
@@ -67,4 +84,5 @@
   .countdown-orange  :deep(.n-input) {  background: #ffa940a3; }
   .countdown-deeporange :deep(.n-input) {  background: #ff7040b9; }
   .countdown-red     :deep(.n-input) {  background: #f34d50b6;}
+  .countdown-blue     :deep(.n-input) {  background: #121cda80;}
   </style>

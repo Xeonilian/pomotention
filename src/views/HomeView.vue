@@ -53,9 +53,9 @@ import ScheduleView from '@/views/Home/ScheduleView.vue'
 import TodayView from '@/views//Home/TodayView.vue'  
 import TaskView from '@/views//Home/TaskView.vue'  
 import ActivityView from '@/views//Home/ActivityView.vue' 
-import type { Activity } from '@/core/types/Activity'
+import type { Activity } from 'core/types/Activity'
 import { getTimestampForTimeString } from '@/core/utils';  
-import type { Block } from '@/core/types/Block'
+import type { Block } from 'core/types/Block'
 
 // 1 界面控制参数定义
 const showLeft = ref(true)  

@@ -1,3 +1,25 @@
+<!-- 
+  Component: ActivityButtons.vue 
+  Description: 
+  提供一组按钮，用于操作活动（任务和预约），包括选择活动、筛选、添加任务、添加预约和删除活动。
+
+  Props:
+  - filterOptions: 筛选选项数组，用于下拉菜单。
+  - activeId: 当前选中的活动 ID，用于控制删除按钮的启用状态。
+
+  Emits:
+  - pick-activity-todo: 触发选择活动的操作。
+  - filter: 触发筛选操作，传递筛选选项的 key。
+  - add-task: 触发添加任务的操作。
+  - add-schedule: 触发添加预约的操作。
+  - delete-active: 触发删除当前选中活动的操作。
+
+  Parent: ActivityView.vue
+
+  Usage:
+  <ActivityButtons :filterOptions="filterOptions" :activeId="activeId" @pick-activity-todo="pickActivity" @filter="handleFilter" @add-task="addTask" @add-schedule="addSchedule" @delete-active="deleteActive" />
+-->
+
 <template>
     <div class="activity-view-button-container">
       <n-button @click="$emit('pick-activity-todo')" secondary circle type="info" title="选择活动">
