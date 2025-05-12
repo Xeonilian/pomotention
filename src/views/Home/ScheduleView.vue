@@ -38,7 +38,7 @@ import { NButton } from 'naive-ui';
 import ScheduleEditor from '@/components/ScheduleDay/ScheduleEditor.vue';  
 import ScheduleTimeBlocks from '@/components/ScheduleDay/ScheduleTimeBlocks.vue';  
 
-import type { Block } from '@/core/types/Block';
+import type { Block } from 'core/types/Block';
 
 // 1 按钮  
 const showEditor = ref(false);  
