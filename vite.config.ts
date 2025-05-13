@@ -36,11 +36,5 @@ export default defineConfig(async () => ({
       '@': fileURLToPath(new URL('./src', import.meta.url)),  
     },  
   },
-  "compilerOptions":{
-
-    "baseUrl": "./",
-    "paths":{
-      "@/*": ["src/*"],
-    }
-  },
+  
 }));

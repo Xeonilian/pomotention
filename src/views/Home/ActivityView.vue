@@ -34,7 +34,7 @@
 import { ref, computed } from "vue"
 import ActivityButtons from '@/components/ActivitySheet/ActivityButtons.vue'
 import ActivitySheet from '@/components/ActivitySheet/Activities.vue'
-import type { Activity } from "../../core/types/Activity"
+import type { Activity } from "@/core/types/Activity"
 
 
 const props = defineProps<{
