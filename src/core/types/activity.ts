@@ -12,4 +12,5 @@ export interface Activity {
     fourZone?: '1' | '2' | '3' | '4';
     repeatParams?: [number, number, string, string];  //开始日期，结束日期，重复方式：dayly, monthly, weakly, every x day|week|month, every mon tue thr sat, 是否包括周末 不是MVP，只把每天加入
     status?: '' | 'delayed' | 'ongoing' | 'cancelled' | 'done';
+    location?: string;
   }

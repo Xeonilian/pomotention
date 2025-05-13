@@ -18,10 +18,12 @@
   <div class="today-container">
     <TodayTodo 
       :todos="todoList"
-      @update-todo="$emit('update-todo', $event)"
-      @delete-todo="$emit('delete-todo', $event)"
+
     />
-    <TodaySchedule />
+    <TodaySchedule 
+      :schedules="scheduleList"
+
+    />
   </div>
 </template>
 
@@ -29,13 +31,13 @@
 import TodayTodo from '../../components/TodayTSG/TodayTodo.vue'
 import TodaySchedule from '../../components/TodayTSG/TodaySchedule.vue'
 import type { Todo } from '../../core/types/Todo'
+import type { Schedule } from '@/core/types/Schedule'
 
 defineProps<{
-  todoList: Todo[]
+  todoList: Todo[];
+  scheduleList: Schedule[];
 }>()
 
-defineEmits<{
-  (e: 'update-todo', todo: Todo): void
-  (e: 'delete-todo', id: number): void
-}>()
+
+
 </script>

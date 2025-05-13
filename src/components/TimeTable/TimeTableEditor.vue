@@ -55,7 +55,7 @@ import { CategoryColors } from '@/core/constants';
 // 1. 参数传递和定义 -----------------------------------------  
 
 // 1.1 定义时间块接口类型，描述每个时间段的属性  
-const STORAGE_KEY_SCHEDULE = 'myScheduleBlocks'
+const STORAGE_KEY_TIMETABLE = 'myScheduleBlocks'
 
 // 1.2 定义父组件传入的props，接收一个Block数组，使用Vue3的defineProps  
 const props = defineProps<{ blocks: Block[] }>() 
@@ -69,7 +69,7 @@ const Blocks = ref<Block[]>([]);
 let hasLoadedFromLocal = false;  
 
 // 1.5 优先从 localStorage 载入数据  
-const saved = localStorage.getItem('STORAGE_KEY_SCHEDULE');  
+const saved = localStorage.getItem('STORAGE_KEY_TIMETABLE');  
 if (saved) {  
   try {  
     const parsed = JSON.parse(saved);  
@@ -122,7 +122,7 @@ const syncToParent = () => {
     start: b.start,  
     end: b.end  
   }))); 
-  localStorage.setItem(STORAGE_KEY_SCHEDULE, JSON.stringify(Blocks.value));   
+  localStorage.setItem(STORAGE_KEY_TIMETABLE, JSON.stringify(Blocks.value));   
 };  
 
 // 2. 表格编辑相关逻辑 --------------------------------------  

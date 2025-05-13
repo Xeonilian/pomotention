@@ -10,10 +10,10 @@
       <div v-if="showLeft" class="left"><TimeTableView
         :blocks = "blocks"
         @update-blocks="onBlocksUpdate"
-        @reset-schedule="onScheduleReset"
+        @reset-schedule="onTimeTableReset"
          /></div>  
       <div class="middle">  
-        <div v-if="showMiddleTop" class="middle-top"><TodayView :todoList="todoList" @update-todo="handleUpdateTodo"/></div>  
+        <div v-if="showMiddleTop" class="middle-top"><TodayView :todoList="todoList" :scheduleList="scheduleList" /></div>  
         <div class="middle-bottom">
         <div class="button-group">  
           <n-button  
@@ -58,18 +58,19 @@ import TimeTableView from '@/views/Home/TimeTableView.vue'
 import TodayView from '@/views//Home/TodayView.vue'  
 import TaskView from '@/views//Home/TaskView.vue'  
 import ActivityView from '@/views//Home/ActivityView.vue' 
-import type { Activity } from 'core/types/Activity'
-import { getTimestampForTimeString } from '../core/utils';  
-import type { Block } from 'core/types/Block'
-import { Todo } from '@/core/types/Todo'
+import type { Activity } from '@/core/types/Activity'
+import { getTimestampForTimeString } from '@/core/utils';  
+import type { Block } from '@/core/types/Block'
+import type { Todo } from '@/core/types/Todo'
+import type { Schedule } from '@/core/types/Schedule'
 
-// 1 界面控制参数定义
+// 1 界面控制参数定义 
 const showLeft = ref(true)  
 const showMiddleTop = ref(true)  
 const showRight = ref(true)  
 
-// 2 TimeTableView 数据传递
-const STORAGE_KEY_SCHEDULE = 'myScheduleBlocks'
+// 2 TimeTableView 数据传递 
+const STORAGE_KEY_TIMETABLE = 'myScheduleBlocks'
 // 默认日程数据  
 const workBlocks: Block[] = [  
   { id: '1', category: 'living', start: getTimestampForTimeString('06:00'), end: getTimestampForTimeString('09:00') },  
@@ -95,7 +96,7 @@ const blocks = ref<Block[]>([]);
 // 读取本地数据
 onMounted(() => {
   try {
-    const local = localStorage.getItem(STORAGE_KEY_SCHEDULE)
+    const local = localStorage.getItem(STORAGE_KEY_TIMETABLE)
     if (local) {
       blocks.value = JSON.parse(local)
     } else {
@@ -108,7 +109,7 @@ onMounted(() => {
 
 //  blocks 每次变化就持久化本地 
 watch(blocks, (newVal) => {  
-  localStorage.setItem(STORAGE_KEY_SCHEDULE, JSON.stringify(newVal));  
+  localStorage.setItem(STORAGE_KEY_TIMETABLE, JSON.stringify(newVal));  
 }, { deep: true });  
 
 /** TimeTableView 发出blocks修改事件，接管更新 */
@@ -117,17 +118,19 @@ function onBlocksUpdate(newBlocks: Block[]) {
 }
 
 /** “重置”事件，区分工作/娱乐 */
-function onScheduleReset(type: 'work' | 'entertainment') {
+function onTimeTableReset(type: 'work' | 'entertainment') {
   blocks.value = type === 'work' ? [...workBlocks] : [...entertainmentBlocks]
-  localStorage.removeItem(STORAGE_KEY_SCHEDULE) // 可选，重置时也清理
+  localStorage.removeItem(STORAGE_KEY_TIMETABLE) // 可选，重置时也清理
 }
 
-// 3 ActivityView 和 TodayView 数据管理
+// 3 ActivityView 和 TodayView 数据管理 
 const STORAGE_KEY_ACTIVITY = 'activitySheet'
-const STORAGE_KEY_TODAY = 'TodayTS'
+const STORAGE_KEY_TODO = 'todayTodo'
+const STORAGE_KEY_SCHEDULE = 'todaySchedule'
 
 const activityList = ref<Activity[]>(loadActivities())
 const todoList = ref<Todo[]>(loadTodos())
+const scheduleList = ref<Schedule[]>(loadSchedules())
 const pickedTodoActivity = ref<Activity | null>(null)
 
 // 加载数据
@@ -137,7 +140,12 @@ function loadActivities(): Activity[] {
 }
 
 function loadTodos(): Todo[] {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY_TODAY) || '[]') }
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY_TODO) || '[]') }
+  catch { return [] }
+}
+
+function loadSchedules(): Schedule[] {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY_SCHEDULE) || '[]') }
   catch { return [] }
 }
 
@@ -147,12 +155,17 @@ function saveActivities() {
 }
 
 function saveTodos() {
-  localStorage.setItem(STORAGE_KEY_TODAY, JSON.stringify(todoList.value))
+  localStorage.setItem(STORAGE_KEY_TODO, JSON.stringify(todoList.value))
+}
+
+function saveSchedules() {
+  localStorage.setItem(STORAGE_KEY_SCHEDULE, JSON.stringify(scheduleList.value))
 }
 
 // 监听数据变化
 watch(activityList, saveActivities, { deep: true })
 watch(todoList, saveTodos, { deep: true })
+watch(scheduleList, saveSchedules, { deep: true })
 
 // 处理 Activity 到 Todo 的转换
 function convertToTodo(activity: Activity): Todo {
@@ -167,15 +180,42 @@ function convertToTodo(activity: Activity): Todo {
   }
 }
 
+// 处理 Activity 到 Schedule 的转换
+function convertToSchedule(activity: Activity): Schedule {
+  return {
+    id: Date.now(),
+    activityId: activity.id,
+    activityTitle: activity.title,
+    activityDueRange: [activity.dueRange![0], activity.dueRange![1]],
+    status: activity.status || '',
+    projectName: activity.projectId ? `项目${activity.projectId}` : undefined,
+    location: activity.location || ''
+  }
+}
+
 // 处理子组件事件
 function handleAddActivity(newActivity: Activity) {
   activityList.value.push(newActivity)
+  // 如果是 Schedule 类型且是当天的活动，自动创建 Schedule
+  if (newActivity.class === 'S') {
+    const today = new Date().toISOString().split('T')[0]
+    
+    const activityDate = newActivity.id ? new Date(newActivity.id).toISOString().split('T')[0] : null
+    console.log(today, activityDate)
+    if (activityDate === today) {
+      scheduleList.value.push(convertToSchedule(newActivity))
+    }
+  }
 }
 
 function handleDeleteActivity(id: number) {
   // 删除 Activity 时也删除关联的 Todo
   todoList.value = todoList.value.filter(todo => todo.activityId !== id)
-  activityList.value = activityList.value.filter(item => item.id !== id)
+  // 删除对应的 Schedule
+  scheduleList.value = scheduleList.value.filter(schedule => schedule.activityId !== id)
+  
+  // 删除 Activity
+  activityList.value = activityList.value.filter(activity => activity.id !== id)
 }
 
 function passPickedActivity(activity: Activity) {
@@ -187,38 +227,46 @@ function passPickedActivity(activity: Activity) {
   pickedTodoActivity.value = activity
 }
 
-// 同步 Activity 修改到 Todo
+// 同步 Activity 修改到 Todo 和 Schedule #HACK 
 watch(activityList, (newActivities) => {
   newActivities.forEach(activity => {
-    const relatedTodo = todoList.value.find(todo => todo.activityId === activity.id)
+    const relatedTodo = todoList.value.find(todo => todo.activityId === activity.id);
     if (relatedTodo) {
-      relatedTodo.activityTitle = activity.title
-      relatedTodo.estPomo = activity.estPomoI ? [parseInt(activity.estPomoI)] : []
-      relatedTodo.status = activity.status || ''
+      relatedTodo.activityTitle = activity.title;
+      relatedTodo.estPomo = activity.estPomoI ? [parseInt(activity.estPomoI)] : [];
+      relatedTodo.status = activity.status || '';
     }
-  })
-}, { deep: true })
 
-// 处理 Todo 更新（从 TodayView 发出）
-function handleUpdateTodo(updatedTodo: Todo) {
-  // 1. 更新 todoList
-  const index = todoList.value.findIndex(t => t.id === updatedTodo.id);
-  if (index !== -1) {
-    todoList.value[index] = updatedTodo;
-  }
+    const relatedSchedule = scheduleList.value.find(schedule => schedule.activityId === activity.id);
+    if (relatedSchedule) {
+      relatedSchedule.activityTitle = activity.title;
+      relatedSchedule.activityDueRange = activity.dueRange ? [activity.dueRange[0], activity.dueRange[1]] : [0, 0];
+      relatedSchedule.status = activity.status || '';
+    }
+  });
+}, { deep: true });
 
-  // 2. 同步到关联的 Activity
-  const relatedActivity = activityList.value.find(a => a.id === updatedTodo.activityId);
-  if (relatedActivity) {
-    // 只同步需要的数据
-    relatedActivity.status = updatedTodo.status || '';
+// // 处理 Todo 更新（从 TodayView 发出）#HACK 当前还没有用
+// function handleUpdateTodo(updatedTodo: Todo) {
+//   // 1. 更新 todoList
+//   const index = todoList.value.findIndex(t => t.id === updatedTodo.id);
+//   if (index !== -1) {
+//     todoList.value[index] = updatedTodo;
+//   }
+
+//   // 2. 同步到关联的 Activity
+//   const relatedActivity = activityList.value.find(a => a.id === updatedTodo.activityId);
+//   if (relatedActivity) {
+//     // 只同步需要的数据
+//     relatedActivity.status = updatedTodo.status || '';
     
-    // 如果是任务类型，同步番茄钟数据
-    if (relatedActivity.class === 'T' && updatedTodo.estPomo?.[0]) {
-      relatedActivity.estPomoI = updatedTodo.estPomo[0].toString();
-    }
-  }
-}
+//     // 如果是任务类型，同步番茄钟数据
+//     if (relatedActivity.class === 'T' && updatedTodo.estPomo?.[0]) {
+//       relatedActivity.estPomoI = updatedTodo.estPomo[0].toString();
+//     }
+//   }
+// }
+
 // 5 TaskView 数据传递
 
 // 6 UI 函数
