@@ -16,28 +16,37 @@
 -->
 <template>
   <div class="today-container">
-    <TodayTodo 
+    <TodayTodo
       :todos="todoList"
-
+      :activeId="activeId"
+      @update-active-id="updateActiveId"
     />
-    <TodaySchedule 
+    <TodaySchedule
       :schedules="scheduleList"
-
+      :activeId="activeId"
+      @update-active-id="updateActiveId"
     />
   </div>
 </template>
 
 <script setup lang="ts">
-import TodayTodo from '../../components/TodayTSG/TodayTodo.vue'
-import TodaySchedule from '../../components/TodayTSG/TodaySchedule.vue'
-import type { Todo } from '../../core/types/Todo'
-import type { Schedule } from '@/core/types/Schedule'
+import { defineProps, defineEmits } from "vue";
+import TodayTodo from "../../components/TodayTSG/TodayTodo.vue";
+import TodaySchedule from "../../components/TodayTSG/TodaySchedule.vue";
+import type { Todo } from "../../core/types/Todo";
+import type { Schedule } from "@/core/types/Schedule";
 
 defineProps<{
   todoList: Todo[];
   scheduleList: Schedule[];
-}>()
+  activeId: number | null;
+}>();
 
+const emit = defineEmits<{
+  (e: "update-active-id", id: number | null): void;
+}>();
 
-
+function updateActiveId(id: number | null) {
+  emit("update-active-id", id);
+}
 </script>

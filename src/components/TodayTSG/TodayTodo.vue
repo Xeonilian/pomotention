@@ -13,21 +13,32 @@
       <!-- 表头部分，可单独调整样式 -->
       <thead class="table-header">
         <tr>
-          <th style="width: 10%;">状态</th>  
-          <th style="width: 20%;">开始时间</th>  
-          <th style="width: 30%;">描述</th>  
-          <th style="width: 40%;">估计/实际</th>  
+          <th style="width: 10%">状态</th>
+          <th style="width: 20%">开始时间</th>
+          <th style="width: 30%">描述</th>
+          <th style="width: 40%">估计/实际</th>
         </tr>
       </thead>
       <!-- 表格内容部分，可单独调整样式 -->
       <tbody class="table-body">
-        <tr v-for="todo in todos" :key="todo.id">
+        <tr
+          v-for="todo in todos"
+          :key="todo.id"
+          :class="{ 'active-row': todo.activityId === activeId }"
+        >
           <td>{{ todo.status }}</td>
-          <td>{{ todo.taskId ? formatTime(todo.taskId) : '-' }}</td>
-          <td>{{ todo.activityTitle ?? '-' }}</td>
+          <td>{{ todo.taskId ? formatTime(todo.taskId) : "-" }}</td>
+          <td>{{ todo.activityTitle ?? "-" }}</td>
           <td>
-            {{ (todo.estPomo && todo.estPomo.length) ? todo.estPomo.join('/') : '-' }} /
-            {{ (todo.realPomo && todo.realPomo.length) ? todo.realPomo.join('/') : '-' }}
+            {{
+              todo.estPomo && todo.estPomo.length ? todo.estPomo.join("/") : "-"
+            }}
+            /
+            {{
+              todo.realPomo && todo.realPomo.length
+                ? todo.realPomo.join("/")
+                : "-"
+            }}
           </td>
         </tr>
       </tbody>
@@ -36,13 +47,14 @@
 </template>
 
 <script setup lang="ts">
-import type { Todo } from '@/core/types/Todo';
-import { formatTime } from '@/core/utils';
+import type { Todo } from "@/core/types/Todo";
+import { formatTime } from "@/core/utils";
 
 // 定义 Props
-defineProps<{ todos: Todo[] }>();
-
-
+defineProps<{
+  todos: Todo[];
+  activeId: number | null;
+}>();
 </script>
 
 <style scoped>
@@ -75,5 +87,10 @@ defineProps<{ todos: Todo[] }>();
 /* 隔行变色 */
 .table-body tr:nth-child(even) {
   background-color: #f9f9f9;
+}
+
+/* 激活行样式 */
+.table-body tr.active-row {
+  background-color: rgba(255, 255, 0, 0.378); /* 激活行的底色为黄色 */
 }
 </style>
