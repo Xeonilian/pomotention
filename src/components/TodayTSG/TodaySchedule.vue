@@ -17,7 +17,12 @@
           :key="schedule.id"
           :class="{ 'active-row': schedule.activityId === activeId }"
         >
-          <td>{{ schedule.status }}</td>
+          <td>
+            <n-checkbox
+              :checked="schedule.status === 'done'"
+              @update:checked="handleCheckboxChange(schedule, $event)"
+            />
+          </td>
           <td>
             {{
               schedule.activityDueRange
@@ -36,12 +41,29 @@
 <script setup lang="ts">
 import type { Schedule } from "@/core/types/Schedule";
 import { formatTime } from "@/core/utils";
+import { NCheckbox } from "naive-ui";
 
 // 定义 Props
 defineProps<{
   schedules: Schedule[];
   activeId: number | null;
 }>();
+
+const emit = defineEmits<{
+  (
+    e: "update-schedule-status",
+    id: number,
+    activityId: number,
+    status: string
+  ): void;
+}>();
+
+function handleCheckboxChange(schedule: Schedule, checked: boolean) {
+  const newStatus = checked ? "done" : "";
+  schedule.status = newStatus;
+
+  emit("update-schedule-status", schedule.id, schedule.activityId, newStatus);
+}
 </script>
 
 <style scoped>

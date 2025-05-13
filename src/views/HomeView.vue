@@ -23,6 +23,7 @@
             :scheduleList="scheduleList"
             :activeId="activeId"
             @update-active-id="updateActiveId"
+            @update-schedule-status="updateScheduleStatus"
           />
         </div>
         <div class="middle-bottom">
@@ -287,7 +288,7 @@ function convertToTodo(activity: Activity): Todo {
     activityId: activity.id,
     activityTitle: activity.title,
     estPomo: activity.estPomoI ? [parseInt(activity.estPomoI)] : [],
-    status: activity.status || "",
+    status: "ongoing",
     projectName: activity.projectId ? `项目${activity.projectId}` : undefined,
   };
 }
@@ -299,7 +300,7 @@ function convertToSchedule(activity: Activity): Schedule {
     activityId: activity.id,
     activityTitle: activity.title,
     activityDueRange: [activity.dueRange![0], activity.dueRange![1]],
-    status: activity.status || "",
+    status: "ongoing",
     projectName: activity.projectId ? `项目${activity.projectId}` : undefined,
     location: activity.location || "",
   };
@@ -317,6 +318,13 @@ function handleAddActivity(newActivity: Activity) {
       : null;
     console.log(today, activityDate);
     if (activityDate === today) {
+      // 更新 activityList 中对应的 activity 的 status 为 "ongoing"
+      const activityToUpdate = activityList.value.find(
+        (a) => a.id === newActivity.id
+      );
+      if (activityToUpdate) {
+        activityToUpdate.status = "ongoing";
+      }
       scheduleList.value.push(convertToSchedule(newActivity));
     }
   }
@@ -338,6 +346,11 @@ function handleDeleteActivity(id: number) {
 
 // 将选中的 Activity 转换为 Todo 并添加到列表
 function passPickedActivity(activity: Activity) {
+  // 更新 activityList 中对应的 activity 的 status 为 "ongoing"
+  const activityToUpdate = activityList.value.find((a) => a.id === activity.id);
+  if (activityToUpdate) {
+    activityToUpdate.status = "ongoing";
+  }
   const existingTodo = todoList.value.find(
     (todo) => todo.activityId === activity.id
   );
@@ -383,26 +396,35 @@ watch(
   { deep: true }
 );
 
-// // 处理 Todo 更新（从 TodayView 发出）#HACK 当前还没有用
-// function handleUpdateTodo(updatedTodo: Todo) {
-//   // 1. 更新 todoList
-//   const index = todoList.value.findIndex(t => t.id === updatedTodo.id);
-//   if (index !== -1) {
-//     todoList.value[index] = updatedTodo;
-//   }
+function updateScheduleStatus(id: number, activityId: number, status: string) {
+  const validStatus = ["", "done", "delayed", "ongoing", "cancelled"].includes(
+    status
+  )
+    ? status
+    : "";
 
-//   // 2. 同步到关联的 Activity
-//   const relatedActivity = activityList.value.find(a => a.id === updatedTodo.activityId);
-//   if (relatedActivity) {
-//     // 只同步需要的数据
-//     relatedActivity.status = updatedTodo.status || '';
+  // 更新 scheduleList
+  const schedule = scheduleList.value.find((s) => s.id === id);
+  if (schedule) {
+    schedule.status = validStatus as
+      | ""
+      | "done"
+      | "delayed"
+      | "ongoing"
+      | "cancelled";
+  }
 
-//     // 如果是任务类型，同步番茄钟数据
-//     if (relatedActivity.class === 'T' && updatedTodo.estPomo?.[0]) {
-//       relatedActivity.estPomoI = updatedTodo.estPomo[0].toString();
-//     }
-//   }
-// }
+  // 更新 activityList
+  const activity = activityList.value.find((a) => a.id === activityId);
+  if (activity) {
+    activity.status = validStatus as
+      | ""
+      | "done"
+      | "delayed"
+      | "ongoing"
+      | "cancelled";
+  }
+}
 
 // 5 TaskView 数据传递
 

@@ -25,6 +25,7 @@
       :schedules="scheduleList"
       :activeId="activeId"
       @update-active-id="updateActiveId"
+      @update-schedule-status="updateScheduleStatus"
     />
   </div>
 </template>
@@ -44,9 +45,19 @@ defineProps<{
 
 const emit = defineEmits<{
   (e: "update-active-id", id: number | null): void;
+  (
+    e: "update-schedule-status",
+    id: number,
+    activityId: number,
+    status: string
+  ): void;
 }>();
 
 function updateActiveId(id: number | null) {
   emit("update-active-id", id);
+}
+
+function updateScheduleStatus(id: number, activityId: number, status: string) {
+  emit("update-schedule-status", id, activityId, status);
 }
 </script>
