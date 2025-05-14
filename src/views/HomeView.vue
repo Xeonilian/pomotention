@@ -95,7 +95,7 @@ import { getTimestampForTimeString, addOneDayToDate } from "@/core/utils";
 import type { Block } from "@/core/types/Block";
 import type { Todo } from "@/core/types/Todo";
 import type { Schedule } from "@/core/types/Schedule";
-
+import { isToday } from "@/core/utils";
 // 1 界面控制参数定义
 const showLeft = ref(true);
 const showMiddleTop = ref(true);
@@ -373,53 +373,34 @@ function updateActiveId(id: number | null) {
   activeId.value = id;
 }
 
-// 3.3.5 同步 Activity 修改到 Todo 和 Schedule #BUG
+// 3.3.5 同步 Activity 修改到 Todo 和 Schedule
 watch(
   activityList,
-  (newActivities) => {
-    const today = new Date().toISOString().split("T")[0];
-
-    // ========== 1. Schedule 同步 ==========
-    const newScheduleList: Schedule[] = [];
-
-    newActivities.forEach((activity) => {
-      if (
-        activity.class === "S" &&
-        activity.dueRange &&
-        Array.isArray(activity.dueRange)
-      ) {
-        const activityDate = new Date(Number(activity.dueRange[0]))
-          .toISOString()
-          .split("T")[0];
-        if (activityDate === today) {
-          const old = scheduleList.value.find(
-            (s) => s.activityId === activity.id
-          );
-          const id = old ? old.id : Date.now();
-          newScheduleList.push({
-            id,
-            activityId: activity.id,
-            activityTitle: activity.title,
-            activityDueRange: [activity.dueRange[0], activity.dueRange[1]],
-            status: activity.status || "",
-            projectName: activity.projectId
-              ? `项目${activity.projectId}`
-              : undefined,
-            location: activity.location || "",
-          });
-        }
+  (newVal) => {
+    // 只用 find
+    newVal.forEach((activity) => {
+      // 同步 Schedule
+      const relatedSchedule = scheduleList.value.find(
+        (schedule) => schedule.activityId === activity.id
+      );
+      if (relatedSchedule) {
+        relatedSchedule.activityTitle = activity.title;
+        relatedSchedule.activityDueRange = activity.dueRange
+          ? [activity.dueRange[0], activity.dueRange[1]]
+          : [0, 0];
+        relatedSchedule.status = activity.status || "";
+        relatedSchedule.location = activity.location || "";
       }
-    });
-    scheduleList.value = newScheduleList;
-
-    // ========== 2. Todo 同步 ==========
-    // 只同步“activity内容”到 Todo，不自动删/增 todo。只同步 title, estPomo, status
-    todoList.value.forEach((todo) => {
-      const activity = newActivities.find((a) => a.id === todo.activityId);
-      if (activity) {
-        todo.activityTitle = activity.title;
-        todo.estPomo = activity.estPomoI ? [parseInt(activity.estPomoI)] : [];
-        todo.status = activity.status || "";
+      // 同步 Todo
+      const relatedTodo = todoList.value.find(
+        (todo) => todo.activityId === activity.id
+      );
+      if (relatedTodo) {
+        relatedTodo.activityTitle = activity.title;
+        relatedTodo.estPomo = activity.estPomoI
+          ? [parseInt(activity.estPomoI)]
+          : [];
+        relatedTodo.status = activity.status || "";
       }
     });
   },
@@ -547,7 +528,64 @@ function handleSuspendSchedule(id: number) {
   );
 }
 
-// 3.3.10
+// 3.3.10 更新Schedule的日期改变
+watch(
+  () => activityList.value.map((a) => a.dueRange && a.dueRange[0]),
+  () => {
+    activityList.value.forEach((activity) => {
+      const tag = `【activity: ${activity.title} (id:${activity.id})】`;
+      const due = activity.dueRange && activity.dueRange[0];
+      const scheduleIdx = scheduleList.value.findIndex(
+        (s) => s.activityId === activity.id
+      );
+
+      if (activity.class === "S" && due) {
+        const dueMs = typeof due === "string" ? Date.parse(due) : Number(due);
+
+        if (isToday(dueMs)) {
+          //console.log(`${tag} 属于今天（通过 isToday）`);
+          // 1. 没有就加，有就更新
+          if (scheduleIdx === -1) {
+            // 可选：status 自动改 ongoing
+            activity.status = "ongoing";
+            const sch = convertToSchedule(activity);
+            scheduleList.value.push(sch);
+            // console.log(`${tag} 新增 schedule:`, sch);
+          } else {
+            // 已有 schedule，更新主字段
+            //console.log(`${tag} Schedule 已存在，准备更新`);
+            const sch = scheduleList.value[scheduleIdx];
+            sch.activityTitle = activity.title;
+            sch.activityDueRange = activity.dueRange
+              ? [...activity.dueRange]
+              : [0, 0];
+            sch.status = activity.status || "";
+            sch.projectName = activity.projectId
+              ? `项目${activity.projectId}`
+              : undefined;
+            sch.location = activity.location || "";
+            // console.log(`${tag} 更新后 schedule:`, sch);
+          }
+        } else {
+          // 不是今天，应该从 scheduleList 里删除
+          // console.log(`${tag} 不属于今天，准备移除 schedule`);
+          if (scheduleIdx !== -1) {
+            scheduleList.value.splice(scheduleIdx, 1);
+            //console.log(`${tag} schedule 已移除`);
+          } else {
+            console.log(`${tag} 不属于今天，无 schedule 不需操作`);
+          }
+        }
+      } else if (scheduleIdx !== -1) {
+        //console.log(`${tag} 非 S 类型，移除 schedule`);
+        scheduleList.value.splice(scheduleIdx, 1);
+      }
+    });
+
+    // 总结最终 scheduleList
+    //console.log( "【watch结束】当前 scheduleList:",JSON.parse(JSON.stringify(scheduleList.value)));
+  }
+);
 
 // 4 TaskView 数据传递
 
