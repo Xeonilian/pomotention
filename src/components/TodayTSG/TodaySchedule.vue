@@ -14,7 +14,9 @@
       <!-- 表格内容部分，可单独调整样式 -->
       <tbody class="table-body">
         <tr
-          v-for="schedule in schedules"
+          v-for="schedule in schedules.sort(
+            (a, b) => a.activityDueRange[0] - b.activityDueRange[0]
+          )"
           :key="schedule.id"
           :class="{ 'active-row': schedule.activityId === activeId }"
         >

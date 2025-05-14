@@ -84,7 +84,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from "vue";
+import { ref, onMounted, watch, onUnmounted } from "vue";
 import { NButton } from "naive-ui";
 import TimeTableView from "@/views/Home/TimeTableView.vue";
 import TodayView from "@/views//Home/TodayView.vue";
@@ -373,31 +373,53 @@ function updateActiveId(id: number | null) {
   activeId.value = id;
 }
 
-// 3.3.5 同步 Activity 修改到 Todo 和 Schedule
+// 3.3.5 同步 Activity 修改到 Todo 和 Schedule #BUG
 watch(
   activityList,
   (newActivities) => {
-    newActivities.forEach((activity) => {
-      const relatedTodo = todoList.value.find(
-        (todo) => todo.activityId === activity.id
-      );
-      if (relatedTodo) {
-        relatedTodo.activityTitle = activity.title;
-        relatedTodo.estPomo = activity.estPomoI
-          ? [parseInt(activity.estPomoI)]
-          : [];
-        relatedTodo.status = activity.status || "";
-      }
+    const today = new Date().toISOString().split("T")[0];
 
-      const relatedSchedule = scheduleList.value.find(
-        (schedule) => schedule.activityId === activity.id
-      );
-      if (relatedSchedule) {
-        relatedSchedule.activityTitle = activity.title;
-        relatedSchedule.activityDueRange = activity.dueRange
-          ? [activity.dueRange[0], activity.dueRange[1]]
-          : [0, 0];
-        relatedSchedule.status = activity.status || "";
+    // ========== 1. Schedule 同步 ==========
+    const newScheduleList: Schedule[] = [];
+
+    newActivities.forEach((activity) => {
+      if (
+        activity.class === "S" &&
+        activity.dueRange &&
+        Array.isArray(activity.dueRange)
+      ) {
+        const activityDate = new Date(Number(activity.dueRange[0]))
+          .toISOString()
+          .split("T")[0];
+        if (activityDate === today) {
+          const old = scheduleList.value.find(
+            (s) => s.activityId === activity.id
+          );
+          const id = old ? old.id : Date.now();
+          newScheduleList.push({
+            id,
+            activityId: activity.id,
+            activityTitle: activity.title,
+            activityDueRange: [activity.dueRange[0], activity.dueRange[1]],
+            status: activity.status || "",
+            projectName: activity.projectId
+              ? `项目${activity.projectId}`
+              : undefined,
+            location: activity.location || "",
+          });
+        }
+      }
+    });
+    scheduleList.value = newScheduleList;
+
+    // ========== 2. Todo 同步 ==========
+    // 只同步“activity内容”到 Todo，不自动删/增 todo。只同步 title, estPomo, status
+    todoList.value.forEach((todo) => {
+      const activity = newActivities.find((a) => a.id === todo.activityId);
+      if (activity) {
+        todo.activityTitle = activity.title;
+        todo.estPomo = activity.estPomoI ? [parseInt(activity.estPomoI)] : [];
+        todo.status = activity.status || "";
       }
     });
   },
@@ -525,6 +547,8 @@ function handleSuspendSchedule(id: number) {
   );
 }
 
+// 3.3.10
+
 // 4 TaskView 数据传递
 
 // 5 UI 函数
@@ -534,6 +558,95 @@ function buttonStyle(show: boolean) {
     opacity: show ? 1 : 0.6,
   };
 }
+
+// 6 日期监控
+// 日期检查状态变量
+type TimeoutType = ReturnType<typeof setTimeout>;
+let debounceTimer: TimeoutType | null = null;
+let lastCheckedDate: string = new Date().toISOString().split("T")[0];
+let debouncedCheckFunction: ((event: Event) => void) | null = null;
+
+// 核心检查函数
+function checkDateChange() {
+  const currentDate = new Date().toISOString().split("T")[0];
+  if (currentDate !== lastCheckedDate) {
+    console.log(`日期从 ${lastCheckedDate} 变为 ${currentDate}`);
+    processSchedulesForNewDay();
+    lastCheckedDate = currentDate;
+    return true;
+  }
+  return false;
+}
+
+// 处理新一天的日程
+function processSchedulesForNewDay() {
+  const today = new Date().toISOString().split("T")[0];
+
+  // 检查 activityList 中的所有活动
+  activityList.value.forEach((activity) => {
+    // 只处理类型为 "S" 的活动（日程类型）
+    if (activity.class === "S" && activity.dueRange) {
+      const activityDate = new Date(activity.dueRange[0])
+        .toISOString()
+        .split("T")[0];
+
+      // 如果活动日期是今天且还没有添加到日程列表中
+      if (
+        activityDate === today &&
+        !scheduleList.value.some((s) => s.activityId === activity.id)
+      ) {
+        // 将状态设置为 ongoing
+        activity.status = "ongoing";
+        // 添加到今日日程
+        scheduleList.value.push(convertToSchedule(activity));
+      }
+    }
+  });
+}
+
+// 设置用户交互检测
+function setupUserInteractionCheck() {
+  // 创建防抖函数
+  debouncedCheckFunction = () => {
+    if (debounceTimer) return;
+    debounceTimer = setTimeout(() => {
+      checkDateChange();
+      debounceTimer = null;
+    }, 1000); // 1秒防抖
+  };
+
+  // 添加事件监听器
+  document.addEventListener("click", debouncedCheckFunction);
+  document.addEventListener("keydown", debouncedCheckFunction);
+}
+
+// 清理事件监听器
+function cleanupListeners() {
+  if (debouncedCheckFunction) {
+    document.removeEventListener("click", debouncedCheckFunction);
+    document.removeEventListener("keydown", debouncedCheckFunction);
+    debouncedCheckFunction = null;
+  }
+
+  if (debounceTimer) {
+    clearTimeout(debounceTimer);
+    debounceTimer = null;
+  }
+}
+
+// 在组件挂载时设置
+onMounted(() => {
+  // 初次检查
+  checkDateChange();
+
+  // 设置用户交互检测
+  setupUserInteractionCheck();
+});
+
+// 在组件卸载时清理
+onUnmounted(() => {
+  cleanupListeners();
+});
 </script>
 
 <style scoped>
