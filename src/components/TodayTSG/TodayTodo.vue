@@ -13,10 +13,12 @@
       <!-- 表头部分，可单独调整样式 -->
       <thead class="table-header">
         <tr>
-          <th style="width: 10%">状态</th>
-          <th style="width: 20%">开始时间</th>
+          <th style="width: 8%">状态</th>
+          <th style="width: 8%">优先</th>
+          <th style="width: 16%">开始</th>
           <th style="width: 30%">描述</th>
-          <th style="width: 40%">估计/实际</th>
+          <th style="width: 30%">估计/实际</th>
+          <th style="width: 8%">取消</th>
         </tr>
       </thead>
       <!-- 表格内容部分，可单独调整样式 -->
@@ -26,7 +28,14 @@
           :key="todo.id"
           :class="{ 'active-row': todo.activityId === activeId }"
         >
-          <td>{{ todo.status }}</td>
+          <td>
+            <n-checkbox
+              :checked="todo.status === 'done'"
+              @update:checked="handleCheckboxChange(todo, $event)"
+            />
+          </td>
+
+          <td>{{ todo.priority }}</td>
           <td>{{ todo.taskId ? formatTime(todo.taskId) : "-" }}</td>
           <td>{{ todo.activityTitle ?? "-" }}</td>
           <td>
@@ -40,6 +49,19 @@
                 : "-"
             }}
           </td>
+          <td>
+            <n-button
+              size="small"
+              type="error"
+              @click="handleDropTodo(todo.id)"
+            >
+              <template #icon>
+                <n-icon size="16">
+                  <Delete24Regular />
+                </n-icon>
+              </template>
+            </n-button>
+          </td>
         </tr>
       </tbody>
     </table>
@@ -49,12 +71,35 @@
 <script setup lang="ts">
 import type { Todo } from "@/core/types/Todo";
 import { formatTime } from "@/core/utils";
+import { Delete24Regular } from "@vicons/fluent";
+import { NCheckbox } from "naive-ui";
 
 // 定义 Props
 defineProps<{
   todos: Todo[];
   activeId: number | null;
 }>();
+
+const emit = defineEmits<{
+  (e: "drop-todo", id: number): void;
+  (
+    e: "update-todo-status",
+    id: number,
+    activityId: number,
+    status: string
+  ): void;
+}>();
+
+function handleDropTodo(id: number) {
+  emit("drop-todo", id);
+}
+
+function handleCheckboxChange(todo: Todo, checked: boolean) {
+  const newStatus = checked ? "done" : "";
+  todo.status = newStatus;
+
+  emit("update-todo-status", todo.id, todo.activityId, newStatus);
+}
 </script>
 
 <style scoped>

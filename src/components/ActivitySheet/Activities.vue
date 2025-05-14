@@ -32,10 +32,16 @@
           <n-icon v-else-if="item.interruption === 'E'" color="#138"
             ><VideoPersonCall24Regular
           /></n-icon>
-          <n-icon v-else-if="item.class === 'T'" color="blue"
+          <n-icon
+            v-else-if="item.class === 'T'"
+            :color="item.status === 'ongoing' ? 'red' : 'black'"
+            :depth="item.status === 'delayed' ? '1' : '3'"
             ><ApprovalsApp24Regular
           /></n-icon>
-          <n-icon v-else-if="item.class === 'S'" color="red"
+          <n-icon
+            v-else-if="item.class === 'S'"
+            :color="item.status === 'ongoing' ? 'blue' : 'black'"
+            :depth="item.status === 'delayed' ? '1' : '3'"
             ><AlertUrgent24Regular
           /></n-icon>
         </template>
@@ -100,7 +106,9 @@ defineEmits(["focus-row"]);
   gap: 0px;
   width: 100%;
 }
-
+.delayed {
+  background: #44f8daa0;
+}
 .countdown-yellow :deep(.n-input) {
   background: #f8d444a0;
 }

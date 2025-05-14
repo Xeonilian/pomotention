@@ -7,7 +7,8 @@
           <th style="width: 10%">状态</th>
           <th style="width: 20%">开始时间</th>
           <th style="width: 30%">描述</th>
-          <th style="width: 40%">地点</th>
+          <th style="width: 32%">地点</th>
+          <th style="width: 8%">取消</th>
         </tr>
       </thead>
       <!-- 表格内容部分，可单独调整样式 -->
@@ -32,6 +33,20 @@
           </td>
           <td>{{ schedule.activityTitle ?? "-" }}</td>
           <td>{{ schedule.location ?? "-" }}</td>
+
+          <td>
+            <n-button
+              size="small"
+              type="error"
+              @click="handleSuspendSchedule(schedule.id)"
+            >
+              <template #icon>
+                <n-icon size="16">
+                  <Delete24Regular />
+                </n-icon>
+              </template>
+            </n-button>
+          </td>
         </tr>
       </tbody>
     </table>
@@ -42,6 +57,7 @@
 import type { Schedule } from "@/core/types/Schedule";
 import { formatTime } from "@/core/utils";
 import { NCheckbox } from "naive-ui";
+import { Delete24Regular } from "@vicons/fluent";
 
 // 定义 Props
 defineProps<{
@@ -56,6 +72,7 @@ const emit = defineEmits<{
     activityId: number,
     status: string
   ): void;
+  (e: "suspend-schedule", id: number): void;
 }>();
 
 function handleCheckboxChange(schedule: Schedule, checked: boolean) {
@@ -63,6 +80,10 @@ function handleCheckboxChange(schedule: Schedule, checked: boolean) {
   schedule.status = newStatus;
 
   emit("update-schedule-status", schedule.id, schedule.activityId, newStatus);
+}
+
+function handleSuspendSchedule(id: number) {
+  emit("suspend-schedule", id);
 }
 </script>
 

@@ -24,6 +24,9 @@
             :activeId="activeId"
             @update-active-id="updateActiveId"
             @update-schedule-status="updateScheduleStatus"
+            @update-todo-status="updateTodoStatus"
+            @drop-todo="handleDropTodo"
+            @suspend-schedule="handleSuspendSchedule"
           />
         </div>
         <div class="middle-bottom">
@@ -88,7 +91,7 @@ import TodayView from "@/views//Home/TodayView.vue";
 import TaskView from "@/views//Home/TaskView.vue";
 import ActivityView from "@/views//Home/ActivityView.vue";
 import type { Activity } from "@/core/types/Activity";
-import { getTimestampForTimeString } from "@/core/utils";
+import { getTimestampForTimeString, addOneDayToDate } from "@/core/utils";
 import type { Block } from "@/core/types/Block";
 import type { Todo } from "@/core/types/Todo";
 import type { Schedule } from "@/core/types/Schedule";
@@ -290,6 +293,7 @@ function convertToTodo(activity: Activity): Todo {
     estPomo: activity.estPomoI ? [parseInt(activity.estPomoI)] : [],
     status: "ongoing",
     projectName: activity.projectId ? `项目${activity.projectId}` : undefined,
+    priority: 0,
   };
 }
 
@@ -316,7 +320,7 @@ function handleAddActivity(newActivity: Activity) {
     const activityDate = newActivity.id
       ? new Date(newActivity.id).toISOString().split("T")[0]
       : null;
-    console.log(today, activityDate);
+    // onsole.log(today, activityDate);
     if (activityDate === today) {
       // 更新 activityList 中对应的 activity 的 status 为 "ongoing"
       const activityToUpdate = activityList.value.find(
@@ -365,7 +369,7 @@ function updateActiveId(id: number | null) {
   activeId.value = id;
 }
 
-// 同步 Activity 修改到 Todo 和 Schedule #HACK
+// 同步 Activity 修改到 Todo 和 Schedule
 watch(
   activityList,
   (newActivities) => {
@@ -396,6 +400,7 @@ watch(
   { deep: true }
 );
 
+// 修改Schedule状态
 function updateScheduleStatus(id: number, activityId: number, status: string) {
   const validStatus = ["", "done", "delayed", "ongoing", "cancelled"].includes(
     status
@@ -424,6 +429,94 @@ function updateScheduleStatus(id: number, activityId: number, status: string) {
       | "ongoing"
       | "cancelled";
   }
+}
+// 修改Todo状态
+function updateTodoStatus(id: number, activityId: number, status: string) {
+  const validStatus = ["", "done", "delayed", "ongoing", "cancelled"].includes(
+    status
+  )
+    ? status
+    : "";
+
+  // 更新 scheduleList
+  const todo = todoList.value.find((t) => t.id === id);
+  if (todo) {
+    todo.status = validStatus as
+      | ""
+      | "done"
+      | "delayed"
+      | "ongoing"
+      | "cancelled";
+  }
+
+  // 更新 activityList
+  const activity = activityList.value.find((a) => a.id === activityId);
+  if (activity) {
+    activity.status = validStatus as
+      | ""
+      | "done"
+      | "delayed"
+      | "ongoing"
+      | "cancelled";
+  }
+}
+
+function handleDropTodo(id: number) {
+  // 找到对应的 Todo
+  const todo = todoList.value.find((todo) => todo.id === id);
+  if (todo) {
+    // 找到 activityList 中对应的活动
+    const activity = activityList.value.find(
+      (activity) => activity.id === todo.activityId
+    );
+    if (activity) {
+      // 更新 activity 的状态为 "delayed"
+      activity.status = "delayed";
+      console.log(`Activity with id ${activity.id} status updated to delayed`);
+    } else {
+      console.log(`No activity found with activityId ${todo.activityId}`);
+    }
+  } else {
+    console.log(`No todo found with id ${id}`);
+  }
+
+  // 从 todoList 中移除对应的 Todo
+  todoList.value = todoList.value.filter((todo) => todo.id !== id);
+}
+
+function handleSuspendSchedule(id: number) {
+  // 找到对应的 Schedule
+  const schedule = scheduleList.value.find((schedule) => schedule.id === id);
+  if (schedule) {
+    // 找到 activityList 中对应的活动
+    const activity = activityList.value.find(
+      (activity) => activity.id === schedule.activityId
+    );
+    if (activity) {
+      // 更新 activity 的状态为 "delayed"
+      activity.status = "delayed";
+      console.log(`Activity with id ${activity.id} status updated to delayed`);
+
+      if (activity.dueRange) {
+        // 将 dueRange 的两个时间都加1天
+        activity.dueRange = [
+          addOneDayToDate(activity.dueRange[0]),
+          addOneDayToDate(activity.dueRange[1]),
+        ];
+      } else {
+        console.log(`Activity with id ${activity.id} does not have dueRange`);
+      }
+    } else {
+      console.log(`No activity found with activityId ${schedule.activityId}`);
+    }
+  } else {
+    console.log(`No schedule found with id ${id}`);
+  }
+
+  // 从 scheduleList 中移除对应的 Schedule
+  scheduleList.value = scheduleList.value.filter(
+    (schedule) => schedule.id !== id
+  );
 }
 
 // 5 TaskView 数据传递

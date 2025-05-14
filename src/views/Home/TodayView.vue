@@ -19,19 +19,19 @@
     <TodayTodo
       :todos="todoList"
       :activeId="activeId"
-      @update-active-id="updateActiveId"
+      @update-todo-status="updateTodoStatus"
+      @drop-todo="handleDropTodo"
     />
     <TodaySchedule
       :schedules="scheduleList"
       :activeId="activeId"
-      @update-active-id="updateActiveId"
       @update-schedule-status="updateScheduleStatus"
+      @suspend-schedule="handleSuspendSchedule"
     />
   </div>
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits } from "vue";
 import TodayTodo from "../../components/TodayTSG/TodayTodo.vue";
 import TodaySchedule from "../../components/TodayTSG/TodaySchedule.vue";
 import type { Todo } from "../../core/types/Todo";
@@ -44,20 +44,35 @@ defineProps<{
 }>();
 
 const emit = defineEmits<{
-  (e: "update-active-id", id: number | null): void;
   (
     e: "update-schedule-status",
     id: number,
     activityId: number,
     status: string
   ): void;
+  (
+    e: "update-todo-status",
+    id: number,
+    activityId: number,
+    status: string
+  ): void;
+  (e: "suspend-schedule", id: number): void;
+  (e: "drop-todo", id: number): void;
 }>();
-
-function updateActiveId(id: number | null) {
-  emit("update-active-id", id);
-}
 
 function updateScheduleStatus(id: number, activityId: number, status: string) {
   emit("update-schedule-status", id, activityId, status);
+}
+
+function updateTodoStatus(id: number, activityId: number, status: string) {
+  emit("update-todo-status", id, activityId, status);
+}
+
+function handleSuspendSchedule(id: number) {
+  emit("suspend-schedule", id);
+}
+
+function handleDropTodo(id: number) {
+  emit("drop-todo", id);
 }
 </script>
