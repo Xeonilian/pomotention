@@ -43,13 +43,16 @@
     <n-button title="删除活动" @click="$emit('delete-active')" circle secondary type="error" :disabled="activeId === null">
       <template #icon><n-icon><Delete24Regular /></n-icon></template>
     </n-button>
+    <n-button title="番茄类型" @click="$emit('set-pomo-type')" circle secondary type="warning" >
+      <template #icon><n-icon><ArrowRepeatAll24Regular /></n-icon></template>
+    </n-button>
   </div>
 </template>
   
 <script setup lang="ts">
 import { computed } from 'vue'
 import { NButton, NIcon, NDropdown } from "naive-ui"
-import { AddCircle24Regular, Delete24Regular, ChevronCircleLeft48Regular, DocumentTableSearch24Regular, BookAdd24Regular } from '@vicons/fluent'
+import { AddCircle24Regular, Delete24Regular, ChevronCircleLeft48Regular, DocumentTableSearch24Regular, BookAdd24Regular, ArrowRepeatAll24Regular } from '@vicons/fluent'
 
 const props = defineProps<{
   filterOptions: any[],
@@ -61,7 +64,7 @@ const isSelectedClassS = computed(() => {
 return props.selectedClass === 'S'
 })
 
-defineEmits(['pick-activity-todo', 'filter', 'add-task', 'add-schedule', 'delete-active'])
+defineEmits(['pick-activity-todo', 'filter', 'add-task', 'add-schedule', 'delete-active' , 'set-pomo-type'])
 </script>
 
 <style scoped>

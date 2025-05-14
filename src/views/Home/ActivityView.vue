@@ -46,6 +46,7 @@ const emit = defineEmits<{
   (e: "add-activity", activity: Activity): void;
   (e: "delete-activity", id: number): void;
   (e: "update-active-id", id: number | null): void;
+  (e: "set-pomo-type", id: number | null): void;
 }>();
 
 const filterOptions = [
@@ -130,6 +131,7 @@ function addTaskRow() {
     class: "T",
     title: "",
     estPomoI: "",
+    pomoType: '🍅'
   });
 }
 
@@ -157,6 +159,11 @@ function getCountdownClass(dueDate: number | undefined | null): string {
   if (diff === 3) return "countdown-yellow";
   if (diff < 0) return "countdown-blue";
   return "";
+}
+
+// 9 
+function changPomoType(id: number) {
+  emit("set-pomo-type", id);
 }
 </script>
 
