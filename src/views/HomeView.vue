@@ -225,6 +225,7 @@ function onTimeTableReset(type: "work" | "entertainment") {
 }
 
 // 3 ActivityView 和 TodayView 数据管理
+// 3.1 数据构造
 const STORAGE_KEY_ACTIVITY = "activitySheet";
 const STORAGE_KEY_TODO = "todayTodo";
 const STORAGE_KEY_SCHEDULE = "todaySchedule";
@@ -284,6 +285,7 @@ watch(activityList, saveActivities, { deep: true });
 watch(todoList, saveTodos, { deep: true });
 watch(scheduleList, saveSchedules, { deep: true });
 
+// 3.2 数据类型转换
 // 处理 Activity 到 Todo 的转换
 function convertToTodo(activity: Activity): Todo {
   return {
@@ -310,7 +312,8 @@ function convertToSchedule(activity: Activity): Schedule {
   };
 }
 
-// 处理子组件事件
+// 3.3 处理子组件事件
+// 3.3.1 增加活动
 function handleAddActivity(newActivity: Activity) {
   activityList.value.push(newActivity);
   // 如果是 Schedule 类型且是当天的活动，自动创建 Schedule
@@ -334,6 +337,7 @@ function handleAddActivity(newActivity: Activity) {
   }
 }
 
+// 3.3.2 删除活动
 function handleDeleteActivity(id: number) {
   // 删除 Activity 时也删除关联的 Todo
   todoList.value = todoList.value.filter((todo) => todo.activityId !== id);
@@ -348,7 +352,7 @@ function handleDeleteActivity(id: number) {
   );
 }
 
-// 将选中的 Activity 转换为 Todo 并添加到列表
+// 3.3.3 将选中的 Activity 转换为 Todo 并添加到列表
 function passPickedActivity(activity: Activity) {
   // 更新 activityList 中对应的 activity 的 status 为 "ongoing"
   const activityToUpdate = activityList.value.find((a) => a.id === activity.id);
@@ -364,12 +368,12 @@ function passPickedActivity(activity: Activity) {
   pickedTodoActivity.value = activity;
 }
 
-// 更新激活ID
+// 3.3.4 更新当前ActivityView中激活行的ID
 function updateActiveId(id: number | null) {
   activeId.value = id;
 }
 
-// 同步 Activity 修改到 Todo 和 Schedule
+// 3.3.5 同步 Activity 修改到 Todo 和 Schedule
 watch(
   activityList,
   (newActivities) => {
@@ -400,7 +404,7 @@ watch(
   { deep: true }
 );
 
-// 修改Schedule状态
+// 3.3.6 更新打钩的schedule状态
 function updateScheduleStatus(id: number, activityId: number, status: string) {
   const validStatus = ["", "done", "delayed", "ongoing", "cancelled"].includes(
     status
@@ -430,7 +434,7 @@ function updateScheduleStatus(id: number, activityId: number, status: string) {
       | "cancelled";
   }
 }
-// 修改Todo状态
+// 3.3.7 更新打钩的todo状态
 function updateTodoStatus(id: number, activityId: number, status: string) {
   const validStatus = ["", "done", "delayed", "ongoing", "cancelled"].includes(
     status
@@ -461,6 +465,7 @@ function updateTodoStatus(id: number, activityId: number, status: string) {
   }
 }
 
+// 3.3.8 更新取消todo的状态
 function handleDropTodo(id: number) {
   // 找到对应的 Todo
   const todo = todoList.value.find((todo) => todo.id === id);
@@ -484,6 +489,7 @@ function handleDropTodo(id: number) {
   todoList.value = todoList.value.filter((todo) => todo.id !== id);
 }
 
+// 3.3.9 更新推后一天schedule的状态
 function handleSuspendSchedule(id: number) {
   // 找到对应的 Schedule
   const schedule = scheduleList.value.find((schedule) => schedule.id === id);
@@ -519,9 +525,9 @@ function handleSuspendSchedule(id: number) {
   );
 }
 
-// 5 TaskView 数据传递
+// 4 TaskView 数据传递
 
-// 6 UI 函数
+// 5 UI 函数
 function buttonStyle(show: boolean) {
   return {
     filter: show ? "none" : "grayscale(100%)",
