@@ -4,12 +4,12 @@
       <!-- 表头部分，可单独调整样式 -->
       <thead class="table-header">
         <tr>
-          <th style="width: 30px"></th>
+          <th style="width: 40px"></th>
           <th style="width: 60px">开始</th>
-          <th style="width: 60px">持续</th>
+          <th style="width: 40px">持续</th>
           <th style="width: calc((100% - 180px) / 2)">描述</th>
           <th style="width: calc((100% - 180px) / 2)">地点</th>
-          <th style="width: 30px"></th>
+          <th style="width: 40px"></th>
         </tr>
       </thead>
       <!-- 表格内容部分，可单独调整样式 -->

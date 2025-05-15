@@ -13,19 +13,19 @@
       <!-- 表头部分，可单独调整样式 -->
       <thead class="table-header">
         <tr>
-          <th style="width: 30px"></th>
+          <th style="width: 40px"></th>
           <th style="width: 60px">开始</th>
-          <th style="width: 60px">优先</th>
+          <th style="width: 40px">优先</th>
           <th style="width: calc((100% - 180px) / 2)">描述</th>
           <th style="width: calc((100% - 180px) / 2)">番茄</th>
-          <th style="width: 30px"></th>
+          <th style="width: 40px"></th>
         </tr>
       </thead>
       <!-- 表格内容部分，可单独调整样式 -->
       <tbody class="table-body">
-        <template v-if="todos && todos.length > 0">
+        <template v-if="sortedTodos.length > 0">
           <tr
-            v-for="todo in todos"
+            v-for="todo in sortedTodos"
             :key="todo.id"
             :class="{ 'active-row': todo.activityId === activeId }"
           >
@@ -36,7 +36,26 @@
               />
             </td>
             <td>{{ todo.taskId ? formatTime(todo.taskId) : "-" }}</td>
-            <td>{{ todo.priority }}</td>
+            <td class="priority-cell" @click="startEditing(todo)">
+              <template v-if="editingTodo && editingTodo.id === todo.id">
+                <n-input-number
+                  v-model:value="editingPriority"
+                  :min="0"
+                  :max="10"
+                  @blur="finishEditing"
+                  @keydown.enter="finishEditing"
+                  size="small"
+                  style="width: 30px"
+                  @focus="handleInputFocus"
+                  autofocus
+                  :show-button="false"
+                  placeholder=" "
+                />
+              </template>
+              <template v-else>
+                {{ getPriorityEmoji(todo.priority) }}
+              </template>
+            </td>
             <td class="ellipsis">{{ todo.activityTitle ?? "-" }}</td>
             <td>
               {{
@@ -81,11 +100,17 @@
 import type { Todo } from "@/core/types/Todo";
 import { formatTime } from "@/core/utils";
 import { Delete24Regular } from "@vicons/fluent";
-import { NCheckbox } from "naive-ui";
+import { NCheckbox, NInputNumber } from "naive-ui";
+import { ref, computed } from "vue";
+
+// 假设 Todo 类型中 priority 是 number
+interface TodoWithNumberPriority extends Omit<Todo, "priority"> {
+  priority: number;
+}
 
 // 定义 Props
-defineProps<{
-  todos: Todo[];
+const props = defineProps<{
+  todos: TodoWithNumberPriority[];
   activeId: number | null;
 }>();
 
@@ -97,13 +122,141 @@ const emit = defineEmits<{
     activityId: number,
     status: string
   ): void;
+  (e: "update-todo-priority", id: number, priority: number): void;
+  (
+    e: "batch-update-priorities",
+    updates: Array<{ id: number; priority: number }>
+  ): void;
 }>();
+
+const editingTodo = ref<TodoWithNumberPriority | null>(null);
+const editingPriority = ref<number>(0);
+
+// 处理输入框获取焦点
+function handleInputFocus(event: FocusEvent) {
+  const inputElement = event.target as HTMLInputElement;
+  if (inputElement) {
+    inputElement.select();
+  }
+}
+
+// 对待办事项按优先级降序排序（高优先级在前）
+const sortedTodos = computed(() => {
+  if (!props.todos || props.todos.length === 0) {
+    return [];
+  }
+
+  return [...props.todos].sort((a, b) => {
+    return b.priority - a.priority; // 降序排列
+  });
+});
+
+// 将数字优先级转换为对应表情符号
+function getPriorityEmoji(priority: number): string {
+  const emojis = [
+    "0️⃣",
+    "1️⃣",
+    "2️⃣",
+    "3️⃣",
+    "4️⃣",
+    "5️⃣",
+    "6️⃣",
+    "7️⃣",
+    "8️⃣",
+    "9️⃣",
+    "🔟",
+  ];
+  return priority >= 0 && priority <= 10 ? emojis[priority] : "❓";
+}
+
+// 开始编辑优先级
+function startEditing(todo: TodoWithNumberPriority) {
+  editingTodo.value = todo;
+  editingPriority.value = todo.priority;
+}
+
+// 完成编辑优先级并处理优先级冲突
+function finishEditing() {
+  if (!editingTodo.value) return;
+
+  // 检查任务数量是否已经达到限制
+  const prioritizedTodos = props.todos.filter((todo) => todo.priority > 0);
+  if (
+    prioritizedTodos.length >= 10 &&
+    editingPriority.value > 0 &&
+    editingTodo.value.priority === 0
+  ) {
+    console.warn("今天已经有10件优先事项了，不能再添加了");
+    editingTodo.value = null;
+    return;
+  }
+
+  // 如果优先级没有变化，直接退出编辑模式
+  if (editingPriority.value === editingTodo.value.priority) {
+    editingTodo.value = null;
+    return;
+  }
+
+  // 收集所有任务的优先级，按照优先级排序
+  let activeTodos = props.todos
+    .filter((todo) => todo.id !== editingTodo.value!.id && todo.priority > 0)
+    .sort((a, b) => a.priority - b.priority);
+
+  // 创建更新列表
+  const updates: Array<{ id: number; priority: number }> = [];
+
+  // 如果设置为0，只需要更新当前任务
+  if (editingPriority.value === 0) {
+    updates.push({
+      id: editingTodo.value.id,
+      priority: 0,
+    });
+  }
+  // 如果是从0设置为其他值，或者改变优先级
+  else {
+    // 先插入当前编辑的任务
+    const updatedTodos = [
+      ...activeTodos.filter((t) => t.priority < editingPriority.value),
+      { ...editingTodo.value, priority: editingPriority.value },
+      ...activeTodos.filter((t) => t.priority >= editingPriority.value),
+    ];
+
+    // 重新分配优先级，确保从1开始连续
+    updatedTodos.forEach((todo, index) => {
+      const newPriority = index + 1;
+      if (todo.id === editingTodo.value!.id || todo.priority !== newPriority) {
+        updates.push({
+          id: todo.id,
+          priority: newPriority,
+        });
+      }
+    });
+  }
+
+  // 发送批量更新事件
+  if (updates.length > 0) {
+    emit("batch-update-priorities", updates);
+
+    // 立即更新本地状态以获得良好的用户体验
+    updates.forEach((update) => {
+      const todo = props.todos.find((t) => t.id === update.id);
+      if (todo) {
+        todo.priority = update.priority;
+      }
+    });
+
+    console.log("优先级已更新，保持了优先级的连续性");
+  }
+
+  // 退出编辑模式
+  editingTodo.value = null;
+}
 
 function handleDropTodo(id: number) {
   emit("drop-todo", id);
 }
 
-function handleCheckboxChange(todo: Todo, checked: boolean) {
+function handleCheckboxChange(todo: TodoWithNumberPriority, checked: boolean) {
   const newStatus = checked ? "done" : "";
   todo.status = newStatus;
 
@@ -134,7 +287,7 @@ function handleCheckboxChange(todo: Todo, checked: boolean) {
   border-bottom: 2px solid #ddd; /* 底部边框 */
   white-space: nowrap; /* 防止文本换行 */
   overflow: hidden; /* 隐藏溢出内容 */
-  height: 28px; /* 固定高度 */
+  height: 32px; /* 固定高度 */
 }
 
 /* 表格内容样式 */
@@ -145,6 +298,12 @@ function handleCheckboxChange(todo: Todo, checked: boolean) {
   white-space: nowrap; /* 防止文本换行 */
   overflow: hidden; /* 隐藏溢出内容 */
   height: 20px; /* 固定高度 */
+}
+
+/* 优先级单元格样式 */
+.priority-cell {
+  cursor: pointer;
+  text-align: center;
 }
 
 /* 允许描述列显示省略号 */
@@ -164,7 +323,7 @@ function handleCheckboxChange(todo: Todo, checked: boolean) {
 
 /* 空行样式 */
 .empty-row td {
-  height: 28px;
+  height: 40px;
   text-align: center;
 }
 </style>
