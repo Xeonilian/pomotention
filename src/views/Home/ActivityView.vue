@@ -21,6 +21,7 @@
       @add-todo="addTodoRow"
       @add-schedule="addScheduleRow"
       @delete-active="deleteActiveRow"
+      @toggle-pomo-type="togglePomoType"
     />
   </div>
   <ActivitySheet
@@ -46,6 +47,7 @@ const emit = defineEmits<{
   "add-activity": [activity: Activity];
   "delete-activity": [id: number];
   "update-active-id": [id: number | null];
+  "toggle-pomo-type": [id: number];
 }>();
 
 const filterOptions = [
@@ -160,10 +162,9 @@ function getCountdownClass(dueDate: number | undefined | null): string {
   return "";
 }
 
-// 9
-// function changPomoType(id: number) {
-//   emit("set-pomo-type", id);
-// }
+function togglePomoType() {
+  if (props.activeId !== null) emit("toggle-pomo-type", props.activeId);
+}
 </script>
 
 <style scoped>

@@ -76,7 +76,26 @@
           @add-activity="handleAddActivity"
           @delete-activity="handleDeleteActivity"
           @update-active-id="updateActiveId"
+          @toggle-pomo-type="handleTogglePomoType"
         />
+        <!-- 使用 Naive UI 的 popover -->
+        <n-popover
+          v-if="showPomoTypeChangePopover"
+          :show="showPomoTypeChangePopover"
+          trigger="manual"
+          pplacement="bottom-end"
+          @update:show="showPomoTypeChangePopover = $event"
+        >
+          <template #trigger>
+            <div
+              ref="pomoTypeChangeTarget"
+              style="position: fixed; right: 20px; bottom: 20px"
+            ></div>
+          </template>
+          <div style="padding: 0px 0px">
+            {{ pomoTypeChangeMessage }}
+          </div>
+        </n-popover>
       </div>
     </div>
   </div>
@@ -84,7 +103,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, watch, onUnmounted } from "vue";
-import { NButton } from "naive-ui";
+import { NButton, NPopover } from "naive-ui";
 import TimeTableView from "@/views/Home/TimeTableView.vue";
 import TodayView from "@/views//Home/TodayView.vue";
 import TaskView from "@/views//Home/TaskView.vue";
@@ -585,6 +604,49 @@ watch(
     //console.log( "【watch结束】当前 scheduleList:",JSON.parse(JSON.stringify(scheduleList.value)));
   }
 );
+
+// 切换Activity的pomoType
+const showPomoTypeChangePopover = ref(false);
+const pomoTypeChangeMessage = ref("");
+const pomoTypeChangeTarget = ref<HTMLElement | null>(null);
+function handleTogglePomoType(id: number) {
+  // 查找对应的活动
+  const activity = activityList.value.find((a) => a.id === id);
+  if (!activity) {
+    console.log(`没有找到ID为${id}的活动`);
+    return;
+  }
+
+  // 如果是S类型的活动，不进行操作
+  if (activity.class === "S") {
+    console.log(`ID为${id}的活动是S类型，不能修改番茄类型`);
+    return;
+  }
+
+  // 番茄类型及其顺序
+  const pomoTypes: ("🍅" | "🍇" | "🍒")[] = ["🍅", "🍇", "🍒"];
+
+  // 获取当前番茄类型的索引，如果未设置则默认为"🍅"
+  const currentType = activity.pomoType || "🍅";
+  const currentIndex = pomoTypes.indexOf(currentType);
+
+  // 计算下一个类型的索引
+  const nextIndex = (currentIndex + 1) % pomoTypes.length;
+  // 确保新的番茄类型符合 Activity.pomoType 的类型定义
+  const newPomoType: "🍅" | "🍇" | "🍒" = pomoTypes[nextIndex];
+
+  // 设置 popover 消息并显示
+  pomoTypeChangeMessage.value = `番茄类型从${currentType}更改为${newPomoType}`;
+  showPomoTypeChangePopover.value = true;
+
+  // 3秒后自动关闭提示
+  setTimeout(() => {
+    showPomoTypeChangePopover.value = false;
+  }, 3000);
+
+  // 更新活动的番茄类型
+  activity.pomoType = newPomoType;
+}
 
 // 4 TaskView 数据传递
 

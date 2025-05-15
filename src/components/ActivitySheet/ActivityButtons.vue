@@ -57,10 +57,11 @@
     </n-button>
     <n-button
       title="番茄类型"
-      @click="$emit('set-pomo-type')"
+      @click="$emit('toggle-pomo-type')"
       circle
       secondary
       type="success"
+      :disabled="activeId === null || isSelectedClassS"
     >
       <template #icon
         ><n-icon><ArrowRepeatAll24Regular /></n-icon
@@ -121,7 +122,7 @@ defineEmits([
   "add-todo",
   "add-schedule",
   "delete-active",
-  "set-pomo-type",
+  "toggle-pomo-type",
 ]);
 </script>
 

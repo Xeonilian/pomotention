@@ -56,9 +56,10 @@
       <n-input
         v-if="item.class === 'T'"
         v-model:value="item.estPomoI"
-        placeholder="🍅"
+        :placeholder="item.pomoType"
         style="max-width: 42px"
         @focus="$emit('focus-row', item.id)"
+        :title="`输入估计${item.pomoType || '🍅'}数量`"
       />
       <n-input
         v-else
