@@ -109,116 +109,36 @@ import TodayView from "@/views//Home/TodayView.vue";
 import TaskView from "@/views//Home/TaskView.vue";
 import ActivityView from "@/views//Home/ActivityView.vue";
 import type { Activity } from "@/core/types/Activity";
-import { getTimestampForTimeString, addOneDayToDate } from "@/core/utils";
 import type { Block } from "@/core/types/Block";
 import type { Todo } from "@/core/types/Todo";
 import type { Schedule } from "@/core/types/Schedule";
-import { isToday } from "@/core/utils";
+import { addOneDayToDate, isToday } from "@/core/utils";
+import {
+  STORAGE_KEYS,
+  WORK_BLOCKS,
+  ENTERTAINMENT_BLOCKS,
+  POMO_TYPES,
+} from "@/core/constants";
+
 // 1 界面控制参数定义
 const showLeft = ref(true);
 const showMiddleTop = ref(true);
 const showRight = ref(true);
 
 // 2 TimeTableView 数据传递
-const STORAGE_KEY_TIMETABLE = "myScheduleBlocks";
-// 默认日程数据
-const workBlocks: Block[] = [
-  {
-    id: "1",
-    category: "living",
-    start: getTimestampForTimeString("06:00"),
-    end: getTimestampForTimeString("09:00"),
-  },
-  {
-    id: "2",
-    category: "working",
-    start: getTimestampForTimeString("09:00"),
-    end: getTimestampForTimeString("12:00"),
-  },
-  {
-    id: "3",
-    category: "living",
-    start: getTimestampForTimeString("12:00"),
-    end: getTimestampForTimeString("13:00"),
-  },
-  {
-    id: "4",
-    category: "working",
-    start: getTimestampForTimeString("13:00"),
-    end: getTimestampForTimeString("15:00"),
-  },
-  {
-    id: "5",
-    category: "living",
-    start: getTimestampForTimeString("15:00"),
-    end: getTimestampForTimeString("15:15"),
-  },
-  {
-    id: "6",
-    category: "working",
-    start: getTimestampForTimeString("15:15"),
-    end: getTimestampForTimeString("17:40"),
-  },
-  {
-    id: "7",
-    category: "living",
-    start: getTimestampForTimeString("17:40"),
-    end: getTimestampForTimeString("18:10"),
-  },
-  {
-    id: "8",
-    category: "working",
-    start: getTimestampForTimeString("18:10"),
-    end: getTimestampForTimeString("19:40"),
-  },
-  {
-    id: "9",
-    category: "living",
-    start: getTimestampForTimeString("19:40"),
-    end: getTimestampForTimeString("20:00"),
-  },
-  {
-    id: "10",
-    category: "working",
-    start: getTimestampForTimeString("20:00"),
-    end: getTimestampForTimeString("24:00"),
-  },
-];
-
-const entertainmentBlocks: Block[] = [
-  {
-    id: "1",
-    category: "sleeping",
-    start: getTimestampForTimeString("00:00"),
-    end: getTimestampForTimeString("09:00"),
-  },
-  {
-    id: "2",
-    category: "living",
-    start: getTimestampForTimeString("09:00"),
-    end: getTimestampForTimeString("22:00"),
-  },
-  {
-    id: "3",
-    category: "sleeping",
-    start: getTimestampForTimeString("22:00"),
-    end: getTimestampForTimeString("24:00"),
-  },
-];
-
 const blocks = ref<Block[]>([]);
 
 // 读取本地数据
 onMounted(() => {
   try {
-    const local = localStorage.getItem(STORAGE_KEY_TIMETABLE);
+    const local = localStorage.getItem(STORAGE_KEYS.TIMETABLE);
     if (local) {
       blocks.value = JSON.parse(local);
     } else {
-      blocks.value = [...workBlocks]; // 没有就用默认
+      blocks.value = [...WORK_BLOCKS]; // 没有就用默认
     }
   } catch {
-    blocks.value = [...workBlocks];
+    blocks.value = [...WORK_BLOCKS];
   }
 });
 
@@ -226,7 +146,7 @@ onMounted(() => {
 watch(
   blocks,
   (newVal) => {
-    localStorage.setItem(STORAGE_KEY_TIMETABLE, JSON.stringify(newVal));
+    localStorage.setItem(STORAGE_KEYS.TIMETABLE, JSON.stringify(newVal));
   },
   { deep: true }
 );
@@ -238,16 +158,12 @@ function onBlocksUpdate(newBlocks: Block[]) {
 
 /** “重置”事件，区分工作/娱乐 */
 function onTimeTableReset(type: "work" | "entertainment") {
-  blocks.value = type === "work" ? [...workBlocks] : [...entertainmentBlocks];
-  localStorage.removeItem(STORAGE_KEY_TIMETABLE); // 可选，重置时也清理
+  blocks.value = type === "work" ? [...WORK_BLOCKS] : [...ENTERTAINMENT_BLOCKS];
+  localStorage.removeItem(STORAGE_KEYS.TIMETABLE); // 可选，重置时也清理
 }
 
 // 3 ActivityView 和 TodayView 数据管理
 // 3.1 数据构造
-const STORAGE_KEY_ACTIVITY = "activitySheet";
-const STORAGE_KEY_TODO = "todayTodo";
-const STORAGE_KEY_SCHEDULE = "todaySchedule";
-
 const activityList = ref<Activity[]>(loadActivities());
 const todoList = ref<Todo[]>(loadTodos());
 const scheduleList = ref<Schedule[]>(loadSchedules());
@@ -257,7 +173,7 @@ const activeId = ref<number | null>(null); // 是Activity中定义的ID
 // 加载数据
 function loadActivities(): Activity[] {
   try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY_ACTIVITY) || "[]");
+    return JSON.parse(localStorage.getItem(STORAGE_KEYS.ACTIVITY) || "[]");
   } catch {
     return [];
   }
@@ -265,7 +181,7 @@ function loadActivities(): Activity[] {
 
 function loadTodos(): Todo[] {
   try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY_TODO) || "[]");
+    return JSON.parse(localStorage.getItem(STORAGE_KEYS.TODO) || "[]");
   } catch {
     return [];
   }
@@ -273,7 +189,7 @@ function loadTodos(): Todo[] {
 
 function loadSchedules(): Schedule[] {
   try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY_SCHEDULE) || "[]");
+    return JSON.parse(localStorage.getItem(STORAGE_KEYS.SCHEDULE) || "[]");
   } catch {
     return [];
   }
@@ -282,18 +198,18 @@ function loadSchedules(): Schedule[] {
 // 保存数据
 function saveActivities() {
   localStorage.setItem(
-    STORAGE_KEY_ACTIVITY,
+    STORAGE_KEYS.ACTIVITY,
     JSON.stringify(activityList.value)
   );
 }
 
 function saveTodos() {
-  localStorage.setItem(STORAGE_KEY_TODO, JSON.stringify(todoList.value));
+  localStorage.setItem(STORAGE_KEYS.TODO, JSON.stringify(todoList.value));
 }
 
 function saveSchedules() {
   localStorage.setItem(
-    STORAGE_KEY_SCHEDULE,
+    STORAGE_KEYS.SCHEDULE,
     JSON.stringify(scheduleList.value)
   );
 }
@@ -623,17 +539,14 @@ function handleTogglePomoType(id: number) {
     return;
   }
 
-  // 番茄类型及其顺序
-  const pomoTypes: ("🍅" | "🍇" | "🍒")[] = ["🍅", "🍇", "🍒"];
-
   // 获取当前番茄类型的索引，如果未设置则默认为"🍅"
   const currentType = activity.pomoType || "🍅";
-  const currentIndex = pomoTypes.indexOf(currentType);
+  const currentIndex = POMO_TYPES.indexOf(currentType);
 
   // 计算下一个类型的索引
-  const nextIndex = (currentIndex + 1) % pomoTypes.length;
+  const nextIndex = (currentIndex + 1) % POMO_TYPES.length;
   // 确保新的番茄类型符合 Activity.pomoType 的类型定义
-  const newPomoType: "🍅" | "🍇" | "🍒" = pomoTypes[nextIndex];
+  const newPomoType: "🍅" | "🍇" | "🍒" = POMO_TYPES[nextIndex];
 
   // 设置 popover 消息并显示
   pomoTypeChangeMessage.value = `番茄类型从${currentType}更改为${newPomoType}`;
