@@ -44,14 +44,14 @@
             <td class="ellipsis">{{ schedule.location ?? "-" }}</td>
             <td>
               <n-button
-                size="small"
+                size="tiny"
                 type="error"
                 secondary
                 @click="handleSuspendSchedule(schedule.id)"
               >
                 <template #icon>
-                  <n-icon size="16">
-                    <Delete24Regular />
+                  <n-icon size="18">
+                    <ChevronCircleRight48Regular />
                   </n-icon>
                 </template>
               </n-button>
@@ -72,7 +72,7 @@
 import type { Schedule } from "@/core/types/Schedule";
 import { formatTime } from "@/core/utils";
 import { NCheckbox } from "naive-ui";
-import { Delete24Regular } from "@vicons/fluent";
+import { ChevronCircleRight48Regular } from "@vicons/fluent";
 
 // 定义 Props
 defineProps<{
@@ -130,8 +130,8 @@ function handleSuspendSchedule(id: number) {
 
 /* 表格内容样式 */
 .table-body td {
-  padding: 2px;
-  border-bottom: 2px solid #ddd; /* 底部边框 */
+  padding-top: 3px;
+  border-bottom: 1px solid #ddd; /* 底部边框 */
   text-align: left;
   white-space: normal; /* 允许文本换行 */
   overflow: hidden; /* 隐藏溢出内容 */

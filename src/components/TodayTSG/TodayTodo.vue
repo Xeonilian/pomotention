@@ -72,14 +72,14 @@
             </td>
             <td>
               <n-button
-                size="small"
+                size="tiny"
                 type="error"
                 secondary
                 @click="handleDropTodo(todo.id)"
               >
                 <template #icon>
-                  <n-icon size="16">
-                    <Delete24Regular />
+                  <n-icon size="18">
+                    <ChevronCircleRight48Regular />
                   </n-icon>
                 </template>
               </n-button>
@@ -113,7 +113,7 @@
 <script setup lang="ts">
 import type { Todo } from "@/core/types/Todo";
 import { formatTime } from "@/core/utils";
-import { Delete24Regular } from "@vicons/fluent";
+import { ChevronCircleRight48Regular } from "@vicons/fluent";
 import { NCheckbox, NInputNumber, NPopover } from "naive-ui";
 import { ref, computed } from "vue";
 
@@ -193,7 +193,6 @@ function startEditing(todo: TodoWithNumberPriority) {
   editingPriority.value = todo.priority;
 }
 
-// 完成编辑优先级并处理优先级冲突
 // 完成编辑优先级并处理优先级冲突
 function finishEditing() {
   if (!editingTodo.value) return;
@@ -345,8 +344,8 @@ function handleCheckboxChange(todo: TodoWithNumberPriority, checked: boolean) {
 
 /* 表格内容样式 */
 .table-body td {
-  padding: 2px;
-  border-bottom: 2px solid #ddd; /* 底部边框 */
+  padding-top: 3px;
+  border-bottom: 1px solid #ddd; /* 底部边框 */
   text-align: left;
   white-space: normal; /* 允许文本换行 */
   overflow: hidden; /* 隐藏溢出内容 */

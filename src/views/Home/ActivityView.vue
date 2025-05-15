@@ -54,6 +54,8 @@ const filterOptions = [
   { label: "今日到期", key: "today" },
   { label: "内外打扰", key: "interrupt" },
   { label: "显示全部", key: "all" },
+  { label: "待办任务", key: "todo" },
+  { label: "预约任务", key: "schedule" },
 ];
 
 // 获取当前选中活动的 class
@@ -110,6 +112,12 @@ const filteredActivities = computed(() => {
       }
     } else if (currentFilter.value === "interrupt") {
       return !!item.interruption;
+    } else if (currentFilter.value === "todo") {
+      // 只显示任务（class 为 T）
+      return item.class === "T";
+    } else if (currentFilter.value === "schedule") {
+      // 只显示预约（class 为 S）
+      return item.class === "S";
     }
     return false;
   });

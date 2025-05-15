@@ -16,7 +16,7 @@
   <Activities :displaySheet="activitySheet" :getCountdownClass="getCountdownClass" @focus-row="handleFocusRow" />
 -->
 <template>
-  <div v-for="item in displaySheet" :key="item.id">
+  <div v-for="item in sortedDisplaySheet" :key="item.id">
     <div v-if="item.status !== 'done'" class="activity-row">
       <n-input
         v-model:value="item.title"
@@ -109,6 +109,7 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from "vue";
 import { NInput, NDatePicker, NIcon } from "naive-ui";
 import {
   VideoPersonSparkle24Regular,
@@ -119,12 +120,21 @@ import {
 import type { Activity } from "@/core/types/Activity";
 
 // 接收发射数据
-defineProps<{
+const props = defineProps<{
   displaySheet: Activity[];
   getCountdownClass: (dueDate: number | undefined | null) => string;
 }>();
 
 defineEmits(["focus-row"]);
+
+// 排序：T类型优先，其次S类型，其他类照旧
+const sortedDisplaySheet = computed(() =>
+  props.displaySheet.slice().sort((a, b) => {
+    if (a.class === "T" && b.class !== "T") return -1;
+    if (a.class !== "T" && b.class === "T") return 1;
+    return 0;
+  })
+);
 </script>
 
 <style scoped>
