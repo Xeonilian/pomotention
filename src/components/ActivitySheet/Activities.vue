@@ -47,17 +47,39 @@
         </template>
       </n-input>
       <n-input
+        v-if="item.class === 'S'"
+        v-model:value="item.location"
+        style="max-width: 60px"
+        @focus="$emit('focus-row', item.id)"
+        placeholder="地点"
+      />
+      <n-input
         v-if="item.class === 'T'"
         v-model:value="item.estPomoI"
         placeholder="🍅"
-        style="max-width: 45px"
+        style="max-width: 42px"
         @focus="$emit('focus-row', item.id)"
       />
+      <n-input
+        v-else
+        :value="item.dueRange ? item.dueRange[1] : ''"
+        @update:value="
+          (val) =>
+            item.dueRange
+              ? (item.dueRange[1] = val)
+              : (item.dueRange = [Date.now(), val])
+        "
+        style="max-width: 42px"
+        @focus="$emit('focus-row', item.id)"
+        title="持续时间(分钟)"
+        placeholder="min"
+      />
+
       <n-date-picker
         v-if="item.class === 'T'"
         v-model:value="item.dueDate"
         type="date"
-        style="max-width: 125px"
+        style="max-width: 90px"
         clearable
         format="MM-dd"
         @focus="$emit('focus-row', item.id)"
@@ -66,14 +88,20 @@
       />
       <n-date-picker
         v-else
-        v-model:value="item.dueRange"
-        type="datetimerange"
-        style="max-width: 170px"
+        :value="item.dueRange ? item.dueRange[0] : 0"
+        @update:value="
+          (val) =>
+            item.dueRange
+              ? (item.dueRange[0] = val)
+              : (item.dueRange = [Date.now(), ''])
+        "
+        type="datetime"
+        style="max-width: 90px"
         clearable
         format="HH:mm"
         @focus="$emit('focus-row', item.id)"
         title="约定时间"
-        :class="getCountdownClass(item.dueRange && item.dueRange[1])"
+        :class="getCountdownClass(item.dueRange && item.dueRange[0])"
       />
     </div>
   </div>

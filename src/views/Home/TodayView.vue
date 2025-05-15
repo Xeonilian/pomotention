@@ -15,13 +15,15 @@
   Parent: HomeView.vue
 -->
 <template>
-  <div class="today-container">
+  <div class="todo-container">
     <TodayTodo
       :todos="todoList"
       :activeId="activeId"
       @update-todo-status="updateTodoStatus"
       @drop-todo="handleDropTodo"
     />
+  </div>
+  <div class="schedule-container">
     <TodaySchedule
       :schedules="scheduleList"
       :activeId="activeId"
@@ -76,3 +78,8 @@ function handleDropTodo(id: number) {
   emit("drop-todo", id);
 }
 </script>
+<style scoped>
+.schedule-container {
+  margin-top: 5px;
+}
+</style>

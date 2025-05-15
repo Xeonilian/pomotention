@@ -13,54 +13,63 @@
       <!-- 表头部分，可单独调整样式 -->
       <thead class="table-header">
         <tr>
-          <th style="width: 8%">状态</th>
-          <th style="width: 8%">优先</th>
-          <th style="width: 16%">开始</th>
-          <th style="width: 30%">描述</th>
-          <th style="width: 30%">估计/实际</th>
-          <th style="width: 8%">取消</th>
+          <th style="width: 30px"></th>
+          <th style="width: 60px">开始</th>
+          <th style="width: 60px">优先</th>
+          <th style="width: calc((100% - 180px) / 2)">描述</th>
+          <th style="width: calc((100% - 180px) / 2)">番茄</th>
+          <th style="width: 30px"></th>
         </tr>
       </thead>
       <!-- 表格内容部分，可单独调整样式 -->
       <tbody class="table-body">
-        <tr
-          v-for="todo in todos"
-          :key="todo.id"
-          :class="{ 'active-row': todo.activityId === activeId }"
-        >
-          <td>
-            <n-checkbox
-              :checked="todo.status === 'done'"
-              @update:checked="handleCheckboxChange(todo, $event)"
-            />
-          </td>
-
-          <td>{{ todo.priority }}</td>
-          <td>{{ todo.taskId ? formatTime(todo.taskId) : "-" }}</td>
-          <td>{{ todo.activityTitle ?? "-" }}</td>
-          <td>
-            {{
-              todo.estPomo && todo.estPomo.length ? todo.estPomo.join("/") : "-"
-            }}
-            /
-            {{
-              todo.realPomo && todo.realPomo.length
-                ? todo.realPomo.join("/")
-                : "-"
-            }}
-          </td>
-          <td>
-            <n-button
-              size="small"
-              type="error"
-              @click="handleDropTodo(todo.id)"
-            >
-              <template #icon>
-                <n-icon size="16">
-                  <Delete24Regular />
-                </n-icon>
-              </template>
-            </n-button>
+        <template v-if="todos && todos.length > 0">
+          <tr
+            v-for="todo in todos"
+            :key="todo.id"
+            :class="{ 'active-row': todo.activityId === activeId }"
+          >
+            <td>
+              <n-checkbox
+                :checked="todo.status === 'done'"
+                @update:checked="handleCheckboxChange(todo, $event)"
+              />
+            </td>
+            <td>{{ todo.taskId ? formatTime(todo.taskId) : "-" }}</td>
+            <td>{{ todo.priority }}</td>
+            <td class="ellipsis">{{ todo.activityTitle ?? "-" }}</td>
+            <td>
+              {{
+                todo.estPomo && todo.estPomo.length
+                  ? todo.estPomo.join("/")
+                  : "-"
+              }}
+              /
+              {{
+                todo.realPomo && todo.realPomo.length
+                  ? todo.realPomo.join("/")
+                  : "-"
+              }}
+            </td>
+            <td>
+              <n-button
+                size="small"
+                type="error"
+                secondary
+                @click="handleDropTodo(todo.id)"
+              >
+                <template #icon>
+                  <n-icon size="16">
+                    <Delete24Regular />
+                  </n-icon>
+                </template>
+              </n-button>
+            </td>
+          </tr>
+        </template>
+        <tr v-else class="empty-row">
+          <td colspan="6" style="text-align: center; padding: 10px">
+            暂无今日待办
           </td>
         </tr>
       </tbody>
@@ -113,20 +122,34 @@ function handleCheckboxChange(todo: Todo, checked: boolean) {
 .full-width-table {
   width: 100%;
   border-collapse: collapse; /* 合并边框 */
+  table-layout: fixed; /* 使用固定布局算法 */
 }
 
 /* 表头样式 */
 .table-header th {
-  background-color: #f5f5f5; /* 背景色 */
-  padding: 10px;
+  background-color: #ffe9e1; /* 背景色 */
+  padding: 2px;
   text-align: left;
+  border-top: 2px solid #ddd; /* 顶部边框 */
   border-bottom: 2px solid #ddd; /* 底部边框 */
+  white-space: nowrap; /* 防止文本换行 */
+  overflow: hidden; /* 隐藏溢出内容 */
+  height: 28px; /* 固定高度 */
 }
 
 /* 表格内容样式 */
 .table-body td {
-  padding: 10px;
-  border-bottom: 1px solid #ddd; /* 底部边框 */
+  padding: 2px;
+  border-bottom: 2px solid #ddd; /* 底部边框 */
+  text-align: left;
+  white-space: nowrap; /* 防止文本换行 */
+  overflow: hidden; /* 隐藏溢出内容 */
+  height: 20px; /* 固定高度 */
+}
+
+/* 允许描述列显示省略号 */
+.ellipsis {
+  text-overflow: ellipsis; /* 文本溢出显示省略号 */
 }
 
 /* 隔行变色 */
@@ -137,5 +160,11 @@ function handleCheckboxChange(todo: Todo, checked: boolean) {
 /* 激活行样式 */
 .table-body tr.active-row {
   background-color: rgba(255, 255, 0, 0.378); /* 激活行的底色为黄色 */
+}
+
+/* 空行样式 */
+.empty-row td {
+  height: 28px;
+  text-align: center;
 }
 </style>

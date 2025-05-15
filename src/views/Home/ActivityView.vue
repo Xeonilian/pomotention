@@ -18,7 +18,7 @@
       :selectedClass="selectedActivity?.class"
       @pick-activity-todo="pickActivity"
       @filter="handleFilter"
-      @add-task="addTaskRow"
+      @add-todo="addTodoRow"
       @add-schedule="addScheduleRow"
       @delete-active="deleteActiveRow"
     />
@@ -42,11 +42,10 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  (e: "pick-activity-todo", activity: Activity): void;
-  (e: "add-activity", activity: Activity): void;
-  (e: "delete-activity", id: number): void;
-  (e: "update-active-id", id: number | null): void;
-  (e: "set-pomo-type", id: number | null): void;
+  "pick-activity-todo": [activity: Activity];
+  "add-activity": [activity: Activity];
+  "delete-activity": [id: number];
+  "update-active-id": [id: number | null];
 }>();
 
 const filterOptions = [
@@ -120,18 +119,18 @@ function addScheduleRow() {
     id: Date.now(),
     class: "S",
     title: "",
-    dueRange: [Date.now(), Date.now()],
+    dueRange: [Date.now(), ""],
   });
 }
 
 // 5 增加任务活动
-function addTaskRow() {
+function addTodoRow() {
   emit("add-activity", {
     id: Date.now(),
     class: "T",
     title: "",
     estPomoI: "",
-    pomoType: '🍅'
+    pomoType: "🍅",
   });
 }
 
@@ -161,10 +160,10 @@ function getCountdownClass(dueDate: number | undefined | null): string {
   return "";
 }
 
-// 9 
-function changPomoType(id: number) {
-  emit("set-pomo-type", id);
-}
+// 9
+// function changPomoType(id: number) {
+//   emit("set-pomo-type", id);
+// }
 </script>
 
 <style scoped>
@@ -175,7 +174,7 @@ function changPomoType(id: number) {
   margin: 0 auto 10px auto; /* 水平居中+下方间距 */
   background-color: rgb(245, 245, 245);
   border-radius: 15px; /* 建议用像素，百分号效果容易变形 */
-  width: 200px;
+  width: 250px;
   height: 50px;
   display: flex; /* 加flex布局 */
   align-items: center; /* 垂直居中（高度方向） */

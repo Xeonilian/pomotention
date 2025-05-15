@@ -22,49 +22,107 @@
 
 <template>
   <div class="activity-view-button-container">
-    <n-button @click="$emit('pick-activity-todo')" :disabled="isSelectedClassS" secondary circle type="info" title="选择活动">
+    <n-button
+      @click="$emit('pick-activity-todo')"
+      :disabled="isSelectedClassS"
+      secondary
+      circle
+      type="info"
+      title="选择活动"
+    >
       <template #icon>
         <n-icon><ChevronCircleLeft48Regular /></n-icon>
       </template>
     </n-button>
-    <n-dropdown :options="filterOptions" @select="key => $emit('filter', key)">
+    <n-dropdown
+      :options="filterOptions"
+      @select="(key) => $emit('filter', key)"
+    >
       <n-button strong secondary circle type="info" title="筛选活动">
         <template #icon>
-          <n-icon><DocumentTableSearch24Regular/></n-icon>
+          <n-icon><DocumentTableSearch24Regular /></n-icon>
         </template>
       </n-button>
     </n-dropdown>
-    <n-button @click="$emit('add-task')" circle secondary type="success" title="添加任务">
-      <template #icon><n-icon><AddCircle24Regular /></n-icon></template>
+    <n-button
+      @click="$emit('add-todo')"
+      circle
+      secondary
+      type="success"
+      title="添加任务"
+    >
+      <template #icon
+        ><n-icon><AddCircle24Regular /></n-icon
+      ></template>
     </n-button>
-    <n-button title="添加预约" @click="$emit('add-schedule')" circle secondary type="warning">
-      <template #icon><n-icon><BookAdd24Regular /></n-icon></template>
+    <n-button
+      title="番茄类型"
+      @click="$emit('set-pomo-type')"
+      circle
+      secondary
+      type="success"
+    >
+      <template #icon
+        ><n-icon><ArrowRepeatAll24Regular /></n-icon
+      ></template>
     </n-button>
-    <n-button title="删除活动" @click="$emit('delete-active')" circle secondary type="error" :disabled="activeId === null">
-      <template #icon><n-icon><Delete24Regular /></n-icon></template>
+    <n-button
+      title="添加预约"
+      @click="$emit('add-schedule')"
+      circle
+      secondary
+      type="warning"
+    >
+      <template #icon
+        ><n-icon><BookAdd24Regular /></n-icon
+      ></template>
     </n-button>
-    <n-button title="番茄类型" @click="$emit('set-pomo-type')" circle secondary type="warning" >
-      <template #icon><n-icon><ArrowRepeatAll24Regular /></n-icon></template>
+
+    <n-button
+      title="删除活动"
+      @click="$emit('delete-active')"
+      circle
+      secondary
+      type="error"
+      :disabled="activeId === null"
+    >
+      <template #icon
+        ><n-icon><Delete24Regular /></n-icon
+      ></template>
     </n-button>
   </div>
 </template>
-  
+
 <script setup lang="ts">
-import { computed } from 'vue'
-import { NButton, NIcon, NDropdown } from "naive-ui"
-import { AddCircle24Regular, Delete24Regular, ChevronCircleLeft48Regular, DocumentTableSearch24Regular, BookAdd24Regular, ArrowRepeatAll24Regular } from '@vicons/fluent'
+import { computed } from "vue";
+import { NButton, NIcon, NDropdown } from "naive-ui";
+import {
+  AddCircle24Regular,
+  Delete24Regular,
+  ChevronCircleLeft48Regular,
+  DocumentTableSearch24Regular,
+  BookAdd24Regular,
+  ArrowRepeatAll24Regular,
+} from "@vicons/fluent";
 
 const props = defineProps<{
-  filterOptions: any[],
-  activeId: number | null
-  selectedClass?: 'T' | 'S'  // 从父组件传递
-}>()
+  filterOptions: any[];
+  activeId: number | null;
+  selectedClass?: "T" | "S"; // 从父组件传递
+}>();
 
 const isSelectedClassS = computed(() => {
-return props.selectedClass === 'S'
-})
+  return props.selectedClass === "S";
+});
 
-defineEmits(['pick-activity-todo', 'filter', 'add-task', 'add-schedule', 'delete-active' , 'set-pomo-type'])
+defineEmits([
+  "pick-activity-todo",
+  "filter",
+  "add-todo",
+  "add-schedule",
+  "delete-active",
+  "set-pomo-type",
+]);
 </script>
 
 <style scoped>

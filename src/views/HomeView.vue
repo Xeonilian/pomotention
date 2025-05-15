@@ -22,7 +22,6 @@
             :todoList="todoList"
             :scheduleList="scheduleList"
             :activeId="activeId"
-            @update-active-id="updateActiveId"
             @update-schedule-status="updateScheduleStatus"
             @update-todo-status="updateTodoStatus"
             @drop-todo="handleDropTodo"
@@ -387,7 +386,7 @@ watch(
         relatedSchedule.activityTitle = activity.title;
         relatedSchedule.activityDueRange = activity.dueRange
           ? [activity.dueRange[0], activity.dueRange[1]]
-          : [0, 0];
+          : [0, "0"];
         relatedSchedule.status = activity.status || "";
         relatedSchedule.location = activity.location || "";
       }
@@ -507,10 +506,10 @@ function handleSuspendSchedule(id: number) {
       console.log(`Activity with id ${activity.id} status updated to delayed`);
 
       if (activity.dueRange) {
-        // 将 dueRange 的两个时间都加1天
+        // 将 dueRange 的时间都加1天
         activity.dueRange = [
           addOneDayToDate(activity.dueRange[0]),
-          addOneDayToDate(activity.dueRange[1]),
+          activity.dueRange[1],
         ];
       } else {
         console.log(`Activity with id ${activity.id} does not have dueRange`);
@@ -558,7 +557,7 @@ watch(
             sch.activityTitle = activity.title;
             sch.activityDueRange = activity.dueRange
               ? [...activity.dueRange]
-              : [0, 0];
+              : [0, "0"];
             sch.status = activity.status || "";
             sch.projectName = activity.projectId
               ? `项目${activity.projectId}`
