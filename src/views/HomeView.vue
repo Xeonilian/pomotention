@@ -22,10 +22,10 @@
             :todoList="todoList"
             :scheduleList="scheduleList"
             :activeId="activeId"
-            @update-schedule-status="updateScheduleStatus"
-            @update-todo-status="updateTodoStatus"
-            @drop-todo="handleDropTodo"
-            @suspend-schedule="handleSuspendSchedule"
+            @update-schedule-status="onUpdateScheduleStatus"
+            @update-todo-status="onUpdateTodoStatus"
+            @drop-todo="onDropTodo"
+            @suspend-schedule="onSuspendSchedule"
           />
         </div>
         <div class="middle-bottom">
@@ -72,11 +72,11 @@
         <ActivityView
           :activities="activityList"
           :activeId="activeId"
-          @pick-activity-todo="passPickedActivity"
-          @add-activity="handleAddActivity"
-          @delete-activity="handleDeleteActivity"
-          @update-active-id="updateActiveId"
-          @toggle-pomo-type="handleTogglePomoType"
+          @pick-activity-todo="onPickActivity"
+          @add-activity="onAddActivity"
+          @delete-activity="onDeleteActivity"
+          @update-active-id="onUpdateActiveId"
+          @toggle-pomo-type="onTogglePomoType"
         />
         <!-- 使用 Naive UI 的 popover -->
         <n-popover
@@ -112,202 +112,114 @@ import type { Activity } from "@/core/types/Activity";
 import type { Block } from "@/core/types/Block";
 import type { Todo } from "@/core/types/Todo";
 import type { Schedule } from "@/core/types/Schedule";
-import { addOneDayToDate, isToday } from "@/core/utils";
+import { convertToSchedule } from "@/core/utils/convertActivity";
+import { WORK_BLOCKS, ENTERTAINMENT_BLOCKS } from "@/core/constants";
 import {
-  STORAGE_KEYS,
-  WORK_BLOCKS,
-  ENTERTAINMENT_BLOCKS,
-  POMO_TYPES,
-} from "@/core/constants";
+  loadActivities,
+  loadTodos,
+  loadSchedules,
+  loadTimeBlocks,
+  saveActivities,
+  saveTodos,
+  saveSchedules,
+  saveTimeBlocks,
+  removeTimeBlocksStorage,
+} from "@/services/storageService";
+
+// Activity 相关导入
+import {
+  handleAddActivity,
+  handleDeleteActivity,
+  passPickedActivity,
+  togglePomoType,
+} from "@/services/activityService";
+
+// Today 相关导入
+import {
+  updateScheduleStatus,
+  updateTodoStatus,
+  handleDropTodo,
+  handleSuspendSchedule,
+  isToday,
+} from "@/services/todayService";
 
 // 1 界面控制参数定义
 const showLeft = ref(true);
 const showMiddleTop = ref(true);
 const showRight = ref(true);
+const showPomoTypeChangePopover = ref(false);
+const pomoTypeChangeMessage = ref("");
+const pomoTypeChangeTarget = ref<HTMLElement | null>(null);
 
-// 2 TimeTableView 数据传递
-const blocks = ref<Block[]>([]);
+// 初始化数据
+const activityList = ref<Activity[]>(loadActivities());
+const todoList = ref<Todo[]>(loadTodos());
+const scheduleList = ref<Schedule[]>(loadSchedules());
+const blocks = ref<Block[]>(loadTimeBlocks(WORK_BLOCKS));
+const pickedTodoActivity = ref<Activity | null>(null); // 当前选中的活动
+const activeId = ref<number | null>(null); // 当前激活的活动ID
 
-// 读取本地数据
-onMounted(() => {
-  try {
-    const local = localStorage.getItem(STORAGE_KEYS.TIMETABLE);
-    if (local) {
-      blocks.value = JSON.parse(local);
-    } else {
-      blocks.value = [...WORK_BLOCKS]; // 没有就用默认
-    }
-  } catch {
-    blocks.value = [...WORK_BLOCKS];
-  }
-});
+// 监听变化自动保存
+watch(activityList, (value) => saveActivities(value), { deep: true });
+watch(todoList, (value) => saveTodos(value), { deep: true });
+watch(scheduleList, (value) => saveSchedules(value), { deep: true });
+watch(blocks, (value) => saveTimeBlocks(value), { deep: true });
 
-//  blocks 每次变化就持久化本地
-watch(
-  blocks,
-  (newVal) => {
-    localStorage.setItem(STORAGE_KEYS.TIMETABLE, JSON.stringify(newVal));
-  },
-  { deep: true }
-);
+// 2 加载TimeTable数据 ----------------------------------------------------------
+// "重置"事件，区分工作/娱乐
+function onTimeTableReset(type: "work" | "entertainment") {
+  blocks.value = type === "work" ? [...WORK_BLOCKS] : [...ENTERTAINMENT_BLOCKS];
+  removeTimeBlocksStorage();
+}
 
-/** TimeTableView 发出blocks修改事件，接管更新 */
+// 更新时间区块
 function onBlocksUpdate(newBlocks: Block[]) {
   blocks.value = [...newBlocks];
 }
 
-/** “重置”事件，区分工作/娱乐 */
-function onTimeTableReset(type: "work" | "entertainment") {
-  blocks.value = type === "work" ? [...WORK_BLOCKS] : [...ENTERTAINMENT_BLOCKS];
-  localStorage.removeItem(STORAGE_KEYS.TIMETABLE); // 可选，重置时也清理
+// 3 Activity处理子组件事件------------------------------
+function onAddActivity(newActivity: Activity) {
+  handleAddActivity(activityList.value, scheduleList.value, newActivity);
 }
 
-// 3 ActivityView 和 TodayView 数据管理
-// 3.1 数据构造
-const activityList = ref<Activity[]>(loadActivities());
-const todoList = ref<Todo[]>(loadTodos());
-const scheduleList = ref<Schedule[]>(loadSchedules());
-const pickedTodoActivity = ref<Activity | null>(null);
-const activeId = ref<number | null>(null); // 是Activity中定义的ID
-
-// 加载数据
-function loadActivities(): Activity[] {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEYS.ACTIVITY) || "[]");
-  } catch {
-    return [];
-  }
-}
-
-function loadTodos(): Todo[] {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEYS.TODO) || "[]");
-  } catch {
-    return [];
-  }
-}
-
-function loadSchedules(): Schedule[] {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEYS.SCHEDULE) || "[]");
-  } catch {
-    return [];
-  }
-}
-
-// 保存数据
-function saveActivities() {
-  localStorage.setItem(
-    STORAGE_KEYS.ACTIVITY,
-    JSON.stringify(activityList.value)
+function onDeleteActivity(id: number) {
+  handleDeleteActivity(
+    activityList.value,
+    todoList.value,
+    scheduleList.value,
+    id
   );
 }
 
-function saveTodos() {
-  localStorage.setItem(STORAGE_KEYS.TODO, JSON.stringify(todoList.value));
-}
-
-function saveSchedules() {
-  localStorage.setItem(
-    STORAGE_KEYS.SCHEDULE,
-    JSON.stringify(scheduleList.value)
+function onPickActivity(activity: Activity) {
+  const result = passPickedActivity(
+    activityList.value,
+    todoList.value,
+    activity
   );
+  pickedTodoActivity.value = result;
 }
 
-// 监听数据变化
-watch(activityList, saveActivities, { deep: true });
-watch(todoList, saveTodos, { deep: true });
-watch(scheduleList, saveSchedules, { deep: true });
-
-// 3.2 数据类型转换
-// 处理 Activity 到 Todo 的转换
-function convertToTodo(activity: Activity): Todo {
-  return {
-    id: Date.now(),
-    activityId: activity.id,
-    activityTitle: activity.title,
-    estPomo: activity.estPomoI ? [parseInt(activity.estPomoI)] : [],
-    status: "ongoing",
-    projectName: activity.projectId ? `项目${activity.projectId}` : undefined,
-    priority: 0,
-  };
-}
-
-// 处理 Activity 到 Schedule 的转换
-function convertToSchedule(activity: Activity): Schedule {
-  return {
-    id: Date.now(),
-    activityId: activity.id,
-    activityTitle: activity.title,
-    activityDueRange: [activity.dueRange![0], activity.dueRange![1]],
-    status: "ongoing",
-    projectName: activity.projectId ? `项目${activity.projectId}` : undefined,
-    location: activity.location || "",
-  };
-}
-
-// 3.3 处理子组件事件
-// 3.3.1 增加活动
-function handleAddActivity(newActivity: Activity) {
-  activityList.value.push(newActivity);
-  // 如果是 Schedule 类型且是当天的活动，自动创建 Schedule
-  if (newActivity.class === "S") {
-    const today = new Date().toISOString().split("T")[0];
-
-    const activityDate = newActivity.id
-      ? new Date(newActivity.id).toISOString().split("T")[0]
-      : null;
-    // onsole.log(today, activityDate);
-    if (activityDate === today) {
-      // 更新 activityList 中对应的 activity 的 status 为 "ongoing"
-      const activityToUpdate = activityList.value.find(
-        (a) => a.id === newActivity.id
-      );
-      if (activityToUpdate) {
-        activityToUpdate.status = "ongoing";
-      }
-      scheduleList.value.push(convertToSchedule(newActivity));
-    }
-  }
-}
-
-// 3.3.2 删除活动
-function handleDeleteActivity(id: number) {
-  // 删除 Activity 时也删除关联的 Todo
-  todoList.value = todoList.value.filter((todo) => todo.activityId !== id);
-  // 删除对应的 Schedule
-  scheduleList.value = scheduleList.value.filter(
-    (schedule) => schedule.activityId !== id
-  );
-
-  // 删除 Activity
-  activityList.value = activityList.value.filter(
-    (activity) => activity.id !== id
-  );
-}
-
-// 3.3.3 将选中的 Activity 转换为 Todo 并添加到列表
-function passPickedActivity(activity: Activity) {
-  // 更新 activityList 中对应的 activity 的 status 为 "ongoing"
-  const activityToUpdate = activityList.value.find((a) => a.id === activity.id);
-  if (activityToUpdate) {
-    activityToUpdate.status = "ongoing";
-  }
-  const existingTodo = todoList.value.find(
-    (todo) => todo.activityId === activity.id
-  );
-  if (!existingTodo) {
-    todoList.value.push(convertToTodo(activity));
-  }
-  pickedTodoActivity.value = activity;
-}
-
-// 3.3.4 更新当前ActivityView中激活行的ID
-function updateActiveId(id: number | null) {
+function onUpdateActiveId(id: number | null) {
   activeId.value = id;
 }
 
-// 3.3.5 同步 Activity 修改到 Todo 和 Schedule
+function onTogglePomoType(id: number, event?: Event) {
+  const target = (event?.target as HTMLElement) || null;
+  const result = togglePomoType(activityList.value, id);
+
+  if (result) {
+    pomoTypeChangeMessage.value = `番茄类型从${result.oldType}更改为${result.newType}`;
+    pomoTypeChangeTarget.value = target;
+    showPomoTypeChangePopover.value = true;
+
+    setTimeout(() => {
+      showPomoTypeChangePopover.value = false;
+    }, 3000);
+  }
+}
+
+// 同步 Activity 修改到 Todo 和 Schedule
 watch(
   activityList,
   (newVal) => {
@@ -341,128 +253,37 @@ watch(
   { deep: true }
 );
 
-// 3.3.6 更新打钩的schedule状态
-function updateScheduleStatus(id: number, activityId: number, status: string) {
-  const validStatus = ["", "done", "delayed", "ongoing", "cancelled"].includes(
+// 4 Today 相关函数------------------------------------
+// 更新打钩的 todo 状态 - 使用 todayService 中的函数
+function onUpdateTodoStatus(id: number, activityId: number, status: string) {
+  updateTodoStatus(todoList.value, activityList.value, id, activityId, status);
+}
+
+// 更新取消 todo 的状态 - 使用 todayService 中的函数
+function onDropTodo(id: number) {
+  handleDropTodo(todoList.value, activityList.value, id);
+}
+
+// 更新推后一天 schedule 的状态 - 使用 todayService 中的函数
+function onSuspendSchedule(id: number) {
+  handleSuspendSchedule(scheduleList.value, activityList.value, id);
+}
+
+// 更新打钩的 schedule 状态 - 使用 todayService 中的函数
+function onUpdateScheduleStatus(
+  id: number,
+  activityId: number,
+  status: string
+) {
+  updateScheduleStatus(
+    scheduleList.value,
+    activityList.value,
+    id,
+    activityId,
     status
-  )
-    ? status
-    : "";
-
-  // 更新 scheduleList
-  const schedule = scheduleList.value.find((s) => s.id === id);
-  if (schedule) {
-    schedule.status = validStatus as
-      | ""
-      | "done"
-      | "delayed"
-      | "ongoing"
-      | "cancelled";
-  }
-
-  // 更新 activityList
-  const activity = activityList.value.find((a) => a.id === activityId);
-  if (activity) {
-    activity.status = validStatus as
-      | ""
-      | "done"
-      | "delayed"
-      | "ongoing"
-      | "cancelled";
-  }
-}
-// 3.3.7 更新打钩的todo状态
-function updateTodoStatus(id: number, activityId: number, status: string) {
-  const validStatus = ["", "done", "delayed", "ongoing", "cancelled"].includes(
-    status
-  )
-    ? status
-    : "";
-
-  // 更新 scheduleList
-  const todo = todoList.value.find((t) => t.id === id);
-  if (todo) {
-    todo.status = validStatus as
-      | ""
-      | "done"
-      | "delayed"
-      | "ongoing"
-      | "cancelled";
-  }
-
-  // 更新 activityList
-  const activity = activityList.value.find((a) => a.id === activityId);
-  if (activity) {
-    activity.status = validStatus as
-      | ""
-      | "done"
-      | "delayed"
-      | "ongoing"
-      | "cancelled";
-  }
-}
-
-// 3.3.8 更新取消todo的状态
-function handleDropTodo(id: number) {
-  // 找到对应的 Todo
-  const todo = todoList.value.find((todo) => todo.id === id);
-  if (todo) {
-    // 找到 activityList 中对应的活动
-    const activity = activityList.value.find(
-      (activity) => activity.id === todo.activityId
-    );
-    if (activity) {
-      // 更新 activity 的状态为 "delayed"
-      activity.status = "delayed";
-      console.log(`Activity with id ${activity.id} status updated to delayed`);
-    } else {
-      console.log(`No activity found with activityId ${todo.activityId}`);
-    }
-  } else {
-    console.log(`No todo found with id ${id}`);
-  }
-
-  // 从 todoList 中移除对应的 Todo
-  todoList.value = todoList.value.filter((todo) => todo.id !== id);
-}
-
-// 3.3.9 更新推后一天schedule的状态
-function handleSuspendSchedule(id: number) {
-  // 找到对应的 Schedule
-  const schedule = scheduleList.value.find((schedule) => schedule.id === id);
-  if (schedule) {
-    // 找到 activityList 中对应的活动
-    const activity = activityList.value.find(
-      (activity) => activity.id === schedule.activityId
-    );
-    if (activity) {
-      // 更新 activity 的状态为 "delayed"
-      activity.status = "delayed";
-      console.log(`Activity with id ${activity.id} status updated to delayed`);
-
-      if (activity.dueRange) {
-        // 将 dueRange 的时间都加1天
-        activity.dueRange = [
-          addOneDayToDate(activity.dueRange[0]),
-          activity.dueRange[1],
-        ];
-      } else {
-        console.log(`Activity with id ${activity.id} does not have dueRange`);
-      }
-    } else {
-      console.log(`No activity found with activityId ${schedule.activityId}`);
-    }
-  } else {
-    console.log(`No schedule found with id ${id}`);
-  }
-
-  // 从 scheduleList 中移除对应的 Schedule
-  scheduleList.value = scheduleList.value.filter(
-    (schedule) => schedule.id !== id
   );
 }
-
-// 3.3.10 更新Schedule的日期改变
+// 更新Schedule的日期改变
 watch(
   () => activityList.value.map((a) => a.dueRange && a.dueRange[0]),
   () => {
@@ -521,49 +342,9 @@ watch(
   }
 );
 
-// 切换Activity的pomoType
-const showPomoTypeChangePopover = ref(false);
-const pomoTypeChangeMessage = ref("");
-const pomoTypeChangeTarget = ref<HTMLElement | null>(null);
-function handleTogglePomoType(id: number) {
-  // 查找对应的活动
-  const activity = activityList.value.find((a) => a.id === id);
-  if (!activity) {
-    console.log(`没有找到ID为${id}的活动`);
-    return;
-  }
+// 5 TaskView 数据传递
 
-  // 如果是S类型的活动，不进行操作
-  if (activity.class === "S") {
-    console.log(`ID为${id}的活动是S类型，不能修改番茄类型`);
-    return;
-  }
-
-  // 获取当前番茄类型的索引，如果未设置则默认为"🍅"
-  const currentType = activity.pomoType || "🍅";
-  const currentIndex = POMO_TYPES.indexOf(currentType);
-
-  // 计算下一个类型的索引
-  const nextIndex = (currentIndex + 1) % POMO_TYPES.length;
-  // 确保新的番茄类型符合 Activity.pomoType 的类型定义
-  const newPomoType: "🍅" | "🍇" | "🍒" = POMO_TYPES[nextIndex];
-
-  // 设置 popover 消息并显示
-  pomoTypeChangeMessage.value = `番茄类型从${currentType}更改为${newPomoType}`;
-  showPomoTypeChangePopover.value = true;
-
-  // 3秒后自动关闭提示
-  setTimeout(() => {
-    showPomoTypeChangePopover.value = false;
-  }, 3000);
-
-  // 更新活动的番茄类型
-  activity.pomoType = newPomoType;
-}
-
-// 4 TaskView 数据传递
-
-// 5 UI 函数
+// 6 UI 函数
 function buttonStyle(show: boolean) {
   return {
     filter: show ? "none" : "grayscale(100%)",
@@ -571,7 +352,7 @@ function buttonStyle(show: boolean) {
   };
 }
 
-// 6 日期监控
+// 7 日期监控
 // 日期检查状态变量
 type TimeoutType = ReturnType<typeof setTimeout>;
 let debounceTimer: TimeoutType | null = null;
