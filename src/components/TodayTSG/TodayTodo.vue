@@ -94,14 +94,32 @@
       </tbody>
     </table>
   </div>
+  <n-popover v-model:show="showPopover" trigger="manual" placement="top-end">
+    <template #trigger>
+      <div
+        style="
+          position: fixed;
+          bottom: 20px;
+          right: 20px;
+          width: 1px;
+          height: 1px;
+        "
+      ></div>
+    </template>
+    {{ popoverMessage }}
+  </n-popover>
 </template>
 
 <script setup lang="ts">
 import type { Todo } from "@/core/types/Todo";
 import { formatTime } from "@/core/utils";
 import { Delete24Regular } from "@vicons/fluent";
-import { NCheckbox, NInputNumber } from "naive-ui";
+import { NCheckbox, NInputNumber, NPopover } from "naive-ui";
 import { ref, computed } from "vue";
+
+// 添加状态来控制提示信息
+const showPopover = ref(false);
+const popoverMessage = ref("");
 
 // 假设 Todo 类型中 priority 是 number
 interface TodoWithNumberPriority extends Omit<Todo, "priority"> {
@@ -176,6 +194,7 @@ function startEditing(todo: TodoWithNumberPriority) {
 }
 
 // 完成编辑优先级并处理优先级冲突
+// 完成编辑优先级并处理优先级冲突
 function finishEditing() {
   if (!editingTodo.value) return;
 
@@ -186,7 +205,11 @@ function finishEditing() {
     editingPriority.value > 0 &&
     editingTodo.value.priority === 0
   ) {
-    console.warn("今天已经有10件优先事项了，不能再添加了");
+    popoverMessage.value = "今天已经有10件优先事项了，不能再添加了";
+    showPopover.value = true;
+    setTimeout(() => {
+      showPopover.value = false;
+    }, 3000); // 3秒后自动关闭
     editingTodo.value = null;
     return;
   }
@@ -197,39 +220,65 @@ function finishEditing() {
     return;
   }
 
-  // 收集所有任务的优先级，按照优先级排序
-  let activeTodos = props.todos
-    .filter((todo) => todo.id !== editingTodo.value!.id && todo.priority > 0)
-    .sort((a, b) => a.priority - b.priority);
+  const oldPriority = editingTodo.value.priority;
+  const newPriority = editingPriority.value;
 
   // 创建更新列表
   const updates: Array<{ id: number; priority: number }> = [];
 
   // 如果设置为0，只需要更新当前任务
-  if (editingPriority.value === 0) {
+  if (newPriority === 0) {
     updates.push({
       id: editingTodo.value.id,
       priority: 0,
     });
   }
-  // 如果是从0设置为其他值，或者改变优先级
-  else {
-    // 先插入当前编辑的任务
-    const updatedTodos = [
-      ...activeTodos.filter((t) => t.priority < editingPriority.value),
-      { ...editingTodo.value, priority: editingPriority.value },
-      ...activeTodos.filter((t) => t.priority >= editingPriority.value),
-    ];
+  // 如果是从0设置为其他值，需要检查是否有冲突
+  else if (oldPriority === 0) {
+    // 查找是否有相同优先级的任务
+    const conflictingTodo = props.todos.find(
+      (todo) =>
+        todo.id !== editingTodo.value!.id && todo.priority === newPriority
+    );
 
-    // 重新分配优先级，确保从1开始连续
-    updatedTodos.forEach((todo, index) => {
-      const newPriority = index + 1;
-      if (todo.id === editingTodo.value!.id || todo.priority !== newPriority) {
-        updates.push({
-          id: todo.id,
-          priority: newPriority,
-        });
-      }
+    if (conflictingTodo) {
+      // 所有大于等于新优先级的任务优先级加1
+      props.todos.forEach((todo) => {
+        if (todo.id !== editingTodo.value!.id && todo.priority >= newPriority) {
+          updates.push({
+            id: todo.id,
+            priority: todo.priority + 1,
+          });
+        }
+      });
+    }
+
+    // 更新当前任务
+    updates.push({
+      id: editingTodo.value.id,
+      priority: newPriority,
+    });
+  }
+  // 如果是交换两个任务的优先级
+  else {
+    // 找到与新优先级匹配的任务
+    const targetTodo = props.todos.find(
+      (todo) =>
+        todo.id !== editingTodo.value!.id && todo.priority === newPriority
+    );
+
+    if (targetTodo) {
+      // 简单交换优先级
+      updates.push({
+        id: targetTodo.id,
+        priority: oldPriority,
+      });
+    }
+
+    // 更新当前任务
+    updates.push({
+      id: editingTodo.value.id,
+      priority: newPriority,
     });
   }
 
@@ -245,7 +294,11 @@ function finishEditing() {
       }
     });
 
-    console.log("优先级已更新，保持了优先级的连续性");
+    popoverMessage.value = "优先级已更新";
+    showPopover.value = true;
+    setTimeout(() => {
+      showPopover.value = false;
+    }, 2000); // 2秒后自动关闭
   }
 
   // 退出编辑模式
