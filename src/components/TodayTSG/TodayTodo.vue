@@ -348,9 +348,11 @@ function handleCheckboxChange(todo: TodoWithNumberPriority, checked: boolean) {
   padding: 2px;
   border-bottom: 2px solid #ddd; /* 底部边框 */
   text-align: left;
-  white-space: nowrap; /* 防止文本换行 */
+  white-space: normal; /* 允许文本换行 */
   overflow: hidden; /* 隐藏溢出内容 */
-  height: 20px; /* 固定高度 */
+  word-break: break-word; /* 允许在单词内换行 */
+  min-height: 20px;
+  height: auto;
 }
 
 /* 优先级单元格样式 */

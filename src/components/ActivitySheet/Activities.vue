@@ -49,7 +49,7 @@
       <n-input
         v-if="item.class === 'S'"
         v-model:value="item.location"
-        style="max-width: 60px"
+        style="max-width: 90px"
         @focus="$emit('focus-row', item.id)"
         placeholder="地点"
       />
