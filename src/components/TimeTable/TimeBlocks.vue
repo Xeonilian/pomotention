@@ -1,11 +1,11 @@
 <!--
   Component: SchedualTimeBlocks.vue
-  Description: 将时间范围渲染为图
+  Description: 渲染时间区间及番茄时间分段
   Props:
-    - blocks: Block[],  
-    - timeRange: { start: number; end: number },  // 区域范围时间戳
-    - effectivePxPerMinute: number,  // 像素分钟比
-  Parent: TimeTableView.vue 
+    - blocks: Block[]                // 原始区块
+    - timeRange: { start, end }      // 显示时间起止（毫秒）
+    - effectivePxPerMinute: number   // 1分钟对应像素
+  Parent: TimeTableView.vue
 -->
 
 <template>
@@ -13,21 +13,22 @@
     <!-- 小时刻度线背景 -->
     <div class="hour-ticks-container">
       <div
-        v-for="(hourStamp, index) in hourStamps"
+        v-for="(hourStamp, idx) in hourStamps"
         :key="hourStamp"
         class="hour-tick"
         :style="{ top: getHourTickTop(hourStamp) + 'px' }"
       >
         <div class="tick-line"></div>
+        <!-- 最后一条不显示label -->
         <span
           class="hour-label"
-          :style="index === hourStamps.length - 1 ? { display: 'none' } : {}"
+          :style="idx === hourStamps.length - 1 ? { display: 'none' } : {}"
           >{{ formatHour(hourStamp) }}</span
         >
       </div>
     </div>
 
-    <!-- 时间块 -->
+    <!-- 时间主块背景 -->
     <div
       v-for="block in props.blocks"
       :key="block.id"
@@ -44,6 +45,19 @@
       :style="{ top: currentTimeTop + 'px' }"
     />
   </div>
+
+  <!-- 番茄时间分段 -->
+  <div
+    v-for="segment in pomodoroSegments"
+    :key="segment.parentBlockId + '-' + segment.start + '-' + segment.type"
+    :class="['pomo-segment', segment.type]"
+    :style="getPomodoroStyle(segment)"
+  >
+    <!-- 仅在“工作段”且有编号时显示序号 -->
+    <template v-if="segment.type === 'work' && segment.index != null">
+      {{ segment.index }}
+    </template>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -51,25 +65,24 @@ import { ref, computed } from "vue";
 import type { CSSProperties } from "vue";
 import { CategoryColors } from "@/core/constants";
 import type { Block } from "@/core/types/Block";
+import {
+  splitBlocksToPomodorosWithIndex,
+  PomodoroSegment,
+} from "@/services/pomodoroService";
 
-// 说明 Date 加上当天日期的时间戳毫秒 getTime变为分钟时间 HH:mm 时间字符串
-// 1 数据结构和传递
-// 定义组件接收的 props，blocks 是 Block 类型数组
+// ======= Props区域 =======
 const props = defineProps<{
   blocks: Block[];
-  timeRange: { start: number; end: number }; // 区域范围时间戳
-  effectivePxPerMinute: number; // 像素分钟比
+  timeRange: { start: number; end: number };
+  effectivePxPerMinute: number;
 }>();
 
-// 3 将Blocks根据时间对应到区域 [不重复使用]
-// 输入是在Blocks里面的start end，
-// 根据时间块数据，计算该块对应的样式（定位和尺寸）
+// ======= 时间主块（Blocks）的样式计算 =======
 function getVerticalBlockStyle(block: Block): CSSProperties {
   const startMinute = (block.start - props.timeRange.start) / (1000 * 60);
   const endMinute = (block.end - props.timeRange.start) / (1000 * 60);
   const topPx = startMinute * props.effectivePxPerMinute;
   const heightPx = (endMinute - startMinute) * props.effectivePxPerMinute;
-
   return {
     position: "absolute",
     top: topPx + "px",
@@ -87,69 +100,97 @@ function getVerticalBlockStyle(block: Block): CSSProperties {
     whiteSpace: "nowrap",
   };
 }
-// 4 绘制小时刻度线
-// timeRange.start timeRange.end 之间
-// 生成时间区间内每小时的【时间戳】数组，用于绘制小时刻度线
+
+// ======= 小时刻度线相关 =======
+// （1）刻度数组
 const hourStamps = computed(() => {
   if (!props.timeRange.start || !props.timeRange.end) return [];
-
   const startHour = new Date(props.timeRange.start);
-  startHour.setMinutes(0, 0, 0); // 向下取整到整点小时
-
+  startHour.setMinutes(0, 0, 0);
   const endHour = new Date(props.timeRange.end);
   endHour.setMinutes(0, 0, 0);
-
   const stamps = [];
   let current = startHour.getTime();
   while (current <= endHour.getTime()) {
     stamps.push(current);
-    current += 1000 * 60 * 60; // 递增1小时
+    current += 3600 * 1000;
   }
   return stamps;
 });
 
-// 计算指定小时刻度对应的top像素位置
-// 在template里将hourStamps传递到timeStamp
-// pxPerMinute
+// （2）刻度线的top像素位置
 function getHourTickTop(timeStamp: number): number {
-  const minutesFromStart = (timeStamp - props.timeRange.start) / (1000 * 60);
-  return minutesFromStart * props.effectivePxPerMinute; // HACK
+  const minutes = (timeStamp - props.timeRange.start) / (1000 * 60);
+  return minutes * props.effectivePxPerMinute;
 }
 
-// 格式化小时标签，输出类似 "09:00"
+// （3）刻度线标签格式化
 function formatHour(timeStamp: number): string {
   const dt = new Date(timeStamp);
-  const hh = dt.getHours().toString().padStart(2, "0");
-  return `${hh}:00`;
+  return dt.getHours().toString().padStart(2, "0") + ":00";
 }
 
-// 5 显示当前时间线 [本函数特有]
-// 当前时间戳，初始为当前时间
+// ======= 当前时间线功能 =======
 const now = ref(Date.now());
+setInterval(() => (now.value = Date.now()), 60 * 1000);
 
-// 每隔一分钟更新当前时间，保证视图刷新当前时间线位置
-setInterval(() => {
-  now.value = Date.now();
-}, 60 * 1000);
-
-// 计算当前时间线相对于容器顶部的像素位置
-// 超出时间区间时返回 -1 表示不显示
 const currentTimeTop = computed(() => {
-  if (now.value < props.timeRange.start || now.value > props.timeRange.end) {
+  if (now.value < props.timeRange.start || now.value > props.timeRange.end)
     return -1;
-  }
-  const minutesFromStart = (now.value - props.timeRange.start) / (1000 * 60);
-
-  return minutesFromStart * props.effectivePxPerMinute;
+  const minutes = (now.value - props.timeRange.start) / (1000 * 60);
+  return minutes * props.effectivePxPerMinute;
 });
-
-// 判断是否展示当前时间线（只有当前时间在线范围内才显示）
 const showCurrentLine = computed(() => currentTimeTop.value >= 0);
+
+// ======= 番茄分段功能 =======
+// (1) 定义类别颜色。living绿色，working红色（可拓展）
+const POMODORO_COLORS: Record<string, string> = {
+  living: "#78cb4c",
+  working: "#fa5252",
+  // sleeping: "#8ecae6",
+};
+
+// (2) 计算所有番茄段（含类别与编号）
+const pomodoroSegments = computed(() =>
+  splitBlocksToPomodorosWithIndex(props.blocks)
+);
+
+// (3) 番茄段样式
+function getPomodoroStyle(seg: PomodoroSegment): CSSProperties {
+  const topPx =
+    ((seg.start - props.timeRange.start) / 60000) * props.effectivePxPerMinute;
+  const heightPx = ((seg.end - seg.start) / 60000) * props.effectivePxPerMinute;
+  // 不同类别work显色，break为黄色
+  const color =
+    seg.type === "work"
+      ? POMODORO_COLORS[seg.category] ?? "#fa5252"
+      : "#ffe066";
+  return {
+    position: "absolute",
+    left: "32px",
+    width: "13px",
+    top: `${topPx}px`,
+    height: `${heightPx}px`,
+    backgroundColor: color,
+    opacity: seg.type === "work" ? 0.7 : 0.25,
+    borderRadius: "2px",
+    zIndex: 5,
+    color: "#fff",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    fontSize: "12px",
+    fontWeight: "bold",
+    letterSpacing: "0px",
+    textShadow: "0 1px 3px #222a, 0 0 1px #fff6",
+    overflow: "hidden",
+  };
+}
 </script>
 
 <style scoped>
 .schedule-bar-container {
-  padding-top: 14px; /* 预留足够的顶部空间 */
+  padding-top: 14px;
   position: relative;
   overflow: visible;
   height: 100%;
@@ -157,39 +198,35 @@ const showCurrentLine = computed(() => currentTimeTop.value >= 0);
   margin-top: 10px;
 }
 
-/* 小时刻度背景容器，放第一个，z-index最低 */
 .hour-ticks-container {
   position: absolute;
   left: 0;
   top: 0;
   width: 100%;
   height: 100%;
-  pointer-events: none; /* 让背景不可交互 */
+  pointer-events: none;
   z-index: 1;
 }
 
-/* 确定宽度的容器 */
 .hour-tick {
   position: absolute;
   left: 0;
-  width: 100%; /* 根据需要调整宽度 */
+  width: 100%;
   display: flex;
-  flex-direction: column; /* 竖直排列 */
-  align-items: center; /* 水平居中 */
+  flex-direction: column;
+  align-items: center;
   user-select: none;
 }
 
-/* 看到的线 */
 .tick-line {
   height: 1px;
   width: 179px;
   background-color: #bbb;
   margin-bottom: 2px;
   flex-shrink: 0;
-  margin-left: auto; /* 靠右对齐 */
+  margin-left: auto;
 }
 
-/* 看到的标签 */
 .hour-label {
   font-size: 10px;
   line-height: 14px;
@@ -197,10 +234,9 @@ const showCurrentLine = computed(() => currentTimeTop.value >= 0);
   text-align: right;
   flex-shrink: 0;
   color: #666;
-  margin-left: auto; /* 靠右对齐 */
+  margin-left: auto;
 }
 
-/* 当前时间指示线 */
 .current-time-line {
   position: absolute;
   left: 0px;
@@ -210,15 +246,23 @@ const showCurrentLine = computed(() => currentTimeTop.value >= 0);
   pointer-events: none;
   z-index: 20;
 }
-
 .current-time-line::before {
   content: "🍅";
   position: absolute;
-  right: 3px; /* 或者 left:0，根据你想放的位置 */
+  right: 3px;
   transform: translateY(-50%);
-  font-size: 16px; /* Emoji大小 */
+  font-size: 16px;
   pointer-events: none;
   user-select: none;
   z-index: 20;
+}
+.pomo-segment {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 12px;
+  font-weight: bold;
+  pointer-events: none;
+  font-family: "Courier New", Courier, monospace;
 }
 </style>

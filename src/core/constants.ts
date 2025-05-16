@@ -1,3 +1,4 @@
+// src/core/constants
 export const PomodoroDurations = {
   workDuration: 25,
   breakDuration: 5,
@@ -88,7 +89,7 @@ export const WORK_BLOCKS: Block[] = [
     id: "10",
     category: "working",
     start: getTimestampForTimeString("20:00"),
-    end: getTimestampForTimeString("24:00"),
+    end: getTimestampForTimeString("22:00"),
   },
 ];
 
