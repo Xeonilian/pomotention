@@ -22,42 +22,46 @@
         class="schedule-button"
         >{{ buttonText }}</n-button
       >
-      <!-- 工作日程 -->
+      <n-button
+        secondary
+        circle
+        type="info"
+        :title="
+          currentType === 'work' ? '切换到娱乐时间表' : '切换到工作时间表'
+        "
+        @click="toggleType"
+      >
+        {{ currentType === "work" ? "💼" : "🏕️" }}
+      </n-button>
       <n-popconfirm
-        @positive-click="emitReset('work')"
+        @positive-click="emitReset(currentType)"
         negative-text="取消"
         positive-text="确定"
       >
         <template #trigger>
-          <n-button secondary circle type="warning" title="默认工作日"
-            >💰</n-button
+          <n-button
+            secondary
+            circle
+            type="info"
+            title="复位为默认时间表"
+            style="margin-right: 8px"
           >
+            <n-icon size="20">
+              <ArrowReset48Filled />
+            </n-icon>
+          </n-button>
         </template>
-        <span>确定要重置为默认工作日吗？</span>
-      </n-popconfirm>
-
-      <!-- 娱乐日程 -->
-      <n-popconfirm
-        @positive-click="emitReset('entertainment')"
-        negative-text="取消"
-        positive-text="确定"
-      >
-        <template #trigger>
-          <n-button secondary circle type="warning" title="默认休息日"
-            >🏕️</n-button
-          >
-        </template>
-        <span>确定要重置为默认休息日吗？</span>
+        <span>确定要将当前时间表复位为默认吗？</span>
       </n-popconfirm>
     </div>
     <!-- 2 编辑区 -->
     <div v-if="showEditor" class="schedule-editor">
-      <TimeTableEditor :blocks="blocks" @update-blocks="emitUpdate" />
+      <TimeTableEditor :blocks="props.blocks" @update-blocks="emitUpdate" />
     </div>
     <!-- 3 显示区 -->
     <div v-else class="schedule-time-block" ref="container">
       <TimeBlocks
-        :blocks="blocks"
+        :blocks="props.blocks"
         :timeRange="timeRange"
         :effectivePxPerMinute="effectivePxPerMinute"
       />
@@ -68,6 +72,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, computed } from "vue";
 import { NButton, NPopconfirm } from "naive-ui";
+import { ArrowReset48Filled } from "@vicons/fluent";
 import TimeTableEditor from "@/components/TimeTable/TimeTableEditor.vue";
 import TimeBlocks from "@/components/TimeTable/TimeBlocks.vue";
 
@@ -85,12 +90,14 @@ const toggleDisplay = () => {
 // 接收父级的数据
 const props = defineProps<{
   blocks: Block[];
+  currentType: "work" | "entertainment";
 }>();
 
 // 发出事件给 Home
 const emit = defineEmits<{
   (e: "update-blocks", blocks: Block[]): void;
   (e: "reset-schedule", type: "work" | "entertainment"): void;
+  (e: "change-type", type: "work" | "entertainment"): void;
 }>();
 
 // 编辑器更新blocks回传到父级
@@ -99,6 +106,11 @@ function emitUpdate(newBlocks: Block[]) {
 }
 function emitReset(type: "work" | "entertainment") {
   emit("reset-schedule", type);
+}
+// 切换时 emit
+function toggleType() {
+  const next = props.currentType === "work" ? "entertainment" : "work";
+  emit("change-type", next);
 }
 
 // 高度和容器引用

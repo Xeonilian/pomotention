@@ -10,9 +10,11 @@
       <div v-if="showLeft" class="left">
         <!-- 日程表 -->
         <TimeTableView
-          :blocks="blocks"
+          :blocks="viewBlocks"
+          :current-type="currentType"
           @update-blocks="onBlocksUpdate"
           @reset-schedule="onTimeTableReset"
+          @change-type="onTypeChange"
         />
       </div>
       <div class="middle">
@@ -102,7 +104,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch, onUnmounted } from "vue";
+import { ref, onMounted, watch, onUnmounted, computed } from "vue";
 import { NButton, NPopover } from "naive-ui";
 import TimeTableView from "@/views/Home/TimeTableView.vue";
 import TodayView from "@/views//Home/TodayView.vue";
@@ -157,7 +159,6 @@ const pomoTypeChangeTarget = ref<HTMLElement | null>(null);
 const activityList = ref<Activity[]>(loadActivities());
 const todoList = ref<Todo[]>(loadTodos());
 const scheduleList = ref<Schedule[]>(loadSchedules());
-const blocks = ref<Block[]>(loadTimeBlocks(WORK_BLOCKS));
 const pickedTodoActivity = ref<Activity | null>(null); // 当前选中的活动
 const activeId = ref<number | null>(null); // 当前激活的活动ID
 
@@ -165,21 +166,39 @@ const activeId = ref<number | null>(null); // 当前激活的活动ID
 watch(activityList, (value) => saveActivities(value), { deep: true });
 watch(todoList, (value) => saveTodos(value), { deep: true });
 watch(scheduleList, (value) => saveSchedules(value), { deep: true });
-watch(blocks, (value) => saveTimeBlocks(value), { deep: true });
 
 // 2 加载TimeTable数据 ----------------------------------------------------------
-blocks.value = loadTimeBlocks([...WORK_BLOCKS]); // 初次从本地或用默认
-// "重置"事件，区分工作/娱乐
-function onTimeTableReset(type: "work" | "entertainment") {
-  blocks.value = type === "work" ? [...WORK_BLOCKS] : [...ENTERTAINMENT_BLOCKS];
-  removeTimeBlocksStorage();
+// 当前类型
+const currentType = ref<"work" | "entertainment">("work");
+
+// 两套时间表
+const allBlocks = ref({
+  work: loadTimeBlocks("work", [...WORK_BLOCKS]),
+  entertainment: loadTimeBlocks("entertainment", [...ENTERTAINMENT_BLOCKS]),
+});
+// 当前视图展示的 blocks
+const viewBlocks = computed(() => allBlocks.value[currentType.value]);
+
+/** 切换时间表类型 */
+function onTypeChange(newType: "work" | "entertainment") {
+  currentType.value = newType;
 }
 
-// 更新时间区块
+/** 编辑时间块后的回调 */
 function onBlocksUpdate(newBlocks: Block[]) {
-  blocks.value = [...newBlocks];
+  allBlocks.value[currentType.value] = [...newBlocks];
+  // 同步保存到本地
+  saveTimeBlocks(currentType.value, newBlocks);
 }
 
+/** 恢复默认时间块 */
+function onTimeTableReset(type: "work" | "entertainment") {
+  allBlocks.value[type] =
+    type === "work" ? [...WORK_BLOCKS] : [...ENTERTAINMENT_BLOCKS];
+  // 删除旧的数据，并保存新数据
+  removeTimeBlocksStorage(type);
+  saveTimeBlocks(type, allBlocks.value[type]);
+}
 // 3 Activity处理子组件事件------------------------------
 function onAddActivity(newActivity: Activity) {
   handleAddActivity(activityList.value, scheduleList.value, newActivity);
