@@ -37,9 +37,14 @@ export function updateScheduleStatus(
   activityId: number,
   status: string
 ) {
-  const validStatus = ["", "done", "delayed", "ongoing", "cancelled"].includes(
-    status
-  )
+  const validStatus = [
+    "",
+    "done",
+    "delayed",
+    "ongoing",
+    "cancelled",
+    "suspended",
+  ].includes(status)
     ? status
     : "";
 
@@ -51,7 +56,8 @@ export function updateScheduleStatus(
       | "done"
       | "delayed"
       | "ongoing"
-      | "cancelled";
+      | "cancelled"
+      | "suspended";
   }
 
   // 更新 activityList
@@ -62,7 +68,8 @@ export function updateScheduleStatus(
       | "done"
       | "delayed"
       | "ongoing"
-      | "cancelled";
+      | "cancelled"
+      | "suspended";
   }
 }
 
@@ -81,9 +88,14 @@ export function updateTodoStatus(
   activityId: number,
   status: string
 ) {
-  const validStatus = ["", "done", "delayed", "ongoing", "cancelled"].includes(
-    status
-  )
+  const validStatus = [
+    "",
+    "done",
+    "suspended.",
+    "ongoing",
+    "cancelled",
+    "suspended",
+  ].includes(status)
     ? status
     : "";
 
@@ -95,7 +107,8 @@ export function updateTodoStatus(
       | "done"
       | "delayed"
       | "ongoing"
-      | "cancelled";
+      | "cancelled"
+      | "suspended";
   }
 
   // 更新 activityList
@@ -106,17 +119,18 @@ export function updateTodoStatus(
       | "done"
       | "delayed"
       | "ongoing"
-      | "cancelled";
+      | "cancelled"
+      | "suspended";
   }
 }
 
 /**
- * 取消待办事项，更新活动状态为延迟
+ * 主动取消待办事项，更新活动状态为延迟
  * @param todoList 待办事项列表
  * @param activityList 活动列表
  * @param id 待办事项ID
  */
-export function handleDropTodo(
+export function handleSuspendTodo(
   todoList: Todo[],
   activityList: Activity[],
   id: number
@@ -129,9 +143,11 @@ export function handleDropTodo(
       (activity) => activity.id === todo.activityId
     );
     if (activity) {
-      // 更新 activity 的状态为 "delayed"
-      activity.status = "delayed";
-      console.log(`Activity with id ${activity.id} status updated to delayed`);
+      // 更新 activity 的状态为 "suspended."
+      activity.status = "suspended";
+      console.log(
+        `Activity with id ${activity.id} status updated to suspended.`
+      );
     } else {
       console.log(`No activity found with activityId ${todo.activityId}`);
     }
@@ -145,7 +161,7 @@ export function handleDropTodo(
 }
 
 /**
- * 推迟日程一天，更新活动状态为延迟
+ * 主动推迟日程一天，更新活动状态为延迟
  * @param scheduleList 日程列表
  * @param activityList 活动列表
  * @param id 日程ID
@@ -163,9 +179,11 @@ export function handleSuspendSchedule(
       (activity) => activity.id === schedule.activityId
     );
     if (activity) {
-      // 更新 activity 的状态为 "delayed"
-      activity.status = "delayed";
-      console.log(`Activity with id ${activity.id} status updated to delayed`);
+      // 更新 activity 的状态为 "suspended."
+      activity.status = "suspended";
+      console.log(
+        `Activity with id ${activity.id} status updated to suspended.`
+      );
 
       if (activity.dueRange) {
         // 将 dueRange 的时间都加1天
@@ -195,11 +213,14 @@ export function handleSuspendSchedule(
  * @param activityList 活动列表
  * @param scheduleList 日程列表
  * @param convertToSchedule 将活动转换为日程的函数
+ * @param convertTodo 将活动转换为日程的函数
  */
 export function syncDateChanges(
   activityList: Activity[],
   scheduleList: Schedule[],
-  convertToSchedule: (activity: Activity) => Schedule
+  todoList: Todo[],
+  convertToSchedule: (activity: Activity) => Schedule,
+  convertToTodo: (activity: Activity) => Todo
 ) {
   activityList.forEach((activity) => {
     const due = activity.dueRange && activity.dueRange[0];

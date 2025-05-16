@@ -75,7 +75,7 @@
                 size="tiny"
                 type="error"
                 secondary
-                @click="handleDropTodo(todo.id)"
+                @click="handleSuspendTodo(todo.id)"
               >
                 <template #icon>
                   <n-icon size="18">
@@ -304,7 +304,7 @@ function finishEditing() {
   editingTodo.value = null;
 }
 
-function handleDropTodo(id: number) {
+function handleSuspendTodo(id: number) {
   emit("drop-todo", id);
 }
 

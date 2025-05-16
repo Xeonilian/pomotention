@@ -62,6 +62,8 @@
     <div v-else class="schedule-time-block" ref="container">
       <TimeBlocks
         :blocks="props.blocks"
+        :scheduleList="props.scheduleList"
+        :todoList="props.todoList"
         :timeRange="timeRange"
         :effectivePxPerMinute="effectivePxPerMinute"
       />
@@ -75,8 +77,9 @@ import { NButton, NPopconfirm } from "naive-ui";
 import { ArrowReset48Filled } from "@vicons/fluent";
 import TimeTableEditor from "@/components/TimeTable/TimeTableEditor.vue";
 import TimeBlocks from "@/components/TimeTable/TimeBlocks.vue";
-
 import type { Block } from "@/core/types/Block";
+import type { Todo } from "../../core/types/Todo";
+import type { Schedule } from "@/core/types/Schedule";
 
 // 1 按钮
 const showEditor = ref(false);
@@ -91,6 +94,8 @@ const toggleDisplay = () => {
 const props = defineProps<{
   blocks: Block[];
   currentType: "work" | "entertainment";
+  todoList: Todo[];
+  scheduleList: Schedule[];
 }>();
 
 // 发出事件给 Home

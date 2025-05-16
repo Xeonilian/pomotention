@@ -20,7 +20,7 @@
       :todos="todoList"
       :activeId="activeId"
       @update-todo-status="updateTodoStatus"
-      @drop-todo="handleDropTodo"
+      @drop-todo="handleSuspendTodo"
     />
   </div>
   <div class="schedule-container">
@@ -74,7 +74,7 @@ function handleSuspendSchedule(id: number) {
   emit("suspend-schedule", id);
 }
 
-function handleDropTodo(id: number) {
+function handleSuspendTodo(id: number) {
   emit("drop-todo", id);
 }
 </script>

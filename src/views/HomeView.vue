@@ -12,6 +12,8 @@
         <TimeTableView
           :blocks="viewBlocks"
           :current-type="currentType"
+          :scheduleList="scheduleList"
+          :todoList="todoList"
           @update-blocks="onBlocksUpdate"
           @reset-schedule="onTimeTableReset"
           @change-type="onTypeChange"
@@ -114,7 +116,7 @@ import type { Activity } from "@/core/types/Activity";
 import type { Block } from "@/core/types/Block";
 import type { Todo } from "@/core/types/Todo";
 import type { Schedule } from "@/core/types/Schedule";
-import { convertToSchedule } from "@/core/utils/convertActivity";
+import { convertToSchedule, convertToTodo } from "@/core/utils/convertActivity";
 import { WORK_BLOCKS, ENTERTAINMENT_BLOCKS } from "@/core/constants";
 import {
   loadActivities,
@@ -140,7 +142,7 @@ import {
 import {
   updateScheduleStatus,
   updateTodoStatus,
-  handleDropTodo,
+  handleSuspendTodo,
   handleSuspendSchedule,
   isToday,
 } from "@/services/todayService";
@@ -283,7 +285,7 @@ function onUpdateTodoStatus(id: number, activityId: number, status: string) {
 
 // 更新取消 todo 的状态 - 使用 todayService 中的函数
 function onDropTodo(id: number) {
-  handleDropTodo(todoList.value, activityList.value, id);
+  handleSuspendTodo(todoList.value, activityList.value, id);
 }
 
 // 更新推后一天 schedule 的状态 - 使用 todayService 中的函数
@@ -371,7 +373,9 @@ function buttonStyle(show: boolean) {
 const dateCheckService = createDateCheckService({
   activityList,
   scheduleList,
+  todoList,
   convertToSchedule,
+  convertToTodo,
 });
 
 onMounted(() => {

@@ -62,7 +62,7 @@ export function handleDeleteActivity(
 }
 
 /**
- * 将选中的活动转换为待办事项
+ * 将选中的活动转换为待办事项 #HACK
  */
 export function passPickedActivity(
   activityList: Activity[],

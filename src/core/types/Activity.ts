@@ -11,7 +11,7 @@ export interface Activity {
   category?: "red" | "yellow" | "blue" | "green" | "white";
   fourZone?: "1" | "2" | "3" | "4";
   repeatParams?: [number, number, string, string]; //开始日期，结束日期，重复方式：dayly, monthly, weakly, every x day|week|month, every mon tue thr sat, 是否包括周末 不是MVP，只把每天加入
-  status?: "" | "delayed" | "ongoing" | "cancelled" | "done";
+  status?: "" | "delayed" | "ongoing" | "cancelled" | "done" | "suspended";
   location?: string;
   pomoType?: "🍅" | "🍇" | "🍒";
 }

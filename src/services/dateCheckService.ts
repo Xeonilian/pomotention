@@ -3,13 +3,16 @@
 import type { Ref } from "vue";
 import type { Activity } from "@/core/types/Activity";
 import type { Schedule } from "@/core/types/Schedule";
+import type { Todo } from "@/core/types/Todo";
 
 type TimeoutType = ReturnType<typeof setTimeout>;
 
 interface DateCheckServiceOptions {
   activityList: Ref<Activity[]>;
   scheduleList: Ref<Schedule[]>;
+  todoList: Ref<Todo[]>;
   convertToSchedule: (activity: Activity) => Schedule;
+  convertToTodo: (activity: Activity) => Todo;
 }
 
 /**
@@ -18,7 +21,9 @@ interface DateCheckServiceOptions {
 export function createDateCheckService({
   activityList,
   scheduleList,
+  todoList,
   convertToSchedule,
+  convertToTodo,
 }: DateCheckServiceOptions) {
   let debounceTimer: TimeoutType | null = null;
   let lastCheckedDate: string = new Date().toISOString().split("T")[0];
@@ -32,6 +37,8 @@ export function createDateCheckService({
     if (currentDate !== lastCheckedDate) {
       console.log(`日期从 ${lastCheckedDate} 变为 ${currentDate}`);
       processSchedulesForNewDay();
+      processTodoForNewDay();
+      processActivityForNewDay();
       lastCheckedDate = currentDate;
       return true;
     }
@@ -41,7 +48,7 @@ export function createDateCheckService({
   /**
    * 检查 activityList，自动把当天 schedule 加入 scheduleList
    */
-  function processSchedulesForNewDay() {
+  function processActivityForNewDay() {
     const today = new Date().toISOString().split("T")[0];
     activityList.value.forEach((activity: Activity) => {
       if (activity.class === "S" && activity.dueRange) {
@@ -57,6 +64,50 @@ export function createDateCheckService({
           activity.status = "ongoing";
           scheduleList.value.push(convertToSchedule(activity));
         }
+      }
+    });
+  }
+  /**
+   * 将所有当天未完成（ongoing）的 schedule 状态标记为 cancelled，
+   * 并同步将对应 activity 的状态也改为 cancelled。
+   */
+  function processSchedulesForNewDay() {
+    scheduleList.value.forEach((schedule) => {
+      if (schedule.status === "ongoing") {
+        schedule.status = "cancelled";
+        // 同步 activity 的状态
+        const activity = activityList.value.find(
+          (a) => a.id === schedule.activityId
+        );
+        if (activity) {
+          activity.status = "cancelled";
+        }
+      }
+    });
+  }
+  /**
+/**
+ * 将所有当天未完成（ongoing）的 todo 状态标记为 delayed，
+ * 同步将对应 activity 的状态改为 delayed，
+ * 并为每个被归为 delayed 的 todo 新建今日一条新的 ongoing todo。
+ */
+  function processTodoForNewDay() {
+    // 先收集待处理 todo，防止遍历时 push 导致死循环
+    const processingTodos = todoList.value.filter(
+      (todo) => todo.status === "ongoing"
+    );
+    processingTodos.forEach((todo) => {
+      // 标记旧 todo 为 delayed
+      todo.status = "delayed";
+      // 同步 activity 状态
+      const activity = activityList.value.find((a) => a.id === todo.activityId);
+      if (activity) {
+        activity.status = "delayed";
+      }
+      // 新建今日新 todo（convertToTodo 默认 status 为 "ongoing"）
+      if (activity) {
+        const newTodo = convertToTodo(activity);
+        todoList.value.push(newTodo);
       }
     });
   }
