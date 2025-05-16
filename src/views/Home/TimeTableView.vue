@@ -23,23 +23,32 @@
         >{{ buttonText }}</n-button
       >
       <!-- 工作日程 -->
-      <n-button
-        @click="emitReset('work')"
-        secondary
-        circle
-        type="warning"
-        title="默认工作日"
-        >💰</n-button
+      <n-popconfirm
+        @positive-click="emitReset('work')"
+        negative-text="取消"
+        positive-text="确定"
       >
+        <template #trigger>
+          <n-button secondary circle type="warning" title="默认工作日"
+            >💰</n-button
+          >
+        </template>
+        <span>确定要重置为默认工作日吗？</span>
+      </n-popconfirm>
+
       <!-- 娱乐日程 -->
-      <n-button
-        @click="emitReset('entertainment')"
-        secondary
-        circle
-        type="warning"
-        title="默认休息日"
-        >🏕️</n-button
+      <n-popconfirm
+        @positive-click="emitReset('entertainment')"
+        negative-text="取消"
+        positive-text="确定"
       >
+        <template #trigger>
+          <n-button secondary circle type="warning" title="默认休息日"
+            >🏕️</n-button
+          >
+        </template>
+        <span>确定要重置为默认休息日吗？</span>
+      </n-popconfirm>
     </div>
     <!-- 2 编辑区 -->
     <div v-if="showEditor" class="schedule-editor">
@@ -58,7 +67,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, computed } from "vue";
-import { NButton } from "naive-ui";
+import { NButton, NPopconfirm } from "naive-ui";
 import TimeTableEditor from "@/components/TimeTable/TimeTableEditor.vue";
 import TimeBlocks from "@/components/TimeTable/TimeBlocks.vue";
 
@@ -66,11 +75,11 @@ import type { Block } from "@/core/types/Block";
 
 // 1 按钮
 const showEditor = ref(false);
-const buttonText = ref("设置日程");
+const buttonText = ref("设置时间表");
 
 const toggleDisplay = () => {
   showEditor.value = !showEditor.value;
-  buttonText.value = showEditor.value ? "确认日程" : "设置日程";
+  buttonText.value = showEditor.value ? "确认时间表" : "设置时间表";
 };
 
 // 接收父级的数据

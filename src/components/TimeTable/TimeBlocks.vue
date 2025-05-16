@@ -147,7 +147,6 @@ const showCurrentLine = computed(() => currentTimeTop.value >= 0);
 const POMODORO_COLORS: Record<string, string> = {
   living: "#78cb4c",
   working: "#fa5252",
-  // sleeping: "#8ecae6",
 };
 
 // (2) 计算所有番茄段（含类别与编号）

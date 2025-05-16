@@ -9,38 +9,42 @@ Parent: HomeView.vue
   <table class="compact-table">
     <thead>
       <tr>
-        <th>分类</th>
-        <th>开始时间</th>
-        <th>结束时间</th>
+        <th style="width: 54px">分类</th>
+        <th style="width: 80px">开始时间</th>
+        <th style="width: 80px">结束时间</th>
       </tr>
     </thead>
     <tbody>
       <tr v-for="(block, idx) in Blocks" :key="block.id || idx">
-        <td>
+        <td style="width: 54px">
           <n-select
             size="small"
             :value="block.category"
             :options="categoryOptions"
             @update:value="(val) => handleCategoryChange(val, idx)"
+            :show-arrow="true"
           />
         </td>
-        <td>
+        <td style="width: 80px">
           <n-time-picker
             size="small"
             v-model:value="block.start"
-            use-12-hours
-            format="h:mm a"
-            :minutes="5"
-            @update:value="(val) => handleTimeChange(val, idx, 'start')"
+            :show-icon="false"
+            format="HH:mm"
+            @update:value="
+              (val) => {
+                handleTimeChange(val, idx, 'start');
+                onStartTimeChange(idx);
+              }
+            "
           />
         </td>
-        <td>
+        <td style="width: 80px">
           <n-time-picker
             size="small"
             v-model:value="block.end"
-            use-12-hours
-            format="h:mm a"
-            :minutes="5"
+            format="HH:mm"
+            :show-icon="false"
             @update:value="
               (val) => {
                 handleTimeChange(val, idx, 'end');
@@ -185,13 +189,31 @@ function onEndTimeChange(idx: number) {
   const b = Blocks.value[idx],
     dayEnd = getDayEndTimestamp();
 
+  // 保持自身合法
   if (b.end < b.start) b.end = b.start;
   if (b.end > dayEnd) b.end = dayEnd;
 
-  if (Blocks.value[idx + 1]) {
-    const next = Blocks.value[idx + 1];
-    if (next.start !== b.end) next.start = b.end;
-    if (next.end < b.end) next.end = b.end;
+  // 依次调整所有后续块
+  for (let i = idx + 1; i < Blocks.value.length; ++i) {
+    const prev = Blocks.value[i - 1];
+    const curr = Blocks.value[i];
+    if (curr.start !== prev.end) curr.start = prev.end;
+    if (curr.end < curr.start) curr.end = curr.start;
+    // 如需阻止超日末，也可加判断
+  }
+
+  syncToParentAndLocal();
+}
+// 开始时间变更的窗口，带与上一块联动
+function onStartTimeChange(idx: number) {
+  if (idx === 0) return; // 第一行前面没块
+  const curr = Blocks.value[idx];
+  const prev = Blocks.value[idx - 1];
+  if (curr.start < prev.start) {
+    curr.start = prev.start; // 不允许重叠
+  }
+  if (prev.end !== curr.start) {
+    prev.end = curr.start;
   }
   syncToParentAndLocal();
 }
@@ -252,5 +274,21 @@ watch(
   display: flex;
   justify-content: center;
   padding-top: 10px;
+}
+.n-time-picker .n-base-suffix,
+.n-time-picker .n-input__suffix {
+  display: none !important;
+  width: 0 !important;
+  min-width: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+.n-select .n-base-suffix,
+.n-select .n-base-loading {
+  display: none !important;
+  width: 0 !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 </style>
