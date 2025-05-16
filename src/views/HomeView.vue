@@ -23,8 +23,8 @@
         <div v-if="showMiddleTop" class="middle-top">
           <!-- 今日待办 -->
           <TodayView
-            :todoList="todoList"
-            :scheduleList="scheduleList"
+            :todayTodos="todayTodos"
+            :todaySchedules="todaySchedules"
             :activeId="activeId"
             @update-schedule-status="onUpdateScheduleStatus"
             @update-todo-status="onUpdateTodoStatus"
@@ -163,6 +163,13 @@ const todoList = ref<Todo[]>(loadTodos());
 const scheduleList = ref<Schedule[]>(loadSchedules());
 const pickedTodoActivity = ref<Activity | null>(null); // 当前选中的活动
 const activeId = ref<number | null>(null); // 当前激活的活动ID
+const todayTodos = computed(() =>
+  todoList.value.filter((todo) => isToday(todo.id))
+);
+
+const todaySchedules = computed(() =>
+  scheduleList.value.filter((schedule) => isToday(schedule.id))
+);
 
 // 监听变化自动保存
 watch(activityList, (value) => saveActivities(value), { deep: true });

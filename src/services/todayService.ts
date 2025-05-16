@@ -218,9 +218,7 @@ export function handleSuspendSchedule(
 export function syncDateChanges(
   activityList: Activity[],
   scheduleList: Schedule[],
-  todoList: Todo[],
-  convertToSchedule: (activity: Activity) => Schedule,
-  convertToTodo: (activity: Activity) => Todo
+  convertToSchedule: (activity: Activity) => Schedule
 ) {
   activityList.forEach((activity) => {
     const due = activity.dueRange && activity.dueRange[0];

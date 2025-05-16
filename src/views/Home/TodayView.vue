@@ -17,7 +17,7 @@
 <template>
   <div class="todo-container">
     <TodayTodo
-      :todos="todoList"
+      :todos="todayTodos"
       :activeId="activeId"
       @update-todo-status="updateTodoStatus"
       @drop-todo="handleSuspendTodo"
@@ -25,7 +25,7 @@
   </div>
   <div class="schedule-container">
     <TodaySchedule
-      :schedules="scheduleList"
+      :schedules="todaySchedules"
       :activeId="activeId"
       @update-schedule-status="updateScheduleStatus"
       @suspend-schedule="handleSuspendSchedule"
@@ -40,8 +40,8 @@ import type { Todo } from "../../core/types/Todo";
 import type { Schedule } from "@/core/types/Schedule";
 
 defineProps<{
-  todoList: Todo[];
-  scheduleList: Schedule[];
+  todayTodos: Todo[];
+  todaySchedules: Schedule[];
   activeId: number | null;
 }>();
 
