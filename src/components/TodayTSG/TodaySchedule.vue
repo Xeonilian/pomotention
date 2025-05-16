@@ -6,7 +6,7 @@
         <tr>
           <th style="width: 40px"></th>
           <th style="width: 60px">开始</th>
-          <th style="width: 40px">持续</th>
+          <th style="width: 40px">分钟</th>
           <th style="width: calc((100% - 180px) / 2)">描述</th>
           <th style="width: calc((100% - 180px) / 2)">地点</th>
           <th style="width: 40px"></th>
