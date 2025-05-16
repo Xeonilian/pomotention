@@ -142,6 +142,8 @@ import {
   handleSuspendSchedule,
   isToday,
 } from "@/services/todayService";
+// 日期监控
+import { createDateCheckService } from "@/services/dateCheckService";
 
 // 1 界面控制参数定义
 const showLeft = ref(true);
@@ -166,6 +168,7 @@ watch(scheduleList, (value) => saveSchedules(value), { deep: true });
 watch(blocks, (value) => saveTimeBlocks(value), { deep: true });
 
 // 2 加载TimeTable数据 ----------------------------------------------------------
+blocks.value = loadTimeBlocks([...WORK_BLOCKS]); // 初次从本地或用默认
 // "重置"事件，区分工作/娱乐
 function onTimeTableReset(type: "work" | "entertainment") {
   blocks.value = type === "work" ? [...WORK_BLOCKS] : [...ENTERTAINMENT_BLOCKS];
@@ -293,22 +296,16 @@ watch(
       const scheduleIdx = scheduleList.value.findIndex(
         (s) => s.activityId === activity.id
       );
-
       if (activity.class === "S" && due) {
         const dueMs = typeof due === "string" ? Date.parse(due) : Number(due);
-
         if (isToday(dueMs)) {
-          //console.log(`${tag} 属于今天（通过 isToday）`);
           // 1. 没有就加，有就更新
           if (scheduleIdx === -1) {
-            // 可选：status 自动改 ongoing
             activity.status = "ongoing";
             const sch = convertToSchedule(activity);
             scheduleList.value.push(sch);
-            // console.log(`${tag} 新增 schedule:`, sch);
           } else {
             // 已有 schedule，更新主字段
-            //console.log(`${tag} Schedule 已存在，准备更新`);
             const sch = scheduleList.value[scheduleIdx];
             sch.activityTitle = activity.title;
             sch.activityDueRange = activity.dueRange
@@ -319,14 +316,12 @@ watch(
               ? `项目${activity.projectId}`
               : undefined;
             sch.location = activity.location || "";
-            // console.log(`${tag} 更新后 schedule:`, sch);
           }
         } else {
           // 不是今天，应该从 scheduleList 里删除
-          // console.log(`${tag} 不属于今天，准备移除 schedule`);
+
           if (scheduleIdx !== -1) {
             scheduleList.value.splice(scheduleIdx, 1);
-            //console.log(`${tag} schedule 已移除`);
           } else {
             console.log(`${tag} 不属于今天，无 schedule 不需操作`);
           }
@@ -353,92 +348,20 @@ function buttonStyle(show: boolean) {
 }
 
 // 7 日期监控
-// 日期检查状态变量
-type TimeoutType = ReturnType<typeof setTimeout>;
-let debounceTimer: TimeoutType | null = null;
-let lastCheckedDate: string = new Date().toISOString().split("T")[0];
-let debouncedCheckFunction: ((event: Event) => void) | null = null;
-
-// 核心检查函数
-function checkDateChange() {
-  const currentDate = new Date().toISOString().split("T")[0];
-  if (currentDate !== lastCheckedDate) {
-    console.log(`日期从 ${lastCheckedDate} 变为 ${currentDate}`);
-    processSchedulesForNewDay();
-    lastCheckedDate = currentDate;
-    return true;
-  }
-  return false;
-}
-
-// 处理新一天的日程
-function processSchedulesForNewDay() {
-  const today = new Date().toISOString().split("T")[0];
-
-  // 检查 activityList 中的所有活动
-  activityList.value.forEach((activity) => {
-    // 只处理类型为 "S" 的活动（日程类型）
-    if (activity.class === "S" && activity.dueRange) {
-      const activityDate = new Date(activity.dueRange[0])
-        .toISOString()
-        .split("T")[0];
-
-      // 如果活动日期是今天且还没有添加到日程列表中
-      if (
-        activityDate === today &&
-        !scheduleList.value.some((s) => s.activityId === activity.id)
-      ) {
-        // 将状态设置为 ongoing
-        activity.status = "ongoing";
-        // 添加到今日日程
-        scheduleList.value.push(convertToSchedule(activity));
-      }
-    }
-  });
-}
-
-// 设置用户交互检测
-function setupUserInteractionCheck() {
-  // 创建防抖函数
-  debouncedCheckFunction = () => {
-    if (debounceTimer) return;
-    debounceTimer = setTimeout(() => {
-      checkDateChange();
-      debounceTimer = null;
-    }, 1000); // 1秒防抖
-  };
-
-  // 添加事件监听器
-  document.addEventListener("click", debouncedCheckFunction);
-  document.addEventListener("keydown", debouncedCheckFunction);
-}
-
-// 清理事件监听器
-function cleanupListeners() {
-  if (debouncedCheckFunction) {
-    document.removeEventListener("click", debouncedCheckFunction);
-    document.removeEventListener("keydown", debouncedCheckFunction);
-    debouncedCheckFunction = null;
-  }
-
-  if (debounceTimer) {
-    clearTimeout(debounceTimer);
-    debounceTimer = null;
-  }
-}
-
-// 在组件挂载时设置
-onMounted(() => {
-  // 初次检查
-  checkDateChange();
-
-  // 设置用户交互检测
-  setupUserInteractionCheck();
+// 初始化service
+const dateCheckService = createDateCheckService({
+  activityList,
+  scheduleList,
+  convertToSchedule,
 });
 
-// 在组件卸载时清理
+onMounted(() => {
+  dateCheckService.checkDateChange();
+  dateCheckService.setupUserInteractionCheck();
+});
+
 onUnmounted(() => {
-  cleanupListeners();
+  dateCheckService.cleanupListeners();
 });
 </script>
 

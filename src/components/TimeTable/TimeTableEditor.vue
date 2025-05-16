@@ -84,212 +84,149 @@ import { getEndOfDayTimestamp, getTimestampForTimeString } from "@/core/utils";
 import type { Block } from "@/core/types/Block";
 import { CategoryColors, STORAGE_KEYS } from "@/core/constants";
 
-// 1. 参数传递和定义 -----------------------------------------
+// ----- 常量和选项配置 -------
+const labelMap = { sleeping: "睡眠", living: "生活", working: "工作" };
+type Category = keyof typeof CategoryColors;
+const categories = Object.keys(CategoryColors) as Category[];
+const categoryOptions = categories.map((c) => ({
+  label: labelMap[c],
+  value: c,
+  color: CategoryColors[c],
+}));
 
-// 1.1 定义时间块接口类型，描述每个时间段的属性
-
-// 1.2 定义父组件传入的props，接收一个Block数组，使用Vue3的defineProps
+// ------ Props & Emits -------
 const props = defineProps<{ blocks: Block[] }>();
-// 定义组件向父组件发送事件，更新modelValue
 const emit = defineEmits<{ (e: "update-blocks", val: Block[]): void }>();
 
-// 1.3 响应式变量Blocks，内部维护当前时间块列表，便于操作和绑定
+// ------ 数据流 & 本地存储 -------
 const Blocks = ref<Block[]>([]);
-
-// 1.4 有没有存储的
 let hasLoadedFromLocal = false;
 
-// 1.5 优先从 localStorage 载入数据
-const saved = localStorage.getItem(STORAGE_KEYS.TIMETABLE);
-if (saved) {
+function loadFromLocal() {
+  const saved = localStorage.getItem(STORAGE_KEYS.TIMETABLE);
+  if (!saved) return false;
   try {
     const parsed = JSON.parse(saved);
     if (Array.isArray(parsed)) {
       Blocks.value = parsed;
       hasLoadedFromLocal = true;
+      return true;
     }
   } catch (e) {
     console.warn("localStorage 取数据失败", e);
   }
+  return false;
 }
 
-// 1.5 监听父组件传入的modelValue变化，及时更新内部Blocks数组
-watch(
-  () => props.blocks,
-  (newVal) => {
-    if (!hasLoadedFromLocal && Array.isArray(newVal) && newVal.length) {
-      Blocks.value.splice(0, Blocks.value.length, ...newVal);
-      console.log("初始化：用父组件数据");
-    }
-  },
-  { immediate: true }
-);
+// 初始化（优先用本地存储）
+loadFromLocal() || syncFromProps(props.blocks);
 
-// 1.6 定义下拉菜单的类别选项及其中文标签，方便渲染选择框
-const categories: ("living" | "working" | "sleeping")[] = [
-  "living",
-  "working",
-  "sleeping",
-];
-const labelMap = {
-  sleeping: "睡眠",
-  living: "生活",
-  working: "工作",
-};
-// 把类别映射成label/value格式的选项数组，适用于select等组件
-const categoryOptions = categories.map((c) => ({
-  label: labelMap[c],
-  value: c,
-}));
+// 根据props.blocks同步（如果不是本地导入才会用）
+function syncFromProps(arr: Block[]) {
+  if (arr?.length) Blocks.value = arr.map((b) => ({ ...b }));
+}
 
-// 1.7 时间选择器事件处理函数，防御性编程保证输入有效
-const handleTimeChange = (
+function syncToParentAndLocal() {
+  emit(
+    "update-blocks",
+    Blocks.value.map((b) => ({ ...b }))
+  );
+  localStorage.setItem(STORAGE_KEYS.TIMETABLE, JSON.stringify(Blocks.value));
+}
+
+// --------- Block 增删改查 --------
+let maxId = 0;
+function initMaxId() {
+  maxId = Blocks.value.length
+    ? Math.max(...Blocks.value.map((b) => Number(b.id)))
+    : 0;
+}
+function generateId() {
+  return (++maxId).toString();
+}
+
+function addBlock() {
+  const prev = Blocks.value[Blocks.value.length - 1];
+  if (prev && !canAddBlock.value) return;
+  const start = prev ? prev.end : getTimestampForTimeString("00:00");
+  const end = Math.min(getDayEndTimestamp(), start + 2 * 60 * 60 * 1000);
+  Blocks.value.push({
+    id: generateId(),
+    category: categories[0],
+    start,
+    end,
+  });
+  syncToParentAndLocal();
+}
+
+function deleteLastBlock() {
+  Blocks.value.pop();
+  syncToParentAndLocal();
+}
+
+// 时间选择、分类选择
+function handleTimeChange(
   val: number | null,
   idx: number,
   field: "start" | "end"
-) => {
-  if (val === null || val === undefined) return; // 如果无效值，直接返回
-  Blocks.value[idx][field] = val; // 修改对应块的开始/结束时间
-  syncToParent(); // 同步数据到父组件
-};
+) {
+  if (val == null) return;
+  Blocks.value[idx][field] = val;
+  syncToParentAndLocal();
+}
 
-// 1.8 处理类型变化
-const handleCategoryChange = (
-  val: keyof typeof CategoryColors,
-  idx: number
-) => {
+function handleCategoryChange(val: Category, idx: number) {
   Blocks.value[idx].category = val;
-  syncToParent();
-};
+  syncToParentAndLocal();
+}
 
-// 1.9 同步当前Blocks数据到父组件
-const syncToParent = () => {
-  emit(
-    "update-blocks",
-    Blocks.value.map((b: Block) => ({
-      id: b.id,
-      category: b.category,
-      start: b.start,
-      end: b.end,
-    }))
-  );
-  localStorage.setItem(STORAGE_KEYS.TIMETABLE, JSON.stringify(Blocks.value));
-};
+// 结束时间变更的窗口，带与下一块联动
+function onEndTimeChange(idx: number) {
+  const b = Blocks.value[idx],
+    dayEnd = getDayEndTimestamp();
 
-// 2. 表格编辑相关逻辑 --------------------------------------
+  if (b.end < b.start) b.end = b.start;
+  if (b.end > dayEnd) b.end = dayEnd;
 
-// 2-1 当前已使用的最大ID（对应时间块的唯一标识），初始为0，通过监控props初始化
-let maxId = 0;
+  if (Blocks.value[idx + 1]) {
+    const next = Blocks.value[idx + 1];
+    if (next.start !== b.end) next.start = b.end;
+    if (next.end < b.end) next.end = b.end;
+  }
+  syncToParentAndLocal();
+}
 
-// 2-2 监控传入的数据，初始化maxId并同步父组件的时间块到本地响应式Blocks
+// ------- 业务辅助 -------
+function getDayEndTimestamp() {
+  return Blocks.value.length
+    ? getEndOfDayTimestamp(Blocks.value[Blocks.value.length - 1].start)
+    : getEndOfDayTimestamp(Date.now());
+}
+const canAddBlock = computed(
+  () =>
+    !Blocks.value.length ||
+    Blocks.value[Blocks.value.length - 1].end < getDayEndTimestamp()
+);
+
+// -------- 副作用 watch --------
 watch(
   () => props.blocks,
-  (blocks) => {
-    if (blocks.length > 0) {
-      maxId = Math.max(...blocks.map((b) => parseInt(b.id))); // 找到当前最大ID
+  (newBlocks) => {
+    if (!hasLoadedFromLocal && newBlocks?.length) {
+      syncFromProps(newBlocks);
+      initMaxId();
     }
-    // 初始化Blocks数组，拷贝父组件数据
-    Blocks.value.splice(
-      0,
-      Blocks.value.length,
-      ...blocks.map((b) => ({
-        ...b,
-        start: b.start,
-        end: b.end,
-      }))
-    );
   },
   { immediate: true }
 );
 
-// 2-3 删除最后一条时间块数据，并同步
-function deleteLastBlock() {
-  if (Blocks.value.length === 0) return;
-  Blocks.value = Blocks.value.slice(0, -1);
-  syncToParent();
-}
-
-// 2-4 生成不重复递增ID，确保新增行ID与已有不冲突
-const generateId = () => (++maxId).toString();
-
-// 2-5 根据当前已有时间块取当天24点作为统一最大值
-const getDayEndTimestamp = () => {
-  if (Blocks.value.length === 0) {
-    // 默认今天的24点
-    return getEndOfDayTimestamp(Date.now());
-  }
-  // 取最后一个block的start时间为基准算当日24点
-  return getEndOfDayTimestamp(Blocks.value[Blocks.value.length - 1].start);
-};
-
-// TEST 2-6  计算是否可以添加新时间块，判断条件结束时间到达时间戳
-const canAddBlock = computed(() => {
-  if (Blocks.value.length === 0) return true;
-  const lastEnd = Blocks.value[Blocks.value.length - 1].end;
-  const dayEnd = getDayEndTimestamp();
-
-  return lastEnd < dayEnd;
-});
-
-// TEST 2-7 添加一条新时间块行，起始时间为上一行的结束
-function addBlock() {
-  const lastBlock = Blocks.value[Blocks.value.length - 1];
-  if (lastBlock && !canAddBlock.value) return;
-
-  const dayEnd = getDayEndTimestamp();
-  const newStart = lastBlock
-    ? lastBlock.end
-    : getTimestampForTimeString("00:00");
-  const newEnd = Math.min(dayEnd, newStart + 2 * 60 * 60 * 1000); // 默认2小时(7200000 ms)
-
-  Blocks.value = [
-    ...Blocks.value,
-    {
-      id: generateId(),
-      category: categories[0],
-      start: newStart,
-      end: newEnd,
-    },
-  ];
-
-  // 打印刚添加的那个元素
-  //console.log('新增时间块：', Blocks.value[Blocks.value.length - 1]);
-  // 或打印完整数组
-  // console.log('当前Blocks数组：', Blocks.value[Blocks.value.length - 2]);
-  syncToParent();
-}
-
-// 2-8 结束时间修改时的辅助函数，做边界检查及联动下一行开始时间
-function onEndTimeChange(idx: number) {
-  const block = Blocks.value[idx];
-  const startTs = block.start;
-  let endTs = block.end;
-  const dayEnd = getDayEndTimestamp();
-
-  if (endTs < startTs) {
-    endTs = startTs;
-    block.end = endTs;
-  }
-
-  if (endTs > dayEnd) {
-    endTs = dayEnd;
-    block.end = endTs;
-  }
-
-  if (idx < Blocks.value.length - 1) {
-    const nextBlock = Blocks.value[idx + 1];
-
-    if (nextBlock.start !== endTs) {
-      nextBlock.start = endTs;
-
-      if (nextBlock.end < endTs) {
-        nextBlock.end = endTs;
-      }
-    }
-  }
-
-  syncToParent();
-}
+watch(
+  Blocks,
+  () => {
+    initMaxId();
+  },
+  { deep: true, immediate: true }
+);
 </script>
 
 <style scoped>
