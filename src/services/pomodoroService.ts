@@ -1,5 +1,6 @@
 // src/services/pomodoroService.ts
 import type { Block } from "@/core/types/Block";
+import type { Todo } from "@/core/types/Todo";
 
 export interface PomodoroSegment {
   parentBlockId: string;
@@ -10,6 +11,20 @@ export interface PomodoroSegment {
   index?: number; // 在同种类型中的序号
 }
 
+export interface TodoSegment {
+  todoId: number;
+  todoTitle: string;
+  priority: number;
+  start: number;
+  end: number;
+  pomoType: "🍅" | "🍇" | "🍒";
+  category?: string;
+  index: number; // 本todo第几个番茄
+  assignedPomodoroSegment?: PomodoroSegment;
+  overflow?: boolean;
+}
+
+// ---------- 辅助方法 ----------
 function subtractIntervals(
   base: [number, number],
   excludes: [number, number][]
@@ -37,6 +52,83 @@ function formatTime(ts: number): string {
   const hh = `${d.getHours()}`.padStart(2, "0");
   const min = `${d.getMinutes()}`.padStart(2, "0");
   return `${mm}-${dd} ${hh}:${min}`;
+}
+
+// 工具函数
+
+/** 统计 todo 预估番茄数 */
+export function getTodoEstPomoCount(todo: Todo): number {
+  if (!todo.estPomo) return 0;
+  return todo.estPomo.reduce(
+    (sum, cur) => sum + (typeof cur === "number" ? cur : 0),
+    0
+  );
+}
+
+/** 按番茄类型返回每颗番茄分钟数 */
+export function getPomoMinutesByType(type?: Todo["pomoType"]): number {
+  if (type === "🍅") return 30; // 25+5
+  if (type === "🍒") return 15;
+  if (type === "🍇") return 60;
+  return 30;
+}
+
+export function assignTodosToPomodoroSegments(
+  todos: Todo[],
+  pomodoroSegments: PomodoroSegment[]
+): TodoSegment[] {
+  const sortedTodos = [...todos].sort(
+    (a, b) => (b.priority ?? 0) - (a.priority ?? 0)
+  );
+  // 只挑出type === "work" 且 category === "working"的番茄段
+  const workingPomodoroSegments = pomodoroSegments.filter(
+    (seg) => seg.type === "work" && seg.category === "working"
+  );
+  let segmentUsed: boolean[] = new Array(workingPomodoroSegments.length).fill(
+    false
+  );
+
+  const todoSegments: TodoSegment[] = [];
+
+  for (const todo of sortedTodos) {
+    const needCount = getTodoEstPomoCount(todo);
+    for (let i = 0; i < needCount; i++) {
+      const nextIndex = segmentUsed.findIndex((u) => !u);
+      if (nextIndex !== -1) {
+        segmentUsed[nextIndex] = true;
+        const seg = workingPomodoroSegments[nextIndex];
+        todoSegments.push({
+          todoId: todo.id,
+          priority: todo.priority,
+          todoTitle: todo.activityTitle,
+          index: i + 1,
+          start: seg.start,
+          end: seg.end,
+          pomoType: todo.pomoType ?? "🍅",
+          assignedPomodoroSegment: seg,
+          category: seg.category,
+        });
+      } else {
+        // overflow
+        todoSegments.push({
+          todoId: todo.id,
+          priority: todo.priority,
+          todoTitle: todo.activityTitle,
+          index: i + 1,
+          start: workingPomodoroSegments.length
+            ? workingPomodoroSegments[workingPomodoroSegments.length - 1].end
+            : Date.now(),
+          end: workingPomodoroSegments.length
+            ? workingPomodoroSegments[workingPomodoroSegments.length - 1].end +
+              25 * 60 * 1000
+            : Date.now() + 25 * 60 * 1000,
+          pomoType: todo.pomoType ?? "🍅",
+          overflow: true,
+        });
+      }
+    }
+  }
+  return todoSegments;
 }
 
 export function splitBlocksToPomodorosWithIndexExcludeSchedules(
@@ -167,54 +259,4 @@ export function splitBlocksToPomodorosWithIndexExcludeSchedules(
   });
   segments.sort((a, b) => a.start - b.start);
   return segments;
-}
-
-// 1. 原有的番茄拆分函数（与之前一致）
-export function splitBlocksToPomodorosWithIndex(
-  blocks: Block[]
-): PomodoroSegment[] {
-  const all: PomodoroSegment[] = [];
-  const categoryCount: Record<string, number> = {};
-  for (const block of blocks) {
-    if (block.category === "sleeping") continue;
-
-    if (block.end - block.start < 30 * 60 * 1000) continue;
-    let current = block.start;
-    let currIdx = categoryCount[block.category] || 1;
-    while (block.end - current >= 25 * 60 * 1000 + 5 * 60 * 1000) {
-      // work
-      all.push({
-        parentBlockId: block.id,
-        type: "work",
-        start: current,
-        end: current + 25 * 60 * 1000,
-        category: block.category,
-        index: currIdx,
-      });
-      current += 25 * 60 * 1000;
-      // break
-      all.push({
-        parentBlockId: block.id,
-        type: "break",
-        start: current,
-        end: current + 5 * 60 * 1000,
-        category: block.category,
-      });
-      currIdx++;
-      current += 5 * 60 * 1000;
-    }
-    if (block.end - current > 0) {
-      all.push({
-        parentBlockId: block.id,
-        type: "work",
-        start: current,
-        end: block.end,
-        category: block.category,
-        index: currIdx,
-      });
-      currIdx++;
-    }
-    categoryCount[block.category] = currIdx;
-  }
-  return all;
 }

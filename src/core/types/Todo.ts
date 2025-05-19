@@ -10,4 +10,5 @@ export interface Todo {
   realPomo?: number[]; // 最多3次实际
   status?: "" | "delayed" | "ongoing" | "cancelled" | "done" | "suspended";
   priority: number;
+  pomoType?: "🍅" | "🍇" | "🍒";
 }

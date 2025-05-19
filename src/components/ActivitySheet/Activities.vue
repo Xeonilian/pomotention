@@ -60,6 +60,7 @@
         style="max-width: 32px"
         @focus="$emit('focus-row', item.id)"
         :title="`输入估计${item.pomoType || '🍅'}数量`"
+        class="T-bg-input"
       />
       <n-input
         v-else
@@ -167,5 +168,11 @@ const sortedDisplaySheet = computed(() =>
 }
 .countdown-blue :deep(.n-input) {
   background: #121cda80;
+}
+
+:deep(.T-bg-input .n-input__input) {
+  background: url('data:image/svg+xml,%3Csvg width="32" height="32" xmlns="http://www.w3.org/2000/svg"%3E%3Ctext x="0" y="25" font-size="28"%3E🍒%3C/text%3E%3C/svg%3E')
+    no-repeat 8px;
+  background-size: 12px 12px;
 }
 </style>

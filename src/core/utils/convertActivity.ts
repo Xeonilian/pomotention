@@ -16,6 +16,7 @@ export function convertToTodo(activity: Activity): Todo {
     activityTitle: activity.title,
     estPomo: activity.estPomoI ? [parseInt(activity.estPomoI)] : [],
     status: "ongoing",
+    pomoType: activity.pomoType,
     projectName: activity.projectId ? `项目${activity.projectId}` : undefined,
     priority: 0,
   };

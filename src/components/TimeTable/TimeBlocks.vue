@@ -59,6 +59,17 @@
     </template>
     <template v-if="segment.type === 'schedule'"> S </template>
   </div>
+  <div
+    v-for="seg in todoSegments"
+    :key="seg.todoId + '-' + seg.index"
+    class="todo-segment"
+    :class="{ overflow: seg.overflow }"
+    :style="getTodoSegmentStyle(seg)"
+    :title="seg.todoTitle + (seg.overflow ? '（超出可用番茄）' : '')"
+  >
+    <span v-if="!seg.overflow">{{ seg.priority }}</span>
+    <span v-else>⚠️</span>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -69,8 +80,11 @@ import type { Block } from "@/core/types/Block";
 import {
   splitBlocksToPomodorosWithIndexExcludeSchedules,
   PomodoroSegment,
+  assignTodosToPomodoroSegments,
+  TodoSegment,
 } from "@/services/pomodoroService";
-import { Schedule } from "@/core/types/Schedule";
+import type { Schedule } from "@/core/types/Schedule";
+import type { Todo } from "@/core/types/Todo";
 
 // ======= Props区域 =======
 const props = defineProps<{
@@ -78,6 +92,7 @@ const props = defineProps<{
   timeRange: { start: number; end: number };
   effectivePxPerMinute: number;
   schedules: Schedule[];
+  todos: Todo[];
 }>();
 
 // ======= 时间主块（Blocks）的样式计算 =======
@@ -152,9 +167,7 @@ import { POMODORO_COLORS } from "@/core/constants";
 const pomodoroSegments = computed(() =>
   splitBlocksToPomodorosWithIndexExcludeSchedules(props.blocks, props.schedules)
 );
-// const pomodoroSegments = computed(() =>
-//   splitBlocksToPomodorosWithIndex(props.blocks)
-// );
+
 // (3) 番茄段样式
 // 在 getPomodoroStyle 函数中修改
 function getPomodoroStyle(seg: PomodoroSegment): CSSProperties {
@@ -192,6 +205,37 @@ function getPomodoroStyle(seg: PomodoroSegment): CSSProperties {
     letterSpacing: "0px",
     textShadow: "0 1px 3px #222a, 0 0 1px #fff6",
     overflow: "hidden",
+  };
+}
+
+// 拿实际分配结果
+const todoSegments = computed(() =>
+  assignTodosToPomodoroSegments(props.todos, pomodoroSegments.value)
+);
+
+function getTodoSegmentStyle(seg: TodoSegment): CSSProperties {
+  const startMinute = (seg.start - props.timeRange.start) / 60000;
+  const endMinute = (seg.end - props.timeRange.start) / 60000;
+  const topPx = startMinute * props.effectivePxPerMinute;
+  const heightPx = (endMinute - startMinute) * props.effectivePxPerMinute;
+  return {
+    position: "absolute",
+    left: "51px", // 让 todo 条和番茄条左右分开展示（31+13+gap=约51px，可按实际布局调整）
+    width: "13px",
+    top: `${topPx}px`,
+    height: `${heightPx}px`,
+    background: seg.overflow ? "rgba(210,60,40,0.65)" : "rgba(52,110,255,0.7)",
+    borderRadius: "2px",
+    color: "#fff",
+    fontSize: "12px",
+    fontWeight: "bold",
+    zIndex: 8,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    boxShadow: seg.overflow ? "0 0 8px #d33" : "none",
+    border: seg.overflow ? "1.5px solid #a00" : undefined,
+    pointerEvents: "none",
   };
 }
 </script>

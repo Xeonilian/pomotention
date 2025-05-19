@@ -71,6 +71,7 @@
       <TimeBlocks
         :blocks="props.blocks"
         :schedules="todaySchedules"
+        :todos="todayTodos"
         :timeRange="timeRange"
         :effectivePxPerMinute="effectivePxPerMinute"
       />
