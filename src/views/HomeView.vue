@@ -106,6 +106,7 @@
 </template>
 
 <script setup lang="ts">
+// imports
 import { ref, onMounted, watch, onUnmounted, computed } from "vue";
 import { NButton, NPopover } from "naive-ui";
 import TimeTableView from "@/views/Home/TimeTableView.vue";
@@ -149,7 +150,7 @@ import {
 // 日期监控
 import { createDateCheckService } from "@/services/dateCheckService";
 
-// 1 界面控制参数定义
+// 1 参数定义数据初始化
 const showLeft = ref(true);
 const showMiddleTop = ref(true);
 const showRight = ref(true);
@@ -250,7 +251,7 @@ function onTogglePomoType(id: number, event?: Event) {
   }
 }
 
-// 同步 Activity 修改到 Todo 和 Schedule
+// 同步 Activity 修改到 Todo 和 Schedule （除了时间）
 watch(
   activityList,
   (newVal) => {
@@ -284,6 +285,61 @@ watch(
   { deep: true }
 );
 
+// 更新Schedule的日期改变
+watch(
+  () => activityList.value.map((a) => a.dueRange && a.dueRange[0]),
+  () => {
+    activityList.value.forEach((activity) => {
+      const tag = `【activity: ${activity.title} (id:${activity.id})】`;
+      const due = activity.dueRange && activity.dueRange[0];
+      const scheduleIdx = scheduleList.value.findIndex(
+        (s) => s.activityId === activity.id
+      );
+
+      if (activity.class === "S" && due) {
+        const dueMs = typeof due === "string" ? Date.parse(due) : Number(due);
+        if (isToday(dueMs)) {
+          // 1. 没有就加，有就更新
+          if (scheduleIdx === -1) {
+            activity.status = "ongoing";
+            const sch = convertToSchedule(activity);
+            scheduleList.value.push(sch);
+          } else {
+            // 已有 schedule，更新主字段
+            const sch = scheduleList.value[scheduleIdx];
+            sch.activityTitle = activity.title;
+            sch.activityDueRange = activity.dueRange
+              ? [...activity.dueRange]
+              : [0, "0"];
+            sch.status = activity.status || "";
+            sch.projectName = activity.projectId
+              ? `项目${activity.projectId}`
+              : undefined;
+            sch.location = activity.location || "";
+          }
+        } else {
+          // 不是今天，应该从 scheduleList 里删除
+          if (scheduleIdx !== -1) {
+            scheduleList.value.splice(scheduleIdx, 1);
+            activity.status = "";
+            console.log(`${tag} 由于不再属于今天，A.status 已自动置空`);
+          }
+        }
+      } else if (scheduleIdx !== -1) {
+        // 非 S 类型，移除 schedule
+        console.log(`${tag} 非 S 类型，移除 schedule`);
+        scheduleList.value.splice(scheduleIdx, 1);
+      }
+    });
+
+    // 总结最终 scheduleList
+    console.log(
+      "【watch结束】当前 scheduleList:",
+      JSON.parse(JSON.stringify(scheduleList.value))
+    );
+  }
+);
+
 // 4 Today 相关函数------------------------------------
 // 更新打钩的 todo 状态 - 使用 todayService 中的函数
 function onUpdateTodoStatus(id: number, activityId: number, status: string) {
@@ -314,56 +370,6 @@ function onUpdateScheduleStatus(
     status
   );
 }
-// 更新Schedule的日期改变
-watch(
-  () => activityList.value.map((a) => a.dueRange && a.dueRange[0]),
-  () => {
-    activityList.value.forEach((activity) => {
-      const tag = `【activity: ${activity.title} (id:${activity.id})】`;
-      const due = activity.dueRange && activity.dueRange[0];
-      const scheduleIdx = scheduleList.value.findIndex(
-        (s) => s.activityId === activity.id
-      );
-      if (activity.class === "S" && due) {
-        const dueMs = typeof due === "string" ? Date.parse(due) : Number(due);
-        if (isToday(dueMs)) {
-          // 1. 没有就加，有就更新
-          if (scheduleIdx === -1) {
-            activity.status = "ongoing";
-            const sch = convertToSchedule(activity);
-            scheduleList.value.push(sch);
-          } else {
-            // 已有 schedule，更新主字段
-            const sch = scheduleList.value[scheduleIdx];
-            sch.activityTitle = activity.title;
-            sch.activityDueRange = activity.dueRange
-              ? [...activity.dueRange]
-              : [0, "0"];
-            sch.status = activity.status || "";
-            sch.projectName = activity.projectId
-              ? `项目${activity.projectId}`
-              : undefined;
-            sch.location = activity.location || "";
-          }
-        } else {
-          // 不是今天，应该从 scheduleList 里删除
-
-          if (scheduleIdx !== -1) {
-            scheduleList.value.splice(scheduleIdx, 1);
-          } else {
-            console.log(`${tag} 不属于今天，无 schedule 不需操作`);
-          }
-        }
-      } else if (scheduleIdx !== -1) {
-        //console.log(`${tag} 非 S 类型，移除 schedule`);
-        scheduleList.value.splice(scheduleIdx, 1);
-      }
-    });
-
-    // 总结最终 scheduleList
-    //console.log( "【watch结束】当前 scheduleList:",JSON.parse(JSON.stringify(scheduleList.value)));
-  }
-);
 
 // 5 TaskView 数据传递
 

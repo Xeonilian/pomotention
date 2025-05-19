@@ -62,8 +62,6 @@
     <div v-else class="schedule-time-block" ref="container">
       <TimeBlocks
         :blocks="props.blocks"
-        :scheduleList="props.scheduleList"
-        :todoList="props.todoList"
         :timeRange="timeRange"
         :effectivePxPerMinute="effectivePxPerMinute"
       />
