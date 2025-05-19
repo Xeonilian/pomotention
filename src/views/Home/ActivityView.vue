@@ -130,6 +130,7 @@ function addScheduleRow() {
     class: "S",
     title: "",
     dueRange: [Date.now(), ""],
+    status: "",
   });
 }
 
@@ -141,6 +142,7 @@ function addTodoRow() {
     title: "",
     estPomoI: "",
     pomoType: "🍅",
+    status: "",
   });
 }
 
