@@ -57,6 +57,7 @@
     <template v-if="segment.type === 'work' && segment.index != null">
       {{ segment.index }}
     </template>
+    <template v-if="segment.type === 'schedule'"> S </template>
   </div>
 </template>
 
@@ -146,11 +147,7 @@ const showCurrentLine = computed(() => currentTimeTop.value >= 0);
 
 // ======= 番茄分段功能 =======
 // (1) 定义类别颜色。living绿色，working红色（可拓展）
-const POMODORO_COLORS: Record<string, string> = {
-  living: "#78cb4c",
-  working: "#fa5252",
-};
-
+import { POMODORO_COLORS } from "@/core/constants";
 // (2) 计算所有番茄段（含类别与编号）
 const pomodoroSegments = computed(() =>
   splitBlocksToPomodorosWithIndexExcludeSchedules(props.blocks, props.schedules)
@@ -159,15 +156,22 @@ const pomodoroSegments = computed(() =>
 //   splitBlocksToPomodorosWithIndex(props.blocks)
 // );
 // (3) 番茄段样式
+// 在 getPomodoroStyle 函数中修改
 function getPomodoroStyle(seg: PomodoroSegment): CSSProperties {
   const topPx =
     ((seg.start - props.timeRange.start) / 60000) * props.effectivePxPerMinute;
   const heightPx = ((seg.end - seg.start) / 60000) * props.effectivePxPerMinute;
-  // 不同类别work显色，break为黄色
-  const color =
-    seg.type === "work"
-      ? POMODORO_COLORS[seg.category] ?? "#fa5252"
-      : "#ffe066";
+
+  // 添加 schedule 类型的颜色处理
+  let color;
+  if (seg.type === "work") {
+    color = POMODORO_COLORS[seg.category] ?? "#fa5252";
+  } else if (seg.type === "break") {
+    color = "#ffe066"; // 休息段为黄色
+  } else if (seg.type === "schedule") {
+    color = POMODORO_COLORS[seg.category]; // schedule 段为黑色
+  }
+
   return {
     position: "absolute",
     left: "32px",
@@ -175,7 +179,8 @@ function getPomodoroStyle(seg: PomodoroSegment): CSSProperties {
     top: `${topPx}px`,
     height: `${heightPx}px`,
     backgroundColor: color,
-    opacity: seg.type === "work" ? 0.7 : 0.25,
+    // schedule 段可以更突出一点
+    opacity: seg.type === "work" ? 0.7 : seg.type === "schedule" ? 0.9 : 0.25,
     borderRadius: "2px",
     zIndex: 5,
     color: "#fff",

@@ -3,7 +3,7 @@ import type { Block } from "@/core/types/Block";
 
 export interface PomodoroSegment {
   parentBlockId: string;
-  type: "work" | "break";
+  type: "work" | "break" | "schedule";
   start: number;
   end: number;
   category: string; // 增加原block的类型
@@ -54,11 +54,15 @@ export function splitBlocksToPomodorosWithIndexExcludeSchedules(
   // );
   // -------------------------
   // 取所有activityDueRange区间
-  const ex: [number, number][] = schedules.map((s) => {
-    const start = Number(s.activityDueRange[0]);
-    const duration = Number(s.activityDueRange[1]);
-    return [start, start + duration * 60 * 1000];
-  });
+  // 取所有activityDueRange区间
+  const ex: [number, number][] = schedules
+    .map((s) => {
+      const start = Number(s.activityDueRange[0]);
+      const duration = Number(s.activityDueRange[1]);
+      return duration > 0 ? [start, start + duration * 60 * 1000] : null;
+    })
+    .filter((range): range is [number, number] => range !== null);
+
   // console.log("\n======不可用区间（activityDueRange）=====");
   // ex.forEach((x, i) =>
   //   console.log(`[${i}] ${formatTime(x[0])}~${formatTime(x[1])}`)
@@ -66,6 +70,31 @@ export function splitBlocksToPomodorosWithIndexExcludeSchedules(
 
   let segments: PomodoroSegment[] = [];
   const globalIndex: Record<string, number> = {};
+
+  // 合并区间
+  const merged: [number, number][] = [];
+  ex.sort((a, b) => a[0] - b[0]).forEach(([start, end]) => {
+    if (!merged.length || merged[merged.length - 1][1] < start) {
+      merged.push([start, end]);
+    } else {
+      // 有重叠
+      merged[merged.length - 1][1] = Math.max(
+        merged[merged.length - 1][1],
+        end
+      );
+    }
+  });
+
+  // 2. schedule段合并后统一加入（跨 block 只生成一个）
+  merged.forEach(([start, end]) => {
+    segments.push({
+      parentBlockId: "S", // 特殊
+      type: "schedule",
+      start,
+      end,
+      category: "schedule",
+    });
+  });
 
   blocks.forEach((block, blockIdx) => {
     if (block.category === "sleeping") return;
@@ -85,7 +114,7 @@ export function splitBlocksToPomodorosWithIndexExcludeSchedules(
     // );
 
     for (const [aStart, aEnd] of available) {
-      if (aEnd - aStart < 30 * 60 * 1000) {
+      if (aEnd - aStart < 0 * 60 * 1000) {
         //console.log(`   -- 可用区间不足30分钟，不分番茄`);
         continue;
       }
@@ -136,7 +165,7 @@ export function splitBlocksToPomodorosWithIndexExcludeSchedules(
       globalIndex[block.category] = idx;
     }
   });
-
+  segments.sort((a, b) => a.start - b.start);
   return segments;
 }
 
@@ -148,6 +177,7 @@ export function splitBlocksToPomodorosWithIndex(
   const categoryCount: Record<string, number> = {};
   for (const block of blocks) {
     if (block.category === "sleeping") continue;
+
     if (block.end - block.start < 30 * 60 * 1000) continue;
     let current = block.start;
     let currIdx = categoryCount[block.category] || 1;

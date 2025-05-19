@@ -57,7 +57,7 @@
         v-if="item.class === 'T'"
         v-model:value="item.estPomoI"
         :placeholder="item.pomoType"
-        style="max-width: 42px"
+        style="max-width: 32px"
         @focus="$emit('focus-row', item.id)"
         :title="`输入估计${item.pomoType || '🍅'}数量`"
       />
@@ -70,7 +70,7 @@
               ? (item.dueRange[1] = val)
               : (item.dueRange = [Date.now(), val])
         "
-        style="max-width: 42px"
+        style="max-width: 32px; font-size: 10px; margin: 0 auto"
         @focus="$emit('focus-row', item.id)"
         title="持续时间(分钟)"
         placeholder="min"
@@ -80,7 +80,7 @@
         v-if="item.class === 'T'"
         v-model:value="item.dueDate"
         type="date"
-        style="max-width: 90px"
+        style="max-width: 70px"
         clearable
         format="MM-dd"
         @focus="$emit('focus-row', item.id)"
@@ -97,7 +97,7 @@
               : (item.dueRange = [Date.now(), ''])
         "
         type="datetime"
-        style="max-width: 90px"
+        style="max-width: 70px"
         clearable
         format="HH:mm"
         @focus="$emit('focus-row', item.id)"
@@ -144,6 +144,11 @@ const sortedDisplaySheet = computed(() =>
   padding: 1px 0;
   gap: 0px;
   width: 100%;
+}
+/* 如果上面的不生效，尝试这个 */
+:deep(.n-input .n-input-wrapper) {
+  padding-left: 6px;
+  padding-right: 6px;
 }
 .delayed {
   background: #44f8daa0;

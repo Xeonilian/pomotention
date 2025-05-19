@@ -117,3 +117,9 @@ export const ENTERTAINMENT_BLOCKS: Block[] = [
 
 // 番茄类型
 export const POMO_TYPES: ("🍅" | "🍇" | "🍒")[] = ["🍅", "🍇", "🍒"];
+
+export const POMODORO_COLORS: Record<string, string> = {
+  living: "rgb(120, 203, 76)", // 绿色透明
+  working: "rgb(250, 82, 82)", // 红色透明
+  schedule: "rgba(247, 226, 4, 0.8)", // S区黑色半透明
+};
