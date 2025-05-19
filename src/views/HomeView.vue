@@ -12,8 +12,8 @@
         <TimeTableView
           :blocks="viewBlocks"
           :current-type="currentType"
-          :scheduleList="scheduleList"
-          :todoList="todoList"
+          :todayTodos="todayTodos"
+          :todaySchedules="todaySchedules"
           @update-blocks="onBlocksUpdate"
           @reset-schedule="onTimeTableReset"
           @change-type="onTypeChange"

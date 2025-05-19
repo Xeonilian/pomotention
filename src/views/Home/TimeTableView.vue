@@ -62,6 +62,7 @@
     <div v-else class="schedule-time-block" ref="container">
       <TimeBlocks
         :blocks="props.blocks"
+        :schedules="todaySchedules"
         :timeRange="timeRange"
         :effectivePxPerMinute="effectivePxPerMinute"
       />
@@ -92,8 +93,8 @@ const toggleDisplay = () => {
 const props = defineProps<{
   blocks: Block[];
   currentType: "work" | "entertainment";
-  todoList: Todo[];
-  scheduleList: Schedule[];
+  todayTodos: Todo[];
+  todaySchedules: Schedule[];
 }>();
 
 // 发出事件给 Home

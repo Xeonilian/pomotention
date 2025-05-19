@@ -66,15 +66,17 @@ import type { CSSProperties } from "vue";
 import { CategoryColors } from "@/core/constants";
 import type { Block } from "@/core/types/Block";
 import {
-  splitBlocksToPomodorosWithIndex,
+  splitBlocksToPomodorosWithIndexExcludeSchedules,
   PomodoroSegment,
 } from "@/services/pomodoroService";
+import { Schedule } from "@/core/types/Schedule";
 
 // ======= Props区域 =======
 const props = defineProps<{
   blocks: Block[];
   timeRange: { start: number; end: number };
   effectivePxPerMinute: number;
+  schedules: Schedule[];
 }>();
 
 // ======= 时间主块（Blocks）的样式计算 =======
@@ -151,9 +153,11 @@ const POMODORO_COLORS: Record<string, string> = {
 
 // (2) 计算所有番茄段（含类别与编号）
 const pomodoroSegments = computed(() =>
-  splitBlocksToPomodorosWithIndex(props.blocks)
+  splitBlocksToPomodorosWithIndexExcludeSchedules(props.blocks, props.schedules)
 );
-
+// const pomodoroSegments = computed(() =>
+//   splitBlocksToPomodorosWithIndex(props.blocks)
+// );
 // (3) 番茄段样式
 function getPomodoroStyle(seg: PomodoroSegment): CSSProperties {
   const topPx =
