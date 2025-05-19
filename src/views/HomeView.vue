@@ -209,6 +209,7 @@ function onTimeTableReset(type: "work" | "entertainment") {
   removeTimeBlocksStorage(type);
   saveTimeBlocks(type, allBlocks.value[type]);
 }
+
 // 3 Activity处理子组件事件------------------------------
 function onAddActivity(newActivity: Activity) {
   handleAddActivity(activityList.value, scheduleList.value, newActivity);

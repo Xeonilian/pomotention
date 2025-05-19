@@ -26,6 +26,7 @@
         secondary
         circle
         type="info"
+        :disabled="showEditor"
         :title="
           currentType === 'work' ? '切换到娱乐时间表' : '切换到工作时间表'
         "
@@ -45,6 +46,7 @@
             type="info"
             title="复位为默认时间表"
             style="margin-right: 8px"
+            :disabled="!showEditor"
           >
             <n-icon size="20">
               <ArrowReset48Filled />
@@ -56,7 +58,13 @@
     </div>
     <!-- 2 编辑区 -->
     <div v-if="showEditor" class="schedule-editor">
-      <TimeTableEditor :blocks="props.blocks" @update-blocks="emitUpdate" />
+      <TimeTableEditor
+        v-if="showEditor"
+        :blocks="props.blocks"
+        @update-blocks="emitUpdate"
+        :key="props.currentType + '-' + props.blocks.length"
+        :current-type="props.currentType"
+      />
     </div>
     <!-- 3 显示区 -->
     <div v-else class="schedule-time-block" ref="container">
@@ -85,6 +93,7 @@ const showEditor = ref(false);
 const buttonText = ref("设置时间表");
 
 const toggleDisplay = () => {
+  //console.log("准备进入编辑模式时的 currentType:", props.currentType);
   showEditor.value = !showEditor.value;
   buttonText.value = showEditor.value ? "确认时间表" : "设置时间表";
 };
@@ -108,6 +117,8 @@ const emit = defineEmits<{
 function emitUpdate(newBlocks: Block[]) {
   emit("update-blocks", newBlocks);
 }
+
+// 复位数据
 function emitReset(type: "work" | "entertainment") {
   emit("reset-schedule", type);
 }

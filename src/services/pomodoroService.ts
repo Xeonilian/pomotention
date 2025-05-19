@@ -44,14 +44,14 @@ export function splitBlocksToPomodorosWithIndexExcludeSchedules(
   schedules: { activityDueRange: [number, string] }[]
 ): PomodoroSegment[] {
   // -------------------------
-  console.log("======原始block=====");
-  blocks.forEach((b, i) =>
-    console.log(
-      `[${i}] block: ${formatTime(b.start)}~${formatTime(b.end)} (${
-        b.category
-      })`
-    )
-  );
+  //console.log("======原始block=====");
+  // blocks.forEach((b, i) =>
+  //   console.log(
+  //     `[${i}] block: ${formatTime(b.start)}~${formatTime(b.end)} (${
+  //       b.category
+  //     })`
+  //   )
+  // );
   // -------------------------
   // 取所有activityDueRange区间
   const ex: [number, number][] = schedules.map((s) => {
@@ -59,10 +59,10 @@ export function splitBlocksToPomodorosWithIndexExcludeSchedules(
     const duration = Number(s.activityDueRange[1]);
     return [start, start + duration * 60 * 1000];
   });
-  console.log("\n======不可用区间（activityDueRange）=====");
-  ex.forEach((x, i) =>
-    console.log(`[${i}] ${formatTime(x[0])}~${formatTime(x[1])}`)
-  );
+  // console.log("\n======不可用区间（activityDueRange）=====");
+  // ex.forEach((x, i) =>
+  //   console.log(`[${i}] ${formatTime(x[0])}~${formatTime(x[1])}`)
+  // );
 
   let segments: PomodoroSegment[] = [];
   const globalIndex: Record<string, number> = {};
@@ -74,19 +74,19 @@ export function splitBlocksToPomodorosWithIndexExcludeSchedules(
     const relatedEx = ex.filter(([s, e]) => e > block.start && s < block.end);
     // 剔除后剩余可用区间
     const available = subtractIntervals([block.start, block.end], relatedEx);
-    console.log(`\n[block#${blockIdx}] after剔除:`);
-    available.forEach((a, i) =>
-      console.log(
-        `  可用区间#${i}: ${a[0]}~${a[1]}, 长度：${(
-          (a[1] - a[0]) /
-          60000
-        ).toFixed(1)}分钟`
-      )
-    );
+    //console.log(`\n[block#${blockIdx}] after剔除:`);
+    // available.forEach((a, i) =>
+    //   console.log(
+    //     `  可用区间#${i}: ${a[0]}~${a[1]}, 长度：${(
+    //       (a[1] - a[0]) /
+    //       60000
+    //     ).toFixed(1)}分钟`
+    //   )
+    // );
 
     for (const [aStart, aEnd] of available) {
       if (aEnd - aStart < 30 * 60 * 1000) {
-        console.log(`   -- 可用区间不足30分钟，不分番茄`);
+        //console.log(`   -- 可用区间不足30分钟，不分番茄`);
         continue;
       }
       let cur = aStart;
@@ -126,11 +126,11 @@ export function splitBlocksToPomodorosWithIndexExcludeSchedules(
         idx++;
       } else if (aEnd - cur > 0) {
         // 如需提示，可以加一句
-        console.log(
-          `   -- 区间末尾剩余${((aEnd - cur) / 60000).toFixed(
-            1
-          )}分钟，未插入pomo`
-        );
+        // console.log(
+        //   `   -- 区间末尾剩余${((aEnd - cur) / 60000).toFixed(
+        //     1
+        //   )}分钟，未插入pomo`
+        // );
       }
 
       globalIndex[block.category] = idx;

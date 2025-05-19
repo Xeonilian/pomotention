@@ -99,7 +99,10 @@ const categoryOptions = categories.map((c) => ({
 }));
 
 // ------ Props & Emits -------
-const props = defineProps<{ blocks: Block[] }>();
+const props = defineProps<{
+  blocks: Block[];
+  currentType: "work" | "entertainment"; // 新增
+}>();
 const emit = defineEmits<{ (e: "update-blocks", val: Block[]): void }>();
 
 // ------ 数据流 & 本地存储 -------
@@ -107,7 +110,9 @@ const Blocks = ref<Block[]>([]);
 let hasLoadedFromLocal = false;
 
 function loadFromLocal() {
-  const saved = localStorage.getItem(STORAGE_KEYS.TIMETABLE);
+  // 使用类型特定的存储键
+  const storageKey = `${STORAGE_KEYS.TIMETABLE}_${props.currentType}`;
+  const saved = localStorage.getItem(storageKey);
   if (!saved) return false;
   try {
     const parsed = JSON.parse(saved);
@@ -135,7 +140,9 @@ function syncToParentAndLocal() {
     "update-blocks",
     Blocks.value.map((b) => ({ ...b }))
   );
-  localStorage.setItem(STORAGE_KEYS.TIMETABLE, JSON.stringify(Blocks.value));
+  // 使用类型特定的存储键
+  const storageKey = `${STORAGE_KEYS.TIMETABLE}_${props.currentType}`;
+  localStorage.setItem(storageKey, JSON.stringify(Blocks.value));
 }
 
 // --------- Block 增删改查 --------
@@ -240,6 +247,26 @@ watch(
     }
   },
   { immediate: true }
+);
+
+// 添加一个新的 watch 专门监听数据重置
+watch(
+  () => props.blocks,
+  (newBlocks, oldBlocks) => {
+    // 检测是否为重置操作（数据发生显著变化）
+    if (
+      newBlocks?.length &&
+      (!oldBlocks?.length ||
+        JSON.stringify(newBlocks) !== JSON.stringify(oldBlocks))
+    ) {
+      console.log(
+        "检测到 blocks 数据重大变化，可能是reset操作，强制更新编辑器"
+      );
+      syncFromProps(newBlocks);
+      initMaxId();
+    }
+  },
+  { deep: true } // 深度监听以检测内容变化
 );
 
 watch(
