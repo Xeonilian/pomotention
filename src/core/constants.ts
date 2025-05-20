@@ -18,7 +18,7 @@ export const CategoryColors = {
 
 export type CategoryColorKey = keyof typeof CategoryColors;
 
-import { getTimestampForTimeString } from "@/core/utils";
+// import { getTimestampForTimeString } from "@/core/utils";
 import type { Block } from "@/core/types/Block";
 
 // 存储键名常量
@@ -34,62 +34,62 @@ export const WORK_BLOCKS: Block[] = [
   {
     id: "1",
     category: "living",
-    start: getTimestampForTimeString("06:00"),
-    end: getTimestampForTimeString("09:00"),
+    start: "06:00",
+    end: "09:00",
   },
   {
     id: "2",
     category: "working",
-    start: getTimestampForTimeString("09:00"),
-    end: getTimestampForTimeString("12:00"),
+    start: "09:00",
+    end: "12:00",
   },
   {
     id: "3",
     category: "living",
-    start: getTimestampForTimeString("12:00"),
-    end: getTimestampForTimeString("13:00"),
+    start: "12:00",
+    end: "13:00",
   },
   {
     id: "4",
     category: "working",
-    start: getTimestampForTimeString("13:00"),
-    end: getTimestampForTimeString("15:00"),
+    start: "13:00",
+    end: "15:00",
   },
   {
     id: "5",
     category: "living",
-    start: getTimestampForTimeString("15:00"),
-    end: getTimestampForTimeString("15:15"),
+    start: "15:00",
+    end: "15:15",
   },
   {
     id: "6",
     category: "working",
-    start: getTimestampForTimeString("15:15"),
-    end: getTimestampForTimeString("17:40"),
+    start: "15:15",
+    end: "17:40",
   },
   {
     id: "7",
     category: "living",
-    start: getTimestampForTimeString("17:40"),
-    end: getTimestampForTimeString("18:10"),
+    start: "17:40",
+    end: "18:10",
   },
   {
     id: "8",
     category: "working",
-    start: getTimestampForTimeString("18:10"),
-    end: getTimestampForTimeString("19:40"),
+    start: "18:10",
+    end: "19:40",
   },
   {
     id: "9",
     category: "living",
-    start: getTimestampForTimeString("19:40"),
-    end: getTimestampForTimeString("20:00"),
+    start: "19:40",
+    end: "20:00",
   },
   {
     id: "10",
     category: "working",
-    start: getTimestampForTimeString("20:00"),
-    end: getTimestampForTimeString("22:00"),
+    start: "20:00",
+    end: "22:00",
   },
 ];
 
@@ -98,22 +98,106 @@ export const ENTERTAINMENT_BLOCKS: Block[] = [
   {
     id: "1",
     category: "sleeping",
-    start: getTimestampForTimeString("00:00"),
-    end: getTimestampForTimeString("09:00"),
+    start: "00:00",
+    end: "09:00",
   },
   {
     id: "2",
     category: "living",
-    start: getTimestampForTimeString("09:00"),
-    end: getTimestampForTimeString("22:00"),
+    start: "09:00",
+    end: "22:00",
   },
   {
     id: "3",
     category: "sleeping",
-    start: getTimestampForTimeString("22:00"),
-    end: getTimestampForTimeString("24:00"),
+    start: "22:00",
+    end: "24:00",
   },
 ];
+// export const WORK_BLOCKS: Block[] = [
+//   {
+//     id: "1",
+//     category: "living",
+//     start: getTimestampForTimeString("06:00"),
+//     end: getTimestampForTimeString("09:00"),
+//   },
+//   {
+//     id: "2",
+//     category: "working",
+//     start: getTimestampForTimeString("09:00"),
+//     end: getTimestampForTimeString("12:00"),
+//   },
+//   {
+//     id: "3",
+//     category: "living",
+//     start: getTimestampForTimeString("12:00"),
+//     end: getTimestampForTimeString("13:00"),
+//   },
+//   {
+//     id: "4",
+//     category: "working",
+//     start: getTimestampForTimeString("13:00"),
+//     end: getTimestampForTimeString("15:00"),
+//   },
+//   {
+//     id: "5",
+//     category: "living",
+//     start: getTimestampForTimeString("15:00"),
+//     end: getTimestampForTimeString("15:15"),
+//   },
+//   {
+//     id: "6",
+//     category: "working",
+//     start: getTimestampForTimeString("15:15"),
+//     end: getTimestampForTimeString("17:40"),
+//   },
+//   {
+//     id: "7",
+//     category: "living",
+//     start: getTimestampForTimeString("17:40"),
+//     end: getTimestampForTimeString("18:10"),
+//   },
+//   {
+//     id: "8",
+//     category: "working",
+//     start: getTimestampForTimeString("18:10"),
+//     end: getTimestampForTimeString("19:40"),
+//   },
+//   {
+//     id: "9",
+//     category: "living",
+//     start: getTimestampForTimeString("19:40"),
+//     end: getTimestampForTimeString("20:00"),
+//   },
+//   {
+//     id: "10",
+//     category: "working",
+//     start: getTimestampForTimeString("20:00"),
+//     end: getTimestampForTimeString("22:00"),
+//   },
+// ];
+
+// // 预设的娱乐时间块
+// export const ENTERTAINMENT_BLOCKS: Block[] = [
+//   {
+//     id: "1",
+//     category: "sleeping",
+//     start: getTimestampForTimeString("00:00"),
+//     end: getTimestampForTimeString("09:00"),
+//   },
+//   {
+//     id: "2",
+//     category: "living",
+//     start: getTimestampForTimeString("09:00"),
+//     end: getTimestampForTimeString("22:00"),
+//   },
+//   {
+//     id: "3",
+//     category: "sleeping",
+//     start: getTimestampForTimeString("22:00"),
+//     end: getTimestampForTimeString("24:00"),
+//   },
+// ];
 
 // 番茄类型
 export const POMO_TYPES: ("🍅" | "🍇" | "🍒")[] = ["🍅", "🍇", "🍒"];

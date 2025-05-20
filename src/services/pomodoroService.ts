@@ -1,6 +1,7 @@
 // src/services/pomodoroService.ts
 import type { Block } from "@/core/types/Block";
 import type { Todo } from "@/core/types/Todo";
+import { getTimestampForTimeString } from "@/core/utils";
 
 export interface PomodoroSegment {
   parentBlockId: string;
@@ -43,15 +44,6 @@ function subtractIntervals(
   }
   if (cur < bEnd) result.push([cur, bEnd]);
   return result.filter(([s, e]) => e > s);
-}
-
-function formatTime(ts: number): string {
-  const d = new Date(ts);
-  const mm = `${d.getMonth() + 1}`.padStart(2, "0");
-  const dd = `${d.getDate()}`.padStart(2, "0");
-  const hh = `${d.getHours()}`.padStart(2, "0");
-  const min = `${d.getMinutes()}`.padStart(2, "0");
-  return `${mm}-${dd} ${hh}:${min}`;
 }
 
 // 工具函数
@@ -135,17 +127,12 @@ export function splitBlocksToPomodorosWithIndexExcludeSchedules(
   blocks: Block[],
   schedules: { activityDueRange: [number, string] }[]
 ): PomodoroSegment[] {
-  // -------------------------
-  //console.log("======原始block=====");
-  // blocks.forEach((b, i) =>
-  //   console.log(
-  //     `[${i}] block: ${formatTime(b.start)}~${formatTime(b.end)} (${
-  //       b.category
-  //     })`
-  //   )
-  // );
-  // -------------------------
-  // 取所有activityDueRange区间
+  //-------------------------
+  console.log("======原始block=====");
+  blocks.forEach((b, i) =>
+    console.log(`[${i}] block: ${b.start}~${b.end} (${b.category})`)
+  );
+  //-------------------------
   // 取所有activityDueRange区间
   const ex: [number, number][] = schedules
     .map((s) => {
@@ -155,10 +142,8 @@ export function splitBlocksToPomodorosWithIndexExcludeSchedules(
     })
     .filter((range): range is [number, number] => range !== null);
 
-  // console.log("\n======不可用区间（activityDueRange）=====");
-  // ex.forEach((x, i) =>
-  //   console.log(`[${i}] ${formatTime(x[0])}~${formatTime(x[1])}`)
-  // );
+  console.log("\n======不可用区间（activityDueRange）=====");
+  ex.forEach((x, i) => console.log(`[${i}] ${x[0]}~${x[1]}`));
 
   let segments: PomodoroSegment[] = [];
   const globalIndex: Record<string, number> = {};
@@ -192,18 +177,28 @@ export function splitBlocksToPomodorosWithIndexExcludeSchedules(
     if (block.category === "sleeping") return;
 
     // 只考虑与当块有交集的
-    const relatedEx = ex.filter(([s, e]) => e > block.start && s < block.end);
+    const relatedEx = ex.filter(
+      ([s, e]) =>
+        e > getTimestampForTimeString(block.start) &&
+        s < getTimestampForTimeString(block.end)
+    );
     // 剔除后剩余可用区间
-    const available = subtractIntervals([block.start, block.end], relatedEx);
-    //console.log(`\n[block#${blockIdx}] after剔除:`);
-    // available.forEach((a, i) =>
-    //   console.log(
-    //     `  可用区间#${i}: ${a[0]}~${a[1]}, 长度：${(
-    //       (a[1] - a[0]) /
-    //       60000
-    //     ).toFixed(1)}分钟`
-    //   )
-    // );
+    const available = subtractIntervals(
+      [
+        getTimestampForTimeString(block.start),
+        getTimestampForTimeString(block.end),
+      ],
+      relatedEx
+    );
+    console.log(`\n[block#${blockIdx}] after剔除:`);
+    available.forEach((a, i) =>
+      console.log(
+        `  可用区间#${i}: ${a[0]}~${a[1]}, 长度：${(
+          (a[1] - a[0]) /
+          60000
+        ).toFixed(1)}分钟`
+      )
+    );
 
     for (const [aStart, aEnd] of available) {
       if (aEnd - aStart < 0 * 60 * 1000) {

@@ -75,6 +75,7 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
 import type { CSSProperties } from "vue";
+import { getTimestampForTimeString } from "@/core/utils";
 import { CategoryColors } from "@/core/constants";
 import type { Block } from "@/core/types/Block";
 import {
@@ -97,8 +98,12 @@ const props = defineProps<{
 
 // ======= 时间主块（Blocks）的样式计算 =======
 function getVerticalBlockStyle(block: Block): CSSProperties {
-  const startMinute = (block.start - props.timeRange.start) / (1000 * 60);
-  const endMinute = (block.end - props.timeRange.start) / (1000 * 60);
+  const startMinute =
+    (getTimestampForTimeString(block.start) - props.timeRange.start) /
+    (1000 * 60);
+  const endMinute =
+    (getTimestampForTimeString(block.end) - props.timeRange.start) /
+    (1000 * 60);
   const topPx = startMinute * props.effectivePxPerMinute;
   const heightPx = (endMinute - startMinute) * props.effectivePxPerMinute;
   return {

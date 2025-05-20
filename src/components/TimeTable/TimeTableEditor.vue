@@ -28,7 +28,7 @@ Parent: HomeView.vue
         <td style="width: 80px">
           <n-time-picker
             size="small"
-            v-model:value="block.start"
+            :value="getTimestampForTimeString(block.start)"
             :show-icon="false"
             format="HH:mm"
             @update:value="
@@ -42,7 +42,7 @@ Parent: HomeView.vue
         <td style="width: 80px">
           <n-time-picker
             size="small"
-            v-model:value="block.end"
+            :value="getTimestampForTimeString(block.end)"
             format="HH:mm"
             :show-icon="false"
             @update:value="
@@ -84,7 +84,7 @@ Parent: HomeView.vue
 <script setup lang="ts">
 import { ref, watch, computed } from "vue";
 import { NSelect, NTimePicker, NButton } from "naive-ui";
-import { getEndOfDayTimestamp, getTimestampForTimeString } from "@/core/utils";
+import { getTimestampForTimeString, timestampToTimeString } from "@/core/utils";
 import type { Block } from "@/core/types/Block";
 import { CategoryColors, STORAGE_KEYS } from "@/core/constants";
 
@@ -140,7 +140,6 @@ function syncToParentAndLocal() {
     "update-blocks",
     Blocks.value.map((b) => ({ ...b }))
   );
-  // 使用类型特定的存储键
   const storageKey = `${STORAGE_KEYS.TIMETABLE}_${props.currentType}`;
   localStorage.setItem(storageKey, JSON.stringify(Blocks.value));
 }
@@ -156,11 +155,18 @@ function generateId() {
   return (++maxId).toString();
 }
 
+function addMinutesToTime(str: string, add: number) {
+  const timestamp = getTimestampForTimeString(str) + add * 60 * 1000;
+  // 限制不超过 24:00
+  const max = getTimestampForTimeString("24:00");
+  return timestampToTimeString(Math.min(timestamp, max));
+}
+
 function addBlock() {
   const prev = Blocks.value[Blocks.value.length - 1];
   if (prev && !canAddBlock.value) return;
-  const start = prev ? prev.end : getTimestampForTimeString("00:00");
-  const end = Math.min(getDayEndTimestamp(), start + 2 * 60 * 60 * 1000);
+  const start = prev ? prev.end : "00:00";
+  const end = addMinutesToTime(start, 120); // +2小时
   Blocks.value.push({
     id: generateId(),
     category: categories[0],
@@ -182,7 +188,7 @@ function handleTimeChange(
   field: "start" | "end"
 ) {
   if (val == null) return;
-  Blocks.value[idx][field] = val;
+  Blocks.value[idx][field] = timestampToTimeString(val);
   syncToParentAndLocal();
 }
 
@@ -194,7 +200,7 @@ function handleCategoryChange(val: Category, idx: number) {
 // 结束时间变更的窗口，带与下一块联动
 function onEndTimeChange(idx: number) {
   const b = Blocks.value[idx],
-    dayEnd = getDayEndTimestamp();
+    dayEnd = "24:00";
 
   // 保持自身合法
   if (b.end < b.start) b.end = b.start;
@@ -226,15 +232,12 @@ function onStartTimeChange(idx: number) {
 }
 
 // ------- 业务辅助 -------
-function getDayEndTimestamp() {
-  return Blocks.value.length
-    ? getEndOfDayTimestamp(Blocks.value[Blocks.value.length - 1].start)
-    : getEndOfDayTimestamp(Date.now());
-}
+
 const canAddBlock = computed(
   () =>
     !Blocks.value.length ||
-    Blocks.value[Blocks.value.length - 1].end < getDayEndTimestamp()
+    getTimestampForTimeString(Blocks.value[Blocks.value.length - 1].end) <
+      getTimestampForTimeString("24:00")
 );
 
 // -------- 副作用 watch --------

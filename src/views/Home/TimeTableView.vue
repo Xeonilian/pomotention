@@ -88,6 +88,7 @@ import TimeBlocks from "@/components/TimeTable/TimeBlocks.vue";
 import type { Block } from "@/core/types/Block";
 import type { Todo } from "../../core/types/Todo";
 import type { Schedule } from "@/core/types/Schedule";
+import { getTimestampForTimeString } from "@/core/utils";
 
 // 1 按钮
 const showEditor = ref(false);
@@ -155,8 +156,12 @@ watch(props.blocks, () => {
 // timeRange 计算 时间戳
 const timeRange = computed(() => {
   if (props.blocks.length === 0) return { start: 0, end: 0 };
-  const start = Math.min(...props.blocks.map((b) => b.start));
-  const end = Math.max(...props.blocks.map((b) => b.end));
+  const start = Math.min(
+    ...props.blocks.map((b) => getTimestampForTimeString(b.start))
+  );
+  const end = Math.max(
+    ...props.blocks.map((b) => getTimestampForTimeString(b.end))
+  );
   return { start, end };
 });
 

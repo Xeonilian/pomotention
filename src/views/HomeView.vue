@@ -334,10 +334,10 @@ watch(
     });
 
     // 总结最终 scheduleList
-    console.log(
-      "【watch结束】当前 scheduleList:",
-      JSON.parse(JSON.stringify(scheduleList.value))
-    );
+    // console.log(
+    //   "【watch结束】当前 scheduleList:",
+    //   JSON.parse(JSON.stringify(scheduleList.value))
+    // );
   }
 );
 

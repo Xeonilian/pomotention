@@ -34,14 +34,32 @@
           /></n-icon>
           <n-icon
             v-else-if="item.class === 'T'"
-            :color="item.status === 'ongoing' ? 'red' : 'black'"
-            :depth="item.status === 'delayed' ? '1' : '3'"
+            :color="
+              item.status === 'ongoing'
+                ? 'red'
+                : item.status === 'delayed'
+                ? 'orange'
+                : item.status === 'suspended'
+                ? 'blue'
+                : item.status === 'cancelled'
+                ? 'gray'
+                : 'black'
+            "
             ><ApprovalsApp24Regular
           /></n-icon>
           <n-icon
             v-else-if="item.class === 'S'"
-            :color="item.status === 'ongoing' ? 'blue' : 'black'"
-            :depth="item.status === 'delayed' ? '1' : '3'"
+            :color="
+              item.status === 'ongoing'
+                ? 'red'
+                : item.status === 'delayed'
+                ? 'orange'
+                : item.status === 'suspended'
+                ? 'blue'
+                : item.status === 'cancelled'
+                ? 'purple'
+                : 'black'
+            "
             ><AlertUrgent24Regular
           /></n-icon>
         </template>
@@ -167,12 +185,12 @@ const sortedDisplaySheet = computed(() =>
   background: #f34d50b6;
 }
 .countdown-blue :deep(.n-input) {
-  background: #121cda80;
+  background: #777777ab;
 }
 
-:deep(.T-bg-input .n-input__input) {
+/* .T-bg-input :deep(.n-input__input) {
   background: url('data:image/svg+xml,%3Csvg width="32" height="32" xmlns="http://www.w3.org/2000/svg"%3E%3Ctext x="0" y="25" font-size="28"%3E🍒%3C/text%3E%3C/svg%3E')
     no-repeat 8px;
   background-size: 12px 12px;
-}
+} */
 </style>
