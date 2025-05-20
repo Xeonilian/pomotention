@@ -121,7 +121,7 @@ import { ref, computed } from "vue";
 const showPopover = ref(false);
 const popoverMessage = ref("");
 
-// 假设 Todo 类型中 priority 是 number
+// Todo 类型中 priority 是 number
 interface TodoWithNumberPriority extends Omit<Todo, "priority"> {
   priority: number;
 }
@@ -165,7 +165,12 @@ const sortedTodos = computed(() => {
   }
 
   return [...props.todos].sort((a, b) => {
-    return b.priority - a.priority; // 降序排列
+    // 0 放最后
+    if (a.priority === 0 && b.priority === 0) return 0;
+    if (a.priority === 0) return 1;
+    if (b.priority === 0) return -1;
+    // 其余越小越优先
+    return a.priority - b.priority;
   });
 });
 
@@ -193,117 +198,81 @@ function startEditing(todo: TodoWithNumberPriority) {
   editingPriority.value = todo.priority;
 }
 
-// 完成编辑优先级并处理优先级冲突
+// 结束优先级编辑
 function finishEditing() {
   if (!editingTodo.value) return;
 
-  // 检查任务数量是否已经达到限制
-  const prioritizedTodos = props.todos.filter((todo) => todo.priority > 0);
-  if (
-    prioritizedTodos.length >= 10 &&
-    editingPriority.value > 0 &&
-    editingTodo.value.priority === 0
-  ) {
-    popoverMessage.value = "今天已经有10件优先事项了，不能再添加了";
-    showPopover.value = true;
-    setTimeout(() => {
-      showPopover.value = false;
-    }, 3000); // 3秒后自动关闭
+  // 1. 统计已完成任务的优先级集合（要锁定）
+  const lockedPriorities = new Set(
+    props.todos
+      .filter((t) => t.status === "done" && t.priority > 0)
+      .map((t) => t.priority)
+  );
+
+  // 2. 统计所有未完成任务
+  const activeTodos = props.todos.filter(
+    (t) => t.status !== "done" && t.priority > 0
+  );
+
+  // 3. 优先级调整
+  // 用户想设置 newPriority，如果这个数字已经被锁定，则往后选下一个没被占用的
+  let desiredPriority = editingPriority.value;
+  while (desiredPriority > 0 && lockedPriorities.has(desiredPriority)) {
+    desiredPriority++;
+  }
+
+  // 4. 检查是否真的发生了变化
+  if (editingTodo.value.priority === desiredPriority) {
     editingTodo.value = null;
     return;
   }
 
-  // 如果优先级没有变化，直接退出编辑模式
-  if (editingPriority.value === editingTodo.value.priority) {
-    editingTodo.value = null;
-    return;
-  }
-
-  const oldPriority = editingTodo.value.priority;
-  const newPriority = editingPriority.value;
-
-  // 创建更新列表
+  // 5. 准备批量更新
   const updates: Array<{ id: number; priority: number }> = [];
 
-  // 如果设置为0，只需要更新当前任务
-  if (newPriority === 0) {
+  // 如果设置为0，单独处理
+  if (desiredPriority === 0) {
     updates.push({
       id: editingTodo.value.id,
       priority: 0,
     });
-  }
-  // 如果是从0设置为其他值，需要检查是否有冲突
-  else if (oldPriority === 0) {
-    // 查找是否有相同优先级的任务
-    const conflictingTodo = props.todos.find(
-      (todo) =>
-        todo.id !== editingTodo.value!.id && todo.priority === newPriority
-    );
-
-    if (conflictingTodo) {
-      // 所有大于等于新优先级的任务优先级加1
-      props.todos.forEach((todo) => {
-        if (todo.id !== editingTodo.value!.id && todo.priority >= newPriority) {
-          updates.push({
-            id: todo.id,
-            priority: todo.priority + 1,
-          });
-        }
-      });
-    }
-
-    // 更新当前任务
-    updates.push({
-      id: editingTodo.value.id,
-      priority: newPriority,
+  } else {
+    // 处理冲突：所有 >= 新优先级的未完成任务，编号往后挪
+    activeTodos.forEach((t) => {
+      if (t.id !== editingTodo.value!.id && t.priority >= desiredPriority) {
+        updates.push({ id: t.id, priority: t.priority + 1 });
+      }
     });
-  }
-  // 如果是交换两个任务的优先级
-  else {
-    // 找到与新优先级匹配的任务
-    const targetTodo = props.todos.find(
-      (todo) =>
-        todo.id !== editingTodo.value!.id && todo.priority === newPriority
-    );
 
-    if (targetTodo) {
-      // 简单交换优先级
-      updates.push({
-        id: targetTodo.id,
-        priority: oldPriority,
-      });
-    }
-
-    // 更新当前任务
+    // 当前项赋值
     updates.push({
       id: editingTodo.value.id,
-      priority: newPriority,
+      priority: desiredPriority,
     });
   }
 
-  // 发送批量更新事件
+  // 6. 应用更新
   if (updates.length > 0) {
     emit("batch-update-priorities", updates);
 
     // 立即更新本地状态以获得良好的用户体验
     updates.forEach((update) => {
       const todo = props.todos.find((t) => t.id === update.id);
-      if (todo) {
-        todo.priority = update.priority;
-      }
+      if (todo) todo.priority = update.priority;
     });
 
     popoverMessage.value = "优先级已更新";
     showPopover.value = true;
     setTimeout(() => {
       showPopover.value = false;
-    }, 2000); // 2秒后自动关闭
+    }, 2000);
   }
 
   // 退出编辑模式
   editingTodo.value = null;
 }
 
+// suspended Todo
 function handleSuspendTodo(id: number) {
   emit("drop-todo", id);
 }

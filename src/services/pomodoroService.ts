@@ -69,9 +69,14 @@ export function assignTodosToPomodoroSegments(
   todos: Todo[],
   pomodoroSegments: PomodoroSegment[]
 ): TodoSegment[] {
-  const sortedTodos = [...todos].sort(
-    (a, b) => (b.priority ?? 0) - (a.priority ?? 0)
-  );
+  const sortedTodos = [...todos].sort((a, b) => {
+    // 0号任务永远在最后
+    if ((a.priority ?? 0) === 0 && (b.priority ?? 0) === 0) return 0;
+    if ((a.priority ?? 0) === 0) return 1;
+    if ((b.priority ?? 0) === 0) return -1;
+    // 其他按从小到大
+    return (a.priority ?? 0) - (b.priority ?? 0);
+  });
   // 只挑出type === "work" 且 category === "working"的番茄段
   const workingPomodoroSegments = pomodoroSegments.filter(
     (seg) => seg.type === "work" && seg.category === "working"
