@@ -278,7 +278,7 @@ function handleSuspendTodo(id: number) {
 }
 
 function handleCheckboxChange(todo: TodoWithNumberPriority, checked: boolean) {
-  const newStatus = checked ? "done" : "";
+  const newStatus = checked ? "done" : "ongoing";
   todo.status = newStatus;
 
   emit("update-todo-status", todo.id, todo.activityId, newStatus);

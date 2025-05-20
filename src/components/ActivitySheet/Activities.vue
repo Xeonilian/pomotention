@@ -73,12 +73,20 @@
       />
       <n-input
         v-if="item.class === 'T'"
-        v-model:value="item.estPomoI"
+        :value="getInputValue(item)"
         :placeholder="item.pomoType"
         style="max-width: 32px"
-        @focus="$emit('focus-row', item.id)"
         :title="`输入估计${item.pomoType || '🍅'}数量`"
-        class="T-bg-input"
+        :class="{
+          'pomo-red': item.pomoType === '🍅',
+          'pomo-purple': item.pomoType === '🍇',
+          'pomo-green': item.pomoType === '🍒',
+          'input-center': true, // 新增
+          'input-clear-disabled': item.pomoType === '🍒', // 新增
+        }"
+        :disabled="item.pomoType === '🍒'"
+        @update:value="(val) => onInputUpdate(item, val)"
+        @focus="$emit('focus-row', item.id)"
       />
       <n-input
         v-else
@@ -93,6 +101,7 @@
         @focus="$emit('focus-row', item.id)"
         title="持续时间(分钟)"
         placeholder="min"
+        class="input-center"
       />
 
       <n-date-picker
@@ -154,6 +163,21 @@ const sortedDisplaySheet = computed(() =>
     return 0;
   })
 );
+
+// 获取输入显示字符串
+function getInputValue(item: Activity): string {
+  if (item.pomoType === "🍒") return "4";
+  return typeof item.estPomoI === "string" ? item.estPomoI : "";
+}
+
+// 响应用户输入
+function onInputUpdate(item: Activity, value: string) {
+  if (item.pomoType === "🍒") {
+    item.estPomoI = "4";
+    return;
+  }
+  item.estPomoI = value;
+}
 </script>
 
 <style scoped>
@@ -164,7 +188,7 @@ const sortedDisplaySheet = computed(() =>
   gap: 0px;
   width: 100%;
 }
-/* 如果上面的不生效，尝试这个 */
+
 :deep(.n-input .n-input-wrapper) {
   padding-left: 6px;
   padding-right: 6px;
@@ -187,10 +211,29 @@ const sortedDisplaySheet = computed(() =>
 .countdown-blue :deep(.n-input) {
   background: #777777ab;
 }
+.pomo-red {
+  background-color: rgba(255, 99, 71, 0.15) !important;
+  border-color: rgba(255, 99, 71, 0.3) !important;
+}
+.pomo-purple {
+  background-color: rgba(128, 0, 128, 0.15) !important;
+  border-color: rgba(128, 0, 128, 0.3) !important;
+}
+.pomo-green {
+  background-color: rgba(0, 128, 0, 0.15) !important;
+  border-color: rgba(0, 128, 0, 0.3) !important;
+}
+/* 文本居中 */
+.input-center :deep(.n-input__input) {
+  text-align: center;
+  color: #510909 !important;
+  opacity: 1 !important;
+}
 
-/* .T-bg-input :deep(.n-input__input) {
-  background: url('data:image/svg+xml,%3Csvg width="32" height="32" xmlns="http://www.w3.org/2000/svg"%3E%3Ctext x="0" y="25" font-size="28"%3E🍒%3C/text%3E%3C/svg%3E')
-    no-repeat 8px;
-  background-size: 12px 12px;
-} */
+/* 禁用也要高对比度且和普通同色 */
+.input-clear-disabled :deep(.n-input__input-el[disabled]) {
+  color: #510909 !important;
+  opacity: 1 !important;
+  -webkit-text-fill-color: #222 !important;
+}
 </style>
