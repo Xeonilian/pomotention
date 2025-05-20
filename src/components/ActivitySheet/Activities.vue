@@ -107,9 +107,10 @@
       <n-date-picker
         v-if="item.class === 'T'"
         v-model:value="item.dueDate"
-        type="datetime"
+        type="date"
+        clearable
         style="max-width: 70px"
-        format="HH:mm"
+        format="MM/dd"
         @focus="$emit('focus-row', item.id)"
         title="死线日期"
         :class="getCountdownClass(item.dueDate)"
@@ -125,6 +126,7 @@
         "
         type="datetime"
         style="max-width: 70px"
+        clearable
         format="HH:mm"
         @focus="$emit('focus-row', item.id)"
         title="约定时间"
@@ -140,7 +142,6 @@ import { NInput, NDatePicker, NIcon } from "naive-ui";
 import {
   VideoPersonSparkle24Regular,
   VideoPersonCall24Regular,
-  AlertUrgent24Regular,
   ApprovalsApp24Regular,
   Accessibility28Filled,
 } from "@vicons/fluent";
