@@ -60,7 +60,7 @@
                 ? 'purple'
                 : 'black'
             "
-            ><AlertUrgent24Regular
+            ><Accessibility28Filled
           /></n-icon>
         </template>
       </n-input>
@@ -144,6 +144,7 @@ import {
   VideoPersonCall24Regular,
   AlertUrgent24Regular,
   ApprovalsApp24Regular,
+  Accessibility28Filled,
 } from "@vicons/fluent";
 import type { Activity } from "@/core/types/Activity";
 

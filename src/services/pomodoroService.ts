@@ -56,7 +56,7 @@ export function getTodoEstPomoCount(todo: Todo): number {
     0
   );
   if (todo.pomoType === "🍒") {
-    return rawCount * 2;
+    return rawCount / 4;
   }
   return rawCount;
 }

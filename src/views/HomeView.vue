@@ -276,10 +276,16 @@ watch(
       );
       if (relatedTodo) {
         relatedTodo.activityTitle = activity.title;
-        relatedTodo.estPomo = activity.estPomoI
-          ? [parseInt(activity.estPomoI)]
-          : [];
+        // 判断是不是樱桃
+        if (activity.pomoType === "🍒") {
+          relatedTodo.estPomo = [4];
+        } else {
+          relatedTodo.estPomo = activity.estPomoI
+            ? [parseInt(activity.estPomoI)]
+            : [];
+        }
         relatedTodo.status = activity.status || "";
+        relatedTodo.pomoType = activity.pomoType;
       }
     });
   },

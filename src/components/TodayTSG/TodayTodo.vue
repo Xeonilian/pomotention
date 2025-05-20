@@ -58,6 +58,7 @@
             </td>
             <td class="ellipsis">{{ todo.activityTitle ?? "-" }}</td>
             <td>
+              {{ todo.pomoType }}:
               {{
                 todo.estPomo && todo.estPomo.length
                   ? todo.estPomo.join("/")
