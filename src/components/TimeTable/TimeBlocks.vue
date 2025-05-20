@@ -67,7 +67,13 @@
     :style="getTodoSegmentStyle(seg)"
     :title="seg.todoTitle + (seg.overflow ? '（超出可用番茄）' : '')"
   >
-    <span v-if="!seg.overflow">{{ seg.priority }}</span>
+    <span
+      v-if="!seg.overflow"
+      class="priority-badge"
+      :class="'priority-' + seg.priority"
+    >
+      {{ seg.priority > 0 ? seg.priority : "–" }}
+    </span>
     <span v-else>⚠️</span>
   </div>
 </template>
@@ -229,7 +235,7 @@ function getTodoSegmentStyle(seg: TodoSegment): CSSProperties {
     width: "13px",
     top: `${topPx}px`,
     height: `${heightPx}px`,
-    background: seg.overflow ? "rgba(210,60,40,0.65)" : "rgba(52,110,255,0.7)",
+    background: seg.overflow ? "rgba(210,60,40,0.65)" : "rgba(52,110,255,0.0)",
     borderRadius: "2px",
     color: "#fff",
     fontSize: "12px",
@@ -321,5 +327,57 @@ function getTodoSegmentStyle(seg: TodoSegment): CSSProperties {
   font-weight: bold;
   pointer-events: none;
   font-family: "Courier New", Courier, monospace;
+}
+
+.priority-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background-color: #bbb;
+  color: #fff;
+  font-size: 12px;
+  font-weight: bold;
+  margin: 2px;
+  padding: 0;
+  outline: none;
+  border: none;
+  box-shadow: none;
+}
+
+/* 可按 priority 分不同色 */
+.priority-1 {
+  background-color: #ef5350;
+}
+.priority-2 {
+  background-color: #ff9800;
+}
+.priority-3 {
+  background-color: #ffc107;
+  color: #555;
+}
+.priority-4 {
+  background-color: #4caf50;
+}
+.priority-5 {
+  background-color: #2196f3;
+}
+.priority-6 {
+  background-color: #9575cd;
+}
+.priority-7 {
+  background-color: #7e57c2;
+}
+.priority-8 {
+  background-color: #26a69a;
+}
+.priority-9 {
+  background-color: #789262;
+}
+.priority-10 {
+  background-color: #8d6e63;
 }
 </style>

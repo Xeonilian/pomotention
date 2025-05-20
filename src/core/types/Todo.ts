@@ -11,4 +11,5 @@ export interface Todo {
   status?: "" | "delayed" | "ongoing" | "cancelled" | "done" | "suspended";
   priority: number;
   pomoType?: "🍅" | "🍇" | "🍒";
+  dueDate?: number;
 }

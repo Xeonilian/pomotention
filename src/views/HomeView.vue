@@ -286,6 +286,7 @@ watch(
         }
         relatedTodo.status = activity.status || "";
         relatedTodo.pomoType = activity.pomoType;
+        relatedTodo.dueDate = activity.dueDate;
       }
     });
   },

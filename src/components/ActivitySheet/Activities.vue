@@ -107,10 +107,9 @@
       <n-date-picker
         v-if="item.class === 'T'"
         v-model:value="item.dueDate"
-        type="date"
+        type="datetime"
         style="max-width: 70px"
-        clearable
-        format="MM-dd"
+        format="HH:mm"
         @focus="$emit('focus-row', item.id)"
         title="死线日期"
         :class="getCountdownClass(item.dueDate)"
@@ -126,7 +125,6 @@
         "
         type="datetime"
         style="max-width: 70px"
-        clearable
         format="HH:mm"
         @focus="$emit('focus-row', item.id)"
         title="约定时间"

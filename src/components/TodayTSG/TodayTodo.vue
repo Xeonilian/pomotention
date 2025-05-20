@@ -53,7 +53,12 @@
                 />
               </template>
               <template v-else>
-                {{ getPriorityEmoji(todo.priority) }}
+                <span
+                  class="priority-badge"
+                  :class="'priority-' + todo.priority"
+                >
+                  {{ todo.priority > 0 ? todo.priority : "" }}
+                </span>
               </template>
             </td>
             <td class="ellipsis">{{ todo.activityTitle ?? "-" }}</td>
@@ -175,30 +180,23 @@ const sortedTodos = computed(() => {
   });
 });
 
-// 将数字优先级转换为对应表情符号
-function getPriorityEmoji(priority: number): string {
-  const emojis = [
-    "0️⃣",
-    "1️⃣",
-    "2️⃣",
-    "3️⃣",
-    "4️⃣",
-    "5️⃣",
-    "6️⃣",
-    "7️⃣",
-    "8️⃣",
-    "9️⃣",
-    "🔟",
-  ];
-  return priority >= 0 && priority <= 10 ? emojis[priority] : "❓";
-}
-
 // 开始编辑优先级
 function startEditing(todo: TodoWithNumberPriority) {
   editingTodo.value = todo;
   editingPriority.value = todo.priority;
 }
 
+// 重新排序
+function relayoutPriority(todos: TodoWithNumberPriority[]) {
+  // 只管“未完成+优先级>0”的 task
+  const active = todos
+    .filter((t) => t.status !== "done" && t.priority > 0)
+    .sort((a, b) => a.priority - b.priority);
+
+  active.forEach((t, idx) => {
+    t.priority = idx + 1;
+  });
+}
 // 结束优先级编辑
 function finishEditing() {
   if (!editingTodo.value) return;
@@ -271,6 +269,8 @@ function finishEditing() {
 
   // 退出编辑模式
   editingTodo.value = null;
+  //  确保优先级连续
+  relayoutPriority(props.todos);
 }
 
 // suspended Todo
@@ -349,5 +349,51 @@ function handleCheckboxChange(todo: TodoWithNumberPriority, checked: boolean) {
 .empty-row td {
   height: 40px;
   text-align: center;
+}
+.priority-badge {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  text-align: center;
+  line-height: 20px;
+  font-weight: bold;
+  color: #fff;
+  background-color: #bbb;
+  font-size: 16px;
+  box-shadow: 0 1px 3px #eee;
+}
+
+/* 可按 priority 分不同色 */
+.priority-1 {
+  background-color: #ef5350;
+}
+.priority-2 {
+  background-color: #ff9800;
+}
+.priority-3 {
+  background-color: #ffc107;
+  color: #555;
+}
+.priority-4 {
+  background-color: #4caf50;
+}
+.priority-5 {
+  background-color: #2196f3;
+}
+.priority-6 {
+  background-color: #9575cd;
+}
+.priority-7 {
+  background-color: #7e57c2;
+}
+.priority-8 {
+  background-color: #26a69a;
+}
+.priority-9 {
+  background-color: #789262;
+}
+.priority-10 {
+  background-color: #8d6e63;
 }
 </style>
