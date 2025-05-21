@@ -70,8 +70,20 @@
               title="切换活动视图"
               >📋</n-button
             >
+            <n-button
+              size="small"
+              circle
+              secondary
+              strong
+              type="info"
+              title="番茄序列"
+              @click="showPomoSeq = !showPomoSeq"
+              :style="buttonStyle(showPomoSeq)"
+            >
+              🍅
+            </n-button>
           </div>
-          <TaskView />
+          <TaskView :showPomoSeq="showPomoSeq" />
         </div>
       </div>
       <div v-if="showRight" class="right">
@@ -157,6 +169,7 @@ const showRight = ref(true);
 const showPomoTypeChangePopover = ref(false);
 const pomoTypeChangeMessage = ref("");
 const pomoTypeChangeTarget = ref<HTMLElement | null>(null);
+const showPomoSeq = ref(true);
 
 // -- 核心数据
 const currentDate = ref(new Date().toISOString().split("T")[0]);
