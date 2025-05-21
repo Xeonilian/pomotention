@@ -1,8 +1,8 @@
 <!-- PomodoroView.vue -->
 <template>
   <div class="pomodoro-view">
-    <PomodoroTimer />
-    <PomodoroSequence v-if="showPomoSeq" />
+    <PomodoroTimer class="time" />
+    <PomodoroSequence v-if="showPomoSeq" class="sequence" />
   </div>
 </template>
 
