@@ -13,6 +13,7 @@ interface DateCheckServiceOptions {
   todoList: Ref<Todo[]>;
   convertToSchedule: (activity: Activity) => Schedule;
   convertToTodo: (activity: Activity) => Todo;
+  onDateChange?: (currentDate: string) => void;
 }
 
 /**
@@ -24,6 +25,7 @@ export function createDateCheckService({
   todoList,
   convertToSchedule,
   convertToTodo,
+  onDateChange,
 }: DateCheckServiceOptions) {
   let debounceTimer: TimeoutType | null = null;
   let lastCheckedDate: string = new Date().toISOString().split("T")[0];
@@ -39,6 +41,7 @@ export function createDateCheckService({
       processSchedulesForNewDay();
       processTodoForNewDay();
       processActivityForNewDay();
+      if (onDateChange) onDateChange(currentDate);
       lastCheckedDate = currentDate;
       return true;
     }

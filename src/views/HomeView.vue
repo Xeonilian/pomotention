@@ -22,6 +22,9 @@
       <div class="middle">
         <div v-if="showMiddleTop" class="middle-top">
           <!-- 今日待办 -->
+          <div class="today-info">
+            <span>今日日期：{{ currentDate }}</span>
+          </div>
           <TodayView
             :todayTodos="todayTodos"
             :todaySchedules="todaySchedules"
@@ -106,13 +109,13 @@
 </template>
 
 <script setup lang="ts">
-// imports
+// ------------------------ 导入依赖 ------------------------
 import { ref, onMounted, watch, onUnmounted, computed } from "vue";
 import { NButton, NPopover } from "naive-ui";
 import TimeTableView from "@/views/Home/TimeTableView.vue";
-import TodayView from "@/views//Home/TodayView.vue";
-import TaskView from "@/views//Home/TaskView.vue";
-import ActivityView from "@/views//Home/ActivityView.vue";
+import TodayView from "@/views/Home/TodayView.vue";
+import TaskView from "@/views/Home/TaskView.vue";
+import ActivityView from "@/views/Home/ActivityView.vue";
 import type { Activity } from "@/core/types/Activity";
 import type { Block } from "@/core/types/Block";
 import type { Todo } from "@/core/types/Todo";
@@ -130,16 +133,12 @@ import {
   saveTimeBlocks,
   removeTimeBlocksStorage,
 } from "@/services/storageService";
-
-// Activity 相关导入
 import {
   handleAddActivity,
   handleDeleteActivity,
   passPickedActivity,
   togglePomoType,
 } from "@/services/activityService";
-
-// Today 相关导入
 import {
   updateScheduleStatus,
   updateTodoStatus,
@@ -147,10 +146,11 @@ import {
   handleSuspendSchedule,
   isToday,
 } from "@/services/todayService";
-// 日期监控
 import { createDateCheckService } from "@/services/dateCheckService";
 
-// 1 参数定义数据初始化
+// ======================== 响应式状态与初始化 ========================
+
+// -- 基础UI状态
 const showLeft = ref(true);
 const showMiddleTop = ref(true);
 const showRight = ref(true);
@@ -158,46 +158,32 @@ const showPomoTypeChangePopover = ref(false);
 const pomoTypeChangeMessage = ref("");
 const pomoTypeChangeTarget = ref<HTMLElement | null>(null);
 
-// 初始化数据
+// -- 核心数据
+const currentDate = ref(new Date().toISOString().split("T")[0]);
 const activityList = ref<Activity[]>(loadActivities());
 const todoList = ref<Todo[]>(loadTodos());
 const scheduleList = ref<Schedule[]>(loadSchedules());
-const pickedTodoActivity = ref<Activity | null>(null); // 当前选中的活动
-const activeId = ref<number | null>(null); // 当前激活的活动ID
-const todayTodos = computed(() =>
-  todoList.value.filter((todo) => isToday(todo.id))
-);
+const pickedTodoActivity = ref<Activity | null>(null); // 选中活动
+const activeId = ref<number | null>(null); // 当前激活活动id
 
-const todaySchedules = computed(() =>
-  scheduleList.value.filter((schedule) => isToday(schedule.id))
-);
+// ======================== 1. TimeTable 相关 ========================
 
-// 监听变化自动保存
-watch(activityList, (value) => saveActivities(value), { deep: true });
-watch(todoList, (value) => saveTodos(value), { deep: true });
-watch(scheduleList, (value) => saveSchedules(value), { deep: true });
-
-// 2 加载TimeTable数据 ----------------------------------------------------------
-// 当前类型
+// -- 时间表数据和类型
 const currentType = ref<"work" | "entertainment">("work");
-
-// 两套时间表
 const allBlocks = ref({
   work: loadTimeBlocks("work", [...WORK_BLOCKS]),
   entertainment: loadTimeBlocks("entertainment", [...ENTERTAINMENT_BLOCKS]),
 });
-// 当前视图展示的 blocks
 const viewBlocks = computed(() => allBlocks.value[currentType.value]);
 
-/** 切换时间表类型 */
+/** 切换时间表类型（工作/娱乐） */
 function onTypeChange(newType: "work" | "entertainment") {
   currentType.value = newType;
 }
 
-/** 编辑时间块后的回调 */
+/** 编辑时间块后的处理 */
 function onBlocksUpdate(newBlocks: Block[]) {
-  allBlocks.value[currentType.value] = [...newBlocks];
-  // 同步保存到本地
+  allBlocks.value[currentType.value] = [...newBlocks]; // 保持引用变
   saveTimeBlocks(currentType.value, newBlocks);
 }
 
@@ -205,16 +191,35 @@ function onBlocksUpdate(newBlocks: Block[]) {
 function onTimeTableReset(type: "work" | "entertainment") {
   allBlocks.value[type] =
     type === "work" ? [...WORK_BLOCKS] : [...ENTERTAINMENT_BLOCKS];
-  // 删除旧的数据，并保存新数据
   removeTimeBlocksStorage(type);
   saveTimeBlocks(type, allBlocks.value[type]);
 }
 
-// 3 Activity处理子组件事件------------------------------
+// ======================== 2. Today（当天）数据相关 ========================
+
+/** 今日的 Todo */
+const todayTodos = computed(() =>
+  todoList.value.filter((todo) => {
+    currentDate.value; // 依赖今日，日期变自动刷新
+    return isToday(todo.id);
+  })
+);
+/** 今日的 Schedule */
+const todaySchedules = computed(() =>
+  scheduleList.value.filter((schedule) => {
+    currentDate.value;
+    return isToday(schedule.id);
+  })
+);
+
+// ======================== 3. Activity 相关 ========================
+
+/** 新增活动 */
 function onAddActivity(newActivity: Activity) {
   handleAddActivity(activityList.value, scheduleList.value, newActivity);
 }
 
+/** 删除活动及其关联的 todo/schedule */
 function onDeleteActivity(id: number) {
   handleDeleteActivity(
     activityList.value,
@@ -224,147 +229,50 @@ function onDeleteActivity(id: number) {
   );
 }
 
+/** 选中活动，将其转为 todo 并作为 picked */
 function onPickActivity(activity: Activity) {
-  const result = passPickedActivity(
+  pickedTodoActivity.value = passPickedActivity(
     activityList.value,
     todoList.value,
     activity
   );
-  pickedTodoActivity.value = result;
 }
 
+/** 标记当前活跃活动id，用于高亮和交互 */
 function onUpdateActiveId(id: number | null) {
   activeId.value = id;
 }
 
+/** 修改番茄类型时的提示处理 */
 function onTogglePomoType(id: number, event?: Event) {
   const target = (event?.target as HTMLElement) || null;
   const result = togglePomoType(activityList.value, id);
-
   if (result) {
     pomoTypeChangeMessage.value = `番茄类型从${result.oldType}更改为${result.newType}`;
     pomoTypeChangeTarget.value = target;
     showPomoTypeChangePopover.value = true;
-
-    setTimeout(() => {
-      showPomoTypeChangePopover.value = false;
-    }, 3000);
+    setTimeout(() => (showPomoTypeChangePopover.value = false), 3000);
   }
 }
 
-// 同步 Activity 修改到 Todo 和 Schedule （除了时间）
-watch(
-  activityList,
-  (newVal) => {
-    // 只用 find
-    newVal.forEach((activity) => {
-      // 同步 Schedule
-      const relatedSchedule = scheduleList.value.find(
-        (schedule) => schedule.activityId === activity.id
-      );
-      if (relatedSchedule) {
-        relatedSchedule.activityTitle = activity.title;
-        relatedSchedule.activityDueRange = activity.dueRange
-          ? [activity.dueRange[0], activity.dueRange[1]]
-          : [0, "0"];
-        relatedSchedule.status = activity.status || "";
-        relatedSchedule.location = activity.location || "";
-      }
-      // 同步 Todo
-      const relatedTodo = todoList.value.find(
-        (todo) => todo.activityId === activity.id
-      );
-      if (relatedTodo) {
-        relatedTodo.activityTitle = activity.title;
-        // 判断是不是樱桃
-        if (activity.pomoType === "🍒") {
-          relatedTodo.estPomo = [4];
-        } else {
-          relatedTodo.estPomo = activity.estPomoI
-            ? [parseInt(activity.estPomoI)]
-            : [];
-        }
-        relatedTodo.status = activity.status || "";
-        relatedTodo.pomoType = activity.pomoType;
-        relatedTodo.dueDate = activity.dueDate;
-      }
-    });
-  },
-  { deep: true }
-);
+// ======================== 4. Today/任务相关操作 ========================
 
-// 更新Schedule的日期改变
-watch(
-  () => activityList.value.map((a) => a.dueRange && a.dueRange[0]),
-  () => {
-    activityList.value.forEach((activity) => {
-      const tag = `【activity: ${activity.title} (id:${activity.id})】`;
-      const due = activity.dueRange && activity.dueRange[0];
-      const scheduleIdx = scheduleList.value.findIndex(
-        (s) => s.activityId === activity.id
-      );
-
-      if (activity.class === "S" && due) {
-        const dueMs = typeof due === "string" ? Date.parse(due) : Number(due);
-        if (isToday(dueMs)) {
-          // 1. 没有就加，有就更新
-          if (scheduleIdx === -1) {
-            activity.status = "ongoing";
-            const sch = convertToSchedule(activity);
-            scheduleList.value.push(sch);
-          } else {
-            // 已有 schedule，更新主字段
-            const sch = scheduleList.value[scheduleIdx];
-            sch.activityTitle = activity.title;
-            sch.activityDueRange = activity.dueRange
-              ? [...activity.dueRange]
-              : [0, "0"];
-            sch.status = activity.status || "";
-            sch.projectName = activity.projectId
-              ? `项目${activity.projectId}`
-              : undefined;
-            sch.location = activity.location || "";
-          }
-        } else {
-          // 不是今天，应该从 scheduleList 里删除
-          if (scheduleIdx !== -1) {
-            scheduleList.value.splice(scheduleIdx, 1);
-            activity.status = "";
-            console.log(`${tag} 由于不再属于今天，A.status 已自动置空`);
-          }
-        }
-      } else if (scheduleIdx !== -1) {
-        // 非 S 类型，移除 schedule
-        console.log(`${tag} 非 S 类型，移除 schedule`);
-        scheduleList.value.splice(scheduleIdx, 1);
-      }
-    });
-
-    // 总结最终 scheduleList
-    // console.log(
-    //   "【watch结束】当前 scheduleList:",
-    //   JSON.parse(JSON.stringify(scheduleList.value))
-    // );
-  }
-);
-
-// 4 Today 相关函数------------------------------------
-// 更新打钩的 todo 状态 - 使用 todayService 中的函数
+/** Todo 更新状态（勾选） */
 function onUpdateTodoStatus(id: number, activityId: number, status: string) {
   updateTodoStatus(todoList.value, activityList.value, id, activityId, status);
 }
 
-// 更新取消 todo 的状态 - 使用 todayService 中的函数
+/** Todo 推迟处理 */
 function onDropTodo(id: number) {
   handleSuspendTodo(todoList.value, activityList.value, id);
 }
 
-// 更新推后一天 schedule 的状态 - 使用 todayService 中的函数
+/** Schedule 推迟一天 */
 function onSuspendSchedule(id: number) {
   handleSuspendSchedule(scheduleList.value, activityList.value, id);
 }
 
-// 更新打钩的 schedule 状态 - 使用 todayService 中的函数
+/** Schedule 勾选完成 */
 function onUpdateScheduleStatus(
   id: number,
   activityId: number,
@@ -379,9 +287,100 @@ function onUpdateScheduleStatus(
   );
 }
 
-// 5 TaskView 数据传递
+// ======================== 5. 数据联动 Watchers ========================
 
-// 6 UI 函数
+/** 自动保存数据 */
+watch(activityList, (value) => saveActivities(value), { deep: true });
+watch(todoList, (value) => saveTodos(value), { deep: true });
+watch(scheduleList, (value) => saveSchedules(value), { deep: true });
+
+/** 活动变化时联动 Todo/Schedule 属性同步 */
+watch(
+  activityList,
+  (newVal) => {
+    newVal.forEach((activity) => {
+      // 同步Schedule
+      const relatedSchedule = scheduleList.value.find(
+        (s) => s.activityId === activity.id
+      );
+      if (relatedSchedule) {
+        relatedSchedule.activityTitle = activity.title;
+        relatedSchedule.activityDueRange = activity.dueRange
+          ? [activity.dueRange[0], activity.dueRange[1]]
+          : [0, "0"];
+        relatedSchedule.status = activity.status || "";
+        relatedSchedule.location = activity.location || "";
+      }
+      // 同步Todo
+      const relatedTodo = todoList.value.find(
+        (todo) => todo.activityId === activity.id
+      );
+      if (relatedTodo) {
+        relatedTodo.activityTitle = activity.title;
+        relatedTodo.estPomo =
+          activity.pomoType === "🍒"
+            ? [4]
+            : activity.estPomoI
+            ? [parseInt(activity.estPomoI)]
+            : [];
+        relatedTodo.status = activity.status || "";
+        relatedTodo.pomoType = activity.pomoType;
+        relatedTodo.dueDate = activity.dueDate;
+      }
+    });
+  },
+  { deep: true }
+);
+
+/** 活动due范围变化时，补全/移除 scheduleList */
+watch(
+  () => activityList.value.map((a) => a.dueRange && a.dueRange[0]),
+  () => {
+    activityList.value.forEach((activity) => {
+      const tag = `【activity: ${activity.title} (id:${activity.id})】`;
+      const due = activity.dueRange && activity.dueRange[0];
+      const scheduleIdx = scheduleList.value.findIndex(
+        (s) => s.activityId === activity.id
+      );
+      if (activity.class === "S" && due) {
+        const dueMs = typeof due === "string" ? Date.parse(due) : Number(due);
+        if (isToday(dueMs)) {
+          // 新增或更新schedule
+          if (scheduleIdx === -1) {
+            activity.status = "ongoing";
+            const sch = convertToSchedule(activity);
+            scheduleList.value.push(sch);
+          } else {
+            // 更新主字段
+            const sch = scheduleList.value[scheduleIdx];
+            sch.activityTitle = activity.title;
+            sch.activityDueRange = activity.dueRange
+              ? [...activity.dueRange]
+              : [0, "0"];
+            sch.status = activity.status || "";
+            sch.projectName = activity.projectId
+              ? `项目${activity.projectId}`
+              : undefined;
+            sch.location = activity.location || "";
+          }
+        } else if (scheduleIdx !== -1) {
+          // 非今日，移除schedule
+          scheduleList.value.splice(scheduleIdx, 1);
+          activity.status = "";
+          console.log(`${tag} 由于不再属于今天，A.status 已置空`);
+        }
+      } else if (scheduleIdx !== -1) {
+        // 非S类型移除schedule
+        scheduleList.value.splice(scheduleIdx, 1);
+        console.log(`${tag} 非 S 类型，移除 schedule`);
+      }
+    });
+  }
+);
+
+// ======================== 6. 辅助UI函数 ========================
+
+/** 按钮的禁用与高亮效果 */
 function buttonStyle(show: boolean) {
   return {
     filter: show ? "none" : "grayscale(100%)",
@@ -389,15 +388,29 @@ function buttonStyle(show: boolean) {
   };
 }
 
-// 7 日期监控
-// 初始化service
+// ======================== 7. 日期监控服务 ========================
+
+/**
+ * 校验日期变化，变动时刷新当前日期及 blocks，并同步相关UI
+ * 注意：日期变化回调可进一步加入其他刷新逻辑
+ */
 const dateCheckService = createDateCheckService({
   activityList,
   scheduleList,
   todoList,
   convertToSchedule,
   convertToTodo,
+  onDateChange(date) {
+    // 日期变时：刷新 blocks 并刷新 currentDate 触发 UI 自动更新
+    allBlocks.value[currentType.value] = [
+      ...allBlocks.value[currentType.value],
+    ];
+    currentDate.value = new Date().toISOString().split("T")[0];
+    console.log("当前日期变化:", date);
+  },
 });
+
+// ======================== 8. 生命周期 Hook ========================
 
 onMounted(() => {
   dateCheckService.checkDateChange();

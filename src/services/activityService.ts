@@ -75,11 +75,13 @@ export function passPickedActivity(
     activityToUpdate.status = "ongoing";
   }
 
-  const existingTodo = todoList.find((todo) => todo.activityId === activity.id);
+  // const existingTodo = todoList.find((todo) => todo.activityId === activity.id);
 
-  if (!existingTodo) {
-    todoList.push(convertToTodo(activity));
-  }
+  // if (!existingTodo) {
+  //   todoList.push(convertToTodo(activity));
+  // }
+
+  todoList.push(convertToTodo(activity));
 
   return activity;
 }
