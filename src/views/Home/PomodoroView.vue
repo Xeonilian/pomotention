@@ -1,12 +1,14 @@
 <!-- PomodoroView.vue -->
 <template>
   <div class="pomodoro-view">
-    <PomodoroTimer v-if="showPomoSeq" />
+    <PomodoroTimer />
+    <PomodoroSequence v-if="showPomoSeq" />
   </div>
 </template>
 
 <script setup lang="ts">
 import PomodoroTimer from "@/components/PomodoroTimer/PomodoroTimer.vue";
+import PomodoroSequence from "@/components/PomodoroTimer/PomodoroSequence.vue";
 defineProps({
   showPomoSeq: {
     type: Boolean,
