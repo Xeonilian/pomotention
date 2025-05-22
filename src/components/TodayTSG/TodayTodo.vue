@@ -538,20 +538,19 @@ function cancelAddEstimate() {
 .pomo-container {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
   white-space: nowrap; /* 防止换行 */
   overflow-x: auto; /* 如果内容过长允许横向滚动 */
 }
 
 .pomo-group {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 2px;
   flex-shrink: 0; /* 防止压缩 */
 }
 
 .pomo-separator {
-  margin: 0 4px;
   color: #999;
   flex-shrink: 0; /* 防止压缩 */
 }
