@@ -23,7 +23,13 @@
         <div class="middle-top" :style="{ height: topHeight + 'px' }">
           <!-- 今日待办 -->
           <div class="today-header">
-            <span class="today-status">{{ currentDate }}</span>
+            <div class="today-info">
+              <span class="today-status">{{ currentDate }}</span>
+              <span class="global-pomo"
+                ><span class="today-pomo">🍅 {{ todayPomoCount }}/</span
+                ><span class="total-pomo">{{ globalRealPomo }}</span></span
+              >
+            </div>
             <div class="button-group">
               <n-button
                 size="small"
@@ -146,7 +152,11 @@ import type { Block } from "@/core/types/Block";
 import type { Todo } from "@/core/types/Todo";
 import type { Schedule } from "@/core/types/Schedule";
 import { convertToSchedule, convertToTodo } from "@/core/utils/convertActivity";
-import { WORK_BLOCKS, ENTERTAINMENT_BLOCKS } from "@/core/constants";
+import {
+  WORK_BLOCKS,
+  ENTERTAINMENT_BLOCKS,
+  STORAGE_KEYS,
+} from "@/core/constants";
 import {
   loadActivities,
   loadTodos,
@@ -214,6 +224,66 @@ const todoList = ref<Todo[]>(loadTodos());
 const scheduleList = ref<Schedule[]>(loadSchedules());
 const pickedTodoActivity = ref<Activity | null>(null); // 选中活动
 const activeId = ref<number | null>(null); // 当前激活活动id
+
+// 全局番茄钟计数器
+const globalPomoCounter = ref(loadGlobalPomoCount());
+
+// 计算当天的番茄钟数
+const todayPomoCount = computed(() => {
+  return todoList.value.reduce((total, todo) => {
+    if (todo.realPomo && todo.realPomo.length > 0) {
+      return total + todo.realPomo.reduce((sum, pomo) => sum + pomo, 0);
+    }
+    return total;
+  }, 0);
+});
+
+// 计算全局realPomo（历史 + 当天）
+const globalRealPomo = computed(() => {
+  return globalPomoCounter.value + todayPomoCount.value;
+});
+
+// 更新全局番茄钟计数
+function updateGlobalPomoCount(todo: Todo) {
+  if (todo.realPomo && todo.realPomo.length > 0) {
+    const newCount = todo.realPomo.reduce((sum, pomo) => sum + pomo, 0);
+    globalPomoCounter.value += newCount;
+    saveGlobalPomoCount(globalPomoCounter.value);
+  }
+}
+
+// 加载全局番茄钟计数
+function loadGlobalPomoCount(): number {
+  return JSON.parse(
+    localStorage.getItem(STORAGE_KEYS.GLOBAL_POMO_COUNT) || "0"
+  );
+}
+
+// 保存全局番茄钟计数
+function saveGlobalPomoCount(count: number): void {
+  localStorage.setItem(STORAGE_KEYS.GLOBAL_POMO_COUNT, JSON.stringify(count));
+}
+
+// 监听todoList变化，更新全局计数
+watch(
+  todoList,
+  (newTodos, oldTodos) => {
+    // 只计算新增的番茄钟
+    newTodos.forEach((todo) => {
+      if (todo.realPomo && todo.realPomo.length > 0) {
+        // 检查是否是新增的番茄钟
+        const oldTodo = oldTodos.find((t) => t.id === todo.id);
+        if (
+          !oldTodo ||
+          JSON.stringify(oldTodo.realPomo) !== JSON.stringify(todo.realPomo)
+        ) {
+          updateGlobalPomoCount(todo);
+        }
+      }
+    });
+  },
+  { deep: true }
+);
 
 // ======================== 1. TimeTable 相关 ========================
 
@@ -595,10 +665,35 @@ function stopResize() {
   margin: 8px 8px 8px 0px;
 }
 
+.today-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .today-status {
   font-size: 18px;
   font-weight: 500;
   color: #333;
+}
+
+.global-pomo {
+  display: inline-flex;
+  align-items: center;
+  font-size: 16px;
+  color: #666;
+  background: #f5f5f5;
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+.today-pomo {
+  color: #2080f0;
+  font-weight: 500;
+}
+
+.total-pomo {
+  color: #666;
 }
 
 .button-group {

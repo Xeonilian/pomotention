@@ -27,6 +27,7 @@ export const STORAGE_KEYS = {
   ACTIVITY: "activitySheet",
   TODO: "todayTodo",
   SCHEDULE: "todaySchedule",
+  GLOBAL_POMO_COUNT: "globalPomoCount",
 };
 
 // 预设的工作时间块
