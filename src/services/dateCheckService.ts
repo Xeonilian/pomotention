@@ -104,11 +104,11 @@ export function createDateCheckService({
       if (activity) {
         activity.status = "delayed";
       }
-      // 新建今日新 todo（convertToTodo 默认 status 为 "ongoing"）
-      if (activity) {
-        const newTodo = convertToTodo(activity);
-        todoList.value.push(newTodo);
-      }
+      // 新建今日新 todo（convertToTodo 默认 status 为 "ongoing"） 产生错误
+      // if (activity) {
+      //   const newTodo = convertToTodo(activity);
+      //   todoList.value.push(newTodo);
+      // }
     });
   }
 

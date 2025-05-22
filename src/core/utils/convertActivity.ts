@@ -3,6 +3,7 @@
 import type { Activity } from "@/core/types/Activity";
 import type { Todo } from "@/core/types/Todo";
 import type { Schedule } from "@/core/types/Schedule";
+import { timestampToDatetime } from "./timestampToDatetime";
 
 /**
  * 将活动转换为待办事项
@@ -19,6 +20,7 @@ export function convertToTodo(activity: Activity): Todo {
     pomoType: activity.pomoType,
     projectName: activity.projectId ? `项目${activity.projectId}` : undefined,
     priority: 0,
+    idFormated: timestampToDatetime(Date.now()),
   };
 }
 

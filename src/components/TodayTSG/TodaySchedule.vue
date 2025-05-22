@@ -31,7 +31,7 @@
             <td>
               {{
                 schedule.activityDueRange
-                  ? formatTime(schedule.activityDueRange[0])
+                  ? timestampToTimeString(schedule.activityDueRange[0])
                   : "-"
               }}
             </td>
@@ -70,7 +70,7 @@
 
 <script setup lang="ts">
 import type { Schedule } from "@/core/types/Schedule";
-import { formatTime } from "@/core/utils";
+import { timestampToTimeString } from "@/core/utils";
 import { NCheckbox } from "naive-ui";
 import { ChevronCircleRight48Regular } from "@vicons/fluent";
 

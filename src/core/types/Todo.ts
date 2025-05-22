@@ -12,4 +12,5 @@ export interface Todo {
   priority: number;
   pomoType?: "🍅" | "🍇" | "🍒";
   dueDate?: number;
+  idFormated?: string; // 测试用
 }

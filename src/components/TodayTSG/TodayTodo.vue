@@ -35,7 +35,9 @@
                 @update:checked="handleCheckboxChange(todo, $event)"
               />
             </td>
-            <td>{{ todo.taskId ? formatTime(todo.taskId) : "-" }}</td>
+            <td>
+              {{ todo.taskId ? timestampToTimeString(todo.taskId) : "-" }}
+            </td>
             <td class="priority-cell" @click="startEditing(todo)">
               <template v-if="editingTodo && editingTodo.id === todo.id">
                 <n-input-number
@@ -118,7 +120,7 @@
 
 <script setup lang="ts">
 import type { Todo } from "@/core/types/Todo";
-import { formatTime } from "@/core/utils";
+import { timestampToTimeString } from "@/core/utils";
 import { ChevronCircleRight48Regular } from "@vicons/fluent";
 import { NCheckbox, NInputNumber, NPopover } from "naive-ui";
 import { ref, computed } from "vue";

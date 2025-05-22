@@ -275,10 +275,10 @@ export function splitBlocksToPomodorosWithIndexExcludeSchedules(
   schedules: { activityDueRange: [number, string] }[]
 ): PomodoroSegment[] {
   //-------------------------
-  console.log("======原始block=====");
-  blocks.forEach((b, i) =>
-    console.log(`[${i}] block: ${b.start}~${b.end} (${b.category})`)
-  );
+  // console.log("======原始block=====");
+  // blocks.forEach((b, i) =>
+  //   console.log(`[${i}] block: ${b.start}~${b.end} (${b.category})`)
+  // );
   //-------------------------
   // 取所有activityDueRange区间
   const ex: [number, number][] = schedules
@@ -289,8 +289,8 @@ export function splitBlocksToPomodorosWithIndexExcludeSchedules(
     })
     .filter((range): range is [number, number] => range !== null);
 
-  console.log("\n======不可用区间（activityDueRange）=====");
-  ex.forEach((x, i) => console.log(`[${i}] ${x[0]}~${x[1]}`));
+  // console.log("\n======不可用区间（activityDueRange）=====");
+  // ex.forEach((x, i) => console.log(`[${i}] ${x[0]}~${x[1]}`));
 
   let segments: PomodoroSegment[] = [];
   const globalIndex: Record<string, number> = {};
@@ -337,15 +337,15 @@ export function splitBlocksToPomodorosWithIndexExcludeSchedules(
       ],
       relatedEx
     );
-    console.log(`\n[block#${blockIdx}] after剔除:`);
-    available.forEach((a, i) =>
-      console.log(
-        `  可用区间#${i}: ${a[0]}~${a[1]}, 长度：${(
-          (a[1] - a[0]) /
-          60000
-        ).toFixed(1)}分钟`
-      )
-    );
+    // console.log(`\n[block#${blockIdx}] after剔除:`);
+    // available.forEach((a, i) =>
+    //   console.log(
+    //     `  可用区间#${i}: ${a[0]}~${a[1]}, 长度：${(
+    //       (a[1] - a[0]) /
+    //       60000
+    //     ).toFixed(1)}分钟`
+    //   )
+    // );
 
     for (const [aStart, aEnd] of available) {
       if (aEnd - aStart < 0 * 60 * 1000) {
