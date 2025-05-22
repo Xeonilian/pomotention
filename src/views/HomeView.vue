@@ -20,7 +20,7 @@
         />
       </div>
       <div class="middle">
-        <div class="middle-top">
+        <div class="middle-top" :style="{ height: topHeight + 'px' }">
           <!-- 今日待办 -->
           <div class="today-header">
             <span class="today-status">{{ currentDate }}</span>
@@ -85,7 +85,16 @@
             @update-todo-pomo="onUpdateTodoPomo"
           />
         </div>
-        <div v-if="showMiddleBottom" class="middle-bottom">
+        <div
+          v-if="showMiddleBottom"
+          class="resize-handle"
+          @mousedown="startResize"
+        ></div>
+        <div
+          v-if="showMiddleBottom"
+          class="middle-bottom"
+          :style="{ height: `calc(100% - ${topHeight}px - 8px)` }"
+        >
           <TaskView :showPomoSeq="showPomoSeq" />
         </div>
       </div>
@@ -483,6 +492,41 @@ onMounted(() => {
 onUnmounted(() => {
   dateCheckService.cleanupListeners();
 });
+
+// 添加拖动相关的状态
+const topHeight = ref(200); // 初始高度
+const isResizing = ref(false);
+const startY = ref(0);
+const startHeight = ref(0);
+
+// 开始拖动
+function startResize(e: MouseEvent) {
+  isResizing.value = true;
+  startY.value = e.clientY;
+  startHeight.value = topHeight.value;
+
+  document.addEventListener("mousemove", handleMouseMove);
+  document.addEventListener("mouseup", stopResize);
+}
+
+// 处理拖动
+function handleMouseMove(e: MouseEvent) {
+  if (!isResizing.value) return;
+
+  const deltaY = e.clientY - startY.value;
+  const newHeight = Math.max(
+    100,
+    Math.min(startHeight.value + deltaY, window.innerHeight - 200)
+  );
+  topHeight.value = newHeight;
+}
+
+// 停止拖动
+function stopResize() {
+  isResizing.value = false;
+  document.removeEventListener("mousemove", handleMouseMove);
+  document.removeEventListener("mouseup", stopResize);
+}
 </script>
 
 <style scoped>
@@ -530,7 +574,6 @@ onUnmounted(() => {
 }
 
 .middle-top {
-  height: 40%;
   background: #ffffff;
   margin-bottom: 8px;
   overflow: auto;
@@ -539,12 +582,10 @@ onUnmounted(() => {
 }
 
 .middle-bottom {
-  flex: 1;
   background: #ffffff;
   overflow: auto;
   padding: 4px;
   box-sizing: border-box;
-  height: 60%;
 }
 
 .today-header {
@@ -564,5 +605,29 @@ onUnmounted(() => {
   display: flex;
   gap: 8px;
   padding: 0px;
+}
+
+.resize-handle {
+  height: 8px;
+  background: #f0f0f0;
+  cursor: ns-resize;
+  position: relative;
+  margin: 0;
+}
+
+.resize-handle:hover {
+  background: #e0e0e0;
+}
+
+.resize-handle::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 30px;
+  height: 4px;
+  background: #ccc;
+  border-radius: 2px;
 }
 </style>
