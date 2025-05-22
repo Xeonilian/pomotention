@@ -1,8 +1,14 @@
 <!-- PomodoroView.vue -->
 <template>
   <div class="pomodoro-container">
-    <div class="pomodoro-view" :class="{ 'is-running': timerStore.isActive }">
-      <PomodoroTimer class="time" />
+    <div
+      class="pomodoro-view"
+      :class="{
+        'is-running': timerStore.isActive,
+        'sequence-mode': showPomoSeq,
+      }"
+    >
+      <PomodoroTimer class="time" :show-pomo-seq="showPomoSeq" />
       <PomodoroSequence v-if="showPomoSeq" class="sequence" />
     </div>
   </div>
@@ -50,7 +56,7 @@ defineProps({
   transition: height 0.3s ease;
 }
 
-.pomodoro-view.is-running :deep(.pomodoro-timer) {
+.pomodoro-view.sequence-mode :deep(.pomodoro-timer) {
   height: 100px !important;
 }
 
@@ -62,7 +68,7 @@ defineProps({
   transition: height 0.3s ease;
 }
 
-.pomodoro-view.is-running :deep(.pomodoro-sequence) {
-  height: 60px !important;
+.pomodoro-view.is-running.sequence-mode :deep(.pomodoro-sequence) {
+  height: 65px !important;
 }
 </style>

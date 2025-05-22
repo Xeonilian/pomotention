@@ -68,9 +68,7 @@
     <div class="button-container">
       <!-- 5-1 工作按钮：只在非休息状态显示 -->
       <n-button
-        v-if="
-          timerStore.pomodoroState !== 'breaking' && !timerStore.isFromSequence
-        "
+        v-if="timerStore.pomodoroState !== 'breaking' && !showPomoSeq"
         strong
         round
         type="error"
@@ -82,9 +80,7 @@
 
       <!-- 5-2 休息按钮：只在非工作状态显示 -->
       <n-button
-        v-if="
-          timerStore.pomodoroState !== 'working' && !timerStore.isFromSequence
-        "
+        v-if="timerStore.pomodoroState !== 'working' && !showPomoSeq"
         strong
         round
         type="info"
@@ -95,7 +91,10 @@
       </n-button>
 
       <!-- 5-2 休息时间选择器 (只在待机状态显示) -->
-      <div v-if="timerStore.pomodoroState === 'idle'" class="duration-selector">
+      <div
+        v-if="timerStore.pomodoroState === 'idle' && !showPomoSeq"
+        class="duration-selector"
+      >
         <n-dropdown
           trigger="click"
           :options="breakDurationOptions"
@@ -139,6 +138,11 @@ const clickStore = clickStatsStore();
 const timerStore = useTimerStore();
 const isGray = computed(() => timerStore.isGray); // 进度条设置
 const settingStore = useSettingStore();
+
+// 添加 showPomoSeq prop
+defineProps<{
+  showPomoSeq?: boolean;
+}>();
 
 const barLength = computed(() => settingStore.style.barLength);
 const redBarColor = computed(() => settingStore.style.redBarColor);
