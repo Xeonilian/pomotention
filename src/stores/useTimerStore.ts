@@ -19,6 +19,7 @@ export const useTimerStore = defineStore("timer", () => {
   const timeRemaining = ref<number>(0);
   const totalTime = ref<number>(0); // 带有time的为秒
   const timerInterval = ref<number | null>(null);
+  const startTime = ref<number | null>(null); // 添加开始时间记录
   const breakDuration = ref<number>(PomodoroDurations.breakDuration); // 默认休息5分钟  为分钟
   const workDuration = ref<number>(PomodoroDurations.workDuration);
   const r1Duration = ref<number>((2 / 25) * workDuration.value);
@@ -51,6 +52,73 @@ export const useTimerStore = defineStore("timer", () => {
   // 状态
   const isFromSequence = ref<boolean>(false); // 添加是否来自序列的状态
 
+  // 添加进度条相关的计算属性
+  const progressPercentage = computed(() => {
+    if (totalTime.value === 0) return 0;
+    return ((totalTime.value - timeRemaining.value) / totalTime.value) * 100;
+  });
+
+  const currentPhase = computed(() => {
+    if (!isWorking.value) return null;
+    const elapsedMinutes = (totalTime.value - timeRemaining.value) / 60;
+
+    if (elapsedMinutes <= r1Duration.value) {
+      return "r1";
+    } else if (elapsedMinutes <= r1Duration.value + wDuration.value) {
+      return "w1";
+    } else if (
+      elapsedMinutes <=
+      r1Duration.value + wDuration.value + r2Duration.value
+    ) {
+      return "r2";
+    } else if (
+      elapsedMinutes <=
+      r1Duration.value + wDuration.value + r2Duration.value + wDuration.value
+    ) {
+      return "w2";
+    } else {
+      return "t";
+    }
+  });
+
+  // 计算当前阶段的进度
+  const currentPhaseProgress = computed(() => {
+    if (!isWorking.value || !currentPhase.value) return 0;
+
+    const elapsedMinutes = (totalTime.value - timeRemaining.value) / 60;
+    let phaseStart = 0;
+    let phaseDuration = 0;
+
+    switch (currentPhase.value) {
+      case "r1":
+        phaseStart = 0;
+        phaseDuration = r1Duration.value;
+        break;
+      case "w1":
+        phaseStart = r1Duration.value;
+        phaseDuration = wDuration.value;
+        break;
+      case "r2":
+        phaseStart = r1Duration.value + wDuration.value;
+        phaseDuration = r2Duration.value;
+        break;
+      case "w2":
+        phaseStart = r1Duration.value + wDuration.value + r2Duration.value;
+        phaseDuration = wDuration.value;
+        break;
+      case "t":
+        phaseStart =
+          r1Duration.value +
+          wDuration.value +
+          r2Duration.value +
+          wDuration.value;
+        phaseDuration = tDuration.value;
+        break;
+    }
+
+    return ((elapsedMinutes - phaseStart) / phaseDuration) * 100;
+  });
+
   // 方法
   function startWorking(duration: number, onFinish?: () => void): void {
     if (timerInterval.value) clearInterval(timerInterval.value);
@@ -59,6 +127,7 @@ export const useTimerStore = defineStore("timer", () => {
     const dur = duration ?? workDuration.value;
     totalTime.value = dur * 60;
     timeRemaining.value = totalTime.value;
+    startTime.value = Date.now(); // 记录开始时间
 
     isGray.value = false;
     isFromSequence.value = !!onFinish;
@@ -73,28 +142,34 @@ export const useTimerStore = defineStore("timer", () => {
     let middleAlertPlayed = false;
 
     timerInterval.value = window.setInterval(() => {
-      if (timeRemaining.value > 0) {
+      if (startTime.value) {
+        const elapsedSeconds = Math.floor(
+          (Date.now() - startTime.value) / 1000
+        );
+        timeRemaining.value = Math.max(0, totalTime.value - elapsedSeconds);
+
         // 检查是否需要播放中间提醒
         if (!middleAlertPlayed && timeRemaining.value <= middleTime) {
           playSound(SoundType.WORK_MIDDLE);
           middleAlertPlayed = true;
         }
-        timeRemaining.value--;
-      } else {
-        if (timerInterval.value) {
-          clearInterval(timerInterval.value);
-          timerInterval.value = null;
-        }
 
-        // 播放工作结束声音
-        playSound(SoundType.WORK_END);
-        // 停止白噪音
-        stopWhiteNoise();
+        if (timeRemaining.value <= 0) {
+          if (timerInterval.value) {
+            clearInterval(timerInterval.value);
+            timerInterval.value = null;
+          }
 
-        if (onFinish) {
-          onFinish();
-        } else {
-          resetTimer();
+          // 播放工作结束声音
+          playSound(SoundType.WORK_END);
+          // 停止白噪音
+          stopWhiteNoise();
+
+          if (onFinish) {
+            onFinish();
+          } else {
+            resetTimer();
+          }
         }
       }
     }, 1000);
@@ -107,6 +182,7 @@ export const useTimerStore = defineStore("timer", () => {
     const dur = duration ?? breakDuration.value;
     totalTime.value = dur * 60;
     timeRemaining.value = totalTime.value;
+    startTime.value = Date.now(); // 记录开始时间
     isGray.value = false;
     isFromSequence.value = !!onFinish;
 
@@ -116,23 +192,28 @@ export const useTimerStore = defineStore("timer", () => {
     }
 
     timerInterval.value = window.setInterval(() => {
-      if (timeRemaining.value > 0) {
-        timeRemaining.value--;
-      } else {
-        if (timerInterval.value) {
-          clearInterval(timerInterval.value);
-          timerInterval.value = null;
-        }
+      if (startTime.value) {
+        const elapsedSeconds = Math.floor(
+          (Date.now() - startTime.value) / 1000
+        );
+        timeRemaining.value = Math.max(0, totalTime.value - elapsedSeconds);
 
-        // 如果不是来自序列，播放休息结束声音
-        if (!isFromSequence.value) {
-          playSound(SoundType.BREAK_END);
-        }
+        if (timeRemaining.value <= 0) {
+          if (timerInterval.value) {
+            clearInterval(timerInterval.value);
+            timerInterval.value = null;
+          }
 
-        if (onFinish) {
-          onFinish();
-        } else {
-          resetTimer();
+          // 如果不是来自序列，播放休息结束声音
+          if (!isFromSequence.value) {
+            playSound(SoundType.BREAK_END);
+          }
+
+          if (onFinish) {
+            onFinish();
+          } else {
+            resetTimer();
+          }
         }
       }
     }, 1000);
@@ -171,6 +252,7 @@ export const useTimerStore = defineStore("timer", () => {
     pomodoroState.value = "idle";
     timeRemaining.value = 0;
     isFromSequence.value = false;
+    startTime.value = null; // 重置开始时间
 
     // 设置番茄钟停止状态
     setPomodoroRunning(false);
@@ -194,6 +276,9 @@ export const useTimerStore = defineStore("timer", () => {
     isFromSequence, // 导出isFromSequence状态
     redBarOffsetPercentage,
     redBarPercentage,
+    progressPercentage,
+    currentPhase,
+    currentPhaseProgress,
     startWorking,
     startBreak,
     cancelTimer,
