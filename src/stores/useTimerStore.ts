@@ -2,6 +2,13 @@
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import { PomodoroDurations } from "../core/constants.ts";
+import {
+  playSound,
+  SoundType,
+  startWhiteNoise,
+  stopWhiteNoise,
+  setPomodoroRunning,
+} from "../core/sounds.ts";
 
 // 修改状态类型，更清晰地表达三种状态
 type PomodoroState = "idle" | "working" | "breaking";
@@ -50,30 +57,44 @@ export const useTimerStore = defineStore("timer", () => {
 
     pomodoroState.value = "working";
     const dur = duration ?? workDuration.value;
-    totalTime.value = dur * 60; // 25分钟
+    totalTime.value = dur * 60;
     timeRemaining.value = totalTime.value;
 
-    isGray.value = false; // 计时状态为彩色
-    isFromSequence.value = !!onFinish; // 如果有onFinish回调，说明来自序列
+    isGray.value = false;
+    isFromSequence.value = !!onFinish;
+
+    // 播放工作开始声音
+    playSound(SoundType.WORK_START);
+    // 开始播放白噪音
+    startWhiteNoise();
+
+    // 设置中间提醒
+    const middleTime = Math.floor(totalTime.value / 2);
+    let middleAlertPlayed = false;
 
     timerInterval.value = window.setInterval(() => {
       if (timeRemaining.value > 0) {
+        // 检查是否需要播放中间提醒
+        if (!middleAlertPlayed && timeRemaining.value <= middleTime) {
+          playSound(SoundType.WORK_MIDDLE);
+          middleAlertPlayed = true;
+        }
         timeRemaining.value--;
       } else {
-        // 时间结束
         if (timerInterval.value) {
           clearInterval(timerInterval.value);
           timerInterval.value = null;
         }
 
-        // 播放提示音
-        playAlertSound();
+        // 播放工作结束声音
+        playSound(SoundType.WORK_END);
+        // 停止白噪音
+        stopWhiteNoise();
 
-        // 自动切换到初始状态或基于外部流程
         if (onFinish) {
-          onFinish(); // 外部自动流程专用
+          onFinish();
         } else {
-          resetTimer(); // 切换初始状态
+          resetTimer();
         }
       }
     }, 1000);
@@ -84,54 +105,75 @@ export const useTimerStore = defineStore("timer", () => {
 
     pomodoroState.value = "breaking";
     const dur = duration ?? breakDuration.value;
-    totalTime.value = dur * 60; // 转换为秒
+    totalTime.value = dur * 60;
     timeRemaining.value = totalTime.value;
-    isGray.value = false; // 计时状态为彩色
-    isFromSequence.value = !!onFinish; // 如果有onFinish回调，说明来自序列
+    isGray.value = false;
+    isFromSequence.value = !!onFinish;
+
+    // 如果不是来自序列，播放休息开始声音
+    if (!isFromSequence.value) {
+      playSound(SoundType.BREAK_START);
+    }
 
     timerInterval.value = window.setInterval(() => {
       if (timeRemaining.value > 0) {
         timeRemaining.value--;
       } else {
-        // 休息结束
         if (timerInterval.value) {
           clearInterval(timerInterval.value);
           timerInterval.value = null;
         }
 
-        // 播放提示音
-        playAlertSound();
+        // 如果不是来自序列，播放休息结束声音
+        if (!isFromSequence.value) {
+          playSound(SoundType.BREAK_END);
+        }
 
-        // 自动切换到初始状态或基于外部流程
         if (onFinish) {
-          onFinish(); // 外部自动流程专用
+          onFinish();
         } else {
-          resetTimer(); // 切换初始状态
+          resetTimer();
         }
       }
     }, 1000);
   }
 
   function cancelTimer(): void {
-    // 重命名为cancelTimer更直观
+    // 如果正在工作，播放工作结束声音
+    if (isWorking.value) {
+      playSound(SoundType.WORK_END);
+      // 停止白噪音
+      stopWhiteNoise();
+    }
+    // 如果正在休息，播放休息结束声音
+    else if (isBreaking.value) {
+      playSound(SoundType.BREAK_END);
+    }
     resetTimer();
   }
 
   function resetTimer(): void {
-    isGray.value = true; // 非工作状态为灰色
+    // 如果正在工作，播放工作结束声音
+    if (isWorking.value) {
+      playSound(SoundType.WORK_END);
+    }
+    // 如果正在休息，播放休息结束声音
+    else if (isBreaking.value) {
+      playSound(SoundType.BREAK_END);
+    }
+
+    isGray.value = true;
     if (timerInterval.value) {
       clearInterval(timerInterval.value);
       timerInterval.value = null;
     }
 
-    pomodoroState.value = "idle"; // 改为idle
+    pomodoroState.value = "idle";
     timeRemaining.value = 0;
-    isFromSequence.value = false; // 重置序列状态
-  }
+    isFromSequence.value = false;
 
-  function playAlertSound(): void {
-    // 实现播放提示音的逻辑
-    console.log("时间结束提示音");
+    // 设置番茄钟停止状态
+    setPomodoroRunning(false);
   }
 
   // 返回状态和方法

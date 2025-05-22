@@ -44,9 +44,13 @@
         ▶️
       </button>
       <button class="action-button" @click="stopPomodoro">⏹️</button>
-      <!-- <button class="action-button" @click="testBreak" :disabled="isRunning">
-        ☕
-      </button> -->
+      <button
+        class="action-button"
+        @click="handleToggleWhiteNoise"
+        :title="isWhiteNoiseEnabled ? '关闭白噪音' : '开启白噪音'"
+      >
+        {{ isWhiteNoiseEnabled ? "🔊" : "🔇" }}
+      </button>
     </div>
   </div>
 </template>
@@ -54,6 +58,11 @@
 <script setup lang="ts">
 import { ref, computed, onUnmounted } from "vue";
 import { useTimerStore } from "@/stores/useTimerStore";
+import {
+  toggleWhiteNoise,
+  getWhiteNoiseState,
+  setPomodoroRunning,
+} from "@/core/sounds.ts";
 
 type PomodoroStep = {
   type: "work" | "break";
@@ -70,6 +79,9 @@ const currentStep = ref<number>(0);
 const totalPomodoros = ref<number>(0);
 const currentPomodoro = ref<number>(1);
 const statusLabel = ref<string>("Let's 🍅!");
+
+// 白噪音状态
+const isWhiteNoiseEnabled = ref<boolean>(getWhiteNoiseState());
 
 // 解析序列
 function parseSequence(sequence: string): PomodoroStep[] {
@@ -108,6 +120,7 @@ function startPomodoroCircle(): void {
     }
 
     isRunning.value = true;
+    setPomodoroRunning(true); // 设置番茄钟运行状态
     currentStep.value = 0;
     totalPomodoros.value = steps.filter((step) => step.type === "work").length;
     currentPomodoro.value = 1;
@@ -158,13 +171,15 @@ function runStep(steps: PomodoroStep[]): void {
 
 // 在 PomodoroSequence.vue 中修改 stopPomodoro 函数
 function stopPomodoro(): void {
+  // 先调用 store 的 resetTimer 方法
+  timerStore.resetTimer();
+
+  // 然后更新本地状态
   isRunning.value = false;
+  setPomodoroRunning(false); // 设置番茄钟停止状态
   timeoutHandles.value.forEach((handle) => clearTimeout(handle));
   timeoutHandles.value = [];
   console.log("Stopping pomodoro...");
-
-  // 调用 store 的 resetTimer 方法
-  timerStore.resetTimer();
 
   // 重置状态
   currentStep.value = 0;
@@ -306,6 +321,11 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
+// 切换白噪音
+function handleToggleWhiteNoise(): void {
+  isWhiteNoiseEnabled.value = toggleWhiteNoise();
+}
+
 // 组件卸载时清理
 onUnmounted(() => {
   // 只有在序列正在运行时才停止计时器
@@ -353,7 +373,7 @@ onUnmounted(() => {
 .progress-container {
   display: flex;
   margin: 0px auto;
-  width: auto;
+  width: 180px;
   height: 0;
   overflow: hidden;
   transition: all 0.3s ease;
@@ -388,7 +408,7 @@ onUnmounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  width: 140px;
+  width: 175px; /* 增加宽度以适应新按钮 */
   margin: 0 auto;
 }
 
