@@ -247,13 +247,34 @@ function startEditing(todo: TodoWithNumberPriority) {
 
 // 重新排序
 function relayoutPriority(todos: TodoWithNumberPriority[]) {
-  // 只管"未完成+优先级>0"的 task
+  // 获取已完成任务的优先级集合
+  const lockedPriorities = new Set(
+    todos
+      .filter((t) => t.status === "done" && t.priority > 0)
+      .map((t) => t.priority)
+  );
+
+  // 获取未完成且优先级>0的任务
   const active = todos
     .filter((t) => t.status !== "done" && t.priority > 0)
     .sort((a, b) => a.priority - b.priority);
 
-  active.forEach((t, idx) => {
-    t.priority = idx + 1;
+  // 获取所有可用的优先级（排除已锁定的）
+  const availablePriorities = new Set<number>();
+  for (let i = 1; i <= 10; i++) {
+    if (!lockedPriorities.has(i)) {
+      availablePriorities.add(i);
+    }
+  }
+
+  // 按顺序分配可用的优先级
+  let priorityIndex = 0;
+  active.forEach((t) => {
+    const availablePriority = Array.from(availablePriorities)[priorityIndex];
+    if (availablePriority) {
+      t.priority = availablePriority;
+      priorityIndex++;
+    }
   });
 }
 // 结束优先级编辑
@@ -273,10 +294,17 @@ function finishEditing() {
   );
 
   // 3. 优先级调整
-  // 用户想设置 newPriority，如果这个数字已经被锁定，则往后选下一个没被占用的
   let desiredPriority = editingPriority.value;
-  while (desiredPriority > 0 && lockedPriorities.has(desiredPriority)) {
-    desiredPriority++;
+
+  // 如果目标优先级已被锁定，显示提示并退出
+  if (desiredPriority > 0 && lockedPriorities.has(desiredPriority)) {
+    popoverMessage.value = "该优先级已被占用";
+    showPopover.value = true;
+    setTimeout(() => {
+      showPopover.value = false;
+    }, 2000);
+    editingTodo.value = null;
+    return;
   }
 
   // 4. 检查是否真的发生了变化
