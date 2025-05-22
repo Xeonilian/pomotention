@@ -25,12 +25,41 @@
           <div class="today-header">
             <div class="today-info">
               <span class="today-status">{{ currentDate }}</span>
+
               <span class="global-pomo"
                 ><span class="today-pomo">🍅 {{ todayPomoCount }}/</span
                 ><span class="total-pomo">{{ globalRealPomo }}</span></span
               >
             </div>
             <div class="button-group">
+              <n-button
+                size="small"
+                circle
+                secondary
+                strong
+                type="info"
+                @click="goToPreviousDay"
+                :disabled="!canGoToPreviousDay"
+                title="上一天"
+              >
+                <template #icon>
+                  <DocumentArrowLeft20Regular />
+                </template>
+              </n-button>
+              <n-button
+                size="small"
+                circle
+                secondary
+                strong
+                type="info"
+                @click="goToNextDay"
+                :disabled="!canGoToNextDay"
+                title="下一天"
+              >
+                <template #icon>
+                  <DocumentArrowRight20Regular />
+                </template>
+              </n-button>
               <n-button
                 size="small"
                 circle
@@ -50,7 +79,8 @@
                 type="info"
                 @click="showMiddleBottom = !showMiddleBottom"
                 :style="buttonStyle(showMiddleBottom)"
-                title="切换待办视图"
+                title="切换执行视图"
+                :disabled="timerStore.isActive"
                 >🖊️</n-button
               >
               <n-button
@@ -183,6 +213,10 @@ import {
   updateTodoPomo,
 } from "@/services/todayService";
 import { createDateCheckService } from "@/services/dateCheckService";
+import {
+  DocumentArrowLeft20Regular,
+  DocumentArrowRight20Regular,
+} from "@vicons/fluent";
 
 // ======================== 响应式状态与初始化 ========================
 
@@ -557,6 +591,7 @@ const dateCheckService = createDateCheckService({
 onMounted(() => {
   dateCheckService.checkDateChange();
   dateCheckService.setupUserInteractionCheck();
+  updateCurrentDate(); // 初始化日期显示
 });
 
 onUnmounted(() => {
@@ -596,6 +631,59 @@ function stopResize() {
   isResizing.value = false;
   document.removeEventListener("mousemove", handleMouseMove);
   document.removeEventListener("mouseup", stopResize);
+}
+
+// ======================== 日期切换相关 ========================
+const initialDate = new Date("2025-04-03");
+const currentViewDate = ref(new Date());
+
+const canGoToPreviousDay = computed(() => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return currentViewDate.value > today;
+});
+
+const canGoToNextDay = computed(() => {
+  const maxDate = new Date("2025-04-03");
+  maxDate.setHours(23, 59, 59, 999);
+  return currentViewDate.value < maxDate;
+});
+
+function goToPreviousDay() {
+  if (canGoToPreviousDay.value) {
+    const newDate = new Date(currentViewDate.value);
+    newDate.setDate(newDate.getDate() - 1);
+    currentViewDate.value = newDate;
+    updateCurrentDate();
+  }
+}
+
+function goToNextDay() {
+  if (canGoToNextDay.value) {
+    const newDate = new Date(currentViewDate.value);
+    newDate.setDate(newDate.getDate() + 1);
+    currentViewDate.value = newDate;
+    updateCurrentDate();
+  }
+}
+
+function updateCurrentDate() {
+  const date = currentViewDate.value;
+  const dateStr = date.toISOString().split("T")[0];
+  const weekDay = weekdayShort[date.getDay()];
+
+  // 计算周数
+  const yearStart = new Date(date.getFullYear(), 0, 1);
+  const weekNo = Math.ceil(
+    ((date.getTime() - yearStart.getTime()) / 86400000 + 1) / 7
+  );
+
+  currentDate.value = `${dateStr} ${weekDay} W${weekNo}`;
+
+  // 如果是2025年4月3日，显示特殊消息
+  if (dateStr === "2025-04-03") {
+    window.$message?.info("今天是我最爱的喵喵的生日，没有啦");
+  }
 }
 </script>
 
