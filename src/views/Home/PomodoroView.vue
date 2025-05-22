@@ -1,8 +1,10 @@
 <!-- PomodoroView.vue -->
 <template>
-  <div class="pomodoro-view">
-    <PomodoroTimer class="time" />
-    <PomodoroSequence v-if="showPomoSeq" class="sequence" />
+  <div class="pomodoro-container">
+    <div class="pomodoro-view">
+      <PomodoroTimer class="time" />
+      <PomodoroSequence v-if="showPomoSeq" class="sequence" />
+    </div>
   </div>
 </template>
 
@@ -19,6 +21,7 @@ defineProps({
 <style scoped>
 .pomodoro-view {
   display: flex;
-  justify-content: center;
+  margin: 0 auto;
+  /* 不设置宽度，让内容决定宽度 */
 }
 </style>

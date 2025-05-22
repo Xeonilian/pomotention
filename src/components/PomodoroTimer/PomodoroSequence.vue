@@ -1,28 +1,21 @@
 <template>
-  <div class="pomodoro-container">
-    <button class="minimize-button" @click="toggleMinimize">
-      {{ isMinimized ? "+" : "-" }}
-    </button>
-
+  <div class="pomodoro-sequence">
     <div class="status-row">
       <span class="status-label">Let's 🍅!</span>
     </div>
 
     <div class="progress-container" ref="progressContainer"></div>
 
-    <div class="sequence-row" v-if="!isMinimized">
+    <div class="sequence-row">
       <textarea
+        v-if="!isMinimized"
         v-model="sequenceInput"
         placeholder="🍅+05+🍅+15..."
         class="sequence-input"
       ></textarea>
     </div>
 
-    <!-- <div class="hint-text" v-if="!isMinimized">
-      🍅=25min work, 05/15/30=break minutes
-    </div> -->
-
-    <div class="button-row" v-if="!isMinimized">
+    <div class="button-row">
       <button class="action-button" @click="addPomodoro" title="insert 🍅+05">
         🍅
       </button>
@@ -57,7 +50,6 @@ const timerStore = useTimerStore();
 // 数据
 const sequenceInput = ref<string>(">>>>🍅+05+🍅+05+🍅+05+🍅+15");
 const isRunning = ref<boolean>(false);
-const isMinimized = ref<boolean>(false);
 const timeoutHandles = ref<NodeJS.Timeout[]>([]);
 const currentStep = ref<number>(0);
 const totalPomodoros = ref<number>(0);
@@ -167,7 +159,7 @@ function addPizza(): void {
 }
 
 // 最小化切换
-function toggleMinimize(): void {
+function toggleInput(): void {
   isMinimized.value = !isMinimized.value;
 }
 
@@ -178,18 +170,17 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.pomodoro-container {
-  position: relative;
-  background-color: white;
+.pomodoro-sequence {
+  text-align: center;
+  width: 200px;
+  margin: 5px auto;
+  background-color: var(--color-background) !important;
+  padding: 10px;
+  height: 125px; /* 确保高度由内容决定 */
+  min-height: 0; /* 防止 flex 项目被撑开 */
   border: 2px solid grey;
   border-radius: 10px;
-  padding: 10px;
-  z-index: 1000;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
   box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
-  width: 300px;
 }
 
 .minimize-button {
@@ -222,7 +213,7 @@ onUnmounted(() => {
   gap: 2px;
   margin: 0 auto;
   padding: 5px;
-  width: 230px;
+  width: 180px;
 }
 
 .sequence-row {
@@ -233,15 +224,16 @@ onUnmounted(() => {
 }
 
 .sequence-input {
-  width: 230px;
+  width: 175px;
   height: 50px;
   font-family: "Consolas", "Courier New", Courier, "Lucida Console", Monaco,
     "Consolas", "Liberation Mono", "Menlo", monospace;
   font-size: 14px;
-  padding: 0px;
+  padding-bottom: 5px;
   resize: none;
   display: block;
   margin: 0 auto;
+  margin-bottom: 10px;
 }
 
 .hint-text {
@@ -254,7 +246,7 @@ onUnmounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  width: 200px;
+  width: 140px;
   margin: 0 auto;
 }
 

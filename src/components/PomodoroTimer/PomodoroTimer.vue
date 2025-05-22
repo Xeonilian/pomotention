@@ -299,9 +299,11 @@ function handleDurationSelect(key: number): void {
   margin: 5px auto;
   background-color: var(--color-background) !important;
   padding: 10px;
-  border-radius: 10px;
-  height: 120px; /* 确保高度由内容决定 */
+  height: 125px; /* 确保高度由内容决定 */
   min-height: 0; /* 防止 flex 项目被撑开 */
+  border: 2px solid grey;
+  border-radius: 10px;
+  box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 /* 1-状态信息 */
