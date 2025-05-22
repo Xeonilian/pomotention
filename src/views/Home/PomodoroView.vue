@@ -28,6 +28,15 @@ defineProps({
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  /* 不设置宽度，让内容决定宽度 */
+  gap: 0; /* 移除间距 */
+}
+
+/* 添加新的样式来覆盖子组件的 margin */
+.pomodoro-view :deep(.pomodoro-timer) {
+  margin: 1px !important;
+}
+
+.pomodoro-view :deep(.pomodoro-sequence) {
+  margin: 1px !important;
 }
 </style>
