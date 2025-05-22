@@ -92,6 +92,19 @@ export const WORK_BLOCKS: Block[] = [
     start: "20:00",
     end: "22:00",
   },
+  {
+    id: "11",
+    category: "living",
+    start: "22:00",
+    end: "23:00",
+  },
+
+  {
+    id: "12",
+    category: "sleeping",
+    start: "23:00",
+    end: "24:00",
+  },
 ];
 
 // 预设的娱乐时间块

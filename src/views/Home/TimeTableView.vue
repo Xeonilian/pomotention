@@ -178,9 +178,31 @@ const effectivePxPerMinute = computed(() => {
 });
 
 // 调试用
-// watch(effectivePxPerMinute, (val) => {
-//   console.log('实际像素分钟比:', val, '容器高度:', containerHeight.value, '总分钟数:', totalMinutes.value, 'adjPara:', adjPara.value);
-// }, { immediate: true });
+// watch(
+//   effectivePxPerMinute,
+//   (val) => {
+//     console.log(
+//       "实际像素分钟比:",
+//       val,
+//       "容器高度:",
+//       containerHeight.value,
+//       "总分钟数:",
+//       totalMinutes.value,
+//       "adjPara:",
+//       adjPara.value
+//     );
+//   },
+//   { immediate: true }
+// );
+
+// watch(
+//   timeRange,
+//   (val) => {
+//     console.log("timeRange changed:", val);
+//     console.log("blocks:", props.blocks);
+//   },
+//   { immediate: true }
+// );
 </script>
 
 <style scoped>
