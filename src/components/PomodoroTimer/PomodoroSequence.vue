@@ -341,8 +341,8 @@ onUnmounted(() => {
   width: 200px;
   margin: 5px auto;
   background-color: var(--color-background) !important;
-  padding: 10px;
-  height: auto;
+  padding: 5px 10px 10px 10px;
+  height: 125px;
   min-height: 120px;
   border: 2px solid grey;
   border-radius: 10px;
@@ -351,8 +351,8 @@ onUnmounted(() => {
 }
 
 .pomodoro-sequence.running {
-  height: 55px;
-  min-height: 55px;
+  height: 43px;
+  min-height: 43px;
   overflow: hidden;
 }
 
@@ -380,8 +380,8 @@ onUnmounted(() => {
 }
 
 .progress-container:has(.time-block) {
-  height: 30px; /* 增加进度条容器高度 */
-  margin-top: 2px;
+  height: 25px; /* 增加进度条容器高度 */
+  margin-top: 0px;
   margin-bottom: 0px;
 }
 
@@ -408,7 +408,7 @@ onUnmounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  width: 175px; /* 增加宽度以适应新按钮 */
+  width: 155px; /* 增加宽度以适应新按钮 */
   margin: 0 auto;
 }
 
