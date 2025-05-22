@@ -97,7 +97,7 @@
               ? (item.dueRange[1] = val)
               : (item.dueRange = [Date.now(), val])
         "
-        style="max-width: 32px; font-size: 10px; margin: 0 auto"
+        style="max-width: 32px; font-size: 14px; margin: 0 auto"
         @focus="$emit('focus-row', item.id)"
         title="持续时间(分钟)"
         placeholder="min"

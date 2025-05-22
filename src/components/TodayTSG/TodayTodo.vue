@@ -304,14 +304,14 @@ function handleCheckboxChange(todo: TodoWithNumberPriority, checked: boolean) {
 
 /* 表头样式 */
 .table-header th {
-  background-color: #ffe9e1; /* 背景色 */
+  background-color: rgba(198, 219, 244, 0.3); /* 背景色 */
   padding: 2px;
   text-align: left;
   border-top: 2px solid #ddd; /* 顶部边框 */
   border-bottom: 2px solid #ddd; /* 底部边框 */
   white-space: nowrap; /* 防止文本换行 */
   overflow: hidden; /* 隐藏溢出内容 */
-  height: 32px; /* 固定高度 */
+  height: 24px; /* 固定高度 */
 }
 
 /* 表格内容样式 */

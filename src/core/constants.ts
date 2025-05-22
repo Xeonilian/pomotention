@@ -11,9 +11,9 @@ export const TimerStyleDefaults = {
 };
 
 export const CategoryColors = {
-  living: "rgba(74, 144, 226, 0.5)", // 蓝色
-  sleeping: "rgba(0, 0, 0, 0.5)", // 灰色
-  working: "rgba(208, 2, 27, 0.5)", // 红色
+  living: "rgba(58, 147, 250, 0.6)", // 蓝色
+  sleeping: "rgba(0, 0, 0, 0.6)", // 灰色
+  working: "rgba(208, 49, 80, 0.6)", // 红色
 } as const;
 
 export type CategoryColorKey = keyof typeof CategoryColors;
@@ -203,7 +203,7 @@ export const ENTERTAINMENT_BLOCKS: Block[] = [
 export const POMO_TYPES: ("🍅" | "🍇" | "🍒")[] = ["🍅", "🍇", "🍒"];
 
 export const POMODORO_COLORS: Record<string, string> = {
-  living: "rgb(120, 203, 76)", // 绿色透明
-  working: "rgb(250, 82, 82)", // 红色透明
-  schedule: "rgba(247, 226, 4, 0.8)", // S区黑色半透明
+  living: "rgba(222, 87, 109, 0.9)",
+  working: "rgba(64, 152, 252, 0.9)",
+  schedule: "rgba(128, 128, 128, 0.9)",
 };

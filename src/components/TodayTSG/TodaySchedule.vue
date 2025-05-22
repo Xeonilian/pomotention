@@ -118,7 +118,7 @@ function handleSuspendSchedule(id: number) {
 
 /* 表头样式 */
 .table-header th {
-  background-color: #d3f4f6; /* 背景色 */
+  background-color: rgba(198, 219, 244, 0.3); /* 背景色 */
   padding: 2px;
   text-align: left;
   border-top: 2px solid #ddd; /* 顶部边框 */
