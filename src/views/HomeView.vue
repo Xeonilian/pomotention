@@ -467,7 +467,7 @@ onUnmounted(() => {
 
 .left {
   width: 240px;
-  background: #e1eaf3;
+  background: #ffffff;
   padding: 16px;
   box-sizing: border-box;
   overflow-y: hidden; /*BUG*/
@@ -476,7 +476,7 @@ onUnmounted(() => {
 
 .right {
   width: 480px;
-  background: #f0e9d8;
+  background: #ffffff;
   padding: 16px;
   box-sizing: border-box;
   overflow: auto;
@@ -489,25 +489,24 @@ onUnmounted(() => {
   flex-direction: column;
   padding: 0px;
   box-sizing: border-box;
-  background: #fff;
   overflow: hidden;
   min-width: 400px;
 }
 
 .middle-top {
   height: 40%;
-  background: #f7f2f0;
-  margin-bottom: 12px;
+  background: #ffffff;
+  margin-bottom: 8px;
   overflow: auto;
-  padding: 8px;
+  padding: 4px;
   box-sizing: border-box;
 }
 
 .middle-bottom {
   flex: 1;
-  background: #f7f2f0;
+  background: #ffffff;
   overflow: auto;
-  padding: 8px;
+  padding: 4px;
   box-sizing: border-box;
   height: 60%;
 }

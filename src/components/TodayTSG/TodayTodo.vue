@@ -354,11 +354,11 @@ function handleCheckboxChange(todo: TodoWithNumberPriority, checked: boolean) {
 }
 .priority-badge {
   display: inline-block;
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
   text-align: center;
-  line-height: 20px;
+  line-height: 18px;
   font-weight: bold;
   color: #fff;
   background-color: #bbb;
