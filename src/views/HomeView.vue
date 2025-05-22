@@ -484,6 +484,7 @@ onUnmounted(() => {
   box-sizing: border-box;
   background: #fff;
   overflow: hidden;
+  min-width: 400px;
 }
 
 .middle-top {

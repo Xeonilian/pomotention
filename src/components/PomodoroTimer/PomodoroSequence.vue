@@ -1,14 +1,18 @@
 <template>
-  <div class="pomodoro-sequence">
-    <div class="status-row">
+  <div class="pomodoro-sequence" :class="{ running: isRunning }">
+    <div class="status-row" v-show="!isRunning">
       <span class="status-label">Let's 🍅!</span>
     </div>
 
-    <div class="progress-container" ref="progressContainer"></div>
+    <div
+      class="progress-container"
+      ref="progressContainer"
+      v-show="isRunning"
+    ></div>
 
-    <div class="sequence-row">
+    <div>
       <textarea
-        v-if="!isMinimized"
+        v-if="!isRunning"
         v-model="sequenceInput"
         placeholder="🍅+05+🍅+15..."
         class="sequence-input"
@@ -16,22 +20,27 @@
     </div>
 
     <div class="button-row">
-      <button class="action-button" @click="addPomodoro" title="insert 🍅+05">
+      <button
+        class="action-button"
+        @click="addPomodoro"
+        title="insert 🍅+05"
+        :disabled="isRunning"
+      >
         🍅
-      </button>
-      <button class="action-button" @click="addPizza" title="insert 4x(🍅+05)">
-        🍕
       </button>
       <button
         class="action-button"
-        @click="startPomodoro"
+        @click="addPizza"
+        title="insert 4x(🍅+05)"
         :disabled="isRunning"
       >
-        ▶️
+        🍕
       </button>
-      <button class="action-button" @click="stopPomodoro" :disabled="isRunning">
-        ⏹️
-      </button>
+      <button class="action-button" @click="startPomodoroCircle">▶️</button>
+      <button class="action-button" @click="stopPomodoro">⏹️</button>
+      <!-- <button class="action-button" @click="testBreak" :disabled="isRunning">
+        ☕
+      </button> -->
     </div>
   </div>
 </template>
@@ -84,11 +93,11 @@ function parseSequence(sequence: string): PomodoroStep[] {
 }
 
 // 开始番茄钟循环
-function startPomodoroCycles(): void {
+function startPomodoroCircle(): void {
   try {
     const steps = parseSequence(sequenceInput.value);
     if (steps.length === 0) {
-      alert("Please enter a valid sequence.");
+      alert("请输入有效的序列。");
       return;
     }
 
@@ -97,6 +106,16 @@ function startPomodoroCycles(): void {
     totalPomodoros.value = steps.filter((step) => step.type === "work").length;
     currentPomodoro.value = 1;
     statusLabel.value = `🍅 ${currentPomodoro.value}/${totalPomodoros.value}`;
+    // 初始化进度条
+    initializeProgress(sequenceInput.value);
+    updateProgressStatus(currentStep.value);
+    // 开始第一个工作周期
+    const firstStep = steps[0];
+    if (firstStep.type === "work") {
+      timerStore.startWorking(firstStep.duration);
+    } else {
+      timerStore.startBreak(firstStep.duration);
+    }
 
     runStep(steps);
   } catch (error) {
@@ -131,14 +150,44 @@ function runStep(steps: PomodoroStep[]): void {
   }
 }
 
-// 停止番茄钟
+// 在 PomodoroSequence.vue 中修改 stopPomodoro 函数
 function stopPomodoro(): void {
   isRunning.value = false;
   timeoutHandles.value.forEach((handle) => clearTimeout(handle));
   timeoutHandles.value = [];
+  console.log("Stopping pomodoro...");
+
+  // 调用 store 的 resetTimer 方法
   timerStore.resetTimer();
+
+  // 重置状态
+  currentStep.value = 0;
+  currentPomodoro.value = 1;
+  totalPomodoros.value = 0;
   statusLabel.value = "Let's 🍅!";
+
+  // 清空进度条
+  if (progressContainer.value) {
+    progressContainer.value.innerHTML = "";
+  }
+
+  // 重置序列输入
+  sequenceInput.value = ">>>>🍅+05+🍅+05+🍅+05+🍅+15";
 }
+
+// 测试 break
+// function testBreak(): void {
+//   try {
+//     isRunning.value = true;
+//     statusLabel.value = "Break 5min";
+//     timerStore.startBreak(15, () => {
+//       isRunning.value = false;
+//       statusLabel.value = "Let's 🍅!";
+//     });
+//   } catch (error) {
+//     alert((error as Error).message);
+//   }
+// }
 
 // 添加番茄钟序列
 function addPomodoro(): void {
@@ -158,10 +207,98 @@ function addPizza(): void {
   }
 }
 
-// 最小化切换
-function toggleInput(): void {
-  isMinimized.value = !isMinimized.value;
+// 添加 ref
+const progressContainer = ref<HTMLElement | null>(null);
+
+// 创建时间块函数
+function createTimeBlock(duration: number, type: string): HTMLElement {
+  const block = document.createElement("div");
+  block.className = "time-block";
+  block.style.width = `${duration * 4}px`; // 根据时长设置宽度
+  block.style.height = "20px"; // 添加固定高度
+  block.style.margin = "1px"; // 添加间距
+  block.style.borderRadius = "4px"; // 添加圆角
+  block.classList.add(type);
+  return block;
 }
+
+// 更新进度状态函数
+function updateProgressStatus(currentStep: number): void {
+  const blocks = progressContainer.value?.children;
+  if (!blocks) return;
+
+  Array.from(blocks).forEach((block, index) => {
+    const element = block as HTMLElement;
+    if (index < currentStep) {
+      // 已完成的块
+      element.style.backgroundImage = "";
+      element.style.animation = "none";
+      element.style.backgroundColor = element.classList.contains("work")
+        ? "#f44336"
+        : "#4CAF50";
+    } else if (index === currentStep) {
+      // 当前执行的块
+      element.style.backgroundImage =
+        "linear-gradient(45deg, rgba(255,248,10,.35) 25%, transparent 25%, transparent 50%, rgba(255,248,10,.35) 50%, rgba(255,248,10,.35) 75%, transparent 75%, transparent)";
+      element.style.backgroundSize = "20px 20px";
+      element.style.animation = "progress-animation 1s linear infinite";
+      element.style.backgroundColor = element.classList.contains("work")
+        ? "#f44336"
+        : "#4CAF50";
+    } else {
+      // 未开始的块
+      element.style.backgroundColor = element.classList.contains("work")
+        ? "rgba(244, 67, 54, 0.2)"
+        : "rgba(76, 175, 80, 0.2)";
+    }
+  });
+}
+
+// 初始化进度条
+function initializeProgress(sequence: string): void {
+  console.log("Initializing progress with sequence:", sequence);
+  if (!progressContainer.value) {
+    console.error("Progress container not found!");
+    return;
+  }
+
+  progressContainer.value.innerHTML = "";
+  const steps = parseSequence(sequence);
+  console.log("Steps for progress:", steps);
+
+  steps.forEach((step) => {
+    const block = createTimeBlock(step.duration, step.type);
+    block.classList.add(step.type);
+    progressContainer.value?.appendChild(block);
+  });
+}
+
+// 添加样式
+const style = document.createElement("style");
+style.textContent = `
+.time-block {
+  transition: background-color 0.3s ease;
+  margin: 0;
+}
+
+.time-block.work {
+  background-color: rgba(244, 67, 54, 0.2);
+}
+
+.time-block.break {
+  background-color: rgba(76, 175, 80, 0.2);
+}
+
+@keyframes progress-animation {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 20px 0;
+  }
+}
+`;
+document.head.appendChild(style);
 
 // 组件卸载时清理
 onUnmounted(() => {
@@ -176,23 +313,18 @@ onUnmounted(() => {
   margin: 5px auto;
   background-color: var(--color-background) !important;
   padding: 10px;
-  height: 125px; /* 确保高度由内容决定 */
-  min-height: 0; /* 防止 flex 项目被撑开 */
+  height: auto;
+  min-height: 120px;
   border: 2px solid grey;
   border-radius: 10px;
   box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
 }
 
-.minimize-button {
-  position: absolute;
-  top: 5px;
-  right: 5px;
-  width: 20px;
-  height: 20px;
-  line-height: 15px;
-  text-align: center;
-  padding: 0;
-  border-radius: 50%;
+.pomodoro-sequence.running {
+  height: 60px;
+  min-height: 60px;
+  overflow: hidden;
 }
 
 .status-row {
@@ -206,34 +338,35 @@ onUnmounted(() => {
   color: rgb(35, 39, 43);
   font-weight: bold;
   height: 16px;
+  margin-bottom: 10px;
 }
 
 .progress-container {
   display: flex;
-  gap: 2px;
-  margin: 0 auto;
-  padding: 5px;
-  width: 180px;
+  margin: 5px auto;
+  width: auto;
+  height: 0;
+  overflow: hidden;
+  transition: all 0.3s ease;
 }
 
-.sequence-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 0px;
+.progress-container:has(.time-block) {
+  height: 30px; /* 增加进度条容器高度 */
+  margin-top: 5px;
+  margin-bottom: 5px;
 }
 
 .sequence-input {
   width: 175px;
-  height: 50px;
+  height: 60px; /* 调整输入框高度 */
   font-family: "Consolas", "Courier New", Courier, "Lucida Console", Monaco,
     "Consolas", "Liberation Mono", "Menlo", monospace;
   font-size: 14px;
-  padding-bottom: 5px;
+  padding: 0px;
   resize: none;
   display: block;
   margin: 0 auto;
-  margin-bottom: 10px;
+  margin-bottom: 10px; /* 减小底部边距 */
 }
 
 .hint-text {
@@ -258,6 +391,30 @@ onUnmounted(() => {
   justify-content: center;
   border-radius: 20%;
   cursor: pointer;
+  border: 1px solid #ccc;
+  background-color: #fff;
+}
+
+.action-button:hover {
+  background-color: #f0f0f0;
+}
+
+.action-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.time-block {
+  transition: background-color 0.3s ease;
+  margin: 0;
+}
+
+.time-block.work {
+  background-color: rgba(244, 67, 54, 0.2);
+}
+
+.time-block.break {
+  background-color: rgba(76, 175, 80, 0.2);
 }
 
 @keyframes progress-animation {
