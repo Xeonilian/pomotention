@@ -20,10 +20,58 @@
         />
       </div>
       <div class="middle">
-        <div v-if="showMiddleTop" class="middle-top">
+        <div class="middle-top">
           <!-- 今日待办 -->
-          <div class="today-info">
-            <span>今日日期：{{ currentDate }}</span>
+          <div class="today-header">
+            <span class="today-status">{{ currentDate }}</span>
+            <div class="button-group">
+              <n-button
+                size="small"
+                circle
+                secondary
+                strong
+                type="info"
+                @click="showLeft = !showLeft"
+                :style="buttonStyle(showLeft)"
+                title="切换日程视图"
+                >🗓️</n-button
+              >
+              <n-button
+                size="small"
+                circle
+                secondary
+                strong
+                type="info"
+                @click="showMiddleBottom = !showMiddleBottom"
+                :style="buttonStyle(showMiddleBottom)"
+                title="切换待办视图"
+                >🖊️</n-button
+              >
+              <n-button
+                size="small"
+                circle
+                secondary
+                strong
+                type="info"
+                @click="showRight = !showRight"
+                :style="buttonStyle(showRight)"
+                title="切换活动视图"
+                >📋</n-button
+              >
+              <n-button
+                size="small"
+                circle
+                secondary
+                strong
+                type="info"
+                title="番茄序列"
+                @click="showPomoSeq = !showPomoSeq"
+                :style="buttonStyle(showPomoSeq, true)"
+                :disabled="timerStore.isActive"
+              >
+                🍅
+              </n-button>
+            </div>
           </div>
           <TodayView
             :todayTodos="todayTodos"
@@ -37,55 +85,7 @@
             @update-todo-pomo="onUpdateTodoPomo"
           />
         </div>
-        <div class="middle-bottom">
-          <div class="button-group">
-            <n-button
-              size="small"
-              circle
-              secondary
-              strong
-              type="info"
-              @click="showLeft = !showLeft"
-              :style="buttonStyle(showLeft)"
-              title="切换日程视图"
-              >🗓️</n-button
-            >
-            <n-button
-              size="small"
-              circle
-              secondary
-              strong
-              type="info"
-              @click="showMiddleTop = !showMiddleTop"
-              :style="buttonStyle(showMiddleTop)"
-              title="切换待办视图"
-              >🖊️</n-button
-            >
-            <n-button
-              size="small"
-              circle
-              secondary
-              strong
-              type="info"
-              @click="showRight = !showRight"
-              :style="buttonStyle(showRight)"
-              title="切换活动视图"
-              >📋</n-button
-            >
-            <n-button
-              size="small"
-              circle
-              secondary
-              strong
-              type="info"
-              title="番茄序列"
-              @click="showPomoSeq = !showPomoSeq"
-              :style="buttonStyle(showPomoSeq, true)"
-              :disabled="timerStore.isActive"
-            >
-              🍅
-            </n-button>
-          </div>
+        <div v-if="showMiddleBottom" class="middle-bottom">
           <TaskView :showPomoSeq="showPomoSeq" />
         </div>
       </div>
@@ -171,7 +171,8 @@ const timerStore = useTimerStore();
 
 // -- 基础UI状态
 const showLeft = ref(true);
-const showMiddleTop = ref(true);
+const showMiddleBottom = ref(true);
+
 const showRight = ref(true);
 const showPomoTypeChangePopover = ref(false);
 const pomoTypeChangeMessage = ref("");
@@ -179,7 +180,26 @@ const pomoTypeChangeTarget = ref<HTMLElement | null>(null);
 const showPomoSeq = ref(true);
 
 // -- 核心数据
-const currentDate = ref(new Date().toISOString().split("T")[0]);
+const weekdayShort = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const now = new Date();
+
+// 获取星期，ISO8601周一为第一天
+const day = now.getDay() || 7; // 周日为0，转为7
+
+// 取本周周四，用于确定年第几周
+now.setHours(0, 0, 0, 0);
+now.setDate(now.getDate() + 4 - day); // 本周四
+
+// 计算1月1日
+const yearStart = new Date(now.getFullYear(), 0, 1);
+// 第几周
+const weekNo = Math.ceil(((now - yearStart) / 86400000 + 1) / 7);
+
+const today = new Date();
+const dateStr = today.toISOString().split("T")[0];
+const weekDay = weekdayShort[today.getDay()];
+
+const currentDate = ref(`${dateStr} ${weekDay} W${weekNo}`);
 const activityList = ref<Activity[]>(loadActivities());
 const todoList = ref<Todo[]>(loadTodos());
 const scheduleList = ref<Schedule[]>(loadSchedules());
@@ -481,13 +501,6 @@ onUnmounted(() => {
   overflow: auto;
 }
 
-.button-group {
-  display: flex;
-  gap: 8px;
-  padding: 0px;
-  justify-content: flex-end;
-}
-
 .left {
   width: 240px;
   background: #ffffff;
@@ -532,5 +545,24 @@ onUnmounted(() => {
   padding: 4px;
   box-sizing: border-box;
   height: 60%;
+}
+
+.today-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 8px 8px 8px 0px;
+}
+
+.today-status {
+  font-size: 18px;
+  font-weight: 500;
+  color: #333;
+}
+
+.button-group {
+  display: flex;
+  gap: 8px;
+  padding: 0px;
 }
 </style>

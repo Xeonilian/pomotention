@@ -1,7 +1,7 @@
 <!-- PomodoroView.vue -->
 <template>
   <div class="pomodoro-container">
-    <div class="pomodoro-view">
+    <div class="pomodoro-view" :class="{ 'is-running': timerStore.isActive }">
       <PomodoroTimer class="time" />
       <PomodoroSequence v-if="showPomoSeq" class="sequence" />
     </div>
@@ -23,20 +23,46 @@ defineProps({
 </script>
 
 <style scoped>
+.pomodoro-container {
+  padding: 8px;
+  width: 240px;
+  box-sizing: border-box;
+}
+
 .pomodoro-view {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0; /* 移除间距 */
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 8px;
+  padding: 8px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
-/* 添加新的样式来覆盖子组件的 margin */
 .pomodoro-view :deep(.pomodoro-timer) {
-  margin: 1px !important;
+  margin: 0 !important;
+  width: 100%;
+  box-sizing: border-box;
+  height: 140px;
+  transition: height 0.3s ease;
+}
+
+.pomodoro-view.is-running :deep(.pomodoro-timer) {
+  height: 100px !important;
 }
 
 .pomodoro-view :deep(.pomodoro-sequence) {
-  margin: 1px !important;
+  margin: 0 !important;
+  width: 100%;
+  box-sizing: border-box;
+  height: 140px;
+  transition: height 0.3s ease;
+}
+
+.pomodoro-view.is-running :deep(.pomodoro-sequence) {
+  height: 60px !important;
 }
 </style>
