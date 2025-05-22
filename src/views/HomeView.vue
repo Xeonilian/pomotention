@@ -78,7 +78,8 @@
               type="info"
               title="番茄序列"
               @click="showPomoSeq = !showPomoSeq"
-              :style="buttonStyle(showPomoSeq)"
+              :style="buttonStyle(showPomoSeq, true)"
+              :disabled="timerStore.isActive"
             >
               🍅
             </n-button>
@@ -124,6 +125,7 @@
 // ------------------------ 导入依赖 ------------------------
 import { ref, onMounted, watch, onUnmounted, computed } from "vue";
 import { NButton, NPopover } from "naive-ui";
+import { useTimerStore } from "@/stores/useTimerStore";
 import TimeTableView from "@/views/Home/TimeTableView.vue";
 import TodayView from "@/views/Home/TodayView.vue";
 import TaskView from "@/views/Home/TaskView.vue";
@@ -161,6 +163,8 @@ import {
 import { createDateCheckService } from "@/services/dateCheckService";
 
 // ======================== 响应式状态与初始化 ========================
+
+const timerStore = useTimerStore();
 
 // -- 基础UI状态
 const showLeft = ref(true);
@@ -394,10 +398,13 @@ watch(
 // ======================== 6. 辅助UI函数 ========================
 
 /** 按钮的禁用与高亮效果 */
-function buttonStyle(show: boolean) {
+function buttonStyle(show: boolean, isPomoButton = false) {
   return {
     filter: show ? "none" : "grayscale(100%)",
     opacity: show ? 1 : 0.6,
+    cursor: isPomoButton && timerStore.isActive ? "not-allowed" : "pointer",
+    backgroundColor:
+      isPomoButton && timerStore.isActive ? "#e0e0e0" : undefined,
   };
 }
 
