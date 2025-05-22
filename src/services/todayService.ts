@@ -260,3 +260,51 @@ export function syncDateChanges(
     }
   });
 }
+
+/**
+ * 更新待办事项的番茄钟估计
+ * @param todoList 待办事项列表
+ * @param activityList 活动列表
+ * @param id 待办事项ID
+ * @param estPomo 新的番茄钟估计数组
+ */
+export function updateTodoEst(
+  todoList: Todo[],
+  activityList: Activity[],
+  id: number,
+  estPomo: number[]
+) {
+  const todo = todoList.find((t) => t.id === id);
+  if (todo) {
+    todo.estPomo = estPomo;
+
+    // 同步更新对应的 Activity
+    const activity = activityList.find((a) => a.id === todo.activityId);
+    if (activity) {
+      // 如果是 🍒 类型，固定为 4
+      if (activity.pomoType === "🍒") {
+        activity.estPomoI = "4";
+      } else {
+        // 否则使用第一个估计值
+        activity.estPomoI = estPomo.length > 0 ? estPomo[0].toString() : "";
+      }
+    }
+  }
+}
+
+/**
+ * 更新待办事项的实际番茄钟完成情况
+ * @param todoList 待办事项列表
+ * @param id 待办事项ID
+ * @param realPomo 新的实际番茄钟完成数组
+ */
+export function updateTodoPomo(
+  todoList: Todo[],
+  id: number,
+  realPomo: number[]
+) {
+  const todo = todoList.find((t) => t.id === id);
+  if (todo) {
+    todo.realPomo = realPomo;
+  }
+}

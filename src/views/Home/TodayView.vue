@@ -21,6 +21,8 @@
       :activeId="activeId"
       @update-todo-status="updateTodoStatus"
       @drop-todo="handleSuspendTodo"
+      @update-todo-est="updateTodoEst"
+      @update-todo-pomo="updateTodoPomo"
     />
   </div>
   <div class="schedule-container">
@@ -60,6 +62,8 @@ const emit = defineEmits<{
   ): void;
   (e: "suspend-schedule", id: number): void;
   (e: "drop-todo", id: number): void;
+  (e: "update-todo-est", id: number, estPomo: number[]): void;
+  (e: "update-todo-pomo", id: number, pomo: number[]): void;
 }>();
 
 function updateScheduleStatus(id: number, activityId: number, status: string) {
@@ -76,6 +80,14 @@ function handleSuspendSchedule(id: number) {
 
 function handleSuspendTodo(id: number) {
   emit("drop-todo", id);
+}
+
+function updateTodoEst(id: number, estPomo: number[]) {
+  emit("update-todo-est", id, estPomo);
+}
+
+function updateTodoPomo(id: number, pomo: number[]) {
+  emit("update-todo-pomo", id, pomo);
 }
 </script>
 <style scoped>

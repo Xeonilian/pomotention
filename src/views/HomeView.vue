@@ -33,6 +33,8 @@
             @update-todo-status="onUpdateTodoStatus"
             @drop-todo="onDropTodo"
             @suspend-schedule="onSuspendSchedule"
+            @update-todo-est="onUpdateTodoEst"
+            @update-todo-pomo="onUpdateTodoPomo"
           />
         </div>
         <div class="middle-bottom">
@@ -159,6 +161,7 @@ import {
   handleSuspendTodo,
   handleSuspendSchedule,
   isToday,
+  updateTodoPomo,
 } from "@/services/todayService";
 import { createDateCheckService } from "@/services/dateCheckService";
 
@@ -279,6 +282,23 @@ function onUpdateTodoStatus(id: number, activityId: number, status: string) {
   updateTodoStatus(todoList.value, activityList.value, id, activityId, status);
 }
 
+/** 更新待办事项的番茄钟估计 */
+function onUpdateTodoEst(id: number, estPomo: number[]) {
+  // 更新 todoList 中的数据
+  const todo = todoList.value.find((t) => t.id === id);
+  if (todo) {
+    todo.estPomo = estPomo;
+    // 保存到本地存储
+    saveTodos(todoList.value);
+  }
+}
+
+/** 更新待办事项的实际番茄钟完成情况 */
+function onUpdateTodoPomo(id: number, realPomo: number[]) {
+  updateTodoPomo(todoList.value, id, realPomo);
+  saveTodos(todoList.value);
+}
+
 /** Todo 推迟处理 */
 function onDropTodo(id: number) {
   handleSuspendTodo(todoList.value, activityList.value, id);
@@ -334,12 +354,15 @@ watch(
       );
       if (relatedTodo) {
         relatedTodo.activityTitle = activity.title;
-        relatedTodo.estPomo =
-          activity.pomoType === "🍒"
-            ? [4]
-            : activity.estPomoI
-            ? [parseInt(activity.estPomoI)]
-            : [];
+        // 只在 estPomo 不存在时才设置初始值
+        if (!relatedTodo.estPomo || relatedTodo.estPomo.length === 0) {
+          relatedTodo.estPomo =
+            activity.pomoType === "🍒"
+              ? [4]
+              : activity.estPomoI
+              ? [parseInt(activity.estPomoI)]
+              : [];
+        }
         relatedTodo.status = activity.status || "";
         relatedTodo.pomoType = activity.pomoType;
         relatedTodo.dueDate = activity.dueDate;

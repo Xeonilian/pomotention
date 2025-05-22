@@ -65,18 +65,41 @@
             </td>
             <td class="ellipsis">{{ todo.activityTitle ?? "-" }}</td>
             <td>
-              {{ todo.pomoType }}:
-              {{
-                todo.estPomo && todo.estPomo.length
-                  ? todo.estPomo.join("/")
-                  : "-"
-              }}
-              /
-              {{
-                todo.realPomo && todo.realPomo.length
-                  ? todo.realPomo.join("/")
-                  : "-"
-              }}
+              <div class="pomo-container">
+                {{ todo.pomoType }}
+                <template v-for="(est, index) in todo.estPomo" :key="index">
+                  <div class="pomo-group">
+                    <template v-for="i in est" :key="i">
+                      <n-checkbox
+                        :checked="isPomoCompleted(todo, index, i)"
+                        @update:checked="
+                          (checked) => handlePomoCheck(todo, index, i, checked)
+                        "
+                      />
+                    </template>
+                    <span
+                      v-if="index < todo.estPomo.length - 1"
+                      class="pomo-separator"
+                      >|</span
+                    >
+                  </div>
+                </template>
+
+                <!-- 新增估计按钮 -->
+                <n-button
+                  v-if="todo.estPomo.length < 3"
+                  size="tiny"
+                  type="primary"
+                  secondary
+                  @click="handleAddEstimate(todo)"
+                >
+                  <template #icon>
+                    <n-icon size="18">
+                      <CheckboxArrowRight24Regular />
+                    </n-icon>
+                  </template>
+                </n-button>
+              </div>
             </td>
             <td>
               <n-button
@@ -102,7 +125,12 @@
       </tbody>
     </table>
   </div>
-  <n-popover v-model:show="showPopover" trigger="manual" placement="top-end">
+  <n-popover
+    v-model:show="showPopover"
+    trigger="manual"
+    placement="top-end"
+    style="width: 200px"
+  >
     <template #trigger>
       <div
         style="
@@ -116,18 +144,45 @@
     </template>
     {{ popoverMessage }}
   </n-popover>
+  <!-- 添加输入框弹窗 -->
+  <n-modal
+    v-model:show="showEstimateInput"
+    preset="dialog"
+    title="新增番茄钟估计"
+    positive-text="确认"
+    negative-text="取消"
+    @positive-click="confirmAddEstimate"
+    @negative-click="cancelAddEstimate"
+    style="width: 300px"
+  >
+    <n-input-number
+      v-model:value="newEstimate"
+      :min="1"
+      :max="5"
+      placeholder="请输入估计的番茄数"
+      style="width: 100%"
+    />
+  </n-modal>
 </template>
 
 <script setup lang="ts">
 import type { Todo } from "@/core/types/Todo";
 import { timestampToTimeString } from "@/core/utils";
-import { ChevronCircleRight48Regular } from "@vicons/fluent";
+import {
+  ChevronCircleRight48Regular,
+  CheckboxArrowRight24Regular,
+} from "@vicons/fluent";
 import { NCheckbox, NInputNumber, NPopover } from "naive-ui";
 import { ref, computed } from "vue";
 
 // 添加状态来控制提示信息
 const showPopover = ref(false);
 const popoverMessage = ref("");
+
+// 添加状态来控制输入框的显示
+const showEstimateInput = ref(false);
+const currentTodoId = ref<number | null>(null);
+const newEstimate = ref<number>(1);
 
 // Todo 类型中 priority 是 number
 interface TodoWithNumberPriority extends Omit<Todo, "priority"> {
@@ -153,6 +208,8 @@ const emit = defineEmits<{
     e: "batch-update-priorities",
     updates: Array<{ id: number; priority: number }>
   ): void;
+  (e: "update-todo-pomo", id: number, realPomo: number[]): void;
+  (e: "update-todo-est", id: number, estPomo: number[]): void;
 }>();
 
 const editingTodo = ref<TodoWithNumberPriority | null>(null);
@@ -190,7 +247,7 @@ function startEditing(todo: TodoWithNumberPriority) {
 
 // 重新排序
 function relayoutPriority(todos: TodoWithNumberPriority[]) {
-  // 只管“未完成+优先级>0”的 task
+  // 只管"未完成+优先级>0"的 task
   const active = todos
     .filter((t) => t.status !== "done" && t.priority > 0)
     .sort((a, b) => a.priority - b.priority);
@@ -286,6 +343,76 @@ function handleCheckboxChange(todo: TodoWithNumberPriority, checked: boolean) {
 
   emit("update-todo-status", todo.id, todo.activityId, newStatus);
 }
+
+// 番茄估计
+// 检查番茄钟是否完成
+function isPomoCompleted(
+  todo: Todo,
+  estIndex: number,
+  pomoIndex: number
+): boolean {
+  if (!todo.realPomo || todo.realPomo.length <= estIndex) return false;
+  return todo.realPomo[estIndex] >= pomoIndex;
+}
+
+// 处理番茄钟勾选
+function handlePomoCheck(
+  todo: Todo,
+  estIndex: number,
+  pomoIndex: number,
+  checked: boolean
+) {
+  // 确保 realPomo 数组存在且长度与 estPomo 一致
+  if (!todo.realPomo) todo.realPomo = [];
+  while (todo.realPomo.length < todo.estPomo.length) {
+    todo.realPomo.push(0);
+  }
+
+  if (checked) {
+    todo.realPomo[estIndex] = Math.max(todo.realPomo[estIndex], pomoIndex);
+  } else {
+    todo.realPomo[estIndex] = Math.min(todo.realPomo[estIndex], pomoIndex - 1);
+  }
+
+  // 通知父组件更新
+  emit("update-todo-pomo", todo.id, todo.realPomo);
+}
+
+// 处理新增估计
+function handleAddEstimate(todo: Todo) {
+  currentTodoId.value = todo.id;
+  newEstimate.value = 1;
+  showEstimateInput.value = true;
+}
+
+// 确认添加新的估计
+function confirmAddEstimate() {
+  if (!currentTodoId.value) return;
+
+  const todo = props.todos.find((t) => t.id === currentTodoId.value);
+  if (!todo) return;
+
+  // 确保 estPomo 数组存在
+  if (!todo.estPomo) todo.estPomo = [];
+
+  // 添加新的估计值
+  todo.estPomo.push(newEstimate.value);
+
+  // 通知父组件更新
+  emit("update-todo-est", todo.id, todo.estPomo);
+
+  // 重置状态并关闭对话框
+  showEstimateInput.value = false;
+  currentTodoId.value = null;
+  newEstimate.value = 1; // 重置为默认值
+}
+
+// 取消添加
+function cancelAddEstimate() {
+  showEstimateInput.value = false;
+  currentTodoId.value = null;
+  newEstimate.value = 1; // 重置为默认值
+}
 </script>
 
 <style scoped>
@@ -293,6 +420,16 @@ function handleCheckboxChange(todo: TodoWithNumberPriority, checked: boolean) {
 .table-container {
   width: 100%;
   overflow-x: auto; /* 支持横向滚动 */
+}
+
+:deep(.n-checkbox) {
+  --n-check-mark-color: #343434 !important;
+  --n-color-checked: transparent !important;
+}
+
+:deep(.n-checkbox.n-checkbox--checked .n-checkbox-box .n-checkbox-box__border) {
+  border-color: #343434;
+  border-width: 1.2px;
 }
 
 /* 表格占满宽度 */
@@ -397,5 +534,30 @@ function handleCheckboxChange(todo: TodoWithNumberPriority, checked: boolean) {
 }
 .priority-10 {
   background-color: #8d6e63;
+}
+.pomo-container {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap; /* 防止换行 */
+  overflow-x: auto; /* 如果内容过长允许横向滚动 */
+}
+
+.pomo-group {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0; /* 防止压缩 */
+}
+
+.pomo-separator {
+  margin: 0 4px;
+  color: #999;
+  flex-shrink: 0; /* 防止压缩 */
+}
+
+/* 确保按钮不会被压缩 */
+.pomo-container .n-button {
+  flex-shrink: 0;
 }
 </style>
