@@ -36,7 +36,13 @@
       >
         🍕
       </button>
-      <button class="action-button" @click="startPomodoroCircle">▶️</button>
+      <button
+        class="action-button"
+        @click="startPomodoroCircle"
+        :disabled="isRunning"
+      >
+        ▶️
+      </button>
       <button class="action-button" @click="stopPomodoro">⏹️</button>
       <!-- <button class="action-button" @click="testBreak" :disabled="isRunning">
         ☕
@@ -302,7 +308,10 @@ document.head.appendChild(style);
 
 // 组件卸载时清理
 onUnmounted(() => {
-  stopPomodoro();
+  // 只有在序列正在运行时才停止计时器
+  if (isRunning.value) {
+    stopPomodoro();
+  }
 });
 </script>
 
@@ -322,8 +331,8 @@ onUnmounted(() => {
 }
 
 .pomodoro-sequence.running {
-  height: 60px;
-  min-height: 60px;
+  height: 55px;
+  min-height: 55px;
   overflow: hidden;
 }
 
@@ -343,7 +352,7 @@ onUnmounted(() => {
 
 .progress-container {
   display: flex;
-  margin: 5px auto;
+  margin: 0px auto;
   width: auto;
   height: 0;
   overflow: hidden;
@@ -352,8 +361,8 @@ onUnmounted(() => {
 
 .progress-container:has(.time-block) {
   height: 30px; /* 增加进度条容器高度 */
-  margin-top: 5px;
-  margin-bottom: 5px;
+  margin-top: 2px;
+  margin-bottom: 0px;
 }
 
 .sequence-input {

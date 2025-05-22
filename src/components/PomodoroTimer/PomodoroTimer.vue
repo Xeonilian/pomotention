@@ -68,7 +68,9 @@
     <div class="button-container">
       <!-- 5-1 工作按钮：只在非休息状态显示 -->
       <n-button
-        v-if="timerStore.pomodoroState !== 'breaking'"
+        v-if="
+          timerStore.pomodoroState !== 'breaking' && !timerStore.isFromSequence
+        "
         strong
         round
         type="error"
@@ -80,7 +82,9 @@
 
       <!-- 5-2 休息按钮：只在非工作状态显示 -->
       <n-button
-        v-if="timerStore.pomodoroState !== 'working'"
+        v-if="
+          timerStore.pomodoroState !== 'working' && !timerStore.isFromSequence
+        "
         strong
         round
         type="info"
@@ -304,6 +308,12 @@ function handleDurationSelect(key: number): void {
   border: 2px solid grey;
   border-radius: 10px;
   box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+  transition: height 0.3s ease; /* 添加高度过渡动画 */
+}
+
+/* 添加序列模式下的样式 */
+.pomodoro-timer:has(.button-container:empty) {
+  height: 80px;
 }
 
 /* 1-状态信息 */

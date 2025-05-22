@@ -41,6 +41,9 @@ export const useTimerStore = defineStore("timer", () => {
     return pomodoroState.value === "breaking";
   });
 
+  // 状态
+  const isFromSequence = ref<boolean>(false); // 添加是否来自序列的状态
+
   // 方法
   function startWorking(duration: number, onFinish?: () => void): void {
     if (timerInterval.value) clearInterval(timerInterval.value);
@@ -51,6 +54,7 @@ export const useTimerStore = defineStore("timer", () => {
     timeRemaining.value = totalTime.value;
 
     isGray.value = false; // 计时状态为彩色
+    isFromSequence.value = !!onFinish; // 如果有onFinish回调，说明来自序列
 
     timerInterval.value = window.setInterval(() => {
       if (timeRemaining.value > 0) {
@@ -83,6 +87,7 @@ export const useTimerStore = defineStore("timer", () => {
     totalTime.value = dur * 60; // 转换为秒
     timeRemaining.value = totalTime.value;
     isGray.value = false; // 计时状态为彩色
+    isFromSequence.value = !!onFinish; // 如果有onFinish回调，说明来自序列
 
     timerInterval.value = window.setInterval(() => {
       if (timeRemaining.value > 0) {
@@ -121,6 +126,7 @@ export const useTimerStore = defineStore("timer", () => {
 
     pomodoroState.value = "idle"; // 改为idle
     timeRemaining.value = 0;
+    isFromSequence.value = false; // 重置序列状态
   }
 
   function playAlertSound(): void {
@@ -143,6 +149,7 @@ export const useTimerStore = defineStore("timer", () => {
     isActive,
     isWorking,
     isBreaking,
+    isFromSequence, // 导出isFromSequence状态
     redBarOffsetPercentage,
     redBarPercentage,
     startWorking,
