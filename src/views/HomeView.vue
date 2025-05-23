@@ -45,11 +45,21 @@
                 type="warning"
                 title="番茄序列"
                 @click="showPomoSeq = !showPomoSeq"
-                :style="buttonStyle(showPomoSeq, true)"
-                :disabled="timerStore.isActive"
+                :disabled="!showPomodoroView || timerStore.isActive"
               >
-                🍅
+                {{ showPomoSeq ? "🍕" : "🍅" }}
               </n-button>
+              <n-button
+                @click="showPomodoroView = !showPomodoroView"
+                size="small"
+                circle
+                secondary
+                strong
+                type="warning"
+                :style="buttonStyle(showPomodoroView)"
+                title="切换番茄钟视图"
+                >⏰</n-button
+              >
               <n-button
                 size="small"
                 circle
@@ -61,7 +71,7 @@
                 title="切换日程视图"
                 >🗓️</n-button
               >
-              <n-button
+              <!-- <n-button
                 size="small"
                 circle
                 secondary
@@ -72,7 +82,8 @@
                 title="切换执行视图"
                 :disabled="timerStore.isActive"
                 >🖊️</n-button
-              >
+              > -->
+
               <n-button
                 size="small"
                 circle
@@ -90,7 +101,6 @@
                 circle
                 secondary
                 strong
-                type="info"
                 @click="dateService.goToPreviousDay"
                 :disabled="!dateService.canGoToPreviousDay"
                 title="上一天"
@@ -104,7 +114,6 @@
                 circle
                 secondary
                 strong
-                type="info"
                 @click="dateService.goToNextDay"
                 :disabled="!dateService.canGoToNextDay"
                 title="下一天"
@@ -141,7 +150,11 @@
         >
           <TaskView
             :showPomoSeq="showPomoSeq"
+            :showPomodoroView="showPomodoroView"
             :selectedTaskId="selectedTaskId"
+            @energy-record="handleEnergyRecord"
+            @reward-record="handleRewardRecord"
+            @interruption-record="handleInterruptionRecord"
           />
         </div>
       </div>
@@ -242,8 +255,9 @@ const dateService = useDateService();
 
 // -- 基础UI状态
 const showLeft = ref(true);
-const showMiddleBottom = ref(true);
+const showMiddleBottom = ref(true); // 取消隐藏下部分
 const showRight = ref(true);
+const showPomodoroView = ref(true); // 控制是否显示 PomodoroView
 const showPomoTypeChangePopover = ref(false);
 const pomoTypeChangeMessage = ref("");
 const pomoTypeChangeTarget = ref<HTMLElement | null>(null);
@@ -643,6 +657,36 @@ const selectedTaskId = ref<number | null>(null);
 // 添加选择任务处理函数
 function onSelectTask(taskId: number | null) {
   selectedTaskId.value = taskId;
+}
+
+// 处理能量记录
+function handleEnergyRecord() {
+  if (!selectedTaskId.value) return;
+  const task = taskService.getTask(selectedTaskId.value);
+  if (!task) return;
+
+  // TODO: 打开能量记录输入界面
+  console.log("打开能量记录输入界面", task);
+}
+
+// 处理奖赏记录
+function handleRewardRecord() {
+  if (!selectedTaskId.value) return;
+  const task = taskService.getTask(selectedTaskId.value);
+  if (!task) return;
+
+  // TODO: 打开奖赏记录输入界面
+  console.log("打开奖赏记录输入界面", task);
+}
+
+// 处理打扰记录
+function handleInterruptionRecord() {
+  if (!selectedTaskId.value) return;
+  const task = taskService.getTask(selectedTaskId.value);
+  if (!task) return;
+
+  // TODO: 打开打扰记录输入界面
+  console.log("打开打扰记录输入界面", task);
 }
 </script>
 
