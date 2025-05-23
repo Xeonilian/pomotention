@@ -255,22 +255,52 @@ watch(
   todoList,
   (newTodos) => {
     const todayTodos = newTodos.filter((todo) => isToday(todo.id));
+    console.log("更新今日待办列表:", todayTodos);
     pomoStore.setTodayTodos(todayTodos);
+
+    // 更新每个todo的番茄钟计数
+    todayTodos.forEach((todo) => {
+      if (todo.realPomo && todo.realPomo.length > 0) {
+        pomoStore.updateGlobalPomoCount(todo);
+      }
+    });
   },
-  { deep: true }
+  { deep: true, immediate: true } // 添加 immediate: true 确保首次加载时执行
 );
 
 // 监听单个todo的番茄钟变化
 watch(
   () => todoList.value.map((todo) => todo.realPomo),
   () => {
-    todoList.value.forEach((todo) => {
-      if (isToday(todo.id)) {
+    console.log("检测到番茄钟变化");
+    const todayTodos = todoList.value.filter((todo) => isToday(todo.id));
+    pomoStore.setTodayTodos(todayTodos);
+
+    todayTodos.forEach((todo) => {
+      if (todo.realPomo && todo.realPomo.length > 0) {
         pomoStore.updateGlobalPomoCount(todo);
       }
     });
   },
   { deep: true }
+);
+
+// 监听日期变化
+watch(
+  () => currentDate.value,
+  (newDate) => {
+    console.log("日期变化:", newDate);
+    // 更新今日待办列表
+    const todayTodos = todoList.value.filter((todo) => isToday(todo.id));
+    pomoStore.setTodayTodos(todayTodos);
+
+    // 更新每个todo的番茄钟计数
+    todayTodos.forEach((todo) => {
+      if (todo.realPomo && todo.realPomo.length > 0) {
+        pomoStore.updateGlobalPomoCount(todo);
+      }
+    });
+  }
 );
 
 // ======================== 1. TimeTable 相关 ========================
@@ -382,8 +412,16 @@ function onUpdateTodoEst(id: number, estPomo: number[]) {
 
 /** 更新待办事项的实际番茄钟完成情况 */
 function onUpdateTodoPomo(id: number, realPomo: number[]) {
+  console.log("更新番茄钟完成情况:", { id, realPomo });
   updateTodoPomo(todoList.value, id, realPomo);
   saveTodos(todoList.value);
+
+  // 确保更新全局计数
+  const todo = todoList.value.find((t) => t.id === id);
+  if (todo && isToday(todo.id)) {
+    console.log("触发全局计数更新");
+    pomoStore.updateGlobalPomoCount(todo);
+  }
 }
 
 /** Todo 推迟处理 */
