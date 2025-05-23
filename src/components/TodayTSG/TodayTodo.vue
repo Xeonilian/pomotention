@@ -16,9 +16,9 @@
           <th style="width: 40px"></th>
           <th style="width: 60px">开始</th>
           <th style="width: 40px">优先</th>
-          <th style="width: calc((100% - 180px) / 2)">描述</th>
-          <th style="width: calc((100% - 180px) / 2)">番茄</th>
-          <th style="width: 40px"></th>
+          <th style="width: calc((100% - 200px) / 2)">描述</th>
+          <th style="width: calc((100% - 200px) / 2)">番茄</th>
+          <th style="width: 60px"></th>
         </tr>
       </thead>
       <!-- 表格内容部分，可单独调整样式 -->
@@ -102,18 +102,32 @@
               </div>
             </td>
             <td>
-              <n-button
-                size="tiny"
-                type="error"
-                secondary
-                @click="handleSuspendTodo(todo.id)"
-              >
-                <template #icon>
-                  <n-icon size="18">
-                    <ChevronCircleRight48Regular />
-                  </n-icon>
-                </template>
-              </n-button>
+              <div class="button-group">
+                <n-button
+                  size="tiny"
+                  type="info"
+                  secondary
+                  @click="handleConvertToTask(todo)"
+                >
+                  <template #icon>
+                    <n-icon size="18">
+                      <ChevronCircleDown48Regular />
+                    </n-icon>
+                  </template>
+                </n-button>
+                <n-button
+                  size="tiny"
+                  type="error"
+                  secondary
+                  @click="handleSuspendTodo(todo.id)"
+                >
+                  <template #icon>
+                    <n-icon size="18">
+                      <ChevronCircleRight48Regular />
+                    </n-icon>
+                  </template>
+                </n-button>
+              </div>
             </td>
           </tr>
         </template>
@@ -171,9 +185,11 @@ import { timestampToTimeString } from "@/core/utils";
 import {
   ChevronCircleRight48Regular,
   CheckboxArrowRight24Regular,
+  ChevronCircleDown48Regular,
 } from "@vicons/fluent";
-import { NCheckbox, NInputNumber, NPopover } from "naive-ui";
+import { NCheckbox, NInputNumber, NPopover, NButton, NIcon } from "naive-ui";
 import { ref, computed } from "vue";
+import { taskService } from "@/services/taskService";
 
 // 添加状态来控制提示信息
 const showPopover = ref(false);
@@ -442,6 +458,23 @@ function cancelAddEstimate() {
   currentTodoId.value = null;
   newEstimate.value = 1; // 重置为默认值
 }
+
+// 转换为任务
+function handleConvertToTask(todo: TodoWithNumberPriority) {
+  const task = taskService.createTaskFromTodo(
+    todo.id.toString(),
+    todo.activityTitle,
+    todo.projectName
+  );
+
+  if (task) {
+    popoverMessage.value = "已转换为任务";
+    showPopover.value = true;
+    setTimeout(() => {
+      showPopover.value = false;
+    }, 2000);
+  }
+}
 </script>
 
 <style scoped>
@@ -587,5 +620,11 @@ function cancelAddEstimate() {
 /* 确保按钮不会被压缩 */
 .pomo-container .n-button {
   flex-shrink: 0;
+}
+
+.button-group {
+  display: flex;
+  gap: 2px;
+  justify-content: flex-end;
 }
 </style>

@@ -7,9 +7,9 @@
           <th style="width: 40px"></th>
           <th style="width: 60px">开始</th>
           <th style="width: 40px">分钟</th>
-          <th style="width: calc((100% - 180px) / 2)">描述</th>
-          <th style="width: calc((100% - 180px) / 2)">地点</th>
-          <th style="width: 40px"></th>
+          <th style="width: calc((100% - 200px) / 2)">描述</th>
+          <th style="width: calc((100% - 200px) / 2)">地点</th>
+          <th style="width: 60px"></th>
         </tr>
       </thead>
       <!-- 表格内容部分，可单独调整样式 -->
@@ -43,18 +43,32 @@
             <td class="ellipsis">{{ schedule.activityTitle ?? "-" }}</td>
             <td class="ellipsis">{{ schedule.location ?? "-" }}</td>
             <td>
-              <n-button
-                size="tiny"
-                type="error"
-                secondary
-                @click="handleSuspendSchedule(schedule.id)"
-              >
-                <template #icon>
-                  <n-icon size="18">
-                    <ChevronCircleRight48Regular />
-                  </n-icon>
-                </template>
-              </n-button>
+              <div class="button-group">
+                <n-button
+                  size="tiny"
+                  type="info"
+                  secondary
+                  @click="handleConvertToTask(schedule)"
+                >
+                  <template #icon>
+                    <n-icon size="18">
+                      <ChevronCircleDown48Regular />
+                    </n-icon>
+                  </template>
+                </n-button>
+                <n-button
+                  size="tiny"
+                  type="error"
+                  secondary
+                  @click="handleSuspendSchedule(schedule.id)"
+                >
+                  <template #icon>
+                    <n-icon size="18">
+                      <ChevronCircleRight48Regular />
+                    </n-icon>
+                  </template>
+                </n-button>
+              </div>
             </td>
           </tr>
         </template>
@@ -66,13 +80,37 @@
       </tbody>
     </table>
   </div>
+  <n-popover
+    v-model:show="showPopover"
+    trigger="manual"
+    placement="top-end"
+    style="width: 200px"
+  >
+    <template #trigger>
+      <div
+        style="
+          position: fixed;
+          bottom: 20px;
+          right: 20px;
+          width: 1px;
+          height: 1px;
+        "
+      ></div>
+    </template>
+    {{ popoverMessage }}
+  </n-popover>
 </template>
 
 <script setup lang="ts">
 import type { Schedule } from "@/core/types/Schedule";
 import { timestampToTimeString } from "@/core/utils";
-import { NCheckbox } from "naive-ui";
-import { ChevronCircleRight48Regular } from "@vicons/fluent";
+import { NCheckbox, NButton, NIcon, NPopover } from "naive-ui";
+import {
+  ChevronCircleRight48Regular,
+  ChevronCircleDown48Regular,
+} from "@vicons/fluent";
+import { taskService } from "@/services/taskService";
+import { ref } from "vue";
 
 // 定义 Props
 defineProps<{
@@ -90,6 +128,10 @@ const emit = defineEmits<{
   (e: "suspend-schedule", id: number): void;
 }>();
 
+// 添加状态来控制提示信息
+const showPopover = ref(false);
+const popoverMessage = ref("");
+
 function handleCheckboxChange(schedule: Schedule, checked: boolean) {
   const newStatus = checked ? "done" : "";
   schedule.status = newStatus;
@@ -99,6 +141,19 @@ function handleCheckboxChange(schedule: Schedule, checked: boolean) {
 
 function handleSuspendSchedule(id: number) {
   emit("suspend-schedule", id);
+}
+
+function handleConvertToTask(schedule: Schedule) {
+  taskService.createTaskFromSchedule(
+    schedule.id.toString(),
+    schedule.activityTitle,
+    schedule.projectName
+  );
+  popoverMessage.value = "已转换为任务";
+  showPopover.value = true;
+  setTimeout(() => {
+    showPopover.value = false;
+  }, 2000);
 }
 </script>
 
@@ -159,5 +214,12 @@ function handleSuspendSchedule(id: number) {
 .empty-row td {
   height: 28px;
   text-align: center;
+}
+
+/* 按钮组样式 */
+.button-group {
+  display: flex;
+  gap: 2px;
+  justify-content: flex-end;
 }
 </style>
