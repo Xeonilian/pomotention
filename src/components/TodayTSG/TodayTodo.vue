@@ -78,7 +78,7 @@
                       />
                     </template>
                     <span
-                      v-if="index < todo.estPomo.length - 1"
+                      v-if="todo.estPomo && index < todo.estPomo.length - 1"
                       class="pomo-separator"
                       >|</span
                     >
@@ -87,7 +87,7 @@
 
                 <!-- 新增估计按钮 -->
                 <n-button
-                  v-if="todo.estPomo.length < 3"
+                  v-if="todo.estPomo && todo.estPomo.length < 3"
                   size="tiny"
                   type="primary"
                   secondary
@@ -392,6 +392,7 @@ function handlePomoCheck(
 ) {
   // 确保 realPomo 数组存在且长度与 estPomo 一致
   if (!todo.realPomo) todo.realPomo = [];
+  if (!todo.estPomo) todo.estPomo = [];
   while (todo.realPomo.length < todo.estPomo.length) {
     todo.realPomo.push(0);
   }
