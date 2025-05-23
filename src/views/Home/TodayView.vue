@@ -24,6 +24,7 @@
       @update-todo-pomo="updateTodoPomo"
       @update-todo-est="updateTodoEst"
       @convert-to-task="onConvertToTask"
+      @select-task="onSelectTask"
     />
   </div>
   <div class="schedule-container">
@@ -71,6 +72,7 @@ const emit = defineEmits<{
     updates: Array<{ id: number; priority: number }>
   ): void;
   (e: "convert-to-task", id: number): void;
+  (e: "select-task", taskId: number | null): void;
 }>();
 
 function updateScheduleStatus(id: number, activityId: number, status: string) {
@@ -99,6 +101,10 @@ function updateTodoEst(id: number, estPomo: number[]) {
 
 function onConvertToTask(id: number) {
   emit("convert-to-task", id);
+}
+
+function onSelectTask(taskId: number | null) {
+  emit("select-task", taskId);
 }
 </script>
 <style scoped>

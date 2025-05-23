@@ -126,6 +126,7 @@
             @update-todo-est="onUpdateTodoEst"
             @update-todo-pomo="onUpdateTodoPomo"
             @convert-to-task="onConvertToTask"
+            @select-task="onSelectTask"
           />
         </div>
         <div
@@ -138,7 +139,10 @@
           class="middle-bottom"
           :style="{ height: `calc(100% - ${topHeight}px - 8px)` }"
         >
-          <TaskView :showPomoSeq="showPomoSeq" />
+          <TaskView
+            :showPomoSeq="showPomoSeq"
+            :selectedTaskId="selectedTaskId"
+          />
         </div>
       </div>
       <div
@@ -632,6 +636,14 @@ const { size: rightWidth, startResize: startRightResize } = useResize(
   600,
   true // 右侧面板
 );
+
+// 添加选中的任务ID状态
+const selectedTaskId = ref<number | null>(null);
+
+// 添加选择任务处理函数
+function onSelectTask(taskId: number | null) {
+  selectedTaskId.value = taskId;
+}
 </script>
 
 <style scoped>

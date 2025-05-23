@@ -4,6 +4,7 @@
     <div class="draggable-container" ref="draggableContainer">
       <PomodoroView :showPomoSeq="showPomoSeq" />
     </div>
+    <div class="task-id-display">当前任务ID: {{ selectedTaskId }}</div>
   </div>
 </template>
 
@@ -14,6 +15,10 @@ import { ref, onMounted, onUnmounted } from "vue";
 defineProps({
   showPomoSeq: {
     type: Boolean,
+  },
+  selectedTaskId: {
+    type: [Number, null],
+    default: null,
   },
 });
 

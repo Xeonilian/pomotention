@@ -28,6 +28,8 @@
             v-for="todo in sortedTodos"
             :key="todo.id"
             :class="{ 'active-row': todo.activityId === activeId }"
+            @click="handleRowClick(todo)"
+            style="cursor: pointer"
           >
             <td>
               <n-checkbox
@@ -231,6 +233,7 @@ const emit = defineEmits<{
   (e: "update-todo-pomo", id: number, realPomo: number[]): void;
   (e: "update-todo-est", id: number, estPomo: number[]): void;
   (e: "convert-to-task", id: number): void;
+  (e: "select-task", taskId: number | null): void;
 }>();
 
 const editingTodo = ref<TodoWithNumberPriority | null>(null);
@@ -491,6 +494,11 @@ function handleConvertToTask(todo: TodoWithNumberPriority) {
     }, 2000);
     emit("convert-to-task", todo.id);
   }
+}
+
+// 添加点击行处理函数
+function handleRowClick(todo: TodoWithNumberPriority) {
+  emit("select-task", todo.taskId || null);
 }
 </script>
 

@@ -8,7 +8,11 @@
         'sequence-mode': showPomoSeq,
       }"
     >
-      <PomodoroTimer class="time" :show-pomo-seq="showPomoSeq" />
+      <PomodoroTimer
+        class="time"
+        :show-pomo-seq="showPomoSeq"
+        :selected-task-id="selectedTaskId"
+      />
       <PomodoroSequence v-if="showPomoSeq" class="sequence" />
     </div>
   </div>
@@ -24,6 +28,10 @@ const timerStore = useTimerStore();
 defineProps({
   showPomoSeq: {
     type: Boolean,
+  },
+  selectedTaskId: {
+    type: Number,
+    default: null,
   },
 });
 </script>
