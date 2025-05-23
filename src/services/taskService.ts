@@ -10,24 +10,24 @@ import { STORAGE_KEYS } from "@/core/constants";
 export const taskService = {
   // 获取特定任务
   getTask(taskId: number): Task | undefined {
-    const tasks = JSON.parse(localStorage.getItem(STORAGE_KEYS.TASKS) || "[]");
-    return tasks.find((t: Task) => t.id === taskId);
+    const TASK = JSON.parse(localStorage.getItem(STORAGE_KEYS.TASK) || "[]");
+    return TASK.find((t: Task) => t.id === taskId);
   },
 
   // 保存任务
   saveTask(task: Task): void {
-    const tasks = JSON.parse(localStorage.getItem(STORAGE_KEYS.TASKS) || "[]");
-    tasks.push(task);
-    localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(tasks));
+    const TASK = JSON.parse(localStorage.getItem(STORAGE_KEYS.TASK) || "[]");
+    TASK.push(task);
+    localStorage.setItem(STORAGE_KEYS.TASK, JSON.stringify(TASK));
   },
 
   // 更新任务
   updateTask(taskId: number, updates: Partial<Task>): void {
-    const tasks = JSON.parse(localStorage.getItem(STORAGE_KEYS.TASKS) || "[]");
-    const index = tasks.findIndex((t: Task) => t.id === taskId);
+    const TASK = JSON.parse(localStorage.getItem(STORAGE_KEYS.TASK) || "[]");
+    const index = TASK.findIndex((t: Task) => t.id === taskId);
     if (index !== -1) {
-      tasks[index] = { ...tasks[index], ...updates };
-      localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(tasks));
+      TASK[index] = { ...TASK[index], ...updates };
+      localStorage.setItem(STORAGE_KEYS.TASK, JSON.stringify(TASK));
     }
   },
 
@@ -50,11 +50,11 @@ export const taskService = {
     this.saveTask(task);
 
     // 更新 Todo 的 taskId
-    const todos = JSON.parse(localStorage.getItem(STORAGE_KEYS.TODOS) || "[]");
+    const todos = JSON.parse(localStorage.getItem(STORAGE_KEYS.TODO) || "[]");
     const todoIndex = todos.findIndex((t: any) => t.id.toString() === todoId);
     if (todoIndex !== -1) {
       todos[todoIndex].taskId = task.id;
-      localStorage.setItem(STORAGE_KEYS.TODOS, JSON.stringify(todos));
+      localStorage.setItem(STORAGE_KEYS.TODO, JSON.stringify(todos));
     }
 
     return task;
@@ -163,10 +163,10 @@ export const taskService = {
 
     // 保存到localStorage
     const activities = JSON.parse(
-      localStorage.getItem(STORAGE_KEYS.ACTIVITIES) || "[]"
+      localStorage.getItem(STORAGE_KEYS.ACTIVITY) || "[]"
     );
     activities.push(activity);
-    localStorage.setItem(STORAGE_KEYS.ACTIVITIES, JSON.stringify(activities));
+    localStorage.setItem(STORAGE_KEYS.ACTIVITY, JSON.stringify(activities));
 
     return activity;
   },

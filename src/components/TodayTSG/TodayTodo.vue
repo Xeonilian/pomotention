@@ -18,7 +18,7 @@
           <th style="width: 40px">优先</th>
           <th style="width: calc((100% - 200px) / 2)">描述</th>
           <th style="width: calc((100% - 200px) / 2)">番茄</th>
-          <th style="width: 60px"></th>
+          <th style="width: 60px; text-align: center">操作</th>
         </tr>
       </thead>
       <!-- 表格内容部分，可单独调整样式 -->
@@ -118,6 +118,7 @@
                   </template>
                 </n-button>
                 <n-button
+                  v-if="!todo.realPomo"
                   size="tiny"
                   type="error"
                   secondary
@@ -481,6 +482,8 @@ function handleConvertToTask(todo: TodoWithNumberPriority) {
   );
 
   if (task) {
+    // 立即更新本地的 taskId
+    todo.taskId = task.id;
     popoverMessage.value = "已转换为任务";
     showPopover.value = true;
     setTimeout(() => {
