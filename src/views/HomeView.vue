@@ -121,10 +121,11 @@
             :activeId="activeId"
             @update-schedule-status="onUpdateScheduleStatus"
             @update-todo-status="onUpdateTodoStatus"
-            @drop-todo="onDropTodo"
+            @suspend-todo="onSuspendTodo"
             @suspend-schedule="onSuspendSchedule"
             @update-todo-est="onUpdateTodoEst"
             @update-todo-pomo="onUpdateTodoPomo"
+            @convert-to-task="onConvertToTask"
           />
         </div>
         <div
@@ -185,6 +186,7 @@ import { ref, onMounted, watch, onUnmounted, computed } from "vue";
 import { NButton, NPopover } from "naive-ui";
 import { useTimerStore } from "@/stores/useTimerStore";
 import { usePomoStore } from "@/stores/usePomoStore";
+import { taskService } from "@/services/taskService";
 import TimeTableView from "@/views/Home/TimeTableView.vue";
 import TodayView from "@/views/Home/TodayView.vue";
 import TaskView from "@/views/Home/TaskView.vue";
@@ -432,7 +434,7 @@ function onUpdateTodoPomo(id: number, realPomo: number[]) {
 }
 
 /** Todo 推迟处理 */
-function onDropTodo(id: number) {
+function onSuspendTodo(id: number) {
   handleSuspendTodo(todoList.value, activityList.value, id);
 }
 
@@ -454,6 +456,18 @@ function onUpdateScheduleStatus(
     activityId,
     status
   );
+}
+
+/** Schedule 转换为任务 */
+function onConvertToTask(id: number) {
+  const schedule = scheduleList.value.find((s) => s.id === id);
+  if (schedule) {
+    taskService.createTaskFromSchedule(
+      schedule.id.toString(),
+      schedule.activityTitle,
+      schedule.projectName
+    );
+  }
 }
 
 // ======================== 5. 数据联动 Watchers ========================

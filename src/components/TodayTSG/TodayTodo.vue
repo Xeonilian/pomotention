@@ -104,10 +104,12 @@
             <td>
               <div class="button-group">
                 <n-button
+                  v-if="!todo.taskId"
                   size="tiny"
                   type="info"
                   secondary
                   @click="handleConvertToTask(todo)"
+                  title="追踪任务"
                 >
                   <template #icon>
                     <n-icon size="18">
@@ -120,6 +122,7 @@
                   type="error"
                   secondary
                   @click="handleSuspendTodo(todo.id)"
+                  title="取消待办"
                 >
                   <template #icon>
                     <n-icon size="18">
@@ -212,7 +215,7 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  (e: "drop-todo", id: number): void;
+  (e: "suspend-todo", id: number): void;
   (
     e: "update-todo-status",
     id: number,
@@ -226,6 +229,7 @@ const emit = defineEmits<{
   ): void;
   (e: "update-todo-pomo", id: number, realPomo: number[]): void;
   (e: "update-todo-est", id: number, estPomo: number[]): void;
+  (e: "convert-to-task", id: number): void;
 }>();
 
 const editingTodo = ref<TodoWithNumberPriority | null>(null);
@@ -378,7 +382,7 @@ function finishEditing() {
 
 // suspended Todo
 function handleSuspendTodo(id: number) {
-  emit("drop-todo", id);
+  emit("suspend-todo", id);
 }
 
 function handleCheckboxChange(todo: TodoWithNumberPriority, checked: boolean) {
@@ -461,6 +465,15 @@ function cancelAddEstimate() {
 
 // 转换为任务
 function handleConvertToTask(todo: TodoWithNumberPriority) {
+  if (todo.taskId) {
+    popoverMessage.value = "该待办已转换为任务";
+    showPopover.value = true;
+    setTimeout(() => {
+      showPopover.value = false;
+    }, 2000);
+    return;
+  }
+
   const task = taskService.createTaskFromTodo(
     todo.id.toString(),
     todo.activityTitle,
@@ -473,6 +486,7 @@ function handleConvertToTask(todo: TodoWithNumberPriority) {
     setTimeout(() => {
       showPopover.value = false;
     }, 2000);
+    emit("convert-to-task", todo.id);
   }
 }
 </script>

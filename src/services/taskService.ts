@@ -48,6 +48,15 @@ export const taskService = {
       interruptionRecords: [],
     };
     this.saveTask(task);
+
+    // 更新 Todo 的 taskId
+    const todos = JSON.parse(localStorage.getItem(STORAGE_KEYS.TODOS) || "[]");
+    const todoIndex = todos.findIndex((t: any) => t.id.toString() === todoId);
+    if (todoIndex !== -1) {
+      todos[todoIndex].taskId = task.id;
+      localStorage.setItem(STORAGE_KEYS.TODOS, JSON.stringify(todos));
+    }
+
     return task;
   },
 
@@ -68,6 +77,19 @@ export const taskService = {
       interruptionRecords: [],
     };
     this.saveTask(task);
+
+    // 更新 Schedule 的 taskId
+    const schedules = JSON.parse(
+      localStorage.getItem(STORAGE_KEYS.SCHEDULE) || "[]"
+    );
+    const scheduleIndex = schedules.findIndex(
+      (s: any) => s.id.toString() === scheduleId
+    );
+    if (scheduleIndex !== -1) {
+      schedules[scheduleIndex].taskId = task.id;
+      localStorage.setItem(STORAGE_KEYS.SCHEDULE, JSON.stringify(schedules));
+    }
+
     return task;
   },
 

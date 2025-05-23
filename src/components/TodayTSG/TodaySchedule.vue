@@ -45,10 +45,12 @@
             <td>
               <div class="button-group">
                 <n-button
+                  v-if="!schedule.taskId"
                   size="tiny"
                   type="info"
                   secondary
                   @click="handleConvertToTask(schedule)"
+                  title="追踪任务"
                 >
                   <template #icon>
                     <n-icon size="18">
@@ -61,6 +63,7 @@
                   type="error"
                   secondary
                   @click="handleSuspendSchedule(schedule.id)"
+                  title="取消日程"
                 >
                   <template #icon>
                     <n-icon size="18">
@@ -126,6 +129,7 @@ const emit = defineEmits<{
     status: string
   ): void;
   (e: "suspend-schedule", id: number): void;
+  (e: "convert-to-task", id: number): void;
 }>();
 
 // 添加状态来控制提示信息
@@ -144,6 +148,15 @@ function handleSuspendSchedule(id: number) {
 }
 
 function handleConvertToTask(schedule: Schedule) {
+  if (schedule.taskId) {
+    popoverMessage.value = "该日程已转换为任务";
+    showPopover.value = true;
+    setTimeout(() => {
+      showPopover.value = false;
+    }, 2000);
+    return;
+  }
+
   taskService.createTaskFromSchedule(
     schedule.id.toString(),
     schedule.activityTitle,
@@ -154,6 +167,7 @@ function handleConvertToTask(schedule: Schedule) {
   setTimeout(() => {
     showPopover.value = false;
   }, 2000);
+  emit("convert-to-task", schedule.id);
 }
 </script>
 

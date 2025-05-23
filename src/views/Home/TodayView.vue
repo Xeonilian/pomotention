@@ -20,9 +20,10 @@
       :todos="todayTodos"
       :activeId="activeId"
       @update-todo-status="updateTodoStatus"
-      @drop-todo="handleSuspendTodo"
-      @update-todo-est="updateTodoEst"
+      @suspend-todo="handleSuspendTodo"
       @update-todo-pomo="updateTodoPomo"
+      @update-todo-est="updateTodoEst"
+      @convert-to-task="onConvertToTask"
     />
   </div>
   <div class="schedule-container">
@@ -61,9 +62,15 @@ const emit = defineEmits<{
     status: string
   ): void;
   (e: "suspend-schedule", id: number): void;
-  (e: "drop-todo", id: number): void;
+  (e: "suspend-todo", id: number): void;
   (e: "update-todo-est", id: number, estPomo: number[]): void;
   (e: "update-todo-pomo", id: number, pomo: number[]): void;
+  (e: "update-todo-priority", id: number, priority: number): void;
+  (
+    e: "batch-update-priorities",
+    updates: Array<{ id: number; priority: number }>
+  ): void;
+  (e: "convert-to-task", id: number): void;
 }>();
 
 function updateScheduleStatus(id: number, activityId: number, status: string) {
@@ -79,15 +86,19 @@ function handleSuspendSchedule(id: number) {
 }
 
 function handleSuspendTodo(id: number) {
-  emit("drop-todo", id);
+  emit("suspend-todo", id);
+}
+
+function updateTodoPomo(id: number, pomo: number[]) {
+  emit("update-todo-pomo", id, pomo);
 }
 
 function updateTodoEst(id: number, estPomo: number[]) {
   emit("update-todo-est", id, estPomo);
 }
 
-function updateTodoPomo(id: number, pomo: number[]) {
-  emit("update-todo-pomo", id, pomo);
+function onConvertToTask(id: number) {
+  emit("convert-to-task", id);
 }
 </script>
 <style scoped>
