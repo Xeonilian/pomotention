@@ -28,7 +28,11 @@ export const STORAGE_KEYS = {
   TODO: "todayTodo",
   SCHEDULE: "todaySchedule",
   GLOBAL_POMO_COUNT: "globalPomoCount",
-};
+  TASKS: "pomotention_tasks",
+  TODOS: "pomotention_todos",
+  SCHEDULES: "pomotention_schedules",
+  ACTIVITIES: "pomotention_activities",
+} as const;
 
 // 预设的工作时间块
 export const WORK_BLOCKS: Block[] = [
