@@ -7,7 +7,7 @@
 <template>
   <div class="home-content">
     <div class="content">
-      <div v-if="showLeft" class="left">
+      <div v-if="showLeft" class="left" :style="{ width: leftWidth + 'px' }">
         <!-- 日程表 -->
         <TimeTableView
           :blocks="viewBlocks"
@@ -19,6 +19,11 @@
           @change-type="onTypeChange"
         />
       </div>
+      <div
+        v-if="showLeft"
+        class="resize-handle-horizontal"
+        @mousedown="startLeftResize"
+      ></div>
       <div class="middle">
         <div class="middle-top" :style="{ height: topHeight + 'px' }">
           <!-- 今日待办 -->
@@ -125,7 +130,7 @@
         <div
           v-if="showMiddleBottom"
           class="resize-handle"
-          @mousedown="startResize"
+          @mousedown="startVerticalResize"
         ></div>
         <div
           v-if="showMiddleBottom"
@@ -135,7 +140,12 @@
           <TaskView :showPomoSeq="showPomoSeq" />
         </div>
       </div>
-      <div v-if="showRight" class="right">
+      <div
+        v-if="showRight"
+        class="resize-handle-horizontal"
+        @mousedown="startRightResize"
+      ></div>
+      <div v-if="showRight" class="right" :style="{ width: rightWidth + 'px' }">
         <!-- 活动清单 -->
         <ActivityView
           :activities="activityList"
@@ -184,11 +194,7 @@ import type { Block } from "@/core/types/Block";
 import type { Todo } from "@/core/types/Todo";
 import type { Schedule } from "@/core/types/Schedule";
 import { convertToSchedule, convertToTodo } from "@/core/utils/convertActivity";
-import {
-  WORK_BLOCKS,
-  ENTERTAINMENT_BLOCKS,
-  STORAGE_KEYS,
-} from "@/core/constants";
+import { WORK_BLOCKS, ENTERTAINMENT_BLOCKS } from "@/core/constants";
 import {
   loadActivities,
   loadTodos,
@@ -220,6 +226,7 @@ import {
   DocumentArrowRight20Regular,
 } from "@vicons/fluent";
 import { useDateService } from "@/services/dateService";
+import { useResize } from "@/composables/useResize";
 
 // ======================== 响应式状态与初始化 ========================
 
@@ -590,40 +597,27 @@ onUnmounted(() => {
   dateCheckService.cleanupListeners();
 });
 
-// 添加拖动相关的状态
-const topHeight = ref(200); // 初始高度
-const isResizing = ref(false);
-const startY = ref(0);
-const startHeight = ref(0);
-
-// 开始拖动
-function startResize(e: MouseEvent) {
-  isResizing.value = true;
-  startY.value = e.clientY;
-  startHeight.value = topHeight.value;
-
-  document.addEventListener("mousemove", handleMouseMove);
-  document.addEventListener("mouseup", stopResize);
-}
-
-// 处理拖动
-function handleMouseMove(e: MouseEvent) {
-  if (!isResizing.value) return;
-
-  const deltaY = e.clientY - startY.value;
-  const newHeight = Math.max(
-    100,
-    Math.min(startHeight.value + deltaY, window.innerHeight - 200)
-  );
-  topHeight.value = newHeight;
-}
-
-// 停止拖动
-function stopResize() {
-  isResizing.value = false;
-  document.removeEventListener("mousemove", handleMouseMove);
-  document.removeEventListener("mouseup", stopResize);
-}
+// 使用 composable
+const { size: topHeight, startResize: startVerticalResize } = useResize(
+  280,
+  "vertical",
+  100,
+  window.innerHeight - 200
+);
+const { size: leftWidth, startResize: startLeftResize } = useResize(
+  240,
+  "horizontal",
+  200,
+  240,
+  false // 左侧面板
+);
+const { size: rightWidth, startResize: startRightResize } = useResize(
+  480,
+  "horizontal",
+  300,
+  600,
+  true // 右侧面板
+);
 </script>
 
 <style scoped>
@@ -643,21 +637,19 @@ function stopResize() {
 }
 
 .left {
-  width: 240px;
   background: #ffffff;
   padding: 16px;
   box-sizing: border-box;
-  overflow-y: hidden; /*BUG*/
-  margin-right: 8px;
+  overflow-y: hidden;
+  margin-right: 0;
 }
 
 .right {
-  width: 480px;
   background: #ffffff;
   padding: 16px;
   box-sizing: border-box;
   overflow: auto;
-  margin-left: 8px;
+  margin-left: 0;
 }
 
 .middle {
@@ -749,6 +741,30 @@ function stopResize() {
   transform: translate(-50%, -50%);
   width: 30px;
   height: 4px;
+  background: #ccc;
+  border-radius: 2px;
+}
+
+.resize-handle-horizontal {
+  width: 8px;
+  background: #f0f0f0;
+  cursor: ew-resize;
+  position: relative;
+  margin: 0;
+}
+
+.resize-handle-horizontal:hover {
+  background: #e0e0e0;
+}
+
+.resize-handle-horizontal::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 4px;
+  height: 30px;
   background: #ccc;
   border-radius: 2px;
 }
