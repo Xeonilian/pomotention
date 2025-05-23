@@ -2,28 +2,53 @@
 <template>
   <div>
     <div class="draggable-container" ref="draggableContainer">
-      <PomodoroView :showPomoSeq="showPomoSeq" />
+      <PomodoroView v-if="showPomodoroView" :showPomoSeq="showPomoSeq" />
     </div>
-    <div class="task-id-display">
+    <!-- <div class="task-id-display">
       {{ selectedTaskId !== null ? selectedTaskId : "无记录" }}
-    </div>
+    </div> -->
+    <TaskButtons
+      :taskId="selectedTaskId"
+      @energy-record="handleEnergyRecord"
+      @reward-record="handleRewardRecord"
+      @interruption-record="handleInterruptionRecord"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import PomodoroView from "./PomodoroView.vue";
+import TaskButtons from "@/components/TaskTracker/TaskButtons.vue";
 import { ref, onMounted, onUnmounted } from "vue";
 
-defineProps({
-  showPomoSeq: {
-    type: Boolean,
-  },
-  selectedTaskId: {
-    type: [Number, null],
-    default: null,
-  },
-});
+defineProps<{
+  showPomoSeq: boolean;
+  showPomodoroView: boolean;
+  selectedTaskId: number | null;
+}>();
 
+const emit = defineEmits<{
+  (e: "energy-record"): void;
+  (e: "reward-record"): void;
+  (e: "interruption-record"): void;
+}>();
+
+// 处理能量记录
+function handleEnergyRecord() {
+  emit("energy-record");
+}
+
+// 处理奖赏记录
+function handleRewardRecord() {
+  emit("reward-record");
+}
+
+// 处理打扰记录
+function handleInterruptionRecord() {
+  emit("interruption-record");
+}
+
+// 移动Timer的位置
 const draggableContainer = ref<HTMLElement | null>(null);
 let isDragging = false;
 let startX = 0;

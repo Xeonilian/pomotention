@@ -13,15 +13,7 @@
     <!-- 1 按钮 -->
     <div class="schedule-view-button-container">
       <!-- 设置按钮 -->
-      <n-button
-        @click="toggleDisplay"
-        secondary
-        round
-        strong
-        type="default"
-        class="schedule-button"
-        >{{ buttonText }}</n-button
-      >
+
       <n-button
         secondary
         circle
@@ -34,6 +26,15 @@
       >
         {{ currentType === "work" ? "💼" : "🏕️" }}
       </n-button>
+      <n-button
+        @click="toggleDisplay"
+        secondary
+        round
+        strong
+        type="default"
+        class="schedule-button"
+        >{{ buttonText }}</n-button
+      >
       <n-popconfirm
         @positive-click="emitReset(currentType)"
         negative-text="取消"
@@ -92,12 +93,12 @@ import { getTimestampForTimeString } from "@/core/utils";
 
 // 1 按钮
 const showEditor = ref(false);
-const buttonText = ref("设置时间表");
+const buttonText = ref("设置");
 
 const toggleDisplay = () => {
   //console.log("准备进入编辑模式时的 currentType:", props.currentType);
   showEditor.value = !showEditor.value;
-  buttonText.value = showEditor.value ? "确认时间表" : "设置时间表";
+  buttonText.value = showEditor.value ? "确认" : "设置";
 };
 
 // 接收父级的数据

@@ -73,6 +73,36 @@
                     </n-icon>
                   </template>
                 </n-button>
+                <n-button
+                  v-if="schedule.taskId"
+                  size="tiny"
+                  type="warning"
+                  secondary
+                  @click="handleEnergyRecord(schedule)"
+                  title="能量记录"
+                >
+                  🔋
+                </n-button>
+                <n-button
+                  v-if="schedule.taskId"
+                  size="tiny"
+                  type="success"
+                  secondary
+                  @click="handleRewardRecord(schedule)"
+                  title="奖赏记录"
+                >
+                  😜
+                </n-button>
+                <n-button
+                  v-if="schedule.taskId"
+                  size="tiny"
+                  type="info"
+                  secondary
+                  @click="handleInterruptionRecord(schedule)"
+                  title="打扰记录"
+                >
+                  📬
+                </n-button>
               </div>
             </td>
           </tr>
@@ -176,6 +206,46 @@ function handleConvertToTask(schedule: Schedule) {
 // 添加点击行处理函数
 function handleRowClick(schedule: Schedule) {
   emit("select-task", schedule.taskId || null);
+}
+
+// 添加记录处理函数
+function handleEnergyRecord(schedule: Schedule) {
+  if (!schedule.taskId) {
+    popoverMessage.value = "请先转换为任务";
+    showPopover.value = true;
+    setTimeout(() => {
+      showPopover.value = false;
+    }, 2000);
+    return;
+  }
+  emit("select-task", schedule.taskId);
+  // TODO: 打开能量记录输入界面
+}
+
+function handleRewardRecord(schedule: Schedule) {
+  if (!schedule.taskId) {
+    popoverMessage.value = "请先转换为任务";
+    showPopover.value = true;
+    setTimeout(() => {
+      showPopover.value = false;
+    }, 2000);
+    return;
+  }
+  emit("select-task", schedule.taskId);
+  // TODO: 打开奖赏记录输入界面
+}
+
+function handleInterruptionRecord(schedule: Schedule) {
+  if (!schedule.taskId) {
+    popoverMessage.value = "请先转换为任务";
+    showPopover.value = true;
+    setTimeout(() => {
+      showPopover.value = false;
+    }, 2000);
+    return;
+  }
+  emit("select-task", schedule.taskId);
+  // TODO: 打开打扰记录输入界面
 }
 </script>
 

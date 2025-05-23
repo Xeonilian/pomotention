@@ -43,7 +43,7 @@
                 secondary
                 strong
                 type="warning"
-                title="番茄序列"
+                :title="showPomoSeq ? '变为番茄' : '变为序列'"
                 @click="showPomoSeq = !showPomoSeq"
                 :disabled="!showPomodoroView || timerStore.isActive"
               >
