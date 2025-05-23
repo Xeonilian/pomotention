@@ -33,6 +33,7 @@
       :activeId="activeId"
       @update-schedule-status="updateScheduleStatus"
       @suspend-schedule="handleSuspendSchedule"
+      @select-task="onSelectTask"
     />
   </div>
 </template>

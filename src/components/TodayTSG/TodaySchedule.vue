@@ -21,6 +21,8 @@
             )"
             :key="schedule.id"
             :class="{ 'active-row': schedule.activityId === activeId }"
+            @click="handleRowClick(schedule)"
+            style="cursor: pointer"
           >
             <td>
               <n-checkbox
@@ -130,6 +132,7 @@ const emit = defineEmits<{
   ): void;
   (e: "suspend-schedule", id: number): void;
   (e: "convert-to-task", id: number): void;
+  (e: "select-task", taskId: number | null): void;
 }>();
 
 // 添加状态来控制提示信息
@@ -168,6 +171,11 @@ function handleConvertToTask(schedule: Schedule) {
     showPopover.value = false;
   }, 2000);
   emit("convert-to-task", schedule.id);
+}
+
+// 添加点击行处理函数
+function handleRowClick(schedule: Schedule) {
+  emit("select-task", schedule.taskId || null);
 }
 </script>
 

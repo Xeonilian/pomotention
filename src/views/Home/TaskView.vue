@@ -4,7 +4,9 @@
     <div class="draggable-container" ref="draggableContainer">
       <PomodoroView :showPomoSeq="showPomoSeq" />
     </div>
-    <div class="task-id-display">当前任务ID: {{ selectedTaskId }}</div>
+    <div class="task-id-display">
+      {{ selectedTaskId !== null ? selectedTaskId : "无记录" }}
+    </div>
   </div>
 </template>
 
