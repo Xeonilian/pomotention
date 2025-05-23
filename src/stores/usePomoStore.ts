@@ -6,11 +6,11 @@ export const usePomoStore = defineStore("pomo", {
   state: () => {
     // 从 localStorage 获取 globalPomoCount，如果不存在则初始化为 0
     const storedCount = localStorage.getItem(STORAGE_KEYS.GLOBAL_POMO_COUNT);
-    console.log(
-      "STORAGE_KEYS.GLOBAL_POMO_COUNT:",
-      STORAGE_KEYS.GLOBAL_POMO_COUNT
-    );
-    console.log("从 localStorage 获取的原始值:", storedCount);
+    // console.log(
+    //   "STORAGE_KEYS.GLOBAL_POMO_COUNT:",
+    //   STORAGE_KEYS.GLOBAL_POMO_COUNT
+    // );
+    // console.log("从 localStorage 获取的原始值:", storedCount);
 
     let initialCount = 0;
     if (storedCount !== null) {
@@ -71,12 +71,12 @@ export const usePomoStore = defineStore("pomo", {
     updateGlobalPomoCount(todo: Todo) {
       if (todo.realPomo && todo.realPomo.length > 0) {
         const oldTodo = this.todayTodos.find((t) => t.id === todo.id);
-        console.log("更新全局番茄钟计数:", {
-          todoId: todo.id,
-          oldTodo: oldTodo ? "存在" : "不存在",
-          realPomo: todo.realPomo,
-          currentGlobalCount: this.globalPomoCount,
-        });
+        // console.log("更新全局番茄钟计数:", {
+        //   todoId: todo.id,
+        //   oldTodo: oldTodo ? "存在" : "不存在",
+        //   realPomo: todo.realPomo,
+        //   currentGlobalCount: this.globalPomoCount,
+        // });
 
         // 如果是新任务，不更新全局计数
         if (!oldTodo) {
@@ -91,12 +91,12 @@ export const usePomoStore = defineStore("pomo", {
         const newCount = todo.realPomo.reduce((sum, pomo) => sum + pomo, 0);
         const diff = newCount - oldCount;
 
-        console.log("番茄钟计数变化:", {
-          oldCount,
-          newCount,
-          diff,
-          currentGlobalCount: this.globalPomoCount,
-        });
+        // console.log("番茄钟计数变化:", {
+        //   oldCount,
+        //   newCount,
+        //   diff,
+        //   currentGlobalCount: this.globalPomoCount,
+        // });
 
         if (diff > 0) {
           this.globalPomoCount += diff;
