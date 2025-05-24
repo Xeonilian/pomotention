@@ -69,17 +69,17 @@ export function passPickedActivity(
   todoList: Todo[],
   activity: Activity
 ) {
-  // 更新 activityList 中对应的 activity 的 status 为 "ongoing"
+  // 将 activity 状态设置为 ongoing
   const activityToUpdate = activityList.find((a) => a.id === activity.id);
   if (activityToUpdate) {
     activityToUpdate.status = "ongoing";
   }
 
-  const existingTodo = todoList.find((todo) => todo.activityId === activity.id);
-
-  if (!existingTodo) {
-    todoList.push(convertToTodo(activity));
-  }
+  // 创建新的 todo
+  const newTodo = convertToTodo(activity);
+  newTodo.id = Date.now(); // 使用当前时间戳作为 id
+  newTodo.status = "ongoing";
+  todoList.push(newTodo);
 
   return activity;
 }

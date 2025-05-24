@@ -95,23 +95,19 @@ export function createDateCheckService({
  * 并为每个被归为 delayed 的 todo 新建今日一条新的 ongoing todo。
  */
   function processTodoForNewDay() {
-    // 先收集待处理 todo，防止遍历时 push 导致死循环
-    const processingTodos = todoList.value.filter(
-      (todo) => todo.status === "ongoing"
-    );
-    processingTodos.forEach((todo) => {
-      // 标记旧 todo 为 delayed
-      todo.status = "delayed";
-      // 同步 activity 状态
-      const activity = activityList.value.find((a) => a.id === todo.activityId);
-      if (activity) {
-        activity.status = "delayed";
+    // 处理所有未完成的 todo
+    todoList.value.forEach((todo) => {
+      if (todo.status === "ongoing") {
+        // 标记旧 todo 为 delayed
+        todo.status = "delayed";
+        // 同步 activity 状态为 delayed
+        const activity = activityList.value.find(
+          (a) => a.id === todo.activityId
+        );
+        if (activity) {
+          activity.status = "delayed";
+        }
       }
-      // 新建今日新 todo（convertToTodo 默认 status 为 "ongoing"） 产生错误
-      // if (activity) {
-      //   const newTodo = convertToTodo(activity);
-      //   todoList.value.push(newTodo);
-      // }
     });
   }
 

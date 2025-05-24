@@ -24,7 +24,7 @@
           <!-- 今日待办 -->
           <div class="today-header">
             <div class="today-info">
-              <span class="today-status">{{ dateService.currentDate }}</span>
+              <span class="today-status">{{ currentDate }}</span>
 
               <span class="global-pomo"
                 ><span class="today-pomo">🍅 {{ todayPomoCount }}/</span
@@ -174,6 +174,7 @@
 import { ref, onMounted, watch, onUnmounted, computed } from "vue";
 import { NButton, NPopover } from "naive-ui";
 import { useTimerStore } from "@/stores/useTimerStore";
+import { usePomoStore } from "@/stores/usePomoStore";
 import TimeTableView from "@/views/Home/TimeTableView.vue";
 import TodayView from "@/views/Home/TodayView.vue";
 import TaskView from "@/views/Home/TaskView.vue";
@@ -223,6 +224,7 @@ import { useDateService } from "@/services/dateService";
 // ======================== 响应式状态与初始化 ========================
 
 const timerStore = useTimerStore();
+const pomoStore = usePomoStore();
 const dateService = useDateService();
 
 // -- 基础UI状态
@@ -240,61 +242,31 @@ const todoList = ref<Todo[]>(loadTodos());
 const scheduleList = ref<Schedule[]>(loadSchedules());
 const pickedTodoActivity = ref<Activity | null>(null); // 选中活动
 const activeId = ref<number | null>(null); // 当前激活活动id
-
-// 全局番茄钟计数器
-const globalPomoCounter = ref(loadGlobalPomoCount());
+const currentDate = ref(new Date().toISOString().split("T")[0]);
 
 // 计算当天的番茄钟数
-const todayPomoCount = computed(() => {
-  return todoList.value.reduce((total, todo) => {
-    if (todo.realPomo && todo.realPomo.length > 0) {
-      return total + todo.realPomo.reduce((sum, pomo) => sum + pomo, 0);
-    }
-    return total;
-  }, 0);
-});
+const todayPomoCount = computed(() => pomoStore.todayPomoCount);
 
 // 计算全局realPomo（历史 + 当天）
-const globalRealPomo = computed(() => {
-  return globalPomoCounter.value + todayPomoCount.value;
-});
-
-// 更新全局番茄钟计数
-function updateGlobalPomoCount(todo: Todo) {
-  if (todo.realPomo && todo.realPomo.length > 0) {
-    const newCount = todo.realPomo.reduce((sum, pomo) => sum + pomo, 0);
-    globalPomoCounter.value += newCount;
-    saveGlobalPomoCount(globalPomoCounter.value);
-  }
-}
-
-// 加载全局番茄钟计数
-function loadGlobalPomoCount(): number {
-  return JSON.parse(
-    localStorage.getItem(STORAGE_KEYS.GLOBAL_POMO_COUNT) || "0"
-  );
-}
-
-// 保存全局番茄钟计数
-function saveGlobalPomoCount(count: number): void {
-  localStorage.setItem(STORAGE_KEYS.GLOBAL_POMO_COUNT, JSON.stringify(count));
-}
+const globalRealPomo = computed(() => pomoStore.globalRealPomo);
 
 // 监听todoList变化，更新全局计数
 watch(
   todoList,
-  (newTodos, oldTodos) => {
-    // 只计算新增的番茄钟
-    newTodos.forEach((todo) => {
-      if (todo.realPomo && todo.realPomo.length > 0) {
-        // 检查是否是新增的番茄钟
-        const oldTodo = oldTodos.find((t) => t.id === todo.id);
-        if (
-          !oldTodo ||
-          JSON.stringify(oldTodo.realPomo) !== JSON.stringify(todo.realPomo)
-        ) {
-          updateGlobalPomoCount(todo);
-        }
+  (newTodos) => {
+    const todayTodos = newTodos.filter((todo) => isToday(todo.id));
+    pomoStore.setTodayTodos(todayTodos);
+  },
+  { deep: true }
+);
+
+// 监听单个todo的番茄钟变化
+watch(
+  () => todoList.value.map((todo) => todo.realPomo),
+  () => {
+    todoList.value.forEach((todo) => {
+      if (isToday(todo.id)) {
+        pomoStore.updateGlobalPomoCount(todo);
       }
     });
   },
@@ -335,14 +307,14 @@ function onTimeTableReset(type: "work" | "entertainment") {
 /** 今日的 Todo */
 const todayTodos = computed(() =>
   todoList.value.filter((todo) => {
-    dateService.currentDate; // 依赖今日，日期变自动刷新
+    currentDate.value; // 依赖今日，日期变自动刷新
     return isToday(todo.id);
   })
 );
 /** 今日的 Schedule */
 const todaySchedules = computed(() =>
   scheduleList.value.filter((schedule) => {
-    dateService.currentDate;
+    currentDate.value;
     return isToday(schedule.id);
   })
 );
@@ -563,7 +535,7 @@ const dateCheckService = createDateCheckService({
     allBlocks.value[currentType.value] = [
       ...allBlocks.value[currentType.value],
     ];
-    dateService.updateCurrentDate();
+    currentDate.value = new Date().toISOString().split("T")[0];
     console.log("当前日期变化:", date);
   },
 });
