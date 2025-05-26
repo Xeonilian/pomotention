@@ -29,7 +29,7 @@
           <!-- 今日待办 -->
           <div class="today-header">
             <div class="today-info">
-              <span class="today-status">{{ currentDate }}</span>
+              <span class="today-status">{{ dateService.currentDate }}</span>
 
               <span class="global-pomo"
                 ><span class="today-pomo">🍅 {{ todayPomoCount }}/</span
@@ -269,7 +269,6 @@ const todoList = ref<Todo[]>(loadTodos());
 const scheduleList = ref<Schedule[]>(loadSchedules());
 const pickedTodoActivity = ref<Activity | null>(null); // 选中活动
 const activeId = ref<number | null>(null); // 当前激活活动id
-const currentDate = ref(new Date().toISOString().split("T")[0]);
 
 // 计算当天的番茄钟数
 const todayPomoCount = computed(() => pomoStore.todayPomoCount);
@@ -314,7 +313,7 @@ watch(
 
 // 监听日期变化
 watch(
-  () => currentDate.value,
+  () => dateService.currentDate,
   (newDate) => {
     console.log("日期变化:", newDate);
     // 更新今日待办列表
@@ -364,14 +363,14 @@ function onTimeTableReset(type: "work" | "entertainment") {
 /** 今日的 Todo */
 const todayTodos = computed(() =>
   todoList.value.filter((todo) => {
-    currentDate.value; // 依赖今日，日期变自动刷新
+    dateService.currentDate; // 依赖今日，日期变自动刷新
     return isToday(todo.id);
   })
 );
 /** 今日的 Schedule */
 const todaySchedules = computed(() =>
   scheduleList.value.filter((schedule) => {
-    currentDate.value;
+    dateService.currentDate;
     return isToday(schedule.id);
   })
 );
@@ -612,7 +611,7 @@ const dateCheckService = createDateCheckService({
     allBlocks.value[currentType.value] = [
       ...allBlocks.value[currentType.value],
     ];
-    currentDate.value = new Date().toISOString().split("T")[0];
+    dateService.updateCurrentDate();
     console.log("当前日期变化:", date);
   },
 });
