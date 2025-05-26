@@ -113,11 +113,13 @@ const handleClick = (event: MouseEvent) => {
 
       // 查找并更新对应的行
       const updatedLines = lines.map((line) => {
-        // 匹配任务列表项的正则表达式
-        const taskMatch = line.match(/^(\s*-\s+)\[([ xX])\]\s+(.*)$/);
+        // 匹配任务列表项的正则表达式（支持数字编号和短横线）
+        const taskMatch = line.match(
+          /^(\s*)(\d+\.\s+|-)\s*\[([ xX])\]\s+(.*)$/
+        );
 
         if (taskMatch) {
-          const [, prefix, currentStatus, taskText] = taskMatch;
+          const [, indent, prefix, currentStatus, taskText] = taskMatch;
           console.log("匹配到的任务行:", line);
           console.log("任务文本:", taskText.trim());
           console.log("li文本:", liText);
@@ -126,19 +128,20 @@ const handleClick = (event: MouseEvent) => {
           if (taskText.trim() === liText) {
             // 根据当前checkbox状态设置新状态
             const newStatus = checkbox.checked ? "x" : " ";
-            const newLine = `${prefix}[${newStatus}] ${taskText}`;
+            const newLine = `${indent}${prefix} [${newStatus}] ${taskText}`;
             console.log("更新行:", newLine);
             return newLine;
           }
         }
-
         return line;
       });
 
       console.log("更新后的行:", updatedLines);
+      console.log("原始内容:", content.value);
 
       // 更新内容
       content.value = updatedLines.join("\n");
+      console.log("更新后的内容:", content.value);
       emit("update:content", content.value);
     }, 0);
 
