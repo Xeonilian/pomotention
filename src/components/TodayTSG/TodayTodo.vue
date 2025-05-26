@@ -585,7 +585,7 @@ function handleRowClick(todo: TodoWithNumberPriority) {
 
 /* 激活行样式 */
 .table-body tr.active-row {
-  background-color: rgba(255, 255, 0, 0.3) !important; /* 更明显的黄色高亮 */
+  background-color: rgba(255, 72, 0, 0.109) !important;
   transition: background-color 0.2s ease; /* 添加过渡效果 */
 }
 
@@ -596,7 +596,7 @@ function handleRowClick(todo: TodoWithNumberPriority) {
 
 /* 确保激活行的样式优先级高于隔行变色 */
 .table-body tr.active-row:nth-child(even) {
-  background-color: rgba(255, 255, 0, 0.3) !important;
+  background-color: rgba(255, 72, 0, 0.109) !important;
 }
 
 /* 空行样式 */
