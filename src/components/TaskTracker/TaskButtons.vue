@@ -1,13 +1,3 @@
-<!-- 
-  Component: TaskButtons.vue
-  Description: 任务追踪按钮组，包含能量记录、奖赏记录和打扰记录按钮
-  Props:
-    - taskId: number | null - 当前选中的任务ID
-  Emits:
-    - energy-record: 打开能量记录输入界面
-    - reward-record: 打开奖赏记录输入界面
-    - interruption-record: 打开打扰记录输入界面
--->
 <template>
   <div class="task-buttons-container">
     <n-button
@@ -16,7 +6,7 @@
       secondary
       circle
       strong
-      @click="$emit('energy-record')"
+      @click="showEnergyDialog = true"
       :disabled="!taskId"
       title="能量记录"
     >
@@ -25,10 +15,10 @@
     <n-button
       size="small"
       type="success"
+      secondary
       circle
       strong
-      secondary
-      @click="$emit('reward-record')"
+      @click="showRewardDialog = true"
       :disabled="!taskId"
       title="奖赏记录"
     >
@@ -40,27 +30,79 @@
       circle
       strong
       secondary
-      @click="$emit('interruption-record')"
+      @click="showInterruptionDialog = true"
       :disabled="!taskId"
       title="打扰记录"
     >
       📬
     </n-button>
+    <!-- 弹窗组件挂载进来 -->
+    <EnergyInputDialog
+      v-model:show="showEnergyDialog"
+      @confirm="handleEnergyConfirm"
+    />
+    <RewardInputDialog
+      v-model:show="showRewardDialog"
+      @confirm="handleRewardConfirm"
+    />
+    <InterruptionInputDialog
+      v-model:show="showInterruptionDialog"
+      @confirm="handleInterruptionConfirm"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
+import { ref } from "vue";
 import { NButton } from "naive-ui";
+import EnergyInputDialog from "@/components/EnergyInputDialog.vue";
+import RewardInputDialog from "@/components/RewardInputDialog.vue";
+import InterruptionInputDialog from "@/components/InterruptionInputDialog.vue";
+import { taskService } from "@/services/taskService";
 
-defineProps<{
+const props = defineProps<{
   taskId: number | null;
 }>();
 
-defineEmits<{
-  (e: "energy-record"): void;
-  (e: "reward-record"): void;
+const emit = defineEmits<{
   (e: "interruption-record"): void;
 }>();
+
+const showEnergyDialog = ref(false);
+const showRewardDialog = ref(false);
+const showInterruptionDialog = ref(false);
+
+// 能量弹窗点击确认
+function handleEnergyConfirm(val: number) {
+  if (props.taskId) {
+    taskService.addEnergyRecord(props.taskId, val);
+    // 可以加弹窗/刷新/消息等
+  }
+}
+
+// 奖励弹窗点击确认
+function handleRewardConfirm(val: number) {
+  if (props.taskId) {
+    taskService.addRewardRecord(props.taskId, val);
+    // 可以加提示
+  }
+}
+
+// 打扰弹窗点击确认
+function handleInterruptionConfirm(val: {
+  classType: "E" | "I";
+  description: string;
+  asActivity: boolean;
+}) {
+  if (props.taskId) {
+    taskService.addInterruptionRecord(
+      props.taskId,
+      val.description,
+      val.classType
+    );
+    // 可以加提示
+  }
+}
 </script>
 
 <style scoped>

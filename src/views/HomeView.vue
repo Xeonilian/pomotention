@@ -152,9 +152,6 @@
             :showPomoSeq="showPomoSeq"
             :showPomodoroView="showPomodoroView"
             :selectedTaskId="selectedTaskId"
-            @energy-record="handleEnergyRecord"
-            @reward-record="handleRewardRecord"
-            @interruption-record="handleInterruptionRecord"
           />
         </div>
       </div>
@@ -656,36 +653,6 @@ const selectedTaskId = ref<number | null>(null);
 // 添加选择任务处理函数
 function onSelectTask(taskId: number | null) {
   selectedTaskId.value = taskId;
-}
-
-// 处理能量记录
-function handleEnergyRecord() {
-  if (!selectedTaskId.value) return;
-  const task = taskService.getTask(selectedTaskId.value);
-  if (!task) return;
-
-  // TODO: 打开能量记录输入界面
-  console.log("打开能量记录输入界面", task);
-}
-
-// 处理奖赏记录
-function handleRewardRecord() {
-  if (!selectedTaskId.value) return;
-  const task = taskService.getTask(selectedTaskId.value);
-  if (!task) return;
-
-  // TODO: 打开奖赏记录输入界面
-  console.log("打开奖赏记录输入界面", task);
-}
-
-// 处理打扰记录
-function handleInterruptionRecord() {
-  if (!selectedTaskId.value) return;
-  const task = taskService.getTask(selectedTaskId.value);
-  if (!task) return;
-
-  // TODO: 打开打扰记录输入界面
-  console.log("打开打扰记录输入界面", task);
 }
 </script>
 
