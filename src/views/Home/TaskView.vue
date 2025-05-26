@@ -7,21 +7,32 @@
     <!-- <div class="task-id-display">
       {{ selectedTaskId !== null ? selectedTaskId : "无记录" }}
     </div> -->
-    <TaskButtons
-      :taskId="selectedTaskId"
-      @energy-record="handleEnergyRecord"
-      @reward-record="handleRewardRecord"
-      @interruption-record="handleInterruptionRecord"
-    />
+    <div class="task-buttons-container">
+      <TaskButtons
+        :taskId="selectedTaskId"
+        :isMarkdown="isMarkdown"
+        @toggle-markdown="toggleMarkdown"
+      />
+    </div>
+    <div class="task-record-container">
+      <TaskRecord
+        :taskId="selectedTaskId"
+        :initialContent="taskDescription"
+        :isMarkdown="isMarkdown"
+        @update:content="updateTaskDescription"
+      />
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import PomodoroView from "./PomodoroView.vue";
 import TaskButtons from "@/components/TaskTracker/TaskButtons.vue";
-import { ref, onMounted, onUnmounted } from "vue";
+import TaskRecord from "@/components/TaskTracker/TaskRecord.vue";
+import { ref, onMounted, onUnmounted, watch } from "vue";
+import type { Task } from "@/core/types/Task";
 
-defineProps<{
+const props = defineProps<{
   showPomoSeq: boolean;
   showPomodoroView: boolean;
   selectedTaskId: number | null;
@@ -33,20 +44,60 @@ const emit = defineEmits<{
   (e: "interruption-record"): void;
 }>();
 
-// 处理能量记录
-function handleEnergyRecord() {
-  emit("energy-record");
-}
+// Markdown相关状态
+const isMarkdown = ref(false);
+const taskDescription = ref("");
 
-// 处理奖赏记录
-function handleRewardRecord() {
-  emit("reward-record");
-}
+// 从localStorage加载任务描述
+const loadTaskDescription = () => {
+  if (props.selectedTaskId) {
+    const taskTrackStr = localStorage.getItem("taskTrack");
+    if (taskTrackStr) {
+      const tasks: Task[] = JSON.parse(taskTrackStr);
+      const currentTask = tasks.find(
+        (task) => task.id === props.selectedTaskId
+      );
+      taskDescription.value = currentTask?.description || "";
+    }
+  } else {
+    taskDescription.value = "";
+  }
+};
 
-// 处理打扰记录
-function handleInterruptionRecord() {
-  emit("interruption-record");
-}
+// 监听任务ID变化，加载任务描述
+watch(
+  () => props.selectedTaskId,
+  () => {
+    loadTaskDescription();
+  },
+  { immediate: true }
+);
+
+// 切换Markdown模式
+const toggleMarkdown = () => {
+  isMarkdown.value = !isMarkdown.value;
+};
+
+// 更新任务描述
+const updateTaskDescription = (content: string) => {
+  taskDescription.value = content;
+  if (props.selectedTaskId) {
+    const taskTrackStr = localStorage.getItem("taskTrack");
+    if (taskTrackStr) {
+      const tasks: Task[] = JSON.parse(taskTrackStr);
+      const taskIndex = tasks.findIndex(
+        (task) => task.id === props.selectedTaskId
+      );
+      if (taskIndex !== -1) {
+        tasks[taskIndex] = {
+          ...tasks[taskIndex],
+          description: content,
+        };
+        localStorage.setItem("taskTrack", JSON.stringify(tasks));
+      }
+    }
+  }
+};
 
 // 移动Timer的位置
 const draggableContainer = ref<HTMLElement | null>(null);
@@ -112,5 +163,14 @@ onUnmounted(() => {
 
 .draggable-container:hover {
   box-shadow: 0 4px 16px rgba(255, 255, 255, 0.15);
+}
+
+/* 添加组件间距控制 */
+.task-buttons-container {
+  margin-bottom: 0px; /* 设置 TaskButtons 底部间距 */
+}
+
+.task-record-container {
+  margin-top: 0px; /* 设置 TaskRecord 顶部间距 */
 }
 </style>
