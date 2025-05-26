@@ -13,7 +13,6 @@
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-opener": "^2",
     "@vicons/ionicons5": "^0.13.0",
-    "dompurify": "^3.2.6",
     "marked": "^15.0.12",
     "naive-ui": "^2.41.0",
     "pinia": "^3.0.2",
