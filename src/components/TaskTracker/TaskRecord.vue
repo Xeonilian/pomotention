@@ -25,7 +25,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick, onMounted, onUnmounted } from "vue";
+import { ref, computed, watch, nextTick } from "vue";
 import { marked } from "marked";
 
 // 配置 marked 选项
@@ -62,37 +62,6 @@ const renderedMarkdown = computed(() => {
   return marked(content.value);
 });
 
-// 添加一个函数来处理checkbox的点击
-const handleCheckboxClick = (event: MouseEvent) => {
-  const target = event.target as HTMLElement;
-  if (
-    target.tagName === "INPUT" &&
-    target.getAttribute("type") === "checkbox"
-  ) {
-    event.preventDefault();
-    event.stopPropagation();
-
-    const checkbox = target as HTMLInputElement;
-    const listItem = checkbox.closest("li");
-    if (!listItem) return;
-
-    const line = listItem.textContent?.trim() || "";
-    const newContent = content.value
-      .split("\n")
-      .map((line) => {
-        const checkboxMatch = line.match(/^- \[([ x])\] (.*)$/);
-        if (checkboxMatch && checkboxMatch[2].trim() === line.trim()) {
-          return `- [${checkbox.checked ? "x" : " "}] ${checkboxMatch[2]}`;
-        }
-        return line;
-      })
-      .join("\n");
-
-    content.value = newContent;
-    emit("update:content", content.value);
-  }
-};
-
 watch(
   () => props.initialContent,
   (newContent) => {
@@ -112,26 +81,67 @@ const stopEditing = () => {
   emit("update:content", content.value);
 };
 
-onMounted(() => {
-  document.addEventListener("click", handleCheckboxClick);
-});
-
-onUnmounted(() => {
-  document.removeEventListener("click", handleCheckboxClick);
-});
-
 const handleClick = (event: MouseEvent) => {
   const target = event.target as HTMLElement;
   console.log("点击目标元素:", target);
   console.log("目标元素标签名:", target.tagName);
   console.log("目标元素类名:", target.className);
 
-  // 如果点击的是checkbox，不触发编辑模式
+  // 如果点击的是checkbox，处理checkbox逻辑
   if (
     target.tagName === "INPUT" &&
-    target.getAttribute("type") === "checkbox"
+    target.classList.contains("markdown-checkbox")
   ) {
-    console.log("检测到checkbox点击，阻止编辑模式");
+    console.log("检测到checkbox点击，处理checkbox逻辑");
+
+    event.stopPropagation(); // 阻止冒泡，但不阻止默认行为
+
+    const checkbox = target as HTMLInputElement;
+    const li = checkbox.closest("li");
+    if (!li) return;
+
+    // 使用 setTimeout 确保 checkbox 状态已经更新
+    setTimeout(() => {
+      // 获取li元素的文本内容（去掉checkbox部分）
+      const liText = li.textContent?.replace(/^\s*\[.\]\s*/, "").trim() || "";
+      console.log("li文本:", liText);
+      console.log("checkbox当前状态:", checkbox.checked);
+
+      // 分割内容为行数组
+      const lines = content.value.split("\n");
+      console.log("原始内容行:", lines);
+
+      // 查找并更新对应的行
+      const updatedLines = lines.map((line) => {
+        // 匹配任务列表项的正则表达式
+        const taskMatch = line.match(/^(\s*-\s+)\[([ xX])\]\s+(.*)$/);
+
+        if (taskMatch) {
+          const [, prefix, currentStatus, taskText] = taskMatch;
+          console.log("匹配到的任务行:", line);
+          console.log("任务文本:", taskText.trim());
+          console.log("li文本:", liText);
+
+          // 如果任务文本匹配当前点击的项
+          if (taskText.trim() === liText) {
+            // 根据当前checkbox状态设置新状态
+            const newStatus = checkbox.checked ? "x" : " ";
+            const newLine = `${prefix}[${newStatus}] ${taskText}`;
+            console.log("更新行:", newLine);
+            return newLine;
+          }
+        }
+
+        return line;
+      });
+
+      console.log("更新后的行:", updatedLines);
+
+      // 更新内容
+      content.value = updatedLines.join("\n");
+      emit("update:content", content.value);
+    }, 0);
+
     return;
   }
 
@@ -237,7 +247,7 @@ const handleClick = (event: MouseEvent) => {
   content: none;
 }
 
-:deep(.markdown-checkbox:disabled) {
+:deep(.markdown-checkbox) {
   cursor: pointer;
   opacity: 1;
 }
