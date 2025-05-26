@@ -20,7 +20,10 @@
               (a, b) => a.activityDueRange[0] - b.activityDueRange[0]
             )"
             :key="schedule.id"
-            :class="{ 'active-row': schedule.activityId === activeId }"
+            :class="{
+              'active-row': schedule.activityId === activeId,
+              'selected-row': schedule.id === selectedRowId,
+            }"
             @click="handleRowClick(schedule)"
             style="cursor: pointer"
           >
@@ -121,6 +124,7 @@ import { ref } from "vue";
 defineProps<{
   schedules: Schedule[];
   activeId: number | null;
+  selectedRowId: number | null; // 新增：从父组件接收选中行ID
 }>();
 
 const emit = defineEmits<{
@@ -133,6 +137,7 @@ const emit = defineEmits<{
   (e: "suspend-schedule", id: number): void;
   (e: "convert-to-task", id: number): void;
   (e: "select-task", taskId: number | null): void;
+  (e: "select-row", id: number | null): void; // 新增：选中行事件
 }>();
 
 // 添加状态来控制提示信息
@@ -178,8 +183,9 @@ function handleConvertToTask(schedule: Schedule) {
   }
 }
 
-// 添加点击行处理函数
+// 修改点击行处理函数
 function handleRowClick(schedule: Schedule) {
+  emit("select-row", schedule.id); // 新增：发送选中行事件
   emit("select-task", schedule.taskId || null);
 }
 </script>
@@ -234,7 +240,30 @@ function handleRowClick(schedule: Schedule) {
 
 /* 激活行样式 */
 .table-body tr.active-row {
-  background-color: rgba(255, 255, 0, 0.378); /* 激活行的底色为黄色 */
+  background-color: rgba(255, 255, 0, 0.3) !important;
+  transition: background-color 0.2s ease;
+}
+
+/* 选中行样式 */
+.table-body tr.selected-row {
+  background-color: rgba(255, 255, 0, 0.3) !important;
+  transition: background-color 0.2s ease;
+}
+
+/* 确保选中行的样式优先级高于其他样式 */
+.table-body tr.selected-row:nth-child(even) {
+  background-color: rgba(255, 255, 0, 0.3) !important;
+}
+
+/* 同时具有active和selected状态时的样式 */
+.table-body tr.active-row.selected-row {
+  background-color: rgba(255, 255, 0, 0.3) !important;
+}
+
+/* 鼠标悬停效果 */
+.table-body tr:hover {
+  background-color: rgba(0, 242, 255, 0.054);
+  transition: background-color 0.2s ease;
 }
 
 /* 空行样式 */

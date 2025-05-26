@@ -19,21 +19,25 @@
     <TodayTodo
       :todos="todayTodos"
       :activeId="activeId"
+      :selectedRowId="selectedRowId"
       @update-todo-status="updateTodoStatus"
       @suspend-todo="handleSuspendTodo"
       @update-todo-pomo="updateTodoPomo"
       @update-todo-est="updateTodoEst"
       @convert-to-task="onConvertToTask"
       @select-task="onSelectTask"
+      @select-row="handleSelectRow"
     />
   </div>
   <div class="schedule-container">
     <TodaySchedule
       :schedules="todaySchedules"
       :activeId="activeId"
+      :selectedRowId="selectedRowId"
       @update-schedule-status="updateScheduleStatus"
       @suspend-schedule="handleSuspendSchedule"
       @select-task="onSelectTask"
+      @select-row="handleSelectRow"
     />
   </div>
 </template>
@@ -43,6 +47,7 @@ import TodayTodo from "../../components/TodayTSG/TodayTodo.vue";
 import TodaySchedule from "../../components/TodayTSG/TodaySchedule.vue";
 import type { Todo } from "../../core/types/Todo";
 import type { Schedule } from "@/core/types/Schedule";
+import { ref } from "vue";
 
 defineProps<{
   todayTodos: Todo[];
@@ -75,6 +80,14 @@ const emit = defineEmits<{
   (e: "convert-to-task", id: number): void;
   (e: "select-task", taskId: number | null): void;
 }>();
+
+// 添加选中行状态
+const selectedRowId = ref<number | null>(null);
+
+// 处理选中行事件
+function handleSelectRow(id: number | null) {
+  selectedRowId.value = id;
+}
 
 function updateScheduleStatus(id: number, activityId: number, status: string) {
   emit("update-schedule-status", id, activityId, status);

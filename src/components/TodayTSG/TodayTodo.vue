@@ -3,7 +3,18 @@
   Description: 显示多个任务的详细信息或列表。
   Props:
     - todos: Array<Todo> - 任务列表数据
-  Emits: 无
+    - activeId: number | null - 当前活动的任务ID
+    - selectedRowId: number | null - 从父组件接收选中行ID
+  Emits:
+    - suspend-todo: (id: number)
+    - update-todo-status: (id: number, activityId: number, status: string)
+    - update-todo-priority: (id: number, priority: number)
+    - batch-update-priorities: (updates: Array<{ id: number; priority: number }>)
+    - update-todo-pomo: (id: number, realPomo: number[])
+    - update-todo-est: (id: number, estPomo: number[])
+    - convert-to-task: (id: number)
+    - select-task: (taskId: number | null)
+    - select-row: (id: number | null)
   Parent: TodayView.vue
 -->
 <template>
@@ -27,7 +38,10 @@
           <tr
             v-for="todo in sortedTodos"
             :key="todo.id"
-            :class="{ 'active-row': todo.activityId === activeId }"
+            :class="{
+              'active-row': todo.activityId === activeId,
+              'selected-row': todo.id === selectedRowId,
+            }"
             @click="handleRowClick(todo)"
             style="cursor: pointer"
           >
@@ -215,6 +229,7 @@ interface TodoWithNumberPriority extends Omit<Todo, "priority"> {
 const props = defineProps<{
   todos: TodoWithNumberPriority[];
   activeId: number | null;
+  selectedRowId: number | null; // 新增：从父组件接收选中行ID
 }>();
 
 const emit = defineEmits<{
@@ -234,6 +249,7 @@ const emit = defineEmits<{
   (e: "update-todo-est", id: number, estPomo: number[]): void;
   (e: "convert-to-task", id: number): void;
   (e: "select-task", taskId: number | null): void;
+  (e: "select-row", id: number | null): void; // 新增：选中行事件
 }>();
 
 const editingTodo = ref<TodoWithNumberPriority | null>(null);
@@ -496,8 +512,9 @@ function handleConvertToTask(todo: TodoWithNumberPriority) {
   }
 }
 
-// 添加点击行处理函数
+// 修改点击行处理函数
 function handleRowClick(todo: TodoWithNumberPriority) {
+  emit("select-row", todo.id); // 新增：发送选中行事件
   emit("select-task", todo.taskId || null);
 }
 </script>
@@ -568,7 +585,18 @@ function handleRowClick(todo: TodoWithNumberPriority) {
 
 /* 激活行样式 */
 .table-body tr.active-row {
-  background-color: rgba(255, 255, 0, 0.378); /* 激活行的底色为黄色 */
+  background-color: rgba(255, 255, 0, 0.3) !important; /* 更明显的黄色高亮 */
+  transition: background-color 0.2s ease; /* 添加过渡效果 */
+}
+
+.table-body tr:hover {
+  background-color: rgba(0, 242, 255, 0.054); /* 鼠标悬停时的浅黄色 */
+  transition: background-color 0.2s ease;
+}
+
+/* 确保激活行的样式优先级高于隔行变色 */
+.table-body tr.active-row:nth-child(even) {
+  background-color: rgba(255, 255, 0, 0.3) !important;
 }
 
 /* 空行样式 */
@@ -651,5 +679,21 @@ function handleRowClick(todo: TodoWithNumberPriority) {
   display: flex;
   gap: 2px;
   justify-content: flex-end;
+}
+
+/* 选中行样式 */
+.table-body tr.selected-row {
+  background-color: rgba(255, 255, 0, 0.3) !important;
+  transition: background-color 0.2s ease;
+}
+
+/* 确保选中行的样式优先级高于其他样式 */
+.table-body tr.selected-row:nth-child(even) {
+  background-color: rgba(255, 255, 0, 0.3) !important;
+}
+
+/* 同时具有active和selected状态时的样式 */
+.table-body tr.active-row.selected-row {
+  background-color: rgba(255, 255, 0, 0.3) !important;
 }
 </style>
