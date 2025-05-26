@@ -165,8 +165,21 @@ function addMinutesToTime(str: string, add: number) {
 function addBlock() {
   const prev = Blocks.value[Blocks.value.length - 1];
   if (prev && !canAddBlock.value) return;
+
   const start = prev ? prev.end : "00:00";
-  const end = addMinutesToTime(start, 120); // +2小时
+  let end;
+
+  // 如果开始时间在22:00之后，直接设置为24:00
+  if (getTimestampForTimeString(start) >= getTimestampForTimeString("22:00")) {
+    end = "24:00";
+  } else {
+    end = addMinutesToTime(start, 120); // +2小时
+    // 如果加2小时后超过22:00，也直接设置为24:00
+    if (getTimestampForTimeString(end) >= getTimestampForTimeString("22:00")) {
+      end = "24:00";
+    }
+  }
+
   Blocks.value.push({
     id: generateId(),
     category: categories[0],
