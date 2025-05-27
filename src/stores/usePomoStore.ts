@@ -29,7 +29,11 @@ export const usePomoStore = defineStore("pomo", {
   getters: {
     todayPomoCount: (state) => {
       const count = state.todayTodos.reduce((total, todo) => {
-        if (todo.realPomo && todo.realPomo.length > 0) {
+        if (
+          todo.realPomo &&
+          todo.realPomo.length > 0 &&
+          todo.pomoType === "🍅"
+        ) {
           return total + todo.realPomo.reduce((sum, pomo) => sum + pomo, 0);
         }
         return total;
@@ -46,7 +50,11 @@ export const usePomoStore = defineStore("pomo", {
     setTodayTodos(todos: Todo[]) {
       // 计算新的番茄钟总数
       const newCount = todos.reduce((total, todo) => {
-        if (todo.realPomo && todo.realPomo.length > 0) {
+        if (
+          todo.realPomo &&
+          todo.realPomo.length > 0 &&
+          todo.pomoType === "🍅"
+        ) {
           return total + todo.realPomo.reduce((sum, pomo) => sum + pomo, 0);
         }
         return total;
