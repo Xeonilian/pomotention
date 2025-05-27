@@ -41,6 +41,32 @@ renderer.checkbox = function ({ checked }: { checked: boolean }) {
     checked ? "checked" : ""
   }>`;
 };
+
+// 添加高亮语法支持
+const highlightRule = {
+  name: "highlight",
+  level: "inline",
+  start(src: string) {
+    return src.indexOf("==");
+  },
+  tokenizer(src: string) {
+    const rule = /^==([^=]+)==/;
+    const match = rule.exec(src);
+    if (match) {
+      return {
+        type: "highlight",
+        raw: match[0],
+        text: match[1].trim(),
+      };
+    }
+    return undefined;
+  },
+  renderer(token: any) {
+    return `<span class="highlight-text">${token.text}</span>`;
+  },
+};
+
+marked.use({ extensions: [highlightRule] });
 marked.setOptions({ renderer });
 
 const props = defineProps<{
@@ -262,5 +288,11 @@ const handleClick = (event: MouseEvent) => {
 .markdown-content.disabled {
   cursor: not-allowed;
   background-color: #f5f5f5;
+}
+
+:deep(.highlight-text) {
+  background-color: #ffeb3b;
+  padding: 0 2px;
+  border-radius: 2px;
 }
 </style>
