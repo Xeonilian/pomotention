@@ -102,7 +102,6 @@
                 secondary
                 strong
                 @click="dateService.goToPreviousDay"
-                :disabled="!dateService.canGoToPreviousDay"
                 title="上一天"
               >
                 <template #icon>
@@ -114,8 +113,19 @@
                 circle
                 secondary
                 strong
+                @click="dateService.resetToToday"
+                title="回到今天"
+              >
+                <template #icon>
+                  <CalendarToday20Regular />
+                </template>
+              </n-button>
+              <n-button
+                size="small"
+                circle
+                secondary
+                strong
                 @click="dateService.goToNextDay"
-                :disabled="!dateService.canGoToNextDay"
                 title="下一天"
               >
                 <template #icon>
@@ -241,6 +251,7 @@ import { createDateCheckService } from "@/services/dateCheckService";
 import {
   DocumentArrowLeft20Regular,
   DocumentArrowRight20Regular,
+  CalendarToday20Regular,
 } from "@vicons/fluent";
 import { useDateService } from "@/services/dateService";
 import { useResize } from "@/composables/useResize";
@@ -297,12 +308,11 @@ watch(
 
 // 监听日期变化
 watch(
-  () => dateService.currentDate,
-  (newDate) => {
-    console.log("日期变化:", newDate);
-    const todayTodos = todoList.value.filter((todo) => isToday(todo.id));
-    pomoStore.setTodayTodos(todayTodos);
-  }
+  () => dateService.currentViewDate,
+  () => {
+    console.log("日期已更新:", dateService.currentDate);
+  },
+  { immediate: true }
 );
 
 // ======================== 1. TimeTable 相关 ========================
@@ -725,12 +735,15 @@ function onActivityUpdated() {
   display: flex;
   align-items: center;
   gap: 12px;
+  font-family: "Courier New", Courier, monospace;
+  font-weight: bold;
 }
 
 .today-status {
   font-size: 18px;
-  font-weight: 500;
+  font-weight: bold;
   color: #333;
+  font-family: "Courier New", Courier, monospace;
 }
 
 .global-pomo {
@@ -741,15 +754,19 @@ function onActivityUpdated() {
   background: #f5f5f5;
   padding: 2px 8px;
   border-radius: 12px;
+  font-family: "Courier New", Courier, monospace;
 }
 
 .today-pomo {
   color: #2080f0;
   font-weight: 500;
+  font-family: "Courier New", Courier, monospace;
+  font-weight: bold;
 }
 
 .total-pomo {
   color: #666;
+  font-weight: bold;
 }
 
 .button-group {
