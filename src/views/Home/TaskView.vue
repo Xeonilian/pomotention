@@ -69,6 +69,7 @@ import TaskRecord from "@/components/TaskTracker/TaskRecord.vue";
 import { ref, onMounted, onUnmounted, watch, computed } from "vue";
 import type { Task } from "@/core/types/Task";
 import { taskService } from "@/services/taskService";
+import { addOneDayToDate } from "@/core/utils";
 
 const props = defineProps<{
   showPomoSeq: boolean;
@@ -317,7 +318,6 @@ function handleInterruptionRecord(data: {
             if (data.activityClass === "T" && data.dueDate) {
               activity.dueDate = data.dueDate;
             }
-
             // 通知父组件活动已更新
             emit("activity-updated");
           }
@@ -480,6 +480,4 @@ const combinedRecords = computed(() => {
   color: var(--n-text-color-3);
   line-height: 1;
 }
-
-/* Removed old color classes */
 </style>

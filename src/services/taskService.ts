@@ -6,6 +6,7 @@ import type {
 } from "@/core/types/Task";
 import type { Activity } from "@/core/types/Activity";
 import { STORAGE_KEYS } from "@/core/constants";
+import { addOneDayToDate } from "@/core/utils";
 
 export const taskService = {
   // 获取特定任务
@@ -166,7 +167,14 @@ export const taskService = {
       title: interruption.description,
       class: activityClass,
       interruption: interruption.class, // 保持原有的interruption类型
-      status: "ongoing",
+      status: "",
+      // 根据活动类型设置相应属性
+      ...(activityClass === "T" && {
+        pomoType: "🍅",
+      }),
+      ...(activityClass === "S" && {
+        dueRange: [addOneDayToDate(Date.now()), "60"],
+      }),
     };
 
     // 保存到localStorage
