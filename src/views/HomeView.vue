@@ -492,14 +492,21 @@ watch(
       );
       if (relatedTodo) {
         relatedTodo.activityTitle = activity.title;
-        // 只在 estPomo 不存在时才设置初始值
-        if (!relatedTodo.estPomo || relatedTodo.estPomo.length === 0) {
-          relatedTodo.estPomo =
-            activity.pomoType === "🍒"
-              ? [4]
-              : activity.estPomoI
+        if (activity.pomoType === "🍒") {
+          // 只要变成樱桃，无条件重置为4个番茄
+          relatedTodo.estPomo = [4];
+        } else {
+          // 非樱桃类型时，才考虑 estPomoI
+          if (!relatedTodo.estPomo || relatedTodo.estPomo.length === 0) {
+            // 没有estPomo则按estPomoI初始化
+            relatedTodo.estPomo = activity.estPomoI
               ? [parseInt(activity.estPomoI)]
               : [];
+          }
+          // 只要有estPomoI，覆盖第一个元素
+          if (activity.estPomoI) {
+            relatedTodo.estPomo[0] = parseInt(activity.estPomoI);
+          }
         }
         relatedTodo.status = activity.status || "";
         relatedTodo.pomoType = activity.pomoType;

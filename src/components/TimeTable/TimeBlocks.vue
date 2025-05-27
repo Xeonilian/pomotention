@@ -235,7 +235,7 @@ function getTodoSegmentStyle(seg: TodoSegment): CSSProperties {
     width: "13px",
     top: `${topPx}px`,
     height: `${heightPx}px`,
-    background: seg.overflow ? "rgba(210,60,40,0.65)" : "rgba(52,110,255,0.0)",
+    background: seg.overflow ? "rgba(210,60,40,0.65)" : "rgba(52,110,255,0.2)",
     borderRadius: "2px",
     color: "#fff",
     fontSize: "12px",
