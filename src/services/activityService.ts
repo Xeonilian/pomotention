@@ -69,6 +69,13 @@ export function passPickedActivity(
   todoList: Todo[],
   activity: Activity
 ) {
+  // 检查是否已经存在相同 activityId 的待办事项
+  const existingTodo = todoList.find((todo) => todo.activityId === activity.id);
+  if (existingTodo) {
+    console.log(`活动 ${activity.title} 已经存在于待办事项列表中`);
+    return null;
+  }
+
   // 将 activity 状态设置为 ongoing
   const activityToUpdate = activityList.find((a) => a.id === activity.id);
   if (activityToUpdate) {
