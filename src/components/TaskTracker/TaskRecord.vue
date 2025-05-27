@@ -159,7 +159,7 @@ const handleClick = (event: MouseEvent) => {
 <style scoped>
 .task-record {
   width: 100%;
-  min-height: 200px;
+  height: 100%;
   margin: 0px 0;
   overflow: hidden; /* 防止出现滚动条 */
 }
@@ -168,7 +168,7 @@ const handleClick = (event: MouseEvent) => {
   padding: 10px;
   border: 1px solid #ddd;
   border-radius: 4px;
-  min-height: 200px;
+  height: 100%;
   cursor: text;
   box-sizing: border-box;
   font-weight: normal; /* 确保字体不会变粗 */
@@ -176,11 +176,10 @@ const handleClick = (event: MouseEvent) => {
 
 .task-textarea {
   width: 100%;
-  min-height: 200px;
+  height: 100%;
   padding: 10px;
   border: 1px solid #ddd;
   border-radius: 4px;
-  resize: vertical;
   font-family: inherit;
   font-weight: normal;
   box-sizing: border-box;
@@ -197,7 +196,7 @@ const handleClick = (event: MouseEvent) => {
 :deep(.markdown-content h1),
 :deep(.markdown-content h2),
 :deep(.markdown-content h3) {
-  margin-top: 1em;
+  margin-top: 0.5em;
   margin-bottom: 0.5em;
 }
 

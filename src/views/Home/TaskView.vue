@@ -1,6 +1,6 @@
 <!-- TaskView.vue -->
 <template>
-  <div>
+  <div class="task-view-container">
     <div class="draggable-container" ref="draggableContainer">
       <PomodoroView v-if="showPomodoroView" :showPomoSeq="showPomoSeq" />
     </div>
@@ -150,6 +150,12 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+.task-view-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
 .draggable-container {
   position: fixed;
   z-index: 1000;
@@ -165,12 +171,28 @@ onUnmounted(() => {
   box-shadow: 0 4px 16px rgba(255, 255, 255, 0.15);
 }
 
-/* 添加组件间距控制 */
 .task-buttons-container {
-  margin-bottom: 0px; /* 设置 TaskButtons 底部间距 */
+  margin-bottom: 0px;
+  flex-shrink: 0;
 }
 
 .task-record-container {
-  margin-top: 0px; /* 设置 TaskRecord 顶部间距 */
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* 添加内部滚动容器样式 */
+.task-record-container :deep(.task-record) {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.task-record-container :deep(.markdown-content),
+.task-record-container :deep(.task-textarea) {
+  flex: 1;
+  overflow-y: auto;
 }
 </style>

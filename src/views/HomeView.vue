@@ -711,6 +711,10 @@ function onSelectTask(taskId: number | null) {
   overflow: auto;
   padding: 4px;
   box-sizing: border-box;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
 .today-header {
