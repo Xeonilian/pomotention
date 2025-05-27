@@ -1,6 +1,6 @@
 // useTimerStore.ts
 import { defineStore } from "pinia";
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 import { PomodoroDurations } from "../core/constants.ts";
 import {
   playSound,
@@ -119,8 +119,36 @@ export const useTimerStore = defineStore("timer", () => {
     return ((elapsedMinutes - phaseStart) / phaseDuration) * 100;
   });
 
+  // 处理阶段变化的声音
+  function handlePhaseChange(phase: "r1" | "w1" | "w2" | "r2" | "t"): void {
+    if (pomodoroState.value === "working") {
+      switch (phase) {
+        case "w1":
+          playSound(SoundType.WORK_MIDDLE);
+          break;
+        case "w2":
+          playSound(SoundType.WORK_MIDDLE);
+          break;
+        case "r2":
+          playSound(SoundType.WORK_MIDDLE);
+          break;
+      }
+    } else {
+      console.log("Not playing sound - not in working state");
+    }
+  }
+
+  // 监听阶段变化
+  watch(currentPhase, (newPhase, oldPhase) => {
+    console.log("Phase changed:", { oldPhase, newPhase });
+    if (newPhase !== oldPhase && newPhase) {
+      handlePhaseChange(newPhase);
+    }
+  });
+
   // 方法
   function startWorking(duration: number, onFinish?: () => void): void {
+    console.log("startWorking called with duration:", duration);
     if (timerInterval.value) clearInterval(timerInterval.value);
 
     pomodoroState.value = "working";
@@ -133,13 +161,10 @@ export const useTimerStore = defineStore("timer", () => {
     isFromSequence.value = !!onFinish;
 
     // 播放工作开始声音
+    console.log("Playing work start sound");
     playSound(SoundType.WORK_START);
     // 开始播放白噪音
     startWhiteNoise();
-
-    // 设置中间提醒
-    const middleTime = Math.floor(totalTime.value / 2);
-    let middleAlertPlayed = false;
 
     timerInterval.value = window.setInterval(() => {
       if (startTime.value) {
@@ -147,12 +172,6 @@ export const useTimerStore = defineStore("timer", () => {
           (Date.now() - startTime.value) / 1000
         );
         timeRemaining.value = Math.max(0, totalTime.value - elapsedSeconds);
-
-        // 检查是否需要播放中间提醒
-        if (!middleAlertPlayed && timeRemaining.value <= middleTime) {
-          playSound(SoundType.WORK_MIDDLE);
-          middleAlertPlayed = true;
-        }
 
         if (timeRemaining.value <= 0) {
           if (timerInterval.value) {

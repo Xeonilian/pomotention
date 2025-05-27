@@ -128,7 +128,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from "vue";
+import { ref, computed } from "vue";
 import { useTimerStore } from "@/stores/useTimerStore.ts";
 import { NText, NProgress, NButton, NDropdown } from "naive-ui";
 import { clickStatsStore } from "@/stores/useClickStatsStore";
@@ -214,47 +214,6 @@ const redProgressPercentage = computed(() => {
   return (
     (((timePassed / totalSeconds) * 100 - wStartPercent) / wRangePercent) * 100
   );
-});
-
-// 3-3 进度与声音
-function playPhaseChangeSound(phase: "r1" | "w1" | "w2" | "r2" | "t"): void {
-  console.log(`Phase changed to ${phase}, playing sound...`);
-  // 实际的声音播放代码...
-}
-
-// 3-4 确定当前所处阶段
-const currentPhase = computed((): "r1" | "w1" | "w2" | "r2" | "t" => {
-  // 没有精确定义r w等阶段，使用的都是timerStore里的
-  const progressBlue = progressPercentage.value;
-  const r1Duration = timerStore.r1Duration;
-  const wDuration = timerStore.wDuration;
-  const r2Duration = timerStore.r2Duration;
-  const workDuration = timerStore.workDuration;
-
-  // 根据比例计算各阶段的界限
-  const r1End = (r1Duration / workDuration) * 100;
-  const w1End = ((r1Duration + wDuration) / workDuration) * 100;
-  const w2End = ((r1Duration + 2 * wDuration) / workDuration) * 100;
-  const r2End =
-    ((r1Duration + 2 * wDuration + r2Duration) / workDuration) * 100;
-
-  // 打印实际计算的结果
-  //    const progressRed = redProgressPercentage.value;
-  //console.log(`当前蓝色进度: ${progressBlue.toFixed(1)}, 红色进度: ${progressRed.toFixed(1)}` );
-
-  if (progressBlue < r1End) return "r1";
-  if (progressBlue < w1End) return "w1";
-  if (progressBlue < w2End) return "w2";
-  if (progressBlue < r2End) return "r2";
-  return "t";
-});
-
-// TODO 3-5 状态监听与反应
-watch(currentPhase, (newPhase, oldPhase) => {
-  if (newPhase !== oldPhase) {
-    // 播放对应阶段变化的声音
-    playPhaseChangeSound(newPhase);
-  }
 });
 
 // 4 按钮
