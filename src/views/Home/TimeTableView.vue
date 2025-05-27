@@ -225,7 +225,7 @@ const effectivePxPerMinute = computed(() => {
 }
 .schedule-view-button-container {
   width: 100%;
-  margin: auto;
+  margin-left: 15px;
   text-align: center;
   align-items: center;
   display: flex;
