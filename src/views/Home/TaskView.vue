@@ -124,8 +124,25 @@ function handleMouseMove(e: MouseEvent) {
   const deltaX = e.clientX - startX;
   const deltaY = e.clientY - startY;
 
-  draggableContainer.value.style.left = `${initialX + deltaX}px`;
-  draggableContainer.value.style.top = `${initialY + deltaY}px`;
+  // 获取视窗尺寸
+  const windowWidth = window.innerWidth;
+  const windowHeight = window.innerHeight;
+
+  // 获取元素尺寸
+  const elementWidth = draggableContainer.value.offsetWidth;
+  const elementHeight = draggableContainer.value.offsetHeight;
+
+  // 计算新位置
+  let newX = initialX + deltaX;
+  let newY = initialY + deltaY;
+
+  // 限制X轴范围
+  newX = Math.max(0, Math.min(newX, windowWidth - elementWidth));
+  // 限制Y轴范围
+  newY = Math.max(0, Math.min(newY, windowHeight - elementHeight));
+
+  draggableContainer.value.style.left = `${newX}px`;
+  draggableContainer.value.style.top = `${newY}px`;
 }
 
 function handleMouseUp() {
