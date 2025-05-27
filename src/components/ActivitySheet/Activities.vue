@@ -26,10 +26,10 @@
         @focus="$emit('focus-row', item.id)"
       >
         <template #prefix>
-          <n-icon v-if="item.interruption === 'I'" color="#fa5c7c"
+          <n-icon v-if="item.interruption === 'I'" color="#f8d"
             ><VideoPersonSparkle24Regular
           /></n-icon>
-          <n-icon v-else-if="item.interruption === 'E'" color="#138"
+          <n-icon v-else-if="item.interruption === 'E'" color="#f28d"
             ><VideoPersonCall24Regular
           /></n-icon>
           <n-icon
@@ -217,7 +217,7 @@ function onInputUpdate(item: Activity, value: string) {
 }
 .pomo-purple {
   background-color: rgba(128, 0, 128, 0.15) !important;
-  border-color: rgba(128, 0, 128, 0.3) !important;
+  border-color: #8000804d !important;
 }
 .pomo-green {
   background-color: rgba(0, 128, 0, 0.15) !important;
