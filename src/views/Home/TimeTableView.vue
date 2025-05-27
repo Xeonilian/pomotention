@@ -29,12 +29,15 @@
       <n-button
         @click="toggleDisplay"
         secondary
-        round
-        strong
-        type="default"
+        circle
+        type="info"
         class="schedule-button"
-        >{{ buttonText }}</n-button
+        :title="showEditor ? '完成编辑' : '开始编辑'"
       >
+        <n-icon size="20">
+          <Settings20Regular />
+        </n-icon>
+      </n-button>
       <n-popconfirm
         @positive-click="emitReset(currentType)"
         negative-text="取消"
@@ -83,7 +86,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, computed } from "vue";
 import { NButton, NPopconfirm } from "naive-ui";
-import { ArrowReset48Filled } from "@vicons/fluent";
+import { ArrowReset48Filled, Settings20Regular } from "@vicons/fluent";
 import TimeTableEditor from "@/components/TimeTable/TimeTableEditor.vue";
 import TimeBlocks from "@/components/TimeTable/TimeBlocks.vue";
 import type { Block } from "@/core/types/Block";
@@ -93,12 +96,10 @@ import { getTimestampForTimeString } from "@/core/utils";
 
 // 1 按钮
 const showEditor = ref(false);
-const buttonText = ref("设置");
 
 const toggleDisplay = () => {
   //console.log("准备进入编辑模式时的 currentType:", props.currentType);
   showEditor.value = !showEditor.value;
-  buttonText.value = showEditor.value ? "确认" : "设置";
 };
 
 // 接收父级的数据
