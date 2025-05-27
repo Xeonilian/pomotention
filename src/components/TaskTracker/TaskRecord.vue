@@ -83,16 +83,16 @@ const stopEditing = () => {
 
 const handleClick = (event: MouseEvent) => {
   const target = event.target as HTMLElement;
-  console.log("点击目标元素:", target);
-  console.log("目标元素标签名:", target.tagName);
-  console.log("目标元素类名:", target.className);
+  //   console.log("点击目标元素:", target);
+  //   console.log("目标元素标签名:", target.tagName);
+  //   console.log("目标元素类名:", target.className);
 
   // 如果点击的是checkbox，处理checkbox逻辑
   if (
     target.tagName === "INPUT" &&
     target.classList.contains("markdown-checkbox")
   ) {
-    console.log("检测到checkbox点击，处理checkbox逻辑");
+    // console.log("检测到checkbox点击，处理checkbox逻辑");
 
     event.stopPropagation(); // 阻止冒泡，但不阻止默认行为
 
@@ -104,12 +104,12 @@ const handleClick = (event: MouseEvent) => {
     setTimeout(() => {
       // 获取li元素的文本内容（去掉checkbox部分）
       const liText = li.textContent?.replace(/^\s*\[.\]\s*/, "").trim() || "";
-      console.log("li文本:", liText);
-      console.log("checkbox当前状态:", checkbox.checked);
+      //   console.log("li文本:", liText);
+      //   console.log("checkbox当前状态:", checkbox.checked);
 
       // 分割内容为行数组
       const lines = content.value.split("\n");
-      console.log("原始内容行:", lines);
+      //   console.log("原始内容行:", lines);
 
       // 查找并更新对应的行
       const updatedLines = lines.map((line) => {
@@ -120,28 +120,28 @@ const handleClick = (event: MouseEvent) => {
 
         if (taskMatch) {
           const [, indent, prefix, currentStatus, taskText] = taskMatch;
-          console.log("匹配到的任务行:", line);
-          console.log("任务文本:", taskText.trim());
-          console.log("li文本:", liText);
+          //   console.log("匹配到的任务行:", line);
+          //   console.log("任务文本:", taskText.trim());
+          //   console.log("li文本:", liText);
 
           // 如果任务文本匹配当前点击的项
           if (taskText.trim() === liText) {
             // 根据当前checkbox状态设置新状态
             const newStatus = checkbox.checked ? "x" : " ";
             const newLine = `${indent}${prefix} [${newStatus}] ${taskText}`;
-            console.log("更新行:", newLine);
+            // console.log("更新行:", newLine);
             return newLine;
           }
         }
         return line;
       });
 
-      console.log("更新后的行:", updatedLines);
-      console.log("原始内容:", content.value);
+      //   console.log("更新后的行:", updatedLines);
+      //   console.log("原始内容:", content.value);
 
       // 更新内容
       content.value = updatedLines.join("\n");
-      console.log("更新后的内容:", content.value);
+      //   console.log("更新后的内容:", content.value);
       emit("update:content", content.value);
     }, 0);
 
@@ -150,7 +150,7 @@ const handleClick = (event: MouseEvent) => {
 
   // 只有在非checkbox点击且taskId存在时才进入编辑模式
   if (props.taskId) {
-    console.log("进入编辑模式");
+    // console.log("进入编辑模式");
     startEditing();
   }
 };
