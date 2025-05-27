@@ -283,7 +283,7 @@ function getTodoSegmentStyle(seg: TodoSegment): CSSProperties {
 
 .tick-line {
   height: 1px;
-  width: 179px;
+  width: calc(100% - 30px);
   background-color: #bbb;
   margin-bottom: 2px;
   flex-shrink: 0;
@@ -293,7 +293,7 @@ function getTodoSegmentStyle(seg: TodoSegment): CSSProperties {
 .hour-label {
   font-size: 10px;
   line-height: 14px;
-  width: 180px;
+  width: 100%;
   text-align: right;
   flex-shrink: 0;
   color: #666;

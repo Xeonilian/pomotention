@@ -633,7 +633,7 @@ const { size: topHeight, startResize: startVerticalResize } = useResize(
   window.innerHeight - 200
 );
 const { size: leftWidth, startResize: startLeftResize } = useResize(
-  240,
+  200,
   "horizontal",
   200,
   240,
@@ -674,7 +674,7 @@ function onSelectTask(taskId: number | null) {
 
 .left {
   background: #ffffff;
-  padding: 16px;
+  padding: 5px 10px 15px 10px;
   box-sizing: border-box;
   overflow-y: hidden;
   margin-right: 0;
