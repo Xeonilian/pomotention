@@ -6,10 +6,12 @@ const weekdayShort = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 export function useDateService() {
   const currentViewDate = ref(new Date());
   const currentDate = ref("");
+  const selectedDate = ref(new Date());
 
   // 重置到当前日期
   function resetToToday() {
     currentViewDate.value = new Date();
+    selectedDate.value = new Date();
     updateCurrentDate();
   }
 
@@ -18,6 +20,7 @@ export function useDateService() {
     const newDate = new Date(currentViewDate.value);
     newDate.setDate(newDate.getDate() - 1);
     currentViewDate.value = newDate;
+    selectedDate.value = new Date(newDate);
     updateCurrentDate();
   }
 
@@ -26,6 +29,7 @@ export function useDateService() {
     const newDate = new Date(currentViewDate.value);
     newDate.setDate(newDate.getDate() + 1);
     currentViewDate.value = newDate;
+    selectedDate.value = new Date(newDate);
     updateCurrentDate();
   }
 
@@ -55,16 +59,32 @@ export function useDateService() {
     return currentViewDate.value.toISOString().split("T")[0];
   }
 
+  // 获取选中日期字符串
+  function getSelectedDateStr() {
+    return selectedDate.value.toISOString().split("T")[0];
+  }
+
+  // 检查日期是否是选中日期
+  function isSelectedDate(date: Date | string | number): boolean {
+    const dateToCheck = new Date(date);
+    const selectedDateStr = selectedDate.value.toISOString().split("T")[0];
+    const dateToCheckStr = dateToCheck.toISOString().split("T")[0];
+    return dateToCheckStr === selectedDateStr;
+  }
+
   // 初始化时更新日期显示
   updateCurrentDate();
 
   return {
     currentViewDate,
     currentDate,
+    selectedDate,
     goToPreviousDay,
     goToNextDay,
     updateCurrentDate,
     getCurrentDateStr,
+    getSelectedDateStr,
+    isSelectedDate,
     resetToToday,
   };
 }

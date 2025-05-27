@@ -24,7 +24,6 @@ export function createDateCheckService({
   scheduleList,
   todoList,
   convertToSchedule,
-  convertToTodo,
   onDateChange,
 }: DateCheckServiceOptions) {
   let debounceTimer: TimeoutType | null = null;

@@ -25,7 +25,11 @@
         @mousedown="startLeftResize"
       ></div>
       <div class="middle">
-        <div class="middle-top" :style="{ height: topHeight + 'px' }">
+        <div
+          class="middle-top"
+          :style="{ height: topHeight + 'px' }"
+          :class="{ 'not-today': !isCurrentDay }"
+        >
           <!-- 今日待办 -->
           <div class="today-header">
             <div class="today-info">
@@ -244,7 +248,7 @@ import {
   updateTodoStatus,
   handleSuspendTodo,
   handleSuspendSchedule,
-  isToday,
+  isToday as isTodayTodo,
   updateTodoPomo,
 } from "@/services/todayService";
 import { createDateCheckService } from "@/services/dateCheckService";
@@ -289,7 +293,7 @@ const globalRealPomo = computed(() => pomoStore.globalRealPomo);
 watch(
   todoList,
   (newTodos) => {
-    const todayTodos = newTodos.filter((todo) => isToday(todo.id));
+    const todayTodos = newTodos.filter((todo) => isTodayTodo(todo.id));
     pomoStore.setTodayTodos(todayTodos);
   },
   { deep: true, immediate: true }
@@ -300,7 +304,7 @@ watch(
   () => todoList.value.map((todo) => todo.realPomo),
   () => {
     console.log("检测到番茄钟变化");
-    const todayTodos = todoList.value.filter((todo) => isToday(todo.id));
+    const todayTodos = todoList.value.filter((todo) => isTodayTodo(todo.id));
     pomoStore.setTodayTodos(todayTodos);
   },
   { deep: true }
@@ -349,15 +353,14 @@ function onTimeTableReset(type: "work" | "entertainment") {
 /** 今日的 Todo */
 const todayTodos = computed(() =>
   todoList.value.filter((todo) => {
-    dateService.currentDate; // 依赖今日，日期变自动刷新
-    return isToday(todo.id);
+    return dateService.isSelectedDate(todo.id);
   })
 );
+
 /** 今日的 Schedule */
 const todaySchedules = computed(() =>
   scheduleList.value.filter((schedule) => {
-    dateService.currentDate;
-    return isToday(schedule.id);
+    return dateService.isSelectedDate(schedule.id);
   })
 );
 
@@ -430,7 +433,7 @@ function onUpdateTodoPomo(id: number, realPomo: number[]) {
 
   // 确保更新全局计数
   const todo = todoList.value.find((t) => t.id === id);
-  if (todo && isToday(todo.id)) {
+  if (todo && isTodayTodo(todo.id)) {
     console.log("触发全局计数更新");
     pomoStore.updateGlobalPomoCount(todo);
   }
@@ -540,7 +543,7 @@ watch(
       );
       if (activity.class === "S" && due) {
         const dueMs = typeof due === "string" ? Date.parse(due) : Number(due);
-        if (isToday(dueMs)) {
+        if (isTodayTodo(dueMs)) {
           // 新增或更新schedule
           if (scheduleIdx === -1) {
             activity.status = "ongoing";
@@ -660,6 +663,13 @@ function onActivityUpdated() {
   // 重新加载日程列表
   scheduleList.value = loadSchedules();
 }
+
+// 在 script setup 部分添加计算属性
+const isCurrentDay = computed(() => {
+  const today = new Date();
+  const selected = dateService.selectedDate.value;
+  return today.toDateString() === selected.toDateString();
+});
 </script>
 
 <style scoped>
@@ -701,7 +711,7 @@ function onActivityUpdated() {
   padding: 0px;
   box-sizing: border-box;
   overflow: hidden;
-  min-width: 400px;
+  min-width: 450px;
   max-width: 900px;
 }
 
@@ -711,6 +721,33 @@ function onActivityUpdated() {
   overflow: auto;
   padding: 4px;
   box-sizing: border-box;
+  transition: all 0.3s ease;
+}
+
+.middle-top.not-today {
+  background: #f9f9f9;
+  opacity: 0.95;
+  filter: grayscale(30%);
+}
+
+.middle-top.not-today .today-header {
+  opacity: 0.95;
+}
+
+.middle-top.not-today .today-status {
+  color: #d6e45a;
+}
+
+.middle-top.not-today .global-pomo {
+  background: #f0f0f0;
+}
+
+.middle-top.not-today .today-pomo {
+  color: #666;
+}
+
+.middle-top.not-today .total-pomo {
+  color: #999;
 }
 
 .middle-bottom {
