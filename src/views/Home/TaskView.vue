@@ -413,7 +413,7 @@ const combinedRecords = computed(() => {
 
 .task-buttons-container {
   position: absolute;
-  top: 0px;
+  top: 5px;
   right: 0px;
   z-index: 500;
 }
@@ -456,15 +456,16 @@ const combinedRecords = computed(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  min-width: 30px;
+  width: 25px;
   background-color: rgba(214, 177, 177, 0.1);
   border-radius: 8px;
-  padding: 8px 4px;
+  padding: 4px 2px;
   margin: 0 2px;
+  height: 20 px;
 }
 
 .point-icon {
-  font-size: 12px;
+  font-size: 10px;
   margin-bottom: 1px;
 }
 
@@ -472,7 +473,7 @@ const combinedRecords = computed(() => {
   font-size: 14px;
   font-weight: bold;
   line-height: 1;
-  margin: 4px 0;
+  margin: 1px;
 }
 
 .point-time {

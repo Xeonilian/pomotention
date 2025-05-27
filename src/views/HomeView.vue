@@ -713,6 +713,7 @@ const isCurrentDay = computed(() => {
   overflow: hidden;
   min-width: 450px;
   max-width: 900px;
+  margin: 0 auto;
 }
 
 .middle-top {

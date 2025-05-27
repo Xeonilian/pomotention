@@ -1,5 +1,5 @@
 <template>
-  <div class="task-buttons-container">
+  <div class="task-buttons">
     <n-button
       size="small"
       type="warning"
@@ -107,7 +107,7 @@ function handleInterruptionConfirm(val: {
 </script>
 
 <style scoped>
-.task-buttons-container {
+.task-buttons {
   display: flex;
   gap: 8px;
   justify-content: right;
