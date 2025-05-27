@@ -56,7 +56,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onUnmounted } from "vue";
+import { ref, onUnmounted, watch } from "vue";
 import { useTimerStore } from "@/stores/useTimerStore";
 import {
   toggleWhiteNoise,
@@ -82,6 +82,16 @@ const statusLabel = ref<string>("Let's 🍅!");
 
 // 白噪音状态
 const isWhiteNoiseEnabled = ref<boolean>(getWhiteNoiseState());
+
+// 添加进度监听
+watch(
+  () => timerStore.timeRemaining,
+  () => {
+    if (isRunning.value && progressContainer.value) {
+      updateProgressStatus(currentStep.value);
+    }
+  }
+);
 
 // 解析序列
 function parseSequence(sequence: string): PomodoroStep[] {
@@ -153,7 +163,11 @@ function runStep(steps: PomodoroStep[]): void {
 
   const onFinish = () => {
     if (!isRunning.value) return;
+    // 更新当前步骤的进度条状态为已完成
+    updateProgressStatus(currentStep.value);
     currentStep.value++;
+    // 更新下一个步骤的进度条状态
+    updateProgressStatus(currentStep.value);
     runStep(steps);
   };
 
@@ -235,10 +249,17 @@ const progressContainer = ref<HTMLElement | null>(null);
 function createTimeBlock(duration: number, type: string): HTMLElement {
   const block = document.createElement("div");
   block.className = "time-block";
-  block.style.width = `${duration * 4}px`; // 根据时长设置宽度
-  block.style.height = "20px"; // 添加固定高度
-  block.style.margin = "1px"; // 添加间距
-  block.style.borderRadius = "4px"; // 添加圆角
+  // 根据时长设置宽度，保持总长度占满
+  const totalWidth = 180; // 总容器宽度
+  const totalDuration = parseSequence(sequenceInput.value).reduce(
+    (sum, step) => sum + step.duration,
+    0
+  );
+  const width = (duration / totalDuration) * totalWidth;
+  block.style.width = `${width}px`;
+  block.style.height = "20px";
+  block.style.margin = "1px";
+  block.style.borderRadius = "4px";
   block.classList.add(type);
   return block;
 }
