@@ -15,30 +15,32 @@
   Parent: HomeView.vue
 -->
 <template>
-  <div class="todo-container">
-    <TodayTodo
-      :todos="todayTodos"
-      :activeId="activeId"
-      :selectedRowId="selectedRowId"
-      @update-todo-status="updateTodoStatus"
-      @suspend-todo="handleSuspendTodo"
-      @update-todo-pomo="updateTodoPomo"
-      @update-todo-est="updateTodoEst"
-      @convert-to-task="onConvertToTask"
-      @select-task="onSelectTask"
-      @select-row="handleSelectRow"
-    />
-  </div>
-  <div class="schedule-container">
-    <TodaySchedule
-      :schedules="todaySchedules"
-      :activeId="activeId"
-      :selectedRowId="selectedRowId"
-      @update-schedule-status="updateScheduleStatus"
-      @suspend-schedule="handleSuspendSchedule"
-      @select-task="onSelectTask"
-      @select-row="handleSelectRow"
-    />
+  <div class="today-container">
+    <div class="todo-container">
+      <TodayTodo
+        :todos="todayTodos"
+        :activeId="activeId"
+        :selectedRowId="selectedRowId"
+        @update-todo-status="updateTodoStatus"
+        @suspend-todo="handleSuspendTodo"
+        @update-todo-pomo="updateTodoPomo"
+        @update-todo-est="updateTodoEst"
+        @convert-to-task="onConvertToTask"
+        @select-task="onSelectTask"
+        @select-row="handleSelectRow"
+      />
+    </div>
+    <div class="schedule-container">
+      <TodaySchedule
+        :schedules="todaySchedules"
+        :activeId="activeId"
+        :selectedRowId="selectedRowId"
+        @update-schedule-status="updateScheduleStatus"
+        @suspend-schedule="handleSuspendSchedule"
+        @select-task="onSelectTask"
+        @select-row="handleSelectRow"
+      />
+    </div>
   </div>
 </template>
 
@@ -122,6 +124,9 @@ function onSelectTask(taskId: number | null) {
 }
 </script>
 <style scoped>
+.today-container {
+  margin: 5px;
+}
 .schedule-container {
   margin-top: 5px;
 }

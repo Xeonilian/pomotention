@@ -692,6 +692,7 @@ function onActivityUpdated() {
   box-sizing: border-box;
   overflow: hidden;
   min-width: 400px;
+  max-width: 900px;
 }
 
 .middle-top {

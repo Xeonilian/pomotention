@@ -207,7 +207,7 @@ function stopPomodoro(): void {
   }
 
   // 重置序列输入
-  sequenceInput.value = ">>>>🍅+05+🍅+05+🍅+05+🍅+15";
+  sequenceInput.value = ">>>>🍅+05";
 }
 
 // 测试 break

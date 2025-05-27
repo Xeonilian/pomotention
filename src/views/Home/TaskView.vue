@@ -457,6 +457,10 @@ const combinedRecords = computed(() => {
   flex-direction: column;
   align-items: center;
   min-width: 30px;
+  background-color: rgba(214, 177, 177, 0.1);
+  border-radius: 8px;
+  padding: 8px 4px;
+  margin: 0 2px;
 }
 
 .point-icon {
@@ -468,7 +472,7 @@ const combinedRecords = computed(() => {
   font-size: 14px;
   font-weight: bold;
   line-height: 1;
-  margin-bottom: 1px;
+  margin: 4px 0;
 }
 
 .point-time {
