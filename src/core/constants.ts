@@ -29,6 +29,7 @@ export const STORAGE_KEYS = {
   SCHEDULE: "todaySchedule",
   GLOBAL_POMO_COUNT: "globalPomoCount",
   TASK: "taskTrack",
+  LAST_TODAY_COUNT: "lastTodayCount",
 } as const;
 
 // 预设的工作时间块

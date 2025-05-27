@@ -19,10 +19,25 @@ export const usePomoStore = defineStore("pomo", {
       }
     }
 
+    // 从 localStorage 获取 lastTodayCount
+    const storedLastCount = localStorage.getItem(STORAGE_KEYS.LAST_TODAY_COUNT);
+    let initialLastCount = 0;
+
+    if (storedLastCount !== null) {
+      try {
+        initialLastCount = parseInt(storedLastCount, 10);
+        if (isNaN(initialLastCount)) {
+          initialLastCount = 0;
+        }
+      } catch (e) {
+        initialLastCount = 0;
+      }
+    }
+
     return {
       globalPomoCount: initialCount,
       todayTodos: [] as Todo[],
-      lastTodayCount: 0,
+      lastTodayCount: initialLastCount,
     };
   },
 
@@ -48,6 +63,10 @@ export const usePomoStore = defineStore("pomo", {
 
   actions: {
     setTodayTodos(todos: Todo[]) {
+      console.log("setTodayTodos 被调用");
+      console.log("当前 lastTodayCount:", this.lastTodayCount);
+      console.log("当前 globalPomoCount:", this.globalPomoCount);
+
       // 计算新的番茄钟总数
       const newCount = todos.reduce((total, todo) => {
         if (
@@ -60,12 +79,16 @@ export const usePomoStore = defineStore("pomo", {
         return total;
       }, 0);
 
+      console.log("计算得到的新计数 newCount:", newCount);
+
       // 计算与上次计数的差值
       const diff = newCount - this.lastTodayCount;
+      console.log("计算得到的差值 diff:", diff);
 
       // 更新全局计数
       if (diff !== 0) {
         this.globalPomoCount = Math.max(0, this.globalPomoCount + diff);
+        console.log("更新后的 globalPomoCount:", this.globalPomoCount);
         localStorage.setItem(
           STORAGE_KEYS.GLOBAL_POMO_COUNT,
           this.globalPomoCount.toString()
@@ -75,6 +98,12 @@ export const usePomoStore = defineStore("pomo", {
       // 更新状态
       this.todayTodos = todos;
       this.lastTodayCount = newCount;
+      // 保存 lastTodayCount 到 localStorage
+      localStorage.setItem(
+        STORAGE_KEYS.LAST_TODAY_COUNT,
+        this.lastTodayCount.toString()
+      );
+      console.log("更新后的 lastTodayCount:", this.lastTodayCount);
     },
 
     updateGlobalPomoCount(todo: Todo) {
