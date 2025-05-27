@@ -101,8 +101,10 @@ export const taskService = {
         id: Date.now(),
         value,
       };
-      task.energyRecords.push(record);
-      this.updateTask(taskId, { energyRecords: task.energyRecords });
+      // 创建新的数组以确保响应式更新
+      const newEnergyRecords = [...task.energyRecords, record];
+      this.updateTask(taskId, { energyRecords: newEnergyRecords });
+      console.log("添加能量记录:", record);
     }
   },
 
@@ -114,8 +116,10 @@ export const taskService = {
         id: Date.now(),
         value,
       };
-      task.rewardRecords.push(record);
-      this.updateTask(taskId, { rewardRecords: task.rewardRecords });
+      // 创建新的数组以确保响应式更新
+      const newRewardRecords = [...task.rewardRecords, record];
+      this.updateTask(taskId, { rewardRecords: newRewardRecords });
+      console.log("添加奖励记录:", record);
     }
   },
 
@@ -123,7 +127,8 @@ export const taskService = {
   addInterruptionRecord(
     taskId: number,
     description: string,
-    classType: "E" | "I"
+    classType: "E" | "I",
+    activityType?: "T" | "S" | null
   ): void {
     const task = this.getTask(taskId);
     if (task) {
@@ -131,11 +136,14 @@ export const taskService = {
         id: Date.now(),
         class: classType,
         description,
+        activityType: activityType || null,
       };
-      task.interruptionRecords.push(record);
+      // 创建新的数组以确保响应式更新
+      const newInterruptionRecords = [...task.interruptionRecords, record];
       this.updateTask(taskId, {
-        interruptionRecords: task.interruptionRecords,
+        interruptionRecords: newInterruptionRecords,
       });
+      console.log("添加打扰记录:", record);
     }
   },
 

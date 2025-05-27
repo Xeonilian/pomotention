@@ -12,6 +12,9 @@
         :taskId="selectedTaskId"
         :isMarkdown="isMarkdown"
         @toggle-markdown="toggleMarkdown"
+        @energy-record="handleEnergyRecord"
+        @reward-record="handleRewardRecord"
+        @interruption-record="handleInterruptionRecord"
       />
     </div>
     <div class="task-record-container">
@@ -31,6 +34,9 @@ import TaskButtons from "@/components/TaskTracker/TaskButtons.vue";
 import TaskRecord from "@/components/TaskTracker/TaskRecord.vue";
 import { ref, onMounted, onUnmounted, watch } from "vue";
 import type { Task } from "@/core/types/Task";
+import { taskService } from "@/services/taskService";
+import { handleAddActivity } from "@/services/activityService";
+import type { Activity } from "@/core/types/Activity";
 
 const props = defineProps<{
   showPomoSeq: boolean;
@@ -41,7 +47,17 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: "energy-record"): void;
   (e: "reward-record"): void;
-  (e: "interruption-record"): void;
+  (
+    e: "interruption-record",
+    data: {
+      classType: "E" | "I";
+      description: string;
+      asActivity: boolean;
+      activityClass?: "T" | "S";
+      dueDate?: number;
+    }
+  ): void;
+  (e: "activity-updated"): void;
 }>();
 
 // Markdown相关状态
@@ -71,6 +87,54 @@ watch(
     loadTaskDescription();
   },
   { immediate: true }
+);
+
+// 创建一个响应式的任务数据引用
+const currentTask = ref<Task | null>(null);
+
+// 更新当前任务数据
+function updateCurrentTask() {
+  if (props.selectedTaskId) {
+    currentTask.value = taskService.getTask(props.selectedTaskId) || null;
+  } else {
+    currentTask.value = null;
+  }
+}
+
+// 监听任务ID变化时更新当前任务
+watch(() => props.selectedTaskId, updateCurrentTask, { immediate: true });
+
+// 监听能量记录变化
+watch(
+  () => currentTask.value?.energyRecords,
+  (newRecords) => {
+    if (newRecords) {
+      console.log("能量记录更新:", newRecords);
+    }
+  },
+  { deep: true }
+);
+
+// 监听奖励记录变化
+watch(
+  () => currentTask.value?.rewardRecords,
+  (newRecords) => {
+    if (newRecords) {
+      console.log("奖励记录更新:", newRecords);
+    }
+  },
+  { deep: true }
+);
+
+// 监听打扰记录变化
+watch(
+  () => currentTask.value?.interruptionRecords,
+  (newRecords) => {
+    if (newRecords) {
+      console.log("打扰记录更新:", newRecords);
+    }
+  },
+  { deep: true }
 );
 
 // 切换Markdown模式
@@ -164,6 +228,76 @@ onUnmounted(() => {
     document.removeEventListener("mouseup", handleMouseUp);
   }
 });
+
+// 修改处理函数，添加更新当前任务的调用
+function handleEnergyRecord(value: number) {
+  if (props.selectedTaskId) {
+    taskService.addEnergyRecord(props.selectedTaskId, value);
+    updateCurrentTask(); // 更新当前任务数据
+    emit("energy-record");
+  }
+}
+
+function handleRewardRecord(value: number) {
+  if (props.selectedTaskId) {
+    taskService.addRewardRecord(props.selectedTaskId, value);
+    updateCurrentTask(); // 更新当前任务数据
+    emit("reward-record");
+  }
+}
+
+function handleInterruptionRecord(data: {
+  classType: "E" | "I";
+  description: string;
+  asActivity: boolean;
+  activityClass?: "T" | "S";
+  dueDate?: number;
+}) {
+  if (props.selectedTaskId) {
+    console.log("开始处理打断记录:", data);
+
+    // 添加打扰记录
+    taskService.addInterruptionRecord(
+      props.selectedTaskId,
+      data.description,
+      data.classType,
+      data.activityClass
+    );
+    updateCurrentTask();
+
+    // 如果需要转换为活动
+    if (data.asActivity && data.activityClass) {
+      const task = taskService.getTask(props.selectedTaskId);
+      if (task) {
+        // 获取最后添加的打断记录
+        const lastInterruption =
+          task.interruptionRecords[task.interruptionRecords.length - 1];
+        if (lastInterruption) {
+          // 创建活动
+          const activity = taskService.createActivityFromInterruption(
+            props.selectedTaskId,
+            lastInterruption.id,
+            data.activityClass
+          );
+
+          if (activity) {
+            // 如果是待办事项且有截止日期，设置dueDate
+            if (data.activityClass === "T" && data.dueDate) {
+              activity.dueDate = data.dueDate;
+            }
+
+            // 通知父组件活动已更新
+            emit("activity-updated");
+          }
+        }
+      }
+    }
+
+    emit("interruption-record", data);
+  } else {
+    console.log("没有选中的任务ID");
+  }
+}
 </script>
 
 <style scoped>

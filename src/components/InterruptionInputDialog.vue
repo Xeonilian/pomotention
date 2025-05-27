@@ -11,17 +11,28 @@
         maxlength="40"
         show-count
       />
-      <n-checkbox v-model:checked="asActivity">
-        同时创建为活动（Activity）
-      </n-checkbox>
+      <n-space vertical>
+        <n-text>转换为活动：</n-text>
+        <n-radio-group v-model:value="activityType" name="activityType">
+          <n-radio value="T">待办事项</n-radio>
+          <n-radio value="S">日程安排</n-radio>
+        </n-radio-group>
+      </n-space>
+
+      <!-- 待办事项的截止日期（可选） -->
+      <n-space vertical v-if="activityType === 'T'">
+        <n-text>截止日期（可选）：</n-text>
+        <n-date-picker
+          v-model:value="todoDueDate"
+          type="date"
+          clearable
+          placeholder="选择截止日期"
+        />
+      </n-space>
     </n-space>
     <template #action>
       <n-button @click="handleCancel">取消</n-button>
-      <n-button
-        type="primary"
-        @click="handleConfirm"
-        :disabled="!description.trim()"
-      >
+      <n-button type="primary" @click="handleConfirm" :disabled="!isValid">
         确认
       </n-button>
     </template>
@@ -37,7 +48,8 @@ import {
   NRadio,
   NInput,
   NButton,
-  NCheckbox,
+  NText,
+  NDatePicker,
 } from "naive-ui";
 
 const props = defineProps<{
@@ -52,13 +64,22 @@ const emit = defineEmits<{
       classType: "E" | "I";
       description: string;
       asActivity: boolean;
+      activityClass?: "T" | "S";
+      dueDate?: number;
     }
   ): void;
 }>();
 
 const interruptionType = ref<"E" | "I">("I"); // 默认内部打扰
 const description = ref("");
-const asActivity = ref(false);
+const activityType = ref<"T" | "S" | null>(null); // 默认不选中
+const todoDueDate = ref<number | null>(null); // 待办截止日期
+
+// 验证表单是否有效
+const isValid = computed(() => {
+  if (!description.value.trim()) return false;
+  return true;
+});
 
 const showModal = computed({
   get: () => props.show,
@@ -69,13 +90,16 @@ function handleConfirm() {
   emit("confirm", {
     classType: interruptionType.value,
     description: description.value.trim(),
-    asActivity: asActivity.value,
+    asActivity: activityType.value !== null,
+    activityClass: activityType.value || undefined,
+    dueDate: todoDueDate.value || undefined,
   });
   emit("update:show", false);
-  // 可选：重置
+  // 重置
   interruptionType.value = "I";
   description.value = "";
-  asActivity.value = false;
+  activityType.value = null;
+  todoDueDate.value = null;
 }
 
 function handleCancel() {

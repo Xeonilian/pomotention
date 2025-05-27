@@ -58,33 +58,39 @@ import { NButton } from "naive-ui";
 import EnergyInputDialog from "@/components/EnergyInputDialog.vue";
 import RewardInputDialog from "@/components/RewardInputDialog.vue";
 import InterruptionInputDialog from "@/components/InterruptionInputDialog.vue";
-import { taskService } from "@/services/taskService";
 
 const props = defineProps<{
   taskId: number | null;
-}>();
-
-const emit = defineEmits<{
-  (e: "interruption-record"): void;
 }>();
 
 const showEnergyDialog = ref(false);
 const showRewardDialog = ref(false);
 const showInterruptionDialog = ref(false);
 
+const emit = defineEmits<{
+  (e: "energy-record", value: number): void;
+  (e: "reward-record", value: number): void;
+  (
+    e: "interruption-record",
+    data: {
+      classType: "E" | "I";
+      description: string;
+      asActivity: boolean;
+    }
+  ): void;
+}>();
+
 // 能量弹窗点击确认
 function handleEnergyConfirm(val: number) {
   if (props.taskId) {
-    taskService.addEnergyRecord(props.taskId, val);
-    // 可以加弹窗/刷新/消息等
+    emit("energy-record", val);
   }
 }
 
 // 奖励弹窗点击确认
 function handleRewardConfirm(val: number) {
   if (props.taskId) {
-    taskService.addRewardRecord(props.taskId, val);
-    // 可以加提示
+    emit("reward-record", val);
   }
 }
 
@@ -95,12 +101,7 @@ function handleInterruptionConfirm(val: {
   asActivity: boolean;
 }) {
   if (props.taskId) {
-    taskService.addInterruptionRecord(
-      props.taskId,
-      val.description,
-      val.classType
-    );
-    // 可以加提示
+    emit("interruption-record", val);
   }
 }
 </script>

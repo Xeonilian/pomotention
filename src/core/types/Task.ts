@@ -26,4 +26,5 @@ export interface InterruptionRecord {
   id: number;
   class: "E" | "I";
   description: string;
+  activityType: "T" | "S" | null;
 }

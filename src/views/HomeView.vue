@@ -152,6 +152,7 @@
             :showPomoSeq="showPomoSeq"
             :showPomodoroView="showPomodoroView"
             :selectedTaskId="selectedTaskId"
+            @activity-updated="onActivityUpdated"
           />
         </div>
       </div>
@@ -638,6 +639,16 @@ const selectedTaskId = ref<number | null>(null);
 // 添加选择任务处理函数
 function onSelectTask(taskId: number | null) {
   selectedTaskId.value = taskId;
+}
+
+// 在script部分添加处理函数
+function onActivityUpdated() {
+  // 重新加载活动列表
+  activityList.value = loadActivities();
+  // 重新加载待办事项列表
+  todoList.value = loadTodos();
+  // 重新加载日程列表
+  scheduleList.value = loadSchedules();
 }
 </script>
 
