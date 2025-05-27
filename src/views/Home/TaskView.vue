@@ -17,38 +17,37 @@
         @interruption-record="handleInterruptionRecord"
       />
     </div>
-    <!-- 添加能量记录时间轴 -->
-    <div
-      class="energy-timeline-container"
-      v-if="currentTask?.energyRecords?.length"
-    >
-      <div class="energy-timeline">
-        🔋
+    <!-- 合并能量和愉悦记录时间轴 -->
+    <div class="combined-timeline-container" v-if="combinedRecords.length">
+      <div class="combined-timeline">
         <div
-          v-for="record in currentTask.energyRecords"
-          :key="record.id"
-          class="energy-point"
-          :class="getEnergyClass(record.value)"
+          v-for="record in combinedRecords"
+          :key="record.id + record.type"
+          class="timeline-point"
         >
-          <div class="energy-value">{{ record.value }}</div>
-          <div class="energy-time">{{ formatTime(record.id) }}</div>
-        </div>
-      </div>
-    </div>
-    <div
-      class="reward-timeline-container"
-      v-if="currentTask?.rewardRecords?.length"
-    >
-      <div class="reward-timeline">
-        😜
-        <div
-          v-for="record in currentTask.rewardRecords"
-          :key="record.id"
-          class="reward-point"
-          :class="getRewardClass(record.value)"
-        >
-          <div class="reward-value">{{ record.value }}</div>
-          <div class="reward-time">{{ formatTime(record.id) }}</div>
+          <span
+            class="point-icon"
+            :style="{
+              color:
+                record.type === 'energy'
+                  ? getEnergyColor(record.value)
+                  : getRewardColor(record.value),
+            }"
+          >
+            {{ record.type === "energy" ? "🔋" : "😜" }}
+          </span>
+          <span
+            class="point-value"
+            :style="{
+              color:
+                record.type === 'energy'
+                  ? getEnergyColor(record.value)
+                  : getRewardColor(record.value),
+            }"
+          >
+            {{ record.value }}
+          </span>
+          <div class="point-time">{{ formatTime(record.id) }}</div>
         </div>
       </div>
     </div>
@@ -67,8 +66,8 @@
 import PomodoroView from "./PomodoroView.vue";
 import TaskButtons from "@/components/TaskTracker/TaskButtons.vue";
 import TaskRecord from "@/components/TaskTracker/TaskRecord.vue";
-import { ref, onMounted, onUnmounted, watch } from "vue";
-import type { Task, EnergyRecord } from "@/core/types/Task";
+import { ref, onMounted, onUnmounted, watch, computed } from "vue";
+import type { Task } from "@/core/types/Task";
 import { taskService } from "@/services/taskService";
 
 const props = defineProps<{
@@ -343,21 +342,50 @@ const formatTime = (timestamp: number) => {
   });
 };
 
-// 根据能量值获取样式类
-const getEnergyClass = (value: number) => {
-  if (value >= 8) return "energy-high";
-  if (value >= 5) return "energy-medium";
-  if (value >= 3) return "energy-low";
-  return "energy-very-low";
+// 根据能量值获取颜色 (红到绿渐变)
+const getEnergyColor = (value: number) => {
+  // Clamp value between 1 and 10
+  const clampedValue = Math.max(1, Math.min(10, value));
+  // Normalize value to a 0-1 range
+  const normalizedValue = (clampedValue - 1) / 9;
+
+  // Interpolate between red (0) and green (1)
+  const red = 255 * (1 - normalizedValue);
+  const green = 255 * normalizedValue;
+  const blue = 0;
+
+  return `rgb(${Math.round(red)}, ${Math.round(green)}, ${Math.round(blue)})`;
 };
 
-// 根据愉悦值获取样式类
-const getRewardClass = (value: number) => {
-  if (value >= 8) return "reward-high";
-  if (value >= 5) return "reward-medium";
-  if (value >= 3) return "reward-low";
-  return "reward-very-low";
+// 根据愉悦值获取颜色 (浅蓝到深蓝渐变)
+const getRewardColor = (value: number) => {
+  // Clamp value between 1 and 10
+  const clampedValue = Math.max(1, Math.min(10, value));
+  // Normalize value to a 0-1 range
+  const normalizedValue = (clampedValue - 1) / 9;
+
+  // Interpolate between light blue (e.g., #add8e6) and dark blue (e.g., #00008b)
+  // Using RGB values for interpolation
+  const startColor = { r: 173, g: 216, b: 230 }; // light blue
+  const endColor = { r: 0, g: 0, b: 139 }; // dark blue
+
+  const r = startColor.r + (endColor.r - startColor.r) * normalizedValue;
+  const g = startColor.g + (endColor.g - startColor.g) * normalizedValue;
+  const b = startColor.b + (endColor.b - startColor.b) * normalizedValue;
+
+  return `rgb(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)})`;
 };
+
+// 合并并按时间排序能量和愉悦记录
+const combinedRecords = computed(() => {
+  const energy =
+    currentTask.value?.energyRecords?.map((r) => ({ ...r, type: "energy" })) ||
+    [];
+  const reward =
+    currentTask.value?.rewardRecords?.map((r) => ({ ...r, type: "reward" })) ||
+    [];
+  return [...energy, ...reward].sort((a, b) => a.id - b.id);
+});
 </script>
 
 <style scoped>
@@ -365,6 +393,7 @@ const getRewardClass = (value: number) => {
   display: flex;
   flex-direction: column;
   height: 100vh;
+  position: relative;
 }
 
 .draggable-container {
@@ -383,8 +412,10 @@ const getRewardClass = (value: number) => {
 }
 
 .task-buttons-container {
-  margin-bottom: 0px;
-  flex-shrink: 0;
+  position: absolute;
+  top: 0px;
+  right: 0px;
+  z-index: 500;
 }
 
 .task-record-container {
@@ -392,6 +423,7 @@ const getRewardClass = (value: number) => {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  margin: 5px;
 }
 
 /* 添加内部滚动容器样式 */
@@ -407,101 +439,43 @@ const getRewardClass = (value: number) => {
   overflow-y: auto;
 }
 
-.energy-timeline-container {
+.combined-timeline-container {
   margin-top: 0;
   padding: 0;
 }
 
-.energy-timeline {
+.combined-timeline {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 4px 12px;
+  gap: 3px;
+  padding: 2px 2px;
   overflow-x: auto;
 }
 
-.energy-point {
+.timeline-point {
   display: flex;
   flex-direction: column;
   align-items: center;
-  min-width: 48px;
+  min-width: 30px;
 }
 
-.energy-value {
-  font-size: 16px;
+.point-icon {
+  font-size: 12px;
+  margin-bottom: 1px;
+}
+
+.point-value {
+  font-size: 14px;
   font-weight: bold;
   line-height: 1;
-  margin-bottom: 2px;
+  margin-bottom: 1px;
 }
 
-.energy-time {
-  font-size: 11px;
+.point-time {
+  font-size: 10px;
   color: var(--n-text-color-3);
   line-height: 1;
 }
 
-.energy-high {
-  color: #18a058;
-}
-
-.energy-medium {
-  color: #2080f0;
-}
-
-.energy-low {
-  color: #f0a020;
-}
-
-.energy-very-low {
-  color: #d03050;
-}
-
-.reward-timeline-container {
-  margin-top: 0;
-  padding: 0;
-}
-
-.reward-timeline {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 12px;
-  overflow-x: auto;
-}
-
-.reward-point {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  min-width: 48px;
-}
-
-.reward-value {
-  font-size: 16px;
-  font-weight: bold;
-  line-height: 1;
-  margin-bottom: 2px;
-}
-
-.reward-time {
-  font-size: 11px;
-  color: var(--n-text-color-3);
-  line-height: 1;
-}
-
-.reward-high {
-  color: #18a058;
-}
-
-.reward-medium {
-  color: #2080f0;
-}
-
-.reward-low {
-  color: #f0a020;
-}
-
-.reward-very-low {
-  color: #d03050;
-}
+/* Removed old color classes */
 </style>
