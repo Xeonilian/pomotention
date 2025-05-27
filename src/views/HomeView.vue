@@ -692,7 +692,7 @@ const isCurrentDay = computed(() => {
   background: #ffffff;
   padding: 5px 10px 15px 10px;
   box-sizing: border-box;
-  overflow-y: hidden;
+  overflow: hidden;
   margin-right: 0;
 }
 
