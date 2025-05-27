@@ -17,6 +17,41 @@
         @interruption-record="handleInterruptionRecord"
       />
     </div>
+    <!-- 添加能量记录时间轴 -->
+    <div
+      class="energy-timeline-container"
+      v-if="currentTask?.energyRecords?.length"
+    >
+      <div class="energy-timeline">
+        🔋
+        <div
+          v-for="record in currentTask.energyRecords"
+          :key="record.id"
+          class="energy-point"
+          :class="getEnergyClass(record.value)"
+        >
+          <div class="energy-value">{{ record.value }}</div>
+          <div class="energy-time">{{ formatTime(record.id) }}</div>
+        </div>
+      </div>
+    </div>
+    <div
+      class="reward-timeline-container"
+      v-if="currentTask?.rewardRecords?.length"
+    >
+      <div class="reward-timeline">
+        😜
+        <div
+          v-for="record in currentTask.rewardRecords"
+          :key="record.id"
+          class="reward-point"
+          :class="getRewardClass(record.value)"
+        >
+          <div class="reward-value">{{ record.value }}</div>
+          <div class="reward-time">{{ formatTime(record.id) }}</div>
+        </div>
+      </div>
+    </div>
     <div class="task-record-container">
       <TaskRecord
         :taskId="selectedTaskId"
@@ -33,10 +68,8 @@ import PomodoroView from "./PomodoroView.vue";
 import TaskButtons from "@/components/TaskTracker/TaskButtons.vue";
 import TaskRecord from "@/components/TaskTracker/TaskRecord.vue";
 import { ref, onMounted, onUnmounted, watch } from "vue";
-import type { Task } from "@/core/types/Task";
+import type { Task, EnergyRecord } from "@/core/types/Task";
 import { taskService } from "@/services/taskService";
-import { handleAddActivity } from "@/services/activityService";
-import type { Activity } from "@/core/types/Activity";
 
 const props = defineProps<{
   showPomoSeq: boolean;
@@ -298,6 +331,33 @@ function handleInterruptionRecord(data: {
     console.log("没有选中的任务ID");
   }
 }
+
+// 格式化时间戳
+const formatTime = (timestamp: number) => {
+  if (!timestamp) return "--:--";
+  const date = new Date(timestamp);
+  if (isNaN(date.getTime())) return "--:--";
+  return date.toLocaleString("zh-CN", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
+// 根据能量值获取样式类
+const getEnergyClass = (value: number) => {
+  if (value >= 8) return "energy-high";
+  if (value >= 5) return "energy-medium";
+  if (value >= 3) return "energy-low";
+  return "energy-very-low";
+};
+
+// 根据愉悦值获取样式类
+const getRewardClass = (value: number) => {
+  if (value >= 8) return "reward-high";
+  if (value >= 5) return "reward-medium";
+  if (value >= 3) return "reward-low";
+  return "reward-very-low";
+};
 </script>
 
 <style scoped>
@@ -345,5 +405,103 @@ function handleInterruptionRecord(data: {
 .task-record-container :deep(.task-textarea) {
   flex: 1;
   overflow-y: auto;
+}
+
+.energy-timeline-container {
+  margin-top: 0;
+  padding: 0;
+}
+
+.energy-timeline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  overflow-x: auto;
+}
+
+.energy-point {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 48px;
+}
+
+.energy-value {
+  font-size: 16px;
+  font-weight: bold;
+  line-height: 1;
+  margin-bottom: 2px;
+}
+
+.energy-time {
+  font-size: 11px;
+  color: var(--n-text-color-3);
+  line-height: 1;
+}
+
+.energy-high {
+  color: #18a058;
+}
+
+.energy-medium {
+  color: #2080f0;
+}
+
+.energy-low {
+  color: #f0a020;
+}
+
+.energy-very-low {
+  color: #d03050;
+}
+
+.reward-timeline-container {
+  margin-top: 0;
+  padding: 0;
+}
+
+.reward-timeline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  overflow-x: auto;
+}
+
+.reward-point {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 48px;
+}
+
+.reward-value {
+  font-size: 16px;
+  font-weight: bold;
+  line-height: 1;
+  margin-bottom: 2px;
+}
+
+.reward-time {
+  font-size: 11px;
+  color: var(--n-text-color-3);
+  line-height: 1;
+}
+
+.reward-high {
+  color: #18a058;
+}
+
+.reward-medium {
+  color: #2080f0;
+}
+
+.reward-low {
+  color: #f0a020;
+}
+
+.reward-very-low {
+  color: #d03050;
 }
 </style>
