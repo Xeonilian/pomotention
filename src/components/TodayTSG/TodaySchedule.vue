@@ -252,7 +252,7 @@ function handleRowClick(schedule: Schedule) {
 
 /* 确保选中行的样式优先级高于其他样式 */
 .table-body tr.selected-row:nth-child(even) {
-  background-color: rgba255, 72, 0, 0.109) !important;
+  background-color: rgba(255, 72, 0, 0.109) !important;
 }
 
 /* 同时具有active和selected状态时的样式 */

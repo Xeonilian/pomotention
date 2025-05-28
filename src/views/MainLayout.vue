@@ -12,14 +12,14 @@
           <n-button
             v-for="(control, index) in viewControls"
             :key="index"
-            size="small"
-            circle
-            secondary
+            size="tiny"
+            tertiary
             strong
-            type="info"
+            type="default"
             :style="buttonStyle(control.show)"
             :title="control.title"
             @click="handleViewToggle(control.key)"
+            class="header-button"
           >
             {{ control.icon }}
           </n-button>
@@ -61,9 +61,9 @@ function handleMenuSelect(key: string) {
 const viewControls = [
   { key: "pomodoro", icon: "⏰", title: "切换番茄钟视图", show: true },
   { key: "schedule", icon: "🗓️", title: "切换日程视图", show: true },
-  { key: "activity", icon: "📋", title: "切换活动视图", show: true },
-  { key: "today", icon: "📅", title: "切换今日视图", show: true },
   { key: "task", icon: "🖊️", title: "切换执行视图", show: true },
+  { key: "activity", icon: "📋", title: "切换活动视图", show: true },
+  // { key: "today", icon: "📅", title: "切换今日视图", show: true },
 ];
 
 // 按钮样式函数
@@ -103,7 +103,7 @@ function handleViewToggle(key: string) {
 
 .view-controls {
   display: flex;
-  gap: 8px;
+  gap: 2px;
   align-items: center;
 }
 
@@ -124,5 +124,14 @@ body,
   display: flex;
   flex-direction: column;
   height: 100vh;
+}
+.header-button {
+  width: 30px;
+  height: 25px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font-size: 14px;
 }
 </style>
