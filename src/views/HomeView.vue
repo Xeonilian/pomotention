@@ -722,25 +722,25 @@ defineExpose({
 .content {
   flex: 1;
   display: flex;
-  background: #fafafa;
+  background: var(--color-background-light-light);
   overflow: auto;
   justify-content: center;
 }
 
 .left {
-  background: #ffffff;
   padding: 5px 10px 15px 10px;
   box-sizing: border-box;
   overflow: hidden;
   margin-right: 0;
+  background: var(--color-background);
 }
 
 .right {
-  background: #ffffff;
   padding: 16px;
   box-sizing: border-box;
   overflow: auto;
   margin-left: 0;
+  background: var(--color-background);
 }
 
 .middle {
@@ -761,41 +761,37 @@ defineExpose({
 }
 
 .middle-top {
-  background: #ffffff;
+  background: var(--color-background);
   margin-bottom: 8px;
   overflow: auto;
   padding: 4px;
   box-sizing: border-box;
 }
 
-.middle-top.not-today {
-  background: #f9f9f9;
-  opacity: 0.95;
-  filter: grayscale(30%);
-}
-
 .middle-top.not-today .today-header {
-  opacity: 0.95;
+  background: var(--color-green-light);
 }
 
 .middle-top.not-today .today-status {
-  color: #d6e45a;
+  color: var(--color-text);
 }
 
 .middle-top.not-today .global-pomo {
-  background: #f0f0f0;
+  background: var(--color-background-light);
 }
 
 .middle-top.not-today .today-pomo {
-  color: #666;
+  color: var(--color-text);
+  /* display: none; */
 }
 
 .middle-top.not-today .total-pomo {
-  color: #999;
+  color: var(--color-text);
+  /* display: none; */
 }
 
 .middle-bottom {
-  background: #ffffff;
+  background: var(--color-background);
   overflow: auto;
   padding: 4px;
   box-sizing: border-box;

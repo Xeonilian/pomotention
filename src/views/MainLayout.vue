@@ -93,7 +93,7 @@ function buttonStyle(show: boolean, key: ViewKey) {
     opacity: show ? (isDisabled ? 0.4 : 1) : 0.6,
     backgroundColor: buttonStates.value[key]
       ? "var(--color-primary-light)"
-      : "var(--color-backgroud-light)",
+      : "var(--color-background-light)",
     borderRadius: "4px",
     transition: "all 0.3s ease",
     cursor: isDisabled ? "not-allowed" : "pointer",
@@ -123,7 +123,7 @@ function handleViewToggle(key: string) {
   padding: 0 16px;
   background: var(--color-background);
 
-  border-bottom: 1px solid var(--color-backgroud-light);
+  border-bottom: 1px solid var(--color-background-light);
   font-weight: bold;
 }
 

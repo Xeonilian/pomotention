@@ -234,7 +234,7 @@ function handleRowClick(schedule: Schedule) {
 
 /* 隔行变色 */
 .table-body tr:nth-child(even) {
-  background-color: var(--color-backgroud-light-light);
+  background-color: var(--color-background-light-light);
 }
 
 /* 激活行样式 */

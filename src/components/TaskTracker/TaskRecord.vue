@@ -265,8 +265,8 @@ const handleClick = (event: MouseEvent) => {
 }
 
 :deep(.markdown-checkbox:checked) {
-  background-color: var(--color-primary-light);
-  border-color: var(--color-primary-light);
+  background-color: var(--color-blue);
+  border-color: var(--color-blue);
 }
 
 :deep(.markdown-checkbox:checked::after) {
@@ -297,7 +297,7 @@ const handleClick = (event: MouseEvent) => {
 
 .markdown-content.disabled {
   cursor: not-allowed;
-  background-color: var(--color-backgroud-light-light);
+  background-color: var(--color-background-light-light);
 }
 
 :deep(.highlight-text) {

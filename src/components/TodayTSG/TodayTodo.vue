@@ -579,7 +579,7 @@ function handleRowClick(todo: TodoWithNumberPriority) {
 
 /* 隔行变色 */
 .table-body tr:nth-child(even) {
-  background-color: var(--color-backgroud-light-light);
+  background-color: var(--color-background-light-light);
 }
 
 /* 激活行样式 */
@@ -615,7 +615,7 @@ function handleRowClick(todo: TodoWithNumberPriority) {
   color: var(--color-background);
   background-color: var(--color-text-secondary);
   font-size: 16px;
-  box-shadow: 0 1px 3px var(--color-backgroud-light);
+  box-shadow: 0 1px 3px var(--color-background-light);
 }
 
 /* 可按 priority 分不同色 */
