@@ -34,59 +34,12 @@
           <div class="today-header">
             <div class="today-info">
               <span class="today-status">{{ dateService.currentDate }}</span>
-
-              <span class="global-pomo"
-                ><span class="today-pomo">🍅 {{ todayPomoCount }}/</span
-                ><span class="total-pomo">{{ globalRealPomo }}</span></span
-              >
+              <span class="global-pomo">
+                <span class="today-pomo">🍅 {{ todayPomoCount }}/</span>
+                <span class="total-pomo">{{ globalRealPomo }}</span>
+              </span>
             </div>
             <div class="button-group">
-              <n-button
-                @click="showPomodoroView = !showPomodoroView"
-                size="small"
-                circle
-                secondary
-                strong
-                type="info"
-                :style="buttonStyle(showPomodoroView)"
-                title="切换番茄钟视图"
-                >⏰</n-button
-              >
-              <n-button
-                size="small"
-                circle
-                secondary
-                strong
-                type="info"
-                @click="showLeft = !showLeft"
-                :style="buttonStyle(showLeft)"
-                title="切换日程视图"
-                >🗓️</n-button
-              >
-              <n-button
-                size="small"
-                circle
-                secondary
-                strong
-                type="info"
-                @click="showRight = !showRight"
-                :style="buttonStyle(showRight)"
-                title="切换活动视图"
-                >📋</n-button
-              >
-              <!-- <n-button
-                size="small"
-                circle
-                secondary
-                strong
-                type="info"
-                @click="showMiddleBottom = !showMiddleBottom"
-                :style="buttonStyle(showMiddleBottom)"
-                title="切换执行视图"
-                :disabled="timerStore.isActive"
-                >🖊️</n-button
-              > -->
-
               <n-button
                 size="small"
                 circle
@@ -174,24 +127,6 @@
           @update-active-id="onUpdateActiveId"
           @toggle-pomo-type="onTogglePomoType"
         />
-        <!-- 使用 Naive UI 的 popover -->
-        <n-popover
-          v-if="showPomoTypeChangePopover"
-          :show="showPomoTypeChangePopover"
-          trigger="manual"
-          pplacement="bottom-end"
-          @update:show="showPomoTypeChangePopover = $event"
-        >
-          <template #trigger>
-            <div
-              ref="pomoTypeChangeTarget"
-              style="position: fixed; right: 20px; bottom: 20px"
-            ></div>
-          </template>
-          <div style="padding: 0px 0px">
-            {{ pomoTypeChangeMessage }}
-          </div>
-        </n-popover>
       </div>
     </div>
     <!-- 添加可拖动的 PomodoroView -->
@@ -628,6 +563,7 @@ onMounted(() => {
     draggableContainer.value.style.left = `${initialX}px`;
     draggableContainer.value.style.top = `${initialY}px`;
   }
+  window.addEventListener("view-toggle", handleViewToggle);
 });
 
 onUnmounted(() => {
@@ -637,6 +573,7 @@ onUnmounted(() => {
     document.removeEventListener("mousemove", handleMouseMove);
     document.removeEventListener("mouseup", handleMouseUp);
   }
+  window.removeEventListener("view-toggle", handleViewToggle);
 });
 
 // ======================== 9. 使用 composable ========================
@@ -735,6 +672,33 @@ function handleMouseMove(e: MouseEvent) {
 function handleMouseUp() {
   isDragging = false;
 }
+
+// 添加视图控制函数
+function handleViewToggle(event: CustomEvent) {
+  const { key } = event.detail;
+  switch (key) {
+    case "pomodoro":
+      showPomodoroView.value = !showPomodoroView.value;
+      break;
+    case "schedule":
+      showLeft.value = !showLeft.value;
+      break;
+    case "activity":
+      showRight.value = !showRight.value;
+      break;
+    case "task":
+      showMiddleBottom.value = !showMiddleBottom.value;
+      break;
+    case "pomoSeq":
+      showPomoSeq.value = !showPomoSeq.value;
+      break;
+  }
+}
+
+// 暴露方法给父组件
+defineExpose({
+  handleViewToggle,
+});
 </script>
 
 <style scoped>
