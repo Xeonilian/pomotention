@@ -35,7 +35,15 @@
       :style="getVerticalBlockStyle(block)"
       class="time-block"
     >
-      {{ block.category }}
+      {{
+        block.category === "sleeping"
+          ? "sleep"
+          : block.category === "working"
+          ? "work"
+          : block.category === "living"
+          ? "live"
+          : block.category
+      }}
     </div>
 
     <!-- 当前时间指示线 -->
@@ -112,6 +120,17 @@ function getVerticalBlockStyle(block: Block): CSSProperties {
     (1000 * 60);
   const topPx = startMinute * props.effectivePxPerMinute;
   const heightPx = (endMinute - startMinute) * props.effectivePxPerMinute;
+
+  // 简化显示文字
+  const displayText =
+    block.category === "sleeping"
+      ? "sleep"
+      : block.category === "working"
+      ? "work"
+      : block.category === "living"
+      ? "live"
+      : block.category;
+
   return {
     position: "absolute",
     top: topPx + "px",
@@ -119,14 +138,15 @@ function getVerticalBlockStyle(block: Block): CSSProperties {
     width: "30px",
     height: heightPx + "px",
     backgroundColor: CategoryColors[block.category] || "#ccc",
-    color: "#fff",
-    fontSize: "0px", // 不显示文字
+    color: "var(--color-text)",
+    fontSize: "9px",
     textAlign: "center",
     lineHeight: heightPx + "px",
     userSelect: "none",
     borderRadius: "0px",
     cursor: "default",
     whiteSpace: "nowrap",
+    content: displayText,
   };
 }
 
@@ -303,7 +323,7 @@ function getTodoSegmentStyle(seg: TodoSegment): CSSProperties {
 .current-time-line {
   position: absolute;
   left: 0px;
-  width: 30px;
+  width: 130px;
   height: 1px;
   background-color: var(--color-yellow);
   pointer-events: none;
