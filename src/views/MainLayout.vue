@@ -16,7 +16,7 @@
             tertiary
             strong
             type="default"
-            :style="buttonStyle(control.show)"
+            :style="buttonStyle(control.show, control.key)"
             :title="control.title"
             @click="handleViewToggle(control.key)"
             class="header-button"
@@ -47,6 +47,24 @@ const menuOptions = [
 ];
 
 const current = ref(route.path);
+
+type ViewKey = "pomodoro" | "schedule" | "today" | "task" | "activity";
+
+interface ViewControl {
+  key: ViewKey;
+  icon: string;
+  title: string;
+  show: boolean;
+}
+
+const buttonStates = ref<Record<ViewKey, boolean>>({
+  pomodoro: false,
+  schedule: false,
+  today: false,
+  task: false,
+  activity: false,
+});
+
 watch(route, (newVal) => {
   current.value = newVal.path;
 });
@@ -57,25 +75,28 @@ function handleMenuSelect(key: string) {
   }
 }
 
-// 视图控制按钮配置
-const viewControls = [
+const viewControls: ViewControl[] = [
   { key: "pomodoro", icon: "⏰", title: "切换番茄钟视图", show: true },
   { key: "schedule", icon: "🗓️", title: "切换日程视图", show: true },
+  { key: "today", icon: "📅", title: "切换今日视图", show: true },
   { key: "task", icon: "🖊️", title: "切换执行视图", show: true },
   { key: "activity", icon: "📋", title: "切换活动视图", show: true },
-  // { key: "today", icon: "📅", title: "切换今日视图", show: true },
 ];
 
 // 按钮样式函数
-function buttonStyle(show: boolean) {
+function buttonStyle(show: boolean, key: ViewKey) {
   return {
     filter: show ? "none" : "grayscale(100%)",
     opacity: show ? 1 : 0.6,
+    backgroundColor: buttonStates.value[key] ? "#e6f4ff" : "#f5f5f5",
+    borderRadius: "4px",
+    transition: "background-color 0.3s ease",
   };
 }
 
 // 处理视图切换
-function handleViewToggle(key: string) {
+function handleViewToggle(key: ViewKey) {
+  buttonStates.value[key] = !buttonStates.value[key]; // 切换按钮状态
   // 发送自定义事件到window
   window.dispatchEvent(new CustomEvent("view-toggle", { detail: { key } }));
 }

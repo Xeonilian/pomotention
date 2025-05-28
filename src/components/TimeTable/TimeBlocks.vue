@@ -120,11 +120,11 @@ function getVerticalBlockStyle(block: Block): CSSProperties {
     height: heightPx + "px",
     backgroundColor: CategoryColors[block.category] || "#ccc",
     color: "#fff",
-    fontSize: "10px",
+    fontSize: "0px", // 不显示文字
     textAlign: "center",
     lineHeight: heightPx + "px",
     userSelect: "none",
-    borderRadius: "2px",
+    borderRadius: "0px",
     cursor: "default",
     whiteSpace: "nowrap",
   };
@@ -191,14 +191,14 @@ function getPomodoroStyle(seg: PomodoroSegment): CSSProperties {
   if (seg.type === "work") {
     color = POMODORO_COLORS[seg.category] ?? "#fa5252";
   } else if (seg.type === "break") {
-    color = "#ffe066"; // 休息段为黄色
+    color = "white"; // 休息段为黄色
   } else if (seg.type === "schedule") {
     color = POMODORO_COLORS[seg.category]; // schedule 段为黑色
   }
 
   return {
     position: "absolute",
-    left: "32px",
+    left: "35px",
     width: "13px",
     top: `${topPx}px`,
     height: `${heightPx}px`,
@@ -231,7 +231,7 @@ function getTodoSegmentStyle(seg: TodoSegment): CSSProperties {
   const heightPx = (endMinute - startMinute) * props.effectivePxPerMinute;
   return {
     position: "absolute",
-    left: "51px", // 让 todo 条和番茄条左右分开展示（31+13+gap=约51px，可按实际布局调整）
+    left: "55px", // 让 todo 条和番茄条左右分开展示（31+13+gap=约51px，可按实际布局调整）
     width: "13px",
     top: `${topPx}px`,
     height: `${heightPx}px`,
