@@ -297,7 +297,7 @@ const handleClick = (event: MouseEvent) => {
 
 .markdown-content.disabled {
   cursor: not-allowed;
-  background-color: var(--color-backgroud-light);
+  background-color: var(--color-backgroud-light-light);
 }
 
 :deep(.highlight-text) {

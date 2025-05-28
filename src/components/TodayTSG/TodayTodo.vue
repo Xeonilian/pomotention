@@ -579,7 +579,7 @@ function handleRowClick(todo: TodoWithNumberPriority) {
 
 /* 隔行变色 */
 .table-body tr:nth-child(even) {
-  background-color: var(--color-backgroud-light);
+  background-color: var(--color-backgroud-light-light);
 }
 
 /* 激活行样式 */
