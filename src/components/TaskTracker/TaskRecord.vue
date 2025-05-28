@@ -212,7 +212,7 @@ const handleClick = (event: MouseEvent) => {
   font-size: 14px;
   line-height: 1.6;
   overflow: hidden;
-  outline: 1px solid #ff2121; /* 更细腻的 outline */
+  outline: 1px solid var(--color-text-secondary); /* 更细腻的 outline */
 }
 
 :deep(.markdown-content) {
@@ -222,12 +222,22 @@ const handleClick = (event: MouseEvent) => {
 :deep(.markdown-content h1),
 :deep(.markdown-content h2),
 :deep(.markdown-content h3) {
-  margin-top: 0.5em;
-  margin-bottom: 0.5em;
+  margin-top: 0.1em;
+  margin-bottom: 0.1em;
 }
 
 :deep(.markdown-content p) {
-  margin: 0 0;
+  margin: 2px;
+}
+
+:deep(.markdown-content code) {
+  background-color: var(--color-text-secondary);
+  border-radius: 2px;
+  padding: 0 2px 0 2px;
+}
+:deep(.markdown-content blockquote) {
+  background-color: var(--color-text-secondary);
+  margin: 2px auto;
 }
 
 :deep(.markdown-content ul),
