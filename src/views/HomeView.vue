@@ -147,7 +147,6 @@
 // ------------------------ 导入依赖 ------------------------
 import { ref, onMounted, watch, onUnmounted, computed } from "vue";
 import { NButton } from "naive-ui";
-import { useTimerStore } from "@/stores/useTimerStore";
 import { usePomoStore } from "@/stores/usePomoStore";
 import { taskService } from "@/services/taskService";
 import TimeTableView from "@/views/Home/TimeTableView.vue";
@@ -196,8 +195,6 @@ import { useDateService } from "@/services/dateService";
 import { useResize } from "@/composables/useResize";
 
 // ======================== 响应式状态与初始化 ========================
-
-const timerStore = useTimerStore();
 const pomoStore = usePomoStore();
 const dateService = useDateService();
 
@@ -513,19 +510,6 @@ watch(
   }
 );
 
-// ======================== 6. 辅助UI函数 ========================
-
-/** 按钮的禁用与高亮效果 */
-function buttonStyle(show: boolean, isPomoButton = false) {
-  return {
-    filter: show ? "none" : "grayscale(100%)",
-    opacity: show ? 1 : 0.6,
-    cursor: isPomoButton && timerStore.isActive ? "not-allowed" : "pointer",
-    backgroundColor:
-      isPomoButton && timerStore.isActive ? "#e0e0e0" : undefined,
-  };
-}
-
 // ======================== 7. 日期监控服务 ========================
 
 /**
@@ -819,7 +803,7 @@ defineExpose({
 .today-status {
   font-size: 18px;
   font-weight: bold;
-  color: #333;
+  color: var(--color-text);
   font-family: "Courier New", Courier, monospace;
 }
 
@@ -827,22 +811,22 @@ defineExpose({
   display: inline-flex;
   align-items: center;
   font-size: 16px;
-  color: #666;
-  background: #f5f5f5;
+  color: var(--color-text);
+  background: var(--color-background-light);
   padding: 2px 8px;
   border-radius: 12px;
   font-family: "Courier New", Courier, monospace;
 }
 
 .today-pomo {
-  color: #2080f0;
+  color: var(--color-blue);
   font-weight: 500;
   font-family: "Courier New", Courier, monospace;
   font-weight: bold;
 }
 
 .total-pomo {
-  color: #666;
+  color: var(--color-text);
   font-weight: bold;
 }
 
