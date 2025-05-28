@@ -26,8 +26,11 @@
       ></div>
       <div class="middle" :class="{ 'middle-alone': !showLeft && !showRight }">
         <div
+          v-if="showTodayView"
           class="middle-top"
-          :style="{ height: topHeight + 'px' }"
+          :style="
+            showMiddleBottom ? { height: topHeight + 'px' } : { height: '100%' }
+          "
           :class="{ 'not-today': !isCurrentDay }"
         >
           <!-- 今日待办 -->
@@ -203,6 +206,7 @@ const showPomoTypeChangePopover = ref(false);
 const pomoTypeChangeMessage = ref("");
 const pomoTypeChangeTarget = ref<HTMLElement | null>(null);
 const showPomoSeq = ref(true);
+const showTodayView = ref(true);
 
 // -- 核心数据
 const activityList = ref<Activity[]>(loadActivities());
@@ -674,8 +678,9 @@ function handleMouseUp() {
 }
 
 // 添加视图控制函数
-function handleViewToggle(event: CustomEvent) {
-  const { key } = event.detail;
+function handleViewToggle(event: Event) {
+  const customEvent = event as CustomEvent<{ key: string }>;
+  const { key } = customEvent.detail;
   switch (key) {
     case "pomodoro":
       showPomodoroView.value = !showPomodoroView.value;
@@ -689,8 +694,8 @@ function handleViewToggle(event: CustomEvent) {
     case "task":
       showMiddleBottom.value = !showMiddleBottom.value;
       break;
-    case "pomoSeq":
-      showPomoSeq.value = !showPomoSeq.value;
+    case "today":
+      showTodayView.value = !showTodayView.value;
       break;
   }
 }
@@ -757,6 +762,7 @@ defineExpose({
   overflow: auto;
   padding: 4px;
   box-sizing: border-box;
+  transition: height 0.2s;
 }
 
 .middle-top.not-today {

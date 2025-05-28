@@ -62,8 +62,8 @@ const viewControls = [
   { key: "pomodoro", icon: "⏰", title: "切换番茄钟视图", show: true },
   { key: "schedule", icon: "🗓️", title: "切换日程视图", show: true },
   { key: "activity", icon: "📋", title: "切换活动视图", show: true },
+  { key: "today", icon: "📅", title: "切换今日视图", show: true },
   { key: "task", icon: "🖊️", title: "切换执行视图", show: true },
-  { key: "pomoSeq", icon: "📝", title: "切换番茄序列视图", show: true },
 ];
 
 // 按钮样式函数
