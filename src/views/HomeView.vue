@@ -48,7 +48,7 @@
                 circle
                 secondary
                 strong
-                @click="dateService.goToPreviousDay"
+                @click="onDateChange('prev')"
                 title="上一天"
               >
                 <template #icon>
@@ -60,7 +60,7 @@
                 circle
                 secondary
                 strong
-                @click="dateService.resetToToday"
+                @click="onDateChange('today')"
                 title="回到今天"
               >
                 <template #icon>
@@ -72,7 +72,7 @@
                 circle
                 secondary
                 strong
-                @click="dateService.goToNextDay"
+                @click="onDateChange('next')"
                 title="下一天"
               >
                 <template #icon>
@@ -215,6 +215,8 @@ const todoList = ref<Todo[]>(loadTodos());
 const scheduleList = ref<Schedule[]>(loadSchedules());
 const pickedTodoActivity = ref<Activity | null>(null); // 选中活动
 const activeId = ref<number | null>(null); // 当前激活活动id
+// 添加选中的任务ID状态
+const selectedTaskId = ref<number | null>(null);
 
 // 计算当天的番茄钟数
 const todayPomoCount = computed(() => pomoStore.todayPomoCount);
@@ -247,7 +249,16 @@ watch(
 watch(
   () => dateService.currentViewDate,
   () => {
-    console.log("日期已更新:", dateService.currentDate);
+    clearSelectedRow();
+  },
+  { immediate: true }
+);
+
+// 监听日期变化
+watch(
+  () => dateService.selectedDate,
+  () => {
+    clearSelectedRow();
   },
   { immediate: true }
 );
@@ -590,9 +601,6 @@ const { size: rightWidth, startResize: startRightResize } = useResize(
   true // 右侧面板
 );
 
-// 添加选中的任务ID状态
-const selectedTaskId = ref<number | null>(null);
-
 // 添加选择任务处理函数
 function onSelectTask(taskId: number | null) {
   selectedTaskId.value = taskId;
@@ -692,6 +700,28 @@ function handleViewToggle(event: Event) {
 defineExpose({
   handleViewToggle,
 });
+
+// 添加清除选中行的函数
+function clearSelectedRow() {
+  selectedTaskId.value = null;
+  activeId.value = null;
+}
+
+// 修改日期切换按钮的处理函数
+function onDateChange(direction: "prev" | "next" | "today") {
+  clearSelectedRow(); // 先清除选中状态
+  switch (direction) {
+    case "prev":
+      dateService.goToPreviousDay();
+      break;
+    case "next":
+      dateService.goToNextDay();
+      break;
+    case "today":
+      dateService.resetToToday();
+      break;
+  }
+}
 </script>
 
 <style scoped>
