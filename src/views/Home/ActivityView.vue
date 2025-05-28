@@ -185,8 +185,8 @@ function togglePomoType() {
   margin: 0 auto 10px auto; /* 水平居中+下方间距 */
   background-color: rgb(245, 245, 245);
   border-radius: 15px; /* 建议用像素，百分号效果容易变形 */
-  width: 250px;
-  height: 50px;
+  width: 220px;
+  height: 40px;
   display: flex; /* 加flex布局 */
   align-items: center; /* 垂直居中（高度方向） */
   justify-content: center; /* 水平居中内部内容 */

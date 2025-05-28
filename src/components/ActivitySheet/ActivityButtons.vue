@@ -27,7 +27,8 @@
       :disabled="isSelectedClassS"
       secondary
       circle
-      type="info"
+      type="error"
+      size="small"
       title="选择活动"
     >
       <template #icon>
@@ -38,7 +39,14 @@
       :options="filterOptions"
       @select="(key) => $emit('filter', key)"
     >
-      <n-button strong secondary circle type="info" title="筛选活动">
+      <n-button
+        strong
+        secondary
+        circle
+        type="error"
+        size="small"
+        title="筛选活动"
+      >
         <template #icon>
           <n-icon><DocumentTableSearch24Regular /></n-icon>
         </template>
@@ -48,8 +56,9 @@
       @click="$emit('add-todo')"
       circle
       secondary
-      type="success"
+      type="info"
       title="添加任务"
+      size="small"
     >
       <template #icon
         ><n-icon><AddCircle24Regular /></n-icon
@@ -60,7 +69,8 @@
       @click="$emit('toggle-pomo-type')"
       circle
       secondary
-      type="success"
+      type="info"
+      size="small"
       :disabled="activeId === null || isSelectedClassS"
     >
       <template #icon
@@ -72,10 +82,11 @@
       @click="$emit('add-schedule')"
       circle
       secondary
-      type="warning"
+      type="info"
+      size="small"
     >
       <template #icon
-        ><n-icon><BookAdd24Regular /></n-icon
+        ><n-icon><CalendarAdd24Regular /></n-icon
       ></template>
     </n-button>
 
@@ -84,7 +95,8 @@
       @click="$emit('delete-active')"
       circle
       secondary
-      type="error"
+      type="default"
+      size="small"
       :disabled="activeId === null"
     >
       <template #icon
@@ -102,7 +114,7 @@ import {
   Delete24Regular,
   ChevronCircleLeft48Regular,
   DocumentTableSearch24Regular,
-  BookAdd24Regular,
+  CalendarAdd24Regular,
   ArrowRepeatAll24Regular,
 } from "@vicons/fluent";
 
@@ -130,7 +142,7 @@ defineEmits([
 .activity-view-button-container {
   display: flex;
   justify-content: center;
-  gap: 2px;
-  margin: 5px 0 5px 0;
+  gap: 8px;
+  width: 100%;
 }
 </style>

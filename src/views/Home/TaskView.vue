@@ -11,7 +11,10 @@
       <TaskButtons
         :taskId="selectedTaskId"
         :isMarkdown="isMarkdown"
+        :showPomoSeq="showPomoSeq"
+        :showPomodoroView="showPomodoroView"
         @toggle-markdown="toggleMarkdown"
+        @toggle-pomo-seq="$emit('toggle-pomo-seq')"
         @energy-record="handleEnergyRecord"
         @reward-record="handleRewardRecord"
         @interruption-record="handleInterruptionRecord"
@@ -80,6 +83,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: "energy-record"): void;
   (e: "reward-record"): void;
+  (e: "toggle-pomo-seq"): void;
   (
     e: "interruption-record",
     data: {

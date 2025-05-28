@@ -9,9 +9,9 @@ Parent: HomeView.vue
   <table class="compact-table">
     <thead>
       <tr>
-        <th style="width: 54px">分类</th>
-        <th style="width: 80px">开始时间</th>
-        <th style="width: 80px">结束时间</th>
+        <th style="width: 45px">分类</th>
+        <th style="width: 60px">开始</th>
+        <th style="width: 60px">结束</th>
       </tr>
     </thead>
     <tbody>
@@ -58,23 +58,30 @@ Parent: HomeView.vue
   </table>
   <div class="editor-botton-container">
     <n-button
-      round
+      circle
       secondary
       type="success"
+      size="small"
       :disabled="!canAddBlock"
       @click="addBlock"
       title="新增最后一行"
-      >Add</n-button
     >
+      <template #icon
+        ><n-icon><AddCircle24Regular /></n-icon>
+      </template>
+    </n-button>
     <n-button
-      round
+      circle
       secondary
       type="error"
+      size="small"
       :disabled="Blocks.length === 0"
       @click="deleteLastBlock"
       title="删除最后一行"
-      >Delete</n-button
     >
+      <template #icon
+        ><n-icon><Delete24Regular /></n-icon> </template
+    ></n-button>
   </div>
   <span v-if="!canAddBlock" style="margin-left: 8px; color: #999">
     24小时添加完毕
@@ -87,6 +94,7 @@ import { NSelect, NTimePicker, NButton } from "naive-ui";
 import { getTimestampForTimeString, timestampToTimeString } from "@/core/utils";
 import type { Block } from "@/core/types/Block";
 import { CategoryColors, STORAGE_KEYS } from "@/core/constants";
+import { AddCircle24Regular, Delete24Regular } from "@vicons/fluent";
 
 // ----- 常量和选项配置 -------
 const labelMap = { sleeping: "睡眠", living: "生活", working: "工作" };
@@ -303,35 +311,22 @@ watch(
 .compact-table td {
   text-align: center;
   border: 1px solid #ddd;
-  padding: 0px 0px;
+  padding: 0px;
   font-size: 13px;
   vertical-align: middle;
   width: 60px;
   height: 20px;
 }
+
+:deep(.n-input-wrapper) {
+  padding: 0 !important;
+}
+
 .editor-botton-container {
-  width: 100%;
-  margin: auto;
-  text-align: center;
-  align-items: center;
   display: flex;
   justify-content: center;
-  padding-top: 10px;
-}
-.n-time-picker .n-base-suffix,
-.n-time-picker .n-input__suffix {
-  display: none !important;
-  width: 0 !important;
-  min-width: 0 !important;
-  padding: 0 !important;
-  margin: 0 !important;
-}
-.n-select .n-base-suffix,
-.n-select .n-base-loading {
-  display: none !important;
-  width: 0 !important;
-  min-width: 0 !important;
-  margin: 0 !important;
-  padding: 0 !important;
+  gap: 16px;
+  width: 100%;
+  margin: 10px;
 }
 </style>

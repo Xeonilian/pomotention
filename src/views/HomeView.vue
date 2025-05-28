@@ -24,7 +24,7 @@
         class="resize-handle-horizontal"
         @mousedown="startLeftResize"
       ></div>
-      <div class="middle">
+      <div class="middle" :class="{ 'middle-alone': !showLeft && !showRight }">
         <div
           class="middle-top"
           :style="{ height: topHeight + 'px' }"
@@ -42,24 +42,12 @@
             </div>
             <div class="button-group">
               <n-button
-                size="small"
-                circle
-                secondary
-                strong
-                type="warning"
-                :title="showPomoSeq ? '变为番茄' : '变为序列'"
-                @click="showPomoSeq = !showPomoSeq"
-                :disabled="!showPomodoroView || timerStore.isActive"
-              >
-                {{ showPomoSeq ? "🍕" : "🍅" }}
-              </n-button>
-              <n-button
                 @click="showPomodoroView = !showPomodoroView"
                 size="small"
                 circle
                 secondary
                 strong
-                type="warning"
+                type="info"
                 :style="buttonStyle(showPomodoroView)"
                 title="切换番茄钟视图"
                 >⏰</n-button
@@ -75,6 +63,17 @@
                 title="切换日程视图"
                 >🗓️</n-button
               >
+              <n-button
+                size="small"
+                circle
+                secondary
+                strong
+                type="info"
+                @click="showRight = !showRight"
+                :style="buttonStyle(showRight)"
+                title="切换活动视图"
+                >📋</n-button
+              >
               <!-- <n-button
                 size="small"
                 circle
@@ -87,18 +86,6 @@
                 :disabled="timerStore.isActive"
                 >🖊️</n-button
               > -->
-
-              <n-button
-                size="small"
-                circle
-                secondary
-                strong
-                type="info"
-                @click="showRight = !showRight"
-                :style="buttonStyle(showRight)"
-                title="切换活动视图"
-                >📋</n-button
-              >
 
               <n-button
                 size="small"
@@ -167,6 +154,7 @@
             :showPomodoroView="showPomodoroView"
             :selectedTaskId="selectedTaskId"
             @activity-updated="onActivityUpdated"
+            @toggle-pomo-seq="showPomoSeq = !showPomoSeq"
           />
         </div>
       </div>
@@ -632,9 +620,9 @@ const { size: topHeight, startResize: startVerticalResize } = useResize(
   window.innerHeight - 200
 );
 const { size: leftWidth, startResize: startLeftResize } = useResize(
-  200,
+  150,
   "horizontal",
-  200,
+  150,
   240,
   false // 左侧面板
 );
@@ -686,6 +674,7 @@ const isCurrentDay = computed(() => {
   display: flex;
   background: #fafafa;
   overflow: auto;
+  justify-content: center;
 }
 
 .left {
@@ -712,8 +701,13 @@ const isCurrentDay = computed(() => {
   box-sizing: border-box;
   overflow: hidden;
   min-width: 450px;
-  max-width: 900px;
+  max-width: 800px;
+  margin: 0;
+}
+
+.middle-alone {
   margin: 0 auto;
+  max-width: 900px;
 }
 
 .middle-top {
@@ -722,7 +716,6 @@ const isCurrentDay = computed(() => {
   overflow: auto;
   padding: 4px;
   box-sizing: border-box;
-  transition: all 0.3s ease;
 }
 
 .middle-top.not-today {

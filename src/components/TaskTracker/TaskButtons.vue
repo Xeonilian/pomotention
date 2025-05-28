@@ -2,7 +2,7 @@
   <div class="task-buttons">
     <n-button
       size="small"
-      type="warning"
+      type="info"
       secondary
       circle
       strong
@@ -10,11 +10,13 @@
       :disabled="!taskId"
       title="能量记录"
     >
-      🔋
+      <template #icon>
+        <n-icon><BatterySaver20Regular /></n-icon>
+      </template>
     </n-button>
     <n-button
       size="small"
-      type="success"
+      type="info"
       secondary
       circle
       strong
@@ -22,11 +24,13 @@
       :disabled="!taskId"
       title="奖赏记录"
     >
-      😜
+      <template #icon>
+        <n-icon><Beach24Regular /></n-icon>
+      </template>
     </n-button>
     <n-button
       size="small"
-      type="info"
+      type="default"
       circle
       strong
       secondary
@@ -34,7 +38,21 @@
       :disabled="!taskId"
       title="打扰记录"
     >
-      📬
+      <template #icon>
+        <n-icon><CalendarAssistant20Regular /></n-icon>
+      </template>
+    </n-button>
+    <n-button
+      size="small"
+      circle
+      secondary
+      strong
+      type="info"
+      :title="showPomoSeq ? '变为番茄' : '变为序列'"
+      @click="emit('toggle-pomo-seq')"
+      :disabled="!showPomodoroView"
+    >
+      {{ showPomoSeq ? "🍕" : "🍅" }}
     </n-button>
     <!-- 弹窗组件挂载进来 -->
     <EnergyInputDialog
@@ -58,9 +76,17 @@ import { NButton } from "naive-ui";
 import EnergyInputDialog from "@/components/EnergyInputDialog.vue";
 import RewardInputDialog from "@/components/RewardInputDialog.vue";
 import InterruptionInputDialog from "@/components/InterruptionInputDialog.vue";
+import {
+  BatterySaver20Regular,
+  Beach24Regular,
+  CalendarAssistant20Regular,
+} from "@vicons/fluent";
 
 const props = defineProps<{
   taskId: number | null;
+  showPomoSeq: boolean;
+  showPomodoroView: boolean;
+  isMarkdown: boolean;
 }>();
 
 const showEnergyDialog = ref(false);
@@ -70,6 +96,8 @@ const showInterruptionDialog = ref(false);
 const emit = defineEmits<{
   (e: "energy-record", value: number): void;
   (e: "reward-record", value: number): void;
+  (e: "toggle-markdown"): void;
+  (e: "toggle-pomo-seq"): void;
   (
     e: "interruption-record",
     data: {
@@ -112,5 +140,6 @@ function handleInterruptionConfirm(val: {
   gap: 8px;
   justify-content: right;
   padding: 8px;
+  margin-left: 10px;
 }
 </style>

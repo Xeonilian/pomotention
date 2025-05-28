@@ -18,25 +18,32 @@
         secondary
         circle
         type="info"
+        size="small"
         :disabled="showEditor"
         :title="
           currentType === 'work' ? '切换到娱乐时间表' : '切换到工作时间表'
         "
         @click="toggleType"
       >
-        {{ currentType === "work" ? "💼" : "🏕️" }}
+        <template #icon>
+          <n-icon>
+            <Backpack24Regular v-if="currentType === 'work'" />
+            <Beach24Regular v-else />
+          </n-icon>
+        </template>
       </n-button>
       <n-button
         @click="toggleDisplay"
         secondary
         circle
-        type="info"
+        type="default"
+        size="small"
         class="schedule-button"
         :title="showEditor ? '完成编辑' : '开始编辑'"
       >
-        <n-icon size="20">
-          <Settings20Regular />
-        </n-icon>
+        <template #icon>
+          <n-icon><Settings24Regular /></n-icon>
+        </template>
       </n-button>
       <n-popconfirm
         @positive-click="emitReset(currentType)"
@@ -47,9 +54,10 @@
           <n-button
             secondary
             circle
-            type="info"
+            size="small"
+            type="default"
             title="复位为默认时间表"
-            style="margin-right: 8px"
+            strong
             :disabled="!showEditor"
           >
             <n-icon size="20">
@@ -86,7 +94,12 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, computed } from "vue";
 import { NButton, NPopconfirm } from "naive-ui";
-import { ArrowReset48Filled, Settings20Regular } from "@vicons/fluent";
+import {
+  ArrowReset48Filled,
+  Settings24Regular,
+  Beach24Regular,
+  Backpack24Regular,
+} from "@vicons/fluent";
 import TimeTableEditor from "@/components/TimeTable/TimeTableEditor.vue";
 import TimeBlocks from "@/components/TimeTable/TimeBlocks.vue";
 import type { Block } from "@/core/types/Block";
@@ -222,17 +235,21 @@ const effectivePxPerMinute = computed(() => {
   margin: auto;
   position: relative;
   height: 100%;
+  bottom: 5px;
 }
 .schedule-view-button-container {
-  width: 100%;
-  margin-left: 15px;
-  text-align: center;
-  align-items: center;
-  display: flex;
-  justify-content: center;
-  padding-top: 10px;
-  text-align: center;
-  flex-wrap: nowrap;
-  gap: 10px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  margin: 10px auto 10px auto; /* 水平居中+下方间距 */
+  background-color: rgb(245, 245, 245);
+  border-radius: 15px; /* 建议用像素，百分号效果容易变形 */
+  width: 135px;
+  height: 40px;
+  display: flex; /* 加flex布局 */
+  align-items: center; /* 垂直居中（高度方向） */
+  justify-content: center; /* 水平居中内部内容 */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05); /* 如需要阴影 */
+  gap: 8px;
 }
 </style>

@@ -194,19 +194,19 @@ function onInputUpdate(item: Activity, value: string) {
   padding-right: 6px;
 }
 .delayed {
-  background: #44f8daa0;
+  background: #f89e44a0;
 }
 .countdown-yellow :deep(.n-input) {
   background: #f8d444a0;
 }
 .countdown-orange :deep(.n-input) {
-  background: #ffa940a3;
+  background: #ffa94063;
 }
 .countdown-deeporange :deep(.n-input) {
-  background: #ff40efb9;
+  background: #ffa940a3;
 }
 .countdown-red :deep(.n-input) {
-  background: #f34d50b6;
+  background: #f34d5071;
 }
 .countdown-blue :deep(.n-input) {
   background: #777777ab;

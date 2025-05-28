@@ -43,10 +43,10 @@ function handleMenuSelect(key: string) {
 <style scoped>
 .header {
   height: 5%;
-  display: none;
-  /* display: flex; */
+  /* display: none; */
+  display: flex;
   align-items: center;
-  /* padding: 0 16px; */
+  padding: 0 16px;
   background: #fff;
   color: #000;
   border-bottom: 1px solid #eee;
@@ -54,7 +54,7 @@ function handleMenuSelect(key: string) {
 }
 .content {
   overflow: auto;
-  height: 100%;
+  height: 95%;
 }
 html,
 body,
