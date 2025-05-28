@@ -194,6 +194,10 @@
         </n-popover>
       </div>
     </div>
+    <!-- 添加可拖动的 PomodoroView -->
+    <div class="draggable-container" ref="draggableContainer">
+      <PomodoroView v-if="showPomodoroView" :showPomoSeq="showPomoSeq" />
+    </div>
   </div>
 </template>
 
@@ -208,6 +212,7 @@ import TimeTableView from "@/views/Home/TimeTableView.vue";
 import TodayView from "@/views/Home/TodayView.vue";
 import TaskView from "@/views/Home/TaskView.vue";
 import ActivityView from "@/views/Home/ActivityView.vue";
+import PomodoroView from "@/views/Home/PomodoroView.vue";
 import type { Activity } from "@/core/types/Activity";
 import type { Block } from "@/core/types/Block";
 import type { Todo } from "@/core/types/Todo";
@@ -606,10 +611,32 @@ onMounted(() => {
   dateCheckService.checkDateChange();
   dateCheckService.setupUserInteractionCheck();
   dateService.updateCurrentDate(); // 初始化日期显示
+  if (draggableContainer.value) {
+    draggableContainer.value.addEventListener("mousedown", handleMouseDown);
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+
+    // 设置初始位置在页面正中偏下方
+    const windowWidth = window.innerWidth;
+    const windowHeight = window.innerHeight;
+    const elementWidth = draggableContainer.value.offsetWidth;
+    const elementHeight = draggableContainer.value.offsetHeight;
+
+    const initialX = (windowWidth - elementWidth) * 0.35; // 正中间
+    const initialY = (windowHeight - elementHeight) * 0.96; // 偏下方
+
+    draggableContainer.value.style.left = `${initialX}px`;
+    draggableContainer.value.style.top = `${initialY}px`;
+  }
 });
 
 onUnmounted(() => {
   dateCheckService.cleanupListeners();
+  if (draggableContainer.value) {
+    draggableContainer.value.removeEventListener("mousedown", handleMouseDown);
+    document.removeEventListener("mousemove", handleMouseMove);
+    document.removeEventListener("mouseup", handleMouseUp);
+  }
 });
 
 // ======================== 9. 使用 composable ========================
@@ -658,6 +685,56 @@ const isCurrentDay = computed(() => {
   const selected = dateService.selectedDate.value;
   return today.toDateString() === selected.toDateString();
 });
+
+// 添加拖动相关代码
+const draggableContainer = ref<HTMLElement | null>(null);
+let isDragging = false;
+let startX = 0;
+let startY = 0;
+let initialX = 0;
+let initialY = 0;
+
+function handleMouseDown(e: MouseEvent) {
+  isDragging = true;
+  startX = e.clientX;
+  startY = e.clientY;
+  if (draggableContainer.value) {
+    const rect = draggableContainer.value.getBoundingClientRect();
+    initialX = rect.left;
+    initialY = rect.top;
+  }
+}
+
+function handleMouseMove(e: MouseEvent) {
+  if (!isDragging || !draggableContainer.value) return;
+
+  const deltaX = e.clientX - startX;
+  const deltaY = e.clientY - startY;
+
+  // 获取视窗尺寸
+  const windowWidth = window.innerWidth;
+  const windowHeight = window.innerHeight;
+
+  // 获取元素尺寸
+  const elementWidth = draggableContainer.value.offsetWidth;
+  const elementHeight = draggableContainer.value.offsetHeight;
+
+  // 计算新位置
+  let newX = initialX + deltaX;
+  let newY = initialY + deltaY;
+
+  // 限制X轴范围
+  newX = Math.max(0, Math.min(newX, windowWidth - elementWidth));
+  // 限制Y轴范围
+  newY = Math.max(0, Math.min(newY, windowHeight - elementHeight));
+
+  draggableContainer.value.style.left = `${newX}px`;
+  draggableContainer.value.style.top = `${newY}px`;
+}
+
+function handleMouseUp() {
+  isDragging = false;
+}
 </script>
 
 <style scoped>
@@ -852,5 +929,20 @@ const isCurrentDay = computed(() => {
   height: 30px;
   background: #ccc;
   border-radius: 2px;
+}
+
+.draggable-container {
+  position: fixed;
+  z-index: 1000;
+  cursor: move;
+  user-select: none;
+  background: rgba(255, 255, 255, 0);
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(255, 255, 255, 0.1);
+  transition: box-shadow 0.3s ease;
+}
+
+.draggable-container:hover {
+  box-shadow: 0 4px 16px rgba(255, 255, 255, 0.15);
 }
 </style>
