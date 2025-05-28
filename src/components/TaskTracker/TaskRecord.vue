@@ -192,7 +192,7 @@ const handleClick = (event: MouseEvent) => {
 
 .markdown-content {
   padding: 10px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--color-background-dark);
   border-radius: 4px;
   height: 100%;
   cursor: text;
@@ -204,7 +204,7 @@ const handleClick = (event: MouseEvent) => {
   width: 100%;
   height: 100%;
   padding: 10px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--color-primary);
   border-radius: 4px;
   font-family: inherit;
   font-weight: normal;
@@ -212,7 +212,7 @@ const handleClick = (event: MouseEvent) => {
   font-size: 14px;
   line-height: 1.6;
   overflow: hidden;
-  outline: 1px solid var(--color-text-secondary); /* 更细腻的 outline */
+  outline: 1px solid var(--color-primary); /* 更细腻的 outline */
 }
 
 :deep(.markdown-content) {
@@ -231,12 +231,12 @@ const handleClick = (event: MouseEvent) => {
 }
 
 :deep(.markdown-content code) {
-  background-color: var(--color-text-secondary);
+  background-color: var(--color-text-primary-transparent);
   border-radius: 2px;
   padding: 0 2px 0 2px;
 }
 :deep(.markdown-content blockquote) {
-  background-color: var(--color-text-secondary);
+  background-color: var(--color-text-primary-transparent);
   margin: 2px auto;
 }
 
@@ -253,8 +253,8 @@ const handleClick = (event: MouseEvent) => {
   width: 16px;
   height: 16px;
   border-radius: 3px;
-  border: 1px solid #d9d9d9;
-  background-color: #fff;
+  border: 1px solid var(--color-background-dark);
+  background-color: var(--color-background-light);
   position: relative;
   display: inline-block;
   vertical-align: middle;
@@ -265,8 +265,8 @@ const handleClick = (event: MouseEvent) => {
 }
 
 :deep(.markdown-checkbox:checked) {
-  background-color: #1890ff;
-  border-color: #1890ff;
+  background-color: var(--color-primary-light);
+  border-color: var(--color-primary-light);
 }
 
 :deep(.markdown-checkbox:checked::after) {
@@ -276,7 +276,7 @@ const handleClick = (event: MouseEvent) => {
   top: 1px;
   width: 5px;
   height: 10px;
-  border: solid white;
+  border: solid var(--color-background);
   border-width: 0 2px 2px 0;
   transform: rotate(45deg);
 }
@@ -291,17 +291,17 @@ const handleClick = (event: MouseEvent) => {
 }
 
 .placeholder {
-  color: #999;
+  color: var(--color-text-secondary);
   font-style: italic;
 }
 
 .markdown-content.disabled {
   cursor: not-allowed;
-  background-color: #f5f5f5;
+  background-color: var(--color-backgroud-light);
 }
 
 :deep(.highlight-text) {
-  background-color: #ffeb3b;
+  background-color: var(--color-yellow-light);
   padding: 0 2px;
   border-radius: 2px;
 }

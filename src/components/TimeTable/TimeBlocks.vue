@@ -53,7 +53,7 @@
     :class="['pomo-segment', segment.type]"
     :style="getPomodoroStyle(segment)"
   >
-    <!-- 仅在“工作段”且有编号时显示序号 -->
+    <!-- 仅在"工作段"且有编号时显示序号 -->
     <template v-if="segment.type === 'work' && segment.index != null">
       {{ segment.index }}
     </template>
@@ -189,11 +189,11 @@ function getPomodoroStyle(seg: PomodoroSegment): CSSProperties {
   // 添加 schedule 类型的颜色处理
   let color;
   if (seg.type === "work") {
-    color = POMODORO_COLORS[seg.category] ?? "#fa5252";
+    color = POMODORO_COLORS[seg.category] ?? "var(--color-red)";
   } else if (seg.type === "break") {
-    color = "white"; // 休息段为黄色
+    color = "var(--color-background)"; // 休息段为白色
   } else if (seg.type === "schedule") {
-    color = POMODORO_COLORS[seg.category]; // schedule 段为黑色
+    color = POMODORO_COLORS[seg.category]; // schedule 段使用对应颜色
   }
 
   return {
@@ -203,18 +203,18 @@ function getPomodoroStyle(seg: PomodoroSegment): CSSProperties {
     top: `${topPx}px`,
     height: `${heightPx}px`,
     backgroundColor: color,
-    // schedule 段可以更突出一点
     opacity: seg.type === "work" ? 0.7 : seg.type === "schedule" ? 0.9 : 0.25,
     borderRadius: "2px",
     zIndex: 5,
-    color: "#fff",
+    color: "var(--color-background)",
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
     fontSize: "12px",
     fontWeight: "bold",
     letterSpacing: "0px",
-    textShadow: "0 1px 3px #222a, 0 0 1px #fff6",
+    textShadow:
+      "0 1px 3px var(--color-text-primary-transparent), 0 0 1px var(--color-background-transparent)",
     overflow: "hidden",
   };
 }
@@ -231,21 +231,21 @@ function getTodoSegmentStyle(seg: TodoSegment): CSSProperties {
   const heightPx = (endMinute - startMinute) * props.effectivePxPerMinute;
   return {
     position: "absolute",
-    left: "55px", // 让 todo 条和番茄条左右分开展示（31+13+gap=约51px，可按实际布局调整）
+    left: "55px",
     width: "13px",
     top: `${topPx}px`,
     height: `${heightPx}px`,
-    background: seg.overflow ? "rgba(210,60,40,0.65)" : "rgba(52,110,255,0.2)",
+    background: seg.overflow ? "var(--color-red-transparent)" : "", //不超过就不需要底色
     borderRadius: "2px",
-    color: "#fff",
+    color: "var(--color-background)",
     fontSize: "12px",
     fontWeight: "bold",
     zIndex: 8,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    boxShadow: seg.overflow ? "0 0 8px #d33" : "none",
-    border: seg.overflow ? "1.5px solid #a00" : undefined,
+    boxShadow: seg.overflow ? "0 0 8px var(--color-red)" : "none",
+    border: seg.overflow ? "1.5px solid var(--color-red-dark)" : undefined,
     pointerEvents: "none",
   };
 }
@@ -284,7 +284,7 @@ function getTodoSegmentStyle(seg: TodoSegment): CSSProperties {
 .tick-line {
   height: 1px;
   width: calc(100% - 30px);
-  background-color: #bbb;
+  background-color: var(--color-text-secondary);
   margin-bottom: 2px;
   flex-shrink: 0;
   margin-left: auto;
@@ -296,7 +296,7 @@ function getTodoSegmentStyle(seg: TodoSegment): CSSProperties {
   width: 100%;
   text-align: right;
   flex-shrink: 0;
-  color: #666;
+  color: var(--color-text-secondary);
   margin-left: auto;
 }
 
@@ -305,7 +305,7 @@ function getTodoSegmentStyle(seg: TodoSegment): CSSProperties {
   left: 0px;
   width: 30px;
   height: 1px;
-  background-color: rgb(241, 219, 21);
+  background-color: var(--color-yellow);
   pointer-events: none;
   z-index: 20;
 }
@@ -337,8 +337,8 @@ function getTodoSegmentStyle(seg: TodoSegment): CSSProperties {
   width: 15px;
   height: 15px;
   border-radius: 50%;
-  background-color: #bbb;
-  color: #fff;
+  background-color: var(--color-text-secondary);
+  color: var(--color-background);
   font-size: 12px;
   font-weight: bold;
   margin: 2px;

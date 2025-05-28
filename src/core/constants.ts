@@ -5,15 +5,15 @@ export const PomodoroDurations = {
 };
 
 export const TimerStyleDefaults = {
-  barLength: "175px",
-  redBarColor: "red",
-  blueBarColor: "blue",
+  barLength: "var(--bar-length)",
+  redBarColor: "var(--color-red)",
+  blueBarColor: "var(--color-blue)",
 };
 
 export const CategoryColors = {
-  living: "rgba(58, 147, 250, 0.6)", // 蓝色
-  sleeping: "rgba(0, 0, 0, 0.6)", // 灰色
-  working: "rgba(208, 49, 80, 0.6)", // 红色
+  living: "var(--color-blue-light)",
+  sleeping: "var(--color-text-secondary-transparent)",
+  working: "var(--color-red-light)",
 } as const;
 
 export type CategoryColorKey = keyof typeof CategoryColors;
@@ -130,96 +130,12 @@ export const ENTERTAINMENT_BLOCKS: Block[] = [
     end: "24:00",
   },
 ];
-// export const WORK_BLOCKS: Block[] = [
-//   {
-//     id: "1",
-//     category: "living",
-//     start: getTimestampForTimeString("06:00"),
-//     end: getTimestampForTimeString("09:00"),
-//   },
-//   {
-//     id: "2",
-//     category: "working",
-//     start: getTimestampForTimeString("09:00"),
-//     end: getTimestampForTimeString("12:00"),
-//   },
-//   {
-//     id: "3",
-//     category: "living",
-//     start: getTimestampForTimeString("12:00"),
-//     end: getTimestampForTimeString("13:00"),
-//   },
-//   {
-//     id: "4",
-//     category: "working",
-//     start: getTimestampForTimeString("13:00"),
-//     end: getTimestampForTimeString("15:00"),
-//   },
-//   {
-//     id: "5",
-//     category: "living",
-//     start: getTimestampForTimeString("15:00"),
-//     end: getTimestampForTimeString("15:15"),
-//   },
-//   {
-//     id: "6",
-//     category: "working",
-//     start: getTimestampForTimeString("15:15"),
-//     end: getTimestampForTimeString("17:40"),
-//   },
-//   {
-//     id: "7",
-//     category: "living",
-//     start: getTimestampForTimeString("17:40"),
-//     end: getTimestampForTimeString("18:10"),
-//   },
-//   {
-//     id: "8",
-//     category: "working",
-//     start: getTimestampForTimeString("18:10"),
-//     end: getTimestampForTimeString("19:40"),
-//   },
-//   {
-//     id: "9",
-//     category: "living",
-//     start: getTimestampForTimeString("19:40"),
-//     end: getTimestampForTimeString("20:00"),
-//   },
-//   {
-//     id: "10",
-//     category: "working",
-//     start: getTimestampForTimeString("20:00"),
-//     end: getTimestampForTimeString("22:00"),
-//   },
-// ];
-
-// // 预设的娱乐时间块
-// export const ENTERTAINMENT_BLOCKS: Block[] = [
-//   {
-//     id: "1",
-//     category: "sleeping",
-//     start: getTimestampForTimeString("00:00"),
-//     end: getTimestampForTimeString("09:00"),
-//   },
-//   {
-//     id: "2",
-//     category: "living",
-//     start: getTimestampForTimeString("09:00"),
-//     end: getTimestampForTimeString("22:00"),
-//   },
-//   {
-//     id: "3",
-//     category: "sleeping",
-//     start: getTimestampForTimeString("22:00"),
-//     end: getTimestampForTimeString("24:00"),
-//   },
-// ];
 
 // 番茄类型
 export const POMO_TYPES: ("🍅" | "🍇" | "🍒")[] = ["🍅", "🍇", "🍒"];
 
 export const POMODORO_COLORS: Record<string, string> = {
-  living: "rgba(222, 87, 109, 0.9)",
-  working: "rgba(64, 152, 252, 0.9)",
-  schedule: "rgba(128, 128, 128, 0.9)",
+  living: "var(--color-red-dark)",
+  working: "var(--color-blue-dark)",
+  schedule: "var(--color-text-secondary)",
 };

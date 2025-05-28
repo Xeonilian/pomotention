@@ -276,22 +276,22 @@ function updateProgressStatus(currentStep: number): void {
       element.style.backgroundImage = "";
       element.style.animation = "none";
       element.style.backgroundColor = element.classList.contains("work")
-        ? "#f44336"
-        : "#4CAF50";
+        ? "var(--color-red)"
+        : "var(--color-green)";
     } else if (index === currentStep) {
       // 当前执行的块
       element.style.backgroundImage =
-        "linear-gradient(45deg, rgba(255,248,10,.35) 25%, transparent 25%, transparent 50%, rgba(255,248,10,.35) 50%, rgba(255,248,10,.35) 75%, transparent 75%, transparent)";
+        "linear-gradient(45deg, var(--color-yellow-light-transparent) 25%, transparent 25%, transparent 50%, var(--color-yellow-light-transparent) 50%, var(--color-yellow-light-transparent) 75%, transparent 75%, transparent)";
       element.style.backgroundSize = "20px 20px";
       element.style.animation = "progress-animation 1s linear infinite";
       element.style.backgroundColor = element.classList.contains("work")
-        ? "#f44336"
-        : "#4CAF50";
+        ? "var(--color-red)"
+        : "var(--color-green)";
     } else {
       // 未开始的块
       element.style.backgroundColor = element.classList.contains("work")
-        ? "rgba(244, 67, 54, 0.2)"
-        : "rgba(76, 175, 80, 0.2)";
+        ? "var(--color-red-dark-transparent)"
+        : "var(--color-green-dark-transparent)";
     }
   });
 }
@@ -324,11 +324,11 @@ style.textContent = `
 }
 
 .time-block.work {
-  background-color: rgba(244, 67, 54, 0.2);
+  background-color: var(--color-red-light-transparent);
 }
 
 .time-block.break {
-  background-color: rgba(76, 175, 80, 0.2);
+  background-color: var(--color-green-light-transparent);
 }
 
 @keyframes progress-animation {
@@ -367,7 +367,7 @@ onUnmounted(() => {
   min-height: 120px;
   border: 2px solid grey;
   border-radius: 10px;
-  box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0px 4px 6px var(--color-backgroud-light-transparent);
   transition: all 0.3s ease;
 }
 
@@ -385,7 +385,6 @@ onUnmounted(() => {
 
 .status-label {
   font-size: 16px;
-  color: rgb(35, 39, 43);
   font-weight: bold;
   height: 16px;
   margin-bottom: 10px;
@@ -441,12 +440,11 @@ onUnmounted(() => {
   justify-content: center;
   border-radius: 20%;
   cursor: pointer;
-  border: 1px solid #ccc;
-  background-color: #fff;
+  border: 1px solid var(--color-background-dark);
 }
 
 .action-button:hover {
-  background-color: #f0f0f0;
+  background-color: var(--color-primary-light);
 }
 
 .action-button:disabled {
@@ -460,11 +458,11 @@ onUnmounted(() => {
 }
 
 .time-block.work {
-  background-color: rgba(244, 67, 54, 0.2);
+  background-color: var(--color-green-red-transparent);
 }
 
 .time-block.break {
-  background-color: rgba(76, 175, 80, 0.2);
+  background-color: var(--color-green-light-transparent);
 }
 
 @keyframes progress-animation {

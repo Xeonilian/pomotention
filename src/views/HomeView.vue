@@ -146,7 +146,7 @@
 <script setup lang="ts">
 // ------------------------ 导入依赖 ------------------------
 import { ref, onMounted, watch, onUnmounted, computed } from "vue";
-import { NButton, NPopover } from "naive-ui";
+import { NButton } from "naive-ui";
 import { useTimerStore } from "@/stores/useTimerStore";
 import { usePomoStore } from "@/stores/usePomoStore";
 import { taskService } from "@/services/taskService";
@@ -209,7 +209,7 @@ const showPomodoroView = ref(true); // 控制是否显示 PomodoroView
 const showPomoTypeChangePopover = ref(false);
 const pomoTypeChangeMessage = ref("");
 const pomoTypeChangeTarget = ref<HTMLElement | null>(null);
-const showPomoSeq = ref(true);
+const showPomoSeq = ref(false);
 const showTodayView = ref(true);
 
 // -- 核心数据

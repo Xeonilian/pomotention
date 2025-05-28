@@ -1,9 +1,79 @@
 :root {
+  /* 主色调 */
+  --color-primary: #4098fc;
+  --color-primary-light: #cee3fc;
+  --color-primary-dark: #2080f0;
+  --color-primary-transparent: rgba(64, 152, 252, 0.3);
+  --color-primary-light-transparent: rgba(206, 227, 252, 0.3);
+  --color-primary-dark-transparent: rgba(32, 128, 240, 0.3);
+
+  /* 红色系 */
+  --color-red: #d64864;
+  --color-red-light: #f5d2d9;
+  --color-red-dark: #de576d;
+  --color-red-transparent: rgba(214, 72, 100, 0.3);
+  --color-red-light-transparent: rgba(245, 210, 217, 0.3);
+  --color-red-dark-transparent: rgba(222, 87, 109, 0.3);
+
+  /* 橙色系 */
+  --color-orange: #f0a020;
+  --color-orange-light: #fceace;
+  --color-orange-dark: #fcb040;
+  --color-orange-transparent: rgba(240, 160, 32, 0.3);
+  --color-orange-light-transparent: rgba(252, 234, 206, 0.3);
+  --color-orange-dark-transparent: rgba(252, 176, 64, 0.3);
+
+  /* 黄色系 */
+  --color-yellow: #ffeb3b;
+  --color-yellow-light: #fff9c4;
+  --color-yellow-dark: #fbc02d;
+  --color-yellow-transparent: rgba(255, 235, 59, 0.3);
+  --color-yellow-light-transparent: rgba(255, 249, 196, 0.3);
+  --color-yellow-dark-transparent: rgba(251, 192, 45, 0.3);
+
+  /* 绿色系 */
+  --color-green: #2ca967;
+  --color-green-light: #cceada;
+  --color-green-dark: #36ad6a;
+  --color-green-transparent: rgba(44, 169, 103, 0.3);
+  --color-green-light-transparent: rgba(204, 234, 218, 0.3);
+  --color-green-dark-transparent: rgba(54, 173, 106, 0.3);
+
+  /* 青色系 */
+  --color-cyan: #20a0f0;
+  --color-cyan-light: #cee8fc;
+  --color-cyan-dark: #2080f0;
+  --color-cyan-transparent: rgba(32, 160, 240, 0.3);
+  --color-cyan-light-transparent: rgba(206, 232, 252, 0.3);
+  --color-cyan-dark-transparent: rgba(32, 128, 240, 0.3);
+
+  /* 蓝色系 */
+  --color-blue: #4098fc;
+  --color-blue-light: #cee3fc;
+  --color-blue-dark: #2080f0;
+  --color-blue-transparent: rgba(64, 152, 252, 0.3);
+  --color-blue-light-transparent: rgba(206, 227, 252, 0.3);
+  --color-blue-dark-transparent: rgba(32, 128, 240, 0.3);
+
+  /* 紫色系 */
+  --color-purple: #a020f0;
+  --color-purple-light: #e8cefc;
+  --color-purple-dark: #8040f0;
+  --color-purple-transparent: rgba(160, 32, 240, 0.3);
+  --color-purple-light-transparent: rgba(232, 206, 252, 0.3);
+  --color-purple-dark-transparent: rgba(128, 64, 240, 0.3);
+
   /* 中性色 */
   --color-text-primary: #333639;
-  --color-text-secondary: #64c6ff63;
+  --color-text-secondary: #999;
   --color-background: #ffffff;
+  --color-background-dark: #ddd;
+  --color-backgroud-light: #efefef;
+  --color-text-primary-transparent: rgba(51, 54, 57, 0.3);
+  --color-text-secondary-transparent: rgba(102, 102, 102, 0.3);
+  --color-backgroud-light-transparent: #rgba(0, 0, 0, 0.1);
 
+  /* 其他变量 */
   --bar-length: 175px;
   --red-bar-percentage: 84%;
   --red-bar-left: 14px;

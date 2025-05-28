@@ -206,24 +206,23 @@ function handleRowClick(schedule: Schedule) {
 
 /* 表头样式 */
 .table-header th {
-  background-color: rgba(198, 219, 244, 0.3); /* 背景色 */
   padding: 2px;
   text-align: left;
-  border-top: 2px solid #ddd; /* 顶部边框 */
-  border-bottom: 2px solid #ddd; /* 底部边框 */
-  white-space: nowrap; /* 防止文本换行 */
-  overflow: hidden; /* 隐藏溢出内容 */
-  height: 28px; /* 固定高度 */
+  border-top: 2px solid var(--color-background-dark);
+  border-bottom: 2px solid var(--color-background-dark);
+  white-space: nowrap;
+  overflow: hidden;
+  height: 28px;
 }
 
 /* 表格内容样式 */
 .table-body td {
   padding-top: 3px;
-  border-bottom: 1px solid #ddd; /* 底部边框 */
+  border-bottom: 1px solid var(--color-background-dark);
   text-align: left;
-  white-space: normal; /* 允许文本换行 */
-  overflow: hidden; /* 隐藏溢出内容 */
-  word-break: break-word; /* 允许在单词内换行 */
+  white-space: normal;
+  overflow: hidden;
+  word-break: break-word;
   min-height: 20px;
   height: auto;
 }
@@ -235,34 +234,34 @@ function handleRowClick(schedule: Schedule) {
 
 /* 隔行变色 */
 .table-body tr:nth-child(even) {
-  background-color: #f9f9f9;
+  background-color: var(--color-backgroud-light);
 }
 
 /* 激活行样式 */
 .table-body tr.active-row {
-  background-color: rgba(255, 72, 0, 0.3) !important;
+  background-color: var(--color-red-light-transparent) !important;
   transition: background-color 0.2s ease;
 }
 
 /* 选中行样式 */
 .table-body tr.selected-row {
-  background-color: rgba(255, 255, 0, 0.3) !important;
+  background-color: var(--color-yellow-transparent) !important;
   transition: background-color 0.2s ease;
 }
 
 /* 确保选中行的样式优先级高于其他样式 */
 .table-body tr.selected-row:nth-child(even) {
-  background-color: rgba(255, 72, 0, 0.109) !important;
+  background-color: var(--color-red-light-transparent) !important;
 }
 
 /* 同时具有active和selected状态时的样式 */
 .table-body tr.active-row.selected-row {
-  background-color: rgba(255, 72, 0, 0.109) !important;
+  background-color: var(--color-red-light-transparent) !important;
 }
 
 /* 鼠标悬停效果 */
 .table-body tr:hover {
-  background-color: rgba(0, 242, 255, 0.054);
+  background-color: var(--color-cyan-light-transparent);
   transition: background-color 0.2s ease;
 }
 

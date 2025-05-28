@@ -91,7 +91,9 @@ function buttonStyle(show: boolean, key: ViewKey) {
   return {
     filter: show ? (isDisabled ? "grayscale(50%)" : "none") : "grayscale(100%)",
     opacity: show ? (isDisabled ? 0.4 : 1) : 0.6,
-    backgroundColor: buttonStates.value[key] ? "#e6f4ff" : "#f5f5f5",
+    backgroundColor: buttonStates.value[key]
+      ? "var(--color-primary-light)"
+      : "var(--color-backgroud-light)",
     borderRadius: "4px",
     transition: "all 0.3s ease",
     cursor: isDisabled ? "not-allowed" : "pointer",
@@ -105,6 +107,8 @@ function handleViewToggle(key: string) {
   if (key === "pomodoro" && timerStore.isActive) {
     return;
   }
+  // 更新按钮状态
+  buttonStates.value[key as ViewKey] = !buttonStates.value[key as ViewKey];
   // 发送自定义事件到window
   window.dispatchEvent(new CustomEvent("view-toggle", { detail: { key } }));
 }
@@ -117,9 +121,9 @@ function handleViewToggle(key: string) {
   display: flex;
   align-items: center;
   padding: 0 16px;
-  background: #fff;
-  color: #000;
-  border-bottom: 1px solid #eee;
+  background: var(--color-background);
+
+  border-bottom: 1px solid var(--color-backgroud-light);
   font-weight: bold;
 }
 

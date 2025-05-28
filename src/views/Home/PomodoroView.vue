@@ -92,7 +92,6 @@ function handleTogglePomoSeq() {
   align-items: center;
   justify-content: center;
   gap: 4px;
-  background: rgba(255, 255, 255, 0.95);
   border-radius: 8px;
   padding: 8px;
   width: 100%;

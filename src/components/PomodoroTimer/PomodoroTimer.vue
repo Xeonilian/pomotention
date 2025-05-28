@@ -55,7 +55,7 @@
     <div class="progress-container" v-else>
       <n-progress
         :percentage="progressPercentage"
-        color="green"
+        :color="'var(--color-green)'"
         :show-indicator="false"
         :height="20"
         :border-radius="2"
@@ -329,7 +329,7 @@ function handleDurationSelect(key: number): void {
   height: 20px; /* 与进度条高度一致 */
   line-height: 20px; /* 确保文字垂直居中 */
   z-index: 3; /* 确保文字在进度条上方 */
-  color: #ffffff; /* 文字颜色 */
+  color: var(--color-background); /* 文字颜色 */
   pointer-events: none; /* 防止文字干扰进度条的交互 */
 }
 
@@ -347,7 +347,7 @@ function handleDurationSelect(key: number): void {
   top: 0;
   width: 1px; /* 细线 */
   height: 100%; /* 等高于容器 */
-  background-color: rgb(255, 255, 255);
+  background-color: var(--color-background);
   z-index: 4;
 }
 

@@ -26,24 +26,28 @@
         @focus="$emit('focus-row', item.id)"
       >
         <template #prefix>
-          <n-icon v-if="item.interruption === 'I'" color="#f8d"
+          <n-icon
+            v-if="item.interruption === 'I'"
+            :color="'var(--color-purple)'"
             ><VideoPersonSparkle24Regular
           /></n-icon>
-          <n-icon v-else-if="item.interruption === 'E'" color="#f28d"
+          <n-icon
+            v-else-if="item.interruption === 'E'"
+            :color="'var(--color-orange)'"
             ><VideoPersonCall24Regular
           /></n-icon>
           <n-icon
             v-else-if="item.class === 'T'"
             :color="
               item.status === 'ongoing'
-                ? 'red'
+                ? 'var(--color-red)'
                 : item.status === 'delayed'
-                ? 'orange'
+                ? 'var(--color-orange)'
                 : item.status === 'suspended'
-                ? 'blue'
+                ? 'var(--color-blue)'
                 : item.status === 'cancelled'
-                ? 'gray'
-                : 'black'
+                ? 'var(--color-text-secondary)'
+                : 'var(--color-text-primary)'
             "
             ><ApprovalsApp24Regular
           /></n-icon>
@@ -51,14 +55,14 @@
             v-else-if="item.class === 'S'"
             :color="
               item.status === 'ongoing'
-                ? 'red'
+                ? 'var(--color-red)'
                 : item.status === 'delayed'
-                ? 'orange'
+                ? 'var(--color-orange)'
                 : item.status === 'suspended'
-                ? 'blue'
+                ? 'var(--color-blue)'
                 : item.status === 'cancelled'
-                ? 'purple'
-                : 'black'
+                ? 'var(--color-purple)'
+                : 'var(--color-text-primary)'
             "
             ><Accessibility28Filled
           /></n-icon>
@@ -194,46 +198,46 @@ function onInputUpdate(item: Activity, value: string) {
   padding-right: 6px;
 }
 .delayed {
-  background: #f89e44a0;
+  background: var(--color-orange-transparent);
 }
 .countdown-yellow :deep(.n-input) {
-  background: #f8d444a0;
+  background: var(--color-yellow-transparent);
 }
 .countdown-orange :deep(.n-input) {
-  background: #ffa94063;
+  background: var(--color-orange-light-transparent);
 }
 .countdown-deeporange :deep(.n-input) {
-  background: #ffa940a3;
+  background: var(--color-orange-dark-transparent);
 }
 .countdown-red :deep(.n-input) {
-  background: #f34d5071;
+  background: var(--color-red-light-transparent);
 }
 .countdown-blue :deep(.n-input) {
-  background: #777777ab;
+  background: var(--color-text-secondary-transparent);
 }
 .pomo-red {
-  background-color: rgba(255, 99, 71, 0.15) !important;
-  border-color: rgba(255, 99, 71, 0.3) !important;
+  background-color: var(--color-red-light-transparent) !important;
+  border-color: var(--color-red-transparent) !important;
 }
 .pomo-purple {
-  background-color: rgba(128, 0, 128, 0.15) !important;
-  border-color: #8000804d !important;
+  background-color: var(--color-purple-light-transparent) !important;
+  border-color: var(--color-purple-transparent) !important;
 }
 .pomo-green {
-  background-color: rgba(0, 128, 0, 0.15) !important;
-  border-color: rgba(0, 128, 0, 0.3) !important;
+  background-color: var(--color-green-light-transparent) !important;
+  border-color: var(--color-green-transparent) !important;
 }
 /* 文本居中 */
 .input-center :deep(.n-input__input) {
   text-align: center;
-  color: #510909 !important;
+  color: var(--color-text-primary) !important;
   opacity: 1 !important;
 }
 
 /* 禁用也要高对比度且和普通同色 */
 .input-clear-disabled :deep(.n-input__input-el[disabled]) {
-  color: #510909 !important;
+  color: var(--color-text-primary) !important;
   opacity: 1 !important;
-  -webkit-text-fill-color: #222 !important;
+  -webkit-text-fill-color: var(--color-text-primary) !important;
 }
 </style>

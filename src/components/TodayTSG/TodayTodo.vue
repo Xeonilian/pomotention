@@ -523,46 +523,45 @@ function handleRowClick(todo: TodoWithNumberPriority) {
 /* 表格容器样式，占满页面 */
 .table-container {
   width: 100%;
-  overflow-x: auto; /* 支持横向滚动 */
+  overflow-x: auto;
 }
 
 :deep(.n-checkbox) {
-  --n-check-mark-color: #343434 !important;
+  --n-check-mark-color: var(--color-text-primary) !important;
   --n-color-checked: transparent !important;
 }
 
 :deep(.n-checkbox.n-checkbox--checked .n-checkbox-box .n-checkbox-box__border) {
-  border-color: #343434;
+  border-color: var(--color-text-primary);
   border-width: 1.2px;
 }
 
 /* 表格占满宽度 */
 .full-width-table {
   width: 100%;
-  border-collapse: collapse; /* 合并边框 */
-  table-layout: fixed; /* 使用固定布局算法 */
+  border-collapse: collapse;
+  table-layout: fixed;
 }
 
 /* 表头样式 */
 .table-header th {
-  background-color: rgba(198, 219, 244, 0.3); /* 背景色 */
   padding: 2px;
   text-align: left;
-  border-top: 2px solid #ddd; /* 顶部边框 */
-  border-bottom: 2px solid #ddd; /* 底部边框 */
-  white-space: nowrap; /* 防止文本换行 */
-  overflow: hidden; /* 隐藏溢出内容 */
-  height: 24px; /* 固定高度 */
+  border-top: 2px solid var(--color-background-dark);
+  border-bottom: 2px solid var(--color-background-dark);
+  white-space: nowrap;
+  overflow: hidden;
+  height: 24px;
 }
 
 /* 表格内容样式 */
 .table-body td {
   padding-top: 3px;
-  border-bottom: 1px solid #ddd; /* 底部边框 */
+  border-bottom: 1px solid var(--color-background-dark);
   text-align: left;
-  white-space: normal; /* 允许文本换行 */
-  overflow: hidden; /* 隐藏溢出内容 */
-  word-break: break-word; /* 允许在单词内换行 */
+  white-space: normal;
+  overflow: hidden;
+  word-break: break-word;
   min-height: 20px;
   height: auto;
 }
@@ -575,28 +574,28 @@ function handleRowClick(todo: TodoWithNumberPriority) {
 
 /* 允许描述列显示省略号 */
 .ellipsis {
-  text-overflow: ellipsis; /* 文本溢出显示省略号 */
+  text-overflow: ellipsis;
 }
 
 /* 隔行变色 */
 .table-body tr:nth-child(even) {
-  background-color: #f9f9f9;
+  background-color: var(--color-backgroud-light);
 }
 
 /* 激活行样式 */
 .table-body tr.active-row {
-  background-color: rgba(255, 72, 0, 0.109) !important;
-  transition: background-color 0.2s ease; /* 添加过渡效果 */
+  background-color: var(--color-red-light-transparent) !important;
+  transition: background-color 0.2s ease;
 }
 
 .table-body tr:hover {
-  background-color: rgba(0, 242, 255, 0.054); /* 鼠标悬停时的浅黄色 */
+  background-color: var(--color-cyan-light-transparent);
   transition: background-color 0.2s ease;
 }
 
 /* 确保激活行的样式优先级高于隔行变色 */
 .table-body tr.active-row:nth-child(even) {
-  background-color: rgba(255, 72, 0, 0.109) !important;
+  background-color: var(--color-red-light-transparent) !important;
 }
 
 /* 空行样式 */
@@ -604,6 +603,7 @@ function handleRowClick(todo: TodoWithNumberPriority) {
   height: 40px;
   text-align: center;
 }
+
 .priority-badge {
   display: inline-block;
   width: 18px;
@@ -612,62 +612,63 @@ function handleRowClick(todo: TodoWithNumberPriority) {
   text-align: center;
   line-height: 18px;
   font-weight: bold;
-  color: #fff;
-  background-color: #bbb;
+  color: var(--color-background);
+  background-color: var(--color-text-secondary);
   font-size: 16px;
-  box-shadow: 0 1px 3px #eee;
+  box-shadow: 0 1px 3px var(--color-backgroud-light);
 }
 
 /* 可按 priority 分不同色 */
 .priority-1 {
-  background-color: #ef5350;
+  background-color: var(--color-red);
 }
 .priority-2 {
-  background-color: #ff9800;
+  background-color: var(--color-orange);
 }
 .priority-3 {
-  background-color: #ffc107;
-  color: #555;
+  background-color: var(--color-yellow);
+  color: var(--color-text-primary);
 }
 .priority-4 {
-  background-color: #4caf50;
+  background-color: var(--color-green);
 }
 .priority-5 {
-  background-color: #2196f3;
+  background-color: var(--color-blue);
 }
 .priority-6 {
-  background-color: #9575cd;
+  background-color: var(--color-purple);
 }
 .priority-7 {
-  background-color: #7e57c2;
+  background-color: var(--color-purple-dark);
 }
 .priority-8 {
-  background-color: #26a69a;
+  background-color: var(--color-cyan);
 }
 .priority-9 {
-  background-color: #789262;
+  background-color: var(--color-green-dark);
 }
 .priority-10 {
-  background-color: #8d6e63;
+  background-color: var(--color-orange-dark);
 }
+
 .pomo-container {
   display: flex;
   align-items: center;
   gap: 2px;
-  white-space: nowrap; /* 防止换行 */
-  overflow-x: auto; /* 如果内容过长允许横向滚动 */
+  white-space: nowrap;
+  overflow-x: auto;
 }
 
 .pomo-group {
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  flex-shrink: 0; /* 防止压缩 */
+  flex-shrink: 0;
 }
 
 .pomo-separator {
-  color: #999;
-  flex-shrink: 0; /* 防止压缩 */
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
 }
 
 /* 确保按钮不会被压缩 */
@@ -683,17 +684,17 @@ function handleRowClick(todo: TodoWithNumberPriority) {
 
 /* 选中行样式 */
 .table-body tr.selected-row {
-  background-color: rgba(255, 255, 0, 0.3) !important;
+  background-color: var(--color-yellow-transparent) !important;
   transition: background-color 0.2s ease;
 }
 
 /* 确保选中行的样式优先级高于其他样式 */
 .table-body tr.selected-row:nth-child(even) {
-  background-color: rgba(255, 255, 0, 0.3) !important;
+  background-color: var(--color-yellow-transparent) !important;
 }
 
 /* 同时具有active和selected状态时的样式 */
 .table-body tr.active-row.selected-row {
-  background-color: rgba(255, 255, 0, 0.3) !important;
+  background-color: var(--color-yellow-transparent) !important;
 }
 </style>
