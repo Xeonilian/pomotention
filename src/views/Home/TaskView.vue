@@ -28,10 +28,22 @@
               color:
                 record.type === 'energy'
                   ? getEnergyColor(record.value)
-                  : getRewardColor(record.value),
+                  : record.type === 'reward'
+                  ? getRewardColor(record.value)
+                  : record.class === 'I'
+                  ? '#666666'
+                  : '#999999',
             }"
           >
-            {{ record.type === "energy" ? "🔋" : "😜" }}
+            {{
+              record.type === "energy"
+                ? "🔋"
+                : record.type === "reward"
+                ? "😜"
+                : record.class === "I"
+                ? "🌚"
+                : "🌝"
+            }}
           </span>
           <span
             class="point-value"
@@ -39,10 +51,18 @@
               color:
                 record.type === 'energy'
                   ? getEnergyColor(record.value)
-                  : getRewardColor(record.value),
+                  : record.type === 'reward'
+                  ? getRewardColor(record.value)
+                  : record.class === 'I'
+                  ? '#666666'
+                  : '#999999',
             }"
           >
-            {{ record.value }}
+            {{
+              record.type === "interruption"
+                ? record.class + (record.activityType ? "A" : "")
+                : record.value
+            }}
           </span>
           <div class="point-time">{{ formatTime(record.id) }}</div>
         </div>
@@ -63,7 +83,12 @@
 import TaskButtons from "@/components/TaskTracker/TaskButtons.vue";
 import TaskRecord from "@/components/TaskTracker/TaskRecord.vue";
 import { ref, watch, computed } from "vue";
-import type { Task } from "@/core/types/Task";
+import type {
+  Task,
+  EnergyRecord,
+  RewardRecord,
+  InterruptionRecord,
+} from "@/core/types/Task";
 import { taskService } from "@/services/taskService";
 
 const props = defineProps<{
@@ -134,37 +159,37 @@ function updateCurrentTask() {
 watch(() => props.selectedTaskId, updateCurrentTask, { immediate: true });
 
 // 监听能量记录变化
-watch(
-  () => currentTask.value?.energyRecords,
-  (newRecords) => {
-    if (newRecords) {
-      console.log("能量记录更新:", newRecords);
-    }
-  },
-  { deep: true }
-);
+// watch(
+//   () => currentTask.value?.energyRecords,
+//   (newRecords) => {
+//     if (newRecords) {
+//       console.log("能量记录更新:", newRecords);
+//     }
+//   },
+//   { deep: true }
+// );
 
 // 监听奖励记录变化
-watch(
-  () => currentTask.value?.rewardRecords,
-  (newRecords) => {
-    if (newRecords) {
-      console.log("奖励记录更新:", newRecords);
-    }
-  },
-  { deep: true }
-);
+// watch(
+//   () => currentTask.value?.rewardRecords,
+//   (newRecords) => {
+//     if (newRecords) {
+//       console.log("奖励记录更新:", newRecords);
+//     }
+//   },
+//   { deep: true }
+// );
 
 // 监听打扰记录变化
-watch(
-  () => currentTask.value?.interruptionRecords,
-  (newRecords) => {
-    if (newRecords) {
-      console.log("打扰记录更新:", newRecords);
-    }
-  },
-  { deep: true }
-);
+// watch(
+//   () => currentTask.value?.interruptionRecords,
+//   (newRecords) => {
+//     if (newRecords) {
+//       console.log("打扰记录更新:", newRecords);
+//     }
+//   },
+//   { deep: true }
+// );
 
 // 切换Markdown模式
 const toggleMarkdown = () => {
@@ -192,15 +217,30 @@ const updateTaskDescription = (content: string) => {
   }
 };
 
+// 定义合并后的记录类型
+type CombinedRecord =
+  | (EnergyRecord & { type: "energy" })
+  | (RewardRecord & { type: "reward" })
+  | (InterruptionRecord & { type: "interruption" });
+
 // 合并并按时间排序能量和愉悦记录
-const combinedRecords = computed(() => {
+const combinedRecords = computed<CombinedRecord[]>(() => {
   const energy =
-    currentTask.value?.energyRecords?.map((r) => ({ ...r, type: "energy" })) ||
-    [];
+    currentTask.value?.energyRecords?.map((r) => ({
+      ...r,
+      type: "energy" as const,
+    })) || [];
   const reward =
-    currentTask.value?.rewardRecords?.map((r) => ({ ...r, type: "reward" })) ||
-    [];
-  return [...energy, ...reward].sort((a, b) => a.id - b.id);
+    currentTask.value?.rewardRecords?.map((r) => ({
+      ...r,
+      type: "reward" as const,
+    })) || [];
+  const interruption =
+    currentTask.value?.interruptionRecords?.map((r) => ({
+      ...r,
+      type: "interruption" as const,
+    })) || [];
+  return [...energy, ...reward, ...interruption].sort((a, b) => a.id - b.id);
 });
 
 // 修改处理函数，添加更新当前任务的调用
