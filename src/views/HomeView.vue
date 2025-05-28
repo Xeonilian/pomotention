@@ -278,17 +278,9 @@ watch(
   todoList,
   (newTodos) => {
     const todayTodos = newTodos.filter((todo) => isToday(todo.id));
-    // console.log("更新今日待办列表:", todayTodos);
     pomoStore.setTodayTodos(todayTodos);
-
-    // 更新每个todo的番茄钟计数
-    todayTodos.forEach((todo) => {
-      if (todo.realPomo && todo.realPomo.length > 0) {
-        pomoStore.updateGlobalPomoCount(todo);
-      }
-    });
   },
-  { deep: true, immediate: true } // 添加 immediate: true 确保首次加载时执行
+  { deep: true, immediate: true }
 );
 
 // 监听单个todo的番茄钟变化
@@ -298,12 +290,6 @@ watch(
     console.log("检测到番茄钟变化");
     const todayTodos = todoList.value.filter((todo) => isToday(todo.id));
     pomoStore.setTodayTodos(todayTodos);
-
-    todayTodos.forEach((todo) => {
-      if (todo.realPomo && todo.realPomo.length > 0) {
-        pomoStore.updateGlobalPomoCount(todo);
-      }
-    });
   },
   { deep: true }
 );
@@ -313,16 +299,8 @@ watch(
   () => dateService.currentDate,
   (newDate) => {
     console.log("日期变化:", newDate);
-    // 更新今日待办列表
     const todayTodos = todoList.value.filter((todo) => isToday(todo.id));
     pomoStore.setTodayTodos(todayTodos);
-
-    // 更新每个todo的番茄钟计数
-    todayTodos.forEach((todo) => {
-      if (todo.realPomo && todo.realPomo.length > 0) {
-        pomoStore.updateGlobalPomoCount(todo);
-      }
-    });
   }
 );
 
