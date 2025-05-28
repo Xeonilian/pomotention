@@ -116,5 +116,31 @@ export const usePomoStore = defineStore("pomo", {
       this.lastTodayCount = 0;
       localStorage.setItem(STORAGE_KEYS.GLOBAL_POMO_COUNT, "0");
     },
+
+    // 添加新的 action 处理日期变更
+    handleDateChange() {
+      // 重置 lastTodayCount
+      this.lastTodayCount = 0;
+      localStorage.setItem(STORAGE_KEYS.LAST_TODAY_COUNT, "0");
+
+      // 保持 globalPomoCount 不变，因为它需要累积历史数据
+      // 重新计算今天的番茄钟数
+      const todayCount = this.todayTodos.reduce((total, todo) => {
+        if (
+          todo.realPomo &&
+          todo.realPomo.length > 0 &&
+          todo.pomoType === "🍅"
+        ) {
+          return total + todo.realPomo.reduce((sum, pomo) => sum + pomo, 0);
+        }
+        return total;
+      }, 0);
+
+      this.lastTodayCount = todayCount;
+      localStorage.setItem(
+        STORAGE_KEYS.LAST_TODAY_COUNT,
+        todayCount.toString()
+      );
+    },
   },
 });

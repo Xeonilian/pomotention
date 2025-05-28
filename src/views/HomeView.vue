@@ -721,6 +721,8 @@ function onDateChange(direction: "prev" | "next" | "today") {
       dateService.resetToToday();
       break;
   }
+  // 在日期变更后调用 pomoStore 的 handleDateChange
+  pomoStore.handleDateChange();
 }
 </script>
 
