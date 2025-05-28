@@ -36,9 +36,11 @@
 import { ref, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { NMenu, NButton } from "naive-ui";
+import { useTimerStore } from "@/stores/useTimerStore";
 
 const router = useRouter();
 const route = useRoute();
+const timerStore = useTimerStore();
 
 const menuOptions = [
   { label: "首页", key: "/" },
@@ -85,18 +87,24 @@ const viewControls: ViewControl[] = [
 
 // 按钮样式函数
 function buttonStyle(show: boolean, key: ViewKey) {
+  const isDisabled = key === "pomodoro" && timerStore.isActive;
   return {
-    filter: show ? "none" : "grayscale(100%)",
-    opacity: show ? 1 : 0.6,
+    filter: show ? (isDisabled ? "grayscale(50%)" : "none") : "grayscale(100%)",
+    opacity: show ? (isDisabled ? 0.4 : 1) : 0.6,
     backgroundColor: buttonStates.value[key] ? "#e6f4ff" : "#f5f5f5",
     borderRadius: "4px",
-    transition: "background-color 0.3s ease",
+    transition: "all 0.3s ease",
+    cursor: isDisabled ? "not-allowed" : "pointer",
+    transform: isDisabled ? "scale(0.95)" : "scale(1)",
   };
 }
 
 // 处理视图切换
-function handleViewToggle(key: ViewKey) {
-  buttonStates.value[key] = !buttonStates.value[key]; // 切换按钮状态
+function handleViewToggle(key: string) {
+  // 如果是pomodoro视图且计时器正在运行，不允许切换
+  if (key === "pomodoro" && timerStore.isActive) {
+    return;
+  }
   // 发送自定义事件到window
   window.dispatchEvent(new CustomEvent("view-toggle", { detail: { key } }));
 }
