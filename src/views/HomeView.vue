@@ -134,7 +134,11 @@
     </div>
     <!-- 添加可拖动的 PomodoroView -->
     <div class="draggable-container" ref="draggableContainer">
-      <PomodoroView v-if="showPomodoroView" :showPomoSeq="showPomoSeq" />
+      <PomodoroView
+        v-if="showPomodoroView"
+        :showPomoSeq="showPomoSeq"
+        @toggle-pomo-seq="showPomoSeq = !showPomoSeq"
+      />
     </div>
   </div>
 </template>
@@ -762,7 +766,6 @@ defineExpose({
   overflow: auto;
   padding: 4px;
   box-sizing: border-box;
-  transition: height 0.2s;
 }
 
 .middle-top.not-today {

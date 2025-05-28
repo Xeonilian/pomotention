@@ -62,10 +62,9 @@
 <script setup lang="ts">
 import TaskButtons from "@/components/TaskTracker/TaskButtons.vue";
 import TaskRecord from "@/components/TaskTracker/TaskRecord.vue";
-import { ref, onMounted, onUnmounted, watch, computed } from "vue";
+import { ref, watch, computed } from "vue";
 import type { Task } from "@/core/types/Task";
 import { taskService } from "@/services/taskService";
-import { addOneDayToDate } from "@/core/utils";
 
 const props = defineProps<{
   showPomoSeq: boolean;

@@ -42,18 +42,6 @@
         <n-icon><CalendarAssistant20Regular /></n-icon>
       </template>
     </n-button>
-    <n-button
-      size="small"
-      circle
-      secondary
-      strong
-      type="info"
-      :title="showPomoSeq ? '变为番茄' : '变为序列'"
-      @click="emit('toggle-pomo-seq')"
-      :disabled="!showPomodoroView"
-    >
-      {{ showPomoSeq ? "🍕" : "🍅" }}
-    </n-button>
     <!-- 弹窗组件挂载进来 -->
     <EnergyInputDialog
       v-model:show="showEnergyDialog"
@@ -97,7 +85,6 @@ const emit = defineEmits<{
   (e: "energy-record", value: number): void;
   (e: "reward-record", value: number): void;
   (e: "toggle-markdown"): void;
-  (e: "toggle-pomo-seq"): void;
   (
     e: "interruption-record",
     data: {

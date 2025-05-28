@@ -28,14 +28,14 @@
       >
         🍅
       </button>
-      <button
+      <!-- <button
         class="action-button"
         @click="addPizza"
         title="insert 4x(🍅+05)"
         :disabled="isRunning"
       >
         🍕
-      </button>
+      </button> -->
       <button
         class="action-button"
         @click="startPomodoroCircle"
@@ -234,13 +234,13 @@ function addPomodoro(): void {
 }
 
 // 添加披萨序列
-function addPizza(): void {
-  if (sequenceInput.value.trim() === "") {
-    sequenceInput.value = "🍅+05+🍅+05+🍅+05+🍅+15";
-  } else {
-    sequenceInput.value += "+🍅+05+🍅+05+🍅+05+🍅+15";
-  }
-}
+// function addPizza(): void {
+//   if (sequenceInput.value.trim() === "") {
+//     sequenceInput.value = "🍅+05+🍅+05+🍅+05+🍅+15";
+//   } else {
+//     sequenceInput.value += "+🍅+05+🍅+05+🍅+05+🍅+15";
+//   }
+// }
 
 // 添加 ref
 const progressContainer = ref<HTMLElement | null>(null);
@@ -360,9 +360,9 @@ onUnmounted(() => {
 .pomodoro-sequence {
   text-align: center;
   width: 200px;
-  margin: 5px auto;
+  margin: 0 auto;
   background-color: var(--color-background) !important;
-  padding: 5px 10px 10px 10px;
+  padding: 5px 10px 0px 10px;
   height: 125px;
   min-height: 120px;
   border: 2px solid grey;
@@ -416,7 +416,7 @@ onUnmounted(() => {
   resize: none;
   display: block;
   margin: 0 auto;
-  margin-bottom: 10px; /* 减小底部边距 */
+  margin-bottom: 5px; /* 减小底部边距 */
 }
 
 .hint-text {
@@ -429,7 +429,7 @@ onUnmounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  width: 155px; /* 增加宽度以适应新按钮 */
+  width: 120px; /* 增加宽度以适应新按钮 */
   margin: 0 auto;
 }
 
