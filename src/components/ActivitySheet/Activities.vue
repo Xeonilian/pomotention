@@ -105,7 +105,7 @@
         @focus="$emit('focus-row', item.id)"
         title="持续时间(分钟)"
         placeholder="min"
-        class="input-center"
+        class="input-center input-min"
       />
 
       <n-date-picker
@@ -196,6 +196,10 @@ function onInputUpdate(item: Activity, value: string) {
 :deep(.n-input .n-input-wrapper) {
   padding-left: 6px;
   padding-right: 6px;
+}
+
+.input-min :deep(.n-input__placeholder) {
+  font-size: 11px;
 }
 .delayed {
   background: var(--color-orange-transparent);

@@ -224,6 +224,36 @@ const todayPomoCount = computed(() => pomoStore.todayPomoCount);
 // 计算全局realPomo（历史 + 当天）
 const globalRealPomo = computed(() => pomoStore.globalRealPomo);
 
+// 计算当前日期
+const isCurrentDay = computed(() => {
+  const today = new Date();
+  const selected = dateService.selectedDate.value;
+  return today.toDateString() === selected.toDateString();
+});
+
+// 日期监控服务定义
+/**
+ * 校验日期变化，变动时刷新当前日期及 blocks，并同步相关UI
+ * 注意：日期变化回调可进一步加入其他刷新逻辑
+ */
+const dateCheckService = createDateCheckService({
+  activityList,
+  scheduleList,
+  todoList,
+  convertToSchedule,
+  convertToTodo,
+  onDateChange() {
+    // 日期变时：刷新 blocks 并刷新 currentDate 触发 UI 自动更新
+    allBlocks.value[currentType.value] = [
+      ...allBlocks.value[currentType.value],
+    ];
+    dateService.updateCurrentDate();
+    scheduleList.value = [...scheduleList.value];
+    todoList.value = [...todoList.value];
+    dateService.resetToToday();
+  },
+});
+
 // 监听todoList变化，更新全局计数
 watch(
   todoList,
@@ -238,7 +268,6 @@ watch(
 watch(
   () => todoList.value.map((todo) => todo.realPomo),
   () => {
-    console.log("检测到番茄钟变化");
     const todayTodos = todoList.value.filter((todo) => isTodayTodo(todo.id));
     pomoStore.setTodayTodos(todayTodos);
   },
@@ -249,6 +278,7 @@ watch(
 watch(
   () => dateService.currentViewDate,
   () => {
+    dateCheckService.checkDateChange();
     clearSelectedRow();
   },
   { immediate: true }
@@ -497,7 +527,7 @@ watch(
   { deep: true }
 );
 
-/** 活动due范围变化时，补全/移除 scheduleList */
+/** 活动due范围变化时 */
 watch(
   () => activityList.value.map((a) => a.dueRange && a.dueRange[0]),
   () => {
@@ -530,9 +560,8 @@ watch(
           }
         } else if (scheduleIdx !== -1) {
           // 非今日，移除schedule
-          scheduleList.value.splice(scheduleIdx, 1);
           activity.status = "";
-          console.log(`${tag} 由于不再属于今天，A.status 已置空`);
+          console.log(`${tag} 由于不再属于今天，A.status 已取消`);
         }
       } else if (scheduleIdx !== -1) {
         // 非S类型移除schedule
@@ -543,36 +572,7 @@ watch(
   }
 );
 
-// ======================== 7. 日期监控服务 ========================
-// 计算当前日期
-const isCurrentDay = computed(() => {
-  const today = new Date();
-  const selected = dateService.selectedDate.value;
-  return today.toDateString() === selected.toDateString();
-});
-
-/**
- * 校验日期变化，变动时刷新当前日期及 blocks，并同步相关UI
- * 注意：日期变化回调可进一步加入其他刷新逻辑
- */
-const dateCheckService = createDateCheckService({
-  activityList,
-  scheduleList,
-  todoList,
-  convertToSchedule,
-  convertToTodo,
-  onDateChange(date) {
-    // 日期变时：刷新 blocks 并刷新 currentDate 触发 UI 自动更新
-    allBlocks.value[currentType.value] = [
-      ...allBlocks.value[currentType.value],
-    ];
-    dateService.updateCurrentDate();
-    console.log("当前日期变化:", date);
-  },
-});
-
 // ======================== 8. 生命周期 Hook ========================
-
 onMounted(() => {
   // 主动检查一次日期变更
   dateCheckService.checkDateChange();

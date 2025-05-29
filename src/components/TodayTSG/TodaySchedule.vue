@@ -197,6 +197,15 @@ function handleRowClick(schedule: Schedule) {
   overflow-x: auto; /* 支持横向滚动 */
 }
 
+:deep(.n-checkbox) {
+  --n-check-mark-color: var(--color-text-primary) !important;
+  --n-color-checked: transparent !important;
+}
+
+:deep(.n-checkbox.n-checkbox--checked .n-checkbox-box .n-checkbox-box__border) {
+  border-color: var(--color-text-primary);
+  border-width: 1.2px;
+}
 /* 表格占满宽度 */
 .full-width-table {
   width: 100%;
@@ -231,7 +240,7 @@ function handleRowClick(schedule: Schedule) {
 .table-body td:nth-child(3) {
   text-align: center;
 }
-.table-body td:last-child {
+.table-body td:nth-child(6) {
   display: flex;
   justify-content: center; /* 水平居中 */
   align-items: center; /* 垂直居中 */
@@ -279,6 +288,7 @@ function handleRowClick(schedule: Schedule) {
   height: 30px;
   text-align: center;
   color: var(--color-text-secondary);
+  width: 100%;
 }
 
 /* 按钮组样式 */

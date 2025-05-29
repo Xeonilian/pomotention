@@ -571,7 +571,7 @@ function handleRowClick(todo: TodoWithNumberPriority) {
   text-align: center;
 }
 
-.table-body td:last-child {
+.table-body td:nth-child(6) {
   display: flex;
   justify-content: center; /* 水平居中 */
   align-items: center; /* 垂直居中 */
@@ -613,6 +613,7 @@ function handleRowClick(todo: TodoWithNumberPriority) {
   height: 30px;
   text-align: center;
   color: var(--color-text-secondary);
+  width: 100%;
 }
 
 .priority-badge {

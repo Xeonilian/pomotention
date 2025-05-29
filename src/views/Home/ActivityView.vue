@@ -36,6 +36,7 @@ import { ref, computed } from "vue";
 import ActivityButtons from "@/components/ActivitySheet/ActivityButtons.vue";
 import ActivitySheet from "@/components/ActivitySheet/Activities.vue";
 import type { Activity } from "@/core/types/Activity";
+import { addOneDayToDate } from "@/core/utils";
 
 const props = defineProps<{
   activities: Activity[];
@@ -129,7 +130,7 @@ function addScheduleRow() {
     id: Date.now(),
     class: "S",
     title: "",
-    dueRange: [Date.now(), ""],
+    dueRange: [addOneDayToDate(Date.now()), ""], //HACK
     status: "",
   });
 }
