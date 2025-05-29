@@ -61,9 +61,9 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { NButton } from "naive-ui";
-import EnergyInputDialog from "@/components/EnergyInputDialog.vue";
-import RewardInputDialog from "@/components/RewardInputDialog.vue";
-import InterruptionInputDialog from "@/components/InterruptionInputDialog.vue";
+import EnergyInputDialog from "@/components/TaskTracker/EnergyInputDialog.vue";
+import RewardInputDialog from "@/components/TaskTracker/RewardInputDialog.vue";
+import InterruptionInputDialog from "@/components/TaskTracker/InterruptionInputDialog.vue";
 import {
   BatterySaver20Regular,
   Beach24Regular,

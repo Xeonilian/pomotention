@@ -37,6 +37,7 @@
         :selectedRowId="selectedRowId"
         @update-schedule-status="updateScheduleStatus"
         @suspend-schedule="handleSuspendSchedule"
+        @convert-to-task="onConvertToTask"
         @select-task="onSelectTask"
         @select-row="handleSelectRow"
       />

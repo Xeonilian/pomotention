@@ -4,11 +4,11 @@
       <!-- 表头部分，可单独调整样式 -->
       <thead class="table-header">
         <tr>
-          <th style="width: 40px"></th>
-          <th style="width: 60px">开始</th>
-          <th style="width: 40px">分钟</th>
-          <th style="width: calc((100% - 200px) / 2)">描述</th>
-          <th style="width: calc((100% - 200px) / 2)">地点</th>
+          <th style="width: 25px"></th>
+          <th style="width: 45px; text-align: center">开始</th>
+          <th style="width: 40px; text-align: center">分钟</th>
+          <th style="width: calc(100% - 250px)">描述</th>
+          <th style="width: 180px">地点</th>
           <th style="width: 60px; text-align: center">操作</th>
         </tr>
       </thead>
@@ -82,7 +82,7 @@
         </template>
         <tr v-else class="empty-row">
           <td colspan="6" style="text-align: center; padding: 10px">
-            暂无日程安排
+            暂无日程
           </td>
         </tr>
       </tbody>
@@ -226,7 +226,16 @@ function handleRowClick(schedule: Schedule) {
   min-height: 20px;
   height: auto;
 }
-
+.table-body td:first-child,
+.table-body td:nth-child(2),
+.table-body td:nth-child(3) {
+  text-align: center;
+}
+.table-body td:last-child {
+  display: flex;
+  justify-content: center; /* 水平居中 */
+  align-items: center; /* 垂直居中 */
+}
 /* 允许描述和地点列显示省略号 */
 .ellipsis {
   text-overflow: ellipsis; /* 文本溢出显示省略号 */
@@ -267,8 +276,9 @@ function handleRowClick(schedule: Schedule) {
 
 /* 空行样式 */
 .empty-row td {
-  height: 28px;
+  height: 30px;
   text-align: center;
+  color: var(--color-text-secondary);
 }
 
 /* 按钮组样式 */

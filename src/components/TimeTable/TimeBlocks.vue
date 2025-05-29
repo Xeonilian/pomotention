@@ -35,15 +35,20 @@
       :style="getVerticalBlockStyle(block)"
       class="time-block"
     >
-      {{
-        block.category === "sleeping"
-          ? "sleep"
-          : block.category === "working"
-          ? "work"
-          : block.category === "living"
-          ? "live"
-          : block.category
-      }}
+      <span
+        class="block-label"
+        :style="block.category === 'living' ? { color: 'white' } : {}"
+      >
+        {{
+          block.category === "sleeping"
+            ? "sleep"
+            : block.category === "working"
+            ? "work"
+            : block.category === "living"
+            ? "live"
+            : block.category
+        }}</span
+      >
     </div>
 
     <!-- 当前时间指示线 -->
@@ -110,7 +115,7 @@ const props = defineProps<{
   todos: Todo[];
 }>();
 
-// ======= 时间主块（Blocks）的样式计算 =======
+// ======= 时间主块（Blocks）底色的样式计算 =======
 function getVerticalBlockStyle(block: Block): CSSProperties {
   const startMinute =
     (getTimestampForTimeString(block.start) - props.timeRange.start) /
@@ -121,32 +126,23 @@ function getVerticalBlockStyle(block: Block): CSSProperties {
   const topPx = startMinute * props.effectivePxPerMinute;
   const heightPx = (endMinute - startMinute) * props.effectivePxPerMinute;
 
-  // 简化显示文字
-  const displayText =
-    block.category === "sleeping"
-      ? "sleep"
-      : block.category === "working"
-      ? "work"
-      : block.category === "living"
-      ? "live"
-      : block.category;
-
   return {
     position: "absolute",
     top: topPx + "px",
     left: "0%",
-    width: "30px",
+    width: "100%",
     height: heightPx + "px",
     backgroundColor: CategoryColors[block.category] || "#ccc",
-    color: "var(--color-text)",
-    fontSize: "9px",
+    color: "var(--color-background-dark)",
+    fontSize: "10px",
+    fontWeight: "bold",
     textAlign: "center",
     lineHeight: heightPx + "px",
     userSelect: "none",
     borderRadius: "0px",
     cursor: "default",
     whiteSpace: "nowrap",
-    content: displayText,
+    zIndex: "1",
   };
 }
 
@@ -258,8 +254,8 @@ function getTodoSegmentStyle(seg: TodoSegment): CSSProperties {
     background: seg.overflow ? "var(--color-red-transparent)" : "", //不超过就不需要底色
     borderRadius: "2px",
     color: "var(--color-background)",
-    fontSize: "12px",
-    fontWeight: "bold",
+    fontSize: "10px",
+    // fontWeight: "bold",
     zIndex: 8,
     display: "flex",
     alignItems: "center",
@@ -288,7 +284,7 @@ function getTodoSegmentStyle(seg: TodoSegment): CSSProperties {
   width: 100%;
   height: 100%;
   pointer-events: none;
-  z-index: 1;
+  z-index: 20;
 }
 
 .hour-tick {
@@ -299,27 +295,33 @@ function getTodoSegmentStyle(seg: TodoSegment): CSSProperties {
   flex-direction: column;
   align-items: center;
   user-select: none;
+  z-index: 2;
 }
 
 .tick-line {
   height: 1px;
-  width: calc(100% - 30px);
+  width: calc(100% - 0px);
   background-color: var(--color-text-secondary);
   margin-bottom: 2px;
   flex-shrink: 0;
   margin-left: auto;
+  z-index: 2;
+  transform: scaleY(0.5);
 }
-
+/* 文字 */
 .hour-label {
   font-size: 10px;
   line-height: 14px;
   width: 100%;
-  text-align: right;
+  text-align: left;
   flex-shrink: 0;
   color: var(--color-text-secondary);
   margin-left: auto;
+  z-index: 2;
 }
-
+.block-label {
+  z-index: 100;
+}
 .current-time-line {
   position: absolute;
   left: 0px;
@@ -327,12 +329,12 @@ function getTodoSegmentStyle(seg: TodoSegment): CSSProperties {
   height: 1px;
   background-color: var(--color-yellow);
   pointer-events: none;
-  z-index: 20;
+  z-index: 2;
 }
 .current-time-line::before {
   content: "🍅";
   position: absolute;
-  right: 3px;
+
   transform: translateY(-50%);
   font-size: 16px;
   pointer-events: none;
@@ -345,26 +347,26 @@ function getTodoSegmentStyle(seg: TodoSegment): CSSProperties {
     transform: translateY(-50%) rotate(0deg);
   }
   25% {
-    transform: translateY(-50%) rotate(-9deg);
+    transform: translateY(-50%) rotate(-15deg);
   }
   50% {
-    transform: translateY(-50%) rotate(9deg);
+    transform: translateY(-50%) rotate(15deg);
   }
   75% {
-    transform: translateY(-50%) rotate(-9deg);
+    transform: translateY(-50%) rotate(-15deg);
   }
   100% {
-    transform: translateY(-50%) rotate(0deg);
+    transform: translateY(-50%) rotate(15deg);
   }
 }
 .pomo-segment {
   display: flex;
   justify-content: center;
   align-items: center;
-  font-size: 12px;
-  font-weight: bold;
+  font-size: 10px;
+  /* font-weight: bold; */
   pointer-events: none;
-  font-family: "Courier New", Courier, monospace;
+  font-family: "Arial";
 }
 
 .priority-badge {

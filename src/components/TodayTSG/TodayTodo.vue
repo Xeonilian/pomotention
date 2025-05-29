@@ -24,11 +24,11 @@
       <!-- 表头部分，可单独调整样式 -->
       <thead class="table-header">
         <tr>
-          <th style="width: 40px"></th>
-          <th style="width: 60px">开始</th>
-          <th style="width: 40px">优先</th>
-          <th style="width: calc((100% - 200px) / 2)">描述</th>
-          <th style="width: calc((100% - 200px) / 2)">番茄</th>
+          <th style="width: 25px"></th>
+          <th style="width: 45px; text-align: center">开始</th>
+          <th style="width: 40px; text-align: center">优先</th>
+          <th style="width: calc(100% - 350px)">描述</th>
+          <th style="width: 180px">番茄</th>
           <th style="width: 60px; text-align: center">操作</th>
         </tr>
       </thead>
@@ -153,7 +153,7 @@
         </template>
         <tr v-else class="empty-row">
           <td colspan="6" style="text-align: center; padding: 10px">
-            暂无今日待办
+            暂无待办
           </td>
         </tr>
       </tbody>
@@ -565,7 +565,17 @@ function handleRowClick(todo: TodoWithNumberPriority) {
   min-height: 20px;
   height: auto;
 }
+.table-body td:first-child,
+.table-body td:nth-child(2),
+.table-body td:nth-child(3) {
+  text-align: center;
+}
 
+.table-body td:last-child {
+  display: flex;
+  justify-content: center; /* 水平居中 */
+  align-items: center; /* 垂直居中 */
+}
 /* 优先级单元格样式 */
 .priority-cell {
   cursor: pointer;
@@ -600,8 +610,9 @@ function handleRowClick(todo: TodoWithNumberPriority) {
 
 /* 空行样式 */
 .empty-row td {
-  height: 40px;
+  height: 30px;
   text-align: center;
+  color: var(--color-text-secondary);
 }
 
 .priority-badge {

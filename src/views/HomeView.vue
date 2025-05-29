@@ -156,7 +156,6 @@ import type { Activity } from "@/core/types/Activity";
 import type { Block } from "@/core/types/Block";
 import type { Todo } from "@/core/types/Todo";
 import type { Schedule } from "@/core/types/Schedule";
-import { convertToSchedule, convertToTodo } from "@/core/utils/convertActivity";
 import { WORK_BLOCKS, ENTERTAINMENT_BLOCKS } from "@/core/constants";
 import {
   loadActivities,
@@ -174,6 +173,8 @@ import {
   handleDeleteActivity,
   passPickedActivity,
   togglePomoType,
+  convertToSchedule,
+  convertToTodo,
 } from "@/services/activityService";
 import {
   updateScheduleStatus,

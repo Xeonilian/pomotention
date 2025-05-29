@@ -204,7 +204,7 @@ const handleClick = (event: MouseEvent) => {
   width: 100%;
   height: 100%;
   padding: 10px;
-  border: 1px solid var(--color-primary);
+
   border-radius: 4px;
   font-family: inherit;
   font-weight: normal;
@@ -212,9 +212,13 @@ const handleClick = (event: MouseEvent) => {
   font-size: 14px;
   line-height: 1.6;
   overflow: hidden;
-  outline: 1px solid var(--color-primary); /* 更细腻的 outline */
+  outline: none;
+  transition: border-color 0.2s;
 }
 
+.task-textarea:focus {
+  border: 1px solid var(--color-primary);
+}
 :deep(.markdown-content) {
   line-height: 1.6;
 }

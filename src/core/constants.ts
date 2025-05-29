@@ -12,8 +12,8 @@ export const TimerStyleDefaults = {
 
 export const CategoryColors = {
   living: "var(--color-blue-light)",
-  sleeping: "var(--color-text-secondary-transparent)",
-  working: "var(--color-red-light)",
+  sleeping: "var(--color-background-light)",
+  working: "var(--color-backgroud)",
 } as const;
 
 export type CategoryColorKey = keyof typeof CategoryColors;
@@ -135,7 +135,7 @@ export const ENTERTAINMENT_BLOCKS: Block[] = [
 export const POMO_TYPES: ("🍅" | "🍇" | "🍒")[] = ["🍅", "🍇", "🍒"];
 
 export const POMODORO_COLORS: Record<string, string> = {
-  living: "var(--color-red-dark)",
-  working: "var(--color-blue-dark)",
-  schedule: "var(--color-text-secondary)",
+  living: "var(--color-blue-dark)",
+  working: "var(--color-red-dark)",
+  schedule: "var(--color-purple)",
 };
