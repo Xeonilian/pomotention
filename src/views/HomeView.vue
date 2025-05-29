@@ -91,7 +91,6 @@
             @suspend-schedule="onSuspendSchedule"
             @update-todo-est="onUpdateTodoEst"
             @update-todo-pomo="onUpdateTodoPomo"
-            @convert-to-task="onConvertToTask"
             @select-task="onSelectTask"
           />
         </div>
@@ -148,7 +147,6 @@
 import { ref, onMounted, watch, onUnmounted, computed } from "vue";
 import { NButton } from "naive-ui";
 import { usePomoStore } from "@/stores/usePomoStore";
-import { taskService } from "@/services/taskService";
 import TimeTableView from "@/views/Home/TimeTableView.vue";
 import TodayView from "@/views/Home/TodayView.vue";
 import TaskView from "@/views/Home/TaskView.vue";
@@ -215,6 +213,7 @@ const todoList = ref<Todo[]>(loadTodos());
 const scheduleList = ref<Schedule[]>(loadSchedules());
 const pickedTodoActivity = ref<Activity | null>(null); // 选中活动
 const activeId = ref<number | null>(null); // 当前激活活动id
+
 // 添加选中的任务ID状态
 const selectedTaskId = ref<number | null>(null);
 
@@ -245,7 +244,7 @@ watch(
   { deep: true }
 );
 
-// 监听日期变化
+// 监听当前日期变化
 watch(
   () => dateService.currentViewDate,
   () => {
@@ -254,7 +253,7 @@ watch(
   { immediate: true }
 );
 
-// 监听日期变化
+// 监听选择日期变化
 watch(
   () => dateService.selectedDate,
   () => {
@@ -262,6 +261,11 @@ watch(
   },
   { immediate: true }
 );
+
+/** 自动保存数据 */
+watch(activityList, (value) => saveActivities(value), { deep: true });
+watch(todoList, (value) => saveTodos(value), { deep: true });
+watch(scheduleList, (value) => saveSchedules(value), { deep: true });
 
 // ======================== 1. TimeTable 相关 ========================
 
@@ -292,23 +296,7 @@ function onTimeTableReset(type: "work" | "entertainment") {
   saveTimeBlocks(type, allBlocks.value[type]);
 }
 
-// ======================== 2. Today（当天）数据相关 ========================
-
-/** 今日的 Todo */
-const todayTodos = computed(() =>
-  todoList.value.filter((todo) => {
-    return dateService.isSelectedDate(todo.id);
-  })
-);
-
-/** 今日的 Schedule */
-const todaySchedules = computed(() =>
-  scheduleList.value.filter((schedule) => {
-    return dateService.isSelectedDate(schedule.id);
-  })
-);
-
-// ======================== 3. Activity 相关 ========================
+// ======================== 2. Activity 相关 ========================
 
 /** 新增活动 */
 function onAddActivity(newActivity: Activity) {
@@ -351,8 +339,20 @@ function onTogglePomoType(id: number, event?: Event) {
   }
 }
 
-// ======================== 4. Today/任务相关操作 ========================
+// ======================== 3. Today/任务相关操作 ========================
+/** 今日的 Todo */
+const todayTodos = computed(() =>
+  todoList.value.filter((todo) => {
+    return dateService.isSelectedDate(todo.id);
+  })
+);
 
+/** 今日的 Schedule */
+const todaySchedules = computed(() =>
+  scheduleList.value.filter((schedule) => {
+    return dateService.isSelectedDate(schedule.id);
+  })
+);
 /** Todo 更新状态（勾选） */
 function onUpdateTodoStatus(id: number, activityId: number, status: string) {
   updateTodoStatus(todoList.value, activityList.value, id, activityId, status);
@@ -408,25 +408,46 @@ function onUpdateScheduleStatus(
   );
 }
 
-/** Schedule 转换为任务 */
-function onConvertToTask(id: number) {
-  const schedule = scheduleList.value.find((s) => s.id === id);
-  if (schedule) {
-    taskService.createTaskFromSchedule(
-      schedule.id.toString(),
-      schedule.activityTitle,
-      schedule.projectName
-    );
+/** 修改日期切换按钮的处理函数 */
+function onDateChange(direction: "prev" | "next" | "today") {
+  clearSelectedRow(); // 先清除选中状态
+  switch (direction) {
+    case "prev":
+      dateService.goToPreviousDay();
+      break;
+    case "next":
+      dateService.goToNextDay();
+      break;
+    case "today":
+      dateService.resetToToday();
+      break;
   }
+  // 在日期变更后调用 pomoStore 的 handleDateChange
+  pomoStore.handleDateChange();
+}
+
+// 从Today选择任务处理函数
+function onSelectTask(taskId: number | null) {
+  selectedTaskId.value = taskId;
+}
+
+// 清除Today选中行的函数
+function clearSelectedRow() {
+  selectedTaskId.value = null;
+  activeId.value = null;
+}
+// ======================== 4. Task/执行相关操作 ========================
+// 在script部分添加处理函数
+function onActivityUpdated() {
+  // 重新加载活动列表
+  activityList.value = loadActivities();
+  // 重新加载待办事项列表
+  todoList.value = loadTodos();
+  // 重新加载日程列表
+  scheduleList.value = loadSchedules();
 }
 
 // ======================== 5. 数据联动 Watchers ========================
-
-/** 自动保存数据 */
-watch(activityList, (value) => saveActivities(value), { deep: true });
-watch(todoList, (value) => saveTodos(value), { deep: true });
-watch(scheduleList, (value) => saveSchedules(value), { deep: true });
-
 /** 活动变化时联动 Todo/Schedule 属性同步 */
 watch(
   activityList,
@@ -522,6 +543,12 @@ watch(
 );
 
 // ======================== 7. 日期监控服务 ========================
+// 计算当前日期
+const isCurrentDay = computed(() => {
+  const today = new Date();
+  const selected = dateService.selectedDate.value;
+  return today.toDateString() === selected.toDateString();
+});
 
 /**
  * 校验日期变化，变动时刷新当前日期及 blocks，并同步相关UI
@@ -546,9 +573,11 @@ const dateCheckService = createDateCheckService({
 // ======================== 8. 生命周期 Hook ========================
 
 onMounted(() => {
+  // 主动检查一次日期变更
   dateCheckService.checkDateChange();
   dateCheckService.setupUserInteractionCheck();
   dateService.updateCurrentDate(); // 初始化日期显示
+
   if (draggableContainer.value) {
     draggableContainer.value.addEventListener("mousedown", handleMouseDown);
     document.addEventListener("mousemove", handleMouseMove);
@@ -579,7 +608,7 @@ onUnmounted(() => {
   window.removeEventListener("view-toggle", handleViewToggle);
 });
 
-// ======================== 9. 使用 composable ========================
+// ======================== 9. 页面尺寸调整  ========================
 const { size: topHeight, startResize: startVerticalResize } = useResize(
   280,
   "vertical",
@@ -600,28 +629,6 @@ const { size: rightWidth, startResize: startRightResize } = useResize(
   600,
   true // 右侧面板
 );
-
-// 添加选择任务处理函数
-function onSelectTask(taskId: number | null) {
-  selectedTaskId.value = taskId;
-}
-
-// 在script部分添加处理函数
-function onActivityUpdated() {
-  // 重新加载活动列表
-  activityList.value = loadActivities();
-  // 重新加载待办事项列表
-  todoList.value = loadTodos();
-  // 重新加载日程列表
-  scheduleList.value = loadSchedules();
-}
-
-// 在 script setup 部分添加计算属性
-const isCurrentDay = computed(() => {
-  const today = new Date();
-  const selected = dateService.selectedDate.value;
-  return today.toDateString() === selected.toDateString();
-});
 
 // 添加拖动相关代码
 const draggableContainer = ref<HTMLElement | null>(null);
@@ -672,8 +679,7 @@ function handleMouseMove(e: MouseEvent) {
 function handleMouseUp() {
   isDragging = false;
 }
-
-// 添加视图控制函数
+// ======================== 9.  页面视图隐藏显示控制 ========================
 function handleViewToggle(event: Event) {
   const customEvent = event as CustomEvent<{ key: string }>;
   const { key } = customEvent.detail;
@@ -700,30 +706,6 @@ function handleViewToggle(event: Event) {
 defineExpose({
   handleViewToggle,
 });
-
-// 添加清除选中行的函数
-function clearSelectedRow() {
-  selectedTaskId.value = null;
-  activeId.value = null;
-}
-
-// 修改日期切换按钮的处理函数
-function onDateChange(direction: "prev" | "next" | "today") {
-  clearSelectedRow(); // 先清除选中状态
-  switch (direction) {
-    case "prev":
-      dateService.goToPreviousDay();
-      break;
-    case "next":
-      dateService.goToNextDay();
-      break;
-    case "today":
-      dateService.resetToToday();
-      break;
-  }
-  // 在日期变更后调用 pomoStore 的 handleDateChange
-  pomoStore.handleDateChange();
-}
 </script>
 
 <style scoped>
