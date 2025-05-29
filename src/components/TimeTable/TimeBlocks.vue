@@ -338,6 +338,24 @@ function getTodoSegmentStyle(seg: TodoSegment): CSSProperties {
   pointer-events: none;
   user-select: none;
   z-index: 20;
+  animation: shake 4s infinite;
+}
+@keyframes shake {
+  0% {
+    transform: translateY(-50%) rotate(0deg);
+  }
+  25% {
+    transform: translateY(-50%) rotate(-9deg);
+  }
+  50% {
+    transform: translateY(-50%) rotate(9deg);
+  }
+  75% {
+    transform: translateY(-50%) rotate(-9deg);
+  }
+  100% {
+    transform: translateY(-50%) rotate(0deg);
+  }
 }
 .pomo-segment {
   display: flex;
