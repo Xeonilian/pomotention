@@ -527,7 +527,6 @@ watch(
   { deep: true }
 );
 
-/** 活动due范围变化时更新状态并同步到scheduleList */
 /** 活动due范围变化时仅更新状态 */
 watch(
   () => activityList.value.map(a => a.dueRange && a.dueRange[0]),

@@ -3,7 +3,7 @@ import type { Activity } from "@/core/types/Activity";
 import type { Todo } from "@/core/types/Todo";
 import type { Schedule } from "@/core/types/Schedule";
 import { POMO_TYPES } from "@/core/constants";
-import { timestampToDatetime } from "@/core/utils";
+import { timestampToDatetime, getLocalDateString } from "@/core/utils";
 
 /**
  * 添加新活动并处理相关联动
@@ -16,10 +16,10 @@ export function handleAddActivity(
   activityList.push(newActivity);
   // 如果是 Schedule 类型且是当天的活动，自动创建 Schedule
   if (newActivity.class === "S") {
-    const today = new Date().toISOString().split("T")[0];
+    const today = getLocalDateString(new Date());
 
     const activityDate = newActivity.id
-      ? new Date(newActivity.id).toISOString().split("T")[0]
+      ? getLocalDateString(new Date(newActivity.id))
       : null;
 
     if (activityDate === today) {

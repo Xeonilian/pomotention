@@ -1,4 +1,5 @@
 import { ref } from "vue";
+import { getLocalDateString } from "@/core/utils";
 
 // 星期几的简写
 const weekdayShort = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -36,7 +37,8 @@ export function useDateService() {
   // 更新当前日期显示
   function updateCurrentDate() {
     const date = currentViewDate.value;
-    const dateStr = date.toISOString().split("T")[0];
+    // 使用本地时区计算日期，避免时区问题
+    const dateStr = getLocalDateString(date);
     const weekDay = weekdayShort[date.getDay()];
 
     // 计算周数
@@ -56,19 +58,22 @@ export function useDateService() {
 
   // 获取当前日期字符串
   function getCurrentDateStr() {
-    return currentViewDate.value.toISOString().split("T")[0];
+    // 使用本地时区计算日期，避免时区问题
+    return getLocalDateString(currentViewDate.value);
   }
 
   // 获取选中日期字符串
   function getSelectedDateStr() {
-    return selectedDate.value.toISOString().split("T")[0];
+    // 使用本地时区计算日期，避免时区问题
+    return getLocalDateString(selectedDate.value);
   }
 
   // 检查日期是否是选中日期
   function isSelectedDate(date: Date | string | number): boolean {
     const dateToCheck = new Date(date);
-    const selectedDateStr = selectedDate.value.toISOString().split("T")[0];
-    const dateToCheckStr = dateToCheck.toISOString().split("T")[0];
+    // 使用本地时区计算日期，避免时区问题
+    const selectedDateStr = getLocalDateString(selectedDate.value);
+    const dateToCheckStr = getLocalDateString(dateToCheck);
     return dateToCheckStr === selectedDateStr;
   }
 

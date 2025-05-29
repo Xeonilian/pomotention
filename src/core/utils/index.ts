@@ -4,3 +4,4 @@ export { getEndOfDayTimestamp, getEndOfDayTime } from "./getEndOfDayTimestamp";
 export { timestampToTimeString } from "./timestampToTimeString";
 export { getTimestampForTimeString } from "./getTimestampForTimeString";
 export { timestampToDatetime } from "./timestampToDatetime";
+export { getLocalDateString } from "./getLocalDateString";

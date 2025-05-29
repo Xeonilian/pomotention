@@ -4,6 +4,7 @@ import type { Ref } from "vue";
 import type { Activity } from "@/core/types/Activity";
 import type { Schedule } from "@/core/types/Schedule";
 import type { Todo } from "@/core/types/Todo";
+import { getLocalDateString } from "@/core/utils";
 
 type TimeoutType = ReturnType<typeof setTimeout>;
 
@@ -27,14 +28,20 @@ export function createDateCheckService({
   onDateChange,
 }: DateCheckServiceOptions) {
   let debounceTimer: TimeoutType | null = null;
-  let lastCheckedDate: string = new Date().toISOString().split("T")[0];
   let debouncedCheckFunction: ((event: Event) => void) | null = null;
+
+
+  // 使用本地时区日期初始化
+  let lastCheckedDate: string = getLocalDateString();
 
   /**
    * 若日期变化，处理 schedule
+   * 使用本地时区计算日期，避免 UTC 与本地时区差异导致的问题
+   * (特别是在中国等 UTC+8 时区，每天0点到8点期间可能出现日期不匹配)
    */
   function checkDateChange() {
-    const currentDate = new Date().toISOString().split("T")[0];
+    const currentDate = getLocalDateString();
+    
     if (currentDate !== lastCheckedDate) {
       console.log(`日期从 ${lastCheckedDate} 变为 ${currentDate}`);
       processSchedulesForNewDay();
@@ -46,7 +53,6 @@ export function createDateCheckService({
     }
     return false;
   }
-
   /**
    * 检查 activityList，自动把当天 schedule 加入 scheduleList
    */
@@ -55,9 +61,8 @@ export function createDateCheckService({
     activityList.value.forEach((activity: Activity) => {
       if (activity.class === "S" && activity.dueRange) {
         // dueRange[0] 是 number（时间戳）
-        const activityDate = new Date(activity.dueRange[0])
-          .toISOString()
-          .split("T")[0];
+        const activityDate = getLocalDateString(new Date(activity.dueRange[0]));
+
         // 如果是今天且 scheduleList 还没加入
         if (
           activityDate === today &&
