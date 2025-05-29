@@ -18,52 +18,66 @@
         class="sequence-input"
       ></textarea>
     </div>
-
     <div class="button-row">
-      <button
+      <n-button
         class="action-button"
         @click="addPomodoro"
         title="insert 🍅+05"
         :disabled="isRunning"
+        tertiary
+        circle
       >
         🍅
-      </button>
-      <!-- <button
-        class="action-button"
-        @click="addPizza"
-        title="insert 4x(🍅+05)"
-        :disabled="isRunning"
-      >
-        🍕
-      </button> -->
-      <button
+      </n-button>
+
+      <n-button
         class="action-button"
         @click="startPomodoroCircle"
         :disabled="isRunning"
+        tertiary
+        circle
       >
-        ▶️
-      </button>
-      <button class="action-button" @click="stopPomodoro">⏹️</button>
-      <button
+        <template #icon>
+          <n-icon :component="PlayCircle24Regular" />
+        </template>
+      </n-button>
+      
+      <n-button 
+        class="action-button" 
+        @click="stopPomodoro"
+        tertiary
+        circle
+      >
+        <template #icon>
+          <n-icon :component="RecordStop24Regular" />
+        </template>
+      </n-button>
+      
+      <n-button
         class="action-button"
         @click="handleToggleWhiteNoise"
         :title="isWhiteNoiseEnabled ? '关闭白噪音' : '开启白噪音'"
+        tertiary
+        circle
       >
-        {{ isWhiteNoiseEnabled ? "🔊" : "🔇" }}
-      </button>
+        <template #icon>
+          <n-icon :component="isWhiteNoiseEnabled ? Speaker224Regular : SpeakerMute24Regular" />
+        </template>
+      </n-button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onUnmounted, watch } from "vue";
+import { NButton, NIcon } from 'naive-ui';
 import { useTimerStore } from "@/stores/useTimerStore";
 import {
   toggleWhiteNoise,
   getWhiteNoiseState,
   setPomodoroRunning,
 } from "@/core/sounds.ts";
-
+import { Speaker224Regular, SpeakerMute24Regular,PlayCircle24Regular,RecordStop24Regular } from "@vicons/fluent"
 type PomodoroStep = {
   type: "work" | "break";
   duration: number;
@@ -233,15 +247,6 @@ function addPomodoro(): void {
   }
 }
 
-// 添加披萨序列
-// function addPizza(): void {
-//   if (sequenceInput.value.trim() === "") {
-//     sequenceInput.value = "🍅+05+🍅+05+🍅+05+🍅+15";
-//   } else {
-//     sequenceInput.value += "+🍅+05+🍅+05+🍅+05+🍅+15";
-//   }
-// }
-
 // 添加 ref
 const progressContainer = ref<HTMLElement | null>(null);
 
@@ -315,32 +320,6 @@ function initializeProgress(sequence: string): void {
   });
 }
 
-// 添加样式
-const style = document.createElement("style");
-style.textContent = `
-.time-block {
-  transition: background-color 0.3s ease;
-  margin: 0;
-}
-
-.time-block.work {
-  background-color: var(--color-red-light-transparent);
-}
-
-.time-block.break {
-  background-color: var(--color-green-light-transparent);
-}
-
-@keyframes progress-animation {
-  from {
-    background-position: 0 0;
-  }
-  to {
-    background-position: 20px 0;
-  }
-}
-`;
-document.head.appendChild(style);
 
 // 切换白噪音
 function handleToggleWhiteNoise(): void {
@@ -458,7 +437,7 @@ onUnmounted(() => {
 }
 
 .time-block.work {
-  background-color: var(--color-green-red-transparent);
+  background-color: var(--color-green-transparent);
 }
 
 .time-block.break {

@@ -21,7 +21,9 @@
             @click="handleViewToggle(control.key)"
             class="header-button"
           >
-            {{ control.icon }}
+          <template #icon>
+            <n-icon :component="control.icon" />
+            </template>
           </n-button>
         </div>
       </div>
@@ -33,10 +35,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from "vue";
+import { ref, watch, Component } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { NMenu, NButton } from "naive-ui";
 import { useTimerStore } from "@/stores/useTimerStore";
+import { ArrowLeft24Filled, ArrowUp24Filled, ArrowDown24Filled, ArrowRight24Filled,Timer24Regular } from '@vicons/fluent';
 
 const router = useRouter();
 const route = useRoute();
@@ -54,7 +57,7 @@ type ViewKey = "pomodoro" | "schedule" | "today" | "task" | "activity";
 
 interface ViewControl {
   key: ViewKey;
-  icon: string;
+  icon: Component;
   title: string;
   show: boolean;
 }
@@ -78,11 +81,11 @@ function handleMenuSelect(key: string) {
 }
 
 const viewControls: ViewControl[] = [
-  { key: "pomodoro", icon: "⏰", title: "切换番茄钟视图", show: true },
-  { key: "schedule", icon: "🗓️", title: "切换日程视图", show: true },
-  { key: "today", icon: "📅", title: "切换今日视图", show: true },
-  { key: "task", icon: "🖊️", title: "切换执行视图", show: true },
-  { key: "activity", icon: "📋", title: "切换活动视图", show: true },
+  { key: "pomodoro", icon: Timer24Regular, title: "切换番茄钟视图", show: true },
+  { key: "schedule", icon: ArrowLeft24Filled, title: "切换日程视图", show: true },
+  { key: "today", icon: ArrowUp24Filled, title: "切换今日视图", show: true },
+  { key: "task", icon: ArrowDown24Filled, title: "切换执行视图", show: true },
+  { key: "activity", icon: ArrowRight24Filled, title: "切换活动视图", show: true },
 ];
 
 // 按钮样式函数
@@ -92,7 +95,7 @@ function buttonStyle(show: boolean, key: ViewKey) {
     filter: show ? (isDisabled ? "grayscale(50%)" : "none") : "grayscale(100%)",
     opacity: show ? (isDisabled ? 0.4 : 1) : 0.6,
     backgroundColor: buttonStates.value[key]
-      ? "var(--color-primary-light)"
+      ? "var(--color-blue-light)"
       : "var(--color-background-light)",
     borderRadius: "4px",
     transition: "all 0.3s ease",

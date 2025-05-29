@@ -52,7 +52,7 @@
                 title="上一天"
               >
                 <template #icon>
-                  <DocumentArrowLeft20Regular />
+                  <Previous24Regular />
                 </template>
               </n-button>
               <n-button
@@ -76,7 +76,7 @@
                 title="下一天"
               >
                 <template #icon>
-                  <DocumentArrowRight20Regular />
+                  <Next24Regular />
                 </template>
               </n-button>
             </div>
@@ -186,8 +186,8 @@ import {
 } from "@/services/todayService";
 import { createDateCheckService } from "@/services/dateCheckService";
 import {
-  DocumentArrowLeft20Regular,
-  DocumentArrowRight20Regular,
+  Previous24Regular,
+  Next24Regular,
   CalendarToday20Regular,
 } from "@vicons/fluent";
 import { useDateService } from "@/services/dateService";
@@ -591,7 +591,7 @@ onMounted(() => {
     const elementHeight = draggableContainer.value.offsetHeight;
 
     const initialX = (windowWidth - elementWidth) * 0.35; // 正中间
-    const initialY = (windowHeight - elementHeight) * 0.96; // 偏下方
+    const initialY = (windowHeight - elementHeight) * 0.80; // 偏下方
 
     draggableContainer.value.style.left = `${initialX}px`;
     draggableContainer.value.style.top = `${initialY}px`;
