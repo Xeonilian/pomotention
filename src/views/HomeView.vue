@@ -381,7 +381,7 @@ const todayTodos = computed(() =>
 /** 今日的 Schedule */
 const todaySchedules = computed(() =>
   scheduleList.value.filter((schedule) => {
-    return dateService.isSelectedDate(schedule.id);
+    return dateService.isSelectedDate(schedule.activityDueRange[0]);
   })
 );
 /** Todo 更新状态（勾选） */
@@ -527,46 +527,33 @@ watch(
   { deep: true }
 );
 
-/** 活动due范围变化时 */
+/** 活动due范围变化时更新状态并同步到scheduleList */
+/** 活动due范围变化时仅更新状态 */
 watch(
-  () => activityList.value.map((a) => a.dueRange && a.dueRange[0]),
+  () => activityList.value.map(a => a.dueRange && a.dueRange[0]),
   () => {
-    activityList.value.forEach((activity) => {
-      const tag = `【activity: ${activity.title} (id:${activity.id})】`;
-      const due = activity.dueRange && activity.dueRange[0];
-      const scheduleIdx = scheduleList.value.findIndex(
-        (s) => s.activityId === activity.id
-      );
-      if (activity.class === "S" && due) {
-        const dueMs = typeof due === "string" ? Date.parse(due) : Number(due);
-        if (isTodayTodo(dueMs)) {
-          // 新增或更新schedule
-          if (scheduleIdx === -1) {
-            activity.status = "ongoing";
-            const sch = convertToSchedule(activity);
-            scheduleList.value.push(sch);
-          } else {
-            // 更新主字段
-            const sch = scheduleList.value[scheduleIdx];
-            sch.activityTitle = activity.title;
-            sch.activityDueRange = activity.dueRange
-              ? [...activity.dueRange]
-              : [0, "0"];
-            sch.status = activity.status || "";
-            sch.projectName = activity.projectId
-              ? `项目${activity.projectId}`
-              : undefined;
-            sch.location = activity.location || "";
-          }
-        } else if (scheduleIdx !== -1) {
-          // 非今日，移除schedule
-          activity.status = "";
-          console.log(`${tag} 由于不再属于今天，A.status 已取消`);
-        }
-      } else if (scheduleIdx !== -1) {
-        // 非S类型移除schedule
-        scheduleList.value.splice(scheduleIdx, 1);
-        console.log(`${tag} 非 S 类型，移除 schedule`);
+    const now = Date.now();
+    const today = new Date();
+    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+    const endOfDay = startOfDay + 24 * 60 * 60 * 1000 - 1;
+    
+    activityList.value.forEach(activity => {
+      if (!activity.dueRange || !activity.dueRange[0]) return;
+      
+      const dueMs = typeof activity.dueRange[0] === "string" 
+        ? Date.parse(activity.dueRange[0]) 
+        : Number(activity.dueRange[0]);
+      
+      // 只更新活动状态
+      if (dueMs >= startOfDay && dueMs <= endOfDay) {
+        // 截止日期是今天
+        activity.status = "ongoing";
+      } else if (dueMs < now) {
+        // 截止日期已过
+        activity.status = "cancelled";
+      } else {
+        // 截止日期还未到
+        activity.status = "";
       }
     });
   }
