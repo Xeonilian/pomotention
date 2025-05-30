@@ -69,14 +69,14 @@ export const useTimerStore = defineStore("timer", () => {
       return "w1";
     } else if (
       elapsedMinutes <=
-      r1Duration.value + wDuration.value + r2Duration.value
-    ) {
-      return "r2";
-    } else if (
-      elapsedMinutes <=
-      r1Duration.value + wDuration.value + r2Duration.value + wDuration.value
+      r1Duration.value + wDuration.value + wDuration.value
     ) {
       return "w2";
+    } else if (
+      elapsedMinutes <=
+      r1Duration.value + wDuration.value + wDuration.value + r2Duration.value
+    ) {
+      return "r2";
     } else {
       return "t";
     }
@@ -99,20 +99,20 @@ export const useTimerStore = defineStore("timer", () => {
         phaseStart = r1Duration.value;
         phaseDuration = wDuration.value;
         break;
-      case "r2":
+      case "w2": // w2 在 r2 之前
         phaseStart = r1Duration.value + wDuration.value;
-        phaseDuration = r2Duration.value;
-        break;
-      case "w2":
-        phaseStart = r1Duration.value + wDuration.value + r2Duration.value;
         phaseDuration = wDuration.value;
+        break;
+      case "r2": // r2 在 w2 之后
+        phaseStart = r1Duration.value + wDuration.value + wDuration.value;
+        phaseDuration = r2Duration.value;
         break;
       case "t":
         phaseStart =
           r1Duration.value +
           wDuration.value +
-          r2Duration.value +
-          wDuration.value;
+          wDuration.value +
+          r2Duration.value;
         phaseDuration = tDuration.value;
         break;
     }
