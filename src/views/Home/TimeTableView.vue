@@ -9,9 +9,9 @@
 -->
 
 <template>
-  <div class="schedule-container">
+  <div class="timetable-container">
     <!-- 1 按钮 -->
-    <div class="schedule-view-button-container">
+    <div class="timetable-view-button-container">
       <!-- 设置按钮 -->
 
       <n-button
@@ -38,7 +38,7 @@
         circle
         type="default"
         size="small"
-        class="schedule-button"
+        class="timetable-button"
         :title="showEditor ? '完成编辑' : '开始编辑'"
       >
         <template #icon>
@@ -69,7 +69,7 @@
       </n-popconfirm>
     </div>
     <!-- 2 编辑区 -->
-    <div v-if="showEditor" class="schedule-editor">
+    <div v-if="showEditor" class="timetable-editor">
       <TimeTableEditor
         v-if="showEditor"
         :blocks="props.blocks"
@@ -79,7 +79,7 @@
       />
     </div>
     <!-- 3 显示区 -->
-    <div v-else class="schedule-time-block" ref="container">
+    <div v-else class="timetable-time-block" ref="container">
       <TimeBlocks
         :blocks="props.blocks"
         :schedules="todaySchedules"
@@ -191,65 +191,44 @@ const effectivePxPerMinute = computed(() => {
   if (totalMinutes.value <= 0) return 0;
   return (containerHeight.value - adjPara.value) / totalMinutes.value;
 });
-
-// 调试用
-// watch(
-//   effectivePxPerMinute,
-//   (val) => {
-//     console.log(
-//       "实际像素分钟比:",
-//       val,
-//       "容器高度:",
-//       containerHeight.value,
-//       "总分钟数:",
-//       totalMinutes.value,
-//       "adjPara:",
-//       adjPara.value
-//     );
-//   },
-//   { immediate: true }
-// );
-
-// watch(
-//   timeRange,
-//   (val) => {
-//     console.log("timeRange changed:", val);
-//     console.log("blocks:", props.blocks);
-//   },
-//   { immediate: true }
-// );
 </script>
 
 <style scoped>
-.schedule-container {
+.timetable-container {
   height: 100%;
   overflow: visible;
 }
 
-.schedule-editor {
+.timetable-editor {
   height: 100%;
   padding: 10px;
 }
 
-.schedule-time-block {
-  margin: auto;
+.timetable-time-block {
   position: relative;
   height: 100%;
   bottom: 5px;
 }
-.schedule-view-button-container {
+.timetable-view-button-container {
   position: sticky;
   top: 0;
   z-index: 10;
-  margin: 10px auto 10px auto; /* 水平居中+下方间距 */
-  background-color: rgb(245, 245, 245);
-  border-radius: 15px; /* 建议用像素，百分号效果容易变形 */
-  width: 135px;
+  margin: 5px auto 15px auto;
+  border-radius: 15px;
+  width: 120px;
   height: 40px;
-  display: flex; /* 加flex布局 */
-  align-items: center; /* 垂直居中（高度方向） */
-  justify-content: center; /* 水平居中内部内容 */
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05); /* 如需要阴影 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   gap: 8px;
+}
+
+/* 添加这些样式来确保按钮居中 */
+.timetable-view-button-container :deep(.n-button) {
+  margin: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
 </style>

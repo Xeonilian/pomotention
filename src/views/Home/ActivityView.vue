@@ -267,7 +267,7 @@ function getCountdownClass(dueDate: number | undefined | null): string {
   top: 0;
   z-index: 10;
   margin: 0 auto 10px auto; /* 水平居中+下方间距 */
-  background-color: var(--color-background-light-light);
+  background-color: var(--color-background);
   border-radius: 15px; /* 建议用像素，百分号效果容易变形 */
   width: 220px;
   height: 40px;

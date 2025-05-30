@@ -377,7 +377,7 @@ function getTodoSegmentStyle(seg: TodoSegment): CSSProperties {
   width: 15px;
   height: 15px;
   border-radius: 50%;
-  background-color: var(--color-text-secondary);
+  background-color: var(--color-background-dark);
   color: var(--color-background);
   font-size: 12px;
   font-weight: bold;

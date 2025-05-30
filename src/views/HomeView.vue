@@ -82,6 +82,7 @@
             </div>
           </div>
           <TodayView
+            :selectedRowId="selectedRowId"
             :todayTodos="currentViewDateTodos"
             :todaySchedules="currentViewDateSchedules"
             :activeId="activeId"
@@ -93,6 +94,7 @@
             @update-todo-pomo="onUpdateTodoPomo"
             @select-task="onSelectTask"
             @select-activity="onSelectActivity"
+            @select-row="onSelectRow"
           />
         </div>
         <div
@@ -214,11 +216,13 @@ const activityList = ref<Activity[]>(loadActivities());
 const todoList = ref<Todo[]>(loadTodos());
 const scheduleList = ref<Schedule[]>(loadSchedules());
 const pickedTodoActivity = ref<Activity | null>(null); // 选中活动
-const activeId = ref<number | null>(null); // 当前激活活动id
 
 // 添加选中的任务ID状态
-const selectedTaskId = ref<number | null>(null);
-const selectedActivityId = ref<number | null>(null);
+const activeId = ref<number | null>(null); // 当前从ActivityView选中的
+const selectedTaskId = ref<number | null>(null); // 当前从Todo选中的TaskID
+const selectedActivityId = ref<number | null>(null); // 当前从Todo选中的ActivityID
+// 在现有的状态定义区域添加 #HACK
+const selectedRowId = ref<number | null>(null);
 
 // 计算当天的番茄钟数
 const currentDatePomoCount = computed(() => {
@@ -374,7 +378,14 @@ function onPickActivity(activity: Activity) {
 /** 标记当前活跃活动id，用于高亮和交互 */
 function onUpdateActiveId(id: number | null) {
   activeId.value = id;
-  selectedActivityId.value = null; // 添加这一行
+  selectedActivityId.value = null; // 避免多重高亮
+  selectedTaskId.value = null;
+  selectedRowId.value = null;
+}
+
+// 添加处理函数
+function onSelectRow(id: number | null) {
+  selectedRowId.value = id;
 }
 
 /** 修改番茄类型时的提示处理 */
@@ -471,6 +482,7 @@ function onDateChange(direction: "prev" | "next" | "today") {
 // 从Today选择任务处理函数
 function onSelectTask(taskId: number | null) {
   selectedTaskId.value = taskId;
+  activeId.value = null;
 }
 
 // 从Today选择任务处理函数
@@ -482,6 +494,7 @@ function onSelectActivity(activityId: number | null) {
 function clearSelectedRow() {
   selectedTaskId.value = null;
   activeId.value = null;
+  selectedRowId.value = null;
 }
 // ======================== 4. Task/执行相关操作 ========================
 // 在script部分添加处理函数
@@ -834,7 +847,7 @@ defineExpose({
   align-items: center;
   font-size: 16px;
   color: var(--color-text);
-  background: var(--color-background-light);
+  background: var(--color-background-light-transparent);
   padding: 2px 8px;
   border-radius: 12px;
   font-family: "Courier New", Courier, monospace;

@@ -82,7 +82,7 @@
             <td class="ellipsis">{{ todo.activityTitle ?? "-" }}</td>
             <td>
               <div class="pomo-container">
-                {{ todo.pomoType }}
+                <span class="pomo-type">{{ todo.pomoType }}</span>
                 <template v-for="(est, index) in todo.estPomo" :key="index">
                   <div class="pomo-group">
                     <template v-for="i in est" :key="i">
@@ -593,7 +593,7 @@ function handleRowClick(todo: TodoWithNumberPriority) {
 
 /* 隔行变色 */
 .table-body tr:nth-child(even) {
-  background-color: var(--color-background-light-light);
+  background-color: var(--color-background-light-transparent);
 }
 
 /* 激活行样式 */
@@ -629,7 +629,7 @@ function handleRowClick(todo: TodoWithNumberPriority) {
   line-height: 18px;
   font-weight: bold;
   color: var(--color-background);
-  background-color: var(--color-text-secondary);
+  background-color: var(--color-background-dark);
   font-size: 16px;
   box-shadow: 0 1px 3px var(--color-background-light);
 }
@@ -713,5 +713,8 @@ function handleRowClick(todo: TodoWithNumberPriority) {
 /* 同时具有active和selected状态时的样式 */
 .table-body tr.active-row.selected-row {
   background-color: var(--color-yellow-transparent) !important;
+}
+.pomo-type {
+  font-size: 11px;
 }
 </style>

@@ -72,7 +72,7 @@
   --color-background-light-light: #f5f5f5;
   --color-text-primary-transparent: rgba(51, 54, 57, 0.3);
   --color-text-secondary-transparent: rgba(102, 102, 102, 0.3);
-  --color-background-light-transparent: #rgba(0, 0, 0, 0.1);
+  --color-background-light-transparent: rgba(226, 226, 226, 0.2);
 
   /* 其他变量 */
   --bar-length: 175px;
