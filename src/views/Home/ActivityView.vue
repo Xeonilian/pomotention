@@ -173,18 +173,18 @@ function showErrorPopover(message: string) {
   }, 3000);
 }
 
-// 选择活动处理函数
+// 选择活动处理函数，提示
 function pickActivity() {
   // 1. 检查是否有选中的活动
   if (props.activeId === null) {
-    showErrorPopover("请先选择一个活动");
+    showErrorPopover("请选择一个活动！");
     return;
   }
 
-  // 2. 查找对应的活动
-  const picked = props.activities.find((a) => a.id === props.activeId);
+  // 2. 查找todo中是否有对应的活动
+  const picked = props.todos.find((t) => t.activityId === props.activeId);
   if (picked) {
-    showErrorPopover("该活动以及选择应的活动");
+    showErrorPopover("该活动已经启动待办");
     return;
   }
 
