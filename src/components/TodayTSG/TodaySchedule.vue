@@ -64,6 +64,7 @@
                   </template>
                 </n-button>
                 <n-button
+                  v-if="schedule.status !== 'done'"
                   size="tiny"
                   type="error"
                   secondary

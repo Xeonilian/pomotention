@@ -578,7 +578,6 @@ function handleRowClick(todo: TodoWithNumberPriority) {
 }
 
 .table-body td:nth-child(6) {
-
   justify-content: center; /* 水平居中 */
   align-items: center; /* 垂直居中 */
   min-height: 25px;
