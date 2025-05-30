@@ -2,72 +2,52 @@ import { defineStore } from "pinia";
 import { STORAGE_KEYS } from "@/core/constants";
 import type { Todo } from "@/core/types/Todo";
 
+export interface DailyPomoData {
+  count: number; // 番茄钟总数
+  diff: number; // 和上次相比的增量
+}
+
 export const usePomoStore = defineStore("pomo", {
   state: () => {
-    // 从 localStorage 获取 globalPomoCount
-    const storedCount = localStorage.getItem(STORAGE_KEYS.GLOBAL_POMO_COUNT);
-    let initialCount = 0;
-
-    if (storedCount !== null) {
-      try {
-        initialCount = parseInt(storedCount, 10);
-        if (isNaN(initialCount)) {
-          initialCount = 0;
-        }
-      } catch (e) {
-        initialCount = 0;
-      }
+    // 从localStorage获取
+    let globalPomoCount = 0;
+    const storedGlobal = localStorage.getItem(STORAGE_KEYS.GLOBAL_POMO_COUNT);
+    if (storedGlobal) {
+      globalPomoCount = parseInt(storedGlobal, 10) || 0;
     }
 
-    // 从 localStorage 获取 lastTodayCount
-    const storedLastCount = localStorage.getItem(STORAGE_KEYS.LAST_TODAY_COUNT);
-    let initialLastCount = 0;
-
-    if (storedLastCount !== null) {
+    // 所有天的pomo信息
+    let dailyPomos: Record<string, DailyPomoData> = {};
+    const storedDaily = localStorage.getItem(STORAGE_KEYS.DAILY_POMOS);
+    if (storedDaily) {
       try {
-        initialLastCount = parseInt(storedLastCount, 10);
-        if (isNaN(initialLastCount)) {
-          initialLastCount = 0;
-        }
-      } catch (e) {
-        initialLastCount = 0;
-      }
+        dailyPomos = JSON.parse(storedDaily);
+      } catch {}
     }
 
     return {
-      globalPomoCount: initialCount,
-      todayTodos: [] as Todo[],
-      lastTodayCount: initialLastCount,
+      globalPomoCount,
+      dailyPomos, // { [dateStr]: { count, diff } }
+      todosByDate: {} as Record<string, Todo[]>, // { [dateStr]: Todo[] }
     };
   },
 
   getters: {
-    todayPomoCount: (state) => {
-      const count = state.todayTodos.reduce((total, todo) => {
-        if (
-          todo.realPomo &&
-          todo.realPomo.length > 0 &&
-          todo.pomoType === "🍅"
-        ) {
-          return total + todo.realPomo.reduce((sum, pomo) => sum + pomo, 0);
-        }
-        return total;
-      }, 0);
-      return count;
+    // 获取当前视图日期的番茄钟数
+    getPomoCountByDate: (state) => (dateString: string) => {
+      return state.dailyPomos[dateString]?.count || 0;
     },
-
-    globalRealPomo: (state): number => {
-      return state.globalPomoCount;
-    },
+    // 全局累计
+    globalRealPomo: (state): number => state.globalPomoCount,
   },
 
   actions: {
-    setTodayTodos(todos: Todo[]) {
-      // console.log('setTodayTodos 被调用');
-      // console.log('当前 lastTodayCount:', this.lastTodayCount);
-      // console.log('当前 globalPomoCount:', this.globalPomoCount);
+    // 设置某天的todos，并自动计算count/diff
+    setTodosForDate(dateString: string, todos: Todo[]) {
+      // 保留当天的 todos
+      this.todosByDate[dateString] = todos;
 
-      // 计算新的番茄钟总数
+      // 计算今日总番茄钟数
       const newCount = todos.reduce((total, todo) => {
         if (
           todo.realPomo &&
@@ -79,68 +59,60 @@ export const usePomoStore = defineStore("pomo", {
         return total;
       }, 0);
 
-      // console.log('计算得到的新计数 newCount:', newCount);
+      // 上次保存的数量
+      const last = this.dailyPomos[dateString]?.count || 0;
+      const diff = newCount - last;
 
-      // 计算与上次计数的差值
-      const diff = newCount - this.lastTodayCount;
-      // console.log('计算得到的差值 diff:', diff);
+      // 保存每日计数及diff
+      this.dailyPomos[dateString] = { count: newCount, diff };
 
-      // 更新全局计数
+      // 累计/调整全局
       if (diff !== 0) {
         this.globalPomoCount = Math.max(0, this.globalPomoCount + diff);
-        // console.log('更新后的 globalPomoCount:', this.globalPomoCount);
         localStorage.setItem(
           STORAGE_KEYS.GLOBAL_POMO_COUNT,
           this.globalPomoCount.toString()
         );
       }
 
-      // 更新状态
-      this.todayTodos = todos;
-      this.lastTodayCount = newCount;
-      // 保存 lastTodayCount 到 localStorage
+      // 持久化dailyPomos
       localStorage.setItem(
-        STORAGE_KEYS.LAST_TODAY_COUNT,
-        this.lastTodayCount.toString()
+        STORAGE_KEYS.DAILY_POMOS,
+        JSON.stringify(this.dailyPomos)
       );
-      // console.log('更新后的 lastTodayCount:', this.lastTodayCount);
     },
 
-    updateGlobalPomoCount(todo: Todo) {
-      // 这个方法现在只用于设置今日待办事项
-      this.setTodayTodos(this.todayTodos);
+    // 支持获取任意视图日期当日todos
+    getTodosForDate(dateStr: string): Todo[] {
+      return this.todosByDate[dateStr] || [];
     },
 
+    // 重置全局累计
     resetGlobalPomoCount() {
       this.globalPomoCount = 0;
-      this.lastTodayCount = 0;
       localStorage.setItem(STORAGE_KEYS.GLOBAL_POMO_COUNT, "0");
     },
 
-    // 添加新的 action 处理日期变更
-    handleDateChange() {
-      // 重置 lastTodayCount
-      this.lastTodayCount = 0;
-      localStorage.setItem(STORAGE_KEYS.LAST_TODAY_COUNT, "0");
-
-      // 保持 globalPomoCount 不变，因为它需要累积历史数据
-      // 重新计算今天的番茄钟数
-      const todayCount = this.todayTodos.reduce((total, todo) => {
-        if (
-          todo.realPomo &&
-          todo.realPomo.length > 0 &&
-          todo.pomoType === "🍅"
-        ) {
-          return total + todo.realPomo.reduce((sum, pomo) => sum + pomo, 0);
-        }
-        return total;
-      }, 0);
-
-      this.lastTodayCount = todayCount;
+    // 设置初始全局计数（用于导入历史数据）
+    setInitialGlobalCount(initialCount: number) {
+      this.globalPomoCount = Math.max(0, initialCount);
       localStorage.setItem(
-        STORAGE_KEYS.LAST_TODAY_COUNT,
-        todayCount.toString()
+        STORAGE_KEYS.GLOBAL_POMO_COUNT,
+        this.globalPomoCount.toString()
       );
+    },
+
+    // 重置并设置新的初始值
+    resetAndSetInitial(newInitialCount: number = 0) {
+      // 清空日常数据（可选）
+      this.dailyPomos = {};
+      this.todosByDate = {};
+
+      // 设置新的全局起始值
+      this.setInitialGlobalCount(newInitialCount);
+
+      // 清理localStorage
+      localStorage.setItem(STORAGE_KEYS.DAILY_POMOS, "{}");
     },
   },
 });

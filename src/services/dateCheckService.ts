@@ -13,7 +13,6 @@ interface DateCheckServiceOptions {
   scheduleList: Ref<Schedule[]>;
   todoList: Ref<Todo[]>;
   convertToSchedule: (activity: Activity) => Schedule;
-  convertToTodo: (activity: Activity) => Todo;
   onDateChange?: (currentDate: string) => void;
 }
 
@@ -30,7 +29,6 @@ export function createDateCheckService({
   let debounceTimer: TimeoutType | null = null;
   let debouncedCheckFunction: ((event: Event) => void) | null = null;
 
-
   // 使用本地时区日期初始化
   let lastCheckedDate: string = getLocalDateString();
 
@@ -41,7 +39,7 @@ export function createDateCheckService({
    */
   function checkDateChange() {
     const currentDate = getLocalDateString();
-    
+
     if (currentDate !== lastCheckedDate) {
       console.log(`日期从 ${lastCheckedDate} 变为 ${currentDate}`);
       processSchedulesForNewDay();

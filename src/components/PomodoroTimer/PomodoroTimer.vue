@@ -154,15 +154,17 @@ const breakDuration = computed(() => settingStore.durations.breakDuration);
 const selectedDuration = ref(breakDuration.value);
 
 // 把常量转成 CSS 变量名格式
-const timerStyleVars = computed(() => ({
-  "--bar-length": barLength.value,
-  "--red-bar-length": `${
-    parseFloat(barLength.value) * timerStore.redBarPercentage
-  }px`,
-  "--red-bar-offset": `${
-    parseFloat(barLength.value) * timerStore.redBarOffsetPercentage
-  }px`,
-}));
+const timerStyleVars = computed(() => {
+  const barLengthValue = 175;
+
+  const calculatedLength = barLengthValue * timerStore.redBarPercentage;
+  const calculatedOffset = barLengthValue * timerStore.redBarOffsetPercentage;
+  return {
+    "--bar-length": barLength.value,
+    "--red-bar-length": `${calculatedLength}px`,
+    "--red-bar-offset": `${calculatedOffset}px`,
+  };
+});
 
 // 1 状态信息
 const stateMessage = computed((): string => {

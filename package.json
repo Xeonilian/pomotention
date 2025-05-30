@@ -23,7 +23,6 @@
   "devDependencies": {
     "@ricons/fluent": "^0.13.0",
     "@tauri-apps/cli": "^2",
-    "@types/dompurify": "^3.2.0",
     "@types/marked": "^6.0.0",
     "@types/node": "^22.14.1",
     "@vicons/fluent": "^0.13.0",

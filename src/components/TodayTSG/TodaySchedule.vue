@@ -241,7 +241,6 @@ function handleRowClick(schedule: Schedule) {
   text-align: center;
 }
 .table-body td:nth-child(6) {
-
   justify-content: center; /* 水平居中 */
   align-items: center; /* 垂直居中 */
   min-height: 25px;
@@ -254,7 +253,7 @@ function handleRowClick(schedule: Schedule) {
 
 /* 隔行变色 */
 .table-body tr:nth-child(even) {
-  background-color: var(--color-background-light-light);
+  background-color: var(--color-background-light);
 }
 
 /* 激活行样式 */

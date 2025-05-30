@@ -11,7 +11,7 @@ export const TimerStyleDefaults = {
 };
 
 export const CategoryColors = {
-  living: "var(--color-blue-light)",
+  living: "var(--color-background-light-transparent)",
   sleeping: "var(--color-background-light)",
   working: "var(--color-backgroud)",
 } as const;
@@ -28,7 +28,7 @@ export const STORAGE_KEYS = {
   TODO: "todayTodo",
   SCHEDULE: "todaySchedule",
   GLOBAL_POMO_COUNT: "globalPomoCount",
-  DAILY_POMO_COUNTS: "dailyPomoCount",
+  DAILY_POMOS: "dailyPomos",
   TASK: "taskTrack",
   LAST_TODAY_COUNT: "lastTodayCount",
 } as const;

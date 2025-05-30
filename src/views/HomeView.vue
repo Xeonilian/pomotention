@@ -12,8 +12,8 @@
         <TimeTableView
           :blocks="viewBlocks"
           :current-type="currentType"
-          :todayTodos="todayTodos"
-          :todaySchedules="todaySchedules"
+          :todayTodos="currentViewDateTodos"
+          :todaySchedules="currentViewDateSchedules"
           @update-blocks="onBlocksUpdate"
           @reset-schedule="onTimeTableReset"
           @change-type="onTypeChange"
@@ -38,7 +38,7 @@
             <div class="today-info">
               <span class="today-status">{{ dateService.currentDate }}</span>
               <span class="global-pomo">
-                <span class="today-pomo">🍅 {{ todayPomoCount }}/</span>
+                <span class="today-pomo">🍅 {{ currentDatePomoCount }}/</span>
                 <span class="total-pomo">{{ globalRealPomo }}</span>
               </span>
             </div>
@@ -82,8 +82,9 @@
             </div>
           </div>
           <TodayView
-            :todayTodos="todayTodos"
-            :todaySchedules="todaySchedules"
+            :selectedRowId="selectedRowId"
+            :todayTodos="currentViewDateTodos"
+            :todaySchedules="currentViewDateSchedules"
             :activeId="activeId"
             @update-schedule-status="onUpdateScheduleStatus"
             @update-todo-status="onUpdateTodoStatus"
@@ -92,6 +93,8 @@
             @update-todo-est="onUpdateTodoEst"
             @update-todo-pomo="onUpdateTodoPomo"
             @select-task="onSelectTask"
+            @select-activity="onSelectActivity"
+            @select-row="onSelectRow"
           />
         </div>
         <div
@@ -123,6 +126,8 @@
         <ActivityView
           :activities="activityList"
           :activeId="activeId"
+          :todos="todoList"
+          :selectedActivityId="selectedActivityId"
           @pick-activity-todo="onPickActivity"
           @add-activity="onAddActivity"
           @delete-activity="onDeleteActivity"
@@ -174,14 +179,12 @@ import {
   passPickedActivity,
   togglePomoType,
   convertToSchedule,
-  convertToTodo,
 } from "@/services/activityService";
 import {
   updateScheduleStatus,
   updateTodoStatus,
   handleSuspendTodo,
   handleSuspendSchedule,
-  isToday as isTodayTodo,
   updateTodoPomo,
 } from "@/services/todayService";
 import { createDateCheckService } from "@/services/dateCheckService";
@@ -213,13 +216,19 @@ const activityList = ref<Activity[]>(loadActivities());
 const todoList = ref<Todo[]>(loadTodos());
 const scheduleList = ref<Schedule[]>(loadSchedules());
 const pickedTodoActivity = ref<Activity | null>(null); // 选中活动
-const activeId = ref<number | null>(null); // 当前激活活动id
 
 // 添加选中的任务ID状态
-const selectedTaskId = ref<number | null>(null);
+const activeId = ref<number | null>(null); // 当前从ActivityView选中的
+const selectedTaskId = ref<number | null>(null); // 当前从Todo选中的TaskID
+const selectedActivityId = ref<number | null>(null); // 当前从Todo选中的ActivityID
+// 在现有的状态定义区域添加 #HACK
+const selectedRowId = ref<number | null>(null);
 
 // 计算当天的番茄钟数
-const todayPomoCount = computed(() => pomoStore.todayPomoCount);
+const currentDatePomoCount = computed(() => {
+  const dateString = dateService.getCurrentDateStr();
+  return pomoStore.getPomoCountByDate(dateString);
+});
 
 // 计算全局realPomo（历史 + 当天）
 const globalRealPomo = computed(() => pomoStore.globalRealPomo);
@@ -241,57 +250,70 @@ const dateCheckService = createDateCheckService({
   scheduleList,
   todoList,
   convertToSchedule,
-  convertToTodo,
   onDateChange() {
     // 日期变时：刷新 blocks 并刷新 currentDate 触发 UI 自动更新
     allBlocks.value[currentType.value] = [
       ...allBlocks.value[currentType.value],
     ];
     dateService.updateCurrentDate();
-    scheduleList.value = [...scheduleList.value];
-    todoList.value = [...todoList.value];
-    dateService.resetToToday();
+    // dateService.resetToToday(); HACK
   },
 });
 
-// 监听todoList变化，更新全局计数
-watch(
-  todoList,
-  (newTodos) => {
-    const todayTodos = newTodos.filter((todo) => isTodayTodo(todo.id));
-    pomoStore.setTodayTodos(todayTodos);
-  },
-  { deep: true, immediate: true }
-);
-
-// 监听单个todo的番茄钟变化
+// 1. 监听：todos的realPomo数组变化（番茄钟完成情况变化）
 watch(
   () => todoList.value.map((todo) => todo.realPomo),
   () => {
-    const todayTodos = todoList.value.filter((todo) => isTodayTodo(todo.id));
-    pomoStore.setTodayTodos(todayTodos);
+    // 当任何todo的realPomo变化时，重新计算当前日期的番茄钟总数
+    updateCurrentDateTodos();
   },
   { deep: true }
 );
 
-// 监听当前日期变化
+// 2. 监听：当前视图日期变化（用户切换日期）
 watch(
-  () => dateService.currentViewDate,
+  () => dateService.currentViewDate.value,
   () => {
+    // 日期切换时的处理：
+    // - 检查日期变化（可能触发一些全局状态更新）
+    // - 清除当前选中的任务
+    // - 更新新日期的todos到store
     dateCheckService.checkDateChange();
+    clearSelectedRow();
+    updateCurrentDateTodos();
+  },
+  { immediate: true }
+);
+
+// 3. 监听：选择日期变化（通常与currentViewDate同步，但单独处理UI状态）
+watch(
+  () => dateService.selectedDate.value,
+  () => {
+    // 选择日期变化时只需要清除选中状态
+    // todos更新由上面的currentViewDate监听器处理
     clearSelectedRow();
   },
   { immediate: true }
 );
 
-// 监听选择日期变化
+// 4. 监听：todoList整体变化（新增、删除todo）
 watch(
-  () => dateService.selectedDate,
+  todoList,
   () => {
-    clearSelectedRow();
+    // 当todoList发生变化时（新增/删除todo），更新当前日期的todos
+    updateCurrentDateTodos();
   },
-  { immediate: true }
+  { deep: true, immediate: true }
 );
+
+// 通用函数：更新当前日期的todos到store
+function updateCurrentDateTodos() {
+  const dateString = dateService.getCurrentDateStr();
+  const currentTodos = todoList.value.filter((todo) => {
+    return dateService.isSelectedDate(todo.id);
+  });
+  pomoStore.setTodosForDate(dateString, currentTodos);
+}
 
 /** 自动保存数据 */
 watch(activityList, (value) => saveActivities(value), { deep: true });
@@ -356,6 +378,14 @@ function onPickActivity(activity: Activity) {
 /** 标记当前活跃活动id，用于高亮和交互 */
 function onUpdateActiveId(id: number | null) {
   activeId.value = id;
+  selectedActivityId.value = null; // 避免多重高亮
+  selectedTaskId.value = null;
+  selectedRowId.value = null;
+}
+
+// 添加处理函数
+function onSelectRow(id: number | null) {
+  selectedRowId.value = id;
 }
 
 /** 修改番茄类型时的提示处理 */
@@ -372,14 +402,14 @@ function onTogglePomoType(id: number, event?: Event) {
 
 // ======================== 3. Today/任务相关操作 ========================
 /** 今日的 Todo */
-const todayTodos = computed(() =>
+const currentViewDateTodos = computed(() =>
   todoList.value.filter((todo) => {
     return dateService.isSelectedDate(todo.id);
   })
 );
 
 /** 今日的 Schedule */
-const todaySchedules = computed(() =>
+const currentViewDateSchedules = computed(() =>
   scheduleList.value.filter((schedule) => {
     return dateService.isSelectedDate(schedule.activityDueRange[0]);
   })
@@ -401,17 +431,11 @@ function onUpdateTodoEst(id: number, estPomo: number[]) {
 }
 
 /** 更新待办事项的实际番茄钟完成情况 */
+/** 更新待办事项的实际番茄钟完成情况 */
 function onUpdateTodoPomo(id: number, realPomo: number[]) {
-  console.log("更新番茄钟完成情况:", { id, realPomo });
   updateTodoPomo(todoList.value, id, realPomo);
   saveTodos(todoList.value);
-
-  // 确保更新全局计数
-  const todo = todoList.value.find((t) => t.id === id);
-  if (todo && isTodayTodo(todo.id)) {
-    console.log("触发全局计数更新");
-    pomoStore.updateGlobalPomoCount(todo);
-  }
+  // watch监听器会自动检测变化并更新store
 }
 
 /** Todo 推迟处理 */
@@ -453,19 +477,24 @@ function onDateChange(direction: "prev" | "next" | "today") {
       dateService.resetToToday();
       break;
   }
-  // 在日期变更后调用 pomoStore 的 handleDateChange
-  pomoStore.handleDateChange();
 }
 
 // 从Today选择任务处理函数
 function onSelectTask(taskId: number | null) {
   selectedTaskId.value = taskId;
+  activeId.value = null;
+}
+
+// 从Today选择任务处理函数
+function onSelectActivity(activityId: number | null) {
+  selectedActivityId.value = activityId;
 }
 
 // 清除Today选中行的函数
 function clearSelectedRow() {
   selectedTaskId.value = null;
   activeId.value = null;
+  selectedRowId.value = null;
 }
 // ======================== 4. Task/执行相关操作 ========================
 // 在script部分添加处理函数
@@ -529,20 +558,25 @@ watch(
 
 /** 活动due范围变化时仅更新状态 */
 watch(
-  () => activityList.value.map(a => a.dueRange && a.dueRange[0]),
+  () => activityList.value.map((a) => a.dueRange && a.dueRange[0]),
   () => {
     const now = Date.now();
     const today = new Date();
-    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+    const startOfDay = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate()
+    ).getTime();
     const endOfDay = startOfDay + 24 * 60 * 60 * 1000 - 1;
-    
-    activityList.value.forEach(activity => {
+
+    activityList.value.forEach((activity) => {
       if (!activity.dueRange || !activity.dueRange[0]) return;
-      
-      const dueMs = typeof activity.dueRange[0] === "string" 
-        ? Date.parse(activity.dueRange[0]) 
-        : Number(activity.dueRange[0]);
-      
+
+      const dueMs =
+        typeof activity.dueRange[0] === "string"
+          ? Date.parse(activity.dueRange[0])
+          : Number(activity.dueRange[0]);
+
       // 只更新活动状态
       if (dueMs >= startOfDay && dueMs <= endOfDay) {
         // 截止日期是今天
@@ -577,7 +611,7 @@ onMounted(() => {
     const elementHeight = draggableContainer.value.offsetHeight;
 
     const initialX = (windowWidth - elementWidth) * 0.35; // 正中间
-    const initialY = (windowHeight - elementHeight) * 0.80; // 偏下方
+    const initialY = (windowHeight - elementHeight) * 0.8; // 偏下方
 
     draggableContainer.value.style.left = `${initialX}px`;
     draggableContainer.value.style.top = `${initialY}px`;
@@ -817,7 +851,7 @@ defineExpose({
   align-items: center;
   font-size: 16px;
   color: var(--color-text);
-  background: var(--color-background-light);
+  background: var(--color-background-light-transparent);
   padding: 2px 8px;
   border-radius: 12px;
   font-family: "Courier New", Courier, monospace;

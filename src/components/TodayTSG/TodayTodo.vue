@@ -82,7 +82,7 @@
             <td class="ellipsis">{{ todo.activityTitle ?? "-" }}</td>
             <td>
               <div class="pomo-container">
-                {{ todo.pomoType }}
+                <span class="pomo-type">{{ todo.pomoType }}</span>
                 <template v-for="(est, index) in todo.estPomo" :key="index">
                   <div class="pomo-group">
                     <template v-for="i in est" :key="i">
@@ -103,7 +103,11 @@
 
                 <!-- 新增估计按钮 -->
                 <n-button
-                  v-if="todo.estPomo && todo.estPomo.length < 3"
+                  v-if="
+                    todo.estPomo &&
+                    todo.estPomo.length < 3 &&
+                    todo.status !== 'done'
+                  "
                   size="tiny"
                   type="primary"
                   secondary
@@ -134,7 +138,7 @@
                   </template>
                 </n-button>
                 <n-button
-                  v-if="!todo.realPomo"
+                  v-if="!todo.realPomo && todo.status !== 'done'"
                   size="tiny"
                   type="error"
                   secondary
@@ -249,7 +253,8 @@ const emit = defineEmits<{
   (e: "update-todo-est", id: number, estPomo: number[]): void;
   (e: "convert-to-task", id: number): void;
   (e: "select-task", taskId: number | null): void;
-  (e: "select-row", id: number | null): void; // 新增：选中行事件
+  (e: "select-row", id: number | null): void;
+  (e: "select-activity", activityId: number | null): void;
 }>();
 
 const editingTodo = ref<TodoWithNumberPriority | null>(null);
@@ -516,6 +521,7 @@ function handleConvertToTask(todo: TodoWithNumberPriority) {
 function handleRowClick(todo: TodoWithNumberPriority) {
   emit("select-row", todo.id); // 新增：发送选中行事件
   emit("select-task", todo.taskId || null);
+  emit("select-activity", todo.activityId || null);
 }
 </script>
 
@@ -591,8 +597,7 @@ function handleRowClick(todo: TodoWithNumberPriority) {
 
 /* 隔行变色 */
 .table-body tr:nth-child(even) {
-  background-color: var(--color-background-light-light);
-  height: 25px;
+  background-color: var(--color-background-light-transparent);
 }
 
 /* 激活行样式 */
@@ -628,7 +633,7 @@ function handleRowClick(todo: TodoWithNumberPriority) {
   line-height: 18px;
   font-weight: bold;
   color: var(--color-background);
-  background-color: var(--color-text-secondary);
+  background-color: var(--color-background-dark);
   font-size: 16px;
   box-shadow: 0 1px 3px var(--color-background-light);
 }
@@ -712,5 +717,8 @@ function handleRowClick(todo: TodoWithNumberPriority) {
 /* 同时具有active和selected状态时的样式 */
 .table-body tr.active-row.selected-row {
   background-color: var(--color-yellow-transparent) !important;
+}
+.pomo-type {
+  font-size: 11px;
 }
 </style>
