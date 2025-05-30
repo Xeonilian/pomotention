@@ -26,11 +26,12 @@ export const useTimerStore = defineStore("timer", () => {
   const r2Duration = ref<number>((1 / 25) * workDuration.value);
   const wDuration = ref<number>((10.5 / 25) * workDuration.value);
   const tDuration = ref<number>((1 / 25) * workDuration.value);
-  const redBarOffsetPercentage = ref<number>(
-    r1Duration.value / workDuration.value
+  // 将这两行改为 computed
+  const redBarOffsetPercentage = computed(
+    () => r1Duration.value / workDuration.value
   );
-  const redBarPercentage = ref<number>(
-    (wDuration.value * 2) / workDuration.value
+  const redBarPercentage = computed(
+    () => (wDuration.value * 2) / workDuration.value
   );
 
   // 进度条颜色控制
