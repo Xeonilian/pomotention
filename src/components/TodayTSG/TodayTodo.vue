@@ -138,7 +138,7 @@
                   </template>
                 </n-button>
                 <n-button
-                  v-if="!todo.realPomo"
+                  v-if="!todo.realPomo && todo.status !== 'done'"
                   size="tiny"
                   type="error"
                   secondary
