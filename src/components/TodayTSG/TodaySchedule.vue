@@ -232,8 +232,8 @@ function handleRowClick(schedule: Schedule) {
   white-space: normal;
   overflow: hidden;
   word-break: break-word;
-  min-height: 20px;
-  height: auto;
+  min-height: 25px;
+  height: 25px;
 }
 .table-body td:first-child,
 .table-body td:nth-child(2),
@@ -241,9 +241,11 @@ function handleRowClick(schedule: Schedule) {
   text-align: center;
 }
 .table-body td:nth-child(6) {
-  display: flex;
+
   justify-content: center; /* 水平居中 */
   align-items: center; /* 垂直居中 */
+  min-height: 25px;
+  height: 25px;
 }
 /* 允许描述和地点列显示省略号 */
 .ellipsis {

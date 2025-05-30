@@ -754,11 +754,15 @@ defineExpose({
 }
 
 .middle-top.not-today .today-header {
-  background: var(--color-green-light);
+  background: var(--color-background-light-light);
+
 }
 
 .middle-top.not-today .today-status {
   color: var(--color-text);
+  border-radius: 6px;
+  margin-top: 2px;
+  background: var(--color-green-light);
 }
 
 .middle-top.not-today .global-pomo {

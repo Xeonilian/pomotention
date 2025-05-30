@@ -22,7 +22,7 @@
             class="header-button"
           >
           <template #icon>
-            <n-icon :component="control.icon" />
+            <n-icon size="18" :component="control.icon" />
             </template>
           </n-button>
         </div>
@@ -95,7 +95,7 @@ function buttonStyle(show: boolean, key: ViewKey) {
     filter: show ? (isDisabled ? "grayscale(50%)" : "none") : "grayscale(100%)",
     opacity: show ? (isDisabled ? 0.4 : 1) : 0.6,
     backgroundColor: buttonStates.value[key]
-      ? "var(--color-blue-light)"
+      ? "var(--color-background-dark)"
       : "var(--color-background-light)",
     borderRadius: "4px",
     transition: "all 0.3s ease",
