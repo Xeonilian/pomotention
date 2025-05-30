@@ -17,7 +17,11 @@
 -->
 <template>
   <div v-for="item in sortedDisplaySheet" :key="item.id">
-    <div v-if="item.status !== 'done'" class="activity-row">
+    <div
+      v-if="item.status !== 'done'"
+      class="activity-row"
+      :class="{ 'highlight-line': item.id === activityId }"
+    >
       <n-input
         v-model:value="item.title"
         type="text"
@@ -155,6 +159,7 @@ import type { Activity } from "@/core/types/Activity";
 const props = defineProps<{
   displaySheet: Activity[];
   getCountdownClass: (dueDate: number | undefined | null) => string;
+  activityId: number | null;
 }>();
 
 defineEmits(["focus-row"]);
@@ -243,5 +248,9 @@ function onInputUpdate(item: Activity, value: string) {
   color: var(--color-text-primary) !important;
   opacity: 1 !important;
   -webkit-text-fill-color: var(--color-text-primary) !important;
+}
+
+.highlight-line {
+  background-color: var(--color-yellow);
 }
 </style>

@@ -27,6 +27,7 @@
         @update-todo-est="updateTodoEst"
         @convert-to-task="onConvertToTask"
         @select-task="onSelectTask"
+        @select-activity="onSelectActivity"
         @select-row="handleSelectRow"
       />
     </div>
@@ -82,7 +83,8 @@ const emit = defineEmits<{
   ): void;
   (e: "convert-to-task", id: number): void;
   (e: "select-task", taskId: number | null): void;
-}>();
+  (e: "select-activity", activityId: number | null): void;
+}>(); // HACK
 
 // 添加选中行状态
 const selectedRowId = ref<number | null>(null);
@@ -122,6 +124,11 @@ function onConvertToTask(id: number) {
 
 function onSelectTask(taskId: number | null) {
   emit("select-task", taskId);
+}
+
+// HACK
+function onSelectActivity(activityId: number | null) {
+  emit("select-activity", activityId);
 }
 </script>
 <style scoped>

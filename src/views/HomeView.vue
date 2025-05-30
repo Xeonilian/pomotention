@@ -92,6 +92,7 @@
             @update-todo-est="onUpdateTodoEst"
             @update-todo-pomo="onUpdateTodoPomo"
             @select-task="onSelectTask"
+            @select-activity="onSelectActivity"
           />
         </div>
         <div
@@ -123,6 +124,8 @@
         <ActivityView
           :activities="activityList"
           :activeId="activeId"
+          :todos="todoList"
+          :selectedActivityId="selectedActivityId"
           @pick-activity-todo="onPickActivity"
           @add-activity="onAddActivity"
           @delete-activity="onDeleteActivity"
@@ -216,6 +219,7 @@ const activeId = ref<number | null>(null); // 当前激活活动id
 
 // 添加选中的任务ID状态
 const selectedTaskId = ref<number | null>(null);
+const selectedActivityId = ref<number | null>(null);
 
 // 计算当天的番茄钟数
 const currentDatePomoCount = computed(() => {
@@ -468,6 +472,11 @@ function onDateChange(direction: "prev" | "next" | "today") {
 // 从Today选择任务处理函数
 function onSelectTask(taskId: number | null) {
   selectedTaskId.value = taskId;
+}
+
+// 从Today选择任务处理函数
+function onSelectActivity(activityId: number | null) {
+  selectedActivityId.value = activityId;
 }
 
 // 清除Today选中行的函数

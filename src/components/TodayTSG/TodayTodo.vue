@@ -103,7 +103,11 @@
 
                 <!-- 新增估计按钮 -->
                 <n-button
-                  v-if="todo.estPomo && todo.estPomo.length < 3"
+                  v-if="
+                    todo.estPomo &&
+                    todo.estPomo.length < 3 &&
+                    todo.status !== 'done'
+                  "
                   size="tiny"
                   type="primary"
                   secondary
@@ -249,7 +253,8 @@ const emit = defineEmits<{
   (e: "update-todo-est", id: number, estPomo: number[]): void;
   (e: "convert-to-task", id: number): void;
   (e: "select-task", taskId: number | null): void;
-  (e: "select-row", id: number | null): void; // 新增：选中行事件
+  (e: "select-row", id: number | null): void;
+  (e: "select-activity", activityId: number | null): void;
 }>();
 
 const editingTodo = ref<TodoWithNumberPriority | null>(null);
@@ -516,6 +521,7 @@ function handleConvertToTask(todo: TodoWithNumberPriority) {
 function handleRowClick(todo: TodoWithNumberPriority) {
   emit("select-row", todo.id); // 新增：发送选中行事件
   emit("select-task", todo.taskId || null);
+  emit("select-activity", todo.activityId || null);
 }
 </script>
 
