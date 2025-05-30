@@ -241,7 +241,6 @@ function handleRowClick(schedule: Schedule) {
   text-align: center;
 }
 .table-body td:nth-child(6) {
-  display: flex;
   justify-content: center; /* 水平居中 */
   align-items: center; /* 垂直居中 */
 }

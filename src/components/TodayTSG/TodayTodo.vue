@@ -562,8 +562,7 @@ function handleRowClick(todo: TodoWithNumberPriority) {
   white-space: normal;
   overflow: hidden;
   word-break: break-word;
-  min-height: 20px;
-  height: auto;
+  height: 23px;
 }
 .table-body td:first-child,
 .table-body td:nth-child(2),
@@ -572,7 +571,6 @@ function handleRowClick(todo: TodoWithNumberPriority) {
 }
 
 .table-body td:nth-child(6) {
-  display: flex;
   justify-content: center; /* 水平居中 */
   align-items: center; /* 垂直居中 */
 }
@@ -692,6 +690,7 @@ function handleRowClick(todo: TodoWithNumberPriority) {
   display: flex;
   gap: 2px;
   justify-content: flex-end;
+  height: 23px;
 }
 
 /* 选中行样式 */
