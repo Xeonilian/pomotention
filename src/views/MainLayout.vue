@@ -53,8 +53,8 @@ const timerStore = useTimerStore();
 
 const menuOptions = [
   { label: "首页", key: "/" },
-  { label: "统计", key: "/statistics" },
-  { label: "设置", key: "/settings" },
+  //{ label: "统计", key: "/statistics" },
+  //{ label: "设置", key: "/settings" },
 ];
 
 const current = ref(route.path);
