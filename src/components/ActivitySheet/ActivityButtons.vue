@@ -35,23 +35,18 @@
         <n-icon><ChevronCircleLeft48Regular /></n-icon>
       </template>
     </n-button>
-    <n-dropdown
-      :options="filterOptions"
-      @select="(key) => $emit('filter', key)"
+    <n-button
+      title="添加预约"
+      @click="$emit('add-schedule')"
+      circle
+      secondary
+      type="info"
+      size="small"
     >
-      <n-button
-        strong
-        secondary
-        circle
-        type="error"
-        size="small"
-        title="筛选活动"
-      >
-        <template #icon>
-          <n-icon><DocumentTableSearch24Regular /></n-icon>
-        </template>
-      </n-button>
-    </n-dropdown>
+      <template #icon
+        ><n-icon><CalendarAdd24Regular /></n-icon
+      ></template>
+    </n-button>
     <n-button
       @click="$emit('add-todo')"
       circle
@@ -77,25 +72,13 @@
         ><n-icon><ArrowRepeatAll24Regular /></n-icon
       ></template>
     </n-button>
-    <n-button
-      title="添加预约"
-      @click="$emit('add-schedule')"
-      circle
-      secondary
-      type="info"
-      size="small"
-    >
-      <template #icon
-        ><n-icon><CalendarAdd24Regular /></n-icon
-      ></template>
-    </n-button>
 
     <n-button
       title="删除活动"
       @click="$emit('delete-active')"
       circle
       secondary
-      type="default"
+      type="info"
       size="small"
       :disabled="activeId === null"
     >
@@ -103,6 +86,23 @@
         ><n-icon><Delete24Regular /></n-icon
       ></template>
     </n-button>
+    <n-dropdown
+      :options="filterOptions"
+      @select="(key) => $emit('filter', key)"
+    >
+      <n-button
+        strong
+        secondary
+        circle
+        type="default"
+        size="small"
+        title="筛选活动"
+      >
+        <template #icon>
+          <n-icon><DocumentTableSearch24Regular /></n-icon>
+        </template>
+      </n-button>
+    </n-dropdown>
   </div>
 </template>
 

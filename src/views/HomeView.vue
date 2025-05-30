@@ -177,7 +177,6 @@ import {
   passPickedActivity,
   togglePomoType,
   convertToSchedule,
-  convertToTodo,
 } from "@/services/activityService";
 import {
   updateScheduleStatus,
@@ -247,7 +246,6 @@ const dateCheckService = createDateCheckService({
   scheduleList,
   todoList,
   convertToSchedule,
-  convertToTodo,
   onDateChange() {
     // 日期变时：刷新 blocks 并刷新 currentDate 触发 UI 自动更新
     allBlocks.value[currentType.value] = [
@@ -376,6 +374,7 @@ function onPickActivity(activity: Activity) {
 /** 标记当前活跃活动id，用于高亮和交互 */
 function onUpdateActiveId(id: number | null) {
   activeId.value = id;
+  selectedActivityId.value = null; // 添加这一行
 }
 
 /** 修改番茄类型时的提示处理 */

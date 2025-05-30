@@ -182,13 +182,16 @@ function pickActivity() {
   }
 
   // 2. 查找todo中是否有对应的活动
-  const picked = props.todos.find((t) => t.activityId === props.activeId);
-  if (picked) {
+  const isPicked = props.todos.find((t) => t.activityId === props.activeId);
+  if (isPicked) {
     showErrorPopover("该活动已经启动待办");
     return;
   }
+  const picked = props.activities.find((a) => a.id === props.activeId);
+  if (!picked) return;
 
   // 4. 触发事件并重置选中状态
+  emit("pick-activity-todo", picked);
   emit("update-active-id", null);
 }
 
