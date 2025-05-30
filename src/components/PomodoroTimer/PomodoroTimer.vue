@@ -155,15 +155,14 @@ const selectedDuration = ref(breakDuration.value);
 
 // 把常量转成 CSS 变量名格式
 const timerStyleVars = computed(() => {
-  const barLengthValue =
-    parseFloat(barLength.value.toString().replace("px", "")) || 200;
+  const barLengthValue = 175;
 
+  const calculatedLength = barLengthValue * timerStore.redBarPercentage;
+  const calculatedOffset = barLengthValue * timerStore.redBarOffsetPercentage;
   return {
     "--bar-length": barLength.value,
-    "--red-bar-length": `${barLengthValue * timerStore.redBarPercentage}px`,
-    "--red-bar-offset": `${
-      barLengthValue * timerStore.redBarOffsetPercentage
-    }px`,
+    "--red-bar-length": `${calculatedLength}px`,
+    "--red-bar-offset": `${calculatedOffset}px`,
   };
 });
 
