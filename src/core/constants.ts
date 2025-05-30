@@ -28,6 +28,7 @@ export const STORAGE_KEYS = {
   TODO: "todayTodo",
   SCHEDULE: "todaySchedule",
   GLOBAL_POMO_COUNT: "globalPomoCount",
+  DAILY_POMO_COUNTS: "dailyPomoCount",
   TASK: "taskTrack",
   LAST_TODAY_COUNT: "lastTodayCount",
 } as const;
