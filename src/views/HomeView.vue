@@ -788,15 +788,18 @@ defineExpose({
 }
 
 .middle-top.not-today .today-header {
-  background: var(--color-background-light-light);
+  background: var(--color-background);
 
 }
 
 .middle-top.not-today .today-status {
+  font-size: 18px;
+  font-family: "Courier New", Courier, monospace;
   color: var(--color-text);
-  border-radius: 6px;
-  margin-top: 2px;
-  background: var(--color-green-light);
+  border-radius: 12px;
+  padding: 0px 8px 0px 8px;
+  margin: 2px;
+  background: var(--color-blue-light);
 }
 
 .middle-top.not-today .global-pomo {
@@ -841,9 +844,11 @@ defineExpose({
 
 .today-status {
   font-size: 18px;
-  font-weight: bold;
-  color: var(--color-text);
   font-family: "Courier New", Courier, monospace;
+  color: var(--color-text);
+  border-radius: 12px;
+  padding: 0px 8px 0px 8px;
+  margin: 2px;
 }
 
 .global-pomo {

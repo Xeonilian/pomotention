@@ -37,7 +37,7 @@
     >
       <span
         class="block-label"
-        :style="block.category === 'living' ? { color: 'white' } : {}"
+        :style="block.category === 'living' ? { color: 'var(--color-blue-transparent)' } : block.category === 'working' ? { color: 'var(--color-red-transparent)' } : {}"
       >
         {{
           block.category === "sleeping"

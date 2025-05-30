@@ -222,7 +222,7 @@ function onInputUpdate(item: Activity, value: string) {
   background: var(--color-red-light-transparent);
 }
 .countdown-blue :deep(.n-input) {
-  background: var(--color-text-secondary-transparent);
+  background: var(--color-blue-light-transparent);
 }
 .pomo-red {
   background-color: var(--color-red-light-transparent) !important;
