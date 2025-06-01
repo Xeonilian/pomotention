@@ -81,6 +81,7 @@
               </n-button>
             </div>
           </div>
+          <div class="today-view-container">
           <TodayView
             :selectedRowId="selectedRowId"
             :todayTodos="currentViewDateTodos"
@@ -96,6 +97,7 @@
             @select-activity="onSelectActivity"
             @select-row="onSelectRow"
           />
+        </div>
         </div>
         <div
           v-if="showMiddleBottom"
@@ -782,14 +784,44 @@ defineExpose({
 .middle-top {
   background: var(--color-background);
   margin-bottom: 8px;
-  overflow: auto;
   padding: 4px;
   box-sizing: border-box;
+  flex-direction: column;
+  display: flex;
 }
 
+.today-header {
+  position: sticky;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 8px 8px 8px 0px;
+  flex-shrink: 0; 
+}
+
+.today-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: "Courier New", Courier, monospace;
+  font-weight: bold;
+}
+
+.today-status {
+  font-size: 18px;
+  font-family: "Courier New", Courier, monospace;
+  color: var(--color-text);
+  border-radius: 12px;
+  padding: 0px 8px 0px 8px;
+  margin: 2px;
+}
+.today-view-container {
+  flex: 1;
+  overflow: auto;
+  min-height: 0; /* 重要：允许 flex 子项收缩 */
+}
 .middle-top.not-today .today-header {
   background: var(--color-background);
-
 }
 
 .middle-top.not-today .today-status {
@@ -825,30 +857,6 @@ defineExpose({
   display: flex;
   flex-direction: column;
   height: 100%;
-}
-
-.today-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin: 8px 8px 8px 0px;
-}
-
-.today-info {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-family: "Courier New", Courier, monospace;
-  font-weight: bold;
-}
-
-.today-status {
-  font-size: 18px;
-  font-family: "Courier New", Courier, monospace;
-  color: var(--color-text);
-  border-radius: 12px;
-  padding: 0px 8px 0px 8px;
-  margin: 2px;
 }
 
 .global-pomo {
