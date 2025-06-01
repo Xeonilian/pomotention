@@ -226,7 +226,7 @@ const handleClick = (event: MouseEvent) => {
 }
 
 :deep(.markdown-content code) {
-  background-color: var(--color-text-primary-transparent);
+  background-color: var(--color-red-light);
   border-radius: 2px;
   padding: 0 2px 0 2px;
 }

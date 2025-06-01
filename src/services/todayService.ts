@@ -35,6 +35,7 @@ export function updateScheduleStatus(
   activityList: Activity[],
   id: number,
   activityId: number,
+  doneTime: number | undefined,
   status: string
 ) {
   const validStatus = [
@@ -58,6 +59,7 @@ export function updateScheduleStatus(
       | "ongoing"
       | "cancelled"
       | "suspended";
+    schedule.doneTime = doneTime;
   }
 
   // 更新 activityList
@@ -86,6 +88,7 @@ export function updateTodoStatus(
   activityList: Activity[],
   id: number,
   activityId: number,
+  doneTime: number | undefined,
   status: string
 ) {
   const validStatus = [
@@ -109,6 +112,7 @@ export function updateTodoStatus(
       | "ongoing"
       | "cancelled"
       | "suspended";
+    todo.doneTime = doneTime;
   }
 
   // 更新 activityList

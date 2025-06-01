@@ -64,12 +64,14 @@ const emit = defineEmits<{
     e: "update-schedule-status",
     id: number,
     activityId: number,
+    doneTime: number | undefined,
     status: string
   ): void;
   (
     e: "update-todo-status",
     id: number,
     activityId: number,
+    doneTime: number | undefined,
     status: string
   ): void;
   (e: "suspend-schedule", id: number): void;
@@ -92,12 +94,12 @@ function handleSelectRow(id: number | null) {
   emit("select-row", id);
 }
 
-function updateScheduleStatus(id: number, activityId: number, status: string) {
-  emit("update-schedule-status", id, activityId, status);
+function updateScheduleStatus(id: number, activityId: number, doneTime: number | undefined, status: string) {
+  emit("update-schedule-status", id, activityId, doneTime, status);
 }
 
-function updateTodoStatus(id: number, activityId: number, status: string) {
-  emit("update-todo-status", id, activityId, status);
+function updateTodoStatus(id: number, activityId: number, doneTime: number | undefined, status: string) {
+  emit("update-todo-status", id, activityId, doneTime, status);
 }
 
 function handleSuspendSchedule(id: number) {

@@ -6,8 +6,9 @@
         <tr>
           <th style="width: 25px"></th>
           <th style="width: 45px; text-align: center">开始</th>
+          <th style="width: 45px; text-align: center">结束</th>
           <th style="width: 40px; text-align: center">分钟</th>
-          <th style="width: calc(100% - 250px)">描述</th>
+          <th style="width: calc(100% - 390px)">描述</th>
           <th style="width: 180px">地点</th>
           <th style="width: 60px; text-align: center">操作</th>
         </tr>
@@ -37,6 +38,13 @@
               {{
                 schedule.activityDueRange
                   ? timestampToTimeString(schedule.activityDueRange[0])
+                  : "-"
+              }}
+            </td>
+            <td>
+              {{
+                schedule.doneTime
+                  ? timestampToTimeString(schedule.doneTime)
                   : "-"
               }}
             </td>
@@ -133,6 +141,7 @@ const emit = defineEmits<{
     e: "update-schedule-status",
     id: number,
     activityId: number,
+    doneTime: number | undefined,
     status: string
   ): void;
   (e: "suspend-schedule", id: number): void;
@@ -148,8 +157,12 @@ const popoverMessage = ref("");
 function handleCheckboxChange(schedule: Schedule, checked: boolean) {
   const newStatus = checked ? "done" : "";
   schedule.status = newStatus;
-
-  emit("update-schedule-status", schedule.id, schedule.activityId, newStatus);
+  if (checked) {
+    schedule.doneTime = Date.now();
+  } else {
+    schedule.doneTime = undefined;
+  }
+  emit("update-schedule-status", schedule.id, schedule.activityId, schedule.doneTime, newStatus);
 }
 
 function handleSuspendSchedule(id: number) {

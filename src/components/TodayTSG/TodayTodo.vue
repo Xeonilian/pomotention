@@ -26,8 +26,9 @@
         <tr>
           <th style="width: 25px"></th>
           <th style="width: 45px; text-align: center">开始</th>
+          <th style="width: 45px; text-align: center">结束</th>
           <th style="width: 40px; text-align: center">优先</th>
-          <th style="width: calc(100% - 350px)">描述</th>
+          <th style="width: calc(100% - 390px)">描述</th>
           <th style="width: 180px">番茄</th>
           <th style="width: 60px; text-align: center">操作</th>
         </tr>
@@ -53,6 +54,13 @@
             </td>
             <td>
               {{ todo.taskId ? timestampToTimeString(todo.taskId) : "-" }}
+            </td>
+            <td>
+              {{
+                todo.doneTime
+                  ? timestampToTimeString(todo.doneTime)
+                  : "-"
+              }}
             </td>
             <td class="priority-cell" @click="startEditing(todo)">
               <template v-if="editingTodo && editingTodo.id === todo.id">
@@ -242,6 +250,7 @@ const emit = defineEmits<{
     e: "update-todo-status",
     id: number,
     activityId: number,
+    doneTime: number | undefined,
     status: string
   ): void;
   (e: "update-todo-priority", id: number, priority: number): void;
@@ -413,8 +422,12 @@ function handleSuspendTodo(id: number) {
 function handleCheckboxChange(todo: TodoWithNumberPriority, checked: boolean) {
   const newStatus = checked ? "done" : "ongoing";
   todo.status = newStatus;
-
-  emit("update-todo-status", todo.id, todo.activityId, newStatus);
+  if (checked) {
+    todo.doneTime = Date.now();
+  } else {
+    todo.doneTime = undefined;
+  }
+  emit("update-todo-status", todo.id, todo.activityId, todo.doneTime, newStatus);
 }
 
 // 番茄估计

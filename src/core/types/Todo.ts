@@ -13,4 +13,5 @@ export interface Todo {
   pomoType?: "🍅" | "🍇" | "🍒";
   dueDate?: number;
   idFormated?: string; // 测试用
+  doneTime?: number;
 }

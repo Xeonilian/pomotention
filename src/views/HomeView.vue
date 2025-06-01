@@ -415,8 +415,8 @@ const currentViewDateSchedules = computed(() =>
 );
 
 /** Todo 更新状态（勾选） */
-function onUpdateTodoStatus(id: number, activityId: number, status: string) {
-  updateTodoStatus(todoList.value, activityList.value, id, activityId, status);
+function onUpdateTodoStatus(id: number, activityId: number, doneTime: number | undefined, status: string) {
+  updateTodoStatus(todoList.value, activityList.value, id, activityId, doneTime, status);
 }
 
 /** 更新待办事项的番茄钟估计 */
@@ -427,7 +427,11 @@ function onUpdateTodoEst(id: number, estPomo: number[]) {
     todo.estPomo = estPomo;
     // 保存到本地存储
     saveTodos(todoList.value);
-  }
+  } 
+  const activity = activityList.value.find((a) => a.id === todo?.activityId)
+  if (activity && estPomo && estPomo.length === 1) {
+  activity.estPomoI = estPomo[0].toString();
+}
 }
 
 /** 更新待办事项的实际番茄钟完成情况 */
@@ -451,6 +455,7 @@ function onSuspendSchedule(id: number) {
 function onUpdateScheduleStatus(
   id: number,
   activityId: number,
+  doneTime: number | undefined,
   status: string
 ) {
   updateScheduleStatus(
@@ -458,6 +463,7 @@ function onUpdateScheduleStatus(
     activityList.value,
     id,
     activityId,
+    doneTime,
     status
   );
 }

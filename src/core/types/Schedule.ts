@@ -8,4 +8,5 @@ export interface Schedule {
   status?: "" | "delayed" | "ongoing" | "cancelled" | "done" | "suspended";
   projectName?: string;
   location?: string;
+  doneTime?: number;
 }
