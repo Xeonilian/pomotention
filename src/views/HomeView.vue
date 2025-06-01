@@ -220,11 +220,11 @@ const scheduleList = ref<Schedule[]>(loadSchedules());
 const pickedTodoActivity = ref<Activity | null>(null); // 选中活动
 
 // 添加选中的任务ID状态
-const activeId = ref<number | null>(null); // 当前从ActivityView选中的
-const selectedTaskId = ref<number | null>(null); // 当前从Todo选中的TaskID
-const selectedActivityId = ref<number | null>(null); // 当前从Todo选中的ActivityID
+const activeId = ref<number | null>(null); // 当前从ActivityView选中的activity.id
+const selectedTaskId = ref<number | null>(null); // 当前从Todo选中的todo.taskId
+const selectedActivityId = ref<number | null>(null); // 当前从Todo选中的todo.activityId
 // 在现有的状态定义区域添加 #HACK
-const selectedRowId = ref<number | null>(null);
+const selectedRowId = ref<number | null>(null); // todo.id 或者 schedule.id
 
 // 计算当天的番茄钟数
 const currentDatePomoCount = computed(() => {
@@ -258,7 +258,6 @@ const dateCheckService = createDateCheckService({
       ...allBlocks.value[currentType.value],
     ];
     dateService.updateCurrentDate();
-    // dateService.resetToToday(); HACK
   },
 });
 
@@ -377,18 +376,16 @@ function onPickActivity(activity: Activity) {
   );
 }
 
-/** 标记当前活跃活动id，用于高亮和交互 */
+/** 标记当前活跃活动清单id，用于高亮和交互 */
 function onUpdateActiveId(id: number | null) {
   activeId.value = id;
   selectedActivityId.value = null; // 避免多重高亮
-  selectedTaskId.value = null;
-  selectedRowId.value = null;
+  const todo = todoList.value.find((t) => t.activityId === id);
+  const schedule = scheduleList.value.find((s) => s.activityId === id);
+  selectedTaskId.value = todo?.taskId || schedule?.taskId || null; //用id在todoList ScheduleList里面搜索TaskId，等于搜到的值
+  selectedRowId.value = null; // 这个id是activity的
 }
 
-// 添加处理函数
-function onSelectRow(id: number | null) {
-  selectedRowId.value = id;
-}
 
 /** 修改番茄类型时的提示处理 */
 function onTogglePomoType(id: number, event?: Event) {
@@ -416,6 +413,7 @@ const currentViewDateSchedules = computed(() =>
     return dateService.isSelectedDate(schedule.activityDueRange[0]);
   })
 );
+
 /** Todo 更新状态（勾选） */
 function onUpdateTodoStatus(id: number, activityId: number, status: string) {
   updateTodoStatus(todoList.value, activityList.value, id, activityId, status);
@@ -432,7 +430,6 @@ function onUpdateTodoEst(id: number, estPomo: number[]) {
   }
 }
 
-/** 更新待办事项的实际番茄钟完成情况 */
 /** 更新待办事项的实际番茄钟完成情况 */
 function onUpdateTodoPomo(id: number, realPomo: number[]) {
   updateTodoPomo(todoList.value, id, realPomo);
@@ -492,12 +489,18 @@ function onSelectActivity(activityId: number | null) {
   selectedActivityId.value = activityId;
 }
 
+// 选中行
+function onSelectRow(id: number | null) {
+  selectedRowId.value = id;
+}
+
 // 清除Today选中行的函数
 function clearSelectedRow() {
   selectedTaskId.value = null;
   activeId.value = null;
   selectedRowId.value = null;
 }
+
 // ======================== 4. Task/执行相关操作 ========================
 // 在script部分添加处理函数
 function onActivityUpdated() {

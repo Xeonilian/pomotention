@@ -142,7 +142,6 @@ const settingStore = useSettingStore();
 // 添加 showPomoSeq prop
 defineProps<{
   showPomoSeq?: boolean;
-  selectedTaskId?: number | null;
 }>();
 
 const barLength = computed(() => settingStore.style.barLength);

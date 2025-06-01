@@ -22,7 +22,7 @@
       <PomodoroTimer
         class="time"
         :show-pomo-seq="showPomoSeq"
-        :selected-task-id="selectedTaskId"
+
       />
       <PomodoroSequence v-if="showPomoSeq" class="sequence" />
     </div>
@@ -37,14 +37,10 @@ import { NButton } from "naive-ui";
 
 const timerStore = useTimerStore();
 
-const props = defineProps({
+defineProps({
   showPomoSeq: {
     type: Boolean,
     required: true,
-  },
-  selectedTaskId: {
-    type: Number,
-    default: null,
   },
 });
 
