@@ -184,7 +184,7 @@ function pickActivity() {
   // 2. 查找todo中是否有对应的活动
   const isPicked = props.todos.find((t) => t.activityId === props.activeId);
   if (isPicked) {
-    showErrorPopover("该活动已经启动待办");
+    showErrorPopover("【"+ isPicked.idFormated + "】启动待办");
     return;
   }
   const picked = props.activities.find((a) => a.id === props.activeId);

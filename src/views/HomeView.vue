@@ -571,7 +571,7 @@ watch(
 
     activityList.value.forEach((activity) => {
       if (!activity.dueRange || !activity.dueRange[0]) return;
-
+      if (activity.status === "done") return;
       const dueMs =
         typeof activity.dueRange[0] === "string"
           ? Date.parse(activity.dueRange[0])
