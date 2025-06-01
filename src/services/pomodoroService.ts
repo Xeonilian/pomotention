@@ -172,28 +172,38 @@ export function assignTodosToPomodoroSegments(
       const segs = segByCategory.living;
       const isUsed = used.living;
       for (let i = 0; i < segs.length - 1 && assignedCount < needCount; i++) {
-        if (
-          !isUsed[i] &&
-          segs[i].type === "work" &&
-          !isUsed[i + 1] &&
-          segs[i + 1].type === "break" &&
-          segs[i].end === segs[i + 1].start
-        ) {
+        if (!isUsed[i] && segs[i].type === "work") {
+          // 默认只用work段
+          let segmentEnd = segs[i].end;
+          let span = 0;
+    
+          // 检查是否可以和后面break成对
+          if (
+            i + 1 < segs.length &&
+            !isUsed[i + 1] &&
+            segs[i + 1].type === "break" &&
+            segs[i].end === segs[i + 1].start
+          ) {
+            // work+break配对
+            segmentEnd = segs[i + 1].end;
+            isUsed[i + 1] = true;
+            span = 1;
+          }
+          // 标记work已用
           isUsed[i] = true;
-          isUsed[i + 1] = true;
           todoSegments.push({
             todoId: todo.id,
             priority: todo.priority,
             todoTitle: todo.activityTitle,
             index: assignedCount + 1,
             start: segs[i].start,
-            end: segs[i + 1].end,
+            end: segmentEnd,
             pomoType: "🍇",
             assignedPomodoroSegment: segs[i],
             category: segs[i].category,
           });
           assignedCount++;
-          i++;
+          i += span;
         }
       }
       while (assignedCount < needCount) {
@@ -232,19 +242,20 @@ export function assignTodosToPomodoroSegments(
           segs[i + 2].end === segs[i + 3].start
         ) {
           isUsed[i] = isUsed[i + 1] = isUsed[i + 2] = isUsed[i + 3] = true;
-          todoSegments.push({
-            todoId: todo.id,
-            priority: todo.priority,
-            todoTitle: todo.activityTitle,
-            index: assignedCount + 1,
-            start: segs[i].start,
-            end: segs[i + 3].end,
-            pomoType: "🍒",
-            assignedPomodoroSegment: segs[i],
-            category: segs[i].category,
-          });
+          for (let j = 0; j < 4; j++) {
+            todoSegments.push({
+              todoId: todo.id,
+              priority: todo.priority,
+              todoTitle: todo.activityTitle,
+              index: assignedCount + 1,
+              start: segs[i + j].start,
+              end: segs[i + j].end,  // 每个segment独立的开始结束
+              pomoType: "🍒",
+              assignedPomodoroSegment: segs[i + j],
+              category: segs[i + j].category,
+            });
+          }
           assignedCount++;
-          i += 3;
         }
       }
       while (assignedCount < needCount) {
