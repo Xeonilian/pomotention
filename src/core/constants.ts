@@ -139,5 +139,5 @@ export const POMODORO_COLORS: Record<string, string> = {
   living: "var(--color-blue-dark)",
   working: "var(--color-red-dark)",
   schedule: "var(--color-background-dark)",
-  untaetigkeit: "var(--color-yellow)"
+  untaetigkeit: "var(--color-blue)"
 };

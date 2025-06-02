@@ -25,15 +25,20 @@
       <n-input
         v-model:value="item.title"
         type="text"
-        placeholder="任务描述"
+        :placeholder="item.isUntaetigkeit ? '无所事事' : '任务描述'"
         style="flex: 2"
         @focus="$emit('focus-row', item.id)"
       >
         <template #prefix>
           <n-icon
+            v-if="item.isUntaetigkeit"
+            :color="'var(--color-blue)'"
+            ><AddSubtractCircle24Filled
+          /></n-icon>
+          <n-icon
             v-if="item.interruption === 'I'"
             :color="'var(--color-purple)'"
-            ><VideoPersonSparkle24Regular
+            ><AddSubtractCircle24Filled
           /></n-icon>
           <n-icon
             v-else-if="item.interruption === 'E'"
@@ -56,7 +61,7 @@
             ><ApprovalsApp24Regular
           /></n-icon>
           <n-icon
-            v-else-if="item.class === 'S'"
+            v-else-if="item.class === 'S' && !item.isUntaetigkeit"
             :color="
               item.status === 'ongoing'
                 ? 'var(--color-red)'
@@ -152,6 +157,7 @@ import {
   VideoPersonCall24Regular,
   ApprovalsApp24Regular,
   Accessibility28Filled,
+  AddSubtractCircle24Filled
 } from "@vicons/fluent";
 import type { Activity } from "@/core/types/Activity";
 
