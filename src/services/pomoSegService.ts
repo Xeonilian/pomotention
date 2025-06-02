@@ -1,11 +1,11 @@
-// src/services/pomodoroService.ts
+// src/services/pomoSegService.ts
 import type { Block } from "@/core/types/Block";
 import type { Todo } from "@/core/types/Todo";
 import { getTimestampForTimeString } from "@/core/utils";
 
 export interface PomodoroSegment {
   parentBlockId: string;
-  type: "work" | "break" | "schedule";
+  type: "work" | "break" | "schedule" | "untaetigkeit";
   start: number;
   end: number;
   category: string; // 增加原block的类型
@@ -69,7 +69,7 @@ export function getPomoMinutesByType(type?: Todo["pomoType"]): number {
   return 30;
 }
 
-// 分配todo #HACK
+// 分配todo 
 export function assignTodosToPomodoroSegments(
   todos: Todo[],
   pomodoroSegments: PomodoroSegment[]
@@ -283,7 +283,7 @@ export function assignTodosToPomodoroSegments(
 // 计算当日除去schedule可用pomo
 export function splitBlocksToPomodorosWithIndexExcludeSchedules(
   blocks: Block[],
-  schedules: { activityDueRange: [number, string] }[]
+  schedules: { activityDueRange: [number, string]; isUntaetigkeit?: boolean; }[]
 ): PomodoroSegment[] {
   //-------------------------
   // console.log("======原始block=====");
@@ -291,14 +291,25 @@ export function splitBlocksToPomodorosWithIndexExcludeSchedules(
   //   console.log(`[${i}] block: ${b.start}~${b.end} (${b.category})`)
   // );
   //-------------------------
-  // 取所有activityDueRange区间
-  const ex: [number, number][] = schedules
+  // 取所有activityDueRange区间，同时保留isUntaetigkeit信息
+  const scheduleInfo: Array<{
+    range: [number, number];
+    isUntaetigkeit: boolean;
+  }> = schedules
     .map((s) => {
       const start = Number(s.activityDueRange[0]);
       const duration = Number(s.activityDueRange[1]);
-      return duration > 0 ? [start, start + duration * 60 * 1000] : null;
+      return duration > 0 
+        ? {
+            range: [start, start + duration * 60 * 1000] as [number, number],
+            isUntaetigkeit: s.isUntaetigkeit || false
+          }
+        : null;
     })
-    .filter((range): range is [number, number] => range !== null);
+    .filter((info): info is NonNullable<typeof info> => info !== null);
+
+  // 用于排除的区间（所有schedule，不管类型）
+  const ex: [number, number][] = scheduleInfo.map(info => info.range);
 
   // console.log("\n======不可用区间（activityDueRange）=====");
   // ex.forEach((x, i) => console.log(`[${i}] ${x[0]}~${x[1]}`));
@@ -306,28 +317,36 @@ export function splitBlocksToPomodorosWithIndexExcludeSchedules(
   let segments: PomodoroSegment[] = [];
   const globalIndex: Record<string, number> = {};
 
-  // 合并区间
-  const merged: [number, number][] = [];
-  ex.sort((a, b) => a[0] - b[0]).forEach(([start, end]) => {
-    if (!merged.length || merged[merged.length - 1][1] < start) {
-      merged.push([start, end]);
-    } else {
-      // 有重叠
-      merged[merged.length - 1][1] = Math.max(
-        merged[merged.length - 1][1],
-        end
-      );
-    }
-  });
+  // 合并区间时需要保留类型信息
+  const merged: Array<{
+    range: [number, number];
+    hasUntaetigkeit: boolean;
+  }> = [];
+  
+  scheduleInfo
+    .sort((a, b) => a.range[0] - b.range[0])
+    .forEach(({ range: [start, end], isUntaetigkeit }) => {
+      if (!merged.length || merged[merged.length - 1].range[1] < start) {
+        merged.push({
+          range: [start, end],
+          hasUntaetigkeit: isUntaetigkeit
+        });
+      } else {
+        // 有重叠，合并区间，如果任一个是untaetigkeit则保留
+        const last = merged[merged.length - 1];
+        last.range[1] = Math.max(last.range[1], end);
+        last.hasUntaetigkeit = last.hasUntaetigkeit || isUntaetigkeit;
+      }
+    });
 
-  // 2. schedule段合并后统一加入（跨 block 只生成一个）
-  merged.forEach(([start, end]) => {
+  // 生成schedule段，根据类型决定type和category
+  merged.forEach(({ range: [start, end], hasUntaetigkeit }) => {
     segments.push({
-      parentBlockId: "S", // 特殊
-      type: "schedule",
+      parentBlockId: "S",
+      type: hasUntaetigkeit ? "untaetigkeit" : "schedule",
       start,
       end,
-      category: "schedule",
+      category: hasUntaetigkeit ? "untaetigkeit" : "schedule",
     });
   });
 

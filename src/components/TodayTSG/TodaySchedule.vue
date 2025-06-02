@@ -24,6 +24,7 @@
             :class="{
               'active-row': schedule.activityId === activeId,
               'selected-row': schedule.id === selectedRowId,
+              'done-row': schedule.status === 'done',
             }"
             @click="handleRowClick(schedule)"
             style="cursor: pointer"
@@ -53,7 +54,24 @@
                 schedule.activityDueRange ? schedule.activityDueRange[1] : "min"
               }}
             </td>
-            <td class="ellipsis">{{ schedule.activityTitle ?? "-" }}</td>
+            <td 
+              class="ellipsis title-cell" 
+              :class="{'done-cell': schedule.status === 'done'}"
+              @dblclick.stop="startEditing(schedule.id)"
+              :title="editingRowId === schedule.id ? '' : '双击编辑'"
+            >
+              <input
+                v-if="editingRowId === schedule.id"
+                v-model="editingTitle"
+                @blur="saveEdit(schedule)"
+                @keyup.enter="saveEdit(schedule)"
+                @keyup.esc="cancelEdit"
+                @click.stop
+                class="title-input"
+                ref="titleInput"
+              />
+              <span v-else>{{ schedule.activityTitle ?? "-" }}</span>
+            </td>
             <td class="ellipsis">{{ schedule.location ?? "-" }}</td>
             <td>
               <div class="button-group">
@@ -127,10 +145,14 @@ import {
   ChevronCircleDown48Regular,
 } from "@vicons/fluent";
 import { taskService } from "@/services/taskService";
-import { ref } from "vue";
+import { ref, nextTick } from "vue";
+
+const editingRowId = ref<number | null>(null);
+const editingTitle = ref("");
+const titleInput = ref<HTMLInputElement>();
 
 // 定义 Props
-defineProps<{
+const props = defineProps<{
   schedules: Schedule[];
   activeId: number | null;
   selectedRowId: number | null; // 新增：从父组件接收选中行ID
@@ -147,7 +169,8 @@ const emit = defineEmits<{
   (e: "suspend-schedule", id: number): void;
   (e: "convert-to-task", id: number): void;
   (e: "select-task", taskId: number | null): void;
-  (e: "select-row", id: number | null): void; // 新增：选中行事件
+  (e: "select-row", id: number | null): void; 
+  (e: "edit-title", id: number, newTitle: string): void;
 }>();
 
 // 添加状态来控制提示信息
@@ -201,6 +224,31 @@ function handleConvertToTask(schedule: Schedule) {
 function handleRowClick(schedule: Schedule) {
   emit("select-row", schedule.id); // 新增：发送选中行事件
   emit("select-task", schedule.taskId || null);
+}
+
+// 编辑相关函数
+function startEditing(scheduleId: number) {
+  const schedule = props.schedules.find(s => s.id === scheduleId);
+  if (schedule) {
+    editingRowId.value = scheduleId;
+    editingTitle.value = schedule.activityTitle || "";
+    nextTick(() => {
+      titleInput.value?.focus();
+      titleInput.value?.select();
+    });
+  }
+}
+
+function saveEdit(schedule: Schedule) {
+  if (editingRowId.value && editingTitle.value.trim()) {
+    emit("edit-title", schedule.id, editingTitle.value.trim());
+  }
+  cancelEdit();
+}
+
+function cancelEdit() {
+  editingRowId.value = null;
+  editingTitle.value = "";
 }
 </script>
 
@@ -304,6 +352,50 @@ function handleRowClick(schedule: Schedule) {
   text-align: center;
   color: var(--color-text-secondary);
   width: 100%;
+}
+
+/* 完成行样式 */
+.done-row {
+  color: var(--color-text-secondary)
+}
+
+.done-cell{
+  text-decoration: line-through var(--color-text-secondary) 0.5px;
+}
+.title-cell {
+  position: relative;
+  cursor: pointer;
+}
+
+.title-cell:hover::after {
+  content: "双击编辑";
+  position: absolute;
+  top: -25px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.title-input {
+  width: 100%;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: inherit;
+  font-family: inherit;
+  outline: none;
+}
+
+.title-input:focus {
+  border-color: #40a9ff;
+  box-shadow: 0 0 0 2px rgba(64, 169, 255, 0.2);
 }
 
 /* 按钮组样式 */

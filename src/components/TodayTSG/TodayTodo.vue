@@ -42,6 +42,7 @@
             :class="{
               'active-row': todo.activityId === activeId,
               'selected-row': todo.id === selectedRowId,
+              'done-row': todo.status === 'done',
             }"
             @click="handleRowClick(todo)"
             style="cursor: pointer"
@@ -87,7 +88,7 @@
                 </span>
               </template>
             </td>
-            <td class="ellipsis">{{ todo.activityTitle ?? "-" }}</td>
+            <td class="ellipsis" :class="{'done-cell': todo.status === 'done'}">{{ todo.activityTitle ?? "-" }}</td>
             <td>
               <div class="pomo-container">
                 <span class="pomo-type">{{ todo.pomoType }}</span>
@@ -730,6 +731,17 @@ function handleRowClick(todo: TodoWithNumberPriority) {
 .table-body tr.active-row.selected-row {
   background-color: var(--color-yellow-transparent) !important;
 }
+
+/* 完成行样式 */
+.done-row {
+  color: var(--color-text-secondary);
+  
+}
+
+.done-cell{
+  text-decoration: line-through var(--color-text-secondary) 0.5px;
+}
+
 .pomo-type {
   font-size: 11px;
 }

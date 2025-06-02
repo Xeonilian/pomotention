@@ -71,6 +71,7 @@
       {{ segment.index }}
     </template>
     <template v-if="segment.type === 'schedule'"> S </template>
+    <template v-if="segment.type === 'untaetigkeit'"> U </template>
   </div>
   <div
     v-for="seg in todoSegments"
@@ -102,7 +103,7 @@ import {
   PomodoroSegment,
   assignTodosToPomodoroSegments,
   TodoSegment,
-} from "@/services/pomodoroService";
+} from "@/services/pomoSegService";
 import type { Schedule } from "@/core/types/Schedule";
 import type { Todo } from "@/core/types/Todo";
 
@@ -125,6 +126,7 @@ function getVerticalBlockStyle(block: Block): CSSProperties {
     (1000 * 60);
   const topPx = startMinute * props.effectivePxPerMinute;
   const heightPx = (endMinute - startMinute) * props.effectivePxPerMinute;
+  console.log(props.effectivePxPerMinute);
 
   return {
     position: "absolute",
@@ -150,13 +152,23 @@ function getVerticalBlockStyle(block: Block): CSSProperties {
 // （1）刻度数组
 const hourStamps = computed(() => {
   if (!props.timeRange.start || !props.timeRange.end) return [];
+  
+  // 找到第一个大于等于 timeRange.start 的整点
   const startHour = new Date(props.timeRange.start);
   startHour.setMinutes(0, 0, 0);
+  if (startHour.getTime() < props.timeRange.start) {
+    startHour.setHours(startHour.getHours() + 1);
+  }
+  
   const endHour = new Date(props.timeRange.end);
   endHour.setMinutes(0, 0, 0);
+  if (endHour.getTime() < props.timeRange.end) {
+    endHour.setHours(endHour.getHours() + 1);
+  }
+  
   const stamps = [];
   let current = startHour.getTime();
-  while (current <= endHour.getTime()) {
+  while (current <= props.timeRange.end) {
     stamps.push(current);
     current += 3600 * 1000;
   }
@@ -192,11 +204,11 @@ const showCurrentLine = computed(() => currentTimeTop.value >= 0);
 import { POMODORO_COLORS } from "@/core/constants";
 // (2) 计算所有番茄段（含类别与编号）
 const pomodoroSegments = computed(() =>
-  splitBlocksToPomodorosWithIndexExcludeSchedules(props.blocks, props.schedules)
+splitBlocksToPomodorosWithIndexExcludeSchedules(props.blocks, props.schedules)
 );
 
 // (3) 番茄段样式
-// 在 getPomodoroStyle 函数中修改
+// 在 getPomodoroStyle 函数中修改 #HACK
 function getPomodoroStyle(seg: PomodoroSegment): CSSProperties {
   const topPx =
     ((seg.start - props.timeRange.start) / 60000) * props.effectivePxPerMinute;
@@ -210,6 +222,8 @@ function getPomodoroStyle(seg: PomodoroSegment): CSSProperties {
     color = "var(--color-background)"; // 休息段为白色
   } else if (seg.type === "schedule") {
     color = POMODORO_COLORS[seg.category]; // schedule 段使用对应颜色
+  } else if (seg.type === "untaetigkeit") {
+    color = POMODORO_COLORS.untaetigkeit;
   }
 
   return {

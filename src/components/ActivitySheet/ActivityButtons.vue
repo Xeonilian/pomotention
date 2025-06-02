@@ -48,6 +48,19 @@
       ></template>
     </n-button>
     <n-button
+      title="添加无所事事"
+      @click="$emit('add-untaetigkeit')"
+      circle
+      secondary
+      type="info"
+      size="small"
+    >
+      <template #icon
+        ><n-icon><AddSubtractCircle24Filled /></n-icon
+      ></template>
+    </n-button>
+    
+    <n-button
       @click="$emit('add-todo')"
       circle
       secondary
@@ -112,6 +125,7 @@ import { NButton, NIcon, NDropdown } from "naive-ui";
 import {
   AddCircle24Regular,
   Delete24Regular,
+  AddSubtractCircle24Filled,
   ChevronCircleLeft48Regular,
   DocumentTableSearch24Regular,
   CalendarAdd24Regular,
@@ -133,6 +147,7 @@ defineEmits([
   "filter",
   "add-todo",
   "add-schedule",
+  "add-untaetigkeit",
   "delete-active",
   "toggle-pomo-type",
 ]);

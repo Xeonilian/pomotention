@@ -2,7 +2,7 @@
 export interface Activity {
   id: number;
   title: string;
-  class: "S" | "T"; // schedule todo
+  class: "S" | "T" ; // schedule todo 
   projectId?: number;
   estPomoI?: string;
   dueDate?: number;
@@ -14,4 +14,5 @@ export interface Activity {
   status?: "" | "delayed" | "ongoing" | "cancelled" | "done" | "suspended";
   location?: string;
   pomoType?: "🍅" | "🍇" | "🍒";
+  isUntaetigkeit?: boolean; // S的分支，if true = untätigkeit 无所事事
 }

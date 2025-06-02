@@ -196,6 +196,7 @@ export function convertToSchedule(activity: Activity): Schedule {
     status: "ongoing",
     projectName: activity.projectId ? `项目${activity.projectId}` : undefined,
     location: activity.location || "",
+    isUntaetigkeit:activity.isUntaetigkeit? true: false ,
   };
 }
 

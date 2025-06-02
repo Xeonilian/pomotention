@@ -25,6 +25,7 @@
       @filter="handleFilter"
       @add-todo="addTodoRow"
       @add-schedule="addScheduleRow"
+      @add-untaetigkeit="addUntaetigkeitRow"
       @delete-active="deleteActiveRow"
       @toggle-pomo-type="togglePomoType"
     />
@@ -208,6 +209,19 @@ function addScheduleRow() {
     title: "",
     dueRange: [addOneDayToDate(Date.now()), ""], // HACK: 默认明天开始
     status: "",
+  });
+}
+
+// 添加新的无所事事
+function addUntaetigkeitRow() {
+  emit("add-activity", {
+    id: Date.now(),
+    class: "S",
+    title: "",
+    dueRange: [Date.now(), ""], 
+    status: "",
+    isUntaetigkeit: true,
+
   });
 }
 

@@ -9,4 +9,5 @@ export interface Schedule {
   projectName?: string;
   location?: string;
   doneTime?: number;
+  isUntaetigkeit?: boolean;
 }
