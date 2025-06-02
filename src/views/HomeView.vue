@@ -96,6 +96,7 @@
             @select-task="onSelectTask"
             @select-activity="onSelectActivity"
             @select-row="onSelectRow"
+            @edit-title="handleEditTitle"
           />
         </div>
         </div>
@@ -507,6 +508,22 @@ function clearSelectedRow() {
   selectedRowId.value = null;
 }
 
+// 编辑title，Schedule.id，同步Activity
+function handleEditTitle(id: number, newTitle: string) {
+  const schedule = scheduleList.value.find(s => s.id === id);
+  if (!schedule) {
+    console.warn(`未找到 id 为 ${id} 的 schedule`);
+    return;
+  }
+  schedule.activityTitle = newTitle;
+  const activity = activityList.value.find(a => a.id === schedule.activityId);
+  if (!activity) {
+    console.warn(`未找到 activityId 为 ${schedule.activityId} 的 activity`);
+    return;
+  }
+  activity.title = newTitle;
+  console.log(`已更新 schedule ${id} 和 activity ${schedule.activityId} 的标题为: ${newTitle}`);
+}
 // ======================== 4. Task/执行相关操作 ========================
 // 在script部分添加处理函数
 function onActivityUpdated() {

@@ -41,6 +41,7 @@
         @convert-to-task="onConvertToTask"
         @select-task="onSelectTask"
         @select-row="handleSelectRow"
+        @edit-title="handleEditTitle"
       />
     </div>
   </div>
@@ -86,7 +87,8 @@ const emit = defineEmits<{
   (e: "convert-to-task", id: number): void;
   (e: "select-task", taskId: number | null): void;
   (e: "select-activity", activityId: number | null): void;
-  (e: "select-row", id: number | null): void; // 添加这行
+  (e: "select-row", id: number | null): void; 
+  (e: "edit-title", id: number, newTitle: string): void;
 }>(); // HACK
 
 // 处理选中行事件
@@ -126,9 +128,12 @@ function onSelectTask(taskId: number | null) {
   emit("select-task", taskId);
 }
 
-// HACK
 function onSelectActivity(activityId: number | null) {
   emit("select-activity", activityId);
+}
+
+function handleEditTitle(scheduleId: number, newTitle: string) {
+  emit("edit-title", scheduleId, newTitle);
 }
 </script>
 <style scoped>
