@@ -96,7 +96,8 @@
             @select-task="onSelectTask"
             @select-activity="onSelectActivity"
             @select-row="onSelectRow"
-            @edit-title="handleEditTitle"
+            @edit-schedule-title="handleEditScheduleTitle"
+            @edit-todo-title="handleEditTodoTitle"
           />
         </div>
         </div>
@@ -224,7 +225,7 @@ const pickedTodoActivity = ref<Activity | null>(null); // 选中活动
 const activeId = ref<number | null>(null); // 当前从ActivityView选中的activity.id
 const selectedTaskId = ref<number | null>(null); // 当前从Todo选中的todo.taskId
 const selectedActivityId = ref<number | null>(null); // 当前从Todo选中的todo.activityId
-// 在现有的状态定义区域添加 #HACK
+// 在现有的状态定义区域添加 
 const selectedRowId = ref<number | null>(null); // todo.id 或者 schedule.id
 
 // 计算当天的番茄钟数
@@ -509,7 +510,7 @@ function clearSelectedRow() {
 }
 
 // 编辑title，Schedule.id，同步Activity
-function handleEditTitle(id: number, newTitle: string) {
+function handleEditScheduleTitle(id: number, newTitle: string) {
   const schedule = scheduleList.value.find(s => s.id === id);
   if (!schedule) {
     console.warn(`未找到 id 为 ${id} 的 schedule`);
@@ -523,6 +524,21 @@ function handleEditTitle(id: number, newTitle: string) {
   }
   activity.title = newTitle;
   console.log(`已更新 schedule ${id} 和 activity ${schedule.activityId} 的标题为: ${newTitle}`);
+}
+
+// 编辑title，todo.id，同步Activity
+function handleEditTodoTitle(id: number, newTitle: string) {
+  const todo = todoList.value.find(t => t.id === id);
+  if (!todo) {
+    console.warn(`未找到 id 为 ${id} 的 todo`);
+    return;
+  }
+  todo.activityTitle = newTitle;
+  const activity = activityList.value.find(a => a.id === todo.activityId);
+  if (!activity) {
+    return;
+  }
+  activity.title = newTitle;
 }
 // ======================== 4. Task/执行相关操作 ========================
 // 在script部分添加处理函数

@@ -29,6 +29,7 @@
         @select-task="onSelectTask"
         @select-activity="onSelectActivity"
         @select-row="handleSelectRow"
+        @edit-todo-title="handleEditTodoTitle"
       />
     </div>
     <div class="schedule-container">
@@ -41,7 +42,7 @@
         @convert-to-task="onConvertToTask"
         @select-task="onSelectTask"
         @select-row="handleSelectRow"
-        @edit-title="handleEditTitle"
+        @edit-schedule-title="handleEditScheduleTitle"
       />
     </div>
   </div>
@@ -57,7 +58,7 @@ defineProps<{
   todayTodos: Todo[];
   todaySchedules: Schedule[];
   activeId: number | null;
-  selectedRowId: number | null; // 添加这行
+  selectedRowId: number | null; 
 }>();
 
 const emit = defineEmits<{
@@ -88,7 +89,8 @@ const emit = defineEmits<{
   (e: "select-task", taskId: number | null): void;
   (e: "select-activity", activityId: number | null): void;
   (e: "select-row", id: number | null): void; 
-  (e: "edit-title", id: number, newTitle: string): void;
+  (e: "edit-schedule-title", id: number, newTitle: string): void;
+  (e: "edit-todo-title", id: number, newTitle: string): void;
 }>(); // HACK
 
 // 处理选中行事件
@@ -132,8 +134,12 @@ function onSelectActivity(activityId: number | null) {
   emit("select-activity", activityId);
 }
 
-function handleEditTitle(scheduleId: number, newTitle: string) {
-  emit("edit-title", scheduleId, newTitle);
+function handleEditScheduleTitle(scheduleId: number, newTitle: string) {
+  emit("edit-schedule-title", scheduleId, newTitle);
+}
+
+function handleEditTodoTitle(todoId: number, newTitle: string) {
+  emit("edit-todo-title", todoId, newTitle);
 }
 </script>
 <style scoped>

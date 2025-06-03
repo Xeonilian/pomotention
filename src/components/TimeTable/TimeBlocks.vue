@@ -126,7 +126,6 @@ function getVerticalBlockStyle(block: Block): CSSProperties {
     (1000 * 60);
   const topPx = startMinute * props.effectivePxPerMinute;
   const heightPx = (endMinute - startMinute) * props.effectivePxPerMinute;
-  console.log(props.effectivePxPerMinute);
 
   return {
     position: "absolute",

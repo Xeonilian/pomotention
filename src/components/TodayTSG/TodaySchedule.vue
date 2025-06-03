@@ -56,7 +56,7 @@
             </td>
             <td 
               class="ellipsis title-cell" 
-              :class="{'done-cell': schedule.status === 'done'}"
+              :class="{'done-cell': schedule.status === 'done', 'cloud-background': schedule.isUntaetigkeit === true}"
               @dblclick.stop="startEditing(schedule.id)"
               :title="editingRowId === schedule.id ? '' : '双击编辑'"
             >
@@ -64,13 +64,19 @@
                 v-if="editingRowId === schedule.id"
                 v-model="editingTitle"
                 @blur="saveEdit(schedule)"
-                @keyup.enter="saveEdit(schedule)"
+                @keyup.enter="saveEdit(schedule)" 
                 @keyup.esc="cancelEdit"
                 @click.stop
                 class="title-input"
                 ref="titleInput"
               />
               <span v-else>{{ schedule.activityTitle ?? "-" }}</span>
+  <!-- 云朵背景元素 - 只有当 isUntaetigkeit 为 true 时才显示 -->
+  <template v-if="schedule.isUntaetigkeit === true">
+    <div class="cloud cloud-1"></div>
+    <div class="cloud cloud-2"></div>
+    <div class="cloud cloud-3"></div>
+  </template>
             </td>
             <td class="ellipsis">{{ schedule.location ?? "-" }}</td>
             <td>
@@ -147,6 +153,7 @@ import {
 import { taskService } from "@/services/taskService";
 import { ref, nextTick } from "vue";
 
+// 编辑用
 const editingRowId = ref<number | null>(null);
 const editingTitle = ref("");
 const titleInput = ref<HTMLInputElement>();
@@ -170,7 +177,7 @@ const emit = defineEmits<{
   (e: "convert-to-task", id: number): void;
   (e: "select-task", taskId: number | null): void;
   (e: "select-row", id: number | null): void; 
-  (e: "edit-title", id: number, newTitle: string): void;
+  (e: "edit-schedule-title", id: number, newTitle: string): void;
 }>();
 
 // 添加状态来控制提示信息
@@ -241,7 +248,7 @@ function startEditing(scheduleId: number) {
 
 function saveEdit(schedule: Schedule) {
   if (editingRowId.value && editingTitle.value.trim()) {
-    emit("edit-title", schedule.id, editingTitle.value.trim());
+    emit("edit-schedule-title", schedule.id, editingTitle.value.trim());
   }
   cancelEdit();
 }
@@ -362,6 +369,7 @@ function cancelEdit() {
 .done-cell{
   text-decoration: line-through var(--color-text-secondary) 0.5px;
 }
+
 .title-cell {
   position: relative;
   cursor: pointer;
@@ -403,5 +411,182 @@ function cancelEdit() {
   display: flex;
   gap: 2px;
   justify-content: flex-end;
+}
+
+
+.cloud-background {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #ffffff7b 0%, #b2d3f585 50%, #dff6ff24 100%) !important;
+}
+
+.cloud {
+  position: absolute;
+  pointer-events: none;
+}
+
+/* 更真实的云朵样式 */
+.cloud-1 {
+  top: 25%;
+  left: -8%;
+  animation: floatMove1 45s infinite linear;
+}
+
+.cloud-1::before {
+  content: '';
+  position: absolute;
+  width: 50px;
+  height: 30px;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 50px;
+  box-shadow: 
+    15px 5px 0 5px rgba(255, 255, 255, 0.7),
+    25px -10px 0 -5px rgba(255, 255, 255, 0.8),
+    40px -5px 0 rgba(255, 255, 255, 0.6),
+    55px 2px 0 -8px rgba(255, 255, 255, 0.7),
+    25px 8px 0 -5px rgba(255, 255, 255, 0.8),
+    35px 15px 0 -10px rgba(255, 255, 255, 0.6);
+}
+
+.cloud-2 {
+  top: 45%;
+  left: -6%;
+  animation: floatMove2 50s infinite linear;
+  animation-delay: -10s;
+}
+
+.cloud-2::before {
+  content: '';
+  position: absolute;
+  width: 40px;
+  height: 25px;
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 40px;
+  box-shadow: 
+    10px 3px 0 3px rgba(255, 255, 255, 0.8),
+    20px -8px 0 -3px rgba(255, 255, 255, 0.7),
+    32px -3px 0 rgba(255, 255, 255, 0.6),
+    42px 1px 0 -5px rgba(255, 255, 255, 0.8),
+    20px 6px 0 -3px rgba(255, 255, 255, 0.7);
+}
+
+.cloud-3 {
+  top: 35%;
+  left: -10%;
+  animation: floatMove3 55s infinite linear;
+  animation-delay: -25s;
+}
+
+.cloud-3::before {
+  content: '';
+  position: absolute;
+  width: 60px;
+  height: 35px;
+  background: rgba(255, 255, 255, 0.75);
+  border-radius: 60px;
+  box-shadow: 
+    18px 6px 0 6px rgba(255, 255, 255, 0.8),
+    30px -12px 0 -6px rgba(255, 255, 255, 0.7),
+    50px -6px 0 rgba(255, 255, 255, 0.65),
+    68px 3px 0 -10px rgba(255, 255, 255, 0.8),
+    30px 10px 0 -6px rgba(255, 255, 255, 0.75),
+    42px 18px 0 -12px rgba(255, 255, 255, 0.6),
+    15px -5px 0 -8px rgba(255, 255, 255, 0.7);
+}
+
+/* 慢悠悠的飘动动画，带上下浮动 */
+@keyframes floatMove1 {
+  0% {
+    transform: translateX(0px) translateY(0px);
+    opacity: 0.8;
+  }
+  20% {
+    transform: translateX(20vw) translateY(-8px);
+    opacity: 0.9;
+  }
+  40% {
+    transform: translateX(40vw) translateY(5px);
+    opacity: 0.85;
+  }
+  60% {
+    transform: translateX(60vw) translateY(-6px);
+    opacity: 0.9;
+  }
+  80% {
+    transform: translateX(80vw) translateY(4px);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateX(110vw) translateY(0px);
+    opacity: 0.6;
+  }
+}
+
+@keyframes floatMove2 {
+  0% {
+    transform: translateX(0px) translateY(0px);
+    opacity: 0.7;
+  }
+  25% {
+    transform: translateX(25vw) translateY(6px);
+    opacity: 0.85;
+  }
+  45% {
+    transform: translateX(45vw) translateY(-4px);
+    opacity: 0.9;
+  }
+  65% {
+    transform: translateX(65vw) translateY(7px);
+    opacity: 0.8;
+  }
+  85% {
+    transform: translateX(85vw) translateY(-3px);
+    opacity: 0.85;
+  }
+  100% {
+    transform: translateX(110vw) translateY(2px);
+    opacity: 0.6;
+  }
+}
+
+@keyframes floatMove3 {
+  0% {
+    transform: translateX(0px) translateY(0px);
+    opacity: 0.75;
+  }
+  15% {
+    transform: translateX(15vw) translateY(-5px);
+    opacity: 0.8;
+  }
+  35% {
+    transform: translateX(35vw) translateY(8px);
+    opacity: 0.85;
+  }
+  55% {
+    transform: translateX(55vw) translateY(-7px);
+    opacity: 0.8;
+  }
+  75% {
+    transform: translateX(75vw) translateY(3px);
+    opacity: 0.85;
+  }
+  90% {
+    transform: translateX(90vw) translateY(-4px);
+    opacity: 0.75;
+  }
+  100% {
+    transform: translateX(110vw) translateY(1px);
+    opacity: 0.6;
+  }
+}
+
+/* 确保文字内容在云朵之上 */
+.title-input,
+.cloud-background span {
+  position: relative;
+  z-index: 10;
+  background: rgba(255,255,255,0.1);
+  padding: 2px 4px;
+  border-radius: 3px;
 }
 </style>

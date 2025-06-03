@@ -63,7 +63,7 @@
                   : "-"
               }}
             </td>
-            <td class="priority-cell" @click="startEditing(todo)">
+            <td class="priority-cell" @click="startEditingPriority(todo)">
               <template v-if="editingTodo && editingTodo.id === todo.id">
                 <n-input-number
                   v-model:value="editingPriority"
@@ -88,7 +88,24 @@
                 </span>
               </template>
             </td>
-            <td class="ellipsis" :class="{'done-cell': todo.status === 'done'}">{{ todo.activityTitle ?? "-" }}</td>
+            <td 
+              class="ellipsis title-cell" 
+              :class="{'done-cell': todo.status === 'done'}"
+              @dblclick.stop="startEditing(todo.id)"
+              :title="editingRowId === todo.id ? '' : '双击编辑'"
+            >
+              <input
+                v-if="editingRowId === todo.id"
+                v-model="editingTitle"
+                @blur="saveEdit(todo)"
+                @keyup.enter="saveEdit(todo)" 
+                @keyup.esc="cancelEdit"
+                @click.stop
+                class="title-input"
+                ref="titleInput"
+              />
+              <span v-else>{{ todo.activityTitle ?? "-" }}</span>
+            </td>
             <td>
               <div class="pomo-container">
                 <span class="pomo-type">{{ todo.pomoType }}</span>
@@ -221,8 +238,13 @@ import {
   ChevronCircleDown48Regular,
 } from "@vicons/fluent";
 import { NCheckbox, NInputNumber, NPopover, NButton, NIcon } from "naive-ui";
-import { ref, computed } from "vue";
+import { ref, computed, nextTick } from "vue";
 import { taskService } from "@/services/taskService";
+
+// 编辑用
+const editingRowId = ref<number | null>(null);
+const editingTitle = ref("");
+const titleInput = ref<HTMLInputElement>();
 
 // 添加状态来控制提示信息
 const showPopover = ref(false);
@@ -265,6 +287,7 @@ const emit = defineEmits<{
   (e: "select-task", taskId: number | null): void;
   (e: "select-row", id: number | null): void;
   (e: "select-activity", activityId: number | null): void;
+  (e: "edit-todo-title", id: number, newTitle: string): void;
 }>();
 
 const editingTodo = ref<TodoWithNumberPriority | null>(null);
@@ -295,7 +318,7 @@ const sortedTodos = computed(() => {
 });
 
 // 开始编辑优先级
-function startEditing(todo: TodoWithNumberPriority) {
+function startEditingPriority(todo: TodoWithNumberPriority) {
   editingTodo.value = todo;
   editingPriority.value = todo.priority;
 }
@@ -537,6 +560,31 @@ function handleRowClick(todo: TodoWithNumberPriority) {
   emit("select-task", todo.taskId || null);
   emit("select-activity", todo.activityId || null);
 }
+
+// 编辑相关函数
+function startEditing(todoId: number) {
+  const todo = props.todos.find(t => t.id === todoId);
+  if (todo) {
+    editingRowId.value = todoId;
+    editingTitle.value = todo.activityTitle || "";
+    nextTick(() => {
+      titleInput.value?.focus();
+      titleInput.value?.select();
+    });
+  }
+}
+
+function saveEdit(todo: Todo) {
+  if (editingRowId.value && editingTitle.value.trim()) {
+    emit("edit-todo-title", todo.id, editingTitle.value.trim());
+  }
+  cancelEdit();
+}
+
+function cancelEdit() {
+  editingRowId.value = null;
+  editingTitle.value = "";
+}
 </script>
 
 <style scoped>
@@ -735,7 +783,6 @@ function handleRowClick(todo: TodoWithNumberPriority) {
 /* 完成行样式 */
 .done-row {
   color: var(--color-text-secondary);
-  
 }
 
 .done-cell{
@@ -745,4 +792,41 @@ function handleRowClick(todo: TodoWithNumberPriority) {
 .pomo-type {
   font-size: 11px;
 }
+
+.title-cell {
+  position: relative;
+  cursor: pointer;
+}
+
+.title-cell:hover::after {
+  content: "双击编辑";
+  position: absolute;
+  top: -25px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.title-input {
+  width: 100%;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: inherit;
+  font-family: inherit;
+  outline: none;
+}
+
+.title-input:focus {
+  border-color: #40a9ff;
+  box-shadow: 0 0 0 2px rgba(64, 169, 255, 0.2);
+}
+
 </style>

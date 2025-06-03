@@ -217,7 +217,7 @@ function addUntaetigkeitRow() {
   emit("add-activity", {
     id: Date.now(),
     class: "S",
-    title: "无所事事",
+    title: "",
     dueRange: [Date.now(), ""], 
     status: "",
     isUntaetigkeit: true,
