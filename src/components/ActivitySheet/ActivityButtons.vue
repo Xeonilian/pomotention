@@ -59,7 +59,7 @@
         ><n-icon><AddSubtractCircle24Filled /></n-icon
       ></template>
     </n-button>
-    
+
     <n-button
       @click="$emit('add-todo')"
       circle
@@ -157,7 +157,15 @@ defineEmits([
 .activity-view-button-container {
   display: flex;
   justify-content: center;
+  align-items: center;
+  margin: 0 auto 10px auto;
   gap: 8px;
-  width: 100%;
+  top: 0;
+  z-index: 10;
+  background-color: var(--color-background);
+  border-radius: 15px;
+  width: 260px;
+  height: 40px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05); /* 如需要阴影 */
 }
 </style>

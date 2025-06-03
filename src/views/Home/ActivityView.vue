@@ -185,7 +185,7 @@ function pickActivity() {
   // 2. 查找todo中是否有对应的活动
   const isPicked = props.todos.find((t) => t.activityId === props.activeId);
   if (isPicked) {
-    showErrorPopover("【"+ isPicked.idFormated + "】启动待办");
+    showErrorPopover("【" + isPicked.idFormated + "】启动待办");
     return;
   }
   const picked = props.activities.find((a) => a.id === props.activeId);
@@ -218,10 +218,9 @@ function addUntaetigkeitRow() {
     id: Date.now(),
     class: "S",
     title: "",
-    dueRange: [Date.now(), ""], 
+    dueRange: [Date.now(), ""],
     status: "",
     isUntaetigkeit: true,
-
   });
 }
 
@@ -278,16 +277,5 @@ function getCountdownClass(dueDate: number | undefined | null): string {
 /* 顶部固定按钮容器样式 */
 .activity-buttons-sticky {
   position: sticky;
-  top: 0;
-  z-index: 10;
-  margin: 0 auto 10px auto; /* 水平居中+下方间距 */
-  background-color: var(--color-background);
-  border-radius: 15px; /* 建议用像素，百分号效果容易变形 */
-  width: 220px;
-  height: 40px;
-  display: flex; /* 加flex布局 */
-  align-items: center; /* 垂直居中（高度方向） */
-  justify-content: center; /* 水平居中内部内容 */
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05); /* 如需要阴影 */
 }
 </style>
