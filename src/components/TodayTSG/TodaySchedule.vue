@@ -54,9 +54,12 @@
                 schedule.activityDueRange ? schedule.activityDueRange[1] : "min"
               }}
             </td>
-            <td 
-              class="ellipsis title-cell" 
-              :class="{'done-cell': schedule.status === 'done', 'cloud-background': schedule.isUntaetigkeit === true}"
+            <td
+              class="ellipsis title-cell"
+              :class="{
+                'done-cell': schedule.status === 'done',
+                'cloud-background': schedule.isUntaetigkeit === true,
+              }"
               @dblclick.stop="startEditing(schedule.id)"
               :title="editingRowId === schedule.id ? '' : '双击编辑'"
             >
@@ -64,19 +67,22 @@
                 v-if="editingRowId === schedule.id"
                 v-model="editingTitle"
                 @blur="saveEdit(schedule)"
-                @keyup.enter="saveEdit(schedule)" 
+                @keyup.enter="saveEdit(schedule)"
                 @keyup.esc="cancelEdit"
                 @click.stop
                 class="title-input"
                 ref="titleInput"
               />
               <span v-else>{{ schedule.activityTitle ?? "-" }}</span>
-  <!-- 云朵背景元素 - 只有当 isUntaetigkeit 为 true 时才显示 -->
-  <template v-if="schedule.isUntaetigkeit === true">
-    <div class="cloud cloud-1"></div>
-    <div class="cloud cloud-2"></div>
-    <div class="cloud cloud-3"></div>
-  </template>
+              <!-- 云朵背景元素 - 只有当 isUntaetigkeit 为 true 时才显示 -->
+              <template v-if="schedule.isUntaetigkeit === true">
+                <div class="cloud cloud-1"></div>
+                <div class="cloud cloud-2"></div>
+                <div class="cloud cloud-3"></div>
+                <div class="cloud cloud-4"></div>
+                <div class="cloud cloud-5"></div>
+                <div class="cloud cloud-6"></div>
+              </template>
             </td>
             <td class="ellipsis">{{ schedule.location ?? "-" }}</td>
             <td>
@@ -176,7 +182,7 @@ const emit = defineEmits<{
   (e: "suspend-schedule", id: number): void;
   (e: "convert-to-task", id: number): void;
   (e: "select-task", taskId: number | null): void;
-  (e: "select-row", id: number | null): void; 
+  (e: "select-row", id: number | null): void;
   (e: "edit-schedule-title", id: number, newTitle: string): void;
 }>();
 
@@ -192,7 +198,13 @@ function handleCheckboxChange(schedule: Schedule, checked: boolean) {
   } else {
     schedule.doneTime = undefined;
   }
-  emit("update-schedule-status", schedule.id, schedule.activityId, schedule.doneTime, newStatus);
+  emit(
+    "update-schedule-status",
+    schedule.id,
+    schedule.activityId,
+    schedule.doneTime,
+    newStatus
+  );
 }
 
 function handleSuspendSchedule(id: number) {
@@ -235,7 +247,7 @@ function handleRowClick(schedule: Schedule) {
 
 // 编辑相关函数
 function startEditing(scheduleId: number) {
-  const schedule = props.schedules.find(s => s.id === scheduleId);
+  const schedule = props.schedules.find((s) => s.id === scheduleId);
   if (schedule) {
     editingRowId.value = scheduleId;
     editingTitle.value = schedule.activityTitle || "";
@@ -363,10 +375,10 @@ function cancelEdit() {
 
 /* 完成行样式 */
 .done-row {
-  color: var(--color-text-secondary)
+  color: var(--color-text-secondary);
 }
 
-.done-cell{
+.done-cell {
   text-decoration: line-through var(--color-text-secondary) 0.5px;
 }
 
@@ -413,11 +425,15 @@ function cancelEdit() {
   justify-content: flex-end;
 }
 
-
 .cloud-background {
   position: relative;
   overflow: hidden;
-  background: linear-gradient(135deg, #ffffff7b 0%, #b2d3f585 50%, #dff6ff24 100%) !important;
+  background: linear-gradient(
+    135deg,
+    #ffffff7b 0%,
+    #b2d3f585 50%,
+    #dff6ff24 100%
+  ) !important;
 }
 
 .cloud {
@@ -429,18 +445,18 @@ function cancelEdit() {
 .cloud-1 {
   top: 25%;
   left: -8%;
-  animation: floatMove1 45s infinite linear;
+  animation: floatMove1 45s infinite linear, fadeIn 1.5s forwards;
+  opacity: 0;
 }
 
 .cloud-1::before {
-  content: '';
+  content: "";
   position: absolute;
   width: 50px;
   height: 30px;
   background: rgba(255, 255, 255, 0.8);
   border-radius: 50px;
-  box-shadow: 
-    15px 5px 0 5px rgba(255, 255, 255, 0.7),
+  box-shadow: 15px 5px 0 5px rgba(255, 255, 255, 0.7),
     25px -10px 0 -5px rgba(255, 255, 255, 0.8),
     40px -5px 0 rgba(255, 255, 255, 0.6),
     55px 2px 0 -8px rgba(255, 255, 255, 0.7),
@@ -451,19 +467,19 @@ function cancelEdit() {
 .cloud-2 {
   top: 45%;
   left: -6%;
-  animation: floatMove2 50s infinite linear;
-  animation-delay: -10s;
+  animation: fadeIn 1.5s forwards, floatMove2 50s infinite linear;
+  animation-delay: 2s, -10s;
+  opacity: 0;
 }
 
 .cloud-2::before {
-  content: '';
+  content: "";
   position: absolute;
   width: 40px;
   height: 25px;
   background: rgba(255, 255, 255, 0.7);
   border-radius: 40px;
-  box-shadow: 
-    10px 3px 0 3px rgba(255, 255, 255, 0.8),
+  box-shadow: 10px 3px 0 3px rgba(255, 255, 255, 0.8),
     20px -8px 0 -3px rgba(255, 255, 255, 0.7),
     32px -3px 0 rgba(255, 255, 255, 0.6),
     42px 1px 0 -5px rgba(255, 255, 255, 0.8),
@@ -473,19 +489,19 @@ function cancelEdit() {
 .cloud-3 {
   top: 35%;
   left: -10%;
-  animation: floatMove3 55s infinite linear;
-  animation-delay: -25s;
+  animation: fadeIn 1.5s forwards, floatMove3 40s infinite linear;
+  animation-delay: 1s, -25s;
+  opacity: 0;
 }
 
 .cloud-3::before {
-  content: '';
+  content: "";
   position: absolute;
   width: 60px;
   height: 35px;
   background: rgba(255, 255, 255, 0.75);
   border-radius: 60px;
-  box-shadow: 
-    18px 6px 0 6px rgba(255, 255, 255, 0.8),
+  box-shadow: 18px 6px 0 6px rgba(255, 255, 255, 0.8),
     30px -12px 0 -6px rgba(255, 255, 255, 0.7),
     50px -6px 0 rgba(255, 255, 255, 0.65),
     68px 3px 0 -10px rgba(255, 255, 255, 0.8),
@@ -494,6 +510,83 @@ function cancelEdit() {
     15px -5px 0 -8px rgba(255, 255, 255, 0.7);
 }
 
+.cloud-4 {
+  top: 25%;
+  left: -8%;
+  animation: fadeIn 3s, forwards floatMove1 45s infinite linear;
+  opacity: 0;
+  animation-delay: 1s, -15s;
+}
+
+.cloud-4::before {
+  content: "";
+  position: absolute;
+  width: 50px;
+  height: 30px;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 50px;
+  box-shadow: 15px 5px 0 5px rgba(255, 255, 255, 0.7),
+    25px -10px 0 -5px rgba(255, 255, 255, 0.8),
+    40px -5px 0 rgba(255, 255, 255, 0.6),
+    55px 2px 0 -8px rgba(255, 255, 255, 0.7),
+    25px 8px 0 -5px rgba(255, 255, 255, 0.8),
+    35px 15px 0 -10px rgba(255, 255, 255, 0.6);
+}
+
+.cloud-5 {
+  top: 45%;
+  left: -6%;
+  animation: fadeIn 1.5s forwards, floatMove3 50s linear infinite;
+  animation-delay: 1s, -45s;
+  opacity: 0;
+}
+
+.cloud-5::before {
+  content: "";
+  position: absolute;
+  width: 40px;
+  height: 30px;
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 40px;
+  box-shadow: 10px 3px 0 3px rgba(255, 255, 255, 0.8),
+    20px -8px 0 -3px rgba(255, 255, 255, 0.7),
+    32px -3px 0 rgba(255, 255, 255, 0.6),
+    42px 1px 0 -5px rgba(255, 255, 255, 0.8),
+    20px 6px 0 -3px rgba(255, 255, 255, 0.7);
+}
+
+.cloud-6 {
+  top: 35%;
+  left: -10%;
+  animation: fadeIn 1.5s forwards, floatMove2 50s linear infinite;
+  animation-delay: 1s, -5s;
+  opacity: 0;
+}
+
+.cloud-6::before {
+  content: "";
+  position: absolute;
+  width: 60px;
+  height: 35px;
+  background: rgba(255, 255, 255, 0.75);
+  border-radius: 60px;
+  box-shadow: 18px 6px 0 6px rgba(255, 255, 255, 0.8),
+    30px -12px 0 -6px rgba(255, 255, 255, 0.7),
+    50px -6px 0 rgba(255, 255, 255, 0.65),
+    68px 3px 0 -10px rgba(255, 255, 255, 0.8),
+    30px 10px 0 -6px rgba(255, 255, 255, 0.75),
+    42px 18px 0 -12px rgba(255, 255, 255, 0.6),
+    15px -5px 0 -8px rgba(255, 255, 255, 0.7);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
 /* 慢悠悠的飘动动画，带上下浮动 */
 @keyframes floatMove1 {
   0% {
@@ -585,7 +678,7 @@ function cancelEdit() {
 .cloud-background span {
   position: relative;
   z-index: 10;
-  background: rgba(255,255,255,0.1);
+  background: rgba(255, 255, 255, 0.1);
   padding: 2px 4px;
   border-radius: 3px;
 }
