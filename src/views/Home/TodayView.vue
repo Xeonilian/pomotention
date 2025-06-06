@@ -30,6 +30,8 @@
         @select-activity="onSelectActivity"
         @select-row="handleSelectRow"
         @edit-todo-title="handleEditTodoTitle"
+        @edit-todo-start="handleEditTodoStart"
+        @edit-todo-done="handleEditTodoDone"
       />
     </div>
     <div class="schedule-container">
@@ -58,7 +60,7 @@ defineProps<{
   todayTodos: Todo[];
   todaySchedules: Schedule[];
   activeId: number | null;
-  selectedRowId: number | null; 
+  selectedRowId: number | null;
 }>();
 
 const emit = defineEmits<{
@@ -88,9 +90,11 @@ const emit = defineEmits<{
   (e: "convert-to-task", id: number): void;
   (e: "select-task", taskId: number | null): void;
   (e: "select-activity", activityId: number | null): void;
-  (e: "select-row", id: number | null): void; 
+  (e: "select-row", id: number | null): void;
   (e: "edit-schedule-title", id: number, newTitle: string): void;
   (e: "edit-todo-title", id: number, newTitle: string): void;
+  (e: "edit-todo-start", id: number, newTs: number): void;
+  (e: "edit-todo-done", id: number, newTs: number): void;
 }>(); // HACK
 
 // 处理选中行事件
@@ -98,11 +102,21 @@ function handleSelectRow(id: number | null) {
   emit("select-row", id);
 }
 
-function updateScheduleStatus(id: number, activityId: number, doneTime: number | undefined, status: string) {
+function updateScheduleStatus(
+  id: number,
+  activityId: number,
+  doneTime: number | undefined,
+  status: string
+) {
   emit("update-schedule-status", id, activityId, doneTime, status);
 }
 
-function updateTodoStatus(id: number, activityId: number, doneTime: number | undefined, status: string) {
+function updateTodoStatus(
+  id: number,
+  activityId: number,
+  doneTime: number | undefined,
+  status: string
+) {
   emit("update-todo-status", id, activityId, doneTime, status);
 }
 
@@ -140,6 +154,14 @@ function handleEditScheduleTitle(scheduleId: number, newTitle: string) {
 
 function handleEditTodoTitle(todoId: number, newTitle: string) {
   emit("edit-todo-title", todoId, newTitle);
+}
+
+function handleEditTodoStart(todoId: number, newTs: number) {
+  emit("edit-todo-start", todoId, newTs);
+}
+
+function handleEditTodoDone(todoId: number, newTs: number) {
+  emit("edit-todo-done", todoId, newTs);
 }
 </script>
 <style scoped>

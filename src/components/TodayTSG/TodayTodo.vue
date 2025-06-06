@@ -12,7 +12,7 @@
     - batch-update-priorities: (updates: Array<{ id: number; priority: number }>)
     - update-todo-pomo: (id: number, realPomo: number[])
     - update-todo-est: (id: number, estPomo: number[])
-    - convert-to-task: (id: number)
+
     - select-task: (taskId: number | null)
     - select-row: (id: number | null)
   Parent: TodayView.vue
@@ -53,15 +53,55 @@
                 @update:checked="handleCheckboxChange(todo, $event)"
               />
             </td>
-            <td>
-              {{ todo.taskId ? timestampToTimeString(todo.taskId) : "-" }}
+            <!-- 开始时间 -->
+            <td
+              @dblclick.stop="startEditing(todo.id, 'start')"
+              :title="
+                editingRowId === todo.id && editingField === 'start'
+                  ? ''
+                  : '双击编辑'
+              "
+            >
+              <input
+                v-if="editingRowId === todo.id && editingField === 'start'"
+                v-model="editingValue"
+                @blur="saveEdit(todo)"
+                @keyup.enter="saveEdit(todo)"
+                @keyup.esc="cancelEdit"
+                ref="editingInput"
+                class="start-input time-input"
+                :data-todo-id="todo.id"
+                maxlength="5"
+                autocomplete="off"
+              />
+              <span v-else>{{
+                todo.startTime ? timestampToTimeString(todo.startTime) : "-"
+              }}</span>
             </td>
-            <td>
-              {{
-                todo.doneTime
-                  ? timestampToTimeString(todo.doneTime)
-                  : "-"
-              }}
+            <!-- 结束时间 -->
+            <td
+              @dblclick.stop="startEditing(todo.id, 'done')"
+              :title="
+                editingRowId === todo.id && editingField === 'done'
+                  ? ''
+                  : '双击编辑'
+              "
+            >
+              <input
+                v-if="editingRowId === todo.id && editingField === 'done'"
+                v-model="editingValue"
+                @blur="saveEdit(todo)"
+                @keyup.enter="saveEdit(todo)"
+                @keyup.esc="cancelEdit"
+                ref="editingInput"
+                class="done-input time-input"
+                :data-todo-id="todo.id"
+                maxlength="5"
+                autocomplete="off"
+              />
+              <span v-else>{{
+                todo.doneTime ? timestampToTimeString(todo.doneTime) : "-"
+              }}</span>
             </td>
             <td class="priority-cell" @click="startEditingPriority(todo)">
               <template v-if="editingTodo && editingTodo.id === todo.id">
@@ -88,21 +128,26 @@
                 </span>
               </template>
             </td>
-            <td 
-              class="ellipsis title-cell" 
-              :class="{'done-cell': todo.status === 'done'}"
-              @dblclick.stop="startEditing(todo.id)"
-              :title="editingRowId === todo.id ? '' : '双击编辑'"
+            <td
+              class="ellipsis title-cell"
+              :class="{ 'done-cell': todo.status === 'done' }"
+              @dblclick.stop="startEditing(todo.id, 'title')"
+              :title="
+                editingRowId === todo.id && editingField === 'title'
+                  ? ''
+                  : '双击编辑'
+              "
             >
               <input
-                v-if="editingRowId === todo.id"
-                v-model="editingTitle"
+                v-if="editingRowId === todo.id && editingField === 'title'"
+                v-model="editingValue"
                 @blur="saveEdit(todo)"
-                @keyup.enter="saveEdit(todo)" 
+                @keyup.enter="saveEdit(todo)"
                 @keyup.esc="cancelEdit"
                 @click.stop
                 class="title-input"
-                ref="titleInput"
+                :data-todo-id="todo.id"
+                ref="editingInput"
               />
               <span v-else>{{ todo.activityTitle ?? "-" }}</span>
             </td>
@@ -240,11 +285,13 @@ import {
 import { NCheckbox, NInputNumber, NPopover, NButton, NIcon } from "naive-ui";
 import { ref, computed, nextTick } from "vue";
 import { taskService } from "@/services/taskService";
+import { getTimestampForTimeString } from "@/core/utils";
 
 // 编辑用
 const editingRowId = ref<number | null>(null);
-const editingTitle = ref("");
-const titleInput = ref<HTMLInputElement>();
+const editingField = ref<null | "title" | "start" | "done">(null);
+const editingValue = ref("");
+const editingInput = ref<HTMLInputElement>();
 
 // 添加状态来控制提示信息
 const showPopover = ref(false);
@@ -283,11 +330,13 @@ const emit = defineEmits<{
   ): void;
   (e: "update-todo-pomo", id: number, realPomo: number[]): void;
   (e: "update-todo-est", id: number, estPomo: number[]): void;
-  (e: "convert-to-task", id: number): void;
+
   (e: "select-task", taskId: number | null): void;
   (e: "select-row", id: number | null): void;
   (e: "select-activity", activityId: number | null): void;
   (e: "edit-todo-title", id: number, newTitle: string): void;
+  (e: "edit-todo-start", id: number, newTs: number): void;
+  (e: "edit-todo-done", id: number, newTs: number): void;
 }>();
 
 const editingTodo = ref<TodoWithNumberPriority | null>(null);
@@ -451,7 +500,13 @@ function handleCheckboxChange(todo: TodoWithNumberPriority, checked: boolean) {
   } else {
     todo.doneTime = undefined;
   }
-  emit("update-todo-status", todo.id, todo.activityId, todo.doneTime, newStatus);
+  emit(
+    "update-todo-status",
+    todo.id,
+    todo.activityId,
+    todo.doneTime,
+    newStatus
+  );
 }
 
 // 番茄估计
@@ -545,12 +600,12 @@ function handleConvertToTask(todo: TodoWithNumberPriority) {
   if (task) {
     // 立即更新本地的 taskId
     todo.taskId = task.id;
+    todo.startTime = task.id;
     popoverMessage.value = "已转换为任务";
     showPopover.value = true;
     setTimeout(() => {
       showPopover.value = false;
     }, 2000);
-    emit("convert-to-task", todo.id);
   }
 }
 
@@ -562,28 +617,72 @@ function handleRowClick(todo: TodoWithNumberPriority) {
 }
 
 // 编辑相关函数
-function startEditing(todoId: number) {
-  const todo = props.todos.find(t => t.id === todoId);
-  if (todo) {
-    editingRowId.value = todoId;
-    editingTitle.value = todo.activityTitle || "";
-    nextTick(() => {
-      titleInput.value?.focus();
-      titleInput.value?.select();
-    });
-  }
+// 修改 startEditing 函数
+function startEditing(todoId: number, field: "title" | "start" | "done") {
+  const todo = props.todos.find((t) => t.id === todoId);
+  if (!todo) return;
+  editingRowId.value = todoId;
+  editingField.value = field;
+  editingValue.value =
+    field === "title"
+      ? todo.activityTitle || ""
+      : field === "start"
+      ? todo.taskId
+        ? timestampToTimeString(todo.taskId)
+        : ""
+      : todo.doneTime
+      ? timestampToTimeString(todo.doneTime)
+      : "";
+
+  // 使用 querySelector 来获取当前编辑的输入框，而不是依赖 ref
+  nextTick(() => {
+    const input = document.querySelector(
+      `input.${field}-input[data-todo-id="${todoId}"]`
+    );
+    if (input) {
+      (input as HTMLInputElement).focus();
+    }
+  });
 }
 
-function saveEdit(todo: Todo) {
-  if (editingRowId.value && editingTitle.value.trim()) {
-    emit("edit-todo-title", todo.id, editingTitle.value.trim());
+// #HACK
+function saveEdit(todo: TodoWithNumberPriority) {
+  if (!editingRowId.value) return;
+
+  if (editingField.value === "title") {
+    if (editingValue.value.trim()) {
+      emit("edit-todo-title", todo.id, editingValue.value.trim());
+    }
+  }
+
+  if (editingField.value === "start") {
+    if (isValidTimeString(editingValue.value)) {
+      const ts = getTimestampForTimeString(editingValue.value);
+      emit("edit-todo-start", todo.id, ts);
+    }
+  }
+
+  if (editingField.value === "done") {
+    if (isValidTimeString(editingValue.value)) {
+      const ts = getTimestampForTimeString(editingValue.value);
+      emit("edit-todo-done", todo.id, ts);
+    }
   }
   cancelEdit();
 }
 
 function cancelEdit() {
   editingRowId.value = null;
-  editingTitle.value = "";
+  editingField.value = null;
+  editingValue.value = "";
+}
+
+function isValidTimeString(str: string) {
+  return (
+    /^\d{2}:\d{2}$/.test(str) &&
+    +str.split(":")[0] <= 24 &&
+    +str.split(":")[1] < 60
+  );
 }
 </script>
 
@@ -785,7 +884,7 @@ function cancelEdit() {
   color: var(--color-text-secondary);
 }
 
-.done-cell{
+.done-cell {
   text-decoration: line-through var(--color-text-secondary) 0.5px;
 }
 
@@ -815,10 +914,10 @@ function cancelEdit() {
 }
 
 .title-input {
-  width: 100%;
+  width: calc(100% - 10px);
   border: 1px solid #d9d9d9;
   border-radius: 4px;
-  padding: 4px 8px;
+
   font-size: inherit;
   font-family: inherit;
   outline: none;
@@ -829,4 +928,26 @@ function cancelEdit() {
   box-shadow: 0 0 0 2px rgba(64, 169, 255, 0.2);
 }
 
+.time-input {
+  border: 1px solid #d9d9d9;
+  max-width: 100%;
+  border-radius: 4px;
+  font-size: inherit;
+  font-family: inherit;
+  outline: none;
+}
+.start-input,
+.done-input {
+  width: 42px !important;
+  max-width: 42px !important;
+  min-width: 0 !important;
+  box-sizing: border-box;
+  padding: 2px 4px;
+  font-size: inherit;
+}
+
+.time-input:focus {
+  border-color: #40a9ff;
+  box-shadow: 0 0 0 2px rgba(64, 169, 255, 0.2);
+}
 </style>

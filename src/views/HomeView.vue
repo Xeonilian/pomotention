@@ -82,24 +82,26 @@
             </div>
           </div>
           <div class="today-view-container">
-          <TodayView
-            :selectedRowId="selectedRowId"
-            :todayTodos="currentViewDateTodos"
-            :todaySchedules="currentViewDateSchedules"
-            :activeId="activeId"
-            @update-schedule-status="onUpdateScheduleStatus"
-            @update-todo-status="onUpdateTodoStatus"
-            @suspend-todo="onSuspendTodo"
-            @suspend-schedule="onSuspendSchedule"
-            @update-todo-est="onUpdateTodoEst"
-            @update-todo-pomo="onUpdateTodoPomo"
-            @select-task="onSelectTask"
-            @select-activity="onSelectActivity"
-            @select-row="onSelectRow"
-            @edit-schedule-title="handleEditScheduleTitle"
-            @edit-todo-title="handleEditTodoTitle"
-          />
-        </div>
+            <TodayView
+              :selectedRowId="selectedRowId"
+              :todayTodos="currentViewDateTodos"
+              :todaySchedules="currentViewDateSchedules"
+              :activeId="activeId"
+              @update-schedule-status="onUpdateScheduleStatus"
+              @update-todo-status="onUpdateTodoStatus"
+              @suspend-todo="onSuspendTodo"
+              @suspend-schedule="onSuspendSchedule"
+              @update-todo-est="onUpdateTodoEst"
+              @update-todo-pomo="onUpdateTodoPomo"
+              @select-task="onSelectTask"
+              @select-activity="onSelectActivity"
+              @select-row="onSelectRow"
+              @edit-schedule-title="handleEditScheduleTitle"
+              @edit-todo-title="handleEditTodoTitle"
+              @edit-todo-start="handleEditTodoStart"
+              @edit-todo-done="handleEditTodoDone"
+            />
+          </div>
         </div>
         <div
           v-if="showMiddleBottom"
@@ -225,7 +227,7 @@ const pickedTodoActivity = ref<Activity | null>(null); // 选中活动
 const activeId = ref<number | null>(null); // 当前从ActivityView选中的activity.id
 const selectedTaskId = ref<number | null>(null); // 当前从Todo选中的todo.taskId
 const selectedActivityId = ref<number | null>(null); // 当前从Todo选中的todo.activityId
-// 在现有的状态定义区域添加 
+// 在现有的状态定义区域添加
 const selectedRowId = ref<number | null>(null); // todo.id 或者 schedule.id
 
 // 计算当天的番茄钟数
@@ -388,7 +390,6 @@ function onUpdateActiveId(id: number | null) {
   selectedRowId.value = null; // 这个id是activity的
 }
 
-
 /** 修改番茄类型时的提示处理 */
 function onTogglePomoType(id: number, event?: Event) {
   const target = (event?.target as HTMLElement) || null;
@@ -417,8 +418,20 @@ const currentViewDateSchedules = computed(() =>
 );
 
 /** Todo 更新状态（勾选） */
-function onUpdateTodoStatus(id: number, activityId: number, doneTime: number | undefined, status: string) {
-  updateTodoStatus(todoList.value, activityList.value, id, activityId, doneTime, status);
+function onUpdateTodoStatus(
+  id: number,
+  activityId: number,
+  doneTime: number | undefined,
+  status: string
+) {
+  updateTodoStatus(
+    todoList.value,
+    activityList.value,
+    id,
+    activityId,
+    doneTime,
+    status
+  );
 }
 
 /** 更新待办事项的番茄钟估计 */
@@ -429,11 +442,11 @@ function onUpdateTodoEst(id: number, estPomo: number[]) {
     todo.estPomo = estPomo;
     // 保存到本地存储
     saveTodos(todoList.value);
-  } 
-  const activity = activityList.value.find((a) => a.id === todo?.activityId)
+  }
+  const activity = activityList.value.find((a) => a.id === todo?.activityId);
   if (activity && estPomo && estPomo.length === 1) {
-  activity.estPomoI = estPomo[0].toString();
-}
+    activity.estPomoI = estPomo[0].toString();
+  }
 }
 
 /** 更新待办事项的实际番茄钟完成情况 */
@@ -492,7 +505,7 @@ function onSelectTask(taskId: number | null) {
   activeId.value = null;
 }
 
-// 从Today选择任务处理函数
+// 从Today选择活动处理函数
 function onSelectActivity(activityId: number | null) {
   selectedActivityId.value = activityId;
 }
@@ -511,34 +524,54 @@ function clearSelectedRow() {
 
 // 编辑title，Schedule.id，同步Activity
 function handleEditScheduleTitle(id: number, newTitle: string) {
-  const schedule = scheduleList.value.find(s => s.id === id);
+  const schedule = scheduleList.value.find((s) => s.id === id);
   if (!schedule) {
     console.warn(`未找到 id 为 ${id} 的 schedule`);
     return;
   }
   schedule.activityTitle = newTitle;
-  const activity = activityList.value.find(a => a.id === schedule.activityId);
+  const activity = activityList.value.find((a) => a.id === schedule.activityId);
   if (!activity) {
     console.warn(`未找到 activityId 为 ${schedule.activityId} 的 activity`);
     return;
   }
   activity.title = newTitle;
-  console.log(`已更新 schedule ${id} 和 activity ${schedule.activityId} 的标题为: ${newTitle}`);
+  console.log(
+    `已更新 schedule ${id} 和 activity ${schedule.activityId} 的标题为: ${newTitle}`
+  );
 }
 
 // 编辑title，todo.id，同步Activity
 function handleEditTodoTitle(id: number, newTitle: string) {
-  const todo = todoList.value.find(t => t.id === id);
+  const todo = todoList.value.find((t) => t.id === id);
   if (!todo) {
     console.warn(`未找到 id 为 ${id} 的 todo`);
     return;
   }
   todo.activityTitle = newTitle;
-  const activity = activityList.value.find(a => a.id === todo.activityId);
+  const activity = activityList.value.find((a) => a.id === todo.activityId);
   if (!activity) {
     return;
   }
   activity.title = newTitle;
+}
+// 编辑时间
+function handleEditTodoStart(id: number, newTm: number) {
+  const todo = todoList.value.find((t) => t.id === id);
+  if (!todo) {
+    console.warn(`未找到 id 为 ${id} 的 todo`);
+    return;
+  }
+  todo.startTime = newTm;
+}
+
+function handleEditTodoDone(id: number, newTm: number) {
+  const todo = todoList.value.find((t) => t.id === id);
+  if (!todo) {
+    console.warn(`未找到 id 为 ${id} 的 todo`);
+    return;
+  }
+  todo.doneTime = newTm;
 }
 // ======================== 4. Task/执行相关操作 ========================
 // 在script部分添加处理函数
@@ -838,7 +871,7 @@ defineExpose({
   justify-content: space-between;
   align-items: center;
   margin: 8px 8px 8px 0px;
-  flex-shrink: 0; 
+  flex-shrink: 0;
 }
 
 .today-info {

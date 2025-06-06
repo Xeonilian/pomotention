@@ -14,4 +14,5 @@ export interface Todo {
   dueDate?: number;
   idFormated?: string; // 测试用
   doneTime?: number;
+  startTime?: number;
 }
