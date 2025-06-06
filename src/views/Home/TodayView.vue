@@ -25,7 +25,6 @@
         @suspend-todo="handleSuspendTodo"
         @update-todo-pomo="updateTodoPomo"
         @update-todo-est="updateTodoEst"
-        @convert-to-task="onConvertToTask"
         @select-task="onSelectTask"
         @select-activity="onSelectActivity"
         @select-row="handleSelectRow"
@@ -41,10 +40,10 @@
         :selectedRowId="selectedRowId"
         @update-schedule-status="updateScheduleStatus"
         @suspend-schedule="handleSuspendSchedule"
-        @convert-to-task="onConvertToTask"
         @select-task="onSelectTask"
         @select-row="handleSelectRow"
         @edit-schedule-title="handleEditScheduleTitle"
+        @edit-schedule-done="handleEditScheduleDone"
       />
     </div>
   </div>
@@ -95,6 +94,7 @@ const emit = defineEmits<{
   (e: "edit-todo-title", id: number, newTitle: string): void;
   (e: "edit-todo-start", id: number, newTs: number): void;
   (e: "edit-todo-done", id: number, newTs: number): void;
+  (e: "edit-schedule-done", id: number, newTs: number): void;
 }>(); // HACK
 
 // 处理选中行事件
@@ -136,10 +136,6 @@ function updateTodoEst(id: number, estPomo: number[]) {
   emit("update-todo-est", id, estPomo);
 }
 
-function onConvertToTask(id: number) {
-  emit("convert-to-task", id);
-}
-
 function onSelectTask(taskId: number | null) {
   emit("select-task", taskId);
 }
@@ -162,6 +158,10 @@ function handleEditTodoStart(todoId: number, newTs: number) {
 
 function handleEditTodoDone(todoId: number, newTs: number) {
   emit("edit-todo-done", todoId, newTs);
+}
+
+function handleEditScheduleDone(scheduleId: number, newTs: number) {
+  emit("edit-schedule-done", scheduleId, newTs);
 }
 </script>
 <style scoped>

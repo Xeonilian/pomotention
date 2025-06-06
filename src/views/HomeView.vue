@@ -100,6 +100,7 @@
               @edit-todo-title="handleEditTodoTitle"
               @edit-todo-start="handleEditTodoStart"
               @edit-todo-done="handleEditTodoDone"
+              @edit-schedule-done="handleEditScheduleDone"
             />
           </div>
         </div>
@@ -572,6 +573,15 @@ function handleEditTodoDone(id: number, newTm: number) {
     return;
   }
   todo.doneTime = newTm;
+}
+
+function handleEditScheduleDone(id: number, newTm: number) {
+  const schedule = scheduleList.value.find((s) => s.id === id);
+  if (!schedule) {
+    console.warn(`未找到 id 为 ${id} 的 schedule`);
+    return;
+  }
+  schedule.doneTime = newTm;
 }
 // ======================== 4. Task/执行相关操作 ========================
 // 在script部分添加处理函数

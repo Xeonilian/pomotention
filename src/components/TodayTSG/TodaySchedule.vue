@@ -42,12 +42,31 @@
                   : "-"
               }}
             </td>
-            <td>
-              {{
+            <td
+              @dblclick.stop="startEditing(schedule.id, 'done')"
+              :title="
+                editingRowId === schedule.id && editingField === 'done'
+                  ? ''
+                  : '双击编辑'
+              "
+            >
+              <input
+                v-if="editingRowId === schedule.id && editingField === 'done'"
+                v-model="editingValue"
+                @blur="saveEdit(schedule)"
+                @keyup.enter="saveEdit(schedule)"
+                @keyup.esc="cancelEdit"
+                ref="editingInput"
+                class="done-input time-input"
+                :data-schedule-id="schedule.id"
+                maxlength="5"
+                autocomplete="off"
+              />
+              <span v-else>{{
                 schedule.doneTime
                   ? timestampToTimeString(schedule.doneTime)
                   : "-"
-              }}
+              }}</span>
             </td>
             <td>
               {{
@@ -56,22 +75,24 @@
             </td>
             <td
               class="ellipsis title-cell"
-              :class="{
-                'done-cell': schedule.status === 'done',
-                'cloud-background': schedule.isUntaetigkeit === true,
-              }"
-              @dblclick.stop="startEditing(schedule.id)"
-              :title="editingRowId === schedule.id ? '' : '双击编辑'"
+              :class="{ 'done-cell': schedule.status === 'done' }"
+              @dblclick.stop="startEditing(schedule.id, 'title')"
+              :title="
+                editingRowId === schedule.id && editingField === 'title'
+                  ? ''
+                  : '双击编辑'
+              "
             >
               <input
-                v-if="editingRowId === schedule.id"
-                v-model="editingTitle"
+                v-if="editingRowId === schedule.id && editingField === 'title'"
+                v-model="editingValue"
                 @blur="saveEdit(schedule)"
                 @keyup.enter="saveEdit(schedule)"
                 @keyup.esc="cancelEdit"
                 @click.stop
                 class="title-input"
-                ref="titleInput"
+                :data-schedule-id="schedule.id"
+                ref="editingInput"
               />
               <span v-else>{{ schedule.activityTitle ?? "-" }}</span>
               <!-- 云朵背景元素 - 只有当 isUntaetigkeit 为 true 时才显示 -->
@@ -158,11 +179,13 @@ import {
 } from "@vicons/fluent";
 import { taskService } from "@/services/taskService";
 import { ref, nextTick } from "vue";
+import { getTimestampForTimeString } from "@/core/utils";
 
 // 编辑用
 const editingRowId = ref<number | null>(null);
-const editingTitle = ref("");
-const titleInput = ref<HTMLInputElement>();
+const editingField = ref<null | "title" | "start" | "done">(null);
+const editingValue = ref("");
+const editingInput = ref<HTMLInputElement>();
 
 // 定义 Props
 const props = defineProps<{
@@ -184,6 +207,7 @@ const emit = defineEmits<{
   (e: "select-task", taskId: number | null): void;
   (e: "select-row", id: number | null): void;
   (e: "edit-schedule-title", id: number, newTitle: string): void;
+  (e: "edit-schedule-done", id: number, newTs: number): void;
 }>();
 
 // 添加状态来控制提示信息
@@ -246,28 +270,63 @@ function handleRowClick(schedule: Schedule) {
 }
 
 // 编辑相关函数
-function startEditing(scheduleId: number) {
+function startEditing(scheduleId: number, field: "title" | "start" | "done") {
   const schedule = props.schedules.find((s) => s.id === scheduleId);
-  if (schedule) {
-    editingRowId.value = scheduleId;
-    editingTitle.value = schedule.activityTitle || "";
-    nextTick(() => {
-      titleInput.value?.focus();
-      titleInput.value?.select();
-    });
-  }
+  if (!schedule) return;
+  editingRowId.value = scheduleId;
+  editingField.value = field;
+  editingValue.value =
+    field === "title"
+      ? schedule.activityTitle || ""
+      : field === "start"
+      ? schedule.taskId
+        ? timestampToTimeString(schedule.taskId)
+        : ""
+      : schedule.doneTime
+      ? timestampToTimeString(schedule.doneTime)
+      : "";
+
+  // 使用 querySelector 来获取当前编辑的输入框，而不是依赖 ref
+  nextTick(() => {
+    const input = document.querySelector(
+      `input.${field}-input[data-schedule-id="${scheduleId}"]`
+    );
+    if (input) {
+      (input as HTMLInputElement).focus();
+    }
+  });
 }
 
 function saveEdit(schedule: Schedule) {
-  if (editingRowId.value && editingTitle.value.trim()) {
-    emit("edit-schedule-title", schedule.id, editingTitle.value.trim());
+  if (!editingRowId.value) return;
+
+  if (editingField.value === "title") {
+    if (editingValue.value.trim()) {
+      emit("edit-schedule-title", schedule.id, editingValue.value.trim());
+    }
+  }
+
+  if (editingField.value === "done") {
+    if (isValidTimeString(editingValue.value)) {
+      const ts = getTimestampForTimeString(editingValue.value);
+      emit("edit-schedule-done", schedule.id, ts);
+    }
   }
   cancelEdit();
 }
 
 function cancelEdit() {
   editingRowId.value = null;
-  editingTitle.value = "";
+  editingField.value = null;
+  editingValue.value = "";
+}
+
+function isValidTimeString(str: string) {
+  return (
+    /^\d{2}:\d{2}$/.test(str) &&
+    +str.split(":")[0] <= 24 &&
+    +str.split(":")[1] < 60
+  );
 }
 </script>
 
@@ -404,7 +463,7 @@ function cancelEdit() {
 }
 
 .title-input {
-  width: 100%;
+  width: calc(100% - 10px);
   border: 1px solid #d9d9d9;
   border-radius: 4px;
   padding: 4px 8px;
@@ -416,6 +475,29 @@ function cancelEdit() {
 .title-input:focus {
   border-color: #40a9ff;
   box-shadow: 0 0 0 2px rgba(64, 169, 255, 0.2);
+}
+
+.start-input,
+.done-input {
+  width: 42px !important;
+  max-width: 42px !important;
+  min-width: 0 !important;
+  box-sizing: border-box;
+  padding: 2px 4px;
+  font-size: inherit;
+}
+
+.time-input:focus {
+  border-color: #40a9ff;
+  box-shadow: 0 0 0 2px rgba(64, 169, 255, 0.2);
+}
+.time-input {
+  border: 1px solid #d9d9d9;
+  max-width: 100%;
+  border-radius: 4px;
+  font-size: inherit;
+  font-family: inherit;
+  outline: none;
 }
 
 /* 按钮组样式 */
