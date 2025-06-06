@@ -1,5 +1,5 @@
 <!--
-  Component: SchedualTimeBlocks.vue
+  Component: TimeBlocks.vue
   Description: 渲染时间区间及番茄时间分段
   Props:
     - blocks: Block[]                // 原始区块
@@ -37,7 +37,13 @@
     >
       <span
         class="block-label"
-        :style="block.category === 'living' ? { color: 'var(--color-blue-transparent)' } : block.category === 'working' ? { color: 'var(--color-red-transparent)' } : {}"
+        :style="
+          block.category === 'living'
+            ? { color: 'var(--color-blue-transparent)' }
+            : block.category === 'working'
+            ? { color: 'var(--color-red-transparent)' }
+            : {}
+        "
       >
         {{
           block.category === "sleeping"
@@ -77,14 +83,21 @@
     v-for="seg in todoSegments"
     :key="seg.todoId + '-' + seg.index"
     class="todo-segment"
-    :class="{ overflow: seg.overflow }"
+    :class="{
+      overflow: seg.overflow,
+      completed: seg.completed,
+      'using-real-pomo': seg.usingRealPomo,
+    }"
     :style="getTodoSegmentStyle(seg)"
     :title="seg.todoTitle + (seg.overflow ? '（超出可用番茄）' : '')"
   >
     <span
       v-if="!seg.overflow"
       class="priority-badge"
-      :class="'priority-' + seg.priority"
+      :class="[
+        'priority-' + seg.priority,
+        { 'cherry-badge': seg.pomoType === '🍒' },
+      ]"
     >
       {{ seg.priority > 0 ? seg.priority : "–" }}
     </span>
@@ -101,7 +114,7 @@ import type { Block } from "@/core/types/Block";
 import {
   splitBlocksToPomodorosWithIndexExcludeSchedules,
   PomodoroSegment,
-  assignTodosToPomodoroSegments,
+  generateTodoSegmentsByStatus,
   TodoSegment,
 } from "@/services/pomoSegService";
 import type { Schedule } from "@/core/types/Schedule";
@@ -151,20 +164,20 @@ function getVerticalBlockStyle(block: Block): CSSProperties {
 // （1）刻度数组
 const hourStamps = computed(() => {
   if (!props.timeRange.start || !props.timeRange.end) return [];
-  
+
   // 找到第一个大于等于 timeRange.start 的整点
   const startHour = new Date(props.timeRange.start);
   startHour.setMinutes(0, 0, 0);
   if (startHour.getTime() < props.timeRange.start) {
     startHour.setHours(startHour.getHours() + 1);
   }
-  
+
   const endHour = new Date(props.timeRange.end);
   endHour.setMinutes(0, 0, 0);
   if (endHour.getTime() < props.timeRange.end) {
     endHour.setHours(endHour.getHours() + 1);
   }
-  
+
   const stamps = [];
   let current = startHour.getTime();
   while (current <= props.timeRange.end) {
@@ -203,7 +216,7 @@ const showCurrentLine = computed(() => currentTimeTop.value >= 0);
 import { POMODORO_COLORS } from "@/core/constants";
 // (2) 计算所有番茄段（含类别与编号）
 const pomodoroSegments = computed(() =>
-splitBlocksToPomodorosWithIndexExcludeSchedules(props.blocks, props.schedules)
+  splitBlocksToPomodorosWithIndexExcludeSchedules(props.blocks, props.schedules)
 );
 
 // (3) 番茄段样式
@@ -250,7 +263,7 @@ function getPomodoroStyle(seg: PomodoroSegment): CSSProperties {
 
 // 拿实际分配结果
 const todoSegments = computed(() =>
-  assignTodosToPomodoroSegments(props.todos, pomodoroSegments.value)
+  generateTodoSegmentsByStatus(props.todos, pomodoroSegments.value)
 );
 
 function getTodoSegmentStyle(seg: TodoSegment): CSSProperties {
@@ -432,5 +445,16 @@ function getTodoSegmentStyle(seg: TodoSegment): CSSProperties {
 }
 .priority-10 {
   background-color: #8d6e63;
+}
+
+/* 已完成的todo段样式 */
+.todo-segment.completed .priority-badge {
+  opacity: 0.5;
+}
+
+.priority-badge.cherry-badge {
+  width: 15px;
+  height: 15px;
+  font-size: 12px;
 }
 </style>
