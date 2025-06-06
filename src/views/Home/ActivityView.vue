@@ -233,6 +233,7 @@ function addTodoRow() {
     estPomoI: "",
     pomoType: "🍅",
     status: "",
+    dueDate: Date.now(), // 默认今天
   });
 }
 
