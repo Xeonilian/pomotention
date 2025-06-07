@@ -28,8 +28,8 @@
           <th style="width: 45px; text-align: center">开始</th>
           <th style="width: 45px; text-align: center">结束</th>
           <th style="width: 40px; text-align: center">优先</th>
-          <th style="width: calc(100% - 390px)">描述</th>
-          <th style="width: 180px">番茄</th>
+          <th style="width: calc(50% - 180px)">描述</th>
+          <th style="width: calc(50% - 210px)">番茄</th>
           <th style="width: 60px; text-align: center">操作</th>
         </tr>
       </thead>
@@ -724,13 +724,14 @@ function isValidTimeString(str: string) {
 .table-body td {
   padding-top: 3px;
   border-bottom: 1px solid var(--color-background-dark);
-  text-align: left;
+
   white-space: normal;
   overflow: hidden;
   word-break: break-word;
   min-height: 25px;
   height: 25px;
 }
+
 .table-body td:first-child,
 .table-body td:nth-child(2),
 .table-body td:nth-child(3) {
