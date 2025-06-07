@@ -203,14 +203,21 @@ function onInputUpdate(item: Activity, value: string) {
   gap: 0px;
   width: 100%;
 }
-
+.input-min :deep( .n-input-wrapper) {
+  padding-left: 0px !important;
+  padding-right: 0px !important;
+}
 :deep(.n-input .n-input-wrapper) {
   padding-left: 6px;
   padding-right: 6px;
 }
 
+.input-min :deep(.n-input__input) {
+  font-size: 12px;
+}
+
 .input-min :deep(.n-input__placeholder) {
-  font-size: 11px;
+  font-size: 12px;
 }
 .delayed {
   background: var(--color-orange-transparent);
@@ -231,15 +238,15 @@ function onInputUpdate(item: Activity, value: string) {
   background: var(--color-blue-light-transparent);
 }
 .pomo-red {
-  background-color: var(--color-red-light-transparent) !important;
+  background-color: var(--color-red-light) !important;
   border-color: var(--color-red-transparent) !important;
 }
 .pomo-purple {
-  background-color: var(--color-purple-light-transparent) !important;
+  background-color: var(--color-purple-light) !important;
   border-color: var(--color-purple-transparent) !important;
 }
 .pomo-green {
-  background-color: var(--color-green-light-transparent) !important;
+  background-color: var(--color-green-light) !important;
   border-color: var(--color-green-transparent) !important;
 }
 /* 文本居中 */
