@@ -29,6 +29,14 @@ export interface TodoSegment {
   usingRealPomo?: boolean; // 是否使用realPomo计数
 }
 
+export interface ActualTimeRange {
+  todoId: number;
+  todoTitle: string;
+  start: number;
+  end: number;
+  category: string;
+}
+
 // ========== 辅助工具函数 ==========
 
 /**
@@ -733,10 +741,9 @@ export function generateActualTodoSegments(todos: Todo[]): TodoSegment[] {
   for (const todo of todosWithStartTime) {
     if (!todo.startTime) continue;
 
-    // 根据完成状态决定使用哪种计数
-    const needCount = getTodoDisplayPomoCount(todo);
-    const isCompleted = todo.status === "done";
-    const usingRealPomo = isCompleted;
+    // 🔥 关键修改：实际执行列直接使用realPomo
+    const totalCount = getTodoEstPomoCount(todo);
+    const completedCount = getTodoRealPomoCount(todo); // 已完成的数量
 
     if (todo.pomoType === "🍒") {
       // 🍒特殊处理：创建4个15分钟的段
@@ -755,14 +762,14 @@ export function generateActualTodoSegments(todos: Todo[]): TodoSegment[] {
           end: segmentEnd,
           pomoType: "🍒",
           category: "working",
-          completed: isCompleted,
-          usingRealPomo: usingRealPomo,
+          completed: pomodoroIndex < completedCount, // 🔥 前completedCount个为绿色
+          usingRealPomo: true,
         });
       }
     } else {
       // 🍅🍇的处理：每个25分钟
       const duration = 25 * 60 * 1000;
-      for (let i = 0; i < needCount; i++) {
+      for (let i = 0; i < totalCount; i++) {
         const segmentStart = todo.startTime + i * duration;
         const segmentEnd = segmentStart + duration;
 
@@ -775,8 +782,8 @@ export function generateActualTodoSegments(todos: Todo[]): TodoSegment[] {
           end: segmentEnd,
           pomoType: todo.pomoType || "🍅",
           category: todo.pomoType === "🍇" ? "living" : "working",
-          completed: isCompleted,
-          usingRealPomo: usingRealPomo,
+          completed: i < completedCount, // 🔥 前completedCount个为绿色
+          usingRealPomo: true,
         });
       }
     }

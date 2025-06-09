@@ -131,6 +131,14 @@
   >
     {{ seg.pomoType }}
   </div>
+  <!-- 实际时间范围背景 -->
+  <div
+    v-for="range in actualTimeRanges"
+    :key="`actual-range-${range.todoId}`"
+    class="actual-time-range"
+    :style="getActualTimeRangeStyle(range)"
+    :title="`${range.todoTitle} - 实际执行时间`"
+  ></div>
 </template>
 
 <script setup lang="ts">
@@ -146,6 +154,7 @@ import {
   generateActualTodoSegments,
   TodoSegment,
   reallocateTodoFromPosition,
+  ActualTimeRange,
 } from "@/services/pomoSegService";
 import type { Schedule } from "@/core/types/Schedule";
 import type { Todo } from "@/core/types/Todo";
@@ -394,25 +403,50 @@ function getActualSegmentStyle(seg: TodoSegment): CSSProperties {
     width: "13px",
     top: `${topPx}px`,
     height: `${heightPx}px`,
-    background: seg.completed
-      ? "var(--color-green-transparent)" // 已完成用绿色
-      : "var(--color-blue-transparent)", // 进行中用蓝色
-    borderRadius: "2px",
+    background: "transparent",
     color: "var(--color-background)",
-    fontSize: "10px",
+    fontSize: "12px",
     zIndex: 9, // 比估计分配层级稍高
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    boxShadow: seg.completed
-      ? "0 0 6px var(--color-green)"
-      : "0 0 6px var(--color-blue)",
-    border: seg.completed
-      ? "1.5px solid var(--color-green-dark)"
-      : "1.5px solid var(--color-blue-dark)",
+    opacity: seg.completed ? 1.0 : 0.3,
   };
 }
+// 实际时间范围背景
+const actualTimeRanges = computed((): ActualTimeRange[] => {
+  return props.todos
+    .filter((todo) => todo.status === "done" && todo.startTime && todo.doneTime)
+    .map((todo) => ({
+      todoId: todo.id,
+      todoTitle: todo.activityTitle,
+      start: todo.startTime!,
+      end: todo.doneTime!,
+      category: todo.pomoType === "🍇" ? "living" : "working",
+    }));
+});
 
+function getActualTimeRangeStyle(range: ActualTimeRange): CSSProperties {
+  const startMinute = (range.start - props.timeRange.start) / 60000;
+  const endMinute = (range.end - props.timeRange.start) / 60000;
+  const topPx = startMinute * props.effectivePxPerMinute;
+  const heightPx = (endMinute - startMinute) * props.effectivePxPerMinute;
+
+  return {
+    position: "absolute",
+    left: "95px",
+    width: "8px",
+    top: `${topPx}px`,
+    height: `${heightPx}px`,
+    background:
+      range.category === "living"
+        ? "var(--color-blue)" // 🔥 直接用颜色值，更明显
+        : "var(--color-red)", // 🔥 绿色更显眼
+    borderRadius: "4px",
+    zIndex: 10, // 🔥 提高层级确保可见
+    opacity: 0.65, // 🔥 完全不透明
+  };
+}
 // 拖拽开始
 function handleDragStart(event: DragEvent, seg: TodoSegment) {
   console.log("🟢 Drag start:", seg.todoId, seg.index);
@@ -545,6 +579,11 @@ function handleDrop(
   height: 100%;
   max-height: 200px;
   margin-top: 10px;
+  /* 🔥 禁用选中复制粘贴 */
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
 }
 
 .hour-ticks-container {
@@ -612,6 +651,7 @@ function handleDrop(
   z-index: 20;
   animation: shake 4s infinite;
 }
+
 @keyframes shake {
   0% {
     transform: translateY(-50%) rotate(0deg);
