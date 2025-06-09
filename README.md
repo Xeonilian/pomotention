@@ -66,9 +66,9 @@
 
 本项目基于以下专业课程和服务：
 
-- **[拖延深度改善两阶段课程](https://ebp.gesedna.com/product/delay_multi/?rd=%2F)** - 系统性解决拖延问题
-- **[番茄列车](https://ebp.gesedna.com/pa-group-info-pomo/?rd=%2FEBPTsundoku%2F%3Frd%3D%2F)** - 社群化专注实践
-- **[番茄工作法官方理念](https://www.pomodorotechnique.com/)**，计时器设计和核心逻辑均基于官方标准实现。
+- [拖延深度改善两阶段课程](https://ebp.gesedna.com/product/delay_multi/?rd=%2F) - 系统性解决拖延问题
+- [番茄列车](https://ebp.gesedna.com/pa-group-info-pomo/?rd=%2FEBPTsundoku%2F%3Frd%3D%2F) - 社群化专注实践
+- [番茄工作法官方理念](https://www.pomodorotechnique.com/) - 计时器设计和核心逻辑均基于官方改造
 
 ## 🛠️ 技术栈
 
@@ -80,7 +80,7 @@
 ## 📦 安装和使用
 
 - 克隆项目 `git clone https://github.com/Xeonilian/pomotention.git`
-- 便携版 `https://github.com/Xeonilian/pomotention/releases/download/v0.1.0/pomotention.exe`
+- windows 便携版 `https://github.com/Xeonilian/pomotention/releases/download/v0.1.0/pomotention.exe`
 - windows 安装包 `https://github.com/Xeonilian/pomotention/releases/download/v0.1.0/pomotention_0.1.0_x64_en-US.msi`
 
 ## 数据说明
