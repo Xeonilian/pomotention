@@ -73,7 +73,7 @@
 本项目基于以下专业课程和服务：
 
 - **[拖延深度改善两阶段课程](https://ebp.gesedna.com/product/delay_multi/?rd=%2F)** - 系统性解决拖延问题
-- **[番茄列车服务](https://ebp.gesedna.com/pa-group-info-pomo/?rd=%2FEBPTsundoku%2F%3Frd%3D%2F)** - 社群化专注实践
+- **[番茄列车](https://ebp.gesedna.com/pa-group-info-pomo/?rd=%2FEBPTsundoku%2F%3Frd%3D%2F)** - 社群化专注实践
 - **[番茄工作法官方理念](https://www.pomodorotechnique.com/)**，计时器设计和核心逻辑均基于官方标准实现。
 
 ## 🛠️ 技术栈
@@ -81,7 +81,7 @@
 - **前端**: Vue.js + TypeScript
 - **UI 组件**: Naive UI + Xicons
 - **后端**: Tauri (Rust)
-- **跨平台**: Windows / macOS / Linux
+- **跨平台**: Windows / macOS [马上] / Linux [马上上]
 
 ## 📦 安装和使用
 
@@ -89,7 +89,7 @@
 
 ## 数据说明
 
-- 设置和历史记录安全存储在你的电脑中，卸载应用不会删除您的数据
+- 历史记录安全存储在你的电脑中，卸载应用不会删除数据
 - 数据位置：%LOCALAPPDATA%\com.pomotention.app\EBWebView\Default\Local Storage\leveldb
-- 注意：数据以加密格式存储，不是普通文本文件
+- 数据以加密格式存储，不是普通文本文件
 - 后续版本将提供数据导出功能，方便您备份和迁移数据
