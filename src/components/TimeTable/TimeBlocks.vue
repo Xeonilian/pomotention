@@ -1,10 +1,5 @@
 <!--
   Component: TimeBlocks.vue
-  Description: 渲染时间区间及番茄时间分段
-  Props:
-    - blocks: Block[]                // 原始区块
-    - timeRange: { start, end }      // 显示时间起止（毫秒）
-    - effectivePxPerMinute: number   // 1分钟对应像素
   Parent: TimeTableView.vue
 -->
 
@@ -67,10 +62,20 @@
 
   <!-- 番茄时间分段 -->
   <div
-    v-for="segment in pomodoroSegments"
+    v-for="(segment, index) in pomodoroSegments"
     :key="segment.parentBlockId + '-' + segment.start + '-' + segment.type"
-    :class="['pomo-segment', segment.type]"
+    :class="[
+      'pomo-segment',
+      segment.type,
+      {
+        'drop-target': dragState.isDragging && segment.type === 'work',
+        'drop-hover': dragState.dropTargetSegmentIndex === index,
+      },
+    ]"
     :style="getPomodoroStyle(segment)"
+    @dragover="handleDragOver($event, segment, index)"
+    @dragleave="handleDragLeave"
+    @drop="handleDrop($event, segment, index)"
   >
     <!-- 仅在"工作段"且有编号时显示序号 -->
     <template v-if="segment.type === 'work' && segment.index != null">
@@ -79,17 +84,26 @@
     <template v-if="segment.type === 'schedule'"> S </template>
     <template v-if="segment.type === 'untaetigkeit'"> U </template>
   </div>
+
+  <!-- 估计分配的segments (左侧列) -->
   <div
     v-for="seg in todoSegments"
-    :key="seg.todoId + '-' + seg.index"
-    class="todo-segment"
+    :key="`estimated-${seg.todoId}-${seg.index}`"
+    class="todo-segment estimated"
     :class="{
       overflow: seg.overflow,
       completed: seg.completed,
       'using-real-pomo': seg.usingRealPomo,
+      dragging:
+        dragState.isDragging &&
+        dragState.draggedTodoId === seg.todoId &&
+        dragState.draggedIndex != null &&
+        dragState.draggedIndex === seg.index,
     }"
     :style="getTodoSegmentStyle(seg)"
-    :title="seg.todoTitle + (seg.overflow ? '（超出可用番茄）' : '')"
+    :title="`${seg.todoTitle} - 第${seg.index}个番茄 (估计分配)${
+      seg.overflow ? ' - 超出可用时间' : ''
+    }`"
   >
     <span
       v-if="!seg.overflow"
@@ -98,10 +112,24 @@
         'priority-' + seg.priority,
         { 'cherry-badge': seg.pomoType === '🍒' },
       ]"
+      draggable="true"
+      @dragstart="handleDragStart($event, seg)"
+      @dragend="handleDragEnd"
+      style="cursor: grab"
     >
       {{ seg.priority > 0 ? seg.priority : "–" }}
     </span>
     <span v-else>⚠️</span>
+  </div>
+  <!-- 实际执行的segments (右侧列) -->
+  <div
+    v-for="seg in actualSegments"
+    :key="`actual-${seg.todoId}-${seg.index}`"
+    class="todo-segment actual"
+    :style="getActualSegmentStyle(seg)"
+    :title="`${seg.todoTitle} - 第${seg.index}个番茄`"
+  >
+    {{ seg.pomoType }}
   </div>
 </template>
 
@@ -114,8 +142,10 @@ import type { Block } from "@/core/types/Block";
 import {
   splitBlocksToPomodorosWithIndexExcludeSchedules,
   PomodoroSegment,
-  generateTodoSegmentsByStatus,
+  generateEstimatedTodoSegments,
+  generateActualTodoSegments,
   TodoSegment,
+  reallocateTodoFromPosition,
 } from "@/services/pomoSegService";
 import type { Schedule } from "@/core/types/Schedule";
 import type { Todo } from "@/core/types/Todo";
@@ -128,6 +158,19 @@ const props = defineProps<{
   schedules: Schedule[];
   todos: Todo[];
 }>();
+
+// ======= 拖拽状态 =======
+const dragState = ref<{
+  isDragging: boolean;
+  draggedTodoId: number | null;
+  draggedIndex: number | null;
+  dropTargetSegmentIndex: number | null;
+}>({
+  isDragging: false,
+  draggedTodoId: null,
+  draggedIndex: null,
+  dropTargetSegmentIndex: null,
+});
 
 // ======= 时间主块（Blocks）底色的样式计算 =======
 function getVerticalBlockStyle(block: Block): CSSProperties {
@@ -258,13 +301,58 @@ function getPomodoroStyle(seg: PomodoroSegment): CSSProperties {
     textShadow:
       "0 1px 3px var(--color-text-primary-transparent), 0 0 1px var(--color-background-transparent)",
     overflow: "hidden",
+    pointerEvents: seg.type === "work" ? "auto" : "none",
   };
 }
 
 // 拿实际分配结果
-const todoSegments = computed(() =>
-  generateTodoSegmentsByStatus(props.todos, pomodoroSegments.value)
-);
+// 添加本地重写状态
+const manualAllocations = ref<Map<number, number>>(new Map()); // todoId -> startSegmentIndex
+
+// 修改 todoSegments 的计算逻辑
+const todoSegments = computed(() => {
+  // 🔥 关键：先生成完整的自动分配
+  let autoSegments = generateEstimatedTodoSegments(
+    props.todos,
+    pomodoroSegments.value
+  );
+
+  // 🔥 对有手动分配的 todos，完全重新生成
+  if (manualAllocations.value.size > 0) {
+    // 分离手动和自动分配的 todos
+    const manualTodos = props.todos.filter((t) =>
+      manualAllocations.value.has(t.id)
+    );
+    const autoTodos = props.todos.filter(
+      (t) => !manualAllocations.value.has(t.id)
+    );
+
+    // 重新为自动分配的 todos 生成 segments
+    autoSegments = generateEstimatedTodoSegments(
+      autoTodos,
+      pomodoroSegments.value
+    );
+
+    // 为手动分配的 todos 生成 segments
+    const manualSegments: TodoSegment[] = [];
+    manualAllocations.value.forEach((startIndex, todoId) => {
+      const todo = props.todos.find((t) => t.id === todoId);
+      if (todo) {
+        const newSegments = reallocateTodoFromPosition(
+          todo,
+          startIndex,
+          pomodoroSegments.value,
+          [...autoSegments, ...manualSegments] // 传入已分配的所有 segments
+        );
+        manualSegments.push(...newSegments);
+      }
+    });
+
+    return [...autoSegments, ...manualSegments];
+  }
+
+  return autoSegments;
+});
 
 function getTodoSegmentStyle(seg: TodoSegment): CSSProperties {
   const startMinute = (seg.start - props.timeRange.start) / 60000;
@@ -288,8 +376,164 @@ function getTodoSegmentStyle(seg: TodoSegment): CSSProperties {
     justifyContent: "center",
     boxShadow: seg.overflow ? "0 0 8px var(--color-red)" : "none",
     border: seg.overflow ? "1.5px solid var(--color-red-dark)" : undefined,
-    pointerEvents: "none",
   };
+}
+
+// 获取实际执行segment的样式
+const actualSegments = computed(() => generateActualTodoSegments(props.todos));
+
+function getActualSegmentStyle(seg: TodoSegment): CSSProperties {
+  const startMinute = (seg.start - props.timeRange.start) / 60000;
+  const endMinute = (seg.end - props.timeRange.start) / 60000;
+  const topPx = startMinute * props.effectivePxPerMinute;
+  const heightPx = (endMinute - startMinute) * props.effectivePxPerMinute;
+
+  return {
+    position: "absolute",
+    left: "75px", // 与估计分配错开位置
+    width: "13px",
+    top: `${topPx}px`,
+    height: `${heightPx}px`,
+    background: seg.completed
+      ? "var(--color-green-transparent)" // 已完成用绿色
+      : "var(--color-blue-transparent)", // 进行中用蓝色
+    borderRadius: "2px",
+    color: "var(--color-background)",
+    fontSize: "10px",
+    zIndex: 9, // 比估计分配层级稍高
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    boxShadow: seg.completed
+      ? "0 0 6px var(--color-green)"
+      : "0 0 6px var(--color-blue)",
+    border: seg.completed
+      ? "1.5px solid var(--color-green-dark)"
+      : "1.5px solid var(--color-blue-dark)",
+  };
+}
+
+// 拖拽开始
+function handleDragStart(event: DragEvent, seg: TodoSegment) {
+  console.log("🟢 Drag start:", seg.todoId, seg.index);
+  dragState.value.isDragging = true;
+  dragState.value.draggedTodoId = seg.todoId;
+  dragState.value.draggedIndex = seg.index;
+
+  // 设置拖拽数据
+  event.dataTransfer?.setData(
+    "text/plain",
+    JSON.stringify({
+      todoId: seg.todoId,
+      index: seg.index,
+      priority: seg.priority,
+    })
+  );
+}
+
+// 拖拽结束
+function handleDragEnd() {
+  dragState.value.isDragging = false;
+  dragState.value.draggedTodoId = null;
+  dragState.value.draggedIndex = null;
+  dragState.value.dropTargetSegmentIndex = null;
+}
+
+function isValidTodoSegmentMatch(
+  todoPomoType: string,
+  segmentCategory: string
+): boolean {
+  const matchRules: Record<string, string[]> = {
+    "🍇": ["living"], // 葡萄只能分配到living
+    "🍅": ["working"], // 普通番茄只能分配到working
+    "🍒": ["working"], // 樱桃番茄也只能分配到working
+  };
+
+  console.log(
+    "🔍 Checking match:",
+    todoPomoType,
+    "→",
+    segmentCategory,
+    "=",
+    matchRules[todoPomoType]?.includes(segmentCategory)
+  );
+  return matchRules[todoPomoType]?.includes(segmentCategory) || false;
+}
+
+// 拖拽悬停
+function handleDragOver(
+  event: DragEvent,
+  segment: PomodoroSegment,
+  index: number
+) {
+  console.log("🟠 Drag over:", segment.type, index, dragState.value.isDragging);
+
+  if (segment.type === "work" && dragState.value.isDragging) {
+    const draggedTodo = props.todos.find(
+      (t) => t.id === dragState.value.draggedTodoId
+    );
+    if (!draggedTodo) return;
+
+    // 只检查类型匹配
+    if (
+      !isValidTodoSegmentMatch(
+        draggedTodo.pomoType || "🍅",
+        segment.category || ""
+      )
+    ) {
+      console.log(
+        "❌ Todo type mismatch:",
+        draggedTodo.pomoType,
+        "→",
+        segment.category
+      );
+      return;
+    }
+
+    // 检查冲突
+    const conflictingSegment = todoSegments.value.find(
+      (seg) =>
+        seg.todoId !== dragState.value.draggedTodoId &&
+        seg.start <= segment.start &&
+        seg.end > segment.start
+    );
+
+    if (conflictingSegment) {
+      console.log("⚠️ Conflict detected");
+      return;
+    }
+
+    event.preventDefault();
+    dragState.value.dropTargetSegmentIndex = index;
+  }
+}
+
+// 拖拽离开
+function handleDragLeave() {
+  dragState.value.dropTargetSegmentIndex = null;
+}
+
+// 修改 handleDrop 函数
+function handleDrop(
+  event: DragEvent,
+  segment: PomodoroSegment,
+  segmentIndex: number
+) {
+  event.preventDefault();
+
+  if (segment.type !== "work" || !dragState.value.isDragging) {
+    return;
+  }
+
+  const dragData = JSON.parse(
+    event.dataTransfer?.getData("text/plain") || "{}"
+  );
+
+  // 记录手动分配
+  manualAllocations.value.set(dragData.todoId, segmentIndex);
+
+  // 重置拖拽状态
+  handleDragEnd();
 }
 </script>
 
@@ -456,5 +700,33 @@ function getTodoSegmentStyle(seg: TodoSegment): CSSProperties {
   width: 15px;
   height: 15px;
   font-size: 12px;
+}
+
+/* 拖拽效果 */
+.priority-badge[draggable="true"] {
+  cursor: grab;
+}
+
+.priority-badge[draggable="true"]:active {
+  cursor: grabbing;
+}
+
+.todo-segment.dragging {
+  opacity: 0.5;
+  transform: scale(0.95);
+}
+
+.pomo-segment.drop-target {
+  outline: 1px dashed var(--color-primary);
+  pointer-events: auto !important;
+}
+
+.pomo-segment.drop-hover {
+  background-color: var(--color-primary-transparent) !important;
+  outline: 2px solid var(--color-primary);
+}
+
+.pomo-segment.work {
+  pointer-events: auto !important;
 }
 </style>

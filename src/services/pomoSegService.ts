@@ -3,12 +3,14 @@ import type { Block } from "@/core/types/Block";
 import type { Todo } from "@/core/types/Todo";
 import { getTimestampForTimeString } from "@/core/utils";
 
+// ========== 接口定义 ==========
+
 export interface PomodoroSegment {
   parentBlockId: string;
   type: "work" | "break" | "schedule" | "untaetigkeit";
   start: number;
   end: number;
-  category: string; // 增加原block的类型
+  category: string; // 原block的类型
   index?: number; // 在同种类型中的序号
 }
 
@@ -22,35 +24,46 @@ export interface TodoSegment {
   category?: string;
   index: number; // 本todo第几个番茄
   assignedPomodoroSegment?: PomodoroSegment;
-  overflow?: boolean;
-  completed?: boolean; // 新增：todo是否已完成
-  usingRealPomo?: boolean; // 新增：是否使用realPomo计数
+  overflow?: boolean; // 是否溢出（超出可用时间段）
+  completed?: boolean; // todo是否已完成
+  usingRealPomo?: boolean; // 是否使用realPomo计数
 }
 
-// ---------- 辅助方法 ----------
+// ========== 辅助工具函数 ==========
+
+/**
+ * 从基础时间区间中减去排除区间，返回剩余的可用区间
+ */
 function subtractIntervals(
   base: [number, number],
   excludes: [number, number][]
 ): [number, number][] {
   const [bStart, bEnd] = base;
   if (!excludes.length) return [[bStart, bEnd]];
+
   const relevant = excludes.filter(([s, e]) => e > bStart && s < bEnd);
   if (!relevant.length) return [[bStart, bEnd]];
+
   relevant.sort((a, b) => a[0] - b[0]);
   let result: [number, number][] = [];
   let cur = bStart;
+
   for (const [s, e] of relevant) {
     if (s > cur) result.push([cur, Math.min(s, bEnd)]);
     cur = Math.max(cur, e);
     if (cur >= bEnd) break;
   }
+
   if (cur < bEnd) result.push([cur, bEnd]);
   return result.filter(([s, e]) => e > s);
 }
 
-// 工具函数
+// ========== 番茄统计工具函数 ==========
 
-/** 统计 todo 预估番茄数 */
+/**
+ * 统计 todo 预估番茄数
+ * 🍒类型需要除以2，因为一个🍒等于2个普通番茄的时间
+ */
 export function getTodoEstPomoCount(todo: Todo): number {
   if (!todo.estPomo) return 0;
   const rawCount = todo.estPomo.reduce(
@@ -58,12 +71,15 @@ export function getTodoEstPomoCount(todo: Todo): number {
     0
   );
   if (todo.pomoType === "🍒") {
-    return rawCount / 4;
+    return rawCount / 2;
   }
   return rawCount;
 }
 
-/** 统计 todo 实际完成番茄数 */
+/**
+ * 统计 todo 实际完成番茄数
+ * 🍒类型需要除以2，因为一个🍒等于2个普通番茄的时间
+ */
 export function getTodoRealPomoCount(todo: Todo): number {
   if (!todo.realPomo) return 0;
   const rawCount = todo.realPomo.reduce(
@@ -71,41 +87,49 @@ export function getTodoRealPomoCount(todo: Todo): number {
     0
   );
   if (todo.pomoType === "🍒") {
-    return rawCount / 4;
+    return rawCount / 2;
   }
   return rawCount;
 }
 
-/** 按番茄类型返回每颗番茄分钟数 */
+/**
+ * 按番茄类型返回每颗番茄的分钟数
+ * 🍅: 30分钟 (25工作+5休息)
+ * 🍒: 60分钟 (工作休息工作休息各15分钟)
+ * 🍇: 30分钟 (25工作+5休息)
+ */
 export function getPomoMinutesByType(type?: Todo["pomoType"]): number {
   if (type === "🍅") return 30; // 25+5
-  if (type === "🍒") return 60;
-  if (type === "🍇") return 30;
+  if (type === "🍒") return 60; // 15*4
+  if (type === "🍇") return 30; // 25+5
   return 30;
 }
 
-/** 根据todo状态决定使用estPomo还是realPomo */
+/**
+ * 根据todo状态决定使用estPomo还是realPomo
+ * 已完成的使用realPomo，未完成的使用estPomo
+ */
 export function getTodoDisplayPomoCount(todo: Todo): number {
   if (todo.status === "done") {
-    // 已完成的todo使用realPomo
     return getTodoRealPomoCount(todo);
   } else {
-    // 未完成的todo使用estPomo
     return getTodoEstPomoCount(todo);
   }
 }
 
-// 分配todo到番茄时间段
-export function generateTodoSegmentsByStatus(
+// ========== 估计分配相关函数 ==========
+
+/**
+ * 生成估计的todo时间段分配
+ * 忽略startTime，纯粹按优先级和可用时间段进行分配
+ */
+export function generateEstimatedTodoSegments(
   todos: Todo[],
   pomodoroSegments: PomodoroSegment[]
 ): TodoSegment[] {
-  // 分离已完成和未完成的todos
-  const todosWithStartTime = todos.filter((todo) => todo.startTime);
-  const todosWithoutStartTime = todos.filter((todo) => !todo.startTime);
   const todoSegments: TodoSegment[] = [];
 
-  // 按类型&区块准备好work/break段
+  // 按类型分类可用的番茄时间段
   const segByCategory: Record<string, PomodoroSegment[]> = {
     working: pomodoroSegments
       .filter(
@@ -123,64 +147,620 @@ export function generateTodoSegmentsByStatus(
       .sort((a, b) => a.start - b.start),
   };
 
-  // 记录被已完成todo占用的番茄段索引
-  const occupiedSegments = new Set<number>();
+  // 标记时间段使用状态
+  const used = {
+    working: new Array(segByCategory.working.length).fill(false),
+    living: new Array(segByCategory.living.length).fill(false),
+  };
 
-  // 第一步：处理未完成的todos，分配到剩余可用的番茄段
+  // 按优先级排序todos（优先级数字越小越重要，0表示无优先级放最后）
+  const sortedTodos = [...todos].sort((a, b) => {
+    if ((a.priority ?? 0) === 0 && (b.priority ?? 0) === 0) return 0;
+    if ((a.priority ?? 0) === 0) return 1;
+    if ((b.priority ?? 0) === 0) return -1;
+    return (a.priority ?? 0) - (b.priority ?? 0);
+  });
+
+  // 为每个todo分配时间段
+  for (const todo of sortedTodos) {
+    const needCount = getTodoEstPomoCount(todo);
+
+    if (todo.pomoType === "🍅" || !todo.pomoType) {
+      allocateTomatoSegments(
+        todo,
+        needCount,
+        segByCategory.working,
+        used.working,
+        todoSegments
+      );
+    } else if (todo.pomoType === "🍇") {
+      allocateGrapeSegments(
+        todo,
+        needCount,
+        segByCategory.living,
+        used.living,
+        todoSegments
+      );
+    } else if (todo.pomoType === "🍒") {
+      allocateCherrySegments(
+        todo,
+        needCount,
+        segByCategory.working,
+        used.working,
+        todoSegments
+      );
+    }
+  }
+
+  return todoSegments;
+}
+
+/**
+ * 分配🍅番茄段到working区域
+ * 每个🍅包含25分钟工作时间，会尝试与5分钟休息时间配对
+ */
+function allocateTomatoSegments(
+  todo: Todo,
+  needCount: number,
+  segments: PomodoroSegment[],
+  isUsed: boolean[],
+  todoSegments: TodoSegment[]
+): void {
+  let assignedCount = 0;
+
+  // 遍历可用的work段
+  for (let i = 0; i < segments.length && assignedCount < needCount; i++) {
+    if (!isUsed[i] && segments[i].type === "work") {
+      let segmentEnd = segments[i].end;
+      let span = 0;
+
+      // 尝试与后面的break段配对形成完整的番茄时间
+      if (
+        i + 1 < segments.length &&
+        !isUsed[i + 1] &&
+        segments[i + 1].type === "break" &&
+        segments[i].end === segments[i + 1].start
+      ) {
+        segmentEnd = segments[i + 1].end;
+        isUsed[i + 1] = true;
+        span = 1;
+      }
+
+      isUsed[i] = true;
+      todoSegments.push({
+        todoId: todo.id,
+        priority: todo.priority,
+        todoTitle: todo.activityTitle,
+        index: assignedCount + 1,
+        start: segments[i].start,
+        end: segmentEnd,
+        pomoType: "🍅",
+        assignedPomodoroSegment: segments[i],
+        category: "working",
+        completed: false,
+        usingRealPomo: false,
+      });
+      assignedCount++;
+      i += span;
+    }
+  }
+
+  // 处理溢出：如果没有足够的时间段，在最后添加虚拟段
+  while (assignedCount < needCount) {
+    const lastSeg = segments[segments.length - 1];
+    todoSegments.push({
+      todoId: todo.id,
+      priority: todo.priority,
+      todoTitle: todo.activityTitle,
+      index: assignedCount + 1,
+      start: lastSeg ? lastSeg.end : Date.now(),
+      end: lastSeg ? lastSeg.end + 25 * 60 * 1000 : Date.now() + 25 * 60 * 1000,
+      pomoType: "🍅",
+      category: "working",
+      overflow: true,
+      completed: false,
+      usingRealPomo: false,
+    });
+    assignedCount++;
+  }
+}
+
+/**
+ * 分配🍇番茄段到living区域
+ * 逻辑与🍅类似，但分配到living区域
+ */
+function allocateGrapeSegments(
+  todo: Todo,
+  needCount: number,
+  segments: PomodoroSegment[],
+  isUsed: boolean[],
+  todoSegments: TodoSegment[]
+): void {
+  let assignedCount = 0;
+
+  for (let i = 0; i < segments.length && assignedCount < needCount; i++) {
+    if (!isUsed[i] && segments[i].type === "work") {
+      let segmentEnd = segments[i].end;
+      let span = 0;
+
+      // 尝试与break段配对
+      if (
+        i + 1 < segments.length &&
+        !isUsed[i + 1] &&
+        segments[i + 1].type === "break" &&
+        segments[i].end === segments[i + 1].start
+      ) {
+        segmentEnd = segments[i + 1].end;
+        isUsed[i + 1] = true;
+        span = 1;
+      }
+
+      isUsed[i] = true;
+      todoSegments.push({
+        todoId: todo.id,
+        priority: todo.priority,
+        todoTitle: todo.activityTitle,
+        index: assignedCount + 1,
+        start: segments[i].start,
+        end: segmentEnd,
+        pomoType: "🍇",
+        assignedPomodoroSegment: segments[i],
+        category: "living",
+        completed: false,
+        usingRealPomo: false,
+      });
+      assignedCount++;
+      i += span;
+    }
+  }
+
+  // 处理溢出
+  while (assignedCount < needCount) {
+    const lastSeg = segments[segments.length - 1];
+    todoSegments.push({
+      todoId: todo.id,
+      priority: todo.priority,
+      todoTitle: todo.activityTitle,
+      index: assignedCount + 1,
+      start: lastSeg ? lastSeg.end : Date.now(),
+      end: lastSeg ? lastSeg.end + 25 * 60 * 1000 : Date.now() + 25 * 60 * 1000,
+      pomoType: "🍇",
+      category: "living",
+      overflow: true,
+      completed: false,
+      usingRealPomo: false,
+    });
+    assignedCount++;
+  }
+}
+
+/**
+ * 分配🍒番茄段
+ * 🍒需要连续的4个段（work-break-work-break）才能形成一个完整的🍒
+ * 每个🍒实际产生4个时间段，但显示为2个番茄单位
+ */
+function allocateCherrySegments(
+  todo: Todo,
+  needCount: number,
+  segments: PomodoroSegment[],
+  isUsed: boolean[],
+  todoSegments: TodoSegment[]
+): void {
+  let assignedCount = 0;
+
+  // 查找连续的4段组合
+  for (let i = 0; i < segments.length - 3 && assignedCount < needCount; i++) {
+    // 检查连续4段是否都可用且符合work-break-work-break模式
+    if (
+      !isUsed[i] &&
+      segments[i].type === "work" &&
+      !isUsed[i + 1] &&
+      segments[i + 1].type === "break" &&
+      segments[i].end === segments[i + 1].start &&
+      !isUsed[i + 2] &&
+      segments[i + 2].type === "work" &&
+      segments[i + 1].end === segments[i + 2].start &&
+      !isUsed[i + 3] &&
+      segments[i + 3].type === "break" &&
+      segments[i + 2].end === segments[i + 3].start
+    ) {
+      // 标记4段都已使用
+      isUsed[i] = isUsed[i + 1] = isUsed[i + 2] = isUsed[i + 3] = true;
+
+      // 创建4个段，前2段为第1个番茄，后2段为第2个番茄
+      for (let j = 0; j < 4; j++) {
+        const pomodoroIndex = Math.floor(j / 2); // 0,1->0  2,3->1
+        todoSegments.push({
+          todoId: todo.id,
+          priority: todo.priority,
+          todoTitle: todo.activityTitle,
+          index: assignedCount + 1 + pomodoroIndex,
+          start: segments[i + j].start,
+          end: segments[i + j].end,
+          pomoType: "🍒",
+          assignedPomodoroSegment: segments[i + j],
+          category: "working",
+          completed: false,
+          usingRealPomo: false,
+        });
+      }
+      assignedCount += 2; // 一次处理了2个番茄
+    }
+  }
+
+  // 处理溢出
+  while (assignedCount < needCount) {
+    const lastSeg = segments[segments.length - 1];
+    todoSegments.push({
+      todoId: todo.id,
+      priority: todo.priority,
+      todoTitle: todo.activityTitle,
+      index: assignedCount + 1,
+      start: lastSeg ? lastSeg.end : Date.now(),
+      end: lastSeg ? lastSeg.end + 60 * 60 * 1000 : Date.now() + 60 * 60 * 1000,
+      pomoType: "🍒",
+      category: "working",
+      overflow: true,
+      completed: false,
+      usingRealPomo: false,
+    });
+    assignedCount++;
+  }
+}
+
+// ========== 从指定位置重新分配单个todo的时间段 ========== #HACK
+/**
+ * 从指定位置重新分配单个todo的时间段
+ */
+export function reallocateTodoFromPosition(
+  todo: Todo,
+  startSegmentIndex: number,
+  pomodoroSegments: PomodoroSegment[],
+  existingTodoSegments: TodoSegment[] = []
+): TodoSegment[] {
+  const needCount = getTodoEstPomoCount(todo);
+  const todoSegments: TodoSegment[] = [];
+
+  // 确定使用哪个类别的时间段
+  const categorySegs = pomodoroSegments
+    .filter((seg) => {
+      const targetCategory = todo.pomoType === "🍇" ? "living" : "working";
+      return (
+        seg.category === targetCategory &&
+        (seg.type === "work" || seg.type === "break")
+      );
+    })
+    .sort((a, b) => a.start - b.start);
+
+  // 标记已被其他todo使用的时间段
+  const used = new Array(categorySegs.length).fill(false);
+
+  // 标记已被现有todoSegments占用的时间段（排除当前todo的）
+  existingTodoSegments
+    .filter((seg) => seg.todoId !== todo.id)
+    .forEach((seg) => {
+      if (seg.assignedPomodoroSegment) {
+        const index = categorySegs.findIndex(
+          (s) => s === seg.assignedPomodoroSegment
+        );
+        if (index >= 0) used[index] = true;
+      }
+    });
+
+  // 找到对应的开始索引（在过滤后的数组中）
+  const targetSeg = pomodoroSegments[startSegmentIndex];
+  const startIndex = categorySegs.findIndex((seg) => seg === targetSeg);
+
+  if (startIndex === -1) {
+    // 如果找不到目标段，回退到原始逻辑
+    return [];
+  }
+
+  // 从指定位置开始分配
+  if (todo.pomoType === "🍅" || !todo.pomoType) {
+    allocateTomatoSegmentsFromIndex(
+      todo,
+      needCount,
+      categorySegs,
+      used,
+      todoSegments,
+      startIndex
+    );
+  } else if (todo.pomoType === "🍇") {
+    allocateGrapeSegmentsFromIndex(
+      todo,
+      needCount,
+      categorySegs,
+      used,
+      todoSegments,
+      startIndex
+    );
+  } else if (todo.pomoType === "🍒") {
+    allocateCherrySegmentsFromIndex(
+      todo,
+      needCount,
+      categorySegs,
+      used,
+      todoSegments,
+      startIndex
+    );
+  }
+
+  return todoSegments;
+}
+
+/**
+ * 从指定索引开始分配番茄段 #HACK
+ */
+function allocateTomatoSegmentsFromIndex(
+  todo: Todo,
+  needCount: number,
+  segments: PomodoroSegment[],
+  isUsed: boolean[],
+  todoSegments: TodoSegment[],
+  startIndex: number
+): void {
+  let assignedCount = 0;
+
+  // 从指定索引开始遍历
+  for (
+    let i = startIndex;
+    i < segments.length && assignedCount < needCount;
+    i++
+  ) {
+    if (!isUsed[i] && segments[i].type === "work") {
+      let segmentEnd = segments[i].end;
+      let span = 0;
+
+      // 尝试与后面的break段配对
+      if (
+        i + 1 < segments.length &&
+        !isUsed[i + 1] &&
+        segments[i + 1].type === "break" &&
+        segments[i].end === segments[i + 1].start
+      ) {
+        segmentEnd = segments[i + 1].end;
+        isUsed[i + 1] = true;
+        span = 1;
+      }
+
+      isUsed[i] = true;
+      todoSegments.push({
+        todoId: todo.id,
+        priority: todo.priority,
+        todoTitle: todo.activityTitle,
+        index: assignedCount + 1,
+        start: segments[i].start,
+        end: segmentEnd,
+        pomoType: "🍅",
+        assignedPomodoroSegment: segments[i],
+        category: "working",
+        completed: false,
+        usingRealPomo: false,
+      });
+      assignedCount++;
+      i += span;
+    }
+  }
+
+  // 处理溢出（与原函数相同）
+  while (assignedCount < needCount) {
+    const lastSeg = segments[segments.length - 1];
+    todoSegments.push({
+      todoId: todo.id,
+      priority: todo.priority,
+      todoTitle: todo.activityTitle,
+      index: assignedCount + 1,
+      start: lastSeg ? lastSeg.end : Date.now(),
+      end: lastSeg ? lastSeg.end + 25 * 60 * 1000 : Date.now() + 25 * 60 * 1000,
+      pomoType: "🍅",
+      category: "working",
+      overflow: true,
+      completed: false,
+      usingRealPomo: false,
+    });
+    assignedCount++;
+  }
+}
+
+/**
+ * 从指定索引开始分配🍇葡萄段 #HACK
+ */
+function allocateGrapeSegmentsFromIndex(
+  todo: Todo,
+  needCount: number,
+  segments: PomodoroSegment[],
+  isUsed: boolean[],
+  todoSegments: TodoSegment[],
+  startIndex: number
+): void {
+  let assignedCount = 0;
+
+  // 从指定索引开始遍历
+  for (
+    let i = startIndex;
+    i < segments.length && assignedCount < needCount;
+    i++
+  ) {
+    if (!isUsed[i] && segments[i].type === "work") {
+      let segmentEnd = segments[i].end;
+      let span = 0;
+
+      // 尝试与break段配对
+      if (
+        i + 1 < segments.length &&
+        !isUsed[i + 1] &&
+        segments[i + 1].type === "break" &&
+        segments[i].end === segments[i + 1].start
+      ) {
+        segmentEnd = segments[i + 1].end;
+        isUsed[i + 1] = true;
+        span = 1;
+      }
+
+      isUsed[i] = true;
+      todoSegments.push({
+        todoId: todo.id,
+        priority: todo.priority,
+        todoTitle: todo.activityTitle,
+        index: assignedCount + 1,
+        start: segments[i].start,
+        end: segmentEnd,
+        pomoType: "🍇",
+        assignedPomodoroSegment: segments[i],
+        category: "living",
+        completed: false,
+        usingRealPomo: false,
+      });
+      assignedCount++;
+      i += span;
+    }
+  }
+
+  // 处理溢出
+  while (assignedCount < needCount) {
+    const lastSeg = segments[segments.length - 1];
+    todoSegments.push({
+      todoId: todo.id,
+      priority: todo.priority,
+      todoTitle: todo.activityTitle,
+      index: assignedCount + 1,
+      start: lastSeg ? lastSeg.end : Date.now(),
+      end: lastSeg ? lastSeg.end + 25 * 60 * 1000 : Date.now() + 25 * 60 * 1000,
+      pomoType: "🍇",
+      category: "living",
+      overflow: true,
+      completed: false,
+      usingRealPomo: false,
+    });
+    assignedCount++;
+  }
+}
+
+/**
+ * 从指定索引开始分配🍒樱桃段 #HACK
+ */
+function allocateCherrySegmentsFromIndex(
+  todo: Todo,
+  needCount: number,
+  segments: PomodoroSegment[],
+  isUsed: boolean[],
+  todoSegments: TodoSegment[],
+  startIndex: number
+): void {
+  let assignedCount = 0;
+
+  // 从指定索引开始查找连续的4段组合
+  for (
+    let i = startIndex;
+    i < segments.length - 3 && assignedCount < needCount;
+    i++
+  ) {
+    // 检查连续4段是否都可用且符合work-break-work-break模式
+    if (
+      !isUsed[i] &&
+      segments[i].type === "work" &&
+      !isUsed[i + 1] &&
+      segments[i + 1].type === "break" &&
+      segments[i].end === segments[i + 1].start &&
+      !isUsed[i + 2] &&
+      segments[i + 2].type === "work" &&
+      segments[i + 1].end === segments[i + 2].start &&
+      !isUsed[i + 3] &&
+      segments[i + 3].type === "break" &&
+      segments[i + 2].end === segments[i + 3].start
+    ) {
+      // 标记4段都已使用
+      isUsed[i] = isUsed[i + 1] = isUsed[i + 2] = isUsed[i + 3] = true;
+
+      // 创建4个段，前2段为第1个番茄，后2段为第2个番茄
+      for (let j = 0; j < 4; j++) {
+        const pomodoroIndex = Math.floor(j / 2); // 0,1->0  2,3->1
+        todoSegments.push({
+          todoId: todo.id,
+          priority: todo.priority,
+          todoTitle: todo.activityTitle,
+          index: assignedCount + 1 + pomodoroIndex,
+          start: segments[i + j].start,
+          end: segments[i + j].end,
+          pomoType: "🍒",
+          assignedPomodoroSegment: segments[i + j],
+          category: "working",
+          completed: false,
+          usingRealPomo: false,
+        });
+      }
+      assignedCount += 2; // 一次处理了2个番茄
+    }
+  }
+
+  // 处理溢出
+  while (assignedCount < needCount) {
+    const lastSeg = segments[segments.length - 1];
+    todoSegments.push({
+      todoId: todo.id,
+      priority: todo.priority,
+      todoTitle: todo.activityTitle,
+      index: assignedCount + 1,
+      start: lastSeg ? lastSeg.end : Date.now(),
+      end: lastSeg ? lastSeg.end + 60 * 60 * 1000 : Date.now() + 60 * 60 * 1000,
+      pomoType: "🍒",
+      category: "working",
+      overflow: true,
+      completed: false,
+      usingRealPomo: false,
+    });
+    assignedCount++;
+  }
+}
+
+// ========== 实际执行相关函数 ==========
+
+/**
+ * 生成实际执行的todo时间段
+ * 基于startTime和完成状态，使用realPomo或estPomo
+ */
+export function generateActualTodoSegments(todos: Todo[]): TodoSegment[] {
+  const todoSegments: TodoSegment[] = [];
+
+  // 只处理有startTime的todos
+  const todosWithStartTime = todos.filter((todo) => todo.startTime);
+
   for (const todo of todosWithStartTime) {
     if (!todo.startTime) continue;
 
+    // 根据完成状态决定使用哪种计数
     const needCount = getTodoDisplayPomoCount(todo);
+    const isCompleted = todo.status === "done";
+    const usingRealPomo = isCompleted;
 
     if (todo.pomoType === "🍒") {
-      // 🍒特殊处理：始终创建2个段显示2个badge
+      // 🍒特殊处理：创建4个15分钟的段
       for (let i = 0; i < 4; i++) {
-        const duration = 15 * 60 * 1000; // 每个badge 30分钟
+        const duration = 15 * 60 * 1000; // 15分钟
         const segmentStart = todo.startTime + i * duration;
         const segmentEnd = segmentStart + duration;
-
-        // 标记占用的番茄段
-        const targetCategory = "working";
-        const segs = segByCategory[targetCategory];
-        for (let j = 0; j < segs.length; j++) {
-          const seg = segs[j];
-          if (segmentStart < seg.end && segmentEnd > seg.start) {
-            occupiedSegments.add(j);
-          }
-        }
+        const pomodoroIndex = Math.floor(i / 2); // 0,1->0  2,3->1
 
         todoSegments.push({
           todoId: todo.id,
           priority: todo.priority,
           todoTitle: todo.activityTitle,
-          index: i + 1, // 第1个badge, 第2个badge
+          index: pomodoroIndex + 1,
           start: segmentStart,
           end: segmentEnd,
           pomoType: "🍒",
           category: "working",
-          completed: todo.status === "done",
-          usingRealPomo: todo.status === "done",
+          completed: isCompleted,
+          usingRealPomo: usingRealPomo,
         });
       }
     } else {
-      // 🍅🍇的原有逻辑
+      // 🍅🍇的处理：每个25分钟
+      const duration = 25 * 60 * 1000;
       for (let i = 0; i < needCount; i++) {
-        let duration = 25 * 60 * 1000; // 25分钟
         const segmentStart = todo.startTime + i * duration;
         const segmentEnd = segmentStart + duration;
-
-        const targetCategory = todo.pomoType === "🍇" ? "living" : "working";
-        const segs = segByCategory[targetCategory];
-
-        for (let j = 0; j < segs.length; j++) {
-          const seg = segs[j];
-          if (segmentStart < seg.end && segmentEnd > seg.start) {
-            const globalIndex =
-              j +
-              (targetCategory === "working" ? 0 : segByCategory.working.length);
-            occupiedSegments.add(globalIndex);
-          }
-        }
 
         todoSegments.push({
           todoId: todo.id,
@@ -190,251 +770,28 @@ export function generateTodoSegmentsByStatus(
           start: segmentStart,
           end: segmentEnd,
           pomoType: todo.pomoType || "🍅",
-          category: targetCategory,
-          completed: todo.status === "done",
-          usingRealPomo: todo.status === "done",
+          category: todo.pomoType === "🍇" ? "living" : "working",
+          completed: isCompleted,
+          usingRealPomo: usingRealPomo,
         });
       }
     }
   }
 
-  // 第二步：处理没有startTime的todos，分配到剩余可用的番茄段
-
-  // 初始化使用状态标记
-  let used = {
-    working: new Array(segByCategory.working.length).fill(false),
-    living: new Array(segByCategory.living.length).fill(false),
-  };
-
-  // 按优先级排序没有startTime的todos
-  const sortedTodosWithoutStartTime = [...todosWithoutStartTime].sort(
-    (a, b) => {
-      if ((a.priority ?? 0) === 0 && (b.priority ?? 0) === 0) return 0;
-      if ((a.priority ?? 0) === 0) return 1;
-      if ((b.priority ?? 0) === 0) return -1;
-      return (a.priority ?? 0) - (b.priority ?? 0);
-    }
-  );
-
-  // 为每个没有startTime的todo分配番茄段
-  for (const todo of sortedTodosWithoutStartTime) {
-    const needCount = getTodoDisplayPomoCount(todo);
-    let assignedCount = 0;
-
-    if (todo.pomoType === "🍅" || !todo.pomoType) {
-      // 🍅只分配给working区
-      const segs = segByCategory.working;
-      const isUsed = used.working;
-      for (let i = 0; i < segs.length && assignedCount < needCount; i++) {
-        // 检查：未被标记使用 && 未被done todo占用 && 是work段
-        if (!isUsed[i] && !occupiedSegments.has(i) && segs[i].type === "work") {
-          let segmentEnd = segs[i].end;
-          let span = 0;
-
-          // 尝试与后面的break段配对
-          if (
-            i + 1 < segs.length &&
-            !isUsed[i + 1] &&
-            !occupiedSegments.has(i + 1) &&
-            segs[i + 1].type === "break" &&
-            segs[i].end === segs[i + 1].start
-          ) {
-            segmentEnd = segs[i + 1].end;
-            isUsed[i + 1] = true;
-            span = 1;
-          }
-
-          isUsed[i] = true;
-          todoSegments.push({
-            todoId: todo.id,
-            priority: todo.priority,
-            todoTitle: todo.activityTitle,
-            index: assignedCount + 1,
-            start: segs[i].start,
-            end: segmentEnd,
-            pomoType: "🍅",
-            assignedPomodoroSegment: segs[i],
-            category: segs[i].category,
-            completed: false,
-            usingRealPomo: false,
-          });
-          assignedCount++;
-          i += span;
-        }
-      }
-
-      // 处理溢出的番茄段
-      while (assignedCount < needCount) {
-        const lastSeg = segs[segs.length - 1];
-        todoSegments.push({
-          todoId: todo.id,
-          priority: todo.priority,
-          todoTitle: todo.activityTitle,
-          index: assignedCount + 1,
-          start: lastSeg ? lastSeg.end : Date.now(),
-          end: lastSeg
-            ? lastSeg.end + 25 * 60 * 1000
-            : Date.now() + 25 * 60 * 1000,
-          pomoType: "🍅",
-          category: "working",
-          overflow: true,
-          completed: false,
-          usingRealPomo: false,
-        });
-        assignedCount++;
-      }
-    } else if (todo.pomoType === "🍇") {
-      // 🍇只分配给living区
-      const segs = segByCategory.living;
-      const isUsed = used.living;
-      for (let i = 0; i < segs.length && assignedCount < needCount; i++) {
-        // living区域的占用检查需要加上working区域长度的偏移
-        const globalIndex = i + segByCategory.working.length;
-        if (
-          !isUsed[i] &&
-          !occupiedSegments.has(globalIndex) &&
-          segs[i].type === "work"
-        ) {
-          let segmentEnd = segs[i].end;
-          let span = 0;
-
-          // 尝试与后面的break段配对
-          if (
-            i + 1 < segs.length &&
-            !isUsed[i + 1] &&
-            !occupiedSegments.has(globalIndex + 1) &&
-            segs[i + 1].type === "break" &&
-            segs[i].end === segs[i + 1].start
-          ) {
-            segmentEnd = segs[i + 1].end;
-            isUsed[i + 1] = true;
-            span = 1;
-          }
-
-          isUsed[i] = true;
-          todoSegments.push({
-            todoId: todo.id,
-            priority: todo.priority,
-            todoTitle: todo.activityTitle,
-            index: assignedCount + 1,
-            start: segs[i].start,
-            end: segmentEnd,
-            pomoType: "🍇",
-            assignedPomodoroSegment: segs[i],
-            category: segs[i].category,
-            completed: false,
-            usingRealPomo: false,
-          });
-          assignedCount++;
-          i += span;
-        }
-      }
-
-      // 处理溢出的番茄段
-      while (assignedCount < needCount) {
-        const lastSeg = segs[segs.length - 1];
-        todoSegments.push({
-          todoId: todo.id,
-          priority: todo.priority,
-          todoTitle: todo.activityTitle,
-          index: assignedCount + 1,
-          start: lastSeg ? lastSeg.end : Date.now(),
-          end: lastSeg
-            ? lastSeg.end + 25 * 60 * 1000
-            : Date.now() + 25 * 60 * 1000,
-          pomoType: "🍇",
-          category: "living",
-          overflow: true,
-          completed: false,
-          usingRealPomo: false,
-        });
-        assignedCount++;
-      }
-    } else if (todo.pomoType === "🍒") {
-      // 🍒必须连续4段（work break work break），只在working区找
-      const segs = segByCategory.working;
-      const isUsed = used.working;
-      for (let i = 0; i < segs.length - 3 && assignedCount < needCount; i++) {
-        // 检查连续4段都可用且未被占用
-        if (
-          !isUsed[i] &&
-          !occupiedSegments.has(i) &&
-          segs[i].type === "work" &&
-          !isUsed[i + 1] &&
-          !occupiedSegments.has(i + 1) &&
-          segs[i + 1].type === "break" &&
-          segs[i].end === segs[i + 1].start &&
-          !isUsed[i + 2] &&
-          !occupiedSegments.has(i + 2) &&
-          segs[i + 2].type === "work" &&
-          segs[i + 1].end === segs[i + 2].start &&
-          !isUsed[i + 3] &&
-          !occupiedSegments.has(i + 3) &&
-          segs[i + 3].type === "break" &&
-          segs[i + 2].end === segs[i + 3].start
-        ) {
-          // 标记4段都已使用
-          isUsed[i] = isUsed[i + 1] = isUsed[i + 2] = isUsed[i + 3] = true;
-
-          // 创建4个段，分为2个番茄显示
-          for (let j = 0; j < 4; j++) {
-            const pomodoroIndex = Math.floor(j / 2); // 0,1,2,3 -> 0,0,1,1
-            todoSegments.push({
-              todoId: todo.id,
-              priority: todo.priority,
-              todoTitle: todo.activityTitle,
-              index: assignedCount + 1 + pomodoroIndex, // 第1,2段用index+1，第3,4段用index+2
-              start: segs[i + j].start,
-              end: segs[i + j].end,
-              pomoType: "🍒",
-              assignedPomodoroSegment: segs[i + j],
-              category: segs[i + j].category,
-              completed: false,
-              usingRealPomo: false,
-            });
-          }
-          assignedCount += 2; // ✅ 改为+2，因为处理了2个番茄
-        }
-      }
-
-      // 处理溢出的番茄段
-      while (assignedCount < needCount) {
-        const lastSeg = segs[segs.length - 1];
-        todoSegments.push({
-          todoId: todo.id,
-          priority: todo.priority,
-          todoTitle: todo.activityTitle,
-          index: assignedCount + 1,
-          start: lastSeg ? lastSeg.end : Date.now(),
-          end: lastSeg
-            ? lastSeg.end + 60 * 60 * 1000 // 修改为60分钟
-            : Date.now() + 60 * 60 * 1000,
-          pomoType: "🍒",
-          category: "working",
-          overflow: true,
-          completed: false,
-          usingRealPomo: false,
-        });
-        assignedCount++;
-      }
-    }
-  }
-
-  return todoSegments;
+  return todoSegments.sort((a, b) => a.start - b.start);
 }
 
-// 计算当日除去schedule可用pomo
+// ========== 番茄时间段生成 ==========
+
+/**
+ * 将时间块分割为番茄时间段，排除已安排的活动
+ * 生成可用于分配的work和break时间段
+ */
 export function splitBlocksToPomodorosWithIndexExcludeSchedules(
   blocks: Block[],
   schedules: { activityDueRange: [number, string]; isUntaetigkeit?: boolean }[]
 ): PomodoroSegment[] {
-  //-------------------------
-  // console.log("======原始block=====");
-  // blocks.forEach((b, i) =>
-  //   console.log(`[${i}] block: ${b.start}~${b.end} (${b.category})`)
-  // );
-  //-------------------------
-  // 取所有activityDueRange区间，同时保留isUntaetigkeit信息
+  // 处理所有需要排除的时间段
   const scheduleInfo: Array<{
     range: [number, number];
     isUntaetigkeit: boolean;
@@ -451,16 +808,14 @@ export function splitBlocksToPomodorosWithIndexExcludeSchedules(
     })
     .filter((info): info is NonNullable<typeof info> => info !== null);
 
-  // 用于排除的区间（所有schedule，不管类型）
-  const ex: [number, number][] = scheduleInfo.map((info) => info.range);
-
-  // console.log("\n======不可用区间（activityDueRange）=====");
-  // ex.forEach((x, i) => console.log(`[${i}] ${x[0]}~${x[1]}`));
+  const excludeRanges: [number, number][] = scheduleInfo.map(
+    (info) => info.range
+  );
 
   let segments: PomodoroSegment[] = [];
   const globalIndex: Record<string, number> = {};
 
-  // 合并区间时需要保留类型信息
+  // 合并重叠的排除区间
   const merged: Array<{
     range: [number, number];
     hasUntaetigkeit: boolean;
@@ -475,14 +830,13 @@ export function splitBlocksToPomodorosWithIndexExcludeSchedules(
           hasUntaetigkeit: isUntaetigkeit,
         });
       } else {
-        // 有重叠，合并区间，如果任一个是untaetigkeit则保留
         const last = merged[merged.length - 1];
         last.range[1] = Math.max(last.range[1], end);
         last.hasUntaetigkeit = last.hasUntaetigkeit || isUntaetigkeit;
       }
     });
 
-  // 生成schedule段，根据类型决定type和category
+  // 生成schedule段
   merged.forEach(({ range: [start, end], hasUntaetigkeit }) => {
     segments.push({
       parentBlockId: "S",
@@ -493,42 +847,36 @@ export function splitBlocksToPomodorosWithIndexExcludeSchedules(
     });
   });
 
-  blocks.forEach((block, blockIdx) => {
+  // 处理每个时间块
+  blocks.forEach((block) => {
     if (block.category === "sleeping") return;
 
-    // 只考虑与当块有交集的
-    const relatedEx = ex.filter(
-      ([s, e]) =>
-        e > getTimestampForTimeString(block.start) &&
-        s < getTimestampForTimeString(block.end)
-    );
-    // 剔除后剩余可用区间
-    const available = subtractIntervals(
-      [
-        getTimestampForTimeString(block.start),
-        getTimestampForTimeString(block.end),
-      ],
-      relatedEx
-    );
-    // console.log(`\n[block#${blockIdx}] after剔除:`);
-    // available.forEach((a, i) =>
-    //   console.log(
-    //     `  可用区间#${i}: ${a[0]}~${a[1]}, 长度：${(
-    //       (a[1] - a[0]) /
-    //       60000
-    //     ).toFixed(1)}分钟`
-    //   )
-    // );
+    const blockStart = getTimestampForTimeString(block.start);
+    const blockEnd = getTimestampForTimeString(block.end);
 
-    for (const [aStart, aEnd] of available) {
-      if (aEnd - aStart < 0 * 60 * 1000) {
-        //console.log(`   -- 可用区间不足30分钟，不分番茄`);
-        continue;
-      }
+    // 找到与当前块有交集的排除区间
+    const relatedExcludes = excludeRanges.filter(
+      ([s, e]) => e > blockStart && s < blockEnd
+    );
+
+    // 计算可用的时间区间
+    const availableRanges = subtractIntervals(
+      [blockStart, blockEnd],
+      relatedExcludes
+    );
+
+    // 为每个可用区间生成番茄时间段
+    for (const [aStart, aEnd] of availableRanges) {
+      // 跳过太短的区间
+      if (aEnd - aStart < 30 * 60 * 1000) continue;
+
       let cur = aStart;
       let idx = globalIndex[block.category] || 1;
-      while (aEnd - cur >= 25 * 60 * 1000 + 5 * 60 * 1000) {
-        // work
+
+      // 生成25分钟工作 + 5分钟休息的循环
+      while (aEnd - cur >= 30 * 60 * 1000) {
+        // 需要至少30分钟
+        // 工作段
         segments.push({
           parentBlockId: block.id,
           type: "work",
@@ -538,7 +886,8 @@ export function splitBlocksToPomodorosWithIndexExcludeSchedules(
           index: idx,
         });
         cur += 25 * 60 * 1000;
-        // break
+
+        // 休息段
         segments.push({
           parentBlockId: block.id,
           type: "break",
@@ -549,7 +898,8 @@ export function splitBlocksToPomodorosWithIndexExcludeSchedules(
         cur += 5 * 60 * 1000;
         idx++;
       }
-      // 只保留最后一个完整的work pomo，少于25分钟丢弃！
+
+      // 处理剩余时间：如果还有至少25分钟，添加最后一个工作段
       if (aEnd - cur >= 25 * 60 * 1000) {
         segments.push({
           parentBlockId: block.id,
@@ -560,18 +910,11 @@ export function splitBlocksToPomodorosWithIndexExcludeSchedules(
           index: idx,
         });
         idx++;
-      } else if (aEnd - cur > 0) {
-        // 如需提示，可以加一句
-        // console.log(
-        //   `   -- 区间末尾剩余${((aEnd - cur) / 60000).toFixed(
-        //     1
-        //   )}分钟，未插入pomo`
-        // );
       }
 
       globalIndex[block.category] = idx;
     }
   });
-  segments.sort((a, b) => a.start - b.start);
-  return segments;
+
+  return segments.sort((a, b) => a.start - b.start);
 }
