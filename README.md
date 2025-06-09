@@ -85,16 +85,11 @@
 
 ## 📦 安装和使用
 
-```bash
-# 克隆项目
-git clone https://github.com/your-username/hat-pomo.git
+- 克隆项目 `git clone https://github.com/Xeonilian/pomotention.git`
 
-# 安装依赖
-npm install
+## 数据说明
 
-# 开发模式
-npm run tauri dev
-
-# 构建应用
-npm run tauri build
-```
+- 设置和历史记录安全存储在你的电脑中，卸载应用不会删除您的数据
+- 数据位置：%LOCALAPPDATA%\com.pomotention.app\EBWebView\Default\Local Storage\leveldb
+- 注意：数据以加密格式存储，不是普通文本文件
+- 后续版本将提供数据导出功能，方便您备份和迁移数据

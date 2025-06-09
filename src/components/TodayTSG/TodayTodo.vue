@@ -227,7 +227,7 @@
           </tr>
         </template>
         <tr v-else class="empty-row">
-          <td colspan="6" style="text-align: center; padding: 10px">
+          <td colspan="7" style="text-align: center; padding: 10px">
             暂无待办
           </td>
         </tr>

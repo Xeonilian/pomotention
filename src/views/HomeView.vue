@@ -839,6 +839,7 @@ defineExpose({
   overflow: hidden;
   margin-right: 0;
   background: var(--color-background);
+  min-width: 150px;
 }
 
 .right {

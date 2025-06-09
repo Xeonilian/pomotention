@@ -75,7 +75,10 @@
             </td>
             <td
               class="ellipsis title-cell"
-              :class="{ 'done-cell': schedule.status === 'done' }"
+              :class="{
+                'done-cell': schedule.status === 'done',
+                'cloud-background': schedule.isUntaetigkeit === true,
+              }"
               @dblclick.stop="startEditing(schedule.id, 'title')"
               :title="
                 editingRowId === schedule.id && editingField === 'title'
@@ -141,7 +144,7 @@
           </tr>
         </template>
         <tr v-else class="empty-row">
-          <td colspan="6" style="text-align: center; padding: 10px">
+          <td colspan="7" style="text-align: center; padding: 10px">
             暂无日程
           </td>
         </tr>

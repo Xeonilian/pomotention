@@ -21,8 +21,8 @@
             @click="handleViewToggle(control.key)"
             class="header-button"
           >
-          <template #icon>
-            <n-icon size="18" :component="control.icon" />
+            <template #icon>
+              <n-icon size="18" :component="control.icon" />
             </template>
           </n-button>
         </div>
@@ -53,6 +53,7 @@ const timerStore = useTimerStore();
 
 const menuOptions = [
   { label: "首页", key: "/" },
+  { label: "帮助", key: "/help" },
   //{ label: "统计", key: "/statistics" },
   //{ label: "设置", key: "/settings" },
 ];

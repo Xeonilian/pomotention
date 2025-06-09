@@ -59,7 +59,6 @@
       :style="{ top: currentTimeTop + 'px' }"
     />
   </div>
-
   <!-- 番茄时间分段 -->
   <div
     v-for="(segment, index) in pomodoroSegments"
@@ -73,9 +72,6 @@
       },
     ]"
     :style="getPomodoroStyle(segment)"
-    @dragover="handleDragOver($event, segment, index)"
-    @dragleave="handleDragLeave"
-    @drop="handleDrop($event, segment, index)"
   >
     <!-- 仅在"工作段"且有编号时显示序号 -->
     <template v-if="segment.type === 'work' && segment.index != null">
@@ -112,9 +108,7 @@
         'priority-' + seg.priority,
         { 'cherry-badge': seg.pomoType === '🍒' },
       ]"
-      draggable="true"
-      @dragstart="handleDragStart($event, seg)"
-      @dragend="handleDragEnd"
+      @mousedown="handleMouseDown($event, seg)"
       style="cursor: grab"
     >
       {{ seg.priority > 0 ? seg.priority : "–" }}
@@ -167,19 +161,6 @@ const props = defineProps<{
   schedules: Schedule[];
   todos: Todo[];
 }>();
-
-// ======= 拖拽状态 =======
-const dragState = ref<{
-  isDragging: boolean;
-  draggedTodoId: number | null;
-  draggedIndex: number | null;
-  dropTargetSegmentIndex: number | null;
-}>({
-  isDragging: false,
-  draggedTodoId: null,
-  draggedIndex: null,
-  dropTargetSegmentIndex: null,
-});
 
 // ======= 时间主块（Blocks）底色的样式计算 =======
 function getVerticalBlockStyle(block: Block): CSSProperties {
@@ -445,31 +426,6 @@ function getActualTimeRangeStyle(range: ActualTimeRange): CSSProperties {
     opacity: 0.65, // 🔥 完全不透明
   };
 }
-// 拖拽开始
-function handleDragStart(event: DragEvent, seg: TodoSegment) {
-  console.log("🟢 Drag start:", seg.todoId, seg.index);
-  dragState.value.isDragging = true;
-  dragState.value.draggedTodoId = seg.todoId;
-  dragState.value.draggedIndex = seg.index;
-
-  // 设置拖拽数据
-  event.dataTransfer?.setData(
-    "text/plain",
-    JSON.stringify({
-      todoId: seg.todoId,
-      index: seg.index,
-      priority: seg.priority,
-    })
-  );
-}
-
-// 拖拽结束
-function handleDragEnd() {
-  dragState.value.isDragging = false;
-  dragState.value.draggedTodoId = null;
-  dragState.value.draggedIndex = null;
-  dragState.value.dropTargetSegmentIndex = null;
-}
 
 function isValidTodoSegmentMatch(
   todoPomoType: string,
@@ -492,80 +448,144 @@ function isValidTodoSegmentMatch(
   return matchRules[todoPomoType]?.includes(segmentCategory) || false;
 }
 
-// 拖拽悬停
-function handleDragOver(
-  event: DragEvent,
-  segment: PomodoroSegment,
-  index: number
-) {
-  console.log("🟠 Drag over:", segment.type, index, dragState.value.isDragging);
+// ======= 拖拽状态 =======
+const dragState = ref<{
+  isDragging: boolean;
+  draggedTodoId: number | null;
+  draggedIndex: number | null;
+  dropTargetSegmentIndex: number | null;
+}>({
+  isDragging: false,
+  draggedTodoId: null,
+  draggedIndex: null,
+  dropTargetSegmentIndex: null,
+});
 
-  if (segment.type === "work" && dragState.value.isDragging) {
-    const draggedTodo = props.todos.find(
-      (t) => t.id === dragState.value.draggedTodoId
-    );
-    if (!draggedTodo) return;
+// 替换原来的拖拽状态管理
+const mouseState = ref<{
+  isDragging: boolean;
+  startX: number;
+  startY: number;
+  draggedSeg: TodoSegment | null;
+}>({
+  isDragging: false,
+  startX: 0,
+  startY: 0,
+  draggedSeg: null,
+});
 
-    // 只检查类型匹配
-    if (
-      !isValidTodoSegmentMatch(
-        draggedTodo.pomoType || "🍅",
-        segment.category || ""
-      )
-    ) {
-      console.log(
-        "❌ Todo type mismatch:",
-        draggedTodo.pomoType,
-        "→",
-        segment.category
-      );
-      return;
-    }
+// 替换 handleDragStart
+function handleMouseDown(event: MouseEvent, seg: TodoSegment) {
+  console.log("🟢 Mouse down:", seg.todoId, seg.index);
 
-    // 检查冲突
-    const conflictingSegment = todoSegments.value.find(
-      (seg) =>
-        seg.todoId !== dragState.value.draggedTodoId &&
-        seg.start <= segment.start &&
-        seg.end > segment.start
-    );
+  mouseState.value.isDragging = true;
+  mouseState.value.startX = event.clientX;
+  mouseState.value.startY = event.clientY;
+  mouseState.value.draggedSeg = seg;
 
-    if (conflictingSegment) {
-      console.log("⚠️ Conflict detected");
-      return;
-    }
+  // 设置拖拽视觉状态
+  dragState.value.isDragging = true;
+  dragState.value.draggedTodoId = seg.todoId;
+  dragState.value.draggedIndex = seg.index;
 
-    event.preventDefault();
-    dragState.value.dropTargetSegmentIndex = index;
-  }
-}
+  // 添加全局事件监听
+  document.addEventListener("mousemove", handleMouseMove);
+  document.addEventListener("mouseup", handleMouseUp);
 
-// 拖拽离开
-function handleDragLeave() {
-  dragState.value.dropTargetSegmentIndex = null;
-}
-
-// 修改 handleDrop 函数
-function handleDrop(
-  event: DragEvent,
-  segment: PomodoroSegment,
-  segmentIndex: number
-) {
   event.preventDefault();
+  event.stopPropagation();
+}
 
-  if (segment.type !== "work" || !dragState.value.isDragging) {
-    return;
+// 鼠标移动
+function handleMouseMove(event: MouseEvent) {
+  if (!mouseState.value.isDragging) return;
+
+  // 获取鼠标下的元素
+  const elementBelow = document.elementFromPoint(event.clientX, event.clientY);
+  const pomoElement = elementBelow?.closest(".pomo-segment");
+
+  if (pomoElement && pomoElement.classList.contains("work")) {
+    const segmentIndex = Array.from(
+      document.querySelectorAll(".pomo-segment.work")
+    ).indexOf(pomoElement);
+
+    if (segmentIndex >= 0) {
+      const segment = pomodoroSegments.value.filter((s) => s.type === "work")[
+        segmentIndex
+      ];
+      if (segment && mouseState.value.draggedSeg) {
+        // 检查是否可以放置
+        const draggedTodo = props.todos.find(
+          (t) => t.id === mouseState.value.draggedSeg!.todoId
+        );
+        if (
+          draggedTodo &&
+          isValidTodoSegmentMatch(
+            draggedTodo.pomoType || "🍅",
+            segment.category || ""
+          )
+        ) {
+          dragState.value.dropTargetSegmentIndex =
+            pomodoroSegments.value.indexOf(segment);
+        } else {
+          dragState.value.dropTargetSegmentIndex = null;
+        }
+      }
+    }
+  } else {
+    dragState.value.dropTargetSegmentIndex = null;
+  }
+}
+
+// 鼠标松开
+function handleMouseUp() {
+  if (
+    mouseState.value.isDragging &&
+    dragState.value.dropTargetSegmentIndex !== null
+  ) {
+    // 执行放置逻辑
+    const targetSegment =
+      pomodoroSegments.value[dragState.value.dropTargetSegmentIndex];
+    if (targetSegment && mouseState.value.draggedSeg) {
+      const draggedTodo = props.todos.find(
+        (t) => t.id === mouseState.value.draggedSeg!.todoId
+      );
+      if (draggedTodo) {
+        // 检查冲突
+        const conflictingSegment = todoSegments.value.find(
+          (seg) =>
+            seg.todoId !== mouseState.value.draggedSeg!.todoId &&
+            seg.start <= targetSegment.start &&
+            seg.end > targetSegment.start
+        );
+
+        if (!conflictingSegment) {
+          // 记录手动分配
+          manualAllocations.value.set(
+            mouseState.value.draggedSeg.todoId,
+            dragState.value.dropTargetSegmentIndex
+          );
+          console.log(
+            "✅ Drop successful:",
+            mouseState.value.draggedSeg.todoId,
+            "→",
+            dragState.value.dropTargetSegmentIndex
+          );
+        }
+      }
+    }
   }
 
-  const dragData = JSON.parse(
-    event.dataTransfer?.getData("text/plain") || "{}"
-  );
+  // 清理状态
+  mouseState.value.isDragging = false;
+  dragState.value.isDragging = false;
+  dragState.value.draggedTodoId = null;
+  dragState.value.draggedIndex = null;
+  dragState.value.dropTargetSegmentIndex = null;
 
-  // 记录手动分配
-  manualAllocations.value.set(dragData.todoId, segmentIndex);
-
-  // 重置拖拽状态
-  handleDragEnd();
+  // 移除全局监听
+  document.removeEventListener("mousemove", handleMouseMove);
+  document.removeEventListener("mouseup", handleMouseUp);
 }
 </script>
 
