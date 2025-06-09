@@ -2,12 +2,11 @@
   <div class="help-view">
     <div class="help-header">
       <h1>📖 使用帮助</h1>
-      <button @click="refreshContent" class="refresh-btn">🔄 刷新</button>
     </div>
 
     <div class="help-content">
-      <div v-if="loading" class="loading">📖 正在加载...</div>
-      <div v-else-if="error" class="error">❌ {{ error }}</div>
+      <div v-if="loading">📖 加载中...</div>
+      <div v-else-if="error" class="error">❌ 加载失败</div>
       <div v-else class="markdown-content" v-html="htmlContent"></div>
     </div>
   </div>
@@ -18,33 +17,19 @@ import { ref, onMounted } from "vue";
 import { marked } from "marked";
 
 const loading = ref(true);
-const error = ref("");
+const error = ref(false);
 const htmlContent = ref("");
 
-async function loadReadme() {
-  loading.value = true;
-  error.value = "";
-
+onMounted(async () => {
   try {
-    const response = await fetch("/README.md");
-    if (!response.ok) throw new Error("README文件未找到");
-
+    const response = await fetch("/README.md"); // ✅ 正确路径
     const text = await response.text();
     htmlContent.value = await marked(text);
-  } catch (err) {
-    error.value = "无法加载帮助文档";
-    console.error(err);
+  } catch {
+    error.value = true;
   } finally {
     loading.value = false;
   }
-}
-
-function refreshContent() {
-  loadReadme();
-}
-
-onMounted(() => {
-  loadReadme();
 });
 </script>
 
