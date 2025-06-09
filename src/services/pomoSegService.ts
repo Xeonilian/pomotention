@@ -163,7 +163,7 @@ export function generateEstimatedTodoSegments(
 
   // 为每个todo分配时间段
   for (const todo of sortedTodos) {
-    const needCount = getTodoEstPomoCount(todo);
+    const needCount = getTodoDisplayPomoCount(todo); // 改用动态数
 
     if (todo.pomoType === "🍅" || !todo.pomoType) {
       allocateTomatoSegments(
@@ -418,7 +418,11 @@ export function reallocateTodoFromPosition(
   pomodoroSegments: PomodoroSegment[],
   existingTodoSegments: TodoSegment[] = []
 ): TodoSegment[] {
-  const needCount = getTodoEstPomoCount(todo);
+  // 🔥 改用动态计数，樱桃这个可能是错的
+  const needCount =
+    todo.pomoType === "🍒"
+      ? getTodoEstPomoCount(todo) // 樱桃继续用估计数
+      : getTodoDisplayPomoCount(todo); // 🍅🍇用动态数
   const todoSegments: TodoSegment[] = [];
 
   // 确定使用哪个类别的时间段
