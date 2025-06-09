@@ -329,9 +329,7 @@ const todoSegments = computed(() => {
   // 🔥 对有手动分配的 todos，完全重新生成
   if (manualAllocations.value.size > 0) {
     // 分离手动和自动分配的 todos
-    const manualTodos = props.todos.filter((t) =>
-      manualAllocations.value.has(t.id)
-    );
+
     const autoTodos = props.todos.filter(
       (t) => !manualAllocations.value.has(t.id)
     );

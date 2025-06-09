@@ -30,9 +30,7 @@
         @focus="$emit('focus-row', item.id)"
       >
         <template #prefix>
-          <n-icon
-            v-if="item.isUntaetigkeit"
-            :color="'var(--color-blue)'"
+          <n-icon v-if="item.isUntaetigkeit" :color="'var(--color-blue)'"
             ><AddSubtractCircle24Filled
           /></n-icon>
           <n-icon
@@ -153,11 +151,10 @@
 import { computed } from "vue";
 import { NInput, NDatePicker, NIcon } from "naive-ui";
 import {
-  VideoPersonSparkle24Regular,
   VideoPersonCall24Regular,
   ApprovalsApp24Regular,
   Accessibility28Filled,
-  AddSubtractCircle24Filled
+  AddSubtractCircle24Filled,
 } from "@vicons/fluent";
 import type { Activity } from "@/core/types/Activity";
 
@@ -203,7 +200,7 @@ function onInputUpdate(item: Activity, value: string) {
   gap: 0px;
   width: 100%;
 }
-.input-min :deep( .n-input-wrapper) {
+.input-min :deep(.n-input-wrapper) {
   padding-left: 0px !important;
   padding-right: 0px !important;
 }

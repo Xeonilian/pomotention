@@ -144,7 +144,7 @@ const handleClick = (event: MouseEvent) => {
         );
 
         if (taskMatch) {
-          const [, indent, prefix, currentStatus, taskText] = taskMatch;
+          const [, indent, prefix, taskText] = taskMatch;
 
           // 如果这是第 checkboxIndex 个任务项
           if (taskItemCount === checkboxIndex) {
