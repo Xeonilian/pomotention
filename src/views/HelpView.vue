@@ -66,10 +66,10 @@ const activeId = ref("");
 
 let scrollTimeout: number | null = null;
 
-// 切换目录显示
-const toggleToc = () => {
-  showToc.value = !showToc.value;
-};
+// // 切换目录显示
+// const toggleToc = () => {
+//   showToc.value = !showToc.value;
+// };
 
 // 生成目录
 const generateTableOfContents = () => {
