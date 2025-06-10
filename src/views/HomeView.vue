@@ -52,7 +52,9 @@
                 title="上一天"
               >
                 <template #icon>
-                  <Previous24Regular />
+                  <n-icon>
+                    <Previous24Regular />
+                  </n-icon>
                 </template>
               </n-button>
               <n-button
@@ -64,7 +66,9 @@
                 title="回到今天"
               >
                 <template #icon>
-                  <CalendarToday20Regular />
+                  <n-icon>
+                    <CalendarToday20Regular />
+                  </n-icon>
                 </template>
               </n-button>
               <n-button
@@ -76,7 +80,9 @@
                 title="下一天"
               >
                 <template #icon>
-                  <Next24Regular />
+                  <n-icon>
+                    <Next24Regular />
+                  </n-icon>
                 </template>
               </n-button>
             </div>
@@ -157,7 +163,7 @@
 <script setup lang="ts">
 // ------------------------ 导入依赖 ------------------------
 import { ref, onMounted, watch, onUnmounted, computed } from "vue";
-import { NButton } from "naive-ui";
+import { NButton, NIcon } from "naive-ui";
 import { usePomoStore } from "@/stores/usePomoStore";
 import TimeTableView from "@/views/Home/TimeTableView.vue";
 import TodayView from "@/views/Home/TodayView.vue";
