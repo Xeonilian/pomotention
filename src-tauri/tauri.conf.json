@@ -13,11 +13,12 @@
     "windows": [
       {
         "title": "pomotention",
-        "width": 1200,
-        "height": 800,
-        "minWidth": 800,
-        "minHeight": 600,
-        "center": true
+        "width": 1000,
+        "height": 600,
+        "minWidth": 220,
+        "minHeight": 140,
+        "center": true,
+        "transparent": true
       }
     ],
     "security": {

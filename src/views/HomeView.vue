@@ -831,6 +831,7 @@ defineExpose({
   background: var(--color-background-light-light);
   overflow: auto;
   justify-content: center;
+  overflow-x: hidden; /* 隐藏水平滚动条，但可能裁剪内容 */
 }
 
 .left {
@@ -1031,6 +1032,7 @@ defineExpose({
   border-radius: 8px;
   box-shadow: 0 2px 12px rgba(255, 255, 255, 0.1);
   transition: box-shadow 0.3s ease;
+  padding: 0px;
 }
 
 .draggable-container:hover {

@@ -19,11 +19,7 @@
         'sequence-mode': showPomoSeq,
       }"
     >
-      <PomodoroTimer
-        class="time"
-        :show-pomo-seq="showPomoSeq"
-
-      />
+      <PomodoroTimer class="time" :show-pomo-seq="showPomoSeq" />
       <PomodoroSequence v-if="showPomoSeq" class="sequence" />
     </div>
   </div>
@@ -60,8 +56,8 @@ function handleTogglePomoSeq() {
 
 <style scoped>
 .pomodoro-container {
-  padding: 8px;
-  width: 240px;
+  padding: 0px;
+  width: 220px;
   box-sizing: border-box;
   position: relative;
 }
@@ -89,7 +85,7 @@ function handleTogglePomoSeq() {
   justify-content: center;
   gap: 4px;
   border-radius: 8px;
-  padding: 8px;
+  padding: 0px;
   width: 100%;
   box-sizing: border-box;
 }

@@ -140,8 +140,9 @@ function handleViewToggle(key: string) {
 </script>
 
 <style scoped>
-.header {
-  height: 5%;
+.header,
+.custom-titlebar {
+  height: 30px;
   /* display: none; */
   display: flex;
   align-items: center;
@@ -150,6 +151,17 @@ function handleViewToggle(key: string) {
 
   border-bottom: 1px solid var(--color-background-light);
   font-weight: bold;
+}
+@media (max-height: 300px) {
+  .header,
+  .custom-titlebar {
+    display: none;
+    min-height: 0;
+    height: 0;
+  }
+  .content {
+    height: 100vh !important;
+  }
 }
 
 .header-content {
@@ -167,7 +179,7 @@ function handleViewToggle(key: string) {
 
 .content {
   overflow: auto;
-  height: 95%;
+  height: calc(100% - 30px);
 }
 
 html,
