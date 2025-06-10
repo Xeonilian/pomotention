@@ -70,22 +70,59 @@
 - [番茄列车](https://ebp.gesedna.com/pa-group-info-pomo/?rd=%2FEBPTsundoku%2F%3Frd%3D%2F) - 社群化专注实践
 - [番茄工作法官方理念](https://www.pomodorotechnique.com/) - 计时器设计和核心逻辑均基于官方改造
 
-## 🛠️ 技术栈
-
-- **前端**: Vue.js + TypeScript
-- **UI 组件**: Naive UI + Xicons
-- **后端**: Tauri (Rust)
-- **跨平台**: Windows / macOS [comming soon]
-
 ## 📦 安装和使用
 
-- 克隆项目 `git clone https://github.com/Xeonilian/pomotention.git`
-- windows 便携版 `https://github.com/Xeonilian/pomotention/releases/download/v0.1.0/pomotention.exe`
-- windows 安装包 `https://github.com/Xeonilian/pomotention/releases/download/v0.1.0/pomotention_0.1.0_x64_en-US.msi`
+### 下载途径
 
-## 数据说明
+- 克隆项目： `git clone https://github.com/Xeonilian/pomotention.git`
+- windows 便携版： `https://github.com/Xeonilian/pomotention/releases/download/v0.1.0/pomotention.exe`
+- windows 安装包： `https://github.com/Xeonilian/pomotention/releases/download/v0.1.0/pomotention_0.1.0_x64_en-US.msi`
+- macOS 安装包：
+
+### 安全性说明
+
+#### Windows 系统
+
+当您下载并运行本软件时，Windows 可能会显示"Windows 已保护你的电脑"或"未知发布者"的安全警告。这是因为本软件暂未获得 Microsoft 的数字签名认证。
+
+**安装步骤：**
+
+1. 点击"更多信息"
+2. 点击"仍要运行"
+3. 或者右键点击安装文件，选择"属性" → "常规" → 勾选"解除锁定" → "确定"
+
+#### Mac 系统
+
+macOS 可能会阻止本软件运行，显示"无法打开，因为它来自身份不明的开发者"。
+
+**安装步骤：**
+
+1. **方法一（推荐）：**
+
+   - 按住 Control 键点击应用程序
+   - 选择"打开"
+   - 在弹出对话框中点击"打开"
+
+2. **方法二：**
+
+   - 打开"系统偏好设置" → "安全性与隐私" → "通用"
+   - 点击"仍要打开"按钮
+
+3. **方法三：**
+   - 终端执行：`sudo xattr -rd com.apple.quarantine /path/to/your/app`
+
+**重要提醒：** 本软件经过个人开发和测试，不含恶意代码。安全警告仅因未购买昂贵的开发者证书导致。如有疑虑，建议使用杀毒软件扫描后再安装。
+
+### 数据说明
 
 - 历史记录安全存储在你的电脑中，卸载应用不会删除数据
 - 数据位置：%LOCALAPPDATA%\com.pomotention.app\EBWebView\Default\Local Storage\leveldb
 - 数据以加密格式存储，不是普通文本文件
 - 后续版本将提供数据导出功能，方便您备份和迁移数据
+
+### 🛠️ 技术栈
+
+- **前端**: Vue.js + TypeScript
+- **UI 组件**: Naive UI + Xicons
+- **后端**: Tauri (Rust)
+- **跨平台**: Windows / macOS [comming soon]

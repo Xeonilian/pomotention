@@ -79,11 +79,20 @@
 
 ## 📦 安装和使用
 
-- 克隆项目 `git clone https://github.com/Xeonilian/pomotention.git`
-- windows 便携版 `https://github.com/Xeonilian/pomotention/releases/download/v0.1.0/pomotention.exe`
-- windows 安装包 `https://github.com/Xeonilian/pomotention/releases/download/v0.1.0/pomotention_0.1.0_x64_en-US.msi`
+### 下载途径
 
-## 数据说明
+- 克隆项目： `git clone https://github.com/Xeonilian/pomotention.git`
+- windows 便携版： `https://github.com/Xeonilian/pomotention/releases/download/v0.1.0/pomotention.exe`
+- windows 安装包： `https://github.com/Xeonilian/pomotention/releases/download/v0.1.0/pomotention_0.1.0_x64_en-US.msi`
+- macOS 安装包：
+
+### 安全性说明
+
+#### Windows 系统
+
+#### Mac 系统
+
+### 数据说明
 
 - 历史记录安全存储在你的电脑中，卸载应用不会删除数据
 - 数据位置：%LOCALAPPDATA%\com.pomotention.app\EBWebView\Default\Local Storage\leveldb
