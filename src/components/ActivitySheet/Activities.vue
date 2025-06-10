@@ -87,6 +87,7 @@
         :value="getInputValue(item)"
         :placeholder="item.pomoType"
         style="max-width: 32px"
+        class="pomo-input"
         :title="`输入估计${item.pomoType || '🍅'}数量`"
         :class="{
           'pomo-red': item.pomoType === '🍅',
@@ -234,17 +235,18 @@ function onInputUpdate(item: Activity, value: string) {
 .countdown-blue :deep(.n-input) {
   background: var(--color-blue-light-transparent);
 }
+.pomo-input :deep(.n-input__placeholder) {
+  opacity: 0.5; /* 50% 透明度 */
+  font-size: 12px;
+}
 .pomo-red {
-  background-color: var(--color-red-light) !important;
-  border-color: var(--color-red-transparent) !important;
+  background: var(--color-red-light) !important;
 }
 .pomo-purple {
-  background-color: var(--color-purple-light) !important;
-  border-color: var(--color-purple-transparent) !important;
+  background: var(--color-purple-light) !important;
 }
 .pomo-green {
-  background-color: var(--color-green-light) !important;
-  border-color: var(--color-green-transparent) !important;
+  background: var(--color-green-light) !important;
 }
 /* 文本居中 */
 .input-center :deep(.n-input__input) {
