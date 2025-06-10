@@ -8,8 +8,8 @@
           <th style="width: 45px; text-align: center">开始</th>
           <th style="width: 45px; text-align: center">结束</th>
           <th style="width: 40px; text-align: center">分钟</th>
-          <th style="width: calc(50% - 180px)">描述</th>
-          <th style="width: calc(50% - 210px)">地点</th>
+          <th style="width: 45%; min-width: 100px">描述</th>
+          <th style="width: 25%; min-width: 80px">地点</th>
           <th style="width: 60px; text-align: center">操作</th>
         </tr>
       </thead>
