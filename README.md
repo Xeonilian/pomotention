@@ -35,9 +35,9 @@ git clone https://github.com/Xeonilian/pomotention.git
 
 # 直接下载
 Windows 便携版: https://github.com/Xeonilian/pomotention/releases/download/v0.2.0/pomotention.exe
-Windows 安装包: https://github.com/Xeonilian/pomotention/releases/download/v0.2.0/pomotention_0.2.0_x64_en-US.msi
+Windows 安装包: https://github.com/Xeonilian/pomotention/releases/download/v0.2.1/pomotention_0.2.1_x64_en-US.msi
 macOS 便携版：https://github.com/Xeonilian/pomotention/releases/download/v0.2.0/pomotention
-macOS 安装包：https://github.com/Xeonilian/pomotention/releases/download/v0.2.0/pomotention_0.2.0_x64.dmg
+macOS 安装包：https://github.com/Xeonilian/pomotention/releases/download/v0.2.1/pomotention_0.2.1_x64.dmg
 ```
 
 ### 安全提醒
