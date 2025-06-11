@@ -49,7 +49,7 @@ import {
 } from "@vicons/fluent";
 import { useAlwaysOnTop } from "@/composables/useAlwaysOnTop";
 
-const { isAlwaysOnTop, isLoading, toggleAlwaysOnTop } = useAlwaysOnTop();
+const { isAlwaysOnTop, toggleAlwaysOnTop } = useAlwaysOnTop();
 const router = useRouter();
 const route = useRoute();
 const timerStore = useTimerStore();
