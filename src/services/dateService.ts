@@ -5,9 +5,9 @@ import { getLocalDateString } from "@/core/utils";
 const weekdayShort = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export function useDateService() {
-  const currentViewDate = ref(new Date());
-  const currentDate = ref("");
-  const selectedDate = ref(new Date());
+  const currentViewDate = ref(new Date()); // 当前视图显示的日期
+  const currentDate = ref(""); // 格式化后的日期字符串（用于显示）
+  const selectedDate = ref(new Date()); // "选中"的日期（实际上跟随视图日期变化）
 
   // 重置到当前日期
   function resetToToday() {

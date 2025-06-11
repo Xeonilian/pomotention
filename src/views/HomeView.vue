@@ -208,10 +208,13 @@ import {
 } from "@vicons/fluent";
 import { useDateService } from "@/services/dateService";
 import { useResize } from "@/composables/useResize";
+import { getTimestampForTimeString } from "@/core/utils";
 
 // ======================== 响应式状态与初始化 ========================
 const pomoStore = usePomoStore();
 const dateService = useDateService();
+// 获取当前查看日期的时间戳
+const viewingDayTimestamp = dateService.selectedDate.value.getTime();
 
 // -- 基础UI状态
 const showLeft = ref(true);
@@ -563,31 +566,31 @@ function handleEditTodoTitle(id: number, newTitle: string) {
   activity.title = newTitle;
 }
 // 编辑时间
-function handleEditTodoStart(id: number, newTm: number) {
+function handleEditTodoStart(id: number, newTm: string) {
   const todo = todoList.value.find((t) => t.id === id);
   if (!todo) {
     console.warn(`未找到 id 为 ${id} 的 todo`);
     return;
   }
-  todo.startTime = newTm;
+  todo.startTime = getTimestampForTimeString(newTm, viewingDayTimestamp);
 }
 
-function handleEditTodoDone(id: number, newTm: number) {
+function handleEditTodoDone(id: number, newTm: string) {
   const todo = todoList.value.find((t) => t.id === id);
   if (!todo) {
     console.warn(`未找到 id 为 ${id} 的 todo`);
     return;
   }
-  todo.doneTime = newTm;
+  todo.doneTime = getTimestampForTimeString(newTm, viewingDayTimestamp);
 }
 
-function handleEditScheduleDone(id: number, newTm: number) {
+function handleEditScheduleDone(id: number, newTm: string) {
   const schedule = scheduleList.value.find((s) => s.id === id);
   if (!schedule) {
     console.warn(`未找到 id 为 ${id} 的 schedule`);
     return;
   }
-  schedule.doneTime = newTm;
+  schedule.doneTime = getTimestampForTimeString(newTm, viewingDayTimestamp);
 }
 // ======================== 4. Task/执行相关操作 ========================
 // 在script部分添加处理函数

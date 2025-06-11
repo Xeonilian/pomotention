@@ -182,7 +182,6 @@ import {
 } from "@vicons/fluent";
 import { taskService } from "@/services/taskService";
 import { ref, nextTick } from "vue";
-import { getTimestampForTimeString } from "@/core/utils";
 
 // 编辑用
 const editingRowId = ref<number | null>(null);
@@ -210,7 +209,7 @@ const emit = defineEmits<{
   (e: "select-task", taskId: number | null): void;
   (e: "select-row", id: number | null): void;
   (e: "edit-schedule-title", id: number, newTitle: string): void;
-  (e: "edit-schedule-done", id: number, newTs: number): void;
+  (e: "edit-schedule-done", id: number, newTs: string): void;
 }>();
 
 // 添加状态来控制提示信息
@@ -311,7 +310,7 @@ function saveEdit(schedule: Schedule) {
 
   if (editingField.value === "done") {
     if (isValidTimeString(editingValue.value)) {
-      const ts = getTimestampForTimeString(editingValue.value);
+      const ts = editingValue.value;
       emit("edit-schedule-done", schedule.id, ts);
     }
   }

@@ -92,9 +92,9 @@ const emit = defineEmits<{
   (e: "select-row", id: number | null): void;
   (e: "edit-schedule-title", id: number, newTitle: string): void;
   (e: "edit-todo-title", id: number, newTitle: string): void;
-  (e: "edit-todo-start", id: number, newTs: number): void;
-  (e: "edit-todo-done", id: number, newTs: number): void;
-  (e: "edit-schedule-done", id: number, newTs: number): void;
+  (e: "edit-todo-start", id: number, newTs: string): void;
+  (e: "edit-todo-done", id: number, newTs: string): void;
+  (e: "edit-schedule-done", id: number, newTs: string): void;
 }>(); // HACK
 
 // 处理选中行事件
@@ -152,15 +152,15 @@ function handleEditTodoTitle(todoId: number, newTitle: string) {
   emit("edit-todo-title", todoId, newTitle);
 }
 
-function handleEditTodoStart(todoId: number, newTs: number) {
+function handleEditTodoStart(todoId: number, newTs: string) {
   emit("edit-todo-start", todoId, newTs);
 }
 
-function handleEditTodoDone(todoId: number, newTs: number) {
+function handleEditTodoDone(todoId: number, newTs: string) {
   emit("edit-todo-done", todoId, newTs);
 }
 
-function handleEditScheduleDone(scheduleId: number, newTs: number) {
+function handleEditScheduleDone(scheduleId: number, newTs: string) {
   emit("edit-schedule-done", scheduleId, newTs);
 }
 </script>

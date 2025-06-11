@@ -285,7 +285,6 @@ import {
 import { NCheckbox, NInputNumber, NPopover, NButton, NIcon } from "naive-ui";
 import { ref, computed, nextTick } from "vue";
 import { taskService } from "@/services/taskService";
-import { getTimestampForTimeString } from "@/core/utils";
 
 // 编辑用
 const editingRowId = ref<number | null>(null);
@@ -335,8 +334,8 @@ const emit = defineEmits<{
   (e: "select-row", id: number | null): void;
   (e: "select-activity", activityId: number | null): void;
   (e: "edit-todo-title", id: number, newTitle: string): void;
-  (e: "edit-todo-start", id: number, newTs: number): void;
-  (e: "edit-todo-done", id: number, newTs: number): void;
+  (e: "edit-todo-start", id: number, newTs: string): void;
+  (e: "edit-todo-done", id: number, newTs: string): void;
 }>();
 
 const editingTodo = ref<TodoWithNumberPriority | null>(null);
@@ -656,14 +655,14 @@ function saveEdit(todo: TodoWithNumberPriority) {
 
   if (editingField.value === "start") {
     if (isValidTimeString(editingValue.value)) {
-      const ts = getTimestampForTimeString(editingValue.value);
+      const ts = editingValue.value;
       emit("edit-todo-start", todo.id, ts);
     }
   }
 
   if (editingField.value === "done") {
     if (isValidTimeString(editingValue.value)) {
-      const ts = getTimestampForTimeString(editingValue.value);
+      const ts = editingValue.value;
       emit("edit-todo-done", todo.id, ts);
     }
   }
