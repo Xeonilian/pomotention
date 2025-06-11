@@ -45,8 +45,11 @@ import {
   ArrowDown24Filled,
   ArrowRight24Filled,
   Timer24Regular,
+  RectangleLandscape24Regular,
 } from "@vicons/fluent";
+import { useAlwaysOnTop } from "@/composables/useAlwaysOnTop";
 
+const { isAlwaysOnTop, isLoading, toggleAlwaysOnTop } = useAlwaysOnTop();
 const router = useRouter();
 const route = useRoute();
 const timerStore = useTimerStore();
@@ -60,7 +63,13 @@ const menuOptions = [
 
 const current = ref(route.path);
 
-type ViewKey = "pomodoro" | "schedule" | "today" | "task" | "activity";
+type ViewKey =
+  | "ontop"
+  | "pomodoro"
+  | "schedule"
+  | "today"
+  | "task"
+  | "activity";
 
 interface ViewControl {
   key: ViewKey;
@@ -70,6 +79,7 @@ interface ViewControl {
 }
 
 const buttonStates = ref<Record<ViewKey, boolean>>({
+  ontop: false,
   pomodoro: false,
   schedule: false,
   today: false,
@@ -88,6 +98,12 @@ function handleMenuSelect(key: string) {
 }
 
 const viewControls: ViewControl[] = [
+  {
+    key: "ontop",
+    icon: RectangleLandscape24Regular,
+    title: "界面置顶",
+    show: true,
+  },
   {
     key: "pomodoro",
     icon: Timer24Regular,
@@ -111,27 +127,37 @@ const viewControls: ViewControl[] = [
 ];
 
 // 按钮样式函数
-function buttonStyle(show: boolean, key: ViewKey) {
+function buttonStyle(show: boolean, key: string) {
   const isDisabled = key === "pomodoro" && timerStore.isActive;
+  const isOntop = key === "ontop";
+  const isActive = isOntop
+    ? isAlwaysOnTop.value
+    : buttonStates.value[key as ViewKey];
   return {
     filter: show ? (isDisabled ? "grayscale(50%)" : "none") : "grayscale(100%)",
     opacity: show ? (isDisabled ? 0.4 : 1) : 0.6,
-    backgroundColor: buttonStates.value[key]
+    backgroundColor: isActive
       ? "var(--color-background-dark)"
       : "var(--color-background-light)",
     borderRadius: "4px",
     transition: "all 0.3s ease",
-    cursor: isDisabled ? "not-allowed" : "pointer",
+    cursor: isOntop ? "pointer" : isDisabled ? "not-allowed" : "pointer",
     transform: isDisabled ? "scale(0.95)" : "scale(1)",
   };
 }
 
 // 处理视图切换
 function handleViewToggle(key: string) {
+  if (key === "ontop") {
+    // 独立调用置顶功能
+    toggleAlwaysOnTop();
+    return;
+  }
   // 如果是pomodoro视图且计时器正在运行，不允许切换
   if (key === "pomodoro" && timerStore.isActive) {
     return;
   }
+
   // 更新按钮状态
   buttonStates.value[key as ViewKey] = !buttonStates.value[key as ViewKey];
   // 发送自定义事件到window

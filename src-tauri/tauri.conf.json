@@ -1,5 +1,5 @@
 {
-  "$schema": "https://schema.tauri.app/config/2",
+  "$schema": "https://schema.tauri.app/config/v2.json",
   "productName": "pomotention",
   "version": "0.2.1",
   "identifier": "com.pomotention.app",
