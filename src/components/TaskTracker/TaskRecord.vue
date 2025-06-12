@@ -144,7 +144,7 @@ const handleClick = (event: MouseEvent) => {
         );
 
         if (taskMatch) {
-          const [, indent, prefix, taskText] = taskMatch;
+          const [, indent, prefix, _status, taskText] = taskMatch; // 没有用的status不能删除，要占位现在表示未使用变量
 
           // 如果这是第 checkboxIndex 个任务项
           if (taskItemCount === checkboxIndex) {
