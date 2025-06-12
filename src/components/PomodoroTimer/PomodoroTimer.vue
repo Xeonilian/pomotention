@@ -154,7 +154,7 @@ const selectedDuration = ref(breakDuration.value);
 
 // 把常量转成 CSS 变量名格式
 const timerStyleVars = computed(() => {
-  const barLengthValue = 175;
+  const barLengthValue = 197; // 动态设置失败 #HACK 现在用的是静态的值
 
   const calculatedLength = barLengthValue * timerStore.redBarPercentage;
   const calculatedOffset = barLengthValue * timerStore.redBarOffsetPercentage;
