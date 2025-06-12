@@ -591,7 +591,7 @@ function handleConvertToTask(todo: TodoWithNumberPriority) {
   }
 
   const task = taskService.createTaskFromTodo(
-    todo.id.toString(),
+    todo.id,
     todo.activityTitle,
     todo.projectName
   );
@@ -599,7 +599,7 @@ function handleConvertToTask(todo: TodoWithNumberPriority) {
   if (task) {
     // 立即更新本地的 taskId
     todo.taskId = task.id;
-    todo.startTime = task.id;
+    //    todo.startTime = task.id; // 不然总要改
     popoverMessage.value = "已转换为任务";
     showPopover.value = true;
     setTimeout(() => {
@@ -643,7 +643,7 @@ function startEditing(todoId: number, field: "title" | "start" | "done") {
   });
 }
 
-// #HACK
+// 注意这里是 timestring 不是timestamp，是在Home用currentViewdate进行的转化
 function saveEdit(todo: TodoWithNumberPriority) {
   if (!editingRowId.value) return;
 

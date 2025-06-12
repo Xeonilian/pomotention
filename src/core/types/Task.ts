@@ -6,7 +6,7 @@ export interface Task {
   projectName?: string;
   description?: string; // 任务描述
   source: "todo" | "schedule"; // 来源
-  sourceId: string; // 来源ID
+  sourceId: number; // 来源ID
   energyRecords: EnergyRecord[]; // 精力值记录数组
   rewardRecords: RewardRecord[]; // 愉悦值记录数组
   interruptionRecords: InterruptionRecord[]; // 打扰记录数组

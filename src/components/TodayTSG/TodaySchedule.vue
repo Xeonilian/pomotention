@@ -248,7 +248,7 @@ function handleConvertToTask(schedule: Schedule) {
   }
 
   const task = taskService.createTaskFromSchedule(
-    schedule.id.toString(),
+    schedule.id,
     schedule.activityTitle,
     schedule.projectName
   );
@@ -311,7 +311,7 @@ function saveEdit(schedule: Schedule) {
   if (editingField.value === "done") {
     if (isValidTimeString(editingValue.value)) {
       const ts = editingValue.value;
-      emit("edit-schedule-done", schedule.id, ts);
+      emit("edit-schedule-done", schedule.id, ts); // 注意这里是 timestring 不是timestamp，是在Home用currentViewdate进行的转化
     }
   }
   cancelEdit();

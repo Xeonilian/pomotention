@@ -34,7 +34,7 @@ export const taskService = {
 
   // 从Todo生成Task
   createTaskFromTodo(
-    todoId: string,
+    todoId: number,
     activityTitle: string,
     projectName?: string
   ): Task {
@@ -63,7 +63,7 @@ export const taskService = {
 
   // 从Schedule生成Task
   createTaskFromSchedule(
-    scheduleId: string,
+    scheduleId: number,
     activityTitle: string,
     projectName?: string
   ): Task {
