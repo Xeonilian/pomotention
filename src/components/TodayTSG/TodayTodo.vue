@@ -836,6 +836,7 @@ function isValidTimeString(str: string) {
   gap: 2px;
   white-space: nowrap;
   overflow-x: auto;
+  overflow-y: hidden;
 }
 
 .pomo-group {
