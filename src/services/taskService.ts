@@ -95,12 +95,13 @@ export const taskService = {
   },
 
   // 添加精力值记录
-  addEnergyRecord(taskId: number, value: number): void {
+  addEnergyRecord(taskId: number, value: number, description?: string): void {
     const task = this.getTask(taskId);
     if (task) {
       const record: EnergyRecord = {
         id: Date.now(),
         value,
+        description,
       };
       // 创建新的数组以确保响应式更新
       const newEnergyRecords = [...task.energyRecords, record];
@@ -110,12 +111,13 @@ export const taskService = {
   },
 
   // 添加愉悦值记录
-  addRewardRecord(taskId: number, value: number): void {
+  addRewardRecord(taskId: number, value: number, description?: string): void {
     const task = this.getTask(taskId);
     if (task) {
       const record: RewardRecord = {
         id: Date.now(),
         value,
+        description,
       };
       // 创建新的数组以确保响应式更新
       const newRewardRecords = [...task.rewardRecords, record];

@@ -82,8 +82,8 @@ const showRewardDialog = ref(false);
 const showInterruptionDialog = ref(false);
 
 const emit = defineEmits<{
-  (e: "energy-record", value: number): void;
-  (e: "reward-record", value: number): void;
+  (e: "energy-record", value: { value: number; description?: string }): void;
+  (e: "reward-record", value: { value: number; description?: string }): void;
   (e: "toggle-markdown"): void;
   (
     e: "interruption-record",
@@ -96,14 +96,14 @@ const emit = defineEmits<{
 }>();
 
 // 能量弹窗点击确认
-function handleEnergyConfirm(val: number) {
+function handleEnergyConfirm(val: { value: number; description?: string }) {
   if (props.taskId) {
     emit("energy-record", val);
   }
 }
 
 // 奖励弹窗点击确认
-function handleRewardConfirm(val: number) {
+function handleRewardConfirm(val: { value: number; description?: string }) {
   if (props.taskId) {
     emit("reward-record", val);
   }

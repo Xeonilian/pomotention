@@ -1,5 +1,10 @@
 <template>
-  <n-modal v-model:show="showModal" preset="dialog" title="记录精力值">
+  <n-modal
+    v-model:show="showModal"
+    preset="dialog"
+    title="记录精力值"
+    :on-after-leave="handleCancel"
+  >
     <n-space vertical>
       <n-slider
         v-model:value="energyValue"
@@ -16,7 +21,14 @@
           </template>
         </n-button>
       </n-space>
+      <n-input
+        v-model:value="description"
+        placeholder="请输入内容"
+        maxlength="40"
+        show-count
+      />
     </n-space>
+
     <template #action>
       <n-button @click="handleCancel">取消</n-button>
 
@@ -46,11 +58,12 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: "update:show", value: boolean): void;
-  (e: "confirm", value: number): void;
+  (e: "confirm", value: { value: number; description?: string }): void;
 }>();
 
 const energyValue = ref(5);
 const showHelp = ref(false);
+const description = ref("");
 
 // 修复 v-model 问题
 const showModal = computed({
@@ -65,11 +78,16 @@ const marks = {
 };
 
 const handleConfirm = () => {
-  emit("confirm", energyValue.value);
+  emit("confirm", {
+    value: energyValue.value,
+    description: description.value.trim(),
+  });
+  description.value = "";
   emit("update:show", false);
 };
 
 const handleCancel = () => {
+  description.value = "";
   emit("update:show", false);
 };
 </script>

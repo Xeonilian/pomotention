@@ -15,11 +15,13 @@ export interface Task {
 export interface EnergyRecord {
   id: number; // 记录时间戳
   value: number; // 1-10的精力值
+  description?: string;
 }
 
 export interface RewardRecord {
   id: number; // 记录时间戳
   value: number; // 1-10的愉悦值
+  description?: string;
 }
 
 export interface InterruptionRecord {

@@ -1,5 +1,10 @@
 <template>
-  <n-modal v-model:show="showModal" preset="dialog" title="记录打扰">
+  <n-modal
+    v-model:show="showModal"
+    preset="dialog"
+    title="记录打扰"
+    :on-after-leave="handleCancel"
+  >
     <n-space vertical size="large">
       <n-radio-group v-model:value="interruptionType" name="interruptionType">
         <n-radio value="I">内部打扰</n-radio>
@@ -104,5 +109,6 @@ function handleConfirm() {
 
 function handleCancel() {
   emit("update:show", false);
+  description.value = "";
 }
 </script>

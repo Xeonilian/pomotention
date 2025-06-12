@@ -21,6 +21,7 @@
           v-for="record in combinedRecords"
           :key="record.id + record.type"
           class="timeline-point"
+          :title="record.description"
         >
           <span
             class="point-icon"
@@ -98,7 +99,6 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  (e: "energy-record"): void;
   (e: "reward-record"): void;
   (e: "toggle-pomo-seq"): void;
   (
@@ -244,17 +244,24 @@ const combinedRecords = computed<CombinedRecord[]>(() => {
 });
 
 // 修改处理函数，添加更新当前任务的调用
-function handleEnergyRecord(value: number) {
+function handleEnergyRecord(data: { value: number; description?: string }) {
   if (props.selectedTaskId) {
-    taskService.addEnergyRecord(props.selectedTaskId, value);
+    taskService.addEnergyRecord(
+      props.selectedTaskId,
+      data.value,
+      data.description
+    );
     updateCurrentTask(); // 更新当前任务数据
-    emit("energy-record");
   }
 }
 
-function handleRewardRecord(value: number) {
+function handleRewardRecord(data: { value: number; description?: string }) {
   if (props.selectedTaskId) {
-    taskService.addRewardRecord(props.selectedTaskId, value);
+    taskService.addRewardRecord(
+      props.selectedTaskId,
+      data.value,
+      data.description
+    );
     updateCurrentTask(); // 更新当前任务数据
     emit("reward-record");
   }

@@ -1,5 +1,10 @@
 <template>
-  <n-modal v-model:show="showModal" preset="dialog" title="记录愉悦值">
+  <n-modal
+    v-model:show="showModal"
+    preset="dialog"
+    title="记录愉悦值"
+    :on-after-leave="handleCancel"
+  >
     <n-space vertical>
       <n-slider
         v-model:value="rewardValue"
@@ -16,6 +21,12 @@
           </template>
         </n-button>
       </n-space>
+      <n-input
+        v-model:value="description"
+        placeholder="请输入内容"
+        maxlength="40"
+        show-count
+      />
     </n-space>
     <template #action>
       <n-button @click="handleCancel">取消</n-button>
@@ -46,11 +57,12 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: "update:show", value: boolean): void;
-  (e: "confirm", value: number): void;
+  (e: "confirm", value: { value: number; description?: string }): void;
 }>();
 
 const rewardValue = ref(5);
 const showHelp = ref(false);
+const description = ref("");
 
 // 用于modal显示双向绑定
 const showModal = computed({
@@ -65,11 +77,16 @@ const marks = {
 };
 
 const handleConfirm = () => {
-  emit("confirm", rewardValue.value);
+  emit("confirm", {
+    value: rewardValue.value,
+    description: description.value.trim(),
+  });
+  description.value = "";
   emit("update:show", false);
 };
 
 const handleCancel = () => {
+  description.value = "";
   emit("update:show", false);
 };
 </script>
