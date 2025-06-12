@@ -34,10 +34,8 @@
 git clone https://github.com/Xeonilian/pomotention.git
 
 # 直接下载
-Windows 便携版: https://github.com/Xeonilian/pomotention/releases/download/v0.2.0/pomotention.exe
-Windows 安装包: https://github.com/Xeonilian/pomotention/releases/download/v0.2.0/pomotention_0.2.0_x64_en-US.msi
-macOS 便携版：https://github.com/Xeonilian/pomotention/releases/download/v0.2.0/pomotention
-macOS 安装包：https://github.com/Xeonilian/pomotention/releases/download/v0.2.0/pomotention_0.2.0_x64.dmg
+Windows 安装包: https://github.com/Xeonilian/pomotention/releases/download/v0.2.1/pomotention_0.2.1_x64_en-US.msi
+macOS 安装包：https://github.com/Xeonilian/pomotention/releases/download/v0.2.1/pomotention_0.2.1_x64.dmg
 ```
 
 ### 安全提醒
@@ -80,7 +78,7 @@ macOS 安装包：https://github.com/Xeonilian/pomotention/releases/download/v0.
 
 **操作步骤：**
 
-1.  点击<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 24 24"><g fill="none"><path d="M12 2c5.523 0 10 4.477 10 10s-4.477 10-10 10S2 17.523 2 12S6.477 2 12 2zm0 1.5a8.5 8.5 0 1 0 0 17a8.5 8.5 0 0 0 0-17zM12 7a.75.75 0 0 1 .75.75v3.5h3.5a.75.75 0 0 1 0 1.5h-3.5v3.5a.75.75 0 0 1-1.5 0v-3.5h-3.5a.75.75 0 0 1 0-1.5h3.5v-3.5A.75.75 0 0 1 12 7z" fill="currentColor"></path></g></svg>增加活动（任务/预约/无所事事）
+1.  点击增加活动（任务/预约/无所事事）
 2.  编辑活动内容：
 
     - 待办任务（Task）：描述、预估、到期时间

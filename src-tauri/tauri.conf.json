@@ -39,6 +39,13 @@
     "macOS": {
       "minimumSystemVersion": "10.13",
       "frameworks": []
+    },
+    "createUpdaterArtifacts": true
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "你的公钥",
+      "endpoints": ["https://releases.myapp.com/latest.json"]
     }
   }
 }
