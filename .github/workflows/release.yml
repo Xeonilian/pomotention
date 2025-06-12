@@ -1,0 +1,72 @@
+name: Release Workflow
+
+# 触发条件：当新的 Git tag 被推送时
+on:
+  push:
+    tags:
+      - "*"
+
+# 定义工作流的步骤
+jobs:
+  build-and-release:
+    # 使用 Ubuntu 20.04 环境
+    runs-on: ubuntu-latest
+
+    # 定义工作流的步骤
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+
+      - name: Install Tauri CLI
+        run: npm install -g @tauri-apps/cli
+
+      - name: Install Node.js dependencies
+        run: npm install
+
+      - name: Build Tauri Application
+        run: npm run tauri build
+
+      - name: Generate Updater Signature
+        run: |
+          # 从 GitHub Secrets 中获取私钥
+          echo "$UPDATER_PRIVATE_KEY" > updater.pem
+          # 签名更新包
+          tauri sign --path dist/updater --key updater.pem
+
+      - name: Create GitHub Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
+
+      - name: Upload Release Assets
+        id: upload_assets
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./dist/your-app-name-${{ github.ref_name }}.deb # 替换为你的安装包路径
+          asset_name: your-app-name-${{ github.ref_name }}.deb # 替换为你的安装包名称
+          asset_content_type: application/octet-stream
+
+      - name: Upload Updater JSON
+        id: upload_updater_json
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./dist/updater/updater.json
+          asset_name: updater.json
+          asset_content_type: application/json
