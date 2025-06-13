@@ -137,7 +137,10 @@
                   </template>
                 </n-button>
                 <n-button
-                  v-if="schedule.status !== 'done'"
+                  v-if="
+                    schedule.status !== 'done' &&
+                    schedule.isUntaetigkeit !== true
+                  "
                   text
                   style="font-size: 14px"
                   type="info"
@@ -154,7 +157,8 @@
                 <n-button
                   v-if="
                     schedule.status !== 'done' &&
-                    schedule.status !== 'cancelled'
+                    schedule.status !== 'cancelled' &&
+                    schedule.isUntaetigkeit !== true
                   "
                   text
                   style="font-size: 14px"
@@ -172,7 +176,8 @@
                 <n-button
                   v-if="
                     schedule.status !== 'done' &&
-                    schedule.status !== 'cancelled'
+                    schedule.status !== 'cancelled' &&
+                    schedule.isUntaetigkeit !== true
                   "
                   text
                   style="font-size: 14px"
