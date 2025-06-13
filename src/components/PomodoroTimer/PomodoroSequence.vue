@@ -41,18 +41,13 @@
           <n-icon :component="PlayCircle24Regular" />
         </template>
       </n-button>
-      
-      <n-button 
-        class="action-button" 
-        @click="stopPomodoro"
-        tertiary
-        circle
-      >
+
+      <n-button class="action-button" @click="stopPomodoro" tertiary circle>
         <template #icon>
           <n-icon :component="RecordStop24Regular" />
         </template>
       </n-button>
-      
+
       <n-button
         class="action-button"
         @click="handleToggleWhiteNoise"
@@ -61,7 +56,11 @@
         circle
       >
         <template #icon>
-          <n-icon :component="isWhiteNoiseEnabled ? Speaker224Regular : SpeakerMute24Regular" />
+          <n-icon
+            :component="
+              isWhiteNoiseEnabled ? Speaker224Regular : SpeakerMute24Regular
+            "
+          />
         </template>
       </n-button>
     </div>
@@ -70,14 +69,19 @@
 
 <script setup lang="ts">
 import { ref, onUnmounted, watch } from "vue";
-import { NButton, NIcon } from 'naive-ui';
+import { NButton, NIcon } from "naive-ui";
 import { useTimerStore } from "@/stores/useTimerStore";
 import {
   toggleWhiteNoise,
   getWhiteNoiseState,
   setPomodoroRunning,
 } from "@/core/sounds.ts";
-import { Speaker224Regular, SpeakerMute24Regular,PlayCircle24Regular,RecordStop24Regular } from "@vicons/fluent"
+import {
+  Speaker224Regular,
+  SpeakerMute24Regular,
+  PlayCircle24Regular,
+  RecordStop24Regular,
+} from "@vicons/fluent";
 type PomodoroStep = {
   type: "work" | "break";
   duration: number;
@@ -255,7 +259,7 @@ function createTimeBlock(duration: number, type: string): HTMLElement {
   const block = document.createElement("div");
   block.className = "time-block";
   // 根据时长设置宽度，保持总长度占满
-  const totalWidth = 180; // 总容器宽度
+  const totalWidth = 196; // 总容器宽度
   const totalDuration = parseSequence(sequenceInput.value).reduce(
     (sum, step) => sum + step.duration,
     0
@@ -263,8 +267,8 @@ function createTimeBlock(duration: number, type: string): HTMLElement {
   const width = (duration / totalDuration) * totalWidth;
   block.style.width = `${width}px`;
   block.style.height = "20px";
-  block.style.margin = "1px";
-  block.style.borderRadius = "4px";
+  block.style.margin = "0.5px";
+  block.style.borderRadius = "2px";
   block.classList.add(type);
   return block;
 }
@@ -286,7 +290,7 @@ function updateProgressStatus(currentStep: number): void {
     } else if (index === currentStep) {
       // 当前执行的块
       element.style.backgroundImage =
-        "linear-gradient(45deg, var(--color-yellow-light-transparent) 25%, transparent 25%, transparent 50%, var(--color-yellow-light-transparent) 50%, var(--color-yellow-light-transparent) 75%, transparent 75%, transparent)";
+        "linear-gradient(45deg, var(--color-background-light-transparent) 25%, transparent 25%, transparent 50%, var(--color-background-light-transparent) 50%, var(--color-background-light-transparent) 75%, transparent 75%, transparent)";
       element.style.backgroundSize = "20px 20px";
       element.style.animation = "progress-animation 1s linear infinite";
       element.style.backgroundColor = element.classList.contains("work")
@@ -320,6 +324,32 @@ function initializeProgress(sequence: string): void {
   });
 }
 
+// 添加样式
+const style = document.createElement("style");
+style.textContent = `
+.time-block {
+  transition: background-color 0.3s ease;
+  margin: 0;
+}
+
+.time-block.work {
+  background-color: var(--color-red-light-transparent);
+}
+
+.time-block.break {
+  background-color: var(--color-green-light-transparent);
+}
+
+@keyframes progress-animation {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 20px 0;
+  }
+}
+`;
+document.head.appendChild(style);
 
 // 切换白噪音
 function handleToggleWhiteNoise(): void {
@@ -347,7 +377,6 @@ onUnmounted(() => {
   border: 2px solid grey;
   border-radius: 10px;
   box-shadow: 0px 4px 6px var(--color-background-light-transparent);
-  transition: all 0.3s ease;
 }
 
 .pomodoro-sequence.running {
@@ -372,10 +401,9 @@ onUnmounted(() => {
 .progress-container {
   display: flex;
   margin: 0px auto;
-  width: 180px;
+  width: 196px;
   height: 0;
   overflow: hidden;
-  transition: all 0.3s ease;
 }
 
 .progress-container:has(.time-block) {
@@ -429,27 +457,5 @@ onUnmounted(() => {
 .action-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-}
-
-.time-block {
-  transition: background-color 0.3s ease;
-  margin: 0;
-}
-
-.time-block.work {
-  background-color: var(--color-green-transparent);
-}
-
-.time-block.break {
-  background-color: var(--color-green-light-transparent);
-}
-
-@keyframes progress-animation {
-  from {
-    background-position: 0 0;
-  }
-  to {
-    background-position: 20px 0;
-  }
 }
 </style>

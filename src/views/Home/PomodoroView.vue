@@ -4,6 +4,7 @@
     <n-button
       size="tiny"
       tertiary
+      circle
       type="default"
       :title="showPomoSeq ? '变为番茄' : '变为序列'"
       @click="handleTogglePomoSeq"
@@ -64,8 +65,8 @@ function handleTogglePomoSeq() {
 
 .toggle-button {
   position: absolute;
-  top: 20px;
-  right: 20px;
+  top: 10px;
+  right: 10px;
   z-index: 1000;
   font-size: 10px;
   display: flex;
