@@ -68,15 +68,20 @@ function handleTogglePomoSeq() {
   top: 10px;
   right: 10px;
   z-index: 1000;
-  font-size: 10px;
+  font-size: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
+  border: 1px solid var(--color-background-dark);
 }
 
 .toggle-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.toggle-button:hover {
+  background-color: var(--color-blue-light);
 }
 
 .pomodoro-view {

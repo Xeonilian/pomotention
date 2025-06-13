@@ -374,7 +374,7 @@ onUnmounted(() => {
   padding: 5px 10px 0px 10px;
   height: 125px;
   min-height: 120px;
-  border: 2px solid grey;
+  border: 2px solid var(--color-text-secondary);
   border-radius: 10px;
   box-shadow: 0px 4px 6px var(--color-background-light-transparent);
 }
@@ -451,7 +451,7 @@ onUnmounted(() => {
 }
 
 .action-button:hover {
-  background-color: var(--color-primary-light);
+  background-color: var(--color-blue-light);
 }
 
 .action-button:disabled {

@@ -270,7 +270,7 @@ function handleDurationSelect(key: number): void {
   padding: 10px;
   height: 125px; /* 确保高度由内容决定 */
   min-height: 0; /* 防止 flex 项目被撑开 */
-  border: 2px solid grey;
+  border: 2px solid var(--color-text-secondary);
   border-radius: 10px;
   box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
   transition: height 0.3s ease; /* 添加高度过渡动画 */
