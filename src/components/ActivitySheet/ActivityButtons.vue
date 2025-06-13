@@ -56,7 +56,7 @@
       size="small"
     >
       <template #icon
-        ><n-icon><AddSubtractCircle24Filled /></n-icon
+        ><n-icon><CloudAdd20Regular /></n-icon
       ></template>
     </n-button>
 
@@ -125,7 +125,7 @@ import { NButton, NIcon, NDropdown } from "naive-ui";
 import {
   AddCircle24Regular,
   Delete24Regular,
-  AddSubtractCircle24Filled,
+  CloudAdd20Regular,
   ChevronCircleLeft48Regular,
   DocumentTableSearch24Regular,
   CalendarAdd24Regular,
