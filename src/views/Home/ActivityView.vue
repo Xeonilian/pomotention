@@ -101,9 +101,10 @@ const emit = defineEmits<{
 const filterOptions = [
   { label: "今日到期", key: "today" },
   { label: "内外打扰", key: "interrupt" },
-  { label: "显示全部", key: "all" },
   { label: "待办任务", key: "todo" },
   { label: "预约任务", key: "schedule" },
+  { label: "活动任务", key: "all" },
+  { label: "取消任务", key: "cancelled" },
 ];
 
 // 当前筛选条件
@@ -123,14 +124,16 @@ const selectedActivity = computed(() => {
 
 // 根据筛选条件过滤活动列表
 const filteredActivities = computed(() => {
-  if (currentFilter.value === "all") {
-    return props.activities;
-  }
-
   const now = new Date();
   now.setHours(0, 0, 0, 0);
 
   return props.activities.filter((item) => {
+    if (currentFilter.value === "all") {
+      return item.status !== "cancelled";
+    }
+    if (currentFilter.value === "cancelled") {
+      return item.status === "cancelled";
+    }
     if (currentFilter.value === "today") {
       // 筛选今日到期的活动
       if (item.class === "T") {

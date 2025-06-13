@@ -23,6 +23,8 @@
         :selectedRowId="selectedRowId"
         @update-todo-status="updateTodoStatus"
         @suspend-todo="handleSuspendTodo"
+        @cancel-todo="handleCancelTodo"
+        @repeat-todo="handleRepeatTodo"
         @update-todo-pomo="updateTodoPomo"
         @update-todo-est="updateTodoEst"
         @select-task="onSelectTask"
@@ -79,6 +81,8 @@ const emit = defineEmits<{
   ): void;
   (e: "suspend-schedule", id: number): void;
   (e: "suspend-todo", id: number): void;
+  (e: "cancel-todo", id: number): void;
+  (e: "repeat-todo", id: number): void;
   (e: "update-todo-est", id: number, estPomo: number[]): void;
   (e: "update-todo-pomo", id: number, pomo: number[]): void;
   (e: "update-todo-priority", id: number, priority: number): void;
@@ -126,6 +130,14 @@ function handleSuspendSchedule(id: number) {
 
 function handleSuspendTodo(id: number) {
   emit("suspend-todo", id);
+}
+
+function handleCancelTodo(id: number) {
+  emit("cancel-todo", id);
+}
+
+function handleRepeatTodo(id: number) {
+  emit("repeat-todo", id);
 }
 
 function updateTodoPomo(id: number, pomo: number[]) {

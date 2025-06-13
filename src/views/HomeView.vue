@@ -96,6 +96,8 @@
               @update-schedule-status="onUpdateScheduleStatus"
               @update-todo-status="onUpdateTodoStatus"
               @suspend-todo="onSuspendTodo"
+              @cancel-todo="onCancelTodo"
+              @repeat-todo="onRepeatTodo"
               @suspend-schedule="onSuspendSchedule"
               @update-todo-est="onUpdateTodoEst"
               @update-todo-pomo="onUpdateTodoPomo"
@@ -469,6 +471,46 @@ function onUpdateTodoPomo(id: number, realPomo: number[]) {
 /** Todo 推迟处理 */
 function onSuspendTodo(id: number) {
   handleSuspendTodo(todoList.value, activityList.value, id);
+}
+
+/** Todo 取消 #HACK */
+function onCancelTodo(id: number) {
+  // 更新 todoList 中的数据
+  const todo = todoList.value.find((t) => t.id === id);
+  if (todo) {
+    todo.status = "cancelled";
+    const activity = activityList.value.find((a) => a.id === todo.activityId);
+    if (!activity) {
+      console.warn(`未找到 activityId 为 ${todo.activityId} 的 activity`);
+      return;
+    }
+    activity.status = "cancelled";
+  }
+}
+
+/** Todo 变为 Activity **/
+function onRepeatTodo(id: number) {
+  const todo = todoList.value.find((t) => t.id === id);
+  if (todo) {
+    const activity = activityList.value.find((a) => a.id === todo.activityId);
+    if (!activity) {
+      console.warn(`未找到 activityId 为 ${todo.activityId} 的 activity`);
+      return;
+    }
+    const newActivity = {
+      ...activity, // 使用展开运算符复制 activity 的所有属性
+      id: Date.now(), // 设置新的 id
+      status: "" as
+        | ""
+        | "delayed"
+        | "ongoing"
+        | "cancelled"
+        | "done"
+        | "suspended"
+        | undefined, // 如果需要清空状态，可以在这里设置
+    };
+    activityList.value.push(newActivity);
+  }
 }
 
 /** Schedule 推迟一天 */

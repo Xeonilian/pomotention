@@ -24,13 +24,13 @@
       <!-- 表头部分，可单独调整样式 -->
       <thead class="table-header">
         <tr>
-          <th style="width: 25px"></th>
-          <th style="width: 45px; text-align: center">开始</th>
-          <th style="width: 45px; text-align: center">结束</th>
-          <th style="width: 40px; text-align: center">优先</th>
-          <th style="width: 45%; min-width: 100px">描述</th>
+          <th style="width: 20px"></th>
+          <th style="width: 40px; text-align: center">开始</th>
+          <th style="width: 40px; text-align: center">结束</th>
+          <th style="width: 35px; text-align: center">优先</th>
+          <th style="width: 45%; min-width: 100px; text-align: center">描述</th>
           <th style="width: 25%; min-width: 80px">番茄</th>
-          <th style="width: 60px; text-align: center">操作</th>
+          <th style="width: 80px; text-align: center">操作</th>
         </tr>
       </thead>
       <!-- 表格内容部分，可单独调整样式 -->
@@ -43,15 +43,26 @@
               'active-row': todo.activityId === activeId,
               'selected-row': todo.id === selectedRowId,
               'done-row': todo.status === 'done',
+              'cancel-row': todo.status === 'cancelled',
             }"
             @click="handleRowClick(todo)"
             style="cursor: pointer"
           >
             <td>
               <n-checkbox
+                v-if="todo.status !== 'cancelled'"
                 :checked="todo.status === 'done'"
                 @update:checked="handleCheckboxChange(todo, $event)"
               />
+
+              <n-icon
+                v-else
+                size="22"
+                style="transform: translate(0px, 3px)"
+                color="var(--color-red)"
+              >
+                <DismissSquare20Filled />
+              </n-icon>
             </td>
             <!-- 开始时间 -->
             <td
@@ -130,7 +141,10 @@
             </td>
             <td
               class="ellipsis title-cell"
-              :class="{ 'done-cell': todo.status === 'done' }"
+              :class="{
+                'done-cell': todo.status === 'done',
+                'cancel-cell': todo.status === 'cancelled',
+              }"
               @dblclick.stop="startEditing(todo.id, 'title')"
               :title="
                 editingRowId === todo.id && editingField === 'title'
@@ -194,30 +208,70 @@
             </td>
             <td>
               <div class="button-group">
+                <!-- 追踪任务按钮 -->
                 <n-button
                   v-if="!todo.taskId"
-                  size="tiny"
+                  style="font-size: 12px"
+                  text
                   type="info"
-                  secondary
                   @click="handleConvertToTask(todo)"
                   title="追踪任务"
                 >
                   <template #icon>
-                    <n-icon size="18">
+                    <n-icon>
                       <ChevronCircleDown48Regular />
                     </n-icon>
                   </template>
                 </n-button>
                 <n-button
-                  v-if="!todo.realPomo && todo.status !== 'done'"
-                  size="tiny"
-                  type="error"
-                  secondary
-                  @click="handleSuspendTodo(todo.id)"
-                  title="取消待办"
+                  v-if="todo.status !== 'done'"
+                  text
+                  style="font-size: 14px"
+                  type="info"
+                  @click="handleRepeatTodo(todo.id)"
+                  title="重复待办，新建活动"
                 >
                   <template #icon>
-                    <n-icon size="18">
+                    <n-icon>
+                      <ArrowRepeatAll24Regular />
+                    </n-icon>
+                  </template>
+                </n-button>
+                <!-- 取消任务按钮 -->
+                <n-button
+                  v-if="
+                    !todo.realPomo &&
+                    todo.status !== 'done' &&
+                    todo.status !== 'cancelled'
+                  "
+                  text
+                  style="font-size: 14px"
+                  type="info"
+                  @click="handleCancelTodo(todo.id)"
+                  title="取消任务，不退回活动清单"
+                >
+                  <template #icon>
+                    <n-icon>
+                      <DismissCircle20Regular />
+                    </n-icon>
+                  </template>
+                </n-button>
+                <!-- 退回任务按钮 = 不再在今日 -->
+                <n-button
+                  v-if="
+                    !todo.realPomo &&
+                    todo.status !== 'done' &&
+                    !todo.taskId &&
+                    todo.status !== 'cancelled'
+                  "
+                  text
+                  style="font-size: 14px"
+                  type="info"
+                  @click="handleSuspendTodo(todo.id)"
+                  title="撤销任务，退回活动清单"
+                >
+                  <template #icon>
+                    <n-icon>
                       <ChevronCircleRight48Regular />
                     </n-icon>
                   </template>
@@ -281,6 +335,9 @@ import {
   ChevronCircleRight48Regular,
   CheckboxArrowRight24Regular,
   ChevronCircleDown48Regular,
+  DismissCircle20Regular,
+  ArrowRepeatAll24Regular,
+  DismissSquare20Filled,
 } from "@vicons/fluent";
 import { NCheckbox, NInputNumber, NPopover, NButton, NIcon } from "naive-ui";
 import { ref, computed, nextTick } from "vue";
@@ -315,6 +372,8 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: "suspend-todo", id: number): void;
+  (e: "cancel-todo", id: number): void;
+  (e: "repeat-todo", id: number): void;
   (
     e: "update-todo-status",
     id: number,
@@ -486,11 +545,6 @@ function finishEditing() {
   relayoutPriority(props.todos);
 }
 
-// suspended Todo
-function handleSuspendTodo(id: number) {
-  emit("suspend-todo", id);
-}
-
 function handleCheckboxChange(todo: TodoWithNumberPriority, checked: boolean) {
   const newStatus = checked ? "done" : "ongoing";
   todo.status = newStatus;
@@ -579,35 +633,6 @@ function cancelAddEstimate() {
   newEstimate.value = 1; // 重置为默认值
 }
 
-// 转换为任务
-function handleConvertToTask(todo: TodoWithNumberPriority) {
-  if (todo.taskId) {
-    popoverMessage.value = "该待办已转换为任务";
-    showPopover.value = true;
-    setTimeout(() => {
-      showPopover.value = false;
-    }, 2000);
-    return;
-  }
-
-  const task = taskService.createTaskFromTodo(
-    todo.id,
-    todo.activityTitle,
-    todo.projectName
-  );
-
-  if (task) {
-    // 立即更新本地的 taskId
-    todo.taskId = task.id;
-    //    todo.startTime = task.id; // 不然总要改
-    popoverMessage.value = "已转换为任务";
-    showPopover.value = true;
-    setTimeout(() => {
-      showPopover.value = false;
-    }, 2000);
-  }
-}
-
 // 修改点击行处理函数
 function handleRowClick(todo: TodoWithNumberPriority) {
   emit("select-row", todo.id); // 新增：发送选中行事件
@@ -681,6 +706,48 @@ function isValidTimeString(str: string) {
     +str.split(":")[0] <= 24 &&
     +str.split(":")[1] < 60
   );
+}
+
+// 转换为任务
+function handleConvertToTask(todo: TodoWithNumberPriority) {
+  if (todo.taskId) {
+    popoverMessage.value = "该待办已转换为任务";
+    showPopover.value = true;
+    setTimeout(() => {
+      showPopover.value = false;
+    }, 2000);
+    return;
+  }
+
+  const task = taskService.createTaskFromTodo(
+    todo.id,
+    todo.activityTitle,
+    todo.projectName
+  );
+
+  if (task) {
+    // 立即更新本地的 taskId
+    todo.taskId = task.id;
+    //    todo.startTime = task.id; // 不然总要改
+    popoverMessage.value = "已转换为任务";
+    showPopover.value = true;
+    setTimeout(() => {
+      showPopover.value = false;
+    }, 2000);
+  }
+}
+
+// suspended Todo
+function handleSuspendTodo(id: number) {
+  emit("suspend-todo", id);
+}
+
+function handleCancelTodo(id: number) {
+  emit("cancel-todo", id);
+}
+
+function handleRepeatTodo(id: number) {
+  emit("repeat-todo", id);
 }
 </script>
 
@@ -862,6 +929,9 @@ function isValidTimeString(str: string) {
   justify-content: flex-end;
   height: 24px;
 }
+:deep(.n-button) :hover {
+  color: var(--color-red);
+}
 
 /* 选中行样式 */
 .table-body tr.selected-row {
@@ -886,6 +956,14 @@ function isValidTimeString(str: string) {
 
 .done-cell {
   text-decoration: line-through var(--color-text-secondary) 0.5px;
+}
+
+.cancel-row {
+  color: var(--color-text-secondary);
+}
+
+.cancel-cell {
+  font-style: italic;
 }
 
 .pomo-type {

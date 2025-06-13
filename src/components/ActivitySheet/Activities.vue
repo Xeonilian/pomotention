@@ -52,8 +52,6 @@
                 ? 'var(--color-orange)'
                 : item.status === 'suspended'
                 ? 'var(--color-blue)'
-                : item.status === 'cancelled'
-                ? 'var(--color-text-secondary)'
                 : 'var(--color-text-primary)'
             "
             ><ApprovalsApp24Regular
@@ -67,8 +65,6 @@
                 ? 'var(--color-orange)'
                 : item.status === 'suspended'
                 ? 'var(--color-blue)'
-                : item.status === 'cancelled'
-                ? 'var(--color-purple)'
                 : 'var(--color-text-primary)'
             "
             ><Accessibility28Filled
