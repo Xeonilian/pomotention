@@ -4,13 +4,13 @@
       <!-- 表头部分，可单独调整样式 -->
       <thead class="table-header">
         <tr>
-          <th style="width: 25px"></th>
-          <th style="width: 45px; text-align: center">开始</th>
-          <th style="width: 45px; text-align: center">结束</th>
-          <th style="width: 40px; text-align: center">分钟</th>
-          <th style="width: 45%; min-width: 100px">描述</th>
+          <th style="width: 20px"></th>
+          <th style="width: 40px; text-align: center">开始</th>
+          <th style="width: 40px; text-align: center">结束</th>
+          <th style="width: 35px; text-align: center">分钟</th>
+          <th style="width: 45%; min-width: 100px; text-align: center">描述</th>
           <th style="width: 25%; min-width: 80px">地点</th>
-          <th style="width: 60px; text-align: center">操作</th>
+          <th style="width: 80px; text-align: center">操作</th>
         </tr>
       </thead>
       <!-- 表格内容部分，可单独调整样式 -->
@@ -25,15 +25,25 @@
               'active-row': schedule.activityId === activeId,
               'selected-row': schedule.id === selectedRowId,
               'done-row': schedule.status === 'done',
+              'cancel-row': schedule.status === 'cancelled',
             }"
             @click="handleRowClick(schedule)"
             style="cursor: pointer"
           >
             <td>
               <n-checkbox
+                v-if="schedule.status !== 'cancelled'"
                 :checked="schedule.status === 'done'"
                 @update:checked="handleCheckboxChange(schedule, $event)"
               />
+              <n-icon
+                v-else
+                size="22"
+                style="transform: translate(0px, 3px)"
+                color="var(--color-red)"
+              >
+                <DismissSquare20Filled />
+              </n-icon>
             </td>
             <td>
               {{
@@ -78,6 +88,7 @@
               :class="{
                 'done-cell': schedule.status === 'done',
                 'cloud-background': schedule.isUntaetigkeit === true,
+                'cancel-cell': schedule.status === 'cancelled',
               }"
               @dblclick.stop="startEditing(schedule.id, 'title')"
               :title="
@@ -113,28 +124,64 @@
               <div class="button-group">
                 <n-button
                   v-if="!schedule.taskId"
-                  size="tiny"
+                  style="font-size: 12px"
+                  text
                   type="info"
-                  secondary
                   @click="handleConvertToTask(schedule)"
                   title="追踪任务"
                 >
                   <template #icon>
-                    <n-icon size="18">
+                    <n-icon>
                       <ChevronCircleDown48Regular />
                     </n-icon>
                   </template>
                 </n-button>
                 <n-button
                   v-if="schedule.status !== 'done'"
-                  size="tiny"
-                  type="error"
-                  secondary
+                  text
+                  style="font-size: 14px"
+                  type="info"
+                  @click="handleRepeatSchedule(schedule.id)"
+                  title="重复待办，新建活动"
+                >
+                  <template #icon>
+                    <n-icon>
+                      <ArrowRepeatAll24Regular />
+                    </n-icon>
+                  </template>
+                </n-button>
+                <!-- 取消任务按钮 -->
+                <n-button
+                  v-if="
+                    schedule.status !== 'done' &&
+                    schedule.status !== 'cancelled'
+                  "
+                  text
+                  style="font-size: 14px"
+                  type="info"
+                  @click="handleCancelSchedule(schedule.id)"
+                  title="取消任务，不退回活动清单"
+                >
+                  <template #icon>
+                    <n-icon>
+                      <DismissCircle20Regular />
+                    </n-icon>
+                  </template>
+                </n-button>
+                <!-- 退回任务按钮 = 不再在今日 -->
+                <n-button
+                  v-if="
+                    schedule.status !== 'done' &&
+                    schedule.status !== 'cancelled'
+                  "
+                  text
+                  style="font-size: 14px"
+                  type="info"
                   @click="handleSuspendSchedule(schedule.id)"
                   title="取消日程"
                 >
                   <template #icon>
-                    <n-icon size="18">
+                    <n-icon>
                       <ChevronCircleRight48Regular />
                     </n-icon>
                   </template>
@@ -179,6 +226,9 @@ import { NCheckbox, NButton, NIcon, NPopover } from "naive-ui";
 import {
   ChevronCircleRight48Regular,
   ChevronCircleDown48Regular,
+  DismissCircle20Regular,
+  ArrowRepeatAll24Regular,
+  DismissSquare20Filled,
 } from "@vicons/fluent";
 import { taskService } from "@/services/taskService";
 import { ref, nextTick } from "vue";
@@ -205,6 +255,8 @@ const emit = defineEmits<{
     status: string
   ): void;
   (e: "suspend-schedule", id: number): void;
+  (e: "cancel-schedule", id: number): void;
+  (e: "repeat-schedule", id: number): void;
   (e: "convert-to-task", id: number): void;
   (e: "select-task", taskId: number | null): void;
   (e: "select-row", id: number | null): void;
@@ -231,38 +283,6 @@ function handleCheckboxChange(schedule: Schedule, checked: boolean) {
     schedule.doneTime,
     newStatus
   );
-}
-
-function handleSuspendSchedule(id: number) {
-  emit("suspend-schedule", id);
-}
-
-function handleConvertToTask(schedule: Schedule) {
-  if (schedule.taskId) {
-    popoverMessage.value = "该日程已转换为任务";
-    showPopover.value = true;
-    setTimeout(() => {
-      showPopover.value = false;
-    }, 2000);
-    return;
-  }
-
-  const task = taskService.createTaskFromSchedule(
-    schedule.id,
-    schedule.activityTitle,
-    schedule.projectName
-  );
-
-  if (task) {
-    // 立即更新本地的 taskId
-    schedule.taskId = task.id;
-    popoverMessage.value = "已转换为任务";
-    showPopover.value = true;
-    setTimeout(() => {
-      showPopover.value = false;
-    }, 2000);
-    emit("convert-to-task", schedule.id);
-  }
 }
 
 // 修改点击行处理函数
@@ -329,6 +349,46 @@ function isValidTimeString(str: string) {
     +str.split(":")[0] <= 24 &&
     +str.split(":")[1] < 60
   );
+}
+
+function handleConvertToTask(schedule: Schedule) {
+  if (schedule.taskId) {
+    popoverMessage.value = "该日程已转换为任务";
+    showPopover.value = true;
+    setTimeout(() => {
+      showPopover.value = false;
+    }, 2000);
+    return;
+  }
+
+  const task = taskService.createTaskFromSchedule(
+    schedule.id,
+    schedule.activityTitle,
+    schedule.projectName
+  );
+
+  if (task) {
+    // 立即更新本地的 taskId
+    schedule.taskId = task.id;
+    popoverMessage.value = "已转换为任务";
+    showPopover.value = true;
+    setTimeout(() => {
+      showPopover.value = false;
+    }, 2000);
+    emit("convert-to-task", schedule.id);
+  }
+}
+
+function handleSuspendSchedule(id: number) {
+  emit("suspend-schedule", id);
+}
+
+function handleCancelSchedule(id: number) {
+  emit("cancel-schedule", id);
+}
+
+function handleRepeatSchedule(id: number) {
+  emit("repeat-schedule", id);
 }
 </script>
 
@@ -443,6 +503,14 @@ function isValidTimeString(str: string) {
   text-decoration: line-through var(--color-text-secondary) 0.5px;
 }
 
+.cancel-row {
+  color: var(--color-text-secondary);
+}
+
+.cancel-cell {
+  font-style: italic;
+}
+
 .title-cell {
   position: relative;
   cursor: pointer;
@@ -507,6 +575,10 @@ function isValidTimeString(str: string) {
   display: flex;
   gap: 2px;
   justify-content: flex-end;
+}
+
+:deep(.n-button) :hover {
+  color: var(--color-red);
 }
 
 .cloud-background {

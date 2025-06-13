@@ -42,6 +42,8 @@
         :selectedRowId="selectedRowId"
         @update-schedule-status="updateScheduleStatus"
         @suspend-schedule="handleSuspendSchedule"
+        @cancel-schedule="handleCancelSchedule"
+        @repeat-schedule="handleRepeatSchedule"
         @select-task="onSelectTask"
         @select-row="handleSelectRow"
         @edit-schedule-title="handleEditScheduleTitle"
@@ -80,6 +82,8 @@ const emit = defineEmits<{
     status: string
   ): void;
   (e: "suspend-schedule", id: number): void;
+  (e: "cancel-schedule", id: number): void;
+  (e: "repeat-schedule", id: number): void;
   (e: "suspend-todo", id: number): void;
   (e: "cancel-todo", id: number): void;
   (e: "repeat-todo", id: number): void;
@@ -126,6 +130,14 @@ function updateTodoStatus(
 
 function handleSuspendSchedule(id: number) {
   emit("suspend-schedule", id);
+}
+
+function handleCancelSchedule(id: number) {
+  emit("cancel-schedule", id);
+}
+
+function handleRepeatSchedule(id: number) {
+  emit("repeat-schedule", id);
 }
 
 function handleSuspendTodo(id: number) {

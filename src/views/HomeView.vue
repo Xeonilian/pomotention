@@ -99,6 +99,8 @@
               @cancel-todo="onCancelTodo"
               @repeat-todo="onRepeatTodo"
               @suspend-schedule="onSuspendSchedule"
+              @cancel-schedule="onCancelSchedule"
+              @repeat-schedule="onRepeatSchedule"
               @update-todo-est="onUpdateTodoEst"
               @update-todo-pomo="onUpdateTodoPomo"
               @select-task="onSelectTask"
@@ -473,7 +475,7 @@ function onSuspendTodo(id: number) {
   handleSuspendTodo(todoList.value, activityList.value, id);
 }
 
-/** Todo 取消 #HACK */
+/** Todo 取消 */
 function onCancelTodo(id: number) {
   // 更新 todoList 中的数据
   const todo = todoList.value.find((t) => t.id === id);
@@ -516,6 +518,50 @@ function onRepeatTodo(id: number) {
 /** Schedule 推迟一天 */
 function onSuspendSchedule(id: number) {
   handleSuspendSchedule(scheduleList.value, activityList.value, id);
+}
+
+/** Schedule 取消 #HACK */
+function onCancelSchedule(id: number) {
+  // 更新 ScheduleList 中的数据
+  const schedule = scheduleList.value.find((s) => s.id === id);
+  if (schedule) {
+    schedule.status = "cancelled";
+    const activity = activityList.value.find(
+      (a) => a.id === schedule.activityId
+    );
+    if (!activity) {
+      console.warn(`未找到 activityId 为 ${schedule.activityId} 的 activity`);
+      return;
+    }
+    activity.status = "cancelled";
+  }
+}
+
+/** Schedule 变为 Activity **/
+function onRepeatSchedule(id: number) {
+  const schedule = scheduleList.value.find((s) => s.id === id);
+  if (schedule) {
+    const activity = activityList.value.find(
+      (a) => a.id === schedule.activityId
+    );
+    if (!activity) {
+      console.warn(`未找到 activityId 为 ${schedule.activityId} 的 activity`);
+      return;
+    }
+    const newActivity = {
+      ...activity, // 使用展开运算符复制 activity 的所有属性
+      id: Date.now(), // 设置新的 id
+      status: "" as
+        | ""
+        | "delayed"
+        | "ongoing"
+        | "cancelled"
+        | "done"
+        | "suspended"
+        | undefined, // 如果需要清空状态，可以在这里设置
+    };
+    activityList.value.push(newActivity);
+  }
 }
 
 /** Schedule 勾选完成 */
