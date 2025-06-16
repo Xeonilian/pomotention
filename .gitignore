@@ -28,3 +28,4 @@ package-lock.json
 *.njsproj
 *.sln
 *.sw?
+.tauri
