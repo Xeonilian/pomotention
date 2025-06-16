@@ -9,33 +9,31 @@ on:
 # 定义工作流的步骤
 jobs:
   build-and-release:
-    # 使用 Ubuntu 20.04 环境
-    runs-on: ubuntu-latest
+    # 使用 Windows 环境
+    runs-on: windows-latest
 
     # 定义工作流的步骤
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Set up Rust
-        uses: dtolnay/rust-toolchain@master
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
         with:
-          toolchain: stable
-
-      - name: Install Tauri CLI
-        run: npm install -g @tauri-apps/cli
+          node-version: "18" # 替换为你项目所需的 Node.js 版本
 
       - name: Install Node.js dependencies
         run: npm install
+
+      - name: Install Tauri CLI
+        run: npm install -g @tauri-apps/cli
 
       - name: Build Tauri Application
         run: npm run tauri build
 
       - name: Generate Updater Signature
         run: |
-          # 从 GitHub Secrets 中获取私钥
           echo "$UPDATER_PRIVATE_KEY" > updater.pem
-          # 签名更新包
           tauri sign --path dist/updater --key updater.pem
 
       - name: Create GitHub Release
@@ -44,8 +42,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
+          tag_name: ${{ github.ref_name }}
+          release_name: Release ${{ github.ref_name }}
           draft: false
           prerelease: false
 
@@ -56,8 +54,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./dist/your-app-name-${{ github.ref_name }}.deb # 替换为你的安装包路径
-          asset_name: your-app-name-${{ github.ref_name }}.deb # 替换为你的安装包名称
+          asset_path: ./dist/your-app-name-${{ github.ref_name }}.exe # 替换为实际的安装包路径
+          asset_name: your-app-name-${{ github.ref_name }}.exe # 替换为实际的安装包名称
           asset_content_type: application/octet-stream
 
       - name: Upload Updater JSON

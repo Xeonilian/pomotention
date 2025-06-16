@@ -12,7 +12,7 @@
   "dependencies": {
     "@tauri-apps/api": "^2.5.0",
     "@tauri-apps/plugin-opener": "^2",
-    "@tauri-apps/plugin-updater": "~2",
+    "@tauri-apps/plugin-updater": "~2.7.1",
     "@vicons/ionicons5": "^0.13.0",
     "marked": "^15.0.12",
     "naive-ui": "^2.41.0",
