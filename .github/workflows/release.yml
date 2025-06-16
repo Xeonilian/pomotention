@@ -1,18 +1,15 @@
 name: Release Workflow
 
-# 触发条件：当新的 Git tag 被推送时
 on:
   push:
     tags:
       - "*"
 
-# 定义工作流的步骤
 jobs:
-  build-and-release:
-    # 使用 Windows 环境
+  build-and-release-windows:
     runs-on: windows-latest
+    needs: create_release
 
-    # 定义工作流的步骤
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -20,21 +17,71 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: "18" # 替换为你项目所需的 Node.js 版本
+          node-version: "18"
 
-      - name: Install Node.js dependencies
-        run: npm install
+      - name: Install dependencies
+        run: pnpm install
 
       - name: Install Tauri CLI
-        run: npm install -g @tauri-apps/cli
+        run: pnpm install -g @tauri-apps/cli
 
-      - name: Build Tauri Application
-        run: npm run tauri build
+      - name: Build Tauri Application (Windows)
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: pnpm run tauri build
 
-      - name: Generate Updater Signature
-        run: |
-          echo "$UPDATER_PRIVATE_KEY" > updater.pem
-          tauri sign --path dist/updater --key updater.pem
+      - name: Upload MSI Installer
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create_release.outputs.upload_url }}
+          asset_path: ./src-tauri/target/release/bundle/msi/pomotention_${{ github.ref_name }}_x64.msi
+          asset_name: pomotention-${{ github.ref_name }}-windows.msi
+          asset_content_type: application/vnd.microsoft.portable-executable
+
+  build-and-release-macos:
+    runs-on: macos-latest
+    needs: create_release
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Install Tauri CLI
+        run: pnpm install -g @tauri-apps/cli
+
+      - name: Build Tauri Application (macOS)
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: pnpm run tauri build
+
+      - name: Upload DMG Installer
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create_release.outputs.upload_url }}
+          asset_path: ./src-tauri/target/release/bundle/dmg/pomotention_${{ github.ref_name }}_x64.dmg
+          asset_name: pomotention-${{ github.ref_name }}-macos.dmg
+          asset_content_type: application/x-apple-diskimage
+
+  create_release:
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
 
       - name: Create GitHub Release
         id: create_release
@@ -46,25 +93,3 @@ jobs:
           release_name: Release ${{ github.ref_name }}
           draft: false
           prerelease: false
-
-      - name: Upload Release Assets
-        id: upload_assets
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./dist/your-app-name-${{ github.ref_name }}.exe # 替换为实际的安装包路径
-          asset_name: your-app-name-${{ github.ref_name }}.exe # 替换为实际的安装包名称
-          asset_content_type: application/octet-stream
-
-      - name: Upload Updater JSON
-        id: upload_updater_json
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./dist/updater/updater.json
-          asset_name: updater.json
-          asset_content_type: application/json
