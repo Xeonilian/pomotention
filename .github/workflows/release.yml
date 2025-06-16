@@ -19,6 +19,9 @@ jobs:
         with:
           node-version: "18"
 
+      - name: Install pnpm
+        run: npm install -g pnpm
+
       - name: Install dependencies
         run: pnpm install
 
@@ -52,6 +55,9 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: "18"
+
+      - name: Install pnpm
+        run: npm install -g pnpm
 
       - name: Install dependencies
         run: pnpm install
