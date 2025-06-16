@@ -101,14 +101,9 @@
           @select="handleDurationSelect"
           placement="top-start"
           :style="{
-            '--n-font-size': '8px',
-            width: '90px',
-            height: '60px',
             display: 'grid',
-            'grid-template-columns': 'repeat(2, 1fr)',
+            'grid-template-columns': 'repeat(2, 3fr)',
             'place-items': 'center', // 居中对齐
-            '--n-option-prefix-width': '5px',
-            '--n-option-suffix-width': '0px',
           }"
           size="small"
         >
@@ -250,8 +245,10 @@ function formatDuration(minutes: number): string {
 const breakDurationOptions = ref([
   { label: "02", key: 2 },
   { label: "05", key: 5 },
+  { label: "10", key: 10 },
   { label: "15", key: 15 },
   { label: "30", key: 30 },
+  { label: "60", key: 60 },
 ]);
 
 // 4-5 处理休息时间选择（从下拉菜单选择）
@@ -452,5 +449,13 @@ function handleDurationSelect(key: number): void {
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+
+/* #BUG 无用 */
+:deep(.n-dropdown-menu, .n-dropdown-option, .n-dropdown-option-body) {
+  width: 20px !important;
+  height: 20px;
+  font-size: 12px !important;
+  color: red !important;
 }
 </style>
