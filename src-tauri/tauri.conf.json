@@ -27,10 +27,14 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["windows-msi", "macOS-dmg"],
-    "windows": ["msi"],
-
-    "linux": ["appimage"],
+    "targets": "all",
+    "windows": {
+      "nsis": null
+    },
+    "macOS": {
+      "minimumSystemVersion": "10.13",
+      "frameworks": []
+    },
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -39,12 +43,6 @@
       "icons/icon.ico"
     ],
     "licenseFile": "../LICENSE",
-    "macOS": {
-      "dmg": {
-        "minimumSystemVersion": "10.13",
-        "frameworks": []
-      }
-    },
     "createUpdaterArtifacts": true
   },
   "plugins": {
