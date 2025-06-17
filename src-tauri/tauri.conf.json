@@ -51,7 +51,7 @@
       "dialog": true,
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDk2MDRCNTkyMEM0NEJFRDYKUldUV3ZrUU1rclVFbHVUTms3aW1oa2FFdmptdmNxTzJoVzF2QUhLekFoMmZFcGNiOGpNU0xjV3AK",
       "endpoints": [
-        "https://github.com/xeonilian/pomotention/releases/latest/download/latest.json"
+        "https://github.com/Xeonilian/pomotention/releases/latest/download/latest.json"
       ],
       "windows": {
         "installMode": "passive"

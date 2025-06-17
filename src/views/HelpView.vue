@@ -64,9 +64,9 @@ onMounted(async () => {
   }
 });
 
-const docsUrl = "https://xeonilian.github.io/pomotention/";
+const docsUrl = "https://Xeonilian.github.io/pomotention/";
 const githubUrl = "https://github.com/xeonilian/pomotention";
-const releaseUrl = "https://github.com/xeonilian/pomotention/releases/latest";
+const releaseUrl = "https://github.com/Xeonilian/pomotention/releases/latest";
 
 const openDocs = () => {
   window.open(docsUrl, "_blank");

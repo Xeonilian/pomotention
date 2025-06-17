@@ -30,6 +30,7 @@ async function handleUpdateCheck() {
     const update = await check();
 
     if (update) {
+      console.log("update内容", update);
       const shouldUpdate = confirm(
         `发现新版本 v${update.version}\n\n${
           update.body || "包含功能更新和错误修复"
@@ -46,12 +47,16 @@ async function handleUpdateCheck() {
       console.log("当前已是最新版本");
     }
   } catch (error) {
+    console.error(
+      "Update failed (raw):",
+      error,
+      typeof error,
+      error && error.constructor && error.constructor.name
+    );
     if (error instanceof Error) {
-      console.error("Update failed:", error.message);
       alert(`Update failed: ${error.message}`);
     } else {
-      console.error("Unknown error:", error);
-      alert("Unknown error occurred during update");
+      alert("Unknown error occurred during update: " + JSON.stringify(error));
     }
   }
 }
