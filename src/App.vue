@@ -10,9 +10,22 @@
 // ;(window as any).settingStore = settingStore
 import { onMounted } from "vue";
 import { check } from "@tauri-apps/plugin-updater";
+import { isTauri } from "@tauri-apps/api/core";
+import { getVersion } from "@tauri-apps/api/app";
+
+onMounted(() => {
+  if (isTauri()) {
+    handleUpdateCheck();
+  } else {
+    console.log("Not in Tauri, skip update");
+  }
+});
 
 async function handleUpdateCheck() {
   try {
+    // 本地版本
+    const localVersion = await getVersion();
+    console.log("Local App Version:", localVersion);
     // 检查更新
     const update = await check();
 
@@ -42,9 +55,5 @@ async function handleUpdateCheck() {
     }
   }
 }
-
-onMounted(() => {
-  handleUpdateCheck();
-});
 </script>
 <style></style>
