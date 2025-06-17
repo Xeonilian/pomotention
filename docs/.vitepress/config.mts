@@ -1,11 +1,12 @@
 import { defineConfig } from "vitepress";
 
 export default defineConfig({
+  base: "/pomotention/",
   title: "Pomotention",
   description: "🍅 基于番茄工作法的深度专注与效率管理系统",
 
   themeConfig: {
-    logo: "/public/logo.png",
+    logo: "/logo.png",
 
     nav: [
       { text: "首页", link: "/" },

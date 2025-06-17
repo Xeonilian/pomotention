@@ -3,9 +3,9 @@ layout: home
 hero:
   name: "Pomotention"
   text: "番茄意图"
-  tagline: 基于番茄工作法与执行意图自我照顾系统
+  tagline: 基于番茄工作法与执行意图的自我照顾系统
   image:
-    src: /public/logo.png
+    src: /logo.png
     alt: Pomotention
   actions:
     - theme: brand
