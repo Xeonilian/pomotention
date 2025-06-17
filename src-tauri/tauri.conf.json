@@ -27,9 +27,9 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["dmg", "msi"],
+    "targets": "all",
     "windows": {
-      "nsis": null
+      "nsis": {}
     },
     "macOS": {
       "minimumSystemVersion": "10.13",
