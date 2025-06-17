@@ -1,0 +1,1 @@
+import{_ as e,c as t,o as a}from"./chunks/framework.CAbILWTE.js";const i=JSON.parse('{"title":"","description":"","frontmatter":{},"headers":[],"relativePath":"features.md","filePath":"features.md","lastUpdated":1750146826000}'),r={name:"features.md"};function s(o,c,n,d,f,p){return a(),t("div")}const m=e(r,[["render",s]]);export{i as __pageData,m as default};

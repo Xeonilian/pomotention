@@ -1,1 +1,0 @@
-import{_ as e,c as t,o as a}from"./chunks/framework.DPDPlp3K.js";const _=JSON.parse('{"title":"","description":"","frontmatter":{},"headers":[],"relativePath":"guide/interface.md","filePath":"guide/interface.md","lastUpdated":1750146826000}'),r={name:"guide/interface.md"};function c(n,i,o,s,d,f){return a(),t("div")}const m=e(r,[["render",c]]);export{_ as __pageData,m as default};

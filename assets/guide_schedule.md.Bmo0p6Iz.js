@@ -1,1 +1,0 @@
-import{_ as e,c as t,o as a}from"./chunks/framework.DPDPlp3K.js";const u=JSON.parse('{"title":"","description":"","frontmatter":{},"headers":[],"relativePath":"guide/schedule.md","filePath":"guide/schedule.md","lastUpdated":1750146826000}'),s={name:"guide/schedule.md"};function c(d,r,o,n,i,l){return a(),t("div")}const _=e(s,[["render",c]]);export{u as __pageData,_ as default};
