@@ -4,7 +4,7 @@
       <div class="help-icon">📚</div>
       <h1>帮助文档</h1>
       <p class="help-description">
-        由于帮助文档尚在构建，直接显示 GitHub Pages 文档。<br />
+        由于帮助文档尚在构建，尚未内嵌。<br />
         请点击下方按钮在浏览器中查看完整的帮助文档。
       </p>
 
@@ -17,7 +17,9 @@
           📂 查看项目源码
         </button>
       </div>
-
+      <n-tag v-if="checkVersion" type="info" round>
+        当前版本：{{ localVersion }}
+      </n-tag>
       <div class="help-info">
         <h3>📋 功能一览</h3>
         <ul>
@@ -49,6 +51,19 @@
 </template>
 
 <script setup lang="ts">
+import { ref, onMounted } from "vue";
+import { getVersion } from "@tauri-apps/api/app";
+import { isTauri } from "@tauri-apps/api/core";
+import { NTag } from "naive-ui";
+
+const localVersion = ref("");
+const checkVersion = isTauri();
+onMounted(async () => {
+  if (checkVersion) {
+    localVersion.value = await getVersion();
+  }
+});
+
 const docsUrl = "https://xeonilian.github.io/pomotention/";
 const githubUrl = "https://github.com/xeonilian/pomotention";
 const releaseUrl = "https://github.com/xeonilian/pomotention/releases/latest";
