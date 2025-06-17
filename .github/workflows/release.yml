@@ -3,7 +3,7 @@ name: Release Workflow
 on:
   push:
     tags:
-      - "*"
+      - "v1"
 
 jobs:
   build-and-release-windows:

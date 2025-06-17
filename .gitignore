@@ -12,6 +12,8 @@ dist
 dist-ssr
 *.local
 
+latest-temp.json
+
 # 包管理锁文件（如果你想忽略）  
 # pnpm-lock.yaml  
 # yarn.lock  
