@@ -13,9 +13,9 @@ dist-ssr
 *.local
 
 # 包管理锁文件（如果你想忽略）  
-pnpm-lock.yaml  
-yarn.lock  
-package-lock.json  
+# pnpm-lock.yaml  
+# yarn.lock  
+# package-lock.json  
 
 
 # Editor directories and files
