@@ -1,0 +1,12 @@
+# 自动识别文本文件，并统一换行符处理  
+* text=auto  
+
+# 脚本文件统一使用 LF（Unix 风格换行）  
+*.sh text eol=lf  
+
+# Windows 批处理文件使用 CRLF（Windows 风格换行）  
+*.bat text eol=crlf  
+
+# Rust/Cargo 文件保持 LF（常见标准）  
+*.toml text eol=lf  
+*.lock text eol=lf  

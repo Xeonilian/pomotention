@@ -1,0 +1,1 @@
+import{_ as e,c as t,o as a}from"./chunks/framework.DPDPlp3K.js";const _=JSON.parse('{"title":"","description":"","frontmatter":{},"headers":[],"relativePath":"guide/timer.md","filePath":"guide/timer.md","lastUpdated":1750146826000}'),r={name:"guide/timer.md"};function i(o,s,c,d,n,m){return a(),t("div")}const f=e(r,[["render",i]]);export{_ as __pageData,f as default};

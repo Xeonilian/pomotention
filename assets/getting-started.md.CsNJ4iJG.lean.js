@@ -1,0 +1,1 @@
+import{_ as t,c as e,o as a}from"./chunks/framework.DPDPlp3K.js";const g=JSON.parse('{"title":"","description":"","frontmatter":{},"headers":[],"relativePath":"getting-started.md","filePath":"getting-started.md","lastUpdated":1750146826000}'),r={name:"getting-started.md"};function s(n,o,d,c,i,p){return a(),e("div")}const m=t(r,[["render",s]]);export{g as __pageData,m as default};

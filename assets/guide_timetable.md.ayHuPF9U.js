@@ -1,0 +1,1 @@
+import{_ as e,c as t,o as a}from"./chunks/framework.DPDPlp3K.js";const p=JSON.parse('{"title":"","description":"","frontmatter":{},"headers":[],"relativePath":"guide/timetable.md","filePath":"guide/timetable.md","lastUpdated":1750146826000}'),r={name:"guide/timetable.md"};function i(o,s,c,d,n,m){return a(),t("div")}const _=e(r,[["render",i]]);export{p as __pageData,_ as default};
