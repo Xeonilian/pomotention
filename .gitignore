@@ -31,3 +31,4 @@ latest-temp.json
 *.sln
 *.sw?
 .tauri
+.env
