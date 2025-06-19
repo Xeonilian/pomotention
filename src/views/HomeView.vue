@@ -128,6 +128,7 @@
             :showPomoSeq="showPomoSeq"
             :showPomodoroView="showPomodoroView"
             :selectedTaskId="selectedTaskId"
+            :selectedTask="selectedTask"
             @activity-updated="onActivityUpdated"
             @toggle-pomo-seq="showPomoSeq = !showPomoSeq"
           />
@@ -150,6 +151,7 @@
           @delete-activity="onDeleteActivity"
           @update-active-id="onUpdateActiveId"
           @toggle-pomo-type="onTogglePomoType"
+          @repeat-activity="onRepeatActivity"
         />
       </div>
     </div>
@@ -178,16 +180,19 @@ import type { Activity } from "@/core/types/Activity";
 import type { Block } from "@/core/types/Block";
 import type { Todo } from "@/core/types/Todo";
 import type { Schedule } from "@/core/types/Schedule";
+import { Task } from "@/core/types/Task";
 import { WORK_BLOCKS, ENTERTAINMENT_BLOCKS } from "@/core/constants";
 import {
   loadActivities,
   loadTodos,
   loadSchedules,
   loadTimeBlocks,
+  loadTasks,
   saveActivities,
   saveTodos,
   saveSchedules,
   saveTimeBlocks,
+  saveTasks,
   removeTimeBlocksStorage,
 } from "@/services/storageService";
 import {
@@ -235,6 +240,7 @@ const showTodayView = ref(true);
 const activityList = ref<Activity[]>(loadActivities());
 const todoList = ref<Todo[]>(loadTodos());
 const scheduleList = ref<Schedule[]>(loadSchedules());
+const taskList = ref<Task[]>(loadTasks());
 const pickedTodoActivity = ref<Activity | null>(null); // 选中活动
 
 // 添加选中的任务ID状态
@@ -243,6 +249,14 @@ const selectedTaskId = ref<number | null>(null); // 当前从Todo选中的todo.t
 const selectedActivityId = ref<number | null>(null); // 当前从Todo选中的todo.activityId
 // 在现有的状态定义区域添加
 const selectedRowId = ref<number | null>(null); // todo.id 或者 schedule.id
+const selectedTask = computed(() => {
+  if (selectedTaskId.value && taskList.value) {
+    return (
+      taskList.value.find((task) => task.id === selectedTaskId.value) || null
+    );
+  }
+  return null;
+});
 
 // 计算当天的番茄钟数
 const currentDatePomoCount = computed(() => {
@@ -338,6 +352,7 @@ function updateCurrentDateTodos() {
 watch(activityList, (value) => saveActivities(value), { deep: true });
 watch(todoList, (value) => saveTodos(value), { deep: true });
 watch(scheduleList, (value) => saveSchedules(value), { deep: true });
+watch(taskList, (value) => saveTasks(value), { deep: true });
 
 // ======================== 1. TimeTable 相关 ========================
 
@@ -416,6 +431,27 @@ function onTogglePomoType(id: number, event?: Event) {
   }
 }
 
+/** 重复当前的活动 */
+function onRepeatActivity(id: number) {
+  // 找到Activity
+  const selectActivity = activityList.value.find((a) => a.id === id);
+
+  if (selectActivity) {
+    const newActivity = {
+      ...selectActivity, // 使用展开运算符复制 activity 的所有属性
+      id: Date.now(), // 设置新的 id
+      status: "" as
+        | ""
+        | "delayed"
+        | "ongoing"
+        | "cancelled"
+        | "done"
+        | "suspended"
+        | undefined, // 如果需要清空状态，可以在这里设置
+    };
+    handleAddActivity(activityList.value, scheduleList.value, newActivity);
+  }
+}
 // ======================== 3. Today/任务相关操作 ========================
 /** 今日的 Todo */
 const currentViewDateTodos = computed(() =>
@@ -520,7 +556,7 @@ function onSuspendSchedule(id: number) {
   handleSuspendSchedule(scheduleList.value, activityList.value, id);
 }
 
-/** Schedule 取消 #HACK */
+/** Schedule 取消 */
 function onCancelSchedule(id: number) {
   // 更新 ScheduleList 中的数据
   const schedule = scheduleList.value.find((s) => s.id === id);
@@ -637,22 +673,45 @@ function handleEditScheduleTitle(id: number, newTitle: string) {
   console.log(
     `已更新 schedule ${id} 和 activity ${schedule.activityId} 的标题为: ${newTitle}`
   );
+
+  // 找到task 并重新赋值
+  const taskIndex = taskList.value.findIndex((t) => t.sourceId === schedule.id);
+  if (taskIndex !== -1) {
+    console.log(taskIndex);
+    taskList.value[taskIndex] = {
+      ...taskList.value[taskIndex],
+      activityTitle: newTitle,
+    };
+  }
 }
 
 // 编辑title，todo.id，同步Activity
 function handleEditTodoTitle(id: number, newTitle: string) {
+  // 找到todo
   const todo = todoList.value.find((t) => t.id === id);
   if (!todo) {
     console.warn(`未找到 id 为 ${id} 的 todo`);
     return;
   }
   todo.activityTitle = newTitle;
+
+  // 找到activity
   const activity = activityList.value.find((a) => a.id === todo.activityId);
   if (!activity) {
     return;
   }
-  activity.title = newTitle;
+  activity.title = newTitle; // #BUG
+
+  // 找到task 并重新赋值
+  const taskIndex = taskList.value.findIndex((t) => t.id === todo.id);
+  if (taskIndex !== -1) {
+    taskList.value[taskIndex] = {
+      ...taskList.value[taskIndex],
+      activityTitle: newTitle,
+    };
+  }
 }
+
 // 编辑时间
 function handleEditTodoStart(id: number, newTm: string) {
   const todo = todoList.value.find((t) => t.id === id);
@@ -776,6 +835,8 @@ watch(
   }
 );
 
+/** 变化时联动 Todo/Schedule 属性同步 */
+
 // ======================== 8. 生命周期 Hook ========================
 onMounted(() => {
   // 主动检查一次日期变更
@@ -830,7 +891,7 @@ const { size: leftWidth, startResize: startLeftResize } = useResize(
 const { size: rightWidth, startResize: startRightResize } = useResize(
   480,
   "horizontal",
-  300,
+  320,
   600,
   true // 右侧面板
 );

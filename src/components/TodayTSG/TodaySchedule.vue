@@ -265,6 +265,7 @@ const emit = defineEmits<{
   (e: "convert-to-task", id: number): void;
   (e: "select-task", taskId: number | null): void;
   (e: "select-row", id: number | null): void;
+  (e: "select-activity", activityId: number | null): void;
   (e: "edit-schedule-title", id: number, newTitle: string): void;
   (e: "edit-schedule-done", id: number, newTs: string): void;
 }>();
@@ -294,6 +295,7 @@ function handleCheckboxChange(schedule: Schedule, checked: boolean) {
 function handleRowClick(schedule: Schedule) {
   emit("select-row", schedule.id); // 新增：发送选中行事件
   emit("select-task", schedule.taskId || null);
+  emit("select-activity", schedule.activityId || null);
 }
 
 // 编辑相关函数

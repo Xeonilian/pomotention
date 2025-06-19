@@ -31,12 +31,12 @@
       >
         <template #prefix>
           <n-icon v-if="item.isUntaetigkeit" :color="'var(--color-blue)'"
-            ><AddSubtractCircle24Filled
+            ><Cloud24Filled
           /></n-icon>
           <n-icon
             v-if="item.interruption === 'I'"
             :color="'var(--color-purple)'"
-            ><AddSubtractCircle24Filled
+            ><Cloud24Filled
           /></n-icon>
           <n-icon
             v-else-if="item.interruption === 'E'"
@@ -151,7 +151,7 @@ import {
   VideoPersonCall24Regular,
   ApprovalsApp24Regular,
   Accessibility28Filled,
-  AddSubtractCircle24Filled,
+  Cloud24Filled,
 } from "@vicons/fluent";
 import type { Activity } from "@/core/types/Activity";
 

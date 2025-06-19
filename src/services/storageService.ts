@@ -5,6 +5,7 @@ import type { Activity } from "@/core/types/Activity";
 import type { Todo } from "@/core/types/Todo";
 import type { Schedule } from "@/core/types/Schedule";
 import type { Block } from "@/core/types/Block";
+import type { Task } from "@/core/types/Task";
 
 // =================== 活动相关 ===================
 
@@ -90,6 +91,23 @@ export function saveTimeBlocks(
  */
 export function removeTimeBlocksStorage(type: "work" | "entertainment"): void {
   localStorage.removeItem(`${STORAGE_KEYS.TIMETABLE}_${type}`);
+}
+
+// =================== 任务相关 ===================
+
+/** 从本地存储加载任务列表 */
+export function loadTasks(): Task[] {
+  return loadData<Task[]>(STORAGE_KEYS.TASK, []);
+}
+
+/** 保存任务列表到本地存储 */
+export function saveTasks(tasks: Task[]): void {
+  saveData(STORAGE_KEYS.TASK, tasks);
+}
+
+/** 删除任务存储 */
+export function removeTasksStorage(): void {
+  localStorage.removeItem(STORAGE_KEYS.TASK);
 }
 
 // =================== 通用本地存储操作 ===================

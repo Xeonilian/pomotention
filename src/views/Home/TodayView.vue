@@ -45,6 +45,7 @@
         @cancel-schedule="handleCancelSchedule"
         @repeat-schedule="handleRepeatSchedule"
         @select-task="onSelectTask"
+        @select-activity="onSelectActivity"
         @select-row="handleSelectRow"
         @edit-schedule-title="handleEditScheduleTitle"
         @edit-schedule-done="handleEditScheduleDone"

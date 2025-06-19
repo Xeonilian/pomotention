@@ -56,7 +56,9 @@ async function handleUpdateCheck() {
     if (error instanceof Error) {
       alert(`Update failed: ${error.message}`);
     } else {
-      alert("Unknown error occurred during update: " + JSON.stringify(error));
+      console.log(
+        "Unknown error occurred during update: " + JSON.stringify(error)
+      );
     }
   }
 }

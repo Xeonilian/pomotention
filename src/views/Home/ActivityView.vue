@@ -28,6 +28,7 @@
       @add-untaetigkeit="addUntaetigkeitRow"
       @delete-active="deleteActiveRow"
       @toggle-pomo-type="togglePomoType"
+      @repeat-activity="repeatActivity"
     />
   </div>
 
@@ -92,6 +93,7 @@ const emit = defineEmits<{
   "delete-activity": [id: number]; // 删除活动
   "update-active-id": [id: number | null]; // 更新选中活动ID
   "toggle-pomo-type": [id: number]; // 切换番茄钟类型
+  "repeat-activity": [id: number]; // 重复选中的活动
 }>();
 
 // ========================
@@ -259,6 +261,12 @@ function togglePomoType() {
   }
 }
 
+// 重复选中的活动
+function repeatActivity() {
+  if (props.activeId !== null) {
+    emit("repeat-activity", props.activeId);
+  }
+}
 // 根据截止日期计算倒计时样式类名
 function getCountdownClass(dueDate: number | undefined | null): string {
   if (!dueDate) return "";

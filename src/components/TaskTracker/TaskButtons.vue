@@ -25,7 +25,7 @@
       title="奖赏记录"
     >
       <template #icon>
-        <n-icon><Beach24Regular /></n-icon>
+        <n-icon><Emoji24Regular /></n-icon>
       </template>
     </n-button>
     <n-button
@@ -66,7 +66,7 @@ import RewardInputDialog from "@/components/TaskTracker/RewardInputDialog.vue";
 import InterruptionInputDialog from "@/components/TaskTracker/InterruptionInputDialog.vue";
 import {
   BatterySaver20Regular,
-  Beach24Regular,
+  Emoji24Regular,
   CalendarAssistant20Regular,
 } from "@vicons/fluent";
 
@@ -126,7 +126,5 @@ function handleInterruptionConfirm(val: {
   display: flex;
   gap: 8px;
   justify-content: right;
-  padding: 8px;
-  margin-left: 10px;
 }
 </style>

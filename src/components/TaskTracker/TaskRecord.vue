@@ -217,7 +217,7 @@ const handleClick = (event: MouseEvent) => {
 :deep(.markdown-content h1),
 :deep(.markdown-content h2),
 :deep(.markdown-content h3) {
-  margin-top: 0.1em;
+  margin-top: 0em;
   margin-bottom: 0.1em;
 }
 

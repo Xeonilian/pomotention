@@ -17,9 +17,22 @@
           📂 查看项目源码
         </button>
       </div>
-      <n-tag v-if="checkVersion" type="info" round>
-        当前版本：{{ localVersion }}
-      </n-tag>
+
+      <div class="version-info">
+        <n-tag type="info" round>本地版本：v{{ localVersion }}</n-tag>
+        <n-tag v-if="remoteOk" type="success" round style="margin-left: 8px">
+          云端最新版本：{{ remoteVersion }}
+        </n-tag>
+        <n-tag v-else type="warning" round style="margin-left: 8px">
+          云端获取失败
+          <span v-if="remoteError">({{ remoteError }})</span>
+        </n-tag>
+        <span style="margin-left: 8px">
+          <template v-if="remoteOk">🌐 github连接正常</template>
+          <template v-else>🚫 github连接异常</template>
+        </span>
+      </div>
+
       <div class="help-info">
         <h3>📋 功能一览</h3>
         <ul>
@@ -58,27 +71,59 @@ import { NTag } from "naive-ui";
 
 const localVersion = ref("");
 const checkVersion = isTauri();
-onMounted(async () => {
-  if (checkVersion) {
-    localVersion.value = await getVersion();
-  }
-});
 
+// 云端版信息
+const remoteVersion = ref("...");
+const remoteOk = ref(false);
+const remoteError = ref("");
+
+// URL 配置
 const docsUrl = "https://Xeonilian.github.io/pomotention/";
 const githubUrl = "https://github.com/xeonilian/pomotention";
 const releaseUrl = "https://github.com/Xeonilian/pomotention/releases/latest";
 
+onMounted(async () => {
+  if (checkVersion) {
+    localVersion.value = await getVersion();
+  }
+  await checkRemoteRelease();
+});
+
+// 统一的打开网页方法
+const openUrl = (url: string) => {
+  window.open(url, "_blank");
+};
+
+// 各个按钮的点击处理
 const openDocs = () => {
-  window.open(docsUrl, "_blank");
+  openUrl(docsUrl);
 };
 
 const openGitHub = () => {
-  window.open(githubUrl, "_blank");
+  openUrl(githubUrl);
 };
 
 const openRelease = () => {
-  window.open(releaseUrl, "_blank");
+  openUrl(releaseUrl);
 };
+
+// 检查云端 release 及连通性
+async function checkRemoteRelease() {
+  try {
+    const resp = await fetch(
+      "https://api.github.com/repos/Xeonilian/pomotention/releases/latest",
+      { headers: { Accept: "application/vnd.github.v3+json" } }
+    );
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
+    const data = await resp.json();
+    remoteVersion.value = data.tag_name ?? data.name ?? "(未知)";
+    remoteOk.value = true;
+  } catch (e: any) {
+    remoteError.value = e.message || String(e);
+    remoteVersion.value = "(获取失败)";
+    remoteOk.value = false;
+  }
+}
 </script>
 
 <style scoped>
@@ -122,7 +167,7 @@ const openRelease = () => {
   display: flex;
   gap: 12px;
   justify-content: center;
-  margin-bottom: 40px;
+  margin-bottom: 30px;
   flex-wrap: wrap;
 }
 
@@ -173,12 +218,22 @@ const openRelease = () => {
   color: var(--color-red);
 }
 
+.version-info {
+  margin: 20px 0;
+  text-align: left;
+  padding: 16px;
+  background: var(--color-background);
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+}
+
 .help-info {
   text-align: left;
   background: var(--color-background);
   padding: 24px;
   border-radius: 8px;
   border: 1px solid var(--color-border);
+  margin-top: 20px;
 }
 
 .help-info h3 {

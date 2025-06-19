@@ -82,10 +82,22 @@
       :disabled="activeId === null || isSelectedClassS"
     >
       <template #icon
+        ><n-icon><FoodPizza24Regular /></n-icon
+      ></template>
+    </n-button>
+    <n-button
+      title="重复任务"
+      @click="$emit('repeat-activity')"
+      circle
+      secondary
+      type="info"
+      size="small"
+      :disabled="activeId === null"
+    >
+      <template #icon
         ><n-icon><ArrowRepeatAll24Regular /></n-icon
       ></template>
     </n-button>
-
     <n-button
       title="删除活动"
       @click="$emit('delete-active')"
@@ -130,6 +142,7 @@ import {
   DocumentTableSearch24Regular,
   CalendarAdd24Regular,
   ArrowRepeatAll24Regular,
+  FoodPizza24Regular,
 } from "@vicons/fluent";
 
 const props = defineProps<{
@@ -150,6 +163,7 @@ defineEmits([
   "add-untaetigkeit",
   "delete-active",
   "toggle-pomo-type",
+  "repeat-activity",
 ]);
 </script>
 
@@ -164,7 +178,7 @@ defineEmits([
   z-index: 10;
   background-color: var(--color-background);
   border-radius: 15px;
-  width: 260px;
+  width: 290px;
   height: 40px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05); /* 如需要阴影 */
 }

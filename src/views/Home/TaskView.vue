@@ -1,7 +1,62 @@
 <!-- TaskView.vue -->
 <template>
   <div class="task-view-container">
-    <div class="task-buttons-container">
+    <div class="task-header-container">
+      <!-- 合并能量和愉悦记录时间轴 -->
+      <div class="combined-timeline-container" v-if="combinedRecords.length">
+        <div class="combined-timeline">
+          <div
+            v-for="record in combinedRecords"
+            :key="record.id + record.type"
+            class="timeline-point"
+            :title="record.description"
+          >
+            <span
+              class="point-icon"
+              :style="{
+                color:
+                  record.type === 'energy'
+                    ? getEnergyColor(record.value)
+                    : record.type === 'reward'
+                    ? getRewardColor(record.value)
+                    : record.class === 'I'
+                    ? '#666666'
+                    : '#999999',
+              }"
+            >
+              {{
+                record.type === "energy"
+                  ? "🔋"
+                  : record.type === "reward"
+                  ? "😜"
+                  : record.class === "I"
+                  ? "🌚"
+                  : "🌝"
+              }}
+            </span>
+            <span
+              class="point-value"
+              :style="{
+                color:
+                  record.type === 'energy'
+                    ? getEnergyColor(record.value)
+                    : record.type === 'reward'
+                    ? getRewardColor(record.value)
+                    : record.class === 'I'
+                    ? '#666666'
+                    : '#999999',
+              }"
+            >
+              {{
+                record.type === "interruption"
+                  ? record.class + (record.activityType ? "A" : "")
+                  : record.value
+              }}
+            </span>
+            <div class="point-time">{{ formatTime(record.id) }}</div>
+          </div>
+        </div>
+      </div>
       <TaskButtons
         :taskId="selectedTaskId"
         :isMarkdown="isMarkdown"
@@ -12,62 +67,8 @@
         @energy-record="handleEnergyRecord"
         @reward-record="handleRewardRecord"
         @interruption-record="handleInterruptionRecord"
+        class="task-buttons-container"
       />
-    </div>
-    <!-- 合并能量和愉悦记录时间轴 -->
-    <div class="combined-timeline-container" v-if="combinedRecords.length">
-      <div class="combined-timeline">
-        <div
-          v-for="record in combinedRecords"
-          :key="record.id + record.type"
-          class="timeline-point"
-          :title="record.description"
-        >
-          <span
-            class="point-icon"
-            :style="{
-              color:
-                record.type === 'energy'
-                  ? getEnergyColor(record.value)
-                  : record.type === 'reward'
-                  ? getRewardColor(record.value)
-                  : record.class === 'I'
-                  ? '#666666'
-                  : '#999999',
-            }"
-          >
-            {{
-              record.type === "energy"
-                ? "🔋"
-                : record.type === "reward"
-                ? "😜"
-                : record.class === "I"
-                ? "🌚"
-                : "🌝"
-            }}
-          </span>
-          <span
-            class="point-value"
-            :style="{
-              color:
-                record.type === 'energy'
-                  ? getEnergyColor(record.value)
-                  : record.type === 'reward'
-                  ? getRewardColor(record.value)
-                  : record.class === 'I'
-                  ? '#666666'
-                  : '#999999',
-            }"
-          >
-            {{
-              record.type === "interruption"
-                ? record.class + (record.activityType ? "A" : "")
-                : record.value
-            }}
-          </span>
-          <div class="point-time">{{ formatTime(record.id) }}</div>
-        </div>
-      </div>
     </div>
     <div class="task-record-container">
       <TaskRecord
@@ -96,6 +97,7 @@ const props = defineProps<{
   showPomoSeq: boolean;
   showPomodoroView: boolean;
   selectedTaskId: number | null;
+  selectedTask: Task | null;
 }>();
 
 const emit = defineEmits<{
@@ -157,39 +159,6 @@ function updateCurrentTask() {
 
 // 监听任务ID变化时更新当前任务
 watch(() => props.selectedTaskId, updateCurrentTask, { immediate: true });
-
-// 监听能量记录变化
-// watch(
-//   () => currentTask.value?.energyRecords,
-//   (newRecords) => {
-//     if (newRecords) {
-//       console.log("能量记录更新:", newRecords);
-//     }
-//   },
-//   { deep: true }
-// );
-
-// 监听奖励记录变化
-// watch(
-//   () => currentTask.value?.rewardRecords,
-//   (newRecords) => {
-//     if (newRecords) {
-//       console.log("奖励记录更新:", newRecords);
-//     }
-//   },
-//   { deep: true }
-// );
-
-// 监听打扰记录变化
-// watch(
-//   () => currentTask.value?.interruptionRecords,
-//   (newRecords) => {
-//     if (newRecords) {
-//       console.log("打扰记录更新:", newRecords);
-//     }
-//   },
-//   { deep: true }
-// );
 
 // 切换Markdown模式
 const toggleMarkdown = () => {
@@ -373,19 +342,20 @@ const getRewardColor = (value: number) => {
   position: relative;
 }
 
-.task-buttons-container {
-  position: absolute;
-  top: 5px;
-  right: 0px;
-  z-index: 500;
+.task-header-container {
+  height: 36px; /* 固定高度，不要用 flex: 1 */
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  flex-shrink: 0; /* 防止被压缩 */
 }
 
-.task-record-container {
-  flex: 1;
+.task-buttons-container {
   display: flex;
-  flex-direction: column;
-  min-height: 0;
+  flex-direction: row;
   margin: 5px;
+  align-items: center;
+  margin-left: auto;
 }
 
 /* 添加内部滚动容器样式 */
@@ -395,12 +365,20 @@ const getRewardColor = (value: number) => {
   flex-direction: column;
 }
 
+.task-record-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  margin: 5px;
+  overflow: hidden;
+}
 .task-record-container :deep(.markdown-content),
 .task-record-container :deep(.task-textarea) {
   flex: 1;
   overflow-y: auto;
 }
 
+/* 记录的标记样式 */
 .combined-timeline-container {
   margin-top: 0;
   padding: 0;
@@ -409,9 +387,10 @@ const getRewardColor = (value: number) => {
 .combined-timeline {
   display: flex;
   align-items: center;
-  gap: 3px;
-  padding: 2px 2px;
+  gap: 4px;
+  padding: 2px 4px;
   overflow-x: auto;
+  margin-bottom: 2px;
 }
 
 .timeline-point {
@@ -419,28 +398,28 @@ const getRewardColor = (value: number) => {
   flex-direction: column;
   align-items: center;
   width: 25px;
-  background-color: rgba(214, 177, 177, 0.1);
+  background-color: var(--color-blue-light-transparent);
   border-radius: 8px;
-  padding: 4px 2px;
-  margin: 0 2px;
-  height: 20 px;
+  padding: 1px 0px;
+  margin: 0;
+  height: 36px;
 }
 
 .point-icon {
-  font-size: 10px;
+  font-size: 9px;
   margin-bottom: 1px;
 }
 
 .point-value {
-  font-size: 14px;
+  font-size: 12px;
   font-weight: bold;
   line-height: 1;
-  margin: 1px;
 }
 
 .point-time {
-  font-size: 10px;
-  color: var(--n-text-color-3);
+  font-size: 8px;
+  color: var(--color-text-primary);
   line-height: 1;
+  margin: 1px;
 }
 </style>

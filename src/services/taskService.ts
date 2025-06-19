@@ -47,6 +47,7 @@ export const taskService = {
       energyRecords: [],
       rewardRecords: [],
       interruptionRecords: [],
+      description: `# ${activityTitle}`,
     };
     this.saveTask(task);
 
@@ -76,6 +77,7 @@ export const taskService = {
       energyRecords: [],
       rewardRecords: [],
       interruptionRecords: [],
+      description: `# ${activityTitle}`,
     };
     this.saveTask(task);
 
