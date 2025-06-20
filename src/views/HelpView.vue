@@ -2,10 +2,10 @@
   <div class="help-view">
     <div class="help-content">
       <div class="help-icon">📚</div>
-      <h1>帮助文档</h1>
+
       <p class="help-description">
-        由于帮助文档尚在构建，尚未内嵌。<br />
-        请点击下方按钮在浏览器中查看完整的帮助文档。
+        帮助文档构建中，尚未内嵌<br />
+        请点击下方按钮查看帮助文档信息
       </p>
 
       <div class="help-actions">
@@ -20,42 +20,41 @@
 
       <div class="version-info">
         <n-tag type="info" round>本地版本：v{{ localVersion }}</n-tag>
-        <n-tag v-if="remoteOk" type="success" round style="margin-left: 8px">
-          云端最新版本：{{ remoteVersion }}
+        <n-tag v-if="remoteOk" type="default" round>
+          🌐最新版本：{{ remoteVersion }}
         </n-tag>
-        <n-tag v-else type="warning" round style="margin-left: 8px">
-          云端获取失败
+        <n-tag v-else type="warning" round>
+          🚫获取失败
           <span v-if="remoteError">({{ remoteError }})</span>
         </n-tag>
-        <span style="margin-left: 8px">
+        <!-- <span style="margin-left: 8px">
           <template v-if="remoteOk">🌐 github连接正常</template>
           <template v-else>🚫 github连接异常</template>
-        </span>
+        </span> -->
       </div>
-
       <div class="help-info">
         <h3>📋 功能一览</h3>
         <ul>
           <li>
-            📅 <strong>日程管理</strong> -
+            🍅 <strong>番茄计时器</strong> -
+            完整计时控制，自动记录，自定义专注/休息循环
+          </li>
+          <li>
+            📅 <strong>时间表管理</strong> -
             创建工作/娱乐模板，智能计算可用番茄时间
           </li>
           <li>
             🎯 <strong>活动管理</strong> -
-            支持任务、待办、休闲等多类型活动创建与筛选
+            支持任务、待办、闲暇等多类型活动创建与筛选
           </li>
+          <li>📝 <strong>今日管理</strong> - 自动提取当日计划，支持任务流转</li>
           <li>
-            🍅 <strong>番茄时钟</strong> -
-            完整计时控制，自动记录，自定义专注/休息循环
+            📊 <strong>状态追踪</strong> -
+            预估与执行番茄记录，打扰事件记录，精力值和愉悦值记录
           </li>
+          <li>💭 <strong>任务记录</strong> - 任务关联的深度思考和总结</li>
           <li>
-            📊 <strong>执行追踪</strong> - 预估 vs
-            实际误差分析，打扰事件记录，精力值管理
-          </li>
-          <li>💭 <strong>反思记录</strong> - 任务关联的深度思考和总结</li>
-          <li>📝 <strong>今日待办</strong> - 自动提取当日计划，支持任务流转</li>
-          <li>
-            📈 <strong>数据可视化</strong> - 时间轴分布、番茄统计、历史数据分析
+            📈 <strong>数据分析</strong> - 时间分布、番茄统计、历史数据分析
           </li>
         </ul>
       </div>
@@ -133,21 +132,19 @@ async function checkRemoteRelease() {
   justify-content: center;
   align-items: center;
   background: var(--color-background);
-  padding: 20px;
 }
 
 .help-content {
   max-width: 600px;
   text-align: center;
   background: var(--color-background-secondary);
-  padding: 40px;
+  padding: 0 15px;
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .help-icon {
   font-size: 64px;
-  margin-bottom: 20px;
 }
 
 .help-content h1 {
@@ -159,7 +156,7 @@ async function checkRemoteRelease() {
 .help-description {
   color: var(--color-text-secondary);
   line-height: 1.6;
-  margin-bottom: 30px;
+
   font-size: 16px;
 }
 
@@ -167,7 +164,6 @@ async function checkRemoteRelease() {
   display: flex;
   gap: 12px;
   justify-content: center;
-  margin-bottom: 30px;
   flex-wrap: wrap;
 }
 
@@ -181,7 +177,7 @@ async function checkRemoteRelease() {
   cursor: pointer;
   transition: all 0.2s;
   font-weight: 500;
-  min-width: 140px;
+  min-width: 90px;
 }
 
 .btn-primary {
@@ -219,8 +215,10 @@ async function checkRemoteRelease() {
 }
 
 .version-info {
-  margin: 20px 0;
   text-align: left;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
   padding: 16px;
   background: var(--color-background);
   border-radius: 8px;
@@ -230,47 +228,24 @@ async function checkRemoteRelease() {
 .help-info {
   text-align: left;
   background: var(--color-background);
-  padding: 24px;
+  padding: 0 12px;
   border-radius: 8px;
   border: 1px solid var(--color-border);
-  margin-top: 20px;
 }
 
 .help-info h3 {
   color: var(--color-primary);
-  margin-bottom: 16px;
+  margin-bottom: 6px;
   text-align: center;
 }
 
 .help-info ul {
   list-style: none;
-  padding: 0;
-  margin: 0;
 }
 
 .help-info li {
   padding: 8px 0;
   color: var(--color-text);
   line-height: 1.5;
-}
-
-@media (max-width: 768px) {
-  .help-content {
-    padding: 24px;
-    margin: 20px;
-  }
-
-  .help-actions {
-    flex-direction: column;
-    align-items: center;
-    gap: 12px;
-  }
-
-  .btn-primary,
-  .btn-secondary,
-  .btn-release {
-    width: 100%;
-    max-width: 250px;
-  }
 }
 </style>
