@@ -338,7 +338,7 @@ const getRewardColor = (value: number) => {
 .task-view-container {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100%;
   position: relative;
 }
 
