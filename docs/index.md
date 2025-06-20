@@ -13,7 +13,7 @@ hero:
       link: /getting-started
     - theme: alt
       text: 下载应用
-      link: /download
+      link: "/download"
     - theme: alt
       text: GitHub
       link: https://github.com/Xeonilian/pomotention
