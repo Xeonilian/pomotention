@@ -9,15 +9,18 @@ lerna-debug.log*
 
 node_modules
 dist
+cache
 dist-ssr
 *.local
+
+docs/.vitepress/cache
 
 latest-temp.json
 
 # 包管理锁文件（如果你想忽略）  
 # pnpm-lock.yaml  
 # yarn.lock  
-# package-lock.json  
+package-lock.json  
 
 
 # Editor directories and files
@@ -32,3 +35,4 @@ latest-temp.json
 *.sw?
 .tauri
 .env
+
