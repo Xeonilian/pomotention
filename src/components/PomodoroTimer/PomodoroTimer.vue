@@ -163,7 +163,13 @@ const timerStyleVars = computed(() => {
 // 1 状态信息
 const stateMessage = computed((): string => {
   if (timerStore.pomodoroState === "working") {
-    return "Initial review";
+    if (timerStore.currentPhase === "r1") {
+      return "Initial Review";
+    } else if (timerStore.currentPhase === "r2") {
+      return "Final Review";
+    } else {
+      return "Getting Things Done!";
+    }
   } else if (timerStore.pomodoroState === "breaking") {
     return "Take a break";
   } else {

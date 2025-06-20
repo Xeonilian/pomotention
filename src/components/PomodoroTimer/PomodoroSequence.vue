@@ -10,14 +10,14 @@
       v-show="isRunning"
     ></div>
 
-    <div>
-      <textarea
-        v-if="!isRunning"
-        v-model="sequenceInput"
-        placeholder="🍅+05+🍅+15..."
-        class="sequence-input"
-      ></textarea>
-    </div>
+    <n-input
+      v-if="!isRunning"
+      v-model:value="sequenceInput"
+      placeholder="输入序列，例如：🍅+05"
+      class="sequence-input"
+      type="textarea"
+    />
+
     <div class="button-row">
       <n-button
         class="action-button"
@@ -69,7 +69,7 @@
 
 <script setup lang="ts">
 import { ref, onUnmounted, watch } from "vue";
-import { NButton, NIcon } from "naive-ui";
+import { NButton, NIcon, NInput } from "naive-ui";
 import { useTimerStore } from "@/stores/useTimerStore";
 import {
   toggleWhiteNoise,
@@ -413,16 +413,21 @@ onUnmounted(() => {
 }
 
 .sequence-input {
-  width: 175px;
-  height: 60px; /* 调整输入框高度 */
+  max-height: 60px;
   font-family: "Consolas", "Courier New", Courier, "Lucida Console", Monaco,
     "Consolas", "Liberation Mono", "Menlo", monospace;
-  font-size: 14px;
+  font-size: 12px;
   padding: 0px;
   resize: none;
   display: block;
   margin: 0 auto;
   margin-bottom: 5px; /* 减小底部边距 */
+  text-align: left;
+  overflow: hidden;
+}
+
+:deep(.n-input-wrapper) {
+  width: 190px;
 }
 
 .hint-text {
