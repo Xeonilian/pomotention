@@ -1,0 +1,125 @@
+/* ===== 全局间距调整 ===== */
+
+/* 减少段落间距 */
+.vp-doc p {
+  margin-bottom: 0.75rem; /* 默认 1.25rem */
+}
+
+/* 标题间距调整 */
+.vp-doc h1 {
+  margin-top: 0rem;
+  margin-bottom: 0rem;
+}
+
+.vp-doc h2 {
+  margin-top: 1.25rem;
+  margin-bottom: 0.6rem;
+}
+
+.vp-doc h3 {
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.vp-doc h4,
+.vp-doc h5,
+.vp-doc h6 {
+  margin-top: 0.8rem;
+  margin-bottom: 0.4rem;
+}
+
+/* 列表间距 */
+.vp-doc ul,
+.vp-doc ol {
+  margin-top: 0.5rem;
+  margin-bottom: 0.75rem;
+  padding-left: 1.25rem;
+}
+
+.vp-doc li {
+  margin-bottom: 0.2rem; /* 减少列表项间距 */
+}
+
+.vp-doc li + li {
+  margin-top: 0.2rem;
+}
+
+/* 嵌套列表 */
+.vp-doc li > ul,
+.vp-doc li > ol {
+  margin-top: 0.25rem;
+  margin-bottom: 0.25rem;
+}
+
+/* 代码块间距 */
+.vp-doc div[class*="language-"] {
+  margin: 0.8rem 0; /* 默认 1.5rem */
+}
+
+.vp-doc p + div[class*="language-"] {
+  margin-top: 0.8rem;
+}
+
+/* 行内代码 */
+.vp-doc :not(pre) > code {
+  margin: 0 0.2rem;
+}
+
+/* 信息提示框间距 */
+.vp-doc .custom-block {
+  margin: 1rem 0; /* 默认 1.5rem */
+}
+
+.vp-doc .custom-block-title {
+  margin-bottom: 0.5rem;
+}
+
+/* 表格间距 */
+.vp-doc table {
+  margin: 1rem 0;
+}
+
+/* 引用块间距 */
+.vp-doc blockquote {
+  margin: 0.1rem 0;
+  padding: 0.2rem 0.4rem;
+}
+
+/* 分割线间距 */
+.vp-doc hr {
+  margin: 0.5rem 0;
+}
+
+/* 图片间距 */
+.vp-doc img {
+  margin: 0.8rem 0;
+}
+
+/* 调整整体行高 */
+.vp-doc {
+  line-height: 1.5; /* 默认 1.7 */
+}
+
+/* 首页特殊调整 */
+.vp-home .vp-doc h1 {
+  margin-bottom: 0.2rem;
+}
+
+/* ===== 响应式调整 ===== */
+@media (max-width: 768px) {
+  .vp-doc p {
+    margin-bottom: 0.6rem;
+  }
+
+  .vp-doc h2 {
+    margin-top: 0.3rem;
+    margin-bottom: 0.1rem;
+  }
+
+  .vp-doc h3 {
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+    border-left: 8px solid pink;
+    padding-left: 4px;
+  }
+}
