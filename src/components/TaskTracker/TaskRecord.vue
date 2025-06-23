@@ -225,11 +225,25 @@ const handleClick = (event: MouseEvent) => {
   margin: 2px;
 }
 
+:deep(.markdown-content pre) {
+  background-color: var(--color-background-light);
+  padding: 0px;
+  border-radius: 8px;
+  font-family: "Consolas", "Monaco", "Courier New", monospace;
+}
+
 :deep(.markdown-content code) {
   background-color: var(--color-red-light);
   border-radius: 2px;
   padding: 0 2px 0 2px;
+  font-family: "Consolas", "Monaco", "Courier New", monospace;
 }
+
+:deep(.markdown-content pre code) {
+  background-color: inherit;
+  font-family: "Consolas", "Monaco", "Courier New", monospace;
+}
+
 :deep(.markdown-content blockquote) {
   background-color: var(--color-text-primary-transparent);
   margin: 2px auto;
