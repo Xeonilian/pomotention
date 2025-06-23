@@ -168,42 +168,91 @@
             <td>
               <div class="pomo-container">
                 <span class="pomo-type">{{ todo.pomoType }}</span>
-                <template v-for="(est, index) in todo.estPomo" :key="index">
-                  <div class="pomo-group">
-                    <template v-for="i in est" :key="i">
-                      <n-checkbox
-                        :checked="isPomoCompleted(todo, index, i)"
-                        @update:checked="
-                          (checked) => handlePomoCheck(todo, index, i, checked)
-                        "
-                      />
-                    </template>
-                    <span
-                      v-if="todo.estPomo && index < todo.estPomo.length - 1"
-                      class="pomo-separator"
-                      >|</span
-                    >
-                  </div>
-                </template>
 
-                <!-- 新增估计按钮 -->
-                <n-button
-                  v-if="
-                    todo.estPomo &&
-                    todo.estPomo.length < 3 &&
-                    todo.status !== 'done'
-                  "
-                  size="tiny"
-                  type="primary"
-                  secondary
-                  @click="handleAddEstimate(todo)"
-                >
-                  <template #icon>
-                    <n-icon size="18">
-                      <CheckboxArrowRight24Regular />
-                    </n-icon>
+                <!-- 将所有番茄钟内容包装在一个容器中 -->
+                <div class="pomo-groups">
+                  <template v-for="(est, index) in todo.estPomo" :key="index">
+                    <div class="pomo-group">
+                      <template v-for="i in est" :key="i">
+                        <n-checkbox
+                          :checked="isPomoCompleted(todo, index, i)"
+                          @update:checked="
+                            (checked) =>
+                              handlePomoCheck(todo, index, i, checked)
+                          "
+                        />
+                      </template>
+                      <span
+                        v-if="todo.estPomo && index < todo.estPomo.length - 1"
+                        class="pomo-separator"
+                        >|</span
+                      >
+                    </div>
                   </template>
-                </n-button>
+                </div>
+                <!-- 删除估计按钮  -->
+                <n-popover
+                  display-directive="if"
+                  trigger="manual"
+                  :show="showPopover"
+                  @after-leave="showPopover = false"
+                  placement="bottom"
+                >
+                  <template #trigger>
+                    <div>
+                      <n-button
+                        v-if="
+                          todo.estPomo &&
+                          todo.estPomo.length > 1 &&
+                          todo.estPomo.length < 4 &&
+                          todo.status !== 'done'
+                        "
+                        text
+                        @click="handleDeleteEstimate(todo)"
+                        title="减少预估番茄数量"
+                        class="button-left"
+                      >
+                        <template #icon>
+                          <n-icon size="18">
+                            <ArrowExportRtl20Regular />
+                          </n-icon>
+                        </template>
+                      </n-button>
+                    </div>
+                  </template>
+                  <span>{{ popoverMessage }}</span>
+                </n-popover>
+                <!-- 新增估计按钮  -->
+                <n-popover
+                  display-directive="if"
+                  trigger="manual"
+                  :show="showPopover"
+                  @after-leave="showPopover = false"
+                  placement="bottom"
+                >
+                  <template #trigger>
+                    <div>
+                      <n-button
+                        v-if="
+                          todo.estPomo &&
+                          todo.estPomo.length < 3 &&
+                          todo.status !== 'done'
+                        "
+                        text
+                        @click="handleAddEstimate(todo)"
+                        title="增加预估番茄数量"
+                        class="button-right"
+                      >
+                        <template #icon>
+                          <n-icon size="18">
+                            <ArrowExportLtr20Regular />
+                          </n-icon>
+                        </template>
+                      </n-button>
+                    </div>
+                  </template>
+                  <span>{{ popoverMessage }}</span>
+                </n-popover>
               </div>
             </td>
             <td>
@@ -333,11 +382,12 @@ import type { Todo } from "@/core/types/Todo";
 import { timestampToTimeString } from "@/core/utils";
 import {
   ChevronCircleRight48Regular,
-  CheckboxArrowRight24Regular,
+  ArrowExportLtr20Regular,
   ChevronCircleDown48Regular,
   DismissCircle20Regular,
   ArrowRepeatAll24Regular,
   DismissSquare20Filled,
+  ArrowExportRtl20Regular,
 } from "@vicons/fluent";
 import { NCheckbox, NInputNumber, NPopover, NButton, NIcon } from "naive-ui";
 import { ref, computed, nextTick } from "vue";
@@ -633,6 +683,22 @@ function cancelAddEstimate() {
   newEstimate.value = 1; // 重置为默认值
 }
 
+// 删除估计
+function handleDeleteEstimate(todo: Todo) {
+  if (todo.estPomo && todo.estPomo.length > 0) {
+    todo.estPomo.pop();
+    emit("update-todo-est", todo.id, todo.estPomo);
+  } else {
+    popoverMessage.value = "没啦，别删了~";
+    showPopover.value = true;
+    // 保证只有一个计时器
+    setTimeout(() => {
+      showPopover.value = false;
+    }, 2000);
+    return;
+  }
+}
+
 // 修改点击行处理函数
 function handleRowClick(todo: TodoWithNumberPriority) {
   emit("select-row", todo.id); // 新增：发送选中行事件
@@ -923,12 +989,23 @@ function handleRepeatTodo(id: number) {
   flex-shrink: 0;
 }
 
+.button-left {
+  display: flex;
+  margin-left: 0px;
+}
+
+.button-right {
+  display: flex;
+  margin-left: -4px;
+}
+
 .button-group {
   display: flex;
   gap: 2px;
   justify-content: flex-end;
   height: 24px;
 }
+
 :deep(.n-button) :hover {
   color: var(--color-red);
 }
