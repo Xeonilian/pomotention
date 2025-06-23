@@ -5,6 +5,8 @@ import { isTauri } from "@tauri-apps/api/core";
 import { getVersion } from "@tauri-apps/api/app";
 import { NModal, NProgress, NText, useNotification, useDialog } from "naive-ui";
 
+type DialogType = "warning" | "error" | "success" | "info";
+
 // 更新状态管理
 const updateState = reactive({
   showProgress: false,
@@ -15,10 +17,13 @@ const updateState = reactive({
 const notification = useNotification();
 const dialog = useDialog();
 
-// 🔥 添加对话框实例管理
+// 对话框实例管理
 let currentDialogInstance: any = null;
 
-// 🔥 关闭当前对话框的辅助函数
+// 对话框超时计时器引用
+let dialogTimeoutRef: ReturnType<typeof setTimeout> | null = null;
+
+// 关闭当前对话框的辅助函数
 function closeCurrentDialog() {
   if (
     currentDialogInstance &&
@@ -26,6 +31,88 @@ function closeCurrentDialog() {
   ) {
     currentDialogInstance.destroy();
     currentDialogInstance = null;
+  }
+}
+
+// 清除对话框计时器
+function clearDialogTimeout() {
+  if (dialogTimeoutRef) {
+    clearTimeout(dialogTimeoutRef);
+    dialogTimeoutRef = null;
+    console.log("对话框计时器已清除");
+  }
+}
+
+// 启动对话框计时器 - 30秒后自动执行指定操作
+function startDialogTimeout(onTimeout: () => void) {
+  clearDialogTimeout();
+  dialogTimeoutRef = setTimeout(() => {
+    console.log("对话框超时(30s)，自动执行取消操作");
+    onTimeout();
+  }, 20000); // 20秒超时
+}
+
+// 统一的对话框显示函数，支持超时自动关闭
+function showDialogWithTimeout(
+  options: any & { type?: DialogType },
+  onTimeout?: () => void
+) {
+  closeCurrentDialog();
+
+  const wrap = (fn?: Function) => {
+    return (...args: any[]) => {
+      clearDialogTimeout();
+      // 核心修复：先销毁实例再清空引用
+      if (currentDialogInstance?.destroy) {
+        currentDialogInstance.destroy();
+      }
+      if (fn) fn(...args);
+      currentDialogInstance = null;
+    };
+  };
+
+  options.onPositiveClick = wrap(options.onPositiveClick);
+  options.onNegativeClick = wrap(options.onNegativeClick);
+
+  const originalOnClose = options.onClose;
+  options.onClose = () => {
+    clearDialogTimeout();
+    // 确保关闭时也销毁实例
+    if (currentDialogInstance?.destroy) {
+      currentDialogInstance.destroy();
+    }
+    if (originalOnClose) originalOnClose();
+    currentDialogInstance = null;
+  };
+
+  const type =
+    options.type &&
+    ["warning", "error", "info", "success"].includes(options.type)
+      ? (options.type as DialogType)
+      : ("warning" as DialogType);
+
+  switch (type) {
+    case "warning":
+      currentDialogInstance = dialog.warning(options);
+      break;
+    case "error":
+      currentDialogInstance = dialog.error(options);
+      break;
+    case "info":
+      currentDialogInstance = dialog.info(options);
+      break;
+    case "success":
+      currentDialogInstance = dialog.success(options);
+      break;
+    default:
+      currentDialogInstance = dialog.warning(options);
+  }
+  // 如果提供了超时处理函数，启动计时器
+  if (onTimeout) {
+    startDialogTimeout(() => {
+      if (options.onNegativeClick) options.onNegativeClick();
+      else if (onTimeout) onTimeout();
+    });
   }
 }
 
@@ -49,32 +136,36 @@ async function handleUpdateCheck() {
     if (update) {
       console.log("update内容", update);
 
-      // 🔥 关闭之前的对话框，创建新的
-      closeCurrentDialog();
-
-      currentDialogInstance = dialog.warning({
-        title: "发现新版本",
-        content: `新版本 v${update.version}\n\n${
-          update.body || "包含功能更新和错误修复"
-        }\n\n是否立即更新？`,
-        positiveText: "立即更新",
-        negativeText: "稍后提醒",
-        onPositiveClick: async () => {
-          currentDialogInstance = null; // 🔥 清除引用
-          await downloadAndInstall(update);
+      // 使用超时对话框替代直接调用
+      showDialogWithTimeout(
+        {
+          type: "warning",
+          title: "发现新版本",
+          content: `新版本 v${update.version}\n\n${
+            update.body || "包含功能更新和错误修复"
+          }\n\n是否立即更新？`,
+          positiveText: "立即更新",
+          negativeText: "稍后提醒",
+          onPositiveClick: async () => {
+            await downloadAndInstall(update);
+          },
+          onNegativeClick: () => {
+            notification.info({
+              title: "更新提醒",
+              content: "您可以稍后手动检查更新",
+              duration: 3000,
+            });
+          },
         },
-        onNegativeClick: () => {
-          currentDialogInstance = null; // 🔥 清除引用
+        () => {
+          // 超时默认行为
           notification.info({
             title: "更新提醒",
-            content: "您可以稍后手动检查更新",
+            content: "操作超时，已自动取消。您可以稍后手动检查更新",
             duration: 3000,
           });
-        },
-        onClose: () => {
-          currentDialogInstance = null; // 🔥 对话框关闭时清除引用
-        },
-      });
+        }
+      );
     } else {
       console.log("当前已是最新版本");
       notification.success({
@@ -134,6 +225,7 @@ function handleUpdateCheckError(error: any) {
 
   let errorMessage = "更新服务暂时不可用";
   let isNetworkError = false;
+  let isPlatformMismatchError = false; // 新增平台不匹配错误标志
 
   try {
     let originalMessage = "";
@@ -149,7 +241,20 @@ function handleUpdateCheckError(error: any) {
 
     console.log("Original error message:", originalMessage);
 
+    // 检测平台不匹配错误
     if (
+      originalMessage.includes("platform") &&
+      originalMessage.includes("was not found on the response") &&
+      originalMessage.includes("platforms")
+    ) {
+      isPlatformMismatchError = true;
+
+      // 从错误信息中提取平台名称
+      const platformMatch = originalMessage.match(/platform `([^`]+)`/);
+      const platform = platformMatch ? platformMatch[1] : "当前平台";
+
+      errorMessage = `没有找到适用于 ${platform} 的更新包`;
+    } else if (
       originalMessage.includes("error sending request") ||
       originalMessage.includes("network") ||
       originalMessage.includes("timeout") ||
@@ -165,53 +270,107 @@ function handleUpdateCheckError(error: any) {
     errorMessage = "检查更新时发生错误";
   }
 
-  if (isNetworkError) {
-    // 🔥 关闭之前的对话框，创建新的错误对话框
-    closeCurrentDialog();
-
-    currentDialogInstance = dialog.error({
-      title: "网络连接问题",
-      // 🔥 最终推荐的写法
-      content: () =>
-        h("div", [
-          h("div", "无法连接到更新服务器"),
-          h("div", { style: "margin: 8px 0 0 0;" }, [
-            h("b", "提示: "),
-            "GitHub 服务器在某些地区访问不稳定，这是正常现象。",
+  // 处理平台不匹配错误
+  if (isPlatformMismatchError) {
+    showDialogWithTimeout(
+      {
+        type: "warning",
+        title: "平台更新不可用",
+        content: () =>
+          h("div", [
+            h("div", errorMessage),
+            h("div", { style: "margin: 8px 0 0 0;" }, [
+              h("b", "说明: "),
+              "当前版本更新中没有包含您的操作系统平台。",
+            ]),
+            h("div", { style: "margin: 8px 0 0 0;" }, [h("b", "可能原因: ")]),
+            h("ul", { style: "margin: 4px 0 0 16px; padding: 0;" }, [
+              h("li", "当前更新仅针对其他平台发布"),
+              h("li", "您的平台版本将在稍后更新"),
+              h("li", "更新配置问题导致无法识别当前平台"),
+            ]),
+            h("div", { style: "margin: 8px 0 0 0;" }, [
+              "您可以稍后再试，或前往官方网站查看是否有适用于您平台的手动更新方式。",
+            ]),
           ]),
-          h("div", { style: "margin: 8px 0 0 0;" }, [h("b", "建议: ")]),
-          h("ul", { style: "margin: 4px 0 0 16px; padding: 0;" }, [
-            h("li", "稍后重试"),
-            h("li", "检查网络连接"),
-            h("li", "使用代理/VPN"),
-          ]),
-        ]),
-      positiveText: "重试",
-      negativeText: "稍后再试",
-      onPositiveClick: () => {
-        currentDialogInstance = null; // 🔥 清除引用
-        console.log("User chose to retry update check");
-        notification.info({
-          title: "重新检查更新",
-          content: "正在重新连接 GitHub 服务器...",
-          duration: 2000,
-        });
-        setTimeout(() => {
-          handleUpdateCheck();
-        }, 2000);
+        positiveText: "确定",
+        negativeText: "不再提醒",
+        onPositiveClick: () => {
+          notification.info({
+            title: "更新检查",
+            content: "您可以稍后再次检查更新",
+            duration: 3000,
+          });
+        },
+        onNegativeClick: () => {
+          notification.info({
+            title: "已设置",
+            content: "自动检查更新终止",
+            duration: 4000,
+          });
+          // 这里你可能需要设置 settingStore.settings.checkForUpdate = false
+          // 但需要确保这个 store 可访问
+        },
       },
-      onNegativeClick: () => {
-        currentDialogInstance = null; // 🔥 清除引用
+      () => {
+        // 超时默认行为
         notification.info({
-          title: "已取消",
-          content: "您可以稍后手动检查更新，或在网络状况较好时重试",
+          title: "操作超时",
+          content: "对话框已自动关闭",
           duration: 4000,
         });
+      }
+    );
+  } else if (isNetworkError) {
+    // 原有的网络错误处理代码保持不变
+    showDialogWithTimeout(
+      {
+        type: "error",
+        title: "网络连接问题",
+        content: () =>
+          h("div", [
+            h("div", "无法连接到更新服务器"),
+            h("div", { style: "margin: 8px 0 0 0;" }, [
+              h("b", "提示: "),
+              "GitHub 服务器在某些地区访问不稳定，这是正常现象。",
+            ]),
+            h("div", { style: "margin: 8px 0 0 0;" }, [h("b", "建议: ")]),
+            h("ul", { style: "margin: 4px 0 0 16px; padding: 0;" }, [
+              h("li", "稍后重试"),
+              h("li", "检查网络连接"),
+              h("li", "使用代理/VPN"),
+            ]),
+          ]),
+        positiveText: "重试",
+        negativeText: "稍后再试",
+        onPositiveClick: () => {
+          console.log("User chose to retry update check");
+          notification.info({
+            title: "重新检查更新",
+            content: "正在重新连接 GitHub 服务器...",
+            duration: 2000,
+          });
+          setTimeout(() => {
+            handleUpdateCheck();
+          }, 2000);
+        },
+        onNegativeClick: () => {
+          notification.info({
+            title: "已取消",
+            content: "您可以稍后手动检查更新，或在网络状况较好时重试",
+            duration: 4000,
+          });
+        },
       },
-      onClose: () => {
-        currentDialogInstance = null; // 🔥 对话框关闭时清除引用
-      },
-    });
+      () => {
+        notification.info({
+          title: "操作超时",
+          content:
+            "对话框已自动关闭，您可以稍后手动检查更新，或在网络状况较好时重试",
+          duration: 4000,
+        });
+      }
+    );
   } else {
     notification.error({
       title: "检查更新失败",
@@ -267,48 +426,52 @@ function handleDownloadError(error: any) {
   }
 
   if (isNetworkError) {
-    // 🔥 关闭之前的对话框，创建新的错误对话框
-    closeCurrentDialog();
-
-    currentDialogInstance = dialog.error({
-      title: "下载中断",
-      content: () =>
-        h("div", [
-          h("div", errorMessage),
-          h("br"),
-          h("div", "下载大文件时网络中断是常见问题。建议："),
-          h("ul", { style: "margin: 8px 0 0 16px; padding: 0;" }, [
-            h("li", "检查网络连接稳定性"),
-            h("li", "重新尝试下载"),
-            h("li", "或稍后在网络较好时重试"),
+    // 使用超时对话框替代直接调用
+    showDialogWithTimeout(
+      {
+        type: "error",
+        title: "下载中断",
+        content: () =>
+          h("div", [
+            h("div", errorMessage),
+            h("br"),
+            h("div", "下载大文件时网络中断是常见问题。建议："),
+            h("ul", { style: "margin: 8px 0 0 16px; padding: 0;" }, [
+              h("li", "检查网络连接稳定性"),
+              h("li", "重新尝试下载"),
+              h("li", "或稍后在网络较好时重试"),
+            ]),
           ]),
-        ]),
-      positiveText: "重新下载",
-      negativeText: "稍后重试",
-      onPositiveClick: () => {
-        currentDialogInstance = null; // 🔥 清除引用
-        console.log("User chose to retry download");
-        notification.info({
-          title: "重新开始",
-          content: "正在重新检查更新并下载...",
-          duration: 2000,
-        });
-        setTimeout(() => {
-          handleUpdateCheck();
-        }, 2000);
+        positiveText: "重新下载",
+        negativeText: "稍后重试",
+        onPositiveClick: () => {
+          console.log("User chose to retry download");
+          notification.info({
+            title: "重新开始",
+            content: "正在重新检查更新并下载...",
+            duration: 2000,
+          });
+          setTimeout(() => {
+            handleUpdateCheck();
+          }, 2000);
+        },
+        onNegativeClick: () => {
+          notification.info({
+            title: "已取消",
+            content: "建议在网络状况较好时重新尝试更新",
+            duration: 4000,
+          });
+        },
       },
-      onNegativeClick: () => {
-        currentDialogInstance = null; // 🔥 清除引用
+      () => {
+        // 超时默认行为
         notification.info({
-          title: "已取消",
-          content: "建议在网络状况较好时重新尝试更新",
+          title: "操作超时",
+          content: "对话框已自动关闭，建议在网络状况较好时重新尝试更新",
           duration: 4000,
         });
-      },
-      onClose: () => {
-        currentDialogInstance = null; // 🔥 对话框关闭时清除引用
-      },
-    });
+      }
+    );
   } else {
     notification.error({
       title: "下载失败",
