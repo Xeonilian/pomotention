@@ -34,6 +34,36 @@ export function useDateService() {
     updateCurrentDate();
   }
 
+  // 去特定天
+  // 去特定天 - 支持多种输入格式
+  function gotoQueryDate(queryDate: Date | string | number | null) {
+    if (!queryDate) return;
+
+    let targetDate: Date;
+
+    // 根据不同的输入类型创建Date对象
+    if (queryDate instanceof Date) {
+      targetDate = new Date(queryDate);
+    } else if (typeof queryDate === "string") {
+      targetDate = new Date(queryDate);
+    } else if (typeof queryDate === "number") {
+      targetDate = new Date(queryDate);
+    } else {
+      console.warn("Invalid date format:", queryDate);
+      return;
+    }
+
+    // 检查日期是否有效
+    if (isNaN(targetDate.getTime())) {
+      console.warn("Invalid date:", queryDate);
+      return;
+    }
+
+    currentViewDate.value = targetDate;
+    selectedDate.value = new Date(targetDate);
+    updateCurrentDate();
+  }
+
   // 更新当前日期显示
   function updateCurrentDate() {
     const date = currentViewDate.value;
@@ -91,5 +121,6 @@ export function useDateService() {
     getSelectedDateStr,
     isSelectedDate,
     resetToToday,
+    gotoQueryDate,
   };
 }

@@ -94,6 +94,7 @@ const emit = defineEmits<{
   "update-active-id": [id: number | null]; // 更新选中活动ID
   "toggle-pomo-type": [id: number]; // 切换番茄钟类型
   "repeat-activity": [id: number]; // 重复选中的活动
+  "go-to-todo": [id: number]; // 去到todo所在天
 }>();
 
 // ========================
@@ -188,11 +189,13 @@ function pickActivity() {
   }
 
   // 2. 查找todo中是否有对应的活动
-  const isPicked = props.todos.find((t) => t.activityId === props.activeId);
-  if (isPicked) {
-    showErrorPopover("【" + isPicked.idFormated + "】启动待办");
+  const relatedTodo = props.todos.find((t) => t.activityId === props.activeId);
+  if (relatedTodo) {
+    showErrorPopover("【" + relatedTodo.idFormated + "】启动待办");
+    emit("go-to-todo", relatedTodo.id);
     return;
   }
+
   const picked = props.activities.find((a) => a.id === props.activeId);
   if (!picked) return;
 

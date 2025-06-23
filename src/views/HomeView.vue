@@ -43,12 +43,26 @@
               </span>
             </div>
             <div class="button-group">
+              <!-- 绑定 queryDate 并监听变化 -->
+              <n-date-picker
+                v-model:value="queryDate"
+                type="date"
+                placeholder=""
+                @keyup.enter="onDateSet('query')"
+                @update:value="onDateSet('query')"
+                style="width: 100px"
+                class="search-date"
+              >
+                <template #date-icon>
+                  <n-icon :size="18" :component="Search24Regular" />
+                </template>
+              </n-date-picker>
               <n-button
                 size="small"
                 circle
                 secondary
                 strong
-                @click="onDateChange('prev')"
+                @click="onDateSet('prev')"
                 title="上一天"
               >
                 <template #icon>
@@ -62,21 +76,7 @@
                 circle
                 secondary
                 strong
-                @click="onDateChange('today')"
-                title="回到今天"
-              >
-                <template #icon>
-                  <n-icon>
-                    <CalendarToday20Regular />
-                  </n-icon>
-                </template>
-              </n-button>
-              <n-button
-                size="small"
-                circle
-                secondary
-                strong
-                @click="onDateChange('next')"
+                @click="onDateSet('next')"
                 title="下一天"
               >
                 <template #icon>
@@ -152,6 +152,7 @@
           @update-active-id="onUpdateActiveId"
           @toggle-pomo-type="onTogglePomoType"
           @repeat-activity="onRepeatActivity"
+          @go-to-todo="goToTodo"
         />
       </div>
     </div>
@@ -213,7 +214,7 @@ import { createDateCheckService } from "@/services/dateCheckService";
 import {
   Previous24Regular,
   Next24Regular,
-  CalendarToday20Regular,
+  Search24Regular,
 } from "@vicons/fluent";
 import { useDateService } from "@/services/dateService";
 import { useResize } from "@/composables/useResize";
@@ -235,6 +236,7 @@ const pomoTypeChangeMessage = ref("");
 const pomoTypeChangeTarget = ref<HTMLElement | null>(null);
 const showPomoSeq = ref(false);
 const showTodayView = ref(true);
+const queryDate = ref<number | null>(null);
 
 // -- 核心数据
 const activityList = ref<Activity[]>(loadActivities());
@@ -618,7 +620,8 @@ function onUpdateScheduleStatus(
 }
 
 /** 修改日期切换按钮的处理函数 */
-function onDateChange(direction: "prev" | "next" | "today") {
+function onDateSet(direction: "prev" | "next" | "today" | "query") {
+  // today 不在用，query now 替代
   clearSelectedRow(); // 先清除选中状态
   switch (direction) {
     case "prev":
@@ -630,7 +633,15 @@ function onDateChange(direction: "prev" | "next" | "today") {
     case "today":
       dateService.resetToToday();
       break;
+    case "query":
+      dateService.gotoQueryDate(queryDate.value);
+      queryDate.value = null;
+      break;
   }
+}
+
+function goToTodo(todoId: number) {
+  dateService.gotoQueryDate(todoId);
 }
 
 // 从Today选择任务处理函数
@@ -700,7 +711,7 @@ function handleEditTodoTitle(id: number, newTitle: string) {
   if (!activity) {
     return;
   }
-  activity.title = newTitle; // #BUG
+  activity.title = newTitle; //
 
   // 找到task 并重新赋值
   const taskIndex = taskList.value.findIndex((t) => t.id === todo.id);
@@ -739,6 +750,7 @@ function handleEditScheduleDone(id: number, newTm: string) {
   }
   schedule.doneTime = getTimestampForTimeString(newTm, viewingDayTimestamp);
 }
+
 // ======================== 4. Task/执行相关操作 ========================
 // 在script部分添加处理函数
 function onActivityUpdated() {
@@ -1129,8 +1141,9 @@ defineExpose({
 
 .button-group {
   display: flex;
-  gap: 8px;
+  gap: 2px;
   padding: 0px;
+  align-items: center;
 }
 
 .resize-handle {
@@ -1195,5 +1208,17 @@ defineExpose({
 
 .draggable-container:hover {
   box-shadow: 0 4px 16px rgba(255, 255, 255, 0.15);
+}
+
+.search-date :deep(.n-input) {
+  --n-height: 25px !important;
+  font-size: 12px;
+  padding-top: 1px;
+  padding-bottom: 1px;
+}
+
+.search-date :deep(.n-input-wrapper) {
+  padding-left: 4px;
+  padding-right: 4px;
 }
 </style>
