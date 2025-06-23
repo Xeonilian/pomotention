@@ -31,6 +31,7 @@ export const STORAGE_KEYS = {
   DAILY_POMOS: "dailyPomos",
   TASK: "taskTrack",
   LAST_TODAY_COUNT: "lastTodayCount",
+  GLOBAL_SETTINGS: "globalSettings",
 } as const;
 
 // 预设的工作时间块
@@ -139,5 +140,5 @@ export const POMODORO_COLORS: Record<string, string> = {
   living: "var(--color-blue-dark)",
   working: "var(--color-red-dark)",
   schedule: "var(--color-background-dark)",
-  untaetigkeit: "var(--color-blue)"
+  untaetigkeit: "var(--color-blue)",
 };

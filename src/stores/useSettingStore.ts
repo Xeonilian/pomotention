@@ -1,50 +1,67 @@
-// src/stores/SettingStore.ts  
-import { defineStore } from 'pinia'  
-import { ref, watch } from 'vue'  
-import { PomodoroDurations, TimerStyleDefaults } from '../core/constants.ts'  
+// src/stores/SettingStore.ts
+import { defineStore } from "pinia";
+import { ref, watch } from "vue";
+import { STORAGE_KEYS } from "../core/constants";
+import { PomodoroDurations, TimerStyleDefaults } from "../core/constants";
 
-const STORAGE_KEY_DURATIONS = 'pomodoro-durations'  
-const STORAGE_KEY_STYLE = 'timer-style'  
+// 定义全局 settings 类型（可根据自己需要补充或修改）
+export interface GlobalSettings {
+  checkForUpdate: boolean; // 是否启用自动更新检测
+  durations: typeof PomodoroDurations;
+  style: typeof TimerStyleDefaults;
+  // 以后新增全局设置项就在这里补充
+}
 
-function loadFromStorage<T>(key: string, defaultValue: T): T {  
-  try {  
-    const stored = localStorage.getItem(key)  
-    return stored ? JSON.parse(stored) : defaultValue  
-  } catch {  
-    return defaultValue  
-  }  
-}  
+// 默认设置
+const defaultSettings: GlobalSettings = {
+  checkForUpdate: true,
+  durations: PomodoroDurations,
+  style: TimerStyleDefaults,
+};
 
-export const useSettingStore = defineStore('setting', () => {  
-  // 初始化，取localStorage或默认  
-  const durations = ref(loadFromStorage(STORAGE_KEY_DURATIONS, PomodoroDurations))  
-  const style = ref(loadFromStorage(STORAGE_KEY_STYLE, TimerStyleDefaults))  
+// 工具函数
+function loadFromStorage<T>(key: string, defaultValue: T): T {
+  try {
+    const stored = localStorage.getItem(key);
+    return stored ? JSON.parse(stored) : defaultValue;
+  } catch {
+    return defaultValue;
+  }
+}
 
-  // 监听变化自动存localStorage  
-  watch(durations, (val) => {  
-    localStorage.setItem(STORAGE_KEY_DURATIONS, JSON.stringify(val))  
-  }, { deep: true })  
+export const useSettingStore = defineStore("setting", () => {
+  // 所有设置统一存于 settings
+  const settings = ref<GlobalSettings>(
+    loadFromStorage(STORAGE_KEYS.GLOBAL_SETTINGS, defaultSettings)
+  );
 
-  watch(style, (val) => {  
-    localStorage.setItem(STORAGE_KEY_STYLE, JSON.stringify(val))  
-  }, { deep: true })  
+  // 响应式保存到 localStorage
+  watch(
+    settings,
+    (val) => {
+      localStorage.setItem(STORAGE_KEYS.GLOBAL_SETTINGS, JSON.stringify(val));
+    },
+    { deep: true }
+  );
 
-  // 重置函数  
-  function resetDurations() {  
-    Object.assign(durations, PomodoroDurations)  
-    localStorage.removeItem(STORAGE_KEY_DURATIONS)  
-  }  
+  // 重置全部设置为默认
+  function resetSettings() {
+    settings.value = JSON.parse(JSON.stringify(defaultSettings));
+  }
 
-  function resetStyle() {  
-    Object.assign(style, TimerStyleDefaults)  
-    localStorage.removeItem(STORAGE_KEY_STYLE)  
-  }  
+  // 如果你还想保留单独重置部分设置项可以加下面这些
+  function resetDurations() {
+    settings.value.durations = JSON.parse(JSON.stringify(PomodoroDurations));
+  }
+  function resetStyle() {
+    settings.value.style = JSON.parse(JSON.stringify(TimerStyleDefaults));
+  }
 
-  // 返回响应式状态和方法  
-  return {  
-    durations,  
-    style,  
-    resetDurations,  
-    resetStyle  
-  }  
-})  
+  // 返回
+  return {
+    settings,
+    resetSettings,
+    resetDurations,
+    resetStyle,
+  };
+});

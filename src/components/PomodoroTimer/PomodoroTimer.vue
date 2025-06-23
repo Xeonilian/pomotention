@@ -139,11 +139,15 @@ defineProps<{
   showPomoSeq?: boolean;
 }>();
 
-const barLength = computed(() => settingStore.style.barLength);
-const redBarColor = computed(() => settingStore.style.redBarColor);
-const blueBarColor = computed(() => settingStore.style.blueBarColor);
-const workDuration = computed(() => settingStore.durations.workDuration);
-const breakDuration = computed(() => settingStore.durations.breakDuration);
+const barLength = computed(() => settingStore.settings.style.barLength);
+const redBarColor = computed(() => settingStore.settings.style.redBarColor);
+const blueBarColor = computed(() => settingStore.settings.style.blueBarColor);
+const workDuration = computed(
+  () => settingStore.settings.durations.workDuration
+);
+const breakDuration = computed(
+  () => settingStore.settings.durations.breakDuration
+);
 
 const selectedDuration = ref(breakDuration.value);
 
