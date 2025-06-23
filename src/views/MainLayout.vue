@@ -45,7 +45,7 @@ import {
   ArrowDown24Filled,
   ArrowRight24Filled,
   Timer24Regular,
-  RectangleLandscape24Regular,
+  Pin24Regular,
 } from "@vicons/fluent";
 import { useAlwaysOnTop } from "@/composables/useAlwaysOnTop";
 
@@ -100,7 +100,7 @@ function handleMenuSelect(key: string) {
 const viewControls: ViewControl[] = [
   {
     key: "ontop",
-    icon: RectangleLandscape24Regular,
+    icon: Pin24Regular,
     title: "界面置顶",
     show: true,
   },
