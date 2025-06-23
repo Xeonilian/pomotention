@@ -31,6 +31,14 @@
           <template v-if="remoteOk">🌐 github连接正常</template>
           <template v-else>🚫 github连接异常</template>
         </span> -->
+        <n-switch
+          v-model:value="settingStore.settings.checkForUpdate"
+          small
+          class="switch-button"
+          :title="
+            settingStore.settings.checkForUpdate ? '启动更新' : '关闭更新'
+          "
+        />
       </div>
       <div class="help-info">
         <h3>📋 功能一览</h3>
@@ -66,10 +74,13 @@
 import { ref, onMounted } from "vue";
 import { getVersion } from "@tauri-apps/api/app";
 import { isTauri } from "@tauri-apps/api/core";
-import { NTag } from "naive-ui";
+import { NTag, NSwitch } from "naive-ui";
+import { useSettingStore } from "@/stores/useSettingStore";
+import { watch } from "vue";
 
 const localVersion = ref("");
 const checkVersion = isTauri();
+const settingStore = useSettingStore();
 
 // 云端版信息
 const remoteVersion = ref("...");
@@ -85,8 +96,24 @@ onMounted(async () => {
   if (checkVersion) {
     localVersion.value = await getVersion();
   }
-  await checkRemoteRelease();
+  if (settingStore.settings.checkForUpdate) {
+    await checkRemoteRelease();
+  } else {
+    console.log("禁止更新");
+  }
 });
+
+// 监听开关变化，打开时触发检查
+watch(
+  () => settingStore.settings.checkForUpdate,
+  (val) => {
+    if (val) {
+      // 只在切换到 true 时执行检查
+      checkRemoteRelease();
+    } else {
+    }
+  }
+);
 
 // 统一的打开网页方法
 const openUrl = (url: string) => {
@@ -223,6 +250,15 @@ async function checkRemoteRelease() {
   background: var(--color-background);
   border-radius: 8px;
   border: 1px solid var(--color-border);
+  align-items: center;
+}
+
+/* 假设样式加在 HelpView.vue 里 */
+
+.switch-button :deep(.n-switch__rail) {
+  --n-rail-color: var(--color-blue-light);
+  /* 激活时轨道颜色 */
+  --n-rail-color-active: var(--color-red-light);
 }
 
 .help-info {
