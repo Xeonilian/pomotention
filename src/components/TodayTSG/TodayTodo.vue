@@ -191,68 +191,45 @@
                   </template>
                 </div>
                 <!-- 删除估计按钮  -->
-                <n-popover
-                  display-directive="if"
-                  trigger="manual"
-                  :show="showPopover"
-                  @after-leave="showPopover = false"
-                  placement="bottom"
+
+                <n-button
+                  v-if="
+                    todo.estPomo &&
+                    todo.estPomo.length > 1 &&
+                    todo.estPomo.length < 4 &&
+                    todo.status !== 'done'
+                  "
+                  text
+                  @click="handleDeleteEstimate(todo)"
+                  title="减少预估番茄数量"
+                  class="button-left"
                 >
-                  <template #trigger>
-                    <div>
-                      <n-button
-                        v-if="
-                          todo.estPomo &&
-                          todo.estPomo.length > 1 &&
-                          todo.estPomo.length < 4 &&
-                          todo.status !== 'done'
-                        "
-                        text
-                        @click="handleDeleteEstimate(todo)"
-                        title="减少预估番茄数量"
-                        class="button-left"
-                      >
-                        <template #icon>
-                          <n-icon size="18">
-                            <ArrowExportRtl20Regular />
-                          </n-icon>
-                        </template>
-                      </n-button>
-                    </div>
+                  <template #icon>
+                    <n-icon size="18">
+                      <ArrowExportRtl20Regular />
+                    </n-icon>
                   </template>
-                  <span>{{ popoverMessage }}</span>
-                </n-popover>
+                </n-button>
+
                 <!-- 新增估计按钮  -->
-                <n-popover
-                  display-directive="if"
-                  trigger="manual"
-                  :show="showPopover"
-                  @after-leave="showPopover = false"
-                  placement="bottom"
+
+                <n-button
+                  v-if="
+                    todo.estPomo &&
+                    todo.estPomo.length < 3 &&
+                    todo.status !== 'done'
+                  "
+                  text
+                  @click="handleAddEstimate(todo)"
+                  title="增加预估番茄数量"
+                  class="button-right"
                 >
-                  <template #trigger>
-                    <div>
-                      <n-button
-                        v-if="
-                          todo.estPomo &&
-                          todo.estPomo.length < 3 &&
-                          todo.status !== 'done'
-                        "
-                        text
-                        @click="handleAddEstimate(todo)"
-                        title="增加预估番茄数量"
-                        class="button-right"
-                      >
-                        <template #icon>
-                          <n-icon size="18">
-                            <ArrowExportLtr20Regular />
-                          </n-icon>
-                        </template>
-                      </n-button>
-                    </div>
+                  <template #icon>
+                    <n-icon size="18">
+                      <ArrowExportLtr20Regular />
+                    </n-icon>
                   </template>
-                  <span>{{ popoverMessage }}</span>
-                </n-popover>
+                </n-button>
               </div>
             </td>
             <td>
