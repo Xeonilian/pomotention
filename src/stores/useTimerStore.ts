@@ -239,6 +239,27 @@ export const useTimerStore = defineStore("timer", () => {
       }
     }, 1000);
   }
+  const breakReminderCount = ref<number>(5); // 可设置提醒密度（默认5段）
+  const remindedSet = ref(new Set<number>());
+
+  // 在useTimerStore内，新增对break提醒的watch
+  watch([pomodoroState, timeRemaining], ([state, timeLeft]) => {
+    if (state !== "breaking" || breakReminderCount.value < 2) {
+      remindedSet.value.clear();
+      return;
+    }
+    const segments = breakReminderCount.value;
+    const segmentLen = totalTime.value / segments;
+    const elapsed = totalTime.value - timeLeft;
+    for (let i = 1; i < segments; i++) {
+      // 首尾不提醒
+      const node = Math.round(segmentLen * i);
+      if (Math.abs(elapsed - node) <= 1 && !remindedSet.value.has(i)) {
+        playSound(SoundType.PHASE_BREAK);
+        remindedSet.value.add(i);
+      }
+    }
+  });
 
   function cancelTimer(): void {
     // 如果正在工作，播放工作结束声音

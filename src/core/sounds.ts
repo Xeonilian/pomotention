@@ -12,6 +12,7 @@ export enum SoundType {
   PHASE_W2 = "phase_w2",
   PHASE_R2 = "phase_r2",
   PHASE_T = "phase_t",
+  PHASE_BREAK = "phase_break",
 }
 
 // 声音文件路径
@@ -27,6 +28,7 @@ const soundPaths = {
   [SoundType.PHASE_W2]: "/sounds/phase_w2.wav",
   [SoundType.PHASE_R2]: "/sounds/phase_r2.wav",
   [SoundType.PHASE_T]: "/sounds/phase_t.wav",
+  [SoundType.PHASE_BREAK]: "/sounds/break_middle.wav",
 };
 
 // 声音对象缓存
