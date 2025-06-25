@@ -9,6 +9,7 @@
     <div class="content">
       <div v-if="showLeft" class="left" :style="{ width: leftWidth + 'px' }">
         <!-- 日程表 -->
+
         <TimeTableView
           :blocks="viewBlocks"
           :current-type="currentType"
@@ -19,6 +20,7 @@
           @change-type="onTypeChange"
         />
       </div>
+
       <div
         v-if="showLeft"
         class="resize-handle-horizontal"
@@ -36,7 +38,7 @@
           <!-- 今日待办 -->
           <div class="today-header">
             <div class="today-info">
-              <span class="today-status">{{ dateService.currentDate }}</span>
+              <span class="today-status">{{ dateService.displayDate }}</span>
               <span class="global-pomo">
                 <span class="today-pomo">🍅 {{ currentDatePomoCount }}/</span>
                 <span class="total-pomo">{{ globalRealPomo }}</span>
@@ -224,7 +226,7 @@ import { getTimestampForTimeString } from "@/core/utils";
 const pomoStore = usePomoStore();
 const dateService = useDateService();
 // 获取当前查看日期的时间戳
-const viewingDayTimestamp = dateService.selectedDate.value.getTime();
+const viewingDayTimestamp = dateService.currentViewDate.value.getTime();
 
 // -- 基础UI状态
 const showLeft = ref(true);
@@ -262,7 +264,7 @@ const selectedTask = computed(() => {
 
 // 计算当天的番茄钟数
 const currentDatePomoCount = computed(() => {
-  const dateString = dateService.getCurrentDateStr();
+  const dateString = dateService.currentDateKey.value;
   return pomoStore.getPomoCountByDate(dateString);
 });
 
@@ -272,7 +274,7 @@ const globalRealPomo = computed(() => pomoStore.globalRealPomo);
 // 计算当前日期
 const isCurrentDay = computed(() => {
   const today = new Date();
-  const selected = dateService.selectedDate.value;
+  const selected = dateService.currentViewDate.value;
   return today.toDateString() === selected.toDateString();
 });
 
@@ -286,12 +288,16 @@ const dateCheckService = createDateCheckService({
   scheduleList,
   todoList,
   convertToSchedule,
+  currentDateKey: dateService.currentDateKey,
   onDateChange() {
-    // 日期变时：刷新 blocks 并刷新 currentDate 触发 UI 自动更新
+    // 强制通知响应式系统所有关键数据变更
+    scheduleList.value = [...scheduleList.value];
+    todoList.value = [...todoList.value];
+    activityList.value = [...activityList.value];
     allBlocks.value[currentType.value] = [
       ...allBlocks.value[currentType.value],
     ];
-    dateService.updateCurrentDate();
+    console.log("[状态同步] 日期变更后强制刷新所有关键数据");
   },
 });
 
@@ -309,10 +315,6 @@ watch(
 watch(
   () => dateService.currentViewDate.value,
   () => {
-    // 日期切换时的处理：
-    // - 检查日期变化（可能触发一些全局状态更新）
-    // - 清除当前选中的任务
-    // - 更新新日期的todos到store
     dateCheckService.checkDateChange();
     clearSelectedRow();
     updateCurrentDateTodos();
@@ -322,7 +324,7 @@ watch(
 
 // 3. 监听：选择日期变化（通常与currentViewDate同步，但单独处理UI状态）
 watch(
-  () => dateService.selectedDate.value,
+  () => dateService.currentViewDate.value,
   () => {
     // 选择日期变化时只需要清除选中状态
     // todos更新由上面的currentViewDate监听器处理
@@ -343,7 +345,7 @@ watch(
 
 // 通用函数：更新当前日期的todos到store
 function updateCurrentDateTodos() {
-  const dateString = dateService.getCurrentDateStr();
+  const dateString = dateService.currentDateKey.value;
   const currentTodos = todoList.value.filter((todo) => {
     return dateService.isSelectedDate(todo.id);
   });
@@ -621,27 +623,26 @@ function onUpdateScheduleStatus(
 
 /** 修改日期切换按钮的处理函数 */
 function onDateSet(direction: "prev" | "next" | "today" | "query") {
-  // today 不在用，query now 替代
-  clearSelectedRow(); // 先清除选中状态
+  clearSelectedRow();
   switch (direction) {
     case "prev":
-      dateService.goToPreviousDay();
+      dateService.navigateDate("prev");
       break;
     case "next":
-      dateService.goToNextDay();
+      dateService.navigateDate("next");
       break;
     case "today":
-      dateService.resetToToday();
+      dateService.navigateDate("today");
       break;
     case "query":
-      dateService.gotoQueryDate(queryDate.value);
+      if (queryDate.value) dateService.navigateDate(new Date(queryDate.value));
       queryDate.value = null;
       break;
   }
 }
 
 function goToTodo(todoId: number) {
-  dateService.gotoQueryDate(todoId);
+  dateService.navigateDate(new Date(todoId));
 }
 
 // 从Today选择任务处理函数
@@ -847,14 +848,12 @@ watch(
   }
 );
 
-/** 变化时联动 Todo/Schedule 属性同步 */
-
 // ======================== 8. 生命周期 Hook ========================
 onMounted(() => {
   // 主动检查一次日期变更
   dateCheckService.checkDateChange();
   dateCheckService.setupUserInteractionCheck();
-  dateService.updateCurrentDate(); // 初始化日期显示
+  dateService.navigateDate("today");
 
   if (draggableContainer.value) {
     draggableContainer.value.addEventListener("mousedown", handleMouseDown);

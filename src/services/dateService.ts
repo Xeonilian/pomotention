@@ -1,126 +1,54 @@
-import { ref } from "vue";
-import { getLocalDateString } from "@/core/utils";
-
-// 星期几的简写
-const weekdayShort = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+// 简化并强化核心逻辑
+import { ref, computed } from "vue";
+import { getLocalDateString, getDateKey } from "@/core/utils";
 
 export function useDateService() {
-  const currentViewDate = ref(new Date()); // 当前视图显示的日期
-  const currentDate = ref(""); // 格式化后的日期字符串（用于显示）
-  const selectedDate = ref(new Date()); // "选中"的日期（实际上跟随视图日期变化）
+  const currentViewDate = ref(new Date());
+  const currentDateKey = computed(() => getDateKey(currentViewDate.value));
 
-  // 重置到当前日期
-  function resetToToday() {
-    currentViewDate.value = new Date();
-    selectedDate.value = new Date();
-    updateCurrentDate();
-  }
+  // 单一日期间隔计算
+  const getDayInterval = (days: number) => {
+    const date = new Date(currentViewDate.value);
+    date.setDate(date.getDate() + days);
+    return date;
+  };
 
-  // 前往前一天
-  function goToPreviousDay() {
-    const newDate = new Date(currentViewDate.value);
-    newDate.setDate(newDate.getDate() - 1);
-    currentViewDate.value = newDate;
-    selectedDate.value = new Date(newDate);
-    updateCurrentDate();
-  }
+  // 统一日期操作
+  const navigateDate = (type: "prev" | "next" | "today" | Date) => {
+    let newDate = currentViewDate.value;
 
-  // 前往后一天
-  function goToNextDay() {
-    const newDate = new Date(currentViewDate.value);
-    newDate.setDate(newDate.getDate() + 1);
-    currentViewDate.value = newDate;
-    selectedDate.value = new Date(newDate);
-    updateCurrentDate();
-  }
-
-  // 去特定天
-  // 去特定天 - 支持多种输入格式
-  function gotoQueryDate(queryDate: Date | string | number | null) {
-    if (!queryDate) return;
-
-    let targetDate: Date;
-
-    // 根据不同的输入类型创建Date对象
-    if (queryDate instanceof Date) {
-      targetDate = new Date(queryDate);
-    } else if (typeof queryDate === "string") {
-      targetDate = new Date(queryDate);
-    } else if (typeof queryDate === "number") {
-      targetDate = new Date(queryDate);
-    } else {
-      console.warn("Invalid date format:", queryDate);
-      return;
+    switch (type) {
+      case "prev":
+        newDate = getDayInterval(-1);
+        break;
+      case "next":
+        newDate = getDayInterval(1);
+        break;
+      case "today":
+        newDate = new Date();
+        break;
+      default:
+        newDate = type instanceof Date ? type : new Date(type);
     }
 
-    // 检查日期是否有效
-    if (isNaN(targetDate.getTime())) {
-      console.warn("Invalid date:", queryDate);
-      return;
-    }
+    currentViewDate.value = newDate;
+    return newDate;
+  };
 
-    currentViewDate.value = targetDate;
-    selectedDate.value = new Date(targetDate);
-    updateCurrentDate();
-  }
-
-  // 更新当前日期显示
-  function updateCurrentDate() {
+  // 格式化显示日期
+  const displayDate = computed(() => {
     const date = currentViewDate.value;
-    // 使用本地时区计算日期，避免时区问题
-    const dateStr = getLocalDateString(date);
-    const weekDay = weekdayShort[date.getDay()];
-
-    // 计算周数
-    const yearStart = new Date(date.getFullYear(), 0, 1);
-    const weekNo = Math.ceil(
-      ((date.getTime() - yearStart.getTime()) / 86400000 + 1) / 7
-    );
-
-    currentDate.value = `${dateStr} ${weekDay} W${weekNo}`;
-
-    // 如果是2025年4月3日，显示特殊消息
-    if (dateStr === "2025-04-03") {
-      return "今天是我最爱的喵喵的生日，没有啦";
-    }
-    return null;
-  }
-
-  // 获取当前日期字符串
-  function getCurrentDateStr() {
-    // 使用本地时区计算日期，避免时区问题
-    return getLocalDateString(currentViewDate.value);
-  }
-
-  // 获取选中日期字符串
-  function getSelectedDateStr() {
-    // 使用本地时区计算日期，避免时区问题
-    return getLocalDateString(selectedDate.value);
-  }
-
-  // 检查日期是否是选中日期
-  function isSelectedDate(date: Date | string | number): boolean {
-    const dateToCheck = new Date(date);
-    // 使用本地时区计算日期，避免时区问题
-    const selectedDateStr = getLocalDateString(selectedDate.value);
-    const dateToCheckStr = getLocalDateString(dateToCheck);
-    return dateToCheckStr === selectedDateStr;
-  }
-
-  // 初始化时更新日期显示
-  updateCurrentDate();
+    return `${getLocalDateString(date)} ${date.toLocaleDateString("en-US", {
+      weekday: "short",
+    })}`;
+  });
 
   return {
     currentViewDate,
-    currentDate,
-    selectedDate,
-    goToPreviousDay,
-    goToNextDay,
-    updateCurrentDate,
-    getCurrentDateStr,
-    getSelectedDateStr,
-    isSelectedDate,
-    resetToToday,
-    gotoQueryDate,
+    currentDateKey,
+    displayDate,
+    navigateDate,
+    isSelectedDate: (date: Date | string | number) =>
+      getDateKey(date) === currentDateKey.value,
   };
 }
