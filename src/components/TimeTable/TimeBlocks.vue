@@ -155,6 +155,7 @@ import type { Todo } from "@/core/types/Todo";
 
 // ======= Props区域 =======
 const props = defineProps<{
+  appDateTimestamp: number;
   blocks: Block[];
   timeRange: { start: number; end: number };
   effectivePxPerMinute: number;
@@ -165,14 +166,15 @@ const props = defineProps<{
 // ======= 时间主块（Blocks）底色的样式计算 =======
 function getVerticalBlockStyle(block: Block): CSSProperties {
   const startMinute =
-    (getTimestampForTimeString(block.start) - props.timeRange.start) /
+    (getTimestampForTimeString(block.start, props.appDateTimestamp) -
+      props.timeRange.start) /
     (1000 * 60);
   const endMinute =
-    (getTimestampForTimeString(block.end) - props.timeRange.start) /
+    (getTimestampForTimeString(block.end, props.appDateTimestamp) -
+      props.timeRange.start) /
     (1000 * 60);
   const topPx = startMinute * props.effectivePxPerMinute;
   const heightPx = (endMinute - startMinute) * props.effectivePxPerMinute;
-
   return {
     position: "absolute",
     top: topPx + "px",
@@ -249,7 +251,11 @@ const showCurrentLine = computed(() => currentTimeTop.value >= 0);
 import { POMODORO_COLORS } from "@/core/constants";
 // (2) 计算所有番茄段（含类别与编号）
 const pomodoroSegments = computed(() =>
-  splitBlocksToPomodorosWithIndexExcludeSchedules(props.blocks, props.schedules)
+  splitBlocksToPomodorosWithIndexExcludeSchedules(
+    props.appDateTimestamp,
+    props.blocks,
+    props.schedules
+  )
 );
 
 // (3) 番茄段样式
@@ -303,6 +309,7 @@ const manualAllocations = ref<Map<number, number>>(new Map()); // todoId -> star
 const todoSegments = computed(() => {
   // 🔥 关键：先生成完整的自动分配
   let autoSegments = generateEstimatedTodoSegments(
+    props.appDateTimestamp,
     props.todos,
     pomodoroSegments.value
   );
@@ -317,6 +324,7 @@ const todoSegments = computed(() => {
 
     // 重新为自动分配的 todos 生成 segments
     autoSegments = generateEstimatedTodoSegments(
+      props.appDateTimestamp,
       autoTodos,
       pomodoroSegments.value
     );
@@ -327,6 +335,7 @@ const todoSegments = computed(() => {
       const todo = props.todos.find((t) => t.id === todoId);
       if (todo) {
         const newSegments = reallocateTodoFromPosition(
+          props.appDateTimestamp,
           todo,
           startIndex,
           pomodoroSegments.value,

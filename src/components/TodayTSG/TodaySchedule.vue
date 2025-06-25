@@ -252,13 +252,7 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  (
-    e: "update-schedule-status",
-    id: number,
-    activityId: number,
-    doneTime: number | undefined,
-    status: string
-  ): void;
+  (e: "update-schedule-status", id: number, checked: boolean): void;
   (e: "suspend-schedule", id: number): void;
   (e: "cancel-schedule", id: number): void;
   (e: "repeat-schedule", id: number): void;
@@ -275,20 +269,7 @@ const showPopover = ref(false);
 const popoverMessage = ref("");
 
 function handleCheckboxChange(schedule: Schedule, checked: boolean) {
-  const newStatus = checked ? "done" : "";
-  schedule.status = newStatus;
-  if (checked) {
-    schedule.doneTime = Date.now();
-  } else {
-    schedule.doneTime = undefined;
-  }
-  emit(
-    "update-schedule-status",
-    schedule.id,
-    schedule.activityId,
-    schedule.doneTime,
-    newStatus
-  );
+  emit("update-schedule-status", schedule.id, checked);
 }
 
 // 修改点击行处理函数

@@ -3,7 +3,7 @@
 import type { Activity } from "@/core/types/Activity";
 import type { Schedule } from "@/core/types/Schedule";
 import type { Todo } from "@/core/types/Todo";
-import { addOneDayToDate } from "@/core/utils";
+import { addDays } from "@/core/utils";
 
 /**
  * 检查日期是否为今天
@@ -192,7 +192,7 @@ export function handleSuspendSchedule(
       if (activity.dueRange) {
         // 将 dueRange 的时间都加1天
         activity.dueRange = [
-          addOneDayToDate(activity.dueRange[0]),
+          addDays(activity.dueRange[0], 1),
           activity.dueRange[1],
         ];
       } else {

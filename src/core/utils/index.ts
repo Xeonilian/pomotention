@@ -1,8 +1,11 @@
 export { isToday } from "./isToday";
-export { addOneDayToDate } from "./addOneDayToDate";
+export { addDays } from "./addDays";
 export { getEndOfDayTimestamp, getEndOfDayTime } from "./getEndOfDayTimestamp";
 export { timestampToTimeString } from "./timestampToTimeString";
 export { getTimestampForTimeString } from "./getTimestampForTimeString";
 export { timestampToDatetime } from "./timestampToDatetime";
 export { getLocalDateString } from "./getLocalDateString";
 export { getDateKey } from "./getDateKey";
+export { getTodayDate } from "./getTodayDate";
+export { areSameDay } from "./areSameDay";
+export { getDayStartTimestamp } from "./getDayStartTimestamp";

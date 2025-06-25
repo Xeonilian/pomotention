@@ -71,7 +71,7 @@ import ActivityButtons from "@/components/ActivitySheet/ActivityButtons.vue";
 import ActivitySheet from "@/components/ActivitySheet/Activities.vue";
 import type { Activity } from "@/core/types/Activity";
 import type { Todo } from "@/core/types/Todo";
-import { addOneDayToDate } from "@/core/utils";
+import { addDays } from "@/core/utils";
 import { NPopover } from "naive-ui";
 
 // ========================
@@ -215,7 +215,7 @@ function addScheduleRow() {
     id: Date.now(),
     class: "S",
     title: "",
-    dueRange: [addOneDayToDate(Date.now()), ""], // HACK: 默认明天开始
+    dueRange: [addDays(Date.now(), 1), ""], // HACK: 默认明天开始
     status: "",
   });
 }

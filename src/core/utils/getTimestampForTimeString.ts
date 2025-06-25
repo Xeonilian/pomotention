@@ -1,11 +1,26 @@
 /**
- * 将 'HH:MM' 转为当天对应的时间戳
- *
- * @param timeString - 时间字符串 "HH:MM"
- * @param baseTimestamp - 可选，基准时间戳（用于决定哪一天），默认为当前时间
- * @returns number - 新生成的时间戳
+ * 将一个时间字符串 (如 'HH:MM') 与一个基准日期的时间戳结合，生成一个新的完整时间戳。
+ * @param timeString 'HH:MM' 格式的时间字符串。
+ * @param baseTimestamp 代表基准日期的【当天任意时刻】的毫秒时间戳。函数内部会将其标准化为零点。
+ * @returns 返回一个数字，表示基准日期当天指定时间的毫秒时间戳。
  */
 export function getTimestampForTimeString(
+  timeString: string,
+  baseTimestamp: number
+): number {
+  // 1. 从时间字符串中解析小时和分钟
+  const [hours, minutes] = timeString.split(":").map(Number);
+
+  // 2. 基于基准时间戳创建一个 Date 对象
+  const date = new Date(baseTimestamp);
+
+  // 3. 设置为当天的指定小时和分钟，同时清零秒和毫秒，确保精确
+  date.setHours(hours, minutes, 0, 0);
+
+  return date.getTime();
+}
+
+export function getTimestampForTimeStringOld(
   timeString: string,
   baseTimestamp?: number
 ): number {

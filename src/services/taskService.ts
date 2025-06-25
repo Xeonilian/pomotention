@@ -6,7 +6,7 @@ import type {
 } from "@/core/types/Task";
 import type { Activity } from "@/core/types/Activity";
 import { STORAGE_KEYS } from "@/core/constants";
-import { addOneDayToDate } from "@/core/utils";
+import { addDays } from "@/core/utils";
 
 export const taskService = {
   // 获取特定任务
@@ -177,7 +177,7 @@ export const taskService = {
         pomoType: "🍅",
       }),
       ...(activityClass === "S" && {
-        dueRange: [addOneDayToDate(Date.now()), "60"],
+        dueRange: [addDays(Date.now(), 1), "60"],
       }),
     };
 

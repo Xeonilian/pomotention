@@ -68,13 +68,7 @@ defineProps<{
 }>();
 
 const emit = defineEmits<{
-  (
-    e: "update-schedule-status",
-    id: number,
-    activityId: number,
-    doneTime: number | undefined,
-    status: string
-  ): void;
+  (e: "update-schedule-status", id: number, checked: boolean): void;
   (
     e: "update-todo-status",
     id: number,
@@ -104,20 +98,15 @@ const emit = defineEmits<{
   (e: "edit-todo-start", id: number, newTs: string): void;
   (e: "edit-todo-done", id: number, newTs: string): void;
   (e: "edit-schedule-done", id: number, newTs: string): void;
-}>(); // HACK
+}>();
 
 // 处理选中行事件
 function handleSelectRow(id: number | null) {
   emit("select-row", id);
 }
 
-function updateScheduleStatus(
-  id: number,
-  activityId: number,
-  doneTime: number | undefined,
-  status: string
-) {
-  emit("update-schedule-status", id, activityId, doneTime, status);
+function updateScheduleStatus(id: number, checked: boolean) {
+  emit("update-schedule-status", id, checked);
 }
 
 function updateTodoStatus(

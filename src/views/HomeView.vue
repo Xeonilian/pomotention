@@ -13,11 +13,12 @@
         <TimeTableView
           :blocks="viewBlocks"
           :current-type="currentType"
-          :todayTodos="currentViewDateTodos"
-          :todaySchedules="currentViewDateSchedules"
+          :todayTodos="todosForAppDate"
+          :todaySchedules="schedulesForAppDate"
           @update-blocks="onBlocksUpdate"
           @reset-schedule="onTimeTableReset"
           @change-type="onTypeChange"
+          :appDateTimestamp="dateService.appDateTimestamp.value"
         />
       </div>
 
@@ -33,7 +34,7 @@
           :style="
             showMiddleBottom ? { height: topHeight + 'px' } : { height: '100%' }
           "
-          :class="{ 'not-today': !isCurrentDay }"
+          :class="{ 'not-today': !isViewingToday }"
         >
           <!-- 今日待办 -->
           <div class="today-header">
@@ -92,8 +93,8 @@
           <div class="today-view-container">
             <TodayView
               :selectedRowId="selectedRowId"
-              :todayTodos="currentViewDateTodos"
-              :todaySchedules="currentViewDateSchedules"
+              :todayTodos="todosForAppDate"
+              :todaySchedules="schedulesForAppDate"
               :activeId="activeId"
               @update-schedule-status="onUpdateScheduleStatus"
               @update-todo-status="onUpdateTodoStatus"
@@ -212,21 +213,16 @@ import {
   handleSuspendSchedule,
   updateTodoPomo,
 } from "@/services/todayService";
-import { createDateCheckService } from "@/services/dateCheckService";
 import {
   Previous24Regular,
   Next24Regular,
   Search24Regular,
 } from "@vicons/fluent";
-import { useDateService } from "@/services/dateService";
 import { useResize } from "@/composables/useResize";
-import { getTimestampForTimeString } from "@/core/utils";
+import { getTimestampForTimeString, addDays } from "@/core/utils";
+import { useUnifiedDateService } from "@/services/useUnifiedDateService";
 
 // ======================== 响应式状态与初始化 ========================
-const pomoStore = usePomoStore();
-const dateService = useDateService();
-// 获取当前查看日期的时间戳
-const viewingDayTimestamp = dateService.currentViewDate.value.getTime();
 
 // -- 基础UI状态
 const showLeft = ref(true);
@@ -262,9 +258,20 @@ const selectedTask = computed(() => {
   return null;
 });
 
+// ======================== 0. UI 更新相关 ========================
+
+const pomoStore = usePomoStore();
+
+const dateService = useUnifiedDateService({
+  activityList,
+  scheduleList,
+  todoList,
+  convertToSchedule,
+});
+
 // 计算当天的番茄钟数
 const currentDatePomoCount = computed(() => {
-  const dateString = dateService.currentDateKey.value;
+  const dateString = dateService.appDateKey.value;
   return pomoStore.getPomoCountByDate(dateString);
 });
 
@@ -272,85 +279,63 @@ const currentDatePomoCount = computed(() => {
 const globalRealPomo = computed(() => pomoStore.globalRealPomo);
 
 // 计算当前日期
-const isCurrentDay = computed(() => {
-  const today = new Date();
-  const selected = dateService.currentViewDate.value;
-  return today.toDateString() === selected.toDateString();
+const isViewingToday = dateService.isViewingToday;
+
+// 计算筛选的当天todo
+const todosForAppDate = computed(() => {
+  // 获取 appDate 当天零点的时间戳
+  const startOfDay = dateService.appDateTimestamp.value;
+  // 计算 appDate 第二天零点的时间戳，作为筛选范围的上限（不包含）
+  const endOfDay = addDays(startOfDay, 1);
+
+  if (!todoList.value) return [];
+
+  // todo.id 是创建时的时间戳，筛选出 id 在 [startOfDay, endOfDay) 区间内的 todo
+  return todoList.value.filter(
+    (todo) => todo.id >= startOfDay && todo.id < endOfDay
+  );
 });
 
-// 日期监控服务定义
+// 计算筛选当天的schedule
+const schedulesForAppDate = computed(() => {
+  const startOfDay = dateService.appDateTimestamp.value;
+  const endOfDay = addDays(startOfDay, 1);
+
+  if (!scheduleList.value) return [];
+
+  // schedule.id 是一个时间戳，筛选逻辑与 todo 保持一致。
+  return scheduleList.value.filter(
+    (schedule) => schedule.id >= startOfDay && schedule.id < endOfDay
+  );
+});
+
 /**
- * 校验日期变化，变动时刷新当前日期及 blocks，并同步相关UI
- * 注意：日期变化回调可进一步加入其他刷新逻辑
+ * 监听【经过筛选后】的当天 todo 列表的变化。
+ * 当这个列表本身、或者其中任何 todo 的 realPomo 属性变化时，
+ * 就更新 Pomo Store 中对应日期的数据。
  */
-const dateCheckService = createDateCheckService({
-  activityList,
-  scheduleList,
-  todoList,
-  convertToSchedule,
-  currentDateKey: dateService.currentDateKey,
-  onDateChange() {
-    // 强制通知响应式系统所有关键数据变更
-    scheduleList.value = [...scheduleList.value];
-    todoList.value = [...todoList.value];
-    activityList.value = [...activityList.value];
-    allBlocks.value[currentType.value] = [
-      ...allBlocks.value[currentType.value],
-    ];
-    console.log("[状态同步] 日期变更后强制刷新所有关键数据");
-  },
-});
-
-// 1. 监听：todos的realPomo数组变化（番茄钟完成情况变化）
 watch(
-  () => todoList.value.map((todo) => todo.realPomo),
-  () => {
-    // 当任何todo的realPomo变化时，重新计算当前日期的番茄钟总数
-    updateCurrentDateTodos();
+  todosForAppDate,
+  (currentTodos) => {
+    const dateKey = dateService.appDateKey.value;
+    pomoStore.setTodosForDate(dateKey, currentTodos);
+    console.log(`[HomeView] Pomo store updated for date: ${dateKey}`);
   },
-  { deep: true }
+  { deep: true, immediate: true } // immediate 确保初始化时执行一次
 );
 
-// 2. 监听：当前视图日期变化（用户切换日期）
+/**
+ * 监听 appDate 的变化，用于处理需要清空选中状态等副作用。
+ */
 watch(
-  () => dateService.currentViewDate.value,
+  () => dateService.appDateTimestamp.value, // 监听时间戳更可靠
   () => {
-    dateCheckService.checkDateChange();
-    clearSelectedRow();
-    updateCurrentDateTodos();
-  },
-  { immediate: true }
+    selectedRowId.value = null;
+    selectedTaskId.value = null;
+    // ... 清理其他选中状态 ...
+    console.log(`[HomeView] App date changed, selection cleared.`);
+  }
 );
-
-// 3. 监听：选择日期变化（通常与currentViewDate同步，但单独处理UI状态）
-watch(
-  () => dateService.currentViewDate.value,
-  () => {
-    // 选择日期变化时只需要清除选中状态
-    // todos更新由上面的currentViewDate监听器处理
-    clearSelectedRow();
-  },
-  { immediate: true }
-);
-
-// 4. 监听：todoList整体变化（新增、删除todo）
-watch(
-  todoList,
-  () => {
-    // 当todoList发生变化时（新增/删除todo），更新当前日期的todos
-    updateCurrentDateTodos();
-  },
-  { deep: true, immediate: true }
-);
-
-// 通用函数：更新当前日期的todos到store
-function updateCurrentDateTodos() {
-  const dateString = dateService.currentDateKey.value;
-  const currentTodos = todoList.value.filter((todo) => {
-    return dateService.isSelectedDate(todo.id);
-  });
-  pomoStore.setTodosForDate(dateString, currentTodos);
-}
 
 /** 自动保存数据 */
 watch(activityList, (value) => saveActivities(value), { deep: true });
@@ -457,20 +442,6 @@ function onRepeatActivity(id: number) {
   }
 }
 // ======================== 3. Today/任务相关操作 ========================
-/** 今日的 Todo */
-const currentViewDateTodos = computed(() =>
-  todoList.value.filter((todo) => {
-    return dateService.isSelectedDate(todo.id);
-  })
-);
-
-/** 今日的 Schedule */
-const currentViewDateSchedules = computed(() =>
-  scheduleList.value.filter((schedule) => {
-    return dateService.isSelectedDate(schedule.activityDueRange[0]);
-  })
-);
-
 /** Todo 更新状态（勾选） */
 function onUpdateTodoStatus(
   id: number,
@@ -605,19 +576,40 @@ function onRepeatSchedule(id: number) {
 }
 
 /** Schedule 勾选完成 */
-function onUpdateScheduleStatus(
-  id: number,
-  activityId: number,
-  doneTime: number | undefined,
-  status: string
-) {
+function onUpdateScheduleStatus(id: number, isChecked: boolean) {
+  // 1. 根据 ID 安全地查找目标 Schedule
+  const schedule = scheduleList.value.find((s) => s.id === id);
+
+  // 如果找不到对应的 Schedule，则打印错误并直接返回，防止后续代码出错
+  if (!schedule) {
+    console.error(
+      `[onUpdateScheduleStatus] 错误：无法在 scheduleList 中找到 id 为 ${id} 的项目。`
+    );
+    return;
+  }
+
+  // 2. 根据 isChecked 状态，决定新的 status 和 doneTime
+  const newStatus = isChecked ? "done" : "";
+  let doneTime: number | undefined;
+
+  if (isChecked) {
+    const date = new Date(dateService.appDateTimestamp.value);
+
+    const now = new Date();
+    date.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
+
+    doneTime = date.getTime();
+  } else {
+    doneTime = undefined;
+  }
+
   updateScheduleStatus(
     scheduleList.value,
     activityList.value,
     id,
-    activityId,
+    schedule.activityId,
     doneTime,
-    status
+    newStatus
   );
 }
 
@@ -726,6 +718,8 @@ function handleEditTodoTitle(id: number, newTitle: string) {
 
 // 编辑时间
 function handleEditTodoStart(id: number, newTm: string) {
+  // 获取当前查看日期的时间戳
+  const viewingDayTimestamp = dateService.appDateTimestamp.value;
   const todo = todoList.value.find((t) => t.id === id);
   if (!todo) {
     console.warn(`未找到 id 为 ${id} 的 todo`);
@@ -735,6 +729,8 @@ function handleEditTodoStart(id: number, newTm: string) {
 }
 
 function handleEditTodoDone(id: number, newTm: string) {
+  // 获取当前查看日期的时间戳
+  const viewingDayTimestamp = dateService.appDateTimestamp.value;
   const todo = todoList.value.find((t) => t.id === id);
   if (!todo) {
     console.warn(`未找到 id 为 ${id} 的 todo`);
@@ -744,6 +740,8 @@ function handleEditTodoDone(id: number, newTm: string) {
 }
 
 function handleEditScheduleDone(id: number, newTm: string) {
+  // 获取当前查看日期的时间戳
+  const viewingDayTimestamp = dateService.appDateTimestamp.value;
   const schedule = scheduleList.value.find((s) => s.id === id);
   if (!schedule) {
     console.warn(`未找到 id 为 ${id} 的 schedule`);
@@ -851,8 +849,7 @@ watch(
 // ======================== 8. 生命周期 Hook ========================
 onMounted(() => {
   // 主动检查一次日期变更
-  dateCheckService.checkDateChange();
-  dateCheckService.setupUserInteractionCheck();
+
   dateService.navigateDate("today");
 
   if (draggableContainer.value) {
@@ -876,7 +873,6 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-  dateCheckService.cleanupListeners();
   if (draggableContainer.value) {
     draggableContainer.value.removeEventListener("mousedown", handleMouseDown);
     document.removeEventListener("mousemove", handleMouseMove);

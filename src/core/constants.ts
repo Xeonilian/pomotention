@@ -32,6 +32,7 @@ export const STORAGE_KEYS = {
   TASK: "taskTrack",
   LAST_TODAY_COUNT: "lastTodayCount",
   GLOBAL_SETTINGS: "globalSettings",
+  LAST_KNOWN_TODAY_KEY: "app_last_known_today",
 } as const;
 
 // 预设的工作时间块
