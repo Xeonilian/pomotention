@@ -28,7 +28,7 @@ Parent: HomeView.vue
         <td style="width: 80px">
           <n-time-picker
             size="small"
-            :value="getTimestampForTimeString(block.start)"
+            :value="getTimestampForTimeString(block.start, systemDate)"
             :show-icon="false"
             format="HH:mm"
             @update:value="
@@ -42,7 +42,7 @@ Parent: HomeView.vue
         <td style="width: 80px">
           <n-time-picker
             size="small"
-            :value="getTimestampForTimeString(block.end)"
+            :value="getTimestampForTimeString(block.end, systemDate)"
             format="HH:mm"
             :show-icon="false"
             @update:value="
@@ -117,6 +117,8 @@ const emit = defineEmits<{ (e: "update-blocks", val: Block[]): void }>();
 const Blocks = ref<Block[]>([]);
 let hasLoadedFromLocal = false;
 
+const systemDate = Date.now();
+
 function loadFromLocal() {
   // 使用类型特定的存储键
   const storageKey = `${STORAGE_KEYS.TIMETABLE}_${props.currentType}`;
@@ -164,9 +166,10 @@ function generateId() {
 }
 
 function addMinutesToTime(str: string, add: number) {
-  const timestamp = getTimestampForTimeString(str) + add * 60 * 1000;
+  const timestamp =
+    getTimestampForTimeString(str, systemDate) + add * 60 * 1000;
   // 限制不超过 24:00
-  const max = getTimestampForTimeString("24:00");
+  const max = getTimestampForTimeString("24:00", systemDate);
   return timestampToTimeString(Math.min(timestamp, max));
 }
 
@@ -178,12 +181,18 @@ function addBlock() {
   let end;
 
   // 如果开始时间在22:00之后，直接设置为24:00
-  if (getTimestampForTimeString(start) >= getTimestampForTimeString("22:00")) {
+  if (
+    getTimestampForTimeString(start, systemDate) >=
+    getTimestampForTimeString("22:00", systemDate)
+  ) {
     end = "24:00";
   } else {
     end = addMinutesToTime(start, 120); // +2小时
     // 如果加2小时后超过22:00，也直接设置为24:00
-    if (getTimestampForTimeString(end) >= getTimestampForTimeString("22:00")) {
+    if (
+      getTimestampForTimeString(end, systemDate) >=
+      getTimestampForTimeString("22:00", systemDate)
+    ) {
       end = "24:00";
     }
   }
@@ -257,8 +266,10 @@ function onStartTimeChange(idx: number) {
 const canAddBlock = computed(
   () =>
     !Blocks.value.length ||
-    getTimestampForTimeString(Blocks.value[Blocks.value.length - 1].end) <
-      getTimestampForTimeString("24:00")
+    getTimestampForTimeString(
+      Blocks.value[Blocks.value.length - 1].end,
+      systemDate
+    ) < getTimestampForTimeString("24:00", systemDate)
 );
 
 // -------- 副作用 watch --------
