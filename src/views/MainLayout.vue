@@ -57,6 +57,7 @@ const timerStore = useTimerStore();
 const menuOptions = [
   { label: "首页", key: "/" },
   { label: "帮助", key: "/help" },
+  { label: "搜索", key: "/search" },
   //{ label: "统计", key: "/statistics" },
   //{ label: "设置", key: "/settings" },
 ];
