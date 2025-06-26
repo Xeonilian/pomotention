@@ -118,13 +118,16 @@ export function removeTasksStorage(): void {
  * @param defaultValue 默认值
  * @returns 解析后的数据或默认值
  */
-function loadData<T>(key: string, defaultValue: T): T {
+function loadData<T>(key: string, defaultData: T): T {
   try {
-    const data = localStorage.getItem(key);
-    return data ? JSON.parse(data) : defaultValue;
-  } catch {
-    return defaultValue;
+    const storedData = localStorage.getItem(key);
+    if (storedData) {
+      return JSON.parse(storedData) as T; // 从存储中读取数据并解析
+    }
+  } catch (error) {
+    console.error(`加载数据时出错: ${error}`); // 打印错误信息
   }
+  return defaultData; // 如果没有数据或出错，则返回默认数据
 }
 
 /**
