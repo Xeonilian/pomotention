@@ -15,17 +15,14 @@
       :key="item.id"
       class="search-item-todo"
     >
-      <n-card-header>
-        <div class="title">{{ item.activityTitle }}</div>
-        <p>截止日期: {{ formatDate(item.dueDate) }}</p>
-      </n-card-header>
-      <n-card-body>
-        <div v-for="task in getTasksBySourceId(item.id)" :key="task.id">
-          <p>任务内容:</p>
-          <!-- 直接用 v-html 渲染 Markdown 内容 -->
-          <div v-html="convertMarkdown(task.description)"></div>
-        </div>
-      </n-card-body>
+      <div class="title">{{ item.activityTitle }}</div>
+      <p>截止日期: {{ formatDate(item.dueDate) }}</p>
+
+      <div v-for="task in getTasksBySourceId(item.id)" :key="task.id">
+        <p>任务内容:</p>
+        <!-- 直接用 v-html 渲染 Markdown 内容 -->
+        <div v-html="convertMarkdown(task.description)"></div>
+      </div>
     </n-card>
 
     <!-- 展示 Schedule 及其相关任务 -->
@@ -34,18 +31,15 @@
       :key="item.id"
       class="search-item-schedule"
     >
-      <n-card-header>
-        <div class="title">{{ item.activityTitle }}</div>
-      </n-card-header>
-      <n-card-body>
-        <p>截止日期: {{ formatDate(item.activityDueRange[0]) }}</p>
-        <p>位置: {{ item.location || "无" }}</p>
-        <div v-for="task in getTasksBySourceId(item.id)" :key="task.id">
-          <p>任务内容:</p>
-          <!-- 直接用 v-html 渲染 Markdown 内容 -->
-          <div v-html="convertMarkdown(task.description)"></div>
-        </div>
-      </n-card-body>
+      <div class="title">{{ item.activityTitle }}</div>
+
+      <p>截止日期: {{ formatDate(item.activityDueRange[0]) }}</p>
+      <p>位置: {{ item.location || "无" }}</p>
+      <div v-for="task in getTasksBySourceId(item.id)" :key="task.id">
+        <p>任务内容:</p>
+        <!-- 直接用 v-html 渲染 Markdown 内容 -->
+        <div v-html="convertMarkdown(task.description)"></div>
+      </div>
     </n-card>
   </div>
 </template>
@@ -57,8 +51,14 @@ import { marked } from "marked"; // 引入 marked
 import type { Todo } from "@/core/types/Todo";
 import type { Schedule } from "@/core/types/Schedule";
 import type { Task } from "@/core/types/Task";
+import { NCard, NButton, NInput } from "naive-ui";
 
 export default defineComponent({
+  components: {
+    NCard,
+    NButton,
+    NInput,
+  },
   setup() {
     const searchQuery = ref("");
     const todos = ref<Todo[]>([]);
@@ -149,7 +149,7 @@ export default defineComponent({
   justify-content: center; /* 水平居中 */
   align-items: center; /* 垂直居中 */
   flex-direction: column; /* 纵向排列子元素 */
-  height: 100%; /* 页面至少占满整个视口高度 */
+  height: 100hv; /* 页面至少占满整个视口高度 */
 }
 
 .search-container {
