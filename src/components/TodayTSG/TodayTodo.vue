@@ -52,7 +52,7 @@
               <n-checkbox
                 v-if="todo.status !== 'cancelled'"
                 :checked="todo.status === 'done'"
-                @update:checked="handleCheckboxChange(todo, $event)"
+                @update:checked="handleCheckboxChange(todo.id, $event)"
               />
 
               <n-icon
@@ -401,13 +401,7 @@ const emit = defineEmits<{
   (e: "suspend-todo", id: number): void;
   (e: "cancel-todo", id: number): void;
   (e: "repeat-todo", id: number): void;
-  (
-    e: "update-todo-status",
-    id: number,
-    activityId: number,
-    doneTime: number | undefined,
-    status: string
-  ): void;
+  (e: "update-todo-status", id: number, checked: boolean): void;
   (e: "update-todo-priority", id: number, priority: number): void;
   (
     e: "batch-update-priorities",
@@ -572,21 +566,8 @@ function finishEditing() {
   relayoutPriority(props.todos);
 }
 
-function handleCheckboxChange(todo: TodoWithNumberPriority, checked: boolean) {
-  const newStatus = checked ? "done" : "ongoing";
-  todo.status = newStatus;
-  if (checked) {
-    todo.doneTime = Date.now();
-  } else {
-    todo.doneTime = undefined;
-  }
-  emit(
-    "update-todo-status",
-    todo.id,
-    todo.activityId,
-    todo.doneTime,
-    newStatus
-  );
+function handleCheckboxChange(id: number, checked: boolean) {
+  emit("update-todo-status", id, checked);
 }
 
 // 番茄估计

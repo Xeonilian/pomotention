@@ -69,13 +69,7 @@ defineProps<{
 
 const emit = defineEmits<{
   (e: "update-schedule-status", id: number, checked: boolean): void;
-  (
-    e: "update-todo-status",
-    id: number,
-    activityId: number,
-    doneTime: number | undefined,
-    status: string
-  ): void;
+  (e: "update-todo-status", id: number, checked: boolean): void;
   (e: "suspend-schedule", id: number): void;
   (e: "cancel-schedule", id: number): void;
   (e: "repeat-schedule", id: number): void;
@@ -109,13 +103,8 @@ function updateScheduleStatus(id: number, checked: boolean) {
   emit("update-schedule-status", id, checked);
 }
 
-function updateTodoStatus(
-  id: number,
-  activityId: number,
-  doneTime: number | undefined,
-  status: string
-) {
-  emit("update-todo-status", id, activityId, doneTime, status);
+function updateTodoStatus(id: number, checked: boolean) {
+  emit("update-todo-status", id, checked);
 }
 
 function handleSuspendSchedule(id: number) {

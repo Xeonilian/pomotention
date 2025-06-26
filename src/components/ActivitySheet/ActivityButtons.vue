@@ -86,7 +86,7 @@
       ></template>
     </n-button>
     <n-button
-      title="重复任务"
+      title="重复活动"
       @click="$emit('repeat-activity')"
       circle
       secondary

@@ -21,6 +21,7 @@ export function convertToTodo(activity: Activity): Todo {
     projectName: activity.projectId ? `项目${activity.projectId}` : undefined,
     priority: 0,
     idFormated: timestampToDatetime(Date.now()),
+    interruption: activity.interruption ? activity.interruption : undefined,
   };
 }
 
@@ -35,18 +36,11 @@ export function convertToSchedule(activity: Activity): Schedule {
     activityId: activity.id,
     activityTitle: activity.title,
     activityDueRange: [activity.dueRange![0], activity.dueRange![1]],
-    status: "ongoing",
+    status: "",
     projectName: activity.projectId ? `项目${activity.projectId}` : undefined,
     location: activity.location || "",
+    interruption: activity.interruption ? activity.interruption : undefined,
   };
-}
-
-/**
- * 生成唯一ID
- * @returns 基于当前时间戳的唯一ID
- */
-export function generateId(): number {
-  return Date.now();
 }
 
 /**

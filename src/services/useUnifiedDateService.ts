@@ -16,7 +16,6 @@ interface UnifiedDateServiceOptions {
   activityList: Ref<Activity[]>;
   scheduleList: Ref<Schedule[]>;
   todoList: Ref<Todo[]>;
-  convertToSchedule: (activity: Activity) => Schedule;
 }
 
 /**
@@ -30,7 +29,6 @@ export function useUnifiedDateService({
   activityList,
   scheduleList,
   todoList,
-  convertToSchedule,
 }: UnifiedDateServiceOptions) {
   // --- 1. 核心响应式状态 ---
 
@@ -127,8 +125,6 @@ export function useUnifiedDateService({
           !scheduleList.value.some((s) => s.activityId === activity.id)
         ) {
           activity.status = "ongoing";
-          // 使用传入的转换函数创建新的 Schedule
-          scheduleList.value.push(convertToSchedule(activity));
         }
       }
     });

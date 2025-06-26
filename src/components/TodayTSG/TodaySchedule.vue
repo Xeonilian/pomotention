@@ -34,7 +34,7 @@
               <n-checkbox
                 v-if="schedule.status !== 'cancelled'"
                 :checked="schedule.status === 'done'"
-                @update:checked="handleCheckboxChange(schedule, $event)"
+                @update:checked="handleCheckboxChange(schedule.id, $event)"
               />
               <n-icon
                 v-else
@@ -268,8 +268,8 @@ const emit = defineEmits<{
 const showPopover = ref(false);
 const popoverMessage = ref("");
 
-function handleCheckboxChange(schedule: Schedule, checked: boolean) {
-  emit("update-schedule-status", schedule.id, checked);
+function handleCheckboxChange(id: number, checked: boolean) {
+  emit("update-schedule-status", id, checked);
 }
 
 // 修改点击行处理函数

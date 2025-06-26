@@ -9,7 +9,6 @@
     <div class="content">
       <div v-if="showLeft" class="left" :style="{ width: leftWidth + 'px' }">
         <!-- 日程表 -->
-
         <TimeTableView
           :blocks="viewBlocks"
           :current-type="currentType"
@@ -133,6 +132,7 @@
             :selectedTaskId="selectedTaskId"
             :selectedTask="selectedTask"
             @activity-updated="onActivityUpdated"
+            @interruption-update="onInterruptionUpdated"
             @toggle-pomo-seq="showPomoSeq = !showPomoSeq"
           />
         </div>
@@ -204,7 +204,6 @@ import {
   handleDeleteActivity,
   passPickedActivity,
   togglePomoType,
-  convertToSchedule,
 } from "@/services/activityService";
 import {
   updateScheduleStatus,
@@ -266,7 +265,6 @@ const dateService = useUnifiedDateService({
   activityList,
   scheduleList,
   todoList,
-  convertToSchedule,
 });
 
 // 计算当天的番茄钟数
@@ -298,15 +296,19 @@ const todosForAppDate = computed(() => {
 
 // 计算筛选当天的schedule
 const schedulesForAppDate = computed(() => {
+  // 获取 appDate 当天零点的时间戳
   const startOfDay = dateService.appDateTimestamp.value;
+  // 计算 appDate 第二天零点的时间戳，作为筛选范围的上限（不包含）
   const endOfDay = addDays(startOfDay, 1);
 
   if (!scheduleList.value) return [];
-
-  // schedule.id 是一个时间戳，筛选逻辑与 todo 保持一致。
   return scheduleList.value.filter(
-    (schedule) => schedule.id >= startOfDay && schedule.id < endOfDay
+    (schedule) =>
+      schedule.activityDueRange[0] >= startOfDay &&
+      schedule.activityDueRange[0] < endOfDay
   );
+
+  // schedule.id 是一个时间戳，筛选比今天的起始日期大的
 });
 
 /**
@@ -443,19 +445,39 @@ function onRepeatActivity(id: number) {
 }
 // ======================== 3. Today/任务相关操作 ========================
 /** Todo 更新状态（勾选） */
-function onUpdateTodoStatus(
-  id: number,
-  activityId: number,
-  doneTime: number | undefined,
-  status: string
-) {
+function onUpdateTodoStatus(id: number, isChecked: boolean) {
+  const todo = todoList.value.find((t) => t.id === id);
+
+  // 如果找不到对应的 Schedule，则打印错误并直接返回，防止后续代码出错
+  if (!todo) {
+    console.error(
+      `[onUpdateTodoStatus] 错误：无法在 todoList 中找到 id 为 ${id} 的项目。`
+    );
+    return;
+  }
+
+  // 2. 根据 isChecked 状态，决定新的 status 和 doneTime
+  const newStatus = isChecked ? "done" : "";
+  let doneTime: number | undefined;
+
+  if (isChecked) {
+    const date = new Date(dateService.appDateTimestamp.value);
+
+    const now = new Date();
+    date.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
+
+    doneTime = date.getTime();
+  } else {
+    doneTime = undefined;
+  }
+
   updateTodoStatus(
     todoList.value,
     activityList.value,
     id,
-    activityId,
+    todo.activityId,
     doneTime,
-    status
+    newStatus
   );
 }
 
@@ -761,6 +783,20 @@ function onActivityUpdated() {
   scheduleList.value = loadSchedules();
 }
 
+function onInterruptionUpdated(interruption: Schedule) {
+  // 日志输出查看具体值
+  console.log("interruption object:", interruption);
+
+  // 确保 interruption 是有效的 Schedule 对象
+  if (interruption && typeof interruption === "object") {
+    scheduleList.value.push(interruption);
+    console.log("push", interruption.activityTitle);
+    console.log("Updated schedule list:", scheduleList.value);
+    saveSchedules(scheduleList.value);
+  } else {
+    console.error("Invalid interruption object:", interruption);
+  }
+}
 // ======================== 5. 数据联动 Watchers ========================
 /** 活动变化时联动 Todo/Schedule 属性同步 */
 watch(

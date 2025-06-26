@@ -2,11 +2,11 @@
 export interface Activity {
   id: number;
   title: string;
-  class: "S" | "T" ; // schedule todo 
+  class: "S" | "T"; // schedule todo
   projectId?: number;
   estPomoI?: string;
   dueDate?: number;
-  dueRange?: [number, string]; // 第二个改为小时用input获取
+  dueRange?: [number, string]; // 第二个改为分钟用input获取
   interruption?: "I" | "E";
   category?: "red" | "yellow" | "blue" | "green" | "white";
   fourZone?: "1" | "2" | "3" | "4";

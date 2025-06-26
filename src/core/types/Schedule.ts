@@ -10,4 +10,5 @@ export interface Schedule {
   location?: string;
   doneTime?: number;
   isUntaetigkeit?: boolean;
+  interruption?: "I" | "E";
 }

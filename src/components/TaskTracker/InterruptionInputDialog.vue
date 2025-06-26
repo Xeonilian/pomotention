@@ -19,8 +19,8 @@
       <n-space vertical>
         <n-text>转换为活动：</n-text>
         <n-radio-group v-model:value="activityType" name="activityType">
-          <n-radio value="T">待办事项</n-radio>
-          <n-radio value="S">日程安排</n-radio>
+          <n-radio value="T">待办活动</n-radio>
+          <n-radio value="S">预约活动</n-radio>
         </n-radio-group>
       </n-space>
 

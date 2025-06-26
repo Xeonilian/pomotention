@@ -15,4 +15,5 @@ export interface Todo {
   idFormated?: string; // 测试用
   doneTime?: number;
   startTime?: number;
+  interruption?: "I" | "E";
 }

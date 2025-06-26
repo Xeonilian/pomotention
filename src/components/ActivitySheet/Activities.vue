@@ -31,16 +31,36 @@
       >
         <template #prefix>
           <n-icon v-if="item.isUntaetigkeit" :color="'var(--color-blue)'"
-            ><Cloud24Filled
+            ><Cloud24Regular
           /></n-icon>
           <n-icon
             v-if="item.interruption === 'I'"
-            :color="'var(--color-purple)'"
-            ><Cloud24Filled
+            :color="
+              item.status === 'ongoing'
+                ? 'var(--color-red)'
+                : item.status === 'delayed'
+                ? 'var(--color-blue)'
+                : item.status === 'suspended'
+                ? 'var(--color-orange)'
+                : item.status === 'cancelled'
+                ? 'var(--color-text-primary)'
+                : 'var(--color-text-secondary)'
+            "
+            ><Chat24Regular
           /></n-icon>
           <n-icon
             v-else-if="item.interruption === 'E'"
-            :color="'var(--color-orange)'"
+            :color="
+              item.status === 'ongoing'
+                ? 'var(--color-red)'
+                : item.status === 'delayed'
+                ? 'var(--color-blue)'
+                : item.status === 'suspended'
+                ? 'var(--color-orange)'
+                : item.status === 'cancelled'
+                ? 'var(--color-text-primary)'
+                : 'var(--color-text-secondary)'
+            "
             ><VideoPersonCall24Regular
           /></n-icon>
           <n-icon
@@ -49,10 +69,12 @@
               item.status === 'ongoing'
                 ? 'var(--color-red)'
                 : item.status === 'delayed'
-                ? 'var(--color-orange)'
-                : item.status === 'suspended'
                 ? 'var(--color-blue)'
-                : 'var(--color-text-primary)'
+                : item.status === 'suspended'
+                ? 'var(--color-orange)'
+                : item.status === 'cancelled'
+                ? 'var(--color-text-primary)'
+                : 'var(--color-text-secondary)'
             "
             ><ApprovalsApp24Regular
           /></n-icon>
@@ -62,12 +84,14 @@
               item.status === 'ongoing'
                 ? 'var(--color-red)'
                 : item.status === 'delayed'
-                ? 'var(--color-orange)'
-                : item.status === 'suspended'
                 ? 'var(--color-blue)'
-                : 'var(--color-text-primary)'
+                : item.status === 'suspended'
+                ? 'var(--color-orange)'
+                : item.status === 'cancelled'
+                ? 'var(--color-text-primary)'
+                : 'var(--color-text-secondary)'
             "
-            ><Accessibility28Filled
+            ><Accessibility24Regular
           /></n-icon>
         </template>
       </n-input>
@@ -90,7 +114,7 @@
           'pomo-purple': item.pomoType === '🍇',
           'pomo-green': item.pomoType === '🍒',
           'input-center': true, // 新增
-          'input-clear-disabled': item.pomoType === '🍒', // 新增
+          'input-clear-disabled': item.pomoType === '🍒',
         }"
         :disabled="item.pomoType === '🍒'"
         @update:value="(val) => onInputUpdate(item, val)"
@@ -99,6 +123,13 @@
       <n-input
         v-else
         style="max-width: 32px; font-size: 14px; margin: 0 auto"
+        :value="item.dueRange ? item.dueRange[1] : ''"
+        @update:value="
+          (val) =>
+            item.dueRange
+              ? (item.dueRange[1] = val)
+              : (item.dueRange = [Date.now(), val])
+        "
         @focus="$emit('focus-row', item.id)"
         title="持续时间(分钟)"
         placeholder="min"
@@ -143,8 +174,9 @@ import { NInput, NDatePicker, NIcon } from "naive-ui";
 import {
   VideoPersonCall24Regular,
   ApprovalsApp24Regular,
-  Accessibility28Filled,
-  Cloud24Filled,
+  Accessibility24Regular,
+  Cloud24Regular,
+  Chat24Regular,
 } from "@vicons/fluent";
 import type { Activity } from "@/core/types/Activity";
 
@@ -225,17 +257,17 @@ function onInputUpdate(item: Activity, value: string) {
   background: var(--color-blue-light-transparent);
 }
 .pomo-input :deep(.n-input__placeholder) {
-  opacity: 0.5; /* 50% 透明度 */
-  font-size: 12px;
+  opacity: 0.45; /* 50% 透明度 */
+  font-size: 10px;
 }
 .pomo-red {
-  background: var(--color-red-light) !important;
+  background: var(--color-background) !important;
 }
 .pomo-purple {
-  background: var(--color-purple-light) !important;
+  background: var(--color-purple-light-transparent) !important;
 }
 .pomo-green {
-  background: var(--color-green-light) !important;
+  background: var(--color-green-light-transparent) !important;
 }
 /* 文本居中 */
 .input-center :deep(.n-input__input) {

@@ -63,7 +63,6 @@
         :showPomoSeq="showPomoSeq"
         :showPomodoroView="showPomodoroView"
         @toggle-markdown="toggleMarkdown"
-        @toggle-pomo-seq="$emit('toggle-pomo-seq')"
         @energy-record="handleEnergyRecord"
         @reward-record="handleRewardRecord"
         @interruption-record="handleInterruptionRecord"
@@ -92,6 +91,8 @@ import type {
   InterruptionRecord,
 } from "@/core/types/Task";
 import { taskService } from "@/services/taskService";
+import { convertToSchedule } from "@/core/utils/convertActivity";
+import { Schedule } from "@/core/types/Schedule";
 
 const props = defineProps<{
   showPomoSeq: boolean;
@@ -102,7 +103,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: "reward-record"): void;
-  (e: "toggle-pomo-seq"): void;
+
   (
     e: "interruption-record",
     data: {
@@ -114,6 +115,7 @@ const emit = defineEmits<{
     }
   ): void;
   (e: "activity-updated"): void;
+  (e: "interruption-update", interruption: Schedule): void;
 }>();
 
 // Markdown相关状态
@@ -271,10 +273,16 @@ function handleInterruptionRecord(data: {
           );
 
           if (activity) {
+            if (data.activityClass === "S") {
+              const interruption = convertToSchedule(activity);
+              emit("interruption-update", interruption);
+              console.log(interruption);
+            }
             // 如果是待办事项且有截止日期，设置dueDate
             if (data.activityClass === "T" && data.dueDate) {
               activity.dueDate = data.dueDate;
             }
+
             // 通知父组件活动已更新
             emit("activity-updated");
           }

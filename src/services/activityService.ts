@@ -193,10 +193,10 @@ export function convertToSchedule(activity: Activity): Schedule {
     activityId: activity.id,
     activityTitle: activity.title,
     activityDueRange: [activity.dueRange![0], activity.dueRange![1]],
-    status: "ongoing",
+    status: "",
     projectName: activity.projectId ? `项目${activity.projectId}` : undefined,
     location: activity.location || "",
-    isUntaetigkeit:activity.isUntaetigkeit? true: false ,
+    isUntaetigkeit: activity.isUntaetigkeit ? true : false,
   };
 }
 

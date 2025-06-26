@@ -11,7 +11,6 @@ interface DateCheckServiceOptions {
   activityList: Ref<Activity[]>;
   scheduleList: Ref<Schedule[]>;
   todoList: Ref<Todo[]>;
-  convertToSchedule: (activity: Activity) => Schedule;
   currentDateKey: Ref<string> | ComputedRef<string>;
   onDateChange?: (currentDateKey: string) => void;
 }
@@ -23,7 +22,6 @@ export function createDateCheckService({
   activityList,
   scheduleList,
   todoList,
-  convertToSchedule,
   currentDateKey,
   onDateChange,
 }: DateCheckServiceOptions) {
@@ -57,6 +55,7 @@ export function createDateCheckService({
   }
 
   function processActivityForNewDay() {
+    // 日期变更，识别S类Activity如果到期时间是系统时间，变为ongoing
     const todayKey = getDateKey(new Date());
 
     activityList.value.forEach((activity: Activity) => {
@@ -69,7 +68,6 @@ export function createDateCheckService({
           !scheduleList.value.some((s) => s.activityId === activity.id)
         ) {
           activity.status = "ongoing";
-          scheduleList.value.push(convertToSchedule(activity));
         }
       }
     });

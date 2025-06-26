@@ -238,20 +238,20 @@ export function syncDateChanges(
         if (scheduleIdx === -1) {
           // 可选：status 自动改 ongoing
           activity.status = "ongoing";
-          const sch = convertToSchedule(activity);
-          scheduleList.push(sch);
+          const schedule = convertToSchedule(activity);
+          scheduleList.push(schedule);
         } else {
           // 已有 schedule，更新主字段
-          const sch = scheduleList[scheduleIdx];
-          sch.activityTitle = activity.title;
-          sch.activityDueRange = activity.dueRange
+          const schedule = scheduleList[scheduleIdx];
+          schedule.activityTitle = activity.title;
+          schedule.activityDueRange = activity.dueRange
             ? [...activity.dueRange]
             : [0, "0"];
-          sch.status = activity.status || "";
-          sch.projectName = activity.projectId
+          schedule.status = activity.status || "";
+          schedule.projectName = activity.projectId
             ? `项目${activity.projectId}`
             : undefined;
-          sch.location = activity.location || "";
+          schedule.location = activity.location || "";
         }
       } else {
         // 不是今天，应该从 scheduleList 里删除

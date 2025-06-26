@@ -104,9 +104,9 @@ const emit = defineEmits<{
 const filterOptions = [
   { label: "今日到期", key: "today" },
   { label: "内外打扰", key: "interrupt" },
-  { label: "待办任务", key: "todo" },
-  { label: "预约任务", key: "schedule" },
-  { label: "活动任务", key: "all" },
+  { label: "待办活动", key: "todo" },
+  { label: "预约活动", key: "schedule" },
+  { label: "全部活动", key: "all" },
   { label: "取消任务", key: "cancelled" },
 ];
 
