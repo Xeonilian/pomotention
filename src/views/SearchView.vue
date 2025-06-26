@@ -149,7 +149,7 @@ export default defineComponent({
   justify-content: center; /* 水平居中 */
   align-items: center; /* 垂直居中 */
   flex-direction: column; /* 纵向排列子元素 */
-  min-height: 100vh; /* 页面至少占满整个视口高度 */
+  height: 100%; /* 页面至少占满整个视口高度 */
 }
 
 .search-container {
