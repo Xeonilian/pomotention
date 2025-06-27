@@ -6,165 +6,175 @@
 
 <template>
   <div class="home-content">
-    <div class="content">
-      <div v-if="showLeft" class="left" :style="{ width: leftWidth + 'px' }">
-        <!-- 日程表 -->
-        <TimeTableView
-          :blocks="viewBlocks"
-          :current-type="currentType"
-          :todayTodos="todosForAppDate"
-          :todaySchedules="schedulesForAppDate"
-          @update-blocks="onBlocksUpdate"
-          @reset-schedule="onTimeTableReset"
-          @change-type="onTypeChange"
-          :appDateTimestamp="dateService.appDateTimestamp.value"
-        />
-      </div>
+    <!-- 左侧面板 (日程表) -->
+    <div
+      v-if="uiStore.showSchedulePanel"
+      class="left"
+      :style="{ width: leftWidth + 'px' }"
+    >
+      <TimeTableView
+        :blocks="viewBlocks"
+        :current-type="currentType"
+        :todayTodos="todosForAppDate"
+        :todaySchedules="schedulesForAppDate"
+        @update-blocks="onBlocksUpdate"
+        @reset-schedule="onTimeTableReset"
+        @change-type="onTypeChange"
+        :appDateTimestamp="dateService.appDateTimestamp.value"
+      />
+    </div>
 
+    <!-- 左侧面板调整大小手柄 -->
+    <div
+      v-if="uiStore.showSchedulePanel"
+      class="resize-handle-horizontal"
+      @mousedown="startLeftResize"
+    ></div>
+
+    <!-- 中间内容区域 -->
+    <div
+      class="middle"
+      :class="{
+        'middle-alone':
+          !uiStore.showSchedulePanel && !uiStore.showActivityPanel,
+      }"
+    >
+      <!-- 今日视图 -->
       <div
-        v-if="showLeft"
-        class="resize-handle-horizontal"
-        @mousedown="startLeftResize"
-      ></div>
-      <div class="middle" :class="{ 'middle-alone': !showLeft && !showRight }">
-        <div
-          v-if="showTodayView"
-          class="middle-top"
-          :style="
-            showMiddleBottom ? { height: topHeight + 'px' } : { height: '100%' }
-          "
-          :class="{ 'not-today': !isViewingToday }"
-        >
-          <!-- 今日待办 -->
-          <div class="today-header">
-            <div class="today-info">
-              <span class="today-status">{{ dateService.displayDate }}</span>
-              <span class="global-pomo">
-                <span class="today-pomo">🍅 {{ currentDatePomoCount }}/</span>
-                <span class="total-pomo">{{ globalRealPomo }}</span>
-              </span>
-            </div>
-            <div class="button-group">
-              <!-- 绑定 queryDate 并监听变化 -->
-              <n-date-picker
-                v-model:value="queryDate"
-                type="date"
-                placeholder=""
-                @keyup.enter="onDateSet('query')"
-                @update:value="onDateSet('query')"
-                style="width: 100px"
-                class="search-date"
-              >
-                <template #date-icon>
-                  <n-icon :size="18" :component="Search24Regular" />
-                </template>
-              </n-date-picker>
-              <n-button
-                size="small"
-                circle
-                secondary
-                strong
-                @click="onDateSet('prev')"
-                title="上一天"
-              >
-                <template #icon>
-                  <n-icon>
-                    <Previous24Regular />
-                  </n-icon>
-                </template>
-              </n-button>
-              <n-button
-                size="small"
-                circle
-                secondary
-                strong
-                @click="onDateSet('next')"
-                title="下一天"
-              >
-                <template #icon>
-                  <n-icon>
-                    <Next24Regular />
-                  </n-icon>
-                </template>
-              </n-button>
-            </div>
+        v-if="uiStore.showTodayPanel"
+        class="middle-top"
+        :style="
+          uiStore.showTaskPanel
+            ? { height: topHeight + 'px' }
+            : { height: '100%' }
+        "
+        :class="{ 'not-today': !isViewingToday }"
+      >
+        <!-- 今日待办的头部和控件 -->
+        <div class="today-header">
+          <div class="today-info">
+            <span class="today-status">{{ dateService.displayDate }}</span>
+            <span class="global-pomo">
+              <span class="today-pomo">🍅 {{ currentDatePomoCount }}/</span>
+              <span class="total-pomo">{{ globalRealPomo }}</span>
+            </span>
           </div>
-          <div class="today-view-container">
-            <TodayView
-              :selectedRowId="selectedRowId"
-              :todayTodos="todosForAppDate"
-              :todaySchedules="schedulesForAppDate"
-              :activeId="activeId"
-              @update-schedule-status="onUpdateScheduleStatus"
-              @update-todo-status="onUpdateTodoStatus"
-              @suspend-todo="onSuspendTodo"
-              @cancel-todo="onCancelTodo"
-              @repeat-todo="onRepeatTodo"
-              @suspend-schedule="onSuspendSchedule"
-              @cancel-schedule="onCancelSchedule"
-              @repeat-schedule="onRepeatSchedule"
-              @update-todo-est="onUpdateTodoEst"
-              @update-todo-pomo="onUpdateTodoPomo"
-              @select-task="onSelectTask"
-              @select-activity="onSelectActivity"
-              @select-row="onSelectRow"
-              @edit-schedule-title="handleEditScheduleTitle"
-              @edit-todo-title="handleEditTodoTitle"
-              @edit-todo-start="handleEditTodoStart"
-              @edit-todo-done="handleEditTodoDone"
-              @edit-schedule-done="handleEditScheduleDone"
-            />
+          <div class="button-group">
+            <n-date-picker
+              v-model:value="queryDate"
+              type="date"
+              placeholder=""
+              @keyup.enter="onDateSet('query')"
+              @update:value="onDateSet('query')"
+              style="width: 100px"
+              class="search-date"
+            >
+              <template #date-icon>
+                <n-icon :size="18" :component="Search24Regular" />
+              </template>
+            </n-date-picker>
+            <n-button
+              size="small"
+              circle
+              secondary
+              strong
+              @click="onDateSet('prev')"
+              title="上一天"
+            >
+              <template #icon>
+                <n-icon>
+                  <Previous24Regular />
+                </n-icon>
+              </template>
+            </n-button>
+            <n-button
+              size="small"
+              circle
+              secondary
+              strong
+              @click="onDateSet('next')"
+              title="下一天"
+            >
+              <template #icon>
+                <n-icon>
+                  <Next24Regular />
+                </n-icon>
+              </template>
+            </n-button>
           </div>
         </div>
-        <div
-          v-if="showMiddleBottom"
-          class="resize-handle"
-          @mousedown="startVerticalResize"
-        ></div>
-        <div
-          v-if="showMiddleBottom"
-          class="middle-bottom"
-          :style="{ height: `calc(100% - ${topHeight}px - 8px)` }"
-        >
-          <TaskView
-            :showPomoSeq="showPomoSeq"
-            :showPomodoroView="showPomodoroView"
-            :selectedTaskId="selectedTaskId"
-            :selectedTask="selectedTask"
-            @activity-updated="onActivityUpdated"
-            @interruption-update="onInterruptionUpdated"
-            @toggle-pomo-seq="showPomoSeq = !showPomoSeq"
+        <!-- 今日视图容器 -->
+        <div class="today-view-container">
+          <TodayView
+            :selectedRowId="selectedRowId"
+            :todayTodos="todosForAppDate"
+            :todaySchedules="schedulesForAppDate"
+            :activeId="activeId"
+            @update-schedule-status="onUpdateScheduleStatus"
+            @update-todo-status="onUpdateTodoStatus"
+            @suspend-todo="onSuspendTodo"
+            @cancel-todo="onCancelTodo"
+            @repeat-todo="onRepeatTodo"
+            @suspend-schedule="onSuspendSchedule"
+            @cancel-schedule="onCancelSchedule"
+            @repeat-schedule="onRepeatSchedule"
+            @update-todo-est="onUpdateTodoEst"
+            @update-todo-pomo="onUpdateTodoPomo"
+            @select-task="onSelectTask"
+            @select-activity="onSelectActivity"
+            @select-row="onSelectRow"
+            @edit-schedule-title="handleEditScheduleTitle"
+            @edit-todo-title="handleEditTodoTitle"
+            @edit-todo-start="handleEditTodoStart"
+            @edit-todo-done="handleEditTodoDone"
+            @edit-schedule-done="handleEditScheduleDone"
           />
         </div>
       </div>
+      <!-- 任务视图调整大小手柄 -->
       <div
-        v-if="showRight"
-        class="resize-handle-horizontal"
-        @mousedown="startRightResize"
+        v-if="uiStore.showTaskPanel"
+        class="resize-handle"
+        @mousedown="startVerticalResize"
       ></div>
-      <div v-if="showRight" class="right" :style="{ width: rightWidth + 'px' }">
-        <!-- 活动清单 -->
-        <ActivityView
-          :activities="activityList"
-          :activeId="activeId"
-          :todos="todoList"
-          :selectedActivityId="selectedActivityId"
-          @pick-activity-todo="onPickActivity"
-          @add-activity="onAddActivity"
-          @delete-activity="onDeleteActivity"
-          @update-active-id="onUpdateActiveId"
-          @toggle-pomo-type="onTogglePomoType"
-          @repeat-activity="onRepeatActivity"
-          @go-to-todo="goToTodo"
+      <!-- 任务视图 -->
+      <div
+        v-if="uiStore.showTaskPanel"
+        class="middle-bottom"
+        :style="{ height: `calc(100% - ${topHeight}px - 8px)` }"
+      >
+        <TaskView
+          :selectedTaskId="selectedTaskId"
+          :selectedTask="selectedTask"
+          @activity-updated="onActivityUpdated"
+          @interruption-update="onInterruptionUpdated"
         />
       </div>
     </div>
-    <!-- 添加可拖动的 PomodoroView -->
-    <div class="draggable-container" ref="draggableContainer">
-      <PomodoroView
-        v-if="showPomodoroView"
-        :showPomoSeq="showPomoSeq"
-        @toggle-pomo-seq="showPomoSeq = !showPomoSeq"
+    <!-- 右侧面板调整大小手柄 -->
+    <div
+      v-if="uiStore.showActivityPanel"
+      class="resize-handle-horizontal"
+      @mousedown="startRightResize"
+    ></div>
+    <!-- 右侧面板 (活动清单) -->
+    <div
+      v-if="uiStore.showActivityPanel"
+      class="right"
+      :style="{ width: rightWidth + 'px' }"
+    >
+      <ActivityView
+        :activities="activityList"
+        :activeId="activeId"
+        :todos="todoList"
+        :selectedActivityId="selectedActivityId"
+        @pick-activity-todo="onPickActivity"
+        @add-activity="onAddActivity"
+        @delete-activity="onDeleteActivity"
+        @update-active-id="onUpdateActiveId"
+        @toggle-pomo-type="onTogglePomoType"
+        @repeat-activity="onRepeatActivity"
+        @go-to-todo="goToTodo"
       />
     </div>
   </div>
@@ -172,14 +182,13 @@
 
 <script setup lang="ts">
 // ------------------------ 导入依赖 ------------------------
-import { ref, onMounted, watch, onUnmounted, computed } from "vue";
+import { ref, onMounted, watch, computed } from "vue";
 import { NButton, NIcon } from "naive-ui";
 import { usePomoStore } from "@/stores/usePomoStore";
 import TimeTableView from "@/views/Home/TimeTableView.vue";
 import TodayView from "@/views/Home/TodayView.vue";
 import TaskView from "@/views/Home/TaskView.vue";
 import ActivityView from "@/views/Home/ActivityView.vue";
-import PomodoroView from "@/views/Home/PomodoroView.vue";
 import type { Activity } from "@/core/types/Activity";
 import type { Block } from "@/core/types/Block";
 import type { Todo } from "@/core/types/Todo";
@@ -220,19 +229,15 @@ import {
 import { useResize } from "@/composables/useResize";
 import { getTimestampForTimeString, addDays } from "@/core/utils";
 import { useUnifiedDateService } from "@/services/useUnifiedDateService";
+import { useUIStore } from "@/stores/useUIStore";
 
 // ======================== 响应式状态与初始化 ========================
 
 // -- 基础UI状态
-const showLeft = ref(true);
-const showMiddleBottom = ref(true); // 取消隐藏下部分
-const showRight = ref(true);
-const showPomodoroView = ref(true); // 控制是否显示 PomodoroView
+const uiStore = useUIStore();
 const showPomoTypeChangePopover = ref(false);
 const pomoTypeChangeMessage = ref("");
 const pomoTypeChangeTarget = ref<HTMLElement | null>(null);
-const showPomoSeq = ref(false);
-const showTodayView = ref(true);
 const queryDate = ref<number | null>(null);
 
 // -- 核心数据
@@ -885,36 +890,7 @@ watch(
 // ======================== 8. 生命周期 Hook ========================
 onMounted(() => {
   // 主动检查一次日期变更
-
   dateService.navigateDate("today");
-
-  if (draggableContainer.value) {
-    draggableContainer.value.addEventListener("mousedown", handleMouseDown);
-    document.addEventListener("mousemove", handleMouseMove);
-    document.addEventListener("mouseup", handleMouseUp);
-
-    // 设置初始位置在页面正中偏下方
-    const windowWidth = window.innerWidth;
-    const windowHeight = window.innerHeight;
-    const elementWidth = draggableContainer.value.offsetWidth;
-    const elementHeight = draggableContainer.value.offsetHeight;
-
-    const initialX = (windowWidth - elementWidth) * 0.35; // 正中间
-    const initialY = (windowHeight - elementHeight) * 0.8; // 偏下方
-
-    draggableContainer.value.style.left = `${initialX}px`;
-    draggableContainer.value.style.top = `${initialY}px`;
-  }
-  window.addEventListener("view-toggle", handleViewToggle);
-});
-
-onUnmounted(() => {
-  if (draggableContainer.value) {
-    draggableContainer.value.removeEventListener("mousedown", handleMouseDown);
-    document.removeEventListener("mousemove", handleMouseMove);
-    document.removeEventListener("mouseup", handleMouseUp);
-  }
-  window.removeEventListener("view-toggle", handleViewToggle);
 });
 
 // ======================== 9. 页面尺寸调整  ========================
@@ -938,101 +914,16 @@ const { size: rightWidth, startResize: startRightResize } = useResize(
   600,
   true // 右侧面板
 );
-
-// 添加拖动相关代码
-const draggableContainer = ref<HTMLElement | null>(null);
-let isDragging = false;
-let startX = 0;
-let startY = 0;
-let initialX = 0;
-let initialY = 0;
-
-function handleMouseDown(e: MouseEvent) {
-  isDragging = true;
-  startX = e.clientX;
-  startY = e.clientY;
-  if (draggableContainer.value) {
-    const rect = draggableContainer.value.getBoundingClientRect();
-    initialX = rect.left;
-    initialY = rect.top;
-  }
-}
-
-function handleMouseMove(e: MouseEvent) {
-  if (!isDragging || !draggableContainer.value) return;
-
-  const deltaX = e.clientX - startX;
-  const deltaY = e.clientY - startY;
-
-  // 获取视窗尺寸
-  const windowWidth = window.innerWidth;
-  const windowHeight = window.innerHeight;
-
-  // 获取元素尺寸
-  const elementWidth = draggableContainer.value.offsetWidth;
-  const elementHeight = draggableContainer.value.offsetHeight;
-
-  // 计算新位置
-  let newX = initialX + deltaX;
-  let newY = initialY + deltaY;
-
-  // 限制X轴范围
-  newX = Math.max(0, Math.min(newX, windowWidth - elementWidth));
-  // 限制Y轴范围
-  newY = Math.max(0, Math.min(newY, windowHeight - elementHeight));
-
-  draggableContainer.value.style.left = `${newX}px`;
-  draggableContainer.value.style.top = `${newY}px`;
-}
-
-function handleMouseUp() {
-  isDragging = false;
-}
-// ======================== 9.  页面视图隐藏显示控制 ========================
-function handleViewToggle(event: Event) {
-  const customEvent = event as CustomEvent<{ key: string }>;
-  const { key } = customEvent.detail;
-  switch (key) {
-    case "pomodoro":
-      showPomodoroView.value = !showPomodoroView.value;
-      break;
-    case "schedule":
-      showLeft.value = !showLeft.value;
-      break;
-    case "activity":
-      showRight.value = !showRight.value;
-      break;
-    case "task":
-      showMiddleBottom.value = !showMiddleBottom.value;
-      break;
-    case "today":
-      showTodayView.value = !showTodayView.value;
-      break;
-  }
-}
-
-// 暴露方法给父组件
-defineExpose({
-  handleViewToggle,
-});
 </script>
 
 <style scoped>
 .home-content {
   display: flex;
-  flex-direction: column;
-  height: 100%;
-  overflow: auto;
-  flex: 1;
-}
-
-.content {
-  flex: 1;
-  display: flex;
   background: var(--color-background-light-light);
-  overflow: auto;
   justify-content: center;
-  overflow-x: hidden; /* 隐藏水平滚动条，但可能裁剪内容 */
+  overflow: hidden;
+  height: 100%;
+  flex-direction: row;
 }
 
 .left {
@@ -1045,7 +936,7 @@ defineExpose({
 }
 
 .right {
-  padding: 16px;
+  padding: 8px;
   box-sizing: border-box;
   overflow: auto;
   margin-left: 0;
@@ -1144,7 +1035,6 @@ defineExpose({
   flex: 1;
   display: flex;
   flex-direction: column;
-  height: 100%;
 }
 
 .global-pomo {
@@ -1223,22 +1113,6 @@ defineExpose({
   height: 30px;
   background: #ccc;
   border-radius: 2px;
-}
-
-.draggable-container {
-  position: fixed;
-  z-index: 1000;
-  cursor: move;
-  user-select: none;
-  background: rgba(255, 255, 255, 0);
-  border-radius: 8px;
-  box-shadow: 0 2px 12px rgba(255, 255, 255, 0.1);
-  transition: box-shadow 0.3s ease;
-  padding: 0px;
-}
-
-.draggable-container:hover {
-  box-shadow: 0 4px 16px rgba(255, 255, 255, 0.15);
 }
 
 .search-date :deep(.n-input) {

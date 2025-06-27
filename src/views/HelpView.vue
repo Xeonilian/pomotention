@@ -27,16 +27,12 @@
           🚫获取失败
           <span v-if="remoteError">({{ remoteError }})</span>
         </n-tag>
-        <!-- <span style="margin-left: 8px">
-          <template v-if="remoteOk">🌐 github连接正常</template>
-          <template v-else>🚫 github连接异常</template>
-        </span> -->
         <n-switch
           v-model:value="settingStore.settings.checkForUpdate"
           small
           class="switch-button"
           :title="
-            settingStore.settings.checkForUpdate ? '启动更新' : '关闭更新'
+            settingStore.settings.checkForUpdate ? '关闭更新' : '启动更新'
           "
         />
       </div>
@@ -162,7 +158,7 @@ async function checkRemoteRelease() {
 }
 
 .help-content {
-  max-width: 600px;
+  max-width: 500px;
   text-align: center;
   background: var(--color-background-secondary);
   padding: 0 15px;

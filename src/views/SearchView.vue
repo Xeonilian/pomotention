@@ -1,5 +1,5 @@
 <template>
-  <div class="center-container">
+  <div class="search-view">
     <div class="search-container">
       <n-input
         placeholder="请输入搜索关键字"
@@ -9,38 +9,40 @@
       <n-button @click="performSearch" type="info">搜索</n-button>
     </div>
 
-    <!-- 展示 Todo 及其相关任务 -->
-    <n-card
-      v-for="item in filteredTodos"
-      :key="item.id"
-      class="search-item-todo"
-    >
-      <div class="title">{{ item.activityTitle }}</div>
-      <p>截止日期: {{ formatDate(item.dueDate) }}</p>
+    <div class="content-container">
+      <!-- 展示 Todo 及其相关任务 -->
+      <n-card
+        v-for="item in filteredTodos"
+        :key="item.id"
+        class="search-item-todo"
+      >
+        <div class="title">{{ item.activityTitle }}</div>
+        <p>截止日期: {{ formatDate(item.dueDate) }}</p>
 
-      <div v-for="task in getTasksBySourceId(item.id)" :key="task.id">
-        <p>任务内容:</p>
-        <!-- 直接用 v-html 渲染 Markdown 内容 -->
-        <div v-html="convertMarkdown(task.description)"></div>
-      </div>
-    </n-card>
+        <div v-for="task in getTasksBySourceId(item.id)" :key="task.id">
+          <p>任务内容:</p>
+          <!-- 直接用 v-html 渲染 Markdown 内容 -->
+          <div v-html="convertMarkdown(task.description)"></div>
+        </div>
+      </n-card>
 
-    <!-- 展示 Schedule 及其相关任务 -->
-    <n-card
-      v-for="item in filteredSchedules"
-      :key="item.id"
-      class="search-item-schedule"
-    >
-      <div class="title">{{ item.activityTitle }}</div>
+      <!-- 展示 Schedule 及其相关任务 -->
+      <n-card
+        v-for="item in filteredSchedules"
+        :key="item.id"
+        class="search-item-schedule"
+      >
+        <div class="title">{{ item.activityTitle }}</div>
 
-      <p>截止日期: {{ formatDate(item.activityDueRange[0]) }}</p>
-      <p>位置: {{ item.location || "无" }}</p>
-      <div v-for="task in getTasksBySourceId(item.id)" :key="task.id">
-        <p>任务内容:</p>
-        <!-- 直接用 v-html 渲染 Markdown 内容 -->
-        <div v-html="convertMarkdown(task.description)"></div>
-      </div>
-    </n-card>
+        <p>截止日期: {{ formatDate(item.activityDueRange[0]) }}</p>
+        <p>位置: {{ item.location || "无" }}</p>
+        <div v-for="task in getTasksBySourceId(item.id)" :key="task.id">
+          <p>任务内容:</p>
+          <!-- 直接用 v-html 渲染 Markdown 内容 -->
+          <div v-html="convertMarkdown(task.description)"></div>
+        </div>
+      </n-card>
+    </div>
   </div>
 </template>
 
@@ -144,21 +146,34 @@ export default defineComponent({
 </script>
 
 <style scoped>
-.center-container {
+.search-view {
   display: flex;
-  justify-content: center; /* 水平居中 */
-  align-items: center; /* 垂直居中 */
-  flex-direction: column; /* 纵向排列子元素 */
-  height: 100hv; /* 页面至少占满整个视口高度 */
+  margin: 0 auto; /* 自动左右外边距以居中 */
+  overflow: hidden;
+  flex-direction: column;
 }
 
 .search-container {
-  margin-top: 10px;
-  display: flex; /* 使用 flexbox */
-  justify-content: center; /* 水平居中 */
-  align-items: center; /* 垂直居中 */
-  margin-bottom: 0px; /* 和其他内容之间的间距 */
+  position: fixed; /* 使搜索容器固定在视口 */
+  top: 15px; /* 距离视口顶部的距离，可以根据需要调整 */
+  left: 50%; /* 将元素居中 */
+  transform: translateX(-50%); /* 确保居中 */
+  padding-top: 30px;
+  justify-content: center;
+  align-items: center;
   gap: 20px;
+  width: 400px; /* 保持宽度 */
+  overflow: hidden;
+  z-index: 10; /* 确保搜索框位于其他元素之上 */
+  display: flex;
+}
+
+.content-container {
+  padding-top: 50px;
+  width: 100%;
+  display: flex;
+  justify-content: center; /* 水平居中 */
+  margin: 0 auto;
 }
 
 .search-item-todo {

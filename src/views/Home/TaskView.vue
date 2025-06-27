@@ -60,8 +60,6 @@
       <TaskButtons
         :taskId="selectedTaskId"
         :isMarkdown="isMarkdown"
-        :showPomoSeq="showPomoSeq"
-        :showPomodoroView="showPomodoroView"
         @toggle-markdown="toggleMarkdown"
         @energy-record="handleEnergyRecord"
         @reward-record="handleRewardRecord"
@@ -95,8 +93,6 @@ import { convertToSchedule } from "@/core/utils/convertActivity";
 import { Schedule } from "@/core/types/Schedule";
 
 const props = defineProps<{
-  showPomoSeq: boolean;
-  showPomodoroView: boolean;
   selectedTaskId: number | null;
   selectedTask: Task | null;
 }>();

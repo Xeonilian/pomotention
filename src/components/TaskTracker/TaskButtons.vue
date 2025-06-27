@@ -72,8 +72,6 @@ import {
 
 const props = defineProps<{
   taskId: number | null;
-  showPomoSeq: boolean;
-  showPomodoroView: boolean;
   isMarkdown: boolean;
 }>();
 

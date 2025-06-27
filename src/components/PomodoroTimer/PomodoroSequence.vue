@@ -375,7 +375,7 @@ onUnmounted(() => {
   height: 125px;
   min-height: 120px;
   border: 2px solid var(--color-text-secondary);
-  border-radius: 10px;
+  border-radius: 8px;
   box-shadow: 0px 4px 6px var(--color-background-light-transparent);
 }
 
