@@ -105,6 +105,7 @@ import {
 } from "@tauri-apps/api/window";
 
 import PomodoroView from "./Home/PomodoroView.vue"; // 确保 PomodoroView 是正确的路径
+import { isTauri } from "@tauri-apps/api/core";
 
 // 2. ==================== Store 初始化 (Store Initialization) ====================
 const timerStore = useTimerStore();
@@ -384,7 +385,7 @@ function handleMouseUp() {
  * 处理 Tauri 窗口迷你模式的逻辑（置顶/恢复）。
  */
 async function handleToggleOntopMode() {
-  if (import.meta.env.TAURI) {
+  if (isTauri()) {
     const appWindow = getCurrentWindow(); // Tauri 窗口实例
     // 切换窗口置顶状态
     await toggleAlwaysOnTop();
@@ -452,6 +453,10 @@ async function handleToggleOntopMode() {
 
         // 计算新的位置
         if (draggableContainer.value) {
+          draggableContainer.value.addEventListener(
+            "mousedown",
+            handleMouseDown
+          );
           const parentElement = draggableContainer.value.parentElement;
           if (parentElement) {
             const parentWidth = parentElement.clientWidth;
