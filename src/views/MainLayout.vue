@@ -567,7 +567,7 @@ onMounted(() => {
   }
 });
 
-// 同样，在 watch(showPomodoroView) 里面也需要修改
+// 同样，在 watch(showPomodoroView) 里面也需要修改 #HACK
 watch(
   showPomodoroView,
   async (newVal) => {
@@ -575,6 +575,7 @@ watch(
       await nextTick();
       if (draggableContainer.value) {
         const parentElement = draggableContainer.value.parentElement;
+        draggableContainer.value.addEventListener("mousedown", handleMouseDown);
         if (!parentElement) {
           console.error(
             "Draggable container has no parent element in watcher!"
