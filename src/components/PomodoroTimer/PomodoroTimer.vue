@@ -280,7 +280,6 @@ function handleDurationSelect(key: number): void {
   border: 2px solid var(--color-text-secondary);
   border-radius: 8px;
   box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
-  transition: height 0.3s ease; /* 添加高度过渡动画 */
 }
 
 /* 添加序列模式下的样式 */

@@ -91,7 +91,7 @@ type PomodoroStep = {
 const timerStore = useTimerStore();
 
 const emit = defineEmits<{
-  (e: "pomo-seq-change"): void;
+  (e: "pomo-seq-running", status: boolean): void;
 }>();
 
 // 数据
@@ -151,7 +151,9 @@ function startPomodoroCircle(): void {
       alert("请输入有效的序列。");
       return;
     }
-    emit("pomo-seq-change");
+    // 发射事件，告诉父组件当前状态
+    emit("pomo-seq-running", true);
+
     isRunning.value = true;
     setPomodoroRunning(true); // 设置番茄钟运行状态
     currentStep.value = 0;
@@ -210,7 +212,7 @@ function runStep(steps: PomodoroStep[]): void {
 function stopPomodoro(): void {
   // 先调用 store 的 resetTimer 方法
   timerStore.resetTimer();
-  emit("pomo-seq-change");
+  emit("pomo-seq-running", false);
   // 然后更新本地状态
   isRunning.value = false;
   setPomodoroRunning(false); // 设置番茄钟停止状态

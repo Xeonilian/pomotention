@@ -56,8 +56,6 @@
           :showPomoSeq="showPomoSeq"
           :isMiniMode="isMiniMode"
           @toggle-pomo-seq="showPomoSeq = !showPomoSeq"
-          @report-size="handlePomodoroViewSizeReport"
-          @exit-mini-mode="handleToggleOntopMode"
         />
       </div>
 
@@ -69,7 +67,9 @@
         :isMiniMode="isMiniMode"
         @toggle-pomo-seq="showPomoSeq = !showPomoSeq"
         @report-size="handlePomodoroViewSizeReport"
-        @exit-mini-mode="handleToggleOntopMode"
+        @exit-mini-mode="
+          handleToggleOntopMode(reportedPomodoroWidth, reportedPomodoroHeight)
+        "
       />
     </n-layout-content>
 
@@ -180,16 +180,49 @@ const DRAG_THRESHOLD = 5; // 拖动阈值（像素），只有当鼠标移动超
  * PomodoroView 报告尺寸的回调函数。
  * @param size - 包含 width 和 height 的对象。
  */
-const handlePomodoroViewSizeReport = ({
+const handlePomodoroViewSizeReport = async ({
   width,
   height,
 }: {
   width: number;
   height: number;
 }) => {
+  // 更新报告的宽度和高度
   reportedPomodoroWidth.value = width;
   reportedPomodoroHeight.value = height;
-  console.log(`MainLayout received PomodoroView size: ${width}x${height}`);
+  console.log(
+    `[report] MainLayout received PomodoroView size: ${width}x${height}`
+  );
+
+  if (isTauri()) {
+    const appWindow = getCurrentWindow(); // Tauri 窗口实例
+
+    try {
+      let finalWidth = Math.round(width);
+      let finalHeight = Math.round(height);
+
+      // 如果 PomodoroView 报告的尺寸为零，则使用默认值
+      if (finalWidth === 0 || finalHeight === 0) {
+        finalWidth = 220; // 默认宽度
+        finalHeight = showPomoSeq ? 240 : 140; // 默认高度
+      }
+
+      const scaleFactor = await appWindow.scaleFactor();
+      await appWindow.setSize(
+        new LogicalSize(
+          finalWidth * scaleFactor + 2,
+          finalHeight * scaleFactor + 1
+        )
+      );
+      console.log(`[report] Window resized to: ${finalWidth}x${finalHeight}`);
+    } catch (error) {
+      console.error("[report] Failed to resize window:", error);
+    }
+  } else {
+    console.warn(
+      "[report] Tauri calls are being skipped as the app is not running in Tauri environment."
+    );
+  }
 };
 
 /**
@@ -265,7 +298,11 @@ function buttonStyle(show: boolean, key: string) {
  */
 function handleMainLayoutViewToggle(key: string) {
   if (key === "ontop") {
-    handleToggleOntopMode(); // 调用专门处理置顶/迷你模式的函数
+    handleToggleOntopMode(
+      reportedPomodoroWidth.value,
+      reportedPomodoroHeight.value
+    ); // 调用专门处理置顶/迷你模式的函数
+    isMiniMode.value = true;
     return;
   }
 
@@ -384,7 +421,7 @@ function handleMouseUp() {
 /**
  * 处理 Tauri 窗口迷你模式的逻辑（置顶/恢复）。
  */
-async function handleToggleOntopMode() {
+async function handleToggleOntopMode(width: number, height: number) {
   if (isTauri()) {
     const appWindow = getCurrentWindow(); // Tauri 窗口实例
     // 切换窗口置顶状态
@@ -396,54 +433,54 @@ async function handleToggleOntopMode() {
     // 判断当前的置顶状态决定进入或退出迷你模式
     if (isAlwaysOnTop.value) {
       // 进入迷你模式
-      isMiniMode.value = true;
-      console.log("Entering mini mode...");
-
-      // 等待 PomodoroView 渲染并报告尺寸，确保获取到正确的窗口大小
-      await new Promise((resolve) => setTimeout(resolve, 100));
-
-      let finalWidth = reportedPomodoroWidth.value;
-      let finalHeight = reportedPomodoroHeight.value;
-
-      // 如果 PomodoroView 还没有报告尺寸，使用默认值
-      if (finalWidth === 0 || finalHeight === 0) {
-        // console.warn(
-        // "PomodoroView size not reported, using default for mini mode."
-        //      );
-        finalWidth = 220; // 你的 PomodoroView 固定宽度
-        finalHeight = 350; // 根据你的 PomodoroView 大致高度
-      }
-
-      const roundedWidth = Math.round(finalWidth);
-      const roundedHeight = Math.round(finalHeight);
-
+      console.log(
+        "[mini] Entering mini mode...",
+        width,
+        height,
+        "showPomoSeq",
+        showPomoSeq.value
+      );
+      let finalWidth = reportedPomodoroWidth.value; // 使用传递的 width
+      let finalHeight =
+        reportedPomodoroHeight.value || (showPomoSeq.value ? 240 : 140);
+      console.log(
+        "[mini] final size:",
+        width,
+        height,
+        "showPomoSeq",
+        showPomoSeq.value
+      );
       try {
         const scaleFactor = await appWindow.scaleFactor();
-        console.log(scaleFactor);
+        console.log("[mini] scaleFactor", scaleFactor);
         await appWindow.setDecorations(false); // 隐藏窗口装饰 (标题栏、边框等)
         await appWindow.setSize(
           new LogicalSize(
-            roundedWidth * scaleFactor + 2,
-            roundedHeight * scaleFactor + 1
+            finalWidth * scaleFactor + 2,
+            finalHeight * scaleFactor + 1
           )
         );
-        await appWindow.setPosition(new PhysicalPosition(0, 0)); // 将窗口移动到左上角
+        console.log(`[mini] Window resized to: ${finalWidth}x${finalHeight}`);
+        await appWindow.setPosition(new PhysicalPosition(100, 100)); // mini窗口位置
         //  console.log(
         //   "Window resized, positioned, and decorations hidden for mini mode."
         //    );
       } catch (error) {
-        console.error("Failed to set window properties for mini mode:", error);
+        console.error(
+          "[mini] Failed to set window properties for mini mode:",
+          error
+        );
       }
     } else {
       // 退出迷你模式
       isMiniMode.value = false;
-      console.log("Exiting mini mode...");
+      console.log("[mini] Exiting mini mode...");
 
       try {
         await appWindow.setDecorations(true); // 显示窗口装饰
         await appWindow.setSize(new LogicalSize(900, 600)); // 恢复默认窗口大小
         await appWindow.center(); // 恢复窗口居中
-        console.log("Window properties restored from mini mode.");
+        console.log("[mini] Window properties restored from mini mode.");
         if (draggableContainer.value) {
           draggableContainer.value.style.visibility = "hidden"; // 首先隐藏
         }
