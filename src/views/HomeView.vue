@@ -66,7 +66,7 @@
               placeholder="回车到今天"
               @keyup.enter="onDateSet('today')"
               @update:value="onDateSet('query')"
-              style="width: 100px"
+              style="width: 92px"
               class="search-date"
             >
               <template #date-icon>
@@ -1123,7 +1123,7 @@ const { size: rightWidth, startResize: startRightResize } = useResize(
 }
 
 .search-date :deep(.n-input-wrapper) {
-  padding-left: 4px;
-  padding-right: 4px;
+  padding-left: 6px;
+  padding-right: 6px;
 }
 </style>
