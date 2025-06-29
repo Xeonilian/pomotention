@@ -82,12 +82,17 @@ import {
   PlayCircle24Regular,
   RecordStop24Regular,
 } from "@vicons/fluent";
+
 type PomodoroStep = {
   type: "work" | "break";
   duration: number;
 };
 
 const timerStore = useTimerStore();
+
+const emit = defineEmits<{
+  (e: "pomo-seq-change"): void;
+}>();
 
 // 数据
 const sequenceInput = ref<string>(">>>>🍅+05+🍅+05+🍅+05+🍅+15");
@@ -146,7 +151,7 @@ function startPomodoroCircle(): void {
       alert("请输入有效的序列。");
       return;
     }
-
+    emit("pomo-seq-change");
     isRunning.value = true;
     setPomodoroRunning(true); // 设置番茄钟运行状态
     currentStep.value = 0;
@@ -205,7 +210,7 @@ function runStep(steps: PomodoroStep[]): void {
 function stopPomodoro(): void {
   // 先调用 store 的 resetTimer 方法
   timerStore.resetTimer();
-
+  emit("pomo-seq-change");
   // 然后更新本地状态
   isRunning.value = false;
   setPomodoroRunning(false); // 设置番茄钟停止状态
@@ -227,20 +232,6 @@ function stopPomodoro(): void {
   // 重置序列输入
   sequenceInput.value = ">>>>🍅+05";
 }
-
-// 测试 break
-// function testBreak(): void {
-//   try {
-//     isRunning.value = true;
-//     statusLabel.value = "Break 5min";
-//     timerStore.startBreak(15, () => {
-//       isRunning.value = false;
-//       statusLabel.value = "Let's 🍅!";
-//     });
-//   } catch (error) {
-//     alert((error as Error).message);
-//   }
-// }
 
 // 添加番茄钟序列
 function addPomodoro(): void {
