@@ -42,7 +42,24 @@
         <n-icon><CalendarAssistant20Regular /></n-icon>
       </template>
     </n-button>
-    <!-- 弹窗组件挂载进来 -->
+
+    <!-- 模板管理按钮 -->
+    <n-button
+      type="default"
+      size="small"
+      circle
+      strong
+      secondary
+      :disabled="!taskId"
+      @click="showTemplateDialog = true"
+      title="模板管理"
+    >
+      <template #icon>
+        <n-icon><CalligraphyPen20Regular /></n-icon>
+      </template>
+    </n-button>
+
+    <!-- 弹窗组件挂载 -->
     <EnergyInputDialog
       v-model:show="showEnergyDialog"
       @confirm="handleEnergyConfirm"
@@ -55,6 +72,15 @@
       v-model:show="showInterruptionDialog"
       @confirm="handleInterruptionConfirm"
     />
+
+    <!-- 模板管理弹窗 -->
+    <TemplateDialog
+      :show="showTemplateDialog"
+      :templates="templates"
+      @update:show="showTemplateDialog = $event"
+      @confirm="handleTemplateConfirm"
+      @delete="handleDeleteTemplate"
+    />
   </div>
 </template>
 
@@ -64,32 +90,39 @@ import { NButton } from "naive-ui";
 import EnergyInputDialog from "@/components/TaskTracker/EnergyInputDialog.vue";
 import RewardInputDialog from "@/components/TaskTracker/RewardInputDialog.vue";
 import InterruptionInputDialog from "@/components/TaskTracker/InterruptionInputDialog.vue";
+import TemplateDialog from "@/components/TaskTracker/TemplateDialog.vue";
 import {
   BatterySaver20Regular,
   Emoji24Regular,
   CalendarAssistant20Regular,
+  CalligraphyPen20Regular,
 } from "@vicons/fluent";
+import {
+  loadTemplates,
+  saveTemplates,
+  generateTemplateId,
+} from "@/services/storageService";
+import type { Template } from "@/core/types/Template";
 
+// Props
 const props = defineProps<{
   taskId: number | null;
-  isMarkdown: boolean;
 }>();
 
+// State Variables
 const showEnergyDialog = ref(false);
 const showRewardDialog = ref(false);
 const showInterruptionDialog = ref(false);
+const showTemplateDialog = ref(false);
+const templates = ref<Template[]>(loadTemplates());
 
+// Methods
 const emit = defineEmits<{
   (e: "energy-record", value: { value: number; description?: string }): void;
   (e: "reward-record", value: { value: number; description?: string }): void;
-  (e: "toggle-markdown"): void;
   (
     e: "interruption-record",
-    data: {
-      classType: "E" | "I";
-      description: string;
-      asActivity: boolean;
-    }
+    data: { classType: "E" | "I"; description: string; asActivity: boolean }
   ): void;
 }>();
 
@@ -117,6 +150,39 @@ function handleInterruptionConfirm(val: {
     emit("interruption-record", val);
   }
 }
+
+// 保存模板到 localStorage
+const saveTemplatesToLocal = () => {
+  saveTemplates(templates.value);
+};
+
+// 更新模板的确认处理
+const handleTemplateConfirm = (template: Template) => {
+  if (!template.id) return; // 确保是有效的模板，实际上这行可以删除
+
+  const index = templates.value.findIndex((t) => t.id === template.id);
+  if (index !== -1) {
+    // 更新现有模板
+    templates.value[index] = { ...template };
+  } else {
+    // 新增模板处理，确保生成一个新的 ID
+    const newTemplate: Template = {
+      id: generateTemplateId(), // 生成新的 ID
+      title: template.title,
+      content: template.content,
+    };
+
+    templates.value.push(newTemplate);
+  }
+
+  saveTemplatesToLocal(); // 更新存储
+};
+
+// 删除模板
+const handleDeleteTemplate = (templateId: number) => {
+  templates.value = templates.value.filter((t) => t.id !== templateId);
+  saveTemplatesToLocal(); // 更新本地存储
+};
 </script>
 
 <style scoped>

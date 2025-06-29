@@ -6,6 +6,7 @@ import type { Todo } from "@/core/types/Todo";
 import type { Schedule } from "@/core/types/Schedule";
 import type { Block } from "@/core/types/Block";
 import type { Task } from "@/core/types/Task";
+import type { Template } from "@/core/types/Template";
 
 // =================== 活动相关 ===================
 
@@ -108,6 +109,38 @@ export function saveTasks(tasks: Task[]): void {
 /** 删除任务存储 */
 export function removeTasksStorage(): void {
   localStorage.removeItem(STORAGE_KEYS.TASK);
+}
+// =================== 模板相关 ===================
+ 
+/** 从本地存储加载模板列表 */
+export function loadTemplates(): Template[] {
+  return loadData<Template[]>(STORAGE_KEYS.WRITING_TEMPLATE, []);
+}
+
+/** 保存模板列表到本地存储 */
+export function saveTemplates(templates: Template[]): void {
+  saveData(STORAGE_KEYS.WRITING_TEMPLATE, templates);
+}
+
+/** 删除模板存储 */
+export function removeTemplatesStorage(): void {
+  localStorage.removeItem(STORAGE_KEYS.WRITING_TEMPLATE);
+}
+
+/**
+ * 为模板生成唯一的自增 ID
+ * @returns 新模板的 ID
+ */
+export function generateTemplateId(): number {
+  const templates = loadTemplates();
+  if (!templates || templates.length === 0) {
+    return 1;
+  }
+  const ids = templates.map((template) => template.id);
+  if (!ids || ids.length === 0) {
+    return 1;
+  }
+  return Math.max(...ids) + 1;
 }
 
 // =================== 通用本地存储操作 ===================

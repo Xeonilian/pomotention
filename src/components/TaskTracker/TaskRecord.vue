@@ -6,10 +6,12 @@
       class="markdown-content"
       :class="{ disabled: !taskId }"
       @click="handleClick"
+      @dblclick="handleDoubleClick"
+      :title="'双击启动编辑'"
     >
       <div v-if="!taskId" class="placeholder">请选择追踪的任务...</div>
       <div v-else-if="!content" class="placeholder">
-        点击此处编辑任务描述...
+        双击此处编辑任务描述...
       </div>
       <div v-else v-html="renderedMarkdown"></div>
     </div>
@@ -18,8 +20,8 @@
       ref="textarea"
       v-model="content"
       class="task-textarea"
-      :placeholder="'点击此处编辑任务描述...'"
-      @blur="stopEditing"
+      @keydown="handleKeydown"
+      :title="'Esc退出编辑'"
     ></textarea>
   </div>
 </template>
@@ -27,6 +29,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from "vue";
 import { marked } from "marked";
+import { escape } from "querystring";
 
 // 添加自定义渲染器
 const renderer = new marked.Renderer();
@@ -106,6 +109,39 @@ const stopEditing = () => {
   emit("update:content", content.value);
 };
 
+const handleDoubleClick = () => {
+  if (props.taskId) startEditing();
+};
+
+const handleKeydown = (event: KeyboardEvent) => {
+  // Check if the escape key is pressed
+  if (event.key === "Escape") {
+    stopEditing(); // Call stopEditing to exit edit mode
+  } else if (event.key === "Tab") {
+    event.preventDefault(); // Prevent default Tab behavior
+
+    // Get the textarea element
+    const textAreaElement = textarea.value;
+    if (!textAreaElement) return; // Ensure the textarea is available
+
+    // Get the cursor position
+    const start = textAreaElement.selectionStart;
+    const end = textAreaElement.selectionEnd;
+
+    // Insert spaces or a tab character
+    const indent = "    "; // You can change this to a tab character if you prefer '\t'
+    content.value =
+      content.value.substring(0, start) + indent + content.value.substring(end);
+
+    // Move the cursor after the inserted indent
+    nextTick(() => {
+      textAreaElement.selectionStart = textAreaElement.selectionEnd =
+        start + indent.length;
+      textAreaElement.focus(); // Keep the focus on the textarea
+    });
+  }
+};
+
 const handleClick = (event: MouseEvent) => {
   const target = event.target as HTMLElement;
 
@@ -164,11 +200,6 @@ const handleClick = (event: MouseEvent) => {
     }, 0);
 
     return;
-  }
-
-  // 只有在非checkbox点击且taskId存在时才进入编辑模式
-  if (props.taskId) {
-    startEditing();
   }
 };
 </script>
