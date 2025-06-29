@@ -898,7 +898,7 @@ const { size: topHeight, startResize: startVerticalResize } = useResize(
   280,
   "vertical",
   100,
-  window.innerHeight - 200
+  280
 );
 const { size: leftWidth, startResize: startLeftResize } = useResize(
   150,
