@@ -63,8 +63,8 @@
             <n-date-picker
               v-model:value="queryDate"
               type="date"
-              placeholder=""
-              @keyup.enter="onDateSet('query')"
+              placeholder="回车到今天"
+              @keyup.enter="onDateSet('today')"
               @update:value="onDateSet('query')"
               style="width: 100px"
               class="search-date"

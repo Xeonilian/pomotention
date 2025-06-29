@@ -115,7 +115,6 @@ const uiStore = useUIStore();
 const { isAlwaysOnTop, toggleAlwaysOnTop } = useAlwaysOnTop(); // 窗口置顶状态和切换函数
 const router = useRouter(); // Vue Router 实例
 const route = useRoute(); // 当前路由信息
-const appWindow = getCurrentWindow(); // Tauri 窗口实例
 
 const isMiniMode = ref(false); // 标记是否处于迷你模式 (Tauri 窗口模式)
 const showPomoSeq = ref(false); // 控制 PomodoroView 内部的显示模式（番茄/序列）
@@ -385,96 +384,103 @@ function handleMouseUp() {
  * 处理 Tauri 窗口迷你模式的逻辑（置顶/恢复）。
  */
 async function handleToggleOntopMode() {
-  // 切换窗口置顶状态
-  await toggleAlwaysOnTop();
+  if (import.meta.env.TAURI) {
+    const appWindow = getCurrentWindow(); // Tauri 窗口实例
+    // 切换窗口置顶状态
+    await toggleAlwaysOnTop();
 
-  // 确保 Vue 的响应式系统更新了 isAlwaysOnTop
-  await nextTick();
+    // 确保 Vue 的响应式系统更新了 isAlwaysOnTop
+    await nextTick();
 
-  // 判断当前的置顶状态决定进入或退出迷你模式
-  if (isAlwaysOnTop.value) {
-    // 进入迷你模式
-    isMiniMode.value = true;
-    console.log("Entering mini mode...");
+    // 判断当前的置顶状态决定进入或退出迷你模式
+    if (isAlwaysOnTop.value) {
+      // 进入迷你模式
+      isMiniMode.value = true;
+      console.log("Entering mini mode...");
 
-    // 等待 PomodoroView 渲染并报告尺寸，确保获取到正确的窗口大小
-    await new Promise((resolve) => setTimeout(resolve, 100));
+      // 等待 PomodoroView 渲染并报告尺寸，确保获取到正确的窗口大小
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
-    let finalWidth = reportedPomodoroWidth.value;
-    let finalHeight = reportedPomodoroHeight.value;
+      let finalWidth = reportedPomodoroWidth.value;
+      let finalHeight = reportedPomodoroHeight.value;
 
-    // 如果 PomodoroView 还没有报告尺寸，使用默认值
-    if (finalWidth === 0 || finalHeight === 0) {
-      // console.warn(
-      // "PomodoroView size not reported, using default for mini mode."
-      //      );
-      finalWidth = 220; // 你的 PomodoroView 固定宽度
-      finalHeight = 350; // 根据你的 PomodoroView 大致高度
-    }
+      // 如果 PomodoroView 还没有报告尺寸，使用默认值
+      if (finalWidth === 0 || finalHeight === 0) {
+        // console.warn(
+        // "PomodoroView size not reported, using default for mini mode."
+        //      );
+        finalWidth = 220; // 你的 PomodoroView 固定宽度
+        finalHeight = 350; // 根据你的 PomodoroView 大致高度
+      }
 
-    const roundedWidth = Math.round(finalWidth);
-    const roundedHeight = Math.round(finalHeight);
+      const roundedWidth = Math.round(finalWidth);
+      const roundedHeight = Math.round(finalHeight);
 
-    try {
-      const scaleFactor = await appWindow.scaleFactor();
-      console.log(scaleFactor);
-      await appWindow.setDecorations(false); // 隐藏窗口装饰 (标题栏、边框等)
-      await appWindow.setSize(
-        new LogicalSize(
-          roundedWidth * scaleFactor + 2,
-          roundedHeight * scaleFactor + 1
-        )
-      );
-      await appWindow.setPosition(new PhysicalPosition(0, 0)); // 将窗口移动到左上角
-      //  console.log(
-      //   "Window resized, positioned, and decorations hidden for mini mode."
-      //    );
-    } catch (error) {
-      console.error("Failed to set window properties for mini mode:", error);
+      try {
+        const scaleFactor = await appWindow.scaleFactor();
+        console.log(scaleFactor);
+        await appWindow.setDecorations(false); // 隐藏窗口装饰 (标题栏、边框等)
+        await appWindow.setSize(
+          new LogicalSize(
+            roundedWidth * scaleFactor + 2,
+            roundedHeight * scaleFactor + 1
+          )
+        );
+        await appWindow.setPosition(new PhysicalPosition(0, 0)); // 将窗口移动到左上角
+        //  console.log(
+        //   "Window resized, positioned, and decorations hidden for mini mode."
+        //    );
+      } catch (error) {
+        console.error("Failed to set window properties for mini mode:", error);
+      }
+    } else {
+      // 退出迷你模式
+      isMiniMode.value = false;
+      console.log("Exiting mini mode...");
+
+      try {
+        await appWindow.setDecorations(true); // 显示窗口装饰
+        await appWindow.setSize(new LogicalSize(900, 600)); // 恢复默认窗口大小
+        await appWindow.center(); // 恢复窗口居中
+        console.log("Window properties restored from mini mode.");
+        if (draggableContainer.value) {
+          draggableContainer.value.style.visibility = "hidden"; // 首先隐藏
+        }
+
+        // 确保 Vue 响应
+        await nextTick(); // 等待下一个 DOM 更新周期
+
+        // 计算新的位置
+        if (draggableContainer.value) {
+          const parentElement = draggableContainer.value.parentElement;
+          if (parentElement) {
+            const parentWidth = parentElement.clientWidth;
+            const parentHeight = parentElement.clientHeight;
+
+            const elementWidth = reportedPomodoroWidth.value || 220;
+            const elementHeight = reportedPomodoroHeight.value || 350;
+
+            const initialPosLeft = (parentWidth - elementWidth) * 0.35;
+            const initialPosTop = (parentHeight - elementHeight) * 0.8;
+
+            draggableContainer.value.style.left = `${initialPosLeft}px`;
+            draggableContainer.value.style.top = `${initialPosTop}px`;
+            draggableContainer.value.style.visibility = "visible"; // 最后重新显示
+          }
+        }
+      } catch (error) {
+        console.error("Failed to restore window properties:", error);
+      }
+
+      // 如果当前路由不是首页，则在退出迷你模式后回到首页
+      if (route.path !== "/") {
+        await router.push("/");
+      }
     }
   } else {
-    // 退出迷你模式
-    isMiniMode.value = false;
-    console.log("Exiting mini mode...");
-
-    try {
-      await appWindow.setDecorations(true); // 显示窗口装饰
-      await appWindow.setSize(new LogicalSize(900, 600)); // 恢复默认窗口大小
-      await appWindow.center(); // 恢复窗口居中
-      console.log("Window properties restored from mini mode.");
-      if (draggableContainer.value) {
-        draggableContainer.value.style.visibility = "hidden"; // 首先隐藏
-      }
-
-      // 确保 Vue 响应
-      await nextTick(); // 等待下一个 DOM 更新周期
-
-      // 计算新的位置
-      if (draggableContainer.value) {
-        const parentElement = draggableContainer.value.parentElement;
-        if (parentElement) {
-          const parentWidth = parentElement.clientWidth;
-          const parentHeight = parentElement.clientHeight;
-
-          const elementWidth = reportedPomodoroWidth.value || 220;
-          const elementHeight = reportedPomodoroHeight.value || 350;
-
-          const initialPosLeft = (parentWidth - elementWidth) * 0.35;
-          const initialPosTop = (parentHeight - elementHeight) * 0.8;
-
-          draggableContainer.value.style.left = `${initialPosLeft}px`;
-          draggableContainer.value.style.top = `${initialPosTop}px`;
-          draggableContainer.value.style.visibility = "visible"; // 最后重新显示
-        }
-      }
-    } catch (error) {
-      console.error("Failed to restore window properties:", error);
-    }
-
-    // 如果当前路由不是首页，则在退出迷你模式后回到首页
-    if (route.path !== "/") {
-      await router.push("/");
-    }
+    console.warn(
+      "Tauri calls are being skipped as the app is not running in Tauri environment."
+    );
   }
 }
 
