@@ -22,7 +22,9 @@
               title="双击复制模板"
               :style="{
                 background:
-                  selectedTemplate?.id === template.id ? '#e1f5fe' : 'white',
+                  selectedTemplate?.id === template.id
+                    ? 'var(--color-blue-light)'
+                    : 'var(--color-background',
               }"
             >
               {{ template.title }}
@@ -41,6 +43,11 @@
               :disabled="!canEditContent"
               :placeholder="contentPlaceholder"
               style="width: 100%"
+              :style="{
+                background: canEditContent
+                  ? 'var(--color-blue-light)'
+                  : 'var(--color-background)',
+              }"
             />
             <n-input
               type="textarea"
@@ -49,6 +56,11 @@
               rows="10"
               :disabled="!canEditContent"
               style="width: 100%"
+              :style="{
+                background: !canEditContent
+                  ? 'var(--color-background-light)'
+                  : 'var(--color-background)',
+              }"
             />
           </div>
         </n-layout-content>
@@ -56,7 +68,12 @@
 
       <n-layout-footer>
         <n-space justify="center">
-          <n-button @click="handleAddNewTemplate" type="primary">新增</n-button>
+          <n-button
+            @click="handleAddNewTemplate"
+            type="primary"
+            :title="'新增模板'"
+            >新增</n-button
+          >
           <n-button
             type="primary"
             @click="handleConfirm"
@@ -207,6 +224,7 @@ const resetForm = () => {
 
 .n-list-item {
   padding: 4px 6px !important;
+  min-height: 30px;
 }
 
 .n-layout-footer {
