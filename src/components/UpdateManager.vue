@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { onMounted, reactive, h } from "vue";
+import { onMounted, reactive, h, watch } from "vue";
 import { check } from "@tauri-apps/plugin-updater";
 import { isTauri } from "@tauri-apps/api/core";
 import { getVersion } from "@tauri-apps/api/app";
 import { NModal, NProgress, NText, useNotification, useDialog } from "naive-ui";
+import { useSettingStore } from "@/stores/useSettingStore"; // 引入设置存储
 
 type DialogType = "warning" | "error" | "success" | "info";
 
@@ -16,6 +17,7 @@ const updateState = reactive({
 
 const notification = useNotification();
 const dialog = useDialog();
+const settingStore = useSettingStore();
 
 // 对话框实例管理
 let currentDialogInstance: any = null;
@@ -118,13 +120,27 @@ function showDialogWithTimeout(
 
 onMounted(() => {
   console.log("Notification and Dialog initialized successfully");
-
   if (isTauri()) {
-    handleUpdateCheck();
+    console.log(settingStore.settings.checkForUpdate);
+    if (settingStore.settings.checkForUpdate) {
+      console.log("Initializing update checking");
+      handleUpdateCheck();
+    }
   } else {
     console.log("Not in Tauri, skip update");
   }
 });
+
+// 监听 settings.checkForUpdate 的变化
+watch(
+  () => settingStore.settings.checkForUpdate,
+  (newValue) => {
+    if (isTauri() && newValue) {
+      console.log("用户启用自动更新，进行更新检查", newValue);
+      handleUpdateCheck(); // 切换打开开关时检查更新
+    }
+  }
+);
 
 async function handleUpdateCheck() {
   try {

@@ -95,7 +95,7 @@ onMounted(async () => {
   if (settingStore.settings.checkForUpdate) {
     await checkRemoteRelease();
   } else {
-    console.log("禁止更新");
+    console.log("禁止更新", settingStore.settings.checkForUpdate);
   }
 });
 
@@ -250,9 +250,9 @@ async function checkRemoteRelease() {
 /* 假设样式加在 HelpView.vue 里 */
 
 .switch-button :deep(.n-switch__rail) {
-  --n-rail-color: var(--color-blue-light);
-  /* 激活时轨道颜色 */
-  --n-rail-color-active: var(--color-red-light);
+  --n-rail-color: var(--color-red-light);
+  /* 激活时轨道颜色 因为下载用的蓝色 */
+  --n-rail-color-active: var(--color-blue-light);
 }
 
 .help-info {
