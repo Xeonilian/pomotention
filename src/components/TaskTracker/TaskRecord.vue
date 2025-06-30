@@ -29,7 +29,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from "vue";
 import { marked } from "marked";
-import { escape } from "querystring";
 
 // 添加自定义渲染器
 const renderer = new marked.Renderer();
