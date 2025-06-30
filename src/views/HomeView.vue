@@ -911,7 +911,7 @@ const { size: leftWidth, startResize: startLeftResize } = useResize(
 const { size: rightWidth, startResize: startRightResize } = useResize(
   480,
   "horizontal",
-  320,
+  300,
   600,
   true // 右侧面板
 );
@@ -952,7 +952,7 @@ const { size: rightWidth, startResize: startRightResize } = useResize(
   box-sizing: border-box;
   overflow: hidden;
   min-width: 450px;
-  max-width: 800px;
+  max-width: 900px;
   margin: 0;
 }
 
@@ -963,7 +963,6 @@ const { size: rightWidth, startResize: startRightResize } = useResize(
 
 .middle-top {
   background: var(--color-background);
-  margin-bottom: 8px;
   padding: 4px;
   box-sizing: border-box;
   flex-direction: column;
@@ -975,7 +974,7 @@ const { size: rightWidth, startResize: startRightResize } = useResize(
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin: 8px 8px 8px 0px;
+  margin: 8px 8px 4px 0px;
   flex-shrink: 0;
 }
 
