@@ -495,8 +495,8 @@ async function handleToggleOntopMode(width: number, height: number) {
             const elementWidth = reportedPomodoroWidth.value || 220;
             const elementHeight = reportedPomodoroHeight.value || 350;
 
-            const initialPosLeft = (parentWidth - elementWidth) * 0.4;
-            const initialPosTop = (parentHeight - elementHeight) * 0.8;
+            const initialPosLeft = (parentWidth - elementWidth) * 0.9;
+            const initialPosTop = (parentHeight - elementHeight) * 0.9;
 
             draggableContainer.value.style.left = `${initialPosLeft}px`;
             draggableContainer.value.style.top = `${initialPosTop}px`;
@@ -542,8 +542,8 @@ onMounted(() => {
       const elementWidth = reportedPomodoroWidth.value || 220;
       const elementHeight = reportedPomodoroHeight.value || 350;
 
-      const initialPosLeft = (parentWidth - elementWidth) * 0.35;
-      const initialPosTop = (parentHeight - elementHeight) * 0.8;
+      const initialPosLeft = (parentWidth - elementWidth) * 0.9;
+      const initialPosTop = (parentHeight - elementHeight) * 1.5;
 
       draggableContainer.value.style.left = `${initialPosLeft}px`;
       draggableContainer.value.style.top = `${initialPosTop}px`;
@@ -651,8 +651,8 @@ watch(
           const elementWidth = reportedPomodoroWidth.value || 220;
           const elementHeight = reportedPomodoroHeight.value || 350;
 
-          const initialPosLeft = (parentWidth - elementWidth) * 0.4;
-          const initialPosTop = (parentHeight - elementHeight) * 0.8;
+          const initialPosLeft = (parentWidth - elementWidth) * 0.9;
+          const initialPosTop = (parentHeight - elementHeight) * 0.9;
 
           draggableContainer.value.style.left = `${initialPosLeft}px`;
           draggableContainer.value.style.top = `${initialPosTop}px`;
