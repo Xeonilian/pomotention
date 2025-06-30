@@ -55,8 +55,8 @@
 </template>
 
 <script setup lang="ts">
-import TodayTodo from "../../components/TodayTSG/TodayTodo.vue";
-import TodaySchedule from "../../components/TodayTSG/TodaySchedule.vue";
+import TodayTodo from "../../components/TodayTS/TodayTodo.vue";
+import TodaySchedule from "../../components/TodayTS/TodaySchedule.vue";
 import type { Todo } from "../../core/types/Todo";
 import type { Schedule } from "@/core/types/Schedule";
 
