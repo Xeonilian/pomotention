@@ -273,7 +273,7 @@ function handleDurationSelect(key: number): void {
   text-align: center;
   width: 200px;
   margin: 5px auto;
-  background-color: var(--color-background) !important;
+  background-color: var(--color-background);
   padding: 10px;
   height: 125px; /* 确保高度由内容决定 */
   min-height: 0; /* 防止 flex 项目被撑开 */

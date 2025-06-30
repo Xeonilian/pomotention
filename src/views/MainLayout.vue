@@ -209,7 +209,7 @@ const handlePomodoroViewSizeReport = async ({
 
       const scaleFactor = await appWindow.scaleFactor();
       console.log("[report] scaleFactor", scaleFactor);
-      await appWindow.setSize(new LogicalSize(finalWidth + 2, finalHeight + 2));
+      await appWindow.setSize(new LogicalSize(finalWidth + 1, finalHeight + 2));
       console.log(`[report] Window resized to: ${finalWidth}x${finalHeight}`);
     } catch (error) {
       console.error("[report] Failed to resize window:", error);
@@ -451,7 +451,7 @@ async function handleToggleOntopMode(width: number, height: number) {
         console.log("[mini] scaleFactor", scaleFactor);
         await appWindow.setDecorations(false); // 隐藏窗口装饰 (标题栏、边框等)
         await appWindow.setSize(
-          new LogicalSize(finalWidth + 2, finalHeight + 1)
+          new LogicalSize(finalWidth + 1, finalHeight + 2)
         );
         console.log(`[mini] Window resized to: ${finalWidth}x${finalHeight}`);
         await appWindow.setPosition(new PhysicalPosition(100, 100)); // mini窗口位置
@@ -471,7 +471,7 @@ async function handleToggleOntopMode(width: number, height: number) {
 
       try {
         await appWindow.setDecorations(true); // 显示窗口装饰
-        await appWindow.setSize(new LogicalSize(900, 600)); // 恢复默认窗口大小
+        await appWindow.setSize(new LogicalSize(950, 600)); // 恢复默认窗口大小
         await appWindow.center(); // 恢复窗口居中
         console.log("[mini] Window properties restored from mini mode.");
         if (draggableContainer.value) {
@@ -495,7 +495,7 @@ async function handleToggleOntopMode(width: number, height: number) {
             const elementWidth = reportedPomodoroWidth.value || 220;
             const elementHeight = reportedPomodoroHeight.value || 350;
 
-            const initialPosLeft = (parentWidth - elementWidth) * 0.35;
+            const initialPosLeft = (parentWidth - elementWidth) * 0.4;
             const initialPosTop = (parentHeight - elementHeight) * 0.8;
 
             draggableContainer.value.style.left = `${initialPosLeft}px`;
@@ -651,7 +651,7 @@ watch(
           const elementWidth = reportedPomodoroWidth.value || 220;
           const elementHeight = reportedPomodoroHeight.value || 350;
 
-          const initialPosLeft = (parentWidth - elementWidth) * 0.35;
+          const initialPosLeft = (parentWidth - elementWidth) * 0.4;
           const initialPosTop = (parentHeight - elementHeight) * 0.8;
 
           draggableContainer.value.style.left = `${initialPosLeft}px`;
@@ -714,7 +714,6 @@ body,
   margin: 0;
   padding: 0;
   overflow: hidden;
-  background-color: red;
 }
 
 /* 根布局容器：占据整个视口，并垂直 flex 布局 */
@@ -797,9 +796,12 @@ body,
   cursor: grab; /* 拖动光标 */
   z-index: 100; /* 确保它在其他内容之上 */
   /* 添加一些默认背景和边框，确保浮动时有良好外观 */
-  background-color: var(--color-background);
+
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); /* 阴影效果 */
   user-select: none;
+}
+.n-layout {
+  background-color: white;
 }
 </style>

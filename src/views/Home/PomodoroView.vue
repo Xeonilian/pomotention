@@ -24,6 +24,7 @@
       :class="{
         'is-running': timerStore.isActive,
         'sequence-mode': showPomoSeq,
+        'is-minimode': isMiniMode,
       }"
     >
       <n-button
@@ -240,5 +241,29 @@ function handlePomoSeqRunning(status: boolean) {
   color: black;
   background-color: rgba(0, 0, 0, 0.1);
   cursor: pointer;
+}
+
+/* miniMode */
+
+.pomodoro-content-area.sequence-mode.is-minimode :deep(.pomodoro-timer) {
+  border: 0 solid white;
+  box-shadow: 0px 4px 6px rgba(0, 0, 0, 0);
+}
+.pomodoro-content-area.sequence-mode.is-minimode {
+  background-color: white;
+}
+.pomodoro-content-area.sequence-mode.is-minimode :deep(.pomodoro-sequence) {
+  border: 0 solid white !important;
+}
+
+.pomodoro-content-area.is-minimode :deep(.pomodoro-timer) {
+  border: 0 solid white;
+  box-shadow: 0px 4px 6px rgba(0, 0, 0, 0);
+}
+.pomodoro-content-area.is-minimode {
+  background-color: white;
+}
+.pomodoro-content-area.is-minimode :deep(.pomodoro-sequence) {
+  border: 0 solid white !important;
 }
 </style>
