@@ -208,12 +208,8 @@ const handlePomodoroViewSizeReport = async ({
       }
 
       const scaleFactor = await appWindow.scaleFactor();
-      await appWindow.setSize(
-        new LogicalSize(
-          finalWidth * scaleFactor + 2,
-          finalHeight * scaleFactor + 1
-        )
-      );
+      console.log("[report] scaleFactor", scaleFactor);
+      await appWindow.setSize(new LogicalSize(finalWidth + 2, finalHeight + 2));
       console.log(`[report] Window resized to: ${finalWidth}x${finalHeight}`);
     } catch (error) {
       console.error("[report] Failed to resize window:", error);
@@ -455,10 +451,7 @@ async function handleToggleOntopMode(width: number, height: number) {
         console.log("[mini] scaleFactor", scaleFactor);
         await appWindow.setDecorations(false); // 隐藏窗口装饰 (标题栏、边框等)
         await appWindow.setSize(
-          new LogicalSize(
-            finalWidth * scaleFactor + 2,
-            finalHeight * scaleFactor + 1
-          )
+          new LogicalSize(finalWidth + 2, finalHeight + 1)
         );
         console.log(`[mini] Window resized to: ${finalWidth}x${finalHeight}`);
         await appWindow.setPosition(new PhysicalPosition(100, 100)); // mini窗口位置
