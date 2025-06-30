@@ -154,31 +154,30 @@ async function checkRemoteRelease() {
   display: flex;
   justify-content: center;
   background: var(--color-background);
+  align-items: center;
 }
 
 .help-content {
-  max-width: 500px;
+  max-width: 600px;
   text-align: center;
   background: var(--color-background-secondary);
   padding: 0 15px;
   border-radius: 12px;
+  background: var(--color-background-secondary);
+  padding: 0 15px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .help-icon {
   font-size: 64px;
 }
 
-.help-content h1 {
-  color: var(--color-primary);
-  margin-bottom: 16px;
-  font-size: 28px;
-}
-
 .help-description {
   color: var(--color-text-secondary);
-  line-height: 1.6;
-
+  line-height: 1.2;
   font-size: 16px;
+  margin: 8px;
 }
 
 .help-actions {
@@ -197,7 +196,6 @@ async function checkRemoteRelease() {
   font-size: 14px;
   cursor: pointer;
   transition: all 0.2s;
-  font-weight: 500;
   min-width: 90px;
 }
 
@@ -240,7 +238,7 @@ async function checkRemoteRelease() {
   display: flex;
   justify-content: center;
   gap: 12px;
-  padding: 16px;
+  padding: 20px;
   background: var(--color-background);
   border-radius: 8px;
   border: 1px solid var(--color-border);
@@ -258,14 +256,14 @@ async function checkRemoteRelease() {
 .help-info {
   text-align: left;
   background: var(--color-background);
-  padding: 0 12px;
+  padding: 0;
   border-radius: 8px;
   border: 1px solid var(--color-border);
 }
 
 .help-info h3 {
   color: var(--color-primary);
-  margin-bottom: 6px;
+  margin: 0px;
   text-align: center;
 }
 
@@ -276,6 +274,6 @@ async function checkRemoteRelease() {
 .help-info li {
   padding: 8px 0;
   color: var(--color-text);
-  line-height: 1.5;
+  line-height: 1.3;
 }
 </style>
