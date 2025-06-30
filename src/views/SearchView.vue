@@ -10,38 +10,61 @@
     </div>
 
     <div class="content-container">
-      <!-- 展示 Todo 及其相关任务 -->
-      <n-card
-        v-for="item in filteredTodos"
-        :key="item.id"
-        class="search-item-todo"
-      >
-        <div class="title">{{ item.activityTitle }}</div>
-        <p>截止日期: {{ formatDate(item.dueDate) }}</p>
+      <div class="grid-container">
+        <!-- 新增网格容器 -->
+        <!-- 展示 Todo 及其相关任务 -->
+        <n-card
+          v-for="item in filteredTodos"
+          :key="item.id"
+          class="search-item-todo"
+        >
+          <div class="title">{{ item.activityTitle }}</div>
+          <p
+            class="info"
+            style="
+              margin-top: 2px;
+              margin-bottom: 2px;
+              color: var(--color-blue);
+            "
+          >
+            截止日期: {{ formatDate(item.dueDate) }}
+          </p>
+          <div v-for="task in getTasksBySourceId(item.id)" :key="task.id">
+            <div
+              class="task-content"
+              v-html="convertMarkdown(task.description)"
+              style="margin: 0"
+            ></div>
+          </div>
+        </n-card>
 
-        <div v-for="task in getTasksBySourceId(item.id)" :key="task.id">
-          <p>任务内容:</p>
-          <!-- 直接用 v-html 渲染 Markdown 内容 -->
-          <div v-html="convertMarkdown(task.description)"></div>
-        </div>
-      </n-card>
-
-      <!-- 展示 Schedule 及其相关任务 -->
-      <n-card
-        v-for="item in filteredSchedules"
-        :key="item.id"
-        class="search-item-schedule"
-      >
-        <div class="title">{{ item.activityTitle }}</div>
-
-        <p>截止日期: {{ formatDate(item.activityDueRange[0]) }}</p>
-        <p>位置: {{ item.location || "无" }}</p>
-        <div v-for="task in getTasksBySourceId(item.id)" :key="task.id">
-          <p>任务内容:</p>
-          <!-- 直接用 v-html 渲染 Markdown 内容 -->
-          <div v-html="convertMarkdown(task.description)"></div>
-        </div>
-      </n-card>
+        <!-- 展示 Schedule 及其相关任务 -->
+        <n-card
+          v-for="item in filteredSchedules"
+          :key="item.id"
+          class="search-item-schedule"
+        >
+          <div class="title">{{ item.activityTitle }}</div>
+          <p
+            class="info"
+            style="margin-top: 2px; margin-bottom: 2px; color: var(--color-red)"
+          >
+            截止日期: {{ formatDate(item.activityDueRange[0]) }}
+          </p>
+          <p
+            class="info"
+            style="margin-top: 2px; margin-bottom: 2px; color: var(--color-red)"
+          >
+            位置: {{ item.location || "无" }}
+          </p>
+          <div v-for="task in getTasksBySourceId(item.id)" :key="task.id">
+            <div
+              class="task-content"
+              v-html="convertMarkdown(task.description)"
+            ></div>
+          </div>
+        </n-card>
+      </div>
     </div>
   </div>
 </template>
@@ -67,20 +90,17 @@ export default defineComponent({
     const schedules = ref<Schedule[]>([]);
     const tasks = ref<Task[]>([]);
 
-    const loadData = () => {
-      todos.value = JSON.parse(
-        localStorage.getItem(STORAGE_KEYS.TODO) || "[]"
-      ) as Todo[];
-      schedules.value = JSON.parse(
-        localStorage.getItem(STORAGE_KEYS.SCHEDULE) || "[]"
-      ) as Schedule[];
-      tasks.value = JSON.parse(
-        localStorage.getItem(STORAGE_KEYS.TASK) || "[]"
-      ) as Task[];
+    const performSearch = () => {
+      loadData(); // Load data only when performing search
     };
 
-    const performSearch = () => {
-      loadData(); // 确保每次搜索时加载数据
+    const loadData = () => {
+      // Load data into memory only when the search query changes
+      todos.value = JSON.parse(localStorage.getItem(STORAGE_KEYS.TODO) || "[]");
+      schedules.value = JSON.parse(
+        localStorage.getItem(STORAGE_KEYS.SCHEDULE) || "[]"
+      );
+      tasks.value = JSON.parse(localStorage.getItem(STORAGE_KEYS.TASK) || "[]");
     };
 
     const formatDate = (timestamp?: number) => {
@@ -90,7 +110,7 @@ export default defineComponent({
     };
 
     const filteredTodos = computed(() => {
-      if (!searchQuery.value) return todos.value;
+      if (!searchQuery.value) return []; // 改为返回空数组，避免加载所有数据
       return todos.value.filter((item) => {
         const matchesTitle = item.activityTitle
           .toLowerCase()
@@ -106,7 +126,7 @@ export default defineComponent({
     });
 
     const filteredSchedules = computed(() => {
-      if (!searchQuery.value) return schedules.value;
+      if (!searchQuery.value) return []; // 改为返回空数组，避免加载所有数据
       return schedules.value.filter((item) => {
         const matchesTitle = item.activityTitle
           .toLowerCase()
@@ -127,11 +147,9 @@ export default defineComponent({
 
     // 定义将 Markdown 转换为 HTML 的函数
     const convertMarkdown = (markdownText: string | undefined) => {
-      // 如果描述为空，返回"无"
       return markdownText ? marked(markdownText) : "无";
     };
 
-    loadData(); // 初始加载数据
     return {
       searchQuery,
       filteredTodos,
@@ -139,7 +157,7 @@ export default defineComponent({
       getTasksBySourceId,
       performSearch,
       formatDate,
-      convertMarkdown, // 将此函数导出以在模板中使用
+      convertMarkdown,
     };
   },
 });
@@ -147,53 +165,88 @@ export default defineComponent({
 
 <style scoped>
 .search-view {
+  height: 100%;
   display: flex;
-  margin: 0 auto; /* 自动左右外边距以居中 */
-  overflow: hidden;
-  flex-direction: column;
+  justify-content: center;
+  background: var(--color-background);
 }
 
 .search-container {
-  position: fixed; /* 使搜索容器固定在视口 */
-  top: 15px; /* 距离视口顶部的距离，可以根据需要调整 */
-  left: 50%; /* 将元素居中 */
-  transform: translateX(-50%); /* 确保居中 */
-  padding-top: 30px;
-  justify-content: center;
-  align-items: center;
-  gap: 20px;
-  width: 400px; /* 保持宽度 */
-  overflow: hidden;
-  z-index: 10; /* 确保搜索框位于其他元素之上 */
   display: flex;
+  flex-direction: row;
+  position: fixed;
+  top: 15px;
+  padding-top: 30px;
+  gap: 20px;
+  width: 400px;
+  overflow: hidden;
+  z-index: 10;
+  margin: auto;
 }
 
 .content-container {
-  padding-top: 50px;
-  width: 100%;
   display: flex;
-  justify-content: center; /* 水平居中 */
-  margin: 0 auto;
+  flex-direction: column;
+  justify-content: center;
+  margin: auto;
+  width: 100%; /* 确保容器宽度自适应 */
 }
 
-.search-item-todo {
-  margin-top: 10px;
-  margin-left: 20px;
-  margin-right: 20px;
-  width: 800px;
-  background-color: var(--color-background);
+.grid-container {
+  display: grid; /* 使用网格布局 */
+  grid-template-columns: repeat(
+    auto-fill,
+    minmax(600px, 1fr)
+  ); /* 自动填充列，最小300px宽 */
+  gap: 10px; /* 不同卡片之间的间隙 */
+  margin-top: 50px;
 }
 
+.search-item-todo,
 .search-item-schedule {
   margin-top: 10px;
-  margin-left: 20px;
-  margin-right: 20px;
-  width: 800px;
+  margin-left: 10px;
+  margin-right: 10px;
+  width: 600px;
   background-color: var(--color-background);
+  max-height: 500px; /* 设置最大高度 */
+  min-height: 100px; /* 设置最大高度 */
+  overflow-y: auto; /* 允许垂直滚动 */
+}
+
+.n-card {
+  padding: 0px;
 }
 
 .title {
   font-weight: bold;
   font-size: 1.2em;
+  margin: 0 !important;
+  padding: 0;
+}
+
+.task-content {
+  background-color: var(--color-background-light-light);
+  margin: 2px;
+  padding: 4px 6px;
+}
+.task-content :deep(h1) {
+  margin: 0;
+}
+/* 滚动条样式可选 */
+.search-item-todo::-webkit-scrollbar,
+.search-item-schedule::-webkit-scrollbar {
+  width: 8px;
+}
+
+.search-item-todo::-webkit-scrollbar-thumb,
+.search-item-schedule::-webkit-scrollbar-thumb {
+  background-color: darkgrey;
+  border-radius: 10px;
+}
+
+.search-item-todo::-webkit-scrollbar-track,
+.search-item-schedule::-webkit-scrollbar-track {
+  background: #f1f1f1;
 }
 </style>

@@ -153,7 +153,6 @@ async function checkRemoteRelease() {
   height: 100%;
   display: flex;
   justify-content: center;
-  align-items: center;
   background: var(--color-background);
 }
 
@@ -163,7 +162,6 @@ async function checkRemoteRelease() {
   background: var(--color-background-secondary);
   padding: 0 15px;
   border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .help-icon {
