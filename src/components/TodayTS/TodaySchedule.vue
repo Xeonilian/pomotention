@@ -10,7 +10,7 @@
           <th style="width: 35px; text-align: center">分钟</th>
           <th style="width: 45%; min-width: 100px; text-align: center">描述</th>
           <th style="width: 25%; min-width: 80px">地点</th>
-          <th style="width: 80px; text-align: center">操作</th>
+          <th style="width: 75px; text-align: center">操作</th>
         </tr>
       </thead>
       <!-- 表格内容部分，可单独调整样式 -->
@@ -124,7 +124,6 @@
               <div class="button-group">
                 <n-button
                   v-if="!schedule.taskId"
-                  style="font-size: 12px"
                   text
                   type="info"
                   @click="handleConvertToTask(schedule)"
@@ -142,7 +141,6 @@
                     schedule.isUntaetigkeit !== true
                   "
                   text
-                  style="font-size: 14px"
                   type="info"
                   @click="handleRepeatSchedule(schedule.id)"
                   title="重复待办，新建活动"
@@ -161,7 +159,6 @@
                     schedule.isUntaetigkeit !== true
                   "
                   text
-                  style="font-size: 14px"
                   type="info"
                   @click="handleCancelSchedule(schedule.id)"
                   title="取消任务，不退回活动清单"
@@ -180,7 +177,6 @@
                     schedule.isUntaetigkeit !== true
                   "
                   text
-                  style="font-size: 14px"
                   type="info"
                   @click="handleSuspendSchedule(schedule.id)"
                   title="取消日程"

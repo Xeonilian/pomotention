@@ -30,7 +30,7 @@
           <th style="width: 35px; text-align: center">优先</th>
           <th style="width: 45%; min-width: 100px; text-align: center">描述</th>
           <th style="width: 25%; min-width: 80px">番茄</th>
-          <th style="width: 80px; text-align: center">操作</th>
+          <th style="width: 75px; text-align: center">操作</th>
         </tr>
       </thead>
       <!-- 表格内容部分，可单独调整样式 -->
@@ -205,7 +205,7 @@
                   class="button-left"
                 >
                   <template #icon>
-                    <n-icon size="18">
+                    <n-icon size="14">
                       <ArrowExportRtl20Regular />
                     </n-icon>
                   </template>
@@ -225,7 +225,7 @@
                   class="button-right"
                 >
                   <template #icon>
-                    <n-icon size="18">
+                    <n-icon size="14">
                       <ArrowExportLtr20Regular />
                     </n-icon>
                   </template>
@@ -237,14 +237,13 @@
                 <!-- 追踪任务按钮 -->
                 <n-button
                   v-if="!todo.taskId"
-                  style="font-size: 12px"
                   text
                   type="info"
                   @click="handleConvertToTask(todo)"
                   title="追踪任务"
                 >
                   <template #icon>
-                    <n-icon>
+                    <n-icon size="18">
                       <ChevronCircleDown48Regular />
                     </n-icon>
                   </template>
@@ -252,13 +251,12 @@
                 <n-button
                   v-if="todo.status !== 'done'"
                   text
-                  style="font-size: 14px"
                   type="info"
                   @click="handleRepeatTodo(todo.id)"
                   title="重复待办，新建活动"
                 >
                   <template #icon>
-                    <n-icon>
+                    <n-icon size="18">
                       <ArrowRepeatAll24Regular />
                     </n-icon>
                   </template>
@@ -271,13 +269,12 @@
                     todo.status !== 'cancelled'
                   "
                   text
-                  style="font-size: 14px"
                   type="info"
                   @click="handleCancelTodo(todo.id)"
                   title="取消任务，不退回活动清单"
                 >
                   <template #icon>
-                    <n-icon>
+                    <n-icon size="18">
                       <DismissCircle20Regular />
                     </n-icon>
                   </template>
@@ -291,13 +288,12 @@
                     todo.status !== 'cancelled'
                   "
                   text
-                  style="font-size: 14px"
                   type="info"
                   @click="handleSuspendTodo(todo.id)"
                   title="撤销任务，退回活动清单"
                 >
                   <template #icon>
-                    <n-icon>
+                    <n-icon size="18">
                       <ChevronCircleRight48Regular />
                     </n-icon>
                   </template>
@@ -924,16 +920,23 @@ function handleRepeatTodo(id: number) {
 .pomo-container {
   display: flex;
   align-items: center;
-  gap: 2px;
   white-space: nowrap;
+}
+
+.pomo-type {
+  font-size: 10px;
+  padding-right: 0px;
+}
+
+.pomo-groups {
   overflow-x: auto;
   overflow-y: hidden;
+  padding-left: 1px;
 }
 
 .pomo-group {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
   flex-shrink: 0;
 }
 
@@ -949,7 +952,7 @@ function handleRepeatTodo(id: number) {
 
 .button-left {
   display: flex;
-  margin-left: 0px;
+  margin-left: -2px;
 }
 
 .button-right {
@@ -959,7 +962,6 @@ function handleRepeatTodo(id: number) {
 
 .button-group {
   display: flex;
-  gap: 2px;
   justify-content: flex-end;
   height: 24px;
 }
@@ -999,10 +1001,6 @@ function handleRepeatTodo(id: number) {
 
 .cancel-cell {
   font-style: italic;
-}
-
-.pomo-type {
-  font-size: 11px;
 }
 
 .title-cell {
