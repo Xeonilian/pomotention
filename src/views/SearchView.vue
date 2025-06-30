@@ -10,61 +10,54 @@
     </div>
 
     <div class="content-container">
-      <div class="grid-container">
-        <!-- 新增网格容器 -->
-        <!-- 展示 Todo 及其相关任务 -->
-        <n-card
-          v-for="item in filteredTodos"
-          :key="item.id"
-          class="search-item-todo"
+      <!-- 展示 Todo 及其相关任务 -->
+      <n-card
+        v-for="item in filteredTodos"
+        :key="item.id"
+        class="search-item-todo"
+      >
+        <div class="title">{{ item.activityTitle }}</div>
+        <p
+          class="info"
+          style="margin-top: 2px; margin-bottom: 2px; color: var(--color-blue)"
         >
-          <div class="title">{{ item.activityTitle }}</div>
-          <p
-            class="info"
-            style="
-              margin-top: 2px;
-              margin-bottom: 2px;
-              color: var(--color-blue);
-            "
-          >
-            截止日期: {{ formatDate(item.dueDate) }}
-          </p>
-          <div v-for="task in getTasksBySourceId(item.id)" :key="task.id">
-            <div
-              class="task-content"
-              v-html="convertMarkdown(task.description)"
-              style="margin: 0"
-            ></div>
-          </div>
-        </n-card>
+          截止日期: {{ formatDate(item.dueDate) }}
+        </p>
+        <div v-for="task in getTasksBySourceId(item.id)" :key="task.id">
+          <div
+            class="task-content"
+            v-html="convertMarkdown(task.description)"
+            style="margin: 0"
+          ></div>
+        </div>
+      </n-card>
 
-        <!-- 展示 Schedule 及其相关任务 -->
-        <n-card
-          v-for="item in filteredSchedules"
-          :key="item.id"
-          class="search-item-schedule"
+      <!-- 展示 Schedule 及其相关任务 -->
+      <n-card
+        v-for="item in filteredSchedules"
+        :key="item.id"
+        class="search-item-schedule"
+      >
+        <div class="title">{{ item.activityTitle }}</div>
+        <p
+          class="info"
+          style="margin-top: 2px; margin-bottom: 2px; color: var(--color-red)"
         >
-          <div class="title">{{ item.activityTitle }}</div>
-          <p
-            class="info"
-            style="margin-top: 2px; margin-bottom: 2px; color: var(--color-red)"
-          >
-            截止日期: {{ formatDate(item.activityDueRange[0]) }}
-          </p>
-          <p
-            class="info"
-            style="margin-top: 2px; margin-bottom: 2px; color: var(--color-red)"
-          >
-            位置: {{ item.location || "无" }}
-          </p>
-          <div v-for="task in getTasksBySourceId(item.id)" :key="task.id">
-            <div
-              class="task-content"
-              v-html="convertMarkdown(task.description)"
-            ></div>
-          </div>
-        </n-card>
-      </div>
+          截止日期: {{ formatDate(item.activityDueRange[0]) }}
+        </p>
+        <p
+          class="info"
+          style="margin-top: 2px; margin-bottom: 2px; color: var(--color-red)"
+        >
+          位置: {{ item.location || "无" }}
+        </p>
+        <div v-for="task in getTasksBySourceId(item.id)" :key="task.id">
+          <div
+            class="task-content"
+            v-html="convertMarkdown(task.description)"
+          ></div>
+        </div>
+      </n-card>
     </div>
   </div>
 </template>
@@ -100,7 +93,8 @@ export default defineComponent({
       schedules.value = JSON.parse(
         localStorage.getItem(STORAGE_KEYS.SCHEDULE) || "[]"
       );
-      tasks.value = JSON.parse(localStorage.getItem(STORAGE_KEYS.TASK) || "[]");
+      tasks.value =
+        JSON.parse(localStorage.getItem(STORAGE_KEYS.TASK) || "[]") || [];
     };
 
     const formatDate = (timestamp?: number) => {
@@ -190,27 +184,15 @@ export default defineComponent({
   justify-content: center;
   margin: auto;
   width: 100%; /* 确保容器宽度自适应 */
-}
-
-.grid-container {
-  display: grid; /* 使用网格布局 */
-  grid-template-columns: repeat(
-    auto-fill,
-    minmax(600px, 1fr)
-  ); /* 自动填充列，最小300px宽 */
-  gap: 10px; /* 不同卡片之间的间隙 */
-  margin-top: 50px;
+  padding-top: 45px;
 }
 
 .search-item-todo,
 .search-item-schedule {
-  margin-top: 10px;
-  margin-left: 10px;
-  margin-right: 10px;
-  width: 600px;
+  margin: 10px auto; /* 保持每个卡片在中间，添加上下间距 */
+  width: 600px; /* 固定宽度 */
   background-color: var(--color-background);
   max-height: 500px; /* 设置最大高度 */
-  min-height: 100px; /* 设置最大高度 */
   overflow-y: auto; /* 允许垂直滚动 */
 }
 
@@ -233,6 +215,7 @@ export default defineComponent({
 .task-content :deep(h1) {
   margin: 0;
 }
+
 /* 滚动条样式可选 */
 .search-item-todo::-webkit-scrollbar,
 .search-item-schedule::-webkit-scrollbar {
