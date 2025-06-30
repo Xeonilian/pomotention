@@ -189,10 +189,15 @@ function pickActivity() {
   }
 
   // 2. 查找todo中是否有对应的活动
-  const relatedTodo = props.todos.find((t) => t.activityId === props.activeId);
+  const relatedTodo = props.todos.find(
+    (todo) => todo.activityId === props.activeId
+  );
   if (relatedTodo) {
     showErrorPopover("【" + relatedTodo.idFormated + "】启动待办");
     emit("go-to-todo", relatedTodo.id);
+    emit("update-active-id", props.activeId);
+    console.log(props.activeId);
+
     return;
   }
 
@@ -201,7 +206,6 @@ function pickActivity() {
 
   // 4. 触发事件并重置选中状态
   emit("pick-activity-todo", picked);
-  emit("update-active-id", null);
 }
 
 // 处理筛选条件变化
@@ -255,6 +259,7 @@ function deleteActiveRow() {
 // 处理行聚焦事件
 function handleFocusRow(id: number) {
   emit("update-active-id", id);
+  console.log(id);
 }
 
 // 切换番茄钟类型

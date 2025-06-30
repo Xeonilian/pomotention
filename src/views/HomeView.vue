@@ -338,9 +338,9 @@ watch(
   () => dateService.appDateTimestamp.value, // 监听时间戳更可靠
   () => {
     selectedRowId.value = null;
-    selectedTaskId.value = null;
+    selectedActivityId.value = null;
     // ... 清理其他选中状态 ...
-    console.log(`[HomeView] App date changed, selection cleared.`);
+    console.log(`[HomeView] App date changed, activity selection cleared.`);
   }
 );
 
@@ -412,7 +412,8 @@ function onUpdateActiveId(id: number | null) {
   const todo = todoList.value.find((t) => t.activityId === id);
   const schedule = scheduleList.value.find((s) => s.activityId === id);
   selectedTaskId.value = todo?.taskId || schedule?.taskId || null; //用id在todoList ScheduleList里面搜索TaskId，等于搜到的值
-  selectedRowId.value = null; // 这个id是activity的
+  console.log("task", selectedTaskId.value);
+  selectedRowId.value = null; // 这个id是today里的
 }
 
 /** 修改番茄类型时的提示处理 */
