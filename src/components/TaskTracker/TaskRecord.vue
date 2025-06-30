@@ -6,12 +6,11 @@
       class="markdown-content"
       :class="{ disabled: !taskId }"
       @click="handleClick"
-      @dblclick="handleDoubleClick"
-      :title="'双击启动编辑'"
+      :title="'单击启动编辑'"
     >
       <div v-if="!taskId" class="placeholder">请选择追踪的任务...</div>
       <div v-else-if="!content" class="placeholder">
-        双击此处编辑任务描述...
+        点击此处编辑任务描述...
       </div>
       <div v-else v-html="renderedMarkdown"></div>
     </div>
@@ -20,6 +19,7 @@
       ref="textarea"
       v-model="content"
       class="task-textarea"
+      @blur="stopEditing"
       @keydown="handleKeydown"
       :title="'Esc退出编辑'"
     ></textarea>
@@ -108,9 +108,6 @@ const stopEditing = () => {
   emit("update:content", content.value);
 };
 
-const handleDoubleClick = () => {
-  if (props.taskId) startEditing();
-};
 
 const handleKeydown = (event: KeyboardEvent) => {
   // Check if the escape key is pressed
@@ -200,6 +197,7 @@ const handleClick = (event: MouseEvent) => {
 
     return;
   }
+  if (props.taskId) startEditing();
 };
 </script>
 
