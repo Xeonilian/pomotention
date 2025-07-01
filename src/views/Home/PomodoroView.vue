@@ -58,7 +58,8 @@ import { NButton, NIcon } from "naive-ui";
 import { ArrowExpand24Regular } from "@vicons/fluent";
 
 const timerStore = useTimerStore();
-let isPomoSeqRunning = ref(false);
+let isPomoSeqRunning = ref(false); // 基于运行状态，返回不同的高度
+const pomodoroContainerRef = ref<HTMLElement | null>(null); // 自动识别正确高度
 
 const props = defineProps({
   showPomoSeq: {
@@ -115,6 +116,7 @@ watch(
   }
 );
 
+// 监听 pomoSeg 运行变化
 watch(
   () => isPomoSeqRunning.value,
   (newVal) => {

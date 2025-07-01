@@ -52,7 +52,6 @@ export function useResize(
     isResizing.value = false;
     // 恢复文本选择
     document.body.style.userSelect = "";
-    document.body.style.webkitUserSelect = "";
 
     document.removeEventListener("mousemove", handleMouseMove);
     document.removeEventListener("mouseup", stopResize);
