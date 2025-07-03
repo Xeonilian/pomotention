@@ -196,8 +196,6 @@ function pickActivity() {
     showErrorPopover("【" + relatedTodo.idFormated + "】启动待办");
     emit("go-to-todo", relatedTodo.id);
     emit("update-active-id", props.activeId);
-    console.log(props.activeId);
-
     return;
   }
 
@@ -259,7 +257,6 @@ function deleteActiveRow() {
 // 处理行聚焦事件
 function handleFocusRow(id: number) {
   emit("update-active-id", id);
-  console.log(id);
 }
 
 // 切换番茄钟类型

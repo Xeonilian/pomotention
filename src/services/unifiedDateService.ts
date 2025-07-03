@@ -66,7 +66,39 @@ export function unifiedDateService({
     const dateString = getDateKey(dateState.app);
     // toLocaleDateString 提供了一种获取本地化星期名称的便捷方式。
     const weekDay = date.toLocaleDateString("en-US", { weekday: "short" });
-    return `${dateString} ${weekDay}`;
+
+    // 计算当前日期是全年第几周（ISO 8601）
+    const year = date.getFullYear();
+
+    // 获取该年1月1日
+    const firstDayOfYear = new Date(year, 0, 1);
+
+    // 找到该年第一周的第一个周一
+    const firstMondayOfYear = firstDayOfYear;
+    // 如果1月1号是周六，周日，或者1月一号在星期一之后，则向下找到这个周的前面一个周一
+    while (firstMondayOfYear.getDay() !== 1) {
+      firstMondayOfYear.setDate(firstMondayOfYear.getDate() + 1);
+    }
+
+    // 计算第一周的基准日期
+    const firstWeekStart = new Date(firstMondayOfYear);
+
+    // 计算本周的开始
+    const currentWeekStart = new Date(date);
+    while (currentWeekStart.getDay() !== 1) {
+      currentWeekStart.setDate(currentWeekStart.getDate() - 1);
+    }
+
+    // 计算相差天数
+    const daysDifference = Math.floor(
+      (currentWeekStart.getTime() - firstWeekStart.getTime()) /
+        (1000 * 60 * 60 * 24)
+    );
+
+    // 计算周数，注意要加1，因为我们从0开始计数
+    const week = Math.floor(daysDifference / 7) + 1;
+    console.log(week);
+    return `${dateString} ${weekDay} w${week}`;
   });
 
   /**
@@ -217,7 +249,6 @@ export function unifiedDateService({
     appDateKey,
     displayDate,
     isViewingToday,
-
     // 动作
     navigateDate,
   };

@@ -412,7 +412,6 @@ function onUpdateActiveId(id: number | null) {
   const todo = todoList.value.find((t) => t.activityId === id);
   const schedule = scheduleList.value.find((s) => s.activityId === id);
   selectedTaskId.value = todo?.taskId || schedule?.taskId || null; //用id在todoList ScheduleList里面搜索TaskId，等于搜到的值
-  console.log("task", selectedTaskId.value);
   selectedRowId.value = null; // 这个id是today里的
 }
 
@@ -467,12 +466,14 @@ function onUpdateTodoStatus(id: number, isChecked: boolean) {
   let doneTime: number | undefined;
 
   if (isChecked) {
-    const date = new Date(dateService.appDateTimestamp.value);
+    if (isViewingToday.value) {
+      const date = new Date(dateService.appDateTimestamp.value);
 
-    const now = new Date();
-    date.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
+      const now = new Date();
+      date.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
 
-    doneTime = date.getTime();
+      doneTime = date.getTime();
+    }
   } else {
     doneTime = undefined;
   }
@@ -621,12 +622,14 @@ function onUpdateScheduleStatus(id: number, isChecked: boolean) {
   let doneTime: number | undefined;
 
   if (isChecked) {
-    const date = new Date(dateService.appDateTimestamp.value);
+    if (dateService.isViewingToday.value) {
+      const date = new Date(dateService.appDateTimestamp.value);
 
-    const now = new Date();
-    date.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
+      const now = new Date();
+      date.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
 
-    doneTime = date.getTime();
+      doneTime = date.getTime();
+    }
   } else {
     doneTime = undefined;
   }
