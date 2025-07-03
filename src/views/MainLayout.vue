@@ -1,73 +1,85 @@
 <template>
-  <n-layout class="app-layout">
-    <n-layout-header
-      class="app-layout__header"
-      :class="{ 'app-layout__header--hidden': isMiniMode }"
-    >
-      <div class="app-layout__header-content">
-        <n-menu
-          :options="menuOptions"
-          mode="horizontal"
-          :value="current"
-          @update:value="handleMenuSelect"
-        />
-        <div class="app-layout__view-controls">
-          <n-button
-            v-for="(control, index) in viewControls"
-            :key="index"
-            size="tiny"
-            tertiary
-            strong
-            type="default"
-            :style="buttonStyle(control.show, control.key)"
-            :title="control.title"
-            @click="handleMainLayoutViewToggle(control.key)"
-            class="header-button"
-          >
-            <template #icon>
-              <n-icon size="18" :component="control.icon" />
-            </template>
-          </n-button>
-        </div>
-      </div>
-    </n-layout-header>
-    <n-layout-content
-      class="app-layout__content"
-      :class="{ 'app-layout__content--full-height': isMiniMode }"
-    >
-      <router-view v-if="!isMiniMode" />
-      <div
-        class="draggable-container"
-        ref="draggableContainer"
-        v-if="!isMiniMode && uiStore.showPomodoroPanel"
+  <div class="pomodoro-mini-view-wrapper" ref="pomodoroViewContainerRef">
+    <n-layout class="app-layout">
+      <n-layout-header
+        class="app-layout__header"
+        :class="{ 'app-layout__header--hidden': isMiniMode }"
       >
-        <PomodoroView
-          :showPomoSeq="showPomoSeq"
-          :isMiniMode="isMiniMode"
-          @toggle-pomo-seq="showPomoSeq = !showPomoSeq"
-        />
-      </div>
+        <div class="app-layout__header-content">
+          <n-menu
+            :options="menuOptions"
+            mode="horizontal"
+            :value="current"
+            @update:value="handleMenuSelect"
+          />
+          <div class="app-layout__view-controls">
+            <n-button
+              v-for="(control, index) in viewControls"
+              :key="index"
+              size="tiny"
+              tertiary
+              strong
+              type="default"
+              :style="buttonStyle(control.show, control.key)"
+              :title="control.title"
+              @click="handleMainLayoutViewToggle(control.key)"
+              class="header-button"
+            >
+              <template #icon>
+                <n-icon size="18" :component="control.icon" />
+              </template>
+            </n-button>
+          </div>
+        </div>
+      </n-layout-header>
+      <n-layout-content
+        class="app-layout__content"
+        :class="{ 'app-layout__content--full-height': isMiniMode }"
+      >
+        <router-view v-if="!isMiniMode" />
+        <div
+          class="draggable-container"
+          ref="draggableContainer"
+          v-if="!isMiniMode && uiStore.showPomodoroPanel"
+        >
+          <PomodoroView
+            :showPomoSeq="showPomoSeq"
+            :isMiniMode="isMiniMode"
+            @toggle-pomo-seq="showPomoSeq = !showPomoSeq"
+            @report-size="handlePomodoroViewSizeReport"
+          />
+        </div>
 
-      <div class="pomodoro-mini-view-wrapper" ref="pomodoroViewContainerRef">
         <PomodoroView
           v-if="isMiniMode"
           :showPomoSeq="showPomoSeq"
           :isMiniMode="isMiniMode"
+          @toggle-pomo-seq="showPomoSeq = !showPomoSeq"
           @report-size="handlePomodoroViewSizeReport"
           @exit-mini-mode="
             handleToggleOntopMode(reportedPomodoroWidth, reportedPomodoroHeight)
           "
         />
-      </div>
-    </n-layout-content>
-  </n-layout>
+      </n-layout-content>
+    </n-layout>
+  </div>
 </template>
 
 <script setup lang="ts">
 import { ref, watch, Component, nextTick, onMounted, onUnmounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { NMenu, NButton, NIcon } from "naive-ui";
+import { isTauri } from "@tauri-apps/api/core";
+
+import {
+  getCurrentWindow,
+  PhysicalPosition,
+  LogicalSize,
+} from "@tauri-apps/api/window";
+
 import { useUIStore } from "@/stores/useUIStore";
+import { useSettingStore } from "@/stores/useSettingStore";
+import { useTimerStore } from "@/stores/useTimerStore";
 
 import {
   ArrowLeft24Filled,
@@ -82,16 +94,11 @@ import { useAlwaysOnTop } from "@/composables/useAlwaysOnTop";
 import { useDraggable } from "@/composables/useDraggable";
 import { useButtonStyle } from "@/composables/useButtonStyle";
 
-import {
-  getCurrentWindow,
-  PhysicalPosition,
-  LogicalSize,
-} from "@tauri-apps/api/window";
-
 import PomodoroView from "./Home/PomodoroView.vue";
-import { isTauri } from "@tauri-apps/api/core";
 
+const timerStore = useTimerStore();
 const uiStore = useUIStore();
+const settingStore = useSettingStore();
 
 const { isAlwaysOnTop, toggleAlwaysOnTop } = useAlwaysOnTop();
 const router = useRouter();
@@ -103,6 +110,8 @@ const showPomoSeq = ref(false);
 const reportedPomodoroWidth = ref(0);
 const reportedPomodoroHeight = ref(0);
 const pomodoroViewContainerRef = ref<HTMLElement | null>(null);
+const containerWidth = ref(0);
+const containerHeight = ref(0);
 
 const menuOptions = [
   { label: "首页", key: "/" },
@@ -198,31 +207,48 @@ async function handleToggleOntopMode(width: number, height: number) {
 
     if (isAlwaysOnTop.value) {
       console.log(
-        "[mini] Entering mini mode...",
-        width,
-        height,
-        "showPomoSeq",
-        showPomoSeq.value
+        "[mini] Entering mini mode...Set ",
+        settingStore.settings.miniModeRefactor
       );
-      let finalWidth = reportedPomodoroWidth.value;
-      let finalHeight =
-        reportedPomodoroHeight.value || (showPomoSeq.value ? 240 : 140);
-      console.log(
-        "[mini] final size:",
-        width,
-        height,
-        "showPomoSeq",
-        showPomoSeq.value
-      );
+      let finalWidth = width * settingStore.settings.miniModeRefactor;
+      let finalHeight = height * settingStore.settings.miniModeRefactor;
+      console.log(`[mini] Window resized ori: ${width}x${height}`);
+      console.log(`[mini] Window resized factor: ${finalWidth}x${finalHeight}`);
       try {
-        const scaleFactor = await appWindow.scaleFactor();
-        console.log("[mini] scaleFactor", scaleFactor);
         await appWindow.setDecorations(false);
-        await appWindow.setSize(
-          new LogicalSize(finalWidth + 1, finalHeight + 2)
-        );
-        console.log(`[mini] Window resized to: ${finalWidth}x${finalHeight}`);
-        await appWindow.setPosition(new PhysicalPosition(100, 100));
+        await appWindow.setSize(new LogicalSize(finalWidth, finalHeight));
+
+        await new Promise((resolve) => setTimeout(resolve, 50));
+        // const realSize = await appWindow.innerSize();
+
+        // console.log(
+        //   "[mini] Window resized actual:",
+        //   realSize.width,
+        //   realSize.height
+        // );
+
+        if (pomodoroViewContainerRef.value) {
+          // 打印出具体引用的 DOM 元素
+          console.log("[mini] Container Ref:", pomodoroViewContainerRef.value);
+
+          // 获取并记录尺寸
+          containerWidth.value = pomodoroViewContainerRef.value.clientWidth;
+          containerHeight.value = pomodoroViewContainerRef.value.clientHeight;
+          console.log(
+            "[mini] Window resized true:",
+            containerWidth.value,
+            containerHeight.value
+          );
+          let factorReal = finalWidth / containerWidth.value;
+          if (factorReal !== 1) {
+            factorReal = Math.ceil(factorReal * 100) / 100;
+            settingStore.settings.miniModeRefactor = factorReal;
+          }
+        } else {
+          console.warn("[mini] Container Ref not found!");
+        }
+
+        await appWindow.setPosition(new PhysicalPosition(400, 400));
       } catch (error) {
         console.error(
           "[mini] Failed to set window properties for mini mode:",
@@ -235,13 +261,21 @@ async function handleToggleOntopMode(width: number, height: number) {
 
       try {
         await appWindow.setDecorations(true);
-        await appWindow.setSize(new LogicalSize(950, 600));
+        await appWindow.setSize(
+          new LogicalSize(
+            950 * settingStore.settings.miniModeRefactor,
+            600 * settingStore.settings.miniModeRefactor
+          )
+        );
         await appWindow.center();
         console.log("[mini] Window properties restored from mini mode.");
         lastPosition.value = { x: -1, y: -1 };
         await updateDraggableContainerVisibilityAndPosition(true);
       } catch (error) {
         console.error("Failed to restore window properties:", error);
+      }
+      if (draggableContainer.value) {
+        draggableContainer.value.addEventListener("mousedown", handleMouseDown);
       }
 
       if (route.path !== "/") {
@@ -288,7 +322,7 @@ const handlePomodoroViewSizeReport = ({
   reportedPomodoroWidth.value = width;
   reportedPomodoroHeight.value = height;
   console.log(
-    `[report] MainLayout received PomodoroView size: ${width}x${height}`
+    `[report] MainLayout received PomodoroView size: ${reportedPomodoroWidth.value}x${reportedPomodoroHeight.value}`
   );
 };
 
@@ -329,6 +363,51 @@ watch(
   () => uiStore.showPomodoroPanel,
   async (newVal) => {
     await updateDraggableContainerVisibilityAndPosition(newVal);
+  }
+);
+
+watch(
+  () => showPomoSeq.value,
+  async (newVal) => {
+    if (isMiniMode) {
+      console.log("[MainLayout show pomoseq]:", newVal);
+      const appWindow = getCurrentWindow();
+
+      await nextTick();
+
+      let finalWidth =
+        reportedPomodoroWidth.value * settingStore.settings.miniModeRefactor;
+      let finalHeight =
+        reportedPomodoroHeight.value * settingStore.settings.miniModeRefactor;
+      console.log(`[mini] Window update to: ${finalWidth}x${finalHeight}`);
+      try {
+        await appWindow.setSize(new LogicalSize(finalWidth, finalHeight));
+      } catch (error) {
+        console.error("[mini] Failed to set pomoSeq", error);
+      }
+    }
+  }
+);
+watch(
+  () => timerStore.isActive,
+  async (newVal) => {
+    if (isMiniMode && showPomoSeq.value) {
+      console.log("[MainLayout running pomoseq]:", newVal);
+      const appWindow = getCurrentWindow();
+
+      await nextTick();
+
+      let finalWidth =
+        reportedPomodoroWidth.value * settingStore.settings.miniModeRefactor;
+      let finalHeight =
+        reportedPomodoroHeight.value * settingStore.settings.miniModeRefactor;
+      console.log(`[mini] Window update to: ${finalWidth}x${finalHeight}`);
+      try {
+        await appWindow.setSize(new LogicalSize(finalWidth, finalHeight));
+      } catch (error) {
+        console.error("[mini] Failed to set pomoSeq", error);
+      }
+    }
   }
 );
 </script>

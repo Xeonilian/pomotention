@@ -228,7 +228,7 @@ import {
 } from "@vicons/fluent";
 import { useResize } from "@/composables/useResize";
 import { getTimestampForTimeString, addDays } from "@/core/utils";
-import { useUnifiedDateService } from "@/services/useUnifiedDateService";
+import { unifiedDateService } from "@/services/unifiedDateService";
 import { useUIStore } from "@/stores/useUIStore";
 
 // ======================== 响应式状态与初始化 ========================
@@ -266,7 +266,7 @@ const selectedTask = computed(() => {
 
 const pomoStore = usePomoStore();
 
-const dateService = useUnifiedDateService({
+const dateService = unifiedDateService({
   activityList,
   scheduleList,
   todoList,
@@ -326,7 +326,7 @@ watch(
   (currentTodos) => {
     const dateKey = dateService.appDateKey.value;
     pomoStore.setTodosForDate(dateKey, currentTodos);
-    console.log(`[HomeView] Pomo store updated for date: ${dateKey}`);
+    // console.log(`[HomeView] Pomo store updated for date: ${dateKey}`);
   },
   { deep: true, immediate: true } // immediate 确保初始化时执行一次
 );
