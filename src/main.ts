@@ -40,6 +40,3 @@ app.use(pinia);
 app.use(router);
 app.use(naive);
 app.mount("#app");
-
-// 确保pinia初始化后，打印localStorage中数据
-console.log(localStorage.getItem("pinia"));

@@ -89,7 +89,7 @@ function reportSize() {
   } else {
     height = 140; // 非运行和非序列模式
   }
-  console.log(width, height);
+  // console.log("[pomodoroView]", width, height);
   emit("report-size", { width, height });
 }
 

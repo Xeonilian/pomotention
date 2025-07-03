@@ -119,9 +119,9 @@ function showDialogWithTimeout(
 }
 
 onMounted(() => {
-  console.log("Notification and Dialog initialized successfully");
+  // console.log("Notification and Dialog initialized successfully");
   if (isTauri()) {
-    console.log(settingStore.settings.checkForUpdate);
+    // console.log(settingStore.settings.checkForUpdate);
     if (settingStore.settings.checkForUpdate) {
       console.log("Initializing update checking");
       handleUpdateCheck();
