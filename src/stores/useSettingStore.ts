@@ -9,6 +9,7 @@ export interface GlobalSettings {
   checkForUpdate: boolean; // 是否启用自动更新检测
   durations: typeof PomodoroDurations;
   style: typeof TimerStyleDefaults;
+  miniModeRefactor: number;
   // 以后新增全局设置项就在这里补充
 }
 
@@ -17,15 +18,35 @@ const defaultSettings: GlobalSettings = {
   checkForUpdate: true,
   durations: PomodoroDurations,
   style: TimerStyleDefaults,
+  miniModeRefactor: 1,
 };
 
 // 工具函数
-function loadFromStorage<T>(key: string, defaultValue: T): T {
+function loadFromStorage<T extends Record<string, any>>(
+  key: string,
+  defaultValue: T
+): T {
   try {
     const stored = localStorage.getItem(key);
-    return stored ? JSON.parse(stored) : defaultValue;
-  } catch {
-    return defaultValue;
+    const loadedData = stored ? JSON.parse(stored) : {};
+
+    // 检查 loadedData 中是否有未定义的字段
+    const hasUndefined = Object.keys(defaultValue).some(
+      (key) => loadedData[key] === undefined
+    );
+
+    // 仅在 loadedData 存在，需要合并的情况下才合并
+    const mergedData = hasUndefined
+      ? { ...defaultValue, ...loadedData }
+      : loadedData;
+
+    // 保存合并后的数据到 localStorage
+    localStorage.setItem(key, JSON.stringify(mergedData));
+
+    return mergedData as T; // 返回合并后的数据
+  } catch (error) {
+    console.error(`Error loading from storage - Key: ${key}, Error: ${error}`);
+    return defaultValue; // 如果发生错误，返回默认值
   }
 }
 
@@ -35,13 +56,24 @@ export const useSettingStore = defineStore("setting", () => {
     loadFromStorage(STORAGE_KEYS.GLOBAL_SETTINGS, defaultSettings)
   );
 
+  // Log loaded settings
+  // console.log("Initialized settings:", settings.value);
+
   // 响应式保存到 localStorage
   watch(
     settings,
-    (val) => {
-      localStorage.setItem(STORAGE_KEYS.GLOBAL_SETTINGS, JSON.stringify(val));
+    (newValue) => {
+      try {
+        console.log("Saving to localStorage:", JSON.stringify(newValue)); // 日志检查
+        localStorage.setItem(
+          STORAGE_KEYS.GLOBAL_SETTINGS,
+          JSON.stringify(newValue)
+        );
+      } catch (error) {
+        console.error("Failed to save to localStorage:", error);
+      }
     },
-    { deep: true }
+    { deep: true } // 深度监视
   );
 
   // 重置全部设置为默认
