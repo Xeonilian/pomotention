@@ -1,3 +1,5 @@
+// dateService.ts
+// 不使用合并到unifiedDateService.ts
 // 简化并强化核心逻辑
 import { ref, computed } from "vue";
 import { getLocalDateString, getDateKey } from "@/core/utils";

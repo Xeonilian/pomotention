@@ -1,4 +1,4 @@
-// useUnifiedDateService.ts
+// unifiedDateService.ts
 import { reactive, computed, onMounted, onUnmounted } from "vue";
 import { getDayStartTimestamp, getDateKey, addDays } from "@/core/utils";
 
@@ -9,7 +9,7 @@ import type { Schedule } from "@/core/types/Schedule";
 import type { Todo } from "@/core/types/Todo";
 
 /**
- * useUnifiedDateService 的配置选项。
+ * unifiedDateService 的配置选项。
  * 接收外部响应式数据列表和转换函数，以便在内部处理业务逻辑。
  */
 interface UnifiedDateServiceOptions {
@@ -25,7 +25,7 @@ interface UnifiedDateServiceOptions {
  * @param options 包含数据源和业务逻辑函数的配置对象。
  * @returns 返回一个接口，包含UI所需的日期状态和操作函数。
  */
-export function useUnifiedDateService({
+export function unifiedDateService({
   activityList,
   scheduleList,
   todoList,
@@ -80,18 +80,19 @@ export function useUnifiedDateService({
   /**
    * 处理真实跨天时，前一天未完成的计划 (Schedule)。
    * 将所有仍在 "ongoing" 状态的 Schedule 标记为 "cancelled"。
+   * 【取消】大部分时候只是忘记标记了
    */
-  const processSchedulesForNewDay = () => {
-    scheduleList.value.forEach((schedule) => {
-      if (schedule.status === "ongoing") {
-        schedule.status = "cancelled";
-        const activity = activityList.value.find(
-          (a) => a.id === schedule.activityId
-        );
-        if (activity) activity.status = "cancelled";
-      }
-    });
-  };
+  // const processSchedulesForNewDay = () => {
+  //   scheduleList.value.forEach((schedule) => {
+  //     if (schedule.status === "ongoing") {
+  //       schedule.status = "cancelled";
+  //       const activity = activityList.value.find(
+  //         (a) => a.id === schedule.activityId
+  //       );
+  //       if (activity) activity.status = "cancelled";
+  //     }
+  //   });
+  // };
 
   /**
    * 处理真实跨天时，前一天未完成的待办 (Todo)。
@@ -170,7 +171,7 @@ export function useUnifiedDateService({
       dateState.system = newSystemTimestamp;
 
       // 仅在真实跨天时，才执行这些一次性的数据处理任务。
-      processSchedulesForNewDay();
+      // processSchedulesForNewDay();
       processTodoForNewDay();
       processActivityForNewDay();
     }
@@ -184,7 +185,7 @@ export function useUnifiedDateService({
   const setupSystemDateWatcher = () => {
     document.addEventListener("visibilitychange", systemDateSync);
     window.addEventListener("focus", systemDateSync);
-    console.log("[UnifiedDateService] 系统日期同步监听器已启动。");
+    // console.log("[UnifiedDateService] 系统日期同步监听器已启动。");
   };
 
   /**
@@ -193,7 +194,7 @@ export function useUnifiedDateService({
   const cleanupSystemDateWatcher = () => {
     document.removeEventListener("visibilitychange", systemDateSync);
     window.removeEventListener("focus", systemDateSync);
-    console.log("[UnifiedDateService] 系统日期同步监听器已清理。");
+    // console.log("[UnifiedDateService] 系统日期同步监听器已清理。");
   };
 
   // --- 6. Vue 生命周期钩子 ---

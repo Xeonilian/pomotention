@@ -1,4 +1,5 @@
 // src/services/dateCheckService.ts
+// 不使用合并到unifiedDateService.ts
 import type { Ref, ComputedRef } from "vue";
 import type { Activity } from "@/core/types/Activity";
 import type { Schedule } from "@/core/types/Schedule";
