@@ -4,13 +4,13 @@
       <!-- 表头部分，可单独调整样式 -->
       <thead class="table-header">
         <tr>
-          <th style="width: 20px"></th>
-          <th style="width: 40px; text-align: center">开始</th>
-          <th style="width: 40px; text-align: center">结束</th>
-          <th style="width: 35px; text-align: center">分钟</th>
-          <th style="width: 45%; min-width: 100px; text-align: center">描述</th>
-          <th style="width: 25%; min-width: 80px">地点</th>
-          <th style="width: 75px; text-align: center">操作</th>
+          <th style="width: 18px"></th>
+          <th style="width: 36px; text-align: center">开始</th>
+          <th style="width: 36px; text-align: center">结束</th>
+          <th style="width: 32px; text-align: center">分钟</th>
+          <th style="width: 40%; min-width: 100px; text-align: center">描述</th>
+          <th style="width: 30%; min-width: 80px">地点</th>
+          <th style="width: 68px; text-align: center">操作</th>
         </tr>
       </thead>
       <!-- 表格内容部分，可单独调整样式 -->

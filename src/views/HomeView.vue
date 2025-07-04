@@ -55,7 +55,7 @@
           <div class="today-info">
             <span class="today-status">{{ dateService.displayDate }}</span>
             <span class="global-pomo">
-              <span class="today-pomo">🍅 {{ currentDatePomoCount }}/</span>
+              <span class="today-pomo">🍅{{ currentDatePomoCount }}/</span>
               <span class="total-pomo">{{ globalRealPomo }}</span>
             </span>
           </div>
@@ -984,7 +984,7 @@ const { size: rightWidth, startResize: startRightResize } = useResize(
 .today-info {
   display: flex;
   align-items: center;
-  gap: 12px;
+
   font-family: "Courier New", Courier, monospace;
   font-weight: bold;
 }

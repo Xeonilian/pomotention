@@ -97,7 +97,6 @@ export function unifiedDateService({
 
     // 计算周数，注意要加1，因为我们从0开始计数
     const week = Math.floor(daysDifference / 7) + 1;
-    console.log(week);
     return `${dateString} ${weekDay} w${week}`;
   });
 
