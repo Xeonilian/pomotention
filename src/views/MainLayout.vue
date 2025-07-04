@@ -321,9 +321,9 @@ const handlePomodoroViewSizeReport = ({
 }) => {
   reportedPomodoroWidth.value = width;
   reportedPomodoroHeight.value = height;
-  console.log(
-    `[report] MainLayout received PomodoroView size: ${reportedPomodoroWidth.value}x${reportedPomodoroHeight.value}`
-  );
+  // console.log(
+  //   `[report] MainLayout received PomodoroView size: ${reportedPomodoroWidth.value}x${reportedPomodoroHeight.value}`
+  // );
 };
 
 onMounted(() => {
