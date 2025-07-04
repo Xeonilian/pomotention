@@ -135,7 +135,7 @@
                   class="priority-badge"
                   :class="'priority-' + todo.priority"
                 >
-                  {{ todo.priority > 0 ? todo.priority : "" }}
+                  {{ todo.priority > 0 ? todo.priority : "—" }}
                 </span>
               </template>
             </td>
@@ -709,6 +709,10 @@ function saveEdit(todo: TodoWithNumberPriority) {
     if (isValidTimeString(editingValue.value)) {
       const ts = editingValue.value;
       emit("edit-todo-done", todo.id, ts);
+    } else {
+      if (editingValue.value === "") {
+        emit("edit-todo-done", todo.id, "");
+      }
     }
   }
   cancelEdit();
@@ -884,6 +888,9 @@ function handleRepeatTodo(id: number) {
 }
 
 /* 可按 priority 分不同色 */
+.priority-0 {
+  background-color: var(--color-background-dark);
+}
 .priority-1 {
   background-color: var(--color-red);
 }

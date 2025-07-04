@@ -767,7 +767,11 @@ function handleEditTodoDone(id: number, newTm: string) {
     console.warn(`未找到 id 为 ${id} 的 todo`);
     return;
   }
-  todo.doneTime = getTimestampForTimeString(newTm, viewingDayTimestamp);
+  if (newTm === "") {
+    todo.doneTime = undefined;
+  } else {
+    todo.doneTime = getTimestampForTimeString(newTm, viewingDayTimestamp);
+  }
 }
 
 function handleEditScheduleDone(id: number, newTm: string) {
@@ -778,7 +782,11 @@ function handleEditScheduleDone(id: number, newTm: string) {
     console.warn(`未找到 id 为 ${id} 的 schedule`);
     return;
   }
-  schedule.doneTime = getTimestampForTimeString(newTm, viewingDayTimestamp);
+  if (newTm === "") {
+    schedule.doneTime = undefined;
+  } else {
+    schedule.doneTime = getTimestampForTimeString(newTm, viewingDayTimestamp);
+  }
 }
 
 // ======================== 4. Task/执行相关操作 ========================
