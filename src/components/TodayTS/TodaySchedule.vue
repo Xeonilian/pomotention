@@ -130,7 +130,7 @@
                   title="追踪任务"
                 >
                   <template #icon>
-                    <n-icon>
+                    <n-icon size="18">
                       <ChevronCircleDown48Regular />
                     </n-icon>
                   </template>
@@ -146,7 +146,7 @@
                   title="重复待办，新建活动"
                 >
                   <template #icon>
-                    <n-icon>
+                    <n-icon size="18">
                       <ArrowRepeatAll24Regular />
                     </n-icon>
                   </template>
@@ -164,7 +164,7 @@
                   title="取消任务，不退回活动清单"
                 >
                   <template #icon>
-                    <n-icon>
+                    <n-icon size="18">
                       <DismissCircle20Regular />
                     </n-icon>
                   </template>
@@ -182,7 +182,7 @@
                   title="取消日程"
                 >
                   <template #icon>
-                    <n-icon>
+                    <n-icon size="18">
                       <ChevronCircleRight48Regular />
                     </n-icon>
                   </template>
@@ -415,7 +415,7 @@ function handleRepeatSchedule(id: number) {
   padding-top: 3px;
   border-bottom: 1px solid var(--color-background-dark);
   text-align: middle;
-  white-space: normal;
+  white-space: nowrap;
   overflow: hidden;
   word-break: break-word;
   min-height: 25px;
@@ -434,7 +434,7 @@ function handleRepeatSchedule(id: number) {
 }
 /* 允许描述和地点列显示省略号 */
 .ellipsis {
-  text-overflow: ellipsis; /* 文本溢出显示省略号 */
+  text-overflow: ellipsis !important; /* 文本溢出显示省略号 */
 }
 
 /* 隔行变色 */
@@ -557,8 +557,8 @@ function handleRepeatSchedule(id: number) {
 /* 按钮组样式 */
 .button-group {
   display: flex;
-  gap: 2px;
   justify-content: flex-end;
+  height: 24px;
 }
 
 :deep(.n-button) :hover {

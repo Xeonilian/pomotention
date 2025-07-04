@@ -810,8 +810,7 @@ function handleRepeatTodo(id: number) {
 .table-body td {
   padding-top: 3px;
   border-bottom: 1px solid var(--color-background-dark);
-
-  white-space: normal;
+  white-space: nowrap;
   overflow: hidden;
   word-break: break-word;
   min-height: 25px;
@@ -838,7 +837,7 @@ function handleRepeatTodo(id: number) {
 
 /* 允许描述列显示省略号 */
 .ellipsis {
-  text-overflow: ellipsis;
+  text-overflow: ellipsis !important;
 }
 
 /* 隔行变色 */
