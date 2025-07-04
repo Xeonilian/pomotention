@@ -18,7 +18,7 @@
         <span
           class="hour-label"
           :style="idx === hourStamps.length - 1 ? { display: 'none' } : {}"
-          >{{ formatHour(hourStamp) }}</span
+          >{{ timestampToTimeString(hourStamp) }}</span
         >
       </div>
     </div>
@@ -138,20 +138,27 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
 import type { CSSProperties } from "vue";
-import { getTimestampForTimeString } from "@/core/utils";
+import { getTimestampForTimeString, timestampToTimeString } from "@/core/utils";
 import { CategoryColors } from "@/core/constants";
-import type { Block } from "@/core/types/Block";
-import {
-  splitBlocksToPomodorosWithIndexExcludeSchedules,
+import type {
+  Block,
   PomodoroSegment,
+  TodoSegment,
+  ActualTimeRange,
+} from "@/core/types/Block";
+import {
+  splitIndexPomoBlocksExSchedules,
   generateEstimatedTodoSegments,
   generateActualTodoSegments,
-  TodoSegment,
   reallocateTodoFromPosition,
-  ActualTimeRange,
+  reallocateAllTodos,
 } from "@/services/pomoSegService";
+
 import type { Schedule } from "@/core/types/Schedule";
 import type { Todo } from "@/core/types/Todo";
+import { useSegStore } from "@/stores/useSegStore";
+
+const segStore = useSegStore();
 
 // ======= Props区域 =======
 const props = defineProps<{
@@ -228,11 +235,11 @@ function getHourTickTop(timeStamp: number): number {
   return minutes * props.effectivePxPerMinute;
 }
 
-// （3）刻度线标签格式化
-function formatHour(timeStamp: number): string {
-  const dt = new Date(timeStamp);
-  return dt.getHours().toString().padStart(2, "0") + ":00";
-}
+// // （3）刻度线标签格式化
+// function formatHour(timeStamp: number): string {
+//   const dt = new Date(timeStamp);
+//   return dt.getHours().toString().padStart(2, "0") + ":00";
+// }
 
 // ======= 当前时间线功能 =======
 const now = ref(Date.now());
@@ -246,12 +253,13 @@ const currentTimeTop = computed(() => {
 });
 const showCurrentLine = computed(() => currentTimeTop.value >= 0);
 
-// ======= 番茄分段功能 =======
+// ======= 基于时间表划分番茄分段 =======
 // (1) 定义类别颜色。living绿色，working红色（可拓展）
 import { POMODORO_COLORS } from "@/core/constants";
+
 // (2) 计算所有番茄段（含类别与编号）
 const pomodoroSegments = computed(() =>
-  splitBlocksToPomodorosWithIndexExcludeSchedules(
+  splitIndexPomoBlocksExSchedules(
     props.appDateTimestamp,
     props.blocks,
     props.schedules
@@ -259,7 +267,7 @@ const pomodoroSegments = computed(() =>
 );
 
 // (3) 番茄段样式
-// 在 getPomodoroStyle 函数中修改 #HACK
+// 在 getPomodoroStyle 函数中修改
 function getPomodoroStyle(seg: PomodoroSegment): CSSProperties {
   const topPx =
     ((seg.start - props.timeRange.start) / 60000) * props.effectivePxPerMinute;
@@ -301,20 +309,20 @@ function getPomodoroStyle(seg: PomodoroSegment): CSSProperties {
   };
 }
 
-// 拿实际分配结果
-// 添加本地重写状态
+// todo在番茄段上的分配
+// 本地重写状态
 const manualAllocations = ref<Map<number, number>>(new Map()); // todoId -> startSegmentIndex
 
-// 修改 todoSegments 的计算逻辑
+// todoSegments 的计算
 const todoSegments = computed(() => {
-  // 🔥 关键：先生成完整的自动分配
+  // 先生成完整的自动分配
   let autoSegments = generateEstimatedTodoSegments(
     props.appDateTimestamp,
     props.todos,
     pomodoroSegments.value
   );
 
-  // 🔥 对有手动分配的 todos，完全重新生成
+  // 对有手动分配的 todos，完全重新生成
   if (manualAllocations.value.size > 0) {
     // 分离手动和自动分配的 todos
 
@@ -401,6 +409,7 @@ function getActualSegmentStyle(seg: TodoSegment): CSSProperties {
     opacity: seg.completed ? 1.0 : 0.3,
   };
 }
+
 // 实际时间范围背景
 const actualTimeRanges = computed((): ActualTimeRange[] => {
   return props.todos
@@ -470,7 +479,7 @@ const dragState = ref<{
   dropTargetSegmentIndex: null,
 });
 
-// 替换原来的拖拽状态管理
+// 拖拽状态管理
 const mouseState = ref<{
   isDragging: boolean;
   startX: number;
@@ -483,7 +492,7 @@ const mouseState = ref<{
   draggedSeg: null,
 });
 
-// 替换 handleDragStart
+// handleMouseDown
 function handleMouseDown(event: MouseEvent, seg: TodoSegment) {
   console.log("🟢 Mouse down:", seg.todoId, seg.index);
 
@@ -548,31 +557,39 @@ function handleMouseMove(event: MouseEvent) {
 
 // 鼠标松开
 function handleMouseUp() {
-  if (
-    mouseState.value.isDragging &&
-    dragState.value.dropTargetSegmentIndex !== null
-  ) {
-    // 执行放置逻辑
-    const targetSegment =
-      pomodoroSegments.value[dragState.value.dropTargetSegmentIndex];
-    if (targetSegment && mouseState.value.draggedSeg) {
-      const draggedTodo = props.todos.find(
-        (t) => t.id === mouseState.value.draggedSeg!.todoId
-      );
-      if (draggedTodo) {
-        // 检查冲突
-        const conflictingSegment = todoSegments.value.find(
-          (seg) =>
-            seg.todoId !== mouseState.value.draggedSeg!.todoId &&
-            seg.start <= targetSegment.start &&
-            seg.end > targetSegment.start
-        );
+  if (mouseState.value.isDragging) {
+    // 检查当前拖拽的目标段是否有冲突
+    const conflictingSegment = todoSegments.value.find(
+      (seg) =>
+        seg.todoId !== mouseState.value.draggedSeg!.todoId &&
+        seg.start <= dragState.value.dropTargetSegmentIndex! &&
+        seg.end > dragState.value.dropTargetSegmentIndex!
+    );
 
-        if (!conflictingSegment) {
-          // 记录手动分配
+    // 如果有冲突，清空手动分配并重新分配所有待办事项
+    if (conflictingSegment) {
+      // 清空手动分配
+      manualAllocations.value.clear();
+      console.log("🚨 发生冲突，重新分配所有待办事项");
+
+      // 重新分配所有待办事项
+      reallocateAllTodos(
+        props.appDateTimestamp,
+        props.todos,
+        pomodoroSegments.value
+      );
+    } else {
+      // 执行正常的放置逻辑
+      const targetSegment =
+        pomodoroSegments.value[dragState.value.dropTargetSegmentIndex!];
+      if (targetSegment && mouseState.value.draggedSeg) {
+        const draggedTodo = props.todos.find(
+          (t) => t.id === mouseState.value.draggedSeg!.todoId
+        );
+        if (draggedTodo) {
           manualAllocations.value.set(
             mouseState.value.draggedSeg.todoId,
-            dragState.value.dropTargetSegmentIndex
+            dragState.value.dropTargetSegmentIndex!
           );
           console.log(
             "✅ Drop successful:",
@@ -596,6 +613,17 @@ function handleMouseUp() {
   document.removeEventListener("mousemove", handleMouseMove);
   document.removeEventListener("mouseup", handleMouseUp);
 }
+
+const allocateTodos = () => {
+  const allocatedSegments = reallocateAllTodos(
+    props.appDateTimestamp,
+    props.todos,
+    segStore.pomodoroSegments
+  );
+  segStore.clearTodoSegments();
+  allocatedSegments.forEach((segment) => segStore.addTodoSegment(segment));
+};
+allocateTodos();
 </script>
 
 <style scoped>
