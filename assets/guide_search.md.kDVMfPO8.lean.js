@@ -1,0 +1,1 @@
+import{_ as e,c as t,o as a}from"./chunks/framework.Cs5y-aXb.js";const m=JSON.parse('{"title":"","description":"","frontmatter":{},"headers":[],"relativePath":"guide/search.md","filePath":"guide/search.md","lastUpdated":1751625720000}'),r={name:"guide/search.md"};function s(c,o,d,n,i,p){return a(),t("div")}const f=e(r,[["render",s]]);export{m as __pageData,f as default};
