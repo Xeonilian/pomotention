@@ -96,7 +96,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, defineEmits, watch } from "vue";
+import { ref, computed, watch } from "vue";
 import {
   NModal,
   NInput,
