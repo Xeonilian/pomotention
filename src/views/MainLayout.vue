@@ -363,13 +363,16 @@ watch(
   () => uiStore.showPomodoroPanel,
   async (newVal) => {
     await updateDraggableContainerVisibilityAndPosition(newVal);
+    if (draggableContainer.value) {
+      draggableContainer.value.addEventListener("mousedown", handleMouseDown);
+    }
   }
 );
 
 watch(
   () => showPomoSeq.value,
   async (newVal) => {
-    if (isMiniMode) {
+    if (isMiniMode.value) {
       console.log("[MainLayout show pomoseq]:", newVal);
       const appWindow = getCurrentWindow();
 
@@ -385,6 +388,9 @@ watch(
       } catch (error) {
         console.error("[mini] Failed to set pomoSeq", error);
       }
+    }
+    if (draggableContainer.value) {
+      draggableContainer.value.addEventListener("mousedown", handleMouseDown);
     }
   }
 );
