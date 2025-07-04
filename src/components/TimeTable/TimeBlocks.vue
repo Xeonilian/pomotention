@@ -622,6 +622,7 @@ const allocateTodos = () => {
   );
   segStore.clearTodoSegments();
   allocatedSegments.forEach((segment) => segStore.addTodoSegment(segment));
+  console.log(segStore.todoSegments);
 };
 allocateTodos();
 </script>
