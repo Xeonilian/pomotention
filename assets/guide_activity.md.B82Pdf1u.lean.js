@@ -1,1 +1,0 @@
-import{_ as t,c as e,o as a}from"./chunks/framework.CAbILWTE.js";const m=JSON.parse('{"title":"","description":"","frontmatter":{},"headers":[],"relativePath":"guide/activity.md","filePath":"guide/activity.md","lastUpdated":1750146826000}'),i={name:"guide/activity.md"};function c(r,o,s,d,n,p){return a(),e("div")}const f=t(i,[["render",c]]);export{m as __pageData,f as default};
