@@ -38,7 +38,7 @@ config.mts 初始页面布局
     "docs:dev": "vitepress dev",
     "docs:build": "vitepress build",
     "docs:preview": "vitepress preview",
-    "deploy": "vitepress build && gh-pages -d .vitepress/dist"
+    "deploy": "vitepress build && npx gh-pages -d .vitepress/dist"
   },
   "devDependencies": {
     "gh-pages": "^6.3.0",
@@ -49,3 +49,9 @@ config.mts 初始页面布局
 ```
 
 - public\logo.png 放 logo
+
+## 步骤
+
+1. 路径 doc\
+2. pnpm docs:build
+3. npx gh-pages -d .vitepress/dist
