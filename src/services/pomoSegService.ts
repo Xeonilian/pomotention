@@ -1,48 +1,14 @@
 // src/services/pomoSegService.ts
-import type { Block } from "@/core/types/Block";
+import type { Block, TodoSegment, PomodoroSegment } from "@/core/types/Block";
 import type { Todo } from "@/core/types/Todo";
 import { getTimestampForTimeString } from "@/core/utils";
-
-// ========== 接口定义 ==========
-
-export interface PomodoroSegment {
-  parentBlockId: string;
-  type: "work" | "break" | "schedule" | "untaetigkeit";
-  start: number;
-  end: number;
-  category: string; // 原block的类型
-  index?: number; // 在同种类型中的序号
-}
-
-export interface TodoSegment {
-  todoId: number;
-  todoTitle: string;
-  priority: number;
-  start: number;
-  end: number;
-  pomoType: "🍅" | "🍇" | "🍒";
-  category?: string;
-  index: number; // 本todo第几个番茄
-  assignedPomodoroSegment?: PomodoroSegment;
-  overflow?: boolean; // 是否溢出（超出可用时间段）
-  completed?: boolean; // todo是否已完成
-  usingRealPomo?: boolean; // 是否使用realPomo计数
-}
-
-export interface ActualTimeRange {
-  todoId: number;
-  todoTitle: string;
-  start: number;
-  end: number;
-  category: string;
-}
 
 // ========== 辅助工具函数 ==========
 
 /**
  * 从基础时间区间中减去排除区间，返回剩余的可用区间
  */
-function subtractIntervals(
+function _subtractIntervals(
   base: [number, number],
   excludes: [number, number][]
 ): [number, number][] {
@@ -66,12 +32,10 @@ function subtractIntervals(
   return result.filter(([s, e]) => e > s);
 }
 
-// ========== 番茄统计工具函数 ==========
-
 /**
  * 统计 todo 预估番茄数
  */
-export function getTodoEstPomoCount(todo: Todo): number {
+function _getTodoEstPomoCount(todo: Todo): number {
   if (!todo.estPomo) return 0;
   const rawCount = todo.estPomo.reduce(
     (sum, cur) => sum + (typeof cur === "number" ? cur : 0),
@@ -86,7 +50,7 @@ export function getTodoEstPomoCount(todo: Todo): number {
 /**
  * 统计 todo 实际完成番茄数
  */
-export function getTodoRealPomoCount(todo: Todo): number {
+function _getTodoRealPomoCount(todo: Todo): number {
   if (!todo.realPomo) return 0;
   const rawCount = todo.realPomo.reduce(
     (sum, cur) => sum + (typeof cur === "number" ? cur : 0),
@@ -99,24 +63,139 @@ export function getTodoRealPomoCount(todo: Todo): number {
 }
 
 /**
- * 按番茄类型返回每颗番茄的分钟数
- */
-export function getPomoMinutesByType(type?: Todo["pomoType"]): number {
-  if (type === "🍅") return 30; // 25+5
-  if (type === "🍒") return 60; // 15*4
-  if (type === "🍇") return 30; // 25+5
-  return 30;
-}
-
-/**
  * 根据todo状态决定使用estPomo还是realPomo
  */
 export function getTodoDisplayPomoCount(todo: Todo): number {
   if (todo.status === "done") {
-    return getTodoRealPomoCount(todo);
+    return _getTodoRealPomoCount(todo);
   } else {
-    return getTodoEstPomoCount(todo);
+    return _getTodoEstPomoCount(todo);
   }
+}
+
+// ========== 番茄时间段生成 ==========
+
+/**
+ * 将时间块分割为番茄时间段，排除已安排的活动
+ */
+export function splitIndexPomoBlocksExSchedules(
+  appDateTimestamp: number,
+  blocks: Block[],
+  schedules: { activityDueRange: [number, string]; isUntaetigkeit?: boolean }[]
+): PomodoroSegment[] {
+  const scheduleInfo: Array<{
+    range: [number, number];
+    isUntaetigkeit: boolean;
+  }> = schedules
+    .map((s) => {
+      const start = Number(s.activityDueRange[0]);
+      const duration = Number(s.activityDueRange[1]);
+      return duration > 0
+        ? {
+            range: [start, start + duration * 60 * 1000] as [number, number],
+            isUntaetigkeit: s.isUntaetigkeit || false,
+          }
+        : null;
+    })
+    .filter((info): info is NonNullable<typeof info> => info !== null);
+
+  const excludeRanges: [number, number][] = scheduleInfo.map(
+    (info) => info.range
+  );
+
+  let segments: PomodoroSegment[] = [];
+  const globalIndex: Record<string, number> = {};
+
+  const merged: Array<{
+    range: [number, number];
+    hasUntaetigkeit: boolean;
+  }> = [];
+
+  scheduleInfo
+    .sort((a, b) => a.range[0] - b.range[0])
+    .forEach(({ range: [start, end], isUntaetigkeit }) => {
+      if (!merged.length || merged[merged.length - 1].range[1] < start) {
+        merged.push({
+          range: [start, end],
+          hasUntaetigkeit: isUntaetigkeit,
+        });
+      } else {
+        const last = merged[merged.length - 1];
+        last.range[1] = Math.max(last.range[1], end);
+        last.hasUntaetigkeit = last.hasUntaetigkeit || isUntaetigkeit;
+      }
+    });
+
+  merged.forEach(({ range: [start, end], hasUntaetigkeit }) => {
+    segments.push({
+      parentBlockId: "S",
+      type: hasUntaetigkeit ? "untaetigkeit" : "schedule",
+      start,
+      end,
+      category: hasUntaetigkeit ? "untaetigkeit" : "schedule",
+    });
+  });
+
+  blocks.forEach((block) => {
+    if (block.category === "sleeping") return;
+
+    const blockStart = getTimestampForTimeString(block.start, appDateTimestamp);
+    const blockEnd = getTimestampForTimeString(block.end, appDateTimestamp);
+
+    const relatedExcludes = excludeRanges.filter(
+      ([s, e]) => e > blockStart && s < blockEnd
+    );
+
+    const availableRanges = _subtractIntervals(
+      [blockStart, blockEnd],
+      relatedExcludes
+    );
+
+    for (const [aStart, aEnd] of availableRanges) {
+      if (aEnd - aStart < 30 * 60 * 1000) continue;
+
+      let cur = aStart;
+      let idx = globalIndex[block.category] || 1;
+
+      while (aEnd - cur >= 30 * 60 * 1000) {
+        segments.push({
+          parentBlockId: block.id,
+          type: "work",
+          start: cur,
+          end: cur + 25 * 60 * 1000,
+          category: block.category,
+          index: idx,
+        });
+        cur += 25 * 60 * 1000;
+
+        segments.push({
+          parentBlockId: block.id,
+          type: "break",
+          start: cur,
+          end: cur + 5 * 60 * 1000,
+          category: block.category,
+        });
+        cur += 5 * 60 * 1000;
+        idx++;
+      }
+
+      if (aEnd - cur >= 25 * 60 * 1000) {
+        segments.push({
+          parentBlockId: block.id,
+          type: "work",
+          start: cur,
+          end: cur + 25 * 60 * 1000,
+          category: block.category,
+          index: idx,
+        });
+        idx++;
+      }
+
+      globalIndex[block.category] = idx;
+    }
+  });
+
+  return segments.sort((a, b) => a.start - b.start);
 }
 
 // ========== 估计分配相关函数 ==========
@@ -165,7 +244,7 @@ export function generateEstimatedTodoSegments(
     if (needCount === 0) continue;
 
     if (todo.pomoType === "🍅" || !todo.pomoType) {
-      allocateTomatoSegments(
+      _allocateTomatoSegments(
         appDateTimestamp,
         todo,
         needCount,
@@ -174,7 +253,7 @@ export function generateEstimatedTodoSegments(
         todoSegments
       );
     } else if (todo.pomoType === "🍇") {
-      allocateGrapeSegments(
+      _allocateGrapeSegments(
         appDateTimestamp,
         todo,
         needCount,
@@ -183,7 +262,7 @@ export function generateEstimatedTodoSegments(
         todoSegments
       );
     } else if (todo.pomoType === "🍒") {
-      allocateCherrySegments(
+      _allocateCherrySegments(
         appDateTimestamp,
         todo,
         needCount,
@@ -197,10 +276,72 @@ export function generateEstimatedTodoSegments(
   return todoSegments;
 }
 
+// ========== 实际执行相关函数 ==========
+
+/**
+ * 生成实际执行的todo时间段
+ * 当todo的状态带有startTime
+ */
+export function generateActualTodoSegments(todos: Todo[]): TodoSegment[] {
+  const todoSegments: TodoSegment[] = [];
+
+  const todosWithStartTime = todos.filter((todo) => todo.startTime);
+
+  for (const todo of todosWithStartTime) {
+    if (!todo.startTime) continue;
+
+    const totalCount = _getTodoEstPomoCount(todo);
+    const completedCount = _getTodoRealPomoCount(todo);
+
+    if (todo.pomoType === "🍒") {
+      for (let i = 0; i < 4; i++) {
+        const duration = 15 * 60 * 1000;
+        const segmentStart = todo.startTime + i * duration;
+        const segmentEnd = segmentStart + duration;
+        const pomodoroIndex = Math.floor(i / 2);
+
+        todoSegments.push({
+          todoId: todo.id,
+          priority: todo.priority,
+          todoTitle: todo.activityTitle,
+          index: pomodoroIndex + 1,
+          start: segmentStart,
+          end: segmentEnd,
+          pomoType: "🍒",
+          category: "working",
+          completed: pomodoroIndex < completedCount,
+          usingRealPomo: true,
+        });
+      }
+    } else {
+      const duration = 25 * 60 * 1000;
+      for (let i = 0; i < totalCount; i++) {
+        const segmentStart = todo.startTime + i * duration;
+        const segmentEnd = segmentStart + duration;
+
+        todoSegments.push({
+          todoId: todo.id,
+          priority: todo.priority,
+          todoTitle: todo.activityTitle,
+          index: i + 1,
+          start: segmentStart,
+          end: segmentEnd,
+          pomoType: todo.pomoType || "🍅",
+          category: todo.pomoType === "🍇" ? "living" : "working",
+          completed: i < completedCount,
+          usingRealPomo: true,
+        });
+      }
+    }
+  }
+
+  return todoSegments.sort((a, b) => a.start - b.start);
+}
+// ========== 分配相关函数 ==========
 /**
  * 分配🍅番茄段到working区域
  */
-function allocateTomatoSegments(
+function _allocateTomatoSegments(
   appDateTimestamp: number,
   todo: Todo,
   needCount: number,
@@ -279,7 +420,7 @@ function allocateTomatoSegments(
 /**
  * 分配🍇番茄段到living区域
  */
-function allocateGrapeSegments(
+function _allocateGrapeSegments(
   appDateTimestamp: number,
   todo: Todo,
   needCount: number,
@@ -358,7 +499,7 @@ function allocateGrapeSegments(
 /**
  * 分配🍒番茄段
  */
-function allocateCherrySegments(
+function _allocateCherrySegments(
   appDateTimestamp: number,
   todo: Todo,
   needCount: number,
@@ -481,7 +622,7 @@ export function reallocateTodoFromPosition(
   }
 
   if (todo.pomoType === "🍅" || !todo.pomoType) {
-    allocateTomatoSegmentsFromIndex(
+    _allocateTomatoSegmentsFromIndex(
       appDateTimestamp,
       todo,
       needCount,
@@ -491,7 +632,7 @@ export function reallocateTodoFromPosition(
       startIndex
     );
   } else if (todo.pomoType === "🍇") {
-    allocateGrapeSegmentsFromIndex(
+    _allocateGrapeSegmentsFromIndex(
       appDateTimestamp,
       todo,
       needCount,
@@ -501,7 +642,7 @@ export function reallocateTodoFromPosition(
       startIndex
     );
   } else if (todo.pomoType === "🍒") {
-    allocateCherrySegmentsFromIndex(
+    _allocateCherrySegmentsFromIndex(
       appDateTimestamp,
       todo,
       needCount,
@@ -516,9 +657,42 @@ export function reallocateTodoFromPosition(
 }
 
 /**
+ * 重新分配所有待办事项的时间段
+ */
+export function reallocateAllTodos(
+  appDateTimestamp: number,
+  todos: Todo[],
+  pomodoroSegments: PomodoroSegment[]
+): TodoSegment[] {
+  const todoSegments: TodoSegment[] = [];
+
+  for (const todo of todos) {
+    const needCount = getTodoDisplayPomoCount(todo);
+    if (needCount > 0) {
+      const categorySegs = pomodoroSegments.filter((seg) => {
+        const targetCategory = todo.pomoType === "🍇" ? "living" : "working";
+        return (
+          seg.category === targetCategory &&
+          (seg.type === "work" || seg.type === "break")
+        );
+      });
+
+      const assignedSegments = generateEstimatedTodoSegments(
+        appDateTimestamp,
+        [todo],
+        categorySegs
+      );
+      todoSegments.push(...assignedSegments);
+    }
+  }
+
+  return todoSegments;
+}
+
+/**
  * 从指定索引开始分配番茄段
  */
-function allocateTomatoSegmentsFromIndex(
+function _allocateTomatoSegmentsFromIndex(
   appDateTimestamp: number,
   todo: Todo,
   needCount: number,
@@ -602,7 +776,7 @@ function allocateTomatoSegmentsFromIndex(
 /**
  * 从指定索引开始分配🍇葡萄段
  */
-function allocateGrapeSegmentsFromIndex(
+function _allocateGrapeSegmentsFromIndex(
   appDateTimestamp: number,
   todo: Todo,
   needCount: number,
@@ -686,7 +860,7 @@ function allocateGrapeSegmentsFromIndex(
 /**
  * 从指定索引开始分配🍒樱桃段
  */
-function allocateCherrySegmentsFromIndex(
+function _allocateCherrySegmentsFromIndex(
   appDateTimestamp: number,
   todo: Todo,
   needCount: number,
@@ -766,190 +940,4 @@ function allocateCherrySegmentsFromIndex(
       assignedCount++;
     }
   }
-}
-
-// ========== 实际执行相关函数 ==========
-
-/**
- * 生成实际执行的todo时间段
- */
-export function generateActualTodoSegments(todos: Todo[]): TodoSegment[] {
-  const todoSegments: TodoSegment[] = [];
-
-  const todosWithStartTime = todos.filter((todo) => todo.startTime);
-
-  for (const todo of todosWithStartTime) {
-    if (!todo.startTime) continue;
-
-    const totalCount = getTodoEstPomoCount(todo);
-    const completedCount = getTodoRealPomoCount(todo);
-
-    if (todo.pomoType === "🍒") {
-      for (let i = 0; i < 4; i++) {
-        const duration = 15 * 60 * 1000;
-        const segmentStart = todo.startTime + i * duration;
-        const segmentEnd = segmentStart + duration;
-        const pomodoroIndex = Math.floor(i / 2);
-
-        todoSegments.push({
-          todoId: todo.id,
-          priority: todo.priority,
-          todoTitle: todo.activityTitle,
-          index: pomodoroIndex + 1,
-          start: segmentStart,
-          end: segmentEnd,
-          pomoType: "🍒",
-          category: "working",
-          completed: pomodoroIndex < completedCount,
-          usingRealPomo: true,
-        });
-      }
-    } else {
-      const duration = 25 * 60 * 1000;
-      for (let i = 0; i < totalCount; i++) {
-        const segmentStart = todo.startTime + i * duration;
-        const segmentEnd = segmentStart + duration;
-
-        todoSegments.push({
-          todoId: todo.id,
-          priority: todo.priority,
-          todoTitle: todo.activityTitle,
-          index: i + 1,
-          start: segmentStart,
-          end: segmentEnd,
-          pomoType: todo.pomoType || "🍅",
-          category: todo.pomoType === "🍇" ? "living" : "working",
-          completed: i < completedCount,
-          usingRealPomo: true,
-        });
-      }
-    }
-  }
-
-  return todoSegments.sort((a, b) => a.start - b.start);
-}
-
-// ========== 番茄时间段生成 ==========
-
-/**
- * 将时间块分割为番茄时间段，排除已安排的活动
- */
-export function splitBlocksToPomodorosWithIndexExcludeSchedules(
-  appDateTimestamp: number,
-  blocks: Block[],
-  schedules: { activityDueRange: [number, string]; isUntaetigkeit?: boolean }[]
-): PomodoroSegment[] {
-  const scheduleInfo: Array<{
-    range: [number, number];
-    isUntaetigkeit: boolean;
-  }> = schedules
-    .map((s) => {
-      const start = Number(s.activityDueRange[0]);
-      const duration = Number(s.activityDueRange[1]);
-      return duration > 0
-        ? {
-            range: [start, start + duration * 60 * 1000] as [number, number],
-            isUntaetigkeit: s.isUntaetigkeit || false,
-          }
-        : null;
-    })
-    .filter((info): info is NonNullable<typeof info> => info !== null);
-
-  const excludeRanges: [number, number][] = scheduleInfo.map(
-    (info) => info.range
-  );
-
-  let segments: PomodoroSegment[] = [];
-  const globalIndex: Record<string, number> = {};
-
-  const merged: Array<{
-    range: [number, number];
-    hasUntaetigkeit: boolean;
-  }> = [];
-
-  scheduleInfo
-    .sort((a, b) => a.range[0] - b.range[0])
-    .forEach(({ range: [start, end], isUntaetigkeit }) => {
-      if (!merged.length || merged[merged.length - 1].range[1] < start) {
-        merged.push({
-          range: [start, end],
-          hasUntaetigkeit: isUntaetigkeit,
-        });
-      } else {
-        const last = merged[merged.length - 1];
-        last.range[1] = Math.max(last.range[1], end);
-        last.hasUntaetigkeit = last.hasUntaetigkeit || isUntaetigkeit;
-      }
-    });
-
-  merged.forEach(({ range: [start, end], hasUntaetigkeit }) => {
-    segments.push({
-      parentBlockId: "S",
-      type: hasUntaetigkeit ? "untaetigkeit" : "schedule",
-      start,
-      end,
-      category: hasUntaetigkeit ? "untaetigkeit" : "schedule",
-    });
-  });
-
-  blocks.forEach((block) => {
-    if (block.category === "sleeping") return;
-
-    const blockStart = getTimestampForTimeString(block.start, appDateTimestamp);
-    const blockEnd = getTimestampForTimeString(block.end, appDateTimestamp);
-
-    const relatedExcludes = excludeRanges.filter(
-      ([s, e]) => e > blockStart && s < blockEnd
-    );
-
-    const availableRanges = subtractIntervals(
-      [blockStart, blockEnd],
-      relatedExcludes
-    );
-
-    for (const [aStart, aEnd] of availableRanges) {
-      if (aEnd - aStart < 30 * 60 * 1000) continue;
-
-      let cur = aStart;
-      let idx = globalIndex[block.category] || 1;
-
-      while (aEnd - cur >= 30 * 60 * 1000) {
-        segments.push({
-          parentBlockId: block.id,
-          type: "work",
-          start: cur,
-          end: cur + 25 * 60 * 1000,
-          category: block.category,
-          index: idx,
-        });
-        cur += 25 * 60 * 1000;
-
-        segments.push({
-          parentBlockId: block.id,
-          type: "break",
-          start: cur,
-          end: cur + 5 * 60 * 1000,
-          category: block.category,
-        });
-        cur += 5 * 60 * 1000;
-        idx++;
-      }
-
-      if (aEnd - cur >= 25 * 60 * 1000) {
-        segments.push({
-          parentBlockId: block.id,
-          type: "work",
-          start: cur,
-          end: cur + 25 * 60 * 1000,
-          category: block.category,
-          index: idx,
-        });
-        idx++;
-      }
-
-      globalIndex[block.category] = idx;
-    }
-  });
-
-  return segments.sort((a, b) => a.start - b.start);
 }
