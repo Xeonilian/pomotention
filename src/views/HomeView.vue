@@ -899,23 +899,23 @@ onMounted(() => {
 
 // ======================== 9. 页面尺寸调整  ========================
 const { size: topHeight, startResize: startVerticalResize } = useResize(
-  280,
+  300,
   "vertical",
-  100,
-  280
+  200,
+  500
 );
 const { size: leftWidth, startResize: startLeftResize } = useResize(
-  150,
+  100,
   "horizontal",
-  150,
-  240,
+  50,
+  400,
   false // 左侧面板
 );
 const { size: rightWidth, startResize: startRightResize } = useResize(
-  480,
-  "horizontal",
   300,
-  600,
+  "horizontal",
+  50,
+  400,
   true // 右侧面板
 );
 </script>
@@ -936,7 +936,7 @@ const { size: rightWidth, startResize: startRightResize } = useResize(
   overflow: hidden;
   margin-right: 0;
   background: var(--color-background);
-  min-width: 150px;
+  min-width: 120px;
 }
 
 .right {

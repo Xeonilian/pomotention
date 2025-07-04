@@ -397,7 +397,7 @@ watch(
 watch(
   () => timerStore.isActive,
   async (newVal) => {
-    if (isMiniMode && showPomoSeq.value) {
+    if (isMiniMode.value && showPomoSeq.value) {
       console.log("[MainLayout running pomoseq]:", newVal);
       const appWindow = getCurrentWindow();
 
