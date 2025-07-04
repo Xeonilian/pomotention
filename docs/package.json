@@ -3,7 +3,7 @@
     "docs:dev": "vitepress dev",
     "docs:build": "vitepress build",
     "docs:preview": "vitepress preview",
-    "deploy": "vitepress build && gh-pages -d .vitepress/dist"
+    "deploy": "vitepress build && npx gh-pages -d .vitepress/dist"
   },
   "devDependencies": {
     "gh-pages": "^6.3.0",

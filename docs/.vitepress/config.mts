@@ -11,7 +11,7 @@ export default defineConfig({
     nav: [
       { text: "首页", link: "/" },
       { text: "快速开始", link: "/getting-started" },
-      { text: "使用说明", link: "/guide/modules" },
+      { text: "使用说明", link: "/guide/" },
       { text: "GitHub", link: "https://github.com/Xeonilian/pomotention" },
     ],
 
@@ -24,14 +24,16 @@ export default defineConfig({
         ],
       },
       {
-        text: "使用指南",
+        text: "使用说明",
         items: [
-          { text: "番茄计时器", link: "/guide/schedule" },
-          { text: "活动清单管理", link: "/guide/activity" },
-          { text: "今日待办", link: "/guide/daily-tasks" },
-          { text: "任务执行追踪", link: "/guide/tracking" },
-          { text: "界面可视化", link: "/guide/interface" },
-          { text: "数据查看", link: "/guide/history" },
+          { text: "软件界面", link: "/guide/interface" },
+          { text: "番茄时钟", link: "/guide/timer" },
+          { text: "活动清单", link: "/guide/activity" },
+          { text: "今日待办", link: "/guide/todo" },
+          { text: "每日日程", link: "/guide/timetable" },
+          { text: "任务追踪", link: "/guide/task" },
+          { text: "数据查看", link: "/guide/search" },
+          { text: "一日流程", link: "/guide/workflow" },
         ],
       },
       {
