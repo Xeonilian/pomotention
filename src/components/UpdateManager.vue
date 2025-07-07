@@ -142,10 +142,43 @@ watch(
   }
 );
 
+// 辅助函数：获取远端（GitHub）最新 release 版本
+async function getRemoteVersion(): Promise<string | null> {
+  try {
+    const resp = await fetch(
+      "https://api.github.com/repos/Xeonilian/pomotention/releases/latest",
+      { headers: { Accept: "application/vnd.github.v3+json" } }
+    );
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
+    const data = await resp.json();
+    // tag_name 格式 v1.2.3
+    return (data.tag_name ?? data.name ?? null) as string | null;
+  } catch (e: any) {
+    console.warn("拉取远端版本信息失败:", e.message || e);
+    return null;
+  }
+}
+
 async function handleUpdateCheck() {
   try {
     const localVersion = await getVersion();
     console.log("Local App Version:", localVersion);
+    const remoteVersion = await getRemoteVersion();
+    console.log("远端最新版本:", remoteVersion);
+
+    // 步骤2：本地与远端一致则直接短路
+    if (
+      remoteVersion &&
+      remoteVersion.replace(/^v/, "") === localVersion.replace(/^v/, "")
+      // ↑ 有些 release tag 前面有 v，有些没有，这样兼容
+    ) {
+      notification.success({
+        title: "版本检查",
+        content: "当前已是最新版本",
+        duration: 2000,
+      });
+      return; // 不再走后面 Tauri 插件逻辑
+    }
 
     const update = await check();
 
