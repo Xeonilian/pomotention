@@ -10,13 +10,18 @@ description: 下载最新版本的应用程序
 ## 当前版本
 
 ::: info 最新发布
-**版本 v0.2.6** - 2025 年 7 月 4 日发布
+**版本 v0.2.7** - 2025 年 7 月 7 日发布
 
 - 功能稳定测试
 - 支持 Windows macOS （ dmg + App + msi + exe）
 - 简易全局搜索
 - 番茄钟最小化置顶
 - 自动更新
+  :::
+
+::: warning 紧急修复
+
+- 0.2.6 引入操作 bug
   :::
 
 ## 系统要求
@@ -35,13 +40,13 @@ description: 下载最新版本的应用程序
 
 ### Windows
 
-<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.2.6/pomotention_0.2.6_x64_en-US.msi" class="download-btn windows">
+<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.2.7/pomotention_0.2.7_x64_en-US.msi" class="download-btn windows">
   <span class="platform">Windows</span>
   <span class="format">.msi 安装包</span>
   <span class="size">15.7MB</span>
 </a>
 
-<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.2.6/pomotention_0.2.6_x64-setup.exe" class="download-btn windows">
+<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.2.7/pomotention_0.2.7_x64-setup.exe" class="download-btn windows">
   <span class="platform">Windows</span>
   <span class="format">.exe </span>
   <span class="size">14.5MB</span>
@@ -49,13 +54,13 @@ description: 下载最新版本的应用程序
 
 ### macOS
 
-<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.2.6/pomotention_0.2.6_x64.dmg" class="download-btn macos">
+<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.2.7/pomotention_0.2.7_x64.dmg" class="download-btn macos">
   <span class="platform">macOS</span>
   <span class="format">.dmg 安装包</span>
   <span class="size">18.5MB</span>
 </a>
 
-<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.2.6/pomotention.app.tar.gz" class="download-btn macos">
+<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.2.7/pomotention.app.tar.gz" class="download-btn macos">
   <span class="platform">macOS</span>
   <span class="format">app.tar.gz</span>
   <span class="size">17.1MB</span>
@@ -102,7 +107,7 @@ description: 下载最新版本的应用程序
 
   - 🎉 首个 macOS 版本发布 #macOS
 
-- v0.2.6 `2025-07-04`
+- v0.2.7 `2025-07-07`
   - 测试稳定版本 #macOS #window
   - 支持缩小置顶
   - 优化 UI
