@@ -20,6 +20,7 @@
       v-model="content"
       class="task-textarea"
       @keydown="handleKeydown"
+      @blur="stopEditing"
       :title="'激活时Esc退出编辑'"
     ></textarea>
   </div>
