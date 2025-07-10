@@ -62,18 +62,24 @@
       >
         🍅
       </n-button>
-      =
-      <n-input
-        ref="pomoDurationInput"
-        v-model:value="defaultPomoDuration"
-        placeholder=""
-        class="pomo-duration-input"
-        size="small"
-        @blur="handleBlurRestore"
-        @keydown="handleKeydown"
-        title="设置番茄时长/回车确认"
-      />
-      min
+      <div
+        class="pomo-duration-input-container"
+        :class="{ disabled: isRunning }"
+      >
+        =
+        <n-input
+          ref="pomoDurationInput"
+          v-model:value="defaultPomoDuration"
+          placeholder=""
+          class="pomo-duration-input"
+          size="small"
+          @blur="handleBlurRestore"
+          @keydown="handleKeydown"
+          title="设置番茄时长/回车确认"
+          :disabled="isRunning"
+        />
+        <span class="pomo-duration-input-unit">min</span>
+      </div>
     </div>
   </div>
 </template>
@@ -510,9 +516,10 @@ onUnmounted(() => {
 
 .button-row {
   display: flex;
-  justify-content: space-between;
+  justify-content: center; /* 聚拢到中间 */
   align-items: center;
-  width: 170px; /* 增加宽度以适应新按钮 */
+  gap: 4px; /* 计算好间距后聚拢 */
+  width: 180px; /* 增加宽度以适应新按钮 */
   margin: 0 auto;
   font-size: 12px;
 }
@@ -561,5 +568,8 @@ onUnmounted(() => {
   text-align: center;
   font-size: 12px;
   pointer-events: auto;
+}
+.disabled {
+  color: var(--color-text-secondary);
 }
 </style>
