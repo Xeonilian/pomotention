@@ -10,6 +10,7 @@ export interface GlobalSettings {
   durations: typeof PomodoroDurations;
   style: typeof TimerStyleDefaults;
   miniModeRefactor: number;
+  activityRank: Record<number, number>; // 活动排序：{activityId: rank}
   // 以后新增全局设置项就在这里补充
 }
 
@@ -19,6 +20,7 @@ const defaultSettings: GlobalSettings = {
   durations: PomodoroDurations,
   style: TimerStyleDefaults,
   miniModeRefactor: 1,
+  activityRank: {}, // 默认空对象
 };
 
 // 工具函数

@@ -2,6 +2,7 @@
   Component: Activities.vue 
   Description: 
   用于展示活动列表，包括任务和预约。支持编辑活动信息，并根据活动的截止日期或预约时间显示不同颜色背景。
+  新增拖拽排序功能，用户可以通过拖拽图标区域调整活动顺序。
 
   Props:
   - displaySheet: 活动数组，包含任务和预约的详细信息。
@@ -28,71 +29,82 @@
         :placeholder="item.isUntaetigkeit ? '无所事事' : '任务描述'"
         style="flex: 2"
         @focus="$emit('focus-row', item.id)"
+        :class="{ 'force-hover': hoveredRowId === item.id }"
       >
         <template #prefix>
-          <n-icon v-if="item.isUntaetigkeit" :color="'var(--color-blue)'"
-            ><Cloud24Regular
-          /></n-icon>
-          <n-icon
-            v-if="item.interruption === 'I'"
-            :color="
-              item.status === 'ongoing'
-                ? 'var(--color-red)'
-                : item.status === 'delayed'
-                ? 'var(--color-blue)'
-                : item.status === 'suspended'
-                ? 'var(--color-orange)'
-                : item.status === 'cancelled'
-                ? 'var(--color-text-primary)'
-                : 'var(--color-text-secondary)'
+          <div
+            class="icon-drag-area"
+            @mousedown="startDrag($event, item)"
+            @mouseenter="handleIconMouseEnter(item.id)"
+            @mouseleave="handleIconMouseLeave"
+            :title="
+              item.status !== 'cancelled' ? '拖拽调整顺序' : '不支持顺序修改'
             "
-            ><Chat24Regular
-          /></n-icon>
-          <n-icon
-            v-else-if="item.interruption === 'E'"
-            :color="
-              item.status === 'ongoing'
-                ? 'var(--color-red)'
-                : item.status === 'delayed'
-                ? 'var(--color-blue)'
-                : item.status === 'suspended'
-                ? 'var(--color-orange)'
-                : item.status === 'cancelled'
-                ? 'var(--color-text-primary)'
-                : 'var(--color-text-secondary)'
-            "
-            ><VideoPersonCall24Regular
-          /></n-icon>
-          <n-icon
-            v-else-if="item.class === 'T'"
-            :color="
-              item.status === 'ongoing'
-                ? 'var(--color-red)'
-                : item.status === 'delayed'
-                ? 'var(--color-blue)'
-                : item.status === 'suspended'
-                ? 'var(--color-orange)'
-                : item.status === 'cancelled'
-                ? 'var(--color-text-primary)'
-                : 'var(--color-text-secondary)'
-            "
-            ><ApprovalsApp24Regular
-          /></n-icon>
-          <n-icon
-            v-else-if="item.class === 'S' && !item.isUntaetigkeit"
-            :color="
-              item.status === 'ongoing'
-                ? 'var(--color-red)'
-                : item.status === 'delayed'
-                ? 'var(--color-blue)'
-                : item.status === 'suspended'
-                ? 'var(--color-orange)'
-                : item.status === 'cancelled'
-                ? 'var(--color-text-primary)'
-                : 'var(--color-text-secondary)'
-            "
-            ><Accessibility24Regular
-          /></n-icon>
+          >
+            <n-icon v-if="item.isUntaetigkeit" :color="'var(--color-blue)'"
+              ><Cloud24Regular
+            /></n-icon>
+            <n-icon
+              v-if="item.interruption === 'I'"
+              :color="
+                item.status === 'ongoing'
+                  ? 'var(--color-red)'
+                  : item.status === 'delayed'
+                  ? 'var(--color-blue)'
+                  : item.status === 'suspended'
+                  ? 'var(--color-orange)'
+                  : item.status === 'cancelled'
+                  ? 'var(--color-text-primary)'
+                  : 'var(--color-text-secondary)'
+              "
+              ><Chat24Regular
+            /></n-icon>
+            <n-icon
+              v-else-if="item.interruption === 'E'"
+              :color="
+                item.status === 'ongoing'
+                  ? 'var(--color-red)'
+                  : item.status === 'delayed'
+                  ? 'var(--color-blue)'
+                  : item.status === 'suspended'
+                  ? 'var(--color-orange)'
+                  : item.status === 'cancelled'
+                  ? 'var(--color-text-primary)'
+                  : 'var(--color-text-secondary)'
+              "
+              ><VideoPersonCall24Regular
+            /></n-icon>
+            <n-icon
+              v-else-if="item.class === 'T'"
+              :color="
+                item.status === 'ongoing'
+                  ? 'var(--color-red)'
+                  : item.status === 'delayed'
+                  ? 'var(--color-blue)'
+                  : item.status === 'suspended'
+                  ? 'var(--color-orange)'
+                  : item.status === 'cancelled'
+                  ? 'var(--color-text-primary)'
+                  : 'var(--color-text-secondary)'
+              "
+              ><ApprovalsApp24Regular
+            /></n-icon>
+            <n-icon
+              v-else-if="item.class === 'S' && !item.isUntaetigkeit"
+              :color="
+                item.status === 'ongoing'
+                  ? 'var(--color-red)'
+                  : item.status === 'delayed'
+                  ? 'var(--color-blue)'
+                  : item.status === 'suspended'
+                  ? 'var(--color-orange)'
+                  : item.status === 'cancelled'
+                  ? 'var(--color-text-primary)'
+                  : 'var(--color-text-secondary)'
+              "
+              ><Accessibility24Regular
+            /></n-icon>
+          </div>
         </template>
       </n-input>
       <n-input
@@ -101,6 +113,7 @@
         style="max-width: 90px"
         @focus="$emit('focus-row', item.id)"
         placeholder="地点"
+        :class="{ 'force-hover': hoveredRowId === item.id }"
       />
       <n-input
         v-if="item.class === 'T'"
@@ -115,6 +128,7 @@
           'pomo-green': item.pomoType === '🍒',
           'input-center': true, // 新增
           'input-clear-disabled': item.pomoType === '🍒',
+          'force-hover': hoveredRowId === item.id,
         }"
         :disabled="item.pomoType === '🍒'"
         @update:value="(val) => onInputUpdate(item, val)"
@@ -134,6 +148,7 @@
         title="持续时间(分钟)"
         placeholder="min"
         class="input-center input-min"
+        :class="{ 'force-hover': hoveredRowId === item.id }"
       />
 
       <n-date-picker
@@ -169,7 +184,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import { NInput, NDatePicker, NIcon } from "naive-ui";
 import {
   VideoPersonCall24Regular,
@@ -179,6 +194,7 @@ import {
   Chat24Regular,
 } from "@vicons/fluent";
 import type { Activity } from "@/core/types/Activity";
+import { useSettingStore } from "@/stores/useSettingStore";
 
 // 接收发射数据
 const props = defineProps<{
@@ -187,16 +203,123 @@ const props = defineProps<{
   activityId: number | null;
 }>();
 
-defineEmits(["focus-row"]);
+defineEmits<{
+  "focus-row": [id: number];
+}>();
 
-// 排序：T类型优先，其次S类型，其他类照旧
-const sortedDisplaySheet = computed(() =>
-  props.displaySheet.slice().sort((a, b) => {
+const settingStore = useSettingStore();
+
+// 拖拽相关状态
+const isDragging = ref(false);
+const draggedItem = ref<Activity | null>(null);
+const dragStartY = ref(0);
+
+// 新增：用于模拟 hover 效果的行 id
+const hoveredRowId = ref<number | null>(null);
+
+// 排序：先按自定义排序，再按类型排序
+const sortedDisplaySheet = computed(() => {
+  // 只保留未取消的活动
+  const activities = props.displaySheet.slice();
+
+  // 应用自定义排序
+  activities.sort((a, b) => {
+    const rankA =
+      settingStore.settings.activityRank[a.id] ?? Number.MAX_SAFE_INTEGER;
+    const rankB =
+      settingStore.settings.activityRank[b.id] ?? Number.MAX_SAFE_INTEGER;
+
+    if (rankA !== rankB) {
+      return rankA - rankB;
+    }
+
+    // 如果排序相同，按类型排序：T类型优先
     if (a.class === "T" && b.class !== "T") return -1;
     if (a.class !== "T" && b.class === "T") return 1;
     return 0;
-  })
-);
+  });
+
+  return activities;
+});
+
+// 开始拖拽
+function startDrag(event: MouseEvent, item: Activity) {
+  event.preventDefault();
+  event.stopPropagation();
+
+  // 检查是否点击在输入框上
+  const target = event.target as HTMLElement;
+  const isInputElement = target.closest("input, textarea, .n-input__input");
+
+  if (isInputElement) {
+    return;
+  }
+
+  isDragging.value = true;
+  draggedItem.value = item;
+  dragStartY.value = event.clientY;
+
+  document.addEventListener("mousemove", handleDragMove);
+  document.addEventListener("mouseup", handleDragEnd);
+}
+
+// 拖拽移动
+function handleDragMove(event: MouseEvent) {
+  if (!isDragging.value || !draggedItem.value) return;
+
+  const deltaY = event.clientY - dragStartY.value;
+  const threshold = 30; // 拖拽阈值
+
+  if (Math.abs(deltaY) < threshold) return;
+
+  const currentIndex = sortedDisplaySheet.value.findIndex(
+    (item) => item.id === draggedItem.value!.id
+  );
+
+  if (currentIndex === -1) return;
+
+  const newIndex =
+    deltaY > 0
+      ? Math.min(currentIndex + 1, sortedDisplaySheet.value.length - 1)
+      : Math.max(currentIndex - 1, 0);
+
+  if (newIndex !== currentIndex) {
+    updateActivityRank(currentIndex, newIndex);
+    dragStartY.value = event.clientY;
+  }
+}
+
+// 拖拽结束
+function handleDragEnd() {
+  isDragging.value = false;
+  draggedItem.value = null;
+
+  document.removeEventListener("mousemove", handleDragMove);
+  document.removeEventListener("mouseup", handleDragEnd);
+}
+
+// 更新活动排序
+function updateActivityRank(fromIndex: number, toIndex: number) {
+  // 只对未取消的活动排序
+  const activities = sortedDisplaySheet.value;
+  const newRank: Record<number, number> = {
+    ...settingStore.settings.activityRank,
+  };
+
+  activities.forEach((activity, index) => {
+    // 跳过取消的活动
+    if (activity.status === "cancelled") return;
+    if (index === fromIndex) {
+      newRank[activity.id] = toIndex;
+    } else if (index === toIndex) {
+      newRank[activity.id] = fromIndex;
+    } else {
+      newRank[activity.id] = index;
+    }
+  });
+
+  settingStore.settings.activityRank = newRank;
+}
 
 // 获取输入显示字符串
 function getInputValue(item: Activity): string {
@@ -212,6 +335,14 @@ function onInputUpdate(item: Activity, value: string) {
   }
   item.estPomoI = value;
 }
+
+// 在 template 里用到
+function handleIconMouseEnter(id: number) {
+  hoveredRowId.value = id;
+}
+function handleIconMouseLeave() {
+  hoveredRowId.value = null;
+}
 </script>
 
 <style scoped>
@@ -222,6 +353,26 @@ function onInputUpdate(item: Activity, value: string) {
   gap: 0px;
   width: 100%;
 }
+
+.icon-drag-area {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  padding: 2px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.icon-drag-area:hover {
+  background-color: var(--color-blue-light);
+}
+
+.icon-drag-area:active {
+  cursor: grabbing;
+  background-color: var(--color-red-light);
+}
+
 .input-min :deep(.n-input-wrapper) {
   padding-left: 0px !important;
   padding-right: 0px !important;
@@ -285,5 +436,15 @@ function onInputUpdate(item: Activity, value: string) {
 
 .highlight-line {
   background-color: var(--color-yellow);
+}
+
+/* 强制 n-input 显示 hover 效果 */
+.force-hover :deep(.n-input) {
+  border-color: var(--n-border-hover) !important;
+  box-shadow: var(--n-box-shadow-focus) !important;
+  background-color: var(--n-color-hover) !important;
+}
+.force-hover :deep(.n-input__input) {
+  background-color: var(--n-color-hover) !important;
 }
 </style>
