@@ -159,6 +159,33 @@ async function getRemoteVersion(): Promise<string | null> {
   }
 }
 
+/**
+ * 比较两个语义化版本号。
+ * @returns 'major', 'minor', 'patch', 'equal', or 'lower'
+ */
+function compareVersions(
+  v1_str: string,
+  v2_str: string
+): "major" | "minor" | "patch" | "equal" | "lower" {
+  const v1 = v1_str.replace(/^v/, "").split(".").map(Number);
+  const v2 = v2_str.replace(/^v/, "").split(".").map(Number);
+
+  // 补全版本号，例如 1.2 -> 1.2.0
+  while (v1.length < 3) v1.push(0);
+  while (v2.length < 3) v2.push(0);
+
+  if (v1[0] < v2[0]) return "major";
+  if (v1[0] > v2[0]) return "lower";
+
+  if (v1[1] < v2[1]) return "minor";
+  if (v1[1] > v2[1]) return "lower";
+
+  if (v1[2] < v2[2]) return "patch";
+  if (v1[2] > v2[2]) return "lower";
+
+  return "equal";
+}
+
 async function handleUpdateCheck() {
   try {
     const localVersion = await getVersion();
@@ -169,12 +196,23 @@ async function handleUpdateCheck() {
     // 步骤2：本地与远端一致则直接短路
     if (
       remoteVersion &&
-      remoteVersion.replace(/^v/, "") === localVersion.replace(/^v/, "")
-      // ↑ 有些 release tag 前面有 v，有些没有，这样兼容
+      compareVersions(localVersion, remoteVersion) === "equal"
     ) {
       notification.success({
         title: "版本检查",
         content: "当前已是最新版本",
+        duration: 2000,
+      });
+      return; // 不再走后面 Tauri 插件逻辑
+    }
+
+    if (
+      remoteVersion &&
+      compareVersions(localVersion, remoteVersion) === "patch"
+    ) {
+      notification.success({
+        title: "版本检查",
+        content: "微小调整，按需更新",
         duration: 2000,
       });
       return; // 不再走后面 Tauri 插件逻辑
