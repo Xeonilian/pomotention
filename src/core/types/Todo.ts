@@ -16,4 +16,5 @@ export interface Todo {
   doneTime?: number;
   startTime?: number;
   interruption?: "I" | "E";
+  index?: number;
 }

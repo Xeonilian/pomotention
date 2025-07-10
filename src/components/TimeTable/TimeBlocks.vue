@@ -136,7 +136,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, watch, nextTick } from "vue";
 import type { CSSProperties } from "vue";
 import { getTimestampForTimeString, timestampToTimeString } from "@/core/utils";
 import { CategoryColors } from "@/core/constants";
@@ -342,6 +342,8 @@ const todoSegments = computed(() => {
     manualAllocations.value.forEach((startIndex, todoId) => {
       const todo = props.todos.find((t) => t.id === todoId);
       if (todo) {
+        // 这里写入index
+        todo.index = getCategoryWorkIndexBySegmentIndex(todo, startIndex);
         const newSegments = reallocateTodoFromPosition(
           props.appDateTimestamp,
           todo,
@@ -358,6 +360,24 @@ const todoSegments = computed(() => {
 
   return autoSegments;
 });
+
+// 计算某todo在目标类别下的work段index
+function getCategoryWorkIndexBySegmentIndex(
+  todo: Todo,
+  segmentIndex: number
+): number {
+  const seg = pomodoroSegments.value[segmentIndex];
+  if (!seg) return 0;
+  const targetCategory = todo.pomoType === "🍇" ? "living" : "working";
+  // 只统计同类别work段
+  const workSegs = pomodoroSegments.value.filter(
+    (s) => s.category === targetCategory && s.type === "work"
+  );
+  const idx = workSegs.findIndex(
+    (s) => s.start === seg.start && s.end === seg.end
+  );
+  return idx >= 0 ? idx : 0;
+}
 
 function getTodoSegmentStyle(seg: TodoSegment): CSSProperties {
   const startMinute = (seg.start - props.timeRange.start) / 60000;
@@ -591,11 +611,18 @@ function handleMouseUp() {
             mouseState.value.draggedSeg.todoId,
             dragState.value.dropTargetSegmentIndex!
           );
+          // 这里写入index
+          draggedTodo.index = getCategoryWorkIndexBySegmentIndex(
+            draggedTodo,
+            dragState.value.dropTargetSegmentIndex!
+          );
           console.log(
             "✅ Drop successful:",
             mouseState.value.draggedSeg.todoId,
             "→",
-            dragState.value.dropTargetSegmentIndex
+            dragState.value.dropTargetSegmentIndex,
+            "index:",
+            draggedTodo.index
           );
         }
       }
@@ -614,17 +641,27 @@ function handleMouseUp() {
   document.removeEventListener("mouseup", handleMouseUp);
 }
 
-const allocateTodos = () => {
-  const allocatedSegments = reallocateAllTodos(
-    props.appDateTimestamp,
-    props.todos,
-    segStore.pomodoroSegments
-  );
-  segStore.clearTodoSegments();
-  allocatedSegments.forEach((segment) => segStore.addTodoSegment(segment));
-  console.log(segStore.todoSegments);
-};
-allocateTodos();
+// ======= 分配todos的时机修正 =======
+watch(
+  [() => pomodoroSegments.value, () => props.todos],
+  async ([segments, todos]) => {
+    // 检查work段数量
+    const workCount = segments.filter((s) => s.type === "work").length;
+    if (workCount > 0 && todos.length > 0) {
+      await nextTick();
+      // 重新分配todos
+      segStore.clearTodoSegments();
+      const allocatedSegments = reallocateAllTodos(
+        props.appDateTimestamp,
+        todos,
+        segments
+      );
+      allocatedSegments.forEach((segment) => segStore.addTodoSegment(segment));
+      // console.log(segStore.todoSegments);
+    }
+  },
+  { immediate: true }
+);
 </script>
 
 <style scoped>

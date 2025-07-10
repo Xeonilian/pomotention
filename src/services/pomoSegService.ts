@@ -243,6 +243,77 @@ export function generateEstimatedTodoSegments(
     const needCount = getTodoDisplayPomoCount(todo);
     if (needCount === 0) continue;
 
+    // 只保留每个todo分配的第一组console.log
+    // console.log(
+    //   `[分配] title=${todo.activityTitle}, index=${todo.index}, pomoType=${todo.pomoType}, needCount=${needCount}`
+    // );
+
+    // 优先根据index分配
+    if (typeof todo.index === "number" && todo.index >= 0) {
+      const targetCategory = todo.pomoType === "🍇" ? "living" : "working";
+      const segs = segByCategory[targetCategory];
+      const workSegs = segs.filter((s) => s.type === "work");
+      // usedArr只针对workSegs
+      const usedArr = new Array(workSegs.length).fill(false);
+      let assignedCount = 0;
+      let assignedWorkIndexes: number[] = [];
+      for (let i = 0; i < needCount; i++) {
+        const workIdx = todo.index + i;
+        if (workIdx < workSegs.length && !usedArr[workIdx]) {
+          usedArr[workIdx] = true;
+          assignedWorkIndexes.push(workIdx);
+          todoSegments.push({
+            todoId: todo.id,
+            priority: todo.priority,
+            todoTitle: todo.activityTitle,
+            index: i + 1,
+            start: workSegs[workIdx].start,
+            end: workSegs[workIdx].end,
+            pomoType: todo.pomoType || "🍅",
+            assignedPomodoroSegment: workSegs[workIdx],
+            category: targetCategory,
+            completed: false,
+            usingRealPomo: false,
+          });
+          assignedCount++;
+        }
+      }
+      // console.log(
+      //   `[分配] 实际分配到的work段indexes=${assignedWorkIndexes}, assignedCount=${assignedCount}`
+      // );
+      let overflowCount = 0;
+      while (assignedCount < needCount) {
+        let overflowStartTime: number;
+        if (segs.length > 0) {
+          overflowStartTime = segs[segs.length - 1].end;
+        } else {
+          const overflowBaseDate = new Date(appDateTimestamp);
+          overflowBaseDate.setHours(22, 0, 0, 0);
+          overflowStartTime = overflowBaseDate.getTime();
+        }
+        const duration = 25 * 60 * 1000;
+        todoSegments.push({
+          todoId: todo.id,
+          priority: todo.priority,
+          todoTitle: todo.activityTitle,
+          index: assignedCount + 1,
+          start: overflowStartTime,
+          end: overflowStartTime + duration,
+          pomoType: todo.pomoType || "🍅",
+          category: targetCategory,
+          overflow: true,
+          completed: false,
+          usingRealPomo: false,
+        });
+        assignedCount++;
+        overflowCount++;
+      }
+      if (overflowCount > 0) {
+        console.log(`[分配] overflow数量=${overflowCount}`);
+      }
+      continue;
+    }
+
     if (todo.pomoType === "🍅" || !todo.pomoType) {
       _allocateTomatoSegments(
         appDateTimestamp,
