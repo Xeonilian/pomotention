@@ -19,6 +19,17 @@ export function useDraggable(dragThreshold: number = 5) {
         return;
       }
 
+      // 检查点击的目标是否是输入框相关元素
+      const target = e.target as HTMLElement;
+      const isInputElement = target.closest(
+        "input, textarea, .n-input, .n-input-wrapper, .n-input__input"
+      );
+
+      if (isInputElement) {
+        // 如果是输入框相关元素，跳过拖拽处理
+        return;
+      }
+
       isDragging.value = true;
       hasPassedThreshold.value = false;
       startX.value = e.clientX;
