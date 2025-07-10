@@ -21,17 +21,6 @@
     <div class="button-row">
       <n-button
         class="action-button"
-        @click="addPomodoro"
-        title="insert 🍅+05"
-        :disabled="isRunning"
-        tertiary
-        circle
-      >
-        🍅
-      </n-button>
-
-      <n-button
-        class="action-button"
         @click="startPomodoroCircle"
         :disabled="isRunning"
         tertiary
@@ -63,14 +52,37 @@
           />
         </template>
       </n-button>
+      <n-button
+        class="action-button"
+        @click="addPomodoro"
+        title="insert 🍅+05"
+        :disabled="isRunning"
+        tertiary
+        circle
+      >
+        🍅
+      </n-button>
+      =
+      <n-input
+        ref="pomoDurationInput"
+        v-model:value="defaultPomoDuration"
+        placeholder=""
+        class="pomo-duration-input"
+        size="small"
+        @blur="handleBlurRestore"
+        @keydown="handleKeydown"
+        title="设置番茄时长/回车确认"
+      />
+      min
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onUnmounted, watch } from "vue";
-import { NButton, NIcon, NInput } from "naive-ui";
+import { NButton, NIcon, NInput, useDialog } from "naive-ui";
 import { useTimerStore } from "@/stores/useTimerStore";
+import { useSettingStore } from "@/stores/useSettingStore";
 import {
   toggleWhiteNoise,
   getWhiteNoiseState,
@@ -89,6 +101,8 @@ type PomodoroStep = {
 };
 
 const timerStore = useTimerStore();
+const settingStore = useSettingStore();
+const dialog = useDialog();
 
 const emit = defineEmits<{
   (e: "pomo-seq-running", status: boolean): void;
@@ -102,6 +116,9 @@ const currentStep = ref<number>(0);
 const totalPomodoros = ref<number>(0);
 const currentPomodoro = ref<number>(1);
 const statusLabel = ref<string>("Let's 🍅!");
+const defaultPomoDuration = ref<string>(
+  settingStore.settings.durations.workDuration.toString()
+);
 
 // 白噪音状态
 const isWhiteNoiseEnabled = ref<boolean>(getWhiteNoiseState());
@@ -113,6 +130,14 @@ watch(
     if (isRunning.value && progressContainer.value) {
       updateProgressStatus(currentStep.value);
     }
+  }
+);
+
+// 监听settingStore中的工作时长变化
+watch(
+  () => settingStore.settings.durations.workDuration,
+  (newValue) => {
+    defaultPomoDuration.value = newValue.toString();
   }
 );
 
@@ -128,7 +153,7 @@ function parseSequence(sequence: string): PomodoroStep[] {
   const steps = sequence.split("+").map((step) => step.trim());
   return steps.map((step) => {
     if (step.includes("🍅")) {
-      return { type: "work", duration: 25 };
+      return { type: "work", duration: parseInt(defaultPomoDuration.value) };
     } else {
       const breakTime = step.padStart(2, "0");
       if (!validBreakTimes.includes(breakTime)) {
@@ -349,6 +374,60 @@ function handleToggleWhiteNoise(): void {
   isWhiteNoiseEnabled.value = toggleWhiteNoise();
 }
 
+// 处理键盘事件
+function handleKeydown(event: KeyboardEvent): void {
+  if (event.key === "Enter") {
+    event.preventDefault(); // 阻止默认行为
+    handleDurationConfirm();
+    // 让输入框失去焦点
+    (event.target as HTMLElement)?.blur();
+  }
+}
+
+// 处理番茄时长输入框回车确认
+function handleDurationConfirm(): void {
+  const num = Number(defaultPomoDuration.value);
+  if (Number.isInteger(num) && num >= 15 && num <= 59) {
+    dialog.warning({
+      title: "确认修改番茄时长",
+      content: `确定要将番茄工作时长修改为 ${num} 分钟吗？`,
+      positiveText: "确认修改",
+      negativeText: "取消",
+      onPositiveClick: () => {
+        settingStore.settings.durations.workDuration = num;
+        console.log("Pomodoro duration confirmed:", num);
+      },
+      onNegativeClick: () => {
+        // 取消时恢复原值
+        defaultPomoDuration.value =
+          settingStore.settings.durations.workDuration.toString();
+      },
+    });
+  } else {
+    // 立即恢复原值
+    defaultPomoDuration.value =
+      settingStore.settings.durations.workDuration.toString();
+
+    dialog.error({
+      title: "输入无效",
+      content: "请输入15-59之间的整数作为番茄时长。",
+      positiveText: "确定",
+    });
+  }
+}
+
+// 处理番茄时长输入框失去焦点时恢复设置
+function handleBlurRestore(): void {
+  const num = Number(defaultPomoDuration.value);
+  if (Number.isInteger(num) && num >= 15 && num <= 59) {
+    settingStore.settings.durations.workDuration = num;
+    console.log("Pomodoro duration restored:", num);
+  } else {
+    defaultPomoDuration.value =
+      settingStore.settings.durations.workDuration.toString();
+  }
+}
+
 // 组件卸载时清理
 onUnmounted(() => {
   // 只有在序列正在运行时才停止计时器
@@ -433,8 +512,9 @@ onUnmounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  width: 120px; /* 增加宽度以适应新按钮 */
+  width: 170px; /* 增加宽度以适应新按钮 */
   margin: 0 auto;
+  font-size: 12px;
 }
 
 .action-button {
@@ -455,5 +535,31 @@ onUnmounted(() => {
 .action-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.pomo-duration-input {
+  width: 25px;
+  height: 25px;
+  display: inline-block;
+  pointer-events: auto;
+}
+
+.pomo-duration-input :deep(.n-input-wrapper) {
+  width: 25px;
+  height: 25px;
+  padding: 0px;
+  pointer-events: auto;
+  background-color: var(--color-background-light-transparent);
+  transition: background-color 0.3s ease;
+}
+
+.pomo-duration-input:focus-within :deep(.n-input-wrapper) {
+  background-color: var(--color-background);
+}
+
+.pomo-duration-input :deep(.n-input__input) {
+  text-align: center;
+  font-size: 12px;
+  pointer-events: auto;
 }
 </style>

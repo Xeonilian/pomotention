@@ -20,12 +20,48 @@ export const useTimerStore = defineStore("timer", () => {
   const totalTime = ref<number>(0); // 带有time的为秒
   const timerInterval = ref<number | null>(null);
   const startTime = ref<number | null>(null); // 添加开始时间记录
-  const breakDuration = ref<number>(PomodoroDurations.breakDuration); // 默认休息5分钟  为分钟
-  const workDuration = ref<number>(PomodoroDurations.workDuration);
-  const r1Duration = ref<number>((2 / 25) * workDuration.value);
-  const r2Duration = ref<number>((1 / 25) * workDuration.value);
-  const wDuration = ref<number>((10.5 / 25) * workDuration.value);
-  const tDuration = ref<number>((1 / 25) * workDuration.value);
+
+  // 从localStorage获取设置，如果没有则使用默认值
+  function getWorkDuration(): number {
+    try {
+      const settings = localStorage.getItem("globalSettings");
+      if (settings) {
+        const parsed = JSON.parse(settings);
+        return parsed.durations?.workDuration || PomodoroDurations.workDuration;
+      }
+    } catch (error) {
+      console.error("Error loading work duration from settings:", error);
+    }
+    return PomodoroDurations.workDuration;
+  }
+
+  function getBreakDuration(): number {
+    try {
+      const settings = localStorage.getItem("globalSettings");
+      if (settings) {
+        const parsed = JSON.parse(settings);
+        return (
+          parsed.durations?.breakDuration || PomodoroDurations.breakDuration
+        );
+      }
+    } catch (error) {
+      console.error("Error loading break duration from settings:", error);
+    }
+    return PomodoroDurations.breakDuration;
+  }
+
+  // 获取当前工作时长的计算属性
+  const workDuration = computed(() => getWorkDuration());
+  const breakDuration = computed(() => getBreakDuration());
+
+  // 修改计算方式，基于实际工作时长
+  // 原来的比例：r1=2分钟, r2=1分钟, w=10.5分钟, t=1分钟 (总共25分钟)
+  // 现在基于实际工作时长计算
+  const r1Duration = computed(() => (2 / 25) * workDuration.value);
+  const r2Duration = computed(() => (1 / 25) * workDuration.value);
+  const wDuration = computed(() => (10.5 / 25) * workDuration.value);
+  const tDuration = computed(() => (1 / 25) * workDuration.value);
+
   // 在 useTimerStore.ts 中修正
   const redBarOffsetPercentage = computed(
     () => r1Duration.value / workDuration.value // 应该是 2/25 = 0.08
@@ -154,7 +190,8 @@ export const useTimerStore = defineStore("timer", () => {
     if (timerInterval.value) clearInterval(timerInterval.value);
 
     pomodoroState.value = "working";
-    const dur = duration ?? workDuration.value;
+    // 如果没有传入duration，则获取最新的工作时长
+    const dur = duration ?? getWorkDuration();
     totalTime.value = dur * 60;
     timeRemaining.value = totalTime.value;
     startTime.value = Date.now(); // 记录开始时间
@@ -200,7 +237,8 @@ export const useTimerStore = defineStore("timer", () => {
     if (timerInterval.value) clearInterval(timerInterval.value);
 
     pomodoroState.value = "breaking";
-    const dur = duration ?? breakDuration.value;
+    // 如果没有传入duration，则获取最新的休息时长
+    const dur = duration ?? getBreakDuration();
     totalTime.value = dur * 60;
     timeRemaining.value = totalTime.value;
     startTime.value = Date.now(); // 记录开始时间

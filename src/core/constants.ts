@@ -1,6 +1,6 @@
 // src/core/constants
 export const PomodoroDurations = {
-  workDuration: 25,
+  workDuration: 30,
   breakDuration: 5,
 };
 
