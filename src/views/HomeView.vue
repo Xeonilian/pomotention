@@ -923,7 +923,7 @@ const { size: rightWidth, startResize: startRightResize } = useResize(
   300,
   "horizontal",
   50,
-  400,
+  800,
   true // 右侧面板
 );
 </script>
