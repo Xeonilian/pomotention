@@ -915,7 +915,7 @@ const { size: topHeight, startResize: startVerticalResize } = useResize(
 const { size: leftWidth, startResize: startLeftResize } = useResize(
   100,
   "horizontal",
-  50,
+  60,
   400,
   false // 左侧面板
 );

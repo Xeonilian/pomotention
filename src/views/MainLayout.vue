@@ -185,11 +185,11 @@ function handleMenuSelect(key: string) {
 
 function handleMainLayoutViewToggle(key: string) {
   if (key === "ontop") {
+    isMiniMode.value = true;
     handleToggleOntopMode(
       reportedPomodoroWidth.value,
       reportedPomodoroHeight.value
     );
-    isMiniMode.value = true;
     return;
   }
 

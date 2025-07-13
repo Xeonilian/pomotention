@@ -178,7 +178,7 @@ export const useTimerStore = defineStore("timer", () => {
 
   // 监听阶段变化
   watch(currentPhase, (newPhase, oldPhase) => {
-    console.log("Phase changed:", { oldPhase, newPhase });
+    // console.log("Phase changed:", { oldPhase, newPhase });
     if (newPhase !== oldPhase && newPhase) {
       handlePhaseChange(newPhase);
     }
@@ -186,7 +186,7 @@ export const useTimerStore = defineStore("timer", () => {
 
   // 方法
   function startWorking(duration: number, onFinish?: () => void): void {
-    console.log("startWorking called with duration:", duration);
+    // console.log("startWorking called with duration:", duration);
     if (timerInterval.value) clearInterval(timerInterval.value);
 
     pomodoroState.value = "working";
@@ -200,7 +200,7 @@ export const useTimerStore = defineStore("timer", () => {
     isFromSequence.value = !!onFinish;
 
     // 播放工作开始声音
-    console.log("Playing work start sound");
+    // console.log("Playing work start sound");
     playSound(SoundType.WORK_START);
     // 开始播放白噪音
     startWhiteNoise();

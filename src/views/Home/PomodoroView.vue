@@ -44,6 +44,7 @@
         v-if="showPomoSeq"
         class="sequence"
         @pomo-seq-running="handlePomoSeqRunning"
+        :is-pomo-seq-running="isPomoSeqRunning"
       />
     </div>
   </div>
@@ -96,6 +97,14 @@ function reportSize() {
 // 挂载组件时报告尺寸
 onMounted(() => {
   reportSize();
+
+  // 如果番茄钟正在运行且来自序列，恢复 pomoSeq 运行状态
+  if (timerStore.isActive && timerStore.isFromSequence) {
+    console.log(
+      "[PomodoroView] Component mounted, restoring pomoSeq running state"
+    );
+    isPomoSeqRunning.value = true;
+  }
 });
 
 // 监听 showPomoSeq 变化

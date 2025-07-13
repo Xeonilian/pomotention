@@ -85,7 +85,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onUnmounted, watch } from "vue";
+import { ref, onUnmounted, watch, onMounted } from "vue";
 import { NButton, NIcon, NInput, useDialog } from "naive-ui";
 import { useTimerStore } from "@/stores/useTimerStore";
 import { useSettingStore } from "@/stores/useSettingStore";
@@ -113,6 +113,13 @@ const dialog = useDialog();
 const emit = defineEmits<{
   (e: "pomo-seq-running", status: boolean): void;
 }>();
+
+const props = defineProps({
+  isPomoSeqRunning: {
+    type: Boolean,
+    default: false,
+  },
+});
 
 // 数据
 const sequenceInput = ref<string>(">>>>🍅+05+🍅+05+🍅+05+🍅+15");
@@ -434,12 +441,55 @@ function handleBlurRestore(): void {
   }
 }
 
+// 组件挂载时检查并恢复状态
+onMounted(() => {
+  // 如果番茄钟正在运行且来自序列，恢复 UI 状态
+  if (timerStore.isActive && timerStore.isFromSequence) {
+    console.log(
+      "[PomodoroSequence] Component mounted, restoring pomo sequence UI state"
+    );
+    isRunning.value = true;
+    emit("pomo-seq-running", true);
+    setPomodoroRunning(true);
+
+    // 恢复进度条
+    initializeProgress(sequenceInput.value);
+
+    // 估算当前步骤
+    const steps = parseSequence(sequenceInput.value);
+    const totalElapsed = timerStore.totalTime - timerStore.timeRemaining;
+    let elapsedInSequence = 0;
+    let estimatedStep = 0;
+
+    for (let i = 0; i < steps.length; i++) {
+      const stepDuration = steps[i].duration * 60; // 转换为秒
+      if (elapsedInSequence + stepDuration > totalElapsed) {
+        estimatedStep = i;
+        break;
+      }
+      elapsedInSequence += stepDuration;
+      estimatedStep = i + 1;
+    }
+
+    currentStep.value = Math.min(estimatedStep, steps.length - 1);
+    totalPomodoros.value = steps.filter((step) => step.type === "work").length;
+    currentPomodoro.value =
+      steps.slice(0, currentStep.value).filter((step) => step.type === "work")
+        .length + 1;
+
+    updateProgressStatus(currentStep.value);
+  }
+});
+
 // 组件卸载时清理
 onUnmounted(() => {
-  // 只有在序列正在运行时才停止计时器
-  if (isRunning.value) {
-    stopPomodoro();
-  }
+  // 当组件卸载时，我们不应该停止正在运行的番茄钟序列
+  // 因为进入 onTop 模式时组件会被重新挂载，但番茄钟应该继续运行
+  // 只有当用户明确点击停止按钮时，才应该停止番茄钟序列
+  console.log(
+    "[PomodoroSequence] Component unmounted, but keeping pomodoro running if active"
+  );
+  // 不在这里停止番茄钟，让它继续运行
 });
 </script>
 
