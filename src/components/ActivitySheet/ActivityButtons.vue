@@ -24,7 +24,7 @@
   <div class="activity-view-button-container">
     <n-button
       @click="$emit('pick-activity-todo')"
-      :disabled="isSelectedClassS"
+      :disabled="activeId === null || isSelectedClassS"
       secondary
       circle
       type="error"
@@ -33,6 +33,21 @@
     >
       <template #icon>
         <n-icon><ChevronCircleLeft48Regular /></n-icon>
+      </template>
+    </n-button>
+    <n-button
+      @click="$emit('convert-activity-to-task')"
+      secondary
+      circle
+      type="error"
+      size="small"
+      :disabled="activeId === null || props.selectedTaskId !== null"
+      title="追踪任务"
+    >
+      <template #icon>
+        <n-icon>
+          <ChevronCircleDown48Regular />
+        </n-icon>
       </template>
     </n-button>
     <n-button
@@ -136,6 +151,7 @@ import { computed } from "vue";
 import { NButton, NIcon, NDropdown } from "naive-ui";
 import {
   AddCircle24Regular,
+  ChevronCircleDown48Regular,
   Delete24Regular,
   CloudAdd20Regular,
   ChevronCircleLeft48Regular,
@@ -149,6 +165,7 @@ const props = defineProps<{
   filterOptions: any[];
   activeId: number | null;
   selectedClass?: "T" | "S"; // 从父组件传递
+  selectedTaskId: number | null;
 }>();
 
 const isSelectedClassS = computed(() => {
@@ -164,6 +181,7 @@ defineEmits([
   "delete-active",
   "toggle-pomo-type",
   "repeat-activity",
+  "convert-activity-to-task",
 ]);
 </script>
 

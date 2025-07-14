@@ -128,6 +128,8 @@
             @edit-todo-start="handleEditTodoStart"
             @edit-todo-done="handleEditTodoDone"
             @edit-schedule-done="handleEditScheduleDone"
+            @convert-todo-to-task="onConvertTodoToTask"
+            @convert-schedule-to-task="onConvertScheduleToTask"
           />
         </div>
       </div>
@@ -168,6 +170,7 @@
         :activeId="activeId"
         :todos="todoList"
         :selectedActivityId="selectedActivityId"
+        :selectedTaskId="selectedTaskId"
         @pick-activity-todo="onPickActivity"
         @add-activity="onAddActivity"
         @delete-activity="onDeleteActivity"
@@ -175,6 +178,7 @@
         @toggle-pomo-type="onTogglePomoType"
         @repeat-activity="onRepeatActivity"
         @go-to-todo="goToTodo"
+        @convert-activity-to-task="onConvertActivityToTask"
       />
     </div>
   </div>
@@ -405,13 +409,45 @@ function onPickActivity(activity: Activity) {
   );
 }
 
+function onConvertActivityToTask(id: number, taskId: number) {
+  activeId.value = id;
+  selectedTaskId.value = taskId;
+}
+
+function onConvertTodoToTask(id: number, taskId: number) {
+  console.log("onConvertTodoToTask", id, taskId);
+  const todo = todoList.value.find((t) => t.id === id);
+  if (todo) {
+    const activity = activityList.value.find((a) => a.id === todo.activityId);
+    if (activity) {
+      activity.taskId = taskId;
+    }
+  }
+}
+
+function onConvertScheduleToTask(id: number, taskId: number) {
+  console.log("onConvertScheduleToTask", id, taskId);
+  const schedule = scheduleList.value.find((s) => s.id === id);
+  if (schedule) {
+    const activity = activityList.value.find(
+      (a) => a.id === schedule.activityId
+    );
+    if (activity) {
+      activity.taskId = taskId;
+    }
+  }
+}
+
 /** 标记当前活跃活动清单id，用于高亮和交互 */
 function onUpdateActiveId(id: number | null) {
   activeId.value = id;
   selectedActivityId.value = null; // 避免多重高亮
+  const activity = activityList.value.find((a) => a.id === id);
   const todo = todoList.value.find((t) => t.activityId === id);
   const schedule = scheduleList.value.find((s) => s.activityId === id);
-  selectedTaskId.value = todo?.taskId || schedule?.taskId || null; //用id在todoList ScheduleList里面搜索TaskId，等于搜到的值
+  selectedTaskId.value =
+    activity?.taskId || todo?.taskId || schedule?.taskId || null; //用id在todoList ScheduleList里面搜索TaskId，等于搜到的值
+  console.log("selectedTaskId.value", selectedTaskId.value);
   selectedRowId.value = null; // 这个id是today里的
 }
 

@@ -51,14 +51,6 @@ export const taskService = {
     };
     this.saveTask(task);
 
-    // 更新 Todo 的 taskId
-    const todos = JSON.parse(localStorage.getItem(STORAGE_KEYS.TODO) || "[]");
-    const todoIndex = todos.findIndex((t: any) => t.id.toString() === todoId);
-    if (todoIndex !== -1) {
-      todos[todoIndex].taskId = task.id;
-      localStorage.setItem(STORAGE_KEYS.TODO, JSON.stringify(todos));
-    }
-
     return task;
   },
 
@@ -81,17 +73,26 @@ export const taskService = {
     };
     this.saveTask(task);
 
-    // 更新 Schedule 的 taskId
-    const schedules = JSON.parse(
-      localStorage.getItem(STORAGE_KEYS.SCHEDULE) || "[]"
-    );
-    const scheduleIndex = schedules.findIndex(
-      (s: any) => s.id.toString() === scheduleId
-    );
-    if (scheduleIndex !== -1) {
-      schedules[scheduleIndex].taskId = task.id;
-      localStorage.setItem(STORAGE_KEYS.SCHEDULE, JSON.stringify(schedules));
-    }
+    return task;
+  },
+
+  createTaskFromActivity(
+    activityId: number,
+    activityTitle: string,
+    projectName?: string
+  ): Task {
+    const task: Task = {
+      id: Date.now(),
+      activityTitle,
+      projectName,
+      source: "activity",
+      sourceId: activityId,
+      energyRecords: [],
+      rewardRecords: [],
+      interruptionRecords: [],
+      description: `# ${activityTitle}`,
+    };
+    this.saveTask(task);
 
     return task;
   },

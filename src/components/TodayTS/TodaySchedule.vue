@@ -252,12 +252,12 @@ const emit = defineEmits<{
   (e: "suspend-schedule", id: number): void;
   (e: "cancel-schedule", id: number): void;
   (e: "repeat-schedule", id: number): void;
-  (e: "convert-to-task", id: number): void;
   (e: "select-task", taskId: number | null): void;
   (e: "select-row", id: number | null): void;
   (e: "select-activity", activityId: number | null): void;
   (e: "edit-schedule-title", id: number, newTitle: string): void;
   (e: "edit-schedule-done", id: number, newTs: string): void;
+  (e: "convert-schedule-to-task", id: number, taskId: number): void;
 }>();
 
 // 添加状态来控制提示信息
@@ -340,6 +340,7 @@ function isValidTimeString(str: string) {
 }
 
 function handleConvertToTask(schedule: Schedule) {
+  console.log("handleConvertToTask", schedule.id, schedule.taskId);
   if (schedule.taskId) {
     popoverMessage.value = "该日程已转换为任务";
     showPopover.value = true;
@@ -358,12 +359,12 @@ function handleConvertToTask(schedule: Schedule) {
   if (task) {
     // 立即更新本地的 taskId
     schedule.taskId = task.id;
+    emit("convert-schedule-to-task", schedule.id, task.id);
     popoverMessage.value = "已转换为任务";
     showPopover.value = true;
     setTimeout(() => {
       showPopover.value = false;
     }, 2000);
-    emit("convert-to-task", schedule.id);
   }
 }
 

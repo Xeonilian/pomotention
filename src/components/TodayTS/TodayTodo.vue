@@ -412,6 +412,7 @@ const emit = defineEmits<{
   (e: "edit-todo-title", id: number, newTitle: string): void;
   (e: "edit-todo-start", id: number, newTs: string): void;
   (e: "edit-todo-done", id: number, newTs: string): void;
+  (e: "convert-todo-to-task", id: number, taskId: number): void;
 }>();
 
 const editingTodo = ref<TodoWithNumberPriority | null>(null);
@@ -752,8 +753,10 @@ function handleConvertToTask(todo: TodoWithNumberPriority) {
   if (task) {
     // 立即更新本地的 taskId
     todo.taskId = task.id;
-    //    todo.startTime = task.id; // 不然总要改
-    popoverMessage.value = "已转换为任务";
+    console.log(task.id, "taskid");
+    emit("convert-todo-to-task", todo.id, task.id);
+    console.log(task.id, "taskid");
+    popoverMessage.value = "完成任务转换";
     showPopover.value = true;
     setTimeout(() => {
       showPopover.value = false;

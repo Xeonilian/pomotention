@@ -6,7 +6,7 @@
       class="markdown-content"
       :class="{ disabled: !taskId }"
       @click="handleClick"
-      :title="isEditing ? '单击启动编辑' : '请选择追踪的任务'"
+      :title="isEditing ? '单击启动编辑' : ''"
     >
       <div v-if="!taskId" class="placeholder">请选择追踪的任务...</div>
       <div v-else-if="!content" class="placeholder">

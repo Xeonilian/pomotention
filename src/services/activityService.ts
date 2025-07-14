@@ -179,6 +179,7 @@ export function convertToTodo(activity: Activity): Todo {
     projectName: activity.projectId ? `项目${activity.projectId}` : undefined,
     priority: 0,
     idFormated: timestampToDatetime(Date.now()),
+    taskId: activity.taskId,
   };
 }
 
@@ -197,6 +198,7 @@ export function convertToSchedule(activity: Activity): Schedule {
     projectName: activity.projectId ? `项目${activity.projectId}` : undefined,
     location: activity.location || "",
     isUntaetigkeit: activity.isUntaetigkeit ? true : false,
+    taskId: activity.taskId,
   };
 }
 

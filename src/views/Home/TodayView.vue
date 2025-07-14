@@ -83,7 +83,6 @@ const emit = defineEmits<{
     e: "batch-update-priorities",
     updates: Array<{ id: number; priority: number }>
   ): void;
-  (e: "convert-to-task", id: number): void;
   (e: "select-task", taskId: number | null): void;
   (e: "select-activity", activityId: number | null): void;
   (e: "select-row", id: number | null): void;
@@ -92,6 +91,8 @@ const emit = defineEmits<{
   (e: "edit-todo-start", id: number, newTs: string): void;
   (e: "edit-todo-done", id: number, newTs: string): void;
   (e: "edit-schedule-done", id: number, newTs: string): void;
+  (e: "convert-todo-to-task", id: number, taskId: number): void;
+  (e: "convert-schedule-to-task", id: number, taskId: number): void;
 }>();
 
 // 处理选中行事件

@@ -20,6 +20,7 @@
     <ActivityButtons
       :filterOptions="filterOptions"
       :activeId="activeId"
+      :selectedTaskId="selectedTaskId"
       :selectedClass="selectedActivity?.class"
       @pick-activity-todo="pickActivity"
       @filter="handleFilter"
@@ -29,6 +30,7 @@
       @delete-active="deleteActiveRow"
       @toggle-pomo-type="togglePomoType"
       @repeat-activity="repeatActivity"
+      @convert-activity-to-task="handleConvertToTask"
     />
   </div>
 
@@ -73,6 +75,7 @@ import type { Activity } from "@/core/types/Activity";
 import type { Todo } from "@/core/types/Todo";
 import { addDays } from "@/core/utils";
 import { NPopover } from "naive-ui";
+import { taskService } from "@/services/taskService";
 
 // ========================
 // Props 定义
@@ -82,6 +85,7 @@ const props = defineProps<{
   activeId: number | null; // 当前选中的活动ID
   todos: Todo[]; // 待办事项列表
   selectedActivityId: number | null;
+  selectedTaskId: number | null;
 }>();
 
 // ========================
@@ -95,6 +99,7 @@ const emit = defineEmits<{
   "toggle-pomo-type": [id: number]; // 切换番茄钟类型
   "repeat-activity": [id: number]; // 重复选中的活动
   "go-to-todo": [id: number]; // 去到todo所在天
+  "convert-activity-to-task": [id: number, taskId: number]; // 转换为任务
 }>();
 
 // ========================
@@ -287,6 +292,36 @@ function getCountdownClass(dueDate: number | undefined | null): string {
   if (diff === 3) return "countdown-yellow"; // 三天后到期
   if (diff < 0) return "countdown-blue"; // 已过期
   return "";
+}
+
+// 转换为任务
+function handleConvertToTask() {
+  // console.log("activity", props.activeId);
+  const activity = props.activities.find((a) => a.id === props.activeId);
+  console.log("activity", activity?.id);
+  if (!activity) {
+    return;
+  }
+  if (activity?.taskId) {
+    popoverMessage.value = "该活动已转换为任务";
+    showPopover.value = true;
+    setTimeout(() => {
+      showPopover.value = false;
+    }, 2000);
+    return;
+  }
+  console.log("covert", activity?.id);
+  const task = taskService.createTaskFromActivity(activity.id, activity.title);
+  if (task) {
+    // 立即更新本地的 taskId
+    activity.taskId = task.id;
+    emit("convert-activity-to-task", activity.id, task.id);
+    popoverMessage.value = "已转换为任务";
+    showPopover.value = true;
+    setTimeout(() => {
+      showPopover.value = false;
+    }, 2000);
+  }
 }
 </script>
 
