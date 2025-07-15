@@ -18,12 +18,10 @@
   <!-- 顶部固定按钮区域 -->
   <div class="activity-buttons-sticky">
     <ActivityButtons
-      :filterOptions="filterOptions"
       :activeId="activeId"
       :selectedTaskId="selectedTaskId"
       :selectedClass="selectedActivity?.class"
       @pick-activity-todo="pickActivity"
-      @filter="handleFilter"
       @add-todo="addTodoRow"
       @add-schedule="addScheduleRow"
       @add-untaetigkeit="addUntaetigkeitRow"
@@ -36,10 +34,13 @@
 
   <!-- 活动列表展示区域 -->
   <ActivitySheet
+    :filterOptions="filterOptions"
     :displaySheet="filteredActivities"
     :getCountdownClass="getCountdownClass"
-    @focus-row="handleFocusRow"
     :activityId="selectedActivityId"
+    :currentFilter="currentFilter"
+    @focus-row="handleFocusRow"
+    @filter="handleFilter"
   />
 
   <!-- 错误提示弹窗 -->

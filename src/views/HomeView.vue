@@ -998,7 +998,7 @@ const { size: rightWidth, startResize: startRightResize } = useResize(
   padding: 0px;
   box-sizing: border-box;
   overflow: hidden;
-  min-width: 450px;
+  min-width: 50px;
   max-width: 900px;
   margin: 0;
 }

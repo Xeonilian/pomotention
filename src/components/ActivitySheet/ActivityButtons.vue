@@ -126,43 +126,24 @@
         ><n-icon><Delete24Regular /></n-icon
       ></template>
     </n-button>
-    <n-dropdown
-      :options="filterOptions"
-      @select="(key) => $emit('filter', key)"
-    >
-      <n-button
-        strong
-        secondary
-        circle
-        type="default"
-        size="small"
-        title="筛选活动"
-      >
-        <template #icon>
-          <n-icon><DocumentTableSearch24Regular /></n-icon>
-        </template>
-      </n-button>
-    </n-dropdown>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from "vue";
-import { NButton, NIcon, NDropdown } from "naive-ui";
+import { NButton, NIcon } from "naive-ui";
 import {
   AddCircle24Regular,
   ChevronCircleDown48Regular,
   Delete24Regular,
   CloudAdd20Regular,
   ChevronCircleLeft48Regular,
-  DocumentTableSearch24Regular,
   CalendarAdd24Regular,
   ArrowRepeatAll24Regular,
   FoodPizza24Regular,
 } from "@vicons/fluent";
 
 const props = defineProps<{
-  filterOptions: any[];
   activeId: number | null;
   selectedClass?: "T" | "S"; // 从父组件传递
   selectedTaskId: number | null;
@@ -174,7 +155,6 @@ const isSelectedClassS = computed(() => {
 
 defineEmits([
   "pick-activity-todo",
-  "filter",
   "add-todo",
   "add-schedule",
   "add-untaetigkeit",
