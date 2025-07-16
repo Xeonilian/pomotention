@@ -15,7 +15,7 @@
             :options="filterOptions"
             @select="(key) => $emit('filter', key)"
           >
-            <n-button text type="default" size="small" title="筛选活动">
+            <n-button text type="default" title="筛选活动">
               <template #icon>
                 <n-icon><DocumentTableSearch24Regular /></n-icon>
               </template>
@@ -26,8 +26,8 @@
 
       <n-button
         v-if="isAddButton"
-        text
         type="default"
+        secondary
         title="增加一列"
         @click="$emit('add-section', props.sectionId)"
       >
@@ -37,13 +37,13 @@
       </n-button>
       <n-button
         v-if="isRemoveButton"
-        text
         type="default"
+        secondary
         title="删除本列"
         @click="$emit('remove-section', props.sectionId)"
       >
         <template #icon>
-          <n-icon><Delete16Regular /></n-icon>
+          <n-icon><Subtract16Regular /></n-icon>
         </template>
       </n-button>
     </div>
@@ -225,7 +225,7 @@ import {
   Chat24Regular,
   DocumentTableSearch24Regular,
   Add16Regular,
-  Delete16Regular,
+  Subtract16Regular,
 } from "@vicons/fluent";
 import type { Activity } from "@/core/types/Activity";
 import { useSettingStore } from "@/stores/useSettingStore";
@@ -405,7 +405,9 @@ function handleIconMouseLeave() {
   gap: 2px;
   margin-bottom: 4px;
 }
-
+.section-header :deep(.n-input__input-el) {
+  font-weight: bold;
+}
 .activity-row {
   display: flex;
   align-items: center;
