@@ -40,7 +40,7 @@
         <div
           class="draggable-container"
           ref="draggableContainer"
-          v-if="!isMiniMode && uiStore.showPomodoroPanel"
+          v-if="!isMiniMode && settingStore.settings.showPomodoro"
         >
           <PomodoroView
             :showPomoSeq="showPomoSeq"
@@ -66,7 +66,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, Component, nextTick, onMounted, onUnmounted } from "vue";
+import { ref, watch, nextTick, onMounted, onUnmounted, computed } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { NMenu, NButton, NIcon } from "naive-ui";
 import { isTauri } from "@tauri-apps/api/core";
@@ -77,7 +77,6 @@ import {
   LogicalSize,
 } from "@tauri-apps/api/window";
 
-import { useUIStore } from "@/stores/useUIStore";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useTimerStore } from "@/stores/useTimerStore";
 
@@ -97,7 +96,6 @@ import { useButtonStyle } from "@/composables/useButtonStyle";
 import PomodoroView from "./Home/PomodoroView.vue";
 
 const timerStore = useTimerStore();
-const uiStore = useUIStore();
 const settingStore = useSettingStore();
 
 const { isAlwaysOnTop, toggleAlwaysOnTop } = useAlwaysOnTop();
@@ -120,21 +118,6 @@ const menuOptions = [
 ];
 const current = ref(route.path);
 
-type ViewKey =
-  | "ontop"
-  | "pomodoro"
-  | "schedule"
-  | "today"
-  | "task"
-  | "activity";
-
-interface ViewControl {
-  key: ViewKey;
-  icon: Component;
-  title: string;
-  show: boolean;
-}
-
 const DRAG_THRESHOLD = 5;
 
 // Use the composables
@@ -148,7 +131,7 @@ const {
   lastPosition,
 } = useDraggable(DRAG_THRESHOLD);
 
-const viewControls: ViewControl[] = [
+const viewControls = computed(() => [
   {
     key: "ontop",
     icon: Pin24Regular,
@@ -159,28 +142,46 @@ const viewControls: ViewControl[] = [
     key: "pomodoro",
     icon: Timer24Regular,
     title: "切换番茄钟视图",
-    show: true,
+    show: settingStore.settings.showPomodoro,
   },
   {
     key: "schedule",
     icon: ArrowLeft24Filled,
     title: "切换日程视图",
-    show: true,
+    show: settingStore.settings.showSchedule,
   },
-  { key: "today", icon: ArrowUp24Filled, title: "切换今日视图", show: true },
-  { key: "task", icon: ArrowDown24Filled, title: "切换执行视图", show: true },
+  {
+    key: "today",
+    icon: ArrowUp24Filled,
+    title: "切换今日视图",
+    show: settingStore.settings.showToday,
+  },
+  {
+    key: "task",
+    icon: ArrowDown24Filled,
+    title: "切换执行视图",
+    show: settingStore.settings.showTask,
+  },
   {
     key: "activity",
     icon: ArrowRight24Filled,
     title: "切换活动视图",
-    show: true,
+    show: settingStore.settings.showActivity,
   },
-];
+]);
 
 function handleMenuSelect(key: string) {
   if (key !== route.path) {
     router.push(key);
   }
+}
+
+function toggleSettingPanel(
+  panel: "schedule" | "activity" | "task" | "today" | "pomodoro"
+) {
+  const key = "show" + panel.charAt(0).toUpperCase() + panel.slice(1);
+  (settingStore.settings as any)[key] = !(settingStore.settings as any)[key];
+  // ⚠️ 用 as any 失去了类型检查，字段名拼错编译不会报错，但短期可用
 }
 
 function handleMainLayoutViewToggle(key: string) {
@@ -193,7 +194,7 @@ function handleMainLayoutViewToggle(key: string) {
     return;
   }
 
-  uiStore.togglePanel(
+  toggleSettingPanel(
     key as "schedule" | "activity" | "task" | "today" | "pomodoro"
   );
 }
@@ -327,7 +328,9 @@ const handlePomodoroViewSizeReport = ({
 };
 
 onMounted(() => {
-  updateDraggableContainerVisibilityAndPosition(uiStore.showPomodoroPanel);
+  updateDraggableContainerVisibilityAndPosition(
+    settingStore.settings.showPomodoro
+  );
   if (draggableContainer.value) {
     draggableContainer.value.addEventListener("mousedown", handleMouseDown);
   }
@@ -346,11 +349,11 @@ watch(route, (newVal) => {
 
 watch(
   [
-    () => uiStore.showSchedulePanel,
-    () => uiStore.showTodayPanel,
-    () => uiStore.showTaskPanel,
-    () => uiStore.showActivityPanel,
-    () => uiStore.showPomodoroPanel,
+    () => settingStore.settings.showSchedule,
+    () => settingStore.settings.showToday,
+    () => settingStore.settings.showTask,
+    () => settingStore.settings.showActivity,
+    () => settingStore.settings.showPomodoro,
   ],
   () => {
     updateButtonStates();
@@ -360,7 +363,7 @@ watch(
 
 // 7.3 浮动组件显示状态变化监听 (设置位置)
 watch(
-  () => uiStore.showPomodoroPanel,
+  () => settingStore.settings.showPomodoro,
   async (newVal) => {
     await updateDraggableContainerVisibilityAndPosition(newVal);
     if (draggableContainer.value) {

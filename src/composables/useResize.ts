@@ -1,15 +1,15 @@
-import { ref } from "vue";
+import { Ref, ref } from "vue";
 
 type ResizeDirection = "vertical" | "horizontal";
 
 export function useResize(
-  initialSize: number = 400,
+  sizeRef: Ref<number>,
   direction: ResizeDirection = "vertical",
   minSize: number = 100,
   maxSize: number = window.innerHeight - 200,
   isLeft: boolean = true
 ) {
-  const size = ref(initialSize);
+  const size = sizeRef;
   const isResizing = ref(false);
   const startPos = ref(0);
   const startSize = ref(0);
@@ -22,7 +22,6 @@ export function useResize(
 
     // 禁用文本选择
     document.body.style.userSelect = "none";
-    document.body.style.webkitUserSelect = "none";
 
     document.addEventListener("mousemove", handleMouseMove);
     document.addEventListener("mouseup", stopResize);

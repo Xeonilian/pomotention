@@ -13,6 +13,14 @@ export interface GlobalSettings {
   miniModeRefactor: number;
   activityRank: Record<number, number>; // 活动排序：{activityId: rank}
   kanbanSetting: ActivitySectionConfig[];
+  showPomodoro: boolean;
+  showSchedule: boolean;
+  showToday: boolean;
+  showTask: boolean;
+  showActivity: boolean;
+  leftWidth: number;
+  rightWidth: number;
+  topHeight: number;
   // 以后新增全局设置项就在这里补充
 }
 
@@ -24,6 +32,14 @@ const defaultSettings: GlobalSettings = {
   miniModeRefactor: 1,
   activityRank: {}, // 默认空对象
   kanbanSetting: [{ id: 1, filterKey: "all", search: "" }],
+  showPomodoro: true,
+  showSchedule: true,
+  showToday: true,
+  showTask: true,
+  showActivity: true,
+  leftWidth: 100, // 默认值你自己定
+  rightWidth: 300,
+  topHeight: 300,
 };
 
 // 工具函数
@@ -69,7 +85,7 @@ export const useSettingStore = defineStore("setting", () => {
     settings,
     (newValue) => {
       try {
-        console.log("Saving to localStorage:", JSON.stringify(newValue)); // 日志检查
+        // console.log("Saving to localStorage:", JSON.stringify(newValue)); // 日志检查
         localStorage.setItem(
           STORAGE_KEYS.GLOBAL_SETTINGS,
           JSON.stringify(newValue)

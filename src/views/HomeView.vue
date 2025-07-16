@@ -8,7 +8,7 @@
   <div class="home-content">
     <!-- 左侧面板 (日程表) -->
     <div
-      v-if="uiStore.showSchedulePanel"
+      v-if="settingStore.settings.showSchedule"
       class="left"
       :style="{ width: leftWidth + 'px' }"
     >
@@ -26,7 +26,7 @@
 
     <!-- 左侧面板调整大小手柄 -->
     <div
-      v-if="uiStore.showSchedulePanel"
+      v-if="settingStore.settings.showSchedule"
       class="resize-handle-horizontal"
       @mousedown="startLeftResize"
     ></div>
@@ -36,15 +36,16 @@
       class="middle"
       :class="{
         'middle-alone':
-          !uiStore.showSchedulePanel && !uiStore.showActivityPanel,
+          !settingStore.settings.showSchedule &&
+          !settingStore.settings.showActivity,
       }"
     >
       <!-- 今日视图 -->
       <div
-        v-if="uiStore.showTodayPanel"
+        v-if="settingStore.settings.showToday"
         class="middle-top"
         :style="
-          uiStore.showTaskPanel
+          settingStore.settings.showTask
             ? { height: topHeight + 'px' }
             : { height: '100%' }
         "
@@ -135,13 +136,13 @@
       </div>
       <!-- 任务视图调整大小手柄 -->
       <div
-        v-if="uiStore.showTaskPanel"
+        v-if="settingStore.settings.showTask"
         class="resize-handle"
         @mousedown="startVerticalResize"
       ></div>
       <!-- 任务视图 -->
       <div
-        v-if="uiStore.showTaskPanel"
+        v-if="settingStore.settings.showTask"
         class="middle-bottom"
         :style="{ height: `calc(100% - ${topHeight}px - 8px)` }"
       >
@@ -155,13 +156,13 @@
     </div>
     <!-- 右侧面板调整大小手柄 -->
     <div
-      v-if="uiStore.showActivityPanel"
+      v-if="settingStore.settings.showActivity"
       class="resize-handle-horizontal"
       @mousedown="startRightResize"
     ></div>
     <!-- 右侧面板 (活动清单) -->
     <div
-      v-if="uiStore.showActivityPanel"
+      v-if="settingStore.settings.showActivity"
       class="right"
       :style="{ width: rightWidth + 'px' }"
     >
@@ -233,12 +234,11 @@ import {
 import { useResize } from "@/composables/useResize";
 import { getTimestampForTimeString, addDays } from "@/core/utils";
 import { unifiedDateService } from "@/services/unifiedDateService";
-import { useUIStore } from "@/stores/useUIStore";
-
+import { useSettingStore } from "@/stores/useSettingStore";
 // ======================== 响应式状态与初始化 ========================
 
 // -- 基础UI状态
-const uiStore = useUIStore();
+const settingStore = useSettingStore();
 const showPomoTypeChangePopover = ref(false);
 const pomoTypeChangeMessage = ref("");
 const pomoTypeChangeTarget = ref<HTMLElement | null>(null);
@@ -942,21 +942,35 @@ onMounted(() => {
 });
 
 // ======================== 9. 页面尺寸调整  ========================
-const { size: topHeight, startResize: startVerticalResize } = useResize(
-  300,
+
+const leftWidth = computed({
+  get: () => settingStore.settings.leftWidth,
+  set: (v) => (settingStore.settings.leftWidth = v),
+});
+const rightWidth = computed({
+  get: () => settingStore.settings.rightWidth,
+  set: (v) => (settingStore.settings.rightWidth = v),
+});
+const topHeight = computed({
+  get: () => settingStore.settings.topHeight,
+  set: (v) => (settingStore.settings.topHeight = v),
+});
+
+const { startResize: startVerticalResize } = useResize(
+  topHeight,
   "vertical",
   200,
   500
 );
-const { size: leftWidth, startResize: startLeftResize } = useResize(
-  100,
+const { startResize: startLeftResize } = useResize(
+  leftWidth,
   "horizontal",
   60,
   400,
   false // 左侧面板
 );
-const { size: rightWidth, startResize: startRightResize } = useResize(
-  300,
+const { startResize: startRightResize } = useResize(
+  rightWidth,
   "horizontal",
   50,
   800,
