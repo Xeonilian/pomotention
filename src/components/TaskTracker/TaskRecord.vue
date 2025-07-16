@@ -14,21 +14,33 @@
       </div>
       <div v-else v-html="renderedMarkdown"></div>
     </div>
-    <textarea
-      v-else
-      ref="textarea"
-      v-model="content"
-      class="task-textarea"
-      @keydown="handleKeydown"
-      @blur="stopEditing"
-      :title="'激活时Esc退出编辑'"
-    ></textarea>
+    <div v-else style="position: relative; width: 100%; height: 100%">
+      <textarea
+        ref="textarea"
+        v-model="content"
+        class="task-textarea"
+        @keydown="handleKeydown"
+        @blur="stopEditing"
+        :title="'激活时Esc退出编辑'"
+        style="position: relative; z-index: 1"
+      ></textarea>
+      <div v-if="showCaretFlash" class="caret-flash" :style="caretFlashStyle">
+        🍅
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from "vue";
 import { marked } from "marked";
+import {
+  getClickContextFragments,
+  findFragmentSequenceInSource,
+} from "@/services/taskRecordService";
+import { useCaretFlash } from "@/composables/useCaretFlash";
+
+const { showCaretFlash, caretFlashStyle, flashCaretFlash } = useCaretFlash();
 
 // 添加自定义渲染器
 const renderer = new marked.Renderer();
@@ -99,7 +111,17 @@ watch(
 const startEditing = () => {
   isEditing.value = true;
   nextTick(() => {
-    textarea.value?.focus();
+    setTimeout(() => {
+      const ta = textarea.value;
+      if (
+        ta &&
+        ta instanceof HTMLTextAreaElement &&
+        document.body.contains(ta)
+      ) {
+        ta.focus();
+        flashCaretFlash(ta);
+      }
+    }, 0);
   });
 };
 
@@ -196,7 +218,26 @@ const handleClick = (event: MouseEvent) => {
 
     return;
   }
-  if (props.taskId) startEditing();
+  if (props.taskId) {
+    const container = event.currentTarget as HTMLElement;
+    // 调用service代替原本逻辑
+    const fragments = getClickContextFragments(target, container);
+    if (fragments.length === 0) {
+      startEditing();
+      return;
+    }
+    const pos = findFragmentSequenceInSource(content.value, fragments);
+    startEditing();
+    if (pos !== null) {
+      nextTick(() => {
+        if (textarea.value) {
+          textarea.value.focus();
+          textarea.value.selectionStart = textarea.value.selectionEnd = pos;
+        }
+      });
+    }
+    return;
+  }
 };
 </script>
 
@@ -340,5 +381,31 @@ const handleClick = (event: MouseEvent) => {
   background-color: var(--color-yellow-light);
   padding: 0 2px;
   border-radius: 2px;
+}
+
+.caret-flash {
+  position: absolute;
+  width: 18px;
+  /* background: #ffe971; */
+  border-radius: 4px;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0.85;
+  animation: caret-appear 0.8s;
+}
+
+@keyframes caret-appear {
+  0% {
+    opacity: 0.85;
+    transform: scale(1.6, 0.6);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1, 1.2);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1, 1);
+  }
 }
 </style>
