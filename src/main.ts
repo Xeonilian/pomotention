@@ -35,6 +35,7 @@ const app = createApp({
 
 //配色
 import "./styles/colors.css";
+import "./styles/global.css";
 
 app.use(pinia);
 app.use(router);

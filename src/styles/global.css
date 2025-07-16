@@ -1,0 +1,14 @@
+/* 细窄全局滚动条，兼容常见 PC 浏览器 */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-background-dark), var(--color-background);
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--color-background);
+}
