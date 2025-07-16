@@ -33,6 +33,7 @@ export const STORAGE_KEYS = {
   LAST_TODAY_COUNT: "lastTodayCount",
   GLOBAL_SETTINGS: "globalSettings",
   WRITING_TEMPLATE: "writingTemplate",
+  TAG: "tag",
 } as const;
 
 // 预设的工作时间块
@@ -143,3 +144,25 @@ export const POMODORO_COLORS: Record<string, string> = {
   schedule: "var(--color-background-dark)",
   untaetigkeit: "var(--color-blue)",
 };
+
+/**
+ * 默认标签样式配置
+ */
+export const DEFAULT_TAG_STYLE = {
+  color: "#1976d2",
+  backgroundColor: "#e3f2fd",
+  newTagColor: "#666666",
+  newTagBackgroundColor: "#f5f5f5",
+} as const;
+
+// 默认颜色配置
+export const DEFAULT_TAG_COLORS = [
+  { color: "#ffffff", backgroundColor: "#2080f0" }, // 蓝色
+  { color: "#ffffff", backgroundColor: "#18a058" }, // 绿色
+  { color: "#ffffff", backgroundColor: "#f0a020" }, // 橙色
+  { color: "#ffffff", backgroundColor: "#d03050" }, // 红色
+  { color: "#ffffff", backgroundColor: "#7c3aed" }, // 紫色
+  { color: "#ffffff", backgroundColor: "#0891b2" }, // 青色
+  { color: "#ffffff", backgroundColor: "#dc2626" }, // 深红
+  { color: "#ffffff", backgroundColor: "#059669" }, // 深绿
+];

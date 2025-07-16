@@ -7,6 +7,7 @@ import type { Schedule } from "@/core/types/Schedule";
 import type { Block } from "@/core/types/Block";
 import type { Task } from "@/core/types/Task";
 import type { Template } from "@/core/types/Template";
+import type { Tag } from "@/core/types/Tag";
 
 // =================== 活动相关 ===================
 
@@ -111,7 +112,7 @@ export function removeTasksStorage(): void {
   localStorage.removeItem(STORAGE_KEYS.TASK);
 }
 // =================== 模板相关 ===================
- 
+
 /** 从本地存储加载模板列表 */
 export function loadTemplates(): Template[] {
   return loadData<Template[]>(STORAGE_KEYS.WRITING_TEMPLATE, []);
@@ -142,7 +143,38 @@ export function generateTemplateId(): number {
   }
   return Math.max(...ids) + 1;
 }
+// =================== 标签相关 ===================
 
+/** 从本地存储加载标签列表 */
+export function loadTags(): Tag[] {
+  return loadData<Tag[]>(STORAGE_KEYS.TAG, []);
+}
+
+/** 保存标签列表到本地存储 */
+export function saveTags(tags: Tag[]): void {
+  saveData(STORAGE_KEYS.TAG, tags);
+}
+
+/** 删除标签存储 */
+export function removeTagsStorage(): void {
+  localStorage.removeItem(STORAGE_KEYS.TAG);
+}
+
+/**
+ * 为标签生成唯一的自增 ID
+ * @returns 新标签的 ID
+ */
+export function generateTagId(): number {
+  const tags = loadTags();
+  if (!tags || tags.length === 0) {
+    return 1;
+  }
+  const ids = tags.map((tag) => tag.id);
+  if (!ids || ids.length === 0) {
+    return 1;
+  }
+  return Math.max(...ids) + 1;
+}
 // =================== 通用本地存储操作 ===================
 
 /**
