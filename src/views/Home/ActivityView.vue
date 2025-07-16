@@ -1,17 +1,5 @@
 <!-- 
   Component: ActivityView.vue
-  Description: 展示和管理活动列表，仅负责 UI 交互
-  Props:
-    - activities: Activity[] - 活动数据列表
-    - activeId: number | null - 当前选中的活动ID
-    - todos: Todo[] - 待办事项列表
-  Emits:
-    - pick-activity-todo: 传递选中的活动
-    - add-activity: 请求新增活动
-    - delete-activity: 请求删除活动
-    - update-active-id: 更新当前选中的活动ID
-    - toggle-pomo-type: 切换番茄钟类型
-  Parent: HomeView.vue 
 -->
 
 <template>
@@ -31,18 +19,32 @@
       @convert-activity-to-task="handleConvertToTask"
     />
   </div>
-
-  <!-- 活动列表展示区域 -->
-  <ActivitySheet
-    :filterOptions="filterOptions"
-    :displaySheet="filteredActivities"
-    :getCountdownClass="getCountdownClass"
-    :activityId="selectedActivityId"
-    :currentFilter="currentFilter"
-    @focus-row="handleFocusRow"
-    @filter="handleFilter"
-  />
-
+  <!-- 看板列容器 -->
+  <div class="kanban-columns">
+    <div
+      v-for="(section, idx) in sections"
+      :key="section.id"
+      class="kanban-column"
+    >
+      <!-- 活动列表展示区域 -->
+      <ActivitySection
+        :filterOptions="filterOptions"
+        :displaySheet="filteredBySection(section)"
+        :getCountdownClass="getCountdownClass"
+        :activityId="selectedActivityId"
+        :currentFilter="section.filterKey"
+        :isAddButton="section.id === 1 && sections.length < 6"
+        :isRemoveButton="section.id !== 1"
+        :sectionId="section.id"
+        :search="section.search"
+        @add-section="addSection"
+        @remove-section="removeSection"
+        @focus-row="handleFocusRow"
+        @filter="(filterKey) => handleSectionFilter(idx, filterKey)"
+        @update:search="(val) => handleSectionSearch(section.id, val)"
+      />
+    </div>
+  </div>
   <!-- 错误提示弹窗 -->
   <n-popover
     v-model:show="showPopover"
@@ -71,12 +73,13 @@
 // ========================
 import { ref, computed } from "vue";
 import ActivityButtons from "@/components/ActivitySheet/ActivityButtons.vue";
-import ActivitySheet from "@/components/ActivitySheet/Activities.vue";
-import type { Activity } from "@/core/types/Activity";
+import ActivitySection from "@/components/ActivitySheet/ActivitySection.vue";
+import type { Activity, ActivitySectionConfig } from "@/core/types/Activity";
 import type { Todo } from "@/core/types/Todo";
 import { addDays } from "@/core/utils";
 import { NPopover } from "naive-ui";
 import { taskService } from "@/services/taskService";
+import { useSettingStore } from "@/stores/useSettingStore";
 
 // ========================
 // Props 定义
@@ -116,12 +119,34 @@ const filterOptions = [
   { label: "取消任务", key: "cancelled" },
 ];
 
-// 当前筛选条件
-const currentFilter = ref<string>("all");
+// Kanban多个section参数管理
+const settingStore = useSettingStore();
+// 响应式可直接用
+const sections = computed({
+  get: () => settingStore.settings.kanbanSetting,
+  set: (val) => {
+    settingStore.settings.kanbanSetting = val;
+  },
+});
 
 // 错误提示弹窗相关
 const showPopover = ref(false);
 const popoverMessage = ref("");
+
+function addSection() {
+  if (sections.value.length >= 6) return;
+  sections.value.push({
+    id: Date.now(),
+    filterKey: "all",
+    search: "",
+  });
+}
+
+function removeSection(id: number) {
+  if (id === 1) return;
+  settingStore.settings.kanbanSetting =
+    settingStore.settings.kanbanSetting.filter((s) => s.id !== id);
+}
 
 // ========================
 // 计算属性
@@ -132,45 +157,86 @@ const selectedActivity = computed(() => {
 });
 
 // 根据筛选条件过滤活动列表
-const filteredActivities = computed(() => {
+function filteredBySection(section: ActivitySectionConfig) {
   const now = new Date();
   now.setHours(0, 0, 0, 0);
 
-  return props.activities.filter((item) => {
-    if (currentFilter.value === "all") {
-      return item.status !== "cancelled";
+  // 如果filterKey有（不为null），直接switch分支
+  if (section.filterKey) {
+    switch (section.filterKey) {
+      case "all":
+        return props.activities.filter((item) => item.status !== "cancelled");
+      case "cancelled":
+        return props.activities.filter((item) => item.status === "cancelled");
+      case "today":
+        return props.activities.filter((item) => {
+          if (item.class === "T") {
+            if (!item.dueDate) return false;
+            const due = new Date(item.dueDate);
+            due.setHours(0, 0, 0, 0);
+            return due.getTime() === now.getTime();
+          } else if (item.class === "S") {
+            if (!item.dueRange || !item.dueRange[0]) return false;
+            const start = new Date(item.dueRange[0]);
+            start.setHours(0, 0, 0, 0);
+            return start.getTime() === now.getTime();
+          }
+          return false;
+        });
+      case "interrupt":
+        return props.activities.filter(
+          (item) => !!item.interruption && item.status !== "cancelled"
+        );
+      case "todo":
+        return props.activities.filter(
+          (item) => item.class === "T" && item.status !== "cancelled"
+        );
+      case "schedule":
+        return props.activities.filter(
+          (item) => item.class === "S" && item.status !== "cancelled"
+        );
+      default:
+        break;
     }
-    if (currentFilter.value === "cancelled") {
-      return item.status === "cancelled";
-    }
-    if (currentFilter.value === "today") {
-      // 筛选今日到期的活动
-      if (item.class === "T") {
-        // 任务类型：检查截止日期
-        if (!item.dueDate) return false;
-        const due = new Date(item.dueDate);
-        due.setHours(0, 0, 0, 0);
-        return due.getTime() === now.getTime();
-      } else if (item.class === "S") {
-        // 预约类型：检查开始日期
-        if (!item.dueRange || !item.dueRange[0]) return false;
-        const start = new Date(item.dueRange[0]);
-        start.setHours(0, 0, 0, 0);
-        return start.getTime() === now.getTime();
-      }
-    } else if (currentFilter.value === "interrupt") {
-      // 筛选有打扰标记的活动
-      return !!item.interruption;
-    } else if (currentFilter.value === "todo") {
-      // 只显示任务（class 为 T）
-      return item.class === "T";
-    } else if (currentFilter.value === "schedule") {
-      // 只显示预约（class 为 S）
-      return item.class === "S";
-    }
-    return false;
-  });
-});
+  }
+
+  // 没有 filterKey，再看search
+  if (section.search) {
+    const keyword = section.search.trim().toLowerCase();
+    return props.activities.filter(
+      (item) =>
+        item.status !== "cancelled" &&
+        item.title &&
+        item.title.toLowerCase().includes(keyword)
+    );
+  }
+
+  // 什么条件都没有，返回空
+  return [];
+}
+
+// 活动筛选，由 section 单独管理
+function handleSectionFilter(idx: number, filterKey: string) {
+  const option = filterOptions.find((opt) => opt.key === filterKey);
+  if (option) {
+    sections.value[idx].filterKey = filterKey;
+    sections.value[idx].search = option.label; // 输入框内容显示label
+  }
+}
+
+// 搜索
+function handleSectionSearch(id: number, val: string) {
+  const section = sections.value.find((s) => s.id === id);
+  if (section) {
+    section.search = val;
+    console.log(val);
+    // 判断输入内容是否等于某个label，是就赋filterKey，否则清空filterKey
+    const match = filterOptions.find(
+      (opt) => opt.label.trim().toLowerCase() === val.trim().toLowerCase()
+    );
+    section.filterKey = match ? match.key : null; // 这句不能少！
+  }
+}
 
 // ========================
 // 方法函数
@@ -210,11 +276,6 @@ function pickActivity() {
 
   // 4. 触发事件并重置选中状态
   emit("pick-activity-todo", picked);
-}
-
-// 处理筛选条件变化
-function handleFilter(key: string) {
-  currentFilter.value = key;
 }
 
 // 添加新的预约活动
@@ -330,5 +391,21 @@ function handleConvertToTask() {
 /* 顶部固定按钮容器样式 */
 .activity-buttons-sticky {
   position: sticky;
+  height: 45px;
+}
+
+.kanban-columns {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  align-items: stretch;
+  height: calc(100% - 45px);
+}
+.kanban-column {
+  flex: 1 0 0;
+  min-width: 240px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 </style>

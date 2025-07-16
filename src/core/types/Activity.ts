@@ -17,3 +17,9 @@ export interface Activity {
   isUntaetigkeit?: boolean; // S的分支，if true = untätigkeit 无所事事
   taskId?: number; // 关联的任务ID
 }
+
+export interface ActivitySectionConfig {
+  id: number;
+  filterKey: string | null;
+  search: string;
+}

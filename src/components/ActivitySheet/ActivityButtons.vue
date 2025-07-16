@@ -178,6 +178,6 @@ defineEmits([
   border-radius: 15px;
   width: 290px;
   height: 40px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05); /* 如需要阴影 */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 </style>

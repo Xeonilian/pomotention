@@ -3,6 +3,7 @@ import { defineStore } from "pinia";
 import { ref, watch } from "vue";
 import { STORAGE_KEYS } from "../core/constants";
 import { PomodoroDurations, TimerStyleDefaults } from "../core/constants";
+import { ActivitySectionConfig } from "@/core/types/Activity";
 
 // 定义全局 settings 类型（可根据自己需要补充或修改）
 export interface GlobalSettings {
@@ -11,6 +12,7 @@ export interface GlobalSettings {
   style: typeof TimerStyleDefaults;
   miniModeRefactor: number;
   activityRank: Record<number, number>; // 活动排序：{activityId: rank}
+  kanbanSetting: ActivitySectionConfig[];
   // 以后新增全局设置项就在这里补充
 }
 
@@ -21,6 +23,7 @@ const defaultSettings: GlobalSettings = {
   style: TimerStyleDefaults,
   miniModeRefactor: 1,
   activityRank: {}, // 默认空对象
+  kanbanSetting: [{ id: 1, filterKey: "all", search: "" }],
 };
 
 // 工具函数
