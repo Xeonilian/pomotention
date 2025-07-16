@@ -17,198 +17,196 @@
   <Activities :displaySheet="activitySheet" :getCountdownClass="getCountdownClass" @focus-row="handleFocusRow" />
 -->
 <template>
-  <n-grid class="filter-content-1">
-    <div class="filter-bar-1">
-      <n-dropdown
-        :options="filterOptions"
-        @select="(key) => $emit('filter', key)"
+  <div class="filter-bar-1">
+    <n-dropdown
+      :options="filterOptions"
+      @select="(key) => $emit('filter', key)"
+    >
+      <n-button
+        strong
+        secondary
+        circle
+        type="default"
+        size="small"
+        title="筛选活动"
       >
-        <n-button
-          strong
-          secondary
-          circle
-          type="default"
-          size="small"
-          title="筛选活动"
-        >
-          <template #icon>
-            <n-icon><DocumentTableSearch24Regular /></n-icon>
-          </template>
-        </n-button>
-      </n-dropdown>
-      <n-input />
-
-      <n-button text type="default" title="增加一列">
         <template #icon>
-          <n-icon><Add16Regular /></n-icon>
+          <n-icon><DocumentTableSearch24Regular /></n-icon>
         </template>
       </n-button>
-    </div>
-    <div v-for="item in sortedDisplaySheet" :key="item.id">
-      <div
-        v-if="item.status !== 'done'"
-        class="activity-row"
-        :class="{ 'highlight-line': item.id === activityId }"
-      >
-        <n-input
-          v-model:value="item.title"
-          type="text"
-          :placeholder="item.isUntaetigkeit ? '无所事事' : '任务描述'"
-          style="flex: 2"
-          @focus="$emit('focus-row', item.id)"
-          :class="{ 'force-hover': hoveredRowId === item.id }"
-        >
-          <template #prefix>
-            <div
-              class="icon-drag-area"
-              @mousedown="startDrag($event, item)"
-              @mouseenter="handleIconMouseEnter(item.id)"
-              @mouseleave="handleIconMouseLeave"
-              :title="
-                item.status !== 'cancelled' ? '拖拽调整顺序' : '不支持顺序修改'
-              "
-            >
-              <n-icon v-if="item.isUntaetigkeit" :color="'var(--color-blue)'"
-                ><Cloud24Regular
-              /></n-icon>
-              <n-icon
-                v-if="item.interruption === 'I'"
-                :color="
-                  item.status === 'ongoing'
-                    ? 'var(--color-red)'
-                    : item.status === 'delayed'
-                    ? 'var(--color-blue)'
-                    : item.status === 'suspended'
-                    ? 'var(--color-orange)'
-                    : item.status === 'cancelled'
-                    ? 'var(--color-text-primary)'
-                    : 'var(--color-text-secondary)'
-                "
-                ><Chat24Regular
-              /></n-icon>
-              <n-icon
-                v-else-if="item.interruption === 'E'"
-                :color="
-                  item.status === 'ongoing'
-                    ? 'var(--color-red)'
-                    : item.status === 'delayed'
-                    ? 'var(--color-blue)'
-                    : item.status === 'suspended'
-                    ? 'var(--color-orange)'
-                    : item.status === 'cancelled'
-                    ? 'var(--color-text-primary)'
-                    : 'var(--color-text-secondary)'
-                "
-                ><VideoPersonCall24Regular
-              /></n-icon>
-              <n-icon
-                v-else-if="item.class === 'T'"
-                :color="
-                  item.status === 'ongoing'
-                    ? 'var(--color-red)'
-                    : item.status === 'delayed'
-                    ? 'var(--color-blue)'
-                    : item.status === 'suspended'
-                    ? 'var(--color-orange)'
-                    : item.status === 'cancelled'
-                    ? 'var(--color-text-primary)'
-                    : 'var(--color-text-secondary)'
-                "
-                ><ApprovalsApp24Regular
-              /></n-icon>
-              <n-icon
-                v-else-if="item.class === 'S' && !item.isUntaetigkeit"
-                :color="
-                  item.status === 'ongoing'
-                    ? 'var(--color-red)'
-                    : item.status === 'delayed'
-                    ? 'var(--color-blue)'
-                    : item.status === 'suspended'
-                    ? 'var(--color-orange)'
-                    : item.status === 'cancelled'
-                    ? 'var(--color-text-primary)'
-                    : 'var(--color-text-secondary)'
-                "
-                ><Accessibility24Regular
-              /></n-icon>
-            </div>
-          </template>
-        </n-input>
-        <n-input
-          v-if="item.class === 'S'"
-          v-model:value="item.location"
-          style="max-width: 90px"
-          @focus="$emit('focus-row', item.id)"
-          placeholder="地点"
-          :class="{ 'force-hover': hoveredRowId === item.id }"
-        />
-        <n-input
-          v-if="item.class === 'T'"
-          :value="getInputValue(item)"
-          :placeholder="item.pomoType"
-          style="max-width: 32px"
-          class="pomo-input"
-          :title="`输入估计${item.pomoType || '🍅'}数量`"
-          :class="{
-            'pomo-red': item.pomoType === '🍅',
-            'pomo-purple': item.pomoType === '🍇',
-            'pomo-green': item.pomoType === '🍒',
-            'input-center': true, // 新增
-            'input-clear-disabled': item.pomoType === '🍒',
-            'force-hover': hoveredRowId === item.id,
-          }"
-          :disabled="item.pomoType === '🍒'"
-          @update:value="(val) => onInputUpdate(item, val)"
-          @focus="$emit('focus-row', item.id)"
-        />
-        <n-input
-          v-else
-          style="max-width: 32px; font-size: 14px; margin: 0 auto"
-          :value="item.dueRange ? item.dueRange[1] : ''"
-          @update:value="
-            (val) =>
-              item.dueRange
-                ? (item.dueRange[1] = val)
-                : (item.dueRange = [Date.now(), val])
-          "
-          @focus="$emit('focus-row', item.id)"
-          title="持续时间(分钟)"
-          placeholder="min"
-          class="input-center input-min"
-          :class="{ 'force-hover': hoveredRowId === item.id }"
-        />
+    </n-dropdown>
+    <n-input />
 
-        <n-date-picker
-          v-if="item.class === 'T'"
-          v-model:value="item.dueDate"
-          type="date"
-          clearable
-          style="max-width: 70px"
-          format="MM/dd"
-          @focus="$emit('focus-row', item.id)"
-          title="死线日期"
-          :class="getCountdownClass(item.dueDate)"
-        />
-        <n-date-picker
-          v-else
-          :value="item.dueRange ? item.dueRange[0] : 0"
-          @update:value="
-            (val) =>
-              item.dueRange
-                ? (item.dueRange[0] = val)
-                : (item.dueRange = [Date.now(), ''])
-          "
-          type="datetime"
-          style="max-width: 70px"
-          clearable
-          format="HH:mm"
-          @focus="$emit('focus-row', item.id)"
-          title="约定时间"
-          :class="getCountdownClass(item.dueRange && item.dueRange[0])"
-        />
-      </div>
+    <n-button text type="default" title="增加一列">
+      <template #icon>
+        <n-icon><Add16Regular /></n-icon>
+      </template>
+    </n-button>
+  </div>
+  <div v-for="item in sortedDisplaySheet" :key="item.id">
+    <div
+      v-if="item.status !== 'done'"
+      class="activity-row"
+      :class="{ 'highlight-line': item.id === activityId }"
+    >
+      <n-input
+        v-model:value="item.title"
+        type="text"
+        :placeholder="item.isUntaetigkeit ? '无所事事' : '任务描述'"
+        style="flex: 2"
+        @focus="$emit('focus-row', item.id)"
+        :class="{ 'force-hover': hoveredRowId === item.id }"
+      >
+        <template #prefix>
+          <div
+            class="icon-drag-area"
+            @mousedown="startDrag($event, item)"
+            @mouseenter="handleIconMouseEnter(item.id)"
+            @mouseleave="handleIconMouseLeave"
+            :title="
+              item.status !== 'cancelled' ? '拖拽调整顺序' : '不支持顺序修改'
+            "
+          >
+            <n-icon v-if="item.isUntaetigkeit" :color="'var(--color-blue)'"
+              ><Cloud24Regular
+            /></n-icon>
+            <n-icon
+              v-if="item.interruption === 'I'"
+              :color="
+                item.status === 'ongoing'
+                  ? 'var(--color-red)'
+                  : item.status === 'delayed'
+                  ? 'var(--color-blue)'
+                  : item.status === 'suspended'
+                  ? 'var(--color-orange)'
+                  : item.status === 'cancelled'
+                  ? 'var(--color-text-primary)'
+                  : 'var(--color-text-secondary)'
+              "
+              ><Chat24Regular
+            /></n-icon>
+            <n-icon
+              v-else-if="item.interruption === 'E'"
+              :color="
+                item.status === 'ongoing'
+                  ? 'var(--color-red)'
+                  : item.status === 'delayed'
+                  ? 'var(--color-blue)'
+                  : item.status === 'suspended'
+                  ? 'var(--color-orange)'
+                  : item.status === 'cancelled'
+                  ? 'var(--color-text-primary)'
+                  : 'var(--color-text-secondary)'
+              "
+              ><VideoPersonCall24Regular
+            /></n-icon>
+            <n-icon
+              v-else-if="item.class === 'T'"
+              :color="
+                item.status === 'ongoing'
+                  ? 'var(--color-red)'
+                  : item.status === 'delayed'
+                  ? 'var(--color-blue)'
+                  : item.status === 'suspended'
+                  ? 'var(--color-orange)'
+                  : item.status === 'cancelled'
+                  ? 'var(--color-text-primary)'
+                  : 'var(--color-text-secondary)'
+              "
+              ><ApprovalsApp24Regular
+            /></n-icon>
+            <n-icon
+              v-else-if="item.class === 'S' && !item.isUntaetigkeit"
+              :color="
+                item.status === 'ongoing'
+                  ? 'var(--color-red)'
+                  : item.status === 'delayed'
+                  ? 'var(--color-blue)'
+                  : item.status === 'suspended'
+                  ? 'var(--color-orange)'
+                  : item.status === 'cancelled'
+                  ? 'var(--color-text-primary)'
+                  : 'var(--color-text-secondary)'
+              "
+              ><Accessibility24Regular
+            /></n-icon>
+          </div>
+        </template>
+      </n-input>
+      <n-input
+        v-if="item.class === 'S'"
+        v-model:value="item.location"
+        style="max-width: 90px"
+        @focus="$emit('focus-row', item.id)"
+        placeholder="地点"
+        :class="{ 'force-hover': hoveredRowId === item.id }"
+      />
+      <n-input
+        v-if="item.class === 'T'"
+        :value="getInputValue(item)"
+        :placeholder="item.pomoType"
+        style="max-width: 32px"
+        class="pomo-input"
+        :title="`输入估计${item.pomoType || '🍅'}数量`"
+        :class="{
+          'pomo-red': item.pomoType === '🍅',
+          'pomo-purple': item.pomoType === '🍇',
+          'pomo-green': item.pomoType === '🍒',
+          'input-center': true, // 新增
+          'input-clear-disabled': item.pomoType === '🍒',
+          'force-hover': hoveredRowId === item.id,
+        }"
+        :disabled="item.pomoType === '🍒'"
+        @update:value="(val) => onInputUpdate(item, val)"
+        @focus="$emit('focus-row', item.id)"
+      />
+      <n-input
+        v-else
+        style="max-width: 32px; font-size: 14px; margin: 0 auto"
+        :value="item.dueRange ? item.dueRange[1] : ''"
+        @update:value="
+          (val) =>
+            item.dueRange
+              ? (item.dueRange[1] = val)
+              : (item.dueRange = [Date.now(), val])
+        "
+        @focus="$emit('focus-row', item.id)"
+        title="持续时间(分钟)"
+        placeholder="min"
+        class="input-center input-min"
+        :class="{ 'force-hover': hoveredRowId === item.id }"
+      />
+
+      <n-date-picker
+        v-if="item.class === 'T'"
+        v-model:value="item.dueDate"
+        type="date"
+        clearable
+        style="max-width: 70px"
+        format="MM/dd"
+        @focus="$emit('focus-row', item.id)"
+        title="死线日期"
+        :class="getCountdownClass(item.dueDate)"
+      />
+      <n-date-picker
+        v-else
+        :value="item.dueRange ? item.dueRange[0] : 0"
+        @update:value="
+          (val) =>
+            item.dueRange
+              ? (item.dueRange[0] = val)
+              : (item.dueRange = [Date.now(), ''])
+        "
+        type="datetime"
+        style="max-width: 70px"
+        clearable
+        format="HH:mm"
+        @focus="$emit('focus-row', item.id)"
+        title="约定时间"
+        :class="getCountdownClass(item.dueRange && item.dueRange[0])"
+      />
     </div>
-  </n-grid>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -430,6 +428,10 @@ filter-content-1 {
   font-size: 12px;
 }
 
+:deep(.n-input .n-input__suffix) {
+  margin: 0px;
+}
+
 .input-min :deep(.n-input__placeholder) {
   font-size: 12px;
 }
@@ -464,6 +466,7 @@ filter-content-1 {
 .pomo-green {
   background: var(--color-green-light-transparent) !important;
 }
+
 /* 文本居中 */
 .input-center :deep(.n-input__input) {
   text-align: center;
