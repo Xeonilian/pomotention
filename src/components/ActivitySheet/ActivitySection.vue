@@ -162,7 +162,7 @@
                 tempTagIds = [...(item.tagIds || [])];
               "
               class="icon-tag"
-              :title="getTagNamesByIds(item.tagIds || [])"
+              title="右键显示"
               ><Tag16Filled
             /></n-icon>
           </template>
@@ -218,7 +218,6 @@
           class="input-center input-min"
           :class="{ 'force-hover': hoveredRowId === item.id }"
         />
-
         <n-date-picker
           v-if="item.class === 'T'"
           v-model:value="item.dueDate"
@@ -248,12 +247,21 @@
           :class="getCountdownClass(item.dueRange && item.dueRange[0])"
         />
       </div>
+      <div
+        v-if="item.tagIds && item.tagIds.length > 0"
+        class="tag-render-container"
+      >
+        <TagRenderer
+          :tag-ids="item.tagIds"
+          @remove-tag="handleRemoveTag(item, $event)"
+        />
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 import { NInput, NDatePicker, NIcon, NDropdown } from "naive-ui";
 import {
   VideoPersonCall24Regular,
@@ -271,6 +279,7 @@ import type { Activity } from "@/core/types/Activity";
 import { useSettingStore } from "@/stores/useSettingStore";
 import TagManager from "./TagManager.vue";
 import { useTagStore } from "@/stores/useTagStore";
+import TagRenderer from "./TagRenderer.vue";
 
 // 接收发射数据
 const props = defineProps<{
@@ -296,7 +305,7 @@ defineEmits<{
 const settingStore = useSettingStore();
 const showTagManager = ref(false);
 const editingTagId = ref(0);
-const { getTagNamesByIds, allTags, setTagCount } = useTagStore();
+const { allTags, setTagCount } = useTagStore();
 
 const tempTagIds = ref<number[]>([]); // 临时编辑tagIds
 
@@ -468,6 +477,21 @@ function onTagManagerClosed() {
   // 清空临时数据
   tempTagIds.value = [];
 }
+// 处理删除标签
+function handleRemoveTag(item: Activity, tagId: number) {
+  if (item.tagIds) {
+    const index = item.tagIds.indexOf(tagId);
+    if (index > -1) {
+      item.tagIds.splice(index, 1);
+
+      // 更新标签计数
+      const tag = allTags.value.find((t) => t.id === tagId);
+      if (tag) {
+        setTagCount(tagId, Math.max(0, tag.count - 1));
+      }
+    }
+  }
+}
 </script>
 
 <style scoped>
@@ -610,5 +634,9 @@ function onTagManagerClosed() {
 }
 .force-hover :deep(.n-input__input) {
   background-color: var(--n-color-hover) !important;
+}
+
+.tag-render-container {
+  display: flex;
 }
 </style>

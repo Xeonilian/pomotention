@@ -86,12 +86,16 @@
       </div>
     </div>
     <!-- 颜色选择弹窗 -->
-    <n-modal v-model:show="colorPicker.visible">
-      <n-card style="width: 220px">
+    <n-modal
+      v-model:show="colorPicker.visible"
+      @after-leave="onColorPickerClose"
+      @mask-click="onColorPickerClose"
+      :close-on-esc="true"
+    >
+      <n-card style="width: 220px" @click.stop>
         <n-color-picker
           v-model:value="colorPicker.color"
           :show-alpha="false"
-          @update:value="onColorChange"
           style="margin: 20px 0"
         />
       </n-card>
@@ -138,11 +142,13 @@ const colorPicker = ref<{
   tagId: number | null;
   target: "bg" | "fg" | null;
   color: string;
+  originalColor: string; // 保存原始颜色，用于取消时恢复
 }>({
   visible: false,
   tagId: null,
   target: null,
   color: "",
+  originalColor: "",
 });
 
 const props = defineProps<{
@@ -236,16 +242,24 @@ function onEditFinish(tag: Tag) {
   editingTagName.value = "";
 }
 
-function onColorChange(val: string) {
+// 颜色选择器关闭时保存（点击非面板区域或按ESC）
+function onColorPickerClose() {
   if (!colorPicker.value.tagId) return;
-  colorPicker.value.color = val;
+
+  const val = colorPicker.value.color;
+
   if (colorPicker.value.target === "bg") {
     updateTag(colorPicker.value.tagId, { backgroundColor: val });
   }
   if (colorPicker.value.target === "fg") {
     updateTag(colorPicker.value.tagId, { color: val });
   }
-  colorPicker.value.visible = false; // 即选即关
+
+  // 重置状态
+  colorPicker.value.tagId = null;
+  colorPicker.value.target = null;
+  colorPicker.value.color = "";
+  colorPicker.value.originalColor = "";
 }
 
 function onPickBgColor(tag: Tag) {
@@ -253,6 +267,7 @@ function onPickBgColor(tag: Tag) {
   colorPicker.value.tagId = tag.id;
   colorPicker.value.target = "bg";
   colorPicker.value.color = tag.backgroundColor;
+  colorPicker.value.originalColor = tag.backgroundColor;
 }
 
 function onPickColor(tag: Tag) {
@@ -260,9 +275,8 @@ function onPickColor(tag: Tag) {
   colorPicker.value.tagId = tag.id;
   colorPicker.value.target = "fg";
   colorPicker.value.color = tag.color;
+  colorPicker.value.originalColor = tag.color;
 }
-
-// 移除了 watch，count 的更新交给父组件处理
 
 // --- input 宽自适应相关 ---
 const sizerRef = ref<HTMLElement | null>(null);

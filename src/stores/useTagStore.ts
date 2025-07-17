@@ -4,15 +4,13 @@ import { loadTags, saveTags, generateTagId } from "@/services/storageService";
 import type { Tag } from "@/core/types/Tag";
 
 export function useTagStore() {
-  // 全部tag（响应式，初始化加载本地）
   const tags = ref<Tag[]>(loadTags());
 
-  // 新增tag，name唯一（忽略大小写）
   function addTag(name: string, color: string, backgroundColor: string) {
     const exist = tags.value.find(
       (tag) => tag.name.trim().toLowerCase() === name.trim().toLowerCase()
     );
-    if (exist) return exist; // 已有不重复添加
+    if (exist) return exist;
     const tag: Tag = {
       id: generateTagId(),
       name: name.trim(),
@@ -25,16 +23,18 @@ export function useTagStore() {
     return tag;
   }
 
-  // 编辑tag（支持改名/颜色）
+  // **修改 updateTag 方法**
   function updateTag(id: number, patch: Partial<Omit<Tag, "id" | "count">>) {
-    const tag = tags.value.find((t) => t.id === id);
-    if (tag) {
-      Object.assign(tag, patch);
+    const index = tags.value.findIndex((t) => t.id === id);
+    if (index !== -1) {
+      // 创建新的 Tag 对象，保留旧属性并应用补丁
+      const updatedTag = { ...tags.value[index], ...patch };
+      // 使用 splice 替换数组中的旧对象，触发响应式更新
+      tags.value.splice(index, 1, updatedTag);
       saveTags(tags.value);
     }
   }
 
-  // 删除tag
   function removeTag(id: number) {
     const idx = tags.value.findIndex((t) => t.id === id);
     if (idx >= 0) {
@@ -43,23 +43,24 @@ export function useTagStore() {
     }
   }
 
-  // 查询tag
   function findByName(keyword: string) {
     return tags.value.filter((t) =>
       t.name.toLowerCase().includes(keyword.trim().toLowerCase())
     );
   }
 
-  // 查询单个
   function getTag(id: number) {
     return tags.value.find((t) => t.id === id) || null;
   }
 
-  // 设置计数（主要在业务中维护引用数，不在本store内部）
+  // **修改 setTagCount 方法**
   function setTagCount(id: number, count: number) {
-    const tag = getTag(id);
-    if (tag) {
-      tag.count = count;
+    const index = tags.value.findIndex((t) => t.id === id);
+    if (index !== -1) {
+      // 创建新的 Tag 对象，更新 count 属性
+      const updatedTag = { ...tags.value[index], count: count };
+      // 使用 splice 替换数组中的旧对象，触发响应式更新
+      tags.value.splice(index, 1, updatedTag);
       saveTags(tags.value);
     }
   }
@@ -78,7 +79,6 @@ export function useTagStore() {
       .join(", ");
   }
 
-  // 所有
   const allTags = computed(() => tags.value);
 
   return {
