@@ -4,6 +4,7 @@
 -->
 <template>
   <div class="section-container">
+    <!-- 筛选区 -->
     <div class="section-header">
       <n-input
         placeholder="请输入筛选条件..."
@@ -27,7 +28,6 @@
       <n-button
         v-if="isAddButton"
         type="default"
-        secondary
         title="增加一列"
         @click="$emit('add-section', props.sectionId)"
       >
@@ -39,6 +39,7 @@
         v-if="isRemoveButton"
         type="default"
         secondary
+        strong
         title="删除本列"
         @click="$emit('remove-section', props.sectionId)"
       >
@@ -47,6 +48,8 @@
         </template>
       </n-button>
     </div>
+
+    <!-- 内容区 -->
     <div v-for="item in sortedDisplaySheet" :key="item.id">
       <div
         v-if="item.status !== 'done'"
@@ -136,7 +139,42 @@
               /></n-icon>
             </div>
           </template>
+          <template #suffix>
+            <n-icon
+              v-if="!item.tagIds"
+              text
+              color="var(--color-blue)"
+              @click="
+                showTagManager = true;
+                editingTagId = item.id;
+              "
+              class="icon-tag"
+              title="添加标签"
+              ><Tag16Regular
+            /></n-icon>
+            <n-icon
+              v-else
+              text
+              color="var(--color-blue)"
+              @click="
+                showTagManager = true;
+                editingTagId = item.id;
+                tempTagIds = [...(item.tagIds || [])];
+              "
+              class="icon-tag"
+              :title="getTagNamesByIds(item.tagIds || [])"
+              ><Tag16Filled
+            /></n-icon>
+          </template>
         </n-input>
+        <n-modal
+          v-model:show="showTagManager"
+          @after-leave="onTagManagerClosed"
+        >
+          <n-card style="width: 420px">
+            <TagManager v-model="tempTagIds" />
+          </n-card>
+        </n-modal>
         <n-input
           v-if="item.class === 'S'"
           v-model:value="item.location"
@@ -226,9 +264,13 @@ import {
   DocumentTableSearch24Regular,
   Add16Regular,
   Subtract16Regular,
+  Tag16Filled,
+  Tag16Regular,
 } from "@vicons/fluent";
 import type { Activity } from "@/core/types/Activity";
 import { useSettingStore } from "@/stores/useSettingStore";
+import TagManager from "./TagManager.vue";
+import { useTagStore } from "@/stores/useTagStore";
 
 // 接收发射数据
 const props = defineProps<{
@@ -252,6 +294,11 @@ defineEmits<{
 }>();
 
 const settingStore = useSettingStore();
+const showTagManager = ref(false);
+const editingTagId = ref(0);
+const { getTagNamesByIds, allTags, setTagCount } = useTagStore();
+
+const tempTagIds = ref<number[]>([]); // 临时编辑tagIds
 
 // 拖拽相关状态
 const isDragging = ref(false);
@@ -387,6 +434,40 @@ function handleIconMouseEnter(id: number) {
 function handleIconMouseLeave() {
   hoveredRowId.value = null;
 }
+
+// 保存Tags #HACK
+function onTagManagerClosed() {
+  console.log(tempTagIds.value);
+  // 只在弹窗关闭时才同步
+  const activity = props.displaySheet.find(
+    (act) => act.id === editingTagId.value
+  );
+
+  if (activity) {
+    console.log(activity.id);
+    const existingTagIds = activity.tagIds || [];
+    const mergedTagIds = [...new Set([...existingTagIds, ...tempTagIds.value])];
+
+    // 计算实际新增的 tagIds
+    const newlyAddedTagIds = mergedTagIds.filter(
+      (id) => !existingTagIds.includes(id)
+    );
+
+    // 更新 activity
+    activity.tagIds = mergedTagIds;
+
+    // 只为新增的 tags 更新 count
+    newlyAddedTagIds.forEach((tagId) => {
+      const tag = allTags.value.find((t) => t.id === tagId);
+      if (tag) {
+        setTagCount(tagId, tag.count + 1);
+      }
+    });
+  }
+
+  // 清空临时数据
+  tempTagIds.value = [];
+}
 </script>
 
 <style scoped>
@@ -433,6 +514,21 @@ function handleIconMouseLeave() {
 
 .icon-drag-area:active {
   cursor: grabbing;
+  background-color: var(--color-red-light);
+}
+
+.icon-tag {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  padding: 2px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.icon-tag:hover {
+  cursor: pointer;
   background-color: var(--color-red-light);
 }
 

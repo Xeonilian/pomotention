@@ -1,4 +1,5 @@
 // src/stores/useUIStore.ts
+// 弃用，已经整合到setting里
 import { defineStore } from "pinia";
 import { ref } from "vue";
 

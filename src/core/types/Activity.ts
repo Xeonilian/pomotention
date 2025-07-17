@@ -16,6 +16,7 @@ export interface Activity {
   pomoType?: "🍅" | "🍇" | "🍒";
   isUntaetigkeit?: boolean; // S的分支，if true = untätigkeit 无所事事
   taskId?: number; // 关联的任务ID
+  tagIds?: number[];
 }
 
 export interface ActivitySectionConfig {
