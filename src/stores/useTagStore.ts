@@ -99,9 +99,8 @@ export const useTagStore = defineStore("tagStore", () => {
 
   watch(
     tags,
-    (newVal) => {
-      const tagNames = newVal.map((tag) => tag.name).join(", ");
-      console.log(`[TagStore] 标签数据更新。当前标签: [${tagNames}]`, newVal);
+    () => {
+      console.log(`[TagStore] 标签数据更新。`);
     },
     { deep: true }
   );

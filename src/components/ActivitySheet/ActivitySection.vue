@@ -68,8 +68,8 @@
             <div
               class="icon-drag-area"
               @mousedown="startDrag($event, item)"
-              @mouseenter="handleIconMouseEnter(item.id)"
-              @mouseleave="handleIconMouseLeave"
+              @mouseenter="handleIconMoveMouseEnter(item.id)"
+              @mouseleave="handleIconMoveMouseLeave"
               :title="
                 item.status !== 'cancelled' ? '拖拽调整顺序' : '不支持顺序修改'
               "
@@ -156,13 +156,9 @@
               v-else
               text
               color="var(--color-blue)"
-              @click="
-                showTagManager = true;
-                editingTagId = item.id;
-                tempTagIds = [...(item.tagIds || [])];
-              "
+              @click="handleTagIconClick($event, item)"
               class="icon-tag"
-              title="右键显示"
+              title="Alt+点击=切换显示 | 点击=管理标签"
               ><Tag16Filled
             /></n-icon>
           </template>
@@ -250,7 +246,7 @@
         />
       </div>
       <div
-        v-if="item.tagIds && item.tagIds.length > 0"
+        v-if="item.tagIds && item.tagIds.length > 0 && showTags"
         class="tag-render-container"
       >
         <TagRenderer
@@ -306,6 +302,7 @@ defineEmits<{
 
 const settingStore = useSettingStore();
 const showTagManager = ref(false);
+const showTags = ref(true);
 const editingTagId = ref(0);
 const { allTags, setTagCount } = useTagStore();
 
@@ -343,6 +340,14 @@ const sortedDisplaySheet = computed(() => {
 
   return activities;
 });
+
+// 在拖拽里用到
+function handleIconMoveMouseEnter(id: number) {
+  hoveredRowId.value = id;
+}
+function handleIconMoveMouseLeave() {
+  hoveredRowId.value = null;
+}
 
 // 开始拖拽
 function startDrag(event: MouseEvent, item: Activity) {
@@ -438,16 +443,24 @@ function onInputUpdate(item: Activity, value: string) {
   item.estPomoI = value;
 }
 
-// 在 template 里用到
-function handleIconMouseEnter(id: number) {
-  hoveredRowId.value = id;
-}
-function handleIconMouseLeave() {
-  hoveredRowId.value = null;
-}
+// Tag相关
+function handleTagIconClick(event: MouseEvent, item: Activity) {
+  if (event.altKey) {
+    // --- Alt+Click 逻辑 ---
+    // 阻止任何可能发生的默认行为（比如文本选择）
+    event.preventDefault();
 
-// 保存Tags #HACK
-
+    // 切换 showTags 的值 (true -> false, false -> true)
+    showTags.value = !showTags.value;
+  } else {
+    // --- 普通点击逻辑 (你之前的代码) ---
+    // 如果没有按 Alt 键，就执行常规的打开标签管理器的操作
+    showTagManager.value = true;
+    editingTagId.value = item.id;
+    tempTagIds.value = [...(item.tagIds || [])];
+  }
+}
+// 保存Tags
 function onTagManagerClosed() {
   // 只在弹窗关闭时才同步
   const activity = props.displaySheet.find(

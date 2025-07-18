@@ -6,7 +6,7 @@
         v-model:value="inputText"
         placeholder="搜索或新建标签"
         @input="onInput"
-        @keydown.enter="onAddOrSelect"
+        @keydown.enter="onAddTag"
         size="medium"
         clearable
         style="width: 100%"
@@ -21,7 +21,8 @@
         type="info"
         secondary
         :disabled="!inputText.trim()"
-        @click="onAddOrSelect"
+        @click="onAddTag"
+        title="增加标签"
       >
         <n-icon size="18px"> <Add20Filled /></n-icon>
       </n-button>
@@ -175,7 +176,7 @@ const filteredTags = computed(() => {
   }
   return [...tagStore.allTags]
     .sort((a, b) => (b.count || 0) - (a.count || 0))
-    .slice(0, 10);
+    .slice(0, 20);
 });
 
 // 计算需要多少个空位来补满10个，以维持布局稳定
@@ -207,7 +208,7 @@ function onInput(val: string) {
 }
 
 // 处理新建或选择标签的逻辑
-function onAddOrSelect() {
+function onAddTag() {
   const input = inputText.value.trim().replace(/^#+/, "");
   if (!input) return;
 
@@ -216,18 +217,16 @@ function onAddOrSelect() {
     .find((t) => t.name.toLowerCase() === input.toLowerCase());
 
   if (exist) {
-    // 如果标签已存在，则直接选中它
-    if (!isTagSelected(exist.id)) {
-      onClickTag(exist);
-    }
+    return;
   } else {
     // 如果标签不存在，则创建新标签并选中它
     const newTag = tagStore.addTag(input, "#333", "#eee");
     if (newTag && !isTagSelected(newTag.id)) {
       onClickTag(newTag);
+      tagStore.setTagCount(newTag.id, 1);
     }
+    inputText.value = "";
   }
-  inputText.value = "";
 }
 
 // --- 标签编辑相关函数 ---
@@ -342,13 +341,19 @@ function updateInputWidth() {
 /* 悬浮在“未选中”的标签上时的效果 */
 .custom-tag:not(.selected):hover {
   transform: translateY(-3px) scale(1.02);
-  box-shadow: 0 6px 4px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 6px 4px rgba(0, 0, 0, 0.2);
 }
 
 /* “已选中”标签的固定样式 */
 .custom-tag.selected {
   transform: translateY(-2px);
-  box-shadow: 0 4px 4px rgba(170, 56, 56, 0.1);
+  border: 1px solid var(--color-blue);
+}
+
+/* “已选中”标签的固定样式 */
+.custom-tag:not(.selected) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 4px rgba(0, 0, 0, 0.1);
 }
 
 /* 悬浮在“已选中”的标签上时的增强效果 */
