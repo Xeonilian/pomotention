@@ -1037,6 +1037,9 @@ const { startResize: startRightResize } = useResize(
   align-items: center;
   margin: 8px 8px 4px 0px;
   flex-shrink: 0;
+  white-space: nowrap; /* 防止内部的 span 换行 */
+  overflow: hidden; /* 如果内容实在太多，隐藏超出部分 */
+  text-overflow: ellipsis; /* 用省略号表示被隐藏的文本 */
 }
 
 .today-info {
