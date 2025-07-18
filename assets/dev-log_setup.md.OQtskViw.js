@@ -6,7 +6,7 @@ import{_ as s,c as e,o as n,ag as t}from"./chunks/framework.Cs5y-aXb.js";const c
 <span class="line"><span>    &quot;docs:dev&quot;: &quot;vitepress dev&quot;,</span></span>
 <span class="line"><span>    &quot;docs:build&quot;: &quot;vitepress build&quot;,</span></span>
 <span class="line"><span>    &quot;docs:preview&quot;: &quot;vitepress preview&quot;,</span></span>
-<span class="line"><span>    &quot;deploy&quot;: &quot;vitepress build &amp;&amp; npx gh-pages -d .vitepress/dist&quot;</span></span>
+<span class="line"><span>    &quot;deploy&quot;: &quot;vitepress build &amp;&amp; gh-pages -d .vitepress/dist&quot;</span></span>
 <span class="line"><span>  },</span></span>
 <span class="line"><span>  &quot;devDependencies&quot;: {</span></span>
 <span class="line"><span>    &quot;gh-pages&quot;: &quot;^6.3.0&quot;,</span></span>
