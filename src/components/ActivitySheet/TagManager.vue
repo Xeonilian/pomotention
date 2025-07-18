@@ -1,5 +1,6 @@
 <template>
   <div class="tag-manager">
+    <!-- 顶部搜索和新建区域 -->
     <div class="tag-search">
       <n-input
         v-model:value="inputText"
@@ -17,7 +18,7 @@
         </template>
       </n-input>
       <n-button
-        type="default"
+        type="info"
         secondary
         :disabled="!inputText.trim()"
         @click="onAddOrSelect"
@@ -25,6 +26,8 @@
         <n-icon size="18px"> <Add20Filled /></n-icon>
       </n-button>
     </div>
+
+    <!-- 标签列表显示区域 -->
     <div class="tag-suggestions">
       <template v-for="t in filteredTags" :key="t.id">
         <div
@@ -34,11 +37,12 @@
             color: t.color,
             backgroundColor: t.backgroundColor,
           }"
+          @click="onClickTag(t)"
         >
+          <!-- 标签名显示，双击可进入编辑状态 -->
           <span
             v-if="editingId !== t.id"
-            @dblclick="startEdit(t)"
-            @click="onClickTag(t)"
+            @dblclick.stop="startEdit(t)"
             style="
               max-width: 110px;
               overflow: hidden;
@@ -48,6 +52,7 @@
           >
             {{ t.name }}
           </span>
+          <!-- 标签名编辑输入框 -->
           <n-input
             v-else
             v-model:value="editValue"
@@ -63,64 +68,74 @@
             @input="onEditInput"
             @keydown.enter.prevent="onEditFinish(t)"
           />
-          <n-button text @click="onPickColor(t)" :color="t.color">
-            <n-icon><Heart16Filled /></n-icon>
-          </n-button>
-          <n-button text @click="onPickBgColor(t)">
-            <n-icon><HeartCircle16Regular /></n-icon>
-          </n-button>
-          <n-button text @click="removeTag(t.id)">
+
+          <!-- 文本颜色选择器 -->
+          <n-popover
+            trigger="click"
+            placement="bottom"
+            :style="{ padding: '10px', width: '240px' }"
+          >
+            <template #trigger>
+              <n-button text :color="t.color">
+                <n-icon><Heart16Filled /></n-icon>
+              </n-button>
+            </template>
+            <n-color-picker
+              :value="t.color"
+              :show-alpha="false"
+              @update:value="(color) => onColorUpdate(t.id, 'fg', color)"
+            />
+          </n-popover>
+
+          <!-- 背景颜色选择器 -->
+          <n-popover
+            trigger="click"
+            placement="bottom"
+            :style="{ width: '200px' }"
+          >
+            <template #trigger>
+              <n-button text>
+                <n-icon><HeartCircle16Regular /></n-icon>
+              </n-button>
+            </template>
+            <n-color-picker
+              :value="t.backgroundColor"
+              :show-alpha="false"
+              @update:value="(color) => onColorUpdate(t.id, 'bg', color)"
+            />
+          </n-popover>
+
+          <!-- 删除按钮，点击弹出确认对话框 -->
+          <n-button text @click.stop="confirmRemoveTag(t)">
             <n-icon><TagDismiss16Regular /></n-icon>
           </n-button>
-          <span>{{ t.count }}</span>
+
+          <!-- 标签引用计数 -->
+          <span class="tag-count">[{{ t.count }}]</span>
         </div>
       </template>
-      <!-- 补满 10 行的透明占位符，保证固定高度不跑位 -->
+
+      <!-- 用于保证列表高度稳定的透明占位符 -->
       <div
         v-for="idx in emptyCount"
         :key="'empty-tag-' + idx"
         class="custom-tag empty-tag"
-        style="opacity: 0; pointer-events: none"
       >
         -
       </div>
     </div>
-    <!-- 颜色选择弹窗 -->
-    <n-modal
-      v-model:show="colorPicker.visible"
-      @after-leave="onColorPickerClose"
-      @mask-click="onColorPickerClose"
-      :close-on-esc="true"
-    >
-      <n-card style="width: 220px" @click.stop>
-        <n-color-picker
-          v-model:value="colorPicker.color"
-          :show-alpha="false"
-          style="margin: 20px 0"
-        />
-      </n-card>
-    </n-modal>
-    <!-- 用于测量 input 宽度 -->
-    <span
-      ref="sizerRef"
-      class="input-sizer"
-      style="
-        position: absolute;
-        visibility: hidden;
-        white-space: pre;
-        font-size: 13px;
-        font-family: inherit;
-        font-weight: 500;
-        padding: 0 7px;
-      "
-      >{{ editValue || editingTagName }}</span
-    >
+
+    <!-- 用于动态测量编辑输入框宽度的隐藏元素 -->
+    <span ref="sizerRef" class="input-sizer">
+      {{ editValue || editingTagName }}
+    </span>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, nextTick } from "vue";
 import { useTagStore } from "@/stores/useTagStore";
+import { useDialog } from "naive-ui";
 import {
   TagSearch20Filled,
   Add20Filled,
@@ -128,169 +143,160 @@ import {
   Heart16Filled,
   TagDismiss16Regular,
 } from "@vicons/fluent";
-import { NInput, NButton, NModal, NCard, NColorPicker, NIcon } from "naive-ui";
-import { Tag } from "@/core/types/Tag";
+import { NInput, NButton, NPopover, NColorPicker, NIcon } from "naive-ui";
+import type { Tag } from "@/core/types/Tag";
 
-const { allTags, addTag, updateTag, removeTag, findByName } = useTagStore();
+// 初始化 store 和 naive-ui 的 dialog 服务
+const tagStore = useTagStore();
+const dialog = useDialog();
 
+// 组件内部状态 ref
 const inputText = ref("");
 const editingId = ref<number | null>(null);
 const editValue = ref("");
-const editingTagName = ref(""); // 防止 editValue 清空后无法回显
-const colorPicker = ref<{
-  visible: boolean;
-  tagId: number | null;
-  target: "bg" | "fg" | null;
-  color: string;
-  originalColor: string; // 保存原始颜色，用于取消时恢复
-}>({
-  visible: false,
-  tagId: null,
-  target: null,
-  color: "",
-  originalColor: "",
-});
+const editingTagName = ref(""); // 存储原始标签名，用于计算宽度
+const editInputRef = ref<InstanceType<typeof NInput> | null>(null);
+const sizerRef = ref<HTMLElement | null>(null);
 
+// 定义 props 和 emits，用于与父组件进行 v-model 通信
 const props = defineProps<{
-  modelValue: number[];
+  modelValue: number[]; // 已选中的标签 ID 数组
 }>();
 
 const emit = defineEmits<{
   "update:modelValue": [value: number[]];
 }>();
 
-// 计算tag排序，搜索时全部，否则只显示count前10
+// 根据输入文本动态过滤标签列表
+// 如果无输入，则显示引用次数最多的前10个
 const filteredTags = computed(() => {
   if (inputText.value.trim()) {
-    return findByName(inputText.value);
+    return tagStore.findByName(inputText.value);
   }
-  return [...allTags.value]
+  return [...tagStore.allTags]
     .sort((a, b) => (b.count || 0) - (a.count || 0))
     .slice(0, 10);
 });
 
-// 空位数量补满10
+// 计算需要多少个空位来补满10个，以维持布局稳定
 const emptyCount = computed(() => Math.max(0, 10 - filteredTags.value.length));
 
-// 判断标签是否已选中
+// 检查某个标签 ID 是否在 props.modelValue 中，即是否已被选中
 function isTagSelected(tagId: number): boolean {
   return props.modelValue.includes(tagId);
 }
 
-function startEdit(tag: Tag) {
-  editingId.value = tag.id;
-  editValue.value = tag.name;
-  editingTagName.value = tag.name;
-  updateInputWidth();
-  nextTick(() => {
-    updateInputWidth();
-  });
-}
-
+// 单击标签时触发，用于切换选中状态
 function onClickTag(tag: Tag) {
   const currentTagIds = [...props.modelValue];
   const index = currentTagIds.indexOf(tag.id);
 
   if (index > -1) {
+    // 如果已选中，则取消选中
     currentTagIds.splice(index, 1);
   } else {
+    // 如果未选中，则添加选中
     currentTagIds.push(tag.id);
   }
-
   emit("update:modelValue", currentTagIds);
 }
 
-function onEditInput() {
-  updateInputWidth();
-}
-
+// 处理搜索框的输入事件
 function onInput(val: string) {
   inputText.value = val;
 }
 
+// 处理新建或选择标签的逻辑
 function onAddOrSelect() {
-  let input = inputText.value.trim().replace(/^#+/, "");
+  const input = inputText.value.trim().replace(/^#+/, "");
   if (!input) return;
-  const exist = filteredTags.value.find(
-    (t) => t.name.toLowerCase() === input.toLowerCase()
-  );
+
+  const exist = tagStore
+    .findByName(input)
+    .find((t) => t.name.toLowerCase() === input.toLowerCase());
+
   if (exist) {
-    // 如果存在，直接选中该标签
-    onClickTag(exist);
-    inputText.value = "";
-    return;
-  }
-  // 如果不存在，创建新标签并选中
-  const newTag = addTag(input, "#333", "#eee");
-  if (newTag) {
-    const currentTagIds = [...props.modelValue];
-    if (!currentTagIds.includes(newTag.id)) {
-      currentTagIds.push(newTag.id);
-      emit("update:modelValue", currentTagIds);
+    // 如果标签已存在，则直接选中它
+    if (!isTagSelected(exist.id)) {
+      onClickTag(exist);
+    }
+  } else {
+    // 如果标签不存在，则创建新标签并选中它
+    const newTag = tagStore.addTag(input, "#333", "#eee");
+    if (newTag && !isTagSelected(newTag.id)) {
+      onClickTag(newTag);
     }
   }
   inputText.value = "";
 }
 
+// --- 标签编辑相关函数 ---
+
+function startEdit(tag: Tag) {
+  editingId.value = tag.id;
+  editValue.value = tag.name;
+  editingTagName.value = tag.name;
+  nextTick(() => {
+    updateInputWidth();
+    editInputRef.value?.focus();
+  });
+}
+
 function onEditFinish(tag: Tag) {
-  let newVal = editValue.value.trim().replace(/^#+/, "");
+  const newVal = editValue.value.trim().replace(/^#+/, "");
   if (newVal && newVal !== tag.name) {
-    updateTag(tag.id, { name: newVal });
+    tagStore.updateTag(tag.id, { name: newVal });
   }
   editingId.value = null;
   editValue.value = "";
   editingTagName.value = "";
 }
 
-// 颜色选择器关闭时保存（点击非面板区域或按ESC）
-function onColorPickerClose() {
-  if (!colorPicker.value.tagId) return;
+function onEditInput() {
+  updateInputWidth();
+}
 
-  const val = colorPicker.value.color;
+// --- 颜色更新 ---
 
-  if (colorPicker.value.target === "bg") {
-    updateTag(colorPicker.value.tagId, { backgroundColor: val });
+function onColorUpdate(tagId: number, target: "fg" | "bg", color: string) {
+  if (target === "bg") {
+    tagStore.updateTag(tagId, { backgroundColor: color });
+  } else {
+    tagStore.updateTag(tagId, { color: color });
   }
-  if (colorPicker.value.target === "fg") {
-    updateTag(colorPicker.value.tagId, { color: val });
-  }
-
-  // 重置状态
-  colorPicker.value.tagId = null;
-  colorPicker.value.target = null;
-  colorPicker.value.color = "";
-  colorPicker.value.originalColor = "";
 }
 
-function onPickBgColor(tag: Tag) {
-  colorPicker.value.visible = true;
-  colorPicker.value.tagId = tag.id;
-  colorPicker.value.target = "bg";
-  colorPicker.value.color = tag.backgroundColor;
-  colorPicker.value.originalColor = tag.backgroundColor;
+// --- 删除确认 ---
+
+function confirmRemoveTag(tag: Tag) {
+  const content =
+    tag.count > 0
+      ? `此标签正被 ${tag.count} 个条目使用。确定要删除标签 "${tag.name}" 吗？删除后引用将丢失。`
+      : `确定要删除标签 "${tag.name}" 吗？`;
+
+  dialog.warning({
+    title: "确认删除",
+    content: content,
+    positiveText: "确认删除",
+    negativeText: "取消",
+    onPositiveClick: () => {
+      tagStore.removeTag(tag.id);
+    },
+  });
 }
 
-function onPickColor(tag: Tag) {
-  colorPicker.value.visible = true;
-  colorPicker.value.tagId = tag.id;
-  colorPicker.value.target = "fg";
-  colorPicker.value.color = tag.color;
-  colorPicker.value.originalColor = tag.color;
-}
+// --- 编辑输入框宽度自适应 ---
 
-// --- input 宽自适应相关 ---
-const sizerRef = ref<HTMLElement | null>(null);
 function editInputWidth(t?: Tag) {
   if (editingId.value === t?.id && sizerRef.value) {
     return Math.max(32, sizerRef.value.offsetWidth);
   }
-  return 40;
+  return 40; // 默认宽度
 }
 
 function updateInputWidth() {
-  nextTick(() => {
-    // 强制触发dom更新
-  });
+  // nextTick 确保 DOM 更新后才计算宽度
+  nextTick(() => {});
 }
 </script>
 
@@ -301,6 +307,7 @@ function updateInputWidth() {
   display: flex;
   flex-direction: column;
   position: relative;
+  min-height: 300px;
 }
 
 .tag-search {
@@ -313,7 +320,8 @@ function updateInputWidth() {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 14px;
+  padding-top: 14px;
+  padding-left: 2px;
   width: 380px;
   overflow-y: auto;
 }
@@ -322,22 +330,39 @@ function updateInputWidth() {
   display: flex;
   align-items: center;
   border-radius: 16px;
-  padding: 0 10px;
-  height: 32px;
+  padding: 0 6px;
+  height: 28px;
   font-size: 15px;
-  font-weight: 500;
-  box-shadow: 0 1px 3px #0001;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   cursor: pointer;
-  min-width: 80px;
+  border: 2px solid transparent;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
-.custom-tag.hover {
-  box-shadow: 0 1px 3px blue !important;
+/* 悬浮在“未选中”的标签上时的效果 */
+.custom-tag:not(.selected):hover {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 6px 4px rgba(0, 0, 0, 0.3);
 }
 
-.empty-tag {
+/* “已选中”标签的固定样式 */
+.custom-tag.selected {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 4px rgba(170, 56, 56, 0.1);
+}
+
+/* 悬浮在“已选中”的标签上时的增强效果 */
+.custom-tag.selected:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+}
+
+.custom-tag.empty-tag {
   background: transparent !important;
   box-shadow: none !important;
+  border-color: transparent !important;
+  pointer-events: none;
+  opacity: 0;
 }
 
 .custom-tag span {
@@ -346,6 +371,21 @@ function updateInputWidth() {
 }
 
 .input-sizer {
+  position: absolute;
+  visibility: hidden;
+  white-space: pre;
+  font-size: 13px;
+  font-family: inherit;
+  font-weight: 500;
+  padding: 0 7px;
   pointer-events: none;
+}
+
+.tag-count {
+  font-size: 12px;
+  align-items: center;
+  font-family: "Courier New", Courier, monospace;
+  font-weight: bold;
+  padding-left: 2px;
 }
 </style>

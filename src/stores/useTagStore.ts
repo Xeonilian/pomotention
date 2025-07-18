@@ -1,11 +1,22 @@
 // src/stores/useTagStore.ts
-import { ref, computed } from "vue";
+
+import { ref, computed, watch } from "vue";
+import { defineStore } from "pinia"; // ✅ 1. 导入 defineStore
 import { loadTags, saveTags, generateTagId } from "@/services/storageService";
 import type { Tag } from "@/core/types/Tag";
 
-export function useTagStore() {
+// ✅ 2. 使用 defineStore 创建 store
+// 第一个参数是 store 的唯一 ID
+// 第二个参数是一个 setup 函数，和你之前的代码几乎一样
+export const useTagStore = defineStore("tagStore", () => {
+  // --- 你所有的 state, getters, actions 代码都放在这里 ---
+
   const tags = ref<Tag[]>(loadTags());
 
+  // Getters (用 computed 实现)
+  const allTags = computed(() => tags.value);
+
+  // Actions (普通函数)
   function addTag(name: string, color: string, backgroundColor: string) {
     const exist = tags.value.find(
       (tag) => tag.name.trim().toLowerCase() === name.trim().toLowerCase()
@@ -23,14 +34,28 @@ export function useTagStore() {
     return tag;
   }
 
-  // **修改 updateTag 方法**
-  function updateTag(id: number, patch: Partial<Omit<Tag, "id" | "count">>) {
+  function updateTag(id: number, patch: Partial<Tag>) {
     const index = tags.value.findIndex((t) => t.id === id);
     if (index !== -1) {
-      // 创建新的 Tag 对象，保留旧属性并应用补丁
-      const updatedTag = { ...tags.value[index], ...patch };
-      // 使用 splice 替换数组中的旧对象，触发响应式更新
-      tags.value.splice(index, 1, updatedTag);
+      const updated = { ...tags.value[index], ...patch };
+      tags.value = [
+        ...tags.value.slice(0, index),
+        updated,
+        ...tags.value.slice(index + 1),
+      ];
+      saveTags(tags.value);
+    }
+  }
+
+  function setTagCount(id: number, count: number) {
+    const index = tags.value.findIndex((t) => t.id === id);
+    if (index !== -1) {
+      const updated = { ...tags.value[index], count };
+      tags.value = [
+        ...tags.value.slice(0, index),
+        updated,
+        ...tags.value.slice(index + 1),
+      ];
       saveTags(tags.value);
     }
   }
@@ -53,18 +78,6 @@ export function useTagStore() {
     return tags.value.find((t) => t.id === id) || null;
   }
 
-  // **修改 setTagCount 方法**
-  function setTagCount(id: number, count: number) {
-    const index = tags.value.findIndex((t) => t.id === id);
-    if (index !== -1) {
-      // 创建新的 Tag 对象，更新 count 属性
-      const updatedTag = { ...tags.value[index], count: count };
-      // 使用 splice 替换数组中的旧对象，触发响应式更新
-      tags.value.splice(index, 1, updatedTag);
-      saveTags(tags.value);
-    }
-  }
-
   function getTagsByIds(tagIds: number[]): Tag[] {
     if (!tagIds || tagIds.length === 0) return [];
 
@@ -79,17 +92,35 @@ export function useTagStore() {
       .join(", ");
   }
 
-  const allTags = computed(() => tags.value);
+  function decrementTagCount(id: number) {
+    const tag = tags.value.find((t) => t.id === id);
+    if (tag) setTagCount(id, Math.max(0, tag.count - 1));
+  }
 
-  return {
+  watch(
     tags,
+    (newVal) => {
+      const tagNames = newVal.map((tag) => tag.name).join(", ");
+      console.log(`[TagStore] 标签数据更新。当前标签: [${tagNames}]`, newVal);
+    },
+    { deep: true }
+  );
+
+  // ✅ 3. 返回所有需要暴露给外部的 state, getters, 和 actions
+  return {
+    // state
+    tags,
+    // getters
     allTags,
+    // actions
     addTag,
     updateTag,
     removeTag,
     findByName,
     getTag,
     setTagCount,
+    getTagsByIds,
     getTagNamesByIds,
+    decrementTagCount,
   };
-}
+});

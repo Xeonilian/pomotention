@@ -1,16 +1,21 @@
 <template>
   <div class="tag-container">
+    <!-- 关键改动：直接循环响应式的 renderedTags -->
     <n-tag
-      v-for="tagId in props.tagIds"
-      :key="tagId"
+      v-for="tag in renderedTags"
+      :key="tag.id"
       round
       size="small"
       closable
-      @close="removeTag(tagId)"
+      @close="removeTag(tag.id)"
       class="tag-item"
-      :style="getTagStyle(tagId)"
+      :style="{
+        color: tag.color,
+        backgroundColor: tag.backgroundColor,
+        borderColor: tag.backgroundColor /* 或者一个更柔和的颜色 */,
+      }"
     >
-      {{ getTagName(tagId) }}
+      {{ tag.name }}
     </n-tag>
   </div>
 </template>
@@ -18,6 +23,9 @@
 <script setup lang="ts">
 import { NTag } from "naive-ui";
 import { useTagStore } from "@/stores/useTagStore";
+import { computed, watch } from "vue";
+import type { Tag } from "@/core/types/Tag";
+import { storeToRefs } from "pinia";
 
 const props = defineProps<{
   tagIds: number[];
@@ -27,29 +35,39 @@ const emit = defineEmits<{
   "remove-tag": [tagId: number];
 }>();
 
-const { getTag } = useTagStore();
+// 1. 从 Store 中解构出需要的函数
+const tagStore = useTagStore();
+const { tags } = storeToRefs(tagStore);
 
-// 获取标签名称
-function getTagName(tagId: number): string {
-  const tag = getTag(tagId);
-  return tag?.name || "未知标签";
-}
+// 2. 创建 computed 属性，它会成为响应性的数据源
+const renderedTags = computed<Tag[]>(() => {
+  const tagMap = new Map(tags.value.map((t) => [t.id, t]));
 
-// 获取标签颜色配置
-function getTagStyle(tagId: number) {
-  const tag = getTag(tagId);
-  if (!tag) return {};
-  return {
-    color: tag.color,
-    backgroundColor: tag.backgroundColor,
-    borderColor: tag.backgroundColor,
-  };
-}
+  const result = props.tagIds
+    .map((id) => tagMap.get(id))
+    .filter((tag) => tag !== undefined) as Tag[];
 
-// 删除标签
+  console.log(
+    `[TagRenderer] Fetched new tags:`,
+    JSON.parse(JSON.stringify(result))
+  );
+  return result;
+});
+
+// 3. emit 事件的函数保持不变
 function removeTag(tagId: number) {
   emit("remove-tag", tagId);
 }
+watch(
+  renderedTags,
+  (newTags) => {
+    console.log(
+      `[TagRenderer]4 WATCHER detected 'renderedTags' has changed. UI should update now. New tags:`,
+      newTags
+    );
+  },
+  { deep: true }
+);
 </script>
 
 <style scoped>
@@ -57,13 +75,8 @@ function removeTag(tagId: number) {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
-  padding: 8px;
-  background: var(--color-background);
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  max-width: 200px;
-  min-width: 120px;
+  padding: 2px;
+  width: 100%;
 }
 
 .tag-item {

@@ -170,6 +170,8 @@
         <n-modal
           v-model:show="showTagManager"
           @after-leave="onTagManagerClosed"
+          role="dialog"
+          aria-modal="true"
         >
           <n-card style="width: 420px">
             <TagManager v-model="tempTagIds" />
@@ -261,7 +263,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, ref } from "vue";
 import { NInput, NDatePicker, NIcon, NDropdown } from "naive-ui";
 import {
   VideoPersonCall24Regular,
@@ -445,15 +447,14 @@ function handleIconMouseLeave() {
 }
 
 // 保存Tags #HACK
+
 function onTagManagerClosed() {
-  console.log(tempTagIds.value);
   // 只在弹窗关闭时才同步
   const activity = props.displaySheet.find(
     (act) => act.id === editingTagId.value
   );
 
   if (activity) {
-    console.log(activity.id);
     const existingTagIds = activity.tagIds || [];
     const mergedTagIds = [...new Set([...existingTagIds, ...tempTagIds.value])];
 
@@ -467,7 +468,7 @@ function onTagManagerClosed() {
 
     // 只为新增的 tags 更新 count
     newlyAddedTagIds.forEach((tagId) => {
-      const tag = allTags.value.find((t) => t.id === tagId);
+      const tag = allTags.find((t) => t.id === tagId);
       if (tag) {
         setTagCount(tagId, tag.count + 1);
       }
@@ -477,19 +478,16 @@ function onTagManagerClosed() {
   // 清空临时数据
   tempTagIds.value = [];
 }
+
 // 处理删除标签
+// 修改标签删除逻辑
 function handleRemoveTag(item: Activity, tagId: number) {
   if (item.tagIds) {
-    const index = item.tagIds.indexOf(tagId);
-    if (index > -1) {
-      item.tagIds.splice(index, 1);
+    // ✅ 创建新数组确保引用更新
+    item.tagIds = item.tagIds.filter((id) => id !== tagId);
 
-      // 更新标签计数
-      const tag = allTags.value.find((t) => t.id === tagId);
-      if (tag) {
-        setTagCount(tagId, Math.max(0, tag.count - 1));
-      }
-    }
+    // ✅ 将count更新逻辑移至store内
+    useTagStore().decrementTagCount(tagId);
   }
 }
 </script>
@@ -638,5 +636,8 @@ function handleRemoveTag(item: Activity, tagId: number) {
 
 .tag-render-container {
   display: flex;
+}
+.n-modal-mask {
+  background-color: rgba(0, 0, 0, 0.1) !important;
 }
 </style>
