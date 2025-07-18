@@ -447,7 +447,7 @@ function onUpdateActiveId(id: number | null) {
   const schedule = scheduleList.value.find((s) => s.activityId === id);
   selectedTaskId.value =
     activity?.taskId || todo?.taskId || schedule?.taskId || null; //用id在todoList ScheduleList里面搜索TaskId，等于搜到的值
-  console.log("selectedTaskId.value", selectedTaskId.value);
+  // console.log("selectedTaskId.value", selectedTaskId.value);
   selectedRowId.value = null; // 这个id是today里的
 }
 
