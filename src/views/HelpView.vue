@@ -84,7 +84,7 @@ const remoteOk = ref(false);
 const remoteError = ref("");
 
 // URL 配置
-const docsUrl = "https://Xeonilian.github.io/pomotention/";
+const docsUrl = "https://xeonilian.github.io/pomotention/";
 const githubUrl = "https://github.com/xeonilian/pomotention";
 const releaseUrl = "https://github.com/Xeonilian/pomotention/releases/latest";
 
