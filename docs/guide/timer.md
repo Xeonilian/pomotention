@@ -1,7 +1,7 @@
 ### **单次计时模式 (Pomodoro Mode)**
 
 此模式适用于独立的、单次的工作或休息任务。
-![Pomodoro Mode](/public/pomodoro-mode.png)
+<img src="/pomodoro-mode.png" alt="Pomodoro Mode" width="200">
 
 - **开始工作**: 点击 `Wind up` 启动一个标准的工作时钟周期。
 - **取消任务**: 点击 `Squash` 可提前终止并取消当前的工作计时。
@@ -36,7 +36,7 @@
 ### **连续计时模式 (Pizza Mode)**
 
 此模式专为需要连续执行多个工作和休息周期的用户设计。
-![Pizza Mode](pizza-mode.png)
+<img src="/pizza-mode.png" alt="Pizza Mode" width="200">
 
 - **模式切换**: 点击 🍅🍕 按钮，可在单次计时与连续计时模式之间进行切换。
 - **自定义序列**: 在文本框中输入指令，以设定连续运行的任务序列。
