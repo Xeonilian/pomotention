@@ -68,6 +68,12 @@
       />
     </div>
     <div class="task-record-container">
+      <div
+        v-if="props.selectedTagIds && props.selectedTagIds.length > 0"
+        class="task-tag-render-container"
+      >
+        <TagRenderer :tag-ids="props.selectedTagIds" :isCloseable="false" />
+      </div>
       <TaskRecord
         :taskId="selectedTaskId"
         :initialContent="taskDescription"
@@ -91,10 +97,12 @@ import type {
 import { taskService } from "@/services/taskService";
 import { convertToSchedule } from "@/core/utils/convertActivity";
 import { Schedule } from "@/core/types/Schedule";
+import TagRenderer from "@/components/TagSystem/TagRenderer.vue";
 
 const props = defineProps<{
   selectedTaskId: number | null;
   selectedTask: Task | null;
+  selectedTagIds: number[] | null;
 }>();
 
 const emit = defineEmits<{
@@ -360,6 +368,13 @@ const getRewardColor = (value: number) => {
   margin: 5px;
   align-items: center;
   margin-left: auto;
+}
+
+.task-tag-render-container {
+  border-radius: 4px;
+  border: 1px solid var(--color-background-dark);
+  padding: 2px;
+  margin-bottom: 2px;
 }
 
 /* 添加内部滚动容器样式 */

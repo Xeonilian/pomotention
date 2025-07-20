@@ -149,6 +149,7 @@
         <TaskView
           :selectedTaskId="selectedTaskId"
           :selectedTask="selectedTask"
+          :selectedTagIds="selectedTagIds"
           @activity-updated="onActivityUpdated"
           @interruption-update="onInterruptionUpdated"
         />
@@ -178,6 +179,8 @@
         @update-active-id="onUpdateActiveId"
         @toggle-pomo-type="onTogglePomoType"
         @repeat-activity="onRepeatActivity"
+        @create-child-activity="onCreateChildActivity"
+        @increase-child-activity="onIncreaseChildActivity"
         @go-to-todo="goToTodo"
         @convert-activity-to-task="onConvertActivityToTask"
       />
@@ -262,6 +265,13 @@ const selectedTask = computed(() => {
     return (
       taskList.value.find((task) => task.id === selectedTaskId.value) || null
     );
+  }
+  return null;
+});
+const selectedTagIds = computed(() => {
+  if (activeId.value && activityList.value) {
+    const activity = activityList.value.find((a) => a.id === activeId.value);
+    if (activity) return activity.tagIds || null;
   }
   return null;
 });
@@ -398,6 +408,7 @@ function onDeleteActivity(id: number) {
     scheduleList.value,
     id
   );
+  activeId.value = null;
 }
 
 /** 选中活动，将其转为 todo 并作为 picked */
@@ -480,10 +491,41 @@ function onRepeatActivity(id: number) {
         | "done"
         | "suspended"
         | undefined, // 如果需要清空状态，可以在这里设置
+      tagIds: undefined,
     };
     handleAddActivity(activityList.value, scheduleList.value, newActivity);
   }
 }
+function onCreateChildActivity(id: number) {
+  // 找到Activity
+  const selectActivity = activityList.value.find((a) => a.id === id);
+
+  if (selectActivity && !selectActivity.parentId) {
+    const newActivity = {
+      ...selectActivity, // 使用展开运算符复制 activity 的所有属性
+      id: Date.now(), // 设置新的 id
+      status: "" as
+        | ""
+        | "delayed"
+        | "ongoing"
+        | "cancelled"
+        | "done"
+        | "suspended"
+        | undefined, // 如果需要清空状态，可以在这里设置
+      tagIds: undefined,
+      parentId: id,
+    };
+    handleAddActivity(activityList.value, scheduleList.value, newActivity);
+  }
+}
+
+function onIncreaseChildActivity(id: number) {
+  // 找到Activity
+  const selectActivity = activityList.value.find((a) => a.id === id);
+
+  if (selectActivity) selectActivity.parentId = null;
+}
+
 // ======================== 3. Today/任务相关操作 ========================
 /** Todo 更新状态（勾选） */
 function onUpdateTodoStatus(id: number, isChecked: boolean) {

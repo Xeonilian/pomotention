@@ -9,6 +9,7 @@
       :activeId="activeId"
       :selectedTaskId="selectedTaskId"
       :selectedClass="selectedActivity?.class"
+      :hasParent="selectedActivity?.parentId"
       @pick-activity-todo="pickActivity"
       @add-todo="addTodoRow"
       @add-schedule="addScheduleRow"
@@ -17,6 +18,8 @@
       @toggle-pomo-type="togglePomoType"
       @repeat-activity="repeatActivity"
       @convert-activity-to-task="handleConvertToTask"
+      @create-child-activity="createChildActivity"
+      @increase-child-activity="increaseChildActivity"
     />
   </div>
   <!-- 看板列容器 -->
@@ -42,6 +45,7 @@
         @focus-row="handleFocusRow"
         @filter="(filterKey) => handleSectionFilter(idx, filterKey)"
         @update:search="(val) => handleSectionSearch(section.id, val)"
+        @focus-search="handleFocusSearch"
       />
     </div>
   </div>
@@ -102,8 +106,10 @@ const emit = defineEmits<{
   "update-active-id": [id: number | null]; // 更新选中活动ID
   "toggle-pomo-type": [id: number]; // 切换番茄钟类型
   "repeat-activity": [id: number]; // 重复选中的活动
+  "create-child-activity": [id: number]; //构建选中活动的子活动
   "go-to-todo": [id: number]; // 去到todo所在天
   "convert-activity-to-task": [id: number, taskId: number]; // 转换为任务
+  "increase-child-activity": [id: number]; // 取消子项
 }>();
 
 // ========================
@@ -286,6 +292,7 @@ function addScheduleRow() {
     title: "",
     dueRange: [addDays(Date.now(), 1), ""], // HACK: 默认明天开始
     status: "",
+    parentId: null,
   });
 }
 
@@ -298,6 +305,7 @@ function addUntaetigkeitRow() {
     dueRange: [Date.now(), ""],
     status: "",
     isUntaetigkeit: true,
+    parentId: null,
   });
 }
 
@@ -311,6 +319,7 @@ function addTodoRow() {
     pomoType: "🍅",
     status: "",
     dueDate: Date.now(), // 默认今天
+    parentId: null,
   });
 }
 
@@ -326,6 +335,10 @@ function handleFocusRow(id: number) {
   emit("update-active-id", id);
 }
 
+function handleFocusSearch() {
+  emit("update-active-id", null);
+}
+
 // 切换番茄钟类型
 function togglePomoType() {
   if (props.activeId !== null) {
@@ -339,6 +352,21 @@ function repeatActivity() {
     emit("repeat-activity", props.activeId);
   }
 }
+
+// 构建选中活动的子活动
+function createChildActivity() {
+  if (props.activeId !== null) {
+    emit("create-child-activity", props.activeId);
+  }
+}
+
+// 恢复选中活动的子活动
+function increaseChildActivity() {
+  if (props.activeId !== null) {
+    emit("increase-child-activity", props.activeId);
+  }
+}
+
 // 根据截止日期计算倒计时样式类名
 function getCountdownClass(dueDate: number | undefined | null): string {
   if (!dueDate) return "";

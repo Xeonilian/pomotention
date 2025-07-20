@@ -6,7 +6,7 @@
       :key="tag.id"
       round
       size="small"
-      closable
+      :closable="props.isCloseable"
       @close="removeTag(tag.id)"
       class="tag-item"
       :style="{
@@ -29,6 +29,7 @@ import { storeToRefs } from "pinia";
 
 const props = defineProps<{
   tagIds: number[];
+  isCloseable: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -47,10 +48,10 @@ const renderedTags = computed<Tag[]>(() => {
     .map((id) => tagMap.get(id))
     .filter((tag) => tag !== undefined) as Tag[];
 
-  console.log(
-    `[TagRenderer] Fetched new tags:`,
-    JSON.parse(JSON.stringify(result))
-  );
+  // console.log(
+  //   `[TagRenderer] Fetched new tags:`,
+  //   JSON.parse(JSON.stringify(result))
+  // );
   return result;
 });
 
@@ -58,16 +59,16 @@ const renderedTags = computed<Tag[]>(() => {
 function removeTag(tagId: number) {
   emit("remove-tag", tagId);
 }
-watch(
-  renderedTags,
-  (newTags) => {
-    console.log(
-      `[TagRenderer]4 WATCHER detected 'renderedTags' has changed. UI should update now. New tags:`,
-      newTags
-    );
-  },
-  { deep: true }
-);
+// watch(
+//   renderedTags,
+//   (newTags) => {
+//     console.log(
+//       `[TagRenderer]4 WATCHER detected 'renderedTags' has changed. UI should update now. New tags:`,
+//       newTags
+//     );
+//   },
+//   { deep: true }
+// );
 </script>
 
 <style scoped>
@@ -81,6 +82,7 @@ watch(
 
 .tag-item {
   transition: transform 0.2s;
+  font-size: 12px;
 }
 
 .tag-item:hover {

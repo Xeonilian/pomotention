@@ -4,6 +4,7 @@ import type { Todo } from "@/core/types/Todo";
 import type { Schedule } from "@/core/types/Schedule";
 import { POMO_TYPES } from "@/core/constants";
 import { timestampToDatetime, getLocalDateString } from "@/core/utils";
+import { useTagStore } from "@/stores/useTagStore";
 
 /**
  * 添加新活动并处理相关联动
@@ -38,25 +39,56 @@ export function handleAddActivity(
 /**
  * 删除活动及关联的待办事项和日程
  */
+/**
+ * 删除活动及其所有子孙、所有tagIds先扣count，顺带删待办和日程
+ */
 export function handleDeleteActivity(
   activityList: Activity[],
   todoList: Todo[],
   scheduleList: Schedule[],
   id: number
 ) {
-  // 过滤掉关联的 Todo
-  const filteredTodos = todoList.filter((todo) => todo.activityId !== id);
+  const tagStore = useTagStore();
+
+  // 递归获取所有要删的activity的id（含id自己）
+  function collectAllDescendantIds(
+    curId: number,
+    list: Activity[],
+    acc: Set<number>
+  ) {
+    acc.add(curId);
+    list.forEach((activity) => {
+      if (activity.parentId === curId) {
+        collectAllDescendantIds(activity.id, list, acc);
+      }
+    });
+  }
+  // 获得所有要删的id集合
+  const toDeleteIds = new Set<number>();
+  collectAllDescendantIds(id, activityList, toDeleteIds);
+
+  // 对所有将要删掉的activity，处理tagIds count
+  activityList.forEach((activity) => {
+    if (toDeleteIds.has(activity.id) && Array.isArray(activity.tagIds)) {
+      activity.tagIds.forEach((tagId) => tagStore.decrementTagCount(tagId));
+    }
+  });
+
+  // 删除关联 todo
+  const filteredTodos = todoList.filter(
+    (todo) => !toDeleteIds.has(todo.activityId)
+  );
   todoList.splice(0, todoList.length, ...filteredTodos);
 
-  // 过滤掉关联的 Schedule
+  // 删除关联 schedule
   const filteredSchedules = scheduleList.filter(
-    (schedule) => schedule.activityId !== id
+    (schedule) => !toDeleteIds.has(schedule.activityId)
   );
   scheduleList.splice(0, scheduleList.length, ...filteredSchedules);
 
-  // 删除 Activity
+  // 删除活动本体
   const filteredActivities = activityList.filter(
-    (activity) => activity.id !== id
+    (activity) => !toDeleteIds.has(activity.id)
   );
   activityList.splice(0, activityList.length, ...filteredActivities);
 }

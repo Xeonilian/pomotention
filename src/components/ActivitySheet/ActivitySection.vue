@@ -10,6 +10,7 @@
         placeholder="请输入筛选条件..."
         :value="props.search"
         @update:value="(val) => $emit('update:search', val)"
+        @focus="$emit('focus-search')"
       >
         <template #prefix>
           <n-dropdown
@@ -62,7 +63,10 @@
           :placeholder="item.isUntaetigkeit ? '无所事事' : '任务描述'"
           style="flex: 2"
           @focus="$emit('focus-row', item.id)"
-          :class="{ 'force-hover': hoveredRowId === item.id }"
+          :class="{
+            'force-hover': hoveredRowId === item.id,
+            'child-activity': item.parentId,
+          }"
         >
           <template #prefix>
             <div
@@ -248,9 +252,11 @@
       <div
         v-if="item.tagIds && item.tagIds.length > 0 && showTags"
         class="tag-render-container"
+        :class="{ 'child-activity': item.parentId }"
       >
         <TagRenderer
           :tag-ids="item.tagIds"
+          :isCloseable="true"
           @remove-tag="handleRemoveTag(item, $event)"
         />
       </div>
@@ -275,9 +281,9 @@ import {
 } from "@vicons/fluent";
 import type { Activity } from "@/core/types/Activity";
 import { useSettingStore } from "@/stores/useSettingStore";
-import TagManager from "./TagManager.vue";
+import TagManager from "../TagSystem/TagManager.vue";
 import { useTagStore } from "@/stores/useTagStore";
-import TagRenderer from "./TagRenderer.vue";
+import TagRenderer from "../TagSystem/TagRenderer.vue";
 
 // 接收发射数据
 const props = defineProps<{
@@ -298,6 +304,7 @@ defineEmits<{
   "add-section": [id: number];
   "remove-section": [id: number];
   "update:search": [value: string];
+  "focus-search": [];
 }>();
 
 const settingStore = useSettingStore();
@@ -374,26 +381,93 @@ function startDrag(event: MouseEvent, item: Activity) {
 function handleDragMove(event: MouseEvent) {
   if (!isDragging.value || !draggedItem.value) return;
 
-  const deltaY = event.clientY - dragStartY.value;
-  const threshold = 30; // 拖拽阈值
+  const hoverId = hoveredRowId.value;
+  if (!hoverId) return;
 
-  if (Math.abs(deltaY) < threshold) return;
+  const flatList = sortedDisplaySheet.value;
+  const dragItem = draggedItem.value;
+  const targetItem = flatList.find((act) => act.id === hoverId);
 
-  const currentIndex = sortedDisplaySheet.value.findIndex(
-    (item) => item.id === draggedItem.value!.id
-  );
+  if (!targetItem || dragItem.id === targetItem.id) return;
 
-  if (currentIndex === -1) return;
+  // 判定是否允许drop，只能同组拖
+  if (!canDrop(dragItem, targetItem)) return;
 
-  const newIndex =
-    deltaY > 0
-      ? Math.min(currentIndex + 1, sortedDisplaySheet.value.length - 1)
-      : Math.max(currentIndex - 1, 0);
+  let newList: Activity[] = [];
 
-  if (newIndex !== currentIndex) {
-    updateActivityRank(currentIndex, newIndex);
-    dragStartY.value = event.clientY;
+  // 如果拖的是父（根活动），则父和所有子一起移动
+  if (!dragItem.parentId) {
+    const originalList = flatList.slice();
+    const dragBlock = getFamilyBlock(dragItem.id, originalList);
+
+    // 从列表中移除正在拖拽的块
+    const listWithoutBlock = originalList.filter(
+      (i) => !dragBlock.some((b) => b.id === i.id)
+    );
+
+    // 在新列表中找到目标位置的索引
+    let targetIndexInNewList = listWithoutBlock.findIndex(
+      (i) => i.id === targetItem.id
+    );
+
+    // 关键修正：判断原始拖拽方向，以决定插入点
+    const originalDragIndex = originalList.findIndex(
+      (i) => i.id === dragItem.id
+    );
+    const originalTargetIndex = originalList.findIndex(
+      (i) => i.id === targetItem.id
+    );
+
+    // 如果是向下拖拽，插入点应该在目标元素的后面
+    if (originalDragIndex < originalTargetIndex) {
+      targetIndexInNewList++;
+    }
+
+    // 将拖拽的块插入到计算好的正确位置
+    listWithoutBlock.splice(targetIndexInNewList, 0, ...dragBlock);
+    newList = listWithoutBlock;
+  } else {
+    // 拖的是子活动，只在同一父活动的子活动组内重新排序
+    const siblings = flatList.filter((i) => i.parentId === dragItem.parentId);
+    const originalDragIndex = siblings.findIndex((i) => i.id === dragItem.id);
+    const originalTargetIndex = siblings.findIndex(
+      (i) => i.id === targetItem.id
+    );
+
+    if (originalDragIndex === -1 || originalTargetIndex === -1) return;
+
+    const newSiblings = [...siblings];
+    const [movedItem] = newSiblings.splice(originalDragIndex, 1); // 从副本中取出拖动的项
+
+    // 在移除了拖动项的副本中找到目标的新索引
+    let newTargetIndex = newSiblings.findIndex((i) => i.id === targetItem.id);
+
+    // 根据原始拖动方向决定插入位置
+    if (originalDragIndex < originalTargetIndex) {
+      newSiblings.splice(newTargetIndex + 1, 0, movedItem);
+    } else {
+      newSiblings.splice(newTargetIndex, 0, movedItem);
+    }
+
+    // 使用新的子活动顺序重组整个列表
+    const groupStartIndex = flatList.findIndex((i) => i.id === siblings[0].id);
+    const groupEndIndex = flatList.findIndex(
+      (i) => i.id === siblings[siblings.length - 1].id
+    );
+    newList = [
+      ...flatList.slice(0, groupStartIndex),
+      ...newSiblings,
+      ...flatList.slice(groupEndIndex + 1),
+    ];
   }
+
+  // 使用新排好序的列表来更新排序 rank
+  if (newList.length > 0) {
+    updateActivityRankByList(newList);
+  }
+
+  // 可选：此时刷新起始Y，避免继续移动“误触”
+  dragStartY.value = event.clientY;
 }
 
 // 拖拽结束
@@ -406,26 +480,33 @@ function handleDragEnd() {
 }
 
 // 更新活动排序
-function updateActivityRank(fromIndex: number, toIndex: number) {
-  // 只对未取消的活动排序
-  const activities = sortedDisplaySheet.value;
-  const newRank: Record<number, number> = {
-    ...settingStore.settings.activityRank,
-  };
-
-  activities.forEach((activity, index) => {
-    // 跳过取消的活动
-    if (activity.status === "cancelled") return;
-    if (index === fromIndex) {
-      newRank[activity.id] = toIndex;
-    } else if (index === toIndex) {
-      newRank[activity.id] = fromIndex;
-    } else {
-      newRank[activity.id] = index;
-    }
+/** 用排序后的扁平列表写入rank  */
+function updateActivityRankByList(orderedList: Activity[]) {
+  const newRank: Record<number, number> = {};
+  orderedList.forEach((a, idx) => {
+    newRank[a.id] = idx;
   });
-
   settingStore.settings.activityRank = newRank;
+}
+
+/** 取某 id 所有自身及子孙 activity，顺序一致扁平返回 */
+function getFamilyBlock(activityId: number, flatList: Activity[]): Activity[] {
+  const result: Activity[] = [];
+  function dfs(id: number) {
+    const act = flatList.find((item) => item.id === id);
+    if (!act) return;
+    result.push(act);
+    flatList.forEach((item) => {
+      if (item.parentId === id) dfs(item.id);
+    });
+  }
+  dfs(activityId);
+  return result;
+}
+
+// 判断是否拖拽合法
+function canDrop(dragItem: Activity, targetItem: Activity) {
+  return dragItem.parentId === targetItem.parentId;
 }
 
 // 获取输入显示字符串
@@ -647,6 +728,9 @@ function handleRemoveTag(item: Activity, tagId: number) {
   background-color: var(--n-color-hover) !important;
 }
 
+.child-activity {
+  margin-left: 20px;
+}
 .tag-render-container {
   display: flex;
 }
