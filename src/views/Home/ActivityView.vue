@@ -117,11 +117,11 @@ const emit = defineEmits<{
 // ========================
 // 筛选选项配置
 const filterOptions = [
+  { label: "全部活动", key: "all" },
   { label: "今日到期", key: "today" },
   { label: "内外打扰", key: "interrupt" },
   { label: "待办活动", key: "todo" },
   { label: "预约活动", key: "schedule" },
-  { label: "全部活动", key: "all" },
   { label: "取消任务", key: "cancelled" },
 ];
 

@@ -17,7 +17,7 @@
   Parent: ActivityView.vue
 
   Usage:
-  <ActivityButtons :filterOptions="filterOptions" :activeId="activeId" @pick-activity-todo="pickActivity" @filter="handleFilter" @add-task="addTask" @add-schedule="addSchedule" @delete-active="deleteActive" />
+  <ActivityButtons  :activeId="activeId" @pick-activity-todo="pickActivity" @filter="handleFilter" @add-task="addTask" @add-schedule="addSchedule" @delete-active="deleteActive" />
 -->
 
 <template>

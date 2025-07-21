@@ -6,6 +6,8 @@ import router from "./router";
 import { NConfigProvider } from "naive-ui";
 import { zhCN, dateZhCN } from "naive-ui";
 import naive from "naive-ui";
+import { useTagStore } from "./stores/useTagStore";
+import { DEFAULT_TAGS } from "./core/constants";
 
 // 创建Pinia实例
 const pinia = createPinia();
@@ -39,5 +41,8 @@ import "./styles/global.css";
 
 app.use(pinia);
 app.use(router);
+
+const tagStore = useTagStore(); // 获取 store 实例
+tagStore.loadInitialTags(DEFAULT_TAGS);
 app.use(naive);
 app.mount("#app");

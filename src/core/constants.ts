@@ -1,4 +1,5 @@
-// src/core/constants
+// src/core/constants.ts
+import type { Tag } from "@/core/types/Tag";
 export const PomodoroDurations = {
   workDuration: 25,
   breakDuration: 5,
@@ -146,23 +147,58 @@ export const POMODORO_COLORS: Record<string, string> = {
 };
 
 /**
- * 默认标签样式配置
+ * 默认标签列表 (最终版本)
+ *
+ * 直接使用具体的 HEX 和 RGBA 颜色值，以确保在所有 Vue 组件
+ * (包括 Naive UI 的 Button 和原生 div) 中都能被正确解析，
+ * 避免因组件内部的 JavaScript 颜色计算逻辑而引发的兼容性问题。
  */
-export const DEFAULT_TAG_STYLE = {
-  color: "#1976d2",
-  backgroundColor: "#e3f2fd",
-  newTagColor: "#666666",
-  newTagBackgroundColor: "#f5f5f5",
-} as const;
+export const DEFAULT_TAGS: Tag[] = [
+  // --- 1. By Priority ---
+  {
+    id: 1,
+    name: "Urgent",
+    color: "#de576d",
+    backgroundColor: "rgba(245, 210, 217, 0.4)",
+    count: 0,
+  },
+  {
+    id: 2,
+    name: "Important",
+    color: "#fcb040",
+    backgroundColor: "rgba(252, 234, 206, 0.5)",
+    count: 0,
+  },
 
-// 默认颜色配置
-export const DEFAULT_TAG_COLORS = [
-  { color: "#ffffff", backgroundColor: "#2080f0" }, // 蓝色
-  { color: "#ffffff", backgroundColor: "#18a058" }, // 绿色
-  { color: "#ffffff", backgroundColor: "#f0a020" }, // 橙色
-  { color: "#ffffff", backgroundColor: "#d03050" }, // 红色
-  { color: "#ffffff", backgroundColor: "#7c3aed" }, // 紫色
-  { color: "#ffffff", backgroundColor: "#0891b2" }, // 青色
-  { color: "#ffffff", backgroundColor: "#dc2626" }, // 深红
-  { color: "#ffffff", backgroundColor: "#059669" }, // 深绿
+  // --- 2. By Domain ---
+  {
+    id: 3,
+    name: "Work",
+    color: "#2080f0",
+    backgroundColor: "rgba(206, 227, 252, 0.5)",
+    count: 0,
+  },
+  {
+    id: 4,
+    name: "Study",
+    color: "#36ad6a",
+    backgroundColor: "rgba(204, 234, 218, 0.5)",
+    count: 0,
+  },
+  {
+    id: 5,
+    name: "Personal",
+    color: "#8040f0",
+    backgroundColor: "rgba(232, 206, 252, 0.4)",
+    count: 0,
+  },
+
+  // --- 4. Other Categories ---
+  {
+    id: 6,
+    name: "Idea",
+    color: "#fbc02d",
+    backgroundColor: "rgba(255, 249, 196, 0.6)",
+    count: 0,
+  },
 ];

@@ -57,116 +57,146 @@
         class="activity-row"
         :class="{ 'highlight-line': item.id === activityId }"
       >
-        <n-input
-          v-model:value="item.title"
-          type="text"
-          :placeholder="item.isUntaetigkeit ? '无所事事' : '任务描述'"
-          style="flex: 2"
-          @focus="$emit('focus-row', item.id)"
-          :class="{
-            'force-hover': hoveredRowId === item.id,
-            'child-activity': item.parentId,
-          }"
-        >
-          <template #prefix>
-            <div
-              class="icon-drag-area"
-              @mousedown="startDrag($event, item)"
-              @mouseenter="handleIconMoveMouseEnter(item.id)"
-              @mouseleave="handleIconMoveMouseLeave"
-              :title="
-                item.status !== 'cancelled' ? '拖拽调整顺序' : '不支持顺序修改'
-              "
+        <n-popover
+          :show="popoverTargetId === item.id"
+          @update:show="(show) => !show && (popoverTargetId = null)"
+          trigger="manual"
+          placement="bottom-start"
+          :trap-focus="false"
+          :show-arrow="false"
+          style="padding: 0; border-radius: 6px"
+          :to="false"
+          ><template #trigger>
+            <n-input
+              v-model:value="item.title"
+              type="text"
+              :placeholder="item.isUntaetigkeit ? '无所事事' : '任务描述'"
+              style="flex: 2"
+              @input="handleTitleInput(item, $event)"
+              @keydown="handleInputKeydown($event, item)"
+              @focus="$emit('focus-row', item.id)"
+              :class="{
+                'force-hover': hoveredRowId === item.id,
+                'child-activity': item.parentId,
+              }"
             >
-              <n-icon v-if="item.isUntaetigkeit" :color="'var(--color-blue)'"
-                ><Cloud24Regular
-              /></n-icon>
-              <n-icon
-                v-if="item.interruption === 'I'"
-                :color="
-                  item.status === 'ongoing'
-                    ? 'var(--color-red)'
-                    : item.status === 'delayed'
-                    ? 'var(--color-blue)'
-                    : item.status === 'suspended'
-                    ? 'var(--color-orange)'
-                    : item.status === 'cancelled'
-                    ? 'var(--color-text-primary)'
-                    : 'var(--color-text-secondary)'
-                "
-                ><Chat24Regular
-              /></n-icon>
-              <n-icon
-                v-else-if="item.interruption === 'E'"
-                :color="
-                  item.status === 'ongoing'
-                    ? 'var(--color-red)'
-                    : item.status === 'delayed'
-                    ? 'var(--color-blue)'
-                    : item.status === 'suspended'
-                    ? 'var(--color-orange)'
-                    : item.status === 'cancelled'
-                    ? 'var(--color-text-primary)'
-                    : 'var(--color-text-secondary)'
-                "
-                ><VideoPersonCall24Regular
-              /></n-icon>
-              <n-icon
-                v-else-if="item.class === 'T'"
-                :color="
-                  item.status === 'ongoing'
-                    ? 'var(--color-red)'
-                    : item.status === 'delayed'
-                    ? 'var(--color-blue)'
-                    : item.status === 'suspended'
-                    ? 'var(--color-orange)'
-                    : item.status === 'cancelled'
-                    ? 'var(--color-text-primary)'
-                    : 'var(--color-text-secondary)'
-                "
-                ><ApprovalsApp24Regular
-              /></n-icon>
-              <n-icon
-                v-else-if="item.class === 'S' && !item.isUntaetigkeit"
-                :color="
-                  item.status === 'ongoing'
-                    ? 'var(--color-red)'
-                    : item.status === 'delayed'
-                    ? 'var(--color-blue)'
-                    : item.status === 'suspended'
-                    ? 'var(--color-orange)'
-                    : item.status === 'cancelled'
-                    ? 'var(--color-text-primary)'
-                    : 'var(--color-text-secondary)'
-                "
-                ><Accessibility24Regular
-              /></n-icon>
-            </div>
+              <template #prefix>
+                <div
+                  class="icon-drag-area"
+                  @mousedown="startDrag($event, item)"
+                  @mouseenter="handleIconMoveMouseEnter(item.id)"
+                  @mouseleave="handleIconMoveMouseLeave"
+                  :title="
+                    item.status !== 'cancelled'
+                      ? '拖拽调整顺序'
+                      : '不支持顺序修改'
+                  "
+                >
+                  <n-icon
+                    v-if="item.isUntaetigkeit"
+                    :color="'var(--color-blue)'"
+                    ><Cloud24Regular
+                  /></n-icon>
+                  <n-icon
+                    v-if="item.interruption === 'I'"
+                    :color="
+                      item.status === 'ongoing'
+                        ? 'var(--color-red)'
+                        : item.status === 'delayed'
+                        ? 'var(--color-blue)'
+                        : item.status === 'suspended'
+                        ? 'var(--color-orange)'
+                        : item.status === 'cancelled'
+                        ? 'var(--color-text-primary)'
+                        : 'var(--color-text-secondary)'
+                    "
+                    ><Chat24Regular
+                  /></n-icon>
+                  <n-icon
+                    v-else-if="item.interruption === 'E'"
+                    :color="
+                      item.status === 'ongoing'
+                        ? 'var(--color-red)'
+                        : item.status === 'delayed'
+                        ? 'var(--color-blue)'
+                        : item.status === 'suspended'
+                        ? 'var(--color-orange)'
+                        : item.status === 'cancelled'
+                        ? 'var(--color-text-primary)'
+                        : 'var(--color-text-secondary)'
+                    "
+                    ><VideoPersonCall24Regular
+                  /></n-icon>
+                  <n-icon
+                    v-else-if="item.class === 'T'"
+                    :color="
+                      item.status === 'ongoing'
+                        ? 'var(--color-red)'
+                        : item.status === 'delayed'
+                        ? 'var(--color-blue)'
+                        : item.status === 'suspended'
+                        ? 'var(--color-orange)'
+                        : item.status === 'cancelled'
+                        ? 'var(--color-text-primary)'
+                        : 'var(--color-text-secondary)'
+                    "
+                    ><ApprovalsApp24Regular
+                  /></n-icon>
+                  <n-icon
+                    v-else-if="item.class === 'S' && !item.isUntaetigkeit"
+                    :color="
+                      item.status === 'ongoing'
+                        ? 'var(--color-red)'
+                        : item.status === 'delayed'
+                        ? 'var(--color-blue)'
+                        : item.status === 'suspended'
+                        ? 'var(--color-orange)'
+                        : item.status === 'cancelled'
+                        ? 'var(--color-text-primary)'
+                        : 'var(--color-text-secondary)'
+                    "
+                    ><Accessibility24Regular
+                  /></n-icon>
+                </div>
+              </template>
+              <template #suffix>
+                <n-icon
+                  v-if="!item.tagIds"
+                  text
+                  color="var(--color-blue)"
+                  @click="
+                    showTagManager = true;
+                    editingTagId = item.id;
+                  "
+                  class="icon-tag"
+                  title="添加标签"
+                  ><Tag16Regular
+                /></n-icon>
+                <n-icon
+                  v-else
+                  text
+                  color="var(--color-blue)"
+                  @click="handleTagIconClick($event, item)"
+                  class="icon-tag"
+                  title="Alt+点击=切换显示 | 点击=管理标签"
+                  ><Tag16Filled
+                /></n-icon>
+              </template>
+            </n-input>
           </template>
-          <template #suffix>
-            <n-icon
-              v-if="!item.tagIds"
-              text
-              color="var(--color-blue)"
-              @click="
-                showTagManager = true;
-                editingTagId = item.id;
-              "
-              class="icon-tag"
-              title="添加标签"
-              ><Tag16Regular
-            /></n-icon>
-            <n-icon
-              v-else
-              text
-              color="var(--color-blue)"
-              @click="handleTagIconClick($event, item)"
-              class="icon-tag"
-              title="Alt+点击=切换显示 | 点击=管理标签"
-              ><Tag16Filled
-            /></n-icon>
-          </template>
-        </n-input>
+          <TagSelector
+            :ref="
+              (el) => {
+                if (popoverTargetId === item.id) tagSelectorRef = el;
+              }
+            "
+            :search-term="tagSearchTerm"
+            :allow-create="true"
+            @select-tag="(tagId: any) => handleTagSelected(item, tagId)"
+            @create-tag="(tagName: any) => handleTagCreate(item, tagName)"
+            @close-selector="popoverTargetId = null"
+          />
+        </n-popover>
         <n-modal
           v-model:show="showTagManager"
           @after-leave="onTagManagerClosed"
@@ -266,7 +296,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import { NInput, NDatePicker, NIcon, NDropdown } from "naive-ui";
+import { NInput, NDatePicker, NIcon, NDropdown, NPopover } from "naive-ui";
 import {
   VideoPersonCall24Regular,
   ApprovalsApp24Regular,
@@ -284,6 +314,7 @@ import { useSettingStore } from "@/stores/useSettingStore";
 import TagManager from "../TagSystem/TagManager.vue";
 import { useTagStore } from "@/stores/useTagStore";
 import TagRenderer from "../TagSystem/TagRenderer.vue";
+import TagSelector from "../TagSystem/TagSelector.vue";
 
 // 接收发射数据
 const props = defineProps<{
@@ -311,9 +342,15 @@ const settingStore = useSettingStore();
 const showTagManager = ref(false);
 const showTags = ref(true);
 const editingTagId = ref(0);
-const { allTags, setTagCount } = useTagStore();
+const tagStore = useTagStore();
 
 const tempTagIds = ref<number[]>([]); // 临时编辑tagIds
+
+// Popover 相关状态
+const tagSearchTerm = ref("");
+const popoverTargetId = ref<number | null>(null);
+const tagSelectorRef = ref<any>(null);
+const inputRefs = ref<Record<number, any>>({});
 
 // 拖拽相关状态
 const isDragging = ref(false);
@@ -352,6 +389,7 @@ const sortedDisplaySheet = computed(() => {
 function handleIconMoveMouseEnter(id: number) {
   hoveredRowId.value = id;
 }
+
 function handleIconMoveMouseLeave() {
   hoveredRowId.value = null;
 }
@@ -562,10 +600,7 @@ function onTagManagerClosed() {
 
     // 只为新增的 tags 更新 count
     newlyAddedTagIds.forEach((tagId) => {
-      const tag = allTags.find((t) => t.id === tagId);
-      if (tag) {
-        setTagCount(tagId, tag.count + 1);
-      }
+      tagStore.incrementTagCount(tagId);
     });
   }
 
@@ -581,8 +616,89 @@ function handleRemoveTag(item: Activity, tagId: number) {
     item.tagIds = item.tagIds.filter((id) => id !== tagId);
 
     // ✅ 将count更新逻辑移至store内
-    useTagStore().decrementTagCount(tagId);
+    tagStore.decrementTagCount(tagId);
   }
+}
+
+// 更新 handleTitleInput 函数
+function handleTitleInput(item: Activity, value: string) {
+  const match = value.match(/#([\p{L}\p{N}_]*)$/u);
+
+  // 存储当前输入框的引用
+  inputRefs.value[item.id] = event?.target || null;
+
+  if (match) {
+    popoverTargetId.value = item.id;
+    tagSearchTerm.value = match[1];
+  } else {
+    popoverTargetId.value = null;
+  }
+}
+
+// 键盘事件处理函数
+function handleInputKeydown(event: KeyboardEvent, item: Activity) {
+  // 仅当当前输入框的popover开启时处理特殊按键
+  if (popoverTargetId.value === item.id && tagSelectorRef.value) {
+    switch (event.key) {
+      case "ArrowDown":
+        console.log("ArrowDown");
+        tagSelectorRef.value.navigateDown();
+        event.preventDefault(); // 阻止输入框光标移动
+        break;
+      case "ArrowUp":
+        tagSelectorRef.value.navigateUp();
+        event.preventDefault();
+        break;
+      case "Enter":
+        console.log("Enter");
+        tagSelectorRef.value.selectHighlighted();
+        event.preventDefault(); // 阻止输入框换行
+        break;
+      case "Escape":
+        console.log("Escape");
+        popoverTargetId.value = null; // 直接关闭popover
+        event.preventDefault();
+        break;
+    }
+  }
+
+  // 特殊处理：#键自动打开popover
+  if (event.key === "#" && popoverTargetId.value === null) {
+    popoverTargetId.value = item.id;
+  }
+}
+
+// 标签选择处理函数
+function handleTagSelected(item: Activity, tagId: number) {
+  // 在标题中移除标签搜索符号
+  item.title = item.title.replace(/#[\p{L}\p{N}_]*$/u, "").trim();
+
+  // 添加标签ID
+  if (!item.tagIds) item.tagIds = [];
+  if (!item.tagIds.includes(tagId)) {
+    item.tagIds.push(tagId);
+    tagStore.incrementTagCount(tagId);
+  }
+
+  // 关闭popover
+  popoverTargetId.value = null;
+}
+
+// 标签创建处理函数
+function handleTagCreate(item: Activity, tagName: string) {
+  // 创建新标签后自动更新标题
+  item.title = item.title.replace(/#[\p{L}\p{N}_]*$/u, "").trim();
+
+  // 创建新标签
+  const newTag = tagStore.addTag(tagName, "#333", "#eee");
+  if (newTag) {
+    if (!item.tagIds) item.tagIds = [];
+    item.tagIds.push(newTag.id);
+    tagStore.setTagCount(newTag.id, 1);
+  }
+
+  // 关闭popover
+  popoverTargetId.value = null;
 }
 </script>
 

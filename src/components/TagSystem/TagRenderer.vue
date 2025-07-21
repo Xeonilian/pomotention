@@ -23,7 +23,7 @@
 <script setup lang="ts">
 import { NTag } from "naive-ui";
 import { useTagStore } from "@/stores/useTagStore";
-import { computed, watch } from "vue";
+import { computed } from "vue";
 import type { Tag } from "@/core/types/Tag";
 import { storeToRefs } from "pinia";
 

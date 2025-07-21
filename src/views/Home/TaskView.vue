@@ -69,7 +69,11 @@
     </div>
     <div class="task-record-container">
       <div
-        v-if="props.selectedTagIds && props.selectedTagIds.length > 0"
+        v-if="
+          props.selectedTagIds &&
+          props.selectedTagIds.length > 0 &&
+          selectedTaskId
+        "
         class="task-tag-render-container"
       >
         <TagRenderer :tag-ids="props.selectedTagIds" :isCloseable="false" />

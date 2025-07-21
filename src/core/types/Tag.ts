@@ -10,3 +10,10 @@ export interface Tag {
   backgroundColor: string; // 背景颜色
   count: number;
 }
+
+export type TagSelectorInstance = {
+  navigateDown: () => void;
+  navigateUp: () => void;
+  selectHighlighted: () => void;
+  close: () => void;
+};

@@ -306,7 +306,7 @@ function updateInputWidth() {
   display: flex;
   flex-direction: column;
   position: relative;
-  min-height: 300px;
+  min-height: 220px;
 }
 
 .tag-search {
@@ -323,6 +323,7 @@ function updateInputWidth() {
   padding-left: 2px;
   width: 380px;
   overflow-y: auto;
+  padding-bottom: 5px;
 }
 
 .custom-tag {
@@ -341,25 +342,25 @@ function updateInputWidth() {
 /* 悬浮在“未选中”的标签上时的效果 */
 .custom-tag:not(.selected):hover {
   transform: translateY(-3px) scale(1.02);
-  box-shadow: 0 6px 4px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 6px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* “未选中”标签的固定样式 */
+.custom-tag:not(.selected) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 4px rgba(0, 0, 0, 0.3);
 }
 
 /* “已选中”标签的固定样式 */
 .custom-tag.selected {
   transform: translateY(-2px);
-  border: 1px solid var(--color-blue);
-}
-
-/* “已选中”标签的固定样式 */
-.custom-tag:not(.selected) {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 4px rgba(0, 0, 0, 0.1);
+  border: 2px solid var(--color-backgroud-dark);
 }
 
 /* 悬浮在“已选中”的标签上时的增强效果 */
 .custom-tag.selected:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 2px 2px rgba(0, 0, 0, 0.12);
 }
 
 .custom-tag.empty-tag {

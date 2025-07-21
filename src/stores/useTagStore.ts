@@ -34,6 +34,23 @@ export const useTagStore = defineStore("tagStore", () => {
     return tag;
   }
 
+  function loadInitialTags(defaultTags: Tag[]) {
+    // 关键判断：只有当 store 初始化后 tags 数组为空时才执行
+    if (tags.value.length > 0) {
+      console.log("[TagStore] 本地已存在标签，跳过加载默认标签。");
+      return;
+    }
+
+    console.log("[TagStore] 本地无标签，正在加载默认标签...");
+
+    // *** 核心修正 ***
+    // 直接使用传入的、已经包含 ID 的默认标签数组
+    tags.value = defaultTags;
+
+    // 在所有默认标签都添加完毕后，进行一次性的保存
+    saveTags(tags.value);
+  }
+
   function updateTag(id: number, patch: Partial<Tag>) {
     const index = tags.value.findIndex((t) => t.id === id);
     if (index !== -1) {
@@ -97,6 +114,13 @@ export const useTagStore = defineStore("tagStore", () => {
     if (tag) setTagCount(id, Math.max(0, tag.count - 1));
   }
 
+  function incrementTagCount(id: number) {
+    const tag = tags.value.find((t) => t.id === id);
+    if (tag) {
+      // 直接调用 setTagCount，逻辑复用
+      setTagCount(id, tag.count + 1);
+    }
+  }
   watch(
     tags,
     () => {
@@ -121,5 +145,7 @@ export const useTagStore = defineStore("tagStore", () => {
     getTagsByIds,
     getTagNamesByIds,
     decrementTagCount,
+    incrementTagCount,
+    loadInitialTags,
   };
 });
