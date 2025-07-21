@@ -72,7 +72,7 @@
         v-if="
           props.selectedTagIds &&
           props.selectedTagIds.length > 0 &&
-          selectedTaskId
+          props.selectedTaskId
         "
         class="task-tag-render-container"
       >

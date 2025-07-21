@@ -273,6 +273,24 @@ const selectedTagIds = computed(() => {
     const activity = activityList.value.find((a) => a.id === activeId.value);
     if (activity) return activity.tagIds || null;
   }
+  if (selectedRowId && todoList.value && scheduleList.value) {
+    const todo = todoList.value.find((t) => t.id === selectedRowId.value);
+    const schedule = scheduleList.value.find(
+      (s) => s.id === selectedRowId.value
+    );
+    if (todo && activityList.value) {
+      const targetActivity = activityList.value.find(
+        (a) => a.id === todo.activityId
+      );
+      if (targetActivity) return targetActivity.tagIds || null;
+    }
+    if (schedule && activityList.value) {
+      const targetActivity = activityList.value.find(
+        (a) => a.id === schedule.activityId
+      );
+      if (targetActivity) return targetActivity.tagIds || null;
+    }
+  }
   return null;
 });
 
