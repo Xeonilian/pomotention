@@ -441,6 +441,7 @@ function onPickActivity(activity: Activity) {
 function onConvertActivityToTask(id: number, taskId: number) {
   activeId.value = id;
   selectedTaskId.value = taskId;
+  // 寻找 #HACK
 }
 
 function onConvertTodoToTask(id: number, taskId: number) {
@@ -927,6 +928,7 @@ watch(
           : [0, "0"];
         relatedSchedule.status = activity.status || "";
         relatedSchedule.location = activity.location || "";
+        relatedSchedule.taskId = activity.taskId;
       }
       // 同步Todo
       const relatedTodo = todoList.value.find(

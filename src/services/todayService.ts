@@ -177,7 +177,8 @@ export function handleSuspendSchedule(
 ) {
   // 找到对应的 Schedule
   const schedule = scheduleList.find((schedule) => schedule.id === id);
-  if (schedule) {
+
+  if (schedule && schedule.activityDueRange) {
     // 找到 activityList 中对应的活动
     const activity = activityList.find(
       (activity) => activity.id === schedule.activityId
@@ -195,6 +196,11 @@ export function handleSuspendSchedule(
           addDays(activity.dueRange[0], 1),
           activity.dueRange[1],
         ];
+        schedule.activityDueRange = [
+          addDays(schedule.activityDueRange[0], 1),
+          schedule.activityDueRange[1],
+        ];
+        console.log(activity.dueRange, schedule.activityDueRange);
       } else {
         console.log(`Activity with id ${activity.id} does not have dueRange`);
       }
