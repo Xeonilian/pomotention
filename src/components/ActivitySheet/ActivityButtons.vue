@@ -79,13 +79,14 @@
 
     <n-popover
       trigger="click"
-      placement="right"
+      placement="top"
       :delay="1000"
       :show-arrow="false"
       class="popover-container"
       :style="{
         padding: '2px 0 2px 0',
         boxShadow: 'none',
+        backgroundColor: 'var(--color-background)',
       }"
     >
       <template #trigger>
