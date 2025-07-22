@@ -10,13 +10,14 @@ description: 下载最新版本的应用程序
 ## 当前版本
 
 ::: info 最新发布
-**版本 v0.2.7** - 2025 年 7 月 7 日发布
+**版本 v0.3.0** - 2025 年 7 月 22 日发布
 
 - 功能稳定测试
-- 支持 Windows macOS （ dmg + App + msi + exe）
+- 支持 Windows macOS （ dmg + app + msi + exe）
 - 简易全局搜索
 - 番茄钟最小化置顶
 - 自动更新
+- 活动 Kanban+标签+子活动
   :::
 
 ::: warning 紧急修复
@@ -54,7 +55,7 @@ description: 下载最新版本的应用程序
 
 ### macOS
 
-<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.2.7/pomotention_0.2.7_x64.dmg" class="download-btn macos">
+<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.3.0/pomotention_0.2.7_x64.dmg" class="download-btn macos">
   <span class="platform">macOS</span>
   <span class="format">.dmg 安装包</span>
   <span class="size">18.5MB</span>
@@ -123,10 +124,12 @@ description: 下载最新版本的应用程序
 
   - 活动拖动排序
 
-- v0.3. `2025-07-22`
-  - feature: 标签系统
-  - feature: 添加子活动（修改按钮布局）
-  - fix: 任务、日程和活动的联动不一致，删除 Suspend 功能，同步 taskId
+- v0.3.0 `2025-07-22`
+  - 【新增】标签系统
+  - 【新增】子活动（调整按钮布局）
+  - 【新增】活动清单升级为活动看板
+  - 【优化】任务区长输入模糊定位和鼠标位置提醒
+  - 【修复】任务、日程和活动的联动不一致，删除 Suspend 功能，同步 taskId
 
 ## 遇到问题
 
