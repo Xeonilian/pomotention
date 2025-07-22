@@ -172,6 +172,7 @@ export const taskService = {
       title: interruption.description,
       class: activityClass,
       interruption: interruption.class, // 保持原有的interruption类型
+      parentId: null,
       status: "",
       // 根据活动类型设置相应属性
       ...(activityClass === "T" && {

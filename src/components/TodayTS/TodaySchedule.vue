@@ -225,7 +225,6 @@ import type { Schedule } from "@/core/types/Schedule";
 import { timestampToTimeString } from "@/core/utils";
 import { NCheckbox, NButton, NIcon, NPopover } from "naive-ui";
 import {
-  ChevronCircleRight48Regular,
   ChevronCircleDown48Regular,
   DismissCircle20Regular,
   ArrowRepeatAll24Regular,
@@ -368,9 +367,9 @@ function handleConvertToTask(schedule: Schedule) {
   }
 }
 
-function handleSuspendSchedule(id: number) {
-  emit("suspend-schedule", id);
-}
+// function handleSuspendSchedule(id: number) {
+//   emit("suspend-schedule", id);
+// }
 
 function handleCancelSchedule(id: number) {
   emit("cancel-schedule", id);
