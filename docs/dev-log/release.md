@@ -29,7 +29,6 @@
 - [ ] **1. 准备签名环境：**
 
   - [ ] 确保 Tauri 签名所需的 `private.key` 文件已准备好。
-  - [ ] (可选) 如有必要，加载私钥到环境中或确认配置文件路径正确。
 
 - [ ] **2. 执行打包命令：**
 
@@ -40,7 +39,6 @@
   - [ ] 打包完成后，进入 `src-tauri/target/release/bundle/` 目录。
   - [ ] 找到生成的 `.exe` 安装器和 `.msi` 包。
   - [ ] 找到 `.msi.zip` 文件旁边生成的 `.sig` 签名文件。
-  - [ ] **关键**：将这三个文件 (`.exe`, `.msi`, `.sig`) 复制到一个临时的、易于访问的发布文件夹中（例如 `桌面/release_v0.6.0`）。
 
 ## 阶段三：macOS 平台构建
 
@@ -124,7 +122,7 @@
   - [ ] 恭喜！本次版本发布成功。
 
 ```
-# 1. 添加所有文件变更到Git暂存区
+# 1. 添加所有文件变更到Git暂存区（先修改设置文件）
 git add .
 
 # 2. 提交代码变更，并附上版本更新信息（将 vX.X.X 替换为实际版本）
@@ -140,7 +138,7 @@ git tag vX.X.X
 git push origin vX.X.X
 
 # 6. 查看两个标签之间的提交记录
-git log vOld.Tag..vNew.Tag --oneline`
+git log vOld.Tag..vNew.Tag --oneline
 
 # 7. 录入秘钥
 $env:TAURI_SIGNING_PRIVATE_KEY = "=="
