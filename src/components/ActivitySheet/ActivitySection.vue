@@ -640,10 +640,10 @@ function onTagManagerClosed() {
 // 修改标签删除逻辑
 function handleRemoveTag(item: Activity, tagId: number) {
   if (item.tagIds) {
-    // ✅ 创建新数组确保引用更新
-    item.tagIds = item.tagIds.filter((id) => id !== tagId);
+    const newTagIds = item.tagIds.filter((id) => id !== tagId);
+    // 如果过滤后为空数组，赋为null，否则用新数组
+    item.tagIds = newTagIds.length > 0 ? newTagIds : undefined;
 
-    // ✅ 将count更新逻辑移至store内
     tagStore.decrementTagCount(tagId);
   }
 }
