@@ -41,13 +41,13 @@ description: 下载最新版本的应用程序
 
 ### Windows
 
-<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.2.7/pomotention_0.2.7_x64_en-US.msi" class="download-btn windows">
+<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.3.0/pomotention_0.3.0_x64_en-US.msi" class="download-btn windows">
   <span class="platform">Windows</span>
   <span class="format">.msi 安装包</span>
   <span class="size">15.7MB</span>
 </a>
 
-<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.2.7/pomotention_0.2.7_x64-setup.exe" class="download-btn windows">
+<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.2.7/pomotention_0.3.0_x64-setup.exe" class="download-btn windows">
   <span class="platform">Windows</span>
   <span class="format">.exe </span>
   <span class="size">14.5MB</span>
@@ -55,13 +55,13 @@ description: 下载最新版本的应用程序
 
 ### macOS
 
-<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.3.0/pomotention_0.2.7_x64.dmg" class="download-btn macos">
+<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.3.0/pomotention_0.3.0_x64.dmg" class="download-btn macos">
   <span class="platform">macOS</span>
   <span class="format">.dmg 安装包</span>
   <span class="size">18.5MB</span>
 </a>
 
-<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.2.7/pomotention.app.tar.gz" class="download-btn macos">
+<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.3.0/pomotention.app.tar.gz" class="download-btn macos">
   <span class="platform">macOS</span>
   <span class="format">app.tar.gz</span>
   <span class="size">17.1MB</span>
