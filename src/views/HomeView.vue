@@ -1021,7 +1021,7 @@ const topHeight = computed({
 const { startResize: startVerticalResize } = useResize(
   topHeight,
   "vertical",
-  200,
+  0,
   500
 );
 const { startResize: startLeftResize } = useResize(
@@ -1035,7 +1035,7 @@ const { startResize: startRightResize } = useResize(
   rightWidth,
   "horizontal",
   50,
-  800,
+  1600,
   true // 右侧面板
 );
 </script>
@@ -1065,6 +1065,7 @@ const { startResize: startRightResize } = useResize(
   overflow: auto;
   margin-left: 0;
   background: var(--color-background);
+  min-width: 120px;
 }
 
 .middle {
@@ -1074,8 +1075,7 @@ const { startResize: startRightResize } = useResize(
   padding: 0px;
   box-sizing: border-box;
   overflow: hidden;
-  min-width: 50px;
-  max-width: 900px;
+  min-width: 0px;
   margin: 0;
 }
 
