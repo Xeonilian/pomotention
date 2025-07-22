@@ -362,27 +362,51 @@ const hoveredRowId = ref<number | null>(null);
 
 // 排序：先按自定义排序，再按类型排序
 const sortedDisplaySheet = computed(() => {
-  // 只保留未取消的活动
   const activities = props.displaySheet.slice();
+  const activityMap = new Map<number, Activity[]>(); // 存储每个 parentId 对应的子活动列表
 
-  // 应用自定义排序
-  activities.sort((a, b) => {
-    const rankA =
-      settingStore.settings.activityRank[a.id] ?? Number.MAX_SAFE_INTEGER;
-    const rankB =
-      settingStore.settings.activityRank[b.id] ?? Number.MAX_SAFE_INTEGER;
+  const rootActivities: Activity[] = [];
 
-    if (rankA !== rankB) {
-      return rankA - rankB;
+  // 第一次遍历：构建父子关系的 Map，并分离出根活动
+  activities.forEach((item) => {
+    if (item.parentId === null || item.parentId === undefined) {
+      rootActivities.push(item);
+    } else {
+      if (!activityMap.has(item.parentId)) {
+        activityMap.set(item.parentId, []);
+      }
+      activityMap.get(item.parentId)!.push(item);
     }
-
-    // 如果排序相同，按类型排序：T类型优先
-    if (a.class === "T" && b.class !== "T") return -1;
-    if (a.class !== "T" && b.class === "T") return 1;
-    return 0;
   });
 
-  return activities;
+  const getRank = (id: number) =>
+    settingStore.settings.activityRank[id] ?? Number.MAX_SAFE_INTEGER;
+
+  // 对所有层级的活动列表进行排序
+  // 1. 对根活动排序
+  rootActivities.sort((a, b) => getRank(a.id) - getRank(b.id));
+
+  // 2. 对每个子活动列表进行排序
+  for (const children of activityMap.values()) {
+    children.sort((a, b) => getRank(a.id) - getRank(b.id));
+  }
+
+  const result: Activity[] = [];
+
+  // 第二次遍历：通过深度优先搜索（DFS）将树状结构展平为有序列表
+  function dfs(activity: Activity) {
+    result.push(activity);
+    const children = activityMap.get(activity.id);
+    if (children) {
+      // 此时 children 已经是排好序的
+      children.forEach(dfs);
+    }
+  }
+
+  rootActivities.forEach(dfs);
+
+  // 最终的 result 列表就保证了父子结构，并且同级之间按 rank 排序
+  return result;
 });
 
 // 在拖拽里用到
