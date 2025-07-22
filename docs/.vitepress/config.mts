@@ -29,6 +29,7 @@ export default defineConfig({
           { text: "软件界面", link: "/guide/interface" },
           { text: "番茄时钟", link: "/guide/timer" },
           { text: "活动清单", link: "/guide/activity" },
+          { text: "标签系统", link: "/guide/tag" },
           { text: "今日待办", link: "/guide/todo" },
           { text: "每日日程", link: "/guide/timetable" },
           { text: "任务追踪", link: "/guide/task" },
