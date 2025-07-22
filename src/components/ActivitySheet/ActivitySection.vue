@@ -567,7 +567,11 @@ function getFamilyBlock(activityId: number, flatList: Activity[]): Activity[] {
 }
 
 // 判断是否拖拽合法
-function canDrop(dragItem: Activity, targetItem: Activity) {
+function canDrop(dragItem: Activity, targetItem: Activity): boolean {
+  // 根活动之间的拖拽始终允许
+  if (!dragItem.parentId && !targetItem.parentId) return true;
+
+  // 子活动必须在同一父级下
   return dragItem.parentId === targetItem.parentId;
 }
 
