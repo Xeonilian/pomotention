@@ -19,9 +19,12 @@ export function handleAddActivity(
   if (newActivity.class === "S") {
     const today = getLocalDateString(new Date());
 
-    const activityDate = newActivity.id
-      ? getLocalDateString(new Date(newActivity.id))
-      : null;
+    const activityDate =
+      newActivity.dueRange &&
+      newActivity.dueRange[0] &&
+      !isNaN(new Date(newActivity.dueRange[0]).getTime())
+        ? getLocalDateString(new Date(newActivity.dueRange[0]))
+        : null;
 
     if (activityDate === today) {
       // 更新 activityList 中对应的 activity 的 status 为 "ongoing"
@@ -31,8 +34,8 @@ export function handleAddActivity(
       if (activityToUpdate) {
         activityToUpdate.status = "ongoing";
       }
-      scheduleList.push(convertToSchedule(newActivity));
     }
+    scheduleList.push(convertToSchedule(newActivity));
   }
 }
 

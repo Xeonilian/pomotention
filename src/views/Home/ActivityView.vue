@@ -181,7 +181,7 @@ function filteredBySection(section: ActivitySectionConfig) {
             due.setHours(0, 0, 0, 0);
             return due.getTime() === now.getTime();
           } else if (item.class === "S") {
-            if (!item.dueRange || !item.dueRange[0]) return false;
+            if (!item.dueRange || !item.dueRange[0]) return true;
             const start = new Date(item.dueRange[0]);
             start.setHours(0, 0, 0, 0);
             return start.getTime() === now.getTime();

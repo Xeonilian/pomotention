@@ -986,12 +986,12 @@ watch(
       if (dueMs >= startOfDay && dueMs <= endOfDay) {
         // 截止日期是今天
         activity.status = "ongoing";
-      } else if (dueMs < now) {
+      } else if (dueMs < now && activity.status != "cancelled") {
         // 截止日期已过
-        activity.status = "cancelled";
+        activity.status = "suspended";
       } else {
         // 截止日期还未到
-        activity.status = "";
+        if (activity.status != "cancelled") activity.status = "";
       }
     });
   }
