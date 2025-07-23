@@ -268,6 +268,7 @@ const selectedTask = computed(() => {
   }
   return null;
 });
+// 选中的tagIds
 const selectedTagIds = computed(() => {
   if (activeId.value && activityList.value) {
     const activity = activityList.value.find((a) => a.id === activeId.value);
@@ -339,13 +340,12 @@ const schedulesForAppDate = computed(() => {
   const endOfDay = addDays(startOfDay, 1);
 
   if (!scheduleList.value) return [];
-  return scheduleList.value.filter(
-    (schedule) =>
-      schedule.activityDueRange[0] >= startOfDay &&
-      schedule.activityDueRange[0] < endOfDay
-  );
-
-  // schedule.id 是一个时间戳，筛选比今天的起始日期大的
+  return scheduleList.value.filter((schedule) => {
+    const date = schedule.activityDueRange?.[0];
+    //  date 在指定范围内时都保留
+    if (date == null) return false;
+    return date >= startOfDay && date < endOfDay;
+  });
 });
 
 /**
@@ -925,7 +925,7 @@ watch(
         relatedSchedule.activityTitle = activity.title;
         relatedSchedule.activityDueRange = activity.dueRange
           ? [activity.dueRange[0], activity.dueRange[1]]
-          : [0, "0"];
+          : [null, "0"];
         relatedSchedule.status = activity.status || "";
         relatedSchedule.location = activity.location || "";
         relatedSchedule.taskId = activity.taskId;
@@ -1102,14 +1102,16 @@ const { startResize: startRightResize } = useResize(
   white-space: nowrap; /* 防止内部的 span 换行 */
   overflow: hidden; /* 如果内容实在太多，隐藏超出部分 */
   text-overflow: ellipsis; /* 用省略号表示被隐藏的文本 */
+  min-width: 0;
 }
 
 .today-info {
   display: flex;
   align-items: center;
-
   font-family: "Courier New", Courier, monospace;
   font-weight: bold;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .today-status {
@@ -1120,11 +1122,40 @@ const { startResize: startRightResize } = useResize(
   padding: 0px 8px 0px 8px;
   margin: 2px;
 }
-.today-view-container {
-  flex: 1;
-  overflow: auto;
-  min-height: 0; /* 重要：允许 flex 子项收缩 */
+
+.global-pomo {
+  display: inline-flex;
+  align-items: center;
+  font-size: 16px;
+  color: var(--color-text);
+  background: var(--color-background-light-transparent);
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-family: "Courier New", Courier, monospace;
 }
+
+.today-pomo {
+  color: var(--color-blue);
+  font-weight: 500;
+  font-family: "Courier New", Courier, monospace;
+  font-weight: bold;
+}
+
+.total-pomo {
+  color: var(--color-text);
+  font-weight: bold;
+}
+
+.button-group {
+  display: flex;
+  gap: 2px;
+  padding: 0px;
+  align-items: center;
+  flex-shrink: 0;
+  flex-grow: 0;
+  background-color: var(--color-background);
+}
+
 .middle-top.not-today .today-header {
   background: var(--color-background);
 }
@@ -1163,34 +1194,10 @@ const { startResize: startRightResize } = useResize(
   flex-direction: column;
 }
 
-.global-pomo {
-  display: inline-flex;
-  align-items: center;
-  font-size: 16px;
-  color: var(--color-text);
-  background: var(--color-background-light-transparent);
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-family: "Courier New", Courier, monospace;
-}
-
-.today-pomo {
-  color: var(--color-blue);
-  font-weight: 500;
-  font-family: "Courier New", Courier, monospace;
-  font-weight: bold;
-}
-
-.total-pomo {
-  color: var(--color-text);
-  font-weight: bold;
-}
-
-.button-group {
-  display: flex;
-  gap: 2px;
-  padding: 0px;
-  align-items: center;
+.today-view-container {
+  flex: 1;
+  overflow: auto;
+  min-height: 0; /* 重要：允许 flex 子项收缩 */
 }
 
 .resize-handle {
