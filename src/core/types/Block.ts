@@ -13,7 +13,7 @@ export interface PomodoroSegment {
   start: number;
   end: number;
   category: string; // 原block的类型
-  index?: number; // 在同种类型中的序号
+  pomoIndex?: number; // 在同种类型中的序号
 }
 
 export interface TodoSegment {
@@ -24,7 +24,7 @@ export interface TodoSegment {
   end: number;
   pomoType: "🍅" | "🍇" | "🍒";
   category?: string;
-  index: number; // 本todo第几个番茄
+  todoIndex: number; // 本todo第几个番茄
   assignedPomodoroSegment?: PomodoroSegment;
   overflow?: boolean; // 是否溢出（超出可用时间段）
   completed?: boolean; // todo是否已完成

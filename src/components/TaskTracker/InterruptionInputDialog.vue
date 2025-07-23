@@ -70,7 +70,7 @@ const emit = defineEmits<{
       description: string;
       asActivity: boolean;
       activityClass?: "T" | "S";
-      dueDate?: number;
+      dueDate?: number | null;
     }
   ): void;
 }>();

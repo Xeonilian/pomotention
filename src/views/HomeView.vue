@@ -49,7 +49,7 @@
             ? { height: topHeight + 'px' }
             : { height: '100%' }
         "
-        :class="{ 'not-today': !isViewingToday }"
+        :class="{ yesterday: isViewingYesterday, tomorrow: isViewingTomorrow }"
       >
         <!-- 今日待办的头部和控件 -->
         <div class="today-header">
@@ -314,8 +314,10 @@ const currentDatePomoCount = computed(() => {
 // 计算全局realPomo（历史 + 当天）
 const globalRealPomo = computed(() => pomoStore.globalRealPomo);
 
-// 计算当前日期
+// 计算当前日期 不赋值在UI计算class就会失效，但是UI输出的值是正确的
 const isViewingToday = dateService.isViewingToday;
+const isViewingYesterday = dateService.isViewingYesterday;
+const isViewingTomorrow = dateService.isViewingTomorrow;
 
 // 计算筛选的当天todo
 const todosForAppDate = computed(() => {
@@ -483,6 +485,8 @@ function onUpdateActiveId(id: number | null) {
 
 /** 修改番茄类型时的提示处理 */
 function onTogglePomoType(id: number, event?: Event) {
+  const todo = todoList.value.find((t) => t.activityId === id);
+  if (todo) todo.positionIndex = undefined;
   const target = (event?.target as HTMLElement) || null;
   const result = togglePomoType(activityList.value, id);
   if (result) {
@@ -912,7 +916,7 @@ function onInterruptionUpdated(interruption: Schedule) {
   }
 }
 // ======================== 5. 数据联动 Watchers ========================
-/** 活动变化时联动 Todo/Schedule 属性同步 */
+/** Activity 活动变化时联动 Todo/Schedule 属性同步 */
 watch(
   activityList,
   (newVal) => {
@@ -947,14 +951,15 @@ watch(
               ? [parseInt(activity.estPomoI)]
               : [];
           }
+          if (!activity.estPomoI) relatedTodo.estPomo = undefined;
           // 只要有estPomoI，覆盖第一个元素
-          if (activity.estPomoI) {
+          if (activity.estPomoI && relatedTodo.estPomo) {
             relatedTodo.estPomo[0] = parseInt(activity.estPomoI);
           }
         }
         relatedTodo.status = activity.status || "";
         relatedTodo.pomoType = activity.pomoType;
-        relatedTodo.dueDate = activity.dueDate;
+        if (activity.dueDate) relatedTodo.dueDate = activity.dueDate;
       }
     });
   },
@@ -1149,39 +1154,33 @@ const { startResize: startRightResize } = useResize(
 .button-group {
   display: flex;
   gap: 2px;
-  padding: 0px;
+  padding: 1px;
   align-items: center;
   flex-shrink: 0;
   flex-grow: 0;
   background-color: var(--color-background);
 }
 
-.middle-top.not-today .today-header {
-  background: var(--color-background);
+.middle-top.tomorrow .today-status {
+  background: var(--color-red-light);
 }
 
-.middle-top.not-today .today-status {
+.middle-top.yesterday .today-status {
+  background: var(--color-blue-light);
+}
+
+.today-status {
   font-size: 18px;
   font-family: "Courier New", Courier, monospace;
   color: var(--color-text);
   border-radius: 12px;
   padding: 0px 8px 0px 8px;
   margin: 2px;
-  background: var(--color-blue-light);
 }
 
-.middle-top.not-today .global-pomo {
+.global-pomo {
   background: var(--color-background-light);
-}
-
-.middle-top.not-today .today-pomo {
   color: var(--color-text);
-  /* display: none; */
-}
-
-.middle-top.not-today .total-pomo {
-  color: var(--color-text);
-  /* display: none; */
 }
 
 .middle-bottom {

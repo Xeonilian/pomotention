@@ -122,7 +122,12 @@ const emit = defineEmits<{
   (e: "reward-record", value: { value: number; description?: string }): void;
   (
     e: "interruption-record",
-    data: { classType: "E" | "I"; description: string; asActivity: boolean }
+    data: {
+      classType: "E" | "I";
+      description: string;
+      asActivity: boolean;
+      dueDate?: number | null;
+    }
   ): void;
 }>();
 
@@ -145,6 +150,7 @@ function handleInterruptionConfirm(val: {
   classType: "E" | "I";
   description: string;
   asActivity: boolean;
+  dueDate?: number | null;
 }) {
   if (props.taskId) {
     emit("interruption-record", val);

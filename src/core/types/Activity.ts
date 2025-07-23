@@ -5,7 +5,7 @@ export interface Activity {
   class: "S" | "T"; // schedule todo
   projectId?: number;
   estPomoI?: string;
-  dueDate?: number;
+  dueDate?: number | null;
   dueRange?: [number | null, string]; // 第二个改为分钟用input获取
   interruption?: "I" | "E";
   category?: "red" | "yellow" | "blue" | "green" | "white";

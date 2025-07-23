@@ -157,6 +157,12 @@ export function togglePomoType(activityList: Activity[], id: number) {
   // 更新活动的番茄类型
   activity.pomoType = newPomoType;
 
+  if (newPomoType == "🍒") {
+    activity.estPomoI = "4";
+  } else {
+    activity.estPomoI = undefined;
+  }
+  console.log(activity.estPomoI, activity.pomoType);
   return {
     oldType: currentType,
     newType: newPomoType,

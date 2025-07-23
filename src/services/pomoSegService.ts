@@ -81,7 +81,10 @@ export function getTodoDisplayPomoCount(todo: Todo): number {
 export function splitIndexPomoBlocksExSchedules(
   appDateTimestamp: number,
   blocks: Block[],
-  schedules: { activityDueRange: [number, string]; isUntaetigkeit?: boolean }[]
+  schedules: {
+    activityDueRange: [number | null, string];
+    isUntaetigkeit?: boolean;
+  }[]
 ): PomodoroSegment[] {
   const scheduleInfo: Array<{
     range: [number, number];
@@ -164,7 +167,7 @@ export function splitIndexPomoBlocksExSchedules(
           start: cur,
           end: cur + 25 * 60 * 1000,
           category: block.category,
-          index: idx,
+          pomoIndex: idx,
         });
         cur += 25 * 60 * 1000;
 
@@ -186,7 +189,7 @@ export function splitIndexPomoBlocksExSchedules(
           start: cur,
           end: cur + 25 * 60 * 1000,
           category: block.category,
-          index: idx,
+          pomoIndex: idx,
         });
         idx++;
       }
@@ -249,7 +252,7 @@ export function generateEstimatedTodoSegments(
     // );
 
     // 优先根据index分配
-    if (typeof todo.index === "number" && todo.index >= 0) {
+    if (typeof todo.positionIndex === "number" && todo.positionIndex >= 0) {
       const targetCategory = todo.pomoType === "🍇" ? "living" : "working";
       const segs = segByCategory[targetCategory];
       const workSegs = segs.filter((s) => s.type === "work");
@@ -258,7 +261,7 @@ export function generateEstimatedTodoSegments(
       let assignedCount = 0;
       let assignedWorkIndexes: number[] = [];
       for (let i = 0; i < needCount; i++) {
-        const workIdx = todo.index + i;
+        const workIdx = todo.positionIndex + i;
         if (workIdx < workSegs.length && !usedArr[workIdx]) {
           usedArr[workIdx] = true;
           assignedWorkIndexes.push(workIdx);
@@ -266,7 +269,7 @@ export function generateEstimatedTodoSegments(
             todoId: todo.id,
             priority: todo.priority,
             todoTitle: todo.activityTitle,
-            index: i + 1,
+            todoIndex: i + 1,
             start: workSegs[workIdx].start,
             end: workSegs[workIdx].end,
             pomoType: todo.pomoType || "🍅",
@@ -296,7 +299,7 @@ export function generateEstimatedTodoSegments(
           todoId: todo.id,
           priority: todo.priority,
           todoTitle: todo.activityTitle,
-          index: assignedCount + 1,
+          todoIndex: assignedCount + 1,
           start: overflowStartTime,
           end: overflowStartTime + duration,
           pomoType: todo.pomoType || "🍅",
@@ -375,7 +378,7 @@ export function generateActualTodoSegments(todos: Todo[]): TodoSegment[] {
           todoId: todo.id,
           priority: todo.priority,
           todoTitle: todo.activityTitle,
-          index: pomodoroIndex + 1,
+          todoIndex: pomodoroIndex + 1,
           start: segmentStart,
           end: segmentEnd,
           pomoType: "🍒",
@@ -394,7 +397,7 @@ export function generateActualTodoSegments(todos: Todo[]): TodoSegment[] {
           todoId: todo.id,
           priority: todo.priority,
           todoTitle: todo.activityTitle,
-          index: i + 1,
+          todoIndex: i + 1,
           start: segmentStart,
           end: segmentEnd,
           pomoType: todo.pomoType || "🍅",
@@ -443,7 +446,7 @@ function _allocateTomatoSegments(
         todoId: todo.id,
         priority: todo.priority,
         todoTitle: todo.activityTitle,
-        index: assignedCount + 1,
+        todoIndex: assignedCount + 1,
         start: segments[i].start,
         end: segmentEnd,
         pomoType: "🍅",
@@ -473,7 +476,7 @@ function _allocateTomatoSegments(
         todoId: todo.id,
         priority: todo.priority,
         todoTitle: todo.activityTitle,
-        index: assignedCount + 1,
+        todoIndex: assignedCount + 1,
         start: overflowStartTime,
         end: overflowStartTime + duration,
         pomoType: "🍅",
@@ -522,7 +525,7 @@ function _allocateGrapeSegments(
         todoId: todo.id,
         priority: todo.priority,
         todoTitle: todo.activityTitle,
-        index: assignedCount + 1,
+        todoIndex: assignedCount + 1,
         start: segments[i].start,
         end: segmentEnd,
         pomoType: "🍇",
@@ -552,7 +555,7 @@ function _allocateGrapeSegments(
         todoId: todo.id,
         priority: todo.priority,
         todoTitle: todo.activityTitle,
-        index: assignedCount + 1,
+        todoIndex: assignedCount + 1,
         start: overflowStartTime,
         end: overflowStartTime + duration,
         pomoType: "🍇",
@@ -602,7 +605,7 @@ function _allocateCherrySegments(
           todoId: todo.id,
           priority: todo.priority,
           todoTitle: todo.activityTitle,
-          index: assignedCount + 1 + pomodoroIndex,
+          todoIndex: assignedCount + 1 + pomodoroIndex,
           start: segments[i + j].start,
           end: segments[i + j].end,
           pomoType: "🍒",
@@ -632,7 +635,7 @@ function _allocateCherrySegments(
         todoId: todo.id,
         priority: todo.priority,
         todoTitle: todo.activityTitle,
-        index: assignedCount + 1,
+        todoIndex: assignedCount + 1,
         start: overflowStartTime,
         end: overflowStartTime + duration,
         pomoType: "🍒",
@@ -799,7 +802,7 @@ function _allocateTomatoSegmentsFromIndex(
         todoId: todo.id,
         priority: todo.priority,
         todoTitle: todo.activityTitle,
-        index: assignedCount + 1,
+        todoIndex: assignedCount + 1,
         start: segments[i].start,
         end: segmentEnd,
         pomoType: "🍅",
@@ -829,7 +832,7 @@ function _allocateTomatoSegmentsFromIndex(
         todoId: todo.id,
         priority: todo.priority,
         todoTitle: todo.activityTitle,
-        index: assignedCount + 1,
+        todoIndex: assignedCount + 1,
         start: overflowStartTime,
         end: overflowStartTime + duration,
         pomoType: "🍅",
@@ -883,7 +886,7 @@ function _allocateGrapeSegmentsFromIndex(
         todoId: todo.id,
         priority: todo.priority,
         todoTitle: todo.activityTitle,
-        index: assignedCount + 1,
+        todoIndex: assignedCount + 1,
         start: segments[i].start,
         end: segmentEnd,
         pomoType: "🍇",
@@ -913,7 +916,7 @@ function _allocateGrapeSegmentsFromIndex(
         todoId: todo.id,
         priority: todo.priority,
         todoTitle: todo.activityTitle,
-        index: assignedCount + 1,
+        todoIndex: assignedCount + 1,
         start: overflowStartTime,
         end: overflowStartTime + duration,
         pomoType: "🍇",
@@ -968,7 +971,7 @@ function _allocateCherrySegmentsFromIndex(
           todoId: todo.id,
           priority: todo.priority,
           todoTitle: todo.activityTitle,
-          index: assignedCount + 1 + pomodoroIndex,
+          todoIndex: assignedCount + 1 + pomodoroIndex,
           start: segments[i + j].start,
           end: segments[i + j].end,
           pomoType: "🍒",
@@ -998,7 +1001,7 @@ function _allocateCherrySegmentsFromIndex(
         todoId: todo.id,
         priority: todo.priority,
         todoTitle: todo.activityTitle,
-        index: assignedCount + 1,
+        todoIndex: assignedCount + 1,
         start: overflowStartTime,
         end: overflowStartTime + duration,
         pomoType: "🍒",
