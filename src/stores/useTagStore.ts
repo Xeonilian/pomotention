@@ -36,12 +36,12 @@ export const useTagStore = defineStore("tagStore", () => {
 
   function loadInitialTags(defaultTags: Tag[]) {
     // 关键判断：只有当 store 初始化后 tags 数组为空时才执行
-    // if (tags.value.length > 0) {
-    //   console.log("[TagStore] 本地已存在标签，跳过加载默认标签。");
-    //   return;
-    // }
+    if (tags.value.length > 0) {
+      // console.log("[TagStore] 本地已存在标签，跳过加载默认标签。");
+      return;
+    }
 
-    console.log("[TagStore] 本地无标签，正在加载默认标签...");
+    // console.log("[TagStore] 本地无标签，正在加载默认标签...");
 
     // *** 核心修正 ***
     // 直接使用传入的、已经包含 ID 的默认标签数组
