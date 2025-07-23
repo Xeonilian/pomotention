@@ -190,7 +190,11 @@ export function handleSuspendSchedule(
         `Activity with id ${activity.id} status updated to suspended.`
       );
 
-      if (activity.dueRange) {
+      if (
+        activity.dueRange &&
+        activity.dueRange[0] &&
+        schedule.activityDueRange[0]
+      ) {
         // 将 dueRange 的时间都加1天
         activity.dueRange = [
           addDays(activity.dueRange[0], 1),
@@ -252,7 +256,7 @@ export function syncDateChanges(
           schedule.activityTitle = activity.title;
           schedule.activityDueRange = activity.dueRange
             ? [...activity.dueRange]
-            : [0, "0"];
+            : [null, "0"];
           schedule.status = activity.status || "";
           schedule.projectName = activity.projectId
             ? `项目${activity.projectId}`

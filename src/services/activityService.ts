@@ -177,7 +177,7 @@ export function syncActivityChanges(
       relatedSchedule.activityTitle = activity.title;
       relatedSchedule.activityDueRange = activity.dueRange
         ? [activity.dueRange[0], activity.dueRange[1]]
-        : [0, "0"];
+        : [null, "0"];
       relatedSchedule.status = activity.status || "";
       relatedSchedule.location = activity.location || "";
     }

@@ -219,13 +219,7 @@ function onAddTag() {
   if (exist) {
     return;
   } else {
-    // 如果标签不存在，则创建新标签并选中它
-    const newTag = tagStore.addTag(input, "#333", "#eee");
-    if (newTag && !isTagSelected(newTag.id)) {
-      onClickTag(newTag);
-      tagStore.setTagCount(newTag.id, 1);
-    }
-    inputText.value = "";
+    tagStore.addTag(input, "#333", "#eee");
   }
 }
 
@@ -333,7 +327,7 @@ function updateInputWidth() {
   padding: 0 6px;
   height: 28px;
   font-size: 15px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  /* box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08); */
   cursor: pointer;
   border: 2px solid transparent;
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
@@ -360,7 +354,8 @@ function updateInputWidth() {
 /* 悬浮在“已选中”的标签上时的增强效果 */
 .custom-tag.selected:hover {
   transform: translateY(-2px);
-  box-shadow: 0 2px 2px rgba(0, 0, 0, 0.12);
+  /* box-shadow: 0 2px 2px rgba(0, 0, 0, 0.12); */
+  cursor: default;
 }
 
 .custom-tag.empty-tag {

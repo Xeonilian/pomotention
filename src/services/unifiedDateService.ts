@@ -150,13 +150,19 @@ export function unifiedDateService({
     const todayKey = getDateKey(dateState.system);
     activityList.value.forEach((activity) => {
       if (activity.class === "S" && activity.dueRange) {
-        const activityKey = getDateKey(activity.dueRange[0]);
-        // 检查活动的开始日期是否是今天，并且它还没有被转换成 Schedule
         if (
-          activityKey === todayKey &&
-          !scheduleList.value.some((s) => s.activityId === activity.id)
+          activity.class === "S" &&
+          activity.dueRange &&
+          activity.dueRange[0]
         ) {
-          activity.status = "ongoing";
+          const activityKey = getDateKey(activity.dueRange[0]);
+          // 检查活动的开始日期是否是今天，并且它还没有被转换成 Schedule
+          if (
+            activityKey === todayKey &&
+            !scheduleList.value.some((s) => s.activityId === activity.id)
+          ) {
+            activity.status = "ongoing";
+          }
         }
       }
     });

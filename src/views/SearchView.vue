@@ -43,7 +43,10 @@
           class="info"
           style="margin-top: 2px; margin-bottom: 2px; color: var(--color-red)"
         >
-          截止日期: {{ formatDate(item.activityDueRange[0]) }}
+          截止日期:
+          {{
+            item.activityDueRange[0] ? formatDate(item.activityDueRange[0]) : ""
+          }}
         </p>
         <p
           class="info"
