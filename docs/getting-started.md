@@ -9,21 +9,14 @@ description: 下载最新版本的应用程序
 
 ## 当前版本
 
-::: info 最新发布
-**版本 v0.3.0** - 2025 年 7 月 22 日发布
-
-- 功能稳定测试
-- 支持 Windows macOS （ dmg + app + msi + exe）
-- 简易全局搜索
-- 番茄钟最小化置顶
-- 自动更新
-- 活动 Kanban+标签+子活动
-  :::
-
 ::: warning 紧急修复
 
-- 0.2.6 引入操作 bug
+- 0.3.0 标签保存出错，删除全部内容，尽快恢复
   :::
+
+::: info 最新发布
+**版本 v0.2.9** - 2025 年 7 月 11 日发布
+:::
 
 ## 系统要求
 
@@ -41,13 +34,13 @@ description: 下载最新版本的应用程序
 
 ### Windows
 
-<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.3.0/pomotention_0.3.0_x64_en-US.msi" class="download-btn windows">
+<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.2.9/pomotention_0.2.9_x64_en-US.msi" class="download-btn windows">
   <span class="platform">Windows</span>
   <span class="format">.msi 安装包</span>
   <span class="size">15.7MB</span>
 </a>
 
-<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.2.7/pomotention_0.3.0_x64-setup.exe" class="download-btn windows">
+<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.2.9/pomotention_0.2.9_x64-setup.exe" class="download-btn windows">
   <span class="platform">Windows</span>
   <span class="format">.exe </span>
   <span class="size">14.5MB</span>
@@ -55,13 +48,13 @@ description: 下载最新版本的应用程序
 
 ### macOS
 
-<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.3.0/pomotention_0.3.0_x64.dmg" class="download-btn macos">
+<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.2.9/pomotention_0.2.9_x64.dmg" class="download-btn macos">
   <span class="platform">macOS</span>
   <span class="format">.dmg 安装包</span>
   <span class="size">18.5MB</span>
 </a>
 
-<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.3.0/pomotention.app.tar.gz" class="download-btn macos">
+<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.2.9/pomotention.app.tar.gz" class="download-btn macos">
   <span class="platform">macOS</span>
   <span class="format">app.tar.gz</span>
   <span class="size">17.1MB</span>
