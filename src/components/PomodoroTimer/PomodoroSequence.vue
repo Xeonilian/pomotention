@@ -85,15 +85,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onUnmounted, watch, onMounted } from "vue";
+import { ref, watch, onMounted, computed } from "vue";
 import { NButton, NIcon, NInput, useDialog } from "naive-ui";
 import { useTimerStore } from "@/stores/useTimerStore";
 import { useSettingStore } from "@/stores/useSettingStore";
-import {
-  toggleWhiteNoise,
-  getWhiteNoiseState,
-  setPomodoroRunning,
-} from "@/core/sounds.ts";
+import { toggleWhiteNoise, setPomodoroRunning } from "@/core/sounds.ts";
 import {
   Speaker224Regular,
   SpeakerMute24Regular,
@@ -134,7 +130,12 @@ const defaultPomoDuration = ref<string>(
 );
 
 // 白噪音状态
-const isWhiteNoiseEnabled = ref<boolean>(getWhiteNoiseState());
+const isWhiteNoiseEnabled = computed({
+  get: () => settingStore.settings.isWhiteNoiseEnabled,
+  set: (val) => {
+    settingStore.settings.isWhiteNoiseEnabled = val;
+  },
+});
 
 // 添加进度监听
 watch(
@@ -256,7 +257,7 @@ function stopPomodoro(): void {
   setPomodoroRunning(false); // 设置番茄钟停止状态
   timeoutHandles.value.forEach((handle) => clearTimeout(handle));
   timeoutHandles.value = [];
-  console.log("Stopping pomodoro...");
+  // console.log("Stopping pomodoro...");
 
   // 重置状态
   currentStep.value = 0;
@@ -338,7 +339,7 @@ function updateProgressStatus(currentStep: number): void {
 
 // 初始化进度条
 function initializeProgress(sequence: string): void {
-  console.log("Initializing progress with sequence:", sequence);
+  // console.log("Initializing progress with sequence:", sequence);
   if (!progressContainer.value) {
     console.error("Progress container not found!");
     return;
@@ -346,7 +347,7 @@ function initializeProgress(sequence: string): void {
 
   progressContainer.value.innerHTML = "";
   const steps = parseSequence(sequence);
-  console.log("Steps for progress:", steps);
+  // console.log("Steps for progress:", steps);
 
   steps.forEach((step) => {
     const block = createTimeBlock(step.duration, step.type);
@@ -384,7 +385,7 @@ document.head.appendChild(style);
 
 // 切换白噪音
 function handleToggleWhiteNoise(): void {
-  isWhiteNoiseEnabled.value = toggleWhiteNoise();
+  toggleWhiteNoise();
 }
 
 // 处理键盘事件
@@ -445,9 +446,9 @@ function handleBlurRestore(): void {
 onMounted(() => {
   // 如果番茄钟正在运行且来自序列，恢复 UI 状态
   if (timerStore.isActive && timerStore.isFromSequence) {
-    console.log(
-      "[PomodoroSequence] Component mounted, restoring pomo sequence UI state"
-    );
+    // console.log(
+    //   "[PomodoroSequence] Component mounted, restoring pomo sequence UI state"
+    // );
     isRunning.value = true;
     emit("pomo-seq-running", true);
     setPomodoroRunning(true);
@@ -481,16 +482,7 @@ onMounted(() => {
   }
 });
 
-// 组件卸载时清理
-onUnmounted(() => {
-  // 当组件卸载时，我们不应该停止正在运行的番茄钟序列
-  // 因为进入 onTop 模式时组件会被重新挂载，但番茄钟应该继续运行
-  // 只有当用户明确点击停止按钮时，才应该停止番茄钟序列
-  console.log(
-    "[PomodoroSequence] Component unmounted, but keeping pomodoro running if active"
-  );
-  // 不在这里停止番茄钟，让它继续运行
-});
+// 组件卸载时清理取消
 </script>
 
 <style scoped>

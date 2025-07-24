@@ -21,6 +21,7 @@ export interface GlobalSettings {
   leftWidth: number;
   rightWidth: number;
   topHeight: number;
+  isWhiteNoiseEnabled: boolean;
   // 以后新增全局设置项就在这里补充
 }
 
@@ -40,6 +41,7 @@ const defaultSettings: GlobalSettings = {
   leftWidth: 100, // 默认值你自己定
   rightWidth: 300,
   topHeight: 300,
+  isWhiteNoiseEnabled: true,
 };
 
 // 工具函数

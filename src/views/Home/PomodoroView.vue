@@ -111,7 +111,7 @@ onMounted(() => {
 watch(
   () => props.showPomoSeq,
   () => {
-    console.log("repo seq切换");
+    // console.log("repo seq切换");
     reportSize();
   }
 );
@@ -120,7 +120,7 @@ watch(
 watch(
   () => props.isMiniMode,
   () => {
-    console.log("repo mini切换");
+    // console.log("repo mini切换");
     reportSize();
   }
 );
@@ -128,8 +128,8 @@ watch(
 // 监听 pomoSeg 运行变化
 watch(
   () => isPomoSeqRunning.value,
-  (newVal) => {
-    console.log("repo  seq 运行", newVal);
+  () => {
+    // console.log("repo  seq 运行", newVal);
     reportSize();
   }
 );

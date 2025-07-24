@@ -1,4 +1,5 @@
 // sounds.ts
+import { useSettingStore } from "@/stores/useSettingStore";
 // 声音类型枚举
 export enum SoundType {
   WORK_START = "work_start",
@@ -38,7 +39,6 @@ const soundCache = new Map<SoundType, HTMLAudioElement>();
 let whiteNoiseAudio: HTMLAudioElement | null = null;
 
 // 白噪音状态
-let isWhiteNoiseEnabled = true;
 let isPomodoroRunning = false;
 
 // 获取声音对象
@@ -61,7 +61,8 @@ export function playSound(type: SoundType): void {
 
 // 开始播放白噪音
 export function startWhiteNoise(): void {
-  if (!isWhiteNoiseEnabled || !isPomodoroRunning) {
+  const settingStore = useSettingStore();
+  if (!settingStore.settings.isWhiteNoiseEnabled) {
     return;
   }
 
@@ -71,7 +72,7 @@ export function startWhiteNoise(): void {
     whiteNoiseAudio.volume = 0.3;
 
     whiteNoiseAudio.addEventListener("canplaythrough", () => {
-      if (isWhiteNoiseEnabled && isPomodoroRunning) {
+      if (settingStore.settings.isWhiteNoiseEnabled && isPomodoroRunning) {
         whiteNoiseAudio
           ?.play()
           .catch((error) => console.error("白噪音播放失败:", error));
@@ -98,26 +99,23 @@ export function stopWhiteNoise(): void {
 
 // 设置番茄钟运行状态
 export function setPomodoroRunning(running: boolean): void {
+  const settingStore = useSettingStore();
   isPomodoroRunning = running;
   if (!running) {
     stopWhiteNoise();
-  } else if (isWhiteNoiseEnabled) {
+  } else if (settingStore.settings.isWhiteNoiseEnabled) {
     startWhiteNoise();
   }
 }
 
-// 获取白噪音状态
-export function getWhiteNoiseState(): boolean {
-  return isWhiteNoiseEnabled;
-}
-
 // 切换白噪音状态
-export function toggleWhiteNoise(): boolean {
-  isWhiteNoiseEnabled = !isWhiteNoiseEnabled;
-  if (!isWhiteNoiseEnabled) {
+export function toggleWhiteNoise(): void {
+  const settingStore = useSettingStore();
+  settingStore.settings.isWhiteNoiseEnabled =
+    !settingStore.settings.isWhiteNoiseEnabled;
+  if (!settingStore.settings.isWhiteNoiseEnabled) {
     stopWhiteNoise();
   } else if (isPomodoroRunning) {
     startWhiteNoise();
   }
-  return isWhiteNoiseEnabled;
 }

@@ -200,7 +200,7 @@ export const useTimerStore = defineStore("timer", () => {
     isFromSequence.value = !!onFinish;
 
     // 播放工作开始声音
-    // console.log("Playing work start sound");
+    console.log("Playing work start sound");
     playSound(SoundType.WORK_START);
     // 开始播放白噪音
     startWhiteNoise();
