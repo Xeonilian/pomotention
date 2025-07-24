@@ -36,22 +36,83 @@
           <n-icon :component="RecordStop24Regular" />
         </template>
       </n-button>
-
-      <n-button
-        class="action-button"
-        @click="handleToggleWhiteNoise"
-        :title="isWhiteNoiseEnabled ? '关闭白噪音' : '开启白噪音'"
-        tertiary
-        circle
+      <n-popover
+        trigger="click"
+        placement="top"
+        :delay="1000"
+        :show-arrow="false"
+        class="popover-container"
+        :style="{
+          padding: '2px 0 2px 0',
+          boxShadow: 'none',
+          backgroundColor: 'var(--color-background)',
+        }"
       >
-        <template #icon>
-          <n-icon
-            :component="
-              isWhiteNoiseEnabled ? Speaker224Regular : SpeakerMute24Regular
-            "
-          />
+        <template #trigger>
+          <n-badge
+            dot
+            type="default"
+            :offset="[-2, 2]"
+            title="选择白噪音"
+            class="clickable-badge"
+          >
+            <n-button
+              class="action-button"
+              @click="handleToggleWhiteNoise"
+              :title="isWhiteNoiseEnabled ? '关闭白噪音' : '开启白噪音'"
+              tertiary
+              circle
+            >
+              <template #icon>
+                <n-icon
+                  :component="
+                    isWhiteNoiseEnabled
+                      ? Speaker224Regular
+                      : SpeakerMute24Regular
+                  "
+                />
+              </template>
+            </n-button>
+          </n-badge>
         </template>
-      </n-button>
+
+        <!-- Popover 的内容：垂直排列的按钮 -->
+        <div class="popover-actions">
+          <n-button
+            secondary
+            circle
+            type="info"
+            size="small"
+            title="雨声"
+            @click="
+              settingStore.settings.whiteNoiseSoundTrack =
+                SoundType.WHITE_NOISE;
+              stopWhiteNoise();
+              startWhiteNoise();
+            "
+          >
+            <template #icon>
+              <n-icon><WeatherThunderstorm20Regular /></n-icon>
+            </template>
+          </n-button>
+          <n-button
+            secondary
+            type="info"
+            circle
+            size="small"
+            title="滴答声"
+            @click="
+              settingStore.settings.whiteNoiseSoundTrack = SoundType.WORK_TICK;
+              stopWhiteNoise();
+              startWhiteNoise();
+            "
+          >
+            <template #icon>
+              <n-icon><ClockAlarm24Regular /></n-icon>
+            </template>
+          </n-button>
+        </div>
+      </n-popover>
       <n-button
         class="action-button"
         @click="addPomodoro"
@@ -86,17 +147,24 @@
 
 <script setup lang="ts">
 import { ref, watch, onMounted, computed } from "vue";
-import { NButton, NIcon, NInput, useDialog } from "naive-ui";
+import { NButton, NIcon, NInput, useDialog, NBadge } from "naive-ui";
 import { useTimerStore } from "@/stores/useTimerStore";
 import { useSettingStore } from "@/stores/useSettingStore";
-import { toggleWhiteNoise, setPomodoroRunning } from "@/core/sounds.ts";
+import {
+  toggleWhiteNoise,
+  setPomodoroRunning,
+  stopWhiteNoise,
+  startWhiteNoise,
+} from "@/core/sounds.ts";
 import {
   Speaker224Regular,
   SpeakerMute24Regular,
   PlayCircle24Regular,
   RecordStop24Regular,
+  WeatherThunderstorm20Regular,
+  ClockAlarm24Regular,
 } from "@vicons/fluent";
-
+import { SoundType } from "@/core/sounds.ts";
 type PomodoroStep = {
   type: "work" | "break";
   duration: number;
@@ -613,5 +681,22 @@ onMounted(() => {
 }
 .disabled {
   color: var(--color-text-secondary);
+}
+
+/* 为 popover 内容里的按钮容器添加样式 */
+.popover-actions {
+  display: flex;
+  flex-direction: row; /* 垂直排列 */
+  gap: 8px; /* 按钮之间的垂直间距 */
+  margin: 0px;
+  padding: 0;
+}
+
+.clickable-badge:hover {
+  cursor: default;
+}
+
+.clickable-badge:hover :deep(.n-badge-sup) {
+  background-color: var(--color-red);
 }
 </style>

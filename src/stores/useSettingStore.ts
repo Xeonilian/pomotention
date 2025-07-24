@@ -4,6 +4,7 @@ import { ref, watch } from "vue";
 import { STORAGE_KEYS } from "../core/constants";
 import { PomodoroDurations, TimerStyleDefaults } from "../core/constants";
 import { ActivitySectionConfig } from "@/core/types/Activity";
+import { SoundType } from "@/core/sounds";
 
 // 定义全局 settings 类型（可根据自己需要补充或修改）
 export interface GlobalSettings {
@@ -22,6 +23,7 @@ export interface GlobalSettings {
   rightWidth: number;
   topHeight: number;
   isWhiteNoiseEnabled: boolean;
+  whiteNoiseSoundTrack: SoundType;
   // 以后新增全局设置项就在这里补充
 }
 
@@ -42,6 +44,7 @@ const defaultSettings: GlobalSettings = {
   rightWidth: 300,
   topHeight: 300,
   isWhiteNoiseEnabled: true,
+  whiteNoiseSoundTrack: SoundType.WORK_TICK,
 };
 
 // 工具函数

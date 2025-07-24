@@ -14,6 +14,7 @@ export enum SoundType {
   PHASE_R2 = "phase_r2",
   PHASE_T = "phase_t",
   PHASE_BREAK = "phase_break",
+  WORK_TICK = "work_tick",
 }
 
 // 声音文件路径
@@ -30,6 +31,7 @@ const soundPaths = {
   [SoundType.PHASE_R2]: "/sounds/phase_r2.wav",
   [SoundType.PHASE_T]: "/sounds/phase_t.wav",
   [SoundType.PHASE_BREAK]: "/sounds/break_middle.wav",
+  [SoundType.WORK_TICK]: "/sounds/work_tick.wav",
 };
 
 // 声音对象缓存
@@ -65,11 +67,24 @@ export function startWhiteNoise(): void {
   if (!settingStore.settings.isWhiteNoiseEnabled) {
     return;
   }
+  const targetSrc = soundPaths[settingStore.settings.whiteNoiseSoundTrack];
 
+  // 如果 audio 对象存在，但 src 不一致，需要重建
+  if (
+    whiteNoiseAudio &&
+    whiteNoiseAudio.src !== window.location.origin + targetSrc
+  ) {
+    whiteNoiseAudio.pause();
+    whiteNoiseAudio = null;
+  }
+
+  // 重新创建 audio 对象
   if (!whiteNoiseAudio) {
-    whiteNoiseAudio = new Audio(soundPaths[SoundType.WHITE_NOISE]);
+    whiteNoiseAudio = new Audio(targetSrc);
     whiteNoiseAudio.loop = true;
-    whiteNoiseAudio.volume = 0.3;
+    if (settingStore.settings.whiteNoiseSoundTrack === SoundType.WORK_TICK)
+      whiteNoiseAudio.volume = 1;
+    else whiteNoiseAudio.volume = 0.3;
 
     whiteNoiseAudio.addEventListener("canplaythrough", () => {
       if (settingStore.settings.isWhiteNoiseEnabled && isPomodoroRunning) {
@@ -94,6 +109,8 @@ export function stopWhiteNoise(): void {
   if (whiteNoiseAudio) {
     whiteNoiseAudio.pause();
     whiteNoiseAudio.currentTime = 0;
+    whiteNoiseAudio.src = ""; // 彻底切断流
+    whiteNoiseAudio = null; // 关键：彻底销毁
   }
 }
 
