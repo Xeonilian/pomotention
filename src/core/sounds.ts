@@ -64,53 +64,33 @@ export function playSound(type: SoundType): void {
 // 开始播放白噪音
 export function startWhiteNoise(): void {
   const settingStore = useSettingStore();
-  if (!settingStore.settings.isWhiteNoiseEnabled) {
-    return;
-  }
-  const targetSrc = soundPaths[settingStore.settings.whiteNoiseSoundTrack];
+  if (!settingStore.settings.isWhiteNoiseEnabled) return;
 
-  // 如果 audio 对象存在，但 src 不一致，需要重建
-  if (
-    whiteNoiseAudio &&
-    whiteNoiseAudio.src !== window.location.origin + targetSrc
-  ) {
+  // 彻底销毁旧 audio
+  if (whiteNoiseAudio) {
     whiteNoiseAudio.pause();
+    whiteNoiseAudio.src = "";
     whiteNoiseAudio = null;
   }
+  const src = soundPaths[settingStore.settings.whiteNoiseSoundTrack];
+  whiteNoiseAudio = new Audio(src);
+  whiteNoiseAudio.loop = true;
+  whiteNoiseAudio.volume =
+    settingStore.settings.whiteNoiseSoundTrack === SoundType.WORK_TICK
+      ? 1
+      : 0.3;
 
-  // 重新创建 audio 对象
-  if (!whiteNoiseAudio) {
-    whiteNoiseAudio = new Audio(targetSrc);
-    whiteNoiseAudio.loop = true;
-    if (settingStore.settings.whiteNoiseSoundTrack === SoundType.WORK_TICK)
-      whiteNoiseAudio.volume = 1;
-    else whiteNoiseAudio.volume = 0.3;
-
-    whiteNoiseAudio.addEventListener("canplaythrough", () => {
-      if (settingStore.settings.isWhiteNoiseEnabled && isPomodoroRunning) {
-        whiteNoiseAudio
-          ?.play()
-          .catch((error) => console.error("白噪音播放失败:", error));
-      }
-    });
-
-    whiteNoiseAudio.addEventListener("error", (e) => {
-      console.error("白噪音音频加载错误:", e);
-    });
-  } else {
-    whiteNoiseAudio
-      .play()
-      .catch((error) => console.error("白噪音播放失败:", error));
-  }
+  // 直接播放，无需监听 canplaythrough，现代浏览器会自动缓冲到位后播
+  whiteNoiseAudio.play().catch((e) => {
+    // 忽略所有报错，不打印到控制台
+    // console.log("白噪音 play 错误", e);
+  });
 }
-
-// 停止播放白噪音
 export function stopWhiteNoise(): void {
   if (whiteNoiseAudio) {
     whiteNoiseAudio.pause();
-    whiteNoiseAudio.currentTime = 0;
-    whiteNoiseAudio.src = ""; // 彻底切断流
-    whiteNoiseAudio = null; // 关键：彻底销毁
+    whiteNoiseAudio.src = "";
+    whiteNoiseAudio = null;
   }
 }
 
