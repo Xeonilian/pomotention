@@ -15,11 +15,13 @@
       </thead>
       <!-- 表格内容部分，可单独调整样式 -->
       <tbody class="table-body">
-        <template v-if="schedules && schedules.length > 0">
+        <template v-if="schedules && schedules!.length > 0">
           <tr
-            v-for="schedule in schedules.sort(
-              (a, b) => a.activityDueRange[0] - b.activityDueRange[0]
-            )"
+            v-for="schedule in schedules.sort((a, b) => {
+              const aValue = a.activityDueRange?.[0] ?? Infinity;
+              const bValue = b.activityDueRange?.[0] ?? Infinity;
+              return aValue - bValue;
+            })"
             :key="schedule.id"
             :class="{
               'active-row': schedule.activityId === activeId,
