@@ -79,6 +79,15 @@ importers:
         specifier: ^2.1.10
         version: 2.2.10(typescript@5.6.3)
 
+  docs:
+    devDependencies:
+      gh-pages:
+        specifier: ^6.3.0
+        version: 6.3.0
+      vitepress:
+        specifier: ^1.6.3
+        version: 1.6.3(@algolia/client-search@5.27.0)(@types/node@22.15.3)(async-validator@4.2.5)(postcss@8.5.3)(search-insights@2.17.3)(typescript@5.6.3)
+
 packages:
 
   '@algolia/autocomplete-core@1.17.7':
