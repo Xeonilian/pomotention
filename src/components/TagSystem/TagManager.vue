@@ -192,11 +192,7 @@ function onClickTag(tag: Tag) {
   const currentTagIds = [...props.modelValue];
   const index = currentTagIds.indexOf(tag.id);
 
-  if (index > -1) {
-    // 如果已选中，则取消选中
-    currentTagIds.splice(index, 1);
-  } else {
-    // 如果未选中，则添加选中
+  if (index) {
     currentTagIds.push(tag.id);
   }
   emit("update:modelValue", currentTagIds);
