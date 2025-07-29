@@ -84,12 +84,7 @@
             type="info"
             size="small"
             title="雨声"
-            @click="
-              settingStore.settings.whiteNoiseSoundTrack =
-                SoundType.WHITE_NOISE;
-              stopWhiteNoise();
-              startWhiteNoise();
-            "
+            @click="resetWhiteNoise(SoundType.WHITE_NOISE)"
           >
             <template #icon>
               <n-icon><WeatherThunderstorm20Regular /></n-icon>
@@ -101,11 +96,7 @@
             circle
             size="small"
             title="滴答声"
-            @click="
-              settingStore.settings.whiteNoiseSoundTrack = SoundType.WORK_TICK;
-              stopWhiteNoise();
-              startWhiteNoise();
-            "
+            @click="resetWhiteNoise(SoundType.WORK_TICK)"
           >
             <template #icon>
               <n-icon><ClockAlarm24Regular /></n-icon>
@@ -550,7 +541,14 @@ onMounted(() => {
   }
 });
 
-// 组件卸载时清理取消
+function resetWhiteNoise(sound: SoundType){
+  settingStore.settings.whiteNoiseSoundTrack = sound;
+  if(isRunning.value){
+    stopWhiteNoise();
+    startWhiteNoise();
+  }
+
+}
 </script>
 
 <style scoped>

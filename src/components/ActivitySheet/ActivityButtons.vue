@@ -114,7 +114,6 @@
 
       <!-- Popover 的内容：垂直排列的按钮 -->
       <div class="popover-actions">
-        <!-- ... 这里的按钮保持不变 ... -->
         <n-button
           secondary
           circle
