@@ -83,7 +83,7 @@ export function startWhiteNoise(): void {
   // 直接播放，无需监听 canplaythrough，现代浏览器会自动缓冲到位后播
   whiteNoiseAudio.play().catch((e) => {
     // 忽略所有报错，不打印到控制台
-    // console.log("白噪音 play 错误", e);
+    console.log("白噪音 play 错误", e);
   });
 }
 export function stopWhiteNoise(): void {

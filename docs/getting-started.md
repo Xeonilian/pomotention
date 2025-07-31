@@ -10,7 +10,7 @@ description: 下载最新版本的应用程序
 ## 当前版本
 
 ::: info 最新发布
-**版本 v0.3.1** - 2025 年 7 月 24 日发布
+**版本 v0.3.2** - 2025 年 7 月 31 日发布
 
 - 标签系统+子活动
 - 活动 Kanban
@@ -31,20 +31,20 @@ description: 下载最新版本的应用程序
 ### macOS
 
 - macOS 13.0 (Ventura) 或更高版本
-- webkit支持不完全导致macOS 12.0可安装，部分渲染失败
+- webkit 支持不完全导致 macOS 12.0 可安装，部分渲染失败
 - Intel 或 Apple Silicon 处理器
 
 ## 下载链接
 
 ### Windows
 
-<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.3.1/pomotention_0.3.1_x64_en-US.msi" class="download-btn windows">
+<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.3.2/pomotention_0.3.2_x64_en-US.msi" class="download-btn windows">
   <span class="platform">Windows</span>
   <span class="format">.msi 安装包</span>
   <span class="size">15.7MB</span>
 </a>
 
-<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.3.1/pomotention_0.3.1_x64-setup.exe" class="download-btn windows">
+<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.3.2/pomotention_0.3.2_x64-setup.exe" class="download-btn windows">
   <span class="platform">Windows</span>
   <span class="format">.exe </span>
   <span class="size">14.5MB</span>
@@ -52,13 +52,13 @@ description: 下载最新版本的应用程序
 
 ### macOS
 
-<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.3.1/pomotention_0.3.1_x64.dmg" class="download-btn macos">
+<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.3.2/pomotention_0.3.2_x64.dmg" class="download-btn macos">
   <span class="platform">macOS</span>
   <span class="format">.dmg 安装包</span>
   <span class="size">18.5MB</span>
 </a>
 
-<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.3.1/pomotention.app.tar.gz" class="download-btn macos">
+<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.3.2/pomotention.app.tar.gz" class="download-btn macos">
   <span class="platform">macOS</span>
   <span class="format">app.tar.gz</span>
   <span class="size">17.1MB</span>
@@ -130,10 +130,17 @@ description: 下载最新版本的应用程序
   - 【修复】任务、日程和活动的联动不一致，删除 Suspend 功能，同步 taskId
 
 - v0.3.1 `2025-07-24`
+
   - 【修复】Tag 无法保存
   - 【修复】时间表标签拖拽机制
   - 【优化】打扰转化为活动时间处理机制
   - 【优化】新建日程无日期，不再自动取消
+
+- v0.3.2 `2025-07-31`
+  - 【新增】滴答白噪音
+  - 【优化】声音全局开关
+  - 【修复】任务完成后 tag 依然保留
+  - 【修复】时钟长度全局使用 setting，同步
 
 ## 遇到问题
 
