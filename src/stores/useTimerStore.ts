@@ -1,7 +1,7 @@
 // useTimerStore.ts
 import { defineStore } from "pinia";
 import { ref, computed, watch } from "vue";
-import { PomodoroDurations } from "../core/constants.ts";
+import { useSettingStore } from "./useSettingStore.ts";
 import {
   playSound,
   SoundType,
@@ -20,47 +20,17 @@ export const useTimerStore = defineStore("timer", () => {
   const totalTime = ref<number>(0); // 带有time的为秒
   const timerInterval = ref<number | null>(null);
   const startTime = ref<number | null>(null); // 添加开始时间记录
-
-  // 从localStorage获取设置，如果没有则使用默认值
-  function getWorkDuration(): number {
-    try {
-      const settings = localStorage.getItem("globalSettings");
-      if (settings) {
-        const parsed = JSON.parse(settings);
-        return parsed.durations?.workDuration || PomodoroDurations.workDuration;
-      }
-    } catch (error) {
-      console.error("Error loading work duration from settings:", error);
-    }
-    return PomodoroDurations.workDuration;
-  }
-
-  function getBreakDuration(): number {
-    try {
-      const settings = localStorage.getItem("globalSettings");
-      if (settings) {
-        const parsed = JSON.parse(settings);
-        return (
-          parsed.durations?.breakDuration || PomodoroDurations.breakDuration
-        );
-      }
-    } catch (error) {
-      console.error("Error loading break duration from settings:", error);
-    }
-    return PomodoroDurations.breakDuration;
-  }
-
-  // 获取当前工作时长的计算属性
-  const workDuration = computed(() => getWorkDuration());
-  const breakDuration = computed(() => getBreakDuration());
-
+  
+  const settingStore = useSettingStore()
+  const workDuration = ref(settingStore.settings.durations.workDuration)
+  const breakDuration = ref(settingStore.settings.durations.breakDuration)
   // 修改计算方式，基于实际工作时长
   // 原来的比例：r1=2分钟, r2=1分钟, w=10.5分钟, t=1分钟 (总共25分钟)
   // 现在基于实际工作时长计算
-  const r1Duration = computed(() => (2 / 25) * workDuration.value);
-  const r2Duration = computed(() => (1 / 25) * workDuration.value);
-  const wDuration = computed(() => (10.5 / 25) * workDuration.value);
-  const tDuration = computed(() => (1 / 25) * workDuration.value);
+  const r1Duration = computed(() => (2 / 25) *  workDuration.value);
+  const r2Duration = computed(() => (1 / 25) *  workDuration.value);
+  const wDuration = computed(() => (10.5 / 25) *  workDuration.value);
+  const tDuration = computed(() => (1 / 25) *  workDuration.value);
 
   // 在 useTimerStore.ts 中修正
   const redBarOffsetPercentage = computed(
@@ -180,6 +150,7 @@ export const useTimerStore = defineStore("timer", () => {
   watch(currentPhase, (newPhase, oldPhase) => {
     // console.log("Phase changed:", { oldPhase, newPhase });
     if (newPhase !== oldPhase && newPhase) {
+      console.log("newPhase");
       handlePhaseChange(newPhase);
     }
   });
@@ -191,7 +162,7 @@ export const useTimerStore = defineStore("timer", () => {
 
     pomodoroState.value = "working";
     // 如果没有传入duration，则获取最新的工作时长
-    const dur = duration ?? getWorkDuration();
+    const dur = duration ?? workDuration.value;
     totalTime.value = dur * 60;
     timeRemaining.value = totalTime.value;
     startTime.value = Date.now(); // 记录开始时间
@@ -200,7 +171,7 @@ export const useTimerStore = defineStore("timer", () => {
     isFromSequence.value = !!onFinish;
 
     // 播放工作开始声音
-    // console.log("Playing work start sound");
+    console.log("Playing work start sound");
     playSound(SoundType.WORK_START);
     // 开始播放白噪音
     startWhiteNoise();
@@ -238,7 +209,7 @@ export const useTimerStore = defineStore("timer", () => {
 
     pomodoroState.value = "breaking";
     // 如果没有传入duration，则获取最新的休息时长
-    const dur = duration ?? getBreakDuration();
+    const dur = duration ?? breakDuration.value;
     totalTime.value = dur * 60;
     timeRemaining.value = totalTime.value;
     startTime.value = Date.now(); // 记录开始时间
@@ -263,10 +234,10 @@ export const useTimerStore = defineStore("timer", () => {
             timerInterval.value = null;
           }
 
-          // 如果不是来自序列，播放休息结束声音
-          if (!isFromSequence.value) {
-            playSound(SoundType.BREAK_END);
-          }
+          // 如果不是来自序列，播放休息结束声音 !isFromSequence.value 取消这个
+
+          playSound(SoundType.BREAK_END);
+          
 
           if (onFinish) {
             onFinish();
@@ -280,24 +251,28 @@ export const useTimerStore = defineStore("timer", () => {
   const breakReminderCount = ref<number>(5); // 可设置提醒密度（默认5段）
   const remindedSet = ref(new Set<number>());
 
-  // 在useTimerStore内，新增对break提醒的watch
   watch([pomodoroState, timeRemaining], ([state, timeLeft]) => {
+    // 重置条件
     if (state !== "breaking" || breakReminderCount.value < 2) {
       remindedSet.value.clear();
       return;
     }
+
     const segments = breakReminderCount.value;
     const segmentLen = totalTime.value / segments;
     const elapsed = totalTime.value - timeLeft;
+
     for (let i = 1; i < segments; i++) {
-      // 首尾不提醒
       const node = Math.round(segmentLen * i);
-      if (Math.abs(elapsed - node) <= 1 && !remindedSet.value.has(i)) {
+      const timeDiff = Math.abs(elapsed - node);
+      const shouldTrigger = timeDiff <= 1 && !remindedSet.value.has(i);
+
+      if (shouldTrigger) {
         playSound(SoundType.PHASE_BREAK);
         remindedSet.value.add(i);
       }
     }
-  });
+  }, { deep: true });
 
   function cancelTimer(): void {
     // 如果正在工作，播放工作结束声音
@@ -343,8 +318,6 @@ export const useTimerStore = defineStore("timer", () => {
     pomodoroState,
     timeRemaining,
     totalTime,
-    breakDuration,
-    workDuration,
     r1Duration,
     r2Duration,
     wDuration,

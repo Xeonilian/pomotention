@@ -36,22 +36,74 @@
           <n-icon :component="RecordStop24Regular" />
         </template>
       </n-button>
-
-      <n-button
-        class="action-button"
-        @click="handleToggleWhiteNoise"
-        :title="isWhiteNoiseEnabled ? '关闭白噪音' : '开启白噪音'"
-        tertiary
-        circle
+      <n-popover
+        trigger="click"
+        placement="top"
+        :delay="1000"
+        :show-arrow="false"
+        class="popover-container"
+        :style="{
+          padding: '2px 0 2px 0',
+          boxShadow: 'none',
+          backgroundColor: 'var(--color-background)',
+        }"
       >
-        <template #icon>
-          <n-icon
-            :component="
-              isWhiteNoiseEnabled ? Speaker224Regular : SpeakerMute24Regular
-            "
-          />
+        <template #trigger>
+          <n-badge
+            dot
+            type="default"
+            :offset="[-2, 2]"
+            title="选择白噪音"
+            class="clickable-badge"
+          >
+            <n-button
+              class="action-button"
+              @click="handleToggleWhiteNoise"
+              :title="isWhiteNoiseEnabled ? '关闭白噪音' : '开启白噪音'"
+              tertiary
+              circle
+            >
+              <template #icon>
+                <n-icon
+                  :component="
+                    isWhiteNoiseEnabled
+                      ? Speaker224Regular
+                      : SpeakerMute24Regular
+                  "
+                />
+              </template>
+            </n-button>
+          </n-badge>
         </template>
-      </n-button>
+
+        <!-- Popover 的内容：垂直排列的按钮 -->
+        <div class="popover-actions">
+          <n-button
+            secondary
+            circle
+            type="info"
+            size="small"
+            title="雨声"
+            @click="resetWhiteNoise(SoundType.WHITE_NOISE)"
+          >
+            <template #icon>
+              <n-icon><WeatherThunderstorm20Regular /></n-icon>
+            </template>
+          </n-button>
+          <n-button
+            secondary
+            type="info"
+            circle
+            size="small"
+            title="滴答声"
+            @click="resetWhiteNoise(SoundType.WORK_TICK)"
+          >
+            <template #icon>
+              <n-icon><ClockAlarm24Regular /></n-icon>
+            </template>
+          </n-button>
+        </div>
+      </n-popover>
       <n-button
         class="action-button"
         @click="addPomodoro"
@@ -85,22 +137,25 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onUnmounted, watch, onMounted } from "vue";
-import { NButton, NIcon, NInput, useDialog } from "naive-ui";
+import { ref, watch, onMounted, computed } from "vue";
+import { NButton, NIcon, NInput, useDialog, NBadge } from "naive-ui";
 import { useTimerStore } from "@/stores/useTimerStore";
 import { useSettingStore } from "@/stores/useSettingStore";
 import {
   toggleWhiteNoise,
-  getWhiteNoiseState,
   setPomodoroRunning,
+  stopWhiteNoise,
+  startWhiteNoise,
 } from "@/core/sounds.ts";
 import {
   Speaker224Regular,
   SpeakerMute24Regular,
   PlayCircle24Regular,
   RecordStop24Regular,
+  WeatherThunderstorm20Regular,
+  ClockAlarm24Regular,
 } from "@vicons/fluent";
-
+import { SoundType } from "@/core/sounds.ts";
 type PomodoroStep = {
   type: "work" | "break";
   duration: number;
@@ -134,7 +189,12 @@ const defaultPomoDuration = ref<string>(
 );
 
 // 白噪音状态
-const isWhiteNoiseEnabled = ref<boolean>(getWhiteNoiseState());
+const isWhiteNoiseEnabled = computed({
+  get: () => settingStore.settings.isWhiteNoiseEnabled,
+  set: (val) => {
+    settingStore.settings.isWhiteNoiseEnabled = val;
+  },
+});
 
 // 添加进度监听
 watch(
@@ -256,7 +316,7 @@ function stopPomodoro(): void {
   setPomodoroRunning(false); // 设置番茄钟停止状态
   timeoutHandles.value.forEach((handle) => clearTimeout(handle));
   timeoutHandles.value = [];
-  console.log("Stopping pomodoro...");
+  // console.log("Stopping pomodoro...");
 
   // 重置状态
   currentStep.value = 0;
@@ -338,7 +398,7 @@ function updateProgressStatus(currentStep: number): void {
 
 // 初始化进度条
 function initializeProgress(sequence: string): void {
-  console.log("Initializing progress with sequence:", sequence);
+  // console.log("Initializing progress with sequence:", sequence);
   if (!progressContainer.value) {
     console.error("Progress container not found!");
     return;
@@ -346,7 +406,7 @@ function initializeProgress(sequence: string): void {
 
   progressContainer.value.innerHTML = "";
   const steps = parseSequence(sequence);
-  console.log("Steps for progress:", steps);
+  // console.log("Steps for progress:", steps);
 
   steps.forEach((step) => {
     const block = createTimeBlock(step.duration, step.type);
@@ -384,7 +444,7 @@ document.head.appendChild(style);
 
 // 切换白噪音
 function handleToggleWhiteNoise(): void {
-  isWhiteNoiseEnabled.value = toggleWhiteNoise();
+  toggleWhiteNoise();
 }
 
 // 处理键盘事件
@@ -445,9 +505,9 @@ function handleBlurRestore(): void {
 onMounted(() => {
   // 如果番茄钟正在运行且来自序列，恢复 UI 状态
   if (timerStore.isActive && timerStore.isFromSequence) {
-    console.log(
-      "[PomodoroSequence] Component mounted, restoring pomo sequence UI state"
-    );
+    // console.log(
+    //   "[PomodoroSequence] Component mounted, restoring pomo sequence UI state"
+    // );
     isRunning.value = true;
     emit("pomo-seq-running", true);
     setPomodoroRunning(true);
@@ -481,16 +541,14 @@ onMounted(() => {
   }
 });
 
-// 组件卸载时清理
-onUnmounted(() => {
-  // 当组件卸载时，我们不应该停止正在运行的番茄钟序列
-  // 因为进入 onTop 模式时组件会被重新挂载，但番茄钟应该继续运行
-  // 只有当用户明确点击停止按钮时，才应该停止番茄钟序列
-  console.log(
-    "[PomodoroSequence] Component unmounted, but keeping pomodoro running if active"
-  );
-  // 不在这里停止番茄钟，让它继续运行
-});
+function resetWhiteNoise(sound: SoundType){
+  settingStore.settings.whiteNoiseSoundTrack = sound;
+  if(isRunning.value){
+    stopWhiteNoise();
+    startWhiteNoise();
+  }
+
+}
 </script>
 
 <style scoped>
@@ -621,5 +679,22 @@ onUnmounted(() => {
 }
 .disabled {
   color: var(--color-text-secondary);
+}
+
+/* 为 popover 内容里的按钮容器添加样式 */
+.popover-actions {
+  display: flex;
+  flex-direction: row; /* 垂直排列 */
+  gap: 8px; /* 按钮之间的垂直间距 */
+  margin: 0px;
+  padding: 0;
+}
+
+.clickable-badge:hover {
+  cursor: default;
+}
+
+.clickable-badge:hover :deep(.n-badge-sup) {
+  background-color: var(--color-red);
 }
 </style>

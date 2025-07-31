@@ -51,244 +51,246 @@
     </div>
 
     <!-- 内容区 -->
-    <div v-for="item in sortedDisplaySheet" :key="item.id">
+    <div v-for="item in sortedDisplaySheet" :key="item.id" >
       <div
         v-if="item.status !== 'done'"
         class="activity-row"
         :class="{ 'highlight-line': item.id === activityId }"
       >
-        <n-popover
-          :show="popoverTargetId === item.id"
-          @update:show="(show) => !show && (popoverTargetId = null)"
-          trigger="manual"
-          placement="bottom-start"
-          :trap-focus="false"
-          :show-arrow="false"
-          style="padding: 0; border-radius: 6px"
-          :to="false"
-          ><template #trigger>
-            <n-input
-              v-model:value="item.title"
-              type="text"
-              :placeholder="item.isUntaetigkeit ? '无所事事' : '任务描述'"
-              style="flex: 2"
-              @input="handleTitleInput(item, $event)"
-              @keydown="handleInputKeydown($event, item)"
-              @focus="$emit('focus-row', item.id)"
-              :class="{
-                'force-hover': hoveredRowId === item.id,
-                'child-activity': item.parentId,
-              }"
-            >
-              <template #prefix>
-                <div
-                  class="icon-drag-area"
-                  @mousedown="startDrag($event, item)"
-                  @mouseenter="handleIconMoveMouseEnter(item.id)"
-                  @mouseleave="handleIconMoveMouseLeave"
-                  :title="
-                    item.status !== 'cancelled'
-                      ? '拖拽调整顺序'
-                      : '不支持顺序修改'
-                  "
-                >
-                  <n-icon
-                    v-if="item.isUntaetigkeit"
-                    :color="'var(--color-blue)'"
-                    ><Cloud24Regular
-                  /></n-icon>
-                  <n-icon
-                    v-if="item.interruption === 'I'"
-                    :color="
-                      item.status === 'ongoing'
-                        ? 'var(--color-red)'
-                        : item.status === 'delayed'
-                        ? 'var(--color-blue)'
-                        : item.status === 'suspended'
-                        ? 'var(--color-orange)'
-                        : item.status === 'cancelled'
-                        ? 'var(--color-text-primary)'
-                        : 'var(--color-text-secondary)'
+        <div class="activity-content">
+          <n-popover
+            :show="popoverTargetId === item.id"
+            @update:show="(show) => !show && (popoverTargetId = null)"
+            trigger="manual"
+            placement="bottom-start"
+            :trap-focus="false"
+            :show-arrow="false"
+            style="padding: 0; border-radius: 6px"
+            :to="false"
+            ><template #trigger>
+              <n-input
+                v-model:value="item.title"
+                type="text"
+                :placeholder="item.isUntaetigkeit ? '无所事事' : '任务描述'"
+                style="flex: 2"
+                @input="handleTitleInput(item, $event)"
+                @keydown="handleInputKeydown($event, item)"
+                @focus="$emit('focus-row', item.id)"
+                :class="{
+                  'force-hover': hoveredRowId === item.id,
+                  'child-activity': item.parentId,
+                }"
+              >
+                <template #prefix>
+                  <div
+                    class="icon-drag-area"
+                    @mousedown="startDrag($event, item)"
+                    @mouseenter="handleIconMoveMouseEnter(item.id)"
+                    @mouseleave="handleIconMoveMouseLeave"
+                    :title="
+                      item.status !== 'cancelled'
+                        ? '拖拽调整顺序'
+                        : '不支持顺序修改'
                     "
-                    ><Chat24Regular
+                  >
+                    <n-icon
+                      v-if="item.isUntaetigkeit"
+                      :color="'var(--color-blue)'"
+                      ><Cloud24Regular
+                    /></n-icon>
+                    <n-icon
+                      v-if="item.interruption === 'I'"
+                      :color="
+                        item.status === 'ongoing'
+                          ? 'var(--color-red)'
+                          : item.status === 'delayed'
+                          ? 'var(--color-blue)'
+                          : item.status === 'suspended'
+                          ? 'var(--color-orange)'
+                          : item.status === 'cancelled'
+                          ? 'var(--color-text-primary)'
+                          : 'var(--color-text-secondary)'
+                      "
+                      ><Chat24Regular
+                    /></n-icon>
+                    <n-icon
+                      v-else-if="item.interruption === 'E'"
+                      :color="
+                        item.status === 'ongoing'
+                          ? 'var(--color-red)'
+                          : item.status === 'delayed'
+                          ? 'var(--color-blue)'
+                          : item.status === 'suspended'
+                          ? 'var(--color-orange)'
+                          : item.status === 'cancelled'
+                          ? 'var(--color-text-primary)'
+                          : 'var(--color-text-secondary)'
+                      "
+                      ><VideoPersonCall24Regular
+                    /></n-icon>
+                    <n-icon
+                      v-else-if="item.class === 'T'"
+                      :color="
+                        item.status === 'ongoing'
+                          ? 'var(--color-red)'
+                          : item.status === 'delayed'
+                          ? 'var(--color-blue)'
+                          : item.status === 'suspended'
+                          ? 'var(--color-orange)'
+                          : item.status === 'cancelled'
+                          ? 'var(--color-text-primary)'
+                          : 'var(--color-text-secondary)'
+                      "
+                      ><ApprovalsApp24Regular
+                    /></n-icon>
+                    <n-icon
+                      v-else-if="item.class === 'S' && !item.isUntaetigkeit"
+                      :color="
+                        item.status === 'ongoing'
+                          ? 'var(--color-red)'
+                          : item.status === 'delayed'
+                          ? 'var(--color-blue)'
+                          : item.status === 'suspended'
+                          ? 'var(--color-orange)'
+                          : item.status === 'cancelled'
+                          ? 'var(--color-text-primary)'
+                          : 'var(--color-text-secondary)'
+                      "
+                      ><Accessibility24Regular
+                    /></n-icon>
+                  </div>
+                </template>
+                <template #suffix>
+                  <n-icon
+                    v-if="!item.tagIds"
+                    text
+                    color="var(--color-blue)"
+                    @click="
+                      showTagManager = true;
+                      editingTagId = item.id;
+                    "
+                    class="icon-tag"
+                    title="添加标签"
+                    ><Tag16Regular
                   /></n-icon>
                   <n-icon
-                    v-else-if="item.interruption === 'E'"
-                    :color="
-                      item.status === 'ongoing'
-                        ? 'var(--color-red)'
-                        : item.status === 'delayed'
-                        ? 'var(--color-blue)'
-                        : item.status === 'suspended'
-                        ? 'var(--color-orange)'
-                        : item.status === 'cancelled'
-                        ? 'var(--color-text-primary)'
-                        : 'var(--color-text-secondary)'
-                    "
-                    ><VideoPersonCall24Regular
+                    v-else
+                    text
+                    color="var(--color-blue)"
+                    @click="handleTagIconClick($event, item)"
+                    class="icon-tag"
+                    title="Alt+点击=切换显示 | 点击=管理标签"
+                    ><Tag16Filled
                   /></n-icon>
-                  <n-icon
-                    v-else-if="item.class === 'T'"
-                    :color="
-                      item.status === 'ongoing'
-                        ? 'var(--color-red)'
-                        : item.status === 'delayed'
-                        ? 'var(--color-blue)'
-                        : item.status === 'suspended'
-                        ? 'var(--color-orange)'
-                        : item.status === 'cancelled'
-                        ? 'var(--color-text-primary)'
-                        : 'var(--color-text-secondary)'
-                    "
-                    ><ApprovalsApp24Regular
-                  /></n-icon>
-                  <n-icon
-                    v-else-if="item.class === 'S' && !item.isUntaetigkeit"
-                    :color="
-                      item.status === 'ongoing'
-                        ? 'var(--color-red)'
-                        : item.status === 'delayed'
-                        ? 'var(--color-blue)'
-                        : item.status === 'suspended'
-                        ? 'var(--color-orange)'
-                        : item.status === 'cancelled'
-                        ? 'var(--color-text-primary)'
-                        : 'var(--color-text-secondary)'
-                    "
-                    ><Accessibility24Regular
-                  /></n-icon>
-                </div>
-              </template>
-              <template #suffix>
-                <n-icon
-                  v-if="!item.tagIds"
-                  text
-                  color="var(--color-blue)"
-                  @click="
-                    showTagManager = true;
-                    editingTagId = item.id;
-                  "
-                  class="icon-tag"
-                  title="添加标签"
-                  ><Tag16Regular
-                /></n-icon>
-                <n-icon
-                  v-else
-                  text
-                  color="var(--color-blue)"
-                  @click="handleTagIconClick($event, item)"
-                  class="icon-tag"
-                  title="Alt+点击=切换显示 | 点击=管理标签"
-                  ><Tag16Filled
-                /></n-icon>
-              </template>
-            </n-input>
-          </template>
-          <TagSelector
-            :ref="
-              (el) => {
-                if (popoverTargetId === item.id) tagSelectorRef = el;
-              }
-            "
-            :search-term="tagSearchTerm"
-            :allow-create="true"
-            @select-tag="(tagId: any) => handleTagSelected(item, tagId)"
-            @create-tag="(tagName: any) => handleTagCreate(item, tagName)"
-            @close-selector="popoverTargetId = null"
+                </template>
+              </n-input>
+            </template>
+            <TagSelector
+              :ref="
+                (el) => {
+                  if (popoverTargetId === item.id) tagSelectorRef = el;
+                }
+              "
+              :search-term="tagSearchTerm"
+              :allow-create="true"
+              @select-tag="(tagId: any) => handleTagSelected(item, tagId)"
+              @create-tag="(tagName: any) => handleTagCreate(item, tagName)"
+              @close-selector="popoverTargetId = null"
+            />
+          </n-popover>
+          <n-modal
+            v-model:show="showTagManager"
+            @after-leave="onTagManagerClosed"
+            role="dialog"
+            aria-modal="true"
+          >
+            <n-card style="width: 420px">
+              <TagManager v-model="tempTagIds" />
+            </n-card>
+          </n-modal>
+          <n-input
+            v-if="item.class === 'S'"
+            v-model:value="item.location"
+            style="max-width: 90px"
+            @focus="$emit('focus-row', item.id)"
+            placeholder="地点"
+            :class="{ 'force-hover': hoveredRowId === item.id }"
           />
-        </n-popover>
-        <n-modal
-          v-model:show="showTagManager"
-          @after-leave="onTagManagerClosed"
-          role="dialog"
-          aria-modal="true"
+          <n-input
+            v-if="item.class === 'T'"
+            :value="getInputValue(item)"
+            :placeholder="item.pomoType"
+            style="max-width: 32px"
+            class="pomo-input"
+            :title="`输入估计${item.pomoType || '🍅'}数量`"
+            :class="{
+              'pomo-red': item.pomoType === '🍅',
+              'pomo-purple': item.pomoType === '🍇',
+              'pomo-green': item.pomoType === '🍒',
+              'input-center': true, // 新增
+              'input-clear-disabled': item.pomoType === '🍒',
+              'force-hover': hoveredRowId === item.id,
+            }"
+            :disabled="item.pomoType === '🍒'"
+            @update:value="(val) => onInputUpdate(item, val)"
+            @focus="$emit('focus-row', item.id)"
+          />
+          <n-input
+            v-else
+            style="max-width: 32px; font-size: 14px; margin: 0 auto"
+            :value="item.dueRange ? item.dueRange[1] : ''"
+            @update:value="
+              (val) =>
+                item.dueRange
+                  ? (item.dueRange[1] = val)
+                  : (item.dueRange = [Date.now(), val])
+            "
+            @focus="$emit('focus-row', item.id)"
+            title="持续时间(分钟)"
+            placeholder="min"
+            class="input-center input-min"
+            :class="{ 'force-hover': hoveredRowId === item.id }"
+          />
+          <n-date-picker
+            v-if="item.class === 'T'"
+            v-model:value="item.dueDate"
+            type="date"
+            clearable
+            style="max-width: 70px"
+            format="MM/dd"
+            @focus="$emit('focus-row', item.id)"
+            title="死线日期"
+            :class="getCountdownClass(item.dueDate)"
+          />
+          <n-date-picker
+            v-else
+            :value="item.dueRange ? item.dueRange[0] : 0"
+            @update:value="
+              (val) =>
+                item.dueRange
+                  ? (item.dueRange[0] = val)
+                  : (item.dueRange = [Date.now(), ''])
+            "
+            type="datetime"
+            style="max-width: 70px"
+            clearable
+            format="HH:mm"
+            @focus="$emit('focus-row', item.id)"
+            title="约定时间"
+            :class="getCountdownClass(item.dueRange && item.dueRange[0])"
+          />
+        </div>
+        <div
+          v-if="item.tagIds && item.tagIds.length > 0 && showTags"
+          class="tag-content"
+          :class="{ 'child-activity': item.parentId }"
         >
-          <n-card style="width: 420px">
-            <TagManager v-model="tempTagIds" />
-          </n-card>
-        </n-modal>
-        <n-input
-          v-if="item.class === 'S'"
-          v-model:value="item.location"
-          style="max-width: 90px"
-          @focus="$emit('focus-row', item.id)"
-          placeholder="地点"
-          :class="{ 'force-hover': hoveredRowId === item.id }"
-        />
-        <n-input
-          v-if="item.class === 'T'"
-          :value="getInputValue(item)"
-          :placeholder="item.pomoType"
-          style="max-width: 32px"
-          class="pomo-input"
-          :title="`输入估计${item.pomoType || '🍅'}数量`"
-          :class="{
-            'pomo-red': item.pomoType === '🍅',
-            'pomo-purple': item.pomoType === '🍇',
-            'pomo-green': item.pomoType === '🍒',
-            'input-center': true, // 新增
-            'input-clear-disabled': item.pomoType === '🍒',
-            'force-hover': hoveredRowId === item.id,
-          }"
-          :disabled="item.pomoType === '🍒'"
-          @update:value="(val) => onInputUpdate(item, val)"
-          @focus="$emit('focus-row', item.id)"
-        />
-        <n-input
-          v-else
-          style="max-width: 32px; font-size: 14px; margin: 0 auto"
-          :value="item.dueRange ? item.dueRange[1] : ''"
-          @update:value="
-            (val) =>
-              item.dueRange
-                ? (item.dueRange[1] = val)
-                : (item.dueRange = [Date.now(), val])
-          "
-          @focus="$emit('focus-row', item.id)"
-          title="持续时间(分钟)"
-          placeholder="min"
-          class="input-center input-min"
-          :class="{ 'force-hover': hoveredRowId === item.id }"
-        />
-        <n-date-picker
-          v-if="item.class === 'T'"
-          v-model:value="item.dueDate"
-          type="date"
-          clearable
-          style="max-width: 70px"
-          format="MM/dd"
-          @focus="$emit('focus-row', item.id)"
-          title="死线日期"
-          :class="getCountdownClass(item.dueDate)"
-        />
-        <n-date-picker
-          v-else
-          :value="item.dueRange ? item.dueRange[0] : 0"
-          @update:value="
-            (val) =>
-              item.dueRange
-                ? (item.dueRange[0] = val)
-                : (item.dueRange = [Date.now(), ''])
-          "
-          type="datetime"
-          style="max-width: 70px"
-          clearable
-          format="HH:mm"
-          @focus="$emit('focus-row', item.id)"
-          title="约定时间"
-          :class="getCountdownClass(item.dueRange && item.dueRange[0])"
-        />
-      </div>
-      <div
-        v-if="item.tagIds && item.tagIds.length > 0 && showTags"
-        class="tag-render-container"
-        :class="{ 'child-activity': item.parentId }"
-      >
-        <TagRenderer
-          :tag-ids="item.tagIds"
-          :isCloseable="true"
-          @remove-tag="handleRemoveTag(item, $event)"
-        />
+          <TagRenderer
+            :tag-ids="item.tagIds"
+            :isCloseable="true"
+            @remove-tag="handleRemoveTag(item, $event)"
+          />
+        </div>      
       </div>
     </div>
   </div>
@@ -751,11 +753,23 @@ function handleTagCreate(item: Activity, tagName: string) {
   font-weight: bold;
 }
 .activity-row {
-  display: flex;
   align-items: center;
   padding: 1px 0;
   gap: 0px;
   width: 100%;
+}
+
+.child-activity {
+  margin-left: 20px;
+}
+
+.activity-content{
+  display: flex;
+  flex-direction: row; 
+}
+.tag-content {
+  display: flex;
+
 }
 
 .icon-drag-area {
@@ -859,7 +873,7 @@ function handleTagCreate(item: Activity, tagName: string) {
 }
 
 .highlight-line {
-  background-color: var(--color-yellow);
+  background-color: var(--color-yellow-light);
 }
 
 /* 强制 n-input 显示 hover 效果 */
@@ -872,12 +886,6 @@ function handleTagCreate(item: Activity, tagName: string) {
   background-color: var(--n-color-hover) !important;
 }
 
-.child-activity {
-  margin-left: 20px;
-}
-.tag-render-container {
-  display: flex;
-}
 .n-modal-mask {
   background-color: rgba(0, 0, 0, 0.1) !important;
 }

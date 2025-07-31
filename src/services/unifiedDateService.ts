@@ -105,6 +105,8 @@ export function unifiedDateService({
    * UI可以利用此状态来提供视觉反馈，例如高亮或禁用“回到今天”按钮。
    */
   const isViewingToday = computed(() => dateState.app === dateState.system);
+  const isViewingYesterday = computed(() => dateState.app < dateState.system);
+  const isViewingTomorrow = computed(() => dateState.app > dateState.system);
 
   // --- 3. 跨天业务逻辑 ---
 
@@ -150,13 +152,19 @@ export function unifiedDateService({
     const todayKey = getDateKey(dateState.system);
     activityList.value.forEach((activity) => {
       if (activity.class === "S" && activity.dueRange) {
-        const activityKey = getDateKey(activity.dueRange[0]);
-        // 检查活动的开始日期是否是今天，并且它还没有被转换成 Schedule
         if (
-          activityKey === todayKey &&
-          !scheduleList.value.some((s) => s.activityId === activity.id)
+          activity.class === "S" &&
+          activity.dueRange &&
+          activity.dueRange[0]
         ) {
-          activity.status = "ongoing";
+          const activityKey = getDateKey(activity.dueRange[0]);
+          // 检查活动的开始日期是否是今天，并且它还没有被转换成 Schedule
+          if (
+            activityKey === todayKey &&
+            !scheduleList.value.some((s) => s.activityId === activity.id)
+          ) {
+            activity.status = "ongoing";
+          }
         }
       }
     });
@@ -248,6 +256,8 @@ export function unifiedDateService({
     appDateKey,
     displayDate,
     isViewingToday,
+    isViewingTomorrow,
+    isViewingYesterday,
     // 动作
     navigateDate,
   };

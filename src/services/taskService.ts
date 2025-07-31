@@ -6,7 +6,6 @@ import type {
 } from "@/core/types/Task";
 import type { Activity } from "@/core/types/Activity";
 import { STORAGE_KEYS } from "@/core/constants";
-import { addDays } from "@/core/utils";
 
 export const taskService = {
   // 获取特定任务
@@ -157,7 +156,8 @@ export const taskService = {
   createActivityFromInterruption(
     taskId: number,
     interruptionId: number,
-    activityClass: "T" | "S"
+    activityClass: "T" | "S",
+    dueDate?: number | null
   ): Activity | undefined {
     const task = this.getTask(taskId);
     if (!task) return undefined;
@@ -177,9 +177,10 @@ export const taskService = {
       // 根据活动类型设置相应属性
       ...(activityClass === "T" && {
         pomoType: "🍅",
+        dueDate: dueDate,
       }),
       ...(activityClass === "S" && {
-        dueRange: [addDays(Date.now(), 1), "60"],
+        dueRange: [null, "60"],
       }),
     };
 

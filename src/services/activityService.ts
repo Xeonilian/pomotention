@@ -19,9 +19,12 @@ export function handleAddActivity(
   if (newActivity.class === "S") {
     const today = getLocalDateString(new Date());
 
-    const activityDate = newActivity.id
-      ? getLocalDateString(new Date(newActivity.id))
-      : null;
+    const activityDate =
+      newActivity.dueRange &&
+      newActivity.dueRange[0] &&
+      !isNaN(new Date(newActivity.dueRange[0]).getTime())
+        ? getLocalDateString(new Date(newActivity.dueRange[0]))
+        : null;
 
     if (activityDate === today) {
       // 更新 activityList 中对应的 activity 的 status 为 "ongoing"
@@ -31,8 +34,8 @@ export function handleAddActivity(
       if (activityToUpdate) {
         activityToUpdate.status = "ongoing";
       }
-      scheduleList.push(convertToSchedule(newActivity));
     }
+    scheduleList.push(convertToSchedule(newActivity));
   }
 }
 
@@ -154,6 +157,12 @@ export function togglePomoType(activityList: Activity[], id: number) {
   // 更新活动的番茄类型
   activity.pomoType = newPomoType;
 
+  if (newPomoType == "🍒") {
+    activity.estPomoI = "4";
+  } else {
+    activity.estPomoI = undefined;
+  }
+  console.log(activity.estPomoI, activity.pomoType);
   return {
     oldType: currentType,
     newType: newPomoType,
@@ -177,7 +186,7 @@ export function syncActivityChanges(
       relatedSchedule.activityTitle = activity.title;
       relatedSchedule.activityDueRange = activity.dueRange
         ? [activity.dueRange[0], activity.dueRange[1]]
-        : [0, "0"];
+        : [null, "0"];
       relatedSchedule.status = activity.status || "";
       relatedSchedule.location = activity.location || "";
     }

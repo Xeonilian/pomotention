@@ -1,4 +1,5 @@
 // sounds.ts
+import { useSettingStore } from "@/stores/useSettingStore";
 // 声音类型枚举
 export enum SoundType {
   WORK_START = "work_start",
@@ -13,6 +14,7 @@ export enum SoundType {
   PHASE_R2 = "phase_r2",
   PHASE_T = "phase_t",
   PHASE_BREAK = "phase_break",
+  WORK_TICK = "work_tick",
 }
 
 // 声音文件路径
@@ -29,6 +31,7 @@ const soundPaths = {
   [SoundType.PHASE_R2]: "/sounds/phase_r2.wav",
   [SoundType.PHASE_T]: "/sounds/phase_t.wav",
   [SoundType.PHASE_BREAK]: "/sounds/break_middle.wav",
+  [SoundType.WORK_TICK]: "/sounds/work_tick.wav",
 };
 
 // 声音对象缓存
@@ -38,7 +41,6 @@ const soundCache = new Map<SoundType, HTMLAudioElement>();
 let whiteNoiseAudio: HTMLAudioElement | null = null;
 
 // 白噪音状态
-let isWhiteNoiseEnabled = true;
 let isPomodoroRunning = false;
 
 // 获取声音对象
@@ -61,63 +63,56 @@ export function playSound(type: SoundType): void {
 
 // 开始播放白噪音
 export function startWhiteNoise(): void {
-  if (!isWhiteNoiseEnabled || !isPomodoroRunning) {
-    return;
+  const settingStore = useSettingStore();
+  if (!settingStore.settings.isWhiteNoiseEnabled) return;
+
+  // 彻底销毁旧 audio
+  if (whiteNoiseAudio) {
+    whiteNoiseAudio.pause();
+    whiteNoiseAudio.src = "";
+    whiteNoiseAudio = null;
   }
+  const src = soundPaths[settingStore.settings.whiteNoiseSoundTrack];
+  whiteNoiseAudio = new Audio(src);
+  whiteNoiseAudio.loop = true;
+  whiteNoiseAudio.volume =
+    settingStore.settings.whiteNoiseSoundTrack === SoundType.WORK_TICK
+      ? 1
+      : 0.3;
 
-  if (!whiteNoiseAudio) {
-    whiteNoiseAudio = new Audio(soundPaths[SoundType.WHITE_NOISE]);
-    whiteNoiseAudio.loop = true;
-    whiteNoiseAudio.volume = 0.3;
-
-    whiteNoiseAudio.addEventListener("canplaythrough", () => {
-      if (isWhiteNoiseEnabled && isPomodoroRunning) {
-        whiteNoiseAudio
-          ?.play()
-          .catch((error) => console.error("白噪音播放失败:", error));
-      }
-    });
-
-    whiteNoiseAudio.addEventListener("error", (e) => {
-      console.error("白噪音音频加载错误:", e);
-    });
-  } else {
-    whiteNoiseAudio
-      .play()
-      .catch((error) => console.error("白噪音播放失败:", error));
-  }
+  // 直接播放，无需监听 canplaythrough，现代浏览器会自动缓冲到位后播
+  whiteNoiseAudio.play().catch((e) => {
+    // 忽略所有报错，不打印到控制台
+    // console.log("白噪音 play 错误", e);
+  });
 }
-
-// 停止播放白噪音
 export function stopWhiteNoise(): void {
   if (whiteNoiseAudio) {
     whiteNoiseAudio.pause();
-    whiteNoiseAudio.currentTime = 0;
+    whiteNoiseAudio.src = "";
+    whiteNoiseAudio = null;
   }
 }
 
 // 设置番茄钟运行状态
 export function setPomodoroRunning(running: boolean): void {
+  const settingStore = useSettingStore();
   isPomodoroRunning = running;
   if (!running) {
     stopWhiteNoise();
-  } else if (isWhiteNoiseEnabled) {
+  } else if (settingStore.settings.isWhiteNoiseEnabled) {
     startWhiteNoise();
   }
 }
 
-// 获取白噪音状态
-export function getWhiteNoiseState(): boolean {
-  return isWhiteNoiseEnabled;
-}
-
 // 切换白噪音状态
-export function toggleWhiteNoise(): boolean {
-  isWhiteNoiseEnabled = !isWhiteNoiseEnabled;
-  if (!isWhiteNoiseEnabled) {
+export function toggleWhiteNoise(): void {
+  const settingStore = useSettingStore();
+  settingStore.settings.isWhiteNoiseEnabled =
+    !settingStore.settings.isWhiteNoiseEnabled;
+  if (!settingStore.settings.isWhiteNoiseEnabled) {
     stopWhiteNoise();
   } else if (isPomodoroRunning) {
     startWhiteNoise();
   }
-  return isWhiteNoiseEnabled;
 }

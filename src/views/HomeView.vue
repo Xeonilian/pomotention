@@ -49,7 +49,7 @@
             ? { height: topHeight + 'px' }
             : { height: '100%' }
         "
-        :class="{ 'not-today': !isViewingToday }"
+        :class="{ yesterday: isViewingYesterday, tomorrow: isViewingTomorrow }"
       >
         <!-- 今日待办的头部和控件 -->
         <div class="today-header">
@@ -268,6 +268,7 @@ const selectedTask = computed(() => {
   }
   return null;
 });
+// 选中的tagIds
 const selectedTagIds = computed(() => {
   if (activeId.value && activityList.value) {
     const activity = activityList.value.find((a) => a.id === activeId.value);
@@ -313,8 +314,10 @@ const currentDatePomoCount = computed(() => {
 // 计算全局realPomo（历史 + 当天）
 const globalRealPomo = computed(() => pomoStore.globalRealPomo);
 
-// 计算当前日期
+// 计算当前日期 不赋值在UI计算class就会失效，但是UI输出的值是正确的
 const isViewingToday = dateService.isViewingToday;
+const isViewingYesterday = dateService.isViewingYesterday;
+const isViewingTomorrow = dateService.isViewingTomorrow;
 
 // 计算筛选的当天todo
 const todosForAppDate = computed(() => {
@@ -339,13 +342,12 @@ const schedulesForAppDate = computed(() => {
   const endOfDay = addDays(startOfDay, 1);
 
   if (!scheduleList.value) return [];
-  return scheduleList.value.filter(
-    (schedule) =>
-      schedule.activityDueRange[0] >= startOfDay &&
-      schedule.activityDueRange[0] < endOfDay
-  );
-
-  // schedule.id 是一个时间戳，筛选比今天的起始日期大的
+  return scheduleList.value.filter((schedule) => {
+    const date = schedule.activityDueRange?.[0];
+    //  date 在指定范围内时都保留
+    if (date == null) return false;
+    return date >= startOfDay && date < endOfDay;
+  });
 });
 
 /**
@@ -483,6 +485,8 @@ function onUpdateActiveId(id: number | null) {
 
 /** 修改番茄类型时的提示处理 */
 function onTogglePomoType(id: number, event?: Event) {
+  const todo = todoList.value.find((t) => t.activityId === id);
+  if (todo) todo.positionIndex = undefined;
   const target = (event?.target as HTMLElement) || null;
   const result = togglePomoType(activityList.value, id);
   if (result) {
@@ -912,7 +916,7 @@ function onInterruptionUpdated(interruption: Schedule) {
   }
 }
 // ======================== 5. 数据联动 Watchers ========================
-/** 活动变化时联动 Todo/Schedule 属性同步 */
+/** Activity 活动变化时联动 Todo/Schedule 属性同步 */
 watch(
   activityList,
   (newVal) => {
@@ -925,7 +929,7 @@ watch(
         relatedSchedule.activityTitle = activity.title;
         relatedSchedule.activityDueRange = activity.dueRange
           ? [activity.dueRange[0], activity.dueRange[1]]
-          : [0, "0"];
+          : [null, "0"];
         relatedSchedule.status = activity.status || "";
         relatedSchedule.location = activity.location || "";
         relatedSchedule.taskId = activity.taskId;
@@ -947,14 +951,15 @@ watch(
               ? [parseInt(activity.estPomoI)]
               : [];
           }
+          if (!activity.estPomoI) relatedTodo.estPomo = undefined;
           // 只要有estPomoI，覆盖第一个元素
-          if (activity.estPomoI) {
+          if (activity.estPomoI && relatedTodo.estPomo) {
             relatedTodo.estPomo[0] = parseInt(activity.estPomoI);
           }
         }
         relatedTodo.status = activity.status || "";
         relatedTodo.pomoType = activity.pomoType;
-        relatedTodo.dueDate = activity.dueDate;
+        if (activity.dueDate) relatedTodo.dueDate = activity.dueDate;
       }
     });
   },
@@ -986,12 +991,12 @@ watch(
       if (dueMs >= startOfDay && dueMs <= endOfDay) {
         // 截止日期是今天
         activity.status = "ongoing";
-      } else if (dueMs < now) {
+      } else if (dueMs < now && activity.status != "cancelled") {
         // 截止日期已过
-        activity.status = "cancelled";
+        activity.status = "suspended";
       } else {
         // 截止日期还未到
-        activity.status = "";
+        if (activity.status != "cancelled") activity.status = "";
       }
     });
   }
@@ -1102,14 +1107,16 @@ const { startResize: startRightResize } = useResize(
   white-space: nowrap; /* 防止内部的 span 换行 */
   overflow: hidden; /* 如果内容实在太多，隐藏超出部分 */
   text-overflow: ellipsis; /* 用省略号表示被隐藏的文本 */
+  min-width: 0;
 }
 
 .today-info {
   display: flex;
   align-items: center;
-
   font-family: "Courier New", Courier, monospace;
   font-weight: bold;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .today-status {
@@ -1119,48 +1126,6 @@ const { startResize: startRightResize } = useResize(
   border-radius: 12px;
   padding: 0px 8px 0px 8px;
   margin: 2px;
-}
-.today-view-container {
-  flex: 1;
-  overflow: auto;
-  min-height: 0; /* 重要：允许 flex 子项收缩 */
-}
-.middle-top.not-today .today-header {
-  background: var(--color-background);
-}
-
-.middle-top.not-today .today-status {
-  font-size: 18px;
-  font-family: "Courier New", Courier, monospace;
-  color: var(--color-text);
-  border-radius: 12px;
-  padding: 0px 8px 0px 8px;
-  margin: 2px;
-  background: var(--color-blue-light);
-}
-
-.middle-top.not-today .global-pomo {
-  background: var(--color-background-light);
-}
-
-.middle-top.not-today .today-pomo {
-  color: var(--color-text);
-  /* display: none; */
-}
-
-.middle-top.not-today .total-pomo {
-  color: var(--color-text);
-  /* display: none; */
-}
-
-.middle-bottom {
-  background: var(--color-background);
-  overflow: auto;
-  padding: 4px;
-  box-sizing: border-box;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
 }
 
 .global-pomo {
@@ -1189,8 +1154,49 @@ const { startResize: startRightResize } = useResize(
 .button-group {
   display: flex;
   gap: 2px;
-  padding: 0px;
+  padding: 1px;
   align-items: center;
+  flex-shrink: 0;
+  flex-grow: 0;
+  background-color: var(--color-background);
+}
+
+.middle-top.tomorrow .today-status {
+  background: var(--color-red-light);
+}
+
+.middle-top.yesterday .today-status {
+  background: var(--color-blue-light);
+}
+
+.today-status {
+  font-size: 18px;
+  font-family: "Courier New", Courier, monospace;
+  color: var(--color-text);
+  border-radius: 12px;
+  padding: 0px 8px 0px 8px;
+  margin: 2px;
+}
+
+.global-pomo {
+  background: var(--color-background-light);
+  color: var(--color-text);
+}
+
+.middle-bottom {
+  background: var(--color-background);
+  overflow: auto;
+  padding: 4px;
+  box-sizing: border-box;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.today-view-container {
+  flex: 1;
+  overflow: auto;
+  min-height: 0; /* 重要：允许 flex 子项收缩 */
 }
 
 .resize-handle {

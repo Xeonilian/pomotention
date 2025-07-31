@@ -10,19 +10,15 @@ description: 下载最新版本的应用程序
 ## 当前版本
 
 ::: info 最新发布
-**版本 v0.3.0** - 2025 年 7 月 22 日发布
+**版本 v0.3.1** - 2025 年 7 月 24 日发布
 
-- 功能稳定测试
-- 支持 Windows macOS （ dmg + app + msi + exe）
-- 简易全局搜索
-- 番茄钟最小化置顶
-- 自动更新
-- 活动 Kanban+标签+子活动
+- 标签系统+子活动
+- 活动 Kanban
   :::
 
 ::: warning 紧急修复
 
-- 0.2.6 引入操作 bug
+- 0.3.0 标签保存出错，删除全部内容，尽快恢复
   :::
 
 ## 系统要求
@@ -34,20 +30,21 @@ description: 下载最新版本的应用程序
 
 ### macOS
 
-- macOS 10.13 (High Sierra) 或更高版本
+- macOS 13.0 (Ventura) 或更高版本
+- webkit支持不完全导致macOS 12.0可安装，部分渲染失败
 - Intel 或 Apple Silicon 处理器
 
 ## 下载链接
 
 ### Windows
 
-<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.3.0/pomotention_0.3.0_x64_en-US.msi" class="download-btn windows">
+<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.3.1/pomotention_0.3.1_x64_en-US.msi" class="download-btn windows">
   <span class="platform">Windows</span>
   <span class="format">.msi 安装包</span>
   <span class="size">15.7MB</span>
 </a>
 
-<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.2.7/pomotention_0.3.0_x64-setup.exe" class="download-btn windows">
+<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.3.1/pomotention_0.3.1_x64-setup.exe" class="download-btn windows">
   <span class="platform">Windows</span>
   <span class="format">.exe </span>
   <span class="size">14.5MB</span>
@@ -55,13 +52,13 @@ description: 下载最新版本的应用程序
 
 ### macOS
 
-<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.3.0/pomotention_0.3.0_x64.dmg" class="download-btn macos">
+<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.3.1/pomotention_0.3.1_x64.dmg" class="download-btn macos">
   <span class="platform">macOS</span>
   <span class="format">.dmg 安装包</span>
   <span class="size">18.5MB</span>
 </a>
 
-<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.3.0/pomotention.app.tar.gz" class="download-btn macos">
+<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.3.1/pomotention.app.tar.gz" class="download-btn macos">
   <span class="platform">macOS</span>
   <span class="format">app.tar.gz</span>
   <span class="size">17.1MB</span>
@@ -102,34 +99,41 @@ description: 下载最新版本的应用程序
 
 - v0.1.0 `2025-06-09`
 
-  - 🎉 首个正式版本发布 #window
+  - 【发布】🎉 首个正式版本发布 #window
 
 - v0.2.0 `2025-06-10`
 
-  - 🎉 首个 macOS 版本发布 #macOS
+  - 【发布】🎉 首个 macOS 版本发布 #macOS
 
 - v0.2.7 `2025-07-07`
 
   - 测试稳定版本 #macOS #window
-  - 支持缩小置顶
-  - 优化 UI
-  - 优化互动
+  - 【新增】支持缩小置顶
+  - 【优化】UI
+  - 【优化】互动
 
 - v0.2.8 `2025-07-10`
 
-  - 自定义番茄时间
-  - 微小变化不自动更新
+  - 【新增】自定义番茄时间
+  - 【优化】微小变化不自动更新
 
 - v0.2.9 `2025-07-11`
 
-  - 活动拖动排序
+  - 【新增】活动拖动排序
 
 - v0.3.0 `2025-07-22`
+
   - 【新增】标签系统
   - 【新增】子活动（调整按钮布局）
   - 【新增】活动清单升级为活动看板
   - 【优化】任务区长输入模糊定位和鼠标位置提醒
   - 【修复】任务、日程和活动的联动不一致，删除 Suspend 功能，同步 taskId
+
+- v0.3.1 `2025-07-24`
+  - 【修复】Tag 无法保存
+  - 【修复】时间表标签拖拽机制
+  - 【优化】打扰转化为活动时间处理机制
+  - 【优化】新建日程无日期，不再自动取消
 
 ## 遇到问题
 

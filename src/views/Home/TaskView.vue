@@ -119,7 +119,7 @@ const emit = defineEmits<{
       description: string;
       asActivity: boolean;
       activityClass?: "T" | "S";
-      dueDate?: number;
+      dueDate?: number | null;
     }
   ): void;
   (e: "activity-updated"): void;
@@ -251,7 +251,7 @@ function handleInterruptionRecord(data: {
   description: string;
   asActivity: boolean;
   activityClass?: "T" | "S";
-  dueDate?: number;
+  dueDate?: number | null;
 }) {
   if (props.selectedTaskId) {
     console.log("开始处理打断记录:", data);
@@ -277,8 +277,10 @@ function handleInterruptionRecord(data: {
           const activity = taskService.createActivityFromInterruption(
             props.selectedTaskId,
             lastInterruption.id,
-            data.activityClass
+            data.activityClass,
+            data.dueDate
           );
+          // HACK 处理日期传递
 
           if (activity) {
             if (data.activityClass === "S") {

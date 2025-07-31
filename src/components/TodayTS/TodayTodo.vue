@@ -194,6 +194,7 @@
 
                 <n-button
                   v-if="
+                    todo.pomoType != '🍒' &&
                     todo.estPomo &&
                     todo.estPomo.length > 1 &&
                     todo.estPomo.length < 4 &&
@@ -215,6 +216,7 @@
 
                 <n-button
                   v-if="
+                    todo.pomoType != '🍒' &&
                     todo.estPomo &&
                     todo.estPomo.length < 3 &&
                     todo.status !== 'done'

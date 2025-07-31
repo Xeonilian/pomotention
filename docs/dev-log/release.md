@@ -20,7 +20,7 @@
   - [ ] 推送提交到远程仓库: `git push`
   - [ ] 创建并推送新的 Git Tag: `git tag v0.6.0` -> `git push origin v0.6.0`
   - [ ] 利用 commit 确定 changelog： `git log vOld.Tag..vNew.Tag --oneline`
-  - [ ] 编写更新日志： `getting-started.md` 和 `roadmap.md`
+  - [ ] 编写更新日志： `getting-started.md` 和 `roadmap.md`，部署到 `git page`
 
 ## 阶段二：Windows 平台构建
 

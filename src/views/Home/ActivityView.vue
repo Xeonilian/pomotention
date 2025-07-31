@@ -80,7 +80,6 @@ import ActivityButtons from "@/components/ActivitySheet/ActivityButtons.vue";
 import ActivitySection from "@/components/ActivitySheet/ActivitySection.vue";
 import type { Activity, ActivitySectionConfig } from "@/core/types/Activity";
 import type { Todo } from "@/core/types/Todo";
-import { addDays } from "@/core/utils";
 import { NPopover } from "naive-ui";
 import { taskService } from "@/services/taskService";
 import { useSettingStore } from "@/stores/useSettingStore";
@@ -182,7 +181,7 @@ function filteredBySection(section: ActivitySectionConfig) {
             due.setHours(0, 0, 0, 0);
             return due.getTime() === now.getTime();
           } else if (item.class === "S") {
-            if (!item.dueRange || !item.dueRange[0]) return false;
+            if (!item.dueRange || !item.dueRange[0]) return true;
             const start = new Date(item.dueRange[0]);
             start.setHours(0, 0, 0, 0);
             return start.getTime() === now.getTime();
@@ -290,7 +289,7 @@ function addScheduleRow() {
     id: Date.now(),
     class: "S",
     title: "",
-    dueRange: [addDays(Date.now(), 1), ""], // HACK: 默认明天开始
+    dueRange: [null, ""], // HACK: 默认明天开始
     status: "",
     parentId: null,
   });

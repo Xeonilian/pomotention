@@ -60,7 +60,11 @@ export function createDateCheckService({
     const todayKey = getDateKey(new Date());
 
     activityList.value.forEach((activity: Activity) => {
-      if (activity.class === "S" && activity.dueRange) {
+      if (
+        activity.class === "S" &&
+        activity.dueRange &&
+        activity.dueRange[0] != null
+      ) {
         const activityDate = new Date(activity.dueRange[0]);
         const activityKey = getDateKey(activityDate);
 
