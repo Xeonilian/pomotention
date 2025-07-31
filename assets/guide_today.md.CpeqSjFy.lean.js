@@ -1,0 +1,1 @@
+import{_ as t,c as e,o as a}from"./chunks/framework.Cs5y-aXb.js";const m=JSON.parse('{"title":"","description":"","frontmatter":{},"headers":[],"relativePath":"guide/today.md","filePath":"guide/today.md","lastUpdated":1753928598000}'),o={name:"guide/today.md"};function d(r,s,c,n,i,p){return a(),e("div")}const f=t(o,[["render",d]]);export{m as __pageData,f as default};
