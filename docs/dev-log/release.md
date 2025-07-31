@@ -140,19 +140,19 @@ git push origin vX.X.X
 # 6. 查看两个标签之间的提交记录
 git log vOld.Tag..vNew.Tag --oneline
 
-# 7. 录入秘钥
+# 7. 录入秘钥(Windows)
 $env:TAURI_SIGNING_PRIVATE_KEY = "=="
 
 # 8. 执行Tauri的构建和打包命令，此命令会自动处理签名流程
 pnpm run tauri build
 
-# 9. (在另一台设备上) 拉取远程仓库的最新变更
+# 9. (在Mac上) 拉取远程仓库的最新变更
 git pull
 
-# 10. (在另一台设备上) 检出到指定的标签版本，确保代码与发布版本一致
+# 10. (在Mac上) 检出到指定的标签版本，确保代码与发布版本一致
 git checkout vX.X.X
 
-# 11. (在另一台设备上)秘钥
+# 11. (在Mac上)秘钥
 export TAURI_SIGNING_PRIVATE_KEY="=="
 
 # 12. (在另一台设备上)打包
