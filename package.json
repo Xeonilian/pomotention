@@ -20,7 +20,8 @@
     "pinia-plugin-persistedstate": "^4.2.0",
     "textarea-caret": "^3.1.0",
     "vue": "^3.5.13",
-    "vue-router": "^4.5.0"
+    "vue-router": "^4.5.0",
+    "webdav": "^5.8.0"
   },
   "devDependencies": {
     "@ricons/fluent": "^0.13.0",
