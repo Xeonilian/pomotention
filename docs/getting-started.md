@@ -30,7 +30,8 @@ description: 下载最新版本的应用程序
 
 ### macOS
 
-- macOS 10.13 (High Sierra) 或更高版本
+- macOS 13.0 (Ventura) 或更高版本
+- webkit支持不完全导致macOS 12.0可安装，部分渲染失败
 - Intel 或 Apple Silicon 处理器
 
 ## 下载链接
