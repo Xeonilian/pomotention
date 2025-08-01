@@ -35,7 +35,18 @@
             settingStore.settings.checkForUpdate ? '关闭更新' : '启动更新'
           "
         />
+        <n-button @click="trySyncPomotention" size="small" type="info" secondary
+          ><template #icon>
+            <n-icon>
+              <ArrowSync24Regular />
+            </n-icon> </template
+        ></n-button>
       </div>
+      <WebdavInputDialog
+        v-model:show="showWebdavDialog"
+        @confirm="syncPomotention"
+      />
+
       <div class="help-info">
         <h3>📋 功能一览</h3>
         <ul>
@@ -70,13 +81,22 @@
 import { ref, onMounted } from "vue";
 import { getVersion } from "@tauri-apps/api/app";
 import { isTauri } from "@tauri-apps/api/core";
-import { NTag, NSwitch } from "naive-ui";
+import { NTag, NSwitch, NButton } from "naive-ui";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { watch } from "vue";
+import { ArrowSync24Regular } from "@vicons/fluent";
+import WebdavInputDialog from "@/components/WebdavInputDialog.vue";
+import {
+  testLogin,
+  ensureMainFolder,
+  saveData,
+  readData,
+} from "@/services/webdavService";
 
 const localVersion = ref("");
 const checkVersion = isTauri();
 const settingStore = useSettingStore();
+const showWebdavDialog = ref(false);
 
 // 云端版信息
 const remoteVersion = ref("...");
@@ -144,6 +164,78 @@ async function checkRemoteRelease() {
     remoteError.value = e.message || String(e);
     remoteVersion.value = "(获取失败)";
     remoteOk.value = false;
+  }
+}
+
+async function syncPomotention() {
+  const options = {
+    id: settingStore.settings.webdavId,
+    website: settingStore.settings.webdavWebsite,
+    key: settingStore.settings.webdavKey,
+  };
+  const folderName = "PomotentionBackup";
+  const fileName = "test.json";
+  const testData = { time: Date.now(), message: "来自Pomotention的测试数据" };
+
+  // ✅ 安全的日志输出
+  console.log("开始WebDAV同步:", {
+    id: options.id,
+    website: options.website,
+    key: "***",
+  });
+
+  // 1. 登录测试
+  const loginOk = await testLogin(options);
+  if (!loginOk) {
+    console.log("WebDAV 登录失败，终止后续操作");
+    return;
+  }
+
+  // 2. 确保目录存在
+  const folderOk = await ensureMainFolder(options, folderName);
+  if (!folderOk) {
+    console.log("主目录创建失败，终止后续操作");
+    return;
+  }
+
+  // 3. 写入文件
+  const saveOk = await saveData(
+    options,
+    folderName,
+    fileName,
+    JSON.stringify(testData)
+  );
+  if (!saveOk) {
+    console.log("文件保存失败！");
+    return;
+  }
+
+  // 4. 读取文件
+  const content = await readData(options, folderName, fileName);
+  if (content === null) {
+    console.log("文件读取失败！");
+    return;
+  }
+
+  // 5. 控制台输出读取结果（解析后的数据）
+  try {
+    const parsedContent = JSON.parse(String(content));
+    console.log("WebDAV 同步测试成功！读取到的数据:", parsedContent);
+  } catch (e) {
+    console.log("数据格式解析失败，原始内容长度:", String(content).length);
+  }
+}
+
+function trySyncPomotention() {
+  const settingStore = useSettingStore();
+  if (
+    settingStore.settings.webdavId &&
+    settingStore.settings.webdavWebsite &&
+    settingStore.settings.webdavKey
+  ) {
+    syncPomotention();
+  } else {
+    showWebdavDialog.value = true;
   }
 }
 </script>

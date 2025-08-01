@@ -24,6 +24,9 @@ export interface GlobalSettings {
   topHeight: number;
   isWhiteNoiseEnabled: boolean;
   whiteNoiseSoundTrack: SoundType;
+  webdavId: string;
+  webdavKey: string;
+  webdavWebsite: string;
   // 以后新增全局设置项就在这里补充
 }
 
@@ -45,6 +48,9 @@ const defaultSettings: GlobalSettings = {
   topHeight: 300,
   isWhiteNoiseEnabled: true,
   whiteNoiseSoundTrack: SoundType.WORK_TICK,
+  webdavId: "",
+  webdavKey: "",
+  webdavWebsite: "https://dav.jianguoyun.com/dav/",
 };
 
 // 工具函数
