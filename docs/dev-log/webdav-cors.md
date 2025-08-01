@@ -129,6 +129,7 @@ fetch("https://httpbin.org/json")
 2. **开发环境：** 如果在 main 分支开发，建议先提交当前更改
 3. **编译时间：** 首次添加插件需要较长编译时间
 4. **Schema 警告：** 可能遇到 schema 加载错误，但不影响功能使用
+5. **设置 withGlobalTauri: true :**，Tauri 会把浏览器原生的 fetch 函数替换成它自己的版本（支持跨域），但这个替换版本要求添加 headers 和重试机制。
 
 ## 参考资料
 

@@ -27,6 +27,13 @@
         type="password"
         show-count
       />
+
+      <n-input
+        v-model:value="webdavPath"
+        placeholder="WebDAV 目录"
+        maxlength="100"
+        show-count
+      />
     </n-space>
     <template #action>
       <n-button @click="handleCancel">取消</n-button>
@@ -59,6 +66,7 @@ const settingStore = useSettingStore();
 const webdavId = ref("");
 const webdavWebsite = ref("");
 const webdavKey = ref("");
+const webdavPath = ref("");
 
 // 每次弹窗打开都同步store到输入框
 watch(
@@ -68,6 +76,7 @@ watch(
       webdavId.value = settingStore.settings.webdavId;
       webdavWebsite.value = settingStore.settings.webdavWebsite;
       webdavKey.value = settingStore.settings.webdavKey;
+      webdavKey.value = settingStore.settings.webdavPath;
     }
   }
 );

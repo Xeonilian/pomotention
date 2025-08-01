@@ -8,6 +8,7 @@ import type { Block } from "@/core/types/Block";
 import type { Task } from "@/core/types/Task";
 import type { Template } from "@/core/types/Template";
 import type { Tag } from "@/core/types/Tag";
+import type { SyncDataV1, LocalSyncStatus } from "@/core/types/Sync";
 
 // =================== 活动相关 ===================
 
@@ -175,6 +176,145 @@ export function generateTagId(): number {
   }
   return Math.max(...ids) + 1;
 }
+
+// =================== 同步状态相关 ===================
+
+/** 从本地存储加载同步状态 */
+export function loadSyncStatus(): LocalSyncStatus | null {
+  return loadData<LocalSyncStatus | null>(STORAGE_KEYS.SYNC_STATUS, null);
+}
+
+/** 保存同步状态到本地存储 */
+export function saveSyncStatus(status: LocalSyncStatus): void {
+  saveData(STORAGE_KEYS.SYNC_STATUS, status);
+}
+
+/** 删除同步状态存储 */
+export function removeSyncStatusStorage(): void {
+  localStorage.removeItem(STORAGE_KEYS.SYNC_STATUS);
+}
+
+/**
+ * 获取当前设备ID（如果不存在则生成新的）
+ */
+export function getCurrentDeviceId(): string {
+  const status = loadSyncStatus();
+  if (status?.currentDeviceId) {
+    return status.currentDeviceId;
+  }
+
+  // 生成新的设备ID
+  const newDeviceId = generateDeviceId();
+  const newStatus: LocalSyncStatus = {
+    currentDeviceId: newDeviceId,
+    needsSync: false,
+  };
+  saveSyncStatus(newStatus);
+  return newDeviceId;
+}
+
+/**
+ * 更新同步状态
+ */
+export function updateSyncStatus(updates: Partial<LocalSyncStatus>): void {
+  const currentStatus = loadSyncStatus() || {
+    currentDeviceId: generateDeviceId(),
+    needsSync: false,
+  };
+
+  const updatedStatus = { ...currentStatus, ...updates };
+  saveSyncStatus(updatedStatus);
+}
+
+/**
+ * 生成唯一的设备ID
+ */
+function generateDeviceId(): string {
+  const timestamp = Date.now().toString(36);
+  const random = Math.random().toString(36).substring(2, 8);
+  return `device-${timestamp}-${random}`;
+}
+
+// =================== 获取其他信息  ===================
+/** 从本地存储加载全局设置 */
+function loadGlobalSettings(): any {
+  // 这里需要导入 GlobalSettings 类型和对应的 STORAGE_KEY
+  return loadData(STORAGE_KEYS.GLOBAL_SETTINGS, {});
+}
+
+/** 从本地存储加载每日番茄钟数据 */
+function loadDailyPomos(): Record<string, { count: number; diff: number }> {
+  return loadData(STORAGE_KEYS.DAILY_POMOS, {});
+}
+
+/** 从本地存储加载全局番茄钟总数 */
+function loadGlobalPomoCount(): number {
+  return loadData(STORAGE_KEYS.GLOBAL_POMO_COUNT, 0);
+}
+
+// =================== 获取本地信息  ===================
+/**
+ * 收集所有本地数据用于同步
+ * @returns 符合 SyncDataV1 格式的数据结构
+ */
+export function collectLocalData(): SyncDataV1["data"] {
+  return {
+    activitySheet: loadActivities(),
+    todayTodo: loadTodos(),
+    todaySchedule: loadSchedules(),
+    taskTrack: loadTasks(),
+    globalSettings: loadGlobalSettings(),
+    tag: loadTags(),
+    dailyPomos: loadDailyPomos(),
+    globalPomoCount: loadGlobalPomoCount(),
+    writingTemplate: loadTemplates(),
+  };
+}
+// =================== 数据变化检测 ===================
+
+/**
+ * 获取当前所有数据的统计信息
+ */
+export function getDataCounts() {
+  return {
+    activities: loadActivities().length,
+    todos: loadTodos().length,
+    schedules: loadSchedules().length,
+    tasks: loadTasks().length,
+    templates: loadTemplates().length,
+    tags: loadTags().length,
+    globalPomoCount: loadGlobalPomoCount(),
+  };
+}
+
+/**
+ * 检查数据是否有变化（相比上次同步）
+ */
+export function hasDataChanged(): boolean {
+  const currentCounts = getDataCounts();
+  const syncStatus = loadSyncStatus();
+
+  if (!syncStatus?.lastSyncCounts) {
+    // 第一次同步，肯定有变化
+    return true;
+  }
+
+  return (
+    JSON.stringify(currentCounts) !== JSON.stringify(syncStatus.lastSyncCounts)
+  );
+}
+
+/**
+ * 记录当前数据统计（同步成功后调用）
+ */
+export function recordSyncCounts(): void {
+  const currentCounts = getDataCounts();
+  updateSyncStatus({
+    lastSyncCounts: currentCounts,
+    lastSyncTime: Date.now(),
+  });
+}
+
 // =================== 通用本地存储操作 ===================
 
 /**

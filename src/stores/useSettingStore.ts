@@ -27,6 +27,7 @@ export interface GlobalSettings {
   webdavId: string;
   webdavKey: string;
   webdavWebsite: string;
+  webdavPath: string;
   // 以后新增全局设置项就在这里补充
 }
 
@@ -51,6 +52,7 @@ const defaultSettings: GlobalSettings = {
   webdavId: "",
   webdavKey: "",
   webdavWebsite: "https://dav.jianguoyun.com/dav/",
+  webdavPath: "/PomotentionBackup",
 };
 
 // 工具函数

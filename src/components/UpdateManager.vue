@@ -143,18 +143,56 @@ watch(
 );
 
 // 辅助函数：获取远端（GitHub）最新 release 版本
+// UpdateManager.vue 中的 getRemoteVersion 函数
 async function getRemoteVersion(): Promise<string | null> {
   try {
+    console.log("使用 Tauri 环境获取 GitHub 版本信息");
+
+    // 在 Tauri 环境中，全局的 fetch 已经被替换为支持跨域的版本
     const resp = await fetch(
       "https://api.github.com/repos/Xeonilian/pomotention/releases/latest",
-      { headers: { Accept: "application/vnd.github.v3+json" } }
+      {
+        method: "GET",
+        headers: {
+          Accept: "application/vnd.github.v3+json",
+          "User-Agent": "Pomotention-App",
+        },
+      }
     );
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
+
+    console.log("GitHub API 响应状态:", resp.status, resp.statusText);
+
+    if (!resp.ok) {
+      // 获取更详细的错误信息
+      let errorDetail = "";
+      try {
+        const errorText = await resp.text();
+        errorDetail = errorText;
+      } catch (e) {
+        errorDetail = "无法读取错误详情";
+      }
+
+      console.error("GitHub API 错误:", {
+        status: resp.status,
+        statusText: resp.statusText,
+        detail: errorDetail,
+      });
+
+      throw new Error(
+        `HTTP ${resp.status}: ${resp.statusText} - ${errorDetail}`
+      );
+    }
+
     const data = await resp.json();
-    // tag_name 格式 v1.2.3
+    console.log("成功获取版本信息:", data.tag_name);
+
     return (data.tag_name ?? data.name ?? null) as string | null;
   } catch (e: any) {
-    console.warn("拉取远端版本信息失败:", e.message || e);
+    console.warn("拉取远端版本信息失败:", {
+      name: e.name,
+      message: e.message,
+      cause: e.cause,
+    });
     return null;
   }
 }

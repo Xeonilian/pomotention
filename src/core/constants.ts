@@ -31,10 +31,10 @@ export const STORAGE_KEYS = {
   GLOBAL_POMO_COUNT: "globalPomoCount",
   DAILY_POMOS: "dailyPomos",
   TASK: "taskTrack",
-  LAST_TODAY_COUNT: "lastTodayCount",
   GLOBAL_SETTINGS: "globalSettings",
   WRITING_TEMPLATE: "writingTemplate",
   TAG: "tag",
+  SYNC_STATUS: "syncStatus",
 } as const;
 
 // 预设的工作时间块
