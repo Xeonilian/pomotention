@@ -46,7 +46,17 @@
         v-model:show="showWebdavDialog"
         @confirm="syncPomotention"
       />
-
+      <n-modal
+        v-model:show="showSyncPanel"
+        preset="card"
+        title="数据同步"
+        size="medium"
+        :bordered="false"
+        :closable="true"
+        :mask-closable="true"
+      >
+        <SyncPanel />
+      </n-modal>
       <div class="help-info">
         <h3>📋 功能一览</h3>
         <ul>
@@ -92,11 +102,13 @@ import {
   writeData,
   readData,
 } from "@/services/webdavService";
+import SyncPanel from "@/components/SyncPanel.vue";
 
 const localVersion = ref("");
 const checkVersion = isTauri();
 const settingStore = useSettingStore();
 const showWebdavDialog = ref(false);
+const showSyncPanel = ref(false);
 
 // 云端版信息
 const remoteVersion = ref("...");
@@ -234,9 +246,10 @@ function trySyncPomotention() {
   if (
     settingStore.settings.webdavId &&
     settingStore.settings.webdavWebsite &&
-    settingStore.settings.webdavKey
+    settingStore.settings.webdavKey &&
+    settingStore.settings.webdavPath
   ) {
-    syncPomotention();
+    showSyncPanel.value = true;
   } else {
     showWebdavDialog.value = true;
   }
