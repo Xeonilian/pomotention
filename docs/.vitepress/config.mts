@@ -35,6 +35,7 @@ export default defineConfig({
           { text: "任务追踪", link: "/guide/task" },
           { text: "数据查看", link: "/guide/search" },
           { text: "一日流程", link: "/guide/workflow" },
+          { text: "数据同步", link: "/guide/synchronize" },
         ],
       },
       {
