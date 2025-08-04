@@ -858,7 +858,7 @@ watch(
 .priority-4 {
   background-color: #4caf50;
 }
-C .priority-5 {
+.priority-5 {
   background-color: #2196f3;
 }
 .priority-6 {
