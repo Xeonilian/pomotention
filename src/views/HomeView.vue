@@ -515,10 +515,15 @@ function onRepeatActivity(id: number) {
         | "suspended"
         | undefined, // 如果需要清空状态，可以在这里设置
       tagIds: undefined,
+      ...(selectActivity.dueRange && {
+        dueRange: [...selectActivity.dueRange] as [number | null, string],
+      }),
     };
     handleAddActivity(activityList.value, scheduleList.value, newActivity);
   }
 }
+
+/** 创建子活动 */
 function onCreateChildActivity(id: number) {
   // 找到Activity
   const selectActivity = activityList.value.find((a) => a.id === id);
@@ -689,7 +694,7 @@ function onRepeatSchedule(id: number) {
       console.warn(`未找到 activityId 为 ${schedule.activityId} 的 activity`);
       return;
     }
-    const newActivity = {
+    const newActivity: Activity = {
       ...activity, // 使用展开运算符复制 activity 的所有属性
       id: Date.now(), // 设置新的 id
       status: "" as
@@ -700,6 +705,13 @@ function onRepeatSchedule(id: number) {
         | "done"
         | "suspended"
         | undefined, // 如果需要清空状态，可以在这里设置
+      ...(activity.dueRange && {
+        dueRange: [activity.dueRange[0], activity.dueRange[1]] as [
+          number | null,
+          string
+        ], // 保持类型安全
+        tagIds: undefined,
+      }),
     };
     activityList.value.push(newActivity);
   }
