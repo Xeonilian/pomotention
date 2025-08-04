@@ -79,7 +79,7 @@
 
     <n-popover
       trigger="click"
-      placement="top"
+      placement="bottom"
       :delay="1000"
       :show-arrow="false"
       class="popover-container"

@@ -31,7 +31,7 @@
         size="tiny"
         tertiary
         type="default"
-        :title="showPomoSeq ? '变为番茄' : '变为序列'"
+        :title="showPomoSeq ? '变为番茄' : '变为序列|打开设置'"
         @click="handleTogglePomoSeq"
         class="toggle-button"
         :disabled="timerStore.isActive"
