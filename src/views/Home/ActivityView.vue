@@ -235,11 +235,13 @@ function handleSectionSearch(id: number, val: string) {
   if (section) {
     section.search = val;
     console.log(val);
-    // 判断输入内容是否等于某个label，是就赋filterKey，否则清空filterKey
+    // 支持用label和key来判断
     const match = filterOptions.find(
-      (opt) => opt.label.trim().toLowerCase() === val.trim().toLowerCase()
+      (opt) =>
+        opt.label.trim().toLowerCase() === val.trim().toLowerCase() ||
+        opt.key.trim().toLowerCase() === val.trim().toLowerCase()
     );
-    section.filterKey = match ? match.key : null; // 这句不能少！
+    section.filterKey = match ? match.key : null;
   }
 }
 

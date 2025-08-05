@@ -91,6 +91,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: "update:content", content: string): void;
   (e: "toggle-markdown"): void;
+  (e: "activetaskId", taskId: number | null): void;
 }>();
 
 const content = ref(props.initialContent);
@@ -160,6 +161,7 @@ const handleKeydown = (event: KeyboardEvent) => {
 };
 
 const handleClick = (event: MouseEvent) => {
+  emit("activetaskId", props.taskId);
   const target = event.target as HTMLElement;
 
   // 如果点击的是checkbox，处理checkbox逻辑
@@ -219,6 +221,7 @@ const handleClick = (event: MouseEvent) => {
     return;
   }
   if (props.taskId) {
+    emit("activetaskId", props.taskId);
     const container = event.currentTarget as HTMLElement;
     // 调用service代替原本逻辑
     const fragments = getClickContextFragments(target, container);

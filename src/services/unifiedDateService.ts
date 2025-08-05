@@ -61,7 +61,7 @@ export function unifiedDateService({
    * 生成一个用于在UI上友好展示的日期字符串。
    * 例如: "2023-10-27 Fri"
    */
-  const displayDate = computed(() => {
+  const displayDateInfo = computed(() => {
     const date = new Date(dateState.app);
     const dateString = getDateKey(dateState.app);
     // toLocaleDateString 提供了一种获取本地化星期名称的便捷方式。
@@ -254,7 +254,7 @@ export function unifiedDateService({
     // 状态 (只读的计算属性，防止外部直接修改)
     appDateTimestamp: computed(() => dateState.app),
     appDateKey,
-    displayDate,
+    displayDateInfo, // today info 显示的信息
     isViewingToday,
     isViewingTomorrow,
     isViewingYesterday,

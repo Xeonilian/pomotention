@@ -83,6 +83,7 @@
         :initialContent="taskDescription"
         :isMarkdown="isMarkdown"
         @update:content="updateTaskDescription"
+        @activetaskId="(taskId) => emit('activetaskId', taskId)"
       />
     </div>
   </div>
@@ -124,6 +125,7 @@ const emit = defineEmits<{
   ): void;
   (e: "activity-updated"): void;
   (e: "interruption-update", interruption: Schedule): void;
+  (e: "activetaskId", taskId: number | null): void;
 }>();
 
 // Markdown相关状态

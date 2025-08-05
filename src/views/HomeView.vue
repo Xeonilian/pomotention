@@ -54,7 +54,7 @@
         <!-- 今日待办的头部和控件 -->
         <div class="today-header">
           <div class="today-info">
-            <span class="today-status">{{ dateService.displayDate }}</span>
+            <span class="today-status">{{ dateService.displayDateInfo }}</span>
             <span class="global-pomo">
               <span class="today-pomo">🍅{{ currentDatePomoCount }}/</span>
               <span class="total-pomo">{{ globalRealPomo }}</span>
@@ -152,6 +152,7 @@
           :selectedTagIds="selectedTagIds"
           @activity-updated="onActivityUpdated"
           @interruption-update="onInterruptionUpdated"
+          @activetaskId="onActiveTaskId"
         />
       </div>
     </div>
@@ -215,7 +216,7 @@ import {
   saveTimeBlocks,
   saveTasks,
   removeTimeBlocksStorage,
-} from "@/services/storageService";
+} from "@/services/localStorageService";
 import {
   handleAddActivity,
   handleDeleteActivity,
@@ -436,14 +437,15 @@ function onPickActivity(activity: Activity) {
   pickedTodoActivity.value = passPickedActivity(
     activityList.value,
     todoList.value,
-    activity
+    activity,
+    dateService.appDateTimestamp.value,
+    dateService.isViewingToday.value
   );
 }
 
 function onConvertActivityToTask(id: number, taskId: number) {
   activeId.value = id;
   selectedTaskId.value = taskId;
-  // 寻找 #HACK
 }
 
 function onConvertTodoToTask(id: number, taskId: number) {
@@ -927,6 +929,44 @@ function onInterruptionUpdated(interruption: Schedule) {
     console.error("Invalid interruption object:", interruption);
   }
 }
+
+// 选择task时高亮对应的todo/activity/schedule
+function onActiveTaskId(taskId: number | null) {
+  if (!taskId) {
+    // 如果没有 taskId，清空
+    selectedRowId.value = null;
+    selectedActivityId.value = null;
+    return;
+  }
+
+  // 找到当前任务
+  const task = taskList.value.find((t) => t.id === taskId);
+  if (!task) {
+    // 如果找不到任务，清空
+    selectedRowId.value = null;
+    selectedActivityId.value = null;
+    return;
+  }
+
+  // 根据 task 的 source 判断
+  if (task.source === "activity") {
+    const activity = activityList.value.find((a) => a.id === task.sourceId);
+    if (activity) {
+      selectedActivityId.value = activity.id; // 找到活动
+    }
+  } else if (task.source === "todo") {
+    const todo = todoList.value.find((t) => t.id === task.sourceId);
+    if (todo) {
+      selectedActivityId.value = todo.activityId; // 获取关联的 activityId
+    }
+  } else if (task.source === "schedule") {
+    const schedule = scheduleList.value.find((s) => s.id === task.sourceId);
+    if (schedule) {
+      selectedActivityId.value = schedule.activityId; // 获取关联的 activityId
+    }
+  }
+}
+
 // ======================== 5. 数据联动 Watchers ========================
 /** Activity 活动变化时联动 Todo/Schedule 属性同步 */
 watch(
