@@ -102,7 +102,9 @@ export function handleDeleteActivity(
 export function passPickedActivity(
   activityList: Activity[],
   todoList: Todo[],
-  activity: Activity
+  activity: Activity,
+  appDateTimestamp: number,
+  isToday: boolean
 ) {
   // 存在检查在ActivityView中
   // // 检查是否已经存在相同 activityId 的待办事项
@@ -116,12 +118,24 @@ export function passPickedActivity(
   const activityToUpdate = activityList.find((a) => a.id === activity.id);
   if (activityToUpdate) {
     activityToUpdate.status = "ongoing";
-    activityToUpdate.dueDate = Date.now();
   }
 
   // 创建新的 todo
   const newTodo = convertToTodo(activity);
-  newTodo.id = Date.now(); // 使用当前时间戳作为 id
+  if (isToday) {
+    newTodo.id = Date.now(); // 使用当前时间戳作为 id
+  } else {
+    // 构建当前时间的appDateTimestamp的时间戳
+    const now = new Date();
+    // 用 appDateTimestamp 构造日期对象
+    const appDate = new Date(appDateTimestamp);
+    // 设置appDate的时分秒为当前的
+    appDate.setHours(now.getHours());
+    appDate.setMinutes(now.getMinutes());
+    appDate.setSeconds(now.getSeconds());
+    appDate.setMilliseconds(now.getMilliseconds());
+    newTodo.id = appDate.getTime();
+  }
   newTodo.status = "ongoing";
   todoList.push(newTodo);
 
