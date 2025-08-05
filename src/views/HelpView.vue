@@ -48,7 +48,7 @@
       />
       <n-modal
         v-model:show="showSyncPanel"
-        preset="card"
+        preset="dialog"
         title="数据同步"
         size="medium"
         :bordered="false"

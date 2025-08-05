@@ -14,6 +14,12 @@
         show-count
       />
       <n-input
+        v-model:value="webdavPath"
+        placeholder="WebDAV 目录"
+        maxlength="100"
+        show-count
+      />
+      <n-input
         v-model:value="webdavId"
         placeholder="WebDAV 用户ID"
         maxlength="40"
@@ -25,13 +31,6 @@
         placeholder="WebDAV 授权码/密码"
         maxlength="100"
         type="password"
-        show-count
-      />
-
-      <n-input
-        v-model:value="webdavPath"
-        placeholder="WebDAV 目录"
-        maxlength="100"
         show-count
       />
     </n-space>
@@ -76,7 +75,7 @@ watch(
       webdavId.value = settingStore.settings.webdavId;
       webdavWebsite.value = settingStore.settings.webdavWebsite;
       webdavKey.value = settingStore.settings.webdavKey;
-      webdavKey.value = settingStore.settings.webdavPath;
+      webdavPath.value = settingStore.settings.webdavPath;
     }
   }
 );

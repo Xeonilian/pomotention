@@ -107,7 +107,7 @@ import {
   NLayout,
 } from "naive-ui";
 import { Template } from "@/core/types/Template";
-import { generateTemplateId } from "@/services/storageService";
+import { generateTemplateId } from "@/services/LocalStorageService";
 
 const props = defineProps<{
   show: boolean;

@@ -47,7 +47,7 @@ import {
   NCollapse,
   NCollapseItem,
 } from "naive-ui";
-import { getCurrentDeviceId } from "@/services/storageService";
+import { getCurrentDeviceId } from "@/services/localStorageService";
 import { performSync } from "@/services/syncService";
 import type { SyncResult } from "@/core/types/Sync";
 import { SyncStatus } from "@/core/types/Sync";

@@ -101,7 +101,7 @@ import {
   loadTemplates,
   saveTemplates,
   generateTemplateId,
-} from "@/services/storageService";
+} from "@/services/localStorageService";
 import type { Template } from "@/core/types/Template";
 
 // Props

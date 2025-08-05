@@ -6,7 +6,7 @@ import type { Task } from "@/core/types/Task";
 import type { Tag } from "@/core/types/Tag";
 import type { GlobalSettings } from "@/stores/useSettingStore";
 import { Template } from "./Template";
-import type { getDataCounts } from "@/services/storageService";
+import type { getDataCounts } from "@/services/localStorageService";
 
 export interface SyncMetadata {
   timestamp: number; // 同步时间戳

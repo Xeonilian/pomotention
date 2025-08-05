@@ -1,4 +1,4 @@
-// src/services/storageService.ts
+// src/services/localStorageService.ts
 
 import { STORAGE_KEYS } from "@/core/constants";
 import type { Activity } from "@/core/types/Activity";
