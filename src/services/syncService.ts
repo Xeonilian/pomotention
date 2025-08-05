@@ -38,6 +38,7 @@ export async function performSync(): Promise<SyncResult> {
       deviceId,
       deviceName: `设备-${deviceId.slice(-8)}`,
       version: SYNC_VERSION,
+      dataFingerprintHash: "",
     };
 
     // 将 dataFingerprint 和 dataCounts 包含在 data 属性中
