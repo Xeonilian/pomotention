@@ -1,55 +1,33 @@
-import { useSettingStore } from "@/stores/useSettingStore";
-import {
-  getCurrentDeviceId,
-  getDataCounts,
-  hasDataChanged,
-} from "./localStorageService";
-import { WebDAVStorageAdapter } from "./storageAdapter";
+// src/services/syncService.ts
+
 import type { SyncResult, SyncMetadata, SyncData } from "@/core/types/Sync";
 import { SYNC_VERSION, SyncStatus } from "@/core/types/Sync";
-import { StorageAdapter } from "./storageAdapter";
 
-// 工厂函数：根据配置类型，返回对应适配器实例
-function getCurrentStorageAdapter(): StorageAdapter {
-  const settingStore = useSettingStore();
-  const { webdavId, webdavWebsite, webdavKey, webdavPath } =
-    settingStore.settings;
-
-  return new WebDAVStorageAdapter({
-    webdavId,
-    webdavWebsite,
-    webdavKey,
-    webdavPath: webdavPath || "/PomotentionBackup",
-  });
-}
+import { getCurrentDeviceId } from "./localStorageService";
+import { WebDAVStorageAdapter } from "./storageAdapter";
 
 export async function performSync(): Promise<SyncResult> {
   try {
-    const adapter = getCurrentStorageAdapter();
+    const adapter = new WebDAVStorageAdapter();
 
     // 数据准备
     const deviceId = getCurrentDeviceId();
-    const dataCounts = getDataCounts();
-    const dataChanged = hasDataChanged();
 
     // 构造元数据
     const metadata: SyncMetadata = {
       timestamp: Date.now(),
       deviceId,
-      deviceName: `设备-${deviceId.slice(-8)}`,
       version: SYNC_VERSION,
-      dataFingerprintHash: "",
     };
 
-    // 将 dataFingerprint 和 dataCounts 包含在 data 属性中
+    // 构造同步数据
     const syncData: SyncData = {
       metadata,
       data: {
-        dataCounts: dataCounts,
-        hasChanged: dataChanged,
+        test: "test",
       },
     };
-
+    await adapter.login();
     // 同步操作
     const saveOk = await adapter.save(syncData);
     if (!saveOk) {

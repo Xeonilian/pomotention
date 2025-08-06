@@ -16,7 +16,9 @@
  * - deleteData: 删除文件
 
  **/
+
 import { createClient, WebDAVClient } from "webdav";
+import { useSettingStore } from "@/stores/useSettingStore";
 
 /**
  * WebDAV 配置接口，与 SettingStore 保持一致
@@ -29,36 +31,37 @@ export interface WebDAVConfig {
 }
 
 /**
+ * 获取 WebDAV 配置
+ */
+export function getWebDAVConfig(): WebDAVConfig {
+  const settingStore = useSettingStore();
+  return {
+    webdavId: settingStore.settings.webdavId,
+    webdavKey: settingStore.settings.webdavKey,
+    webdavWebsite: settingStore.settings.webdavWebsite,
+    webdavPath: settingStore.settings.webdavPath || "/PomotentionBackup",
+  };
+}
+
+/**
  * 初始化 WebDAV 客户端
  */
-export function getWebDAVClient({
-  webdavId,
-  webdavWebsite,
-  webdavKey,
-}: WebDAVConfig): WebDAVClient {
-  return createClient(webdavWebsite, {
-    username: webdavId,
-    password: webdavKey,
+function getWebDAVClient(): WebDAVClient {
+  const config = getWebDAVConfig();
+  return createClient(config.webdavWebsite, {
+    username: config.webdavId,
+    password: config.webdavKey,
   });
 }
 
 /**
  * 登录测试
  */
-export async function testLogin({
-  webdavId,
-  webdavWebsite,
-  webdavKey,
-}: Omit<WebDAVConfig, "webdavPath">) {
-  const client = getWebDAVClient({
-    webdavId,
-    webdavWebsite,
-    webdavKey,
-    webdavPath: "",
-  });
+export async function testLogin() {
+  const client = getWebDAVClient(); // 直接使用获取的 client
   try {
     await client.getDirectoryContents("/");
-    console.log("WebDAV 登录成功");
+    // console.log("WebDAV 登录成功");
     return true;
   } catch (err) {
     console.error(
@@ -72,23 +75,21 @@ export async function testLogin({
 /**
  * 创建应用文件夹
  */
-export async function createFolder(config: WebDAVConfig) {
-  const client = getWebDAVClient(config);
+export async function createFolder() {
+  const config = getWebDAVConfig();
+  const client = getWebDAVClient(); // 获取客户端
 
   try {
-    // 先检查文件夹是否存在
     const exists = await client.exists(config.webdavPath);
     if (exists) {
       console.log("应用文件夹已存在:", config.webdavPath);
       return true;
     }
 
-    // 文件夹不存在，创建它
     await client.createDirectory(config.webdavPath);
     console.log("应用文件夹创建成功:", config.webdavPath);
     return true;
   } catch (err: any) {
-    // 保留这个作为备用处理
     if (err?.response?.status === 405) {
       console.log("应用文件夹已存在(通过错误判断):", config.webdavPath);
       return true;
@@ -105,19 +106,18 @@ export async function createFolder(config: WebDAVConfig) {
  * 写文件到应用文件夹
  */
 export async function writeData(
-  config: WebDAVConfig,
   fileName: string,
   data: string,
-  customFolderPath?: string // 可选的自定义路径
+  customFolderPath?: string
 ) {
-  const client = getWebDAVClient(config);
-  const appFolderPath =
-    customFolderPath || config.webdavPath || "/PomotentionBackup";
+  const config = getWebDAVConfig();
+  const client = getWebDAVClient();
+  const appFolderPath = customFolderPath || config.webdavPath;
   const filePath = `${appFolderPath}/${fileName}`;
 
   try {
     await client.putFileContents(filePath, data, { overwrite: true });
-    console.log("保存数据成功:", filePath);
+    // console.log("保存数据成功:", filePath);
     return true;
   } catch (err) {
     console.error(
@@ -129,22 +129,17 @@ export async function writeData(
 }
 
 /**
- * 从应用文件夹读文件
+ * 从应用文件夹读取文件
  */
-/**
- * 读取文件
- */
-export async function readData(
-  config: WebDAVConfig,
-  fileName: string
-): Promise<string | null> {
-  const client = getWebDAVClient(config);
-  const folderPath = config.webdavPath || "/PomotentionBackup";
+export async function readData(fileName: string): Promise<string | null> {
+  const config = getWebDAVConfig();
+  const client = getWebDAVClient();
+  const folderPath = config.webdavPath;
   const filePath = `${folderPath}/${fileName}`;
 
   try {
     const content = await client.getFileContents(filePath, { format: "text" });
-    console.log("读取文件成功:", filePath);
+    // console.log("读取文件成功:", filePath);
 
     // 安全的类型转换
     if (content instanceof ArrayBuffer) {
@@ -164,14 +159,10 @@ export async function readData(
 /**
  * 删除应用文件夹中的文件
  */
-export async function deleteData(
-  config: WebDAVConfig,
-  fileName: string,
-  customFolderPath?: string
-) {
-  const client = getWebDAVClient(config);
-  const appFolderPath =
-    customFolderPath || config.webdavPath || "/PomotentionBackup";
+export async function deleteData(fileName: string, customFolderPath?: string) {
+  const config = getWebDAVConfig();
+  const client = getWebDAVClient();
+  const appFolderPath = customFolderPath || config.webdavPath;
   const filePath = `${appFolderPath}/${fileName}`;
 
   try {

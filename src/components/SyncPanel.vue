@@ -4,7 +4,7 @@
     <div class="sync-status">
       <n-space align="center">
         <n-spin v-if="syncing" size="small" />
-        <n-text>{{ syncStatus }}</n-text>
+        <n-text :style="{ 'white-space': 'pre-line' }">{{ syncStatus }}</n-text>
       </n-space>
     </div>
 
@@ -51,17 +51,37 @@ import { getCurrentDeviceId } from "@/services/localStorageService";
 import { performSync } from "@/services/syncService";
 import type { SyncResult } from "@/core/types/Sync";
 import { SyncStatus } from "@/core/types/Sync";
+import { WebDAVStorageAdapter } from "@/services/storageAdapter";
 
 // 响应式数据
 const syncing = ref(false);
-const syncStatus = ref("准备就绪");
+const syncStatus = ref("正在获取同步状态...");
 const deviceId = ref("");
 const debugInfo = ref("");
 
 // 获取设备ID
-onMounted(() => {
+onMounted(async () => {
   deviceId.value = getCurrentDeviceId();
-  console.log("SyncPanel 初始化，设备ID:", deviceId.value);
+  try {
+    // 1. 直接实例化适配器，因为构造函数是空的
+    const adapter = new WebDAVStorageAdapter();
+
+    // 2. 调用异步方法并等待结果
+    const metadata = await adapter.getMetadata();
+
+    // 3. 根据结果更新 syncStatus
+    if (metadata && metadata.timestamp) {
+      const lastSyncDate = new Date(metadata.timestamp).toLocaleString();
+      const lastSyncDeviceId = metadata.deviceId;
+      syncStatus.value = `上次同步于: ${lastSyncDate}\n最后同步设备: ${lastSyncDeviceId}`;
+    } else {
+      syncStatus.value = "未找到同步记录，准备首次同步";
+    }
+  } catch (error) {
+    console.error("获取元数据失败:", error);
+    syncStatus.value = "获取同步状态失败";
+    debugInfo.value = String(error);
+  }
 });
 
 // 处理同步
@@ -70,14 +90,12 @@ async function handleSync() {
   syncStatus.value = "准备同步...";
   debugInfo.value = "";
 
-  console.log("=== 开始同步 ===");
-
   try {
     const result: SyncResult = await performSync();
 
     if (result.status === SyncStatus.SUCCESS) {
       syncStatus.value = "同步完成 ✅";
-      console.log("✅ 同步成功:", result);
+      // console.log("✅ 同步成功:", result);
 
       debugInfo.value = JSON.stringify(
         {
@@ -123,7 +141,6 @@ async function handleSync() {
     );
   } finally {
     syncing.value = false;
-    console.log("=== 同步结束 ===");
   }
 }
 </script>
@@ -137,21 +154,18 @@ async function handleSync() {
 
 .sync-status {
   padding: 12px;
-  background: var(--n-color-target);
   border-radius: 6px;
-  border-left: 3px solid var(--n-color-primary);
 }
 
 .device-info {
-  padding: 8px 12px;
-  background: var(--n-color-target);
+  padding: 0px 12px;
   border-radius: 4px;
   font-family: "Courier New", monospace;
   font-size: 12px;
 }
 
 .sync-actions {
-  margin: 8px 0;
+  margin: 0px 0;
 }
 
 .debug-info {
@@ -159,7 +173,6 @@ async function handleSync() {
 }
 
 .debug-content {
-  background: var(--n-color-target);
   padding: 12px;
   border-radius: 4px;
   font-size: 12px;

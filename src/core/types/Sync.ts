@@ -12,8 +12,8 @@ export interface SyncMetadata {
   timestamp: number; // 同步时间戳
   deviceId: string; // 设备唯一标识
   deviceName?: string; // 设备名称（可选，如"张三的MacBook"）
-  version: string; // 数据版本（如"1.0.0"）
-  dataFingerprintHash: string; // 数据指纹的哈希
+  version?: string; // adapter版本（如"1.0.0"）
+  dataFingerprintHash?: string; // 数据指纹的哈希
 }
 
 export interface DataFingerprint {

@@ -214,7 +214,7 @@ export function getCurrentDeviceId(): string {
 }
 
 /**
- * 更新同步状态
+ * 更新同步状态 没用 #HACK
  */
 export function updateSyncStatus(updates: Partial<LocalSyncStatus>): void {
   const currentStatus = loadSyncStatus() || {
