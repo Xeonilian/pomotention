@@ -268,12 +268,14 @@ export function collectLocalData(): SyncDataV1["data"] {
     dailyPomos: loadDailyPomos(),
     globalPomoCount: loadGlobalPomoCount(),
     writingTemplate: loadTemplates(),
+    timeTableBlocks_work: loadTimeBlocks("work", []),
+    timeTableBlocks_entertainment: loadTimeBlocks("entertainment", []),
   };
 }
 // =================== 数据变化检测 ===================
 
 /**
- * 获取当前所有数据的统计信息
+ * 获取当前所有数据的统计信息 #HACK
  */
 export function getDataCounts() {
   return {
@@ -288,7 +290,7 @@ export function getDataCounts() {
 }
 
 /**
- * 检查数据是否有变化（相比上次同步）
+ * 检查数据是否有变化（相比上次同步） #HACK
  */
 export function hasDataChanged(): boolean {
   const currentCounts = getDataCounts();
@@ -323,16 +325,24 @@ export function recordSyncCounts(): void {
  * @param defaultValue 默认值
  * @returns 解析后的数据或默认值
  */
-function loadData<T>(key: string, defaultData: T): T {
+export function loadData<T>(key: string, defaultValue: T): T {
   try {
-    const storedData = localStorage.getItem(key);
-    if (storedData) {
-      return JSON.parse(storedData) as T; // 从存储中读取数据并解析
+    const storedValue = localStorage.getItem(key);
+
+    if (storedValue !== null) {
+      // 本地有数据，解析并返回，这部分逻辑不变
+      return JSON.parse(storedValue) as T;
+    } else {
+      // 本地没有数据，直接返回传入的 defaultValue
+      // 关键：如果 defaultValue 是 null，这里就会返回 null
+      // 如果 defaultValue 是一个数组，这里就会返回数组
+      return defaultValue;
     }
   } catch (error) {
-    console.error(`加载数据时出错: ${error}`); // 打印错误信息
+    console.error(`加载 '${key}' 出错，使用默认值:`, error);
+    // 出错时也一样，直接返回传入的 defaultValue
+    return defaultValue;
   }
-  return defaultData; // 如果没有数据或出错，则返回默认数据
 }
 
 /**

@@ -24,7 +24,7 @@ import type { Block } from "@/core/types/Block";
 
 // 存储键名常量
 export const STORAGE_KEYS = {
-  TIMETABLE: "myScheduleBlocks",
+  TIMETABLE: "timeTableBlocks",
   ACTIVITY: "activitySheet",
   TODO: "todayTodo",
   SCHEDULE: "todaySchedule",

@@ -5,11 +5,12 @@ import { SYNC_VERSION, SyncStatus } from "@/core/types/Sync";
 
 import { getCurrentDeviceId } from "./localStorageService";
 import { WebDAVStorageAdapter } from "./storageAdapter";
+import { collectLocalData } from "./localStorageService";
 
 export async function performSync(): Promise<SyncResult> {
   try {
     const adapter = new WebDAVStorageAdapter();
-
+    const localData = collectLocalData();
     // 数据准备
     const deviceId = getCurrentDeviceId();
 
@@ -23,9 +24,7 @@ export async function performSync(): Promise<SyncResult> {
     // 构造同步数据
     const syncData: SyncData = {
       metadata,
-      data: {
-        test: "test",
-      },
+      data: localData,
     };
     await adapter.login();
     // 同步操作

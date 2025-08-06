@@ -47,7 +47,7 @@ const defaultSettings: GlobalSettings = {
   leftWidth: 100, // 默认值你自己定
   rightWidth: 300,
   topHeight: 300,
-  isWhiteNoiseEnabled: true,
+  isWhiteNoiseEnabled: false,
   whiteNoiseSoundTrack: SoundType.WORK_TICK,
   webdavId: "",
   webdavKey: "",

@@ -7,7 +7,7 @@ import type { Tag } from "@/core/types/Tag";
 import type { GlobalSettings } from "@/stores/useSettingStore";
 import { Template } from "./Template";
 import type { getDataCounts } from "@/services/localStorageService";
-
+import type { Block } from "./Block";
 export interface SyncMetadata {
   timestamp: number; // 同步时间戳
   deviceId: string; // 设备唯一标识
@@ -47,6 +47,8 @@ export interface SyncDataV1 extends SyncData {
     dailyPomos: Record<string, { count: number; diff: number }>;
     globalPomoCount: number;
     writingTemplate: Template[];
+    timeTableBlocks_work: Block[];
+    timeTableBlocks_entertainment: Block[];
   };
 }
 
