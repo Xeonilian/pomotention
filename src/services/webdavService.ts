@@ -157,6 +157,53 @@ export async function readData(fileName: string): Promise<string | null> {
 }
 
 /**
+ * 读取文件夹内容，返回文件列表
+ * @param customFolderPath - 自定义文件夹路径，不传则使用默认的应用文件夹
+ * @param excludeFiles - 要排除的文件名数组，默认排除常见的系统文件
+ * @returns 文件名数组，失败时返回空数组
+ */
+export async function readFolder(
+  customFolderPath?: string,
+  excludeFiles: string[] = [".DS_Store", "Thumbs.db", ".gitkeep"]
+): Promise<string[]> {
+  const config = getWebDAVConfig();
+  const client = getWebDAVClient();
+  const folderPath = customFolderPath || config.webdavPath;
+
+  try {
+    const response = await client.getDirectoryContents(folderPath);
+    console.log(`读取文件夹成功: ${folderPath}`);
+
+    // 处理两种可能的返回类型
+    let contents: any[];
+    if (Array.isArray(response)) {
+      // 如果直接返回数组
+      contents = response;
+    } else {
+      // 如果返回的是包装对象，提取 data 属性
+      contents = (response as any).data || [];
+    }
+
+    // 过滤出文件（排除文件夹）并排除指定的文件
+    const files = contents
+      .filter((item: any) => item.type === "file") // 只要文件，不要文件夹
+      .map((item: any) => item.basename || item.name) // 获取文件名（兼容不同的属性名）
+      .filter(
+        (fileName: string) => fileName && !excludeFiles.includes(fileName)
+      ) // 排除指定文件和空值
+      .sort(); // 按字母顺序排序
+
+    console.log(`找到 ${files.length} 个文件:`, files);
+    return files;
+  } catch (err) {
+    console.error(
+      "读取文件夹失败:",
+      err instanceof Error ? err.message : "未知错误"
+    );
+    return [];
+  }
+}
+/**
  * 删除应用文件夹中的文件
  */
 export async function deleteData(fileName: string, customFolderPath?: string) {

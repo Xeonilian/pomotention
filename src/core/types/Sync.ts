@@ -6,7 +6,6 @@ import type { Task } from "@/core/types/Task";
 import type { Tag } from "@/core/types/Tag";
 import type { GlobalSettings } from "@/stores/useSettingStore";
 import { Template } from "./Template";
-import type { getDataCounts } from "@/services/localStorageService";
 import type { Block } from "./Block";
 export interface SyncMetadata {
   timestamp: number; // 同步时间戳
@@ -55,16 +54,10 @@ export interface SyncDataV1 extends SyncData {
 // 版本常量
 export const SYNC_VERSION = "1.0.0";
 
-export type DataCounts = ReturnType<typeof getDataCounts>;
-
 export interface LocalSyncStatus {
-  lastSyncTime?: number; // 最后同步时间
-  lastSyncDeviceId?: string; // 最后同步的设备ID
-  lastSyncPomoCount?: number; // 同步时的番茄钟数
+  lastSyncLocalTimestamp?: number; // 最后同步时间
+  lastSyncRemoteTimestamp?: number; // 最后同步的设备ID
   currentDeviceId: string; // 当前设备ID
-  needsSync: boolean; // 是否需要同步
-  lastSyncFingerprintHash?: string; // 上次同步的数据指纹
-  lastSyncCounts?: ReturnType<typeof getDataCounts>;
 }
 
 // 同步状态枚举
@@ -75,6 +68,9 @@ export enum SyncStatus {
   DOWNLOADING = "downloading", // 下载中
   SUCCESS = "success", // 成功
   ERROR = "error", // 错误
+  SKIP = "skip", // 跳过
+  MERGE = "merge", // 合并
+  WARNING = "warning", // 警告
 }
 
 export interface SyncResult {

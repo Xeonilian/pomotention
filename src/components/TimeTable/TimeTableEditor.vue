@@ -121,7 +121,10 @@ const systemDate = Date.now();
 
 function loadFromLocal() {
   // 使用类型特定的存储键
-  const storageKey = `${STORAGE_KEYS.TIMETABLE}_${props.currentType}`;
+  const storageKey =
+    props.currentType === "work"
+      ? STORAGE_KEYS.TIMETABLE_WORK
+      : STORAGE_KEYS.TIMETABLE_ENTERTAINMENT;
   const saved = localStorage.getItem(storageKey);
   if (!saved) return false;
   try {
@@ -150,7 +153,10 @@ function syncToParentAndLocal() {
     "update-blocks",
     Blocks.value.map((b) => ({ ...b }))
   );
-  const storageKey = `${STORAGE_KEYS.TIMETABLE}_${props.currentType}`;
+  const storageKey =
+    props.currentType === "work"
+      ? STORAGE_KEYS.TIMETABLE_WORK
+      : STORAGE_KEYS.TIMETABLE_ENTERTAINMENT;
   localStorage.setItem(storageKey, JSON.stringify(Blocks.value));
 }
 

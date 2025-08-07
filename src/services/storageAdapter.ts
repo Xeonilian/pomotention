@@ -1,10 +1,4 @@
-import {
-  writeData,
-  readData,
-  deleteData,
-  createFolder,
-  testLogin,
-} from "./webdavService";
+import { writeData, readData, testLogin, readFolder } from "./webdavService";
 import type { SyncData, SyncMetadata } from "@/core/types/Sync";
 
 /**
@@ -58,6 +52,7 @@ export class WebDAVStorageAdapter implements StorageAdapter {
       if (payload.hasOwnProperty(key)) {
         const content = JSON.stringify(payload[key]); // 将 value 转换为 JSON 字符串
         const fileName = `${key}.json`; // 文件名使用 key
+        console.log(fileName);
 
         const saveSuccess = await writeData(fileName, content);
         if (!saveSuccess) {
@@ -69,31 +64,82 @@ export class WebDAVStorageAdapter implements StorageAdapter {
     return true;
   }
 
-  // 在 WebDAVStorageAdapter.ts 中修改
-
+  // 在 从云端获取文件
   async load(): Promise<SyncData | null> {
-    const metadataFileName = "metadata.json";
     try {
-      const metadataContent = await readData(metadataFileName);
-      if (!metadataContent) {
-        console.warn("未在云端找到 metadata.json 文件。");
+      // 1. 获取云端所有文件列表
+      console.log("[load] 正在获取云端文件列表...");
+      const allFiles = await readFolder();
+      console.log(`[load] 云端发现 ${allFiles.length} 个文件:`, allFiles);
+
+      if (allFiles.length === 0) {
+        console.warn("[load] 云端没有找到任何文件");
         return null;
       }
 
-      // 1. 解析元数据
-      const metadata = JSON.parse(metadataContent) as SyncMetadata;
+      // 2. 检查是否有 metadata.json
+      if (!allFiles.includes("metadata.json")) {
+        console.warn("[load] 云端没有找到必需的 metadata.json 文件");
+        return null;
+      }
 
-      // 2. TODO: 将来在这里也需要加载 payload 数据
-      //    例如，遍历所有 .json 文件（除了 metadata.json）
-      const payload = {}; // 暂时为空
+      // 3. 下载所有文件并分类处理
+      const payload: Record<string, any> = {};
+      let metadata: SyncMetadata | null = null;
+      const downloadedFiles: string[] = [];
 
-      // 3. 按照 SyncData 结构返回
+      console.log(`[load] 开始下载所有文件...`);
+
+      for (const fileName of allFiles) {
+        console.log(`[load] 正在下载: ${fileName}`);
+        const fileContent = await readData(fileName);
+
+        if (!fileContent) {
+          console.warn(`[load] ✗ ${fileName} (读取失败或为空)`);
+          continue;
+        }
+
+        try {
+          const parsedContent = JSON.parse(fileContent);
+
+          if (fileName === "metadata.json") {
+            // 处理 metadata
+            metadata = parsedContent as SyncMetadata;
+            console.log(`[load] ✓ ${fileName} (metadata 解析成功)`);
+          } else {
+            // 处理数据文件：去掉 .json 后缀作为字段名
+            const fieldName = fileName.replace(".json", "");
+            payload[fieldName] = parsedContent;
+          }
+
+          downloadedFiles.push(fileName);
+        } catch (parseError) {
+          if (fileName === "metadata.json") {
+            console.error(`[load] metadata.json 解析失败:`, parseError);
+            return null; // metadata 解析失败是致命错误
+          } else {
+            // 数据文件解析失败，保存为文本
+            const fieldName = fileName.replace(".json", "");
+            payload[fieldName] = fileContent;
+            downloadedFiles.push(fileName);
+          }
+        }
+      }
+
+      // 4. 验证是否成功获取了 metadata
+      if (!metadata) {
+        console.error("[load] 未能成功解析 metadata");
+        return null;
+      }
+
+      console.log(`[load] 数据字段: [${Object.keys(payload).join(", ")}]`);
+
       return {
         metadata: metadata,
         data: payload,
       };
     } catch (error) {
-      console.error("加载元数据失败:", error);
+      console.error("[load] 加载过程出错:", error);
       return null;
     }
   }

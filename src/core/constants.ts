@@ -24,16 +24,17 @@ import type { Block } from "@/core/types/Block";
 
 // 存储键名常量
 export const STORAGE_KEYS = {
-  TIMETABLE: "timeTableBlocks",
+  GLOBAL_POMO_COUNT: "globalPomoCount",
   ACTIVITY: "activitySheet",
   TODO: "todayTodo",
   SCHEDULE: "todaySchedule",
-  GLOBAL_POMO_COUNT: "globalPomoCount",
-  DAILY_POMOS: "dailyPomos",
   TASK: "taskTrack",
-  GLOBAL_SETTINGS: "globalSettings",
+  DAILY_POMOS: "dailyPomos",
+  TIMETABLE_WORK: "timeTableBlocks_work",
+  TIMETABLE_ENTERTAINMENT: "timeTableBlocks_entertainment",
   WRITING_TEMPLATE: "writingTemplate",
   TAG: "tag",
+  GLOBAL_SETTINGS: "globalSettings",
   SYNC_STATUS: "syncStatus",
 } as const;
 

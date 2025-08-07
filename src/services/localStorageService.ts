@@ -73,7 +73,12 @@ export function loadTimeBlocks(
   type: "work" | "entertainment",
   defaultBlocks: Block[]
 ): Block[] {
-  return loadData<Block[]>(`${STORAGE_KEYS.TIMETABLE}_${type}`, defaultBlocks);
+  const storageKey =
+    type === "work"
+      ? STORAGE_KEYS.TIMETABLE_WORK
+      : STORAGE_KEYS.TIMETABLE_ENTERTAINMENT;
+
+  return loadData<Block[]>(storageKey, defaultBlocks);
 }
 
 /**
@@ -85,7 +90,12 @@ export function saveTimeBlocks(
   type: "work" | "entertainment",
   blocks: Block[]
 ): void {
-  saveData(`${STORAGE_KEYS.TIMETABLE}_${type}`, blocks);
+  const storageKey =
+    type === "work"
+      ? STORAGE_KEYS.TIMETABLE_WORK
+      : STORAGE_KEYS.TIMETABLE_ENTERTAINMENT;
+
+  saveData(storageKey, blocks);
 }
 
 /**
@@ -93,7 +103,12 @@ export function saveTimeBlocks(
  * @param type 'work' 或 'entertainment'
  */
 export function removeTimeBlocksStorage(type: "work" | "entertainment"): void {
-  localStorage.removeItem(`${STORAGE_KEYS.TIMETABLE}_${type}`);
+  const storageKey =
+    type === "work"
+      ? STORAGE_KEYS.TIMETABLE_WORK
+      : STORAGE_KEYS.TIMETABLE_ENTERTAINMENT;
+
+  localStorage.removeItem(storageKey);
 }
 
 // =================== 任务相关 ===================
@@ -207,7 +222,6 @@ export function getCurrentDeviceId(): string {
   const newDeviceId = generateDeviceId();
   const newStatus: LocalSyncStatus = {
     currentDeviceId: newDeviceId,
-    needsSync: false,
   };
   saveSyncStatus(newStatus);
   return newDeviceId;
@@ -219,7 +233,6 @@ export function getCurrentDeviceId(): string {
 export function updateSyncStatus(updates: Partial<LocalSyncStatus>): void {
   const currentStatus = loadSyncStatus() || {
     currentDeviceId: generateDeviceId(),
-    needsSync: false,
   };
 
   const updatedStatus = { ...currentStatus, ...updates };
@@ -272,50 +285,6 @@ export function collectLocalData(): SyncDataV1["data"] {
     timeTableBlocks_entertainment: loadTimeBlocks("entertainment", []),
   };
 }
-// =================== 数据变化检测 ===================
-
-/**
- * 获取当前所有数据的统计信息 #HACK
- */
-export function getDataCounts() {
-  return {
-    activities: loadActivities().length,
-    todos: loadTodos().length,
-    schedules: loadSchedules().length,
-    tasks: loadTasks().length,
-    templates: loadTemplates().length,
-    tags: loadTags().length,
-    globalPomoCount: loadGlobalPomoCount(),
-  };
-}
-
-/**
- * 检查数据是否有变化（相比上次同步） #HACK
- */
-export function hasDataChanged(): boolean {
-  const currentCounts = getDataCounts();
-  const syncStatus = loadSyncStatus();
-
-  if (!syncStatus?.lastSyncCounts) {
-    // 第一次同步，肯定有变化
-    return true;
-  }
-
-  return (
-    JSON.stringify(currentCounts) !== JSON.stringify(syncStatus.lastSyncCounts)
-  );
-}
-
-/**
- * 记录当前数据统计（同步成功后调用）
- */
-export function recordSyncCounts(): void {
-  const currentCounts = getDataCounts();
-  updateSyncStatus({
-    lastSyncCounts: currentCounts,
-    lastSyncTime: Date.now(),
-  });
-}
 
 // =================== 通用本地存储操作 ===================
 
@@ -350,6 +319,14 @@ export function loadData<T>(key: string, defaultValue: T): T {
  * @param key 存储键名
  * @param data 要保存的数据
  */
-function saveData<T>(key: string, data: T): void {
+export function saveData<T>(key: string, data: T): void {
   localStorage.setItem(key, JSON.stringify(data));
+}
+
+/**
+ * 删除本地存储数据的通用函数
+ * @param key 存储键名
+ */
+export function removeData(key: string): void {
+  localStorage.removeItem(key);
 }

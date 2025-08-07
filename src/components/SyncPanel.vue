@@ -15,15 +15,48 @@
 
     <!-- 同步按钮 -->
     <div class="sync-actions">
+      <!-- 首次同步或异常时显示自动同步按钮 -->
       <n-button
+        v-if="showAutoSync"
         type="primary"
         :loading="syncing"
         :disabled="syncing"
-        @click="handleSync"
+        @click="handleAutoSync"
         block
+        style="margin-bottom: 8px"
       >
-        {{ syncing ? "同步中..." : "开始同步" }}
+        {{ syncing ? "同步中..." : "首次同步（上传本地数据）" }}
       </n-button>
+
+      <!-- 手动选择按钮组 -->
+      <n-space v-if="showManualSync" vertical>
+        <n-button
+          type="info"
+          :loading="syncing && syncAction === 'upload'"
+          :disabled="syncing"
+          @click="handleUpload"
+          block
+        >
+          {{
+            syncing && syncAction === "upload"
+              ? "上传中..."
+              : "上传本地数据到云端"
+          }}
+        </n-button>
+        <n-button
+          type="warning"
+          :loading="syncing && syncAction === 'download'"
+          :disabled="syncing"
+          @click="handleDownload"
+          block
+        >
+          {{
+            syncing && syncAction === "download"
+              ? "下载中..."
+              : "下载云端数据（覆盖本地）"
+          }}
+        </n-button>
+      </n-space>
     </div>
 
     <!-- 调试信息 -->
@@ -38,7 +71,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed } from "vue";
 import {
   NButton,
   NSpin,
@@ -48,100 +81,154 @@ import {
   NCollapseItem,
 } from "naive-ui";
 import { getCurrentDeviceId } from "@/services/localStorageService";
-import { performSync } from "@/services/syncService";
+import {
+  performSync,
+  getRemoteSyncMetadata,
+  isFirstTimeSync,
+  uploadToCloud,
+  downloadFromCloud,
+} from "@/services/syncService";
 import type { SyncResult } from "@/core/types/Sync";
 import { SyncStatus } from "@/core/types/Sync";
-import { WebDAVStorageAdapter } from "@/services/storageAdapter";
 
 // 响应式数据
 const syncing = ref(false);
 const syncStatus = ref("正在获取同步状态...");
 const deviceId = ref("");
 const debugInfo = ref("");
+const syncAction = ref<"upload" | "download" | null>(null);
+const isFirstTime = ref(true);
 
-// 获取设备ID
+// 计算属性
+const showAutoSync = computed(() => isFirstTime.value);
+const showManualSync = computed(() => !isFirstTime.value);
+
+// 获取设备ID和状态
 onMounted(async () => {
   deviceId.value = getCurrentDeviceId();
-  try {
-    // 1. 直接实例化适配器，因为构造函数是空的
-    const adapter = new WebDAVStorageAdapter();
 
-    // 2. 调用异步方法并等待结果
-    const metadata = await adapter.getMetadata();
+  // 检查是否首次同步
+  isFirstTime.value = await isFirstTimeSync();
 
-    // 3. 根据结果更新 syncStatus
+  if (isFirstTime.value) {
+    syncStatus.value = "未找到云端数据，可进行首次同步";
+  } else {
+    const metadata = await getRemoteSyncMetadata();
     if (metadata && metadata.timestamp) {
       const lastSyncDate = new Date(metadata.timestamp).toLocaleString();
       const lastSyncDeviceId = metadata.deviceId;
-      syncStatus.value = `上次同步于: ${lastSyncDate}\n最后同步设备: ${lastSyncDeviceId}`;
+      syncStatus.value = `云端数据信息:\n上次同步: ${lastSyncDate}\n同步设备: ${lastSyncDeviceId}`;
     } else {
-      syncStatus.value = "未找到同步记录，准备首次同步";
+      syncStatus.value = "无法获取云端状态";
     }
-  } catch (error) {
-    console.error("获取元数据失败:", error);
-    syncStatus.value = "获取同步状态失败";
-    debugInfo.value = String(error);
   }
 });
 
-// 处理同步
-async function handleSync() {
+// 处理自动同步（首次）
+async function handleAutoSync() {
   syncing.value = true;
-  syncStatus.value = "准备同步...";
+  syncStatus.value = "准备首次同步...";
   debugInfo.value = "";
 
   try {
     const result: SyncResult = await performSync();
+    handleSyncResult(result);
 
+    // 首次同步成功后，切换到手动模式
     if (result.status === SyncStatus.SUCCESS) {
-      syncStatus.value = "同步完成 ✅";
-      // console.log("✅ 同步成功:", result);
-
-      debugInfo.value = JSON.stringify(
-        {
-          status: result.status,
-          message: result.message,
-          timestamp: result.timestamp
-            ? new Date(result.timestamp).toLocaleString()
-            : new Date().toLocaleString(),
-        },
-        null,
-        2
-      );
-    } else {
-      syncStatus.value = `同步失败: ${result.message || "未知错误"}`;
-      console.error("❌ 同步失败:", result);
-
-      debugInfo.value = JSON.stringify(
-        {
-          status: result.status,
-          message: result.message,
-          error: result.error?.message,
-          timestamp: result.timestamp
-            ? new Date(result.timestamp).toLocaleString()
-            : new Date().toLocaleString(),
-        },
-        null,
-        2
-      );
+      isFirstTime.value = false;
     }
   } catch (error: any) {
-    console.error("同步过程异常:", error);
-    syncStatus.value = "同步异常";
+    handleSyncError(error);
+  } finally {
+    syncing.value = false;
+    syncAction.value = null;
+  }
+}
 
+// 处理上传
+async function handleUpload() {
+  syncing.value = true;
+  syncAction.value = "upload";
+  syncStatus.value = "准备上传本地数据...";
+  debugInfo.value = "";
+
+  try {
+    const result: SyncResult = await uploadToCloud();
+    handleSyncResult(result);
+  } catch (error: any) {
+    handleSyncError(error);
+  } finally {
+    syncing.value = false;
+    syncAction.value = null;
+  }
+}
+
+// 处理下载
+async function handleDownload() {
+  syncing.value = true;
+  syncAction.value = "download";
+  syncStatus.value = "准备下载云端数据...";
+  debugInfo.value = "";
+
+  try {
+    const result: SyncResult = await downloadFromCloud();
+    handleSyncResult(result);
+  } catch (error: any) {
+    handleSyncError(error);
+  } finally {
+    syncing.value = false;
+    syncAction.value = null;
+  }
+}
+
+// 处理同步结果
+function handleSyncResult(result: SyncResult) {
+  if (result.status === SyncStatus.SUCCESS) {
+    syncStatus.value = `${result.message} ✅`;
     debugInfo.value = JSON.stringify(
       {
-        status: "EXCEPTION",
-        message: "同步过程发生异常",
-        error: error.message,
-        timestamp: new Date().toLocaleString(),
+        status: result.status,
+        message: result.message,
+        timestamp: result.timestamp
+          ? new Date(result.timestamp).toLocaleString()
+          : new Date().toLocaleString(),
       },
       null,
       2
     );
-  } finally {
-    syncing.value = false;
+  } else {
+    syncStatus.value = `操作失败: ${result.message || "未知错误"}`;
+    console.error("❌ 同步失败:", result);
+    debugInfo.value = JSON.stringify(
+      {
+        status: result.status,
+        message: result.message,
+        error: result.error?.message,
+        timestamp: result.timestamp
+          ? new Date(result.timestamp).toLocaleString()
+          : new Date().toLocaleString(),
+      },
+      null,
+      2
+    );
   }
+}
+
+// 处理同步异常
+function handleSyncError(error: any) {
+  console.error("同步过程异常:", error);
+  syncStatus.value = "操作异常";
+  debugInfo.value = JSON.stringify(
+    {
+      status: "EXCEPTION",
+      message: "操作过程发生异常",
+      error: error.message,
+      timestamp: new Date().toLocaleString(),
+    },
+    null,
+    2
+  );
 }
 </script>
 
