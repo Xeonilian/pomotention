@@ -172,9 +172,10 @@
         :activities="activityList"
         :activeId="activeId"
         :todos="todoList"
+        :schedules="scheduleList"
         :selectedActivityId="selectedActivityId"
         :selectedTaskId="selectedTaskId"
-        @pick-activity-todo="onPickActivity"
+        @pick-activity="onPickActivity"
         @add-activity="onAddActivity"
         @delete-activity="onDeleteActivity"
         @update-active-id="onUpdateActiveId"
@@ -183,6 +184,7 @@
         @create-child-activity="onCreateChildActivity"
         @increase-child-activity="onIncreaseChildActivity"
         @go-to-todo="goToTodo"
+        @go-to-schedule="goToSchedule"
         @convert-activity-to-task="onConvertActivityToTask"
       />
     </div>
@@ -236,7 +238,7 @@ import {
   Search24Regular,
 } from "@vicons/fluent";
 import { useResize } from "@/composables/useResize";
-import { getTimestampForTimeString, addDays } from "@/core/utils";
+import { getTimestampForTimeString, addDays, getDateKey } from "@/core/utils";
 import { unifiedDateService } from "@/services/unifiedDateService";
 import { useSettingStore } from "@/stores/useSettingStore";
 // ======================== 响应式状态与初始化 ========================
@@ -781,6 +783,12 @@ function onDateSet(direction: "prev" | "next" | "today" | "query") {
 
 function goToTodo(todoId: number) {
   dateService.navigateDate(new Date(todoId));
+}
+
+function goToSchedule(scheduleId: number) {
+  console.log(getDateKey(scheduleId));
+
+  dateService.navigateDate(new Date(scheduleId));
 }
 
 // 从Today选择任务处理函数

@@ -8,7 +8,7 @@
   - activeId: 当前选中的活动 ID，用于控制删除按钮的启用状态。
 
   Emits:
-  - pick-activity-todo: 触发选择活动的操作。
+  - pick-activity: 触发选择活动的操作。
   - filter: 触发筛选操作，传递筛选选项的 key。
   - add-task: 触发添加任务的操作。
   - add-schedule: 触发添加预约的操作。
@@ -17,19 +17,19 @@
   Parent: ActivityView.vue
 
   Usage:
-  <ActivityButtons  :activeId="activeId" @pick-activity-todo="pickActivity" @filter="handleFilter" @add-task="addTask" @add-schedule="addSchedule" @delete-active="deleteActive" />
+  <ActivityButtons  :activeId="activeId" @pick-activity="pickActivity" @filter="handleFilter" @add-task="addTask" @add-schedule="addSchedule" @delete-active="deleteActive" />
 -->
 
 <template>
   <div class="activity-view-button-container">
     <n-button
-      @click="$emit('pick-activity-todo')"
-      :disabled="activeId === null || isSelectedClassS"
+      @click="$emit('pick-activity')"
+      :disabled="activeId === null"
       secondary
       circle
       type="error"
       size="small"
-      title="选择活动"
+      :title="isSelectedClassS ? '预约：跳转' : '任务：跳转|选择'"
     >
       <template #icon>
         <n-icon><ChevronCircleLeft48Regular /></n-icon>
@@ -218,7 +218,7 @@ const isSelectedClassS = computed(() => {
 });
 
 const emit = defineEmits([
-  "pick-activity-todo",
+  "pick-activity",
   "add-todo",
   "add-schedule",
   "add-untaetigkeit",

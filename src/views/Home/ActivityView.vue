@@ -10,7 +10,7 @@
       :selectedTaskId="selectedTaskId"
       :selectedClass="selectedActivity?.class"
       :hasParent="selectedActivity?.parentId"
-      @pick-activity-todo="pickActivity"
+      @pick-activity="pickActivity"
       @add-todo="addTodoRow"
       @add-schedule="addScheduleRow"
       @add-untaetigkeit="addUntaetigkeitRow"
@@ -83,14 +83,16 @@ import type { Todo } from "@/core/types/Todo";
 import { NPopover } from "naive-ui";
 import { taskService } from "@/services/taskService";
 import { useSettingStore } from "@/stores/useSettingStore";
+import { Schedule } from "@/core/types/Schedule";
 
 // ========================
 // Props 定义
 // ========================
 const props = defineProps<{
   activities: Activity[]; // 活动数据列表
-  activeId: number | null; // 当前选中的活动ID
+  schedules: Schedule[]; // 预约事项列表
   todos: Todo[]; // 待办事项列表
+  activeId: number | null; // 当前选中的活动ID
   selectedActivityId: number | null;
   selectedTaskId: number | null;
 }>();
@@ -99,7 +101,7 @@ const props = defineProps<{
 // Emits 定义
 // ========================
 const emit = defineEmits<{
-  "pick-activity-todo": [activity: Activity]; // 选择活动待办
+  "pick-activity": [activity: Activity]; // 选择活动待办
   "add-activity": [activity: Activity]; // 添加新活动
   "delete-activity": [id: number]; // 删除活动
   "update-active-id": [id: number | null]; // 更新选中活动ID
@@ -107,6 +109,7 @@ const emit = defineEmits<{
   "repeat-activity": [id: number]; // 重复选中的活动
   "create-child-activity": [id: number]; //构建选中活动的子活动
   "go-to-todo": [id: number]; // 去到todo所在天
+  "go-to-schedule": [id: number]; // 去到schedule所在天
   "convert-activity-to-task": [id: number, taskId: number]; // 转换为任务
   "increase-child-activity": [id: number]; // 取消子项
 }>();
@@ -277,12 +280,26 @@ function pickActivity() {
     emit("update-active-id", props.activeId);
     return;
   }
+  const relatedSchedule = props.schedules.find(
+    (schedule) => schedule.activityId === props.activeId
+  );
+
+  if (relatedSchedule) {
+    if (relatedSchedule.activityDueRange[0]) {
+      emit("go-to-schedule", relatedSchedule.activityDueRange[0]);
+      emit("update-active-id", props.activeId);
+    } else {
+      showErrorPopover("预约尚未设置时间！");
+    }
+
+    return;
+  }
 
   const picked = props.activities.find((a) => a.id === props.activeId);
   if (!picked) return;
 
   // 4. 触发事件并重置选中状态
-  emit("pick-activity-todo", picked);
+  emit("pick-activity", picked);
 }
 
 // 添加新的预约活动
