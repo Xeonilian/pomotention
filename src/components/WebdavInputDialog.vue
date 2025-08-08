@@ -4,7 +4,7 @@
     v-model:show="showModal"
     preset="dialog"
     title="录入WebDAV信息"
-    :on-after-leave="resetInputs"
+    :on-after-leave="restoreSettings"
   >
     <n-space vertical>
       <n-input
@@ -33,8 +33,12 @@
         type="password"
         show-count
       />
+      <n-text>
+        {{ passMessage }}
+      </n-text>
     </n-space>
     <template #action>
+      <n-button @click="handleTest">测试</n-button>
       <n-button @click="handleCancel">取消</n-button>
       <n-button type="primary" @click="handleConfirm">确认</n-button>
     </template>
@@ -45,6 +49,7 @@
 import { ref, watch, computed } from "vue";
 import { NModal, NInput, NSpace, NButton } from "naive-ui";
 import { useSettingStore } from "@/stores/useSettingStore";
+import { WebDAVStorageAdapter } from "@/services/storageAdapter";
 
 // props/emit，支持 v-model:show
 const props = defineProps<{
@@ -52,7 +57,6 @@ const props = defineProps<{
 }>();
 const emit = defineEmits<{
   (e: "update:show", value: boolean): void;
-  (e: "confirm"): void;
 }>();
 
 const showModal = computed({
@@ -60,41 +64,106 @@ const showModal = computed({
   set: (val) => emit("update:show", val),
 });
 
+const adapter = new WebDAVStorageAdapter();
 const settingStore = useSettingStore();
-
 const webdavId = ref("");
 const webdavWebsite = ref("");
 const webdavKey = ref("");
 const webdavPath = ref("");
+const passMessage = ref("📢请测试账户信息！");
+const passTest = ref(false);
+const originalSettings = ref({
+  webdavWebsite: "",
+  webdavPath: "",
+  webdavId: "",
+  webdavKey: "",
+});
 
 // 每次弹窗打开都同步store到输入框
 watch(
   () => props.show,
   (val) => {
     if (val) {
-      webdavId.value = settingStore.settings.webdavId;
+      // 1. **备份**当前 store 中的设置为“原始版本”
+
+      originalSettings.value = {
+        webdavWebsite: settingStore.settings.webdavWebsite,
+        webdavPath: settingStore.settings.webdavPath,
+        webdavId: settingStore.settings.webdavId,
+        webdavKey: settingStore.settings.webdavKey,
+      };
+
+      // 2. 将 store 的值加载到本地 ref，用于输入框显示
       webdavWebsite.value = settingStore.settings.webdavWebsite;
-      webdavKey.value = settingStore.settings.webdavKey;
       webdavPath.value = settingStore.settings.webdavPath;
+      webdavId.value = settingStore.settings.webdavId;
+      webdavKey.value = settingStore.settings.webdavKey;
+
+      // 3. 重置测试状态
+      passTest.value = false;
+      passMessage.value = "📢请输入配置并测试。";
     }
   }
 );
 
-function resetInputs() {
-  webdavId.value = "";
-  webdavWebsite.value = "";
-  webdavKey.value = "";
-}
+watch(webdavWebsite, (val) => {
+  settingStore.settings.webdavWebsite = val;
+});
+watch(webdavPath, (val) => {
+  settingStore.settings.webdavPath = val;
+});
+watch(webdavId, (val) => {
+  settingStore.settings.webdavId = val;
+});
+watch(webdavKey, (val) => {
+  settingStore.settings.webdavKey = val;
+});
 
 function handleConfirm() {
-  // 写回 store，自动全局生效（pinia 持久化会同步存）
-  settingStore.settings.webdavId = webdavId.value.trim();
-  settingStore.settings.webdavWebsite = webdavWebsite.value.trim();
-  settingStore.settings.webdavKey = webdavKey.value.trim();
-  emit("confirm");
+  if (!passTest.value) {
+    // 如果测试没通过就确认，恢复到原始设置
+    settingStore.settings.webdavWebsite = originalSettings.value.webdavWebsite;
+    settingStore.settings.webdavPath = originalSettings.value.webdavPath;
+    settingStore.settings.webdavId = originalSettings.value.webdavId;
+    settingStore.settings.webdavKey = originalSettings.value.webdavKey;
+  }
+  // 如果测试通过了，就什么都不做，保留 store 中已更新的值。
+
   emit("update:show", false);
 }
+
 function handleCancel() {
+  // 用户点击取消，总是恢复到原始设置
+  settingStore.settings.webdavWebsite = originalSettings.value.webdavWebsite;
+  settingStore.settings.webdavPath = originalSettings.value.webdavPath;
+  settingStore.settings.webdavId = originalSettings.value.webdavId;
+  settingStore.settings.webdavKey = originalSettings.value.webdavKey;
+
   emit("update:show", false);
+}
+
+async function handleTest() {
+  const res = await adapter.login();
+  if (res) {
+    passTest.value = true;
+    passMessage.value = "✔️账户测试通过！";
+  } else {
+    passTest.value = false;
+    passMessage.value = "⚠️账户信息有误，请重新填写！";
+  }
+}
+
+function restoreSettings() {
+  // 这个函数将在弹窗关闭后执行
+  // 检查最终的测试状态
+  if (!passTest.value) {
+    // 如果测试最终没有通过，就用原始备份恢复 store
+    settingStore.settings.webdavWebsite = originalSettings.value.webdavWebsite;
+    settingStore.settings.webdavPath = originalSettings.value.webdavPath;
+    settingStore.settings.webdavId = originalSettings.value.webdavId;
+    settingStore.settings.webdavKey = originalSettings.value.webdavKey;
+  }
+  // 如果测试通过了 (passTest.value is true)，就什么都不做，
+  // 让 store 保留已经被 watch 更新的新值。
 }
 </script>

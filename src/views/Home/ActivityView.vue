@@ -124,7 +124,7 @@ const filterOptions = [
   { label: "内外打扰", key: "interrupt" },
   { label: "待办活动", key: "todo" },
   { label: "预约活动", key: "schedule" },
-  { label: "取消任务", key: "cancelled" },
+  { label: "取消活动", key: "cancelled" },
 ];
 
 // Kanban多个section参数管理

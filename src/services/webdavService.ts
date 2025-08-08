@@ -48,6 +48,7 @@ export function getWebDAVConfig(): WebDAVConfig {
  */
 function getWebDAVClient(): WebDAVClient {
   const config = getWebDAVConfig();
+  console.log(config);
   return createClient(config.webdavWebsite, {
     username: config.webdavId,
     password: config.webdavKey,

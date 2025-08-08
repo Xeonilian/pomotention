@@ -1,4 +1,10 @@
-import { writeData, readData, testLogin, readFolder } from "./webdavService";
+import {
+  writeData,
+  readData,
+  testLogin,
+  readFolder,
+  createFolder,
+} from "./webdavService";
 import type { SyncData, SyncMetadata } from "@/core/types/Sync";
 
 /**
@@ -18,7 +24,34 @@ export interface StorageAdapter {
 export class WebDAVStorageAdapter implements StorageAdapter {
   constructor() {}
   async login(): Promise<boolean> {
-    return await testLogin();
+    try {
+      // 第一步：测试登录凭据
+      const isLoggedIn = await testLogin();
+
+      // 如果登录测试失败，立即中止并返回 false
+      if (!isLoggedIn) {
+        console.log("WebDAV 登录测试失败，已中止操作。");
+        return false;
+      }
+
+      console.log("WebDAV 登录测试成功，现在开始检查/创建应用文件夹...");
+
+      // 第二步：创建应用文件夹
+      const isFolderReady = await createFolder();
+
+      // createFolder 成功或失败都会返回 boolean，直接将其作为最终结果返回
+      if (isFolderReady) {
+        console.log("WebDAV 环境初始化完成（登录+文件夹）。");
+      } else {
+        console.error("WebDAV 文件夹创建失败，环境初始化未完成。");
+      }
+
+      return isFolderReady;
+    } catch (error) {
+      // 捕获任何意外错误（例如网络问题）
+      console.error("在执行 login 流程时发生意外错误:", error);
+      return false;
+    }
   }
 
   async save(data: SyncData): Promise<boolean> {

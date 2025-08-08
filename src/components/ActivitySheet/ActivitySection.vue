@@ -51,7 +51,7 @@
     </div>
 
     <!-- 内容区 -->
-    <div v-for="item in sortedDisplaySheet" :key="item.id" >
+    <div v-for="item in sortedDisplaySheet" :key="item.id">
       <div
         v-if="item.status !== 'done'"
         class="activity-row"
@@ -156,7 +156,7 @@
                           ? 'var(--color-text-primary)'
                           : 'var(--color-text-secondary)'
                       "
-                      ><Accessibility24Regular
+                      ><CalendarCheckmark20Regular
                     /></n-icon>
                   </div>
                 </template>
@@ -290,7 +290,7 @@
             :isCloseable="true"
             @remove-tag="handleRemoveTag(item, $event)"
           />
-        </div>      
+        </div>
       </div>
     </div>
   </div>
@@ -302,7 +302,7 @@ import { NInput, NDatePicker, NIcon, NDropdown, NPopover } from "naive-ui";
 import {
   VideoPersonCall24Regular,
   ApprovalsApp24Regular,
-  Accessibility24Regular,
+  CalendarCheckmark20Regular,
   Cloud24Regular,
   Chat24Regular,
   DocumentTableSearch24Regular,
@@ -763,13 +763,12 @@ function handleTagCreate(item: Activity, tagName: string) {
   margin-left: 20px;
 }
 
-.activity-content{
+.activity-content {
   display: flex;
-  flex-direction: row; 
+  flex-direction: row;
 }
 .tag-content {
   display: flex;
-
 }
 
 .icon-drag-area {

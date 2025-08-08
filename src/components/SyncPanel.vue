@@ -10,7 +10,7 @@
 
     <!-- 设备信息 -->
     <div class="device-info">
-      <n-text depth="3">设备ID: {{ deviceId }}</n-text>
+      <n-text>设备ID: {{ deviceId }}</n-text>
     </div>
 
     <!-- 同步按钮 -->
@@ -40,7 +40,7 @@
           {{
             syncing && syncAction === "upload"
               ? "上传中..."
-              : "上传本地数据到云端"
+              : "上传本地数据到云端（覆盖云端）"
           }}
         </n-button>
         <n-button
@@ -98,10 +98,11 @@ const deviceId = ref("");
 const debugInfo = ref("");
 const syncAction = ref<"upload" | "download" | null>(null);
 const isFirstTime = ref(true);
+const isLoaded = ref(false);
 
 // 计算属性
-const showAutoSync = computed(() => isFirstTime.value);
-const showManualSync = computed(() => !isFirstTime.value);
+const showAutoSync = computed(() => isLoaded.value && isFirstTime.value);
+const showManualSync = computed(() => isLoaded.value && !isFirstTime.value);
 
 // 获取设备ID和状态
 onMounted(async () => {
@@ -122,6 +123,7 @@ onMounted(async () => {
       syncStatus.value = "无法获取云端状态";
     }
   }
+  isLoaded.value = true;
 });
 
 // 处理自动同步（首次）
@@ -242,6 +244,7 @@ function handleSyncError(error: any) {
 .sync-status {
   padding: 12px;
   border-radius: 6px;
+  font-family: "Courier New", monospace;
 }
 
 .device-info {

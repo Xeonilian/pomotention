@@ -51,7 +51,7 @@
         "
         :class="{ yesterday: isViewingYesterday, tomorrow: isViewingTomorrow }"
       >
-        <!-- 今日待办的头部和控件 -->
+        <!-- 今日活动的头部和控件 -->
         <div class="today-header">
           <div class="today-info">
             <span class="today-status">{{ dateService.displayDateInfo }}</span>

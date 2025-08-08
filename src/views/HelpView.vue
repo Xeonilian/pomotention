@@ -42,10 +42,7 @@
             </n-icon> </template
         ></n-button>
       </div>
-      <WebdavInputDialog
-        v-model:show="showWebdavDialog"
-        @confirm="syncPomotention"
-      />
+      <WebdavInputDialog v-model:show="showWebdavDialog" />
       <n-modal
         v-model:show="showSyncPanel"
         preset="dialog"
@@ -96,12 +93,7 @@ import { useSettingStore } from "@/stores/useSettingStore";
 import { watch } from "vue";
 import { ArrowSync24Regular } from "@vicons/fluent";
 import WebdavInputDialog from "@/components/WebdavInputDialog.vue";
-import {
-  testLogin,
-  createFolder,
-  writeData,
-  readData,
-} from "@/services/webdavService";
+
 import SyncPanel from "@/components/SyncPanel.vue";
 
 const localVersion = ref("");
@@ -181,63 +173,6 @@ async function checkRemoteRelease() {
     remoteError.value = e.message || String(e);
     remoteVersion.value = "(获取失败)";
     remoteOk.value = false;
-  }
-}
-
-async function syncPomotention() {
-  // 直接从 settingStore 构建配置对象
-  const config = {
-    webdavId: settingStore.settings.webdavId,
-    webdavWebsite: settingStore.settings.webdavWebsite,
-    webdavKey: settingStore.settings.webdavKey,
-    webdavPath: settingStore.settings.webdavPath || "/PomotentionBackup",
-  };
-
-  const fileName = "test.json";
-  const testData = { time: Date.now(), message: "来自Pomotention的测试数据" };
-
-  // ✅ 安全的日志输出
-  console.log("开始WebDAV同步:", {
-    id: config.webdavId,
-    website: config.webdavWebsite,
-    key: "***",
-    path: config.webdavPath,
-  });
-
-  // 1. 登录测试
-  const loginOk = await testLogin(config);
-  if (!loginOk) {
-    console.log("WebDAV 登录失败，终止后续操作");
-    return;
-  }
-
-  // 2. 确保目录存在
-  const folderOk = await createFolder(config);
-  if (!folderOk) {
-    console.log("主目录创建失败，终止后续操作");
-    return;
-  }
-
-  // 3. 写入文件
-  const saveOk = await writeData(config, fileName, JSON.stringify(testData));
-  if (!saveOk) {
-    console.log("文件保存失败！");
-    return;
-  }
-
-  // 4. 读取文件
-  const content = await readData(config, fileName);
-  if (content === null) {
-    console.log("文件读取失败！");
-    return;
-  }
-
-  // 5. 控制台输出读取结果（解析后的数据）
-  try {
-    const parsedContent = JSON.parse(content);
-    console.log("WebDAV 同步测试成功！读取到的数据:", parsedContent);
-  } catch (e) {
-    console.log("数据格式解析失败，原始内容长度:", content.length);
   }
 }
 
