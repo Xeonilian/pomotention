@@ -64,11 +64,12 @@
             <n-date-picker
               v-model:value="queryDate"
               type="date"
-              placeholder="回车到今天"
-              @keyup.enter="onDateSet('today')"
+              placeholder="点击到今天"
               @update:value="onDateSet('query')"
               style="width: 92px"
               class="search-date"
+              @click="onDateSet('today')"
+              title="输入示例：2025-01-01"
             >
               <template #date-icon>
                 <n-icon :size="18" :component="Search24Regular" />
