@@ -1,1 +1,0 @@
-import{_ as t,c as e,o as a}from"./chunks/framework.Cs5y-aXb.js";const m=JSON.parse('{"title":"","description":"","frontmatter":{},"headers":[],"relativePath":"guide/task.md","filePath":"guide/task.md","lastUpdated":1750146826000}'),s={name:"guide/task.md"};function r(o,c,d,n,i,p){return a(),e("div")}const f=t(s,[["render",r]]);export{m as __pageData,f as default};
