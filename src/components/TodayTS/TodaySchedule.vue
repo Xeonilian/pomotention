@@ -462,12 +462,12 @@ function handleRepeatSchedule(id: number) {
 
 /* 确保选中行的样式优先级高于其他样式 */
 .table-body tr.selected-row:nth-child(even) {
-  background-color: var(--color-red-light-transparent) !important;
+  background-color: var(--color-yellow-light-transparent) !important;
 }
 
 /* 同时具有active和selected状态时的样式 */
 .table-body tr.active-row.selected-row {
-  background-color: var(--color-red-light-transparent) !important;
+  background-color: var(--color-yellow-light-transparent) !important;
 }
 
 /* 鼠标悬停效果 */
