@@ -129,6 +129,7 @@ const filterOptions = [
 
 // Kanban多个section参数管理
 const settingStore = useSettingStore();
+
 // 响应式可直接用
 const sections = computed({
   get: () => settingStore.settings.kanbanSetting,
@@ -143,6 +144,9 @@ const popoverMessage = ref("");
 
 function addSection() {
   if (sections.value.length >= 6) return;
+
+  settingStore.settings.rightWidth = 250 * (sections.value.length + 1);
+
   sections.value.push({
     id: Date.now(),
     filterKey: "all",
@@ -152,6 +156,12 @@ function addSection() {
 
 function removeSection(id: number) {
   if (id === 1) return;
+  console.log(sections.value.length);
+  if (sections.value.length === 2) {
+    settingStore.settings.rightWidth = 300;
+  } else {
+    settingStore.settings.rightWidth = 250 * (sections.value.length - 1);
+  }
   settingStore.settings.kanbanSetting =
     settingStore.settings.kanbanSetting.filter((s) => s.id !== id);
 }
