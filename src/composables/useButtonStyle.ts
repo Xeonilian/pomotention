@@ -1,7 +1,6 @@
 // composables/useButtonStyle.ts
 import { useTimerStore } from "@/stores/useTimerStore";
 import { useUIStore } from "@/stores/useUIStore";
-import { useAlwaysOnTop } from "@/composables/useAlwaysOnTop";
 import { ref } from "vue";
 
 type ViewKey =
