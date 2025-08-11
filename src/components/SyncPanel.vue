@@ -13,34 +13,45 @@
       <n-text>设备ID: {{ deviceId }}</n-text>
     </div>
 
+    <!-- 导出按钮 -->
+    <n-button
+      type="primary"
+      secondary
+      :loading="syncing"
+      :disabled="syncing"
+      @click="handleExport"
+    >
+      导出数据到本地
+    </n-button>
+
     <!-- 同步按钮 -->
     <div class="sync-actions">
       <!-- 首次同步或异常时显示自动同步按钮 -->
       <n-button
         v-if="showAutoSync"
         type="primary"
+        secondary
         :loading="syncing"
         :disabled="syncing"
         @click="handleAutoSync"
-        block
-        style="margin-bottom: 8px"
       >
         {{ syncing ? "同步中..." : "首次同步（上传本地数据）" }}
       </n-button>
 
       <!-- 手动选择按钮组 -->
-      <n-space v-if="showManualSync" vertical>
+      <n-space v-if="showManualSync" :vertical="false" :wrap="false">
         <n-button
           type="info"
           :loading="syncing && syncAction === 'upload'"
           :disabled="syncing"
           @click="handleUpload"
-          block
+          secondary
+          style="width: 189px"
         >
           {{
             syncing && syncAction === "upload"
               ? "上传中..."
-              : "上传本地数据到云端（覆盖云端）"
+              : "上传本地数据 - 覆盖云端"
           }}
         </n-button>
         <n-button
@@ -48,12 +59,13 @@
           :loading="syncing && syncAction === 'download'"
           :disabled="syncing"
           @click="handleDownload"
-          block
+          secondary
+          style="width: 188px"
         >
           {{
             syncing && syncAction === "download"
               ? "下载中..."
-              : "下载云端数据（覆盖本地）"
+              : "下载云端数据 - 覆盖本地"
           }}
         </n-button>
       </n-space>
@@ -90,6 +102,9 @@ import {
 } from "@/services/syncService";
 import type { SyncResult } from "@/core/types/Sync";
 import { SyncStatus } from "@/core/types/Sync";
+import { collectLocalData } from "@/services/localStorageService";
+import { open } from "@tauri-apps/plugin-dialog";
+import { writeTextFile } from "@tauri-apps/plugin-fs";
 
 // 响应式数据
 const syncing = ref(false);
@@ -125,6 +140,38 @@ onMounted(async () => {
   }
   isLoaded.value = true;
 });
+
+// 处理数据导出
+async function handleExport() {
+  try {
+    const localdata = collectLocalData();
+
+    // 选择目录
+    const dirPath = await open({
+      directory: true,
+      multiple: false,
+    });
+
+    if (!dirPath || typeof dirPath !== "string") {
+      return;
+    }
+
+    // 分别保存每个数据类型
+    const savePromises = Object.entries(localdata).map(async ([key, value]) => {
+      const fileName = `${key}.json`;
+      const filePath = `${dirPath}/${fileName}`;
+      const jsonData = JSON.stringify(value, null, 2);
+      await writeTextFile(filePath, jsonData);
+      return fileName;
+    });
+
+    await Promise.all(savePromises);
+
+    debugInfo.value = "✔️所有数据文件导出成功: " + dirPath;
+  } catch (error) {
+    debugInfo.value = "⚠️导出失败: " + error;
+  }
+}
 
 // 处理自动同步（首次）
 async function handleAutoSync() {
@@ -238,7 +285,7 @@ function handleSyncError(error: any) {
 .sync-content {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 8px;
 }
 
 .sync-status {
@@ -255,7 +302,7 @@ function handleSyncError(error: any) {
 }
 
 .sync-actions {
-  margin: 0px 0;
+  margin: 0;
 }
 
 .debug-info {
