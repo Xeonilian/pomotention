@@ -17,7 +17,6 @@
     <n-button
       type="primary"
       secondary
-      :loading="syncing"
       :disabled="syncing"
       @click="handleExport"
     >
@@ -30,10 +29,10 @@
       <n-button
         v-if="showAutoSync"
         type="primary"
-        secondary
         :loading="syncing"
         :disabled="syncing"
         @click="handleAutoSync"
+        block
       >
         {{ syncing ? "同步中..." : "首次同步（上传本地数据）" }}
       </n-button>
@@ -122,14 +121,22 @@ const showManualSync = computed(() => isLoaded.value && !isFirstTime.value);
 // 获取设备ID和状态
 onMounted(async () => {
   deviceId.value = getCurrentDeviceId();
+  // 添加调试信息
+  const localFirstTime = await isFirstTimeSync();
+  const metadata = await getRemoteSyncMetadata();
 
+  console.log("调试信息:", {
+    localFirstTime,
+    metadata,
+    hasRemoteData: !!(metadata && metadata.timestamp),
+  });
+  isFirstTime.value = localFirstTime;
   // 检查是否首次同步
   isFirstTime.value = await isFirstTimeSync();
 
   if (isFirstTime.value) {
     syncStatus.value = "未找到云端数据，可进行首次同步";
   } else {
-    const metadata = await getRemoteSyncMetadata();
     if (metadata && metadata.timestamp) {
       const lastSyncDate = new Date(metadata.timestamp).toLocaleString();
       const lastSyncDeviceId = metadata.deviceId;
