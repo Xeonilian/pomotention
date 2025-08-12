@@ -26,8 +26,8 @@
         <tr>
           <th style="width: 18px"></th>
           <th style="width: 34px; text-align: center">开始</th>
-          <th style="width: 32px; text-align: center">结束</th>
-          <th style="width: 32px; text-align: center">排序</th>
+          <th style="width: 34px; text-align: center">结束</th>
+          <th style="width: 30px; text-align: center">排序</th>
           <th style="width: 40%; min-width: 100px; text-align: center">描述</th>
           <th style="width: 30%; min-width: 80px">番茄</th>
           <th style="width: 68px; text-align: center">操作</th>
