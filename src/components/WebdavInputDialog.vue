@@ -38,6 +38,7 @@
       </n-text>
     </n-space>
     <template #action>
+      <n-button type="info" secondary @click="handleExport">导出数据</n-button>
       <n-button @click="handleTest">测试</n-button>
       <n-button @click="handleCancel">取消</n-button>
       <n-button type="primary" @click="handleConfirm">确认</n-button>
@@ -50,6 +51,9 @@ import { ref, watch, computed } from "vue";
 import { NModal, NInput, NSpace, NButton } from "naive-ui";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { WebDAVStorageAdapter } from "@/services/storageAdapter";
+import { collectLocalData } from "@/services/localStorageService";
+import { open } from "@tauri-apps/plugin-dialog";
+import { writeTextFile } from "@tauri-apps/plugin-fs";
 
 // props/emit，支持 v-model:show
 const props = defineProps<{
@@ -142,6 +146,39 @@ function handleCancel() {
   emit("update:show", false);
 }
 
+// 处理数据导出
+async function handleExport() {
+  try {
+    const localdata = collectLocalData();
+
+    // 选择目录
+    const dirPath = await open({
+      directory: true,
+      multiple: false,
+    });
+
+    if (!dirPath || typeof dirPath !== "string") {
+      return;
+    }
+
+    // 分别保存每个数据类型
+    const savePromises = Object.entries(localdata).map(async ([key, value]) => {
+      const fileName = `${key}.json`;
+      const filePath = `${dirPath}/${fileName}`;
+      const jsonData = JSON.stringify(value, null, 2);
+      await writeTextFile(filePath, jsonData);
+      return fileName;
+    });
+
+    await Promise.all(savePromises);
+
+    passMessage.value = "✔️所有数据文件导出成功: " + dirPath;
+  } catch (error) {
+    passMessage.value = "⚠️导出失败: " + error;
+  }
+}
+
+// 测试账户设置
 async function handleTest() {
   const res = await adapter.login();
   if (res) {

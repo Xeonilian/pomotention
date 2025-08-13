@@ -364,9 +364,11 @@ const hoveredRowId = ref<number | null>(null);
 
 // 排序：先按自定义排序，再按类型排序
 const sortedDisplaySheet = computed(() => {
-  const activities = props.displaySheet.slice();
+  const activities = props.displaySheet
+    .filter((activity: Activity) => activity.status !== "done")
+    .slice();
   const activityMap = new Map<number, Activity[]>(); // 存储每个 parentId 对应的子活动列表
-
+  console.log(activities);
   const rootActivities: Activity[] = [];
 
   // 第一次遍历：构建父子关系的 Map，并分离出根活动

@@ -107,6 +107,9 @@ import type { Block } from "@/core/types/Block";
 import type { Todo } from "../../core/types/Todo";
 import type { Schedule } from "@/core/types/Schedule";
 import { getTimestampForTimeString } from "@/core/utils";
+import { useSettingStore } from "@/stores/useSettingStore";
+
+const settingStore = useSettingStore();
 
 // 1 按钮
 const showEditor = ref(false);
@@ -114,6 +117,11 @@ const showEditor = ref(false);
 const toggleDisplay = () => {
   //console.log("准备进入编辑模式时的 currentType:", props.currentType);
   showEditor.value = !showEditor.value;
+  if (showEditor.value) {
+    settingStore.settings.leftWidth = 200;
+  } else {
+    settingStore.settings.leftWidth = 100;
+  }
 };
 
 // 接收父级的数据

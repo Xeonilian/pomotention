@@ -5,9 +5,9 @@
       <thead class="table-header">
         <tr>
           <th style="width: 18px"></th>
-          <th style="width: 36px; text-align: center">开始</th>
-          <th style="width: 36px; text-align: center">结束</th>
-          <th style="width: 32px; text-align: center">分钟</th>
+          <th style="width: 34px; text-align: center">开始</th>
+          <th style="width: 34px; text-align: center">结束</th>
+          <th style="width: 30px; text-align: center">时长</th>
           <th style="width: 40%; min-width: 100px; text-align: center">描述</th>
           <th style="width: 30%; min-width: 80px">地点</th>
           <th style="width: 68px; text-align: center">操作</th>
@@ -369,10 +369,6 @@ function handleConvertToTask(schedule: Schedule) {
   }
 }
 
-// function handleSuspendSchedule(id: number) {
-//   emit("suspend-schedule", id);
-// }
-
 function handleCancelSchedule(id: number) {
   emit("cancel-schedule", id);
 }
@@ -398,6 +394,7 @@ function handleRepeatSchedule(id: number) {
   border-color: var(--color-text-primary);
   border-width: 1.2px;
 }
+
 /* 表格占满宽度 */
 .full-width-table {
   width: 100%;
@@ -427,11 +424,13 @@ function handleRepeatSchedule(id: number) {
   min-height: 25px;
   height: 25px;
 }
+
 .table-body td:first-child,
 .table-body td:nth-child(2),
 .table-body td:nth-child(3) {
   text-align: center;
 }
+
 .table-body td:nth-child(6) {
   justify-content: center; /* 水平居中 */
   align-items: center; /* 垂直居中 */
@@ -462,12 +461,12 @@ function handleRepeatSchedule(id: number) {
 
 /* 确保选中行的样式优先级高于其他样式 */
 .table-body tr.selected-row:nth-child(even) {
-  background-color: var(--color-red-light-transparent) !important;
+  background-color: var(--color-yellow-light-transparent) !important;
 }
 
 /* 同时具有active和selected状态时的样式 */
 .table-body tr.active-row.selected-row {
-  background-color: var(--color-red-light-transparent) !important;
+  background-color: var(--color-yellow-light-transparent) !important;
 }
 
 /* 鼠标悬停效果 */

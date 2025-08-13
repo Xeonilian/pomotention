@@ -1054,7 +1054,7 @@ watch(
         activity.status = "ongoing";
       } else if (dueMs < now && activity.status != "cancelled") {
         // 截止日期已过
-        activity.status = "suspended";
+        activity.status = "delayed";
       } else {
         // 截止日期还未到
         if (activity.status != "cancelled") activity.status = "";

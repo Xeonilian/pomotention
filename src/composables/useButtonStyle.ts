@@ -1,7 +1,6 @@
 // composables/useButtonStyle.ts
 import { useTimerStore } from "@/stores/useTimerStore";
 import { useUIStore } from "@/stores/useUIStore";
-import { useAlwaysOnTop } from "@/composables/useAlwaysOnTop";
 import { ref } from "vue";
 
 type ViewKey =
@@ -15,7 +14,6 @@ type ViewKey =
 export function useButtonStyle() {
   const timerStore = useTimerStore();
   const uiStore = useUIStore();
-  const { isAlwaysOnTop } = useAlwaysOnTop();
 
   const buttonStates = ref<Record<ViewKey, boolean>>({
     ontop: false,
@@ -29,9 +27,6 @@ export function useButtonStyle() {
   const buttonStyle = (show: boolean, key: string) => {
     const isDisabled = key === "pomodoro" && timerStore.isActive;
     const isOntop = key === "ontop";
-    const isActive = isOntop
-      ? isAlwaysOnTop.value
-      : buttonStates.value[key as ViewKey];
 
     return {
       filter: show
@@ -40,9 +35,7 @@ export function useButtonStyle() {
           : "none"
         : "grayscale(100%)",
       opacity: show ? (isDisabled ? 0.4 : 1) : 0.6,
-      backgroundColor: isActive
-        ? "var(--color-background-dark)"
-        : "var(--color-background-light)",
+      backgroundColor: "var(--color-background-dark)",
       borderRadius: "4px",
       transition: "all 0.3s ease",
       cursor: isOntop ? "pointer" : isDisabled ? "not-allowed" : "pointer",
