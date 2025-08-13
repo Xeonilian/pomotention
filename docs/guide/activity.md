@@ -7,10 +7,10 @@
 活动 `Activity` ，指所有显示在清单内的条目包括：
 | 图标 | 名称 | 英语|定义 |
 | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --|---------------------- | -------------------------------------------------------------------------------------- |
-| <img src="/icons/ApprovalsApp24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(224, 224, 224);border-radius: 6px;"> | 待办|`Todo` | 以原子时间块拆分但不一定有固定截止日期的任务<br>分三种子类型：<br> 🍅 分配为工作的`25min`<br>🍒 分配为工作的`4×15min`<br>🍇 分配到生活的 `25min` |
+| <img src="/icons/ApprovalsApp24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(224, 224, 224);border-radius: 6px;"> | 待办|`Todo` | 以原子时间块拆分但不一定有固定截止日期的任务<br>分三种子类型： <li>🍅 分配为工作的`25min`</li><li>🍒 分配为工作的`4×15min`</li><li>🍇 分配到生活的 `25min` </li> |
 | <img src="/icons/CalendarCheckmark20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(224, 224, 224);border-radius: 6px;"> | 预约|`Schedule` | 与他人约定具体地点、日期和持续时间的事件。 |
 | <img src="/icons/Cloud24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(224, 224, 224);border-radius: 6px;"> | 无所事事 |`Untaetigkei` | 与自己约定留白或发呆的时间段 |
-|<img src="/icons/Chat24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(224, 224, 224);border-radius: 6px;"> |内部打扰|`Internal Interruption`|来自个人情绪、想法和感受|
+|<img src="/icons/Chat24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(224, 224, 224);border-radius: 6px;"> |内部打扰|`Internal Interruption`|来自个人情绪、想法和感受等|
 | <img src="/icons/VideoPersonCall24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(224, 224, 224);border-radius: 6px;"> |外部打扰|`External Interruption`|来自他人信息、电话等|
 
 ### 1.2 任务状态配色
@@ -19,8 +19,8 @@
 | -------- | -------------------------------------------------------------------------------------------------------------------------------- |
 | 新添加   | <span style="display:inline-block; background:#888; color:#fff; padding:0 8px; border-radius:4px; font-size:90%;">灰色</span>    |
 | 进行中   | <span style="display:inline-block; background:#e55151; color:#fff; padding:0 8px; border-radius:4px; font-size:90%;">红色</span> |
-| 延期     | <span style="display:inline-block; background:#4287f5; color:#fff; padding:0 8px; border-radius:4px; font-size:90%;">蓝色</span> |
 | 退回     | <span style="display:inline-block; background:#f59b23; color:#fff; padding:0 8px; border-radius:4px; font-size:90%;">橙色</span> |
+| 延期     | <span style="display:inline-block; background:#4287f5; color:#fff; padding:0 8px; border-radius:4px; font-size:90%;">蓝色</span> |
 | 取消     | <span style="display:inline-block; background:#222; color:#fff; padding:0 8px; border-radius:4px; font-size:90%;">黑色</span>    |
 
 ### 1.3 截止日期配色
@@ -28,14 +28,16 @@
 | 截止日期 | 颜色                                                                                                                             |
 | -------- | -------------------------------------------------------------------------------------------------------------------------------- |
 | 今天到期 | <span style="display:inline-block; background:#e55151; color:#fff; padding:0 8px; border-radius:4px; font-size:90%;">红色</span> |
-| 后天到期 | <span style="display:inline-block; background:#ffe066; color:#222; padding:0 8px; border-radius:4px; font-size:90%;">黄色</span> |
 | 明天到期 | <span style="display:inline-block; background:#f59b23; color:#fff; padding:0 8px; border-radius:4px; font-size:90%;">橙色</span> |
+| 后天到期 | <span style="display:inline-block; background:#ffe066; color:#222; padding:0 8px; border-radius:4px; font-size:90%;">黄色</span> |
 | 已过期   | <span style="display:inline-block; background:#4287f5; color:#fff; padding:0 8px; border-radius:4px; font-size:90%;">蓝色</span> |
 
 ### 1.4 选中与高亮
 
-- 在`活动清单视图`中选中：活动行边框高亮为<span style="display:inline-block; background:#e55151; color:#fff; padding:0 8px; border-radius:4px; font-size:90%;">红色</span>
-- 从`今日活动视图`中选中对应的活动：整行背景显示为<span style="display:inline-block; background:#ffe066; color:#222; padding:0 8px; border-radius:4px; font-size:90%;">黄色</span>
+| 选中位置       | 视图显示                                                                                                                                  |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `活动清单视图` | <span style="display:inline-block; background:#e55151; color:#fff; padding:0 8px; border-radius:4px; font-size:90%;">红色</span> 背景高亮 |
+| `今日活动视图` | <span style="display:inline-block; background:#ffe066; color:#222; padding:0 8px; border-radius:4px; font-size:90%;">黄色</span> 背景高亮 |
 
 ## 2 活动清单功能
 

@@ -72,7 +72,6 @@ export const STORAGE_KEYS = {
   WRITING_TEMPLATE: "writingTemplate",
   TAG: "tag",
   GLOBAL_SETTINGS: "globalSettings",
-  SYNC_STATUS: "syncStatus",
 } as const;
 ```
 
