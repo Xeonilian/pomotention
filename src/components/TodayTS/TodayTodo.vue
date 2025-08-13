@@ -643,12 +643,28 @@ function cancelAddEstimate() {
 // 删除估计
 function handleDeleteEstimate(todo: Todo) {
   if (todo.estPomo && todo.estPomo.length > 0) {
+    // 要删除的下标是最后一项
+    const delIdx = todo.estPomo.length - 1;
+    if (
+      todo.realPomo &&
+      delIdx < todo.realPomo.length &&
+      todo.realPomo[delIdx] !== undefined &&
+      todo.realPomo[delIdx] !== 0
+    ) {
+      // realPomo此位置已被填写，提示不能删
+      popoverMessage.value = "已经有实际完成，不可删除~";
+      showPopover.value = true;
+      setTimeout(() => {
+        showPopover.value = false;
+      }, 2000);
+      return;
+    }
+    // 可以删
     todo.estPomo.pop();
     emit("update-todo-est", todo.id, todo.estPomo);
   } else {
     popoverMessage.value = "没啦，别删了~";
     showPopover.value = true;
-    // 保证只有一个计时器
     setTimeout(() => {
       showPopover.value = false;
     }, 2000);
@@ -932,6 +948,7 @@ function handleRepeatTodo(id: number) {
   display: flex;
   align-items: center;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .pomo-type {
@@ -942,13 +959,14 @@ function handleRepeatTodo(id: number) {
 .pomo-groups {
   overflow-x: auto;
   overflow-y: hidden;
-  padding-left: 1px;
 }
 
 .pomo-group {
   display: inline-flex;
   align-items: center;
   flex-shrink: 0;
+  margin-right: 1px;
+  gap: 1px;
 }
 
 .pomo-separator {
@@ -956,19 +974,15 @@ function handleRepeatTodo(id: number) {
   flex-shrink: 0;
 }
 
-/* 确保按钮不会被压缩 */
-.pomo-container .n-button {
-  flex-shrink: 0;
-}
-
 .button-left {
   display: flex;
-  margin-left: -2px;
+  margin-left: -4px;
 }
 
 .button-right {
   display: flex;
-  margin-left: -4px;
+  margin-left: -2px;
+  right: 3px !important;
 }
 
 .button-group {

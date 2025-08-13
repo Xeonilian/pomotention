@@ -525,7 +525,7 @@ function handleRepeatSchedule(id: number) {
   width: calc(100% - 10px);
   border: 1px solid #d9d9d9;
   border-radius: 4px;
-  padding: 4px 8px;
+
   font-size: inherit;
   font-family: inherit;
   outline: none;
@@ -824,7 +824,7 @@ function handleRepeatSchedule(id: number) {
   position: relative;
   z-index: 10;
   background: rgba(255, 255, 255, 0.1);
-  padding: 2px 4px;
+
   border-radius: 3px;
 }
 </style>
