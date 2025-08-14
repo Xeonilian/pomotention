@@ -255,8 +255,8 @@ class MergeService {
   private async recalculateDailyPomos(): Promise<void> {
     try {
       // 动态导入 pomo store，避免循环依赖
-      const { usePomoStore } = await import("@/stores/usePomoStore");
-      const pomoStore = usePomoStore();
+      // const { usePomoStore } = await import("@/stores/usePomoStore");
+      // const pomoStore = usePomoStore();
 
       // 这里需要根据你的实际逻辑来重新计算
       // 可能需要重新加载所有日期的 todos 并调用 setTodosForDate

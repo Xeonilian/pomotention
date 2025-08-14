@@ -10,15 +10,12 @@ description: 下载最新版本的应用程序
 ## 当前版本
 
 ::: info 最新发布
-**版本 v0.3.2** - 2025 年 7 月 31 日发布
+**版本 v0.3.3** - 2025 年 8 月 14 日发布
 
-- 标签系统+子活动
-- 活动 Kanban
-  :::
+- WebDav 数据全量同步
+- 数据导出功能
+- macOS 0.3.3 正在准备中
 
-::: warning 紧急修复
-
-- 0.3.0 标签保存出错，删除全部内容，尽快恢复
   :::
 
 ## 系统要求
@@ -38,13 +35,13 @@ description: 下载最新版本的应用程序
 
 ### Windows
 
-<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.3.2/pomotention_0.3.2_x64_en-US.msi" class="download-btn windows">
+<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.3.3/pomotention_0.3.3_x64_en-US.msi" class="download-btn windows">
   <span class="platform">Windows</span>
   <span class="format">.msi 安装包</span>
   <span class="size">19.6MB</span>
 </a>
 
-<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.3.2/pomotention_0.3.2_x64-setup.exe" class="download-btn windows">
+<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.3.3/pomotention_0.3.3_x64-setup.exe" class="download-btn windows">
   <span class="platform">Windows</span>
   <span class="format">.exe </span>
   <span class="size">18.3MB</span>
@@ -137,6 +134,12 @@ description: 下载最新版本的应用程序
   - 【优化】新建日程无日期，不再自动取消
 
 - v0.3.2 `2025-07-31`
+  - 【新增】滴答白噪音
+  - 【优化】声音全局开关
+  - 【修复】任务完成后 tag 依然保留
+  - 【修复】时钟长度全局使用 setting，同步
+  -
+- v0.3.3 `2025-08-14`
   - 【新增】滴答白噪音
   - 【优化】声音全局开关
   - 【修复】任务完成后 tag 依然保留
