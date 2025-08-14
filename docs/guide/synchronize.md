@@ -39,7 +39,7 @@
 
 ### 2.2 日常同步
 
-1. 如果软件检测到指定文件存有同步数据，点击点击 <img src="/icons/ArrowSync24Regular.svg" width="20" style="display: inline-block; vertical-align: middle; margin:0;background:rgb(193, 226, 255);border-radius: 6px;"> 按钮，弹出 `同步对话框`：
+1. 如果软件检测到指定文件存有同步数据，点击 <img src="/icons/ArrowSync24Regular.svg" width="20" style="display: inline-block; vertical-align: middle; margin:0;background:rgb(193, 226, 255);border-radius: 6px;"> 按钮，弹出 `同步对话框`：
    <img src="/sync-2.2.png" alt="Sync Regular" width="300">
 2. 根据 `上传本地数据 - 覆盖云端`，会把当前数据，全部上传至云端，并替换云端的文件。
 3. 根据 `下载云端数据 - 覆盖本地`，会把云端数据，全部下载至本地，导入软件，并刷新。

@@ -12,7 +12,7 @@
 
   <img src="/tag-input.png" alt="Tag Input" width="300">
 
-- **切换标签显示状态**：按住 `ALT`/ `OPT` + 点击 <img src="/icons/Tag16Regular.svg" width="20" style="display: inline-block; vertical-align: middle; margin:0;"> 可切换全部标签显示状态，每列活动清单的可视化状态保持独立。
+- **切换标签显示状态**：按住 `ALT`/`OPT` + 点击 <img src="/icons/Tag16Regular.svg" width="20" style="display: inline-block; vertical-align: middle; margin:0;"> 可切换全部标签显示状态，每列活动清单的可视化状态保持独立。
   <img src="/tag-toggle.png" alt="Tag Toggle" width="400">
 - **删除**：在标签显示状态，点击标签上的 <img src="/icons/CancelOutlined.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;"> 符号删除。
 
