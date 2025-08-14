@@ -69,6 +69,14 @@
       <n-layout-footer>
         <n-space justify="center">
           <n-button
+            type="info"
+            secondary
+            :disabled="!selectedTemplate"
+            @click="handleCopy"
+          >
+            {{ copyMessage }}
+          </n-button>
+          <n-button
             @click="handleAddNewTemplate"
             type="primary"
             :title="'新增模板'"
@@ -124,6 +132,7 @@ const selectedTemplate = ref<Template | null>(null);
 const editableTemplateContent = ref<string>("");
 const editableTemplateTitle = ref<string>("");
 const addNew = ref<boolean>(false);
+const copyMessage = ref("复制");
 
 const showModal = ref(props.show);
 // 在适当的生命周期钩子中同步 props 与 local state
@@ -131,7 +140,6 @@ watch(
   () => props.show,
   (newVal) => {
     showModal.value = newVal; // 确保 props 与内部状态同步
-    console.log(addNew);
   }
 );
 // 是否可以编辑内容的计算属性
@@ -157,7 +165,12 @@ const copyTemplateContent = (template: Template) => {
   const textToCopy = `${template.content}`;
   navigator.clipboard
     .writeText(textToCopy)
-    .then(() => console.log("模板内容已复制到剪贴板"))
+    .then(() => {
+      copyMessage.value = "复制✔️";
+      setTimeout(() => {
+        copyMessage.value = "复制";
+      }, 1000); // 5000 毫秒后恢复
+    })
     .catch((err) => console.error("复制失败:", err));
 };
 
@@ -165,6 +178,21 @@ const handleAddNewTemplate = () => {
   resetForm();
   addNew.value = true;
   selectedTemplate.value = null;
+};
+
+const handleCopy = () => {
+  const textToCopy = selectedTemplate.value?.content;
+  if (textToCopy) {
+    navigator.clipboard
+      .writeText(textToCopy)
+      .then(() => {
+        copyMessage.value = "复制✔️";
+        setTimeout(() => {
+          copyMessage.value = "复制";
+        }, 1000); // 5000 毫秒后恢复
+      })
+      .catch((err) => console.error("复制失败:", err));
+  }
 };
 
 const handleConfirm = () => {
