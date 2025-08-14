@@ -631,6 +631,12 @@ function onCancelTodo(id: number) {
       return;
     }
     activity.status = "cancelled";
+    const childActivities = activityList.value.filter(
+      (a) => a.parentId === activity.id
+    );
+    childActivities.forEach((child) => {
+      child.status = "cancelled";
+    });
   }
 }
 
