@@ -511,17 +511,10 @@ function onRepeatActivity(id: number) {
     const newActivity = {
       ...selectActivity, // 使用展开运算符复制 activity 的所有属性
       id: Date.now(), // 设置新的 id
-      status: "" as
-        | ""
-        | "delayed"
-        | "ongoing"
-        | "cancelled"
-        | "done"
-        | "suspended"
-        | undefined, // 如果需要清空状态，可以在这里设置
+      status: "" as any,
       tagIds: undefined,
       ...(selectActivity.dueRange && {
-        dueRange: [...selectActivity.dueRange] as [number | null, string],
+        dueRange: [null, selectActivity.dueRange[1]] as [number | null, string],
       }),
     };
     handleAddActivity(activityList.value, scheduleList.value, newActivity);
@@ -660,7 +653,8 @@ function onRepeatTodo(id: number) {
         | "cancelled"
         | "done"
         | "suspended"
-        | undefined, // 如果需要清空状态，可以在这里设置
+        | undefined,
+      dueDate: null,
     };
     activityList.value.push(newActivity);
   }
@@ -702,20 +696,10 @@ function onRepeatSchedule(id: number) {
     const newActivity: Activity = {
       ...activity, // 使用展开运算符复制 activity 的所有属性
       id: Date.now(), // 设置新的 id
-      status: "" as
-        | ""
-        | "delayed"
-        | "ongoing"
-        | "cancelled"
-        | "done"
-        | "suspended"
-        | undefined, // 如果需要清空状态，可以在这里设置
+      status: "" as any,
       ...(activity.dueRange && {
-        dueRange: [activity.dueRange[0], activity.dueRange[1]] as [
-          number | null,
-          string
-        ], // 保持类型安全
-        tagIds: undefined,
+        dueRange: [null, activity.dueRange[1]] as [number | null, string], // 保持类型安全
+        // tagIds: undefined,
       }),
     };
     activityList.value.push(newActivity);
