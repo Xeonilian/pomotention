@@ -368,7 +368,6 @@ const sortedDisplaySheet = computed(() => {
     .filter((activity: Activity) => activity.status !== "done")
     .slice();
   const activityMap = new Map<number, Activity[]>(); // 存储每个 parentId 对应的子活动列表
-  console.log(activities);
   const rootActivities: Activity[] = [];
 
   // 第一次遍历：构建父子关系的 Map，并分离出根活动
