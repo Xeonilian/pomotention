@@ -131,39 +131,54 @@ const filterOptions = [
 const settingStore = useSettingStore();
 
 // 响应式可直接用
-const sections = computed({
-  get: () => settingStore.settings.kanbanSetting,
-  set: (val) => {
-    settingStore.settings.kanbanSetting = val;
-  },
-});
+const sections = computed(() =>
+  settingStore.settings.kanbanSetting.filter((s) => s.show)
+);
 
 // 错误提示弹窗相关
 const showPopover = ref(false);
 const popoverMessage = ref("");
 
 function addSection() {
-  if (sections.value.length >= 6) return;
+  if (settingStore.settings.kanbanSetting.length !== 6) {
+    // 版本切换时，过去设置可能出现问题
+    settingStore.resetSettings(["kanbanSetting"]);
+  }
+  const visibleCount = settingStore.settings.kanbanSetting.filter(
+    (s) => s.show
+  ).length;
+  if (visibleCount >= 6) return;
 
-  settingStore.settings.rightWidth = 250 * (sections.value.length + 1);
+  // 找到第一个隐藏的section（id从小到大）
+  const nextHidden = settingStore.settings.kanbanSetting.find((s) => !s.show);
+  if (nextHidden) {
+    nextHidden.show = true;
+  }
 
-  sections.value.push({
-    id: Date.now(),
-    filterKey: "all",
-    search: "",
-  });
+  // 重新计算宽度
+  const newVisibleCount = settingStore.settings.kanbanSetting.filter(
+    (s) => s.show
+  ).length;
+  settingStore.settings.rightWidth = 250 * newVisibleCount;
 }
 
 function removeSection(id: number) {
-  if (id === 1) return;
-  console.log(sections.value.length);
-  if (sections.value.length === 2) {
+  if (id === 1) return; // id=1不能隐藏
+
+  const section = settingStore.settings.kanbanSetting.find((s) => s.id === id);
+  if (section) {
+    section.show = false;
+  }
+
+  // 重新计算宽度
+  const visibleCount = settingStore.settings.kanbanSetting.filter(
+    (s) => s.show
+  ).length;
+  if (visibleCount === 1) {
     settingStore.settings.rightWidth = 300;
   } else {
-    settingStore.settings.rightWidth = 250 * (sections.value.length - 1);
+    settingStore.settings.rightWidth = 250 * visibleCount;
   }
-  settingStore.settings.kanbanSetting =
-    settingStore.settings.kanbanSetting.filter((s) => s.id !== id);
 }
 
 // ========================

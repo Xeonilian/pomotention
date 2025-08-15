@@ -2,7 +2,11 @@
 import { defineStore } from "pinia";
 import { ref, watch } from "vue";
 import { STORAGE_KEYS } from "../core/constants";
-import { PomodoroDurations, TimerStyleDefaults } from "../core/constants";
+import {
+  PomodoroDurations,
+  TimerStyleDefaults,
+  ViewType,
+} from "../core/constants";
 import { ActivitySectionConfig } from "@/core/types/Activity";
 import { SoundType } from "@/core/sounds";
 
@@ -16,7 +20,7 @@ export interface GlobalSettings {
   kanbanSetting: ActivitySectionConfig[];
   showPomodoro: boolean;
   showSchedule: boolean;
-  showToday: boolean;
+  showPlanner: boolean;
   showTask: boolean;
   showActivity: boolean;
   leftWidth: number;
@@ -28,6 +32,7 @@ export interface GlobalSettings {
   webdavKey: string;
   webdavWebsite: string;
   webdavPath: string;
+  viewSet: ViewType;
   // 以后新增全局设置项就在这里补充
 }
 
@@ -38,10 +43,17 @@ const defaultSettings: GlobalSettings = {
   style: TimerStyleDefaults,
   miniModeRefactor: 1,
   activityRank: {}, // 默认空对象
-  kanbanSetting: [{ id: 1, filterKey: "all", search: "" }],
+  kanbanSetting: [
+    { id: 1, filterKey: "all", search: "", show: true },
+    { id: 2, filterKey: "today", search: "", show: false },
+    { id: 3, filterKey: "interrupt", search: "", show: false },
+    { id: 4, filterKey: "todo", search: "", show: false },
+    { id: 5, filterKey: "schedule", search: "", show: false },
+    { id: 6, filterKey: "cancelled", search: "", show: false },
+  ],
   showPomodoro: true,
   showSchedule: true,
-  showToday: true,
+  showPlanner: true,
   showTask: true,
   showActivity: true,
   leftWidth: 100, // 默认值你自己定
@@ -53,6 +65,7 @@ const defaultSettings: GlobalSettings = {
   webdavKey: "",
   webdavWebsite: "https://dav.jianguoyun.com/dav/",
   webdavPath: "/PomotentionBackup",
+  viewSet: "day",
 };
 
 // 工具函数
@@ -111,8 +124,30 @@ export const useSettingStore = defineStore("setting", () => {
   );
 
   // 重置全部设置为默认
-  function resetSettings() {
-    settings.value = JSON.parse(JSON.stringify(defaultSettings));
+  type SettingsKey = keyof GlobalSettings;
+
+  function resetSettings(keys?: SettingsKey | SettingsKey[]) {
+    if (!keys) {
+      // 重置全部
+      settings.value = JSON.parse(JSON.stringify(defaultSettings));
+      return;
+    }
+
+    const list = Array.isArray(keys) ? keys : [keys];
+
+    for (const key of list) {
+      // 仅当 defaultSettings 中存在该键时才重置
+      if (key in defaultSettings) {
+        // 对象/数组做深拷贝，基础类型直接赋值
+        const defVal = (defaultSettings as any)[key];
+        (settings.value as any)[key] =
+          typeof defVal === "object" && defVal !== null
+            ? JSON.parse(JSON.stringify(defVal))
+            : defVal;
+      } else {
+        console.warn(`resetSettings: unknown key "${String(key)}" skipped`);
+      }
+    }
   }
 
   // 如果你还想保留单独重置部分设置项可以加下面这些
