@@ -154,7 +154,7 @@ const viewControls = computed(() => [
     key: "today",
     icon: ArrowUp24Filled,
     title: "切换今日视图",
-    show: settingStore.settings.showToday,
+    show: settingStore.settings.showPlanner,
   },
   {
     key: "task",
@@ -350,7 +350,7 @@ watch(route, (newVal) => {
 watch(
   [
     () => settingStore.settings.showSchedule,
-    () => settingStore.settings.showToday,
+    () => settingStore.settings.showPlanner,
     () => settingStore.settings.showTask,
     () => settingStore.settings.showActivity,
     () => settingStore.settings.showPomodoro,

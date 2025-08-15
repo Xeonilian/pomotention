@@ -11,7 +11,7 @@ export const useUIStore = defineStore("uiStore", () => {
   const showSchedulePanel = ref(true); // 对应 HomeView 的左侧面板
   const showActivityPanel = ref(true); // 对应 HomeView 的右侧面板
   const showTaskPanel = ref(true); // 对应 HomeView 的任务面板 (假设在中间底部)
-  const showTodayPanel = ref(true); // 对应 HomeView 的今日视图 (假设在中间顶部)
+  const showPlannerPanel = ref(true); // 对应 HomeView 的今日视图 (假设在中间顶部)
   const showPomodoroPanel = ref(true); // 对应 PomodoroView 的今日视图 (假设在中间顶部)
 
   /**
@@ -30,7 +30,7 @@ export const useUIStore = defineStore("uiStore", () => {
         showTaskPanel.value = !showTaskPanel.value;
         break;
       case "today":
-        showTodayPanel.value = !showTodayPanel.value;
+        showPlannerPanel.value = !showPlannerPanel.value;
         break;
       case "pomodoro":
         showPomodoroPanel.value = !showPomodoroPanel.value;
@@ -49,7 +49,7 @@ export const useUIStore = defineStore("uiStore", () => {
     showSchedulePanel,
     showActivityPanel,
     showTaskPanel,
-    showTodayPanel,
+    showPlannerPanel,
     showPomodoroPanel,
     // 暴露方法
     togglePanel,

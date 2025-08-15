@@ -46,7 +46,7 @@ export function useButtonStyle() {
   const updateButtonStates = () => {
     buttonStates.value.pomodoro = uiStore.showPomodoroPanel;
     buttonStates.value.schedule = uiStore.showSchedulePanel;
-    buttonStates.value.today = uiStore.showTodayPanel;
+    buttonStates.value.today = uiStore.showPlannerPanel;
     buttonStates.value.task = uiStore.showTaskPanel;
     buttonStates.value.activity = uiStore.showActivityPanel;
   };

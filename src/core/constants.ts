@@ -1,5 +1,9 @@
 // src/core/constants.ts
+
 import type { Tag } from "@/core/types/Tag";
+
+export type ViewType = "day" | "week" | "month";
+
 export const PomodoroDurations = {
   workDuration: 25,
   breakDuration: 5,

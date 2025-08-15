@@ -42,7 +42,7 @@
     >
       <!-- 今日视图 -->
       <div
-        v-if="settingStore.settings.showToday"
+        v-if="settingStore.settings.showPlanner"
         class="middle-top"
         :style="
           settingStore.settings.showTask
@@ -52,12 +52,27 @@
         :class="{ yesterday: isViewingYesterday, tomorrow: isViewingTomorrow }"
       >
         <!-- 今日活动的头部和控件 -->
-        <div class="today-header">
-          <div class="today-info">
-            <span class="today-status">{{ dateService.displayDateInfo }}</span>
+        <div class="planner-header">
+          <div v-if="settingStore.settings.viewSet === 'day'" class="day-info">
+            <span class="day-status">{{ dateService.displayDateInfo }}</span>
             <span class="global-pomo">
               <span class="today-pomo">🍅{{ currentDatePomoCount }}/</span>
               <span class="total-pomo">{{ globalRealPomo }}</span>
+            </span>
+          </div>
+          <div v-if="settingStore.settings.viewSet === 'week'" class="day-info">
+            <span class="day-status">{{ dateService.displayWeekInfo }}</span>
+            <span class="global-pomo">
+              <span class="total-pomo">🍅{{ globalRealPomo }}</span>
+            </span>
+          </div>
+          <div
+            v-if="settingStore.settings.viewSet === 'month'"
+            class="day-info"
+          >
+            <span class="day-status">{{ dateService.displayMonthInfo }}</span>
+            <span class="global-pomo">
+              <span class="total-pomo">🍅{{ globalRealPomo }}</span>
             </span>
           </div>
           <div class="button-group">
@@ -75,13 +90,20 @@
                 <n-icon :size="18" :component="Search24Regular" />
               </template>
             </n-date-picker>
+
             <n-button
               size="small"
               circle
               secondary
               strong
               @click="onDateSet('prev')"
-              title="上一天"
+              :title="
+                settingStore.settings.viewSet === 'day'
+                  ? '上一天'
+                  : settingStore.settings.viewSet === 'week'
+                  ? '上一周'
+                  : '上一月'
+              "
             >
               <template #icon>
                 <n-icon>
@@ -89,13 +111,20 @@
                 </n-icon>
               </template>
             </n-button>
+
             <n-button
               size="small"
               circle
               secondary
               strong
               @click="onDateSet('next')"
-              title="下一天"
+              :title="
+                settingStore.settings.viewSet === 'day'
+                  ? '下一天'
+                  : settingStore.settings.viewSet === 'week'
+                  ? '下一周'
+                  : '下一月'
+              "
             >
               <template #icon>
                 <n-icon>
@@ -103,11 +132,30 @@
                 </n-icon>
               </template>
             </n-button>
+
+            <n-button
+              size="small"
+              circle
+              secondary
+              strong
+              @click="onViewSet()"
+              title="切换视图"
+            >
+              <template #icon>
+                <n-icon>
+                  <CalendarSettings20Regular />
+                </n-icon>
+              </template>
+            </n-button>
           </div>
         </div>
         <!-- 今日视图容器 -->
-        <div class="today-view-container">
-          <TodayView
+        <div class="planner-view-container">
+          <DayView
+            v-if="
+              settingStore.settings.showPlanner &&
+              settingStore.settings.viewSet === 'day'
+            "
             :selectedRowId="selectedRowId"
             :todayTodos="todosForAppDate"
             :todaySchedules="schedulesForAppDate"
@@ -132,6 +180,18 @@
             @edit-schedule-done="handleEditScheduleDone"
             @convert-todo-to-task="onConvertTodoToTask"
             @convert-schedule-to-task="onConvertScheduleToTask"
+          />
+          <WeekView
+            v-if="
+              settingStore.settings.showPlanner &&
+              settingStore.settings.viewSet === 'week'
+            "
+          />
+          <MonthView
+            v-if="
+              settingStore.settings.showPlanner &&
+              settingStore.settings.viewSet === 'month'
+            "
           />
         </div>
       </div>
@@ -198,7 +258,9 @@ import { ref, onMounted, watch, computed } from "vue";
 import { NButton, NIcon } from "naive-ui";
 import { usePomoStore } from "@/stores/usePomoStore";
 import TimeTableView from "@/views/Home/TimeTableView.vue";
-import TodayView from "@/views/Home/TodayView.vue";
+import DayView from "@/views/Home/DayView.vue";
+import WeekView from "@/views/Home/WeekView.vue";
+import MonthView from "@/views/Home/MonthView.vue";
 import TaskView from "@/views/Home/TaskView.vue";
 import ActivityView from "@/views/Home/ActivityView.vue";
 import type { Activity } from "@/core/types/Activity";
@@ -206,7 +268,7 @@ import type { Block } from "@/core/types/Block";
 import type { Todo } from "@/core/types/Todo";
 import type { Schedule } from "@/core/types/Schedule";
 import { Task } from "@/core/types/Task";
-import { WORK_BLOCKS, ENTERTAINMENT_BLOCKS } from "@/core/constants";
+import { WORK_BLOCKS, ENTERTAINMENT_BLOCKS, ViewType } from "@/core/constants";
 import {
   loadActivities,
   loadTodos,
@@ -237,6 +299,7 @@ import {
   Previous24Regular,
   Next24Regular,
   Search24Regular,
+  CalendarSettings20Regular,
 } from "@vicons/fluent";
 import { useResize } from "@/composables/useResize";
 import { getTimestampForTimeString, addDays, getDateKey } from "@/core/utils";
@@ -757,29 +820,41 @@ function onDateSet(direction: "prev" | "next" | "today" | "query") {
   clearSelectedRow();
   switch (direction) {
     case "prev":
-      dateService.navigateDate("prev");
+      dateService.navigateByView("prev");
       break;
     case "next":
-      dateService.navigateDate("next");
+      dateService.navigateByView("next");
       break;
     case "today":
-      dateService.navigateDate("today");
+      dateService.navigateByView("today");
       break;
     case "query":
-      if (queryDate.value) dateService.navigateDate(new Date(queryDate.value));
+      if (queryDate.value) {
+        // 传入选中的日期；服务内部会按当前 viewType 锚定到日/周一/月初
+        dateService.navigateTo(new Date(queryDate.value));
+      }
       queryDate.value = null;
       break;
   }
 }
 
+// 切换视图
+function onViewSet() {
+  const order: readonly ViewType[] = ["day", "week", "month"] as const;
+  const cur = settingStore.settings.viewSet as ViewType;
+  const idx = order.indexOf(cur);
+  const next = order[(idx + 1) % order.length];
+  settingStore.settings.viewSet = next;
+}
+
 function goToTodo(todoId: number) {
-  dateService.navigateDate(new Date(todoId));
+  dateService.navigateTo(new Date(todoId));
 }
 
 function goToSchedule(scheduleId: number) {
   console.log(getDateKey(scheduleId));
 
-  dateService.navigateDate(new Date(scheduleId));
+  dateService.navigateTo(new Date(scheduleId));
 }
 
 // 从Today选择任务处理函数
@@ -1056,7 +1131,7 @@ watch(
 // ======================== 8. 生命周期 Hook ========================
 onMounted(() => {
   // 主动检查一次日期变更
-  dateService.navigateDate("today");
+  dateService.navigateByView("today");
 });
 
 // ======================== 9. 页面尺寸调整  ========================
@@ -1148,10 +1223,9 @@ const { startResize: startRightResize } = useResize(
   display: flex;
 }
 
-.today-header {
+.planner-header {
   position: sticky;
   display: flex;
-  justify-content: space-between;
   align-items: center;
   margin: 8px 8px 4px 0px;
   flex-shrink: 0;
@@ -1161,7 +1235,18 @@ const { startResize: startRightResize } = useResize(
   min-width: 0;
 }
 
-.today-info {
+.button-group {
+  display: flex;
+  gap: 2px;
+  padding: 1px;
+  align-items: center;
+  flex-shrink: 0;
+  flex-grow: 0;
+  background-color: var(--color-background);
+  margin-left: auto;
+}
+
+.day-info {
   display: flex;
   align-items: center;
   font-family: "Courier New", Courier, monospace;
@@ -1170,7 +1255,7 @@ const { startResize: startRightResize } = useResize(
   min-width: 0;
 }
 
-.today-status {
+.day-status {
   font-size: 18px;
   font-family: "Courier New", Courier, monospace;
   color: var(--color-text);
@@ -1202,25 +1287,15 @@ const { startResize: startRightResize } = useResize(
   font-weight: bold;
 }
 
-.button-group {
-  display: flex;
-  gap: 2px;
-  padding: 1px;
-  align-items: center;
-  flex-shrink: 0;
-  flex-grow: 0;
-  background-color: var(--color-background);
-}
-
-.middle-top.tomorrow .today-status {
+.middle-top.tomorrow .day-status {
   background: var(--color-red-light);
 }
 
-.middle-top.yesterday .today-status {
+.middle-top.yesterday .day-status {
   background: var(--color-blue-light);
 }
 
-.today-status {
+.day-status {
   font-size: 18px;
   font-family: "Courier New", Courier, monospace;
   color: var(--color-text);
@@ -1244,7 +1319,7 @@ const { startResize: startRightResize } = useResize(
   flex-direction: column;
 }
 
-.today-view-container {
+.planner-view-container {
   flex: 1;
   overflow: auto;
   min-height: 0; /* 重要：允许 flex 子项收缩 */

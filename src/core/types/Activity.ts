@@ -24,4 +24,5 @@ export interface ActivitySectionConfig {
   id: number;
   filterKey: string | null;
   search: string;
+  show?: boolean;
 }

@@ -1,5 +1,5 @@
 <!-- 
-  Component: TodayView.vue
+  Component: DayView.vue
   Description: 
   今日待办事项的纯展示容器，仅负责：
   1. 渲染父组件传入的Todo列表
