@@ -1,0 +1,19 @@
+<svg width="120" height="120" viewBox="0 0 120 120" fill="none" 
+     xmlns="http://www.w3.org/2000/svg">
+  <ellipse cx="60" cy="72" rx="40" ry="34" fill="#FF5542" stroke="#C91F1A" stroke-width="3"/>
+  <ellipse cx="45" cy="76" rx="5" ry="7" fill="#fff" fill-opacity="0.4"/>
+  <ellipse cx="68" cy="74" rx="3" ry="4" fill="#fff" fill-opacity="0.3"/>
+  <ellipse cx="83" cy="70" rx="6" ry="8" fill="#fff" fill-opacity="0.15"/>
+  <path d="M60 35 Q62 25 75 28 Q64 34 68 40 Q62 39 60 42 Q58 39 52 40 Q56 34 45 28 Q58 25 60 35Z" 
+        fill="#55A533" stroke="#3E8720" stroke-width="2"/>
+  <ellipse cx="70" cy="96" rx="4" ry="2" fill="#B32114" fill-opacity="0.25"/>
+  <!-- 脸部表情 -->
+  <ellipse cx="80" cy="77" rx="4" ry="6" fill="#222"/>
+  <ellipse cx="51" cy="77" rx="4" ry="7" fill="#222"/>
+  <ellipse cx="52.8" cy="76" rx="1" ry="2" fill="#fff"/>
+  <ellipse cx="80.9" cy="76" rx="1" ry="2" fill="#fff"/>
+  <path d="M60 95 Q65 100 78 92" stroke="#3E2520" stroke-width="2" stroke-linecap="round"/>
+  <!-- 腮红 -->
+  <ellipse cx="54" cy="87" rx="6" ry="2.5" fill="#F88C80" fill-opacity="0.55"/>
+  <ellipse cx="78" cy="87" rx="6" ry="2.5" fill="#F88C80" fill-opacity="0.55"/>
+</svg>

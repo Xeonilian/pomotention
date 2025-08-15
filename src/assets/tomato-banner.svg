@@ -1,0 +1,59 @@
+<svg width="400" height="80" viewBox="0 0 400 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- 第一颗番茄 -->
+  <ellipse cx="40" cy="40" rx="25" ry="22" fill="#FC5753" stroke="#CB3127" stroke-width="2"/>
+  <ellipse cx="40" cy="22" rx="7" ry="10" fill="#56B541" stroke="#348C24" stroke-width="1.5"/>
+  <!-- 脸1 -->
+  <ellipse cx="33" cy="46" rx="3" ry="5" fill="#222"/>
+  <ellipse cx="47" cy="46" rx="3" ry="5" fill="#222"/>
+  <ellipse cx="34.2" cy="45" rx="0.8" ry="1.2" fill="#fff"/>
+  <ellipse cx="47.9" cy="45" rx="0.8" ry="1.2" fill="#fff"/>
+  <path d="M38 58 Q40 60 42 58" stroke="#672017" stroke-width="2" stroke-linecap="round"/>
+  <ellipse cx="33" cy="53" rx="3" ry="1.2" fill="#FFBCB9" fill-opacity="0.6"/>
+  <ellipse cx="47" cy="53" rx="3" ry="1.2" fill="#FFBCB9" fill-opacity="0.6"/>
+  <!-- 第二颗番茄 -->
+  <ellipse cx="110" cy="48" rx="20" ry="18" fill="#FF6050" stroke="#CB3127" stroke-width="2"/>
+  <ellipse cx="110" cy="32" rx="5" ry="6" fill="#60BC52" stroke="#348C24" stroke-width="1"/>
+  <!-- 脸2 - winking -->
+  <ellipse cx="104" cy="52" rx="2.1" ry="3.2" fill="#222"/>
+  <rect x="116" y="51" width="4" height="2" rx="1" fill="#222"/>
+  <ellipse cx="104.7" cy="51.3" rx="0.6" ry="0.7" fill="#fff"/>
+  <path d="M108 60 Q110 62 112 59" stroke="#672017" stroke-width="1.5" stroke-linecap="round"/>
+  <ellipse cx="104" cy="57" rx="2.1" ry="1" fill="#FFD4CB" fill-opacity="0.7"/>
+  <ellipse cx="116" cy="56.8" rx="2.1" ry="0.9" fill="#FFD4CB" fill-opacity="0.7"/>
+  <!-- 第三颗番茄 -->
+  <ellipse cx="180" cy="41" rx="25" ry="23" fill="#FC5753" stroke="#CB3127" stroke-width="2"/>
+  <ellipse cx="188" cy="25" rx="7" ry="7" fill="#56B541" stroke="#348C24" stroke-width="1.2"/>
+  <!-- 脸3 - 微笑 -->
+  <ellipse cx="173" cy="47" rx="2.5" ry="4" fill="#222"/>
+  <ellipse cx="187" cy="47" rx="2.5" ry="4" fill="#222"/>
+  <ellipse cx="174" cy="46" rx="0.8" ry="1.1" fill="#fff"/>
+  <ellipse cx="188.5" cy="46" rx="0.8" ry="1.1" fill="#fff"/>
+  <path d="M177 56 Q180 60 183 56" stroke="#8C4133" stroke-width="2" stroke-linecap="round"/>
+  <ellipse cx="172" cy="53" rx="2" ry="0.8" fill="#FFD4E5"/>
+  <ellipse cx="188" cy="53" rx="2" ry="0.8" fill="#FFD4E5"/>
+  <!-- 第四颗番茄 -->
+  <ellipse cx="260" cy="49" rx="18" ry="14" fill="#FF675D" stroke="#CB3127" stroke-width="1.5"/>
+  <ellipse cx="260" cy="36" rx="4.5" ry="6" fill="#6CC95A" stroke="#348C24" stroke-width="0.8"/>
+  <!-- 脸4 - 蒙眼笑 -->
+  <rect x="254" y="53" width="2.5" height="1.7" rx="0.85" fill="#222"/>
+  <rect x="263" y="53" width="2.5" height="1.7" rx="0.85" fill="#222"/>
+  <path d="M257 58 Q260 61 263 57" stroke="#B1762C" stroke-width="1.2" stroke-linecap="round"/>
+  <!-- 第五颗番茄 -->
+  <ellipse cx="330" cy="44" rx="23" ry="20" fill="#FB4340" stroke="#CB3127" stroke-width="2"/>
+  <ellipse cx="336" cy="28" rx="6" ry="9" fill="#54B74B" stroke="#348C24" stroke-width="1"/>
+  <!-- 脸5 - 惊讶 -->
+  <ellipse cx="323" cy="49" rx="3.3" ry="4.5" fill="#222"/>
+  <ellipse cx="337" cy="50" rx="3" ry="4.2" fill="#222"/>
+  <ellipse cx="324.2" cy="48" rx="0.8" ry="1.2" fill="#fff"/>
+  <ellipse cx="338.4" cy="49" rx="0.8" ry="1.2" fill="#fff"/>
+  <ellipse cx="330" cy="59" rx="2.2" ry="2.8" fill="#672017"/>
+  <ellipse cx="321" cy="56" rx="3" ry="1.1" fill="#FFC9C4" fill-opacity="0.8"/>
+  <ellipse cx="338" cy="56" rx="3" ry="1.1" fill="#FFC9C4" fill-opacity="0.8"/>
+  <!-- 运动轨迹/阴影 -->
+  <ellipse cx="40" cy="72" rx="15" ry="3" fill="#FFD0CF" fill-opacity="0.27"/>
+  <ellipse cx="110" cy="77" rx="12" ry="2.5" fill="#FFD0CF" fill-opacity="0.24"/>
+  <ellipse cx="180" cy="70" rx="14" ry="3" fill="#FFD0CF" fill-opacity="0.20"/>
+  <ellipse cx="260" cy="73" rx="9" ry="2" fill="#FFD0CF" fill-opacity="0.18"/>
+  <ellipse cx="330" cy="69" rx="13" ry="3" fill="#FFD0CF" fill-opacity="0.20"/>
+  <!-- 滚动动画建议用CSS或JS结合SVG进行，纯SVG静态展示 -->
+</svg>

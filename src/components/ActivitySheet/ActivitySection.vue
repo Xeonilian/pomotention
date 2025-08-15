@@ -72,7 +72,7 @@
                 v-model:value="item.title"
                 type="text"
                 :placeholder="item.isUntaetigkeit ? '无所事事' : '任务描述'"
-                style="flex: 2"
+                style="flex: 1"
                 @input="handleTitleInput(item, $event)"
                 @keydown="handleInputKeydown($event, item)"
                 @focus="$emit('focus-row', item.id)"
@@ -211,7 +211,7 @@
           <n-input
             v-if="item.class === 'S'"
             v-model:value="item.location"
-            style="max-width: 90px"
+            style="width: 100%; min-width: 30px; max-width: 90px"
             @focus="$emit('focus-row', item.id)"
             placeholder="地点"
             :class="{ 'force-hover': hoveredRowId === item.id }"
@@ -256,7 +256,7 @@
             v-model:value="item.dueDate"
             type="date"
             clearable
-            style="max-width: 70px"
+            style="width: 70px"
             format="MM/dd"
             @focus="$emit('focus-row', item.id)"
             title="死线日期"
@@ -272,7 +272,7 @@
                   : (item.dueRange = [Date.now(), ''])
             "
             type="datetime"
-            style="max-width: 70px"
+            style="width: 70px"
             clearable
             format="HH:mm"
             @focus="$emit('focus-row', item.id)"

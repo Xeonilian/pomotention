@@ -8,34 +8,19 @@
     <!-- 对话框头部 -->
     <div class="ai-chat-header" @mousedown="handleMouseDown">
       <div class="ai-chat-title">
-        <n-icon size="16" class="ai-icon">
-          <Chat24Regular />
-        </n-icon>
-        <span>AI 助手</span>
+        <img src="@/assets/cloud-sun.svg" alt="可爱的番茄横幅" />
       </div>
       <div class="ai-chat-controls">
-        <n-button
-          size="tiny"
-          quaternary
-          circle
-          class="control-btn"
-          @click="handleSetting"
-        >
+        <n-button size="tiny" class="control-btn" @click="handleSetting">
           <template #icon>
-            <n-icon size="14">
+            <n-icon size="18">
               <Settings24Regular />
             </n-icon>
           </template>
         </n-button>
-        <n-button
-          size="tiny"
-          quaternary
-          circle
-          @click="close"
-          class="control-btn"
-        >
+        <n-button size="tiny" circle @click="close" class="control-btn">
           <template #icon>
-            <n-icon size="14">
+            <n-icon size="18">
               <DismissCircle24Regular />
             </n-icon>
           </template>
@@ -52,18 +37,11 @@
           :class="['message', message.role]"
         >
           <div class="message-avatar">
-            <n-icon
-              size="16"
-              :class="message.role === 'user' ? 'user-icon' : 'ai-icon'"
-            >
-              <component
-                :is="
-                  message.role === 'user'
-                    ? 'VideoPersonCall24Regular'
-                    : 'Chat24Regular'
-                "
-              />
-            </n-icon>
+            <n-avatar
+              :round="true"
+              :size="22"
+              :src="message.role === 'user' ? userAvatar : aiAvatar"
+            />
           </div>
           <div class="message-content">
             <div
@@ -120,7 +98,6 @@
 import { ref, computed, nextTick, watch, onMounted, onUnmounted } from "vue";
 import { NButton, NInput, NIcon } from "naive-ui";
 import {
-  Chat24Regular,
   ArrowExportLtr20Regular,
   DismissCircle24Regular,
   Settings24Regular,
@@ -128,6 +105,8 @@ import {
 import { aiService, type AIMessage } from "@/services/aiService";
 import AISettingsDialog from "./AISettingsDialog.vue";
 import { useDraggable } from "@/composables/useDraggable";
+import userAvatar from "@/assets/user-1.svg";
+import aiAvatar from "@/assets/bot-avatar.png";
 
 interface Message {
   role: "user" | "assistant";
@@ -488,7 +467,7 @@ watch(
   justify-content: space-between;
   align-items: center;
   padding: 8px 12px;
-  background: var(--color-primary);
+  background: var(--color-blue-light);
   color: white;
   cursor: grab;
   user-select: none;
@@ -496,10 +475,8 @@ watch(
 
 .ai-chat-title {
   display: flex;
-  align-items: center;
-  gap: 6px;
-  font-weight: 500;
-  font-size: 14px;
+  align-items: left;
+  height: 30px;
 }
 
 .ai-chat-controls {
@@ -511,7 +488,6 @@ watch(
   width: 20px;
   height: 20px;
   min-width: 20px;
-  color: white;
 }
 
 .control-btn:hover {
@@ -555,7 +531,7 @@ watch(
 }
 
 .message.user .message-avatar {
-  background: var(--color-primary);
+  background: var(--color-blue-light);
   color: white;
 }
 
@@ -581,15 +557,15 @@ watch(
 }
 
 .message.user .message-text {
-  background: var(--color-primary);
+  background: var(--color-blue);
   color: white;
-  border-bottom-right-radius: 4px;
+  border-bottom-right-radius: 1px;
 }
 
 .message.assistant .message-text {
   background: var(--color-background-light);
   color: var(--color-text);
-  border-bottom-left-radius: 4px;
+  border-bottom-left-radius: 1px;
 }
 
 .message-time {
