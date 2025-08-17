@@ -106,7 +106,7 @@ export function passPickedActivity(
   appDateTimestamp: number,
   isToday: boolean
 ) {
-  // 存在检查在ActivityView中
+  // 存在检查在ActivitySheet中
   // // 检查是否已经存在相同 activityId 的待办事项
   // const existingTodo = todoList.find((todo) => todo.activityId === activity.id);
   // if (existingTodo) {

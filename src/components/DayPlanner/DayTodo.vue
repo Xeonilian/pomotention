@@ -1,5 +1,5 @@
 <!--
-  Component: TodayTodo.vue
+  Component: DayTodo.vue
   Description: 显示多个任务的详细信息或列表。
   Props:
     - todos: Array<Todo> - 任务列表数据
@@ -15,7 +15,7 @@
 
     - select-task: (taskId: number | null)
     - select-row: (id: number | null)
-  Parent: TodayView.vue
+  Parent: DayView.vue
 -->
 <template>
   <!-- 表格容器，占满父容器宽度 -->

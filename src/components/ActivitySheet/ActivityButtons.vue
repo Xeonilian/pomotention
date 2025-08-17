@@ -14,7 +14,7 @@
   - add-schedule: 触发添加预约的操作。
   - delete-active: 触发删除当前选中活动的操作。
 
-  Parent: ActivityView.vue
+  Parent: ActivitySheet.vue
 
   Usage:
   <ActivityButtons  :activeId="activeId" @pick-activity="pickActivity" @filter="handleFilter" @add-task="addTask" @add-schedule="addSchedule" @delete-active="deleteActive" />

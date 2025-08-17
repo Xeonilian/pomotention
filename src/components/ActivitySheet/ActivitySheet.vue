@@ -1,5 +1,5 @@
 <!-- 
-  Component: ActivityView.vue
+  Component: ActivitySheet.vue
 -->
 
 <template>
@@ -75,7 +75,7 @@
 // ========================
 // 依赖导入
 // ========================
-import { ref, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
 import ActivityButtons from "@/components/ActivitySheet/ActivityButtons.vue";
 import ActivitySection from "@/components/ActivitySheet/ActivitySection.vue";
 import type { Activity, ActivitySectionConfig } from "@/core/types/Activity";
@@ -130,6 +130,12 @@ const filterOptions = [
 // Kanban多个section参数管理
 const settingStore = useSettingStore();
 
+onMounted(() => {
+  if (settingStore.settings.kanbanSetting.length !== 6) {
+    // 版本切换校正一次
+    settingStore.resetSettings(["kanbanSetting"]);
+  }
+});
 // 响应式可直接用
 const sections = computed(() =>
   settingStore.settings.kanbanSetting.filter((s) => s.show)
@@ -140,10 +146,6 @@ const showPopover = ref(false);
 const popoverMessage = ref("");
 
 function addSection() {
-  if (settingStore.settings.kanbanSetting.length !== 6) {
-    // 版本切换时，过去设置可能出现问题
-    settingStore.resetSettings(["kanbanSetting"]);
-  }
   const visibleCount = settingStore.settings.kanbanSetting.filter(
     (s) => s.show
   ).length;

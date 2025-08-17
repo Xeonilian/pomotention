@@ -12,7 +12,7 @@ export const useUIStore = defineStore("uiStore", () => {
   const showActivityPanel = ref(true); // 对应 HomeView 的右侧面板
   const showTaskPanel = ref(true); // 对应 HomeView 的任务面板 (假设在中间底部)
   const showPlannerPanel = ref(true); // 对应 HomeView 的今日视图 (假设在中间顶部)
-  const showPomodoroPanel = ref(true); // 对应 PomodoroView 的今日视图 (假设在中间顶部)
+  const showPomodoroPanel = ref(true); // 对应 PomotentionTimer 的今日视图 (假设在中间顶部)
 
   /**
    * 切换指定面板的显示状态。

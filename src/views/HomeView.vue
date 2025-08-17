@@ -12,7 +12,7 @@
       class="left"
       :style="{ width: leftWidth + 'px' }"
     >
-      <TimeTableView
+      <TimeTable
         :blocks="viewBlocks"
         :current-type="currentType"
         :todayTodos="todosForAppDate"
@@ -151,7 +151,7 @@
         </div>
         <!-- 今日视图容器 -->
         <div class="planner-view-container">
-          <DayView
+          <DayPlanner
             v-if="
               settingStore.settings.showPlanner &&
               settingStore.settings.viewSet === 'day'
@@ -181,13 +181,13 @@
             @convert-todo-to-task="onConvertTodoToTask"
             @convert-schedule-to-task="onConvertScheduleToTask"
           />
-          <WeekView
+          <WeekPlanner
             v-if="
               settingStore.settings.showPlanner &&
               settingStore.settings.viewSet === 'week'
             "
           />
-          <MonthView
+          <MonthPlanner
             v-if="
               settingStore.settings.showPlanner &&
               settingStore.settings.viewSet === 'month'
@@ -207,7 +207,7 @@
         class="middle-bottom"
         :style="{ height: `calc(100% - ${topHeight}px - 8px)` }"
       >
-        <TaskView
+        <TaskTracker
           :selectedTaskId="selectedTaskId"
           :selectedTask="selectedTask"
           :selectedTagIds="selectedTagIds"
@@ -229,7 +229,7 @@
       class="right"
       :style="{ width: rightWidth + 'px' }"
     >
-      <ActivityView
+      <ActivitySheet
         :activities="activityList"
         :activeId="activeId"
         :todos="todoList"
@@ -257,12 +257,12 @@
 import { ref, onMounted, watch, computed } from "vue";
 import { NButton, NIcon } from "naive-ui";
 import { usePomoStore } from "@/stores/usePomoStore";
-import TimeTableView from "@/views/Home/TimeTableView.vue";
-import DayView from "@/views/Home/DayView.vue";
-import WeekView from "@/views/Home/WeekView.vue";
-import MonthView from "@/views/Home/MonthView.vue";
-import TaskView from "@/views/Home/TaskView.vue";
-import ActivityView from "@/views/Home/ActivityView.vue";
+import TimeTable from "@/components/TimeTable/TimeTable.vue";
+import DayPlanner from "@/components/DayPlanner/DayPlanner.vue";
+import WeekPlanner from "@/components/WeekPlanner/WeekPlanner.vue";
+import MonthPlanner from "@/components/MonthPlanner/MonthPlanner.vue";
+import TaskTracker from "@/components/TaskTracker/TaskTracker.vue";
+import ActivitySheet from "@/components/ActivitySheet/ActivitySheet.vue";
 import type { Activity } from "@/core/types/Activity";
 import type { Block } from "@/core/types/Block";
 import type { Todo } from "@/core/types/Todo";
@@ -322,7 +322,7 @@ const taskList = ref<Task[]>(loadTasks());
 const pickedTodoActivity = ref<Activity | null>(null); // 选中活动
 
 // 添加选中的任务ID状态
-const activeId = ref<number | null>(null); // 当前从ActivityView选中的activity.id
+const activeId = ref<number | null>(null); // 当前从ActivitySheet选中的activity.id
 const selectedTaskId = ref<number | null>(null); // 当前从Todo选中的todo.taskId
 const selectedActivityId = ref<number | null>(null); // 当前从Todo选中的todo.activityId
 // 在现有的状态定义区域添加

@@ -1,5 +1,5 @@
 <template>
-  <div class="pomodoro-mini-view-wrapper" ref="pomodoroViewContainerRef">
+  <div class="pomodoro-mini-view-wrapper" ref="PomotentionTimerContainerRef">
     <n-layout class="app-layout">
       <n-layout-header
         class="app-layout__header"
@@ -42,20 +42,20 @@
           ref="draggableContainer"
           v-if="!isMiniMode && settingStore.settings.showPomodoro"
         >
-          <PomodoroView
+          <PomotentionTimer
             :showPomoSeq="showPomoSeq"
             :isMiniMode="isMiniMode"
             @toggle-pomo-seq="showPomoSeq = !showPomoSeq"
-            @report-size="handlePomodoroViewSizeReport"
+            @report-size="handlePomotentionTimerSizeReport"
           />
         </div>
 
-        <PomodoroView
+        <PomotentionTimer
           v-if="isMiniMode"
           :showPomoSeq="showPomoSeq"
           :isMiniMode="isMiniMode"
           @toggle-pomo-seq="showPomoSeq = !showPomoSeq"
-          @report-size="handlePomodoroViewSizeReport"
+          @report-size="handlePomotentionTimerSizeReport"
           @exit-mini-mode="
             handleToggleOntopMode(reportedPomodoroWidth, reportedPomodoroHeight)
           "
@@ -93,7 +93,7 @@ import { useAlwaysOnTop } from "@/composables/useAlwaysOnTop";
 import { useDraggable } from "@/composables/useDraggable";
 import { useButtonStyle } from "@/composables/useButtonStyle";
 
-import PomodoroView from "./Home/PomodoroView.vue";
+import PomotentionTimer from "../components/PomotentionTimer/PomotentionTimer.vue";
 
 const timerStore = useTimerStore();
 const settingStore = useSettingStore();
@@ -107,7 +107,7 @@ const showPomoSeq = ref(false);
 
 const reportedPomodoroWidth = ref(0);
 const reportedPomodoroHeight = ref(0);
-const pomodoroViewContainerRef = ref<HTMLElement | null>(null);
+const PomotentionTimerContainerRef = ref<HTMLElement | null>(null);
 const containerWidth = ref(0);
 const containerHeight = ref(0);
 
@@ -228,13 +228,17 @@ async function handleToggleOntopMode(width: number, height: number) {
         //   realSize.height
         // );
 
-        if (pomodoroViewContainerRef.value) {
+        if (PomotentionTimerContainerRef.value) {
           // 打印出具体引用的 DOM 元素
-          console.log("[mini] Container Ref:", pomodoroViewContainerRef.value);
+          console.log(
+            "[mini] Container Ref:",
+            PomotentionTimerContainerRef.value
+          );
 
           // 获取并记录尺寸
-          containerWidth.value = pomodoroViewContainerRef.value.clientWidth;
-          containerHeight.value = pomodoroViewContainerRef.value.clientHeight;
+          containerWidth.value = PomotentionTimerContainerRef.value.clientWidth;
+          containerHeight.value =
+            PomotentionTimerContainerRef.value.clientHeight;
           console.log(
             "[mini] Window resized true:",
             containerWidth.value,
@@ -313,7 +317,7 @@ async function updateDraggableContainerVisibilityAndPosition(show: boolean) {
   }
 }
 
-const handlePomodoroViewSizeReport = ({
+const handlePomotentionTimerSizeReport = ({
   width,
   height,
 }: {
@@ -323,7 +327,7 @@ const handlePomodoroViewSizeReport = ({
   reportedPomodoroWidth.value = width;
   reportedPomodoroHeight.value = height;
   // console.log(
-  //   `[report] MainLayout received PomodoroView size: ${reportedPomodoroWidth.value}x${reportedPomodoroHeight.value}`
+  //   `[report] MainLayout received PomotentionTimer size: ${reportedPomodoroWidth.value}x${reportedPomodoroHeight.value}`
   // );
 };
 

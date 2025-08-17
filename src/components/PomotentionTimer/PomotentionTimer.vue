@@ -52,8 +52,8 @@
 
 <script setup lang="ts">
 import { onMounted, watch, ref } from "vue";
-import PomodoroTimer from "@/components/PomodoroTimer/PomodoroTimer.vue";
-import PomodoroSequence from "@/components/PomodoroTimer/PomodoroSequence.vue";
+import PomodoroTimer from "@/components/PomotentionTimer/PomodoroTimer.vue";
+import PomodoroSequence from "@/components/PomotentionTimer/PomodoroSequence.vue";
 import { useTimerStore } from "@/stores/useTimerStore";
 import { NButton, NIcon } from "naive-ui";
 import { ArrowExpand24Regular } from "@vicons/fluent";
@@ -90,7 +90,7 @@ function reportSize() {
   } else {
     height = 140; // 非运行和非序列模式
   }
-  // console.log("[pomodoroView]", width, height);
+  // console.log("[PomotentionTimer]", width, height);
   emit("report-size", { width, height });
 }
 
@@ -101,7 +101,7 @@ onMounted(() => {
   // 如果番茄钟正在运行且来自序列，恢复 pomoSeq 运行状态
   if (timerStore.isActive && timerStore.isFromSequence) {
     console.log(
-      "[PomodoroView] Component mounted, restoring pomoSeq running state"
+      "[PomotentionTimer] Component mounted, restoring pomoSeq running state"
     );
     isPomoSeqRunning.value = true;
   }

@@ -17,7 +17,7 @@
 <template>
   <div class="today-container">
     <div class="todo-container">
-      <TodayTodo
+      <DayTodo
         :todos="todayTodos"
         :activeId="activeId"
         :selectedRowId="selectedRowId"
@@ -36,7 +36,7 @@
       />
     </div>
     <div class="schedule-container">
-      <TodaySchedule
+      <DaySchedule
         :schedules="todaySchedules"
         :activeId="activeId"
         :selectedRowId="selectedRowId"
@@ -55,9 +55,9 @@
 </template>
 
 <script setup lang="ts">
-import TodayTodo from "../../components/TodayTS/TodayTodo.vue";
-import TodaySchedule from "../../components/TodayTS/TodaySchedule.vue";
-import type { Todo } from "../../core/types/Todo";
+import DayTodo from "@/components/DayPlanner/DayTodo.vue";
+import DaySchedule from "@/components/DayPlanner/DaySchedule.vue";
+import type { Todo } from "@/core/types/Todo";
 import type { Schedule } from "@/core/types/Schedule";
 
 defineProps<{
