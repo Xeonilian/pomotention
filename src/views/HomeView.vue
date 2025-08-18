@@ -531,7 +531,9 @@ function onPickActivity(activity: Activity) {
   );
 }
 
+// 同步UI选中
 function onConvertActivityToTask(id: number, taskId: number) {
+  console.log("onConvertActivityToTask", id, taskId);
   activeId.value = id;
   selectedTaskId.value = taskId;
 }
@@ -542,7 +544,8 @@ function onConvertTodoToTask(id: number, taskId: number) {
   if (todo) {
     const activity = activityList.value.find((a) => a.id === todo.activityId);
     if (activity) {
-      activity.taskId = taskId;
+      selectedTaskId.value = taskId;
+      activeId.value = activity.id;
     }
   }
 }
@@ -555,7 +558,8 @@ function onConvertScheduleToTask(id: number, taskId: number) {
       (a) => a.id === schedule.activityId
     );
     if (activity) {
-      activity.taskId = taskId;
+      selectedTaskId.value = taskId;
+      activeId.value = activity.id;
     }
   }
 }

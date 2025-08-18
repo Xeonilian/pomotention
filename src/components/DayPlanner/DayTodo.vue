@@ -771,9 +771,8 @@ function handleConvertToTask(todo: TodoWithNumberPriority) {
   if (task) {
     // 立即更新本地的 taskId
     todo.taskId = task.id;
-    console.log(task.id, "taskid");
+    console.log("taskid:", task.id);
     emit("convert-todo-to-task", todo.id, task.id);
-    console.log(task.id, "taskid");
     popoverMessage.value = "完成任务转换";
     showPopover.value = true;
     setTimeout(() => {

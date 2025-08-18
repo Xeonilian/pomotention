@@ -1,5 +1,4 @@
 // src/core/types/Todo.ts
-// 直接将Activity数据合并
 export interface Todo {
   id: number; // 时间戳生成时刻
   activityId: number; // 生成任务时刻

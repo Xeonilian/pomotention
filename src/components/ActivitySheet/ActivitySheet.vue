@@ -450,6 +450,9 @@ function handleConvertToTask() {
   if (task) {
     // 立即更新本地的 taskId
     activity.taskId = task.id;
+    // 寻找 todo
+    const todo = props.todos.find((t) => t.activityId === activity.id);
+    if (todo) todo.taskId = task.id;
     emit("convert-activity-to-task", activity.id, task.id);
     popoverMessage.value = "已转换为任务";
     showPopover.value = true;
