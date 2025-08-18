@@ -4,7 +4,7 @@ import type { Todo } from "@/core/types/Todo";
 
 export interface DailyPomoData {
   count: number; // 番茄钟总数
-  diff: number; // 和上次相比的增量
+  diff?: number; // 和上次相比的增量
 }
 
 export const usePomoStore = defineStore("pomo", {

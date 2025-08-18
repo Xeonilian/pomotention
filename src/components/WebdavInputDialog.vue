@@ -38,6 +38,9 @@
       </n-text>
     </n-space>
     <template #action>
+      <n-button type="success" secondary @click="handleImport"
+        >导入数据</n-button
+      >
       <n-button type="info" secondary @click="handleExport">导出数据</n-button>
       <n-button @click="handleTest">测试</n-button>
       <n-button @click="handleCancel">取消</n-button>
@@ -53,7 +56,7 @@ import { useSettingStore } from "@/stores/useSettingStore";
 import { WebDAVStorageAdapter } from "@/services/storageAdapter";
 import { collectLocalData } from "@/services/localStorageService";
 import { open } from "@tauri-apps/plugin-dialog";
-import { writeTextFile } from "@tauri-apps/plugin-fs";
+import { writeTextFile, readTextFile } from "@tauri-apps/plugin-fs";
 
 // props/emit，支持 v-model:show
 const props = defineProps<{
@@ -145,6 +148,9 @@ function handleCancel() {
 
   emit("update:show", false);
 }
+
+// 处理数据导入
+async function handleImport() {}
 
 // 处理数据导出
 async function handleExport() {
