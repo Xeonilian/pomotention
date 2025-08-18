@@ -18,7 +18,7 @@
   <div class="today-container">
     <div class="todo-container">
       <DayTodo
-        :todos="todayTodos"
+        :todos="dayTodos"
         :activeId="activeId"
         :selectedRowId="selectedRowId"
         @update-todo-status="updateTodoStatus"
@@ -37,7 +37,7 @@
     </div>
     <div class="schedule-container">
       <DaySchedule
-        :schedules="todaySchedules"
+        :schedules="daySchedules"
         :activeId="activeId"
         :selectedRowId="selectedRowId"
         @update-schedule-status="updateScheduleStatus"
@@ -61,8 +61,8 @@ import type { Todo } from "@/core/types/Todo";
 import type { Schedule } from "@/core/types/Schedule";
 
 defineProps<{
-  todayTodos: Todo[];
-  todaySchedules: Schedule[];
+  dayTodos: Todo[];
+  daySchedules: Schedule[];
   activeId: number | null;
   selectedRowId: number | null;
 }>();

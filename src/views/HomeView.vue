@@ -17,10 +17,10 @@
         :current-type="currentType"
         :todayTodos="todosForAppDate"
         :todaySchedules="schedulesForAppDate"
+        :dayStart="dateService.appDateTimestamp.value"
         @update-blocks="onBlocksUpdate"
         @reset-schedule="onTimeTableReset"
         @change-type="onTypeChange"
-        :appDateTimestamp="dateService.appDateTimestamp.value"
       />
     </div>
 
@@ -49,7 +49,10 @@
             ? { height: topHeight + 'px' }
             : { height: '100%' }
         "
-        :class="{ yesterday: isViewingYesterday, tomorrow: isViewingTomorrow }"
+        :class="{
+          yesterday: isViewDateYesterday,
+          tomorrow: isViewDateTomorrow,
+        }"
       >
         <!-- 今日活动的头部和控件 -->
         <div class="planner-header">
@@ -157,8 +160,8 @@
               settingStore.settings.viewSet === 'day'
             "
             :selectedRowId="selectedRowId"
-            :todayTodos="todosForAppDate"
-            :todaySchedules="schedulesForAppDate"
+            :dayTodos="todosForCurrentView"
+            :daySchedules="schedulesForCurrentView"
             :activeId="activeId"
             @update-schedule-status="onUpdateScheduleStatus"
             @update-todo-status="onUpdateTodoStatus"
@@ -186,12 +189,16 @@
               settingStore.settings.showPlanner &&
               settingStore.settings.viewSet === 'week'
             "
+            :todayTodos="todosForCurrentView"
+            :todaySchedules="schedulesForCurrentView"
           />
           <MonthPlanner
             v-if="
               settingStore.settings.showPlanner &&
               settingStore.settings.viewSet === 'month'
             "
+            :todayTodos="todosForCurrentView"
+            :todaySchedules="schedulesForCurrentView"
           />
         </div>
       </div>
@@ -382,20 +389,37 @@ const currentDatePomoCount = computed(() => {
 const globalRealPomo = computed(() => pomoStore.globalRealPomo);
 
 // 计算当前日期 不赋值在UI计算class就会失效，但是UI输出的值是正确的
-const isViewingToday = dateService.isViewingToday;
-const isViewingYesterday = dateService.isViewingYesterday;
-const isViewingTomorrow = dateService.isViewingTomorrow;
+const isViewDateToday = dateService.isViewDateToday;
+const isViewDateYesterday = dateService.isViewDateYesterday;
+const isViewDateTomorrow = dateService.isViewDateTomorrow;
+
+// 计算筛选的当前视图范围内的 todo
+const todosForCurrentView = computed(() => {
+  const { start, end } = dateService.visibleRange.value;
+
+  if (!todoList.value) return [];
+  return todoList.value.filter((todo) => todo.id >= start && todo.id < end);
+});
+
+// 计算筛选当前视图范围内的 schedule
+const schedulesForCurrentView = computed(() => {
+  const { start, end } = dateService.visibleRange.value;
+
+  if (!scheduleList.value) return [];
+  return scheduleList.value.filter((schedule) => {
+    const date = schedule.activityDueRange?.[0];
+
+    if (date == null) return false;
+    return date >= start && date < end;
+  });
+});
 
 // 计算筛选的当天todo
 const todosForAppDate = computed(() => {
-  // 获取 appDate 当天零点的时间戳
   const startOfDay = dateService.appDateTimestamp.value;
-  // 计算 appDate 第二天零点的时间戳，作为筛选范围的上限（不包含）
   const endOfDay = addDays(startOfDay, 1);
 
   if (!todoList.value) return [];
-
-  // todo.id 是创建时的时间戳，筛选出 id 在 [startOfDay, endOfDay) 区间内的 todo
   return todoList.value.filter(
     (todo) => todo.id >= startOfDay && todo.id < endOfDay
   );
@@ -403,15 +427,13 @@ const todosForAppDate = computed(() => {
 
 // 计算筛选当天的schedule
 const schedulesForAppDate = computed(() => {
-  // 获取 appDate 当天零点的时间戳
   const startOfDay = dateService.appDateTimestamp.value;
-  // 计算 appDate 第二天零点的时间戳，作为筛选范围的上限（不包含）
   const endOfDay = addDays(startOfDay, 1);
 
   if (!scheduleList.value) return [];
   return scheduleList.value.filter((schedule) => {
     const date = schedule.activityDueRange?.[0];
-    //  date 在指定范围内时都保留
+
     if (date == null) return false;
     return date >= startOfDay && date < endOfDay;
   });
@@ -505,7 +527,7 @@ function onPickActivity(activity: Activity) {
     todoList.value,
     activity,
     dateService.appDateTimestamp.value,
-    dateService.isViewingToday.value
+    dateService.isViewDateToday.value
   );
 }
 
@@ -633,7 +655,7 @@ function onUpdateTodoStatus(id: number, isChecked: boolean) {
   let doneTime: number | undefined;
 
   if (isChecked) {
-    if (isViewingToday.value) {
+    if (isViewDateToday.value) {
       const date = new Date(dateService.appDateTimestamp.value);
 
       const now = new Date();
@@ -793,7 +815,7 @@ function onUpdateScheduleStatus(id: number, isChecked: boolean) {
   let doneTime: number | undefined;
 
   if (isChecked) {
-    if (dateService.isViewingToday.value) {
+    if (dateService.isViewDateToday.value) {
       const date = new Date(dateService.appDateTimestamp.value);
 
       const now = new Date();

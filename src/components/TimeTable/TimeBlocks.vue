@@ -164,7 +164,7 @@ const segStore = useSegStore();
 
 // ======= Props区域 =======
 const props = defineProps<{
-  appDateTimestamp: number;
+  dayStart: number;
   blocks: Block[];
   timeRange: { start: number; end: number };
   effectivePxPerMinute: number;
@@ -175,11 +175,11 @@ const props = defineProps<{
 // ======= 时间主块（Blocks）底色的样式计算 =======
 function getVerticalBlockStyle(block: Block): CSSProperties {
   const startMinute =
-    (getTimestampForTimeString(block.start, props.appDateTimestamp) -
+    (getTimestampForTimeString(block.start, props.dayStart) -
       props.timeRange.start) /
     (1000 * 60);
   const endMinute =
-    (getTimestampForTimeString(block.end, props.appDateTimestamp) -
+    (getTimestampForTimeString(block.end, props.dayStart) -
       props.timeRange.start) /
     (1000 * 60);
   const topPx = startMinute * props.effectivePxPerMinute;
@@ -255,11 +255,7 @@ import { POMODORO_COLORS } from "@/core/constants";
 
 // (2) 计算所有番茄段（含类别与编号）
 const pomodoroSegments = computed(() =>
-  splitIndexPomoBlocksExSchedules(
-    props.appDateTimestamp,
-    props.blocks,
-    props.schedules
-  )
+  splitIndexPomoBlocksExSchedules(props.dayStart, props.blocks, props.schedules)
 );
 
 // (3) 番茄段样式
@@ -313,7 +309,7 @@ const manualAllocations = ref<Map<number, number>>(new Map()); // todoId -> star
 const todoSegments = computed(() => {
   // 先生成完整的自动分配
   let autoSegments = generateEstimatedTodoSegments(
-    props.appDateTimestamp,
+    props.dayStart,
     props.todos,
     pomodoroSegments.value
   );
@@ -328,7 +324,7 @@ const todoSegments = computed(() => {
 
     // 重新为自动分配的 todos 生成 segments
     autoSegments = generateEstimatedTodoSegments(
-      props.appDateTimestamp,
+      props.dayStart,
       autoTodos,
       pomodoroSegments.value
     );
@@ -344,7 +340,7 @@ const todoSegments = computed(() => {
           startIndex
         );
         const newSegments = reallocateTodoFromPosition(
-          props.appDateTimestamp,
+          props.dayStart,
           todo,
           startIndex,
           pomodoroSegments.value,
@@ -705,7 +701,7 @@ watch(
       // 重新分配todos
       segStore.clearTodoSegments();
       const allocatedSegments = reallocateAllTodos(
-        props.appDateTimestamp,
+        props.dayStart,
         todos,
         segments
       );

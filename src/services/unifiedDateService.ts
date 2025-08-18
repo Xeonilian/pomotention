@@ -19,29 +19,51 @@ interface UnifiedDateServiceOptions {
   todoList: Ref<Todo[]>;
 }
 
+interface DateRange {
+  start: number; // 当日含零点
+  end: number; // 不含零点，代表下一个区间的开始
+} // end exclusive
+
 export function unifiedDateService({
   activityList,
   scheduleList,
   todoList,
 }: UnifiedDateServiceOptions) {
   const settingStore = useSettingStore();
+
   // --- 1. 核心状态 ---
   const dateState = reactive({
     app: getDayStartTimestamp(), // 当前基准日期（零点）
     system: getDayStartTimestamp(), // 设备当天零点
   });
 
-  // --- 2. 工具函数 ---
-  const getWeekStart = (ts: number) => {
-    const day = new Date(ts).getDay() || 7; // 周日=7
-    return addDays(getDayStartTimestamp(ts), -(day - 1)); // 回到周一
+  // --- 2. 工具函数（使用可配置 weekStartsOn） ---
+  const getStartOfWeek = (ts: number) => {
+    const weekStartsOn = 1;
+    const d = new Date(getDayStartTimestamp(ts));
+    const jsDay = d.getDay(); // 0~6, 周日=0
+    // 将 jsDay 映射到从 weekStartsOn 开始的偏移
+    // 计算从 d 回退多少天到一周的起始日
+    const offset = (jsDay - weekStartsOn + 7) % 7;
+    return addDays(d.getTime(), -offset);
   };
 
-  const getMonthStart = (ts: number) => {
+  const getStartOfNextWeek = (ts: number) => addDays(getStartOfWeek(ts), 7);
+
+  const getStartOfMonth = (ts: number) => {
     const d = new Date(ts);
-    return new Date(d.getFullYear(), d.getMonth(), 1).setHours(0, 0, 0, 0);
+    const m0 = new Date(d.getFullYear(), d.getMonth(), 1);
+    m0.setHours(0, 0, 0, 0);
+    return m0.getTime();
+  };
+  const getStartOfNextMonth = (ts: number) => {
+    const d = new Date(getStartOfMonth(ts));
+    const next = new Date(d.getFullYear(), d.getMonth() + 1, 1);
+    next.setHours(0, 0, 0, 0);
+    return next.getTime();
   };
 
+  // ISO week 信息
   const getISOWeekInfo = (ts: number) => {
     const d = new Date(ts);
     const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
@@ -61,13 +83,13 @@ export function unifiedDateService({
   };
 
   const getWeekKey = (ts: number) => {
-    const start = getWeekStart(ts);
+    const start = getStartOfWeek(ts);
     const { isoYear, weekNumber } = getISOWeekInfo(start);
     return `${isoYear}-W${String(weekNumber).padStart(2, "0")}`;
   };
 
   const getMonthKey = (ts: number) => {
-    const start = getMonthStart(ts);
+    const start = getStartOfMonth(ts);
     const d = new Date(start);
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
   };
@@ -83,7 +105,7 @@ export function unifiedDateService({
     return `${dateString} ${weekDay} w${weekNumber}`;
   });
 
-  const weekStartTs = computed(() => getWeekStart(dateState.app));
+  const weekStartTs = computed(() => getStartOfWeek(dateState.app));
   const weekKey = computed(() => getWeekKey(dateState.app));
   const displayWeekInfo = computed(() => {
     const start = new Date(weekStartTs.value);
@@ -92,7 +114,7 @@ export function unifiedDateService({
     return `${isoYear} ${monthName} Week ${weekNumber}`;
   });
 
-  const monthStartTs = computed(() => getMonthStart(dateState.app));
+  const monthStartTs = computed(() => getStartOfMonth(dateState.app));
   const monthKey = computed(() => getMonthKey(dateState.app));
   const displayMonthInfo = computed(() => {
     const d = new Date(monthStartTs.value);
@@ -101,9 +123,39 @@ export function unifiedDateService({
     return `${year} ${monthName}`;
   });
 
-  const isViewingToday = computed(() => dateState.app === dateState.system);
-  const isViewingYesterday = computed(() => dateState.app < dateState.system);
-  const isViewingTomorrow = computed(() => dateState.app > dateState.system);
+  // --- 3.1 可见范围（新） ---
+
+  // 半开区间 [start, end)
+  const visibleRange = computed<DateRange>(() => {
+    const app = dateState.app;
+    const curView = settingStore.settings.viewSet;
+    if (curView === "day") {
+      const start = getDayStartTimestamp(app);
+      const end = addDays(start, 1);
+      return { start, end };
+    }
+    if (curView === "week") {
+      const start = getStartOfWeek(app);
+      const end = getStartOfNextWeek(app);
+      return { start, end };
+    }
+
+    // 方案A：严格自然月
+    const mStart = getStartOfMonth(app);
+    const mEnd = getStartOfNextMonth(app);
+    return { start: mStart, end: mEnd };
+
+    // 方案B：若需要“按周填满月网格”，可改为：
+    // const gridStart = getStartOfWeek(getStartOfMonth(app));
+    // const gridEnd = getStartOfWeek(getStartOfNextMonth(app)); // 或 getStartOfNextWeek(endOfMonth)
+    // return { start: gridStart, end: gridEnd };
+  });
+
+  // 系统日期与视图关系（命名更清晰）
+  const currentDate = computed(() => dateState.system);
+  const isViewDateToday = computed(() => dateState.app === dateState.system);
+  const isViewDateYesterday = computed(() => dateState.app < dateState.system);
+  const isViewDateTomorrow = computed(() => dateState.app > dateState.system);
 
   // --- 4. 跨天业务逻辑 ---
   const processTodoForNewDay = () => {
@@ -143,8 +195,8 @@ export function unifiedDateService({
         curView === "day"
           ? base
           : curView === "week"
-          ? getWeekStart(base)
-          : getMonthStart(base);
+          ? getStartOfWeek(base)
+          : getStartOfMonth(base);
       return;
     }
 
@@ -157,14 +209,14 @@ export function unifiedDateService({
     }
 
     if (curView === "week") {
-      const start = getWeekStart(dateState.app);
+      const start = getStartOfWeek(dateState.app);
       const step = type === "prev" ? -7 : 7;
       dateState.app = addDays(start, step);
       return;
     }
 
     // month
-    const start = new Date(getMonthStart(dateState.app));
+    const start = new Date(getStartOfMonth(dateState.app));
     const m = start.getMonth();
     const y = start.getFullYear();
     const next = type === "next";
@@ -181,8 +233,8 @@ export function unifiedDateService({
       curView === "day"
         ? target
         : curView === "week"
-        ? getWeekStart(target)
-        : getMonthStart(target);
+        ? getStartOfWeek(target)
+        : getStartOfMonth(target);
   };
 
   // --- 6. 系统日期监听 ---
@@ -213,6 +265,8 @@ export function unifiedDateService({
     // 状态
     appDateTimestamp: computed(() => dateState.app),
     appDateKey,
+    visibleRange, // {start, end} 半开区间
+    currentDate,
 
     // 日/周/月信息
     displayDateInfo,
@@ -224,9 +278,9 @@ export function unifiedDateService({
     displayMonthInfo,
 
     // 关系判断
-    isViewingToday,
-    isViewingTomorrow,
-    isViewingYesterday,
+    isViewDateToday,
+    isViewDateTomorrow,
+    isViewDateYesterday,
 
     // 导航
     navigateByView, // prev/next/today

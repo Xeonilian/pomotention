@@ -86,7 +86,7 @@
         :todos="todayTodos"
         :timeRange="timeRange"
         :effectivePxPerMinute="effectivePxPerMinute"
-        :appDateTimestamp="props.appDateTimestamp"
+        :dayStart="props.dayStart"
       />
     </div>
   </div>
@@ -126,7 +126,7 @@ const toggleDisplay = () => {
 
 // 接收父级的数据
 const props = defineProps<{
-  appDateTimestamp: number;
+  dayStart: number;
   blocks: Block[];
   currentType: "work" | "entertainment";
   todayTodos: Todo[];
@@ -183,13 +183,11 @@ const timeRange = computed(() => {
   if (props.blocks.length === 0) return { start: 0, end: 0 };
   const start = Math.min(
     ...props.blocks.map((b) =>
-      getTimestampForTimeString(b.start, props.appDateTimestamp)
+      getTimestampForTimeString(b.start, props.dayStart)
     )
   );
   const end = Math.max(
-    ...props.blocks.map((b) =>
-      getTimestampForTimeString(b.end, props.appDateTimestamp)
-    )
+    ...props.blocks.map((b) => getTimestampForTimeString(b.end, props.dayStart))
   );
   return { start, end };
 });
