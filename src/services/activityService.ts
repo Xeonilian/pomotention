@@ -207,7 +207,6 @@ export function togglePomoType(activityList: Activity[], id: number) {
   } else {
     activity.estPomoI = undefined;
   }
-  console.log(activity.estPomoI, activity.pomoType);
   return {
     oldType: currentType,
     newType: newPomoType,

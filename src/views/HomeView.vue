@@ -257,12 +257,32 @@
       />
     </div>
   </div>
+  <!-- 错误提示弹窗 -->
+  <n-popover
+    v-model:show="showPopover"
+    trigger="manual"
+    placement="top-end"
+    style="width: 200px"
+  >
+    <template #trigger>
+      <div
+        style="
+          position: fixed;
+          bottom: 20px;
+          right: 20px;
+          width: 1px;
+          height: 1px;
+        "
+      ></div>
+    </template>
+    {{ popoverMessage }}
+  </n-popover>
 </template>
 
 <script setup lang="ts">
 // ------------------------ 导入依赖 ------------------------
 import { ref, onMounted, watch, computed } from "vue";
-import { NButton, NIcon } from "naive-ui";
+import { NButton, NIcon, NPopover } from "naive-ui";
 import { usePomoStore } from "@/stores/usePomoStore";
 import TimeTable from "@/components/TimeTable/TimeTable.vue";
 import DayPlanner from "@/components/DayPlanner/DayPlanner.vue";
@@ -316,10 +336,9 @@ import { useSettingStore } from "@/stores/useSettingStore";
 
 // -- 基础UI状态
 const settingStore = useSettingStore();
-const showPomoTypeChangePopover = ref(false);
-const pomoTypeChangeMessage = ref("");
-const pomoTypeChangeTarget = ref<HTMLElement | null>(null);
 const queryDate = ref<number | null>(null);
+const showPopover = ref(false);
+const popoverMessage = ref("");
 
 // -- 核心数据
 const activityList = ref<Activity[]>(loadActivities());
@@ -473,6 +492,15 @@ watch(todoList, (value) => saveTodos(value), { deep: true });
 watch(scheduleList, (value) => saveSchedules(value), { deep: true });
 watch(taskList, (value) => saveTasks(value), { deep: true });
 
+/**  显示错误提示弹窗 */
+function showErrorPopover(message: string) {
+  popoverMessage.value = message;
+  showPopover.value = true;
+  // 3秒后自动隐藏
+  setTimeout(() => {
+    showPopover.value = false;
+  }, 3000);
+}
 // ======================== 1. TimeTable 相关 ========================
 
 // -- 时间表数据和类型
@@ -511,12 +539,13 @@ function onAddActivity(newActivity: Activity) {
 
 /** 删除活动及其关联的 todo/schedule */
 function onDeleteActivity(id: number) {
-  handleDeleteActivity(
+  const result = handleDeleteActivity(
     activityList.value,
     todoList.value,
     scheduleList.value,
     id
   );
+  if (!result) showErrorPopover("请先清空子项目再删除！");
   activeId.value = null;
 }
 
@@ -578,17 +607,11 @@ function onUpdateActiveId(id: number | null) {
 }
 
 /** 修改番茄类型时的提示处理 */
-function onTogglePomoType(id: number, event?: Event) {
+function onTogglePomoType(id: number) {
   const todo = todoList.value.find((t) => t.activityId === id);
-  if (todo) todo.positionIndex = undefined;
-  const target = (event?.target as HTMLElement) || null;
+  if (todo) todo.positionIndex = undefined; // 先取消当前TimeTable的位置
   const result = togglePomoType(activityList.value, id);
-  if (result) {
-    pomoTypeChangeMessage.value = `番茄类型从${result.oldType}更改为${result.newType}`;
-    pomoTypeChangeTarget.value = target;
-    showPomoTypeChangePopover.value = true;
-    setTimeout(() => (showPomoTypeChangePopover.value = false), 3000);
-  }
+  if (result) showErrorPopover("活动的类型已切换！");
 }
 
 /** 重复当前的活动 */
