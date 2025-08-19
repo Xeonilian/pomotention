@@ -422,11 +422,10 @@ function getCountdownClass(dueDate: number | undefined | null): string {
   due.setHours(0, 0, 0, 0);
   const diff = Math.ceil((due.getTime() - now.setHours(0, 0, 0, 0)) / 86400000);
 
-  if (diff === 0) return "countdown-red"; // 今日到期
-  if (diff === 1) return "countdown-deeporange"; // 明日到期
-  if (diff === 2) return "countdown-orange"; // 后天到期
-  if (diff === 3) return "countdown-yellow"; // 三天后到期
-  if (diff < 0) return "countdown-blue"; // 已过期
+  if (diff === 0) return "countdown-0"; // 今日到期
+  if (diff === 1) return "countdown-1"; // 明日到期
+  if (diff === 2) return "countdown-2"; // 后天到期
+  if (diff < 0) return "countdown-boom"; // 已过期
   return "";
 }
 

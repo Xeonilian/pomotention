@@ -765,6 +765,7 @@ function handleTagCreate(item: Activity, tagName: string) {
   position: relative;
   margin-left: 20px;
 }
+
 .activity-content .child-activity::before {
   content: "";
   position: absolute;
@@ -848,22 +849,19 @@ function handleTagCreate(item: Activity, tagName: string) {
 .input-min :deep(.n-input__placeholder) {
   font-size: 12px;
 }
-.delayed {
-  background: var(--color-orange-transparent);
-}
-.countdown-yellow :deep(.n-input) {
-  background: var(--color-yellow-transparent);
-}
-.countdown-orange :deep(.n-input) {
-  background: var(--color-orange-light-transparent);
-}
-.countdown-deeporange :deep(.n-input) {
-  background: var(--color-orange-dark-transparent);
-}
-.countdown-red :deep(.n-input) {
+
+.countdown-0 :deep(.n-input) {
   background: var(--color-red-light-transparent);
 }
-.countdown-blue :deep(.n-input) {
+
+.countdown-1 :deep(.n-input) {
+  background: var(--color-background-light-transparent);
+}
+.countdown-2 :deep(.n-input) {
+  background: var(--color-background-transparent);
+}
+
+.countdown-boom :deep(.n-input) {
   background: var(--color-blue-light-transparent);
 }
 .pomo-input :deep(.n-input__placeholder) {
