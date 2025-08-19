@@ -211,7 +211,7 @@
           <n-input
             v-if="item.class === 'S'"
             v-model:value="item.location"
-            style="max-width: 90px"
+            style="max-width: 50px"
             @focus="$emit('focus-row', item.id)"
             placeholder="地点"
             :class="{ 'force-hover': hoveredRowId === item.id }"
@@ -256,7 +256,7 @@
             v-model:value="item.dueDate"
             type="date"
             clearable
-            style="max-width: 70px"
+            style="max-width: 63px"
             format="MM/dd"
             @focus="$emit('focus-row', item.id)"
             title="死线日期"
@@ -272,7 +272,7 @@
                   : (item.dueRange = [Date.now(), ''])
             "
             type="datetime"
-            style="max-width: 70px"
+            style="max-width: 63px"
             clearable
             format="HH:mm"
             @focus="$emit('focus-row', item.id)"
@@ -283,7 +283,7 @@
         <div
           v-if="item.tagIds && item.tagIds.length > 0 && showTags"
           class="tag-content"
-          :class="{ 'child-activity': item.parentId }"
+          :class="{ 'child-activity-tag': item.parentId }"
         >
           <TagRenderer
             :tag-ids="item.tagIds"
@@ -750,6 +750,7 @@ function handleTagCreate(item: Activity, tagName: string) {
   gap: 2px;
   margin-bottom: 4px;
 }
+
 .section-header :deep(.n-input__input-el) {
   font-weight: bold;
 }
@@ -760,7 +761,23 @@ function handleTagCreate(item: Activity, tagName: string) {
   width: 100%;
 }
 
-.child-activity {
+.activity-content .child-activity {
+  position: relative;
+  margin-left: 20px;
+}
+.activity-content .child-activity::before {
+  content: "";
+  position: absolute;
+  left: -12px; /* inside the 20px margin */
+  top: 1em; /* vertically centered */
+  width: 6px;
+  height: 6px;
+  background: currentColor;
+  border-radius: 50%;
+  color: var(--color-text-secondary);
+}
+
+.child-activity-tag {
   margin-left: 20px;
 }
 
@@ -810,9 +827,10 @@ function handleTagCreate(item: Activity, tagName: string) {
   padding-left: 0px !important;
   padding-right: 0px !important;
 }
+
 :deep(.n-input .n-input-wrapper) {
-  padding-left: 6px;
-  padding-right: 6px;
+  padding-left: 4px;
+  padding-right: 4px;
 }
 
 .input-min :deep(.n-input__input) {
@@ -820,6 +838,10 @@ function handleTagCreate(item: Activity, tagName: string) {
 }
 
 :deep(.n-input .n-input__suffix) {
+  margin: 0px;
+}
+
+:deep(.n-input .n-input__prefix) {
   margin: 0px;
 }
 

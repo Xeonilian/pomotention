@@ -206,12 +206,13 @@ function filteredBySection(section: ActivitySectionConfig) {
       case "today":
         return props.activities.filter((item) => {
           if (item.class === "T") {
-            if (!item.dueDate) return false;
+            if (!item.dueDate && item.parentId) return false; // 不允许没有日期的子项目在今日到期显示
+            if (!item.dueDate) return true; // 允许没有日期的项目在今日到期显示
             const due = new Date(item.dueDate);
             due.setHours(0, 0, 0, 0);
             return due.getTime() === now.getTime();
           } else if (item.class === "S") {
-            if (!item.dueRange || !item.dueRange[0]) return true;
+            if (!item.dueRange || !item.dueRange[0]) return true; // 允许没有日期的项目在今日到期显示
             const start = new Date(item.dueRange[0]);
             start.setHours(0, 0, 0, 0);
             return start.getTime() === now.getTime();
