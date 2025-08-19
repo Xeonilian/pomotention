@@ -55,8 +55,10 @@ import { NModal, NInput, NSpace, NButton } from "naive-ui";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { WebDAVStorageAdapter } from "@/services/storageAdapter";
 import { collectLocalData } from "@/services/localStorageService";
+import { handleFileImport } from "@/services/mergeService";
 import { open } from "@tauri-apps/plugin-dialog";
-import { writeTextFile, readTextFile } from "@tauri-apps/plugin-fs";
+import { writeTextFile, readDir } from "@tauri-apps/plugin-fs";
+import { join } from "@tauri-apps/api/path";
 
 // props/emit，支持 v-model:show
 const props = defineProps<{
@@ -149,8 +151,22 @@ function handleCancel() {
   emit("update:show", false);
 }
 
-// 处理数据导入
-async function handleImport() {}
+async function handleImport() {
+  const dirPath = await open({ directory: true, multiple: false });
+  if (!dirPath || typeof dirPath !== "string") return;
+
+  const entries = await readDir(dirPath);
+  const filePaths: { [key: string]: string } = {}; // key 是文件名，value 是完整路径
+
+  for (const entry of entries) {
+    if (entry.name && entry.name.toLowerCase().endsWith(".json")) {
+      const fullPath = await join(dirPath, entry.name);
+      filePaths[entry.name] = fullPath;
+    }
+  }
+  console.log("filePaths map =", filePaths);
+  await handleFileImport(filePaths);
+}
 
 // 处理数据导出
 async function handleExport() {
