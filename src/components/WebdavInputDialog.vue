@@ -164,7 +164,6 @@ async function handleImport() {
       filePaths[entry.name] = fullPath;
     }
   }
-  console.log("filePaths map =", filePaths);
   await handleFileImport(filePaths);
 }
 

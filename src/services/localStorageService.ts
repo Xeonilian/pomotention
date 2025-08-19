@@ -287,30 +287,42 @@ export function collectLocalData(): SyncDataV1["data"] {
 }
 
 // =================== 通用本地存储操作 ===================
-
 /**
  * 从本地存储加载数据的通用函数
  * @param key 存储键名
  * @param defaultValue 默认值
  * @returns 解析后的数据或默认值
  */
-export function loadData<T>(key: string, defaultValue: T): T {
+// 重载签名
+export function loadData<T>(key: string): T | null;
+export function loadData<T>(key: string, defaultValue: T): T;
+
+// 实现
+export function loadData<T>(key: string, defaultValue?: T): T | null {
   try {
     const storedValue = localStorage.getItem(key);
 
     if (storedValue !== null) {
-      // 本地有数据，解析并返回，这部分逻辑不变
       return JSON.parse(storedValue) as T;
+    }
+
+    // 没有存储值
+    if (arguments.length >= 2) {
+      // 传入了 defaultValue，则返回它
+      return defaultValue as T;
     } else {
-      // 本地没有数据，直接返回传入的 defaultValue
-      // 关键：如果 defaultValue 是 null，这里就会返回 null
-      // 如果 defaultValue 是一个数组，这里就会返回数组
-      return defaultValue;
+      // 未传 defaultValue，则返回 null
+      return null;
     }
   } catch (error) {
-    console.error(`加载 '${key}' 出错，使用默认值:`, error);
-    // 出错时也一样，直接返回传入的 defaultValue
-    return defaultValue;
+    console.error(`加载 '${key}' 出错:`, error);
+
+    // 解析失败时的回退逻辑与“无数据”一致
+    if (arguments.length >= 2) {
+      return defaultValue as T;
+    } else {
+      return null;
+    }
   }
 }
 

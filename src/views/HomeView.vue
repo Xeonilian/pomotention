@@ -602,6 +602,7 @@ function onRepeatActivity(id: number) {
       id: Date.now(), // 设置新的 id
       status: "" as any,
       tagIds: undefined,
+      taskId: undefined,
       ...(selectActivity.dueRange && {
         dueRange: [null, selectActivity.dueRange[1]] as [number | null, string],
       }),
@@ -629,6 +630,7 @@ function onCreateChildActivity(id: number) {
         | undefined, // 如果需要清空状态，可以在这里设置
       tagIds: undefined,
       parentId: id,
+      taskId: undefined,
     };
     handleAddActivity(activityList.value, scheduleList.value, newActivity);
   }

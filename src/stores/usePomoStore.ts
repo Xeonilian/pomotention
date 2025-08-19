@@ -114,5 +114,50 @@ export const usePomoStore = defineStore("pomo", {
       // 清理localStorage
       localStorage.setItem(STORAGE_KEYS.DAILY_POMOS, "{}");
     },
+
+    /**
+     * 用于从文件导入场景：直接增加指定日期的番茄钟数量。
+     * 这个 action 只做增量，不影响当天的 todos 数组，且同时负责持久化。
+     * @param dailyIncrements - 一个记录了每日增量的对象，格式为 { 'YYYY-MM-DD': count }
+     */
+    importAndIncrementPomos(dailyIncrements: Record<string, number>) {
+      console.log("[Pinia Action]: 开始执行 importAndIncrementPomos。");
+      let totalIncrement = 0;
+
+      for (const [dateKey, increment] of Object.entries(dailyIncrements)) {
+        if (increment > 0) {
+          // 1. 更新 dailyPomos
+          const oldData = this.dailyPomos[dateKey] || { count: 0 };
+          this.dailyPomos[dateKey] = {
+            count: oldData.count + increment,
+            // diff 可以在这里不设置，或设为 increment
+            diff: increment,
+          };
+          totalIncrement += increment;
+        }
+      }
+
+      // 2. 更新 globalPomoCount
+      if (totalIncrement > 0) {
+        this.globalPomoCount += totalIncrement;
+        console.log(
+          `[Pinia Action]: 全局番茄钟总数增加了 ${totalIncrement}，新值为 ${this.globalPomoCount}`
+        );
+      }
+
+      // 3. !!! 最关键的一步：手动持久化变更 !!!
+      localStorage.setItem(
+        STORAGE_KEYS.DAILY_POMOS,
+        JSON.stringify(this.dailyPomos)
+      );
+      localStorage.setItem(
+        STORAGE_KEYS.GLOBAL_POMO_COUNT,
+        this.globalPomoCount.toString()
+      );
+
+      console.log(
+        "[Pinia Action]: dailyPomos 和 globalPomoCount 已成功持久化到 localStorage。"
+      );
+    },
   },
 });

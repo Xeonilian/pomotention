@@ -43,57 +43,88 @@ export function handleAddActivity(
  * 删除活动及关联的待办事项和日程
  */
 /**
- * 删除活动及其所有子孙、所有tagIds先扣count，顺带删待办和日程
+ * 安全地删除一个活动及其所有子孙。
+ * 在删除前会校验，如果任何子孙活动正在进行中 (status非空 或 taskId有值)，
+ * 则中断删除并返回 false。
+ * 成功删除则返回 true。
+ * @returns {boolean} - 操作是否成功执行。
  */
 export function handleDeleteActivity(
   activityList: Activity[],
   todoList: Todo[],
   scheduleList: Schedule[],
-  id: number
-) {
+  idToDelete: number
+): boolean {
+  // <--- 返回值是简单的 boolean
   const tagStore = useTagStore();
 
-  // 递归获取所有要删的activity的id（含id自己）
+  // 辅助函数：递归获取所有要删除的activity的id（含自身）
   function collectAllDescendantIds(
-    curId: number,
-    list: Activity[],
-    acc: Set<number>
-  ) {
-    acc.add(curId);
-    list.forEach((activity) => {
-      if (activity.parentId === curId) {
-        collectAllDescendantIds(activity.id, list, acc);
+    currentId: number,
+    allActivities: Activity[],
+    idSet: Set<number>
+  ): void {
+    idSet.add(currentId);
+    allActivities.forEach((activity) => {
+      if (activity.parentId === currentId) {
+        collectAllDescendantIds(activity.id, allActivities, idSet);
       }
     });
   }
-  // 获得所有要删的id集合
-  const toDeleteIds = new Set<number>();
-  collectAllDescendantIds(id, activityList, toDeleteIds);
 
-  // 对所有将要删掉的activity，处理tagIds count
+  // 1. 获取所有将要被删除的活动的ID集合
+  const idsToDelete = new Set<number>();
+  collectAllDescendantIds(idToDelete, activityList, idsToDelete);
+
+  // 2.【新增】安全校验逻辑
+  // 遍历所有待删除的活动，检查其子孙节点是否处于活动状态
+  for (const activity of activityList) {
+    // a. 必须是待删除的活动
+    // b. 必须不是用户点击删除的那个活动本身 (idToDelete)，我们只关心它的子孙
+    if (idsToDelete.has(activity.id) && activity.id !== idToDelete) {
+      const hasStatus = activity.status && (activity.status as any) !== "";
+      const hasTaskId =
+        activity.taskId !== undefined && activity.taskId !== null;
+
+      // 如果发现一个正在进行的子孙活动，则阻止删除
+      if (hasStatus || hasTaskId) {
+        console.warn(
+          `删除操作被阻止。子活动 "${activity.title}" (ID: ${activity.id}) 正在进行中，无法删除父项。`
+        );
+        return false; // <--- 中断操作，返回 false
+      }
+    }
+  }
+
+  // --- 如果校验通过，则执行原有的删除逻辑 ---
+
+  // 3. 对所有将要删掉的activity，处理tagIds的引用计数
   activityList.forEach((activity) => {
-    if (toDeleteIds.has(activity.id) && Array.isArray(activity.tagIds)) {
+    if (idsToDelete.has(activity.id) && Array.isArray(activity.tagIds)) {
       activity.tagIds.forEach((tagId) => tagStore.decrementTagCount(tagId));
     }
   });
 
-  // 删除关联 todo
+  // 4. 删除关联的 todo
   const filteredTodos = todoList.filter(
-    (todo) => !toDeleteIds.has(todo.activityId)
+    (todo) => !idsToDelete.has(todo.activityId)
   );
   todoList.splice(0, todoList.length, ...filteredTodos);
 
-  // 删除关联 schedule
+  // 5. 删除关联的 schedule
   const filteredSchedules = scheduleList.filter(
-    (schedule) => !toDeleteIds.has(schedule.activityId)
+    (schedule) => !idsToDelete.has(schedule.activityId)
   );
   scheduleList.splice(0, scheduleList.length, ...filteredSchedules);
 
-  // 删除活动本体
+  // 6. 删除活动本体
   const filteredActivities = activityList.filter(
-    (activity) => !toDeleteIds.has(activity.id)
+    (activity) => !idsToDelete.has(activity.id)
   );
   activityList.splice(0, activityList.length, ...filteredActivities);
+
+  // 7. 操作成功
+  return true;
 }
 
 /**
