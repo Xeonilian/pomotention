@@ -20,17 +20,17 @@ export const useTimerStore = defineStore("timer", () => {
   const totalTime = ref<number>(0); // 带有time的为秒
   const timerInterval = ref<number | null>(null);
   const startTime = ref<number | null>(null); // 添加开始时间记录
-  
-  const settingStore = useSettingStore()
-  const workDuration = ref(settingStore.settings.durations.workDuration)
-  const breakDuration = ref(settingStore.settings.durations.breakDuration)
+
+  const settingStore = useSettingStore();
+  const workDuration = ref(settingStore.settings.durations.workDuration);
+  const breakDuration = ref(settingStore.settings.durations.breakDuration);
   // 修改计算方式，基于实际工作时长
   // 原来的比例：r1=2分钟, r2=1分钟, w=10.5分钟, t=1分钟 (总共25分钟)
   // 现在基于实际工作时长计算
-  const r1Duration = computed(() => (2 / 25) *  workDuration.value);
-  const r2Duration = computed(() => (1 / 25) *  workDuration.value);
-  const wDuration = computed(() => (10.5 / 25) *  workDuration.value);
-  const tDuration = computed(() => (1 / 25) *  workDuration.value);
+  const r1Duration = computed(() => (2 / 25) * workDuration.value);
+  const r2Duration = computed(() => (1 / 25) * workDuration.value);
+  const wDuration = computed(() => (10.5 / 25) * workDuration.value);
+  const tDuration = computed(() => (1 / 25) * workDuration.value);
 
   // 在 useTimerStore.ts 中修正
   const redBarOffsetPercentage = computed(
@@ -150,7 +150,6 @@ export const useTimerStore = defineStore("timer", () => {
   watch(currentPhase, (newPhase, oldPhase) => {
     // console.log("Phase changed:", { oldPhase, newPhase });
     if (newPhase !== oldPhase && newPhase) {
-      console.log("newPhase");
       handlePhaseChange(newPhase);
     }
   });
@@ -171,7 +170,7 @@ export const useTimerStore = defineStore("timer", () => {
     isFromSequence.value = !!onFinish;
 
     // 播放工作开始声音
-    console.log("Playing work start sound");
+    // console.log("Playing work start sound");
     playSound(SoundType.WORK_START);
     // 开始播放白噪音
     startWhiteNoise();
@@ -237,7 +236,6 @@ export const useTimerStore = defineStore("timer", () => {
           // 如果不是来自序列，播放休息结束声音 !isFromSequence.value 取消这个
 
           playSound(SoundType.BREAK_END);
-          
 
           if (onFinish) {
             onFinish();
@@ -251,28 +249,32 @@ export const useTimerStore = defineStore("timer", () => {
   const breakReminderCount = ref<number>(5); // 可设置提醒密度（默认5段）
   const remindedSet = ref(new Set<number>());
 
-  watch([pomodoroState, timeRemaining], ([state, timeLeft]) => {
-    // 重置条件
-    if (state !== "breaking" || breakReminderCount.value < 2) {
-      remindedSet.value.clear();
-      return;
-    }
-
-    const segments = breakReminderCount.value;
-    const segmentLen = totalTime.value / segments;
-    const elapsed = totalTime.value - timeLeft;
-
-    for (let i = 1; i < segments; i++) {
-      const node = Math.round(segmentLen * i);
-      const timeDiff = Math.abs(elapsed - node);
-      const shouldTrigger = timeDiff <= 1 && !remindedSet.value.has(i);
-
-      if (shouldTrigger) {
-        playSound(SoundType.PHASE_BREAK);
-        remindedSet.value.add(i);
+  watch(
+    [pomodoroState, timeRemaining],
+    ([state, timeLeft]) => {
+      // 重置条件
+      if (state !== "breaking" || breakReminderCount.value < 2) {
+        remindedSet.value.clear();
+        return;
       }
-    }
-  }, { deep: true });
+
+      const segments = breakReminderCount.value;
+      const segmentLen = totalTime.value / segments;
+      const elapsed = totalTime.value - timeLeft;
+
+      for (let i = 1; i < segments; i++) {
+        const node = Math.round(segmentLen * i);
+        const timeDiff = Math.abs(elapsed - node);
+        const shouldTrigger = timeDiff <= 1 && !remindedSet.value.has(i);
+
+        if (shouldTrigger) {
+          playSound(SoundType.PHASE_BREAK);
+          remindedSet.value.add(i);
+        }
+      }
+    },
+    { deep: true }
+  );
 
   function cancelTimer(): void {
     // 如果正在工作，播放工作结束声音
