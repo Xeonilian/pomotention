@@ -2,11 +2,7 @@
 
 import { ref, computed, watch } from "vue";
 import { defineStore } from "pinia"; // ✅ 1. 导入 defineStore
-import {
-  loadTags,
-  saveTags,
-  generateTagId,
-} from "@/services/localStorageService";
+import { loadTags, saveTags } from "@/services/localStorageService";
 import type { Tag } from "@/core/types/Tag";
 
 // ✅ 2. 使用 defineStore 创建 store
@@ -27,7 +23,7 @@ export const useTagStore = defineStore("tagStore", () => {
     );
     if (exist) return exist;
     const tag: Tag = {
-      id: generateTagId(),
+      id: Date.now(),
       name: name.trim(),
       color,
       backgroundColor,

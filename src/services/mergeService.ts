@@ -204,35 +204,20 @@ async function mergeArrayDedupe(
     // 情况一：名称已存在 (Name Collision)
     if (localItemWithName) {
       const localId = localItemWithName[idField];
-      // 子情况：名称相同，ID也相同 -> 完全重复，直接跳过
+
       if (importId === localId) {
         // console.log(`[${storageKey}]: 名称为 "${importName}" 的项目完全相同，跳过。`);
       } else {
-        // [核心冲突] 子情况：名称相同，ID不同 -> 保留本地项，跳过导入项，并发出日志提醒
         console.warn(
           `[${storageKey}]: **冲突提醒** 名称为 "${importName}" 的项目已存在，但ID不同。` +
-            `本地ID为 "${localId}"，导入ID为 "${importId}"。` +
-            `请检查使用旧ID "${importId}" 的数据，可能需要手动更新为 "${localId}"。`
+            `本地ID为 "${localId}"，导入ID为 "${importId}"。`
         );
       }
       continue; // 跳过此导入项，不进行任何添加
     }
 
-    // 情况二：名称不存在，但ID已存在 (ID Collision)
+    // 情况二：名称不存在，但ID已存在 (ID Collision) 修改为 timeString 不可能了
     if (localIdSet.has(importId)) {
-      // [核心冲突] 为这个新名称的项目生成一个全新的ID
-      const newId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      console.warn(
-        `[${storageKey}]: **冲突提醒** 项目 "${importName}" 的ID "${importId}" 已被占用。` +
-          `已为其分配新ID "${newId}"。` +
-          `请检查使用旧ID "${importId}" 的数据，可能需要手动更新为新ID "${newId}"。`
-      );
-      // 创建一个新对象，避免直接修改原始导入数据
-      const newItem = { ...importItem, [idField]: newId };
-      itemsToAdd.push(newItem);
-      // 将新生成的ID也加入Set，防止导入数据内部也有ID冲突
-      localIdSet.add(newId);
-      continue;
     }
 
     // 情况三：名称和ID都是全新的 -> 直接添加

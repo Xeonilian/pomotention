@@ -115,7 +115,6 @@ import {
   NLayout,
 } from "naive-ui";
 import { Template } from "@/core/types/Template";
-import { generateTemplateId } from "@/services/localStorageService";
 
 const props = defineProps<{
   show: boolean;
@@ -199,7 +198,7 @@ const handleConfirm = () => {
   if (addNew.value) {
     // 添加
     const newTemplate = {
-      id: generateTemplateId(),
+      id: Date.now(),
       title: editableTemplateTitle.value.trim(),
       content: editableTemplateContent.value.trim(),
     };
