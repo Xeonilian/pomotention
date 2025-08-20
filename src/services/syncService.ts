@@ -117,19 +117,19 @@ export async function downloadFromCloud(): Promise<SyncResult> {
       currentDeviceId: localDeviceId,
     };
     updateSyncStatus(localSyncStatus);
-    // 刷新页面以同步UI
-    window.location.reload();
 
     return {
       status: SyncStatus.SUCCESS,
       message: "下载成功，本地数据已更新",
       timestamp: Date.now(),
+      reloadWindow: true,
     };
   } catch (error: any) {
     return {
       status: SyncStatus.ERROR,
       message: "下载过程异常",
       timestamp: Date.now(),
+      reloadWindow: false,
       error:
         error instanceof Error
           ? error

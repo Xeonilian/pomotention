@@ -23,6 +23,7 @@ interface DownloadResult {
   success: boolean;
   downloadedKeys: string[];
   skippedKeys: string[];
+  errors?: Record<string, string>;
 }
 
 /**
@@ -30,36 +31,101 @@ interface DownloadResult {
  * @param cloudData 云端数据
  * @returns 下载结果
  */
+
+function isEmptyCollection(v: any) {
+  if (Array.isArray(v)) return v.length === 0;
+  if (v && typeof v === "object") return Object.keys(v).length === 0;
+  return false;
+}
+
 export async function replaceLocalData(
-  cloudData: Record<string, any>
+  cloudData: Record<string, any>,
+  opts?: {
+    // null 是否视为“云端无内容但有键”？这里建议按“空内容”处理：跳过
+    treatNullAsEmpty?: boolean; // 默认 true -> null 当作空内容，跳过
+    stringifyBeforeSave?: boolean; // saveData 是否需要字符串
+    verbose?: boolean;
+  }
 ): Promise<DownloadResult> {
+  const {
+    treatNullAsEmpty = true,
+    stringifyBeforeSave = false,
+    verbose = false,
+  } = opts || {};
+
   const downloadedKeys: string[] = [];
   const skippedKeys: string[] = [];
+  const errors: Record<string, string> = {};
 
-  // 遍历所有需要下载的键
-  for (const storageKey of DOWNLOAD_KEYS) {
-    const cloudValue = cloudData[storageKey];
+  const hasOwn = (obj: any, key: string) =>
+    obj && Object.prototype.hasOwnProperty.call(obj, key);
+
+  const sizeOf = (v: any) => {
+    try {
+      if (typeof v === "string") return v.length;
+      return JSON.stringify(v)?.length ?? 0;
+    } catch {
+      return -1;
+    }
+  };
+
+  for (const rawKey of DOWNLOAD_KEYS) {
+    const key = String(rawKey);
 
     try {
-      // 不管本地有没有数据，都用云端数据完全替换
-      // 如果云端没有这个字段，直接删除本地对应项
-      if (cloudValue !== undefined) {
-        saveData(storageKey, cloudValue);
-      } else {
-        removeData(storageKey); // 使用通用删除函数
+      // 1) 云端没有该键 -> 跳过（保留本地）
+      if (!hasOwn(cloudData, key)) {
+        if (verbose) console.log(`[DL][skip-missing] ${key}`);
+        skippedKeys.push(key);
+        continue;
       }
 
-      downloadedKeys.push(storageKey);
-    } catch (error) {
-      console.error(`替换 ${storageKey} 时出错:`, error);
-      skippedKeys.push(storageKey);
+      const cloudValue = cloudData[key];
+
+      // 2) 空内容（[] / {} / 以及 treatNullAsEmpty 时的 null）-> 跳过（保留本地）
+      const isNullAndTreatAsEmpty = cloudValue === null && treatNullAsEmpty;
+      if (isNullAndTreatAsEmpty || isEmptyCollection(cloudValue)) {
+        if (verbose)
+          console.log(
+            `[DL][skip-empty] ${key} type=${
+              cloudValue === null
+                ? "null"
+                : Array.isArray(cloudValue)
+                ? "array"
+                : "object"
+            } size=${sizeOf(cloudValue)}`
+          );
+        skippedKeys.push(key);
+        continue;
+      }
+
+      // 3) 其余非空值 -> 覆盖本地
+      const toSave =
+        stringifyBeforeSave && typeof cloudValue !== "string"
+          ? JSON.stringify(cloudValue)
+          : cloudValue;
+
+      if (verbose)
+        console.log(
+          `[DL][save] ${key} type=${typeof cloudValue} size=${sizeOf(
+            cloudValue
+          )}`
+        );
+
+      await saveData(key, toSave);
+      downloadedKeys.push(key);
+    } catch (e: any) {
+      console.error(`替换 ${key} 时出错:`, e);
+      errors[key] = e?.message || String(e);
+      skippedKeys.push(key);
     }
   }
 
   return {
-    success: skippedKeys.length === 0,
+    success: Object.keys(errors).length === 0,
     downloadedKeys,
     skippedKeys,
+    errors: Object.keys(errors).length ? errors : undefined,
   };
 }
 

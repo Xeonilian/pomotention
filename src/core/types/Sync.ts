@@ -78,4 +78,5 @@ export interface SyncResult {
   message?: string;
   timestamp?: number;
   error?: Error;
+  reloadWindow?: boolean;
 }

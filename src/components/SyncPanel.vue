@@ -126,6 +126,7 @@ const syncAction = ref<"upload" | "download" | null>(null);
 const isFirstTime = ref(true);
 const isLoaded = ref(false);
 const importReport = ref<ImportReport | null>(null);
+const syncResult = ref<SyncResult | null>(null);
 
 // 计算属性
 const showAutoSync = computed(() => isLoaded.value && isFirstTime.value);
@@ -161,13 +162,7 @@ onMounted(async () => {
   isLoaded.value = true;
 });
 
-onUnmounted(() => {
-  // 在组件即将被销毁时，检查 reloadWindow 的值
-  if (importReport.value && importReport.value.shouldReload)
-    window.location.reload();
-});
-
-// 处理数据导入
+// 处理数据文件导入
 async function handleImport() {
   importReport.value = null;
   debugInfo.value = "";
@@ -191,7 +186,7 @@ async function handleImport() {
   );
 }
 
-// 处理数据导出
+// 处理数据文件导出
 async function handleExport() {
   try {
     const localdata = collectLocalData();
@@ -245,7 +240,7 @@ async function handleAutoSync() {
   }
 }
 
-// 处理上传
+// 处理文件云端上传
 async function handleUpload() {
   syncing.value = true;
   syncAction.value = "upload";
@@ -263,7 +258,7 @@ async function handleUpload() {
   }
 }
 
-// 处理下载
+// 处理文件云端下载
 async function handleDownload() {
   syncing.value = true;
   syncAction.value = "download";
@@ -271,8 +266,8 @@ async function handleDownload() {
   debugInfo.value = "";
 
   try {
-    const result: SyncResult = await downloadFromCloud();
-    handleSyncResult(result);
+    syncResult.value = await downloadFromCloud();
+    handleSyncResult(syncResult.value);
   } catch (error: any) {
     handleSyncError(error);
   } finally {
@@ -329,6 +324,16 @@ function handleSyncError(error: any) {
     2
   );
 }
+
+onUnmounted(() => {
+  // 在组件即将被销毁时，检查 reloadWindow 的值
+  if (importReport.value && importReport.value.shouldReload) {
+    window.location.reload();
+  }
+  if (syncResult.value && syncResult.value.reloadWindow) {
+    window.location.reload();
+  }
+});
 </script>
 
 <style scoped>
