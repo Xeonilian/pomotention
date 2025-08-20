@@ -114,13 +114,18 @@ export const useTagStore = defineStore("tagStore", () => {
     if (tag) setTagCount(id, Math.max(0, tag.count - 1));
   }
 
-  function incrementTagCount(id: number) {
+  // 函数定义，为第二个参数 amount 设置默认值 1
+  function incrementTagCount(id: number, amount: number = 1) {
     const tag = tags.value.find((t) => t.id === id);
     if (tag) {
-      // 直接调用 setTagCount，逻辑复用
-      setTagCount(id, tag.count + 1);
+      // 使用传入的 amount 进行累加
+      // 注意：这里我们假设 setTagCount 是“设置”值的函数，而不是“累加”值的函数
+      // 所以我们要计算出目标值 (tag.count + amount) 再传给它
+      const newCount = (tag.count || 0) + amount;
+      setTagCount(id, newCount);
     }
   }
+
   watch(
     tags,
     () => {

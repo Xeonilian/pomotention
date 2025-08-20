@@ -146,6 +146,7 @@ export function removeTemplatesStorage(): void {
 
 /**
  * 为模板生成唯一的自增 ID
+ * * 不再使用 引起同步冲突
  * @returns 新模板的 ID
  */
 export function generateTemplateId(): number {
@@ -178,6 +179,7 @@ export function removeTagsStorage(): void {
 
 /**
  * 为标签生成唯一的自增 ID
+ * 不再使用 引起同步冲突
  * @returns 新标签的 ID
  */
 export function generateTagId(): number {

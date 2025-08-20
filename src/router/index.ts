@@ -15,7 +15,7 @@ const routes = [
       { path: "statistics", component: StatisticsView }, // 统计页
       { path: "settings", component: SettingView }, // 设置页
       { path: "help", component: HelpView }, // 帮助页
-      { path: "search", component: SearchView }, // 帮助页
+      { path: "search", component: SearchView }, // 搜索页
     ],
   },
 ];

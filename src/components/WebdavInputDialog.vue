@@ -55,7 +55,7 @@ import { NModal, NInput, NSpace, NButton } from "naive-ui";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { WebDAVStorageAdapter } from "@/services/storageAdapter";
 import { collectLocalData } from "@/services/localStorageService";
-import { handleFileImport } from "@/services/mergeService";
+import { handleFileImport, type ImportReport } from "@/services/mergeService";
 import { open } from "@tauri-apps/plugin-dialog";
 import { writeTextFile, readDir } from "@tauri-apps/plugin-fs";
 import { join } from "@tauri-apps/api/path";
@@ -87,6 +87,7 @@ const originalSettings = ref({
   webdavId: "",
   webdavKey: "",
 });
+const importReport = ref<ImportReport | null>(null);
 
 // 每次弹窗打开都同步store到输入框
 watch(
@@ -149,9 +150,12 @@ function handleCancel() {
   settingStore.settings.webdavKey = originalSettings.value.webdavKey;
 
   emit("update:show", false);
+  if (importReport.value && importReport.value.shouldReload)
+    window.location.reload();
 }
 
 async function handleImport() {
+  importReport.value = null;
   const dirPath = await open({ directory: true, multiple: false });
   if (!dirPath || typeof dirPath !== "string") return;
 
@@ -164,7 +168,7 @@ async function handleImport() {
       filePaths[entry.name] = fullPath;
     }
   }
-  await handleFileImport(filePaths);
+  importReport.value = await handleFileImport(filePaths);
 }
 
 // 处理数据导出
@@ -223,5 +227,7 @@ function restoreSettings() {
   }
   // 如果测试通过了 (passTest.value is true)，就什么都不做，
   // 让 store 保留已经被 watch 更新的新值。
+  if (importReport.value && importReport.value.shouldReload)
+    window.location.reload();
 }
 </script>

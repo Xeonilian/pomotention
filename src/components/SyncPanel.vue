@@ -12,17 +12,27 @@
     <div class="device-info">
       <n-text>设备ID: {{ deviceId }}</n-text>
     </div>
-
-    <!-- 导出按钮 -->
-    <n-button
-      type="primary"
-      secondary
-      :disabled="syncing"
-      @click="handleExport"
-    >
-      导出数据到本地
-    </n-button>
-
+    <n-space :vertical="false" :wrap="false">
+      <!-- 导出按钮 -->
+      <n-button
+        type="success"
+        secondary
+        :disabled="syncing"
+        @click="handleExport"
+        style="width: 189px"
+      >
+        导出数据到本地
+      </n-button>
+      <n-button
+        type="info"
+        secondary
+        :disabled="syncing"
+        style="width: 189px"
+        @click="handleImport"
+      >
+        导入数据到本地
+      </n-button>
+    </n-space>
     <!-- 同步按钮 -->
     <div class="sync-actions">
       <!-- 首次同步或异常时显示自动同步按钮 -->
@@ -82,7 +92,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, computed, onUnmounted } from "vue";
 import {
   NButton,
   NSpin,
@@ -102,8 +112,10 @@ import {
 import type { SyncResult } from "@/core/types/Sync";
 import { SyncStatus } from "@/core/types/Sync";
 import { collectLocalData } from "@/services/localStorageService";
+import { handleFileImport, type ImportReport } from "@/services/mergeService";
 import { open } from "@tauri-apps/plugin-dialog";
-import { writeTextFile } from "@tauri-apps/plugin-fs";
+import { writeTextFile, readDir } from "@tauri-apps/plugin-fs";
+import { join } from "@tauri-apps/api/path";
 
 // 响应式数据
 const syncing = ref(false);
@@ -113,6 +125,7 @@ const debugInfo = ref("");
 const syncAction = ref<"upload" | "download" | null>(null);
 const isFirstTime = ref(true);
 const isLoaded = ref(false);
+const importReport = ref<ImportReport | null>(null);
 
 // 计算属性
 const showAutoSync = computed(() => isLoaded.value && isFirstTime.value);
@@ -147,6 +160,36 @@ onMounted(async () => {
   }
   isLoaded.value = true;
 });
+
+onUnmounted(() => {
+  // 在组件即将被销毁时，检查 reloadWindow 的值
+  if (importReport.value && importReport.value.shouldReload)
+    window.location.reload();
+});
+
+// 处理数据导入
+async function handleImport() {
+  importReport.value = null;
+  debugInfo.value = "";
+  const dirPath = await open({ directory: true, multiple: false });
+  if (!dirPath || typeof dirPath !== "string") return;
+
+  const entries = await readDir(dirPath);
+  const filePaths: { [key: string]: string } = {}; // key 是文件名，value 是完整路径
+
+  for (const entry of entries) {
+    if (entry.name && entry.name.toLowerCase().endsWith(".json")) {
+      const fullPath = await join(dirPath, entry.name);
+      filePaths[entry.name] = fullPath;
+    }
+  }
+  importReport.value = await handleFileImport(filePaths);
+  debugInfo.value = JSON.stringify(
+    importReport.value, // 直接传入报告对象
+    null, // replacer 函数，我们不需要，所以是 null
+    2 // space 参数，2个空格缩进，使其美观
+  );
+}
 
 // 处理数据导出
 async function handleExport() {

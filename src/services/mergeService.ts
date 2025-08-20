@@ -4,6 +4,27 @@ import { loadData, saveData } from "@/services/localStorageService";
 import { usePomoStore } from "@/stores/usePomoStore";
 import { Todo } from "@/core/types/Todo";
 import { readTextFile } from "@tauri-apps/plugin-fs";
+import { useTagStore } from "@/stores/useTagStore";
+import { Activity } from "@/core/types/Activity";
+
+// 定义文件处理结果的详细类型
+export interface FileProcessResult {
+  fileName: string; // 处理的文件名
+  storageKey: string; // 对应的 localStorage Key
+  status: "SUCCESS" | "SKIPPED" | "EMPTY" | "ERROR"; // 处理状态
+  strategy: string; // 使用的合并策略
+  addedCount: number; // 新增的项目数量
+  skippedCount: number; // 因重复而跳过的项目数量
+  idConflictCount: number; // 发生ID冲突并重新生成ID的数量
+  message: string; // 一段总结信息
+}
+
+// 新增：定义整个导入操作的总结报告类型
+export interface ImportReport {
+  overallStatus: "COMPLETE" | "PARTIAL_ERROR" | "FATAL_ERROR"; // 总体状态
+  results: FileProcessResult[]; // 每个文件的处理结果数组
+  shouldReload: boolean; // 是否需要刷新UI
+}
 
 // 合并策略枚举
 export const MERGE_STRATEGIES = {
@@ -23,8 +44,6 @@ export const MERGE_KEYS = {
   //   strategy: MERGE_STRATEGIES.SKIP,
   // },
 
-  // 策略2：替换 删除对应 KEY的localStorage
-  // 然后存入新内容，这样很容易出错，把错误的信息完全替换，我还没有重置功能
   [STORAGE_KEYS.GLOBAL_SETTINGS]: {
     strategy: MERGE_STRATEGIES.SKIP,
   },
@@ -34,29 +53,7 @@ export const MERGE_KEYS = {
   [STORAGE_KEYS.TIMETABLE_WORK]: {
     strategy: MERGE_STRATEGIES.SKIP,
   },
-
-  // 策略3：数组合并（时间戳ID，冲突就跳过）将内容追加到localStorage对应KEY中
-  [STORAGE_KEYS.ACTIVITY]: {
-    strategy: MERGE_STRATEGIES.ARRAY_WITH_ID,
-    idField: "id",
-  },
-  [STORAGE_KEYS.SCHEDULE]: {
-    strategy: MERGE_STRATEGIES.ARRAY_WITH_ID,
-    idField: "id",
-  },
-  [STORAGE_KEYS.TASK]: {
-    strategy: MERGE_STRATEGIES.ARRAY_WITH_ID,
-    idField: "id",
-  },
-
-  // 策略4：数组合并（时间戳ID，冲突就跳过，合并就启动计算）
-  [STORAGE_KEYS.TODO]: {
-    strategy: MERGE_STRATEGIES.ARRAY_WITH_ID,
-    idField: "id",
-    afterMerge: "INCREMENTAL_UPDATE_POMOS",
-  },
-
-  // 策略5：数组合并+去重（ID+名称双重验证），会发生ID占用，
+  // 策略2：数组合并+去重（ID+名称双重验证），会发生ID占用，
   // A App数据，B 导入数据，默认A优先
   // id=!id name=!name，KEEP
   // id=id name=name，SKIP
@@ -76,6 +73,31 @@ export const MERGE_KEYS = {
     idField: "id",
     dedupeBy: "name",
   },
+
+  // 策略3：数组合并（时间戳ID，冲突就跳过）将内容追加到localStorage对应KEY中
+  [STORAGE_KEYS.ACTIVITY]: {
+    strategy: MERGE_STRATEGIES.ARRAY_WITH_ID,
+    idField: "id",
+    afterMerge: "INCREMENTAL_COUNT",
+  },
+  [STORAGE_KEYS.SCHEDULE]: {
+    strategy: MERGE_STRATEGIES.ARRAY_WITH_ID,
+    idField: "id",
+  },
+  [STORAGE_KEYS.TASK]: {
+    strategy: MERGE_STRATEGIES.ARRAY_WITH_ID,
+    idField: "id",
+  },
+
+  // 策略4：数组合并（时间戳ID，冲突就跳过，合并就启动计算）
+  [STORAGE_KEYS.TODO]: {
+    strategy: MERGE_STRATEGIES.ARRAY_WITH_ID,
+    idField: "id",
+    afterMerge: "INCREMENTAL_UPDATE_POMOS",
+  },
+
+  // 策略5：替换 删除对应 KEY的localStorage
+  // 然后存入新内容，这样很容易出错，把错误的信息完全替换，我还没有重置功能
 } as const;
 
 // 文件名到 STORAGE_KEYS 的映射表（基于 STORAGE_KEYS 的实际值调整）
@@ -113,19 +135,23 @@ async function mergeArrayWithId(
   storageKey: string,
   importData: any[],
   idField: string
-): Promise<DataItem[]> {
+): Promise<{ itemsToAdd: DataItem[]; itemsToSkip: DataItem[] }> {
   console.log(
     `[${storageKey}]: 策略为数组合并 (ARRAY_WITH_ID)，ID字段为 '${idField}'。`
   );
   const localData: DataItem[] = loadData<DataItem[]>(storageKey) || [];
   const existingIds = new Set(localData.map((item) => item[idField]));
-  const itemsToAdd = importData.filter((importItem) => {
+
+  const itemsToAdd: DataItem[] = [];
+  const itemsToSkip: DataItem[] = [];
+
+  importData.forEach((importItem) => {
     const id = importItem[idField];
-    // 如果导入项没有ID，或者ID已经存在，则过滤掉
     if (id === undefined || existingIds.has(id)) {
-      return false;
+      itemsToSkip.push(importItem); // 如果ID已存在或无效，则计入跳过列表
+    } else {
+      itemsToAdd.push(importItem);
     }
-    return true;
   });
 
   // 4. 如果有新项目，则合并并一次性写回
@@ -138,7 +164,7 @@ async function mergeArrayWithId(
   } else {
     console.log(`[${storageKey}]: 无新项目可合并。`);
   }
-  return itemsToAdd;
+  return { itemsToAdd, itemsToSkip };
 }
 
 /**
@@ -157,7 +183,11 @@ async function mergeArrayDedupe(
   importData: DataItem[],
   idField: string,
   dedupeBy: string
-): Promise<void> {
+): Promise<{
+  itemsToAdd: DataItem[];
+  itemsToSkip: DataItem[];
+  idConflictCount: number;
+}> {
   // 返回 void 因为所有操作（保存/日志）都在函数内部完成
   console.log(
     `[${storageKey}]: 执行数组去重合并策略，ID字段：'${idField}', 去重字段：'${dedupeBy}'。`
@@ -166,8 +196,7 @@ async function mergeArrayDedupe(
   // 1. 加载本地数据
   const localData: DataItem[] = loadData(storageKey, []);
 
-  // 2. 为了高效查找，将本地数据处理成Map和Set
-  // localNameMap: 用于通过名称快速查找本地的完整项目 { name -> {id, name, ...} }
+  // 2. MapId localNameMap: 用于通过名称快速查找本地的完整项目 { name -> {id, name, ...} }
   const localNameMap = new Map<string, DataItem>();
   // localIdSet: 用于快速判断某个ID是否已在本地存在
   const localIdSet = new Set<string>();
@@ -183,12 +212,14 @@ async function mergeArrayDedupe(
 
   // 3. 遍历导入数据，识别冲突并准备新增列表
   const itemsToAdd: DataItem[] = []; // 存放最终需要被添加的新项目
+  const itemsToSkip: DataItem[] = [];
+
+  let idConflictCount = 0;
 
   for (const importItem of importData) {
     const importName = importItem[dedupeBy];
     const importId = importItem[idField];
 
-    // 如果导入项缺少关键的去重字段或ID字段，则跳过
     if (!importName || !importId) {
       console.warn(
         `[${storageKey}]: 发现一个导入项缺少'${dedupeBy}'或'${idField}'字段，已跳过。`,
@@ -197,33 +228,44 @@ async function mergeArrayDedupe(
       continue;
     }
 
-    const localItemWithName = localNameMap.get(importName);
-
-    // --- 开始判断冲突 ---
-
-    // 情况一：名称已存在 (Name Collision)
-    if (localItemWithName) {
-      const localId = localItemWithName[idField];
-
-      if (importId === localId) {
-        // console.log(`[${storageKey}]: 名称为 "${importName}" 的项目完全相同，跳过。`);
-      } else {
-        console.warn(
-          `[${storageKey}]: **冲突提醒** 名称为 "${importName}" 的项目已存在，但ID不同。` +
-            `本地ID为 "${localId}"，导入ID为 "${importId}"。`
-        );
-      }
-      continue; // 跳过此导入项，不进行任何添加
-    }
-
-    // 情况二：名称不存在，但ID已存在 (ID Collision) 修改为 timeString 不可能了
+    // 情况一：ID 已存在 (ID Collision)
     if (localIdSet.has(importId)) {
-    }
+      // ID相同，需要检查 name 是否也相同
+      const localItemWithId = localData.find(
+        (item) => item[idField] === importId
+      );
 
-    // 情况三：名称和ID都是全新的 -> 直接添加
-    itemsToAdd.push(importItem);
-    // 将此新ID加入Set，以正确处理后续导入项的ID冲突检查
-    localIdSet.add(importId);
+      // 确保找到了本地项目（理论上 localIdSet.has(importId) 为 true 就一定能找到）
+      if (localItemWithId) {
+        // ID相同，Name也相同 -> 完全重复，跳过
+        if (importName === localItemWithId[dedupeBy]) {
+          itemsToSkip.push(importItem); // 一样所以两边都可能有count，所以要相加
+          continue;
+        }
+        // ID相同，Name不同 -> ID冲突
+        else {
+          console.warn(
+            `[${storageKey}]: **ID冲突** ID "${importId}" 已被本地项目 "${localItemWithId[dedupeBy]}" 使用。` +
+              `将为导入项目 "${importName}" 分配一个新ID。`
+          );
+          idConflictCount++;
+          // 修改导入项的ID为一个新的唯一值
+          importItem[idField] = Date.now();
+
+          // 将修改后的项加入待添加列表
+          itemsToAdd.push(importItem);
+          // 把新生成的ID也加入Set中，防止导入数据内部自己有重复ID导致后续逻辑出错
+          localIdSet.add(importItem[idField]);
+        }
+      }
+    }
+    // 情况二：ID 不存在 -> 直接添加
+    else {
+      // ID是全新的，直接添加
+      itemsToAdd.push(importItem);
+      // 将此新ID加入Set，以正确处理后续导入项的ID检查
+      localIdSet.add(importId);
+    }
   }
 
   // 4. 将处理好的新增列表与本地数据合并，并保存
@@ -236,13 +278,20 @@ async function mergeArrayDedupe(
   } else {
     console.log(`[${storageKey}]: 无新项目可合并或更新。`);
   }
+  return { itemsToAdd, itemsToSkip, idConflictCount };
 }
 
 // 主要的合并服务函数
 export async function handleFileImport(fileMap: {
   [fileName: string]: string;
-}): Promise<void> {
-  // 这里先用 void，后续可以改成返回一个结果对象
+}): Promise<ImportReport> {
+  // 1. 初始化报告对象
+  const report: ImportReport = {
+    overallStatus: "COMPLETE",
+    results: [],
+    shouldReload: false, // 默认为 false
+  };
+
   const allKeys = Object.keys(MERGE_KEYS);
 
   for (const fileName in fileMap) {
@@ -250,27 +299,49 @@ export async function handleFileImport(fileMap: {
       const storageKey = FILE_TO_KEY_MAP[fileName];
       const filePath = fileMap[fileName];
 
+      // 初始化当前文件的处理结果
+      const fileResult: FileProcessResult = {
+        fileName,
+        storageKey: storageKey || "N/A",
+        status: "SKIPPED",
+        strategy: "N/A",
+        addedCount: 0,
+        skippedCount: 0,
+        idConflictCount: 0,
+        message: `文件 "${fileName}" 不在预设的合并配置中，已被跳过。`,
+      };
+
       // 1. 检查文件名是否在处理映射表中
       if (!storageKey || !allKeys.includes(storageKey)) {
         console.warn(`文件 "${fileName}" 不在预设的合并配置中，将被跳过。`);
         continue;
       }
 
+      const config = MERGE_KEYS[storageKey as keyof typeof MERGE_KEYS];
+
+      fileResult.strategy = config.strategy;
+
       try {
         // 2. 读取文件内容
         const fileContent = await readTextFile(filePath);
         if (!fileContent) {
+          fileResult.status = "EMPTY";
+          fileResult.message = `文件 "${fileName}" 内容为空。`;
           console.warn(`文件 "${fileName}" 内容为空，跳过处理。`);
           continue;
         }
+
         const importData = JSON.parse(fileContent);
         let itemsToAdd: DataItem[] = [];
-        // 3. 根据预设的合并策略进行操作
-        const config = MERGE_KEYS[storageKey as keyof typeof MERGE_KEYS];
+        let itemsToSkip: DataItem[] = [];
+        let idConflicts = 0;
 
         switch (config.strategy) {
           case MERGE_STRATEGIES.SKIP:
             await mergeSkip(storageKey, importData);
+
+            fileResult.status = "SKIPPED";
+            fileResult.message = "策略为跳过，未做任何操作。";
             break;
 
           // case MERGE_STRATEGIES.REPLACE:
@@ -285,11 +356,13 @@ export async function handleFileImport(fileMap: {
               continue;
             }
             // @ts-ignore
-            itemsToAdd = await mergeArrayWithId(
+            const resultWithId = await mergeArrayWithId(
               storageKey,
               importData,
               config.idField
             );
+            itemsToAdd = resultWithId.itemsToAdd;
+            itemsToSkip = resultWithId.itemsToSkip;
 
             break;
 
@@ -301,30 +374,58 @@ export async function handleFileImport(fileMap: {
               continue;
             }
             // @ts-ignore
-            await mergeArrayDedupe(
+            const resultDedupe = await mergeArrayDedupe(
               storageKey,
               importData,
               config.idField,
               config.dedupeBy
             );
+            itemsToAdd = resultDedupe.itemsToAdd;
+            itemsToSkip = resultDedupe.itemsToSkip;
+            idConflicts = resultDedupe.idConflictCount;
             break;
 
           default:
             console.warn(`未知的合并策略: ${storageKey}`);
             break;
         }
-        console.log(itemsToAdd, config);
-        if ("afterMerge" in config && itemsToAdd.length > 0) {
-          console.log("计算");
-          await updatePomoCounts(itemsToAdd as Todo[]);
+        fileResult.status = "SUCCESS";
+        fileResult.addedCount = itemsToAdd.length;
+        fileResult.skippedCount = itemsToSkip.length;
+        fileResult.idConflictCount = idConflicts;
+        fileResult.message = `成功处理: 新增 ${itemsToAdd.length} 项, 跳过 ${itemsToSkip.length} 项, ID冲突 ${idConflicts} 项。`;
+
+        // 如果有任何数据被添加或更新，则认为需要刷新
+        if (itemsToAdd.length > 0 || idConflicts > 0) {
+          report.shouldReload = true;
         }
-      } catch (error) {
+
+        if ("afterMerge" in config && itemsToAdd.length > 0) {
+          fileResult.message += " 触发了后续计算。";
+          if (config.afterMerge === "INCREMENTAL_UPDATE_POMOS") {
+            await updatePomoCounts(itemsToAdd as Todo[]);
+          } else if (config.afterMerge === "INCREMENTAL_COUNT") {
+            await updateTagCounts(itemsToAdd as Activity[]);
+          }
+        }
+      } catch (error: any) {
         console.error(`处理文件 "${fileName}" 时发生错误:`, error);
+        report.overallStatus = "PARTIAL_ERROR"; // 发生任何错误，都标记为部分错误
+        fileResult.status = "ERROR";
+        fileResult.message = `处理时发生错误: ${error.message}`;
       }
+      report.results.push(fileResult);
     }
   }
-  console.log("所有文件处理完毕。");
-  // 在这里可以触发后续操作，比如重新计算、刷新UI等
+  if (
+    report.overallStatus === "PARTIAL_ERROR" &&
+    report.results.every((r) => r.status === "ERROR")
+  ) {
+    report.overallStatus = "FATAL_ERROR";
+  }
+
+  console.log("所有文件处理完毕，生成报告:", report);
+  return report;
 }
 
 /**
@@ -376,4 +477,31 @@ async function updatePomoCounts(newTodos: Todo[]): Promise<void> {
   } else {
     console.log("Pomo更新：在新增的Todo中未发现有效的番茄钟记录。");
   }
+}
+/**
+ * 从导入的 Tag 列表中，根据其 'count' 属性，更新全局的标签统计。
+ * @param newTags - 从文件导入的新增 Tag 数组。
+ */
+async function updateTagCounts(newActivitys: Activity[]): Promise<void> {
+  // 1. 如果没有新增的 Tag，或者数组为空，则提前结束。
+  if (!newActivitys || newActivitys.length === 0) {
+    console.log("Activitys更新：没有新增的Activitys，跳过计算。");
+    return;
+  }
+
+  // 2. 获取 Pinia Store 实例。
+  const tagStore = useTagStore();
+
+  // 3. 遍历所有导入的新标签。
+  for (const activity of newActivitys) {
+    if (activity.tagIds && activity.tagIds.length > 0) {
+      // 4. 调用 Store 中定义的 Action 来增加计数值。
+      // 函数的第二个参数 (amount) 就是这个导入标签自身的 count 值。
+      for (const tagId of activity.tagIds) {
+        tagStore.incrementTagCount(tagId);
+      }
+    }
+  }
+
+  console.log("Tag更新：所有标签计数值更新完毕。");
 }

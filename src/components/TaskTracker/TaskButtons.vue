@@ -97,11 +97,7 @@ import {
   CalendarAssistant20Regular,
   CalligraphyPen20Regular,
 } from "@vicons/fluent";
-import {
-  loadTemplates,
-  saveTemplates,
-  generateTemplateId,
-} from "@/services/localStorageService";
+import { loadTemplates, saveTemplates } from "@/services/localStorageService";
 import type { Template } from "@/core/types/Template";
 
 // Props
@@ -173,7 +169,7 @@ const handleTemplateConfirm = (template: Template) => {
   } else {
     // 新增模板处理，确保生成一个新的 ID
     const newTemplate: Template = {
-      id: generateTemplateId(), // 生成新的 ID
+      id: Date.now(), // 生成新的 ID
       title: template.title,
       content: template.content,
     };

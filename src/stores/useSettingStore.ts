@@ -38,7 +38,7 @@ export interface GlobalSettings {
 
 // 默认设置
 const defaultSettings: GlobalSettings = {
-  checkForUpdate: true,
+  checkForUpdate: false,
   durations: PomodoroDurations,
   style: TimerStyleDefaults,
   miniModeRefactor: 1,

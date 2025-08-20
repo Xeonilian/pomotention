@@ -196,7 +196,7 @@ const handleCopy = () => {
 
 const handleConfirm = () => {
   if (addNew.value) {
-    // 添加
+    // 确认添加
     const newTemplate = {
       id: Date.now(),
       title: editableTemplateTitle.value.trim(),
@@ -208,7 +208,7 @@ const handleConfirm = () => {
       resetForm();
     }
   } else if (selectedTemplate.value) {
-    // 修改
+    // 确认修改
     const updatedTemplate = {
       ...selectedTemplate.value,
       title: editableTemplateTitle.value.trim(),
