@@ -69,7 +69,8 @@ export function getTodoDisplayPomoCount(todo: Todo): number {
   if (todo.status === "done") {
     return _getTodoRealPomoCount(todo);
   } else {
-    return _getTodoEstPomoCount(todo);
+    const est = _getTodoEstPomoCount(todo);
+    return Math.max(1, est);
   }
 }
 
@@ -213,7 +214,8 @@ export function generateEstimatedTodoSegments(
 ): TodoSegment[] {
   const todoSegments: TodoSegment[] = [];
 
-  const segByCategory: Record<string, PomodoroSegment[]> = {
+  // 1) 按类别准备 segment 列表（含 work/break，已排序）
+  const segByCategory: Record<"working" | "living", PomodoroSegment[]> = {
     working: pomodoroSegments
       .filter(
         (seg) =>
@@ -230,11 +232,114 @@ export function generateEstimatedTodoSegments(
       .sort((a, b) => a.start - b.start),
   };
 
-  const used = {
+  // 2) 已用标记（与 segByCategory 对齐）
+  const used: Record<"working" | "living", boolean[]> = {
     working: new Array(segByCategory.working.length).fill(false),
     living: new Array(segByCategory.living.length).fill(false),
   };
 
+  // 3) 每个类别的“分配游标”，只前进不回退
+  const cursor: Record<"working" | "living", number> = {
+    working: Math.max(
+      0,
+      segByCategory.working.findIndex((s) => s.type === "work")
+    ),
+    living: Math.max(
+      0,
+      segByCategory.living.findIndex((s) => s.type === "work")
+    ),
+  };
+
+  // 工具：把 cursor 之前的段标记为已用，阻止任何“回填前面的洞”
+  function sealBeforeCursorAsUsed(
+    segs: PomodoroSegment[],
+    usedFlags: boolean[],
+    cursorPos: number
+  ) {
+    for (let i = 0; i < cursorPos && i < segs.length; i++) {
+      // 为了避免专用分配函数在“合并 break”时回跳到 cursor 前，
+      // 这里把 work 和紧随其后的 break 一并封印
+      usedFlags[i] = true;
+    }
+  }
+
+  // 工具：从 cursor 起向后分配 1 段（work + 可选紧邻 break），用于“兜底为 1”的占位
+  function allocateOneAfterCursor(
+    appDateTimestamp: number,
+    todo: Todo,
+    segs: PomodoroSegment[],
+    usedFlags: boolean[],
+    category: "working" | "living"
+  ): boolean {
+    let i = Math.max(0, cursor[category]);
+    // 把搜索起点推进到下一个 work
+    while (i < segs.length && segs[i].type !== "work") i++;
+
+    for (; i < segs.length; i++) {
+      if (segs[i].type !== "work") continue;
+      if (usedFlags[i]) continue;
+
+      let end = segs[i].end;
+      // 若紧跟 break 且未用，合并
+      if (
+        i + 1 < segs.length &&
+        segs[i + 1].type === "break" &&
+        !usedFlags[i + 1] &&
+        segs[i].end === segs[i + 1].start
+      ) {
+        end = segs[i + 1].end;
+        usedFlags[i + 1] = true;
+        cursor[category] = Math.max(cursor[category], i + 2);
+      } else {
+        cursor[category] = Math.max(cursor[category], i + 1);
+      }
+
+      usedFlags[i] = true;
+
+      todoSegments.push({
+        todoId: todo.id,
+        priority: todo.priority,
+        todoTitle: todo.activityTitle,
+        todoIndex: 1,
+        start: segs[i].start,
+        end,
+        pomoType: todo.pomoType || "🍅",
+        assignedPomodoroSegment: segs[i],
+        category,
+        completed: false,
+        usingRealPomo: false,
+      });
+
+      return true;
+    }
+
+    // 没有可用 work 段，接到尾部 overflow
+    const baseEnd = segs.length
+      ? segs[segs.length - 1].end
+      : (() => {
+          const d = new Date(appDateTimestamp);
+          d.setHours(22, 0, 0, 0);
+          return d.getTime();
+        })();
+    const duration = todo.pomoType === "🍒" ? 60 * 60 * 1000 : 25 * 60 * 1000;
+    todoSegments.push({
+      todoId: todo.id,
+      priority: todo.priority,
+      todoTitle: todo.activityTitle,
+      todoIndex: 1,
+      start: baseEnd,
+      end: baseEnd + duration,
+      pomoType: todo.pomoType || "🍅",
+      category,
+      overflow: true,
+      completed: false,
+      usingRealPomo: false,
+    });
+    // 溢出不回退 cursor
+    return true;
+  }
+
+  // 4) 任务排序：保留你现有的优先级排序
   const sortedTodos = [...todos].sort((a, b) => {
     if ((a.priority ?? 0) === 0 && (b.priority ?? 0) === 0) return 0;
     if ((a.priority ?? 0) === 0) return 1;
@@ -242,49 +347,78 @@ export function generateEstimatedTodoSegments(
     return (a.priority ?? 0) - (b.priority ?? 0);
   });
 
+  // 5) 分配循环
   for (const todo of sortedTodos) {
     const needCount = getTodoDisplayPomoCount(todo);
     if (needCount === 0) continue;
 
-    // 只保留每个todo分配的第一组console.log
-    // console.log(
-    //   `[分配] title=${todo.activityTitle}, index=${todo.index}, pomoType=${todo.pomoType}, needCount=${needCount}`
-    // );
+    const targetCategory: "working" | "living" =
+      todo.pomoType === "🍇" ? "living" : "working";
+    const segs = segByCategory[targetCategory];
+    const usedFlags = used[targetCategory];
 
-    // 优先根据index分配
+    // A) 手动 positionIndex 优先
     if (typeof todo.positionIndex === "number" && todo.positionIndex >= 0) {
-      const targetCategory = todo.pomoType === "🍇" ? "living" : "working";
-      const segs = segByCategory[targetCategory];
       const workSegs = segs.filter((s) => s.type === "work");
-      // usedArr只针对workSegs
-      const usedArr = new Array(workSegs.length).fill(false);
+      // 本地 work-only 的 used 数组不影响全局 usedFlags，这里仅用于本次 positionIndex 分配
+      const localUsedWork = new Array(workSegs.length).fill(false);
+
       let assignedCount = 0;
-      let assignedWorkIndexes: number[] = [];
       for (let i = 0; i < needCount; i++) {
         const workIdx = todo.positionIndex + i;
-        if (workIdx < workSegs.length && !usedArr[workIdx]) {
-          usedArr[workIdx] = true;
-          assignedWorkIndexes.push(workIdx);
+        if (workIdx < workSegs.length && !localUsedWork[workIdx]) {
+          localUsedWork[workIdx] = true;
+
+          const assignedPs = workSegs[workIdx]; // 具体 work 段
+          const realIdx = segs.findIndex((s) => s === assignedPs);
+
+          // 端点
+          let segStart = assignedPs.start;
+          let segEnd = assignedPs.end;
+
+          // 尝试合并紧邻 break（若未用）
+          if (
+            realIdx >= 0 &&
+            realIdx + 1 < segs.length &&
+            segs[realIdx + 1].type === "break" &&
+            segs[realIdx].end === segs[realIdx + 1].start &&
+            usedFlags[realIdx + 1] === false
+          ) {
+            segEnd = segs[realIdx + 1].end;
+            usedFlags[realIdx + 1] = true;
+            cursor[targetCategory] = Math.max(
+              cursor[targetCategory],
+              realIdx + 2
+            );
+          } else if (realIdx >= 0) {
+            cursor[targetCategory] = Math.max(
+              cursor[targetCategory],
+              realIdx + 1
+            );
+          }
+
+          // 标记全局 usedFlags 中的该 work 段
+          if (realIdx >= 0) usedFlags[realIdx] = true;
+
           todoSegments.push({
             todoId: todo.id,
             priority: todo.priority,
             todoTitle: todo.activityTitle,
             todoIndex: i + 1,
-            start: workSegs[workIdx].start,
-            end: workSegs[workIdx].end,
+            start: segStart,
+            end: segEnd,
             pomoType: todo.pomoType || "🍅",
-            assignedPomodoroSegment: workSegs[workIdx],
+            assignedPomodoroSegment: assignedPs,
             category: targetCategory,
             completed: false,
             usingRealPomo: false,
           });
+
           assignedCount++;
         }
       }
-      // console.log(
-      //   `[分配] 实际分配到的work段indexes=${assignedWorkIndexes}, assignedCount=${assignedCount}`
-      // );
-      let overflowCount = 0;
+
+      // 不足部分走 overflow（保持你原逻辑）
       while (assignedCount < needCount) {
         let overflowStartTime: number;
         if (segs.length > 0) {
@@ -309,21 +443,33 @@ export function generateEstimatedTodoSegments(
           usingRealPomo: false,
         });
         assignedCount++;
-        overflowCount++;
       }
-      if (overflowCount > 0) {
-        console.log(`[分配] overflow数量=${overflowCount}`);
-      }
-      continue;
+      continue; // 手动分配结束
     }
+
+    // B) 兜底为 1 的占位：只放 1 段，从 cursor 往后找，不回填
+    const estRaw = _getTodoEstPomoCount(todo);
+    if (estRaw === 0 && needCount === 1) {
+      allocateOneAfterCursor(
+        appDateTimestamp,
+        todo,
+        segs,
+        usedFlags,
+        targetCategory
+      );
+      continue; // 防止后续再次分配
+    }
+
+    // C) 正常任务：不回填。封印 cursor 之前的段，再走原专用分配函数
+    sealBeforeCursorAsUsed(segs, usedFlags, cursor[targetCategory]);
 
     if (todo.pomoType === "🍅" || !todo.pomoType) {
       _allocateTomatoSegments(
         appDateTimestamp,
         todo,
         needCount,
-        segByCategory.working,
-        used.working,
+        segs,
+        usedFlags,
         todoSegments
       );
     } else if (todo.pomoType === "🍇") {
@@ -331,8 +477,8 @@ export function generateEstimatedTodoSegments(
         appDateTimestamp,
         todo,
         needCount,
-        segByCategory.living,
-        used.living,
+        segs,
+        usedFlags,
         todoSegments
       );
     } else if (todo.pomoType === "🍒") {
@@ -340,8 +486,8 @@ export function generateEstimatedTodoSegments(
         appDateTimestamp,
         todo,
         needCount,
-        segByCategory.working,
-        used.working,
+        segs,
+        usedFlags,
         todoSegments
       );
     }
