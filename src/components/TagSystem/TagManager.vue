@@ -189,13 +189,11 @@ function isTagSelected(tagId: number): boolean {
 
 // 单击标签时触发，用于切换选中状态
 function onClickTag(tag: Tag) {
-  const currentTagIds = [...props.modelValue];
-  const index = currentTagIds.indexOf(tag.id);
-
-  if (index) {
-    currentTagIds.push(tag.id);
-  }
-  emit("update:modelValue", currentTagIds);
+  const current = [...props.modelValue];
+  const idx = current.indexOf(tag.id);
+  if (idx === -1) current.push(tag.id);
+  else current.splice(idx, 1);
+  emit("update:modelValue", current);
 }
 
 // 处理搜索框的输入事件
