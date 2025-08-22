@@ -3,38 +3,56 @@
   <div class="week-planner">
     <div class="grid">
       <div v-for="(day, idx) in days" :key="idx" class="day-col">
-        <n-card size="small" class="day-card">
+        <n-card
+          size="small"
+          class="day-card"
+          :class="[{ 'day-card--selected': selectedDate === day.startTs }]"
+          @click="() => handleDateSelect(day.startTs)"
+        >
           <div class="day-header">
             <div class="dow">
               {{ dayNames[idx] }}
             </div>
-
             <div class="date">{{ formatMonthDay(day.startTs) }}</div>
           </div>
 
-          <n-scrollbar style="max-height: 520px">
-            <div class="items">
-              <template v-if="day.items.length">
-                <div
-                  v-for="item in day.items.slice(0, MAX_PER_DAY)"
-                  :key="item.key"
-                  class="item"
+          <div class="items">
+            <template v-if="day.items.length">
+              <div
+                v-for="item in day.items.slice(0, MAX_PER_DAY)"
+                :key="item.key"
+                class="item"
+                @click.stop="
+                  () =>
+                    handleItemSelect(
+                      item.id,
+                      item.ts,
+                      item.activityId,
+                      item.taskId
+                    )
+                "
+              >
+                <span class="type-dot" :class="item.type"></span>
+
+                <span
+                  class="title"
+                  :title="item.title"
+                  :class="[
+                    { 'item--selected': selectedItem === item.id },
+                    { 'activity--selected': activeId === item.activityId },
+                  ]"
                 >
-                  <span class="type-dot" :class="item.type"></span>
+                  {{ item.title }}
+                </span>
+              </div>
 
-                  <span class="title" :title="item.title">
-                    {{ item.title }}
-                  </span>
-                </div>
+              <div v-if="day.items.length > MAX_PER_DAY" class="more">
+                {{ day.items.length - MAX_PER_DAY }} …
+              </div>
+            </template>
 
-                <div v-if="day.items.length > MAX_PER_DAY" class="more">
-                  {{ day.items.length - MAX_PER_DAY }} …
-                </div>
-              </template>
-
-              <div v-else class="empty">无</div>
-            </div>
-          </n-scrollbar>
+            <div v-else class="empty">无</div>
+          </div>
         </n-card>
       </div>
     </div>
@@ -42,10 +60,15 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
-import { NCard, NScrollbar } from "naive-ui";
+import { computed, ref } from "vue";
+import { NCard } from "naive-ui";
 import type { Todo } from "@/core/types/Todo";
 import type { Schedule } from "@/core/types/Schedule";
+
+const emit = defineEmits<{
+  "date-change": [timestamp: number];
+  "item-change": [activityId?: number, taskId?: number];
+}>();
 
 type UnifiedItem = {
   key: string;
@@ -77,7 +100,13 @@ const props = defineProps<{
   weekTodos: Todo[];
   weekSchedules: Schedule[];
   weekStartTs: number; // 周一 00:00:00（毫秒）
+  dayStartTs: number;
+  activeId: number | null;
+  selectedRowId: number | null;
 }>();
+
+const selectedDate = computed(() => props.dayStartTs);
+const selectedItem = ref(1);
 
 const MAX_PER_DAY = 10;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -191,6 +220,24 @@ function formatMonthDay(ts: number) {
   const d = new Date(ts);
   return `${d.getDate()}`;
 }
+
+// 处理日期选择
+const handleDateSelect = (day: number) => {
+  selectedItem.value = -1;
+  // 向父组件发送日期变化事件
+  emit("date-change", day);
+};
+
+const handleItemSelect = (
+  id: number,
+  ts: number,
+  activityId?: number,
+  taskId?: number
+) => {
+  selectedItem.value = id;
+  emit("date-change", ts);
+  emit("item-change", activityId, taskId);
+};
 </script>
 
 <style scoped>
@@ -198,22 +245,26 @@ function formatMonthDay(ts: number) {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  height: calc(100% - 18px);
+  height: 100%;
 }
 
 .grid {
   flex: 1 1 auto; /* 占据剩余空间 */
   min-height: 0;
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 4px;
+}
+
+.day-card--selected {
+  border-color: var(--primary-color, #409eff) !important;
+  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.3);
 }
 
 .day-card {
   display: flex;
   flex-direction: column;
   height: 100%; /* 关键：撑满格子高度（即 grid 的行高） */
-  width: 120px;
 }
 .day-card :deep(.n-card__content) {
   padding: 8px 6px;
@@ -223,7 +274,7 @@ function formatMonthDay(ts: number) {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 }
 .day-header .dow {
   font-weight: 600;
@@ -236,7 +287,19 @@ function formatMonthDay(ts: number) {
 .items {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
+  min-width: 0;
+}
+
+.item--selected {
+  background-color: var(--color-blue-light);
+  border-radius: 2px;
+  padding: 2px;
+}
+.activity--selected {
+  background-color: var(--color-red-light);
+  border-radius: 2px;
+  padding: 2px;
 }
 
 .item {

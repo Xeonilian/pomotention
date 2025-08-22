@@ -49,14 +49,17 @@
             ? { height: topHeight + 'px' }
             : { height: '100%' }
         "
-        :class="{
-          yesterday: isViewDateYesterday,
-          tomorrow: isViewDateTomorrow,
-        }"
       >
         <!-- 今日活动的头部和控件 -->
         <div class="planner-header">
-          <div v-if="settingStore.settings.viewSet === 'day'" class="day-info">
+          <div
+            v-if="settingStore.settings.viewSet === 'day'"
+            class="day-info"
+            :class="{
+              yesterday: isViewDateYesterday,
+              tomorrow: isViewDateTomorrow,
+            }"
+          >
             <span class="day-status">{{ dateService.displayDateInfo }}</span>
             <span class="global-pomo">
               <span class="today-pomo">🍅{{ currentDatePomoCount }}/</span>
@@ -160,9 +163,9 @@
               settingStore.settings.viewSet === 'day'
             "
             :selectedRowId="selectedRowId"
+            :activeId="activeId"
             :dayTodos="todosForCurrentView"
             :daySchedules="schedulesForCurrentView"
-            :activeId="activeId"
             @update-schedule-status="onUpdateScheduleStatus"
             @update-todo-status="onUpdateTodoStatus"
             @suspend-todo="onSuspendTodo"
@@ -192,6 +195,11 @@
             :weekTodos="todosForCurrentView"
             :weekSchedules="schedulesForCurrentView"
             :weekStartTs="dateService.weekStartTs.value"
+            :dayStartTs="dateService.appDateTimestamp.value"
+            :selectedRowId="selectedRowId"
+            :activeId="activeId"
+            @date-change="onDateChange"
+            @item-change="onItemChange"
           />
           <MonthPlanner
             v-if="
@@ -435,7 +443,7 @@ const schedulesForCurrentView = computed(() => {
   });
 });
 
-// 计算筛选的当天todo
+// 计算筛选的todo
 const todosForAppDate = computed(() => {
   const startOfDay = dateService.appDateTimestamp.value;
   const endOfDay = addDays(startOfDay, 1);
@@ -446,7 +454,7 @@ const todosForAppDate = computed(() => {
   );
 });
 
-// 计算筛选当天的schedule
+// 计算筛选的schedule
 const schedulesForAppDate = computed(() => {
   const startOfDay = dateService.appDateTimestamp.value;
   const endOfDay = addDays(startOfDay, 1);
@@ -460,6 +468,26 @@ const schedulesForAppDate = computed(() => {
   });
 });
 
+// weekplanner 引起变化日期
+const onDateChange = (day: number) => {
+  dateService.setAppDate(day);
+  selectedActivityId.value = null;
+  selectedTaskId.value = null;
+};
+
+// weekplanner 引起变化日期
+const onItemChange = (activityId?: number, taskId?: number) => {
+  if (activityId) {
+    selectedActivityId.value = activityId;
+  } else {
+    selectedActivityId.value = null;
+  }
+  if (taskId) {
+    selectedTaskId.value = taskId;
+  } else {
+    selectedTaskId.value = null;
+  }
+};
 /**
  * 监听【经过筛选后】的当天 todo 列表的变化。
  * 当这个列表本身、或者其中任何 todo 的 realPomo 属性变化时，
@@ -873,13 +901,18 @@ function onDateSet(direction: "prev" | "next" | "today" | "query") {
   clearSelectedRow();
   switch (direction) {
     case "prev":
-      dateService.navigateByView("prev");
+      const rdate = dateService.navigateByView("prev");
+      dateService.setAppDate(rdate);
+      console.log(dateService.appDateTimestamp.value);
       break;
     case "next":
-      dateService.navigateByView("next");
+      const ndate = dateService.navigateByView("next");
+      console.log(ndate);
+      dateService.setAppDate(dateService.appDateTimestamp.value);
       break;
     case "today":
-      dateService.navigateByView("today");
+      const tdate = dateService.navigateByView("today");
+      dateService.setAppDate(tdate);
       break;
     case "query":
       if (queryDate.value) {
@@ -1340,11 +1373,11 @@ const { startResize: startRightResize } = useResize(
   font-weight: bold;
 }
 
-.middle-top.tomorrow .day-status {
+.day-info.tomorrow .day-status {
   background: var(--color-red-light);
 }
 
-.middle-top.yesterday .day-status {
+.day-info.yesterday .day-status {
   background: var(--color-blue-light);
 }
 

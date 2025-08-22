@@ -151,9 +151,9 @@ const viewControls = computed(() => [
     show: settingStore.settings.showSchedule,
   },
   {
-    key: "today",
+    key: "planner",
     icon: ArrowUp24Filled,
-    title: "切换今日视图",
+    title: "切换计划视图",
     show: settingStore.settings.showPlanner,
   },
   {
@@ -177,7 +177,7 @@ function handleMenuSelect(key: string) {
 }
 
 function toggleSettingPanel(
-  panel: "schedule" | "activity" | "task" | "today" | "pomodoro"
+  panel: "schedule" | "activity" | "task" | "planner" | "pomodoro"
 ) {
   const key = "show" + panel.charAt(0).toUpperCase() + panel.slice(1);
   (settingStore.settings as any)[key] = !(settingStore.settings as any)[key];
@@ -195,7 +195,7 @@ function handleMainLayoutViewToggle(key: string) {
   }
 
   toggleSettingPanel(
-    key as "schedule" | "activity" | "task" | "today" | "pomodoro"
+    key as "schedule" | "activity" | "task" | "planner" | "pomodoro"
   );
 }
 

@@ -186,7 +186,7 @@ export function unifiedDateService({
   };
 
   // --- 5. 导航（仅视图感知版本） ---
-  const navigateByView = (type: "prev" | "next" | "today") => {
+  const navigateByView = (type: "prev" | "next" | "today"): number => {
     const curView = settingStore.settings.viewSet;
 
     if (type === "today") {
@@ -197,7 +197,7 @@ export function unifiedDateService({
           : curView === "week"
           ? getStartOfWeek(base)
           : getStartOfMonth(base);
-      return;
+      return base;
     }
 
     if (curView === "day") {
@@ -205,14 +205,14 @@ export function unifiedDateService({
         getDayStartTimestamp(dateState.app),
         type === "prev" ? -1 : 1
       );
-      return;
+      return dateState.app;
     }
 
     if (curView === "week") {
       const start = getStartOfWeek(dateState.app);
       const step = type === "prev" ? -7 : 7;
       dateState.app = addDays(start, step);
-      return;
+      return dateState.app;
     }
 
     // month
@@ -223,10 +223,11 @@ export function unifiedDateService({
     const target = new Date(y, m + (next ? 1 : -1), 1);
     target.setHours(0, 0, 0, 0);
     dateState.app = target.getTime();
+    return dateState.app;
   };
 
   // 跳到某个日期，并按当前视图锚定到起点
-  const navigateTo = (date: Date | number) => {
+  const navigateTo = (date: Date | number): number => {
     const target = getDayStartTimestamp(date);
     const curView = settingStore.settings.viewSet;
     dateState.app =
@@ -235,6 +236,7 @@ export function unifiedDateService({
         : curView === "week"
         ? getStartOfWeek(target)
         : getStartOfMonth(target);
+    return target;
   };
 
   // --- 6. 系统日期监听 ---
@@ -255,6 +257,11 @@ export function unifiedDateService({
   const cleanupSystemDateWatcher = () => {
     document.removeEventListener("visibilitychange", systemDateSync);
     window.removeEventListener("focus", systemDateSync);
+  };
+
+  const setAppDate = (timestamp: number) => {
+    const dayStart = getDayStartTimestamp(new Date(timestamp));
+    dateState.app = dayStart;
   };
 
   onMounted(setupSystemDateWatcher);
@@ -285,5 +292,6 @@ export function unifiedDateService({
     // 导航
     navigateByView, // prev/next/today
     navigateTo, // 跳转日期并按当前视图锚定
+    setAppDate,
   };
 }
