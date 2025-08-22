@@ -250,7 +250,7 @@ async function handleUpdateCheck() {
     ) {
       notification.success({
         title: "版本检查",
-        content: "微小调整，按需更新",
+        content: "功能优化调整，按需更新",
         duration: 2000,
       });
       return; // 不再走后面 Tauri 插件逻辑

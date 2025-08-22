@@ -63,11 +63,12 @@ function _getTodoRealPomoCount(todo: Todo): number {
 }
 
 /**
- * 根据todo状态决定使用estPomo还是realPomo
+ * 根据todo状态决定使用estPomo还是realPomo 保证至少一个
  */
 export function getTodoDisplayPomoCount(todo: Todo): number {
   if (todo.status === "done") {
-    return _getTodoRealPomoCount(todo);
+    const real = _getTodoRealPomoCount(todo);
+    return Math.max(1, real);
   } else {
     const est = _getTodoEstPomoCount(todo);
     return Math.max(1, est);
