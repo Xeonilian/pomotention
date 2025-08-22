@@ -208,7 +208,12 @@
             "
             :monthTodos="todosForCurrentView"
             :monthSchedules="schedulesForCurrentView"
-            :monthStartTs="dateService.monthStartTs"
+            :monthStartTs="dateService.monthStartTs.value"
+            :dayStartTs="dateService.appDateTimestamp.value"
+            :selectedRowId="selectedRowId"
+            :activeId="activeId"
+            @date-change="onDateChange"
+            @item-change="onItemChange"
           />
         </div>
       </div>
@@ -473,6 +478,7 @@ const onDateChange = (day: number) => {
   dateService.setAppDate(day);
   selectedActivityId.value = null;
   selectedTaskId.value = null;
+  activeId.value = null;
 };
 
 // weekplanner 引起变化日期
