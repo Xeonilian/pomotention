@@ -324,22 +324,33 @@ const getSystemPrompt = (): string => {
 };
 
 // 调用真实的AI API
-const callAIAPI = async (input: string): Promise<string> => {
+const callAIAPI = async (userInput: string): Promise<string> => {
+  // 1. 获取历史消息 (不包含当前用户输入)
+  const history: AIMessage[] = messages.value.map((msg) => ({
+    role: msg.role,
+    content: msg.content,
+  }));
+
+  // 2. 构建要发送给 API 的完整消息列表
+  const messagesToSend: AIMessage[] = [
+    // a. 添加系统提示词
+    { role: "system", content: getSystemPrompt() },
+    // b. 添加所有历史消息
+    ...history,
+    // c. 添加当前用户这次的输入
+    { role: "user", content: userInput },
+  ];
+
   try {
-    const config = aiService.getConfig();
-    if (!config.apiKey) {
-      throw new Error("API Key 未设置，请在设置中配置");
-    }
-
-    const messages: AIMessage[] = [
-      { role: "system", content: getSystemPrompt() },
-      { role: "user", content: input },
-    ];
-
-    const response = await aiService.sendMessage(messages);
+    // 调用我们 service 中的方法
+    const response = await aiService.sendMessage(messagesToSend);
     return response.content;
   } catch (error) {
-    console.error("AI API 调用失败:", error);
+    console.error("AI 服务调用失败:", error);
+    // 将 service 抛出的错误再次抛出，让外层 try-catch 捕获
+    // 这样就可以在 UI 上显示 "抱歉，我遇到了一些问题..."
+    // 也可以在这里定制更详细的错误信息
+    // 例如: throw new Error(`API 调用失败: ${(error as Error).message}`);
     throw error;
   }
 };

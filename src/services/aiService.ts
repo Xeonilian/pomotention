@@ -1,211 +1,96 @@
-// AI 服务 - 用于与 DeepSeek API 通信
-interface AIMessage {
-  role: "user" | "assistant" | "system";
+// src/services/aiService.ts
+
+import { invoke } from "@tauri-apps/api/core";
+
+// 定义与你 Vue 组件中一致的消息类型
+export interface AIMessage {
+  role: "system" | "user" | "assistant";
   content: string;
 }
 
-interface AIResponse {
-  content: string;
-  usage?: {
-    prompt_tokens: number;
-    completion_tokens: number;
-    total_tokens: number;
-  };
-}
-
-interface AIConfig {
+// 定义AI配置的类型（可以从 localStorage 读取）
+export interface AIConfig {
   apiKey: string;
   model: string;
-  baseUrl: string;
-  maxTokens: number;
-  temperature: number;
+  systemPrompt: string;
 }
 
-// 默认配置
-const defaultConfig: AIConfig = {
-  apiKey: "",
-  model: "deepseek-chat",
-  baseUrl: "https://api.deepseek.com/v1",
-  maxTokens: 2000,
-  temperature: 0.7,
-};
+// 定义从 Rust 后端返回的响应体类型
+interface RustChatOutput {
+  content: string;
+}
 
 class AIService {
-  private config: AIConfig = { ...defaultConfig };
+  private config: AIConfig;
 
-  // 设置配置
-  setConfig(config: Partial<AIConfig>) {
-    this.config = { ...this.config, ...config };
+  constructor() {
+    // 初始化时从 localStorage 加载配置
+    this.config = this.loadConfigFromLocalStorage();
   }
 
-  // 获取配置
-  getConfig(): AIConfig {
-    return { ...this.config };
-  }
-
-  // 发送消息到 AI
-  async sendMessage(
-    messages: AIMessage[],
-    options?: Partial<AIConfig>
-  ): Promise<AIResponse> {
-    const config = { ...this.config, ...options };
-
-    if (!config.apiKey) {
-      throw new Error("API Key 未设置");
+  // 从本地存储加载配置
+  private loadConfigFromLocalStorage(): AIConfig {
+    try {
+      const saved = localStorage.getItem("ai-config");
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (error) {
+      console.error("加载 AI 配置失败:", error);
     }
+    // 返回一个安全的默认值
+    return {
+      apiKey: "", // API Key 由后端环境变量提供，前端不需要
+      model: "moonshot-v1-8k",
+      systemPrompt:
+        "你是一个智能的时间管理助手，专门帮助用户提高工作效率和时间管理能力。",
+    };
+  }
+
+  // 获取当前配置
+  public getConfig(): AIConfig {
+    // 每次获取时都重新加载，以防在其他地方被修改
+    this.config = this.loadConfigFromLocalStorage();
+    return this.config;
+  }
+
+  // 保存配置
+  public saveConfig(newConfig: Partial<AIConfig>) {
+    const currentConfig = this.getConfig();
+    const updatedConfig = { ...currentConfig, ...newConfig };
+    localStorage.setItem("ai-config", JSON.stringify(updatedConfig));
+    this.config = updatedConfig;
+  }
+
+  /**
+   * 发送消息到 Tauri 后端。
+   * @param messages 消息历史数组
+   * @returns 包含 AI 回复内容的对象
+   */
+  public async sendMessage(messages: AIMessage[]): Promise<RustChatOutput> {
+    const config = this.getConfig();
 
     try {
-      const response = await fetch(`${config.baseUrl}/chat/completions`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${config.apiKey}`,
-        },
-        body: JSON.stringify({
-          model: config.model,
+      // 调用我们在 Rust 中定义的 `chat_completion` 命令
+      const response = await invoke<RustChatOutput>("chat_completion", {
+        input: {
+          // 直接将前端完整的消息数组传递给后端
           messages: messages,
-          max_tokens: config.maxTokens,
-          temperature: config.temperature,
-          stream: false,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(
-          `API 请求失败: ${response.status} ${response.statusText} - ${
-            errorData.error?.message || "未知错误"
-          }`
-        );
-      }
-
-      const data = await response.json();
-
-      return {
-        content: data.choices[0]?.message?.content || "",
-        usage: data.usage,
-      };
-    } catch (error) {
-      console.error("AI API 调用失败:", error);
-      throw error;
-    }
-  }
-
-  // 流式发送消息（用于实时显示）
-  async sendMessageStream(
-    messages: AIMessage[],
-    onChunk: (chunk: string) => void,
-    options?: Partial<AIConfig>
-  ): Promise<void> {
-    const config = { ...this.config, ...options };
-
-    if (!config.apiKey) {
-      throw new Error("API Key 未设置");
-    }
-
-    try {
-      const response = await fetch(`${config.baseUrl}/chat/completions`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${config.apiKey}`,
-        },
-        body: JSON.stringify({
-          model: config.model,
-          messages: messages,
-          max_tokens: config.maxTokens,
-          temperature: config.temperature,
-          stream: true,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(
-          `API 请求失败: ${response.status} ${response.statusText} - ${
-            errorData.error?.message || "未知错误"
-          }`
-        );
-      }
-
-      const reader = response.body?.getReader();
-      if (!reader) {
-        throw new Error("无法读取响应流");
-      }
-
-      const decoder = new TextDecoder();
-      let buffer = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() || "";
-
-        for (const line of lines) {
-          if (line.startsWith("data: ")) {
-            const data = line.slice(6);
-            if (data === "[DONE]") {
-              return;
-            }
-
-            try {
-              const parsed = JSON.parse(data);
-              const content = parsed.choices[0]?.delta?.content;
-              if (content) {
-                onChunk(content);
-              }
-            } catch (e) {
-              // 忽略解析错误
-            }
-          }
-        }
-      }
-    } catch (error) {
-      console.error("AI 流式 API 调用失败:", error);
-      throw error;
-    }
-  }
-
-  // 验证 API Key
-  async validateAPIKey(apiKey: string): Promise<boolean> {
-    try {
-      const tempConfig = { ...this.config, apiKey };
-      await this.sendMessage([{ role: "user", content: "Hello" }], tempConfig);
-      return true;
-    } catch (error) {
-      console.error("API Key 验证失败:", error);
-      return false;
-    }
-  }
-
-  // 获取模型列表
-  async getModels(): Promise<string[]> {
-    try {
-      const response = await fetch(`${this.config.baseUrl}/models`, {
-        headers: {
-          Authorization: `Bearer ${this.config.apiKey}`,
+          // 也可以从前端配置中读取模型和温度
+          model: config.model || "moonshot-v1-8k",
+          temperature: 0.7, // 或者也加入到配置里
+          stream: false, // 目前是非流式
         },
       });
-
-      if (!response.ok) {
-        throw new Error(`获取模型列表失败: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return data.data?.map((model: any) => model.id) || [];
+      return response;
     } catch (error) {
-      console.error("获取模型列表失败:", error);
-      return [];
+      console.error("Tauri invoke 'chat_completion' failed:", error);
+      // 将 Rust 返回的错误信息包装成一个标准 Error 对象并抛出
+      // error 的内容可能是 "Moonshot API error: 401 Unauthorized - ..."
+      throw new Error(error as string);
     }
   }
 }
 
-// 创建单例实例
+// 导出一个单例，方便在整个应用中使用
 export const aiService = new AIService();
-
-// 导出类型
-export type { AIMessage, AIResponse, AIConfig };
