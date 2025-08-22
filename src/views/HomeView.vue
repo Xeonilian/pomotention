@@ -189,16 +189,18 @@
               settingStore.settings.showPlanner &&
               settingStore.settings.viewSet === 'week'
             "
-            :todayTodos="todosForCurrentView"
-            :todaySchedules="schedulesForCurrentView"
+            :weekTodos="todosForCurrentView"
+            :weekSchedules="schedulesForCurrentView"
+            :weekStartTs="dateService.weekStartTs.value"
           />
           <MonthPlanner
             v-if="
               settingStore.settings.showPlanner &&
               settingStore.settings.viewSet === 'month'
             "
-            :todayTodos="todosForCurrentView"
-            :todaySchedules="schedulesForCurrentView"
+            :monthTodos="todosForCurrentView"
+            :monthSchedules="schedulesForCurrentView"
+            :monthStartTs="dateService.monthStartTs"
           />
         </div>
       </div>
@@ -1374,6 +1376,9 @@ const { startResize: startRightResize } = useResize(
   flex: 1;
   overflow: auto;
   min-height: 0; /* 重要：允许 flex 子项收缩 */
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
 .resize-handle {
