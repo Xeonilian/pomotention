@@ -367,6 +367,7 @@ import {
 import { NCheckbox, NInputNumber, NPopover, NButton, NIcon } from "naive-ui";
 import { ref, computed, nextTick } from "vue";
 import { taskService } from "@/services/taskService";
+import { Task } from "@/core/types/Task";
 
 // 编辑用
 const editingRowId = ref<number | null>(null);
@@ -414,7 +415,7 @@ const emit = defineEmits<{
   (e: "edit-todo-title", id: number, newTitle: string): void;
   (e: "edit-todo-start", id: number, newTs: string): void;
   (e: "edit-todo-done", id: number, newTs: string): void;
-  (e: "convert-todo-to-task", id: number, taskId: number): void;
+  (e: "convert-todo-to-task", payload: { task: Task; todoId: number }): void;
 }>();
 
 const editingTodo = ref<TodoWithNumberPriority | null>(null);
@@ -771,8 +772,8 @@ function handleConvertToTask(todo: TodoWithNumberPriority) {
   if (task) {
     // 立即更新本地的 taskId
     todo.taskId = task.id;
-    console.log("taskid:", task.id);
-    emit("convert-todo-to-task", todo.id, task.id);
+
+    emit("convert-todo-to-task", { task: task, todoId: todo.id });
     popoverMessage.value = "完成任务转换";
     showPopover.value = true;
     setTimeout(() => {

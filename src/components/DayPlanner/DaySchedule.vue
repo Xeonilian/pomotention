@@ -234,6 +234,7 @@ import {
 } from "@vicons/fluent";
 import { taskService } from "@/services/taskService";
 import { ref, nextTick } from "vue";
+import { Task } from "@/core/types/Task";
 
 // 编辑用
 const editingRowId = ref<number | null>(null);
@@ -258,7 +259,13 @@ const emit = defineEmits<{
   (e: "select-activity", activityId: number | null): void;
   (e: "edit-schedule-title", id: number, newTitle: string): void;
   (e: "edit-schedule-done", id: number, newTs: string): void;
-  (e: "convert-schedule-to-task", id: number, taskId: number): void;
+  (
+    e: "convert-schedule-to-task",
+    payload: {
+      task: Task;
+      scheduleId: number;
+    }
+  ): void;
 }>();
 
 // 添加状态来控制提示信息
@@ -271,7 +278,7 @@ function handleCheckboxChange(id: number, checked: boolean) {
 
 // 修改点击行处理函数
 function handleRowClick(schedule: Schedule) {
-  emit("select-row", schedule.id); // 新增：发送选中行事件
+  emit("select-row", schedule.id); // 发送选中行事件
   emit("select-task", schedule.taskId || null);
   emit("select-activity", schedule.activityId || null);
 }
@@ -356,11 +363,9 @@ function handleConvertToTask(schedule: Schedule) {
     schedule.activityTitle,
     schedule.projectName
   );
-
+  console.log("DaySch", task);
   if (task) {
-    // 立即更新本地的 taskId
-    schedule.taskId = task.id;
-    emit("convert-schedule-to-task", schedule.id, task.id);
+    emit("convert-schedule-to-task", { task: task, scheduleId: schedule.id });
     popoverMessage.value = "已转换为任务";
     showPopover.value = true;
     setTimeout(() => {

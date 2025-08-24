@@ -116,7 +116,6 @@ const emit = defineEmits<{
     payload: {
       task: Task;
       activityId: number;
-      todoId?: number; // 若找到了关联的 todo，可一并告知
     }
   ): void;
   (e: "increase-child-activity", id: number): void; // 取消子项（名称含义建议确认）
@@ -454,14 +453,10 @@ function handleConvertToTask() {
   // 1) 生成任务（不持久化）
   const task = taskService.createTaskFromActivity(activity.id, activity.title);
 
-  // 2) 计算可能的 todo 关联（可选）
-  const todo = props.todos.find((t) => t.activityId === activity.id);
-
   // 3) 只 emit，不在子组件里直接操作父层列表
   emit("convert-activity-to-task", {
     task,
     activityId: activity.id,
-    todoId: todo?.id,
   });
 
   // 4) 反馈 UI

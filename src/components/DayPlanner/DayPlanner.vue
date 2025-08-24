@@ -33,6 +33,7 @@
         @edit-todo-title="handleEditTodoTitle"
         @edit-todo-start="handleEditTodoStart"
         @edit-todo-done="handleEditTodoDone"
+        @convert-todo-to-task="handleConvertTodoToTask"
       />
     </div>
     <div class="schedule-container">
@@ -49,6 +50,7 @@
         @select-row="handleSelectRow"
         @edit-schedule-title="handleEditScheduleTitle"
         @edit-schedule-done="handleEditScheduleDone"
+        @convert-schedule-to-task="handleConvertScheduleToTask"
       />
     </div>
   </div>
@@ -59,6 +61,7 @@ import DayTodo from "@/components/DayPlanner/DayTodo.vue";
 import DaySchedule from "@/components/DayPlanner/DaySchedule.vue";
 import type { Todo } from "@/core/types/Todo";
 import type { Schedule } from "@/core/types/Schedule";
+import type { Task } from "@/core/types/Task";
 
 defineProps<{
   dayTodos: Todo[];
@@ -91,8 +94,11 @@ const emit = defineEmits<{
   (e: "edit-todo-start", id: number, newTs: string): void;
   (e: "edit-todo-done", id: number, newTs: string): void;
   (e: "edit-schedule-done", id: number, newTs: string): void;
-  (e: "convert-todo-to-task", id: number, taskId: number): void;
-  (e: "convert-schedule-to-task", id: number, taskId: number): void;
+  (e: "convert-todo-to-task", payload: { task: Task; todoId: number }): void;
+  (
+    e: "convert-schedule-to-task",
+    payload: { task: Task; scheduleId: number }
+  ): void;
 }>();
 
 // 处理选中行事件
@@ -141,6 +147,7 @@ function updateTodoEst(id: number, estPomo: number[]) {
 }
 
 function onSelectTask(taskId: number | null) {
+  console.log("planner", taskId);
   emit("select-task", taskId);
 }
 
@@ -166,6 +173,25 @@ function handleEditTodoDone(todoId: number, newTs: string) {
 
 function handleEditScheduleDone(scheduleId: number, newTs: string) {
   emit("edit-schedule-done", scheduleId, newTs);
+}
+
+function handleConvertTodoToTask(payload: { task: Task; todoId: number }) {
+  const { task, todoId } = payload;
+  emit("convert-todo-to-task", {
+    task,
+    todoId: todoId,
+  });
+}
+
+function handleConvertScheduleToTask(payload: {
+  task: Task;
+  scheduleId: number;
+}) {
+  const { task, scheduleId } = payload;
+  emit("convert-schedule-to-task", {
+    task,
+    scheduleId: scheduleId,
+  });
 }
 </script>
 <style scoped>

@@ -31,12 +31,16 @@ export function isToday(date: number | string): boolean {
  * @param status 新状态
  */
 export function updateScheduleStatus(
-  scheduleList: Schedule[],
-  activityList: Activity[],
+  _scheduleList: Schedule[],
+  _activityList: Activity[],
   id: number,
   activityId: number,
   doneTime: number | undefined,
-  status: string
+  status: string,
+  deps: {
+    scheduleById: Map<number, Schedule>;
+    activityById: Map<number, Activity>;
+  }
 ) {
   const validStatus = [
     "",
@@ -49,8 +53,7 @@ export function updateScheduleStatus(
     ? status
     : "";
 
-  // 更新 scheduleList
-  const schedule = scheduleList.find((s) => s.id === id);
+  const schedule = deps.scheduleById.get(id);
   if (schedule) {
     schedule.status = validStatus as
       | ""
@@ -62,8 +65,7 @@ export function updateScheduleStatus(
     schedule.doneTime = doneTime;
   }
 
-  // 更新 activityList
-  const activity = activityList.find((a) => a.id === activityId);
+  const activity = deps.activityById.get(activityId);
   if (activity) {
     activity.status = validStatus as
       | ""
@@ -303,22 +305,5 @@ export function updateTodoEst(
         activity.estPomoI = estPomo.length > 0 ? estPomo[0].toString() : "";
       }
     }
-  }
-}
-
-/**
- * 更新待办事项的实际番茄钟完成情况
- * @param todoList 待办事项列表
- * @param id 待办事项ID
- * @param realPomo 新的实际番茄钟完成数组
- */
-export function updateTodoPomo(
-  todoList: Todo[],
-  id: number,
-  realPomo: number[]
-) {
-  const todo = todoList.find((t) => t.id === id);
-  if (todo) {
-    todo.realPomo = realPomo;
   }
 }

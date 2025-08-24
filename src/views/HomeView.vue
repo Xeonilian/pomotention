@@ -339,8 +339,7 @@ import {
   updateTodoStatus,
   handleSuspendTodo,
   handleSuspendSchedule,
-  updateTodoPomo,
-} from "@/services/todayService";
+} from "@/services/plannerService";
 import {
   Previous24Regular,
   Next24Regular,
@@ -414,7 +413,6 @@ const scheduleById = computed(() => {
   return m;
 });
 
-// HACK 可能不需要
 const childrenOfActivity = computed(() => {
   const m = new Map<number, Activity[]>();
   for (const a of activityList.value) {
@@ -589,7 +587,6 @@ watch(
 /** 自动保存数据 */
 const saveAllNow = () => {
   try {
-    console.log("save all now");
     saveActivities(activityList.value);
     saveTodos(todoList.value);
     saveSchedules(scheduleList.value);
@@ -600,10 +597,13 @@ const saveAllNow = () => {
 };
 const saveAllDebounced = debounce(saveAllNow, 800);
 
-watch([activityList, todoList, scheduleList, taskList], () => {
-  console.log("watch debounce save");
-  saveAllDebounced();
-});
+watch(
+  [activityList, todoList, scheduleList, taskList],
+  () => {
+    saveAllDebounced();
+  },
+  { deep: true }
+);
 
 // 离开页面兜底（Tauri 桌面端同样可用）
 window.addEventListener("beforeunload", () => {
@@ -692,53 +692,27 @@ function onPickActivity(activity: Activity) {
 }
 
 // 同步UI选中
-function onConvertActivityToTask(payload: {
-  task: Task;
-  activityId: number;
-  todoId?: number;
-}) {
-  const { task, activityId, todoId } = payload;
-  console.log("onConvertActivityToTask", activityId, task.id);
+function onConvertActivityToTask(payload: { task: Task; activityId: number }) {
+  const { task, activityId } = payload;
 
   // 1) 推入任务列表（替换引用，便于浅 watch 或立即响应）
   taskList.value = [...taskList.value, task];
 
   // 2) 回写 activity.taskId
-  const aIdx = activityList.value.findIndex((a) => a.id === activityId);
-  if (aIdx !== -1) {
-    const updated = { ...activityList.value[aIdx], taskId: task.id };
-    const cloned = [...activityList.value];
-    cloned[aIdx] = updated;
-    activityList.value = cloned;
+  const activity = activityById.value.get(activityId);
+  if (activity) {
+    activity.taskId = task.id;
+    const todo = todoByActivityId.value.get(activityId);
+    if (todo) todo.taskId = task.id;
+    const schedule = scheduleByActivityId.value.get(activityId);
+    if (schedule) schedule.taskId = task.id;
   }
 
-  // 3) 回写 todo.taskId（如果存在）
-  if (todoId != null) {
-    const tIdx = todoList.value.findIndex((t) => t.id === todoId);
-    if (tIdx !== -1) {
-      const updated = { ...todoList.value[tIdx], taskId: task.id };
-      const cloned = [...todoList.value];
-      cloned[tIdx] = updated;
-      todoList.value = cloned;
-    } else {
-      // 若只知道按 activityId 关联：
-      const ttIdx = todoList.value.findIndex(
-        (t) => t.activityId === activityId
-      );
-      if (ttIdx !== -1) {
-        const updated = { ...todoList.value[ttIdx], taskId: task.id };
-        const cloned = [...todoList.value];
-        cloned[ttIdx] = updated;
-        todoList.value = cloned;
-      }
-    }
-  }
-
-  // 4) 同步 UI 选中（如果你希望）
+  // 3) 同步 UI 选中（如果你希望）
   activeId.value = activityId;
   selectedTaskId.value = task.id;
 
-  // 5) 一次性保存
+  // 4) 一次性保存
   saveAllDebounced();
 }
 
@@ -761,7 +735,7 @@ function onUpdateActiveId(id: number | null) {
 
 /** 修改番茄类型时的提示处理 */
 function onTogglePomoType(id: number) {
-  const todo = todoList.value.find((t) => t.activityId === id);
+  const todo = todoByActivityId.value.get(id);
   if (todo) todo.positionIndex = undefined; // 先取消当前TimeTable的位置
   const result = togglePomoType(id, { activityById: activityById.value });
   if (result) showErrorPopover("活动的类型已切换！");
@@ -831,7 +805,7 @@ function onIncreaseChildActivity(id: number) {
 // ======================== 3. Planner/任务相关操作 ========================
 /** Todo 更新状态（勾选） */
 function onUpdateTodoStatus(id: number, isChecked: boolean) {
-  const todo = todoList.value.find((t) => t.id === id);
+  const todo = todoById.value.get(id);
 
   // 如果找不到对应的 Schedule，则打印错误并直接返回，防止后续代码出错
   if (!todo) {
@@ -872,13 +846,16 @@ function onUpdateTodoStatus(id: number, isChecked: boolean) {
 /** 更新待办事项的番茄钟估计 */
 function onUpdateTodoEst(id: number, estPomo: number[]) {
   // 更新 todoList 中的数据
-  const todo = todoList.value.find((t) => t.id === id);
+  const todo = todoById.value.get(id);
   if (todo) {
     todo.estPomo = estPomo;
     // 保存到本地存储
     saveTodos(todoList.value);
   }
-  const activity = activityList.value.find((a) => a.id === todo?.activityId);
+  const activity =
+    todo?.activityId != null
+      ? activityById.value.get(todo.activityId)
+      : undefined;
   if (activity && estPomo && estPomo.length === 1) {
     activity.estPomoI = estPomo[0].toString();
   }
@@ -887,7 +864,10 @@ function onUpdateTodoEst(id: number, estPomo: number[]) {
 
 /** 更新待办事项的实际番茄钟完成情况 */
 function onUpdateTodoPomo(id: number, realPomo: number[]) {
-  updateTodoPomo(todoList.value, id, realPomo);
+  const todo = todoById.value.get(id);
+  if (todo) {
+    todo.realPomo = realPomo;
+  }
   saveAllDebounced();
 }
 
@@ -900,30 +880,28 @@ function onSuspendTodo(id: number) {
 /** Todo 取消 */
 function onCancelTodo(id: number) {
   // 更新 todoList 中的数据
-  const todo = todoList.value.find((t) => t.id === id);
+  const todo = todoById.value.get(id);
   if (todo) {
     todo.status = "cancelled";
-    const activity = activityList.value.find((a) => a.id === todo.activityId);
+    const activity = activityById.value.get(todo.activityId);
     if (!activity) {
       console.warn(`未找到 activityId 为 ${todo.activityId} 的 activity`);
       return;
     }
     activity.status = "cancelled";
-    const childActivities = activityList.value.filter(
-      (a) => a.parentId === activity.id
-    );
-    childActivities.forEach((child) => {
+    const childActivities = childrenOfActivity.value.get(activity.id) ?? [];
+    for (const child of childActivities) {
       child.status = "cancelled";
-    });
+    }
   }
   saveAllDebounced();
 }
 
 /** Todo 变为 Activity **/
 function onRepeatTodo(id: number) {
-  const todo = todoList.value.find((t) => t.id === id);
+  const todo = todoById.value.get(id);
   if (todo) {
-    const activity = activityList.value.find((a) => a.id === todo.activityId);
+    const activity = activityById.value.get(todo.activityId);
     if (!activity) {
       console.warn(`未找到 activityId 为 ${todo.activityId} 的 activity`);
       return;
@@ -955,12 +933,10 @@ function onSuspendSchedule(id: number) {
 /** Schedule 取消 */
 function onCancelSchedule(id: number) {
   // 更新 ScheduleList 中的数据
-  const schedule = scheduleList.value.find((s) => s.id === id);
+  const schedule = scheduleById.value.get(id);
   if (schedule) {
     schedule.status = "cancelled";
-    const activity = activityList.value.find(
-      (a) => a.id === schedule.activityId
-    );
+    const activity = activityById.value.get(schedule.activityId);
     if (!activity) {
       console.warn(`未找到 activityId 为 ${schedule.activityId} 的 activity`);
       return;
@@ -972,11 +948,9 @@ function onCancelSchedule(id: number) {
 
 /** Schedule 变为 Activity **/
 function onRepeatSchedule(id: number) {
-  const schedule = scheduleList.value.find((s) => s.id === id);
+  const schedule = scheduleById.value.get(id);
   if (schedule) {
-    const activity = activityList.value.find(
-      (a) => a.id === schedule.activityId
-    );
+    const activity = activityById.value.get(schedule.activityId);
     if (!activity) {
       console.warn(`未找到 activityId 为 ${schedule.activityId} 的 activity`);
       return;
@@ -998,7 +972,7 @@ function onRepeatSchedule(id: number) {
 /** Schedule 勾选完成 */
 function onUpdateScheduleStatus(id: number, isChecked: boolean) {
   // 1. 根据 ID 安全地查找目标 Schedule
-  const schedule = scheduleList.value.find((s) => s.id === id);
+  const schedule = scheduleById.value.get(id);
 
   // 如果找不到对应的 Schedule，则打印错误并直接返回，防止后续代码出错
   if (!schedule) {
@@ -1031,36 +1005,46 @@ function onUpdateScheduleStatus(id: number, isChecked: boolean) {
     id,
     schedule.activityId,
     doneTime,
-    newStatus
+    newStatus,
+    { scheduleById: scheduleById.value, activityById: activityById.value }
   );
   saveAllDebounced();
 }
 
-function onConvertTodoToTask(id: number, taskId: number) {
-  console.log("onConvertTodoToTask", id, taskId);
-  const todo = todoList.value.find((t) => t.id === id);
+function onConvertTodoToTask(payload: { task: Task; todoId: number }) {
+  const { task, todoId } = payload;
+  taskList.value = [...taskList.value, task];
+  const todo = todoById.value.get(todoId);
   if (todo) {
-    const activity = activityList.value.find((a) => a.id === todo.activityId);
+    todo.taskId = task.id;
+    const activity = activityById.value.get(todo.activityId);
     if (activity) {
-      selectedTaskId.value = taskId;
+      selectedTaskId.value = task.id;
       activeId.value = activity.id;
     }
   }
   saveAllDebounced();
 }
 
-function onConvertScheduleToTask(id: number, taskId: number) {
-  console.log("onConvertScheduleToTask", id, taskId);
-  const schedule = scheduleList.value.find((s) => s.id === id);
+function onConvertScheduleToTask(payload: { task: Task; scheduleId: number }) {
+  const { task, scheduleId } = payload;
+  console.log("home", task.id);
+
+  // 1) 推入任务列表（替换引用，便于浅 watch 或立即响应）
+  taskList.value = [...taskList.value, task];
+  // 2) 回写 schedule.taskId
+  const schedule = scheduleById.value.get(scheduleId);
   if (schedule) {
-    const activity = activityList.value.find(
-      (a) => a.id === schedule.activityId
-    );
+    schedule.taskId = task.id;
+
+    const activity = activityById.value.get(schedule.activityId);
     if (activity) {
-      selectedTaskId.value = taskId;
-      activeId.value = activity.id;
+      activity.taskId = task.id;
     }
   }
+  // 3) 同步 UI 选中
+  selectedTaskId.value = task.id;
+
   saveAllDebounced();
 }
 
@@ -1125,6 +1109,7 @@ function onSelectActivity(activityId: number | null) {
 // 选中行
 function onSelectRow(id: number | null) {
   selectedRowId.value = id;
+  console.log(id);
 }
 
 // 清除Today选中行的函数
@@ -1136,13 +1121,13 @@ function clearSelectedRow() {
 
 // 编辑title，Schedule.id，同步Activity
 function handleEditScheduleTitle(id: number, newTitle: string) {
-  const schedule = scheduleList.value.find((s) => s.id === id);
+  const schedule = scheduleById.value.get(id);
   if (!schedule) {
     console.warn(`未找到 id 为 ${id} 的 schedule`);
     return;
   }
   schedule.activityTitle = newTitle;
-  const activity = activityList.value.find((a) => a.id === schedule.activityId);
+  const activity = activityById.value.get(schedule.activityId);
   if (!activity) {
     console.warn(`未找到 activityId 为 ${schedule.activityId} 的 activity`);
     return;
@@ -1153,13 +1138,9 @@ function handleEditScheduleTitle(id: number, newTitle: string) {
   );
 
   // 找到task 并重新赋值
-  const taskIndex = taskList.value.findIndex((t) => t.sourceId === schedule.id);
-  if (taskIndex !== -1) {
-    console.log(taskIndex);
-    taskList.value[taskIndex] = {
-      ...taskList.value[taskIndex],
-      activityTitle: newTitle,
-    };
+  const task = taskBySourceId.value.get(schedule.id);
+  if (task) {
+    task.activityTitle = newTitle;
   }
   saveAllDebounced();
 }
@@ -1167,7 +1148,7 @@ function handleEditScheduleTitle(id: number, newTitle: string) {
 // 编辑title，todo.id，同步Activity
 function handleEditTodoTitle(id: number, newTitle: string) {
   // 找到todo
-  const todo = todoList.value.find((t) => t.id === id);
+  const todo = todoById.value.get(id);
   if (!todo) {
     console.warn(`未找到 id 为 ${id} 的 todo`);
     return;
@@ -1175,19 +1156,16 @@ function handleEditTodoTitle(id: number, newTitle: string) {
   todo.activityTitle = newTitle;
 
   // 找到activity
-  const activity = activityList.value.find((a) => a.id === todo.activityId);
+  const activity = activityById.value.get(todo.activityId);
   if (!activity) {
     return;
   }
   activity.title = newTitle; //
 
   // 找到task 并重新赋值
-  const taskIndex = taskList.value.findIndex((t) => t.id === todo.id);
-  if (taskIndex !== -1) {
-    taskList.value[taskIndex] = {
-      ...taskList.value[taskIndex],
-      activityTitle: newTitle,
-    };
+  const task = taskById.value.get(todo.id);
+  if (task) {
+    task.activityTitle = newTitle;
   }
   saveAllDebounced();
 }
@@ -1196,7 +1174,7 @@ function handleEditTodoTitle(id: number, newTitle: string) {
 function handleEditTodoStart(id: number, newTm: string) {
   // 获取当前查看日期的时间戳
   const viewingDayTimestamp = dateService.appDateTimestamp.value;
-  const todo = todoList.value.find((t) => t.id === id);
+  const todo = todoById.value.get(id);
   if (!todo) {
     console.warn(`未找到 id 为 ${id} 的 todo`);
     return;
@@ -1207,7 +1185,7 @@ function handleEditTodoStart(id: number, newTm: string) {
 function handleEditTodoDone(id: number, newTm: string) {
   // 获取当前查看日期的时间戳
   const viewingDayTimestamp = dateService.appDateTimestamp.value;
-  const todo = todoList.value.find((t) => t.id === id);
+  const todo = todoById.value.get(id);
   if (!todo) {
     console.warn(`未找到 id 为 ${id} 的 todo`);
     return;
@@ -1223,7 +1201,7 @@ function handleEditTodoDone(id: number, newTm: string) {
 function handleEditScheduleDone(id: number, newTm: string) {
   // 获取当前查看日期的时间戳
   const viewingDayTimestamp = dateService.appDateTimestamp.value;
-  const schedule = scheduleList.value.find((s) => s.id === id);
+  const schedule = scheduleById.value.get(id);
   if (!schedule) {
     console.warn(`未找到 id 为 ${id} 的 schedule`);
     return;
@@ -1242,13 +1220,9 @@ function onUpdateTaskDescription(payload: {
   description: string;
 }) {
   const { taskId, description } = payload;
-  const idx = taskList.value.findIndex((t) => t.id === taskId);
-  if (idx === -1) return;
 
-  // 替换引用，确保响应式与浅 watch 都能触发
-  const cloned = [...taskList.value];
-  cloned[idx] = { ...cloned[idx], description };
-  taskList.value = cloned;
+  const task = taskById.value.get(taskId);
+  if (task) task.description = description;
 
   // 统一持久化
   saveAllDebounced();
@@ -1257,53 +1231,35 @@ function onUpdateTaskDescription(payload: {
 function onInterruptionRecord(payload: InterruptionCommittedPayload) {
   console.log("[interruption] record:", payload);
 
-  {
-    const idx = taskList.value.findIndex((t) => t.id === payload.taskId);
-    if (idx !== -1) {
-      const task = taskList.value[idx];
+  const task = taskById.value.get(payload.taskId);
+  if (!task) {
+    console.warn("[interruption] task not found by id:", payload.taskId);
+    return;
+  }
 
-      const existsIndex = task.interruptionRecords.findIndex(
-        (r) => r.id === payload.record.id
-      );
+  const existsIndex = task.interruptionRecords.findIndex(
+    (r) => r.id === payload.record.id
+  );
 
-      let nextInterruptionRecords: InterruptionRecord[];
-
-      if (existsIndex !== -1) {
-        // 标准化已存在的那一项，确保使用 class 字段
-        const old = task.interruptionRecords[existsIndex] as any;
-        const normalized: InterruptionRecord = {
-          id: old.id ?? payload.record.id,
-          class: ("class" in old
-            ? old.class
-            : payload.record.interruptionType) as "E" | "I",
-          description: old.description ?? payload.record.description,
-          activityType: old.activityType ?? payload.activity?.class ?? null,
-        };
-
-        nextInterruptionRecords = [...task.interruptionRecords];
-        nextInterruptionRecords[existsIndex] = normalized;
-      } else {
-        nextInterruptionRecords = [
-          ...task.interruptionRecords,
-          {
-            id: payload.record.id,
-            class: payload.record.interruptionType,
-            description: payload.record.description,
-            activityType: payload.activity?.class ?? null,
-          },
-        ];
-      }
-
-      const nextTask: Task = {
-        ...task,
-        interruptionRecords: nextInterruptionRecords,
-      };
-      const nextTasks = [...taskList.value];
-      nextTasks[idx] = nextTask;
-      taskList.value = nextTasks;
-    } else {
-      console.warn("[interruption] task not found by id:", payload.taskId);
-    }
+  if (existsIndex !== -1) {
+    const old = task.interruptionRecords[existsIndex] as any;
+    const normalized: InterruptionRecord = {
+      id: old.id ?? payload.record.id,
+      class: ("class" in old ? old.class : payload.record.interruptionType) as
+        | "E"
+        | "I",
+      description: old.description ?? payload.record.description,
+      activityType: old.activityType ?? payload.activity?.class ?? null,
+    };
+    // 就地替换该项
+    task.interruptionRecords.splice(existsIndex, 1, normalized);
+  } else {
+    task.interruptionRecords.push({
+      id: payload.record.id,
+      class: payload.record.interruptionType,
+      description: payload.record.description,
+      activityType: payload.activity?.class ?? null,
+    });
   }
 
   if (payload.activity) {
@@ -1339,7 +1295,7 @@ function onActiveTaskId(taskId: number | null) {
   }
 
   // 找到当前任务
-  const task = taskList.value.find((t) => t.id === taskId);
+  const task = taskById.value.get(taskId);
   if (!task) {
     // 如果找不到任务，清空
     selectedRowId.value = null;
@@ -1349,17 +1305,17 @@ function onActiveTaskId(taskId: number | null) {
 
   // 根据 task 的 source 判断
   if (task.source === "activity") {
-    const activity = activityList.value.find((a) => a.id === task.sourceId);
+    const activity = activityById.value.get(task.sourceId);
     if (activity) {
       selectedActivityId.value = activity.id; // 找到活动
     }
   } else if (task.source === "todo") {
-    const todo = todoList.value.find((t) => t.id === task.sourceId);
+    const todo = todoById.value.get(task.sourceId);
     if (todo) {
       selectedActivityId.value = todo.activityId; // 获取关联的 activityId
     }
   } else if (task.source === "schedule") {
-    const schedule = scheduleList.value.find((s) => s.id === task.sourceId);
+    const schedule = scheduleById.value.get(task.sourceId);
     if (schedule) {
       selectedActivityId.value = schedule.activityId; // 获取关联的 activityId
     }
@@ -1373,9 +1329,7 @@ watch(
   (newVal) => {
     newVal.forEach((activity) => {
       // 同步Schedule
-      const relatedSchedule = scheduleList.value.find(
-        (s) => s.activityId === activity.id
-      );
+      const relatedSchedule = scheduleByActivityId.value.get(activity.id);
       if (relatedSchedule) {
         relatedSchedule.activityTitle = activity.title;
         relatedSchedule.activityDueRange = activity.dueRange
@@ -1386,9 +1340,7 @@ watch(
         relatedSchedule.taskId = activity.taskId;
       }
       // 同步Todo
-      const relatedTodo = todoList.value.find(
-        (todo) => todo.activityId === activity.id
-      );
+      const relatedTodo = todoByActivityId.value.get(activity.id);
       if (relatedTodo) {
         relatedTodo.activityTitle = activity.title;
         if (activity.pomoType === "🍒") {
