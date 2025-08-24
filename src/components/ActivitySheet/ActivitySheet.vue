@@ -84,6 +84,7 @@ import { NPopover } from "naive-ui";
 import { taskService } from "@/services/taskService";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { Schedule } from "@/core/types/Schedule";
+import { Task } from "@/core/types/Task";
 
 // ========================
 // Props 定义
@@ -101,17 +102,24 @@ const props = defineProps<{
 // Emits 定义
 // ========================
 const emit = defineEmits<{
-  "pick-activity": [activity: Activity]; // 选择活动待办
-  "add-activity": [activity: Activity]; // 添加新活动
-  "delete-activity": [id: number]; // 删除活动
-  "update-active-id": [id: number | null]; // 更新选中活动ID
-  "toggle-pomo-type": [id: number]; // 切换番茄钟类型
-  "repeat-activity": [id: number]; // 重复选中的活动
-  "create-child-activity": [id: number]; //构建选中活动的子活动
-  "go-to-todo": [id: number]; // 去到todo所在天
-  "go-to-schedule": [id: number]; // 去到schedule所在天
-  "convert-activity-to-task": [id: number, taskId: number]; // 转换为任务
-  "increase-child-activity": [id: number]; // 取消子项
+  (e: "pick-activity", activity: Activity): void; // 选择活动待办
+  (e: "add-activity", activity: Activity): void; // 添加新活动
+  (e: "delete-activity", id: number): void; // 删除活动
+  (e: "update-active-id", id: number | null): void; // 更新选中活动ID
+  (e: "toggle-pomo-type", id: number): void; // 切换番茄钟类型
+  (e: "repeat-activity", id: number): void; // 重复选中的活动
+  (e: "create-child-activity", id: number): void; // 构建选中活动的子活动
+  (e: "go-to-todo", id: number): void; // 去到 todo 所在天
+  (e: "go-to-schedule", id: number): void; // 去到 schedule 所在天
+  (
+    e: "convert-activity-to-task",
+    payload: {
+      task: Task;
+      activityId: number;
+      todoId?: number; // 若找到了关联的 todo，可一并告知
+    }
+  ): void;
+  (e: "increase-child-activity", id: number): void; // 取消子项（名称含义建议确认）
 }>();
 
 // ========================
@@ -429,37 +437,37 @@ function getCountdownClass(dueDate: number | undefined | null): string {
   return "";
 }
 
-// 转换为任务
 function handleConvertToTask() {
-  // console.log("activity", props.activeId);
   const activity = props.activities.find((a) => a.id === props.activeId);
   console.log("activity", activity?.id);
-  if (!activity) {
-    return;
-  }
-  if (activity?.taskId) {
+  if (!activity) return;
+
+  if (activity.taskId) {
     popoverMessage.value = "该活动已转换为任务";
     showPopover.value = true;
-    setTimeout(() => {
-      showPopover.value = false;
-    }, 2000);
+    setTimeout(() => (showPopover.value = false), 2000);
     return;
   }
-  console.log("covert", activity?.id);
+
+  console.log("convert", activity.id);
+
+  // 1) 生成任务（不持久化）
   const task = taskService.createTaskFromActivity(activity.id, activity.title);
-  if (task) {
-    // 立即更新本地的 taskId
-    activity.taskId = task.id;
-    // 寻找 todo
-    const todo = props.todos.find((t) => t.activityId === activity.id);
-    if (todo) todo.taskId = task.id;
-    emit("convert-activity-to-task", activity.id, task.id);
-    popoverMessage.value = "已转换为任务";
-    showPopover.value = true;
-    setTimeout(() => {
-      showPopover.value = false;
-    }, 2000);
-  }
+
+  // 2) 计算可能的 todo 关联（可选）
+  const todo = props.todos.find((t) => t.activityId === activity.id);
+
+  // 3) 只 emit，不在子组件里直接操作父层列表
+  emit("convert-activity-to-task", {
+    task,
+    activityId: activity.id,
+    todoId: todo?.id,
+  });
+
+  // 4) 反馈 UI
+  popoverMessage.value = "已转换为任务";
+  showPopover.value = true;
+  setTimeout(() => (showPopover.value = false), 2000);
 }
 </script>
 

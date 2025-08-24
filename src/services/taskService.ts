@@ -1,3 +1,4 @@
+// taskService.ts（纯数据，不直接持久化）
 import type {
   Task,
   EnergyRecord,
@@ -5,33 +6,39 @@ import type {
   InterruptionRecord,
 } from "@/core/types/Task";
 import type { Activity } from "@/core/types/Activity";
-import { STORAGE_KEYS } from "@/core/constants";
+
+// 假设由上层传入或在模块外部管理的“内存仓库”（可由 Pinia/Vue ref 持有）
+let taskStore: Task[] = [];
+let activityStore: Activity[] = [];
+
+// 提供注入函数，让应用启动时由上层把 ref 或数组传进来
+export function bindStores(opts: { tasks: Task[]; activities: Activity[] }) {
+  taskStore = opts.tasks;
+  activityStore = opts.activities;
+}
 
 export const taskService = {
-  // 获取特定任务
   getTask(taskId: number): Task | undefined {
-    const TASK = JSON.parse(localStorage.getItem(STORAGE_KEYS.TASK) || "[]");
-    return TASK.find((t: Task) => t.id === taskId);
+    return taskStore.find((t) => t.id === taskId);
   },
 
-  // 保存任务
-  saveTask(task: Task): void {
-    const TASK = JSON.parse(localStorage.getItem(STORAGE_KEYS.TASK) || "[]");
-    TASK.push(task);
-    localStorage.setItem(STORAGE_KEYS.TASK, JSON.stringify(TASK));
-  },
-
-  // 更新任务
-  updateTask(taskId: number, updates: Partial<Task>): void {
-    const TASK = JSON.parse(localStorage.getItem(STORAGE_KEYS.TASK) || "[]");
-    const index = TASK.findIndex((t: Task) => t.id === taskId);
-    if (index !== -1) {
-      TASK[index] = { ...TASK[index], ...updates };
-      localStorage.setItem(STORAGE_KEYS.TASK, JSON.stringify(TASK));
+  // 仅更新内存
+  upsertTask(task: Task): void {
+    const idx = taskStore.findIndex((t) => t.id === task.id);
+    if (idx === -1) {
+      taskStore.push(task);
+    } else {
+      taskStore[idx] = { ...taskStore[idx], ...task };
     }
   },
 
-  // 从Todo生成Task
+  updateTask(taskId: number, updates: Partial<Task>): void {
+    const idx = taskStore.findIndex((t) => t.id === taskId);
+    if (idx !== -1) {
+      taskStore[idx] = { ...taskStore[idx], ...updates };
+    }
+  },
+
   createTaskFromTodo(
     todoId: number,
     activityTitle: string,
@@ -48,12 +55,10 @@ export const taskService = {
       interruptionRecords: [],
       description: `# ${activityTitle}`,
     };
-    this.saveTask(task);
-
+    this.upsertTask(task);
     return task;
   },
 
-  // 从Schedule生成Task
   createTaskFromSchedule(
     scheduleId: number,
     activityTitle: string,
@@ -70,8 +75,7 @@ export const taskService = {
       interruptionRecords: [],
       description: `# ${activityTitle}`,
     };
-    this.saveTask(task);
-
+    this.upsertTask(task);
     return task;
   },
 
@@ -91,68 +95,56 @@ export const taskService = {
       interruptionRecords: [],
       description: `# ${activityTitle}`,
     };
-    this.saveTask(task);
-
+    this.upsertTask(task);
     return task;
   },
 
-  // 添加精力值记录
-  addEnergyRecord(taskId: number, value: number, description?: string): void {
+  addEnergyRecord(
+    taskId: number,
+    value: number,
+    description?: string
+  ): EnergyRecord | undefined {
     const task = this.getTask(taskId);
-    if (task) {
-      const record: EnergyRecord = {
-        id: Date.now(),
-        value,
-        description,
-      };
-      // 创建新的数组以确保响应式更新
-      const newEnergyRecords = [...task.energyRecords, record];
-      this.updateTask(taskId, { energyRecords: newEnergyRecords });
-      console.log("添加能量记录:", record);
-    }
+    if (!task) return;
+    const record: EnergyRecord = { id: Date.now(), value, description };
+    const newEnergyRecords = [...task.energyRecords, record];
+    this.updateTask(taskId, { energyRecords: newEnergyRecords });
+    return record;
   },
 
-  // 添加愉悦值记录
-  addRewardRecord(taskId: number, value: number, description?: string): void {
+  addRewardRecord(
+    taskId: number,
+    value: number,
+    description?: string
+  ): RewardRecord | undefined {
     const task = this.getTask(taskId);
-    if (task) {
-      const record: RewardRecord = {
-        id: Date.now(),
-        value,
-        description,
-      };
-      // 创建新的数组以确保响应式更新
-      const newRewardRecords = [...task.rewardRecords, record];
-      this.updateTask(taskId, { rewardRecords: newRewardRecords });
-      console.log("添加奖励记录:", record);
-    }
+    if (!task) return;
+    const record: RewardRecord = { id: Date.now(), value, description };
+    const newRewardRecords = [...task.rewardRecords, record];
+    this.updateTask(taskId, { rewardRecords: newRewardRecords });
+    return record;
   },
 
-  // 添加打扰记录
   addInterruptionRecord(
     taskId: number,
+    interruptionType: "E" | "I",
     description: string,
-    classType: "E" | "I",
     activityType?: "T" | "S" | null
-  ): void {
+  ): InterruptionRecord | undefined {
     const task = this.getTask(taskId);
-    if (task) {
-      const record: InterruptionRecord = {
-        id: Date.now(),
-        class: classType,
-        description,
-        activityType: activityType || null,
-      };
-      // 创建新的数组以确保响应式更新
-      const newInterruptionRecords = [...task.interruptionRecords, record];
-      this.updateTask(taskId, {
-        interruptionRecords: newInterruptionRecords,
-      });
-      console.log("添加打扰记录:", record);
-    }
+    if (!task) return;
+    const record: InterruptionRecord = {
+      id: Date.now(),
+      class: interruptionType,
+      description: description,
+      activityType: activityType ?? null,
+    };
+    const newInterruptionRecords = [...task.interruptionRecords, record];
+    this.updateTask(taskId, { interruptionRecords: newInterruptionRecords });
+    return record;
   },
 
-  // 从Interruption创建Activity
+  // 返回新建的 Activity，但不落地存储
   createActivityFromInterruption(
     taskId: number,
     interruptionId: number,
@@ -160,37 +152,26 @@ export const taskService = {
     dueDate?: number | null
   ): Activity | undefined {
     const task = this.getTask(taskId);
-    if (!task) return undefined;
+    if (!task) return;
 
     const interruption = task.interruptionRecords.find(
       (r) => r.id === interruptionId
     );
-    if (!interruption) return undefined;
+    if (!interruption) return;
 
     const activity: Activity = {
-      id: interruption.id, // 使用interruption的id
+      id: interruption.id, // 注意：用 interruption.id 可能与现有 activity 冲突，建议改为新 id
       title: interruption.description,
       class: activityClass,
-      interruption: interruption.class, // 保持原有的interruption类型
+      interruption: interruption.class,
       parentId: null,
       status: "",
-      // 根据活动类型设置相应属性
-      ...(activityClass === "T" && {
-        pomoType: "🍅",
-        dueDate: dueDate,
-      }),
-      ...(activityClass === "S" && {
-        dueRange: [null, "60"],
-      }),
+      ...(activityClass === "T" && { pomoType: "🍅", dueDate }),
+      ...(activityClass === "S" && { dueRange: [null, "60"] }),
     };
 
-    // 保存到localStorage
-    const activities = JSON.parse(
-      localStorage.getItem(STORAGE_KEYS.ACTIVITY) || "[]"
-    );
-    activities.push(activity);
-    localStorage.setItem(STORAGE_KEYS.ACTIVITY, JSON.stringify(activities));
-
+    // 仅内存落地
+    activityStore.push(activity);
     return activity;
   },
 };

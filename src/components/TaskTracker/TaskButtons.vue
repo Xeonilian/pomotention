@@ -119,7 +119,7 @@ const emit = defineEmits<{
   (
     e: "interruption-record",
     data: {
-      classType: "E" | "I";
+      interruptionType: "E" | "I";
       description: string;
       asActivity: boolean;
       dueDate?: number | null;
@@ -143,7 +143,7 @@ function handleRewardConfirm(val: { value: number; description?: string }) {
 
 // 打扰弹窗点击确认
 function handleInterruptionConfirm(val: {
-  classType: "E" | "I";
+  interruptionType: "E" | "I";
   description: string;
   asActivity: boolean;
   dueDate?: number | null;

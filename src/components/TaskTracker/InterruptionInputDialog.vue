@@ -66,7 +66,7 @@ const emit = defineEmits<{
   (
     e: "confirm",
     value: {
-      classType: "E" | "I";
+      interruptionType: "E" | "I";
       description: string;
       asActivity: boolean;
       activityClass?: "T" | "S";
@@ -93,7 +93,7 @@ const showModal = computed({
 
 function handleConfirm() {
   emit("confirm", {
-    classType: interruptionType.value,
+    interruptionType: interruptionType.value,
     description: description.value.trim(),
     asActivity: activityType.value !== null,
     activityClass: activityType.value || undefined,

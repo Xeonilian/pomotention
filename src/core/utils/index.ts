@@ -9,3 +9,4 @@ export { getDateKey } from "./getDateKey";
 export { getTodayDate } from "./getTodayDate";
 export { areSameDay } from "./areSameDay";
 export { getDayStartTimestamp } from "./getDayStartTimestamp";
+export { debounce } from "./debounce";
