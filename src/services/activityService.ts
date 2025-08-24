@@ -10,11 +10,10 @@ import { useTagStore } from "@/stores/useTagStore";
  * 添加新活动并处理相关联动
  */
 export function handleAddActivity(
-  activityList: Activity[],
   scheduleList: Schedule[],
-  newActivity: Activity
+  newActivity: Activity,
+  deps: { activityById: Map<number, Activity> } // 由调用方传入
 ) {
-  activityList.push(newActivity);
   // 如果是 Schedule 类型且是当天的活动，自动创建 Schedule
   if (newActivity.class === "S") {
     const today = getLocalDateString(new Date());
@@ -28,9 +27,7 @@ export function handleAddActivity(
 
     if (activityDate === today) {
       // 更新 activityList 中对应的 activity 的 status 为 "ongoing"
-      const activityToUpdate = activityList.find(
-        (a) => a.id === newActivity.id
-      );
+      const activityToUpdate = deps.activityById.get(newActivity.id);
       if (activityToUpdate) {
         activityToUpdate.status = "ongoing";
       }
@@ -40,90 +37,93 @@ export function handleAddActivity(
 }
 
 /**
- * 删除活动及关联的待办事项和日程
- */
-/**
  * 安全地删除一个活动及其所有子孙。
  * 在删除前会校验，如果任何子孙活动正在进行中 (status非空 或 taskId有值)，
- * 则中断删除并返回 false。
- * 成功删除则返回 true。
- * @returns {boolean} - 操作是否成功执行。
+ * 则中断删除并返回 false。成功删除则返回 true。
  */
 export function handleDeleteActivity(
   activityList: Activity[],
   todoList: Todo[],
   scheduleList: Schedule[],
-  idToDelete: number
+  idToDelete: number,
+  deps: {
+    activityById: Map<number, Activity>;
+    childrenByParentId?: Map<number, Activity[]>; // 可选，传入则高效递归
+  }
 ): boolean {
-  // <--- 返回值是简单的 boolean
   const tagStore = useTagStore();
 
-  // 辅助函数：递归获取所有要删除的activity的id（含自身）
-  function collectAllDescendantIds(
-    currentId: number,
-    allActivities: Activity[],
-    idSet: Set<number>
-  ): void {
-    idSet.add(currentId);
-    allActivities.forEach((activity) => {
-      if (activity.parentId === currentId) {
-        collectAllDescendantIds(activity.id, allActivities, idSet);
-      }
-    });
-  }
-
-  // 1. 获取所有将要被删除的活动的ID集合
+  // 递归获取所有将要被删除的 activity 的 id（含自身）
   const idsToDelete = new Set<number>();
-  collectAllDescendantIds(idToDelete, activityList, idsToDelete);
+  function collectAllDescendantIds(currentId: number): void {
+    idsToDelete.add(currentId);
 
-  // 2.【新增】安全校验逻辑
-  // 遍历所有待删除的活动，检查其子孙节点是否处于活动状态
-  for (const activity of activityList) {
-    // a. 必须是待删除的活动
-    // b. 必须不是用户点击删除的那个活动本身 (idToDelete)，我们只关心它的子孙
-    if (idsToDelete.has(activity.id) && activity.id !== idToDelete) {
-      const hasStatus = activity.status && (activity.status as any) !== "";
-      const hasTaskId =
-        activity.taskId !== undefined && activity.taskId !== null;
-
-      // 如果发现一个正在进行的子孙活动，则阻止删除
-      if (hasStatus || hasTaskId) {
-        console.warn(
-          `删除操作被阻止。子活动 "${activity.title}" (ID: ${activity.id}) 正在进行中，无法删除父项。`
-        );
-        return false; // <--- 中断操作，返回 false
+    if (deps.childrenByParentId) {
+      // 使用上层传入的 children map，效率更高
+      const children = deps.childrenByParentId.get(currentId) ?? [];
+      for (const child of children) {
+        collectAllDescendantIds(child.id);
+      }
+    } else {
+      // 退化到全表扫描（保持旧行为）
+      for (const activity of activityList) {
+        if (activity.parentId === currentId) {
+          collectAllDescendantIds(activity.id);
+        }
       }
     }
   }
+  collectAllDescendantIds(idToDelete);
 
-  // --- 如果校验通过，则执行原有的删除逻辑 ---
+  // 安全校验：子孙中是否有进行中
+  for (const id of idsToDelete) {
+    if (id === idToDelete) continue;
+    const activity = deps.activityById.get(id);
+    if (!activity) continue;
 
-  // 3. 对所有将要删掉的activity，处理tagIds的引用计数
-  activityList.forEach((activity) => {
-    if (idsToDelete.has(activity.id) && Array.isArray(activity.tagIds)) {
-      activity.tagIds.forEach((tagId) => tagStore.decrementTagCount(tagId));
+    const hasStatus = activity.status && (activity.status as any) !== "";
+    const hasTaskId = activity.taskId !== undefined && activity.taskId !== null;
+
+    if (hasStatus || hasTaskId) {
+      console.warn(
+        `删除操作被阻止。子活动 "${activity.title}" (ID: ${activity.id}) 正在进行中，无法删除父项。`
+      );
+      return false;
     }
-  });
+  }
 
-  // 4. 删除关联的 todo
-  const filteredTodos = todoList.filter(
-    (todo) => !idsToDelete.has(todo.activityId)
-  );
-  todoList.splice(0, todoList.length, ...filteredTodos);
+  // tag 引用计数减少
+  for (const id of idsToDelete) {
+    const activity = deps.activityById.get(id);
+    if (activity && Array.isArray(activity.tagIds)) {
+      for (const tagId of activity.tagIds) tagStore.decrementTagCount(tagId);
+    }
+  }
 
-  // 5. 删除关联的 schedule
-  const filteredSchedules = scheduleList.filter(
-    (schedule) => !idsToDelete.has(schedule.activityId)
-  );
-  scheduleList.splice(0, scheduleList.length, ...filteredSchedules);
+  // 删除关联的 todo
+  {
+    const filteredTodos = todoList.filter(
+      (todo) => !idsToDelete.has(todo.activityId)
+    );
+    todoList.splice(0, todoList.length, ...filteredTodos);
+  }
 
-  // 6. 删除活动本体
-  const filteredActivities = activityList.filter(
-    (activity) => !idsToDelete.has(activity.id)
-  );
-  activityList.splice(0, activityList.length, ...filteredActivities);
+  // 删除关联的 schedule
+  {
+    const filteredSchedules = scheduleList.filter(
+      (schedule) => !idsToDelete.has(schedule.activityId)
+    );
+    scheduleList.splice(0, scheduleList.length, ...filteredSchedules);
+  }
 
-  // 7. 操作成功
+  // 删除活动本体
+  {
+    const filteredActivities = activityList.filter(
+      (activity) => !idsToDelete.has(activity.id)
+    );
+    activityList.splice(0, activityList.length, ...filteredActivities);
+  }
+
   return true;
 }
 
@@ -131,121 +131,63 @@ export function handleDeleteActivity(
  * 将选中的活动转换为待办事项
  */
 export function passPickedActivity(
-  activityList: Activity[],
-  todoList: Todo[],
   activity: Activity,
   appDateTimestamp: number,
   isToday: boolean
-) {
-  // 存在检查在ActivitySheet中
-  // // 检查是否已经存在相同 activityId 的待办事项
-  // const existingTodo = todoList.find((todo) => todo.activityId === activity.id);
-  // if (existingTodo) {
-  //   console.log(`活动 ${activity.title} 已经存在于待办事项列表中`);
-  //   return null;
-  // }
-
-  // 将 activity 状态设置为 ongoing
-  const activityToUpdate = activityList.find((a) => a.id === activity.id);
-  if (activityToUpdate) {
-    activityToUpdate.status = "ongoing";
-  }
-
-  // 创建新的 todo
+): { newTodo: Todo } {
   const newTodo = convertToTodo(activity);
   if (isToday) {
-    newTodo.id = Date.now(); // 使用当前时间戳作为 id
+    newTodo.id = Date.now();
   } else {
-    // 构建当前时间的appDateTimestamp的时间戳
     const now = new Date();
-    // 用 appDateTimestamp 构造日期对象
     const appDate = new Date(appDateTimestamp);
-    // 设置appDate的时分秒为当前的
-    appDate.setHours(now.getHours());
-    appDate.setMinutes(now.getMinutes());
-    appDate.setSeconds(now.getSeconds());
-    appDate.setMilliseconds(now.getMilliseconds());
+    appDate.setHours(
+      now.getHours(),
+      now.getMinutes(),
+      now.getSeconds(),
+      now.getMilliseconds()
+    );
     newTodo.id = appDate.getTime();
   }
   newTodo.status = "ongoing";
-  todoList.push(newTodo);
-
-  return activity;
+  return { newTodo };
 }
 
 /**
  * 切换活动的番茄类型
  */
-export function togglePomoType(activityList: Activity[], id: number) {
-  // 查找对应的活动
-  const activity = activityList.find((a) => a.id === id);
+export function togglePomoType(
+  id: number,
+  deps: { activityById: Map<number, Activity> } // 由调用方传入
+) {
+  const activity = deps.activityById.get(id);
   if (!activity) {
     console.log(`没有找到ID为${id}的活动`);
     return null;
   }
 
-  // 如果是S类型的活动，不进行操作
+  // 如果是 S 类型的活动，不进行操作
   if (activity.class === "S") {
     console.log(`ID为${id}的活动是S类型，不能修改番茄类型`);
     return null;
   }
 
-  // 获取当前番茄类型的索引，如果未设置则默认为"🍅"
+  // 获取当前番茄类型的索引，如果未设置则默认为 "🍅"
   const currentType = activity.pomoType || "🍅";
   const currentIndex = POMO_TYPES.indexOf(currentType);
 
   // 计算下一个类型的索引
   const nextIndex = (currentIndex + 1) % POMO_TYPES.length;
-  // 确保新的番茄类型符合 Activity.pomoType 的类型定义
   const newPomoType: "🍅" | "🍇" | "🍒" = POMO_TYPES[nextIndex];
 
   // 更新活动的番茄类型
   activity.pomoType = newPomoType;
+  activity.estPomoI = newPomoType === "🍒" ? "4" : undefined;
 
-  if (newPomoType == "🍒") {
-    activity.estPomoI = "4";
-  } else {
-    activity.estPomoI = undefined;
-  }
   return {
     oldType: currentType,
     newType: newPomoType,
   };
-}
-
-/**
- * 同步活动变化到待办事项和日程
- */
-export function syncActivityChanges(
-  activityList: Activity[],
-  todoList: Todo[],
-  scheduleList: Schedule[]
-) {
-  activityList.forEach((activity) => {
-    // 同步 Schedule
-    const relatedSchedule = scheduleList.find(
-      (schedule) => schedule.activityId === activity.id
-    );
-    if (relatedSchedule) {
-      relatedSchedule.activityTitle = activity.title;
-      relatedSchedule.activityDueRange = activity.dueRange
-        ? [activity.dueRange[0], activity.dueRange[1]]
-        : [null, "0"];
-      relatedSchedule.status = activity.status || "";
-      relatedSchedule.location = activity.location || "";
-    }
-    // 同步 Todo
-    const relatedTodo = todoList.find(
-      (todo) => todo.activityId === activity.id
-    );
-    if (relatedTodo) {
-      relatedTodo.activityTitle = activity.title;
-      relatedTodo.estPomo = activity.estPomoI
-        ? [parseInt(activity.estPomoI)]
-        : [];
-      relatedTodo.status = activity.status || "";
-    }
-  });
 }
 
 /**
