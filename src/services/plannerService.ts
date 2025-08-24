@@ -1,4 +1,4 @@
-// src/services/todayService.ts
+// src/services/plannerService.ts
 
 import type { Activity } from "@/core/types/Activity";
 import type { Schedule } from "@/core/types/Schedule";
