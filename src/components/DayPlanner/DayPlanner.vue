@@ -147,7 +147,6 @@ function updateTodoEst(id: number, estPomo: number[]) {
 }
 
 function onSelectTask(taskId: number | null) {
-  console.log("planner", taskId);
   emit("select-task", taskId);
 }
 

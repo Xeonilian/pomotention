@@ -19,7 +19,7 @@
                     ? getEnergyColor(record.value)
                     : record.type === 'reward'
                     ? getRewardColor(record.value)
-                    : record.class === 'I'
+                    : record.interruptionType === 'I'
                     ? '#666666'
                     : '#999999',
               }"
@@ -29,7 +29,7 @@
                   ? "🔋"
                   : record.type === "reward"
                   ? "😜"
-                  : record.class === "I"
+                  : record.interruptionType === "I"
                   ? "🌚"
                   : "🌝"
               }}
@@ -42,14 +42,14 @@
                     ? getEnergyColor(record.value)
                     : record.type === 'reward'
                     ? getRewardColor(record.value)
-                    : record.class === 'I'
+                    : record.interruptionType === 'I'
                     ? '#666666'
                     : '#999999',
               }"
             >
               {{
                 record.type === "interruption"
-                  ? record.class + (record.activityType ? "A" : "")
+                  ? record.interruptionType + (record.activityType ? "A" : "")
                   : record.value
               }}
             </span>
@@ -64,16 +64,7 @@
         @toggle-markdown="toggleMarkdown"
         @energy-record="handleEnergyRecord"
         @reward-record="handleRewardRecord"
-        @interruption-record="
-          (p) => {
-            void handleInterruptionRecord({
-              class: p.interruptionType, // 映射字段名
-              description: p.description,
-              asActivity: p.asActivity,
-              dueDate: p.dueDate ?? null,
-            });
-          }
-        "
+        @interruption-record="handleInterruptionRecord"
         class="task-buttons-container"
       />
     </div>
@@ -110,10 +101,8 @@ import type {
   EnergyRecord,
   RewardRecord,
   InterruptionRecord,
-  InterruptionCommittedPayload,
 } from "@/core/types/Task";
-import { taskService } from "@/services/taskService";
-import { convertToSchedule } from "@/core/utils/convertActivity";
+
 import TagRenderer from "@/components/TagSystem/TagRenderer.vue";
 
 const props = defineProps<{
@@ -124,7 +113,16 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: "reward-record"): void;
-  (e: "interruption-record", payload: InterruptionCommittedPayload): void;
+  (
+    e: "interruption-record",
+    data: {
+      interruptionType: "E" | "I";
+      description: string;
+      asActivity: boolean;
+      activityType?: "T" | "S";
+      dueDate?: number | null;
+    }
+  ): void;
   (e: "activetaskId", taskId: number | null): void;
   (
     e: "update-task-description",
@@ -166,28 +164,57 @@ const toggleMarkdown = () => {
   isMarkdown.value = !isMarkdown.value;
 };
 
-// 统一的 CombinedRecord 类型，注意 interruption 使用 class
+// 统一的 CombinedRecord 类型
 type CombinedRecord =
   | (EnergyRecord & { type: "energy" })
   | (RewardRecord & { type: "reward" })
   | (InterruptionRecord & {
       type: "interruption";
-      class: "E" | "I";
-      activityType?: "T" | "S" | null;
     });
 
-// 合并并按时间排序
+// 合并并按时间排序 ，注意 interruption 兼容使用 class
 const combinedRecords = computed<CombinedRecord[]>(() => {
   const t = currentTask.value;
+  if (!t) return []; // 如果没有当前任务，返回空数组
+
+  // Energy 和 Reward 记录保持不变
   const energy =
-    t?.energyRecords?.map((r) => ({ ...r, type: "energy" as const })) || [];
+    t.energyRecords?.map((r) => ({ ...r, type: "energy" as const })) || [];
   const reward =
-    t?.rewardRecords?.map((r) => ({ ...r, type: "reward" as const })) || [];
+    t.rewardRecords?.map((r) => ({ ...r, type: "reward" as const })) || [];
+
+  // --- 关键修改在这里 ---
   const interruption =
-    t?.interruptionRecords?.map((r) => ({
-      ...r,
-      type: "interruption" as const,
-    })) || [];
+    t.interruptionRecords?.map((record: any) => {
+      // 使用 any 来接收不确定的结构
+      const isOldVersion =
+        record.class && typeof record.interruptionType === "undefined";
+
+      // 基础对象，包含了两种版本都有的属性和新加的 type
+      const baseRecord = {
+        id: record.id,
+        description: record.description,
+        type: "interruption" as const,
+      };
+
+      if (isOldVersion) {
+        // 如果是旧版本，进行转换
+        return {
+          ...baseRecord,
+          interruptionType: record.class, // class -> interruptionType
+          activityType: record.activityClass || null, // activityClass -> activityType
+        };
+      } else {
+        // 如果是新版本，直接扩展
+        return {
+          ...baseRecord,
+          interruptionType: record.interruptionType,
+          activityType: record.activityType,
+        };
+      }
+    }) || [];
+
+  // 合并所有记录并排序
   return [...energy, ...reward, ...interruption].sort((a, b) => a.id - b.id);
 });
 
@@ -204,67 +231,18 @@ function handleRewardRecord(val: { value: number; description?: string }) {
 }
 
 // 打断记录：创建 record，如需派生活动转 schedule，一并通过 payload 告知父层
-async function handleInterruptionRecord(data: {
-  class: "E" | "I";
+function handleInterruptionRecord(data: {
+  interruptionType: "E" | "I";
   description: string;
   asActivity: boolean;
-  activityClass?: "T" | "S";
+  activityType?: "T" | "S";
   dueDate?: number | null;
 }) {
   if (!props.selectedTaskId) {
     console.warn("没有选中的任务ID");
     return;
   }
-
-  const taskId = props.selectedTaskId;
-
-  // 1) 追加打断记录（优先使用返回值，避免 id 不一致）
-  const createdRecord = taskService.addInterruptionRecord(
-    taskId,
-    data.class,
-    data.description,
-    data.activityClass
-  );
-
-  const recordId = createdRecord?.id ?? Date.now();
-
-  const payload: InterruptionCommittedPayload = {
-    taskId,
-    record: {
-      id: recordId,
-      interruptionType: data.class,
-      description: data.description,
-    },
-  };
-
-  // 2) 如需派生活动
-  if (data.asActivity && data.activityClass) {
-    // 通过 recordId 创建活动
-    const activity = taskService.createActivityFromInterruption(
-      taskId,
-      recordId,
-      data.activityClass,
-      data.dueDate ?? null
-    );
-
-    if (activity) {
-      // 待办 + 截止日直赋值
-      if (data.activityClass === "T" && data.dueDate) {
-        activity.dueDate = data.dueDate;
-      }
-
-      payload.activity = activity;
-
-      // 若是日程，立即转换得到 schedule
-      if (data.activityClass === "S") {
-        const schedule = convertToSchedule(activity);
-        payload.schedule = schedule;
-      }
-    }
-  }
-
-  // 3) 告知父层（父层落地保存等）
-  emit("interruption-record", payload);
+  emit("interruption-record", data);
 }
 
 // 格式化时间戳

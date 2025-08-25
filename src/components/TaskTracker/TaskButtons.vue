@@ -122,6 +122,7 @@ const emit = defineEmits<{
       interruptionType: "E" | "I";
       description: string;
       asActivity: boolean;
+      activityType?: "T" | "S";
       dueDate?: number | null;
     }
   ): void;
@@ -146,6 +147,7 @@ function handleInterruptionConfirm(val: {
   interruptionType: "E" | "I";
   description: string;
   asActivity: boolean;
+  activityType?: "T" | "S";
   dueDate?: number | null;
 }) {
   if (props.taskId) {

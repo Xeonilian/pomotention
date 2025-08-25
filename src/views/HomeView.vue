@@ -313,7 +313,6 @@ import type { Todo } from "@/core/types/Todo";
 import type { Schedule } from "@/core/types/Schedule";
 import {
   Task,
-  InterruptionCommittedPayload,
   EnergyRecord,
   RewardRecord,
   InterruptionRecord,
@@ -359,7 +358,6 @@ import {
 } from "@/core/utils";
 import { unifiedDateService } from "@/services/unifiedDateService";
 import { useSettingStore } from "@/stores/useSettingStore";
-import { taskService } from "@/services/taskService";
 // ======================== 响应式状态与初始化 ========================
 
 // -- 基础UI状态
@@ -1114,7 +1112,6 @@ function onSelectActivity(activityId: number | null) {
 // 选中行
 function onSelectRow(id: number | null) {
   selectedRowId.value = id;
-  console.log(id);
 }
 
 // 清除Today选中行的函数
@@ -1233,61 +1230,42 @@ function onUpdateTaskDescription(payload: {
   saveAllDebounced();
 }
 
-function onInterruptionRecord(payload: InterruptionCommittedPayload) {
-  console.log("[interruption] record:", payload);
+function onInterruptionRecord(data: {
+  interruptionType: "E" | "I";
+  description: string;
+  asActivity: boolean;
+  activityType?: "T" | "S";
+  dueDate?: number | null;
+}) {
+  const { interruptionType, description, asActivity, activityType, dueDate } =
+    data;
 
-  const task = taskById.value.get(payload.taskId);
-  if (!task) {
-    console.warn("[interruption] task not found by id:", payload.taskId);
-    return;
-  }
-
-  const existsIndex = task.interruptionRecords.findIndex(
-    (r) => r.id === payload.record.id
-  );
-
-  if (existsIndex !== -1) {
-    const old = task.interruptionRecords[existsIndex] as any;
-    const normalized: InterruptionRecord = {
-      id: old.id ?? payload.record.id,
-      class: ("class" in old ? old.class : payload.record.interruptionType) as
-        | "E"
-        | "I",
-      description: old.description ?? payload.record.description,
-      activityType: old.activityType ?? payload.activity?.class ?? null,
+  if (selectedTaskId.value) {
+    const task = taskById.value.get(selectedTaskId.value);
+    if (!task) return;
+    const record: InterruptionRecord = {
+      id: Date.now(),
+      interruptionType: interruptionType,
+      description: description,
+      activityType: activityType || null,
     };
-    // 就地替换该项
-    task.interruptionRecords.splice(existsIndex, 1, normalized);
-  } else {
-    task.interruptionRecords.push({
-      id: payload.record.id,
-      class: payload.record.interruptionType,
-      description: payload.record.description,
-      activityType: payload.activity?.class ?? null,
-    });
-  }
-
-  if (payload.activity) {
-    console.log(33);
-    const exists = activityList.value.some(
-      (a) => a.id === payload.activity!.id
-    );
-    if (!exists) {
-      activityList.value = [...activityList.value, payload.activity];
-      console.log("[activity] pushed:", payload.activity.title);
+    task.interruptionRecords.push(record);
+    if (asActivity && activityType) {
+      const newActivity: Activity = {
+        id: Date.now(),
+        title: description,
+        class: activityType,
+        dueDate: dueDate || null,
+        parentId: null,
+        dueRange: [null, ""],
+        status: "",
+      };
+      activityList.value.push(newActivity);
+      handleAddActivity(scheduleList.value, newActivity, {
+        activityById: activityById.value,
+      });
     }
   }
-
-  if (payload.schedule) {
-    const exists = scheduleList.value.some(
-      (s) => s.id === payload.schedule!.id
-    );
-    if (!exists) {
-      scheduleList.value = [...scheduleList.value, payload.schedule];
-      console.log("[schedule] pushed:", payload.schedule.activityTitle);
-    }
-  }
-
   saveAllDebounced();
 }
 

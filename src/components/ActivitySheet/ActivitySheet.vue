@@ -343,7 +343,7 @@ function addScheduleRow() {
     id: Date.now(),
     class: "S",
     title: "",
-    dueRange: [null, ""], // HACK: 默认明天开始
+    dueRange: [null, ""],
     status: "",
     parentId: null,
   });

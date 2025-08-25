@@ -1,9 +1,5 @@
 // src/core/types/Task.ts
 // import type { Pomo } from "./Pomo";
-import { Activity } from "./Activity";
-import { Todo } from "./Todo";
-import { Schedule } from "./Schedule";
-
 export interface Task {
   id: number; // 使用时间戳
   activityTitle: string;
@@ -30,19 +26,7 @@ export interface RewardRecord {
 
 export interface InterruptionRecord {
   id: number;
-  class: "E" | "I";
+  interruptionType: "E" | "I";
   description: string;
   activityType: "T" | "S" | null;
-}
-
-export interface InterruptionCommittedPayload {
-  taskId: number;
-  record: {
-    id: number; // 新建的 interruptionRecord 的 id
-    interruptionType: "E" | "I";
-    description: string;
-  };
-  activity?: Activity; // 若 asActivity === true 则返回
-  schedule?: Schedule; // 若 activityClass === "S" 则返回
-  todo?: Todo; // 若 activityClass === "T" 则可返回（若你在子组件就生成）
 }

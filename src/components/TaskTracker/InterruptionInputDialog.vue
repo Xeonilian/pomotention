@@ -69,7 +69,7 @@ const emit = defineEmits<{
       interruptionType: "E" | "I";
       description: string;
       asActivity: boolean;
-      activityClass?: "T" | "S";
+      activityType?: "T" | "S";
       dueDate?: number | null;
     }
   ): void;
@@ -96,7 +96,7 @@ function handleConfirm() {
     interruptionType: interruptionType.value,
     description: description.value.trim(),
     asActivity: activityType.value !== null,
-    activityClass: activityType.value || undefined,
+    activityType: activityType.value || undefined,
     dueDate: todoDueDate.value || undefined,
   });
   emit("update:show", false);
