@@ -360,7 +360,7 @@ const handleItemSelect = (
   border-radius: 50%;
   z-index: 1;
   color: var(--color-text-secondary);
-  background-color: var(--primary-color, #e2e2e26b);
+  background-color: var(--primary-color, #efeded4b);
   padding: 1px;
 }
 
