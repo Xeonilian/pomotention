@@ -1,3 +1,4 @@
+<!-- MessageDispatcher.vue -->
 <template>
   <div></div>
 </template>
