@@ -1,6 +1,11 @@
 <!-- // src//MonthPlanner.vue -->
 <template>
   <div class="month-planner">
+    <div class="month-header">
+      <n-card v-for="dayName in dayNames" :key="dayName" class="header-card">
+        {{ dayName }}
+      </n-card>
+    </div>
     <div class="grid">
       <div v-for="(day, idx) in days" :key="idx" class="day-col">
         <n-card
@@ -70,6 +75,7 @@ const emit = defineEmits<{
   "item-change": [activityId?: number, taskId?: number];
 }>();
 
+const dayNames = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 type UnifiedItem = {
   key: string;
   id: number;
@@ -282,8 +288,24 @@ const handleItemSelect = (
 .month-planner {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+
   height: 100%;
+}
+
+.month-header {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr); /* 创建7个等宽的列 */
+  text-align: center;
+  height: 22px;
+  gap: 2px;
+}
+
+.header-card :deep(.n-card__content) {
+  font-size: 14px;
+  color: var(--color-text-primary);
+  font-weight: 600;
+  height: 20px;
+  padding: 0 !important;
 }
 
 .grid {
@@ -299,9 +321,10 @@ const handleItemSelect = (
   display: flex;
   flex-direction: column;
   height: 100%;
-  min-height: 100px;
+  min-height: 80px;
   position: relative; /* 为绝对定位的日期徽章提供定位基准 */
-  padding: 2px;
+  padding: 6px 4px;
+  overflow: visible;
 }
 
 .day-card :deep(.n-card__content) {
@@ -324,7 +347,7 @@ const handleItemSelect = (
 /* 日期徽章 - 右上角绝对定位 */
 .date-badge {
   position: absolute;
-  top: 2px;
+  top: -2px;
   right: 2px;
   font-weight: 500;
   font-size: 14px;
@@ -336,8 +359,9 @@ const handleItemSelect = (
   justify-content: center;
   border-radius: 50%;
   z-index: 1;
-  background-color: transparent;
   color: var(--color-text-secondary);
+  background-color: var(--primary-color, #e2e2e26b);
+  padding: 1px;
 }
 
 .date-badge.today {
@@ -352,7 +376,7 @@ const handleItemSelect = (
   gap: 2px;
   min-width: 0;
   flex: 1;
-  overflow: hidden;
+  overflow: visible;
   padding-top: 2px; /* 给右上角日期留出一点空间 */
 }
 
@@ -390,10 +414,11 @@ const handleItemSelect = (
 
 .more {
   color: var(--color-text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: 10px;
-  text-align: center;
-  padding: 2px;
-  margin-top: auto;
+  overflow: visible;
 }
 
 /* 基础小圆点 */
@@ -403,6 +428,7 @@ const handleItemSelect = (
   height: 4px;
   border-radius: 50%;
   flex-shrink: 0;
+  margin-right: 2px;
 }
 
 .type-dot.todo {

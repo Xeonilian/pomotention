@@ -1086,8 +1086,14 @@ function onViewSet() {
   const idx = order.indexOf(cur);
   const next = order[(idx + 1) % order.length];
   settingStore.settings.viewSet = next;
+  if (cur === "week") {
+    settingStore.settings.topHeight = 590;
+  } else if (cur === "day") {
+    settingStore.settings.topHeight = 300;
+  } else if (cur === "month") {
+    settingStore.settings.topHeight = 300;
+  }
 }
-
 function goToTodo(todoId: number) {
   dateService.navigateTo(new Date(todoId));
 }
@@ -1435,7 +1441,7 @@ const { startResize: startVerticalResize } = useResize(
   topHeight,
   "vertical",
   0,
-  500
+  600
 );
 const { startResize: startLeftResize } = useResize(
   leftWidth,
