@@ -181,6 +181,93 @@ const handleKeydown = (event: KeyboardEvent) => {
     });
     return; // 功能完成，提前返回
   }
+  // --- 移动当前行：Alt + ArrowDown ---
+  if (event.altKey && !event.shiftKey && event.key === "ArrowDown") {
+    event.preventDefault(); // 阻止默认行为（如滚动页面）
+
+    // 1. 定位当前行
+    const lineStart = originalContent.lastIndexOf("\n", start - 1) + 1;
+    let lineEnd = originalContent.indexOf("\n", start);
+    if (lineEnd === -1) {
+      lineEnd = originalContent.length;
+    }
+
+    // 如果当前行已经是最后一行，则无需移动
+    if (lineEnd === originalContent.length) {
+      return;
+    }
+
+    // 2. 提取当前行内容（包括换行符）
+    const lineWithNewline = originalContent.substring(lineStart, lineEnd + 1);
+
+    // 3. 定位下一行
+    let nextLineEnd = originalContent.indexOf("\n", lineEnd + 1);
+    if (nextLineEnd === -1) {
+      nextLineEnd = originalContent.length;
+    }
+
+    // 4. 重组内容
+    const partBefore = originalContent.substring(0, lineStart);
+    const nextLineContent = originalContent.substring(
+      lineEnd + 1,
+      nextLineEnd + 1
+    );
+    const partAfter = originalContent.substring(nextLineEnd + 1);
+
+    content.value = partBefore + nextLineContent + lineWithNewline + partAfter;
+
+    // 5. 更新光标位置
+    nextTick(() => {
+      const newCursorPos = start + nextLineContent.length;
+      textArea.selectionStart = newCursorPos;
+      textArea.selectionEnd = newCursorPos;
+    });
+
+    return;
+  }
+
+  // --- 移动当前行：Alt + ArrowUp ---
+  if (event.altKey && !event.shiftKey && event.key === "ArrowUp") {
+    event.preventDefault();
+
+    // 1. 定位当前行
+    const lineStart = originalContent.lastIndexOf("\n", start - 1) + 1;
+    let lineEnd = originalContent.indexOf("\n", start);
+    if (lineEnd === -1) {
+      lineEnd = originalContent.length;
+    }
+
+    // 如果当前行已经是第一行，则无需移动
+    if (lineStart === 0) {
+      return;
+    }
+
+    // 2. 提取当前行内容
+    const currentLineContent = originalContent.substring(
+      lineStart,
+      lineEnd + 1
+    );
+
+    // 3. 定位上一行
+    const prevLineStart = originalContent.lastIndexOf("\n", lineStart - 2) + 1;
+
+    // 4. 重组内容
+    const partBefore = originalContent.substring(0, prevLineStart);
+    const prevLineContent = originalContent.substring(prevLineStart, lineStart);
+    const partAfter = originalContent.substring(lineEnd + 1);
+
+    content.value =
+      partBefore + currentLineContent + prevLineContent + partAfter;
+
+    // 5. 更新光标位置
+    nextTick(() => {
+      const newCursorPos = start - prevLineContent.length;
+      textArea.selectionStart = newCursorPos;
+      textArea.selectionEnd = newCursorPos;
+    });
+
+    return;
+  }
 
   // 3. Tab 或 Shift+Tab: 缩进/取消缩进
   if (event.key === "Tab") {

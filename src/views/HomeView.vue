@@ -1259,6 +1259,7 @@ function onInterruptionRecord(data: {
         parentId: null,
         dueRange: [null, ""],
         status: "",
+        interruption: interruptionType,
       };
       activityList.value.push(newActivity);
       handleAddActivity(scheduleList.value, newActivity, {
