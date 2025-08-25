@@ -72,7 +72,7 @@
                 v-model:value="item.title"
                 type="text"
                 :placeholder="item.isUntaetigkeit ? '无所事事' : '任务描述'"
-                style="flex: 2"
+                style="flex: 1"
                 @input="handleTitleInput(item, $event)"
                 @keydown="handleInputKeydown($event, item)"
                 @focus="$emit('focus-row', item.id)"

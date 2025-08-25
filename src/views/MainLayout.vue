@@ -62,6 +62,16 @@
         />
       </n-layout-content>
     </n-layout>
+
+    <!-- AI 对话对话框 -->
+    <AIChatDialog
+      :visible="settingStore.settings.showAi"
+      :position="settingStore.settings.aiChatPosition"
+      :size="settingStore.settings.aiChatSize"
+      @close="settingStore.settings.showAi = false"
+      @update:position="(pos: { x: number; y: number }) => settingStore.settings.aiChatPosition = pos"
+      @update:size="(size: { width: number; height: number }) => settingStore.settings.aiChatSize = size"
+    />
   </div>
 </template>
 
@@ -87,13 +97,15 @@ import {
   ArrowRight24Filled,
   Timer24Regular,
   Pin24Regular,
+  BrainCircuit24Regular,
 } from "@vicons/fluent";
 
 import { useAlwaysOnTop } from "@/composables/useAlwaysOnTop";
 import { useDraggable } from "@/composables/useDraggable";
 import { useButtonStyle } from "@/composables/useButtonStyle";
 
-import PomotentionTimer from "../components/PomotentionTimer/PomotentionTimer.vue";
+import PomotentionTimer from "@/components/PomotentionTimer/PomotentionTimer.vue";
+import AIChatDialog from "@/components/AIChat/AIChatDialog.vue";
 
 const timerStore = useTimerStore();
 const settingStore = useSettingStore();
@@ -168,6 +180,12 @@ const viewControls = computed(() => [
     title: "切换活动视图",
     show: settingStore.settings.showActivity,
   },
+  {
+    key: "ai",
+    icon: BrainCircuit24Regular,
+    title: "AI 助手",
+    show: settingStore.settings.showAi,
+  },
 ]);
 
 function handleMenuSelect(key: string) {
@@ -177,7 +195,7 @@ function handleMenuSelect(key: string) {
 }
 
 function toggleSettingPanel(
-  panel: "schedule" | "activity" | "task" | "planner" | "pomodoro"
+  panel: "schedule" | "activity" | "task" | "today" | "pomodoro" | "ai"
 ) {
   const key = "show" + panel.charAt(0).toUpperCase() + panel.slice(1);
   (settingStore.settings as any)[key] = !(settingStore.settings as any)[key];
@@ -195,7 +213,7 @@ function handleMainLayoutViewToggle(key: string) {
   }
 
   toggleSettingPanel(
-    key as "schedule" | "activity" | "task" | "planner" | "pomodoro"
+    key as "schedule" | "activity" | "task" | "today" | "pomodoro" | "ai"
   );
 }
 
@@ -358,6 +376,7 @@ watch(
     () => settingStore.settings.showTask,
     () => settingStore.settings.showActivity,
     () => settingStore.settings.showPomodoro,
+    () => settingStore.settings.showAi,
   ],
   () => {
     updateButtonStates();
