@@ -132,31 +132,153 @@ const stopEditing = () => {
 };
 
 const handleKeydown = (event: KeyboardEvent) => {
-  // Check if the escape key is pressed
+  // 阻止默认行为的通用检查
+  if (
+    event.key === "Tab" ||
+    (event.altKey && event.shiftKey && event.key === "ArrowDown")
+  ) {
+    event.preventDefault();
+  }
+
+  const textArea = event.target as HTMLTextAreaElement;
+  if (!textArea) return;
+
+  const start = textArea.selectionStart;
+  const end = textArea.selectionEnd;
+  const originalContent = content.value;
+
+  // 1. Escape 键: 退出编辑
   if (event.key === "Escape") {
-    stopEditing(); // Call stopEditing to exit edit mode
-  } else if (event.key === "Tab") {
-    event.preventDefault(); // Prevent default Tab behavior
+    stopEditing();
+    return;
+  }
 
-    // Get the textarea element
-    const textAreaElement = textarea.value;
-    if (!textAreaElement) return; // Ensure the textarea is available
+  // 2. Alt+Shift+ArrowDown (Option+Shift+↓ on Mac): 重复当前行
+  if (event.altKey && event.shiftKey && event.key === "ArrowDown") {
+    // 找到当前行的起始和结束位置
+    const lineStart = originalContent.lastIndexOf("\n", start - 1) + 1;
+    let lineEnd = originalContent.indexOf("\n", end);
+    // 如果是最后一行，则行尾就是字符串的结尾
+    if (lineEnd === -1) {
+      lineEnd = originalContent.length;
+    }
 
-    // Get the cursor position
-    const start = textAreaElement.selectionStart;
-    const end = textAreaElement.selectionEnd;
+    const currentLineContent = originalContent.substring(lineStart, lineEnd);
+    const contentToInsert = "\n" + currentLineContent;
 
-    // Insert spaces or a tab character
-    const indent = "    "; // You can change this to a tab character if you prefer '\t'
+    // 将复制的内容插入到当前行之后
     content.value =
-      content.value.substring(0, start) + indent + content.value.substring(end);
+      originalContent.substring(0, lineEnd) +
+      contentToInsert +
+      originalContent.substring(lineEnd);
 
-    // Move the cursor after the inserted indent
+    // 更新光标位置到新行的相同位置
     nextTick(() => {
-      textAreaElement.selectionStart = textAreaElement.selectionEnd =
-        start + indent.length;
-      textAreaElement.focus(); // Keep the focus on the textarea
+      const newCursorPos = start + contentToInsert.length;
+      textArea.selectionStart = newCursorPos;
+      textArea.selectionEnd = newCursorPos;
+      textArea.focus();
     });
+    return; // 功能完成，提前返回
+  }
+
+  // 3. Tab 或 Shift+Tab: 缩进/取消缩进
+  if (event.key === "Tab") {
+    // 情况一：处理多行选择 (start 和 end 不在同一位置)
+    if (start !== end) {
+      let lineStart = originalContent.lastIndexOf("\n", start - 1) + 1;
+      const selectedText = originalContent.substring(lineStart, end);
+      let newSelectedText = "";
+      let changeInLength = 0;
+
+      if (event.shiftKey) {
+        // Shift+Tab: 减少缩进
+        newSelectedText = selectedText
+          .split("\n")
+          .map((line) => {
+            if (line.startsWith("    ")) {
+              changeInLength -= 4;
+              return line.substring(4);
+            } else if (line.startsWith("\t")) {
+              changeInLength -= 1;
+              return line.substring(1);
+            }
+            return line;
+          })
+          .join("\n");
+      } else {
+        // Tab: 增加缩进
+        newSelectedText = selectedText
+          .split("\n")
+          .map((line) => {
+            // 只为非空行增加缩进
+            if (line.length > 0) {
+              changeInLength += 4;
+              return "    " + line;
+            }
+            return line;
+          })
+          .join("\n");
+      }
+
+      content.value =
+        originalContent.substring(0, lineStart) +
+        newSelectedText +
+        originalContent.substring(end);
+
+      nextTick(() => {
+        textArea.selectionStart = lineStart;
+        textArea.selectionEnd = end + changeInLength;
+        textArea.focus();
+      });
+    } else {
+      // 情况二：处理单行（光标在一点）
+      if (event.shiftKey) {
+        // Shift+Tab: 减少缩进
+        const lineStart = originalContent.lastIndexOf("\n", start - 1) + 1;
+        const lineContentBeforeCursor = originalContent.substring(
+          lineStart,
+          start
+        );
+
+        if (lineContentBeforeCursor.startsWith("    ")) {
+          content.value =
+            originalContent.substring(0, lineStart) +
+            originalContent.substring(lineStart + 4);
+          nextTick(() => {
+            textArea.selectionStart = textArea.selectionEnd = Math.max(
+              start - 4,
+              lineStart
+            );
+            textArea.focus();
+          });
+        } else if (lineContentBeforeCursor.startsWith("\t")) {
+          content.value =
+            originalContent.substring(0, lineStart) +
+            originalContent.substring(lineStart + 1);
+          nextTick(() => {
+            textArea.selectionStart = textArea.selectionEnd = Math.max(
+              start - 1,
+              lineStart
+            );
+            textArea.focus();
+          });
+        }
+      } else {
+        // Tab: 增加缩进
+        const indent = "    ";
+        content.value =
+          originalContent.substring(0, start) +
+          indent +
+          originalContent.substring(end);
+
+        nextTick(() => {
+          textArea.selectionStart = textArea.selectionEnd =
+            start + indent.length;
+          textArea.focus();
+        });
+      }
+    }
   }
 };
 
