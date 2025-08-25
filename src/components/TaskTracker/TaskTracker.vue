@@ -130,6 +130,8 @@ const emit = defineEmits<{
     e: "update-task-description",
     payload: { taskId: number; description: string }
   ): void;
+  (e: "energy-record", value: { value: number; description?: string }): void;
+  (e: "reward-record", value: { value: number; description?: string }): void;
 }>();
 
 // UI 状态
@@ -190,24 +192,15 @@ const combinedRecords = computed<CombinedRecord[]>(() => {
 });
 
 // 能量记录：直接用 service 更新共享内存（不上提）
-function handleEnergyRecord(data: { value: number; description?: string }) {
+function handleEnergyRecord(val: { value: number; description?: string }) {
   if (!props.selectedTaskId) return;
-  taskService.addEnergyRecord(
-    props.selectedTaskId,
-    data.value,
-    data.description
-  );
+  emit("energy-record", val);
 }
 
 // 愉悦记录：同上
-function handleRewardRecord(data: { value: number; description?: string }) {
+function handleRewardRecord(val: { value: number; description?: string }) {
   if (!props.selectedTaskId) return;
-  taskService.addRewardRecord(
-    props.selectedTaskId,
-    data.value,
-    data.description
-  );
-  emit("reward-record"); // 若父层需要联动，可保持此事件
+  emit("reward-record", val); // 若父层需要联动，可保持此事件
 }
 
 // 打断记录：创建 record，如需派生活动转 schedule，一并通过 payload 告知父层

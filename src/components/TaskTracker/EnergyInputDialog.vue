@@ -1,3 +1,4 @@
+<!-- EnergyInputDialog.vue -->
 <template>
   <n-modal
     v-model:show="showModal"

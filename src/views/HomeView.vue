@@ -233,9 +233,11 @@
           :selectedTaskId="selectedTaskId"
           :selectedTask="selectedTask"
           :selectedTagIds="selectedTagIds"
-          @interruption-record="onInterruptionRecord"
           @activetaskId="onActiveTaskId"
           @update-task-description="onUpdateTaskDescription"
+          @interruption-record="onInterruptionRecord"
+          @reward-record="onRewordRecord"
+          @energy-record="onEnergyRecord"
         />
       </div>
     </div>
@@ -312,6 +314,8 @@ import type { Schedule } from "@/core/types/Schedule";
 import {
   Task,
   InterruptionCommittedPayload,
+  EnergyRecord,
+  RewardRecord,
   InterruptionRecord,
 } from "@/core/types/Task";
 import { WORK_BLOCKS, ENTERTAINMENT_BLOCKS, ViewType } from "@/core/constants";
@@ -355,6 +359,7 @@ import {
 } from "@/core/utils";
 import { unifiedDateService } from "@/services/unifiedDateService";
 import { useSettingStore } from "@/stores/useSettingStore";
+import { taskService } from "@/services/taskService";
 // ======================== 响应式状态与初始化 ========================
 
 // -- 基础UI状态
@@ -1263,6 +1268,7 @@ function onInterruptionRecord(payload: InterruptionCommittedPayload) {
   }
 
   if (payload.activity) {
+    console.log(33);
     const exists = activityList.value.some(
       (a) => a.id === payload.activity!.id
     );
@@ -1283,6 +1289,26 @@ function onInterruptionRecord(payload: InterruptionCommittedPayload) {
   }
 
   saveAllDebounced();
+}
+
+function onRewordRecord(val: { value: number; description?: string }) {
+  const { value, description } = val;
+  if (selectedTaskId.value) {
+    const task = taskById.value.get(selectedTaskId.value);
+    if (!task) return;
+    const record: RewardRecord = { id: Date.now(), value, description };
+    task.rewardRecords.push(record);
+  }
+}
+
+function onEnergyRecord(val: { value: number; description?: string }) {
+  const { value, description } = val;
+  if (selectedTaskId.value) {
+    const task = taskById.value.get(selectedTaskId.value);
+    if (!task) return;
+    const record: EnergyRecord = { id: Date.now(), value, description };
+    task.energyRecords.push(record);
+  }
 }
 
 // 选择task时高亮对应的todo/activity/schedule
