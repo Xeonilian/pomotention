@@ -88,10 +88,6 @@
   </div>
 
   <!-- AI 设置对话框 -->
-  <AISettingsDialog
-    v-model:visible="showSettings"
-    @saved="handleSettingsSaved"
-  />
 </template>
 
 <script setup lang="ts">
@@ -103,7 +99,7 @@ import {
   Settings24Regular,
 } from "@vicons/fluent";
 import { aiService, type AIMessage } from "@/services/aiService";
-import AISettingsDialog from "./AISettingsDialog.vue";
+
 import { useDraggable } from "@/composables/useDraggable";
 import userAvatar from "@/assets/user-1.svg";
 import aiAvatar from "@/assets/bot-avatar.png";
@@ -120,7 +116,11 @@ const props = defineProps({
   size: { type: Object, default: () => ({ width: 400, height: 500 }) },
 });
 
-const emit = defineEmits(["close", "update:position", "update:size"]);
+const emit = defineEmits<{
+  (e: "update:position", pos: { x: number; y: number }): void;
+  (e: "update:size", size: { width: number; height: number }): void;
+  (e: "close"): void;
+}>();
 
 // 响应式数据
 const messages = ref<Message[]>([]);
@@ -299,11 +299,6 @@ const sendMessage = async () => {
 // 设置
 const handleSetting = () => {
   showSettings.value = true;
-};
-
-// 处理设置保存
-const handleSettingsSaved = () => {
-  console.log("AI 设置已保存");
 };
 
 // 获取系统提示词

@@ -17,6 +17,13 @@
           </div>
 
           <div class="items">
+            <div
+              class="pomo-fill"
+              :style="{
+                height: (day.pomoRatio * 100).toFixed(2) + '%',
+                background: getPomoGradient(day.pomoRatio),
+              }"
+            />
             <template v-if="day.items.length">
               <div
                 v-for="item in day.items.slice(0, MAX_PER_DAY)"
@@ -33,7 +40,16 @@
                 "
               >
                 <span class="type-dot" :class="item.type"></span>
-
+                <TagRenderer
+                  :tag-ids="item.tagIds ?? []"
+                  :isCloseable="false"
+                  size="tiny"
+                  :displayLength="Number(3)"
+                  :showIdx="Number(2)"
+                />
+                <span v-if="item.activityDueRange?.[0]" class="schedule-time">
+                  {{ timestampToTimeString(item.activityDueRange?.[0]) }}
+                </span>
                 <span
                   class="title"
                   :title="item.title"
@@ -46,8 +62,12 @@
                 </span>
               </div>
 
-              <div v-if="day.items.length > MAX_PER_DAY" class="more">
-                {{ day.items.length - MAX_PER_DAY }} …
+              <div class="card-statistic">
+                <span v-if="day.items.length > MAX_PER_DAY" class="more">
+                  [{{ day.sumRealPomo }}x🍅]
+                  {{ day.items.length - MAX_PER_DAY }} …
+                </span>
+                <span v-else class="pom-sum">[{{ day.sumRealPomo }}x🍅]</span>
               </div>
             </template>
 
@@ -64,10 +84,21 @@ import { computed, ref } from "vue";
 import { NCard } from "naive-ui";
 import type { Todo } from "@/core/types/Todo";
 import type { Schedule } from "@/core/types/Schedule";
+import TagRenderer from "../TagSystem/TagRenderer.vue";
+import { timestampToTimeString } from "@/core/utils";
+
+const props = defineProps<{
+  weekTodos: Array<Todo & { tagIds?: number[] }>;
+  weekSchedules: Array<Schedule & { tagIds?: number[] }>;
+  weekStartTs: number; // 周一 00:00:00（毫秒）
+  dayStartTs: number;
+  activeId: number | null;
+  selectedRowId: number | null;
+}>();
 
 const emit = defineEmits<{
   "date-change": [timestamp: number];
-  "item-change": [activityId?: number, taskId?: number];
+  "item-change": [id: number, activityId?: number, taskId?: number];
 }>();
 
 type UnifiedItem = {
@@ -94,29 +125,17 @@ type UnifiedItem = {
 
   // schedule 专属
   activityDueRange?: [number | null, string]; // [开始时间戳, 持续 min(字符串)]
+  tagIds?: number[];
 };
-
-const props = defineProps<{
-  weekTodos: Todo[];
-  weekSchedules: Schedule[];
-  weekStartTs: number; // 周一 00:00:00（毫秒）
-  dayStartTs: number;
-  activeId: number | null;
-  selectedRowId: number | null;
-}>();
 
 const selectedDate = computed(() => props.dayStartTs);
 const selectedItem = ref(1);
 
-const MAX_PER_DAY = 10;
+const MAX_PER_DAY = 9;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 const dayNames = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
-
-const dayStartTsList = computed(() => {
-  const base = startOfDay(props.weekStartTs);
-  return Array.from({ length: 7 }, (_, i) => base + i * DAY_MS);
-});
+const STANDARD_POMO = 20;
 
 const days = computed(() => {
   // 将 Todo 映射到统一结构
@@ -143,6 +162,7 @@ const days = computed(() => {
         startTime: t.startTime,
         interruption: t.interruption,
         positionIndex: t.positionIndex,
+        tagIds: t.tagIds,
       } as UnifiedItem;
     })
     .filter((x): x is UnifiedItem => !!x);
@@ -168,11 +188,12 @@ const days = computed(() => {
         isUntaetigkeit: s.isUntaetigkeit as any,
         interruption: s.interruption,
         activityDueRange: s.activityDueRange,
+        tagIds: s.tagIds,
       } as UnifiedItem;
     })
     .filter((x): x is UnifiedItem => !!x);
 
-  const merged = [...todoItems, ...scheduleItems];
+  const merged = [...scheduleItems, ...todoItems];
 
   // 分桶到 7 天
   const buckets: UnifiedItem[][] = Array.from({ length: 7 }, () => []);
@@ -186,13 +207,29 @@ const days = computed(() => {
   }
 
   // 各天排序
-  const result = buckets.map((arr, idx) => {
-    const sorted = arr.slice().sort((a, b) => a.ts - b.ts);
+  const result = Array.from({ length: 7 }, (_, idx) => {
+    const dayTs = weekStart + idx * DAY_MS;
+    const sorted = buckets[idx].slice().sort((a, b) => a.ts - b.ts);
+
+    // realPomo 聚合（番茄个数）
+    const sumRealPomo = sorted
+      .filter((i) => i.type === "todo")
+      .reduce((sum, item) => {
+        const arr = item.realPomo;
+        if (!Array.isArray(arr) || arr.length === 0) return sum;
+        const itemSum = arr.reduce((s, n) => s + (Number(n) || 0), 0);
+        return sum + itemSum;
+      }, 0);
+
+    const pomoRatio = Math.min(sumRealPomo / STANDARD_POMO, 1);
+
     return {
       index: idx,
-      startTs: dayStartTsList.value[idx],
-      endTs: dayStartTsList.value[idx] + DAY_MS,
+      startTs: dayTs,
+      endTs: dayTs + DAY_MS,
       items: sorted,
+      sumRealPomo,
+      pomoRatio,
     };
   });
 
@@ -201,7 +238,7 @@ const days = computed(() => {
 
 function pickTodoTs(t: Todo): number | null {
   // 排序与分桶使用的时间戳优先级：startTime > dueDate > id
-  return t.startTime ?? t.dueDate ?? t.id ?? null;
+  return t.id ?? t.dueDate ?? t.startTime ?? null;
 }
 
 function pickScheduleTs(s: Schedule): number | null {
@@ -236,8 +273,14 @@ const handleItemSelect = (
 ) => {
   selectedItem.value = id;
   emit("date-change", ts);
-  emit("item-change", activityId, taskId);
+  emit("item-change", id, activityId, taskId);
 };
+
+function getPomoGradient(ratio: number) {
+  const clamped = Math.max(0, Math.min(1, ratio));
+  const alpha = 0 + 0.15 * clamped * 0; // 0 ~ 0.35，很淡的红
+  return `rgba(245, 85, 45, ${alpha.toFixed(3)})`;
+}
 </script>
 
 <style scoped>
@@ -264,30 +307,48 @@ const handleItemSelect = (
 .day-card {
   display: flex;
   flex-direction: column;
-  height: 100%; /* 关键：撑满格子高度（即 grid 的行高） */
+  height: 100%;
+  overflow: hidden;
 }
 .day-card :deep(.n-card__content) {
-  padding: 8px 6px;
+  padding: 6px 6px;
+}
+
+.pomo-fill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0; /* 自下而上填充 */
+  pointer-events: none; /* 不影响点击 */
+  z-index: 0; /* 在内容之下 */
+  border-radius: 2px;
 }
 
 .day-header {
   display: flex;
-  justify-content: space-between;
   align-items: baseline;
+  justify-content: space-between;
   margin-bottom: 6px;
+  white-space: nowrap;
 }
+
 .day-header .dow {
   font-weight: 600;
+  white-space: nowrap;
+  flex: 0 0 auto;
 }
+
 .day-header .date {
   color: var(--color-text-secondary);
   font-size: 14px;
+  min-width: 0; /* 关键：允许收缩到 0 */
+  overflow: hidden;
 }
 
 .items {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
   min-width: 0;
 }
 
@@ -329,9 +390,23 @@ const handleItemSelect = (
   white-space: nowrap;
 }
 
+.card-statistic {
+  position: absolute;
+  bottom: 0;
+}
+
 .more {
   color: var(--color-text-secondary);
   font-size: 12px;
+  margin-right: 4px;
+  font-family: "consolas", monospace;
+}
+
+.pom-sum {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  text-align: center;
+  font-family: "consolas", monospace;
   margin-right: 4px;
 }
 
@@ -347,7 +422,7 @@ const handleItemSelect = (
   height: 6px;
   border-radius: 50%;
   flex-shrink: 0;
-  margin-right: 4px; /* 和时间之间的间距 */
+  margin-right: 0px; /* 和时间之间的间距 */
 }
 
 /* 颜色：todo 蓝色，schedule 红色 */
@@ -356,5 +431,15 @@ const handleItemSelect = (
 }
 .type-dot.schedule {
   background-color: var(--color-blue);
+}
+
+.schedule-time {
+  font-size: 10px;
+  font-family: "consolas", monospace;
+  color: var(--color-text);
+  white-space: nowrap;
+  border-radius: 2px;
+  border: 1px solid var(--color-blue);
+  background-color: var(--color-blue-light);
 }
 </style>

@@ -177,7 +177,7 @@
                         <n-checkbox
                           :checked="isPomoCompleted(todo, index, i)"
                           @update:checked="
-                            (checked) =>
+                            (checked: any) =>
                               handlePomoCheck(todo, index, i, checked)
                           "
                         />

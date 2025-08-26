@@ -17,7 +17,7 @@
       <tbody class="table-body">
         <template v-if="schedules && schedules!.length > 0">
           <tr
-            v-for="schedule in schedules.sort((a, b) => {
+            v-for="schedule in schedules.sort((a:Schedule, b:Schedule) => {
               const aValue = a.activityDueRange?.[0] ?? Infinity;
               const bValue = b.activityDueRange?.[0] ?? Infinity;
               return aValue - bValue;

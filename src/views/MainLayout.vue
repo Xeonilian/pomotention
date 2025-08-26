@@ -69,8 +69,8 @@
       :position="settingStore.settings.aiChatPosition"
       :size="settingStore.settings.aiChatSize"
       @close="settingStore.settings.showAi = false"
-      @update:position="(pos: { x: number; y: number }) => settingStore.settings.aiChatPosition = pos"
-      @update:size="(size: { width: number; height: number }) => settingStore.settings.aiChatSize = size"
+      @update:position="(pos) => (settingStore.settings.aiChatPosition = pos)"
+      @update:size="(size) => (settingStore.settings.aiChatSize = size)"
     />
   </div>
 </template>

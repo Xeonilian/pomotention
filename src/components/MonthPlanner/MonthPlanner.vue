@@ -21,8 +21,14 @@
           <div class="date-badge" :class="{ today: day.isToday }">
             {{ formatDay(day.startTs) }}
           </div>
-
           <div class="items">
+            <div
+              class="pomo-fill"
+              :style="{
+                height: '100%',
+                background: getPomoGradient(day.pomoRatio),
+              }"
+            />
             <template v-if="day.items.length">
               <div
                 v-for="item in day.items.slice(0, MAX_PER_DAY)"
@@ -39,7 +45,17 @@
                 "
               >
                 <span class="type-dot" :class="item.type"></span>
-
+                <TagRenderer
+                  :tag-ids="normalizeTagIds(item.tagIds)"
+                  :isCloseable="false"
+                  size="tiny"
+                  :displayLength="Number(0)"
+                  :showIdx="Number(1)"
+                  class="tag"
+                />
+                <span v-if="item.activityDueRange?.[0]" class="schedule-time">
+                  {{ timestampToTimeString(item.activityDueRange?.[0]) }}
+                </span>
                 <span
                   class="title"
                   :title="item.title"
@@ -51,7 +67,6 @@
                   {{ item.title }}
                 </span>
               </div>
-
               <div v-if="day.items.length > MAX_PER_DAY" class="more">
                 +{{ day.items.length - MAX_PER_DAY }}
               </div>
@@ -62,27 +77,29 @@
     </div>
   </div>
 </template>
-
 <script setup lang="ts">
 // ... 脚本部分保持不变
 import { computed, ref } from "vue";
 import { NCard } from "naive-ui";
 import type { Todo } from "@/core/types/Todo";
 import type { Schedule } from "@/core/types/Schedule";
+import TagRenderer from "../TagSystem/TagRenderer.vue";
+import { timestampToTimeString } from "@/core/utils";
 
 const emit = defineEmits<{
   "date-change": [timestamp: number];
-  "item-change": [activityId?: number, taskId?: number];
+  "item-change": [id: number, activityId?: number, taskId?: number];
 }>();
 
 const dayNames = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
+const STANDARD_POMO = 20;
+
 type UnifiedItem = {
   key: string;
   id: number;
   ts: number; // 用于分桶与排序的时间戳（毫秒）
   type: "todo" | "schedule";
   title: string;
-
   // 可选携带的原字段，便于后续交互扩展
   activityId?: number;
   activityTitle?: string;
@@ -97,23 +114,20 @@ type UnifiedItem = {
   startTime?: number;
   interruption?: "I" | "E";
   positionIndex?: number;
-
   // schedule 专属
   activityDueRange?: [number | null, string];
+  tagIds?: number[];
 };
-
 const props = defineProps<{
-  monthTodos: Todo[];
-  monthSchedules: Schedule[];
+  monthTodos: Array<Todo & { tagIds?: number[] }>;
+  monthSchedules: Array<Schedule & { tagIds?: number[] }>;
   monthStartTs: number; // 月初 00:00:00（毫秒）
   dayStartTs: number;
   selectedRowId: number | null;
   activeId: number | null;
 }>();
-
 const selectedDate = computed(() => props.dayStartTs);
 const selectedItem = ref(1);
-
 const MAX_PER_DAY = 4; // 每天最多显示4个项目
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -123,10 +137,8 @@ const days = computed(() => {
   const monthEnd = endOfMonth(props.monthStartTs);
   const calendarStart = startOfWeek(monthStart); // 月视图显示完整周
   const calendarEnd = endOfWeek(monthEnd);
-
   // 计算日历天数
   const totalDays = Math.ceil((calendarEnd - calendarStart) / DAY_MS);
-
   // 将 Todo 映射到统一结构
   const todoItems: UnifiedItem[] = (props.monthTodos || [])
     .map((t) => {
@@ -151,10 +163,10 @@ const days = computed(() => {
         startTime: t.startTime,
         interruption: t.interruption,
         positionIndex: t.positionIndex,
+        tagIds: t.tagIds,
       } as UnifiedItem;
     })
     .filter((x): x is UnifiedItem => !!x);
-
   // 将 Schedule 映射到统一结构
   const scheduleItems: UnifiedItem[] = (props.monthSchedules || [])
     .map((s) => {
@@ -176,22 +188,19 @@ const days = computed(() => {
         isUntaetigkeit: s.isUntaetigkeit as any,
         interruption: s.interruption,
         activityDueRange: s.activityDueRange,
+        tagIds: s.tagIds,
       } as UnifiedItem;
     })
     .filter((x): x is UnifiedItem => !!x);
-
-  const merged = [...todoItems, ...scheduleItems];
-
+  const merged = [...scheduleItems, ...todoItems];
   // 分桶到各天
   const buckets: UnifiedItem[][] = Array.from({ length: totalDays }, () => []);
-
   for (const item of merged) {
     const dayIndex = Math.floor((item.ts - calendarStart) / DAY_MS);
     if (dayIndex >= 0 && dayIndex < totalDays) {
       buckets[dayIndex].push(item);
     }
   }
-
   // 构建日历天数数据
   const today = startOfDay(Date.now());
   const currentMonth = new Date(props.monthStartTs).getMonth();
@@ -201,6 +210,19 @@ const days = computed(() => {
     const dayDate = new Date(dayTs);
     const sorted = buckets[idx].slice().sort((a, b) => a.ts - b.ts);
 
+    // 聚合当日 realPomo
+    const sumRealPomo = sorted
+      .filter((i) => i.type === "todo")
+      .reduce((sum, item) => {
+        const arr = item.realPomo;
+        if (!Array.isArray(arr) || arr.length === 0) return sum;
+        // 如果 realPomo 含有分钟数或片段数，请在这里按你的实际语义调整
+        const itemSum = arr.reduce((s, n) => s + (Number(n) || 0), 0);
+        return sum + itemSum;
+      }, 0);
+
+    const ratio = Math.min(sumRealPomo / STANDARD_POMO, 1);
+
     return {
       index: idx,
       startTs: dayTs,
@@ -208,14 +230,19 @@ const days = computed(() => {
       items: sorted,
       isCurrentMonth: dayDate.getMonth() === currentMonth,
       isToday: dayTs === today,
+      sumRealPomo,
+      pomoRatio: ratio,
     };
   });
-
   return result;
 });
 
+function normalizeTagIds(ids?: number[] | null): number[] {
+  return Array.isArray(ids) && ids.length > 0 ? ids : [0];
+}
+
 function pickTodoTs(t: Todo): number | null {
-  return t.startTime ?? t.dueDate ?? t.id ?? null;
+  return t.id ?? t.dueDate ?? t.startTime ?? null;
 }
 
 function pickScheduleTs(s: Schedule): number | null {
@@ -228,7 +255,6 @@ function startOfDay(ts: number) {
   d.setHours(0, 0, 0, 0);
   return d.getTime();
 }
-
 function startOfMonth(ts: number) {
   const d = new Date(ts);
   d.setDate(1);
@@ -242,7 +268,6 @@ function endOfMonth(ts: number) {
   d.setHours(23, 59, 59, 999);
   return d.getTime();
 }
-
 function startOfWeek(ts: number) {
   const d = new Date(ts);
   const day = d.getDay();
@@ -280,18 +305,21 @@ const handleItemSelect = (
 ) => {
   selectedItem.value = id;
   emit("date-change", ts);
-  emit("item-change", activityId, taskId);
+  emit("item-change", id, activityId, taskId);
 };
-</script>
 
+function getPomoGradient(ratio: number) {
+  const clamped = Math.max(0, Math.min(1, ratio));
+  const alpha = 0 * clamped;
+  return `rgba(255, 99, 111, ${alpha.toFixed(3)})`;
+}
+</script>
 <style scoped>
 .month-planner {
   display: flex;
   flex-direction: column;
-
   height: 100%;
 }
-
 .month-header {
   display: grid;
   grid-template-columns: repeat(7, 1fr); /* 创建7个等宽的列 */
@@ -299,7 +327,6 @@ const handleItemSelect = (
   height: 22px;
   gap: 2px;
 }
-
 .header-card :deep(.n-card__content) {
   font-size: 14px;
   color: var(--color-text-primary);
@@ -307,7 +334,6 @@ const handleItemSelect = (
   height: 20px;
   padding: 0 !important;
 }
-
 .grid {
   flex: 1 1 auto;
   min-height: 0;
@@ -316,17 +342,23 @@ const handleItemSelect = (
   grid-auto-rows: minmax(100px, 1fr); /* 自动行高，最小100px */
   gap: 2px;
 }
-
+.pomo-fill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0; /* 自下而上填充 */
+  pointer-events: none; /* 不影响点击 */
+  z-index: 0; /* 在内容之下 */
+  border-radius: 2px;
+}
 .day-card {
   display: flex;
   flex-direction: column;
   height: 100%;
   min-height: 80px;
   position: relative; /* 为绝对定位的日期徽章提供定位基准 */
-  padding: 6px 4px;
-  overflow: visible;
+  overflow: hidden;
 }
-
 .day-card :deep(.n-card__content) {
   padding: 4px;
   display: flex;
@@ -334,20 +366,17 @@ const handleItemSelect = (
   height: 100%;
   position: relative;
 }
-
 .day-card--selected {
   border-color: var(--primary-color, #409eff) !important;
   box-shadow: 0 2px 8px rgba(64, 158, 255, 0.3);
 }
-
 .day-card--other-month {
   opacity: 0.4;
 }
-
 /* 日期徽章 - 右上角绝对定位 */
 .date-badge {
   position: absolute;
-  top: -2px;
+  top: 2px;
   right: 2px;
   font-weight: 500;
   font-size: 14px;
@@ -363,13 +392,11 @@ const handleItemSelect = (
   background-color: var(--primary-color, #efeded4b);
   padding: 1px;
 }
-
 .date-badge.today {
-  background-color: var(--primary-color, #409eff);
+  background-color: var(--primary-color, #40a0ffc4);
   color: white;
   font-weight: 600;
 }
-
 .items {
   display: flex;
   flex-direction: column;
@@ -377,37 +404,34 @@ const handleItemSelect = (
   min-width: 0;
   flex: 1;
   overflow: visible;
-  padding-top: 2px; /* 给右上角日期留出一点空间 */
+  padding-top: 8px; /* 给右上角日期留出一点空间 */
 }
-
 .item {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
   font-size: 11px;
   line-height: 1.2;
+  min-height: 15px;
   color: var(--text-color);
   cursor: pointer;
   padding: 1px 2px;
   border-radius: 2px;
   transition: background-color 0.2s;
+  overflow: visible;
 }
-
 .item:hover {
   background-color: var(--color-hover, rgba(0, 0, 0, 0.05));
 }
-
 .item .title {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   flex: 1;
 }
-
 .item--selected {
   background-color: var(--color-blue-light, rgba(64, 158, 255, 0.1)) !important;
 }
-
 .activity--selected {
   background-color: var(--color-red-light, rgba(255, 77, 77, 0.1)) !important;
 }
@@ -418,24 +442,46 @@ const handleItemSelect = (
   align-items: center;
   justify-content: center;
   font-size: 10px;
+  line-height: 10px;
   overflow: visible;
 }
-
 /* 基础小圆点 */
 .type-dot {
   display: inline-block;
   width: 4px;
   height: 4px;
+  display: none;
   border-radius: 50%;
   flex-shrink: 0;
-  margin-right: 2px;
+  margin-right: 0px;
 }
 
 .type-dot.todo {
   background-color: var(--color-text-secondary);
 }
-
 .type-dot.schedule {
   background-color: var(--color-blue);
+}
+.tag {
+  height: 15px;
+  width: 10px;
+}
+
+.tag :deep(.n-tag) {
+  height: 8px;
+  top: 4px;
+}
+
+.schedule-time {
+  margin-left: 1px;
+  font-size: 11px;
+  font-family: "consolas", monospace;
+  color: var(--color-text);
+  white-space: nowrap;
+  border-radius: 2px;
+  border: 1px solid var(--color-blue);
+  background-color: var(--color-blue-light);
+  padding-left: 1px;
+  padding-right: 1px;
 }
 </style>

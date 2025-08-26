@@ -289,6 +289,7 @@
             :tag-ids="item.tagIds"
             :isCloseable="true"
             @remove-tag="handleRemoveTag(item, $event)"
+            class="tagRenderer-container"
           />
         </div>
       </div>
@@ -908,5 +909,9 @@ function handleTagCreate(item: Activity, tagName: string) {
 
 .n-modal-mask {
   background-color: rgba(0, 0, 0, 0.1) !important;
+}
+
+.tagRenderer-container {
+  margin-top: 2px;
 }
 </style>

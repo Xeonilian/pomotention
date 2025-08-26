@@ -135,7 +135,7 @@ export const taskService = {
     if (!task) return;
     const record: InterruptionRecord = {
       id: Date.now(),
-      class: interruptionType,
+      interruptionType: interruptionType,
       description: description,
       activityType: activityType ?? null,
     };
@@ -163,7 +163,7 @@ export const taskService = {
       id: interruption.id, // 注意：用 interruption.id 可能与现有 activity 冲突，建议改为新 id
       title: interruption.description,
       class: activityClass,
-      interruption: interruption.class,
+      interruption: interruption.interruptionType,
       parentId: null,
       status: "",
       ...(activityClass === "T" && { pomoType: "🍅", dueDate }),

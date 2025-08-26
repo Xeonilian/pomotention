@@ -192,8 +192,8 @@
               settingStore.settings.showPlanner &&
               settingStore.settings.viewSet === 'week'
             "
-            :weekTodos="todosForCurrentView"
-            :weekSchedules="schedulesForCurrentView"
+            :weekTodos="todosForCurrentViewWithTags"
+            :weekSchedules="schedulesForCurrentViewWithTags"
             :weekStartTs="dateService.weekStartTs.value"
             :dayStartTs="dateService.appDateTimestamp.value"
             :selectedRowId="selectedRowId"
@@ -206,8 +206,8 @@
               settingStore.settings.showPlanner &&
               settingStore.settings.viewSet === 'month'
             "
-            :monthTodos="todosForCurrentView"
-            :monthSchedules="schedulesForCurrentView"
+            :monthTodos="todosForCurrentViewWithTags"
+            :monthSchedules="schedulesForCurrentViewWithTags"
             :monthStartTs="dateService.monthStartTs.value"
             :dayStartTs="dateService.appDateTimestamp.value"
             :selectedRowId="selectedRowId"
@@ -499,18 +499,54 @@ const todosForCurrentView = computed(() => {
   if (!todoList.value) return [];
   return todoList.value.filter((todo) => todo.id >= start && todo.id < end);
 });
-
+type TodoWithTags = Todo & { tagIds?: number[] };
+const todosForCurrentViewWithTags = computed<TodoWithTags[]>(() => {
+  const { start, end } = dateService.visibleRange.value;
+  if (!todoList.value) return [];
+  const out: TodoWithTags[] = [];
+  for (const todo of todoList.value) {
+    if (todo.id < start || todo.id >= end) continue;
+    const activity =
+      todo.activityId != null
+        ? activityById.value.get(todo.activityId)
+        : undefined;
+    out.push({
+      ...todo,
+      tagIds: activity?.tagIds ?? [],
+    });
+  }
+  return out;
+});
 // 计算筛选当前视图范围内的 schedule
 const schedulesForCurrentView = computed(() => {
   const { start, end } = dateService.visibleRange.value;
-
   if (!scheduleList.value) return [];
   return scheduleList.value.filter((schedule) => {
     const date = schedule.activityDueRange?.[0];
-
     if (date == null) return false;
     return date >= start && date < end;
   });
+});
+
+type ScheduleWithTags = Schedule & { tagIds?: number[] };
+const schedulesForCurrentViewWithTags = computed<ScheduleWithTags[]>(() => {
+  const { start, end } = dateService.visibleRange.value;
+  if (!scheduleList.value) return [];
+  return scheduleList.value
+    .filter((schedule) => {
+      const date = schedule.activityDueRange?.[0];
+      return date != null && date >= start && date < end;
+    })
+    .map((schedule) => {
+      const activity =
+        schedule.activityId != null
+          ? activityById.value.get(schedule.activityId)
+          : undefined;
+      return {
+        ...schedule,
+        tagIds: activity?.tagIds ?? [],
+      };
+    });
 });
 
 // 计算筛选的todo
@@ -538,23 +574,27 @@ const schedulesForAppDate = computed(() => {
   });
 });
 
-// weekplanner 引起变化日期
+// weekplanner month 引起变化日期
 const onDateChange = (day: number) => {
   dateService.setAppDate(day);
   selectedActivityId.value = null;
   selectedTaskId.value = null;
   activeId.value = null;
+  selectedRowId.value = null;
 };
 
-// weekplanner 引起变化日期
-const onItemChange = (activityId?: number, taskId?: number) => {
+// week month planner 引起选中的任务行
+const onItemChange = (id: number, activityId?: number, taskId?: number) => {
+  selectedRowId.value = null;
   if (activityId) {
     selectedActivityId.value = activityId;
+    selectedRowId.value = id;
   } else {
     selectedActivityId.value = null;
   }
   if (taskId) {
     selectedTaskId.value = taskId;
+    selectedRowId.value = id;
   } else {
     selectedTaskId.value = null;
   }
