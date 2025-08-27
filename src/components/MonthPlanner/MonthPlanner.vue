@@ -354,6 +354,7 @@ function getPomoGradient(ratio: number) {
   color: var(--color-text-primary);
   font-weight: 600;
   height: 20px;
+  white-space: nowrap;
   padding: 0 !important;
 }
 .grid {

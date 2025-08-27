@@ -778,17 +778,23 @@ function handleTagCreate(item: Activity, tagName: string) {
   border-radius: 50%;
   color: var(--color-text-secondary);
 }
-
-.child-activity-tag {
-  margin-left: 20px;
-}
-
 .activity-content {
   display: flex;
   flex-direction: row;
 }
 .tag-content {
   display: flex;
+  flex-wrap: wrap;
+  width: 100%;
+}
+.child-activity-tag {
+  margin-left: 20px;
+}
+
+.tagRenderer-container {
+  margin-top: 2px;
+  display: flex;
+  flex-wrap: wrap;
 }
 
 .icon-drag-area {
@@ -909,9 +915,5 @@ function handleTagCreate(item: Activity, tagName: string) {
 
 .n-modal-mask {
   background-color: rgba(0, 0, 0, 0.1) !important;
-}
-
-.tagRenderer-container {
-  margin-top: 2px;
 }
 </style>
