@@ -203,7 +203,11 @@ export const useTimerStore = defineStore("timer", () => {
     }, 1000);
   }
 
+  const breakReminderCount = ref<number>(5); // 可设置提醒密度
+  const remindedSet = ref(new Set<number>());
+
   function startBreak(duration: number, onFinish?: () => void): void {
+    breakReminderCount.value = duration; // 每min一次提醒
     if (timerInterval.value) clearInterval(timerInterval.value);
 
     pomodoroState.value = "breaking";
@@ -246,8 +250,6 @@ export const useTimerStore = defineStore("timer", () => {
       }
     }, 1000);
   }
-  const breakReminderCount = ref<number>(5); // 可设置提醒密度（默认5段）
-  const remindedSet = ref(new Set<number>());
 
   watch(
     [pomodoroState, timeRemaining],
