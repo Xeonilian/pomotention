@@ -13,15 +13,21 @@
             <div class="dow">
               {{ dayNames[idx] }}
             </div>
-            <div class="date">{{ formatMonthDay(day.startTs) }}</div>
+            <div
+              class="date"
+              :class="{ today: day.isToday }"
+              @click="$emit('date-jump')"
+            >
+              {{ formatMonthDay(day.startTs) }}
+            </div>
           </div>
 
           <div class="items">
             <div
               class="pomo-fill"
               :style="{
-                height: (day.pomoRatio * 100).toFixed(2) + '%',
-                background: getPomoGradient(day.pomoRatio),
+                height: (day.pomoRatio * 100 * 0).toFixed(2) + '%',
+                background: getPomoGradient(0),
               }"
             />
             <template v-if="day.items.length">
@@ -60,14 +66,32 @@
                 >
                   {{ item.title }}
                 </span>
-              </div>
 
-              <div class="card-statistic">
-                <span v-if="day.items.length > MAX_PER_DAY" class="more">
-                  [{{ day.sumRealPomo }}x🍅]
-                  {{ day.items.length - MAX_PER_DAY }} …
-                </span>
-                <span v-else class="pom-sum">[{{ day.sumRealPomo }}x🍅]</span>
+                <div class="card-statistic">
+                  <span v-if="day.items.length > MAX_PER_DAY" class="more">
+                    <span class="more-left">
+                      +{{ day.items.length - MAX_PER_DAY }}</span
+                    >
+                    [<span
+                      class="pomo-gradient"
+                      :style="{
+                        color: getPomoGradient(day.pomoRatio),
+                      }"
+                      >🍅&nbsp;
+                    </span>
+                    = {{ day.sumRealPomo }} 🍇 = {{ day.sumRealGrape }}]
+                  </span>
+                  <span v-else class="pom-sum"
+                    >[<span
+                      class="pomo-gradient"
+                      :style="{
+                        color: getPomoGradient(day.pomoRatio),
+                      }"
+                      >🍅
+                    </span>
+                    = {{ day.sumRealPomo }} 🍇 = {{ day.sumRealGrape }}]</span
+                  >
+                </div>
               </div>
             </template>
 
@@ -98,8 +122,11 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   "date-change": [timestamp: number];
+  "date-jump": [];
   "item-change": [id: number, activityId?: number, taskId?: number];
 }>();
+
+const today = startOfDay(Date.now());
 
 type UnifiedItem = {
   key: string;
@@ -135,7 +162,7 @@ const MAX_PER_DAY = 9;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 const dayNames = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
-const STANDARD_POMO = 20;
+const STANDARD_POMO = 12;
 
 const days = computed(() => {
   // 将 Todo 映射到统一结构
@@ -211,9 +238,17 @@ const days = computed(() => {
     const dayTs = weekStart + idx * DAY_MS;
     const sorted = buckets[idx].slice().sort((a, b) => a.ts - b.ts);
 
-    // realPomo 聚合（番茄个数）
     const sumRealPomo = sorted
-      .filter((i) => i.type === "todo")
+      .filter((i) => i.type === "todo" && i.pomoType === "🍅")
+      .reduce((sum, item) => {
+        const arr = item.realPomo;
+        if (!Array.isArray(arr) || arr.length === 0) return sum;
+        const itemSum = arr.reduce((s, n) => s + (Number(n) || 0), 0);
+        return sum + itemSum;
+      }, 0);
+
+    const sumRealGrape = sorted
+      .filter((i) => i.type === "todo" && i.pomoType === "🍇")
       .reduce((sum, item) => {
         const arr = item.realPomo;
         if (!Array.isArray(arr) || arr.length === 0) return sum;
@@ -229,7 +264,9 @@ const days = computed(() => {
       endTs: dayTs + DAY_MS,
       items: sorted,
       sumRealPomo,
+      sumRealGrape,
       pomoRatio,
+      isToday: dayTs === today,
     };
   });
 
@@ -278,7 +315,7 @@ const handleItemSelect = (
 
 function getPomoGradient(ratio: number) {
   const clamped = Math.max(0, Math.min(1, ratio));
-  const alpha = 0 + 0.15 * clamped * 0; // 0 ~ 0.35，很淡的红
+  const alpha = 0.1 + 0.9 * clamped; // 0 ~ 0.35，很淡的红
   return `rgba(245, 85, 45, ${alpha.toFixed(3)})`;
 }
 </script>
@@ -332,17 +369,35 @@ function getPomoGradient(ratio: number) {
   white-space: nowrap;
 }
 
-.day-header .dow {
+.dow {
   font-weight: 600;
   white-space: nowrap;
-  flex: 0 0 auto;
 }
 
-.day-header .date {
-  color: var(--color-text-secondary);
+.date {
+  display: inline-flex; /* 或 display: flex */
+  align-items: center; /* 垂直居中 */
+  justify-content: center;
   font-size: 14px;
   min-width: 0; /* 关键：允许收缩到 0 */
   overflow: hidden;
+  font-weight: 500;
+  width: 20px;
+  height: 20px;
+  font-weight: 600;
+  border-radius: 50%;
+  z-index: 1;
+  color: var(--color-text-secondary);
+  background-color: var(--primary-color, #efeded4b);
+}
+
+.date.today {
+  background-color: var(--color-blue);
+  color: white;
+  font-weight: 600;
+}
+.date:hover {
+  cursor: pointer;
 }
 
 .items {
@@ -415,21 +470,31 @@ function getPomoGradient(ratio: number) {
 .card-statistic {
   position: absolute;
   bottom: 0;
+  width: 90%;
 }
 
-.more {
+.card-statistic .more {
+  display: flex;
+  align-items: center;
   color: var(--color-text-secondary);
   font-size: 12px;
-  margin-right: 4px;
-  font-family: "consolas", monospace;
+  font-family: "Segoe UI Symbol", "Noto Emoji", "Twemoji Mozilla",
+    "Apple Symbols", sans-serif;
+  white-space: nowrap;
+}
+
+.more-left {
+  margin-right: auto; /* 一定靠左 */
 }
 
 .pom-sum {
+  display: block; /* 或保持默认块级 */
+  margin-left: auto; /* 推向右侧 */
+  width: max-content;
   color: var(--color-text-secondary);
   font-size: 12px;
-  text-align: center;
-  font-family: "consolas", monospace;
-  margin-right: 4px;
+  font-family: "Segoe UI Symbol", "Noto Emoji", "Twemoji Mozilla",
+    "Apple Symbols", sans-serif;
 }
 
 .empty {

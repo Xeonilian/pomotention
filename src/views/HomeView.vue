@@ -60,7 +60,9 @@
               tomorrow: isViewDateTomorrow,
             }"
           >
-            <span class="day-status">{{ dateService.displayDateInfo }}</span>
+            <span @click="onMonthJump" class="day-status">{{
+              dateService.displayDateInfo
+            }}</span>
             <span class="global-pomo">
               <span class="today-pomo">🍅{{ currentDatePomoCount }}/</span>
               <span class="total-pomo">{{ globalRealPomo }}</span>
@@ -199,6 +201,7 @@
             :selectedRowId="selectedRowId"
             :activeId="activeId"
             @date-change="onDateChange"
+            @date-jump="onDateJump"
             @item-change="onItemChange"
           />
           <MonthPlanner
@@ -214,6 +217,7 @@
             :activeId="activeId"
             @date-change="onDateChange"
             @item-change="onItemChange"
+            @date-jump="onDateJump"
           />
         </div>
       </div>
@@ -575,6 +579,16 @@ const schedulesForAppDate = computed(() => {
 });
 
 // weekplanner month 引起变化日期
+const onMonthJump = () => {
+  settingStore.settings.viewSet = "month";
+  settingStore.settings.topHeight = 570;
+};
+
+const onDateJump = () => {
+  settingStore.settings.viewSet = "day";
+  settingStore.settings.topHeight = 300;
+};
+
 const onDateChange = (day: number) => {
   dateService.setAppDate(day);
   selectedActivityId.value = null;
@@ -1590,6 +1604,7 @@ const { startResize: startRightResize } = useResize(
   border-radius: 12px;
   padding: 0px 8px 0px 8px;
   margin: 2px;
+  cursor: pointer;
 }
 
 .global-pomo {

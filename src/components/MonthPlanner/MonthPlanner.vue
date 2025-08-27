@@ -18,15 +18,19 @@
           @click="() => handleDateSelect(day.startTs)"
         >
           <!-- 日期数字放在右上角 -->
-          <div class="date-badge" :class="{ today: day.isToday }">
+          <div
+            class="date-badge"
+            :class="{ today: day.isToday }"
+            @click="$emit('date-jump')"
+          >
             {{ formatDay(day.startTs) }}
           </div>
           <div class="items">
             <div
               class="pomo-fill"
               :style="{
-                height: '100%',
-                background: getPomoGradient(day.pomoRatio),
+                height: '0%',
+                background: getPomoGradient(day.pomoRatio * 0),
               }"
             />
             <template v-if="day.items.length">
@@ -69,6 +73,14 @@
               </div>
               <div v-if="day.items.length > MAX_PER_DAY" class="more">
                 +{{ day.items.length - MAX_PER_DAY }}
+                <span
+                  class="pomo-gradient"
+                  :style="{
+                    color: getPomoGradient(day.pomoRatio),
+                  }"
+                >
+                  &nbsp;🍅
+                </span>
               </div>
             </template>
           </div>
@@ -88,11 +100,12 @@ import { timestampToTimeString } from "@/core/utils";
 
 const emit = defineEmits<{
   "date-change": [timestamp: number];
+  "date-jump": [];
   "item-change": [id: number, activityId?: number, taskId?: number];
 }>();
 
 const dayNames = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
-const STANDARD_POMO = 20;
+const STANDARD_POMO = 12;
 
 type UnifiedItem = {
   key: string;
@@ -212,11 +225,19 @@ const days = computed(() => {
 
     // 聚合当日 realPomo
     const sumRealPomo = sorted
-      .filter((i) => i.type === "todo")
+      .filter((i) => i.type === "todo" && i.pomoType === "🍅")
       .reduce((sum, item) => {
         const arr = item.realPomo;
         if (!Array.isArray(arr) || arr.length === 0) return sum;
-        // 如果 realPomo 含有分钟数或片段数，请在这里按你的实际语义调整
+        const itemSum = arr.reduce((s, n) => s + (Number(n) || 0), 0);
+        return sum + itemSum;
+      }, 0);
+
+    const sumRealGrape = sorted
+      .filter((i) => i.type === "todo" && i.pomoType === "🍇")
+      .reduce((sum, item) => {
+        const arr = item.realPomo;
+        if (!Array.isArray(arr) || arr.length === 0) return sum;
         const itemSum = arr.reduce((s, n) => s + (Number(n) || 0), 0);
         return sum + itemSum;
       }, 0);
@@ -231,6 +252,7 @@ const days = computed(() => {
       isCurrentMonth: dayDate.getMonth() === currentMonth,
       isToday: dayTs === today,
       sumRealPomo,
+      sumRealGrape,
       pomoRatio: ratio,
     };
   });
@@ -310,8 +332,8 @@ const handleItemSelect = (
 
 function getPomoGradient(ratio: number) {
   const clamped = Math.max(0, Math.min(1, ratio));
-  const alpha = 0 * clamped;
-  return `rgba(255, 99, 111, ${alpha.toFixed(3)})`;
+  const alpha = 0.1 + 0.9 * clamped; // 0 ~ 0.35，很淡的红
+  return `rgba(245, 85, 45, ${alpha.toFixed(3)})`;
 }
 </script>
 <style scoped>
@@ -395,8 +417,11 @@ function getPomoGradient(ratio: number) {
 .date-badge.today {
   background-color: var(--color-blue);
   color: white;
-  font-weight: 600;
 }
+.date-badge:hover {
+  cursor: pointer;
+}
+
 .items {
   display: flex;
   flex-direction: column;
@@ -437,15 +462,17 @@ function getPomoGradient(ratio: number) {
 }
 
 .more {
-  color: var(--color-text-secondary);
+  margin-left: auto;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  color: var(--color-text-secondary);
+  width: 55%;
   font-size: 10px;
   line-height: 10px;
   overflow: visible;
+  white-space: nowrap;
 }
-/* 基础小圆点 */
+
+/* 基础小圆点 没有了 */
 .type-dot {
   display: inline-block;
   width: 4px;
@@ -487,5 +514,12 @@ function getPomoGradient(ratio: number) {
   background-color: var(--color-blue-light);
   padding-left: 1px;
   padding-right: 1px;
+}
+
+.pomo-gradient {
+  display: block; /* 或保持默认块级 */
+  margin-left: auto; /* 推向右侧 */
+  font-family: "Segoe UI Symbol", "Noto Emoji", "Twemoji Mozilla",
+    "Apple Symbols", sans-serif;
 }
 </style>
