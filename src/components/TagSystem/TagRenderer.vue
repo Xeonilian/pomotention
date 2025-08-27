@@ -13,6 +13,10 @@
       :style="{
         color: tag.color,
         backgroundColor: tag.backgroundColor,
+        boxShadow:
+          props.displayLength === null || props.displayLength === 0
+            ? `1px 1px 0px ${tag.color}`
+            : 'none',
       }"
       displayLength="props.displayLength || null"
     >
@@ -48,9 +52,9 @@ const renderedTags = computed<Tag[]>(() => {
       if (id === 0) {
         return {
           id: 0,
-          name: "1",
-          color: "#ffffff",
-          backgroundColor: "#ffffff",
+          name: "",
+          color: "var(--color-text-secondary)",
+          backgroundColor: "var(--color-background)",
         } as unknown as Tag;
       }
       return tagMap.get(id);
@@ -81,7 +85,6 @@ function truncatedName(tag: string) {
   transition: transform 0.2s;
   font-size: 12px;
   font-family: "Consolas", Consolas, monospace;
-  box-shadow: 1px 1px 1px var(--color-background-dark);
 }
 .tag-item:hover {
   transform: scale(1.05);

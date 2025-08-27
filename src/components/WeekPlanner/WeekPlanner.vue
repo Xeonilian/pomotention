@@ -357,6 +357,7 @@ function getPomoGradient(ratio: number) {
   border-radius: 2px;
   padding: 2px;
 }
+
 .activity--selected {
   background-color: var(--color-red-light);
   border-radius: 2px;
@@ -366,28 +367,49 @@ function getPomoGradient(ratio: number) {
 .item {
   display: flex;
   align-items: center;
+  justify-content: baseline;
+  vertical-align: middle;
   gap: 2px;
   font-size: 13px;
   line-height: 1.4;
   color: var(--text-color);
 }
 
-.item .type-tag {
-  flex-shrink: 0;
-}
-
-.item .time {
-  flex-shrink: 0;
-  color: var(--color-text-secondary);
-  font-variant-numeric: tabular-nums;
-  width: 44px;
-  text-align: right;
-}
-
 .item .title {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* 基础小圆点 */
+.type-dot {
+  display: inline-block;
+  width: 6px; /* 点的直径，可按需调整 */
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-right: 0px; /* 和时间之间的间距 */
+}
+
+/* 颜色：todo 蓝色，schedule 红色 */
+.type-dot.todo {
+  background-color: var(--color-text-secondary);
+}
+.type-dot.schedule {
+  background-color: var(--color-blue);
+}
+
+.schedule-time {
+  font-size: 11px;
+  font-family: "consolas", monospace;
+  color: var(--color-text);
+  white-space: nowrap;
+  border-radius: 2px;
+  border: 1px solid var(--color-blue-light);
+  background-color: var(--color-blue-light);
+  box-shadow: 1px 1px 1px var(--color-blue);
+  margin-left: 2px;
+  line-height: 1.4;
 }
 
 .card-statistic {
@@ -413,33 +435,5 @@ function getPomoGradient(ratio: number) {
 .empty {
   color: var(--color-text-secondary);
   font-size: 12px;
-}
-
-/* 基础小圆点 */
-.type-dot {
-  display: inline-block;
-  width: 6px; /* 点的直径，可按需调整 */
-  height: 6px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  margin-right: 0px; /* 和时间之间的间距 */
-}
-
-/* 颜色：todo 蓝色，schedule 红色 */
-.type-dot.todo {
-  background-color: var(--color-text-secondary);
-}
-.type-dot.schedule {
-  background-color: var(--color-blue);
-}
-
-.schedule-time {
-  font-size: 10px;
-  font-family: "consolas", monospace;
-  color: var(--color-text);
-  white-space: nowrap;
-  border-radius: 2px;
-  border: 1px solid var(--color-blue);
-  background-color: var(--color-blue-light);
 }
 </style>

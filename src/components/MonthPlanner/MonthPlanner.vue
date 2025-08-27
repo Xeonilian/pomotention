@@ -376,7 +376,7 @@ function getPomoGradient(ratio: number) {
 /* 日期徽章 - 右上角绝对定位 */
 .date-badge {
   position: absolute;
-  top: 2px;
+  top: 1px;
   right: 2px;
   font-weight: 500;
   font-size: 14px;
@@ -393,7 +393,7 @@ function getPomoGradient(ratio: number) {
   padding: 1px;
 }
 .date-badge.today {
-  background-color: var(--primary-color, #40a0ffc4);
+  background-color: var(--color-blue);
   color: white;
   font-weight: 600;
 }
@@ -462,14 +462,18 @@ function getPomoGradient(ratio: number) {
 .type-dot.schedule {
   background-color: var(--color-blue);
 }
+
+/* 提示点的tag的位置 */
 .tag {
   height: 15px;
   width: 10px;
 }
 
+/* 提示点的tag的大小及位置 */
 .tag :deep(.n-tag) {
-  height: 8px;
+  height: 6px;
   top: 4px;
+  padding: 4px;
 }
 
 .schedule-time {
@@ -479,7 +483,7 @@ function getPomoGradient(ratio: number) {
   color: var(--color-text);
   white-space: nowrap;
   border-radius: 2px;
-  border: 1px solid var(--color-blue);
+  border: 1px solid var(--color-blue-light);
   background-color: var(--color-blue-light);
   padding-left: 1px;
   padding-right: 1px;
