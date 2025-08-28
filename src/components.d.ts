@@ -16,7 +16,6 @@ declare module 'vue' {
     DaySchedule: typeof import('./components/DayPlanner/DaySchedule.vue')['default']
     DayTodo: typeof import('./components/DayPlanner/DayTodo.vue')['default']
     EnergyInputDialog: typeof import('./components/TaskTracker/EnergyInputDialog.vue')['default']
-    Icon: typeof import('./components/Common/Icon.vue')['default']
     InterruptionInputDialog: typeof import('./components/TaskTracker/InterruptionInputDialog.vue')['default']
     MessageDispatcher: typeof import('./components/AIChat/MessageDispatcher.vue')['default']
     MonthPlanner: typeof import('./components/MonthPlanner/MonthPlanner.vue')['default']
