@@ -1,5 +1,5 @@
 <template>
-  <div class="ai-chat-dialog" v-if="visible">
+  <div class="ai-chat-dialog">
     <!-- 对话框头部 -->
     <div class="ai-chat-header">
       <div class="ai-chat-controls">
@@ -66,7 +66,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick, watch, onMounted } from "vue";
+import { ref, nextTick, watch, onMounted } from "vue";
 import { NButton, NInput, NIcon } from "naive-ui";
 import { DismissCircle24Regular, Settings24Regular } from "@vicons/fluent";
 import { aiService, type AIMessage } from "@/services/aiService";
@@ -77,15 +77,7 @@ interface Message {
   timestamp: Date;
 }
 
-const props = defineProps({
-  visible: { type: Boolean, required: true },
-  position: { type: Object, default: () => ({ x: 200, y: 200 }) },
-  size: { type: Object, default: () => ({ width: 400, height: 500 }) },
-});
-
 const emit = defineEmits<{
-  (e: "update:position", pos: { x: number; y: number }): void;
-  (e: "update:size", size: { width: number; height: number }): void;
   (e: "close"): void;
 }>();
 
@@ -97,14 +89,6 @@ const isMinimized = ref(false);
 const unreadCount = ref(0);
 const messagesContainer = ref<HTMLElement>();
 const showSettings = ref(false);
-
-// 对话框位置和样式 - 包含位置和大小
-const dialogStyle = computed(() => ({
-  left: `${props.position.x}px`,
-  top: `${props.position.y}px`,
-  width: `${props.size.width}px`,
-  height: `${props.size.height}px`,
-}));
 
 // 发送消息
 const sendMessage = async () => {

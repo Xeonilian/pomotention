@@ -23,13 +23,6 @@
           </div>
 
           <div class="items">
-            <div
-              class="pomo-fill"
-              :style="{
-                height: (day.pomoRatio * 100 * 0).toFixed(2) + '%',
-                background: getPomoGradient(0),
-              }"
-            />
             <template v-if="day.items.length">
               <div
                 v-for="item in day.items.slice(0, MAX_PER_DAY)"
@@ -66,32 +59,29 @@
                 >
                   {{ item.title }}
                 </span>
-
-                <div class="card-statistic">
-                  <span v-if="day.items.length > MAX_PER_DAY" class="more">
-                    <span class="more-left">
-                      +{{ day.items.length - MAX_PER_DAY }}</span
-                    >
-                    [<span
-                      class="pomo-gradient"
-                      :style="{
-                        color: getPomoGradient(day.pomoRatio),
-                      }"
-                      >🍅&nbsp;
-                    </span>
-                    = {{ day.sumRealPomo }} 🍇 = {{ day.sumRealGrape }}]
-                  </span>
-                  <span v-else class="pom-sum"
-                    >[<span
-                      class="pomo-gradient"
-                      :style="{
-                        color: getPomoGradient(day.pomoRatio),
-                      }"
-                      >🍅
-                    </span>
-                    = {{ day.sumRealPomo }} 🍇 = {{ day.sumRealGrape }}]</span
+              </div>
+              <div class="card-statistic">
+                <span v-if="day.items.length > MAX_PER_DAY" class="more">
+                  <span class="more-left">
+                    +{{ day.items.length - MAX_PER_DAY }}</span
                   >
-                </div>
+                  [<span
+                    :style="{
+                      color: getPomoColorHSL(day.pomoRatio),
+                    }"
+                    >🍅&nbsp;
+                  </span>
+                  = {{ day.sumRealPomo }} 🍇 = {{ day.sumRealGrape }}]
+                </span>
+                <span v-else class="pom-sum"
+                  >[<span
+                    :style="{
+                      color: getPomoColorHSL(day.pomoRatio),
+                    }"
+                    >🍅
+                  </span>
+                  = {{ day.sumRealPomo }} 🍇 = {{ day.sumRealGrape }}]</span
+                >
               </div>
             </template>
 
@@ -162,7 +152,7 @@ const MAX_PER_DAY = 9;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 const dayNames = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
-const STANDARD_POMO = 12;
+const STANDARD_POMO = 20;
 
 const days = computed(() => {
   // 将 Todo 映射到统一结构
@@ -313,10 +303,12 @@ const handleItemSelect = (
   emit("item-change", id, activityId, taskId);
 };
 
-function getPomoGradient(ratio: number) {
-  const clamped = Math.max(0, Math.min(1, ratio));
-  const alpha = 0.1 + 0.9 * clamped; // 0 ~ 0.35，很淡的红
-  return `rgba(245, 85, 45, ${alpha.toFixed(3)})`;
+function getPomoColorHSL(ratio: number) {
+  const r = Math.max(0, Math.min(1, ratio));
+  const h = 10; // 红偏橙，接近 #F5552D
+  const s = 85; // 饱和度
+  const l = 98 - 58 * r; // 98% -> 40%，r 越大越红
+  return `hsl(${h} ${s}% ${l}%)`;
 }
 </script>
 
@@ -351,16 +343,6 @@ function getPomoGradient(ratio: number) {
   padding: 6px 6px;
 }
 
-.pomo-fill {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0; /* 自下而上填充 */
-  pointer-events: none; /* 不影响点击 */
-  z-index: 0; /* 在内容之下 */
-  border-radius: 2px;
-}
-
 .day-header {
   display: flex;
   align-items: baseline;
@@ -381,7 +363,6 @@ function getPomoGradient(ratio: number) {
   font-size: 14px;
   min-width: 0; /* 关键：允许收缩到 0 */
   overflow: hidden;
-  font-weight: 500;
   width: 20px;
   height: 20px;
   font-weight: 600;
@@ -396,6 +377,7 @@ function getPomoGradient(ratio: number) {
   color: white;
   font-weight: 600;
 }
+
 .date:hover {
   cursor: pointer;
 }

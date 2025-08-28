@@ -24,8 +24,6 @@ export interface GlobalSettings {
   showTask: boolean;
   showActivity: boolean;
   showAi: boolean;
-  aiChatPosition: { x: number; y: number };
-  aiChatSize: { width: number; height: number };
   leftWidth: number;
   rightWidth: number;
   topHeight: number;
@@ -59,9 +57,7 @@ const defaultSettings: GlobalSettings = {
   showPlanner: true,
   showTask: true,
   showActivity: true,
-  showAi: true,
-  aiChatPosition: { x: 200, y: 200 },
-  aiChatSize: { width: 400, height: 500 },
+  showAi: false,
   leftWidth: 100, // 默认值你自己定
   rightWidth: 300,
   topHeight: 300,

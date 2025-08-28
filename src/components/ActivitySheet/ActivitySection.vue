@@ -743,6 +743,7 @@ function handleTagCreate(item: Activity, tagName: string) {
   flex-direction: column;
   height: 100%;
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .section-header {

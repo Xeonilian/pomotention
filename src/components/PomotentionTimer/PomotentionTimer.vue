@@ -156,6 +156,7 @@ function handlePomoSeqRunning(status: boolean) {
   width: 220px;
   box-sizing: border-box;
   padding: 0;
+  background-color: transparent;
 }
 
 .pomodoro-content-area {
@@ -163,10 +164,11 @@ function handlePomoSeqRunning(status: boolean) {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 0px;
   border-radius: 4px;
   width: 100%;
   box-sizing: border-box;
+  background-color: transparent;
 }
 
 .toggle-button {
@@ -178,7 +180,7 @@ function handlePomoSeqRunning(status: boolean) {
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--color-background-dark);
+  border: 0px solid var(--color-background-dark);
   width: 20px;
   height: 18px;
   padding: 0px;
@@ -191,6 +193,10 @@ function handlePomoSeqRunning(status: boolean) {
 
 .toggle-button:hover {
   background-color: var(--color-blue-light);
+}
+
+.pomodoro-content-area.sequence-mode {
+  background-color: transparent;
 }
 
 .pomodoro-content-area :deep(.pomodoro-timer),

@@ -277,9 +277,9 @@ function handleDurationSelect(key: number): void {
   padding: 10px;
   height: 125px; /* 确保高度由内容决定 */
   min-height: 0; /* 防止 flex 项目被撑开 */
-  border: 2px solid var(--color-text-secondary);
+  border: 0px solid var(--color-text-secondary);
   border-radius: 8px;
-  box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 1px 2px 6px var(--color-background-light-transparent);
 }
 
 /* 添加序列模式下的样式 */

@@ -26,13 +26,6 @@
             {{ formatDay(day.startTs) }}
           </div>
           <div class="items">
-            <div
-              class="pomo-fill"
-              :style="{
-                height: '0%',
-                background: getPomoGradient(day.pomoRatio * 0),
-              }"
-            />
             <template v-if="day.items.length">
               <div
                 v-for="item in day.items.slice(0, MAX_PER_DAY)"
@@ -71,15 +64,17 @@
                   {{ item.title }}
                 </span>
               </div>
-              <div v-if="day.items.length > MAX_PER_DAY" class="more">
-                +{{ day.items.length - MAX_PER_DAY }}
+              <div class="more">
+                <span v-if="day.items.length > MAX_PER_DAY" class="more-left"
+                  >+{{ day.items.length - MAX_PER_DAY }}</span
+                >
                 <span
-                  class="pomo-gradient"
+                  class="pomo-sum"
                   :style="{
-                    color: getPomoGradient(day.pomoRatio),
+                    color: getPomoColorHSL(day.pomoRatio),
                   }"
                 >
-                  &nbsp;🍅
+                  &nbsp;🍅={{ day.sumRealPomo }}
                 </span>
               </div>
             </template>
@@ -105,7 +100,7 @@ const emit = defineEmits<{
 }>();
 
 const dayNames = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
-const STANDARD_POMO = 12;
+const STANDARD_POMO = 20;
 
 type UnifiedItem = {
   key: string;
@@ -330,10 +325,12 @@ const handleItemSelect = (
   emit("item-change", id, activityId, taskId);
 };
 
-function getPomoGradient(ratio: number) {
-  const clamped = Math.max(0, Math.min(1, ratio));
-  const alpha = 0.1 + 0.9 * clamped; // 0 ~ 0.35，很淡的红
-  return `rgba(245, 85, 45, ${alpha.toFixed(3)})`;
+function getPomoColorHSL(ratio: number) {
+  const r = Math.max(0, Math.min(1, ratio));
+  const h = 10; // 红偏橙，接近 #F5552D
+  const s = 85; // 饱和度
+  const l = 98 - 58 * r; // 98% -> 40%，r 越大越红
+  return `hsl(${h} ${s}% ${l}%)`;
 }
 </script>
 <style scoped>
@@ -365,15 +362,7 @@ function getPomoGradient(ratio: number) {
   grid-auto-rows: minmax(100px, 1fr); /* 自动行高，最小100px */
   gap: 2px;
 }
-.pomo-fill {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0; /* 自下而上填充 */
-  pointer-events: none; /* 不影响点击 */
-  z-index: 0; /* 在内容之下 */
-  border-radius: 2px;
-}
+
 .day-card {
   display: flex;
   flex-direction: column;
@@ -401,7 +390,6 @@ function getPomoGradient(ratio: number) {
   position: absolute;
   top: 1px;
   right: 2px;
-  font-weight: 500;
   font-size: 14px;
   width: 20px;
   height: 20px;
@@ -462,17 +450,6 @@ function getPomoGradient(ratio: number) {
   background-color: var(--color-red-light, rgba(255, 77, 77, 0.1)) !important;
 }
 
-.more {
-  margin-left: auto;
-  display: flex;
-  color: var(--color-text-secondary);
-  width: 55%;
-  font-size: 10px;
-  line-height: 10px;
-  overflow: visible;
-  white-space: nowrap;
-}
-
 /* 基础小圆点 没有了 */
 .type-dot {
   display: inline-block;
@@ -517,10 +494,37 @@ function getPomoGradient(ratio: number) {
   padding-right: 1px;
 }
 
-.pomo-gradient {
-  display: block; /* 或保持默认块级 */
-  margin-left: auto; /* 推向右侧 */
+.more {
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  right: 0;
+  color: var(--color-text-secondary);
+  font-size: 12px;
   font-family: "Segoe UI Symbol", "Noto Emoji", "Twemoji Mozilla",
     "Apple Symbols", sans-serif;
+  white-space: nowrap;
+  display: flex; /* 启用 Flex */
+  align-items: center;
+  justify-content: space-between;
+  padding-right: 4px;
+}
+
+/* 关键：无论有无 .more-left，都创建一个可伸缩的占位 */
+.more::before {
+  content: "";
+  flex: 1 1 auto; /* 占满左侧空间 */
+  min-width: 0;
+}
+
+/* 若有 .more-left，让它占位，伪元素收缩 */
+.more-left {
+  flex: 0 0 auto; /* 实体左侧内容优先显示 */
+  margin-right: 8px; /* 可选间距 */
+}
+
+/* 保证右侧元素紧贴右边 */
+.pomo-sum {
+  flex: 0 0 auto;
 }
 </style>

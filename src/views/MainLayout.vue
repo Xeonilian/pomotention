@@ -538,11 +538,10 @@ body,
   visibility: hidden; /* 初始隐藏，直到设置好位置再显示，避免闪烁 */
   cursor: grab; /* 拖动光标 */
   z-index: 100; /* 确保它在其他内容之上 */
-  /* 添加一些默认背景和边框，确保浮动时有良好外观 */
-
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); /* 阴影效果 */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   user-select: none;
+  background-color: transparent;
 }
 .n-layout {
   background-color: white;

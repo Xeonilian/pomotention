@@ -390,8 +390,8 @@ function updateProgressStatus(currentStep: number): void {
     } else {
       // 未开始的块
       element.style.backgroundColor = element.classList.contains("work")
-        ? "var(--color-red-dark-transparent)"
-        : "var(--color-green-dark-transparent)";
+        ? "var(--color-red-light)"
+        : "var(--color-green-light)";
     }
   });
 }
@@ -541,13 +541,12 @@ onMounted(() => {
   }
 });
 
-function resetWhiteNoise(sound: SoundType){
+function resetWhiteNoise(sound: SoundType) {
   settingStore.settings.whiteNoiseSoundTrack = sound;
-  if(isRunning.value){
+  if (isRunning.value) {
     stopWhiteNoise();
     startWhiteNoise();
   }
-
 }
 </script>
 
@@ -557,12 +556,12 @@ function resetWhiteNoise(sound: SoundType){
   width: 200px;
   margin: 0 auto;
   background-color: var(--color-background) !important;
-  padding: 5px 10px 0px 10px;
+  padding: 2px 10px 0px 10px;
   height: 125px;
   min-height: 120px;
-  border: 2px solid var(--color-text-secondary);
+  border: 0px solid var(--color-text-secondary);
   border-radius: 8px;
-  box-shadow: 0px 4px 6px var(--color-background-light-transparent);
+  box-shadow: 1px 2px 6px var(--color-background-light-transparent);
 }
 
 .pomodoro-sequence.running {
@@ -587,7 +586,7 @@ function resetWhiteNoise(sound: SoundType){
 .progress-container {
   display: flex;
   margin: 0px auto;
-  width: 196px;
+  width: 200px;
   height: 0;
   overflow: hidden;
 }
@@ -630,6 +629,7 @@ function resetWhiteNoise(sound: SoundType){
   width: 180px; /* 增加宽度以适应新按钮 */
   margin: 0 auto;
   font-size: 12px;
+  padding-top: 4px;
 }
 
 .action-button {
