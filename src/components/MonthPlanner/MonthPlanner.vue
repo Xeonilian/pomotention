@@ -21,7 +21,7 @@
           <div
             class="date-badge"
             :class="{ today: day.isToday }"
-            @click="$emit('date-jump')"
+            @click="() => handleDateJump(day.startTs)"
           >
             {{ formatDay(day.startTs) }}
           </div>
@@ -95,7 +95,7 @@ import { timestampToTimeString } from "@/core/utils";
 
 const emit = defineEmits<{
   "date-change": [timestamp: number];
-  "date-jump": [];
+  "date-jump": [timestamp: number];
   "item-change": [id: number, activityId?: number, taskId?: number];
 }>();
 
@@ -312,6 +312,11 @@ function formatDay(ts: number) {
 const handleDateSelect = (day: number) => {
   selectedItem.value = -1;
   emit("date-change", day);
+};
+
+const handleDateJump = (day: number) => {
+  selectedItem.value = -1;
+  emit("date-jump", day);
 };
 
 const handleItemSelect = (

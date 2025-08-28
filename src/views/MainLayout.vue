@@ -532,6 +532,10 @@ body,
   font-size: 14px;
 }
 
+.header-button:hover {
+  background-color: var(--color-blue-light) !important;
+}
+
 /* draggable-container 样式 */
 .draggable-container {
   position: absolute; /* 允许在内容区域内自由拖动 */

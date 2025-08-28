@@ -35,7 +35,9 @@ export function useButtonStyle() {
           : "none"
         : "grayscale(100%)",
       opacity: show ? (isDisabled ? 0.4 : 1) : 0.6,
-      backgroundColor: "var(--color-background-dark)",
+      backgroundColor: show
+        ? "var(--color-background)"
+        : "var(--color-background-light)",
       borderRadius: "4px",
       transition: "all 0.3s ease",
       cursor: isOntop ? "pointer" : isDisabled ? "not-allowed" : "pointer",

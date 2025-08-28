@@ -16,7 +16,7 @@
             <div
               class="date"
               :class="{ today: day.isToday }"
-              @click="$emit('date-jump')"
+              @click="() => handleDateJump(day.startTs)"
             >
               {{ formatMonthDay(day.startTs) }}
             </div>
@@ -112,7 +112,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   "date-change": [timestamp: number];
-  "date-jump": [];
+  "date-jump": [timestamp: number];
   "item-change": [id: number, activityId?: number, taskId?: number];
 }>();
 
@@ -290,6 +290,11 @@ const handleDateSelect = (day: number) => {
   selectedItem.value = -1;
   // 向父组件发送日期变化事件
   emit("date-change", day);
+};
+
+const handleDateJump = (day: number) => {
+  selectedItem.value = -1;
+  emit("date-jump", day);
 };
 
 const handleItemSelect = (

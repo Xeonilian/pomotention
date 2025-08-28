@@ -622,9 +622,10 @@ const onMonthJump = () => {
   settingStore.settings.topHeight = 570;
 };
 
-const onDateJump = () => {
+const onDateJump = (day: number) => {
   settingStore.settings.viewSet = "day";
   settingStore.settings.topHeight = 300;
+  dateService.setAppDate(day);
 };
 
 const onDateChange = (day: number) => {
