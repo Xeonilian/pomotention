@@ -62,16 +62,6 @@
         />
       </n-layout-content>
     </n-layout>
-
-    <!-- AI 对话对话框 -->
-    <AIChatDialog
-      :visible="settingStore.settings.showAi"
-      :position="settingStore.settings.aiChatPosition"
-      :size="settingStore.settings.aiChatSize"
-      @close="settingStore.settings.showAi = false"
-      @update:position="(pos) => (settingStore.settings.aiChatPosition = pos)"
-      @update:size="(size) => (settingStore.settings.aiChatSize = size)"
-    />
   </div>
 </template>
 
@@ -105,7 +95,6 @@ import { useDraggable } from "@/composables/useDraggable";
 import { useButtonStyle } from "@/composables/useButtonStyle";
 
 import PomotentionTimer from "@/components/PomotentionTimer/PomotentionTimer.vue";
-import AIChatDialog from "@/components/AIChat/AIChatDialog.vue";
 
 const timerStore = useTimerStore();
 const settingStore = useSettingStore();
@@ -194,12 +183,36 @@ function handleMenuSelect(key: string) {
   }
 }
 
-function toggleSettingPanel(
-  panel: "schedule" | "activity" | "task" | "today" | "pomodoro" | "ai"
-) {
-  const key = "show" + panel.charAt(0).toUpperCase() + panel.slice(1);
-  (settingStore.settings as any)[key] = !(settingStore.settings as any)[key];
-  // ⚠️ 用 as any 失去了类型检查，字段名拼错编译不会报错，但短期可用
+type Panel = "schedule" | "activity" | "task" | "today" | "pomodoro" | "ai";
+
+function toggleSettingPanel(panel: Panel) {
+  // 统一生成 key，并用显式联合类型避免拼写错误
+  const toKey = (p: Panel) =>
+    ("show" + p.charAt(0).toUpperCase() + p.slice(1)) as
+      | "showSchedule"
+      | "showActivity"
+      | "showTask"
+      | "showToday"
+      | "showPomodoro"
+      | "showAi";
+
+  const settings = settingStore.settings;
+  const key = toKey(panel);
+
+  // 先切换当前面板
+  const next = !(settings as any)[key] as boolean;
+  (settings as any)[key] = next;
+
+  // 若当前被打开，则关闭互斥的另一个
+  if (next) {
+    if (panel === "activity") {
+      (settings as any)[toKey("ai")] = false;
+    } else if (panel === "ai") {
+      (settings as any)[toKey("activity")] = false;
+    }
+  }
+
+  // ⚠️ 注：如果仍然使用 any，字段名拼错编译不会报错
 }
 
 function handleMainLayoutViewToggle(key: string) {
@@ -238,13 +251,6 @@ async function handleToggleOntopMode(width: number, height: number) {
         await appWindow.setSize(new LogicalSize(finalWidth, finalHeight));
 
         await new Promise((resolve) => setTimeout(resolve, 50));
-        // const realSize = await appWindow.innerSize();
-
-        // console.log(
-        //   "[mini] Window resized actual:",
-        //   realSize.width,
-        //   realSize.height
-        // );
 
         if (PomotentionTimerContainerRef.value) {
           // 打印出具体引用的 DOM 元素
@@ -344,9 +350,6 @@ const handlePomotentionTimerSizeReport = ({
 }) => {
   reportedPomodoroWidth.value = width;
   reportedPomodoroHeight.value = height;
-  // console.log(
-  //   `[report] MainLayout received PomotentionTimer size: ${reportedPomodoroWidth.value}x${reportedPomodoroHeight.value}`
-  // );
 };
 
 onMounted(() => {
@@ -420,6 +423,7 @@ watch(
     }
   }
 );
+
 watch(
   () => timerStore.isActive,
   async (newVal) => {

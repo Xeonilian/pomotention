@@ -37,7 +37,8 @@
       :class="{
         'middle-alone':
           !settingStore.settings.showSchedule &&
-          !settingStore.settings.showActivity,
+          !settingStore.settings.showActivity &&
+          !settingStore.settings.showAi,
       }"
     >
       <!-- 今日视图 -->
@@ -245,12 +246,14 @@
         />
       </div>
     </div>
+
     <!-- 右侧面板调整大小手柄 -->
     <div
-      v-if="settingStore.settings.showActivity"
+      v-if="settingStore.settings.showActivity || settingStore.settings.showAi"
       class="resize-handle-horizontal"
       @mousedown="startRightResize"
     ></div>
+
     <!-- 右侧面板 (活动清单) -->
     <div
       v-if="settingStore.settings.showActivity"
@@ -275,6 +278,17 @@
         @go-to-todo="goToTodo"
         @go-to-schedule="goToSchedule"
         @convert-activity-to-task="onConvertActivityToTask"
+      />
+    </div>
+    <div
+      v-if="settingStore.settings.showAi"
+      class="right"
+      :style="{ width: rightWidth + 'px' }"
+    >
+      <!-- AI 对话对话框 -->
+      <AIChatDialog
+        :visible="settingStore.settings.showAi"
+        @close="settingStore.settings.showAi = false"
       />
     </div>
   </div>
@@ -381,6 +395,10 @@ const TaskTracker = defineAsyncComponent(
 );
 const ActivitySheet = defineAsyncComponent(
   () => import("@/components/ActivitySheet/ActivitySheet.vue")
+);
+
+const AIChatDialog = defineAsyncComponent(
+  () => import("@/components/AIChat/AIChatDialog.vue")
 );
 // ======================== 响应式状态与初始化 ========================
 
