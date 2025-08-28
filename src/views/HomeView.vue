@@ -303,14 +303,14 @@
 <script setup lang="ts">
 // ------------------------ 导入依赖 ------------------------
 import { ref, onMounted, watch, computed } from "vue";
-import { NButton, NIcon, NPopover } from "naive-ui";
+// import { NButton, NIcon, NPopover } from "naive-ui";
 import { usePomoStore } from "@/stores/usePomoStore";
-import TimeTable from "@/components/TimeTable/TimeTable.vue";
-import DayPlanner from "@/components/DayPlanner/DayPlanner.vue";
-import WeekPlanner from "@/components/WeekPlanner/WeekPlanner.vue";
-import MonthPlanner from "@/components/MonthPlanner/MonthPlanner.vue";
-import TaskTracker from "@/components/TaskTracker/TaskTracker.vue";
-import ActivitySheet from "@/components/ActivitySheet/ActivitySheet.vue";
+// import TimeTable from "@/components/TimeTable/TimeTable.vue";
+// import DayPlanner from "@/components/DayPlanner/DayPlanner.vue";
+// import WeekPlanner from "@/components/WeekPlanner/WeekPlanner.vue";
+// import MonthPlanner from "@/components/MonthPlanner/MonthPlanner.vue";
+// import TaskTracker from "@/components/TaskTracker/TaskTracker.vue";
+// import ActivitySheet from "@/components/ActivitySheet/ActivitySheet.vue";
 import type { Activity } from "@/core/types/Activity";
 import type { Block } from "@/core/types/Block";
 import type { Todo } from "@/core/types/Todo";
@@ -362,6 +362,26 @@ import {
 } from "@/core/utils";
 import { unifiedDateService } from "@/services/unifiedDateService";
 import { useSettingStore } from "@/stores/useSettingStore";
+import { defineAsyncComponent } from "vue";
+
+const TimeTable = defineAsyncComponent(
+  () => import("@/components/TimeTable/TimeTable.vue")
+);
+const DayPlanner = defineAsyncComponent(
+  () => import("@/components/DayPlanner/DayPlanner.vue")
+);
+const WeekPlanner = defineAsyncComponent(
+  () => import("@/components/WeekPlanner/WeekPlanner.vue")
+);
+const MonthPlanner = defineAsyncComponent(
+  () => import("@/components/MonthPlanner/MonthPlanner.vue")
+);
+const TaskTracker = defineAsyncComponent(
+  () => import("@/components/TaskTracker/TaskTracker.vue")
+);
+const ActivitySheet = defineAsyncComponent(
+  () => import("@/components/ActivitySheet/ActivitySheet.vue")
+);
 // ======================== 响应式状态与初始化 ========================
 
 // -- 基础UI状态

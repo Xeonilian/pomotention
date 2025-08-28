@@ -1,10 +1,11 @@
 import { createRouter, createWebHistory } from "vue-router";
-import HomeView from "../views/HomeView.vue";
-import StatisticsView from "../views/StatisticView.vue";
-import SettingView from "../views/SettingView.vue";
-import MainLayout from "../views/MainLayout.vue";
-import HelpView from "@/views/HelpView.vue";
-import SearchView from "@/views/SearchView.vue";
+
+const MainLayout = () => import("@/views/MainLayout.vue");
+const HomeView = () => import("@/views/HomeView.vue");
+const StatisticsView = () => import("@/views/StatisticView.vue");
+const SettingView = () => import("@/views/SettingView.vue");
+const HelpView = () => import("@/views/HelpView.vue");
+const SearchView = () => import("@/views/SearchView.vue");
 
 const routes = [
   {

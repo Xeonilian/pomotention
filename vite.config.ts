@@ -1,13 +1,33 @@
 import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
-import { fileURLToPath, URL } from 'node:url' 
-
+import { fileURLToPath, URL } from "node:url";
+import AutoImport from "unplugin-auto-import/vite";
+import Components from "unplugin-vue-components/vite";
+import { NaiveUiResolver } from "unplugin-vue-components/resolvers";
+import { visualizer } from "rollup-plugin-visualizer";
 
 const host = process.env.TAURI_DEV_HOST;
 
 // https://vitejs.dev/config/
 export default defineConfig(async () => ({
-  plugins: [vue()],
+  plugins: [
+    vue(),
+    AutoImport({
+      imports: ["vue", "vue-router", "pinia"],
+      resolvers: [NaiveUiResolver()],
+      dts: "src/auto-imports.d.ts",
+    }),
+    Components({
+      resolvers: [NaiveUiResolver()],
+      dts: "src/components.d.ts",
+    }),
+    visualizer({
+      filename: "stats.html",
+      open: true,
+      gzipSize: true,
+      brotliSize: true,
+    }),
+  ],
 
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   //
@@ -31,10 +51,9 @@ export default defineConfig(async () => ({
     },
   },
   // 3. @ define
-  resolve: {  
-    alias: {  
-      '@': fileURLToPath(new URL('./src', import.meta.url)),  
-    },  
+  resolve: {
+    alias: {
+      "@": fileURLToPath(new URL("./src", import.meta.url)),
+    },
   },
-  
 }));
