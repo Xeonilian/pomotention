@@ -22,6 +22,9 @@
             class="date-badge"
             :class="{ today: day.isToday }"
             @click="() => handleDateJump(day.startTs)"
+            :style="{
+              color: getPomoColor(day.pomoRatio),
+            }"
           >
             {{ formatDay(day.startTs) }}
           </div>
@@ -65,17 +68,9 @@
                 </span>
               </div>
               <div class="more">
-                <span v-if="day.items.length > MAX_PER_DAY" class="more-left"
+                <span v-if="day.items.length > MAX_PER_DAY"
                   >+{{ day.items.length - MAX_PER_DAY }}</span
                 >
-                <span
-                  class="pomo-sum"
-                  :style="{
-                    color: getPomoColorHSL(day.pomoRatio),
-                  }"
-                >
-                  &nbsp;🍅={{ day.sumRealPomo }}
-                </span>
               </div>
             </template>
           </div>
@@ -100,7 +95,7 @@ const emit = defineEmits<{
 }>();
 
 const dayNames = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
-const STANDARD_POMO = 20;
+const STANDARD_POMO = 16;
 
 type UnifiedItem = {
   key: string;
@@ -330,12 +325,24 @@ const handleItemSelect = (
   emit("item-change", id, activityId, taskId);
 };
 
-function getPomoColorHSL(ratio: number) {
-  const r = Math.max(0, Math.min(1, ratio));
-  const h = 10; // 红偏橙，接近 #F5552D
-  const s = 85; // 饱和度
-  const l = 98 - 58 * r; // 98% -> 40%，r 越大越红
-  return `hsl(${h} ${s}% ${l}%)`;
+function getPomoColor(ratio: number) {
+  const clamp = (v: number, min = 0, max = 1) =>
+    Math.min(max, Math.max(min, v));
+  const r = clamp(ratio);
+
+  // 起点与终点（#999 简写等于 #999999）
+  const from = { r: 0x99, g: 0x99, b: 0x99 };
+  const to = { r: 0xd6, g: 0x48, b: 0x64 };
+
+  const lerp = (a: number, b: number, t: number) => Math.round(a + (b - a) * t);
+
+  const R = lerp(from.r, to.r, r);
+  const G = lerp(from.g, to.g, r);
+  const B = lerp(from.b, to.b, r);
+
+  const hex = (n: number) => n.toString(16).padStart(2, "0");
+
+  return `#${hex(R)}${hex(G)}${hex(B)}`;
 }
 </script>
 <style scoped>
@@ -364,7 +371,7 @@ function getPomoColorHSL(ratio: number) {
   min-height: 0;
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr)); /* 7列（一周7天） */
-  grid-auto-rows: minmax(100px, 1fr); /* 自动行高，最小100px */
+  grid-auto-rows: minmax(105px, 1fr); /* 自动行高，最小100px */
   gap: 2px;
 }
 
@@ -372,12 +379,11 @@ function getPomoColorHSL(ratio: number) {
   display: flex;
   flex-direction: column;
   height: 100%;
-  min-height: 80px;
   position: relative; /* 为绝对定位的日期徽章提供定位基准 */
   overflow: hidden;
 }
 .day-card :deep(.n-card__content) {
-  padding: 4px;
+  padding: 6px;
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -393,7 +399,7 @@ function getPomoColorHSL(ratio: number) {
 /* 日期徽章 - 右上角绝对定位 */
 .date-badge {
   position: absolute;
-  top: 1px;
+  top: 2px;
   right: 2px;
   font-size: 14px;
   width: 20px;
@@ -404,13 +410,12 @@ function getPomoColorHSL(ratio: number) {
   justify-content: center;
   border-radius: 50%;
   z-index: 1;
-  color: var(--color-text-secondary);
   background-color: var(--primary-color, #efeded4b);
   padding: 1px;
 }
 .date-badge.today {
-  background-color: var(--color-blue);
-  color: white;
+  background-color: var(--color-blue) !important;
+  color: white !important;
 }
 .date-badge:hover {
   cursor: pointer;
@@ -423,27 +428,27 @@ function getPomoColorHSL(ratio: number) {
   min-width: 0;
   flex: 1;
   overflow: visible;
-  padding-top: 8px; /* 给右上角日期留出一点空间 */
+  padding: 2px 2px; /* 给右上角日期留出一点空间 */
+  margin-top: 7px;
 }
 .item {
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 11px;
-  line-height: 1.2;
+  font-size: 12px;
+  line-height: 1.3;
   min-height: 15px;
   color: var(--text-color);
   cursor: pointer;
   padding: 1px 2px;
   border-radius: 2px;
   transition: background-color 0.2s;
-  overflow: visible;
 }
 .item:hover {
   background-color: var(--color-hover, rgba(0, 0, 0, 0.05));
 }
 .item .title {
-  overflow: hidden;
+  overflow-x: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   flex: 1;
@@ -476,14 +481,14 @@ function getPomoColorHSL(ratio: number) {
 /* 提示点的tag的位置 */
 .tag {
   height: 15px;
-  width: 10px;
+  width: 8px;
 }
 
 /* 提示点的tag的大小及位置 */
 .tag :deep(.n-tag) {
-  height: 6px;
-  top: 4px;
-  padding: 4px;
+  top: 3px;
+  height: 0px; /* 提示点的tag的大小 */
+  padding: 3px; /* 提示点的tag的大小 */
 }
 
 .schedule-time {
@@ -494,7 +499,7 @@ function getPomoColorHSL(ratio: number) {
   white-space: nowrap;
   border-radius: 2px;
   border: 1px solid var(--color-blue-light);
-  background-color: var(--color-blue-light);
+  box-shadow: 1px 1px 0px var(--color-background-dark);
   padding-left: 1px;
   padding-right: 1px;
 }
@@ -504,32 +509,12 @@ function getPomoColorHSL(ratio: number) {
   bottom: -2px;
   left: 0;
   right: 0;
+  text-align: center;
   color: var(--color-text-secondary);
   font-size: 12px;
   font-family: "Segoe UI Symbol", "Noto Emoji", "Twemoji Mozilla",
     "Apple Symbols", sans-serif;
   white-space: nowrap;
-  display: flex; /* 启用 Flex */
-  align-items: center;
-  justify-content: space-between;
-  padding-right: 4px;
-}
-
-/* 关键：无论有无 .more-left，都创建一个可伸缩的占位 */
-.more::before {
-  content: "";
-  flex: 1 1 auto; /* 占满左侧空间 */
-  min-width: 0;
-}
-
-/* 若有 .more-left，让它占位，伪元素收缩 */
-.more-left {
-  flex: 0 0 auto; /* 实体左侧内容优先显示 */
-  margin-right: 8px; /* 可选间距 */
-}
-
-/* 保证右侧元素紧贴右边 */
-.pomo-sum {
-  flex: 0 0 auto;
+  padding-right: 6px;
 }
 </style>

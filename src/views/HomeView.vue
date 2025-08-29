@@ -179,7 +179,6 @@
             @repeat-schedule="onRepeatSchedule"
             @update-todo-est="onUpdateTodoEst"
             @update-todo-pomo="onUpdateTodoPomo"
-            @select-task="onSelectTask"
             @select-activity="onSelectActivity"
             @select-row="onSelectRow"
             @edit-schedule-title="handleEditScheduleTitle"
@@ -470,8 +469,8 @@ const childrenOfActivity = computed(() => {
 
 // 添加选中的任务ID状态
 const activeId = ref<number | null>(null); // 当前从ActivitySheet选中的activity.id
-const selectedTaskId = ref<number | null>(null); // 当前从Todo选中的todo.taskId
-const selectedActivityId = ref<number | null>(null); // 当前从Todo选中的todo.activityId
+const selectedTaskId = ref<number | null>(null); // 当前从Planner选中的.taskId
+const selectedActivityId = ref<number | null>(null); // 当前从Planner选中的.activityId
 const selectedRowId = ref<number | null>(null); // todo.id 或者 schedule.id
 
 // 选中的Task
@@ -619,7 +618,7 @@ const schedulesForAppDate = computed(() => {
 // weekplanner month 引起变化日期
 const onMonthJump = () => {
   settingStore.settings.viewSet = "month";
-  settingStore.settings.topHeight = 570;
+  settingStore.settings.topHeight = 610;
 };
 
 const onDateJump = (day: number) => {
@@ -1146,7 +1145,9 @@ function onConvertScheduleToTask(payload: { task: Task; scheduleId: number }) {
 
 /** 修改日期切换按钮的处理函数 */
 function onDateSet(direction: "prev" | "next" | "today" | "query") {
-  clearSelectedRow();
+  selectedTaskId.value = null;
+  activeId.value = null;
+  selectedRowId.value = null;
   switch (direction) {
     case "prev":
       const rdate = dateService.navigateByView("prev");
@@ -1180,7 +1181,7 @@ function onViewSet() {
   const next = order[(idx + 1) % order.length];
   settingStore.settings.viewSet = next;
   if (cur === "week") {
-    settingStore.settings.topHeight = 590;
+    settingStore.settings.topHeight = 610;
   } else if (cur === "day") {
     settingStore.settings.topHeight = 300;
   } else if (cur === "month") {
@@ -1197,27 +1198,35 @@ function goToSchedule(scheduleId: number) {
   dateService.navigateTo(new Date(scheduleId));
 }
 
-// 从Today选择任务处理函数
-function onSelectTask(taskId: number | null) {
-  selectedTaskId.value = taskId;
-  activeId.value = null;
-}
-
-// 从Today选择活动处理函数
+// 从Planner选择活动处理函数
 function onSelectActivity(activityId: number | null) {
   selectedActivityId.value = activityId;
 }
 
 // 选中行
 function onSelectRow(id: number | null) {
-  selectedRowId.value = id;
-}
-
-// 清除Today选中行的函数
-function clearSelectedRow() {
-  selectedTaskId.value = null;
   activeId.value = null;
-  selectedRowId.value = null;
+  if (id === null) {
+    return;
+  }
+  const todo = todoById.value.get(id);
+  const schedule = scheduleById.value.get(id);
+  const activityId = todo?.activityId ?? schedule?.activityId ?? null;
+  if (activityId) {
+    const activity = activityById.value.get(activityId);
+    selectedTaskId.value =
+      activity?.taskId ?? todo?.activityId ?? schedule?.activityId ?? null;
+  }
+  if (
+    todo?.status !== "done" &&
+    todo?.status !== "cancelled" &&
+    schedule?.status !== "done" &&
+    schedule?.status !== "cancelled"
+  ) {
+    activeId.value = activityId;
+  }
+
+  selectedRowId.value = id;
 }
 
 // 编辑title，Schedule.id，同步Activity
@@ -1534,7 +1543,7 @@ const { startResize: startVerticalResize } = useResize(
   topHeight,
   "vertical",
   0,
-  600
+  610
 );
 const { startResize: startLeftResize } = useResize(
   leftWidth,
@@ -1630,15 +1639,16 @@ const { startResize: startRightResize } = useResize(
 .day-info {
   display: flex;
   align-items: center;
-  font-family: "Courier New", Courier, monospace;
-  font-weight: bold;
   flex: 1 1 auto;
   min-width: 0;
+
+  font-weight: 500;
 }
 
 .day-status {
   font-size: 18px;
-  font-family: "Courier New", Courier, monospace;
+  font-family: Consolas, "Courier New", Courier, Monaco, "Liberation Mono",
+    "Menlo", monospace;
   color: var(--color-text);
   border-radius: 12px;
   padding: 0px 8px 0px 8px;
@@ -1654,41 +1664,22 @@ const { startResize: startRightResize } = useResize(
   background: var(--color-background-light-transparent);
   padding: 2px 8px;
   border-radius: 12px;
-  font-family: "Courier New", Courier, monospace;
+  font-family: Consolas, "Courier New", Courier, monospace;
 }
 
 .today-pomo {
   color: var(--color-blue);
-  font-weight: 500;
-  font-family: "Courier New", Courier, monospace;
-  font-weight: bold;
-}
-
-.total-pomo {
-  color: var(--color-text);
-  font-weight: bold;
+  font-family: Consolas, "Courier New", Courier, monospace;
 }
 
 .day-info.tomorrow .day-status {
-  background: var(--color-red-light);
+  background: var(--color-background-light-transparent);
+  box-shadow: -4px 0px 0px 0px var(--color-red-light) inset;
 }
 
 .day-info.yesterday .day-status {
-  background: var(--color-blue-light);
-}
-
-.day-status {
-  font-size: 18px;
-  font-family: "Courier New", Courier, monospace;
-  color: var(--color-text);
-  border-radius: 12px;
-  padding: 0px 8px 0px 8px;
-  margin: 2px;
-}
-
-.global-pomo {
-  background: var(--color-background-light);
-  color: var(--color-text);
+  background: var(--color-background-light-transparent);
+  box-shadow: 4px 0px 0px 0px var(--color-blue-light) inset;
 }
 
 .middle-bottom {

@@ -1,6 +1,5 @@
 <template>
   <div class="tag-container">
-    <!-- 关键改动：直接循环响应式的 renderedTags -->
     <n-tag
       v-for="tag in renderedTags"
       :key="tag.id"
@@ -13,9 +12,10 @@
       :style="{
         color: tag.color,
         backgroundColor: tag.backgroundColor,
+        // border: `1px solid ${tag.color}`,
         boxShadow:
           props.displayLength === null || props.displayLength === 0
-            ? `1px 1px 0px ${tag.color}`
+            ? `1px -1px 0px 0px ${tag.color} inset`
             : 'none',
       }"
       displayLength="props.displayLength || null"
@@ -54,7 +54,7 @@ const renderedTags = computed<Tag[]>(() => {
           id: 0,
           name: "",
           color: "var(--color-text-secondary)",
-          backgroundColor: "var(--color-background)",
+          backgroundColor: "var(--color-text-secondary)",
         } as unknown as Tag;
       }
       return tagMap.get(id);

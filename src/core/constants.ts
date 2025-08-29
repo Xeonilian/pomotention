@@ -18,7 +18,7 @@ export const TimerStyleDefaults = {
 export const CategoryColors = {
   living: "var(--color-background-light-transparent)",
   sleeping: "var(--color-background-light)",
-  working: "var(--color-backgroud)",
+  working: "var(--color-background)",
 } as const;
 
 export type CategoryColorKey = keyof typeof CategoryColors;

@@ -295,6 +295,7 @@ function updateInputWidth() {
   flex-direction: column;
   position: relative;
   min-height: 220px;
+  overflow-x: hidden;
 }
 
 .tag-search {
@@ -311,6 +312,7 @@ function updateInputWidth() {
   padding-left: 2px;
   width: 380px;
   overflow-y: auto;
+  overflow: visible;
   padding-bottom: 5px;
 }
 
@@ -342,7 +344,7 @@ function updateInputWidth() {
 /* “已选中”标签的固定样式 */
 .custom-tag.selected {
   transform: translateY(-2px);
-  border: 2px solid var(--color-backgroud-dark);
+  border: 2px solid var(--color-background-dark);
 }
 
 /* 悬浮在“已选中”的标签上时的增强效果 */

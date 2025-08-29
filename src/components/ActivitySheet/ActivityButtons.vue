@@ -191,7 +191,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, watch } from "vue";
 import { NButton, NIcon, NBadge, NPopover } from "naive-ui";
 import {
   ChevronCircleLeft48Regular,
@@ -216,6 +216,13 @@ const props = defineProps<{
 const isSelectedClassS = computed(() => {
   return props.selectedClass === "S";
 });
+
+watch(
+  () => props.activeId,
+  (val) => {
+    console.log("button", val);
+  }
+);
 
 const emit = defineEmits([
   "pick-activity",

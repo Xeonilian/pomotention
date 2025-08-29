@@ -98,6 +98,12 @@ const props = defineProps<{
   selectedTaskId: number | null;
 }>();
 
+watch(
+  () => props.activeId,
+  (val) => {
+    console.log("sheet", val);
+  }
+);
 // ========================
 // Emits 定义
 // ========================

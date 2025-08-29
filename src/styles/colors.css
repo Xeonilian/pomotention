@@ -50,6 +50,7 @@
   /* 蓝色系 */
   --color-blue: #4098fc;
   --color-blue-light: #cee3fc;
+  --color-blue-medium: rgb(86, 158, 243);
   --color-blue-dark: #2080f0;
   --color-blue-transparent: rgba(64, 152, 252, 0.3);
   --color-blue-light-transparent: rgba(206, 227, 252, 0.3);

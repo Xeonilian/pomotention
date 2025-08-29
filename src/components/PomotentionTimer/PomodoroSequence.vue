@@ -600,7 +600,7 @@ function resetWhiteNoise(sound: SoundType) {
 .sequence-input {
   max-height: 60px;
   font-family: "Consolas", "Courier New", Courier, "Lucida Console", Monaco,
-    "Consolas", "Liberation Mono", "Menlo", monospace;
+    "Liberation Mono", "Menlo", monospace;
   font-size: 12px;
   padding: 0px;
   resize: none;

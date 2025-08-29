@@ -824,11 +824,13 @@ function handleRepeatTodo(id: number) {
 .table-header th {
   padding: 2px;
   text-align: left;
-  border-top: 2px solid var(--color-background-dark);
   border-bottom: 2px solid var(--color-background-dark);
   white-space: nowrap;
   overflow: hidden;
-  height: 24px;
+  height: 20px;
+  font-weight: 400;
+  color: var(--color-text-secondary);
+  line-height: 1.3;
 }
 
 /* 表格内容样式 */
@@ -892,6 +894,7 @@ function handleRepeatTodo(id: number) {
   text-align: center;
   color: var(--color-text-secondary);
   width: 100%;
+  border-bottom: 1px solid var(--color-background);
 }
 
 .priority-badge {
@@ -910,7 +913,8 @@ function handleRepeatTodo(id: number) {
 
 /* 可按 priority 分不同色 */
 .priority-0 {
-  background-color: var(--color-background-dark);
+  background-color: var(--color-background);
+  color: var(--color-text-secondary);
 }
 .priority-1 {
   background-color: var(--color-red);

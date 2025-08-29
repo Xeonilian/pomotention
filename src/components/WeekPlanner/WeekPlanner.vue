@@ -67,7 +67,7 @@
                   >
                   [<span
                     :style="{
-                      color: getPomoColorHSL(day.pomoRatio),
+                      color: getPomoColor(day.pomoRatio),
                     }"
                     >🍅&nbsp;
                   </span>
@@ -76,7 +76,7 @@
                 <span v-else class="pom-sum"
                   >[<span
                     :style="{
-                      color: getPomoColorHSL(day.pomoRatio),
+                      color: getPomoColor(day.pomoRatio),
                     }"
                     >🍅
                   </span>
@@ -152,7 +152,7 @@ const MAX_PER_DAY = 9;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 const dayNames = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
-const STANDARD_POMO = 20;
+const STANDARD_POMO = 16;
 
 const days = computed(() => {
   // 将 Todo 映射到统一结构
@@ -308,12 +308,24 @@ const handleItemSelect = (
   emit("item-change", id, activityId, taskId);
 };
 
-function getPomoColorHSL(ratio: number) {
-  const r = Math.max(0, Math.min(1, ratio));
-  const h = 10; // 红偏橙，接近 #F5552D
-  const s = 85; // 饱和度
-  const l = 98 - 58 * r; // 98% -> 40%，r 越大越红
-  return `hsl(${h} ${s}% ${l}%)`;
+function getPomoColor(ratio: number) {
+  const clamp = (v: number, min = 0, max = 1) =>
+    Math.min(max, Math.max(min, v));
+  const r = clamp(ratio);
+
+  // 起点与终点（#999 简写等于 #999999）
+  const from = { r: 0x99, g: 0x99, b: 0x99 };
+  const to = { r: 0xd6, g: 0x48, b: 0x64 };
+
+  const lerp = (a: number, b: number, t: number) => Math.round(a + (b - a) * t);
+
+  const R = lerp(from.r, to.r, r);
+  const G = lerp(from.g, to.g, r);
+  const B = lerp(from.b, to.b, r);
+
+  const hex = (n: number) => n.toString(16).padStart(2, "0");
+
+  return `#${hex(R)}${hex(G)}${hex(B)}`;
 }
 </script>
 
@@ -448,8 +460,7 @@ function getPomoColorHSL(ratio: number) {
   white-space: nowrap;
   border-radius: 2px;
   border: 1px solid var(--color-blue-light);
-  background-color: var(--color-blue-light);
-  box-shadow: 1px 1px 1px var(--color-blue);
+  box-shadow: 1px 1px 0px var(--color-background-dark);
   margin-left: 2px;
   line-height: 1.4;
 }

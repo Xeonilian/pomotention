@@ -164,7 +164,7 @@
                   <n-icon
                     v-if="!item.tagIds"
                     text
-                    color="var(--color-blue)"
+                    color="var(--color-text-secondary)"
                     @click="
                       showTagManager = true;
                       editingTagId = item.id;
@@ -180,7 +180,7 @@
                     @click="handleTagIconClick($event, item)"
                     class="icon-tag"
                     title="Alt+点击=切换显示 | 点击=管理标签"
-                    ><Tag16Filled
+                    ><Tag16Regular
                   /></n-icon>
                 </template>
               </n-input>
@@ -309,7 +309,6 @@ import {
   DocumentTableSearch24Regular,
   Add16Regular,
   Subtract16Regular,
-  Tag16Filled,
   Tag16Regular,
 } from "@vicons/fluent";
 import type { Activity } from "@/core/types/Activity";
@@ -819,9 +818,6 @@ function handleTagCreate(item: Activity, tagName: string) {
 
 .icon-tag {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: grab;
   padding: 2px;
   border-radius: 4px;
   transition: background-color 0.2s;
