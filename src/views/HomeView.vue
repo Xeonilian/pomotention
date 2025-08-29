@@ -173,10 +173,8 @@
             @update-todo-status="onUpdateTodoStatus"
             @suspend-todo="onSuspendTodo"
             @cancel-todo="onCancelTodo"
-            @repeat-todo="onRepeatTodo"
             @suspend-schedule="onSuspendSchedule"
             @cancel-schedule="onCancelSchedule"
-            @repeat-schedule="onRepeatSchedule"
             @update-todo-est="onUpdateTodoEst"
             @update-todo-pomo="onUpdateTodoPomo"
             @select-activity="onSelectActivity"
@@ -993,31 +991,32 @@ function onCancelTodo(id: number) {
 }
 
 /** Todo 变为 Activity **/
-function onRepeatTodo(id: number) {
-  const todo = todoById.value.get(id);
-  if (todo) {
-    const activity = activityById.value.get(todo.activityId);
-    if (!activity) {
-      console.warn(`未找到 activityId 为 ${todo.activityId} 的 activity`);
-      return;
-    }
-    const newActivity = {
-      ...activity, // 使用展开运算符复制 activity 的所有属性
-      id: Date.now(), // 设置新的 id
-      status: "" as
-        | ""
-        | "delayed"
-        | "ongoing"
-        | "cancelled"
-        | "done"
-        | "suspended"
-        | undefined,
-      dueDate: null,
-    };
-    activityList.value.push(newActivity);
-  }
-  saveAllDebounced();
-}
+// <!-- @repeat-schedule="onRepeatSchedule" @repeat-todo="onRepeatTodo" -->
+// function onRepeatTodo(id: number) {
+//   const todo = todoById.value.get(id);
+//   if (todo) {
+//     const activity = activityById.value.get(todo.activityId);
+//     if (!activity) {
+//       console.warn(`未找到 activityId 为 ${todo.activityId} 的 activity`);
+//       return;
+//     }
+//     const newActivity = {
+//       ...activity, // 使用展开运算符复制 activity 的所有属性
+//       id: Date.now(), // 设置新的 id
+//       status: "" as
+//         | ""
+//         | "delayed"
+//         | "ongoing"
+//         | "cancelled"
+//         | "done"
+//         | "suspended"
+//         | undefined,
+//       dueDate: null,
+//     };
+//     activityList.value.push(newActivity);
+//   }
+//   saveAllDebounced();
+// }
 
 /** Schedule 推迟一天 */
 function onSuspendSchedule(id: number) {
@@ -1042,27 +1041,27 @@ function onCancelSchedule(id: number) {
 }
 
 /** Schedule 变为 Activity **/
-function onRepeatSchedule(id: number) {
-  const schedule = scheduleById.value.get(id);
-  if (schedule) {
-    const activity = activityById.value.get(schedule.activityId);
-    if (!activity) {
-      console.warn(`未找到 activityId 为 ${schedule.activityId} 的 activity`);
-      return;
-    }
-    const newActivity: Activity = {
-      ...activity, // 使用展开运算符复制 activity 的所有属性
-      id: Date.now(), // 设置新的 id
-      status: "" as any,
-      ...(activity.dueRange && {
-        dueRange: [null, activity.dueRange[1]] as [number | null, string], // 保持类型安全
-        // tagIds: undefined,
-      }),
-    };
-    activityList.value.push(newActivity);
-  }
-  saveAllDebounced();
-}
+// function onRepeatSchedule(id: number) {
+//   const schedule = scheduleById.value.get(id);
+//   if (schedule) {
+//     const activity = activityById.value.get(schedule.activityId);
+//     if (!activity) {
+//       console.warn(`未找到 activityId 为 ${schedule.activityId} 的 activity`);
+//       return;
+//     }
+//     const newActivity: Activity = {
+//       ...activity, // 使用展开运算符复制 activity 的所有属性
+//       id: Date.now(), // 设置新的 id
+//       status: "" as any,
+//       ...(activity.dueRange && {
+//         dueRange: [null, activity.dueRange[1]] as [number | null, string], // 保持类型安全
+//         // tagIds: undefined,
+//       }),
+//     };
+//     activityList.value.push(newActivity);
+//   }
+//   saveAllDebounced();
+// }
 
 /** Schedule 勾选完成 */
 function onUpdateScheduleStatus(id: number, isChecked: boolean) {
@@ -1642,7 +1641,7 @@ const { startResize: startRightResize } = useResize(
   flex: 1 1 auto;
   min-width: 0;
 
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .day-status {

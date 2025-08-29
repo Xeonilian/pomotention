@@ -10,7 +10,8 @@
           <th style="width: 30px; text-align: center">时长</th>
           <th style="width: 40%; min-width: 100px; text-align: center">描述</th>
           <th style="width: 30%; min-width: 80px">地点</th>
-          <th style="width: 68px; text-align: center">操作</th>
+          <th style="width: 18px; text-align: center"></th>
+          <th style="width: 50px; text-align: center">操作</th>
         </tr>
       </thead>
       <!-- 表格内容部分，可单独调整样式 -->
@@ -122,6 +123,7 @@
               </template>
             </td>
             <td class="ellipsis">{{ schedule.location ?? "-" }}</td>
+            <td></td>
             <td>
               <div class="button-group">
                 <n-button
@@ -137,7 +139,7 @@
                     </n-icon>
                   </template>
                 </n-button>
-                <n-button
+                <!-- <n-button
                   v-if="
                     schedule.status !== 'done' &&
                     schedule.isUntaetigkeit !== true
@@ -152,7 +154,7 @@
                       <ArrowRepeatAll24Regular />
                     </n-icon>
                   </template>
-                </n-button>
+                </n-button> -->
                 <!-- 取消任务按钮 -->
                 <n-button
                   v-if="
@@ -194,7 +196,7 @@
           </tr>
         </template>
         <tr v-else class="empty-row">
-          <td colspan="7" style="text-align: center; padding: 10px">
+          <td colspan="8" style="text-align: center; padding: 10px">
             暂无日程
           </td>
         </tr>
@@ -229,7 +231,7 @@ import { NCheckbox, NButton, NIcon, NPopover } from "naive-ui";
 import {
   ChevronCircleDown48Regular,
   DismissCircle20Regular,
-  ArrowRepeatAll24Regular,
+  // ArrowRepeatAll24Regular,
   DismissSquare20Filled,
 } from "@vicons/fluent";
 import { taskService } from "@/services/taskService";
@@ -253,7 +255,7 @@ const emit = defineEmits<{
   (e: "update-schedule-status", id: number, checked: boolean): void;
   (e: "suspend-schedule", id: number): void;
   (e: "cancel-schedule", id: number): void;
-  (e: "repeat-schedule", id: number): void;
+  // (e: "repeat-schedule", id: number): void;
   (e: "select-task", taskId: number | null): void;
   (e: "select-row", id: number | null): void;
   (e: "select-activity", activityId: number | null): void;
@@ -378,9 +380,9 @@ function handleCancelSchedule(id: number) {
   emit("cancel-schedule", id);
 }
 
-function handleRepeatSchedule(id: number) {
-  emit("repeat-schedule", id);
-}
+// function handleRepeatSchedule(id: number) {
+//   emit("repeat-schedule", id);
+// }
 </script>
 
 <style scoped>
@@ -438,7 +440,7 @@ function handleRepeatSchedule(id: number) {
   text-align: center;
 }
 
-.table-body td:nth-child(6) {
+.table-body td:nth-child(8) {
   justify-content: center; /* 水平居中 */
   align-items: center; /* 垂直居中 */
   min-height: 25px;

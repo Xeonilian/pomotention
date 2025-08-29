@@ -24,10 +24,8 @@
         @update-todo-status="updateTodoStatus"
         @suspend-todo="handleSuspendTodo"
         @cancel-todo="handleCancelTodo"
-        @repeat-todo="handleRepeatTodo"
         @update-todo-pomo="updateTodoPomo"
         @update-todo-est="updateTodoEst"
-        @select-task="onSelectTask"
         @select-activity="onSelectActivity"
         @select-row="handleSelectRow"
         @edit-todo-title="handleEditTodoTitle"
@@ -44,8 +42,6 @@
         @update-schedule-status="updateScheduleStatus"
         @suspend-schedule="handleSuspendSchedule"
         @cancel-schedule="handleCancelSchedule"
-        @repeat-schedule="handleRepeatSchedule"
-        @select-task="onSelectTask"
         @select-activity="onSelectActivity"
         @select-row="handleSelectRow"
         @edit-schedule-title="handleEditScheduleTitle"
@@ -55,6 +51,8 @@
     </div>
   </div>
 </template>
+<!-- @repeat-schedule="handleRepeatSchedule" -->
+<!-- @repeat-todo="handleRepeatTodo" -->
 
 <script setup lang="ts">
 import DayTodo from "@/components/DayPlanner/DayTodo.vue";
@@ -75,10 +73,10 @@ const emit = defineEmits<{
   (e: "update-todo-status", id: number, checked: boolean): void;
   (e: "suspend-schedule", id: number): void;
   (e: "cancel-schedule", id: number): void;
-  (e: "repeat-schedule", id: number): void;
+  // (e: "repeat-schedule", id: number): void;
   (e: "suspend-todo", id: number): void;
   (e: "cancel-todo", id: number): void;
-  (e: "repeat-todo", id: number): void;
+  // (e: "repeat-todo", id: number): void;
   (e: "update-todo-est", id: number, estPomo: number[]): void;
   (e: "update-todo-pomo", id: number, pomo: number[]): void;
   (e: "update-todo-priority", id: number, priority: number): void;
@@ -86,7 +84,6 @@ const emit = defineEmits<{
     e: "batch-update-priorities",
     updates: Array<{ id: number; priority: number }>
   ): void;
-  (e: "select-task", taskId: number | null): void;
   (e: "select-activity", activityId: number | null): void;
   (e: "select-row", id: number | null): void;
   (e: "edit-schedule-title", id: number, newTitle: string): void;
@@ -122,9 +119,9 @@ function handleCancelSchedule(id: number) {
   emit("cancel-schedule", id);
 }
 
-function handleRepeatSchedule(id: number) {
-  emit("repeat-schedule", id);
-}
+// function handleRepeatSchedule(id: number) {
+//   emit("repeat-schedule", id);
+// }
 
 function handleSuspendTodo(id: number) {
   emit("suspend-todo", id);
@@ -134,9 +131,9 @@ function handleCancelTodo(id: number) {
   emit("cancel-todo", id);
 }
 
-function handleRepeatTodo(id: number) {
-  emit("repeat-todo", id);
-}
+// function handleRepeatTodo(id: number) {
+//   emit("repeat-todo", id);
+// }
 
 function updateTodoPomo(id: number, pomo: number[]) {
   emit("update-todo-pomo", id, pomo);
@@ -144,10 +141,6 @@ function updateTodoPomo(id: number, pomo: number[]) {
 
 function updateTodoEst(id: number, estPomo: number[]) {
   emit("update-todo-est", id, estPomo);
-}
-
-function onSelectTask(taskId: number | null) {
-  emit("select-task", taskId);
 }
 
 function onSelectActivity(activityId: number | null) {

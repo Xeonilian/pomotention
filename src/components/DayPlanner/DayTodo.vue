@@ -28,9 +28,12 @@
           <th style="width: 34px; text-align: center">开始</th>
           <th style="width: 34px; text-align: center">结束</th>
           <th style="width: 30px; text-align: center">排序</th>
-          <th style="width: 40%; min-width: 100px; text-align: center">描述</th>
-          <th style="width: 30%; min-width: 80px">番茄</th>
-          <th style="width: 68px; text-align: center">操作</th>
+          <th style="width: 40%; min-width: 100px; text-align: center">
+            任务描述
+          </th>
+          <th style="width: 30%; min-width: 80px">累积果果</th>
+          <th style="width: 18px; text-align: center">打扰</th>
+          <th style="width: 50px; text-align: center">操作</th>
         </tr>
       </thead>
       <!-- 表格内容部分，可单独调整样式 -->
@@ -167,8 +170,6 @@
             </td>
             <td>
               <div class="pomo-container">
-                <span class="pomo-type">{{ todo.pomoType }}</span>
-
                 <!-- 将所有番茄钟内容包装在一个容器中 -->
                 <div class="pomo-groups">
                   <template v-for="(est, index) in todo.estPomo" :key="index">
@@ -176,6 +177,11 @@
                       <template v-for="i in est" :key="i">
                         <n-checkbox
                           :checked="isPomoCompleted(todo, index, i)"
+                          :class="{
+                            'pomo-cherry': todo.pomoType === '🍒',
+                            'pomo-grape': todo.pomoType === '🍇',
+                            'pomo-tomato': todo.pomoType === '🍅',
+                          }"
                           @update:checked="
                             (checked: any) =>
                               handlePomoCheck(todo, index, i, checked)
@@ -190,8 +196,8 @@
                     </div>
                   </template>
                 </div>
-                <!-- 删除估计按钮  -->
 
+                <!-- 删除估计按钮  -->
                 <n-button
                   v-if="
                     todo.pomoType != '🍒' &&
@@ -213,7 +219,6 @@
                 </n-button>
 
                 <!-- 新增估计按钮  -->
-
                 <n-button
                   v-if="
                     todo.pomoType != '🍒' &&
@@ -234,6 +239,7 @@
                 </n-button>
               </div>
             </td>
+            <td></td>
             <td>
               <div class="button-group">
                 <!-- 追踪任务按钮 -->
@@ -250,7 +256,7 @@
                     </n-icon>
                   </template>
                 </n-button>
-                <n-button
+                <!-- <n-button
                   v-if="todo.status !== 'done'"
                   text
                   type="info"
@@ -262,7 +268,7 @@
                       <ArrowRepeatAll24Regular />
                     </n-icon>
                   </template>
-                </n-button>
+                </n-button> -->
                 <!-- 取消任务按钮 -->
                 <n-button
                   v-if="
@@ -305,7 +311,7 @@
           </tr>
         </template>
         <tr v-else class="empty-row">
-          <td colspan="7" style="text-align: center; padding: 10px">
+          <td colspan="8" style="text-align: center; padding: 10px">
             暂无待办
           </td>
         </tr>
@@ -360,7 +366,7 @@ import {
   ArrowExportLtr20Regular,
   ChevronCircleDown48Regular,
   DismissCircle20Regular,
-  ArrowRepeatAll24Regular,
+  // ArrowRepeatAll24Regular,
   DismissSquare20Filled,
   ArrowExportRtl20Regular,
 } from "@vicons/fluent";
@@ -399,7 +405,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: "suspend-todo", id: number): void;
   (e: "cancel-todo", id: number): void;
-  (e: "repeat-todo", id: number): void;
+  // (e: "repeat-todo", id: number): void;
   (e: "update-todo-status", id: number, checked: boolean): void;
   (e: "update-todo-priority", id: number, priority: number): void;
   (
@@ -791,9 +797,9 @@ function handleCancelTodo(id: number) {
   emit("cancel-todo", id);
 }
 
-function handleRepeatTodo(id: number) {
-  emit("repeat-todo", id);
-}
+// function handleRepeatTodo(id: number) {
+//   emit("repeat-todo", id);
+// }
 </script>
 
 <style scoped>
@@ -804,13 +810,30 @@ function handleRepeatTodo(id: number) {
 }
 
 :deep(.n-checkbox) {
-  --n-check-mark-color: var(--color-text-primary) !important;
   --n-color-checked: transparent !important;
+  --n-check-mark-color: var(--color-text-primary) !important;
 }
 
-:deep(.n-checkbox.n-checkbox--checked .n-checkbox-box .n-checkbox-box__border) {
-  border-color: var(--color-text-primary);
-  border-width: 1.2px;
+.pomo-tomato :deep(.n-checkbox-box) {
+  --n-color: var(--color-red-light-transparent);
+  --n-box-shadow-focus: 0 0 0 0;
+  --n-border: 1px solid var(--color-red-dark);
+  --n-border-checked: 1px solid var(--color-red-dark);
+}
+
+.pomo-cherry :deep(.n-checkbox-box) {
+  --n-color: var(--color-green-light-transparent);
+  --n-box-shadow-focus: 0 0 0 0;
+  --n-border: 1px solid var(--color-green-dark);
+  --n-border-checked: 1px solid var(--color-green-dark);
+}
+
+.pomo-grape :deep(.n-checkbox-box) {
+  /* --n-color-checked: var(--color-purple-light); */
+  --n-color: var(--color-purple-light-transparent);
+  --n-box-shadow-focus: 0 0 0 0;
+  --n-border: 1px solid var(--color-purple-dark);
+  --n-border-checked: 1px solid var(--color-purple-dark);
 }
 
 /* 表格占满宽度 */
@@ -822,11 +845,11 @@ function handleRepeatTodo(id: number) {
 
 /* 表头样式 */
 .table-header th {
+  overflow: visible;
   padding: 2px;
   text-align: left;
   border-bottom: 2px solid var(--color-background-dark);
   white-space: nowrap;
-  overflow: hidden;
   height: 20px;
   font-weight: 400;
   color: var(--color-text-secondary);
@@ -850,7 +873,7 @@ function handleRepeatTodo(id: number) {
   text-align: center;
 }
 
-.table-body td:nth-child(6) {
+.table-body td:nth-child(8) {
   justify-content: center; /* 水平居中 */
   align-items: center; /* 垂直居中 */
   min-height: 25px;
@@ -955,12 +978,9 @@ function handleRepeatTodo(id: number) {
   flex-shrink: 0;
 }
 
-.pomo-type {
-  font-size: 10px;
-  padding-right: 0px;
-}
-
 .pomo-groups {
+  padding-left: 1px;
+  padding-right: 1px;
   overflow-x: auto;
   overflow-y: hidden;
 }
@@ -993,6 +1013,7 @@ function handleRepeatTodo(id: number) {
   display: flex;
   justify-content: flex-end;
   height: 24px;
+  overflow: visible;
 }
 
 :deep(.n-button) :hover {
