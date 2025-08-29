@@ -5,7 +5,10 @@ export default defineConfig({
   title: "Pomotention",
   description: "🍅 基于番茄工作法与执行意图的自我照顾系统",
 
-  head: [["link", { rel: "icon", href: "/logo.png" }]],
+  head: [
+    ["link", { rel: "icon", href: "/pomotention/favicon.ico", sizes: "any" }],
+    ["link", { rel: "icon", type: "image/png", href: "/pomotention/logo.png" }],
+  ],
   themeConfig: {
     logo: "/logo.png",
 
