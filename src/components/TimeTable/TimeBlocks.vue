@@ -268,7 +268,7 @@ function getPomodoroStyle(seg: PomodoroSegment): CSSProperties {
   // 添加 schedule 类型的颜色处理
   let color;
   if (seg.type === "work") {
-    color = POMODORO_COLORS[seg.category] ?? "var(--color-red)";
+    color = POMODORO_COLORS[seg.category];
   } else if (seg.type === "break") {
     color = "var(--color-background)"; // 休息段为白色
   } else if (seg.type === "schedule") {
@@ -279,12 +279,12 @@ function getPomodoroStyle(seg: PomodoroSegment): CSSProperties {
 
   return {
     position: "absolute",
-    left: "35px",
+    left: "0px",
     width: "13px",
     top: `${topPx}px`,
     height: `${heightPx}px`,
     backgroundColor: color,
-    opacity: seg.type === "work" ? 0.7 : seg.type === "schedule" ? 0.9 : 0.25,
+    opacity: 0.75,
     borderRadius: "2px",
     zIndex: 5,
     color: "var(--color-background)",
@@ -381,7 +381,7 @@ function getTodoSegmentStyle(seg: TodoSegment): CSSProperties {
   const heightPx = (endMinute - startMinute) * props.effectivePxPerMinute;
   return {
     position: "absolute",
-    left: "55px",
+    left: "20px",
     width: "13px",
     top: `${topPx}px`,
     height: `${heightPx}px`,
@@ -410,7 +410,7 @@ function getActualSegmentStyle(seg: TodoSegment): CSSProperties {
 
   return {
     position: "absolute",
-    left: "75px", // 与估计分配错开位置
+    left: "40px", // 与估计分配错开位置
     width: "13px",
     top: `${topPx}px`,
     height: `${heightPx}px`,
@@ -446,17 +446,20 @@ function getActualTimeRangeStyle(range: ActualTimeRange): CSSProperties {
 
   return {
     position: "absolute",
-    left: "95px",
+    left: "60px",
     width: "8px",
     top: `${topPx}px`,
     height: `${heightPx}px`,
-    background:
+    border: "1px solid",
+    borderColor:
+      range.category === "living" ? "var(--color-blue)" : "var(--color-red)",
+    backgroundColor:
       range.category === "living"
-        ? "var(--color-blue)" // 🔥 直接用颜色值，更明显
-        : "var(--color-red)", // 🔥 绿色更显眼
+        ? "var(--color-blue-transparent)"
+        : "var(--color-red-transparent)",
     borderRadius: "4px",
-    zIndex: 10, // 🔥 提高层级确保可见
-    opacity: 0.65, // 🔥 完全不透明
+    zIndex: 10,
+    opacity: 1,
   };
 }
 
@@ -762,9 +765,9 @@ watch(
 /* 文字 */
 .hour-label {
   font-size: 10px;
-  line-height: 14px;
+  line-height: 10px;
   width: 100%;
-  text-align: left;
+  text-align: right;
   flex-shrink: 0;
   color: var(--color-text-secondary);
   margin-left: auto;
@@ -785,7 +788,7 @@ watch(
 .current-time-line::before {
   content: "🍅";
   position: absolute;
-
+  right: 0px;
   transform: translateY(-50%);
   font-size: 16px;
   pointer-events: none;
@@ -816,7 +819,6 @@ watch(
   justify-content: center;
   align-items: center;
   font-size: 10px;
-  /* font-weight: bold; */
   pointer-events: none;
   font-family: "Arial";
 }

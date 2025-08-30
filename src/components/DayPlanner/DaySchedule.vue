@@ -8,7 +8,7 @@
           <th style="width: 34px; text-align: center">开始</th>
           <th style="width: 34px; text-align: center">结束</th>
           <th style="width: 30px; text-align: center">时长</th>
-          <th style="width: 40%; min-width: 100px; text-align: center">描述</th>
+          <th style="width: 40%; min-width: 100px; text-align: center">意图</th>
           <th style="width: 30%; min-width: 80px">地点</th>
           <th style="width: 18px; text-align: center"></th>
           <th style="width: 50px; text-align: center">操作</th>
@@ -418,7 +418,7 @@ function handleCancelSchedule(id: number) {
   overflow: hidden;
   height: 20px;
   font-weight: 400;
-  color: var(--color-text-secondary);
+  color: var(--color-text-primary);
   line-height: 1.3;
 }
 

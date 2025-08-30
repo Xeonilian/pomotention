@@ -28,11 +28,9 @@
           <th style="width: 34px; text-align: center">开始</th>
           <th style="width: 34px; text-align: center">结束</th>
           <th style="width: 30px; text-align: center">排序</th>
-          <th style="width: 40%; min-width: 100px; text-align: center">
-            任务描述
-          </th>
+          <th style="width: 40%; min-width: 100px; text-align: center">意图</th>
           <th style="width: 30%; min-width: 80px">累积果果</th>
-          <th style="width: 18px; text-align: center">打扰</th>
+          <th style="width: 18px; text-align: center">状态</th>
           <th style="width: 50px; text-align: center">操作</th>
         </tr>
       </thead>
@@ -852,7 +850,7 @@ function handleCancelTodo(id: number) {
   white-space: nowrap;
   height: 20px;
   font-weight: 400;
-  color: var(--color-text-secondary);
+  color: var(--color-text-primary);
   line-height: 1.3;
 }
 

@@ -633,12 +633,25 @@ const onDateChange = (day: number) => {
   selectedRowId.value = null;
 };
 
-// week month planner 引起选中的任务行
+// week和month planner 引起选中的任务行
 const onItemChange = (id: number, activityId?: number, taskId?: number) => {
   selectedRowId.value = null;
+  activeId.value = null;
+  selectedActivityId.value = null;
   if (activityId) {
     selectedActivityId.value = activityId;
     selectedRowId.value = id;
+    const todo = todoById.value.get(id);
+    const schedule = scheduleById.value.get(id);
+
+    if (
+      todo?.status !== "done" &&
+      todo?.status !== "cancelled" &&
+      schedule?.status !== "done" &&
+      schedule?.status !== "cancelled"
+    ) {
+      activeId.value = activityId;
+    }
   } else {
     selectedActivityId.value = null;
   }
@@ -1547,7 +1560,7 @@ const { startResize: startVerticalResize } = useResize(
 const { startResize: startLeftResize } = useResize(
   leftWidth,
   "horizontal",
-  60,
+  10,
   400,
   false // 左侧面板
 );
@@ -1576,7 +1589,7 @@ const { startResize: startRightResize } = useResize(
   overflow: hidden;
   margin-right: 0;
   background: var(--color-background);
-  min-width: 120px;
+  min-width: 90px;
 }
 
 .right {
@@ -1585,7 +1598,7 @@ const { startResize: startRightResize } = useResize(
   overflow: auto;
   margin-left: 0;
   background: var(--color-background);
-  min-width: 120px;
+  min-width: 90px;
 }
 
 .middle {
