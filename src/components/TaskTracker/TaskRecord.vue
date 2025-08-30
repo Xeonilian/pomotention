@@ -10,7 +10,7 @@
     >
       <div v-if="!taskId" class="placeholder">请选择追踪的任务...</div>
       <div v-else-if="!content" class="placeholder">
-        点击此处编辑任务描述...
+        点击此处追踪执行意图...
       </div>
       <div v-else v-html="renderedMarkdown"></div>
     </div>

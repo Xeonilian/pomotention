@@ -145,6 +145,13 @@ export const ENTERTAINMENT_BLOCKS: Block[] = [
 export const POMO_TYPES: ("🍅" | "🍇" | "🍒")[] = ["🍅", "🍇", "🍒"];
 
 export const POMODORO_COLORS: Record<string, string> = {
+  living: "var(--color-blue-light)",
+  working: "var(--color-red-light)",
+  schedule: "var(--color-purple-light)",
+  untaetigkeit: "var(--color-orange-light)",
+};
+
+export const POMODORO_COLORS_DARK: Record<string, string> = {
   living: "var(--color-blue)",
   working: "var(--color-red)",
   schedule: "var(--color-purple)",

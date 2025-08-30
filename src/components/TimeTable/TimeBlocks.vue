@@ -4,7 +4,7 @@
 -->
 
 <template>
-  <div class="schedule-bar-container">
+  <div class="timetable-bar-container">
     <!-- 小时刻度线背景 -->
     <div class="hour-ticks-container">
       <div
@@ -250,8 +250,8 @@ const currentTimeTop = computed(() => {
 const showCurrentLine = computed(() => currentTimeTop.value >= 0);
 
 // ======= 基于时间表划分番茄分段 =======
-// (1) 定义类别颜色。living绿色，working红色（可拓展）
-import { POMODORO_COLORS } from "@/core/constants";
+// (1) 定义类别颜色。living蓝色，working红色（可拓展）
+import { POMODORO_COLORS, POMODORO_COLORS_DARK } from "@/core/constants";
 
 // (2) 计算所有番茄段（含类别与编号）
 const pomodoroSegments = computed(() =>
@@ -265,39 +265,47 @@ function getPomodoroStyle(seg: PomodoroSegment): CSSProperties {
     ((seg.start - props.timeRange.start) / 60000) * props.effectivePxPerMinute;
   const heightPx = ((seg.end - seg.start) / 60000) * props.effectivePxPerMinute;
 
-  // 添加 schedule 类型的颜色处理
+  // 类型的颜色处理
   let color;
   if (seg.type === "work") {
     color = POMODORO_COLORS[seg.category];
   } else if (seg.type === "break") {
-    color = "var(--color-background)"; // 休息段为白色
+    color = "transparent";
   } else if (seg.type === "schedule") {
-    color = POMODORO_COLORS[seg.category]; // schedule 段使用对应颜色
+    color = POMODORO_COLORS[seg.category];
   } else if (seg.type === "untaetigkeit") {
     color = POMODORO_COLORS.untaetigkeit;
+  }
+
+  let colorDark;
+  if (seg.type === "work") {
+    colorDark = POMODORO_COLORS_DARK[seg.category];
+  } else if (seg.type === "schedule") {
+    colorDark = POMODORO_COLORS_DARK[seg.category];
+  } else if (seg.type === "untaetigkeit") {
+    colorDark = POMODORO_COLORS_DARK.untaetigkeit;
   }
 
   return {
     position: "absolute",
     left: "0px",
     width: "13px",
+    fontSize: "11px",
     top: `${topPx}px`,
     height: `${heightPx}px`,
     backgroundColor: color,
-    opacity: 0.75,
+    color: "var(--color-background)",
+    border: `1px solid ${colorDark}`,
     borderRadius: "2px",
     zIndex: 5,
-    color: "var(--color-background)",
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
-    fontSize: "12px",
-    fontWeight: "bold",
     letterSpacing: "0px",
-    textShadow:
-      "0 1px 3px var(--color-text-primary-transparent), 0 0 1px var(--color-background-transparent)",
+    textShadow: `1px 1px 1px ${colorDark}`,
     overflow: "hidden",
     pointerEvents: seg.type === "work" ? "auto" : "none",
+    userSelect: "none",
   };
 }
 
@@ -381,7 +389,7 @@ function getTodoSegmentStyle(seg: TodoSegment): CSSProperties {
   const heightPx = (endMinute - startMinute) * props.effectivePxPerMinute;
   return {
     position: "absolute",
-    left: "20px",
+    left: "22px",
     width: "13px",
     top: `${topPx}px`,
     height: `${heightPx}px`,
@@ -410,7 +418,7 @@ function getActualSegmentStyle(seg: TodoSegment): CSSProperties {
 
   return {
     position: "absolute",
-    left: "40px", // 与估计分配错开位置
+    left: "42px", // 与估计分配错开位置
     width: "13px",
     top: `${topPx}px`,
     height: `${heightPx}px`,
@@ -446,7 +454,7 @@ function getActualTimeRangeStyle(range: ActualTimeRange): CSSProperties {
 
   return {
     position: "absolute",
-    left: "60px",
+    left: "61px",
     width: "8px",
     top: `${topPx}px`,
     height: `${heightPx}px`,
@@ -717,7 +725,7 @@ watch(
 </script>
 
 <style scoped>
-.schedule-bar-container {
+.timetable-bar-container {
   padding-top: 14px;
   position: relative;
   overflow: visible;

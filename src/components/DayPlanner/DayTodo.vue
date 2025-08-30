@@ -27,11 +27,19 @@
           <th style="width: 18px"></th>
           <th style="width: 34px; text-align: center">开始</th>
           <th style="width: 34px; text-align: center">结束</th>
-          <th style="width: 30px; text-align: center">排序</th>
+          <th style="width: 30px; text-align: center; padding: 0px">排序</th>
           <th style="width: 40%; min-width: 100px; text-align: center">意图</th>
           <th style="width: 30%; min-width: 80px">累积果果</th>
-          <th style="width: 18px; text-align: center">状态</th>
-          <th style="width: 50px; text-align: center">操作</th>
+          <th style="width: 18px; text-align: center; overflow: visible">
+            状态
+          </th>
+          <th
+            style="
+              width: 50px;
+              text-align: center;
+              background-color: transparent !important;
+            "
+          ></th>
         </tr>
       </thead>
       <!-- 表格内容部分，可单独调整样式 -->
@@ -804,34 +812,7 @@ function handleCancelTodo(id: number) {
 /* 表格容器样式，占满页面 */
 .table-container {
   width: 100%;
-  overflow-x: auto;
-}
-
-:deep(.n-checkbox) {
-  --n-color-checked: transparent !important;
-  --n-check-mark-color: var(--color-text-primary) !important;
-}
-
-.pomo-tomato :deep(.n-checkbox-box) {
-  --n-color: var(--color-red-light-transparent);
-  --n-box-shadow-focus: 0 0 0 0;
-  --n-border: 1px solid var(--color-red-dark);
-  --n-border-checked: 1px solid var(--color-red-dark);
-}
-
-.pomo-cherry :deep(.n-checkbox-box) {
-  --n-color: var(--color-green-light-transparent);
-  --n-box-shadow-focus: 0 0 0 0;
-  --n-border: 1px solid var(--color-green-dark);
-  --n-border-checked: 1px solid var(--color-green-dark);
-}
-
-.pomo-grape :deep(.n-checkbox-box) {
-  /* --n-color-checked: var(--color-purple-light); */
-  --n-color: var(--color-purple-light-transparent);
-  --n-box-shadow-focus: 0 0 0 0;
-  --n-border: 1px solid var(--color-purple-dark);
-  --n-border-checked: 1px solid var(--color-purple-dark);
+  overflow-x: hidden;
 }
 
 /* 表格占满宽度 */
@@ -843,15 +824,16 @@ function handleCancelTodo(id: number) {
 
 /* 表头样式 */
 .table-header th {
-  overflow: visible;
   padding: 2px;
   text-align: left;
   border-bottom: 2px solid var(--color-background-dark);
   white-space: nowrap;
+  overflow: hidden;
   height: 20px;
   font-weight: 400;
   color: var(--color-text-primary);
   line-height: 1.3;
+  background-color: var(--color-background) !important;
 }
 
 /* 表格内容样式 */
@@ -876,11 +858,6 @@ function handleCancelTodo(id: number) {
   align-items: center; /* 垂直居中 */
   min-height: 25px;
   height: 25px;
-}
-/* 优先级单元格样式 */
-.priority-cell {
-  cursor: pointer;
-  text-align: center;
 }
 
 /* 允许描述列显示省略号 */
@@ -918,17 +895,25 @@ function handleCancelTodo(id: number) {
   border-bottom: 1px solid var(--color-background);
 }
 
-.priority-badge {
-  display: inline-block;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
+/* 优先级单元格样式 */
+.priority-cell {
+  cursor: pointer;
   text-align: center;
-  line-height: 18px;
+}
+
+.priority-badge {
+  display: inline-flex;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 14px;
+  height: 14px;
+  position: relative;
+  top: -1px;
+  border-radius: 50%;
+  font-size: 12px;
   font-weight: bold;
   color: var(--color-background);
   background-color: var(--color-background-dark);
-  font-size: 16px;
   box-shadow: 0 1px 3px var(--color-background-light);
 }
 
@@ -994,6 +979,33 @@ function handleCancelTodo(id: number) {
 .pomo-separator {
   color: var(--color-text-secondary);
   flex-shrink: 0;
+}
+
+:deep(.n-checkbox) {
+  --n-color-checked: transparent !important;
+  --n-check-mark-color: var(--color-text-primary) !important;
+}
+
+.pomo-tomato :deep(.n-checkbox-box) {
+  --n-color: var(--color-red-light-transparent);
+  --n-box-shadow-focus: 0 0 0 0;
+  --n-border: 1px solid var(--color-red-dark);
+  --n-border-checked: 1px solid var(--color-red-dark);
+}
+
+.pomo-cherry :deep(.n-checkbox-box) {
+  --n-color: var(--color-green-light-transparent);
+  --n-box-shadow-focus: 0 0 0 0;
+  --n-border: 1px solid var(--color-green-dark);
+  --n-border-checked: 1px solid var(--color-green-dark);
+}
+
+.pomo-grape :deep(.n-checkbox-box) {
+  /* --n-color-checked: var(--color-purple-light); */
+  --n-color: var(--color-purple-light-transparent);
+  --n-box-shadow-focus: 0 0 0 0;
+  --n-border: 1px solid var(--color-purple-dark);
+  --n-border-checked: 1px solid var(--color-purple-dark);
 }
 
 .button-left {

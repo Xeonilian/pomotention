@@ -7,11 +7,17 @@
           <th style="width: 18px"></th>
           <th style="width: 34px; text-align: center">开始</th>
           <th style="width: 34px; text-align: center">结束</th>
-          <th style="width: 30px; text-align: center">时长</th>
+          <th style="width: 30px; text-align: center; padding: 0px">时长</th>
           <th style="width: 40%; min-width: 100px; text-align: center">意图</th>
           <th style="width: 30%; min-width: 80px">地点</th>
           <th style="width: 18px; text-align: center"></th>
-          <th style="width: 50px; text-align: center">操作</th>
+          <th
+            style="
+              width: 50px;
+              text-align: center;
+              background-color: transparent;
+            "
+          ></th>
         </tr>
       </thead>
       <!-- 表格内容部分，可单独调整样式 -->
@@ -389,17 +395,7 @@ function handleCancelSchedule(id: number) {
 /* 表格容器样式，占满页面 */
 .table-container {
   width: 100%;
-  overflow-x: auto; /* 支持横向滚动 */
-}
-
-:deep(.n-checkbox) {
-  --n-check-mark-color: var(--color-text-primary) !important;
-  --n-color-checked: transparent !important;
-}
-
-:deep(.n-checkbox.n-checkbox--checked .n-checkbox-box .n-checkbox-box__border) {
-  border-color: var(--color-text-primary);
-  border-width: 1.2px;
+  overflow-x: hidden;
 }
 
 /* 表格占满宽度 */
@@ -420,6 +416,7 @@ function handleCancelSchedule(id: number) {
   font-weight: 400;
   color: var(--color-text-primary);
   line-height: 1.3;
+  background-color: var(--color-background) !important;
 }
 
 /* 表格内容样式 */
@@ -567,6 +564,14 @@ function handleCancelSchedule(id: number) {
   font-size: inherit;
   font-family: inherit;
   outline: none;
+}
+
+/* 勾选 */
+:deep(.n-checkbox) {
+  --n-check-mark-color: var(--color-text-primary) !important;
+  --n-color-checked: transparent !important;
+  border-color: var(--color-text-primary);
+  border-width: 1.2px;
 }
 
 /* 按钮组样式 */
