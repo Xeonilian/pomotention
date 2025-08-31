@@ -29,16 +29,12 @@
           <th style="width: 30px; text-align: center; padding: 0px">排序</th>
           <th style="width: 40%; min-width: 100px; text-align: center">意图</th>
           <th style="width: 30%; min-width: 80px">累积果果</th>
-          <th style="width: 18px; text-align: center; overflow: visible">
+          <th
+            title="能量值|奖赏值|内部打扰|外部打扰"
+            style="width: 72px; overflow: visible; text-align: right"
+          >
             状态
           </th>
-          <th
-            style="
-              width: 50px;
-              text-align: center;
-              background-color: transparent !important;
-            "
-          ></th>
         </tr>
       </thead>
       <!-- 表格内容部分，可单独调整样式 -->
@@ -56,6 +52,7 @@
             @click="handleRowClick(todo)"
             style="cursor: pointer"
           >
+            <!-- 1 完成状态 -->
             <td>
               <n-checkbox
                 v-if="todo.status !== 'cancelled'"
@@ -65,14 +62,13 @@
 
               <n-icon
                 v-else
-                size="22"
-                style="transform: translate(0px, 3px)"
-                color="var(--color-red)"
+                class="cancel-icon"
+                color="var(--color-text-secondary)"
               >
                 <DismissSquare20Filled />
               </n-icon>
             </td>
-            <!-- 开始时间 -->
+            <!-- 2 开始时间 -->
             <td
               @dblclick.stop="startEditing(todo.id, 'start')"
               :title="
@@ -97,7 +93,7 @@
                 todo.startTime ? timestampToTimeString(todo.startTime) : "-"
               }}</span>
             </td>
-            <!-- 结束时间 -->
+            <!-- 3 结束时间 -->
             <td
               @dblclick.stop="startEditing(todo.id, 'done')"
               :title="
@@ -122,6 +118,7 @@
                 todo.doneTime ? timestampToTimeString(todo.doneTime) : "-"
               }}</span>
             </td>
+            <!-- 4 优先级 -->
             <td class="priority-cell" @click="startEditingPriority(todo)">
               <template v-if="editingTodo && editingTodo.id === todo.id">
                 <n-input-number
@@ -147,6 +144,7 @@
                 </span>
               </template>
             </td>
+            <!-- 5 意图 -->
             <td
               class="ellipsis title-cell"
               :class="{
@@ -173,6 +171,7 @@
               />
               <span v-else>{{ todo.activityTitle ?? "-" }}</span>
             </td>
+            <!-- 6 果果 -->
             <td>
               <div class="pomo-container">
                 <!-- 将所有番茄钟内容包装在一个容器中 -->
@@ -187,6 +186,7 @@
                             'pomo-grape': todo.pomoType === '🍇',
                             'pomo-tomato': todo.pomoType === '🍅',
                           }"
+                          :disabled="todo.status === 'cancelled'"
                           @update:checked="
                             (checked: any) =>
                               handlePomoCheck(todo, index, i, checked)
@@ -201,76 +201,86 @@
                     </div>
                   </template>
                 </div>
-
-                <!-- 删除估计按钮  -->
-                <n-button
-                  v-if="
-                    todo.pomoType != '🍒' &&
-                    todo.estPomo &&
-                    todo.estPomo.length > 1 &&
-                    todo.estPomo.length < 4 &&
-                    todo.status !== 'done'
-                  "
-                  text
-                  @click="handleDeleteEstimate(todo)"
-                  title="减少预估番茄数量"
-                  class="button-left"
+                <div
+                  v-if="todo.status !== 'done' && todo.status !== 'cancelled'"
+                  class="est-button"
                 >
-                  <template #icon>
-                    <n-icon size="14">
-                      <ArrowExportRtl20Regular />
-                    </n-icon>
-                  </template>
-                </n-button>
+                  <!-- 删除估计按钮  -->
+                  <n-button
+                    v-if="
+                      todo.pomoType != '🍒' &&
+                      todo.estPomo &&
+                      todo.estPomo.length > 1 &&
+                      todo.estPomo.length < 4
+                    "
+                    text
+                    @click="handleDeleteEstimate(todo)"
+                    title="减少预估番茄数量"
+                    class="button-left"
+                  >
+                    <template #icon>
+                      <n-icon size="14" color="var(--color-text-secondary)">
+                        <CaretLeft12Regular />
+                      </n-icon>
+                    </template>
+                  </n-button>
 
-                <!-- 新增估计按钮  -->
-                <n-button
-                  v-if="
-                    todo.pomoType != '🍒' &&
-                    todo.estPomo &&
-                    todo.estPomo.length < 3 &&
-                    todo.status !== 'done'
-                  "
-                  text
-                  @click="handleAddEstimate(todo)"
-                  title="增加预估番茄数量"
-                  class="button-right"
-                >
-                  <template #icon>
-                    <n-icon size="14">
-                      <ArrowExportLtr20Regular />
-                    </n-icon>
-                  </template>
-                </n-button>
+                  <!-- 新增估计按钮  -->
+                  <n-button
+                    v-if="
+                      todo.pomoType != '🍒' &&
+                      todo.estPomo &&
+                      todo.estPomo.length < 3
+                    "
+                    text
+                    @click="handleAddEstimate(todo)"
+                    title="增加预估番茄数量"
+                    class="button-right"
+                  >
+                    <template #icon>
+                      <n-icon size="14" color="var(--color-text-secondary)">
+                        <CaretRight12Regular />
+                      </n-icon>
+                    </template>
+                  </n-button>
+                </div>
               </div>
             </td>
-            <!-- 记录值 -->
+            <!-- 7 记录值+操作 -->
             <td>
-              <div class="records-stat">
-                {{ averageValue(todo.energyRecords) }}|{{
-                  averageValue(todo.rewardRecords)
-                }}|{{ countInterruptions(todo.interruptionRecords, "E") }}|{{
-                  countInterruptions(todo.interruptionRecords, "I")
-                }}
-              </div>
-            </td>
-            <td>
-              <div class="button-group">
-                <!-- 追踪任务按钮 -->
-                <n-button
-                  v-if="!todo.taskId"
-                  text
-                  type="info"
-                  @click="handleConvertToTask(todo)"
-                  title="追踪任务"
+              <div
+                class="status-cell"
+                :class="{
+                  'check-mode':
+                    todo.status === 'done' || todo.status === 'cancelled',
+                }"
+              >
+                <div v-if="todo.taskId" class="records-stat">
+                  {{ averageValue(todo.energyRecords) }}|{{
+                    averageValue(todo.rewardRecords)
+                  }}|{{ countInterruptions(todo.interruptionRecords, "E") }}|{{
+                    countInterruptions(todo.interruptionRecords, "I")
+                  }}
+                </div>
+                <div
+                  v-if="todo.status !== 'done' && todo.status !== 'cancelled'"
+                  class="button-group"
                 >
-                  <template #icon>
-                    <n-icon size="18">
-                      <ChevronCircleDown48Regular />
-                    </n-icon>
-                  </template>
-                </n-button>
-                <!-- <n-button
+                  <!-- 追踪任务按钮 -->
+                  <n-button
+                    v-if="!todo.taskId"
+                    text
+                    type="info"
+                    @click="handleConvertToTask(todo)"
+                    title="追踪任务"
+                  >
+                    <template #icon>
+                      <n-icon size="18">
+                        <ChevronCircleDown48Regular />
+                      </n-icon>
+                    </template>
+                  </n-button>
+                  <!-- <n-button
                   v-if="todo.status !== 'done'"
                   text
                   type="info"
@@ -283,49 +293,41 @@
                     </n-icon>
                   </template>
                 </n-button> -->
-                <!-- 取消任务按钮 -->
-                <n-button
-                  v-if="
-                    !todo.realPomo &&
-                    todo.status !== 'done' &&
-                    todo.status !== 'cancelled'
-                  "
-                  text
-                  type="info"
-                  @click="handleCancelTodo(todo.id)"
-                  title="取消任务，不退回活动清单"
-                >
-                  <template #icon>
-                    <n-icon size="18">
-                      <DismissCircle20Regular />
-                    </n-icon>
-                  </template>
-                </n-button>
-                <!-- 退回任务按钮 = 不再在今日 -->
-                <n-button
-                  v-if="
-                    !todo.realPomo &&
-                    todo.status !== 'done' &&
-                    !todo.taskId &&
-                    todo.status !== 'cancelled'
-                  "
-                  text
-                  type="info"
-                  @click="handleSuspendTodo(todo.id)"
-                  title="撤销任务，退回活动清单"
-                >
-                  <template #icon>
-                    <n-icon size="18">
-                      <ChevronCircleRight48Regular />
-                    </n-icon>
-                  </template>
-                </n-button>
+                  <!-- 取消任务按钮 -->
+                  <n-button
+                    v-if="!todo.realPomo"
+                    text
+                    type="info"
+                    @click="handleCancelTodo(todo.id)"
+                    title="取消任务，不退回活动清单"
+                  >
+                    <template #icon>
+                      <n-icon size="18">
+                        <DismissCircle20Regular />
+                      </n-icon>
+                    </template>
+                  </n-button>
+                  <!-- 退回任务按钮 = 不再在今日 -->
+                  <n-button
+                    v-if="!todo.realPomo && !todo.taskId"
+                    text
+                    type="info"
+                    @click="handleSuspendTodo(todo.id)"
+                    title="撤销任务，退回活动清单"
+                  >
+                    <template #icon>
+                      <n-icon size="18">
+                        <ChevronCircleRight48Regular />
+                      </n-icon>
+                    </template>
+                  </n-button>
+                </div>
               </div>
             </td>
           </tr>
         </template>
         <tr v-else class="empty-row">
-          <td colspan="8" style="text-align: center; padding: 10px">
+          <td colspan="7" style="text-align: center; padding: 10px">
             暂无待办
           </td>
         </tr>
@@ -377,12 +379,12 @@ import type { Todo, TodoWithTaskRecords } from "@/core/types/Todo";
 import { timestampToTimeString } from "@/core/utils";
 import {
   ChevronCircleRight48Regular,
-  ArrowExportLtr20Regular,
   ChevronCircleDown48Regular,
   DismissCircle20Regular,
   // ArrowRepeatAll24Regular,
   DismissSquare20Filled,
-  ArrowExportRtl20Regular,
+  CaretLeft12Regular,
+  CaretRight12Regular,
 } from "@vicons/fluent";
 import { NCheckbox, NInputNumber, NPopover, NButton, NIcon } from "naive-ui";
 import { ref, computed, nextTick, watch } from "vue";
@@ -844,8 +846,8 @@ function handleCancelTodo(id: number) {
 // 空、null、undefined 或 [] 返回 null
 function averageValue<T extends { value: number }>(
   records: T[] | null | undefined
-): number | null {
-  if (!Array.isArray(records) || records.length === 0) return null;
+): number | string {
+  if (!Array.isArray(records) || records.length === 0) return "-";
   let sum = 0,
     count = 0;
   for (const r of records) {
@@ -855,7 +857,7 @@ function averageValue<T extends { value: number }>(
       count++;
     }
   }
-  return count === 0 ? null : sum / count;
+  return count === 0 ? "-" : sum / count;
 }
 
 // 2) 统计中断类型数量（"E" 或 "I"）
@@ -863,8 +865,8 @@ function averageValue<T extends { value: number }>(
 function countInterruptions(
   records: { interruptionType: "E" | "I" }[] | null | undefined,
   type: "E" | "I"
-): number | null {
-  if (!Array.isArray(records) || records.length === 0) return null;
+): number | string {
+  if (!Array.isArray(records) || records.length === 0) return "-";
   let count = 0;
   for (const r of records) if (r?.interruptionType === type) count++;
   return count;
@@ -916,7 +918,7 @@ function countInterruptions(
   text-align: center;
 }
 
-.table-body td:nth-child(8) {
+.table-body td:nth-child(7) {
   justify-content: center; /* 水平居中 */
   align-items: center; /* 垂直居中 */
   min-height: 25px;
@@ -933,20 +935,32 @@ function countInterruptions(
   background-color: var(--color-background-light-transparent);
 }
 
-/* 激活行样式 */
-.table-body tr.active-row {
-  background-color: var(--color-red-light-transparent) !important;
-  transition: background-color 0.2s ease;
-}
-
+/* hover 高亮（不加 !important，便于被 selected/active 覆盖） */
 .table-body tr:hover {
   background-color: var(--color-cyan-light-transparent);
-  transition: background-color 0.2s ease;
 }
 
-/* 确保激活行的样式优先级高于隔行变色 */
-.table-body tr.active-row:nth-child(even) {
+/* 激活行样式（覆盖一切） */
+.table-body tr.active-row {
   background-color: var(--color-red-light-transparent) !important;
+}
+
+/* 选中行样式（覆盖一切） */
+.table-body tr.selected-row {
+  background-color: var(--color-yellow-transparent) !important;
+}
+
+/* 当同时 active + selected 时，明确以 selected 的颜色为准（可留可删） */
+.table-body tr.active-row.selected-row {
+  background-color: var(--color-yellow-transparent) !important;
+}
+
+/* 统一过渡效果，减少重复声明 */
+.table-body tr,
+.table-body tr:hover,
+.table-body tr.active-row,
+.table-body tr.selected-row {
+  transition: background-color 0.2s ease;
 }
 
 /* 空行样式 */
@@ -1017,17 +1031,16 @@ function countInterruptions(
   background-color: var(--color-orange-dark);
 }
 
+/* 估计番茄数量 */
 .pomo-container {
   display: flex;
   align-items: center;
   white-space: nowrap;
   flex-shrink: 0;
-  overflow-y: hidden;
 }
 
 .pomo-groups {
   padding-right: 1px;
-  overflow-x: hidden;
   overflow-y: hidden;
 }
 
@@ -1071,11 +1084,6 @@ function countInterruptions(
   --n-border-checked: 1px solid var(--color-purple-dark);
 }
 
-.records-stat {
-  overflow: visible;
-  font-family: Consolas, "Courier New", Courier, monospace;
-  font-size: 12px;
-}
 .button-left {
   display: flex;
   margin-left: -4px;
@@ -1087,31 +1095,36 @@ function countInterruptions(
   right: 3px !important;
 }
 
+/* 状态 */
+.status-cell {
+  display: flex;
+  align-items: center;
+}
+
+.status-cell.check-mode {
+  justify-content: end;
+}
+
+.status-cell:not(.check-mode) .button-group {
+  margin-left: auto; /* 常态：按钮贴右 */
+}
+
+.records-stat {
+  display: flex;
+  overflow: visible;
+  font-family: Consolas, "Courier New", Courier, monospace;
+  font-size: 14px;
+  padding-right: 2px;
+}
+
 .button-group {
   display: flex;
-  justify-content: flex-end;
   height: 24px;
   overflow: visible;
 }
 
 :deep(.n-button) :hover {
   color: var(--color-red);
-}
-
-/* 选中行样式 */
-.table-body tr.selected-row {
-  background-color: var(--color-yellow-transparent) !important;
-  transition: background-color 0.2s ease;
-}
-
-/* 确保选中行的样式优先级高于其他样式 */
-.table-body tr.selected-row:nth-child(even) {
-  background-color: var(--color-yellow-transparent) !important;
-}
-
-/* 同时具有active和selected状态时的样式 */
-.table-body tr.active-row.selected-row {
-  background-color: var(--color-yellow-transparent) !important;
 }
 
 /* 完成行样式 */
@@ -1134,6 +1147,21 @@ function countInterruptions(
 .title-cell {
   position: relative;
   cursor: pointer;
+}
+
+.cancel-icon {
+  display: inline-flex;
+  width: 18px;
+  height: 18px;
+  align-items: center;
+  justify-content: center;
+  transform: scale(1.2) translateY(2px) !important;
+  transform-origin: center;
+}
+.cancel-icon svg {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .title-cell:hover::after {

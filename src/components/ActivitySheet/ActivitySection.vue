@@ -218,6 +218,7 @@
           />
           <n-input
             v-if="item.class === 'T'"
+            maxlength="1"
             :value="getInputValue(item)"
             :placeholder="item.pomoType"
             style="max-width: 32px"

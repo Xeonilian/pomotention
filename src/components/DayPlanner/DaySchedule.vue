@@ -10,10 +10,10 @@
           <th style="width: 30px; text-align: center; padding: 0px">时长</th>
           <th style="width: 40%; min-width: 100px; text-align: center">意图</th>
           <th style="width: 30%; min-width: 80px">地点</th>
-          <th style="width: 18px; text-align: center"></th>
+
           <th
             style="
-              width: 50px;
+              width: 72px;
               text-align: center;
               background-color: transparent;
             "
@@ -129,7 +129,7 @@
               </template>
             </td>
             <td class="ellipsis">{{ schedule.location ?? "-" }}</td>
-            <td></td>
+
             <td>
               <div class="button-group">
                 <n-button
@@ -202,7 +202,7 @@
           </tr>
         </template>
         <tr v-else class="empty-row">
-          <td colspan="8" style="text-align: center; padding: 10px">
+          <td colspan="7" style="text-align: center; padding: 10px">
             暂无日程
           </td>
         </tr>
@@ -437,12 +437,13 @@ function handleCancelSchedule(id: number) {
   text-align: center;
 }
 
-.table-body td:nth-child(8) {
+.table-body td:nth-child(7) {
   justify-content: center; /* 水平居中 */
   align-items: center; /* 垂直居中 */
   min-height: 25px;
   height: 25px;
 }
+
 /* 允许描述和地点列显示省略号 */
 .ellipsis {
   text-overflow: ellipsis !important; /* 文本溢出显示省略号 */
