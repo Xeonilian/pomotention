@@ -219,7 +219,7 @@
                     class="button-left"
                   >
                     <template #icon>
-                      <n-icon size="12" color="var(--color-background-dark)">
+                      <n-icon size="18" color="var(--color-background-dark)">
                         <CaretLeft12Filled />
                       </n-icon>
                     </template>
@@ -233,13 +233,14 @@
                       todo.estPomo.length < 3
                     "
                     text
+                    type="default"
                     @click="handleAddEstimate(todo)"
                     title="增加预估番茄数量"
                     class="button-right"
                     :class="{ 'bidirection-mode': todo.estPomo.length === 2 }"
                   >
                     <template #icon>
-                      <n-icon size="12" color="var(--color-background-dark)">
+                      <n-icon size="18" color="var(--color-background-dark)">
                         <CaretRight12Filled />
                       </n-icon>
                     </template>
@@ -1017,6 +1018,7 @@ function countInterruptions(
 .pomo-groups {
   padding-right: 1px;
   overflow-y: hidden;
+  z-index: 10;
 }
 
 .pomo-group {
@@ -1063,44 +1065,20 @@ function countInterruptions(
   display: flex;
 }
 .button-left {
-  transform: scale(1.75) !important;
   position: relative;
   left: -4px;
-  z-index: 10;
+  z-index: 5;
 }
 
 .button-right:not(.bidirection-mode) {
-  transform: scale(1.75) !important;
   position: relative;
   left: -4px;
 }
 
 .button-right.bidirection-mode {
-  transform: scale(1.75) !important;
   position: relative;
-  left: -10px;
+  left: -12px;
   z-index: 0;
-}
-
-/* 仅作用于标记为 .button-right 的按钮 */
-.button-right .n-button__icon,
-.button-right .n-icon-slot,
-.button-right .n-icon,
-.button-right .n-icon > svg {
-  width: 12px !important;
-  min-width: 12px !important;
-  max-width: 12px !important;
-  --n-icon-size: 12px !important;
-}
-
-.button-left .n-button__icon,
-.button-left .n-icon-slot,
-.button-left .n-icon,
-.button-left .n-icon > svg {
-  width: 12px !important;
-  min-width: 12px !important;
-  max-width: 12px !important;
-  --n-icon-size: 12px !important;
 }
 
 /* 状态 */
