@@ -1,4 +1,6 @@
 // src/core/types/Todo.ts
+import type { EnergyRecord, RewardRecord, InterruptionRecord } from "./Task";
+
 export interface Todo {
   id: number; // 时间戳生成时刻
   activityId: number; // 生成任务时刻
@@ -16,4 +18,14 @@ export interface Todo {
   startTime?: number;
   interruption?: "I" | "E";
   positionIndex?: number;
+}
+
+export interface TodoWithTaskRecords extends Todo {
+  energyRecords: EnergyRecord[];
+  rewardRecords: RewardRecord[];
+  interruptionRecords: InterruptionRecord[];
+}
+
+export interface TodoWithTags extends Todo {
+  tagIds?: number[];
 }

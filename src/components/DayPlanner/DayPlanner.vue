@@ -25,6 +25,7 @@
         @suspend-todo="handleSuspendTodo"
         @cancel-todo="handleCancelTodo"
         @update-todo-pomo="updateTodoPomo"
+        @batch-update-priorities="updateTodoPriority"
         @update-todo-est="updateTodoEst"
         @select-activity="onSelectActivity"
         @select-row="handleSelectRow"
@@ -57,12 +58,12 @@
 <script setup lang="ts">
 import DayTodo from "@/components/DayPlanner/DayTodo.vue";
 import DaySchedule from "@/components/DayPlanner/DaySchedule.vue";
-import type { Todo } from "@/core/types/Todo";
+import type { TodoWithTaskRecords } from "@/core/types/Todo";
 import type { Schedule } from "@/core/types/Schedule";
 import type { Task } from "@/core/types/Task";
 
 defineProps<{
-  dayTodos: Todo[];
+  dayTodos: TodoWithTaskRecords[];
   daySchedules: Schedule[];
   activeId: number | null;
   selectedRowId: number | null;
@@ -134,7 +135,9 @@ function handleCancelTodo(id: number) {
 // function handleRepeatTodo(id: number) {
 //   emit("repeat-todo", id);
 // }
-
+function updateTodoPriority(updates: Array<{ id: number; priority: number }>) {
+  emit("batch-update-priorities", updates);
+}
 function updateTodoPomo(id: number, pomo: number[]) {
   emit("update-todo-pomo", id, pomo);
 }

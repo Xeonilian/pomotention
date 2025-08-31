@@ -167,7 +167,7 @@
             "
             :selectedRowId="selectedRowId"
             :activeId="activeId"
-            :dayTodos="todosForCurrentView"
+            :dayTodos="todosForCurrentViewWithTaskRecords"
             :daySchedules="schedulesForCurrentView"
             @update-schedule-status="onUpdateScheduleStatus"
             @update-todo-status="onUpdateTodoStatus"
@@ -177,6 +177,7 @@
             @cancel-schedule="onCancelSchedule"
             @update-todo-est="onUpdateTodoEst"
             @update-todo-pomo="onUpdateTodoPomo"
+            @batch-update-priorities="onUpdateTodoPriority"
             @select-activity="onSelectActivity"
             @select-row="onSelectRow"
             @edit-schedule-title="handleEditScheduleTitle"
@@ -324,7 +325,11 @@ import { usePomoStore } from "@/stores/usePomoStore";
 // import ActivitySheet from "@/components/ActivitySheet/ActivitySheet.vue";
 import type { Activity } from "@/core/types/Activity";
 import type { Block } from "@/core/types/Block";
-import type { Todo } from "@/core/types/Todo";
+import type {
+  Todo,
+  TodoWithTags,
+  TodoWithTaskRecords,
+} from "@/core/types/Todo";
 import type { Schedule } from "@/core/types/Schedule";
 import {
   Task,
@@ -449,6 +454,7 @@ const todoById = computed(() => {
   for (const t of todoList.value) m.set(t.id, t);
   return m;
 });
+
 const scheduleById = computed(() => {
   const m = new Map<number, Schedule>();
   for (const s of scheduleList.value) m.set(s.id, s);
@@ -532,13 +538,35 @@ const isViewDateYesterday = dateService.isViewDateYesterday;
 const isViewDateTomorrow = dateService.isViewDateTomorrow;
 
 // 计算筛选的当前视图范围内的 todo
-const todosForCurrentView = computed(() => {
-  const { start, end } = dateService.visibleRange.value;
+// const todosForCurrentView = computed(() => {
+//   const { start, end } = dateService.visibleRange.value;
 
-  if (!todoList.value) return [];
-  return todoList.value.filter((todo) => todo.id >= start && todo.id < end);
-});
-type TodoWithTags = Todo & { tagIds?: number[] };
+//   if (!todoList.value) return [];
+//   return todoList.value.filter((todo) => todo.id >= start && todo.id < end);
+// });
+const todosForCurrentViewWithTaskRecords = computed<TodoWithTaskRecords[]>(
+  () => {
+    const { start, end } = dateService.visibleRange.value;
+    if (!todoList.value) return [];
+
+    const out: TodoWithTaskRecords[] = [];
+    for (const todo of todoList.value) {
+      if (todo.id < start || todo.id >= end) continue;
+
+      const relatedTask =
+        todo.taskId != null ? taskById.value.get(todo.taskId) : undefined;
+
+      out.push({
+        ...todo,
+        energyRecords: relatedTask?.energyRecords ?? [],
+        rewardRecords: relatedTask?.rewardRecords ?? [],
+        interruptionRecords: relatedTask?.interruptionRecords ?? [],
+      });
+    }
+    return out;
+  }
+);
+
 const todosForCurrentViewWithTags = computed<TodoWithTags[]>(() => {
   const { start, end } = dateService.visibleRange.value;
   if (!todoList.value) return [];
@@ -973,6 +1001,21 @@ function onUpdateTodoPomo(id: number, realPomo: number[]) {
   const todo = todoById.value.get(id);
   if (todo) {
     todo.realPomo = realPomo;
+  }
+  saveAllDebounced();
+}
+
+function onUpdateTodoPriority(
+  updates: Array<{ id: number; priority: number }>
+) {
+  if (!Array.isArray(updates) || updates.length === 0) return;
+
+  // 逐个更新 todo.priority
+  for (const { id, priority } of updates) {
+    const todo = todoById.value.get(id);
+    if (todo) {
+      todo.priority = priority;
+    }
   }
   saveAllDebounced();
 }

@@ -8,7 +8,6 @@
   Emits:
     - suspend-todo: (id: number)
     - update-todo-status: (id: number, activityId: number, status: string)
-    - update-todo-priority: (id: number, priority: number)
     - batch-update-priorities: (updates: Array<{ id: number; priority: number }>)
     - update-todo-pomo: (id: number, realPomo: number[])
     - update-todo-est: (id: number, estPomo: number[])
@@ -245,7 +244,16 @@
                 </n-button>
               </div>
             </td>
-            <td></td>
+            <!-- 记录值 -->
+            <td>
+              <div class="records-stat">
+                {{ averageValue(todo.energyRecords) }}|{{
+                  averageValue(todo.rewardRecords)
+                }}|{{ countInterruptions(todo.interruptionRecords, "E") }}|{{
+                  countInterruptions(todo.interruptionRecords, "I")
+                }}
+              </div>
+            </td>
             <td>
               <div class="button-group">
                 <!-- 追踪任务按钮 -->
@@ -365,7 +373,7 @@
 </template>
 
 <script setup lang="ts">
-import type { Todo } from "@/core/types/Todo";
+import type { Todo, TodoWithTaskRecords } from "@/core/types/Todo";
 import { timestampToTimeString } from "@/core/utils";
 import {
   ChevronCircleRight48Regular,
@@ -377,7 +385,7 @@ import {
   ArrowExportRtl20Regular,
 } from "@vicons/fluent";
 import { NCheckbox, NInputNumber, NPopover, NButton, NIcon } from "naive-ui";
-import { ref, computed, nextTick } from "vue";
+import { ref, computed, nextTick, watch } from "vue";
 import { taskService } from "@/services/taskService";
 import { Task } from "@/core/types/Task";
 
@@ -396,24 +404,45 @@ const showEstimateInput = ref(false);
 const currentTodoId = ref<number | null>(null);
 const newEstimate = ref<number>(1);
 
-// Todo 类型中 priority 是 number
-interface TodoWithNumberPriority extends Omit<Todo, "priority"> {
-  priority: number;
-}
-
 // 定义 Props
 const props = defineProps<{
-  todos: TodoWithNumberPriority[];
+  todos: TodoWithTaskRecords[];
   activeId: number | null;
   selectedRowId: number | null; // 新增：从父组件接收选中行ID
 }>();
+
+watch(
+  () => props.todos,
+  (list, old) => {
+    if (!Array.isArray(list)) {
+      console.log("[todos] not an array:", list);
+      return;
+    }
+
+    // 打印每个 todo 的 priority
+    list.forEach((t, i) => {
+      console.log(`todo[${i}].priority:`, t?.priority);
+    });
+
+    // 如果也想对比新旧 priority 变化（在可对比时）
+    if (Array.isArray(old) && old.length === list.length) {
+      list.forEach((t, i) => {
+        const prev = old[i]?.priority;
+        const curr = t?.priority;
+        if (prev !== curr) {
+          console.log(`priority changed at [${i}]: ${prev} -> ${curr}`);
+        }
+      });
+    }
+  },
+  { immediate: true, deep: true }
+);
 
 const emit = defineEmits<{
   (e: "suspend-todo", id: number): void;
   (e: "cancel-todo", id: number): void;
   // (e: "repeat-todo", id: number): void;
   (e: "update-todo-status", id: number, checked: boolean): void;
-  (e: "update-todo-priority", id: number, priority: number): void;
   (
     e: "batch-update-priorities",
     updates: Array<{ id: number; priority: number }>
@@ -430,7 +459,7 @@ const emit = defineEmits<{
   (e: "convert-todo-to-task", payload: { task: Task; todoId: number }): void;
 }>();
 
-const editingTodo = ref<TodoWithNumberPriority | null>(null);
+const editingTodo = ref<Todo | null>(null);
 const editingPriority = ref<number>(0);
 
 // 处理输入框获取焦点
@@ -458,13 +487,14 @@ const sortedTodos = computed(() => {
 });
 
 // 开始编辑优先级
-function startEditingPriority(todo: TodoWithNumberPriority) {
+function startEditingPriority(todo: Todo) {
   editingTodo.value = todo;
   editingPriority.value = todo.priority;
+  console.log("[DayTodo:]", todo.priority);
 }
 
 // 重新排序
-function relayoutPriority(todos: TodoWithNumberPriority[]) {
+function relayoutPriority(todos: Todo[]) {
   // 获取已完成任务的优先级集合
   const lockedPriorities = new Set(
     todos
@@ -495,6 +525,7 @@ function relayoutPriority(todos: TodoWithNumberPriority[]) {
     }
   });
 }
+
 // 结束优先级编辑
 function finishEditing() {
   if (!editingTodo.value) return;
@@ -578,6 +609,7 @@ function finishEditing() {
   relayoutPriority(props.todos);
 }
 
+// 更新打钩状态
 function handleCheckboxChange(id: number, checked: boolean) {
   emit("update-todo-status", id, checked);
 }
@@ -686,7 +718,7 @@ function handleDeleteEstimate(todo: Todo) {
 }
 
 // 修改点击行处理函数
-function handleRowClick(todo: TodoWithNumberPriority) {
+function handleRowClick(todo: Todo) {
   emit("select-row", todo.id); // 新增：发送选中行事件
   emit("select-task", todo.taskId || null);
   emit("select-activity", todo.activityId || null);
@@ -721,7 +753,7 @@ function startEditing(todoId: number, field: "title" | "start" | "done") {
 }
 
 // 注意这里是 timestring 不是timestamp，是在Home用currentViewdate进行的转化
-function saveEdit(todo: TodoWithNumberPriority) {
+function saveEdit(todo: Todo) {
   if (!editingRowId.value) return;
 
   if (editingField.value === "title") {
@@ -765,7 +797,7 @@ function isValidTimeString(str: string) {
 }
 
 // 转换为任务
-function handleConvertToTask(todo: TodoWithNumberPriority) {
+function handleConvertToTask(todo: Todo) {
   if (todo.taskId) {
     popoverMessage.value = "该待办已转换为任务";
     showPopover.value = true;
@@ -803,9 +835,40 @@ function handleCancelTodo(id: number) {
   emit("cancel-todo", id);
 }
 
+// 取消repeat功能简化页面，Activity部分可以完成同样功能
 // function handleRepeatTodo(id: number) {
 //   emit("repeat-todo", id);
 // }
+
+// 1) 计算平均值（适用于 EnergyRecord[] 或 RewardRecord[]）
+// 空、null、undefined 或 [] 返回 null
+function averageValue<T extends { value: number }>(
+  records: T[] | null | undefined
+): number | null {
+  if (!Array.isArray(records) || records.length === 0) return null;
+  let sum = 0,
+    count = 0;
+  for (const r of records) {
+    const v = r?.value;
+    if (typeof v === "number" && Number.isFinite(v)) {
+      sum += v;
+      count++;
+    }
+  }
+  return count === 0 ? null : sum / count;
+}
+
+// 2) 统计中断类型数量（"E" 或 "I"）
+// 空、null、undefined 或 [] 返回 null
+function countInterruptions(
+  records: { interruptionType: "E" | "I" }[] | null | undefined,
+  type: "E" | "I"
+): number | null {
+  if (!Array.isArray(records) || records.length === 0) return null;
+  let count = 0;
+  for (const r of records) if (r?.interruptionType === type) count++;
+  return count;
+}
 </script>
 
 <style scoped>
@@ -959,12 +1022,12 @@ function handleCancelTodo(id: number) {
   align-items: center;
   white-space: nowrap;
   flex-shrink: 0;
+  overflow-y: hidden;
 }
 
 .pomo-groups {
-  padding-left: 1px;
   padding-right: 1px;
-  overflow-x: auto;
+  overflow-x: hidden;
   overflow-y: hidden;
 }
 
@@ -972,7 +1035,7 @@ function handleCancelTodo(id: number) {
   display: inline-flex;
   align-items: center;
   flex-shrink: 0;
-  margin-right: 1px;
+  overflow-y: hidden;
   gap: 1px;
 }
 
@@ -1008,6 +1071,11 @@ function handleCancelTodo(id: number) {
   --n-border-checked: 1px solid var(--color-purple-dark);
 }
 
+.records-stat {
+  overflow: visible;
+  font-family: Consolas, "Courier New", Courier, monospace;
+  font-size: 12px;
+}
 .button-left {
   display: flex;
   margin-left: -4px;
@@ -1015,7 +1083,7 @@ function handleCancelTodo(id: number) {
 
 .button-right {
   display: flex;
-  margin-left: -2px;
+  margin-left: -1px;
   right: 3px !important;
 }
 

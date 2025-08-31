@@ -217,13 +217,6 @@ const isSelectedClassS = computed(() => {
   return props.selectedClass === "S";
 });
 
-watch(
-  () => props.activeId,
-  (val) => {
-    console.log("button", val);
-  }
-);
-
 const emit = defineEmits([
   "pick-activity",
   "add-todo",
