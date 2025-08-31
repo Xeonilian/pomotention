@@ -203,7 +203,7 @@
                 </div>
                 <div
                   v-if="todo.status !== 'done' && todo.status !== 'cancelled'"
-                  class="est-button"
+                  class="est-buttons"
                 >
                   <!-- 删除估计按钮  -->
                   <n-button
@@ -219,8 +219,8 @@
                     class="button-left"
                   >
                     <template #icon>
-                      <n-icon size="14" color="var(--color-text-secondary)">
-                        <CaretLeft12Regular />
+                      <n-icon size="12" color="var(--color-background-dark)">
+                        <CaretLeft12Filled />
                       </n-icon>
                     </template>
                   </n-button>
@@ -236,10 +236,11 @@
                     @click="handleAddEstimate(todo)"
                     title="增加预估番茄数量"
                     class="button-right"
+                    :class="{ 'bidirection-mode': todo.estPomo.length === 2 }"
                   >
                     <template #icon>
-                      <n-icon size="14" color="var(--color-text-secondary)">
-                        <CaretRight12Regular />
+                      <n-icon size="12" color="var(--color-background-dark)">
+                        <CaretRight12Filled />
                       </n-icon>
                     </template>
                   </n-button>
@@ -383,8 +384,8 @@ import {
   DismissCircle20Regular,
   // ArrowRepeatAll24Regular,
   DismissSquare20Filled,
-  CaretLeft12Regular,
-  CaretRight12Regular,
+  CaretLeft12Filled,
+  CaretRight12Filled,
 } from "@vicons/fluent";
 import { NCheckbox, NInputNumber, NPopover, NButton, NIcon } from "naive-ui";
 import { ref, computed, nextTick } from "vue";
@@ -1010,6 +1011,7 @@ function countInterruptions(
   align-items: center;
   white-space: nowrap;
   flex-shrink: 0;
+  z-index: 10;
 }
 
 .pomo-groups {
@@ -1057,15 +1059,48 @@ function countInterruptions(
   --n-border-checked: 1px solid var(--color-purple-dark);
 }
 
-.button-left {
+.est-buttons {
   display: flex;
-  margin-left: -4px;
+}
+.button-left {
+  transform: scale(1.75) !important;
+  position: relative;
+  left: -4px;
+  z-index: 10;
 }
 
-.button-right {
-  display: flex;
-  margin-left: -1px;
-  right: 3px !important;
+.button-right:not(.bidirection-mode) {
+  transform: scale(1.75) !important;
+  position: relative;
+  left: -4px;
+}
+
+.button-right.bidirection-mode {
+  transform: scale(1.75) !important;
+  position: relative;
+  left: -10px;
+  z-index: 0;
+}
+
+/* 仅作用于标记为 .button-right 的按钮 */
+.button-right .n-button__icon,
+.button-right .n-icon-slot,
+.button-right .n-icon,
+.button-right .n-icon > svg {
+  width: 12px !important;
+  min-width: 12px !important;
+  max-width: 12px !important;
+  --n-icon-size: 12px !important;
+}
+
+.button-left .n-button__icon,
+.button-left .n-icon-slot,
+.button-left .n-icon,
+.button-left .n-icon > svg {
+  width: 12px !important;
+  min-width: 12px !important;
+  max-width: 12px !important;
+  --n-icon-size: 12px !important;
 }
 
 /* 状态 */

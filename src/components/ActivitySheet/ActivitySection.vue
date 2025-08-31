@@ -428,7 +428,6 @@ function setRowInputRef(el: InputInst | null, id: number) {
 watch(
   () => props.activeId,
   async (id) => {
-    console.log("id");
     if (id == null) return;
     // 确保对应行已经渲染完成
     await nextTick();
