@@ -70,6 +70,7 @@
             ><template #trigger>
               <n-input
                 v-model:value="item.title"
+                :ref="(el) => setRowInputRef(el as InputInst | null, item.id)"
                 type="text"
                 :placeholder="item.isUntaetigkeit ? '无所事事' : '任务描述'"
                 style="flex: 1"
@@ -299,7 +300,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, watch, nextTick, ref } from "vue";
 import { NInput, NDatePicker, NIcon, NDropdown, NPopover } from "naive-ui";
 import {
   VideoPersonCall24Regular,
@@ -318,6 +319,7 @@ import TagManager from "../TagSystem/TagManager.vue";
 import { useTagStore } from "@/stores/useTagStore";
 import TagRenderer from "../TagSystem/TagRenderer.vue";
 import TagSelector from "../TagSystem/TagSelector.vue";
+import type { InputInst } from "naive-ui";
 
 // 接收发射数据
 const props = defineProps<{
@@ -330,6 +332,7 @@ const props = defineProps<{
   isRemoveButton: boolean;
   sectionId: number;
   search: string;
+  activeId: number | null;
 }>();
 
 defineEmits<{
@@ -413,6 +416,34 @@ const sortedDisplaySheet = computed(() => {
   return result;
 });
 
+// 用 Map 保存每一行的 n-input 实例
+const rowInputMap = ref(new Map<number, InputInst>());
+
+function setRowInputRef(el: InputInst | null, id: number) {
+  if (el) rowInputMap.value.set(id, el);
+  else rowInputMap.value.delete(id);
+}
+
+// 监听 activeId，命中后聚焦对应行
+watch(
+  () => props.activeId,
+  async (id) => {
+    console.log("id");
+    if (id == null) return;
+    // 确保对应行已经渲染完成
+    await nextTick();
+
+    const inst = rowInputMap.value.get(id);
+    if (!inst) return;
+
+    // 优先组件实例的 focus，兜底用原生 input
+    if (typeof inst.focus === "function") {
+      inst.focus();
+    } else {
+      inst.inputElRef?.focus?.();
+    }
+  }
+);
 // 在拖拽里用到
 function handleIconMoveMouseEnter(id: number) {
   hoveredRowId.value = id;

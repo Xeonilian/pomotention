@@ -50,30 +50,31 @@
         </n-icon>
       </template>
     </n-button>
-
     <n-button
-      title="添加预约"
-      @click="$emit('add-schedule')"
+      title="删除活动"
+      @click="$emit('delete-active')"
       circle
       secondary
       type="info"
       size="small"
+      :disabled="activeId === null"
     >
       <template #icon
-        ><n-icon><CalendarAdd24Regular /></n-icon
+        ><n-icon><Delete24Regular /></n-icon
       ></template>
     </n-button>
 
     <n-button
-      title="添加无所事事"
-      @click="$emit('add-untaetigkeit')"
+      title="重复活动"
+      @click="$emit('repeat-activity')"
       circle
       secondary
       type="info"
       size="small"
+      :disabled="activeId === null"
     >
       <template #icon
-        ><n-icon><CloudAdd20Regular /></n-icon
+        ><n-icon><ArrowRepeatAll24Regular /></n-icon
       ></template>
     </n-button>
 
@@ -161,37 +162,35 @@
     </n-popover>
 
     <n-button
-      title="重复活动"
-      @click="$emit('repeat-activity')"
+      title="添加预约"
+      @click="$emit('add-schedule')"
       circle
       secondary
       type="info"
       size="small"
-      :disabled="activeId === null"
     >
       <template #icon
-        ><n-icon><ArrowRepeatAll24Regular /></n-icon
+        ><n-icon><CalendarAdd24Regular /></n-icon
       ></template>
     </n-button>
 
     <n-button
-      title="删除活动"
-      @click="$emit('delete-active')"
+      title="添加无所事事"
+      @click="$emit('add-untaetigkeit')"
       circle
       secondary
       type="info"
       size="small"
-      :disabled="activeId === null"
     >
       <template #icon
-        ><n-icon><Delete24Regular /></n-icon
+        ><n-icon><CloudAdd20Regular /></n-icon
       ></template>
     </n-button>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, watch } from "vue";
+import { computed } from "vue";
 import { NButton, NIcon, NBadge, NPopover } from "naive-ui";
 import {
   ChevronCircleLeft48Regular,

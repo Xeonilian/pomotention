@@ -789,10 +789,12 @@ function onTimeTableReset(type: "work" | "entertainment") {
 
 /** 新增活动 */
 function onAddActivity(newActivity: Activity) {
+  activeId.value = null;
   activityList.value.push(newActivity);
   handleAddActivity(scheduleList.value, newActivity, {
     activityById: activityById.value,
   });
+  activeId.value = newActivity.id;
   saveAllDebounced();
 }
 
@@ -822,6 +824,7 @@ function onPickActivity(activity: Activity) {
     dateService.isViewDateToday.value
   );
   todoList.value = [...todoList.value, newTodo];
+  activeId.value = null;
   saveAllDebounced();
 }
 

@@ -40,6 +40,7 @@
         :isRemoveButton="section.id !== 1"
         :sectionId="section.id"
         :search="section.search"
+        :activeId="activeId"
         @add-section="addSection"
         @remove-section="removeSection"
         @focus-row="handleFocusRow"
