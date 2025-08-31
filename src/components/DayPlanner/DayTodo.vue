@@ -387,7 +387,7 @@ import {
   CaretRight12Regular,
 } from "@vicons/fluent";
 import { NCheckbox, NInputNumber, NPopover, NButton, NIcon } from "naive-ui";
-import { ref, computed, nextTick, watch } from "vue";
+import { ref, computed, nextTick } from "vue";
 import { taskService } from "@/services/taskService";
 import { Task } from "@/core/types/Task";
 
@@ -412,33 +412,6 @@ const props = defineProps<{
   activeId: number | null;
   selectedRowId: number | null; // 新增：从父组件接收选中行ID
 }>();
-
-watch(
-  () => props.todos,
-  (list, old) => {
-    if (!Array.isArray(list)) {
-      console.log("[todos] not an array:", list);
-      return;
-    }
-
-    // 打印每个 todo 的 priority
-    list.forEach((t, i) => {
-      console.log(`todo[${i}].priority:`, t?.priority);
-    });
-
-    // 如果也想对比新旧 priority 变化（在可对比时）
-    if (Array.isArray(old) && old.length === list.length) {
-      list.forEach((t, i) => {
-        const prev = old[i]?.priority;
-        const curr = t?.priority;
-        if (prev !== curr) {
-          console.log(`priority changed at [${i}]: ${prev} -> ${curr}`);
-        }
-      });
-    }
-  },
-  { immediate: true, deep: true }
-);
 
 const emit = defineEmits<{
   (e: "suspend-todo", id: number): void;
