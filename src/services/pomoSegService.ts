@@ -202,6 +202,7 @@ export function splitIndexPomoBlocksExSchedules(
 
   let segments: PomodoroSegment[] = [];
   let globalIndexCounter = 1;
+  const globalIndex: Record<string, number> = {};
 
   const merged: Array<{
     range: [number, number];
@@ -252,7 +253,7 @@ export function splitIndexPomoBlocksExSchedules(
       if (aEnd - aStart < 30 * 60 * 1000) continue;
 
       let cur = aStart;
-      let idx = 1;
+      let idx = globalIndex[block.category] || 1;
 
       while (aEnd - cur >= 30 * 60 * 1000) {
         // work：计入全局顺序
@@ -297,6 +298,7 @@ export function splitIndexPomoBlocksExSchedules(
         idx++;
         globalIndexCounter++;
       }
+      globalIndex[block.category] = idx;
     }
   });
 
@@ -519,18 +521,17 @@ export function generateActualTodoSegments(todos: Todo[]): TodoSegment[] {
         const duration = 15 * 60 * 1000;
         const segmentStart = todo.startTime + i * duration;
         const segmentEnd = segmentStart + duration;
-        const pomodoroIndex = Math.floor(i / 2);
 
         todoSegments.push({
           todoId: todo.id,
           priority: todo.priority,
           todoTitle: todo.activityTitle,
-          todoIndex: pomodoroIndex + 1,
+          todoIndex: i + 1,
           start: segmentStart,
           end: segmentEnd,
           pomoType: "🍒",
           category: "working",
-          completed: pomodoroIndex < completedCount,
+          completed: i / 2 < completedCount,
           usingRealPomo: true,
         });
       }

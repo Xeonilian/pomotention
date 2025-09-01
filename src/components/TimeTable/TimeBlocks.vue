@@ -59,7 +59,7 @@
       :style="{ top: currentTimeTop + 'px' }"
     />
   </div>
-  <!-- 番茄时间分段 -->
+  <!-- 按番茄时间分段 -->
   <div
     v-for="(segment, index) in pomodoroSegments"
     :key="segment.parentBlockId + '-' + segment.start + '-' + segment.type"
@@ -67,16 +67,16 @@
       'pomo-segment',
       segment.type,
       segment.category,
-      // {
-      //   'drop-target': dragState.isDragging && segment.type === 'work',
-      //   'drop-hover': dragState.dropTargetGlobalIndex === index,
-      // },
+      {
+        'drop-target': dragState.isDragging && segment.type === 'work',
+        'drop-hover': dragState.dropTargetGlobalIndex === index,
+      },
     ]"
     :style="getPomodoroStyle(segment)"
   >
     <!-- 仅在"工作段"且有编号时显示序号 -->
     <template v-if="segment.type === 'work' && segment.pomoIndex != null">
-      {{ segment.pomoIndex }}
+      {{ segment.globalIndex }}
     </template>
     <template v-if="segment.type === 'schedule'"> S </template>
     <template v-if="segment.type === 'untaetigkeit'"> U </template>
@@ -91,18 +91,17 @@
       overflow: seg.overflow,
       completed: seg.completed,
       'using-real-pomo': seg.usingRealPomo,
-      // dragging:
-      //   dragState.isDragging &&
-      //   dragState.draggedTodoId === seg.todoId &&
-      //   dragState.draggedIndex != null &&
-      //   dragState.draggedIndex === seg.todoIndex,
+      dragging:
+        dragState.isDragging &&
+        dragState.draggedTodoId === seg.todoId &&
+        dragState.draggedIndex != null &&
+        dragState.draggedIndex === seg.todoIndex,
     }"
     :style="getTodoSegmentStyle(seg)"
     :title="`${seg.todoTitle} - 第${seg.todoIndex}个番茄 (估计分配)${
       seg.overflow ? ' - 超出可用时间' : ''
     }`"
   >
-    <!-- @mousedown="handleMouseDown($event, seg)"  -->
     <span
       v-if="!seg.overflow"
       class="priority-badge"
@@ -111,11 +110,30 @@
         { 'cherry-badge': seg.pomoType === '🍒' },
       ]"
       style="cursor: grab"
+      @mousedown="handleMouseDown($event, seg)"
     >
       {{ seg.priority > 0 ? seg.priority : "–" }}
     </span>
     <span v-else>⚠️</span>
   </div>
+  <!-- 实际执行的segments (右侧列) -->
+  <div
+    v-for="seg in actualSegments"
+    :key="`actual-${seg.todoId}-${seg.todoIndex}`"
+    class="todo-segment actual"
+    :style="getActualSegmentStyle(seg)"
+    :title="`${seg.todoTitle} - 第${seg.todoIndex}个番茄`"
+  >
+    {{ seg.pomoType }}
+  </div>
+  <!-- 实际时间范围背景 -->
+  <div
+    v-for="range in actualTimeRanges"
+    :key="`actual-range-${range.todoId}`"
+    class="actual-time-range"
+    :style="getActualTimeRangeStyle(range)"
+    :title="`${range.todoTitle} - 实际执行时间`"
+  ></div>
 </template>
 
 <script setup lang="ts">
@@ -133,8 +151,8 @@ import {
   splitIndexPomoBlocksExSchedules,
   generateEstimatedTodoSegments,
   reallocateTodoFromPosition,
-  getTodoDisplayPomoCount,
   generateActualTodoSegments,
+  getTodoDisplayPomoCount,
   reallocateAllTodos,
 } from "@/services/pomoSegService";
 
@@ -290,7 +308,7 @@ function getPomodoroStyle(seg: PomodoroSegment): CSSProperties {
     userSelect: "none",
   };
 }
-// #HACK
+
 // todo在番茄段上的分配
 // 本地重写状态
 const manualAllocations = ref<Map<number, number>>(new Map()); // todoId -> startSegmentIndex
@@ -361,6 +379,294 @@ function getTodoSegmentStyle(seg: TodoSegment): CSSProperties {
     border: seg.overflow ? "1.5px solid var(--color-red-dark)" : undefined,
   };
 }
+
+// 获取实际执行segment的样式
+const actualSegments = computed(() => generateActualTodoSegments(props.todos));
+
+function getActualSegmentStyle(seg: TodoSegment): CSSProperties {
+  const startMinute = (seg.start - props.timeRange.start) / 60000;
+  const endMinute = (seg.end - props.timeRange.start) / 60000;
+  const topPx = startMinute * props.effectivePxPerMinute;
+  const heightPx = (endMinute - startMinute) * props.effectivePxPerMinute;
+
+  return {
+    position: "absolute",
+    left: "42px", // 与估计分配错开位置
+    width: "13px",
+    top: `${topPx}px`,
+    height: `${heightPx}px`,
+    background: "transparent",
+    color: "var(--color-background)",
+    fontSize: "12px",
+    zIndex: 9, // 比估计分配层级稍高
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    opacity: seg.completed ? 1.0 : 0.3,
+  };
+}
+
+// 实际时间范围背景
+const actualTimeRanges = computed((): ActualTimeRange[] => {
+  return props.todos
+    .filter((todo) => todo.status === "done" && todo.startTime && todo.doneTime)
+    .map((todo) => ({
+      todoId: todo.id,
+      todoTitle: todo.activityTitle,
+      start: todo.startTime!,
+      end: todo.doneTime!,
+      category:
+        todo.pomoType === "🍇"
+          ? "grape"
+          : todo.pomoType === "🍒"
+          ? "cherry"
+          : "tomato",
+    }));
+});
+
+function getActualTimeRangeStyle(range: ActualTimeRange): CSSProperties {
+  const startMinute = (range.start - props.timeRange.start) / 60000;
+  const endMinute = (range.end - props.timeRange.start) / 60000;
+  const topPx = startMinute * props.effectivePxPerMinute;
+  const heightPx = (endMinute - startMinute) * props.effectivePxPerMinute;
+
+  return {
+    position: "absolute",
+    left: "61px",
+    width: "8px",
+    top: `${topPx}px`,
+    height: `${heightPx}px`,
+    border: "1px solid",
+    borderColor:
+      range.category === "grape"
+        ? "var(--color-purple)"
+        : range.category === "tomato"
+        ? "var(--color-red)"
+        : "var(--color-green)",
+    backgroundColor:
+      range.category === "grape"
+        ? "var(--color-purple-transparent )"
+        : range.category === "tomato"
+        ? "var(--color-red-transparent)"
+        : "var(--color-green-transparent)",
+    borderRadius: "4px",
+    zIndex: 10,
+    opacity: 1,
+  };
+}
+
+// ======= 拖拽功能 =======
+// 拖拽状态管理
+const dragState = ref<{
+  isDragging: boolean;
+  draggedTodoId: number | null;
+  draggedIndex: number | null; // 这是 todo 自己的番茄序号，没问题
+  dropTargetGlobalIndex: number | null; // 存储全局 index 用于后续分配
+}>({
+  isDragging: false,
+  draggedTodoId: null,
+  draggedIndex: null,
+  dropTargetGlobalIndex: null,
+});
+
+// 鼠标状态管理
+const mouseState = ref<{
+  isDragging: boolean;
+  startX: number;
+  startY: number;
+  draggedSeg: TodoSegment | null;
+}>({
+  isDragging: false,
+  startX: 0,
+  startY: 0,
+  draggedSeg: null,
+});
+
+// handleMouseDown
+function handleMouseDown(event: MouseEvent, seg: TodoSegment) {
+  console.log("🟢 Mouse down:", seg.todoId, "todoIndex:", seg.todoIndex);
+
+  mouseState.value.isDragging = true;
+  mouseState.value.startX = event.clientX;
+  mouseState.value.startY = event.clientY;
+  mouseState.value.draggedSeg = seg;
+
+  // 设置拖拽视觉状态
+  dragState.value.isDragging = true;
+  dragState.value.draggedTodoId = seg.todoId;
+  dragState.value.draggedIndex = seg.todoIndex;
+
+  // 添加全局事件监听
+  document.addEventListener("mousemove", handleMouseMove);
+  document.addEventListener("mouseup", handleMouseUp);
+
+  event.preventDefault();
+  event.stopPropagation();
+}
+
+function handleMouseMove(event: MouseEvent) {
+  if (!mouseState.value.isDragging) return;
+
+  const draggedSeg = mouseState.value.draggedSeg;
+  if (!draggedSeg) return;
+
+  const selector = ".pomo-segment.work"; // 非 break 槽
+  const elementBelow = document.elementFromPoint(
+    event.clientX,
+    event.clientY
+  ) as HTMLElement | null;
+  const pomoElement = elementBelow?.closest(selector) as HTMLElement | null;
+
+  // 每次进入先重置（避免残留）
+  dragState.value.dropTargetGlobalIndex = null;
+
+  if (!pomoElement) return;
+
+  // DOM 命中 -> 通过 DOM 顺序映射到数据
+  const allTargetSegs = Array.from(
+    document.querySelectorAll(selector)
+  ) as HTMLElement[];
+
+  const hoverIndex = allTargetSegs.indexOf(pomoElement);
+  if (hoverIndex < 0) return;
+
+  const workSegments = pomodoroSegments.value.filter(
+    (seg) => seg.type === "work"
+  ); // pomodoroSegments 包含break schedule
+  console.log("📏 workSegments.length =", workSegments.length);
+  const segment = workSegments[hoverIndex];
+  if (!segment) return;
+
+  const globalIndex = pomodoroSegments.value.indexOf(segment);
+  if (globalIndex < 0) return;
+
+  dragState.value.dropTargetGlobalIndex = globalIndex; 
+
+  // 仅输出 globalIndex
+  console.log("🎯 dropTargetGlobalIndex =", globalIndex,);
+}
+
+// 识别鼠标下方的pomo-segment.work
+// function handleMouseMove(event: MouseEvent) {
+//   if (!mouseState.value.isDragging) return;
+//   // 1. 根据拖曳中的todo类型确定目标class
+//   const draggedSeg = mouseState.value.draggedSeg;
+//   if (!draggedSeg) return;
+
+//   // 识别鼠标下方的pomo-segment.work
+//   const selector = ".pomo-segment.work"; //work不是指番茄工作类型，而是区分break schedule
+//   const elementBelow = document.elementFromPoint(event.clientX, event.clientY);
+//   const pomoElement = elementBelow?.closest(selector);
+
+//   dragState.value.dropTargetGlobalIndex = null;
+//   dragState.value.dropTargetPositionIndex = null;
+//   if (pomoElement) {
+//     const allTargetSegs = Array.from(document.querySelectorAll(selector));
+//     const hoverIndex = allTargetSegs.indexOf(pomoElement);
+
+//     if (hoverIndex >= 0) {
+//       const workSegments = pomodoroSegments.value.filter(
+//         (seg) => seg.type === "work"
+//       );
+//       const segment = workSegments[hoverIndex];
+//       const globalIndex = pomodoroSegments.value.indexOf(segment);
+//       const draggedTodo = props.todos.find((t) => t.id === draggedSeg.todoId);
+//       console.log("🟢 Drop target found:", hoverIndex, globalIndex);
+
+//       if (draggedTodo && draggedTodo.positionIndex) {
+//         const positionIndex = draggedTodo.positionIndex;
+//         dragState.value.dropTargetGlobalIndex = globalIndex;
+//         dragState.value.dropTargetPositionIndex = positionIndex;
+//       } else {
+//         dragState.value.dropTargetGlobalIndex = null;
+//         dragState.value.dropTargetPositionIndex = null;
+//       }
+//     } else {
+//       dragState.value.dropTargetGlobalIndex = null;
+//       dragState.value.dropTargetPositionIndex = null;
+//     }
+//   }
+// }
+
+// 鼠标松开
+function handleMouseUp() {
+  if (!mouseState.value.isDragging) return;
+
+  const targetGlobalIndex = dragState.value.dropTargetGlobalIndex;
+
+  // 没有命中有效工作格，直接结束
+  if (targetGlobalIndex === null) {
+    console.log("🟡 Drop on invalid area. No action taken.");
+    // 收尾
+    mouseState.value.isDragging = false;
+    dragState.value.isDragging = false;
+    dragState.value.draggedTodoId = null;
+    dragState.value.draggedIndex = null;
+    dragState.value.dropTargetGlobalIndex = null;
+    document.removeEventListener("mousemove", handleMouseMove);
+    document.removeEventListener("mouseup", handleMouseUp);
+    return;
+  }
+
+  // 找到被拖动的 todo
+  const draggedSeg = mouseState.value.draggedSeg;
+  const draggedTodo = draggedSeg
+    ? props.todos.find((t) => t.id === draggedSeg.todoId)
+    : null;
+
+  if (!draggedTodo) {
+    console.warn("🟠 handleMouseUp: draggedTodo not found, abort.");
+    // 收尾
+    mouseState.value.isDragging = false;
+    dragState.value.isDragging = false;
+    dragState.value.draggedTodoId = null;
+    dragState.value.draggedIndex = null;
+    dragState.value.dropTargetGlobalIndex = null;
+    document.removeEventListener("mousemove", handleMouseMove);
+    document.removeEventListener("mouseup", handleMouseUp);
+    return;
+  }
+
+  // 仅依据 globalIndex 进行放置
+  manualAllocations.value.set(draggedTodo.id, targetGlobalIndex);
+
+  console.log("✅ Drop successful:", {
+    todoId: draggedTodo.id,
+    title: draggedTodo.activityTitle,
+    dropTargetGlobalIndex: targetGlobalIndex,
+  });
+
+  // 收尾
+  mouseState.value.isDragging = false;
+  dragState.value.isDragging = false;
+  dragState.value.draggedTodoId = null;
+  dragState.value.draggedIndex = null;
+  dragState.value.dropTargetGlobalIndex = null;
+  document.removeEventListener("mousemove", handleMouseMove);
+  document.removeEventListener("mouseup", handleMouseUp);
+}
+
+// ======= 分配todos的时机修正 =======
+watch(
+  [() => pomodoroSegments.value, () => props.todos],
+  async ([segments, todos]) => {
+    // 检查work段数量
+    const workCount = segments.filter((s) => s.type === "work").length;
+    if (workCount > 0 && todos.length > 0) {
+      await nextTick();
+      // 重新分配todos
+      segStore.clearTodoSegments();
+      const allocatedSegments = reallocateAllTodos(
+        props.dayStart,
+        todos,
+        segments
+      );
+      allocatedSegments.forEach((segment) => segStore.addTodoSegment(segment));
+      // console.log(segStore.todoSegments);
+    }
+  },
+  { immediate: true }
+);
 </script>
 
 <style scoped>
