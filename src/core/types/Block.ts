@@ -2,7 +2,7 @@
 import { CategoryColors } from "../constants";
 export interface Block {
   id: string;
-  category: keyof typeof CategoryColors;
+  category: keyof typeof CategoryColors; // living sleeping working
   start: string; //使用HH:MM
   end: string;
 }

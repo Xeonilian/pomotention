@@ -13,8 +13,8 @@
     <!-- 3 工作进度条 -->
     <!-- 3-1 进度条容器 -->
     <div
-      class="progress-container"
       v-if="!timerStore.isBreaking"
+      class="progress-container"
       :style="timerStyleVars"
     >
       <!-- 3-2 蓝色进度条 -->
@@ -52,14 +52,13 @@
     </div>
 
     <!-- 4 休息进度条 -->
-    <div class="progress-container" v-else>
+    <div class="progress-container-break" v-else>
       <n-progress
         :percentage="progressPercentage"
         :color="'var(--color-green)'"
         :show-indicator="false"
         :height="20"
         :border-radius="2"
-        class="progress-bar break-bar"
       />
       <!-- 休息模式无需显示分隔线和标签 -->
     </div>
@@ -310,7 +309,7 @@ function handleDurationSelect(key: number): void {
 .progress-container {
   position: relative;
   width: var(--bar-length);
-  margin: 5px auto;
+  margin: 5px 0;
 }
 /* 3-2 红色进度条 */
 .red-bar {
@@ -323,6 +322,10 @@ function handleDurationSelect(key: number): void {
 
 .blue-bar {
   z-index: 1;
+}
+
+.progress-container-break {
+  margin: 5px 0;
 }
 
 /* 3-3 阶段标签样式 */
