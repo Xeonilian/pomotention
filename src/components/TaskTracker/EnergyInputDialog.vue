@@ -5,6 +5,8 @@
     preset="dialog"
     title="记录精力值"
     :on-after-leave="handleCancel"
+    @keyup.enter="handleConfirm"
+    @after-enter="focusSlider"
   >
     <n-space vertical>
       <n-slider
@@ -49,7 +51,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, nextTick } from "vue";
 import { BatterySaver20Regular } from "@vicons/fluent";
 import { NModal, NSlider, NSpace, NText, NButton, NIcon } from "naive-ui";
 import type { DataTableColumns } from "naive-ui";
@@ -71,6 +73,20 @@ type RowData = {
   mental: string;
   overall: string;
 };
+
+const sliderRef = ref<any>(null);
+
+async function focusSlider() {
+  await nextTick();
+  if (sliderRef.value?.focus) {
+    sliderRef.value.focus();
+  } else {
+    const el: HTMLElement | null = sliderRef.value?.$el ?? sliderRef.value;
+    el?.querySelector<HTMLElement>(
+      '[tabindex], input, button, [role="slider"]'
+    )?.focus();
+  }
+}
 
 const createColumns = (): DataTableColumns<RowData> => {
   return [

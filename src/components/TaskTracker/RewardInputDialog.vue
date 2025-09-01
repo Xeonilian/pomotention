@@ -4,6 +4,8 @@
     preset="dialog"
     title="记录愉悦值"
     :on-after-leave="handleCancel"
+    @keyup.enter="handleConfirm"
+    @after-enter="focusSlider"
   >
     <n-space vertical>
       <n-slider
@@ -12,6 +14,7 @@
         :max="10"
         :step="1"
         :marks="marks"
+        ref="sliderRef"
       />
       <n-space justify="space-between">
         <n-text>当前愉悦值: {{ rewardValue }}</n-text>
@@ -47,7 +50,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, nextTick } from "vue";
 import { Beach24Regular } from "@vicons/fluent";
 import { NModal, NSlider, NSpace, NText, NButton, NIcon } from "naive-ui";
 
@@ -63,6 +66,20 @@ const emit = defineEmits<{
 const rewardValue = ref(5);
 const showHelp = ref(false);
 const description = ref("");
+
+const sliderRef = ref<any>(null);
+
+async function focusSlider() {
+  await nextTick();
+  if (sliderRef.value?.focus) {
+    sliderRef.value.focus();
+  } else {
+    const el: HTMLElement | null = sliderRef.value?.$el ?? sliderRef.value;
+    el?.querySelector<HTMLElement>(
+      '[tabindex], input, button, [role="slider"]'
+    )?.focus();
+  }
+}
 
 // 用于modal显示双向绑定
 const showModal = computed({
