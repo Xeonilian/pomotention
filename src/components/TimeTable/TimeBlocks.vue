@@ -320,10 +320,7 @@ const todoSegments = computed(() => {
       const todo = props.todos.find((t) => t.id === todoId);
       if (todo) {
         // 这里写入index
-        todo.positionIndex = getCategoryWorkIndexBySegmentIndex(
-          todo,
-          startIndex
-        );
+        todo.positionIndex = startIndex;
         const newSegments = reallocateTodoFromPosition(
           props.dayStart,
           todo,
@@ -338,24 +335,6 @@ const todoSegments = computed(() => {
   }
   return autoSegments;
 });
-
-// 计算某todo在目标类别下的work段index 不需要
-function getCategoryWorkIndexBySegmentIndex(
-  todo: Todo,
-  segmentIndex: number
-): number {
-  const seg = pomodoroSegments.value[segmentIndex];
-  if (!seg) return 0;
-  const targetCategory = todo.pomoType === "🍇" ? "living" : "working";
-  // 只统计同类别work段
-  const workSegs = pomodoroSegments.value.filter(
-    (s) => s.category === targetCategory && s.type === "work"
-  );
-  const idx = workSegs.findIndex(
-    (s) => s.start === seg.start && s.end === seg.end
-  );
-  return idx >= 0 ? idx : 0;
-}
 
 // 计算TodoSegment的Style
 function getTodoSegmentStyle(seg: TodoSegment): CSSProperties {

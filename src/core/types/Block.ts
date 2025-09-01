@@ -14,6 +14,7 @@ export interface PomodoroSegment {
   end: number;
   category: string; // 原block的类型
   pomoIndex?: number; // 在同种类型中的序号
+  globalIndex?: number; // 在所有类型中的序号
 }
 
 export interface TodoSegment {
