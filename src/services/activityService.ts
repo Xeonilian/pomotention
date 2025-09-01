@@ -5,6 +5,7 @@ import type { Schedule } from "@/core/types/Schedule";
 import { POMO_TYPES } from "@/core/constants";
 import { timestampToDatetime, getLocalDateString } from "@/core/utils";
 import { useTagStore } from "@/stores/useTagStore";
+import { Task } from "@/core/types/Task";
 
 /**
  * 添加新活动并处理相关联动
@@ -45,10 +46,11 @@ export function handleDeleteActivity(
   activityList: Activity[],
   todoList: Todo[],
   scheduleList: Schedule[],
+  taskList: Task[],
   idToDelete: number,
   deps: {
     activityById: Map<number, Activity>;
-    childrenByParentId?: Map<number, Activity[]>; // 可选，传入则高效递归
+    childrenByParentId?: Map<number, Activity[]>;
   }
 ): boolean {
   const tagStore = useTagStore();
@@ -100,23 +102,56 @@ export function handleDeleteActivity(
     }
   }
 
-  // 删除关联的 todo
+  const todoIdsToDelete = new Set<number>();
+  const scheduleIdsToDelete = new Set<number>();
+
+  for (const todo of todoList) {
+    if (idsToDelete.has(todo.activityId)) {
+      todoIdsToDelete.add(todo.id);
+    }
+  }
+
+  for (const schedule of scheduleList) {
+    if (idsToDelete.has(schedule.activityId)) {
+      scheduleIdsToDelete.add(schedule.id);
+    }
+  }
+
+  // 2) 删除关联的 todo
   {
     const filteredTodos = todoList.filter(
-      (todo) => !idsToDelete.has(todo.activityId)
+      (todo) => !todoIdsToDelete.has(todo.id)
     );
     todoList.splice(0, todoList.length, ...filteredTodos);
   }
 
-  // 删除关联的 schedule
+  // 3) 删除关联的 schedule
   {
     const filteredSchedules = scheduleList.filter(
-      (schedule) => !idsToDelete.has(schedule.activityId)
+      (schedule) => !scheduleIdsToDelete.has(schedule.id)
     );
     scheduleList.splice(0, scheduleList.length, ...filteredSchedules);
   }
 
-  // 删除活动本体
+  // 4) 删除关联的 task（按 source/sourceId 判定）
+  {
+    const filteredTasks = taskList.filter((task) => {
+      if (task.source === "activity") {
+        return !idsToDelete.has(task.sourceId);
+      }
+      if (task.source === "todo") {
+        return !todoIdsToDelete.has(task.sourceId);
+      }
+      if (task.source === "schedule") {
+        return !scheduleIdsToDelete.has(task.sourceId);
+      }
+      // 理论上不会到这，保守保留
+      return true;
+    });
+    taskList.splice(0, taskList.length, ...filteredTasks);
+  }
+
+  // 5) 最后删除活动本体
   {
     const filteredActivities = activityList.filter(
       (activity) => !idsToDelete.has(activity.id)

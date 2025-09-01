@@ -464,7 +464,8 @@ const scheduleById = computed(() => {
 const childrenOfActivity = computed(() => {
   const m = new Map<number, Activity[]>();
   for (const a of activityList.value) {
-    if (!a.parentId) continue;
+    // 只跳过 null / undefined，保留 0
+    if (a.parentId == null) continue;
     if (!m.has(a.parentId)) m.set(a.parentId, []);
     m.get(a.parentId)!.push(a);
   }
@@ -804,6 +805,7 @@ function onDeleteActivity(id: number) {
     activityList.value,
     todoList.value,
     scheduleList.value,
+    taskList.value,
     id,
     {
       activityById: activityById.value,
@@ -1176,6 +1178,8 @@ function onConvertTodoToTask(payload: { task: Task; todoId: number }) {
       activeId.value = activity.id;
     }
   }
+  // 3) 同步 UI 选中
+  selectedTaskId.value = task.id;
   saveAllDebounced();
 }
 
@@ -1723,11 +1727,13 @@ const { startResize: startRightResize } = useResize(
   padding: 2px 8px;
   border-radius: 12px;
   font-family: Consolas, "Courier New", Courier, monospace;
+  font-weight: 500;
 }
 
 .today-pomo {
   color: var(--color-blue);
   font-family: Consolas, "Courier New", Courier, monospace;
+  font-weight: 500;
 }
 
 .day-info.tomorrow .day-status {

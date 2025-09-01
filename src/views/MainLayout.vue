@@ -521,6 +521,9 @@ body,
   height: 100%;
 }
 
+.pomodoro-mini-view-wrapper:deep(.n-layout .n-layout-scroll-container) {
+  overflow-y: hidden !important;
+}
 /* 头部按钮通用样式 */
 .header-button {
   width: 30px;
