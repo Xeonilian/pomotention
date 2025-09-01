@@ -24,14 +24,28 @@
       <thead class="table-header">
         <tr>
           <th style="width: 18px"></th>
-          <th style="width: 34px; text-align: center">开始</th>
-          <th style="width: 34px; text-align: center">结束</th>
-          <th style="width: 30px; text-align: center; padding: 0px">排序</th>
+          <th style="width: 34px; text-align: center; white-space: nowrap">
+            开始
+          </th>
+          <th style="width: 34px; text-align: center; white-space: nowrap">
+            结束
+          </th>
+          <th
+            style="
+              width: 30px;
+              text-align: center;
+              padding: 0px;
+              white-space: nowrap;
+            "
+          >
+            排序
+          </th>
           <th style="width: 40%; min-width: 100px; text-align: center">意图</th>
           <th style="width: 30%; min-width: 80px">累积果果</th>
           <th
+            class="status-col"
             title="能量值|奖赏值|内部打扰|外部打扰"
-            style="width: 72px; overflow: visible; text-align: right"
+            style="text-align: right"
           >
             状态
           </th>
@@ -248,8 +262,8 @@
                 </div>
               </div>
             </td>
-            <!-- 7 记录值+操作 -->
-            <td>
+            <!-- 7 状态值+操作 -->
+            <td class="status-col">
               <div
                 class="status-cell"
                 :class="{
@@ -467,7 +481,6 @@ const sortedTodos = computed(() => {
 function startEditingPriority(todo: Todo) {
   editingTodo.value = todo;
   editingPriority.value = todo.priority;
-  console.log("[DayTodo:]", todo.priority);
 }
 
 // 重新排序
@@ -859,7 +872,7 @@ function countInterruptions(
 .full-width-table {
   width: 100%;
   border-collapse: collapse;
-  table-layout: fixed;
+  table-layout: auto;
 }
 
 /* 表头样式 */
@@ -1064,6 +1077,7 @@ function countInterruptions(
 .est-buttons {
   display: flex;
 }
+
 .button-left {
   position: relative;
   left: -4px;
@@ -1082,31 +1096,40 @@ function countInterruptions(
 }
 
 /* 状态 */
+/* 状态列：不换行，尽量由内容决定最小宽度 */
+th.status-col,
+td.status-col {
+  white-space: nowrap;
+  text-align: right; /* 右对齐 */
+  min-width: 60px;
+}
+
+/* 其他列：允许换行，降低最小宽度 */
+th:not(.status-col),
+td:not(.status-col) {
+  white-space: normal; /* 或 break-spaces / pre-wrap，看内容需求 */
+  word-break: break-word;
+  min-width: 0;
+}
+/* 单元格内部容器不必撑满：用 inline-flex 即可 */
 .status-cell {
-  display: flex;
+  display: inline-flex;
   align-items: center;
 }
 
-.status-cell.check-mode {
-  justify-content: end;
-}
-
-.status-cell:not(.check-mode) .button-group {
-  margin-left: auto; /* 常态：按钮贴右 */
-}
-
+/* 统计值为内联块，避免撑满 */
 .records-stat {
-  display: flex;
-  overflow: visible;
+  display: inline-flex;
   font-family: Consolas, "Courier New", Courier, monospace;
   font-size: 14px;
   padding-right: 2px;
 }
 
+/* 按钮组为内联块，不再强制贴右（因为整列已右对齐） */
 .button-group {
-  display: flex;
-  height: 24px;
-  overflow: visible;
+  display: inline-flex;
+  height: 20px;
+  transform: translateY(1px);
 }
 
 :deep(.n-button) :hover {
@@ -1170,7 +1193,6 @@ function countInterruptions(
   width: calc(100% - 10px);
   border: 1px solid #d9d9d9;
   border-radius: 4px;
-
   font-size: inherit;
   font-family: inherit;
   outline: none;
@@ -1191,16 +1213,15 @@ function countInterruptions(
 }
 .start-input,
 .done-input {
-  width: 42px !important;
-  max-width: 42px !important;
+  width: 32px !important;
+  max-width: 32px !important;
   min-width: 0 !important;
   box-sizing: border-box;
-  padding: 2px 4px;
+  padding: 0px 0px;
   font-size: inherit;
 }
 
 .time-input:focus {
   border-color: #40a9ff;
-  box-shadow: 0 0 0 2px rgba(64, 169, 255, 0.2);
 }
 </style>

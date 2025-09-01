@@ -546,11 +546,11 @@ function handleCancelSchedule(id: number) {
 
 .start-input,
 .done-input {
-  width: 42px !important;
-  max-width: 42px !important;
+  width: 32px !important;
+  max-width: 32px !important;
   min-width: 0 !important;
   box-sizing: border-box;
-  padding: 2px 4px;
+  padding: 0px 0px;
   font-size: inherit;
 }
 
@@ -840,7 +840,6 @@ function handleCancelSchedule(id: number) {
   position: relative;
   z-index: 10;
   background: rgba(255, 255, 255, 0.1);
-
   border-radius: 3px;
 }
 </style>
