@@ -1,54 +1,37 @@
 <!--
   Component: DayTodo.vue
-  Description: 显示多个任务的详细信息或列表。
-  Props:
-    - todos: Array<Todo> - 任务列表数据
-    - activeId: number | null - 当前活动的任务ID
-    - selectedRowId: number | null - 从父组件接收选中行ID
-  Emits:
-    - suspend-todo: (id: number)
-    - update-todo-status: (id: number, activityId: number, status: string)
-    - batch-update-priorities: (updates: Array<{ id: number; priority: number }>)
-    - update-todo-pomo: (id: number, realPomo: number[])
-    - update-todo-est: (id: number, estPomo: number[])
-
-    - select-task: (taskId: number | null)
-    - select-row: (id: number | null)
-  Parent: DayView.vue
 -->
 <template>
   <!-- 表格容器，占满父容器宽度 -->
   <div class="table-container">
     <table class="full-width-table">
       <!-- 表头部分，可单独调整样式 -->
+      <colgroup>
+        <!-- 勾选 -->
+        <col style="width: 18px" />
+        <!-- 开始 -->
+        <col style="width: 38px" />
+        <!-- 结束 -->
+        <col style="width: 38px" />
+        <!-- 排序 -->
+        <col style="width: 34px" />
+        <!-- 意图列：吃更多空间 -->
+        <col class="col-intent" />
+        <!-- 果果 -->
+        <col class="col-fruit" />
+        <!-- 状态列：最后才缩，常用 min-width 保护 -->
+        <col class="col-status" />
+      </colgroup>
+
       <thead class="table-header">
         <tr>
-          <th style="width: 18px"></th>
-          <th style="width: 34px; text-align: center; white-space: nowrap">
-            开始
-          </th>
-          <th style="width: 34px; text-align: center; white-space: nowrap">
-            结束
-          </th>
-          <th
-            style="
-              width: 30px;
-              text-align: center;
-              padding: 0px;
-              white-space: nowrap;
-            "
-          >
-            排序
-          </th>
-          <th style="width: 40%; min-width: 100px; text-align: center">意图</th>
-          <th style="width: 30%; min-width: 80px">累积果果</th>
-          <th
-            class="status-col"
-            title="能量值|奖赏值|内部打扰|外部打扰"
-            style="text-align: right"
-          >
-            状态
-          </th>
+          <th></th>
+          <th>开始</th>
+          <th>结束</th>
+          <th>排序</th>
+          <th>意图</th>
+          <th>果果</th>
+          <th>状态</th>
         </tr>
       </thead>
       <!-- 表格内容部分，可单独调整样式 -->
@@ -84,6 +67,7 @@
             </td>
             <!-- 2 开始时间 -->
             <td
+              style="white-space: nowrap"
               @dblclick.stop="startEditing(todo.id, 'start')"
               :title="
                 editingRowId === todo.id && editingField === 'start'
@@ -109,6 +93,7 @@
             </td>
             <!-- 3 结束时间 -->
             <td
+              style="white-space: nowrap"
               @dblclick.stop="startEditing(todo.id, 'done')"
               :title="
                 editingRowId === todo.id && editingField === 'done'
@@ -160,7 +145,7 @@
             </td>
             <!-- 5 意图 -->
             <td
-              class="ellipsis title-cell"
+              class="title-cell"
               :class="{
                 'done-cell': todo.status === 'done',
                 'cancel-cell': todo.status === 'cancelled',
@@ -183,7 +168,9 @@
                 :data-todo-id="todo.id"
                 ref="editingInput"
               />
-              <span v-else>{{ todo.activityTitle ?? "-" }}</span>
+              <span class="ellipsis" v-else>{{
+                todo.activityTitle ?? "-"
+              }}</span>
             </td>
             <!-- 6 果果 -->
             <td>
@@ -865,20 +852,34 @@ function countInterruptions(
 /* 表格容器样式，占满页面 */
 .table-container {
   width: 100%;
-  overflow-x: hidden;
+  overflow-x: auto;
 }
 
 /* 表格占满宽度 */
 .full-width-table {
   width: 100%;
   border-collapse: collapse;
-  table-layout: auto;
+  table-layout: fixed; /* 使用固定布局算法 */
 }
-
+/* 列配额：重点在这三列 */
+col.col-intent {
+  /* 让“意图”吃更多空间：给较大百分比或 auto */
+  width: 50%;
+  min-width: 140px; /* 抗缩性：根据内容调整 */
+}
+col.col-fruit {
+  width: 15%;
+  min-width: 100px;
+}
+/* 状态列：最后才缩（配额靠右，且有保底） */
+col.col-status {
+  width: 1%;
+  min-width: 100px; /* 或 90~120，按你的内容调 */
+}
 /* 表头样式 */
 .table-header th {
   padding: 2px;
-  text-align: left;
+  text-align: center;
   border-bottom: 2px solid var(--color-background-dark);
   white-space: nowrap;
   overflow: hidden;
@@ -895,27 +896,31 @@ function countInterruptions(
   border-bottom: 1px solid var(--color-background-dark);
   white-space: nowrap;
   overflow: hidden;
-  word-break: break-word;
   min-height: 25px;
   height: 25px;
 }
 
 .table-body td:first-child,
 .table-body td:nth-child(2),
-.table-body td:nth-child(3) {
+.table-body td:nth-child(3),
+.table-body td:nth-child(4) {
   text-align: center;
 }
 
 .table-body td:nth-child(7) {
-  justify-content: center; /* 水平居中 */
-  align-items: center; /* 垂直居中 */
   min-height: 25px;
   height: 25px;
 }
 
 /* 允许描述列显示省略号 */
-.ellipsis {
-  text-overflow: ellipsis !important;
+
+.title-cell .ellipsis {
+  display: block; /* 或 inline-block */
+  width: 100%;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* 隔行变色 */
@@ -1100,14 +1105,14 @@ function countInterruptions(
 th.status-col,
 td.status-col {
   white-space: nowrap;
-  text-align: right; /* 右对齐 */
-  min-width: 60px;
+  text-align: right;
+  min-width: 0;
 }
 
 /* 其他列：允许换行，降低最小宽度 */
 th:not(.status-col),
 td:not(.status-col) {
-  white-space: normal; /* 或 break-spaces / pre-wrap，看内容需求 */
+  white-space: normal;
   word-break: break-word;
   min-width: 0;
 }
@@ -1203,14 +1208,6 @@ td:not(.status-col) {
   box-shadow: 0 0 0 2px rgba(64, 169, 255, 0.2);
 }
 
-.time-input {
-  border: 1px solid #d9d9d9;
-  max-width: 100%;
-  border-radius: 4px;
-  font-size: inherit;
-  font-family: inherit;
-  outline: none;
-}
 .start-input,
 .done-input {
   width: 32px !important;

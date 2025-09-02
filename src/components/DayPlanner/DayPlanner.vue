@@ -194,6 +194,10 @@ function handleConvertScheduleToTask(payload: {
   margin: 5px;
 }
 .schedule-container {
-  margin-top: 5px;
+  margin-top: 3px;
+}
+
+.todo-container {
+  margin-bottom: 2px;
 }
 </style>

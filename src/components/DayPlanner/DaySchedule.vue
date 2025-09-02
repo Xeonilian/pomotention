@@ -1,25 +1,39 @@
+<!--
+  Component: DaySchedule.vue
+-->
 <template>
   <div class="table-container">
     <table class="full-width-table">
       <!-- 表头部分，可单独调整样式 -->
+      <colgroup>
+        <!-- 勾选 -->
+        <col style="width: 18px" />
+        <!-- 开始 -->
+        <col style="width: 38px" />
+        <!-- 结束 -->
+        <col style="width: 38px" />
+        <!-- 时长 -->
+        <col style="width: 34px" />
+        <!-- 意图列：吃更多空间 -->
+        <col class="col-intent" />
+        <!-- 地点列：限制上限、避免跟着变长 -->
+        <col class="col-location" />
+        <!-- 状态列：最后才缩，常用 min-width 保护 -->
+        <col class="col-status" />
+      </colgroup>
+
       <thead class="table-header">
         <tr>
-          <th style="width: 18px"></th>
-          <th style="width: 34px; text-align: center">开始</th>
-          <th style="width: 34px; text-align: center">结束</th>
-          <th style="width: 30px; text-align: center; padding: 0px">时长</th>
-          <th style="width: 40%; min-width: 100px; text-align: center">意图</th>
-          <th style="width: 30%; min-width: 80px">地点</th>
-
-          <th
-            style="
-              width: 72px;
-              text-align: center;
-              background-color: transparent;
-            "
-          ></th>
+          <th></th>
+          <th>开始</th>
+          <th>结束</th>
+          <th>时长</th>
+          <th>意图</th>
+          <th>地点</th>
+          <th class="status-col">状态</th>
         </tr>
       </thead>
+
       <!-- 表格内容部分，可单独调整样式 -->
       <tbody class="table-body">
         <template v-if="schedules && schedules!.length > 0">
@@ -39,6 +53,7 @@
             @click="handleRowClick(schedule)"
             style="cursor: pointer"
           >
+            <!-- 完成checkbox -->
             <td>
               <n-checkbox
                 v-if="schedule.status !== 'cancelled'"
@@ -54,6 +69,8 @@
                 <DismissSquare20Filled />
               </n-icon>
             </td>
+
+            <!-- 开始时间 -->
             <td>
               {{
                 schedule.activityDueRange
@@ -61,6 +78,8 @@
                   : "-"
               }}
             </td>
+
+            <!-- 结束时间 -->
             <td
               @dblclick.stop="startEditing(schedule.id, 'done')"
               :title="
@@ -87,13 +106,21 @@
                   : "-"
               }}</span>
             </td>
-            <td style="text-align: center">
+
+            <!-- 时长 -->
+            <td
+              :class="{ 'is-empty-min': schedule.activityDueRange?.[1] === '' }"
+            >
               {{
-                schedule.activityDueRange ? schedule.activityDueRange[1] : "min"
+                (schedule.activityDueRange?.[1] ?? "") !== ""
+                  ? schedule.activityDueRange[1]
+                  : "min"
               }}
             </td>
+
+            <!-- 意图 -->
             <td
-              class="ellipsis title-cell"
+              class="title-cell"
               :class="{
                 'done-cell': schedule.status === 'done',
                 'cloud-background': schedule.isUntaetigkeit === true,
@@ -117,7 +144,10 @@
                 :data-schedule-id="schedule.id"
                 ref="editingInput"
               />
-              <span v-else>{{ schedule.activityTitle ?? "-" }}</span>
+              <span class="ellipsis" v-else>{{
+                schedule.activityTitle ?? "-"
+              }}</span>
+
               <!-- 云朵背景元素 - 只有当 isUntaetigkeit 为 true 时才显示 -->
               <template v-if="schedule.isUntaetigkeit === true">
                 <div class="cloud cloud-1"></div>
@@ -128,24 +158,33 @@
                 <div class="cloud cloud-6"></div>
               </template>
             </td>
-            <td class="ellipsis">{{ schedule.location ?? "-" }}</td>
 
-            <td>
-              <div class="button-group">
-                <n-button
-                  v-if="!schedule.taskId"
-                  text
-                  type="info"
-                  @click="handleConvertToTask(schedule)"
-                  title="追踪任务"
-                >
-                  <template #icon>
-                    <n-icon size="18">
-                      <ChevronCircleDown48Regular />
-                    </n-icon>
-                  </template>
-                </n-button>
-                <!-- <n-button
+            <!-- 地点 -->
+            <td class="location-cell">
+              <div class="ellipsis">
+                {{ schedule.location ?? "-" }}
+              </div>
+            </td>
+
+            <!-- 状态 -->
+            <td class="status-col">
+              <div class="status-cell">
+                <div class="records-stat">&nbsp;</div>
+                <div class="button-group">
+                  <n-button
+                    v-if="!schedule.taskId"
+                    text
+                    type="info"
+                    @click="handleConvertToTask(schedule)"
+                    title="追踪任务"
+                  >
+                    <template #icon>
+                      <n-icon size="18">
+                        <ChevronCircleDown48Regular />
+                      </n-icon>
+                    </template>
+                  </n-button>
+                  <!-- <n-button
                   v-if="
                     schedule.status !== 'done' &&
                     schedule.isUntaetigkeit !== true
@@ -161,25 +200,25 @@
                     </n-icon>
                   </template>
                 </n-button> -->
-                <!-- 取消任务按钮 -->
-                <n-button
-                  v-if="
-                    schedule.status !== 'done' &&
-                    schedule.status !== 'cancelled' &&
-                    schedule.isUntaetigkeit !== true
-                  "
-                  text
-                  type="info"
-                  @click="handleCancelSchedule(schedule.id)"
-                  title="取消任务，不退回活动清单"
-                >
-                  <template #icon>
-                    <n-icon size="18">
-                      <DismissCircle20Regular />
-                    </n-icon>
-                  </template>
-                </n-button>
-                <!-- 退回任务按钮 = 不再在今日
+                  <!-- 取消任务按钮 -->
+                  <n-button
+                    v-if="
+                      schedule.status !== 'done' &&
+                      schedule.status !== 'cancelled' &&
+                      schedule.isUntaetigkeit !== true
+                    "
+                    text
+                    type="info"
+                    @click="handleCancelSchedule(schedule.id)"
+                    title="取消任务，不退回活动清单"
+                  >
+                    <template #icon>
+                      <n-icon size="18">
+                        <DismissCircle20Regular />
+                      </n-icon>
+                    </template>
+                  </n-button>
+                  <!-- 退回任务按钮 = 不再在今日
                 <n-button
                   v-if="
                     schedule.status !== 'done' &&
@@ -197,6 +236,7 @@
                     </n-icon>
                   </template>
                 </n-button> -->
+                </div>
               </div>
             </td>
           </tr>
@@ -395,7 +435,7 @@ function handleCancelSchedule(id: number) {
 /* 表格容器样式，占满页面 */
 .table-container {
   width: 100%;
-  overflow-x: hidden;
+  overflow-x: auto;
 }
 
 /* 表格占满宽度 */
@@ -405,10 +445,29 @@ function handleCancelSchedule(id: number) {
   table-layout: fixed; /* 使用固定布局算法 */
 }
 
+/* 列配额：重点在这三列 */
+col.col-intent {
+  /* 让“意图”吃更多空间：给较大百分比或 auto */
+  width: 50%;
+  min-width: 140px; /* 抗缩性：根据内容调整 */
+}
+
+col.col-location {
+  /* “地点”不要无限拉长：较小配额 + 上限 */
+  width: 15%;
+  min-width: 80px;
+}
+
+/* 状态列：最后才缩（配额靠右，且有保底） */
+col.col-status {
+  width: 1%;
+  min-width: 100px; /* 或 90~120，按你的内容调 */
+}
+
 /* 表头样式 */
 .table-header th {
   padding: 2px;
-  text-align: left;
+  text-align: center;
   border-bottom: 2px solid var(--color-background-dark);
   white-space: nowrap;
   overflow: hidden;
@@ -423,17 +482,16 @@ function handleCancelSchedule(id: number) {
 .table-body td {
   padding-top: 3px;
   border-bottom: 1px solid var(--color-background-dark);
-  text-align: middle;
   white-space: nowrap;
   overflow: hidden;
-  word-break: break-word;
   min-height: 25px;
   height: 25px;
 }
 
 .table-body td:first-child,
 .table-body td:nth-child(2),
-.table-body td:nth-child(3) {
+.table-body td:nth-child(3),
+.table-body td:nth-child(4) {
   text-align: center;
 }
 
@@ -444,9 +502,15 @@ function handleCancelSchedule(id: number) {
   height: 25px;
 }
 
-/* 允许描述和地点列显示省略号 */
-.ellipsis {
-  text-overflow: ellipsis !important; /* 文本溢出显示省略号 */
+/* 补充：让省略容器具备可计算宽度并允许收缩 */
+.location-cell .ellipsis,
+.title-cell .ellipsis {
+  display: block; /* 或 inline-block */
+  width: 100%;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* 隔行变色 */
@@ -489,6 +553,10 @@ function handleCancelSchedule(id: number) {
   color: var(--color-text-secondary);
   width: 100%;
   border-bottom: 1px solid var(--color-background);
+}
+
+.is-empty-min {
+  color: var(--color-text-secondary);
 }
 
 /* 完成行样式 */
@@ -575,17 +643,45 @@ function handleCancelSchedule(id: number) {
   border-width: 1.2px;
 }
 
-/* 按钮组样式 */
+th.status-col,
+td.status-col {
+  white-space: nowrap;
+  text-align: right;
+  min-width: 0;
+}
+
+/* 其他列：允许换行，降低最小宽度 */
+th:not(.status-col),
+td:not(.status-col) {
+  white-space: nowrap;
+  min-width: 0;
+}
+/* 单元格内部容器不必撑满：用 inline-flex 即可 */
+.status-cell {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* 统计值为内联块，避免撑满 */
+.records-stat {
+  display: inline-flex;
+  font-family: Consolas, "Courier New", Courier, monospace;
+  font-size: 14px;
+  padding-right: 2px;
+}
+
+/* 按钮组为内联块，不再强制贴右（因为整列已右对齐） */
 .button-group {
-  display: flex;
-  justify-content: flex-end;
-  height: 24px;
+  display: inline-flex;
+  height: 20px;
+  transform: translateY(1px);
 }
 
 :deep(.n-button) :hover {
   color: var(--color-red);
 }
 
+/* 云朵样式 */
 .cloud-background {
   position: relative;
   overflow: hidden;
@@ -602,7 +698,6 @@ function handleCancelSchedule(id: number) {
   pointer-events: none;
 }
 
-/* 更真实的云朵样式 */
 .cloud-1 {
   top: 25%;
   left: -8%;
