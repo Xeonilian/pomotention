@@ -1268,16 +1268,18 @@ function onSelectActivity(activityId: number | null) {
 // 选中行
 function onSelectRow(id: number | null) {
   activeId.value = null;
+  selectedRowId.value = null;
+  selectedTaskId.value = null;
   if (id === null) {
     return;
   }
   const todo = todoById.value.get(id);
   const schedule = scheduleById.value.get(id);
   const activityId = todo?.activityId ?? schedule?.activityId ?? null;
-  if (activityId) {
+  if (activityId != null) {
     const activity = activityById.value.get(activityId);
     selectedTaskId.value =
-      activity?.taskId ?? todo?.activityId ?? schedule?.activityId ?? null;
+      activity?.taskId ?? todo?.taskId ?? schedule?.taskId ?? null;
   }
   if (
     todo?.status !== "done" &&
