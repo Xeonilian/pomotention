@@ -12,7 +12,7 @@
         <!-- 开始 -->
         <col style="width: 38px" />
         <!-- 结束 -->
-        <col style="width: 34px" />
+        <col style="width: 38px" />
         <!-- 排序 -->
         <col style="width: 30px" />
         <!-- 意图列：吃更多空间 -->
