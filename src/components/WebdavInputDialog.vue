@@ -39,9 +39,9 @@
     </n-space>
     <template #action>
       <n-button type="success" secondary @click="handleImport"
-        >导入数据</n-button
+        >数据导入</n-button
       >
-      <n-button type="info" secondary @click="handleExport">导出数据</n-button>
+      <n-button type="info" secondary @click="handleExport">数据导出</n-button>
       <n-button @click="handleTest">测试</n-button>
       <n-button @click="handleCancel">取消</n-button>
       <n-button type="primary" @click="handleConfirm">确认</n-button>

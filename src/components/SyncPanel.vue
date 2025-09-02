@@ -21,7 +21,7 @@
         @click="handleExport"
         style="width: 189px"
       >
-        导出数据到本地
+        💻全量数据导出
       </n-button>
       <n-button
         type="info"
@@ -30,7 +30,7 @@
         style="width: 189px"
         @click="handleImport"
       >
-        导入数据到本地
+        💻增量数据导入
       </n-button>
     </n-space>
     <!-- 同步按钮 -->
@@ -44,7 +44,7 @@
         @click="handleAutoSync"
         block
       >
-        {{ syncing ? "同步中..." : "首次同步（上传本地数据）" }}
+        {{ syncing ? "同步中..." : "☁首次数据上传" }}
       </n-button>
 
       <!-- 手动选择按钮组 -->
@@ -57,11 +57,7 @@
           secondary
           style="width: 189px"
         >
-          {{
-            syncing && syncAction === "upload"
-              ? "上传中..."
-              : "上传本地数据 - 覆盖云端"
-          }}
+          {{ syncing && syncAction === "upload" ? "上传中..." : "☁数据上传" }}
         </n-button>
         <n-button
           type="warning"
@@ -71,11 +67,7 @@
           secondary
           style="width: 188px"
         >
-          {{
-            syncing && syncAction === "download"
-              ? "下载中..."
-              : "下载云端数据 - 覆盖本地"
-          }}
+          {{ syncing && syncAction === "download" ? "下载中..." : "☁数据下载" }}
         </n-button>
       </n-space>
     </div>
