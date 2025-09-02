@@ -258,7 +258,11 @@
                     todo.status === 'done' || todo.status === 'cancelled',
                 }"
               >
-                <div v-if="todo.taskId" class="records-stat">
+                <div
+                  v-if="todo.taskId"
+                  class="records-stat"
+                  title="能量值 | 奖赏值 | 内部打扰 | 外部打扰"
+                >
                   {{ averageValue(todo.energyRecords) }}|{{
                     averageValue(todo.rewardRecords)
                   }}|{{ countInterruptions(todo.interruptionRecords, "E") }}|{{
