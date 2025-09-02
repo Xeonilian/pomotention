@@ -15,6 +15,7 @@
         :max="10"
         :step="1"
         :marks="marks"
+        ref="sliderRef"
       />
       <n-space justify="space-between">
         <n-text>当前精力值: {{ energyValue }}</n-text>
@@ -33,9 +34,8 @@
     </n-space>
 
     <template #action>
-      <n-button @click="handleCancel">取消</n-button>
-
       <n-button type="primary" @click="handleConfirm">确认</n-button>
+      <n-button @click="handleCancel">取消</n-button>
     </template>
   </n-modal>
 

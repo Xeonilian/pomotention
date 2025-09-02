@@ -36,10 +36,10 @@
       </n-space>
     </n-space>
     <template #action>
-      <n-button @click="handleCancel">取消</n-button>
       <n-button type="primary" @click="handleConfirm" :disabled="!isValid">
         确认
       </n-button>
+      <n-button @click="handleCancel">取消</n-button>
     </template>
   </n-modal>
 </template>
