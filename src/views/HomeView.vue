@@ -813,7 +813,7 @@ function onDeleteActivity(id: number) {
     }
   );
   if (!result) showErrorPopover("请先清空子项目再删除！");
-  activeId.value = null;
+  activeId.value = null; //
   saveAllDebounced();
 }
 

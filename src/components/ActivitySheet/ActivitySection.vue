@@ -428,7 +428,13 @@ function setRowInputRef(el: InputInst | null, id: number) {
 watch(
   () => props.activeId,
   async (id) => {
+    if (id == null) {
+      const list = sortedDisplaySheet.value; // 你的最终显示列表
+      const last = list[list.length - 1];
+      id = last ? last.id : null;
+    }
     if (id == null) return;
+
     // 确保对应行已经渲染完成
     await nextTick();
 
