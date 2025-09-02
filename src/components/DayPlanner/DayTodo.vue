@@ -12,9 +12,9 @@
         <!-- 开始 -->
         <col style="width: 38px" />
         <!-- 结束 -->
-        <col style="width: 38px" />
-        <!-- 排序 -->
         <col style="width: 34px" />
+        <!-- 排序 -->
+        <col style="width: 30px" />
         <!-- 意图列：吃更多空间 -->
         <col class="col-intent" />
         <!-- 果果 -->
@@ -29,9 +29,9 @@
           <th>开始</th>
           <th>结束</th>
           <th>排序</th>
-          <th>意图</th>
+          <th class="status-col">意图</th>
           <th>果果</th>
-          <th>状态</th>
+          <th class="status-col">状态</th>
         </tr>
       </thead>
       <!-- 表格内容部分，可单独调整样式 -->
@@ -872,7 +872,7 @@ col.col-intent {
   min-width: 140px; /* 抗缩性：根据内容调整 */
 }
 col.col-fruit {
-  width: 15%;
+  width: 25%;
   min-width: 100px;
 }
 /* 状态列：最后才缩（配额靠右，且有保底） */
@@ -883,7 +883,7 @@ col.col-status {
 /* 表头样式 */
 .table-header th {
   padding: 2px;
-  text-align: center;
+  text-align: left;
   border-bottom: 2px solid var(--color-background-dark);
   white-space: nowrap;
   overflow: hidden;
@@ -1035,11 +1035,12 @@ col.col-status {
   white-space: nowrap;
   flex-shrink: 0;
   z-index: 10;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
 .pomo-groups {
   padding-right: 1px;
-  overflow-y: hidden;
   z-index: 10;
 }
 
@@ -1047,7 +1048,6 @@ col.col-status {
   display: inline-flex;
   align-items: center;
   flex-shrink: 0;
-  overflow-y: hidden;
   gap: 1px;
 }
 
@@ -1106,18 +1106,22 @@ col.col-status {
 
 /* 状态 */
 /* 状态列：不换行，尽量由内容决定最小宽度 */
-th.status-col,
+
 td.status-col {
   white-space: nowrap;
   text-align: right;
+  min-width: 0;
+}
+th.status-col {
+  white-space: nowrap;
+  text-align: center;
   min-width: 0;
 }
 
 /* 其他列：允许换行，降低最小宽度 */
 th:not(.status-col),
 td:not(.status-col) {
-  white-space: normal;
-  word-break: break-word;
+  white-space: nowrap;
   min-width: 0;
 }
 /* 单元格内部容器不必撑满：用 inline-flex 即可 */
@@ -1141,7 +1145,7 @@ td:not(.status-col) {
   transform: translateY(1px);
 }
 
-:deep(.n-button) :hover {
+:deep(.n-button):hover {
   color: var(--color-red);
 }
 

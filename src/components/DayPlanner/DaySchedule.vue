@@ -13,7 +13,7 @@
         <!-- 结束 -->
         <col style="width: 38px" />
         <!-- 时长 -->
-        <col style="width: 34px" />
+        <col style="width: 30px" />
         <!-- 意图列：吃更多空间 -->
         <col class="col-intent" />
         <!-- 地点列：限制上限、避免跟着变长 -->
@@ -28,7 +28,7 @@
           <th>开始</th>
           <th>结束</th>
           <th>时长</th>
-          <th>意图</th>
+          <th class="status-col">意图</th>
           <th>地点</th>
           <th class="status-col">状态</th>
         </tr>
@@ -441,23 +441,19 @@ function handleCancelSchedule(id: number) {
 /* 表格占满宽度 */
 .full-width-table {
   width: 100%;
-  border-collapse: collapse; /* 合并边框 */
+  border-collapse: collapse;
   table-layout: fixed; /* 使用固定布局算法 */
 }
-
 /* 列配额：重点在这三列 */
 col.col-intent {
   /* 让“意图”吃更多空间：给较大百分比或 auto */
   width: 50%;
   min-width: 140px; /* 抗缩性：根据内容调整 */
 }
-
 col.col-location {
-  /* “地点”不要无限拉长：较小配额 + 上限 */
-  width: 15%;
-  min-width: 80px;
+  width: 25%;
+  min-width: 100px;
 }
-
 /* 状态列：最后才缩（配额靠右，且有保底） */
 col.col-status {
   width: 1%;
@@ -467,7 +463,7 @@ col.col-status {
 /* 表头样式 */
 .table-header th {
   padding: 2px;
-  text-align: center;
+  text-align: left;
   border-bottom: 2px solid var(--color-background-dark);
   white-space: nowrap;
   overflow: hidden;
@@ -643,10 +639,14 @@ col.col-status {
   border-width: 1.2px;
 }
 
-th.status-col,
 td.status-col {
   white-space: nowrap;
   text-align: right;
+  min-width: 0;
+}
+th.status-col {
+  white-space: nowrap;
+  text-align: center;
   min-width: 0;
 }
 

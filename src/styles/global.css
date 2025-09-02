@@ -1,16 +1,19 @@
 /* 细窄全局滚动条，兼容常见 PC 浏览器 */
 * {
-  scrollbar-width: thin;
-  scrollbar-color: var(--color-background-dark), var(--color-background);
+  scrollbar-width: auto;
 }
 
 *::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
-
+*::-webkit-scrollbar-thumb {
+  background-color: var(--color-background-dark);
+  border-radius: 3px; /* 添加圆角让它看起来更柔和 */
+}
 *::-webkit-scrollbar-track {
-  background: var(--color-background);
+  background: var(--color-background) !important;
+  border-radius: 3px;
 }
 
 .n-modal-mask {
