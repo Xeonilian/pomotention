@@ -45,12 +45,12 @@ const defaultSettings: GlobalSettings = {
   miniModeRefactor: 1,
   activityRank: {}, // 默认空对象
   kanbanSetting: [
-    { id: 1, filterKey: "all", search: "", show: true },
-    { id: 2, filterKey: "today", search: "", show: false },
-    { id: 3, filterKey: "interrupt", search: "", show: false },
-    { id: 4, filterKey: "todo", search: "", show: false },
-    { id: 5, filterKey: "schedule", search: "", show: false },
-    { id: 6, filterKey: "cancelled", search: "", show: false },
+    { id: 1, filterKey: "all", search: "", show: true, showTags: true },
+    { id: 2, filterKey: "today", search: "", show: false, showTags: false },
+    { id: 3, filterKey: "interrupt", search: "", show: false, showTags: false },
+    { id: 4, filterKey: "todo", search: "", show: false, showTags: false },
+    { id: 5, filterKey: "schedule", search: "", show: false, showTags: false },
+    { id: 6, filterKey: "cancelled", search: "", show: false, showTags: false },
   ],
   showPomodoro: true,
   showSchedule: true,

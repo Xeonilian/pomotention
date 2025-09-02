@@ -7,7 +7,8 @@
     <!-- 筛选区 -->
     <div class="section-header">
       <n-input
-        placeholder="请输入筛选条件..."
+        :placeholder="currentFilterLabel"
+        title="请输入筛选条件..."
         :value="props.search"
         @update:value="(val) => $emit('update:search', val)"
         @focus="$emit('focus-search')"
@@ -283,7 +284,11 @@
           />
         </div>
         <div
-          v-if="item.tagIds && item.tagIds.length > 0 && showTags"
+          v-if="
+            item.tagIds &&
+            item.tagIds.length > 0 &&
+            settingStore.settings.kanbanSetting[props.sectionId].showTags
+          "
           class="tag-content"
           :class="{ 'child-activity-tag': item.parentId }"
         >
@@ -300,7 +305,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, watch, nextTick, ref } from "vue";
+import { computed, watch, nextTick, ref, onMounted } from "vue";
 import { NInput, NDatePicker, NIcon, NDropdown, NPopover } from "naive-ui";
 import {
   VideoPersonCall24Regular,
@@ -346,11 +351,19 @@ defineEmits<{
 
 const settingStore = useSettingStore();
 const showTagManager = ref(false);
-const showTags = ref(true);
 const editingTagId = ref(0);
 const tagStore = useTagStore();
 
 const tempTagIds = ref<number[]>([]); // 临时编辑tagIds
+
+onMounted(() => {
+  settingStore.settings.kanbanSetting[props.sectionId].showTags ??= true;
+});
+
+const currentFilterLabel = computed(() => {
+  const match = props.filterOptions.find((o) => o.key === props.currentFilter);
+  return match?.label ?? "";
+});
 
 // Popover 相关状态
 const tagSearchTerm = ref("");
@@ -638,7 +651,9 @@ function handleTagIconClick(event: MouseEvent, item: Activity) {
     event.preventDefault();
 
     // 切换 showTags 的值 (true -> false, false -> true)
-    showTags.value = !showTags.value;
+
+    settingStore.settings.kanbanSetting[props.sectionId].showTags =
+      !settingStore.settings.kanbanSetting[props.sectionId].showTags;
   } else {
     // --- 普通点击逻辑 (你之前的代码) ---
     // 如果没有按 Alt 键，就执行常规的打开标签管理器的操作
