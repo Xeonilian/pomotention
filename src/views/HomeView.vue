@@ -473,7 +473,7 @@ const childrenOfActivity = computed(() => {
 });
 
 // 添加选中的任务ID状态
-const activeId = ref<number | null>(null); // 当前从ActivitySheet选中的activity.id
+const activeId = ref<number | null | undefined>(null); // 当前从ActivitySheet选中的activity.id
 const selectedTaskId = ref<number | null>(null); // 当前从Planner选中的.taskId
 const selectedActivityId = ref<number | null>(null); // 当前从Planner选中的.activityId
 const selectedRowId = ref<number | null>(null); // todo.id 或者 schedule.id
@@ -1267,7 +1267,7 @@ function onSelectActivity(activityId: number | null) {
 
 // 选中行
 function onSelectRow(id: number | null) {
-  activeId.value = null;
+  activeId.value = undefined;
   selectedRowId.value = null;
   selectedTaskId.value = null;
   if (id === null) {
@@ -1276,8 +1276,10 @@ function onSelectRow(id: number | null) {
   const todo = todoById.value.get(id);
   const schedule = scheduleById.value.get(id);
   const activityId = todo?.activityId ?? schedule?.activityId ?? null;
+
   if (activityId != null) {
     const activity = activityById.value.get(activityId);
+
     selectedTaskId.value =
       activity?.taskId ?? todo?.taskId ?? schedule?.taskId ?? null;
   }
@@ -1288,6 +1290,8 @@ function onSelectRow(id: number | null) {
     schedule?.status !== "cancelled"
   ) {
     activeId.value = activityId;
+  } else {
+    activeId.value = undefined;
   }
 
   selectedRowId.value = id;

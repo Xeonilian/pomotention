@@ -94,7 +94,7 @@ const props = defineProps<{
   activities: Activity[]; // 活动数据列表
   schedules: Schedule[]; // 预约事项列表
   todos: Todo[]; // 待办事项列表
-  activeId: number | null; // 当前选中的活动ID
+  activeId: number | null | undefined; // 当前选中的活动ID
   selectedActivityId: number | null;
   selectedTaskId: number | null;
 }>();
@@ -105,21 +105,21 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: "pick-activity", activity: Activity): void; // 选择活动待办
   (e: "add-activity", activity: Activity): void; // 添加新活动
-  (e: "delete-activity", id: number): void; // 删除活动
-  (e: "update-active-id", id: number | null): void; // 更新选中活动ID
-  (e: "toggle-pomo-type", id: number): void; // 切换番茄钟类型
-  (e: "repeat-activity", id: number): void; // 重复选中的活动
-  (e: "create-child-activity", id: number): void; // 构建选中活动的子活动
-  (e: "go-to-todo", id: number): void; // 去到 todo 所在天
-  (e: "go-to-schedule", id: number): void; // 去到 schedule 所在天
+  (e: "delete-activity", id: number | null | undefined): void; // 删除活动
+  (e: "update-active-id", id: number | null | undefined): void; // 更新选中活动ID
+  (e: "toggle-pomo-type", id: number | null | undefined): void; // 切换番茄钟类型
+  (e: "repeat-activity", id: number | null | undefined): void; // 重复选中的活动
+  (e: "create-child-activity", id: number | null | undefined): void; // 构建选中活动的子活动
+  (e: "go-to-todo", id: number | null | undefined): void; // 去到 todo 所在天
+  (e: "go-to-schedule", id: number | null | undefined): void; // 去到 schedule 所在天
   (
     e: "convert-activity-to-task",
     payload: {
       task: Task;
-      activityId: number;
+      activityId: number | null | undefined;
     }
   ): void;
-  (e: "increase-child-activity", id: number): void; // 取消子项（名称含义建议确认）
+  (e: "increase-child-activity", id: number | null | undefined): void; // 取消子项（名称含义建议确认）
 }>();
 
 // ========================

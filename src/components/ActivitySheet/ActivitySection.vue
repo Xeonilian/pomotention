@@ -337,7 +337,7 @@ const props = defineProps<{
   isRemoveButton: boolean;
   sectionId: number;
   search: string;
-  activeId: number | null;
+  activeId: number | null | undefined;
 }>();
 
 defineEmits<{
@@ -441,6 +441,7 @@ function setRowInputRef(el: InputInst | null, id: number) {
 watch(
   () => props.activeId,
   async (id) => {
+    if (id == undefined) return;
     if (id == null) {
       const list = sortedDisplaySheet.value; // 你的最终显示列表
       const last = list[list.length - 1];

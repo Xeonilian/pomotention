@@ -106,7 +106,7 @@ const props = defineProps<{
   weekSchedules: Array<Schedule & { tagIds?: number[] }>;
   weekStartTs: number; // 周一 00:00:00（毫秒）
   dayStartTs: number;
-  activeId: number | null;
+  activeId: number | null | undefined;
   selectedRowId: number | null;
 }>();
 

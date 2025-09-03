@@ -206,7 +206,7 @@ import {
 } from "@vicons/fluent";
 
 const props = defineProps<{
-  activeId: number | null;
+  activeId: number | null | undefined;
   selectedClass?: "T" | "S"; // 从父组件传递
   selectedTaskId: number | null;
   hasParent?: number | null;

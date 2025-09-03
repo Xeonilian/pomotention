@@ -2,41 +2,40 @@
   Component: DayTodo.vue
 -->
 <template>
-  <!-- 表格容器，占满父容器宽度 -->
   <div class="table-container">
     <table class="full-width-table">
-      <!-- 表头部分，可单独调整样式 -->
       <colgroup>
         <!-- 勾选 -->
-        <col style="width: 18px" />
+        <col class="col-check" />
         <!-- 开始 -->
-        <col style="width: 38px" />
+        <col class="col-start" />
         <!-- 结束 -->
-        <col style="width: 38px" />
+        <col class="col-end" />
         <!-- 排序 -->
-        <col style="width: 34px" />
-        <!-- 意图列：吃更多空间 -->
+        <col class="col-rank" />
+        <!-- 意图 -->
         <col class="col-intent" />
         <!-- 果果 -->
         <col class="col-fruit" />
-        <!-- 状态列：最后才缩，常用 min-width 保护 -->
+        <!-- 状态 -->
         <col class="col-status" />
       </colgroup>
 
-      <thead class="table-header">
+      <thead>
         <tr>
-          <th></th>
-          <th>开始</th>
-          <th>结束</th>
-          <th>排序</th>
-          <th>意图</th>
-          <th>果果</th>
-          <th>状态</th>
+          <th class="col-check"></th>
+          <th class="col-start">开始</th>
+          <th class="col-end">结束</th>
+          <th class="col-rank">排序</th>
+          <th class="col-intent">意图</th>
+          <th class="col-fruit">果果</th>
+          <th class="col-status">状态</th>
         </tr>
       </thead>
-      <!-- 表格内容部分，可单独调整样式 -->
-      <tbody class="table-body">
+
+      <tbody>
         <template v-if="sortedTodos.length > 0">
+          <!-- 行 -->
           <tr
             v-for="todo in sortedTodos"
             :key="todo.id"
@@ -49,8 +48,9 @@
             @click="handleRowClick(todo)"
             style="cursor: pointer"
           >
+            <!-- 单元格 -->
             <!-- 1 完成状态 -->
-            <td>
+            <td class="col-check">
               <n-checkbox
                 v-if="todo.status !== 'cancelled'"
                 :checked="todo.status === 'done'"
@@ -65,9 +65,10 @@
                 <DismissSquare20Filled />
               </n-icon>
             </td>
+
             <!-- 2 开始时间 -->
             <td
-              style="white-space: nowrap"
+              class="col-start"
               @dblclick.stop="startEditing(todo.id, 'start')"
               :title="
                 editingRowId === todo.id && editingField === 'start'
@@ -76,13 +77,13 @@
               "
             >
               <input
+                class="start-input time-input"
                 v-if="editingRowId === todo.id && editingField === 'start'"
                 v-model="editingValue"
                 @blur="saveEdit(todo)"
                 @keyup.enter="saveEdit(todo)"
                 @keyup.esc="cancelEdit"
                 ref="editingInput"
-                class="start-input time-input"
                 :data-todo-id="todo.id"
                 maxlength="5"
                 autocomplete="off"
@@ -91,9 +92,10 @@
                 todo.startTime ? timestampToTimeString(todo.startTime) : "-"
               }}</span>
             </td>
+
             <!-- 3 结束时间 -->
             <td
-              style="white-space: nowrap"
+              class="col-start"
               @dblclick.stop="startEditing(todo.id, 'done')"
               :title="
                 editingRowId === todo.id && editingField === 'done'
@@ -102,13 +104,13 @@
               "
             >
               <input
+                class="done-input time-input"
                 v-if="editingRowId === todo.id && editingField === 'done'"
                 v-model="editingValue"
                 @blur="saveEdit(todo)"
                 @keyup.enter="saveEdit(todo)"
                 @keyup.esc="cancelEdit"
                 ref="editingInput"
-                class="done-input time-input"
                 :data-todo-id="todo.id"
                 maxlength="5"
                 autocomplete="off"
@@ -117,8 +119,12 @@
                 todo.doneTime ? timestampToTimeString(todo.doneTime) : "-"
               }}</span>
             </td>
-            <!-- 4 优先级 -->
-            <td class="priority-cell" @click="startEditingPriority(todo)">
+
+            <!-- 4 排序 -->
+            <td
+              class="col-rank priority-cell"
+              @click="startEditingPriority(todo)"
+            >
               <template v-if="editingTodo && editingTodo.id === todo.id">
                 <n-input-number
                   v-model:value="editingPriority"
@@ -128,8 +134,6 @@
                   @keydown.enter="finishEditing"
                   size="small"
                   style="width: 30px"
-                  @focus="handleInputFocus"
-                  autofocus
                   :show-button="false"
                   placeholder=" "
                 />
@@ -143,9 +147,10 @@
                 </span>
               </template>
             </td>
+
             <!-- 5 意图 -->
             <td
-              class="title-cell"
+              class="col-intent"
               :class="{
                 'done-cell': todo.status === 'done',
                 'cancel-cell': todo.status === 'cancelled',
@@ -158,13 +163,13 @@
               "
             >
               <input
+                class="title-input"
                 v-if="editingRowId === todo.id && editingField === 'title'"
                 v-model="editingValue"
                 @blur="saveEdit(todo)"
                 @keyup.enter="saveEdit(todo)"
                 @keyup.esc="cancelEdit"
                 @click.stop
-                class="title-input"
                 :data-todo-id="todo.id"
                 ref="editingInput"
               />
@@ -172,8 +177,9 @@
                 todo.activityTitle ?? "-"
               }}</span>
             </td>
+
             <!-- 6 果果 -->
-            <td>
+            <td class="col-fruit">
               <div class="pomo-container">
                 <!-- 将所有番茄钟内容包装在一个容器中 -->
                 <div class="pomo-groups">
@@ -181,12 +187,12 @@
                     <div class="pomo-group">
                       <template v-for="i in est" :key="i">
                         <n-checkbox
-                          :checked="isPomoCompleted(todo, index, i)"
                           :class="{
                             'pomo-cherry': todo.pomoType === '🍒',
                             'pomo-grape': todo.pomoType === '🍇',
                             'pomo-tomato': todo.pomoType === '🍅',
                           }"
+                          :checked="isPomoCompleted(todo, index, i)"
                           :disabled="todo.status === 'cancelled'"
                           @update:checked="
                             (checked: any) =>
@@ -195,8 +201,8 @@
                         />
                       </template>
                       <span
-                        v-if="todo.estPomo && index < todo.estPomo.length - 1"
                         class="pomo-separator"
+                        v-if="todo.estPomo && index < todo.estPomo.length - 1"
                         >|</span
                       >
                     </div>
@@ -208,6 +214,7 @@
                 >
                   <!-- 删除估计按钮  -->
                   <n-button
+                    class="button-left"
                     v-if="
                       todo.pomoType != '🍒' &&
                       todo.estPomo &&
@@ -217,7 +224,6 @@
                     text
                     @click="handleDeleteEstimate(todo)"
                     title="减少预估番茄数量"
-                    class="button-left"
                   >
                     <template #icon>
                       <n-icon size="18" color="var(--color-background-dark)">
@@ -228,6 +234,8 @@
 
                   <!-- 新增估计按钮  -->
                   <n-button
+                    class="button-right"
+                    :class="{ 'bidirection-mode': todo.estPomo.length === 2 }"
                     v-if="
                       todo.pomoType != '🍒' &&
                       todo.estPomo &&
@@ -237,8 +245,6 @@
                     type="default"
                     @click="handleAddEstimate(todo)"
                     title="增加预估番茄数量"
-                    class="button-right"
-                    :class="{ 'bidirection-mode': todo.estPomo.length === 2 }"
                   >
                     <template #icon>
                       <n-icon size="18" color="var(--color-background-dark)">
@@ -249,7 +255,8 @@
                 </div>
               </div>
             </td>
-            <!-- 7 状态值+操作 -->
+
+            <!-- 7 状态 -->
             <td class="status-col">
               <div
                 class="status-cell"
@@ -259,8 +266,8 @@
                 }"
               >
                 <div
-                  v-if="todo.taskId"
                   class="records-stat"
+                  v-if="todo.taskId"
                   title="能量值 | 奖赏值 | 内部打扰 | 外部打扰"
                 >
                   {{ averageValue(todo.energyRecords) }}|{{
@@ -270,8 +277,8 @@
                   }}
                 </div>
                 <div
-                  v-if="todo.status !== 'done' && todo.status !== 'cancelled'"
                   class="button-group"
+                  v-if="todo.status !== 'done' && todo.status !== 'cancelled'"
                 >
                   <!-- 追踪任务按钮 -->
                   <n-button
@@ -300,6 +307,7 @@
                     </n-icon>
                   </template>
                 </n-button> -->
+
                   <!-- 取消任务按钮 -->
                   <n-button
                     v-if="!todo.realPomo"
@@ -381,6 +389,392 @@
   </n-modal>
 </template>
 
+<style scoped>
+/* 表格容器样式，占满页面 */
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+}
+
+/* 表格占满宽度 */
+.full-width-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+col.col-check {
+  width: 18px;
+}
+
+col.col-start {
+  width: 40px;
+}
+
+col.col-end {
+  width: 40px;
+}
+
+col.col-rank {
+  width: 35px;
+}
+
+col.col-intent {
+  width: 60%;
+  min-width: 140px;
+}
+
+col.col-fruit {
+  width: 40%;
+  min-width: 75px;
+}
+
+col.col-status {
+  width: 76px;
+}
+
+thead th,
+tbody td {
+  box-sizing: border-box; /* 避免 padding/border 影响固定计算 */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 表头样式 */
+thead th {
+  padding: 2px;
+  text-align: center;
+  border-bottom: 2px solid var(--color-background-dark);
+  white-space: nowrap;
+  overflow: hidden;
+  height: 20px;
+  font-weight: 400;
+  color: var(--color-text-primary);
+  line-height: 1.3;
+  background-color: var(--color-background) !important;
+}
+
+/* 行样式 */
+/* 隔行变色 */
+tr:nth-child(even) {
+  background-color: var(--color-background-light-transparent);
+}
+
+/* hover 高亮（不加 !important，便于被 selected/active 覆盖） */
+tr:hover {
+  background-color: var(--color-cyan-light-transparent);
+}
+
+/* 激活行样式（覆盖一切） */
+tr.active-row {
+  background-color: var(--color-red-light-transparent) !important;
+}
+
+/* 选中行样式（覆盖一切） */
+tr.selected-row {
+  background-color: var(--color-yellow-transparent) !important;
+}
+
+/* 当同时 active + selected 时，明确以 selected 的颜色为准（可留可删） */
+tr.active-row.selected-row {
+  background-color: var(--color-yellow-transparent) !important;
+}
+
+/* 统一过渡效果 */
+tr,
+tr:hover,
+tr.active-row,
+tr.selected-row {
+  transition: background-color 0.2s ease;
+}
+
+/* 行状态样式 */
+tr.done-row {
+  color: var(--color-text-secondary);
+}
+
+tr.done-cell {
+  text-decoration: line-through var(--color-text-secondary) 0.5px;
+}
+
+tr.cancel-row {
+  color: var(--color-text-secondary);
+}
+
+tr.cancel-cell {
+  font-style: italic;
+}
+
+tr.empty-row {
+  height: 30px;
+  text-align: center;
+  color: var(--color-text-secondary);
+  width: 100%;
+  border-bottom: 1px solid var(--color-background);
+}
+
+/* 表格内容样式 */
+td {
+  padding-top: 3px;
+  border-bottom: 1px solid var(--color-background-dark);
+  white-space: nowrap;
+  overflow: hidden;
+  min-height: 25px;
+  height: 25px;
+}
+
+td:first-child,
+td:nth-child(2),
+td:nth-child(3),
+td:nth-child(4) {
+  text-align: center;
+}
+
+td:nth-child(7) {
+  min-height: 25px;
+  height: 25px;
+}
+
+th.status-col,
+td.status-col {
+  white-space: nowrap;
+  text-align: right;
+  min-width: 0;
+}
+
+/* 允许描述列显示省略号 */
+.col-intent.ellipsis {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 优先级单元格样式 */
+.priority-cell {
+  cursor: pointer;
+  text-align: center;
+}
+
+.priority-badge {
+  display: inline-flex;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 14px;
+  height: 14px;
+  position: relative;
+  top: -1px;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: bold;
+  color: var(--color-background);
+  background-color: var(--color-background-dark);
+  box-shadow: 0 1px 3px var(--color-background-light);
+}
+
+/* 可按 priority 分不同色 */
+.priority-0 {
+  background-color: var(--color-background);
+  color: var(--color-text-secondary);
+}
+.priority-1 {
+  background-color: var(--color-red);
+}
+.priority-2 {
+  background-color: var(--color-orange);
+}
+.priority-3 {
+  background-color: var(--color-yellow);
+  color: var(--color-text-primary);
+}
+.priority-4 {
+  background-color: var(--color-green);
+}
+.priority-5 {
+  background-color: var(--color-blue);
+}
+.priority-6 {
+  background-color: var(--color-purple);
+}
+.priority-7 {
+  background-color: var(--color-purple-dark);
+}
+.priority-8 {
+  background-color: var(--color-cyan);
+}
+.priority-9 {
+  background-color: var(--color-green-dark);
+}
+.priority-10 {
+  background-color: var(--color-orange-dark);
+}
+
+/* 估计番茄数量 */
+.pomo-container {
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.pomo-groups {
+  padding-right: 1px;
+  overflow-y: hidden;
+  z-index: 10;
+}
+
+.pomo-group {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  overflow-y: hidden;
+  gap: 1px;
+}
+
+.pomo-separator {
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+}
+
+:deep(.n-checkbox) {
+  --n-color-checked: transparent !important;
+  --n-check-mark-color: var(--color-text-primary) !important;
+}
+
+.pomo-tomato :deep(.n-checkbox-box) {
+  --n-color: var(--color-red-light-transparent);
+  --n-box-shadow-focus: 0 0 0 0;
+  --n-border: 1px solid var(--color-red-dark);
+  --n-border-checked: 1px solid var(--color-red-dark);
+}
+
+.pomo-cherry :deep(.n-checkbox-box) {
+  --n-color: var(--color-green-light-transparent);
+  --n-box-shadow-focus: 0 0 0 0;
+  --n-border: 1px solid var(--color-green-dark);
+  --n-border-checked: 1px solid var(--color-green-dark);
+}
+
+.pomo-grape :deep(.n-checkbox-box) {
+  /* --n-color-checked: var(--color-purple-light); */
+  --n-color: var(--color-purple-light-transparent);
+  --n-box-shadow-focus: 0 0 0 0;
+  --n-border: 1px solid var(--color-purple-dark);
+  --n-border-checked: 1px solid var(--color-purple-dark);
+}
+
+.est-buttons {
+  display: flex;
+}
+
+.button-left {
+  position: relative;
+  left: -4px;
+  z-index: 5;
+}
+
+.button-right:not(.bidirection-mode) {
+  position: relative;
+  left: -4px;
+}
+
+.button-right.bidirection-mode {
+  position: relative;
+  left: -12px;
+  z-index: 0;
+}
+
+/* 状态信息 */
+.status-cell {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* 统计值为内联块，避免撑满 */
+.records-stat {
+  display: inline-flex;
+  font-family: Consolas, "Courier New", Courier, monospace;
+  font-size: 14px;
+  padding-right: 2px;
+}
+
+/* 按钮组为内联块，不再强制贴右（因为整列已右对齐） */
+.button-group {
+  display: inline-flex;
+  height: 20px;
+  transform: translateY(1px);
+}
+
+:deep(.n-button) :hover {
+  color: var(--color-red);
+}
+
+.cancel-icon {
+  display: inline-flex;
+  width: 18px;
+  height: 18px;
+  align-items: center;
+  justify-content: center;
+  transform: scale(1.2) translateY(2px) !important;
+  transform-origin: center;
+}
+
+.cancel-icon svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.title-cell {
+  position: relative;
+  cursor: pointer;
+}
+
+.title-cell:hover::after {
+  content: "双击编辑";
+  position: absolute;
+  top: -25px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.title-input {
+  width: calc(100% - 10px);
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  font-size: inherit;
+  font-family: inherit;
+  outline: none;
+}
+
+.title-input:focus {
+  border-color: #40a9ff;
+  box-shadow: 0 0 0 2px rgba(64, 169, 255, 0.2);
+}
+
+.start-input,
+.done-input {
+  width: 32px !important;
+  max-width: 32px !important;
+  min-width: 0 !important;
+  box-sizing: border-box;
+  padding: 0px 0px;
+  font-size: inherit;
+}
+</style>
+
 <script setup lang="ts">
 import type { Todo, TodoWithTaskRecords } from "@/core/types/Todo";
 import { timestampToTimeString } from "@/core/utils";
@@ -416,7 +810,7 @@ const newEstimate = ref<number>(1);
 // 定义 Props
 const props = defineProps<{
   todos: TodoWithTaskRecords[];
-  activeId: number | null;
+  activeId: number | null | undefined;
   selectedRowId: number | null; // 新增：从父组件接收选中行ID
 }>();
 
@@ -443,14 +837,6 @@ const emit = defineEmits<{
 
 const editingTodo = ref<Todo | null>(null);
 const editingPriority = ref<number>(0);
-
-// 处理输入框获取焦点
-function handleInputFocus(event: FocusEvent) {
-  const inputElement = event.target as HTMLInputElement;
-  if (inputElement) {
-    inputElement.select();
-  }
-}
 
 // 对待办事项按优先级降序排序（高优先级在前）
 const sortedTodos = computed(() => {
@@ -851,378 +1237,3 @@ function countInterruptions(
   return count;
 }
 </script>
-
-<style scoped>
-/* 表格容器样式，占满页面 */
-.table-container {
-  width: 100%;
-  overflow-x: auto;
-}
-
-/* 表格占满宽度 */
-.full-width-table {
-  width: 100%;
-  border-collapse: collapse;
-  table-layout: fixed; /* 使用固定布局算法 */
-}
-/* 列配额：重点在这三列 */
-col.col-intent {
-  /* 让“意图”吃更多空间：给较大百分比或 auto */
-  width: 50%;
-  min-width: 140px; /* 抗缩性：根据内容调整 */
-}
-col.col-fruit {
-  width: 15%;
-  min-width: 100px;
-}
-/* 状态列：最后才缩（配额靠右，且有保底） */
-col.col-status {
-  width: 1%;
-  min-width: 100px; /* 或 90~120，按你的内容调 */
-}
-/* 表头样式 */
-.table-header th {
-  padding: 2px;
-  text-align: center;
-  border-bottom: 2px solid var(--color-background-dark);
-  white-space: nowrap;
-  overflow: hidden;
-  height: 20px;
-  font-weight: 400;
-  color: var(--color-text-primary);
-  line-height: 1.3;
-  background-color: var(--color-background) !important;
-}
-
-/* 表格内容样式 */
-.table-body td {
-  padding-top: 3px;
-  border-bottom: 1px solid var(--color-background-dark);
-  white-space: nowrap;
-  overflow: hidden;
-  min-height: 25px;
-  height: 25px;
-}
-
-.table-body td:first-child,
-.table-body td:nth-child(2),
-.table-body td:nth-child(3),
-.table-body td:nth-child(4) {
-  text-align: center;
-}
-
-.table-body td:nth-child(7) {
-  min-height: 25px;
-  height: 25px;
-}
-
-/* 允许描述列显示省略号 */
-
-.title-cell .ellipsis {
-  display: block; /* 或 inline-block */
-  width: 100%;
-  min-width: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* 隔行变色 */
-.table-body tr:nth-child(even) {
-  background-color: var(--color-background-light-transparent);
-}
-
-/* hover 高亮（不加 !important，便于被 selected/active 覆盖） */
-.table-body tr:hover {
-  background-color: var(--color-cyan-light-transparent);
-}
-
-/* 激活行样式（覆盖一切） */
-.table-body tr.active-row {
-  background-color: var(--color-red-light-transparent) !important;
-}
-
-/* 选中行样式（覆盖一切） */
-.table-body tr.selected-row {
-  background-color: var(--color-yellow-transparent) !important;
-}
-
-/* 当同时 active + selected 时，明确以 selected 的颜色为准（可留可删） */
-.table-body tr.active-row.selected-row {
-  background-color: var(--color-yellow-transparent) !important;
-}
-
-/* 统一过渡效果，减少重复声明 */
-.table-body tr,
-.table-body tr:hover,
-.table-body tr.active-row,
-.table-body tr.selected-row {
-  transition: background-color 0.2s ease;
-}
-
-/* 空行样式 */
-.empty-row td {
-  height: 30px;
-  text-align: center;
-  color: var(--color-text-secondary);
-  width: 100%;
-  border-bottom: 1px solid var(--color-background);
-}
-
-/* 优先级单元格样式 */
-.priority-cell {
-  cursor: pointer;
-  text-align: center;
-}
-
-.priority-badge {
-  display: inline-flex;
-  align-items: center !important;
-  justify-content: center !important;
-  width: 14px;
-  height: 14px;
-  position: relative;
-  top: -1px;
-  border-radius: 50%;
-  font-size: 12px;
-  font-weight: bold;
-  color: var(--color-background);
-  background-color: var(--color-background-dark);
-  box-shadow: 0 1px 3px var(--color-background-light);
-}
-
-/* 可按 priority 分不同色 */
-.priority-0 {
-  background-color: var(--color-background);
-  color: var(--color-text-secondary);
-}
-.priority-1 {
-  background-color: var(--color-red);
-}
-.priority-2 {
-  background-color: var(--color-orange);
-}
-.priority-3 {
-  background-color: var(--color-yellow);
-  color: var(--color-text-primary);
-}
-.priority-4 {
-  background-color: var(--color-green);
-}
-.priority-5 {
-  background-color: var(--color-blue);
-}
-.priority-6 {
-  background-color: var(--color-purple);
-}
-.priority-7 {
-  background-color: var(--color-purple-dark);
-}
-.priority-8 {
-  background-color: var(--color-cyan);
-}
-.priority-9 {
-  background-color: var(--color-green-dark);
-}
-.priority-10 {
-  background-color: var(--color-orange-dark);
-}
-
-/* 估计番茄数量 */
-.pomo-container {
-  display: flex;
-  align-items: center;
-  white-space: nowrap;
-  flex-shrink: 0;
-  z-index: 10;
-}
-
-.pomo-groups {
-  padding-right: 1px;
-  overflow-y: hidden;
-  z-index: 10;
-}
-
-.pomo-group {
-  display: inline-flex;
-  align-items: center;
-  flex-shrink: 0;
-  overflow-y: hidden;
-  gap: 1px;
-}
-
-.pomo-separator {
-  color: var(--color-text-secondary);
-  flex-shrink: 0;
-}
-
-:deep(.n-checkbox) {
-  --n-color-checked: transparent !important;
-  --n-check-mark-color: var(--color-text-primary) !important;
-}
-
-.pomo-tomato :deep(.n-checkbox-box) {
-  --n-color: var(--color-red-light-transparent);
-  --n-box-shadow-focus: 0 0 0 0;
-  --n-border: 1px solid var(--color-red-dark);
-  --n-border-checked: 1px solid var(--color-red-dark);
-}
-
-.pomo-cherry :deep(.n-checkbox-box) {
-  --n-color: var(--color-green-light-transparent);
-  --n-box-shadow-focus: 0 0 0 0;
-  --n-border: 1px solid var(--color-green-dark);
-  --n-border-checked: 1px solid var(--color-green-dark);
-}
-
-.pomo-grape :deep(.n-checkbox-box) {
-  /* --n-color-checked: var(--color-purple-light); */
-  --n-color: var(--color-purple-light-transparent);
-  --n-box-shadow-focus: 0 0 0 0;
-  --n-border: 1px solid var(--color-purple-dark);
-  --n-border-checked: 1px solid var(--color-purple-dark);
-}
-
-.est-buttons {
-  display: flex;
-}
-
-.button-left {
-  position: relative;
-  left: -4px;
-  z-index: 5;
-}
-
-.button-right:not(.bidirection-mode) {
-  position: relative;
-  left: -4px;
-}
-
-.button-right.bidirection-mode {
-  position: relative;
-  left: -12px;
-  z-index: 0;
-}
-
-/* 状态 */
-/* 状态列：不换行，尽量由内容决定最小宽度 */
-th.status-col,
-td.status-col {
-  white-space: nowrap;
-  text-align: right;
-  min-width: 0;
-}
-
-/* 其他列：允许换行，降低最小宽度 */
-th:not(.status-col),
-td:not(.status-col) {
-  white-space: normal;
-  word-break: break-word;
-  min-width: 0;
-}
-/* 单元格内部容器不必撑满：用 inline-flex 即可 */
-.status-cell {
-  display: inline-flex;
-  align-items: center;
-}
-
-/* 统计值为内联块，避免撑满 */
-.records-stat {
-  display: inline-flex;
-  font-family: Consolas, "Courier New", Courier, monospace;
-  font-size: 14px;
-  padding-right: 2px;
-}
-
-/* 按钮组为内联块，不再强制贴右（因为整列已右对齐） */
-.button-group {
-  display: inline-flex;
-  height: 20px;
-  transform: translateY(1px);
-}
-
-:deep(.n-button) :hover {
-  color: var(--color-red);
-}
-
-/* 完成行样式 */
-.done-row {
-  color: var(--color-text-secondary);
-}
-
-.done-cell {
-  text-decoration: line-through var(--color-text-secondary) 0.5px;
-}
-
-.cancel-row {
-  color: var(--color-text-secondary);
-}
-
-.cancel-cell {
-  font-style: italic;
-}
-
-.title-cell {
-  position: relative;
-  cursor: pointer;
-}
-
-.cancel-icon {
-  display: inline-flex;
-  width: 18px;
-  height: 18px;
-  align-items: center;
-  justify-content: center;
-  transform: scale(1.2) translateY(2px) !important;
-  transform-origin: center;
-}
-.cancel-icon svg {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-
-.title-cell:hover::after {
-  content: "双击编辑";
-  position: absolute;
-  top: -25px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.8);
-  color: white;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  white-space: nowrap;
-  z-index: 1000;
-  pointer-events: none;
-}
-
-.title-input {
-  width: calc(100% - 10px);
-  border: 1px solid #d9d9d9;
-  border-radius: 4px;
-  font-size: inherit;
-  font-family: inherit;
-  outline: none;
-}
-
-.title-input:focus {
-  border-color: #40a9ff;
-  box-shadow: 0 0 0 2px rgba(64, 169, 255, 0.2);
-}
-
-.start-input,
-.done-input {
-  width: 32px !important;
-  max-width: 32px !important;
-  min-width: 0 !important;
-  box-sizing: border-box;
-  padding: 0px 0px;
-  font-size: inherit;
-}
-
-.time-input:focus {
-  border-color: #40a9ff;
-}
-</style>

@@ -127,7 +127,7 @@ const props = defineProps<{
   monthStartTs: number; // 月初 00:00:00（毫秒）
   dayStartTs: number;
   selectedRowId: number | null;
-  activeId: number | null;
+  activeId: number | null | undefined;
 }>();
 const selectedDate = computed(() => props.dayStartTs);
 const selectedItem = ref(1);

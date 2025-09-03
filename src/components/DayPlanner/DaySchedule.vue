@@ -7,36 +7,37 @@
       <!-- 表头部分，可单独调整样式 -->
       <colgroup>
         <!-- 勾选 -->
-        <col style="width: 18px" />
+        <col class="col-check" />
         <!-- 开始 -->
-        <col style="width: 38px" />
+        <col class="col-start" />
         <!-- 结束 -->
-        <col style="width: 38px" />
+        <col sclass="col-end" />
         <!-- 时长 -->
-        <col style="width: 34px" />
-        <!-- 意图列：吃更多空间 -->
+        <col class="col-duration" />
+        <!-- 意图 -->
         <col class="col-intent" />
-        <!-- 地点列：限制上限、避免跟着变长 -->
+        <!-- 地点 -->
         <col class="col-location" />
-        <!-- 状态列：最后才缩，常用 min-width 保护 -->
+        <!-- 状态 -->
         <col class="col-status" />
       </colgroup>
 
       <thead class="table-header">
         <tr>
-          <th></th>
-          <th>开始</th>
-          <th>结束</th>
-          <th>时长</th>
-          <th>意图</th>
-          <th>地点</th>
-          <th class="status-col">状态</th>
+          <th class="col-check"></th>
+          <th class="col-start">开始</th>
+          <th class="col-end">结束</th>
+          <th class="col-duration">时长</th>
+          <th class="col-intent">意图</th>
+          <th class="col-location">地点</th>
+          <th class="col-status">状态</th>
         </tr>
       </thead>
 
       <!-- 表格内容部分，可单独调整样式 -->
       <tbody class="table-body">
         <template v-if="schedules && schedules!.length > 0">
+          <!-- 行 -->
           <tr
             v-for="schedule in schedules.sort((a:Schedule, b:Schedule) => {
               const aValue = a.activityDueRange?.[0] ?? Infinity;
@@ -53,8 +54,9 @@
             @click="handleRowClick(schedule)"
             style="cursor: pointer"
           >
-            <!-- 完成checkbox -->
-            <td>
+            <!-- 单元格 -->
+            <!-- 1 完成状态 -->
+            <td class="col-check">
               <n-checkbox
                 v-if="schedule.status !== 'cancelled'"
                 :checked="schedule.status === 'done'"
@@ -62,16 +64,15 @@
               />
               <n-icon
                 v-else
-                size="22"
-                style="transform: translate(0px, 3px)"
-                color="var(--color-red)"
+                class="cancel-icon"
+                color="var(--color-text-secondary)"
               >
                 <DismissSquare20Filled />
               </n-icon>
             </td>
 
-            <!-- 开始时间 -->
-            <td>
+            <!-- 2 开始时间 -->
+            <td class="col-start">
               {{
                 schedule.activityDueRange
                   ? timestampToTimeString(schedule.activityDueRange[0])
@@ -79,8 +80,9 @@
               }}
             </td>
 
-            <!-- 结束时间 -->
+            <!-- 3 结束时间 -->
             <td
+              class="col-end"
               @dblclick.stop="startEditing(schedule.id, 'done')"
               :title="
                 editingRowId === schedule.id && editingField === 'done'
@@ -89,13 +91,13 @@
               "
             >
               <input
+                class="done-input time-input"
                 v-if="editingRowId === schedule.id && editingField === 'done'"
                 v-model="editingValue"
                 @blur="saveEdit(schedule)"
                 @keyup.enter="saveEdit(schedule)"
                 @keyup.esc="cancelEdit"
                 ref="editingInput"
-                class="done-input time-input"
                 :data-schedule-id="schedule.id"
                 maxlength="5"
                 autocomplete="off"
@@ -107,7 +109,7 @@
               }}</span>
             </td>
 
-            <!-- 时长 -->
+            <!-- 4 时长 -->
             <td
               :class="{ 'is-empty-min': schedule.activityDueRange?.[1] === '' }"
             >
@@ -118,9 +120,9 @@
               }}
             </td>
 
-            <!-- 意图 -->
+            <!-- 5 意图 -->
             <td
-              class="title-cell"
+              class="col-intent"
               :class="{
                 'done-cell': schedule.status === 'done',
                 'cloud-background': schedule.isUntaetigkeit === true,
@@ -134,13 +136,13 @@
               "
             >
               <input
+                class="title-input"
                 v-if="editingRowId === schedule.id && editingField === 'title'"
                 v-model="editingValue"
                 @blur="saveEdit(schedule)"
                 @keyup.enter="saveEdit(schedule)"
                 @keyup.esc="cancelEdit"
                 @click.stop
-                class="title-input"
                 :data-schedule-id="schedule.id"
                 ref="editingInput"
               />
@@ -159,16 +161,23 @@
               </template>
             </td>
 
-            <!-- 地点 -->
-            <td class="location-cell">
-              <div class="ellipsis">
+            <!-- 6 地点 -->
+            <td class="col-location">
+              <span class="ellipsis">
                 {{ schedule.location ?? "-" }}
-              </div>
+              </span>
             </td>
 
-            <!-- 状态 -->
+            <!-- 7 状态 -->
             <td class="status-col">
-              <div class="status-cell">
+              <div
+                class="status-cell"
+                :class="{
+                  'check-mode':
+                    schedule.status === 'done' ||
+                    schedule.status === 'cancelled',
+                }"
+              >
                 <div class="records-stat">&nbsp;</div>
                 <div class="button-group">
                   <n-button
@@ -184,6 +193,7 @@
                       </n-icon>
                     </template>
                   </n-button>
+
                   <!-- <n-button
                   v-if="
                     schedule.status !== 'done' &&
@@ -200,6 +210,7 @@
                     </n-icon>
                   </template>
                 </n-button> -->
+
                   <!-- 取消任务按钮 -->
                   <n-button
                     v-if="
@@ -218,24 +229,6 @@
                       </n-icon>
                     </template>
                   </n-button>
-                  <!-- 退回任务按钮 = 不再在今日
-                <n-button
-                  v-if="
-                    schedule.status !== 'done' &&
-                    schedule.status !== 'cancelled' &&
-                    schedule.isUntaetigkeit !== true
-                  "
-                  text
-                  type="info"
-                  @click="handleSuspendSchedule(schedule.id)"
-                  title="取消日程"
-                >
-                  <template #icon>
-                    <n-icon size="18">
-                      <ChevronCircleRight48Regular />
-                    </n-icon>
-                  </template>
-                </n-button> -->
                 </div>
               </div>
             </td>
@@ -293,7 +286,7 @@ const editingInput = ref<HTMLInputElement>();
 // 定义 Props
 const props = defineProps<{
   schedules: Schedule[];
-  activeId: number | null;
+  activeId: number | null | undefined;
   selectedRowId: number | null; // 新增：从父组件接收选中行ID
 }>();
 
@@ -441,27 +434,23 @@ function handleCancelSchedule(id: number) {
 /* 表格占满宽度 */
 .full-width-table {
   width: 100%;
-  border-collapse: collapse; /* 合并边框 */
-  table-layout: fixed; /* 使用固定布局算法 */
+  border-collapse: collapse;
+  table-layout: fixed;
 }
 
-/* 列配额：重点在这三列 */
 col.col-intent {
-  /* 让“意图”吃更多空间：给较大百分比或 auto */
-  width: 50%;
-  min-width: 140px; /* 抗缩性：根据内容调整 */
+  width: 40%;
+  min-width: 140px;
 }
 
 col.col-location {
-  /* “地点”不要无限拉长：较小配额 + 上限 */
-  width: 15%;
-  min-width: 80px;
+  width: 20%;
+  min-width: 75px;
 }
 
-/* 状态列：最后才缩（配额靠右，且有保底） */
 col.col-status {
   width: 1%;
-  min-width: 100px; /* 或 90~120，按你的内容调 */
+  min-width: 76px;
 }
 
 /* 表头样式 */
