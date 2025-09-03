@@ -665,7 +665,7 @@ const onDateChange = (day: number) => {
 // week和month planner 引起选中的任务行
 const onItemChange = (id: number, activityId?: number, taskId?: number) => {
   selectedRowId.value = null;
-  activeId.value = null;
+  activeId.value = undefined;
   selectedActivityId.value = null;
   if (activityId) {
     selectedActivityId.value = activityId;
@@ -683,6 +683,7 @@ const onItemChange = (id: number, activityId?: number, taskId?: number) => {
     }
   } else {
     selectedActivityId.value = null;
+    activeId.value = undefined;
   }
   if (taskId) {
     selectedTaskId.value = taskId;
@@ -814,6 +815,7 @@ function onDeleteActivity(id: number) {
   );
   if (!result) showErrorPopover("请先清空子项目再删除！");
   activeId.value = null; //
+  console.log("homedelete", activeId.value);
   saveAllDebounced();
 }
 

@@ -51,7 +51,7 @@
               'done-row': schedule.status === 'done',
               'cancel-row': schedule.status === 'cancelled',
             }"
-            @click="handleRowClick(schedule)"
+            @click.stop="handleRowClick(schedule)"
             style="cursor: pointer"
           >
             <!-- 单元格 -->

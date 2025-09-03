@@ -45,7 +45,7 @@
               'done-row': todo.status === 'done',
               'cancel-row': todo.status === 'cancelled',
             }"
-            @click="handleRowClick(todo)"
+            @click.stop="handleRowClick(todo)"
             style="cursor: pointer"
           >
             <!-- 单元格 -->

@@ -441,21 +441,23 @@ function setRowInputRef(el: InputInst | null, id: number) {
 watch(
   () => props.activeId,
   async (id) => {
-    if (id == undefined) return;
-    if (id == null) {
-      const list = sortedDisplaySheet.value; // 你的最终显示列表
+    let targetFocusId = null;
+    if (id === undefined) return;
+    if (id === null) {
+      const list = sortedDisplaySheet.value;
       const last = list[list.length - 1];
-      id = last ? last.id : null;
+      if (last && last.id !== null && last.id !== undefined) {
+        targetFocusId = last.id;
+      } else {
+        return;
+      }
+    } else {
+      targetFocusId = id;
     }
-    if (id == null) return;
-
-    // 确保对应行已经渲染完成
+    if (targetFocusId === null) return;
     await nextTick();
-
-    const inst = rowInputMap.value.get(id);
+    const inst = rowInputMap.value.get(targetFocusId);
     if (!inst) return;
-
-    // 优先组件实例的 focus，兜底用原生 input
     if (typeof inst.focus === "function") {
       inst.focus();
     } else {
@@ -463,6 +465,7 @@ watch(
     }
   }
 );
+
 // 在拖拽里用到
 function handleIconMoveMouseEnter(id: number) {
   hoveredRowId.value = id;
