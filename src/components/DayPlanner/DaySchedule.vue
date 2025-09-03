@@ -11,7 +11,7 @@
         <!-- 开始 -->
         <col class="col-start" />
         <!-- 结束 -->
-        <col sclass="col-end" />
+        <col class="col-end" />
         <!-- 时长 -->
         <col class="col-duration" />
         <!-- 意图 -->
@@ -22,7 +22,7 @@
         <col class="col-status" />
       </colgroup>
 
-      <thead class="table-header">
+      <thead>
         <tr>
           <th class="col-check"></th>
           <th class="col-start">开始</th>
@@ -35,7 +35,7 @@
       </thead>
 
       <!-- 表格内容部分，可单独调整样式 -->
-      <tbody class="table-body">
+      <tbody>
         <template v-if="schedules && schedules!.length > 0">
           <!-- 行 -->
           <tr
@@ -97,7 +97,6 @@
                 @blur="saveEdit(schedule)"
                 @keyup.enter="saveEdit(schedule)"
                 @keyup.esc="cancelEdit"
-                ref="editingInput"
                 :data-schedule-id="schedule.id"
                 maxlength="5"
                 autocomplete="off"
@@ -111,6 +110,7 @@
 
             <!-- 4 时长 -->
             <td
+              class="col-duration"
               :class="{ 'is-empty-min': schedule.activityDueRange?.[1] === '' }"
             >
               {{
@@ -144,7 +144,6 @@
                 @keyup.esc="cancelEdit"
                 @click.stop
                 :data-schedule-id="schedule.id"
-                ref="editingInput"
               />
               <span class="ellipsis" v-else>{{
                 schedule.activityTitle ?? "-"
@@ -281,7 +280,6 @@ import { Task } from "@/core/types/Task";
 const editingRowId = ref<number | null>(null);
 const editingField = ref<null | "title" | "start" | "done">(null);
 const editingValue = ref("");
-const editingInput = ref<HTMLInputElement>();
 
 // 定义 Props
 const props = defineProps<{
@@ -437,24 +435,45 @@ function handleCancelSchedule(id: number) {
   border-collapse: collapse;
   table-layout: fixed;
 }
+col.col-check {
+  width: 20px;
+}
 
+col.col-start {
+  width: 40px;
+}
+
+col.col-end {
+  width: 40px;
+}
+
+col.col-duration {
+  width: 35px;
+}
 col.col-intent {
-  width: 40%;
+  width: 60%;
   min-width: 140px;
 }
 
 col.col-location {
-  width: 20%;
+  width: 40%;
   min-width: 75px;
 }
 
 col.col-status {
-  width: 1%;
-  min-width: 76px;
+  width: 76px;
+}
+
+thead th,
+tbody td {
+  box-sizing: border-box; /* 避免 padding/border 影响固定计算 */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* 表头样式 */
-.table-header th {
+thead th {
   padding: 2px;
   text-align: center;
   border-bottom: 2px solid var(--color-background-dark);
@@ -467,9 +486,68 @@ col.col-status {
   background-color: var(--color-background) !important;
 }
 
+/* 行样式 */
+/* 隔行变色 */
+tr:nth-child(even) {
+  background-color: var(--color-background-light-transparent);
+}
+
+/* hover 高亮（不加 !important，便于被 selected/active 覆盖） */
+tr:hover {
+  background-color: var(--color-cyan-light-transparent);
+}
+
+/* 激活行样式（覆盖一切） */
+tr.active-row {
+  background-color: var(--color-red-light-transparent) !important;
+}
+
+/* 选中行样式（覆盖一切） */
+tr.selected-row {
+  background-color: var(--color-yellow-transparent) !important;
+}
+
+/* 当同时 active + selected 时，明确以 selected 的颜色为准（可留可删） */
+tr.active-row.selected-row {
+  background-color: var(--color-yellow-transparent) !important;
+}
+
+/* 统一过渡效果 */
+tr,
+tr:hover,
+tr.active-row,
+tr.selected-row {
+  transition: background-color 0.2s ease;
+}
+
+/* 行状态样式 */
+tr.done-row {
+  color: var(--color-text-secondary);
+}
+
+tr.done-cell {
+  text-decoration: line-through var(--color-text-secondary) 0.5px;
+}
+
+tr.cancel-row {
+  color: var(--color-text-secondary);
+}
+
+tr.cancel-cell {
+  font-style: italic;
+}
+
+tr.empty-row {
+  height: 30px;
+  text-align: center;
+  color: var(--color-text-secondary);
+  width: 100%;
+  border-bottom: 1px solid var(--color-background);
+}
+
 /* 表格内容样式 */
-.table-body td {
-  padding-top: 3px;
+td {
+  padding: 2px 0px;
   border-bottom: 1px solid var(--color-background-dark);
   white-space: nowrap;
   overflow: hidden;
@@ -477,71 +555,34 @@ col.col-status {
   height: 25px;
 }
 
-.table-body td:first-child,
-.table-body td:nth-child(2),
-.table-body td:nth-child(3),
-.table-body td:nth-child(4) {
+td:first-child,
+td:nth-child(2),
+td:nth-child(3),
+td:nth-child(4) {
   text-align: center;
 }
 
-.table-body td:nth-child(7) {
-  justify-content: center; /* 水平居中 */
-  align-items: center; /* 垂直居中 */
+td:nth-child(7) {
   min-height: 25px;
   height: 25px;
 }
 
+th.status-col,
+td.status-col {
+  white-space: nowrap;
+  text-align: right;
+  min-width: 0;
+}
+
 /* 补充：让省略容器具备可计算宽度并允许收缩 */
-.location-cell .ellipsis,
-.title-cell .ellipsis {
+.col-location .ellipsis,
+.col-intent .ellipsis {
   display: block; /* 或 inline-block */
   width: 100%;
   min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-/* 隔行变色 */
-.table-body tr:nth-child(even) {
-  background-color: var(--color-background-light);
-}
-
-/* 激活行样式 */
-.table-body tr.active-row {
-  background-color: var(--color-red-light-transparent) !important;
-  transition: background-color 0.2s ease;
-}
-
-/* 选中行样式 */
-.table-body tr.selected-row {
-  background-color: var(--color-yellow-transparent) !important;
-  transition: background-color 0.2s ease;
-}
-
-/* 确保选中行的样式优先级高于其他样式 */
-.table-body tr.selected-row:nth-child(even) {
-  background-color: var(--color-yellow-light-transparent) !important;
-}
-
-/* 同时具有active和selected状态时的样式 */
-.table-body tr.active-row.selected-row {
-  background-color: var(--color-yellow-light-transparent) !important;
-}
-
-/* 鼠标悬停效果 */
-.table-body tr:hover {
-  background-color: var(--color-cyan-light-transparent);
-  transition: background-color 0.2s ease;
-}
-
-/* 空行样式 */
-.empty-row td {
-  height: 30px;
-  text-align: center;
-  color: var(--color-text-secondary);
-  width: 100%;
-  border-bottom: 1px solid var(--color-background);
 }
 
 .is-empty-min {
@@ -563,27 +604,6 @@ col.col-status {
 
 .cancel-cell {
   font-style: italic;
-}
-
-.title-cell {
-  position: relative;
-  cursor: pointer;
-}
-
-.title-cell:hover::after {
-  content: "双击编辑";
-  position: absolute;
-  top: -25px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.8);
-  color: white;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  white-space: nowrap;
-  z-index: 1000;
-  pointer-events: none;
 }
 
 .title-input {
@@ -632,19 +652,6 @@ col.col-status {
   border-width: 1.2px;
 }
 
-th.status-col,
-td.status-col {
-  white-space: nowrap;
-  text-align: right;
-  min-width: 0;
-}
-
-/* 其他列：允许换行，降低最小宽度 */
-th:not(.status-col),
-td:not(.status-col) {
-  white-space: nowrap;
-  min-width: 0;
-}
 /* 单元格内部容器不必撑满：用 inline-flex 即可 */
 .status-cell {
   display: inline-flex;

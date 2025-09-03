@@ -56,7 +56,6 @@
                 :checked="todo.status === 'done'"
                 @update:checked="handleCheckboxChange(todo.id, $event)"
               />
-
               <n-icon
                 v-else
                 class="cancel-icon"
@@ -83,7 +82,6 @@
                 @blur="saveEdit(todo)"
                 @keyup.enter="saveEdit(todo)"
                 @keyup.esc="cancelEdit"
-                ref="editingInput"
                 :data-todo-id="todo.id"
                 maxlength="5"
                 autocomplete="off"
@@ -95,7 +93,7 @@
 
             <!-- 3 结束时间 -->
             <td
-              class="col-start"
+              class="col-end"
               @dblclick.stop="startEditing(todo.id, 'done')"
               :title="
                 editingRowId === todo.id && editingField === 'done'
@@ -110,7 +108,6 @@
                 @blur="saveEdit(todo)"
                 @keyup.enter="saveEdit(todo)"
                 @keyup.esc="cancelEdit"
-                ref="editingInput"
                 :data-todo-id="todo.id"
                 maxlength="5"
                 autocomplete="off"
@@ -121,31 +118,30 @@
             </td>
 
             <!-- 4 排序 -->
-            <td
-              class="col-rank priority-cell"
-              @click="startEditingPriority(todo)"
-            >
-              <template v-if="editingTodo && editingTodo.id === todo.id">
-                <n-input-number
-                  v-model:value="editingPriority"
-                  :min="0"
-                  :max="10"
-                  @blur="finishEditing"
-                  @keydown.enter="finishEditing"
-                  size="small"
-                  style="width: 30px"
-                  :show-button="false"
-                  placeholder=" "
-                />
-              </template>
-              <template v-else>
-                <span
-                  class="priority-badge"
-                  :class="'priority-' + todo.priority"
-                >
-                  {{ todo.priority > 0 ? todo.priority : "—" }}
-                </span>
-              </template>
+            <td class="col-rank" @dblclick="startEditingPriority(todo)">
+              <n-input-number
+                class="rank-input"
+                v-if="editingTodo && editingTodo.id === todo.id"
+                v-model:value="editingPriority"
+                :min="0"
+                :max="10"
+                @blur="finishEditing"
+                @keydown.enter="finishEditing"
+                @focus="handleInputFocus"
+                size="small"
+                @click.stop
+                autofocus
+                :show-button="false"
+                placeholder=" "
+              />
+
+              <span
+                v-else
+                class="priority-badge"
+                :class="'priority-' + todo.priority"
+              >
+                {{ todo.priority > 0 ? todo.priority : "—" }}
+              </span>
             </td>
 
             <!-- 5 意图 -->
@@ -171,7 +167,6 @@
                 @keyup.esc="cancelEdit"
                 @click.stop
                 :data-todo-id="todo.id"
-                ref="editingInput"
               />
               <span class="ellipsis" v-else>{{
                 todo.activityTitle ?? "-"
@@ -272,8 +267,8 @@
                 >
                   {{ averageValue(todo.energyRecords) }}|{{
                     averageValue(todo.rewardRecords)
-                  }}|{{ countInterruptions(todo.interruptionRecords, "E") }}|{{
-                    countInterruptions(todo.interruptionRecords, "I")
+                  }}|{{ countInterruptions(todo.interruptionRecords, "I") }}|{{
+                    countInterruptions(todo.interruptionRecords, "E")
                   }}
                 </div>
                 <div
@@ -404,7 +399,7 @@
 }
 
 col.col-check {
-  width: 18px;
+  width: 20px;
 }
 
 col.col-start {
@@ -516,7 +511,7 @@ tr.empty-row {
 
 /* 表格内容样式 */
 td {
-  padding-top: 3px;
+  padding: 2px 0px;
   border-bottom: 1px solid var(--color-background-dark);
   white-space: nowrap;
   overflow: hidden;
@@ -553,18 +548,12 @@ td.status-col {
   text-overflow: ellipsis;
 }
 
-/* 优先级单元格样式 */
-.priority-cell {
-  cursor: pointer;
-  text-align: center;
-}
-
 .priority-badge {
   display: inline-flex;
   align-items: center !important;
   justify-content: center !important;
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   position: relative;
   top: -1px;
   border-radius: 50%;
@@ -660,7 +649,6 @@ td.status-col {
 }
 
 .pomo-grape :deep(.n-checkbox-box) {
-  /* --n-color-checked: var(--color-purple-light); */
   --n-color: var(--color-purple-light-transparent);
   --n-box-shadow-focus: 0 0 0 0;
   --n-border: 1px solid var(--color-purple-dark);
@@ -713,13 +701,16 @@ td.status-col {
   color: var(--color-red);
 }
 
+td.col-check {
+  padding-left: 4px;
+}
 .cancel-icon {
   display: inline-flex;
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   align-items: center;
   justify-content: center;
-  transform: scale(1.2) translateY(2px) !important;
+  transform: scale(1.4) translateY(2px) !important;
   transform-origin: center;
 }
 
@@ -729,39 +720,39 @@ td.status-col {
   height: 100%;
 }
 
-.title-cell {
-  position: relative;
-  cursor: pointer;
+.rank-input {
+  border: 1px solid #40a9ff;
+  width: 20px;
+  height: 18px;
+  border-radius: 4px;
+  outline: none;
+  margin-left: 6px;
 }
 
-.title-cell:hover::after {
-  content: "双击编辑";
-  position: absolute;
-  top: -25px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.8);
-  color: white;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  white-space: nowrap;
-  z-index: 1000;
-  pointer-events: none;
+.rank-input :deep(.n-input-wrapper) {
+  height: 18px;
+  line-height: 22px;
+  padding-left: 2px;
+  padding-right: 2px;
+}
+
+:deep(.n-input .n-input__input-el) {
+  --n-border-radius: 4px;
+  --n-height: 12px;
+  transform: translateY(-1px);
 }
 
 .title-input {
   width: calc(100% - 10px);
-  border: 1px solid #d9d9d9;
+  border: 1px solid #40a9ff;
   border-radius: 4px;
-  font-size: inherit;
-  font-family: inherit;
   outline: none;
 }
 
-.title-input:focus {
-  border-color: #40a9ff;
-  box-shadow: 0 0 0 2px rgba(64, 169, 255, 0.2);
+.time-input {
+  border: 1px solid #40a9ff;
+  border-radius: 4px;
+  outline: none;
 }
 
 .start-input,
@@ -796,7 +787,6 @@ import { Task } from "@/core/types/Task";
 const editingRowId = ref<number | null>(null);
 const editingField = ref<null | "title" | "start" | "done">(null);
 const editingValue = ref("");
-const editingInput = ref<HTMLInputElement>();
 
 // 添加状态来控制提示信息
 const showPopover = ref(false);
@@ -1114,6 +1104,7 @@ function startEditing(todoId: number, field: "title" | "start" | "done") {
       `input.${field}-input[data-todo-id="${todoId}"]`
     );
     if (input) {
+      console.log(input);
       (input as HTMLInputElement).focus();
     }
   });
@@ -1235,5 +1226,12 @@ function countInterruptions(
   let count = 0;
   for (const r of records) if (r?.interruptionType === type) count++;
   return count;
+}
+
+function handleInputFocus(event: FocusEvent) {
+  const inputElement = event.target as HTMLInputElement;
+  if (inputElement) {
+    inputElement.select();
+  }
 }
 </script>
