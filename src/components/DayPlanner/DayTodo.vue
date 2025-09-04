@@ -118,21 +118,18 @@
             </td>
 
             <!-- 4 排序 -->
-            <td class="col-rank" @dblclick="startEditingPriority(todo)">
+            <td class="col-rank" @click.stop="startEditingPriority(todo)">
               <n-input-number
                 class="rank-input"
                 v-if="editingTodo && editingTodo.id === todo.id"
                 v-model:value="editingPriority"
                 :min="0"
-                :max="10"
-                @blur="finishEditing"
-                @keydown.enter="finishEditing"
-                @focus="handleInputFocus"
+                :max="11"
                 size="small"
-                @click.stop
-                autofocus
                 :show-button="false"
                 placeholder=" "
+                @blur="finishEditing"
+                @keydown.enter="finishEditing"
               />
 
               <span
@@ -383,6 +380,458 @@
     />
   </n-modal>
 </template>
+<script setup lang="ts">
+import type { Todo, TodoWithTaskRecords } from "@/core/types/Todo";
+import { timestampToTimeString } from "@/core/utils";
+import {
+  ChevronCircleRight48Regular,
+  ChevronCircleDown48Regular,
+  DismissCircle20Regular,
+  // ArrowRepeatAll24Regular,
+  DismissSquare20Filled,
+  CaretLeft12Filled,
+  CaretRight12Filled,
+} from "@vicons/fluent";
+import { NCheckbox, NInputNumber, NPopover, NButton, NIcon } from "naive-ui";
+import { ref, computed, nextTick } from "vue";
+import { taskService } from "@/services/taskService";
+import { Task } from "@/core/types/Task";
+
+// 编辑用
+const editingRowId = ref<number | null>(null);
+const editingField = ref<null | "title" | "start" | "done">(null);
+const editingValue = ref("");
+
+// 添加状态来控制提示信息
+const showPopover = ref(false);
+const popoverMessage = ref("");
+
+// 添加状态来控制输入框的显示
+const showEstimateInput = ref(false);
+const currentTodoId = ref<number | null>(null);
+const newEstimate = ref<number>(1);
+
+// 定义 Props
+const props = defineProps<{
+  todos: TodoWithTaskRecords[];
+  activeId: number | null | undefined;
+  selectedRowId: number | null; // 新增：从父组件接收选中行ID
+}>();
+
+const emit = defineEmits<{
+  (e: "suspend-todo", id: number): void;
+  (e: "cancel-todo", id: number): void;
+  // (e: "repeat-todo", id: number): void;
+  (e: "update-todo-status", id: number, checked: boolean): void;
+  (
+    e: "batch-update-priorities",
+    updates: Array<{ id: number; priority: number }>
+  ): void;
+  (e: "update-todo-pomo", id: number, realPomo: number[]): void;
+  (e: "update-todo-est", id: number, estPomo: number[]): void;
+
+  (e: "select-task", taskId: number | null): void;
+  (e: "select-row", id: number | null): void;
+  (e: "select-activity", activityId: number | null): void;
+  (e: "edit-todo-title", id: number, newTitle: string): void;
+  (e: "edit-todo-start", id: number, newTs: string): void;
+  (e: "edit-todo-done", id: number, newTs: string): void;
+  (e: "convert-todo-to-task", payload: { task: Task; todoId: number }): void;
+}>();
+
+// 对待办事项按优先级降序排序（高优先级在前）
+const sortedTodos = computed(() => {
+  if (!props.todos || props.todos.length === 0) {
+    return [];
+  }
+
+  return [...props.todos].sort((a, b) => {
+    // 0 放最后
+    if (a.priority === 0 && b.priority === 0) return 0;
+    if (a.priority === 0) return 1;
+    if (b.priority === 0) return -1;
+    // 其余越小越优先
+    return a.priority - b.priority;
+  });
+});
+
+// 优先级 排序================
+const editingTodo = ref<Todo | null>(null);
+const editingPriority = ref<number>(0);
+
+// 开始编辑优先级
+function startEditingPriority(todo: Todo) {
+  editingTodo.value = todo;
+  editingPriority.value = todo.priority;
+  nextTick(() => {
+    const input = document.querySelector(".rank-input .n-input__input-el");
+    if (input) {
+      console.log(input);
+      (input as HTMLInputElement).select();
+    }
+  });
+}
+
+function finishEditing() {
+  if (!editingTodo.value) return;
+  if (editingPriority.value === 11) {
+    popoverMessage.value = "请输入1-10";
+    showPopover.value = true;
+    setTimeout(() => {
+      showPopover.value = false;
+    }, 2000);
+    editingTodo.value = null;
+    return;
+  }
+
+  const current = editingTodo.value;
+  const desired = editingPriority.value;
+
+  if (current.priority === desired) {
+    editingTodo.value = null;
+    return;
+  }
+
+  const before = new Map<number, number>();
+  props.todos.forEach((t) => before.set(t.id, t.priority));
+
+  // 关键：不再提前修改 priority，而是把 current 和 desired 传给排序函数
+  // 让排序函数自己去智能处理
+  relayoutPriority(props.todos, current, desired);
+
+  // 后续逻辑不变...
+  const updates: Array<{ id: number; priority: number }> = [];
+  props.todos.forEach((t) => {
+    const oldP = before.get(t.id);
+    if (oldP !== t.priority) {
+      updates.push({ id: t.id, priority: t.priority });
+    }
+  });
+
+  if (updates.length > 0) {
+    popoverMessage.value = "优先级已更新";
+    showPopover.value = true;
+    setTimeout(() => (showPopover.value = false), 2000);
+    emit("batch-update-priorities", updates);
+  }
+
+  editingTodo.value = null;
+}
+
+// 传入 current 和 desired，让排序更智能
+function relayoutPriority(todos: Todo[], current: Todo, desired: number) {
+  const locked = new Set<number>();
+  todos.forEach((t) => {
+    if (t.status === "done" && t.priority > 0) locked.add(t.priority);
+  });
+
+  const active = todos.filter(
+    (t) => t.status !== "done" && t.status !== "cancelled"
+  );
+
+  active.sort((a, b) => {
+    // 为 a 和 b 获取用于比较的“有效优先级”
+    let pA = a.priority;
+    let pB = b.priority;
+
+    // 如果任务是正在被移动的那个，使用它的“目标优先级”
+    if (a.id === current.id) pA = desired;
+    if (b.id === current.id) pB = desired;
+
+    // 如果是把一个任务往前移（例如 P3 -> P1）
+    // 正在移动的任务应该排在目标位置任务的“前面”
+    if (a.id === current.id && a.priority > desired && pA === pB) {
+      return -1;
+    }
+    // 如果是把一个任务往后移（例如 P1 -> P3）
+    // 正在移动的任务应该排在目标位置任务的“后面”
+    if (a.id === current.id && a.priority < desired && pA === pB) {
+      return 1;
+    }
+
+    // 对于其他情况，正常比较
+    // 1. 无效优先级排在后面
+    const aIsLow = pA <= 0 ? 1 : 0;
+    const bIsLow = pB <= 0 ? 1 : 0;
+    if (aIsLow !== bIsLow) return aIsLow - bIsLow;
+
+    // 2. 按优先级数字排序
+    if (pA !== pB) return pA - pB;
+
+    // 3. 稳定排序
+    return a.id - b.id;
+  });
+
+  // 重新编号 (逻辑不变)
+  let next = 1;
+  for (const t of active) {
+    while (locked.has(next)) next++;
+    t.priority = next;
+    next++;
+  }
+}
+// ===================================
+// 更新打钩状态
+function handleCheckboxChange(id: number, checked: boolean) {
+  emit("update-todo-status", id, checked);
+}
+
+// 番茄估计=============================
+// 检查番茄钟是否完成
+function isPomoCompleted(
+  todo: Todo,
+  estIndex: number,
+  pomoIndex: number
+): boolean {
+  if (!todo.realPomo || todo.realPomo.length <= estIndex) return false;
+  return todo.realPomo[estIndex] >= pomoIndex;
+}
+
+// 处理番茄钟勾选
+function handlePomoCheck(
+  todo: Todo,
+  estIndex: number,
+  pomoIndex: number,
+  checked: boolean
+) {
+  // 确保 realPomo 数组存在且长度与 estPomo 一致
+  if (!todo.realPomo) todo.realPomo = [];
+  if (!todo.estPomo) todo.estPomo = [];
+  while (todo.realPomo.length < todo.estPomo.length) {
+    todo.realPomo.push(0);
+  }
+
+  if (checked) {
+    todo.realPomo[estIndex] = Math.max(todo.realPomo[estIndex], pomoIndex);
+  } else {
+    todo.realPomo[estIndex] = Math.min(todo.realPomo[estIndex], pomoIndex - 1);
+  }
+
+  // 通知父组件更新
+  emit("update-todo-pomo", todo.id, todo.realPomo);
+}
+
+// 处理新增估计
+function handleAddEstimate(todo: Todo) {
+  currentTodoId.value = todo.id;
+  newEstimate.value = 1;
+  showEstimateInput.value = true;
+}
+
+// 确认添加新的估计
+function confirmAddEstimate() {
+  if (!currentTodoId.value) return;
+
+  const todo = props.todos.find((t) => t.id === currentTodoId.value);
+  if (!todo) return;
+
+  // 确保 estPomo 数组存在
+  if (!todo.estPomo) todo.estPomo = [];
+
+  // 添加新的估计值
+  todo.estPomo.push(newEstimate.value);
+
+  // 通知父组件更新
+  emit("update-todo-est", todo.id, todo.estPomo);
+
+  // 重置状态并关闭对话框
+  showEstimateInput.value = false;
+  currentTodoId.value = null;
+  newEstimate.value = 1; // 重置为默认值
+}
+
+// 取消添加
+function cancelAddEstimate() {
+  showEstimateInput.value = false;
+  currentTodoId.value = null;
+  newEstimate.value = 1; // 重置为默认值
+}
+
+// 删除估计
+function handleDeleteEstimate(todo: Todo) {
+  if (todo.estPomo && todo.estPomo.length > 0) {
+    // 要删除的下标是最后一项
+    const delIdx = todo.estPomo.length - 1;
+    if (
+      todo.realPomo &&
+      delIdx < todo.realPomo.length &&
+      todo.realPomo[delIdx] !== undefined &&
+      todo.realPomo[delIdx] !== 0
+    ) {
+      // realPomo此位置已被填写，提示不能删
+      popoverMessage.value = "已经有实际完成，不可删除~";
+      showPopover.value = true;
+      setTimeout(() => {
+        showPopover.value = false;
+      }, 2000);
+      return;
+    }
+    // 可以删
+    todo.estPomo.pop();
+    emit("update-todo-est", todo.id, todo.estPomo);
+  } else {
+    popoverMessage.value = "没啦，别删了~";
+    showPopover.value = true;
+    setTimeout(() => {
+      showPopover.value = false;
+    }, 2000);
+    return;
+  }
+}
+
+// 修改点击行处理函数
+function handleRowClick(todo: Todo) {
+  emit("select-row", todo.id); // 新增：发送选中行事件
+  emit("select-task", todo.taskId || null);
+  emit("select-activity", todo.activityId || null);
+}
+
+// 编辑相关函数
+function startEditing(todoId: number, field: "title" | "start" | "done") {
+  const todo = props.todos.find((t) => t.id === todoId);
+  if (!todo) return;
+  editingRowId.value = todoId;
+  editingField.value = field;
+  editingValue.value =
+    field === "title"
+      ? todo.activityTitle || ""
+      : field === "start"
+      ? todo.taskId
+        ? timestampToTimeString(todo.taskId)
+        : ""
+      : todo.doneTime
+      ? timestampToTimeString(todo.doneTime)
+      : "";
+
+  // 使用 querySelector 来获取当前编辑的输入框，而不是依赖 ref
+  nextTick(() => {
+    const input = document.querySelector(
+      `input.${field}-input[data-todo-id="${todoId}"]`
+    );
+    if (input) {
+      (input as HTMLInputElement).focus();
+    }
+  });
+}
+
+// 注意这里是 timestring 不是timestamp，是在Home用currentViewdate进行的转化
+function saveEdit(todo: Todo) {
+  if (!editingRowId.value) return;
+
+  if (editingField.value === "title") {
+    if (editingValue.value.trim()) {
+      emit("edit-todo-title", todo.id, editingValue.value.trim());
+    }
+  }
+
+  if (editingField.value === "start") {
+    if (isValidTimeString(editingValue.value)) {
+      const ts = editingValue.value;
+      emit("edit-todo-start", todo.id, ts);
+    }
+  }
+
+  if (editingField.value === "done") {
+    if (isValidTimeString(editingValue.value)) {
+      const ts = editingValue.value;
+      emit("edit-todo-done", todo.id, ts);
+    } else {
+      if (editingValue.value === "") {
+        emit("edit-todo-done", todo.id, "");
+      }
+    }
+  }
+  cancelEdit();
+}
+
+function cancelEdit() {
+  editingRowId.value = null;
+  editingField.value = null;
+  editingValue.value = "";
+}
+
+function isValidTimeString(str: string) {
+  return (
+    /^\d{2}:\d{2}$/.test(str) &&
+    +str.split(":")[0] <= 24 &&
+    +str.split(":")[1] < 60
+  );
+}
+
+// 转换为任务
+function handleConvertToTask(todo: Todo) {
+  if (todo.taskId) {
+    popoverMessage.value = "该待办已转换为任务";
+    showPopover.value = true;
+    setTimeout(() => {
+      showPopover.value = false;
+    }, 2000);
+    return;
+  }
+
+  const task = taskService.createTaskFromTodo(
+    todo.id,
+    todo.activityTitle,
+    todo.projectName
+  );
+
+  if (task) {
+    // 立即更新本地的 taskId
+    todo.taskId = task.id;
+
+    emit("convert-todo-to-task", { task: task, todoId: todo.id });
+    popoverMessage.value = "完成任务转换";
+    showPopover.value = true;
+    setTimeout(() => {
+      showPopover.value = false;
+    }, 2000);
+  }
+}
+
+// suspended Todo
+function handleSuspendTodo(id: number) {
+  emit("suspend-todo", id);
+}
+
+function handleCancelTodo(id: number) {
+  emit("cancel-todo", id);
+}
+
+// 取消repeat功能简化页面，Activity部分可以完成同样功能
+// function handleRepeatTodo(id: number) {
+//   emit("repeat-todo", id);
+// }
+
+// 1) 计算平均值（适用于 EnergyRecord[] 或 RewardRecord[]）
+// 空、null、undefined 或 [] 返回 null
+function averageValue<T extends { value: number }>(
+  records: T[] | null | undefined
+): number | string {
+  if (!Array.isArray(records) || records.length === 0) return "-";
+  let sum = 0,
+    count = 0;
+  for (const r of records) {
+    const v = r?.value;
+    if (typeof v === "number" && Number.isFinite(v)) {
+      sum += v;
+      count++;
+    }
+  }
+  return count === 0 ? "-" : sum / count;
+}
+
+// 2) 统计中断类型数量（"E" 或 "I"）
+// 空、null、undefined 或 [] 返回 null
+function countInterruptions(
+  records: { interruptionType: "E" | "I" }[] | null | undefined,
+  type: "E" | "I"
+): number | string {
+  if (!Array.isArray(records) || records.length === 0) return "-";
+  let count = 0;
+  for (const r of records) if (r?.interruptionType === type) count++;
+  return count;
+}
+</script>
 
 <style scoped>
 /* 表格容器样式，占满页面 */
@@ -765,473 +1214,3 @@ td.col-check {
   font-size: inherit;
 }
 </style>
-
-<script setup lang="ts">
-import type { Todo, TodoWithTaskRecords } from "@/core/types/Todo";
-import { timestampToTimeString } from "@/core/utils";
-import {
-  ChevronCircleRight48Regular,
-  ChevronCircleDown48Regular,
-  DismissCircle20Regular,
-  // ArrowRepeatAll24Regular,
-  DismissSquare20Filled,
-  CaretLeft12Filled,
-  CaretRight12Filled,
-} from "@vicons/fluent";
-import { NCheckbox, NInputNumber, NPopover, NButton, NIcon } from "naive-ui";
-import { ref, computed, nextTick } from "vue";
-import { taskService } from "@/services/taskService";
-import { Task } from "@/core/types/Task";
-
-// 编辑用
-const editingRowId = ref<number | null>(null);
-const editingField = ref<null | "title" | "start" | "done">(null);
-const editingValue = ref("");
-
-// 添加状态来控制提示信息
-const showPopover = ref(false);
-const popoverMessage = ref("");
-
-// 添加状态来控制输入框的显示
-const showEstimateInput = ref(false);
-const currentTodoId = ref<number | null>(null);
-const newEstimate = ref<number>(1);
-
-// 定义 Props
-const props = defineProps<{
-  todos: TodoWithTaskRecords[];
-  activeId: number | null | undefined;
-  selectedRowId: number | null; // 新增：从父组件接收选中行ID
-}>();
-
-const emit = defineEmits<{
-  (e: "suspend-todo", id: number): void;
-  (e: "cancel-todo", id: number): void;
-  // (e: "repeat-todo", id: number): void;
-  (e: "update-todo-status", id: number, checked: boolean): void;
-  (
-    e: "batch-update-priorities",
-    updates: Array<{ id: number; priority: number }>
-  ): void;
-  (e: "update-todo-pomo", id: number, realPomo: number[]): void;
-  (e: "update-todo-est", id: number, estPomo: number[]): void;
-
-  (e: "select-task", taskId: number | null): void;
-  (e: "select-row", id: number | null): void;
-  (e: "select-activity", activityId: number | null): void;
-  (e: "edit-todo-title", id: number, newTitle: string): void;
-  (e: "edit-todo-start", id: number, newTs: string): void;
-  (e: "edit-todo-done", id: number, newTs: string): void;
-  (e: "convert-todo-to-task", payload: { task: Task; todoId: number }): void;
-}>();
-
-const editingTodo = ref<Todo | null>(null);
-const editingPriority = ref<number>(0);
-
-// 对待办事项按优先级降序排序（高优先级在前）
-const sortedTodos = computed(() => {
-  if (!props.todos || props.todos.length === 0) {
-    return [];
-  }
-
-  return [...props.todos].sort((a, b) => {
-    // 0 放最后
-    if (a.priority === 0 && b.priority === 0) return 0;
-    if (a.priority === 0) return 1;
-    if (b.priority === 0) return -1;
-    // 其余越小越优先
-    return a.priority - b.priority;
-  });
-});
-
-// 开始编辑优先级
-function startEditingPriority(todo: Todo) {
-  editingTodo.value = todo;
-  editingPriority.value = todo.priority;
-}
-
-// 重新排序
-function relayoutPriority(todos: Todo[]) {
-  // 获取已完成任务的优先级集合
-  const lockedPriorities = new Set(
-    todos
-      .filter((t) => t.status === "done" && t.priority > 0)
-      .map((t) => t.priority)
-  );
-
-  // 获取未完成且优先级>0的任务
-  const active = todos
-    .filter((t) => t.status !== "done" && t.priority > 0)
-    .sort((a, b) => a.priority - b.priority);
-
-  // 获取所有可用的优先级（排除已锁定的）
-  const availablePriorities = new Set<number>();
-  for (let i = 1; i <= 10; i++) {
-    if (!lockedPriorities.has(i)) {
-      availablePriorities.add(i);
-    }
-  }
-
-  // 按顺序分配可用的优先级
-  let priorityIndex = 0;
-  active.forEach((t) => {
-    const availablePriority = Array.from(availablePriorities)[priorityIndex];
-    if (availablePriority) {
-      t.priority = availablePriority;
-      priorityIndex++;
-    }
-  });
-}
-
-// 结束优先级编辑
-function finishEditing() {
-  if (!editingTodo.value) return;
-
-  // 1. 统计已完成任务的优先级集合（要锁定）
-  const lockedPriorities = new Set(
-    props.todos
-      .filter((t) => t.status === "done" && t.priority > 0)
-      .map((t) => t.priority)
-  );
-
-  // 2. 统计所有未完成任务
-  const activeTodos = props.todos.filter(
-    (t) => t.status !== "done" && t.priority > 0
-  );
-
-  // 3. 优先级调整
-  let desiredPriority = editingPriority.value;
-
-  // 如果目标优先级已被锁定，显示提示并退出
-  if (desiredPriority > 0 && lockedPriorities.has(desiredPriority)) {
-    popoverMessage.value = "该优先级已被占用";
-    showPopover.value = true;
-    setTimeout(() => {
-      showPopover.value = false;
-    }, 2000);
-    editingTodo.value = null;
-    return;
-  }
-
-  // 4. 检查是否真的发生了变化
-  if (editingTodo.value.priority === desiredPriority) {
-    editingTodo.value = null;
-    return;
-  }
-
-  // 5. 准备批量更新
-  const updates: Array<{ id: number; priority: number }> = [];
-
-  // 如果设置为0，单独处理
-  if (desiredPriority === 0) {
-    updates.push({
-      id: editingTodo.value.id,
-      priority: 0,
-    });
-  } else {
-    // 处理冲突：所有 >= 新优先级的未完成任务，编号往后挪
-    activeTodos.forEach((t) => {
-      if (t.id !== editingTodo.value!.id && t.priority >= desiredPriority) {
-        updates.push({ id: t.id, priority: t.priority + 1 });
-      }
-    });
-
-    // 当前项赋值
-    updates.push({
-      id: editingTodo.value.id,
-      priority: desiredPriority,
-    });
-  }
-
-  // 6. 应用更新
-  if (updates.length > 0) {
-    emit("batch-update-priorities", updates);
-
-    // 立即更新本地状态以获得良好的用户体验
-    updates.forEach((update) => {
-      const todo = props.todos.find((t) => t.id === update.id);
-      if (todo) todo.priority = update.priority;
-    });
-
-    popoverMessage.value = "优先级已更新";
-    showPopover.value = true;
-    setTimeout(() => {
-      showPopover.value = false;
-    }, 2000);
-  }
-
-  // 退出编辑模式
-  editingTodo.value = null;
-  //  确保优先级连续
-  relayoutPriority(props.todos);
-}
-
-// 更新打钩状态
-function handleCheckboxChange(id: number, checked: boolean) {
-  emit("update-todo-status", id, checked);
-}
-
-// 番茄估计
-// 检查番茄钟是否完成
-function isPomoCompleted(
-  todo: Todo,
-  estIndex: number,
-  pomoIndex: number
-): boolean {
-  if (!todo.realPomo || todo.realPomo.length <= estIndex) return false;
-  return todo.realPomo[estIndex] >= pomoIndex;
-}
-
-// 处理番茄钟勾选
-function handlePomoCheck(
-  todo: Todo,
-  estIndex: number,
-  pomoIndex: number,
-  checked: boolean
-) {
-  // 确保 realPomo 数组存在且长度与 estPomo 一致
-  if (!todo.realPomo) todo.realPomo = [];
-  if (!todo.estPomo) todo.estPomo = [];
-  while (todo.realPomo.length < todo.estPomo.length) {
-    todo.realPomo.push(0);
-  }
-
-  if (checked) {
-    todo.realPomo[estIndex] = Math.max(todo.realPomo[estIndex], pomoIndex);
-  } else {
-    todo.realPomo[estIndex] = Math.min(todo.realPomo[estIndex], pomoIndex - 1);
-  }
-
-  // 通知父组件更新
-  emit("update-todo-pomo", todo.id, todo.realPomo);
-}
-
-// 处理新增估计
-function handleAddEstimate(todo: Todo) {
-  currentTodoId.value = todo.id;
-  newEstimate.value = 1;
-  showEstimateInput.value = true;
-}
-
-// 确认添加新的估计
-function confirmAddEstimate() {
-  if (!currentTodoId.value) return;
-
-  const todo = props.todos.find((t) => t.id === currentTodoId.value);
-  if (!todo) return;
-
-  // 确保 estPomo 数组存在
-  if (!todo.estPomo) todo.estPomo = [];
-
-  // 添加新的估计值
-  todo.estPomo.push(newEstimate.value);
-
-  // 通知父组件更新
-  emit("update-todo-est", todo.id, todo.estPomo);
-
-  // 重置状态并关闭对话框
-  showEstimateInput.value = false;
-  currentTodoId.value = null;
-  newEstimate.value = 1; // 重置为默认值
-}
-
-// 取消添加
-function cancelAddEstimate() {
-  showEstimateInput.value = false;
-  currentTodoId.value = null;
-  newEstimate.value = 1; // 重置为默认值
-}
-
-// 删除估计
-function handleDeleteEstimate(todo: Todo) {
-  if (todo.estPomo && todo.estPomo.length > 0) {
-    // 要删除的下标是最后一项
-    const delIdx = todo.estPomo.length - 1;
-    if (
-      todo.realPomo &&
-      delIdx < todo.realPomo.length &&
-      todo.realPomo[delIdx] !== undefined &&
-      todo.realPomo[delIdx] !== 0
-    ) {
-      // realPomo此位置已被填写，提示不能删
-      popoverMessage.value = "已经有实际完成，不可删除~";
-      showPopover.value = true;
-      setTimeout(() => {
-        showPopover.value = false;
-      }, 2000);
-      return;
-    }
-    // 可以删
-    todo.estPomo.pop();
-    emit("update-todo-est", todo.id, todo.estPomo);
-  } else {
-    popoverMessage.value = "没啦，别删了~";
-    showPopover.value = true;
-    setTimeout(() => {
-      showPopover.value = false;
-    }, 2000);
-    return;
-  }
-}
-
-// 修改点击行处理函数
-function handleRowClick(todo: Todo) {
-  emit("select-row", todo.id); // 新增：发送选中行事件
-  emit("select-task", todo.taskId || null);
-  emit("select-activity", todo.activityId || null);
-}
-
-// 编辑相关函数
-function startEditing(todoId: number, field: "title" | "start" | "done") {
-  const todo = props.todos.find((t) => t.id === todoId);
-  if (!todo) return;
-  editingRowId.value = todoId;
-  editingField.value = field;
-  editingValue.value =
-    field === "title"
-      ? todo.activityTitle || ""
-      : field === "start"
-      ? todo.taskId
-        ? timestampToTimeString(todo.taskId)
-        : ""
-      : todo.doneTime
-      ? timestampToTimeString(todo.doneTime)
-      : "";
-
-  // 使用 querySelector 来获取当前编辑的输入框，而不是依赖 ref
-  nextTick(() => {
-    const input = document.querySelector(
-      `input.${field}-input[data-todo-id="${todoId}"]`
-    );
-    if (input) {
-      console.log(input);
-      (input as HTMLInputElement).focus();
-    }
-  });
-}
-
-// 注意这里是 timestring 不是timestamp，是在Home用currentViewdate进行的转化
-function saveEdit(todo: Todo) {
-  if (!editingRowId.value) return;
-
-  if (editingField.value === "title") {
-    if (editingValue.value.trim()) {
-      emit("edit-todo-title", todo.id, editingValue.value.trim());
-    }
-  }
-
-  if (editingField.value === "start") {
-    if (isValidTimeString(editingValue.value)) {
-      const ts = editingValue.value;
-      emit("edit-todo-start", todo.id, ts);
-    }
-  }
-
-  if (editingField.value === "done") {
-    if (isValidTimeString(editingValue.value)) {
-      const ts = editingValue.value;
-      emit("edit-todo-done", todo.id, ts);
-    } else {
-      if (editingValue.value === "") {
-        emit("edit-todo-done", todo.id, "");
-      }
-    }
-  }
-  cancelEdit();
-}
-
-function cancelEdit() {
-  editingRowId.value = null;
-  editingField.value = null;
-  editingValue.value = "";
-}
-
-function isValidTimeString(str: string) {
-  return (
-    /^\d{2}:\d{2}$/.test(str) &&
-    +str.split(":")[0] <= 24 &&
-    +str.split(":")[1] < 60
-  );
-}
-
-// 转换为任务
-function handleConvertToTask(todo: Todo) {
-  if (todo.taskId) {
-    popoverMessage.value = "该待办已转换为任务";
-    showPopover.value = true;
-    setTimeout(() => {
-      showPopover.value = false;
-    }, 2000);
-    return;
-  }
-
-  const task = taskService.createTaskFromTodo(
-    todo.id,
-    todo.activityTitle,
-    todo.projectName
-  );
-
-  if (task) {
-    // 立即更新本地的 taskId
-    todo.taskId = task.id;
-
-    emit("convert-todo-to-task", { task: task, todoId: todo.id });
-    popoverMessage.value = "完成任务转换";
-    showPopover.value = true;
-    setTimeout(() => {
-      showPopover.value = false;
-    }, 2000);
-  }
-}
-
-// suspended Todo
-function handleSuspendTodo(id: number) {
-  emit("suspend-todo", id);
-}
-
-function handleCancelTodo(id: number) {
-  emit("cancel-todo", id);
-}
-
-// 取消repeat功能简化页面，Activity部分可以完成同样功能
-// function handleRepeatTodo(id: number) {
-//   emit("repeat-todo", id);
-// }
-
-// 1) 计算平均值（适用于 EnergyRecord[] 或 RewardRecord[]）
-// 空、null、undefined 或 [] 返回 null
-function averageValue<T extends { value: number }>(
-  records: T[] | null | undefined
-): number | string {
-  if (!Array.isArray(records) || records.length === 0) return "-";
-  let sum = 0,
-    count = 0;
-  for (const r of records) {
-    const v = r?.value;
-    if (typeof v === "number" && Number.isFinite(v)) {
-      sum += v;
-      count++;
-    }
-  }
-  return count === 0 ? "-" : sum / count;
-}
-
-// 2) 统计中断类型数量（"E" 或 "I"）
-// 空、null、undefined 或 [] 返回 null
-function countInterruptions(
-  records: { interruptionType: "E" | "I" }[] | null | undefined,
-  type: "E" | "I"
-): number | string {
-  if (!Array.isArray(records) || records.length === 0) return "-";
-  let count = 0;
-  for (const r of records) if (r?.interruptionType === type) count++;
-  return count;
-}
-
-function handleInputFocus(event: FocusEvent) {
-  const inputElement = event.target as HTMLInputElement;
-  if (inputElement) {
-    inputElement.select();
-  }
-}
-</script>
