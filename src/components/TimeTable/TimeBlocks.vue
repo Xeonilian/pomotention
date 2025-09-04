@@ -62,7 +62,7 @@
   <!-- 按番茄时间分段 -->
   <div
     v-for="(segment, index) in pomodoroSegments"
-    :key="segment.globalIndex"
+    :data-global-index="segment.globalIndex"
     :class="[
       'pomo-segment',
       segment.type,
@@ -85,7 +85,7 @@
   <!-- 估计分配的segments (左侧列) -->
   <div
     v-for="seg in todoSegments"
-    :key="`estimated-${seg.todoId}-${seg.todoIndex}`"
+    :data-global-index="seg.globalIndex"
     class="todo-segment estimated"
     :class="{
       overflow: seg.overflow,
@@ -312,11 +312,26 @@ const manualAllocations = ref<Map<number, number>>(new Map()); // todoId -> glob
 
 // todoSegments 的计算
 const todoSegments = computed((): TodoSegment[] => {
-  return generateEstimatedTodoSegments(
+  const estTSegs: TodoSegment[] = generateEstimatedTodoSegments(
     props.dayStart,
     props.todos,
     pomodoroSegments.value
   );
+
+  const todoMap = new Map<number, Todo>();
+  for (const t of props.todos) {
+    todoMap.set(t.id, t);
+  }
+
+  estTSegs.forEach((seg) => {
+    if (seg == null) return;
+    const todo = todoMap.get(seg.todoId);
+    if (todo && todo.globalIndex === undefined) {
+      todo.globalIndex = seg.globalIndex;
+    }
+  });
+
+  return estTSegs;
 });
 
 // 计算TodoSegment的Style
@@ -467,53 +482,63 @@ function handleMouseDown(event: MouseEvent, seg: TodoSegment) {
   event.stopPropagation();
 }
 
-// handleMouseMove (版本 V2: 利用 data-global-index)
 function handleMouseMove(event: MouseEvent) {
-  // 如果当前不是在拖拽状态，或者没有记录被拖拽的元素，则直接返回
+  console.log(1);
   if (!mouseState.value.isDragging || !mouseState.value.draggedSeg) {
+    console.log(12);
+    return;
+  }
+  console.log(2);
+
+  const selector = ".pomo-segment";
+  const { clientX: x, clientY: y } = event;
+
+  const elementBelow = document.elementFromPoint(x, y) as HTMLElement | null;
+  const targetElement = elementBelow?.closest(selector) as HTMLElement | null;
+
+  // 清空上次 hover
+  dragState.value.dropTargetGlobalIndex = null;
+
+  if (!targetElement) {
     return;
   }
 
-  // 1. 定义我们关心的所有可作为目标的 segment 的 CSS 选择器。
-  //    我们关心所有带有 'pomo-segment' 类的元素。
-  const selector = ".pomo-segment";
+  const globalIndexStr = targetElement.dataset.globalIndex;
+  if (!globalIndexStr) {
+    console.debug("[DnD] closest has no data-global-index");
+    return;
+  }
 
-  // 2. 从当前鼠标坐标获取最顶层的 HTML 元素。
-  const elementBelow = document.elementFromPoint(
-    event.clientX,
-    event.clientY
-  ) as HTMLElement | null;
+  const globalIndex = Number.parseInt(globalIndexStr, 10);
+  if (!Number.isFinite(globalIndex)) {
+    console.warn("[DnD] invalid globalIndexStr", globalIndexStr);
+    return;
+  }
 
-  // 3. 使用 .closest() 向上查找符合选择器的父元素。
-  //    这样做的好处是，即使鼠标悬停在 segment 内部的图标或文字上，也能找到正确的容器 div。
-  const targetElement = elementBelow?.closest(selector) as HTMLElement | null;
+  const segs = pomodoroSegments.value;
+  if (!Array.isArray(segs)) {
+    console.warn("[DnD] segs not array", segs);
+    return;
+  }
+  if (globalIndex < 0 || globalIndex >= segs.length) {
+    console.warn("[DnD] index out of range", { globalIndex, len: segs.length });
+    return;
+  }
 
-  // 4. 首先，重置上一次的悬停目标。
-  //    这样可以确保如果鼠标移出所有目标，悬停状态会被正确清除。
-  dragState.value.dropTargetGlobalIndex = null;
+  const targetData = segs[globalIndex];
+  if (!targetData) {
+    console.warn("[DnD] no data at index", globalIndex);
+    return;
+  }
 
-  // 5. 检查是否找到了一个目标元素
-  if (targetElement) {
-    // 6. ✨ 核心逻辑：直接从 DOM 元素上读取 data-global-index 属性！
-    //    `dataset.globalIndex` 会自动转换 data-global-index 属性名为驼峰式。
-    const globalIndexStr = targetElement.dataset.globalIndex;
-
-    // 7. 确保我们成功读取到了 globalIndex 字符串
-    if (globalIndexStr) {
-      const globalIndex = parseInt(globalIndexStr, 10);
-
-      // 8. 验证这个 globalIndex 对应的数据，确保它是一个有效的放置目标。
-      //    我们只允许拖放到 'pomo' 类型的块上。
-      const targetData = pomodoroSegments.value[globalIndex];
-
-      if (targetData && targetData.type === "pomo") {
-        // 这是一个有效的 'pomo' 块，更新放置目标状态。
-        dragState.value.dropTargetGlobalIndex = globalIndex;
-
-        // (可选的调试日志)
-        console.log("🎯 Drop Target Hover -> globalIndex:", globalIndex);
-      }
-    }
+  if (targetData.type === "pomo") {
+    dragState.value.dropTargetGlobalIndex = globalIndex;
+    console.log("🎯 Hover -> globalIndex:", globalIndex, targetData);
+  } else {
+    console.debug("[DnD] type mismatch", {
+      type: targetData.type,
+      expected: "pomo",
+    });
   }
 }
 
@@ -545,7 +570,7 @@ function handleMouseUp() {
 
   // 仅依据 globalIndex 进行放置
   manualAllocations.value.set(draggedTodo.id, targetGlobalIndex);
-
+  draggedTodo.globalIndex = targetGlobalIndex;
   console.log("✅ Drop successful:", {
     todoId: draggedTodo.id,
     title: draggedTodo.activityTitle,

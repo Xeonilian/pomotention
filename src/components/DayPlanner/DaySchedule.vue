@@ -178,7 +178,13 @@
                 }"
               >
                 <div class="records-stat">&nbsp;</div>
-                <div class="button-group">
+                <div
+                  class="button-group"
+                  v-if="
+                    schedule.status !== 'done' &&
+                    schedule.status !== 'cancelled'
+                  "
+                >
                   <n-button
                     v-if="!schedule.taskId"
                     text
@@ -212,11 +218,7 @@
 
                   <!-- 取消任务按钮 -->
                   <n-button
-                    v-if="
-                      schedule.status !== 'done' &&
-                      schedule.status !== 'cancelled' &&
-                      schedule.isUntaetigkeit !== true
-                    "
+                    v-if="schedule.isUntaetigkeit !== true"
                     text
                     type="info"
                     @click="handleCancelSchedule(schedule.id)"
@@ -476,14 +478,16 @@ tbody td {
 thead th {
   padding: 2px;
   text-align: center;
-  border-bottom: 2px solid var(--color-background-dark);
+  text-overflow: ellipsis;
   white-space: nowrap;
   overflow: hidden;
   height: 20px;
   font-weight: 400;
+  border-bottom: 2px solid var(--color-background-dark);
   color: var(--color-text-primary);
-  line-height: 1.3;
   background-color: var(--color-background) !important;
+  line-height: 1.3;
+  box-sizing: border-box;
 }
 
 /* 行样式 */
@@ -546,13 +550,15 @@ tr.empty-row {
 }
 
 /* 表格内容样式 */
-td {
-  padding: 2px 0px;
-  border-bottom: 1px solid var(--color-background-dark);
+tbody td {
+  box-sizing: border-box;
   white-space: nowrap;
   overflow: hidden;
-  min-height: 25px;
-  height: 25px;
+  text-overflow: ellipsis;
+  height: 28px;
+  line-height: 18px;
+  padding: 2px 0px;
+  border-bottom: 1px solid var(--color-background-dark);
 }
 
 td.col-check {

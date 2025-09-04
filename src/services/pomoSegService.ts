@@ -348,17 +348,13 @@ export function generateEstimatedTodoSegments(
         // 找到了，将搜索起点更新为这个找到的数组索引
         searchStartIndexInArray = foundIndex;
       } else {
-        // 如果在 segments 数组中找不到这个 globalIndex，这是一个警告。
-        // 分配很可能会失败并走向溢出，但我们仍然需要记录这个警告。
         console.warn(
           `[PomoSegService] 手动分配警告: Todo #${todo.id} 指定的 globalIndex ${targetGlobalIndex} 在当前时间块中无效或不存在。将尝试从头开始分配。`
         );
-        // 此时 searchStartIndexInArray 保持为 0，让它尝试自动分配，但因为 forceStart 仍然为 true，分配基本会失败并溢出。
       }
     }
 
     // 4. 根据任务类型，调用相应的分配函数
-    // 我们将【干净】的 searchStartIndexInArray 值传递给它们。
     const pomoCount = getTodoDisplayPomoCount(todo); // 获取该 todo 需要的番茄数量
 
     switch (todo.pomoType) {
@@ -389,7 +385,6 @@ export function generateEstimatedTodoSegments(
         break;
 
       case "🍒":
-        // 调用我们最新、最简洁的 V4 版本
         _allocateCherrySegmentsFromIndex(
           appDateTimestamp,
           todo,
@@ -483,10 +478,10 @@ function _allocateTomatoSegmentsFromIndex(
         end: segmentEnd,
         pomoType: "🍅",
         assignedPomodoroSegment: currentSeg,
-        // 关键: category 继承自它实际被放入的块，而不是任务的默认值
         category: currentSeg.category,
         completed: false,
         usingRealPomo: false,
+        globalIndex: currentSeg.globalIndex,
       });
 
       indicesToMarkUsed.forEach((idx) => usedGlobalIndices.add(idx));
@@ -500,7 +495,6 @@ function _allocateTomatoSegmentsFromIndex(
 
     // 决定溢出块的起始时间
     if (segments.length > 0) {
-      // 从最后一个已知时间块的末尾开始
       overflowStartTime = segments[segments.length - 1].end;
     } else {
       // 如果没有任何可用时间块，则从当天晚上10点开始
@@ -605,6 +599,7 @@ function _allocateGrapeSegmentsFromIndex(
         category: "living", // 明确 category
         completed: false,
         usingRealPomo: false,
+        globalIndex: currentSeg.globalIndex,
       });
 
       // 标记所有占用的块
@@ -671,7 +666,6 @@ function _allocateCherrySegmentsFromIndex(
   let assigned = false; // 我们只需要分配一次，所以用布尔值即可
 
   // --- 关键简化：循环的步长是 4！---
-  // 我们不再逐一检查，而是以 4 个块为单位进行“跳跃检查”。
   for (let i = startIndex; i < segments.length - 3; i += 4) {
     // 如果是手动模式，只检查 startIndex 这一个位置
     if (forceStart && i > startIndex) {
@@ -741,6 +735,7 @@ function _allocateCherrySegmentsFromIndex(
           category: actualCategory,
           completed: false,
           usingRealPomo: false,
+          globalIndex: subSeg.globalIndex,
         });
       });
 

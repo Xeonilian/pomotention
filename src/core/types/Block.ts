@@ -34,6 +34,7 @@ export interface TodoSegment {
   overflow?: boolean; // 是否溢出（超出可用时间段）
   completed?: boolean; // todo是否已完成
   usingRealPomo?: boolean; // 是否使用realPomo计数
+  globalIndex?: number;
 }
 
 export interface ActualTimeRange {

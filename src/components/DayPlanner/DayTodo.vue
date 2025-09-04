@@ -531,54 +531,68 @@ function finishEditing() {
 
 // 传入 current 和 desired，让排序更智能
 function relayoutPriority(todos: Todo[], current: Todo, desired: number) {
+  // 锁定已完成任务的优先级，这部分逻辑不变
   const locked = new Set<number>();
   todos.forEach((t) => {
-    if (t.status === "done" && t.priority > 0) locked.add(t.priority);
+    if (t.status === "done" && t.priority > 0) {
+      locked.add(t.priority);
+    }
   });
 
+  // 筛选出需要重新排序的活动任务
   const active = todos.filter(
     (t) => t.status !== "done" && t.status !== "cancelled"
   );
 
-  active.sort((a, b) => {
-    // 为 a 和 b 获取用于比较的“有效优先级”
-    let pA = a.priority;
-    let pB = b.priority;
+  // 关键修改：
+  // 找出所有优先级大于 0 的任务
+  const positivePriorityTasks = active.filter(
+    (t) => t.priority > 0 && t.id !== current.id
+  );
+  // 对它们进行排序
+  positivePriorityTasks.sort((a, b) => a.priority - b.priority);
 
-    // 如果任务是正在被移动的那个，使用它的“目标优先级”
-    if (a.id === current.id) pA = desired;
-    if (b.id === current.id) pB = desired;
-
-    // 如果是把一个任务往前移（例如 P3 -> P1）
-    // 正在移动的任务应该排在目标位置任务的“前面”
-    if (a.id === current.id && a.priority > desired && pA === pB) {
-      return -1;
+  // 将当前正在修改的任务插入到目标位置
+  // 如果 desired 是 0 或负数，我们不把它放到排序列表中，因为它不需要参与重新编号
+  if (desired > 0) {
+    // 找到插入点
+    const insertIndex = positivePriorityTasks.findIndex(
+      (t) => t.priority >= desired
+    );
+    if (insertIndex === -1) {
+      positivePriorityTasks.push(current);
+    } else {
+      positivePriorityTasks.splice(insertIndex, 0, current);
     }
-    // 如果是把一个任务往后移（例如 P1 -> P3）
-    // 正在移动的任务应该排在目标位置任务的“后面”
-    if (a.id === current.id && a.priority < desired && pA === pB) {
-      return 1;
-    }
+  }
 
-    // 对于其他情况，正常比较
-    // 1. 无效优先级排在后面
-    const aIsLow = pA <= 0 ? 1 : 0;
-    const bIsLow = pB <= 0 ? 1 : 0;
-    if (aIsLow !== bIsLow) return aIsLow - bIsLow;
-
-    // 2. 按优先级数字排序
-    if (pA !== pB) return pA - pB;
-
-    // 3. 稳定排序
-    return a.id - b.id;
-  });
-
-  // 重新编号 (逻辑不变)
+  // 为被移动的任务重新编号，不触碰 priority <= 0 的任务
   let next = 1;
-  for (const t of active) {
-    while (locked.has(next)) next++;
-    t.priority = next;
+  for (const t of positivePriorityTasks) {
+    // 跳过锁定的优先级
+    while (locked.has(next)) {
+      next++;
+    }
+    // 如果任务原来的优先级和新计算出的优先级不同，则更新
+    if (t.id === current.id) {
+      current.priority = desired; // 直接应用期望的优先级
+    } else if (t.priority !== next) {
+      t.priority = next;
+    }
+    // 如果是当前任务，并且期望优先级大于0，则它的优先级就是 next
+    // 否则，非当前任务的优先级按顺序递增
+    if (t.id === current.id && desired > 0) {
+      t.priority = next;
+    } else if (t.id !== current.id) {
+      t.priority = next;
+    }
+
     next++;
+  }
+
+  // 如果 current 的目标是 0 或负数，直接设置即可，因为它不影响其他任务
+  if (desired <= 0) {
+    current.priority = desired;
   }
 }
 // ===================================
@@ -888,26 +902,20 @@ col.col-status {
   width: 76px;
 }
 
-thead th,
-tbody td {
-  box-sizing: border-box; /* 避免 padding/border 影响固定计算 */
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 /* 表头样式 */
 thead th {
   padding: 2px;
   text-align: center;
-  border-bottom: 2px solid var(--color-background-dark);
+  text-overflow: ellipsis;
   white-space: nowrap;
   overflow: hidden;
   height: 20px;
   font-weight: 400;
+  border-bottom: 2px solid var(--color-background-dark);
   color: var(--color-text-primary);
-  line-height: 1.3;
   background-color: var(--color-background) !important;
+  line-height: 1.3;
+  box-sizing: border-box;
 }
 
 /* 行样式 */
@@ -970,13 +978,15 @@ tr.empty-row {
 }
 
 /* 表格内容样式 */
-td {
-  padding: 2px 0px;
-  border-bottom: 1px solid var(--color-background-dark);
+tbody td {
+  box-sizing: border-box;
   white-space: nowrap;
   overflow: hidden;
-  min-height: 25px;
-  height: 25px;
+  text-overflow: ellipsis;
+  height: 28px;
+  line-height: 18px;
+  padding: 2px 0px;
+  border-bottom: 1px solid var(--color-background-dark);
 }
 
 td:first-child,
