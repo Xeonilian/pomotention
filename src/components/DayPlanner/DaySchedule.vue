@@ -436,7 +436,7 @@ function handleCancelSchedule(id: number) {
   table-layout: fixed;
 }
 col.col-check {
-  width: 20px;
+  width: 22px;
 }
 
 col.col-start {
@@ -553,6 +553,10 @@ td {
   overflow: hidden;
   min-height: 25px;
   height: 25px;
+}
+
+td.col-check {
+  padding-left: 1px;
 }
 
 td:first-child,

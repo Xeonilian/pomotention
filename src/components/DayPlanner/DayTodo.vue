@@ -848,7 +848,7 @@ function countInterruptions(
 }
 
 col.col-check {
-  width: 20px;
+  width: 22px;
 }
 
 col.col-start {
@@ -1152,7 +1152,7 @@ td.status-col {
 }
 
 td.col-check {
-  padding-left: 4px;
+  padding-left: 1px;
 }
 .cancel-icon {
   display: inline-flex;
