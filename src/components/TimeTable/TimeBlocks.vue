@@ -68,15 +68,15 @@
       segment.type,
       segment.category,
       {
-        'drop-target': dragState.isDragging && segment.type === 'work',
+        'drop-target': dragState.isDragging && segment.type === 'pomo',
         'drop-hover': dragState.dropTargetGlobalIndex === index,
       },
     ]"
     :style="getPomodoroStyle(segment)"
   >
     <!-- 仅在"工作段"且有编号时显示序号 -->
-    <template v-if="segment.type === 'work' && segment.pomoIndex != null">
-      {{ segment.globalIndex }}
+    <template v-if="segment.type === 'pomo' && segment.categoryIndex != null">
+      {{ segment.categoryIndex }}
     </template>
     <template v-if="segment.type === 'schedule'"> S </template>
     <template v-if="segment.type === 'untaetigkeit'"> U </template>
@@ -152,8 +152,8 @@ import {
   generateEstimatedTodoSegments,
   reallocateTodoFromPosition,
   generateActualTodoSegments,
-  getTodoDisplayPomoCount,
   reallocateAllTodos,
+  getTodoDisplayPomoCount,
 } from "@/services/pomoSegService";
 
 import type { Schedule } from "@/core/types/Schedule";
@@ -267,7 +267,7 @@ function getPomodoroStyle(seg: PomodoroSegment): CSSProperties {
 
   // 类型的颜色处理
   let color;
-  if (seg.type === "work") {
+  if (seg.type === "pomo") {
     color = POMODORO_COLORS[seg.category];
   } else if (seg.type === "break") {
     color = "transparent";
@@ -278,7 +278,7 @@ function getPomodoroStyle(seg: PomodoroSegment): CSSProperties {
   }
 
   let colorDark;
-  if (seg.type === "work") {
+  if (seg.type === "pomo") {
     colorDark = POMODORO_COLORS_DARK[seg.category];
   } else if (seg.type === "schedule") {
     colorDark = POMODORO_COLORS_DARK[seg.category];
@@ -304,7 +304,7 @@ function getPomodoroStyle(seg: PomodoroSegment): CSSProperties {
     letterSpacing: "0px",
     textShadow: `1px 1px 1px ${colorDark}`,
     overflow: "hidden",
-    pointerEvents: seg.type === "work" ? "auto" : "none",
+    pointerEvents: seg.type === "pomo" ? "auto" : "none",
     userSelect: "none",
   };
 }
@@ -484,7 +484,13 @@ const mouseState = ref<{
 
 // handleMouseDown
 function handleMouseDown(event: MouseEvent, seg: TodoSegment) {
-  console.log("🟢 Mouse down:", seg.todoId, "todoIndex:", seg.todoIndex);
+  console.log(
+    "🟢 Mouse down:",
+    seg.todoId,
+    "todoIndex:",
+    seg.start,
+    seg.todoIndex
+  );
 
   mouseState.value.isDragging = true;
   mouseState.value.startX = event.clientX;
@@ -531,7 +537,7 @@ function handleMouseMove(event: MouseEvent) {
   if (hoverIndex < 0) return;
 
   const workSegments = pomodoroSegments.value.filter(
-    (seg) => seg.type === "work"
+    (seg) => seg.type === "pomo"
   ); // pomodoroSegments 包含break schedule
   console.log("📏 workSegments.length =", workSegments.length);
   const segment = workSegments[hoverIndex];
@@ -540,53 +546,11 @@ function handleMouseMove(event: MouseEvent) {
   const globalIndex = pomodoroSegments.value.indexOf(segment);
   if (globalIndex < 0) return;
 
-  dragState.value.dropTargetGlobalIndex = globalIndex; 
+  dragState.value.dropTargetGlobalIndex = globalIndex;
 
   // 仅输出 globalIndex
-  console.log("🎯 dropTargetGlobalIndex =", globalIndex,);
+  console.log("🎯 dropTargetGlobalIndex =", globalIndex);
 }
-
-// 识别鼠标下方的pomo-segment.work
-// function handleMouseMove(event: MouseEvent) {
-//   if (!mouseState.value.isDragging) return;
-//   // 1. 根据拖曳中的todo类型确定目标class
-//   const draggedSeg = mouseState.value.draggedSeg;
-//   if (!draggedSeg) return;
-
-//   // 识别鼠标下方的pomo-segment.work
-//   const selector = ".pomo-segment.work"; //work不是指番茄工作类型，而是区分break schedule
-//   const elementBelow = document.elementFromPoint(event.clientX, event.clientY);
-//   const pomoElement = elementBelow?.closest(selector);
-
-//   dragState.value.dropTargetGlobalIndex = null;
-//   dragState.value.dropTargetPositionIndex = null;
-//   if (pomoElement) {
-//     const allTargetSegs = Array.from(document.querySelectorAll(selector));
-//     const hoverIndex = allTargetSegs.indexOf(pomoElement);
-
-//     if (hoverIndex >= 0) {
-//       const workSegments = pomodoroSegments.value.filter(
-//         (seg) => seg.type === "work"
-//       );
-//       const segment = workSegments[hoverIndex];
-//       const globalIndex = pomodoroSegments.value.indexOf(segment);
-//       const draggedTodo = props.todos.find((t) => t.id === draggedSeg.todoId);
-//       console.log("🟢 Drop target found:", hoverIndex, globalIndex);
-
-//       if (draggedTodo && draggedTodo.positionIndex) {
-//         const positionIndex = draggedTodo.positionIndex;
-//         dragState.value.dropTargetGlobalIndex = globalIndex;
-//         dragState.value.dropTargetPositionIndex = positionIndex;
-//       } else {
-//         dragState.value.dropTargetGlobalIndex = null;
-//         dragState.value.dropTargetPositionIndex = null;
-//       }
-//     } else {
-//       dragState.value.dropTargetGlobalIndex = null;
-//       dragState.value.dropTargetPositionIndex = null;
-//     }
-//   }
-// }
 
 // 鼠标松开
 function handleMouseUp() {
@@ -616,7 +580,7 @@ function handleMouseUp() {
 
   if (!draggedTodo) {
     console.warn("🟠 handleMouseUp: draggedTodo not found, abort.");
-    // 收尾
+    // 结束后恢复状态
     mouseState.value.isDragging = false;
     dragState.value.isDragging = false;
     dragState.value.draggedTodoId = null;
@@ -636,7 +600,7 @@ function handleMouseUp() {
     dropTargetGlobalIndex: targetGlobalIndex,
   });
 
-  // 收尾
+  // 结束后恢复状态
   mouseState.value.isDragging = false;
   dragState.value.isDragging = false;
   dragState.value.draggedTodoId = null;
@@ -646,12 +610,12 @@ function handleMouseUp() {
   document.removeEventListener("mouseup", handleMouseUp);
 }
 
-// ======= 分配todos的时机修正 =======
+// ======= todos改变时同步 =======
 watch(
   [() => pomodoroSegments.value, () => props.todos],
   async ([segments, todos]) => {
     // 检查work段数量
-    const workCount = segments.filter((s) => s.type === "work").length;
+    const workCount = segments.filter((s) => s.type === "pomo").length;
     if (workCount > 0 && todos.length > 0) {
       await nextTick();
       // 重新分配todos
@@ -735,7 +699,7 @@ watch(
   height: 1px;
   background-color: var(--color-yellow);
   pointer-events: none;
-  z-index: 2;
+  z-index: 200;
 }
 .current-time-line::before {
   content: "🍅";
@@ -745,7 +709,6 @@ watch(
   font-size: 16px;
   pointer-events: none;
   user-select: none;
-  z-index: 20;
   animation: shake 4s infinite;
 }
 

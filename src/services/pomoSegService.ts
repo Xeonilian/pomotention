@@ -86,7 +86,7 @@ function _sealBeforeCursorAsUsed(
   }
 }
 
-// 工具：从 cursor 起向后分配 1 段（work + 可选紧邻 break），用于“兜底为 1”的占位
+// 工具：从 cursor 起向后分配 1 段（pomo + 可选紧邻 break），用于“兜底为 1”的占位
 function _allocateOneAfterCursor(
   appDateTimestamp: number,
   todo: Todo,
@@ -96,11 +96,11 @@ function _allocateOneAfterCursor(
   todoSegments: TodoSegment[]
 ): boolean {
   let i = Math.max(0, cursor);
-  // 把搜索起点推进到下一个 work
-  while (i < segs.length && segs[i].type !== "work") i++;
+  // 把搜索起点推进到下一个 pomo
+  while (i < segs.length && segs[i].type !== "pomo") i++;
 
   for (; i < segs.length; i++) {
-    if (segs[i].type !== "work") continue;
+    if (segs[i].type !== "pomo") continue;
     if (usedFlags[i]) continue;
 
     let end = segs[i].end;
@@ -256,14 +256,14 @@ export function splitIndexPomoBlocksExSchedules(
       let idx = globalIndex[block.category] || 1;
 
       while (aEnd - cur >= 30 * 60 * 1000) {
-        // work：计入全局顺序
+        // pomo：计入全局顺序
         segments.push({
           parentBlockId: block.id,
-          type: "work",
+          type: "pomo",
           start: cur,
           end: cur + 25 * 60 * 1000,
           category: block.category,
-          pomoIndex: idx, // 原有（同类内序号）
+          categoryIndex: idx, // 原有（同类内序号）
           globalIndex: globalIndexCounter, // 新增：仅 work 写入
         });
         cur += 25 * 60 * 1000;
@@ -284,15 +284,15 @@ export function splitIndexPomoBlocksExSchedules(
         globalIndexCounter++;
       }
 
-      // 尾部仍有 25min 的 work（也要计入）
+      // 尾部仍有 25min 的 pomo（也要计入）
       if (aEnd - cur >= 25 * 60 * 1000) {
         segments.push({
           parentBlockId: block.id,
-          type: "work",
+          type: "pomo",
           start: cur,
           end: cur + 25 * 60 * 1000,
           category: block.category,
-          pomoIndex: idx,
+          categoryIndex: idx,
           globalIndex: globalIndexCounter, // 只给 work
         });
         idx++;
@@ -315,9 +315,9 @@ export function generateEstimatedTodoSegments(
 ): TodoSegment[] {
   const todoSegments: TodoSegment[] = [];
 
-  // 1) 统一段池：仅保留 work/break，并按时间排序
+  // 1) 统一段池：仅保留 pomo/break，并按时间排序
   const allSegs = pomodoroSegments
-    .filter((seg) => seg.type === "work" || seg.type === "break")
+    .filter((seg) => seg.type === "pomo" || seg.type === "break")
     .sort((a, b) => a.start - b.start);
 
   // 2) 已用标记（与 allSegs 对齐）
@@ -326,7 +326,7 @@ export function generateEstimatedTodoSegments(
   // 3) 全局“分配游标”，只前进不回退（用于不回填之前的洞）
   let cursor = Math.max(
     0,
-    allSegs.findIndex((s) => s.type === "work")
+    allSegs.findIndex((s) => s.type === "pomo")
   );
 
   // 4) 任务排序
@@ -342,21 +342,21 @@ export function generateEstimatedTodoSegments(
     const needCount = getTodoDisplayPomoCount(todo);
     if (needCount === 0) continue;
 
-    // A) 若存在 positionIndex（面向“工作段的序号”），以全局 work-only 视角处理
+    // A) 若存在 positionIndex（面向“工作段的序号”），以全局 pomo-only 视角处理
     if (
       typeof (todo as any).positionIndex === "number" &&
       (todo as any).positionIndex >= 0
     ) {
-      const workSegs = allSegs.filter((s) => s.type === "work");
-      const localUsedWork = new Array(workSegs.length).fill(false);
+      const pomoSegs = allSegs.filter((s) => s.type === "pomo");
+      const localUsedPomo = new Array(pomoSegs.length).fill(false);
 
       let assignedCount = 0;
       for (let i = 0; i < needCount; i++) {
-        const workIdx = (todo as any).positionIndex + i;
-        if (workIdx < workSegs.length && !localUsedWork[workIdx]) {
-          localUsedWork[workIdx] = true;
+        const pomoIdx = (todo as any).positionIndex + i;
+        if (pomoIdx < pomoSegs.length && !localUsedPomo[pomoIdx]) {
+          localUsedPomo[pomoIdx] = true;
 
-          const assignedPs = workSegs[workIdx]; // 具体 work 段
+          const assignedPs = pomoSegs[pomoIdx]; // 具体 pomo 段
           const realIdx = allSegs.findIndex((s) => s === assignedPs);
 
           // 端点
@@ -580,7 +580,7 @@ export function reallocateTodoFromPosition(
       const targetCategory = todo.pomoType === "🍇" ? "living" : "working";
       return (
         seg.category === targetCategory &&
-        (seg.type === "work" || seg.type === "break")
+        (seg.type === "pomo" || seg.type === "break")
       );
     })
     .sort((a, b) => a.start - b.start);
@@ -657,7 +657,7 @@ export function reallocateAllTodos(
         const targetCategory = todo.pomoType === "🍇" ? "living" : "working";
         return (
           seg.category === targetCategory &&
-          (seg.type === "work" || seg.type === "break")
+          (seg.type === "pomo" || seg.type === "break")
         );
       });
 
@@ -692,7 +692,7 @@ function _allocateTomatoSegmentsFromIndex(
     i < segments.length && assignedCount < needCount;
     i++
   ) {
-    if (!isUsed[i] && segments[i].type === "work") {
+    if (!isUsed[i] && segments[i].type === "pomo") {
       let segmentEnd = segments[i].end;
       let span = 0;
 
@@ -776,7 +776,7 @@ function _allocateGrapeSegmentsFromIndex(
     i < segments.length && assignedCount < needCount;
     i++
   ) {
-    if (!isUsed[i] && segments[i].type === "work") {
+    if (!isUsed[i] && segments[i].type === "pomo") {
       let segmentEnd = segments[i].end;
       let span = 0;
 
@@ -862,12 +862,12 @@ function _allocateCherrySegmentsFromIndex(
   ) {
     if (
       !isUsed[i] &&
-      segments[i].type === "work" &&
+      segments[i].type === "pomo" &&
       !isUsed[i + 1] &&
       segments[i + 1].type === "break" &&
       segments[i].end === segments[i + 1].start &&
       !isUsed[i + 2] &&
-      segments[i + 2].type === "work" &&
+      segments[i + 2].type === "pomo" &&
       segments[i + 1].end === segments[i + 2].start &&
       !isUsed[i + 3] &&
       segments[i + 3].type === "break" &&

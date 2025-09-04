@@ -17,7 +17,7 @@ export interface Todo {
   doneTime?: number;
   startTime?: number;
   interruption?: "I" | "E";
-  positionIndex?: number;
+  positionIndex?: number; // 对应globalIndex，用于还原位置
 }
 
 export interface TodoWithTaskRecords extends Todo {
