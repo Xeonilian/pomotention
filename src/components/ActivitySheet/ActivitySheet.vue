@@ -44,6 +44,7 @@
         @add-section="addSection"
         @remove-section="removeSection"
         @focus-row="handleFocusRow"
+        @nofocus-row="handleNoFocusRow"
         @filter="(filterKey) => handleSectionFilter(idx, filterKey)"
         @update:search="(val) => handleSectionSearch(section.id, val)"
         @focus-search="handleFocusSearch"
@@ -107,6 +108,7 @@ const emit = defineEmits<{
   (e: "add-activity", activity: Activity): void; // 添加新活动
   (e: "delete-activity", id: number | null | undefined): void; // 删除活动
   (e: "update-active-id", id: number | null | undefined): void; // 更新选中活动ID
+  (e: "update-active-id-nofocus", id: number | null | undefined): void; // 更新选中活动ID
   (e: "toggle-pomo-type", id: number | null | undefined): void; // 切换番茄钟类型
   (e: "repeat-activity", id: number | null | undefined): void; // 重复选中的活动
   (e: "create-child-activity", id: number | null | undefined): void; // 构建选中活动的子活动
@@ -385,6 +387,10 @@ function deleteActiveRow() {
 }
 
 // 处理行聚焦事件
+function handleNoFocusRow(id: number) {
+  emit("update-active-id-nofocus", id);
+}
+
 function handleFocusRow(id: number) {
   emit("update-active-id", id);
 }

@@ -269,6 +269,7 @@
         @add-activity="onAddActivity"
         @delete-activity="onDeleteActivity"
         @update-active-id="onUpdateActiveId"
+        @update-active-id-nofocus="onUpdateActiveIdNoFocus"
         @toggle-pomo-type="onTogglePomoType"
         @repeat-activity="onRepeatActivity"
         @create-child-activity="onCreateChildActivity"
@@ -658,7 +659,7 @@ const onDateChange = (day: number) => {
   dateService.setAppDate(day);
   selectedActivityId.value = null;
   selectedTaskId.value = null;
-  activeId.value = null;
+  activeId.value = undefined;
   selectedRowId.value = null;
 };
 
@@ -815,12 +816,12 @@ function onDeleteActivity(id: number) {
   );
   if (!result) showErrorPopover("请先清空子项目再删除！");
   activeId.value = null; //
-  console.log("homedelete", activeId.value);
   saveAllDebounced();
 }
 
 /** 选中活动，将其转为 todo 并作为 picked */
 function onPickActivity(activity: Activity) {
+  console.log("start", activeId.value);
   activity.status = "ongoing";
   const { newTodo } = passPickedActivity(
     activity,
@@ -828,7 +829,8 @@ function onPickActivity(activity: Activity) {
     dateService.isViewDateToday.value
   );
   todoList.value = [...todoList.value, newTodo];
-  activeId.value = null;
+  selectedActivityId.value = activity.id;
+  console.log("last", activeId.value);
   saveAllDebounced();
 }
 
@@ -851,16 +853,18 @@ function onConvertActivityToTask(payload: { task: Task; activityId: number }) {
 
   // 3) 同步 UI 选中（如果你希望）
   activeId.value = activityId;
+  selectedActivityId.value = activityId;
   selectedTaskId.value = task.id;
 
   // 4) 一次性保存
   saveAllDebounced();
 }
 
-/** 标记当前活跃活动清单id，用于高亮和交互 */
+/** 激活红色高亮可以编辑文字 */
 function onUpdateActiveId(id: number | null) {
   activeId.value = id;
   selectedActivityId.value = null; // 避免多重高亮
+  selectedRowId.value = null; // 这个id是today里的
 
   const activity = id != null ? activityById.value.get(id) : undefined;
   const todo = id != null ? todoByActivityId.value.get(id) : undefined;
@@ -870,7 +874,26 @@ function onUpdateActiveId(id: number | null) {
   selectedTaskId.value =
     activity?.taskId || todo?.taskId || schedule?.taskId || null;
   // console.log("selectedTaskId.value", selectedTaskId.value);
-  selectedRowId.value = null; // 这个id是today里的
+
+  saveAllDebounced();
+}
+
+// 激活黄色高亮不编辑文字
+function onUpdateActiveIdNoFocus(id: number | null) {
+  activeId.value = undefined;
+  selectedActivityId.value = null; // 避免多重高亮
+
+  // 查找对象
+  const activity = id != null ? activityById.value.get(id) : undefined;
+  const todo = id != null ? todoByActivityId.value.get(id) : undefined;
+  const schedule = id != null ? scheduleByActivityId.value.get(id) : undefined;
+
+  // 如果存在 taskId，就赋给 selectedTaskId，否则置空
+  selectedTaskId.value =
+    activity?.taskId || todo?.taskId || schedule?.taskId || null;
+
+  selectedRowId.value = todo?.id || schedule?.id || null;
+
   saveAllDebounced();
 }
 

@@ -214,18 +214,19 @@
             v-if="item.class === 'S'"
             v-model:value="item.location"
             style="max-width: 50px"
-            @focus="$emit('focus-row', item.id)"
+            @focus="$emit('nofocus-row', item.id)"
             placeholder="地点"
             :class="{ 'force-hover': hoveredRowId === item.id }"
+            @click.stop
           />
           <n-input
             v-if="item.class === 'T'"
             maxlength="1"
             :value="getInputValue(item)"
             :placeholder="item.pomoType"
+            :title="`输入估计${item.pomoType || '🍅'}数量`"
             style="max-width: 32px"
             class="pomo-input"
-            :title="`输入估计${item.pomoType || '🍅'}数量`"
             :class="{
               'pomo-red': item.pomoType === '🍅',
               'pomo-purple': item.pomoType === '🍇',
@@ -236,7 +237,7 @@
             }"
             :disabled="item.pomoType === '🍒'"
             @update:value="(val) => onInputUpdate(item, val)"
-            @focus="$emit('focus-row', item.id)"
+            @focus="$emit('nofocus-row', item.id)"
           />
           <n-input
             v-else
@@ -248,7 +249,7 @@
                   ? (item.dueRange[1] = val)
                   : (item.dueRange = [Date.now(), val])
             "
-            @focus="$emit('focus-row', item.id)"
+            @focus="$emit('nofocus-row', item.id)"
             title="持续时间(分钟)"
             placeholder="min"
             class="input-center input-min"
@@ -261,7 +262,7 @@
             clearable
             style="max-width: 63px"
             format="MM/dd"
-            @focus="$emit('focus-row', item.id)"
+            @focus="$emit('nofocus-row', item.id)"
             title="死线日期"
             :class="getCountdownClass(item.dueDate)"
           />
@@ -278,7 +279,7 @@
             style="max-width: 63px"
             clearable
             format="HH:mm"
-            @focus="$emit('focus-row', item.id)"
+            @focus="$emit('nofocus-row', item.id)"
             title="约定时间"
             :class="getCountdownClass(item.dueRange && item.dueRange[0])"
           />
@@ -342,6 +343,7 @@ const props = defineProps<{
 
 defineEmits<{
   "focus-row": [id: number];
+  "nofocus-row": [id: number];
   filter: [key: string];
   "add-section": [id: number];
   "remove-section": [id: number];
@@ -441,6 +443,7 @@ function setRowInputRef(el: InputInst | null, id: number) {
 watch(
   () => props.activeId,
   async (id) => {
+    console.log("watch:", id);
     let targetFocusId = null;
     if (id === undefined) return;
     if (id === null) {
