@@ -474,6 +474,18 @@ function startEditingPriority(todo: Todo) {
 
 function finishEditing() {
   if (!editingTodo.value) return;
+  if (
+    editingTodo.value.status === "done" ||
+    editingTodo.value.status === "cancelled"
+  ) {
+    popoverMessage.value = "当前任务已经结束！";
+    showPopover.value = true;
+    setTimeout(() => {
+      showPopover.value = false;
+    }, 2000);
+    editingTodo.value = null;
+    return;
+  }
   if (editingPriority.value === 11) {
     popoverMessage.value = "请输入1-10";
     showPopover.value = true;
