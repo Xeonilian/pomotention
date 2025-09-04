@@ -443,7 +443,6 @@ function setRowInputRef(el: InputInst | null, id: number) {
 watch(
   () => props.activeId,
   async (id) => {
-    console.log("watch:", id);
     let targetFocusId = null;
     if (id === undefined) return;
     if (id === null) {

@@ -137,7 +137,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick } from "vue";
+import { ref, computed, watch } from "vue";
 import type { CSSProperties } from "vue";
 import { getTimestampForTimeString, timestampToTimeString } from "@/core/utils";
 import { CategoryColors } from "@/core/constants";
@@ -150,10 +150,7 @@ import type {
 import {
   splitIndexPomoBlocksExSchedules,
   generateEstimatedTodoSegments,
-  reallocateTodoFromPosition,
   generateActualTodoSegments,
-  reallocateAllTodos,
-  getTodoDisplayPomoCount,
 } from "@/services/pomoSegService";
 
 import type { Schedule } from "@/core/types/Schedule";
@@ -311,49 +308,17 @@ function getPomodoroStyle(seg: PomodoroSegment): CSSProperties {
 
 // todo在番茄段上的分配
 // 本地重写状态
-const manualAllocations = ref<Map<number, number>>(new Map()); // todoId -> startSegmentIndex
-// todoSegments 的计算
-const todoSegments = computed(() => {
-  // 先生成完整的自动分配
-  let autoSegments = generateEstimatedTodoSegments(
+const manualAllocations = ref<Map<number, number>>(new Map()); // todoId -> globalIndex
+
+// todoSegments 的计算 (V2/V3 重构版)
+const todoSegments = computed((): TodoSegment[] => {
+  return generateEstimatedTodoSegments(
+    // 或者 V3，取决于您最终采用的版本
     props.dayStart,
     props.todos,
     pomodoroSegments.value
   );
-  // 对有手动分配的 todos，完全重新生成
-  if (manualAllocations.value.size > 0) {
-    // 分离手动和自动分配的 todos
-    const autoTodos = props.todos.filter(
-      (t) => !manualAllocations.value.has(t.id)
-    );
-    // 重新为自动分配的 todos 生成 segments
-    autoSegments = generateEstimatedTodoSegments(
-      props.dayStart,
-      autoTodos,
-      pomodoroSegments.value
-    );
-    // 为手动分配的 todos 生成 segments
-    const manualSegments: TodoSegment[] = [];
-    manualAllocations.value.forEach((startIndex, todoId) => {
-      const todo = props.todos.find((t) => t.id === todoId);
-      if (todo) {
-        // 这里写入index
-        todo.positionIndex = startIndex;
-        const newSegments = reallocateTodoFromPosition(
-          props.dayStart,
-          todo,
-          startIndex,
-          pomodoroSegments.value,
-          [...autoSegments, ...manualSegments] // 传入已分配的所有 segments
-        );
-        manualSegments.push(...newSegments);
-      }
-    });
-    return [...autoSegments, ...manualSegments];
-  }
-  return autoSegments;
 });
-
 // 计算TodoSegment的Style
 function getTodoSegmentStyle(seg: TodoSegment): CSSProperties {
   const startMinute = (seg.start - props.timeRange.start) / 60000;
@@ -612,24 +577,13 @@ function handleMouseUp() {
 
 // ======= todos改变时同步 =======
 watch(
-  [() => pomodoroSegments.value, () => props.todos],
-  async ([segments, todos]) => {
-    // 检查work段数量
-    const workCount = segments.filter((s) => s.type === "pomo").length;
-    if (workCount > 0 && todos.length > 0) {
-      await nextTick();
-      // 重新分配todos
-      segStore.clearTodoSegments();
-      const allocatedSegments = reallocateAllTodos(
-        props.dayStart,
-        todos,
-        segments
-      );
-      allocatedSegments.forEach((segment) => segStore.addTodoSegment(segment));
-      // console.log(segStore.todoSegments);
-    }
+  () => todoSegments.value, // 明确监听 computed 属性的结果
+  (newAllocatedSegments) => {
+    // 同样，推荐使用一个 action 来整体替换
+    segStore.setTodoSegments(newAllocatedSegments);
   },
-  { immediate: true }
+  { immediate: true, deep: true } // immediate 确保初始加载时同步
+  // deep 确保对 segments 内部的更改也能被侦测到
 );
 </script>
 
