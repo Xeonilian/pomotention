@@ -62,7 +62,7 @@
   <!-- 按番茄时间分段 -->
   <div
     v-for="(segment, index) in pomodoroSegments"
-    :key="segment.parentBlockId + '-' + segment.start + '-' + segment.type"
+    :key="segment.globalIndex"
     :class="[
       'pomo-segment',
       segment.type,
@@ -74,7 +74,7 @@
     ]"
     :style="getPomodoroStyle(segment)"
   >
-    <!-- 仅在"工作段"且有编号时显示序号 -->
+    <!-- 仅在显示序号 -->
     <template v-if="segment.type === 'pomo' && segment.categoryIndex != null">
       {{ segment.categoryIndex }}
     </template>
@@ -306,19 +306,19 @@ function getPomodoroStyle(seg: PomodoroSegment): CSSProperties {
   };
 }
 
-// todo在番茄段上的分配
+// ==============todo在番茄段上的分配 ================
 // 本地重写状态
 const manualAllocations = ref<Map<number, number>>(new Map()); // todoId -> globalIndex
 
-// todoSegments 的计算 (V2/V3 重构版)
+// todoSegments 的计算
 const todoSegments = computed((): TodoSegment[] => {
   return generateEstimatedTodoSegments(
-    // 或者 V3，取决于您最终采用的版本
     props.dayStart,
     props.todos,
     pomodoroSegments.value
   );
 });
+
 // 计算TodoSegment的Style
 function getTodoSegmentStyle(seg: TodoSegment): CSSProperties {
   const startMinute = (seg.start - props.timeRange.start) / 60000;
@@ -345,7 +345,7 @@ function getTodoSegmentStyle(seg: TodoSegment): CSSProperties {
   };
 }
 
-// 获取实际执行segment的样式
+// ====================获取实际执行segment的样式 ================
 const actualSegments = computed(() => generateActualTodoSegments(props.todos));
 
 function getActualSegmentStyle(seg: TodoSegment): CSSProperties {
@@ -371,7 +371,7 @@ function getActualSegmentStyle(seg: TodoSegment): CSSProperties {
   };
 }
 
-// 实际时间范围背景
+// ==============实际时间范围背景=================
 const actualTimeRanges = computed((): ActualTimeRange[] => {
   return props.todos
     .filter((todo) => todo.status === "done" && todo.startTime && todo.doneTime)
@@ -420,7 +420,7 @@ function getActualTimeRangeStyle(range: ActualTimeRange): CSSProperties {
   };
 }
 
-// ======= 拖拽功能 =======
+// ======= 拖拽TodoSegment功能 =======
 // 拖拽状态管理
 const dragState = ref<{
   isDragging: boolean;
@@ -449,14 +449,6 @@ const mouseState = ref<{
 
 // handleMouseDown
 function handleMouseDown(event: MouseEvent, seg: TodoSegment) {
-  console.log(
-    "🟢 Mouse down:",
-    seg.todoId,
-    "todoIndex:",
-    seg.start,
-    seg.todoIndex
-  );
-
   mouseState.value.isDragging = true;
   mouseState.value.startX = event.clientX;
   mouseState.value.startY = event.clientY;
@@ -475,46 +467,54 @@ function handleMouseDown(event: MouseEvent, seg: TodoSegment) {
   event.stopPropagation();
 }
 
+// handleMouseMove (版本 V2: 利用 data-global-index)
 function handleMouseMove(event: MouseEvent) {
-  if (!mouseState.value.isDragging) return;
+  // 如果当前不是在拖拽状态，或者没有记录被拖拽的元素，则直接返回
+  if (!mouseState.value.isDragging || !mouseState.value.draggedSeg) {
+    return;
+  }
 
-  const draggedSeg = mouseState.value.draggedSeg;
-  if (!draggedSeg) return;
+  // 1. 定义我们关心的所有可作为目标的 segment 的 CSS 选择器。
+  //    我们关心所有带有 'pomo-segment' 类的元素。
+  const selector = ".pomo-segment";
 
-  const selector = ".pomo-segment.work"; // 非 break 槽
+  // 2. 从当前鼠标坐标获取最顶层的 HTML 元素。
   const elementBelow = document.elementFromPoint(
     event.clientX,
     event.clientY
   ) as HTMLElement | null;
-  const pomoElement = elementBelow?.closest(selector) as HTMLElement | null;
 
-  // 每次进入先重置（避免残留）
+  // 3. 使用 .closest() 向上查找符合选择器的父元素。
+  //    这样做的好处是，即使鼠标悬停在 segment 内部的图标或文字上，也能找到正确的容器 div。
+  const targetElement = elementBelow?.closest(selector) as HTMLElement | null;
+
+  // 4. 首先，重置上一次的悬停目标。
+  //    这样可以确保如果鼠标移出所有目标，悬停状态会被正确清除。
   dragState.value.dropTargetGlobalIndex = null;
 
-  if (!pomoElement) return;
+  // 5. 检查是否找到了一个目标元素
+  if (targetElement) {
+    // 6. ✨ 核心逻辑：直接从 DOM 元素上读取 data-global-index 属性！
+    //    `dataset.globalIndex` 会自动转换 data-global-index 属性名为驼峰式。
+    const globalIndexStr = targetElement.dataset.globalIndex;
 
-  // DOM 命中 -> 通过 DOM 顺序映射到数据
-  const allTargetSegs = Array.from(
-    document.querySelectorAll(selector)
-  ) as HTMLElement[];
+    // 7. 确保我们成功读取到了 globalIndex 字符串
+    if (globalIndexStr) {
+      const globalIndex = parseInt(globalIndexStr, 10);
 
-  const hoverIndex = allTargetSegs.indexOf(pomoElement);
-  if (hoverIndex < 0) return;
+      // 8. 验证这个 globalIndex 对应的数据，确保它是一个有效的放置目标。
+      //    我们只允许拖放到 'pomo' 类型的块上。
+      const targetData = pomodoroSegments.value[globalIndex];
 
-  const workSegments = pomodoroSegments.value.filter(
-    (seg) => seg.type === "pomo"
-  ); // pomodoroSegments 包含break schedule
-  console.log("📏 workSegments.length =", workSegments.length);
-  const segment = workSegments[hoverIndex];
-  if (!segment) return;
+      if (targetData && targetData.type === "pomo") {
+        // 这是一个有效的 'pomo' 块，更新放置目标状态。
+        dragState.value.dropTargetGlobalIndex = globalIndex;
 
-  const globalIndex = pomodoroSegments.value.indexOf(segment);
-  if (globalIndex < 0) return;
-
-  dragState.value.dropTargetGlobalIndex = globalIndex;
-
-  // 仅输出 globalIndex
-  console.log("🎯 dropTargetGlobalIndex =", globalIndex);
+        // (可选的调试日志)
+        console.log("🎯 Drop Target Hover -> globalIndex:", globalIndex);
+      }
+    }
+  }
 }
 
 // 鼠标松开
@@ -527,13 +527,7 @@ function handleMouseUp() {
   if (targetGlobalIndex === null) {
     console.log("🟡 Drop on invalid area. No action taken.");
     // 收尾
-    mouseState.value.isDragging = false;
-    dragState.value.isDragging = false;
-    dragState.value.draggedTodoId = null;
-    dragState.value.draggedIndex = null;
-    dragState.value.dropTargetGlobalIndex = null;
-    document.removeEventListener("mousemove", handleMouseMove);
-    document.removeEventListener("mouseup", handleMouseUp);
+    cleanupDragState();
     return;
   }
 
@@ -545,14 +539,7 @@ function handleMouseUp() {
 
   if (!draggedTodo) {
     console.warn("🟠 handleMouseUp: draggedTodo not found, abort.");
-    // 结束后恢复状态
-    mouseState.value.isDragging = false;
-    dragState.value.isDragging = false;
-    dragState.value.draggedTodoId = null;
-    dragState.value.draggedIndex = null;
-    dragState.value.dropTargetGlobalIndex = null;
-    document.removeEventListener("mousemove", handleMouseMove);
-    document.removeEventListener("mouseup", handleMouseUp);
+    cleanupDragState();
     return;
   }
 
@@ -566,6 +553,11 @@ function handleMouseUp() {
   });
 
   // 结束后恢复状态
+  cleanupDragState();
+}
+
+// 辅助函数，用于清理状态
+function cleanupDragState() {
   mouseState.value.isDragging = false;
   dragState.value.isDragging = false;
   dragState.value.draggedTodoId = null;
@@ -577,13 +569,11 @@ function handleMouseUp() {
 
 // ======= todos改变时同步 =======
 watch(
-  () => todoSegments.value, // 明确监听 computed 属性的结果
+  () => todoSegments.value,
   (newAllocatedSegments) => {
-    // 同样，推荐使用一个 action 来整体替换
     segStore.setTodoSegments(newAllocatedSegments);
   },
-  { immediate: true, deep: true } // immediate 确保初始加载时同步
-  // deep 确保对 segments 内部的更改也能被侦测到
+  { immediate: true, deep: true }
 );
 </script>
 

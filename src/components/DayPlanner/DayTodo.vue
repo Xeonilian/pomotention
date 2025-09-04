@@ -466,7 +466,6 @@ function startEditingPriority(todo: Todo) {
   nextTick(() => {
     const input = document.querySelector(".rank-input .n-input__input-el");
     if (input) {
-      console.log(input);
       (input as HTMLInputElement).select();
     }
   });
