@@ -1056,12 +1056,13 @@ td.status-col {
   align-items: center;
   white-space: nowrap;
   flex-shrink: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
   z-index: 10;
 }
 
 .pomo-groups {
   padding-right: 1px;
-  overflow-y: hidden;
   z-index: 10;
 }
 
@@ -1069,13 +1070,13 @@ td.status-col {
   display: inline-flex;
   align-items: center;
   flex-shrink: 0;
-  overflow-y: hidden;
-  gap: 1px;
+  gap: 0.5px;
 }
 
 .pomo-separator {
   color: var(--color-text-secondary);
   flex-shrink: 0;
+  transform: translateY(-1px);
 }
 
 :deep(.n-checkbox) {
@@ -1185,7 +1186,7 @@ td.col-check {
   padding-right: 2px;
 }
 
-:deep(.n-input .n-input__input-el) {
+.rank-input :deep(.n-input .n-input__input-el) {
   --n-border-radius: 4px;
   --n-height: 12px;
   transform: translateY(-1px);
