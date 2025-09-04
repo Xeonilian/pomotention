@@ -1,33 +1,15 @@
 <!-- 
   Component: ActivityButtons.vue 
-  Description: 
-  提供一组按钮，用于操作活动（任务和预约），包括选择活动、筛选、添加任务、添加预约和删除活动。
-
-  Props:
-  - filterOptions: 筛选选项数组，用于下拉菜单。
-  - activeId: 当前选中的活动 ID，用于控制删除按钮的启用状态。
-
-  Emits:
-  - pick-activity: 触发选择活动的操作。
-  - filter: 触发筛选操作，传递筛选选项的 key。
-  - add-task: 触发添加任务的操作。
-  - add-schedule: 触发添加预约的操作。
-  - delete-active: 触发删除当前选中活动的操作。
-
-  Parent: ActivitySheet.vue
-
-  Usage:
-  <ActivityButtons  :activeId="activeId" @pick-activity="pickActivity" @filter="handleFilter" @add-task="addTask" @add-schedule="addSchedule" @delete-active="deleteActive" />
 -->
 
 <template>
   <div class="activity-view-button-container">
     <n-button
       @click="$emit('pick-activity')"
-      :disabled="activeId === null"
+      :disabled="activeId === null || activeId === undefined"
       secondary
       circle
-      type="error"
+      type="default"
       size="small"
       :title="isSelectedClassS ? '预约：跳转' : '任务：跳转|选择'"
     >
@@ -39,9 +21,13 @@
       @click="$emit('convert-activity-to-task')"
       secondary
       circle
-      type="error"
+      type="default"
       size="small"
-      :disabled="activeId === null || props.selectedTaskId !== null"
+      :disabled="
+        activeId === null ||
+        props.selectedTaskId !== null ||
+        activeId === undefined
+      "
       title="追踪任务"
     >
       <template #icon>
@@ -55,9 +41,9 @@
       @click="$emit('delete-active')"
       circle
       secondary
-      type="info"
+      type="default"
       size="small"
-      :disabled="activeId === null"
+      :disabled="activeId === null || activeId === undefined"
     >
       <template #icon
         ><n-icon><Delete24Regular /></n-icon
@@ -69,9 +55,9 @@
       @click="$emit('repeat-activity')"
       circle
       secondary
-      type="info"
+      type="default"
       size="small"
-      :disabled="activeId === null"
+      :disabled="activeId === null || activeId === undefined"
     >
       <template #icon
         ><n-icon><ArrowRepeatAll24Regular /></n-icon

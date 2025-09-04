@@ -26,12 +26,12 @@
             >
               {{
                 record.type === "energy"
-                  ? "🔋"
+                  ? "⚡"
                   : record.type === "reward"
-                  ? "😜"
+                  ? "🏵️"
                   : record.interruptionType === "I"
-                  ? "🌚"
-                  : "🌝"
+                  ? "💭"
+                  : "🗣️"
               }}
             </span>
             <span
@@ -256,22 +256,24 @@ const formatTime = (timestamp: number) => {
   });
 };
 
-// 根据能量值获取颜色 (红到绿渐变)
-const getEnergyColor = (value: number) => {
-  const clampedValue = Math.max(1, Math.min(10, value));
-  const normalizedValue = (clampedValue - 1) / 9;
-  const red = 255 * (1 - normalizedValue);
-  const green = 255 * normalizedValue;
-  const blue = 0;
-  return `rgb(${Math.round(red)}, ${Math.round(green)}, ${Math.round(blue)})`;
-};
-
-// 根据愉悦值获取颜色 (浅蓝到深蓝渐变)
+// 根据能量值获取颜色 (红)
 const getRewardColor = (value: number) => {
   const clampedValue = Math.max(1, Math.min(10, value));
   const normalizedValue = (clampedValue - 1) / 9;
-  const startColor = { r: 173, g: 216, b: 230 }; // light blue
-  const endColor = { r: 0, g: 0, b: 139 }; // dark blue
+  const startColor = { r: 36, g: 3, b: 0 };
+  const endColor = { r: 232, g: 27, b: 10 };
+  const r = startColor.r + (endColor.r - startColor.r) * normalizedValue;
+  const g = startColor.g + (endColor.g - startColor.g) * normalizedValue;
+  const b = startColor.b + (endColor.b - startColor.b) * normalizedValue;
+  return `rgb(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)})`;
+};
+
+// 根据愉悦值获取颜色 (浅蓝到深蓝渐变)
+const getEnergyColor = (value: number) => {
+  const clampedValue = Math.max(1, Math.min(10, value));
+  const normalizedValue = (clampedValue - 1) / 9;
+  const startColor = { r: 36, g: 3, b: 0 };
+  const endColor = { r: 64, g: 139, b: 234 };
   const r = startColor.r + (endColor.r - startColor.r) * normalizedValue;
   const g = startColor.g + (endColor.g - startColor.g) * normalizedValue;
   const b = startColor.b + (endColor.b - startColor.b) * normalizedValue;
@@ -349,7 +351,7 @@ const getRewardColor = (value: number) => {
   flex-direction: column;
   align-items: center;
   width: 25px;
-  background-color: var(--color-blue-light-transparent);
+  box-shadow: 1px 1px var(--color-background-light);
   border-radius: 8px;
   padding: 1px 0px;
   margin: 0;
@@ -357,14 +359,14 @@ const getRewardColor = (value: number) => {
 }
 
 .point-icon {
-  font-size: 9px;
-  margin-bottom: 1px;
+  font-size: 12px;
 }
 
 .point-value {
   font-size: 12px;
   font-weight: bold;
-  line-height: 1;
+  line-height: 0.8;
+  font-family: "consolas", monospace;
 }
 
 .point-time {
@@ -372,5 +374,6 @@ const getRewardColor = (value: number) => {
   color: var(--color-text-primary);
   line-height: 1;
   margin: 1px;
+  font-family: "consolas", monospace;
 }
 </style>

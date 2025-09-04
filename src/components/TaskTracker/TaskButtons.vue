@@ -30,7 +30,7 @@
     </n-button>
     <n-button
       size="small"
-      type="default"
+      type="info"
       circle
       strong
       secondary

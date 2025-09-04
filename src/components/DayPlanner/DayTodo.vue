@@ -262,9 +262,14 @@
                   v-if="todo.taskId"
                   title="能量值 | 奖赏值 | 内部打扰 | 外部打扰"
                 >
-                  {{ averageValue(todo.energyRecords) }}|{{
+                  <span style="color: var(--color-blue)">{{
+                    averageValue(todo.energyRecords)
+                  }}</span
+                  >|
+                  <span style="color: var(--color-red)">{{
                     averageValue(todo.rewardRecords)
-                  }}|{{ countInterruptions(todo.interruptionRecords, "I") }}|{{
+                  }}</span
+                  >|{{ countInterruptions(todo.interruptionRecords, "I") }}|{{
                     countInterruptions(todo.interruptionRecords, "E")
                   }}
                 </div>
@@ -842,7 +847,7 @@ function averageValue<T extends { value: number }>(
       count++;
     }
   }
-  return count === 0 ? "-" : sum / count;
+  return count === 0 ? "-" : Math.round(sum / count);
 }
 
 // 2) 统计中断类型数量（"E" 或 "I"）
