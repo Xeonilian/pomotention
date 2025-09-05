@@ -269,7 +269,6 @@
         @add-activity="onAddActivity"
         @delete-activity="onDeleteActivity"
         @update-active-id="onUpdateActiveId"
-        @update-active-id-nofocus="onUpdateActiveIdNoFocus"
         @toggle-pomo-type="onTogglePomoType"
         @repeat-activity="onRepeatActivity"
         @create-child-activity="onCreateChildActivity"
@@ -874,25 +873,6 @@ function onUpdateActiveId(id: number | null) {
   selectedTaskId.value =
     activity?.taskId || todo?.taskId || schedule?.taskId || null;
   // console.log("selectedTaskId.value", selectedTaskId.value);
-
-  saveAllDebounced();
-}
-
-// 激活黄色高亮不编辑文字
-function onUpdateActiveIdNoFocus(id: number | null) {
-  activeId.value = undefined;
-  selectedActivityId.value = null; // 避免多重高亮
-
-  // 查找对象
-  const activity = id != null ? activityById.value.get(id) : undefined;
-  const todo = id != null ? todoByActivityId.value.get(id) : undefined;
-  const schedule = id != null ? scheduleByActivityId.value.get(id) : undefined;
-
-  // 如果存在 taskId，就赋给 selectedTaskId，否则置空
-  selectedTaskId.value =
-    activity?.taskId || todo?.taskId || schedule?.taskId || null;
-
-  selectedRowId.value = todo?.id || schedule?.id || null;
 
   saveAllDebounced();
 }

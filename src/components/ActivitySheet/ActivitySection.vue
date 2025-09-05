@@ -214,7 +214,7 @@
             v-if="item.class === 'S'"
             v-model:value="item.location"
             style="max-width: 50px"
-            @focus="$emit('nofocus-row', item.id)"
+            @focus="handleNoFocus(item.id)"
             placeholder="地点"
             :class="{ 'force-hover': hoveredRowId === item.id }"
             @click.stop
@@ -227,17 +227,16 @@
             :title="`输入估计${item.pomoType || '🍅'}数量`"
             style="max-width: 32px"
             class="pomo-input"
+            :disabled="item.pomoType === '🍒'"
+            @update:value="(val) => onInputUpdate(item, val)"
+            @focus="handleNoFocus(item.id)"
             :class="{
               'pomo-red': item.pomoType === '🍅',
               'pomo-purple': item.pomoType === '🍇',
               'pomo-green': item.pomoType === '🍒',
-              'input-center': true, // 新增
-              'input-clear-disabled': item.pomoType === '🍒',
+              'input-center': true,
               'force-hover': hoveredRowId === item.id,
             }"
-            :disabled="item.pomoType === '🍒'"
-            @update:value="(val) => onInputUpdate(item, val)"
-            @focus="$emit('nofocus-row', item.id)"
           />
           <n-input
             v-else
@@ -249,7 +248,7 @@
                   ? (item.dueRange[1] = val)
                   : (item.dueRange = [Date.now(), val])
             "
-            @focus="$emit('nofocus-row', item.id)"
+            @focus="handleNoFocus(item.id)"
             title="持续时间(分钟)"
             placeholder="min"
             class="input-center input-min"
@@ -262,7 +261,7 @@
             clearable
             style="max-width: 63px"
             format="MM/dd"
-            @focus="$emit('nofocus-row', item.id)"
+            @focus="handleNoFocus(item.id)"
             title="死线日期"
             :class="getCountdownClass(item.dueDate)"
           />
@@ -279,7 +278,7 @@
             style="max-width: 63px"
             clearable
             format="HH:mm"
-            @focus="$emit('nofocus-row', item.id)"
+            @focus="handleNoFocus(item.id)"
             title="约定时间"
             :class="getCountdownClass(item.dueRange && item.dueRange[0])"
           />
@@ -341,9 +340,8 @@ const props = defineProps<{
   activeId: number | null | undefined;
 }>();
 
-defineEmits<{
+const emit = defineEmits<{
   "focus-row": [id: number];
-  "nofocus-row": [id: number];
   filter: [key: string];
   "add-section": [id: number];
   "remove-section": [id: number];
@@ -355,6 +353,7 @@ const settingStore = useSettingStore();
 const showTagManager = ref(false);
 const editingTagId = ref(0);
 const tagStore = useTagStore();
+const noFocus = ref(true);
 
 const tempTagIds = ref<number[]>([]); // 临时编辑tagIds
 
@@ -439,10 +438,15 @@ function setRowInputRef(el: InputInst | null, id: number) {
   else rowInputMap.value.delete(id);
 }
 
+function handleNoFocus(id: number) {
+  noFocus.value = true;
+  emit("focus-row", id);
+}
 // 监听 activeId，命中后聚焦对应行
 watch(
   () => props.activeId,
   async (id) => {
+    if (noFocus.value) return;
     let targetFocusId = null;
     if (id === undefined) return;
     if (id === null) {
