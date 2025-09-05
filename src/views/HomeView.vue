@@ -744,7 +744,6 @@ watch(
 // 离开页面兜底（Tauri 桌面端同样可用）
 window.addEventListener("beforeunload", () => {
   try {
-    console.log("watch flush save");
     saveAllDebounced.flush();
   } catch {}
 });
@@ -820,7 +819,6 @@ function onDeleteActivity(id: number) {
 
 /** 选中活动，将其转为 todo 并作为 picked */
 function onPickActivity(activity: Activity) {
-  console.log("start", activeId.value);
   activity.status = "ongoing";
   const { newTodo } = passPickedActivity(
     activity,
@@ -829,7 +827,6 @@ function onPickActivity(activity: Activity) {
   );
   todoList.value = [...todoList.value, newTodo];
   selectedActivityId.value = activity.id;
-  console.log("last", activeId.value);
   saveAllDebounced();
 }
 
@@ -880,10 +877,14 @@ function onUpdateActiveId(id: number | null) {
 /** 修改番茄类型时的提示处理 */
 function onTogglePomoType(id: number) {
   const todo = todoByActivityId.value.get(id);
-  if (todo) todo.positionIndex = undefined; // 先取消当前TimeTable的位置
+  if (todo) {
+    todo.globalIndex = undefined;
+  } // 先取消当前TimeTable的位置
   const result = togglePomoType(id, { activityById: activityById.value });
-  if (result) showErrorPopover("活动的类型已切换！");
-  saveAllDebounced();
+  if (result) {
+    showErrorPopover("活动的类型已切换！");
+  }
+  activeId.value = id;
 }
 
 /** 重复当前的活动 */
@@ -906,6 +907,7 @@ function onRepeatActivity(id: number) {
     handleAddActivity(scheduleList.value, newActivity, {
       activityById: activityById.value,
     });
+    activeId.value = newActivity.id;
   }
   saveAllDebounced();
 }
@@ -935,6 +937,7 @@ function onCreateChildActivity(id: number) {
     handleAddActivity(scheduleList.value, newActivity, {
       activityById: activityById.value,
     });
+    activeId.value = newActivity.id;
   }
   saveAllDebounced();
 }

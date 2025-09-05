@@ -77,7 +77,7 @@
                 style="flex: 1"
                 @input="handleTitleInput(item, $event)"
                 @keydown="handleInputKeydown($event, item)"
-                @focus="$emit('focus-row', item.id)"
+                @focus="handleNoFocus(item.id)"
                 :class="{
                   'force-hover': hoveredRowId === item.id,
                   'child-activity': item.parentId,
@@ -353,7 +353,7 @@ const settingStore = useSettingStore();
 const showTagManager = ref(false);
 const editingTagId = ref(0);
 const tagStore = useTagStore();
-const noFocus = ref(true);
+const noFocus = ref(false);
 
 const tempTagIds = ref<number[]>([]); // 临时编辑tagIds
 
@@ -442,30 +442,45 @@ function handleNoFocus(id: number) {
   noFocus.value = true;
   emit("focus-row", id);
 }
+
 // 监听 activeId，命中后聚焦对应行
 watch(
   () => props.activeId,
   async (id) => {
-    if (noFocus.value) return;
-    let targetFocusId = null;
+    // 识别不跳转信号，返回并充值为跳转
+    if (noFocus.value) {
+      noFocus.value = false;
+      return;
+    }
+
+    // activeId 没有定义
     if (id === undefined) return;
+
+    let targetFocusId = null;
+
+    // delete 自动聚焦最后一行
     if (id === null) {
       const list = sortedDisplaySheet.value;
       const last = list[list.length - 1];
       if (last && last.id !== null && last.id !== undefined) {
         targetFocusId = last.id;
       } else {
+        noFocus.value = false;
         return;
       }
     } else {
       targetFocusId = id;
     }
+
+    // 新增 聚焦增加行
     if (targetFocusId === null) return;
+
     await nextTick();
     const inst = rowInputMap.value.get(targetFocusId);
     if (!inst) return;
     if (typeof inst.focus === "function") {
       inst.focus();
+      noFocus.value = false;
     } else {
       inst.inputElRef?.focus?.();
     }
