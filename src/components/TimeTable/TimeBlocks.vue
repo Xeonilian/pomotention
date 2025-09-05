@@ -99,7 +99,7 @@
     }"
     :style="getTodoSegmentStyle(seg)"
     :title="`${seg.todoTitle} - 第${seg.todoIndex}个番茄 (估计分配)${
-      seg.overflow ? ' - 超出可用时间' : ''
+      seg.overflow ? ' - 时间冲突' : ''
     }`"
   >
     <span
@@ -702,7 +702,6 @@ watch(
   position: absolute;
   width: 15px;
   height: 15px;
-  border-radius: 50%;
   background-color: var(--color-background-dark);
   color: var(--color-background);
   font-size: 12px;
@@ -710,6 +709,7 @@ watch(
   margin: 2px;
   padding: 0;
   outline: none;
+  border-radius: 50%;
   border: none;
   box-shadow: none;
   user-select: none;
@@ -717,35 +717,51 @@ watch(
 
 /* 可按 priority 分不同色 */
 .priority-1 {
-  background-color: #ef5350;
+  background-color: #ef53505c; /* 半透明浅底 */
+  color: #ef5350; /* 同色文字 */
 }
+
+/* 按 1 的风格修改 */
 .priority-2 {
-  background-color: #ff9800;
+  background-color: #ff98005c; /* 原来是纯色，改为半透明浅底 */
+  color: #ff9800; /* 同色文字 */
 }
+
+/* priority-3 保持不变 */
 .priority-3 {
-  background-color: rgb(255, 235, 59);
-  color: #555;
+  background-color: #ffeb3b5c;
+  color: #ffeb3b;
+  box-shadow: -1px -1px var(--color-background-light) inset;
 }
+
+/* 按 1 的风格修改 */
 .priority-4 {
-  background-color: #4caf50;
+  background-color: #4caf505c;
+  color: #4caf50;
 }
 .priority-5 {
-  background-color: #2196f3;
+  background-color: #2196f35c;
+  color: #2196f3;
 }
 .priority-6 {
-  background-color: #9575cd;
+  background-color: #9575cd5c; /* 你原来已是半透明，保持并补上文字色 */
+  color: #9575cd;
 }
 .priority-7 {
-  background-color: #7e57c2;
+  background-color: #7e57c25c;
+  color: #7e57c2;
 }
 .priority-8 {
-  background-color: #26a69a;
+  background-color: #26a69a5c;
+  color: #26a69a;
 }
 .priority-9 {
-  background-color: #789262;
+  background-color: #7892625c;
+  color: #789262;
 }
 .priority-10 {
-  background-color: #8d6e63;
+  background-color: #8d6e635c;
+  color: #8d6e63;
 }
 
 /* 已完成的todo段样式 */
