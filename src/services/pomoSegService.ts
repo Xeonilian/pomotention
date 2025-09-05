@@ -297,19 +297,15 @@ export function generateActualTodoSegments(todos: Todo[]): TodoSegment[] {
 export function generateEstimatedTodoSegments(
   appDateTimestamp: number,
   todos: Todo[],
-  segments: PomodoroSegment[]
+  pomodoroSegments: PomodoroSegment[]
 ): TodoSegment[] {
   // 1. 初始化
   const usedGlobalIndices: Set<number> = new Set();
-  // `todoSegments` 是最终返回的结果数组，会在这里被逐步填充。
   const todoSegments: TodoSegment[] = [];
 
   // 2. 待办事项排序
-  // 排序至关重要：
-  // - 手动指定的任务 (有 globalIndex) 必须最先被处理。
-  // - 在手动任务内部，按照它们指定的位置先后排序。
-  // - 自动分配的任务，按照优先级等规则排序。
   const sortedTodos = [...todos].sort((a, b) => {
+    // 这是为了不存在globalIndex而准备的
     const aIsManual = typeof a.globalIndex === "number" && a.globalIndex >= 0;
     const bIsManual = typeof b.globalIndex === "number" && b.globalIndex >= 0;
 
@@ -319,11 +315,8 @@ export function generateEstimatedTodoSegments(
     if (aIsManual && bIsManual) {
       // 如果两个都是手动任务
       if (a.globalIndex! !== b.globalIndex!) {
-        // 首先按照它们指定的位置（globalIndex）排序
         return a.globalIndex! - b.globalIndex!;
       }
-      // *** 新增逻辑：如果 globalIndex 相同，则按优先级降序排列 ***
-      // 这样，优先级更高的任务会先被分配到那个共享的位置。
       if (a.priority !== b.priority) {
         return b.priority - a.priority;
       }
@@ -334,28 +327,27 @@ export function generateEstimatedTodoSegments(
       return b.priority - a.priority;
     }
 
-    // 如果优先级也相同，可以加一个最终的稳定排序依据，比如 ID
     return a.id - b.id;
   });
 
-  // 3. 循环处理每一个待办事项
+  // 3. 循环处理每一个待办事项分配todoSegment
   for (const todo of sortedTodos) {
-    let searchStartIndexInArray = 0;
-
-    const isManual =
+    let anchorIndex = 0;
+    // 提供globalIndex模式 全局模式
+    // 首次放置到TimeTable时，是没有设置positionIndex的所以为false，就会激活自动放置
+    // 如果是旧数据，没有globalIndex也会激活非手动
+    const isGlobal =
       typeof todo.globalIndex === "number" && todo.globalIndex >= 0;
-    const forceStart = isManual; // 手动模式下，强制从指定点开始
 
-    // 如果是手动模式，我们需要计算出 `globalIndex` 对应的数组索引
-    if (isManual) {
-      const targetGlobalIndex = todo.globalIndex!;
-      const foundIndex = segments.findIndex(
+    if (isGlobal) {
+      const targetGlobalIndex = todo.globalIndex!; // !让没有定义的变量时不报错
+
+      const foundIndex = pomodoroSegments.findIndex(
         (seg) => seg.globalIndex === targetGlobalIndex
       );
 
       if (foundIndex !== -1) {
-        // 找到了，将搜索起点更新为这个找到的数组索引
-        searchStartIndexInArray = foundIndex;
+        anchorIndex = foundIndex;
       } else {
         console.warn(
           `[PomoSegService] 手动分配警告: Todo #${todo.id} 指定的 globalIndex ${targetGlobalIndex} 在当前时间块中无效或不存在。将尝试从头开始分配。`
@@ -364,19 +356,20 @@ export function generateEstimatedTodoSegments(
     }
 
     // 4. 根据任务类型，调用相应的分配函数
-    const pomoCount = getTodoDisplayPomoCount(todo); // 获取该 todo 需要的番茄数量
+    // 获取该 todo 需要显示的番茄数量，如果还没估计也会显示1个
+    const pomoCount = getTodoDisplayPomoCount(todo);
 
     switch (todo.pomoType) {
       case "🍅":
         _allocateTomatoSegmentsFromIndex(
           appDateTimestamp,
-          todo,
           pomoCount,
-          segments,
+          isGlobal,
+          anchorIndex,
           usedGlobalIndices,
-          todoSegments,
-          searchStartIndexInArray,
-          forceStart
+          todo,
+          pomodoroSegments,
+          todoSegments
         );
         break;
 
@@ -385,24 +378,24 @@ export function generateEstimatedTodoSegments(
           appDateTimestamp,
           todo,
           pomoCount,
-          segments,
+          pomodoroSegments,
           usedGlobalIndices,
           todoSegments,
-          searchStartIndexInArray,
-          forceStart
+          anchorIndex,
+          isGlobal
         );
         break;
 
       case "🍒":
         _allocateCherrySegmentsFromIndex(
           appDateTimestamp,
-          todo,
-          pomoCount, // 对于樱桃，pomoCount 应该是 2
-          segments,
+          pomoCount,
+          isGlobal,
+          anchorIndex,
           usedGlobalIndices,
-          todoSegments,
-          searchStartIndexInArray,
-          forceStart
+          todo,
+          pomodoroSegments,
+          todoSegments
         );
         break;
 
@@ -413,51 +406,46 @@ export function generateEstimatedTodoSegments(
         break;
     }
   }
+  // 为todo赋值globalIndex
   const todoMap = new Map<number, Todo>(todos.map((t) => [t.id, t]));
 
-  // Loop through the *results* of the allocation.
   for (const seg of todoSegments) {
-    // We only care about successfully placed (non-overflow) segments.
-    if (seg.overflow || seg.globalIndex === undefined) {
+    if (seg.globalIndex === undefined) {
       continue;
     }
-
     const originalTodo = todoMap.get(seg.todoId);
-
-    // If the original `todo` didn't have a `globalIndex`, assign the one we just calculated.
-    // This directly MUTATES the objects inside the `todos` array that was passed into this function.
-    if (originalTodo && originalTodo.globalIndex === undefined) {
+    if (originalTodo) {
       originalTodo.globalIndex = seg.globalIndex;
     }
   }
-  // 5. 返回最终结果
-  // 此时的 todoSegments 已经包含了所有成功分配和溢出的任务块
+
   return todoSegments;
 }
 /**
  * 从指定索引开始分配🍅番茄段 (V3 - 支持跨类别手动摆放)
  */
 function _allocateTomatoSegmentsFromIndex(
-  appDateTimestamp: number,
-  todo: Todo,
-  needCount: number,
-  segments: PomodoroSegment[],
+  appDateTimestamp: number, // 确定基准时间
+  needCount: number, // 实际需要的pomo数量，为樱桃设置
+  isMannual: boolean, // 基于globalIndex自动分配
+  anchorIndex: number, // todo提供查验后的globalIndex
   usedGlobalIndices: Set<number>,
-  todoSegments: TodoSegment[],
-  startIndex: number,
-  forceStart: boolean
+  todo: Todo, // 被分配的Todo信息
+  pomodoroSegments: PomodoroSegment[],
+  todoSegments: TodoSegment[]
 ): void {
   let assignedCount = 0;
   const defaultCategory = "working"; // 番茄钟的默认类别
 
+  // 判断提供的基准在pomoSeg范围内，用计数当前配置与需要配置决定是否继续
   for (
-    let i = startIndex;
-    i < segments.length && assignedCount < needCount;
+    let i = anchorIndex;
+    i < pomodoroSegments.length && assignedCount < needCount;
     i++
   ) {
-    const currentSeg = segments[i];
+    const currentPomoSeg = pomodoroSegments[i]; //定位这个todo将放置的Pomo位置
 
-    if (forceStart && assignedCount === 0 && i > startIndex) {
+    if (isMannual && assignedCount === 0 && i > anchorIndex) {
       break;
     }
 
@@ -465,28 +453,28 @@ function _allocateTomatoSegmentsFromIndex(
     // 1. 如果是手动分配 (forceStart)，则不检查类别。
     // 2. 如果是自动分配，则必须匹配默认类别。
     const isCategoryMatch =
-      forceStart || currentSeg.category === defaultCategory;
+      isMannual || currentPomoSeg.category === defaultCategory;
 
     if (
-      currentSeg.type === "pomo" &&
+      currentPomoSeg.type === "pomo" &&
       isCategoryMatch && // 使用新的条件
-      !usedGlobalIndices.has(currentSeg.globalIndex!)
+      !usedGlobalIndices.has(currentPomoSeg.globalIndex!)
     ) {
-      let segmentEnd = currentSeg.end;
-      const indicesToMarkUsed = [currentSeg.globalIndex!];
+      let segmentEnd = currentPomoSeg.end;
+      const indicesToMarkUsed = [currentPomoSeg.globalIndex!];
 
       // --- 合并 break 的逻辑也需要同样的条件 ---
       const nextSegIndex = i + 1;
-      if (nextSegIndex < segments.length) {
-        const nextSeg = segments[nextSegIndex];
+      if (nextSegIndex < pomodoroSegments.length) {
+        const nextSeg = pomodoroSegments[nextSegIndex];
         // break 也必须类别匹配（或在手动模式下被忽略）
         const isNextSegCategoryMatch =
-          forceStart || nextSeg.category === defaultCategory;
+          isMannual || nextSeg.category === defaultCategory;
         if (
           nextSeg.type === "break" &&
           isNextSegCategoryMatch && // 使用新的条件
           !usedGlobalIndices.has(nextSeg.globalIndex!) &&
-          currentSeg.end === nextSeg.start
+          currentPomoSeg.end === nextSeg.start
         ) {
           segmentEnd = nextSeg.end;
           indicesToMarkUsed.push(nextSeg.globalIndex!);
@@ -499,14 +487,14 @@ function _allocateTomatoSegmentsFromIndex(
         priority: todo.priority,
         todoTitle: todo.activityTitle,
         todoIndex: assignedCount + 1,
-        start: currentSeg.start,
+        start: currentPomoSeg.start,
         end: segmentEnd,
         pomoType: "🍅",
-        assignedPomodoroSegment: currentSeg,
-        category: currentSeg.category,
+        assignedPomodoroSegment: currentPomoSeg,
+        category: currentPomoSeg.category,
         completed: false,
         usingRealPomo: false,
-        globalIndex: currentSeg.globalIndex,
+        globalIndex: currentPomoSeg.globalIndex,
       });
 
       indicesToMarkUsed.forEach((idx) => usedGlobalIndices.add(idx));
@@ -519,8 +507,9 @@ function _allocateTomatoSegmentsFromIndex(
     let overflowStartTime: number;
 
     // 决定溢出块的起始时间
-    if (segments.length > 0) {
-      overflowStartTime = segments[segments.length - 1].end;
+    if (pomodoroSegments.length > 0) {
+      overflowStartTime = pomodoroSegments[pomodoroSegments.length - 1].end;
+      console.log("溢出时间");
     } else {
       // 如果没有任何可用时间块，则从当天晚上10点开始
       const overflowBaseDate = new Date(appDateTimestamp);
@@ -680,13 +669,13 @@ function _allocateGrapeSegmentsFromIndex(
  */
 function _allocateCherrySegmentsFromIndex(
   appDateTimestamp: number,
-  todo: Todo,
   needCount: number, // 预期为 2，代表一个完整的樱桃单元 (100分钟)
-  segments: PomodoroSegment[],
-  usedGlobalIndices: Set<number>,
-  todoSegments: TodoSegment[],
+  forceStart: boolean,
   startIndex: number,
-  forceStart: boolean
+  usedGlobalIndices: Set<number>,
+  todo: Todo,
+  segments: PomodoroSegment[],
+  todoSegments: TodoSegment[]
 ): void {
   let assigned = false; // 我们只需要分配一次，所以用布尔值即可
 
