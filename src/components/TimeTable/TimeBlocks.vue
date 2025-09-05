@@ -734,7 +734,6 @@ watch(
   box-shadow: 1px 1px var(--color-background-light);
 }
 
-/* 按 1 的风格修改 */
 .priority-4 {
   background-color: #4caf505c;
   color: #4caf50;

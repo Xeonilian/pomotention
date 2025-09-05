@@ -210,8 +210,8 @@
                     v-if="
                       todo.pomoType != '🍒' &&
                       todo.estPomo &&
-                      todo.estPomo.length > 1 &&
-                      todo.estPomo.length < 4
+                      todo.estPomo.length < 4 &&
+                      todo.estPomo.length > 0
                     "
                     text
                     @click="handleDeleteEstimate(todo)"
@@ -227,11 +227,14 @@
                   <!-- 新增估计按钮  -->
                   <n-button
                     class="button-right"
-                    :class="{ 'bidirection-mode': todo.estPomo.length === 2 }"
+                    :class="{
+                      'one-mode': !todo.estPomo,
+                    }"
                     v-if="
-                      todo.pomoType != '🍒' &&
-                      todo.estPomo &&
-                      todo.estPomo.length < 3
+                      (todo.estPomo &&
+                        todo.pomoType != '🍒' &&
+                        todo.estPomo.length < 3) ||
+                      (!todo.estPomo && todo.pomoType != '🍒')
                     "
                     text
                     type="default"
@@ -1029,6 +1032,7 @@ td.status-col {
   justify-content: center !important;
   width: 16px;
   height: 16px;
+  line-height: 14px;
   position: relative;
   top: -1px;
   border-radius: 50%;
@@ -1044,36 +1048,53 @@ td.status-col {
   background-color: var(--color-background);
   color: var(--color-text-secondary);
 }
+
+/* 可按 priority 分不同色 */
 .priority-1 {
-  background-color: var(--color-red);
+  background-color: #ef53505c;
+  color: #ef5350;
 }
+
+/* 按 1 的风格修改 */
 .priority-2 {
-  background-color: var(--color-orange);
+  background-color: #ff98005c;
+  color: #ff9800;
 }
+
+/* priority-3 保持不变 */
 .priority-3 {
-  background-color: var(--color-yellow);
-  color: var(--color-text-primary);
+  background-color: #ffeb3bb7;
+  color: var(--color-text-secondary);
+  box-shadow: 1px 1px var(--color-background-light);
 }
+
 .priority-4 {
-  background-color: var(--color-green);
+  background-color: #4caf505c;
+  color: #4caf50;
 }
 .priority-5 {
-  background-color: var(--color-blue);
+  background-color: #2196f35c;
+  color: #2196f3;
 }
 .priority-6 {
-  background-color: var(--color-purple);
+  background-color: #9575cd5c; /* 你原来已是半透明，保持并补上文字色 */
+  color: #9575cd;
 }
 .priority-7 {
-  background-color: var(--color-purple-dark);
+  background-color: #7e57c25c;
+  color: #7e57c2;
 }
 .priority-8 {
-  background-color: var(--color-cyan);
+  background-color: #26a69a5c;
+  color: #26a69a;
 }
 .priority-9 {
-  background-color: var(--color-green-dark);
+  background-color: #7892625c;
+  color: #789262;
 }
 .priority-10 {
-  background-color: var(--color-orange-dark);
+  background-color: #8d6e635c;
+  color: #8d6e63;
 }
 
 /* 估计番茄数量 */
@@ -1140,18 +1161,19 @@ td.status-col {
 .button-left {
   position: relative;
   left: -4px;
-  z-index: 5;
+  z-index: 1;
 }
 
-.button-right:not(.bidirection-mode) {
-  position: relative;
-  left: -4px;
-}
-
-.button-right.bidirection-mode {
+.button-right {
   position: relative;
   left: -12px;
-  z-index: 0;
+  z-index: 2;
+}
+
+.button-right.one-mode {
+  position: relative;
+  left: -4px;
+  z-index: 2;
 }
 
 /* 状态信息 */
@@ -1175,7 +1197,7 @@ td.status-col {
   transform: translateY(1px);
 }
 
-:deep(.n-button):hover {
+:deep(.n-button) :hover {
   color: var(--color-red);
 }
 
