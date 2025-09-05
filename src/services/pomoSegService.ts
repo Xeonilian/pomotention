@@ -313,20 +313,29 @@ export function generateEstimatedTodoSegments(
     const aIsManual = typeof a.globalIndex === "number" && a.globalIndex >= 0;
     const bIsManual = typeof b.globalIndex === "number" && b.globalIndex >= 0;
 
-    if (aIsManual && !bIsManual) return -1; // a是手动，b是自动，a优先
-    if (!aIsManual && bIsManual) return 1; // b是手动，a是自动，b优先
+    if (aIsManual && !bIsManual) return -1;
+    if (!aIsManual && bIsManual) return 1;
 
     if (aIsManual && bIsManual) {
-      // 如果两个都是手动任务，则按照它们指定的位置（globalIndex）排序
-      return a.globalIndex! - b.globalIndex!;
+      // 如果两个都是手动任务
+      if (a.globalIndex! !== b.globalIndex!) {
+        // 首先按照它们指定的位置（globalIndex）排序
+        return a.globalIndex! - b.globalIndex!;
+      }
+      // *** 新增逻辑：如果 globalIndex 相同，则按优先级降序排列 ***
+      // 这样，优先级更高的任务会先被分配到那个共享的位置。
+      if (a.priority !== b.priority) {
+        return b.priority - a.priority;
+      }
     }
 
-    // 如果两个都是自动任务，则按您原有的优先级规则排序
-    // 例如：按 priority 降序
+    // 如果两个都是自动任务，或以上条件都相同，则按原有的优先级规则排序
     if (a.priority !== b.priority) {
       return b.priority - a.priority;
     }
-    return 0;
+
+    // 如果优先级也相同，可以加一个最终的稳定排序依据，比如 ID
+    return a.id - b.id;
   });
 
   // 3. 循环处理每一个待办事项
@@ -404,7 +413,23 @@ export function generateEstimatedTodoSegments(
         break;
     }
   }
+  const todoMap = new Map<number, Todo>(todos.map((t) => [t.id, t]));
 
+  // Loop through the *results* of the allocation.
+  for (const seg of todoSegments) {
+    // We only care about successfully placed (non-overflow) segments.
+    if (seg.overflow || seg.globalIndex === undefined) {
+      continue;
+    }
+
+    const originalTodo = todoMap.get(seg.todoId);
+
+    // If the original `todo` didn't have a `globalIndex`, assign the one we just calculated.
+    // This directly MUTATES the objects inside the `todos` array that was passed into this function.
+    if (originalTodo && originalTodo.globalIndex === undefined) {
+      originalTodo.globalIndex = seg.globalIndex;
+    }
+  }
   // 5. 返回最终结果
   // 此时的 todoSegments 已经包含了所有成功分配和溢出的任务块
   return todoSegments;

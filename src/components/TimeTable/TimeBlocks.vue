@@ -149,7 +149,6 @@ import type {
 } from "@/core/types/Block";
 import {
   splitIndexPomoBlocksExSchedules,
-  generateEstimatedTodoSegments,
   generateActualTodoSegments,
 } from "@/services/pomoSegService";
 
@@ -158,7 +157,17 @@ import type { Todo } from "@/core/types/Todo";
 import { useSegStore } from "@/stores/useSegStore";
 
 const segStore = useSegStore();
-
+const pomodoroSegments = computed(() => segStore.pomodoroSegments);
+const todoSegments = computed(() => segStore.todoSegments);
+const occupiedIndices = computed(() => {
+  const map = new Map<number, TodoSegment>();
+  for (const seg of segStore.todoSegments) {
+    if (!seg.overflow && typeof seg.globalIndex === "number") {
+      map.set(seg.globalIndex, seg);
+    }
+  }
+  return map;
+});
 // ======= Props区域 =======
 const props = defineProps<{
   dayStart: number;
@@ -250,10 +259,7 @@ const showCurrentLine = computed(() => currentTimeTop.value >= 0);
 // (1) 定义类别颜色。living蓝色，working红色（可拓展）
 import { POMODORO_COLORS, POMODORO_COLORS_DARK } from "@/core/constants";
 
-// (2) 计算所有番茄段（含类别与编号）
-const pomodoroSegments = computed(() =>
-  splitIndexPomoBlocksExSchedules(props.dayStart, props.blocks, props.schedules)
-);
+// (2) 计算所有番茄段（含类别与编号） 换到store watch
 
 // (3) 番茄段样式
 // 在 getPomodoroStyle 函数中修改
@@ -307,32 +313,7 @@ function getPomodoroStyle(seg: PomodoroSegment): CSSProperties {
 }
 
 // ==============todo在番茄段上的分配 ================
-// 本地重写状态
-const manualAllocations = ref<Map<number, number>>(new Map()); // todoId -> globalIndex
-
-// todoSegments 的计算
-const todoSegments = computed((): TodoSegment[] => {
-  const estTSegs: TodoSegment[] = generateEstimatedTodoSegments(
-    props.dayStart,
-    props.todos,
-    pomodoroSegments.value
-  );
-
-  const todoMap = new Map<number, Todo>();
-  for (const t of props.todos) {
-    todoMap.set(t.id, t);
-  }
-
-  estTSegs.forEach((seg) => {
-    if (seg == null) return;
-    const todo = todoMap.get(seg.todoId);
-    if (todo && todo.globalIndex === undefined) {
-      todo.globalIndex = seg.globalIndex;
-    }
-  });
-
-  return estTSegs;
-});
+// todoSegments 的计算 移动到watch
 
 // 计算TodoSegment的Style
 function getTodoSegmentStyle(seg: TodoSegment): CSSProperties {
@@ -436,7 +417,6 @@ function getActualTimeRangeStyle(range: ActualTimeRange): CSSProperties {
 }
 
 // ======= 拖拽TodoSegment功能 =======
-// 拖拽状态管理
 const dragState = ref<{
   isDragging: boolean;
   draggedTodoId: number | null;
@@ -483,13 +463,9 @@ function handleMouseDown(event: MouseEvent, seg: TodoSegment) {
 }
 
 function handleMouseMove(event: MouseEvent) {
-  console.log(1);
   if (!mouseState.value.isDragging || !mouseState.value.draggedSeg) {
-    console.log(12);
     return;
   }
-  console.log(2);
-
   const selector = ".pomo-segment";
   const { clientX: x, clientY: y } = event;
 
@@ -533,7 +509,7 @@ function handleMouseMove(event: MouseEvent) {
 
   if (targetData.type === "pomo") {
     dragState.value.dropTargetGlobalIndex = globalIndex;
-    console.log("🎯 Hover -> globalIndex:", globalIndex, targetData);
+    // console.log("🎯 Hover -> globalIndex:", globalIndex, targetData);
   } else {
     console.debug("[DnD] type mismatch", {
       type: targetData.type,
@@ -569,13 +545,19 @@ function handleMouseUp() {
   }
 
   // 仅依据 globalIndex 进行放置
-  manualAllocations.value.set(draggedTodo.id, targetGlobalIndex);
+  const occupyingSeg = occupiedIndices.value.get(targetGlobalIndex);
+  const isOccupiedByOther =
+    occupyingSeg && occupyingSeg.todoId !== draggedTodo.id;
+
+  if (isOccupiedByOther) {
+    console.warn("🔴 Drop failed: Target is occupied!");
+    cleanupDragState();
+    return;
+  }
+
   draggedTodo.globalIndex = targetGlobalIndex;
-  console.log("✅ Drop successful:", {
-    todoId: draggedTodo.id,
-    title: draggedTodo.activityTitle,
-    dropTargetGlobalIndex: targetGlobalIndex,
-  });
+
+  segStore.recalculateTodoAllocations(props.todos, props.dayStart);
 
   // 结束后恢复状态
   cleanupDragState();
@@ -594,9 +576,15 @@ function cleanupDragState() {
 
 // ======= todos改变时同步 =======
 watch(
-  () => todoSegments.value,
-  (newAllocatedSegments) => {
-    segStore.setTodoSegments(newAllocatedSegments);
+  () => [props.todos, props.blocks, props.schedules, props.dayStart],
+  () => {
+    const newPomoSegs = splitIndexPomoBlocksExSchedules(
+      props.dayStart,
+      props.blocks,
+      props.schedules
+    );
+    segStore.setPomodoroSegments(newPomoSegs);
+    segStore.recalculateTodoAllocations(props.todos, props.dayStart);
   },
   { immediate: true, deep: true }
 );
