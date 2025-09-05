@@ -214,29 +214,29 @@
             v-if="item.class === 'S'"
             v-model:value="item.location"
             style="max-width: 50px"
-            @focus="$emit('focus-row', item.id)"
+            @focus="handleNoFocus(item.id)"
             placeholder="地点"
             :class="{ 'force-hover': hoveredRowId === item.id }"
+            @click.stop
           />
           <n-input
             v-if="item.class === 'T'"
             maxlength="1"
             :value="getInputValue(item)"
             :placeholder="item.pomoType"
+            :title="`输入估计${item.pomoType || '🍅'}数量`"
             style="max-width: 32px"
             class="pomo-input"
-            :title="`输入估计${item.pomoType || '🍅'}数量`"
+            :disabled="item.pomoType === '🍒'"
+            @update:value="(val) => onInputUpdate(item, val)"
+            @focus="handleNoFocus(item.id)"
             :class="{
               'pomo-red': item.pomoType === '🍅',
               'pomo-purple': item.pomoType === '🍇',
               'pomo-green': item.pomoType === '🍒',
-              'input-center': true, // 新增
-              'input-clear-disabled': item.pomoType === '🍒',
+              'input-center': true,
               'force-hover': hoveredRowId === item.id,
             }"
-            :disabled="item.pomoType === '🍒'"
-            @update:value="(val) => onInputUpdate(item, val)"
-            @focus="$emit('focus-row', item.id)"
           />
           <n-input
             v-else
@@ -248,7 +248,7 @@
                   ? (item.dueRange[1] = val)
                   : (item.dueRange = [Date.now(), val])
             "
-            @focus="$emit('focus-row', item.id)"
+            @focus="handleNoFocus(item.id)"
             title="持续时间(分钟)"
             placeholder="min"
             class="input-center input-min"
@@ -261,7 +261,7 @@
             clearable
             style="max-width: 63px"
             format="MM/dd"
-            @focus="$emit('focus-row', item.id)"
+            @focus="handleNoFocus(item.id)"
             title="死线日期"
             :class="getCountdownClass(item.dueDate)"
           />
@@ -278,7 +278,7 @@
             style="max-width: 63px"
             clearable
             format="HH:mm"
-            @focus="$emit('focus-row', item.id)"
+            @focus="handleNoFocus(item.id)"
             title="约定时间"
             :class="getCountdownClass(item.dueRange && item.dueRange[0])"
           />
@@ -337,10 +337,10 @@ const props = defineProps<{
   isRemoveButton: boolean;
   sectionId: number;
   search: string;
-  activeId: number | null;
+  activeId: number | null | undefined;
 }>();
 
-defineEmits<{
+const emit = defineEmits<{
   "focus-row": [id: number];
   filter: [key: string];
   "add-section": [id: number];
@@ -353,6 +353,7 @@ const settingStore = useSettingStore();
 const showTagManager = ref(false);
 const editingTagId = ref(0);
 const tagStore = useTagStore();
+const noFocus = ref(true);
 
 const tempTagIds = ref<number[]>([]); // 临时编辑tagIds
 
@@ -437,24 +438,32 @@ function setRowInputRef(el: InputInst | null, id: number) {
   else rowInputMap.value.delete(id);
 }
 
+function handleNoFocus(id: number) {
+  noFocus.value = true;
+  emit("focus-row", id);
+}
 // 监听 activeId，命中后聚焦对应行
 watch(
   () => props.activeId,
   async (id) => {
-    if (id == null) {
-      const list = sortedDisplaySheet.value; // 你的最终显示列表
+    if (noFocus.value) return;
+    let targetFocusId = null;
+    if (id === undefined) return;
+    if (id === null) {
+      const list = sortedDisplaySheet.value;
       const last = list[list.length - 1];
-      id = last ? last.id : null;
+      if (last && last.id !== null && last.id !== undefined) {
+        targetFocusId = last.id;
+      } else {
+        return;
+      }
+    } else {
+      targetFocusId = id;
     }
-    if (id == null) return;
-
-    // 确保对应行已经渲染完成
+    if (targetFocusId === null) return;
     await nextTick();
-
-    const inst = rowInputMap.value.get(id);
+    const inst = rowInputMap.value.get(targetFocusId);
     if (!inst) return;
-
-    // 优先组件实例的 focus，兜底用原生 input
     if (typeof inst.focus === "function") {
       inst.focus();
     } else {
@@ -462,6 +471,7 @@ watch(
     }
   }
 );
+
 // 在拖拽里用到
 function handleIconMoveMouseEnter(id: number) {
   hoveredRowId.value = id;

@@ -7,36 +7,37 @@
       <!-- 表头部分，可单独调整样式 -->
       <colgroup>
         <!-- 勾选 -->
-        <col style="width: 18px" />
+        <col class="col-check" />
         <!-- 开始 -->
-        <col style="width: 38px" />
+        <col class="col-start" />
         <!-- 结束 -->
-        <col style="width: 38px" />
+        <col class="col-end" />
         <!-- 时长 -->
-        <col style="width: 30px" />
-        <!-- 意图列：吃更多空间 -->
+        <col class="col-duration" />
+        <!-- 意图 -->
         <col class="col-intent" />
-        <!-- 地点列：限制上限、避免跟着变长 -->
+        <!-- 地点 -->
         <col class="col-location" />
-        <!-- 状态列：最后才缩，常用 min-width 保护 -->
+        <!-- 状态 -->
         <col class="col-status" />
       </colgroup>
 
-      <thead class="table-header">
+      <thead>
         <tr>
-          <th></th>
-          <th>开始</th>
-          <th>结束</th>
-          <th>时长</th>
-          <th class="status-col">意图</th>
-          <th>地点</th>
-          <th class="status-col">状态</th>
+          <th class="col-check"></th>
+          <th class="col-start">开始</th>
+          <th class="col-end">结束</th>
+          <th class="col-duration">时长</th>
+          <th class="col-intent">意图</th>
+          <th class="col-location">地点</th>
+          <th class="col-status">状态</th>
         </tr>
       </thead>
 
       <!-- 表格内容部分，可单独调整样式 -->
-      <tbody class="table-body">
+      <tbody>
         <template v-if="schedules && schedules!.length > 0">
+          <!-- 行 -->
           <tr
             v-for="schedule in schedules.sort((a:Schedule, b:Schedule) => {
               const aValue = a.activityDueRange?.[0] ?? Infinity;
@@ -50,11 +51,12 @@
               'done-row': schedule.status === 'done',
               'cancel-row': schedule.status === 'cancelled',
             }"
-            @click="handleRowClick(schedule)"
+            @click.stop="handleRowClick(schedule)"
             style="cursor: pointer"
           >
-            <!-- 完成checkbox -->
-            <td>
+            <!-- 单元格 -->
+            <!-- 1 完成状态 -->
+            <td class="col-check">
               <n-checkbox
                 v-if="schedule.status !== 'cancelled'"
                 :checked="schedule.status === 'done'"
@@ -62,16 +64,15 @@
               />
               <n-icon
                 v-else
-                size="22"
-                style="transform: translate(0px, 3px)"
-                color="var(--color-red)"
+                class="cancel-icon"
+                color="var(--color-text-secondary)"
               >
                 <DismissSquare20Filled />
               </n-icon>
             </td>
 
-            <!-- 开始时间 -->
-            <td>
+            <!-- 2 开始时间 -->
+            <td class="col-start">
               {{
                 schedule.activityDueRange
                   ? timestampToTimeString(schedule.activityDueRange[0])
@@ -79,8 +80,9 @@
               }}
             </td>
 
-            <!-- 结束时间 -->
+            <!-- 3 结束时间 -->
             <td
+              class="col-end"
               @dblclick.stop="startEditing(schedule.id, 'done')"
               :title="
                 editingRowId === schedule.id && editingField === 'done'
@@ -89,13 +91,12 @@
               "
             >
               <input
+                class="done-input time-input"
                 v-if="editingRowId === schedule.id && editingField === 'done'"
                 v-model="editingValue"
                 @blur="saveEdit(schedule)"
                 @keyup.enter="saveEdit(schedule)"
                 @keyup.esc="cancelEdit"
-                ref="editingInput"
-                class="done-input time-input"
                 :data-schedule-id="schedule.id"
                 maxlength="5"
                 autocomplete="off"
@@ -107,8 +108,9 @@
               }}</span>
             </td>
 
-            <!-- 时长 -->
+            <!-- 4 时长 -->
             <td
+              class="col-duration"
               :class="{ 'is-empty-min': schedule.activityDueRange?.[1] === '' }"
             >
               {{
@@ -118,9 +120,9 @@
               }}
             </td>
 
-            <!-- 意图 -->
+            <!-- 5 意图 -->
             <td
-              class="title-cell"
+              class="col-intent"
               :class="{
                 'done-cell': schedule.status === 'done',
                 'cloud-background': schedule.isUntaetigkeit === true,
@@ -134,15 +136,14 @@
               "
             >
               <input
+                class="title-input"
                 v-if="editingRowId === schedule.id && editingField === 'title'"
                 v-model="editingValue"
                 @blur="saveEdit(schedule)"
                 @keyup.enter="saveEdit(schedule)"
                 @keyup.esc="cancelEdit"
                 @click.stop
-                class="title-input"
                 :data-schedule-id="schedule.id"
-                ref="editingInput"
               />
               <span class="ellipsis" v-else>{{
                 schedule.activityTitle ?? "-"
@@ -159,18 +160,31 @@
               </template>
             </td>
 
-            <!-- 地点 -->
-            <td class="location-cell">
-              <div class="ellipsis">
+            <!-- 6 地点 -->
+            <td class="col-location">
+              <span class="ellipsis">
                 {{ schedule.location ?? "-" }}
-              </div>
+              </span>
             </td>
 
-            <!-- 状态 -->
+            <!-- 7 状态 -->
             <td class="status-col">
-              <div class="status-cell">
+              <div
+                class="status-cell"
+                :class="{
+                  'check-mode':
+                    schedule.status === 'done' ||
+                    schedule.status === 'cancelled',
+                }"
+              >
                 <div class="records-stat">&nbsp;</div>
-                <div class="button-group">
+                <div
+                  class="button-group"
+                  v-if="
+                    schedule.status !== 'done' &&
+                    schedule.status !== 'cancelled'
+                  "
+                >
                   <n-button
                     v-if="!schedule.taskId"
                     text
@@ -184,6 +198,7 @@
                       </n-icon>
                     </template>
                   </n-button>
+
                   <!-- <n-button
                   v-if="
                     schedule.status !== 'done' &&
@@ -200,13 +215,10 @@
                     </n-icon>
                   </template>
                 </n-button> -->
+
                   <!-- 取消任务按钮 -->
                   <n-button
-                    v-if="
-                      schedule.status !== 'done' &&
-                      schedule.status !== 'cancelled' &&
-                      schedule.isUntaetigkeit !== true
-                    "
+                    v-if="schedule.isUntaetigkeit !== true"
                     text
                     type="info"
                     @click="handleCancelSchedule(schedule.id)"
@@ -218,24 +230,6 @@
                       </n-icon>
                     </template>
                   </n-button>
-                  <!-- 退回任务按钮 = 不再在今日
-                <n-button
-                  v-if="
-                    schedule.status !== 'done' &&
-                    schedule.status !== 'cancelled' &&
-                    schedule.isUntaetigkeit !== true
-                  "
-                  text
-                  type="info"
-                  @click="handleSuspendSchedule(schedule.id)"
-                  title="取消日程"
-                >
-                  <template #icon>
-                    <n-icon size="18">
-                      <ChevronCircleRight48Regular />
-                    </n-icon>
-                  </template>
-                </n-button> -->
                 </div>
               </div>
             </td>
@@ -288,12 +282,11 @@ import { Task } from "@/core/types/Task";
 const editingRowId = ref<number | null>(null);
 const editingField = ref<null | "title" | "start" | "done">(null);
 const editingValue = ref("");
-const editingInput = ref<HTMLInputElement>();
 
 // 定义 Props
 const props = defineProps<{
   schedules: Schedule[];
-  activeId: number | null;
+  activeId: number | null | undefined;
   selectedRowId: number | null; // 新增：从父组件接收选中行ID
 }>();
 
@@ -442,113 +435,163 @@ function handleCancelSchedule(id: number) {
 .full-width-table {
   width: 100%;
   border-collapse: collapse;
-  table-layout: fixed; /* 使用固定布局算法 */
+  table-layout: fixed;
 }
-/* 列配额：重点在这三列 */
+col.col-check {
+  width: 22px;
+}
+
+col.col-start {
+  width: 40px;
+}
+
+col.col-end {
+  width: 40px;
+}
+
+col.col-duration {
+  width: 35px;
+}
 col.col-intent {
-  /* 让“意图”吃更多空间：给较大百分比或 auto */
-  width: 50%;
-  min-width: 140px; /* 抗缩性：根据内容调整 */
+  width: 60%;
+  min-width: 140px;
 }
 col.col-location {
-  width: 25%;
-  min-width: 100px;
+  width: 40%;
+  min-width: 75px;
 }
-/* 状态列：最后才缩（配额靠右，且有保底） */
+
 col.col-status {
-  width: 1%;
-  min-width: 100px; /* 或 90~120，按你的内容调 */
+  width: 76px;
+}
+
+thead th,
+tbody td {
+  box-sizing: border-box; /* 避免 padding/border 影响固定计算 */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* 表头样式 */
-.table-header th {
+thead th {
   padding: 2px;
-  text-align: left;
-  border-bottom: 2px solid var(--color-background-dark);
+  text-align: center;
+  text-overflow: ellipsis;
   white-space: nowrap;
   overflow: hidden;
   height: 20px;
   font-weight: 400;
+  border-bottom: 2px solid var(--color-background-dark);
   color: var(--color-text-primary);
-  line-height: 1.3;
   background-color: var(--color-background) !important;
+  line-height: 1.3;
+  box-sizing: border-box;
+}
+
+/* 行样式 */
+/* 隔行变色 */
+tr:nth-child(even) {
+  background-color: var(--color-background-light-transparent);
+}
+
+/* hover 高亮（不加 !important，便于被 selected/active 覆盖） */
+tr:hover {
+  background-color: var(--color-cyan-light-transparent);
+}
+
+/* 激活行样式（覆盖一切） */
+tr.active-row {
+  background-color: var(--color-red-light-transparent) !important;
+}
+
+/* 选中行样式（覆盖一切） */
+tr.selected-row {
+  background-color: var(--color-yellow-transparent) !important;
+}
+
+/* 当同时 active + selected 时，明确以 selected 的颜色为准（可留可删） */
+tr.active-row.selected-row {
+  background-color: var(--color-yellow-transparent) !important;
+}
+
+/* 统一过渡效果 */
+tr,
+tr:hover,
+tr.active-row,
+tr.selected-row {
+  transition: background-color 0.2s ease;
+}
+
+/* 行状态样式 */
+tr.done-row {
+  color: var(--color-text-secondary);
+}
+
+tr.done-cell {
+  text-decoration: line-through var(--color-text-secondary) 0.5px;
+}
+
+tr.cancel-row {
+  color: var(--color-text-secondary);
+}
+
+tr.cancel-cell {
+  font-style: italic;
+}
+
+tr.empty-row {
+  height: 30px;
+  text-align: center;
+  color: var(--color-text-secondary);
+  width: 100%;
+  border-bottom: 1px solid var(--color-background);
 }
 
 /* 表格内容样式 */
-.table-body td {
-  padding-top: 3px;
-  border-bottom: 1px solid var(--color-background-dark);
+tbody td {
+  box-sizing: border-box;
   white-space: nowrap;
   overflow: hidden;
-  min-height: 25px;
-  height: 25px;
+  text-overflow: ellipsis;
+  height: 28px;
+  line-height: 18px;
+  padding: 2px 0px;
+  border-bottom: 1px solid var(--color-background-dark);
 }
 
-.table-body td:first-child,
-.table-body td:nth-child(2),
-.table-body td:nth-child(3),
-.table-body td:nth-child(4) {
+td.col-check {
+  padding-left: 1px;
+}
+
+td:first-child,
+td:nth-child(2),
+td:nth-child(3),
+td:nth-child(4) {
   text-align: center;
 }
 
-.table-body td:nth-child(7) {
-  justify-content: center; /* 水平居中 */
-  align-items: center; /* 垂直居中 */
+td:nth-child(7) {
   min-height: 25px;
   height: 25px;
 }
 
+th.status-col,
+td.status-col {
+  white-space: nowrap;
+  text-align: right;
+  min-width: 0;
+}
+
 /* 补充：让省略容器具备可计算宽度并允许收缩 */
-.location-cell .ellipsis,
-.title-cell .ellipsis {
+.col-location .ellipsis,
+.col-intent .ellipsis {
   display: block; /* 或 inline-block */
   width: 100%;
   min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-/* 隔行变色 */
-.table-body tr:nth-child(even) {
-  background-color: var(--color-background-light);
-}
-
-/* 激活行样式 */
-.table-body tr.active-row {
-  background-color: var(--color-red-light-transparent) !important;
-  transition: background-color 0.2s ease;
-}
-
-/* 选中行样式 */
-.table-body tr.selected-row {
-  background-color: var(--color-yellow-transparent) !important;
-  transition: background-color 0.2s ease;
-}
-
-/* 确保选中行的样式优先级高于其他样式 */
-.table-body tr.selected-row:nth-child(even) {
-  background-color: var(--color-yellow-light-transparent) !important;
-}
-
-/* 同时具有active和selected状态时的样式 */
-.table-body tr.active-row.selected-row {
-  background-color: var(--color-yellow-light-transparent) !important;
-}
-
-/* 鼠标悬停效果 */
-.table-body tr:hover {
-  background-color: var(--color-cyan-light-transparent);
-  transition: background-color 0.2s ease;
-}
-
-/* 空行样式 */
-.empty-row td {
-  height: 30px;
-  text-align: center;
-  color: var(--color-text-secondary);
-  width: 100%;
-  border-bottom: 1px solid var(--color-background);
 }
 
 .is-empty-min {
@@ -570,27 +613,6 @@ col.col-status {
 
 .cancel-cell {
   font-style: italic;
-}
-
-.title-cell {
-  position: relative;
-  cursor: pointer;
-}
-
-.title-cell:hover::after {
-  content: "双击编辑";
-  position: absolute;
-  top: -25px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.8);
-  color: white;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  white-space: nowrap;
-  z-index: 1000;
-  pointer-events: none;
 }
 
 .title-input {
@@ -639,23 +661,6 @@ col.col-status {
   border-width: 1.2px;
 }
 
-td.status-col {
-  white-space: nowrap;
-  text-align: right;
-  min-width: 0;
-}
-th.status-col {
-  white-space: nowrap;
-  text-align: center;
-  min-width: 0;
-}
-
-/* 其他列：允许换行，降低最小宽度 */
-th:not(.status-col),
-td:not(.status-col) {
-  white-space: nowrap;
-  min-width: 0;
-}
 /* 单元格内部容器不必撑满：用 inline-flex 即可 */
 .status-cell {
   display: inline-flex;

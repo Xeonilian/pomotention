@@ -17,7 +17,8 @@ export interface Todo {
   doneTime?: number;
   startTime?: number;
   interruption?: "I" | "E";
-  positionIndex?: number;
+  positionIndex?: number; // 不再使用，对应现在的 categoryIndex，用于还原位置，因为会对living或working连续排序，会根据pomoType和positionIndex找到起始位置，然后放入
+  globalIndex?: number; // 对应globalIndex，用于还原位置
 }
 
 export interface TodoWithTaskRecords extends Todo {

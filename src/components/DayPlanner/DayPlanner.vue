@@ -65,7 +65,7 @@ import type { Task } from "@/core/types/Task";
 defineProps<{
   dayTodos: TodoWithTaskRecords[];
   daySchedules: Schedule[];
-  activeId: number | null;
+  activeId: number | null | undefined;
   selectedRowId: number | null;
 }>();
 

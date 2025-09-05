@@ -2,41 +2,40 @@
   Component: DayTodo.vue
 -->
 <template>
-  <!-- 表格容器，占满父容器宽度 -->
   <div class="table-container">
     <table class="full-width-table">
-      <!-- 表头部分，可单独调整样式 -->
       <colgroup>
         <!-- 勾选 -->
-        <col style="width: 18px" />
+        <col class="col-check" />
         <!-- 开始 -->
-        <col style="width: 38px" />
+        <col class="col-start" />
         <!-- 结束 -->
-        <col style="width: 38px" />
+        <col class="col-end" />
         <!-- 排序 -->
-        <col style="width: 30px" />
-        <!-- 意图列：吃更多空间 -->
+        <col class="col-rank" />
+        <!-- 意图 -->
         <col class="col-intent" />
         <!-- 果果 -->
         <col class="col-fruit" />
-        <!-- 状态列：最后才缩，常用 min-width 保护 -->
+        <!-- 状态 -->
         <col class="col-status" />
       </colgroup>
 
-      <thead class="table-header">
+      <thead>
         <tr>
-          <th></th>
-          <th>开始</th>
-          <th>结束</th>
-          <th>排序</th>
-          <th class="status-col">意图</th>
-          <th>果果</th>
-          <th class="status-col">状态</th>
+          <th class="col-check"></th>
+          <th class="col-start">开始</th>
+          <th class="col-end">结束</th>
+          <th class="col-rank">排序</th>
+          <th class="col-intent">意图</th>
+          <th class="col-fruit">果果</th>
+          <th class="col-status">状态</th>
         </tr>
       </thead>
-      <!-- 表格内容部分，可单独调整样式 -->
-      <tbody class="table-body">
+
+      <tbody>
         <template v-if="sortedTodos.length > 0">
+          <!-- 行 -->
           <tr
             v-for="todo in sortedTodos"
             :key="todo.id"
@@ -46,17 +45,17 @@
               'done-row': todo.status === 'done',
               'cancel-row': todo.status === 'cancelled',
             }"
-            @click="handleRowClick(todo)"
+            @click.stop="handleRowClick(todo)"
             style="cursor: pointer"
           >
+            <!-- 单元格 -->
             <!-- 1 完成状态 -->
-            <td>
+            <td class="col-check">
               <n-checkbox
                 v-if="todo.status !== 'cancelled'"
                 :checked="todo.status === 'done'"
                 @update:checked="handleCheckboxChange(todo.id, $event)"
               />
-
               <n-icon
                 v-else
                 class="cancel-icon"
@@ -65,9 +64,10 @@
                 <DismissSquare20Filled />
               </n-icon>
             </td>
+
             <!-- 2 开始时间 -->
             <td
-              style="white-space: nowrap"
+              class="col-start"
               @dblclick.stop="startEditing(todo.id, 'start')"
               :title="
                 editingRowId === todo.id && editingField === 'start'
@@ -76,13 +76,12 @@
               "
             >
               <input
+                class="start-input time-input"
                 v-if="editingRowId === todo.id && editingField === 'start'"
                 v-model="editingValue"
                 @blur="saveEdit(todo)"
                 @keyup.enter="saveEdit(todo)"
                 @keyup.esc="cancelEdit"
-                ref="editingInput"
-                class="start-input time-input"
                 :data-todo-id="todo.id"
                 maxlength="5"
                 autocomplete="off"
@@ -91,9 +90,10 @@
                 todo.startTime ? timestampToTimeString(todo.startTime) : "-"
               }}</span>
             </td>
+
             <!-- 3 结束时间 -->
             <td
-              style="white-space: nowrap"
+              class="col-end"
               @dblclick.stop="startEditing(todo.id, 'done')"
               :title="
                 editingRowId === todo.id && editingField === 'done'
@@ -102,13 +102,12 @@
               "
             >
               <input
+                class="done-input time-input"
                 v-if="editingRowId === todo.id && editingField === 'done'"
                 v-model="editingValue"
                 @blur="saveEdit(todo)"
                 @keyup.enter="saveEdit(todo)"
                 @keyup.esc="cancelEdit"
-                ref="editingInput"
-                class="done-input time-input"
                 :data-todo-id="todo.id"
                 maxlength="5"
                 autocomplete="off"
@@ -117,35 +116,34 @@
                 todo.doneTime ? timestampToTimeString(todo.doneTime) : "-"
               }}</span>
             </td>
-            <!-- 4 优先级 -->
-            <td class="priority-cell" @click="startEditingPriority(todo)">
-              <template v-if="editingTodo && editingTodo.id === todo.id">
-                <n-input-number
-                  v-model:value="editingPriority"
-                  :min="0"
-                  :max="10"
-                  @blur="finishEditing"
-                  @keydown.enter="finishEditing"
-                  size="small"
-                  style="width: 30px"
-                  @focus="handleInputFocus"
-                  autofocus
-                  :show-button="false"
-                  placeholder=" "
-                />
-              </template>
-              <template v-else>
-                <span
-                  class="priority-badge"
-                  :class="'priority-' + todo.priority"
-                >
-                  {{ todo.priority > 0 ? todo.priority : "—" }}
-                </span>
-              </template>
+
+            <!-- 4 排序 -->
+            <td class="col-rank" @click.stop="startEditingPriority(todo)">
+              <n-input-number
+                class="rank-input"
+                v-if="editingTodo && editingTodo.id === todo.id"
+                v-model:value="editingPriority"
+                :min="0"
+                :max="11"
+                size="small"
+                :show-button="false"
+                placeholder=" "
+                @blur="finishEditing"
+                @keydown.enter="finishEditing"
+              />
+
+              <span
+                v-else
+                class="priority-badge"
+                :class="'priority-' + todo.priority"
+              >
+                {{ todo.priority > 0 ? todo.priority : "—" }}
+              </span>
             </td>
+
             <!-- 5 意图 -->
             <td
-              class="title-cell"
+              class="col-intent"
               :class="{
                 'done-cell': todo.status === 'done',
                 'cancel-cell': todo.status === 'cancelled',
@@ -158,22 +156,22 @@
               "
             >
               <input
+                class="title-input"
                 v-if="editingRowId === todo.id && editingField === 'title'"
                 v-model="editingValue"
                 @blur="saveEdit(todo)"
                 @keyup.enter="saveEdit(todo)"
                 @keyup.esc="cancelEdit"
                 @click.stop
-                class="title-input"
                 :data-todo-id="todo.id"
-                ref="editingInput"
               />
               <span class="ellipsis" v-else>{{
                 todo.activityTitle ?? "-"
               }}</span>
             </td>
+
             <!-- 6 果果 -->
-            <td>
+            <td class="col-fruit">
               <div class="pomo-container">
                 <!-- 将所有番茄钟内容包装在一个容器中 -->
                 <div class="pomo-groups">
@@ -181,12 +179,12 @@
                     <div class="pomo-group">
                       <template v-for="i in est" :key="i">
                         <n-checkbox
-                          :checked="isPomoCompleted(todo, index, i)"
                           :class="{
                             'pomo-cherry': todo.pomoType === '🍒',
                             'pomo-grape': todo.pomoType === '🍇',
                             'pomo-tomato': todo.pomoType === '🍅',
                           }"
+                          :checked="isPomoCompleted(todo, index, i)"
                           :disabled="todo.status === 'cancelled'"
                           @update:checked="
                             (checked: any) =>
@@ -195,8 +193,8 @@
                         />
                       </template>
                       <span
-                        v-if="todo.estPomo && index < todo.estPomo.length - 1"
                         class="pomo-separator"
+                        v-if="todo.estPomo && index < todo.estPomo.length - 1"
                         >|</span
                       >
                     </div>
@@ -208,6 +206,7 @@
                 >
                   <!-- 删除估计按钮  -->
                   <n-button
+                    class="button-left"
                     v-if="
                       todo.pomoType != '🍒' &&
                       todo.estPomo &&
@@ -217,7 +216,6 @@
                     text
                     @click="handleDeleteEstimate(todo)"
                     title="减少预估番茄数量"
-                    class="button-left"
                   >
                     <template #icon>
                       <n-icon size="18" color="var(--color-background-dark)">
@@ -228,6 +226,8 @@
 
                   <!-- 新增估计按钮  -->
                   <n-button
+                    class="button-right"
+                    :class="{ 'bidirection-mode': todo.estPomo.length === 2 }"
                     v-if="
                       todo.pomoType != '🍒' &&
                       todo.estPomo &&
@@ -237,8 +237,6 @@
                     type="default"
                     @click="handleAddEstimate(todo)"
                     title="增加预估番茄数量"
-                    class="button-right"
-                    :class="{ 'bidirection-mode': todo.estPomo.length === 2 }"
                   >
                     <template #icon>
                       <n-icon size="18" color="var(--color-background-dark)">
@@ -249,7 +247,8 @@
                 </div>
               </div>
             </td>
-            <!-- 7 状态值+操作 -->
+
+            <!-- 7 状态 -->
             <td class="status-col">
               <div
                 class="status-cell"
@@ -259,19 +258,24 @@
                 }"
               >
                 <div
-                  v-if="todo.taskId"
                   class="records-stat"
+                  v-if="todo.taskId"
                   title="能量值 | 奖赏值 | 内部打扰 | 外部打扰"
                 >
-                  {{ averageValue(todo.energyRecords) }}|{{
+                  <span style="color: var(--color-blue)">{{
+                    averageValue(todo.energyRecords)
+                  }}</span
+                  >|
+                  <span style="color: var(--color-red)">{{
                     averageValue(todo.rewardRecords)
-                  }}|{{ countInterruptions(todo.interruptionRecords, "E") }}|{{
-                    countInterruptions(todo.interruptionRecords, "I")
+                  }}</span
+                  >|{{ countInterruptions(todo.interruptionRecords, "I") }}|{{
+                    countInterruptions(todo.interruptionRecords, "E")
                   }}
                 </div>
                 <div
-                  v-if="todo.status !== 'done' && todo.status !== 'cancelled'"
                   class="button-group"
+                  v-if="todo.status !== 'done' && todo.status !== 'cancelled'"
                 >
                   <!-- 追踪任务按钮 -->
                   <n-button
@@ -300,6 +304,7 @@
                     </n-icon>
                   </template>
                 </n-button> -->
+
                   <!-- 取消任务按钮 -->
                   <n-button
                     v-if="!todo.realPomo"
@@ -380,7 +385,6 @@
     />
   </n-modal>
 </template>
-
 <script setup lang="ts">
 import type { Todo, TodoWithTaskRecords } from "@/core/types/Todo";
 import { timestampToTimeString } from "@/core/utils";
@@ -402,7 +406,6 @@ import { Task } from "@/core/types/Task";
 const editingRowId = ref<number | null>(null);
 const editingField = ref<null | "title" | "start" | "done">(null);
 const editingValue = ref("");
-const editingInput = ref<HTMLInputElement>();
 
 // 添加状态来控制提示信息
 const showPopover = ref(false);
@@ -416,7 +419,7 @@ const newEstimate = ref<number>(1);
 // 定义 Props
 const props = defineProps<{
   todos: TodoWithTaskRecords[];
-  activeId: number | null;
+  activeId: number | null | undefined;
   selectedRowId: number | null; // 新增：从父组件接收选中行ID
 }>();
 
@@ -441,17 +444,6 @@ const emit = defineEmits<{
   (e: "convert-todo-to-task", payload: { task: Task; todoId: number }): void;
 }>();
 
-const editingTodo = ref<Todo | null>(null);
-const editingPriority = ref<number>(0);
-
-// 处理输入框获取焦点
-function handleInputFocus(event: FocusEvent) {
-  const inputElement = event.target as HTMLInputElement;
-  if (inputElement) {
-    inputElement.select();
-  }
-}
-
 // 对待办事项按优先级降序排序（高优先级在前）
 const sortedTodos = computed(() => {
   if (!props.todos || props.todos.length === 0) {
@@ -468,67 +460,38 @@ const sortedTodos = computed(() => {
   });
 });
 
+// 优先级 排序================
+const editingTodo = ref<Todo | null>(null);
+const editingPriority = ref<number>(0);
+
 // 开始编辑优先级
 function startEditingPriority(todo: Todo) {
   editingTodo.value = todo;
   editingPriority.value = todo.priority;
-}
-
-// 重新排序
-function relayoutPriority(todos: Todo[]) {
-  // 获取已完成任务的优先级集合
-  const lockedPriorities = new Set(
-    todos
-      .filter((t) => t.status === "done" && t.priority > 0)
-      .map((t) => t.priority)
-  );
-
-  // 获取未完成且优先级>0的任务
-  const active = todos
-    .filter((t) => t.status !== "done" && t.priority > 0)
-    .sort((a, b) => a.priority - b.priority);
-
-  // 获取所有可用的优先级（排除已锁定的）
-  const availablePriorities = new Set<number>();
-  for (let i = 1; i <= 10; i++) {
-    if (!lockedPriorities.has(i)) {
-      availablePriorities.add(i);
-    }
-  }
-
-  // 按顺序分配可用的优先级
-  let priorityIndex = 0;
-  active.forEach((t) => {
-    const availablePriority = Array.from(availablePriorities)[priorityIndex];
-    if (availablePriority) {
-      t.priority = availablePriority;
-      priorityIndex++;
+  nextTick(() => {
+    const input = document.querySelector(".rank-input .n-input__input-el");
+    if (input) {
+      (input as HTMLInputElement).select();
     }
   });
 }
 
-// 结束优先级编辑
 function finishEditing() {
   if (!editingTodo.value) return;
-
-  // 1. 统计已完成任务的优先级集合（要锁定）
-  const lockedPriorities = new Set(
-    props.todos
-      .filter((t) => t.status === "done" && t.priority > 0)
-      .map((t) => t.priority)
-  );
-
-  // 2. 统计所有未完成任务
-  const activeTodos = props.todos.filter(
-    (t) => t.status !== "done" && t.priority > 0
-  );
-
-  // 3. 优先级调整
-  let desiredPriority = editingPriority.value;
-
-  // 如果目标优先级已被锁定，显示提示并退出
-  if (desiredPriority > 0 && lockedPriorities.has(desiredPriority)) {
-    popoverMessage.value = "该优先级已被占用";
+  if (
+    editingTodo.value.status === "done" ||
+    editingTodo.value.status === "cancelled"
+  ) {
+    popoverMessage.value = "当前任务已经结束！";
+    showPopover.value = true;
+    setTimeout(() => {
+      showPopover.value = false;
+    }, 2000);
+    editingTodo.value = null;
+    return;
+  }
+  if (editingPriority.value === 11) {
+    popoverMessage.value = "请输入1-10";
     showPopover.value = true;
     setTimeout(() => {
       showPopover.value = false;
@@ -537,65 +500,113 @@ function finishEditing() {
     return;
   }
 
-  // 4. 检查是否真的发生了变化
-  if (editingTodo.value.priority === desiredPriority) {
+  const current = editingTodo.value;
+  const desired = editingPriority.value;
+
+  if (current.priority === desired) {
     editingTodo.value = null;
     return;
   }
 
-  // 5. 准备批量更新
+  const before = new Map<number, number>();
+  props.todos.forEach((t) => before.set(t.id, t.priority));
+
+  // 关键：不再提前修改 priority，而是把 current 和 desired 传给排序函数
+  // 让排序函数自己去智能处理
+  relayoutPriority(props.todos, current, desired);
+
+  // 后续逻辑不变...
   const updates: Array<{ id: number; priority: number }> = [];
+  props.todos.forEach((t) => {
+    const oldP = before.get(t.id);
+    if (oldP !== t.priority) {
+      updates.push({ id: t.id, priority: t.priority });
+    }
+  });
 
-  // 如果设置为0，单独处理
-  if (desiredPriority === 0) {
-    updates.push({
-      id: editingTodo.value.id,
-      priority: 0,
-    });
-  } else {
-    // 处理冲突：所有 >= 新优先级的未完成任务，编号往后挪
-    activeTodos.forEach((t) => {
-      if (t.id !== editingTodo.value!.id && t.priority >= desiredPriority) {
-        updates.push({ id: t.id, priority: t.priority + 1 });
-      }
-    });
-
-    // 当前项赋值
-    updates.push({
-      id: editingTodo.value.id,
-      priority: desiredPriority,
-    });
-  }
-
-  // 6. 应用更新
   if (updates.length > 0) {
-    emit("batch-update-priorities", updates);
-
-    // 立即更新本地状态以获得良好的用户体验
-    updates.forEach((update) => {
-      const todo = props.todos.find((t) => t.id === update.id);
-      if (todo) todo.priority = update.priority;
-    });
-
     popoverMessage.value = "优先级已更新";
     showPopover.value = true;
-    setTimeout(() => {
-      showPopover.value = false;
-    }, 2000);
+    setTimeout(() => (showPopover.value = false), 2000);
+    emit("batch-update-priorities", updates);
   }
 
-  // 退出编辑模式
   editingTodo.value = null;
-  //  确保优先级连续
-  relayoutPriority(props.todos);
 }
 
+// 传入 current 和 desired，让排序更智能
+function relayoutPriority(todos: Todo[], current: Todo, desired: number) {
+  // 锁定已完成任务的优先级，这部分逻辑不变
+  const locked = new Set<number>();
+  todos.forEach((t) => {
+    if (t.status === "done" && t.priority > 0) {
+      locked.add(t.priority);
+    }
+  });
+
+  // 筛选出需要重新排序的活动任务
+  const active = todos.filter(
+    (t) => t.status !== "done" && t.status !== "cancelled"
+  );
+
+  // 关键修改：
+  // 找出所有优先级大于 0 的任务
+  const positivePriorityTasks = active.filter(
+    (t) => t.priority > 0 && t.id !== current.id
+  );
+  // 对它们进行排序
+  positivePriorityTasks.sort((a, b) => a.priority - b.priority);
+
+  // 将当前正在修改的任务插入到目标位置
+  // 如果 desired 是 0 或负数，我们不把它放到排序列表中，因为它不需要参与重新编号
+  if (desired > 0) {
+    // 找到插入点
+    const insertIndex = positivePriorityTasks.findIndex(
+      (t) => t.priority >= desired
+    );
+    if (insertIndex === -1) {
+      positivePriorityTasks.push(current);
+    } else {
+      positivePriorityTasks.splice(insertIndex, 0, current);
+    }
+  }
+
+  // 为被移动的任务重新编号，不触碰 priority <= 0 的任务
+  let next = 1;
+  for (const t of positivePriorityTasks) {
+    // 跳过锁定的优先级
+    while (locked.has(next)) {
+      next++;
+    }
+    // 如果任务原来的优先级和新计算出的优先级不同，则更新
+    if (t.id === current.id) {
+      current.priority = desired; // 直接应用期望的优先级
+    } else if (t.priority !== next) {
+      t.priority = next;
+    }
+    // 如果是当前任务，并且期望优先级大于0，则它的优先级就是 next
+    // 否则，非当前任务的优先级按顺序递增
+    if (t.id === current.id && desired > 0) {
+      t.priority = next;
+    } else if (t.id !== current.id) {
+      t.priority = next;
+    }
+
+    next++;
+  }
+
+  // 如果 current 的目标是 0 或负数，直接设置即可，因为它不影响其他任务
+  if (desired <= 0) {
+    current.priority = desired;
+  }
+}
+// ===================================
 // 更新打钩状态
 function handleCheckboxChange(id: number, checked: boolean) {
   emit("update-todo-status", id, checked);
 }
 
-// 番茄估计
+// 番茄估计=============================
 // 检查番茄钟是否完成
 function isPomoCompleted(
   todo: Todo,
@@ -836,7 +847,7 @@ function averageValue<T extends { value: number }>(
       count++;
     }
   }
-  return count === 0 ? "-" : sum / count;
+  return count === 0 ? "-" : Math.round(sum / count);
 }
 
 // 2) 统计中断类型数量（"E" 或 "I"）
@@ -863,105 +874,107 @@ function countInterruptions(
 .full-width-table {
   width: 100%;
   border-collapse: collapse;
-  table-layout: fixed; /* 使用固定布局算法 */
+  table-layout: fixed;
 }
-/* 列配额：重点在这三列 */
+
+col.col-check {
+  width: 22px;
+}
+
+col.col-start {
+  width: 40px;
+}
+
+col.col-end {
+  width: 40px;
+}
+
+col.col-rank {
+  width: 35px;
+}
+
 col.col-intent {
-  /* 让“意图”吃更多空间：给较大百分比或 auto */
-  width: 50%;
-  min-width: 140px; /* 抗缩性：根据内容调整 */
+  width: 60%;
+  min-width: 140px;
 }
+
 col.col-fruit {
-  width: 25%;
-  min-width: 100px;
+  width: 40%;
+  min-width: 75px;
 }
-/* 状态列：最后才缩（配额靠右，且有保底） */
+
 col.col-status {
-  width: 1%;
-  min-width: 100px; /* 或 90~120，按你的内容调 */
+  width: 76px;
 }
+
 /* 表头样式 */
-.table-header th {
+thead th {
   padding: 2px;
-  text-align: left;
-  border-bottom: 2px solid var(--color-background-dark);
+  text-align: center;
+  text-overflow: ellipsis;
   white-space: nowrap;
   overflow: hidden;
   height: 20px;
   font-weight: 400;
+  border-bottom: 2px solid var(--color-background-dark);
   color: var(--color-text-primary);
-  line-height: 1.3;
   background-color: var(--color-background) !important;
+  line-height: 1.3;
+  box-sizing: border-box;
 }
 
-/* 表格内容样式 */
-.table-body td {
-  padding-top: 3px;
-  border-bottom: 1px solid var(--color-background-dark);
-  white-space: nowrap;
-  overflow: hidden;
-  min-height: 25px;
-  height: 25px;
-}
-
-.table-body td:first-child,
-.table-body td:nth-child(2),
-.table-body td:nth-child(3),
-.table-body td:nth-child(4) {
-  text-align: center;
-}
-
-.table-body td:nth-child(7) {
-  min-height: 25px;
-  height: 25px;
-}
-
-/* 允许描述列显示省略号 */
-
-.title-cell .ellipsis {
-  display: block; /* 或 inline-block */
-  width: 100%;
-  min-width: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
+/* 行样式 */
 /* 隔行变色 */
-.table-body tr:nth-child(even) {
+tr:nth-child(even) {
   background-color: var(--color-background-light-transparent);
 }
 
 /* hover 高亮（不加 !important，便于被 selected/active 覆盖） */
-.table-body tr:hover {
+tr:hover {
   background-color: var(--color-cyan-light-transparent);
 }
 
 /* 激活行样式（覆盖一切） */
-.table-body tr.active-row {
+tr.active-row {
   background-color: var(--color-red-light-transparent) !important;
 }
 
 /* 选中行样式（覆盖一切） */
-.table-body tr.selected-row {
+tr.selected-row {
   background-color: var(--color-yellow-transparent) !important;
 }
 
 /* 当同时 active + selected 时，明确以 selected 的颜色为准（可留可删） */
-.table-body tr.active-row.selected-row {
+tr.active-row.selected-row {
   background-color: var(--color-yellow-transparent) !important;
 }
 
-/* 统一过渡效果，减少重复声明 */
-.table-body tr,
-.table-body tr:hover,
-.table-body tr.active-row,
-.table-body tr.selected-row {
+/* 统一过渡效果 */
+tr,
+tr:hover,
+tr.active-row,
+tr.selected-row {
   transition: background-color 0.2s ease;
 }
 
-/* 空行样式 */
-.empty-row td {
+/* 行状态样式 */
+tr.done-row {
+  color: var(--color-text-secondary);
+}
+
+tr.done-cell {
+  text-decoration: line-through var(--color-text-secondary) 0.5px;
+}
+
+tr.cancel-row {
+  color: var(--color-text-secondary);
+}
+
+tr.cancel-cell {
+  font-style: italic;
+}
+
+tr.empty-row {
   height: 30px;
   text-align: center;
   color: var(--color-text-secondary);
@@ -969,18 +982,53 @@ col.col-status {
   border-bottom: 1px solid var(--color-background);
 }
 
-/* 优先级单元格样式 */
-.priority-cell {
-  cursor: pointer;
+/* 表格内容样式 */
+tbody td {
+  box-sizing: border-box;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  height: 28px;
+  line-height: 18px;
+  padding: 2px 0px;
+  border-bottom: 1px solid var(--color-background-dark);
+}
+
+td:first-child,
+td:nth-child(2),
+td:nth-child(3),
+td:nth-child(4) {
   text-align: center;
+}
+
+td:nth-child(7) {
+  min-height: 25px;
+  height: 25px;
+}
+
+th.status-col,
+td.status-col {
+  white-space: nowrap;
+  text-align: right;
+  min-width: 0;
+}
+
+/* 允许描述列显示省略号 */
+.col-intent.ellipsis {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .priority-badge {
   display: inline-flex;
   align-items: center !important;
   justify-content: center !important;
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   position: relative;
   top: -1px;
   border-radius: 50%;
@@ -1034,6 +1082,8 @@ col.col-status {
   align-items: center;
   white-space: nowrap;
   flex-shrink: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
   z-index: 10;
   overflow-x: auto;
   overflow-y: hidden;
@@ -1048,12 +1098,13 @@ col.col-status {
   display: inline-flex;
   align-items: center;
   flex-shrink: 0;
-  gap: 1px;
+  gap: 0.5px;
 }
 
 .pomo-separator {
   color: var(--color-text-secondary);
   flex-shrink: 0;
+  transform: translateY(-1px);
 }
 
 :deep(.n-checkbox) {
@@ -1076,7 +1127,6 @@ col.col-status {
 }
 
 .pomo-grape :deep(.n-checkbox-box) {
-  /* --n-color-checked: var(--color-purple-light); */
   --n-color: var(--color-purple-light-transparent);
   --n-box-shadow-focus: 0 0 0 0;
   --n-border: 1px solid var(--color-purple-dark);
@@ -1104,27 +1154,7 @@ col.col-status {
   z-index: 0;
 }
 
-/* 状态 */
-/* 状态列：不换行，尽量由内容决定最小宽度 */
-
-td.status-col {
-  white-space: nowrap;
-  text-align: right;
-  min-width: 0;
-}
-th.status-col {
-  white-space: nowrap;
-  text-align: center;
-  min-width: 0;
-}
-
-/* 其他列：允许换行，降低最小宽度 */
-th:not(.status-col),
-td:not(.status-col) {
-  white-space: nowrap;
-  min-width: 0;
-}
-/* 单元格内部容器不必撑满：用 inline-flex 即可 */
+/* 状态信息 */
 .status-cell {
   display: inline-flex;
   align-items: center;
@@ -1149,71 +1179,58 @@ td:not(.status-col) {
   color: var(--color-red);
 }
 
-/* 完成行样式 */
-.done-row {
-  color: var(--color-text-secondary);
+td.col-check {
+  padding-left: 1px;
 }
-
-.done-cell {
-  text-decoration: line-through var(--color-text-secondary) 0.5px;
-}
-
-.cancel-row {
-  color: var(--color-text-secondary);
-}
-
-.cancel-cell {
-  font-style: italic;
-}
-
-.title-cell {
-  position: relative;
-  cursor: pointer;
-}
-
 .cancel-icon {
   display: inline-flex;
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   align-items: center;
   justify-content: center;
-  transform: scale(1.2) translateY(2px) !important;
+  transform: scale(1.4) translateY(2px) !important;
   transform-origin: center;
 }
+
 .cancel-icon svg {
   display: block;
   width: 100%;
   height: 100%;
 }
 
-.title-cell:hover::after {
-  content: "双击编辑";
-  position: absolute;
-  top: -25px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.8);
-  color: white;
-  padding: 4px 8px;
+.rank-input {
+  border: 1px solid #40a9ff;
+  width: 20px;
+  height: 18px;
   border-radius: 4px;
-  font-size: 12px;
-  white-space: nowrap;
-  z-index: 1000;
-  pointer-events: none;
+  outline: none;
+  margin-left: 6px;
+}
+
+.rank-input :deep(.n-input-wrapper) {
+  height: 18px;
+  line-height: 22px;
+  padding-left: 2px;
+  padding-right: 2px;
+}
+
+.rank-input :deep(.n-input .n-input__input-el) {
+  --n-border-radius: 4px;
+  --n-height: 12px;
+  transform: translateY(-1px);
 }
 
 .title-input {
   width: calc(100% - 10px);
-  border: 1px solid #d9d9d9;
+  border: 1px solid #40a9ff;
   border-radius: 4px;
-  font-size: inherit;
-  font-family: inherit;
   outline: none;
 }
 
-.title-input:focus {
-  border-color: #40a9ff;
-  box-shadow: 0 0 0 2px rgba(64, 169, 255, 0.2);
+.time-input {
+  border: 1px solid #40a9ff;
+  border-radius: 4px;
+  outline: none;
 }
 
 .start-input,
@@ -1224,9 +1241,5 @@ td:not(.status-col) {
   box-sizing: border-box;
   padding: 0px 0px;
   font-size: inherit;
-}
-
-.time-input:focus {
-  border-color: #40a9ff;
 }
 </style>

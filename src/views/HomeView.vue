@@ -473,7 +473,7 @@ const childrenOfActivity = computed(() => {
 });
 
 // 添加选中的任务ID状态
-const activeId = ref<number | null>(null); // 当前从ActivitySheet选中的activity.id
+const activeId = ref<number | null | undefined>(null); // 当前从ActivitySheet选中的activity.id
 const selectedTaskId = ref<number | null>(null); // 当前从Planner选中的.taskId
 const selectedActivityId = ref<number | null>(null); // 当前从Planner选中的.activityId
 const selectedRowId = ref<number | null>(null); // todo.id 或者 schedule.id
@@ -658,14 +658,14 @@ const onDateChange = (day: number) => {
   dateService.setAppDate(day);
   selectedActivityId.value = null;
   selectedTaskId.value = null;
-  activeId.value = null;
+  activeId.value = undefined;
   selectedRowId.value = null;
 };
 
 // week和month planner 引起选中的任务行
 const onItemChange = (id: number, activityId?: number, taskId?: number) => {
   selectedRowId.value = null;
-  activeId.value = null;
+  activeId.value = undefined;
   selectedActivityId.value = null;
   if (activityId) {
     selectedActivityId.value = activityId;
@@ -683,6 +683,7 @@ const onItemChange = (id: number, activityId?: number, taskId?: number) => {
     }
   } else {
     selectedActivityId.value = null;
+    activeId.value = undefined;
   }
   if (taskId) {
     selectedTaskId.value = taskId;
@@ -819,6 +820,7 @@ function onDeleteActivity(id: number) {
 
 /** 选中活动，将其转为 todo 并作为 picked */
 function onPickActivity(activity: Activity) {
+  console.log("start", activeId.value);
   activity.status = "ongoing";
   const { newTodo } = passPickedActivity(
     activity,
@@ -826,7 +828,8 @@ function onPickActivity(activity: Activity) {
     dateService.isViewDateToday.value
   );
   todoList.value = [...todoList.value, newTodo];
-  activeId.value = null;
+  selectedActivityId.value = activity.id;
+  console.log("last", activeId.value);
   saveAllDebounced();
 }
 
@@ -849,16 +852,18 @@ function onConvertActivityToTask(payload: { task: Task; activityId: number }) {
 
   // 3) 同步 UI 选中（如果你希望）
   activeId.value = activityId;
+  selectedActivityId.value = activityId;
   selectedTaskId.value = task.id;
 
   // 4) 一次性保存
   saveAllDebounced();
 }
 
-/** 标记当前活跃活动清单id，用于高亮和交互 */
+/** 激活红色高亮可以编辑文字 */
 function onUpdateActiveId(id: number | null) {
   activeId.value = id;
   selectedActivityId.value = null; // 避免多重高亮
+  selectedRowId.value = null; // 这个id是today里的
 
   const activity = id != null ? activityById.value.get(id) : undefined;
   const todo = id != null ? todoByActivityId.value.get(id) : undefined;
@@ -868,7 +873,7 @@ function onUpdateActiveId(id: number | null) {
   selectedTaskId.value =
     activity?.taskId || todo?.taskId || schedule?.taskId || null;
   // console.log("selectedTaskId.value", selectedTaskId.value);
-  selectedRowId.value = null; // 这个id是today里的
+
   saveAllDebounced();
 }
 
@@ -1267,7 +1272,7 @@ function onSelectActivity(activityId: number | null) {
 
 // 选中行
 function onSelectRow(id: number | null) {
-  activeId.value = null;
+  activeId.value = undefined;
   selectedRowId.value = null;
   selectedTaskId.value = null;
   if (id === null) {
@@ -1276,8 +1281,10 @@ function onSelectRow(id: number | null) {
   const todo = todoById.value.get(id);
   const schedule = scheduleById.value.get(id);
   const activityId = todo?.activityId ?? schedule?.activityId ?? null;
+
   if (activityId != null) {
     const activity = activityById.value.get(activityId);
+
     selectedTaskId.value =
       activity?.taskId ?? todo?.taskId ?? schedule?.taskId ?? null;
   }
@@ -1288,6 +1295,8 @@ function onSelectRow(id: number | null) {
     schedule?.status !== "cancelled"
   ) {
     activeId.value = activityId;
+  } else {
+    activeId.value = undefined;
   }
 
   selectedRowId.value = id;
