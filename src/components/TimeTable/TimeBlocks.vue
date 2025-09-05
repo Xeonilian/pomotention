@@ -729,9 +729,9 @@ watch(
 
 /* priority-3 保持不变 */
 .priority-3 {
-  background-color: #ffeb3b5c;
-  color: #ffeb3b;
-  box-shadow: -1px -1px var(--color-background-light) inset;
+  background-color: #ffeb3bb7;
+  color: var(--color-text-secondary);
+  box-shadow: 1px 1px var(--color-background-light);
 }
 
 /* 按 1 的风格修改 */
