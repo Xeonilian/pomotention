@@ -324,7 +324,7 @@
                   </n-button>
                   <!-- 退回任务按钮 = 不再在今日 -->
                   <n-button
-                    v-if="!todo.realPomo && !todo.taskId"
+                    v-if="!todo.realPomo"
                     text
                     type="info"
                     @click="handleSuspendTodo(todo.id)"
