@@ -56,7 +56,10 @@
       <div
         v-if="item.status !== 'done'"
         class="activity-row"
-        :class="{ 'highlight-line': item.id === activityId }"
+        :class="{
+          'highlight-line':
+            item.id === activityId || item.id === props.activeId,
+        }"
       >
         <div class="activity-content">
           <n-popover
@@ -832,6 +835,7 @@ function handleTagCreate(item: Activity, tagName: string) {
 .section-header :deep(.n-input__input-el) {
   font-weight: bold;
 }
+
 .activity-row {
   align-items: center;
   padding: 1px 0;

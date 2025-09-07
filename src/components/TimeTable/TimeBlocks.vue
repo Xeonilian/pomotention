@@ -98,13 +98,13 @@
         dragState.draggedIndex === seg.todoIndex,
     }"
     :style="getTodoSegmentStyle(seg)"
-    :title="`${seg.todoTitle} - 第${seg.todoIndex}个番茄 (估计分配)${
-      seg.overflow ? ' - 时间冲突' : ''
-    }`"
+    :title="`${seg.pomoType}[${seg.priority}]-${seg.todoIndex} - ${
+      seg.todoTitle
+    } - (估计分配)${seg.overflow ? '-时间冲突' : ''}`"
   >
     <span
-      v-if="!seg.overflow"
       class="priority-badge"
+      v-if="!seg.overflow"
       :class="[
         'priority-' + seg.priority,
         { 'cherry-badge': seg.pomoType === '🍒' },
@@ -114,7 +114,9 @@
     >
       {{ seg.priority > 0 ? seg.priority : "–" }}
     </span>
-    <span v-else>⚠️</span>
+    <span v-else style="cursor: grab" @mousedown="handleMouseDown($event, seg)"
+      >⚠️</span
+    >
   </div>
   <!-- 实际执行的segments (右侧列) -->
   <div
@@ -122,7 +124,7 @@
     :key="`actual-${seg.todoId}-${seg.todoIndex}`"
     class="todo-segment actual"
     :style="getActualSegmentStyle(seg)"
-    :title="`${seg.todoTitle} - 第${seg.todoIndex}个番茄`"
+    :title="`${seg.pomoType}[${seg.priority}]-${seg.todoIndex} - ${seg.todoTitle}`"
   >
     {{ seg.pomoType }}
   </div>
@@ -283,6 +285,8 @@ function getPomodoroStyle(seg: PomodoroSegment): CSSProperties {
   let colorDark;
   if (seg.type === "pomo") {
     colorDark = POMODORO_COLORS_DARK[seg.category];
+  } else if (seg.type === "break") {
+    colorDark = "transparent";
   } else if (seg.type === "schedule") {
     colorDark = POMODORO_COLORS_DARK[seg.category];
   } else if (seg.type === "untaetigkeit") {
@@ -292,10 +296,10 @@ function getPomodoroStyle(seg: PomodoroSegment): CSSProperties {
   return {
     position: "absolute",
     left: "0px",
-    width: "13px",
-    fontSize: "11px",
     top: `${topPx}px`,
+    width: "13px",
     height: `${heightPx}px`,
+    fontSize: "11px",
     backgroundColor: color,
     color: "var(--color-background)",
     border: `1px solid ${colorDark}`,
@@ -324,20 +328,18 @@ function getTodoSegmentStyle(seg: TodoSegment): CSSProperties {
   return {
     position: "absolute",
     left: "22px",
-    width: "13px",
     top: `${topPx}px`,
+    width: "13px",
     height: `${heightPx}px`,
-    background: seg.overflow ? "var(--color-red-transparent)" : "", //不超过就不需要底色
-    borderRadius: "2px",
-    color: "var(--color-background)",
-    fontSize: "10px",
-    // fontWeight: "bold",
-    zIndex: 8,
+    fontSize: "12px",
+    zIndex: seg.overflow ? 33 : 30,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    boxShadow: seg.overflow ? "0 0 8px var(--color-red)" : "none",
-    border: seg.overflow ? "1.5px solid var(--color-red-dark)" : undefined,
+    // background: seg.overflow ? "var(--color-red-transparent)" : "", //不超过就不需要底色
+    // borderRadius: "50%",
+    // boxShadow: seg.overflow ? "0 0 8px var(--color-red) inset" : "none",
+    // border: seg.overflow ? "1px solid var(--color-red)" : undefined,
   };
 }
 
@@ -713,6 +715,7 @@ watch(
   border: none;
   box-shadow: none;
   user-select: none;
+  z-index: 30;
 }
 
 /* 可按 priority 分不同色 */
@@ -723,7 +726,7 @@ watch(
 
 /* 按 1 的风格修改 */
 .priority-2 {
-  background-color: #ff98005c; /* 原来是纯色，改为半透明浅底 */
+  background-color: #ff98005c;
   color: #ff9800; /* 同色文字 */
 }
 
@@ -743,7 +746,7 @@ watch(
   color: #2196f3;
 }
 .priority-6 {
-  background-color: #9575cd5c; /* 你原来已是半透明，保持并补上文字色 */
+  background-color: #9575cd5c;
   color: #9575cd;
 }
 .priority-7 {
@@ -800,5 +803,9 @@ watch(
 
 .pomo-segment.work {
   pointer-events: auto !important;
+}
+
+.pomo-segment.break {
+  color: transparent;
 }
 </style>

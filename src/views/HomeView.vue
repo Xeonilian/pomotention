@@ -1768,6 +1768,7 @@ const { startResize: startRightResize } = useResize(
   flex: 1;
   display: flex;
   flex-direction: column;
+  z-index: 2;
 }
 
 .planner-view-container {
