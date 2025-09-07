@@ -340,7 +340,7 @@ export function generateEstimatedTodoSegments(
     } else {
       anchorIndex = todo.globalIndex;
     }
-    console.log(anchorIndex);
+
     // 4. 根据任务类型，调用相应的分配函数
     // 获取该 todo 需要显示的番茄数量，如果还没估计也会显示1个
     const pomoCount = getTodoDisplayPomoCount(todo);
@@ -670,8 +670,20 @@ function _allocateCherrySegmentsFromIndex(
   todoSegments: TodoSegment[]
 ): void {
   let assigned = false; // 我们只需要分配一次，所以用布尔值即可
-
-  // --- 关键简化：循环的步长是 4！---
+  const targetCategory = "working";
+  // --- 当没有forceStart 步长1验证，forceStart则只检验提供的位置---
+  if (!forceStart) {
+    const windowStart = findWindowStartIndex(
+      segments,
+      usedGlobalIndices,
+      startIndex,
+      needCount,
+      (seg) => seg.category === targetCategory
+    );
+    if (windowStart !== null && windowStart !== startIndex) {
+      startIndex = windowStart;
+    }
+  }
   for (let i = startIndex; i < segments.length - 3; i += 1) {
     // 如果是手动模式，只检查 startIndex 这一个位置
     if (forceStart && i > startIndex) {
@@ -681,72 +693,61 @@ function _allocateCherrySegmentsFromIndex(
     const seg1 = segments[i];
     const seg2 = segments[i + 1];
     const seg3 = segments[i + 2];
-    const seg4 = segments[i + 3];
+
+    // 3. 可用性检查 (4个块都未被占用)
+    const isConflict =
+      usedGlobalIndices.has(seg1.globalIndex!) ||
+      usedGlobalIndices.has(seg2.globalIndex!) ||
+      usedGlobalIndices.has(seg3.globalIndex!);
 
     // --- 将所有检查条件整合到一个函数中，一目了然 ---
     const isSlotValid = (
       s1: PomodoroSegment,
       s2: PomodoroSegment,
-      s3: PomodoroSegment,
-      s4: PomodoroSegment
+      s3: PomodoroSegment
     ): boolean => {
-      // 1. 结构检查 (pomo-break-pomo-break)
-      if (
-        s1.type !== "pomo" ||
-        s2.type !== "break" ||
-        s3.type !== "pomo" ||
-        s4.type !== "break"
-      )
-        return false;
-      // 2. 连续性检查 (时间上无缝)
-      if (s1.end !== s2.start || s2.end !== s3.start || s3.end !== s4.start)
-        return false;
-      // 3. 可用性检查 (4个块都未被占用)
-      if (
-        usedGlobalIndices.has(s1.globalIndex!) ||
-        usedGlobalIndices.has(s2.globalIndex!) ||
-        usedGlobalIndices.has(s3.globalIndex!) ||
-        usedGlobalIndices.has(s4.globalIndex!)
-      )
-        return false;
-      // 4. 类别检查
       const category = s1.category;
-      if (
-        s2.category !== category ||
-        s3.category !== category ||
-        s4.category !== category
-      )
-        return false; // 必须统一
       if (!forceStart && category !== "working") return false; // 自动模式下必须是 'working'
+
+      // 1. 结构检查 (pomo-break-pomo-break)
+      if (s1.type !== "pomo" || s2.type !== "break" || s3.type !== "pomo")
+        return false;
 
       return true; // 所有检查通过！
     };
 
-    if (isSlotValid(seg1, seg2, seg3, seg4)) {
+    if (isSlotValid(seg1, seg2, seg3)) {
       // 找到了一个完美的 4 块槽位！
-      const segmentsToAssign = [seg1, seg2, seg3, seg4];
       const actualCategory = seg1.category; // 记录实际占用的类别
 
-      // 一次性创建 4 个 TodoSegment
-      segmentsToAssign.forEach((subSeg, index) => {
+      const fifteenMin = 15 * 60 * 1000; // 900,000 ms
+      const baseStart = seg1.start;
+
+      // 一次性创建 4 个 TodoSegment（每个 15 分钟，从 seg1.start 起连续）
+      for (let i = 0; i < 4; i += 1) {
+        const start = baseStart + i * fifteenMin;
+        const end = start + fifteenMin;
+
         todoSegments.push({
           todoId: todo.id,
           priority: todo.priority,
           todoTitle: todo.activityTitle,
-          todoIndex: index + 1, // 1, 2, 3, 4
-          start: subSeg.start,
-          end: subSeg.end,
+          todoIndex: i + 1, // 1, 2, 3, 4
+          start,
+          end,
           pomoType: "🍒",
-          assignedPomodoroSegment: subSeg,
           category: actualCategory,
           completed: false,
           usingRealPomo: false,
-          globalIndex: subSeg.globalIndex,
+          overflow: isConflict,
+          globalIndex: seg1.globalIndex,
         });
-      });
+      }
 
       // 标记所有 4 个块为已使用
-      segmentsToAssign.forEach((s) => usedGlobalIndices.add(s.globalIndex!));
+      usedGlobalIndices.add(seg1.globalIndex!);
+      usedGlobalIndices.add(seg2.globalIndex!);
+      usedGlobalIndices.add(seg3.globalIndex!);
 
       assigned = true;
       break; // 已成功分配，立即跳出循环
@@ -793,13 +794,13 @@ function findWindowStartIndex(
   needCount: number,
   categoryPredicate: (seg: PomodoroSegment) => boolean
 ): number | null {
-  console.group(
-    `[findWindowStartIndex] startIndex=${startIndex}, needCount=${needCount}`
-  );
-  console.debug(
-    "[findWindowStartIndex] usedGlobalIndices:",
-    Array.from(usedGlobalIndices)
-  );
+  // console.group(
+  //   `[findWindowStartIndex] startIndex=${startIndex}, needCount=${needCount}`
+  // );
+  // console.debug(
+  //   "[findWindowStartIndex] usedGlobalIndices:",
+  //   Array.from(usedGlobalIndices)
+  // );
 
   for (let i = startIndex; i < segments.length; i++) {
     const first = segments[i];
@@ -810,16 +811,6 @@ function findWindowStartIndex(
       first.type === "pomo" &&
       categoryPredicate(first) &&
       !usedGlobalIndices.has(first.globalIndex!);
-
-    console.debug("[findWindowStartIndex] check-start-candidate:", {
-      i,
-      type: first?.type,
-      category: first?.category,
-      globalIndex: first?.globalIndex,
-      isUsed: first ? usedGlobalIndices.has(first.globalIndex!) : undefined,
-      categoryOK: first ? categoryPredicate(first) : undefined,
-      isValidStart,
-    });
 
     if (!isValidStart) continue;
 
@@ -840,11 +831,11 @@ function findWindowStartIndex(
 
       // 如果类别不匹配，按“阻断”处理。如果你想允许跳过类别不匹配，把下面两行改为：continue;
       if (!categoryPredicate(seg)) {
-        console.trace("[findWindowStartIndex] block by category mismatch at", {
-          j,
-          globalIndex: seg.globalIndex,
-          category: seg.category,
-        });
+        // console.trace("[findWindowStartIndex] block by category mismatch at", {
+        //   j,
+        //   globalIndex: seg.globalIndex,
+        //   category: seg.category,
+        // });
         // blocked = true;
         // break;
         continue;
@@ -852,10 +843,10 @@ function findWindowStartIndex(
 
       // 已占用的 pomo 阻断
       if (usedGlobalIndices.has(seg.globalIndex!)) {
-        console.trace("[findWindowStartIndex] block by used pomo at", {
-          j,
-          globalIndex: seg.globalIndex,
-        });
+        // console.trace("[findWindowStartIndex] block by used pomo at", {
+        //   j,
+        //   globalIndex: seg.globalIndex,
+        // });
         blocked = true;
         break;
       }
@@ -864,29 +855,29 @@ function findWindowStartIndex(
       collected += 1;
       picked.push(seg.globalIndex!);
 
-      console.trace("[findWindowStartIndex] take pomo", {
-        j,
-        globalIndex: seg.globalIndex,
-        collected,
-      });
+      // console.trace("[findWindowStartIndex] take pomo", {
+      //   j,
+      //   globalIndex: seg.globalIndex,
+      //   collected,
+      // });
     }
 
-    console.debug("[findWindowStartIndex] candidate-result", {
-      startAt: i,
-      picked,
-      collected,
-      needCount,
-      blocked,
-    });
+    // console.debug("[findWindowStartIndex] candidate-result", {
+    //   startAt: i,
+    //   picked,
+    //   collected,
+    //   needCount,
+    //   blocked,
+    // });
 
     if (!blocked && collected >= needCount) {
-      console.info(
-        "[findWindowStartIndex] FOUND startAt =",
-        i,
-        "picked =",
-        picked
-      );
-      console.groupEnd();
+      // console.info(
+      //   "[findWindowStartIndex] FOUND startAt =",
+      //   i,
+      //   "picked =",
+      //   picked
+      // );
+      // console.groupEnd();
       return i;
     }
     // 如果被阻断了，继续尝试下一个起点 i+1
@@ -895,6 +886,6 @@ function findWindowStartIndex(
   console.warn(
     "[findWindowStartIndex] NO WINDOW FOUND (keep original startIndex)"
   );
-  console.groupEnd();
+  // console.groupEnd();
   return null;
 }
