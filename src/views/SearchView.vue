@@ -6,7 +6,7 @@
       @input="performSearch"
     />
   </div>
-  <div class="search-view" ref="scrollContainer">
+  <div class="search-view">
     <div class="content-container">
       <div class="results-layout">
         <!-- 左侧：标题列表（Todos + Schedules） -->
@@ -37,7 +37,7 @@
         </div>
 
         <!-- 右侧：内容卡片 -->
-        <div class="right-card-list">
+        <div class="right-card-list" ref="scrollContainer">
           <!-- 展示 Todo -->
           <n-card
             v-for="item in filteredTodos"
@@ -90,11 +90,11 @@
             <div class="card-header">
               <div class="title">{{ item.activityTitle }}</div>
               <n-button
-                quaternary
+                text
                 size="small"
                 @click="toggleExpand('sch-' + item.id)"
               >
-                {{ isExpanded("sch-" + item.id) ? "收起" : "展开" }}
+                {{ isExpanded("sch-" + item.id) ? "-" : "+" }}
               </n-button>
             </div>
 
@@ -322,12 +322,16 @@ export default defineComponent({
 <style scoped>
 /* 允许页面自然增长并整体滚动 */
 .search-view {
-  height: 100%;
-  display: block; /* 避免垂直方向压缩 */
-  background: var(--color-background);
+  height: 100vh; /* 直接撑满整个视口高度 */
   max-width: 900px;
   margin: auto;
-  overflow-y: auto;
+
+  /* --- 关键修改 --- */
+  display: flex; /* 改为 flex 布局 */
+  flex-direction: column; /* 垂直排列 */
+  overflow: hidden; /* 禁止它自己滚动！ */
+  /* background 和其他属性保持不变 */
+  background: var(--color-background);
 }
 
 /* 顶部搜索栏固定在顶部中间 */
@@ -342,6 +346,10 @@ export default defineComponent({
 
 /* 内容流式布局，让页面自然滚动 */
 .content-container {
+  /* --- 关键修改 --- */
+  flex: 1; /* 这个属性让它在 flex 容器中占据所有可用空间 */
+  overflow: hidden; /* 也禁止它自己滚动 */
+  /* 其他属性保持不变 */
   display: block;
   margin: 0 auto;
   width: 100%;
@@ -349,23 +357,29 @@ export default defineComponent({
 
 /* 双列布局：左 150px，右自适应 */
 .results-layout {
+  height: 100%;
   display: grid;
   grid-template-columns: 150px 1fr;
   gap: 16px;
   width: 100%;
-  margin: 0 auto;
   align-items: start;
+  margin: 0 auto;
 }
 
 /* 左侧标题列表（支持 sticky，独立滚动） */
 .left-title-list {
-  top: 0;
+  top: 0; /* 或者 10px，让它粘在顶部 */
   position: sticky;
+
+  /* --- 关键修改 --- */
+  height: 100%; /* 撑满 Grid 分配给它的行高 */
+  overflow-y: auto; /* 内容超出时，自己出现滚动条 */
+
+  /* 其他属性保持不变 */
   display: flex;
   flex-direction: column;
   gap: 8px;
   width: 150px;
-  overflow-y: auto;
   overflow-x: hidden;
   padding-right: 6px;
   padding-left: 6px;
@@ -397,6 +411,11 @@ export default defineComponent({
 
 /* 右侧卡片列表流式排列 */
 .right-card-list {
+  /* --- 关键修改 --- */
+  height: 100%; /* 撑满 Grid 分配给它的行高 */
+  overflow-y: auto; /* 内容超出时，自己出现滚动条 */
+
+  /* 其他属性保持不变 */
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -407,20 +426,22 @@ export default defineComponent({
 .card {
   width: 100%;
   background-color: var(--color-background);
-  max-height: 300px;
+  min-height: 200px;
   overflow-y: auto;
   padding: 2px 4px;
 }
 
 /* 展开态：解除限制 */
 .card.expanded {
-  max-height: none;
-  overflow: visible;
+  min-height: 600px;
+  max-height: 600px;
 }
+
 .card.active {
   border: 1px solid var(--color-blue);
   box-shadow: 2px 2px 2px rgba(0, 0, 0, 0.2);
 }
+
 :deep(.n-card__content) {
   padding: 6px;
   --n-padding-bottom: 0px;
@@ -466,40 +487,5 @@ export default defineComponent({
 
 .task-content :deep(h1) {
   margin: 0;
-}
-
-/* 滚动条样式 */
-.card::-webkit-scrollbar,
-.left-title-list::-webkit-scrollbar {
-  width: 8px;
-}
-
-.card::-webkit-scrollbar-thumb,
-.left-title-list::-webkit-scrollbar-thumb {
-  background-color: darkgrey;
-  border-radius: 10px;
-}
-
-.card::-webkit-scrollbar-track,
-.left-title-list::-webkit-scrollbar-track {
-  background: #f1f1f1;
-}
-
-/* 小屏：单列布局，标题行内折叠显示 */
-@media (max-width: 768px) {
-  .results-layout {
-    grid-template-columns: 1fr;
-  }
-  .left-title-list {
-    position: static;
-    max-height: unset;
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: 6px;
-  }
-  .title-item {
-    width: auto;
-    max-width: 48%;
-  }
 }
 </style>
