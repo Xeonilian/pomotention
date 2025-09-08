@@ -1,74 +1,137 @@
 <template>
-  <div class="search-view">
-    <div class="search-container">
-      <n-input
-        placeholder="请输入搜索关键字"
-        v-model:value="searchQuery"
-        @input="performSearch"
-      />
-      <n-button @click="performSearch" type="info">搜索</n-button>
-    </div>
-
+  <div class="search-container">
+    <n-input
+      placeholder="请输入搜索关键字"
+      v-model:value="searchQuery"
+      @input="performSearch"
+    />
+  </div>
+  <div class="search-view" ref="scrollContainer">
     <div class="content-container">
-      <!-- 展示 Todo 及其相关任务 -->
-      <n-card
-        v-for="item in filteredTodos"
-        :key="item.id"
-        class="search-item-todo"
-      >
-        <div class="title">{{ item.activityTitle }}</div>
-        <p
-          class="info"
-          style="margin-top: 2px; margin-bottom: 2px; color: var(--color-blue)"
-        >
-          截止日期: {{ formatDate(item.dueDate) }}
-        </p>
-        <div v-for="task in getTasksBySourceId(item.id)" :key="task.id">
+      <div class="results-layout">
+        <!-- 左侧：标题列表（Todos + Schedules） -->
+        <div class="left-title-list">
+          <!-- Todo 标题 -->
           <div
-            class="task-content"
-            v-html="convertMarkdown(task.description)"
-            style="margin: 0"
-          ></div>
-        </div>
-      </n-card>
+            v-for="item in filteredTodos"
+            :key="'todo-' + item.id"
+            class="title-item"
+            :class="{ active: activeCardKey === 'todo-' + item.id }"
+            @click="focusCard('todo-' + item.id)"
+            :title="item.activityTitle"
+          >
+            {{ item.activityTitle }}
+          </div>
 
-      <!-- 展示 Schedule 及其相关任务 -->
-      <n-card
-        v-for="item in filteredSchedules"
-        :key="item.id"
-        class="search-item-schedule"
-      >
-        <div class="title">{{ item.activityTitle }}</div>
-        <p
-          class="info"
-          style="margin-top: 2px; margin-bottom: 2px; color: var(--color-red)"
-        >
-          截止日期:
-          {{
-            item.activityDueRange[0] ? formatDate(item.activityDueRange[0]) : ""
-          }}
-        </p>
-        <p
-          class="info"
-          style="margin-top: 2px; margin-bottom: 2px; color: var(--color-red)"
-        >
-          位置: {{ item.location || "无" }}
-        </p>
-        <div v-for="task in getTasksBySourceId(item.id)" :key="task.id">
+          <!-- Schedule 标题 -->
           <div
-            class="task-content"
-            v-html="convertMarkdown(task.description)"
-          ></div>
+            v-for="item in filteredSchedules"
+            :key="'sch-' + item.id"
+            class="title-item schedule"
+            :class="{ active: activeCardKey === 'sch-' + item.id }"
+            @click="focusCard('sch-' + item.id)"
+            :title="item.activityTitle"
+          >
+            {{ item.activityTitle }}
+          </div>
         </div>
-      </n-card>
+
+        <!-- 右侧：内容卡片 -->
+        <div class="right-card-list">
+          <!-- 展示 Todo -->
+          <n-card
+            v-for="item in filteredTodos"
+            :key="'todo-' + item.id"
+            :ref="(el) => setCardRef(el)"
+            :data-key="'todo-' + item.id"
+            @click="focusCard('todo-' + item.id)"
+            class="search-item-todo card"
+            :class="{
+              expanded: isExpanded('todo-' + item.id),
+              active: activeCardKey === 'todo-' + item.id,
+            }"
+          >
+            <div class="card-header">
+              <div class="title">{{ item.activityTitle }}</div>
+              <n-button
+                text
+                size="small"
+                @click="toggleExpand('todo-' + item.id)"
+              >
+                {{ isExpanded("todo-" + item.id) ? "-" : "+" }}
+              </n-button>
+            </div>
+
+            <p class="info due blue">
+              截止日期: {{ formatDate(item.dueDate) }}
+            </p>
+
+            <div v-for="task in getTasksBySourceId(item.id)" :key="task.id">
+              <div
+                class="task-content"
+                v-html="convertMarkdown(task.description)"
+              ></div>
+            </div>
+          </n-card>
+
+          <!-- 展示 Schedule -->
+          <n-card
+            v-for="item in filteredSchedules"
+            :key="'sch-' + item.id"
+            :ref="(el) => setCardRef(el)"
+            @click="focusCard('sch-' + item.id)"
+            :data-key="'sch-' + item.id"
+            class="search-item-schedule card"
+            :class="{
+              expanded: isExpanded('sch-' + item.id),
+              active: activeCardKey === 'sch-' + item.id,
+            }"
+          >
+            <div class="card-header">
+              <div class="title">{{ item.activityTitle }}</div>
+              <n-button
+                quaternary
+                size="small"
+                @click="toggleExpand('sch-' + item.id)"
+              >
+                {{ isExpanded("sch-" + item.id) ? "收起" : "展开" }}
+              </n-button>
+            </div>
+
+            <p class="info due red">
+              截止日期:
+              {{
+                item.activityDueRange?.[0]
+                  ? formatDate(item.activityDueRange[0])
+                  : ""
+              }}
+            </p>
+            <p class="info red">位置: {{ item.location || "无" }}</p>
+
+            <div v-for="task in getTasksBySourceId(item.id)" :key="task.id">
+              <div
+                class="task-content"
+                v-html="convertMarkdown(task.description)"
+              ></div>
+            </div>
+          </n-card>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, computed } from "vue";
+import {
+  defineComponent,
+  ref,
+  computed,
+  onBeforeUpdate,
+  onUpdated,
+  nextTick,
+} from "vue"; // 确保导入所有需要的钩子
 import { STORAGE_KEYS } from "@/core/constants";
-import { marked } from "marked"; // 引入 marked
+import { marked } from "marked";
 import type { Todo } from "@/core/types/Todo";
 import type { Schedule } from "@/core/types/Schedule";
 import type { Task } from "@/core/types/Task";
@@ -85,13 +148,45 @@ export default defineComponent({
     const todos = ref<Todo[]>([]);
     const schedules = ref<Schedule[]>([]);
     const tasks = ref<Task[]>([]);
+    const activeCardKey = ref<string | null>(null);
+    const expandedIds = ref<Set<string>>(new Set());
+    const scrollContainer = ref<HTMLElement | null>(null);
+
+    // --- 核心改动：使用函数 ref ---
+    // 这个 Map 用来存储 key 到 DOM 元素的映射
+    const cardElements = new Map<string, HTMLElement>();
+
+    // 这个函数将在每次渲染时被 Vue 调用，用于收集 ref
+    const setCardRef = (el: any) => {
+      if (el) {
+        // NaiveUI 组件实例需要通过 el.$el 访问真实 DOM
+        const domElement = el.$el
+          ? (el.$el as HTMLElement)
+          : (el as HTMLElement);
+        const key = domElement.dataset.key;
+        if (key) {
+          // 确保你设置到了 Map 中
+          cardElements.set(key, domElement);
+        }
+      }
+    };
+    // --- 核心改动：在 DOM 更新前清空 Map ---
+    // 这确保了我们只保留当前渲染中存在的元素引用
+    onBeforeUpdate(() => {
+      cardElements.clear();
+    });
+
+    // 为了调试，我们可以在更新后打印 Map 的内容
+    onUpdated(() => {
+      console.log("DOM updated. Current card refs:", cardElements);
+    });
+    // --- 核心改动结束 ---
 
     const performSearch = () => {
-      loadData(); // Load data only when performing search
+      loadData();
     };
 
     const loadData = () => {
-      // Load data into memory only when the search query changes
       todos.value = JSON.parse(localStorage.getItem(STORAGE_KEYS.TODO) || "[]");
       schedules.value = JSON.parse(
         localStorage.getItem(STORAGE_KEYS.SCHEDULE) || "[]"
@@ -106,45 +201,103 @@ export default defineComponent({
       return date.toLocaleDateString() + " " + date.toLocaleTimeString();
     };
 
+    const getTasksBySourceId = (sourceId: number) => {
+      return tasks.value.filter((task) => task.sourceId === sourceId);
+    };
+
+    const convertMarkdown = (markdownText: string | undefined) => {
+      return markdownText ? marked(markdownText) : "无";
+    };
+
+    const matchesQuery = (text: string | undefined) => {
+      if (!text) return false;
+      if (!searchQuery.value) return false;
+      return text.toLowerCase().includes(searchQuery.value.toLowerCase());
+    };
+
     const filteredTodos = computed(() => {
-      if (!searchQuery.value) return []; // 改为返回空数组，避免加载所有数据
+      if (!searchQuery.value) return [];
       return todos.value.filter((item) => {
-        const matchesTitle = item.activityTitle
-          .toLowerCase()
-          .includes(searchQuery.value.toLowerCase());
+        const matchesTitle = matchesQuery(item.activityTitle);
         const matchesTaskDescription = getTasksBySourceId(item.id).some(
-          (task) =>
-            task.description
-              ?.toLowerCase()
-              .includes(searchQuery.value.toLowerCase())
+          (task) => matchesQuery(task.description)
         );
         return matchesTitle || matchesTaskDescription;
       });
     });
 
     const filteredSchedules = computed(() => {
-      if (!searchQuery.value) return []; // 改为返回空数组，避免加载所有数据
+      if (!searchQuery.value) return [];
       return schedules.value.filter((item) => {
-        const matchesTitle = item.activityTitle
-          .toLowerCase()
-          .includes(searchQuery.value.toLowerCase());
+        const matchesTitle = matchesQuery(item.activityTitle);
         const matchesTaskDescription = getTasksBySourceId(item.id).some(
-          (task) =>
-            task.description
-              ?.toLowerCase()
-              .includes(searchQuery.value.toLowerCase())
+          (task) => matchesQuery(task.description)
         );
         return matchesTitle || matchesTaskDescription;
       });
     });
 
-    const getTasksBySourceId = (sourceId: number) => {
-      return tasks.value.filter((task) => task.sourceId === sourceId);
+    const isExpanded = (key: string) => expandedIds.value.has(key);
+    const toggleExpand = (key: string) => {
+      const set = new Set(expandedIds.value);
+      if (set.has(key)) set.delete(key);
+      else set.add(key);
+      expandedIds.value = set;
     };
 
-    // 定义将 Markdown 转换为 HTML 的函数
-    const convertMarkdown = (markdownText: string | undefined) => {
-      return markdownText ? marked(markdownText) : "无";
+    const stickyOffset = 110;
+
+    const scrollIntoViewWithOffset = (
+      el: HTMLElement,
+      offset = stickyOffset
+    ) => {
+      // 获取我们刚刚用 ref 绑定的滚动容器
+      const container = scrollContainer.value;
+
+      // 如果容器不存在，就直接退出，防止错误
+      if (!container) {
+        console.error("滚动容器 .search-view 未找到！");
+        return;
+      }
+
+      // el.offsetTop 是目标卡片相对于其父容器顶部的距离。
+      // 在这个布局下，它就是我们需要的滚动距离。
+      const topPosition = el.offsetTop;
+
+      // 操作容器的 scrollTop，而不是 window.scrollTo
+      container.scrollTo({
+        top: topPosition - offset, // 滚动到目标位置减去偏移量
+        behavior: "smooth",
+      });
+    };
+
+    // --- 修改 focusCard 以使用新的 cardElements Map ---
+    const focusCard = (key: string) => {
+      activeCardKey.value = key;
+      const el = cardElements.get(key); // 从我们的 Map 中获取元素
+
+      console.log(`Trying to focus on key: ${key}. Element found:`, el); // 调试日志
+
+      if (el) {
+        scrollIntoViewWithOffset(el);
+      } else {
+        // 如果这里依然找不到，说明 ref 收集和 focus 调用之间存在时序问题
+        // 使用 nextTick 尝试在下一个 DOM 更新周期再次查找
+        console.warn(
+          `Element with key '${key}' not found immediately. Retrying after next tick...`
+        );
+        nextTick(() => {
+          const elAfterTick = cardElements.get(key);
+          if (elAfterTick) {
+            console.log("Element found after next tick:", elAfterTick);
+            scrollIntoViewWithOffset(elAfterTick);
+          } else {
+            console.error(
+              `Element with key '${key}' still not found after next tick. Ref collection might be failing.`
+            );
+          }
+        });
+      }
     };
 
     return {
@@ -155,84 +308,198 @@ export default defineComponent({
       performSearch,
       formatDate,
       convertMarkdown,
+      activeCardKey,
+      isExpanded,
+      toggleExpand,
+      focusCard,
+      setCardRef,
+      scrollContainer,
     };
   },
 });
 </script>
 
 <style scoped>
+/* 允许页面自然增长并整体滚动 */
 .search-view {
   height: 100%;
-  display: flex;
-  justify-content: center;
+  display: block; /* 避免垂直方向压缩 */
   background: var(--color-background);
+  max-width: 900px;
+  margin: auto;
+  overflow-y: auto;
 }
 
+/* 顶部搜索栏固定在顶部中间 */
 .search-container {
   display: flex;
-  flex-direction: row;
-  position: fixed;
-  top: 15px;
-  padding-top: 30px;
-  gap: 20px;
+  justify-content: center;
   width: 400px;
-  overflow: hidden;
   z-index: 10;
   margin: auto;
+  padding: 10px;
 }
 
+/* 内容流式布局，让页面自然滚动 */
 .content-container {
+  display: block;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* 双列布局：左 150px，右自适应 */
+.results-layout {
+  display: grid;
+  grid-template-columns: 150px 1fr;
+  gap: 16px;
+  width: 100%;
+  margin: 0 auto;
+  align-items: start;
+}
+
+/* 左侧标题列表（支持 sticky，独立滚动） */
+.left-title-list {
+  top: 0;
+  position: sticky;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  margin: auto;
-  width: 100%; /* 确保容器宽度自适应 */
-  padding-top: 45px;
+  gap: 8px;
+  width: 150px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 6px;
+  padding-left: 6px;
 }
 
-.search-item-todo,
-.search-item-schedule {
-  margin: 10px auto; /* 保持每个卡片在中间，添加上下间距 */
-  width: 600px; /* 固定宽度 */
+/* 标题项：150px 宽度 + 省略号 */
+.title-item {
+  width: 130px;
+  max-width: 130px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: var(--color-background-light);
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.title-item.active {
+  background: var(--color-primary-soft, #e6f0ff);
+  color: var(--color-primary, #3b82f6);
+  font-weight: 600;
+}
+
+.title-item.schedule {
+  border-left: 4px solid var(--color-red);
+}
+
+/* 右侧卡片列表流式排列 */
+.right-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-right: 2px;
+}
+
+/* 卡片默认：固定 200px，高度内滚动 */
+.card {
+  width: 100%;
   background-color: var(--color-background);
-  max-height: 500px; /* 设置最大高度 */
-  overflow-y: auto; /* 允许垂直滚动 */
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 2px 4px;
 }
 
-.n-card {
-  padding: 0px;
+/* 展开态：解除限制 */
+.card.expanded {
+  max-height: none;
+  overflow: visible;
+}
+.card.active {
+  border: 1px solid var(--color-blue);
+  box-shadow: 2px 2px 2px rgba(0, 0, 0, 0.2);
+}
+:deep(.n-card__content) {
+  padding: 6px;
+  --n-padding-bottom: 0px;
 }
 
+/* 卡片头部吸顶，滚动时按钮和标题可见 */
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2px;
+  background: var(--color-background);
+  z-index: 1;
+  padding-bottom: 0px;
+}
+
+/* 标题（卡片内允许换行） */
 .title {
   font-weight: bold;
-  font-size: 1.2em;
   margin: 0 !important;
-  padding: 0;
+  line-height: 1.2;
+  padding: 12px 0px;
 }
 
+.info.due.blue {
+  color: var(--color-blue);
+  margin-top: 0px;
+  margin-bottom: 0px;
+}
+
+.info.due.red,
+.info.red {
+  color: var(--color-red);
+  margin-top: 0px;
+}
+
+/* 任务块样式 */
 .task-content {
   background-color: var(--color-background-light-light);
-  margin: 2px;
-  padding: 4px 6px;
+  margin: 4px 0;
+  padding: 6px 8px;
 }
+
 .task-content :deep(h1) {
   margin: 0;
 }
 
-/* 滚动条样式可选 */
-.search-item-todo::-webkit-scrollbar,
-.search-item-schedule::-webkit-scrollbar {
+/* 滚动条样式 */
+.card::-webkit-scrollbar,
+.left-title-list::-webkit-scrollbar {
   width: 8px;
 }
 
-.search-item-todo::-webkit-scrollbar-thumb,
-.search-item-schedule::-webkit-scrollbar-thumb {
+.card::-webkit-scrollbar-thumb,
+.left-title-list::-webkit-scrollbar-thumb {
   background-color: darkgrey;
   border-radius: 10px;
 }
 
-.search-item-todo::-webkit-scrollbar-track,
-.search-item-schedule::-webkit-scrollbar-track {
+.card::-webkit-scrollbar-track,
+.left-title-list::-webkit-scrollbar-track {
   background: #f1f1f1;
+}
+
+/* 小屏：单列布局，标题行内折叠显示 */
+@media (max-width: 768px) {
+  .results-layout {
+    grid-template-columns: 1fr;
+  }
+  .left-title-list {
+    position: static;
+    max-height: unset;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .title-item {
+    width: auto;
+    max-width: 48%;
+  }
 }
 </style>
