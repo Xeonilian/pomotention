@@ -378,7 +378,6 @@ function getPomoColor(ratio: number) {
   align-items: center; /* 垂直居中 */
   justify-content: center;
   font-size: 14px;
-  min-width: 0; /* 关键：允许收缩到 0 */
   overflow: hidden;
   width: 20px;
   height: 20px;
@@ -387,6 +386,7 @@ function getPomoColor(ratio: number) {
   z-index: 1;
   color: var(--color-text-secondary);
   background-color: var(--primary-color, #efeded4b);
+  flex-shrink: 0;
 }
 
 .date.today {
