@@ -282,6 +282,7 @@
                 >
                   <!-- 追踪任务按钮 -->
                   <n-button
+                    class="covert-button"
                     v-if="!todo.taskId"
                     text
                     type="info"
@@ -310,6 +311,7 @@
 
                   <!-- 取消任务按钮 -->
                   <n-button
+                    class="cancel-button"
                     v-if="!todo.realPomo"
                     text
                     type="info"
@@ -324,6 +326,7 @@
                   </n-button>
                   <!-- 退回任务按钮 = 不再在今日 -->
                   <n-button
+                    class="suspend-button"
                     v-if="!todo.realPomo"
                     text
                     type="info"
@@ -493,8 +496,8 @@ function finishEditing() {
     editingTodo.value = null;
     return;
   }
-  if (editingPriority.value === 11) {
-    popoverMessage.value = "请输入1-10";
+  if (editingPriority.value === 21) {
+    popoverMessage.value = "请输入1-20";
     showPopover.value = true;
     setTimeout(() => {
       showPopover.value = false;
@@ -907,7 +910,7 @@ col.col-fruit {
 }
 
 col.col-status {
-  width: 76px;
+  width: 87px;
 }
 
 /* 表头样式 */
@@ -1199,6 +1202,13 @@ td.status-col {
 
 :deep(.n-button) :hover {
   color: var(--color-red);
+}
+
+.cancel-button {
+  right: 2px;
+}
+.suspend-button {
+  right: 4px;
 }
 
 td.col-check {

@@ -70,7 +70,9 @@
             </span>
           </div>
           <div v-if="settingStore.settings.viewSet === 'week'" class="day-info">
-            <span class="day-status">{{ dateService.displayWeekInfo }}</span>
+            <span @click="onMonthJump" class="day-status">{{
+              dateService.displayWeekInfo
+            }}</span>
             <span class="global-pomo">
               <span class="total-pomo">🍅{{ globalRealPomo }}</span>
             </span>
@@ -1003,8 +1005,12 @@ function onUpdateTodoEst(id: number, estPomo: number[]) {
     todo?.activityId != null
       ? activityById.value.get(todo.activityId)
       : undefined;
-  if (activity && estPomo && estPomo.length === 1) {
-    activity.estPomoI = estPomo[0].toString();
+  if (activity && estPomo) {
+    if (estPomo[0]) {
+      activity.estPomoI = estPomo[0].toString();
+    } else {
+      activity.estPomoI = undefined;
+    }
   }
   saveAllDebounced();
 }

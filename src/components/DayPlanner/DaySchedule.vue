@@ -186,6 +186,7 @@
                   "
                 >
                   <n-button
+                    class="convert-button"
                     v-if="!schedule.taskId"
                     text
                     type="info"
@@ -218,6 +219,7 @@
 
                   <!-- 取消任务按钮 -->
                   <n-button
+                    class="cancel-button"
                     v-if="schedule.isUntaetigkeit !== true"
                     text
                     type="info"
@@ -462,7 +464,7 @@ col.col-location {
 }
 
 col.col-status {
-  width: 76px;
+  width: 87px;
 }
 
 thead th,
@@ -680,6 +682,10 @@ td.status-col {
   display: inline-flex;
   height: 20px;
   transform: translateY(1px);
+}
+
+.convert-button {
+  left: 2px;
 }
 
 :deep(.n-button) :hover {
