@@ -197,7 +197,7 @@ const totalMinutes = computed(
 );
 
 // 整体位移
-const adjPara = ref(50);
+const adjPara = ref(0);
 
 const effectivePxPerMinute = computed(() => {
   if (totalMinutes.value <= 0) return 0;
@@ -210,30 +210,29 @@ const effectivePxPerMinute = computed(() => {
   height: 100%;
   overflow: visible;
 }
-
-.timetable-editor {
-  height: 100%;
-  padding: 10px;
-}
-
-.timetable-time-block {
-  position: relative;
-  height: 100%;
-  bottom: 5px;
-}
 .timetable-view-button-container {
-  position: sticky;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 0 auto 10px auto;
+  gap: 8px;
   top: 0;
   z-index: 10;
-  margin: 5px auto 15px auto;
+  background-color: var(--color-background);
   border-radius: 15px;
   width: 120px;
   height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  gap: 8px;
+}
+
+.timetable-editor {
+  height: 100%;
+}
+
+.timetable-time-block {
+  height: calc(100% - 45px);
+  position: relative;
+  bottom: 0px;
 }
 
 /* 添加这些样式来确保按钮居中 */

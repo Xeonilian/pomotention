@@ -304,7 +304,7 @@ function getPomodoroStyle(seg: PomodoroSegment): CSSProperties {
     color: "var(--color-background)",
     border: `1px solid ${colorDark}`,
     borderRadius: "2px",
-    zIndex: 5,
+    zIndex: 2,
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
@@ -594,12 +594,11 @@ watch(
 
 <style scoped>
 .timetable-bar-container {
-  padding-top: 14px;
   position: relative;
   overflow: visible;
   height: 100%;
-  max-height: 200px;
-  margin-top: 10px;
+  margin-top: 8px;
+  margin-bottom: 0;
   user-select: none; /* 🔥 禁用选中复制粘贴 */
   -webkit-user-select: none;
   -moz-user-select: none;
@@ -613,7 +612,6 @@ watch(
   width: 100%;
   height: 100%;
   pointer-events: none;
-  z-index: 20;
 }
 
 .hour-tick {
@@ -624,17 +622,16 @@ watch(
   flex-direction: column;
   align-items: center;
   user-select: none;
-  z-index: 2;
 }
 
 .tick-line {
   height: 1px;
   width: calc(100% - 0px);
+  flex-shrink: 0;
   background-color: var(--color-text-secondary);
   margin-bottom: 2px;
-  flex-shrink: 0;
   margin-left: auto;
-  z-index: 2;
+  z-index: 5;
   transform: scaleY(0.5);
 }
 /* 文字 */
@@ -646,10 +643,10 @@ watch(
   flex-shrink: 0;
   color: var(--color-text-secondary);
   margin-left: auto;
-  z-index: 2;
+  z-index: 201;
 }
 .block-label {
-  z-index: 100;
+  z-index: 101;
 }
 .current-time-line {
   position: absolute;
@@ -658,7 +655,7 @@ watch(
   height: 1px;
   background-color: var(--color-yellow);
   pointer-events: none;
-  z-index: 200;
+  z-index: 100;
 }
 .current-time-line::before {
   content: "🍅";
