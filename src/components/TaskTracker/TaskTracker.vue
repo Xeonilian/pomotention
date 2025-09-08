@@ -351,7 +351,7 @@ const getEnergyColor = (value: number) => {
   flex-direction: column;
   align-items: center;
   width: 25px;
-  box-shadow: 1px 1px var(--color-background-light);
+  box-shadow: 1px 1px var(--color-background-dark);
   border-radius: 8px;
   padding: 1px 0px;
   margin: 0;
@@ -360,12 +360,13 @@ const getEnergyColor = (value: number) => {
 
 .point-icon {
   font-size: 12px;
+  line-height: 1.5;
 }
 
 .point-value {
   font-size: 12px;
   font-weight: bold;
-  line-height: 0.8;
+  line-height: 0.6;
   font-family: "consolas", monospace;
 }
 

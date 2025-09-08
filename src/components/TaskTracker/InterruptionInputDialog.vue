@@ -36,9 +36,7 @@
       </n-space>
     </n-space>
     <template #action>
-      <n-button type="primary" @click="handleConfirm" :disabled="!isValid">
-        确认
-      </n-button>
+      <n-button type="primary" @click="handleConfirm"> 确认 </n-button>
       <n-button @click="handleCancel">取消</n-button>
     </template>
   </n-modal>
@@ -80,11 +78,11 @@ const description = ref("");
 const activityType = ref<"T" | "S" | null>(null); // 默认不选中
 const todoDueDate = ref<number | null>(null); // 待办截止日期
 
-// 验证表单是否有效
-const isValid = computed(() => {
-  if (!description.value.trim()) return false;
-  return true;
-});
+// // 验证表单是否有效 允许插入没有内容的
+// const isValid = computed(() => {
+//   if (!description.value.trim()) return false;
+//   return true;
+// });
 
 const showModal = computed({
   get: () => props.show,

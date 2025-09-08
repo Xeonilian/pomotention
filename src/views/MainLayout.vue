@@ -172,7 +172,7 @@ const viewControls = computed(() => [
   {
     key: "ai",
     icon: BrainCircuit24Regular,
-    title: "AI 助手",
+    title: "切换AI助手",
     show: settingStore.settings.showAi,
   },
 ]);

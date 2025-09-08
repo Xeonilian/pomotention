@@ -1,27 +1,7 @@
 <template>
   <div class="ai-chat-dialog">
-    <!-- 对话框头部 -->
-    <div class="ai-chat-header">
-      <div class="ai-chat-controls">
-        <n-button text class="control-btn" @click="handleSetting">
-          <template #icon>
-            <n-icon size="18">
-              <Settings24Regular />
-            </n-icon>
-          </template>
-        </n-button>
-        <n-button text @click="close" class="control-btn">
-          <template #icon>
-            <n-icon size="18">
-              <DismissCircle24Regular />
-            </n-icon>
-          </template>
-        </n-button>
-      </div>
-    </div>
-
     <!-- 对话内容区域 -->
-    <div class="ai-chat-content" v-if="!isMinimized">
+    <div class="ai-chat-content">
       <div class="chat-messages" ref="messagesContainer">
         <div
           v-for="(message, index) in messages"
@@ -50,15 +30,6 @@
             :disabled="isLoading"
             class="chat-input"
           />
-          <n-button
-            type="primary"
-            size="small"
-            :loading="isLoading"
-            :disabled="!inputMessage.trim()"
-            @click="sendMessage"
-            class="send-btn"
-          >
-          </n-button>
         </div>
       </div>
     </div>
@@ -66,9 +37,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick, watch, onMounted } from "vue";
-import { NButton, NInput, NIcon } from "naive-ui";
-import { DismissCircle24Regular, Settings24Regular } from "@vicons/fluent";
+import { ref, nextTick, onMounted } from "vue";
+import { NInput } from "naive-ui";
 import { aiService, type AIMessage } from "@/services/aiService";
 
 interface Message {
@@ -77,18 +47,11 @@ interface Message {
   timestamp: Date;
 }
 
-const emit = defineEmits<{
-  (e: "close"): void;
-}>();
-
 // 响应式数据
 const messages = ref<Message[]>([]);
 const inputMessage = ref("");
 const isLoading = ref(false);
-const isMinimized = ref(false);
-const unreadCount = ref(0);
 const messagesContainer = ref<HTMLElement>();
-const showSettings = ref(false);
 
 // 发送消息
 const sendMessage = async () => {
@@ -141,11 +104,6 @@ const sendMessage = async () => {
   } finally {
     isLoading.value = false;
   }
-};
-
-// 设置
-const handleSetting = () => {
-  showSettings.value = true;
 };
 
 // 获取系统提示词
@@ -206,13 +164,13 @@ const mockAIResponse = async (input: string): Promise<string> => {
 
   // 简单的回复逻辑
   if (input.includes("你好") || input.includes("hello")) {
-    return "你好！我是你的AI助手，有什么可以帮助你的吗？";
+    return "喵喵喵~";
   } else if (input.includes("时间") || input.includes("几点")) {
     return `现在是 ${new Date().toLocaleTimeString()}，希望你的时间管理很顺利！`;
   } else if (input.includes("番茄") || input.includes("pomodoro")) {
     return "番茄工作法是一个很好的时间管理技巧！建议你专注工作25分钟，然后休息5分钟。";
   } else {
-    return `我理解你说的是："${input}"。这是一个很好的问题，让我想想怎么回答...`;
+    return "喵喵喵~";
   }
 };
 
@@ -246,30 +204,11 @@ const formatTime = (timestamp: Date) => {
   });
 };
 
-// 关闭
-const close = () => {
-  emit("close");
-};
-
-// 监听新消息，更新未读计数
-watch(
-  messages,
-  (newMessages) => {
-    if (isMinimized.value && newMessages.length > 0) {
-      const lastMessage = newMessages[newMessages.length - 1];
-      if (lastMessage.role === "assistant") {
-        unreadCount.value++;
-      }
-    }
-  },
-  { deep: true }
-);
-
 onMounted(() => {
   // 添加欢迎消息
   messages.value.push({
     role: "assistant",
-    content: "你好！我是你的AI助手，有什么可以帮助你的吗？",
+    content: "你好！我是你的AI助手，正在向你赶来。愿你保持觉察，好好照顾自己！",
     timestamp: new Date(),
   });
 });
@@ -287,32 +226,6 @@ onMounted(() => {
   margin: auto;
 }
 
-.ai-chat-header {
-  display: flex;
-  justify-content: end;
-  align-items: center;
-  padding: 8px 12px;
-
-  color: white;
-  cursor: grab;
-  user-select: none;
-}
-
-.ai-chat-controls {
-  display: flex;
-  gap: 4px;
-}
-
-.control-btn {
-  width: 20px;
-  height: 20px;
-  min-width: 20px;
-}
-
-.control-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-
 .ai-chat-content {
   flex: 1;
   display: flex;
@@ -327,13 +240,14 @@ onMounted(() => {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 2px;
   width: 100%;
+  margin-top: 20px;
 }
 
 .message {
   display: flex;
-  gap: 8px;
+  gap: 2px;
   max-width: 100%;
 }
 
@@ -350,7 +264,7 @@ onMounted(() => {
 }
 
 .message-text {
-  padding: 8px 12px;
+  padding: 0px 0px;
   border-radius: 12px;
   word-wrap: break-word;
   line-height: 1.4;
@@ -363,21 +277,22 @@ onMounted(() => {
 .message.user .message-text {
   background: var(--color-background-light);
   color: var(--color-text);
-  border-bottom-left-radius: 1px;
+  padding: 2px 8px;
 }
 
 .message-time {
   font-size: 11px;
   color: var(--color-text-secondary);
-
   opacity: 0.7;
 }
 
+.message.user .message-time {
+  padding-right: 6px;
+}
 /* 输入区固定在底部且不超父容器宽度 */
 .chat-input-area {
   position: sticky;
   bottom: 0;
-  padding: 12px;
   border-top: 1px solid var(--color-border);
   background: var(--color-background);
   width: 100%;
@@ -397,11 +312,6 @@ onMounted(() => {
   flex: 1;
   min-width: 0; /* 防止 flex 子项撑破父容器 */
   max-width: 100%;
-}
-
-.send-btn {
-  height: 32px;
-  min-width: 32px;
 }
 
 /* 滚动条样式（可留可去） */
