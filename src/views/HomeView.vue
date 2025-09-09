@@ -51,7 +51,7 @@
             : { height: '100%' }
         "
       >
-        <!-- 今日活动的头部和控件 -->
+        <!-- 任务计划的头部和控件 -->
         <div class="planner-header">
           <div
             v-if="settingStore.settings.viewSet === 'day'"
