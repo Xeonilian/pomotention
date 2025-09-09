@@ -278,11 +278,14 @@
                 </div>
                 <div
                   class="button-group"
+                  :class="{
+                    converted: !todo.taskId,
+                  }"
                   v-if="todo.status !== 'done' && todo.status !== 'cancelled'"
                 >
                   <!-- 追踪任务按钮 -->
                   <n-button
-                    class="covert-button"
+                    class="convert-button"
                     v-if="!todo.taskId"
                     text
                     type="info"
@@ -1200,10 +1203,16 @@ td.status-col {
   transform: translateY(1px);
 }
 
+.button-group.converted {
+  padding-left: 38px;
+}
+
 :deep(.n-button) :hover {
   color: var(--color-red);
 }
-
+.convert-button {
+  right: 0px;
+}
 .cancel-button {
   right: 2px;
 }

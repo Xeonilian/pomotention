@@ -180,6 +180,9 @@
                 <div class="records-stat">&nbsp;</div>
                 <div
                   class="button-group"
+                  :class="{
+                    converted: !schedule.taskId,
+                  }"
                   v-if="
                     schedule.status !== 'done' &&
                     schedule.status !== 'cancelled'
@@ -684,8 +687,12 @@ td.status-col {
   transform: translateY(1px);
 }
 
+.button-group.converted {
+  padding-left: 38px;
+}
+
 .convert-button {
-  left: 2px;
+  left: 1px;
 }
 
 :deep(.n-button) :hover {
