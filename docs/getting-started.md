@@ -14,7 +14,8 @@ description: 下载最新版本的应用程序
 
 - 重构 Timetable+Priority 系统
 - 优化活动清单交互
-- 优化 PlannerUI
+- 优化计划 UI
+- 优化搜索输出
 - 发布将进行 AI 开发
 - 记录支持简易快捷键
 
@@ -37,13 +38,13 @@ description: 下载最新版本的应用程序
 
 ### Windows
 
-<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.3.3/pomotention_0.3.3_x64_en-US.msi" class="download-btn windows">
+<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.4.0/pomotention_0.4.0_x64_en-US.msi" class="download-btn windows">
   <span class="platform">Windows</span>
   <span class="format">.msi 安装包</span>
   <span class="size">11.6MB</span>
 </a>
 
-<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.3.3/pomotention_0.3.3_x64-setup.exe" class="download-btn windows">
+<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.4.0/pomotention_0.4.0_x64-setup.exe" class="download-btn windows">
   <span class="platform">Windows</span>
   <span class="format">.exe </span>
   <span class="size">9.8MB</span>
@@ -51,13 +52,13 @@ description: 下载最新版本的应用程序
 
 ### macOS
 
-<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.3.3/pomotention_0.3.3_x64.dmg" class="download-btn macos">
+<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.4.0/pomotention_0.4.0_x64.dmg" class="download-btn macos">
   <span class="platform">macOS</span>
   <span class="format">.dmg 安装包</span>
   <span class="size">14.5MB</span>
 </a>
 
-<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.3.3/pomotention.app.tar.gz" class="download-btn macos">
+<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.4.0/pomotention.app.tar.gz" class="download-btn macos">
   <span class="platform">macOS</span>
   <span class="format">app.tar.gz</span>
   <span class="size">13.1MB</span>
@@ -164,6 +165,7 @@ description: 下载最新版本的应用程序
   - 【优化】活动清单交互
   - 【优化】PlannerUI
   - 【优化】整体 UI 的色彩和谐度
+  - 【优化】搜索输出
   - 【新增】发布将进行 AI 开发
   - 【新增】记录支持简易快捷键
 

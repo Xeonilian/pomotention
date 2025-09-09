@@ -7,7 +7,7 @@
 - **添加：**
   1. 在活动标题文本的末尾输入 `#`，触发标签联想弹窗，显示已有标签列表；
   2. 输入文本可筛选标签；
-  3. 方向键上下选择标签，选中后按回车（Enter），即可关联该标签。
+  3. 方向键上下选择标签，选中后按回车 `Enter`，即可关联该标签。
 - **新建**：若输入内容未命中已有标签，选择最后一行`+ 标签`，回车将新建并关联该标签。
 
   <img src="/tag-input.png" alt="Tag Input" width="300">
@@ -20,7 +20,7 @@
 
 - 每行活动的 任务描述 输入区右侧均有**标签按钮**：
   - **无标签时**：<img src="/icons/Tag16Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;">
-  - **已有标签时**：<img src="/icons/Tag16Filled.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;">
+  - **已有标签时**：<img src="/icons/Tag16RegularBlue.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;">
 - **添加/删除**：点击**标签按钮**，弹出`标签管理面板`，搜索目标标签，每次点击可切换选中/删除状态。
   - 支持每个活动打多个标签，单活动建议不超过 10 个标签以确保界面清晰。
   - 标签的阴影状态显示，该标签是选中。

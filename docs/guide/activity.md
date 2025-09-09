@@ -17,16 +17,16 @@
 
 |                                                                                    按钮图标                                                                                    | 功能说明                                                                                                                                                            |
 | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-|   <img src="/icons/ChevronCircleLeft48Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(248, 179, 167);border-radius: 6px;">   | 选择活动：将 `Todo` 活动设为今日待办，跳转`今日活动视图`到活动执行的日期                                                                                            |
-|   <img src="/icons/ChevronCircleDown48Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(248, 179, 167);border-radius: 6px;">   | 追踪任务：记录当前活动相关的 Task 想法                                                                                                                              |
+|   <img src="/icons/ChevronCircleLeft48Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(224, 224, 224);border-radius: 6px;">   | 选择活动：将 `Todo` 活动设为今日待办，跳转`任务计划视图`到活动执行的日期                                                                                            |
+|   <img src="/icons/ChevronCircleDown48Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(224, 224, 224);border-radius: 6px;">   | 追踪任务：记录当前活动相关的 Task 想法                                                                                                                              |
+|    <img src="/icons/ArrowRepeatAll24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(224, 224, 224);border-radius: 6px;">     | 复制/重复活动：快速复制所选活动，默认不复制标签                                                                                                                     |
+|        <img src="/icons/Delete24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(224, 224, 224);border-radius: 6px;">         | 删除活动：移除选中活动                                                                                                                                              |
 |      <img src="/icons/CalendarAdd24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(193, 226, 255);border-radius: 6px;">      | 添加预约：新增 `Schedule` 活动，设置日期后自动添加相应日期的待办                                                                                                    |
 |       <img src="/icons/CloudAdd20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(193, 226, 255);border-radius: 6px;">        | 添加无所事事：新增 `Untaetigkeit`，默认时间为当前                                                                                                                   |
 |       <img src="/icons/AddCircle24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(193, 226, 255);border-radius: 6px;">       | 添加任务：新增一个 `Todo` 活动；点击 右上角<img src="/icons/DotMark.svg" width="18" style="display:inline-block;vertical-align:middle;margin:0;">可打开二级操作菜单 |
 | <img src="/icons/TextGrammarArrowRight24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(193, 226, 255);border-radius: 6px;"> | 生成子活动（二级菜单）：为当前 `Todo` 类活动生成子活动）                                                                                                            |
 | <img src="/icons/TextGrammarArrowLeft24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(193, 226, 255);border-radius: 6px;">  | 升级为兄弟（二级菜单）：将当前`Todo` 类子活动变为兄弟活动                                                                                                           |
 |        <img src="/icons/LeafTwo24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(193, 226, 255);border-radius: 6px;">        | 切换番茄类型（二级菜单）：切换 `Todo` 活动的类型，工作 🍅/生活 🍇/沉浸 🍒                                                                                           |
-|    <img src="/icons/ArrowRepeatAll24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(193, 226, 255);border-radius: 6px;">     | 复制/重复活动：快速复制所选活动，默认不复制标签                                                                                                                     |
-|        <img src="/icons/Delete24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(193, 226, 255);border-radius: 6px;">         | 删除活动：移除选中活动                                                                                                                                              |
 |  <img src="/icons/DocumentTableSearch24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(224, 224, 224);border-radius: 6px;">  | 筛选：弹出预设筛选方案                                                                                                                                              |
 |          <img src="/icons/Add16Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(224, 224, 224);border-radius: 6px;">          | 增加新列：在看板多分区视图下新增一列                                                                                                                                |
 |       <img src="/icons/Subtract16Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(224, 224, 224);border-radius: 6px;">        | 删除当前列：移除选中分区                                                                                                                                            |
@@ -56,7 +56,7 @@
 | 选中位置       | 视图显示                                                                                                                                  |
 | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
 | `活动清单视图` | <span style="display:inline-block; background:#e55151; color:#fff; padding:0 8px; border-radius:4px; font-size:90%;">红色</span> 背景高亮 |
-| `今日活动视图` | <span style="display:inline-block; background:#ffe066; color:#222; padding:0 8px; border-radius:4px; font-size:90%;">黄色</span> 背景高亮 |
+| `任务计划视图` | <span style="display:inline-block; background:#ffe066; color:#222; padding:0 8px; border-radius:4px; font-size:90%;">黄色</span> 背景高亮 |
 
 ## 2 活动清单功能
 
@@ -70,33 +70,33 @@
 ### 2.1 待办任务 `Todo` 活动操作
 
 - **新建**：点击 <img src="/icons/AddCircle24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0; background:rgb(193, 226, 255);border-radius: 6px;">
-- **删除**：选中活动，点击 <img src="/icons/Delete24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(193, 226, 255);border-radius: 6px;">
-- **复制**：选中活动，点击 <img src="/icons/ArrowRepeatAll24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(193, 226, 255);border-radius: 6px;">
-- **选择执行日期**：选中活动，点击 <img src="/icons/ChevronCircleLeft48Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(248, 179, 167);border-radius: 6px;">，活动会加入到 `今日活动页面`显示的日期中
-- **跳转到执行日期**：选中活动，点击 <img src="/icons/ChevronCircleLeft48Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(248, 179, 167);border-radius: 6px;">，如果活动已经选择执行日期，`今日活动页面`跳转到执行日期
-- **任务追踪**：选中活动，点击 <img src="/icons/ChevronCircleDown48Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(248, 179, 167);border-radius: 6px;">
 - **打开二级菜单**：点击 <img src="/icons/AddCircle24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0; background:rgb(193, 226, 255);border-radius: 6px;"> 右上角<img src="/icons/DotMark.svg" width="18" style="display:inline-block;vertical-align:middle;margin:0;">
 - **生成子活动**：选中活动，点击二级菜单中的 <img src="/icons/TextGrammarArrowRight24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(193, 226, 255);border-radius: 6px;"> ，仅支持一级子活动
 - **升级为兄弟**：选中子活动，点击二级菜单中的 <img src="/icons/TextGrammarArrowLeft24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(193, 226, 255);border-radius: 6px;">
 - **修改类型**：选中活动，点击二级菜单中的 <img src="/icons/LeafTwo24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(193, 226, 255);border-radius: 6px;"> 按顺序切换（🍅/🍒/🍇），切换后预估番茄数清零，樱桃默认为 4 个
+- **删除**：选中活动，点击 <img src="/icons/Delete24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(224, 224, 224);border-radius: 6px;">
+- **复制**：选中活动，点击 <img src="/icons/ArrowRepeatAll24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(224, 224, 224);border-radius: 6px;">
+- **选择执行日期**：选中活动，点击 <img src="/icons/ChevronCircleLeft48Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(224, 224, 224);border-radius: 6px;">，活动会加入到 `任务计划页面`显示的日期中
+- **跳转到执行日期**：选中活动，点击 <img src="/icons/ChevronCircleLeft48Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(224, 224, 224);border-radius: 6px;">，如果活动已经选择执行日期，`任务计划页面`跳转到执行日期
+- **任务追踪**：选中活动，点击 <img src="/icons/ChevronCircleDown48Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(224, 224, 224);border-radius: 6px;">
 
 ### 2.2 预约 `Schedule` 活动操作
 
 - **新建**：点击 <img src="/icons/CalendarAdd24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(193, 226, 255);border-radius: 6px;">
-- **删除**：选中活动，点击 <img src="/icons/Delete24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(193, 226, 255);border-radius: 6px;">
-- **复制**：选中活动，点击 <img src="/icons/ArrowRepeatAll24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(193, 226, 255);border-radius: 6px;">
-- **选择执行日期**：修改活动时间，`Schedule` 自动添加到设置日期的`今日活动页面`
-- **跳转到执行日期**：选中活动，点击 <img src="/icons/ChevronCircleLeft48Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(248, 179, 167);border-radius: 6px;">，`今日活动页面`跳转到执行日期
-- **任务追踪**：选中活动，点击 <img src="/icons/ChevronCircleDown48Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(248, 179, 167);border-radius: 6px;">
+- **删除**：选中活动，点击 <img src="/icons/Delete24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(224, 224, 224);border-radius: 6px;">
+- **复制**：选中活动，点击 <img src="/icons/ArrowRepeatAll24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(224, 224, 224);border-radius: 6px;">
+- **选择执行日期**：修改活动时间，`Schedule` 自动添加到设置日期的`任务计划页面`
+- **跳转到执行日期**：选中活动，点击 <img src="/icons/ChevronCircleLeft48Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(224, 224, 224);border-radius: 6px;">，`任务计划页面`跳转到执行日期
+- **任务追踪**：选中活动，点击 <img src="/icons/ChevronCircleDown48Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(224, 224, 224);border-radius: 6px;">
 
 ### 2.3 无所事事 `Untaetigkeit` 活动操作
 
 - **新建**：点击 <img src="/icons/CloudAdd20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(193, 226, 255);border-radius: 6px;">，新增后自动添加到当前时间
-- **删除**：选中活动，点击 <img src="/icons/Delete24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(193, 226, 255);border-radius: 6px;">
-- **复制**：选中活动，点击 <img src="/icons/ArrowRepeatAll24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(193, 226, 255);border-radius: 6px;">
-- **选择执行日期**：修改日期，自动添加到设置日期的`今日活动页面`
-- **跳转到执行日期**：选中活动，点击 <img src="/icons/ChevronCircleLeft48Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;;background:rgb(248, 179, 167);border-radius: 6px;">，`今日活动页面`跳转到执行日期
-- **任务追踪**：选中活动，点击 <img src="/icons/ChevronCircleDown48Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;;background:rgb(248, 179, 167);border-radius: 6px;">
+- **删除**：选中活动，点击 <img src="/icons/Delete24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(224, 224, 224);border-radius: 6px;">
+- **复制**：选中活动，点击 <img src="/icons/ArrowRepeatAll24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(224, 224, 224);border-radius: 6px;">
+- **选择执行日期**：修改日期，自动添加到设置日期的`任务计划页面`
+- **跳转到执行日期**：选中活动，点击 <img src="/icons/ChevronCircleLeft48Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;;background:rgb(224, 224, 224);border-radius: 6px;">，`任务计划页面`跳转到执行日期
+- **任务追踪**：选中活动，点击 <img src="/icons/ChevronCircleDown48Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;;background:rgb(224, 224, 224);border-radius: 6px;">
 
 ### 2.4 活动清单视图设置
 
