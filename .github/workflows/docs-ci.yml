@@ -1,13 +1,9 @@
-name: Docs CI
+name: Docs CI (rebase-only)
 
 on:
   pull_request:
     paths:
-      - "docs/**"
-  push:
-    branches: [main]
-    paths:
-      - "docs/**"
+      - "docs/dev-log/SOP/rebase_sop.md"
 
 jobs:
   docs-checks:
