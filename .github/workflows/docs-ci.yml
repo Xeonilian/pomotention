@@ -1,0 +1,38 @@
+name: Docs CI
+
+on:
+  pull_request:
+    paths:
+      - "docs/**"
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+
+jobs:
+  docs-checks:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install tools
+        run: |
+          npm i -g markdownlint-cli@0.41.0
+
+      - name: Markdown Lint
+        run: |
+          npx markdownlint-cli "docs/**/*.md" --ignore "docs/**/CHANGELOG.md"
+
+      - name: Dead link check
+        uses: lycheeverse/lychee-action@v2
+        with:
+          args: --no-progress --verbose "docs/**/*.md"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
