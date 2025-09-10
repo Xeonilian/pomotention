@@ -126,4 +126,4 @@ fetch("https://httpbin.org/json")
 ## 参考资料
 
 - [tauri-plugin-cors-fetch 地址](https://crates.org.cn/crates/tauri-plugin-cors-fetch)
-- [Tauri 2.0 官方文档](https://tauri.app/v2/guides/)
+- [Tauri 2.0 官方文档](https://v2.tauri.app/start/)
