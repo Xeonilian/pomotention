@@ -1,26 +1,22 @@
-## 环境搭建
+# 环境搭建
 
-### node.js
+## node.js
 
-### pnpm
+## pnpm
 
-###
+## github 托管
 
-### github 托管
+## 软件打包
 
-### 软件打包
+## 软件 github 发布
 
-### 软件 github 发布
+## 自动更新 update
 
-#### tag
+## 自动发布 github action
 
-### 自动更新 update
+## 帮助页面 vitepress + github pages
 
-### 自动发布 github action
-
-### 帮助页面 vitepress + github pages
-
-```
+```bash
 pnpm add -D vitepres
 pnpm docs:dev
 pnpm docs:build
@@ -32,7 +28,7 @@ config.mts 初始页面布局
 - index.md 首页内容(放在 config 里面)
 - package.json
 
-```
+```json
 {
   "scripts": {
     "docs:dev": "vitepress dev",
@@ -45,13 +41,12 @@ config.mts 初始页面布局
     "vitepress": "^1.6.3"
   }
 }
-
 ```
 
-- public\logo.png 放 logo
+- `public\logo.png` 放 logo
 
 ## 步骤
 
-1. 路径 doc\
-2. pnpm docs:build
-3. npx gh-pages -d .vitepress/dist
+1. 路径 `doc\`
+2. `pnpm docs:build`
+3. `npx gh-pages -d .vitepress/dist`

@@ -7,7 +7,7 @@
 1. 登录[坚果云](https://www.jianguoyun.com/)，从账户信息进入安全选项
 2. 添加应用，输入`pomotention`，点击生成密码，获得应用密码
 3. 本软件中提供信息，`帮助页`点击 <img src="/icons/ArrowSync24Regular.svg" width="20" style="display: inline-block; vertical-align: middle; margin:0;background:rgb(193, 226, 255);border-radius: 6px;"> 按钮，弹出 `录入设置对话框` 输入：
-   - https://dav.jianguoyun.com/dav/
+   - `https://dav.jianguoyun.com/dav/`
    - 坚果云账号
    - 应用密码
    - 保存路径：`/PomodoroBackup`
@@ -61,7 +61,7 @@
 
 - 同步字段包括：
 
-```
+```typescript
 export const STORAGE_KEYS = {
   GLOBAL_POMO_COUNT: "globalPomoCount",
   ACTIVITY: "activitySheet",
