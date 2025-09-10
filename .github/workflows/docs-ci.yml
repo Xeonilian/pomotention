@@ -28,7 +28,7 @@ jobs:
 
       - name: Markdown Lint
         run: |
-          npx markdownlint-cli "docs/**/*.md" --ignore "docs/**/CHANGELOG.md" --config .markdownlint.json
+          npx markdownlint-cli "docs/**/*.md" --ignore "docs/**/CHANGELOG.md" --config "docs/.markdownlint.json"
 
       - name: Dead link check
         uses: lycheeverse/lychee-action@v2
