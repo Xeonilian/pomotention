@@ -1,9 +1,13 @@
-name: Docs CI (rebase-only)
+name: Docs CI
 
 on:
   pull_request:
     paths:
-      - "docs/dev-log/SOP/rebase_sop.md"
+      - "docs/**"
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
 
 jobs:
   docs-checks:
@@ -24,7 +28,7 @@ jobs:
 
       - name: Markdown Lint
         run: |
-          npx markdownlint-cli "docs/**/*.md" --ignore "docs/**/CHANGELOG.md"
+          npx markdownlint-cli "docs/**/*.md" --ignore "docs/**/CHANGELOG.md" --config .markdownlint.json
 
       - name: Dead link check
         uses: lycheeverse/lychee-action@v2

@@ -1,5 +1,4 @@
 ---
-title: 快速开始
 description: 下载最新版本的应用程序
 ---
 
@@ -36,7 +35,7 @@ description: 下载最新版本的应用程序
 
 ## 下载链接
 
-### Windows
+- Windows
 
 <a href="https://github.com/Xeonilian/pomotention/releases/download/v0.4.0/pomotention_0.4.0_x64_en-US.msi" class="download-btn windows">
   <span class="platform">Windows</span>
@@ -50,7 +49,7 @@ description: 下载最新版本的应用程序
   <span class="size">9.8MB</span>
 </a>
 
-### macOS
+- macOS
 
 <a href="https://github.com/Xeonilian/pomotention/releases/download/v0.4.0/pomotention_0.4.0_x64.dmg" class="download-btn macos">
   <span class="platform">macOS</span>

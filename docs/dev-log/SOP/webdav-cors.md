@@ -6,9 +6,8 @@
 
 ## 解决方案
 
-使用 `tauri-plugin-cors-fetch` 插件来处理跨域请求限制。
-
-**插件地址：** https://crates.io.cn/crates/tauri-plugin-cors-fetch
+- 使用 `tauri-plugin-cors-fetch` 插件来处理跨域请求限制。
+- [插件地址](https://crates.io.cn/crates/tauri-plugin-cors-fetch)
 
 ## 具体配置步骤
 
@@ -43,7 +42,7 @@ pub fn run() {
 
 **文件：** `src-tauri/src/main.rs` 入口文件
 
-```
+```rust
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
@@ -62,13 +61,7 @@ fn main() {
   "identifier": "default",
   "description": "capabilities for the main window",
   "windows": ["main"],
-  "permissions": [
-    "core:default",
-    "shell:allow-open",
-    "dialog:default",
-    "updater:default",
-    "cors-fetch:default"
-  ]
+  "permissions": ["core:default", "shell:allow-open", "dialog:default", "updater:default", "cors-fetch:default"]
 }
 ```
 

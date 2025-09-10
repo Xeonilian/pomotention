@@ -21,7 +21,7 @@
 
 示例：
 
-```
+```text
 fix(activity-select): 处理 activeId 空值导致的崩溃
 
 Why
@@ -154,7 +154,7 @@ Refs
 
 提交标题片段（VS Code 可配置 snippet）：
 
-```
+```text
 feat(scope): ...
 fix(scope): ...
 refactor(scope): ...
@@ -171,7 +171,7 @@ hack(scope): ...
 
 提交正文片段：
 
-```
+```text
 Why
 - ...
 
@@ -223,7 +223,7 @@ Tests
 
 - template
 
-```
+```text
 从当前已暂存（staged）的改动生成一条提交信息，要求：
 - 标题格式：type(scope): subject（中文，≤72 字符）
 - 类型限定：feat/fix/refactor/ui/perf/docs/test/build/ci/chore/release/revert/hack

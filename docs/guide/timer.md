@@ -53,10 +53,10 @@
 
 为追求极致专注的用户提供无干扰的计时体验。
 
-1.  **启动模式**：点击`菜单栏` <img src="/icons/Pin24Regular.svg"  width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(224, 224, 224);border-radius: 6px"> 按钮，将隐藏界面上除计时器外的所有元素。
-2.  **退出模式**：点击计时器界面 <img src="/icons/ArrowExpand24Regular.svg"  width="20" style="display:inline-block;vertical-align:middle;margin:0;">，退出迷你模式。
-3.  **多实例运行**：可以同时打开多个计时器应用，并将其中一个或多个设置为迷你模式。
-4.  **跨设备使用 (macOS)**：利用 macOS 的 Sidecar 功能，您可以将迷你版计时器窗口拓展至 iPad 等其他设备上显示。
+1. **启动模式**：点击`菜单栏` <img src="/icons/Pin24Regular.svg"  width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(224, 224, 224);border-radius: 6px"> 按钮，将隐藏界面上除计时器外的所有元素。
+2. **退出模式**：点击计时器界面 <img src="/icons/ArrowExpand24Regular.svg"  width="20" style="display:inline-block;vertical-align:middle;margin:0;">，退出迷你模式。
+3. **多实例运行**：可以同时打开多个计时器应用，并将其中一个或多个设置为迷你模式。
+4. **跨设备使用 (macOS)**：利用 macOS 的 Sidecar 功能，您可以将迷你版计时器窗口拓展至 iPad 等其他设备上显示。
 
 ---
 

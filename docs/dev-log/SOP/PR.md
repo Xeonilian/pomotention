@@ -131,7 +131,7 @@
 
 - PR 模板
 
-  ```
+  ```text
   Title: [S? C? UV?] <type(scope): summary>
 
   Changes:
@@ -151,7 +151,8 @@
   ```
 
 - 契约片段模板（`docs/contracts.md`）
-  ```
+
+  ```text
   ## Contract #<id>: <topic>
   Given:
   - <preconditions>
@@ -160,6 +161,7 @@
   Then:
   - <expected outcome>
   ```
+
 - 命名与脚本（示例）
   - 截图命名：`YYYYMMDD-<topic>-before.png/after.png`
   - 脚本：`pnpm new:contract` 生成契约片段；`scripts/screenshot.sh` 生成标准命名。
