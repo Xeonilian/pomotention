@@ -7,7 +7,6 @@
 ## 解决方案
 
 - 使用 `tauri-plugin-cors-fetch` 插件来处理跨域请求限制。
-- [插件地址](https://crates.io.cn/crates/tauri-plugin-cors-fetch)
 
 ## 具体配置步骤
 
@@ -126,5 +125,5 @@ fetch("https://httpbin.org/json")
 
 ## 参考资料
 
-- [tauri-plugin-cors-fetch](https://crates.io.cn/crates/tauri-plugin-cors-fetch)
-- [Tauri 2.0 官方文档](https://tauri.app/v1/guides/)
+- [tauri-plugin-cors-fetch 地址](https://crates.org.cn/crates/tauri-plugin-cors-fetch)
+- [Tauri 2.0 官方文档](https://tauri.app/v2/guides/)
