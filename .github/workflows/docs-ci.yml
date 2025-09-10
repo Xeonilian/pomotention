@@ -33,6 +33,6 @@ jobs:
       - name: Dead link check
         uses: lycheeverse/lychee-action@v2
         with:
-          args: --no-progress --verbose "docs/**/*.md" --base ./docs
+          args: --no-progress --verbose "docs/**/*.md"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
