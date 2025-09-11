@@ -87,6 +87,21 @@
             </span>
           </div>
           <div class="button-group">
+            <n-button
+              size="small"
+              :type="selectedRowId === null ? 'default' : 'info'"
+              circle
+              quaternary
+              strong
+              @click="onIcsExport"
+              title="导出 ICS / 二维码"
+            >
+              <template #icon>
+                <n-icon>
+                  <QrCode24Regular />
+                </n-icon>
+              </template>
+            </n-button>
             <n-date-picker
               v-model:value="queryDate"
               type="date"
@@ -312,6 +327,12 @@
     </template>
     {{ popoverMessage }}
   </n-popover>
+  <IcsExportModal
+    v-if="icsModalVisible"
+    :visible="icsModalVisible"
+    :qrText="icsQRText"
+    @close="icsModalVisible = false"
+  />
 </template>
 
 <script setup lang="ts">
@@ -365,11 +386,13 @@ import {
   handleSuspendTodo,
   handleSuspendSchedule,
 } from "@/services/plannerService";
+import { handleExportOrQR, type DataRow } from "@/services/icsService";
 import {
   Previous24Regular,
   Next24Regular,
   Search24Regular,
   CalendarSettings20Regular,
+  QrCode24Regular,
 } from "@vicons/fluent";
 import { useResize } from "@/composables/useResize";
 import {
@@ -381,6 +404,7 @@ import {
 import { unifiedDateService } from "@/services/unifiedDateService";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { defineAsyncComponent } from "vue";
+import IcsExportModal from "@/components/IcsExportModal.vue";
 
 const TimeTable = defineAsyncComponent(
   () => import("@/components/TimeTable/TimeTable.vue")
@@ -952,6 +976,89 @@ function onIncreaseChildActivity(id: number) {
 }
 
 // ======================== 3. Planner/任务相关操作 ========================
+const icsModalVisible = ref(false);
+const icsQRText = ref("");
+
+// 视图数据汇总（根据你的变量名替换）
+// 将你现有视图数据，映射为 DataRow[]
+const viewSet = computed(
+  () => settingStore.settings.viewSet as "day" | "week" | "month"
+);
+
+// 注意：请把下述变量名替换为你真实存在的 computed/refs
+const datasetsForCurrentView = computed<DataRow[]>(() => {
+  if (viewSet.value === "day") {
+    return [
+      ...(schedulesForCurrentView.value ?? []).map((s) => ({
+        type: "S" as const,
+        item: s,
+      })),
+      ...(todosForCurrentViewWithTaskRecords.value ?? []).map((t) => ({
+        type: "T" as const,
+        item: t,
+      })),
+    ];
+  } else if (viewSet.value === "week") {
+    return [
+      ...(schedulesForCurrentViewWithTags.value ?? []).map((s) => ({
+        type: "S" as const,
+        item: s,
+      })),
+      ...(todosForCurrentViewWithTags.value ?? []).map((t) => ({
+        type: "T" as const,
+        item: t,
+      })),
+    ];
+  } else {
+    return [
+      ...(schedulesForCurrentViewWithTags.value ?? []).map((s) => ({
+        type: "S" as const,
+        item: s,
+      })),
+      ...(todosForCurrentViewWithTags.value ?? []).map((t) => ({
+        type: "T" as const,
+        item: t,
+      })),
+    ];
+  }
+});
+
+async function onIcsExport() {
+  const res = await handleExportOrQR(
+    datasetsForCurrentView.value as DataRow[],
+    selectedRowId.value,
+    {
+      idGetter: (item: any) =>
+        String(item?.id ?? item?._id ?? item?.uuid ?? ""),
+    }
+  );
+
+  if (res.ok) {
+    if (res.mode === "qr") {
+      icsQRText.value = res.qrText;
+      icsModalVisible.value = true;
+    } else {
+      // 文件保存成功
+      showErrorPopover(`已保存到 ${res.path}`);
+    }
+  } else {
+    switch (res.reason) {
+      case "cancelled":
+        showErrorPopover("已取消保存");
+        break;
+      case "empty":
+        showErrorPopover("当前无可导出的数据");
+        break;
+      case "not_found":
+        showErrorPopover("未找到所选条目");
+        break;
+      default:
+        showErrorPopover(`导出失败：${res.detail ?? "未知错误"}`);
+        break;
+    }
+  }
+}
+
 /** Todo 更新状态（勾选） */
 function onUpdateTodoStatus(id: number, isChecked: boolean) {
   const todo = todoById.value.get(id);
@@ -1297,16 +1404,16 @@ function onSelectRow(id: number | null) {
     selectedTaskId.value =
       activity?.taskId ?? todo?.taskId ?? schedule?.taskId ?? null;
   }
-  if (
-    todo?.status !== "done" &&
-    todo?.status !== "cancelled" &&
-    schedule?.status !== "done" &&
-    schedule?.status !== "cancelled"
-  ) {
-    activeId.value = activityId;
-  } else {
-    activeId.value = undefined;
-  }
+  // if (
+  //   todo?.status !== "done" &&
+  //   todo?.status !== "cancelled" &&
+  //   schedule?.status !== "done" &&
+  //   schedule?.status !== "cancelled"
+  // ) {
+  //   activeId.value = activityId;
+  // } else {
+  //   activeId.value = undefined;
+  // }
 
   selectedRowId.value = id;
 }

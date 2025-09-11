@@ -34,6 +34,7 @@
                 v-for="item in day.items.slice(0, MAX_PER_DAY)"
                 :key="item.key"
                 class="item"
+                :class="[{ 'item--selected': selectedRowId === item.id }]"
                 @click.stop="
                   () =>
                     handleItemSelect(
@@ -60,7 +61,6 @@
                   class="title"
                   :title="item.title"
                   :class="[
-                    { 'item--selected': selectedItem === item.id },
                     { 'activity--selected': activeId === item.activityId },
                   ]"
                 >
@@ -444,20 +444,21 @@ function getPomoColor(ratio: number) {
   border-radius: 2px;
   transition: background-color 0.2s;
 }
-.item:hover {
+.item:hover:not(.item--selected) {
   background-color: var(--color-hover, rgba(0, 0, 0, 0.05));
 }
+
 .item .title {
-  overflow-x: hidden;
+  overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  flex: 1;
 }
+
 .item--selected {
-  background-color: var(--color-blue-light, rgba(64, 158, 255, 0.1)) !important;
+  background-color: var(--color-yellow-light) !important;
 }
 .activity--selected {
-  background-color: var(--color-red-light, rgba(255, 77, 77, 0.1)) !important;
+  background-color: var(--color-red-light) !important;
 }
 
 /* 基础小圆点 没有了 */
