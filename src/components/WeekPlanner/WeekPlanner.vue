@@ -28,6 +28,7 @@
                 v-for="item in day.items.slice(0, MAX_PER_DAY)"
                 :key="item.key"
                 class="item"
+                :class="[{ 'item--selected': selectedRowId === item.id }]"
                 @click.stop="
                   () =>
                     handleItemSelect(
@@ -53,7 +54,6 @@
                   class="title"
                   :title="item.title"
                   :class="[
-                    { 'item--selected': selectedItem === item.id },
                     { 'activity--selected': activeId === item.activityId },
                   ]"
                 >
@@ -406,16 +406,16 @@ function getPomoColor(ratio: number) {
   min-width: 0;
 }
 
+.item:hover:not(.item--selected) {
+  background-color: var(--color-hover, rgba(0, 0, 0, 0.05));
+}
+
 .item--selected {
-  background-color: var(--color-blue-light);
-  border-radius: 2px;
-  padding: 2px;
+  background-color: var(--color-yellow-light);
 }
 
 .activity--selected {
   background-color: var(--color-red-light);
-  border-radius: 2px;
-  padding: 2px;
 }
 
 .item {
