@@ -31,6 +31,12 @@
 - **后端**: Tauri (Rust)
 - **平台**: Windows / macOS
 
+## 使用说明
+
+- **最新版本**：`0.4.1`
+- **快速开始**：[链接](getting-started.md)
+- **更新日志**：[链接](dev-log/CHANGELOG.md)
+
 ## 🎓 开发参考
 
 - [番茄列车](https://ebp.gesedna.com/pa-group-info-pomo/?rd=%2FEBPTsundoku%2F%3Frd%3D%2F) - 社群化专注实践
