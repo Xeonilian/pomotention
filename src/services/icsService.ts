@@ -28,18 +28,13 @@ function formatIcsDate(ts: number | string | Date) {
 
 function escapeText(text?: string) {
   if (!text) return "";
-  return String(text)
-    .replace(/\\/g, "\\\\")
-    .replace(/;/g, "\\;")
-    .replace(/,/g, "\\,")
-    .replace(/\r?\n/g, "\\n");
+  return String(text).replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n");
 }
 
 function foldLine(line: string) {
   const max = 75;
   const chunks: string[] = [];
-  for (let i = 0; i < line.length; i += max)
-    chunks.push(line.slice(i, i + max));
+  for (let i = 0; i < line.length; i += max) chunks.push(line.slice(i, i + max));
   return chunks.map((c, idx) => (idx === 0 ? c : ` ${c}`)).join("\r\n");
 }
 
@@ -54,34 +49,25 @@ function makeIcsEvent(e: {
 }) {
   const lines: string[] = [
     "BEGIN:VEVENT",
-    `UID:${e.UID}`,
+    `UID:${e.UID}@pomotention`,
     `DTSTAMP:${formatIcsDate(e.DTSTAMP)}`,
     `DTSTART:${formatIcsDate(e.DTSTART)}`,
   ];
-  const mergedDescription =
-    e.DESCRIPTION && e.LOCATION
-      ? `${e.DESCRIPTION}\n${e.LOCATION}`
-      : e.DESCRIPTION ?? e.LOCATION ?? undefined;
+  const mergedDescription = e.DESCRIPTION && e.LOCATION ? `${e.DESCRIPTION}\n${e.LOCATION}` : e.DESCRIPTION ?? e.LOCATION ?? undefined;
 
   // 然后按合并后的描述输出
 
   // LOCATION 仍可保留，方便日历客户端识别可导航的地点字段
   if (e.DTEND) lines.push(`DTEND:${formatIcsDate(e.DTEND)}`);
   if (e.SUMMARY) lines.push(foldLine(`SUMMARY:${escapeText(e.SUMMARY)}`));
-  if (mergedDescription)
-    lines.push(foldLine(`DESCRIPTION:${escapeText(mergedDescription)}`));
+  if (mergedDescription) lines.push(foldLine(`DESCRIPTION:${escapeText(mergedDescription)}`));
   if (e.LOCATION) lines.push(foldLine(`LOCATION:${escapeText(e.LOCATION)}`));
   lines.push("END:VEVENT");
   return lines.join("\r\n");
 }
 
 function wrapCalendar(vevents: string[]) {
-  const head = [
-    "BEGIN:VCALENDAR",
-    "VERSION:2.0",
-    "PRODID:-//Pomotention//Planner//CN",
-    "CALSCALE:GREGORIAN",
-  ];
+  const head = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Pomotention//Planner//CN", "CALSCALE:GREGORIAN"];
   return [...head, ...vevents, "END:VCALENDAR"].join("\r\n");
 }
 
@@ -168,8 +154,7 @@ export function buildCalendarFromRows(rows: DataRow[]): string {
 }
 
 export function buildSingleCalendar(row: DataRow): string {
-  const vevent =
-    row.type === "S" ? scheduleToIcs(row.item) : todoToIcs(row.item);
+  const vevent = row.type === "S" ? scheduleToIcs(row.item) : todoToIcs(row.item);
   return wrapCalendar([vevent]);
 }
 
@@ -184,27 +169,20 @@ export async function handleExportOrQR(
   selectedRowId: number | null | undefined,
   opts?: { filename?: string; idGetter?: (item: any) => string | number }
 ): Promise<ExportResult> {
-  const idGetter =
-    opts?.idGetter ??
-    ((item: any) => String(item?.id ?? item?._id ?? item?.uuid ?? ""));
+  const idGetter = opts?.idGetter ?? ((item: any) => String(item?.id ?? item?._id ?? item?.uuid ?? ""));
 
   try {
     if (selectedRowId) {
       // 单条 -> 二维码
-      const row = rows.find(
-        (r) => String(idGetter(r.item)) === String(selectedRowId)
-      );
-      if (!row)
-        return { ok: false, reason: "not_found", detail: "未找到所选条目" };
+      const row = rows.find((r) => String(idGetter(r.item)) === String(selectedRowId));
+      if (!row) return { ok: false, reason: "not_found", detail: "未找到所选条目" };
       const ics = buildSingleCalendar(row);
       return { ok: true, mode: "qr", qrText: icsToQR(ics) };
     } else {
       // 批量 -> 文件
-      if (!rows?.length)
-        return { ok: false, reason: "empty", detail: "当前无可导出的数据" };
+      if (!rows?.length) return { ok: false, reason: "empty", detail: "当前无可导出的数据" };
       const icsText = buildCalendarFromRows(rows);
-      const defaultName =
-        opts?.filename ?? `${dayjs().format("YYYYMMDD-HHmmss")}.ics`;
+      const defaultName = opts?.filename ?? `${dayjs().format("YYYYMMDD-HHmmss")}.ics`;
       const path = await save({
         filters: [{ name: "iCalendar", extensions: ["ics"] }],
         defaultPath: defaultName,

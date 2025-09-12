@@ -1,29 +1,6 @@
 # Contracts
 
-# 评审与补充：单条任务生成 QR 码的 Contract 套件
-
-你的结构已经很清晰了，基准 Contract #1 + 各子场景。下面我做了两件事：
-
-- 指出可改进的小问题（编号重复、UID 规则、字段约束）。
-- 补齐其余场景，包括 Schedule 有/无结束时间两种情况，并提供一份“字段映射与校验清单”，方便评审时统一口径。
-
----
-
-## 建议的微调
-
-- **编号冲突**：你有两个“Contract #3”。建议顺延编号（下方已修正）。
-- **UID 规则更明确**：现在写的是“`<Id>` 时间戳保证唯一”。建议固定为“稳定且可复现”的 UID（避免每次导出都变），否则重复导入会产生重复项。推荐：
-  - 方案 A：`<entityType>-<id>@your.domain`（如 `todo-123@your.app`）
-  - 方案 B：UUIDv5(namespace, `<entityType>:<id>`) 保持稳定
-- **字段映射**：明确当 `activityTitle` 缺失时的回退策略，`DESCRIPTION` 是否允许拼接多段信息（优先级、地点、备注）。
-- **时区表达**：统一策略（使用 TZID/offset 或 UTC）。你的文档宣称 Asia/Shanghai，建议保持 `TZID=Asia/Shanghai` 或明确偏移。
-- **全天事件的结束日期**：遵循 iCalendar，全天事件 `DTEND;VALUE=DATE` 是“次日日期”（非含当天末时刻）。
-
----
-
-## 修订后与补充的 Contracts
-
-### Contract #1: 单条任务生成 QR 码（通用约束）
+## Contract #1: 单条任务生成 QR 码（通用约束）
 
 **Given**
 
@@ -49,7 +26,7 @@
 
 ---
 
-### Contract #2: 单条任务生成 QR 码（Todo 无开始/结束时间 → 全天）
+## Contract #2: 单条任务生成 QR 码（Todo 无开始/结束时间 → 全天）
 
 **Given**
 
@@ -69,7 +46,7 @@
 
 ---
 
-### Contract #3: 单条任务生成 QR 码（Todo 有 startTime + estPomo）
+## Contract #3: 单条任务生成 QR 码（Todo 有 startTime + estPomo）
 
 **Given**
 
@@ -89,7 +66,7 @@
 
 ---
 
-### Contract #4: 单条任务生成 QR 码（Todo 有 startTime + doneTime）
+## Contract #4: 单条任务生成 QR 码（Todo 有 startTime + doneTime）
 
 **Given**
 
@@ -109,7 +86,7 @@
 
 ---
 
-### Contract #5: 单条任务生成 QR 码（Schedule 有 dueRange[0], dueRange[1]）
+## Contract #5: 单条任务生成 QR 码（Schedule 有 dueRange[0], dueRange[1]）
 
 **Given**
 
@@ -130,7 +107,7 @@
 
 ---
 
-### Contract #6: 单条任务生成 QR 码（Schedule 仅有 dueRange[0] 无时长 → 系统默认）
+## Contract #6: 单条任务生成 QR 码（Schedule 仅有 dueRange[0] 无时长 → 系统默认）
 
 **Given**
 
