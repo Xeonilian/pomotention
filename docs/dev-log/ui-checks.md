@@ -15,11 +15,11 @@
 
 - 高亮行,按钮变为蓝色
 
-![](ui-checks\20250912-qr-ics-full-after.png)
+![全界面](ui-checks/20250912-qr-ics-full-after.png)
 
 - 弹出二维码 20250912-qr-ics-code-after.png
 
-![](ui-checks\20250912-qr-ics-code-after.png)
+![二维码](ui-checks/20250912-qr-ics-code-after.png)
 
 ## UI check #2 导出 ics 文件
 
@@ -37,8 +37,8 @@
 
 - 黑色按钮
 
-  ![黑色按钮](ui-checks\20250912-qr-ics-after.png)
+  ![黑色按钮](ui-checks/20250912-qr-ics-after.png)
 
 - 加入按钮前
 
-  ![加入按钮前](ui-checks\20250912-qr-ics-before.png)
+  ![加入按钮前](ui-checks/20250912-qr-ics-before.png)
