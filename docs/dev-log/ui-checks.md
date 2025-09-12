@@ -2,16 +2,16 @@
 
 ## UI check #1 导出 ics QR 码
 
-Given:
+### Given:
 
 - 任务区域存在数据
 
-When:
+### When:
 
 - 点击行，选中导出内容
 - 点击按钮，弹出 QR 码
 
-Then:
+### Then:
 
 - 高亮行,按钮变为蓝色
 
@@ -23,17 +23,17 @@ Then:
 
 ## UI check #2 导出 ics 文件
 
-Given:
+### Given:
 
 - 任务区域存在数据
 - 无数据行被选中
 
-When:
+### When:
 
 - 按钮变为黑色
 - 点击按钮，弹出文件选择对话框
 
-Then:
+### Then:
 
 - 黑色按钮
 

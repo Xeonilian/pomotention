@@ -2,7 +2,7 @@
 
 ## Contract #1: 单条任务生成 QR 码（通用约束）
 
-**Given**
+### Given
 
 - 版本 0.4.1；日期：2025-09-12
 - 数据来源：Todo 或 Schedule
@@ -10,13 +10,13 @@
 - 可选字段：`location` / `priority` / `activityTitle` / `startTime` / `doneTime` / `estPomo[]` / `dueRange[1]`
 - 时区：Asia/Shanghai（+08:00）
 
-**When**
+### When
 
 - 选择该条任务
 - 点击 `QrCode24Regular` 按钮生成二维码
 - 使用手机相机或系统扫码工具扫描，解析得到 ICS 文本
 
-**Then**
+### Then
 
 - 生成的 ICS 满足本场景的时间规则与字段要求
 - 字段名大写，时间含时区或 UTC；行长遵循软换行
@@ -28,17 +28,17 @@
 
 ## Contract #2: 单条任务生成 QR 码（Todo 无开始/结束时间 → 全天）
 
-**Given**
+### Given
 
 - 数据：Todo
 - 必备字段：`Todo.id`，`Todo.activityTitle`
 - 时间：无 `startTime`、无 `doneTime`
 
-**When**
+### When
 
 - 如 Contract #1
 
-**Then**
+### Then
 
 - 导出为全天事件：`DTSTART;VALUE=DATE=<YYYYMMDD>`，`DTEND;VALUE=DATE=<YYYYMMDD+1>`
 - `SUMMARY=<Todo.activityTitle>`
@@ -48,17 +48,17 @@
 
 ## Contract #3: 单条任务生成 QR 码（Todo 有 startTime + estPomo）
 
-**Given**
+### Given
 
 - 数据：Todo
 - 必备字段：`Todo.id`，`Todo.activityTitle`，`Todo.startTime（含时区）`，`Todo.estPomo[]`
 - 说明：时长 \(N = \max(1, \sum estPomo)\)，总时长 = \(N \times 30\) 分钟
 
-**When**
+### When
 
 - 如 Contract #1
 
-**Then**
+### Then
 
 - `DTSTART = startTime`
 - `DTEND = startTime + N×30min`
@@ -68,17 +68,17 @@
 
 ## Contract #4: 单条任务生成 QR 码（Todo 有 startTime + doneTime）
 
-**Given**
+### Given
 
 - 数据：Todo
 - 必备字段：`Todo.id`，`Todo.activityTitle`，`Todo.startTime`，`Todo.doneTime`
 - 说明：不使用 `estPomo` 计算
 
-**When**
+### When
 
 - 如 Contract #1
 
-**Then**
+### Then
 
 - `DTSTART = startTime`
 - `DTEND = doneTime`
@@ -88,17 +88,17 @@
 
 ## Contract #5: 单条任务生成 QR 码（Schedule 有 dueRange[0], dueRange[1]）
 
-**Given**
+### Given
 
 - 数据：Schedule
 - 必备字段：`Schedule.id`，`Schedule.activityTitle`，`Schedule.dueRange[0]`（开始），`Schedule.dueRange[1]`（结束）
 - 可选字段：`Schedule.location`
 
-**When**
+### When
 
 - 如 Contract #1
 
-**Then**
+### Then
 
 - `DTSTART = dueRange[0]`
 - `DTEND = dueRange[1]`
@@ -109,17 +109,17 @@
 
 ## Contract #6: 单条任务生成 QR 码（Schedule 仅有 dueRange[0] 无时长 → 系统默认）
 
-**Given**
+### Given
 
 - 数据：Schedule
 - 必备字段：`Schedule.id`，`Schedule.activityTitle`，`Schedule.dueRange[0]`
 - 无 `dueRange[1]`
 
-**When**
+### When
 
 - 如 Contract #1
 
-**Then**
+### Then
 
 - `DTSTART = dueRange[0]`
 - `DTEND = dueRange[0] + 默认时长`
