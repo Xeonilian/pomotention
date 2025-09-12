@@ -11,9 +11,6 @@
           <canvas ref="canvasRef" class="qr-canvas" />
           <div class="actions">
             <n-button size="small" @click="onCopy">复制 ICS 文本</n-button>
-            <n-button size="small" tertiary @click="saveIcs"
-              >保存 .ics</n-button
-            >
           </div>
           <details>
             <summary>预览 ICS 文本</summary>
@@ -28,8 +25,6 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from "vue";
 import QRCode from "qrcode";
-import { save } from "@tauri-apps/plugin-dialog";
-import { writeTextFile } from "@tauri-apps/plugin-fs";
 
 const props = defineProps<{
   visible: boolean;
@@ -61,16 +56,6 @@ async function onCopy() {
   } catch {
     (window as any).$message?.error?.("复制失败");
   }
-}
-
-async function saveIcs() {
-  const filePath = await save({
-    filters: [{ name: "iCalendar", extensions: ["ics"] }],
-    defaultPath: "event.ics",
-  });
-  if (!filePath) return;
-  await writeTextFile(filePath, props.qrText);
-  (window as any).$message?.success?.(`已保存到 ${filePath}`);
 }
 </script>
 

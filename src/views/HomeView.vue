@@ -7,11 +7,7 @@
 <template>
   <div class="home-content">
     <!-- 左侧面板 (日程表) -->
-    <div
-      v-if="settingStore.settings.showSchedule"
-      class="left"
-      :style="{ width: leftWidth + 'px' }"
-    >
+    <div v-if="settingStore.settings.showSchedule" class="left" :style="{ width: leftWidth + 'px' }">
       <TimeTable
         :blocks="viewBlocks"
         :current-type="currentType"
@@ -25,34 +21,23 @@
     </div>
 
     <!-- 左侧面板调整大小手柄 -->
-    <div
-      v-if="settingStore.settings.showSchedule"
-      class="resize-handle-horizontal"
-      @mousedown="startLeftResize"
-    ></div>
+    <div v-if="settingStore.settings.showSchedule" class="resize-handle-horizontal" @mousedown="startLeftResize"></div>
 
     <!-- 中间内容区域 -->
     <div
       class="middle"
       :class="{
-        'middle-alone':
-          !settingStore.settings.showSchedule &&
-          !settingStore.settings.showActivity &&
-          !settingStore.settings.showAi,
+        'middle-alone': !settingStore.settings.showSchedule && !settingStore.settings.showActivity && !settingStore.settings.showAi,
       }"
     >
       <!-- 今日视图 -->
       <div
         v-if="settingStore.settings.showPlanner"
         class="middle-top"
-        :style="
-          settingStore.settings.showTask
-            ? { height: topHeight + 'px' }
-            : { height: '100%' }
-        "
+        :style="settingStore.settings.showTask ? { height: topHeight + 'px' } : { height: '100%' }"
       >
         <!-- 任务计划的头部和控件 -->
-        <div class="planner-header">
+        <div class="planner-header" @click.stop="cleanSelection">
           <div
             v-if="settingStore.settings.viewSet === 'day'"
             class="day-info"
@@ -61,26 +46,19 @@
               tomorrow: isViewDateTomorrow,
             }"
           >
-            <span @click="onMonthJump" class="day-status">{{
-              dateService.displayDateInfo
-            }}</span>
+            <span @click="onMonthJump" class="day-status">{{ dateService.displayDateInfo }}</span>
             <span class="global-pomo">
               <span class="today-pomo">🍅{{ currentDatePomoCount }}/</span>
               <span class="total-pomo">{{ globalRealPomo }}</span>
             </span>
           </div>
           <div v-if="settingStore.settings.viewSet === 'week'" class="day-info">
-            <span @click="onMonthJump" class="day-status">{{
-              dateService.displayWeekInfo
-            }}</span>
+            <span @click="onMonthJump" class="day-status">{{ dateService.displayWeekInfo }}</span>
             <span class="global-pomo">
               <span class="total-pomo">🍅{{ globalRealPomo }}</span>
             </span>
           </div>
-          <div
-            v-if="settingStore.settings.viewSet === 'month'"
-            class="day-info"
-          >
+          <div v-if="settingStore.settings.viewSet === 'month'" class="day-info">
             <span class="day-status">{{ dateService.displayMonthInfo }}</span>
             <span class="global-pomo">
               <span class="total-pomo">🍅{{ globalRealPomo }}</span>
@@ -123,13 +101,7 @@
               secondary
               strong
               @click="onDateSet('prev')"
-              :title="
-                settingStore.settings.viewSet === 'day'
-                  ? '上一天'
-                  : settingStore.settings.viewSet === 'week'
-                  ? '上一周'
-                  : '上一月'
-              "
+              :title="settingStore.settings.viewSet === 'day' ? '上一天' : settingStore.settings.viewSet === 'week' ? '上一周' : '上一月'"
             >
               <template #icon>
                 <n-icon>
@@ -144,13 +116,7 @@
               secondary
               strong
               @click="onDateSet('next')"
-              :title="
-                settingStore.settings.viewSet === 'day'
-                  ? '下一天'
-                  : settingStore.settings.viewSet === 'week'
-                  ? '下一周'
-                  : '下一月'
-              "
+              :title="settingStore.settings.viewSet === 'day' ? '下一天' : settingStore.settings.viewSet === 'week' ? '下一周' : '下一月'"
             >
               <template #icon>
                 <n-icon>
@@ -159,14 +125,7 @@
               </template>
             </n-button>
 
-            <n-button
-              size="small"
-              circle
-              secondary
-              strong
-              @click="onViewSet()"
-              title="切换视图"
-            >
+            <n-button size="small" circle secondary strong @click="onViewSet()" title="切换视图">
               <template #icon>
                 <n-icon>
                   <CalendarSettings20Regular />
@@ -178,10 +137,7 @@
         <!-- 今日视图容器 -->
         <div class="planner-view-container">
           <DayPlanner
-            v-if="
-              settingStore.settings.showPlanner &&
-              settingStore.settings.viewSet === 'day'
-            "
+            v-if="settingStore.settings.showPlanner && settingStore.settings.viewSet === 'day'"
             :selectedRowId="selectedRowId"
             :activeId="activeId"
             :dayTodos="todosForCurrentViewWithTaskRecords"
@@ -206,10 +162,7 @@
             @convert-schedule-to-task="onConvertScheduleToTask"
           />
           <WeekPlanner
-            v-if="
-              settingStore.settings.showPlanner &&
-              settingStore.settings.viewSet === 'week'
-            "
+            v-if="settingStore.settings.showPlanner && settingStore.settings.viewSet === 'week'"
             :weekTodos="todosForCurrentViewWithTags"
             :weekSchedules="schedulesForCurrentViewWithTags"
             :weekStartTs="dateService.weekStartTs.value"
@@ -221,10 +174,7 @@
             @item-change="onItemChange"
           />
           <MonthPlanner
-            v-if="
-              settingStore.settings.showPlanner &&
-              settingStore.settings.viewSet === 'month'
-            "
+            v-if="settingStore.settings.showPlanner && settingStore.settings.viewSet === 'month'"
             :monthTodos="todosForCurrentViewWithTags"
             :monthSchedules="schedulesForCurrentViewWithTags"
             :monthStartTs="dateService.monthStartTs.value"
@@ -238,17 +188,9 @@
         </div>
       </div>
       <!-- 任务视图调整大小手柄 -->
-      <div
-        v-if="settingStore.settings.showTask"
-        class="resize-handle"
-        @mousedown="startVerticalResize"
-      ></div>
+      <div v-if="settingStore.settings.showTask" class="resize-handle" @mousedown="startVerticalResize"></div>
       <!-- 任务视图 -->
-      <div
-        v-if="settingStore.settings.showTask"
-        class="middle-bottom"
-        :style="{ height: `calc(100% - ${topHeight}px - 8px)` }"
-      >
+      <div v-if="settingStore.settings.showTask" class="middle-bottom" :style="{ height: `calc(100% - ${topHeight}px - 8px)` }">
         <TaskTracker
           :selectedTaskId="selectedTaskId"
           :selectedTask="selectedTask"
@@ -270,11 +212,7 @@
     ></div>
 
     <!-- 右侧面板 (活动清单) -->
-    <div
-      v-if="settingStore.settings.showActivity"
-      class="right"
-      :style="{ width: rightWidth + 'px' }"
-    >
+    <div v-if="settingStore.settings.showActivity" class="right" :style="{ width: rightWidth + 'px' }">
       <ActivitySheet
         :activities="activityList"
         :activeId="activeId"
@@ -295,44 +233,19 @@
         @convert-activity-to-task="onConvertActivityToTask"
       />
     </div>
-    <div
-      v-if="settingStore.settings.showAi"
-      class="right"
-      :style="{ width: rightWidth + 'px' }"
-    >
+    <div v-if="settingStore.settings.showAi" class="right" :style="{ width: rightWidth + 'px' }">
       <!-- AI 对话对话框 -->
-      <AIChatDialog
-        :visible="settingStore.settings.showAi"
-        @close="settingStore.settings.showAi = false"
-      />
+      <AIChatDialog :visible="settingStore.settings.showAi" @close="settingStore.settings.showAi = false" />
     </div>
   </div>
   <!-- 错误提示弹窗 -->
-  <n-popover
-    v-model:show="showPopover"
-    trigger="manual"
-    placement="top-end"
-    style="width: 200px"
-  >
+  <n-popover v-model:show="showPopover" trigger="manual" placement="top-end" style="width: 200px">
     <template #trigger>
-      <div
-        style="
-          position: fixed;
-          bottom: 20px;
-          right: 20px;
-          width: 1px;
-          height: 1px;
-        "
-      ></div>
+      <div style="position: fixed; bottom: 20px; right: 20px; width: 1px; height: 1px"></div>
     </template>
     {{ popoverMessage }}
   </n-popover>
-  <IcsExportModal
-    v-if="icsModalVisible"
-    :visible="icsModalVisible"
-    :qrText="icsQRText"
-    @close="icsModalVisible = false"
-  />
+  <IcsExportModal v-if="icsModalVisible" :visible="icsModalVisible" :qrText="icsQRText" @close="icsModalVisible = false" />
 </template>
 
 <script setup lang="ts">
@@ -348,18 +261,9 @@ import { usePomoStore } from "@/stores/usePomoStore";
 // import ActivitySheet from "@/components/ActivitySheet/ActivitySheet.vue";
 import type { Activity } from "@/core/types/Activity";
 import type { Block } from "@/core/types/Block";
-import type {
-  Todo,
-  TodoWithTags,
-  TodoWithTaskRecords,
-} from "@/core/types/Todo";
+import type { Todo, TodoWithTags, TodoWithTaskRecords } from "@/core/types/Todo";
 import type { Schedule } from "@/core/types/Schedule";
-import {
-  Task,
-  EnergyRecord,
-  RewardRecord,
-  InterruptionRecord,
-} from "@/core/types/Task";
+import { Task, EnergyRecord, RewardRecord, InterruptionRecord } from "@/core/types/Task";
 import { WORK_BLOCKS, ENTERTAINMENT_BLOCKS, ViewType } from "@/core/constants";
 import {
   loadActivities,
@@ -374,60 +278,25 @@ import {
   saveTasks,
   removeTimeBlocksStorage,
 } from "@/services/localStorageService";
-import {
-  handleAddActivity,
-  handleDeleteActivity,
-  passPickedActivity,
-  togglePomoType,
-} from "@/services/activityService";
-import {
-  updateScheduleStatus,
-  updateTodoStatus,
-  handleSuspendTodo,
-  handleSuspendSchedule,
-} from "@/services/plannerService";
+import { handleAddActivity, handleDeleteActivity, passPickedActivity, togglePomoType } from "@/services/activityService";
+import { updateScheduleStatus, updateTodoStatus, handleSuspendTodo, handleSuspendSchedule } from "@/services/plannerService";
 import { handleExportOrQR, type DataRow } from "@/services/icsService";
-import {
-  Previous24Regular,
-  Next24Regular,
-  Search24Regular,
-  CalendarSettings20Regular,
-  QrCode24Regular,
-} from "@vicons/fluent";
+import { Previous24Regular, Next24Regular, Search24Regular, CalendarSettings20Regular, QrCode24Regular } from "@vicons/fluent";
 import { useResize } from "@/composables/useResize";
-import {
-  getTimestampForTimeString,
-  addDays,
-  getDateKey,
-  debounce,
-} from "@/core/utils";
+import { getTimestampForTimeString, addDays, getDateKey, debounce } from "@/core/utils";
 import { unifiedDateService } from "@/services/unifiedDateService";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { defineAsyncComponent } from "vue";
 import IcsExportModal from "@/components/IcsExportModal.vue";
 
-const TimeTable = defineAsyncComponent(
-  () => import("@/components/TimeTable/TimeTable.vue")
-);
-const DayPlanner = defineAsyncComponent(
-  () => import("@/components/DayPlanner/DayPlanner.vue")
-);
-const WeekPlanner = defineAsyncComponent(
-  () => import("@/components/WeekPlanner/WeekPlanner.vue")
-);
-const MonthPlanner = defineAsyncComponent(
-  () => import("@/components/MonthPlanner/MonthPlanner.vue")
-);
-const TaskTracker = defineAsyncComponent(
-  () => import("@/components/TaskTracker/TaskTracker.vue")
-);
-const ActivitySheet = defineAsyncComponent(
-  () => import("@/components/ActivitySheet/ActivitySheet.vue")
-);
+const TimeTable = defineAsyncComponent(() => import("@/components/TimeTable/TimeTable.vue"));
+const DayPlanner = defineAsyncComponent(() => import("@/components/DayPlanner/DayPlanner.vue"));
+const WeekPlanner = defineAsyncComponent(() => import("@/components/WeekPlanner/WeekPlanner.vue"));
+const MonthPlanner = defineAsyncComponent(() => import("@/components/MonthPlanner/MonthPlanner.vue"));
+const TaskTracker = defineAsyncComponent(() => import("@/components/TaskTracker/TaskTracker.vue"));
+const ActivitySheet = defineAsyncComponent(() => import("@/components/ActivitySheet/ActivitySheet.vue"));
 
-const AIChatDialog = defineAsyncComponent(
-  () => import("@/components/AIChat/AIChatDialog.vue")
-);
+const AIChatDialog = defineAsyncComponent(() => import("@/components/AIChat/AIChatDialog.vue"));
 // ======================== 响应式状态与初始化 ========================
 
 // -- 基础UI状态
@@ -451,15 +320,13 @@ const activityById = computed(() => {
 
 const todoByActivityId = computed(() => {
   const m = new Map<number, Todo>();
-  for (const t of todoList.value)
-    if (t.activityId != null) m.set(t.activityId, t);
+  for (const t of todoList.value) if (t.activityId != null) m.set(t.activityId, t);
   return m;
 });
 
 const scheduleByActivityId = computed(() => {
   const m = new Map<number, Schedule>();
-  for (const s of scheduleList.value)
-    if (s.activityId != null) m.set(s.activityId, s);
+  for (const s of scheduleList.value) if (s.activityId != null) m.set(s.activityId, s);
   return m;
 });
 
@@ -571,28 +438,25 @@ const isViewDateTomorrow = dateService.isViewDateTomorrow;
 //   if (!todoList.value) return [];
 //   return todoList.value.filter((todo) => todo.id >= start && todo.id < end);
 // });
-const todosForCurrentViewWithTaskRecords = computed<TodoWithTaskRecords[]>(
-  () => {
-    const { start, end } = dateService.visibleRange.value;
-    if (!todoList.value) return [];
+const todosForCurrentViewWithTaskRecords = computed<TodoWithTaskRecords[]>(() => {
+  const { start, end } = dateService.visibleRange.value;
+  if (!todoList.value) return [];
 
-    const out: TodoWithTaskRecords[] = [];
-    for (const todo of todoList.value) {
-      if (todo.id < start || todo.id >= end) continue;
+  const out: TodoWithTaskRecords[] = [];
+  for (const todo of todoList.value) {
+    if (todo.id < start || todo.id >= end) continue;
 
-      const relatedTask =
-        todo.taskId != null ? taskById.value.get(todo.taskId) : undefined;
+    const relatedTask = todo.taskId != null ? taskById.value.get(todo.taskId) : undefined;
 
-      out.push({
-        ...todo,
-        energyRecords: relatedTask?.energyRecords ?? [],
-        rewardRecords: relatedTask?.rewardRecords ?? [],
-        interruptionRecords: relatedTask?.interruptionRecords ?? [],
-      });
-    }
-    return out;
+    out.push({
+      ...todo,
+      energyRecords: relatedTask?.energyRecords ?? [],
+      rewardRecords: relatedTask?.rewardRecords ?? [],
+      interruptionRecords: relatedTask?.interruptionRecords ?? [],
+    });
   }
-);
+  return out;
+});
 
 const todosForCurrentViewWithTags = computed<TodoWithTags[]>(() => {
   const { start, end } = dateService.visibleRange.value;
@@ -600,10 +464,7 @@ const todosForCurrentViewWithTags = computed<TodoWithTags[]>(() => {
   const out: TodoWithTags[] = [];
   for (const todo of todoList.value) {
     if (todo.id < start || todo.id >= end) continue;
-    const activity =
-      todo.activityId != null
-        ? activityById.value.get(todo.activityId)
-        : undefined;
+    const activity = todo.activityId != null ? activityById.value.get(todo.activityId) : undefined;
     out.push({
       ...todo,
       tagIds: activity?.tagIds ?? [],
@@ -632,10 +493,7 @@ const schedulesForCurrentViewWithTags = computed<ScheduleWithTags[]>(() => {
       return date != null && date >= start && date < end;
     })
     .map((schedule) => {
-      const activity =
-        schedule.activityId != null
-          ? activityById.value.get(schedule.activityId)
-          : undefined;
+      const activity = schedule.activityId != null ? activityById.value.get(schedule.activityId) : undefined;
       return {
         ...schedule,
         tagIds: activity?.tagIds ?? [],
@@ -649,9 +507,7 @@ const todosForAppDate = computed(() => {
   const endOfDay = addDays(startOfDay, 1);
 
   if (!todoList.value) return [];
-  return todoList.value.filter(
-    (todo) => todo.id >= startOfDay && todo.id < endOfDay
-  );
+  return todoList.value.filter((todo) => todo.id >= startOfDay && todo.id < endOfDay);
 });
 
 // 计算筛选的schedule
@@ -699,12 +555,7 @@ const onItemChange = (id: number, activityId?: number, taskId?: number) => {
     const todo = todoById.value.get(id);
     const schedule = scheduleById.value.get(id);
 
-    if (
-      todo?.status !== "done" &&
-      todo?.status !== "cancelled" &&
-      schedule?.status !== "done" &&
-      schedule?.status !== "cancelled"
-    ) {
+    if (todo?.status !== "done" && todo?.status !== "cancelled" && schedule?.status !== "done" && schedule?.status !== "cancelled") {
       activeId.value = activityId;
     }
   } else {
@@ -783,6 +634,11 @@ function showErrorPopover(message: string) {
     showPopover.value = false;
   }, 3000);
 }
+
+function cleanSelection() {
+  selectedRowId.value = null;
+  selectedActivityId.value = null;
+}
 // ======================== 1. TimeTable 相关 ========================
 
 // -- 时间表数据和类型
@@ -806,8 +662,7 @@ function onBlocksUpdate(newBlocks: Block[]) {
 
 /** 恢复默认时间块 */
 function onTimeTableReset(type: "work" | "entertainment") {
-  allBlocks.value[type] =
-    type === "work" ? [...WORK_BLOCKS] : [...ENTERTAINMENT_BLOCKS];
+  allBlocks.value[type] = type === "work" ? [...WORK_BLOCKS] : [...ENTERTAINMENT_BLOCKS];
   removeTimeBlocksStorage(type);
   saveTimeBlocks(type, allBlocks.value[type]);
 }
@@ -827,17 +682,10 @@ function onAddActivity(newActivity: Activity) {
 
 /** 删除活动及其关联的 todo/schedule */
 function onDeleteActivity(id: number) {
-  const result = handleDeleteActivity(
-    activityList.value,
-    todoList.value,
-    scheduleList.value,
-    taskList.value,
-    id,
-    {
-      activityById: activityById.value,
-      childrenByParentId: childrenOfActivity.value,
-    }
-  );
+  const result = handleDeleteActivity(activityList.value, todoList.value, scheduleList.value, taskList.value, id, {
+    activityById: activityById.value,
+    childrenByParentId: childrenOfActivity.value,
+  });
   if (!result) showErrorPopover("请先清空子项目再删除！");
   activeId.value = null; //
   saveAllDebounced();
@@ -846,11 +694,7 @@ function onDeleteActivity(id: number) {
 /** 选中活动，将其转为 todo 并作为 picked */
 function onPickActivity(activity: Activity) {
   activity.status = "ongoing";
-  const { newTodo } = passPickedActivity(
-    activity,
-    dateService.appDateTimestamp.value,
-    dateService.isViewDateToday.value
-  );
+  const { newTodo } = passPickedActivity(activity, dateService.appDateTimestamp.value, dateService.isViewDateToday.value);
   todoList.value = [...todoList.value, newTodo];
   selectedActivityId.value = activity.id;
   saveAllDebounced();
@@ -893,8 +737,7 @@ function onUpdateActiveId(id: number | null) {
   const schedule = id != null ? scheduleByActivityId.value.get(id) : undefined;
 
   // 如果存在 taskId，就赋给 selectedTaskId，否则置空
-  selectedTaskId.value =
-    activity?.taskId || todo?.taskId || schedule?.taskId || null;
+  selectedTaskId.value = activity?.taskId || todo?.taskId || schedule?.taskId || null;
   // console.log("selectedTaskId.value", selectedTaskId.value);
 
   saveAllDebounced();
@@ -947,14 +790,7 @@ function onCreateChildActivity(id: number) {
     const newActivity = {
       ...selectActivity, // 使用展开运算符复制 activity 的所有属性
       id: Date.now(), // 设置新的 id
-      status: "" as
-        | ""
-        | "delayed"
-        | "ongoing"
-        | "cancelled"
-        | "done"
-        | "suspended"
-        | undefined, // 如果需要清空状态，可以在这里设置
+      status: "" as "" | "delayed" | "ongoing" | "cancelled" | "done" | "suspended" | undefined, // 如果需要清空状态，可以在这里设置
       tagIds: undefined,
       parentId: id,
       taskId: undefined,
@@ -981,9 +817,7 @@ const icsQRText = ref("");
 
 // 视图数据汇总（根据你的变量名替换）
 // 将你现有视图数据，映射为 DataRow[]
-const viewSet = computed(
-  () => settingStore.settings.viewSet as "day" | "week" | "month"
-);
+const viewSet = computed(() => settingStore.settings.viewSet as "day" | "week" | "month");
 
 // 注意：请把下述变量名替换为你真实存在的 computed/refs
 const datasetsForCurrentView = computed<DataRow[]>(() => {
@@ -1024,14 +858,9 @@ const datasetsForCurrentView = computed<DataRow[]>(() => {
 });
 
 async function onIcsExport() {
-  const res = await handleExportOrQR(
-    datasetsForCurrentView.value as DataRow[],
-    selectedRowId.value,
-    {
-      idGetter: (item: any) =>
-        String(item?.id ?? item?._id ?? item?.uuid ?? ""),
-    }
-  );
+  const res = await handleExportOrQR(datasetsForCurrentView.value as DataRow[], selectedRowId.value, {
+    idGetter: (item: any) => String(item?.id ?? item?._id ?? item?.uuid ?? ""),
+  });
 
   if (res.ok) {
     if (res.mode === "qr") {
@@ -1065,9 +894,7 @@ function onUpdateTodoStatus(id: number, isChecked: boolean) {
 
   // 如果找不到对应的 Schedule，则打印错误并直接返回，防止后续代码出错
   if (!todo) {
-    console.error(
-      `[onUpdateTodoStatus] 错误：无法在 todoList 中找到 id 为 ${id} 的项目。`
-    );
+    console.error(`[onUpdateTodoStatus] 错误：无法在 todoList 中找到 id 为 ${id} 的项目。`);
     return;
   }
 
@@ -1088,14 +915,7 @@ function onUpdateTodoStatus(id: number, isChecked: boolean) {
     doneTime = undefined;
   }
 
-  updateTodoStatus(
-    todoList.value,
-    activityList.value,
-    id,
-    todo.activityId,
-    doneTime,
-    newStatus
-  );
+  updateTodoStatus(todoList.value, activityList.value, id, todo.activityId, doneTime, newStatus);
   saveAllDebounced();
 }
 
@@ -1108,10 +928,7 @@ function onUpdateTodoEst(id: number, estPomo: number[]) {
     // 保存到本地存储
     saveTodos(todoList.value);
   }
-  const activity =
-    todo?.activityId != null
-      ? activityById.value.get(todo.activityId)
-      : undefined;
+  const activity = todo?.activityId != null ? activityById.value.get(todo.activityId) : undefined;
   if (activity && estPomo) {
     if (estPomo[0]) {
       activity.estPomoI = estPomo[0].toString();
@@ -1131,9 +948,7 @@ function onUpdateTodoPomo(id: number, realPomo: number[]) {
   saveAllDebounced();
 }
 
-function onUpdateTodoPriority(
-  updates: Array<{ id: number; priority: number }>
-) {
+function onUpdateTodoPriority(updates: Array<{ id: number; priority: number }>) {
   if (!Array.isArray(updates) || updates.length === 0) return;
 
   // 逐个更新 todo.priority
@@ -1252,9 +1067,7 @@ function onUpdateScheduleStatus(id: number, isChecked: boolean) {
 
   // 如果找不到对应的 Schedule，则打印错误并直接返回，防止后续代码出错
   if (!schedule) {
-    console.error(
-      `[onUpdateScheduleStatus] 错误：无法在 scheduleList 中找到 id 为 ${id} 的项目。`
-    );
+    console.error(`[onUpdateScheduleStatus] 错误：无法在 scheduleList 中找到 id 为 ${id} 的项目。`);
     return;
   }
 
@@ -1275,15 +1088,10 @@ function onUpdateScheduleStatus(id: number, isChecked: boolean) {
     doneTime = undefined;
   }
 
-  updateScheduleStatus(
-    scheduleList.value,
-    activityList.value,
-    id,
-    schedule.activityId,
-    doneTime,
-    newStatus,
-    { scheduleById: scheduleById.value, activityById: activityById.value }
-  );
+  updateScheduleStatus(scheduleList.value, activityList.value, id, schedule.activityId, doneTime, newStatus, {
+    scheduleById: scheduleById.value,
+    activityById: activityById.value,
+  });
   saveAllDebounced();
 }
 
@@ -1401,8 +1209,7 @@ function onSelectRow(id: number | null) {
   if (activityId != null) {
     const activity = activityById.value.get(activityId);
 
-    selectedTaskId.value =
-      activity?.taskId ?? todo?.taskId ?? schedule?.taskId ?? null;
+    selectedTaskId.value = activity?.taskId ?? todo?.taskId ?? schedule?.taskId ?? null;
   }
   // if (
   //   todo?.status !== "done" &&
@@ -1432,9 +1239,7 @@ function handleEditScheduleTitle(id: number, newTitle: string) {
     return;
   }
   activity.title = newTitle;
-  console.log(
-    `已更新 schedule ${id} 和 activity ${schedule.activityId} 的标题为: ${newTitle}`
-  );
+  console.log(`已更新 schedule ${id} 和 activity ${schedule.activityId} 的标题为: ${newTitle}`);
 
   // 找到task 并重新赋值
   const task = taskBySourceId.value.get(schedule.id);
@@ -1514,10 +1319,7 @@ function handleEditScheduleDone(id: number, newTm: string) {
 }
 
 // ======================== 4. Task/执行相关操作 ========================
-function onUpdateTaskDescription(payload: {
-  taskId: number;
-  description: string;
-}) {
+function onUpdateTaskDescription(payload: { taskId: number; description: string }) {
   const { taskId, description } = payload;
 
   const task = taskById.value.get(taskId);
@@ -1534,8 +1336,7 @@ function onInterruptionRecord(data: {
   activityType?: "T" | "S";
   dueDate?: number | null;
 }) {
-  const { interruptionType, description, asActivity, activityType, dueDate } =
-    data;
+  const { interruptionType, description, asActivity, activityType, dueDate } = data;
 
   if (selectedTaskId.value) {
     const task = taskById.value.get(selectedTaskId.value);
@@ -1634,9 +1435,7 @@ watch(
       const relatedSchedule = scheduleByActivityId.value.get(activity.id);
       if (relatedSchedule) {
         relatedSchedule.activityTitle = activity.title;
-        relatedSchedule.activityDueRange = activity.dueRange
-          ? [activity.dueRange[0], activity.dueRange[1]]
-          : [null, "0"];
+        relatedSchedule.activityDueRange = activity.dueRange ? [activity.dueRange[0], activity.dueRange[1]] : [null, "0"];
         relatedSchedule.status = activity.status || "";
         relatedSchedule.location = activity.location || "";
         relatedSchedule.taskId = activity.taskId;
@@ -1652,9 +1451,7 @@ watch(
           // 非樱桃类型时，才考虑 estPomoI
           if (!relatedTodo.estPomo || relatedTodo.estPomo.length === 0) {
             // 没有estPomo则按estPomoI初始化
-            relatedTodo.estPomo = activity.estPomoI
-              ? [parseInt(activity.estPomoI)]
-              : [];
+            relatedTodo.estPomo = activity.estPomoI ? [parseInt(activity.estPomoI)] : [];
           }
           if (!activity.estPomoI) relatedTodo.estPomo = undefined;
           // 只要有estPomoI，覆盖第一个元素
@@ -1677,20 +1474,13 @@ watch(
   () => {
     const now = Date.now();
     const today = new Date();
-    const startOfDay = new Date(
-      today.getFullYear(),
-      today.getMonth(),
-      today.getDate()
-    ).getTime();
+    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
     const endOfDay = startOfDay + 24 * 60 * 60 * 1000 - 1;
 
     activityList.value.forEach((activity) => {
       if (!activity.dueRange || !activity.dueRange[0]) return;
       if (activity.status === "done") return;
-      const dueMs =
-        typeof activity.dueRange[0] === "string"
-          ? Date.parse(activity.dueRange[0])
-          : Number(activity.dueRange[0]);
+      const dueMs = typeof activity.dueRange[0] === "string" ? Date.parse(activity.dueRange[0]) : Number(activity.dueRange[0]);
 
       // 只更新活动状态
       if (dueMs >= startOfDay && dueMs <= endOfDay) {
@@ -1728,12 +1518,7 @@ const topHeight = computed({
   set: (v) => (settingStore.settings.topHeight = v),
 });
 
-const { startResize: startVerticalResize } = useResize(
-  topHeight,
-  "vertical",
-  0,
-  610
-);
+const { startResize: startVerticalResize } = useResize(topHeight, "vertical", 0, 610);
 const { startResize: startLeftResize } = useResize(
   leftWidth,
   "horizontal",
@@ -1836,8 +1621,7 @@ const { startResize: startRightResize } = useResize(
 
 .day-status {
   font-size: 18px;
-  font-family: Consolas, "Courier New", Courier, Monaco, "Liberation Mono",
-    "Menlo", monospace;
+  font-family: Consolas, "Courier New", Courier, Monaco, "Liberation Mono", "Menlo", monospace;
   color: var(--color-text);
   border-radius: 12px;
   padding: 0px 8px 0px 8px;

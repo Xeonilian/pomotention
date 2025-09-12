@@ -39,6 +39,7 @@ export default defineConfig({
           { text: "标签系统", link: "/guide/tag" },
           { text: "数据查看", link: "/guide/search" },
           { text: "数据同步", link: "/guide/synchronize" },
+          { text: "日程导出", link: "/guide/ics" },
         ],
       },
       {
@@ -50,9 +51,7 @@ export default defineConfig({
       },
     ],
 
-    socialLinks: [
-      { icon: "github", link: "https://github.com/Xeonilian/pomotention" },
-    ],
+    socialLinks: [{ icon: "github", link: "https://github.com/Xeonilian/pomotention" }],
 
     footer: {
       message: "Released under the GPL-3.0 License.",
