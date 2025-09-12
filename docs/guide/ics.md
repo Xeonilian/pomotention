@@ -32,7 +32,7 @@
   - 有开始时间无时长： `[开始时间，系统默认]`
     - 不同系统可能重复开始时间，或增加 1h
 
-  <img src="/dev-log/ui-checks/20250912-qr-icr-full-after.png" alt="Export QR" width="500">
+  <img src="/dev-log/ui-checks/20250912-qr-ics-full-after.png" alt="Export QR" width="500">
 
 ## 2 操作步骤
 
@@ -46,15 +46,15 @@
    - 安卓系统使用系统的扫描功能，非照相机；
    - 可扫描下方二维码尝试。
 
-    <img src="/dev-log/ui-checks/20250912-qr-icr-code-after.png" alt="Export QR" width="250">
+    <img src="/dev-log/ui-checks/20250912-qr-ics-code-after.png" alt="Export QR" width="250">
 
-## 2.2 通过 icr 文件导出多条任务
+## 2.2 通过 ics 文件导出多条任务
 
 1. 点击 <img src="/icons/CalendarSettings20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(224, 224, 224);border-radius: 6px;"> 按钮，切换任务计划日、周、月视图；
 2. 点击 <img src="/icons/Previous24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(233, 233, 233);border-radius: 10px;"> <img src="/icons/Next24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(233, 233, 233);border-radius: 10px;"> 选择导出范围；
-3. 点击 <img src="/icons/QrCode24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(193, 226, 255);border-radius: 6px;"> 按钮，弹出保存路径对话框，输入文件名 `*.icr` 。
+3. 点击 <img src="/icons/QrCode24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(193, 226, 255);border-radius: 6px;"> 按钮，弹出保存路径对话框，输入文件名 `*.ics` 。
 4. 选择路径，保存，推荐手机可直接访问的云盘位置。
-5. 在手机上打开 `.icr` 文件，激活日历导入流程，保存。
+5. 在手机上打开 `.ics` 文件，激活日历导入流程，保存。
 
 ## 3 重要说明
 
