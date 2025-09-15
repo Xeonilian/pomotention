@@ -56,11 +56,7 @@
                 :checked="todo.status === 'done'"
                 @update:checked="handleCheckboxChange(todo.id, $event)"
               />
-              <n-icon
-                v-else
-                class="cancel-icon"
-                color="var(--color-text-secondary)"
-              >
+              <n-icon v-else class="cancel-icon" color="var(--color-text-secondary)">
                 <DismissSquare20Filled />
               </n-icon>
             </td>
@@ -69,11 +65,7 @@
             <td
               class="col-start"
               @dblclick.stop="startEditing(todo.id, 'start')"
-              :title="
-                editingRowId === todo.id && editingField === 'start'
-                  ? ''
-                  : '双击编辑'
-              "
+              :title="editingRowId === todo.id && editingField === 'start' ? '' : '双击编辑'"
             >
               <input
                 class="start-input time-input"
@@ -86,20 +78,14 @@
                 maxlength="5"
                 autocomplete="off"
               />
-              <span v-else>{{
-                todo.startTime ? timestampToTimeString(todo.startTime) : "-"
-              }}</span>
+              <span v-else>{{ todo.startTime ? timestampToTimeString(todo.startTime) : "-" }}</span>
             </td>
 
             <!-- 3 结束时间 -->
             <td
               class="col-end"
               @dblclick.stop="startEditing(todo.id, 'done')"
-              :title="
-                editingRowId === todo.id && editingField === 'done'
-                  ? ''
-                  : '双击编辑'
-              "
+              :title="editingRowId === todo.id && editingField === 'done' ? '' : '双击编辑'"
             >
               <input
                 class="done-input time-input"
@@ -112,9 +98,7 @@
                 maxlength="5"
                 autocomplete="off"
               />
-              <span v-else>{{
-                todo.doneTime ? timestampToTimeString(todo.doneTime) : "-"
-              }}</span>
+              <span v-else>{{ todo.doneTime ? timestampToTimeString(todo.doneTime) : "-" }}</span>
             </td>
 
             <!-- 4 排序 -->
@@ -132,11 +116,7 @@
                 @keydown.enter="finishEditing"
               />
 
-              <span
-                v-else
-                class="priority-badge"
-                :class="'priority-' + todo.priority"
-              >
+              <span v-else class="priority-badge" :class="'priority-' + todo.priority">
                 {{ todo.priority > 0 ? todo.priority : "—" }}
               </span>
             </td>
@@ -149,11 +129,7 @@
                 'cancel-cell': todo.status === 'cancelled',
               }"
               @dblclick.stop="startEditing(todo.id, 'title')"
-              :title="
-                editingRowId === todo.id && editingField === 'title'
-                  ? ''
-                  : '双击编辑'
-              "
+              :title="editingRowId === todo.id && editingField === 'title' ? '' : '双击编辑'"
             >
               <input
                 class="title-input"
@@ -165,9 +141,7 @@
                 @click.stop
                 :data-todo-id="todo.id"
               />
-              <span class="ellipsis" v-else>{{
-                todo.activityTitle ?? "-"
-              }}</span>
+              <span class="ellipsis" v-else>{{ todo.activityTitle ?? "-" }}</span>
             </td>
 
             <!-- 6 果果 -->
@@ -192,27 +166,15 @@
                           "
                         />
                       </template>
-                      <span
-                        class="pomo-separator"
-                        v-if="todo.estPomo && index < todo.estPomo.length - 1"
-                        >|</span
-                      >
+                      <span class="pomo-separator" v-if="todo.estPomo && index < todo.estPomo.length - 1">|</span>
                     </div>
                   </template>
                 </div>
-                <div
-                  v-if="todo.status !== 'done' && todo.status !== 'cancelled'"
-                  class="est-buttons"
-                >
+                <div v-if="todo.status !== 'done' && todo.status !== 'cancelled'" class="est-buttons">
                   <!-- 删除估计按钮  -->
                   <n-button
                     class="button-left"
-                    v-if="
-                      todo.pomoType != '🍒' &&
-                      todo.estPomo &&
-                      todo.estPomo.length < 4 &&
-                      todo.estPomo.length > 0
-                    "
+                    v-if="todo.pomoType != '🍒' && todo.estPomo && todo.estPomo.length < 4 && todo.estPomo.length > 0"
                     text
                     @click="handleDeleteEstimate(todo)"
                     title="减少预估番茄数量"
@@ -230,12 +192,7 @@
                     :class="{
                       'one-mode': !todo.estPomo,
                     }"
-                    v-if="
-                      (todo.estPomo &&
-                        todo.pomoType != '🍒' &&
-                        todo.estPomo.length < 3) ||
-                      (!todo.estPomo && todo.pomoType != '🍒')
-                    "
+                    v-if="(todo.estPomo && todo.pomoType != '🍒' && todo.estPomo.length < 3) || (!todo.estPomo && todo.pomoType != '🍒')"
                     text
                     type="default"
                     @click="handleAddEstimate(todo)"
@@ -256,25 +213,14 @@
               <div
                 class="status-cell"
                 :class="{
-                  'check-mode':
-                    todo.status === 'done' || todo.status === 'cancelled',
+                  'check-mode': todo.status === 'done' || todo.status === 'cancelled',
                 }"
               >
-                <div
-                  class="records-stat"
-                  v-if="todo.taskId"
-                  title="能量值 | 奖赏值 | 内部打扰 | 外部打扰"
-                >
-                  <span style="color: var(--color-blue)">{{
-                    averageValue(todo.energyRecords)
-                  }}</span
-                  >|
-                  <span style="color: var(--color-red)">{{
-                    averageValue(todo.rewardRecords)
-                  }}</span
-                  >|{{ countInterruptions(todo.interruptionRecords, "I") }}|{{
-                    countInterruptions(todo.interruptionRecords, "E")
-                  }}
+                <div class="records-stat" v-if="todo.taskId" title="能量值 | 奖赏值 | 内部打扰 | 外部打扰">
+                  <span style="color: var(--color-blue)">{{ averageValue(todo.energyRecords) }}</span>
+                  |
+                  <span style="color: var(--color-red)">{{ averageValue(todo.rewardRecords) }}</span>
+                  |{{ countInterruptions(todo.interruptionRecords, "I") }}|{{ countInterruptions(todo.interruptionRecords, "E") }}
                 </div>
                 <div
                   class="button-group"
@@ -284,14 +230,7 @@
                   v-if="todo.status !== 'done' && todo.status !== 'cancelled'"
                 >
                   <!-- 追踪任务按钮 -->
-                  <n-button
-                    class="convert-button"
-                    v-if="!todo.taskId"
-                    text
-                    type="info"
-                    @click="handleConvertToTask(todo)"
-                    title="追踪任务"
-                  >
+                  <n-button class="convert-button" v-if="!todo.taskId" text type="info" @click="handleConvertToTask(todo)" title="追踪任务">
                     <template #icon>
                       <n-icon size="18">
                         <ChevronCircleDown48Regular />
@@ -348,29 +287,14 @@
           </tr>
         </template>
         <tr v-else class="empty-row">
-          <td colspan="7" style="text-align: center; padding: 10px">
-            暂无待办
-          </td>
+          <td colspan="7" style="text-align: center; padding: 10px">暂无待办</td>
         </tr>
       </tbody>
     </table>
   </div>
-  <n-popover
-    v-model:show="showPopover"
-    trigger="manual"
-    placement="top-end"
-    style="width: 200px"
-  >
+  <n-popover v-model:show="showPopover" trigger="manual" placement="top-end" style="width: 200px">
     <template #trigger>
-      <div
-        style="
-          position: fixed;
-          bottom: 20px;
-          right: 20px;
-          width: 1px;
-          height: 1px;
-        "
-      ></div>
+      <div style="position: fixed; bottom: 20px; right: 20px; width: 1px; height: 1px"></div>
     </template>
     {{ popoverMessage }}
   </n-popover>
@@ -385,13 +309,7 @@
     @negative-click="cancelAddEstimate"
     style="width: 300px"
   >
-    <n-input-number
-      v-model:value="newEstimate"
-      :min="1"
-      :max="5"
-      placeholder="请输入估计的番茄数"
-      style="width: 100%"
-    />
+    <n-input-number v-model:value="newEstimate" :min="1" :max="5" placeholder="请输入估计的番茄数" style="width: 100%" />
   </n-modal>
 </template>
 <script setup lang="ts">
@@ -437,10 +355,7 @@ const emit = defineEmits<{
   (e: "cancel-todo", id: number): void;
   // (e: "repeat-todo", id: number): void;
   (e: "update-todo-status", id: number, checked: boolean): void;
-  (
-    e: "batch-update-priorities",
-    updates: Array<{ id: number; priority: number }>
-  ): void;
+  (e: "batch-update-priorities", updates: Array<{ id: number; priority: number }>): void;
   (e: "update-todo-pomo", id: number, realPomo: number[]): void;
   (e: "update-todo-est", id: number, estPomo: number[]): void;
 
@@ -487,10 +402,7 @@ function startEditingPriority(todo: Todo) {
 
 function finishEditing() {
   if (!editingTodo.value) return;
-  if (
-    editingTodo.value.status === "done" ||
-    editingTodo.value.status === "cancelled"
-  ) {
+  if (editingTodo.value.status === "done" || editingTodo.value.status === "cancelled") {
     popoverMessage.value = "当前任务已经结束！";
     showPopover.value = true;
     setTimeout(() => {
@@ -554,15 +466,11 @@ function relayoutPriority(todos: Todo[], current: Todo, desired: number) {
   });
 
   // 筛选出需要重新排序的活动任务
-  const active = todos.filter(
-    (t) => t.status !== "done" && t.status !== "cancelled"
-  );
+  const active = todos.filter((t) => t.status !== "done" && t.status !== "cancelled");
 
   // 关键修改：
   // 找出所有优先级大于 0 的任务
-  const positivePriorityTasks = active.filter(
-    (t) => t.priority > 0 && t.id !== current.id
-  );
+  const positivePriorityTasks = active.filter((t) => t.priority > 0 && t.id !== current.id);
   // 对它们进行排序
   positivePriorityTasks.sort((a, b) => a.priority - b.priority);
 
@@ -570,9 +478,7 @@ function relayoutPriority(todos: Todo[], current: Todo, desired: number) {
   // 如果 desired 是 0 或负数，我们不把它放到排序列表中，因为它不需要参与重新编号
   if (desired > 0) {
     // 找到插入点
-    const insertIndex = positivePriorityTasks.findIndex(
-      (t) => t.priority >= desired
-    );
+    const insertIndex = positivePriorityTasks.findIndex((t) => t.priority >= desired);
     if (insertIndex === -1) {
       positivePriorityTasks.push(current);
     } else {
@@ -617,22 +523,13 @@ function handleCheckboxChange(id: number, checked: boolean) {
 
 // 番茄估计=============================
 // 检查番茄钟是否完成
-function isPomoCompleted(
-  todo: Todo,
-  estIndex: number,
-  pomoIndex: number
-): boolean {
+function isPomoCompleted(todo: Todo, estIndex: number, pomoIndex: number): boolean {
   if (!todo.realPomo || todo.realPomo.length <= estIndex) return false;
   return todo.realPomo[estIndex] >= pomoIndex;
 }
 
 // 处理番茄钟勾选
-function handlePomoCheck(
-  todo: Todo,
-  estIndex: number,
-  pomoIndex: number,
-  checked: boolean
-) {
+function handlePomoCheck(todo: Todo, estIndex: number, pomoIndex: number, checked: boolean) {
   // 确保 realPomo 数组存在且长度与 estPomo 一致
   if (!todo.realPomo) todo.realPomo = [];
   if (!todo.estPomo) todo.estPomo = [];
@@ -691,12 +588,7 @@ function handleDeleteEstimate(todo: Todo) {
   if (todo.estPomo && todo.estPomo.length > 0) {
     // 要删除的下标是最后一项
     const delIdx = todo.estPomo.length - 1;
-    if (
-      todo.realPomo &&
-      delIdx < todo.realPomo.length &&
-      todo.realPomo[delIdx] !== undefined &&
-      todo.realPomo[delIdx] !== 0
-    ) {
+    if (todo.realPomo && delIdx < todo.realPomo.length && todo.realPomo[delIdx] !== undefined && todo.realPomo[delIdx] !== 0) {
       // realPomo此位置已被填写，提示不能删
       popoverMessage.value = "已经有实际完成，不可删除~";
       showPopover.value = true;
@@ -744,9 +636,7 @@ function startEditing(todoId: number, field: "title" | "start" | "done") {
 
   // 使用 querySelector 来获取当前编辑的输入框，而不是依赖 ref
   nextTick(() => {
-    const input = document.querySelector(
-      `input.${field}-input[data-todo-id="${todoId}"]`
-    );
+    const input = document.querySelector(`input.${field}-input[data-todo-id="${todoId}"]`);
     if (input) {
       (input as HTMLInputElement).focus();
     }
@@ -790,11 +680,7 @@ function cancelEdit() {
 }
 
 function isValidTimeString(str: string) {
-  return (
-    /^\d{2}:\d{2}$/.test(str) &&
-    +str.split(":")[0] <= 24 &&
-    +str.split(":")[1] < 60
-  );
+  return /^\d{2}:\d{2}$/.test(str) && +str.split(":")[0] <= 24 && +str.split(":")[1] < 60;
 }
 
 // 转换为任务
@@ -808,11 +694,7 @@ function handleConvertToTask(todo: Todo) {
     return;
   }
 
-  const task = taskService.createTaskFromTodo(
-    todo.id,
-    todo.activityTitle,
-    todo.projectName
-  );
+  const task = taskService.createTaskFromTodo(todo.id, todo.activityTitle, todo.projectName);
 
   if (task) {
     // 立即更新本地的 taskId
@@ -843,9 +725,7 @@ function handleCancelTodo(id: number) {
 
 // 1) 计算平均值（适用于 EnergyRecord[] 或 RewardRecord[]）
 // 空、null、undefined 或 [] 返回 null
-function averageValue<T extends { value: number }>(
-  records: T[] | null | undefined
-): number | string {
+function averageValue<T extends { value: number }>(records: T[] | null | undefined): number | string {
   if (!Array.isArray(records) || records.length === 0) return "-";
   let sum = 0,
     count = 0;
@@ -861,10 +741,7 @@ function averageValue<T extends { value: number }>(
 
 // 2) 统计中断类型数量（"E" 或 "I"）
 // 空、null、undefined 或 [] 返回 null
-function countInterruptions(
-  records: { interruptionType: "E" | "I" }[] | null | undefined,
-  type: "E" | "I"
-): number | string {
+function countInterruptions(records: { interruptionType: "E" | "I" }[] | null | undefined, type: "E" | "I"): number | string {
   if (!Array.isArray(records) || records.length === 0) return "-";
   let count = 0;
   for (const r of records) if (r?.interruptionType === type) count++;
@@ -1070,8 +947,7 @@ td.status-col {
 /* priority-3 保持不变 */
 .priority-3 {
   background-color: #ffeb3bb7;
-  color: var(--color-text-secondary);
-  box-shadow: 1px 1px var(--color-background-light);
+  color: #3d3d3dc1;
 }
 
 .priority-4 {
@@ -1083,9 +959,10 @@ td.status-col {
   color: #2196f3;
 }
 .priority-6 {
-  background-color: #9575cd5c; /* 你原来已是半透明，保持并补上文字色 */
-  color: #9575cd;
+  background-color: #d33af65c;
+  color: #a156b8;
 }
+
 .priority-7 {
   background-color: #7e57c25c;
   color: #7e57c2;
