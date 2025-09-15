@@ -6,7 +6,7 @@
 - 已在目标仓库目录内执行命令（确保当前目录是该仓库）
 - 已配置 Git 用户信息：`git config user.name`、`git config user.email`
 
-## 1) Issue 管理
+## 1 Issue 管理
 
 ### 创建 Issue
 
@@ -51,7 +51,7 @@ gh issue close 123 --comment "已通过 PR #456 修复并合并。"
 gh issue reopen 123
 ```
 
-## 2) Pull Request（PR）工作流
+## 2 Pull Request（PR）工作流
 
 ### 创建分支并提交更改
 
@@ -68,25 +68,13 @@ git push -u origin fix/login-blank
 - 交互式创建（可自动推断 base/head，填写标题、正文、草稿、关联 Issue 等）
 
 ```bash
-gh pr create
+ gh pr create --base main --head docs/gh-cli+branch --title "[S1 C1 UV0 docs(guide): gh-cli 安装和使用 ]"
 ```
 
-- 一次性命令创建（示例：关联 Issue、设为草稿）
+- 提问是否打开 note，然后输入内容，[格式参考](PR.md)
 
-```bash
-gh pr create \
-  --base main \
-  --head fix/login-blank \
-  --title "fix: 修复登录页空白(错误密码)" \
-  --body "关联 Issue #123。修复渲染条件判断，新增用例。" \
-  --draft
-```
-
-- 从提交消息中自动生成标题/正文
-
-```bash
-gh pr create --fill
-```
+- 是否通过
+  `$PR=(gh pr view --json number | ConvertFrom-Json).number; gh pr checks $PR`
 
 ### 关联 Issue（两种方式）
 
