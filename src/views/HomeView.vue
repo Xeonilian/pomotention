@@ -188,7 +188,11 @@
         </div>
       </div>
       <!-- 任务视图调整大小手柄 -->
-      <div v-if="settingStore.settings.showTask" class="resize-handle" @mousedown="startVerticalResize"></div>
+      <div
+        v-if="settingStore.settings.showTask && settingStore.settings.showPlanner"
+        class="resize-handle"
+        @mousedown="startVerticalResize"
+      ></div>
       <!-- 任务视图 -->
       <div v-if="settingStore.settings.showTask" class="middle-bottom" :style="{ height: `calc(100% - ${topHeight}px - 8px)` }">
         <TaskTracker
