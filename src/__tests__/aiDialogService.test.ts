@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { shouldStartTaskPlanning, getNextQuestion, buildTaskPrompt, guideQuestions } from "../aiDialogService";
+import { shouldStartTaskPlanning, getNextQuestion, buildTaskPrompt, guideQuestions } from "../services/aiDialogService";
 import { DialogState } from "@/core/types/Dialog";
 import type { TaskPlanningContext } from "@/core/types/Dialog";
 
