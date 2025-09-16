@@ -3,16 +3,9 @@
     <!-- 对话内容区域 -->
     <div class="ai-chat-content">
       <div class="chat-messages" ref="messagesContainer">
-        <div
-          v-for="(message, index) in messages"
-          :key="index"
-          :class="['message', message.role]"
-        >
+        <div v-for="(message, index) in messages" :key="index" :class="['message', message.role]">
           <div class="message-content">
-            <div
-              class="message-text"
-              v-html="formatMessage(message.content)"
-            ></div>
+            <div class="message-text" v-html="formatMessage(message.content)"></div>
             <div class="message-time">{{ formatTime(message.timestamp) }}</div>
           </div>
         </div>
@@ -22,6 +15,7 @@
       <div class="chat-input-area">
         <div class="input-container">
           <n-input
+            ref="inputRef"
             v-model:value="inputMessage"
             type="textarea"
             :autosize="{ minRows: 1, maxRows: 4 }"
@@ -35,11 +29,12 @@
     </div>
   </div>
 </template>
-
 <script setup lang="ts">
 import { ref, nextTick, onMounted } from "vue";
 import { NInput } from "naive-ui";
 import { aiService, type AIMessage } from "@/services/aiService";
+import { shouldStartTaskPlanning, getNextQuestion, buildTaskPrompt, guideQuestions } from "@/services/aiDialogService";
+import { TaskPlanningContext, DialogState } from "@/core/types/Dialog";
 
 interface Message {
   role: "user" | "assistant";
@@ -52,6 +47,14 @@ const messages = ref<Message[]>([]);
 const inputMessage = ref("");
 const isLoading = ref(false);
 const messagesContainer = ref<HTMLElement>();
+const inputRef = ref();
+
+// 任务拆解状态
+const taskPlanningContext = ref<TaskPlanningContext>({
+  state: DialogState.NORMAL_CHAT,
+  gatheredInfo: {},
+  currentStep: 0,
+});
 
 // 发送消息
 const sendMessage = async () => {
@@ -73,13 +76,24 @@ const sendMessage = async () => {
   scrollToBottom();
 
   try {
-    // 尝试调用真实的AI API，如果失败则使用模拟响应
     let response: string;
-    try {
-      response = await callAIAPI(currentInput);
-    } catch (apiError) {
-      console.warn("AI API 调用失败，使用模拟响应:", apiError);
-      response = await mockAIResponse(currentInput);
+
+    // 检查是否在任务拆解流程中
+    if (taskPlanningContext.value.state === "gathering_info") {
+      response = await handleTaskPlanningFlow(currentInput);
+    }
+    // 检查是否要开始任务拆解
+    else if (shouldStartTaskPlanning(currentInput)) {
+      response = await startTaskPlanningFlow();
+    }
+    // 正常聊天流程（你原来的逻辑）
+    else {
+      try {
+        response = await callAIAPI(currentInput);
+      } catch (apiError) {
+        console.warn("AI API 调用失败，使用模拟响应:", apiError);
+        response = await mockAIResponse(currentInput);
+      }
     }
 
     const assistantMessage: Message = {
@@ -103,6 +117,8 @@ const sendMessage = async () => {
     messages.value.push(errorMessage);
   } finally {
     isLoading.value = false;
+    await nextTick();
+    inputRef.value?.focus();
   }
 };
 
@@ -112,10 +128,7 @@ const getSystemPrompt = (): string => {
     const saved = localStorage.getItem("ai-config");
     if (saved) {
       const config = JSON.parse(saved);
-      return (
-        config.systemPrompt ||
-        "你是一个智能的时间管理助手，专门帮助用户提高工作效率和时间管理能力。"
-      );
+      return config.systemPrompt || "你是一个智能的时间管理助手，专门帮助用户提高觉察能力、自我照顾、工作效率和时间管理能力。";
     }
   } catch (error) {
     console.error("获取系统提示词失败:", error);
@@ -158,9 +171,7 @@ const callAIAPI = async (userInput: string): Promise<string> => {
 // 模拟AI响应（当API未配置时使用）
 const mockAIResponse = async (input: string): Promise<string> => {
   // 模拟网络延迟
-  await new Promise((resolve) =>
-    setTimeout(resolve, 1000 + Math.random() * 2000)
-  );
+  // await new Promise((resolve) => setTimeout(resolve, 1000 + Math.random() * 2000));
 
   // 简单的回复逻辑
   if (input.includes("你好") || input.includes("hello")) {
@@ -204,12 +215,75 @@ const formatTime = (timestamp: Date) => {
   });
 };
 
+// 处理任务拆解流程
+const handleTaskPlanningFlow = async (input: string): Promise<string> => {
+  const context = taskPlanningContext.value;
+
+  if (context.currentStep < guideQuestions.length) {
+    // 保存用户回答
+    const currentQuestion = guideQuestions[context.currentStep];
+    context.gatheredInfo[currentQuestion.key] = input;
+    context.currentStep++;
+  }
+
+  // 检查是否还有更多问题
+  const nextQuestion = getNextQuestion(context);
+
+  if (nextQuestion) {
+    return `好的，已记录。\n\n${nextQuestion}`;
+  } else {
+    // 所有信息收集完成，生成任务计划
+    context.state = DialogState.API_CALLING;
+
+    const taskPrompt = buildTaskPrompt(context);
+    const finalMessages: AIMessage[] = [
+      { role: "system", content: "你是一个专业的项目管理和任务拆解专家。请提供具体可执行的任务计划。" },
+      { role: "user", content: taskPrompt },
+    ];
+
+    try {
+      const planResponse = await aiService.sendMessage(finalMessages);
+
+      // 重置状态
+      taskPlanningContext.value = {
+        state: DialogState.GATHERING_INFO,
+        gatheredInfo: {},
+        currentStep: 0,
+      };
+
+      return `太好了！基于您提供的信息，我为您制定了以下任务计划：\n\n${planResponse.content}\n\n如果您想调整计划，请告诉我具体需要修改的地方。`;
+    } catch (error) {
+      // 重置状态
+      taskPlanningContext.value = {
+        state: DialogState.NORMAL_CHAT,
+        gatheredInfo: {},
+        currentStep: 0,
+      };
+      return "生成任务计划时出现了问题，请重新尝试或直接告诉我您的需求。";
+    }
+  }
+};
+
+// 开始任务拆解流程
+const startTaskPlanningFlow = async (): Promise<string> => {
+  taskPlanningContext.value = {
+    state: DialogState.GATHERING_INFO,
+    gatheredInfo: {},
+    currentStep: 0,
+  };
+
+  return `我来帮您制定一个详细的任务计划！我需要了解一些信息来为您定制最合适的方案。\n\n${guideQuestions[0].question}`;
+};
+
 onMounted(() => {
-  // 添加欢迎消息
   messages.value.push({
     role: "assistant",
-    content: "你好！我是你的AI助手，正在向你赶来。愿你保持觉察，好好照顾自己！",
+    content:
+      "你好！我是你的AI助手，正在向你赶来。愿你保持觉察，好好照顾自己！\n💡 小贴士：你可以说「帮我规划一个项目」来开始任务拆解流程。",
     timestamp: new Date(),
+  });
+  nextTick(() => {
+    inputRef.value?.focus();
   });
 });
 </script>
@@ -289,6 +363,7 @@ onMounted(() => {
 .message.user .message-time {
   padding-right: 6px;
 }
+
 /* 输入区固定在底部且不超父容器宽度 */
 .chat-input-area {
   position: sticky;
@@ -314,7 +389,7 @@ onMounted(() => {
   max-width: 100%;
 }
 
-/* 滚动条样式（可留可去） */
+/* 滚动条样式*/
 .chat-messages::-webkit-scrollbar {
   width: 4px;
 }
