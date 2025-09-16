@@ -40,6 +40,7 @@ import { TaskPlanningContext, DialogState } from "@/core/types/Dialog";
 interface Message {
   role: "user" | "assistant";
   content: string;
+  hint?: string;
   timestamp: Date;
 }
 
@@ -87,7 +88,7 @@ const sendMessage = async () => {
     else if (shouldStartTaskPlanning(currentInput)) {
       response = await startTaskPlanningFlow();
     }
-    // 正常聊天流程（你原来的逻辑）
+    // API
     else {
       try {
         response = await callAIAPI(currentInput);

@@ -1,5 +1,5 @@
 // aiDialogService.ts
-//
+// 基于本地对话构建日程制定 prompt
 
 import type { TaskPlanningContext, GuideQuestion } from "@/core/types/Dialog";
 
