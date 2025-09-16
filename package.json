@@ -9,7 +9,9 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "new:ctt": "node scripts/new_contract.cjs",
-    "sshot": "powershell.exe -ExecutionPolicy Bypass -File scripts/screenshot.ps1"
+    "sshot": "powershell.exe -ExecutionPolicy Bypass -File scripts/screenshot.ps1",
+    "test": "vitest",
+    "test:ui": "vitest --ui"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.5.0",
@@ -35,6 +37,7 @@
     "@types/node": "^22.14.1",
     "@vicons/fluent": "^0.13.0",
     "@vitejs/plugin-vue": "^5.2.1",
+    "@vitest/ui": "^3.2.4",
     "gh-pages": "^6.3.0",
     "rollup-plugin-visualizer": "^6.0.3",
     "typescript": "~5.6.2",
@@ -42,6 +45,7 @@
     "unplugin-vue-components": "^28.5.0",
     "vite": "^6.3.4",
     "vitepress": "^1.6.3",
+    "vitest": "^3.2.4",
     "vue-tsc": "^2.1.10"
   },
   "prettier": {
