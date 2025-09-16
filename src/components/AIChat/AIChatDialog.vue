@@ -32,7 +32,8 @@
 <script setup lang="ts">
 import { ref, nextTick, onMounted } from "vue";
 import { NInput } from "naive-ui";
-import { aiService, type AIMessage } from "@/services/aiService";
+import { aiService } from "@/services/aiService";
+import { AIMessage } from "@/core/types/AI";
 import { shouldStartTaskPlanning, getNextQuestion, buildTaskPrompt, guideQuestions } from "@/services/aiDialogService";
 import { TaskPlanningContext, DialogState } from "@/core/types/Dialog";
 

@@ -1,19 +1,7 @@
 // src/services/aiService.ts
-
+// 与AI API 链接发动和接收信息
 import { invoke } from "@tauri-apps/api/core";
-
-// 定义与你 Vue 组件中一致的消息类型
-export interface AIMessage {
-  role: "system" | "user" | "assistant";
-  content: string;
-}
-
-// 定义AI配置的类型（可以从 localStorage 读取）
-export interface AIConfig {
-  apiKey: string;
-  model: string;
-  systemPrompt: string;
-}
+import { AIMessage, AIConfig } from "@/core/types/AI";
 
 // 定义从 Rust 后端返回的响应体类型
 interface RustChatOutput {
@@ -42,8 +30,7 @@ class AIService {
     return {
       apiKey: "", // API Key 由后端环境变量提供，前端不需要
       model: "moonshot-v1-8k",
-      systemPrompt:
-        "你是一个智能的时间管理助手，专门帮助用户提高工作效率和时间管理能力。",
+      systemPrompt: "你是一个智能的时间管理助手，专门帮助用户提高工作效率和时间管理能力。",
     };
   }
 
