@@ -91,7 +91,7 @@
       style="cursor: grab"
       @mousedown="handleMouseDown($event, seg)"
     >
-      {{ seg.priority > 0 ? seg.priority : "–" }}
+      {{ seg.priority > 0 ? seg.priority : firstNonDigitLetterWide(seg.todoTitle) || "–" }}
     </span>
     <span v-else style="cursor: grab" @mousedown="handleMouseDown($event, seg)">⚠️</span>
   </div>
@@ -278,6 +278,14 @@ function getPomodoroStyle(seg: PomodoroSegment): CSSProperties {
 }
 
 // ==============todo在番茄段上的分配 ================
+
+function firstNonDigitLetterWide(s: string) {
+  if (!s) return "";
+  // 优先找任意字母（已包含大多数字母体系）；如不放心可额外并入 Han
+  const m = String(s).match(/\p{L}|\p{Script=Han}/u);
+  return m ? m[0] : "";
+}
+
 // todoSegments 的计算 移动到watch
 
 // 计算TodoSegment的Style
@@ -646,7 +654,7 @@ watch(
   position: absolute;
   width: 15px;
   height: 15px;
-  background-color: var(--color-background-dark);
+  background-color: var(--color-text-secondary);
   color: var(--color-background);
   font-size: 12px;
   font-weight: bold;
