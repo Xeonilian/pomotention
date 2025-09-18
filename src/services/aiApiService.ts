@@ -1,7 +1,10 @@
 // src/services/aiApiService.ts
-// 与AI API 链接发动和接收信息
+// 与 AI API 的调用（前端 -> Tauri 后端 invoke）
+// 职责：只做调用，不负责配置的存取
+
 import { invoke } from "@tauri-apps/api/core";
-import { AiMessage, AiConfig } from "@/core/types/Ai";
+import type { AiMessage } from "@/core/types/Ai";
+import { useAiConfig } from "@/services/aiConfigService";
 
 // 定义从 Rust 后端返回的响应体类型
 interface RustChatOutput {
@@ -9,69 +12,44 @@ interface RustChatOutput {
 }
 
 class AiApiService {
-  private config: AiConfig;
-
-  constructor() {
-    // 初始化时从 localStorage 加载配置
-    this.config = this.loadConfigFromLocalStorage();
-  }
-
-  // 从本地存储加载配置
-  private loadConfigFromLocalStorage(): AiConfig {
-    try {
-      const saved = localStorage.getItem("ai-config");
-      if (saved) {
-        return JSON.parse(saved);
-      }
-    } catch (error) {
-      console.error("加载 AI 配置失败:", error);
-    }
-    // 返回一个安全的默认值
-    return {
-      apiKey: "", // API Key 由后端环境变量提供，前端不需要
-      model: "moonshot-v1-8k",
-      systemPrompt: "你是一个智能的时间管理助手，专门帮助用户提高工作效率和时间管理能力。",
-    };
-  }
-
-  // 获取当前配置
-  public getConfig(): AiConfig {
-    // 每次获取时都重新加载，以防在其他地方被修改
-    this.config = this.loadConfigFromLocalStorage();
-    return this.config;
-  }
-
-  // 保存配置
-  public saveConfig(newConfig: Partial<AiConfig>) {
-    const currentConfig = this.getConfig();
-    const updatedConfig = { ...currentConfig, ...newConfig };
-    localStorage.setItem("ai-config", JSON.stringify(updatedConfig));
-    this.config = updatedConfig;
-  }
-
   /**
    * 发送消息到 Tauri 后端。
    * @param messages 消息历史数组
    * @returns 包含 AI 回复内容的对象
    */
   public async sendMessage(messages: AiMessage[]): Promise<RustChatOutput> {
-    const config = this.getConfig();
+    // 读取配置：由 configService 统一从 Pinia Store 获取（做兜底/兼容）
+    const { getModel, getTemperature, getTimeoutMs } = useAiConfig();
+
+    const model = getModel() || "moonshot-v1-8k";
+    const temperature = getTemperature() ?? 0.7;
+    const timeoutMs = getTimeoutMs() ?? 30000;
+
+    // 超时控制（可选）
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+
     try {
-      const response = await invoke<{ content: string }>("chat_completion", {
+      const response = await invoke<RustChatOutput>("chat_completion", {
         input: {
           messages,
-          model: config.model || "moonshot-v1-8k",
-          temperature: 0.7,
+          model,
+          temperature,
           stream: false,
         },
+        // 注意：Tauri 的 invoke 不直接接受 signal，如需超时应在 Rust 侧处理或这里仅做逻辑超时
       });
+
+      clearTimeout(timer);
       return response;
     } catch (error) {
+      clearTimeout(timer);
       console.error("AI API call failed:", error);
-      throw new Error(error as string);
+      // 统一抛出 Error 实例，便于上层捕获
+      throw new Error(error instanceof Error ? error.message : String(error ?? "Unknown AI API error"));
     }
   }
 }
 
-// 导出一个单例，方便在整个应用中使用
+// 导出单例
 export const aiApiService = new AiApiService();
