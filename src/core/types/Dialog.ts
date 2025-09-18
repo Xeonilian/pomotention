@@ -2,6 +2,7 @@
 export enum DialogState {
   NORMAL_CHAT = "normal_chat",
   GATHERING_INFO = "gathering_info",
+  CONFIRMING_PROMPT = "confirming_prompt",
   API_CALLING = "api_calling",
 }
 

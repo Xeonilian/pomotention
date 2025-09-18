@@ -5,7 +5,6 @@
         <div v-for="(message, index) in messages" :key="index" :class="['message', message.role]">
           <div class="message-content">
             <div class="message-text" v-html="formatMessage(message.content)"></div>
-            <div class="message-time">{{ formatTime(message.timestamp) }}</div>
           </div>
         </div>
       </div>
@@ -33,7 +32,6 @@ import { ref, nextTick, onMounted } from "vue";
 import { NInput } from "naive-ui";
 import { useAiChat } from "@/composables/useAiChat";
 import { formatMessage } from "@/core/utils/formatMessage";
-import { formatTime } from "@/core/utils/formatTime";
 
 const messagesContainer = ref<HTMLElement>();
 const inputRef = ref();
@@ -93,14 +91,15 @@ onMounted(async () => {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 6px;
   width: 100%;
   margin-top: 20px;
 }
 
 .message {
   display: flex;
-  gap: 2px;
+  gap: 6px;
+  padding-right: 4px;
   max-width: 100%;
 }
 
@@ -118,13 +117,9 @@ onMounted(async () => {
 
 .message-text {
   padding: 0px 0px;
-  border-radius: 12px;
+  border-radius: 6px;
   word-wrap: break-word;
   line-height: 1.4;
-}
-
-.message.assistant .message-text {
-  border-bottom-right-radius: 6px;
 }
 
 .message.user .message-text {
@@ -163,23 +158,28 @@ onMounted(async () => {
 }
 
 .chat-input {
-  flex: 1;
-  min-width: 0; /* 防止 flex 子项撑破父容器 */
-  max-width: 100%;
+  /* 去掉 hover 时的红色边框 */
+  --n-border-hover: 1px solid rgb(224, 224, 230) !important;
+
+  /* 去掉 focus 时的红色边框 */
+  --n-border-focus: 1px solid rgb(224, 224, 230) !important;
+
+  /* 去掉 focus 时的灰色阴影框 */
+  --n-box-shadow-focus: none !important;
+
+  /* 如果还有警告和错误状态的样式，也一并去掉 */
+  --n-border-hover-warning: 1px solid rgb(224, 224, 230) !important;
+  --n-border-focus-warning: 1px solid rgb(224, 224, 230) !important;
+  --n-box-shadow-focus-warning: none !important;
+
+  --n-border-hover-error: 1px solid rgb(224, 224, 230) !important;
+  --n-border-focus-error: 1px solid rgb(224, 224, 230) !important;
+  --n-box-shadow-focus-error: none !important;
 }
 
+.chat-input:deep(.n-input-wrapper) {
+  padding-left: 6px;
+  padding-right: 6px;
+}
 /* 滚动条样式*/
-.chat-messages::-webkit-scrollbar {
-  width: 4px;
-}
-.chat-messages::-webkit-scrollbar-track {
-  background: transparent;
-}
-.chat-messages::-webkit-scrollbar-thumb {
-  background: var(--color-border);
-  border-radius: 2px;
-}
-.chat-messages::-webkit-scrollbar-thumb:hover {
-  background: var(--color-text-secondary);
-}
 </style>

@@ -46,9 +46,9 @@ describe("AI 对话服务测试", () => {
       state: DialogState.GATHERING_INFO,
       gatheredInfo: {
         goal: "学习Vue3框架",
-        timeline: "2个月",
-        experience: "有基础的JavaScript经验",
-        resources: "有时间，想要实战项目",
+        criteria: "2个月",
+        progress: "有基础的JavaScript经验",
+        constraints: "有时间，想要实战项目",
       },
       currentStep: 4,
     };
@@ -89,7 +89,8 @@ describe("AI 对话服务测试", () => {
       console.log(`❓ 问题 ${index + 1}: ${question}`);
 
       // 模拟用户回答 - 添加类型断言
-      (context.gatheredInfo as any)[guideQuestions[index].key] = answer;
+      const questionKey = guideQuestions[index].key;
+      context.gatheredInfo[questionKey] = answer;
       context.currentStep++;
       console.log(`💬 回答: ${answer}`);
     });

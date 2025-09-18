@@ -26,9 +26,9 @@ export const buildTaskPrompt = (context: TaskPlanningContext): string => {
   return `请帮我制定一个详细的任务执行计划：
 
 项目目标：${gatheredInfo.goal || "未指定"}
-完成标准：${gatheredInfo.criteria || "未指定"}  // 修复：原为 timeline
-当前进展：${gatheredInfo.progress || "未指定"}  // 修复：原为 experience
-限制条件：${gatheredInfo.constraints || "未指定"}  // 修复：原为 resources
+完成标准：${gatheredInfo.criteria || "未指定"}  
+当前进展：${gatheredInfo.progress || "未指定"}
+限制条件：${gatheredInfo.constraints || "未指定"}  
 
 请基于WOOP和SMART原理制定今日计划：
 

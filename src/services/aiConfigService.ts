@@ -17,7 +17,7 @@ export function useAiConfig() {
   const getSystemPrompt = () => {
     const ai = settings.value.ai;
     const prompt = ai?.systemPrompt;
-    return prompt;
+    return prompt ?? "";
   };
   const getModelPrompt = () => getActiveProfile()?.modelPrompt ?? "";
   const getModel = () => getActiveProfile()?.model;

@@ -78,11 +78,13 @@ const defaultSettings: GlobalSettings = {
     profiles: {
       kimik2: {
         id: 1,
-        name: "默认(月之暗面 8k)",
+        name: "月之暗面",
         provider: "moonshot",
         model: "moonshot-v1-8k",
+        baseURL: "https://api.moonshot.cn/v1",
         timeoutMs: 30000,
         temperature: 0.7,
+        apiKey: "sk-xKpgU3UGba3JTYW5uMw0py1KcmlCByEdM5ax4Ngsc72CIsgJ",
       },
       // 你可以再加一个示例
       // openai: {

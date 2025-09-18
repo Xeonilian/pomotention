@@ -6,8 +6,9 @@ export interface AiProfile {
   model: string;
   endpoint?: string; // 自定义/私有部署时用
   apiKey?: string; // 如在前端不存储，留空
+  baseURL?: string;
   timeoutMs?: number;
   temperature?: number;
-  // 可按需扩展：maxTokens/topP/frequencyPenalty/presencePenalty/...
   modelPrompt?: string;
+  // 可按需扩展：maxTokens/topP/frequencyPenalty/presencePenalty/...
 }
