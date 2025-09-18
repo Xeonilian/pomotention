@@ -1,3 +1,4 @@
+// core/types/Dialog.ts
 export enum DialogState {
   NORMAL_CHAT = "normal_chat",
   GATHERING_INFO = "gathering_info",

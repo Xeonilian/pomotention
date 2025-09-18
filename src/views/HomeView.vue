@@ -300,7 +300,7 @@ const MonthPlanner = defineAsyncComponent(() => import("@/components/MonthPlanne
 const TaskTracker = defineAsyncComponent(() => import("@/components/TaskTracker/TaskTracker.vue"));
 const ActivitySheet = defineAsyncComponent(() => import("@/components/ActivitySheet/ActivitySheet.vue"));
 
-const AIChatDialog = defineAsyncComponent(() => import("@/components/AIChat/AiChatDialog.vue"));
+const AIChatDialog = defineAsyncComponent(() => import("@/components/AiChat/AiChatDialog.vue"));
 // ======================== 响应式状态与初始化 ========================
 
 // -- 基础UI状态
