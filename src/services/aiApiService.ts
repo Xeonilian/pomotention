@@ -8,7 +8,7 @@ interface RustChatOutput {
   content: string;
 }
 
-class aiApiService {
+class AiApiService {
   private config: AiConfig;
 
   constructor() {
@@ -74,4 +74,4 @@ class aiApiService {
 }
 
 // 导出一个单例，方便在整个应用中使用
-export const aiService = new aiApiService();
+export const aiApiService = new AiApiService();

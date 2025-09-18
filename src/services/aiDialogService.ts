@@ -44,3 +44,16 @@ export const buildTaskPrompt = (context: TaskPlanningContext): string => {
 
 请确保计划具体可执行，适合导入到时间管理系统中。`;
 };
+
+// 兜底对话
+export const getFallbackReply = (input: string): string => {
+  if (input.includes("你好") || input.toLowerCase().includes("hello")) {
+    return "喵喵喵~";
+  } else if (input.includes("时间") || input.includes("几点")) {
+    return `现在是 ${new Date().toLocaleTimeString()}，希望你的时间管理很顺利！`;
+  } else if (input.includes("番茄") || input.toLowerCase().includes("pomodoro")) {
+    return "番茄工作法是一个很好的时间管理技巧！建议你专注工作25分钟，然后休息5分钟。";
+  } else {
+    return "喵喵喵~";
+  }
+};
