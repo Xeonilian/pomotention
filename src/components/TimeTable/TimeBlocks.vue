@@ -654,8 +654,7 @@ watch(
   position: absolute;
   width: 15px;
   height: 15px;
-  background-color: var(--color-text-secondary);
-  color: var(--color-background);
+  color: var(--color-text-secondary);
   font-size: 12px;
   font-weight: bold;
   margin: 2px;
@@ -669,6 +668,12 @@ watch(
 }
 
 /* 可按 priority 分不同色 */
+.priority-0 {
+  font-weight: 300;
+  color: var(--color-text-primary);
+  background-color: var(--color-background-light);
+}
+
 .priority-1 {
   background-color: #ef53505c; /* 半透明浅底 */
   color: #ef5350; /* 同色文字 */
