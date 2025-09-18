@@ -8,32 +8,27 @@ export const guideQuestions: GuideQuestion[] = [
   { key: "criteria", question: "什么情况下算作项目完成？有哪些具体的成功标准？" },
   { key: "progress", question: "目前项目进展如何？已经完成了哪些部分？" },
   { key: "constraints", question: "有什么限制条件吗？比如时间、资源、技术限制等。" },
+  // 添加更多如果需要
 ];
 
 export const shouldStartTaskPlanning = (input: string): boolean => {
   const triggers = ["规划", "计划", "拆解", "任务", "项目", "制定", "安排", "管理", "分解"];
-
-  const lowerInput = input.toLowerCase();
-  return triggers.some((trigger) => lowerInput.includes(trigger));
+  return triggers.some((trigger) => input.toLowerCase().includes(trigger));
 };
 
 export function getNextQuestion(context: TaskPlanningContext): string | null {
-  if (context.currentStep >= guideQuestions.length) {
-    return null;
-  }
-
+  if (context.currentStep >= guideQuestions.length) return null;
   return guideQuestions[context.currentStep].question;
 }
 
 export const buildTaskPrompt = (context: TaskPlanningContext): string => {
   const { gatheredInfo } = context;
-
   return `请帮我制定一个详细的任务执行计划：
 
 项目目标：${gatheredInfo.goal || "未指定"}
-完成标准：${gatheredInfo.timeline || "未指定"}
-当前进展：${gatheredInfo.experience || "未指定"}
-限制条件：${gatheredInfo.resources || "未指定"}
+完成标准：${gatheredInfo.criteria || "未指定"}  // 修复：原为 timeline
+当前进展：${gatheredInfo.progress || "未指定"}  // 修复：原为 experience
+限制条件：${gatheredInfo.constraints || "未指定"}  // 修复：原为 resources
 
 请基于WOOP和SMART原理制定今日计划：
 
@@ -46,7 +41,6 @@ export const buildTaskPrompt = (context: TaskPlanningContext): string => {
 3. 时间估算（每个任务的预计用时，单位个番茄=25min，上限20个）
 4. 优先级排序
 5. 具体行动步骤，包括if-then执行意图
-
 
 请确保计划具体可执行，适合导入到时间管理系统中。`;
 };

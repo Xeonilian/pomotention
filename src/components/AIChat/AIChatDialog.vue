@@ -32,8 +32,8 @@
 <script setup lang="ts">
 import { ref, nextTick, onMounted } from "vue";
 import { NInput } from "naive-ui";
-import { aiService } from "@/services/aiService";
-import { AIMessage } from "@/core/types/AI";
+import { aiService } from "@/services/aiApiService";
+import { AiMessage } from "@/core/types/Ai";
 import { shouldStartTaskPlanning, getNextQuestion, buildTaskPrompt, guideQuestions } from "@/services/aiDialogService";
 import { TaskPlanningContext, DialogState } from "@/core/types/Dialog";
 
@@ -141,13 +141,13 @@ const getSystemPrompt = (): string => {
 // 调用真实的AI API
 const callAIAPI = async (userInput: string): Promise<string> => {
   // 1. 获取历史消息 (不包含当前用户输入)
-  const history: AIMessage[] = messages.value.map((msg) => ({
+  const history: AiMessage[] = messages.value.map((msg) => ({
     role: msg.role,
     content: msg.content,
   }));
 
   // 2. 构建要发送给 API 的完整消息列表
-  const messagesToSend: AIMessage[] = [
+  const messagesToSend: AiMessage[] = [
     // a. 添加系统提示词
     { role: "system", content: getSystemPrompt() },
     // b. 添加所有历史消息
@@ -238,7 +238,7 @@ const handleTaskPlanningFlow = async (input: string): Promise<string> => {
     context.state = DialogState.API_CALLING;
 
     const taskPrompt = buildTaskPrompt(context);
-    const finalMessages: AIMessage[] = [
+    const finalMessages: AiMessage[] = [
       { role: "system", content: "你是一个专业的项目管理和任务拆解专家。请提供具体可执行的任务计划。" },
       { role: "user", content: taskPrompt },
     ];
