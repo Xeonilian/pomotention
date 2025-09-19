@@ -75,6 +75,7 @@ onMounted(async () => {
   width: 100%;
   overflow-y: auto;
   margin: auto;
+  min-width: 300px;
 }
 
 .ai-chat-content {
@@ -93,7 +94,7 @@ onMounted(async () => {
   flex-direction: column;
   gap: 6px;
   width: 100%;
-  margin-top: 20px;
+  margin-bottom: 5px;
 }
 
 .message {
@@ -103,16 +104,13 @@ onMounted(async () => {
   max-width: 100%;
 }
 
-.message.user {
-  flex-direction: row-reverse;
-}
-
 .message-content {
   flex: 1;
+  display: flex;
 }
 
 .message.user .message-content {
-  text-align: right;
+  justify-content: flex-end;
 }
 
 .message-text {
@@ -123,26 +121,20 @@ onMounted(async () => {
 }
 
 .message.user .message-text {
-  background: var(--color-background-light);
+  width: 66%;
+  background: var(--color-blue-light-transparent);
   color: var(--color-text);
-  padding: 2px 8px;
-}
-
-.message-time {
-  font-size: 11px;
-  color: var(--color-text-secondary);
-  opacity: 0.7;
-}
-
-.message.user .message-time {
-  padding-right: 6px;
+  padding: 1px 4px;
+  margin-left: 0 auto;
+  padding-left: 8px;
+  padding-right: 8px;
 }
 
 /* 输入区固定在底部且不超父容器宽度 */
 .chat-input-area {
   position: sticky;
   bottom: 0;
-  border-top: 1px solid var(--color-border);
+  border: 1px solid var(--color-border);
   background: var(--color-background);
   width: 100%;
   box-sizing: border-box;
@@ -175,11 +167,33 @@ onMounted(async () => {
   --n-border-hover-error: 1px solid rgb(224, 224, 230) !important;
   --n-border-focus-error: 1px solid rgb(224, 224, 230) !important;
   --n-box-shadow-focus-error: none !important;
+  height: 60px;
 }
 
 .chat-input:deep(.n-input-wrapper) {
   padding-left: 6px;
   padding-right: 6px;
 }
-/* 滚动条样式*/
+
+:deep(.message-content pre) {
+  background-color: var(--color-background-light-light);
+  padding: 8px;
+  border-radius: 8px;
+  margin-right: 2px;
+  font-weight: 500;
+}
+
+:deep(.message-content pre code) {
+  background-color: inherit;
+  font-family: "Consolas", "Monaco", "Courier New", monospace;
+  font-weight: 500;
+}
+
+:deep(.message-content code) {
+  background-color: var(--color-background-light-light);
+  border-radius: 2px;
+  padding: 0.5px;
+  font-family: "Consolas", "Monaco", "Courier New", monospace;
+  font-weight: 600;
+}
 </style>
