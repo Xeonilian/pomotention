@@ -67,15 +67,13 @@ onMounted(async () => {
 
 <style scoped>
 .ai-chat-dialog {
-  background: var(--color-background);
-  z-index: 1000;
   display: flex;
   flex-direction: column;
+  background: var(--color-background);
+  overflow-y: auto;
   height: 100%;
   width: 100%;
-  overflow-y: auto;
-  margin: auto;
-  min-width: 300px;
+  min-width: 400px;
 }
 
 .ai-chat-content {
@@ -90,9 +88,10 @@ onMounted(async () => {
 .chat-messages {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 2px;
   width: 100%;
   margin-bottom: 5px;
 }
@@ -100,7 +99,7 @@ onMounted(async () => {
 .message {
   display: flex;
   gap: 6px;
-  padding-right: 4px;
+  width: 100%;
   max-width: 100%;
 }
 
@@ -117,17 +116,39 @@ onMounted(async () => {
   padding: 0px 0px;
   border-radius: 6px;
   word-wrap: break-word;
-  line-height: 1.4;
+  line-height: 1.6;
 }
 
 .message.user .message-text {
   width: 66%;
   background: var(--color-blue-light-transparent);
   color: var(--color-text);
-  padding: 1px 4px;
-  margin-left: 0 auto;
-  padding-left: 8px;
-  padding-right: 8px;
+}
+
+/* 内部markdown格式 */
+/* 整体的大框 */
+:deep(.message-content pre) {
+  width: 90%;
+  background-color: black;
+  border-radius: 8px;
+  font-weight: 500;
+  padding: 2px;
+}
+/* 大框内部 */
+:deep(.message-content pre code) {
+  background-color: inherit;
+  font-family: "Microsoft YaHei" "Consolas", "Monaco", "Courier New", monospace;
+  font-weight: 500;
+  color: white;
+}
+
+/* inline代码 */
+:deep(.message-content code) {
+  background-color: var(--color-background-light-light);
+  border-radius: 2px;
+  padding: 0.5px;
+  font-family: "Microsoft YaHei" "Consolas", "Monaco", "Courier New", monospace;
+  font-weight: 600;
 }
 
 /* 输入区固定在底部且不超父容器宽度 */
@@ -154,7 +175,7 @@ onMounted(async () => {
   --n-border-hover: 1px solid rgb(224, 224, 230) !important;
 
   /* 去掉 focus 时的红色边框 */
-  --n-border-focus: 1px solid rgb(224, 224, 230) !important;
+  --n-border-focus: 1px solid var(--color-blue) !important;
 
   /* 去掉 focus 时的灰色阴影框 */
   --n-box-shadow-focus: none !important;
@@ -173,27 +194,5 @@ onMounted(async () => {
 .chat-input:deep(.n-input-wrapper) {
   padding-left: 6px;
   padding-right: 6px;
-}
-
-:deep(.message-content pre) {
-  background-color: var(--color-background-light-light);
-  padding: 8px;
-  border-radius: 8px;
-  margin-right: 2px;
-  font-weight: 500;
-}
-
-:deep(.message-content pre code) {
-  background-color: inherit;
-  font-family: "Consolas", "Monaco", "Courier New", monospace;
-  font-weight: 500;
-}
-
-:deep(.message-content code) {
-  background-color: var(--color-background-light-light);
-  border-radius: 2px;
-  padding: 0.5px;
-  font-family: "Consolas", "Monaco", "Courier New", monospace;
-  font-weight: 600;
 }
 </style>
