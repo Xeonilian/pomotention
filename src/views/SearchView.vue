@@ -1,10 +1,6 @@
 <template>
   <div class="search-container">
-    <n-input
-      placeholder="请输入搜索关键字"
-      v-model:value="searchQuery"
-      @input="performSearch"
-    />
+    <n-input placeholder="请输入搜索关键字" v-model:value="searchQuery" @input="performSearch" />
   </div>
   <div class="search-view">
     <div class="content-container">
@@ -53,24 +49,15 @@
           >
             <div class="card-header">
               <div class="title">{{ item.activityTitle }}</div>
-              <n-button
-                text
-                size="small"
-                @click="toggleExpand('todo-' + item.id)"
-              >
+              <n-button text size="small" @click="toggleExpand('todo-' + item.id)">
                 {{ isExpanded("todo-" + item.id) ? "-" : "+" }}
               </n-button>
             </div>
 
-            <p class="info due blue">
-              截止日期: {{ formatDate(item.dueDate) }}
-            </p>
+            <p class="info due blue">截止日期: {{ formatDate(item.dueDate) }}</p>
 
             <div v-for="task in getTasksBySourceId(item.id)" :key="task.id">
-              <div
-                class="task-content"
-                v-html="convertMarkdown(task.description)"
-              ></div>
+              <div class="task-content" v-html="convertMarkdown(task.description)"></div>
             </div>
           </n-card>
 
@@ -89,30 +76,19 @@
           >
             <div class="card-header">
               <div class="title">{{ item.activityTitle }}</div>
-              <n-button
-                text
-                size="small"
-                @click="toggleExpand('sch-' + item.id)"
-              >
+              <n-button text size="small" @click="toggleExpand('sch-' + item.id)">
                 {{ isExpanded("sch-" + item.id) ? "-" : "+" }}
               </n-button>
             </div>
 
             <p class="info due red">
               截止日期:
-              {{
-                item.activityDueRange?.[0]
-                  ? formatDate(item.activityDueRange[0])
-                  : ""
-              }}
+              {{ item.activityDueRange?.[0] ? formatDate(item.activityDueRange[0]) : "" }}
             </p>
             <p class="info red">位置: {{ item.location || "无" }}</p>
 
             <div v-for="task in getTasksBySourceId(item.id)" :key="task.id">
-              <div
-                class="task-content"
-                v-html="convertMarkdown(task.description)"
-              ></div>
+              <div class="task-content" v-html="convertMarkdown(task.description)"></div>
             </div>
           </n-card>
         </div>
@@ -122,14 +98,7 @@
 </template>
 
 <script lang="ts">
-import {
-  defineComponent,
-  ref,
-  computed,
-  onBeforeUpdate,
-  onUpdated,
-  nextTick,
-} from "vue"; // 确保导入所有需要的钩子
+import { defineComponent, ref, computed, onBeforeUpdate, onUpdated, nextTick } from "vue"; // 确保导入所有需要的钩子
 import { STORAGE_KEYS } from "@/core/constants";
 import { marked } from "marked";
 import type { Todo } from "@/core/types/Todo";
@@ -160,9 +129,7 @@ export default defineComponent({
     const setCardRef = (el: any) => {
       if (el) {
         // NaiveUI 组件实例需要通过 el.$el 访问真实 DOM
-        const domElement = el.$el
-          ? (el.$el as HTMLElement)
-          : (el as HTMLElement);
+        const domElement = el.$el ? (el.$el as HTMLElement) : (el as HTMLElement);
         const key = domElement.dataset.key;
         if (key) {
           // 确保你设置到了 Map 中
@@ -188,11 +155,8 @@ export default defineComponent({
 
     const loadData = () => {
       todos.value = JSON.parse(localStorage.getItem(STORAGE_KEYS.TODO) || "[]");
-      schedules.value = JSON.parse(
-        localStorage.getItem(STORAGE_KEYS.SCHEDULE) || "[]"
-      );
-      tasks.value =
-        JSON.parse(localStorage.getItem(STORAGE_KEYS.TASK) || "[]") || [];
+      schedules.value = JSON.parse(localStorage.getItem(STORAGE_KEYS.SCHEDULE) || "[]");
+      tasks.value = JSON.parse(localStorage.getItem(STORAGE_KEYS.TASK) || "[]") || [];
     };
 
     const formatDate = (timestamp?: number) => {
@@ -219,9 +183,7 @@ export default defineComponent({
       if (!searchQuery.value) return [];
       return todos.value.filter((item) => {
         const matchesTitle = matchesQuery(item.activityTitle);
-        const matchesTaskDescription = getTasksBySourceId(item.id).some(
-          (task) => matchesQuery(task.description)
-        );
+        const matchesTaskDescription = getTasksBySourceId(item.id).some((task) => matchesQuery(task.description));
         return matchesTitle || matchesTaskDescription;
       });
     });
@@ -230,9 +192,7 @@ export default defineComponent({
       if (!searchQuery.value) return [];
       return schedules.value.filter((item) => {
         const matchesTitle = matchesQuery(item.activityTitle);
-        const matchesTaskDescription = getTasksBySourceId(item.id).some(
-          (task) => matchesQuery(task.description)
-        );
+        const matchesTaskDescription = getTasksBySourceId(item.id).some((task) => matchesQuery(task.description));
         return matchesTitle || matchesTaskDescription;
       });
     });
@@ -247,10 +207,7 @@ export default defineComponent({
 
     const stickyOffset = 110;
 
-    const scrollIntoViewWithOffset = (
-      el: HTMLElement,
-      offset = stickyOffset
-    ) => {
+    const scrollIntoViewWithOffset = (el: HTMLElement, offset = stickyOffset) => {
       // 获取我们刚刚用 ref 绑定的滚动容器
       const container = scrollContainer.value;
 
@@ -283,18 +240,14 @@ export default defineComponent({
       } else {
         // 如果这里依然找不到，说明 ref 收集和 focus 调用之间存在时序问题
         // 使用 nextTick 尝试在下一个 DOM 更新周期再次查找
-        console.warn(
-          `Element with key '${key}' not found immediately. Retrying after next tick...`
-        );
+        console.warn(`Element with key '${key}' not found immediately. Retrying after next tick...`);
         nextTick(() => {
           const elAfterTick = cardElements.get(key);
           if (elAfterTick) {
             console.log("Element found after next tick:", elAfterTick);
             scrollIntoViewWithOffset(elAfterTick);
           } else {
-            console.error(
-              `Element with key '${key}' still not found after next tick. Ref collection might be failing.`
-            );
+            console.error(`Element with key '${key}' still not found after next tick. Ref collection might be failing.`);
           }
         });
       }
@@ -320,17 +273,13 @@ export default defineComponent({
 </script>
 
 <style scoped>
-/* 允许页面自然增长并整体滚动 */
 .search-view {
-  height: 100vh; /* 直接撑满整个视口高度 */
+  height: calc(100% - 60px);
   max-width: 900px;
   margin: auto;
-
-  /* --- 关键修改 --- */
-  display: flex; /* 改为 flex 布局 */
-  flex-direction: column; /* 垂直排列 */
-  overflow: hidden; /* 禁止它自己滚动！ */
-  /* background 和其他属性保持不变 */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   background: var(--color-background);
 }
 
@@ -342,6 +291,7 @@ export default defineComponent({
   z-index: 10;
   margin: auto;
   padding: 10px;
+  height: 30px;
 }
 
 /* 内容流式布局，让页面自然滚动 */
@@ -368,12 +318,10 @@ export default defineComponent({
 
 /* 左侧标题列表（支持 sticky，独立滚动） */
 .left-title-list {
-  top: 0; /* 或者 10px，让它粘在顶部 */
+  top: 0;
   position: sticky;
-
-  /* --- 关键修改 --- */
-  height: 100%; /* 撑满 Grid 分配给它的行高 */
-  overflow-y: auto; /* 内容超出时，自己出现滚动条 */
+  height: 100%;
+  overflow-y: auto;
 
   /* 其他属性保持不变 */
   display: flex;
@@ -411,11 +359,8 @@ export default defineComponent({
 
 /* 右侧卡片列表流式排列 */
 .right-card-list {
-  /* --- 关键修改 --- */
-  height: 100%; /* 撑满 Grid 分配给它的行高 */
-  overflow-y: auto; /* 内容超出时，自己出现滚动条 */
-
-  /* 其他属性保持不变 */
+  height: 100%;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -449,6 +394,8 @@ export default defineComponent({
 
 /* 卡片头部吸顶，滚动时按钮和标题可见 */
 .card-header {
+  top: 0;
+  position: sticky;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -460,10 +407,11 @@ export default defineComponent({
 
 /* 标题（卡片内允许换行） */
 .title {
+  position: sticky;
   font-weight: bold;
   margin: 0 !important;
   line-height: 1.2;
-  padding: 12px 0px;
+  padding: 4px 0px;
 }
 
 .info.due.blue {
