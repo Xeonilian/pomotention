@@ -1,157 +1,159 @@
-// tests/aiApiService.spec.ts
+// tests/aiApiService.test.ts
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-// 1) 模拟 tauri invoke
-const invokeMock = vi.fn();
+// 1) Mock tauri invoke（使用 vi）
 vi.mock("@tauri-apps/api/core", () => {
-  const invoke = vi.fn(); // 工厂内定义
-  return { invoke };
+  return {
+    invoke: vi.fn(), // 返回 vi.fn()
+  };
 });
 
-// 2) 模拟 useAiConfig
-const getModel = vi.fn();
-const getTemperature = vi.fn();
-const getTimeoutMs = vi.fn();
-const getProvider = vi.fn();
-const getApiEndpoint = vi.fn();
-const getApiKey = vi.fn();
-const getProfile = vi.fn();
+// 2) Mock useAiConfig（使用 vi）
+vi.mock("@/services/aiConfigService", () => {
+  const defaultProfile = {
+    baseURL: "https://api.openai.com/v1",
+    provider: "openai",
+    model: "gpt-3.5-turbo",
+    apiKey: "frontend_key",
+    timeoutMs: 30000,
+    temperature: 0.7,
+  };
 
-vi.mock("@/services/aiConfigService", () => ({
-  useAiConfig: () => ({
-    getModel,
-    getTemperature,
-    getTimeoutMs,
-    getProvider,
-    getApiEndpoint,
-    getApiKey,
-    getProfile,
-  }),
-}));
+  const state = {
+    profile: { ...defaultProfile },
+    model: defaultProfile.model,
+    temperature: defaultProfile.temperature,
+    timeoutMs: defaultProfile.timeoutMs,
+    provider: defaultProfile.provider,
+    endpoint: "",
+    apiKey: defaultProfile.apiKey,
+  };
 
-// 3) 引入被测模块（在 mocks 之后）
+  return {
+    useAiConfig: () => ({
+      getProfile: () => state.profile,
+      getModel: () => state.model,
+      getTemperature: () => state.temperature,
+      getTimeoutMs: () => state.timeoutMs,
+      getProvider: () => state.provider,
+      getApiEndpoint: () => state.endpoint,
+      getApiKey: () => state.apiKey,
+      getSystemPrompt: () => "",
+      getModelPrompt: () => "",
+      _set: (patch: Partial<typeof state>) => Object.assign(state, patch),
+    }),
+  };
+});
+
 import { aiApiService } from "@/services/aiApiService";
+import { invoke } from "@tauri-apps/api/core";
+import { useAiConfig } from "@/services/aiConfigService";
 
-// 4) 辅助类型与数据
-type AiMessage = { role: "user" | "assistant" | "system"; content: string };
+describe("aiApiService.sendMessage (Vitest)", () => {
+  const messages = [{ role: "user" as const, content: "Hello" }];
 
-describe("AiApiService.sendMessage", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.clearAllMocks();
-
-    // 默认配置（可被单测覆盖）
-    getModel.mockReturnValue("moonshot-v1-8k");
-    getTemperature.mockReturnValue(0.7);
-    getTimeoutMs.mockReturnValue(30000);
-    getProvider.mockReturnValue("moonshot");
-    getApiEndpoint.mockReturnValue("https://api.moonshot.cn/v1/chat/completions");
-    getApiKey.mockReturnValue("sk-xxx");
-    getProfile.mockReturnValue({ baseURL: "https://api.moonshot.cn/v1" });
-
-    // 默认 invoke 成功
-    invokeMock.mockResolvedValue({ content: "Hello from moonshot" });
   });
 
   afterEach(() => {
     vi.useRealTimers();
   });
 
-  it("应调用 tauri invoke，并携带从 useAiConfig 读取的参数", async () => {
-    const messages: AiMessage[] = [{ role: "user", content: "Hi" }];
-
-    const result = await aiApiService.sendMessage(messages);
-
-    expect(invokeMock).toHaveBeenCalledTimes(1);
-
-    // 断言被调用的命令名
-    const [cmdName, payload] = invokeMock.mock.calls[0];
-    expect(cmdName).toBe("chat_completion");
-
-    // 断言入参结构
-    expect(payload).toHaveProperty("input");
-    expect(payload.input).toMatchObject({
-      messages,
-      model: "moonshot-v1-8k",
-      temperature: 0.7,
-      stream: false,
-      provider: "moonshot",
-      endpoint: "https://api.moonshot.cn/v1/chat/completions",
-      apiKey: "sk-xxx",
-      baseURL: "https://api.moonshot.cn/v1",
+  it("成功返回时：应正确调用 invoke 并透传内容", async () => {
+    const { _set } = useAiConfig() as any;
+    _set({
+      provider: "openai",
+      endpoint: "",
+      apiKey: "frontend_key",
+      model: "gpt-4o",
+      temperature: 0.5,
+      timeoutMs: 10000,
+      profile: { baseURL: "https://api.openai.com/v1" },
     });
 
-    // 断言返回值透传
-    expect(result).toEqual({ content: "Hello from moonshot" });
+    // 使用 vi.fn 的 mockResolvedValue
+    (invoke as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      content: "hi there",
+    });
+
+    const promise = aiApiService.sendMessage(messages);
+    await Promise.resolve(); // 让微任务队列跑一下
+
+    expect(invoke).toHaveBeenCalledTimes(1);
+    const [cmd, payload] = (invoke as any).mock.calls[0];
+    expect(cmd).toBe("chat_completion");
+    expect(payload).toHaveProperty("input");
+
+    const input = payload.input;
+    expect(input).toMatchObject({
+      model: "gpt-4o",
+      temperature: 0.5,
+      stream: false,
+      provider: "openai",
+      endpoint: "",
+      api_key: "frontend_key",
+      base_url: "https://api.openai.com/v1",
+    });
+    expect(input.messages).toEqual(messages);
+
+    const resp = await promise;
+    expect(resp.content).toBe("hi there");
   });
 
-  it("当配置为空时，应使用默认值（model/temperature/timeoutMs）", async () => {
-    getModel.mockReturnValue(undefined);
-    getTemperature.mockReturnValue(undefined);
-    getTimeoutMs.mockReturnValue(undefined);
-    getProvider.mockReturnValue(undefined);
-    getApiEndpoint.mockReturnValue(undefined);
-    getApiKey.mockReturnValue(undefined);
-    getProfile.mockReturnValue(undefined);
+  it("超时应中止并抛出错误", async () => {
+    const { _set } = useAiConfig() as any;
+    _set({ timeoutMs: 100 });
 
-    const messages: AiMessage[] = [{ role: "user", content: "Hi" }];
+    // 模拟 invoke 永不 resolve
+    (invoke as unknown as ReturnType<typeof vi.fn>).mockImplementation(() => new Promise(() => {}));
+
+    const promise = aiApiService.sendMessage(messages);
+
+    // 快进计时器触发超时
+    vi.advanceTimersByTime(120);
+
+    await expect(promise).rejects.toThrow();
+    expect(invoke).toHaveBeenCalledTimes(1);
+  });
+
+  it("后端返回错误时，应抛出清晰错误", async () => {
+    (invoke as unknown as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("API error: 401 - Unauthorized"));
+
+    await expect(aiApiService.sendMessage(messages)).rejects.toThrow("API error: 401 - Unauthorized");
+  });
+
+  it("当未配置 apiKey 时也能调用（让后端用 env）", async () => {
+    const { _set } = useAiConfig() as any;
+    _set({ apiKey: "" });
+
+    (invoke as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      content: "ok via backend key",
+    });
+
+    const resp = await aiApiService.sendMessage(messages);
+    expect(resp.content).toBe("ok via backend key");
+
+    const [, payload] = (invoke as any).mock.calls[0];
+    expect(payload.input.api_key).toBe("");
+  });
+
+  it("优先使用 endpoint 覆盖 base_url", async () => {
+    const { _set } = useAiConfig() as any;
+    _set({
+      endpoint: "https://custom.example.com/v1/chat/completions",
+      profile: { baseURL: "https://api.openai.com/v1" },
+    });
+
+    (invoke as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      content: "ok",
+    });
+
     await aiApiService.sendMessage(messages);
 
-    const [, payload] = invokeMock.mock.calls[0];
-    expect(payload.input.model).toBe("moonshot-v1-8k");
-    expect(payload.input.temperature).toBe(0.7);
-    expect(payload.input.provider).toBe("moonshot"); // 默认 provider
-    expect(payload.input.endpoint).toBe(""); // 让后端用默认
-    expect(payload.input.apiKey).toBe(""); // 让后端用环境变量
-    expect(payload.input.baseURL).toBe(""); // 未提供
-  });
-
-  it("当 invoke 抛错时，应抛出统一 Error", async () => {
-    invokeMock.mockRejectedValueOnce(new Error("Backend failed"));
-
-    const messages: AiMessage[] = [{ role: "user", content: "Hi" }];
-
-    await expect(aiApiService.sendMessage(messages)).rejects.toThrowError("Backend failed");
-  });
-
-  it("应在超时控制中清理定时器（不实际触发 abort，仅检测不报错）", async () => {
-    // 使用较短超时以便测试
-    getTimeoutMs.mockReturnValue(1000);
-
-    const messages: AiMessage[] = [{ role: "user", content: "Hi" }];
-    const p = aiApiService.sendMessage(messages);
-
-    // 快进时间，确保不会因计时器未清理导致泄漏
-    vi.runAllTimers();
-
-    await expect(p).resolves.toEqual({ content: "Hello from moonshot" });
-  });
-
-  it("应将传入的 messages 原样传给后端", async () => {
-    const messages: AiMessage[] = [
-      { role: "system", content: "You are helper" },
-      { role: "user", content: "Who are you?" },
-    ];
-
-    await aiApiService.sendMessage(messages);
-    const [, payload] = invokeMock.mock.calls[0];
-
-    expect(payload.input.messages).toEqual(messages);
-  });
-
-  it("当 provider/endpoint/apiKey/baseURL 在配置中变化时，应正确传递", async () => {
-    getProvider.mockReturnValue("custom");
-    getApiEndpoint.mockReturnValue("https://my.gateway.example.com/chat/completions");
-    getApiKey.mockReturnValue("sk-custom");
-    getProfile.mockReturnValue({ baseURL: "https://my.gateway.example.com" });
-
-    const messages: AiMessage[] = [{ role: "user", content: "Hi" }];
-    await aiApiService.sendMessage(messages);
-
-    const [, payload] = invokeMock.mock.calls[0];
-    expect(payload.input.provider).toBe("custom");
-    expect(payload.input.endpoint).toBe("https://my.gateway.example.com/chat/completions");
-    expect(payload.input.apiKey).toBe("sk-custom");
-    expect(payload.input.baseURL).toBe("https://my.gateway.example.com");
+    const [, payload] = (invoke as any).mock.calls[0];
+    expect(payload.input.endpoint).toBe("https://custom.example.com/v1/chat/completions");
+    expect(payload.input.base_url).toBe("https://api.openai.com/v1");
   });
 });

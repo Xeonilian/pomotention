@@ -79,9 +79,9 @@ const defaultSettings: GlobalSettings = {
       kimik2: {
         id: 1,
         name: "月之暗面",
-        provider: "moonshot",
+        provider: "kimi",
         model: "moonshot-v1-8k",
-        baseURL: "https://api.moonshot.cn/v1",
+        endpoint: "https://api.moonshot.cn/v1/chat/completions",
         timeoutMs: 30000,
         temperature: 0.7,
         apiKey: "sk-xKpgU3UGba3JTYW5uMw0py1KcmlCByEdM5ax4Ngsc72CIsgJ",

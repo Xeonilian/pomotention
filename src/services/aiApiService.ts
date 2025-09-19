@@ -9,42 +9,45 @@ interface RustChatOutput {
 
 class AiApiService {
   public async sendMessage(messages: AiMessage[]): Promise<RustChatOutput> {
+    // aiApiService.ts
     const { getModel, getTemperature, getTimeoutMs, getProvider, getApiEndpoint, getApiKey, getProfile } = useAiConfig();
 
     const model = getModel() || "moonshot-v1-8k";
     const temperature = getTemperature() ?? 0.7;
     const timeoutMs = getTimeoutMs() ?? 30000;
-    const provider = getProvider() || "moonshot";
-    const endpoint = getApiEndpoint() || ""; // 可留空，后端用默认
-    const apiKey = getApiKey() || ""; // 如果你把 key 放在后端 state，也可留空
-    const profile = getProfile(); // 若需要 baseURL 等
+    const provider = getProvider() || "kimi";
 
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    // 强化默认 endpoint，避免空字符串引发后端 builder error
+    const endpoint = getApiEndpoint() || "https://api.moonshot.cn/v1/chat/completions";
 
-    try {
-      const response = await invoke<RustChatOutput>("chat_completion", {
-        input: {
-          messages,
-          model,
-          temperature,
-          stream: false,
+    const api_key = getApiKey() || "";
 
-          // 新增
-          provider,
-          endpoint,
-          apiKey: apiKey,
-          baseURL: profile?.baseURL ?? "",
-        },
-      });
+    const base_url = getProfile()?.baseURL ?? "https://api.moonshot.cn/v1";
 
-      clearTimeout(timer);
-      return response;
-    } catch (error) {
-      clearTimeout(timer);
-      console.error("AI API call failed:", error);
-      throw new Error(error instanceof Error ? error.message : String(error ?? "Unknown AI API error"));
-    }
+    // 基本入参有效性检查（防止 role/content 异常）
+    const safeMessages = messages.map((m) => ({
+      role: m.role, // system | user | assistant
+      content: String(m.content ?? ""),
+    }));
+
+    const input = {
+      messages: safeMessages,
+      model,
+      temperature,
+      stream: false,
+      provider,
+      endpoint, // 完整路径，后端请直接用，不要再拼接
+      api_key, // 允许为空，后端从环境变量兜底
+      base_url, // 仅供后端在 endpoint 为空时拼接
+    };
+
+    // 推荐 Promise.race 实现超时
+    const response = await Promise.race([
+      invoke<RustChatOutput>("chat_completion", { input }),
+      new Promise<RustChatOutput>((_, reject) => setTimeout(() => reject(new Error("AI API timeout")), timeoutMs)),
+    ]);
+
+    return response;
   }
 }
 
