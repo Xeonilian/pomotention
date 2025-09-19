@@ -1,6 +1,5 @@
 // aiDialogService.ts
 // 基于本地对话构建日程制定 prompt
-
 import type { TaskPlanningContext, GuideQuestion } from "@/core/types/Dialog";
 
 export const guideQuestions: GuideQuestion[] = [
@@ -24,25 +23,11 @@ export function getNextQuestion(context: TaskPlanningContext): string | null {
 export const buildTaskPrompt = (context: TaskPlanningContext): string => {
   const { gatheredInfo } = context;
   return `请帮我制定一个详细的任务执行计划：
-
 项目目标：${gatheredInfo.goal || "未指定"}
 完成标准：${gatheredInfo.criteria || "未指定"}  
 当前进展：${gatheredInfo.progress || "未指定"}
 限制条件：${gatheredInfo.constraints || "未指定"}  
-
-请基于WOOP和SMART原理制定今日计划：
-
-1. 难度评估：影响范围(S) + 可控性(C) + 他人可感知性(UV)
-   - S1/S2/S3：局部操作/多技能整合/系统性变化
-   - C1/C2：流程清晰/存在未知
-   - UV0/UV1：仅自己知晓/他人可直接感知
-
-2. 任务拆解（列出3-8个主要任务+产出）
-3. 时间估算（每个任务的预计用时，单位个番茄=25min，上限20个）
-4. 优先级排序
-5. 具体行动步骤，包括if-then执行意图
-
-请确保计划具体可执行，适合导入到时间管理系统中。`;
+`;
 };
 
 // 兜底对话

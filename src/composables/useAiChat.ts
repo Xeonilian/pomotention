@@ -97,7 +97,7 @@ export function useAiChat() {
         currentStep: 0,
       };
 
-      return `这是为您生成任务计划所需的完整说明草稿（可在发送前修改）：\n\n${taskPrompt}\n\n请确认无误后点击发送，我将基于这份说明生成详细的任务计划。`;
+      return `这是为您生成任务计划所需的：\n\n${taskPrompt}\n\n我将基于这份说明生成详细的任务计划。`;
     } catch (err) {
       taskPlanningContext.value = {
         state: DialogState.NORMAL_CHAT,
