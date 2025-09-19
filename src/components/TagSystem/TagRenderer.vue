@@ -13,10 +13,7 @@
         color: tag.color,
         backgroundColor: tag.backgroundColor,
         // border: `1px solid ${tag.color}`,
-        boxShadow:
-          props.displayLength === null || props.displayLength === 0
-            ? `1px -1px 0px 0px ${tag.color} inset`
-            : 'none',
+        boxShadow: props.displayLength === null || props.displayLength === 0 ? `3px -2px 0px 0px ${tag.color} inset` : 'none',
       }"
       displayLength="props.displayLength || null"
     >
@@ -53,8 +50,8 @@ const renderedTags = computed<Tag[]>(() => {
         return {
           id: 0,
           name: "",
-          color: "var(--color-text-secondary)",
-          backgroundColor: "var(--color-text-secondary)",
+          color: "var(--color-background-dark)",
+          backgroundColor: "var(--color-background-dark)",
         } as unknown as Tag;
       }
       return tagMap.get(id);
