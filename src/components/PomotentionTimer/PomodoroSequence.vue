@@ -4,28 +4,12 @@
       <span class="status-label">Let's 🍅!</span>
     </div>
 
-    <div
-      class="progress-container"
-      ref="progressContainer"
-      v-show="isRunning"
-    ></div>
+    <div class="progress-container" ref="progressContainer" v-show="isRunning"></div>
 
-    <n-input
-      v-if="!isRunning"
-      v-model:value="sequenceInput"
-      placeholder="输入序列，例如：🍅+05"
-      class="sequence-input"
-      type="textarea"
-    />
+    <n-input v-if="!isRunning" v-model:value="sequenceInput" placeholder="输入序列，例如：🍅+05" class="sequence-input" type="textarea" />
 
     <div class="button-row">
-      <n-button
-        class="action-button"
-        @click="startPomodoroCircle"
-        :disabled="isRunning"
-        tertiary
-        circle
-      >
+      <n-button class="action-button" @click="startPomodoroCircle" :disabled="isRunning" tertiary circle>
         <template #icon>
           <n-icon :component="PlayCircle24Regular" />
         </template>
@@ -49,13 +33,7 @@
         }"
       >
         <template #trigger>
-          <n-badge
-            dot
-            type="default"
-            :offset="[-2, 2]"
-            title="选择白噪音"
-            class="clickable-badge"
-          >
+          <n-badge dot type="default" :offset="[-2, 2]" title="选择白噪音" class="clickable-badge">
             <n-button
               class="action-button"
               @click="handleToggleWhiteNoise"
@@ -64,13 +42,7 @@
               circle
             >
               <template #icon>
-                <n-icon
-                  :component="
-                    isWhiteNoiseEnabled
-                      ? Speaker224Regular
-                      : SpeakerMute24Regular
-                  "
-                />
+                <n-icon :component="isWhiteNoiseEnabled ? Speaker224Regular : SpeakerMute24Regular" />
               </template>
             </n-button>
           </n-badge>
@@ -78,46 +50,20 @@
 
         <!-- Popover 的内容：垂直排列的按钮 -->
         <div class="popover-actions">
-          <n-button
-            secondary
-            circle
-            type="info"
-            size="small"
-            title="雨声"
-            @click="resetWhiteNoise(SoundType.WHITE_NOISE)"
-          >
+          <n-button secondary circle type="info" size="small" title="雨声" @click="resetWhiteNoise(SoundType.WHITE_NOISE)">
             <template #icon>
               <n-icon><WeatherThunderstorm20Regular /></n-icon>
             </template>
           </n-button>
-          <n-button
-            secondary
-            type="info"
-            circle
-            size="small"
-            title="滴答声"
-            @click="resetWhiteNoise(SoundType.WORK_TICK)"
-          >
+          <n-button secondary type="info" circle size="small" title="滴答声" @click="resetWhiteNoise(SoundType.WORK_TICK)">
             <template #icon>
               <n-icon><ClockAlarm24Regular /></n-icon>
             </template>
           </n-button>
         </div>
       </n-popover>
-      <n-button
-        class="action-button"
-        @click="addPomodoro"
-        title="insert 🍅+05"
-        :disabled="isRunning"
-        tertiary
-        circle
-      >
-        🍅
-      </n-button>
-      <div
-        class="pomo-duration-input-container"
-        :class="{ disabled: isRunning }"
-      >
+      <n-button class="action-button" @click="addPomodoro" title="insert 🍅+05" :disabled="isRunning" tertiary circle>🍅</n-button>
+      <div class="pomo-duration-input-container" :class="{ disabled: isRunning }">
         =
         <n-input
           ref="pomoDurationInput"
@@ -141,12 +87,7 @@ import { ref, watch, onMounted, computed } from "vue";
 import { NButton, NIcon, NInput, useDialog, NBadge } from "naive-ui";
 import { useTimerStore } from "@/stores/useTimerStore";
 import { useSettingStore } from "@/stores/useSettingStore";
-import {
-  toggleWhiteNoise,
-  setPomodoroRunning,
-  stopWhiteNoise,
-  startWhiteNoise,
-} from "@/core/sounds.ts";
+import { toggleWhiteNoise, setPomodoroRunning, stopWhiteNoise, startWhiteNoise } from "@/core/sounds.ts";
 import {
   Speaker224Regular,
   SpeakerMute24Regular,
@@ -184,9 +125,7 @@ const currentStep = ref<number>(0);
 const totalPomodoros = ref<number>(0);
 const currentPomodoro = ref<number>(1);
 const statusLabel = ref<string>("Let's 🍅!");
-const defaultPomoDuration = ref<string>(
-  settingStore.settings.durations.workDuration.toString()
-);
+const defaultPomoDuration = ref<string>(settingStore.settings.durations.workDuration.toString());
 
 // 白噪音状态
 const isWhiteNoiseEnabled = computed({
@@ -230,11 +169,7 @@ function parseSequence(sequence: string): PomodoroStep[] {
     } else {
       const breakTime = step.padStart(2, "0");
       if (!validBreakTimes.includes(breakTime)) {
-        throw new Error(
-          `Invalid break time: ${step}. Allowed break times: ${validBreakTimes.join(
-            ", "
-          )}`
-        );
+        throw new Error(`Invalid break time: ${step}. Allowed break times: ${validBreakTimes.join(", ")}`);
       }
       return { type: "break", duration: parseInt(breakTime) };
     }
@@ -330,7 +265,7 @@ function stopPomodoro(): void {
   }
 
   // 重置序列输入
-  sequenceInput.value = ">>>>🍅+05";
+  sequenceInput.value = ">>>>🍅+05+🍅+05+🍅+05+🍅+15";
 }
 
 // 添加番茄钟序列
@@ -351,10 +286,7 @@ function createTimeBlock(duration: number, type: string): HTMLElement {
   block.className = "time-block";
   // 根据时长设置宽度，保持总长度占满
   const totalWidth = 196; // 总容器宽度
-  const totalDuration = parseSequence(sequenceInput.value).reduce(
-    (sum, step) => sum + step.duration,
-    0
-  );
+  const totalDuration = parseSequence(sequenceInput.value).reduce((sum, step) => sum + step.duration, 0);
   const width = (duration / totalDuration) * totalWidth;
   block.style.width = `${width}px`;
   block.style.height = "20px";
@@ -375,23 +307,17 @@ function updateProgressStatus(currentStep: number): void {
       // 已完成的块
       element.style.backgroundImage = "";
       element.style.animation = "none";
-      element.style.backgroundColor = element.classList.contains("work")
-        ? "var(--color-red)"
-        : "var(--color-green)";
+      element.style.backgroundColor = element.classList.contains("work") ? "var(--color-red)" : "var(--color-green)";
     } else if (index === currentStep) {
       // 当前执行的块
       element.style.backgroundImage =
         "linear-gradient(45deg, var(--color-background-light-transparent) 25%, transparent 25%, transparent 50%, var(--color-background-light-transparent) 50%, var(--color-background-light-transparent) 75%, transparent 75%, transparent)";
       element.style.backgroundSize = "20px 20px";
       element.style.animation = "progress-animation 1s linear infinite";
-      element.style.backgroundColor = element.classList.contains("work")
-        ? "var(--color-red)"
-        : "var(--color-green)";
+      element.style.backgroundColor = element.classList.contains("work") ? "var(--color-red)" : "var(--color-green)";
     } else {
       // 未开始的块
-      element.style.backgroundColor = element.classList.contains("work")
-        ? "var(--color-red-light)"
-        : "var(--color-green-light)";
+      element.style.backgroundColor = element.classList.contains("work") ? "var(--color-red-light)" : "var(--color-green-light)";
     }
   });
 }
@@ -472,14 +398,12 @@ function handleDurationConfirm(): void {
       },
       onNegativeClick: () => {
         // 取消时恢复原值
-        defaultPomoDuration.value =
-          settingStore.settings.durations.workDuration.toString();
+        defaultPomoDuration.value = settingStore.settings.durations.workDuration.toString();
       },
     });
   } else {
     // 立即恢复原值
-    defaultPomoDuration.value =
-      settingStore.settings.durations.workDuration.toString();
+    defaultPomoDuration.value = settingStore.settings.durations.workDuration.toString();
 
     dialog.error({
       title: "输入无效",
@@ -496,8 +420,7 @@ function handleBlurRestore(): void {
     settingStore.settings.durations.workDuration = num;
     console.log("Pomodoro duration restored:", num);
   } else {
-    defaultPomoDuration.value =
-      settingStore.settings.durations.workDuration.toString();
+    defaultPomoDuration.value = settingStore.settings.durations.workDuration.toString();
   }
 }
 
@@ -533,9 +456,7 @@ onMounted(() => {
 
     currentStep.value = Math.min(estimatedStep, steps.length - 1);
     totalPomodoros.value = steps.filter((step) => step.type === "work").length;
-    currentPomodoro.value =
-      steps.slice(0, currentStep.value).filter((step) => step.type === "work")
-        .length + 1;
+    currentPomodoro.value = steps.slice(0, currentStep.value).filter((step) => step.type === "work").length + 1;
 
     updateProgressStatus(currentStep.value);
   }
@@ -599,8 +520,7 @@ function resetWhiteNoise(sound: SoundType) {
 
 .sequence-input {
   max-height: 60px;
-  font-family: "Consolas", "Courier New", Courier, "Lucida Console", Monaco,
-    "Liberation Mono", "Menlo", monospace;
+  font-family: "Consolas", "Courier New", Courier, "Lucida Console", Monaco, "Liberation Mono", "Menlo", monospace;
   font-size: 12px;
   padding: 0px;
   resize: none;
