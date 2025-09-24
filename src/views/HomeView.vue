@@ -222,6 +222,7 @@
           @interruption-record="onInterruptionRecord"
           @reward-record="onRewordRecord"
           @energy-record="onEnergyRecord"
+          @star="onStar"
         />
       </div>
     </div>
@@ -1442,6 +1443,13 @@ function onEnergyRecord(val: { value: number; description?: string }) {
   }
 }
 
+function onStar() {
+  if (selectedTaskId.value) {
+    const task = taskById.value.get(selectedTaskId.value);
+    if (!task) return;
+    task.starred = !task.starred;
+  }
+}
 // 选择task时高亮对应的todo/activity/schedule
 function onActiveTaskId(taskId: number | null) {
   if (!taskId) {
