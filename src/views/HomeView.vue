@@ -64,6 +64,24 @@
               <span class="total-pomo">🍅{{ globalRealPomo }}</span>
             </span>
           </div>
+          <div
+            class="slogen"
+            :class="{ 'slogen-empty': settingStore.settings.slogen === '' }"
+            v-if="!isEditing"
+            @click="startEdit"
+            title="点击编辑 slogen"
+          >
+            {{ settingStore.settings.slogen }} &nbsp;
+          </div>
+          <input
+            v-else
+            v-model="editValue"
+            class="slogen slogen-input"
+            @keydown.enter="saveEdit"
+            @keydown.esc="cancelEdit"
+            @blur="cancelEdit"
+            ref="inputRef"
+          />
           <div class="button-group">
             <n-button
               size="small"
@@ -643,6 +661,28 @@ function cleanSelection() {
   selectedRowId.value = null;
   selectedActivityId.value = null;
 }
+
+/**  slogen 功能*/
+const isEditing = ref(false);
+const editValue = ref("");
+const inputRef = ref();
+function startEdit() {
+  editValue.value = settingStore.settings.slogen;
+  isEditing.value = true;
+  // 输入框自动聚焦
+  nextTick(() => {
+    inputRef.value && inputRef.value.focus();
+  });
+}
+
+function saveEdit() {
+  settingStore.settings.slogen = editValue.value;
+  isEditing.value = false;
+}
+
+function cancelEdit() {
+  isEditing.value = false;
+}
 // ======================== 1. TimeTable 相关 ========================
 
 // -- 时间表数据和类型
@@ -685,7 +725,8 @@ function onAddActivity(newActivity: Activity) {
 }
 
 /** 删除活动及其关联的 todo/schedule */
-function onDeleteActivity(id: number) {
+function onDeleteActivity(id: number | null | undefined) {
+  if (id == null) return;
   const result = handleDeleteActivity(activityList.value, todoList.value, scheduleList.value, taskList.value, id, {
     activityById: activityById.value,
     childrenByParentId: childrenOfActivity.value,
@@ -705,8 +746,9 @@ function onPickActivity(activity: Activity) {
 }
 
 // 同步UI选中
-function onConvertActivityToTask(payload: { task: Task; activityId: number }) {
+function onConvertActivityToTask(payload: { task: Task; activityId: number | null | undefined }) {
   const { task, activityId } = payload;
+  if (activityId == null) return;
 
   // 1) 推入任务列表（替换引用，便于浅 watch 或立即响应）
   taskList.value = [...taskList.value, task];
@@ -731,7 +773,7 @@ function onConvertActivityToTask(payload: { task: Task; activityId: number }) {
 }
 
 /** 激活红色高亮可以编辑文字 */
-function onUpdateActiveId(id: number | null) {
+function onUpdateActiveId(id: number | null | undefined) {
   activeId.value = id;
   selectedActivityId.value = null; // 避免多重高亮
   selectedRowId.value = null; // 这个id是today里的
@@ -748,7 +790,8 @@ function onUpdateActiveId(id: number | null) {
 }
 
 /** 修改番茄类型时的提示处理 */
-function onTogglePomoType(id: number) {
+function onTogglePomoType(id: number | null | undefined) {
+  if (id == null) return;
   const todo = todoByActivityId.value.get(id);
   if (todo) {
     todo.globalIndex = undefined;
@@ -761,7 +804,9 @@ function onTogglePomoType(id: number) {
 }
 
 /** 重复当前的活动 */
-function onRepeatActivity(id: number) {
+function onRepeatActivity(id: number | null | undefined) {
+  if (id == null) return;
+
   // 找到Activity
   const selectActivity = activityById.value.get(id);
 
@@ -786,7 +831,8 @@ function onRepeatActivity(id: number) {
 }
 
 /** 创建子活动 */
-function onCreateChildActivity(id: number) {
+function onCreateChildActivity(id: number | null | undefined) {
+  if (id == null) return;
   // 找到Activity
   const selectActivity = activityById.value.get(id);
 
@@ -808,7 +854,8 @@ function onCreateChildActivity(id: number) {
   saveAllDebounced();
 }
 
-function onIncreaseChildActivity(id: number) {
+function onIncreaseChildActivity(id: number | null | undefined) {
+  if (id == null) return;
   // 找到Activity
   const selectActivity = activityById.value.get(id);
   if (selectActivity) selectActivity.parentId = null;
@@ -1183,18 +1230,21 @@ function onViewSet() {
     settingStore.settings.topHeight = 300;
   }
 }
-function goToTodo(todoId: number) {
+function goToTodo(todoId: number | null | undefined) {
+  if (todoId == null) return;
   dateService.navigateTo(new Date(todoId));
 }
 
-function goToSchedule(scheduleId: number) {
+function goToSchedule(scheduleId: number | null | undefined) {
+  if (scheduleId == null) return;
   console.log(getDateKey(scheduleId));
 
   dateService.navigateTo(new Date(scheduleId));
 }
 
 // 从Planner选择活动处理函数
-function onSelectActivity(activityId: number | null) {
+function onSelectActivity(activityId: number | null | undefined) {
+  if (activityId == null) return;
   selectedActivityId.value = activityId;
 }
 
@@ -1592,15 +1642,46 @@ const { startResize: startRightResize } = useResize(
 }
 
 .planner-header {
-  position: sticky;
   display: flex;
+  justify-content: space-between;
   align-items: center;
+  position: sticky;
   margin: 8px 8px 4px 0px;
-  flex-shrink: 0;
-  white-space: nowrap; /* 防止内部的 span 换行 */
-  overflow: hidden; /* 如果内容实在太多，隐藏超出部分 */
-  text-overflow: ellipsis; /* 用省略号表示被隐藏的文本 */
+  width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.slogen {
+  flex: 1;
+  text-align: center;
+  margin-left: 8px;
   min-width: 0;
+  font-size: 16px;
+  color: var(--color-text);
+  background: var(--color-yellow-light-transparent);
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+  outline: none;
+}
+
+@media (max-width: 650px) {
+  .slogen {
+    display: none;
+  }
+}
+.slogen-input {
+  border: 1px solid var(--color-blue);
+  outline: none;
+}
+.slogen-empty {
+  background: var(--color-background);
 }
 
 .button-group {
@@ -1612,15 +1693,16 @@ const { startResize: startRightResize } = useResize(
   flex-grow: 0;
   background-color: var(--color-background);
   margin-left: auto;
+  z-index: 5;
 }
 
 .day-info {
   display: flex;
   align-items: center;
-  flex: 1 1 auto;
   min-width: 0;
-
+  z-index: 2;
   font-weight: 600;
+  background-color: var(--color-background);
 }
 
 .day-status {
@@ -1631,6 +1713,7 @@ const { startResize: startRightResize } = useResize(
   padding: 0px 8px 0px 8px;
   margin: 2px;
   cursor: pointer;
+  background-color: var(--color-background);
 }
 
 .global-pomo {

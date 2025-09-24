@@ -31,6 +31,7 @@ export interface GlobalSettings {
   webdavWebsite: string;
   webdavPath: string;
   viewSet: ViewType;
+  slogen: string;
 
   ai?: {
     activeId: number; // 当前启用的配置
@@ -71,6 +72,7 @@ const defaultSettings: GlobalSettings = {
   webdavWebsite: "https://dav.jianguoyun.com/dav/",
   webdavPath: "/PomotentionBackup",
   viewSet: "day",
+  slogen: "保持觉察 🍅 = ⏰+🎯+🪬",
 
   ai: {
     activeId: 1,
