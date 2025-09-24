@@ -10,11 +10,7 @@
 </template>
 
 <script setup lang="ts">
-import {
-  NConfigProvider,
-  NNotificationProvider,
-  NDialogProvider,
-} from "naive-ui";
+import { NConfigProvider, NNotificationProvider, NDialogProvider } from "naive-ui";
 import UpdateManager from "./components/UpdateManager.vue";
 </script>
 
@@ -26,6 +22,5 @@ body,
   margin: 0;
   padding: 0;
   overflow: hidden;
-  background-color: red;
 }
 </style>
