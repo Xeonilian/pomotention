@@ -1,350 +1,271 @@
 <template>
-  <div class="search-container">
-    <n-input placeholder="请输入搜索关键字" v-model:value="searchQuery" @input="performSearch" />
-  </div>
-  <div class="search-view">
-    <div class="content-container">
-      <div class="results-layout">
-        <!-- 左侧：标题列表（Todos + Schedules） -->
-        <div class="left-title-list">
-          <!-- Todo 标题 -->
-          <div
-            v-for="item in filteredTodos"
-            :key="'todo-' + item.id"
-            class="title-item"
-            :class="{ active: activeCardKey === 'todo-' + item.id }"
-            @click="focusCard('todo-' + item.id)"
-            :title="item.activityTitle"
-          >
-            {{ item.activityTitle }}
-          </div>
-
-          <!-- Schedule 标题 -->
-          <div
-            v-for="item in filteredSchedules"
-            :key="'sch-' + item.id"
-            class="title-item schedule"
-            :class="{ active: activeCardKey === 'sch-' + item.id }"
-            @click="focusCard('sch-' + item.id)"
-            :title="item.activityTitle"
-          >
-            {{ item.activityTitle }}
-          </div>
+  <div class="search-root">
+    <div class="layout">
+      <!-- 左侧：命中列表（Todos + Schedules） -->
+      <div class="left-pane">
+        <div class="search-tool">
+          <n-input v-model:value="searchQuery" placeholder="请输入搜索关键字" clearable @update:value="onSearchInput" />
+          <n-button text type="warning" @click="toggleFilterStarred" :title="filterStarredOnly ? '仅看加星任务：开' : '仅看加星任务：关'">
+            <template #icon>
+              <n-icon :class="{ 'is-on': filterStarredOnly }">
+                <Star20Filled v-if="filterStarredOnly" />
+                <Star20Regular v-else />
+              </n-icon>
+            </template>
+          </n-button>
         </div>
 
-        <!-- 右侧：内容卡片 -->
-        <div class="right-card-list" ref="scrollContainer">
-          <!-- 展示 Todo -->
-          <n-card
-            v-for="item in filteredTodos"
-            :key="'todo-' + item.id"
-            :ref="(el) => setCardRef(el)"
-            :data-key="'todo-' + item.id"
-            @click="focusCard('todo-' + item.id)"
-            class="search-item-todo card"
-            :class="{
-              expanded: isExpanded('todo-' + item.id),
-              active: activeCardKey === 'todo-' + item.id,
-            }"
-          >
-            <div class="card-header">
-              <div class="title">{{ item.activityTitle }}</div>
-              <n-button text size="small" @click="toggleExpand('todo-' + item.id)">
-                {{ isExpanded("todo-" + item.id) ? "-" : "+" }}
-              </n-button>
-            </div>
-
-            <p class="info due blue">截止日期: {{ formatDate(item.dueDate) }}</p>
-
-            <div v-for="task in getTasksBySourceId(item.id)" :key="task.id">
-              <div class="task-content" v-html="convertMarkdown(task.description)"></div>
-            </div>
-          </n-card>
-
-          <!-- 展示 Schedule -->
-          <n-card
-            v-for="item in filteredSchedules"
-            :key="'sch-' + item.id"
-            :ref="(el) => setCardRef(el)"
-            @click="focusCard('sch-' + item.id)"
-            :data-key="'sch-' + item.id"
-            class="search-item-schedule card"
-            :class="{
-              expanded: isExpanded('sch-' + item.id),
-              active: activeCardKey === 'sch-' + item.id,
-            }"
-          >
-            <div class="card-header">
-              <div class="title">{{ item.activityTitle }}</div>
-              <n-button text size="small" @click="toggleExpand('sch-' + item.id)">
-                {{ isExpanded("sch-" + item.id) ? "-" : "+" }}
-              </n-button>
-            </div>
-
-            <p class="info due red">
-              截止日期:
-              {{ item.activityDueRange?.[0] ? formatDate(item.activityDueRange[0]) : "" }}
-            </p>
-            <p class="info red">位置: {{ item.location || "无" }}</p>
-
-            <div v-for="task in getTasksBySourceId(item.id)" :key="task.id">
-              <div class="task-content" v-html="convertMarkdown(task.description)"></div>
-            </div>
-          </n-card>
+        <div class="section-title">Todos</div>
+        <div
+          v-for="item in sidebarTodos"
+          :key="'todo-' + item.id"
+          class="title-item"
+          :class="{ active: isActive('todo-' + item.id) }"
+          @click="openTab('todo', item.id, item.activityTitle)"
+          :title="item.activityTitle"
+        >
+          {{ item.activityTitle || "（无标题）" }}
         </div>
+
+        <div class="section-title">Schedules</div>
+        <div
+          v-for="item in sidebarSchedules"
+          :key="'sch-' + item.id"
+          class="title-item schedule"
+          :class="{ active: isActive('sch-' + item.id) }"
+          @click="openTab('sch', item.id, item.activityTitle)"
+          :title="item.activityTitle"
+        >
+          {{ item.activityTitle }}
+        </div>
+      </div>
+
+      <!-- 右侧：Tabs -->
+      <div class="right-pane">
+        <n-tabs v-model:value="activeTabKey" type="card" closable @close="closeTab" class="full-tabs">
+          <n-tab-pane v-for="tab in openedTabs" :key="tab.key" :name="tab.key" :tab="tab.title">
+            <div class="meta">
+              <template v-if="tab.type === 'todo'">
+                <span>截止: {{ formatDate(findTodo(tab.id)?.dueDate) }}</span>
+              </template>
+              <template v-else>
+                <span>开始: {{ formatDate(findSchedule(tab.id)?.activityDueRange?.[0] ?? undefined) }}</span>
+                <span style="margin-left: 12px">位置: {{ findSchedule(tab.id)?.location || "无" }}</span>
+              </template>
+            </div>
+
+            <div class="content">
+              <div v-for="task in getTasksBySourceId(tab.id)" :key="task.id" class="task-block">
+                <span class="task-meta">
+                  <n-icon v-if="task.starred" size="16" class="star-on"><Star20Filled /></n-icon>
+                </span>
+
+                <div class="task-content" v-html="convertMarkdown(task.description)"></div>
+              </div>
+
+              <div v-if="getTasksBySourceId(tab.id).length === 0" class="empty">暂无任务</div>
+            </div>
+          </n-tab-pane>
+        </n-tabs>
       </div>
     </div>
   </div>
 </template>
 
-<script lang="ts">
-import { defineComponent, ref, computed, onBeforeUpdate, onUpdated, nextTick } from "vue"; // 确保导入所有需要的钩子
-import { STORAGE_KEYS } from "@/core/constants";
+<script lang="ts" setup>
+import { ref, computed } from "vue";
+import { NInput, NButton, NIcon, NTabs, NTabPane } from "naive-ui";
 import { marked } from "marked";
+import { Star20Filled, Star20Regular } from "@vicons/fluent";
+import { STORAGE_KEYS } from "@/core/constants";
 import type { Todo } from "@/core/types/Todo";
 import type { Schedule } from "@/core/types/Schedule";
 import type { Task } from "@/core/types/Task";
-import { NCard, NButton, NInput } from "naive-ui";
 
-export default defineComponent({
-  components: {
-    NCard,
-    NButton,
-    NInput,
+type TabType = "todo" | "sch";
+type TabItem = { key: string; type: TabType; id: number; title: string };
+
+const searchQuery = ref("");
+const filterStarredOnly = ref(false);
+
+const todos = ref<Todo[]>(JSON.parse(localStorage.getItem(STORAGE_KEYS.TODO) || "[]"));
+const schedules = ref<Schedule[]>(JSON.parse(localStorage.getItem(STORAGE_KEYS.SCHEDULE) || "[]"));
+const tasks = ref<Task[]>(JSON.parse(localStorage.getItem(STORAGE_KEYS.TASK) || "[]") || []);
+
+const openedTabs = ref<TabItem[]>([]);
+const activeTabKey = ref<string | undefined>(undefined);
+
+const makeKey = (type: TabType, id: number) => `${type}-${id}`; // 强制字符串
+
+const onSearchInput = () => {
+  // 如需实时同步 localStorage，可在此重新加载；默认仅过滤内存数据
+};
+
+const dbgSnapshot = () => {
+  const toType = (v: any) => Object.prototype.toString.call(v);
+  const s = {
+    todosCount: todos.value.length,
+    schedulesCount: schedules.value.length,
+    tasksCount: tasks.value.length,
+    sample: {
+      todo: todos.value[0],
+      schedule: schedules.value[0],
+      task: tasks.value[0],
+    },
+    types: {
+      todoId: todos.value[0] ? typeof todos.value[0].id : "n/a",
+      scheduleId: schedules.value[0] ? typeof schedules.value[0].id : "n/a",
+      taskId: tasks.value[0] ? typeof tasks.value[0].id : "n/a",
+      taskSourceId: tasks.value[0] ? typeof tasks.value[0].sourceId : "n/a",
+      taskStarredRawType: tasks.value[0] ? typeof (tasks.value[0] as any).starred : "n/a",
+      taskStarredRawToString: tasks.value[0] ? toType((tasks.value[0] as any).starred) : "n/a",
+    },
+  };
+  console.group("[DBG] Snapshot");
+  console.log(s);
+  console.groupEnd();
+};
+dbgSnapshot();
+
+const toggleFilterStarred = () => {
+  filterStarredOnly.value = !filterStarredOnly.value;
+};
+
+const norm = (s?: string) => (s ?? "").toLowerCase();
+const matchesQuery = (text?: string) => {
+  const q = norm(searchQuery.value);
+  if (!q) return true;
+  return norm(text).includes(q);
+};
+
+const getTasksBySourceId = (sourceId: number) => tasks.value.filter((t) => t.sourceId === sourceId);
+const hasStarredTask = (sourceId: number) => getTasksBySourceId(sourceId).some((t) => !!t.starred);
+
+const passesSearch = (title?: string, sourceId?: number) => {
+  if (!sourceId) return matchesQuery(title);
+  const taskHit = getTasksBySourceId(sourceId).some((t) => matchesQuery(t.activityTitle) || matchesQuery(t.description));
+  return matchesQuery(title) || taskHit;
+};
+
+// 左侧展示数据：搜索 AND 仅看加星
+const sidebarTodos = computed(() =>
+  todos.value.filter((it) => {
+    const searchPass = passesSearch(it.activityTitle, it.id);
+    if (!searchPass) return false;
+    return filterStarredOnly.value ? hasStarredTask(it.id) : true;
+  })
+);
+
+const sidebarSchedules = computed(() =>
+  schedules.value.filter((it) => {
+    const searchPass = passesSearch(it.activityTitle, it.id);
+    if (!searchPass) return false;
+    return filterStarredOnly.value ? hasStarredTask(it.id) : true;
+  })
+);
+
+const formatDate = (ts?: number) => {
+  if (!ts) return "无";
+  const d = new Date(ts);
+  return `${d.toLocaleDateString()} ${d.toLocaleTimeString()}`;
+};
+
+const convertMarkdown = (md?: string) => (md ? marked(md) : "无");
+
+// Tabs
+
+const isActive = (key: string) => activeTabKey.value === key;
+
+const openTab = (type: TabType, id: number, title?: string) => {
+  const key = makeKey(type, id);
+  if (!openedTabs.value.some((t) => t.key === key)) {
+    openedTabs.value.push({
+      key,
+      type,
+      id,
+      title: title && title.trim() ? title : "（无标题）",
+    });
+  }
+  activeTabKey.value = key;
+};
+
+const closeTab = (key: string) => {
+  const idx = openedTabs.value.findIndex((t) => t.key === key);
+  if (idx === -1) return;
+  const isActive = activeTabKey.value === key;
+  openedTabs.value.splice(idx, 1);
+  if (isActive) {
+    const next = openedTabs.value[idx] || openedTabs.value[idx - 1];
+    activeTabKey.value = next ? next.key : undefined;
+  }
+};
+
+watch(
+  openedTabs,
+  (tabs) => {
+    const keys = new Set<string>();
+    for (const t of tabs) {
+      if (keys.has(t.key)) {
+        console.warn("Duplicate tab key detected:", t.key, tabs);
+      }
+      keys.add(t.key);
+    }
   },
-  setup() {
-    const searchQuery = ref("");
-    const todos = ref<Todo[]>([]);
-    const schedules = ref<Schedule[]>([]);
-    const tasks = ref<Task[]>([]);
-    const activeCardKey = ref<string | null>(null);
-    const expandedIds = ref<Set<string>>(new Set());
-    const scrollContainer = ref<HTMLElement | null>(null);
-
-    // --- 核心改动：使用函数 ref ---
-    // 这个 Map 用来存储 key 到 DOM 元素的映射
-    const cardElements = new Map<string, HTMLElement>();
-
-    // 这个函数将在每次渲染时被 Vue 调用，用于收集 ref
-    const setCardRef = (el: any) => {
-      if (el) {
-        // NaiveUI 组件实例需要通过 el.$el 访问真实 DOM
-        const domElement = el.$el ? (el.$el as HTMLElement) : (el as HTMLElement);
-        const key = domElement.dataset.key;
-        if (key) {
-          // 确保你设置到了 Map 中
-          cardElements.set(key, domElement);
-        }
-      }
-    };
-    // --- 核心改动：在 DOM 更新前清空 Map ---
-    // 这确保了我们只保留当前渲染中存在的元素引用
-    onBeforeUpdate(() => {
-      cardElements.clear();
-    });
-
-    // 为了调试，我们可以在更新后打印 Map 的内容
-    onUpdated(() => {
-      console.log("DOM updated. Current card refs:", cardElements);
-    });
-    // --- 核心改动结束 ---
-
-    const performSearch = () => {
-      loadData();
-    };
-
-    const loadData = () => {
-      todos.value = JSON.parse(localStorage.getItem(STORAGE_KEYS.TODO) || "[]");
-      schedules.value = JSON.parse(localStorage.getItem(STORAGE_KEYS.SCHEDULE) || "[]");
-      tasks.value = JSON.parse(localStorage.getItem(STORAGE_KEYS.TASK) || "[]") || [];
-    };
-
-    const formatDate = (timestamp?: number) => {
-      if (!timestamp) return "无";
-      const date = new Date(timestamp);
-      return date.toLocaleDateString() + " " + date.toLocaleTimeString();
-    };
-
-    const getTasksBySourceId = (sourceId: number) => {
-      return tasks.value.filter((task) => task.sourceId === sourceId);
-    };
-
-    const convertMarkdown = (markdownText: string | undefined) => {
-      return markdownText ? marked(markdownText) : "无";
-    };
-
-    const matchesQuery = (text: string | undefined) => {
-      if (!text) return false;
-      if (!searchQuery.value) return false;
-      return text.toLowerCase().includes(searchQuery.value.toLowerCase());
-    };
-
-    const filteredTodos = computed(() => {
-      if (!searchQuery.value) return [];
-      return todos.value.filter((item) => {
-        const matchesTitle = matchesQuery(item.activityTitle);
-        const matchesTaskDescription = getTasksBySourceId(item.id).some((task) => matchesQuery(task.description));
-        return matchesTitle || matchesTaskDescription;
-      });
-    });
-
-    const filteredSchedules = computed(() => {
-      if (!searchQuery.value) return [];
-      return schedules.value.filter((item) => {
-        const matchesTitle = matchesQuery(item.activityTitle);
-        const matchesTaskDescription = getTasksBySourceId(item.id).some((task) => matchesQuery(task.description));
-        return matchesTitle || matchesTaskDescription;
-      });
-    });
-
-    const isExpanded = (key: string) => expandedIds.value.has(key);
-    const toggleExpand = (key: string) => {
-      const set = new Set(expandedIds.value);
-      if (set.has(key)) set.delete(key);
-      else set.add(key);
-      expandedIds.value = set;
-    };
-
-    const stickyOffset = 110;
-
-    const scrollIntoViewWithOffset = (el: HTMLElement, offset = stickyOffset) => {
-      // 获取我们刚刚用 ref 绑定的滚动容器
-      const container = scrollContainer.value;
-
-      // 如果容器不存在，就直接退出，防止错误
-      if (!container) {
-        console.error("滚动容器 .search-view 未找到！");
-        return;
-      }
-
-      // el.offsetTop 是目标卡片相对于其父容器顶部的距离。
-      // 在这个布局下，它就是我们需要的滚动距离。
-      const topPosition = el.offsetTop;
-
-      // 操作容器的 scrollTop，而不是 window.scrollTo
-      container.scrollTo({
-        top: topPosition - offset, // 滚动到目标位置减去偏移量
-        behavior: "smooth",
-      });
-    };
-
-    // --- 修改 focusCard 以使用新的 cardElements Map ---
-    const focusCard = (key: string) => {
-      activeCardKey.value = key;
-      const el = cardElements.get(key); // 从我们的 Map 中获取元素
-
-      console.log(`Trying to focus on key: ${key}. Element found:`, el); // 调试日志
-
-      if (el) {
-        scrollIntoViewWithOffset(el);
-      } else {
-        // 如果这里依然找不到，说明 ref 收集和 focus 调用之间存在时序问题
-        // 使用 nextTick 尝试在下一个 DOM 更新周期再次查找
-        console.warn(`Element with key '${key}' not found immediately. Retrying after next tick...`);
-        nextTick(() => {
-          const elAfterTick = cardElements.get(key);
-          if (elAfterTick) {
-            console.log("Element found after next tick:", elAfterTick);
-            scrollIntoViewWithOffset(elAfterTick);
-          } else {
-            console.error(`Element with key '${key}' still not found after next tick. Ref collection might be failing.`);
-          }
-        });
-      }
-    };
-
-    return {
-      searchQuery,
-      filteredTodos,
-      filteredSchedules,
-      getTasksBySourceId,
-      performSearch,
-      formatDate,
-      convertMarkdown,
-      activeCardKey,
-      isExpanded,
-      toggleExpand,
-      focusCard,
-      setCardRef,
-      scrollContainer,
-    };
-  },
-});
+  { deep: true }
+);
+// 辅助查找
+const findTodo = (id: number) => todos.value.find((t) => t.id === id);
+const findSchedule = (id: number) => schedules.value.find((s) => s.id === id);
 </script>
 
 <style scoped>
-.search-view {
-  height: calc(100% - 60px);
-  max-width: 900px;
-  margin: auto;
+.search-root {
+  height: 100%;
+  margin-top: 6px;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  background: var(--color-background);
 }
 
-/* 顶部搜索栏固定在顶部中间 */
-.search-container {
-  display: flex;
-  justify-content: center;
-  width: 400px;
-  z-index: 10;
-  margin: auto;
-  padding: 10px;
-  height: 30px;
-}
-
-/* 内容流式布局，让页面自然滚动 */
-.content-container {
-  /* --- 关键修改 --- */
-  flex: 1; /* 这个属性让它在 flex 容器中占据所有可用空间 */
-  overflow: hidden; /* 也禁止它自己滚动 */
-  /* 其他属性保持不变 */
-  display: block;
-  margin: 0 auto;
-  width: 100%;
-}
-
-/* 双列布局：左 150px，右自适应 */
-.results-layout {
-  height: 100%;
+.layout {
+  flex: 1;
   display: grid;
-  grid-template-columns: 150px 1fr;
-  gap: 16px;
-  width: 100%;
-  align-items: start;
-  margin: 0 auto;
+  grid-template-columns: 220px 1fr;
+  gap: 12px;
+  min-height: 0;
+  padding: 0 12px 12px;
 }
 
-/* 左侧标题列表（支持 sticky，独立滚动） */
-.left-title-list {
-  top: 0;
-  position: sticky;
-  height: 100%;
-  overflow-y: auto;
+.search-tool {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+}
 
-  /* 其他属性保持不变 */
+.left-pane {
+  min-height: 0;
+  overflow: auto;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  width: 150px;
-  overflow-x: hidden;
-  padding-right: 6px;
-  padding-left: 6px;
+  gap: 6px;
 }
 
-/* 标题项：150px 宽度 + 省略号 */
+.section-title {
+  margin: 8px 0 0;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
 .title-item {
-  width: 130px;
-  max-width: 130px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  cursor: pointer;
   padding: 6px 8px;
+  margin-right: 4px;
   border-radius: 6px;
+  cursor: pointer;
   background: var(--color-background-light);
-  transition: background 0.2s ease, color 0.2s ease;
+  min-height: 20px;
 }
 
 .title-item.active {
@@ -357,83 +278,89 @@ export default defineComponent({
   border-left: 4px solid var(--color-red);
 }
 
-/* 右侧卡片列表流式排列 */
-.right-card-list {
+.right-pane {
+  min-height: 0;
+  overflow: hidden;
+}
+
+:deep(.n-tabs) {
   height: 100%;
-  overflow-y: auto;
+  min-height: 0;
+}
+:deep(.n-tabs .n-tabs-pane-wrapper) {
+  min-height: 0;
+}
+:deep(.n-tabs .n-tab-pane) {
+  height: 100%;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding-right: 2px;
+  min-height: 0;
 }
 
-/* 卡片默认：固定 200px，高度内滚动 */
-.card {
-  width: 100%;
-  background-color: var(--color-background);
-  min-height: 200px;
+/* 内容区域出现纵向滚动条 */
+.content {
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
-  padding: 2px 4px;
+  overflow-x: hidden;
+  padding-right: 8px;
 }
 
-/* 展开态：解除限制 */
-.card.expanded {
-  min-height: 600px;
-  max-height: 600px;
+/* 紧凑 Tabs 尺寸 */
+
+:deep(.n-tabs .n-tabs-tab) {
+  width: 120px;
+  justify-content: center;
+  padding: 6px 2px 6px 2px;
+  border-top-left-radius: 10px !important;
+  border-top-right-radius: 10px !important;
 }
 
-.card.active {
-  border: 1px solid var(--color-blue);
-  box-shadow: 2px 2px 2px rgba(0, 0, 0, 0.2);
+:deep(.n-tabs .n-tabs-tab .n-tabs-tab__label) {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  padding-left: 4px;
+  padding-right: 16px;
 }
 
-:deep(.n-card__content) {
-  padding: 6px;
-  --n-padding-bottom: 0px;
+:deep(.n-tabs .n-tabs-tab .n-tabs-tab__close) {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
 }
 
-/* 卡片头部吸顶，滚动时按钮和标题可见 */
-.card-header {
-  top: 0;
-  position: sticky;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 2px;
-  background: var(--color-background);
-  z-index: 1;
-  padding-bottom: 0px;
+.task-block + .task-block {
+  margin-top: 8px;
 }
 
-/* 标题（卡片内允许换行） */
-.title {
-  position: sticky;
-  font-weight: bold;
-  margin: 0 !important;
-  line-height: 1.2;
-  padding: 4px 0px;
+.task-meta {
+  position: absolute;
+  right: 20px;
+  top: 50px;
 }
 
-.info.due.blue {
-  color: var(--color-blue);
-  margin-top: 0px;
-  margin-bottom: 0px;
+.star-on {
+  color: #f59e0b;
 }
 
-.info.due.red,
-.info.red {
-  color: var(--color-red);
-  margin-top: 0px;
-}
-
-/* 任务块样式 */
 .task-content {
-  background-color: var(--color-background-light-light);
-  margin: 4px 0;
-  padding: 6px 8px;
+  overflow-y: auto;
 }
 
-.task-content :deep(h1) {
-  margin: 0;
+.empty {
+  color: var(--color-text-3, #999);
+  text-align: center;
+  padding: 12px 0;
+}
+
+.search-tool .is-on {
+  color: #f59e0b;
+}
+:deep(.task-content h1) {
+  margin: 0px !important;
 }
 </style>
