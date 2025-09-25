@@ -65,18 +65,20 @@
             </span>
           </div>
           <div
-            class="slogen"
-            :class="{ 'slogen-empty': settingStore.settings.slogen === '' }"
+            class="marquee"
+            :class="{ 'marquee-empty': settingStore.settings.marquee === '' }"
             v-if="!isEditing"
             @click="startEdit"
-            title="点击编辑 slogen"
+            title="点击编辑跑马灯"
           >
-            {{ settingStore.settings.slogen }} &nbsp;
+            <n-marquee v-if="settingStore.settings.marquee !== ''" class="marquee__inner">
+              {{ settingStore.settings.marquee }}&nbsp;
+            </n-marquee>
           </div>
           <input
             v-else
             v-model="editValue"
-            class="slogen slogen-input"
+            class="marquee marquee-input"
             @keydown.enter="saveEdit"
             @keydown.esc="cancelEdit"
             @blur="cancelEdit"
@@ -274,14 +276,7 @@
 <script setup lang="ts">
 // ------------------------ 导入依赖 ------------------------
 import { ref, onMounted, watch, computed } from "vue";
-// import { NButton, NIcon, NPopover } from "naive-ui";
 import { usePomoStore } from "@/stores/usePomoStore";
-// import TimeTable from "@/components/TimeTable/TimeTable.vue";
-// import DayPlanner from "@/components/DayPlanner/DayPlanner.vue";
-// import WeekPlanner from "@/components/WeekPlanner/WeekPlanner.vue";
-// import MonthPlanner from "@/components/MonthPlanner/MonthPlanner.vue";
-// import TaskTracker from "@/components/TaskTracker/TaskTracker.vue";
-// import ActivitySheet from "@/components/ActivitySheet/ActivitySheet.vue";
 import type { Activity } from "@/core/types/Activity";
 import type { Block } from "@/core/types/Block";
 import type { Todo, TodoWithTags, TodoWithTaskRecords } from "@/core/types/Todo";
@@ -312,15 +307,15 @@ import { useSettingStore } from "@/stores/useSettingStore";
 import { defineAsyncComponent } from "vue";
 import IcsExportModal from "@/components/IcsExportModal.vue";
 
+// ======================== 响应式状态与初始化 ========================
+// 不直接import Naive和以下组建加速启动
 const TimeTable = defineAsyncComponent(() => import("@/components/TimeTable/TimeTable.vue"));
 const DayPlanner = defineAsyncComponent(() => import("@/components/DayPlanner/DayPlanner.vue"));
 const WeekPlanner = defineAsyncComponent(() => import("@/components/WeekPlanner/WeekPlanner.vue"));
 const MonthPlanner = defineAsyncComponent(() => import("@/components/MonthPlanner/MonthPlanner.vue"));
 const TaskTracker = defineAsyncComponent(() => import("@/components/TaskTracker/TaskTracker.vue"));
 const ActivitySheet = defineAsyncComponent(() => import("@/components/ActivitySheet/ActivitySheet.vue"));
-
 const AIChatDialog = defineAsyncComponent(() => import("@/components/AiChat/AiChatDialog.vue"));
-// ======================== 响应式状态与初始化 ========================
 
 // -- 基础UI状态
 const settingStore = useSettingStore();
@@ -663,12 +658,12 @@ function cleanSelection() {
   selectedActivityId.value = null;
 }
 
-/**  slogen 功能*/
+/**  marquee 功能*/
 const isEditing = ref(false);
 const editValue = ref("");
 const inputRef = ref();
 function startEdit() {
-  editValue.value = settingStore.settings.slogen;
+  editValue.value = settingStore.settings.marquee;
   isEditing.value = true;
   // 输入框自动聚焦
   nextTick(() => {
@@ -677,7 +672,7 @@ function startEdit() {
 }
 
 function saveEdit() {
-  settingStore.settings.slogen = editValue.value;
+  settingStore.settings.marquee = editValue.value;
   isEditing.value = false;
 }
 
@@ -1661,35 +1656,33 @@ const { startResize: startRightResize } = useResize(
   text-overflow: ellipsis;
 }
 
-.slogen {
+.marquee {
   flex: 1;
-  text-align: center;
   margin-left: 8px;
   min-width: 0;
   font-size: 16px;
   color: var(--color-text);
-  background: var(--color-yellow-light-transparent);
   padding: 2px 8px;
   border-radius: 12px;
   font-weight: 500;
   overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
   cursor: pointer;
   outline: none;
 }
 
 @media (max-width: 650px) {
-  .slogen {
+  .marquee {
     display: none;
   }
 }
-.slogen-input {
+
+.marquee-input {
   border: 1px solid var(--color-blue);
   outline: none;
 }
-.slogen-empty {
-  background: var(--color-background);
+.marquee-empty:before {
+  content: "💡";
 }
 
 .button-group {
