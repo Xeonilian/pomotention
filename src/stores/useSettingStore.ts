@@ -24,6 +24,7 @@ export interface GlobalSettings {
   leftWidth: number;
   rightWidth: number;
   topHeight: number;
+  searchWidth: number;
   isWhiteNoiseEnabled: boolean;
   whiteNoiseSoundTrack: SoundType;
   webdavId: string;
@@ -31,7 +32,7 @@ export interface GlobalSettings {
   webdavWebsite: string;
   webdavPath: string;
   viewSet: ViewType;
-  slogen: string;
+  marquee: string;
 
   ai?: {
     activeId: number; // 当前启用的配置
@@ -65,6 +66,7 @@ const defaultSettings: GlobalSettings = {
   leftWidth: 100, // 默认值你自己定
   rightWidth: 300,
   topHeight: 300,
+  searchWidth: 400, // 搜索页面title宽度
   isWhiteNoiseEnabled: false,
   whiteNoiseSoundTrack: SoundType.WORK_TICK,
   webdavId: "",
@@ -72,7 +74,7 @@ const defaultSettings: GlobalSettings = {
   webdavWebsite: "https://dav.jianguoyun.com/dav/",
   webdavPath: "/PomotentionBackup",
   viewSet: "day",
-  slogen: "保持觉察 🍅 = ⏰+🎯+🪬",
+  marquee: "保持觉察 🍅 = ⏰+🎯+👁‍🗨",
 
   ai: {
     activeId: 1,
