@@ -44,6 +44,7 @@ export const useDataStore = defineStore(
     const selectedTaskId = ref<number | null>(null); // Planner 选中的 .taskId
     const selectedActivityId = ref<number | null>(null); // Planner 选中的 .activityId
     const selectedRowId = ref<number | null>(null); // todo.id 或 schedule.id
+    const selectedDate = ref<number | null>(null); // todo.id 或 schedule.id
 
     // ======================== 3. 初始化/加载逻辑 (Actions) ========================
     const isDataLoaded = ref(false);
@@ -260,7 +261,10 @@ export const useDataStore = defineStore(
 
     function setActiveId(id: number | null) {
       activeId.value = id;
-      console.log(`[DataStore] Active ID set to: ${id}`);
+    }
+
+    function setSelectedDate(id: number | null) {
+      selectedDate.value = id;
     }
 
     // ======================== 7. 监控 (Watches) ========================
@@ -271,14 +275,6 @@ export const useDataStore = defineStore(
         pomoStore.setTodosForDate(dateKey, currentTodos);
       },
       { deep: true, immediate: true }
-    );
-
-    watch(
-      () => dateService.appDateTimestamp.value,
-      () => {
-        console.log(`[HomeView] App date changed, activity selection cleared.`);
-      },
-      { deep: true }
     );
 
     watch(
@@ -371,6 +367,7 @@ export const useDataStore = defineStore(
       selectedTaskId,
       selectedActivityId,
       selectedRowId,
+      selectedDate,
 
       // 派生UI状态
       selectedTask,
@@ -391,13 +388,14 @@ export const useDataStore = defineStore(
       cleanSelection,
       addActivity,
       setActiveId,
+      setSelectedDate,
     };
   },
   {
     // ======================== 9. 精细化持久化配置（v3 语法） ========================
     persist: {
       key: "data-store-ui-state",
-      pick: ["activeId", "selectedTaskId", "selectedActivityId", "selectedRowId"],
+      pick: ["activeId", "selectedTaskId", "selectedActivityId", "selectedRowId", "selectedDate"],
     },
   }
 );

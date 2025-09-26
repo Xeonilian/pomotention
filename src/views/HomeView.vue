@@ -183,24 +183,12 @@
           />
           <WeekPlanner
             v-if="settingStore.settings.showPlanner && settingStore.settings.viewSet === 'week'"
-            :weekTodos="todosForCurrentViewWithTags"
-            :weekSchedules="schedulesForCurrentViewWithTags"
-            :weekStartTs="dateService.weekStartTs"
-            :dayStartTs="dateService.appDateTimestamp"
-            :selectedRowId="selectedRowId"
-            :activeId="activeId"
             @date-change="onDateChange"
             @date-jump="onDateJump"
             @item-change="onItemChange"
           />
           <MonthPlanner
             v-if="settingStore.settings.showPlanner && settingStore.settings.viewSet === 'month'"
-            :monthTodos="todosForCurrentViewWithTags"
-            :monthSchedules="schedulesForCurrentViewWithTags"
-            :monthStartTs="dateService.monthStartTs"
-            :dayStartTs="dateService.appDateTimestamp"
-            :selectedRowId="selectedRowId"
-            :activeId="activeId"
             @date-change="onDateChange"
             @item-change="onItemChange"
             @date-jump="onDateJump"
@@ -362,10 +350,12 @@ const onDateJump = (day: number) => {
   settingStore.settings.viewSet = "day";
   settingStore.settings.topHeight = 300;
   dateService.setAppDate(day);
+  dataStore.setSelectedDate(day);
 };
 
 const onDateChange = (day: number) => {
   dateService.setAppDate(day);
+  dataStore.setSelectedDate(day);
   selectedActivityId.value = null;
   selectedTaskId.value = null;
   activeId.value = undefined;
@@ -886,12 +876,10 @@ function onConvertScheduleToTask(payload: { task: Task; scheduleId: number }) {
 
 /** 修改日期切换按钮的处理函数 */
 function onDateSet(direction: "prev" | "next" | "today" | "query") {
-  selectedTaskId.value = null;
-  activeId.value = null;
-  selectedRowId.value = null;
   switch (direction) {
     case "prev":
       dateService.navigateByView("prev");
+
       break;
     case "next":
       dateService.navigateByView("next");
