@@ -55,12 +55,12 @@
 
 <script setup lang="ts">
 import { ref, watch, computed } from "vue";
-import { storeToRefs } from "pinia"; // 关键修改：导入 storeToRefs
+import { storeToRefs } from "pinia";
 import TaskButtons from "@/components/TaskTracker/TaskButtons.vue";
 import TaskRecord from "@/components/TaskTracker/TaskRecord.vue";
 import TagRenderer from "@/components/TagSystem/TagRenderer.vue";
 import type { EnergyRecord, RewardRecord, InterruptionRecord } from "@/core/types/Task";
-import { useTaskTrackerStore } from "@/stores/useTaskTrackerStore"; // 确保路径正确
+import { useTaskTrackerStore } from "@/stores/useTaskTrackerStore";
 
 // UI 状态
 const isMarkdown = ref(false);
