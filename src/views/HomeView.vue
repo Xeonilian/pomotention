@@ -8,16 +8,7 @@
   <div class="home-content">
     <!-- 左侧面板 (日程表) -->
     <div v-if="settingStore.settings.showSchedule" class="left" :style="{ width: leftWidth + 'px' }">
-      <TimeTable
-        :blocks="viewBlocks"
-        :current-type="currentType"
-        :todayTodos="todosForAppDate"
-        :todaySchedules="schedulesForAppDate"
-        :dayStart="dateService.appDateTimestamp"
-        @update-blocks="onBlocksUpdate"
-        @reset-schedule="onTimeTableReset"
-        @change-type="onTypeChange"
-      />
+      <TimeTable />
     </div>
 
     <!-- 左侧面板调整大小手柄 -->
@@ -258,16 +249,13 @@ import { defineAsyncComponent } from "vue";
 import { storeToRefs } from "pinia";
 
 import type { Activity } from "@/core/types/Activity";
-import type { Block } from "@/core/types/Block";
 import { Task } from "@/core/types/Task";
 import { getTimestampForTimeString, getDateKey } from "@/core/utils";
-import { WORK_BLOCKS, ENTERTAINMENT_BLOCKS, ViewType } from "@/core/constants";
-
+import { ViewType } from "@/core/constants";
 import { useResize } from "@/composables/useResize";
 import IcsExportModal from "@/components/IcsExportModal.vue";
 import { Previous24Regular, Next24Regular, Search24Regular, CalendarSettings20Regular, QrCode24Regular } from "@vicons/fluent";
 
-import { loadTimeBlocks, saveTimeBlocks, removeTimeBlocksStorage } from "@/services/localStorageService";
 import { handleAddActivity, handleDeleteActivity, passPickedActivity, togglePomoType } from "@/services/activityService";
 import { updateScheduleStatus, updateTodoStatus, handleSuspendTodo, handleSuspendSchedule } from "@/services/plannerService";
 import { handleExportOrQR, type DataRow } from "@/services/icsService";
@@ -315,8 +303,7 @@ const {
   childrenOfActivity,
   todosForCurrentViewWithTags,
   schedulesForCurrentViewWithTags,
-  schedulesForAppDate,
-  todosForAppDate,
+
   schedulesForCurrentView,
   todosForCurrentViewWithTaskRecords,
 } = storeToRefs(dataStore);
@@ -425,33 +412,6 @@ function saveEdit() {
 
 function cancelEdit() {
   isEditing.value = false;
-}
-// ======================== 1. TimeTable 相关 ========================
-
-// -- 时间表数据和类型
-const currentType = ref<"work" | "entertainment">("work");
-const allBlocks = ref({
-  work: loadTimeBlocks("work", [...WORK_BLOCKS]),
-  entertainment: loadTimeBlocks("entertainment", [...ENTERTAINMENT_BLOCKS]),
-});
-const viewBlocks = computed(() => allBlocks.value[currentType.value]);
-
-/** 切换时间表类型（工作/娱乐） */
-function onTypeChange(newType: "work" | "entertainment") {
-  currentType.value = newType;
-}
-
-/** 编辑时间块后的处理 */
-function onBlocksUpdate(newBlocks: Block[]) {
-  allBlocks.value[currentType.value] = [...newBlocks]; // 保持引用变
-  saveTimeBlocks(currentType.value, newBlocks);
-}
-
-/** 恢复默认时间块 */
-function onTimeTableReset(type: "work" | "entertainment") {
-  allBlocks.value[type] = type === "work" ? [...WORK_BLOCKS] : [...ENTERTAINMENT_BLOCKS];
-  removeTimeBlocksStorage(type);
-  saveTimeBlocks(type, allBlocks.value[type]);
 }
 
 // ======================== 2. Activity 相关 ========================

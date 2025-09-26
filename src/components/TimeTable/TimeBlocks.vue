@@ -91,7 +91,7 @@
       style="cursor: grab"
       @mousedown="handleMouseDown($event, seg)"
     >
-      {{ seg.priority > 0 ? seg.priority : firstNonDigitLetterWide(seg.todoTitle) || "–" }}
+      {{ seg.priority > 0 ? seg.priority : firstNonDigitLetterWide(seg.todoTitle) || "—" }}
     </span>
     <span v-else style="cursor: grab" @mousedown="handleMouseDown($event, seg)">⚠️</span>
   </div>
@@ -281,7 +281,7 @@ function getPomodoroStyle(seg: PomodoroSegment): CSSProperties {
 
 function firstNonDigitLetterWide(s: string) {
   if (!s) return "";
-  // 优先找任意字母（已包含大多数字母体系）；如不放心可额外并入 Han
+  // 优先找任意字母（已包含大多数字母体系）；如不放心可额外并入
   const m = String(s).match(/\p{L}|\p{Script=Han}/u);
   return m ? m[0] : "";
 }
