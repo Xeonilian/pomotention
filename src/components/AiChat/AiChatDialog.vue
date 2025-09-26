@@ -98,7 +98,7 @@ onMounted(async () => {
 
 .message {
   display: flex;
-  gap: 6px;
+  gap: 12px;
   width: 100%;
   max-width: 100%;
 }
@@ -108,21 +108,22 @@ onMounted(async () => {
   display: flex;
 }
 
-.message.user .message-content {
-  justify-content: flex-end;
-}
-
 .message-text {
-  padding: 0px 0px;
   border-radius: 6px;
   word-wrap: break-word;
   line-height: 1.6;
+  padding-bottom: 2px;
+  padding-top: 2px;
 }
 
+.message.user .message-content {
+  justify-content: flex-end;
+}
 .message.user .message-text {
   width: 66%;
   background: var(--color-blue-light-transparent);
   color: var(--color-text);
+  padding-left: 6px;
 }
 
 /* 内部markdown格式 */
@@ -149,6 +150,10 @@ onMounted(async () => {
   padding: 0.5px;
   font-family: "Microsoft YaHei" "Consolas", "Monaco", "Courier New", monospace;
   font-weight: 600;
+}
+
+:deep(.message-text p) {
+  margin: 0;
 }
 
 /* 输入区固定在底部且不超父容器宽度 */
