@@ -215,17 +215,7 @@
       ></div>
       <!-- 任务视图 -->
       <div v-if="settingStore.settings.showTask" class="middle-bottom" :style="{ height: `calc(100% - ${topHeight}px - 8px)` }">
-        <TaskTracker
-          :selectedTaskId="selectedTaskId"
-          :selectedTask="selectedTask"
-          :selectedTagIds="selectedTagIds"
-          @activetaskId="onActiveTaskId"
-          @update-task-description="onUpdateTaskDescription"
-          @interruption-record="onInterruptionRecord"
-          @reward-record="onRewordRecord"
-          @energy-record="onEnergyRecord"
-          @star="onStar"
-        />
+        <TaskTracker />
       </div>
     </div>
 
@@ -275,27 +265,29 @@
 
 <script setup lang="ts">
 // ------------------------ 导入依赖 ------------------------
-import { ref, onMounted, watch, computed } from "vue";
-import { usePomoStore } from "@/stores/usePomoStore";
+import { ref, onMounted, computed } from "vue";
+import { defineAsyncComponent } from "vue";
+import { storeToRefs } from "pinia"; // 导入 storeToRefs
+
 import type { Activity } from "@/core/types/Activity";
 import type { Block } from "@/core/types/Block";
-import type { TodoWithTags, TodoWithTaskRecords } from "@/core/types/Todo";
-import type { Schedule } from "@/core/types/Schedule";
-import { Task, EnergyRecord, RewardRecord, InterruptionRecord } from "@/core/types/Task";
+import { Task } from "@/core/types/Task";
+import { getTimestampForTimeString, getDateKey } from "@/core/utils";
 import { WORK_BLOCKS, ENTERTAINMENT_BLOCKS, ViewType } from "@/core/constants";
+
+import { useResize } from "@/composables/useResize";
+import IcsExportModal from "@/components/IcsExportModal.vue";
+import { Previous24Regular, Next24Regular, Search24Regular, CalendarSettings20Regular, QrCode24Regular } from "@vicons/fluent";
+
+import { unifiedDateService } from "@/services/unifiedDateService";
 import { loadTimeBlocks, saveTimeBlocks, removeTimeBlocksStorage } from "@/services/localStorageService";
 import { handleAddActivity, handleDeleteActivity, passPickedActivity, togglePomoType } from "@/services/activityService";
 import { updateScheduleStatus, updateTodoStatus, handleSuspendTodo, handleSuspendSchedule } from "@/services/plannerService";
 import { handleExportOrQR, type DataRow } from "@/services/icsService";
-import { Previous24Regular, Next24Regular, Search24Regular, CalendarSettings20Regular, QrCode24Regular } from "@vicons/fluent";
-import { useResize } from "@/composables/useResize";
-import { getTimestampForTimeString, addDays, getDateKey } from "@/core/utils";
-import { unifiedDateService } from "@/services/unifiedDateService";
+
+import { usePomoStore } from "@/stores/usePomoStore";
 import { useSettingStore } from "@/stores/useSettingStore";
-import { defineAsyncComponent } from "vue";
-import IcsExportModal from "@/components/IcsExportModal.vue";
 import { useDataStore } from "@/stores/useDataStore";
-import { storeToRefs } from "pinia"; // 导入 storeToRefs
 
 // ======================== 响应式状态与初始化 ========================
 // 不直接import Naive和以下组建加速启动
@@ -310,6 +302,7 @@ const AIChatDialog = defineAsyncComponent(() => import("@/components/AiChat/AiCh
 // -- 基础UI状态
 const settingStore = useSettingStore();
 const dataStore = useDataStore();
+const pomoStore = usePomoStore();
 
 const queryDate = ref<number | null>(null);
 const showPopover = ref(false);
@@ -333,13 +326,16 @@ const {
   scheduleByActivityId,
   tasksBySource,
   childrenOfActivity,
-  selectedTagIds,
-  selectedTask,
+  todosForCurrentViewWithTags,
+  schedulesForCurrentViewWithTags,
+  schedulesForAppDate,
+  todosForAppDate,
+  schedulesForCurrentView,
+  todosForCurrentViewWithTaskRecords,
 } = storeToRefs(dataStore);
-const { saveAllDebounced } = dataStore;
-// ======================== 0. UI 更新相关 ========================
 
-const pomoStore = usePomoStore();
+const { saveAllDebounced, cleanSelection } = dataStore;
+// ======================== 0. UI 更新相关 ========================
 
 const dateService = unifiedDateService({
   activityList,
@@ -360,92 +356,6 @@ const globalRealPomo = computed(() => pomoStore.globalRealPomo);
 const isViewDateToday = dateService.isViewDateToday;
 const isViewDateYesterday = dateService.isViewDateYesterday;
 const isViewDateTomorrow = dateService.isViewDateTomorrow;
-
-const todosForCurrentViewWithTaskRecords = computed<TodoWithTaskRecords[]>(() => {
-  const { start, end } = dateService.visibleRange.value;
-  if (!todoList.value) return [];
-
-  const out: TodoWithTaskRecords[] = [];
-  for (const todo of todoList.value) {
-    if (todo.id < start || todo.id >= end) continue;
-
-    const relatedTask = todo.taskId != null ? taskById.value.get(todo.taskId) : undefined;
-
-    out.push({
-      ...todo,
-      energyRecords: relatedTask?.energyRecords ?? [],
-      rewardRecords: relatedTask?.rewardRecords ?? [],
-      interruptionRecords: relatedTask?.interruptionRecords ?? [],
-    });
-  }
-  return out;
-});
-
-const todosForCurrentViewWithTags = computed<TodoWithTags[]>(() => {
-  const { start, end } = dateService.visibleRange.value;
-  if (!todoList.value) return [];
-  const out: TodoWithTags[] = [];
-  for (const todo of todoList.value) {
-    if (todo.id < start || todo.id >= end) continue;
-    const activity = todo.activityId != null ? activityById.value.get(todo.activityId) : undefined;
-    out.push({
-      ...todo,
-      tagIds: activity?.tagIds ?? [],
-    });
-  }
-  return out;
-});
-// 计算筛选当前视图范围内的 schedule
-const schedulesForCurrentView = computed(() => {
-  const { start, end } = dateService.visibleRange.value;
-  if (!scheduleList.value) return [];
-  return scheduleList.value.filter((schedule) => {
-    const date = schedule.activityDueRange?.[0];
-    if (date == null) return false;
-    return date >= start && date < end;
-  });
-});
-
-type ScheduleWithTags = Schedule & { tagIds?: number[] };
-const schedulesForCurrentViewWithTags = computed<ScheduleWithTags[]>(() => {
-  const { start, end } = dateService.visibleRange.value;
-  if (!scheduleList.value) return [];
-  return scheduleList.value
-    .filter((schedule) => {
-      const date = schedule.activityDueRange?.[0];
-      return date != null && date >= start && date < end;
-    })
-    .map((schedule) => {
-      const activity = schedule.activityId != null ? activityById.value.get(schedule.activityId) : undefined;
-      return {
-        ...schedule,
-        tagIds: activity?.tagIds ?? [],
-      };
-    });
-});
-
-// 计算筛选的todo
-const todosForAppDate = computed(() => {
-  const startOfDay = dateService.appDateTimestamp.value;
-  const endOfDay = addDays(startOfDay, 1);
-
-  if (!todoList.value) return [];
-  return todoList.value.filter((todo) => todo.id >= startOfDay && todo.id < endOfDay);
-});
-
-// 计算筛选的schedule
-const schedulesForAppDate = computed(() => {
-  const startOfDay = dateService.appDateTimestamp.value;
-  const endOfDay = addDays(startOfDay, 1);
-
-  if (!scheduleList.value) return [];
-  return scheduleList.value.filter((schedule) => {
-    const date = schedule.activityDueRange?.[0];
-
-    if (date == null) return false;
-    return date >= startOfDay && date < endOfDay;
-  });
-});
 
 // weekplanner month 引起变化日期
 const onMonthJump = () => {
@@ -492,41 +402,6 @@ const onItemChange = (id: number, activityId?: number, taskId?: number) => {
     selectedTaskId.value = null;
   }
 };
-/**
- * 监听【经过筛选后】的当天 todo 列表的变化。
- * 当这个列表本身、或者其中任何 todo 的 realPomo 属性变化时，
- * 就更新 Pomo Store 中对应日期的数据。
- */
-watch(
-  todosForAppDate,
-  (currentTodos) => {
-    const dateKey = dateService.appDateKey.value;
-    pomoStore.setTodosForDate(dateKey, currentTodos);
-    // console.log(`[HomeView] Pomo store updated for date: ${dateKey}`);
-  },
-  { deep: true, immediate: true } // immediate 确保初始化时执行一次
-);
-
-/**
- * 监听 appDate 的变化，用于处理需要清空选中状态等副作用。
- */
-watch(
-  () => dateService.appDateTimestamp.value, // 监听时间戳更可靠
-  () => {
-    selectedRowId.value = null;
-    selectedActivityId.value = null;
-    // ... 清理其他选中状态 ...
-    console.log(`[HomeView] App date changed, activity selection cleared.`);
-  }
-);
-
-watch(
-  [activityList, todoList, scheduleList, taskList],
-  () => {
-    saveAllDebounced();
-  },
-  { deep: true }
-);
 
 // 离开页面兜底（Tauri 桌面端同样可用）
 window.addEventListener("beforeunload", () => {
@@ -543,11 +418,6 @@ function showErrorPopover(message: string) {
   setTimeout(() => {
     showPopover.value = false;
   }, 3000);
-}
-
-function cleanSelection() {
-  selectedRowId.value = null;
-  selectedActivityId.value = null;
 }
 
 /**  marquee 功能*/
@@ -1196,192 +1066,6 @@ function handleEditScheduleDone(id: number, newTm: string) {
   }
   saveAllDebounced();
 }
-
-// ======================== 4. Task/执行相关操作 ========================
-function onUpdateTaskDescription(payload: { taskId: number; description: string }) {
-  const { taskId, description } = payload;
-
-  const task = taskById.value.get(taskId);
-  if (task) task.description = description;
-
-  // 统一持久化
-  saveAllDebounced();
-}
-
-function onInterruptionRecord(data: {
-  interruptionType: "E" | "I";
-  description: string;
-  asActivity: boolean;
-  activityType?: "T" | "S";
-  dueDate?: number | null;
-}) {
-  const { interruptionType, description, asActivity, activityType, dueDate } = data;
-
-  if (selectedTaskId.value) {
-    const task = taskById.value.get(selectedTaskId.value);
-    if (!task) return;
-    const record: InterruptionRecord = {
-      id: Date.now(),
-      interruptionType: interruptionType,
-      description: description,
-      activityType: activityType || null,
-    };
-    task.interruptionRecords.push(record);
-    if (asActivity && activityType) {
-      const newActivity: Activity = {
-        id: Date.now(),
-        title: description,
-        class: activityType,
-        dueDate: dueDate || null,
-        parentId: null,
-        dueRange: [null, ""],
-        status: "",
-        interruption: interruptionType,
-      };
-      activityList.value.push(newActivity);
-      handleAddActivity(scheduleList.value, newActivity, {
-        activityById: activityById.value,
-      });
-    }
-  }
-  saveAllDebounced();
-}
-
-function onRewordRecord(val: { value: number; description?: string }) {
-  const { value, description } = val;
-  if (selectedTaskId.value) {
-    const task = taskById.value.get(selectedTaskId.value);
-    if (!task) return;
-    const record: RewardRecord = { id: Date.now(), value, description };
-    task.rewardRecords.push(record);
-  }
-}
-
-function onEnergyRecord(val: { value: number; description?: string }) {
-  const { value, description } = val;
-  if (selectedTaskId.value) {
-    const task = taskById.value.get(selectedTaskId.value);
-    if (!task) return;
-    const record: EnergyRecord = { id: Date.now(), value, description };
-    task.energyRecords.push(record);
-  }
-}
-
-function onStar() {
-  if (selectedTaskId.value) {
-    const task = taskById.value.get(selectedTaskId.value);
-    if (!task) return;
-    task.starred = !task.starred;
-  }
-}
-// 选择task时高亮对应的todo/activity/schedule
-function onActiveTaskId(taskId: number | null) {
-  if (!taskId) {
-    // 如果没有 taskId，清空
-    selectedRowId.value = null;
-    selectedActivityId.value = null;
-    return;
-  }
-
-  // 找到当前任务
-  const task = taskById.value.get(taskId);
-  if (!task) {
-    // 如果找不到任务，清空
-    selectedRowId.value = null;
-    selectedActivityId.value = null;
-    return;
-  }
-
-  // 根据 task 的 source 判断
-  if (task.source === "activity") {
-    const activity = activityById.value.get(task.sourceId);
-    if (activity) {
-      selectedActivityId.value = activity.id; // 找到活动
-    }
-  } else if (task.source === "todo") {
-    const todo = todoById.value.get(task.sourceId);
-    if (todo) {
-      selectedActivityId.value = todo.activityId; // 获取关联的 activityId
-    }
-  } else if (task.source === "schedule") {
-    const schedule = scheduleById.value.get(task.sourceId);
-    if (schedule) {
-      selectedActivityId.value = schedule.activityId; // 获取关联的 activityId
-    }
-  }
-}
-
-// ======================== 5. 数据联动 Watchers ========================
-/** Activity 活动变化时联动 Todo/Schedule 属性同步 */
-watch(
-  activityList,
-  (newVal) => {
-    newVal.forEach((activity) => {
-      // 同步Schedule
-      const relatedSchedule = scheduleByActivityId.value.get(activity.id);
-      if (relatedSchedule) {
-        relatedSchedule.activityTitle = activity.title;
-        relatedSchedule.activityDueRange = activity.dueRange ? [activity.dueRange[0], activity.dueRange[1]] : [null, "0"];
-        relatedSchedule.status = activity.status || "";
-        relatedSchedule.location = activity.location || "";
-        relatedSchedule.taskId = activity.taskId;
-      }
-      // 同步Todo
-      const relatedTodo = todoByActivityId.value.get(activity.id);
-      if (relatedTodo) {
-        relatedTodo.activityTitle = activity.title;
-        if (activity.pomoType === "🍒") {
-          // 只要变成樱桃，无条件重置为4个番茄
-          relatedTodo.estPomo = [4];
-        } else {
-          // 非樱桃类型时，才考虑 estPomoI
-          if (!relatedTodo.estPomo || relatedTodo.estPomo.length === 0) {
-            // 没有estPomo则按estPomoI初始化
-            relatedTodo.estPomo = activity.estPomoI ? [parseInt(activity.estPomoI)] : [];
-          }
-          if (!activity.estPomoI) relatedTodo.estPomo = undefined;
-          // 只要有estPomoI，覆盖第一个元素
-          if (activity.estPomoI && relatedTodo.estPomo) {
-            relatedTodo.estPomo[0] = parseInt(activity.estPomoI);
-          }
-        }
-        relatedTodo.status = activity.status || "";
-        relatedTodo.pomoType = activity.pomoType;
-        if (activity.dueDate) relatedTodo.dueDate = activity.dueDate;
-      }
-    });
-  },
-  { deep: true }
-);
-
-/** 活动due范围变化时仅更新状态 */
-watch(
-  () => activityList.value.map((a) => a.dueRange && a.dueRange[0]),
-  () => {
-    const now = Date.now();
-    const today = new Date();
-    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
-    const endOfDay = startOfDay + 24 * 60 * 60 * 1000 - 1;
-
-    activityList.value.forEach((activity) => {
-      if (!activity.dueRange || !activity.dueRange[0]) return;
-      if (activity.status === "done") return;
-      const dueMs = typeof activity.dueRange[0] === "string" ? Date.parse(activity.dueRange[0]) : Number(activity.dueRange[0]);
-
-      // 只更新活动状态
-      if (dueMs >= startOfDay && dueMs <= endOfDay) {
-        // 截止日期是今天
-        activity.status = "ongoing";
-      } else if (dueMs < now && activity.status != "cancelled") {
-        // 截止日期已过
-        activity.status = "delayed";
-      } else {
-        // 截止日期还未到
-        if (activity.status != "cancelled") activity.status = "";
-      }
-    });
-  }
-);
 
 // ======================== 8. 生命周期 Hook ========================
 onMounted(() => {
