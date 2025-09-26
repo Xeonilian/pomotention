@@ -1,49 +1,75 @@
-// taskService.ts（纯数据，不直接持久化）
-import type {
-  Task,
-  EnergyRecord,
-  RewardRecord,
-  InterruptionRecord,
-} from "@/core/types/Task";
+// src/services/taskService.ts (修改后)
+
+import type { Task, EnergyRecord, RewardRecord, InterruptionRecord } from "@/core/types/Task";
 import type { Activity } from "@/core/types/Activity";
+import { useDataStore } from "@/stores/useDataStore";
 
-// 假设由上层传入或在模块外部管理的“内存仓库”（可由 Pinia/Vue ref 持有）
-let taskStore: Task[] = [];
-let activityStore: Activity[] = [];
-
-// 提供注入函数，让应用启动时由上层把 ref 或数组传进来
-export function bindStores(opts: { tasks: Task[]; activities: Activity[] }) {
-  taskStore = opts.tasks;
-  activityStore = opts.activities;
-}
+// 关键点：不要在模块顶层调用 useDataStore()
 
 export const taskService = {
-  getTask(taskId: number): Task | undefined {
-    return taskStore.find((t) => t.id === taskId);
-  },
+  // 推荐：在每个需要它的方法内部调用 useDataStore()
+  // 这样可以确保 Pinia 实例在调用时总是可用的
 
-  // 仅更新内存
-  upsertTask(task: Task): void {
-    const idx = taskStore.findIndex((t) => t.id === task.id);
-    if (idx === -1) {
-      taskStore.push(task);
-    } else {
-      taskStore[idx] = { ...taskStore[idx], ...task };
-    }
+  getTask(taskId: number): Task | undefined {
+    const dataStore = useDataStore(); // 在方法内部调用
+    return dataStore.taskList.find((t) => t.id === taskId);
   },
 
   updateTask(taskId: number, updates: Partial<Task>): void {
-    const idx = taskStore.findIndex((t) => t.id === taskId);
-    if (idx !== -1) {
-      taskStore[idx] = { ...taskStore[idx], ...updates };
+    const task = this.getTask(taskId);
+    if (task) {
+      Object.assign(task, updates);
     }
   },
 
-  createTaskFromTodo(
-    todoId: number,
-    activityTitle: string,
-    projectName?: string
-  ): Task {
+  upsertTask(task: Task): void {
+    const dataStore = useDataStore(); // 在方法内部调用
+    const idx = dataStore.taskList.findIndex((t) => t.id === task.id);
+    if (idx === -1) {
+      dataStore.taskList.push(task);
+    } else {
+      Object.assign(dataStore.taskList[idx], task);
+    }
+  },
+
+  addEnergyRecord(taskId: number, value: number, description?: string): EnergyRecord | undefined {
+    const task = this.getTask(taskId);
+    if (!task) return;
+    const record: EnergyRecord = { id: Date.now(), value, description };
+    const newEnergyRecords = [...(task.energyRecords || []), record];
+    this.updateTask(taskId, { energyRecords: newEnergyRecords });
+    return record;
+  },
+
+  addRewardRecord(taskId: number, value: number, description?: string): RewardRecord | undefined {
+    const task = this.getTask(taskId);
+    if (!task) return;
+    const record: RewardRecord = { id: Date.now(), value, description };
+    const newRewardRecords = [...(task.rewardRecords || []), record];
+    this.updateTask(taskId, { rewardRecords: newRewardRecords });
+    return record;
+  },
+
+  addInterruptionRecord(
+    taskId: number,
+    interruptionType: "E" | "I",
+    description: string,
+    activityType?: "T" | "S" | null
+  ): InterruptionRecord | undefined {
+    const task = this.getTask(taskId);
+    if (!task) return;
+    const record: InterruptionRecord = {
+      id: Date.now(),
+      interruptionType,
+      description,
+      activityType: activityType ?? null,
+    };
+    const newInterruptionRecords = [...(task.interruptionRecords || []), record];
+    this.updateTask(taskId, { interruptionRecords: newInterruptionRecords });
+    return record;
+  },
+
+  createTaskFromTodo(todoId: number, activityTitle: string, projectName?: string): Task {
     const task: Task = {
       id: Date.now(),
       activityTitle,
@@ -59,11 +85,7 @@ export const taskService = {
     return task;
   },
 
-  createTaskFromSchedule(
-    scheduleId: number,
-    activityTitle: string,
-    projectName?: string
-  ): Task {
+  createTaskFromSchedule(scheduleId: number, activityTitle: string, projectName?: string): Task {
     const task: Task = {
       id: Date.now(),
       activityTitle,
@@ -79,11 +101,7 @@ export const taskService = {
     return task;
   },
 
-  createTaskFromActivity(
-    activityId: number,
-    activityTitle: string,
-    projectName?: string
-  ): Task {
+  createTaskFromActivity(activityId: number, activityTitle: string, projectName?: string): Task {
     const task: Task = {
       id: Date.now(),
       activityTitle,
@@ -99,52 +117,6 @@ export const taskService = {
     return task;
   },
 
-  addEnergyRecord(
-    taskId: number,
-    value: number,
-    description?: string
-  ): EnergyRecord | undefined {
-    const task = this.getTask(taskId);
-    if (!task) return;
-    const record: EnergyRecord = { id: Date.now(), value, description };
-    const newEnergyRecords = [...task.energyRecords, record];
-    this.updateTask(taskId, { energyRecords: newEnergyRecords });
-    return record;
-  },
-
-  addRewardRecord(
-    taskId: number,
-    value: number,
-    description?: string
-  ): RewardRecord | undefined {
-    const task = this.getTask(taskId);
-    if (!task) return;
-    const record: RewardRecord = { id: Date.now(), value, description };
-    const newRewardRecords = [...task.rewardRecords, record];
-    this.updateTask(taskId, { rewardRecords: newRewardRecords });
-    return record;
-  },
-
-  addInterruptionRecord(
-    taskId: number,
-    interruptionType: "E" | "I",
-    description: string,
-    activityType?: "T" | "S" | null
-  ): InterruptionRecord | undefined {
-    const task = this.getTask(taskId);
-    if (!task) return;
-    const record: InterruptionRecord = {
-      id: Date.now(),
-      interruptionType: interruptionType,
-      description: description,
-      activityType: activityType ?? null,
-    };
-    const newInterruptionRecords = [...task.interruptionRecords, record];
-    this.updateTask(taskId, { interruptionRecords: newInterruptionRecords });
-    return record;
-  },
-
-  // 返回新建的 Activity，但不落地存储
   createActivityFromInterruption(
     taskId: number,
     interruptionId: number,
@@ -154,13 +126,11 @@ export const taskService = {
     const task = this.getTask(taskId);
     if (!task) return;
 
-    const interruption = task.interruptionRecords.find(
-      (r) => r.id === interruptionId
-    );
+    const interruption = task.interruptionRecords.find((r) => r.id === interruptionId);
     if (!interruption) return;
 
     const activity: Activity = {
-      id: interruption.id, // 注意：用 interruption.id 可能与现有 activity 冲突，建议改为新 id
+      id: interruption.id,
       title: interruption.description,
       class: activityClass,
       interruption: interruption.interruptionType,
@@ -170,8 +140,7 @@ export const taskService = {
       ...(activityClass === "S" && { dueRange: [null, "60"] }),
     };
 
-    // 仅内存落地
-    activityStore.push(activity);
+    useDataStore().addActivity(activity); // 在方法内部调用
     return activity;
   },
 };

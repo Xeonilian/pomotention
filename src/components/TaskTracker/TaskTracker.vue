@@ -2,8 +2,8 @@
 <template>
   <div class="task-view-container">
     <div class="task-header-container">
-      <div v-if="props.selectedTagIds && props.selectedTagIds.length > 0 && props.selectedTaskId" class="task-tag-render-container">
-        <TagRenderer :tag-ids="props.selectedTagIds" :isCloseable="false" />
+      <div v-if="selectedTagIds && selectedTagIds.length > 0 && selectedTaskId" class="task-tag-render-container">
+        <TagRenderer :tag-ids="selectedTagIds" :isCloseable="false" />
       </div>
       <!-- 合并能量/愉悦/打断 记录时间轴 -->
       <div class="combined-timeline-container" v-if="combinedRecords.length">
@@ -46,157 +46,83 @@
         :taskId="selectedTaskId"
         :initialContent="taskDescription"
         :isMarkdown="isMarkdown"
-        @update:content="updateTaskDescription"
-        @activetaskId="(taskId) => emit('activetaskId', taskId)"
+        @update:content="updateTaskDescriptionInStore"
+        @activetaskId="taskTrackerStore.setActiveTaskId"
       />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { ref, watch, computed } from "vue";
+import { storeToRefs } from "pinia"; // 关键修改：导入 storeToRefs
 import TaskButtons from "@/components/TaskTracker/TaskButtons.vue";
 import TaskRecord from "@/components/TaskTracker/TaskRecord.vue";
-import { ref, watch, computed } from "vue";
-import type { Task, EnergyRecord, RewardRecord, InterruptionRecord } from "@/core/types/Task";
-
 import TagRenderer from "@/components/TagSystem/TagRenderer.vue";
-
-const props = defineProps<{
-  selectedTaskId: number | null;
-  selectedTask: Task | null;
-  selectedTagIds: number[] | null;
-}>();
-
-const isStarred = computed(() => {
-  return props.selectedTask?.starred ?? false;
-});
-
-const emit = defineEmits<{
-  (
-    e: "interruption-record",
-    data: {
-      interruptionType: "E" | "I";
-      description: string;
-      asActivity: boolean;
-      activityType?: "T" | "S";
-      dueDate?: number | null;
-    }
-  ): void;
-  (e: "activetaskId", taskId: number | null): void;
-  (e: "update-task-description", payload: { taskId: number; description: string }): void;
-  (e: "energy-record", value: { value: number; description?: string }): void;
-  (e: "reward-record", value: { value: number; description?: string }): void;
-  (e: "star"): void;
-}>();
+import type { EnergyRecord, RewardRecord, InterruptionRecord } from "@/core/types/Task";
+import { useTaskTrackerStore } from "@/stores/useTaskTrackerStore"; // 确保路径正确
 
 // UI 状态
 const isMarkdown = ref(false);
 const taskDescription = ref("");
 
-// 描述从 props 同步为受控值
+const taskTrackerStore = useTaskTrackerStore();
+const { selectedTaskId, selectedTask, selectedTagIds, isStarred } = storeToRefs(taskTrackerStore);
+const { updateTaskDescription, handleEnergyRecord, handleRewardRecord, handleInterruptionRecord, handleStar } = taskTrackerStore;
+
+// 描述从 store 同步为受控值
 watch(
-  () => props.selectedTask,
+  selectedTask, // 现在 selectedTask 是一个响应式的 ref
   (t) => {
     taskDescription.value = t?.description || "";
   },
-  { immediate: true }
+  { immediate: true, deep: true } // 加上 deep: true 确保监听对象内部变化
 );
 
-// 单一数据源：当前任务
-const currentTask = computed(() => props.selectedTask || null);
-
-// 描述更新：上报给父层（父层更新 taskList 并保存）
-const updateTaskDescription = (content: string) => {
+// 描述更新
+const updateTaskDescriptionInStore = (content: string) => {
   taskDescription.value = content;
-  if (props.selectedTaskId) {
-    emit("update-task-description", {
-      taskId: props.selectedTaskId,
-      description: content,
-    });
-  }
+  // 调用 store 中的 action
+  updateTaskDescription(content);
 };
 
 // 统一的 CombinedRecord 类型
 type CombinedRecord =
   | (EnergyRecord & { type: "energy" })
   | (RewardRecord & { type: "reward" })
-  | (InterruptionRecord & {
-      type: "interruption";
-    });
+  | (InterruptionRecord & { type: "interruption" });
 
-// 合并并按时间排序 ，注意 interruption 兼容使用 class
+// 合并并按时间排序
 const combinedRecords = computed<CombinedRecord[]>(() => {
-  const t = currentTask.value;
-  if (!t) return []; // 如果没有当前任务，返回空数组
+  // 关键修改：访问 ref 的值需要 .value
+  const t = selectedTask.value;
+  if (!t) return [];
 
-  // Energy 和 Reward 记录保持不变
-  const energy = t.energyRecords?.map((r) => ({ ...r, type: "energy" as const })) || [];
-  const reward = t.rewardRecords?.map((r) => ({ ...r, type: "reward" as const })) || [];
+  const energy = t.energyRecords?.map((r: EnergyRecord) => ({ ...r, type: "energy" as const })) || [];
+  const reward = t.rewardRecords?.map((r: RewardRecord) => ({ ...r, type: "reward" as const })) || [];
 
-  // --- 关键修改在这里 ---
   const interruption =
     t.interruptionRecords?.map((record: any) => {
-      // 使用 any 来接收不确定的结构
       const isOldVersion = record.class && typeof record.interruptionType === "undefined";
 
-      // 基础对象，包含了两种版本都有的属性和新加的 type
-      const baseRecord = {
-        id: record.id,
-        description: record.description,
-        type: "interruption" as const,
-      };
-
       if (isOldVersion) {
-        // 如果是旧版本，进行转换
         return {
-          ...baseRecord,
-          interruptionType: record.class, // class -> interruptionType
-          activityType: record.activityClass || null, // activityClass -> activityType
+          id: record.id,
+          description: record.description,
+          type: "interruption" as const,
+          interruptionType: record.class,
+          activityType: record.activityClass || null,
         };
       } else {
-        // 如果是新版本，直接扩展
         return {
-          ...baseRecord,
-          interruptionType: record.interruptionType,
-          activityType: record.activityType,
+          ...record,
+          type: "interruption" as const,
         };
       }
     }) || [];
 
-  // 合并所有记录并排序
   return [...energy, ...reward, ...interruption].sort((a, b) => a.id - b.id);
 });
-
-function handleStar() {
-  emit("star");
-}
-
-// 能量记录：直接用 service 更新共享内存（不上提）
-function handleEnergyRecord(val: { value: number; description?: string }) {
-  if (!props.selectedTaskId) return;
-  emit("energy-record", val);
-}
-
-// 愉悦记录：同上
-function handleRewardRecord(val: { value: number; description?: string }) {
-  if (!props.selectedTaskId) return;
-  emit("reward-record", val); // 若父层需要联动，可保持此事件
-}
-
-// 打断记录：创建 record，如需派生活动转 schedule，一并通过 payload 告知父层
-function handleInterruptionRecord(data: {
-  interruptionType: "E" | "I";
-  description: string;
-  asActivity: boolean;
-  activityType?: "T" | "S";
-  dueDate?: number | null;
-}) {
-  if (!props.selectedTaskId) {
-    console.warn("没有选中的任务ID");
-    return;
-  }
-  emit("interruption-record", data);
-}
 
 // 格式化时间戳
 const formatTime = (timestamp: number) => {
@@ -209,7 +135,7 @@ const formatTime = (timestamp: number) => {
   });
 };
 
-// 根据能量值获取颜色 (红)
+// 根据能量值获取颜色
 const getRewardColor = (value: number) => {
   const clampedValue = Math.max(1, Math.min(10, value));
   const normalizedValue = (clampedValue - 1) / 9;
@@ -221,7 +147,7 @@ const getRewardColor = (value: number) => {
   return `rgb(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)})`;
 };
 
-// 根据愉悦值获取颜色 (浅蓝到深蓝渐变)
+// 根据愉悦值获取颜色
 const getEnergyColor = (value: number) => {
   const clampedValue = Math.max(1, Math.min(10, value));
   const normalizedValue = (clampedValue - 1) / 9;
