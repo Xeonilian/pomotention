@@ -2,12 +2,22 @@
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 
-import { loadActivities, loadTodos, loadSchedules, loadTasks } from "@/services/localStorageService";
+import {
+  loadActivities,
+  loadTodos,
+  loadSchedules,
+  loadTasks,
+  saveActivities,
+  saveTodos,
+  saveSchedules,
+  saveTasks,
+} from "@/services/localStorageService";
 
 import type { Todo } from "@/core/types/Todo";
 import type { Schedule } from "@/core/types/Schedule";
 import type { Task } from "@/core/types/Task";
 import type { Activity } from "@/core/types/Activity";
+import { debounce } from "@/core/utils";
 
 export const useDataStore = defineStore("data", () => {
   // ======================== 1. 核心状态 (State) ========================
@@ -42,39 +52,45 @@ export const useDataStore = defineStore("data", () => {
     console.timeEnd("[DataStore] loadAllData");
   }
 
-  // ======================== 3. 数据索引 (Getters, 即 Computed) ========================
-  // 所有索引和派生数据都在这里统一定义
+  // ======================== 3. 数据索引 (Getters / Computed) ========================
+  // 基础索引：通过 ID 快速查找各项数据
   const activityById = computed(() => new Map(activityList.value.map((a) => [a.id, a])));
   const todoById = computed(() => new Map(todoList.value.map((t) => [t.id, t])));
   const scheduleById = computed(() => new Map(scheduleList.value.map((s) => [s.id, s])));
   const taskById = computed(() => new Map(taskList.value.map((t) => [t.id, t])));
 
+  // 关系索引：通过关联 ID 查找
   const todoByActivityId = computed(() => {
-    const m = new Map<number, Todo>();
-    for (const t of todoList.value) if (t.activityId != null) m.set(t.activityId, t);
-    return m;
+    const map = new Map<number, Todo>();
+    for (const todo of todoList.value) {
+      if (todo.activityId != null) map.set(todo.activityId, todo);
+    }
+    return map;
   });
 
   const scheduleByActivityId = computed(() => {
-    const m = new Map<number, Schedule>();
-    for (const s of scheduleList.value) if (s.activityId != null) m.set(s.activityId, s);
-    return m;
+    const map = new Map<number, Schedule>();
+    for (const schedule of scheduleList.value) {
+      if (schedule.activityId != null) map.set(schedule.activityId, schedule);
+    }
+    return map;
   });
 
-  // ... 其他你需要的 computed 属性，比如 childrenOfActivity, taskBySourceId 等 ...
-
-  // ======================== 4. 派生状态 (Selected Items) ========================
-  // 这些依赖于上面的索引和 UI 状态
-  const selectedTask = computed(() => {
-    const id = selectedTaskId.value;
-    if (id == null) return null;
-    return taskById.value.get(id) ?? null;
+  // 父子关系索引：通过父ID查找所有子活动
+  const childrenOfActivity = computed(() => {
+    const map = new Map<number, Activity[]>();
+    for (const activity of activityList.value) {
+      if (activity.parentId == null) continue;
+      if (!map.has(activity.parentId)) {
+        map.set(activity.parentId, []);
+      }
+      map.get(activity.parentId)!.push(activity);
+    }
+    return map;
   });
 
-  // --- 任务索引：按来源分类 ---
-  // 这个 computed 会在 taskList 加载后，自动创建好分类索引
+  // 任务索引：按来源 ('activity', 'todo', 'schedule') 和 sourceId 分类
   const tasksBySource = computed(() => {
-    console.log("Re-computing tasksBySource index...");
     const bucket = {
       activity: new Map<number, Task[]>(),
       todo: new Map<number, Task[]>(),
@@ -82,74 +98,117 @@ export const useDataStore = defineStore("data", () => {
     };
 
     for (const task of taskList.value) {
-      const sourceKey = task.source; // 'activity', 'todo', or 'schedule'
-      const sourceId = task.sourceId;
-
-      // 找到对应的桶
-      const targetMap = bucket[sourceKey];
+      const targetMap = bucket[task.source];
       if (targetMap) {
-        // 如果这个 sourceId 还没有条目，就创建一个空数组
-        if (!targetMap.has(sourceId)) {
-          targetMap.set(sourceId, []);
+        if (!targetMap.has(task.sourceId)) {
+          targetMap.set(task.sourceId, []);
         }
-        // 将当前任务推入数组
-        targetMap.get(sourceId)!.push(task);
+        targetMap.get(task.sourceId)!.push(task);
       }
     }
     return bucket;
   });
 
-  // --- 3.2 (补全) 封装星标判断逻辑 ---
-  // 我们不把它放在 computed 里，而是作为一个普通方法暴露出去。
-  // 因为它需要接收参数(activityId)，每次调用时根据参数动态计算。
-  // Pinia 的 action 或直接在 setup-style store 中定义的函数都可以做到。
-  function hasStarredTaskForActivity(activityId: number): boolean {
-    // 依赖上面创建好的索引，这会让查找非常高效
-    const tasksOfAct = tasksBySource.value.activity.get(activityId) ?? [];
-    if (tasksOfAct.some((t) => t.starred)) return true;
+  // ======================== 4. 派生UI状态 (Computed) ========================
+  // 派生当前选中的 Task 完整对象
+  const selectedTask = computed(() => {
+    const id = selectedTaskId.value;
+    if (id == null) return null;
+    return taskById.value.get(id) ?? null;
+  });
 
-    // 查找关联的 Todo
+  // 派生当前选中项 (Activity/Todo/Schedule) 关联的 Tag ID 列表
+  const selectedTagIds = computed(() => {
+    // 优先使用 activeId (来自 ActivitySheet 的直接选择)
+    if (activeId.value != null) {
+      return activityById.value.get(activeId.value)?.tagIds ?? null;
+    }
+
+    // 其次使用 selectedRowId (来自 Planner 的行选择)
+    const rowId = selectedRowId.value;
+    if (rowId == null) return null;
+
+    const todo = todoById.value.get(rowId);
+    if (todo?.activityId != null) {
+      return activityById.value.get(todo.activityId)?.tagIds ?? null;
+    }
+
+    const schedule = scheduleById.value.get(rowId);
+    if (schedule?.activityId != null) {
+      return activityById.value.get(schedule.activityId)?.tagIds ?? null;
+    }
+
+    return null;
+  });
+
+  // ======================== 5. 方法 (Actions) ========================
+
+  // 检查一个 Activity 及其关联的 Todo/Schedule 是否有已加星的任务
+  function hasStarredTaskForActivity(activityId: number): boolean {
+    // 检查直接从 Activity 创建的任务
+    const tasksOfAct = tasksBySource.value.activity.get(activityId);
+    if (tasksOfAct?.some((t) => t.starred)) return true;
+
+    // 检查关联的 Todo 创建的任务
     const relatedTodo = todoByActivityId.value.get(activityId);
     if (relatedTodo) {
-      const tasksOfTodo = tasksBySource.value.todo.get(relatedTodo.id) ?? [];
-      if (tasksOfTodo.some((t) => t.starred)) return true;
+      const tasksOfTodo = tasksBySource.value.todo.get(relatedTodo.id);
+      if (tasksOfTodo?.some((t) => t.starred)) return true;
     }
 
-    // 查找关联的 Schedule
+    // 检查关联的 Schedule 创建的任务
     const relatedSchedule = scheduleByActivityId.value.get(activityId);
     if (relatedSchedule) {
-      const tasksOfSch = tasksBySource.value.schedule.get(relatedSchedule.id) ?? [];
-      if (tasksOfSch.some((t) => t.starred)) return true;
+      const tasksOfSch = tasksBySource.value.schedule.get(relatedSchedule.id);
+      if (tasksOfSch?.some((t) => t.starred)) return true;
     }
 
-    // 如果上面都没有找到加星任务，则返回 false
     return false;
   }
 
+  /** 自动保存数据 */
+  const saveAllNow = () => {
+    try {
+      saveActivities(activityList.value);
+      saveTodos(todoList.value);
+      saveSchedules(scheduleList.value);
+      saveTasks(taskList.value);
+    } catch (e) {
+      console.error("save failed", e);
+    }
+  };
+  const saveAllDebounced = debounce(saveAllNow, 800);
   // ======================== 5. 暴露接口 ========================
   return {
-    // State
+    // ======================== 核心状态 (State) ========================
     activityList,
     todoList,
     scheduleList,
     taskList,
+
+    // ======================== UI 状态 (State) ========================
     activeId,
     selectedTaskId,
     selectedActivityId,
     selectedRowId,
 
-    // Getters (Computed)
+    // ======================== 索引 (Getters/Computed) ========================
     activityById,
     todoById,
     scheduleById,
     taskById,
     todoByActivityId,
     scheduleByActivityId,
-    selectedTask,
+    childrenOfActivity,
     tasksBySource,
 
-    // Actions
+    // ======================== 派生UI状态 (Getters/Computed) ========================
+    selectedTask,
+    selectedTagIds,
+
+    // ======================== 方法 (Actions) ========================
     loadAllData,
     hasStarredTaskForActivity,
+    saveAllDebounced,
   };
 });
