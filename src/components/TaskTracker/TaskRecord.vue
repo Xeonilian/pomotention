@@ -9,9 +9,7 @@
       :title="isEditing ? '单击启动编辑' : ''"
     >
       <div v-if="!taskId" class="placeholder">请选择追踪的任务...</div>
-      <div v-else-if="!content" class="placeholder">
-        点击此处追踪执行意图...
-      </div>
+      <div v-else-if="!content" class="placeholder">点击此处追踪执行意图...</div>
       <div v-else v-html="renderedMarkdown"></div>
     </div>
     <div v-else style="position: relative; width: 100%; height: 100%">
@@ -24,9 +22,7 @@
         :title="'激活时Esc退出编辑'"
         style="position: relative; z-index: 1"
       ></textarea>
-      <div v-if="showCaretFlash" class="caret-flash" :style="caretFlashStyle">
-        🍅
-      </div>
+      <div v-if="showCaretFlash" class="caret-flash" :style="caretFlashStyle">🍅</div>
     </div>
   </div>
 </template>
@@ -34,10 +30,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from "vue";
 import { marked } from "marked";
-import {
-  getClickContextFragments,
-  findFragmentSequenceInSource,
-} from "@/services/taskRecordService";
+import { getClickContextFragments, findFragmentSequenceInSource } from "@/services/taskRecordService";
 import { useCaretFlash } from "@/composables/useCaretFlash";
 
 const { showCaretFlash, caretFlashStyle, flashCaretFlash } = useCaretFlash();
@@ -45,9 +38,7 @@ const { showCaretFlash, caretFlashStyle, flashCaretFlash } = useCaretFlash();
 // 添加自定义渲染器
 const renderer = new marked.Renderer();
 renderer.checkbox = function ({ checked }: { checked: boolean }) {
-  return `<input type="checkbox" class="markdown-checkbox" ${
-    checked ? "checked" : ""
-  }>`;
+  return `<input type="checkbox" class="markdown-checkbox" ${checked ? "checked" : ""}>`;
 };
 
 // 添加高亮语法支持
@@ -114,11 +105,7 @@ const startEditing = () => {
   nextTick(() => {
     setTimeout(() => {
       const ta = textarea.value;
-      if (
-        ta &&
-        ta instanceof HTMLTextAreaElement &&
-        document.body.contains(ta)
-      ) {
+      if (ta && ta instanceof HTMLTextAreaElement && document.body.contains(ta)) {
         ta.focus();
         flashCaretFlash(ta);
       }
@@ -133,10 +120,7 @@ const stopEditing = () => {
 
 const handleKeydown = (event: KeyboardEvent) => {
   // 阻止默认行为的通用检查
-  if (
-    event.key === "Tab" ||
-    (event.altKey && event.shiftKey && event.key === "ArrowDown")
-  ) {
+  if (event.key === "Tab" || (event.altKey && event.shiftKey && event.key === "ArrowDown")) {
     event.preventDefault();
   }
 
@@ -167,10 +151,7 @@ const handleKeydown = (event: KeyboardEvent) => {
     const contentToInsert = "\n" + currentLineContent;
 
     // 将复制的内容插入到当前行之后
-    content.value =
-      originalContent.substring(0, lineEnd) +
-      contentToInsert +
-      originalContent.substring(lineEnd);
+    content.value = originalContent.substring(0, lineEnd) + contentToInsert + originalContent.substring(lineEnd);
 
     // 更新光标位置到新行的相同位置
     nextTick(() => {
@@ -208,10 +189,7 @@ const handleKeydown = (event: KeyboardEvent) => {
 
     // 4. 重组内容
     const partBefore = originalContent.substring(0, lineStart);
-    const nextLineContent = originalContent.substring(
-      lineEnd + 1,
-      nextLineEnd + 1
-    );
+    const nextLineContent = originalContent.substring(lineEnd + 1, nextLineEnd + 1);
     const partAfter = originalContent.substring(nextLineEnd + 1);
 
     content.value = partBefore + nextLineContent + lineWithNewline + partAfter;
@@ -243,10 +221,7 @@ const handleKeydown = (event: KeyboardEvent) => {
     }
 
     // 2. 提取当前行内容
-    const currentLineContent = originalContent.substring(
-      lineStart,
-      lineEnd + 1
-    );
+    const currentLineContent = originalContent.substring(lineStart, lineEnd + 1);
 
     // 3. 定位上一行
     const prevLineStart = originalContent.lastIndexOf("\n", lineStart - 2) + 1;
@@ -256,8 +231,7 @@ const handleKeydown = (event: KeyboardEvent) => {
     const prevLineContent = originalContent.substring(prevLineStart, lineStart);
     const partAfter = originalContent.substring(lineEnd + 1);
 
-    content.value =
-      partBefore + currentLineContent + prevLineContent + partAfter;
+    content.value = partBefore + currentLineContent + prevLineContent + partAfter;
 
     // 5. 更新光标位置
     nextTick(() => {
@@ -308,10 +282,7 @@ const handleKeydown = (event: KeyboardEvent) => {
           .join("\n");
       }
 
-      content.value =
-        originalContent.substring(0, lineStart) +
-        newSelectedText +
-        originalContent.substring(end);
+      content.value = originalContent.substring(0, lineStart) + newSelectedText + originalContent.substring(end);
 
       nextTick(() => {
         textArea.selectionStart = lineStart;
@@ -323,45 +294,28 @@ const handleKeydown = (event: KeyboardEvent) => {
       if (event.shiftKey) {
         // Shift+Tab: 减少缩进
         const lineStart = originalContent.lastIndexOf("\n", start - 1) + 1;
-        const lineContentBeforeCursor = originalContent.substring(
-          lineStart,
-          start
-        );
+        const lineContentBeforeCursor = originalContent.substring(lineStart, start);
 
         if (lineContentBeforeCursor.startsWith("    ")) {
-          content.value =
-            originalContent.substring(0, lineStart) +
-            originalContent.substring(lineStart + 4);
+          content.value = originalContent.substring(0, lineStart) + originalContent.substring(lineStart + 4);
           nextTick(() => {
-            textArea.selectionStart = textArea.selectionEnd = Math.max(
-              start - 4,
-              lineStart
-            );
+            textArea.selectionStart = textArea.selectionEnd = Math.max(start - 4, lineStart);
             textArea.focus();
           });
         } else if (lineContentBeforeCursor.startsWith("\t")) {
-          content.value =
-            originalContent.substring(0, lineStart) +
-            originalContent.substring(lineStart + 1);
+          content.value = originalContent.substring(0, lineStart) + originalContent.substring(lineStart + 1);
           nextTick(() => {
-            textArea.selectionStart = textArea.selectionEnd = Math.max(
-              start - 1,
-              lineStart
-            );
+            textArea.selectionStart = textArea.selectionEnd = Math.max(start - 1, lineStart);
             textArea.focus();
           });
         }
       } else {
         // Tab: 增加缩进
         const indent = "    ";
-        content.value =
-          originalContent.substring(0, start) +
-          indent +
-          originalContent.substring(end);
+        content.value = originalContent.substring(0, start) + indent + originalContent.substring(end);
 
         nextTick(() => {
-          textArea.selectionStart = textArea.selectionEnd =
-            start + indent.length;
+          textArea.selectionStart = textArea.selectionEnd = start + indent.length;
           textArea.focus();
         });
       }
@@ -370,14 +324,10 @@ const handleKeydown = (event: KeyboardEvent) => {
 };
 
 const handleClick = (event: MouseEvent) => {
-  emit("activetaskId", props.taskId);
   const target = event.target as HTMLElement;
 
   // 如果点击的是checkbox，处理checkbox逻辑
-  if (
-    target.tagName === "INPUT" &&
-    target.classList.contains("markdown-checkbox")
-  ) {
+  if (target.tagName === "INPUT" && target.classList.contains("markdown-checkbox")) {
     event.stopPropagation();
 
     const checkbox = target as HTMLInputElement;
@@ -390,8 +340,7 @@ const handleClick = (event: MouseEvent) => {
       const markdownContent = checkbox.closest(".markdown-content");
       if (!markdownContent) return;
 
-      const allCheckboxes =
-        markdownContent.querySelectorAll(".markdown-checkbox");
+      const allCheckboxes = markdownContent.querySelectorAll(".markdown-checkbox");
       const checkboxIndex = Array.from(allCheckboxes).indexOf(checkbox);
 
       if (checkboxIndex === -1) return;
@@ -403,9 +352,7 @@ const handleClick = (event: MouseEvent) => {
       // 查找并更新对应的行
       const updatedLines = lines.map((line) => {
         // 匹配任务列表项的正则表达式
-        const taskMatch = line.match(
-          /^(\s*)(\d+\.\s+|-)\s*\[([ xX])\]\s+(.*)$/
-        );
+        const taskMatch = line.match(/^(\s*)(\d+\.\s+|-)\s*\[([ xX])\]\s+(.*)$/);
 
         if (taskMatch) {
           const [, indent, prefix, _status, taskText] = taskMatch; // 没有用的status不能删除，要占位现在表示未使用变量

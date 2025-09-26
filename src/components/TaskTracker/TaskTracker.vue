@@ -47,7 +47,6 @@
         :initialContent="taskDescription"
         :isMarkdown="isMarkdown"
         @update:content="updateTaskDescriptionInStore"
-        @activetaskId="taskTrackerStore.setActiveTaskId"
       />
     </div>
   </div>

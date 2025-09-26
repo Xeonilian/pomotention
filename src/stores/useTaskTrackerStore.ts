@@ -60,11 +60,6 @@ export const useTaskTrackerStore = defineStore("taskTracker", () => {
     }
   }
 
-  function setActiveTaskId(taskId: number | null) {
-    // 这个操作本质上是全局的，所以委托给 dataStore
-    dataStore.setActiveId(taskId);
-  }
-
   return {
     // 暴露给组件的数据
     selectedTaskId,
@@ -77,6 +72,5 @@ export const useTaskTrackerStore = defineStore("taskTracker", () => {
     handleRewardRecord,
     handleInterruptionRecord,
     handleStar,
-    setActiveTaskId,
   };
 });
