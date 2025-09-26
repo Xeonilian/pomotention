@@ -61,13 +61,13 @@
   </div>
 </template>
 <script setup lang="ts">
-// ... 脚本部分保持不变
-import { computed, ref } from "vue";
+import { computed } from "vue";
 import { NCard } from "naive-ui";
 import type { Todo } from "@/core/types/Todo";
 import type { Schedule } from "@/core/types/Schedule";
 import TagRenderer from "../TagSystem/TagRenderer.vue";
 import { timestampToTimeString } from "@/core/utils";
+import { useDataStore } from "@/stores/useDataStore";
 
 const emit = defineEmits<{
   "date-change": [timestamp: number];
@@ -102,29 +102,24 @@ type UnifiedItem = {
   activityDueRange?: [number | null, string];
   tagIds?: number[];
 };
-const props = defineProps<{
-  monthTodos: Array<Todo & { tagIds?: number[] }>;
-  monthSchedules: Array<Schedule & { tagIds?: number[] }>;
-  monthStartTs: number; // 月初 00:00:00（毫秒）
-  dayStartTs: number;
-  selectedRowId: number | null;
-  activeId: number | null | undefined;
-}>();
-const selectedDate = computed(() => props.dayStartTs);
-const selectedItem = ref(1);
+
+const dataStore = useDataStore();
+const { activeId, selectedRowId, todosForCurrentViewWithTags, schedulesForCurrentViewWithTags, selectedDate } = storeToRefs(dataStore);
+const dateService = dataStore.dateService;
+
 const MAX_PER_DAY = 4; // 每天最多显示4个项目
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 const days = computed(() => {
   // 获取月份信息
-  const monthStart = startOfMonth(props.monthStartTs);
-  const monthEnd = endOfMonth(props.monthStartTs);
+  const monthStart = startOfMonth(dateService.monthStartTs);
+  const monthEnd = endOfMonth(dateService.monthStartTs);
   const calendarStart = startOfWeek(monthStart); // 月视图显示完整周
   const calendarEnd = endOfWeek(monthEnd);
   // 计算日历天数
   const totalDays = Math.ceil((calendarEnd - calendarStart) / DAY_MS);
   // 将 Todo 映射到统一结构
-  const todoItems: UnifiedItem[] = (props.monthTodos || [])
+  const todoItems: UnifiedItem[] = (todosForCurrentViewWithTags.value || [])
     .map((t) => {
       const ts = pickTodoTs(t);
       if (ts == null) return null;
@@ -152,7 +147,7 @@ const days = computed(() => {
     })
     .filter((x): x is UnifiedItem => !!x);
   // 将 Schedule 映射到统一结构
-  const scheduleItems: UnifiedItem[] = (props.monthSchedules || [])
+  const scheduleItems: UnifiedItem[] = (schedulesForCurrentViewWithTags.value || [])
     .map((s) => {
       const ts = pickScheduleTs(s);
       if (ts == null) return null;
@@ -187,7 +182,7 @@ const days = computed(() => {
   }
   // 构建日历天数数据
   const today = startOfDay(Date.now());
-  const currentMonth = new Date(props.monthStartTs).getMonth();
+  const currentMonth = new Date(dateService.monthStartTs).getMonth();
 
   const result = Array.from({ length: totalDays }, (_, idx) => {
     const dayTs = calendarStart + idx * DAY_MS;
@@ -286,17 +281,14 @@ function formatDay(ts: number) {
 
 // 处理日期选择
 const handleDateSelect = (day: number) => {
-  selectedItem.value = -1;
   emit("date-change", day);
 };
 
 const handleDateJump = (day: number) => {
-  selectedItem.value = -1;
   emit("date-jump", day);
 };
 
 const handleItemSelect = (id: number, ts: number, activityId?: number, taskId?: number) => {
-  selectedItem.value = id;
   emit("date-change", ts);
   emit("item-change", id, activityId, taskId);
 };
