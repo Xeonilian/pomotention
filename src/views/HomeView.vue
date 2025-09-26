@@ -13,7 +13,7 @@
         :current-type="currentType"
         :todayTodos="todosForAppDate"
         :todaySchedules="schedulesForAppDate"
-        :dayStart="dateService.appDateTimestamp.value"
+        :dayStart="dateService.appDateTimestamp"
         @update-blocks="onBlocksUpdate"
         @reset-schedule="onTimeTableReset"
         @change-type="onTypeChange"
@@ -185,8 +185,8 @@
             v-if="settingStore.settings.showPlanner && settingStore.settings.viewSet === 'week'"
             :weekTodos="todosForCurrentViewWithTags"
             :weekSchedules="schedulesForCurrentViewWithTags"
-            :weekStartTs="dateService.weekStartTs.value"
-            :dayStartTs="dateService.appDateTimestamp.value"
+            :weekStartTs="dateService.weekStartTs"
+            :dayStartTs="dateService.appDateTimestamp"
             :selectedRowId="selectedRowId"
             :activeId="activeId"
             @date-change="onDateChange"
@@ -197,8 +197,8 @@
             v-if="settingStore.settings.showPlanner && settingStore.settings.viewSet === 'month'"
             :monthTodos="todosForCurrentViewWithTags"
             :monthSchedules="schedulesForCurrentViewWithTags"
-            :monthStartTs="dateService.monthStartTs.value"
-            :dayStartTs="dateService.appDateTimestamp.value"
+            :monthStartTs="dateService.monthStartTs"
+            :dayStartTs="dateService.appDateTimestamp"
             :selectedRowId="selectedRowId"
             :activeId="activeId"
             @date-change="onDateChange"
@@ -267,7 +267,7 @@
 // ------------------------ 导入依赖 ------------------------
 import { ref, onMounted, computed } from "vue";
 import { defineAsyncComponent } from "vue";
-import { storeToRefs } from "pinia"; // 导入 storeToRefs
+import { storeToRefs } from "pinia";
 
 import type { Activity } from "@/core/types/Activity";
 import type { Block } from "@/core/types/Block";
@@ -279,7 +279,6 @@ import { useResize } from "@/composables/useResize";
 import IcsExportModal from "@/components/IcsExportModal.vue";
 import { Previous24Regular, Next24Regular, Search24Regular, CalendarSettings20Regular, QrCode24Regular } from "@vicons/fluent";
 
-import { unifiedDateService } from "@/services/unifiedDateService";
 import { loadTimeBlocks, saveTimeBlocks, removeTimeBlocksStorage } from "@/services/localStorageService";
 import { handleAddActivity, handleDeleteActivity, passPickedActivity, togglePomoType } from "@/services/activityService";
 import { updateScheduleStatus, updateTodoStatus, handleSuspendTodo, handleSuspendSchedule } from "@/services/plannerService";
@@ -334,18 +333,14 @@ const {
   todosForCurrentViewWithTaskRecords,
 } = storeToRefs(dataStore);
 
+const dateService = dataStore.dateService;
+
 const { saveAllDebounced, cleanSelection } = dataStore;
 // ======================== 0. UI 更新相关 ========================
 
-const dateService = unifiedDateService({
-  activityList,
-  scheduleList,
-  todoList,
-});
-
 // 计算当天的番茄钟数
 const currentDatePomoCount = computed(() => {
-  const dateString = dateService.appDateKey.value;
+  const dateString = dateService.appDateKey;
   return pomoStore.getPomoCountByDate(dateString);
 });
 
@@ -353,9 +348,9 @@ const currentDatePomoCount = computed(() => {
 const globalRealPomo = computed(() => pomoStore.globalRealPomo);
 
 // 计算当前日期 不赋值在UI计算class就会失效，但是UI输出的值是正确的
-const isViewDateToday = dateService.isViewDateToday;
-const isViewDateYesterday = dateService.isViewDateYesterday;
-const isViewDateTomorrow = dateService.isViewDateTomorrow;
+const isViewDateToday = computed(() => dateService.isViewDateToday);
+const isViewDateYesterday = computed(() => dateService.isViewDateYesterday);
+const isViewDateTomorrow = computed(() => dateService.isViewDateTomorrow);
 
 // weekplanner month 引起变化日期
 const onMonthJump = () => {
@@ -624,11 +619,10 @@ function onIncreaseChildActivity(id: number | null | undefined) {
 const icsModalVisible = ref(false);
 const icsQRText = ref("");
 
-// 视图数据汇总（根据你的变量名替换）
+// 视图数据汇总
 // 将你现有视图数据，映射为 DataRow[]
 const viewSet = computed(() => settingStore.settings.viewSet as "day" | "week" | "month");
 
-// 注意：请把下述变量名替换为你真实存在的 computed/refs
 const datasetsForCurrentView = computed<DataRow[]>(() => {
   if (viewSet.value === "day") {
     return [
@@ -897,22 +891,16 @@ function onDateSet(direction: "prev" | "next" | "today" | "query") {
   selectedRowId.value = null;
   switch (direction) {
     case "prev":
-      const rdate = dateService.navigateByView("prev");
-      dateService.setAppDate(rdate);
-      console.log(dateService.appDateTimestamp.value);
+      dateService.navigateByView("prev");
       break;
     case "next":
-      const ndate = dateService.navigateByView("next");
-      console.log(ndate);
-      dateService.setAppDate(dateService.appDateTimestamp.value);
+      dateService.navigateByView("next");
       break;
     case "today":
-      const tdate = dateService.navigateByView("today");
-      dateService.setAppDate(tdate);
+      dateService.navigateByView("today");
       break;
     case "query":
       if (queryDate.value) {
-        // 传入选中的日期；服务内部会按当前 viewType 锚定到日/周一/月初
         dateService.navigateTo(new Date(queryDate.value));
       }
       queryDate.value = null;
@@ -1070,7 +1058,7 @@ function handleEditScheduleDone(id: number, newTm: string) {
 // ======================== 8. 生命周期 Hook ========================
 onMounted(() => {
   dataStore.loadAllData();
-  // 主动检查一次日期变更
+
   dateService.navigateByView("today");
 });
 

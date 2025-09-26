@@ -3,7 +3,9 @@
     <!-- 左侧：Activity 主列表 -->
     <div class="left-pane" :style="{ width: searchWidth + 'px' }">
       <div class="search-tool">
-        <n-input v-model:value="searchQuery" placeholder="请输入搜索关键字" clearable @update:value="onSearchInput" />
+        <!-- 直接绑定 store state，并通过 onSearchInput action 进行更新 -->
+        <n-input :value="searchQuery" placeholder="请输入搜索关键字" clearable @update:value="onSearchInput" />
+        <!-- 直接调用 store action -->
         <n-button text type="warning" @click="toggleFilterStarred" :title="filterStarredOnly ? '仅看加星任务：开' : '仅看加星任务：关'">
           <template #icon>
             <n-icon :class="{ 'is-on': filterStarredOnly }">
@@ -38,9 +40,17 @@
       <div v-if="sidebarActivities.length === 0" class="empty">暂无结果</div>
     </div>
     <div class="resize-handle-horizontal" @mousedown="resizeSearch.startResize"></div>
-    <!-- 右侧：Tabs（沿用你原本的结构与逻辑，关键是 openRow -> openTab 的映射） -->
+    <!-- 右侧：Tabs -->
     <div class="right-pane" :style="{ width: `calc(100% - ${searchWidth}px - 20px)` }">
-      <n-tabs v-model:value="activeTabKey" type="card" closable @close="closeTab" class="full-tabs">
+      <!-- 绑定 store state 和 actions -->
+      <n-tabs
+        :value="activeTabKey"
+        type="card"
+        closable
+        @close="closeTab"
+        @update:value="searchUiStore.activeTabKey = $event"
+        class="full-tabs"
+      >
         <n-tab-pane v-for="tab in openedTabs" :key="tab.key" :name="tab.key" :tab="tab.title">
           <div class="meta">
             <template v-if="tab.type === 'todo'">
@@ -56,7 +66,6 @@
           </div>
 
           <div class="content">
-            <!-- 使用 convertMarkdown 渲染任务描述 -->
             <div v-for="task in getTasksForTab(tab)" :key="task.id" class="task-block">
               <div class="task-content" v-html="convertMarkdown(task.description)"></div>
             </div>
@@ -70,68 +79,68 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, computed } from "vue";
+import { computed } from "vue";
+import { storeToRefs } from "pinia";
 import { NInput, NButton, NIcon, NTabs, NTabPane } from "naive-ui";
-import { useDataStore } from "@/stores/useDataStore";
 import { marked } from "marked";
 import { Star20Filled, Star20Regular } from "@vicons/fluent";
+
+// 引入 stores 和类型
+import { useDataStore } from "@/stores/useDataStore";
+import { useSearchUiStore, type TabItem, TabType } from "@/stores/useSearchUiStore";
+import { useSettingStore } from "@/stores/useSettingStore";
+// 引入业务类型和组合式函数
 import { Task } from "@/core/types/Task";
 import { useResize } from "@/composables/useResize";
-import { useSettingStore } from "@/stores/useSettingStore";
 
+// =======================================================================
+// 1. 核心数据与状态管理
+// =======================================================================
+
+// 实例化所有需要的 stores
+const dataStore = useDataStore();
+const searchUiStore = useSearchUiStore();
 const settingStore = useSettingStore();
+
+// 从 UI store 中解构出 UI 状态（使用 storeToRefs 保持响应性）
+const { searchQuery, filterStarredOnly, openedTabs, activeTabKey } = storeToRefs(searchUiStore);
+
+// 从 UI store 中解构出 actions，以便在 script 中调用
+const { setSearchQuery, toggleFilterStarred, openTab, closeTab } = searchUiStore;
+
+// 窗口宽度相关的状态和逻辑，保持不变
 const searchWidth = computed({
   get: () => settingStore.settings.searchWidth,
   set: (v) => (settingStore.settings.searchWidth = v),
 });
-
 const resizeSearch = useResize(searchWidth, "horizontal", 10, 600, false);
 
 // =======================================================================
-// Section 1: 核心数据与状态管理 (Core Data & State)
-// =======================================================================
-
-// 2. 实例化 Store，这是本组件与应用数据的唯一接口
-const dataStore = useDataStore();
-
-// 3. (保留) 只属于本视图的 UI 状态，不需要全局共享
-const searchQuery = ref("");
-const filterStarredOnly = ref(false);
-const openedTabs = ref<TabItem[]>([]);
-const activeTabKey = ref<string | undefined>(undefined);
-
-// 定义 Tab 类型，这个是视图内部的逻辑，保留
-type TabType = "todo" | "sch" | "activity";
-type TabItem = { key: string; type: TabType; id: number; title: string };
-// =======================================================================
-// Section 2: 搜索与过滤逻辑 (Search & Filter Logic)
+// 2. 搜索与过滤逻辑
 // =======================================================================
 
 const norm = (s?: string) => (s ?? "").toLowerCase();
+// matchesQuery 现在依赖于从 searchUiStore 来的 searchQuery ref
 const matchesQuery = (text?: string) => {
-  const q = norm(searchQuery.value); // 直接使用 searchQuery ref
+  const q = norm(searchQuery.value);
   if (!q) return true;
   return norm(text).includes(q);
 };
 
-// 搜索防抖函数保持不变，因为它控制的是 searchQuery 这个本地状态的输入频率
+// 搜索防抖逻辑，现在调用 store 的 action
 let searchDebounceTimer: number | null = null;
-const onSearchInput = () => {
+const onSearchInput = (value: string) => {
   if (searchDebounceTimer) window.clearTimeout(searchDebounceTimer);
   searchDebounceTimer = window.setTimeout(() => {
-    console.debug("[onSearchInput] query:", searchQuery.value);
+    setSearchQuery(value); // 调用 action 更新全局状态
+    console.debug("[onSearchInput] query set to:", value);
   }, 300);
 };
 
-const toggleFilterStarred = () => {
-  filterStarredOnly.value = !filterStarredOnly.value;
-  console.debug("[toggleFilterStarred] ->", filterStarredOnly.value);
-};
+// =======================================================================
+// 3. 侧边栏列表构造
+// =======================================================================
 
-// =======================================================================
-// Section 3: 侧边栏列表构造 (Sidebar List Construction)
-// =======================================================================
-// 这是本组件最核心的 computed，它消费全局数据，并结合本地 UI 状态（搜索词）来生成视图
 type ActivityRow = {
   activityId: number;
   title: string;
@@ -142,50 +151,45 @@ type ActivityRow = {
   openKey: string;
 };
 
+// 这个核心 computed 逻辑完全不变，它响应式地依赖 dataStore 和 searchUiStore 的数据
 const sidebarActivities = computed<ActivityRow[]>(() => {
   console.time("[sidebarActivities]");
 
   const rows: ActivityRow[] = [];
   const q = norm(searchQuery.value);
 
-  // 4. 直接从 dataStore 中获取所有 activity，不再需要本地加载
   for (const act of dataStore.activityList) {
     const title = act.title || "（无标题）";
     const isTodo = act.class === "T";
     const isSch = act.class === "S";
 
-    // 5. 直接通过 dataStore 的索引查找派生对象
     const td = isTodo ? dataStore.todoByActivityId.get(act.id) : undefined;
     const sch = isSch ? dataStore.scheduleByActivityId.get(act.id) : undefined;
 
-    // 6. 搜索匹配逻辑: 从 dataStore 获取任务进行匹配
     let passed = matchesQuery(title);
     if (!passed && q) {
-      // 使用 dataStore 中已经计算好的任务索引
       const tasksOfAct = dataStore.tasksBySource.activity.get(act.id) ?? [];
       const tasksOfTodo = td ? dataStore.tasksBySource.todo.get(td.id) ?? [] : [];
       const tasksOfSch = sch ? dataStore.tasksBySource.schedule.get(sch.id) ?? [] : [];
-
       const allTasks = [...tasksOfAct, ...tasksOfTodo, ...tasksOfSch];
       passed = allTasks.some((t) => matchesQuery(t.activityTitle) || matchesQuery(t.description));
     }
-
     if (!passed) continue;
 
-    // 7. 星标判断逻辑: 使用 store 中的函数（假设已迁移）或直接在这里计算
-    // 推荐将 hasStarredTaskForActivity 也移入 store，成为一个 action 或 getter
-    const hasStarred = dataStore.hasStarredTaskForActivity(act.id); // 假设已迁移
-
+    const hasStarred = dataStore.hasStarredTaskForActivity(act.id);
     if (filterStarredOnly.value && !hasStarred) {
       continue;
     }
 
-    // 排序时间戳的计算逻辑保留，因为它服务于本视图的排序需求
     const getPrimaryTime = () => {
       if (isTodo && td) return td.startTime ?? td.dueDate ?? td.id;
       if (isSch && sch) return sch.activityDueRange?.[0] ?? sch.id;
-      return act.id; // Fallback for Activity
+      return act.id;
     };
+
+    // 生成 key 的逻辑现在可以委托给 store，保证一致性
+    const type: TabType = act.class === "T" ? "todo" : act.class === "S" ? "sch" : "activity";
+    const entityId = isTodo ? td?.id : isSch ? sch?.id : act.id;
 
     rows.push({
       activityId: act.id,
@@ -194,11 +198,10 @@ const sidebarActivities = computed<ActivityRow[]>(() => {
       currentId: isTodo ? td?.id : isSch ? sch?.id : undefined,
       primaryTime: getPrimaryTime(),
       hasStarred,
-      openKey: makeKey(act.class === "T" ? "todo" : act.class === "S" ? "sch" : "activity", isTodo ? td?.id : isSch ? sch?.id : act.id),
+      openKey: searchUiStore._makeKey(type, entityId), // 使用 store 的方法生成 key
     });
   }
 
-  // 排序逻辑保持不变
   rows.sort((a, b) => (a.primaryTime ?? Infinity) - (b.primaryTime ?? Infinity));
 
   console.timeEnd("[sidebarActivities]");
@@ -206,37 +209,19 @@ const sidebarActivities = computed<ActivityRow[]>(() => {
 });
 
 // =======================================================================
-// Section 4: Tabs 与交互逻辑 (Tabs & Interaction Logic)
+// 4. Tabs 与交互逻辑
 // =======================================================================
-// 这部分逻辑完全是视图自身的，所以全部保留
 
-const makeKey = (type: TabType, id: number | undefined) => `${type}-${id ?? "unknown"}`;
-
+// 点击左侧列表项时，调用 store action 打开一个 tab
 function openRow(row: ActivityRow) {
   const type: TabType = row.class === "T" ? "todo" : row.class === "S" ? "sch" : "activity";
   const id = row.currentId ?? row.activityId;
-
-  const key = makeKey(type, id);
-  if (!openedTabs.value.some((t) => t.key === key)) {
-    openedTabs.value.push({ key, type, id, title: row.title });
-  }
-  activeTabKey.value = key;
+  openTab(type, id, row.title); // 调用 action，逻辑全部在 store 中处理
 }
 
-function closeTab(key: string) {
-  const idx = openedTabs.value.findIndex((t) => t.key === key);
-  if (idx === -1) return;
+// closeTab 已经直接绑定到模板上，这里不需要额外的函数体
 
-  const isActive = activeTabKey.value === key;
-  openedTabs.value.splice(idx, 1);
-
-  if (isActive) {
-    const next = openedTabs.value[idx] || openedTabs.value[idx - 1];
-    activeTabKey.value = next ? next.key : undefined;
-  }
-}
-
-// 8. 从 dataStore 获取指定 Tab 的任务
+// 从 dataStore 获取指定 Tab 的任务，逻辑不变
 function getTasksForTab(tab: TabItem): Task[] {
   const sourceMap =
     tab.type === "todo"
@@ -248,15 +233,16 @@ function getTasksForTab(tab: TabItem): Task[] {
 }
 
 // =======================================================================
-// Section 5: 辅助与格式化函数 (Helpers & Formatters)
+// 5. 辅助与格式化函数
 // =======================================================================
-// 这些是无状态的纯函数，放在哪里都可以，保留在组件内部完全没问题。
+// 无状态纯函数，保持不变
 const formatDate = (ts?: number) => (ts ? new Date(ts).toLocaleString() : "无");
 const formatMMDD = (ts?: number) => (ts ? new Date(ts).toLocaleDateString(undefined, { month: "2-digit", day: "2-digit" }) : "—");
 const convertMarkdown = (md?: string) => (md ? marked(md) : "无");
 </script>
 
 <style scoped>
+/* 所有样式保持不变 */
 .search-container {
   height: 100%;
   display: flex;
@@ -312,7 +298,6 @@ const convertMarkdown = (md?: string) => (md ? marked(md) : "无");
   margin-top: 6px;
 }
 
-/* 左列条目基础样式（Activity 主列表共用） */
 .title-item {
   display: flex;
   align-items: center;
@@ -327,7 +312,6 @@ const convertMarkdown = (md?: string) => (md ? marked(md) : "无");
   margin-bottom: 4px;
 }
 
-/* 左列条目左右区块布局（配合模板中的 .left / .right） */
 .title-item .left {
   display: flex;
   gap: 4px;
@@ -346,14 +330,12 @@ const convertMarkdown = (md?: string) => (md ? marked(md) : "无");
   flex-shrink: 0;
 }
 
-/* 选中态 */
 .title-item.active {
   background: var(--color-background-light-light);
 
   font-weight: 600;
 }
 
-/* 左侧色条（保留你原有的 schedule 标记，新增 todo 可视化区分） */
 .title-item.schedule {
   border-left: 4px solid var(--color-red);
 }
@@ -361,20 +343,17 @@ const convertMarkdown = (md?: string) => (md ? marked(md) : "无");
   border-left: 4px solid var(--color-blue);
 }
 
-/* 右侧日期（MM-DD），用次要色呈现） */
 .title-item .date {
   color: var(--color-text-secondary);
   font-variant-numeric: tabular-nums;
 }
 
-/* 右侧 Tabs 容器 */
 .right-pane {
   min-height: 0;
   padding: 6px;
   width: auto;
 }
 
-/* NaiveTabs 适配：全高布局 */
 :deep(.n-tabs) {
   height: 100%;
   min-height: 0;
@@ -389,7 +368,6 @@ const convertMarkdown = (md?: string) => (md ? marked(md) : "无");
   min-height: 0;
 }
 
-/* 内容区域支持纵向滚动 */
 .content {
   flex: 1 1 auto;
   min-height: 0;
@@ -399,8 +377,6 @@ const convertMarkdown = (md?: string) => (md ? marked(md) : "无");
   width: 100%;
 }
 
-/* 紧凑 Tabs */
-/* 1. 给 Tab 自身创建定位上下文 */
 :deep(.n-tabs .n-tabs-tab) {
   width: 120px;
   position: relative;
@@ -409,7 +385,6 @@ const convertMarkdown = (md?: string) => (md ? marked(md) : "无");
   border-top-right-radius: 10px !important;
 }
 
-/* 2. 文本标签：强制它在容器内显示，并为关闭按钮留出空间 */
 :deep(.n-tabs .n-tabs-tab .n-tabs-tab__label) {
   display: block;
   width: 100%;
@@ -420,16 +395,14 @@ const convertMarkdown = (md?: string) => (md ? marked(md) : "无");
   text-overflow: ellipsis;
 }
 
-/* 3. 关闭按钮：绝对定位并提升层级 */
 :deep(.n-tabs .n-tabs-tab .n-tabs-tab__close) {
   position: absolute;
-  right: 4px; /* 定位到右侧 */
+  right: 4px;
   top: 50%;
   transform: translateY(-50%);
   z-index: 2;
 }
 
-/* 任务块与星标 */
 .task-block + .task-block {
   margin-top: 8px;
 }
@@ -437,7 +410,6 @@ const convertMarkdown = (md?: string) => (md ? marked(md) : "无");
   color: #f59e0b;
 }
 
-/* Markdown 内容区域 */
 .task-content {
   overflow-y: auto;
 }
@@ -448,12 +420,10 @@ const convertMarkdown = (md?: string) => (md ? marked(md) : "无");
   padding: 12px 0;
 }
 
-/* 星标按钮的“开启态”颜色 */
 .search-tool .is-on {
   color: #f59e0b;
 }
 
-/* Markdown h1 间距微调（保留你的规则） */
 :deep(.task-content h1) {
   margin: 0 !important;
 }
