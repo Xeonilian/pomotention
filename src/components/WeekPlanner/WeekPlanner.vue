@@ -85,6 +85,7 @@ import type { Schedule } from "@/core/types/Schedule";
 import TagRenderer from "../TagSystem/TagRenderer.vue";
 import { timestampToTimeString } from "@/core/utils";
 import { useDataStore } from "@/stores/useDataStore";
+import { storeToRefs } from "pinia";
 
 const dataStore = useDataStore();
 const { activeId, selectedRowId, todosForCurrentViewWithTags, schedulesForCurrentViewWithTags, selectedDate } = storeToRefs(dataStore);
