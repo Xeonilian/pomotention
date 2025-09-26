@@ -20,11 +20,11 @@
                   : record.type === 'reward'
                   ? getRewardColor(record.value)
                   : record.interruptionType === 'I'
-                  ? '#666666'
-                  : '#999999',
+                  ? 'var(--color-blue)'
+                  : 'var(--color-red)',
             }"
           >
-            {{ record.type === "interruption" ? record.interruptionType + (record.activityType ? "A" : "") : record.value }}
+            {{ record.type === "interruption" ? record.interruptionType : record.value }}
           </span>
           <div class="point-time">{{ formatTime(record.id) }}</div>
         </div>

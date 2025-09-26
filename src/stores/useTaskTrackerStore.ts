@@ -45,7 +45,11 @@ export const useTaskTrackerStore = defineStore("taskTracker", () => {
     dueDate?: number | null;
   }) {
     if (selectedTaskId.value) {
-      taskService.addInterruptionRecord(selectedTaskId.value, data.interruptionType, data.description, data.activityType);
+      const record = taskService.addInterruptionRecord(selectedTaskId.value, data.interruptionType, data.description, data.activityType);
+      console.log(record);
+      if (data.asActivity && record && data.activityType) {
+        taskService.createActivityFromInterruption(selectedTaskId.value, record?.id, data.activityType, data.dueDate);
+      }
     }
   }
 
