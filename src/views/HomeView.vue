@@ -442,7 +442,7 @@ function onDeleteActivity(id: number | null | undefined) {
 /** 选中活动，将其转为 todo 并作为 picked */
 function onPickActivity(activity: Activity) {
   activity.status = "ongoing";
-  const { newTodo } = passPickedActivity(activity, dateService.appDateTimestamp.value, dateService.isViewDateToday.value);
+  const { newTodo } = passPickedActivity(activity, dateService.appDateTimestamp, dateService.isViewDateToday);
   todoList.value = [...todoList.value, newTodo];
   selectedActivityId.value = activity.id;
   saveAllDebounced();
@@ -656,8 +656,8 @@ function onUpdateTodoStatus(id: number, isChecked: boolean) {
   let doneTime: number | undefined;
 
   if (isChecked) {
-    if (isViewDateToday.value) {
-      const date = new Date(dateService.appDateTimestamp.value);
+    if (isViewDateToday) {
+      const date = new Date(dateService.appDateTimestamp);
 
       const now = new Date();
       date.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
@@ -776,8 +776,8 @@ function onUpdateScheduleStatus(id: number, isChecked: boolean) {
   let doneTime: number | undefined;
 
   if (isChecked) {
-    if (dateService.isViewDateToday.value) {
-      const date = new Date(dateService.appDateTimestamp.value);
+    if (dateService.isViewDateToday) {
+      const date = new Date(dateService.appDateTimestamp);
 
       const now = new Date();
       date.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
@@ -962,7 +962,7 @@ function handleEditTodoTitle(id: number, newTitle: string) {
 // 编辑时间
 function handleEditTodoStart(id: number, newTm: string) {
   // 获取当前查看日期的时间戳
-  const viewingDayTimestamp = dateService.appDateTimestamp.value;
+  const viewingDayTimestamp = dateService.appDateTimestamp;
   const todo = todoById.value.get(id);
   if (!todo) {
     console.warn(`未找到 id 为 ${id} 的 todo`);
@@ -973,7 +973,7 @@ function handleEditTodoStart(id: number, newTm: string) {
 
 function handleEditTodoDone(id: number, newTm: string) {
   // 获取当前查看日期的时间戳
-  const viewingDayTimestamp = dateService.appDateTimestamp.value;
+  const viewingDayTimestamp = dateService.appDateTimestamp;
   const todo = todoById.value.get(id);
   if (!todo) {
     console.warn(`未找到 id 为 ${id} 的 todo`);
@@ -989,7 +989,7 @@ function handleEditTodoDone(id: number, newTm: string) {
 
 function handleEditScheduleDone(id: number, newTm: string) {
   // 获取当前查看日期的时间戳
-  const viewingDayTimestamp = dateService.appDateTimestamp.value;
+  const viewingDayTimestamp = dateService.appDateTimestamp;
   const schedule = scheduleById.value.get(id);
   if (!schedule) {
     console.warn(`未找到 id 为 ${id} 的 schedule`);
