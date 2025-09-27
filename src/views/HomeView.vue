@@ -208,12 +208,6 @@
     <!-- 右侧面板 (活动清单) -->
     <div v-if="settingStore.settings.showActivity" class="right" :style="{ width: rightWidth + 'px' }">
       <ActivitySheet
-        :activities="activityList"
-        :activeId="activeId"
-        :todos="todoList"
-        :schedules="scheduleList"
-        :selectedActivityId="selectedActivityId"
-        :selectedTaskId="selectedTaskId"
         @pick-activity="onPickActivity"
         @add-activity="onAddActivity"
         @delete-activity="onDeleteActivity"

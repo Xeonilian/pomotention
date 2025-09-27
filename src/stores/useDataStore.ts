@@ -116,6 +116,12 @@ export const useDataStore = defineStore(
     });
 
     // ======================== 5. 派生UI状态 (Computed) ========================
+    const selectedActivity = computed(() => {
+      const id = activeId.value;
+      if (id == null) return null;
+      return activityById.value.get(id) ?? null;
+    });
+
     const selectedTask = computed(() => {
       const id = selectedTaskId.value;
       if (id == null) return null;
@@ -370,6 +376,7 @@ export const useDataStore = defineStore(
       selectedDate,
 
       // 派生UI状态
+      selectedActivity,
       selectedTask,
       selectedTagIds,
       todosForCurrentViewWithTags,
