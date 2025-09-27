@@ -149,10 +149,6 @@
         <div class="planner-view-container">
           <DayPlanner
             v-if="settingStore.settings.showPlanner && settingStore.settings.viewSet === 'day'"
-            :selectedRowId="selectedRowId"
-            :activeId="activeId"
-            :dayTodos="todosForCurrentViewWithTaskRecords"
-            :daySchedules="schedulesForCurrentView"
             @update-schedule-status="onUpdateScheduleStatus"
             @update-todo-status="onUpdateTodoStatus"
             @suspend-todo="onSuspendTodo"
@@ -162,8 +158,6 @@
             @update-todo-est="onUpdateTodoEst"
             @update-todo-pomo="onUpdateTodoPomo"
             @batch-update-priorities="onUpdateTodoPriority"
-            @select-activity="onSelectActivity"
-            @select-row="onSelectRow"
             @edit-schedule-title="handleEditScheduleTitle"
             @edit-todo-title="handleEditTodoTitle"
             @edit-todo-start="handleEditTodoStart"
@@ -216,8 +210,6 @@
         @repeat-activity="onRepeatActivity"
         @create-child-activity="onCreateChildActivity"
         @increase-child-activity="onIncreaseChildActivity"
-        @go-to-todo="goToTodo"
-        @go-to-schedule="goToSchedule"
         @convert-activity-to-task="onConvertActivityToTask"
       />
     </div>
@@ -244,7 +236,7 @@ import { storeToRefs } from "pinia";
 
 import type { Activity } from "@/core/types/Activity";
 import { Task } from "@/core/types/Task";
-import { getTimestampForTimeString, getDateKey } from "@/core/utils";
+import { getTimestampForTimeString } from "@/core/utils";
 import { ViewType } from "@/core/constants";
 import { useResize } from "@/composables/useResize";
 import IcsExportModal from "@/components/IcsExportModal.vue";
@@ -297,7 +289,6 @@ const {
   childrenOfActivity,
   todosForCurrentViewWithTags,
   schedulesForCurrentViewWithTags,
-
   schedulesForCurrentView,
   todosForCurrentViewWithTaskRecords,
 } = storeToRefs(dataStore);
@@ -864,43 +855,6 @@ function onViewSet() {
   } else if (cur === "month") {
     settingStore.settings.topHeight = 300;
   }
-}
-function goToTodo(todoId: number | null | undefined) {
-  if (todoId == null) return;
-  dateService.navigateTo(new Date(todoId));
-}
-
-function goToSchedule(scheduleId: number | null | undefined) {
-  if (scheduleId == null) return;
-  console.log(getDateKey(scheduleId));
-  dateService.navigateTo(new Date(scheduleId));
-}
-
-// 从Planner选择活动处理函数
-function onSelectActivity(activityId: number | null | undefined) {
-  if (activityId == null) return;
-  selectedActivityId.value = activityId;
-}
-
-// 选中行
-function onSelectRow(id: number | null) {
-  activeId.value = undefined;
-  selectedRowId.value = null;
-  selectedTaskId.value = null;
-  if (id === null) {
-    return;
-  }
-  const todo = todoById.value.get(id);
-  const schedule = scheduleById.value.get(id);
-  const activityId = todo?.activityId ?? schedule?.activityId ?? null;
-
-  if (activityId != null) {
-    const activity = activityById.value.get(activityId);
-
-    selectedTaskId.value = activity?.taskId ?? todo?.taskId ?? schedule?.taskId ?? null;
-  }
-
-  selectedRowId.value = id;
 }
 
 // 编辑title，Schedule.id，同步Activity

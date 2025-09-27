@@ -71,7 +71,17 @@ import { useDataStore } from "@/stores/useDataStore";
 import { storeToRefs } from "pinia";
 
 const dataStore = useDataStore();
-const { activeId, selectedTaskId, selectedActivityId, selectedActivity, activityList, todoList, scheduleList } = storeToRefs(dataStore);
+const {
+  activeId,
+  selectedTaskId,
+  selectedActivityId,
+  selectedActivity,
+  activityList,
+  activityById,
+  todoByActivityId,
+  scheduleByActivityId,
+} = storeToRefs(dataStore);
+const dateService = dataStore.dateService;
 
 // ========================
 // Emits 定义
@@ -84,8 +94,6 @@ const emit = defineEmits<{
   (e: "toggle-pomo-type", id: number | null | undefined): void; // 切换番茄钟类型
   (e: "repeat-activity", id: number | null | undefined): void; // 重复选中的活动
   (e: "create-child-activity", id: number | null | undefined): void; // 构建选中活动的子活动
-  (e: "go-to-todo", id: number | null | undefined): void; // 去到 todo 所在天
-  (e: "go-to-schedule", id: number | null | undefined): void; // 去到 schedule 所在天
   (
     e: "convert-activity-to-task",
     payload: {
@@ -249,24 +257,24 @@ function showErrorPopover(message: string) {
 // 选择活动处理函数，提示
 function pickActivity() {
   // 1. 检查是否有选中的活动
-  if (activeId.value === null) {
+  if (activeId.value == null) {
     showErrorPopover("请选择一个活动！");
     return;
   }
 
   // 2. 查找todo中是否有对应的活动
-  const relatedTodo = todoList.value.find((todo) => todo.activityId === activeId.value);
+  const relatedTodo = todoByActivityId.value.get(activeId.value);
   if (relatedTodo) {
     showErrorPopover("【" + relatedTodo.idFormated + "】启动待办");
-    emit("go-to-todo", relatedTodo.id);
+    dateService.navigateTo(new Date(relatedTodo.id));
     emit("update-active-id", activeId.value);
     return;
   }
-  const relatedSchedule = scheduleList.value.find((schedule) => schedule.activityId === activeId.value);
+  const relatedSchedule = scheduleByActivityId.value.get(activeId.value);
 
   if (relatedSchedule) {
     if (relatedSchedule.activityDueRange[0]) {
-      emit("go-to-schedule", relatedSchedule.activityDueRange[0]);
+      dateService.navigateTo(new Date(relatedSchedule.activityDueRange[0]));
       emit("update-active-id", activeId.value);
     } else {
       showErrorPopover("预约尚未设置时间！");
@@ -275,7 +283,7 @@ function pickActivity() {
     return;
   }
 
-  const picked = activityList.value.find((a) => a.id === activeId.value);
+  const picked = activityById.value.get(activeId.value);
   if (!picked) return;
 
   // 4. 触发事件并重置选中状态
@@ -382,8 +390,8 @@ function getCountdownClass(dueDate: number | undefined | null): string {
 }
 
 function handleConvertToTask() {
-  const activity = activityList.value.find((a) => a.id === activeId.value);
-  console.log("activity", activity?.id);
+  if (activeId.value == null) return;
+  const activity = activityById.value.get(activeId.value);
   if (!activity) return;
 
   if (activity.taskId) {
