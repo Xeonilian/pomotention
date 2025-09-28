@@ -87,11 +87,11 @@
     <span
       class="priority-badge"
       v-if="!seg.overflow"
-      :class="['priority-' + seg.priority, { 'cherry-badge': seg.pomoType === '🍒' }]"
+      :class="['priority-' + seg.priority, { 'cherry-badge': seg.pomoType === '🍒', 'no-title': seg.todoTitle === '' }]"
       style="cursor: grab"
       @mousedown="handleMouseDown($event, seg)"
     >
-      {{ seg.priority > 0 ? seg.priority : firstNonDigitLetterWide(seg.todoTitle) || "—" }}
+      {{ seg.priority > 0 ? seg.priority : firstNonDigitLetterWide(seg.todoTitle) || "+" }}
     </span>
     <span v-else style="cursor: grab" @mousedown="handleMouseDown($event, seg)">⚠️</span>
   </div>
@@ -667,6 +667,9 @@ watch(
   z-index: 30;
 }
 
+.priority-0.no-title {
+  font-weight: 600;
+}
 /* 可按 priority 分不同色 */
 .priority-0 {
   font-weight: 300;

@@ -117,7 +117,7 @@
               />
 
               <span v-else class="priority-badge" :class="'priority-' + todo.priority">
-                {{ todo.priority > 0 ? todo.priority : "—" }}
+                {{ todo.priority > 0 ? todo.priority : "+" }}
               </span>
             </td>
 
