@@ -15,12 +15,26 @@ export interface TaskPlanningContext {
     timeline?: string;
     experience?: string;
     constraints?: string;
-    resources?: string;
+    vision?: string;
+    team_resource?: string;
+    success_criteria?: string;
+    deliverables?: string;
+    blockers?: string;
   };
   currentStep: number;
 }
 
 export interface GuideQuestion {
-  key: "goal" | "criteria" | "progress" | "constraints";
+  key:
+    | "goal"
+    | "criteria"
+    | "progress"
+    | "constraints"
+    | "vision"
+    | "success_criteria"
+    | "timeline"
+    | "team_resource"
+    | "blockers"
+    | "deliverables";
   question: string;
 }

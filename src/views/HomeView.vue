@@ -214,7 +214,7 @@
     </div>
     <div v-if="settingStore.settings.showAi" class="right" :style="{ width: rightWidth + 'px' }">
       <!-- AI 对话对话框 -->
-      <AIChatDialog :visible="settingStore.settings.showAi" @close="settingStore.settings.showAi = false" />
+      <AIChatDialog />
     </div>
   </div>
   <!-- 错误提示弹窗 -->
@@ -924,10 +924,13 @@ function handleEditScheduleDone(id: number, newTm: string) {
 // ======================== 8. 生命周期 Hook ========================
 onMounted(() => {
   dataStore.loadAllData();
-
+  dateService.setupSystemDateWatcher();
   dateService.navigateByView("today");
 });
 
+onUnmounted(() => {
+  dateService.cleanSystemDateWatcher();
+});
 // ======================== 9. 页面尺寸调整  ========================
 
 const leftWidth = computed({

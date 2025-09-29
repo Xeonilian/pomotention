@@ -3,7 +3,7 @@ import { ref } from "vue";
 import type { AiMessage } from "@/core/types/Ai";
 import { aiApiService } from "@/services/aiApiService";
 import { useAiConfig } from "@/services/aiConfigService";
-import { shouldStartTaskPlanning, getNextQuestion, buildTaskPrompt, guideQuestions, getFallbackReply } from "@/services/aiDialogService";
+import { shouldStartTaskPlanning, getNextQuestion, buildTaskPromptV2, guideQuestions, getFallbackReply } from "@/services/aiDialogService";
 import { DialogState, type TaskPlanningContext } from "@/core/types/Dialog";
 
 interface Message {
@@ -35,7 +35,7 @@ export function useAiChat() {
 
   // 初始化欢迎语
   const initWelcome = async () => {
-    push("assistant", "你好！我是你的时间管理助手。直接开始聊天，或发送「帮我规划一个项目」进入任务拆解流程。");
+    push("assistant", "你好呀！我是你的三脚猫助手，可聊不可撸，让我们开始一场伟大的对话吧！");
   };
 
   // 通用模型调用：系统提示 + 历史消息 + 本轮用户输入
@@ -89,7 +89,7 @@ export function useAiChat() {
 
     // 3) 已收集完毕：构建草稿，重置上下文
     try {
-      const taskPrompt = buildTaskPrompt(ctx);
+      const taskPrompt = buildTaskPromptV2(ctx);
 
       taskPlanningContext.value = {
         state: DialogState.NORMAL_CHAT,
@@ -97,7 +97,7 @@ export function useAiChat() {
         currentStep: 0,
       };
 
-      return `这是为您生成任务计划所需的：\n\n${taskPrompt}\n\n我将基于这份说明生成详细的任务计划。`;
+      return `计划信息：\n\n${taskPrompt}\n我将基于这份说明生成详细的任务计划。开始吗？`;
     } catch (err) {
       taskPlanningContext.value = {
         state: DialogState.NORMAL_CHAT,
@@ -118,7 +118,28 @@ export function useAiChat() {
 
     try {
       let response = "";
+      const CONTEXT_LENGTH_LIMIT = 6000;
+      const currentContextLength = messages.value.reduce((sum, msg) => sum + msg.content.length, 0);
 
+      if (currentContextLength > CONTEXT_LENGTH_LIMIT) {
+        push("assistant", "我还是一只三脚猫，太多内容记不住啦！为了最好的体验，我将把我们的对话复制到你的剪贴板，请去开始新的对话！");
+
+        // 直接在这里执行“复制并重置”的逻辑
+        const formattedContent = messages.value.map((msg) => `${msg.role === "user" ? "用户" : "助手"}: ${msg.content}`).join("\n\n");
+
+        // 异步执行，不阻塞 UI
+        navigator.clipboard
+          ?.writeText(formattedContent)
+          .then(() => {
+            // 可以在这里加一个成功的 toast 通知，如果你的 UI 库有的话
+          })
+          .catch((err) => {
+            console.error("自动复制失败:", err);
+            // 也可以加一个失败的 toast 通知
+          });
+
+        return; // 终止本次处理
+      }
       // A) 处于任务规划信息收集阶段
       if (taskPlanningContext.value.state === DialogState.GATHERING_INFO) {
         response = await handleTaskPlanningFlow(text);
@@ -131,7 +152,7 @@ export function useAiChat() {
           currentStep: 0,
         };
 
-        response = "我来帮您制定一个详细的任务计划！我需要了解一些信息来为您定制最合适的方案。\n\n" + guideQuestions[0].question;
+        response = "😸太棒了！我们先来一起整理重要的信息。\n\n" + guideQuestions[0].question;
 
         // C) 普通聊天
       } else {
