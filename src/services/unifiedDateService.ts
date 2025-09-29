@@ -1,5 +1,5 @@
 // unifiedDateService.ts
-import { reactive, computed, onMounted, onUnmounted } from "vue";
+import { reactive, computed } from "vue";
 import { getDayStartTimestamp, getDateKey, addDays } from "@/core/utils";
 
 // 导入项目中的数据类型定义
@@ -24,11 +24,7 @@ interface DateRange {
   end: number; // 不含零点，代表下一个区间的开始
 } // end exclusive
 
-export function unifiedDateService({
-  activityList,
-  scheduleList,
-  todoList,
-}: UnifiedDateServiceOptions) {
+export function unifiedDateService({ activityList, scheduleList, todoList }: UnifiedDateServiceOptions) {
   const settingStore = useSettingStore();
 
   // --- 1. 核心状态 ---
@@ -71,14 +67,7 @@ export function unifiedDateService({
     date.setUTCDate(date.getUTCDate() - dayNum + 3); // 移到周四
     const isoYear = date.getUTCFullYear();
     const firstThursday = new Date(Date.UTC(isoYear, 0, 4));
-    const weekNumber =
-      1 +
-      Math.round(
-        ((+date - +firstThursday) / 86400000 -
-          3 +
-          ((firstThursday.getUTCDay() + 6) % 7)) /
-          7
-      );
+    const weekNumber = 1 + Math.round(((+date - +firstThursday) / 86400000 - 3 + ((firstThursday.getUTCDay() + 6) % 7)) / 7);
     return { isoYear, weekNumber };
   };
 
@@ -162,9 +151,7 @@ export function unifiedDateService({
     todoList.value.forEach((todo) => {
       if (todo.status === "ongoing") {
         todo.status = "delayed";
-        const activity = activityList.value.find(
-          (a) => a.id === todo.activityId
-        );
+        const activity = activityList.value.find((a) => a.id === todo.activityId);
         if (activity) activity.status = "delayed";
       }
     });
@@ -175,10 +162,7 @@ export function unifiedDateService({
     activityList.value.forEach((activity) => {
       if (activity.class === "S" && activity.dueRange && activity.dueRange[0]) {
         const activityKey = getDateKey(activity.dueRange[0]);
-        if (
-          activityKey === todayKey &&
-          !scheduleList.value.some((s) => s.activityId === activity.id)
-        ) {
+        if (activityKey === todayKey && !scheduleList.value.some((s) => s.activityId === activity.id)) {
           activity.status = "ongoing";
         }
       }
@@ -191,20 +175,12 @@ export function unifiedDateService({
 
     if (type === "today") {
       const base = dateState.system;
-      dateState.app =
-        curView === "day"
-          ? base
-          : curView === "week"
-          ? getStartOfWeek(base)
-          : getStartOfMonth(base);
+      dateState.app = curView === "day" ? base : curView === "week" ? getStartOfWeek(base) : getStartOfMonth(base);
       return base;
     }
 
     if (curView === "day") {
-      dateState.app = addDays(
-        getDayStartTimestamp(dateState.app),
-        type === "prev" ? -1 : 1
-      );
+      dateState.app = addDays(getDayStartTimestamp(dateState.app), type === "prev" ? -1 : 1);
       return dateState.app;
     }
 
@@ -230,12 +206,7 @@ export function unifiedDateService({
   const navigateTo = (date: Date | number): number => {
     const target = getDayStartTimestamp(date);
     const curView = settingStore.settings.viewSet;
-    dateState.app =
-      curView === "day"
-        ? target
-        : curView === "week"
-        ? getStartOfWeek(target)
-        : getStartOfMonth(target);
+    dateState.app = curView === "day" ? target : curView === "week" ? getStartOfWeek(target) : getStartOfMonth(target);
     return target;
   };
 
@@ -264,9 +235,6 @@ export function unifiedDateService({
     dateState.app = dayStart;
   };
 
-  onMounted(setupSystemDateWatcher);
-  onUnmounted(cleanupSystemDateWatcher);
-
   // --- 7. 暴露接口 ---
   return {
     // 状态
@@ -288,7 +256,8 @@ export function unifiedDateService({
     isViewDateToday,
     isViewDateTomorrow,
     isViewDateYesterday,
-
+    setupSystemDateWatcher,
+    cleanupSystemDateWatcher,
     // 导航
     navigateByView, // prev/next/today
     navigateTo, // 跳转日期并按当前视图锚定
