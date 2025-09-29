@@ -153,7 +153,6 @@
             @update-todo-status="onUpdateTodoStatus"
             @suspend-todo="onSuspendTodo"
             @cancel-todo="onCancelTodo"
-            @suspend-schedule="onSuspendSchedule"
             @cancel-schedule="onCancelSchedule"
             @update-todo-est="onUpdateTodoEst"
             @update-todo-pomo="onUpdateTodoPomo"
@@ -243,7 +242,7 @@ import IcsExportModal from "@/components/IcsExportModal.vue";
 import { Previous24Regular, Next24Regular, Search24Regular, CalendarSettings20Regular, QrCode24Regular } from "@vicons/fluent";
 
 import { handleAddActivity, handleDeleteActivity, passPickedActivity, togglePomoType } from "@/services/activityService";
-import { updateScheduleStatus, updateTodoStatus, handleSuspendTodo, handleSuspendSchedule } from "@/services/plannerService";
+import { updateScheduleStatus, updateTodoStatus, handleSuspendTodo } from "@/services/plannerService";
 import { handleExportOrQR, type DataRow } from "@/services/icsService";
 
 import { usePomoStore } from "@/stores/usePomoStore";
@@ -629,32 +628,23 @@ async function onIcsExport() {
 /** Todo 更新状态（勾选） */
 function onUpdateTodoStatus(id: number, isChecked: boolean) {
   const todo = todoById.value.get(id);
-
-  // 如果找不到对应的 Schedule，则打印错误并直接返回，防止后续代码出错
   if (!todo) {
     console.error(`[onUpdateTodoStatus] 错误：无法在 todoList 中找到 id 为 ${id} 的项目。`);
     return;
   }
 
-  // 2. 根据 isChecked 状态，决定新的 status 和 doneTime
+  // 根据 isChecked 状态，决定新的 status 和 doneTime
   const newStatus = isChecked ? "done" : "";
   let doneTime: number | undefined;
 
-  if (isChecked) {
-    if (isViewDateToday) {
-      const date = new Date(dateService.appDateTimestamp);
-
+  if (isViewDateToday.value && isChecked) {
+    // 只有在任务之前没有完成时间的情况下，才设置新的完成时间
+    if (todo.doneTime == undefined) {
       const now = new Date();
-      date.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
-
-      doneTime = date.getTime();
+      doneTime = now.getTime();
     }
-  } else {
-    doneTime = undefined;
   }
-
-  updateTodoStatus(todoList.value, activityList.value, id, todo.activityId, doneTime, newStatus);
-  saveAllDebounced();
+  updateTodoStatus(id, doneTime, newStatus);
 }
 
 /** 更新待办事项的番茄钟估计 */
@@ -699,7 +689,7 @@ function onUpdateTodoPriority(updates: Array<{ id: number; priority: number }>) 
 
 /** Todo 推迟处理 */
 function onSuspendTodo(id: number) {
-  handleSuspendTodo(todoList.value, activityList.value, id);
+  handleSuspendTodo(id);
   saveAllDebounced();
 }
 
@@ -723,12 +713,6 @@ function onCancelTodo(id: number) {
   saveAllDebounced();
 }
 
-/** Schedule 推迟一天 */
-function onSuspendSchedule(id: number) {
-  handleSuspendSchedule(scheduleList.value, activityList.value, id);
-  saveAllDebounced();
-}
-
 /** Schedule 取消 */
 function onCancelSchedule(id: number) {
   // 更新 ScheduleList 中的数据
@@ -747,10 +731,7 @@ function onCancelSchedule(id: number) {
 
 /** Schedule 勾选完成 */
 function onUpdateScheduleStatus(id: number, isChecked: boolean) {
-  // 1. 根据 ID 安全地查找目标 Schedule
   const schedule = scheduleById.value.get(id);
-
-  // 如果找不到对应的 Schedule，则打印错误并直接返回，防止后续代码出错
   if (!schedule) {
     console.error(`[onUpdateScheduleStatus] 错误：无法在 scheduleList 中找到 id 为 ${id} 的项目。`);
     return;
@@ -760,24 +741,14 @@ function onUpdateScheduleStatus(id: number, isChecked: boolean) {
   const newStatus = isChecked ? "done" : "";
   let doneTime: number | undefined;
 
-  if (isChecked) {
-    if (dateService.isViewDateToday) {
-      const date = new Date(dateService.appDateTimestamp);
-
+  if (isViewDateToday.value && isChecked) {
+    // 只有在任务之前没有完成时间的情况下，才设置新的完成时间
+    if (schedule.doneTime == undefined) {
       const now = new Date();
-      date.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
-
-      doneTime = date.getTime();
+      doneTime = now.getTime();
     }
-  } else {
-    doneTime = undefined;
   }
-
-  updateScheduleStatus(scheduleList.value, activityList.value, id, schedule.activityId, doneTime, newStatus, {
-    scheduleById: scheduleById.value,
-    activityById: activityById.value,
-  });
-  saveAllDebounced();
+  updateScheduleStatus(id, doneTime, newStatus);
 }
 
 function onConvertTodoToTask(payload: { task: Task; todoId: number }) {
@@ -815,7 +786,6 @@ function onConvertScheduleToTask(payload: { task: Task; scheduleId: number }) {
   }
   // 3) 同步 UI 选中
   selectedTaskId.value = task.id;
-
   saveAllDebounced();
 }
 

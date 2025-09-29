@@ -1,80 +1,34 @@
 // src/services/plannerService.ts
 
-import type { Activity } from "@/core/types/Activity";
-import type { Schedule } from "@/core/types/Schedule";
-import type { Todo } from "@/core/types/Todo";
 import { addDays } from "@/core/utils";
+import { useDataStore } from "@/stores/useDataStore";
+import { storeToRefs } from "pinia";
 
-/**
- * 检查日期是否为今天
- * @param date 日期时间戳或字符串
- * @returns 是否为今天
- */
-export function isToday(date: number | string): boolean {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-
-  const targetDate = new Date(date);
-
-  return targetDate >= today && targetDate < tomorrow;
-}
+const dataStore = useDataStore();
+const { saveAllDebounced } = dataStore;
+const { todoList, scheduleList, activityById, todoById, scheduleById } = storeToRefs(dataStore);
 
 /**
  * 更新日程状态并同步到活动
- * @param scheduleList 日程列表
- * @param activityList 活动列表
+
  * @param id 日程ID
  * @param activityId 活动ID
  * @param status 新状态
  */
-export function updateScheduleStatus(
-  _scheduleList: Schedule[],
-  _activityList: Activity[],
-  id: number,
-  activityId: number,
-  doneTime: number | undefined,
-  status: string,
-  deps: {
-    scheduleById: Map<number, Schedule>;
-    activityById: Map<number, Activity>;
-  }
-) {
-  const validStatus = [
-    "",
-    "done",
-    "delayed",
-    "ongoing",
-    "cancelled",
-    "suspended",
-  ].includes(status)
-    ? status
-    : "";
+export function updateScheduleStatus(id: number, doneTime: number | undefined, status: string) {
+  const validStatus = ["", "done", "delayed", "ongoing", "cancelled", "suspended"].includes(status) ? status : "";
 
-  const schedule = deps.scheduleById.get(id);
+  const schedule = scheduleById.value.get(id);
   if (schedule) {
-    schedule.status = validStatus as
-      | ""
-      | "done"
-      | "delayed"
-      | "ongoing"
-      | "cancelled"
-      | "suspended";
-    schedule.doneTime = doneTime;
+    schedule.status = validStatus as "" | "done" | "delayed" | "ongoing" | "cancelled" | "suspended";
+    schedule.doneTime = schedule.doneTime ? schedule.doneTime : doneTime;
   }
 
-  const activity = deps.activityById.get(activityId);
+  const activity = schedule?.activityId != null ? activityById.value.get(schedule.activityId) : undefined;
   if (activity) {
-    activity.status = validStatus as
-      | ""
-      | "done"
-      | "delayed"
-      | "ongoing"
-      | "cancelled"
-      | "suspended";
+    activity.status = validStatus as "" | "done" | "delayed" | "ongoing" | "cancelled" | "suspended";
   }
+  saveAllDebounced();
 }
 
 /**
@@ -85,49 +39,23 @@ export function updateScheduleStatus(
  * @param activityId 活动ID
  * @param status 新状态
  */
-export function updateTodoStatus(
-  todoList: Todo[],
-  activityList: Activity[],
-  id: number,
-  activityId: number,
-  doneTime: number | undefined,
-  status: string
-) {
-  const validStatus = [
-    "",
-    "done",
-    "suspended.",
-    "ongoing",
-    "cancelled",
-    "suspended",
-  ].includes(status)
-    ? status
-    : "";
+export function updateTodoStatus(id: number, doneTime: number | undefined, status: string) {
+  const validStatus = ["", "done", "ongoing", "cancelled", "suspended"].includes(status) ? status : "";
 
   // 更新 todoList
-  const todo = todoList.find((t) => t.id === id);
+  const todo = todoById.value.get(id);
   if (todo) {
-    todo.status = validStatus as
-      | ""
-      | "done"
-      | "delayed"
-      | "ongoing"
-      | "cancelled"
-      | "suspended";
-    todo.doneTime = doneTime;
+    todo.status = validStatus as "" | "done" | "delayed" | "ongoing" | "cancelled" | "suspended";
+    todo.doneTime = todo.doneTime ? todo.doneTime : doneTime;
   }
 
   // 更新 activityList
-  const activity = activityList.find((a) => a.id === activityId);
+  const activity = todo?.activityId != null ? activityById.value.get(todo.activityId) : undefined;
   if (activity) {
-    activity.status = validStatus as
-      | ""
-      | "done"
-      | "delayed"
-      | "ongoing"
-      | "cancelled"
-      | "suspended";
+    activity.status = validStatus as "" | "done" | "delayed" | "ongoing" | "cancelled" | "suspended";
   }
+
+  saveAllDebounced();
 }
 
 /**
@@ -136,24 +64,16 @@ export function updateTodoStatus(
  * @param activityList 活动列表
  * @param id 待办事项ID
  */
-export function handleSuspendTodo(
-  todoList: Todo[],
-  activityList: Activity[],
-  id: number
-) {
+export function handleSuspendTodo(id: number) {
   // 找到对应的 Todo
-  const todo = todoList.find((todo) => todo.id === id);
+  const todo = todoById.value.get(id);
   if (todo) {
     // 找到 activityList 中对应的活动
-    const activity = activityList.find(
-      (activity) => activity.id === todo.activityId
-    );
+    const activity = activityById.value.get(todo.activityId);
     if (activity) {
       // 更新 activity 的状态为 "suspended."
       activity.status = "suspended";
-      console.log(
-        `Activity with id ${activity.id} status updated to suspended.`
-      );
+      console.log(`Activity with id ${activity.id} status updated to suspended.`);
     } else {
       console.log(`No activity found with activityId ${todo.activityId}`);
     }
@@ -162,8 +82,8 @@ export function handleSuspendTodo(
   }
 
   // 从 todoList 中移除对应的 Todo
-  const filteredTodos = todoList.filter((todo) => todo.id !== id);
-  todoList.splice(0, todoList.length, ...filteredTodos);
+  const filteredTodos = todoList.value.filter((todo) => todo.id !== id);
+  todoList.value.splice(0, todoList.value.length, ...filteredTodos);
 }
 
 /**
@@ -171,42 +91,25 @@ export function handleSuspendTodo(
  * @param scheduleList 日程列表
  * @param activityList 活动列表
  * @param id 日程ID
+ * 没用这个功能
  */
-export function handleSuspendSchedule(
-  scheduleList: Schedule[],
-  activityList: Activity[],
-  id: number
-) {
+export function handleSuspendSchedule(id: number) {
   // 找到对应的 Schedule
-  const schedule = scheduleList.find((schedule) => schedule.id === id);
+  const schedule = scheduleById.value.get(id);
 
   if (schedule && schedule.activityDueRange) {
     // 找到 activityList 中对应的活动
-    const activity = activityList.find(
-      (activity) => activity.id === schedule.activityId
-    );
+    const activity = activityById.value.get(schedule.activityId);
     if (activity) {
       // 更新 activity 的状态为 "suspended."
       activity.status = "suspended";
-      console.log(
-        `Activity with id ${activity.id} status updated to suspended.`
-      );
+      console.log(`Activity with id ${activity.id} status updated to suspended.`);
 
-      if (
-        activity.dueRange &&
-        activity.dueRange[0] &&
-        schedule.activityDueRange[0]
-      ) {
+      if (activity.dueRange && activity.dueRange[0] && schedule.activityDueRange[0]) {
         // 将 dueRange 的时间都加1天
-        activity.dueRange = [
-          addDays(activity.dueRange[0], 1),
-          activity.dueRange[1],
-        ];
-        schedule.activityDueRange = [
-          addDays(schedule.activityDueRange[0], 1),
-          schedule.activityDueRange[1],
-        ];
-        console.log(activity.dueRange, schedule.activityDueRange);
+        activity.dueRange = [addDays(activity.dueRange[0], 1), activity.dueRange[1]];
+        schedule.activityDueRange = [addDays(schedule.activityDueRange[0], 1), schedule.activityDueRange[1]];
+        saveAllDebounced();
       } else {
         console.log(`Activity with id ${activity.id} does not have dueRange`);
       }
@@ -218,84 +121,22 @@ export function handleSuspendSchedule(
   }
 
   // 从 scheduleList 中移除对应的 Schedule
-  const filteredSchedules = scheduleList.filter(
-    (schedule) => schedule.id !== id
-  );
-  scheduleList.splice(0, scheduleList.length, ...filteredSchedules);
-}
-
-/**
- * 同步日期变化，管理日程的创建和删除
- * @param activityList 活动列表
- * @param scheduleList 日程列表
- * @param convertToSchedule 将活动转换为日程的函数
- * @param convertTodo 将活动转换为日程的函数
- */
-export function syncDateChanges(
-  activityList: Activity[],
-  scheduleList: Schedule[],
-  convertToSchedule: (activity: Activity) => Schedule
-) {
-  activityList.forEach((activity) => {
-    const due = activity.dueRange && activity.dueRange[0];
-    const scheduleIdx = scheduleList.findIndex(
-      (s) => s.activityId === activity.id
-    );
-
-    if (activity.class === "S" && due) {
-      const dueMs = typeof due === "string" ? Date.parse(due) : Number(due);
-
-      if (isToday(dueMs)) {
-        // 1. 没有就加，有就更新
-        if (scheduleIdx === -1) {
-          // 可选：status 自动改 ongoing
-          activity.status = "ongoing";
-          const schedule = convertToSchedule(activity);
-          scheduleList.push(schedule);
-        } else {
-          // 已有 schedule，更新主字段
-          const schedule = scheduleList[scheduleIdx];
-          schedule.activityTitle = activity.title;
-          schedule.activityDueRange = activity.dueRange
-            ? [...activity.dueRange]
-            : [null, "0"];
-          schedule.status = activity.status || "";
-          schedule.projectName = activity.projectId
-            ? `项目${activity.projectId}`
-            : undefined;
-          schedule.location = activity.location || "";
-        }
-      } else {
-        // 不是今天，应该从 scheduleList 里删除
-        if (scheduleIdx !== -1) {
-          scheduleList.splice(scheduleIdx, 1);
-        }
-      }
-    } else if (scheduleIdx !== -1) {
-      scheduleList.splice(scheduleIdx, 1);
-    }
-  });
+  const filteredSchedules = scheduleList.value.filter((schedule) => schedule.id !== id);
+  scheduleList.value.splice(0, scheduleList.value.length, ...filteredSchedules);
 }
 
 /**
  * 更新待办事项的番茄钟估计
- * @param todoList 待办事项列表
- * @param activityList 活动列表
  * @param id 待办事项ID
  * @param estPomo 新的番茄钟估计数组
  */
-export function updateTodoEst(
-  todoList: Todo[],
-  activityList: Activity[],
-  id: number,
-  estPomo: number[]
-) {
-  const todo = todoList.find((t) => t.id === id);
+export function updateTodoEst(id: number, estPomo: number[]) {
+  const todo = todoById.value.get(id);
   if (todo) {
     todo.estPomo = estPomo;
 
     // 同步更新对应的 Activity
-    const activity = activityList.find((a) => a.id === todo.activityId);
+    const activity = activityById.value.get(todo.activityId);
     if (activity) {
       // 如果是 🍒 类型，固定为 4
       if (activity.pomoType === "🍒") {
