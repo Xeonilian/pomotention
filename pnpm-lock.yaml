@@ -103,6 +103,15 @@ importers:
         specifier: ^2.1.10
         version: 2.2.10(typescript@5.6.3)
 
+  docs:
+    devDependencies:
+      gh-pages:
+        specifier: ^6.3.0
+        version: 6.3.0
+      vitepress:
+        specifier: ^1.6.4
+        version: 1.6.4(@algolia/client-search@5.27.0)(@types/node@22.15.3)(async-validator@4.2.5)(postcss@8.5.3)(qrcode@1.5.4)(search-insights@2.17.3)(typescript@5.6.3)
+
 packages:
 
   '@algolia/autocomplete-core@1.17.7':
@@ -2076,6 +2085,18 @@ packages:
       postcss:
         optional: true
 
+  vitepress@1.6.4:
+    resolution: {integrity: sha512-+2ym1/+0VVrbhNyRoFFesVvBvHAVMZMK0rw60E3X/5349M1GuVdKeazuksqopEdvkKwKGs21Q729jX81/bkBJg==}
+    hasBin: true
+    peerDependencies:
+      markdown-it-mathjax3: ^4
+      postcss: ^8
+    peerDependenciesMeta:
+      markdown-it-mathjax3:
+        optional: true
+      postcss:
+        optional: true
+
   vitest@3.2.4:
     resolution: {integrity: sha512-LUCP5ev3GURDysTWiP47wRRUpLKMOfPh+yKTx3kVIEiu5KOMeqzpnYNsKyOoVrULivR8tLcks4+lga33Whn90A==}
     engines: {node: ^18.0.0 || ^20.0.0 || >=22.0.0}
@@ -4036,6 +4057,55 @@ snapshots:
       jiti: 2.4.2
 
   vitepress@1.6.3(@algolia/client-search@5.27.0)(@types/node@22.15.3)(async-validator@4.2.5)(postcss@8.5.3)(qrcode@1.5.4)(search-insights@2.17.3)(typescript@5.6.3):
+    dependencies:
+      '@docsearch/css': 3.8.2
+      '@docsearch/js': 3.8.2(@algolia/client-search@5.27.0)(search-insights@2.17.3)
+      '@iconify-json/simple-icons': 1.2.38
+      '@shikijs/core': 2.5.0
+      '@shikijs/transformers': 2.5.0
+      '@shikijs/types': 2.5.0
+      '@types/markdown-it': 14.1.2
+      '@vitejs/plugin-vue': 5.2.3(vite@5.4.19(@types/node@22.15.3))(vue@3.5.13(typescript@5.6.3))
+      '@vue/devtools-api': 7.7.6
+      '@vue/shared': 3.5.13
+      '@vueuse/core': 12.8.2(typescript@5.6.3)
+      '@vueuse/integrations': 12.8.2(async-validator@4.2.5)(focus-trap@7.6.5)(qrcode@1.5.4)(typescript@5.6.3)
+      focus-trap: 7.6.5
+      mark.js: 8.11.1
+      minisearch: 7.1.2
+      shiki: 2.5.0
+      vite: 5.4.19(@types/node@22.15.3)
+      vue: 3.5.13(typescript@5.6.3)
+    optionalDependencies:
+      postcss: 8.5.3
+    transitivePeerDependencies:
+      - '@algolia/client-search'
+      - '@types/node'
+      - '@types/react'
+      - async-validator
+      - axios
+      - change-case
+      - drauu
+      - fuse.js
+      - idb-keyval
+      - jwt-decode
+      - less
+      - lightningcss
+      - nprogress
+      - qrcode
+      - react
+      - react-dom
+      - sass
+      - sass-embedded
+      - search-insights
+      - sortablejs
+      - stylus
+      - sugarss
+      - terser
+      - typescript
+      - universal-cookie
+
+  vitepress@1.6.4(@algolia/client-search@5.27.0)(@types/node@22.15.3)(async-validator@4.2.5)(postcss@8.5.3)(qrcode@1.5.4)(search-insights@2.17.3)(typescript@5.6.3):
     dependencies:
       '@docsearch/css': 3.8.2
       '@docsearch/js': 3.8.2(@algolia/client-search@5.27.0)(search-insights@2.17.3)
