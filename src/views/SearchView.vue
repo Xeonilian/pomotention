@@ -51,6 +51,13 @@
         @update:value="searchUiStore.activeTabKey = $event"
         class="full-tabs"
       >
+        <template #suffix>
+          <n-button v-if="openedTabs.length > 0" text @click="closeAllTabs">
+            <template #icon>
+              <n-icon><Dismiss12Regular /></n-icon>
+            </template>
+          </n-button>
+        </template>
         <n-tab-pane v-for="tab in openedTabs" :key="tab.key" :name="tab.key" :tab="tab.title">
           <div class="meta">
             <template v-if="tab.type === 'todo'">
@@ -83,7 +90,7 @@ import { computed } from "vue";
 import { storeToRefs } from "pinia";
 import { NInput, NButton, NIcon, NTabs, NTabPane } from "naive-ui";
 import { marked } from "marked";
-import { Star20Filled, Star20Regular } from "@vicons/fluent";
+import { Star20Filled, Star20Regular, Dismiss12Regular } from "@vicons/fluent";
 
 // 引入 stores 和类型
 import { useDataStore } from "@/stores/useDataStore";
@@ -107,6 +114,7 @@ const { searchQuery, filterStarredOnly, openedTabs, activeTabKey } = storeToRefs
 
 // 从 UI store 中解构出 actions，以便在 script 中调用
 const { setSearchQuery, toggleFilterStarred, openTab, closeTab } = searchUiStore;
+const closeAllTabs = searchUiStore.closeAllTabs.bind(searchUiStore);
 
 // 窗口宽度相关的状态和逻辑，保持不变
 const searchWidth = computed({
@@ -203,7 +211,7 @@ const sidebarActivities = computed<ActivityRow[]>(() => {
     });
   }
 
-  rows.sort((a, b) => (a.primaryTime ?? Infinity) - (b.primaryTime ?? Infinity));
+  rows.sort((a, b) => (b.primaryTime ?? Infinity) - (a.primaryTime ?? Infinity));
 
   return rows;
 });

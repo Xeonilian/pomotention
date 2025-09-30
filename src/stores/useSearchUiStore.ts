@@ -84,6 +84,11 @@ export const useSearchUiStore = defineStore("searchUi", {
         this.activeTabKey = nextTab ? nextTab.key : undefined;
       }
     },
+
+    closeAllTabs() {
+      this.openedTabs = [];
+      this.activeTabKey = undefined;
+    },
   },
 
   // 4. (可选) 启用持久化
