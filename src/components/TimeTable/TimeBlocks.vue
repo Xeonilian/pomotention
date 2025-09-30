@@ -669,12 +669,16 @@ watch(
 
 .priority-0.no-title {
   font-weight: 600;
+  font-size: 14px;
+  padding-bottom: 2px;
 }
 /* 可按 priority 分不同色 */
 .priority-0 {
   font-weight: 300;
   color: var(--color-text-primary);
   background-color: var(--color-background-light);
+  font-size: 14px;
+  padding-bottom: 2px;
 }
 
 .priority-1 {

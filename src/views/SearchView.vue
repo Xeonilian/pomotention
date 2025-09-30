@@ -221,41 +221,58 @@ function openRow(row: ActivityRow) {
 
 // closeTab 已经直接绑定到模板上，这里不需要额外的函数体
 
-// 从 dataStore 获取指定 Tab 的任务
+// 从 dataStore 获取指定 Tab 的任务 (最终修正版)
 function getTasksForTab(tab: TabItem): Task[] {
   let activityId: number | undefined;
 
-  // 1. 根据 Tab 类型，找到最终的 activityId
-  switch (tab.type) {
-    case "todo": {
-      // 如果是 Todo Tab，通过 tab.id 找到 Todo 实例，再获取其 activityId
-      const todoInstance = dataStore.todoById.get(tab.id);
-      if (todoInstance) {
-        activityId = todoInstance.activityId;
-      }
-      break;
-    }
-    case "sch": {
-      // 如果是 Schedule Tab，通过 tab.id 找到 Schedule 实例，再获取其 activityId
-      const schInstance = dataStore.scheduleById.get(tab.id);
-      if (schInstance) {
-        activityId = schInstance.activityId;
-      }
-      break;
-    }
-    case "activity": {
-      // 如果是 Activity Tab，tab.id 本身就是 activityId
+  // 1. 根据 Tab 的类型，找到它最终归属的 activityId
+  if (tab.type === "todo") {
+    // 尝试在 todo store 中查找
+    const todoInstance = dataStore.todoById.get(tab.id);
+    if (todoInstance) {
+      // Case 1: 这是一个已转化的 Todo，我们从实例中获取 activityId
+      activityId = todoInstance.activityId;
+    } else {
+      // Case 2: 这是一个未转化的 Activity，tab.id 本身就是 activityId
       activityId = tab.id;
-      break;
+      console.log(`[getTasksForTab] Tab (type: todo, id: ${tab.id}) is an un-materialized Activity. Using tab.id as activityId.`);
+    }
+  } else if (tab.type === "sch") {
+    // 尝试在 schedule store 中查找
+    const schInstance = dataStore.scheduleById.get(tab.id);
+    if (schInstance) {
+      // Case 1: 这是一个已转化的 Schedule
+      activityId = schInstance.activityId;
+    } else {
+      // Case 2: 这是一个未转化的 Activity
+      activityId = tab.id;
+      console.log(`[getTasksForTab] Tab (type: sch, id: ${tab.id}) is an un-materialized Activity. Using tab.id as activityId.`);
     }
   }
 
-  // 2. 使用获取到的 activityId 从唯一的数据源获取任务
+  // 2. 使用确定的 activityId，从唯一的数据源获取所有相关任务
+  // 注意：我们现在需要合并所有可能的任务源，因为任务可能挂在 Activity 上，也可能挂在 Todo/Schedule 上
   if (activityId !== undefined) {
-    const tasks = dataStore.tasksBySource.activity.get(activityId) ?? [];
-    return tasks;
+    const tasksFromActivity = dataStore.tasksBySource.activity.get(activityId) ?? [];
+
+    // 即使 activityId 找到了，我们仍需检查 tab.id 是否对应着具体的 todo/sch 任务源
+    const tasksFromTodo = dataStore.tasksBySource.todo.get(tab.id) ?? [];
+    const tasksFromSch = dataStore.tasksBySource.schedule.get(tab.id) ?? [];
+
+    const allTasks = [...tasksFromActivity, ...tasksFromTodo, ...tasksFromSch];
+    const uniqueTasks = Array.from(new Map(allTasks.map((task) => [task.id, task])).values());
+
+    uniqueTasks.sort((a, b) => a.id - b.id);
+
+    console.log(`[getTasksForTab] For tab key "${tab.key}" (type: ${tab.type}, id: ${tab.id}):
+      - Determined activityId: ${activityId}
+      - Total unique tasks found: ${uniqueTasks.length}`);
+
+    return uniqueTasks;
   }
 
+  // 如果各种方式都找不到，返回空
+  console.warn(`[getTasksForTab] Could not determine activityId for tab key "${tab.key}". Returning empty array.`);
   return [];
 }
 

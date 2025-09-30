@@ -915,7 +915,6 @@ td.status-col {
   justify-content: center !important;
   width: 16px;
   height: 16px;
-  line-height: 14px;
   position: relative;
   top: -1px;
   border-radius: 50%;
