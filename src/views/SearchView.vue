@@ -133,7 +133,6 @@ const onSearchInput = (value: string) => {
   if (searchDebounceTimer) window.clearTimeout(searchDebounceTimer);
   searchDebounceTimer = window.setTimeout(() => {
     setSearchQuery(value); // 调用 action 更新全局状态
-    console.debug("[onSearchInput] query set to:", value);
   }, 300);
 };
 
@@ -153,8 +152,6 @@ type ActivityRow = {
 
 // 这个核心 computed 逻辑完全不变，它响应式地依赖 dataStore 和 searchUiStore 的数据
 const sidebarActivities = computed<ActivityRow[]>(() => {
-  console.time("[sidebarActivities]");
-
   const rows: ActivityRow[] = [];
   const q = norm(searchQuery.value);
 
@@ -169,6 +166,10 @@ const sidebarActivities = computed<ActivityRow[]>(() => {
     let passed = matchesQuery(title);
     if (!passed && q) {
       const tasksOfAct = dataStore.tasksBySource.activity.get(act.id) ?? [];
+
+      if (tasksOfAct.length > 0) {
+        console.log(`[sidebarActivities] Checking tasks for activity ID ${act.id}:`, JSON.parse(JSON.stringify(tasksOfAct)));
+      }
       const tasksOfTodo = td ? dataStore.tasksBySource.todo.get(td.id) ?? [] : [];
       const tasksOfSch = sch ? dataStore.tasksBySource.schedule.get(sch.id) ?? [] : [];
       const allTasks = [...tasksOfAct, ...tasksOfTodo, ...tasksOfSch];
@@ -204,7 +205,6 @@ const sidebarActivities = computed<ActivityRow[]>(() => {
 
   rows.sort((a, b) => (a.primaryTime ?? Infinity) - (b.primaryTime ?? Infinity));
 
-  console.timeEnd("[sidebarActivities]");
   return rows;
 });
 
@@ -221,15 +221,42 @@ function openRow(row: ActivityRow) {
 
 // closeTab 已经直接绑定到模板上，这里不需要额外的函数体
 
-// 从 dataStore 获取指定 Tab 的任务，逻辑不变
+// 从 dataStore 获取指定 Tab 的任务
 function getTasksForTab(tab: TabItem): Task[] {
-  const sourceMap =
-    tab.type === "todo"
-      ? dataStore.tasksBySource.todo
-      : tab.type === "sch"
-      ? dataStore.tasksBySource.schedule
-      : dataStore.tasksBySource.activity;
-  return sourceMap.get(tab.id) ?? [];
+  let activityId: number | undefined;
+
+  // 1. 根据 Tab 类型，找到最终的 activityId
+  switch (tab.type) {
+    case "todo": {
+      // 如果是 Todo Tab，通过 tab.id 找到 Todo 实例，再获取其 activityId
+      const todoInstance = dataStore.todoById.get(tab.id);
+      if (todoInstance) {
+        activityId = todoInstance.activityId;
+      }
+      break;
+    }
+    case "sch": {
+      // 如果是 Schedule Tab，通过 tab.id 找到 Schedule 实例，再获取其 activityId
+      const schInstance = dataStore.scheduleById.get(tab.id);
+      if (schInstance) {
+        activityId = schInstance.activityId;
+      }
+      break;
+    }
+    case "activity": {
+      // 如果是 Activity Tab，tab.id 本身就是 activityId
+      activityId = tab.id;
+      break;
+    }
+  }
+
+  // 2. 使用获取到的 activityId 从唯一的数据源获取任务
+  if (activityId !== undefined) {
+    const tasks = dataStore.tasksBySource.activity.get(activityId) ?? [];
+    return tasks;
+  }
+
+  return [];
 }
 
 // =======================================================================

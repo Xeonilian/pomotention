@@ -54,13 +54,11 @@ export const useDataStore = defineStore(
         console.log("[DataStore] Data already loaded. Skipping.");
         return;
       }
-      console.time("[DataStore] loadAllData");
       activityList.value = loadActivities();
       todoList.value = loadTodos();
       scheduleList.value = loadSchedules();
       taskList.value = loadTasks();
       isDataLoaded.value = true;
-      console.timeEnd("[DataStore] loadAllData");
     }
 
     // ======================== 4. 数据索引 (Getters / Computed) ========================
