@@ -17,6 +17,7 @@
 
 |                                                                                  按钮图标                                                                                  | 功能说明                                    |
 | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------: | :------------------------------------------ |
+|                                <img src="/icons/Star20Filled.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0; ">                                | 添加星标：标记重要的任务追踪                |
 |   <img src="/icons/BatterySaver20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(193, 226, 255);border-radius: 6px;">    | 记录能量：记录当前任务的精力水平（1-10 分） |
 |       <img src="/icons/Emoji24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(193, 226, 255);border-radius: 6px;">       | 记录愉悦：记录当前任务的愉悦程度（1-10 分） |
 | <img src="/icons/CalendarAssistant20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(193, 226, 255);border-radius: 6px;"> | 记录打扰：记录内部和外部打扰                |
@@ -38,11 +39,11 @@
 - 支持 Markdown 格式的任务描述
 - 时间轴显示所有记录的时间点
 - 任务书写模板快速创建
+- 重要记录添加星标
 
 ### 2.1 状态记录
 
-- **选择任务**：从活动清单中选择任务，进入任务追踪页面，激活录入按钮
-  <img src="/task-header.png" alt="Tag Input" width="400">
+- **选择任务**：选择 `Activity` 或 `Todo` 或 `Schedule`，如果已经开启任务，会自动选中任务并激活录入按钮
 
 #### 2.1.1 能量记录
 
@@ -50,7 +51,7 @@
   - 快速录入：`←→键`选择精力值，回车；
   - 详细录入：选择精力值，输入描述，点击确认；
   - 点击内部 <img src="/icons/BatterySaver20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;border-radius: 6px;"> 按钮，可查看能量值定义参考。
-    <img src="/energy.png" alt="Energy Record" width="450">
+    <img src="/task-energy.png" alt="Energy Record" width="450">
 
 #### 2.1.2 愉悦记录
 
@@ -58,7 +59,7 @@
   - 快速录入：`←→键`选择愉悦值，回车；
   - 详细录入：选择愉悦值，输入描述，点击确认；
   - 点击内部 <img src="/icons/Beach24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;border-radius: 6px;"> 按钮，可查看愉悦值定义参考。
-    <img src="/happy.png" alt="Happy Record" width="450">
+    <img src="/task-happy.png" alt="Happy Record" width="450">
 
 #### 2.1.3 打扰记录
 
@@ -68,27 +69,32 @@
 
 ### 2.2 记录与书写模板功能
 
-### 2.2.1 书写记录
+#### 2.2.1 添加星标
+
+- 点击星号切换选中的任务的星标状态，<img src="/icons/Star20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0; ">/<img src="/icons/Star20Filled.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0; ">
+- 星标用户搜索页面快速筛选重要任务书写
+
+### 2.2.2 书写记录
 
 - **追踪执行意图**：在文本区域点击切换到编辑模式，鼠标在激活位置闪烁，仅能模糊定位。
 - **markdown 识别**：编辑器识别通用 `markdown` 语法，以及：
   - `-[ ]` 显示模式下可直接勾选
   - `== ==` 黄色高亮
-    <img src="/edting-area.png" alt="Editing Aera" width="450">
+    <img src="/task-edting-area.png" alt="Editing Aera" width="450">
 - **快捷键**：
   - `Tab`：缩进，支持多行选中；
   - `Shift + Tab`：取消缩进，支持多行选中；
   - `Shift + Alt + ↓`：复制当前行
   - `Alt + ↓/↑`：当前行上下移动，最后一行可能因为没有换行符引起合并。
 
-### 2.2.2 书写模板
+### 2.2.3 书写模板
 
 - **打开模板**：点击 <img src="/icons/CalligraphyPen20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(224, 224, 224);border-radius: 6px;"> 按钮
 - **创建模板**：点击`新建`，然后输入标题与内容，然后点击`确认`。
 - **应用模板**：双击`左侧模板标题`或点击`复制`，快速复制模版到剪贴板。
 - **编辑模版**：选择`左侧模板标题`，然后编辑左侧标题与内容，再点击`确认`。
 - **删除模版**：选择`左侧模板标题`，再点击`删除`。
-  <img src="/writing-template.png" alt="Writing Template" width="450">
+  <img src="/task-writing-template.png" alt="Writing Template" width="450">
 
 ## 3 重要说明
 
