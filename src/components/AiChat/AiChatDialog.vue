@@ -95,7 +95,7 @@ const markdownContent = ref(`
 
 3. **上下文管理**：聊太长（>8 k）会自动把上文复制到剪贴板，清空后可继续，不丢记忆。
 
-4. **支持喵喵**：喜欢这只猫，可请它吃罐头：49元/6个月 API 许可。钱会全部换成 token 做实验，顺便给你预留新功能投票权 [打赏链接](https://docs.qq.com/form/page/DZWtGeVpKUkNuQnVL)。
+4. **支持喵喵**：喜欢这只猫，可请它吃罐头：49元/6个月 API 许可。钱会换成 token 做实验，顺便给你预留新功能投票权 [打赏链接](https://docs.qq.com/form/page/DZWtGeVpKUkNuQnVL)。
 
 5. **关于售后**：无客服、不退款、不秒回，有佛系群聊，搜集开发需求和提供使用协助。
 

@@ -51,7 +51,7 @@ export default defineConfig({
 
 ### 1. 文件结构（两种选择）
 
-```
+```bash
 选择A：测试文件放在被测试文件旁边
 src/
   services/
@@ -413,7 +413,7 @@ pnpm --filter my-package test
 
 ### 推荐的 .npmrc 配置
 
-```
+```yaml
 # .npmrc
 shamefully-hoist=true  # 如果遇到依赖问题可以开启
 prefer-frozen-lockfile=true
