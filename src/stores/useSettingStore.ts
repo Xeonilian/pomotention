@@ -74,7 +74,7 @@ const defaultSettings: GlobalSettings = {
   webdavWebsite: "https://dav.jianguoyun.com/dav/",
   webdavPath: "/PomotentionBackup",
   viewSet: "day",
-  marquee: "保持觉察 🍅 = ⏰+🎯+👁‍🗨",
+  marquee: "保持觉察 🍅 = ⏰ + 🎯 + 👁‍🗨 ",
 
   ai: {
     activeId: 1,
