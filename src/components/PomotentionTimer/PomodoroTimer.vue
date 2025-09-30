@@ -12,11 +12,7 @@
 
     <!-- 3 工作进度条 -->
     <!-- 3-1 进度条容器 -->
-    <div
-      v-if="!timerStore.isBreaking"
-      class="progress-container"
-      :style="timerStyleVars"
-    >
+    <div v-if="!timerStore.isBreaking" class="progress-container" :style="timerStyleVars">
       <!-- 3-2 蓝色进度条 -->
       <n-progress
         :percentage="progressPercentage"
@@ -53,13 +49,7 @@
 
     <!-- 4 休息进度条 -->
     <div class="progress-container-break" v-else>
-      <n-progress
-        :percentage="progressPercentage"
-        :color="'var(--color-green)'"
-        :show-indicator="false"
-        :height="20"
-        :border-radius="2"
-      />
+      <n-progress :percentage="progressPercentage" :color="'var(--color-green)'" :show-indicator="false" :height="20" :border-radius="2" />
       <!-- 休息模式无需显示分隔线和标签 -->
     </div>
 
@@ -90,10 +80,7 @@
       </n-button>
 
       <!-- 5-2 休息时间选择器 (只在待机状态显示) -->
-      <div
-        v-if="timerStore.pomodoroState === 'idle' && !showPomoSeq"
-        class="duration-selector"
-      >
+      <div v-if="timerStore.pomodoroState === 'idle' && !showPomoSeq" class="duration-selector">
         <n-dropdown
           trigger="click"
           :options="breakDurationOptions"
@@ -106,13 +93,7 @@
           }"
           size="small"
         >
-          <n-button
-            size="small"
-            class="duration-display"
-            tertiary
-            round
-            type="info"
-          >
+          <n-button size="small" class="duration-display" tertiary round type="info">
             {{ formatDuration(selectedDuration) }}
           </n-button>
         </n-dropdown>
@@ -141,12 +122,8 @@ defineProps<{
 const barLength = computed(() => settingStore.settings.style.barLength);
 const redBarColor = computed(() => settingStore.settings.style.redBarColor);
 const blueBarColor = computed(() => settingStore.settings.style.blueBarColor);
-const workDuration = computed(
-  () => settingStore.settings.durations.workDuration
-);
-const breakDuration = computed(
-  () => settingStore.settings.durations.breakDuration
-);
+const workDuration = computed(() => settingStore.settings.durations.workDuration);
+const breakDuration = computed(() => settingStore.settings.durations.breakDuration);
 
 const selectedDuration = ref(breakDuration.value);
 
@@ -154,8 +131,8 @@ const selectedDuration = ref(breakDuration.value);
 const timerStyleVars = computed(() => {
   const barLengthValue = 197; // 动态设置失败 #HACK 现在用的是静态的值
 
-  const calculatedLength = barLengthValue * timerStore.redBarPercentage;
-  const calculatedOffset = barLengthValue * timerStore.redBarOffsetPercentage;
+  const calculatedLength = barLengthValue * timerStore.redBarPercentage + 2;
+  const calculatedOffset = barLengthValue * timerStore.redBarOffsetPercentage + 0.5;
   return {
     "--bar-length": barLength.value,
     "--red-bar-length": `${calculatedLength}px`,
@@ -195,10 +172,7 @@ const formattedTime = computed((): string => {
 // 3-1 总（蓝色）进度条当前进度百分比
 const progressPercentage = computed((): number => {
   if (timerStore.totalTime === 0) return 0;
-  return (
-    ((timerStore.totalTime - timerStore.timeRemaining) / timerStore.totalTime) *
-    100
-  );
+  return ((timerStore.totalTime - timerStore.timeRemaining) / timerStore.totalTime) * 100;
 });
 
 // 3-2 计算红色阶段剩余时间（w1+w2）
@@ -216,9 +190,7 @@ const redProgressPercentage = computed(() => {
   if ((timePassed / totalSeconds) * 100 <= wStartPercent) return 0;
   if ((timePassed / totalSeconds) * 100 >= wEndPercent) return 100;
 
-  return (
-    (((timePassed / totalSeconds) * 100 - wStartPercent) / wRangePercent) * 100
-  );
+  return (((timePassed / totalSeconds) * 100 - wStartPercent) / wRangePercent) * 100;
 });
 
 // 4 按钮
@@ -311,6 +283,7 @@ function handleDurationSelect(key: number): void {
   width: var(--bar-length);
   margin: 5px 0;
 }
+
 /* 3-2 红色进度条 */
 .red-bar {
   position: absolute;
@@ -358,7 +331,7 @@ function handleDurationSelect(key: number): void {
   width: 1px; /* 细线 */
   height: 100%; /* 等高于容器 */
   background-color: var(--color-background);
-  z-index: 4;
+  z-index: 5;
 }
 
 /* 3-3-3  设置分隔线位置 */

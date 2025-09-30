@@ -1,24 +1,12 @@
 <!-- 
   Component: DayView.vue
-  Description: 
-  今日待办事项的纯展示容器，仅负责：
-  1. 渲染父组件传入的Todo列表
-  2. 转发用户交互事件
-
-  Props:
-    - todos: Todo[] - 处理好的今日待办列表（已由HomeView完成过滤/排序）
-
-  Emits:
-    - update-todo: 当用户修改Todo状态时向上传递
-    - delete-todo: 当用户删除Todo项时向上传递
-
   Parent: HomeView.vue
 -->
 <template>
   <div class="today-container">
     <div class="todo-container">
       <DayTodo
-        :todos="dayTodos"
+        :todos="todosForCurrentViewWithTaskRecords"
         :activeId="activeId"
         :selectedRowId="selectedRowId"
         @update-todo-status="updateTodoStatus"
@@ -27,7 +15,7 @@
         @update-todo-pomo="updateTodoPomo"
         @batch-update-priorities="updateTodoPriority"
         @update-todo-est="updateTodoEst"
-        @select-activity="onSelectActivity"
+        @select-activity="handleSelectActivity"
         @select-row="handleSelectRow"
         @edit-todo-title="handleEditTodoTitle"
         @edit-todo-start="handleEditTodoStart"
@@ -37,13 +25,13 @@
     </div>
     <div class="schedule-container">
       <DaySchedule
-        :schedules="daySchedules"
+        :schedules="schedulesForCurrentView"
         :activeId="activeId"
         :selectedRowId="selectedRowId"
         @update-schedule-status="updateScheduleStatus"
         @suspend-schedule="handleSuspendSchedule"
         @cancel-schedule="handleCancelSchedule"
-        @select-activity="onSelectActivity"
+        @select-activity="handleSelectActivity"
         @select-row="handleSelectRow"
         @edit-schedule-title="handleEditScheduleTitle"
         @edit-schedule-done="handleEditScheduleDone"
@@ -58,50 +46,67 @@
 <script setup lang="ts">
 import DayTodo from "@/components/DayPlanner/DayTodo.vue";
 import DaySchedule from "@/components/DayPlanner/DaySchedule.vue";
-import type { TodoWithTaskRecords } from "@/core/types/Todo";
-import type { Schedule } from "@/core/types/Schedule";
 import type { Task } from "@/core/types/Task";
+import { useDataStore } from "@/stores/useDataStore";
+import { storeToRefs } from "pinia";
 
-defineProps<{
-  dayTodos: TodoWithTaskRecords[];
-  daySchedules: Schedule[];
-  activeId: number | null | undefined;
-  selectedRowId: number | null;
-}>();
+const dataStore = useDataStore();
+const {
+  activeId,
+  selectedRowId,
+  selectedActivityId,
+  selectedTaskId,
+  todoById,
+  scheduleById,
+  activityById,
+  todosForCurrentViewWithTaskRecords,
+  schedulesForCurrentView,
+} = storeToRefs(dataStore);
 
 const emit = defineEmits<{
   (e: "update-schedule-status", id: number, checked: boolean): void;
-  (e: "update-todo-status", id: number, checked: boolean): void;
+  (e: "edit-schedule-title", id: number, newTitle: string): void;
   (e: "suspend-schedule", id: number): void;
   (e: "cancel-schedule", id: number): void;
-  // (e: "repeat-schedule", id: number): void;
+  (e: "update-todo-status", id: number, checked: boolean): void;
   (e: "suspend-todo", id: number): void;
   (e: "cancel-todo", id: number): void;
-  // (e: "repeat-todo", id: number): void;
   (e: "update-todo-est", id: number, estPomo: number[]): void;
   (e: "update-todo-pomo", id: number, pomo: number[]): void;
   (e: "update-todo-priority", id: number, priority: number): void;
-  (
-    e: "batch-update-priorities",
-    updates: Array<{ id: number; priority: number }>
-  ): void;
-  (e: "select-activity", activityId: number | null): void;
-  (e: "select-row", id: number | null): void;
-  (e: "edit-schedule-title", id: number, newTitle: string): void;
+  (e: "batch-update-priorities", updates: Array<{ id: number; priority: number }>): void;
   (e: "edit-todo-title", id: number, newTitle: string): void;
   (e: "edit-todo-start", id: number, newTs: string): void;
   (e: "edit-todo-done", id: number, newTs: string): void;
   (e: "edit-schedule-done", id: number, newTs: string): void;
   (e: "convert-todo-to-task", payload: { task: Task; todoId: number }): void;
-  (
-    e: "convert-schedule-to-task",
-    payload: { task: Task; scheduleId: number }
-  ): void;
+  (e: "convert-schedule-to-task", payload: { task: Task; scheduleId: number }): void;
 }>();
 
 // 处理选中行事件
+function handleSelectActivity(activityId: number | null) {
+  if (activityId == null) return;
+  selectedActivityId.value = activityId;
+}
+
 function handleSelectRow(id: number | null) {
-  emit("select-row", id);
+  activeId.value = undefined;
+  selectedRowId.value = null;
+  selectedTaskId.value = null;
+  if (id === null) {
+    return;
+  }
+  const todo = todoById.value.get(id);
+  const schedule = scheduleById.value.get(id);
+  const activityId = todo?.activityId ?? schedule?.activityId ?? null;
+
+  if (activityId != null) {
+    const activity = activityById.value.get(activityId);
+
+    selectedTaskId.value = activity?.taskId ?? todo?.taskId ?? schedule?.taskId ?? null;
+  }
+
+  selectedRowId.value = id;
 }
 
 function updateScheduleStatus(id: number, checked: boolean) {
@@ -120,10 +125,6 @@ function handleCancelSchedule(id: number) {
   emit("cancel-schedule", id);
 }
 
-// function handleRepeatSchedule(id: number) {
-//   emit("repeat-schedule", id);
-// }
-
 function handleSuspendTodo(id: number) {
   emit("suspend-todo", id);
 }
@@ -132,9 +133,6 @@ function handleCancelTodo(id: number) {
   emit("cancel-todo", id);
 }
 
-// function handleRepeatTodo(id: number) {
-//   emit("repeat-todo", id);
-// }
 function updateTodoPriority(updates: Array<{ id: number; priority: number }>) {
   emit("batch-update-priorities", updates);
 }
@@ -144,10 +142,6 @@ function updateTodoPomo(id: number, pomo: number[]) {
 
 function updateTodoEst(id: number, estPomo: number[]) {
   emit("update-todo-est", id, estPomo);
-}
-
-function onSelectActivity(activityId: number | null) {
-  emit("select-activity", activityId);
 }
 
 function handleEditScheduleTitle(scheduleId: number, newTitle: string) {
@@ -178,10 +172,7 @@ function handleConvertTodoToTask(payload: { task: Task; todoId: number }) {
   });
 }
 
-function handleConvertScheduleToTask(payload: {
-  task: Task;
-  scheduleId: number;
-}) {
+function handleConvertScheduleToTask(payload: { task: Task; scheduleId: number }) {
   const { task, scheduleId } = payload;
   emit("convert-schedule-to-task", {
     task,

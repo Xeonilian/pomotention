@@ -9,16 +9,31 @@ description: 下载最新版本的应用程序
 ## 当前版本
 
 ::: info 最新发布
-**版本 v0.4.0** - 2025 年 9 月 8 日发布
+**版本 v0.4.2** - 2025 年 9 月 30 日发布
 
-- 重构 Timetable+Priority 系统
-- 优化活动清单交互
-- 优化计划 UI
-- 优化搜索输出
-- 发布将进行 AI 开发
-- 记录支持简易快捷键
+- AI 对话功能初版发布
 
-  :::
+  - 新功能基于 Kimi API，内置了 免费试用额度。当额度耗尽后，AI 功能将暂时不可用。
+  - 试试对它说「计划」，可体验引导式思考与行动规划。
+  - 对话过长时（>8k 上下文），会自动清空并保留历史在剪贴板中，方便您继续对话。
+  - 喜欢此功能？欢迎来[支持项目](https://docs.qq.com/form/page/DZWtGeVpKUkNuQnVL)，您将获得更长的 API 使用许可与新功能投票权。
+
+- 功能与优化
+
+  - 任务搜索功能及全新 UI。
+  - Planner 计划模块新增跑马灯与自定义提示。
+  - 任务追踪 (Track) 支持加星标。
+  - 重构了核心数据管理模式，实现数据集中管理。
+  - 重构了多个核心模块（Planner/Task/Timetable），提升了可维护性。
+  - 统一并调整了多个 UI 界面，优化了布局与配色。
+  - 提升了应用状态的记忆能力。
+
+- 修复
+
+  - 修正了同步时出现的 emoji 格式错误。
+  - 临时修正了计时器进度条长度不足的问题。
+
+:::
 
 - [更新日志](dev-log/CHANGELOG.md)
 
@@ -39,13 +54,13 @@ description: 下载最新版本的应用程序
 
 - Windows
 
-<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.4.0/pomotention_0.4.0_x64_en-US.msi" class="download-btn windows">
+<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.4.2/pomotention_0.4.2_x64_en-US.msi" class="download-btn windows">
   <span class="platform">Windows</span>
   <span class="format">.msi 安装包</span>
   <span class="size">11.6MB</span>
 </a>
 
-<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.4.0/pomotention_0.4.0_x64-setup.exe" class="download-btn windows">
+<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.4.2/pomotention_0.4.2_x64-setup.exe" class="download-btn windows">
   <span class="platform">Windows</span>
   <span class="format">.exe </span>
   <span class="size">9.8MB</span>
@@ -53,13 +68,13 @@ description: 下载最新版本的应用程序
 
 - macOS
 
-<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.4.0/pomotention_0.4.0_x64.dmg" class="download-btn macos">
+<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.4.2/pomotention_0.4.2_x64.dmg" class="download-btn macos">
   <span class="platform">macOS</span>
   <span class="format">.dmg 安装包</span>
   <span class="size">14.5MB</span>
 </a>
 
-<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.4.0/pomotention.app.tar.gz" class="download-btn macos">
+<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.4.2/pomotention.app.tar.gz" class="download-btn macos">
   <span class="platform">macOS</span>
   <span class="format">app.tar.gz</span>
   <span class="size">13.1MB</span>

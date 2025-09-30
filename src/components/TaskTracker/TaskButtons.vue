@@ -1,77 +1,42 @@
 <template>
   <div class="task-buttons">
-    <n-button
-      size="small"
-      type="info"
-      secondary
-      circle
-      strong
-      @click="showEnergyDialog = true"
-      :disabled="!taskId"
-      title="能量记录"
-    >
+    <n-button type="warning" text @click="starTrack" :disabled="!taskId">
+      <template #icon>
+        <n-icon v-if="isStarred">
+          <Star20Filled />
+        </n-icon>
+        <n-icon v-else>
+          <Star20Regular />
+        </n-icon>
+      </template>
+    </n-button>
+    <n-button size="small" type="info" secondary circle strong @click="showEnergyDialog = true" :disabled="!taskId" title="能量记录">
       <template #icon>
         <n-icon><BatterySaver20Regular /></n-icon>
       </template>
     </n-button>
-    <n-button
-      size="small"
-      type="info"
-      secondary
-      circle
-      strong
-      @click="showRewardDialog = true"
-      :disabled="!taskId"
-      title="奖赏记录"
-    >
+    <n-button size="small" type="info" secondary circle strong @click="showRewardDialog = true" :disabled="!taskId" title="奖赏记录">
       <template #icon>
         <n-icon><Emoji24Regular /></n-icon>
       </template>
     </n-button>
-    <n-button
-      size="small"
-      type="info"
-      circle
-      strong
-      secondary
-      @click="showInterruptionDialog = true"
-      :disabled="!taskId"
-      title="打扰记录"
-    >
+    <n-button size="small" type="info" circle strong secondary @click="showInterruptionDialog = true" :disabled="!taskId" title="打扰记录">
       <template #icon>
         <n-icon><CalendarAssistant20Regular /></n-icon>
       </template>
     </n-button>
 
     <!-- 模板管理按钮 -->
-    <n-button
-      type="default"
-      size="small"
-      circle
-      strong
-      secondary
-      :disabled="!taskId"
-      @click="showTemplateDialog = true"
-      title="模板管理"
-    >
+    <n-button type="default" size="small" circle strong secondary :disabled="!taskId" @click="showTemplateDialog = true" title="模板管理">
       <template #icon>
         <n-icon><CalligraphyPen20Regular /></n-icon>
       </template>
     </n-button>
 
     <!-- 弹窗组件挂载 -->
-    <EnergyInputDialog
-      v-model:show="showEnergyDialog"
-      @confirm="handleEnergyConfirm"
-    />
-    <RewardInputDialog
-      v-model:show="showRewardDialog"
-      @confirm="handleRewardConfirm"
-    />
-    <InterruptionInputDialog
-      v-model:show="showInterruptionDialog"
-      @confirm="handleInterruptionConfirm"
-    />
+    <EnergyInputDialog v-model:show="showEnergyDialog" @confirm="handleEnergyConfirm" />
+    <RewardInputDialog v-model:show="showRewardDialog" @confirm="handleRewardConfirm" />
+    <InterruptionInputDialog v-model:show="showInterruptionDialog" @confirm="handleInterruptionConfirm" />
 
     <!-- 模板管理弹窗 -->
     <TemplateDialog
@@ -96,6 +61,8 @@ import {
   Emoji24Regular,
   CalendarAssistant20Regular,
   CalligraphyPen20Regular,
+  Star20Regular,
+  Star20Filled,
 } from "@vicons/fluent";
 import { loadTemplates, saveTemplates } from "@/services/localStorageService";
 import type { Template } from "@/core/types/Template";
@@ -103,6 +70,7 @@ import type { Template } from "@/core/types/Template";
 // Props
 const props = defineProps<{
   taskId: number | null;
+  isStarred: boolean;
 }>();
 
 // State Variables
@@ -126,6 +94,7 @@ const emit = defineEmits<{
       dueDate?: number | null;
     }
   ): void;
+  (e: "star"): void;
 }>();
 
 // 能量弹窗点击确认
@@ -187,6 +156,12 @@ const handleDeleteTemplate = (templateId: number) => {
   templates.value = templates.value.filter((t) => t.id !== templateId);
   saveTemplatesToLocal(); // 更新本地存储
 };
+
+function starTrack() {
+  if (props.taskId) {
+    emit("star");
+  }
+}
 </script>
 
 <style scoped>

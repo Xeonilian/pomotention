@@ -24,11 +24,7 @@
   </div>
   <!-- 看板列容器 -->
   <div class="kanban-columns">
-    <div
-      v-for="(section, idx) in sections"
-      :key="section.id"
-      class="kanban-column"
-    >
+    <div v-for="(section, idx) in sections" :key="section.id" class="kanban-column">
       <!-- 活动列表展示区域 -->
       <ActivitySection
         :filterOptions="filterOptions"
@@ -51,22 +47,9 @@
     </div>
   </div>
   <!-- 错误提示弹窗 -->
-  <n-popover
-    v-model:show="showPopover"
-    trigger="manual"
-    placement="top-end"
-    style="width: 200px"
-  >
+  <n-popover v-model:show="showPopover" trigger="manual" placement="top-end" style="width: 200px">
     <template #trigger>
-      <div
-        style="
-          position: fixed;
-          bottom: 20px;
-          right: 20px;
-          width: 1px;
-          height: 1px;
-        "
-      ></div>
+      <div style="position: fixed; bottom: 20px; right: 20px; width: 1px; height: 1px"></div>
     </template>
     {{ popoverMessage }}
   </n-popover>
@@ -80,24 +63,25 @@ import { ref, computed, onMounted } from "vue";
 import ActivityButtons from "@/components/ActivitySheet/ActivityButtons.vue";
 import ActivitySection from "@/components/ActivitySheet/ActivitySection.vue";
 import type { Activity, ActivitySectionConfig } from "@/core/types/Activity";
-import type { Todo } from "@/core/types/Todo";
 import { NPopover } from "naive-ui";
 import { taskService } from "@/services/taskService";
 import { useSettingStore } from "@/stores/useSettingStore";
-import { Schedule } from "@/core/types/Schedule";
 import { Task } from "@/core/types/Task";
+import { useDataStore } from "@/stores/useDataStore";
+import { storeToRefs } from "pinia";
 
-// ========================
-// Props 定义
-// ========================
-const props = defineProps<{
-  activities: Activity[]; // 活动数据列表
-  schedules: Schedule[]; // 预约事项列表
-  todos: Todo[]; // 待办事项列表
-  activeId: number | null | undefined; // 当前选中的活动ID
-  selectedActivityId: number | null;
-  selectedTaskId: number | null;
-}>();
+const dataStore = useDataStore();
+const {
+  activeId,
+  selectedTaskId,
+  selectedActivityId,
+  selectedActivity,
+  activityList,
+  activityById,
+  todoByActivityId,
+  scheduleByActivityId,
+} = storeToRefs(dataStore);
+const dateService = dataStore.dateService;
 
 // ========================
 // Emits 定义
@@ -110,8 +94,6 @@ const emit = defineEmits<{
   (e: "toggle-pomo-type", id: number | null | undefined): void; // 切换番茄钟类型
   (e: "repeat-activity", id: number | null | undefined): void; // 重复选中的活动
   (e: "create-child-activity", id: number | null | undefined): void; // 构建选中活动的子活动
-  (e: "go-to-todo", id: number | null | undefined): void; // 去到 todo 所在天
-  (e: "go-to-schedule", id: number | null | undefined): void; // 去到 schedule 所在天
   (
     e: "convert-activity-to-task",
     payload: {
@@ -145,18 +127,14 @@ onMounted(() => {
   }
 });
 // 响应式可直接用
-const sections = computed(() =>
-  settingStore.settings.kanbanSetting.filter((s) => s.show)
-);
+const sections = computed(() => settingStore.settings.kanbanSetting.filter((s) => s.show));
 
 // 错误提示弹窗相关
 const showPopover = ref(false);
 const popoverMessage = ref("");
 
 function addSection() {
-  const visibleCount = settingStore.settings.kanbanSetting.filter(
-    (s) => s.show
-  ).length;
+  const visibleCount = settingStore.settings.kanbanSetting.filter((s) => s.show).length;
   if (visibleCount >= 6) return;
 
   // 找到第一个隐藏的section（id从小到大）
@@ -166,9 +144,7 @@ function addSection() {
   }
 
   // 重新计算宽度
-  const newVisibleCount = settingStore.settings.kanbanSetting.filter(
-    (s) => s.show
-  ).length;
+  const newVisibleCount = settingStore.settings.kanbanSetting.filter((s) => s.show).length;
   settingStore.settings.rightWidth = 250 * newVisibleCount;
 }
 
@@ -181,9 +157,7 @@ function removeSection(id: number) {
   }
 
   // 重新计算宽度
-  const visibleCount = settingStore.settings.kanbanSetting.filter(
-    (s) => s.show
-  ).length;
+  const visibleCount = settingStore.settings.kanbanSetting.filter((s) => s.show).length;
   if (visibleCount === 1) {
     settingStore.settings.rightWidth = 300;
   } else {
@@ -194,11 +168,6 @@ function removeSection(id: number) {
 // ========================
 // 计算属性
 // ========================
-// 获取当前选中活动的详细信息
-const selectedActivity = computed(() => {
-  return props.activities.find((a) => a.id === props.activeId);
-});
-
 // 根据筛选条件过滤活动列表
 function filteredBySection(section: ActivitySectionConfig) {
   const now = new Date();
@@ -208,11 +177,11 @@ function filteredBySection(section: ActivitySectionConfig) {
   if (section.filterKey) {
     switch (section.filterKey) {
       case "all":
-        return props.activities.filter((item) => item.status !== "cancelled");
+        return activityList.value.filter((item) => item.status !== "cancelled");
       case "cancelled":
-        return props.activities.filter((item) => item.status === "cancelled");
+        return activityList.value.filter((item) => item.status === "cancelled");
       case "today":
-        return props.activities.filter((item) => {
+        return activityList.value.filter((item) => {
           if (item.class === "T") {
             if (!item.dueDate) return true; // 允许没有日期的项目在今日到期显示
             if (!item.dueDate && item.parentId) return false; // 不允许没有日期的子项目在今日到期显示
@@ -228,17 +197,11 @@ function filteredBySection(section: ActivitySectionConfig) {
           return false;
         });
       case "interrupt":
-        return props.activities.filter(
-          (item) => !!item.interruption && item.status !== "cancelled"
-        );
+        return activityList.value.filter((item) => !!item.interruption && item.status !== "cancelled");
       case "todo":
-        return props.activities.filter(
-          (item) => item.class === "T" && item.status !== "cancelled"
-        );
+        return activityList.value.filter((item) => item.class === "T" && item.status !== "cancelled");
       case "schedule":
-        return props.activities.filter(
-          (item) => item.class === "S" && item.status !== "cancelled"
-        );
+        return activityList.value.filter((item) => item.class === "S" && item.status !== "cancelled");
       default:
         break;
     }
@@ -247,12 +210,7 @@ function filteredBySection(section: ActivitySectionConfig) {
   // 没有 filterKey，再看search
   if (section.search) {
     const keyword = section.search.trim().toLowerCase();
-    return props.activities.filter(
-      (item) =>
-        item.status !== "cancelled" &&
-        item.title &&
-        item.title.toLowerCase().includes(keyword)
-    );
+    return activityList.value.filter((item) => item.status !== "cancelled" && item.title && item.title.toLowerCase().includes(keyword));
   }
 
   // 什么条件都没有，返回空
@@ -276,9 +234,7 @@ function handleSectionSearch(id: number, val: string) {
     console.log(val);
     // 支持用label和key来判断
     const match = filterOptions.find(
-      (opt) =>
-        opt.label.trim().toLowerCase() === val.trim().toLowerCase() ||
-        opt.key.trim().toLowerCase() === val.trim().toLowerCase()
+      (opt) => opt.label.trim().toLowerCase() === val.trim().toLowerCase() || opt.key.trim().toLowerCase() === val.trim().toLowerCase()
     );
     section.filterKey = match ? match.key : null;
   }
@@ -301,29 +257,25 @@ function showErrorPopover(message: string) {
 // 选择活动处理函数，提示
 function pickActivity() {
   // 1. 检查是否有选中的活动
-  if (props.activeId === null) {
+  if (activeId.value == null) {
     showErrorPopover("请选择一个活动！");
     return;
   }
 
   // 2. 查找todo中是否有对应的活动
-  const relatedTodo = props.todos.find(
-    (todo) => todo.activityId === props.activeId
-  );
+  const relatedTodo = todoByActivityId.value.get(activeId.value);
   if (relatedTodo) {
     showErrorPopover("【" + relatedTodo.idFormated + "】启动待办");
-    emit("go-to-todo", relatedTodo.id);
-    emit("update-active-id", props.activeId);
+    dateService.navigateTo(new Date(relatedTodo.id));
+    emit("update-active-id", activeId.value);
     return;
   }
-  const relatedSchedule = props.schedules.find(
-    (schedule) => schedule.activityId === props.activeId
-  );
+  const relatedSchedule = scheduleByActivityId.value.get(activeId.value);
 
   if (relatedSchedule) {
     if (relatedSchedule.activityDueRange[0]) {
-      emit("go-to-schedule", relatedSchedule.activityDueRange[0]);
-      emit("update-active-id", props.activeId);
+      dateService.navigateTo(new Date(relatedSchedule.activityDueRange[0]));
+      emit("update-active-id", activeId.value);
     } else {
       showErrorPopover("预约尚未设置时间！");
     }
@@ -331,7 +283,7 @@ function pickActivity() {
     return;
   }
 
-  const picked = props.activities.find((a) => a.id === props.activeId);
+  const picked = activityById.value.get(activeId.value);
   if (!picked) return;
 
   // 4. 触发事件并重置选中状态
@@ -379,8 +331,8 @@ function addTodoRow() {
 
 // 删除当前选中的活动
 function deleteActiveRow() {
-  if (props.activeId !== null) {
-    emit("delete-activity", props.activeId);
+  if (activeId.value !== null) {
+    emit("delete-activity", activeId.value);
   }
 }
 
@@ -395,29 +347,29 @@ function handleFocusSearch() {
 
 // 切换番茄钟类型
 function togglePomoType() {
-  if (props.activeId !== null) {
-    emit("toggle-pomo-type", props.activeId);
+  if (activeId.value !== null) {
+    emit("toggle-pomo-type", activeId.value);
   }
 }
 
 // 重复选中的活动
 function repeatActivity() {
-  if (props.activeId !== null) {
-    emit("repeat-activity", props.activeId);
+  if (activeId.value !== null) {
+    emit("repeat-activity", activeId.value);
   }
 }
 
 // 构建选中活动的子活动
 function createChildActivity() {
-  if (props.activeId !== null) {
-    emit("create-child-activity", props.activeId);
+  if (activeId.value !== null) {
+    emit("create-child-activity", activeId.value);
   }
 }
 
 // 恢复选中活动的子活动
 function increaseChildActivity() {
-  if (props.activeId !== null) {
-    emit("increase-child-activity", props.activeId);
+  if (activeId.value !== null) {
+    emit("increase-child-activity", activeId.value);
   }
 }
 
@@ -438,8 +390,8 @@ function getCountdownClass(dueDate: number | undefined | null): string {
 }
 
 function handleConvertToTask() {
-  const activity = props.activities.find((a) => a.id === props.activeId);
-  console.log("activity", activity?.id);
+  if (activeId.value == null) return;
+  const activity = activityById.value.get(activeId.value);
   if (!activity) return;
 
   if (activity.taskId) {

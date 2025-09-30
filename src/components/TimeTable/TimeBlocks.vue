@@ -7,29 +7,17 @@
   <div class="timetable-bar-container">
     <!-- 小时刻度线背景 -->
     <div class="hour-ticks-container">
-      <div
-        v-for="(hourStamp, idx) in hourStamps"
-        :key="hourStamp"
-        class="hour-tick"
-        :style="{ top: getHourTickTop(hourStamp) + 'px' }"
-      >
+      <div v-for="(hourStamp, idx) in hourStamps" :key="hourStamp" class="hour-tick" :style="{ top: getHourTickTop(hourStamp) + 'px' }">
         <div class="tick-line"></div>
         <!-- 最后一条不显示label -->
-        <span
-          class="hour-label"
-          :style="idx === hourStamps.length - 1 ? { display: 'none' } : {}"
-          >{{ timestampToTimeString(hourStamp) }}</span
-        >
+        <span class="hour-label" :style="idx === hourStamps.length - 1 ? { display: 'none' } : {}">
+          {{ timestampToTimeString(hourStamp) }}
+        </span>
       </div>
     </div>
 
     <!-- 时间主块背景 -->
-    <div
-      v-for="block in props.blocks"
-      :key="block.id"
-      :style="getVerticalBlockStyle(block)"
-      class="time-block"
-    >
+    <div v-for="block in props.blocks" :key="block.id" :style="getVerticalBlockStyle(block)" class="time-block">
       <span
         class="block-label"
         :style="
@@ -48,16 +36,12 @@
             : block.category === "living"
             ? "live"
             : block.category
-        }}</span
-      >
+        }}
+      </span>
     </div>
 
     <!-- 当前时间指示线 -->
-    <div
-      v-if="showCurrentLine"
-      class="current-time-line"
-      :style="{ top: currentTimeTop + 'px' }"
-    />
+    <div v-if="showCurrentLine" class="current-time-line" :style="{ top: currentTimeTop + 'px' }" />
   </div>
   <!-- 按番茄时间分段 -->
   <div
@@ -78,8 +62,8 @@
     <template v-if="segment.type === 'pomo' && segment.categoryIndex != null">
       {{ segment.categoryIndex }}
     </template>
-    <template v-if="segment.type === 'schedule'"> S </template>
-    <template v-if="segment.type === 'untaetigkeit'"> U </template>
+    <template v-if="segment.type === 'schedule'">S</template>
+    <template v-if="segment.type === 'untaetigkeit'">U</template>
   </div>
 
   <!-- 估计分配的segments (左侧列) -->
@@ -98,25 +82,18 @@
         dragState.draggedIndex === seg.todoIndex,
     }"
     :style="getTodoSegmentStyle(seg)"
-    :title="`${seg.pomoType}[${seg.priority}]-${seg.todoIndex} - ${
-      seg.todoTitle
-    } - (估计分配)${seg.overflow ? '-时间冲突' : ''}`"
+    :title="`${seg.pomoType}[${seg.priority}]-${seg.todoIndex} - ${seg.todoTitle} - (估计分配)${seg.overflow ? '-时间冲突' : ''}`"
   >
     <span
       class="priority-badge"
       v-if="!seg.overflow"
-      :class="[
-        'priority-' + seg.priority,
-        { 'cherry-badge': seg.pomoType === '🍒' },
-      ]"
+      :class="['priority-' + seg.priority, { 'cherry-badge': seg.pomoType === '🍒', 'no-title': seg.todoTitle === '' }]"
       style="cursor: grab"
       @mousedown="handleMouseDown($event, seg)"
     >
-      {{ seg.priority > 0 ? seg.priority : "–" }}
+      {{ seg.priority > 0 ? seg.priority : firstNonDigitLetterWide(seg.todoTitle) || "+" }}
     </span>
-    <span v-else style="cursor: grab" @mousedown="handleMouseDown($event, seg)"
-      >⚠️</span
-    >
+    <span v-else style="cursor: grab" @mousedown="handleMouseDown($event, seg)">⚠️</span>
   </div>
   <!-- 实际执行的segments (右侧列) -->
   <div
@@ -143,16 +120,8 @@ import { ref, computed, watch } from "vue";
 import type { CSSProperties } from "vue";
 import { getTimestampForTimeString, timestampToTimeString } from "@/core/utils";
 import { CategoryColors } from "@/core/constants";
-import type {
-  Block,
-  PomodoroSegment,
-  TodoSegment,
-  ActualTimeRange,
-} from "@/core/types/Block";
-import {
-  splitIndexPomoBlocksExSchedules,
-  generateActualTodoSegments,
-} from "@/services/pomoSegService";
+import type { Block, PomodoroSegment, TodoSegment, ActualTimeRange } from "@/core/types/Block";
+import { splitIndexPomoBlocksExSchedules, generateActualTodoSegments } from "@/services/pomoSegService";
 
 import type { Schedule } from "@/core/types/Schedule";
 import type { Todo } from "@/core/types/Todo";
@@ -182,14 +151,8 @@ const props = defineProps<{
 
 // ======= 时间主块（Blocks）底色的样式计算 =======
 function getVerticalBlockStyle(block: Block): CSSProperties {
-  const startMinute =
-    (getTimestampForTimeString(block.start, props.dayStart) -
-      props.timeRange.start) /
-    (1000 * 60);
-  const endMinute =
-    (getTimestampForTimeString(block.end, props.dayStart) -
-      props.timeRange.start) /
-    (1000 * 60);
+  const startMinute = (getTimestampForTimeString(block.start, props.dayStart) - props.timeRange.start) / (1000 * 60);
+  const endMinute = (getTimestampForTimeString(block.end, props.dayStart) - props.timeRange.start) / (1000 * 60);
   const topPx = startMinute * props.effectivePxPerMinute;
   const heightPx = (endMinute - startMinute) * props.effectivePxPerMinute;
   return {
@@ -250,8 +213,7 @@ const now = ref(Date.now());
 setInterval(() => (now.value = Date.now()), 60 * 1000);
 
 const currentTimeTop = computed(() => {
-  if (now.value < props.timeRange.start || now.value > props.timeRange.end)
-    return -1;
+  if (now.value < props.timeRange.start || now.value > props.timeRange.end) return -1;
   const minutes = (now.value - props.timeRange.start) / (1000 * 60);
   return minutes * props.effectivePxPerMinute;
 });
@@ -266,8 +228,7 @@ import { POMODORO_COLORS, POMODORO_COLORS_DARK } from "@/core/constants";
 // (3) 番茄段样式
 // 在 getPomodoroStyle 函数中修改
 function getPomodoroStyle(seg: PomodoroSegment): CSSProperties {
-  const topPx =
-    ((seg.start - props.timeRange.start) / 60000) * props.effectivePxPerMinute;
+  const topPx = ((seg.start - props.timeRange.start) / 60000) * props.effectivePxPerMinute;
   const heightPx = ((seg.end - seg.start) / 60000) * props.effectivePxPerMinute;
 
   // 类型的颜色处理
@@ -317,6 +278,14 @@ function getPomodoroStyle(seg: PomodoroSegment): CSSProperties {
 }
 
 // ==============todo在番茄段上的分配 ================
+
+function firstNonDigitLetterWide(s: string) {
+  if (!s) return "";
+  // 优先找任意字母（已包含大多数字母体系）；如不放心可额外并入
+  const m = String(s).match(/\p{L}|\p{Script=Han}/u);
+  return m ? m[0] : "";
+}
+
 // todoSegments 的计算 移动到watch
 
 // 计算TodoSegment的Style
@@ -378,12 +347,7 @@ const actualTimeRanges = computed((): ActualTimeRange[] => {
       todoTitle: todo.activityTitle,
       start: todo.startTime!,
       end: todo.doneTime!,
-      category:
-        todo.pomoType === "🍇"
-          ? "grape"
-          : todo.pomoType === "🍒"
-          ? "cherry"
-          : "tomato",
+      category: todo.pomoType === "🍇" ? "grape" : todo.pomoType === "🍒" ? "cherry" : "tomato",
     }));
 });
 
@@ -401,11 +365,7 @@ function getActualTimeRangeStyle(range: ActualTimeRange): CSSProperties {
     height: `${heightPx}px`,
     border: "1px solid",
     borderColor:
-      range.category === "grape"
-        ? "var(--color-purple)"
-        : range.category === "tomato"
-        ? "var(--color-red)"
-        : "var(--color-green)",
+      range.category === "grape" ? "var(--color-purple)" : range.category === "tomato" ? "var(--color-red)" : "var(--color-green)",
     backgroundColor:
       range.category === "grape"
         ? "var(--color-purple-transparent )"
@@ -536,9 +496,7 @@ function handleMouseUp() {
 
   // 找到被拖动的 todo
   const draggedSeg = mouseState.value.draggedSeg;
-  const draggedTodo = draggedSeg
-    ? props.todos.find((t) => t.id === draggedSeg.todoId)
-    : null;
+  const draggedTodo = draggedSeg ? props.todos.find((t) => t.id === draggedSeg.todoId) : null;
 
   if (!draggedTodo) {
     console.warn("🟠 handleMouseUp: draggedTodo not found, abort.");
@@ -548,8 +506,7 @@ function handleMouseUp() {
 
   // 仅依据 globalIndex 进行放置
   const occupyingSeg = occupiedIndices.value.get(targetGlobalIndex);
-  const isOccupiedByOther =
-    occupyingSeg && occupyingSeg.todoId !== draggedTodo.id;
+  const isOccupiedByOther = occupyingSeg && occupyingSeg.todoId !== draggedTodo.id;
 
   if (isOccupiedByOther) {
     console.warn("🔴 Drop failed: Target is occupied!");
@@ -580,11 +537,7 @@ function cleanupDragState() {
 watch(
   () => [props.todos, props.blocks, props.schedules, props.dayStart],
   () => {
-    const newPomoSegs = splitIndexPomoBlocksExSchedules(
-      props.dayStart,
-      props.blocks,
-      props.schedules
-    );
+    const newPomoSegs = splitIndexPomoBlocksExSchedules(props.dayStart, props.blocks, props.schedules);
     segStore.setPomodoroSegments(newPomoSegs);
     segStore.recalculateTodoAllocations(props.todos, props.dayStart);
   },
@@ -701,8 +654,7 @@ watch(
   position: absolute;
   width: 15px;
   height: 15px;
-  background-color: var(--color-background-dark);
-  color: var(--color-background);
+  color: var(--color-text-secondary);
   font-size: 12px;
   font-weight: bold;
   margin: 2px;
@@ -715,7 +667,16 @@ watch(
   z-index: 30;
 }
 
+.priority-0.no-title {
+  font-weight: 600;
+}
 /* 可按 priority 分不同色 */
+.priority-0 {
+  font-weight: 300;
+  color: var(--color-text-primary);
+  background-color: var(--color-background-light);
+}
+
 .priority-1 {
   background-color: #ef53505c; /* 半透明浅底 */
   color: #ef5350; /* 同色文字 */
@@ -730,8 +691,7 @@ watch(
 /* priority-3 保持不变 */
 .priority-3 {
   background-color: #ffeb3bb7;
-  color: var(--color-text-secondary);
-  box-shadow: 1px 1px var(--color-background-light);
+  color: #3d3d3dc1;
 }
 
 .priority-4 {
@@ -743,9 +703,10 @@ watch(
   color: #2196f3;
 }
 .priority-6 {
-  background-color: #9575cd5c;
-  color: #9575cd;
+  background-color: #d33af65c;
+  color: #a156b8;
 }
+
 .priority-7 {
   background-color: #7e57c25c;
   color: #7e57c2;

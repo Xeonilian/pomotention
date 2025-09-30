@@ -1,6 +1,6 @@
 [package]
 name = "pomotention"
-version = "0.3.5"
+version = "0.4.2"
 description = "A focus enhancement software to help you stay present and improve concentration"
 authors = ["xeonilian"]
 edition = "2021"

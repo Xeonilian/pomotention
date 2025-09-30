@@ -14,10 +14,7 @@
         @focus="$emit('focus-search')"
       >
         <template #prefix>
-          <n-dropdown
-            :options="filterOptions"
-            @select="(key) => $emit('filter', key)"
-          >
+          <n-dropdown :options="filterOptions" @select="(key) => $emit('filter', key)">
             <n-button text type="default" title="筛选活动">
               <template #icon>
                 <n-icon><DocumentTableSearch24Regular /></n-icon>
@@ -27,24 +24,12 @@
         </template>
       </n-input>
 
-      <n-button
-        v-if="isAddButton"
-        type="default"
-        title="增加一列"
-        @click="$emit('add-section', props.sectionId)"
-      >
+      <n-button v-if="isAddButton" type="default" title="增加一列" @click="$emit('add-section', props.sectionId)">
         <template #icon>
           <n-icon><Add16Regular /></n-icon>
         </template>
       </n-button>
-      <n-button
-        v-if="isRemoveButton"
-        type="default"
-        secondary
-        strong
-        title="删除本列"
-        @click="$emit('remove-section', props.sectionId)"
-      >
+      <n-button v-if="isRemoveButton" type="default" secondary strong title="删除本列" @click="$emit('remove-section', props.sectionId)">
         <template #icon>
           <n-icon><Subtract16Regular /></n-icon>
         </template>
@@ -57,8 +42,7 @@
         v-if="item.status !== 'done'"
         class="activity-row"
         :class="{
-          'highlight-line':
-            item.id === activityId || item.id === props.activeId,
+          'highlight-line': item.id === activityId || item.id === props.activeId,
         }"
       >
         <div class="activity-content">
@@ -71,7 +55,8 @@
             :show-arrow="false"
             style="padding: 0; border-radius: 6px"
             :to="false"
-            ><template #trigger>
+          >
+            <template #trigger>
               <n-input
                 v-model:value="item.title"
                 :ref="(el) => setRowInputRef(el as InputInst | null, item.id)"
@@ -92,17 +77,9 @@
                     @mousedown="startDrag($event, item)"
                     @mouseenter="handleIconMoveMouseEnter(item.id)"
                     @mouseleave="handleIconMoveMouseLeave"
-                    :title="
-                      item.status !== 'cancelled'
-                        ? '拖拽调整顺序'
-                        : '不支持顺序修改'
-                    "
+                    :title="item.status !== 'cancelled' ? '拖拽调整顺序' : '不支持顺序修改'"
                   >
-                    <n-icon
-                      v-if="item.isUntaetigkeit"
-                      :color="'var(--color-blue)'"
-                      ><Cloud24Regular
-                    /></n-icon>
+                    <n-icon v-if="item.isUntaetigkeit" :color="'var(--color-blue)'"><Cloud24Regular /></n-icon>
                     <n-icon
                       v-if="item.interruption === 'I'"
                       :color="
@@ -116,8 +93,9 @@
                           ? 'var(--color-text-primary)'
                           : 'var(--color-text-secondary)'
                       "
-                      ><Chat24Regular
-                    /></n-icon>
+                    >
+                      <Chat24Regular />
+                    </n-icon>
                     <n-icon
                       v-else-if="item.interruption === 'E'"
                       :color="
@@ -131,8 +109,9 @@
                           ? 'var(--color-text-primary)'
                           : 'var(--color-text-secondary)'
                       "
-                      ><VideoPersonCall24Regular
-                    /></n-icon>
+                    >
+                      <VideoPersonCall24Regular />
+                    </n-icon>
                     <n-icon
                       v-else-if="item.class === 'T'"
                       :color="
@@ -146,8 +125,9 @@
                           ? 'var(--color-text-primary)'
                           : 'var(--color-text-secondary)'
                       "
-                      ><ApprovalsApp24Regular
-                    /></n-icon>
+                    >
+                      <ApprovalsApp24Regular />
+                    </n-icon>
                     <n-icon
                       v-else-if="item.class === 'S' && !item.isUntaetigkeit"
                       :color="
@@ -161,8 +141,9 @@
                           ? 'var(--color-text-primary)'
                           : 'var(--color-text-secondary)'
                       "
-                      ><CalendarCheckmark20Regular
-                    /></n-icon>
+                    >
+                      <CalendarCheckmark20Regular />
+                    </n-icon>
                   </div>
                 </template>
                 <template #suffix>
@@ -176,8 +157,9 @@
                     "
                     class="icon-tag"
                     title="添加标签"
-                    ><Tag16Regular
-                  /></n-icon>
+                  >
+                    <Tag16Regular />
+                  </n-icon>
                   <n-icon
                     v-else
                     text
@@ -185,8 +167,9 @@
                     @click="handleTagIconClick($event, item)"
                     class="icon-tag"
                     title="Alt+点击=切换显示 | 点击=管理标签"
-                    ><Tag16Regular
-                  /></n-icon>
+                  >
+                    <Tag16Regular />
+                  </n-icon>
                 </template>
               </n-input>
             </template>
@@ -203,12 +186,7 @@
               @close-selector="popoverTargetId = null"
             />
           </n-popover>
-          <n-modal
-            v-model:show="showTagManager"
-            @after-leave="onTagManagerClosed"
-            role="dialog"
-            aria-modal="true"
-          >
+          <n-modal v-model:show="showTagManager" @after-leave="onTagManagerClosed" role="dialog" aria-modal="true">
             <n-card style="width: 420px">
               <TagManager v-model="tempTagIds" />
             </n-card>
@@ -245,12 +223,7 @@
             v-else
             style="max-width: 32px; font-size: 14px; margin: 0 auto"
             :value="item.dueRange ? item.dueRange[1] : ''"
-            @update:value="
-              (val) =>
-                item.dueRange
-                  ? (item.dueRange[1] = val)
-                  : (item.dueRange = [Date.now(), val])
-            "
+            @update:value="(val) => (item.dueRange ? (item.dueRange[1] = val) : (item.dueRange = [Date.now(), val]))"
             @focus="handleNoFocus(item.id)"
             title="持续时间(分钟)"
             placeholder="min"
@@ -271,12 +244,7 @@
           <n-date-picker
             v-else
             :value="item.dueRange ? item.dueRange[0] : 0"
-            @update:value="
-              (val) =>
-                item.dueRange
-                  ? (item.dueRange[0] = val)
-                  : (item.dueRange = [Date.now(), ''])
-            "
+            @update:value="(val) => (item.dueRange ? (item.dueRange[0] = val) : (item.dueRange = [Date.now(), '']))"
             type="datetime"
             style="max-width: 63px"
             clearable
@@ -287,11 +255,7 @@
           />
         </div>
         <div
-          v-if="
-            item.tagIds &&
-            item.tagIds.length > 0 &&
-            settingStore.settings.kanbanSetting[props.sectionId].showTags
-          "
+          v-if="item.tagIds && item.tagIds.length > 0 && settingStore.settings.kanbanSetting[props.sectionId].showTags"
           class="tag-content"
           :class="{ 'child-activity-tag': item.parentId }"
         >
@@ -385,9 +349,7 @@ const hoveredRowId = ref<number | null>(null);
 
 // 排序：先按自定义排序，再按类型排序
 const sortedDisplaySheet = computed(() => {
-  const activities = props.displaySheet
-    .filter((activity: Activity) => activity.status !== "done")
-    .slice();
+  const activities = props.displaySheet.filter((activity: Activity) => activity.status !== "done").slice();
   const activityMap = new Map<number, Activity[]>(); // 存储每个 parentId 对应的子活动列表
   const rootActivities: Activity[] = [];
 
@@ -403,8 +365,7 @@ const sortedDisplaySheet = computed(() => {
     }
   });
 
-  const getRank = (id: number) =>
-    settingStore.settings.activityRank[id] ?? Number.MAX_SAFE_INTEGER;
+  const getRank = (id: number) => settingStore.settings.activityRank[id] ?? Number.MAX_SAFE_INTEGER;
 
   // 对所有层级的活动列表进行排序
   // 1. 对根活动排序
@@ -544,22 +505,14 @@ function handleDragMove(event: MouseEvent) {
     const dragBlock = getFamilyBlock(dragItem.id, originalList);
 
     // 从列表中移除正在拖拽的块
-    const listWithoutBlock = originalList.filter(
-      (i) => !dragBlock.some((b) => b.id === i.id)
-    );
+    const listWithoutBlock = originalList.filter((i) => !dragBlock.some((b) => b.id === i.id));
 
     // 在新列表中找到目标位置的索引
-    let targetIndexInNewList = listWithoutBlock.findIndex(
-      (i) => i.id === targetItem.id
-    );
+    let targetIndexInNewList = listWithoutBlock.findIndex((i) => i.id === targetItem.id);
 
     // 关键修正：判断原始拖拽方向，以决定插入点
-    const originalDragIndex = originalList.findIndex(
-      (i) => i.id === dragItem.id
-    );
-    const originalTargetIndex = originalList.findIndex(
-      (i) => i.id === targetItem.id
-    );
+    const originalDragIndex = originalList.findIndex((i) => i.id === dragItem.id);
+    const originalTargetIndex = originalList.findIndex((i) => i.id === targetItem.id);
 
     // 如果是向下拖拽，插入点应该在目标元素的后面
     if (originalDragIndex < originalTargetIndex) {
@@ -573,9 +526,7 @@ function handleDragMove(event: MouseEvent) {
     // 拖的是子活动，只在同一父活动的子活动组内重新排序
     const siblings = flatList.filter((i) => i.parentId === dragItem.parentId);
     const originalDragIndex = siblings.findIndex((i) => i.id === dragItem.id);
-    const originalTargetIndex = siblings.findIndex(
-      (i) => i.id === targetItem.id
-    );
+    const originalTargetIndex = siblings.findIndex((i) => i.id === targetItem.id);
 
     if (originalDragIndex === -1 || originalTargetIndex === -1) return;
 
@@ -594,14 +545,8 @@ function handleDragMove(event: MouseEvent) {
 
     // 使用新的子活动顺序重组整个列表
     const groupStartIndex = flatList.findIndex((i) => i.id === siblings[0].id);
-    const groupEndIndex = flatList.findIndex(
-      (i) => i.id === siblings[siblings.length - 1].id
-    );
-    newList = [
-      ...flatList.slice(0, groupStartIndex),
-      ...newSiblings,
-      ...flatList.slice(groupEndIndex + 1),
-    ];
+    const groupEndIndex = flatList.findIndex((i) => i.id === siblings[siblings.length - 1].id);
+    newList = [...flatList.slice(0, groupStartIndex), ...newSiblings, ...flatList.slice(groupEndIndex + 1)];
   }
 
   // 使用新排好序的列表来更新排序 rank
@@ -680,8 +625,7 @@ function handleTagIconClick(event: MouseEvent, item: Activity) {
 
     // 切换 showTags 的值 (true -> false, false -> true)
 
-    settingStore.settings.kanbanSetting[props.sectionId].showTags =
-      !settingStore.settings.kanbanSetting[props.sectionId].showTags;
+    settingStore.settings.kanbanSetting[props.sectionId].showTags = !settingStore.settings.kanbanSetting[props.sectionId].showTags;
   } else {
     // --- 普通点击逻辑 (你之前的代码) ---
     // 如果没有按 Alt 键，就执行常规的打开标签管理器的操作
@@ -693,18 +637,14 @@ function handleTagIconClick(event: MouseEvent, item: Activity) {
 // 保存Tags
 function onTagManagerClosed() {
   // 只在弹窗关闭时才同步
-  const activity = props.displaySheet.find(
-    (act) => act.id === editingTagId.value
-  );
+  const activity = props.displaySheet.find((act) => act.id === editingTagId.value);
 
   if (activity) {
     const existingTagIds = activity.tagIds || [];
     const mergedTagIds = [...new Set([...existingTagIds, ...tempTagIds.value])];
 
     // 计算实际新增的 tagIds
-    const newlyAddedTagIds = mergedTagIds.filter(
-      (id) => !existingTagIds.includes(id)
-    );
+    const newlyAddedTagIds = mergedTagIds.filter((id) => !existingTagIds.includes(id));
 
     // 更新 activity
     activity.tagIds = mergedTagIds;
@@ -815,7 +755,7 @@ function handleTagCreate(item: Activity, tagName: string) {
 
 <style scoped>
 .section-container {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border: 2px solid var(--color-background-light);
   border-radius: 6px;
   padding: 2px;
   display: flex;

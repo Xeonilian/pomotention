@@ -13,11 +13,7 @@
             <div class="dow">
               {{ dayNames[idx] }}
             </div>
-            <div
-              class="date"
-              :class="{ today: day.isToday }"
-              @click="() => handleDateJump(day.startTs)"
-            >
+            <div class="date" :class="{ today: day.isToday }" @click="() => handleDateJump(day.startTs)">
               {{ formatMonthDay(day.startTs) }}
             </div>
           </div>
@@ -29,15 +25,7 @@
                 :key="item.key"
                 class="item"
                 :class="[{ 'item--selected': selectedRowId === item.id }]"
-                @click.stop="
-                  () =>
-                    handleItemSelect(
-                      item.id,
-                      item.ts,
-                      item.activityId,
-                      item.taskId
-                    )
-                "
+                @click.stop="() => handleItemSelect(item.id, item.ts, item.activityId, item.taskId)"
               >
                 <span class="type-dot" :class="item.type"></span>
                 <TagRenderer
@@ -50,38 +38,34 @@
                 <span v-if="item.activityDueRange?.[0]" class="schedule-time">
                   {{ timestampToTimeString(item.activityDueRange?.[0]) }}
                 </span>
-                <span
-                  class="title"
-                  :title="item.title"
-                  :class="[
-                    { 'activity--selected': activeId === item.activityId },
-                  ]"
-                >
+                <span class="title" :title="item.title" :class="[{ 'activity--selected': activeId === item.activityId }]">
                   {{ item.title }}
                 </span>
               </div>
               <div class="card-statistic">
                 <span v-if="day.items.length > MAX_PER_DAY" class="more">
-                  <span class="more-left">
-                    +{{ day.items.length - MAX_PER_DAY }}</span
-                  >
-                  [<span
+                  <span class="more-left">+{{ day.items.length - MAX_PER_DAY }}</span>
+                  [
+                  <span
                     :style="{
                       color: getPomoColor(day.pomoRatio),
                     }"
-                    >🍅&nbsp;
+                  >
+                    🍅&nbsp;
                   </span>
                   = {{ day.sumRealPomo }} 🍇 = {{ day.sumRealGrape }}]
                 </span>
-                <span v-else class="pom-sum"
-                  >[<span
+                <span v-else class="pom-sum">
+                  [
+                  <span
                     :style="{
                       color: getPomoColor(day.pomoRatio),
                     }"
-                    >🍅
+                  >
+                    🍅
                   </span>
-                  = {{ day.sumRealPomo }} 🍇 = {{ day.sumRealGrape }}]</span
-                >
+                  = {{ day.sumRealPomo }} 🍇 = {{ day.sumRealGrape }}]
+                </span>
               </div>
             </template>
 
@@ -94,21 +78,18 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed } from "vue";
 import { NCard } from "naive-ui";
 import type { Todo } from "@/core/types/Todo";
 import type { Schedule } from "@/core/types/Schedule";
 import TagRenderer from "../TagSystem/TagRenderer.vue";
 import { timestampToTimeString } from "@/core/utils";
+import { useDataStore } from "@/stores/useDataStore";
+import { storeToRefs } from "pinia";
 
-const props = defineProps<{
-  weekTodos: Array<Todo & { tagIds?: number[] }>;
-  weekSchedules: Array<Schedule & { tagIds?: number[] }>;
-  weekStartTs: number; // 周一 00:00:00（毫秒）
-  dayStartTs: number;
-  activeId: number | null | undefined;
-  selectedRowId: number | null;
-}>();
+const dataStore = useDataStore();
+const { activeId, selectedRowId, todosForCurrentViewWithTags, schedulesForCurrentViewWithTags, selectedDate } = storeToRefs(dataStore);
+const dateService = dataStore.dateService;
 
 const emit = defineEmits<{
   "date-change": [timestamp: number];
@@ -145,9 +126,6 @@ type UnifiedItem = {
   tagIds?: number[];
 };
 
-const selectedDate = computed(() => props.dayStartTs);
-const selectedItem = ref(1);
-
 const MAX_PER_DAY = 9;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -156,7 +134,7 @@ const STANDARD_POMO = 16;
 
 const days = computed(() => {
   // 将 Todo 映射到统一结构
-  const todoItems: UnifiedItem[] = (props.weekTodos || [])
+  const todoItems: UnifiedItem[] = (todosForCurrentViewWithTags.value || [])
     .map((t) => {
       const ts = pickTodoTs(t);
       if (ts == null) return null;
@@ -185,7 +163,7 @@ const days = computed(() => {
     .filter((x): x is UnifiedItem => !!x);
 
   // 将 Schedule 映射到统一结构
-  const scheduleItems: UnifiedItem[] = (props.weekSchedules || [])
+  const scheduleItems: UnifiedItem[] = (schedulesForCurrentViewWithTags.value || [])
     .map((s) => {
       const ts = pickScheduleTs(s);
       if (ts == null) return null;
@@ -214,7 +192,7 @@ const days = computed(() => {
 
   // 分桶到 7 天
   const buckets: UnifiedItem[][] = Array.from({ length: 7 }, () => []);
-  const weekStart = startOfDay(props.weekStartTs);
+  const weekStart = startOfDay(dateService.weekStartTs);
   const weekEnd = weekStart + 7 * DAY_MS;
 
   for (const item of merged) {
@@ -287,30 +265,20 @@ function formatMonthDay(ts: number) {
 
 // 处理日期选择
 const handleDateSelect = (day: number) => {
-  selectedItem.value = -1;
-  // 向父组件发送日期变化事件
   emit("date-change", day);
 };
 
 const handleDateJump = (day: number) => {
-  selectedItem.value = -1;
   emit("date-jump", day);
 };
 
-const handleItemSelect = (
-  id: number,
-  ts: number,
-  activityId?: number,
-  taskId?: number
-) => {
-  selectedItem.value = id;
+const handleItemSelect = (id: number, ts: number, activityId?: number, taskId?: number) => {
   emit("date-change", ts);
   emit("item-change", id, activityId, taskId);
 };
 
 function getPomoColor(ratio: number) {
-  const clamp = (v: number, min = 0, max = 1) =>
-    Math.min(max, Math.max(min, v));
+  const clamp = (v: number, min = 0, max = 1) => Math.min(max, Math.max(min, v));
   const r = clamp(ratio);
 
   // 起点与终点（#999 简写等于 #999999）
@@ -476,8 +444,7 @@ function getPomoColor(ratio: number) {
   align-items: center;
   color: var(--color-text-secondary);
   font-size: 12px;
-  font-family: "Segoe UI Symbol", "Noto Emoji", "Twemoji Mozilla",
-    "Apple Symbols", sans-serif;
+  font-family: "Segoe UI Symbol", "Noto Emoji", "Twemoji Mozilla", "Apple Symbols", sans-serif;
   white-space: nowrap;
 }
 
@@ -491,8 +458,7 @@ function getPomoColor(ratio: number) {
   width: max-content;
   color: var(--color-text-secondary);
   font-size: 12px;
-  font-family: "Segoe UI Symbol", "Noto Emoji", "Twemoji Mozilla",
-    "Apple Symbols", sans-serif;
+  font-family: "Segoe UI Symbol", "Noto Emoji", "Twemoji Mozilla", "Apple Symbols", sans-serif;
 }
 
 .empty {

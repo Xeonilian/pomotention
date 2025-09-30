@@ -1,5 +1,5 @@
-import { createApp, h, reactive } from "vue";
 import App from "./App.vue";
+import { createApp, h, reactive } from "vue";
 import { createPinia } from "pinia";
 import piniaPluginPersistedstate from "pinia-plugin-persistedstate"; // 持久化插件
 import router from "./router";
@@ -26,11 +26,7 @@ const themeOverrides = reactive({
 // 创建Vue应用并挂载，包裹NConfigProvider
 const app = createApp({
   render() {
-    return h(
-      NConfigProvider,
-      { "theme-overrides": themeOverrides, locale: zhCN, dateLocale: dateZhCN },
-      () => h(App)
-    );
+    return h(NConfigProvider, { "theme-overrides": themeOverrides, locale: zhCN, dateLocale: dateZhCN }, () => h(App));
   },
 });
 
@@ -39,9 +35,9 @@ import "./styles/colors.css";
 import "./styles/global.css";
 
 app.use(pinia);
-app.use(router);
-
+// 不要改这个顺序，要有pinia再用store
 const tagStore = useTagStore(); // 获取 store 实例
 tagStore.loadInitialTags(DEFAULT_TAGS);
 
+app.use(router);
 app.mount("#app");

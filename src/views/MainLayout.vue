@@ -1,17 +1,9 @@
 <template>
   <div class="pomodoro-mini-view-wrapper" ref="PomotentionTimerContainerRef">
     <n-layout class="app-layout">
-      <n-layout-header
-        class="app-layout__header"
-        :class="{ 'app-layout__header--hidden': isMiniMode }"
-      >
+      <n-layout-header class="app-layout__header" :class="{ 'app-layout__header--hidden': isMiniMode }">
         <div class="app-layout__header-content">
-          <n-menu
-            :options="menuOptions"
-            mode="horizontal"
-            :value="current"
-            @update:value="handleMenuSelect"
-          />
+          <n-menu :options="menuOptions" mode="horizontal" :value="current" @update:value="handleMenuSelect" />
           <div class="app-layout__view-controls">
             <n-button
               v-for="(control, index) in viewControls"
@@ -32,16 +24,9 @@
           </div>
         </div>
       </n-layout-header>
-      <n-layout-content
-        class="app-layout__content"
-        :class="{ 'app-layout__content--full-height': isMiniMode }"
-      >
+      <n-layout-content class="app-layout__content" :class="{ 'app-layout__content--full-height': isMiniMode }">
         <router-view v-if="!isMiniMode" />
-        <div
-          class="draggable-container"
-          ref="draggableContainer"
-          v-if="!isMiniMode && settingStore.settings.showPomodoro"
-        >
+        <div class="draggable-container" ref="draggableContainer" v-if="!isMiniMode && settingStore.settings.showPomodoro">
           <PomotentionTimer
             :showPomoSeq="showPomoSeq"
             :isMiniMode="isMiniMode"
@@ -56,9 +41,7 @@
           :isMiniMode="isMiniMode"
           @toggle-pomo-seq="showPomoSeq = !showPomoSeq"
           @report-size="handlePomotentionTimerSizeReport"
-          @exit-mini-mode="
-            handleToggleOntopMode(reportedPomodoroWidth, reportedPomodoroHeight)
-          "
+          @exit-mini-mode="handleToggleOntopMode(reportedPomodoroWidth, reportedPomodoroHeight)"
         />
       </n-layout-content>
     </n-layout>
@@ -71,14 +54,11 @@ import { useRouter, useRoute } from "vue-router";
 import { NMenu, NButton, NIcon } from "naive-ui";
 import { isTauri } from "@tauri-apps/api/core";
 
-import {
-  getCurrentWindow,
-  PhysicalPosition,
-  LogicalSize,
-} from "@tauri-apps/api/window";
+import { getCurrentWindow, PhysicalPosition, LogicalSize } from "@tauri-apps/api/window";
 
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useTimerStore } from "@/stores/useTimerStore";
+import { useDataStore } from "@/stores/useDataStore";
 
 import {
   ArrowLeft24Filled,
@@ -98,6 +78,7 @@ import PomotentionTimer from "@/components/PomotentionTimer/PomotentionTimer.vue
 
 const timerStore = useTimerStore();
 const settingStore = useSettingStore();
+const dataStore = useDataStore();
 
 const { isAlwaysOnTop, toggleAlwaysOnTop } = useAlwaysOnTop();
 const router = useRouter();
@@ -114,8 +95,8 @@ const containerHeight = ref(0);
 
 const menuOptions = [
   { label: "首页", key: "/" },
+  { label: "数据", key: "/search" },
   { label: "帮助", key: "/help" },
-  { label: "搜索", key: "/search" },
 ];
 const current = ref(route.path);
 
@@ -125,12 +106,7 @@ const DRAG_THRESHOLD = 5;
 
 const { buttonStyle, updateButtonStates } = useButtonStyle();
 
-const {
-  draggableContainer,
-  setInitialPosition,
-  handleMouseDown,
-  lastPosition,
-} = useDraggable(DRAG_THRESHOLD);
+const { draggableContainer, setInitialPosition, handleMouseDown, lastPosition } = useDraggable(DRAG_THRESHOLD);
 
 const viewControls = computed(() => [
   {
@@ -218,16 +194,11 @@ function toggleSettingPanel(panel: Panel) {
 function handleMainLayoutViewToggle(key: string) {
   if (key === "ontop") {
     isMiniMode.value = true;
-    handleToggleOntopMode(
-      reportedPomodoroWidth.value,
-      reportedPomodoroHeight.value
-    );
+    handleToggleOntopMode(reportedPomodoroWidth.value, reportedPomodoroHeight.value);
     return;
   }
 
-  toggleSettingPanel(
-    key as "schedule" | "activity" | "task" | "today" | "pomodoro" | "ai"
-  );
+  toggleSettingPanel(key as "schedule" | "activity" | "task" | "today" | "pomodoro" | "ai");
 }
 
 async function handleToggleOntopMode(width: number, height: number) {
@@ -238,10 +209,7 @@ async function handleToggleOntopMode(width: number, height: number) {
     await nextTick();
 
     if (isAlwaysOnTop.value) {
-      console.log(
-        "[mini] Entering mini mode...Set ",
-        settingStore.settings.miniModeRefactor
-      );
+      console.log("[mini] Entering mini mode...Set ", settingStore.settings.miniModeRefactor);
       let finalWidth = width * settingStore.settings.miniModeRefactor;
       let finalHeight = height * settingStore.settings.miniModeRefactor;
       console.log(`[mini] Window resized ori: ${width}x${height}`);
@@ -254,20 +222,12 @@ async function handleToggleOntopMode(width: number, height: number) {
 
         if (PomotentionTimerContainerRef.value) {
           // 打印出具体引用的 DOM 元素
-          console.log(
-            "[mini] Container Ref:",
-            PomotentionTimerContainerRef.value
-          );
+          console.log("[mini] Container Ref:", PomotentionTimerContainerRef.value);
 
           // 获取并记录尺寸
           containerWidth.value = PomotentionTimerContainerRef.value.clientWidth;
-          containerHeight.value =
-            PomotentionTimerContainerRef.value.clientHeight;
-          console.log(
-            "[mini] Window resized true:",
-            containerWidth.value,
-            containerHeight.value
-          );
+          containerHeight.value = PomotentionTimerContainerRef.value.clientHeight;
+          console.log("[mini] Window resized true:", containerWidth.value, containerHeight.value);
           let factorReal = finalWidth / containerWidth.value;
           if (factorReal !== 1) {
             factorReal = Math.ceil(factorReal * 100) / 100;
@@ -279,10 +239,7 @@ async function handleToggleOntopMode(width: number, height: number) {
 
         await appWindow.setPosition(new PhysicalPosition(400, 400));
       } catch (error) {
-        console.error(
-          "[mini] Failed to set window properties for mini mode:",
-          error
-        );
+        console.error("[mini] Failed to set window properties for mini mode:", error);
       }
     } else {
       isMiniMode.value = false;
@@ -291,10 +248,7 @@ async function handleToggleOntopMode(width: number, height: number) {
       try {
         await appWindow.setDecorations(true);
         await appWindow.setSize(
-          new LogicalSize(
-            950 * settingStore.settings.miniModeRefactor,
-            600 * settingStore.settings.miniModeRefactor
-          )
+          new LogicalSize(950 * settingStore.settings.miniModeRefactor, 600 * settingStore.settings.miniModeRefactor)
         );
         await appWindow.center();
         console.log("[mini] Window properties restored from mini mode.");
@@ -312,9 +266,7 @@ async function handleToggleOntopMode(width: number, height: number) {
       }
     }
   } else {
-    console.warn(
-      "Tauri calls are being skipped as the app is not running in Tauri environment."
-    );
+    console.warn("Tauri calls are being skipped as the app is not running in Tauri environment.");
   }
 }
 
@@ -341,21 +293,14 @@ async function updateDraggableContainerVisibilityAndPosition(show: boolean) {
   }
 }
 
-const handlePomotentionTimerSizeReport = ({
-  width,
-  height,
-}: {
-  width: number;
-  height: number;
-}) => {
+const handlePomotentionTimerSizeReport = ({ width, height }: { width: number; height: number }) => {
   reportedPomodoroWidth.value = width;
   reportedPomodoroHeight.value = height;
 };
 
 onMounted(() => {
-  updateDraggableContainerVisibilityAndPosition(
-    settingStore.settings.showPomodoro
-  );
+  dataStore.loadAllData();
+  updateDraggableContainerVisibilityAndPosition(settingStore.settings.showPomodoro);
   if (draggableContainer.value) {
     draggableContainer.value.addEventListener("mousedown", handleMouseDown);
   }
@@ -407,10 +352,8 @@ watch(
 
       await nextTick();
 
-      let finalWidth =
-        reportedPomodoroWidth.value * settingStore.settings.miniModeRefactor;
-      let finalHeight =
-        reportedPomodoroHeight.value * settingStore.settings.miniModeRefactor;
+      let finalWidth = reportedPomodoroWidth.value * settingStore.settings.miniModeRefactor;
+      let finalHeight = reportedPomodoroHeight.value * settingStore.settings.miniModeRefactor;
       console.log(`[mini] Window update to: ${finalWidth}x${finalHeight}`);
       try {
         await appWindow.setSize(new LogicalSize(finalWidth, finalHeight));
@@ -433,10 +376,8 @@ watch(
 
       await nextTick();
 
-      let finalWidth =
-        reportedPomodoroWidth.value * settingStore.settings.miniModeRefactor;
-      let finalHeight =
-        reportedPomodoroHeight.value * settingStore.settings.miniModeRefactor;
+      let finalWidth = reportedPomodoroWidth.value * settingStore.settings.miniModeRefactor;
+      let finalHeight = reportedPomodoroHeight.value * settingStore.settings.miniModeRefactor;
       console.log(`[mini] Window update to: ${finalWidth}x${finalHeight}`);
       try {
         await appWindow.setSize(new LogicalSize(finalWidth, finalHeight));

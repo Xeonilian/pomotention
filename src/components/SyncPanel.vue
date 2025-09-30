@@ -14,37 +14,14 @@
     </div>
     <n-space :vertical="false" :wrap="false">
       <!-- 导出按钮 -->
-      <n-button
-        type="success"
-        secondary
-        :disabled="syncing"
-        @click="handleExport"
-        style="width: 189px"
-      >
-        💻全量数据导出
-      </n-button>
-      <n-button
-        type="info"
-        secondary
-        :disabled="syncing"
-        style="width: 189px"
-        @click="handleImport"
-      >
-        💻增量数据导入
-      </n-button>
+      <n-button type="success" secondary :disabled="syncing" @click="handleExport" style="width: 189px">💻全量数据导出</n-button>
+      <n-button type="info" secondary :disabled="syncing" style="width: 189px" @click="handleImport">💻增量数据导入</n-button>
     </n-space>
     <!-- 同步按钮 -->
     <div class="sync-actions">
       <!-- 首次同步或异常时显示自动同步按钮 -->
-      <n-button
-        v-if="showAutoSync"
-        type="primary"
-        :loading="syncing"
-        :disabled="syncing"
-        @click="handleAutoSync"
-        block
-      >
-        {{ syncing ? "同步中..." : "☁首次数据上传" }}
+      <n-button v-if="showAutoSync" type="primary" :loading="syncing" :disabled="syncing" @click="handleAutoSync" block>
+        {{ syncing ? "同步中..." : "☁️首次数据上传" }}
       </n-button>
 
       <!-- 手动选择按钮组 -->
@@ -57,7 +34,7 @@
           secondary
           style="width: 189px"
         >
-          {{ syncing && syncAction === "upload" ? "上传中..." : "☁数据上传" }}
+          {{ syncing && syncAction === "upload" ? "上传中..." : "☁️数据上传" }}
         </n-button>
         <n-button
           type="warning"
@@ -67,7 +44,7 @@
           secondary
           style="width: 188px"
         >
-          {{ syncing && syncAction === "download" ? "下载中..." : "☁数据下载" }}
+          {{ syncing && syncAction === "download" ? "下载中..." : "☁️数据下载" }}
         </n-button>
       </n-space>
     </div>
@@ -85,22 +62,9 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed, onUnmounted } from "vue";
-import {
-  NButton,
-  NSpin,
-  NText,
-  NSpace,
-  NCollapse,
-  NCollapseItem,
-} from "naive-ui";
+import { NButton, NSpin, NText, NSpace, NCollapse, NCollapseItem } from "naive-ui";
 import { getCurrentDeviceId } from "@/services/localStorageService";
-import {
-  performSync,
-  getRemoteSyncMetadata,
-  isFirstTimeSync,
-  uploadToCloud,
-  downloadFromCloud,
-} from "@/services/syncService";
+import { performSync, getRemoteSyncMetadata, isFirstTimeSync, uploadToCloud, downloadFromCloud } from "@/services/syncService";
 import type { SyncResult } from "@/core/types/Sync";
 import { SyncStatus } from "@/core/types/Sync";
 import { collectLocalData } from "@/services/localStorageService";
@@ -276,9 +240,7 @@ function handleSyncResult(result: SyncResult) {
       {
         status: result.status,
         message: result.message,
-        timestamp: result.timestamp
-          ? new Date(result.timestamp).toLocaleString()
-          : new Date().toLocaleString(),
+        timestamp: result.timestamp ? new Date(result.timestamp).toLocaleString() : new Date().toLocaleString(),
       },
       null,
       2
@@ -291,9 +253,7 @@ function handleSyncResult(result: SyncResult) {
         status: result.status,
         message: result.message,
         error: result.error?.message,
-        timestamp: result.timestamp
-          ? new Date(result.timestamp).toLocaleString()
-          : new Date().toLocaleString(),
+        timestamp: result.timestamp ? new Date(result.timestamp).toLocaleString() : new Date().toLocaleString(),
       },
       null,
       2

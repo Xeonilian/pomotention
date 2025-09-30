@@ -11,10 +11,7 @@
         <n-card
           size="small"
           class="day-card"
-          :class="[
-            { 'day-card--selected': selectedDate === day.startTs },
-            { 'day-card--other-month': !day.isCurrentMonth },
-          ]"
+          :class="[{ 'day-card--selected': selectedDate === day.startTs }, { 'day-card--other-month': !day.isCurrentMonth }]"
           @click="() => handleDateSelect(day.startTs)"
         >
           <!-- 日期数字放在右上角 -->
@@ -24,6 +21,7 @@
             @click="() => handleDateJump(day.startTs)"
             :style="{
               color: getPomoColor(day.pomoRatio),
+              backgroundColor: getPomoBgColorHEX(day.pomoRatio),
             }"
           >
             {{ formatDay(day.startTs) }}
@@ -35,17 +33,8 @@
                 :key="item.key"
                 class="item"
                 :class="[{ 'item--selected': selectedRowId === item.id }]"
-                @click.stop="
-                  () =>
-                    handleItemSelect(
-                      item.id,
-                      item.ts,
-                      item.activityId,
-                      item.taskId
-                    )
-                "
+                @click.stop="() => handleItemSelect(item.id, item.ts, item.activityId, item.taskId)"
               >
-                <span class="type-dot" :class="item.type"></span>
                 <TagRenderer
                   :tag-ids="normalizeTagIds(item.tagIds)"
                   :isCloseable="false"
@@ -57,20 +46,12 @@
                 <span v-if="item.activityDueRange?.[0]" class="schedule-time">
                   {{ timestampToTimeString(item.activityDueRange?.[0]) }}
                 </span>
-                <span
-                  class="title"
-                  :title="item.title"
-                  :class="[
-                    { 'activity--selected': activeId === item.activityId },
-                  ]"
-                >
+                <span class="title" :title="item.title" :class="[{ 'activity--selected': activeId === item.activityId }]">
                   {{ item.title }}
                 </span>
               </div>
               <div class="more">
-                <span v-if="day.items.length > MAX_PER_DAY"
-                  >+{{ day.items.length - MAX_PER_DAY }}</span
-                >
+                <span v-if="day.items.length > MAX_PER_DAY">+{{ day.items.length - MAX_PER_DAY }}</span>
               </div>
             </template>
           </div>
@@ -80,13 +61,14 @@
   </div>
 </template>
 <script setup lang="ts">
-// ... 脚本部分保持不变
-import { computed, ref } from "vue";
+import { computed } from "vue";
 import { NCard } from "naive-ui";
 import type { Todo } from "@/core/types/Todo";
 import type { Schedule } from "@/core/types/Schedule";
 import TagRenderer from "../TagSystem/TagRenderer.vue";
 import { timestampToTimeString } from "@/core/utils";
+import { useDataStore } from "@/stores/useDataStore";
+import { storeToRefs } from "pinia";
 
 const emit = defineEmits<{
   "date-change": [timestamp: number];
@@ -121,29 +103,24 @@ type UnifiedItem = {
   activityDueRange?: [number | null, string];
   tagIds?: number[];
 };
-const props = defineProps<{
-  monthTodos: Array<Todo & { tagIds?: number[] }>;
-  monthSchedules: Array<Schedule & { tagIds?: number[] }>;
-  monthStartTs: number; // 月初 00:00:00（毫秒）
-  dayStartTs: number;
-  selectedRowId: number | null;
-  activeId: number | null | undefined;
-}>();
-const selectedDate = computed(() => props.dayStartTs);
-const selectedItem = ref(1);
+
+const dataStore = useDataStore();
+const { activeId, selectedRowId, todosForCurrentViewWithTags, schedulesForCurrentViewWithTags, selectedDate } = storeToRefs(dataStore);
+const dateService = dataStore.dateService;
+
 const MAX_PER_DAY = 4; // 每天最多显示4个项目
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 const days = computed(() => {
   // 获取月份信息
-  const monthStart = startOfMonth(props.monthStartTs);
-  const monthEnd = endOfMonth(props.monthStartTs);
+  const monthStart = startOfMonth(dateService.monthStartTs);
+  const monthEnd = endOfMonth(dateService.monthStartTs);
   const calendarStart = startOfWeek(monthStart); // 月视图显示完整周
   const calendarEnd = endOfWeek(monthEnd);
   // 计算日历天数
   const totalDays = Math.ceil((calendarEnd - calendarStart) / DAY_MS);
   // 将 Todo 映射到统一结构
-  const todoItems: UnifiedItem[] = (props.monthTodos || [])
+  const todoItems: UnifiedItem[] = (todosForCurrentViewWithTags.value || [])
     .map((t) => {
       const ts = pickTodoTs(t);
       if (ts == null) return null;
@@ -171,7 +148,7 @@ const days = computed(() => {
     })
     .filter((x): x is UnifiedItem => !!x);
   // 将 Schedule 映射到统一结构
-  const scheduleItems: UnifiedItem[] = (props.monthSchedules || [])
+  const scheduleItems: UnifiedItem[] = (schedulesForCurrentViewWithTags.value || [])
     .map((s) => {
       const ts = pickScheduleTs(s);
       if (ts == null) return null;
@@ -206,7 +183,7 @@ const days = computed(() => {
   }
   // 构建日历天数数据
   const today = startOfDay(Date.now());
-  const currentMonth = new Date(props.monthStartTs).getMonth();
+  const currentMonth = new Date(dateService.monthStartTs).getMonth();
 
   const result = Array.from({ length: totalDays }, (_, idx) => {
     const dayTs = calendarStart + idx * DAY_MS;
@@ -305,29 +282,21 @@ function formatDay(ts: number) {
 
 // 处理日期选择
 const handleDateSelect = (day: number) => {
-  selectedItem.value = -1;
   emit("date-change", day);
 };
 
 const handleDateJump = (day: number) => {
-  selectedItem.value = -1;
   emit("date-jump", day);
 };
 
-const handleItemSelect = (
-  id: number,
-  ts: number,
-  activityId?: number,
-  taskId?: number
-) => {
-  selectedItem.value = id;
+const handleItemSelect = (id: number, ts: number, activityId?: number, taskId?: number) => {
   emit("date-change", ts);
   emit("item-change", id, activityId, taskId);
 };
 
+// 颜色可视化番茄量
 function getPomoColor(ratio: number) {
-  const clamp = (v: number, min = 0, max = 1) =>
-    Math.min(max, Math.max(min, v));
+  const clamp = (v: number, min = 0, max = 1) => Math.min(max, Math.max(min, v));
   const r = clamp(ratio);
 
   // 起点与终点（#999 简写等于 #999999）
@@ -343,6 +312,29 @@ function getPomoColor(ratio: number) {
   const hex = (n: number) => n.toString(16).padStart(2, "0");
 
   return `#${hex(R)}${hex(G)}${hex(B)}`;
+}
+
+function getPomoBgColorHEX(ratio: number) {
+  const clamp = (v: number, min = 0, max = 1) => Math.min(max, Math.max(min, v));
+  const r = clamp(ratio);
+
+  // 起点：#efeded4b => R=0xef, G=0xed, B=0xed, A=0x4b
+  const from = { r: 0xef, g: 0xed, b: 0xed, a: 0x4b / 255 };
+  // 终点：自行设定一个更聚焦的底色（示例：稍微更饱和/更深一点，透明度也可上调）
+  // 你可以按需调整 to 的 RGBA，或保持同色调仅调整透明度
+  const to = { r: 0xd6, g: 0x48, b: 0x64, a: 0.3 }; // 例：转向玫红系，30% 透明度
+
+  const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+
+  const R = Math.round(lerp(from.r, to.r, r));
+  const G = Math.round(lerp(from.g, to.g, r));
+  const B = Math.round(lerp(from.b, to.b, r));
+  const A = Math.round(lerp(from.a, to.a, r) * 255);
+
+  const hex = (n: number) => n.toString(16).padStart(2, "0");
+
+  // 输出 #RRGGBBAA
+  return `#${hex(R)}${hex(G)}${hex(B)}${hex(A)}`;
 }
 </script>
 <style scoped>
@@ -410,7 +402,6 @@ function getPomoColor(ratio: number) {
   justify-content: center;
   border-radius: 50%;
   z-index: 1;
-  background-color: var(--primary-color, #efeded4b);
   padding: 1px;
 }
 .date-badge.today {
@@ -472,13 +463,6 @@ function getPomoColor(ratio: number) {
   margin-right: 0px;
 }
 
-.type-dot.todo {
-  background-color: var(--color-text-secondary);
-}
-.type-dot.schedule {
-  background-color: var(--color-blue);
-}
-
 /* 提示点的tag的位置 */
 .tag {
   height: 15px;
@@ -487,9 +471,11 @@ function getPomoColor(ratio: number) {
 
 /* 提示点的tag的大小及位置 */
 .tag :deep(.n-tag) {
+  left: -2px;
   top: 3px;
   height: 0px; /* 提示点的tag的大小 */
-  padding: 3px; /* 提示点的tag的大小 */
+  padding: 4px; /* 提示点的tag的大小 */
+  border: 1px solid var(--color-background-dark);
 }
 
 .schedule-time {
@@ -513,8 +499,7 @@ function getPomoColor(ratio: number) {
   text-align: center;
   color: var(--color-text-secondary);
   font-size: 12px;
-  font-family: "Segoe UI Symbol", "Noto Emoji", "Twemoji Mozilla",
-    "Apple Symbols", sans-serif;
+  font-family: "Segoe UI Symbol", "Noto Emoji", "Twemoji Mozilla", "Apple Symbols", sans-serif;
   white-space: nowrap;
   padding-right: 6px;
 }
