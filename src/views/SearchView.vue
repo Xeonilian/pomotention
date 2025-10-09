@@ -3,7 +3,6 @@
     <!-- 左侧：Activity 主列表 -->
     <div class="left-pane" :style="{ width: searchWidth + 'px' }">
       <div class="search-tool">
-        <!-- 直接绑定 store state，并通过 onSearchInput action 进行更新 -->
         <n-input :value="searchQuery" placeholder="请输入搜索关键字" clearable @update:value="onSearchInput" />
         <!-- 直接调用 store action -->
         <n-button text type="warning" @click="toggleFilterStarred" :title="filterStarredOnly ? '仅看加星任务：开' : '仅看加星任务：关'">
@@ -70,11 +69,18 @@
             <template v-else>
               <span>加入时间: {{ formatDate(dataStore.activityById.get(tab.id)?.id) }}</span>
             </template>
-          </div>
-
-          <div class="content">
-            <div v-for="task in getTasksForTab(tab)" :key="task.id" class="task-block">
-              <div class="task-content" v-html="convertMarkdown(task.description)"></div>
+            <div class="content">
+              <div v-for="task in getTasksForTab(tab)" :key="task.id" class="task-block">
+                <n-button text type="warning" @click="dataStore.toggleTaskStar(task.id)" title="切换加星" class="star-btn">
+                  <template #icon>
+                    <n-icon>
+                      <Star20Filled v-if="task.starred" />
+                      <Star20Regular v-else />
+                    </n-icon>
+                  </template>
+                </n-button>
+                <div class="task-content" v-html="convertMarkdown(task.description)"></div>
+              </div>
             </div>
 
             <div v-if="getTasksForTab(tab).length === 0" class="empty">暂无任务</div>
@@ -96,6 +102,7 @@ import { Star20Filled, Star20Regular, Dismiss12Regular } from "@vicons/fluent";
 import { useDataStore } from "@/stores/useDataStore";
 import { useSearchUiStore, type TabItem, TabType } from "@/stores/useSearchUiStore";
 import { useSettingStore } from "@/stores/useSettingStore";
+
 // 引入业务类型和组合式函数
 import { Task } from "@/core/types/Task";
 import { useResize } from "@/composables/useResize";
@@ -223,8 +230,8 @@ const sidebarActivities = computed<ActivityRow[]>(() => {
 // 点击左侧列表项时，调用 store action 打开一个 tab
 function openRow(row: ActivityRow) {
   const type: TabType = row.class === "T" ? "todo" : row.class === "S" ? "sch" : "activity";
-  const id = row.currentId ?? row.activityId;
-  openTab(type, id, row.title); // 调用 action，逻辑全部在 store 中处理
+  const todoOrSchId = row.currentId ?? row.activityId;
+  openTab(type, todoOrSchId, row.title); // 调用 action，逻辑全部在 store 中处理
 }
 
 // closeTab 已经直接绑定到模板上，这里不需要额外的函数体
@@ -243,7 +250,6 @@ function getTasksForTab(tab: TabItem): Task[] {
     } else {
       // Case 2: 这是一个未转化的 Activity，tab.id 本身就是 activityId
       activityId = tab.id;
-      console.log(`[getTasksForTab] Tab (type: todo, id: ${tab.id}) is an un-materialized Activity. Using tab.id as activityId.`);
     }
   } else if (tab.type === "sch") {
     // 尝试在 schedule store 中查找
@@ -254,7 +260,6 @@ function getTasksForTab(tab: TabItem): Task[] {
     } else {
       // Case 2: 这是一个未转化的 Activity
       activityId = tab.id;
-      console.log(`[getTasksForTab] Tab (type: sch, id: ${tab.id}) is an un-materialized Activity. Using tab.id as activityId.`);
     }
   }
 
@@ -271,10 +276,6 @@ function getTasksForTab(tab: TabItem): Task[] {
     const uniqueTasks = Array.from(new Map(allTasks.map((task) => [task.id, task])).values());
 
     uniqueTasks.sort((a, b) => a.id - b.id);
-
-    console.log(`[getTasksForTab] For tab key "${tab.key}" (type: ${tab.type}, id: ${tab.id}):
-      - Determined activityId: ${activityId}
-      - Total unique tasks found: ${uniqueTasks.length}`);
 
     return uniqueTasks;
   }
@@ -478,5 +479,10 @@ const convertMarkdown = (md?: string) => (md ? marked(md) : "无");
 
 :deep(.task-content h1) {
   margin: 0 !important;
+}
+.star-btn {
+  position: absolute;
+  right: 4px;
+  z-index: 2;
 }
 </style>

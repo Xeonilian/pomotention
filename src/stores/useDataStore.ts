@@ -271,6 +271,36 @@ export const useDataStore = defineStore(
       selectedDate.value = id;
     }
 
+    /**
+     * 显式设置某个 Task 的 starred 值（布尔）
+     * - 不写 undefined，保持“外部明确设为布尔”时的行为可控
+     */
+    function setTaskStar(taskId: number, next: boolean): void {
+      const idx = taskList.value.findIndex((t) => t.id === taskId);
+      if (idx === -1) return;
+      // 只在值变化时写入，避免无谓的触发
+      if (taskList.value[idx].starred !== next) {
+        taskList.value[idx] = { ...taskList.value[idx], starred: next };
+        saveTasks(taskList.value);
+      }
+    }
+
+    /**
+     * 切换某个 Task 的 starred 值，序列：undefined → true → false → true ...
+     * - 说明：第一次点击如果是 undefined，则转为 true；
+     *        再次点击 true → false；再次点击 false → true
+     */
+    function toggleTaskStar(taskId: number): void {
+      const idx = taskList.value.findIndex((t) => t.id === taskId);
+      if (idx === -1) return;
+
+      const current = taskList.value[idx].starred; // boolean | undefined
+      const next = current === true ? false : true; // undefined 或 false → true；true → false
+
+      taskList.value[idx] = { ...taskList.value[idx], starred: next };
+      saveTasks(taskList.value);
+    }
+
     // ======================== 7. 监控 (Watches) ========================
     watch(
       todosForAppDate,
@@ -394,6 +424,8 @@ export const useDataStore = defineStore(
       addActivity,
       setActiveId,
       setSelectedDate,
+      setTaskStar,
+      toggleTaskStar,
     };
   },
   {
