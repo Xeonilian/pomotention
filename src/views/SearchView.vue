@@ -4,10 +4,9 @@
     <div class="left-pane" :style="{ width: searchWidth + 'px' }">
       <div class="search-tool">
         <n-input :value="searchQuery" placeholder="请输入搜索关键字" clearable @update:value="onSearchInput" />
-        <!-- 直接调用 store action -->
         <n-button text type="warning" @click="toggleFilterStarred" :title="filterStarredOnly ? '仅看加星任务：开' : '仅看加星任务：关'">
           <template #icon>
-            <n-icon :class="{ 'is-on': filterStarredOnly }">
+            <n-icon>
               <Star20Filled v-if="filterStarredOnly" />
               <Star20Regular v-else />
             </n-icon>
@@ -23,23 +22,15 @@
           @click="openRow(row)"
           :title="row.title"
         >
-          <span class="left">
-            <span class="icon">
-              {{ row.class === "T" ? "📝" : "📅" }}
-            </span>
-            <span class="title">{{ row.title || "（无标题）" }}</span>
+          <span class="left-icon">
+            {{ row.class === "T" ? "📝" : "📅" }}
+
+            <span class="title-name">{{ row.title || "（无标题）" }}</span>
           </span>
-          <span class="right">
+          <span class="right-info">
             <n-icon v-if="row.hasStarred" size="16" class="star-on"><Star20Filled /></n-icon>
             <span class="tag-renderer-container">
-              <TagRenderer
-                class="tag-renderer"
-                :tag-ids="row.tagIds ?? []"
-                :isCloseable="false"
-                size="tiny"
-                :displayLength="Number(3)"
-                :showIdx="Number(2)"
-              />
+              <TagRenderer :tag-ids="row.tagIds ?? []" :isCloseable="false" size="tiny" :displayLength="Number(3)" :showIdx="Number(2)" />
             </span>
 
             <span class="date">{{ formatMMDD(row.primaryTime) }}</span>
@@ -68,8 +59,25 @@
             </template>
           </n-button>
         </template>
+
         <n-tab-pane v-for="tab in openedTabs" :key="tab.key" :name="tab.key" :tab="tab.title">
-          <div class="meta">
+          <div class="meta-row">
+            <n-button
+              v-if="getTaskForTab(tab)"
+              text
+              type="warning"
+              @click="dataStore.toggleTaskStar(getTaskForTab(tab)!.id)"
+              title="切换加星"
+              class="star-btn"
+            >
+              <template #icon>
+                <n-icon>
+                  <Star20Filled v-if="getTaskForTab(tab)?.starred" />
+                  <Star20Regular v-else />
+                </n-icon>
+              </template>
+            </n-button>
+
             <template v-if="tab.type === 'todo'">
               <span>截止时间: {{ formatDate(dataStore.todoById.get(tab.id)?.dueDate) }}</span>
             </template>
@@ -80,21 +88,20 @@
             <template v-else>
               <span>加入时间: {{ formatDate(dataStore.activityById.get(tab.id)?.id) }}</span>
             </template>
-            <div class="content">
-              <div v-for="task in getTasksForTab(tab)" :key="task.id" class="task-block">
-                <n-button text type="warning" @click="dataStore.toggleTaskStar(task.id)" title="切换加星" class="star-btn">
-                  <template #icon>
-                    <n-icon>
-                      <Star20Filled v-if="task.starred" />
-                      <Star20Regular v-else />
-                    </n-icon>
-                  </template>
-                </n-button>
-                <div class="task-content" v-html="convertMarkdown(task.description)"></div>
-              </div>
-            </div>
+            <TagRenderer
+              :tag-ids="getActivityTagIds(tab)"
+              :isCloseable="true"
+              @remove-tag="handleRemoveTagFromTab(tab, $event)"
+              size="small"
+            />
+          </div>
 
-            <div v-if="getTasksForTab(tab).length === 0" class="empty">暂无任务</div>
+          <!-- 任务内容区 -->
+          <div class="content">
+            <template v-if="getTaskForTab(tab)">
+              <div class="task-content" v-html="convertMarkdown(getTaskForTab(tab)!.description)"></div>
+            </template>
+            <div v-else class="empty">暂无任务</div>
           </div>
         </n-tab-pane>
       </n-tabs>
@@ -114,7 +121,7 @@ import TagRenderer from "@/components/TagSystem/TagRenderer.vue";
 import { useDataStore } from "@/stores/useDataStore";
 import { useSearchUiStore, type TabItem, TabType } from "@/stores/useSearchUiStore";
 import { useSettingStore } from "@/stores/useSettingStore";
-
+import { useTagStore } from "@/stores/useTagStore";
 // 引入业务类型和组合式函数
 import { Task } from "@/core/types/Task";
 import { useResize } from "@/composables/useResize";
@@ -127,6 +134,7 @@ import { useResize } from "@/composables/useResize";
 const dataStore = useDataStore();
 const searchUiStore = useSearchUiStore();
 const settingStore = useSettingStore();
+const tagStore = useTagStore();
 
 // 从 UI store 中解构出 UI 状态（使用 storeToRefs 保持响应性）
 const { searchQuery, filterStarredOnly, openedTabs, activeTabKey } = storeToRefs(searchUiStore);
@@ -251,54 +259,65 @@ function openRow(row: ActivityRow) {
 // closeTab 已经直接绑定到模板上，这里不需要额外的函数体
 
 // 从 dataStore 获取指定 Tab 的任务 (最终修正版)
-function getTasksForTab(tab: TabItem): Task[] {
+// 获取 activity 的 tagIds
+function getActivityTagIds(tab: TabItem): number[] {
   let activityId: number | undefined;
 
-  // 1. 根据 Tab 的类型，找到它最终归属的 activityId
   if (tab.type === "todo") {
-    // 尝试在 todo store 中查找
     const todoInstance = dataStore.todoById.get(tab.id);
-    if (todoInstance) {
-      // Case 1: 这是一个已转化的 Todo，我们从实例中获取 activityId
-      activityId = todoInstance.activityId;
-    } else {
-      // Case 2: 这是一个未转化的 Activity，tab.id 本身就是 activityId
-      activityId = tab.id;
-    }
+    activityId = todoInstance?.activityId ?? tab.id;
   } else if (tab.type === "sch") {
-    // 尝试在 schedule store 中查找
     const schInstance = dataStore.scheduleById.get(tab.id);
-    if (schInstance) {
-      // Case 1: 这是一个已转化的 Schedule
-      activityId = schInstance.activityId;
-    } else {
-      // Case 2: 这是一个未转化的 Activity
-      activityId = tab.id;
-    }
+    activityId = schInstance?.activityId ?? tab.id;
+  } else {
+    activityId = tab.id;
   }
 
-  // 2. 使用确定的 activityId，从唯一的数据源获取所有相关任务
-  // 注意：我们现在需要合并所有可能的任务源，因为任务可能挂在 Activity 上，也可能挂在 Todo/Schedule 上
-  if (activityId !== undefined) {
-    const tasksFromActivity = dataStore.tasksBySource.activity.get(activityId) ?? [];
-
-    // 即使 activityId 找到了，我们仍需检查 tab.id 是否对应着具体的 todo/sch 任务源
-    const tasksFromTodo = dataStore.tasksBySource.todo.get(tab.id) ?? [];
-    const tasksFromSch = dataStore.tasksBySource.schedule.get(tab.id) ?? [];
-
-    const allTasks = [...tasksFromActivity, ...tasksFromTodo, ...tasksFromSch];
-    const uniqueTasks = Array.from(new Map(allTasks.map((task) => [task.id, task])).values());
-
-    uniqueTasks.sort((a, b) => a.id - b.id);
-
-    return uniqueTasks;
-  }
-
-  // 如果各种方式都找不到，返回空
-  console.warn(`[getTasksForTab] Could not determine activityId for tab key "${tab.key}". Returning empty array.`);
-  return [];
+  const activity = dataStore.activityById.get(activityId);
+  return activity?.tagIds ?? [];
 }
 
+// 获取 tab 对应的唯一 task
+function getTaskForTab(tab: TabItem): Task | undefined {
+  let tasks: Task[] = [];
+
+  if (tab.type === "todo") {
+    tasks = dataStore.tasksBySource.todo.get(tab.id) ?? [];
+  } else if (tab.type === "sch") {
+    tasks = dataStore.tasksBySource.schedule.get(tab.id) ?? [];
+  } else {
+    tasks = dataStore.tasksBySource.activity.get(tab.id) ?? [];
+  }
+
+  if (tasks.length > 1) {
+    console.warn(`[getTaskForTab] Found ${tasks.length} tasks for tab "${tab.key}", expected at most 1`);
+  }
+
+  return tasks[0];
+}
+
+function handleRemoveTagFromTab(tab: TabItem, tagId: number) {
+  let activityId: number | undefined;
+
+  if (tab.type === "todo") {
+    const todoInstance = dataStore.todoById.get(tab.id);
+    activityId = todoInstance?.activityId ?? tab.id;
+  } else if (tab.type === "sch") {
+    const schInstance = dataStore.scheduleById.get(tab.id);
+    activityId = schInstance?.activityId ?? tab.id;
+  } else {
+    activityId = tab.id;
+  }
+
+  const activity = dataStore.activityById.get(activityId);
+  if (activity && activity.tagIds) {
+    const newTagIds = activity.tagIds.filter((id) => id !== tagId);
+    // 如果过滤后为空数组，赋为 undefined，否则用新数组
+    activity.tagIds = newTagIds.length > 0 ? newTagIds : undefined;
+
+    tagStore.decrementTagCount(tagId);
+  }
+}
 // =======================================================================
 // 5. 辅助与格式化函数
 // =======================================================================
@@ -321,14 +340,14 @@ const convertMarkdown = (md?: string) => (md ? marked(md) : "无");
 
 .resize-handle-horizontal {
   width: 8px;
-  background: #f0f0f0;
+  background: var(--color-background-light-light);
   cursor: ew-resize;
   position: relative;
   margin: 0;
 }
 
 .resize-handle-horizontal:hover {
-  background: #e0e0e0;
+  background: var(--color-background-light);
 }
 
 .resize-handle-horizontal::after {
@@ -339,7 +358,7 @@ const convertMarkdown = (md?: string) => (md ? marked(md) : "无");
   transform: translate(-50%, -50%);
   width: 4px;
   height: 30px;
-  background: #ccc;
+  background: var(--color-background-dark);
   border-radius: 2px;
 }
 
@@ -358,6 +377,10 @@ const convertMarkdown = (md?: string) => (md ? marked(md) : "无");
   flex-direction: row;
   align-items: center;
   gap: 6px;
+}
+
+.star-on {
+  color: var(--color-orange);
 }
 
 .titles {
@@ -379,32 +402,37 @@ const convertMarkdown = (md?: string) => (md ? marked(md) : "无");
   margin-bottom: 4px;
 }
 
-.title-item .left {
+.title-item .left-icon {
   display: flex;
   gap: 4px;
   align-items: center;
   overflow: hidden;
 }
-.title-item .title {
+
+.tag-renderer-container {
+  margin-left: 4px;
+}
+
+.title-item .title-name {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
-.title-item .right {
+.title-item .right-info {
   display: flex;
   align-items: center;
   flex-shrink: 0;
 }
 
 .title-item.active {
-  background: var(--color-background-light-light);
-
+  background: var(--color-background-light);
   font-weight: 600;
 }
 
 .title-item.schedule {
   border-left: 4px solid var(--color-red);
 }
+
 .title-item.todo {
   border-left: 4px solid var(--color-blue);
 }
@@ -415,38 +443,20 @@ const convertMarkdown = (md?: string) => (md ? marked(md) : "无");
   font-variant-numeric: tabular-nums;
 }
 
+.empty {
+  color: var(--color-text-secondary);
+  text-align: center;
+  padding: 12px 0;
+}
+
 .right-pane {
   min-height: 0;
   padding: 6px;
   width: auto;
 }
 
-:deep(.n-tabs) {
-  height: 100%;
-  min-height: 0;
-}
-:deep(.n-tabs .n-tabs-pane-wrapper) {
-  min-height: 0;
-}
-:deep(.n-tabs .n-tab-pane) {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-}
-
-.content {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding-right: 8px;
-  width: 100%;
-}
-
-:deep(.n-tabs .n-tabs-tab) {
+:deep(.n-tabs-tab) {
   width: 120px;
-  position: relative;
   padding: 6px 4px;
   border-top-left-radius: 10px !important;
   border-top-right-radius: 10px !important;
@@ -462,7 +472,7 @@ const convertMarkdown = (md?: string) => (md ? marked(md) : "无");
   text-overflow: ellipsis;
 }
 
-:deep(.n-tabs .n-tabs-tab .n-tabs-tab__close) {
+:deep(.n-tabs-tab__close) {
   position: absolute;
   right: 4px;
   top: 50%;
@@ -470,41 +480,33 @@ const convertMarkdown = (md?: string) => (md ? marked(md) : "无");
   z-index: 2;
 }
 
-.task-block + .task-block {
-  margin-top: 8px;
+.meta-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  margin-top: 2px;
 }
-.star-on {
-  color: #f59e0b;
+
+.content {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 8px;
+  width: 100%;
+}
+
+.star-btn {
+  margin: 1px;
 }
 
 .task-content {
   overflow-y: auto;
 }
 
-.tag-renderer-container {
-  flex-shrink: 0;
-}
-
-.tag-renderer {
-  margin-left: 4px;
-}
-
-.empty {
-  color: var(--color-text-3, #999);
-  text-align: center;
-  padding: 12px 0;
-}
-
-.search-tool .is-on {
-  color: #f59e0b;
-}
-
 :deep(.task-content h1) {
   margin: 0 !important;
-}
-.star-btn {
-  position: absolute;
-  right: 4px;
-  z-index: 2;
 }
 </style>
