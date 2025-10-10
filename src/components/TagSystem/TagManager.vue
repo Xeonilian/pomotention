@@ -2,29 +2,15 @@
   <div class="tag-manager">
     <!-- 顶部搜索和新建区域 -->
     <div class="tag-search">
-      <n-input
-        v-model:value="inputText"
-        placeholder="搜索或新建标签"
-        @input="onInput"
-        @keydown.enter="onAddTag"
-        size="medium"
-        clearable
-        style="width: 100%"
-      >
+      <n-input v-model:value="inputText" placeholder="搜索或新建标签" @keydown.enter="onAddTag" size="medium" clearable style="width: 100%">
         <template #prefix>
           <n-icon color="var(--color-text)">
             <TagSearch20Filled />
           </n-icon>
         </template>
       </n-input>
-      <n-button
-        type="info"
-        secondary
-        :disabled="!inputText.trim()"
-        @click="onAddTag"
-        title="增加标签"
-      >
-        <n-icon size="18px"> <Add20Filled /></n-icon>
+      <n-button type="info" secondary :disabled="!inputText.trim()" @click="onAddTag" title="增加标签">
+        <n-icon size="18px"><Add20Filled /></n-icon>
       </n-button>
     </div>
 
@@ -44,66 +30,46 @@
           <span
             v-if="editingId !== t.id"
             @dblclick.stop="startEdit(t)"
-            style="
-              max-width: 110px;
-              overflow: hidden;
-              text-overflow: ellipsis;
-              white-space: nowrap;
-            "
+            style="max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap"
           >
             {{ t.name }}
           </span>
-          <!-- 标签名编辑输入框 -->
+
+          <!-- 标签名编辑输入框（编辑态） -->
           <n-input
             v-else
             v-model:value="editValue"
             size="tiny"
             :style="{
-              width: editInputWidth(t) + 'px',
+              width: editInputWidth + 'px',
               minWidth: '30px',
               transition: 'width 0.2s',
             }"
-            ref="editInputRef"
-            autofocus
             @blur="onEditFinish(t)"
-            @input="onEditInput"
+            @input="updateInputWidth"
             @keydown.enter.prevent="onEditFinish(t)"
+            @keydown.esc="cancelEdit"
+            @click.stop
           />
 
           <!-- 文本颜色选择器 -->
-          <n-popover
-            trigger="click"
-            placement="bottom"
-            :style="{ padding: '10px', width: '240px' }"
-          >
+          <n-popover trigger="click" placement="bottom" :style="{ padding: '10px', width: '240px' }">
             <template #trigger>
-              <n-button text :color="t.color">
+              <n-button text :color="t.color" @click.stop>
                 <n-icon><Heart16Filled /></n-icon>
               </n-button>
             </template>
-            <n-color-picker
-              :value="t.color"
-              :show-alpha="false"
-              @update:value="(color) => onColorUpdate(t.id, 'fg', color)"
-            />
+            <n-color-picker :value="t.color" :show-alpha="false" @update:value="(color) => onColorUpdate(t.id, 'fg', color)" />
           </n-popover>
 
           <!-- 背景颜色选择器 -->
-          <n-popover
-            trigger="click"
-            placement="bottom"
-            :style="{ width: '200px' }"
-          >
+          <n-popover trigger="click" placement="bottom" :style="{ width: '200px' }">
             <template #trigger>
-              <n-button text>
+              <n-button text @click.stop>
                 <n-icon><HeartCircle16Regular /></n-icon>
               </n-button>
             </template>
-            <n-color-picker
-              :value="t.backgroundColor"
-              :show-alpha="false"
-              @update:value="(color) => onColorUpdate(t.id, 'bg', color)"
-            />
+            <n-color-picker :value="t.backgroundColor" :show-alpha="false" @update:value="(color) => onColorUpdate(t.id, 'bg', color)" />
           </n-popover>
 
           <!-- 删除按钮，点击弹出确认对话框 -->
@@ -117,18 +83,12 @@
       </template>
 
       <!-- 用于保证列表高度稳定的透明占位符 -->
-      <div
-        v-for="idx in emptyCount"
-        :key="'empty-tag-' + idx"
-        class="custom-tag empty-tag"
-      >
-        -
-      </div>
+      <div v-for="idx in emptyCount" :key="'empty-tag-' + idx" class="custom-tag empty-tag">-</div>
     </div>
 
     <!-- 用于动态测量编辑输入框宽度的隐藏元素 -->
     <span ref="sizerRef" class="input-sizer">
-      {{ editValue || editingTagName }}
+      {{ editValue }}
     </span>
   </div>
 </template>
@@ -137,13 +97,7 @@
 import { ref, computed, nextTick } from "vue";
 import { useTagStore } from "@/stores/useTagStore";
 import { useDialog } from "naive-ui";
-import {
-  TagSearch20Filled,
-  Add20Filled,
-  HeartCircle16Regular,
-  Heart16Filled,
-  TagDismiss16Regular,
-} from "@vicons/fluent";
+import { TagSearch20Filled, Add20Filled, HeartCircle16Regular, Heart16Filled, TagDismiss16Regular } from "@vicons/fluent";
 import { NInput, NButton, NPopover, NColorPicker, NIcon } from "naive-ui";
 import type { Tag } from "@/core/types/Tag";
 
@@ -151,13 +105,12 @@ import type { Tag } from "@/core/types/Tag";
 const tagStore = useTagStore();
 const dialog = useDialog();
 
-// 组件内部状态 ref
+// 组件内部状态
 const inputText = ref("");
 const editingId = ref<number | null>(null);
 const editValue = ref("");
-const editingTagName = ref(""); // 存储原始标签名，用于计算宽度
-const editInputRef = ref<InstanceType<typeof NInput> | null>(null);
-const sizerRef = ref<HTMLElement | null>(null);
+const editInputWidth = ref(40); // 编辑输入框宽度（px）
+const sizerRef = ref<HTMLElement | null>(null); // 隐藏 sizer 用于测量文本宽度
 
 // 定义 props 和 emits，用于与父组件进行 v-model 通信
 const props = defineProps<{
@@ -169,12 +122,13 @@ const emit = defineEmits<{
 }>();
 
 // 根据输入文本动态过滤标签列表
-// 如果无输入，则显示引用次数最多的前10个
+// 如果无输入，则显示引用次数最多的前20个
 const filteredTags = computed(() => {
-  if (inputText.value.trim()) {
-    return tagStore.findByName(inputText.value);
+  const keyword = inputText.value.trim();
+  if (keyword) {
+    return tagStore.findByName(keyword);
   }
-  return [...tagStore.allTags]
+  return Array.from(tagStore.allTags)
     .sort((a, b) => (b.count || 0) - (a.count || 0))
     .slice(0, 20);
 });
@@ -187,8 +141,9 @@ function isTagSelected(tagId: number): boolean {
   return props.modelValue.includes(tagId);
 }
 
-// 单击标签时触发，用于切换选中状态
+// 点击标签切换选中状态（编辑态时不处理）
 function onClickTag(tag: Tag) {
+  if (editingId.value === tag.id) return;
   const current = [...props.modelValue];
   const idx = current.indexOf(tag.id);
   if (idx === -1) current.push(tag.id);
@@ -196,65 +151,71 @@ function onClickTag(tag: Tag) {
   emit("update:modelValue", current);
 }
 
-// 处理搜索框的输入事件
-function onInput(val: string) {
-  inputText.value = val;
-}
-
-// 处理新建或选择标签的逻辑
+// 新建或选择标签
 function onAddTag() {
   const input = inputText.value.trim().replace(/^#+/, "");
   if (!input) return;
 
-  const exist = tagStore
-    .findByName(input)
-    .find((t) => t.name.toLowerCase() === input.toLowerCase());
+  const exist = tagStore.findByName(input).find((t) => t.name.toLowerCase() === input.toLowerCase());
 
   if (exist) {
-    return;
+    // 已存在 -> 选中（去重）
+    emit("update:modelValue", Array.from(new Set([...props.modelValue, exist.id])));
   } else {
-    tagStore.addTag(input, "#333", "#eee");
+    // 新建标签并选中
+    const tag = tagStore.addTag(input, "#333", "#eee");
+    if (tag) {
+      emit("update:modelValue", Array.from(new Set([...props.modelValue, tag.id])));
+    }
   }
+  inputText.value = ""; // 清空输入
 }
 
-// --- 标签编辑相关函数 ---
-
+// 进入编辑态
 function startEdit(tag: Tag) {
   editingId.value = tag.id;
   editValue.value = tag.name;
-  editingTagName.value = tag.name;
   nextTick(() => {
     updateInputWidth();
-    editInputRef.value?.focus();
   });
 }
 
+// 完成编辑（失焦或回车）
 function onEditFinish(tag: Tag) {
   const newVal = editValue.value.trim().replace(/^#+/, "");
   if (newVal && newVal !== tag.name) {
     tagStore.updateTag(tag.id, { name: newVal });
   }
+  cancelEdit();
+}
+
+// 取消编辑（ESC 或手动调用）
+function cancelEdit() {
   editingId.value = null;
   editValue.value = "";
-  editingTagName.value = "";
+  editInputWidth.value = 40;
 }
 
-function onEditInput() {
-  updateInputWidth();
+// 编辑输入变化时更新宽度
+function updateInputWidth() {
+  nextTick(() => {
+    if (!sizerRef.value) return;
+    // 以隐藏 sizer 的实际宽度作为基准，增加少量 padding
+    const width = Math.max(40, Math.min(240, sizerRef.value.offsetWidth + 20));
+    editInputWidth.value = width;
+  });
 }
 
-// --- 颜色更新 ---
-
+// 更新颜色
 function onColorUpdate(tagId: number, target: "fg" | "bg", color: string) {
   if (target === "bg") {
     tagStore.updateTag(tagId, { backgroundColor: color });
   } else {
-    tagStore.updateTag(tagId, { color: color });
+    tagStore.updateTag(tagId, { color });
   }
 }
 
-// --- 删除确认 ---
-
+// 删除确认
 function confirmRemoveTag(tag: Tag) {
   const content =
     tag.count > 0
@@ -263,27 +224,18 @@ function confirmRemoveTag(tag: Tag) {
 
   dialog.warning({
     title: "确认删除",
-    content: content,
+    content,
     positiveText: "确认删除",
     negativeText: "取消",
     onPositiveClick: () => {
       tagStore.removeTag(tag.id);
+      // 如果当前被选中，从选中列表移除
+      const next = props.modelValue.filter((id) => id !== tag.id);
+      if (next.length !== props.modelValue.length) {
+        emit("update:modelValue", next);
+      }
     },
   });
-}
-
-// --- 编辑输入框宽度自适应 ---
-
-function editInputWidth(t?: Tag) {
-  if (editingId.value === t?.id && sizerRef.value) {
-    return Math.max(32, sizerRef.value.offsetWidth);
-  }
-  return 40; // 默认宽度
-}
-
-function updateInputWidth() {
-  // nextTick 确保 DOM 更新后才计算宽度
-  nextTick(() => {});
 }
 </script>
 

@@ -10,8 +10,8 @@
       @mouseenter="highlightedIndex = index"
     >
       <div class="tag-color-dot" :style="{ backgroundColor: tag.color }"></div>
-      <span class="tag-name">{{ tag.name }}</span
-      ><span class="tag-count">[{{ tag.count }}]</span>
+      <span class="tag-name">{{ tag.name }}</span>
+      <span class="tag-count">[{{ tag.count }}]</span>
     </div>
 
     <!-- 创建新标签的选项 -->
@@ -27,14 +27,7 @@
     </div>
 
     <!-- 无匹配且不允许创建时的提示 -->
-    <div
-      v-if="
-        searchTerm.trim() &&
-        filteredTags.length === 0 &&
-        (!allowCreate || !searchTerm.trim() || tagExists)
-      "
-      class="no-results"
-    >
+    <div v-if="searchTerm.trim() && filteredTags.length === 0 && (!allowCreate || !searchTerm.trim() || tagExists)" class="no-results">
       无标签
     </div>
   </div>
@@ -68,18 +61,14 @@ const highlightedIndex = ref(0); // 追踪高亮项的索引
 const filteredTags = computed<Tag[]>(() => {
   const searchTerm = props.searchTerm.trim();
   if (!searchTerm || searchTerm === "#") {
-    return [...tagStore.allTags]
-      .sort((a, b) => (b.count || 0) - (a.count || 0))
-      .slice(0, 10);
+    return [...tagStore.allTags].sort((a, b) => (b.count || 0) - (a.count || 0)).slice(0, 10);
   }
 
   return tagStore.findByName(props.searchTerm);
 });
 
 const tagExists = computed(() => {
-  return filteredTags.value.some(
-    (t) => t.name.toLowerCase() === props.searchTerm.trim().toLowerCase()
-  );
+  return filteredTags.value.some((t) => t.name.toLowerCase() === props.searchTerm.trim().toLowerCase());
 });
 
 // 计算选项总数，包括“创建”选项
@@ -108,8 +97,7 @@ function navigateDown() {
 
 function navigateUp() {
   if (totalOptions.value === 0) return;
-  highlightedIndex.value =
-    (highlightedIndex.value - 1 + totalOptions.value) % totalOptions.value;
+  highlightedIndex.value = (highlightedIndex.value - 1 + totalOptions.value) % totalOptions.value;
 }
 
 function selectHighlighted() {
@@ -148,6 +136,7 @@ defineExpose({
   box-shadow: var(--n-box-shadow-focus);
   padding: 4px;
   outline: none; /* 移除聚焦时的蓝色边框 */
+  margin-top: 30px;
 }
 
 .tag-option {
