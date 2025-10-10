@@ -921,8 +921,8 @@ td.status-col {
   font-size: 12px;
   font-weight: bold;
   color: var(--color-background);
+  line-height: 16px;
   background-color: var(--color-background-dark);
-  box-shadow: 0 1px 3px var(--color-background-light);
 }
 
 /* 可按 priority 分不同色 */
@@ -1099,6 +1099,7 @@ td.status-col {
 td.col-check {
   padding-left: 1px;
 }
+
 .cancel-icon {
   display: inline-flex;
   width: 16px;
