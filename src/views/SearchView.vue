@@ -24,13 +24,24 @@
           :title="row.title"
         >
           <span class="left">
-            <span class="icon" :aria-label="row.class === 'T' ? 'Todo' : 'Schedule'">
+            <span class="icon">
               {{ row.class === "T" ? "📝" : "📅" }}
             </span>
             <span class="title">{{ row.title || "（无标题）" }}</span>
           </span>
           <span class="right">
             <n-icon v-if="row.hasStarred" size="16" class="star-on"><Star20Filled /></n-icon>
+            <span class="tag-renderer-container">
+              <TagRenderer
+                class="tag-renderer"
+                :tag-ids="row.tagIds ?? []"
+                :isCloseable="false"
+                size="tiny"
+                :displayLength="Number(3)"
+                :showIdx="Number(2)"
+              />
+            </span>
+
             <span class="date">{{ formatMMDD(row.primaryTime) }}</span>
           </span>
         </div>
@@ -97,6 +108,7 @@ import { storeToRefs } from "pinia";
 import { NInput, NButton, NIcon, NTabs, NTabPane } from "naive-ui";
 import { marked } from "marked";
 import { Star20Filled, Star20Regular, Dismiss12Regular } from "@vicons/fluent";
+import TagRenderer from "@/components/TagSystem/TagRenderer.vue";
 
 // 引入 stores 和类型
 import { useDataStore } from "@/stores/useDataStore";
@@ -162,6 +174,7 @@ type ActivityRow = {
   currentId?: number;
   primaryTime?: number;
   hasStarred: boolean;
+  tagIds?: number[];
   openKey: string;
 };
 
@@ -214,6 +227,7 @@ const sidebarActivities = computed<ActivityRow[]>(() => {
       currentId: isTodo ? td?.id : isSch ? sch?.id : undefined,
       primaryTime: getPrimaryTime(),
       hasStarred,
+      tagIds: act.tagIds,
       openKey: searchUiStore._makeKey(type, entityId), // 使用 store 的方法生成 key
     });
   }
@@ -378,7 +392,6 @@ const convertMarkdown = (md?: string) => (md ? marked(md) : "无");
 }
 .title-item .right {
   display: flex;
-  gap: 8px;
   align-items: center;
   flex-shrink: 0;
 }
@@ -397,6 +410,7 @@ const convertMarkdown = (md?: string) => (md ? marked(md) : "无");
 }
 
 .title-item .date {
+  margin-left: 4px;
   color: var(--color-text-secondary);
   font-variant-numeric: tabular-nums;
 }
@@ -465,6 +479,14 @@ const convertMarkdown = (md?: string) => (md ? marked(md) : "无");
 
 .task-content {
   overflow-y: auto;
+}
+
+.tag-renderer-container {
+  flex-shrink: 0;
+}
+
+.tag-renderer {
+  margin-left: 4px;
 }
 
 .empty {
