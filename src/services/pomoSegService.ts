@@ -8,10 +8,7 @@ import { getTimestampForTimeString } from "@/core/utils";
 /**
  * 从基础时间区间中减去排除区间，返回剩余的可用区间
  */
-function _subtractIntervals(
-  base: [number, number],
-  excludes: [number, number][]
-): [number, number][] {
+function _subtractIntervals(base: [number, number], excludes: [number, number][]): [number, number][] {
   const [bStart, bEnd] = base;
   if (!excludes.length) return [[bStart, bEnd]];
 
@@ -37,10 +34,7 @@ function _subtractIntervals(
  */
 function _getTodoEstPomoCount(todo: Todo): number {
   if (!todo.estPomo) return 0;
-  const rawCount = todo.estPomo.reduce(
-    (sum, cur) => sum + (typeof cur === "number" ? cur : 0),
-    0
-  );
+  const rawCount = todo.estPomo.reduce((sum, cur) => sum + (typeof cur === "number" ? cur : 0), 0);
   if (todo.pomoType === "🍒") {
     return rawCount / 2;
   }
@@ -52,10 +46,7 @@ function _getTodoEstPomoCount(todo: Todo): number {
  */
 function _getTodoRealPomoCount(todo: Todo): number {
   if (!todo.realPomo) return 0;
-  const rawCount = todo.realPomo.reduce(
-    (sum, cur) => sum + (typeof cur === "number" ? cur : 0),
-    0
-  );
+  const rawCount = todo.realPomo.reduce((sum, cur) => sum + (typeof cur === "number" ? cur : 0), 0);
   if (todo.pomoType === "🍒") {
     return rawCount / 2;
   }
@@ -85,17 +76,21 @@ export function splitIndexPomoBlocksExSchedules(
   schedules: {
     activityDueRange: [number | null, string];
     isUntaetigkeit?: boolean;
+    status?: string;
   }[]
 ): PomodoroSegment[] {
   // ==================================================================
   // 阶段一：生成所有 Segment，此时不考虑 globalIndex
   // ==================================================================
 
+  const activeSchedules = schedules.filter(
+    (s) => s.activityDueRange?.[0] != null && Number(s.activityDueRange[1]) > 0 && s.status !== "cancelled"
+  );
   // 1. 处理 Schedule 和 Untaetigkeit 块
   const scheduleInfo: Array<{
     range: [number, number];
     isUntaetigkeit: boolean;
-  }> = schedules
+  }> = activeSchedules
     .map((s) => {
       const start = Number(s.activityDueRange[0]);
       const duration = Number(s.activityDueRange[1]);
@@ -118,10 +113,7 @@ export function splitIndexPomoBlocksExSchedules(
   scheduleInfo
     .sort((a, b) => a.range[0] - b.range[0])
     .forEach(({ range: [start, end], isUntaetigkeit }) => {
-      if (
-        !mergedSchedules.length ||
-        mergedSchedules[mergedSchedules.length - 1].range[1] < start
-      ) {
+      if (!mergedSchedules.length || mergedSchedules[mergedSchedules.length - 1].range[1] < start) {
         mergedSchedules.push({
           range: [start, end],
           hasUntaetigkeit: isUntaetigkeit,
@@ -157,13 +149,8 @@ export function splitIndexPomoBlocksExSchedules(
     const blockStart = getTimestampForTimeString(block.start, appDateTimestamp);
     const blockEnd = getTimestampForTimeString(block.end, appDateTimestamp);
 
-    const relatedExcludes = scheduleInfo
-      .map((info) => info.range)
-      .filter(([s, e]) => e > blockStart && s < blockEnd);
-    const availableRanges = _subtractIntervals(
-      [blockStart, blockEnd],
-      relatedExcludes
-    );
+    const relatedExcludes = scheduleInfo.map((info) => info.range).filter(([s, e]) => e > blockStart && s < blockEnd);
+    const availableRanges = _subtractIntervals([blockStart, blockEnd], relatedExcludes);
 
     for (const [aStart, aEnd] of availableRanges) {
       let cur = aStart;
@@ -215,14 +202,12 @@ export function splitIndexPomoBlocksExSchedules(
   const sortedSegments = rawSegments.sort((a, b) => a.start - b.start);
 
   // 2. 遍历排好序的数组，赋予连续的、唯一的 globalIndex
-  const finalSegments: PomodoroSegment[] = sortedSegments.map(
-    (segment, index) => {
-      return {
-        ...segment,
-        globalIndex: index, // ✨ 黄金标准：用数组的索引作为 globalIndex
-      };
-    }
-  );
+  const finalSegments: PomodoroSegment[] = sortedSegments.map((segment, index) => {
+    return {
+      ...segment,
+      globalIndex: index, // ✨ 黄金标准：用数组的索引作为 globalIndex
+    };
+  });
 
   return finalSegments;
 }
@@ -294,17 +279,13 @@ export function generateActualTodoSegments(todos: Todo[]): TodoSegment[] {
  * 生成估计的todo时间段分配 (修正版)
  * 不再使用positionIndex会有错误数据，暂不处理 #HACK
  */
-export function generateEstimatedTodoSegments(
-  appDateTimestamp: number,
-  todos: Todo[],
-  pomodoroSegments: PomodoroSegment[]
-): TodoSegment[] {
+export function generateEstimatedTodoSegments(appDateTimestamp: number, todos: Todo[], pomodoroSegments: PomodoroSegment[]): TodoSegment[] {
   // 1. 初始化
   const usedGlobalIndices: Set<number> = new Set();
   const todoSegments: TodoSegment[] = [];
-
+  const activeTodos = todos.filter((t) => t.status !== "cancelled");
   // 2. 待办事项排序
-  const sortedTodos = [...todos].sort((a, b) => {
+  const sortedTodos = [...activeTodos].sort((a, b) => {
     // 这是为了不存在globalIndex而准备的
     const aIsManual = typeof a.globalIndex === "number" && a.globalIndex >= 0;
     const bIsManual = typeof b.globalIndex === "number" && b.globalIndex >= 0;
@@ -332,8 +313,7 @@ export function generateEstimatedTodoSegments(
 
   // 3. 循环处理每一个待办事项分配todoSegment
   for (const todo of sortedTodos) {
-    const hasGlobalIndex =
-      typeof todo.globalIndex === "number" && todo.globalIndex >= 0;
+    const hasGlobalIndex = typeof todo.globalIndex === "number" && todo.globalIndex >= 0;
     let anchorIndex;
     if (!todo.globalIndex) {
       anchorIndex = 0;
@@ -385,9 +365,7 @@ export function generateEstimatedTodoSegments(
         break;
 
       default:
-        console.error(
-          `[PomoSegService] 未知的 PomoType: ${todo.pomoType} for Todo #${todo.id}`
-        );
+        console.error(`[PomoSegService] 未知的 PomoType: ${todo.pomoType} for Todo #${todo.id}`);
         break;
     }
   }
@@ -408,23 +386,13 @@ function _allocateTomatoSegmentsFromIndex(
   const targetCategory = "working";
 
   if (!hasGlobalIndex) {
-    const windowStart = findWindowStartIndex(
-      segments,
-      usedGlobalIndices,
-      anchorIndex,
-      needCount,
-      (seg) => seg.category === targetCategory
-    );
+    const windowStart = findWindowStartIndex(segments, usedGlobalIndices, anchorIndex, needCount, (seg) => seg.category === targetCategory);
     if (windowStart !== null && windowStart !== anchorIndex) {
       anchorIndex = windowStart;
     }
   }
 
-  for (
-    let i = anchorIndex;
-    i < segments.length && assignedCount < needCount;
-    i++
-  ) {
+  for (let i = anchorIndex; i < segments.length && assignedCount < needCount; i++) {
     const currentPomoSeg = segments[i];
 
     if (hasGlobalIndex && assignedCount === 0 && i > anchorIndex) {
@@ -434,9 +402,7 @@ function _allocateTomatoSegmentsFromIndex(
     const isPomoType = currentPomoSeg.type === "pomo";
     // 自动模式：需要分类严格匹配；手动模式：允许不同分类
     const mustMatchCategory = !hasGlobalIndex;
-    const isCategoryMatch = mustMatchCategory
-      ? currentPomoSeg.category === targetCategory
-      : true;
+    const isCategoryMatch = mustMatchCategory ? currentPomoSeg.category === targetCategory : true;
 
     if (!isPomoType || !isCategoryMatch) {
       continue;
@@ -476,13 +442,8 @@ function _allocateTomatoSegmentsFromIndex(
       const nextSegIndex = i + 1;
       if (nextSegIndex < segments.length) {
         const nextSeg = segments[nextSegIndex];
-        const isNextSegCategoryMatch =
-          anchorIndex || nextSeg.category === targetCategory;
-        if (
-          nextSeg.type === "break" &&
-          isNextSegCategoryMatch &&
-          !usedGlobalIndices.has(nextSeg.globalIndex!)
-        ) {
+        const isNextSegCategoryMatch = anchorIndex || nextSeg.category === targetCategory;
+        if (nextSeg.type === "break" && isNextSegCategoryMatch && !usedGlobalIndices.has(nextSeg.globalIndex!)) {
           lastAdded.end = nextSeg.end;
           usedGlobalIndices.add(nextSeg.globalIndex!);
         }
@@ -536,23 +497,13 @@ function _allocateGrapeSegmentsFromIndex(
 
   // 自动模式：尝试滑动寻找满足 needCount 的连续可用窗口（严格匹配 living）
   if (!forceStart) {
-    const windowStart = findWindowStartIndex(
-      segments,
-      usedGlobalIndices,
-      startIndex,
-      needCount,
-      (seg) => seg.category === targetCategory
-    );
+    const windowStart = findWindowStartIndex(segments, usedGlobalIndices, startIndex, needCount, (seg) => seg.category === targetCategory);
     if (windowStart !== null && windowStart !== startIndex) {
       startIndex = windowStart;
     }
   }
 
-  for (
-    let i = startIndex;
-    i < segments.length && assignedCount < needCount;
-    i++
-  ) {
+  for (let i = startIndex; i < segments.length && assignedCount < needCount; i++) {
     const currentSeg = segments[i];
 
     // 手动模式：只允许在 startIndex 放置第一块，如果第一块不在 startIndex 则终止
@@ -563,9 +514,7 @@ function _allocateGrapeSegmentsFromIndex(
     const isPomoType = currentSeg.type === "pomo";
     // 自动模式：必须严格匹配 living；手动模式：放宽分类限制
     const mustMatchCategory = !forceStart;
-    const isCategoryMatch = mustMatchCategory
-      ? currentSeg.category === targetCategory
-      : true;
+    const isCategoryMatch = mustMatchCategory ? currentSeg.category === targetCategory : true;
 
     if (!isPomoType || !isCategoryMatch) {
       continue;
@@ -607,14 +556,8 @@ function _allocateGrapeSegmentsFromIndex(
       if (nextSegIndex < segments.length) {
         const nextSeg = segments[nextSegIndex];
         // 自动模式下需类别一致；手动模式放宽
-        const isNextSegCategoryMatch = mustMatchCategory
-          ? nextSeg.category === targetCategory
-          : true;
-        if (
-          nextSeg.type === "break" &&
-          isNextSegCategoryMatch &&
-          !usedGlobalIndices.has(nextSeg.globalIndex!)
-        ) {
+        const isNextSegCategoryMatch = mustMatchCategory ? nextSeg.category === targetCategory : true;
+        if (nextSeg.type === "break" && isNextSegCategoryMatch && !usedGlobalIndices.has(nextSeg.globalIndex!)) {
           lastAdded.end = nextSeg.end;
           usedGlobalIndices.add(nextSeg.globalIndex!);
         }
@@ -673,13 +616,7 @@ function _allocateCherrySegmentsFromIndex(
   const targetCategory = "working";
   // --- 当没有forceStart 步长1验证，forceStart则只检验提供的位置---
   if (!forceStart) {
-    const windowStart = findWindowStartIndex(
-      segments,
-      usedGlobalIndices,
-      startIndex,
-      needCount,
-      (seg) => seg.category === targetCategory
-    );
+    const windowStart = findWindowStartIndex(segments, usedGlobalIndices, startIndex, needCount, (seg) => seg.category === targetCategory);
     if (windowStart !== null && windowStart !== startIndex) {
       startIndex = windowStart;
     }
@@ -696,22 +633,15 @@ function _allocateCherrySegmentsFromIndex(
 
     // 3. 可用性检查 (4个块都未被占用)
     const isConflict =
-      usedGlobalIndices.has(seg1.globalIndex!) ||
-      usedGlobalIndices.has(seg2.globalIndex!) ||
-      usedGlobalIndices.has(seg3.globalIndex!);
+      usedGlobalIndices.has(seg1.globalIndex!) || usedGlobalIndices.has(seg2.globalIndex!) || usedGlobalIndices.has(seg3.globalIndex!);
 
     // --- 将所有检查条件整合到一个函数中，一目了然 ---
-    const isSlotValid = (
-      s1: PomodoroSegment,
-      s2: PomodoroSegment,
-      s3: PomodoroSegment
-    ): boolean => {
+    const isSlotValid = (s1: PomodoroSegment, s2: PomodoroSegment, s3: PomodoroSegment): boolean => {
       const category = s1.category;
       if (!forceStart && category !== "working") return false; // 自动模式下必须是 'working'
 
       // 1. 结构检查 (pomo-break-pomo-break)
-      if (s1.type !== "pomo" || s2.type !== "break" || s3.type !== "pomo")
-        return false;
+      if (s1.type !== "pomo" || s2.type !== "break" || s3.type !== "pomo") return false;
 
       return true; // 所有检查通过！
     };
@@ -806,11 +736,7 @@ function findWindowStartIndex(
     const first = segments[i];
 
     // 起点必须是未占用、类别匹配的 pomo
-    const isValidStart =
-      first &&
-      first.type === "pomo" &&
-      categoryPredicate(first) &&
-      !usedGlobalIndices.has(first.globalIndex!);
+    const isValidStart = first && first.type === "pomo" && categoryPredicate(first) && !usedGlobalIndices.has(first.globalIndex!);
 
     if (!isValidStart) continue;
 
@@ -883,9 +809,7 @@ function findWindowStartIndex(
     // 如果被阻断了，继续尝试下一个起点 i+1
   }
 
-  console.warn(
-    "[findWindowStartIndex] NO WINDOW FOUND (keep original startIndex)"
-  );
+  console.warn("[findWindowStartIndex] NO WINDOW FOUND (keep original startIndex)");
   // console.groupEnd();
   return null;
 }
