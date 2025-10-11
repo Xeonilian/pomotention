@@ -13,9 +13,26 @@
           </template>
         </n-button>
       </div>
+      <div v-if="currentFilterTags.length > 0" class="filter-status-bar">
+        <TagRenderer
+          class="filter-tags"
+          :tag-ids="filterTagIds"
+          :isCloseable="true"
+          @remove-tag="toggleFilterTagId"
+          size="small"
+          title="点击标签可取消单个筛选"
+        />
+
+        <!-- 清除所有筛选的按钮 -->
+        <n-button text circle @click="clearFilterTags" title="清除所有标签筛选">
+          <template #icon>
+            <n-icon><Dismiss12Regular /></n-icon>
+          </template>
+        </n-button>
+      </div>
       <div class="titles">
         <div
-          v-for="row in sidebarActivities"
+          v-for="row in filteredActivities"
           :key="'act-' + row.activityId"
           class="title-item"
           :class="[{ active: activeTabKey === row.openKey }, row.class === 'T' ? 'todo' : 'schedule']"
@@ -30,7 +47,14 @@
           <span class="right-info">
             <n-icon v-if="row.hasStarred" size="16" class="star-on"><Star20Filled /></n-icon>
             <span class="tag-renderer-container">
-              <TagRenderer :tag-ids="row.tagIds ?? []" :isCloseable="false" size="tiny" :displayLength="Number(3)" :showIdx="Number(2)" />
+              <TagRenderer
+                :tag-ids="row.tagIds ?? []"
+                :isCloseable="false"
+                size="tiny"
+                :displayLength="Number(3)"
+                :showIdx="Number(2)"
+                @tag-click="handleTagClick"
+              />
             </span>
 
             <span class="date">{{ formatMMDD(row.primaryTime) }}</span>
@@ -38,7 +62,7 @@
         </div>
       </div>
 
-      <div v-if="sidebarActivities.length === 0" class="empty">暂无结果</div>
+      <div v-if="filteredActivities.length === 0" class="empty">暂无结果</div>
     </div>
     <div class="resize-handle-horizontal" @mousedown="resizeSearch.startResize"></div>
     <!-- 右侧：Tabs -->
@@ -59,52 +83,8 @@
             </template>
           </n-button>
         </template>
-
         <n-tab-pane v-for="tab in openedTabs" :key="tab.key" :name="tab.key" :tab="tab.title">
-          <div class="meta-row">
-            <n-button
-              v-if="getTaskForTab(tab)"
-              text
-              type="warning"
-              @click="dataStore.toggleTaskStar(getTaskForTab(tab)!.id)"
-              title="切换加星"
-              class="star-btn"
-            >
-              <template #icon>
-                <n-icon>
-                  <Star20Filled v-if="getTaskForTab(tab)?.starred" />
-                  <Star20Regular v-else />
-                </n-icon>
-              </template>
-            </n-button>
-
-            <template v-if="tab.type === 'todo'">
-              <span class="meta-time">截止时间: {{ formatDate(dataStore.todoById.get(tab.id)?.dueDate) }}</span>
-            </template>
-            <template v-else-if="tab.type === 'sch'">
-              <span class="meta-time">
-                开始时间: {{ formatDate(dataStore.scheduleById.get(tab.id)?.activityDueRange?.[0] ?? undefined) }}
-              </span>
-              <span style="margin-left: 12px">位置: {{ dataStore.scheduleById.get(tab.id)?.location || "无" }}</span>
-            </template>
-            <template v-else>
-              <span class="meta-time">加入时间: {{ formatDate(dataStore.activityById.get(tab.id)?.id) }}</span>
-            </template>
-            <TagRenderer
-              :tag-ids="getActivityTagIds(tab)"
-              :isCloseable="true"
-              @remove-tag="handleRemoveTagFromTab(tab, $event)"
-              size="small"
-            />
-          </div>
-
-          <!-- 任务内容区 -->
-          <div class="content">
-            <template v-if="getTaskForTab(tab)">
-              <div class="task-content" v-html="convertMarkdown(getTaskForTab(tab)!.description)"></div>
-            </template>
-            <div v-else class="empty">暂无任务</div>
-          </div>
+          <TabPaneContent :tab="tab" />
         </n-tab-pane>
       </n-tabs>
     </div>
@@ -115,34 +95,33 @@
 import { computed } from "vue";
 import { storeToRefs } from "pinia";
 import { NInput, NButton, NIcon, NTabs, NTabPane } from "naive-ui";
-import { marked } from "marked";
+import type { Tag } from "@/core/types/Tag";
+
 import { Star20Filled, Star20Regular, Dismiss12Regular } from "@vicons/fluent";
 import TagRenderer from "@/components/TagSystem/TagRenderer.vue";
 
 // 引入 stores 和类型
-import { useDataStore } from "@/stores/useDataStore";
-import { useSearchUiStore, type TabItem, TabType } from "@/stores/useSearchUiStore";
+
+import { useSearchUiStore } from "@/stores/useSearchUiStore";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useTagStore } from "@/stores/useTagStore";
 // 引入业务类型和组合式函数
-import { Task } from "@/core/types/Task";
-import { useResize } from "@/composables/useResize";
 
-// =======================================================================
-// 1. 核心数据与状态管理
-// =======================================================================
+import { useResize } from "@/composables/useResize";
+import { useSearchFilter } from "@/composables/useSearchFilter";
 
 // 实例化所有需要的 stores
-const dataStore = useDataStore();
 const searchUiStore = useSearchUiStore();
 const settingStore = useSettingStore();
 const tagStore = useTagStore();
 
+const { filteredActivities } = useSearchFilter();
+
 // 从 UI store 中解构出 UI 状态（使用 storeToRefs 保持响应性）
-const { searchQuery, filterStarredOnly, openedTabs, activeTabKey } = storeToRefs(searchUiStore);
+const { searchQuery, filterStarredOnly, openedTabs, activeTabKey, filterTagIds } = storeToRefs(searchUiStore);
 
 // 从 UI store 中解构出 actions，以便在 script 中调用
-const { setSearchQuery, toggleFilterStarred, openTab, closeTab } = searchUiStore;
+const { setSearchQuery, toggleFilterStarred, closeTab, openRow, toggleFilterTagId, clearFilterTags } = searchUiStore;
 const closeAllTabs = searchUiStore.closeAllTabs.bind(searchUiStore);
 
 // 窗口宽度相关的状态和逻辑，保持不变
@@ -150,21 +129,10 @@ const searchWidth = computed({
   get: () => settingStore.settings.searchWidth,
   set: (v) => (settingStore.settings.searchWidth = v),
 });
+
 const resizeSearch = useResize(searchWidth, "horizontal", 10, 600, false);
 
-// =======================================================================
-// 2. 搜索与过滤逻辑
-// =======================================================================
-
-const norm = (s?: string) => (s ?? "").toLowerCase();
-// matchesQuery 现在依赖于从 searchUiStore 来的 searchQuery ref
-const matchesQuery = (text?: string) => {
-  const q = norm(searchQuery.value);
-  if (!q) return true;
-  return norm(text).includes(q);
-};
-
-// 搜索防抖逻辑，现在调用 store 的 action
+// 搜索防抖逻辑
 let searchDebounceTimer: number | null = null;
 const onSearchInput = (value: string) => {
   if (searchDebounceTimer) window.clearTimeout(searchDebounceTimer);
@@ -173,163 +141,20 @@ const onSearchInput = (value: string) => {
   }, 300);
 };
 
-// =======================================================================
-// 3. 侧边栏列表构造
-// =======================================================================
-
-type ActivityRow = {
-  activityId: number;
-  title: string;
-  class: "S" | "T";
-  currentId?: number;
-  primaryTime?: number;
-  hasStarred: boolean;
-  tagIds?: number[];
-  openKey: string;
-};
-
-// 这个核心 computed 逻辑完全不变，它响应式地依赖 dataStore 和 searchUiStore 的数据
-const sidebarActivities = computed<ActivityRow[]>(() => {
-  const rows: ActivityRow[] = [];
-  const q = norm(searchQuery.value);
-
-  for (const act of dataStore.activityList) {
-    const title = act.title || "（无标题）";
-    const isTodo = act.class === "T";
-    const isSch = act.class === "S";
-
-    const td = isTodo ? dataStore.todoByActivityId.get(act.id) : undefined;
-    const sch = isSch ? dataStore.scheduleByActivityId.get(act.id) : undefined;
-
-    let passed = matchesQuery(title);
-    if (!passed && q) {
-      const tasksOfAct = dataStore.tasksBySource.activity.get(act.id) ?? [];
-
-      if (tasksOfAct.length > 0) {
-        console.log(`[sidebarActivities] Checking tasks for activity ID ${act.id}:`, JSON.parse(JSON.stringify(tasksOfAct)));
-      }
-      const tasksOfTodo = td ? dataStore.tasksBySource.todo.get(td.id) ?? [] : [];
-      const tasksOfSch = sch ? dataStore.tasksBySource.schedule.get(sch.id) ?? [] : [];
-      const allTasks = [...tasksOfAct, ...tasksOfTodo, ...tasksOfSch];
-      passed = allTasks.some((t) => matchesQuery(t.activityTitle) || matchesQuery(t.description));
-    }
-    if (!passed) continue;
-
-    const hasStarred = dataStore.hasStarredTaskForActivity(act.id);
-    if (filterStarredOnly.value && !hasStarred) {
-      continue;
-    }
-
-    const getPrimaryTime = () => {
-      if (isTodo && td) return td.startTime ?? td.dueDate ?? td.id;
-      if (isSch && sch) return sch.activityDueRange?.[0] ?? sch.id;
-      return act.id;
-    };
-
-    // 生成 key 的逻辑现在可以委托给 store，保证一致性
-    const type: TabType = act.class === "T" ? "todo" : act.class === "S" ? "sch" : "activity";
-    const entityId = isTodo ? td?.id : isSch ? sch?.id : act.id;
-
-    rows.push({
-      activityId: act.id,
-      title,
-      class: act.class,
-      currentId: isTodo ? td?.id : isSch ? sch?.id : undefined,
-      primaryTime: getPrimaryTime(),
-      hasStarred,
-      tagIds: act.tagIds,
-      openKey: searchUiStore._makeKey(type, entityId), // 使用 store 的方法生成 key
-    });
+const currentFilterTags = computed(() => {
+  // 如果筛选ID数组为空，则返回空数组
+  if (!filterTagIds.value || filterTagIds.value.length === 0) {
+    return [];
   }
-
-  rows.sort((a, b) => (b.primaryTime ?? Infinity) - (a.primaryTime ?? Infinity));
-
-  return rows;
+  // 根据 ID 数组，从 tagStore 中查找完整的标签对象，并过滤掉可能找不到的（以防万一）
+  return filterTagIds.value.map((id) => tagStore.getTag(id)).filter((tag) => tag !== undefined) as Tag[];
 });
 
-// =======================================================================
-// 4. Tabs 与交互逻辑
-// =======================================================================
-
-// 点击左侧列表项时，调用 store action 打开一个 tab
-function openRow(row: ActivityRow) {
-  const type: TabType = row.class === "T" ? "todo" : row.class === "S" ? "sch" : "activity";
-  const todoOrSchId = row.currentId ?? row.activityId;
-  openTab(type, todoOrSchId, row.title); // 调用 action，逻辑全部在 store 中处理
+function handleTagClick(tagId: number) {
+  toggleFilterTagId(tagId);
 }
 
-// closeTab 已经直接绑定到模板上，这里不需要额外的函数体
-
-// 从 dataStore 获取指定 Tab 的任务 (最终修正版)
-// 获取 activity 的 tagIds
-function getActivityTagIds(tab: TabItem): number[] {
-  let activityId: number | undefined;
-
-  if (tab.type === "todo") {
-    const todoInstance = dataStore.todoById.get(tab.id);
-    activityId = todoInstance?.activityId ?? tab.id;
-  } else if (tab.type === "sch") {
-    const schInstance = dataStore.scheduleById.get(tab.id);
-    activityId = schInstance?.activityId ?? tab.id;
-  } else {
-    activityId = tab.id;
-  }
-
-  const activity = dataStore.activityById.get(activityId);
-  return activity?.tagIds ?? [];
-}
-
-// 获取 tab 对应的唯一 task
-function getTaskForTab(tab: TabItem): Task | undefined {
-  let tasks: Task[] = [];
-  tasks = dataStore.tasksBySource.activity.get(tab.id) ?? [];
-  console.log(`[getTaskForTab] tasks:`, tab.id, tasks[0]);
-  if (tasks.length === 0) {
-    if (tab.type === "todo") {
-      const todo = dataStore.todoById.get(tab.id);
-      if (todo) {
-        tasks = dataStore.tasksBySource.activity.get(todo.activityId) ?? dataStore.tasksBySource.todo.get(todo.id) ?? [];
-      }
-    } else if (tab.type === "sch") {
-      const schedule = dataStore.scheduleById.get(tab.id);
-      if (schedule) {
-        tasks = dataStore.tasksBySource.activity.get(schedule.activityId) ?? dataStore.tasksBySource.schedule.get(schedule.id) ?? [];
-      }
-    }
-  }
-
-  return tasks[0];
-}
-
-function handleRemoveTagFromTab(tab: TabItem, tagId: number) {
-  let activityId: number | undefined;
-
-  if (tab.type === "todo") {
-    const todoInstance = dataStore.todoById.get(tab.id);
-    activityId = todoInstance?.activityId ?? tab.id;
-  } else if (tab.type === "sch") {
-    const schInstance = dataStore.scheduleById.get(tab.id);
-    activityId = schInstance?.activityId ?? tab.id;
-  } else {
-    activityId = tab.id;
-  }
-
-  const activity = dataStore.activityById.get(activityId);
-  if (activity && activity.tagIds) {
-    const newTagIds = activity.tagIds.filter((id) => id !== tagId);
-    // 如果过滤后为空数组，赋为 undefined，否则用新数组
-    activity.tagIds = newTagIds.length > 0 ? newTagIds : undefined;
-
-    tagStore.decrementTagCount(tagId);
-  }
-}
-// =======================================================================
-// 5. 辅助与格式化函数
-// =======================================================================
-// 无状态纯函数，保持不变
-const formatDate = (ts?: number) => (ts ? new Date(ts).toLocaleString() : "无");
 const formatMMDD = (ts?: number) => (ts ? new Date(ts).toLocaleDateString(undefined, { month: "2-digit", day: "2-digit" }) : "—");
-const convertMarkdown = (md?: string) => (md ? marked(md) : "无");
 </script>
 
 <style scoped>
@@ -386,6 +211,21 @@ const convertMarkdown = (md?: string) => (md ? marked(md) : "无");
 
 .star-on {
   color: var(--color-orange);
+}
+
+.filter-status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* 让标签和清除按钮两端对齐 */
+  padding: 4px 8px;
+  background-color: var(--n-color-embedded); /* 使用一个柔和的背景色 */
+  border-radius: 4px;
+  margin-top: 8px; /* 和搜索框拉开一点距离 */
+}
+
+.filter-tags {
+  flex-grow: 1; /* 让标签区域占据多余空间 */
+  margin-right: 8px; /* 和清除按钮之间留出空隙 */
 }
 
 .titles {
@@ -483,39 +323,5 @@ const convertMarkdown = (md?: string) => (md ? marked(md) : "无");
   top: 50%;
   transform: translateY(-50%);
   z-index: 2;
-}
-
-.meta-row {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 8px;
-  margin-top: 2px;
-}
-
-.meta-time {
-  white-space: nowrap;
-}
-
-.content {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding-right: 8px;
-  width: 100%;
-}
-
-.star-btn {
-  margin: 1px;
-}
-
-.task-content {
-  overflow-y: auto;
-}
-
-:deep(.task-content h1) {
-  margin: 0 !important;
 }
 </style>
