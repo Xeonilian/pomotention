@@ -79,14 +79,16 @@
             </n-button>
 
             <template v-if="tab.type === 'todo'">
-              <span>截止时间: {{ formatDate(dataStore.todoById.get(tab.id)?.dueDate) }}</span>
+              <span class="meta-time">截止时间: {{ formatDate(dataStore.todoById.get(tab.id)?.dueDate) }}</span>
             </template>
             <template v-else-if="tab.type === 'sch'">
-              <span>开始时间: {{ formatDate(dataStore.scheduleById.get(tab.id)?.activityDueRange?.[0] ?? undefined) }}</span>
+              <span class="meta-time">
+                开始时间: {{ formatDate(dataStore.scheduleById.get(tab.id)?.activityDueRange?.[0] ?? undefined) }}
+              </span>
               <span style="margin-left: 12px">位置: {{ dataStore.scheduleById.get(tab.id)?.location || "无" }}</span>
             </template>
             <template v-else>
-              <span>加入时间: {{ formatDate(dataStore.activityById.get(tab.id)?.id) }}</span>
+              <span class="meta-time">加入时间: {{ formatDate(dataStore.activityById.get(tab.id)?.id) }}</span>
             </template>
             <TagRenderer
               :tag-ids="getActivityTagIds(tab)"
@@ -280,17 +282,13 @@ function getActivityTagIds(tab: TabItem): number[] {
 // 获取 tab 对应的唯一 task
 function getTaskForTab(tab: TabItem): Task | undefined {
   let tasks: Task[] = [];
-
-  if (tab.type === "todo") {
-    tasks = dataStore.tasksBySource.todo.get(tab.id) ?? [];
-  } else if (tab.type === "sch") {
-    tasks = dataStore.tasksBySource.schedule.get(tab.id) ?? [];
-  } else {
-    tasks = dataStore.tasksBySource.activity.get(tab.id) ?? [];
-  }
-
-  if (tasks.length > 1) {
-    console.warn(`[getTaskForTab] Found ${tasks.length} tasks for tab "${tab.key}", expected at most 1`);
+  tasks = dataStore.tasksBySource.activity.get(tab.id) ?? [];
+  if (tasks.length === 0) {
+    if (tab.type === "todo") {
+      tasks = dataStore.tasksBySource.todo.get(tab.id) ?? [];
+    } else if (tab.type === "sch") {
+      tasks = dataStore.tasksBySource.schedule.get(tab.id) ?? [];
+    }
   }
 
   return tasks[0];
@@ -487,6 +485,10 @@ const convertMarkdown = (md?: string) => (md ? marked(md) : "无");
   gap: 6px;
   margin-bottom: 8px;
   margin-top: 2px;
+}
+
+.meta-time {
+  white-space: nowrap;
 }
 
 .content {
