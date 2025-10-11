@@ -3,7 +3,39 @@
     <!-- 左侧：Activity 主列表 -->
     <div class="left-pane" :style="{ width: searchWidth + 'px' }">
       <div class="search-tool">
-        <n-input :value="searchQuery" placeholder="请输入搜索关键字" clearable @update:value="onSearchInput" />
+        <n-input
+          ref="searchInputRef"
+          :value="searchQuery"
+          placeholder="搜索或输入#选择标签..."
+          clearable
+          style="flex: 1"
+          @update:value="handleSearchInput"
+          @keydown="handleSearchKeydown"
+        >
+          <template #prefix>
+            <n-icon><Search20Regular /></n-icon>
+          </template>
+        </n-input>
+        <n-popover
+          :show="tagEditor.popoverTargetId.value === POPOVER_ID"
+          @update:show="(show) => !show && (tagEditor.popoverTargetId.value = null)"
+          placement="bottom-start"
+          :trap-focus="false"
+          trigger="manual"
+          :show-arrow="false"
+          style="padding: 0; border-radius: 6px; z-index: 1000; margin-left: 30px; margin-top: 0px; top: -10px"
+        >
+          <template #trigger>
+            <span style="position: absolute; pointer-events: none"></span>
+          </template>
+          <TagSelector
+            :search-term="tagEditor.tagSearchTerm.value"
+            :allow-create="true"
+            @select-tag="handleTagSelectForFilter"
+            @close-selector="tagEditor.popoverTargetId.value = null"
+            ref="tagSelectorRef"
+          />
+        </n-popover>
         <n-button text type="warning" @click="toggleFilterStarred" :title="filterStarredOnly ? '仅看加星任务：开' : '仅看加星任务：关'">
           <template #icon>
             <n-icon>
@@ -92,16 +124,18 @@
 </template>
 
 <script lang="ts" setup>
-import { computed } from "vue";
+import { computed, ref, nextTick } from "vue";
 import { storeToRefs } from "pinia";
-import { NInput, NButton, NIcon, NTabs, NTabPane } from "naive-ui";
+import { NInput, NButton, NIcon, NTabs, NTabPane, NPopover } from "naive-ui";
 import type { Tag } from "@/core/types/Tag";
 
-import { Star20Filled, Star20Regular, Dismiss12Regular } from "@vicons/fluent";
+import { Star20Filled, Star20Regular, Dismiss12Regular, Search20Regular } from "@vicons/fluent";
+import TagSelector from "@/components/TagSystem/TagSelector.vue";
 import TagRenderer from "@/components/TagSystem/TagRenderer.vue";
 
 // 引入 stores 和类型
 
+import { useActivityTagEditor } from "@/composables/useActivityTagEditor";
 import { useSearchUiStore } from "@/stores/useSearchUiStore";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useTagStore } from "@/stores/useTagStore";
@@ -121,10 +155,16 @@ const { filteredActivities } = useSearchFilter();
 const { searchQuery, filterStarredOnly, openedTabs, activeTabKey, filterTagIds } = storeToRefs(searchUiStore);
 
 // 从 UI store 中解构出 actions，以便在 script 中调用
-const { setSearchQuery, toggleFilterStarred, closeTab, openRow, toggleFilterTagId, clearFilterTags } = searchUiStore;
+const { toggleFilterStarred, closeTab, openRow, toggleFilterTagId, clearFilterTags } = searchUiStore;
 const closeAllTabs = searchUiStore.closeAllTabs.bind(searchUiStore);
 
-// 窗口宽度相关的状态和逻辑，保持不变
+// 使用 TagSelector 相关
+const tagEditor = useActivityTagEditor();
+const POPOVER_ID = "search-input";
+const searchInputRef = ref<InstanceType<typeof NInput> | null>(null);
+const tagSelectorRef = ref<InstanceType<typeof TagSelector> | null>(null);
+
+// 左右拖动功能
 const searchWidth = computed({
   get: () => settingStore.settings.searchWidth,
   set: (v) => (settingStore.settings.searchWidth = v),
@@ -132,15 +172,74 @@ const searchWidth = computed({
 
 const resizeSearch = useResize(searchWidth, "horizontal", 10, 600, false);
 
-// 搜索防抖逻辑
+// 搜索防抖
 let searchDebounceTimer: number | null = null;
-const onSearchInput = (value: string) => {
-  if (searchDebounceTimer) window.clearTimeout(searchDebounceTimer);
-  searchDebounceTimer = window.setTimeout(() => {
-    setSearchQuery(value); // 调用 action 更新全局状态
-  }, 300);
-};
+function handleSearchInput(value: string) {
+  // 立即更新本地的 searchQuery，这样输入框可以实时反映用户的输入
+  // 但注意，我们暂时不调用 Pinia 的 action，除非满足防抖或 # 条件
+  searchQuery.value = value;
 
+  if (searchDebounceTimer) {
+    window.clearTimeout(searchDebounceTimer);
+  }
+
+  // 调用 tagEditor 的核心逻辑来处理 #
+  const isTagTriggered = tagEditor.handleContentInput(POPOVER_ID, value);
+
+  if (!isTagTriggered) {
+    // 设置一个新的计时器
+    searchDebounceTimer = window.setTimeout(() => {
+      searchUiStore.setSearchQuery(searchQuery.value);
+    }, 300); // 300ms 延迟
+  }
+}
+
+// 当从弹出的 TagSelector 中选择一个标签时触发
+function handleTagSelectForFilter(tagId: number) {
+  toggleFilterTagId(tagId);
+
+  const newQuery = tagEditor.clearTagTriggerText(searchQuery.value);
+
+  // 重要：直接更新 Pinia store 和本地 ref
+  searchUiStore.setSearchQuery(newQuery);
+  searchQuery.value = newQuery;
+
+  tagEditor.popoverTargetId.value = null;
+
+  nextTick(() => {
+    searchInputRef.value?.focus();
+  });
+}
+
+function handleSearchKeydown(event: KeyboardEvent) {
+  // 判断条件：Popover 是否为我们的搜索框打开
+  if (tagEditor.popoverTargetId.value === POPOVER_ID && tagSelectorRef.value) {
+    // 逻辑完全复刻你原来的代码，只是把 activity.id 换成了 POPOVER_ID
+    switch (event.key) {
+      case "ArrowDown":
+        // 把指令转发给 TagSelector
+        tagSelectorRef.value.navigateDown();
+        // 阻止默认行为（例如，光标移动到行首/行尾）
+        event.preventDefault();
+        break;
+      case "ArrowUp":
+        tagSelectorRef.value.navigateUp();
+        event.preventDefault();
+        break;
+      case "Enter":
+        // 阻止默认行为（例如，表单提交）
+        event.preventDefault();
+        tagSelectorRef.value.selectHighlighted();
+        break;
+      case "Escape":
+        tagEditor.closePopover();
+        event.preventDefault();
+        break;
+    }
+  }
+}
+
+// 当前筛选的标签
 const currentFilterTags = computed(() => {
   // 如果筛选ID数组为空，则返回空数组
   if (!filterTagIds.value || filterTagIds.value.length === 0) {

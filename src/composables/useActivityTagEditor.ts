@@ -21,7 +21,7 @@ export function useActivityTagEditor() {
 
   // ======================== Popover 状态 ========================
   const tagSearchTerm = ref("");
-  const popoverTargetId = ref<number | null>(null);
+  const popoverTargetId = ref<number | string | null>(null);
 
   // 过滤后的标签列表
   const filteredTags = computed(() => {
@@ -118,6 +118,28 @@ export function useActivityTagEditor() {
   }
 
   /**
+   * 【新增】通用内容输入处理器，检测 # 触发
+   * @param ownerId - 触发者的唯一ID (可以是 number 或 string)
+   * @param content - 输入框的完整内容
+   * @returns boolean - 是否成功触发了标签选择器
+   */
+  function handleContentInput(ownerId: number | string, content: string): boolean {
+    const match = content.match(/#([\p{L}\p{N}_]*)$/u);
+
+    if (match) {
+      // @ts-ignore - 我们接受 number | string 作为 ID
+      popoverTargetId.value = ownerId;
+      tagSearchTerm.value = match[1];
+      return true; // 成功触发
+    } else {
+      // 如果之前这个 owner 的 popover 是打开的，现在就关掉它
+      if (popoverTargetId.value === ownerId) {
+        closePopover();
+      }
+      return false; // 未触发
+    }
+  }
+  /**
    * 从 Popover 选择已有标签
    * @returns 清理后的标题
    */
@@ -148,7 +170,14 @@ export function useActivityTagEditor() {
 
     return cleanedTitle;
   }
-
+  /**
+   * 【新增】清理文本中的标签触发词 (例如 #sometag)
+   * @param content - 原始输入框内容
+   * @returns string - 清理后的内容
+   */
+  function clearTagTriggerText(content: string): string {
+    return content.replace(/#[\p{L}\p{N}_]*$/u, "").trim();
+  }
   /**
    * 关闭 Popover
    */
@@ -199,6 +228,9 @@ export function useActivityTagEditor() {
     createTagFromPopover,
     closePopover,
 
+    // ========== 通用内容输入 ==========
+    clearTagTriggerText,
+    handleContentInput,
     // ========== 辅助方法 ==========
     isTagSelectedInManager,
     shouldShowPopoverFor,
