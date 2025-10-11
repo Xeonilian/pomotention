@@ -283,11 +283,18 @@ function getActivityTagIds(tab: TabItem): number[] {
 function getTaskForTab(tab: TabItem): Task | undefined {
   let tasks: Task[] = [];
   tasks = dataStore.tasksBySource.activity.get(tab.id) ?? [];
+  console.log(`[getTaskForTab] tasks:`, tab.id, tasks[0]);
   if (tasks.length === 0) {
     if (tab.type === "todo") {
-      tasks = dataStore.tasksBySource.todo.get(tab.id) ?? [];
+      const todo = dataStore.todoById.get(tab.id);
+      if (todo) {
+        tasks = dataStore.tasksBySource.activity.get(todo.activityId) ?? dataStore.tasksBySource.todo.get(todo.id) ?? [];
+      }
     } else if (tab.type === "sch") {
-      tasks = dataStore.tasksBySource.schedule.get(tab.id) ?? [];
+      const schedule = dataStore.scheduleById.get(tab.id);
+      if (schedule) {
+        tasks = dataStore.tasksBySource.activity.get(schedule.activityId) ?? dataStore.tasksBySource.schedule.get(schedule.id) ?? [];
+      }
     }
   }
 

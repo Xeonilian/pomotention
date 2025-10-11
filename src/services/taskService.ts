@@ -69,13 +69,13 @@ export const taskService = {
     return record;
   },
 
-  createTaskFromTodo(todoId: number, activityTitle: string, projectName?: string): Task {
+  createTaskFromTodo(activityId: number, activityTitle: string, projectName?: string): Task {
     const task: Task = {
       id: Date.now(),
       activityTitle,
       projectName,
-      source: "todo",
-      sourceId: todoId,
+      source: "activity",
+      sourceId: activityId,
       energyRecords: [],
       rewardRecords: [],
       interruptionRecords: [],
@@ -84,13 +84,13 @@ export const taskService = {
     return task;
   },
 
-  createTaskFromSchedule(scheduleId: number, activityTitle: string, projectName?: string): Task {
+  createTaskFromSchedule(activityId: number, activityTitle: string, projectName?: string): Task {
     const task: Task = {
       id: Date.now(),
       activityTitle,
       projectName,
-      source: "schedule",
-      sourceId: scheduleId,
+      source: "activity",
+      sourceId: activityId,
       energyRecords: [],
       rewardRecords: [],
       interruptionRecords: [],
