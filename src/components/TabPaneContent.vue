@@ -1,67 +1,70 @@
 <template>
-  <!-- Meta 信息行 -->
-  <div class="meta-row">
-    <!-- 切换任务加星按钮 -->
-    <n-button
-      v-if="content.task.value"
-      text
-      type="warning"
-      @click="dataStore.toggleTaskStar(content.task.value!.id)"
-      title="切换加星"
-      class="star-btn"
-    >
-      <template #icon>
-        <n-icon>
-          <Star20Filled v-if="content.task.value?.starred" />
-          <Star20Regular v-else />
-        </n-icon>
+  <div class="tab-pane-container">
+    <!-- Meta 信息行 -->
+    <div class="meta-row">
+      <!-- 切换任务加星按钮 -->
+      <n-button
+        v-if="content.task.value"
+        text
+        type="warning"
+        @click="dataStore.toggleTaskStar(content.task.value!.id)"
+        title="切换加星"
+        class="star-btn"
+      >
+        <template #icon>
+          <n-icon>
+            <Star20Filled v-if="content.task.value?.starred" />
+            <Star20Regular v-else />
+          </n-icon>
+        </template>
+      </n-button>
+
+      <!-- 根据 Tab 类型显示不同的元信息 -->
+      <template v-if="props.tab.type === 'todo'">
+        <span class="meta-time">截止时间: {{ formatDate(dataStore.todoById.get(props.tab.id)?.dueDate) }}</span>
       </template>
-    </n-button>
-
-    <!-- 根据 Tab 类型显示不同的元信息 -->
-    <template v-if="props.tab.type === 'todo'">
-      <span class="meta-time">截止时间: {{ formatDate(dataStore.todoById.get(props.tab.id)?.dueDate) }}</span>
-    </template>
-    <template v-else-if="props.tab.type === 'sch'">
-      <span class="meta-time">
-        开始时间: {{ formatDate(dataStore.scheduleById.get(props.tab.id)?.activityDueRange?.[0] ?? undefined) }}
-      </span>
-      <span style="margin-left: 12px">位置: {{ dataStore.scheduleById.get(props.tab.id)?.location || "无" }}</span>
-    </template>
-    <template v-else>
-      <span class="meta-time">加入时间: {{ formatDate(dataStore.activityById.get(props.tab.id)?.id) }}</span>
-    </template>
-
-    <!-- 标签渲染器，现在使用来自 Composable 的数据和方法 -->
-    <TagRenderer
-      :tag-ids="content.tagIds.value"
-      :isCloseable="true"
-      @remove-tag="content.removeTag"
-      @tag-click="handleTagClick"
-      size="small"
-    />
-    <!-- 打开标签管理器的按钮 -->
-    <n-button text @click="openTagManager">
-      <template #icon>
-        <n-icon color="var(--color-blue)"><Tag16Regular /></n-icon>
+      <template v-else-if="props.tab.type === 'sch'">
+        <span class="meta-time">
+          开始时间: {{ formatDate(dataStore.scheduleById.get(props.tab.id)?.activityDueRange?.[0] ?? undefined) }}
+        </span>
+        <span style="margin-left: 12px">位置: {{ dataStore.scheduleById.get(props.tab.id)?.location || "无" }}</span>
       </template>
-    </n-button>
-  </div>
+      <template v-else>
+        <span class="meta-time">加入时间: {{ formatDate(dataStore.activityById.get(props.tab.id)?.id) }}</span>
+      </template>
 
-  <!-- 任务内容区 -->
-  <div class="content">
-    <template v-if="content.task.value">
-      <div class="task-content" v-html="convertMarkdown(content.task.value!.description)"></div>
-    </template>
-    <div v-else class="empty">暂无任务</div>
-  </div>
+      <!-- 标签渲染器，现在使用来自 Composable 的数据和方法 -->
+      <TagRenderer
+        :tag-ids="content.tagIds.value"
+        :isCloseable="true"
+        @remove-tag="content.removeTag"
+        @tag-click="handleTagClick"
+        size="small"
+        title="点击标签可筛选 | 点击❌可删除标签"
+      />
+      <!-- 打开标签管理器的按钮 -->
+      <n-button text @click="openTagManager">
+        <template #icon>
+          <n-icon color="var(--color-blue)"><Tag16Regular /></n-icon>
+        </template>
+      </n-button>
+    </div>
 
-  <!-- 标签管理器 Modal -->
-  <n-modal v-model:show="showTagManager" @after-leave="handleTagManagerClose">
-    <n-card style="width: 420px">
-      <TagManager v-model="tagIdsProxy" />
-    </n-card>
-  </n-modal>
+    <!-- 任务内容区 -->
+    <div class="content">
+      <template v-if="content.task.value">
+        <div class="task-content" v-html="convertMarkdown(content.task.value!.description)"></div>
+      </template>
+      <div v-else class="empty">暂无任务</div>
+    </div>
+
+    <!-- 标签管理器 Modal -->
+    <n-modal v-model:show="showTagManager" @after-leave="handleTagManagerClose">
+      <n-card style="width: 420px">
+        <TagManager v-model="tagIdsProxy" />
+      </n-card>
+    </n-modal>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -91,6 +94,8 @@ const dataStore = useDataStore();
 const searchUiStore = useSearchUiStore();
 const tagEditor = useActivityTagEditor();
 
+const { toggleFilterTagId } = searchUiStore;
+
 // 3. 核心：为当前 tab 调用 useTabContent
 // toRef 将 props.tab (一个响应式对象) 转换为 ref，符合 useTabContent 的参数要求
 const tabRef = toRef(props, "tab");
@@ -118,8 +123,7 @@ function handleTagManagerClose() {
 
 // 5. 事件处理
 function handleTagClick(tagId: number) {
-  // 直接调用 store 的 action 来设置全局筛选
-  searchUiStore.setFilterTagId(tagId);
+  toggleFilterTagId(tagId);
 }
 
 // 6. 辅助/格式化函数 (从 Search.vue 迁移过来)
@@ -128,13 +132,20 @@ const convertMarkdown = (md?: string) => (md ? marked(md) : "无");
 </script>
 
 <style scoped>
+.tab-pane-container {
+  height: 100%;
+}
+
 .meta-row {
+  position: fixed;
   display: flex;
   flex-direction: row;
   align-items: center;
   gap: 6px;
-  margin-bottom: 8px;
-  margin-top: 2px;
+  padding-bottom: 2px;
+  padding-top: 2px;
+  background-color: var(--color-background);
+  width: 100%;
 }
 
 .meta-time {
@@ -155,6 +166,7 @@ const convertMarkdown = (md?: string) => (md ? marked(md) : "无");
 }
 
 .task-content {
+  margin-top: 20px;
   overflow-y: auto;
 }
 

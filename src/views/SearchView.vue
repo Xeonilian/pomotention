@@ -36,7 +36,13 @@
             ref="tagSelectorRef"
           />
         </n-popover>
-        <n-button text type="warning" @click="toggleFilterStarred" :title="filterStarredOnly ? '仅看加星任务：开' : '仅看加星任务：关'">
+        <n-button
+          text
+          type="warning"
+          @click="toggleFilterStarred"
+          class="star-btn"
+          :title="filterStarredOnly ? '仅看加星任务：开' : '仅看加星任务：关'"
+        >
           <template #icon>
             <n-icon>
               <Star20Filled v-if="filterStarredOnly" />
@@ -99,14 +105,13 @@
     <div class="resize-handle-horizontal" @mousedown="resizeSearch.startResize"></div>
     <!-- 右侧：Tabs -->
     <div class="right-pane" :style="{ width: `calc(100% - ${searchWidth}px - 20px)` }">
-      <!-- 绑定 store state 和 actions -->
       <n-tabs
         :value="activeTabKey"
         type="card"
         closable
         @close="closeTab"
         @update:value="searchUiStore.activeTabKey = $event"
-        class="full-tabs"
+        class="tab-container"
       >
         <template #suffix>
           <n-button v-if="openedTabs.length > 0" text @click="closeAllTabs">
@@ -115,8 +120,8 @@
             </template>
           </n-button>
         </template>
-        <n-tab-pane v-for="tab in openedTabs" :key="tab.key" :name="tab.key" :tab="tab.title">
-          <TabPaneContent :tab="tab" />
+        <n-tab-pane v-for="tab in openedTabs" :key="tab.key" :name="tab.key" :tab="tab.title" class="tab-container">
+          <TabPaneContent :tab="tab" class="tab-container" />
         </n-tab-pane>
       </n-tabs>
     </div>
@@ -298,6 +303,7 @@ const formatMMDD = (ts?: number) => (ts ? new Date(ts).toLocaleDateString(undefi
   gap: 6px;
   margin-right: 0;
   padding: 6px 2px;
+  overflow-y: auto;
 }
 
 .search-tool {
@@ -308,8 +314,12 @@ const formatMMDD = (ts?: number) => (ts ? new Date(ts).toLocaleDateString(undefi
   gap: 6px;
 }
 
-.star-on {
-  color: var(--color-orange);
+:deep(.n-input-wrapper) {
+  padding-left: 8px;
+}
+
+.star-btn {
+  left: -3px;
 }
 
 .filter-status-bar {
@@ -387,6 +397,10 @@ const formatMMDD = (ts?: number) => (ts ? new Date(ts).toLocaleDateString(undefi
   font-variant-numeric: tabular-nums;
 }
 
+.star-on {
+  color: var(--color-orange);
+}
+
 .empty {
   color: var(--color-text-secondary);
   text-align: center;
@@ -394,6 +408,8 @@ const formatMMDD = (ts?: number) => (ts ? new Date(ts).toLocaleDateString(undefi
 }
 
 .right-pane {
+  display: flex;
+  flex-direction: column;
   min-height: 0;
   padding: 6px;
   width: auto;
@@ -412,7 +428,6 @@ const formatMMDD = (ts?: number) => (ts ? new Date(ts).toLocaleDateString(undefi
   box-sizing: border-box;
   padding-right: 12px;
   white-space: nowrap;
-  overflow: hidden;
   text-overflow: ellipsis;
 }
 
@@ -422,5 +437,9 @@ const formatMMDD = (ts?: number) => (ts ? new Date(ts).toLocaleDateString(undefi
   top: 50%;
   transform: translateY(-50%);
   z-index: 2;
+}
+.tab-container {
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 </style>

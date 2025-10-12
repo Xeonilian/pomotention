@@ -6,7 +6,7 @@
       round
       :size="props.size || 'small'"
       :closable="props.isCloseable"
-      :title="tag.name"
+      :title="getTagTitle(tag)"
       @close="removeTag(tag.id)"
       @click.stop="handleTagClick(tag.id)"
       class="tag-item"
@@ -35,6 +35,7 @@ const props = defineProps<{
   size?: "medium" | "small" | "large" | "tiny";
   displayLength?: number;
   showIdx?: number;
+  title?: string;
 }>();
 
 const emit = defineEmits<{
@@ -81,6 +82,14 @@ function truncatedName(tag: string) {
 function handleTagClick(tagId: number) {
   emit("tag-click", tagId);
 }
+
+const getTagTitle = (tag: Tag) => {
+  if (props.title) {
+    return props.title;
+  }
+  // 否则显示标签名称
+  return tag.name;
+};
 </script>
 <style scoped>
 .tag-container {
