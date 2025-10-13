@@ -194,28 +194,29 @@
 
 ### When
 
-1.  标签显示：右侧内容区域渲染所选 `Activity+Task`。
-2.  标签编辑：用户点击 Tag16Regular 按钮打开 `TagManager`，并点击某个标签上的 `×` 将其移除。
-3.  单标签筛选：用户直接点击右侧/左侧内容区（`TagRenderer` 中）的某个标签。
-4.  取消单标签筛选：右侧用户再次点击同一个已被激活为筛选条件的标签。
-5.  叠加筛选：用户在已有一个或多个标签筛选激活的状态下，点击另一个不同的标签。
-6.  清除所有筛选：左侧用户点击“一键清除筛选”控件。
+1. 标签显示：右侧内容区域渲染所选 `Activity+Task`。
+2. 标签编辑：用户点击 Tag16Regular 按钮打开 `TagManager`，并点击某个标签上的 `×` 将其移除。
+3. 单标签筛选：用户直接点击右侧/左侧内容区（`TagRenderer` 中）的某个标签。
+4. 取消单标签筛选：右侧用户再次点击同一个已被激活为筛选条件的标签。
+5. 叠加筛选：用户在已有一个或多个标签筛选激活的状态下，点击另一个不同的标签。
+6. 清除所有筛选：左侧用户点击“一键清除筛选”控件。
 
 ### Then
 
-- 1. 显示规则 (UI 展示)：
+1. 显示规则 (UI 展示)：
 
-  - `TagRenderer` 遍历 `activity.tagIds`，根据每个 `tagId: number` 从全局数据源获取信息，渲染出带颜色和名称的标签。
-  - 若 `activity.tagIds` 为空，则不显示任何标签。
+- `TagRenderer` 遍历 `activity.tagIds`，根据每个 `tagId: number` 从全局数据源获取信息，渲染出带颜色和名称的标签。
+- 若 `activity.tagIds` 为空，则不显示任何标签。
 
-- 2. 编辑规则 (调用既有能力)：
+2. 编辑规则 (调用既有能力)：
 
-  - 点击 `×` 时，调用更新 `Activity` 的 action，将对应的 `tagId` 从 `activity.tagIds` 数组中移除。
-  - `TagManager` 本身不直接改变左侧列表的筛选状态。
+- 点击 `×` 时，调用更新 `Activity` 的 action，将对应的 `tagId` 从 `activity.tagIds` 数组中移除。
+- `TagManager` 本身不直接改变左侧列表的筛选状态。
 
-- 3. 筛选与联动规则 (更新全局 State)：
-  - 单标签筛选：调用 action，将该 `tagId` 添加到 `searchUi.filterTagIds` 数组中。左侧列表根据订阅自动刷新，仅显示同时包含所有 `filterTagIds` 中标签的 `Activity`。
-  - 取消筛选：调用 action，将该 `tagId` 从 `searchUi.filterTagIds` 数组中移除。左侧列表自动刷新。
-  - 叠加筛选：行为与“单标签筛选”一致，即将新的 `tagId` 追加到 `searchUi.filterTagIds` 数组中，实现“与”逻辑的叠加筛选。
-  - 清除筛选：调用 action，将 `searchUi.filterTagIds` 数组置空 (`[]`)。左侧列表恢复显示所有条目。
-  - 界面需要明确显示当前激活的筛选标签（例如在列表顶部或搜索栏下方）。
+3. 筛选与联动规则 (更新全局 State)：
+
+- 单标签筛选：调用 action，将该 `tagId` 添加到 `searchUi.filterTagIds` 数组中。左侧列表根据订阅自动刷新，仅显示同时包含所有 `filterTagIds` 中标签的 `Activity`。
+- 取消筛选：调用 action，将该 `tagId` 从 `searchUi.filterTagIds` 数组中移除。左侧列表自动刷新。
+- 叠加筛选：行为与“单标签筛选”一致，即将新的 `tagId` 追加到 `searchUi.filterTagIds` 数组中，实现“与”逻辑的叠加筛选。
+- 清除筛选：调用 action，将 `searchUi.filterTagIds` 数组置空 (`[]`)。左侧列表恢复显示所有条目。
+- 界面需要明确显示当前激活的筛选标签（例如在列表顶部或搜索栏下方）。
