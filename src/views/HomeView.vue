@@ -929,7 +929,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-  dateService.cleanSystemDateWatcher();
+  dateService.cleanupSystemDateWatcher();
 });
 // ======================== 9. 页面尺寸调整  ========================
 

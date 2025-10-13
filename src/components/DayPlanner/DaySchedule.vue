@@ -62,33 +62,21 @@
                 :checked="schedule.status === 'done'"
                 @update:checked="handleCheckboxChange(schedule.id, $event)"
               />
-              <n-icon
-                v-else
-                class="cancel-icon"
-                color="var(--color-text-secondary)"
-              >
+              <n-icon v-else class="cancel-icon" color="var(--color-text-secondary)">
                 <DismissSquare20Filled />
               </n-icon>
             </td>
 
             <!-- 2 开始时间 -->
             <td class="col-start">
-              {{
-                schedule.activityDueRange
-                  ? timestampToTimeString(schedule.activityDueRange[0])
-                  : "-"
-              }}
+              {{ schedule.activityDueRange ? timestampToTimeString(schedule.activityDueRange[0]) : "-" }}
             </td>
 
             <!-- 3 结束时间 -->
             <td
               class="col-end"
               @dblclick.stop="startEditing(schedule.id, 'done')"
-              :title="
-                editingRowId === schedule.id && editingField === 'done'
-                  ? ''
-                  : '双击编辑'
-              "
+              :title="editingRowId === schedule.id && editingField === 'done' ? '' : '双击编辑'"
             >
               <input
                 class="done-input time-input"
@@ -101,23 +89,12 @@
                 maxlength="5"
                 autocomplete="off"
               />
-              <span v-else>{{
-                schedule.doneTime
-                  ? timestampToTimeString(schedule.doneTime)
-                  : "-"
-              }}</span>
+              <span v-else>{{ schedule.doneTime ? timestampToTimeString(schedule.doneTime) : "-" }}</span>
             </td>
 
             <!-- 4 时长 -->
-            <td
-              class="col-duration"
-              :class="{ 'is-empty-min': schedule.activityDueRange?.[1] === '' }"
-            >
-              {{
-                (schedule.activityDueRange?.[1] ?? "") !== ""
-                  ? schedule.activityDueRange[1]
-                  : "min"
-              }}
+            <td class="col-duration" :class="{ 'is-empty-min': schedule.activityDueRange?.[1] === '' }">
+              {{ (schedule.activityDueRange?.[1] ?? "") !== "" ? schedule.activityDueRange[1] : "min" }}
             </td>
 
             <!-- 5 意图 -->
@@ -129,11 +106,7 @@
                 'cancel-cell': schedule.status === 'cancelled',
               }"
               @dblclick.stop="startEditing(schedule.id, 'title')"
-              :title="
-                editingRowId === schedule.id && editingField === 'title'
-                  ? ''
-                  : '双击编辑'
-              "
+              :title="editingRowId === schedule.id && editingField === 'title' ? '' : '双击编辑'"
             >
               <input
                 class="title-input"
@@ -145,9 +118,7 @@
                 @click.stop
                 :data-schedule-id="schedule.id"
               />
-              <span class="ellipsis" v-else>{{
-                schedule.activityTitle ?? "-"
-              }}</span>
+              <span class="ellipsis" v-else>{{ schedule.activityTitle ?? "-" }}</span>
 
               <!-- 云朵背景元素 - 只有当 isUntaetigkeit 为 true 时才显示 -->
               <template v-if="schedule.isUntaetigkeit === true">
@@ -172,9 +143,7 @@
               <div
                 class="status-cell"
                 :class="{
-                  'check-mode':
-                    schedule.status === 'done' ||
-                    schedule.status === 'cancelled',
+                  'check-mode': schedule.status === 'done' || schedule.status === 'cancelled',
                 }"
               >
                 <div class="records-stat">&nbsp;</div>
@@ -183,10 +152,7 @@
                   :class="{
                     converted: !schedule.taskId,
                   }"
-                  v-if="
-                    schedule.status !== 'done' &&
-                    schedule.status !== 'cancelled'
-                  "
+                  v-if="schedule.status !== 'done' && schedule.status !== 'cancelled'"
                 >
                   <n-button
                     class="convert-button"
@@ -241,29 +207,14 @@
           </tr>
         </template>
         <tr v-else class="empty-row">
-          <td colspan="7" style="text-align: center; padding: 10px">
-            暂无日程
-          </td>
+          <td colspan="7" style="text-align: center; padding: 10px">暂无日程</td>
         </tr>
       </tbody>
     </table>
   </div>
-  <n-popover
-    v-model:show="showPopover"
-    trigger="manual"
-    placement="top-end"
-    style="width: 200px"
-  >
+  <n-popover v-model:show="showPopover" trigger="manual" placement="top-end" style="width: 200px">
     <template #trigger>
-      <div
-        style="
-          position: fixed;
-          bottom: 20px;
-          right: 20px;
-          width: 1px;
-          height: 1px;
-        "
-      ></div>
+      <div style="position: fixed; bottom: 20px; right: 20px; width: 1px; height: 1px"></div>
     </template>
     {{ popoverMessage }}
   </n-popover>
@@ -348,9 +299,7 @@ function startEditing(scheduleId: number, field: "title" | "start" | "done") {
 
   // 使用 querySelector 来获取当前编辑的输入框，而不是依赖 ref
   nextTick(() => {
-    const input = document.querySelector(
-      `input.${field}-input[data-schedule-id="${scheduleId}"]`
-    );
+    const input = document.querySelector(`input.${field}-input[data-schedule-id="${scheduleId}"]`);
     if (input) {
       (input as HTMLInputElement).focus();
     }
@@ -386,11 +335,7 @@ function cancelEdit() {
 }
 
 function isValidTimeString(str: string) {
-  return (
-    /^\d{2}:\d{2}$/.test(str) &&
-    +str.split(":")[0] <= 24 &&
-    +str.split(":")[1] < 60
-  );
+  return /^\d{2}:\d{2}$/.test(str) && +str.split(":")[0] <= 24 && +str.split(":")[1] < 60;
 }
 
 function handleConvertToTask(schedule: Schedule) {
@@ -404,11 +349,7 @@ function handleConvertToTask(schedule: Schedule) {
     return;
   }
 
-  const task = taskService.createTaskFromSchedule(
-    schedule.id,
-    schedule.activityTitle,
-    schedule.projectName
-  );
+  const task = taskService.createTaskFromSchedule(schedule.id, schedule.activityTitle, schedule.projectName);
   console.log("DaySch", task);
   if (task) {
     emit("convert-schedule-to-task", { task: task, scheduleId: schedule.id });
@@ -699,16 +640,27 @@ td.status-col {
   color: var(--color-red);
 }
 
+.cancel-icon {
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+  align-items: center;
+  justify-content: center;
+  transform: scale(1.4) translateY(2px) !important;
+  transform-origin: center;
+}
+
+.cancel-icon svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
 /* 云朵样式 */
 .cloud-background {
   position: relative;
   overflow: hidden;
-  background: linear-gradient(
-    135deg,
-    #ffffff7b 0%,
-    #b2d3f585 50%,
-    #dff6ff24 100%
-  ) !important;
+  background: linear-gradient(135deg, #ffffff7b 0%, #b2d3f585 50%, #dff6ff24 100%) !important;
 }
 
 .cloud {
@@ -730,12 +682,8 @@ td.status-col {
   height: 30px;
   background: rgba(255, 255, 255, 0.8);
   border-radius: 50px;
-  box-shadow: 15px 5px 0 5px rgba(255, 255, 255, 0.7),
-    25px -10px 0 -5px rgba(255, 255, 255, 0.8),
-    40px -5px 0 rgba(255, 255, 255, 0.6),
-    55px 2px 0 -8px rgba(255, 255, 255, 0.7),
-    25px 8px 0 -5px rgba(255, 255, 255, 0.8),
-    35px 15px 0 -10px rgba(255, 255, 255, 0.6);
+  box-shadow: 15px 5px 0 5px rgba(255, 255, 255, 0.7), 25px -10px 0 -5px rgba(255, 255, 255, 0.8), 40px -5px 0 rgba(255, 255, 255, 0.6),
+    55px 2px 0 -8px rgba(255, 255, 255, 0.7), 25px 8px 0 -5px rgba(255, 255, 255, 0.8), 35px 15px 0 -10px rgba(255, 255, 255, 0.6);
 }
 
 .cloud-2 {
@@ -753,11 +701,8 @@ td.status-col {
   height: 25px;
   background: rgba(255, 255, 255, 0.7);
   border-radius: 40px;
-  box-shadow: 10px 3px 0 3px rgba(255, 255, 255, 0.8),
-    20px -8px 0 -3px rgba(255, 255, 255, 0.7),
-    32px -3px 0 rgba(255, 255, 255, 0.6),
-    42px 1px 0 -5px rgba(255, 255, 255, 0.8),
-    20px 6px 0 -3px rgba(255, 255, 255, 0.7);
+  box-shadow: 10px 3px 0 3px rgba(255, 255, 255, 0.8), 20px -8px 0 -3px rgba(255, 255, 255, 0.7), 32px -3px 0 rgba(255, 255, 255, 0.6),
+    42px 1px 0 -5px rgba(255, 255, 255, 0.8), 20px 6px 0 -3px rgba(255, 255, 255, 0.7);
 }
 
 .cloud-3 {
@@ -775,12 +720,8 @@ td.status-col {
   height: 35px;
   background: rgba(255, 255, 255, 0.75);
   border-radius: 60px;
-  box-shadow: 18px 6px 0 6px rgba(255, 255, 255, 0.8),
-    30px -12px 0 -6px rgba(255, 255, 255, 0.7),
-    50px -6px 0 rgba(255, 255, 255, 0.65),
-    68px 3px 0 -10px rgba(255, 255, 255, 0.8),
-    30px 10px 0 -6px rgba(255, 255, 255, 0.75),
-    42px 18px 0 -12px rgba(255, 255, 255, 0.6),
+  box-shadow: 18px 6px 0 6px rgba(255, 255, 255, 0.8), 30px -12px 0 -6px rgba(255, 255, 255, 0.7), 50px -6px 0 rgba(255, 255, 255, 0.65),
+    68px 3px 0 -10px rgba(255, 255, 255, 0.8), 30px 10px 0 -6px rgba(255, 255, 255, 0.75), 42px 18px 0 -12px rgba(255, 255, 255, 0.6),
     15px -5px 0 -8px rgba(255, 255, 255, 0.7);
 }
 
@@ -799,12 +740,8 @@ td.status-col {
   height: 30px;
   background: rgba(255, 255, 255, 0.8);
   border-radius: 50px;
-  box-shadow: 15px 5px 0 5px rgba(255, 255, 255, 0.7),
-    25px -10px 0 -5px rgba(255, 255, 255, 0.8),
-    40px -5px 0 rgba(255, 255, 255, 0.6),
-    55px 2px 0 -8px rgba(255, 255, 255, 0.7),
-    25px 8px 0 -5px rgba(255, 255, 255, 0.8),
-    35px 15px 0 -10px rgba(255, 255, 255, 0.6);
+  box-shadow: 15px 5px 0 5px rgba(255, 255, 255, 0.7), 25px -10px 0 -5px rgba(255, 255, 255, 0.8), 40px -5px 0 rgba(255, 255, 255, 0.6),
+    55px 2px 0 -8px rgba(255, 255, 255, 0.7), 25px 8px 0 -5px rgba(255, 255, 255, 0.8), 35px 15px 0 -10px rgba(255, 255, 255, 0.6);
 }
 
 .cloud-5 {
@@ -822,11 +759,8 @@ td.status-col {
   height: 30px;
   background: rgba(255, 255, 255, 0.7);
   border-radius: 40px;
-  box-shadow: 10px 3px 0 3px rgba(255, 255, 255, 0.8),
-    20px -8px 0 -3px rgba(255, 255, 255, 0.7),
-    32px -3px 0 rgba(255, 255, 255, 0.6),
-    42px 1px 0 -5px rgba(255, 255, 255, 0.8),
-    20px 6px 0 -3px rgba(255, 255, 255, 0.7);
+  box-shadow: 10px 3px 0 3px rgba(255, 255, 255, 0.8), 20px -8px 0 -3px rgba(255, 255, 255, 0.7), 32px -3px 0 rgba(255, 255, 255, 0.6),
+    42px 1px 0 -5px rgba(255, 255, 255, 0.8), 20px 6px 0 -3px rgba(255, 255, 255, 0.7);
 }
 
 .cloud-6 {
@@ -844,12 +778,8 @@ td.status-col {
   height: 35px;
   background: rgba(255, 255, 255, 0.75);
   border-radius: 60px;
-  box-shadow: 18px 6px 0 6px rgba(255, 255, 255, 0.8),
-    30px -12px 0 -6px rgba(255, 255, 255, 0.7),
-    50px -6px 0 rgba(255, 255, 255, 0.65),
-    68px 3px 0 -10px rgba(255, 255, 255, 0.8),
-    30px 10px 0 -6px rgba(255, 255, 255, 0.75),
-    42px 18px 0 -12px rgba(255, 255, 255, 0.6),
+  box-shadow: 18px 6px 0 6px rgba(255, 255, 255, 0.8), 30px -12px 0 -6px rgba(255, 255, 255, 0.7), 50px -6px 0 rgba(255, 255, 255, 0.65),
+    68px 3px 0 -10px rgba(255, 255, 255, 0.8), 30px 10px 0 -6px rgba(255, 255, 255, 0.75), 42px 18px 0 -12px rgba(255, 255, 255, 0.6),
     15px -5px 0 -8px rgba(255, 255, 255, 0.7);
 }
 

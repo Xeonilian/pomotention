@@ -4,34 +4,38 @@ description: 下载最新版本的应用程序
 
 # 快速开始
 
-获取最新版本，体验完整功能。
+获取最新版本，体验完整功能，
+**关于 AI**： 由于没有想好合适的 API 发放机制，暂时不可用，下一步将优先开发 Dashboard，让历史数据可视化，然后发酵 AI 部分
+如果你想[支持 AI 模块开发](https://docs.qq.com/form/page/DZWtGeVpKUkNuQnVL)
 
 ## 当前版本
 
 ::: info 最新发布
-**版本 v0.4.2** - 2025 年 9 月 30 日发布
+**版本 v0.4.3** - 2025 年 10 月 13 日发布
 
-- AI 对话功能初版发布
+- **新增**
 
-  - 新功能基于 Kimi API，内置了 免费试用额度。当额度耗尽后，AI 功能将暂时不可用。
-  - 试试对它说「计划」，可体验引导式思考与行动规划。
-  - 对话过长时（>8k 上下文），会自动清空并保留历史在剪贴板中，方便您继续对话。
-  - 喜欢此功能？欢迎来[支持项目](https://docs.qq.com/form/page/DZWtGeVpKUkNuQnVL)，您将获得更长的 API 使用许可与新功能投票权。
+  - **标签筛选系统**：现在可以点击标签对左侧列表或右侧内容进行筛选，支持多个标签叠加筛选（与逻辑），并可一键清除。
+  - **搜索结果标星**：在搜索结果的内容区，可以直接为条目添加或取消星标，状态会与左侧列表实时同步。
+  - **搜索结果管理**：新增“一键关闭全部”功能，方便快速清空搜索结果。
+  - **编辑标签**：新增搜索页面 Activity 添加删除标签。
+  - **编辑标星**：新增搜索页面 Task 标星。
 
-- 功能与优化
+- **优化**
 
-  - 任务搜索功能及全新 UI。
-  - Planner 计划模块新增跑马灯与自定义提示。
-  - 任务追踪 (Track) 支持加星标。
-  - 重构了核心数据管理模式，实现数据集中管理。
-  - 重构了多个核心模块（Planner/Task/Timetable），提升了可维护性。
-  - 统一并调整了多个 UI 界面，优化了布局与配色。
-  - 提升了应用状态的记忆能力。
+  - **UI 界面重构**：
+    - 重构了任务（Task）的书写模版 UI。
+    - 优化了 Planner 中任务优先级的数字显示样式。
+  - **代码结构优化**：
+    - 将活动（Activity）中的标签拖拽功能重构为可复用的 Composable (`useTagDrag`)，提升了代码的模块化和可维护性。
+  - **性能与逻辑**：
+    - 优化了任务内容（Task-Content）的获取算法，使其更加精准。
+    - 统一了任务（Task）的数据来源 Activity，修正了因此产生的 Tab 计算错误。
 
-- 修复
-
-  - 修正了同步时出现的 emoji 格式错误。
-  - 临时修正了计时器进度条长度不足的问题。
+- **修复**
+  - 修复了因任务数据被存储两次，导致修改后无法正确提取的 Bug。
+  - 修复了在 Mac 设备上 Emoji 跑马灯显示不正常的问题（通过增加空格）。
+  - 修复了时间表（Timetable）中会错误地包含已取消（Cancelled）日程和待办的问题。
 
 :::
 
@@ -54,31 +58,12 @@ description: 下载最新版本的应用程序
 
 - Windows
 
-<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.4.2/pomotention_0.4.2_x64_en-US.msi" class="download-btn windows">
-  <span class="platform">Windows</span>
-  <span class="format">.msi 安装包</span>
-  <span class="size">11.6MB</span>
-</a>
-
-<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.4.2/pomotention_0.4.2_x64-setup.exe" class="download-btn windows">
-  <span class="platform">Windows</span>
-  <span class="format">.exe </span>
-  <span class="size">9.8MB</span>
-</a>
+  - [.msi 安装包](https://github.com/Xeonilian/pomotention/releases/download/v0.4.2/pomotention_0.4.2_x64_en-US.msi)
+  - [.exe](https://github.com/Xeonilian/pomotention/releases/download/v0.4.2/pomotention_0.4.2_x64-setup.exe)
 
 - macOS
-
-<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.4.2/pomotention_0.4.2_x64.dmg" class="download-btn macos">
-  <span class="platform">macOS</span>
-  <span class="format">.dmg 安装包</span>
-  <span class="size">14.5MB</span>
-</a>
-
-<a href="https://github.com/Xeonilian/pomotention/releases/download/v0.4.2/pomotention.app.tar.gz" class="download-btn macos">
-  <span class="platform">macOS</span>
-  <span class="format">app.tar.gz</span>
-  <span class="size">13.1MB</span>
-</a>
+  - [.dmg 安装包](https://github.com/Xeonilian/pomotention/releases/download/v0.4.2/pomotention_0.4.2_x64.dmg)
+  - [app.tar.gz](https://github.com/Xeonilian/pomotention/releases/download/v0.4.2/pomotention.app.tar.gz)
 
 ## 安装指南
 
@@ -100,7 +85,8 @@ description: 下载最新版本的应用程序
 
 - macOS 首次运行时，需要在"系统偏好设置 > 安全性与隐私"中允许应用运行
 - Windows 安装时，可能会出现安全警告，请选择“运行”或“更多信息”->“仍然运行”
-  :::
+
+:::
 
 ## 自动更新
 
@@ -117,46 +103,4 @@ description: 下载最新版本的应用程序
 
 1. **下载失败**：请检查网络连接，或尝试使用下载工具
 2. **安装报错**：确认系统版本符合要求，windows7 暂不支持
-
-<style>
-
-.download-btn {
-  display: flex;
-  flex-direction: column;
-  padding: 1rem;
-  border: 2px solid var(--vp-c-border);
-  border-radius: 8px;
-  text-decoration: none;
-  transition: all 0.3s ease;
-  background: var(--vp-c-bg-soft);
-  margin-bottom: 10px;
-}
-
-.download-btn:hover {
-  border-color: var(--vp-c-brand);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-}
-
-.download-btn .platform {
-  font-size: 1.2rem;
-  font-weight: 600;
-  color: var(--vp-c-text-1);
-  margin-bottom: 0.5rem;
-}
-
-.download-btn .format {
-  color: var(--vp-c-text-2);
-  font-size: 0.9rem;
-}
-
-.download-btn .size {
-  color: var(--vp-c-text-3);
-  font-size: 0.8rem;
-  margin-top: 0.25rem;
-}
-
-.windows:hover { border-color: #0078d4; }
-.macos:hover { border-color: #007aff; }
-.linux:hover { border-color: #ff6b35; }
-</style>
+3. **安装中断**：从`任务管理器`关闭进程后重试安装

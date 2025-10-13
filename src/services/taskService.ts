@@ -69,35 +69,33 @@ export const taskService = {
     return record;
   },
 
-  createTaskFromTodo(todoId: number, activityTitle: string, projectName?: string): Task {
+  createTaskFromTodo(activityId: number, activityTitle: string, projectName?: string): Task {
     const task: Task = {
       id: Date.now(),
       activityTitle,
       projectName,
-      source: "todo",
-      sourceId: todoId,
+      source: "activity",
+      sourceId: activityId,
       energyRecords: [],
       rewardRecords: [],
       interruptionRecords: [],
       description: `# ${activityTitle}`,
     };
-    this.upsertTask(task);
     return task;
   },
 
-  createTaskFromSchedule(scheduleId: number, activityTitle: string, projectName?: string): Task {
+  createTaskFromSchedule(activityId: number, activityTitle: string, projectName?: string): Task {
     const task: Task = {
       id: Date.now(),
       activityTitle,
       projectName,
-      source: "schedule",
-      sourceId: scheduleId,
+      source: "activity",
+      sourceId: activityId,
       energyRecords: [],
       rewardRecords: [],
       interruptionRecords: [],
       description: `# ${activityTitle}`,
     };
-    this.upsertTask(task);
     return task;
   },
 
@@ -113,7 +111,6 @@ export const taskService = {
       interruptionRecords: [],
       description: `# ${activityTitle}`,
     };
-    this.upsertTask(task);
     return task;
   },
 

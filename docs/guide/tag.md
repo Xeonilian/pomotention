@@ -27,6 +27,8 @@
 - **新建**：若输入内容未命中已有标签，点击 <img src="/icons/Add16Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(193, 226, 255);border-radius: 6px;"> 按钮添加。
   <img src="/tag-manager.png" alt="Tag Manger" width="300">
 
+- 另外从 `数据页` 打开一行 Todo/Schedule/Activity，在每个 Tab 的最上部信息区域，有**标签按钮**
+
 ## 2 标签管理
 
 ### 2.1 标签色彩编辑
@@ -40,7 +42,14 @@
   - 通过 `#` 激活标签新建时，无法新建带有 `-`标签，可到`标签管理面板`修改实现。
 - 点击 <img src="/icons/TagDismiss16Regular.svg" width="20" style="display: inline-block; vertical-align: middle; margin:0;"> 删除所有关联的标签，无法恢复。
 
-## 3 重要说明
+## 3 标签搜索
+
+- 进入`数据页`，点击任意可视的标签，会对左侧面板显示的 `Activity` 进行筛选，多个标签进行 AND 逻辑 筛选；
+- 第二次点击取消筛选；
+- 左侧面板提供一键清除筛选；
+- 在搜索区域输入 `#` 激活标签快速输入，选择标签后进行筛选;
+- 参考[数据查看](/guide/search.md)
+
+## 4 重要说明
 
 - 标签选择完成，计入全局标签统计；
-- 标签用于筛选/聚合，并与主筛选框组合使用【开发中】。

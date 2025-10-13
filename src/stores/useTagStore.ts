@@ -1,26 +1,44 @@
 // src/stores/useTagStore.ts
-
 import { ref, computed, watch } from "vue";
-import { defineStore } from "pinia"; // ✅ 1. 导入 defineStore
+import { defineStore } from "pinia";
 import { loadTags, saveTags } from "@/services/localStorageService";
 import type { Tag } from "@/core/types/Tag";
 
-// ✅ 2. 使用 defineStore 创建 store
-// 第一个参数是 store 的唯一 ID
-// 第二个参数是一个 setup 函数，和你之前的代码几乎一样
 export const useTagStore = defineStore("tagStore", () => {
-  // --- 你所有的 state, getters, actions 代码都放在这里 ---
-
   const tags = ref<Tag[]>(loadTags());
 
-  // Getters (用 computed 实现)
   const allTags = computed(() => tags.value);
 
-  // Actions (普通函数)
+  // 供外部在需要时手动重载本地标签（可选）
+  function loadAllTags() {
+    tags.value = loadTags();
+    return tags.value;
+  }
+
+  // 批量设置计数：传入 Map<tagId, count>
+  function recalculateTagCounts(countMap: Map<number, number>) {
+    if (!countMap) return;
+    const newArr = tags.value.map((t) => {
+      const nextCount = countMap.get(t.id) ?? 0;
+      if ((t.count || 0) !== nextCount) {
+        return { ...t, count: nextCount };
+      }
+      return t;
+    });
+    tags.value = newArr;
+    saveTags(tags.value);
+  }
+
+  // 兼容 useDataStore 中的 updateTagCount(tagId, delta)
+  function updateTagCount(id: number, delta: number) {
+    const tag = tags.value.find((t) => t.id === id);
+    if (!tag) return;
+    const next = Math.max(0, (tag.count || 0) + delta);
+    setTagCount(id, next);
+  }
+
   function addTag(name: string, color: string, backgroundColor: string) {
-    const exist = tags.value.find(
-      (tag) => tag.name.trim().toLowerCase() === name.trim().toLowerCase()
-    );
+    const exist = tags.value.find((tag) => tag.name.trim().toLowerCase() === name.trim().toLowerCase());
     if (exist) return exist;
     const tag: Tag = {
       id: Date.now(),
@@ -35,19 +53,8 @@ export const useTagStore = defineStore("tagStore", () => {
   }
 
   function loadInitialTags(defaultTags: Tag[]) {
-    // 关键判断：只有当 store 初始化后 tags 数组为空时才执行
-    if (tags.value.length > 0) {
-      // console.log("[TagStore] 本地已存在标签，跳过加载默认标签。");
-      return;
-    }
-
-    // console.log("[TagStore] 本地无标签，正在加载默认标签...");
-
-    // *** 核心修正 ***
-    // 直接使用传入的、已经包含 ID 的默认标签数组
+    if (tags.value.length > 0) return;
     tags.value = defaultTags;
-
-    // 在所有默认标签都添加完毕后，进行一次性的保存
     saveTags(tags.value);
   }
 
@@ -55,11 +62,7 @@ export const useTagStore = defineStore("tagStore", () => {
     const index = tags.value.findIndex((t) => t.id === id);
     if (index !== -1) {
       const updated = { ...tags.value[index], ...patch };
-      tags.value = [
-        ...tags.value.slice(0, index),
-        updated,
-        ...tags.value.slice(index + 1),
-      ];
+      tags.value = [...tags.value.slice(0, index), updated, ...tags.value.slice(index + 1)];
       saveTags(tags.value);
     }
   }
@@ -68,11 +71,7 @@ export const useTagStore = defineStore("tagStore", () => {
     const index = tags.value.findIndex((t) => t.id === id);
     if (index !== -1) {
       const updated = { ...tags.value[index], count };
-      tags.value = [
-        ...tags.value.slice(0, index),
-        updated,
-        ...tags.value.slice(index + 1),
-      ];
+      tags.value = [...tags.value.slice(0, index), updated, ...tags.value.slice(index + 1)];
       saveTags(tags.value);
     }
   }
@@ -86,9 +85,7 @@ export const useTagStore = defineStore("tagStore", () => {
   }
 
   function findByName(keyword: string) {
-    return tags.value.filter((t) =>
-      t.name.toLowerCase().includes(keyword.trim().toLowerCase())
-    );
+    return tags.value.filter((t) => t.name.toLowerCase().includes(keyword.trim().toLowerCase()));
   }
 
   function getTag(id: number) {
@@ -97,10 +94,7 @@ export const useTagStore = defineStore("tagStore", () => {
 
   function getTagsByIds(tagIds: number[]): Tag[] {
     if (!tagIds || tagIds.length === 0) return [];
-
-    return tagIds
-      .map((id) => tags.value.find((t) => t.id === id))
-      .filter((tag) => tag !== undefined) as Tag[];
+    return tagIds.map((id) => tags.value.find((t) => t.id === id)).filter((tag) => tag !== undefined) as Tag[];
   }
 
   function getTagNamesByIds(tagIds: number[]): string {
@@ -114,13 +108,9 @@ export const useTagStore = defineStore("tagStore", () => {
     if (tag) setTagCount(id, Math.max(0, tag.count - 1));
   }
 
-  // 函数定义，为第二个参数 amount 设置默认值 1
   function incrementTagCount(id: number, amount: number = 1) {
     const tag = tags.value.find((t) => t.id === id);
     if (tag) {
-      // 使用传入的 amount 进行累加
-      // 注意：这里我们假设 setTagCount 是“设置”值的函数，而不是“累加”值的函数
-      // 所以我们要计算出目标值 (tag.count + amount) 再传给它
       const newCount = (tag.count || 0) + amount;
       setTagCount(id, newCount);
     }
@@ -134,13 +124,15 @@ export const useTagStore = defineStore("tagStore", () => {
     { deep: true }
   );
 
-  // ✅ 3. 返回所有需要暴露给外部的 state, getters, 和 actions
   return {
     // state
     tags,
     // getters
     allTags,
     // actions
+    loadAllTags, // 新增：兼容 useDataStore 的调用
+    recalculateTagCounts, // 新增：供数据端重算计数
+    updateTagCount, // 新增：供数据端按 delta 增减
     addTag,
     updateTag,
     removeTag,

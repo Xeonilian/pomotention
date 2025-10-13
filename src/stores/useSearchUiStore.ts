@@ -1,7 +1,7 @@
 // @/stores/useSearchUiStore.ts
 
 import { defineStore } from "pinia";
-
+import { ActivityRow } from "@/composables/useSearchFilter";
 // 定义 Tab 类型，它属于 UI 的一部分，放在这里很合适
 export type TabType = "todo" | "sch" | "activity";
 export type TabItem = { key: string; type: TabType; id: number; title: string };
@@ -15,6 +15,7 @@ export const useSearchUiStore = defineStore("searchUi", {
   state: () => ({
     searchQuery: "",
     filterStarredOnly: false,
+    filterTagIds: [] as number[], // 当前过滤的 tag ids
     openedTabs: [] as TabItem[],
     activeTabKey: undefined as string | undefined,
   }),
@@ -66,6 +67,13 @@ export const useSearchUiStore = defineStore("searchUi", {
       this.activeTabKey = key;
     },
 
+    // 点击左侧列表项时，调用 store action 打开一个 tab
+    openRow(row: ActivityRow) {
+      const type: TabType = row.class === "T" ? "todo" : row.class === "S" ? "sch" : "activity";
+      const todoOrSchId = row.currentId ?? row.activityId;
+      this.openTab(type, todoOrSchId, row.title); // 调用 action，逻辑全部在 store 中处理
+    },
+
     /**
      * 关闭一个指定的 Tab。
      * @param key - 要关闭的 Tab 的 key
@@ -84,6 +92,38 @@ export const useSearchUiStore = defineStore("searchUi", {
         this.activeTabKey = nextTab ? nextTab.key : undefined;
       }
     },
+
+    closeAllTabs() {
+      this.openedTabs = [];
+      this.activeTabKey = undefined;
+    },
+
+    /**
+     * 切换一个标签ID的筛选状态。
+     * 如果ID已在筛选列表中，则移除它；如果不在，则添加它。
+     * @param tagId - 要切换的标签ID
+     */
+    toggleFilterTagId(tagId: number) {
+      // [!code ++]
+      const index = this.filterTagIds.indexOf(tagId); // [!code ++]
+      if (index > -1) {
+        // [!code ++]
+        // 如果已存在，则移除
+        this.filterTagIds.splice(index, 1); // [!code ++]
+      } else {
+        // [!code ++]
+        // 如果不存在，则添加
+        this.filterTagIds.push(tagId); // [!code ++]
+      } // [!code ++]
+    }, // [!code ++]
+
+    /**
+     * 清除所有的标签筛选
+     */
+    clearFilterTags() {
+      // [!code ++]
+      this.filterTagIds = []; // [!code ++]
+    }, // [!code ++]
   },
 
   // 4. (可选) 启用持久化

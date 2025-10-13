@@ -46,160 +46,157 @@
         }"
       >
         <div class="activity-content">
+          <n-input
+            v-model:value="item.title"
+            :ref="(el) => setRowInputRef(el as InputInst | null, item.id)"
+            type="text"
+            :placeholder="item.isUntaetigkeit ? '无所事事' : '任务描述'"
+            style="flex: 1"
+            @input="handleTitleInput(item, $event)"
+            @keydown="handleInputKeydown($event, item)"
+            @focus="handleNoFocus(item.id)"
+            :class="{
+              'force-hover': dragHandler.hoveredRowId.value === item.id,
+              'child-activity': item.parentId,
+            }"
+          >
+            <template #prefix>
+              <div
+                class="icon-drag-area"
+                @mousedown="onDragStart($event, item)"
+                @mouseenter="dragHandler.handleIconMouseEnter(item.id)"
+                @mouseleave="dragHandler.handleIconMouseLeave()"
+                :title="item.status !== 'cancelled' ? '拖拽调整顺序' : '不支持顺序修改'"
+              >
+                <n-icon v-if="item.isUntaetigkeit" :color="'var(--color-blue)'"><Cloud24Regular /></n-icon>
+                <n-icon
+                  v-if="item.interruption === 'I'"
+                  :color="
+                    item.status === 'ongoing'
+                      ? 'var(--color-red)'
+                      : item.status === 'delayed'
+                      ? 'var(--color-blue)'
+                      : item.status === 'suspended'
+                      ? 'var(--color-orange)'
+                      : item.status === 'cancelled'
+                      ? 'var(--color-text-primary)'
+                      : 'var(--color-text-secondary)'
+                  "
+                >
+                  <Chat24Regular />
+                </n-icon>
+                <n-icon
+                  v-else-if="item.interruption === 'E'"
+                  :color="
+                    item.status === 'ongoing'
+                      ? 'var(--color-red)'
+                      : item.status === 'delayed'
+                      ? 'var(--color-blue)'
+                      : item.status === 'suspended'
+                      ? 'var(--color-orange)'
+                      : item.status === 'cancelled'
+                      ? 'var(--color-text-primary)'
+                      : 'var(--color-text-secondary)'
+                  "
+                >
+                  <VideoPersonCall24Regular />
+                </n-icon>
+                <n-icon
+                  v-else-if="item.class === 'T'"
+                  :color="
+                    item.status === 'ongoing'
+                      ? 'var(--color-red)'
+                      : item.status === 'delayed'
+                      ? 'var(--color-blue)'
+                      : item.status === 'suspended'
+                      ? 'var(--color-orange)'
+                      : item.status === 'cancelled'
+                      ? 'var(--color-text-primary)'
+                      : 'var(--color-text-secondary)'
+                  "
+                >
+                  <ApprovalsApp24Regular />
+                </n-icon>
+                <n-icon
+                  v-else-if="item.class === 'S' && !item.isUntaetigkeit"
+                  :color="
+                    item.status === 'ongoing'
+                      ? 'var(--color-red)'
+                      : item.status === 'delayed'
+                      ? 'var(--color-blue)'
+                      : item.status === 'suspended'
+                      ? 'var(--color-orange)'
+                      : item.status === 'cancelled'
+                      ? 'var(--color-text-primary)'
+                      : 'var(--color-text-secondary)'
+                  "
+                >
+                  <CalendarCheckmark20Regular />
+                </n-icon>
+              </div>
+            </template>
+            <template #suffix>
+              <n-icon
+                v-if="!item.tagIds"
+                text
+                color="var(--color-text-secondary)"
+                @click="handleTagIconClick($event, item.id)"
+                class="icon-tag"
+                title="添加标签"
+              >
+                <Tag16Regular />
+              </n-icon>
+              <n-icon
+                v-else
+                text
+                color="var(--color-blue)"
+                @click="handleTagIconClick($event, item.id)"
+                class="icon-tag"
+                title="Alt+点击=切换显示 | 点击=管理标签"
+              >
+                <Tag16Regular />
+              </n-icon>
+            </template>
+          </n-input>
           <n-popover
-            :show="popoverTargetId === item.id"
-            @update:show="(show) => !show && (popoverTargetId = null)"
-            trigger="manual"
+            :show="tagEditor.popoverTargetId.value === item.id"
+            @update:show="(show) => !show && (tagEditor.popoverTargetId.value = null)"
             placement="bottom-start"
             :trap-focus="false"
+            trigger="manual"
             :show-arrow="false"
             style="padding: 0; border-radius: 6px"
             :to="false"
           >
             <template #trigger>
-              <n-input
-                v-model:value="item.title"
-                :ref="(el) => setRowInputRef(el as InputInst | null, item.id)"
-                type="text"
-                :placeholder="item.isUntaetigkeit ? '无所事事' : '任务描述'"
-                style="flex: 1"
-                @input="handleTitleInput(item, $event)"
-                @keydown="handleInputKeydown($event, item)"
-                @focus="handleNoFocus(item.id)"
-                :class="{
-                  'force-hover': hoveredRowId === item.id,
-                  'child-activity': item.parentId,
-                }"
-              >
-                <template #prefix>
-                  <div
-                    class="icon-drag-area"
-                    @mousedown="startDrag($event, item)"
-                    @mouseenter="handleIconMoveMouseEnter(item.id)"
-                    @mouseleave="handleIconMoveMouseLeave"
-                    :title="item.status !== 'cancelled' ? '拖拽调整顺序' : '不支持顺序修改'"
-                  >
-                    <n-icon v-if="item.isUntaetigkeit" :color="'var(--color-blue)'"><Cloud24Regular /></n-icon>
-                    <n-icon
-                      v-if="item.interruption === 'I'"
-                      :color="
-                        item.status === 'ongoing'
-                          ? 'var(--color-red)'
-                          : item.status === 'delayed'
-                          ? 'var(--color-blue)'
-                          : item.status === 'suspended'
-                          ? 'var(--color-orange)'
-                          : item.status === 'cancelled'
-                          ? 'var(--color-text-primary)'
-                          : 'var(--color-text-secondary)'
-                      "
-                    >
-                      <Chat24Regular />
-                    </n-icon>
-                    <n-icon
-                      v-else-if="item.interruption === 'E'"
-                      :color="
-                        item.status === 'ongoing'
-                          ? 'var(--color-red)'
-                          : item.status === 'delayed'
-                          ? 'var(--color-blue)'
-                          : item.status === 'suspended'
-                          ? 'var(--color-orange)'
-                          : item.status === 'cancelled'
-                          ? 'var(--color-text-primary)'
-                          : 'var(--color-text-secondary)'
-                      "
-                    >
-                      <VideoPersonCall24Regular />
-                    </n-icon>
-                    <n-icon
-                      v-else-if="item.class === 'T'"
-                      :color="
-                        item.status === 'ongoing'
-                          ? 'var(--color-red)'
-                          : item.status === 'delayed'
-                          ? 'var(--color-blue)'
-                          : item.status === 'suspended'
-                          ? 'var(--color-orange)'
-                          : item.status === 'cancelled'
-                          ? 'var(--color-text-primary)'
-                          : 'var(--color-text-secondary)'
-                      "
-                    >
-                      <ApprovalsApp24Regular />
-                    </n-icon>
-                    <n-icon
-                      v-else-if="item.class === 'S' && !item.isUntaetigkeit"
-                      :color="
-                        item.status === 'ongoing'
-                          ? 'var(--color-red)'
-                          : item.status === 'delayed'
-                          ? 'var(--color-blue)'
-                          : item.status === 'suspended'
-                          ? 'var(--color-orange)'
-                          : item.status === 'cancelled'
-                          ? 'var(--color-text-primary)'
-                          : 'var(--color-text-secondary)'
-                      "
-                    >
-                      <CalendarCheckmark20Regular />
-                    </n-icon>
-                  </div>
-                </template>
-                <template #suffix>
-                  <n-icon
-                    v-if="!item.tagIds"
-                    text
-                    color="var(--color-text-secondary)"
-                    @click="
-                      showTagManager = true;
-                      editingTagId = item.id;
-                    "
-                    class="icon-tag"
-                    title="添加标签"
-                  >
-                    <Tag16Regular />
-                  </n-icon>
-                  <n-icon
-                    v-else
-                    text
-                    color="var(--color-blue)"
-                    @click="handleTagIconClick($event, item)"
-                    class="icon-tag"
-                    title="Alt+点击=切换显示 | 点击=管理标签"
-                  >
-                    <Tag16Regular />
-                  </n-icon>
-                </template>
-              </n-input>
+              <span style="position: absolute; pointer-events: none"></span>
             </template>
             <TagSelector
               :ref="
                 (el) => {
-                  if (popoverTargetId === item.id) tagSelectorRef = el;
+                  if (tagEditor.popoverTargetId.value === item.id) tagSelectorRef = el;
                 }
               "
-              :search-term="tagSearchTerm"
+              :search-term="tagEditor.tagSearchTerm.value"
               :allow-create="true"
               @select-tag="(tagId: any) => handleTagSelected(item, tagId)"
               @create-tag="(tagName: any) => handleTagCreate(item, tagName)"
-              @close-selector="popoverTargetId = null"
+              @close-selector="tagEditor.popoverTargetId.value = null"
             />
           </n-popover>
-          <n-modal v-model:show="showTagManager" @after-leave="onTagManagerClosed" role="dialog" aria-modal="true">
-            <n-card style="width: 420px">
-              <TagManager v-model="tempTagIds" />
-            </n-card>
-          </n-modal>
+
+          <!-- 地点 -->
           <n-input
             v-if="item.class === 'S'"
             v-model:value="item.location"
             style="max-width: 50px"
             @focus="handleNoFocus(item.id)"
             placeholder="地点"
-            :class="{ 'force-hover': hoveredRowId === item.id }"
+            :class="{ 'force-hover': dragHandler.hoveredRowId.value === item.id }"
             @click.stop
           />
+
+          <!-- 时间或番茄钟 -->
           <n-input
             v-if="item.class === 'T'"
             maxlength="1"
@@ -216,7 +213,7 @@
               'pomo-purple': item.pomoType === '🍇',
               'pomo-green': item.pomoType === '🍒',
               'input-center': true,
-              'force-hover': hoveredRowId === item.id,
+              'force-hover': dragHandler.hoveredRowId.value === item.id,
             }"
           />
           <n-input
@@ -228,8 +225,10 @@
             title="持续时间(分钟)"
             placeholder="min"
             class="input-center input-min"
-            :class="{ 'force-hover': hoveredRowId === item.id }"
+            :class="{ 'force-hover': dragHandler.hoveredRowId.value === item.id }"
           />
+
+          <!-- 日期选择 -->
           <n-date-picker
             v-if="item.class === 'T'"
             v-model:value="item.dueDate"
@@ -254,6 +253,8 @@
             :class="getCountdownClass(item.dueRange && item.dueRange[0])"
           />
         </div>
+
+        <!-- tag显示 -->
         <div
           v-if="item.tagIds && item.tagIds.length > 0 && settingStore.settings.kanbanSetting[props.sectionId].showTags"
           class="tag-content"
@@ -262,10 +263,17 @@
           <TagRenderer
             :tag-ids="item.tagIds"
             :isCloseable="true"
-            @remove-tag="handleRemoveTag(item, $event)"
+            @remove-tag="handleRemoveTag(item.id, $event)"
             class="tagRenderer-container"
           />
         </div>
+
+        <!-- 弹出tag管理 -->
+        <n-modal v-model:show="showTagManager" @after-leave="handleTagManagerClose">
+          <n-card style="width: 420px">
+            <TagManager v-model="tagIdsProxy" />
+          </n-card>
+        </n-modal>
       </div>
     </div>
   </div>
@@ -273,7 +281,7 @@
 
 <script setup lang="ts">
 import { computed, watch, nextTick, ref, onMounted } from "vue";
-import { NInput, NDatePicker, NIcon, NDropdown, NPopover } from "naive-ui";
+import { NInput, NDatePicker, NIcon, NDropdown, NPopover, NButton, NCard, NModal } from "naive-ui";
 import {
   VideoPersonCall24Regular,
   ApprovalsApp24Regular,
@@ -287,13 +295,14 @@ import {
 } from "@vicons/fluent";
 import type { Activity } from "@/core/types/Activity";
 import { useSettingStore } from "@/stores/useSettingStore";
+import { useActivityTagEditor } from "@/composables/useActivityTagEditor";
+import { useActivityDrag } from "@/composables/useActivityDrag";
 import TagManager from "../TagSystem/TagManager.vue";
-import { useTagStore } from "@/stores/useTagStore";
 import TagRenderer from "../TagSystem/TagRenderer.vue";
 import TagSelector from "../TagSystem/TagSelector.vue";
 import type { InputInst } from "naive-ui";
 
-// 接收发射数据
+// ======================== Props & Emits ========================
 const props = defineProps<{
   displaySheet: Activity[];
   filterOptions: any[];
@@ -316,44 +325,17 @@ const emit = defineEmits<{
   "focus-search": [];
 }>();
 
+// ======================== Stores ========================
 const settingStore = useSettingStore();
-const showTagManager = ref(false);
-const editingTagId = ref(0);
-const tagStore = useTagStore();
-const noFocus = ref(false);
 
-const tempTagIds = ref<number[]>([]); // 临时编辑tagIds
-
-onMounted(() => {
-  settingStore.settings.kanbanSetting[props.sectionId].showTags ??= true;
-});
-
-const currentFilterLabel = computed(() => {
-  const match = props.filterOptions.find((o) => o.key === props.currentFilter);
-  return match?.label ?? "";
-});
-
-// Popover 相关状态
-const tagSearchTerm = ref("");
-const popoverTargetId = ref<number | null>(null);
-const tagSelectorRef = ref<any>(null);
-const inputRefs = ref<Record<number, any>>({});
-
-// 拖拽相关状态
-const isDragging = ref(false);
-const draggedItem = ref<Activity | null>(null);
-const dragStartY = ref(0);
-
-// 新增：用于模拟 hover 效果的行 id
-const hoveredRowId = ref<number | null>(null);
-
-// 排序：先按自定义排序，再按类型排序
+// ======================== 排序逻辑 ========================
 const sortedDisplaySheet = computed(() => {
   const activities = props.displaySheet.filter((activity: Activity) => activity.status !== "done").slice();
-  const activityMap = new Map<number, Activity[]>(); // 存储每个 parentId 对应的子活动列表
+
+  const activityMap = new Map<number, Activity[]>();
   const rootActivities: Activity[] = [];
 
-  // 第一次遍历：构建父子关系的 Map，并分离出根活动
+  // 构建父子关系
   activities.forEach((item) => {
     if (item.parentId === null || item.parentId === undefined) {
       rootActivities.push(item);
@@ -367,36 +349,53 @@ const sortedDisplaySheet = computed(() => {
 
   const getRank = (id: number) => settingStore.settings.activityRank[id] ?? Number.MAX_SAFE_INTEGER;
 
-  // 对所有层级的活动列表进行排序
-  // 1. 对根活动排序
+  // 排序
   rootActivities.sort((a, b) => getRank(a.id) - getRank(b.id));
 
-  // 2. 对每个子活动列表进行排序
   for (const children of activityMap.values()) {
     children.sort((a, b) => getRank(a.id) - getRank(b.id));
   }
 
+  // DFS 展平
   const result: Activity[] = [];
-
-  // 第二次遍历：通过深度优先搜索（DFS）将树状结构展平为有序列表
   function dfs(activity: Activity) {
     result.push(activity);
     const children = activityMap.get(activity.id);
     if (children) {
-      // 此时 children 已经是排好序的
       children.forEach(dfs);
     }
   }
-
   rootActivities.forEach(dfs);
 
-  // 最终的 result 列表就保证了父子结构，并且同级之间按 rank 排序
   return result;
 });
 
-// 用 Map 保存每一行的 n-input 实例
-const rowInputMap = ref(new Map<number, InputInst>());
+// ======================== Composables ========================
+const tagEditor = useActivityTagEditor();
+const dragHandler = useActivityDrag(() => sortedDisplaySheet.value);
 
+// ======================== 本地状态 ========================
+const noFocus = ref(false);
+const rowInputMap = ref(new Map<number, InputInst>());
+const showTagManager = ref(false);
+const tagSelectorRef = ref<any>(null);
+
+// ======================== 计算属性 ========================
+const currentFilterLabel = computed(() => {
+  const match = props.filterOptions.find((o) => o.key === props.currentFilter);
+  return match?.label ?? "";
+});
+
+const tagIdsProxy = computed({
+  get: () => tagEditor.tempTagIds.value,
+  set: (v) => (tagEditor.tempTagIds.value = v),
+});
+// ======================== 初始化 ========================
+onMounted(() => {
+  settingStore.settings.kanbanSetting[props.sectionId].showTags ??= true;
+});
+
+// ======================== 输入框引用管理 ========================
 function setRowInputRef(el: InputInst | null, id: number) {
   if (el) rowInputMap.value.set(id, el);
   else rowInputMap.value.delete(id);
@@ -407,22 +406,19 @@ function handleNoFocus(id: number) {
   emit("focus-row", id);
 }
 
-// 监听 activeId，命中后聚焦对应行
+// ======================== 焦点管理 ========================
 watch(
   () => props.activeId,
   async (id) => {
-    // 识别不跳转信号，返回并充值为跳转
     if (noFocus.value) {
       noFocus.value = false;
       return;
     }
 
-    // activeId 没有定义
     if (id === undefined) return;
 
     let targetFocusId = null;
 
-    // delete 自动聚焦最后一行
     if (id === null) {
       const list = sortedDisplaySheet.value;
       const last = list[list.length - 1];
@@ -436,12 +432,12 @@ watch(
       targetFocusId = id;
     }
 
-    // 新增 聚焦增加行
     if (targetFocusId === null) return;
 
     await nextTick();
     const inst = rowInputMap.value.get(targetFocusId);
     if (!inst) return;
+
     if (typeof inst.focus === "function") {
       inst.focus();
       noFocus.value = false;
@@ -451,305 +447,93 @@ watch(
   }
 );
 
-// 在拖拽里用到
-function handleIconMoveMouseEnter(id: number) {
-  hoveredRowId.value = id;
+// ======================== 拖拽处理 ========================
+function onDragStart(event: MouseEvent, item: Activity) {
+  dragHandler.startDrag(event, item);
 }
 
-function handleIconMoveMouseLeave() {
-  hoveredRowId.value = null;
-}
-
-// 开始拖拽
-function startDrag(event: MouseEvent, item: Activity) {
-  event.preventDefault();
-  event.stopPropagation();
-
-  // 检查是否点击在输入框上
-  const target = event.target as HTMLElement;
-  const isInputElement = target.closest("input, textarea, .n-input__input");
-
-  if (isInputElement) {
-    return;
-  }
-
-  isDragging.value = true;
-  draggedItem.value = item;
-  dragStartY.value = event.clientY;
-
-  document.addEventListener("mousemove", handleDragMove);
-  document.addEventListener("mouseup", handleDragEnd);
-}
-
-// 拖拽移动
-function handleDragMove(event: MouseEvent) {
-  if (!isDragging.value || !draggedItem.value) return;
-
-  const hoverId = hoveredRowId.value;
-  if (!hoverId) return;
-
-  const flatList = sortedDisplaySheet.value;
-  const dragItem = draggedItem.value;
-  const targetItem = flatList.find((act) => act.id === hoverId);
-
-  if (!targetItem || dragItem.id === targetItem.id) return;
-
-  // 判定是否允许drop，只能同组拖
-  if (!canDrop(dragItem, targetItem)) return;
-
-  let newList: Activity[] = [];
-
-  // 如果拖的是父（根活动），则父和所有子一起移动
-  if (!dragItem.parentId) {
-    const originalList = flatList.slice();
-    const dragBlock = getFamilyBlock(dragItem.id, originalList);
-
-    // 从列表中移除正在拖拽的块
-    const listWithoutBlock = originalList.filter((i) => !dragBlock.some((b) => b.id === i.id));
-
-    // 在新列表中找到目标位置的索引
-    let targetIndexInNewList = listWithoutBlock.findIndex((i) => i.id === targetItem.id);
-
-    // 关键修正：判断原始拖拽方向，以决定插入点
-    const originalDragIndex = originalList.findIndex((i) => i.id === dragItem.id);
-    const originalTargetIndex = originalList.findIndex((i) => i.id === targetItem.id);
-
-    // 如果是向下拖拽，插入点应该在目标元素的后面
-    if (originalDragIndex < originalTargetIndex) {
-      targetIndexInNewList++;
-    }
-
-    // 将拖拽的块插入到计算好的正确位置
-    listWithoutBlock.splice(targetIndexInNewList, 0, ...dragBlock);
-    newList = listWithoutBlock;
-  } else {
-    // 拖的是子活动，只在同一父活动的子活动组内重新排序
-    const siblings = flatList.filter((i) => i.parentId === dragItem.parentId);
-    const originalDragIndex = siblings.findIndex((i) => i.id === dragItem.id);
-    const originalTargetIndex = siblings.findIndex((i) => i.id === targetItem.id);
-
-    if (originalDragIndex === -1 || originalTargetIndex === -1) return;
-
-    const newSiblings = [...siblings];
-    const [movedItem] = newSiblings.splice(originalDragIndex, 1); // 从副本中取出拖动的项
-
-    // 在移除了拖动项的副本中找到目标的新索引
-    let newTargetIndex = newSiblings.findIndex((i) => i.id === targetItem.id);
-
-    // 根据原始拖动方向决定插入位置
-    if (originalDragIndex < originalTargetIndex) {
-      newSiblings.splice(newTargetIndex + 1, 0, movedItem);
-    } else {
-      newSiblings.splice(newTargetIndex, 0, movedItem);
-    }
-
-    // 使用新的子活动顺序重组整个列表
-    const groupStartIndex = flatList.findIndex((i) => i.id === siblings[0].id);
-    const groupEndIndex = flatList.findIndex((i) => i.id === siblings[siblings.length - 1].id);
-    newList = [...flatList.slice(0, groupStartIndex), ...newSiblings, ...flatList.slice(groupEndIndex + 1)];
-  }
-
-  // 使用新排好序的列表来更新排序 rank
-  if (newList.length > 0) {
-    updateActivityRankByList(newList);
-  }
-
-  // 可选：此时刷新起始Y，避免继续移动“误触”
-  dragStartY.value = event.clientY;
-}
-
-// 拖拽结束
-function handleDragEnd() {
-  isDragging.value = false;
-  draggedItem.value = null;
-
-  document.removeEventListener("mousemove", handleDragMove);
-  document.removeEventListener("mouseup", handleDragEnd);
-}
-
-// 更新活动排序
-/** 用排序后的扁平列表写入rank  */
-function updateActivityRankByList(orderedList: Activity[]) {
-  const newRank: Record<number, number> = {};
-  orderedList.forEach((a, idx) => {
-    newRank[a.id] = idx;
-  });
-  settingStore.settings.activityRank = newRank;
-}
-
-/** 取某 id 所有自身及子孙 activity，顺序一致扁平返回 */
-function getFamilyBlock(activityId: number, flatList: Activity[]): Activity[] {
-  const result: Activity[] = [];
-  function dfs(id: number) {
-    const act = flatList.find((item) => item.id === id);
-    if (!act) return;
-    result.push(act);
-    flatList.forEach((item) => {
-      if (item.parentId === id) dfs(item.id);
-    });
-  }
-  dfs(activityId);
-  return result;
-}
-
-// 判断是否拖拽合法
-function canDrop(dragItem: Activity, targetItem: Activity): boolean {
-  // 根活动之间的拖拽始终允许
-  if (!dragItem.parentId && !targetItem.parentId) return true;
-
-  // 子活动必须在同一父级下
-  return dragItem.parentId === targetItem.parentId;
-}
-
-// 获取输入显示字符串
-function getInputValue(item: Activity): string {
-  if (item.pomoType === "🍒") return "4";
-  return typeof item.estPomoI === "string" ? item.estPomoI : "";
-}
-
-// 响应用户输入
-function onInputUpdate(item: Activity, value: string) {
-  if (item.pomoType === "🍒") {
-    item.estPomoI = "4";
-    return;
-  }
-  item.estPomoI = value;
-}
-
-// Tag相关
-function handleTagIconClick(event: MouseEvent, item: Activity) {
+// ======================== 标签操作 ========================
+function handleTagIconClick(event: MouseEvent, activityId: number) {
   if (event.altKey) {
-    // --- Alt+Click 逻辑 ---
-    // 阻止任何可能发生的默认行为（比如文本选择）
     event.preventDefault();
-
-    // 切换 showTags 的值 (true -> false, false -> true)
-
-    settingStore.settings.kanbanSetting[props.sectionId].showTags = !settingStore.settings.kanbanSetting[props.sectionId].showTags;
+    const setting = settingStore.settings.kanbanSetting[props.sectionId];
+    setting.showTags = !setting.showTags;
   } else {
-    // --- 普通点击逻辑 (你之前的代码) ---
-    // 如果没有按 Alt 键，就执行常规的打开标签管理器的操作
+    tagEditor.openTagManager(activityId);
     showTagManager.value = true;
-    editingTagId.value = item.id;
-    tempTagIds.value = [...(item.tagIds || [])];
-  }
-}
-// 保存Tags
-function onTagManagerClosed() {
-  // 只在弹窗关闭时才同步
-  const activity = props.displaySheet.find((act) => act.id === editingTagId.value);
-
-  if (activity) {
-    const existingTagIds = activity.tagIds || [];
-    const mergedTagIds = [...new Set([...existingTagIds, ...tempTagIds.value])];
-
-    // 计算实际新增的 tagIds
-    const newlyAddedTagIds = mergedTagIds.filter((id) => !existingTagIds.includes(id));
-
-    // 更新 activity
-    activity.tagIds = mergedTagIds;
-
-    // 只为新增的 tags 更新 count
-    newlyAddedTagIds.forEach((tagId) => {
-      tagStore.incrementTagCount(tagId);
-    });
-  }
-
-  // 清空临时数据
-  tempTagIds.value = [];
-}
-
-// 处理删除标签
-// 修改标签删除逻辑
-function handleRemoveTag(item: Activity, tagId: number) {
-  if (item.tagIds) {
-    const newTagIds = item.tagIds.filter((id) => id !== tagId);
-    // 如果过滤后为空数组，赋为null，否则用新数组
-    item.tagIds = newTagIds.length > 0 ? newTagIds : undefined;
-
-    tagStore.decrementTagCount(tagId);
   }
 }
 
-// 更新 handleTitleInput 函数
-function handleTitleInput(item: Activity, value: string) {
-  const match = value.match(/#([\p{L}\p{N}_]*)$/u);
-
-  // 存储当前输入框的引用
-  inputRefs.value[item.id] = event?.target || null;
-
-  if (match) {
-    popoverTargetId.value = item.id;
-    tagSearchTerm.value = match[1];
-  } else {
-    popoverTargetId.value = null;
-  }
+function handleTagManagerClose() {
+  tagEditor.saveAndCloseTagManager();
+  showTagManager.value = false;
 }
 
-// 键盘事件处理函数
-function handleInputKeydown(event: KeyboardEvent, item: Activity) {
-  // 仅当当前输入框的popover开启时处理特殊按键
-  if (popoverTargetId.value === item.id && tagSelectorRef.value) {
+function handleRemoveTag(activityId: number, tagId: number) {
+  tagEditor.quickRemoveTag(activityId, tagId);
+}
+
+// ======================== 标题输入处理 ========================
+function handleTitleInput(activity: Activity, newTitle: string) {
+  tagEditor.handleTitleInput(activity.id, newTitle);
+  // 注意：这里暂时保留了 v-model，所以不需要手动更新
+  // 如果要改成单向数据流，需要通过 dataStore 更新
+}
+
+function handleTagSelected(activity: Activity, tagId: number) {
+  const cleanedTitle = tagEditor.selectTagFromPopover(activity.id, tagId, activity.title);
+
+  // 更新标题
+  activity.title = cleanedTitle;
+}
+
+function handleTagCreate(activity: Activity, tagName: string) {
+  const cleanedTitle = tagEditor.createTagFromPopover(activity.id, tagName, activity.title);
+
+  // 更新标题
+  activity.title = cleanedTitle;
+}
+
+function handleInputKeydown(event: KeyboardEvent, activity: Activity) {
+  if (tagEditor.shouldShowPopoverFor(activity.id) && tagSelectorRef.value) {
     switch (event.key) {
       case "ArrowDown":
-        console.log("ArrowDown");
         tagSelectorRef.value.navigateDown();
-        event.preventDefault(); // 阻止输入框光标移动
+        event.preventDefault();
         break;
       case "ArrowUp":
         tagSelectorRef.value.navigateUp();
         event.preventDefault();
         break;
       case "Enter":
-        console.log("Enter");
         tagSelectorRef.value.selectHighlighted();
-        event.preventDefault(); // 阻止输入框换行
+        event.preventDefault();
         break;
       case "Escape":
-        console.log("Escape");
-        popoverTargetId.value = null; // 直接关闭popover
+        tagEditor.closePopover();
         event.preventDefault();
         break;
     }
   }
 
-  // 特殊处理：#键自动打开popover
-  if (event.key === "#" && popoverTargetId.value === null) {
-    popoverTargetId.value = item.id;
+  // 特殊处理：# 键自动打开 popover
+  if (event.key === "#" && !tagEditor.popoverTargetId.value) {
+    tagEditor.popoverTargetId.value = activity.id;
   }
 }
 
-// 标签选择处理函数
-function handleTagSelected(item: Activity, tagId: number) {
-  // 在标题中移除标签搜索符号
-  item.title = item.title.replace(/#[\p{L}\p{N}_]*$/u, "").trim();
-
-  // 添加标签ID
-  if (!item.tagIds) item.tagIds = [];
-  if (!item.tagIds.includes(tagId)) {
-    item.tagIds.push(tagId);
-    tagStore.incrementTagCount(tagId);
-  }
-
-  // 关闭popover
-  popoverTargetId.value = null;
+// ======================== 其他输入处理 ========================
+function getInputValue(item: Activity): string {
+  if (item.pomoType === "🍒") return "4";
+  return typeof item.estPomoI === "string" ? item.estPomoI : "";
 }
 
-// 标签创建处理函数
-function handleTagCreate(item: Activity, tagName: string) {
-  // 创建新标签后自动更新标题
-  item.title = item.title.replace(/#[\p{L}\p{N}_]*$/u, "").trim();
-
-  // 创建新标签
-  const newTag = tagStore.addTag(tagName, "#333", "#eee");
-  if (newTag) {
-    if (!item.tagIds) item.tagIds = [];
-    item.tagIds.push(newTag.id);
-    tagStore.setTagCount(newTag.id, 1);
+function onInputUpdate(item: Activity, value: string) {
+  if (item.pomoType === "🍒") {
+    item.estPomoI = "4";
+    return;
   }
-
-  // 关闭popover
-  popoverTargetId.value = null;
+  item.estPomoI = value;
 }
 </script>
 

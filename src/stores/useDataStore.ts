@@ -16,10 +16,12 @@ import {
 import type { Schedule } from "@/core/types/Schedule";
 import type { Task } from "@/core/types/Task";
 import type { Activity } from "@/core/types/Activity";
+import type { Tag } from "@/core/types/Tag";
 import { addDays, debounce } from "@/core/utils";
 import type { Todo, TodoWithTags, TodoWithTaskRecords } from "@/core/types/Todo";
 import { unifiedDateService } from "@/services/unifiedDateService";
 import { usePomoStore } from "./usePomoStore";
+import { useTagStore } from "./useTagStore";
 
 export const useDataStore = defineStore(
   "data",
@@ -49,18 +51,25 @@ export const useDataStore = defineStore(
     // ======================== 3. 初始化/加载逻辑 (Actions) ========================
     const isDataLoaded = ref(false);
 
+    // 在数据加载后重新计算标签计数
     function loadAllData() {
       if (isDataLoaded.value) {
         console.log("[DataStore] Data already loaded. Skipping.");
         return;
       }
-      console.time("[DataStore] loadAllData");
+
       activityList.value = loadActivities();
       todoList.value = loadTodos();
       scheduleList.value = loadSchedules();
       taskList.value = loadTasks();
+
+      // 加载标签
+      tagStore.loadAllTags();
+
+      // 重新计算标签计数（以防数据不一致）
+      recalculateAllTagCounts();
+
       isDataLoaded.value = true;
-      console.timeEnd("[DataStore] loadAllData");
     }
 
     // ======================== 4. 数据索引 (Getters / Computed) ========================
@@ -273,6 +282,136 @@ export const useDataStore = defineStore(
       selectedDate.value = id;
     }
 
+    /**
+     * 显式设置某个 Task 的 starred 值（布尔）
+     * - 不写 undefined，保持“外部明确设为布尔”时的行为可控
+     */
+    function setTaskStar(taskId: number, next: boolean): void {
+      const idx = taskList.value.findIndex((t) => t.id === taskId);
+      if (idx === -1) return;
+      // 只在值变化时写入，避免无谓的触发
+      if (taskList.value[idx].starred !== next) {
+        taskList.value[idx] = { ...taskList.value[idx], starred: next };
+        saveTasks(taskList.value);
+      }
+    }
+
+    /**
+     * 切换某个 Task 的 starred 值，序列：undefined → true → false → true ...
+     * - 说明：第一次点击如果是 undefined，则转为 true；
+     *        再次点击 true → false；再次点击 false → true
+     */
+    function toggleTaskStar(taskId: number): void {
+      const idx = taskList.value.findIndex((t) => t.id === taskId);
+      if (idx === -1) return;
+
+      const current = taskList.value[idx].starred; // boolean | undefined
+      const next = current === true ? false : true; // undefined 或 false → true；true → false
+
+      taskList.value[idx] = { ...taskList.value[idx], starred: next };
+      saveTasks(taskList.value);
+    }
+
+    // ======================== Tag 关联操作 ========================
+    const tagStore = useTagStore();
+    /**
+     * 为 Activity 添加标签
+     */
+    function addTagToActivity(activityId: number, tagId: number): boolean {
+      const activity = activityById.value.get(activityId);
+      if (!activity) return false;
+      const oldTagIds = activity.tagIds ?? [];
+      if (oldTagIds.includes(tagId)) return false;
+      return setActivityTags(activityId, [...oldTagIds, tagId]);
+    }
+
+    function removeTagFromActivity(activityId: number, tagId: number): boolean {
+      const activity = activityById.value.get(activityId);
+      if (!activity?.tagIds) return false;
+      if (!activity.tagIds.includes(tagId)) return false;
+      return setActivityTags(
+        activityId,
+        activity.tagIds.filter((id) => id !== tagId)
+      );
+    }
+
+    function setActivityTags(activityId: number, newTagIds: number[]) {
+      const activity = activityById.value.get(activityId);
+      if (!activity) return false;
+
+      const oldTagIds = activity.tagIds || [];
+      const toRemove = oldTagIds.filter((id) => !newTagIds.includes(id));
+      const toAdd = newTagIds.filter((id) => !oldTagIds.includes(id));
+
+      // 更新计数（统一通过 TagStore 的 updateTagCount）
+      toRemove.forEach((id) => tagStore.updateTagCount(id, -1));
+      toAdd.forEach((id) => tagStore.updateTagCount(id, +1));
+
+      activity.tagIds = newTagIds.length > 0 ? newTagIds : undefined;
+      saveActivities(activityList.value);
+      return true;
+    }
+
+    /**
+     * 切换 Activity 的标签
+     */
+    function toggleActivityTag(activityId: number, tagId: number): boolean {
+      const activity = activityById.value.get(activityId);
+      if (!activity) return false;
+
+      const hasTag = activity.tagIds?.includes(tagId);
+
+      if (hasTag) {
+        removeTagFromActivity(activityId, tagId);
+        return false;
+      } else {
+        addTagToActivity(activityId, tagId);
+        return true;
+      }
+    }
+
+    /**
+     * 创建标签并添加到 Activity
+     */
+
+    function createAndAddTagToActivity(activityId: number, tagName: string, color?: string, backgroundColor?: string): Tag | null {
+      const safeColor = color ?? "#000000";
+      const safeBg = backgroundColor ?? "#ffffff";
+
+      const tag = tagStore.addTag(tagName, safeColor, safeBg);
+      if (!tag) return null;
+
+      const ok = addTagToActivity(activityId, tag.id);
+      if (!ok) {
+        // 可选回滚：避免产生“孤儿标签”
+        // tagStore.removeTag(tag.id);
+        return null;
+      }
+      return tag;
+    }
+
+    /**
+     * 获取 Activity 的所有标签
+     */
+    function getActivityTags(activityId: number): Tag[] {
+      const activity = activityById.value.get(activityId);
+      if (!activity?.tagIds) return [];
+      return tagStore.getTagsByIds(activity.tagIds);
+    }
+
+    /**
+     * 重新计算所有标签的引用计数
+     */
+    function recalculateAllTagCounts() {
+      const countMap = new Map<number, number>();
+      activityList.value.forEach((activity) => {
+        activity.tagIds?.forEach((tagId) => {
+          countMap.set(tagId, (countMap.get(tagId) || 0) + 1);
+        });
+      });
+      tagStore.recalculateTagCounts(countMap);
+    }
+
     // ======================== 7. 监控 (Watches) ========================
     watch(
       todosForAppDate,
@@ -396,6 +535,17 @@ export const useDataStore = defineStore(
       addActivity,
       setActiveId,
       setSelectedDate,
+      setTaskStar,
+      toggleTaskStar,
+
+      // Tag 相关操作
+      addTagToActivity,
+      removeTagFromActivity,
+      setActivityTags,
+      toggleActivityTag,
+      createAndAddTagToActivity,
+      getActivityTags,
+      recalculateAllTagCounts,
     };
   },
   {
