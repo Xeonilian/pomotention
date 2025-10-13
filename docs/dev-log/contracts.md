@@ -132,8 +132,8 @@
 
 ### Goals
 
-- **在右侧内容区域显示星标并可点击切换**，使用现有数据与接口，不修改字段语义或可选值。
-- **与左侧列表联动**：依赖既有订阅/刷新机制自然同步，不新增状态机或接口规则。
+- 在右侧内容区域显示星标并可点击切换，使用现有数据与接口，不修改字段语义或可选值。
+- 与左侧列表联动：依赖既有订阅/刷新机制自然同步，不新增状态机或接口规则。
 
 ### Given
 
@@ -160,3 +160,62 @@
   - 不引入新的“状态机定义”、不声明“不可回到 undefined”等新规则；保持现有后端/Store 语义不变
 - 左侧联动：
   - 左侧列表基于 pinia 刷新
+
+好的，收到！我立刻根据你的更正信息修改 `Contract #7`。
+
+将 `activity.tagIds: string[]` 更正为 `activity.tagIds: number[]`，并将全局筛选状态的字段名和位置更正为 `searchUi.filterTagIds`。
+
+这是更新后的版本：
+
+---
+
+## Contract #7（S2 C1 UV1）：数据页面“标签”显示、编辑与筛选
+
+### Goals
+
+- 在右侧内容区域显示标签列表，并可管理：使用 `TagRenderer` 显示 `activity.tagIds`，并通过 `TagManager` 实现增删。
+- 与左侧列表联动筛选：点击右侧标签可触发左侧列表筛选；多次点击可叠加或取消筛选，并清晰展示当前筛选条件。
+
+### Given
+
+- 实体与数据：
+  - 实体 `Activity`，包含字段 `activity.tagIds: number[]`（存储标签 ID 的数组）。
+  - 已有全局 `Tag` 数据源，可通过 `tagId: number` 获取标签的名称、颜色等信息。
+- UI 组件：
+  - `TagRenderer`: 用于在右侧内容区渲染只读的标签列表。
+  - `TagManager`: 一个可交互的标签管理器（可能在弹窗或侧边栏中），允许用户从已有标签中选择，或从 `activity.tagIds` 中移除（点击 `×`）。
+  - 左侧列表：展示 `Activity` 列表，并能响应全局的筛选状态。
+- 状态管理 (State)：
+  - 存在一个 `searchUi` 状态（如 Pinia Store），其中包含用于管理当前标签筛选条件的字段 `searchUi.filterTagIds: number[]`。
+  - 左侧列表已订阅此状态，当 `searchUi.filterTagIds` 变更时会自动刷新显示结果。
+- 既有能力：
+  - 已存在更新 `activity.tagIds` 的调用能力（接口或 action）。
+  - 已存在更新 `searchUi.filterTagIds` 的 action。
+
+### When
+
+1.  标签显示：右侧内容区域渲染所选 `Activity+Task`。
+2.  标签编辑：用户点击 Tag16Regular 按钮打开 `TagManager`，并点击某个标签上的 `×` 将其移除。
+3.  单标签筛选：用户直接点击右侧/左侧内容区（`TagRenderer` 中）的某个标签。
+4.  取消单标签筛选：右侧用户再次点击同一个已被激活为筛选条件的标签。
+5.  叠加筛选：用户在已有一个或多个标签筛选激活的状态下，点击另一个不同的标签。
+6.  清除所有筛选：左侧用户点击“一键清除筛选”控件。
+
+### Then
+
+- 1. 显示规则 (UI 展示)：
+
+  - `TagRenderer` 遍历 `activity.tagIds`，根据每个 `tagId: number` 从全局数据源获取信息，渲染出带颜色和名称的标签。
+  - 若 `activity.tagIds` 为空，则不显示任何标签。
+
+- 2. 编辑规则 (调用既有能力)：
+
+  - 点击 `×` 时，调用更新 `Activity` 的 action，将对应的 `tagId` 从 `activity.tagIds` 数组中移除。
+  - `TagManager` 本身不直接改变左侧列表的筛选状态。
+
+- 3. 筛选与联动规则 (更新全局 State)：
+  - 单标签筛选：调用 action，将该 `tagId` 添加到 `searchUi.filterTagIds` 数组中。左侧列表根据订阅自动刷新，仅显示同时包含所有 `filterTagIds` 中标签的 `Activity`。
+  - 取消筛选：调用 action，将该 `tagId` 从 `searchUi.filterTagIds` 数组中移除。左侧列表自动刷新。
+  - 叠加筛选：行为与“单标签筛选”一致，即将新的 `tagId` 追加到 `searchUi.filterTagIds` 数组中，实现“与”逻辑的叠加筛选。
+  - 清除筛选：调用 action，将 `searchUi.filterTagIds` 数组置空 (`[]`)。左侧列表恢复显示所有条目。
+  - 界面需要明确显示当前激活的筛选标签（例如在列表顶部或搜索栏下方）。
