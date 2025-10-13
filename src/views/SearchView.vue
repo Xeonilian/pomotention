@@ -419,9 +419,10 @@ const formatMMDD = (ts?: number) => (ts ? new Date(ts).toLocaleDateString(undefi
   display: block;
   width: 100%;
   box-sizing: border-box;
-  padding-right: 12px;
+  padding-right: 10px;
   white-space: nowrap;
   text-overflow: ellipsis;
+  overflow: hidden;
 }
 
 :deep(.n-tabs-tab__close) {
