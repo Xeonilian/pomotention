@@ -40,7 +40,7 @@
         @remove-tag="content.removeTag"
         @tag-click="handleTagClick"
         size="small"
-        title="点击标签可筛选 | 点击❌可删除标签"
+        title="点击标签筛选或清除筛选 | 点击❌删除标签"
       />
       <!-- 打开标签管理器的按钮 -->
       <n-button text @click="openTagManager">
@@ -142,8 +142,8 @@ const convertMarkdown = (md?: string) => (md ? marked(md) : "无");
   flex-direction: row;
   align-items: center;
   gap: 6px;
-  padding-bottom: 2px;
-  padding-top: 2px;
+  padding-top: 0px;
+  padding-bottom: 4px;
   background-color: var(--color-background);
   width: 100%;
 }
@@ -159,6 +159,7 @@ const convertMarkdown = (md?: string) => (md ? marked(md) : "无");
   overflow-x: hidden;
   padding-right: 8px;
   width: 100%;
+  margin-top: 4px;
 }
 
 .star-btn {

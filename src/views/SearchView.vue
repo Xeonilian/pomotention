@@ -52,14 +52,7 @@
         </n-button>
       </div>
       <div v-if="currentFilterTags.length > 0" class="filter-status-bar">
-        <TagRenderer
-          class="filter-tags"
-          :tag-ids="filterTagIds"
-          :isCloseable="true"
-          @remove-tag="toggleFilterTagId"
-          size="small"
-          title="点击标签可取消单个筛选"
-        />
+        <TagRenderer class="filter-tags" :tag-ids="filterTagIds" :isCloseable="false" @remove-tag="toggleFilterTagId" size="small" />
 
         <!-- 清除所有筛选的按钮 -->
         <n-button text circle @click="clearFilterTags" title="清除所有标签筛选">
@@ -326,15 +319,15 @@ const formatMMDD = (ts?: number) => (ts ? new Date(ts).toLocaleDateString(undefi
   display: flex;
   align-items: center;
   justify-content: space-between; /* 让标签和清除按钮两端对齐 */
-  padding: 4px 8px;
+  padding: 0px 4px;
   background-color: var(--n-color-embedded); /* 使用一个柔和的背景色 */
   border-radius: 4px;
   margin-top: 8px; /* 和搜索框拉开一点距离 */
 }
 
 .filter-tags {
-  flex-grow: 1; /* 让标签区域占据多余空间 */
-  margin-right: 8px; /* 和清除按钮之间留出空隙 */
+  flex-grow: 1;
+  margin-right: 8px;
 }
 
 .titles {
