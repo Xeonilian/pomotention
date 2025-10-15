@@ -97,6 +97,7 @@ const menuOptions = [
   { label: "首页", key: "/" },
   { label: "数据", key: "/search" },
   { label: "帮助", key: "/help" },
+  { label: "仪表盘", key: "/chart" },
 ];
 const current = ref(route.path);
 

@@ -19,7 +19,10 @@ import type { Activity } from "@/core/types/Activity";
 import type { Tag } from "@/core/types/Tag";
 import { addDays, debounce } from "@/core/utils";
 import type { Todo, TodoWithTags, TodoWithTaskRecords } from "@/core/types/Todo";
+
+import type { DataPoint, MetricName, AggregationType, TimeGranularity } from "@/core/types/Chart";
 import { unifiedDateService } from "@/services/unifiedDateService";
+import { collectPomodoroData, collectTaskRecordData, aggregateByTime } from "@/services/chartDataService";
 import { usePomoStore } from "./usePomoStore";
 import { useTagStore } from "./useTagStore";
 
@@ -411,8 +414,47 @@ export const useDataStore = defineStore(
       });
       tagStore.recalculateTagCounts(countMap);
     }
+    // ============ 7. 时间序列数据提取 ============
+    const allDataPoints = computed((): DataPoint[] => {
+      return [...collectPomodoroData(todoList.value), ...collectTaskRecordData(taskList.value)];
+    });
 
-    // ======================== 7. 监控 (Watches) ========================
+    const dataByMetric = computed((): Map<MetricName, DataPoint[]> => {
+      const grouped = new Map<MetricName, DataPoint[]>();
+
+      allDataPoints.value.forEach((point) => {
+        if (!grouped.has(point.metric)) {
+          grouped.set(point.metric, []);
+        }
+        grouped.get(point.metric)!.push(point);
+      });
+
+      return grouped;
+    });
+
+    /**
+     * 获取指定指标的聚合数据
+     * @param metric 指标名称
+     * @param timeGranularity 时间粒度（day/week/month）
+     * @param aggregationType 聚合方式（sum/avg/count）
+     */
+    function getAggregatedData(
+      metric: MetricName,
+      timeGranularity: TimeGranularity = "day",
+      aggregationType: AggregationType = "sum"
+    ): Map<string, number> {
+      const dataPoints = dataByMetric.value.get(metric) || [];
+      return aggregateByTime(dataPoints, timeGranularity, aggregationType);
+    }
+
+    /**
+     * 获取指定日期范围的数据
+     */
+    function getDataInRange(metric: MetricName, startTime: number, endTime: number): DataPoint[] {
+      const dataPoints = dataByMetric.value.get(metric) || [];
+      return dataPoints.filter((point) => point.timestamp >= startTime && point.timestamp <= endTime);
+    }
+    // ======================== 8. 监控 (Watches) ========================
     watch(
       todosForAppDate,
       (currentTodos) => {
@@ -546,6 +588,12 @@ export const useDataStore = defineStore(
       createAndAddTagToActivity,
       getActivityTags,
       recalculateAllTagCounts,
+
+      // Chart 相关
+      allDataPoints,
+      dataByMetric,
+      getAggregatedData,
+      getDataInRange,
     };
   },
   {
