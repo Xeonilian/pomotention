@@ -12,10 +12,10 @@ import { METRICS } from "@/core/types/Metrics";
  */
 export function collectPomodoroData(todos: Todo[]): DataPoint[] {
   return todos
-    .filter((t) => t.status === "done" && t.doneTime != null && t.realPomo && t.realPomo.length > 0)
+    .filter((t) => t.realPomo && t.realPomo.length > 0 && t.pomoType === "🍅")
     .map((t) => ({
       metric: METRICS.POMODORO,
-      timestamp: t.doneTime!,
+      timestamp: t.doneTime || t.id,
       value: t.realPomo!.reduce((sum, pomo) => sum + pomo, 0),
       sourceId: t.id,
     }))

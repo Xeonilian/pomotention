@@ -2,7 +2,8 @@
 import type { MetricName, MetricDefinition } from "@/core/types/Chart";
 
 /**
- * 指标常量（防止拼写错误）
+ * 指标常量
+ * 使用 as const 保证类型安全
  */
 export const METRICS = {
   POMODORO: "pomodoro",
@@ -10,13 +11,13 @@ export const METRICS = {
   REWARD: "reward",
   INTERRUPTION_EXTERNAL: "interruption_external",
   INTERRUPTION_INTERNAL: "interruption_internal",
-  // 未来Tag追踪
   WEIGHT: "weight",
   SLEEP: "sleep",
 } as const;
 
 /**
  * 指标定义表
+ * 全局注册所有可用指标的元信息
  */
 export const METRIC_DEFINITIONS: Record<MetricName, MetricDefinition> = {
   [METRICS.POMODORO]: {
@@ -64,7 +65,6 @@ export const METRIC_DEFINITIONS: Record<MetricName, MetricDefinition> = {
     description: "内部打扰次数（I类型）",
   },
 
-  // 未来Tag追踪
   [METRICS.WEIGHT]: {
     label: "体重",
     unit: "kg",
