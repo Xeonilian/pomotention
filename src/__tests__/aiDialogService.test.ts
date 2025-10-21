@@ -1,3 +1,4 @@
+// __tests__/aiDialogService.test.ts
 import { describe, it, expect } from "vitest";
 import { shouldStartTaskPlanning, getNextQuestion, buildTaskPrompt, guideQuestions } from "../services/aiDialogService";
 import { DialogState } from "@/core/types/Dialog";

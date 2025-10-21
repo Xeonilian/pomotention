@@ -1,4 +1,4 @@
-// tests/aiApiService.test.ts
+// __tests__/aiApiService.test.ts
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // 1) Mock tauri invoke（使用 vi）

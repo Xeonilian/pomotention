@@ -48,6 +48,13 @@ export default defineConfig(({ mode }) => {
           ]
         : []),
     ],
+    // Vitest 配置
+    test: {
+      globals: true,
+      environment: "jsdom",
+      reporters: ["verbose"],
+      setupFiles: "./src/__tests__/setup.ts",
+    },
 
     // 仅在分析时开启 sourcemap，平时更快更小
     build: {

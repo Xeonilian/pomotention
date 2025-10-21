@@ -6,6 +6,7 @@ const StatisticsView = () => import("@/views/StatisticView.vue");
 const SettingView = () => import("@/views/SettingView.vue");
 const HelpView = () => import("@/views/HelpView.vue");
 const SearchView = () => import("@/views/SearchView.vue");
+const ChartView = () => import("@/views/ChartView.vue");
 
 const routes = [
   {
@@ -17,6 +18,7 @@ const routes = [
       { path: "settings", component: SettingView }, // 设置页
       { path: "help", component: HelpView }, // 帮助页
       { path: "search", component: SearchView }, // 搜索页
+      { path: "chart", component: ChartView }, // 搜索页
     ],
   },
 ];
