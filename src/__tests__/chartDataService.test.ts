@@ -16,6 +16,7 @@ describe("chartDataService", () => {
           status: "done",
           doneTime: 1717920000000,
           realPomo: [1, 2, 3], // 总计6个番茄
+          pomoType: "🍅",
         },
         {
           id: 2,
@@ -25,6 +26,7 @@ describe("chartDataService", () => {
           status: "done",
           doneTime: 1717920000000,
           realPomo: [2, 2], // 总计4个番茄
+          pomoType: "🍅",
         },
       ];
 
@@ -45,15 +47,16 @@ describe("chartDataService", () => {
       });
     });
 
-    it("应该过滤掉未完成、没有realPomo或realPomo为0的Todo", () => {
+    it("应该过滤掉没有realPomo或realPomo为0的Todo", () => {
       const todos: Partial<Todo>[] = [
         {
           id: 1,
           activityId: 100,
           activityTitle: "测试",
           priority: 1,
-          status: "", // 未完成
+          status: "", // 未完成  ✅ 有效
           realPomo: [1, 2],
+          pomoType: "🍅",
         },
         {
           id: 2,
@@ -63,6 +66,7 @@ describe("chartDataService", () => {
           status: "done",
           doneTime: 1717920000000,
           realPomo: [], // 空数组
+          pomoType: "🍅",
         },
         {
           id: 3,
@@ -72,6 +76,7 @@ describe("chartDataService", () => {
           status: "done",
           doneTime: 1717920000000,
           realPomo: [0], // 0个番茄
+          pomoType: "🍅",
         },
         {
           id: 4,
@@ -81,14 +86,15 @@ describe("chartDataService", () => {
           status: "done",
           doneTime: 1717920000000,
           realPomo: [1], // ✅ 有效
+          pomoType: "🍅",
         },
       ];
 
       const result = collectPomodoroData(todos as Todo[]);
 
-      expect(result).toHaveLength(1); // 只有最后一个有效
-      expect(result[0].sourceId).toBe(4);
-      expect(result[0].value).toBe(1);
+      expect(result).toHaveLength(2); // 有2一个有效
+      expect(result[0].sourceId).toBe(1);
+      expect(result[1].sourceId).toBe(4);
     });
   });
 

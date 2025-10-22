@@ -35,8 +35,19 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch } from "vue";
-import * as echarts from "echarts";
-import type { ECharts } from "echarts";
+import * as echarts from "echarts/core";
+import { HeatmapChart } from "echarts/charts";
+import { TooltipComponent, VisualMapComponent, CalendarComponent } from "echarts/components";
+import { CanvasRenderer } from "echarts/renderers";
+import type { HeatmapSeriesOption } from "echarts/charts";
+import type { TooltipComponentOption, VisualMapComponentOption, CalendarComponentOption } from "echarts/components";
+
+// 注册必需的组件
+echarts.use([HeatmapChart, TooltipComponent, VisualMapComponent, CalendarComponent, CanvasRenderer]);
+
+// 组合类型定义
+type ECOption = echarts.ComposeOption<HeatmapSeriesOption | TooltipComponentOption | VisualMapComponentOption | CalendarComponentOption>;
+
 import { NButton, NIcon } from "naive-ui";
 import { ArrowUp24Filled, ArrowDown24Filled } from "@vicons/fluent";
 import { useDataStore } from "@/stores/useDataStore";
@@ -52,7 +63,7 @@ const props = defineProps<Props>();
 const dataStore = useDataStore();
 
 const chartRef = ref<HTMLElement>();
-const chartInstance = ref<ECharts>();
+const chartInstance = ref<echarts.ECharts>();
 const currentYear = ref(new Date().getFullYear());
 
 /**
@@ -120,7 +131,7 @@ function updateChart() {
 
   const heatmapData = generateHeatmapData(currentYear.value);
 
-  const option = {
+  const option: ECOption = {
     tooltip: {
       formatter: (params: any) => {
         const date = params.data[0];
@@ -152,8 +163,8 @@ function updateChart() {
       ],
     },
     calendar: {
-      top: 45,
-      left: 15,
+      top: 49,
+      left: 12,
       right: 0,
       bottom: 15,
       cellSize: 10,
