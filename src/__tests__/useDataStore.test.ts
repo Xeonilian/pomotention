@@ -36,6 +36,7 @@ describe("useDataStore - 图表数据功能", () => {
         status: "done",
         doneTime: 1749447475938,
         realPomo: [1, 4], // 5个番茄
+        pomoType: "🍅",
       },
       {
         id: 2,
@@ -45,6 +46,7 @@ describe("useDataStore - 图表数据功能", () => {
         status: "done",
         doneTime: 1749526421608,
         realPomo: [1], // 1个番茄
+        pomoType: "🍅",
       },
     ];
 
@@ -104,6 +106,7 @@ describe("useDataStore - 图表数据功能", () => {
         status: "done",
         doneTime: 1717920000000, // 2024-06-09
         realPomo: [3],
+        pomoType: "🍅",
       },
       {
         id: 2,
@@ -113,6 +116,7 @@ describe("useDataStore - 图表数据功能", () => {
         status: "done",
         doneTime: 1717923600000, // 2024-06-09（1小时后）
         realPomo: [5],
+        pomoType: "🍅",
       },
       {
         id: 3,
@@ -122,6 +126,7 @@ describe("useDataStore - 图表数据功能", () => {
         status: "done",
         doneTime: 1718006400000, // 2024-06-10
         realPomo: [2],
+        pomoType: "🍅",
       },
     ];
 
@@ -145,6 +150,7 @@ describe("useDataStore - 图表数据功能", () => {
         status: "done",
         doneTime: 1717920000000,
         realPomo: [3],
+        pomoType: "🍅",
       },
       {
         id: 2,
@@ -154,6 +160,7 @@ describe("useDataStore - 图表数据功能", () => {
         status: "done",
         doneTime: 1718006400000,
         realPomo: [2],
+        pomoType: "🍅",
       },
     ];
 

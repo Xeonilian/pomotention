@@ -1,6 +1,6 @@
 // ChartConfigService.vue
-import { createChartConfig } from "@/core/types/ChartConfig";
 import { METRICS } from "@/core/types/Metrics";
+import { createChartConfig, DateRangePresets } from "@/core/types/ChartConfig";
 import type { ChartConfig } from "@/core/types/ChartConfig";
 
 /**
@@ -9,12 +9,12 @@ import type { ChartConfig } from "@/core/types/ChartConfig";
  */
 export const PRESET_CONFIGS = {
   /**
-   * 番茄钟趋势（30天）
+   * 番茄累积
    */
   pomodoro_trend: createChartConfig([METRICS.POMODORO], {
     type: "line",
-    title: "番茄钟趋势",
-    dateRange: 30,
+    title: "番茄累积",
+    dateRange: DateRangePresets.thisMonth(),
   }),
 
   /**
@@ -28,7 +28,7 @@ export const PRESET_CONFIGS = {
     {
       type: "line",
       title: "精力值 & 愉悦值",
-      dateRange: 30,
+      dateRange: DateRangePresets.thisMonth(),
     }
   ),
 
@@ -38,7 +38,7 @@ export const PRESET_CONFIGS = {
   interruption_stats: createChartConfig([METRICS.INTERRUPTION_EXTERNAL, METRICS.INTERRUPTION_INTERNAL], {
     type: "bar",
     title: "内部与外部打扰",
-    dateRange: 30,
+    dateRange: DateRangePresets.thisMonth(),
     stacked: true,
   }),
 } as const;

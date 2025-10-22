@@ -152,8 +152,8 @@ function updateChart() {
       ],
     },
     calendar: {
-      top: 45,
-      left: 15,
+      top: 49,
+      left: 12,
       right: 0,
       bottom: 15,
       cellSize: 10,

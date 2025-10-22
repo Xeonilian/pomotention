@@ -33,7 +33,12 @@
 
       <!-- 图表区域 -->
       <div class="charts-container">
-        <ChartWidget v-for="(config, index) in chartConfigs" :key="index" :config="config" />
+        <ChartWidget
+          v-for="(config, index) in chartConfigs"
+          :key="index"
+          :config="config"
+          @update:config="handleConfigUpdate(index, $event)"
+        />
       </div>
     </div>
   </div>
@@ -45,6 +50,7 @@ import ChartWidget from "@/components/ChartWidget.vue";
 import { useChartStats } from "@/composables/useChartStats";
 import { getPresetConfig } from "@/services/chartConfigService";
 import HeatmapChart from "@/components/HeatmapChart.vue";
+import type { ChartConfig } from "@/core/types/ChartConfig";
 
 /**
  * 统计数据
@@ -63,8 +69,12 @@ const chartConfigs = ref([
 
 const heatmapConfig = ref({
   title: "",
-  metricName: "pomodoro", // 对应你的 MetricName
+  metricName: "pomodoro",
 });
+
+function handleConfigUpdate(index: number, newConfig: ChartConfig) {
+  chartConfigs.value[index] = newConfig;
+}
 </script>
 
 <style scoped>

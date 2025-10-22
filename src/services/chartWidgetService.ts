@@ -1,8 +1,9 @@
 // services/chartWidgetService.ts
-import type { MetricName, DateString } from "@/core/types/Chart";
-import type { ChartConfig } from "@/core/types/ChartConfig";
+import type { MetricName, DateString, TimeGranularity } from "@/core/types/Chart";
+import type { ChartConfig, DateRange } from "@/core/types/ChartConfig";
 import type { EChartsOption } from "echarts";
 import { METRIC_DEFINITIONS } from "@/core/types/Metrics";
+import { getDateRangeBounds } from "@/core/types/ChartConfig";
 
 /**
  * ECharts 数据系列
@@ -30,7 +31,7 @@ export interface ChartData {
  */
 export function convertToChartData(dataByMetric: Map<MetricName, Map<DateString, number>>, config: ChartConfig): ChartData {
   // 生成连续日期范围
-  const xAxis = generateContinuousDateRange(config.dateRange);
+  const xAxis = generateContinuousDateRange(config.dateRange, config.timeGranularity);
 
   // 为每个指标生成系列
   const series: ChartSeries[] = config.metrics.map((metricConfig) => {
@@ -53,30 +54,115 @@ export function convertToChartData(dataByMetric: Map<MetricName, Map<DateString,
 
 /**
  * 生成连续日期范围
- * @param dateRange 天数范围
- * @returns 连续日期数组 ['YYYY-MM-DD', ...]
+ * @param dateRange 日期范围配置
+ * @param timeGranularity 时间粒度
+ * @returns 连续日期数组（格式根据粒度而定）
  */
-function generateContinuousDateRange(dateRange: number): string[] {
+function generateContinuousDateRange(dateRange: DateRange, timeGranularity: TimeGranularity): string[] {
+  const { start, end } = getDateRangeBounds(dateRange);
   const dates: string[] = [];
-  const today = new Date();
+  const current = new Date(start);
+  const endDate = new Date(end);
 
-  for (let i = dateRange - 1; i >= 0; i--) {
-    const date = new Date(today);
-    date.setDate(today.getDate() - i);
-    dates.push(formatDateString(date));
+  while (current <= endDate) {
+    dates.push(formatDateByGranularity(current, timeGranularity));
+
+    // 根据粒度递增
+    switch (timeGranularity) {
+      case "hour":
+        current.setHours(current.getHours() + 1);
+        break;
+      case "day":
+        current.setDate(current.getDate() + 1);
+        break;
+      case "week":
+        current.setDate(current.getDate() + 7);
+        break;
+      case "month":
+        current.setMonth(current.getMonth() + 1);
+        break;
+      case "year":
+        current.setFullYear(current.getFullYear() + 1);
+        break;
+    }
   }
 
   return dates;
 }
 
 /**
- * 格式化日期为 YYYY-MM-DD
+ * 根据时间粒度格式化日期
  */
-function formatDateString(date: Date): string {
+function formatDateByGranularity(date: Date, granularity: TimeGranularity): DateString {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+
+  switch (granularity) {
+    case "hour":
+      const hour = String(date.getHours()).padStart(2, "0");
+      return `${year}-${month}-${day}T${hour}:00`;
+
+    case "day":
+      return `${year}-${month}-${day}`;
+
+    case "week":
+      const weekNumber = getWeekNumber(date);
+      return `${year}-W${String(weekNumber).padStart(2, "0")}`;
+
+    case "month":
+      return `${year}-${month}`;
+
+    case "year":
+      return `${year}`;
+
+    default:
+      return `${year}-${month}-${day}`;
+  }
+}
+
+/**
+ * 获取ISO周数
+ */
+function getWeekNumber(date: Date): number {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+}
+
+/**
+ * 格式化日期字符串用于显示（X轴标签）
+ */
+function formatDateLabelForDisplay(value: string, granularity: TimeGranularity): string {
+  switch (granularity) {
+    case "hour":
+      // "2024-06-09T14:00" -> "14:00"
+      const parts = value.split("T");
+      return parts.length === 2 ? parts[1] : value;
+
+    case "day":
+      // "2024-06-09" -> "06-09"
+      const dateParts = value.split("-");
+      return dateParts.length === 3 ? `${dateParts[1]}-${dateParts[2]}` : value;
+
+    case "week":
+      // "2024-W23" -> "W23"
+      return value.split("-")[1] || value;
+
+    case "month":
+      // "2024-06" -> "06月"
+      const monthParts = value.split("-");
+      return monthParts.length === 2 ? `${monthParts[1]}月` : value;
+
+    case "year":
+      // "2024" -> "2024"
+      return value;
+
+    default:
+      return value;
+  }
 }
 
 /**
@@ -116,12 +202,8 @@ export function generateEChartsOption(config: ChartConfig, dataByMetric: Map<Met
       axisLabel: {
         rotate: 45,
         fontSize: 11,
-        interval: "auto", // ← 新增
-        formatter: (value: string) => {
-          // ← 新增：格式化为 MM-DD
-          const parts = value.split("-");
-          return parts.length === 3 ? `${parts[1]}-${parts[2]}` : value;
-        },
+        interval: "auto",
+        formatter: (value: string) => formatDateLabelForDisplay(value, config.timeGranularity),
       },
     },
     yAxis: {
@@ -145,15 +227,13 @@ export function generateEChartsOption(config: ChartConfig, dataByMetric: Map<Met
 /**
  * 过滤日期范围内的数据
  */
-export function filterByDateRange(data: Map<DateString, number>, dateRange: number): Map<DateString, number> {
-  const now = Date.now();
-  const startTime = now - dateRange * 24 * 60 * 60 * 1000;
-
+export function filterByDateRange(data: Map<DateString, number>, dateRange: DateRange): Map<DateString, number> {
+  const { start, end } = getDateRangeBounds(dateRange);
   const filtered = new Map<DateString, number>();
 
   data.forEach((value, date) => {
     const timestamp = new Date(date).getTime();
-    if (timestamp >= startTime) {
+    if (timestamp >= start && timestamp <= end) {
       filtered.set(date, value);
     }
   });
@@ -172,7 +252,7 @@ export interface HeatmapData {
 /**
  * 生成热力图数据
  */
-export function generateHeatmapData(data: Map<DateString, number>, dateRange: number = 365): HeatmapData[] {
+export function generateHeatmapData(data: Map<DateString, number>, dateRange: DateRange): HeatmapData[] {
   const filtered = filterByDateRange(data, dateRange);
 
   return Array.from(filtered.entries()).map(([date, value]) => ({
