@@ -12,7 +12,9 @@
     "new:branch": "node scripts/new_branch.cjs",
     "sshot": "powershell.exe -ExecutionPolicy Bypass -File scripts/screenshot.ps1",
     "test": "vitest",
-    "test:ui": "vitest --ui"
+    "test:ui": "vitest --ui",
+    "build:fast": "vite build",
+    "build:analyze": "cross-env ANALYZE=true vite build"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.5.0",
@@ -40,6 +42,7 @@
     "@vicons/fluent": "^0.13.0",
     "@vitejs/plugin-vue": "^5.2.1",
     "@vitest/ui": "^3.2.4",
+    "cross-env": "^10.1.0",
     "gh-pages": "^6.3.0",
     "jsdom": "^27.0.0",
     "rollup-plugin-visualizer": "^6.0.3",
