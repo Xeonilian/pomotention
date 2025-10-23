@@ -379,7 +379,7 @@ export const useDataStore = defineStore(
 
     function createAndAddTagToActivity(activityId: number, tagName: string, color?: string, backgroundColor?: string): Tag | null {
       const safeColor = color ?? "#000000";
-      const safeBg = backgroundColor ?? "#ffffff";
+      const safeBg = backgroundColor ?? "#eee";
 
       const tag = tagStore.addTag(tagName, safeColor, safeBg);
       if (!tag) return null;

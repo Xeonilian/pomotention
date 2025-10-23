@@ -158,6 +158,16 @@ async function main() {
   console.log(c("dim", "\n━".repeat(50)));
   console.log(c("green", `✅ 成功！当前分支: ${fullBranchName}`));
   console.log(c("dim", `   基于: main (latest)\n`));
+
+  // 询问是否发布
+  const shouldPublish = await prompt(c("cyan", "📤 是否立即发布到远程？(Y/n): "));
+  if (shouldPublish.toLowerCase() !== "n") {
+    publishBranch(fullBranchName);
+    console.log(c("green", "🎉 完成！分支已创建并发布"));
+  } else {
+    console.log(c("dim", "\n💡 提示：稍后可使用以下命令发布："));
+    console.log(c("dim", `   git push -u origin ${fullBranchName}\n`));
+  }
 }
 
 main().catch((error) => {

@@ -627,11 +627,9 @@ function startEditing(todoId: number, field: "title" | "start" | "done") {
     field === "title"
       ? todo.activityTitle || ""
       : field === "start"
-      ? todo.taskId
-        ? timestampToTimeString(todo.taskId)
-        : ""
-      : todo.doneTime
-      ? timestampToTimeString(todo.doneTime)
+      ? timestampToTimeString(todo.startTime || todo.taskId || null)
+      : field === "done"
+      ? timestampToTimeString(todo.doneTime || null)
       : "";
 
   // 使用 querySelector 来获取当前编辑的输入框，而不是依赖 ref

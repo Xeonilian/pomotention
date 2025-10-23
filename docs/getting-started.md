@@ -20,7 +20,6 @@ description: 下载最新版本的应用程序
     - 月度数据变化
     - 全年数值
 
-
 :::
 
 - [更新日志](dev-log/CHANGELOG.md)
@@ -42,12 +41,10 @@ description: 下载最新版本的应用程序
 
 - Windows
 
-  - [.msi 安装包](https://github.com/Xeonilian/pomotention/releases/download/v0.4.2/pomotention_0.4.2_x64_en-US.msi)
-  - [.exe](https://github.com/Xeonilian/pomotention/releases/download/v0.4.2/pomotention_0.4.2_x64-setup.exe)
+  - [v0.4.4 .msi 安装包](https://github.com/Xeonilian/pomotention/releases/download/v0.4.4/pomotention_0.4.4_x64_en-US.msi)
 
 - macOS
-  - [.dmg 安装包](https://github.com/Xeonilian/pomotention/releases/download/v0.4.2/pomotention_0.4.2_x64.dmg)
-  - [app.tar.gz](https://github.com/Xeonilian/pomotention/releases/download/v0.4.2/pomotention.app.tar.gz)
+  - [v0.4.4 .dmg 安装包](https://github.com/Xeonilian/pomotention/releases/download/v0.4.4/pomotention_0.4.4_x64.dmg)
 
 ## 安装指南
 
