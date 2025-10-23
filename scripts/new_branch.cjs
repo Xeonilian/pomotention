@@ -80,10 +80,16 @@ function prompt(question) {
   });
 }
 
+// 发布分支到远程
+function publishBranch(branchName) {
+  console.log(c("cyan", `\n🚀 正在发布 ${branchName} 到远程...`));
+  run(`git push -u origin ${branchName}`);
+}
+
 // 主流程
 async function main() {
   console.log(c("cyan", "\n🌿 创建新分支"));
-  console.log(c("dim", "━".repeat(50)));
+  console.log(c("dim", "━".repeat(3)));
 
   checkGitRepo();
 
@@ -135,7 +141,7 @@ async function main() {
   const fullBranchName = `${branchType}/${branchTopic}`;
 
   // 确认
-  console.log(c("dim", "\n━".repeat(50)));
+  console.log(c("dim", "\n━".repeat(3)));
   console.log(c("green", `✨ 将创建分支: ${fullBranchName}`));
 
   if (args.length === 0) {
@@ -155,7 +161,7 @@ async function main() {
   run(`git checkout -b ${fullBranchName}`);
 
   // 完成
-  console.log(c("dim", "\n━".repeat(50)));
+  console.log(c("dim", "\n━".repeat(3)));
   console.log(c("green", `✅ 成功！当前分支: ${fullBranchName}`));
   console.log(c("dim", `   基于: main (latest)\n`));
 
