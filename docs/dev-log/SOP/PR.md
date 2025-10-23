@@ -116,7 +116,7 @@ git commit -m "feat(api): create supabaseClient instance"
     ```
 
 3.  **编辑 PR 描述 (使用模板):**
-    - **标题**: `[S?C?UV?] type(scope): title`
+    - **标题**: `[S?C?UV?]: title`
     - **正文**: 填写模板要求的变更内容、风险和缓解措施。
 
 ---
