@@ -267,16 +267,15 @@
             class="tagRenderer-container"
           />
         </div>
-
-        <!-- 弹出tag管理 -->
-        <n-modal v-model:show="showTagManager" @after-leave="handleTagManagerClose">
-          <n-card style="width: 420px">
-            <TagManager v-model="tagIdsProxy" />
-          </n-card>
-        </n-modal>
       </div>
     </div>
   </div>
+  <!-- 弹出tag管理 -->
+  <n-modal v-model:show="showTagManager" @after-leave="handleTagManagerClose">
+    <n-card style="width: 420px">
+      <TagManager v-model="tagIdsProxy" />
+    </n-card>
+  </n-modal>
 </template>
 
 <script setup lang="ts">
