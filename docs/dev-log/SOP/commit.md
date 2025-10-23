@@ -84,6 +84,7 @@ Refs
 - `feat(webdav): 单向上传完成`
 - `ui(layout): 调整 today 视图的左右分栏宽度`
 - `refactor(date-service): 抽离日期转换工具并统一入口`
+- `build(deps): 安装依赖`
 
 ---
 
