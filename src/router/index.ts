@@ -12,8 +12,9 @@ const HelpView = () => import("@/views/HelpView.vue");
 const SearchView = () => import("@/views/SearchView.vue");
 const ChartView = () => import("@/views/ChartView.vue");
 
-// --- 新增的登录视图 ---
 const LoginView = () => import("@/views/LoginView.vue");
+const AuthCallbackView = () => import("@/views/AuthCallbackView.vue");
+const ResetPassword = () => import("@/views/ResetPasswordView.vue");
 
 // --- 路由定义 ---
 const routes: Array<RouteRecordRaw> = [
@@ -26,7 +27,13 @@ const routes: Array<RouteRecordRaw> = [
   // 邮箱验证回调
   {
     path: "/auth/callback",
-    redirect: "/login",
+    name: "AuthCallback",
+    component: AuthCallbackView,
+  },
+  {
+    path: "/reset-password",
+    name: "ResetPassword",
+    component: ResetPassword,
   },
   // 主应用布局路由
   {
