@@ -27,7 +27,7 @@ const newId = lastId + 1;
 
 // 3. 定义契约模板
 const template = `
-## Contract #${newId}: 主题
+## Contract #${newId}: [S C UV1] 主题
 
 **Given:**
 - <前置条件>

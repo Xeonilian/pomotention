@@ -76,7 +76,7 @@ Refs
 - 业务域：`schedule` `timetable` `today` `activity` `task` `tags`
 - UI 域：`layout` `ui-theme` `scrollbar` `modal` `header` `color`
 - 技术域：`webdav` `sync` `storage` `date-service` `store` `router`
-- 工程域：`build` `packaging` `gh-pages` `updater` `deps`
+- 工程域：`build` `packaging` `gh-pages` `updater` `deps` `script`
 - 文档域：`help` `guide` `changelog`
 
 示例：

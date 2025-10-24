@@ -4,25 +4,20 @@
       <div class="help-icon">📚</div>
 
       <p class="help-description">
-        帮助文档构建中，尚未内嵌<br />
+        帮助文档构建中，尚未内嵌
+        <br />
         请点击下方按钮查看帮助文档信息
       </p>
 
       <div class="help-actions">
         <button @click="openDocs" class="btn-primary">🔗 打开帮助文档</button>
-        <button @click="openRelease" class="btn-release">
-          🚀 下载最新版本
-        </button>
-        <button @click="openGitHub" class="btn-secondary">
-          📂 查看项目源码
-        </button>
+        <button @click="openRelease" class="btn-release">🚀 下载最新版本</button>
+        <button @click="openGitHub" class="btn-secondary">📂 查看项目源码</button>
       </div>
 
       <div class="version-info">
         <n-tag type="info" round>本地版本：v{{ localVersion }}</n-tag>
-        <n-tag v-if="remoteOk" type="default" round>
-          🌐最新版本：{{ remoteVersion }}
-        </n-tag>
+        <n-tag v-if="remoteOk" type="default" round>🌐最新版本：{{ remoteVersion }}</n-tag>
         <n-tag v-else type="warning" round>
           🚫获取失败
           <span v-if="remoteError">({{ remoteError }})</span>
@@ -31,16 +26,24 @@
           v-model:value="settingStore.settings.checkForUpdate"
           small
           class="switch-button"
-          :title="
-            settingStore.settings.checkForUpdate ? '关闭更新' : '启动更新'
-          "
+          :title="settingStore.settings.checkForUpdate ? '关闭更新' : '启动更新'"
         />
-        <n-button @click="trySyncPomotention" size="small" type="info" secondary
-          ><template #icon>
+        <n-button @click="trySyncPomotention" size="small" type="info" secondary>
+          <template #icon>
             <n-icon>
               <ArrowSync24Regular />
-            </n-icon> </template
-        ></n-button>
+            </n-icon>
+          </template>
+        </n-button>
+        <div class="logout-section">
+          <n-button size="small" type="error" secondary @click="handleLogout" :loading="loggingOut" title="退出登录">
+            <template #icon>
+              <n-icon>
+                <PersonAccounts24Filled />
+              </n-icon>
+            </template>
+          </n-button>
+        </div>
       </div>
       <WebdavInputDialog v-model:show="showWebdavDialog" />
       <n-modal
@@ -58,25 +61,39 @@
         <h3>📋 功能一览</h3>
         <ul>
           <li>
-            🍅 <strong>番茄计时器</strong> -
-            完整计时控制，自动记录，自定义专注/休息循环
+            🍅
+            <strong>番茄计时器</strong>
+            - 完整计时控制，自动记录，自定义专注/休息循环
           </li>
           <li>
-            📅 <strong>时间表管理</strong> -
-            创建工作/娱乐模板，智能计算可用番茄时间
+            📅
+            <strong>时间表管理</strong>
+            - 创建工作/娱乐模板，智能计算可用番茄时间
           </li>
           <li>
-            🎯 <strong>活动管理</strong> -
-            支持任务、待办、闲暇等多类型活动创建与筛选
+            🎯
+            <strong>活动管理</strong>
+            - 支持任务、待办、闲暇等多类型活动创建与筛选
           </li>
-          <li>📝 <strong>今日管理</strong> - 自动提取当日计划，支持任务流转</li>
           <li>
-            📊 <strong>状态追踪</strong> -
-            预估与执行番茄记录，打扰事件记录，精力值和愉悦值记录
+            📝
+            <strong>今日管理</strong>
+            - 自动提取当日计划，支持任务流转
           </li>
-          <li>💭 <strong>任务记录</strong> - 任务关联的深度思考和总结</li>
           <li>
-            📈 <strong>数据分析</strong> - 时间分布、番茄统计、历史数据分析
+            📊
+            <strong>状态追踪</strong>
+            - 预估与执行番茄记录，打扰事件记录，精力值和愉悦值记录
+          </li>
+          <li>
+            💭
+            <strong>任务记录</strong>
+            - 任务关联的深度思考和总结
+          </li>
+          <li>
+            📈
+            <strong>数据分析</strong>
+            - 时间分布、番茄统计、历史数据分析
           </li>
         </ul>
       </div>
@@ -91,10 +108,21 @@ import { isTauri } from "@tauri-apps/api/core";
 import { NTag, NSwitch, NButton } from "naive-ui";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { watch } from "vue";
-import { ArrowSync24Regular } from "@vicons/fluent";
+import { ArrowSync24Regular, PersonAccounts24Filled } from "@vicons/fluent";
 import WebdavInputDialog from "@/components/WebdavInputDialog.vue";
-
 import SyncPanel from "@/components/SyncPanel.vue";
+import { useRouter } from "vue-router";
+import { signOut } from "@/core/services/authServicve";
+
+const router = useRouter();
+const loggingOut = ref(false);
+
+async function handleLogout() {
+  loggingOut.value = true;
+  await signOut();
+  loggingOut.value = false;
+  router.push({ name: "Login" });
+}
 
 const localVersion = ref("");
 const checkVersion = isTauri();
@@ -156,15 +184,12 @@ const openRelease = () => {
 // 检查云端 release 及连通性
 async function checkRemoteRelease() {
   try {
-    const resp = await fetch(
-      "https://api.github.com/repos/Xeonilian/pomotention/releases/latest",
-      {
-        headers: {
-          Accept: "application/vnd.github.v3+json",
-          "User-Agent": "Pomotention-App",
-        },
-      }
-    );
+    const resp = await fetch("https://api.github.com/repos/Xeonilian/pomotention/releases/latest", {
+      headers: {
+        Accept: "application/vnd.github.v3+json",
+        "User-Agent": "Pomotention-App",
+      },
+    });
     if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
     const data = await resp.json();
     remoteVersion.value = data.tag_name ?? data.name ?? "(未知)";
