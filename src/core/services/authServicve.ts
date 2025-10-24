@@ -24,7 +24,12 @@ export async function getCurrentUser() {
 // 用户注册
 // 接收邮箱和密码，成功后返回用户对象
 export async function signUp(credentials: SignUpWithPasswordCredentials) {
-  const { data, error } = await supabase.auth.signUp(credentials);
+  const { data, error } = await supabase.auth.signUp({
+    ...credentials,
+    options: {
+      emailRedirectTo: "http://localhost:1420/auth/callback",
+    },
+  });
   if (error) {
     console.error("Error signing up:", error.message);
     // 在实际应用中，你可能想把 error 抛出或返回给 UI 处理

@@ -28,12 +28,29 @@
 import { ref } from "vue";
 import { useRouter } from "vue-router";
 import { signIn, signUp } from "@/core/services/authServicve";
+import { supabase } from "@/core/services/supabase";
 
 const email = ref("");
 const password = ref("");
 const loading = ref(false);
 const errorMessage = ref("");
 const router = useRouter();
+
+// 处理邮箱验证回调
+onMounted(async () => {
+  const hashParams = new URLSearchParams(window.location.hash.substring(1));
+  const accessToken = hashParams.get("access_token");
+
+  if (accessToken) {
+    console.log("检测到邮箱验证，正在处理...");
+    const { data } = await supabase.auth.getSession();
+
+    if (data.session) {
+      console.log("验证成功！");
+      router.push({ name: "Home" });
+    }
+  }
+});
 
 // 处理登录
 async function handleSignIn() {

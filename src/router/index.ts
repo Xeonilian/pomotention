@@ -23,7 +23,12 @@ const routes: Array<RouteRecordRaw> = [
     name: "Login",
     component: LoginView,
   },
-  // 你的主应用布局路由
+  // 邮箱验证回调
+  {
+    path: "/auth/callback",
+    redirect: "/login",
+  },
+  // 主应用布局路由
   {
     path: "/",
     component: MainLayout,
