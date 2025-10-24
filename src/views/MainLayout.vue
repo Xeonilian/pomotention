@@ -96,8 +96,8 @@ const containerHeight = ref(0);
 const menuOptions = [
   { label: "首页", key: "/" },
   { label: "数据", key: "/search" },
-  { label: "帮助", key: "/help" },
   { label: "仪表盘", key: "/chart" },
+  { label: "帮助", key: "/help" },
 ];
 const current = ref(route.path);
 
