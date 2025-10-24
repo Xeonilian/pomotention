@@ -27,7 +27,7 @@ export async function signUp(credentials: SignUpWithPasswordCredentials) {
   const { data, error } = await supabase.auth.signUp({
     ...credentials,
     options: {
-      emailRedirectTo: "http://localhost:1420/auth/callback",
+      emailRedirectTo: `${window.location.origin}/#/auth/callback`,
     },
   });
   if (error) {

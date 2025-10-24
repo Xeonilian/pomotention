@@ -112,7 +112,7 @@ async function handleResetPassword() {
 
   try {
     // ✅ 确保是这个 URL
-    const redirectUrl = `${window.location.origin}/auth/callback`;
+    const redirectUrl = `${window.location.origin}/#/auth/callback`;
     console.log("发送重置邮件，redirect URL:", redirectUrl);
 
     const { error } = await supabase.auth.resetPasswordForEmail(email.value, {
