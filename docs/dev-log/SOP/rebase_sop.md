@@ -9,6 +9,7 @@
 
 - 本地已配置远程 `origin`
 - 当前工作已保存；若有未提交变更，先暂存：`git stash -u`
+- 取回 stash：`git stash pop`
 
 ## 步骤一：同步主分支
 

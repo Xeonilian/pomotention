@@ -27,7 +27,7 @@ export async function signUp(credentials: SignUpWithPasswordCredentials) {
   const { data, error } = await supabase.auth.signUp({
     ...credentials,
     options: {
-      emailRedirectTo: `${window.location.origin}/#/auth/callback`,
+      emailRedirectTo: import.meta.env.VITE_AUTH_REDIRECT_URL ? `${import.meta.env.VITE_AUTH_REDIRECT_URL}/auth/callback` : undefined,
     },
   });
   if (error) {
