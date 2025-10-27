@@ -10,6 +10,8 @@
     "tauri": "tauri",
     "new:ctt": "node scripts/new_contract.cjs",
     "new:branch": "node scripts/new_branch.cjs",
+    "new:pr": "node scripts/create_pr.cjs",
+    "rescue": "node scripts/rescue_changes.cjs",
     "sshot": "powershell.exe -ExecutionPolicy Bypass -File scripts/screenshot.ps1",
     "test": "vitest",
     "test:ui": "vitest --ui",
