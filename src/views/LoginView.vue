@@ -111,8 +111,8 @@ async function handleResetPassword() {
   successMessage.value = "";
 
   try {
-    // ✅ 确保是这个 URL
-    const redirectUrl = `${window.location.origin}/#/auth/callback`;
+    // ✅ 使用环境变量配置的 redirect URL，如果未设置则使用 undefined（由 Supabase Dashboard 的 Site URL 决定）
+    const redirectUrl = import.meta.env.VITE_AUTH_REDIRECT_URL ? `${import.meta.env.VITE_AUTH_REDIRECT_URL}/auth/callback` : undefined;
     console.log("发送重置邮件，redirect URL:", redirectUrl);
 
     const { error } = await supabase.auth.resetPasswordForEmail(email.value, {
