@@ -14,3 +14,12 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 // 创建并导出 Supabase 客户端实例
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
+
+supabase.auth.onAuthStateChange((event) => {
+  // 这段代码会“激活”Supabase客户端的自动刷新功能
+  // 当令牌快过期时，它会在后台为你自动续期
+  console.log("Supabase auth event:", event);
+  if (event === "TOKEN_REFRESHED") {
+    console.log("身份凭证已自动刷新!");
+  }
+});
