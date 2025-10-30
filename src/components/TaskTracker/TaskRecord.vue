@@ -510,11 +510,11 @@ const handleClick = (event: MouseEvent) => {
   border-radius: 3px;
   border: 1px solid var(--color-background-dark);
   background-color: var(--color-background-light);
-  position: relative;
+  position: relative; /* 为了下一步定位√位置 */
   display: inline-block;
   vertical-align: middle;
-  appearance: none;
-  -webkit-appearance: none;
+  appearance: none; /* 禁用浏览器默认样式 为了自定义样式*/
+  -webkit-appearance: none; /* Safari */
 }
 
 :deep(.markdown-checkbox:checked) {
@@ -522,6 +522,7 @@ const handleClick = (event: MouseEvent) => {
   border-color: var(--color-blue);
 }
 
+/* 自定义选中状态下的勾号 */
 :deep(.markdown-checkbox:checked::after) {
   content: "";
   position: absolute;
@@ -534,12 +535,14 @@ const handleClick = (event: MouseEvent) => {
   transform: rotate(45deg);
 }
 
+/* 自定义未选中状态下的勾号 */
 :deep(.markdown-checkbox:not(:checked)::after) {
   content: none;
 }
 
+/* 禁止点击 */
 :deep(.task-content .markdown-checkbox) {
-  pointer-events: none; /* 禁止点击 */
+  pointer-events: none;
   opacity: 0.7; /* 视觉上显示为禁用状态 */
   cursor: not-allowed;
 }
