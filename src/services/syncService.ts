@@ -1,16 +1,11 @@
 // src/services/syncService.ts
 
-import type {
-  SyncResult,
-  SyncMetadata,
-  SyncData,
-  LocalSyncStatus,
-} from "@/core/types/Sync";
+import type { SyncResult, SyncMetadata, SyncData, LocalSyncStatus } from "@/core/types/Sync";
 import { SYNC_VERSION, SyncStatus } from "@/core/types/Sync";
 
-import { getCurrentDeviceId, updateSyncStatus } from "./localStorageService";
-import { WebDAVStorageAdapter } from "./storageAdapter";
-import { collectLocalData } from "./localStorageService";
+import { getCurrentDeviceId, updateSyncStatus } from "@/services/localStorageService";
+import { WebDAVStorageAdapter } from "@/services/storageAdapter";
+import { collectLocalData } from "@/services/localStorageService";
 import { replaceLocalData } from "@/services/downloadService";
 
 /** 获取云端同步元信息 */
@@ -82,10 +77,7 @@ export async function uploadToCloud(): Promise<SyncResult> {
       status: SyncStatus.ERROR,
       message: "上传过程异常",
       timestamp: Date.now(),
-      error:
-        error instanceof Error
-          ? error
-          : new Error(error?.message || "未知错误"),
+      error: error instanceof Error ? error : new Error(error?.message || "未知错误"),
     };
   }
 }
@@ -130,10 +122,7 @@ export async function downloadFromCloud(): Promise<SyncResult> {
       message: "下载过程异常",
       timestamp: Date.now(),
       reloadWindow: false,
-      error:
-        error instanceof Error
-          ? error
-          : new Error(error?.message || "未知错误"),
+      error: error instanceof Error ? error : new Error(error?.message || "未知错误"),
     };
   }
 }
