@@ -171,34 +171,94 @@ const convertMarkdown = (md?: string) => (md ? marked(md) : "无");
   overflow-y: auto;
 }
 
-:deep(.task-content h1) {
-  margin: 0 !important;
+:deep(.task-content) {
+  line-height: 1.6;
+}
+
+:deep(.task-content h1),
+:deep(.task-content h2),
+:deep(.task-content h3) {
+  margin-top: 0em;
+  margin-bottom: 0.1em;
+}
+
+:deep(.task-content p) {
+  margin: 2px;
 }
 
 :deep(.task-content pre) {
-  background-color: var(--color-background-light-light);
-  padding: 8px;
   margin: 2px;
   border-radius: 8px;
+  padding: 8px;
   font-family: "Consolas", "Monaco", "Courier New", monospace;
 }
 
 :deep(.task-content code) {
-  background-color: var(--color-red-light);
+  background-color: var(--color-blue-light);
+  font-family: "Consolas", "Monaco", "Courier New", monospace;
   border-radius: 4px;
   margin: 2px;
   padding: 2px;
-  font-family: "Consolas", "Monaco", "Courier New", monospace;
   line-height: inherit;
 }
 
 :deep(.task-content pre code) {
-  background-color: inherit;
+  background-color: var(--color-background-light-transparent);
   font-family: "Consolas", "Monaco", "Courier New", monospace;
+  padding: 8px;
 }
 
 :deep(.task-content blockquote) {
-  background-color: var(--color-background-light-light);
-  margin: 2px auto;
+  background-color: var(--color-background-light-transparent);
+  border-radius: 4px;
+  margin: 2px;
+  padding: 2px;
+}
+
+:deep(.task-content ul),
+:deep(.task-content ol) {
+  padding-left: 2em;
+  margin: 0.5em 0;
+}
+
+:deep(.markdown-checkbox) {
+  margin-right: 4px;
+  width: 16px;
+  height: 16px;
+  vertical-align: middle;
+  pointer-events: none;
+  cursor: not-allowed;
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1px solid var(--color-background-dark);
+  background-color: var(--color-background-light);
+  border-radius: 3px;
+  position: relative;
+  display: inline-block;
+}
+
+:deep(.markdown-checkbox:checked) {
+  background-color: var(--color-blue);
+  border-color: var(--color-blue);
+}
+
+:deep(.markdown-checkbox:checked::after) {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: -1px;
+  width: 5px;
+  height: 10px;
+  border: solid var(--color-background);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+:deep(.highlight-text) {
+  background-color: var(--color-yellow-light);
+  border-radius: 4px;
+  margin: 2px;
+  padding: 2px;
+  line-height: inherit;
 }
 </style>
