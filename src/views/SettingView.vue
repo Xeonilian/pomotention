@@ -1,15 +1,9 @@
 <template>
-  <n-space vertical size="large" style="max-width: 800px; width: 90%; margin: 20px auto; padding: 20px; max-height: calc(100vh - 100px); overflow-y: auto">
-    <n-card title="Supabase 同步测试">
-      <n-space vertical>
-        <n-button @click="testUpload" type="primary" :loading="uploading">测试上传到 Supabase</n-button>
-        <n-button @click="testDownload" type="info" :loading="downloading">测试从 Supabase 下载</n-button>
-        <div v-if="syncResult" :style="{ color: syncResult.success ? 'green' : 'red' }">
-          {{ syncResult.message }}
-        </div>
-      </n-space>
-    </n-card>
-
+  <n-space
+    vertical
+    size="large"
+    style="max-width: 800px; width: 90%; margin: 20px auto; padding: 20px; max-height: calc(100vh - 100px); overflow-y: auto"
+  >
     <n-card title="设置番茄时长">
       <n-form>
         <n-form-item label="工作时长（分钟）">
@@ -73,10 +67,7 @@
 
 <script setup lang="ts">
 import { NSpace, NCard, NForm, NFormItem, NInput, NInputNumber, NButton, NColorPicker, NSelect } from "naive-ui";
-
-import { ref } from "vue";
 import { useSettingStore } from "../stores/useSettingStore";
-import { uploadToSupabase, downloadFromSupabase } from "@/services/supabaseSyncService";
 
 const settingStore = useSettingStore();
 
@@ -87,54 +78,12 @@ const breakOptions = [
   { label: "30", value: 30 },
 ];
 
-const uploading = ref(false);
-const downloading = ref(false);
-const syncResult = ref<{ success: boolean; message: string } | null>(null);
-
 function resetDurations() {
   settingStore.resetDurations();
 }
 
 function resetStyle() {
   settingStore.resetStyle();
-}
-
-async function testUpload() {
-  uploading.value = true;
-  syncResult.value = null;
-  try {
-    const result = await uploadToSupabase();
-    syncResult.value = {
-      success: result.success,
-      message: result.success ? "✅ 上传成功！去 Supabase 查看数据" : `❌ 上传失败：${result.error}`,
-    };
-  } catch (error: any) {
-    syncResult.value = {
-      success: false,
-      message: `❌ 上传异常：${error.message}`,
-    };
-  } finally {
-    uploading.value = false;
-  }
-}
-
-async function testDownload() {
-  downloading.value = true;
-  syncResult.value = null;
-  try {
-    const result = await downloadFromSupabase();
-    syncResult.value = {
-      success: result.success,
-      message: result.success ? "✅ 下载成功！刷新页面查看数据" : `❌ 下载失败：${result.error}`,
-    };
-  } catch (error: any) {
-    syncResult.value = {
-      success: false,
-      message: `❌ 下载异常：${error.message}`,
-    };
-  } finally {
-    downloading.value = false;
-  }
 }
 </script>
 
