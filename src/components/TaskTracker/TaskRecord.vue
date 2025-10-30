@@ -453,17 +453,20 @@ const handleClick = (event: MouseEvent) => {
 }
 
 :deep(.markdown-content pre) {
-  background-color: var(--color-background-light);
-  padding: 0px;
+  background-color: var(--color-background-light-light);
+  padding: 8px;
+  margin: 2px;
   border-radius: 8px;
   font-family: "Consolas", "Monaco", "Courier New", monospace;
 }
 
 :deep(.markdown-content code) {
   background-color: var(--color-red-light);
-  border-radius: 2px;
-  padding: 0 2px 0 2px;
+  border-radius: 4px;
+  margin: 2px;
+  padding: 2px;
   font-family: "Consolas", "Monaco", "Courier New", monospace;
+  line-height: inherit;
 }
 
 :deep(.markdown-content pre code) {
@@ -472,7 +475,7 @@ const handleClick = (event: MouseEvent) => {
 }
 
 :deep(.markdown-content blockquote) {
-  background-color: var(--color-text-primary-transparent);
+  background-color: var(--color-background-light-light);
   margin: 2px auto;
 }
 

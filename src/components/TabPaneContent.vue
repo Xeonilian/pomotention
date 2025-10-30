@@ -174,4 +174,31 @@ const convertMarkdown = (md?: string) => (md ? marked(md) : "无");
 :deep(.task-content h1) {
   margin: 0 !important;
 }
+
+:deep(.task-content pre) {
+  background-color: var(--color-background-light-light);
+  padding: 8px;
+  margin: 2px;
+  border-radius: 8px;
+  font-family: "Consolas", "Monaco", "Courier New", monospace;
+}
+
+:deep(.task-content code) {
+  background-color: var(--color-red-light);
+  border-radius: 4px;
+  margin: 2px;
+  padding: 2px;
+  font-family: "Consolas", "Monaco", "Courier New", monospace;
+  line-height: inherit;
+}
+
+:deep(.task-content pre code) {
+  background-color: inherit;
+  font-family: "Consolas", "Monaco", "Courier New", monospace;
+}
+
+:deep(.task-content blockquote) {
+  background-color: var(--color-background-light-light);
+  margin: 2px auto;
+}
 </style>
