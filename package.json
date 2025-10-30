@@ -28,6 +28,7 @@
     "@vicons/ionicons5": "^0.13.0",
     "dayjs": "^1.11.18",
     "echarts": "^6.0.0",
+    "highlight.js": "^11.11.1",
     "marked": "^15.0.12",
     "naive-ui": "^2.41.0",
     "pinia": "^3.0.2",
