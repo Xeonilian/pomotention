@@ -43,4 +43,5 @@ docs/scratchpad/
 # supabase
 supabase/.branches
 supabase/.env
+supabase/.temp
 
