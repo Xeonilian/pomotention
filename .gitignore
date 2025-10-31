@@ -37,3 +37,10 @@ package-lock.json
 .env
 
 config
+
+docs/scratchpad/
+
+# supabase
+supabase/.branches
+supabase/.env
+
