@@ -77,7 +77,7 @@ export function useSearchFilter() {
       const sch = isSch ? scheduleByActivityId.value.get(act.id) : undefined;
 
       const getPrimaryTime = () => {
-        if (isTodo && td) return td.startTime ?? td.dueDate ?? td.id;
+        if (isTodo && td) return td.startTime ?? td.id;
         if (isSch && sch) return sch.activityDueRange?.[0] ?? sch.id;
         return act.id;
       };
