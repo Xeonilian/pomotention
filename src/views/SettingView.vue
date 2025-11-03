@@ -1,5 +1,9 @@
 <template>
-  <n-space vertical size="large" style="width: 300px; margin: auto">
+  <n-space
+    vertical
+    size="large"
+    style="max-width: 800px; width: 90%; margin: 20px auto; padding: 20px; max-height: calc(100vh - 100px); overflow-y: auto"
+  >
     <n-card title="设置番茄时长">
       <n-form>
         <n-form-item label="工作时长（分钟）">
@@ -12,16 +16,10 @@
           />
         </n-form-item>
         <n-form-item label="休息时长（分钟）">
-          <n-select
-            v-model:value="settingStore.settings.durations.breakDuration"
-            :options="breakOptions"
-            style="width: 250px"
-          />
+          <n-select v-model:value="settingStore.settings.durations.breakDuration" :options="breakOptions" style="width: 250px" />
         </n-form-item>
       </n-form>
-      <n-button @click="resetDurations" type="error" style="margin-top: 12px">
-        恢复默认时长
-      </n-button>
+      <n-button @click="resetDurations" type="error" style="margin-top: 12px">恢复默认时长</n-button>
     </n-card>
 
     <n-card title="设置样式">
@@ -30,38 +28,32 @@
           <n-input v-model:value="settingStore.settings.style.barLength" />
         </n-form-item>
         <n-form-item label="红色条颜色">
-          <n-color-picker
-            v-model:value="settingStore.settings.style.redBarColor"
-            show-alpha
-          />
+          <n-color-picker v-model:value="settingStore.settings.style.redBarColor" show-alpha />
         </n-form-item>
         <n-form-item label="蓝色条颜色">
-          <n-color-picker
-            v-model:value="settingStore.settings.style.blueBarColor"
-            show-alpha
-          />
+          <n-color-picker v-model:value="settingStore.settings.style.blueBarColor" show-alpha />
         </n-form-item>
       </n-form>
-      <n-button @click="resetStyle" type="error" style="margin-top: 12px">
-        恢复默认样式
-      </n-button>
+      <n-button @click="resetStyle" type="error" style="margin-top: 12px">恢复默认样式</n-button>
     </n-card>
 
-    <n-card
-      title="调试信息"
-      style="max-height: 300px; overflow: auto; white-space: pre-wrap"
-    >
+    <n-card title="调试信息" style="max-height: 300px; overflow: auto; white-space: pre-wrap">
       <div>
         <strong>当前工作时长:</strong>
-        {{ settingStore.settings.durations.workDuration }} 分钟<br />
+        {{ settingStore.settings.durations.workDuration }} 分钟
+        <br />
         <strong>当前休息时长:</strong>
-        {{ settingStore.settings.durations.breakDuration }} 分钟<br />
+        {{ settingStore.settings.durations.breakDuration }} 分钟
+        <br />
         <strong>当前进度条长度:</strong>
-        {{ settingStore.settings.style.barLength }}<br />
-        <strong>红色条颜色:</strong> {{ settingStore.settings.style.redBarColor
-        }}<br />
+        {{ settingStore.settings.style.barLength }}
+        <br />
+        <strong>红色条颜色:</strong>
+        {{ settingStore.settings.style.redBarColor }}
+        <br />
         <strong>蓝色条颜色:</strong>
-        {{ settingStore.settings.style.blueBarColor }}<br />
+        {{ settingStore.settings.style.blueBarColor }}
+        <br />
       </div>
 
       <hr />
@@ -74,18 +66,7 @@
 </template>
 
 <script setup lang="ts">
-import {
-  NSpace,
-  NCard,
-  NForm,
-  NFormItem,
-  NInput,
-  NInputNumber,
-  NButton,
-  NColorPicker,
-  NSelect,
-} from "naive-ui";
-
+import { NSpace, NCard, NForm, NFormItem, NInput, NInputNumber, NButton, NColorPicker, NSelect } from "naive-ui";
 import { useSettingStore } from "../stores/useSettingStore";
 
 const settingStore = useSettingStore();
@@ -105,3 +86,11 @@ function resetStyle() {
   settingStore.resetStyle();
 }
 </script>
+
+<style scoped>
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+</style>

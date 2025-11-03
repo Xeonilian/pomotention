@@ -1,10 +1,4 @@
-import {
-  writeData,
-  readData,
-  testLogin,
-  readFolder,
-  createFolder,
-} from "./webdavService";
+import { writeData, readData, testLogin, readFolder, createFolder } from "./webdavService";
 import type { SyncData, SyncMetadata } from "@/core/types/Sync";
 
 /**
@@ -58,12 +52,7 @@ export class WebDAVStorageAdapter implements StorageAdapter {
     const { metadata, data: payload } = data;
     // console.log("Saving data:", data);
 
-    if (
-      !metadata ||
-      !metadata.timestamp ||
-      !metadata.deviceId ||
-      !metadata.version
-    ) {
+    if (!metadata || !metadata.timestamp || !metadata.deviceId || !metadata.version) {
       console.error("Invalid metadata.");
       return false;
     }
@@ -73,10 +62,7 @@ export class WebDAVStorageAdapter implements StorageAdapter {
     const metadataFileName = "metadata.json";
 
     // 写入文件
-    const saveMetadataSuccess = await writeData(
-      metadataFileName,
-      metadataContent
-    );
+    const saveMetadataSuccess = await writeData(metadataFileName, metadataContent);
     if (!saveMetadataSuccess) {
       console.error("Failed to save sync data.");
       return false;
@@ -85,7 +71,7 @@ export class WebDAVStorageAdapter implements StorageAdapter {
       if (payload.hasOwnProperty(key)) {
         const content = JSON.stringify(payload[key]); // 将 value 转换为 JSON 字符串
         const fileName = `${key}.json`; // 文件名使用 key
-        console.log(fileName);
+        // console.log(fileName);
 
         const saveSuccess = await writeData(fileName, content);
         if (!saveSuccess) {

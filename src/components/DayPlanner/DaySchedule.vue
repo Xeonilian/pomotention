@@ -474,9 +474,9 @@ tr.done-row {
   color: var(--color-text-secondary);
 }
 
-tr.done-cell {
+/* tr.done-cell {
   text-decoration: line-through var(--color-text-secondary) 0.5px;
-}
+} */
 
 tr.cancel-row {
   color: var(--color-text-secondary);

@@ -252,19 +252,34 @@ function generateDeviceId(): string {
 
 // =================== 获取其他信息  ===================
 /** 从本地存储加载全局设置 */
-function loadGlobalSettings(): any {
+export function loadGlobalSettings(): any {
   // 这里需要导入 GlobalSettings 类型和对应的 STORAGE_KEY
   return loadData(STORAGE_KEYS.GLOBAL_SETTINGS, {});
 }
 
+/** 保存全局设置到本地存储 */
+export function saveGlobalSettings(settings: any): void {
+  saveData(STORAGE_KEYS.GLOBAL_SETTINGS, settings);
+}
+
 /** 从本地存储加载每日番茄钟数据 */
-function loadDailyPomos(): Record<string, { count: number; diff: number }> {
+export function loadDailyPomos(): Record<string, { count: number; diff: number }> {
   return loadData(STORAGE_KEYS.DAILY_POMOS, {});
 }
 
+/** 保存每日番茄钟数据到本地存储 */
+export function saveDailyPomos(pomos: Record<string, { count: number; diff: number }>): void {
+  saveData(STORAGE_KEYS.DAILY_POMOS, pomos);
+}
+
 /** 从本地存储加载全局番茄钟总数 */
-function loadGlobalPomoCount(): number {
+export function loadGlobalPomoCount(): number {
   return loadData(STORAGE_KEYS.GLOBAL_POMO_COUNT, 0);
+}
+
+/** 保存全局番茄钟总数到本地存储 */
+export function saveGlobalPomoCount(count: number): void {
+  saveData(STORAGE_KEYS.GLOBAL_POMO_COUNT, count);
 }
 
 // =================== 获取本地信息  ===================

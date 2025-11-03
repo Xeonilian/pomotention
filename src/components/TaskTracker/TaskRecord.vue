@@ -32,19 +32,29 @@ import { ref, computed, watch, nextTick } from "vue";
 import { marked } from "marked";
 import { getClickContextFragments, findFragmentSequenceInSource } from "@/services/taskRecordService";
 import { useCaretFlash } from "@/composables/useCaretFlash";
+import hljs from "highlight.js";
+import "highlight.js/styles/github.css";
 
 const { showCaretFlash, caretFlashStyle, flashCaretFlash } = useCaretFlash();
 
 // 添加自定义渲染器
 const renderer = new marked.Renderer();
+
+// 自定义 checkbox
 renderer.checkbox = function ({ checked }: { checked: boolean }) {
   return `<input type="checkbox" class="markdown-checkbox" ${checked ? "checked" : ""}>`;
 };
 
-// 添加高亮语法支持
-const highlightRule = {
-  name: "highlight",
-  level: "inline",
+// 自定义代码块渲染
+renderer.code = function ({ text, lang }: { text: string; lang?: string; escaped?: boolean }): string {
+  const language = lang && hljs.getLanguage(lang) ? lang : "plaintext";
+  const highlighted = hljs.highlight(text, { language }).value;
+  return `<pre><code class="hljs language-${language}">${highlighted}</code></pre>`;
+};
+// 添加文本高亮语法支持（==文本==）
+const textHighlightRule = {
+  name: "textHighlight",
+  level: "inline" as const,
   start(src: string) {
     return src.indexOf("==");
   },
@@ -53,7 +63,7 @@ const highlightRule = {
     const match = rule.exec(src);
     if (match) {
       return {
-        type: "highlight",
+        type: "textHighlight",
         raw: match[0],
         text: match[1].trim(),
       };
@@ -65,9 +75,9 @@ const highlightRule = {
   },
 };
 
-// 一次性配置所有选项
+// 一次性配置
 marked.use({
-  extensions: [highlightRule],
+  extensions: [textHighlightRule],
   renderer: renderer,
   breaks: true,
   gfm: true,
@@ -418,6 +428,10 @@ const handleClick = (event: MouseEvent) => {
   font-weight: normal; /* 确保字体不会变粗 */
 }
 
+.markdown-content.disabled {
+  cursor: not-allowed;
+  background-color: var(--color-background-light-transparent);
+}
 .task-textarea {
   width: 100%;
   height: 100%;
@@ -437,6 +451,7 @@ const handleClick = (event: MouseEvent) => {
 .task-textarea:focus {
   border: 1px solid var(--color-primary);
 }
+
 :deep(.markdown-content) {
   line-height: 1.6;
 }
@@ -453,27 +468,32 @@ const handleClick = (event: MouseEvent) => {
 }
 
 :deep(.markdown-content pre) {
-  background-color: var(--color-background-light);
-  padding: 0px;
+  margin: 2px;
   border-radius: 8px;
+  padding: 8px;
   font-family: "Consolas", "Monaco", "Courier New", monospace;
 }
 
 :deep(.markdown-content code) {
-  background-color: var(--color-red-light);
-  border-radius: 2px;
-  padding: 0 2px 0 2px;
+  background-color: var(--color-blue-light);
   font-family: "Consolas", "Monaco", "Courier New", monospace;
+  border-radius: 4px;
+  margin: 2px;
+  padding: 2px;
+  line-height: inherit;
 }
 
 :deep(.markdown-content pre code) {
-  background-color: inherit;
+  background-color: var(--color-background-light-transparent);
   font-family: "Consolas", "Monaco", "Courier New", monospace;
+  padding: 8px;
 }
 
 :deep(.markdown-content blockquote) {
-  background-color: var(--color-text-primary-transparent);
-  margin: 2px auto;
+  background-color: var(--color-background-light-transparent);
+  border-radius: 4px;
+  margin: 2px;
+  padding: 2px;
 }
 
 :deep(.markdown-content ul),
@@ -483,21 +503,18 @@ const handleClick = (event: MouseEvent) => {
 }
 
 :deep(.markdown-checkbox) {
-  margin-right: 8px;
-  vertical-align: middle;
   cursor: pointer;
+  margin-right: 4px;
   width: 16px;
   height: 16px;
   border-radius: 3px;
   border: 1px solid var(--color-background-dark);
   background-color: var(--color-background-light);
-  position: relative;
+  position: relative; /* 为了下一步定位√位置 */
   display: inline-block;
   vertical-align: middle;
-  cursor: pointer;
-  transition: all 0.3s;
-  appearance: none;
-  -webkit-appearance: none;
+  appearance: none; /* 禁用浏览器默认样式 为了自定义样式*/
+  -webkit-appearance: none; /* Safari */
 }
 
 :deep(.markdown-checkbox:checked) {
@@ -505,11 +522,12 @@ const handleClick = (event: MouseEvent) => {
   border-color: var(--color-blue);
 }
 
+/* 自定义选中状态下的勾号 */
 :deep(.markdown-checkbox:checked::after) {
   content: "";
   position: absolute;
   left: 4px;
-  top: 1px;
+  top: -1px;
   width: 5px;
   height: 10px;
   border: solid var(--color-background);
@@ -517,29 +535,29 @@ const handleClick = (event: MouseEvent) => {
   transform: rotate(45deg);
 }
 
+/* 自定义未选中状态下的勾号 */
 :deep(.markdown-checkbox:not(:checked)::after) {
   content: none;
 }
 
-:deep(.markdown-checkbox) {
-  cursor: pointer;
-  opacity: 1;
+/* 禁止点击 */
+:deep(.task-content .markdown-checkbox) {
+  pointer-events: none;
+  opacity: 0.7; /* 视觉上显示为禁用状态 */
+  cursor: not-allowed;
+}
+
+:deep(.highlight-text) {
+  background-color: var(--color-yellow-light);
+  border-radius: 4px;
+  margin: 2px;
+  padding: 2px;
+  line-height: inherit;
 }
 
 .placeholder {
   color: var(--color-text-secondary);
   font-style: italic;
-}
-
-.markdown-content.disabled {
-  cursor: not-allowed;
-  background-color: var(--color-background-light-transparent);
-}
-
-:deep(.highlight-text) {
-  background-color: var(--color-yellow-light);
-  padding: 0 2px;
-  border-radius: 2px;
 }
 
 .caret-flash {

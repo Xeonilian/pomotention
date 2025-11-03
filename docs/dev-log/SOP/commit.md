@@ -76,7 +76,7 @@ Refs
 - 业务域：`schedule` `timetable` `today` `activity` `task` `tags`
 - UI 域：`layout` `ui-theme` `scrollbar` `modal` `header` `color`
 - 技术域：`webdav` `sync` `storage` `date-service` `store` `router`
-- 工程域：`build` `packaging` `gh-pages` `updater` `deps` `script`
+- 工程域：`build` `packaging` `gh-pages` `updater` `deps` `script` `lint` `clean`
 - 文档域：`help` `guide` `changelog`
 
 示例：
@@ -85,6 +85,11 @@ Refs
 - `ui(layout): 调整 today 视图的左右分栏宽度`
 - `refactor(date-service): 抽离日期转换工具并统一入口`
 - `build(deps): 安装依赖`
+- `chore(lint): linting 修复`
+- `chore(clean): 清理无用注释`
+- `docs(help): 新增任务标签使用教程`
+- `docs(guide): 补充 CI 流程说明`
+- `chore(guide): 将开发文档迁移到 /docs 目录`
 
 ---
 

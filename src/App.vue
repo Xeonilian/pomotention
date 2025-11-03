@@ -28,7 +28,7 @@ onMounted(async () => {
 
   // 监听认证状态变化
   supabase.auth.onAuthStateChange((event, session) => {
-    console.log("Auth state changed:", event, session);
+    //console.log("Auth state changed:", event, session);
 
     // 当用户确认邮箱或登录成功后
     if (event === "SIGNED_IN" && session) {

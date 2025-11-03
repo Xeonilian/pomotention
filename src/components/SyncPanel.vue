@@ -95,11 +95,11 @@ onMounted(async () => {
   const localFirstTime = await isFirstTimeSync();
   const metadata = await getRemoteSyncMetadata();
 
-  console.log("调试信息:", {
-    localFirstTime,
-    metadata,
-    hasRemoteData: !!(metadata && metadata.timestamp),
-  });
+  // console.log("调试信息:", {
+  //   localFirstTime,
+  //   metadata,
+  //   hasRemoteData: !!(metadata && metadata.timestamp),
+  // });
   isFirstTime.value = localFirstTime;
   // 检查是否首次同步
   isFirstTime.value = await isFirstTimeSync();
