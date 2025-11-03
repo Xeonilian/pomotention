@@ -34,6 +34,7 @@
                   size="tiny"
                   :displayLength="Number(3)"
                   :showIdx="Number(2)"
+                  class="tag-renderer"
                 />
                 <span v-if="item.activityDueRange?.[0]" class="schedule-time">
                   {{ timestampToTimeString(item.activityDueRange?.[0]) }}
@@ -431,6 +432,12 @@ function getPomoColor(ratio: number) {
   box-shadow: 1px 1px 0px var(--color-background-dark);
   margin-left: 2px;
   line-height: 1.4;
+  pointer-events: none;
+}
+
+/* 防止tag阻止点击事件 */
+.tag-renderer {
+  pointer-events: none;
 }
 
 .card-statistic {
