@@ -48,7 +48,7 @@ export function getWebDAVConfig(): WebDAVConfig {
  */
 function getWebDAVClient(): WebDAVClient {
   const config = getWebDAVConfig();
-  console.log(config);
+  // console.log(config);
   return createClient(config.webdavWebsite, {
     username: config.webdavId,
     password: config.webdavKey,
@@ -65,10 +65,7 @@ export async function testLogin() {
     // console.log("WebDAV 登录成功");
     return true;
   } catch (err) {
-    console.error(
-      "WebDAV 登录失败:",
-      err instanceof Error ? err.message : "未知错误"
-    );
+    console.error("WebDAV 登录失败:", err instanceof Error ? err.message : "未知错误");
     return false;
   }
 }
@@ -95,10 +92,7 @@ export async function createFolder() {
       console.log("应用文件夹已存在(通过错误判断):", config.webdavPath);
       return true;
     }
-    console.error(
-      "应用文件夹创建失败:",
-      err instanceof Error ? err.message : "未知错误"
-    );
+    console.error("应用文件夹创建失败:", err instanceof Error ? err.message : "未知错误");
     return false;
   }
 }
@@ -106,11 +100,7 @@ export async function createFolder() {
 /**
  * 写文件到应用文件夹
  */
-export async function writeData(
-  fileName: string,
-  data: string,
-  customFolderPath?: string
-) {
+export async function writeData(fileName: string, data: string, customFolderPath?: string) {
   const config = getWebDAVConfig();
   const client = getWebDAVClient();
   const appFolderPath = customFolderPath || config.webdavPath;
@@ -121,10 +111,7 @@ export async function writeData(
     // console.log("保存数据成功:", filePath);
     return true;
   } catch (err) {
-    console.error(
-      "保存数据失败:",
-      err instanceof Error ? err.message : "未知错误"
-    );
+    console.error("保存数据失败:", err instanceof Error ? err.message : "未知错误");
     return false;
   }
 }
@@ -149,10 +136,7 @@ export async function readData(fileName: string): Promise<string | null> {
 
     return String(content);
   } catch (err) {
-    console.error(
-      "读取文件失败:",
-      err instanceof Error ? err.message : "未知错误"
-    );
+    console.error("读取文件失败:", err instanceof Error ? err.message : "未知错误");
     return null;
   }
 }
@@ -189,18 +173,13 @@ export async function readFolder(
     const files = contents
       .filter((item: any) => item.type === "file") // 只要文件，不要文件夹
       .map((item: any) => item.basename || item.name) // 获取文件名（兼容不同的属性名）
-      .filter(
-        (fileName: string) => fileName && !excludeFiles.includes(fileName)
-      ) // 排除指定文件和空值
+      .filter((fileName: string) => fileName && !excludeFiles.includes(fileName)) // 排除指定文件和空值
       .sort(); // 按字母顺序排序
 
     console.log(`找到 ${files.length} 个文件:`, files);
     return files;
   } catch (err) {
-    console.error(
-      "读取文件夹失败:",
-      err instanceof Error ? err.message : "未知错误"
-    );
+    console.error("读取文件夹失败:", err instanceof Error ? err.message : "未知错误");
     return [];
   }
 }
@@ -218,10 +197,7 @@ export async function deleteData(fileName: string, customFolderPath?: string) {
     console.log("删除文件成功:", filePath);
     return true;
   } catch (err) {
-    console.error(
-      "删除文件失败:",
-      err instanceof Error ? err.message : "未知错误"
-    );
+    console.error("删除文件失败:", err instanceof Error ? err.message : "未知错误");
     return false;
   }
 }
