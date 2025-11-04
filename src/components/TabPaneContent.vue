@@ -21,16 +21,14 @@
 
       <!-- 根据 Tab 类型显示不同的元信息 -->
       <template v-if="props.tab.type === 'todo'">
-        <span class="meta-time">截止时间: {{ formatDate(dataStore.todoById.get(props.tab.id)?.dueDate) }}</span>
+        <span class="meta-time">开始时间：{{ formatDate(dataStore.todoById.get(props.tab.id)?.startTime) }}</span>
+        <span class="meta-time">死线日期：{{ formatDateOnly(dataStore.todoById.get(props.tab.id)?.dueDate) }}</span>
       </template>
       <template v-else-if="props.tab.type === 'sch'">
         <span class="meta-time">
-          开始时间: {{ formatDate(dataStore.scheduleById.get(props.tab.id)?.activityDueRange?.[0] ?? undefined) }}
+          预约时间：{{ formatDate(dataStore.scheduleById.get(props.tab.id)?.activityDueRange?.[0] ?? undefined) }}
         </span>
-        <span style="margin-left: 12px">位置: {{ dataStore.scheduleById.get(props.tab.id)?.location || "无" }}</span>
-      </template>
-      <template v-else>
-        <span class="meta-time">加入时间: {{ formatDate(dataStore.activityById.get(props.tab.id)?.id) }}</span>
+        <span style="margin-left: 12px">位置：{{ dataStore.scheduleById.get(props.tab.id)?.location || "无" }}</span>
       </template>
 
       <!-- 标签渲染器，现在使用来自 Composable 的数据和方法 -->
@@ -127,7 +125,30 @@ function handleTagClick(tagId: number) {
 }
 
 // 6. 辅助/格式化函数 (从 Search.vue 迁移过来)
-const formatDate = (ts?: number) => (ts ? new Date(ts).toLocaleString() : "无");
+const formatDate = (ts?: number) => {
+  if (!ts) return "无";
+
+  const date = new Date(ts);
+  const day = String(date.getDate()).padStart(2, "0"); // 获取日期，并格式化为两位数
+  const month = String(date.getMonth() + 1).padStart(2, "0"); // 获取月份 (月从0开始)
+  const year = String(date.getFullYear()).slice(-2); // 获取年份的后两位
+  const hours = String(date.getHours()).padStart(2, "0"); // 获取小时，并格式化为两位数
+  const minutes = String(date.getMinutes()).padStart(2, "0"); // 获取分钟，并格式化为两位数
+
+  return `${year}/${month}/${day} ${hours}:${minutes}`; // 返回格式化后的日期字符串
+};
+
+const formatDateOnly = (ts?: number) => {
+  if (!ts) return "无";
+
+  const date = new Date(ts);
+  const day = String(date.getDate()).padStart(2, "0"); // 获取日期，并格式化为两位数
+  const month = String(date.getMonth() + 1).padStart(2, "0"); // 获取月份 (月从0开始)
+  const year = String(date.getFullYear()).slice(-2); // 获取年份的后两位
+
+  return `${year}/${month}/${day}`;
+};
+
 const convertMarkdown = (md?: string) => (md ? marked(md) : "无");
 </script>
 
