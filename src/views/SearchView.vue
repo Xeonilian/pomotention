@@ -132,13 +132,12 @@ import TagSelector from "@/components/TagSystem/TagSelector.vue";
 import TagRenderer from "@/components/TagSystem/TagRenderer.vue";
 
 // 引入 stores 和类型
-
 import { useActivityTagEditor } from "@/composables/useActivityTagEditor";
 import { useSearchUiStore } from "@/stores/useSearchUiStore";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useTagStore } from "@/stores/useTagStore";
-// 引入业务类型和组合式函数
 
+// 引入业务类型和组合式函数
 import { useResize } from "@/composables/useResize";
 import { useSearchFilter } from "@/composables/useSearchFilter";
 
