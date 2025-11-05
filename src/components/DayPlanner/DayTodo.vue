@@ -102,7 +102,7 @@
             </td>
 
             <!-- 4 排序 -->
-            <td class="col-rank" @click.stop="startEditingPriority(todo)">
+            <td class="col-rank" @click.stop="startEditingPriority(todo)" title="点击编辑优先级">
               <n-input-number
                 class="rank-input"
                 v-if="editingTodo && editingTodo.id === todo.id"
@@ -117,7 +117,7 @@
               />
 
               <span v-else class="priority-badge" :class="'priority-' + todo.priority">
-                {{ todo.priority > 0 ? todo.priority : "+" }}
+                {{ todo.priority > 0 ? todo.priority : "" }}
               </span>
             </td>
 
@@ -914,19 +914,17 @@ td.status-col {
   width: 16px;
   height: 16px;
   position: relative;
-  top: -1px;
+
   border-radius: 50%;
   font-size: 12px;
   font-weight: bold;
-  color: var(--color-background);
-  line-height: 16px;
-  background-color: var(--color-background-dark);
 }
 
 /* 可按 priority 分不同色 */
 .priority-0 {
-  background-color: var(--color-background);
+  background-color: var(--color-background-light);
   color: var(--color-text-secondary);
+  top: 2px;
 }
 
 /* 可按 priority 分不同色 */
