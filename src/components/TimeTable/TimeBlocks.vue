@@ -91,7 +91,7 @@
       style="cursor: grab"
       @mousedown="handleMouseDown($event, seg)"
     >
-      {{ seg.priority > 0 ? seg.priority : firstNonDigitLetterWide(seg.todoTitle) || "+" }}
+      {{ seg.priority > 0 ? seg.priority : firstNonDigitLetterWide(seg.todoTitle) || "-" }}
     </span>
     <span v-else style="cursor: grab" @mousedown="handleMouseDown($event, seg)">⚠️</span>
   </div>
@@ -652,13 +652,10 @@ watch(
   align-items: center;
   justify-content: center;
   position: absolute;
+  font-weight: bold;
   width: 15px;
   height: 15px;
-  color: var(--color-text-secondary);
   font-size: 12px;
-  font-weight: bold;
-  margin: 2px;
-  padding: 0;
   outline: none;
   border-radius: 50%;
   border: none;
@@ -670,15 +667,12 @@ watch(
 .priority-0.no-title {
   font-weight: 600;
   font-size: 14px;
-  padding-bottom: 2px;
 }
 /* 可按 priority 分不同色 */
 .priority-0 {
-  font-weight: 300;
-  color: var(--color-text-primary);
+  color: var(--color-text-secondary);
   background-color: var(--color-background-light);
   font-size: 14px;
-  padding-bottom: 2px;
 }
 
 .priority-1 {
