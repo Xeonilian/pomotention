@@ -64,23 +64,15 @@ export function useSearchFilter() {
       // --- 筛选条件 3: 标签过滤 (AND 逻辑) ---
       if (filterTagIds.value.length > 0) {
         // 使用 .every() 来确保活动包含了 *所有* 被选中的筛选标签
-        const passedTagFilter = filterTagIds.value.every((filterId) => act.tagIds?.includes(filterId)); // [!code ++]
+        const passedTagFilter = filterTagIds.value.every((filterId) => act.tagIds?.includes(filterId));
         if (!passedTagFilter) {
-          // [!code ++]
           continue; // 如果不满足所有标签条件，则跳过
-        } // [!code ++]
-
-        // --- 以下是旧的 OR 逻辑，我们需要替换掉它 ---
-        // if (!act.tagIds?.some((id) => filterTagIds.value.includes(id))) { // [!code --]
-        //   continue; // [!code --]
-        // } // [!code --]
+        }
       }
 
-      // --- 行数据构造和排序 (保持你原来的全部逻辑) ---
-      // ... 这部分逻辑完全不变 ...
+      // --- 行数据构造和排序  ---
       const isTodo = act.class === "T";
       const isSch = act.class === "S";
-      // ... 后面所有 getPrimaryTime, rows.push, rows.sort 的逻辑都保持不变
       const td = isTodo ? todoByActivityId.value.get(act.id) : undefined;
       const sch = isSch ? scheduleByActivityId.value.get(act.id) : undefined;
 
