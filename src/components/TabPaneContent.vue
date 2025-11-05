@@ -22,7 +22,7 @@
       <!-- 根据 Tab 类型显示不同的元信息 -->
       <template v-if="props.tab.type === 'todo'">
         <span class="meta-time">开始时间：{{ formatDate(dataStore.todoById.get(props.tab.id)?.startTime) }}</span>
-        <span class="meta-time">死线日期：{{ formatDateOnly(dataStore.todoById.get(props.tab.id)?.dueDate) }}</span>
+        <span class="meta-time">死线日期：{{ formatDateOnly(getDueDate()) }}</span>
       </template>
       <template v-else-if="props.tab.type === 'sch'">
         <span class="meta-time">
@@ -126,7 +126,7 @@ function handleTagClick(tagId: number) {
 
 // 6. 辅助/格式化函数 (从 Search.vue 迁移过来)
 const formatDate = (ts?: number) => {
-  if (!ts) return "无";
+  if (!ts) return "/";
 
   const date = new Date(ts);
   const day = String(date.getDate()).padStart(2, "0"); // 获取日期，并格式化为两位数
@@ -139,7 +139,7 @@ const formatDate = (ts?: number) => {
 };
 
 const formatDateOnly = (ts?: number) => {
-  if (!ts) return "无";
+  if (!ts) return "/";
 
   const date = new Date(ts);
   const day = String(date.getDate()).padStart(2, "0"); // 获取日期，并格式化为两位数
@@ -150,6 +150,14 @@ const formatDateOnly = (ts?: number) => {
 };
 
 const convertMarkdown = (md?: string) => (md ? marked(md) : "无");
+
+const getDueDate = () => {
+  const todoItem = dataStore.todoById.get(props.tab.id);
+  const dueDate = todoItem?.dueDate;
+  if (dueDate) return dueDate;
+  const activityItem = dataStore.activityById.get(props.tab.id);
+  return activityItem?.dueDate ?? undefined;
+};
 </script>
 
 <style scoped>
