@@ -18,6 +18,11 @@
     "build:fast": "vite build",
     "build:analyze": "cross-env ANALYZE=true vite build"
   },
+  "pnpm": {
+    "public-hoist-pattern": [
+      "*@postgrestools*"
+    ]
+  },
   "dependencies": {
     "@supabase/supabase-js": "^2.76.1",
     "@tauri-apps/api": "^2.5.0",
@@ -40,6 +45,7 @@
     "webdav": "^5.8.0"
   },
   "devDependencies": {
+    "@postgrestools/postgrestools": "^0.17.2",
     "@ricons/fluent": "^0.13.0",
     "@tauri-apps/cli": "^2",
     "@types/node": "^22.14.1",
