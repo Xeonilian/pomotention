@@ -185,27 +185,7 @@ supabase db push
 - start 只启动本地容器，不会“新建一个云端项目”
 - 开发阶段可完全离线在本地进行；需要同步到云端时再 push
 
-## 8.（可选）仅“查看”时使用 VSCode PostgreSQL 插件
-
-仅当你不想编辑、只需快速查看或在未使用本地 Docker 的前提下连接数据库时，使用 VSCode 插件。
-
-- 插件：PostgreSQL（by Chris Kolkman）
-- 连接本地（启动后用 supabase status 查看实际参数）：
-  - Host: localhost
-  - Port: 54322
-  - Database: postgres
-  - Username: postgres
-  - Password: postgres
-  - SSL: disable/空
-- 连接云端（Session Pooler 推荐）：
-  - 控制台 → Project Settings → Database → Connection string（Session Pooler）
-  - 生成密码
-  - 连接串示例：
-    ```
-    postgresql://postgres:[YOUR_PASSWORD]@<region>.pooler.supabase.com:6543/postgres?sslmode=require
-    ```
-
-## 9. 补充
+## 8. 补充
 
 - 包管理器 Scoop：
   - 安装路径：C:\Users\<用户名>\scoop
