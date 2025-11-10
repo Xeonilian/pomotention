@@ -349,7 +349,7 @@ function handleConvertToTask(schedule: Schedule) {
     return;
   }
 
-  const task = taskService.createTaskFromSchedule(schedule.id, schedule.activityTitle, schedule.projectName);
+  const task = taskService.createTaskFromSchedule(schedule.activityId, schedule.activityTitle, schedule.projectName);
   console.log("DaySch", task);
   if (task) {
     emit("convert-schedule-to-task", { task: task, scheduleId: schedule.id });

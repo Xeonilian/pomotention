@@ -108,7 +108,7 @@
                 v-if="editingTodo && editingTodo.id === todo.id"
                 v-model:value="editingPriority"
                 :min="0"
-                :max="11"
+                :max="21"
                 size="small"
                 :show-button="false"
                 placeholder=" "
@@ -402,6 +402,9 @@ function startEditingPriority(todo: Todo) {
 
 function finishEditing() {
   if (!editingTodo.value) return;
+  if (editingPriority.value === null) {
+    editingPriority.value = 0;
+  }
   if (editingTodo.value.status === "done" || editingTodo.value.status === "cancelled") {
     popoverMessage.value = "当前任务已经结束！";
     showPopover.value = true;
@@ -411,7 +414,7 @@ function finishEditing() {
     editingTodo.value = null;
     return;
   }
-  if (editingPriority.value === 21) {
+  if (editingPriority.value > 21) {
     popoverMessage.value = "请输入1-20";
     showPopover.value = true;
     setTimeout(() => {
