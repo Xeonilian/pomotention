@@ -692,7 +692,7 @@ function handleConvertToTask(todo: Todo) {
     return;
   }
 
-  const task = taskService.createTaskFromTodo(todo.id, todo.activityTitle, todo.projectName);
+  const task = taskService.createTaskFromTodo(todo.activityId, todo.activityTitle, todo.projectName);
 
   if (task) {
     // 立即更新本地的 taskId
