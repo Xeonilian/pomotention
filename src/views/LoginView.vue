@@ -1,54 +1,92 @@
 <!-- src/views/LoginView.vue -->
 <template>
-  <div class="login-view">
-    <h1>欢迎回来</h1>
-    <p class="subtitle">登录或注册以同步您的数据</p>
+  <div class="app-layout">
+    <div class="login-view">
+      <h1>欢迎回来</h1>
+      <p class="subtitle">登录或注册以同步您的数据</p>
 
-    <div class="form-container">
-      <input type="email" v-model="email" placeholder="邮箱地址" />
-      <input v-if="!isResetMode" type="password" v-model="password" placeholder="密码 (至少6位)" @keyup.enter="handleSignIn" />
+      <div class="form-container">
+        <n-input v-model:value="email" type="text" placeholder="邮箱地址" size="large" />
 
-      <div v-if="errorMessage" class="error-message">
-        {{ errorMessage }}
+        <n-input
+          v-if="!isResetMode"
+          v-model:value="password"
+          type="password"
+          placeholder="密码 (至少6位)"
+          size="large"
+          show-password-on="click"
+          @keyup.enter="handleSignIn"
+        />
+
+        <n-alert v-if="errorMessage" type="error" :title="errorMessage" style="margin-bottom: 15px" />
+        <n-alert v-if="successMessage" type="success" :title="successMessage" style="margin-bottom: 15px" />
+
+        <!-- 注册时显示用户协议 -->
+        <div v-if="!isResetMode" class="terms-checkbox">
+          <n-checkbox v-model:checked="agreedToTerms">
+            我已阅读并同意
+            <n-button text type="primary" @click="showTerms = true" style="padding: 0 4px; color: var(--color-blue)">
+              《用户服务协议与隐私政策》
+            </n-button>
+          </n-checkbox>
+        </div>
+
+        <!-- 正常登录/注册模式 -->
+        <n-space v-if="!isResetMode" :size="10" justify="center" style="width: 100%">
+          <n-button @click="handleSignIn" :loading="loading" strong secondary Default size="large" style="min-width: 140px">登录</n-button>
+          <n-tooltip :disabled="agreedToTerms" trigger="hover">
+            <template #trigger>
+              <n-button
+                strong
+                secondary
+                type="info"
+                @click="handleSignUp"
+                :loading="loading"
+                :disabled="!agreedToTerms"
+                size="large"
+                style="min-width: 160px"
+              >
+                注册
+              </n-button>
+            </template>
+            请先阅读并同意用户协议
+          </n-tooltip>
+        </n-space>
+
+        <!-- 找回密码模式 -->
+        <n-space v-else vertical>
+          <n-button strong secondary @click="handleResetPassword" :loading="loading" type="info" size="large" block>发送重置链接</n-button>
+          <n-button strong secondary @click="cancelReset" :loading="loading" size="large" block>取消</n-button>
+        </n-space>
+
+        <!-- 忘记密码链接 -->
+        <div class="forgot-password">
+          <n-button text type="primary" @click="toggleResetMode">
+            {{ isResetMode ? "返回登录" : "忘记密码？" }}
+          </n-button>
+        </div>
       </div>
 
-      <div v-if="successMessage" class="success-message">
-        {{ successMessage }}
-      </div>
-
-      <!-- 正常登录/注册模式 -->
-      <div v-if="!isResetMode" class="button-group">
-        <button @click="handleSignIn" :disabled="loading">
-          {{ loading ? "登录中..." : "登录" }}
-        </button>
-        <button @click="handleSignUp" :disabled="loading" class="secondary">
-          {{ loading ? "注册中..." : "注册" }}
-        </button>
-      </div>
-
-      <!-- 找回密码模式 -->
-      <div v-else class="button-group">
-        <button @click="handleResetPassword" :disabled="loading">
-          {{ loading ? "发送中..." : "发送重置链接" }}
-        </button>
-        <button @click="cancelReset" :disabled="loading" class="secondary">取消</button>
-      </div>
-
-      <!-- 忘记密码链接 -->
-      <div class="forgot-password">
-        <a @click="toggleResetMode" href="javascript:void(0)">
-          {{ isResetMode ? "返回登录" : "忘记密码？" }}
-        </a>
-      </div>
+      <!-- 用户协议弹窗 -->
+      <n-modal v-model:show="showTerms" preset="card" title="用户服务协议与隐私政策" style="width: 600px; max-width: 90vw">
+        <n-scrollbar style="max-height: 60vh">
+          <div class="terms-body" v-html="termsHtml"></div>
+        </n-scrollbar>
+        <template #footer>
+          <n-button strong secondary type="info" @click="acceptTerms" block>我同意</n-button>
+        </template>
+      </n-modal>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed } from "vue";
 import { useRouter } from "vue-router";
+import { NInput, NButton, NAlert, NCheckbox, NSpace, NModal, NScrollbar } from "naive-ui";
 import { signIn, signUp } from "@/core/services/authServicve";
 import { supabase } from "@/core/services/supabase";
+import { marked } from "marked";
 
 const email = ref("");
 const password = ref("");
@@ -56,7 +94,55 @@ const loading = ref(false);
 const errorMessage = ref("");
 const successMessage = ref("");
 const isResetMode = ref(false);
+const agreedToTerms = ref(false);
+const showTerms = ref(false);
 const router = useRouter();
+
+// 用户协议内容（Markdown格式）
+const termsMarkdown = `
+## 欢迎使用本应用
+
+为了让您享受云端同步服务，我们需要收集和处理您的以下信息：
+
+### 我们收集的信息
+
+1. **账户信息**：您用于注册和登录的电子邮箱
+2. **日程数据**：您创建的所有日程内容，将存储于云端服务器
+
+### 我们的承诺
+
+- ✅ **数据安全**：采用 HTTPS 加密传输，确保数据在传输过程中的安全
+- ✅ **隐私保护**：使用行级安全策略，确保其他用户无法访问您的数据
+- ✅ **用途单一**：您的数据仅用于提供多设备同步功能，不做任何其他用途
+- ✅ **数据主权**：您的数据完全属于您，开发者不会主动查看。您可以随时导出或删除所有数据
+
+### 数据存储
+
+- **本地存储**：您的数据始终在本地设备保留一份完整副本
+- **云端存储**：使用 Supabase 提供的数据库服务（数据中心位于海外）
+- **双轨运行**：即使不登录或网络断开，本地功能完全可用
+
+### 您的权利
+
+- 随时停止使用云同步服务
+- 要求删除您的账户及所有数据
+- 导出您的所有数据
+
+### 联系方式
+
+如有任何疑问，请通过应用内反馈功能联系我们。
+
+---
+
+**点击"注册"或"我同意"即表示您已阅读并同意以上条款。**
+
+*最后更新：2024年11月*
+`;
+
+// 将Markdown转换为HTML
+const termsHtml = computed(() => {
+  return marked(termsMarkdown);
+});
 
 // 处理邮箱验证回调
 onMounted(async () => {
@@ -66,9 +152,7 @@ onMounted(async () => {
 
   if (accessToken && type === "recovery") {
     console.log("检测到密码重置请求，跳转到重置密码页面...");
-    // 清理 URL 中的 hash，但保持 session
     window.history.replaceState({}, document.title, window.location.pathname);
-    // 直接跳转到重置密码页面
     router.push({ name: "ResetPassword" });
     return;
   }
@@ -99,6 +183,12 @@ function cancelReset() {
   successMessage.value = "";
 }
 
+// 接受协议
+function acceptTerms() {
+  agreedToTerms.value = true;
+  showTerms.value = false;
+}
+
 // 找回密码
 async function handleResetPassword() {
   if (!email.value) {
@@ -111,7 +201,6 @@ async function handleResetPassword() {
   successMessage.value = "";
 
   try {
-    // ✅ 使用环境变量配置的 redirect URL，如果未设置则使用 undefined（由 Supabase Dashboard 的 Site URL 决定）
     const redirectUrl = import.meta.env.VITE_AUTH_REDIRECT_URL ? `${import.meta.env.VITE_AUTH_REDIRECT_URL}/auth/callback` : undefined;
     console.log("发送重置邮件，redirect URL:", redirectUrl);
 
@@ -158,6 +247,12 @@ async function handleSignUp() {
     errorMessage.value = "邮箱和密码不能为空";
     return;
   }
+
+  if (!agreedToTerms.value) {
+    errorMessage.value = "请先阅读并同意用户服务协议";
+    return;
+  }
+
   loading.value = true;
   errorMessage.value = "";
   successMessage.value = "";
@@ -174,89 +269,89 @@ async function handleSignUp() {
 </script>
 
 <style scoped>
+.app-layout {
+  overflow: hidden;
+  height: 100vh;
+  background-color: var(--color-background-light);
+}
+
 .login-view {
+  overflow: hidden;
   max-width: 400px;
   margin: 100px auto;
   padding: 40px;
   text-align: center;
   border: 1px solid #eee;
   border-radius: 8px;
-  background-color: var(--color-background-light-light);
+  background-color: var(--color-background);
 }
 
 .subtitle {
   color: #666;
-  margin-bottom: 30px;
-}
-
-.form-container input {
-  width: 100%;
-  padding: 12px;
   margin-bottom: 15px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  box-sizing: border-box;
 }
 
-.error-message {
-  color: var(--color-red);
-  margin-bottom: 15px;
-  padding: 10px;
-  background-color: #fee;
-  border-radius: 4px;
-}
-
-.success-message {
-  color: #28a745;
-  margin-bottom: 15px;
-  padding: 10px;
-  background-color: #d4edda;
-  border-radius: 4px;
-}
-
-.button-group {
+.form-container {
   display: flex;
-  gap: 10px;
+  flex-direction: column;
+  gap: 15px;
 }
 
-.button-group button {
-  flex-grow: 1;
-  padding: 12px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  background-color: #333;
-  color: white;
-  transition: opacity 0.2s;
-}
-
-.button-group button.secondary {
-  background-color: #f0f0f0;
-  color: #333;
-}
-
-.button-group button:hover:not(:disabled) {
-  opacity: 0.9;
-}
-
-.button-group button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+/* 用户协议checkbox */
+.terms-checkbox {
+  text-align: left;
+  font-size: 14px;
+  margin: 0;
 }
 
 .forgot-password {
-  margin-top: 15px;
+  margin-top: 0px;
   text-align: center;
 }
 
-.forgot-password a {
-  color: #007bff;
-  text-decoration: none;
-  font-size: 14px;
-  cursor: pointer;
+/* 协议内容样式 */
+.terms-body {
+  padding: 0 12px;
+  line-height: 1.8;
+  color: #333;
+  text-align: left;
 }
 
-.forgot-password a:hover {
-  text-decoration: underline;
+.terms-body :deep(h2) {
+  font-size: 18px;
+  margin-top: 20px;
+  margin-bottom: 12px;
+  color: #333;
+}
+
+.terms-body :deep(h3) {
+  font-size: 15px;
+  margin-top: 16px;
+  margin-bottom: 10px;
+  color: #555;
+}
+
+.terms-body :deep(ul) {
+  padding-left: 24px;
+  margin: 12px 0;
+}
+
+.terms-body :deep(li) {
+  margin: 8px 0;
+}
+
+.terms-body :deep(strong) {
+  color: #333;
+  font-weight: 600;
+}
+
+.terms-body :deep(hr) {
+  margin: 24px 0;
+  border: none;
+  border-top: 1px solid #eee;
+}
+
+.terms-body :deep(p) {
+  margin: 10px 0;
 }
 </style>
