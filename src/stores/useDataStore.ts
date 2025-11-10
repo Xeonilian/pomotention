@@ -253,6 +253,21 @@ export const useDataStore = defineStore(
         const tasksOfSch = tasksBySource.value.schedule.get(relatedSchedule.id);
         if (tasksOfSch?.some((t) => t.starred)) return true;
       }
+
+      // 把activityId当todoId，看是否starred 防御
+      const relatedBugTodo = todoById.value.get(activityId);
+      if (relatedBugTodo) {
+        const tasksOfTodo = tasksBySource.value.todo.get(relatedBugTodo.id);
+        if (tasksOfTodo?.some((t) => t.starred)) return true;
+      }
+
+      // 把activityId当scheduleId，看是否starred 防御
+      const relatedBugSchedule = scheduleById.value.get(activityId);
+      if (relatedBugSchedule) {
+        const tasksOfSch = tasksBySource.value.schedule.get(relatedBugSchedule.id);
+        if (tasksOfSch?.some((t) => t.starred)) return true;
+      }
+
       return false;
     }
 
