@@ -392,15 +392,6 @@ watch(
 </script>
 
 <style scoped>
-html,
-body,
-#app {
-  height: 100%;
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
-}
-
 /* 根布局容器：占据整个视口，并垂直 flex 布局 */
 .app-layout {
   overflow: hidden;

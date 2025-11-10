@@ -6,9 +6,6 @@ import { createClient } from "@supabase/supabase-js";
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-// const supabaseUrl = "http://localhost:54321";
-// const supabaseAnonKey = "你的本地 Supabase anon key";
-
 // 校验环境变量是否存在
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error("Supabase URL and anon key are required. Please check your .env file.");
