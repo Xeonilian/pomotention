@@ -7,6 +7,8 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+.pr-body.md
+
 node_modules
 dist
 cache
@@ -35,7 +37,6 @@ package-lock.json
 *.sw?
 .tauri
 .env
-
 config
 docs/scratchpad/
 target/rust-analyzer
