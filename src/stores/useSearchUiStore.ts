@@ -104,26 +104,23 @@ export const useSearchUiStore = defineStore("searchUi", {
      * @param tagId - 要切换的标签ID
      */
     toggleFilterTagId(tagId: number) {
-      // [!code ++]
-      const index = this.filterTagIds.indexOf(tagId); // [!code ++]
+      const index = this.filterTagIds.indexOf(tagId); 
       if (index > -1) {
-        // [!code ++]
         // 如果已存在，则移除
-        this.filterTagIds.splice(index, 1); // [!code ++]
+        this.filterTagIds.splice(index, 1); 
       } else {
-        // [!code ++]
+      
         // 如果不存在，则添加
-        this.filterTagIds.push(tagId); // [!code ++]
-      } // [!code ++]
-    }, // [!code ++]
+        this.filterTagIds.push(tagId);
+      } 
+    }, 
 
     /**
      * 清除所有的标签筛选
      */
     clearFilterTags() {
-      // [!code ++]
-      this.filterTagIds = []; // [!code ++]
-    }, // [!code ++]
+      this.filterTagIds = []; 
+    }, 
   },
 
   // 4. (可选) 启用持久化
