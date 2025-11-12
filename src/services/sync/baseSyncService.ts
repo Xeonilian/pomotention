@@ -47,7 +47,7 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
     localStorage.setItem(this.localStorageKey, JSON.stringify(items));
   }
 
-/**
+  /**
    * 上传未同步的记录
    */
   async upload(): Promise<{ success: boolean; error?: string; uploaded: number }> {
@@ -142,6 +142,34 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
     } catch (error: any) {
       console.error(`${this.tableName} 下载失败:`, error);
       return { success: false, error: error.message, downloaded: 0 };
+    }
+  }
+
+  /**
+   * 清理超过 30 天的已删除记录（云端）
+   */
+  async cleanupDeleted(): Promise<{ success: boolean; error?: string }> {
+    try {
+      const user = await getCurrentUser();
+      if (!user) return { success: false, error: "用户未登录" };
+
+      const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+      const thirtyDaysAgoDate = new Date(thirtyDaysAgo).toISOString();
+
+      const { error } = await supabase
+        .from(this.tableName)
+        .delete()
+        .eq('user_id', user.id)
+        .eq('deleted', true)
+        .lt('last_modified', thirtyDaysAgoDate);
+
+      if (error) throw error;
+
+      console.log(`✅ ${this.tableName} 已删除记录清理完成`);
+      return { success: true };
+    } catch (error: any) {
+      console.error(`清理 ${this.tableName} 失败:`, error);
+      return { success: false, error: error.message };
     }
   }
 }
