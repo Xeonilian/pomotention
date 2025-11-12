@@ -25,6 +25,7 @@ import { unifiedDateService } from "@/services/unifiedDateService";
 import { collectPomodoroData, collectTaskRecordData, aggregateByTime } from "@/services/chartDataService";
 import { usePomoStore } from "./usePomoStore";
 import { useTagStore } from "./useTagStore";
+import { autoSyncDebounced } from "@/core/utils/autoSync"; 
 
 export const useDataStore = defineStore(
   "data",
@@ -282,6 +283,7 @@ export const useDataStore = defineStore(
         saveTodos(todoList.value);
         saveSchedules(scheduleList.value);
         saveTasks(taskList.value);
+        autoSyncDebounced(); 
       } catch (e) {
         console.error("save failed", e);
       }

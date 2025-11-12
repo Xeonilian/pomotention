@@ -15,8 +15,9 @@ export interface Activity {
   taskId?: number; // 关联的任务ID
   tagIds?: number[];
   parentId: number | null;
-  lastModified?: number; // 最后修改时间戳
-  synced?: boolean;
+  lastModified: number; // 最后修改时间戳
+  synced: boolean;
+  deleted: boolean; 
 }
 
 export interface ActivitySectionConfig {

@@ -399,7 +399,7 @@ function cancelEdit() {
 }
 
 // ======================== 2. Activity 相关 ========================
-import { activityService } from "@/services/activitySupaService";
+
 /** 新增活动 */
 function onAddActivity(newActivity: Activity) {
   activeId.value = null;
@@ -409,12 +409,6 @@ function onAddActivity(newActivity: Activity) {
   });
   activeId.value = newActivity.id;
   saveAllDebounced();
-  activityService.uploadActivity({
-    id: newActivity.id,
-    title: newActivity.title,
-    class: newActivity.class,
-    lastModified: Date.now(),
-  });
 }
 
 /** 删除活动及其关联的 todo/schedule */
@@ -519,12 +513,6 @@ function onRepeatActivity(id: number | null | undefined) {
       activityById: activityById.value,
     });
     activeId.value = newActivity.id;
-    activityService.uploadActivity({
-      id: newActivity.id,
-      title: newActivity.title,
-      class: newActivity.class,
-      lastModified: Date.now(),
-    });
   }
   saveAllDebounced();
 }

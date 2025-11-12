@@ -299,6 +299,9 @@ function addScheduleRow() {
     dueRange: [null, ""],
     status: "",
     parentId: null,
+    synced: false,
+    deleted: false,
+    lastModified: Date.now(),
   });
 }
 
@@ -312,6 +315,9 @@ function addUntaetigkeitRow() {
     status: "",
     isUntaetigkeit: true,
     parentId: null,
+    synced: false,
+    deleted: false,
+    lastModified: Date.now(),
   });
 }
 
@@ -326,6 +332,9 @@ function addTodoRow() {
     status: "",
     dueDate: Date.now(), // 默认今天
     parentId: null,
+    synced: false,
+    deleted: false,
+    lastModified: Date.now(),
   });
 }
 

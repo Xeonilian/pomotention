@@ -14,7 +14,15 @@ import type { SyncDataV1, LocalSyncStatus } from "@/core/types/Sync";
 
 /** 从本地存储加载活动列表 */
 export function loadActivities(): Activity[] {
-  return loadData<Activity[]>(STORAGE_KEYS.ACTIVITY, []);
+  const data = loadData<Activity[]>(STORAGE_KEYS.ACTIVITY, []);
+  
+  // 兼容旧数据
+  return data.map(activity => ({
+    ...activity,
+    synced: activity.synced ?? false,
+    deleted: activity.deleted ?? false,
+    lastModified: activity.lastModified ?? Date.now(),
+  }));
 }
 
 /** 保存活动列表到本地存储 */
