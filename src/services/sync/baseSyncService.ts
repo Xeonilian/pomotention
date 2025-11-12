@@ -47,7 +47,7 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
     localStorage.setItem(this.localStorageKey, JSON.stringify(items));
   }
 
-  /**
+/**
    * 上传未同步的记录
    */
   async upload(): Promise<{ success: boolean; error?: string; uploaded: number }> {
@@ -62,15 +62,17 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
         return { success: true, uploaded: 0 };
       }
 
-      // 转换格式
       const cloudData = unsyncedItems.map((item) => this.mapLocalToCloud(item, user.id));
 
-      // 上传（upsert 会自动处理新增和更新）
-      const { error } = await supabase.from(this.tableName).upsert(cloudData as any);
+      const { error } = await supabase
+        .from(this.tableName)
+        .upsert(cloudData as any, {
+          onConflict: 'user_id,timestamp_id',
+          ignoreDuplicates: false,
+        });
 
       if (error) throw error;
 
-      // 标记为已同步
       unsyncedItems.forEach((item) => {
         item.synced = true;
       });
