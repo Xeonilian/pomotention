@@ -353,7 +353,7 @@ const settingStore = useSettingStore();
 
 // ======================== 排序逻辑 ========================
 const sortedDisplaySheet = computed(() => {
-  const activities = props.displaySheet.filter((activity: Activity) => activity.status !== "done").slice();
+  const activities = props.displaySheet.filter((activity: Activity) => !activity.deleted && activity.status !== "done").slice();
 
   const activityMap = new Map<number, Activity[]>();
   const rootActivities: Activity[] = [];

@@ -11,4 +11,7 @@ export interface Schedule {
   doneTime?: number;
   isUntaetigkeit?: boolean;
   interruption?: "I" | "E";
+  deleted: boolean;
+  lastModified: number;
+  synced: boolean;
 }

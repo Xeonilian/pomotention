@@ -10,7 +10,10 @@ export interface Task {
   energyRecords: EnergyRecord[]; // 精力值记录数组
   rewardRecords: RewardRecord[]; // 愉悦值记录数组
   interruptionRecords: InterruptionRecord[]; // 打扰记录数组
-  starred?: boolean;
+  starred: boolean;
+  deleted: boolean;
+  synced: boolean;
+  lastModified: number;
 }
 
 export interface EnergyRecord {

@@ -102,6 +102,7 @@ export function handleDeleteActivity(
     }
   }
 
+  // 收集需要删除的关联数据 ID
   const todoIdsToDelete = new Set<number>();
   const scheduleIdsToDelete = new Set<number>();
 
@@ -117,46 +118,50 @@ export function handleDeleteActivity(
     }
   }
 
-  // 2) 删除关联的 todo
-  {
-    const filteredTodos = todoList.filter(
-      (todo) => !todoIdsToDelete.has(todo.id)
-    );
-    todoList.splice(0, todoList.length, ...filteredTodos);
+  // 软删除 activities（标记 deleted = true）
+  for (const activity of activityList) {
+    if (idsToDelete.has(activity.id)) {
+      activity.deleted = true;
+      activity.synced = false;
+      activity.lastModified = Date.now();
+    }
   }
 
-  // 3) 删除关联的 schedule
-  {
-    const filteredSchedules = scheduleList.filter(
-      (schedule) => !scheduleIdsToDelete.has(schedule.id)
-    );
-    scheduleList.splice(0, scheduleList.length, ...filteredSchedules);
+  // 软删除关联的 todos
+  for (const todo of todoList) {
+    if (todoIdsToDelete.has(todo.id)) {
+      todo.deleted = true;
+      todo.synced = false;
+      todo.lastModified = Date.now();
+    }
   }
 
-  // 4) 删除关联的 task（按 source/sourceId 判定）
-  {
-    const filteredTasks = taskList.filter((task) => {
-      if (task.source === "activity") {
-        return !idsToDelete.has(task.sourceId);
-      }
-      if (task.source === "todo") {
-        return !todoIdsToDelete.has(task.sourceId);
-      }
-      if (task.source === "schedule") {
-        return !scheduleIdsToDelete.has(task.sourceId);
-      }
-      // 理论上不会到这，保守保留
-      return true;
-    });
-    taskList.splice(0, taskList.length, ...filteredTasks);
+  // 软删除关联的 schedules
+  for (const schedule of scheduleList) {
+    if (scheduleIdsToDelete.has(schedule.id)) {
+      schedule.deleted = true;
+      schedule.synced = false;
+      schedule.lastModified = Date.now();
+    }
   }
 
-  // 5) 最后删除活动本体
-  {
-    const filteredActivities = activityList.filter(
-      (activity) => !idsToDelete.has(activity.id)
-    );
-    activityList.splice(0, activityList.length, ...filteredActivities);
+  // 软删除关联的 tasks（按 source/sourceId 判定）
+  for (const task of taskList) {
+    let shouldDelete = false;
+    
+    if (task.source === "activity") {
+      shouldDelete = idsToDelete.has(task.sourceId);
+    } else if (task.source === "todo") {
+      shouldDelete = todoIdsToDelete.has(task.sourceId);
+    } else if (task.source === "schedule") {
+      shouldDelete = scheduleIdsToDelete.has(task.sourceId);
+    }
+
+    if (shouldDelete) {
+      task.deleted = true;
+      task.synced = false;
+      task.lastModified = Date.now();
+    }
   }
 
   return true;
@@ -242,6 +247,9 @@ export function convertToTodo(activity: Activity): Todo {
     priority: 0,
     idFormated: timestampToDatetime(Date.now()),
     taskId: activity.taskId,
+    deleted: false,
+    lastModified: Date.now(),
+    synced: false,
   };
 }
 
@@ -261,6 +269,9 @@ export function convertToSchedule(activity: Activity): Schedule {
     location: activity.location || "",
     isUntaetigkeit: activity.isUntaetigkeit ? true : false,
     taskId: activity.taskId,
+    deleted: false,
+    lastModified: Date.now(),
+    synced: false,
   };
 }
 

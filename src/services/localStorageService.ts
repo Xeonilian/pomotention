@@ -39,7 +39,15 @@ export function removeActivitiesStorage(): void {
 
 /** 从本地存储加载待办事项列表 */
 export function loadTodos(): Todo[] {
-  return loadData<Todo[]>(STORAGE_KEYS.TODO, []);
+  const data = loadData<Todo[]>(STORAGE_KEYS.TODO, []);
+
+  // 兼容旧数据
+  return data.map(todo => ({
+    ...todo,
+    synced: todo.synced ?? false,
+    deleted: todo.deleted ?? false,
+    lastModified: todo.lastModified ?? Date.now(),
+  }));
 }
 
 /** 保存待办事项列表到本地存储 */
@@ -56,7 +64,15 @@ export function removeTodosStorage(): void {
 
 /** 从本地存储加载日程列表 */
 export function loadSchedules(): Schedule[] {
-  return loadData<Schedule[]>(STORAGE_KEYS.SCHEDULE, []);
+  const data = loadData<Schedule[]>(STORAGE_KEYS.SCHEDULE, []);
+
+  // 兼容旧数据
+  return data.map(schedule => ({
+    ...schedule,
+    synced: schedule.synced ?? false,
+    deleted: schedule.deleted ?? false,
+    lastModified: schedule.lastModified ?? Date.now(),
+  }));
 }
 
 /** 保存日程列表到本地存储 */
@@ -123,7 +139,15 @@ export function removeTimeBlocksStorage(type: "work" | "entertainment"): void {
 
 /** 从本地存储加载任务列表 */
 export function loadTasks(): Task[] {
-  return loadData<Task[]>(STORAGE_KEYS.TASK, []);
+  const data = loadData<Task[]>(STORAGE_KEYS.TASK, []);
+
+  // 兼容旧数据
+  return data.map(task => ({
+    ...task,
+    synced: task.synced ?? false,
+    deleted: task.deleted ?? false,
+    lastModified: task.lastModified ?? Date.now(),
+  }));
 }
 
 /** 保存任务列表到本地存储 */

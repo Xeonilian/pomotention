@@ -418,8 +418,19 @@ function onDeleteActivity(id: number | null | undefined) {
     activityById: activityById.value,
     childrenByParentId: childrenOfActivity.value,
   });
-  if (!result) showErrorPopover("请先清空子项目再删除！");
-  activeId.value = null; //
+  if (!result) {
+    showErrorPopover("请先清空子项目再删除！");
+    return;
+  }
+
+  // 找到被删除的 activity，标记为未同步
+  const activity = activityList.value.find((a) => a.id === id);
+  if (activity) {
+    activity.synced = false;
+    activity.lastModified = Date.now();
+  }
+
+  activeId.value = null;
   saveAllDebounced();
 }
 
