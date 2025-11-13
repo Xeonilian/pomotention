@@ -150,20 +150,20 @@
           <DayPlanner
             v-if="settingStore.settings.showPlanner && settingStore.settings.viewSet === 'day'"
             @update-schedule-status="onUpdateScheduleStatus"
+            @cancel-schedule="onCancelSchedule"
+            @convert-schedule-to-task="onConvertScheduleToTask"
+            @edit-schedule-done="handleEditScheduleDone"
+            @edit-schedule-title="handleEditScheduleTitle"
             @update-todo-status="onUpdateTodoStatus"
             @suspend-todo="onSuspendTodo"
             @cancel-todo="onCancelTodo"
-            @cancel-schedule="onCancelSchedule"
             @update-todo-est="onUpdateTodoEst"
             @update-todo-pomo="onUpdateTodoPomo"
             @batch-update-priorities="onUpdateTodoPriority"
-            @edit-schedule-title="handleEditScheduleTitle"
             @edit-todo-title="handleEditTodoTitle"
             @edit-todo-start="handleEditTodoStart"
             @edit-todo-done="handleEditTodoDone"
-            @edit-schedule-done="handleEditScheduleDone"
             @convert-todo-to-task="onConvertTodoToTask"
-            @convert-schedule-to-task="onConvertScheduleToTask"
           />
           <WeekPlanner
             v-if="settingStore.settings.showPlanner && settingStore.settings.viewSet === 'week'"
@@ -248,6 +248,8 @@ import { handleExportOrQR, type DataRow } from "@/services/icsService";
 import { usePomoStore } from "@/stores/usePomoStore";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useDataStore } from "@/stores/useDataStore";
+import { autoSyncDebounced, uploadAllDebounced } from "@/core/utils/autoSync";
+import { syncAll } from "@/services/sync/index";
 
 // ======================== 响应式状态与初始化 ========================
 // 不直接import Naive和以下组建加速启动
@@ -515,6 +517,9 @@ function onRepeatActivity(id: number | null | undefined) {
       status: "" as any,
       tagIds: selectActivity.tagIds,
       taskId: undefined,
+      synced: false,
+      deleted: false,
+      lastModified: Date.now(),
       ...(selectActivity.dueRange && {
         dueRange: [null, selectActivity.dueRange[1]] as [number | null, string],
       }),
@@ -542,6 +547,9 @@ function onCreateChildActivity(id: number | null | undefined) {
       tagIds: undefined,
       parentId: id,
       taskId: undefined,
+      synced: false,
+      deleted: false,
+      lastModified: Date.now(),
     };
     activityList.value.push(newActivity);
     handleAddActivity(scheduleList.value, newActivity, {
@@ -730,12 +738,16 @@ function onCancelSchedule(id: number) {
   const schedule = scheduleById.value.get(id);
   if (schedule) {
     schedule.status = "cancelled";
+    schedule.synced = false;
+    schedule.lastModified = Date.now();
     const activity = activityById.value.get(schedule.activityId);
     if (!activity) {
       console.warn(`未找到 activityId 为 ${schedule.activityId} 的 activity`);
       return;
     }
     activity.status = "cancelled";
+    activity.synced = false;
+    activity.lastModified = Date.now();
   }
   saveAllDebounced();
 }
@@ -757,6 +769,8 @@ function onUpdateScheduleStatus(id: number, isChecked: boolean) {
     if (schedule.doneTime == undefined) {
       const now = new Date();
       doneTime = now.getTime();
+      schedule.synced = false;
+      schedule.lastModified = Date.now();
     }
   }
   updateScheduleStatus(id, doneTime, newStatus);
@@ -846,12 +860,16 @@ function handleEditScheduleTitle(id: number, newTitle: string) {
     return;
   }
   schedule.activityTitle = newTitle;
+  schedule.synced = false;
+  schedule.lastModified = Date.now();
   const activity = activityById.value.get(schedule.activityId);
   if (!activity) {
     console.warn(`未找到 activityId 为 ${schedule.activityId} 的 activity`);
     return;
   }
   activity.title = newTitle;
+  activity.synced = false;
+  activity.lastModified = Date.now();
   console.log(`已更新 schedule ${id} 和 activity ${schedule.activityId} 的标题为: ${newTitle}`);
 
   // 找到task 并重新赋值
@@ -937,10 +955,37 @@ onMounted(() => {
   dataStore.loadAllData();
   dateService.setupSystemDateWatcher();
   dateService.navigateByView("today");
+  syncAll();
 });
 
 onUnmounted(() => {
   dateService.cleanupSystemDateWatcher();
+  autoSyncDebounced.flush(); //立即执行
+});
+
+// 2. 页面关闭前保存（浏览器关闭/刷新）
+window.addEventListener("beforeunload", (e) => {
+  const pending = uploadAllDebounced.pending();
+  if (pending) {
+    console.log("页面关闭前保存");
+    uploadAllDebounced.flush(); // 立即执行
+    // 注意：现代浏览器可能不会等待异步操作完成
+    e.preventDefault();
+  }
+});
+
+// 3. 页面隐藏时保存（切换标签页）
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) {
+    console.log("页面隐藏时保存");
+    uploadAllDebounced.flush(); // 立即保存
+  }
+});
+
+// 4. 路由切换前保存（Vue Router）
+onBeforeRouteLeave(() => {
+  console.log("路由切换前保存");
+  uploadAllDebounced.flush();
 });
 // ======================== 9. 页面尺寸调整  ========================
 

@@ -39,11 +39,7 @@
         <template v-if="schedules && schedules!.length > 0">
           <!-- 行 -->
           <tr
-            v-for="schedule in schedules.sort((a:Schedule, b:Schedule) => {
-              const aValue = a.activityDueRange?.[0] ?? Infinity;
-              const bValue = b.activityDueRange?.[0] ?? Infinity;
-              return aValue - bValue;
-            })"
+            v-for="schedule in visibleSchedules"
             :key="schedule.id"
             :class="{
               'active-row': schedule.activityId === activeId,
@@ -268,6 +264,16 @@ const emit = defineEmits<{
 // 添加状态来控制提示信息
 const showPopover = ref(false);
 const popoverMessage = ref("");
+
+const visibleSchedules = computed(() =>
+  props.schedules
+    .filter((s) => !s.deleted)
+    .sort((a, b) => {
+      const aValue = a.activityDueRange?.[0] ?? Infinity;
+      const bValue = b.activityDueRange?.[0] ?? Infinity;
+      return aValue - bValue;
+    })
+);
 
 function handleCheckboxChange(id: number, checked: boolean) {
   emit("update-schedule-status", id, checked);
@@ -544,28 +550,10 @@ td.status-col {
   color: var(--color-text-secondary);
 }
 
-/* 完成行样式 */
-.done-row {
-  color: var(--color-text-secondary);
-}
-
-.done-cell {
-  text-decoration: line-through var(--color-text-secondary) 0.5px;
-}
-
-.cancel-row {
-  color: var(--color-text-secondary);
-}
-
-.cancel-cell {
-  font-style: italic;
-}
-
 .title-input {
   width: calc(100% - 10px);
   border: 1px solid #d9d9d9;
   border-radius: 4px;
-
   font-size: inherit;
   font-family: inherit;
   outline: none;

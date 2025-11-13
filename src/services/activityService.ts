@@ -223,6 +223,8 @@ export function togglePomoType(
   // 更新活动的番茄类型
   activity.pomoType = newPomoType;
   activity.estPomoI = newPomoType === "🍒" ? "4" : undefined;
+  activity.synced = false;
+  activity.lastModified = Date.now();
 
   return {
     oldType: currentType,
