@@ -122,15 +122,17 @@ export async function syncAll(): Promise<{ success: boolean; errors: string[]; d
 /**
  * 只上传（用于立即保存）
  */
-export async function uploadAll(): Promise<{ success: boolean; errors: string[] }> {
+export async function uploadAll(): Promise<{ success: boolean; errors: string[]; uploaded: number }> {
   const syncStore = useSyncStore();
   const errors: string[] = [];
+  let uploaded = 0;
 
   if (syncStore.isSyncing) {
-    return { success: false, errors: ["同步进行中"] };
+    return { success: false, errors: ["同步进行中"], uploaded: 0 };
   }
 
   syncStore.isSyncing = true;
+  syncStore.syncError = null; // ✅ 清空旧错误
 
   try {
     // 并行上传所有表
@@ -145,17 +147,26 @@ export async function uploadAll(): Promise<{ success: boolean; errors: string[] 
         const { name, result } = outcome.value;
         if (!result.success && result.error) {
           errors.push(`${name} 上传失败: ${result.error}`);
+        } else {
+          uploaded += result.uploaded; // ✅ 统计上传数量
         }
       } else {
         errors.push(`上传异常: ${outcome.reason}`);
       }
     });
 
-    if (errors.length > 0) {
+    // ✅ 关键：上传成功后更新时间戳
+    if (errors.length === 0) {
+      syncStore.updateLastSyncTimestamp();
+    } else {
       syncStore.syncError = errors.join("; ");
     }
 
-    return { success: errors.length === 0, errors };
+    return { 
+      success: errors.length === 0, 
+      errors,
+      uploaded // ✅ 返回上传数量，方便日志
+    };
   } finally {
     syncStore.isSyncing = false;
   }
