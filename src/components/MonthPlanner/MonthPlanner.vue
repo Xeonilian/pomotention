@@ -98,7 +98,7 @@ type UnifiedItem = {
   doneTime?: number;
   startTime?: number;
   interruption?: "I" | "E";
-  positionIndex?: number;
+
   // schedule 专属
   activityDueRange?: [number | null, string];
   tagIds?: number[];
@@ -142,7 +142,6 @@ const days = computed(() => {
         doneTime: t.doneTime,
         startTime: t.startTime,
         interruption: t.interruption,
-        positionIndex: t.positionIndex,
         tagIds: t.tagIds,
       } as UnifiedItem;
     })
