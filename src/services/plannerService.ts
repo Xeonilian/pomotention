@@ -47,12 +47,16 @@ export function updateTodoStatus(id: number, doneTime: number | undefined, statu
   if (todo) {
     todo.status = validStatus as "" | "done" | "delayed" | "ongoing" | "cancelled" | "suspended";
     todo.doneTime = todo.doneTime ? todo.doneTime : doneTime;
+    todo.synced = true;
+    todo.lastModified = Date.now();
   }
 
   // 更新 activityList
   const activity = todo?.activityId != null ? activityById.value.get(todo.activityId) : undefined;
   if (activity) {
     activity.status = validStatus as "" | "done" | "delayed" | "ongoing" | "cancelled" | "suspended";
+    activity.synced = true;
+    activity.lastModified = Date.now();
   }
 
   saveAllDebounced();
@@ -73,7 +77,8 @@ export function handleSuspendTodo(id: number) {
     if (activity) {
       // 更新 activity 的状态为 "suspended."
       activity.status = "suspended";
-      console.log(`Activity with id ${activity.id} status updated to suspended.`);
+      activity.synced = true;
+      activity.lastModified = Date.now();
     } else {
       console.log(`No activity found with activityId ${todo.activityId}`);
     }
@@ -103,7 +108,8 @@ export function handleSuspendSchedule(id: number) {
     if (activity) {
       // 更新 activity 的状态为 "suspended."
       activity.status = "suspended";
-      console.log(`Activity with id ${activity.id} status updated to suspended.`);
+      activity.synced = true;
+      activity.lastModified = Date.now();
 
       if (activity.dueRange && activity.dueRange[0] && schedule.activityDueRange[0]) {
         // 将 dueRange 的时间都加1天
@@ -145,6 +151,8 @@ export function updateTodoEst(id: number, estPomo: number[]) {
         // 否则使用第一个估计值
         activity.estPomoI = estPomo.length > 0 ? estPomo[0].toString() : "";
       }
+      activity.synced = true;
+      activity.lastModified = Date.now();
     }
   }
 }

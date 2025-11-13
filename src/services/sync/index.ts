@@ -2,12 +2,14 @@
 
 import { activitySync } from "./activitySync";
 import { scheduleSync } from "./scheduleSync";
+import { todoSync } from "./todoSync";
 import { useSyncStore } from "@/stores/useSyncStore";
 
 // 所有需要同步的服务
 const syncServices = [
   { name: "Activities", service: activitySync },
   { name: "Schedules", service: scheduleSync },
+  { name: "Todos", service: todoSync },
 ];
 
 /**
