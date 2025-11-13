@@ -46,11 +46,15 @@ export async function syncAll(): Promise<{ success: boolean; errors: string[]; d
     }
 
     // 3. 清理超过 30 天的已删除记录
-
-    const cleanupResult = await activitySync.cleanupDeleted();
-    if (!cleanupResult.success && cleanupResult.error) {
-      // console.warn(`清理已删除记录时出现问题: ${cleanupResult.error}`);
-      // 清理失败不影响同步结果
+    const now = Date.now();
+    const oneDayMs = 24 * 60 * 60 * 1000;
+    const shouldCleanup = now - syncStore.lastCleanupTimestamp > oneDayMs;
+    if (shouldCleanup) {
+      console.log("🗑️ 开始清理已删除记录...");
+      const cleanupResult = await activitySync.cleanupDeleted();
+      if (cleanupResult.success) {
+        syncStore.updateLastCleanupTimestamp();
+      }
     }
 
     // 4. 更新同步时间（只有全部成功才更新）
