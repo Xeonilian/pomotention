@@ -165,10 +165,10 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
 
       if (error) throw error;
 
-      console.log(`✅ ${this.tableName} 已删除记录清理完成`);
+      console.log(`✅ ${this.tableName} 执行清理30天前的已删除记录完成`);
       return { success: true };
     } catch (error: any) {
-      console.error(`清理 ${this.tableName} 失败:`, error);
+      console.error(`清理已删除 ${this.tableName} 失败:`, error);
       return { success: false, error: error.message };
     }
   }
