@@ -2,6 +2,7 @@
 export function debounce<T extends (...args: any[]) => void>(
   fn: T,
   wait = 300
+  
 ) {
   let timer: ReturnType<typeof setTimeout> | null = null;
   let lastArgs: any[] | null = null;
@@ -16,7 +17,7 @@ export function debounce<T extends (...args: any[]) => void>(
       fn.apply(lastThis, lastArgs!);
       lastArgs = lastThis = null;
     }, wait);
-  } as T & { cancel: () => void; flush: () => void };
+  } as T & { cancel: () => void; flush: () => void; pending: () => boolean };
 
   debounced.cancel = () => {
     if (timer) {
@@ -33,6 +34,10 @@ export function debounce<T extends (...args: any[]) => void>(
       fn.apply(lastThis, lastArgs!);
       lastArgs = lastThis = null;
     }
+  };
+
+  debounced.pending = () => {
+    return timer !== null;
   };
 
   return debounced;
