@@ -39,7 +39,7 @@
         <template v-if="schedules && schedules!.length > 0">
           <!-- 行 -->
           <tr
-            v-for="schedule in visibleSchedules"
+            v-for="schedule in sortedSchedules"
             :key="schedule.id"
             :class="{
               'active-row': schedule.activityId === activeId,
@@ -256,7 +256,7 @@ const emit = defineEmits<{
     e: "convert-schedule-to-task",
     payload: {
       task: Task;
-      scheduleId: number;
+      activityId: number;
     }
   ): void;
 }>();
@@ -265,7 +265,7 @@ const emit = defineEmits<{
 const showPopover = ref(false);
 const popoverMessage = ref("");
 
-const visibleSchedules = computed(() =>
+const sortedSchedules = computed(() =>
   props.schedules
     .filter((s) => !s.deleted)
     .sort((a, b) => {
@@ -358,7 +358,7 @@ function handleConvertToTask(schedule: Schedule) {
   const task = taskService.createTaskFromSchedule(schedule.activityId, schedule.activityTitle, schedule.projectName);
   console.log("DaySch", task);
   if (task) {
-    emit("convert-schedule-to-task", { task: task, scheduleId: schedule.id });
+    emit("convert-schedule-to-task", { task: task, activityId: schedule.activityId });
     popoverMessage.value = "已转换为任务";
     showPopover.value = true;
     setTimeout(() => {

@@ -365,7 +365,7 @@ const emit = defineEmits<{
   (e: "edit-todo-title", id: number, newTitle: string): void;
   (e: "edit-todo-start", id: number, newTs: string): void;
   (e: "edit-todo-done", id: number, newTs: string): void;
-  (e: "convert-todo-to-task", payload: { task: Task; todoId: number }): void;
+  (e: "convert-todo-to-task", payload: { task: Task; activityId: number }): void;
 }>();
 
 // 对待办事项按优先级降序排序（高优先级在前）
@@ -374,14 +374,16 @@ const sortedTodos = computed(() => {
     return [];
   }
 
-  return [...props.todos].sort((a, b) => {
-    // 0 放最后
-    if (a.priority === 0 && b.priority === 0) return 0;
-    if (a.priority === 0) return 1;
-    if (b.priority === 0) return -1;
-    // 其余越小越优先
-    return a.priority - b.priority;
-  });
+  return [...props.todos]
+    .filter((t) => !t.deleted)
+    .sort((a, b) => {
+      // 0 放最后
+      if (a.priority === 0 && b.priority === 0) return 0;
+      if (a.priority === 0) return 1;
+      if (b.priority === 0) return -1;
+      // 其余越小越优先
+      return a.priority - b.priority;
+    });
 });
 
 // 优先级 排序================
@@ -701,7 +703,7 @@ function handleConvertToTask(todo: Todo) {
     // 立即更新本地的 taskId
     todo.taskId = task.id;
 
-    emit("convert-todo-to-task", { task: task, todoId: todo.id });
+    emit("convert-todo-to-task", { task: task, activityId: todo.activityId });
     popoverMessage.value = "完成任务转换";
     showPopover.value = true;
     setTimeout(() => {

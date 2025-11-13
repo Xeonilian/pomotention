@@ -151,7 +151,7 @@
             v-if="settingStore.settings.showPlanner && settingStore.settings.viewSet === 'day'"
             @update-schedule-status="onUpdateScheduleStatus"
             @cancel-schedule="onCancelSchedule"
-            @convert-schedule-to-task="onConvertScheduleToTask"
+            @convert-schedule-to-task="onConvertActivityToTask"
             @edit-schedule-done="handleEditScheduleDone"
             @edit-schedule-title="handleEditScheduleTitle"
             @update-todo-status="onUpdateTodoStatus"
@@ -163,7 +163,7 @@
             @edit-todo-title="handleEditTodoTitle"
             @edit-todo-start="handleEditTodoStart"
             @edit-todo-done="handleEditTodoDone"
-            @convert-todo-to-task="onConvertTodoToTask"
+            @convert-todo-to-task="onConvertActivityToTask"
           />
           <WeekPlanner
             v-if="settingStore.settings.showPlanner && settingStore.settings.viewSet === 'week'"
@@ -672,6 +672,8 @@ function onUpdateTodoEst(id: number, estPomo: number[]) {
   const todo = todoById.value.get(id);
   if (todo) {
     todo.estPomo = estPomo;
+    todo.synced = true;
+    todo.lastModified = Date.now();
   }
   const activity = todo?.activityId != null ? activityById.value.get(todo.activityId) : undefined;
   if (activity && estPomo) {
@@ -680,6 +682,8 @@ function onUpdateTodoEst(id: number, estPomo: number[]) {
     } else {
       activity.estPomoI = undefined;
     }
+    activity.synced = true;
+    activity.lastModified = Date.now();
   }
   saveAllDebounced();
 }
@@ -689,6 +693,8 @@ function onUpdateTodoPomo(id: number, realPomo: number[]) {
   const todo = todoById.value.get(id);
   if (todo) {
     todo.realPomo = realPomo;
+    todo.synced = true;
+    todo.lastModified = Date.now();
   }
   saveAllDebounced();
 }
@@ -701,6 +707,8 @@ function onUpdateTodoPriority(updates: Array<{ id: number; priority: number }>) 
     const todo = todoById.value.get(id);
     if (todo) {
       todo.priority = priority;
+      todo.synced = true;
+      todo.lastModified = Date.now();
     }
   }
   saveAllDebounced();
@@ -728,6 +736,8 @@ function onCancelTodo(id: number) {
     for (const child of childActivities) {
       child.status = "cancelled";
     }
+    todo.synced = true;
+    todo.lastModified = Date.now();
   }
   saveAllDebounced();
 }
@@ -774,44 +784,6 @@ function onUpdateScheduleStatus(id: number, isChecked: boolean) {
     }
   }
   updateScheduleStatus(id, doneTime, newStatus);
-}
-
-function onConvertTodoToTask(payload: { task: Task; todoId: number }) {
-  const { task, todoId } = payload;
-  taskList.value = [...taskList.value, task];
-  const todo = todoById.value.get(todoId);
-  if (todo) {
-    todo.taskId = task.id;
-    const activity = activityById.value.get(todo.activityId);
-    if (activity) {
-      selectedTaskId.value = task.id;
-      activeId.value = activity.id;
-    }
-  }
-  // 3) 同步 UI 选中
-  selectedTaskId.value = task.id;
-  saveAllDebounced();
-}
-
-function onConvertScheduleToTask(payload: { task: Task; scheduleId: number }) {
-  const { task, scheduleId } = payload;
-  console.log("home", task.id);
-
-  // 1) 推入任务列表（替换引用，便于浅 watch 或立即响应）
-  taskList.value = [...taskList.value, task];
-  // 2) 回写 schedule.taskId
-  const schedule = scheduleById.value.get(scheduleId);
-  if (schedule) {
-    schedule.taskId = task.id;
-
-    const activity = activityById.value.get(schedule.activityId);
-    if (activity) {
-      activity.taskId = task.id;
-    }
-  }
-  // 3) 同步 UI 选中
-  selectedTaskId.value = task.id;
-  saveAllDebounced();
 }
 
 /** 修改日期切换按钮的处理函数 */
@@ -952,6 +924,7 @@ function handleEditScheduleDone(id: number, newTm: string) {
 
 // ======================== 8. 生命周期 Hook ========================
 onMounted(() => {
+  console.log("HomeView mounted");
   dataStore.loadAllData();
   dateService.setupSystemDateWatcher();
   dateService.navigateByView("today");
