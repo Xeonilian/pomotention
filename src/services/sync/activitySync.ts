@@ -55,9 +55,9 @@ export class ActivitySyncService extends BaseSyncService<Activity, CloudActivity
       taskId: cloud.task_id ?? undefined,
       tagIds: cloud.tag_ids ?? undefined,
       parentId: cloud.parent_id,
-      lastModified: new Date(cloud.last_modified).getTime(),
+      lastModified: Date.now(),
       synced: true,
-      deleted: cloud.deleted,
+      deleted: false,
     };
   }
 }
