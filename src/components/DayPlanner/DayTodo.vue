@@ -374,16 +374,14 @@ const sortedTodos = computed(() => {
     return [];
   }
 
-  return [...props.todos]
-    .filter((t) => !t.deleted)
-    .sort((a, b) => {
-      // 0 放最后
-      if (a.priority === 0 && b.priority === 0) return 0;
-      if (a.priority === 0) return 1;
-      if (b.priority === 0) return -1;
-      // 其余越小越优先
-      return a.priority - b.priority;
-    });
+  return [...props.todos].sort((a, b) => {
+    // 0 放最后
+    if (a.priority === 0 && b.priority === 0) return 0;
+    if (a.priority === 0) return 1;
+    if (b.priority === 0) return -1;
+    // 其余越小越优先
+    return a.priority - b.priority;
+  });
 });
 
 // 优先级 排序================

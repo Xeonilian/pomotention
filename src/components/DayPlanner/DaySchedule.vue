@@ -266,13 +266,11 @@ const showPopover = ref(false);
 const popoverMessage = ref("");
 
 const sortedSchedules = computed(() =>
-  props.schedules
-    .filter((s) => !s.deleted)
-    .sort((a, b) => {
-      const aValue = a.activityDueRange?.[0] ?? Infinity;
-      const bValue = b.activityDueRange?.[0] ?? Infinity;
-      return aValue - bValue;
-    })
+  props.schedules.sort((a, b) => {
+    const aValue = a.activityDueRange?.[0] ?? Infinity;
+    const bValue = b.activityDueRange?.[0] ?? Infinity;
+    return aValue - bValue;
+  })
 );
 
 function handleCheckboxChange(id: number, checked: boolean) {
