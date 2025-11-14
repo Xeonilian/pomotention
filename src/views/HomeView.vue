@@ -672,7 +672,7 @@ function onUpdateTodoEst(id: number, estPomo: number[]) {
   const todo = todoById.value.get(id);
   if (todo) {
     todo.estPomo = estPomo;
-    todo.synced = true;
+    todo.synced = false;
     todo.lastModified = Date.now();
   }
   const activity = todo?.activityId != null ? activityById.value.get(todo.activityId) : undefined;
@@ -682,7 +682,7 @@ function onUpdateTodoEst(id: number, estPomo: number[]) {
     } else {
       activity.estPomoI = undefined;
     }
-    activity.synced = true;
+    activity.synced = false;
     activity.lastModified = Date.now();
   }
   saveAllDebounced();
@@ -693,7 +693,7 @@ function onUpdateTodoPomo(id: number, realPomo: number[]) {
   const todo = todoById.value.get(id);
   if (todo) {
     todo.realPomo = realPomo;
-    todo.synced = true;
+    todo.synced = false;
     todo.lastModified = Date.now();
   }
   saveAllDebounced();
@@ -707,7 +707,7 @@ function onUpdateTodoPriority(updates: Array<{ id: number; priority: number }>) 
     const todo = todoById.value.get(id);
     if (todo) {
       todo.priority = priority;
-      todo.synced = true;
+      todo.synced = false;
       todo.lastModified = Date.now();
     }
   }
@@ -736,7 +736,7 @@ function onCancelTodo(id: number) {
     for (const child of childActivities) {
       child.status = "cancelled";
     }
-    todo.synced = true;
+    todo.synced = false;
     todo.lastModified = Date.now();
   }
   saveAllDebounced();
