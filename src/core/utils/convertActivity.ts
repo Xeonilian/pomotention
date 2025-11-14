@@ -22,6 +22,9 @@ export function convertToTodo(activity: Activity): Todo {
     priority: 0,
     idFormated: timestampToDatetime(Date.now()),
     interruption: activity.interruption ? activity.interruption : undefined,
+    deleted: false,
+    lastModified: Date.now(),
+    synced: false,
   };
 }
 
@@ -33,13 +36,16 @@ export function convertToTodo(activity: Activity): Todo {
 export function convertToSchedule(activity: Activity): Schedule {
   return {
     id: Date.now(),
+    status: "ongoing",
     activityId: activity.id,
     activityTitle: activity.title,
     activityDueRange: [activity.dueRange![0], activity.dueRange![1]],
-    status: "",
     projectName: activity.projectId ? `项目${activity.projectId}` : undefined,
     location: activity.location || "",
     interruption: activity.interruption ? activity.interruption : undefined,
+    deleted: false,
+    lastModified: Date.now(),
+    synced: false,
   };
 }
 
