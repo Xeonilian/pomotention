@@ -62,10 +62,11 @@ export const useDataStore = defineStore(
         return;
       }
 
-      activityList.value = loadActivities();
-      todoList.value = loadTodos();
-      scheduleList.value = loadSchedules();
-      taskList.value = loadTasks();
+      activityList.value = loadActivities().filter(a => !a.deleted);
+      todoList.value = loadTodos().filter(t => !t.deleted);
+      scheduleList.value = loadSchedules().filter(s => !s.deleted);
+      taskList.value = loadTasks().filter(t => !t.deleted);
+
 
       // 加载标签
       tagStore.loadAllTags();

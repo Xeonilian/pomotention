@@ -1,63 +1,140 @@
 // src/services/sync/todoSync.ts
+
+import { supabase } from "@/core/services/supabase";
+import { getCurrentUser } from "@/core/services/authServicve";
 import { BaseSyncService } from "./baseSyncService";
 import type { Todo } from "@/core/types/Todo";
 import type { Database } from "@/core/types/Database";
 
-type CloudTodo = Database["public"]["Tables"]["todos"]["Row"];
 type CloudTodoInsert = Database["public"]["Tables"]["todos"]["Insert"];
+
+/**
+ * RPC 返回的完整格式（带冗余字段）
+ */
+interface FullTodoFromCloud {
+  id: number;
+  activityId: number;
+  activityTitle: string;
+  projectName: string | null;
+  taskId: number;
+  estPomo: number[];
+  realPomo: number[];
+  status: string;
+  priority: number;
+  pomoType: string;
+  dueDate: number;
+  doneTime: number;
+  startTime: number;
+  interruption: string;
+  globalIndex: number;
+}
 
 export class TodoSyncService extends BaseSyncService<Todo, CloudTodoInsert> {
   constructor() {
-    super("todos", "todos");
+    super("todos", "todayTodo");
   }
 
+  /**
+   * 本地 → 云端（仅非冗余字段）
+   */
   protected mapLocalToCloud(local: Todo, userId: string): CloudTodoInsert {
     return {
       user_id: userId,
-      id: local.id,
+      timestamp_id: local.id,
       activity_id: local.activityId,
-      activity_title: local.activityTitle,
-      project_name: local.projectName || null,
-      task_id: local.taskId || null,
-      est_pomo: local.estPomo || null,
-      real_pomo: local.realPomo || null,
-      status: local.status || null,
+      est_pomo: local.estPomo,
+      real_pomo: local.realPomo,
+      status: local.status as Todo["status"],
       priority: local.priority,
-      pomo_type: local.pomoType || null,
-      due_date: local.dueDate || null,
-      done_time: local.doneTime || null,
-      start_time: local.startTime || null,
-      interruption: local.interruption || null,
-      global_index: local.globalIndex || null,
-      // ✅ 不传 positionIndex
-      // ✅ 不传 idFormated
+      done_time: local.doneTime ?? null,
+      start_time: local.startTime ?? null,
+      global_index: local.globalIndex ?? null,
       deleted: local.deleted,
-      last_modified: new Date(local.lastModified).toISOString(),
     };
   }
 
-  protected mapCloudToLocal(cloud: CloudTodo): Todo {
+  /**
+   * 云端 RPC → 本地（带冗余字段 + 生成同步元数据）
+   */
+  protected mapCloudToLocal(cloud: FullTodoFromCloud): Todo {
     return {
       id: cloud.id,
-      activityId: cloud.activity_id,
-      activityTitle: cloud.activity_title,
-      projectName: cloud.project_name ?? undefined,
-      taskId: cloud.task_id ?? undefined,
-      estPomo: cloud.est_pomo ?? undefined,
-      realPomo: cloud.real_pomo ?? undefined,
-      status: (cloud.status || "") as Todo["status"],
+      activityId: cloud.activityId,
+      activityTitle: cloud.activityTitle,
+      projectName: cloud.projectName ?? undefined,
+      taskId: cloud.taskId,
+      estPomo: cloud.estPomo,
+      realPomo: cloud.realPomo,
+      status: cloud.status as Todo["status"],
       priority: cloud.priority,
-      pomoType: cloud.pomo_type as Todo["pomoType"],
-      dueDate: cloud.due_date ?? undefined,
-      doneTime: cloud.done_time ?? undefined,
-      startTime: cloud.start_time ?? undefined,
-      interruption: cloud.interruption as Todo["interruption"],
-      globalIndex: cloud.global_index ?? undefined,
-      // ✅ 不读 positionIndex（服务端没有）
-      deleted: cloud.deleted ?? false,
-      lastModified: new Date(cloud.last_modified).getTime(),
+      pomoType: cloud.pomoType as "🍅" | "🍇" | "🍒",
+      dueDate: cloud.dueDate,
+      doneTime: cloud.doneTime,
+      startTime: cloud.startTime,
+      interruption: cloud.interruption as "I" | "E",
+      globalIndex: cloud.globalIndex,
+      
+      // 同步元数据（本地生成）
+      lastModified: Date.now(),
       synced: true,
+      deleted: false,
     };
+  }
+
+  /**
+   * 覆盖 download 方法：使用 RPC 获取带冗余字段的数据
+   */
+  async download(lastSyncTimestamp: number): Promise<{
+    success: boolean;
+    error?: string;
+    downloaded: number;
+  }> {
+    try {
+      const user = await getCurrentUser();
+      if (!user) return { success: false, error: "用户未登录", downloaded: 0 };
+
+      // 调用 RPC 获取完整数据（RPC 已过滤 deleted = false）
+      const { data, error } = await supabase.rpc("get_full_todos", {
+        p_user_id: user.id,
+      });
+
+      if (error) throw error;
+      if (!data || data.length === 0) {
+        return { success: true, downloaded: 0 };
+      }
+
+      const localItems = this.loadLocal();
+      let downloadedCount = 0;
+
+      data.forEach((cloudItem: FullTodoFromCloud) => {
+        const cloudEntity = this.mapCloudToLocal(cloudItem);
+        const localIndex = localItems.findIndex((item) => item.id === cloudEntity.id);
+
+        if (localIndex === -1) {
+          // 本地不存在，直接插入
+          localItems.push(cloudEntity);
+          downloadedCount++;
+        } else {
+          const localItem = localItems[localIndex];
+
+          // Last Write Wins: 比较本地时间戳
+          if (!localItem.synced && localItem.lastModified > lastSyncTimestamp) {
+            // 本地有未同步的更新，保留本地版本
+            // 不做任何操作
+          } else {
+            // 云端版本优先，覆盖本地
+            localItems[localIndex] = cloudEntity;
+            downloadedCount++;
+          }
+        }
+      });
+
+      this.saveLocal(localItems);
+      return { success: true, downloaded: downloadedCount };
+    } catch (error: any) {
+      console.error("下载 todos 失败:", error);
+      return { success: false, error: error.message, downloaded: 0 };
+    }
   }
 }
 
