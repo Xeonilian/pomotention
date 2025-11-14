@@ -48,91 +48,100 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
   }
 
   /**
-   * 上传未同步的记录
-   */
-  async upload(): Promise<{ success: boolean; error?: string; uploaded: number }> {
-    try {
-      const user = await getCurrentUser();
-      if (!user) return { success: false, error: "用户未登录", uploaded: 0 };
+ * 上传未同步的记录
+ */
+async upload(): Promise<{ success: boolean; error?: string; uploaded: number }> {
+  try {
+    const user = await getCurrentUser();
+    if (!user) return { success: false, error: "用户未登录", uploaded: 0 };
 
-      const localItems = this.loadLocal();
-      const unsyncedItems = localItems.filter((item) => !item.synced);
+    const localItems = this.loadLocal();
+    const unsyncedItems = localItems.filter((item) => !item.synced);
 
-      if (unsyncedItems.length === 0) {
-        return { success: true, uploaded: 0 };
-      }
-
-      const cloudData = unsyncedItems.map((item) => this.mapLocalToCloud(item, user.id));
-
-      const { error } = await supabase
-        .from(this.tableName)
-        .upsert(cloudData as any, {
-          onConflict: 'user_id,timestamp_id',
-          ignoreDuplicates: false,
-        });
-
-      if (error) throw error;
-
-      unsyncedItems.forEach((item) => {
-        item.synced = true;
-      });
-      this.saveLocal(localItems);
-
-      return { success: true, uploaded: unsyncedItems.length };
-    } catch (error: any) {
-      console.error(`${this.tableName} 上传失败:`, error);
-      return { success: false, error: error.message, uploaded: 0 };
+    if (unsyncedItems.length === 0) {
+      return { success: true, uploaded: 0 };
     }
+
+    // 添加 console 查看具体上传内容
+    console.log(`📤 [${this.tableName}] 准备上传 ${unsyncedItems.length} 条:`, unsyncedItems);
+
+    const cloudData = unsyncedItems.map((item) => this.mapLocalToCloud(item, user.id));
+    
+    console.log(`📤 [${this.tableName}] 转换后的云端数据:`, cloudData);
+
+    const { error } = await supabase
+      .from(this.tableName)
+      .upsert(cloudData as any, {
+        onConflict: 'user_id,timestamp_id',
+        ignoreDuplicates: false,
+      });
+
+    if (error) throw error;
+
+    // 标记为已同步
+    unsyncedItems.forEach((item) => {
+      item.synced = true;
+    });
+    this.saveLocal(localItems);
+
+    console.log(`✅ [${this.tableName}] 上传成功 ${unsyncedItems.length} 条`);
+    return { success: true, uploaded: unsyncedItems.length };
+  } catch (error: any) {
+    console.error(`❌ [${this.tableName}] 上传失败:`, error);
+    return { success: false, error: error.message, uploaded: 0 };
   }
+}
 
   /**
-   * 下载增量数据（Last Write Wins 策略）
+   * 从云端下载数据（默认实现：直接查询表）
+   * 子类可以覆盖此方法（如 TodoSyncService 使用 RPC）
    */
-  async download(lastSyncTimestamp: number): Promise<{ success: boolean; error?: string; downloaded: number }> {
+  async download(lastSyncTimestamp: number): Promise<{
+    success: boolean;
+    error?: string;
+    downloaded: number;
+  }> {
     try {
       const user = await getCurrentUser();
       if (!user) return { success: false, error: "用户未登录", downloaded: 0 };
 
-      // 从云端获取 last_modified > lastSyncTimestamp 的记录
       const lastSyncDate = new Date(lastSyncTimestamp).toISOString();
-      const { data: cloudData, error } = await supabase
+
+      // 直接查询表（增量同步）
+      const { data, error } = await supabase
         .from(this.tableName)
         .select("*")
         .eq("user_id", user.id)
+        .eq("deleted", false)
         .gt("last_modified", lastSyncDate);
 
       if (error) throw error;
-      if (!cloudData || cloudData.length === 0) {
+      if (!data || data.length === 0) {
         return { success: true, downloaded: 0 };
       }
 
       const localItems = this.loadLocal();
       let downloadedCount = 0;
 
-      cloudData.forEach((cloudItem: any) => {
+      data.forEach((cloudItem: any) => {
         const cloudEntity = this.mapCloudToLocal(cloudItem);
         const localIndex = localItems.findIndex((item) => item.id === cloudEntity.id);
 
         if (localIndex === -1) {
-          // 本地不存在，直接插入（跳过已删除的）
-          if (!cloudEntity.deleted) {
-            localItems.push({ ...cloudEntity, synced: true });
-            downloadedCount++;
-          }
+          // 本地不存在，直接插入
+          localItems.push(cloudEntity);
+          downloadedCount++;
         } else {
           const localItem = localItems[localIndex];
 
-          // Last Write Wins: 比较时间戳
-          if (cloudEntity.lastModified > localItem.lastModified) {
-            // 云端更新，覆盖本地
-            localItems[localIndex] = { ...cloudEntity, synced: true };
-            downloadedCount++;
-          } else if (cloudEntity.lastModified < localItem.lastModified && !localItem.synced) {
-            // 本地更新且未同步，保持本地版本（稍后会上传覆盖云端）
+          // Last Write Wins: 比较本地时间戳
+          if (!localItem.synced && localItem.lastModified > lastSyncTimestamp) {
+            // 本地有未同步的更新，保留本地版本（稍后 upload 会覆盖云端）
             // 不做任何操作
           } else {
-            // 时间戳相同或本地已同步，标记为已同步
-            localItem.synced = true;
+            // 云端版本优先，覆盖本地
+            localItems[localIndex] = cloudEntity;
+            downloadedCount++;
           }
         }
       });
