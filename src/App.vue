@@ -10,16 +10,49 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from "vue";
+import { onMounted, watch } from "vue";
+import { storeToRefs } from "pinia"; // ✅ 添加导入
 import { useRouter } from "vue-router";
 import { NConfigProvider, NNotificationProvider, NDialogProvider } from "naive-ui";
 import UpdateManager from "./components/UpdateManager.vue";
 import { supabase } from "@/core/services/supabase";
 
+// 导入 dataStore 和同步相关
+import { useDataStore } from "@/stores/useDataStore";
+import { initSyncServices } from "@/services/sync";
+import { uploadAllDebounced } from "@/core/utils/autoSync";
+
 const router = useRouter();
+const dataStore = useDataStore();
+
+// ✅ 使用 storeToRefs 提取响应式引用
+const { activityList, todoList, scheduleList, taskList } = storeToRefs(dataStore);
 
 onMounted(async () => {
-  // 处理 Supabase 的认证回调（邮箱确认、密码重置等）
+  // ========== 1. 初始化本地数据 ==========
+  dataStore.loadAllData();
+  console.log("✅ [App] 本地数据已加载");
+
+  // ========== 2. 初始化同步服务 ==========
+  initSyncServices({
+    activityList: activityList, // ✅ 现在是 Ref<Activity[]>
+    // 未来加表只需在这里添加一行
+    // todoList: todoList,
+    // scheduleList: scheduleList,
+  });
+
+  // ========== 3. 监听数据变化，触发自动同步 ==========
+  watch(
+    [activityList, todoList, scheduleList, taskList], // ✅ 直接 watch ref
+    () => {
+      dataStore.saveAllDebounced(); // 先保存到 localStorage
+      uploadAllDebounced(); // 再触发云端同步（5秒防抖）
+    },
+    { deep: true }
+  );
+  console.log("✅ [App] 自动同步已启动");
+
+  // ========== 4. 处理 Supabase 的认证回调（原有逻辑） ==========
   const { error } = await supabase.auth.getSession();
 
   if (error) {
@@ -28,8 +61,6 @@ onMounted(async () => {
 
   // 监听认证状态变化
   supabase.auth.onAuthStateChange((event, session) => {
-    //console.log("Auth state changed:", event, session);
-
     // 当用户确认邮箱或登录成功后
     if (event === "SIGNED_IN" && session) {
       // 清除 URL 中的 hash（认证令牌），让 URL 更干净

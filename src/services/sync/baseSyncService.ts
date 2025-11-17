@@ -2,6 +2,7 @@
 
 import { supabase } from "@/core/services/supabase";
 import { getCurrentUser } from "@/core/services/authServicve";
+import type { Ref } from 'vue'; 
 
 /**
  * 可同步的实体接口（本地数据必须有这些字段）
@@ -19,7 +20,8 @@ export interface SyncableEntity {
 export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
   constructor(
     protected tableName: string,
-    protected localStorageKey: string
+    protected localStorageKey: string,
+    protected reactiveList: Ref<TLocal[]>  // ✅ 改动1: 移除 `?`，变为必传参数
   ) {}
 
   /**
@@ -44,53 +46,60 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
    * 保存到 localStorage
    */
   protected saveLocal(items: TLocal[]): void {
+    // ✅ 改动2: 移除 if 判断，直接更新（因为 reactiveList 已经是必传）
+    this.reactiveList.value = items;
     localStorage.setItem(this.localStorageKey, JSON.stringify(items));
+    console.log(`💾 [${this.tableName}] 已更新响应式数据和 localStorage，共 ${items.length} 条`);
   }
 
-  /**
- * 上传未同步的记录
- */
-async upload(): Promise<{ success: boolean; error?: string; uploaded: number }> {
-  try {
-    const user = await getCurrentUser();
-    if (!user) return { success: false, error: "用户未登录", uploaded: 0 };
+  async upload(): Promise<{ success: boolean; error?: string; uploaded: number }> {
+    try {
+      const user = await getCurrentUser();
+      if (!user) return { success: false, error: "用户未登录", uploaded: 0 };
 
-    const localItems = this.loadLocal();
-    const unsyncedItems = localItems.filter((item) => !item.synced);
+      const localItems = this.loadLocal();
+      const unsyncedItems = localItems.filter((item) => !item.synced);
 
-    if (unsyncedItems.length === 0) {
-      return { success: true, uploaded: 0 };
-    }
+      if (unsyncedItems.length === 0) {
+        console.log(`✅ [${this.tableName}] 无需上传`);
+        return { success: true, uploaded: 0 };
+      }
 
-    // 添加 console 查看具体上传内容
-    console.log(`📤 [${this.tableName}] 准备上传 ${unsyncedItems.length} 条:`, unsyncedItems);
+      console.log(`📤 [${this.tableName}] 准备上传 ${unsyncedItems.length} 条，ID:`, unsyncedItems.map(i => i.id));
 
-    const cloudData = unsyncedItems.map((item) => this.mapLocalToCloud(item, user.id));
-    
-    console.log(`📤 [${this.tableName}] 转换后的云端数据:`, cloudData);
+      const cloudData = unsyncedItems.map((item) => this.mapLocalToCloud(item, user.id));
 
-    const { error } = await supabase
-      .from(this.tableName)
-      .upsert(cloudData as any, {
-        onConflict: 'user_id,timestamp_id',
-        ignoreDuplicates: false,
+      const { error } = await supabase
+        .from(this.tableName)
+        .upsert(cloudData as any, {
+          onConflict: 'user_id,timestamp_id',
+          ignoreDuplicates: false,
+        });
+
+      if (error) throw error;
+
+      // 标记为已同步
+      unsyncedItems.forEach((unsyncedItem) => {
+        const item = localItems.find(i => i.id === unsyncedItem.id);
+        if (item) {
+          item.synced = true;
+        }
       });
+      
+      this.saveLocal(localItems);
 
-    if (error) throw error;
-
-    // 标记为已同步
-    unsyncedItems.forEach((item) => {
-      item.synced = true;
-    });
-    this.saveLocal(localItems);
-
-    console.log(`✅ [${this.tableName}] 上传成功 ${unsyncedItems.length} 条`);
-    return { success: true, uploaded: unsyncedItems.length };
-  } catch (error: any) {
-    console.error(`❌ [${this.tableName}] 上传失败:`, error);
-    return { success: false, error: error.message, uploaded: 0 };
+      console.log(`✅ [${this.tableName}] 上传成功 ${unsyncedItems.length} 条，已标记 synced=true`);
+      
+      // ✅ 改动3: 验证日志保留，但不再需要判断 reactiveList 是否存在
+      const stillUnsynced = this.reactiveList.value.filter(i => !i.synced).length;
+      console.log(`🔍 [${this.tableName}] 响应式数据中剩余未同步: ${stillUnsynced} 条`);
+      
+      return { success: true, uploaded: unsyncedItems.length };
+    } catch (error: any) {
+      console.error(`❌ [${this.tableName}] 上传失败:`, error.message);
+      return { success: false, error: error.message, uploaded: 0 };
+    }
   }
-}
 
   /**
    * 从云端下载数据（默认实现：直接查询表）

@@ -3,13 +3,15 @@
 import { BaseSyncService } from "@/services/sync/baseSyncService";
 import type { Activity } from "@/core/types/Activity";
 import type { Database } from "@/core/types/Database";
+import type { Ref } from 'vue'; 
 
 type CloudActivity = Database["public"]["Tables"]["activities"]["Row"];
 type CloudActivityInsert = Database["public"]["Tables"]["activities"]["Insert"];
 
 export class ActivitySyncService extends BaseSyncService<Activity, CloudActivityInsert> {
-  constructor() {
-    super("activities", "activitySheet");
+  // ✅ 改动1: 构造函数参数改为必传（移除 `?`）
+  constructor(reactiveList: Ref<Activity[]>) {
+    super("activities", "activitySheet", reactiveList);
   }
 
   protected mapLocalToCloud(local: Activity, userId: string): CloudActivityInsert {
@@ -62,5 +64,5 @@ export class ActivitySyncService extends BaseSyncService<Activity, CloudActivity
   }
 }
 
-// 导出单例
-export const activitySync = new ActivitySyncService();
+// ❌ 改动2: 删除单例导出
+// export const activitySync = new ActivitySyncService();

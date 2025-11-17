@@ -276,6 +276,10 @@ const {
   todoList,
   scheduleList,
   taskList,
+  activeActivities,
+  activeTodos,
+  activeSchedules,
+  activeTasks,
   activeId,
   selectedTaskId,
   selectedActivityId,
@@ -404,11 +408,21 @@ function cancelEdit() {
 
 /** 新增活动 */
 function onAddActivity(newActivity: Activity) {
+  console.log("🔵 添加前，未同步数量:", activityList.value.filter((a) => !a.synced).length);
+
   activeId.value = null;
   activityList.value.push(newActivity);
+
   handleAddActivity(scheduleList.value, newActivity, {
     activityById: activityById.value,
   });
+
+  console.log("🔵 添加后，未同步数量:", activityList.value.filter((a) => !a.synced).length);
+  console.log(
+    "🔵 未同步的 activities:",
+    activityList.value.filter((a) => !a.synced)
+  );
+
   activeId.value = newActivity.id;
   saveAllDebounced();
 }
@@ -564,7 +578,11 @@ function onIncreaseChildActivity(id: number | null | undefined) {
   if (id == null) return;
   // 找到Activity
   const selectActivity = activityById.value.get(id);
-  if (selectActivity) selectActivity.parentId = null;
+  if (selectActivity) {
+    selectActivity.parentId = null;
+    selectActivity.synced = false;
+    selectActivity.lastModified = Date.now();
+  }
   saveAllDebounced();
 }
 
@@ -925,7 +943,6 @@ function handleEditScheduleDone(id: number, newTm: string) {
 // ======================== 8. 生命周期 Hook ========================
 onMounted(() => {
   console.log("HomeView mounted");
-  dataStore.loadAllData();
   dateService.setupSystemDateWatcher();
   dateService.navigateByView("today");
   syncAll();

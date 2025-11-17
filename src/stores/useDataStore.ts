@@ -25,7 +25,6 @@ import { unifiedDateService } from "@/services/unifiedDateService";
 import { collectPomodoroData, collectTaskRecordData, aggregateByTime } from "@/services/chartDataService";
 import { usePomoStore } from "./usePomoStore";
 import { useTagStore } from "./useTagStore";
-import { uploadAllDebounced } from "@/core/utils/autoSync"; 
 
 export const useDataStore = defineStore(
   "data",
@@ -62,11 +61,10 @@ export const useDataStore = defineStore(
         return;
       }
 
-      activityList.value = loadActivities().filter(a => !a.deleted);
-      todoList.value = loadTodos().filter(t => !t.deleted);
-      scheduleList.value = loadSchedules().filter(s => !s.deleted);
-      taskList.value = loadTasks().filter(t => !t.deleted);
-
+      activityList.value = loadActivities().filter((a) => !a.deleted);
+      todoList.value = loadTodos().filter((t) => !t.deleted);
+      scheduleList.value = loadSchedules().filter((s) => !s.deleted);
+      taskList.value = loadTasks().filter((t) => !t.deleted);
 
       // 加载标签
       tagStore.loadAllTags();
@@ -76,7 +74,21 @@ export const useDataStore = defineStore(
 
       isDataLoaded.value = true;
     }
+const activeActivities = computed(() => 
+  activityList.value.filter(a => !a.deleted)
+);
 
+    const activeTodos = computed(() => 
+      todoList.value.filter(t => !t.deleted)
+    );
+
+    const activeSchedules = computed(() => 
+      scheduleList.value.filter(s => !s.deleted)
+    );
+
+    const activeTasks = computed(() => 
+      taskList.value.filter(t => !t.deleted)
+    );
     // ======================== 4. 数据索引 (Getters / Computed) ========================
     const activityById = computed(() => new Map(activityList.value.map((a) => [a.id, a])));
     const todoById = computed(() => new Map(todoList.value.map((t) => [t.id, t])));
@@ -284,7 +296,6 @@ export const useDataStore = defineStore(
         saveTodos(todoList.value);
         saveSchedules(scheduleList.value);
         saveTasks(taskList.value);
-        uploadAllDebounced();
       } catch (e) {
         console.error("save failed", e);
       }
@@ -556,7 +567,11 @@ export const useDataStore = defineStore(
       todoList,
       scheduleList,
       taskList,
-
+      activeActivities,
+      activeTodos,
+      activeSchedules,
+      activeTasks,
+      
       // 索引
       activityById,
       todoById,

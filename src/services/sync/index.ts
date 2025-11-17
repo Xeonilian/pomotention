@@ -1,21 +1,61 @@
 // src/services/sync/index.ts
 
-import { activitySync } from "./activitySync";
-import { scheduleSync } from "./scheduleSync";
-import { todoSync } from "./todoSync";
+import type { Ref } from "vue";
+import { ActivitySyncService } from "./activitySync";
+import type { Activity } from "@/core/types/Activity";
+// import { ScheduleSyncService } from "./scheduleSync";
+// import { TodoSyncService } from "./todoSync";
 import { useSyncStore } from "@/stores/useSyncStore";
 
-// 所有需要同步的服务
-const syncServices = [
-  { name: "Activities", service: activitySync },
-  { name: "Schedules", service: scheduleSync },
-  { name: "Todos", service: todoSync },
-];
+// 私有变量：存储所有 sync 服务实例
+let syncServices: Array<{ name: string; service: any }> = [];
+let isInitialized = false;
+
+/**
+ * 初始化所有同步服务（由 App.vue 调用）
+ */
+export function initSyncServices(dataStore: {
+  activityList: Ref<Activity[]>;
+  // 未来加表只需在这里添加类型声明
+}) {
+  if (isInitialized) {
+    console.warn("[Sync] 同步服务已初始化，跳过重复初始化");
+    return;
+  }
+
+  // 创建各表的 syncService 实例（传入响应式数据）
+  const activitySync = new ActivitySyncService(dataStore.activityList);
+  // const todoSync = new TodoSyncService(dataStore.todoList);
+  // const scheduleSync = new ScheduleSyncService(dataStore.scheduleList);
+
+  // 填充 syncServices 数组
+  syncServices = [
+    { name: "Activities", service: activitySync },
+    // { name: "Todos", service: todoSync },
+    // { name: "Schedules", service: scheduleSync },
+  ];
+
+  isInitialized = true;
+  console.log("✅ [Sync] 所有同步服务已初始化");
+}
+
+/**
+ * 检查是否已初始化
+ */
+function ensureInitialized() {
+  if (!isInitialized) {
+    throw new Error(
+      "[Sync] 同步服务未初始化，请先在 App.vue 的 onMounted 中调用 initSyncServices(dataStore)"
+    );
+  }
+}
 
 /**
  * 执行完整同步（上传 + 下载）
  */
 export async function syncAll(): Promise<{ success: boolean; errors: string[]; details: any }> {
+  ensureInitialized(); // ← 新增检查
+  
   const syncStore = useSyncStore();
   const errors: string[] = [];
   const details = { uploaded: 0, downloaded: 0 };
@@ -34,7 +74,7 @@ export async function syncAll(): Promise<{ success: boolean; errors: string[]; d
     // ========== 1. 并行上传所有表 ==========
     const uploadResults = await Promise.allSettled(
       syncServices.map(({ name, service }) =>
-        service.upload().then((result) => ({ name, result }))
+        service.upload().then((result: any) => ({ name, result }))
       )
     );
 
@@ -54,7 +94,7 @@ export async function syncAll(): Promise<{ success: boolean; errors: string[]; d
     // ========== 2. 并行下载所有表 ==========
     const downloadResults = await Promise.allSettled(
       syncServices.map(({ name, service }) =>
-        service.download(lastSync).then((result) => ({ name, result }))
+        service.download(lastSync).then((result: any) => ({ name, result }))
       )
     );
 
@@ -81,7 +121,7 @@ export async function syncAll(): Promise<{ success: boolean; errors: string[]; d
 
       const cleanupResults = await Promise.allSettled(
         syncServices.map(({ name, service }) =>
-          service.cleanupDeleted().then((result) => ({ name, result }))
+          service.cleanupDeleted().then((result: any) => ({ name, result }))
         )
       );
 
@@ -125,6 +165,8 @@ export async function syncAll(): Promise<{ success: boolean; errors: string[]; d
  * 只上传（用于立即保存）
  */
 export async function uploadAll(): Promise<{ success: boolean; errors: string[]; uploaded: number }> {
+  ensureInitialized(); // ← 新增检查
+  
   const syncStore = useSyncStore();
   const errors: string[] = [];
   let uploaded = 0;
@@ -134,13 +176,13 @@ export async function uploadAll(): Promise<{ success: boolean; errors: string[];
   }
 
   syncStore.isSyncing = true;
-  syncStore.syncError = null; // ✅ 清空旧错误
+  syncStore.syncError = null;
 
   try {
     // 并行上传所有表
     const uploadResults = await Promise.allSettled(
       syncServices.map(({ name, service }) =>
-        service.upload().then((result) => ({ name, result }))
+        service.upload().then((result: any) => ({ name, result }))
       )
     );
 
@@ -150,24 +192,24 @@ export async function uploadAll(): Promise<{ success: boolean; errors: string[];
         if (!result.success && result.error) {
           errors.push(`${name} 上传失败: ${result.error}`);
         } else {
-          uploaded += result.uploaded; // ✅ 统计上传数量
+          uploaded += result.uploaded;
         }
       } else {
         errors.push(`上传异常: ${outcome.reason}`);
       }
     });
 
-    // ✅ 关键：上传成功后更新时间戳
+    // 上传成功后更新时间戳
     if (errors.length === 0) {
       syncStore.updateLastSyncTimestamp();
     } else {
       syncStore.syncError = errors.join("; ");
     }
 
-    return { 
-      success: errors.length === 0, 
+    return {
+      success: errors.length === 0,
       errors,
-      uploaded // ✅ 返回上传数量，方便日志
+      uploaded,
     };
   } finally {
     syncStore.isSyncing = false;
