@@ -276,10 +276,6 @@ const {
   todoList,
   scheduleList,
   taskList,
-  activeActivities,
-  activeTodos,
-  activeSchedules,
-  activeTasks,
   activeId,
   selectedTaskId,
   selectedActivityId,
@@ -887,6 +883,8 @@ function handleEditTodoTitle(id: number, newTitle: string) {
     return;
   }
   activity.title = newTitle; //
+  activity.synced = false;
+  activity.lastModified = Date.now();
 
   // 找到task 并重新赋值
   const task = taskById.value.get(todo.id);

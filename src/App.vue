@@ -35,9 +35,9 @@ onMounted(async () => {
 
   // ========== 2. 初始化同步服务 ==========
   initSyncServices({
-    activityList: activityList, // ✅ 现在是 Ref<Activity[]>
+    activityList: activityList,
+    todoList: todoList,
     // 未来加表只需在这里添加一行
-    // todoList: todoList,
     // scheduleList: scheduleList,
   });
 

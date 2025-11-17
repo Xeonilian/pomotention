@@ -5,7 +5,7 @@ import { getCurrentUser } from "@/core/services/authServicve";
 import { BaseSyncService } from "./baseSyncService";
 import type { Todo } from "@/core/types/Todo";
 import type { Database } from "@/core/types/Database";
-
+import type { Ref } from "vue";
 type CloudTodoInsert = Database["public"]["Tables"]["todos"]["Insert"];
 
 /**
@@ -30,8 +30,8 @@ interface FullTodoFromCloud {
 }
 
 export class TodoSyncService extends BaseSyncService<Todo, CloudTodoInsert> {
-  constructor() {
-    super("todos", "todayTodo");
+  constructor(reactiveList: Ref<Todo[]>) {
+    super("todos", "todayTodo", reactiveList);
   }
 
   /**
@@ -73,7 +73,7 @@ export class TodoSyncService extends BaseSyncService<Todo, CloudTodoInsert> {
       startTime: cloud.startTime,
       interruption: cloud.interruption as "I" | "E",
       globalIndex: cloud.globalIndex,
-      
+
       // 同步元数据（本地生成）
       lastModified: Date.now(),
       synced: true,
@@ -137,5 +137,3 @@ export class TodoSyncService extends BaseSyncService<Todo, CloudTodoInsert> {
     }
   }
 }
-
-export const todoSync = new TodoSyncService();

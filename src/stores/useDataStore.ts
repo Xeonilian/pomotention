@@ -74,21 +74,13 @@ export const useDataStore = defineStore(
 
       isDataLoaded.value = true;
     }
-const activeActivities = computed(() => 
-  activityList.value.filter(a => !a.deleted)
-);
+    const activeActivities = computed(() => activityList.value.filter((a) => !a.deleted));
 
-    const activeTodos = computed(() => 
-      todoList.value.filter(t => !t.deleted)
-    );
+    const activeTodos = computed(() => todoList.value.filter((t) => !t.deleted));
 
-    const activeSchedules = computed(() => 
-      scheduleList.value.filter(s => !s.deleted)
-    );
+    const activeSchedules = computed(() => scheduleList.value.filter((s) => !s.deleted));
 
-    const activeTasks = computed(() => 
-      taskList.value.filter(t => !t.deleted)
-    );
+    const activeTasks = computed(() => taskList.value.filter((t) => !t.deleted));
     // ======================== 4. 数据索引 (Getters / Computed) ========================
     const activityById = computed(() => new Map(activityList.value.map((a) => [a.id, a])));
     const todoById = computed(() => new Map(todoList.value.map((t) => [t.id, t])));
@@ -178,6 +170,7 @@ const activeActivities = computed(() =>
       if (!todoList.value) return [];
       const out: TodoWithTaskRecords[] = [];
       for (const todo of todoList.value) {
+        if (todo.deleted) continue;
         if (todo.id < start || todo.id >= end) continue;
         const relatedTask = todo.taskId != null ? taskById.value.get(todo.taskId) : undefined;
         out.push({
@@ -571,7 +564,7 @@ const activeActivities = computed(() =>
       activeTodos,
       activeSchedules,
       activeTasks,
-      
+
       // 索引
       activityById,
       todoById,

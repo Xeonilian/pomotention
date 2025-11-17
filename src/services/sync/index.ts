@@ -3,8 +3,9 @@
 import type { Ref } from "vue";
 import { ActivitySyncService } from "./activitySync";
 import type { Activity } from "@/core/types/Activity";
+import { TodoSyncService } from "./todoSync";
+import type { Todo } from "@/core/types/Todo";
 // import { ScheduleSyncService } from "./scheduleSync";
-// import { TodoSyncService } from "./todoSync";
 import { useSyncStore } from "@/stores/useSyncStore";
 
 // 私有变量：存储所有 sync 服务实例
@@ -16,6 +17,7 @@ let isInitialized = false;
  */
 export function initSyncServices(dataStore: {
   activityList: Ref<Activity[]>;
+  todoList: Ref<Todo[]>;
   // 未来加表只需在这里添加类型声明
 }) {
   if (isInitialized) {
@@ -25,13 +27,13 @@ export function initSyncServices(dataStore: {
 
   // 创建各表的 syncService 实例（传入响应式数据）
   const activitySync = new ActivitySyncService(dataStore.activityList);
-  // const todoSync = new TodoSyncService(dataStore.todoList);
+  const todoSync = new TodoSyncService(dataStore.todoList);
   // const scheduleSync = new ScheduleSyncService(dataStore.scheduleList);
 
   // 填充 syncServices 数组
   syncServices = [
     { name: "Activities", service: activitySync },
-    // { name: "Todos", service: todoSync },
+    { name: "Todos", service: todoSync },
     // { name: "Schedules", service: scheduleSync },
   ];
 
@@ -44,9 +46,7 @@ export function initSyncServices(dataStore: {
  */
 function ensureInitialized() {
   if (!isInitialized) {
-    throw new Error(
-      "[Sync] 同步服务未初始化，请先在 App.vue 的 onMounted 中调用 initSyncServices(dataStore)"
-    );
+    throw new Error("[Sync] 同步服务未初始化，请先在 App.vue 的 onMounted 中调用 initSyncServices(dataStore)");
   }
 }
 
@@ -55,7 +55,7 @@ function ensureInitialized() {
  */
 export async function syncAll(): Promise<{ success: boolean; errors: string[]; details: any }> {
   ensureInitialized(); // ← 新增检查
-  
+
   const syncStore = useSyncStore();
   const errors: string[] = [];
   const details = { uploaded: 0, downloaded: 0 };
@@ -73,9 +73,7 @@ export async function syncAll(): Promise<{ success: boolean; errors: string[]; d
 
     // ========== 1. 并行上传所有表 ==========
     const uploadResults = await Promise.allSettled(
-      syncServices.map(({ name, service }) =>
-        service.upload().then((result: any) => ({ name, result }))
-      )
+      syncServices.map(({ name, service }) => service.upload().then((result: any) => ({ name, result })))
     );
 
     uploadResults.forEach((outcome) => {
@@ -93,9 +91,7 @@ export async function syncAll(): Promise<{ success: boolean; errors: string[]; d
 
     // ========== 2. 并行下载所有表 ==========
     const downloadResults = await Promise.allSettled(
-      syncServices.map(({ name, service }) =>
-        service.download(lastSync).then((result: any) => ({ name, result }))
-      )
+      syncServices.map(({ name, service }) => service.download(lastSync).then((result: any) => ({ name, result })))
     );
 
     downloadResults.forEach((outcome) => {
@@ -120,9 +116,7 @@ export async function syncAll(): Promise<{ success: boolean; errors: string[]; d
       console.log("🗑️ 开始清理已删除记录...");
 
       const cleanupResults = await Promise.allSettled(
-        syncServices.map(({ name, service }) =>
-          service.cleanupDeleted().then((result: any) => ({ name, result }))
-        )
+        syncServices.map(({ name, service }) => service.cleanupDeleted().then((result: any) => ({ name, result })))
       );
 
       let allCleanupSuccess = true;
@@ -166,7 +160,7 @@ export async function syncAll(): Promise<{ success: boolean; errors: string[]; d
  */
 export async function uploadAll(): Promise<{ success: boolean; errors: string[]; uploaded: number }> {
   ensureInitialized(); // ← 新增检查
-  
+
   const syncStore = useSyncStore();
   const errors: string[] = [];
   let uploaded = 0;
@@ -181,9 +175,7 @@ export async function uploadAll(): Promise<{ success: boolean; errors: string[];
   try {
     // 并行上传所有表
     const uploadResults = await Promise.allSettled(
-      syncServices.map(({ name, service }) =>
-        service.upload().then((result: any) => ({ name, result }))
-      )
+      syncServices.map(({ name, service }) => service.upload().then((result: any) => ({ name, result })))
     );
 
     uploadResults.forEach((outcome) => {
