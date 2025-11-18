@@ -283,10 +283,9 @@ const {
   activityById,
   todoById,
   scheduleById,
-  taskById,
   todoByActivityId,
   scheduleByActivityId,
-  tasksBySource,
+  taskByActivityId,
   childrenOfActivity,
   todosForCurrentViewWithTags,
   schedulesForCurrentViewWithTags,
@@ -467,6 +466,8 @@ function onConvertActivityToTask(payload: { task: Task; activityId: number | nul
   const activity = activityById.value.get(activityId);
   if (activity) {
     activity.taskId = task.id;
+    activity.synced = false;
+    activity.lastModified = Date.now();
     const todo = todoByActivityId.value.get(activityId);
     if (todo) todo.taskId = task.id;
     const schedule = scheduleByActivityId.value.get(activityId);
@@ -691,13 +692,12 @@ function onUpdateTodoEst(id: number, estPomo: number[]) {
   }
   const activity = todo?.activityId != null ? activityById.value.get(todo.activityId) : undefined;
   if (activity && estPomo) {
-    if (estPomo[0]) {
-      activity.estPomoI = estPomo[0].toString();
-    } else {
-      activity.estPomoI = undefined;
+    const newEstPomoI = estPomo[0] ? estPomo[0].toString() : undefined;
+    if (activity.estPomoI !== newEstPomoI) {
+      activity.estPomoI = newEstPomoI;
+      activity.synced = false;
+      activity.lastModified = Date.now();
     }
-    activity.synced = false;
-    activity.lastModified = Date.now();
   }
   saveAllDebounced();
 }
@@ -739,6 +739,8 @@ function onCancelTodo(id: number) {
   // 更新 todoList 中的数据
   const todo = todoById.value.get(id);
   if (todo) {
+    todo.synced = false;
+    todo.lastModified = Date.now();
     todo.status = "cancelled";
     const activity = activityById.value.get(todo.activityId);
     if (!activity) {
@@ -746,12 +748,14 @@ function onCancelTodo(id: number) {
       return;
     }
     activity.status = "cancelled";
+    activity.synced = false;
+    activity.lastModified = Date.now();
     const childActivities = childrenOfActivity.value.get(activity.id) ?? [];
     for (const child of childActivities) {
       child.status = "cancelled";
+      child.synced = false;
+      child.lastModified = Date.now();
     }
-    todo.synced = false;
-    todo.lastModified = Date.now();
   }
   saveAllDebounced();
 }
@@ -846,8 +850,7 @@ function handleEditScheduleTitle(id: number, newTitle: string) {
     return;
   }
   schedule.activityTitle = newTitle;
-  schedule.synced = false;
-  schedule.lastModified = Date.now();
+
   const activity = activityById.value.get(schedule.activityId);
   if (!activity) {
     console.warn(`未找到 activityId 为 ${schedule.activityId} 的 activity`);
@@ -856,13 +859,11 @@ function handleEditScheduleTitle(id: number, newTitle: string) {
   activity.title = newTitle;
   activity.synced = false;
   activity.lastModified = Date.now();
-  console.log(`已更新 schedule ${id} 和 activity ${schedule.activityId} 的标题为: ${newTitle}`);
 
-  // 找到task 并重新赋值
-  const relatedTasks = tasksBySource.value.schedule.get(id);
-  if (relatedTasks && relatedTasks.length > 0) {
-    const task = relatedTasks[0];
-    task.activityTitle = newTitle;
+  // 找到task 并重新赋值 #HACK
+  const relatedTask = taskByActivityId.value.get(schedule.activityId);
+  if (relatedTask) {
+    relatedTask.activityTitle = newTitle;
   }
   saveAllDebounced();
 }
@@ -882,14 +883,14 @@ function handleEditTodoTitle(id: number, newTitle: string) {
   if (!activity) {
     return;
   }
-  activity.title = newTitle; //
+  activity.title = newTitle;
   activity.synced = false;
   activity.lastModified = Date.now();
 
-  // 找到task 并重新赋值
-  const task = taskById.value.get(todo.id);
-  if (task) {
-    task.activityTitle = newTitle;
+  // 找到task 并重新赋值 #HACK
+  const relatedTask = taskByActivityId.value.get(todo.activityId);
+  if (relatedTask) {
+    relatedTask.activityTitle = newTitle;
   }
   saveAllDebounced();
 }
@@ -904,6 +905,10 @@ function handleEditTodoStart(id: number, newTm: string) {
     return;
   }
   todo.startTime = getTimestampForTimeString(newTm, viewingDayTimestamp);
+  todo.synced = false;
+  todo.lastModified = Date.now();
+
+  saveAllDebounced();
 }
 
 function handleEditTodoDone(id: number, newTm: string) {
@@ -919,6 +924,8 @@ function handleEditTodoDone(id: number, newTm: string) {
   } else {
     todo.doneTime = getTimestampForTimeString(newTm, viewingDayTimestamp);
   }
+  todo.synced = false;
+  todo.lastModified = Date.now();
   saveAllDebounced();
 }
 
