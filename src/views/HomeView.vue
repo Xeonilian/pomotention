@@ -442,6 +442,7 @@ function onDeleteActivity(id: number | null | undefined) {
   }
 
   activeId.value = null;
+  selectedTaskId.value = null;
   saveAllDebounced();
 }
 

@@ -21,7 +21,7 @@ export const useTaskTrackerStore = defineStore("taskTracker", () => {
   // --- 操作 (Actions) ---
   function updateTaskDescription(description: string) {
     if (selectedTaskId.value) {
-      taskService.updateTask(selectedTaskId.value, { description });
+      taskService.updateTask(selectedTaskId.value, { description: description, synced: false, lastModified: Date.now() });
     }
   }
 
@@ -56,7 +56,7 @@ export const useTaskTrackerStore = defineStore("taskTracker", () => {
   function handleStar() {
     if (selectedTaskId.value) {
       // 直接取反当前状态并更新
-      taskService.updateTask(selectedTaskId.value, { starred: !isStarred.value });
+      taskService.updateTask(selectedTaskId.value, { starred: !isStarred.value, synced: false, lastModified: Date.now() });
     }
   }
 

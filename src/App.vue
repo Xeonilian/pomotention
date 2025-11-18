@@ -38,8 +38,8 @@ onMounted(async () => {
     activityList: activityList,
     todoList: todoList,
     scheduleList: scheduleList,
+    taskList: taskList,
     // 未来加表只需在这里添加一行
-    // scheduleList: scheduleList,
   });
 
   // ========== 3. 监听数据变化，触发自动同步 ==========

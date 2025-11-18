@@ -42,10 +42,44 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
    * 保存到 localStorage
    */
   protected saveLocal(items: TLocal[]): void {
-    // ✅ 改动2: 移除 if 判断，直接更新（因为 reactiveList 已经是必传）
+    const oldItems = this.loadLocal();
+    const oldIds = new Set(oldItems.map((item: any) => item.id));
+    const newIds = new Set(items.map((item: any) => item.id));
+
+    // 统计变化
+    const added = items.filter((item: any) => !oldIds.has(item.id));
+    const updated = items.filter((item: any) => {
+      if (!oldIds.has(item.id)) return false;
+      const oldItem = oldItems.find((old: any) => old.id === item.id);
+      return JSON.stringify(oldItem) !== JSON.stringify(item);
+    });
+    const deleted = oldItems.filter((item: any) => !newIds.has(item.id));
+
+    // 更新
     this.reactiveList.value = items;
     localStorage.setItem(this.localStorageKey, JSON.stringify(items));
-    console.log(`💾 [${this.tableName}] 已更新响应式数据和 localStorage，共 ${items.length} 条`);
+
+    // 详细日志
+    console.log(`💾 [${this.tableName}] localStorage 更新:`);
+    console.log(`   总数: ${items.length} (旧: ${oldItems.length})`);
+    if (added.length > 0) {
+      console.log(
+        `   ➕ 新增: ${added.length}`,
+        added.map((i: any) => i.id)
+      );
+    }
+    if (updated.length > 0) {
+      console.log(
+        `   ✏️ 更新: ${updated.length}`,
+        updated.map((i: any) => i.id)
+      );
+    }
+    if (deleted.length > 0) {
+      console.log(
+        `   ❌ 删除: ${deleted.length}`,
+        deleted.map((i: any) => i.id)
+      );
+    }
   }
 
   async upload(): Promise<{ success: boolean; error?: string; uploaded: number }> {

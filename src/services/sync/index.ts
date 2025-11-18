@@ -8,6 +8,8 @@ import type { Todo } from "@/core/types/Todo";
 import { ScheduleSyncService } from "./scheduleSync";
 import type { Schedule } from "@/core/types/Schedule";
 import { useSyncStore } from "@/stores/useSyncStore";
+import { TaskSyncService } from "@/services/sync/taskSync";
+import type { Task } from "@/core/types/Task";
 
 // 私有变量：存储所有 sync 服务实例
 let syncServices: Array<{ name: string; service: any }> = [];
@@ -20,7 +22,8 @@ export function initSyncServices(dataStore: {
   activityList: Ref<Activity[]>;
   todoList: Ref<Todo[]>;
   scheduleList: Ref<Schedule[]>;
-  // 未来加表只需在这里添加类型声明
+  taskList: Ref<Task[]>;
+  // 未来加表只需在这里添加一行
 }) {
   if (isInitialized) {
     console.warn("[Sync] 同步服务已初始化，跳过重复初始化");
@@ -31,12 +34,14 @@ export function initSyncServices(dataStore: {
   const activitySync = new ActivitySyncService(dataStore.activityList);
   const todoSync = new TodoSyncService(dataStore.todoList);
   const scheduleSync = new ScheduleSyncService(dataStore.scheduleList);
+  const taskSync = new TaskSyncService(dataStore.taskList);
 
   // 填充 syncServices 数组
   syncServices = [
     { name: "Activities", service: activitySync },
     { name: "Todos", service: todoSync },
     { name: "Schedules", service: scheduleSync },
+    { name: "Tasks", service: taskSync },
   ];
 
   isInitialized = true;
