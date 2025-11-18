@@ -2,7 +2,7 @@
 
 import { supabase } from "@/core/services/supabase";
 import { getCurrentUser } from "@/core/services/authServicve";
-import type { Ref } from 'vue'; 
+import type { Ref } from "vue";
 
 /**
  * 可同步的实体接口（本地数据必须有这些字段）
@@ -18,11 +18,7 @@ export interface SyncableEntity {
  * 基础同步服务（所有表的通用逻辑）
  */
 export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
-  constructor(
-    protected tableName: string,
-    protected localStorageKey: string,
-    protected reactiveList: Ref<TLocal[]>  // ✅ 改动1: 移除 `?`，变为必传参数
-  ) {}
+  constructor(protected tableName: string, protected localStorageKey: string, protected reactiveList: Ref<TLocal[]>) {}
 
   /**
    * 子类必须实现：本地 → 云端格式转换
@@ -65,35 +61,36 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
         return { success: true, uploaded: 0 };
       }
 
-      console.log(`📤 [${this.tableName}] 准备上传 ${unsyncedItems.length} 条，ID:`, unsyncedItems.map(i => i.id));
+      console.log(
+        `📤 [${this.tableName}] 准备上传 ${unsyncedItems.length} 条，ID:`,
+        unsyncedItems.map((i) => i.id)
+      );
 
       const cloudData = unsyncedItems.map((item) => this.mapLocalToCloud(item, user.id));
 
-      const { error } = await supabase
-        .from(this.tableName)
-        .upsert(cloudData as any, {
-          onConflict: 'user_id,timestamp_id',
-          ignoreDuplicates: false,
-        });
+      const { error } = await supabase.from(this.tableName).upsert(cloudData as any, {
+        onConflict: "user_id,timestamp_id",
+        ignoreDuplicates: false,
+      });
 
       if (error) throw error;
 
       // 标记为已同步
       unsyncedItems.forEach((unsyncedItem) => {
-        const item = localItems.find(i => i.id === unsyncedItem.id);
+        const item = localItems.find((i) => i.id === unsyncedItem.id);
         if (item) {
           item.synced = true;
         }
       });
-      
+
       this.saveLocal(localItems);
 
       console.log(`✅ [${this.tableName}] 上传成功 ${unsyncedItems.length} 条，已标记 synced=true`);
-      
+
       // ✅ 改动3: 验证日志保留，但不再需要判断 reactiveList 是否存在
-      const stillUnsynced = this.reactiveList.value.filter(i => !i.synced).length;
+      const stillUnsynced = this.reactiveList.value.filter((i) => !i.synced).length;
       console.log(`🔍 [${this.tableName}] 响应式数据中剩余未同步: ${stillUnsynced} 条`);
-      
+
       return { success: true, uploaded: unsyncedItems.length };
     } catch (error: any) {
       console.error(`❌ [${this.tableName}] 上传失败:`, error.message);
@@ -177,9 +174,9 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
       const { error } = await supabase
         .from(this.tableName)
         .delete()
-        .eq('user_id', user.id)
-        .eq('deleted', true)
-        .lt('last_modified', thirtyDaysAgoDate);
+        .eq("user_id", user.id)
+        .eq("deleted", true)
+        .lt("last_modified", thirtyDaysAgoDate);
 
       if (error) throw error;
 

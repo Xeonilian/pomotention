@@ -61,10 +61,10 @@ export const useDataStore = defineStore(
         return;
       }
 
-      activityList.value = loadActivities().filter((a) => !a.deleted);
-      todoList.value = loadTodos().filter((t) => !t.deleted);
-      scheduleList.value = loadSchedules().filter((s) => !s.deleted);
-      taskList.value = loadTasks().filter((t) => !t.deleted);
+      activityList.value = loadActivities();
+      todoList.value = loadTodos();
+      scheduleList.value = loadSchedules();
+      taskList.value = loadTasks();
 
       // 加载标签
       tagStore.loadAllTags();
@@ -99,6 +99,14 @@ export const useDataStore = defineStore(
       const map = new Map<number, Schedule>();
       for (const schedule of scheduleList.value) {
         if (schedule.activityId != null) map.set(schedule.activityId, schedule);
+      }
+      return map;
+    });
+
+    const taskByActivityId = computed(() => {
+      const map = new Map<number, Task>();
+      for (const task of taskList.value) {
+        if (task.sourceId != null) map.set(task.sourceId, task);
       }
       return map;
     });
@@ -188,6 +196,7 @@ export const useDataStore = defineStore(
       if (!todoList.value) return [];
       const out: TodoWithTags[] = [];
       for (const todo of todoList.value) {
+        if (todo.deleted) continue;
         if (todo.id < start || todo.id >= end) continue;
         const activity = todo.activityId != null ? activityById.value.get(todo.activityId) : undefined;
         out.push({
@@ -201,7 +210,7 @@ export const useDataStore = defineStore(
     const schedulesForCurrentView = computed(() => {
       const { start, end } = dateService.visibleRange.value;
       if (!scheduleList.value) return [];
-      return scheduleList.value.filter((schedule) => {
+      return activeSchedules.value.filter((schedule) => {
         const date = schedule.activityDueRange?.[0];
         if (date == null) return false;
         return date >= start && date < end;
@@ -212,7 +221,7 @@ export const useDataStore = defineStore(
     const schedulesForCurrentViewWithTags = computed<ScheduleWithTags[]>(() => {
       const { start, end } = dateService.visibleRange.value;
       if (!scheduleList.value) return [];
-      return scheduleList.value
+      return activeSchedules.value
         .filter((schedule) => {
           const date = schedule.activityDueRange?.[0];
           return date != null && date >= start && date < end;
@@ -230,14 +239,14 @@ export const useDataStore = defineStore(
       const startOfDay = dateService.appDateTimestamp.value;
       const endOfDay = addDays(startOfDay, 1);
       if (!todoList.value) return [];
-      return todoList.value.filter((todo) => todo.id >= startOfDay && todo.id < endOfDay);
+      return activeTodos.value.filter((todo) => todo.id >= startOfDay && todo.id < endOfDay);
     });
 
     const schedulesForAppDate = computed(() => {
       const startOfDay = dateService.appDateTimestamp.value;
       const endOfDay = addDays(startOfDay, 1);
       if (!scheduleList.value) return [];
-      return scheduleList.value.filter((schedule) => {
+      return activeSchedules.value.filter((schedule) => {
         const date = schedule.activityDueRange?.[0];
         if (date == null) return false;
         return date >= startOfDay && date < endOfDay;
@@ -572,6 +581,7 @@ export const useDataStore = defineStore(
       taskById,
       todoByActivityId,
       scheduleByActivityId,
+      taskByActivityId, // 字段是sourceId 但是以后都只有 activityId
       childrenOfActivity,
       tasksBySource,
 

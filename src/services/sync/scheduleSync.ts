@@ -5,13 +5,30 @@ import { getCurrentUser } from "@/core/services/authServicve";
 import { BaseSyncService } from "./baseSyncService";
 import type { Schedule } from "@/core/types/Schedule";
 import type { Database } from "@/core/types/Database";
+import type { Ref } from "vue";
 
 type CloudScheduleInsert = Database["public"]["Tables"]["schedules"]["Insert"];
-type FullCloudSchedule = Database["public"]["Functions"]["get_full_schedules"]["Returns"][0];
+
+/**
+ * RPC 返回的完整格式（带冗余字段）
+ */
+interface FullScheduleFromCloud {
+  id: number;
+  activityId: number;
+  activityTitle: string;
+  activityDueRange: [number | null, string];
+  taskId: number;
+  status: string;
+  location: string;
+  doneTime: number;
+  isUntaetigkeit: boolean;
+  interruption: string;
+  projectName: string | null;
+}
 
 export class ScheduleSyncService extends BaseSyncService<Schedule, CloudScheduleInsert> {
-  constructor() {
-    super("schedules", "todaySchedule");
+  constructor(reactiveList: Ref<Schedule[]>) {
+    super("schedules", "todaySchedule", reactiveList);
   }
 
   /**
@@ -22,7 +39,7 @@ export class ScheduleSyncService extends BaseSyncService<Schedule, CloudSchedule
       user_id: userId,
       timestamp_id: local.id,
       activity_id: local.activityId,
-      status: local.status ?? "ongoing",
+      status: local.status ?? null,
       done_time: local.doneTime ?? null,
       deleted: local.deleted,
     };
@@ -31,23 +48,20 @@ export class ScheduleSyncService extends BaseSyncService<Schedule, CloudSchedule
   /**
    * 云端 RPC → 本地（带冗余字段 + 生成同步元数据）
    */
-  protected mapCloudToLocal(cloud: FullCloudSchedule): Schedule {
-    const activityDueRange: [number | null, string] = 
-      Array.isArray(cloud.activityDueRange) && cloud.activityDueRange.length === 2
-        ? [cloud.activityDueRange[0] as number | null, cloud.activityDueRange[1] as string]
-        : [null, ""];
-
+  protected mapCloudToLocal(cloud: FullScheduleFromCloud): Schedule {
     return {
-      ...cloud,
-      status: (cloud.status ?? "ongoing") as Schedule["status"],
-      activityDueRange: activityDueRange,
-      taskId: cloud.taskId ?? undefined,
+      id: cloud.id,
+      activityId: cloud.activityId,
+      activityTitle: cloud.activityTitle,
+      activityDueRange: cloud.activityDueRange,
+      taskId: cloud.taskId,
+      status: cloud.status as Schedule["status"],
+      location: cloud.location,
+      doneTime: cloud.doneTime,
+      isUntaetigkeit: cloud.isUntaetigkeit,
+      interruption: cloud.interruption as "I" | "E",
       projectName: cloud.projectName ?? undefined,
-      location: cloud.location ?? undefined,
-      doneTime: cloud.doneTime ?? undefined,
-      isUntaetigkeit: cloud.isUntaetigkeit ?? false,
-      interruption: cloud.interruption as Schedule["interruption"] | undefined,
-      
+
       // 同步元数据（本地生成）
       lastModified: Date.now(),
       synced: true,
@@ -80,7 +94,7 @@ export class ScheduleSyncService extends BaseSyncService<Schedule, CloudSchedule
       const localItems = this.loadLocal();
       let downloadedCount = 0;
 
-      data.forEach((cloudItem: FullCloudSchedule) => {
+      data.forEach((cloudItem: FullScheduleFromCloud) => {
         const cloudEntity = this.mapCloudToLocal(cloudItem);
         const localIndex = localItems.findIndex((item) => item.id === cloudEntity.id);
 
@@ -111,5 +125,3 @@ export class ScheduleSyncService extends BaseSyncService<Schedule, CloudSchedule
     }
   }
 }
-
-export const scheduleSync = new ScheduleSyncService();

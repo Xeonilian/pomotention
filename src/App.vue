@@ -37,6 +37,7 @@ onMounted(async () => {
   initSyncServices({
     activityList: activityList,
     todoList: todoList,
+    scheduleList: scheduleList,
     // 未来加表只需在这里添加一行
     // scheduleList: scheduleList,
   });

@@ -6,7 +6,7 @@ import { storeToRefs } from "pinia";
 
 const dataStore = useDataStore();
 const { saveAllDebounced } = dataStore;
-const { todoList, scheduleList, activityById, todoById, scheduleById } = storeToRefs(dataStore);
+const { activityById, todoById, scheduleById } = storeToRefs(dataStore);
 
 /**
  * 更新日程状态并同步到活动
@@ -27,6 +27,8 @@ export function updateScheduleStatus(id: number, doneTime: number | undefined, s
   const activity = schedule?.activityId != null ? activityById.value.get(schedule.activityId) : undefined;
   if (activity) {
     activity.status = validStatus as "" | "done" | "delayed" | "ongoing" | "cancelled" | "suspended";
+    activity.synced = false;
+    activity.lastModified = Date.now();
   }
   saveAllDebounced();
 }
@@ -47,7 +49,7 @@ export function updateTodoStatus(id: number, doneTime: number | undefined, statu
   if (todo) {
     todo.status = validStatus as "" | "done" | "delayed" | "ongoing" | "cancelled" | "suspended";
     todo.doneTime = todo.doneTime ? todo.doneTime : doneTime;
-    todo.synced = true;
+    todo.synced = false;
     todo.lastModified = Date.now();
   }
 
@@ -55,7 +57,7 @@ export function updateTodoStatus(id: number, doneTime: number | undefined, statu
   const activity = todo?.activityId != null ? activityById.value.get(todo.activityId) : undefined;
   if (activity) {
     activity.status = validStatus as "" | "done" | "delayed" | "ongoing" | "cancelled" | "suspended";
-    activity.synced = true;
+    activity.synced = false;
     activity.lastModified = Date.now();
   }
 
@@ -72,12 +74,15 @@ export function handleSuspendTodo(id: number) {
   // 找到对应的 Todo
   const todo = todoById.value.get(id);
   if (todo) {
+    todo.deleted = true;
+    todo.synced = false;
+    todo.lastModified = Date.now();
     // 找到 activityList 中对应的活动
     const activity = activityById.value.get(todo.activityId);
     if (activity) {
       // 更新 activity 的状态为 "suspended."
       activity.status = "suspended";
-      activity.synced = true;
+      activity.synced = false;
       activity.lastModified = Date.now();
     } else {
       console.log(`No activity found with activityId ${todo.activityId}`);
@@ -86,9 +91,9 @@ export function handleSuspendTodo(id: number) {
     console.log(`No todo found with id ${id}`);
   }
 
-  // 从 todoList 中移除对应的 Todo
-  const filteredTodos = todoList.value.filter((todo) => todo.id !== id);
-  todoList.value.splice(0, todoList.value.length, ...filteredTodos);
+  // // 从 todoList 中移除对应的 Todo
+  // const filteredTodos = todoList.value.filter((todo) => todo.id !== id);
+  // todoList.value.splice(0, todoList.value.length, ...filteredTodos);
 }
 
 /**
@@ -103,12 +108,15 @@ export function handleSuspendSchedule(id: number) {
   const schedule = scheduleById.value.get(id);
 
   if (schedule && schedule.activityDueRange) {
+    schedule.deleted = true;
+    schedule.synced = false;
+    schedule.lastModified = Date.now();
     // 找到 activityList 中对应的活动
     const activity = activityById.value.get(schedule.activityId);
     if (activity) {
       // 更新 activity 的状态为 "suspended."
       activity.status = "suspended";
-      activity.synced = true;
+      activity.synced = false;
       activity.lastModified = Date.now();
 
       if (activity.dueRange && activity.dueRange[0] && schedule.activityDueRange[0]) {
@@ -126,9 +134,9 @@ export function handleSuspendSchedule(id: number) {
     console.log(`No schedule found with id ${id}`);
   }
 
-  // 从 scheduleList 中移除对应的 Schedule
-  const filteredSchedules = scheduleList.value.filter((schedule) => schedule.id !== id);
-  scheduleList.value.splice(0, scheduleList.value.length, ...filteredSchedules);
+  // // 从 scheduleList 中移除对应的 Schedule
+  // const filteredSchedules = scheduleList.value.filter((schedule) => schedule.id !== id);
+  // scheduleList.value.splice(0, scheduleList.value.length, ...filteredSchedules);
 }
 
 /**
@@ -140,6 +148,8 @@ export function updateTodoEst(id: number, estPomo: number[]) {
   const todo = todoById.value.get(id);
   if (todo) {
     todo.estPomo = estPomo;
+    todo.synced = false;
+    todo.lastModified = Date.now();
 
     // 同步更新对应的 Activity
     const activity = activityById.value.get(todo.activityId);
@@ -151,7 +161,7 @@ export function updateTodoEst(id: number, estPomo: number[]) {
         // 否则使用第一个估计值
         activity.estPomoI = estPomo.length > 0 ? estPomo[0].toString() : "";
       }
-      activity.synced = true;
+      activity.synced = false;
       activity.lastModified = Date.now();
     }
   }

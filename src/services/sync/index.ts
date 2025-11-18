@@ -5,7 +5,8 @@ import { ActivitySyncService } from "./activitySync";
 import type { Activity } from "@/core/types/Activity";
 import { TodoSyncService } from "./todoSync";
 import type { Todo } from "@/core/types/Todo";
-// import { ScheduleSyncService } from "./scheduleSync";
+import { ScheduleSyncService } from "./scheduleSync";
+import type { Schedule } from "@/core/types/Schedule";
 import { useSyncStore } from "@/stores/useSyncStore";
 
 // 私有变量：存储所有 sync 服务实例
@@ -18,6 +19,7 @@ let isInitialized = false;
 export function initSyncServices(dataStore: {
   activityList: Ref<Activity[]>;
   todoList: Ref<Todo[]>;
+  scheduleList: Ref<Schedule[]>;
   // 未来加表只需在这里添加类型声明
 }) {
   if (isInitialized) {
@@ -28,13 +30,13 @@ export function initSyncServices(dataStore: {
   // 创建各表的 syncService 实例（传入响应式数据）
   const activitySync = new ActivitySyncService(dataStore.activityList);
   const todoSync = new TodoSyncService(dataStore.todoList);
-  // const scheduleSync = new ScheduleSyncService(dataStore.scheduleList);
+  const scheduleSync = new ScheduleSyncService(dataStore.scheduleList);
 
   // 填充 syncServices 数组
   syncServices = [
     { name: "Activities", service: activitySync },
     { name: "Todos", service: todoSync },
-    // { name: "Schedules", service: scheduleSync },
+    { name: "Schedules", service: scheduleSync },
   ];
 
   isInitialized = true;

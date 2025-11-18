@@ -6,6 +6,7 @@ import { BaseSyncService } from "./baseSyncService";
 import type { Todo } from "@/core/types/Todo";
 import type { Database } from "@/core/types/Database";
 import type { Ref } from "vue";
+
 type CloudTodoInsert = Database["public"]["Tables"]["todos"]["Insert"];
 
 /**
