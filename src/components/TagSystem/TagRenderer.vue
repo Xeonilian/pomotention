@@ -24,16 +24,18 @@
 </template>
 <script setup lang="ts">
 import { NTag } from "naive-ui";
-import { useTagStore } from "@/stores/useTagStore";
+import { useTagStore, type TagWithCount } from "@/stores/useTagStore";
 import { computed } from "vue";
-import type { Tag } from "@/core/types/Tag";
 import { storeToRefs } from "pinia";
 
+// ================================================================
+// Props & Emits
+// ================================================================
 const props = defineProps<{
   tagIds: number[];
   isCloseable: boolean;
   size?: "medium" | "small" | "large" | "tiny";
-  displayLength?: number;
+  displayLength?: number | null; // ✅ 允许 null
   showIdx?: number;
   title?: string;
 }>();
@@ -43,53 +45,88 @@ const emit = defineEmits<{
   "tag-click": [tagId: number];
 }>();
 
-// 1. 从 Store 中解构出需要的函数
+// ================================================================
+// Store
+// ================================================================
 const tagStore = useTagStore();
-const { tags } = storeToRefs(tagStore);
+const { allTags } = storeToRefs(tagStore); // ✅ 使用 allTags 而不是 tags
 
-// 2. 创建 computed 属性，它会成为响应性的数据源
-const renderedTags = computed<Tag[]>(() => {
-  const tagMap = new Map(tags.value.map((t) => [t.id, t]));
+// ================================================================
+// Computed
+// ================================================================
+
+/**
+ * 根据 tagIds 渲染对应的标签
+ * 支持特殊 ID 0（显示为空标签）
+ * 支持 showIdx 限制显示数量
+ */
+const renderedTags = computed(() => {
+  // 创建 tagId -> tag 的映射
+  const tagMap = new Map(allTags.value.map((t) => [t.id, t]));
+
+  // 映射 tagIds 到实际的 tag 对象
   const result = props.tagIds
     .map((id) => {
+      // 特殊处理 ID 0：显示空标签
       if (id === 0) {
         return {
           id: 0,
           name: "",
           color: "var(--color-background-dark)",
           backgroundColor: "var(--color-background-dark)",
-        } as unknown as Tag;
+          count: 0, // ✅ 添加 count 属性
+          deleted: false,
+          synced: true,
+          lastModified: Date.now(),
+        } as TagWithCount;
       }
       return tagMap.get(id);
     })
-    .filter((tag) => tag !== undefined) as Tag[];
+    .filter((tag): tag is TagWithCount => tag !== undefined); // ✅ 类型守卫
 
+  // 如果指定了 showIdx，只显示前 n 个
   const n = props.showIdx;
   if (n == null || n <= 0) return result;
   return result.slice(0, n);
 });
 
-// 3. emit 事件的函数保持不变
-function removeTag(tagId: number) {
+// ================================================================
+// Methods
+// ================================================================
+
+/**
+ * 移除标签
+ */
+function removeTag(tagId: number): void {
   emit("remove-tag", tagId);
 }
 
-function truncatedName(tag: string) {
-  if (props.displayLength === null) return tag;
-  return tag.slice(0, props.displayLength);
+/**
+ * 截断标签名称
+ */
+function truncatedName(tagName: string): string {
+  if (props.displayLength === null || props.displayLength === undefined) {
+    return tagName;
+  }
+  return tagName.slice(0, props.displayLength);
 }
 
-function handleTagClick(tagId: number) {
+/**
+ * 标签点击事件
+ */
+function handleTagClick(tagId: number): void {
   emit("tag-click", tagId);
 }
 
-const getTagTitle = (tag: Tag) => {
+/**
+ * 获取标签的 title（悬停提示）
+ */
+function getTagTitle(tag: TagWithCount): string {
   if (props.title) {
     return props.title;
   }
-  // 否则显示标签名称
   return tag.name;
-};
+}
 </script>
 <style scoped>
 .tag-container {

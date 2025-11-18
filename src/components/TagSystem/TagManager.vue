@@ -95,24 +95,20 @@
 
 <script setup lang="ts">
 import { ref, computed, nextTick } from "vue";
-import { useTagStore } from "@/stores/useTagStore";
+import { useTagStore, type TagWithCount } from "@/stores/useTagStore";
 import { useDialog } from "naive-ui";
 import { TagSearch20Filled, Add20Filled, HeartCircle16Regular, Heart16Filled, TagDismiss16Regular } from "@vicons/fluent";
 import { NInput, NButton, NPopover, NColorPicker, NIcon } from "naive-ui";
-import type { Tag } from "@/core/types/Tag";
 
-// 初始化 store 和 naive-ui 的 dialog 服务
+// ================================================================
+// 初始化
+// ================================================================
 const tagStore = useTagStore();
 const dialog = useDialog();
 
-// 组件内部状态
-const inputText = ref("");
-const editingId = ref<number | null>(null);
-const editValue = ref("");
-const editInputWidth = ref(40); // 编辑输入框宽度（px）
-const sizerRef = ref<HTMLElement | null>(null); // 隐藏 sizer 用于测量文本宽度
-
-// 定义 props 和 emits，用于与父组件进行 v-model 通信
+// ================================================================
+// Props & Emits
+// ================================================================
 const props = defineProps<{
   modelValue: number[]; // 已选中的标签 ID 数组
 }>();
@@ -121,38 +117,69 @@ const emit = defineEmits<{
   "update:modelValue": [value: number[]];
 }>();
 
-// 根据输入文本动态过滤标签列表
-// 如果无输入，则显示引用次数最多的前20个
-const filteredTags = computed(() => {
+// ================================================================
+// 组件状态
+// ================================================================
+const inputText = ref("");
+const editingId = ref<number | null>(null);
+const editValue = ref("");
+const editInputWidth = ref(40);
+const sizerRef = ref<HTMLElement | null>(null);
+
+// ================================================================
+// Computed
+// ================================================================
+
+/**
+ * 根据输入关键词过滤标签列表
+ * 如果无输入，显示引用次数最多的前 20 个
+ */
+const filteredTags = computed<TagWithCount[]>(() => {
   const keyword = inputText.value.trim();
   if (keyword) {
     return tagStore.findByName(keyword);
   }
-  return Array.from(tagStore.allTags)
-    .sort((a, b) => (b.count || 0) - (a.count || 0))
-    .slice(0, 20);
+  return [...tagStore.allTags].sort((a, b) => b.count - a.count).slice(0, 20);
 });
 
-// 计算需要多少个空位来补满10个，以维持布局稳定
+/**
+ * 计算空位数量以维持布局稳定（最少显示 10 个位置）
+ */
 const emptyCount = computed(() => Math.max(0, 10 - filteredTags.value.length));
 
-// 检查某个标签 ID 是否在 props.modelValue 中，即是否已被选中
+// ================================================================
+// Methods
+// ================================================================
+
+/**
+ * 检查标签是否已被选中
+ */
 function isTagSelected(tagId: number): boolean {
   return props.modelValue.includes(tagId);
 }
 
-// 点击标签切换选中状态（编辑态时不处理）
-function onClickTag(tag: Tag) {
+/**
+ * 点击标签切换选中状态
+ */
+function onClickTag(tag: TagWithCount): void {
   if (editingId.value === tag.id) return;
+
   const current = [...props.modelValue];
   const idx = current.indexOf(tag.id);
-  if (idx === -1) current.push(tag.id);
-  else current.splice(idx, 1);
+
+  if (idx === -1) {
+    current.push(tag.id);
+  } else {
+    current.splice(idx, 1);
+  }
+
   emit("update:modelValue", current);
 }
 
-// 新建或选择标签
-function onAddTag() {
+/**
+ * 新建或选择标签
+ */
+function onAddTag(): void {
   const input = inputText.value.trim().replace(/^#+/, "");
   if (!input) return;
 
@@ -168,11 +195,14 @@ function onAddTag() {
       emit("update:modelValue", Array.from(new Set([...props.modelValue, tag.id])));
     }
   }
-  inputText.value = ""; // 清空输入
+
+  inputText.value = "";
 }
 
-// 进入编辑态
-function startEdit(tag: Tag) {
+/**
+ * 进入编辑态
+ */
+function startEdit(tag: TagWithCount): void {
   editingId.value = tag.id;
   editValue.value = tag.name;
   nextTick(() => {
@@ -180,8 +210,10 @@ function startEdit(tag: Tag) {
   });
 }
 
-// 完成编辑（失焦或回车）
-function onEditFinish(tag: Tag) {
+/**
+ * 完成编辑（失焦或回车）
+ */
+function onEditFinish(tag: TagWithCount): void {
   const newVal = editValue.value.trim().replace(/^#+/, "");
   if (newVal && newVal !== tag.name) {
     tagStore.updateTag(tag.id, { name: newVal });
@@ -189,25 +221,30 @@ function onEditFinish(tag: Tag) {
   cancelEdit();
 }
 
-// 取消编辑（ESC 或手动调用）
-function cancelEdit() {
+/**
+ * 取消编辑（ESC 或手动调用）
+ */
+function cancelEdit(): void {
   editingId.value = null;
   editValue.value = "";
   editInputWidth.value = 40;
 }
 
-// 编辑输入变化时更新宽度
-function updateInputWidth() {
+/**
+ * 编辑输入变化时更新宽度
+ */
+function updateInputWidth(): void {
   nextTick(() => {
     if (!sizerRef.value) return;
-    // 以隐藏 sizer 的实际宽度作为基准，增加少量 padding
     const width = Math.max(40, Math.min(240, sizerRef.value.offsetWidth + 20));
     editInputWidth.value = width;
   });
 }
 
-// 更新颜色
-function onColorUpdate(tagId: number, target: "fg" | "bg", color: string) {
+/**
+ * 更新标签颜色
+ */
+function onColorUpdate(tagId: number, target: "fg" | "bg", color: string): void {
   if (target === "bg") {
     tagStore.updateTag(tagId, { backgroundColor: color });
   } else {
@@ -215,8 +252,10 @@ function onColorUpdate(tagId: number, target: "fg" | "bg", color: string) {
   }
 }
 
-// 删除确认
-function confirmRemoveTag(tag: Tag) {
+/**
+ * 删除标签确认
+ */
+function confirmRemoveTag(tag: TagWithCount): void {
   const content =
     tag.count > 0
       ? `此标签正被 ${tag.count} 个条目使用。确定要删除标签 "${tag.name}" 吗？删除后引用将丢失。`
@@ -229,6 +268,7 @@ function confirmRemoveTag(tag: Tag) {
     negativeText: "取消",
     onPositiveClick: () => {
       tagStore.removeTag(tag.id);
+
       // 如果当前被选中，从选中列表移除
       const next = props.modelValue.filter((id) => id !== tag.id);
       if (next.length !== props.modelValue.length) {

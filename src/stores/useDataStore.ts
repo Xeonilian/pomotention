@@ -66,12 +66,6 @@ export const useDataStore = defineStore(
       scheduleList.value = loadSchedules();
       taskList.value = loadTasks();
 
-      // 加载标签
-      tagStore.loadAllTags();
-
-      // 重新计算标签计数（以防数据不一致）
-      recalculateAllTagCounts();
-
       isDataLoaded.value = true;
     }
     const activeActivities = computed(() => activityList.value.filter((a) => !a.deleted));
@@ -130,7 +124,7 @@ export const useDataStore = defineStore(
         schedule: new Map<number, Task[]>(),
       };
       for (const task of taskList.value) {
-        const targetMap = bucket[task.source];
+        const targetMap = bucket[task.source ?? "activity"];
         if (targetMap) {
           if (!targetMap.has(task.sourceId)) {
             targetMap.set(task.sourceId, []);
@@ -373,15 +367,10 @@ export const useDataStore = defineStore(
       const activity = activityById.value.get(activityId);
       if (!activity) return false;
 
-      const oldTagIds = activity.tagIds || [];
-      const toRemove = oldTagIds.filter((id) => !newTagIds.includes(id));
-      const toAdd = newTagIds.filter((id) => !oldTagIds.includes(id));
-
-      // 更新计数（统一通过 TagStore 的 updateTagCount）
-      toRemove.forEach((id) => tagStore.updateTagCount(id, -1));
-      toAdd.forEach((id) => tagStore.updateTagCount(id, +1));
-
       activity.tagIds = newTagIds.length > 0 ? newTagIds : undefined;
+      activity.lastModified = Date.now();
+      activity.synced = false;
+
       saveActivities(activityList.value);
       return true;
     }
@@ -433,18 +422,6 @@ export const useDataStore = defineStore(
       return tagStore.getTagsByIds(activity.tagIds);
     }
 
-    /**
-     * 重新计算所有标签的引用计数
-     */
-    function recalculateAllTagCounts() {
-      const countMap = new Map<number, number>();
-      activityList.value.forEach((activity) => {
-        activity.tagIds?.forEach((tagId) => {
-          countMap.set(tagId, (countMap.get(tagId) || 0) + 1);
-        });
-      });
-      tagStore.recalculateTagCounts(countMap);
-    }
     // ============ 7. 时间序列数据提取 ============
     const allDataPoints = computed((): DataPoint[] => {
       return [...collectPomodoroData(todoList.value), ...collectTaskRecordData(taskList.value)];
@@ -623,7 +600,6 @@ export const useDataStore = defineStore(
       toggleActivityTag,
       createAndAddTagToActivity,
       getActivityTags,
-      recalculateAllTagCounts,
 
       // Chart 相关
       allDataPoints,
