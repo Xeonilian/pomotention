@@ -86,9 +86,94 @@ export function removeSchedulesStorage(): void {
 }
 
 // =================== 时间表(Timetable)相关 ===================
+/**
+ * 数据迁移：合并旧数据并转换为时间戳 ID
+ */
+function migrateTimetableData(): Block[] {
+  const OLD_KEYS = {
+    work: STORAGE_KEYS.TIMETABLE_WORK,
+    entertainment: STORAGE_KEYS.TIMETABLE_ENTERTAINMENT,
+  };
+
+  const merged: Block[] = [];
+  let baseTimestamp = Date.now() - 100000000; // 用过去的时间戳，避免和新数据冲突
+
+  // 合并 work 数据
+  const workData = localStorage.getItem(OLD_KEYS.work);
+  if (workData) {
+    const workBlocks = JSON.parse(workData) as any[];
+    merged.push(
+      ...workBlocks.map((b, index) => ({
+        id: baseTimestamp + index * 1000, // ✅ 生成时间戳 ID
+        type: "work" as const,
+        category: b.category,
+        start: b.start,
+        end: b.end,
+        synced: false, // ✅ 迁移后需要重新同步
+        deleted: b.deleted ?? false,
+        lastModified: Date.now(),
+      }))
+    );
+    baseTimestamp += workBlocks.length * 1000;
+  }
+
+  // 合并 entertainment 数据
+  const entertainmentData = localStorage.getItem(OLD_KEYS.entertainment);
+  if (entertainmentData) {
+    const entertainmentBlocks = JSON.parse(entertainmentData) as any[];
+    merged.push(
+      ...entertainmentBlocks.map((b, index) => ({
+        id: baseTimestamp + index * 1000, // ✅ 生成时间戳 ID
+        type: "entertainment" as const,
+        category: b.category,
+        start: b.start,
+        end: b.end,
+        synced: false,
+        deleted: b.deleted ?? false,
+        lastModified: Date.now(),
+      }))
+    );
+  }
+
+  // 删除旧 key
+  if (workData || entertainmentData) {
+    localStorage.removeItem(OLD_KEYS.work);
+    localStorage.removeItem(OLD_KEYS.entertainment);
+    console.log("✅ [Migration] 已合并时间表数据，生成新 ID");
+  }
+
+  return merged;
+}
 
 /**
- * 从本地存储加载时间块（支持多类型独立存储）
+ * 加载时间块
+ */
+export function loadTimetableBlocks(): Block[] {
+  const KEY = STORAGE_KEYS.TIMETABLE_BLOCKS;
+
+  const data = localStorage.getItem(KEY);
+  if (data) {
+    return JSON.parse(data) as Block[];
+  }
+
+  // 尝试迁移旧数据
+  const migrated = migrateTimetableData();
+  if (migrated.length > 0) {
+    localStorage.setItem(KEY, JSON.stringify(migrated));
+  }
+
+  return migrated;
+}
+
+/**
+ * 保存时间块
+ */
+export function saveTimetableBlocks(blocks: Block[]): void {
+  localStorage.setItem(STORAGE_KEYS.TIMETABLE_BLOCKS, JSON.stringify(blocks));
+}
+
+/**
+ * 从本地存储加载时间块（支持多类型独立存储） 作废
  * @param type 'work' 或 'entertainment'
  * @param defaultBlocks 默认时间块
  * @returns 时间块列表
@@ -100,7 +185,7 @@ export function loadTimeBlocks(type: "work" | "entertainment", defaultBlocks: Bl
 }
 
 /**
- * 保存时间块到本地存储（支持多类型独立存储）
+ * 保存时间块到本地存储（支持多类型独立存储） 作废
  * @param type 'work' 或 'entertainment'
  * @param blocks 时间块列表
  */
@@ -111,7 +196,7 @@ export function saveTimeBlocks(type: "work" | "entertainment", blocks: Block[]):
 }
 
 /**
- * 删除某一类型的时间块存储
+ * 删除某一类型的时间块存储 作废
  * @param type 'work' 或 'entertainment'
  */
 export function removeTimeBlocksStorage(type: "work" | "entertainment"): void {

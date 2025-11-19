@@ -14,6 +14,8 @@ import { TagSyncService } from "./tagSync";
 import type { Tag } from "@/core/types/Tag";
 import { TemplateSyncService } from "./templateSync";
 import type { Template } from "@/core/types/Template";
+import { TimetableSyncService } from "./timetableSync";
+import type { Block } from "@/core/types/Block";
 
 // 私有变量：存储所有 sync 服务实例
 let syncServices: Array<{ name: string; service: any }> = [];
@@ -29,6 +31,7 @@ export function initSyncServices(dataStore: {
   taskList: Ref<Task[]>;
   tagList: Ref<Tag[]>;
   templateList: Ref<Template[]>;
+  blockList: Ref<Block[]>;
   // 未来加表只需在这里添加一行
 }) {
   if (isInitialized) {
@@ -43,6 +46,7 @@ export function initSyncServices(dataStore: {
   const taskSync = new TaskSyncService(dataStore.taskList);
   const tagSync = new TagSyncService(dataStore.tagList);
   const templateSync = new TemplateSyncService(dataStore.templateList);
+  const timetableSync = new TimetableSyncService(dataStore.blockList);
 
   // 填充 syncServices 数组
   syncServices = [
@@ -52,6 +56,7 @@ export function initSyncServices(dataStore: {
     { name: "Tasks", service: taskSync },
     { name: "Tags", service: tagSync },
     { name: "Templates", service: templateSync },
+    { name: "Blocks", service: timetableSync },
   ];
 
   isInitialized = true;

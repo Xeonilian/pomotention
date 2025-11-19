@@ -1,11 +1,16 @@
 // src/core/types/Block.ts
 import { CategoryColors } from "../constants";
+
 // 在3类下面的分块
 export interface Block {
-  id: string;
+  id: number; // ✅ 时间戳（毫秒）
+  type: "work" | "entertainment";
   category: keyof typeof CategoryColors; // living sleeping working
-  start: string; //使用HH:MM
-  end: string;
+  start: string; // HH:MM
+  end: string; // HH:MM
+  synced: boolean;
+  deleted: boolean;
+  lastModified: number;
 }
 
 // 分块下的25+5时间块

@@ -21,6 +21,7 @@ import { supabase } from "@/core/services/supabase";
 import { useDataStore } from "@/stores/useDataStore";
 import { useTagStore } from "@/stores/useTagStore";
 import { useTemplateStore } from "@/stores/useTemplateStore";
+import { useTimetableStore } from "@/stores/useTimetableStore";
 import { initSyncServices } from "@/services/sync";
 import { uploadAllDebounced } from "@/core/utils/autoSync";
 
@@ -28,11 +29,13 @@ const router = useRouter();
 const dataStore = useDataStore();
 const tagStore = useTagStore();
 const templateStore = useTemplateStore();
+const timetableStore = useTimetableStore();
 
 // ✅ 使用 storeToRefs 提取响应式引用
 const { activityList, todoList, scheduleList, taskList } = storeToRefs(dataStore);
 const { rawTags } = storeToRefs(tagStore);
 const { rawTemplates } = storeToRefs(templateStore);
+const { blocks } = storeToRefs(timetableStore);
 
 onMounted(async () => {
   // ========== 1. 初始化本地数据 ==========
@@ -47,14 +50,17 @@ onMounted(async () => {
     taskList: taskList,
     tagList: rawTags,
     templateList: rawTemplates,
+    blockList: blocks,
+
     // 未来加表只需在这里添加一行
   });
 
   // ========== 3. 监听数据变化，触发自动同步 ==========
   watch(
-    [activityList, todoList, scheduleList, taskList, rawTemplates, rawTags], // ✅ 直接 watch ref, 未来加表只需在这里添加一行
+    [activityList, todoList, scheduleList, taskList, rawTemplates, rawTags, blocks], // ✅ 直接 watch ref, 未来加表只需在这里添加一行
     () => {
       dataStore.saveAllDebounced(); // 先保存到 localStorage
+      timetableStore.saveToLocal();
       uploadAllDebounced(); // 再触发云端同步（5秒防抖）
     },
     { deep: true }
