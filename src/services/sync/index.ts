@@ -8,8 +8,10 @@ import type { Todo } from "@/core/types/Todo";
 import { ScheduleSyncService } from "./scheduleSync";
 import type { Schedule } from "@/core/types/Schedule";
 import { useSyncStore } from "@/stores/useSyncStore";
-import { TaskSyncService } from "@/services/sync/taskSync";
+import { TaskSyncService } from "./taskSync";
 import type { Task } from "@/core/types/Task";
+import { TagSyncService } from "./tagSync";
+import type { Tag } from "@/core/types/Tag";
 
 // 私有变量：存储所有 sync 服务实例
 let syncServices: Array<{ name: string; service: any }> = [];
@@ -23,6 +25,7 @@ export function initSyncServices(dataStore: {
   todoList: Ref<Todo[]>;
   scheduleList: Ref<Schedule[]>;
   taskList: Ref<Task[]>;
+  tagList: Ref<Tag[]>;
   // 未来加表只需在这里添加一行
 }) {
   if (isInitialized) {
@@ -35,6 +38,7 @@ export function initSyncServices(dataStore: {
   const todoSync = new TodoSyncService(dataStore.todoList);
   const scheduleSync = new ScheduleSyncService(dataStore.scheduleList);
   const taskSync = new TaskSyncService(dataStore.taskList);
+  const tagSync = new TagSyncService(dataStore.tagList);
 
   // 填充 syncServices 数组
   syncServices = [
@@ -42,6 +46,7 @@ export function initSyncServices(dataStore: {
     { name: "Todos", service: todoSync },
     { name: "Schedules", service: scheduleSync },
     { name: "Tasks", service: taskSync },
+    { name: "Tags", service: tagSync },
   ];
 
   isInitialized = true;

@@ -15,9 +15,9 @@ import type { SyncDataV1, LocalSyncStatus } from "@/core/types/Sync";
 /** 从本地存储加载活动列表 */
 export function loadActivities(): Activity[] {
   const data = loadData<Activity[]>(STORAGE_KEYS.ACTIVITY, []);
-  
+
   // 兼容旧数据
-  return data.map(activity => ({
+  return data.map((activity) => ({
     ...activity,
     synced: activity.synced ?? false,
     deleted: activity.deleted ?? false,
@@ -42,7 +42,7 @@ export function loadTodos(): Todo[] {
   const data = loadData<Todo[]>(STORAGE_KEYS.TODO, []);
 
   // 兼容旧数据
-  return data.map(todo => ({
+  return data.map((todo) => ({
     ...todo,
     synced: todo.synced ?? false,
     deleted: todo.deleted ?? false,
@@ -67,7 +67,7 @@ export function loadSchedules(): Schedule[] {
   const data = loadData<Schedule[]>(STORAGE_KEYS.SCHEDULE, []);
 
   // 兼容旧数据
-  return data.map(schedule => ({
+  return data.map((schedule) => ({
     ...schedule,
     synced: schedule.synced ?? false,
     deleted: schedule.deleted ?? false,
@@ -93,14 +93,8 @@ export function removeSchedulesStorage(): void {
  * @param defaultBlocks 默认时间块
  * @returns 时间块列表
  */
-export function loadTimeBlocks(
-  type: "work" | "entertainment",
-  defaultBlocks: Block[]
-): Block[] {
-  const storageKey =
-    type === "work"
-      ? STORAGE_KEYS.TIMETABLE_WORK
-      : STORAGE_KEYS.TIMETABLE_ENTERTAINMENT;
+export function loadTimeBlocks(type: "work" | "entertainment", defaultBlocks: Block[]): Block[] {
+  const storageKey = type === "work" ? STORAGE_KEYS.TIMETABLE_WORK : STORAGE_KEYS.TIMETABLE_ENTERTAINMENT;
 
   return loadData<Block[]>(storageKey, defaultBlocks);
 }
@@ -110,14 +104,8 @@ export function loadTimeBlocks(
  * @param type 'work' 或 'entertainment'
  * @param blocks 时间块列表
  */
-export function saveTimeBlocks(
-  type: "work" | "entertainment",
-  blocks: Block[]
-): void {
-  const storageKey =
-    type === "work"
-      ? STORAGE_KEYS.TIMETABLE_WORK
-      : STORAGE_KEYS.TIMETABLE_ENTERTAINMENT;
+export function saveTimeBlocks(type: "work" | "entertainment", blocks: Block[]): void {
+  const storageKey = type === "work" ? STORAGE_KEYS.TIMETABLE_WORK : STORAGE_KEYS.TIMETABLE_ENTERTAINMENT;
 
   saveData(storageKey, blocks);
 }
@@ -127,10 +115,7 @@ export function saveTimeBlocks(
  * @param type 'work' 或 'entertainment'
  */
 export function removeTimeBlocksStorage(type: "work" | "entertainment"): void {
-  const storageKey =
-    type === "work"
-      ? STORAGE_KEYS.TIMETABLE_WORK
-      : STORAGE_KEYS.TIMETABLE_ENTERTAINMENT;
+  const storageKey = type === "work" ? STORAGE_KEYS.TIMETABLE_WORK : STORAGE_KEYS.TIMETABLE_ENTERTAINMENT;
 
   localStorage.removeItem(storageKey);
 }
@@ -142,7 +127,7 @@ export function loadTasks(): Task[] {
   const data = loadData<Task[]>(STORAGE_KEYS.TASK, []);
 
   // 兼容旧数据
-  return data.map(task => ({
+  return data.map((task) => ({
     ...task,
     synced: task.synced ?? false,
     deleted: task.deleted ?? false,
@@ -196,7 +181,15 @@ export function generateTemplateId(): number {
 
 /** 从本地存储加载标签列表 */
 export function loadTags(): Tag[] {
-  return loadData<Tag[]>(STORAGE_KEYS.TAG, []);
+  const tags = loadData<Tag[]>(STORAGE_KEYS.TAG, []);
+
+  // ✅ 数据迁移：补充缺失字段（只对旧数据生效）
+  return tags.map((tag) => ({
+    ...tag,
+    deleted: tag.deleted ?? false,
+    synced: tag.synced ?? false,
+    lastModified: tag.lastModified ?? Date.now(),
+  }));
 }
 
 /** 保存标签列表到本地存储 */

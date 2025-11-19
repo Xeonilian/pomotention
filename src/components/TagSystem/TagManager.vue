@@ -47,8 +47,7 @@
             }"
             @blur="onEditFinish(t)"
             @input="updateInputWidth"
-            @keydown.enter.prevent="onEditFinish(t)"
-            @keydown.esc="cancelEdit"
+            @keydown="(e) => handleEditKeydown(e, t)"
             @click.stop
           />
 
@@ -276,6 +275,15 @@ function confirmRemoveTag(tag: TagWithCount): void {
       }
     },
   });
+}
+
+function handleEditKeydown(e: KeyboardEvent, tag: TagWithCount): void {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    onEditFinish(tag);
+  } else if (e.key === "Escape") {
+    cancelEdit();
+  }
 }
 </script>
 

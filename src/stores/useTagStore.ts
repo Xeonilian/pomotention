@@ -122,7 +122,7 @@ export const useTagStore = defineStore("tagStore", () => {
       rawTags.value = defaultTags.map((t) => ({
         ...t,
         lastModified: Date.now(),
-        synced: true, // 初始 tags 认为是已同步状态
+        synced: false,
       }));
     }
   }
