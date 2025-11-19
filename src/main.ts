@@ -7,7 +7,6 @@ import { NConfigProvider } from "naive-ui";
 import { zhCN, dateZhCN } from "naive-ui";
 import { useTagStore } from "./stores/useTagStore";
 import { DEFAULT_TAGS } from "./core/constants";
-import { useSyncStore } from "./stores/useSyncStore";
 
 // 创建Pinia实例
 const pinia = createPinia();
@@ -39,9 +38,6 @@ app.use(pinia);
 // 不要改这个顺序，要有pinia再用store
 const tagStore = useTagStore(); // 获取 store 实例
 tagStore.loadInitialTags(DEFAULT_TAGS);
-
-const syncStore = useSyncStore();
-syncStore.init();
 
 app.use(router);
 app.mount("#app");

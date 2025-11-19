@@ -33,6 +33,7 @@ export interface GlobalSettings {
   webdavPath: string;
   viewSet: ViewType;
   marquee: string;
+  supabaseSync: number[];
 
   ai?: {
     activeId: number; // 当前启用的配置
@@ -75,7 +76,7 @@ const defaultSettings: GlobalSettings = {
   webdavPath: "/PomotentionBackup",
   viewSet: "day",
   marquee: "保持觉察 🍅 = ⏰ + 🎯 + 👁‍🗨 ",
-
+  supabaseSync: [0, 0],
   ai: {
     activeId: 1,
     systemPrompt:
