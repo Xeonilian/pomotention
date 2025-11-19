@@ -20,16 +20,19 @@ import { supabase } from "@/core/services/supabase";
 // 导入 dataStore 和同步相关
 import { useDataStore } from "@/stores/useDataStore";
 import { useTagStore } from "@/stores/useTagStore";
+import { useTemplateStore } from "@/stores/useTemplateStore";
 import { initSyncServices } from "@/services/sync";
 import { uploadAllDebounced } from "@/core/utils/autoSync";
 
 const router = useRouter();
 const dataStore = useDataStore();
 const tagStore = useTagStore();
+const templateStore = useTemplateStore();
 
 // ✅ 使用 storeToRefs 提取响应式引用
 const { activityList, todoList, scheduleList, taskList } = storeToRefs(dataStore);
 const { rawTags } = storeToRefs(tagStore);
+const { rawTemplates } = storeToRefs(templateStore);
 
 onMounted(async () => {
   // ========== 1. 初始化本地数据 ==========
@@ -43,12 +46,13 @@ onMounted(async () => {
     scheduleList: scheduleList,
     taskList: taskList,
     tagList: rawTags,
+    templateList: rawTemplates,
     // 未来加表只需在这里添加一行
   });
 
   // ========== 3. 监听数据变化，触发自动同步 ==========
   watch(
-    [activityList, todoList, scheduleList, taskList], // ✅ 直接 watch ref
+    [activityList, todoList, scheduleList, taskList, rawTemplates, rawTags], // ✅ 直接 watch ref, 未来加表只需在这里添加一行
     () => {
       dataStore.saveAllDebounced(); // 先保存到 localStorage
       uploadAllDebounced(); // 再触发云端同步（5秒防抖）

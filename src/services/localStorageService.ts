@@ -148,7 +148,12 @@ export function removeTasksStorage(): void {
 
 /** 从本地存储加载模板列表 */
 export function loadTemplates(): Template[] {
-  return loadData<Template[]>(STORAGE_KEYS.WRITING_TEMPLATE, []);
+  return loadData<Template[]>(STORAGE_KEYS.WRITING_TEMPLATE, []).map((template) => ({
+    ...template,
+    deleted: template.deleted ?? false,
+    synced: template.synced ?? false,
+    lastModified: template.lastModified ?? Date.now(),
+  }));
 }
 
 /** 保存模板列表到本地存储 */
