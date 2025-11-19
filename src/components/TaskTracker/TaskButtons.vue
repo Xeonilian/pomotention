@@ -50,7 +50,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, computed } from "vue";
 import { NButton } from "naive-ui";
 import EnergyInputDialog from "@/components/TaskTracker/EnergyInputDialog.vue";
 import RewardInputDialog from "@/components/TaskTracker/RewardInputDialog.vue";
@@ -64,7 +64,7 @@ import {
   Star20Regular,
   Star20Filled,
 } from "@vicons/fluent";
-import { loadTemplates, saveTemplates } from "@/services/localStorageService";
+import { useTemplateStore } from "@/stores/useTemplateStore";
 import type { Template } from "@/core/types/Template";
 
 // Props
@@ -73,12 +73,16 @@ const props = defineProps<{
   isStarred: boolean;
 }>();
 
+// Store
+const templateStore = useTemplateStore();
+
 // State Variables
 const showEnergyDialog = ref(false);
 const showRewardDialog = ref(false);
 const showInterruptionDialog = ref(false);
 const showTemplateDialog = ref(false);
-const templates = ref<Template[]>(loadTemplates());
+
+const templates = computed(() => templateStore.allTemplates);
 
 // Methods
 const emit = defineEmits<{
@@ -124,37 +128,26 @@ function handleInterruptionConfirm(val: {
   }
 }
 
-// 保存模板到 localStorage
-const saveTemplatesToLocal = () => {
-  saveTemplates(templates.value);
-};
-
 // 更新模板的确认处理
 const handleTemplateConfirm = (template: Template) => {
-  if (!template.id) return; // 确保是有效的模板，实际上这行可以删除
+  // ✅ 检查模板是否已存在于 store
+  const exists = templateStore.allTemplates.some((t) => t.id === template.id);
 
-  const index = templates.value.findIndex((t) => t.id === template.id);
-  if (index !== -1) {
-    // 更新现有模板
-    templates.value[index] = { ...template };
+  if (!exists) {
+    // 新增：使用 store 方法生成 id
+    templateStore.addTemplate(template.title, template.content);
   } else {
-    // 新增模板处理，确保生成一个新的 ID
-    const newTemplate: Template = {
-      id: Date.now(), // 生成新的 ID
+    // 编辑：更新现有模板
+    templateStore.updateTemplate(template.id, {
       title: template.title,
       content: template.content,
-    };
-
-    templates.value.push(newTemplate);
+    });
   }
-
-  saveTemplatesToLocal(); // 更新存储
 };
 
 // 删除模板
 const handleDeleteTemplate = (templateId: number) => {
-  templates.value = templates.value.filter((t) => t.id !== templateId);
-  saveTemplatesToLocal(); // 更新本地存储
+  templateStore.removeTemplate(templateId);
 };
 
 function starTrack() {

@@ -1,14 +1,14 @@
+<!-- TemplateDialog.vue -->
 <template>
-  <n-modal v-model:show="showModal" preset="dialog" title="书写模板" :on-after-leave="handleCancel" style="width: 500px; height: 410px">
+  <n-modal v-model:show="showModal" preset="dialog" title="书写模板" :on-after-leave="resetForm" style="width: 500px; height: 410px">
     <n-layout has-sider class="template-container">
       <n-layout-sider bordered width="150">
-        <!-- 左侧：模板列表 -->
         <n-list>
           <n-list-item
             v-for="template in templates"
             :key="template.id"
             @click="selectTemplate(template)"
-            @dblclick="copyTemplateContent(template)"
+            @dblclick="copyToClipboard(template.content)"
             title="双击复制模板"
             :style="{
               background: selectedTemplate?.id === template.id ? 'var(--color-blue-light)' : 'var(--color-background)',
@@ -19,7 +19,6 @@
         </n-list>
       </n-layout-sider>
 
-      <!-- 右侧：模板内容编辑区域 -->
       <n-layout-content>
         <n-input
           type="text"
@@ -27,9 +26,7 @@
           :disabled="!canEditContent"
           :placeholder="contentPlaceholder"
           style="width: 100%; height: 30px"
-          :style="{
-            background: canEditContent ? 'var(--color-blue-light)' : 'var(--color-background)',
-          }"
+          :style="{ background: canEditContent ? 'var(--color-blue-light)' : 'var(--color-background)' }"
         />
         <n-input
           type="textarea"
@@ -38,25 +35,18 @@
           rows="10"
           :disabled="!canEditContent"
           style="width: 100%; height: calc(100% - 31px)"
-          :style="{
-            background: !canEditContent ? 'var(--color-background-light)' : 'var(--color-background)',
-          }"
+          :style="{ background: !canEditContent ? 'var(--color-background-light)' : 'var(--color-background)' }"
         />
       </n-layout-content>
     </n-layout>
 
     <n-layout-footer>
       <n-space justify="center">
-        <n-button type="info" secondary :disabled="!selectedTemplate" @click="handleCopy">
+        <n-button type="info" secondary :disabled="!selectedTemplate" @click="copyToClipboard(selectedTemplate?.content)">
           {{ copyMessage }}
         </n-button>
-        <n-button @click="handleAddNewTemplate" type="primary" :title="'新增模板'">新增</n-button>
-        <n-button
-          type="primary"
-          @click="handleConfirm"
-          :disabled="!selectedTemplate && !addNew"
-          :title="addNew ? '确认新增模版' : '确认编辑模版'"
-        >
+        <n-button type="primary" @click="handleAddNew">新增</n-button>
+        <n-button type="primary" @click="handleConfirm" :disabled="!canConfirm" :title="addNew ? '确认新增模版' : '确认编辑模版'">
           确认
         </n-button>
         <n-button type="default" :disabled="!selectedTemplate" @click="handleDelete">删除</n-button>
@@ -82,102 +72,108 @@ const emit = defineEmits<{
   (e: "delete", templateId: number): void;
 }>();
 
-const selectedTemplate = ref<Template | null>(null);
-const editableTemplateContent = ref<string>("");
-const editableTemplateTitle = ref<string>("");
-const addNew = ref<boolean>(false);
-const copyMessage = ref("复制");
-
+// ==================== 状态 ====================
 const showModal = ref(props.show);
-// 在适当的生命周期钩子中同步 props 与 local state
+const selectedTemplate = ref<Template | null>(null);
+const editableTemplateTitle = ref("");
+const editableTemplateContent = ref("");
+const addNew = ref(false);
+const copyMessage = ref("复制");
+const pendingSelectId = ref<number | null>(null);
+
+// ==================== 计算属性 ====================
+const canEditContent = computed(() => !!selectedTemplate.value || addNew.value);
+const canConfirm = computed(() => canEditContent.value && editableTemplateTitle.value.trim().length > 0);
+const contentPlaceholder = computed(() => (addNew.value ? "输入新模板内容" : "选择模板"));
+
+// ==================== 监听器 ====================
 watch(
   () => props.show,
-  (newVal) => {
-    showModal.value = newVal; // 确保 props 与内部状态同步
-  }
+  (val) => (showModal.value = val)
 );
-// 是否可以编辑内容的计算属性
-const canEditContent = computed(() => {
-  return !!selectedTemplate.value || addNew.value;
-});
 
-// 内容占位符
-const contentPlaceholder = computed(() => {
-  if (addNew.value) {
-    return "输入新模板内容";
-  }
-  return "选择模板";
-});
+watch(
+  () => props.templates,
+  (newTemplates) => {
+    // 新增后自动选中
+    if (pendingSelectId.value) {
+      const created = newTemplates.find((t) => t.id === pendingSelectId.value);
+      if (created) {
+        selectedTemplate.value = created;
+        editableTemplateTitle.value = created.title;
+        editableTemplateContent.value = created.content;
+        pendingSelectId.value = null;
+      }
+      return; // ✅ 提前返回，避免重复处理
+    }
 
+    // 编辑后刷新引用
+    if (selectedTemplate.value) {
+      const updated = newTemplates.find((t) => t.id === selectedTemplate.value!.id);
+      if (updated) {
+        selectedTemplate.value = updated;
+        editableTemplateTitle.value = updated.title;
+        editableTemplateContent.value = updated.content;
+      }
+    }
+  },
+  { deep: true }
+);
+
+// ==================== 方法 ====================
 const selectTemplate = (template: Template) => {
   selectedTemplate.value = template;
-  editableTemplateContent.value = template.content || "";
-  editableTemplateTitle.value = template.title || "";
+  editableTemplateTitle.value = template.title;
+  editableTemplateContent.value = template.content;
+  addNew.value = false;
 };
 
-const copyTemplateContent = (template: Template) => {
-  const textToCopy = `${template.content}`;
+const copyToClipboard = (text?: string) => {
+  if (!text) return;
   navigator.clipboard
-    .writeText(textToCopy)
+    .writeText(text)
     .then(() => {
       copyMessage.value = "复制✔️";
-      setTimeout(() => {
-        copyMessage.value = "复制";
-      }, 1000); // 5000 毫秒后恢复
+      setTimeout(() => (copyMessage.value = "复制"), 1000);
     })
     .catch((err) => console.error("复制失败:", err));
 };
 
-const handleAddNewTemplate = () => {
-  resetForm();
+const handleAddNew = () => {
   addNew.value = true;
   selectedTemplate.value = null;
-};
-
-const handleCopy = () => {
-  const textToCopy = selectedTemplate.value?.content;
-  if (textToCopy) {
-    navigator.clipboard
-      .writeText(textToCopy)
-      .then(() => {
-        copyMessage.value = "复制✔️";
-        setTimeout(() => {
-          copyMessage.value = "复制";
-        }, 1000); // 5000 毫秒后恢复
-      })
-      .catch((err) => console.error("复制失败:", err));
-  }
+  editableTemplateTitle.value = "";
+  editableTemplateContent.value = "";
 };
 
 const handleConfirm = () => {
+  const title = editableTemplateTitle.value.trim();
+  const content = editableTemplateContent.value.trim();
+
+  if (!title) return;
+
   if (addNew.value) {
-    // 确认添加
-    const newTemplate = {
+    const newTemplate: Template = {
       id: Date.now(),
-      title: editableTemplateTitle.value.trim(),
-      content: editableTemplateContent.value.trim(),
+      title,
+      content,
+      synced: false,
+      deleted: false,
+      lastModified: Date.now(),
     };
-    if (newTemplate.title) {
-      emit("confirm", newTemplate);
-      addNew.value = false;
-      resetForm();
-    }
+    pendingSelectId.value = newTemplate.id;
+    emit("confirm", newTemplate);
+    addNew.value = false;
   } else if (selectedTemplate.value) {
-    // 确认修改
-    const updatedTemplate = {
+    const updatedTemplate: Template = {
       ...selectedTemplate.value,
-      title: editableTemplateTitle.value.trim(),
-      content: editableTemplateContent.value.trim(),
+      title,
+      content,
+      synced: false,
+      lastModified: Date.now(),
     };
     emit("confirm", updatedTemplate);
-    resetForm();
   }
-};
-
-const handleCancel = () => {
-  showModal.value = false; // 更新显示状态
-  emit("update:show", false);
-  resetForm();
 };
 
 const handleDelete = () => {
@@ -187,13 +183,20 @@ const handleDelete = () => {
   }
 };
 
+const handleCancel = () => {
+  showModal.value = false;
+  emit("update:show", false);
+};
+
 const resetForm = () => {
   addNew.value = false;
   selectedTemplate.value = null;
-  editableTemplateContent.value = "";
   editableTemplateTitle.value = "";
+  editableTemplateContent.value = "";
+  pendingSelectId.value = null;
 };
 </script>
+
 <style scoped>
 /* 额外的样式调整 */
 .template-container {
