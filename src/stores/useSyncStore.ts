@@ -1,6 +1,6 @@
 // src/stores/useSyncStore.ts
 import { defineStore } from "pinia";
-import { ref } from "vue";
+import { ref, computed } from "vue";
 import { useSettingStore } from "./useSettingStore";
 
 export const useSyncStore = defineStore("sync", () => {
@@ -24,22 +24,16 @@ export const useSyncStore = defineStore("sync", () => {
   });
 
   function updateLastSyncTimestamp(timestamp?: number) {
-    const now = timestamp ?? Date.now();
-    lastSyncTimestamp.value = now;
-    localStorage.setItem("lastSyncTimestamp", now.toString());
+    lastSyncTimestamp.value = timestamp ?? Date.now();
   }
 
   function updateLastCleanupTimestamp(timestamp?: number) {
-    const now = timestamp ?? Date.now();
-    lastCleanupTimestamp.value = now;
-    localStorage.setItem("lastCleanupTimestamp", now.toString());
+    lastCleanupTimestamp.value = timestamp ?? Date.now();
   }
 
   function resetSync() {
     lastSyncTimestamp.value = 0;
     lastCleanupTimestamp.value = 0;
-    localStorage.removeItem("lastSyncTimestamp");
-    localStorage.removeItem("lastCleanupTimestamp");
   }
 
   return {
