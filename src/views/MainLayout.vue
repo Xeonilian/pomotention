@@ -58,7 +58,6 @@ import { getCurrentWindow, PhysicalPosition, LogicalSize } from "@tauri-apps/api
 
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useTimerStore } from "@/stores/useTimerStore";
-import { useDataStore } from "@/stores/useDataStore";
 
 import {
   ArrowLeft24Filled,
@@ -78,7 +77,6 @@ import PomotentionTimer from "@/components/PomotentionTimer/PomotentionTimer.vue
 
 const timerStore = useTimerStore();
 const settingStore = useSettingStore();
-const dataStore = useDataStore();
 
 const { isAlwaysOnTop, toggleAlwaysOnTop } = useAlwaysOnTop();
 const router = useRouter();
