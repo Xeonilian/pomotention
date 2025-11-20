@@ -16,6 +16,7 @@ import { TemplateSyncService } from "./templateSync";
 import type { Template } from "@/core/types/Template";
 import { TimetableSyncService } from "./timetableSync";
 import type { Block } from "@/core/types/Block";
+import { runMigrations } from "../migrationService";
 
 // 私有变量：存储所有 sync 服务实例
 let syncServices: Array<{ name: string; service: any }> = [];
@@ -93,6 +94,24 @@ export async function syncAll(): Promise<{ success: boolean; errors: string[]; d
   try {
     const lastSync = syncStore.lastSyncTimestamp;
 
+    // ========== 首次同步：执行数据迁移 ==========
+    if (lastSync === 0) {
+      console.log("🔍 [Sync] 检测到首次同步，执行数据迁移...");
+      const migrationReport = runMigrations();
+
+      if (migrationReport.errors.length > 0) {
+        console.error("⚠️ [Sync] 迁移过程中出现错误", migrationReport.errors);
+        errors.push(...migrationReport.errors.map((e) => `迁移错误: ${e}`));
+      }
+
+      if (migrationReport.cleaned.length > 0) {
+        console.log(`✅ [Sync] 清理了 ${migrationReport.cleaned.length} 个废弃 key`);
+      }
+
+      if (migrationReport.migrated.length > 0) {
+        console.log(`✅ [Sync] 迁移了 ${migrationReport.migrated.length} 个数据集`);
+      }
+    }
     // ========== 1. 并行上传所有表 ==========
     const uploadResults = await Promise.allSettled(
       syncServices.map(({ name, service }) => service.upload().then((result: any) => ({ name, result })))
