@@ -147,7 +147,6 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
 
       const lastSyncDate = new Date(lastSyncTimestamp).toISOString();
 
-      // 直接查询表（增量同步）
       const { data, error } = await supabase
         .from(this.tableName)
         .select("*")
@@ -164,25 +163,28 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
       let downloadedCount = 0;
 
       data.forEach((cloudItem: any) => {
-        const cloudEntity = this.mapCloudToLocal(cloudItem);
-        const localIndex = localItems.findIndex((item) => item.id === cloudEntity.id);
+        const localIndex = localItems.findIndex((item) => item.id === cloudItem.timestamp_id);
 
         if (localIndex === -1) {
-          // 本地不存在，直接插入
-          localItems.push(cloudEntity);
+          // 本地不存在，插入
+          localItems.push(this.mapCloudToLocal(cloudItem));
           downloadedCount++;
         } else {
           const localItem = localItems[localIndex];
 
-          // Last Write Wins: 比较本地时间戳
-          if (!localItem.synced && localItem.lastModified > lastSyncTimestamp) {
-            // 本地有未同步的更新，保留本地版本（稍后 upload 会覆盖云端）
-            // 不做任何操作
-          } else {
-            // 云端版本优先，覆盖本地
-            localItems[localIndex] = cloudEntity;
-            downloadedCount++;
+          // ✅ 首要依据：synced=true → 本地无修改，跳过
+          if (localItem.synced) {
+            return;
           }
+
+          // ✅ 次要依据：本地有未同步的更新，保留本地
+          if (localItem.lastModified > lastSyncTimestamp) {
+            return;
+          }
+
+          // ✅ 云端优先，覆盖本地
+          localItems[localIndex] = this.mapCloudToLocal(cloudItem);
+          downloadedCount++;
         }
       });
 

@@ -94,7 +94,6 @@ export class TodoSyncService extends BaseSyncService<Todo, CloudTodoInsert> {
       const user = await getCurrentUser();
       if (!user) return { success: false, error: "用户未登录", downloaded: 0 };
 
-      // 调用 RPC 获取完整数据（RPC 已过滤 deleted = false）
       const { data, error } = await supabase.rpc("get_full_todos", {
         p_user_id: user.id,
       });
@@ -108,29 +107,32 @@ export class TodoSyncService extends BaseSyncService<Todo, CloudTodoInsert> {
       let downloadedCount = 0;
 
       data.forEach((cloudItem: FullTodoFromCloud) => {
-        const cloudEntity = this.mapCloudToLocal(cloudItem);
-        const localIndex = localItems.findIndex((item) => item.id === cloudEntity.id);
+        const localIndex = localItems.findIndex((item) => item.id === cloudItem.id);
 
         if (localIndex === -1) {
-          // 本地不存在，直接插入
-          localItems.push(cloudEntity);
+          localItems.push(this.mapCloudToLocal(cloudItem));
           downloadedCount++;
         } else {
           const localItem = localItems[localIndex];
 
-          // Last Write Wins: 比较本地时间戳
-          if (!localItem.synced && localItem.lastModified > lastSyncTimestamp) {
-            // 本地有未同步的更新，保留本地版本
-            // 不做任何操作
-          } else {
-            // 云端版本优先，覆盖本地
-            localItems[localIndex] = cloudEntity;
-            downloadedCount++;
+          if (localItem.synced) {
+            return;
           }
+
+          if (localItem.lastModified > lastSyncTimestamp) {
+            return;
+          }
+
+          localItems[localIndex] = this.mapCloudToLocal(cloudItem);
+          downloadedCount++;
         }
       });
 
-      this.saveLocal(localItems);
+      // ✅ 只有真正下载了数据才保存
+      if (downloadedCount > 0) {
+        this.saveLocal(localItems);
+      }
+
       return { success: true, downloaded: downloadedCount };
     } catch (error: any) {
       console.error("下载 todos 失败:", error);
