@@ -94,26 +94,23 @@ export const useTimetableStore = defineStore("timetable", () => {
   }
 
   function resetToDefaults(type: "work" | "entertainment"): void {
+    const now = Date.now();
+
     // 软删除该类型的所有 blocks
     blocks.value.forEach((b) => {
       if (b.type === type && !b.deleted) {
         b.deleted = true;
         b.synced = false;
-        b.lastModified = Date.now();
+        b.lastModified = now;
       }
     });
 
-    // 添加默认 blocks
+    // 添加默认 blocks（保持固定 ID）
     const defaults = type === "work" ? WORK_BLOCKS : ENTERTAINMENT_BLOCKS;
-    const now = Date.now();
 
-    defaults.forEach((template, index) => {
+    defaults.forEach((template) => {
       blocks.value.push({
-        id: now + index,
-        type,
-        category: template.category,
-        start: template.start,
-        end: template.end,
+        ...template, // 保留原始 id
         synced: false,
         deleted: false,
         lastModified: now,
