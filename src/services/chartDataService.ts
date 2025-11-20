@@ -19,7 +19,7 @@ export function collectPomodoroData(todos: Todo[]): DataPoint[] {
       value: t.realPomo!.reduce((sum, pomo) => sum + pomo, 0),
       sourceId: t.id,
     }))
-    .filter((point) => point.value > 0); // 👈 这行加了吗？
+    .filter((point) => point.value > 0);
 }
 
 /**
