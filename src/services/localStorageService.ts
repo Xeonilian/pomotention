@@ -14,7 +14,15 @@ import type { SyncDataV1, LocalSyncStatus } from "@/core/types/Sync";
 
 /** 从本地存储加载活动列表 */
 export function loadActivities(): Activity[] {
-  return loadData<Activity[]>(STORAGE_KEYS.ACTIVITY, []);
+  const data = loadData<Activity[]>(STORAGE_KEYS.ACTIVITY, []);
+
+  // 兼容旧数据
+  return data.map((activity) => ({
+    ...activity,
+    synced: activity.synced ?? false,
+    deleted: activity.deleted ?? false,
+    lastModified: activity.lastModified ?? Date.now(),
+  }));
 }
 
 /** 保存活动列表到本地存储 */
@@ -31,7 +39,15 @@ export function removeActivitiesStorage(): void {
 
 /** 从本地存储加载待办事项列表 */
 export function loadTodos(): Todo[] {
-  return loadData<Todo[]>(STORAGE_KEYS.TODO, []);
+  const data = loadData<Todo[]>(STORAGE_KEYS.TODO, []);
+
+  // 兼容旧数据
+  return data.map((todo) => ({
+    ...todo,
+    synced: todo.synced ?? false,
+    deleted: todo.deleted ?? false,
+    lastModified: todo.lastModified ?? Date.now(),
+  }));
 }
 
 /** 保存待办事项列表到本地存储 */
@@ -48,7 +64,15 @@ export function removeTodosStorage(): void {
 
 /** 从本地存储加载日程列表 */
 export function loadSchedules(): Schedule[] {
-  return loadData<Schedule[]>(STORAGE_KEYS.SCHEDULE, []);
+  const data = loadData<Schedule[]>(STORAGE_KEYS.SCHEDULE, []);
+
+  // 兼容旧数据
+  return data.map((schedule) => ({
+    ...schedule,
+    synced: schedule.synced ?? false,
+    deleted: schedule.deleted ?? false,
+    lastModified: schedule.lastModified ?? Date.now(),
+  }));
 }
 
 /** 保存日程列表到本地存储 */
@@ -62,51 +86,121 @@ export function removeSchedulesStorage(): void {
 }
 
 // =================== 时间表(Timetable)相关 ===================
+/**
+ * 数据迁移：合并旧数据并转换为时间戳 ID
+ */
+function migrateTimetableData(): Block[] {
+  const OLD_KEYS = {
+    work: STORAGE_KEYS.TIMETABLE_WORK,
+    entertainment: STORAGE_KEYS.TIMETABLE_ENTERTAINMENT,
+  };
+
+  const merged: Block[] = [];
+  let baseTimestamp = Date.now() - 100000000; // 用过去的时间戳，避免和新数据冲突
+
+  // 合并 work 数据
+  const workData = localStorage.getItem(OLD_KEYS.work);
+  if (workData) {
+    const workBlocks = JSON.parse(workData) as any[];
+    merged.push(
+      ...workBlocks.map((b, index) => ({
+        id: baseTimestamp + index * 1000, // ✅ 生成时间戳 ID
+        type: "work" as const,
+        category: b.category,
+        start: b.start,
+        end: b.end,
+        synced: false, // ✅ 迁移后需要重新同步
+        deleted: b.deleted ?? false,
+        lastModified: Date.now(),
+      }))
+    );
+    baseTimestamp += workBlocks.length * 1000;
+  }
+
+  // 合并 entertainment 数据
+  const entertainmentData = localStorage.getItem(OLD_KEYS.entertainment);
+  if (entertainmentData) {
+    const entertainmentBlocks = JSON.parse(entertainmentData) as any[];
+    merged.push(
+      ...entertainmentBlocks.map((b, index) => ({
+        id: baseTimestamp + index * 1000, // ✅ 生成时间戳 ID
+        type: "entertainment" as const,
+        category: b.category,
+        start: b.start,
+        end: b.end,
+        synced: false,
+        deleted: b.deleted ?? false,
+        lastModified: Date.now(),
+      }))
+    );
+  }
+
+  // 删除旧 key
+  if (workData || entertainmentData) {
+    localStorage.removeItem(OLD_KEYS.work);
+    localStorage.removeItem(OLD_KEYS.entertainment);
+    console.log("✅ [Migration] 已合并时间表数据，生成新 ID");
+  }
+
+  return merged;
+}
 
 /**
- * 从本地存储加载时间块（支持多类型独立存储）
+ * 加载时间块
+ */
+export function loadTimetableBlocks(): Block[] {
+  const KEY = STORAGE_KEYS.TIMETABLE_BLOCKS;
+
+  const data = localStorage.getItem(KEY);
+  if (data) {
+    return JSON.parse(data) as Block[];
+  }
+
+  // 尝试迁移旧数据
+  const migrated = migrateTimetableData();
+  if (migrated.length > 0) {
+    localStorage.setItem(KEY, JSON.stringify(migrated));
+  }
+
+  return migrated;
+}
+
+/**
+ * 保存时间块
+ */
+export function saveTimetableBlocks(blocks: Block[]): void {
+  localStorage.setItem(STORAGE_KEYS.TIMETABLE_BLOCKS, JSON.stringify(blocks));
+}
+
+/**
+ * 从本地存储加载时间块（支持多类型独立存储） 作废
  * @param type 'work' 或 'entertainment'
  * @param defaultBlocks 默认时间块
  * @returns 时间块列表
  */
-export function loadTimeBlocks(
-  type: "work" | "entertainment",
-  defaultBlocks: Block[]
-): Block[] {
-  const storageKey =
-    type === "work"
-      ? STORAGE_KEYS.TIMETABLE_WORK
-      : STORAGE_KEYS.TIMETABLE_ENTERTAINMENT;
+export function loadTimeBlocks(type: "work" | "entertainment", defaultBlocks: Block[]): Block[] {
+  const storageKey = type === "work" ? STORAGE_KEYS.TIMETABLE_WORK : STORAGE_KEYS.TIMETABLE_ENTERTAINMENT;
 
   return loadData<Block[]>(storageKey, defaultBlocks);
 }
 
 /**
- * 保存时间块到本地存储（支持多类型独立存储）
+ * 保存时间块到本地存储（支持多类型独立存储） 作废
  * @param type 'work' 或 'entertainment'
  * @param blocks 时间块列表
  */
-export function saveTimeBlocks(
-  type: "work" | "entertainment",
-  blocks: Block[]
-): void {
-  const storageKey =
-    type === "work"
-      ? STORAGE_KEYS.TIMETABLE_WORK
-      : STORAGE_KEYS.TIMETABLE_ENTERTAINMENT;
+export function saveTimeBlocks(type: "work" | "entertainment", blocks: Block[]): void {
+  const storageKey = type === "work" ? STORAGE_KEYS.TIMETABLE_WORK : STORAGE_KEYS.TIMETABLE_ENTERTAINMENT;
 
   saveData(storageKey, blocks);
 }
 
 /**
- * 删除某一类型的时间块存储
+ * 删除某一类型的时间块存储 作废
  * @param type 'work' 或 'entertainment'
  */
 export function removeTimeBlocksStorage(type: "work" | "entertainment"): void {
-  const storageKey =
-    type === "work"
-      ? STORAGE_KEYS.TIMETABLE_WORK
-      : STORAGE_KEYS.TIMETABLE_ENTERTAINMENT;
+  const storageKey = type === "work" ? STORAGE_KEYS.TIMETABLE_WORK : STORAGE_KEYS.TIMETABLE_ENTERTAINMENT;
 
   localStorage.removeItem(storageKey);
 }
@@ -115,7 +209,15 @@ export function removeTimeBlocksStorage(type: "work" | "entertainment"): void {
 
 /** 从本地存储加载任务列表 */
 export function loadTasks(): Task[] {
-  return loadData<Task[]>(STORAGE_KEYS.TASK, []);
+  const data = loadData<Task[]>(STORAGE_KEYS.TASK, []);
+
+  // 兼容旧数据
+  return data.map((task) => ({
+    ...task,
+    synced: task.synced ?? false,
+    deleted: task.deleted ?? false,
+    lastModified: task.lastModified ?? Date.now(),
+  }));
 }
 
 /** 保存任务列表到本地存储 */
@@ -131,7 +233,12 @@ export function removeTasksStorage(): void {
 
 /** 从本地存储加载模板列表 */
 export function loadTemplates(): Template[] {
-  return loadData<Template[]>(STORAGE_KEYS.WRITING_TEMPLATE, []);
+  return loadData<Template[]>(STORAGE_KEYS.WRITING_TEMPLATE, []).map((template) => ({
+    ...template,
+    deleted: template.deleted ?? false,
+    synced: template.synced ?? false,
+    lastModified: template.lastModified ?? Date.now(),
+  }));
 }
 
 /** 保存模板列表到本地存储 */
@@ -164,7 +271,15 @@ export function generateTemplateId(): number {
 
 /** 从本地存储加载标签列表 */
 export function loadTags(): Tag[] {
-  return loadData<Tag[]>(STORAGE_KEYS.TAG, []);
+  const tags = loadData<Tag[]>(STORAGE_KEYS.TAG, []);
+
+  // ✅ 数据迁移：补充缺失字段（只对旧数据生效）
+  return tags.map((tag) => ({
+    ...tag,
+    deleted: tag.deleted ?? false,
+    synced: tag.synced ?? false,
+    lastModified: tag.lastModified ?? Date.now(),
+  }));
 }
 
 /** 保存标签列表到本地存储 */

@@ -652,7 +652,7 @@ watch(
   align-items: center;
   justify-content: center;
   position: absolute;
-  font-weight: bold;
+  font-weight: 500;
   width: 15px;
   height: 15px;
   font-size: 12px;
@@ -662,64 +662,64 @@ watch(
   box-shadow: none;
   user-select: none;
   z-index: 30;
-}
-
-.priority-0.no-title {
-  font-weight: 600;
-  font-size: 14px;
-}
-/* 可按 priority 分不同色 */
-.priority-0 {
-  color: var(--color-text-secondary);
   background-color: var(--color-background-light);
-  font-size: 14px;
 }
 
 .priority-1 {
   background-color: #ef53505c; /* 半透明浅底 */
   color: #ef5350; /* 同色文字 */
+  font-weight: 600;
 }
 
 /* 按 1 的风格修改 */
 .priority-2 {
   background-color: #ff98005c;
   color: #ff9800; /* 同色文字 */
+  font-weight: 600;
 }
 
 /* priority-3 保持不变 */
 .priority-3 {
   background-color: #ffeb3bb7;
   color: #3d3d3dc1;
+  font-weight: 600;
 }
 
 .priority-4 {
   background-color: #4caf505c;
   color: #4caf50;
+  font-weight: 600;
 }
 .priority-5 {
   background-color: #2196f35c;
   color: #2196f3;
+  font-weight: 600;
 }
 .priority-6 {
   background-color: #d33af65c;
   color: #a156b8;
+  font-weight: 600;
 }
 
 .priority-7 {
   background-color: #7e57c25c;
   color: #7e57c2;
+  font-weight: 600;
 }
 .priority-8 {
   background-color: #26a69a5c;
   color: #26a69a;
+  font-weight: 600;
 }
 .priority-9 {
   background-color: #7892625c;
   color: #789262;
+  font-weight: 600;
 }
 .priority-10 {
   background-color: #8d6e635c;
   color: #8d6e63;
+  font-weight: 600;
 }
 
 /* 已完成的todo段样式 */

@@ -1,16 +1,18 @@
 // src/core/types/Task.ts
-// import type { Pomo } from "./Pomo";
 export interface Task {
   id: number; // 使用时间戳
   activityTitle: string;
   projectName?: string;
   description?: string; // 任务描述
-  source: "todo" | "schedule" | "activity"; // 来源
+  source?: "todo" | "schedule" | "activity"; // 来源不再必须，统一为activity
   sourceId: number; // 来源ID
   energyRecords: EnergyRecord[]; // 精力值记录数组
   rewardRecords: RewardRecord[]; // 愉悦值记录数组
   interruptionRecords: InterruptionRecord[]; // 打扰记录数组
-  starred?: boolean;
+  starred: boolean;
+  deleted: boolean;
+  synced: boolean;
+  lastModified: number;
 }
 
 export interface EnergyRecord {

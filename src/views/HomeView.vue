@@ -150,20 +150,20 @@
           <DayPlanner
             v-if="settingStore.settings.showPlanner && settingStore.settings.viewSet === 'day'"
             @update-schedule-status="onUpdateScheduleStatus"
+            @cancel-schedule="onCancelSchedule"
+            @convert-schedule-to-task="onConvertActivityToTask"
+            @edit-schedule-done="handleEditScheduleDone"
+            @edit-schedule-title="handleEditScheduleTitle"
             @update-todo-status="onUpdateTodoStatus"
             @suspend-todo="onSuspendTodo"
             @cancel-todo="onCancelTodo"
-            @cancel-schedule="onCancelSchedule"
             @update-todo-est="onUpdateTodoEst"
             @update-todo-pomo="onUpdateTodoPomo"
             @batch-update-priorities="onUpdateTodoPriority"
-            @edit-schedule-title="handleEditScheduleTitle"
             @edit-todo-title="handleEditTodoTitle"
             @edit-todo-start="handleEditTodoStart"
             @edit-todo-done="handleEditTodoDone"
-            @edit-schedule-done="handleEditScheduleDone"
-            @convert-todo-to-task="onConvertTodoToTask"
-            @convert-schedule-to-task="onConvertScheduleToTask"
+            @convert-todo-to-task="onConvertActivityToTask"
           />
           <WeekPlanner
             v-if="settingStore.settings.showPlanner && settingStore.settings.viewSet === 'week'"
@@ -248,6 +248,8 @@ import { handleExportOrQR, type DataRow } from "@/services/icsService";
 import { usePomoStore } from "@/stores/usePomoStore";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useDataStore } from "@/stores/useDataStore";
+import { autoSyncDebounced, uploadAllDebounced } from "@/core/utils/autoSync";
+import { syncAll } from "@/services/sync/index";
 
 // ======================== 响应式状态与初始化 ========================
 // 不直接import Naive和以下组建加速启动
@@ -281,10 +283,9 @@ const {
   activityById,
   todoById,
   scheduleById,
-  taskById,
   todoByActivityId,
   scheduleByActivityId,
-  tasksBySource,
+  taskByActivityId,
   childrenOfActivity,
   todosForCurrentViewWithTags,
   schedulesForCurrentViewWithTags,
@@ -399,22 +400,26 @@ function cancelEdit() {
 }
 
 // ======================== 2. Activity 相关 ========================
-import { activityService } from "@/services/activitySupaService";
+
 /** 新增活动 */
 function onAddActivity(newActivity: Activity) {
+  console.log("🔵 添加前，未同步数量:", activityList.value.filter((a) => !a.synced).length);
+
   activeId.value = null;
   activityList.value.push(newActivity);
+
   handleAddActivity(scheduleList.value, newActivity, {
     activityById: activityById.value,
   });
+
+  console.log("🔵 添加后，未同步数量:", activityList.value.filter((a) => !a.synced).length);
+  console.log(
+    "🔵 未同步的 activities:",
+    activityList.value.filter((a) => !a.synced)
+  );
+
   activeId.value = newActivity.id;
   saveAllDebounced();
-  activityService.uploadActivity({
-    id: newActivity.id,
-    title: newActivity.title,
-    class: newActivity.class,
-    lastModified: Date.now(),
-  });
 }
 
 /** 删除活动及其关联的 todo/schedule */
@@ -424,8 +429,20 @@ function onDeleteActivity(id: number | null | undefined) {
     activityById: activityById.value,
     childrenByParentId: childrenOfActivity.value,
   });
-  if (!result) showErrorPopover("请先清空子项目再删除！");
-  activeId.value = null; //
+  if (!result) {
+    showErrorPopover("请先清空子项目再删除！");
+    return;
+  }
+
+  // 找到被删除的 activity，标记为未同步
+  const activity = activityList.value.find((a) => a.id === id);
+  if (activity) {
+    activity.synced = false;
+    activity.lastModified = Date.now();
+  }
+
+  activeId.value = null;
+  selectedTaskId.value = null;
   saveAllDebounced();
 }
 
@@ -450,6 +467,8 @@ function onConvertActivityToTask(payload: { task: Task; activityId: number | nul
   const activity = activityById.value.get(activityId);
   if (activity) {
     activity.taskId = task.id;
+    activity.synced = false;
+    activity.lastModified = Date.now();
     const todo = todoByActivityId.value.get(activityId);
     if (todo) todo.taskId = task.id;
     const schedule = scheduleByActivityId.value.get(activityId);
@@ -510,6 +529,9 @@ function onRepeatActivity(id: number | null | undefined) {
       status: "" as any,
       tagIds: selectActivity.tagIds,
       taskId: undefined,
+      synced: false,
+      deleted: false,
+      lastModified: Date.now(),
       ...(selectActivity.dueRange && {
         dueRange: [null, selectActivity.dueRange[1]] as [number | null, string],
       }),
@@ -519,12 +541,6 @@ function onRepeatActivity(id: number | null | undefined) {
       activityById: activityById.value,
     });
     activeId.value = newActivity.id;
-    activityService.uploadActivity({
-      id: newActivity.id,
-      title: newActivity.title,
-      class: newActivity.class,
-      lastModified: Date.now(),
-    });
   }
   saveAllDebounced();
 }
@@ -543,6 +559,9 @@ function onCreateChildActivity(id: number | null | undefined) {
       tagIds: undefined,
       parentId: id,
       taskId: undefined,
+      synced: false,
+      deleted: false,
+      lastModified: Date.now(),
     };
     activityList.value.push(newActivity);
     handleAddActivity(scheduleList.value, newActivity, {
@@ -557,7 +576,11 @@ function onIncreaseChildActivity(id: number | null | undefined) {
   if (id == null) return;
   // 找到Activity
   const selectActivity = activityById.value.get(id);
-  if (selectActivity) selectActivity.parentId = null;
+  if (selectActivity) {
+    selectActivity.parentId = null;
+    selectActivity.synced = false;
+    selectActivity.lastModified = Date.now();
+  }
   saveAllDebounced();
 }
 
@@ -665,13 +688,16 @@ function onUpdateTodoEst(id: number, estPomo: number[]) {
   const todo = todoById.value.get(id);
   if (todo) {
     todo.estPomo = estPomo;
+    todo.synced = false;
+    todo.lastModified = Date.now();
   }
   const activity = todo?.activityId != null ? activityById.value.get(todo.activityId) : undefined;
   if (activity && estPomo) {
-    if (estPomo[0]) {
-      activity.estPomoI = estPomo[0].toString();
-    } else {
-      activity.estPomoI = undefined;
+    const newEstPomoI = estPomo[0] ? estPomo[0].toString() : undefined;
+    if (activity.estPomoI !== newEstPomoI) {
+      activity.estPomoI = newEstPomoI;
+      activity.synced = false;
+      activity.lastModified = Date.now();
     }
   }
   saveAllDebounced();
@@ -682,6 +708,8 @@ function onUpdateTodoPomo(id: number, realPomo: number[]) {
   const todo = todoById.value.get(id);
   if (todo) {
     todo.realPomo = realPomo;
+    todo.synced = false;
+    todo.lastModified = Date.now();
   }
   saveAllDebounced();
 }
@@ -694,6 +722,8 @@ function onUpdateTodoPriority(updates: Array<{ id: number; priority: number }>) 
     const todo = todoById.value.get(id);
     if (todo) {
       todo.priority = priority;
+      todo.synced = false;
+      todo.lastModified = Date.now();
     }
   }
   saveAllDebounced();
@@ -710,6 +740,8 @@ function onCancelTodo(id: number) {
   // 更新 todoList 中的数据
   const todo = todoById.value.get(id);
   if (todo) {
+    todo.synced = false;
+    todo.lastModified = Date.now();
     todo.status = "cancelled";
     const activity = activityById.value.get(todo.activityId);
     if (!activity) {
@@ -717,9 +749,13 @@ function onCancelTodo(id: number) {
       return;
     }
     activity.status = "cancelled";
+    activity.synced = false;
+    activity.lastModified = Date.now();
     const childActivities = childrenOfActivity.value.get(activity.id) ?? [];
     for (const child of childActivities) {
       child.status = "cancelled";
+      child.synced = false;
+      child.lastModified = Date.now();
     }
   }
   saveAllDebounced();
@@ -731,12 +767,16 @@ function onCancelSchedule(id: number) {
   const schedule = scheduleById.value.get(id);
   if (schedule) {
     schedule.status = "cancelled";
+    schedule.synced = false;
+    schedule.lastModified = Date.now();
     const activity = activityById.value.get(schedule.activityId);
     if (!activity) {
       console.warn(`未找到 activityId 为 ${schedule.activityId} 的 activity`);
       return;
     }
     activity.status = "cancelled";
+    activity.synced = false;
+    activity.lastModified = Date.now();
   }
   saveAllDebounced();
 }
@@ -758,47 +798,11 @@ function onUpdateScheduleStatus(id: number, isChecked: boolean) {
     if (schedule.doneTime == undefined) {
       const now = new Date();
       doneTime = now.getTime();
+      schedule.synced = false;
+      schedule.lastModified = Date.now();
     }
   }
   updateScheduleStatus(id, doneTime, newStatus);
-}
-
-function onConvertTodoToTask(payload: { task: Task; todoId: number }) {
-  const { task, todoId } = payload;
-  taskList.value = [...taskList.value, task];
-  const todo = todoById.value.get(todoId);
-  if (todo) {
-    todo.taskId = task.id;
-    const activity = activityById.value.get(todo.activityId);
-    if (activity) {
-      selectedTaskId.value = task.id;
-      activeId.value = activity.id;
-    }
-  }
-  // 3) 同步 UI 选中
-  selectedTaskId.value = task.id;
-  saveAllDebounced();
-}
-
-function onConvertScheduleToTask(payload: { task: Task; scheduleId: number }) {
-  const { task, scheduleId } = payload;
-  console.log("home", task.id);
-
-  // 1) 推入任务列表（替换引用，便于浅 watch 或立即响应）
-  taskList.value = [...taskList.value, task];
-  // 2) 回写 schedule.taskId
-  const schedule = scheduleById.value.get(scheduleId);
-  if (schedule) {
-    schedule.taskId = task.id;
-
-    const activity = activityById.value.get(schedule.activityId);
-    if (activity) {
-      activity.taskId = task.id;
-    }
-  }
-  // 3) 同步 UI 选中
-  selectedTaskId.value = task.id;
-  saveAllDebounced();
 }
 
 /** 修改日期切换按钮的处理函数 */
@@ -847,19 +851,20 @@ function handleEditScheduleTitle(id: number, newTitle: string) {
     return;
   }
   schedule.activityTitle = newTitle;
+
   const activity = activityById.value.get(schedule.activityId);
   if (!activity) {
     console.warn(`未找到 activityId 为 ${schedule.activityId} 的 activity`);
     return;
   }
   activity.title = newTitle;
-  console.log(`已更新 schedule ${id} 和 activity ${schedule.activityId} 的标题为: ${newTitle}`);
+  activity.synced = false;
+  activity.lastModified = Date.now();
 
-  // 找到task 并重新赋值
-  const relatedTasks = tasksBySource.value.schedule.get(id);
-  if (relatedTasks && relatedTasks.length > 0) {
-    const task = relatedTasks[0];
-    task.activityTitle = newTitle;
+  // 找到task 并重新赋值 #HACK
+  const relatedTask = taskByActivityId.value.get(schedule.activityId);
+  if (relatedTask) {
+    relatedTask.activityTitle = newTitle;
   }
   saveAllDebounced();
 }
@@ -879,12 +884,14 @@ function handleEditTodoTitle(id: number, newTitle: string) {
   if (!activity) {
     return;
   }
-  activity.title = newTitle; //
+  activity.title = newTitle;
+  activity.synced = false;
+  activity.lastModified = Date.now();
 
-  // 找到task 并重新赋值
-  const task = taskById.value.get(todo.id);
-  if (task) {
-    task.activityTitle = newTitle;
+  // 找到task 并重新赋值 #HACK
+  const relatedTask = taskByActivityId.value.get(todo.activityId);
+  if (relatedTask) {
+    relatedTask.activityTitle = newTitle;
   }
   saveAllDebounced();
 }
@@ -899,6 +906,10 @@ function handleEditTodoStart(id: number, newTm: string) {
     return;
   }
   todo.startTime = getTimestampForTimeString(newTm, viewingDayTimestamp);
+  todo.synced = false;
+  todo.lastModified = Date.now();
+
+  saveAllDebounced();
 }
 
 function handleEditTodoDone(id: number, newTm: string) {
@@ -914,6 +925,8 @@ function handleEditTodoDone(id: number, newTm: string) {
   } else {
     todo.doneTime = getTimestampForTimeString(newTm, viewingDayTimestamp);
   }
+  todo.synced = false;
+  todo.lastModified = Date.now();
   saveAllDebounced();
 }
 
@@ -935,13 +948,40 @@ function handleEditScheduleDone(id: number, newTm: string) {
 
 // ======================== 8. 生命周期 Hook ========================
 onMounted(() => {
-  dataStore.loadAllData();
+  console.log("HomeView mounted");
   dateService.setupSystemDateWatcher();
   dateService.navigateByView("today");
+  syncAll();
 });
 
 onUnmounted(() => {
   dateService.cleanupSystemDateWatcher();
+  autoSyncDebounced.flush(); //立即执行
+});
+
+// 2. 页面关闭前保存（浏览器关闭/刷新）
+window.addEventListener("beforeunload", (e) => {
+  const pending = uploadAllDebounced.pending();
+  if (pending) {
+    console.log("页面关闭前保存");
+    uploadAllDebounced.flush(); // 立即执行
+    // 注意：现代浏览器可能不会等待异步操作完成
+    e.preventDefault();
+  }
+});
+
+// 3. 页面隐藏时保存（切换标签页）
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) {
+    console.log("页面隐藏时保存");
+    uploadAllDebounced.flush(); // 立即保存
+  }
+});
+
+// 4. 路由切换前保存（Vue Router）
+onBeforeRouteLeave(() => {
+  console.log("路由切换前保存");
+  uploadAllDebounced.flush();
 });
 // ======================== 9. 页面尺寸调整  ========================
 

@@ -66,15 +66,15 @@ export const useDataStore = defineStore(
       scheduleList.value = loadSchedules();
       taskList.value = loadTasks();
 
-      // 加载标签
-      tagStore.loadAllTags();
-
-      // 重新计算标签计数（以防数据不一致）
-      recalculateAllTagCounts();
-
       isDataLoaded.value = true;
     }
+    const activeActivities = computed(() => activityList.value.filter((a) => !a.deleted));
 
+    const activeTodos = computed(() => todoList.value.filter((t) => !t.deleted));
+
+    const activeSchedules = computed(() => scheduleList.value.filter((s) => !s.deleted));
+
+    const activeTasks = computed(() => taskList.value.filter((t) => !t.deleted));
     // ======================== 4. 数据索引 (Getters / Computed) ========================
     const activityById = computed(() => new Map(activityList.value.map((a) => [a.id, a])));
     const todoById = computed(() => new Map(todoList.value.map((t) => [t.id, t])));
@@ -93,6 +93,14 @@ export const useDataStore = defineStore(
       const map = new Map<number, Schedule>();
       for (const schedule of scheduleList.value) {
         if (schedule.activityId != null) map.set(schedule.activityId, schedule);
+      }
+      return map;
+    });
+
+    const taskByActivityId = computed(() => {
+      const map = new Map<number, Task>();
+      for (const task of taskList.value) {
+        if (task.sourceId != null) map.set(task.sourceId, task);
       }
       return map;
     });
@@ -116,7 +124,7 @@ export const useDataStore = defineStore(
         schedule: new Map<number, Task[]>(),
       };
       for (const task of taskList.value) {
-        const targetMap = bucket[task.source];
+        const targetMap = bucket[task.source ?? "activity"];
         if (targetMap) {
           if (!targetMap.has(task.sourceId)) {
             targetMap.set(task.sourceId, []);
@@ -164,6 +172,7 @@ export const useDataStore = defineStore(
       if (!todoList.value) return [];
       const out: TodoWithTaskRecords[] = [];
       for (const todo of todoList.value) {
+        if (todo.deleted) continue;
         if (todo.id < start || todo.id >= end) continue;
         const relatedTask = todo.taskId != null ? taskById.value.get(todo.taskId) : undefined;
         out.push({
@@ -181,6 +190,7 @@ export const useDataStore = defineStore(
       if (!todoList.value) return [];
       const out: TodoWithTags[] = [];
       for (const todo of todoList.value) {
+        if (todo.deleted) continue;
         if (todo.id < start || todo.id >= end) continue;
         const activity = todo.activityId != null ? activityById.value.get(todo.activityId) : undefined;
         out.push({
@@ -194,7 +204,7 @@ export const useDataStore = defineStore(
     const schedulesForCurrentView = computed(() => {
       const { start, end } = dateService.visibleRange.value;
       if (!scheduleList.value) return [];
-      return scheduleList.value.filter((schedule) => {
+      return activeSchedules.value.filter((schedule) => {
         const date = schedule.activityDueRange?.[0];
         if (date == null) return false;
         return date >= start && date < end;
@@ -205,7 +215,7 @@ export const useDataStore = defineStore(
     const schedulesForCurrentViewWithTags = computed<ScheduleWithTags[]>(() => {
       const { start, end } = dateService.visibleRange.value;
       if (!scheduleList.value) return [];
-      return scheduleList.value
+      return activeSchedules.value
         .filter((schedule) => {
           const date = schedule.activityDueRange?.[0];
           return date != null && date >= start && date < end;
@@ -223,14 +233,14 @@ export const useDataStore = defineStore(
       const startOfDay = dateService.appDateTimestamp.value;
       const endOfDay = addDays(startOfDay, 1);
       if (!todoList.value) return [];
-      return todoList.value.filter((todo) => todo.id >= startOfDay && todo.id < endOfDay);
+      return activeTodos.value.filter((todo) => todo.id >= startOfDay && todo.id < endOfDay);
     });
 
     const schedulesForAppDate = computed(() => {
       const startOfDay = dateService.appDateTimestamp.value;
       const endOfDay = addDays(startOfDay, 1);
       if (!scheduleList.value) return [];
-      return scheduleList.value.filter((schedule) => {
+      return activeSchedules.value.filter((schedule) => {
         const date = schedule.activityDueRange?.[0];
         if (date == null) return false;
         return date >= startOfDay && date < endOfDay;
@@ -253,6 +263,21 @@ export const useDataStore = defineStore(
         const tasksOfSch = tasksBySource.value.schedule.get(relatedSchedule.id);
         if (tasksOfSch?.some((t) => t.starred)) return true;
       }
+
+      // 把activityId当todoId，看是否starred 防御
+      const relatedBugTodo = todoById.value.get(activityId);
+      if (relatedBugTodo) {
+        const tasksOfTodo = tasksBySource.value.todo.get(relatedBugTodo.id);
+        if (tasksOfTodo?.some((t) => t.starred)) return true;
+      }
+
+      // 把activityId当scheduleId，看是否starred 防御
+      const relatedBugSchedule = scheduleById.value.get(activityId);
+      if (relatedBugSchedule) {
+        const tasksOfSch = tasksBySource.value.schedule.get(relatedBugSchedule.id);
+        if (tasksOfSch?.some((t) => t.starred)) return true;
+      }
+
       return false;
     }
 
@@ -342,15 +367,10 @@ export const useDataStore = defineStore(
       const activity = activityById.value.get(activityId);
       if (!activity) return false;
 
-      const oldTagIds = activity.tagIds || [];
-      const toRemove = oldTagIds.filter((id) => !newTagIds.includes(id));
-      const toAdd = newTagIds.filter((id) => !oldTagIds.includes(id));
-
-      // 更新计数（统一通过 TagStore 的 updateTagCount）
-      toRemove.forEach((id) => tagStore.updateTagCount(id, -1));
-      toAdd.forEach((id) => tagStore.updateTagCount(id, +1));
-
       activity.tagIds = newTagIds.length > 0 ? newTagIds : undefined;
+      activity.lastModified = Date.now();
+      activity.synced = false;
+
       saveActivities(activityList.value);
       return true;
     }
@@ -402,18 +422,6 @@ export const useDataStore = defineStore(
       return tagStore.getTagsByIds(activity.tagIds);
     }
 
-    /**
-     * 重新计算所有标签的引用计数
-     */
-    function recalculateAllTagCounts() {
-      const countMap = new Map<number, number>();
-      activityList.value.forEach((activity) => {
-        activity.tagIds?.forEach((tagId) => {
-          countMap.set(tagId, (countMap.get(tagId) || 0) + 1);
-        });
-      });
-      tagStore.recalculateTagCounts(countMap);
-    }
     // ============ 7. 时间序列数据提取 ============
     const allDataPoints = computed((): DataPoint[] => {
       return [...collectPomodoroData(todoList.value), ...collectTaskRecordData(taskList.value)];
@@ -538,6 +546,10 @@ export const useDataStore = defineStore(
       todoList,
       scheduleList,
       taskList,
+      activeActivities,
+      activeTodos,
+      activeSchedules,
+      activeTasks,
 
       // 索引
       activityById,
@@ -546,6 +558,7 @@ export const useDataStore = defineStore(
       taskById,
       todoByActivityId,
       scheduleByActivityId,
+      taskByActivityId, // 字段是sourceId 但是以后都只有 activityId
       childrenOfActivity,
       tasksBySource,
 
@@ -587,7 +600,6 @@ export const useDataStore = defineStore(
       toggleActivityTag,
       createAndAddTagToActivity,
       getActivityTags,
-      recalculateAllTagCounts,
 
       // Chart 相关
       allDataPoints,

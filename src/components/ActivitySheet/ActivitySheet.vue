@@ -76,7 +76,7 @@ const {
   selectedTaskId,
   selectedActivityId,
   selectedActivity,
-  activityList,
+  activeActivities,
   activityById,
   todoByActivityId,
   scheduleByActivityId,
@@ -177,11 +177,11 @@ function filteredBySection(section: ActivitySectionConfig) {
   if (section.filterKey) {
     switch (section.filterKey) {
       case "all":
-        return activityList.value.filter((item) => item.status !== "cancelled");
+        return activeActivities.value.filter((item) => item.status !== "cancelled");
       case "cancelled":
-        return activityList.value.filter((item) => item.status === "cancelled");
+        return activeActivities.value.filter((item) => item.status === "cancelled");
       case "today":
-        return activityList.value.filter((item) => {
+        return activeActivities.value.filter((item) => {
           if (item.class === "T") {
             if (!item.dueDate) return true; // 允许没有日期的项目在今日到期显示
             if (!item.dueDate && item.parentId) return false; // 不允许没有日期的子项目在今日到期显示
@@ -197,11 +197,11 @@ function filteredBySection(section: ActivitySectionConfig) {
           return false;
         });
       case "interrupt":
-        return activityList.value.filter((item) => !!item.interruption && item.status !== "cancelled");
+        return activeActivities.value.filter((item) => !!item.interruption && item.status !== "cancelled");
       case "todo":
-        return activityList.value.filter((item) => item.class === "T" && item.status !== "cancelled");
+        return activeActivities.value.filter((item) => item.class === "T" && item.status !== "cancelled");
       case "schedule":
-        return activityList.value.filter((item) => item.class === "S" && item.status !== "cancelled");
+        return activeActivities.value.filter((item) => item.class === "S" && item.status !== "cancelled");
       default:
         break;
     }
@@ -210,7 +210,7 @@ function filteredBySection(section: ActivitySectionConfig) {
   // 没有 filterKey，再看search
   if (section.search) {
     const keyword = section.search.trim().toLowerCase();
-    return activityList.value.filter((item) => item.status !== "cancelled" && item.title && item.title.toLowerCase().includes(keyword));
+    return activeActivities.value.filter((item) => item.status !== "cancelled" && item.title && item.title.toLowerCase().includes(keyword));
   }
 
   // 什么条件都没有，返回空
@@ -299,6 +299,9 @@ function addScheduleRow() {
     dueRange: [null, ""],
     status: "",
     parentId: null,
+    synced: false,
+    deleted: false,
+    lastModified: Date.now(),
   });
 }
 
@@ -312,6 +315,9 @@ function addUntaetigkeitRow() {
     status: "",
     isUntaetigkeit: true,
     parentId: null,
+    synced: false,
+    deleted: false,
+    lastModified: Date.now(),
   });
 }
 
@@ -326,6 +332,9 @@ function addTodoRow() {
     status: "",
     dueDate: Date.now(), // 默认今天
     parentId: null,
+    synced: false,
+    deleted: false,
+    lastModified: Date.now(),
   });
 }
 

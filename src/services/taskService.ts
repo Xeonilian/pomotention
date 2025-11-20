@@ -4,8 +4,6 @@ import type { Task, EnergyRecord, RewardRecord, InterruptionRecord } from "@/cor
 import type { Activity } from "@/core/types/Activity";
 import { useDataStore } from "@/stores/useDataStore";
 
-// 关键点：不要在模块顶层调用 useDataStore()
-
 export const taskService = {
   // 推荐：在每个需要它的方法内部调用 useDataStore()
   // 这样可以确保 Pinia 实例在调用时总是可用的
@@ -37,7 +35,7 @@ export const taskService = {
     if (!task) return;
     const record: EnergyRecord = { id: Date.now(), value, description };
     const newEnergyRecords = [...(task.energyRecords || []), record];
-    this.updateTask(taskId, { energyRecords: newEnergyRecords });
+    this.updateTask(taskId, { energyRecords: newEnergyRecords, synced: false, lastModified: Date.now() });
     return record;
   },
 
@@ -46,7 +44,7 @@ export const taskService = {
     if (!task) return;
     const record: RewardRecord = { id: Date.now(), value, description };
     const newRewardRecords = [...(task.rewardRecords || []), record];
-    this.updateTask(taskId, { rewardRecords: newRewardRecords });
+    this.updateTask(taskId, { rewardRecords: newRewardRecords, synced: false, lastModified: Date.now() });
     return record;
   },
 
@@ -65,7 +63,7 @@ export const taskService = {
       activityType: activityType ?? null,
     };
     const newInterruptionRecords = [...(task.interruptionRecords || []), record];
-    this.updateTask(taskId, { interruptionRecords: newInterruptionRecords });
+    this.updateTask(taskId, { interruptionRecords: newInterruptionRecords, synced: false, lastModified: Date.now() });
     return record;
   },
 
@@ -80,6 +78,10 @@ export const taskService = {
       rewardRecords: [],
       interruptionRecords: [],
       description: `# ${activityTitle}`,
+      starred: false,
+      deleted: false,
+      synced: false,
+      lastModified: Date.now(),
     };
     return task;
   },
@@ -95,6 +97,10 @@ export const taskService = {
       rewardRecords: [],
       interruptionRecords: [],
       description: `# ${activityTitle}`,
+      starred: false,
+      deleted: false,
+      synced: false,
+      lastModified: Date.now(),
     };
     return task;
   },
@@ -110,6 +116,10 @@ export const taskService = {
       rewardRecords: [],
       interruptionRecords: [],
       description: `# ${activityTitle}`,
+      starred: false,
+      deleted: false,
+      synced: false,
+      lastModified: Date.now(),
     };
     return task;
   },
@@ -133,6 +143,9 @@ export const taskService = {
       interruption: interruption.interruptionType,
       parentId: null,
       status: "",
+      synced: false,
+      deleted: false,
+      lastModified: Date.now(),
       ...(activityClass === "T" && { pomoType: "🍅", dueDate }),
       ...(activityClass === "S" && { dueRange: [null, "60"] }),
     };

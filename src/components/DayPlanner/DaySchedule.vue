@@ -39,11 +39,7 @@
         <template v-if="schedules && schedules!.length > 0">
           <!-- 行 -->
           <tr
-            v-for="schedule in schedules.sort((a:Schedule, b:Schedule) => {
-              const aValue = a.activityDueRange?.[0] ?? Infinity;
-              const bValue = b.activityDueRange?.[0] ?? Infinity;
-              return aValue - bValue;
-            })"
+            v-for="schedule in sortedSchedules"
             :key="schedule.id"
             :class="{
               'active-row': schedule.activityId === activeId,
@@ -260,7 +256,7 @@ const emit = defineEmits<{
     e: "convert-schedule-to-task",
     payload: {
       task: Task;
-      scheduleId: number;
+      activityId: number;
     }
   ): void;
 }>();
@@ -268,6 +264,14 @@ const emit = defineEmits<{
 // 添加状态来控制提示信息
 const showPopover = ref(false);
 const popoverMessage = ref("");
+
+const sortedSchedules = computed(() =>
+  props.schedules.sort((a, b) => {
+    const aValue = a.activityDueRange?.[0] ?? Infinity;
+    const bValue = b.activityDueRange?.[0] ?? Infinity;
+    return aValue - bValue;
+  })
+);
 
 function handleCheckboxChange(id: number, checked: boolean) {
   emit("update-schedule-status", id, checked);
@@ -349,10 +353,10 @@ function handleConvertToTask(schedule: Schedule) {
     return;
   }
 
-  const task = taskService.createTaskFromSchedule(schedule.id, schedule.activityTitle, schedule.projectName);
+  const task = taskService.createTaskFromSchedule(schedule.activityId, schedule.activityTitle, schedule.projectName);
   console.log("DaySch", task);
   if (task) {
-    emit("convert-schedule-to-task", { task: task, scheduleId: schedule.id });
+    emit("convert-schedule-to-task", { task: task, activityId: schedule.activityId });
     popoverMessage.value = "已转换为任务";
     showPopover.value = true;
     setTimeout(() => {
@@ -544,28 +548,10 @@ td.status-col {
   color: var(--color-text-secondary);
 }
 
-/* 完成行样式 */
-.done-row {
-  color: var(--color-text-secondary);
-}
-
-.done-cell {
-  text-decoration: line-through var(--color-text-secondary) 0.5px;
-}
-
-.cancel-row {
-  color: var(--color-text-secondary);
-}
-
-.cancel-cell {
-  font-style: italic;
-}
-
 .title-input {
   width: calc(100% - 10px);
   border: 1px solid #d9d9d9;
   border-radius: 4px;
-
   font-size: inherit;
   font-family: inherit;
   outline: none;

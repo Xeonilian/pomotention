@@ -79,8 +79,8 @@ const emit = defineEmits<{
   (e: "edit-todo-start", id: number, newTs: string): void;
   (e: "edit-todo-done", id: number, newTs: string): void;
   (e: "edit-schedule-done", id: number, newTs: string): void;
-  (e: "convert-todo-to-task", payload: { task: Task; todoId: number }): void;
-  (e: "convert-schedule-to-task", payload: { task: Task; scheduleId: number }): void;
+  (e: "convert-todo-to-task", payload: { task: Task; activityId: number }): void;
+  (e: "convert-schedule-to-task", payload: { task: Task; activityId: number }): void;
 }>();
 
 // 处理选中行事件
@@ -164,19 +164,19 @@ function handleEditScheduleDone(scheduleId: number, newTs: string) {
   emit("edit-schedule-done", scheduleId, newTs);
 }
 
-function handleConvertTodoToTask(payload: { task: Task; todoId: number }) {
-  const { task, todoId } = payload;
+function handleConvertTodoToTask(payload: { task: Task; activityId: number }) {
+  const { task, activityId } = payload;
   emit("convert-todo-to-task", {
     task,
-    todoId: todoId,
+    activityId: activityId,
   });
 }
 
-function handleConvertScheduleToTask(payload: { task: Task; scheduleId: number }) {
-  const { task, scheduleId } = payload;
+function handleConvertScheduleToTask(payload: { task: Task; activityId: number }) {
+  const { task, activityId } = payload;
   emit("convert-schedule-to-task", {
     task,
-    scheduleId: scheduleId,
+    activityId: activityId,
   });
 }
 </script>

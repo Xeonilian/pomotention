@@ -301,7 +301,6 @@ const handlePomotentionTimerSizeReport = ({ width, height }: { width: number; he
 };
 
 onMounted(() => {
-  dataStore.loadAllData();
   updateDraggableContainerVisibilityAndPosition(settingStore.settings.showPomodoro);
   if (draggableContainer.value) {
     draggableContainer.value.addEventListener("mousedown", handleMouseDown);

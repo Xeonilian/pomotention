@@ -1,5 +1,5 @@
 // src/services/syncService.ts
-
+// webdav 同步服务
 import type { SyncResult, SyncMetadata, SyncData, LocalSyncStatus } from "@/core/types/Sync";
 import { SYNC_VERSION, SyncStatus } from "@/core/types/Sync";
 

@@ -8,7 +8,9 @@ export interface Tag {
   name: string;
   color: string; // 文字颜色
   backgroundColor: string; // 背景颜色
-  count: number;
+  synced: boolean;
+  lastModified: number;
+  deleted: boolean;
 }
 
 export type TagSelectorInstance = {

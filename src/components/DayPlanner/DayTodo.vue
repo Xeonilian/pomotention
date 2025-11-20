@@ -108,7 +108,7 @@
                 v-if="editingTodo && editingTodo.id === todo.id"
                 v-model:value="editingPriority"
                 :min="0"
-                :max="11"
+                :max="21"
                 size="small"
                 :show-button="false"
                 placeholder=" "
@@ -365,7 +365,7 @@ const emit = defineEmits<{
   (e: "edit-todo-title", id: number, newTitle: string): void;
   (e: "edit-todo-start", id: number, newTs: string): void;
   (e: "edit-todo-done", id: number, newTs: string): void;
-  (e: "convert-todo-to-task", payload: { task: Task; todoId: number }): void;
+  (e: "convert-todo-to-task", payload: { task: Task; activityId: number }): void;
 }>();
 
 // 对待办事项按优先级降序排序（高优先级在前）
@@ -402,6 +402,9 @@ function startEditingPriority(todo: Todo) {
 
 function finishEditing() {
   if (!editingTodo.value) return;
+  if (editingPriority.value === null) {
+    editingPriority.value = 0;
+  }
   if (editingTodo.value.status === "done" || editingTodo.value.status === "cancelled") {
     popoverMessage.value = "当前任务已经结束！";
     showPopover.value = true;
@@ -411,7 +414,7 @@ function finishEditing() {
     editingTodo.value = null;
     return;
   }
-  if (editingPriority.value === 21) {
+  if (editingPriority.value > 21) {
     popoverMessage.value = "请输入1-20";
     showPopover.value = true;
     setTimeout(() => {
@@ -692,13 +695,13 @@ function handleConvertToTask(todo: Todo) {
     return;
   }
 
-  const task = taskService.createTaskFromTodo(todo.id, todo.activityTitle, todo.projectName);
+  const task = taskService.createTaskFromTodo(todo.activityId, todo.activityTitle, todo.projectName);
 
   if (task) {
     // 立即更新本地的 taskId
     todo.taskId = task.id;
 
-    emit("convert-todo-to-task", { task: task, todoId: todo.id });
+    emit("convert-todo-to-task", { task: task, activityId: todo.activityId });
     popoverMessage.value = "完成任务转换";
     showPopover.value = true;
     setTimeout(() => {

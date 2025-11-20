@@ -193,6 +193,12 @@
             @focus="handleNoFocus(item.id)"
             placeholder="地点"
             :class="{ 'force-hover': dragHandler.hoveredRowId.value === item.id }"
+            @update:value="
+              () => {
+                item.synced = false;
+                item.lastModified = Date.now();
+              }
+            "
             @click.stop
           />
 
@@ -220,7 +226,13 @@
             v-else
             style="max-width: 32px; font-size: 14px; margin: 0 auto"
             :value="item.dueRange ? item.dueRange[1] : ''"
-            @update:value="(val) => (item.dueRange ? (item.dueRange[1] = val) : (item.dueRange = [Date.now(), val]))"
+            @update:value="
+              (val) => {
+                item.dueRange ? (item.dueRange[1] = val) : (item.dueRange = [Date.now(), val]);
+                item.synced = false;
+                item.lastModified = Date.now();
+              }
+            "
             @focus="handleNoFocus(item.id)"
             title="持续时间(分钟)"
             placeholder="min"
@@ -239,11 +251,23 @@
             @focus="handleNoFocus(item.id)"
             title="死线日期"
             :class="getCountdownClass(item.dueDate)"
+            @update:value="
+              () => {
+                item.synced = false;
+                item.lastModified = Date.now();
+              }
+            "
           />
           <n-date-picker
             v-else
             :value="item.dueRange ? item.dueRange[0] : 0"
-            @update:value="(val) => (item.dueRange ? (item.dueRange[0] = val) : (item.dueRange = [Date.now(), '']))"
+            @update:value="
+              (val) => {
+                item.dueRange ? (item.dueRange[0] = val) : (item.dueRange = [Date.now(), '']);
+                item.synced = false;
+                item.lastModified = Date.now();
+              }
+            "
             type="datetime"
             style="max-width: 63px"
             clearable
@@ -475,6 +499,8 @@ function handleRemoveTag(activityId: number, tagId: number) {
 // ======================== 标题输入处理 ========================
 function handleTitleInput(activity: Activity, newTitle: string) {
   tagEditor.handleTitleInput(activity.id, newTitle);
+  activity.synced = false;
+  activity.lastModified = Date.now();
   // 注意：这里暂时保留了 v-model，所以不需要手动更新
   // 如果要改成单向数据流，需要通过 dataStore 更新
 }
@@ -484,6 +510,8 @@ function handleTagSelected(activity: Activity, tagId: number) {
 
   // 更新标题
   activity.title = cleanedTitle;
+  activity.synced = false;
+  activity.lastModified = Date.now();
 }
 
 function handleTagCreate(activity: Activity, tagName: string) {
@@ -491,6 +519,8 @@ function handleTagCreate(activity: Activity, tagName: string) {
 
   // 更新标题
   activity.title = cleanedTitle;
+  activity.synced = false;
+  activity.lastModified = Date.now();
 }
 
 function handleInputKeydown(event: KeyboardEvent, activity: Activity) {
@@ -533,6 +563,8 @@ function onInputUpdate(item: Activity, value: string) {
     return;
   }
   item.estPomoI = value;
+  item.synced = false;
+  item.lastModified = Date.now();
 }
 </script>
 

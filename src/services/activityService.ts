@@ -20,9 +20,7 @@ export function handleAddActivity(
     const today = getLocalDateString(new Date());
 
     const activityDate =
-      newActivity.dueRange &&
-      newActivity.dueRange[0] &&
-      !isNaN(new Date(newActivity.dueRange[0]).getTime())
+      newActivity.dueRange && newActivity.dueRange[0] && !isNaN(new Date(newActivity.dueRange[0]).getTime())
         ? getLocalDateString(new Date(newActivity.dueRange[0]))
         : null;
 
@@ -82,14 +80,13 @@ export function handleDeleteActivity(
     if (id === idToDelete) continue;
     const activity = deps.activityById.get(id);
     if (!activity) continue;
+    if (activity.deleted) continue;
 
     const hasStatus = activity.status && (activity.status as any) !== "";
     const hasTaskId = activity.taskId !== undefined && activity.taskId !== null;
 
     if (hasStatus || hasTaskId) {
-      console.warn(
-        `删除操作被阻止。子活动 "${activity.title}" (ID: ${activity.id}) 正在进行中，无法删除父项。`
-      );
+      console.warn(`删除操作被阻止。子活动 "${activity.title}" (ID: ${activity.id}) 正在进行中，无法删除父项。`);
       return false;
     }
   }
@@ -102,6 +99,7 @@ export function handleDeleteActivity(
     }
   }
 
+  // 收集需要删除的关联数据 ID
   const todoIdsToDelete = new Set<number>();
   const scheduleIdsToDelete = new Set<number>();
 
@@ -117,46 +115,50 @@ export function handleDeleteActivity(
     }
   }
 
-  // 2) 删除关联的 todo
-  {
-    const filteredTodos = todoList.filter(
-      (todo) => !todoIdsToDelete.has(todo.id)
-    );
-    todoList.splice(0, todoList.length, ...filteredTodos);
+  // 软删除 activities（标记 deleted = true）
+  for (const activity of activityList) {
+    if (idsToDelete.has(activity.id)) {
+      activity.deleted = true;
+      activity.synced = false;
+      activity.lastModified = Date.now();
+    }
   }
 
-  // 3) 删除关联的 schedule
-  {
-    const filteredSchedules = scheduleList.filter(
-      (schedule) => !scheduleIdsToDelete.has(schedule.id)
-    );
-    scheduleList.splice(0, scheduleList.length, ...filteredSchedules);
+  // 软删除关联的 todos
+  for (const todo of todoList) {
+    if (todoIdsToDelete.has(todo.id)) {
+      todo.deleted = true;
+      todo.synced = false;
+      todo.lastModified = Date.now();
+    }
   }
 
-  // 4) 删除关联的 task（按 source/sourceId 判定）
-  {
-    const filteredTasks = taskList.filter((task) => {
-      if (task.source === "activity") {
-        return !idsToDelete.has(task.sourceId);
-      }
-      if (task.source === "todo") {
-        return !todoIdsToDelete.has(task.sourceId);
-      }
-      if (task.source === "schedule") {
-        return !scheduleIdsToDelete.has(task.sourceId);
-      }
-      // 理论上不会到这，保守保留
-      return true;
-    });
-    taskList.splice(0, taskList.length, ...filteredTasks);
+  // 软删除关联的 schedules
+  for (const schedule of scheduleList) {
+    if (scheduleIdsToDelete.has(schedule.id)) {
+      schedule.deleted = true;
+      schedule.synced = false;
+      schedule.lastModified = Date.now();
+    }
   }
 
-  // 5) 最后删除活动本体
-  {
-    const filteredActivities = activityList.filter(
-      (activity) => !idsToDelete.has(activity.id)
-    );
-    activityList.splice(0, activityList.length, ...filteredActivities);
+  // 软删除关联的 tasks（按 source/sourceId 判定）
+  for (const task of taskList) {
+    let shouldDelete = false;
+
+    if (task.source === "activity") {
+      shouldDelete = idsToDelete.has(task.sourceId);
+    } else if (task.source === "todo") {
+      shouldDelete = todoIdsToDelete.has(task.sourceId);
+    } else if (task.source === "schedule") {
+      shouldDelete = scheduleIdsToDelete.has(task.sourceId);
+    }
+
+    if (shouldDelete) {
+      task.deleted = true;
+      task.synced = false;
+      task.lastModified = Date.now();
+    }
   }
 
   return true;
@@ -165,23 +167,14 @@ export function handleDeleteActivity(
 /**
  * 将选中的活动转换为待办事项
  */
-export function passPickedActivity(
-  activity: Activity,
-  appDateTimestamp: number,
-  isToday: boolean
-): { newTodo: Todo } {
+export function passPickedActivity(activity: Activity, appDateTimestamp: number, isToday: boolean): { newTodo: Todo } {
   const newTodo = convertToTodo(activity);
   if (isToday) {
     newTodo.id = Date.now();
   } else {
     const now = new Date();
     const appDate = new Date(appDateTimestamp);
-    appDate.setHours(
-      now.getHours(),
-      now.getMinutes(),
-      now.getSeconds(),
-      now.getMilliseconds()
-    );
+    appDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
     newTodo.id = appDate.getTime();
   }
   newTodo.status = "ongoing";
@@ -218,6 +211,8 @@ export function togglePomoType(
   // 更新活动的番茄类型
   activity.pomoType = newPomoType;
   activity.estPomoI = newPomoType === "🍒" ? "4" : undefined;
+  activity.synced = false;
+  activity.lastModified = Date.now();
 
   return {
     oldType: currentType,
@@ -242,6 +237,9 @@ export function convertToTodo(activity: Activity): Todo {
     priority: 0,
     idFormated: timestampToDatetime(Date.now()),
     taskId: activity.taskId,
+    deleted: false,
+    lastModified: Date.now(),
+    synced: false,
   };
 }
 
@@ -261,6 +259,9 @@ export function convertToSchedule(activity: Activity): Schedule {
     location: activity.location || "",
     isUntaetigkeit: activity.isUntaetigkeit ? true : false,
     taskId: activity.taskId,
+    deleted: false,
+    lastModified: Date.now(),
+    synced: false,
   };
 }
 

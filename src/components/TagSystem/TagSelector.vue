@@ -35,10 +35,9 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from "vue";
-import { useTagStore } from "@/stores/useTagStore";
+import { useTagStore, type TagWithCount } from "@/stores/useTagStore";
 import { NIcon } from "naive-ui";
 import { Add20Filled } from "@vicons/fluent";
-import type { Tag } from "@/core/types/Tag";
 
 // --- Props & Emits ---
 const props = defineProps<{
@@ -58,7 +57,7 @@ const selectorRef = ref<HTMLElement | null>(null);
 const highlightedIndex = ref(0); // 追踪高亮项的索引
 
 // --- Computed ---
-const filteredTags = computed<Tag[]>(() => {
+const filteredTags = computed<TagWithCount[]>(() => {
   const searchTerm = props.searchTerm.trim();
   if (!searchTerm || searchTerm === "#") {
     return [...tagStore.allTags].sort((a, b) => (b.count || 0) - (a.count || 0)).slice(0, 10);
