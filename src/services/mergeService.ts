@@ -1,11 +1,7 @@
 // services/mergeService.ts 导入并合并数据
 import { STORAGE_KEYS } from "@/core/constants";
 import { loadData, saveData } from "@/services/localStorageService";
-import { usePomoStore } from "@/stores/usePomoStore";
-import { Todo } from "@/core/types/Todo";
 import { readTextFile } from "@tauri-apps/plugin-fs";
-import { useTagStore } from "@/stores/useTagStore";
-import { Activity } from "@/core/types/Activity";
 
 // 定义文件处理结果的详细类型
 export interface FileProcessResult {
@@ -40,9 +36,6 @@ export const MERGE_KEYS = {
   [STORAGE_KEYS.DAILY_POMOS]: {
     strategy: MERGE_STRATEGIES.SKIP,
   },
-  // [STORAGE_KEYS.GLOBAL_POMO_COUNT]: {
-  //   strategy: MERGE_STRATEGIES.SKIP,
-  // },
 
   [STORAGE_KEYS.GLOBAL_SETTINGS]: {
     strategy: MERGE_STRATEGIES.SKIP,
@@ -78,7 +71,6 @@ export const MERGE_KEYS = {
   [STORAGE_KEYS.ACTIVITY]: {
     strategy: MERGE_STRATEGIES.ARRAY_WITH_ID,
     idField: "id",
-    afterMerge: "INCREMENTAL_COUNT",
   },
   [STORAGE_KEYS.SCHEDULE]: {
     strategy: MERGE_STRATEGIES.ARRAY_WITH_ID,
@@ -93,7 +85,6 @@ export const MERGE_KEYS = {
   [STORAGE_KEYS.TODO]: {
     strategy: MERGE_STRATEGIES.ARRAY_WITH_ID,
     idField: "id",
-    afterMerge: "INCREMENTAL_UPDATE_POMOS",
   },
 
   // 策略5：替换 删除对应 KEY的localStorage
@@ -108,11 +99,9 @@ const FILE_TO_KEY_MAP: Record<string, string> = {
   "todayTodo.json": STORAGE_KEYS.TODO,
   "writingTemplate.json": STORAGE_KEYS.WRITING_TEMPLATE,
   "tag.json": STORAGE_KEYS.TAG,
-  "dailyPomos.json": STORAGE_KEYS.DAILY_POMOS, // 策略 SKIP
-  "globalPomoCount.json": STORAGE_KEYS.GLOBAL_POMO_COUNT, // 策略 SKIP
   "globalSettings.json": STORAGE_KEYS.GLOBAL_SETTINGS,
-  "timeTableBlocks_entertainment.json": STORAGE_KEYS.TIMETABLE_ENTERTAINMENT,
-  "timeTableBlocks_work.json": STORAGE_KEYS.TIMETABLE_WORK,
+  "timeTableBlocks.json": STORAGE_KEYS.TIMETABLE_BLOCKS,
+
   // 添加更多（如有其他 key）...
 };
 
@@ -122,23 +111,13 @@ async function mergeSkip(storageKey: string, _importData: any): Promise<void> {
   return;
 }
 
-// async function mergeReplace(
-//   storageKey: string,
-//   importData: any
-// ): Promise<void> {
-//   console.log(`[${storageKey}]: 策略为替换 (REPLACE)。`);
-//   saveData(storageKey, importData); // 实际操作
-// }
-
 type DataItem = Record<string, any>;
 async function mergeArrayWithId(
   storageKey: string,
   importData: any[],
   idField: string
 ): Promise<{ itemsToAdd: DataItem[]; itemsToSkip: DataItem[] }> {
-  console.log(
-    `[${storageKey}]: 策略为数组合并 (ARRAY_WITH_ID)，ID字段为 '${idField}'。`
-  );
+  console.log(`[${storageKey}]: 策略为数组合并 (ARRAY_WITH_ID)，ID字段为 '${idField}'。`);
   const localData: DataItem[] = loadData<DataItem[]>(storageKey) || [];
   const existingIds = new Set(localData.map((item) => item[idField]));
 
@@ -158,9 +137,7 @@ async function mergeArrayWithId(
   if (itemsToAdd.length > 0) {
     const mergedData = [...localData, ...itemsToAdd];
     saveData(storageKey, mergedData);
-    console.log(
-      `[${storageKey}]: 合并完成。新增 ${itemsToAdd.length} 项，总数变为 ${mergedData.length}。`
-    );
+    console.log(`[${storageKey}]: 合并完成。新增 ${itemsToAdd.length} 项，总数变为 ${mergedData.length}。`);
   } else {
     console.log(`[${storageKey}]: 无新项目可合并。`);
   }
@@ -189,9 +166,7 @@ async function mergeArrayDedupe(
   idConflictCount: number;
 }> {
   // 返回 void 因为所有操作（保存/日志）都在函数内部完成
-  console.log(
-    `[${storageKey}]: 执行数组去重合并策略，ID字段：'${idField}', 去重字段：'${dedupeBy}'。`
-  );
+  console.log(`[${storageKey}]: 执行数组去重合并策略，ID字段：'${idField}', 去重字段：'${dedupeBy}'。`);
 
   // 1. 加载本地数据
   const localData: DataItem[] = loadData(storageKey, []);
@@ -221,19 +196,14 @@ async function mergeArrayDedupe(
     const importId = importItem[idField];
 
     if (!importName || !importId) {
-      console.warn(
-        `[${storageKey}]: 发现一个导入项缺少'${dedupeBy}'或'${idField}'字段，已跳过。`,
-        importItem
-      );
+      console.warn(`[${storageKey}]: 发现一个导入项缺少'${dedupeBy}'或'${idField}'字段，已跳过。`, importItem);
       continue;
     }
 
     // 情况一：ID 已存在 (ID Collision)
     if (localIdSet.has(importId)) {
       // ID相同，需要检查 name 是否也相同
-      const localItemWithId = localData.find(
-        (item) => item[idField] === importId
-      );
+      const localItemWithId = localData.find((item) => item[idField] === importId);
 
       // 确保找到了本地项目（理论上 localIdSet.has(importId) 为 true 就一定能找到）
       if (localItemWithId) {
@@ -272,9 +242,7 @@ async function mergeArrayDedupe(
   if (itemsToAdd.length > 0) {
     const mergedData = [...localData, ...itemsToAdd];
     saveData(storageKey, mergedData);
-    console.log(
-      `[${storageKey}]: 合并完成。新增 ${itemsToAdd.length} 项，总数变为 ${mergedData.length}。`
-    );
+    console.log(`[${storageKey}]: 合并完成。新增 ${itemsToAdd.length} 项，总数变为 ${mergedData.length}。`);
   } else {
     console.log(`[${storageKey}]: 无新项目可合并或更新。`);
   }
@@ -282,9 +250,7 @@ async function mergeArrayDedupe(
 }
 
 // 主要的合并服务函数
-export async function handleFileImport(fileMap: {
-  [fileName: string]: string;
-}): Promise<ImportReport> {
+export async function handleFileImport(fileMap: { [fileName: string]: string }): Promise<ImportReport> {
   // 1. 初始化报告对象
   const report: ImportReport = {
     overallStatus: "COMPLETE",
@@ -350,17 +316,11 @@ export async function handleFileImport(fileMap: {
 
           case MERGE_STRATEGIES.ARRAY_WITH_ID:
             if (!Array.isArray(importData)) {
-              console.error(
-                `数据错误: ${fileName} 的内容不是一个数组，无法使用 ARRAY_WITH_ID 策略。`
-              );
+              console.error(`数据错误: ${fileName} 的内容不是一个数组，无法使用 ARRAY_WITH_ID 策略。`);
               continue;
             }
             // @ts-ignore
-            const resultWithId = await mergeArrayWithId(
-              storageKey,
-              importData,
-              config.idField
-            );
+            const resultWithId = await mergeArrayWithId(storageKey, importData, config.idField);
             itemsToAdd = resultWithId.itemsToAdd;
             itemsToSkip = resultWithId.itemsToSkip;
 
@@ -368,18 +328,11 @@ export async function handleFileImport(fileMap: {
 
           case MERGE_STRATEGIES.ARRAY_MERGE_DEDUP:
             if (!Array.isArray(importData)) {
-              console.error(
-                `数据错误: ${fileName} 的内容不是一个数组，无法使用 ARRAY_MERGE_DEDUP 策略。`
-              );
+              console.error(`数据错误: ${fileName} 的内容不是一个数组，无法使用 ARRAY_MERGE_DEDUP 策略。`);
               continue;
             }
             // @ts-ignore
-            const resultDedupe = await mergeArrayDedupe(
-              storageKey,
-              importData,
-              config.idField,
-              config.dedupeBy
-            );
+            const resultDedupe = await mergeArrayDedupe(storageKey, importData, config.idField, config.dedupeBy);
             itemsToAdd = resultDedupe.itemsToAdd;
             itemsToSkip = resultDedupe.itemsToSkip;
             idConflicts = resultDedupe.idConflictCount;
@@ -399,15 +352,6 @@ export async function handleFileImport(fileMap: {
         if (itemsToAdd.length > 0 || idConflicts > 0) {
           report.shouldReload = true;
         }
-
-        if ("afterMerge" in config && itemsToAdd.length > 0) {
-          fileResult.message += " 触发了后续计算。";
-          if (config.afterMerge === "INCREMENTAL_UPDATE_POMOS") {
-            await updatePomoCounts(itemsToAdd as Todo[]);
-          } else if (config.afterMerge === "INCREMENTAL_COUNT") {
-            await updateTagCounts(itemsToAdd as Activity[]);
-          }
-        }
       } catch (error: any) {
         console.error(`处理文件 "${fileName}" 时发生错误:`, error);
         report.overallStatus = "PARTIAL_ERROR"; // 发生任何错误，都标记为部分错误
@@ -417,91 +361,10 @@ export async function handleFileImport(fileMap: {
       report.results.push(fileResult);
     }
   }
-  if (
-    report.overallStatus === "PARTIAL_ERROR" &&
-    report.results.every((r) => r.status === "ERROR")
-  ) {
+  if (report.overallStatus === "PARTIAL_ERROR" && report.results.every((r) => r.status === "ERROR")) {
     report.overallStatus = "FATAL_ERROR";
   }
 
   console.log("所有文件处理完毕，生成报告:", report);
   return report;
-}
-
-/**
- * 从导入的 Todo 列表中计算每日番茄钟增量，并调用 Pinia Action 更新全局状态。
- * @param newTodos - 从文件导入的新增 Todo 数组。
- */
-async function updatePomoCounts(newTodos: Todo[]): Promise<void> {
-  // 1. 如果没有新增的 Todo，则提前结束，不做任何事。
-  if (!newTodos || newTodos.length === 0) {
-    console.log("Pomo更新：没有新增的Todo，跳过计算。");
-    return;
-  }
-
-  // 2. 计算每个日期的番茄钟增量。
-  // dailyIncrements 的格式为: { "YYYY-MM-DD": count, ... }
-  const dailyIncrements: Record<string, number> = {};
-
-  for (const todo of newTodos) {
-    // 只处理类型为"番茄钟"且实际有完成记录的 Todo。
-    if (
-      todo.pomoType !== "🍅" ||
-      !todo.realPomo ||
-      !Array.isArray(todo.realPomo) ||
-      todo.realPomo.length === 0
-    ) {
-      continue;
-    }
-
-    // 从 Todo 的 ID (时间戳) 中获取日期键。
-    const date = new Date(todo.id);
-    const dateKey = date.toISOString().split("T")[0]; // 格式: "YYYY-MM-DD"
-
-    // 累加当前 Todo 的番茄钟数量。
-    const pomoCount = todo.realPomo.reduce((sum, current) => sum + current, 0);
-    if (pomoCount > 0) {
-      dailyIncrements[dateKey] = (dailyIncrements[dateKey] || 0) + pomoCount;
-    }
-  }
-
-  // 3. 如果有计算出的增量，则调用 Pinia Action 进行状态更新和持久化。
-  if (Object.keys(dailyIncrements).length > 0) {
-    console.log(
-      "Pomo更新：计算完成，调用 Pinia Action 更新数据...",
-      dailyIncrements
-    );
-    const pomoStore = usePomoStore();
-    // 调用在 Store 中定义的 Action，它将负责更新 state 和 localStorage。
-    pomoStore.importAndIncrementPomos(dailyIncrements);
-  } else {
-    console.log("Pomo更新：在新增的Todo中未发现有效的番茄钟记录。");
-  }
-}
-/**
- * 从导入的 Tag 列表中，根据其 'count' 属性，更新全局的标签统计。
- * @param newTags - 从文件导入的新增 Tag 数组。
- */
-async function updateTagCounts(newActivitys: Activity[]): Promise<void> {
-  // 1. 如果没有新增的 Tag，或者数组为空，则提前结束。
-  if (!newActivitys || newActivitys.length === 0) {
-    console.log("Activitys更新：没有新增的Activitys，跳过计算。");
-    return;
-  }
-
-  // 2. 获取 Pinia Store 实例。
-  const tagStore = useTagStore();
-
-  // 3. 遍历所有导入的新标签。
-  for (const activity of newActivitys) {
-    if (activity.tagIds && activity.tagIds.length > 0) {
-      // 4. 调用 Store 中定义的 Action 来增加计数值。
-      // 函数的第二个参数 (amount) 就是这个导入标签自身的 count 值。
-      for (const tagId of activity.tagIds) {
-        tagStore.incrementTagCount(tagId);
-      }
-    }
-  }
-
-  console.log("Tag更新：所有标签计数值更新完毕。");
 }
