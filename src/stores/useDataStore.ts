@@ -23,7 +23,6 @@ import type { Todo, TodoWithTags, TodoWithTaskRecords } from "@/core/types/Todo"
 import type { DataPoint, MetricName, AggregationType, TimeGranularity } from "@/core/types/Chart";
 import { unifiedDateService } from "@/services/unifiedDateService";
 import { collectPomodoroData, collectTaskRecordData, aggregateByTime } from "@/services/chartDataService";
-import { usePomoStore } from "./usePomoStore";
 import { useTagStore } from "./useTagStore";
 
 export const useDataStore = defineStore(
@@ -36,8 +35,6 @@ export const useDataStore = defineStore(
     const taskList = ref<Task[]>([]);
 
     // ======================== 2. UI 状态 (State) ========================
-
-    const pomoStore = usePomoStore();
 
     const dateService: any = unifiedDateService({
       activityList,
@@ -463,15 +460,6 @@ export const useDataStore = defineStore(
       return dataPoints.filter((point) => point.timestamp >= startTime && point.timestamp <= endTime);
     }
     // ======================== 8. 监控 (Watches) ========================
-    watch(
-      todosForAppDate,
-      (currentTodos) => {
-        const dateKey = dateService.appDateKey.value;
-        pomoStore.setTodosForDate(dateKey, currentTodos);
-      },
-      { deep: true, immediate: true }
-    );
-
     watch(
       [activityList, todoList, scheduleList, taskList],
       () => {
