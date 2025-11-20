@@ -13,42 +13,16 @@ export const useTimetableStore = defineStore("timetable", () => {
   function initializeBlocks(): Block[] {
     const loaded = loadTimetableBlocks();
 
-    // 如果已有数据，直接返回
     if (loaded.length > 0) {
       return loaded;
     }
 
-    // 否则初始化默认数据
+    // 直接使用预设 blocks，只更新时间戳
     const now = Date.now();
-    const defaultBlocks: Block[] = [];
-
-    // 添加工作时间表
-    WORK_BLOCKS.forEach((template, index) => {
-      defaultBlocks.push({
-        id: now + index,
-        type: "work",
-        category: template.category,
-        start: template.start,
-        end: template.end,
-        synced: false,
-        deleted: false,
-        lastModified: now,
-      });
-    });
-
-    // 添加娱乐时间表
-    ENTERTAINMENT_BLOCKS.forEach((template, index) => {
-      defaultBlocks.push({
-        id: now + WORK_BLOCKS.length + index,
-        type: "entertainment",
-        category: template.category,
-        start: template.start,
-        end: template.end,
-        synced: false,
-        deleted: false,
-        lastModified: now,
-      });
-    });
+    const defaultBlocks: Block[] = [
+      ...WORK_BLOCKS.map((block) => ({ ...block, lastModified: now })),
+      ...ENTERTAINMENT_BLOCKS.map((block) => ({ ...block, lastModified: now })),
+    ];
 
     return defaultBlocks;
   }

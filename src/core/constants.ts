@@ -167,7 +167,7 @@ export const WORK_BLOCKS: Block[] = [
 // 预设的娱乐时间块
 export const ENTERTAINMENT_BLOCKS: Block[] = [
   {
-    id: 1,
+    id: 13,
     category: "sleeping",
     start: "00:00",
     end: "09:00",
@@ -177,7 +177,7 @@ export const ENTERTAINMENT_BLOCKS: Block[] = [
     lastModified: Date.now(),
   },
   {
-    id: 2,
+    id: 14,
     category: "living",
     start: "09:00",
     end: "22:00",
@@ -187,7 +187,7 @@ export const ENTERTAINMENT_BLOCKS: Block[] = [
     lastModified: Date.now(),
   },
   {
-    id: 3,
+    id: 15,
     category: "sleeping",
     start: "22:00",
     end: "24:00",
