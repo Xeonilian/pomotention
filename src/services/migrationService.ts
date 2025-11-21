@@ -184,108 +184,270 @@ export function migrateTaskSource(report: MigrationReport): void {
     console.log(`日程数量: ${schedules.length}`);
     console.log(`活动数量: ${activities.length}`);
 
-    // 创建映射以快速查找
-    const todoMap = new Map(todos.map((t) => [t.id, t.activityId]));
-    const scheduleMap = new Map(schedules.map((s) => [s.id, s.activityId]));
-    const activityMap = new Map(activities.map((a) => [a.id, a]));
+    // 创建映射以快速查找（统一转换为数字，避免类型不匹配问题）
+    const todoMap = new Map(todos.map((t) => [Number(t.id), t]));
+    const scheduleMap = new Map(schedules.map((s) => [Number(s.id), s]));
+    const activityMap = new Map(activities.map((a) => [Number(a.id), a]));
+
+    // 辅助函数：将值转换为数字
+    const toNumber = (value: any): number | null => {
+      if (value == null) return null;
+      const num = typeof value === "string" ? parseInt(value, 10) : Number(value);
+      return isNaN(num) ? null : num;
+    };
 
     let modified = false;
+    let migratedCount = 0;
+    let deletedCount = 0;
     const updatedTasks: any[] = [];
-    const orphanedTasks: any[] = []; // 记录孤立的任务
+    const activitiesToUpdate = new Map<number, any>(); // 需要更新 taskId 的 activities
 
     for (const task of tasks) {
       console.log(`处理任务: ${task.id}, source: ${task.source}, sourceId: ${task.sourceId}`);
 
-      // 直接查找活动
-      const activity = activityMap.get(task.sourceId);
-      if (activity) {
-        if (activity.taskId === task.id) {
-          modified = true;
-          updatedTasks.push({
-            ...task,
-            source: "activity",
-            lastModified: Date.now(),
-          });
-          continue;
-        }
-      }
+      let shouldUpdate = false;
+      let newSourceId: number = toNumber(task.sourceId) ?? task.sourceId;
+      let targetActivity: any = null;
+      let errorMessage: string | null = null;
 
       // 对于源为 todo 的情况
       if (task.source === "todo") {
-        const activityId = todoMap.get(task.sourceId);
-        if (activityId) {
-          const activityFromTodo = activityMap.get(activityId);
-          if (activityFromTodo && activityFromTodo.taskId === task.id) {
-            modified = true;
-            updatedTasks.push({
-              ...task,
-              source: "activity",
-              lastModified: Date.now(),
-            });
-            console.log(`通过待办事项找到关联活动: ${activityFromTodo.id}`);
-            continue;
-          } else {
-            orphanedTasks.push(task);
-            report.errors.push(`Task ${task.id} 在待办事项中未找到关联的活动。`);
-            console.warn(`Task ${task.id} 的 sourceId 在待办事项中未找到。`);
-          }
+        const sourceIdNum = toNumber(task.sourceId);
+        if (sourceIdNum == null) {
+          errorMessage = `Task ${task.id} 的 sourceId ${task.sourceId} 无法转换为数字，将删除该任务`;
+          console.warn(errorMessage);
         } else {
-          orphanedTasks.push(task);
-          report.errors.push(`Task ${task.id} 的 sourceId 在待办事项中未找到。`);
-          console.warn(`Task ${task.id} 的 sourceId 在待办事项中未找到`);
+          const todo = todoMap.get(sourceIdNum);
+          if (todo && todo.activityId != null) {
+            const activityIdNum = toNumber(todo.activityId);
+            if (activityIdNum == null) {
+              errorMessage = `Task ${task.id} 的 todo ${task.sourceId} 的 activityId ${todo.activityId} 无法转换为数字，将删除该任务`;
+              console.warn(errorMessage);
+            } else {
+              const activity = activityMap.get(activityIdNum);
+              if (activity) {
+                newSourceId = activityIdNum;
+                targetActivity = activity;
+                shouldUpdate = true;
+                console.log(`Task ${task.id}: 通过 todo ${task.sourceId} 找到 activity ${activityIdNum}`);
+              } else {
+                errorMessage = `Task ${task.id} 的 todo ${task.sourceId} 指向的 activity ${activityIdNum} 不存在，将删除该任务`;
+                console.warn(errorMessage);
+              }
+            }
+          } else {
+            // 智能修复：如果找不到 todo，检查 sourceId 是否直接指向 activity
+            const activity = activityMap.get(sourceIdNum);
+            if (activity) {
+              // sourceId 直接指向 activity，修复 source 为 "activity"
+              newSourceId = sourceIdNum;
+              targetActivity = activity;
+              shouldUpdate = true;
+              console.log(`Task ${task.id}: source 为 "todo" 但 sourceId 直接指向 activity，修复为 "activity"`);
+            } else {
+              errorMessage = `Task ${task.id} 的 sourceId ${task.sourceId} 在待办事项中未找到，且不指向任何 activity，将删除该任务`;
+              console.warn(errorMessage);
+            }
+          }
+        }
+      }
+      // 对于源为 schedule 的情况
+      else if (task.source === "schedule") {
+        const sourceIdNum = toNumber(task.sourceId);
+        if (sourceIdNum == null) {
+          errorMessage = `Task ${task.id} 的 sourceId ${task.sourceId} 无法转换为数字，将删除该任务`;
+          console.warn(errorMessage);
+        } else {
+          const schedule = scheduleMap.get(sourceIdNum);
+          if (schedule && schedule.activityId != null) {
+            const activityIdNum = toNumber(schedule.activityId);
+            if (activityIdNum == null) {
+              errorMessage = `Task ${task.id} 的 schedule ${task.sourceId} 的 activityId ${schedule.activityId} 无法转换为数字，将删除该任务`;
+              console.warn(errorMessage);
+            } else {
+              const activity = activityMap.get(activityIdNum);
+              if (activity) {
+                newSourceId = activityIdNum;
+                targetActivity = activity;
+                shouldUpdate = true;
+                console.log(`Task ${task.id}: 通过 schedule ${task.sourceId} 找到 activity ${activityIdNum}`);
+              } else {
+                errorMessage = `Task ${task.id} 的 schedule ${task.sourceId} 指向的 activity ${activityIdNum} 不存在，将删除该任务`;
+                console.warn(errorMessage);
+              }
+            }
+          } else {
+            // 智能修复：如果找不到 schedule，检查 sourceId 是否直接指向 activity
+            const activity = activityMap.get(sourceIdNum);
+            if (activity) {
+              // sourceId 直接指向 activity，修复 source 为 "activity"
+              newSourceId = sourceIdNum;
+              targetActivity = activity;
+              shouldUpdate = true;
+              console.log(`Task ${task.id}: source 为 "schedule" 但 sourceId 直接指向 activity，修复为 "activity"`);
+            } else {
+              errorMessage = `Task ${task.id} 的 sourceId ${task.sourceId} 在日程中未找到，且不指向任何 activity，将删除该任务`;
+              console.warn(errorMessage);
+            }
+          }
+        }
+      }
+      // 对于源为 activity 的情况，验证 activity 是否存在
+      else if (task.source === "activity" || !task.source) {
+        const sourceIdNum = toNumber(task.sourceId);
+        if (sourceIdNum == null) {
+          errorMessage = `Task ${task.id} 的 sourceId ${task.sourceId} 无法转换为数字，将删除该任务`;
+          console.warn(errorMessage);
+        } else {
+          let activity = activityMap.get(sourceIdNum);
+          if (activity) {
+            // sourceId 正确指向 activity
+            targetActivity = activity;
+            // activity 存在，且 source 已经是 activity，检查是否需要更新 taskId
+            if (task.source !== "activity") {
+              // source 为空或其他值，统一设置为 activity
+              shouldUpdate = true;
+              console.log(`Task ${task.id}: 统一 source 为 activity`);
+            } else {
+              // source 已经是 activity，但需要确保 activity.taskId 正确
+              const taskIdNum = toNumber(task.id);
+              const currentTaskIdNum = toNumber(targetActivity.taskId);
+              if (taskIdNum != null && currentTaskIdNum !== taskIdNum) {
+                shouldUpdate = true;
+                console.log(`Task ${task.id}: activity.taskId 需要更新`);
+              } else {
+                console.log(`Task ${task.id}: source 已经是 activity，无需更新`);
+              }
+            }
+          } else {
+            // sourceId 不指向 activity，检查是否指向 schedule 或 todo
+            const schedule = scheduleMap.get(sourceIdNum);
+            const todo = todoMap.get(sourceIdNum);
+
+            if (schedule && schedule.activityId != null) {
+              // sourceId 指向 schedule，通过 schedule.activityId 找到正确的 activity
+              const activityIdNum = toNumber(schedule.activityId);
+              if (activityIdNum == null) {
+                errorMessage = `Task ${task.id} 的 schedule ${task.sourceId} 的 activityId ${schedule.activityId} 无法转换为数字，将删除该任务`;
+                console.warn(errorMessage);
+              } else {
+                activity = activityMap.get(activityIdNum);
+                if (activity) {
+                  // 修复：source 已经是 "activity"，但 sourceId 指向 schedule，需要修复 sourceId
+                  newSourceId = activityIdNum;
+                  targetActivity = activity;
+                  shouldUpdate = true;
+                  console.log(`Task ${task.id}: source 为 "activity" 但 sourceId 指向 schedule，修复 sourceId 为 ${activityIdNum}`);
+                } else {
+                  errorMessage = `Task ${task.id} 的 schedule ${task.sourceId} 指向的 activity ${activityIdNum} 不存在，将删除该任务`;
+                  console.warn(errorMessage);
+                }
+              }
+            } else if (todo && todo.activityId != null) {
+              // sourceId 指向 todo，通过 todo.activityId 找到正确的 activity
+              const activityIdNum = toNumber(todo.activityId);
+              if (activityIdNum == null) {
+                errorMessage = `Task ${task.id} 的 todo ${task.sourceId} 的 activityId ${todo.activityId} 无法转换为数字，将删除该任务`;
+                console.warn(errorMessage);
+              } else {
+                activity = activityMap.get(activityIdNum);
+                if (activity) {
+                  // 修复：source 已经是 "activity"，但 sourceId 指向 todo，需要修复 sourceId
+                  newSourceId = activityIdNum;
+                  targetActivity = activity;
+                  shouldUpdate = true;
+                  console.log(`Task ${task.id}: source 为 "activity" 但 sourceId 指向 todo，修复 sourceId 为 ${activityIdNum}`);
+                } else {
+                  errorMessage = `Task ${task.id} 的 todo ${task.sourceId} 指向的 activity ${activityIdNum} 不存在，将删除该任务`;
+                  console.warn(errorMessage);
+                }
+              }
+            } else {
+              // sourceId 既不指向 activity，也不指向 schedule 或 todo
+              errorMessage = `Task ${task.id} 的 sourceId ${task.sourceId} 指向的 activity 不存在，且不指向任何 schedule 或 todo，将删除该任务`;
+              console.warn(errorMessage);
+            }
+          }
+        }
+      } else {
+        errorMessage = `Task ${task.id} 的 source "${task.source}" 不在预期范围内 (todo/schedule/activity)，将删除该任务`;
+        console.warn(errorMessage);
+      }
+
+      // 如果找不到关联的 activity，记录错误并跳过（不添加到 updatedTasks，即删除）
+      if (errorMessage) {
+        report.errors.push(errorMessage);
+        deletedCount++;
+        continue;
+      }
+
+      // 如果找到了 targetActivity，检查并更新 activity.taskId
+      if (targetActivity) {
+        const taskIdNum = toNumber(task.id);
+        const currentTaskIdNum = toNumber(targetActivity.taskId);
+        if (taskIdNum != null && currentTaskIdNum !== taskIdNum) {
+          activitiesToUpdate.set(Number(targetActivity.id), {
+            ...targetActivity,
+            taskId: taskIdNum, // 统一使用数字类型
+            synced: false,
+            lastModified: Date.now(),
+          });
+          console.log(`Activity ${targetActivity.id}: 更新 taskId 为 ${taskIdNum}`);
         }
       }
 
-      // 对于源为 schedule 的情况
-      else if (task.source === "schedule") {
-        const activityId = scheduleMap.get(task.sourceId);
-        if (activityId) {
-          const activityFromSchedule = activityMap.get(activityId);
-          if (activityFromSchedule && activityFromSchedule.taskId === task.id) {
-            modified = true;
-            updatedTasks.push({
-              ...task,
-              source: "activity",
-              lastModified: Date.now(),
-            });
-            console.log(`通过日程找到关联活动: ${activityFromSchedule.id}`);
-            continue;
-          } else {
-            orphanedTasks.push(task);
-            report.errors.push(`Task ${task.id} 无法通过日程找到关联的活动。`);
-            console.warn(`Task ${task.id} 通过日程未找到关联活动`);
-          }
-        } else {
-          orphanedTasks.push(task);
-          report.errors.push(`Task ${task.id} 的 sourceId 在日程中未找到。`);
-          console.warn(`Task ${task.id} 的 sourceId 在日程中未找到`);
-        }
+      // 迁移成功或需要更新，更新任务
+      if (shouldUpdate) {
+        updatedTasks.push({
+          ...task,
+          source: "activity",
+          sourceId: newSourceId, // 确保是数字类型
+          lastModified: Date.now(),
+        });
+        modified = true;
+        migratedCount++;
+      } else if (targetActivity) {
+        // 即使 task 不需要更新，但如果关联到 activity，也要保留并确保 activity.taskId 正确
+        updatedTasks.push({
+          ...task,
+          lastModified: task.lastModified || Date.now(),
+        });
       } else {
-        orphanedTasks.push(task);
-        report.errors.push(`Task ${task.id} 的 source 不在预期范围内。`);
-        console.warn(`Task ${task.id} 的 source 不被支持`);
+        // 无需更新的任务，保留原样
+        updatedTasks.push(task);
       }
     }
 
-    // 更新 localStorage 中的有效任务
-    if (updatedTasks.length > 0) {
+    // 更新 activities 中的 taskId
+    if (activitiesToUpdate.size > 0) {
+      const updatedActivities = activities.map((a) => {
+        const updated = activitiesToUpdate.get(a.id);
+        return updated || a;
+      });
+      localStorage.setItem(STORAGE_KEYS.ACTIVITY, JSON.stringify(updatedActivities));
+      report.migrated.push(`同步更新 activity.taskId，更新的数量: ${activitiesToUpdate.size}`);
+      console.log(`✅ 同步更新 activity.taskId: ${activitiesToUpdate.size} 个`);
+    }
+
+    // 更新 localStorage 中的任务（只保留能成功关联的）
+    if (modified || updatedTasks.length !== tasks.length) {
       localStorage.setItem(STORAGE_KEYS.TASK, JSON.stringify(updatedTasks));
-      report.migrated.push(`成功更新 task 来源为 activity，更新的任务数量: ${updatedTasks.length}`);
-      console.log(`成功更新任务: ${updatedTasks.length}`);
+      if (migratedCount > 0) {
+        report.migrated.push(`成功更新 task 来源为 activity，更新的任务数量: ${migratedCount}/${tasks.length}`);
+        console.log(`✅ 成功更新任务: ${migratedCount}/${tasks.length}`);
+      }
+      if (deletedCount > 0) {
+        report.migrated.push(`删除无法关联到 activity 的任务: ${deletedCount} 个`);
+        console.log(`✅ 删除无法关联的任务: ${deletedCount} 个`);
+      }
+      console.log(`✅ 最终保留任务: ${updatedTasks.length}/${tasks.length}`);
     } else {
       console.info("没有找到需要更新的任务。");
     }
 
-    // 打印孤立任务信息
-    if (orphanedTasks.length > 0) {
-      console.warn("以下任务无法找到关联的活动:");
-      console.table(
-        orphanedTasks.map((task) => ({
-          id: task.id,
-          sourceId: task.sourceId,
-          source: task.source,
-        }))
-      );
+    // 打印迁移统计
+    if (report.errors.length > 0) {
+      console.warn(`⚠️ 迁移过程中删除 ${deletedCount} 个无法关联的任务`);
     }
   } catch (error: any) {
     report.errors.push(`Task source 迁移失败: ${error.message}`);
