@@ -3,11 +3,15 @@
 import { debounce } from "@/core/utils/debounce";
 import { syncAll, uploadAll } from "@/services/sync/index";
 import { getCurrentUser } from "@/core/services/authServicve";
+import { useSettingStore } from "@/stores/useSettingStore";
 
 /**
  * 防抖的自动同步函数（保存后 2 秒触发）
  */
 export const autoSyncDebounced = debounce(async () => {
+  const settingStore = useSettingStore();
+  if (!settingStore.settings.autoSupabaseSync) return; // 检查开关
+
   // 检查用户是否登录
   const user = await getCurrentUser();
   if (!user) {
@@ -25,11 +29,13 @@ export const autoSyncDebounced = debounce(async () => {
   }
 }, 5000);
 
-
 /**
  * 防抖的自动同步函数（保存后 2 秒触发）
  */
 export const uploadAllDebounced = debounce(async () => {
+  const settingStore = useSettingStore();
+  if (!settingStore.settings.autoSupabaseSync) return; // 检查开关
+
   // 检查用户是否登录
   const user = await getCurrentUser();
   if (!user) {

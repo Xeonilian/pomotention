@@ -81,10 +81,7 @@ export class ScheduleSyncService extends BaseSyncService<Schedule, CloudSchedule
       const user = await getCurrentUser();
       if (!user) return { success: false, error: "用户未登录", downloaded: 0 };
 
-      // 调用 RPC 获取完整数据（RPC 已过滤 deleted = false）
-      const { data, error } = await supabase.rpc("get_full_schedules", {
-        p_user_id: user.id,
-      });
+      const { data, error } = await supabase.rpc("get_full_schedules", { p_user_id: user.id });
 
       if (error) throw error;
       if (!data || data.length === 0) {
@@ -106,18 +103,23 @@ export class ScheduleSyncService extends BaseSyncService<Schedule, CloudSchedule
           const localItem = localItems[localIndex];
 
           // Last Write Wins: 比较本地时间戳
-          if (!localItem.synced && localItem.lastModified > lastSyncTimestamp) {
-            // 本地有未同步的更新，保留本地版本
-            // 不做任何操作
-          } else {
-            // 云端版本优先，覆盖本地
+          if (localItem.synced) {
+            // 如果本地已同步，使用云端数据覆盖
+            localItems[localIndex] = cloudEntity;
+            downloadedCount++;
+          } else if (localItem.lastModified <= lastSyncTimestamp) {
+            // 云端版本覆盖
             localItems[localIndex] = cloudEntity;
             downloadedCount++;
           }
         }
       });
 
-      this.saveLocal(localItems);
+      // ✅ 只有真正下载了数据才保存
+      if (downloadedCount > 0) {
+        this.saveLocal(localItems);
+      }
+
       return { success: true, downloaded: downloadedCount };
     } catch (error: any) {
       console.error("下载 schedules 失败:", error);

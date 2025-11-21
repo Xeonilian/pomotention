@@ -2,7 +2,7 @@
 import { STORAGE_KEYS } from "@/core/constants";
 import { loadData, saveData } from "@/services/localStorageService";
 import { readTextFile } from "@tauri-apps/plugin-fs";
-import { migrateTaskSource } from "@/services/migrationService";
+import { deduplicateData, migrateTaskSource } from "@/services/migrationService";
 
 // 定义文件处理结果的详细类型
 export interface FileProcessResult {
@@ -353,20 +353,20 @@ export async function handleFileImport(fileMap: { [fileName: string]: string }):
   }
 
   // 所有文件处理完后，运行 task source migration
-  if (report.shouldReload) {
-    const migrationReport: { migrated: string[]; errors: string[]; cleaned: string[] } = {
-      migrated: [],
-      errors: [],
-      cleaned: [],
-    };
-    migrateTaskSource(migrationReport);
+  const migrationReport: { migrated: string[]; errors: string[]; cleaned: string[] } = {
+    migrated: [],
+    errors: [],
+    cleaned: [],
+  };
+  console.log("🚀 [Import] 开始修复 task source 字段...");
+  deduplicateData(STORAGE_KEYS.TASK, migrationReport);
+  migrateTaskSource(migrationReport);
 
-    if (migrationReport.migrated.length > 0) {
-      console.log("✅ [Import] 已自动修复 task source 字段");
-    }
-    if (migrationReport.errors.length > 0) {
-      console.warn("⚠️ [Import] Task source 修复警告:", migrationReport.errors);
-    }
+  if (migrationReport.migrated.length > 0) {
+    console.log("✅ [Import] 已自动修复 task source 字段");
+  }
+  if (migrationReport.errors.length > 0) {
+    console.warn("⚠️ [Import] Task source 修复警告:", migrationReport.errors);
   }
 
   console.log("所有文件处理完毕，生成报告:", report);

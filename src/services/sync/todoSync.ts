@@ -94,9 +94,7 @@ export class TodoSyncService extends BaseSyncService<Todo, CloudTodoInsert> {
       const user = await getCurrentUser();
       if (!user) return { success: false, error: "用户未登录", downloaded: 0 };
 
-      const { data, error } = await supabase.rpc("get_full_todos", {
-        p_user_id: user.id,
-      });
+      const { data, error } = await supabase.rpc("get_full_todos", { p_user_id: user.id });
 
       if (error) throw error;
       if (!data || data.length === 0) {
@@ -110,21 +108,23 @@ export class TodoSyncService extends BaseSyncService<Todo, CloudTodoInsert> {
         const localIndex = localItems.findIndex((item) => item.id === cloudItem.id);
 
         if (localIndex === -1) {
+          // 本地不存在，直接插入
           localItems.push(this.mapCloudToLocal(cloudItem));
           downloadedCount++;
         } else {
           const localItem = localItems[localIndex];
 
+          // Last Write Wins: 比较本地时间戳
           if (localItem.synced) {
+            // 如果本地已同步，跳过
             return;
           }
 
-          if (localItem.lastModified > lastSyncTimestamp) {
-            return;
+          if (localItem.lastModified <= lastSyncTimestamp) {
+            // 云端版本覆盖
+            localItems[localIndex] = this.mapCloudToLocal(cloudItem);
+            downloadedCount++;
           }
-
-          localItems[localIndex] = this.mapCloudToLocal(cloudItem);
-          downloadedCount++;
         }
       });
 
