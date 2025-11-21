@@ -78,7 +78,7 @@ const defaultSettings: GlobalSettings = {
   viewSet: "day",
   marquee: "", // 保持觉察 🍅 = ⏰ + 🎯 + 👁‍🗨
   supabaseSync: [0, 0],
-  autoSupabaseSync: false,
+  autoSupabaseSync: true,
   ai: {
     activeId: 1,
     systemPrompt:
