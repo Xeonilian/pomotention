@@ -29,7 +29,6 @@
         :activeId="activeId"
         :selectedRowId="selectedRowId"
         @update-schedule-status="updateScheduleStatus"
-        @suspend-schedule="handleSuspendSchedule"
         @cancel-schedule="handleCancelSchedule"
         @select-activity="handleSelectActivity"
         @select-row="handleSelectRow"
@@ -66,7 +65,6 @@ const {
 const emit = defineEmits<{
   (e: "update-schedule-status", id: number, checked: boolean): void;
   (e: "edit-schedule-title", id: number, newTitle: string): void;
-  (e: "suspend-schedule", id: number): void;
   (e: "cancel-schedule", id: number): void;
   (e: "update-todo-status", id: number, checked: boolean): void;
   (e: "suspend-todo", id: number): void;
@@ -115,10 +113,6 @@ function updateScheduleStatus(id: number, checked: boolean) {
 
 function updateTodoStatus(id: number, checked: boolean) {
   emit("update-todo-status", id, checked);
-}
-
-function handleSuspendSchedule(id: number) {
-  emit("suspend-schedule", id);
 }
 
 function handleCancelSchedule(id: number) {
