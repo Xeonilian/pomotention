@@ -4,7 +4,6 @@ import type { Todo } from "@/core/types/Todo";
 import type { Schedule } from "@/core/types/Schedule";
 import { POMO_TYPES } from "@/core/constants";
 import { timestampToDatetime, getLocalDateString } from "@/core/utils";
-import { useTagStore } from "@/stores/useTagStore";
 import { Task } from "@/core/types/Task";
 
 /**
@@ -51,8 +50,6 @@ export function handleDeleteActivity(
     childrenByParentId?: Map<number, Activity[]>;
   }
 ): boolean {
-  const tagStore = useTagStore();
-
   // 递归获取所有将要被删除的 activity 的 id（含自身）
   const idsToDelete = new Set<number>();
   function collectAllDescendantIds(currentId: number): void {
@@ -88,14 +85,6 @@ export function handleDeleteActivity(
     if (hasStatus || hasTaskId) {
       console.warn(`删除操作被阻止。子活动 "${activity.title}" (ID: ${activity.id}) 正在进行中，无法删除父项。`);
       return false;
-    }
-  }
-
-  // tag 引用计数减少
-  for (const id of idsToDelete) {
-    const activity = deps.activityById.get(id);
-    if (activity && Array.isArray(activity.tagIds)) {
-      for (const tagId of activity.tagIds) tagStore.decrementTagCount(tagId);
     }
   }
 
