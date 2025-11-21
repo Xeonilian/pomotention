@@ -17,6 +17,7 @@ import type { Template } from "@/core/types/Template";
 import { TimetableSyncService } from "./timetableSync";
 import type { Block } from "@/core/types/Block";
 import { runMigrations } from "../migrationService";
+import { useSettingStore } from "@/stores/useSettingStore";
 
 // 私有变量：存储所有 sync 服务实例
 let syncServices: Array<{ name: string; service: any }> = [];
@@ -80,6 +81,7 @@ export async function syncAll(): Promise<{ success: boolean; errors: string[]; d
   ensureInitialized(); // ← 新增检查
 
   const syncStore = useSyncStore();
+  const settingStore = useSettingStore();
   const errors: string[] = [];
   const details = { uploaded: 0, downloaded: 0 };
 
@@ -92,6 +94,7 @@ export async function syncAll(): Promise<{ success: boolean; errors: string[]; d
   syncStore.syncError = null;
 
   try {
+    if (!settingStore.settings.autoSupabaseSync) return { success: false, errors: ["自动同步已暂停"], details };
     const lastSync = syncStore.lastSyncTimestamp;
 
     // ========== 首次同步：执行数据迁移 ==========

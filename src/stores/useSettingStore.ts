@@ -34,6 +34,7 @@ export interface GlobalSettings {
   viewSet: ViewType;
   marquee: string;
   supabaseSync: number[];
+  autoSupabaseSync: boolean;
 
   ai?: {
     activeId: number; // 当前启用的配置
@@ -75,8 +76,9 @@ const defaultSettings: GlobalSettings = {
   webdavWebsite: "https://dav.jianguoyun.com/dav/",
   webdavPath: "/PomotentionBackup",
   viewSet: "day",
-  marquee: "保持觉察 🍅 = ⏰ + 🎯 + 👁‍🗨 ",
+  marquee: "", // 保持觉察 🍅 = ⏰ + 🎯 + 👁‍🗨
   supabaseSync: [0, 0],
+  autoSupabaseSync: false,
   ai: {
     activeId: 1,
     systemPrompt:
