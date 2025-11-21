@@ -24,7 +24,7 @@ export function useSearchFilter() {
   const searchUiStore = useSearchUiStore();
 
   // 2. 解构，保持不变
-  const { activityList, todoByActivityId, scheduleByActivityId, tasksBySource } = storeToRefs(dataStore);
+  const { activeActivities, todoByActivityId, scheduleByActivityId, taskByActivityId } = storeToRefs(dataStore);
   const { searchQuery, filterStarredOnly, filterTagIds } = storeToRefs(searchUiStore);
 
   const norm = (s?: string) => (s ?? "").toLowerCase();
@@ -35,22 +35,19 @@ export function useSearchFilter() {
     const q = norm(searchQuery.value);
 
     // 遍历所有原始活动
-    for (const act of activityList.value) {
+    for (const act of activeActivities.value) {
       // --- 筛选条件 1: 关键字搜索 (保持你原来的深入搜索逻辑) ---
       // ... 这部分逻辑完全不变 ...
       const title = act.title || "（无标题）";
+      const relatedTask = taskByActivityId.value.get(act.id);
+
       let passedQuery = !q;
       if (q) {
-        passedQuery = norm(title).includes(q);
-        if (!passedQuery) {
-          const td = todoByActivityId.value.get(act.id);
-          const sch = scheduleByActivityId.value.get(act.id);
-          const tasksOfAct = tasksBySource.value.activity.get(act.id) ?? [];
-          const tasksOfTodo = td ? tasksBySource.value.todo.get(td.id) ?? [] : [];
-          const tasksOfSch = sch ? tasksBySource.value.schedule.get(sch.id) ?? [] : [];
-          const allTasks = [...tasksOfAct, ...tasksOfTodo, ...tasksOfSch];
-          passedQuery = allTasks.some((t) => norm(t.activityTitle).includes(q) || norm(t.description).includes(q));
+        const searchableTexts = [title];
+        if (relatedTask) {
+          searchableTexts.push(relatedTask.activityTitle, relatedTask.projectName ?? "", relatedTask.description ?? "");
         }
+        passedQuery = searchableTexts.some((text) => norm(text).includes(q));
       }
       if (!passedQuery) continue;
 
