@@ -1,46 +1,18 @@
 <!-- WebdavInput.vue -->
 <template>
-  <n-modal
-    v-model:show="showModal"
-    preset="dialog"
-    title="录入WebDAV信息"
-    :on-after-leave="restoreSettings"
-  >
+  <n-modal v-model:show="showModal" preset="dialog" title="录入WebDAV信息" :on-after-leave="restoreSettings">
     <n-space vertical>
-      <n-input
-        v-model:value="webdavWebsite"
-        placeholder="WebDAV 网址"
-        maxlength="100"
-        show-count
-      />
-      <n-input
-        v-model:value="webdavPath"
-        placeholder="WebDAV 目录"
-        maxlength="100"
-        show-count
-      />
-      <n-input
-        v-model:value="webdavId"
-        placeholder="WebDAV 用户ID"
-        maxlength="40"
-        show-count
-      />
+      <n-input v-model:value="webdavWebsite" placeholder="WebDAV 网址" maxlength="100" show-count />
+      <n-input v-model:value="webdavPath" placeholder="WebDAV 目录" maxlength="100" show-count />
+      <n-input v-model:value="webdavId" placeholder="WebDAV 用户ID" maxlength="40" show-count />
 
-      <n-input
-        v-model:value="webdavKey"
-        placeholder="WebDAV 授权码/密码"
-        maxlength="100"
-        type="password"
-        show-count
-      />
+      <n-input v-model:value="webdavKey" placeholder="WebDAV 授权码/密码" maxlength="100" type="password" show-count />
       <n-text>
         {{ passMessage }}
       </n-text>
     </n-space>
     <template #action>
-      <n-button type="success" secondary @click="handleImport"
-        >数据导入</n-button
-      >
+      <n-button type="success" secondary @click="handleImport">数据导入</n-button>
       <n-button type="info" secondary @click="handleExport">数据导出</n-button>
       <n-button @click="handleTest">测试</n-button>
       <n-button @click="handleCancel">取消</n-button>
@@ -54,11 +26,11 @@ import { ref, watch, computed } from "vue";
 import { NModal, NInput, NSpace, NButton } from "naive-ui";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { WebDAVStorageAdapter } from "@/services/storageAdapter";
-import { collectLocalData } from "@/services/localStorageService";
 import { handleFileImport, type ImportReport } from "@/services/mergeService";
 import { open } from "@tauri-apps/plugin-dialog";
-import { writeTextFile, readDir } from "@tauri-apps/plugin-fs";
+import { readDir } from "@tauri-apps/plugin-fs";
 import { join } from "@tauri-apps/api/path";
+import { useDataExport } from "@/composables/useDataExport";
 
 // props/emit，支持 v-model:show
 const props = defineProps<{
@@ -75,6 +47,14 @@ const showModal = computed({
 
 const adapter = new WebDAVStorageAdapter();
 const settingStore = useSettingStore();
+const { message: exportMessage, exportData } = useDataExport();
+
+// 监听导出消息变化，同步到 passMessage
+watch(exportMessage, (newMessage) => {
+  if (newMessage) {
+    passMessage.value = newMessage;
+  }
+});
 const webdavId = ref("");
 const webdavWebsite = ref("");
 const webdavKey = ref("");
@@ -150,8 +130,7 @@ function handleCancel() {
   settingStore.settings.webdavKey = originalSettings.value.webdavKey;
 
   emit("update:show", false);
-  if (importReport.value && importReport.value.shouldReload)
-    window.location.reload();
+  if (importReport.value && importReport.value.shouldReload) window.location.reload();
 }
 
 async function handleImport() {
@@ -173,34 +152,7 @@ async function handleImport() {
 
 // 处理数据导出
 async function handleExport() {
-  try {
-    const localdata = collectLocalData();
-
-    // 选择目录
-    const dirPath = await open({
-      directory: true,
-      multiple: false,
-    });
-
-    if (!dirPath || typeof dirPath !== "string") {
-      return;
-    }
-
-    // 分别保存每个数据类型
-    const savePromises = Object.entries(localdata).map(async ([key, value]) => {
-      const fileName = `${key}.json`;
-      const filePath = `${dirPath}/${fileName}`;
-      const jsonData = JSON.stringify(value, null, 2);
-      await writeTextFile(filePath, jsonData);
-      return fileName;
-    });
-
-    await Promise.all(savePromises);
-
-    passMessage.value = "✔️所有数据文件导出成功: " + dirPath;
-  } catch (error) {
-    passMessage.value = "⚠️导出失败: " + error;
-  }
+  await exportData();
 }
 
 // 测试账户设置
@@ -227,7 +179,6 @@ function restoreSettings() {
   }
   // 如果测试通过了 (passTest.value is true)，就什么都不做，
   // 让 store 保留已经被 watch 更新的新值。
-  if (importReport.value && importReport.value.shouldReload)
-    window.location.reload();
+  if (importReport.value && importReport.value.shouldReload) window.location.reload();
 }
 </script>

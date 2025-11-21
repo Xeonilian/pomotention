@@ -245,7 +245,6 @@ import { handleAddActivity, handleDeleteActivity, passPickedActivity, togglePomo
 import { updateScheduleStatus, updateTodoStatus, handleSuspendTodo } from "@/services/plannerService";
 import { handleExportOrQR, type DataRow } from "@/services/icsService";
 
-import { usePomoStore } from "@/stores/usePomoStore";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useDataStore } from "@/stores/useDataStore";
 import { autoSyncDebounced, uploadAllDebounced } from "@/core/utils/autoSync";
@@ -264,7 +263,6 @@ const AIChatDialog = defineAsyncComponent(() => import("@/components/AiChat/AiCh
 // -- 基础UI状态
 const settingStore = useSettingStore();
 const dataStore = useDataStore();
-const pomoStore = usePomoStore();
 
 const queryDate = ref<number | null>(null);
 const showPopover = ref(false);
@@ -298,14 +296,10 @@ const dateService = dataStore.dateService;
 const { saveAllDebounced, cleanSelection } = dataStore;
 // ======================== 0. UI 更新相关 ========================
 
-// 计算当天的番茄钟数
-const currentDatePomoCount = computed(() => {
-  const dateString = dateService.appDateKey;
-  return pomoStore.getPomoCountByDate(dateString);
-});
+import { usePomodoroStats } from "@/composables/usePomodoroStats";
 
-// 计算全局realPomo（历史 + 当天）
-const globalRealPomo = computed(() => pomoStore.globalRealPomo);
+// 新系统（测试用）
+const { currentDatePomoCount, globalRealPomo } = usePomodoroStats();
 
 // 计算当前日期 不赋值在UI计算class就会失效，但是UI输出的值是正确的
 const isViewDateToday = computed(() => dateService.isViewDateToday);

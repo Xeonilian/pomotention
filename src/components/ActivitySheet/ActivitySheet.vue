@@ -264,7 +264,7 @@ function pickActivity() {
 
   // 2. 查找todo中是否有对应的活动
   const relatedTodo = todoByActivityId.value.get(activeId.value);
-  if (relatedTodo) {
+  if (relatedTodo && !relatedTodo.deleted) {
     showErrorPopover("【" + relatedTodo.idFormated + "】启动待办");
     dateService.navigateTo(new Date(relatedTodo.id));
     emit("update-active-id", activeId.value);

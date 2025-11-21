@@ -28,17 +28,13 @@ import type { Block } from "@/core/types/Block";
 
 // 存储键名常量
 export const STORAGE_KEYS = {
-  GLOBAL_POMO_COUNT: "globalPomoCount",
   ACTIVITY: "activitySheet",
   TODO: "todayTodo",
   SCHEDULE: "todaySchedule",
   TASK: "taskTrack",
-  DAILY_POMOS: "dailyPomos",
-  TIMETABLE_WORK: "timeTableBlocks_work",
-  TIMETABLE_ENTERTAINMENT: "timeTableBlocks_entertainment",
   WRITING_TEMPLATE: "writingTemplate",
-  TAG: "tag",
   GLOBAL_SETTINGS: "globalSettings",
+  TAG: "tag",
   SYNC_STATUS: "syncStatus",
   TIMETABLE_BLOCKS: "timeTableBlocks",
 } as const;
@@ -171,7 +167,7 @@ export const WORK_BLOCKS: Block[] = [
 // 预设的娱乐时间块
 export const ENTERTAINMENT_BLOCKS: Block[] = [
   {
-    id: 1,
+    id: 13,
     category: "sleeping",
     start: "00:00",
     end: "09:00",
@@ -181,7 +177,7 @@ export const ENTERTAINMENT_BLOCKS: Block[] = [
     lastModified: Date.now(),
   },
   {
-    id: 2,
+    id: 14,
     category: "living",
     start: "09:00",
     end: "22:00",
@@ -191,7 +187,7 @@ export const ENTERTAINMENT_BLOCKS: Block[] = [
     lastModified: Date.now(),
   },
   {
-    id: 3,
+    id: 15,
     category: "sleeping",
     start: "22:00",
     end: "24:00",

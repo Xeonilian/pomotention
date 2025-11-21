@@ -7,7 +7,7 @@ import { getSession } from "@/core/services/authServicve"; // 导入获取会话
 const MainLayout = () => import("@/views/MainLayout.vue");
 const HomeView = () => import("@/views/HomeView.vue");
 const StatisticsView = () => import("@/views/StatisticView.vue"); // 注意：你原始代码是 StatisticView，不是 StatisticsView
-const SettingView = () => import("@/views/SettingView.vue");
+// const SettingView = () => import("@/views/SettingView.vue");
 const HelpView = () => import("@/views/HelpView.vue");
 const SearchView = () => import("@/views/SearchView.vue");
 const ChartView = () => import("@/views/ChartView.vue");
@@ -43,7 +43,7 @@ const routes: Array<RouteRecordRaw> = [
     children: [
       { path: "", name: "Home", component: HomeView },
       { path: "statistics", name: "Statistics", component: StatisticsView },
-      { path: "settings", name: "Settings", component: SettingView },
+      // { path: "settings", name: "Settings", component: SettingView },
       { path: "help", name: "Help", component: HelpView },
       { path: "search", name: "Search", component: SearchView },
       { path: "chart", name: "Chart", component: ChartView },

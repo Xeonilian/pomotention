@@ -3,21 +3,23 @@
     <!-- Meta 信息行 -->
     <div class="meta-row">
       <!-- 切换任务加星按钮 -->
-      <n-button
-        v-if="content.task.value"
-        text
-        type="warning"
-        @click="dataStore.toggleTaskStar(content.task.value!.id)"
-        title="切换加星"
-        class="star-btn"
-      >
-        <template #icon>
-          <n-icon>
-            <Star20Filled v-if="content.task.value?.starred" />
-            <Star20Regular v-else />
-          </n-icon>
-        </template>
-      </n-button>
+      <span class="star-btn-placeholder">
+        <n-button
+          v-if="content.activity.value?.taskId"
+          text
+          type="warning"
+          @click="dataStore.toggleTaskStar(content.task.value!.id)"
+          title="切换加星"
+          class="star-btn"
+        >
+          <template #icon>
+            <n-icon>
+              <Star20Filled v-if="content.task.value?.starred" />
+              <Star20Regular v-else />
+            </n-icon>
+          </template>
+        </n-button>
+      </span>
 
       <!-- 根据 Tab 类型显示不同的元信息 -->
       <template v-if="props.tab.type === 'todo'">
@@ -189,6 +191,14 @@ const getDueDate = () => {
   padding-right: 8px;
   width: 100%;
   margin-top: 4px;
+}
+
+.star-btn-placeholder {
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .star-btn {

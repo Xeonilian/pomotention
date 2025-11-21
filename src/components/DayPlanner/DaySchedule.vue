@@ -244,7 +244,6 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: "update-schedule-status", id: number, checked: boolean): void;
-  (e: "suspend-schedule", id: number): void;
   (e: "cancel-schedule", id: number): void;
   // (e: "repeat-schedule", id: number): void;
   (e: "select-task", taskId: number | null): void;
@@ -368,10 +367,6 @@ function handleConvertToTask(schedule: Schedule) {
 function handleCancelSchedule(id: number) {
   emit("cancel-schedule", id);
 }
-
-// function handleRepeatSchedule(id: number) {
-//   emit("repeat-schedule", id);
-// }
 </script>
 
 <style scoped>

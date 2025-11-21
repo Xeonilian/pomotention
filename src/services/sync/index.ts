@@ -16,6 +16,9 @@ import { TemplateSyncService } from "./templateSync";
 import type { Template } from "@/core/types/Template";
 import { TimetableSyncService } from "./timetableSync";
 import type { Block } from "@/core/types/Block";
+import { runMigrations } from "../migrationService";
+import { useSettingStore } from "@/stores/useSettingStore";
+import { useDataExport } from "@/composables/useDataExport";
 
 // 私有变量：存储所有 sync 服务实例
 let syncServices: Array<{ name: string; service: any }> = [];
@@ -79,6 +82,7 @@ export async function syncAll(): Promise<{ success: boolean; errors: string[]; d
   ensureInitialized(); // ← 新增检查
 
   const syncStore = useSyncStore();
+  const settingStore = useSettingStore();
   const errors: string[] = [];
   const details = { uploaded: 0, downloaded: 0 };
 
@@ -91,8 +95,35 @@ export async function syncAll(): Promise<{ success: boolean; errors: string[]; d
   syncStore.syncError = null;
 
   try {
+    if (!settingStore.settings.autoSupabaseSync) return { success: false, errors: ["自动同步已暂停"], details };
     const lastSync = syncStore.lastSyncTimestamp;
 
+    // ========== 首次同步：执行数据迁移 ==========
+    if (lastSync === 0) {
+      // 在首次同步之前，强制要求用户导出一次本地数据作为备份
+      // 此处为保护措施：弹窗提示并强制导出，由用户指定保存位置
+      const { exportData } = useDataExport();
+      // eslint-disable-next-line no-alert
+      if (typeof window !== "undefined") {
+        alert("首次同步前，请导出数据备份（建议备份到安全位置）。接下来会弹出导出对话框。");
+      }
+      await exportData(); // 调用导出函数
+      console.log("🔍 [Sync] 检测到首次同步，执行数据迁移...");
+      const migrationReport = runMigrations();
+
+      if (migrationReport.errors.length > 0) {
+        console.error("⚠️ [Sync] 迁移过程中出现错误", migrationReport.errors);
+        errors.push(...migrationReport.errors.map((e) => `迁移错误: ${e}`));
+      }
+
+      if (migrationReport.cleaned.length > 0) {
+        console.log(`✅ [Sync] 清理了 ${migrationReport.cleaned.length} 个废弃 key`);
+      }
+
+      if (migrationReport.migrated.length > 0) {
+        console.log(`✅ [Sync] 迁移了 ${migrationReport.migrated.length} 个数据集`);
+      }
+    }
     // ========== 1. 并行上传所有表 ==========
     const uploadResults = await Promise.allSettled(
       syncServices.map(({ name, service }) => service.upload().then((result: any) => ({ name, result })))

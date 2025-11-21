@@ -82,6 +82,9 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
     }
   }
 
+  /**
+   * 上传数据到云端
+   */
   async upload(): Promise<{ success: boolean; error?: string; uploaded: number }> {
     try {
       const user = await getCurrentUser();
@@ -100,7 +103,29 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
         unsyncedItems.map((i) => i.id)
       );
 
-      const cloudData = unsyncedItems.map((item) => this.mapLocalToCloud(item, user.id));
+      // 防御性去重：保留 lastModified 最新的
+      const itemsToUpload = Object.values(
+        unsyncedItems.reduce((acc, item) => {
+          const existing = acc[item.id];
+          if (!existing) {
+            acc[item.id] = item;
+          } else {
+            const existingTime = existing.lastModified || 0;
+            const itemTime = item.lastModified || 0;
+            if (itemTime >= existingTime) {
+              acc[item.id] = item;
+            }
+          }
+          return acc;
+        }, {} as Record<string, TLocal>)
+      );
+
+      console.log(
+        `📊 [${this.tableName}] 准备上传的去重数据 ${itemsToUpload.length} 条，ID:`,
+        itemsToUpload.map((i) => i.id)
+      );
+
+      const cloudData = itemsToUpload.map((item) => this.mapLocalToCloud(item, user.id));
 
       const { error } = await supabase.from(this.tableName).upsert(cloudData as any, {
         onConflict: "user_id,timestamp_id",
@@ -110,8 +135,8 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
       if (error) throw error;
 
       // 标记为已同步
-      unsyncedItems.forEach((unsyncedItem) => {
-        const item = localItems.find((i) => i.id === unsyncedItem.id);
+      itemsToUpload.forEach((uploadedItem) => {
+        const item = localItems.find((i) => i.id === uploadedItem.id);
         if (item) {
           item.synced = true;
         }
@@ -119,13 +144,12 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
 
       this.saveLocal(localItems);
 
-      console.log(`✅ [${this.tableName}] 上传成功 ${unsyncedItems.length} 条，已标记 synced=true`);
+      console.log(`✅ [${this.tableName}] 上传成功 ${itemsToUpload.length} 条，已标记 synced=true`);
 
-      // ✅ 改动3: 验证日志保留，但不再需要判断 reactiveList 是否存在
       const stillUnsynced = this.reactiveList.value.filter((i) => !i.synced).length;
       console.log(`🔍 [${this.tableName}] 响应式数据中剩余未同步: ${stillUnsynced} 条`);
 
-      return { success: true, uploaded: unsyncedItems.length };
+      return { success: true, uploaded: itemsToUpload.length };
     } catch (error: any) {
       console.error(`❌ [${this.tableName}] 上传失败:`, error.message);
       return { success: false, error: error.message, uploaded: 0 };
@@ -147,7 +171,6 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
 
       const lastSyncDate = new Date(lastSyncTimestamp).toISOString();
 
-      // 直接查询表（增量同步）
       const { data, error } = await supabase
         .from(this.tableName)
         .select("*")
@@ -164,25 +187,28 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
       let downloadedCount = 0;
 
       data.forEach((cloudItem: any) => {
-        const cloudEntity = this.mapCloudToLocal(cloudItem);
-        const localIndex = localItems.findIndex((item) => item.id === cloudEntity.id);
+        const localIndex = localItems.findIndex((item) => item.id === cloudItem.timestamp_id);
 
         if (localIndex === -1) {
-          // 本地不存在，直接插入
-          localItems.push(cloudEntity);
+          // 本地不存在，插入
+          localItems.push(this.mapCloudToLocal(cloudItem));
           downloadedCount++;
         } else {
           const localItem = localItems[localIndex];
 
-          // Last Write Wins: 比较本地时间戳
-          if (!localItem.synced && localItem.lastModified > lastSyncTimestamp) {
-            // 本地有未同步的更新，保留本地版本（稍后 upload 会覆盖云端）
-            // 不做任何操作
-          } else {
-            // 云端版本优先，覆盖本地
-            localItems[localIndex] = cloudEntity;
-            downloadedCount++;
+          // ✅ 首要依据：synced=true → 本地无修改，跳过
+          if (localItem.synced) {
+            return;
           }
+
+          // ✅ 次要依据：本地有未同步的更新，保留本地
+          if (localItem.lastModified > lastSyncTimestamp) {
+            return;
+          }
+
+          // ✅ 云端优先，覆盖本地
+          localItems[localIndex] = this.mapCloudToLocal(cloudItem);
+          downloadedCount++;
         }
       });
 

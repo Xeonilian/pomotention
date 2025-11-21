@@ -13,42 +13,16 @@ export const useTimetableStore = defineStore("timetable", () => {
   function initializeBlocks(): Block[] {
     const loaded = loadTimetableBlocks();
 
-    // 如果已有数据，直接返回
     if (loaded.length > 0) {
       return loaded;
     }
 
-    // 否则初始化默认数据
+    // 直接使用预设 blocks，只更新时间戳
     const now = Date.now();
-    const defaultBlocks: Block[] = [];
-
-    // 添加工作时间表
-    WORK_BLOCKS.forEach((template, index) => {
-      defaultBlocks.push({
-        id: now + index,
-        type: "work",
-        category: template.category,
-        start: template.start,
-        end: template.end,
-        synced: false,
-        deleted: false,
-        lastModified: now,
-      });
-    });
-
-    // 添加娱乐时间表
-    ENTERTAINMENT_BLOCKS.forEach((template, index) => {
-      defaultBlocks.push({
-        id: now + WORK_BLOCKS.length + index,
-        type: "entertainment",
-        category: template.category,
-        start: template.start,
-        end: template.end,
-        synced: false,
-        deleted: false,
-        lastModified: now,
-      });
-    });
+    const defaultBlocks: Block[] = [
+      ...WORK_BLOCKS.map((block) => ({ ...block, lastModified: now })),
+      ...ENTERTAINMENT_BLOCKS.map((block) => ({ ...block, lastModified: now })),
+    ];
 
     return defaultBlocks;
   }
@@ -120,26 +94,23 @@ export const useTimetableStore = defineStore("timetable", () => {
   }
 
   function resetToDefaults(type: "work" | "entertainment"): void {
+    const now = Date.now();
+
     // 软删除该类型的所有 blocks
     blocks.value.forEach((b) => {
       if (b.type === type && !b.deleted) {
         b.deleted = true;
         b.synced = false;
-        b.lastModified = Date.now();
+        b.lastModified = now;
       }
     });
 
-    // 添加默认 blocks
+    // 添加默认 blocks（保持固定 ID）
     const defaults = type === "work" ? WORK_BLOCKS : ENTERTAINMENT_BLOCKS;
-    const now = Date.now();
 
-    defaults.forEach((template, index) => {
+    defaults.forEach((template) => {
       blocks.value.push({
-        id: now + index,
-        type,
-        category: template.category,
-        start: template.start,
-        end: template.end,
+        ...template, // 保留原始 id
         synced: false,
         deleted: false,
         lastModified: now,

@@ -54,6 +54,20 @@ export interface SyncDataV1 extends SyncData {
 // 版本常量
 export const SYNC_VERSION = "1.0.0";
 
+// V1版本的数据结构定义（当前使用）
+export interface SyncDataV2 extends SyncData {
+  data: {
+    activitySheet: Activity[];
+    todayTodo: Todo[];
+    todaySchedule: Schedule[];
+    taskTrack: Task[];
+    globalSettings: GlobalSettings;
+    tag: Tag[];
+    writingTemplate: Template[];
+    timeTableBlocks: Block[];
+  };
+}
+
 export interface LocalSyncStatus {
   lastSyncLocalTimestamp?: number; // 最后同步时间
   lastSyncRemoteTimestamp?: number; // 最后同步的设备ID
