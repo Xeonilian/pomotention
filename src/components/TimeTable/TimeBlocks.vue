@@ -97,6 +97,17 @@
     <span v-else style="cursor: grab" @mousedown="handleMouseDown($event, seg)">⚠️</span>
   </div>
 
+  <!-- 第二列：schedule segments -->
+  <div
+    v-for="scheduleSeg in scheduleSegmentsForSecondColumn"
+    :key="`schedule-${scheduleSeg.scheduleId}`"
+    class="schedule-segment second-column"
+    :style="getScheduleSegmentStyle(scheduleSeg)"
+    :title="getScheduleTooltip(scheduleSeg)"
+  >
+    S
+  </div>
+
   <!-- 第三列：实际执行的番茄actualSegments -->
   <div
     v-for="seg in actualSegments"
@@ -325,6 +336,95 @@ function getTodoSegmentStyle(seg: TodoSegment): CSSProperties {
 
 // ====================获取实际执行segment的样式 ================
 const actualSegments = computed(() => generateActualTodoSegments(props.todos));
+
+// ====================第二列显示的schedule segments ================
+interface ScheduleSegmentForSecondColumn {
+  scheduleId: number;
+  title: string;
+  location?: string;
+  start: number;
+  end: number;
+  category: string;
+  isUntaetigkeit: boolean;
+}
+
+const scheduleSegmentsForSecondColumn = computed((): ScheduleSegmentForSecondColumn[] => {
+  const scheduleSegs: ScheduleSegmentForSecondColumn[] = [];
+
+  // 从pomodoroSegments中筛选出schedule类型的segments
+  const schedulePomoSegs = pomodoroSegments.value.filter((seg) => seg.type === "schedule" || seg.type === "untaetigkeit");
+
+  for (const pomoSeg of schedulePomoSegs) {
+    // 根据时间范围匹配对应的schedule
+    const matchedSchedule = props.schedules.find((schedule) => {
+      if (!schedule.activityDueRange[0]) return false;
+      const scheduleStart = schedule.activityDueRange[0];
+      const scheduleDuration = Number(schedule.activityDueRange[1]);
+      const scheduleEnd = scheduleStart + scheduleDuration * 60 * 1000;
+
+      // 时间范围匹配（允许小的误差）
+      const timeTolerance = 1000; // 1秒容差
+      return Math.abs(scheduleStart - pomoSeg.start) < timeTolerance && Math.abs(scheduleEnd - pomoSeg.end) < timeTolerance;
+    });
+
+    if (matchedSchedule) {
+      scheduleSegs.push({
+        scheduleId: matchedSchedule.id,
+        title: matchedSchedule.activityTitle,
+        location: matchedSchedule.location,
+        start: pomoSeg.start,
+        end: pomoSeg.end,
+        category: pomoSeg.category,
+        isUntaetigkeit: pomoSeg.type === "untaetigkeit",
+      });
+    }
+  }
+
+  return scheduleSegs;
+});
+
+function getScheduleSegmentStyle(seg: ScheduleSegmentForSecondColumn): CSSProperties {
+  const startMinute = (seg.start - props.timeRange.start) / 60000;
+  const endMinute = (seg.end - props.timeRange.start) / 60000;
+  const topPx = startMinute * props.effectivePxPerMinute;
+  const heightPx = (endMinute - startMinute) * props.effectivePxPerMinute;
+
+  // 如果是untaetigkeit，使用untaetigkeit的颜色，否则使用category对应的颜色
+  const color = seg.isUntaetigkeit ? POMODORO_COLORS.untaetigkeit : POMODORO_COLORS[seg.category] || POMODORO_COLORS.untaetigkeit;
+  const colorDark = seg.isUntaetigkeit
+    ? POMODORO_COLORS_DARK.untaetigkeit
+    : POMODORO_COLORS_DARK[seg.category] || POMODORO_COLORS_DARK.untaetigkeit;
+
+  return {
+    position: "absolute",
+    left: "22px",
+    top: `${topPx}px`,
+    width: "13px",
+    height: `${heightPx}px`,
+    fontSize: "11px",
+    backgroundColor: color,
+    color: "var(--color-background)",
+    border: `1px solid ${colorDark}`,
+    borderRadius: "2px",
+    zIndex: 31, // 比todo segments稍高，但低于overflow
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    letterSpacing: "0px",
+    textShadow: `1px 1px 1px ${colorDark}`,
+    overflow: "hidden",
+    userSelect: "none",
+    pointerEvents: "auto",
+  };
+}
+
+function getScheduleTooltip(seg: ScheduleSegmentForSecondColumn): string {
+  const parts = [seg.title];
+  if (seg.location) {
+    parts.push(`📍 ${seg.location}`);
+  }
+  return parts.join(" - ");
+}
 
 function getActualSegmentStyle(seg: TodoSegment): CSSProperties {
   const startMinute = (seg.start - props.timeRange.start) / 60000;
@@ -806,5 +906,15 @@ watch(
 
 .pomo-segment.break {
   color: transparent;
+}
+
+/* 第二列schedule segments样式 */
+.schedule-segment.second-column {
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.schedule-segment.second-column:hover {
+  opacity: 0.8;
 }
 </style>
