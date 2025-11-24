@@ -130,7 +130,6 @@ export function splitIndexPomoBlocksExSchedules(
 
   mergedSchedules.forEach(({ range: [start, end], hasUntaetigkeit }) => {
     rawSegments.push({
-      parentBlockId: "S",
       type: hasUntaetigkeit ? "untaetigkeit" : "schedule",
       start,
       end,
@@ -158,7 +157,6 @@ export function splitIndexPomoBlocksExSchedules(
       // 第一个 25min 的 pomo
       if (aEnd - cur >= 25 * 60 * 1000) {
         rawSegments.push({
-          parentBlockId: block.id,
           type: "pomo",
           start: cur,
           end: cur + 25 * 60 * 1000,
@@ -172,7 +170,6 @@ export function splitIndexPomoBlocksExSchedules(
       while (aEnd - cur >= 30 * 60 * 1000) {
         // Break 块
         rawSegments.push({
-          parentBlockId: block.id,
           type: "break",
           start: cur,
           end: cur + 5 * 60 * 1000,
@@ -182,7 +179,6 @@ export function splitIndexPomoBlocksExSchedules(
 
         // Pomo 块
         rawSegments.push({
-          parentBlockId: block.id,
           type: "pomo",
           start: cur,
           end: cur + 25 * 60 * 1000,
