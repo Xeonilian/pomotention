@@ -5,7 +5,7 @@
 
 <template>
   <div class="timetable-bar-container">
-    <!-- 小时刻度线背景 -->
+    <!-- 背景：小时刻度线 -->
     <div class="hour-ticks-container">
       <div v-for="(hourStamp, idx) in hourStamps" :key="hourStamp" class="hour-tick" :style="{ top: getHourTickTop(hourStamp) + 'px' }">
         <div class="tick-line"></div>
@@ -16,7 +16,7 @@
       </div>
     </div>
 
-    <!-- 时间主块背景 -->
+    <!-- 背景：时间主块 -->
     <div v-for="block in props.blocks" :key="block.id" :style="getVerticalBlockStyle(block)" class="time-block">
       <span
         class="block-label"
@@ -40,10 +40,11 @@
       </span>
     </div>
 
-    <!-- 当前时间指示线 -->
+    <!-- 背景：当前时间指示线 -->
     <div v-if="showCurrentLine" class="current-time-line" :style="{ top: currentTimeTop + 'px' }" />
   </div>
-  <!-- 按番茄时间分段 -->
+
+  <!-- 第一列：番茄+预约时间分段 -->
   <div
     v-for="(segment, index) in pomodoroSegments"
     :data-global-index="segment.globalIndex"
@@ -66,7 +67,7 @@
     <template v-if="segment.type === 'untaetigkeit'">U</template>
   </div>
 
-  <!-- 估计分配的segments (左侧列) -->
+  <!-- 第二列：估计分配的番茄todosegments + 预约scheduleSegments -->
   <div
     v-for="seg in todoSegments"
     :data-global-index="seg.globalIndex"
@@ -95,7 +96,8 @@
     </span>
     <span v-else style="cursor: grab" @mousedown="handleMouseDown($event, seg)">⚠️</span>
   </div>
-  <!-- 实际执行的segments (右侧列) -->
+
+  <!-- 第三列：实际执行的番茄actualSegments -->
   <div
     v-for="seg in actualSegments"
     :key="`actual-${seg.todoId}-${seg.todoIndex}`"
@@ -105,13 +107,22 @@
   >
     {{ seg.pomoType }}
   </div>
-  <!-- 实际时间范围背景 -->
+
+  <!-- 第四列：实际执行时间范围todo schedule -->
   <div
-    v-for="range in actualTimeRanges"
-    :key="`actual-range-${range.todoId}`"
+    v-for="range in actualTodoTimeRanges"
+    :key="`actual-range-${range.id}`"
     class="actual-time-range"
-    :style="getActualTimeRangeStyle(range)"
-    :title="`${range.todoTitle} - 实际执行时间`"
+    :style="getActualTodoTimeRangeStyle(range)"
+    :title="`${range.title} - 实际番茄执行时间`"
+  ></div>
+
+  <div
+    v-for="range in actualScheduleTimeRanges"
+    :key="`actual-range-${range.id}`"
+    class="actual-time-range"
+    :style="getActualScheduleTimeRangeStyle(range)"
+    :title="`${range.title} - 实际预约执行时间`"
   ></div>
 </template>
 
@@ -339,19 +350,19 @@ function getActualSegmentStyle(seg: TodoSegment): CSSProperties {
 }
 
 // ==============实际时间范围背景=================
-const actualTimeRanges = computed((): ActualTimeRange[] => {
+const actualTodoTimeRanges = computed((): ActualTimeRange[] => {
   return props.todos
     .filter((todo) => todo.status === "done" && todo.startTime && todo.doneTime)
     .map((todo) => ({
-      todoId: todo.id,
-      todoTitle: todo.activityTitle,
+      id: todo.id,
+      title: todo.activityTitle,
       start: todo.startTime!,
       end: todo.doneTime!,
       category: todo.pomoType === "🍇" ? "grape" : todo.pomoType === "🍒" ? "cherry" : "tomato",
     }));
 });
 
-function getActualTimeRangeStyle(range: ActualTimeRange): CSSProperties {
+function getActualTodoTimeRangeStyle(range: ActualTimeRange): CSSProperties {
   const startMinute = (range.start - props.timeRange.start) / 60000;
   const endMinute = (range.end - props.timeRange.start) / 60000;
   const topPx = startMinute * props.effectivePxPerMinute;
@@ -378,6 +389,38 @@ function getActualTimeRangeStyle(range: ActualTimeRange): CSSProperties {
   };
 }
 
+const actualScheduleTimeRanges = computed((): ActualTimeRange[] => {
+  return props.schedules
+    .filter((schedule) => schedule.activityDueRange[0] !== null && schedule.doneTime !== undefined)
+    .map((schedule) => ({
+      id: schedule.id,
+      title: schedule.activityTitle,
+      start: schedule.activityDueRange[0]!,
+      end: schedule.doneTime!,
+      category: schedule.isUntaetigkeit ? "untaetigkeit" : "schedule",
+    }));
+});
+
+function getActualScheduleTimeRangeStyle(range: ActualTimeRange): CSSProperties {
+  const startMinute = (range.start - props.timeRange.start) / 60000;
+  const endMinute = (range.end - props.timeRange.start) / 60000;
+  const topPx = startMinute * props.effectivePxPerMinute;
+  const heightPx = (endMinute - startMinute) * props.effectivePxPerMinute;
+
+  return {
+    position: "absolute",
+    left: "61px",
+    width: "8px",
+    top: `${topPx}px`,
+    height: `${heightPx}px`,
+    border: "1px solid",
+    borderColor: range.category === "untaetigkeit" ? "var(--color-orange)" : "var(--color-purple)",
+    backgroundColor: range.category === "untaetigkeit" ? "var(--color-orange-transparent )" : "var(--color-purple-transparent)",
+    borderRadius: "4px",
+    zIndex: 10,
+    opacity: 1,
+  };
+}
 // ======= 拖拽TodoSegment功能 =======
 const dragState = ref<{
   isDragging: boolean;

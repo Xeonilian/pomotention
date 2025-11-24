@@ -24,12 +24,14 @@ import { useTemplateStore } from "@/stores/useTemplateStore";
 import { useTimetableStore } from "@/stores/useTimetableStore";
 import { initSyncServices } from "@/services/sync";
 import { uploadAllDebounced } from "@/core/utils/autoSync";
+import { useSettingStore } from "@/stores/useSettingStore";
 
 const router = useRouter();
 const dataStore = useDataStore();
 const tagStore = useTagStore();
 const templateStore = useTemplateStore();
 const timetableStore = useTimetableStore();
+const settingStore = useSettingStore();
 
 // ✅ 使用 storeToRefs 提取响应式引用
 const { activityList, todoList, scheduleList, taskList } = storeToRefs(dataStore);
@@ -41,6 +43,7 @@ onMounted(async () => {
   // ========== 1. 初始化本地数据 ==========
   dataStore.loadAllData();
   console.log("✅ [App] 本地数据已加载");
+  settingStore.settings.autoSupabaseSync = false;
 
   // ========== 2. 初始化同步服务 ==========
   initSyncServices({
