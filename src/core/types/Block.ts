@@ -15,7 +15,6 @@ export interface Block {
 
 // 分块下的25+5时间块
 export interface PomodoroSegment {
-  parentBlockId: string; // 所属的block
   type: "pomo" | "break" | "schedule" | "untaetigkeit";
   start: number;
   end: number;
@@ -33,18 +32,27 @@ export interface TodoSegment {
   start: number; // globalIndex
   end: number;
   pomoType: "🍅" | "🍇" | "🍒";
-  todoIndex: number; // 本todo第几个番茄
   category?: string;
+  todoIndex: number; // 本todo第几个番茄
+  globalIndex?: number;
   assignedPomodoroSegment?: PomodoroSegment;
   overflow?: boolean; // 是否溢出（超出可用时间段）
   completed?: boolean; // todo是否已完成
   usingRealPomo?: boolean; // 是否使用realPomo计数
-  globalIndex?: number;
+}
+
+export interface ScheduleSegment {
+  scheduleId: number;
+  scheduleTitle: string;
+  scheduleLocation?: string;
+  start: number;
+  end: number;
+  category?: string;
 }
 
 export interface ActualTimeRange {
-  todoId: number;
-  todoTitle: string;
+  id: number;
+  title: string;
   start: number;
   end: number;
   category: string;
