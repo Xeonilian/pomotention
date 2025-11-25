@@ -15,13 +15,14 @@ const KEYS_TO_TABLE_NAMES: Record<string, string> = {
   [STORAGE_KEYS.SCHEDULE]: "schedules",
   [STORAGE_KEYS.TAG]: "tags",
   [STORAGE_KEYS.WRITING_TEMPLATE]: "writing_templates",
-  [STORAGE_KEYS.TIMETABLE_BLOCKS]: "timetable_blocks",
+  // [STORAGE_KEYS.TIMETABLE_BLOCKS]: "timetable_blocks",
 };
 const report: MigrationReport = {
   cleaned: [],
   migrated: [],
   errors: [],
 };
+
 /**
  * 可同步的实体接口（本地数据必须有这些字段）
  */
@@ -77,26 +78,16 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
     this.reactiveList.value = items;
     localStorage.setItem(this.localStorageKey, JSON.stringify(items));
 
-    // 详细日志
-    console.log(`💾 [${this.tableName}] localStorage 更新:`);
-    console.log(`   总数: ${items.length} (旧: ${oldItems.length})`);
+    // 优化日志输出，保留关键日志
+    console.log(`💾 [${this.tableName}] localStorage 更新 - 总数: ${items.length} (旧: ${oldItems.length})`);
     if (added.length > 0) {
-      console.log(
-        `   ➕ 新增: ${added.length}`,
-        added.map((i: any) => i.id)
-      );
+      console.log(`   ➕ 新增: ${added.length}, IDs: ${added.map((i: any) => i.id)}`);
     }
     if (updated.length > 0) {
-      console.log(
-        `   ✏️ 更新: ${updated.length}`,
-        updated.map((i: any) => i.id)
-      );
+      console.log(`   ✏️ 更新: ${updated.length}, IDs: ${updated.map((i: any) => i.id)}`);
     }
     if (deleted.length > 0) {
-      console.log(
-        `   ❌ 删除: ${deleted.length}`,
-        deleted.map((i: any) => i.id)
-      );
+      console.log(`   ❌ 删除: ${deleted.length}, IDs: ${deleted.map((i: any) => i.id)}`);
     }
   }
 
@@ -106,25 +97,25 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
   async upload(): Promise<{ success: boolean; error?: string; uploaded: number }> {
     try {
       if (!supabase) {
-        console.warn(`[${this.tableName}] Supabase 未启用，跳过上传流程`);
+        console.warn(`[${this.tableName}] Supabase 未启用，跳过上传`);
         return { success: false, error: "云同步未启用", uploaded: 0 };
       }
 
       const user = await getCurrentUser();
-      if (!user) return { success: false, error: "用户未登录", uploaded: 0 };
+      if (!user) {
+        console.log("用户未登录，跳过上传");
+        return { success: false, error: "用户未登录", uploaded: 0 };
+      }
 
       const localItems = this.loadLocal();
       const unsyncedItems = localItems.filter((item) => !item.synced);
 
       if (unsyncedItems.length === 0) {
-        console.log(`✅ [${this.tableName}] 无需上传`);
+        // console.log(`✅ [${this.tableName}] 无需上传`);
         return { success: true, uploaded: 0 };
       }
 
-      console.log(
-        `📤 [${this.tableName}] 准备上传 ${unsyncedItems.length} 条，ID:`,
-        unsyncedItems.map((i) => i.id)
-      );
+      console.log(`📤 [${this.tableName}] 准备上传 ${unsyncedItems.length} 条，ID: ${unsyncedItems.map((i) => i.id)}`);
 
       // 防御性去重：保留 lastModified 最新的
       const itemsToUpload = Object.values(
@@ -143,13 +134,9 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
         }, {} as Record<string, TLocal>)
       );
 
-      console.log(
-        `📊 [${this.tableName}] 准备上传的去重数据 ${itemsToUpload.length} 条，ID:`,
-        itemsToUpload.map((i) => i.id)
-      );
+      console.log(`📊 [${this.tableName}] 准备上传的去重数据 ${itemsToUpload.length} 条，ID: ${itemsToUpload.map((i) => i.id)}`);
 
       const cloudData = itemsToUpload.map((item) => this.mapLocalToCloud(item, user.id));
-
       const { error } = await supabase.from(this.tableName).upsert(cloudData as any, {
         onConflict: "user_id,timestamp_id",
         ignoreDuplicates: false,
@@ -161,14 +148,13 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
       itemsToUpload.forEach((uploadedItem) => {
         const item = localItems.find((i) => i.id === uploadedItem.id);
         if (item) {
-          item.synced = true;
+          item.synced = true; // 标记为同步
         }
       });
 
       this.saveLocal(localItems);
 
-      console.log(`✅ [${this.tableName}] 上传成功 ${itemsToUpload.length} 条，已标记 synced=true`);
-
+      console.log(`✅ [${this.tableName}] 上传成功 ${itemsToUpload.length} 条`);
       const stillUnsynced = this.reactiveList.value.filter((i) => !i.synced).length;
       console.log(`🔍 [${this.tableName}] 响应式数据中剩余未同步: ${stillUnsynced} 条`);
 
@@ -194,15 +180,17 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
   }> {
     try {
       if (!supabase) {
-        console.warn(`[${this.tableName}] Supabase 未启用，跳过下载流程`);
+        console.warn(`[${this.tableName}] Supabase 未启用，跳过下载`);
         return { success: false, error: "云同步未启用", downloaded: 0 };
       }
 
       const user = await getCurrentUser();
-      if (!user) return { success: false, error: "用户未登录", downloaded: 0 };
+      if (!user) {
+        console.log("用户未登录，跳过下载");
+        return { success: false, error: "用户未登录", downloaded: 0 };
+      }
 
       const lastSyncDate = new Date(lastSyncTimestamp).toISOString();
-
       const { data, error } = await supabase
         .from(this.tableName)
         .select("*")
@@ -212,6 +200,7 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
 
       if (error) throw error;
       if (!data || data.length === 0) {
+        console.log(`✅ [${this.tableName}] 没有新数据下载`);
         return { success: true, downloaded: 0 };
       }
 
@@ -245,6 +234,7 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
       });
 
       this.saveLocal(localItems);
+      console.log(`✅ [${this.tableName}] 下载成功 ${downloadedCount} 条`);
       return { success: true, downloaded: downloadedCount };
     } catch (error: any) {
       console.error(`${this.tableName} 下载失败:`, error);
@@ -258,12 +248,15 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
   async cleanupDeleted(): Promise<{ success: boolean; error?: string }> {
     try {
       if (!supabase) {
-        console.warn(`[${this.tableName}] Supabase 未启用，跳过清理流程`);
+        console.warn(`[${this.tableName}] Supabase 未启用，跳过清理`);
         return { success: false, error: "云同步未启用" };
       }
 
       const user = await getCurrentUser();
-      if (!user) return { success: false, error: "用户未登录" };
+      if (!user) {
+        console.log("用户未登录，跳过清理");
+        return { success: false, error: "用户未登录" };
+      }
 
       const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
       const thirtyDaysAgoDate = new Date(thirtyDaysAgo).toISOString();
@@ -277,10 +270,10 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
 
       if (error) throw error;
 
-      console.log(`✅ ${this.tableName} 执行清理30天前的已删除记录完成`);
+      console.log(`✅ [${this.tableName}] 清理30天前的已删除记录完成`);
       return { success: true };
     } catch (error: any) {
-      console.error(`清理已删除 ${this.tableName} 失败:`, error);
+      console.error(`清理 ${this.tableName} 失败:`, error);
       return { success: false, error: error.message };
     }
   }
