@@ -1,7 +1,7 @@
 <template>
   <div class="search-container">
     <!-- 左侧：Activity 主列表 -->
-    <div class="left-pane" :style="{ width: searchWidth + 'px' }">
+    <div class="left-pane" :style="isMobile ? { height: searchHeight + 'px' } : { width: searchWidth + 'px' }">
       <div class="search-tool">
         <n-input
           ref="searchInputRef"
@@ -95,9 +95,16 @@
 
       <div v-if="filteredActivities.length === 0" class="empty">暂无结果</div>
     </div>
-    <div class="resize-handle-horizontal" @mousedown="resizeSearch.startResize"></div>
+    <div
+      :class="isMobile ? 'resize-handle-vertical' : 'resize-handle-horizontal'"
+      @mousedown="handleResizeStart"
+      @touchstart="handleResizeStartTouch"
+    ></div>
     <!-- 右侧：Tabs -->
-    <div class="right-pane" :style="{ width: `calc(100% - ${searchWidth}px - 20px)` }">
+    <div
+      class="right-pane"
+      :style="isMobile ? { height: `calc(100% - ${searchHeight}px - 8px)` } : { width: `calc(100% - ${searchWidth}px - 20px)` }"
+    >
       <n-tabs
         :value="activeTabKey"
         type="card"
@@ -122,7 +129,7 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, ref, nextTick } from "vue";
+import { computed, ref, nextTick, onMounted, onUnmounted } from "vue";
 import { storeToRefs } from "pinia";
 import { NInput, NButton, NIcon, NTabs, NTabPane, NPopover } from "naive-ui";
 import type { Tag } from "@/core/types/Tag";
@@ -161,13 +168,47 @@ const POPOVER_ID = "search-input";
 const searchInputRef = ref<InstanceType<typeof NInput> | null>(null);
 const tagSelectorRef = ref<InstanceType<typeof TagSelector> | null>(null);
 
-// 左右拖动功能
+// 检测是否是移动端
+const windowWidth = ref(window.innerWidth);
+const isMobile = computed(() => windowWidth.value <= 768);
+
+// 监听窗口大小变化
+const handleResize = () => {
+  windowWidth.value = window.innerWidth;
+};
+
+onMounted(() => {
+  window.addEventListener("resize", handleResize);
+});
+
+onUnmounted(() => {
+  window.removeEventListener("resize", handleResize);
+});
+
+// 移动端使用高度，桌面端使用宽度
+const searchHeight = computed({
+  get: () => {
+    const stored = settingStore.settings.searchHeight;
+    // 如果存储值为0或未设置，使用默认值（屏幕高度的33%）
+    return stored > 0 ? stored : Math.floor(window.innerHeight * 0.33);
+  },
+  set: (v) => (settingStore.settings.searchHeight = v),
+});
+
+// 左右拖动功能（桌面端）
 const searchWidth = computed({
   get: () => settingStore.settings.searchWidth,
   set: (v) => (settingStore.settings.searchWidth = v),
 });
 
-const resizeSearch = useResize(searchWidth, "horizontal", 10, 600, false);
+// 根据设备类型选择不同的 resize
+const resizeSearchHorizontal = useResize(searchWidth, "horizontal", 10, 600, false);
+const resizeSearchVertical = useResize(searchHeight, "vertical", 100, Math.floor(window.innerHeight * 0.6), true);
+
+// 根据设备类型返回对应的 resize 函数
+const getResizeHandler = () => {
+  return isMobile.value ? resizeSearchVertical : resizeSearchHorizontal;
+};
 
 // 搜索防抖
 let searchDebounceTimer: number | null = null;
@@ -251,6 +292,24 @@ function handleTagClick(tagId: number) {
 }
 
 const formatMMDD = (ts?: number) => (ts ? new Date(ts).toLocaleDateString(undefined, { month: "2-digit", day: "2-digit" }) : "—");
+
+// 处理调整大小开始事件
+function handleResizeStart(e: MouseEvent) {
+  getResizeHandler().startResize(e);
+}
+
+function handleResizeStartTouch(e: TouchEvent) {
+  if (e.touches[0]) {
+    const touch = e.touches[0];
+    // 创建一个模拟的 MouseEvent
+    const syntheticEvent = {
+      clientX: touch.clientX,
+      clientY: touch.clientY,
+    } as MouseEvent;
+    getResizeHandler().startResize(syntheticEvent);
+    e.preventDefault();
+  }
+}
 </script>
 
 <style scoped>
@@ -434,5 +493,61 @@ const formatMMDD = (ts?: number) => (ts ? new Date(ts).toLocaleDateString(undefi
 .tab-container {
   overflow-y: auto;
   overflow-x: hidden;
+}
+
+/* 垂直调整大小手柄（移动端） */
+.resize-handle-vertical {
+  height: 8px;
+  background: var(--color-background-light-light);
+  cursor: ns-resize;
+  position: relative;
+  margin: 0;
+  width: 100%;
+}
+
+.resize-handle-vertical:hover {
+  background: var(--color-background-light);
+}
+
+.resize-handle-vertical::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 30px;
+  height: 4px;
+  background: var(--color-background-dark);
+  border-radius: 2px;
+}
+
+/* 移动端响应式布局 */
+@media (max-width: 768px) {
+  .search-container {
+    flex-direction: column;
+    margin-left: 0;
+    margin-bottom: 0;
+    padding: 0;
+  }
+
+  .left-pane {
+    width: 100% !important;
+    min-width: 0;
+    margin-right: 0;
+    margin-bottom: 0;
+    padding: 6px;
+    flex-shrink: 0;
+  }
+
+  .right-pane {
+    width: 100% !important;
+    flex: 1;
+    min-height: 0;
+    padding: 6px;
+  }
+
+  .search-tool {
+    position: relative;
+  }
 }
 </style>

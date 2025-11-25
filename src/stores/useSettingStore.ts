@@ -25,6 +25,7 @@ export interface GlobalSettings {
   rightWidth: number;
   topHeight: number;
   searchWidth: number;
+  searchHeight: number;
   isWhiteNoiseEnabled: boolean;
   whiteNoiseSoundTrack: SoundType;
   webdavId: string;
@@ -69,6 +70,7 @@ const defaultSettings: GlobalSettings = {
   rightWidth: 300,
   topHeight: 300,
   searchWidth: 400, // 搜索页面title宽度
+  searchHeight: 0, // 移动端搜索面板高度，0表示使用默认值（33%）
   isWhiteNoiseEnabled: false,
   whiteNoiseSoundTrack: SoundType.WORK_TICK,
   webdavId: "",

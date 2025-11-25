@@ -92,11 +92,10 @@
       :class="['priority-' + seg.priority, { 'cherry-badge': seg.pomoType === '🍒', 'no-title': seg.todoTitle === '' }]"
       style="cursor: grab"
       @mousedown="handleMouseDown($event, seg)"
-      @touchstart="handleTouchStart($event, seg)"
     >
       {{ seg.priority > 0 ? seg.priority : firstNonDigitLetterWide(seg.todoTitle) || "-" }}
     </span>
-    <span v-else style="cursor: grab" @mousedown="handleMouseDown($event, seg)" @touchstart="handleTouchStart($event, seg)">⚠️</span>
+    <span v-else style="cursor: grab" @mousedown="handleMouseDown($event, seg)">⚠️</span>
   </div>
 
   <!-- 第二列：schedule segments -->
@@ -182,7 +181,6 @@ const {
   getScheduleTooltip,
   dragState,
   handleMouseDown,
-  handleTouchStart,
 } = useTimeBlocks(props);
 
 const segStore = useSegStore();
