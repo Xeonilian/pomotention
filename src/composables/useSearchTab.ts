@@ -2,7 +2,6 @@
 
 import { computed, type Ref } from "vue";
 import { useDataStore } from "@/stores/useDataStore";
-import { useTagStore } from "@/stores/useTagStore";
 import type { TabItem } from "@/stores/useSearchUiStore";
 import type { Task } from "@/core/types/Task";
 
@@ -14,7 +13,6 @@ import type { Task } from "@/core/types/Task";
 export function useSearchTab(tab: Ref<TabItem>) {
   // 1. 实例化需要的 stores
   const dataStore = useDataStore();
-  const tagStore = useTagStore();
 
   // 2. 计算当前 Tab 关联的 Activity ID
   // 这是许多其他计算的基础
@@ -76,9 +74,6 @@ export function useSearchTab(tab: Ref<TabItem>) {
 
     const newTagIds = activity.value.tagIds.filter((id) => id !== tagIdToRemove);
     activity.value.tagIds = newTagIds.length > 0 ? newTagIds : undefined;
-
-    // 别忘了更新 tag store 中的计数
-    tagStore.decrementTagCount(tagIdToRemove);
   };
 
   // 7. 将所有计算好的数据和方法返回

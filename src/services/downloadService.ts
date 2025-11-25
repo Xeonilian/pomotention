@@ -11,10 +11,6 @@ export const DOWNLOAD_KEYS = [
   STORAGE_KEYS.TASK,
   STORAGE_KEYS.WRITING_TEMPLATE,
   STORAGE_KEYS.TAG,
-  STORAGE_KEYS.DAILY_POMOS,
-  STORAGE_KEYS.GLOBAL_POMO_COUNT,
-  STORAGE_KEYS.TIMETABLE_ENTERTAINMENT,
-  STORAGE_KEYS.TIMETABLE_WORK,
   STORAGE_KEYS.GLOBAL_SETTINGS,
 ] as const;
 
@@ -47,18 +43,13 @@ export async function replaceLocalData(
     verbose?: boolean;
   }
 ): Promise<DownloadResult> {
-  const {
-    treatNullAsEmpty = true,
-    stringifyBeforeSave = false,
-    verbose = false,
-  } = opts || {};
+  const { treatNullAsEmpty = true, stringifyBeforeSave = false, verbose = false } = opts || {};
 
   const downloadedKeys: string[] = [];
   const skippedKeys: string[] = [];
   const errors: Record<string, string> = {};
 
-  const hasOwn = (obj: any, key: string) =>
-    obj && Object.prototype.hasOwnProperty.call(obj, key);
+  const hasOwn = (obj: any, key: string) => obj && Object.prototype.hasOwnProperty.call(obj, key);
 
   const sizeOf = (v: any) => {
     try {
@@ -87,30 +78,18 @@ export async function replaceLocalData(
       if (isNullAndTreatAsEmpty || isEmptyCollection(cloudValue)) {
         if (verbose)
           console.log(
-            `[DL][skip-empty] ${key} type=${
-              cloudValue === null
-                ? "null"
-                : Array.isArray(cloudValue)
-                ? "array"
-                : "object"
-            } size=${sizeOf(cloudValue)}`
+            `[DL][skip-empty] ${key} type=${cloudValue === null ? "null" : Array.isArray(cloudValue) ? "array" : "object"} size=${sizeOf(
+              cloudValue
+            )}`
           );
         skippedKeys.push(key);
         continue;
       }
 
       // 3) 其余非空值 -> 覆盖本地
-      const toSave =
-        stringifyBeforeSave && typeof cloudValue !== "string"
-          ? JSON.stringify(cloudValue)
-          : cloudValue;
+      const toSave = stringifyBeforeSave && typeof cloudValue !== "string" ? JSON.stringify(cloudValue) : cloudValue;
 
-      if (verbose)
-        console.log(
-          `[DL][save] ${key} type=${typeof cloudValue} size=${sizeOf(
-            cloudValue
-          )}`
-        );
+      if (verbose) console.log(`[DL][save] ${key} type=${typeof cloudValue} size=${sizeOf(cloudValue)}`);
 
       await saveData(key, toSave);
       downloadedKeys.push(key);
