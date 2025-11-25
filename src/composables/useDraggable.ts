@@ -13,8 +13,16 @@ export function useDraggable(dragThreshold: number = 5) {
 
   const uiStore = useUIStore();
 
-  const handleMouseDown = (e: MouseEvent) => {
-    if (e.button === 0 && draggableContainer.value) {
+  const getEventCoordinates = (e: MouseEvent | TouchEvent): { x: number; y: number } => {
+    if (e instanceof TouchEvent) {
+      const touch = e.touches[0] || e.changedTouches[0];
+      return { x: touch.clientX, y: touch.clientY };
+    }
+    return { x: e.clientX, y: e.clientY };
+  };
+
+  const handleStart = (e: MouseEvent | TouchEvent) => {
+    if (draggableContainer.value) {
       if (!draggableContainer.value.contains(e.target as Node)) {
         return;
       }
@@ -30,10 +38,16 @@ export function useDraggable(dragThreshold: number = 5) {
         return;
       }
 
+      // 对于鼠标事件，只处理左键
+      if (e instanceof MouseEvent && e.button !== 0) {
+        return;
+      }
+
+      const coords = getEventCoordinates(e);
       isDragging.value = true;
       hasPassedThreshold.value = false;
-      startX.value = e.clientX;
-      startY.value = e.clientY;
+      startX.value = coords.x;
+      startY.value = coords.y;
 
       const rect = draggableContainer.value.getBoundingClientRect();
       initialX.value = rect.left;
@@ -42,15 +56,26 @@ export function useDraggable(dragThreshold: number = 5) {
       draggableContainer.value.style.cursor = "grabbing";
       document.addEventListener("mousemove", handleMouseMove);
       document.addEventListener("mouseup", handleMouseUp);
+      document.addEventListener("touchmove", handleTouchMove, { passive: false });
+      document.addEventListener("touchend", handleTouchEnd);
       e.preventDefault();
     }
   };
 
-  const handleMouseMove = (e: MouseEvent) => {
+  const handleMouseDown = (e: MouseEvent) => {
+    handleStart(e);
+  };
+
+  const handleTouchStart = (e: TouchEvent) => {
+    handleStart(e);
+  };
+
+  const handleMove = (e: MouseEvent | TouchEvent) => {
     if (!isDragging.value || !draggableContainer.value) return;
 
-    const deltaX = e.clientX - startX.value;
-    const deltaY = e.clientY - startY.value;
+    const coords = getEventCoordinates(e);
+    const deltaX = coords.x - startX.value;
+    const deltaY = coords.y - startY.value;
 
     if (!hasPassedThreshold.value) {
       const distance = Math.hypot(deltaX, deltaY);
@@ -86,7 +111,15 @@ export function useDraggable(dragThreshold: number = 5) {
     e.preventDefault();
   };
 
-  const handleMouseUp = () => {
+  const handleMouseMove = (e: MouseEvent) => {
+    handleMove(e);
+  };
+
+  const handleTouchMove = (e: TouchEvent) => {
+    handleMove(e);
+  };
+
+  const handleEnd = () => {
     isDragging.value = false;
     hasPassedThreshold.value = false;
     if (draggableContainer.value) {
@@ -98,6 +131,16 @@ export function useDraggable(dragThreshold: number = 5) {
     }
     document.removeEventListener("mousemove", handleMouseMove);
     document.removeEventListener("mouseup", handleMouseUp);
+    document.removeEventListener("touchmove", handleTouchMove);
+    document.removeEventListener("touchend", handleTouchEnd);
+  };
+
+  const handleMouseUp = () => {
+    handleEnd();
+  };
+
+  const handleTouchEnd = () => {
+    handleEnd();
   };
 
   const setInitialPosition = () => {
@@ -146,6 +189,7 @@ export function useDraggable(dragThreshold: number = 5) {
     if (draggableContainer.value) {
       setInitialPosition();
       draggableContainer.value.addEventListener("mousedown", handleMouseDown);
+      draggableContainer.value.addEventListener("touchstart", handleTouchStart, { passive: false });
     }
   });
 
@@ -155,8 +199,11 @@ export function useDraggable(dragThreshold: number = 5) {
         "mousedown",
         handleMouseDown
       );
+      draggableContainer.value.removeEventListener("touchstart", handleTouchStart);
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
+      document.removeEventListener("touchmove", handleTouchMove);
+      document.removeEventListener("touchend", handleTouchEnd);
     }
   });
 
@@ -165,6 +212,7 @@ export function useDraggable(dragThreshold: number = 5) {
     (newValue) => {
       if (newValue && draggableContainer.value) {
         draggableContainer.value.addEventListener("mousedown", handleMouseDown);
+        draggableContainer.value.addEventListener("touchstart", handleTouchStart, { passive: false });
         draggableContainer.value.style.visibility = "visible";
         nextTick(() => {
           setInitialPosition();

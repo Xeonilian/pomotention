@@ -69,6 +69,7 @@ interface UseTimeBlocksReturn {
     dropTargetGlobalIndex: number | null;
   }>;
   handleMouseDown: (event: MouseEvent, seg: TodoSegment) => void;
+  handleTouchStart: (event: TouchEvent, seg: TodoSegment) => void;
 }
 
 /**
@@ -434,10 +435,20 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
     draggedSeg: null,
   });
 
-  function handleMouseDown(event: MouseEvent, seg: TodoSegment) {
+  // 获取事件坐标的通用函数
+  function getEventCoordinates(event: MouseEvent | TouchEvent): { x: number; y: number } {
+    if (event instanceof TouchEvent) {
+      const touch = event.touches[0] || event.changedTouches[0];
+      return { x: touch.clientX, y: touch.clientY };
+    }
+    return { x: event.clientX, y: event.clientY };
+  }
+
+  function handleStart(event: MouseEvent | TouchEvent, seg: TodoSegment) {
     mouseState.value.isDragging = true;
-    mouseState.value.startX = event.clientX;
-    mouseState.value.startY = event.clientY;
+    const coords = getEventCoordinates(event);
+    mouseState.value.startX = coords.x;
+    mouseState.value.startY = coords.y;
     mouseState.value.draggedSeg = seg;
 
     // 设置拖拽视觉状态
@@ -448,17 +459,27 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
     // 添加全局事件监听
     document.addEventListener("mousemove", handleMouseMove);
     document.addEventListener("mouseup", handleMouseUp);
+    document.addEventListener("touchmove", handleTouchMove, { passive: false });
+    document.addEventListener("touchend", handleTouchEnd);
 
     event.preventDefault();
     event.stopPropagation();
   }
 
-  function handleMouseMove(event: MouseEvent) {
+  function handleMouseDown(event: MouseEvent, seg: TodoSegment) {
+    handleStart(event, seg);
+  }
+
+  function handleTouchStart(event: TouchEvent, seg: TodoSegment) {
+    handleStart(event, seg);
+  }
+
+  function handleMove(event: MouseEvent | TouchEvent) {
     if (!mouseState.value.isDragging || !mouseState.value.draggedSeg) {
       return;
     }
     const selector = ".pomo-segment";
-    const { clientX: x, clientY: y } = event;
+    const { x, y } = getEventCoordinates(event);
 
     const elementBelow = document.elementFromPoint(x, y) as HTMLElement | null;
     const targetElement = elementBelow?.closest(selector) as HTMLElement | null;
@@ -506,9 +527,18 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
         expected: "pomo",
       });
     }
+    event.preventDefault();
   }
 
-  function handleMouseUp() {
+  function handleMouseMove(event: MouseEvent) {
+    handleMove(event);
+  }
+
+  function handleTouchMove(event: TouchEvent) {
+    handleMove(event);
+  }
+
+  function handleEnd() {
     if (!mouseState.value.isDragging) return;
 
     const targetGlobalIndex = dragState.value.dropTargetGlobalIndex;
@@ -525,7 +555,7 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
     const draggedTodo = draggedSeg ? props.todos.find((t) => t.id === draggedSeg.todoId) : null;
 
     if (!draggedTodo) {
-      console.warn("🟠 handleMouseUp: draggedTodo not found, abort.");
+      console.warn("🟠 handleEnd: draggedTodo not found, abort.");
       cleanupDragState();
       return;
     }
@@ -548,6 +578,14 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
     cleanupDragState();
   }
 
+  function handleMouseUp() {
+    handleEnd();
+  }
+
+  function handleTouchEnd() {
+    handleEnd();
+  }
+
   function cleanupDragState() {
     mouseState.value.isDragging = false;
     dragState.value.isDragging = false;
@@ -556,6 +594,8 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
     dragState.value.dropTargetGlobalIndex = null;
     document.removeEventListener("mousemove", handleMouseMove);
     document.removeEventListener("mouseup", handleMouseUp);
+    document.removeEventListener("touchmove", handleTouchMove);
+    document.removeEventListener("touchend", handleTouchEnd);
   }
 
   return {
@@ -593,5 +633,6 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
     // 拖拽相关
     dragState,
     handleMouseDown,
+    handleTouchStart,
   };
 }

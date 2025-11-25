@@ -19,3 +19,29 @@
 .n-modal-mask {
   background-color: rgba(0, 0, 0, 0.1) !important;
 }
+
+/* 移动端触摸优化 */
+html,
+body {
+  /* 防止移动端双击缩放 */
+  touch-action: manipulation;
+  /* iOS Safari 平滑滚动 */
+  -webkit-overflow-scrolling: touch;
+}
+
+/* 可滚动容器优化 */
+.n-scrollbar,
+.n-scrollbar-container,
+[data-scrollable] {
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y pan-x;
+}
+
+/* 拖拽元素优化 */
+[data-draggable],
+.draggable {
+  touch-action: none;
+  /* 防止拖拽时触发页面滚动 */
+  -webkit-user-select: none;
+  user-select: none;
+}
