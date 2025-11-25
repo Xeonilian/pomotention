@@ -129,7 +129,7 @@ onMounted(async () => {
   // ========== 1. 初始化本地数据 ==========
   dataStore.loadAllData();
   console.log("✅ [App] 本地数据已加载");
-  settingStore.settings.autoSupabaseSync = false;
+  settingStore.settings.autoSupabaseSync = true;
 
   // ========== 2. 初始化同步服务 ==========
   initSyncServices({
