@@ -37,6 +37,8 @@ package-lock.json
 *.sw?
 .tauri
 .env
+.env.production
+.env.development
 config
 docs/scratchpad/
 target/rust-analyzer

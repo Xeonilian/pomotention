@@ -45,12 +45,21 @@ const errorMessage = ref("");
 const successMessage = ref("");
 const isAuthenticated = ref(false);
 const router = useRouter();
+const supabaseClient = supabase;
 
 onMounted(async () => {
+  if (!supabaseClient) {
+    errorMessage.value = "当前为离线模式，暂时无法重置密码";
+    setTimeout(() => {
+      router.push({ name: "Login" });
+    }, 2000);
+    return;
+  }
+
   // 检查用户是否已经通过密码重置邮件登录
   const {
     data: { session },
-  } = await supabase.auth.getSession();
+  } = await supabaseClient.auth.getSession();
 
   if (session) {
     isAuthenticated.value = true;
@@ -67,6 +76,11 @@ function goBack() {
 }
 
 async function handleUpdatePassword() {
+  if (!supabaseClient) {
+    errorMessage.value = "当前为离线模式，暂时无法重置密码";
+    return;
+  }
+
   if (!newPassword.value || !confirmPassword.value) {
     errorMessage.value = "请输入新密码";
     return;
@@ -87,7 +101,7 @@ async function handleUpdatePassword() {
   successMessage.value = "";
 
   try {
-    const { error } = await supabase.auth.updateUser({
+    const { error } = await supabaseClient.auth.updateUser({
       password: newPassword.value,
     });
 

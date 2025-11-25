@@ -5,6 +5,10 @@
       <h1>欢迎回来</h1>
       <p class="subtitle">登录或注册以同步您的数据</p>
 
+      <n-alert v-if="supabaseUnavailable" type="warning" style="margin-bottom: 15px">
+        当前为离线模式，云同步与登录相关功能暂不可用；您仍可离线使用本地功能。
+      </n-alert>
+
       <div class="form-container">
         <n-input v-model:value="email" type="text" placeholder="邮箱地址" size="large" />
 
@@ -44,7 +48,7 @@
                 :loading="loading"
                 :disabled="!agreedToTerms"
                 size="large"
-                style="min-width: 160px"
+                style="min-width: 140px"
               >
                 注册
               </n-button>
@@ -97,6 +101,8 @@ const isResetMode = ref(false);
 const agreedToTerms = ref(false);
 const showTerms = ref(false);
 const router = useRouter();
+const supabaseClient = supabase;
+const supabaseUnavailable = !supabaseClient;
 
 // 用户协议内容（Markdown格式）
 const termsMarkdown = `
@@ -130,13 +136,13 @@ const termsMarkdown = `
 
 ### 联系方式
 
-如有任何疑问，请通过应用内反馈功能联系我们。
+如有任何疑问，请通过github issues联系我。
 
 ---
 
 **点击"注册"或"我同意"即表示您已阅读并同意以上条款。**
 
-*最后更新：2024年11月*
+*最后更新：2025年11月*
 `;
 
 // 将Markdown转换为HTML
@@ -146,6 +152,10 @@ const termsHtml = computed(() => {
 
 // 处理邮箱验证回调
 onMounted(async () => {
+  if (!supabaseClient) {
+    return;
+  }
+
   const hashParams = new URLSearchParams(window.location.hash.substring(1));
   const accessToken = hashParams.get("access_token");
   const type = hashParams.get("type");
@@ -159,7 +169,7 @@ onMounted(async () => {
 
   if (accessToken) {
     console.log("检测到邮箱验证，正在处理...");
-    const { data } = await supabase.auth.getSession();
+    const { data } = await supabaseClient.auth.getSession();
 
     if (data.session) {
       console.log("验证成功！");
@@ -191,6 +201,11 @@ function acceptTerms() {
 
 // 找回密码
 async function handleResetPassword() {
+  if (!supabaseClient) {
+    errorMessage.value = "当前为离线模式，无法发送重置邮件";
+    return;
+  }
+
   if (!email.value) {
     errorMessage.value = "请输入您的邮箱地址";
     return;
@@ -204,7 +219,7 @@ async function handleResetPassword() {
     const redirectUrl = import.meta.env.VITE_AUTH_REDIRECT_URL ? `${import.meta.env.VITE_AUTH_REDIRECT_URL}/auth/callback` : undefined;
     console.log("发送重置邮件，redirect URL:", redirectUrl);
 
-    const { error } = await supabase.auth.resetPasswordForEmail(email.value, {
+    const { error } = await supabaseClient.auth.resetPasswordForEmail(email.value, {
       redirectTo: redirectUrl,
     });
 
@@ -223,6 +238,11 @@ async function handleResetPassword() {
 
 // 处理登录
 async function handleSignIn() {
+  if (!supabaseClient) {
+    errorMessage.value = "当前为离线模式，暂时无法登录";
+    return;
+  }
+
   if (!email.value || !password.value) {
     errorMessage.value = "邮箱和密码不能为空";
     return;
@@ -243,6 +263,11 @@ async function handleSignIn() {
 
 // 处理注册
 async function handleSignUp() {
+  if (!supabaseClient) {
+    errorMessage.value = "当前为离线模式，暂时无法注册";
+    return;
+  }
+
   if (!email.value || !password.value) {
     errorMessage.value = "邮箱和密码不能为空";
     return;
@@ -278,7 +303,7 @@ async function handleSignUp() {
 .login-view {
   overflow: hidden;
   max-width: 400px;
-  margin: 100px auto;
+  margin: 20px auto;
   padding: 40px;
   text-align: center;
   border: 1px solid #eee;
@@ -300,7 +325,7 @@ async function handleSignUp() {
 /* 用户协议checkbox */
 .terms-checkbox {
   text-align: left;
-  font-size: 14px;
+  font-size: 10px;
   margin: 0;
 }
 

@@ -17,6 +17,7 @@ import type { Template } from "@/core/types/Template";
 import { TimetableSyncService } from "./timetableSync";
 import type { Block } from "@/core/types/Block";
 import { useSettingStore } from "@/stores/useSettingStore";
+import { isSupabaseEnabled } from "@/core/services/supabase";
 
 // 私有变量：存储所有 sync 服务实例
 let syncServices: Array<{ name: string; service: any }> = [];
@@ -68,16 +69,25 @@ export function initSyncServices(dataStore: {
  * 检查是否已初始化
  */
 function ensureInitialized() {
+  if (!isSupabaseEnabled()) {
+    console.warn("[Sync] Supabase 未启用，跳过同步操作");
+    return false;
+  }
+
   if (!isInitialized) {
     throw new Error("[Sync] 同步服务未初始化，请先在 App.vue 的 onMounted 中调用 initSyncServices(dataStore)");
   }
+
+  return true;
 }
 
 /**
  * 执行完整同步（上传 + 下载）
  */
 export async function syncAll(): Promise<{ success: boolean; errors: string[]; details: any }> {
-  ensureInitialized(); // ← 新增检查
+  if (!ensureInitialized()) {
+    return { success: false, errors: ["云同步未启用"], details: { uploaded: 0, downloaded: 0 } };
+  }
 
   const syncStore = useSyncStore();
   const settingStore = useSettingStore();
@@ -184,7 +194,9 @@ export async function syncAll(): Promise<{ success: boolean; errors: string[]; d
  * 只上传（用于立即保存）
  */
 export async function uploadAll(): Promise<{ success: boolean; errors: string[]; uploaded: number }> {
-  ensureInitialized(); // ← 新增检查
+  if (!ensureInitialized()) {
+    return { success: false, errors: ["云同步未启用"], uploaded: 0 };
+  }
 
   const syncStore = useSyncStore();
   const errors: string[] = [];

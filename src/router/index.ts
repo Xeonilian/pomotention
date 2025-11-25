@@ -2,6 +2,7 @@
 
 import { createRouter, createWebHistory, RouteRecordRaw } from "vue-router";
 import { getSession } from "@/core/services/authServicve"; // 导入获取会话的方法
+import { isSupabaseEnabled } from "@/core/services/supabase";
 
 // --- 你的视图组件 ---
 const MainLayout = () => import("@/views/MainLayout.vue");
@@ -58,6 +59,12 @@ const router = createRouter({
 
 // --- 全局前置导航守卫 ---
 router.beforeEach(async (to, _from, next) => {
+  if (!isSupabaseEnabled()) {
+    // 离线模式下跳过鉴权，直接放行
+    next();
+    return;
+  }
+
   // getSession() 返回 Session | null
   const session = await getSession();
 

@@ -36,6 +36,8 @@ vi.mock("@/core/services/supabase", () => ({
   },
 }));
 
+const supabaseClient = supabase as NonNullable<typeof supabase>;
+
 vi.mock("@/core/services/authServicve", () => ({
   getCurrentUser: vi.fn().mockResolvedValue({ id: "test-user-id" }),
 }));
@@ -50,7 +52,7 @@ describe("TodoSyncService", () => {
     mockLocalStorage.clear();
 
     // 重置 rpc mock
-    vi.mocked(supabase.rpc).mockResolvedValue({ data: [], error: null, count: null, status: 200, statusText: "OK" });
+    vi.mocked(supabaseClient.rpc).mockResolvedValue({ data: [], error: null, count: null, status: 200, statusText: "OK" });
 
     todoListRef = ref<Todo[]>([]);
     service = new TodoSyncService(todoListRef);
@@ -146,7 +148,7 @@ describe("TodoSyncService", () => {
         }),
       ];
 
-      vi.mocked(supabase.rpc).mockResolvedValueOnce({
+      vi.mocked(supabaseClient.rpc).mockResolvedValueOnce({
         data: mockRpcData,
         error: null,
         count: null,
@@ -156,7 +158,7 @@ describe("TodoSyncService", () => {
 
       const result = await service.download(0);
 
-      expect(supabase.rpc).toHaveBeenCalledWith("get_full_todos", {
+      expect(supabaseClient.rpc).toHaveBeenCalledWith("get_full_todos", {
         p_user_id: "test-user-id",
       });
       expect(result.success).toBe(true);
@@ -178,7 +180,7 @@ describe("TodoSyncService", () => {
         activityTitle: "新标题",
       });
 
-      vi.mocked(supabase.rpc).mockResolvedValueOnce({
+      vi.mocked(supabaseClient.rpc).mockResolvedValueOnce({
         data: [cloudTodo],
         error: null,
         count: null,
@@ -208,7 +210,7 @@ describe("TodoSyncService", () => {
         activityTitle: "云端旧数据",
       });
 
-      vi.mocked(supabase.rpc).mockResolvedValueOnce({
+      vi.mocked(supabaseClient.rpc).mockResolvedValueOnce({
         data: [cloudTodo],
         error: null,
         count: null,
