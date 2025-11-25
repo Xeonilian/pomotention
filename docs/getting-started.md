@@ -5,20 +5,16 @@ description: 下载最新版本的应用程序
 # 快速开始
 
 获取最新版本，体验完整功能，
-**关于 AI**： 由于没有想好合适的 API 发放机制，暂时不可用，下一步将优先开发 Dashboard，让历史数据可视化，然后发酵 AI 部分
-如果你想[支持 AI 模块开发](https://docs.qq.com/form/page/DZWtGeVpKUkNuQnVL)
+**关于 AI**： [网页版](https://pomotention.pages.dev)即将接入。
 
 ## 当前版本
 
 ::: info 最新发布
-**版本 v0.4.4** - 2025 年 10 月 22 日发布
+**版本 v0.5.0** - 2025 年 11 月 25 日发布
 
-- **新增**
-
-  - **仪表盘**：显示基础统计数据。
-    - 番茄热力图
-    - 月度数据变化
-    - 全年数值
+- **网页版正式上线**
+  - 注册
+  - 支持多段数据同步（包括手机，布局和体验优化中）
 
 :::
 
@@ -41,10 +37,10 @@ description: 下载最新版本的应用程序
 
 - Windows
 
-  - [v0.4.4 .msi 安装包](https://github.com/Xeonilian/pomotention/releases/download/v0.4.4/pomotention_0.4.4_x64_en-US.msi)
+  - [v0.5.0 .msi 安装包](https://github.com/Xeonilian/pomotention/releases/download/v0.5.0/pomotention_0.5.0_x64_en-US.msi)
 
 - macOS
-  - [v0.4.4 .dmg 安装包](https://github.com/Xeonilian/pomotention/releases/download/v0.4.4/pomotention_0.4.4_x64.dmg)
+  - [v0.5.0 .dmg 安装包](https://github.com/Xeonilian/pomotention/releases/download/v0.5.0/pomotention_0.5.0_x64.dmg)
 
 ## 安装指南
 
