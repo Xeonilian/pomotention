@@ -250,10 +250,10 @@ watch(
   flex-shrink: 0;
   color: var(--color-text-secondary);
   margin-left: auto;
-  z-index: 201;
+  z-index: 21;
 }
 .block-label {
-  z-index: 101;
+  z-index: 9;
 }
 .current-time-line {
   position: absolute;
@@ -262,7 +262,7 @@ watch(
   height: 1px;
   background-color: var(--color-yellow);
   pointer-events: none;
-  z-index: 100;
+  z-index: 10;
 }
 .current-time-line::before {
   content: "🍅";

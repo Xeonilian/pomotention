@@ -8,7 +8,7 @@ let ScheduleSyncService: any;
 let TaskSyncService: any;
 let TagSyncService: any;
 let TemplateSyncService: any;
-let TimetableSyncService: any;
+// let TimetableSyncService: any;
 
 import type { Activity } from "@/core/types/Activity";
 import type { Todo } from "@/core/types/Todo";
@@ -17,7 +17,7 @@ import { useSyncStore } from "@/stores/useSyncStore";
 import type { Task } from "@/core/types/Task";
 import type { Tag } from "@/core/types/Tag";
 import type { Template } from "@/core/types/Template";
-import type { Block } from "@/core/types/Block";
+// import type { Block } from "@/core/types/Block";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { isSupabaseEnabled } from "@/core/services/supabase";
 
@@ -35,7 +35,7 @@ export async function initSyncServices(dataStore: {
   taskList: Ref<Task[]>;
   tagList: Ref<Tag[]>;
   templateList: Ref<Template[]>;
-  blockList: Ref<Block[]>;
+  // blockList: Ref<Block[]>;
 }) {
   if (isInitialized) {
     console.warn("[Sync] 同步服务已初始化，跳过重复初始化");
@@ -52,7 +52,7 @@ export async function initSyncServices(dataStore: {
     TaskSyncService = (await import("./taskSync")).TaskSyncService;
     TagSyncService = (await import("./tagSync")).TagSyncService;
     TemplateSyncService = (await import("./templateSync")).TemplateSyncService;
-    TimetableSyncService = (await import("./timetableSync")).TimetableSyncService;
+    // TimetableSyncService = (await import("./timetableSync")).TimetableSyncService;
   } catch (error) {
     console.error("[Sync] 动态载入服务失败:", error);
     return;
@@ -65,7 +65,7 @@ export async function initSyncServices(dataStore: {
   const taskSync = new TaskSyncService(dataStore.taskList);
   const tagSync = new TagSyncService(dataStore.tagList);
   const templateSync = new TemplateSyncService(dataStore.templateList);
-  const timetableSync = new TimetableSyncService(dataStore.blockList);
+  // const timetableSync = new TimetableSyncService(dataStore.blockList);
 
   syncServices = [
     { name: "Activities", service: activitySync },
@@ -74,7 +74,7 @@ export async function initSyncServices(dataStore: {
     { name: "Tasks", service: taskSync },
     { name: "Tags", service: tagSync },
     { name: "Templates", service: templateSync },
-    { name: "Blocks", service: timetableSync },
+    // { name: "Blocks", service: timetableSync },
   ];
 
   isInitialized = true;
