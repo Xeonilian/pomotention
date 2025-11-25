@@ -52,16 +52,58 @@ onMounted(async () => {
     await new Promise<void>((resolve) => {
       const checkModal = () => {
         if (!showModal.value) {
-          resolve(undefined); // 用户关闭了对话框，继续执行
+          resolve(); // 用户关闭了对话框，继续执行
         }
       };
-
       watch(showModal, checkModal); // 监视 showModal 的变化
     });
   }
 
-  // 在用户确认导出数据后进行后续操作
-  await handleUserConfirmation();
+  try {
+    dataStore.loadAllData(); // 加载数据
+    console.log("✅ [App] 本地数据已加载");
+
+    // 安全地调用 initSyncServices
+    initSyncServices({
+      activityList: activityList,
+      todoList: todoList,
+      scheduleList: scheduleList,
+      taskList: taskList,
+      tagList: rawTags,
+      templateList: rawTemplates,
+      blockList: blocks,
+    });
+
+    console.log("✅ [App] 自动同步已启动");
+
+    // 监视数据变化并自动保存
+    watch(
+      [activityList, todoList, scheduleList, taskList, rawTemplates, rawTags, blocks],
+      () => {
+        dataStore.saveAllDebounced();
+        timetableStore.saveToLocal();
+        uploadAllDebounced();
+      },
+      { deep: true }
+    );
+
+    if (supabase) {
+      supabase.auth.onAuthStateChange((event: string, session: any | null) => {
+        if (event === "SIGNED_IN" && session) {
+          if (window.location.hash) {
+            window.history.replaceState(null, "", window.location.pathname);
+          }
+          router.push({ name: "Home" });
+        }
+
+        if (event === "SIGNED_OUT") {
+          router.push({ name: "Login" });
+        }
+      });
+    }
+  } catch (error) {
+    console.error("加载数据失败或初始化同步服务失败:", error);
+  }
 
   // 启动触摸事件处理
   initializeTouchHandling();
@@ -70,49 +112,6 @@ onMounted(async () => {
 onUnmounted(() => {
   cleanupTouchHandling();
 });
-
-// 处理用户确认导出后的逻辑
-const handleUserConfirmation = async () => {
-  await dataStore.loadAllData(); // 加载数据
-  console.log("✅ [App] 本地数据已加载");
-
-  initSyncServices({
-    activityList: activityList,
-    todoList: todoList,
-    scheduleList: scheduleList,
-    taskList: taskList,
-    tagList: rawTags,
-    templateList: rawTemplates,
-    blockList: blocks,
-  });
-
-  console.log("✅ [App] 自动同步已启动");
-
-  watch(
-    [activityList, todoList, scheduleList, taskList, rawTemplates, rawTags, blocks],
-    () => {
-      dataStore.saveAllDebounced();
-      timetableStore.saveToLocal();
-      uploadAllDebounced();
-    },
-    { deep: true }
-  );
-
-  if (supabase) {
-    supabase.auth.onAuthStateChange((event: string, session: any | null) => {
-      if (event === "SIGNED_IN" && session) {
-        if (window.location.hash) {
-          window.history.replaceState(null, "", window.location.pathname);
-        }
-        router.push({ name: "Home" });
-      }
-
-      if (event === "SIGNED_OUT") {
-        router.push({ name: "Login" });
-      }
-    });
-  }
-};
 </script>
 
 <style scoped>

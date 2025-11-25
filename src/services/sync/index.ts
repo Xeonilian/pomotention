@@ -42,14 +42,21 @@ export async function initSyncServices(dataStore: {
     return;
   }
 
-  // 动态载入各服务
-  ActivitySyncService = (await import("./activitySync")).ActivitySyncService;
-  TodoSyncService = (await import("./todoSync")).TodoSyncService;
-  ScheduleSyncService = (await import("./scheduleSync")).ScheduleSyncService;
-  TaskSyncService = (await import("./taskSync")).TaskSyncService;
-  TagSyncService = (await import("./tagSync")).TagSyncService;
-  TemplateSyncService = (await import("./templateSync")).TemplateSyncService;
-  TimetableSyncService = (await import("./timetableSync")).TimetableSyncService;
+  console.log("[Sync] 动态载入同步服务...");
+
+  try {
+    // 动态载入各服务
+    ActivitySyncService = (await import("./activitySync")).ActivitySyncService;
+    TodoSyncService = (await import("./todoSync")).TodoSyncService;
+    ScheduleSyncService = (await import("./scheduleSync")).ScheduleSyncService;
+    TaskSyncService = (await import("./taskSync")).TaskSyncService;
+    TagSyncService = (await import("./tagSync")).TagSyncService;
+    TemplateSyncService = (await import("./templateSync")).TemplateSyncService;
+    TimetableSyncService = (await import("./timetableSync")).TimetableSyncService;
+  } catch (error) {
+    console.error("[Sync] 动态载入服务失败:", error);
+    return;
+  }
 
   // 创建各表的 syncService 实例（传入响应式数据）
   const activitySync = new ActivitySyncService(dataStore.activityList);
@@ -60,7 +67,6 @@ export async function initSyncServices(dataStore: {
   const templateSync = new TemplateSyncService(dataStore.templateList);
   const timetableSync = new TimetableSyncService(dataStore.blockList);
 
-  // 填充 syncServices 数组
   syncServices = [
     { name: "Activities", service: activitySync },
     { name: "Todos", service: todoSync },
