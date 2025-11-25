@@ -71,17 +71,17 @@ onMounted(async () => {
       taskList: taskList,
       tagList: rawTags,
       templateList: rawTemplates,
-      blockList: blocks,
+      // blockList: blocks,
     });
 
     console.log("✅ [App] 自动同步已启动");
 
     // 监视数据变化并自动保存
     watch(
-      [activityList, todoList, scheduleList, taskList, rawTemplates, rawTags, blocks],
+      [activityList, todoList, scheduleList, taskList, rawTemplates, rawTags], // blocks
       () => {
         dataStore.saveAllDebounced();
-        timetableStore.saveToLocal();
+        // timetableStore.saveToLocal();
         uploadAllDebounced();
       },
       { deep: true }
