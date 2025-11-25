@@ -4,8 +4,6 @@
       <n-dialog-provider>
         <router-view />
         <UpdateManager />
-
-        <!-- 数据备份提示对话框 -->
         <BackupAlertDialog v-model:showModal="showModal" @update:showModal="showModal = $event" />
       </n-dialog-provider>
     </n-notification-provider>
@@ -13,57 +11,34 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, watch, ref } from "vue";
+import { onMounted, watch } from "vue";
 import { storeToRefs } from "pinia";
 import { useRouter } from "vue-router";
+import { supabase, isSupabaseEnabled } from "@/core/services/supabase"; // 确保引入
 import { useDataStore } from "@/stores/useDataStore";
 import { useTagStore } from "@/stores/useTagStore";
 import { useTemplateStore } from "@/stores/useTemplateStore";
-// import { useTimetableStore } from "@/stores/useTimetableStore";
 import { initSyncServices } from "@/services/sync";
 import { uploadAllDebounced } from "@/core/utils/autoSync";
-import { useSettingStore } from "@/stores/useSettingStore";
-import UpdateManager from "./components/UpdateManager.vue";
 import BackupAlertDialog from "./components/BackupAlertDialog.vue";
-import { initializeTouchHandling, cleanupTouchHandling } from "@/core/utils/touchHandler";
-import { supabase } from "@/core/services/supabase";
 
 const showModal = ref(false);
 const router = useRouter();
 const dataStore = useDataStore();
 const tagStore = useTagStore();
 const templateStore = useTemplateStore();
-// const timetableStore = useTimetableStore();
-const settingStore = useSettingStore();
+
 const { activityList, todoList, scheduleList, taskList } = storeToRefs(dataStore);
 const { rawTags } = storeToRefs(tagStore);
 const { rawTemplates } = storeToRefs(templateStore);
-// const { blocks } = storeToRefs(timetableStore);
 
 onMounted(async () => {
-  settingStore.settings.autoSupabaseSync = true;
-  const lastSync = settingStore.settings.supabaseSync[0];
+  // ========== 1. 初始化本地数据 ==========
+  await dataStore.loadAllData(); // 确保返回 Promise
+  console.log("✅ [App] 本地数据已加载");
 
-  if (lastSync === 0) {
-    console.log("✅ [App] 首次同步，显示提示对话框，让用户导出数据");
-    showModal.value = true;
-
-    // 使用 Promise 等待用户确认之后的逻辑
-    await new Promise<void>((resolve) => {
-      const checkModal = () => {
-        if (!showModal.value) {
-          resolve(); // 用户关闭了对话框，继续执行
-        }
-      };
-      watch(showModal, checkModal); // 监视 showModal 的变化
-    });
-  }
-
-  try {
-    dataStore.loadAllData(); // 加载数据
-    console.log("✅ [App] 本地数据已加载");
-
-    // 安全地调用 initSyncServices
+  // ========== 2. 如果 Supabase 可用，则初始化同步服务 ==========
+  if (isSupabaseEnabled()) {
     initSyncServices({
       activityList: activityList,
       todoList: todoList,
@@ -71,46 +46,57 @@ onMounted(async () => {
       taskList: taskList,
       tagList: rawTags,
       templateList: rawTemplates,
-      // blockList: blocks,
     });
 
-    console.log("✅ [App] 自动同步已启动");
-
-    // 监视数据变化并自动保存
+    // ========== 3. 监听数据变化，触发自动同步 ==========
     watch(
-      [activityList, todoList, scheduleList, taskList, rawTemplates, rawTags], // blocks
+      [activityList, todoList, scheduleList, taskList, rawTemplates, rawTags],
       () => {
-        dataStore.saveAllDebounced();
-        // timetableStore.saveToLocal();
-        uploadAllDebounced();
+        dataStore.saveAllDebounced(); // 先保存到 localStorage
+        uploadAllDebounced(); // 再触发云端同步（5秒防抖）
       },
       { deep: true }
     );
+    console.log("✅ [App] 自动同步已启动");
 
-    if (supabase) {
-      supabase.auth.onAuthStateChange((event: string, session: any | null) => {
-        if (event === "SIGNED_IN" && session) {
-          if (window.location.hash) {
-            window.history.replaceState(null, "", window.location.pathname);
-          }
-          router.push({ name: "Home" });
-        }
+    // ========== 4. 处理 Supabase 的认证回调 ==========
+    const {
+      data: { session },
+      error,
+    } = await supabase!.auth.getSession();
 
-        if (event === "SIGNED_OUT") {
-          router.push({ name: "Login" });
-        }
-      });
+    if (error) {
+      console.error("获取 session 时出现错误:", error.message);
+      return; // 如果获取 session 失败，不继续后面的逻辑
     }
-  } catch (error) {
-    console.error("加载数据失败或初始化同步服务失败:", error);
+
+    // 检查用户的登录状态
+    if (session) {
+      console.log("用户已登录", session);
+    } else {
+      console.log("没有登录用户，跳转到登录页面");
+      router.push({ name: "Login" });
+    }
+
+    // 监听认证状态变化
+    supabase!.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_IN" && session) {
+        console.log("用户登录成功，跳转到首页");
+        if (window.location.hash) {
+          window.history.replaceState(null, "", window.location.pathname);
+        }
+        router.push({ name: "Home" });
+      }
+
+      if (event === "SIGNED_OUT") {
+        console.log("用户已注销，跳转到登录页面");
+        router.push({ name: "Login" });
+      }
+    });
+  } else {
+    console.warn("[Supabase] 当前未启用，跳过 Supabase 相关操作。");
+    // 这里可以自行决定要如何处理离线模式
   }
-
-  // 启动触摸事件处理
-  initializeTouchHandling();
-});
-
-onUnmounted(() => {
-  cleanupTouchHandling();
 });
 </script>
 
