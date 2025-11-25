@@ -1,7 +1,10 @@
 import { ref, shallowRef, unref, watch, onMounted, onUnmounted } from "vue";
 import type { Ref } from "vue";
-import * as echarts from "echarts";
-import type { ECharts } from "echarts";
+import * as echarts from "echarts/core";
+import { LineChart, BarChart } from "echarts/charts";
+import { TooltipComponent, LegendComponent, GridComponent, TitleComponent } from "echarts/components";
+import { CanvasRenderer } from "echarts/renderers";
+import type { ECharts } from "echarts/core";
 import { useDataStore } from "@/stores/useDataStore";
 import { METRIC_DEFINITIONS } from "@/core/types/Metrics";
 import { generateEChartsOption } from "@/services/chartWidgetService";
@@ -17,6 +20,8 @@ type MaybeRefOrGetter<T> = T | Ref<T> | (() => T);
  * 图表 Composable
  * 封装图表的完整生命周期管理
  */
+echarts.use([LineChart, BarChart, TooltipComponent, LegendComponent, GridComponent, TitleComponent, CanvasRenderer]);
+
 export function useChart(config: MaybeRefOrGetter<ChartConfig>) {
   const chartRef = ref<HTMLElement>();
   const chartInstance = shallowRef<ECharts>();

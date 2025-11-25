@@ -28,60 +28,68 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick } from "vue";
-import { marked } from "marked";
+import { ref, computed, watch, nextTick, onMounted } from "vue";
 import { getClickContextFragments, findFragmentSequenceInSource } from "@/services/taskRecordService";
 import { useCaretFlash } from "@/composables/useCaretFlash";
-import hljs from "highlight.js";
 import "highlight.js/styles/github.css";
 
 const { showCaretFlash, caretFlashStyle, flashCaretFlash } = useCaretFlash();
 
-// 添加自定义渲染器
-const renderer = new marked.Renderer();
+const markdownLoaded = ref(false);
+let markedInstance: typeof import("marked")["marked"] | null = null;
 
-// 自定义 checkbox
-renderer.checkbox = function ({ checked }: { checked: boolean }) {
-  return `<input type="checkbox" class="markdown-checkbox" ${checked ? "checked" : ""}>`;
-};
+async function ensureMarkdownEngine() {
+  if (markedInstance) {
+    return markedInstance;
+  }
 
-// 自定义代码块渲染
-renderer.code = function ({ text, lang }: { text: string; lang?: string; escaped?: boolean }): string {
-  const language = lang && hljs.getLanguage(lang) ? lang : "plaintext";
-  const highlighted = hljs.highlight(text, { language }).value;
-  return `<pre><code class="hljs language-${language}">${highlighted}</code></pre>`;
-};
-// 添加文本高亮语法支持（==文本==）
-const textHighlightRule = {
-  name: "textHighlight",
-  level: "inline" as const,
-  start(src: string) {
-    return src.indexOf("==");
-  },
-  tokenizer(src: string) {
-    const rule = /^==([^=]+)==/;
-    const match = rule.exec(src);
-    if (match) {
-      return {
-        type: "textHighlight",
-        raw: match[0],
-        text: match[1].trim(),
-      };
-    }
-    return undefined;
-  },
-  renderer(token: any) {
-    return `<span class="highlight-text">${token.text}</span>`;
-  },
-};
+  const [{ marked }, { default: hljs }] = await Promise.all([import("marked"), import("highlight.js")]);
+  const renderer = new marked.Renderer();
 
-// 一次性配置
-marked.use({
-  extensions: [textHighlightRule],
-  renderer: renderer,
-  breaks: true,
-  gfm: true,
-});
+  renderer.checkbox = function ({ checked }: { checked: boolean }) {
+    return `<input type="checkbox" class="markdown-checkbox" ${checked ? "checked" : ""}>`;
+  };
+
+  renderer.code = function ({ text, lang }: { text: string; lang?: string; escaped?: boolean }): string {
+    const language = lang && hljs.getLanguage(lang) ? lang : "plaintext";
+    const highlighted = hljs.highlight(text, { language }).value;
+    return `<pre><code class="hljs language-${language}">${highlighted}</code></pre>`;
+  };
+
+  const textHighlightRule = {
+    name: "textHighlight",
+    level: "inline" as const,
+    start(src: string) {
+      return src.indexOf("==");
+    },
+    tokenizer(src: string) {
+      const rule = /^==([^=]+)==/;
+      const match = rule.exec(src);
+      if (match) {
+        return {
+          type: "textHighlight",
+          raw: match[0],
+          text: match[1].trim(),
+        };
+      }
+      return undefined;
+    },
+    renderer(token: any) {
+      return `<span class="highlight-text">${token.text}</span>`;
+    },
+  };
+
+  marked.use({
+    extensions: [textHighlightRule],
+    renderer,
+    breaks: true,
+    gfm: true,
+  });
+
+  markedInstance = marked;
+  markdownLoaded.value = true;
+  return markedInstance;
+}
 
 const props = defineProps<{
   taskId: number | null;
@@ -100,7 +108,15 @@ const isEditing = ref(false);
 const textarea = ref<HTMLTextAreaElement | null>(null);
 
 const renderedMarkdown = computed(() => {
-  return marked(content.value);
+  const text = content.value;
+  if (markdownLoaded.value && markedInstance) {
+    return markedInstance.parse(text);
+  }
+  return text.replace(/\n/g, "<br />");
+});
+
+onMounted(() => {
+  ensureMarkdownEngine();
 });
 
 watch(
