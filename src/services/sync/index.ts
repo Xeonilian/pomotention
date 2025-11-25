@@ -104,7 +104,7 @@ export async function syncAll(): Promise<{ success: boolean; errors: string[]; d
       // 此处为保护措施：弹窗提示并强制导出，由用户指定保存位置
       const { exportData } = useDataExport();
       // eslint-disable-next-line no-alert
-      if (typeof window !== "undefined") {
+      if (typeof window !== "undefined" && window.location.host !== "pomotention.pages.dev") {
         alert("首次同步前，请导出数据备份（建议备份到安全位置）。接下来会弹出导出对话框。");
       }
       await exportData(); // 调用导出函数
