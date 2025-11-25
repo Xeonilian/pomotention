@@ -248,7 +248,6 @@ import { handleExportOrQR, type DataRow } from "@/services/icsService";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useDataStore } from "@/stores/useDataStore";
 import { autoSyncDebounced, uploadAllDebounced } from "@/core/utils/autoSync";
-import { syncAll } from "@/services/sync/index";
 
 // ======================== 响应式状态与初始化 ========================
 // 不直接import Naive和以下组建加速启动
@@ -945,7 +944,6 @@ onMounted(() => {
   console.log("HomeView mounted");
   dateService.setupSystemDateWatcher();
   dateService.navigateByView("today");
-  syncAll();
 });
 
 onUnmounted(() => {
