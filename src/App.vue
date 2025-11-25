@@ -19,7 +19,7 @@ import { useRouter } from "vue-router";
 import { useDataStore } from "@/stores/useDataStore";
 import { useTagStore } from "@/stores/useTagStore";
 import { useTemplateStore } from "@/stores/useTemplateStore";
-import { useTimetableStore } from "@/stores/useTimetableStore";
+// import { useTimetableStore } from "@/stores/useTimetableStore";
 import { initSyncServices } from "@/services/sync";
 import { uploadAllDebounced } from "@/core/utils/autoSync";
 import { useSettingStore } from "@/stores/useSettingStore";
@@ -33,12 +33,12 @@ const router = useRouter();
 const dataStore = useDataStore();
 const tagStore = useTagStore();
 const templateStore = useTemplateStore();
-const timetableStore = useTimetableStore();
+// const timetableStore = useTimetableStore();
 const settingStore = useSettingStore();
 const { activityList, todoList, scheduleList, taskList } = storeToRefs(dataStore);
 const { rawTags } = storeToRefs(tagStore);
 const { rawTemplates } = storeToRefs(templateStore);
-const { blocks } = storeToRefs(timetableStore);
+// const { blocks } = storeToRefs(timetableStore);
 
 onMounted(async () => {
   settingStore.settings.autoSupabaseSync = true;
