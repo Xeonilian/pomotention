@@ -4,13 +4,18 @@
 
 - **新增**
 
-  - **网页版**：数据多段同步与随时最新版本。
-    - supabases 数据库服务
-    - https://pomotention.pages.dev
-  - timetable 显示 schedule 内容
+  - **网页版**：数据多端同步与随时最新版本。
+    - **Supabase 数据库服务**：引入 Supabase 作为后端数据库服务，实现数据的云端存储和同步。
+    - **多端数据同步**：支持多设备之间的数据同步，保证用户在不同设备上使用时数据的一致性。解决了数据孤岛问题，并确保用户始终使用最新版本的数据。
+    - **访问地址**：[https://pomotention.pages.dev](https://pomotention.pages.dev)
+  - **Timetable（时间表）**：
+  - **显示 Schedule 内容**：在时间表界面上显示用户的 Schedule 内容，帮助用户更直观地了解自己的日程安排。
 
 - **修复**
-  - task 与 activity 失联和过去冗余数据
+
+  - **数据关联与冗余**：
+    - **Task 与 Activity 失联**：修复了 Task 与 Activity 之间关联丢失的问题，确保 Task 能够正确地关联到对应的 Activity。
+    - **过去冗余数据**：清理了历史遗留的冗余数据，减少了数据存储空间的占用，并提升了数据查询效率。主要涉及对 suspend 的 todo 项，以及 tag count 维护的清理。
 
 ## `v0.4.4` · 2025-10-22
 
