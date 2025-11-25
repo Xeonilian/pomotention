@@ -204,15 +204,15 @@ export const POMO_TYPES: ("🍅" | "🍇" | "🍒")[] = ["🍅", "🍇", "🍒"]
 export const POMODORO_COLORS: Record<string, string> = {
   living: "var(--color-blue-light)",
   working: "var(--color-red-light)",
-  schedule: "var(--color-purple-light)",
-  untaetigkeit: "var(--color-orange-light)",
+  schedule: "var(--color-background-light)",
+  untaetigkeit: "var(--color-background-light)",
 };
 
 export const POMODORO_COLORS_DARK: Record<string, string> = {
   living: "var(--color-blue)",
   working: "var(--color-red)",
-  schedule: "var(--color-purple)",
-  untaetigkeit: "var(--color-orange)",
+  schedule: "var(--color-text-primary-transparent)",
+  untaetigkeit: "var(--color-text-primary-transparent)",
 };
 
 /**

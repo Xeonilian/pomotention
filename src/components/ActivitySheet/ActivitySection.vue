@@ -64,6 +64,7 @@
               <div
                 class="icon-drag-area"
                 @mousedown="onDragStart($event, item)"
+                @touchstart="onDragStart($event, item)"
                 @mouseenter="dragHandler.handleIconMouseEnter(item.id)"
                 @mouseleave="dragHandler.handleIconMouseLeave()"
                 :title="item.status !== 'cancelled' ? '拖拽调整顺序' : '不支持顺序修改'"
@@ -471,7 +472,7 @@ watch(
 );
 
 // ======================== 拖拽处理 ========================
-function onDragStart(event: MouseEvent, item: Activity) {
+function onDragStart(event: MouseEvent | TouchEvent, item: Activity) {
   dragHandler.startDrag(event, item);
 }
 

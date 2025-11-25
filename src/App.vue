@@ -10,7 +10,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, watch } from "vue";
+import { onMounted, onUnmounted, watch } from "vue";
 import { storeToRefs } from "pinia"; // ✅ 添加导入
 import { useRouter } from "vue-router";
 import { NConfigProvider, NNotificationProvider, NDialogProvider } from "naive-ui";
@@ -38,6 +38,92 @@ const { activityList, todoList, scheduleList, taskList } = storeToRefs(dataStore
 const { rawTags } = storeToRefs(tagStore);
 const { rawTemplates } = storeToRefs(templateStore);
 const { blocks } = storeToRefs(timetableStore);
+
+// ========== 移动端触摸事件处理，防止意外页面跳转 ==========
+// 记录触摸开始位置和时间
+let touchStartX = 0;
+let touchStartY = 0;
+let touchStartTime = 0;
+let touchTarget: EventTarget | null = null;
+const SWIPE_THRESHOLD = 50; // 滑动阈值（像素）
+const TIME_THRESHOLD = 300; // 时间阈值（毫秒）
+
+// 检查是否是交互元素（不应该阻止）
+const isInteractiveElement = (target: EventTarget | null): boolean => {
+  if (!target) return false;
+  const element = target as HTMLElement;
+
+  // 允许所有交互元素的默认行为
+  const interactiveSelectors = [
+    "input",
+    "textarea",
+    "a",
+    "button",
+    ".n-input",
+    ".n-input-wrapper",
+    ".n-input__input",
+    ".n-button",
+    ".n-menu-item", // Naive UI 菜单项
+    ".n-menu-item-content", // 菜单项内容
+    "[role='menuitem']", // 菜单项角色
+    "[role='button']", // 按钮角色
+    "[role='link']", // 链接角色
+    "router-link", // Vue Router 链接
+    "[contenteditable]",
+  ];
+
+  // 检查是否是可滚动容器
+  const isScrollable = element.closest(".n-scrollbar, .n-scrollbar-container, [data-scrollable]");
+  if (isScrollable) return true;
+
+  // 检查是否是交互元素
+  for (const selector of interactiveSelectors) {
+    if (element.closest(selector)) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
+const handleTouchStart = (e: TouchEvent) => {
+  const touch = e.touches[0];
+  if (!touch) return;
+
+  touchStartX = touch.clientX;
+  touchStartY = touch.clientY;
+  touchStartTime = Date.now();
+  touchTarget = e.target;
+
+  // 不在 touchstart 阶段阻止，让正常点击可以工作
+};
+
+const handleTouchMove = (e: TouchEvent) => {
+  if (e.touches.length === 0) return;
+
+  // 如果是交互元素，不阻止
+  if (isInteractiveElement(touchTarget)) {
+    return;
+  }
+
+  const touch = e.touches[0];
+  const deltaX = Math.abs(touch.clientX - touchStartX);
+  const deltaY = Math.abs(touch.clientY - touchStartY);
+  const deltaTime = Date.now() - touchStartTime;
+
+  // 如果是明显的水平滑动，且时间很短，可能是手势导航，阻止默认行为
+  if (deltaX > SWIPE_THRESHOLD && deltaX > deltaY && deltaTime < TIME_THRESHOLD) {
+    e.preventDefault();
+  }
+};
+
+const handleTouchEnd = () => {
+  // 触摸结束时的清理工作
+  touchStartX = 0;
+  touchStartY = 0;
+  touchStartTime = 0;
+  touchTarget = null;
+};
 
 onMounted(async () => {
   // ========== 1. 初始化本地数据 ==========
@@ -94,6 +180,22 @@ onMounted(async () => {
       router.push({ name: "Login" });
     }
   });
+
+  // ========== 5. 移动端触摸事件处理，防止意外页面跳转 ==========
+  // 添加触摸事件监听（touchstart 使用 passive: true，touchmove 使用 passive: false）
+  // 这样不会阻止正常的点击事件
+  document.addEventListener("touchstart", handleTouchStart, { passive: true });
+  document.addEventListener("touchmove", handleTouchMove, { passive: false });
+  document.addEventListener("touchend", handleTouchEnd, { passive: true });
+
+  console.log("✅ [App] 移动端触摸事件处理已启动");
+});
+
+onUnmounted(() => {
+  // 清理触摸事件监听器
+  document.removeEventListener("touchstart", handleTouchStart);
+  document.removeEventListener("touchmove", handleTouchMove);
+  document.removeEventListener("touchend", handleTouchEnd);
 });
 </script>
 

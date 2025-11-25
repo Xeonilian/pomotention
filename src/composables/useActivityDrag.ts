@@ -61,9 +61,20 @@ export function useActivityDrag(getSortedList: () => Activity[]) {
   // ======================== 拖拽操作 ========================
 
   /**
+   * 获取事件坐标
+   */
+  function getEventY(event: MouseEvent | TouchEvent): number {
+    if (event instanceof TouchEvent) {
+      const touch = event.touches[0] || event.changedTouches[0];
+      return touch.clientY;
+    }
+    return event.clientY;
+  }
+
+  /**
    * 开始拖拽
    */
-  function startDrag(event: MouseEvent, item: Activity) {
+  function startDrag(event: MouseEvent | TouchEvent, item: Activity) {
     event.preventDefault();
     event.stopPropagation();
 
@@ -74,16 +85,18 @@ export function useActivityDrag(getSortedList: () => Activity[]) {
 
     isDragging.value = true;
     draggedItem.value = item;
-    dragStartY.value = event.clientY;
+    dragStartY.value = getEventY(event);
 
     document.addEventListener("mousemove", handleDragMove);
     document.addEventListener("mouseup", handleDragEnd);
+    document.addEventListener("touchmove", handleDragMoveTouch, { passive: false });
+    document.addEventListener("touchend", handleDragEnd);
   }
 
   /**
    * 拖拽移动（内部方法，从 getSortedList 获取列表）
    */
-  function handleDragMove(event: MouseEvent) {
+  function handleDragMoveInternal(event: MouseEvent | TouchEvent) {
     if (!isDragging.value || !draggedItem.value) return;
 
     const sortedList = getSortedList(); // 🔑 从外部获取最新的排序列表
@@ -151,7 +164,16 @@ export function useActivityDrag(getSortedList: () => Activity[]) {
       updateActivityRankByList(newList);
     }
 
-    dragStartY.value = event.clientY;
+    dragStartY.value = getEventY(event);
+    event.preventDefault();
+  }
+
+  function handleDragMove(event: MouseEvent) {
+    handleDragMoveInternal(event);
+  }
+
+  function handleDragMoveTouch(event: TouchEvent) {
+    handleDragMoveInternal(event);
   }
 
   /**
@@ -163,6 +185,8 @@ export function useActivityDrag(getSortedList: () => Activity[]) {
 
     document.removeEventListener("mousemove", handleDragMove);
     document.removeEventListener("mouseup", handleDragEnd);
+    document.removeEventListener("touchmove", handleDragMoveTouch);
+    document.removeEventListener("touchend", handleDragEnd);
   }
 
   /**
