@@ -45,12 +45,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
-import ChartWidget from "@/components/ChartWidget.vue";
+import { ref, defineAsyncComponent } from "vue";
 import { useChartStats } from "@/composables/useChartStats";
 import { getPresetConfig } from "@/services/chartConfigService";
-import HeatmapChart from "@/components/HeatmapChart.vue";
 import type { ChartConfig } from "@/core/types/ChartConfig";
+
+const ChartWidget = defineAsyncComponent(() => import("@/components/ChartWidget.vue"));
+const HeatmapChart = defineAsyncComponent(() => import("@/components/HeatmapChart.vue"));
 
 /**
  * 统计数据

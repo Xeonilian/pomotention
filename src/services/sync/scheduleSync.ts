@@ -78,6 +78,11 @@ export class ScheduleSyncService extends BaseSyncService<Schedule, CloudSchedule
     downloaded: number;
   }> {
     try {
+      if (!supabase) {
+        console.warn("[schedules] Supabase 未启用，跳过下载 schedule 数据");
+        return { success: false, error: "云同步未启用", downloaded: 0 };
+      }
+
       const user = await getCurrentUser();
       if (!user) return { success: false, error: "用户未登录", downloaded: 0 };
 

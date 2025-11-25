@@ -3,7 +3,7 @@
 import { STORAGE_KEYS } from "@/core/constants";
 import type { Block } from "@/core/types/Block";
 
-interface MigrationReport {
+export interface MigrationReport {
   cleaned: string[];
   migrated: string[];
   errors: string[];
@@ -41,7 +41,7 @@ export function runMigrations(): MigrationReport {
   return report;
 }
 
-function migrateTimetableData(report: MigrationReport): void {
+export function migrateTimetableData(report: MigrationReport): void {
   const NEW_KEY = STORAGE_KEYS.TIMETABLE_BLOCKS;
 
   if (localStorage.getItem(NEW_KEY)) {
@@ -116,7 +116,7 @@ function addSyncedFieldToAllData(report: MigrationReport): void {
   }
 }
 
-function addSyncedField(storageKey: string, report: MigrationReport): void {
+export function addSyncedField(storageKey: string, report: MigrationReport): void {
   const raw = localStorage.getItem(storageKey);
   if (!raw) return;
 

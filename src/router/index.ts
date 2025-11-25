@@ -2,12 +2,12 @@
 
 import { createRouter, createWebHistory, RouteRecordRaw } from "vue-router";
 import { getSession } from "@/core/services/authServicve"; // 导入获取会话的方法
+import { isSupabaseEnabled } from "@/core/services/supabase";
 
-// --- 你的视图组件 ---
+// --- 视图组件 ---
 const MainLayout = () => import("@/views/MainLayout.vue");
 const HomeView = () => import("@/views/HomeView.vue");
-const StatisticsView = () => import("@/views/StatisticView.vue"); // 注意：你原始代码是 StatisticView，不是 StatisticsView
-// const SettingView = () => import("@/views/SettingView.vue");
+const StatisticView = () => import("@/views/StatisticView.vue"); // 注意：这里更新为 StatisticView.vue
 const HelpView = () => import("@/views/HelpView.vue");
 const SearchView = () => import("@/views/SearchView.vue");
 const ChartView = () => import("@/views/ChartView.vue");
@@ -15,6 +15,7 @@ const ChartView = () => import("@/views/ChartView.vue");
 const LoginView = () => import("@/views/LoginView.vue");
 const AuthCallbackView = () => import("@/views/AuthCallbackView.vue");
 const ResetPassword = () => import("@/views/ResetPasswordView.vue");
+// const SettingView = () => import("@/views/SettingView.vue");
 
 // --- 路由定义 ---
 const routes: Array<RouteRecordRaw> = [
@@ -42,7 +43,7 @@ const routes: Array<RouteRecordRaw> = [
     meta: { requiresAuth: true }, // 在父路由上添加认证要求
     children: [
       { path: "", name: "Home", component: HomeView },
-      { path: "statistics", name: "Statistics", component: StatisticsView },
+      { path: "statistics", name: "Statistics", component: StatisticView },
       // { path: "settings", name: "Settings", component: SettingView },
       { path: "help", name: "Help", component: HelpView },
       { path: "search", name: "Search", component: SearchView },
@@ -58,6 +59,12 @@ const router = createRouter({
 
 // --- 全局前置导航守卫 ---
 router.beforeEach(async (to, _from, next) => {
+  if (!isSupabaseEnabled()) {
+    // 离线模式下跳过鉴权，直接放行
+    next();
+    return;
+  }
+
   // getSession() 返回 Session | null
   const session = await getSession();
 

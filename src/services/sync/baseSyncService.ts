@@ -3,7 +3,25 @@
 import { supabase } from "@/core/services/supabase";
 import { getCurrentUser } from "@/core/services/authServicve";
 import type { Ref } from "vue";
+import { STORAGE_KEYS } from "@/core/constants";
+import { addSyncedField, migrateTaskSource } from "@/services/migrationService";
+import { MigrationReport } from "@/services/migrationService";
 
+// 使用 STORAGE_KEYS 来引用表名
+const KEYS_TO_TABLE_NAMES: Record<string, string> = {
+  [STORAGE_KEYS.TODO]: "todos",
+  [STORAGE_KEYS.ACTIVITY]: "activities",
+  [STORAGE_KEYS.TASK]: "tasks",
+  [STORAGE_KEYS.SCHEDULE]: "schedules",
+  [STORAGE_KEYS.TAG]: "tags",
+  [STORAGE_KEYS.WRITING_TEMPLATE]: "writing_templates",
+  [STORAGE_KEYS.TIMETABLE_BLOCKS]: "timetable_blocks",
+};
+const report: MigrationReport = {
+  cleaned: [],
+  migrated: [],
+  errors: [],
+};
 /**
  * 可同步的实体接口（本地数据必须有这些字段）
  */
@@ -87,6 +105,11 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
    */
   async upload(): Promise<{ success: boolean; error?: string; uploaded: number }> {
     try {
+      if (!supabase) {
+        console.warn(`[${this.tableName}] Supabase 未启用，跳过上传流程`);
+        return { success: false, error: "云同步未启用", uploaded: 0 };
+      }
+
       const user = await getCurrentUser();
       if (!user) return { success: false, error: "用户未登录", uploaded: 0 };
 
@@ -152,6 +175,10 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
       return { success: true, uploaded: itemsToUpload.length };
     } catch (error: any) {
       console.error(`❌ [${this.tableName}] 上传失败:`, error.message);
+      addSyncedField(KEYS_TO_TABLE_NAMES[this.localStorageKey], report);
+      if ("fk_tasks_activity" in error.message) {
+        migrateTaskSource(report);
+      }
       return { success: false, error: error.message, uploaded: 0 };
     }
   }
@@ -166,6 +193,11 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
     downloaded: number;
   }> {
     try {
+      if (!supabase) {
+        console.warn(`[${this.tableName}] Supabase 未启用，跳过下载流程`);
+        return { success: false, error: "云同步未启用", downloaded: 0 };
+      }
+
       const user = await getCurrentUser();
       if (!user) return { success: false, error: "用户未登录", downloaded: 0 };
 
@@ -225,6 +257,11 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
    */
   async cleanupDeleted(): Promise<{ success: boolean; error?: string }> {
     try {
+      if (!supabase) {
+        console.warn(`[${this.tableName}] Supabase 未启用，跳过清理流程`);
+        return { success: false, error: "云同步未启用" };
+      }
+
       const user = await getCurrentUser();
       if (!user) return { success: false, error: "用户未登录" };
 

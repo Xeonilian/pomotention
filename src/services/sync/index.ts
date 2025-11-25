@@ -1,24 +1,25 @@
 // src/services/sync/index.ts
 
 import type { Ref } from "vue";
-import { ActivitySyncService } from "./activitySync";
+// 动态导入各个 SyncService
+let ActivitySyncService: any;
+let TodoSyncService: any;
+let ScheduleSyncService: any;
+let TaskSyncService: any;
+let TagSyncService: any;
+let TemplateSyncService: any;
+let TimetableSyncService: any;
+
 import type { Activity } from "@/core/types/Activity";
-import { TodoSyncService } from "./todoSync";
 import type { Todo } from "@/core/types/Todo";
-import { ScheduleSyncService } from "./scheduleSync";
 import type { Schedule } from "@/core/types/Schedule";
 import { useSyncStore } from "@/stores/useSyncStore";
-import { TaskSyncService } from "./taskSync";
 import type { Task } from "@/core/types/Task";
-import { TagSyncService } from "./tagSync";
 import type { Tag } from "@/core/types/Tag";
-import { TemplateSyncService } from "./templateSync";
 import type { Template } from "@/core/types/Template";
-import { TimetableSyncService } from "./timetableSync";
 import type { Block } from "@/core/types/Block";
-import { runMigrations } from "../migrationService";
 import { useSettingStore } from "@/stores/useSettingStore";
-import { useDataExport } from "@/composables/useDataExport";
+import { isSupabaseEnabled } from "@/core/services/supabase";
 
 // 私有变量：存储所有 sync 服务实例
 let syncServices: Array<{ name: string; service: any }> = [];
@@ -27,7 +28,7 @@ let isInitialized = false;
 /**
  * 初始化所有同步服务（由 App.vue 调用）
  */
-export function initSyncServices(dataStore: {
+export async function initSyncServices(dataStore: {
   activityList: Ref<Activity[]>;
   todoList: Ref<Todo[]>;
   scheduleList: Ref<Schedule[]>;
@@ -35,12 +36,20 @@ export function initSyncServices(dataStore: {
   tagList: Ref<Tag[]>;
   templateList: Ref<Template[]>;
   blockList: Ref<Block[]>;
-  // 未来加表只需在这里添加一行
 }) {
   if (isInitialized) {
     console.warn("[Sync] 同步服务已初始化，跳过重复初始化");
     return;
   }
+
+  // 动态载入各服务
+  ActivitySyncService = (await import("./activitySync")).ActivitySyncService;
+  TodoSyncService = (await import("./todoSync")).TodoSyncService;
+  ScheduleSyncService = (await import("./scheduleSync")).ScheduleSyncService;
+  TaskSyncService = (await import("./taskSync")).TaskSyncService;
+  TagSyncService = (await import("./tagSync")).TagSyncService;
+  TemplateSyncService = (await import("./templateSync")).TemplateSyncService;
+  TimetableSyncService = (await import("./timetableSync")).TimetableSyncService;
 
   // 创建各表的 syncService 实例（传入响应式数据）
   const activitySync = new ActivitySyncService(dataStore.activityList);
@@ -70,16 +79,25 @@ export function initSyncServices(dataStore: {
  * 检查是否已初始化
  */
 function ensureInitialized() {
+  if (!isSupabaseEnabled()) {
+    console.warn("[Sync] Supabase 未启用，跳过同步操作");
+    return false;
+  }
+
   if (!isInitialized) {
     throw new Error("[Sync] 同步服务未初始化，请先在 App.vue 的 onMounted 中调用 initSyncServices(dataStore)");
   }
+
+  return true;
 }
 
 /**
  * 执行完整同步（上传 + 下载）
  */
 export async function syncAll(): Promise<{ success: boolean; errors: string[]; details: any }> {
-  ensureInitialized(); // ← 新增检查
+  if (!ensureInitialized()) {
+    return { success: false, errors: ["云同步未启用"], details: { uploaded: 0, downloaded: 0 } };
+  }
 
   const syncStore = useSyncStore();
   const settingStore = useSettingStore();
@@ -98,32 +116,6 @@ export async function syncAll(): Promise<{ success: boolean; errors: string[]; d
     if (!settingStore.settings.autoSupabaseSync) return { success: false, errors: ["自动同步已暂停"], details };
     const lastSync = syncStore.lastSyncTimestamp;
 
-    // ========== 首次同步：执行数据迁移 ==========
-    if (lastSync === 0) {
-      // 在首次同步之前，强制要求用户导出一次本地数据作为备份
-      // 此处为保护措施：弹窗提示并强制导出，由用户指定保存位置
-      const { exportData } = useDataExport();
-      // eslint-disable-next-line no-alert
-      if (typeof window !== "undefined") {
-        alert("首次同步前，请导出数据备份（建议备份到安全位置）。接下来会弹出导出对话框。");
-      }
-      await exportData(); // 调用导出函数
-      console.log("🔍 [Sync] 检测到首次同步，执行数据迁移...");
-      const migrationReport = runMigrations();
-
-      if (migrationReport.errors.length > 0) {
-        console.error("⚠️ [Sync] 迁移过程中出现错误", migrationReport.errors);
-        errors.push(...migrationReport.errors.map((e) => `迁移错误: ${e}`));
-      }
-
-      if (migrationReport.cleaned.length > 0) {
-        console.log(`✅ [Sync] 清理了 ${migrationReport.cleaned.length} 个废弃 key`);
-      }
-
-      if (migrationReport.migrated.length > 0) {
-        console.log(`✅ [Sync] 迁移了 ${migrationReport.migrated.length} 个数据集`);
-      }
-    }
     // ========== 1. 并行上传所有表 ==========
     const uploadResults = await Promise.allSettled(
       syncServices.map(({ name, service }) => service.upload().then((result: any) => ({ name, result })))
@@ -212,7 +204,9 @@ export async function syncAll(): Promise<{ success: boolean; errors: string[]; d
  * 只上传（用于立即保存）
  */
 export async function uploadAll(): Promise<{ success: boolean; errors: string[]; uploaded: number }> {
-  ensureInitialized(); // ← 新增检查
+  if (!ensureInitialized()) {
+    return { success: false, errors: ["云同步未启用"], uploaded: 0 };
+  }
 
   const syncStore = useSyncStore();
   const errors: string[] = [];

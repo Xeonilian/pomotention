@@ -53,11 +53,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed } from "vue";
+import { ref, watch, computed, defineAsyncComponent } from "vue";
 import { storeToRefs } from "pinia";
-import TaskButtons from "@/components/TaskTracker/TaskButtons.vue";
-import TaskRecord from "@/components/TaskTracker/TaskRecord.vue";
-import TagRenderer from "@/components/TagSystem/TagRenderer.vue";
+import type { Component } from "vue";
+
+const TaskButtons = defineAsyncComponent<Component>(() => import("@/components/TaskTracker/TaskButtons.vue"));
+const TaskRecord = defineAsyncComponent<Component>(() => import("@/components/TaskTracker/TaskRecord.vue"));
+const TagRenderer = defineAsyncComponent<Component>(() => import("@/components/TagSystem/TagRenderer.vue"));
 import type { EnergyRecord, RewardRecord, InterruptionRecord } from "@/core/types/Task";
 import { useTaskTrackerStore } from "@/stores/useTaskTrackerStore";
 

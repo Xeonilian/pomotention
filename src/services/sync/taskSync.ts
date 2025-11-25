@@ -79,6 +79,11 @@ export class TaskSyncService extends BaseSyncService<Task, CloudTaskInsert> {
     downloaded: number;
   }> {
     try {
+      if (!supabase) {
+        console.warn("[tasks] Supabase 未启用，跳过下载 task 数据");
+        return { success: false, error: "云同步未启用", downloaded: 0 };
+      }
+
       const user = await getCurrentUser();
       if (!user) return { success: false, error: "用户未登录", downloaded: 0 };
 

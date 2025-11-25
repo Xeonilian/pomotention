@@ -13,8 +13,15 @@ import { useRouter } from "vue-router";
 import { supabase } from "@/core/services/supabase";
 
 const router = useRouter();
+const supabaseClient = supabase;
 
 onMounted(async () => {
+  if (!supabaseClient) {
+    console.warn("[AuthCallback] Supabase 未启用，直接返回首页");
+    router.push({ name: "Home" });
+    return;
+  }
+
   console.log("AuthCallback - 当前 URL:", window.location.href);
   console.log("AuthCallback - hash:", window.location.hash);
 
@@ -38,7 +45,7 @@ onMounted(async () => {
   // 如果是邮箱验证
   if (accessToken) {
     console.log("✅ 检测到邮箱验证");
-    const { data } = await supabase.auth.getSession();
+    const { data } = await supabaseClient.auth.getSession();
 
     if (data.session) {
       router.push({ name: "Home" });
