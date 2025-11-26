@@ -52,7 +52,7 @@ export const useDataStore = defineStore(
     const isDataLoaded = ref(false);
 
     // 在数据加载后重新计算标签计数
-    function loadAllData() {
+    async function loadAllData() {
       if (isDataLoaded.value) {
         console.log("[DataStore] Data already loaded. Skipping.");
         return;
