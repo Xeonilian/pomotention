@@ -15,9 +15,10 @@ export function useResize(
   const startSize = ref(0);
 
   // 开始拖动
-  function startResize(e: MouseEvent) {
+  function startResize(e: MouseEvent | TouchEvent) {
     isResizing.value = true;
-    startPos.value = direction === "vertical" ? e.clientY : e.clientX;
+    const coords = getEventCoordinates(e);
+    startPos.value = direction === "vertical" ? coords.y : coords.x;
     startSize.value = size.value;
 
     // 禁用文本选择
@@ -25,13 +26,33 @@ export function useResize(
 
     document.addEventListener("mousemove", handleMouseMove);
     document.addEventListener("mouseup", stopResize);
+    document.addEventListener("touchmove", handleTouchMove, { passive: false });
+    document.addEventListener("touchend", stopResize);
+  }
+
+  // 根据事件类型获取坐标
+  function getEventCoordinates(e: MouseEvent | TouchEvent): { x: number; y: number } {
+    if (e instanceof TouchEvent) {
+      const touch = e.touches[0] || e.changedTouches[0];
+      return { x: touch.clientX, y: touch.clientY };
+    }
+    return { x: e.clientX, y: e.clientY };
   }
 
   // 处理拖动
   function handleMouseMove(e: MouseEvent) {
+    handleMove(e);
+  }
+
+  function handleTouchMove(e: TouchEvent) {
+    handleMove(e);
+  }
+
+  function handleMove(e: MouseEvent | TouchEvent) {
     if (!isResizing.value) return;
 
-    const currentPos = direction === "vertical" ? e.clientY : e.clientX;
+    const coords = getEventCoordinates(e);
+    const currentPos = direction === "vertical" ? coords.y : coords.x;
     let delta = currentPos - startPos.value;
 
     // 水平拖拽时根据左右方向调整 delta
@@ -39,10 +60,7 @@ export function useResize(
       delta = isLeft ? -delta : delta;
     }
 
-    const newSize = Math.max(
-      minSize,
-      Math.min(startSize.value + delta, maxSize)
-    );
+    const newSize = Math.max(minSize, Math.min(startSize.value + delta, maxSize));
     size.value = newSize;
   }
 
@@ -54,6 +72,8 @@ export function useResize(
 
     document.removeEventListener("mousemove", handleMouseMove);
     document.removeEventListener("mouseup", stopResize);
+    document.removeEventListener("touchmove", handleTouchMove);
+    document.removeEventListener("touchend", stopResize);
   }
 
   return {

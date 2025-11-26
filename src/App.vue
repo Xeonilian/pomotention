@@ -21,6 +21,7 @@ import { useTemplateStore } from "@/stores/useTemplateStore";
 import { initSyncServices, syncAll } from "@/services/sync"; // 导入必要的同步服务
 import { uploadAllDebounced } from "@/core/utils/autoSync";
 import BackupAlertDialog from "./components/BackupAlertDialog.vue";
+import { initializeTouchHandling, cleanupTouchHandling } from "@/core/utils/touchHandler";
 
 const showModal = ref(false);
 const router = useRouter();
@@ -101,6 +102,12 @@ onMounted(async () => {
     console.warn("[Supabase] 当前未启用，跳过 Supabase 相关操作。");
     // 这里可以自行决定要如何处理离线模式
   }
+  // 处理触碰
+  initializeTouchHandling();
+});
+
+onUnmounted(() => {
+  cleanupTouchHandling();
 });
 </script>
 
