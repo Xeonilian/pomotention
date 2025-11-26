@@ -6,6 +6,7 @@ import type { Ref } from "vue";
 import { STORAGE_KEYS } from "@/core/constants";
 import { addSyncedField, migrateTaskSource } from "@/services/migrationService";
 import { MigrationReport } from "@/services/migrationService";
+import { convertTimestampToISO } from "@/core/utils";
 
 // 使用 STORAGE_KEYS 来引用表名
 const KEYS_TO_TABLE_NAMES: Record<string, string> = {
@@ -84,7 +85,7 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
       console.log(`   ➕ 新增: ${added.length}, IDs: ${added.map((i: any) => i.id)}`);
     }
     if (updated.length > 0) {
-      console.log(`   ✏️ 更新: ${updated.length}, IDs: ${updated.map((i: any) => i.id)}`);
+      console.log(`   ✏️ 更新: ${updated.length}`); //, IDs: ${updated.map((i: any) => i.id)}
     }
     if (deleted.length > 0) {
       console.log(`   ❌ 删除: ${deleted.length}, IDs: ${deleted.map((i: any) => i.id)}`);
@@ -173,7 +174,7 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
    * 从云端下载数据（默认实现：直接查询表）
    * 子类可以覆盖此方法（如 TodoSyncService 使用 RPC）
    */
-  async download(lastSyncTimestamp: number): Promise<{
+  async download(_lastSyncTimestamp: number): Promise<{
     success: boolean;
     error?: string;
     downloaded: number;
@@ -190,58 +191,64 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
         return { success: false, error: "用户未登录", downloaded: 0 };
       }
 
-      const lastSyncDate = new Date(lastSyncTimestamp).toISOString();
-      const { data, error } = await supabase
-        .from(this.tableName)
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("deleted", false)
-        .gt("last_modified", lastSyncDate);
+      // 此处不加入 deleted 的过滤，保持获取所有记录
+      // const lastSyncISO = convertTimestampToISO(lastSyncTimestamp);
+
+      const { data, error } = await supabase.from(this.tableName).select("*").eq("user_id", user.id); // 获取所有新数据，不过滤 deleted 条件
+      //.gt("last_modified", lastSyncISO)
 
       if (error) throw error;
       if (!data || data.length === 0) {
         console.log(`✅ [${this.tableName}] 没有新数据下载`);
         return { success: true, downloaded: 0 };
       }
+      console.log(`📊 [${this.tableName}] 下载数据 ${data.length} 条`);
 
-      const localItems = this.loadLocal();
+      const localItems = this.loadLocal(); // 加载本地数据
       let downloadedCount = 0;
 
+      // 遍历云端数据
       data.forEach((cloudItem: any) => {
         const localIndex = localItems.findIndex((item) => item.id === cloudItem.timestamp_id);
 
+        if (cloudItem.deleted) {
+          // 云端的记录被标记为删除，处理本地删除
+          if (localIndex !== -1) {
+            // 如果本地也找到了，删除
+            localItems.splice(localIndex, 1);
+            downloadedCount++; // 删除计入下载
+          }
+          return; // 处理下一个记录
+        }
+
         if (localIndex === -1) {
-          // 本地不存在，插入
+          // 本地不存在该记录，插入
           localItems.push(this.mapCloudToLocal(cloudItem));
           downloadedCount++;
         } else {
           const localItem = localItems[localIndex];
 
-          // ✅ 首要依据：synced=true → 本地无修改，跳过
-          if (localItem.synced) {
-            return;
-          }
+          // console.log(`处理记录 ID: ${cloudItem.timestamp_id}`);
+          // console.log(`云端 last_modified: ${cloudItem.last_modified}`);
+          // console.log(`本地 lastModified: ${convertTimestampToISO(localItem.lastModified)}`);
+          // console.log(`最后同步时间 lastSyncTimestamp: ${lastSyncISO}`);
 
-          // ✅ 次要依据：本地有未同步的更新，保留本地
-          if (localItem.lastModified > lastSyncTimestamp) {
-            return;
+          // 如果云端的记录时间较新，且没有标记为删除，覆盖本地
+          if (cloudItem.last_modified > convertTimestampToISO(localItem.lastModified)) {
+            localItems[localIndex] = this.mapCloudToLocal(cloudItem);
+            downloadedCount++;
           }
-
-          // ✅ 云端优先，覆盖本地
-          localItems[localIndex] = this.mapCloudToLocal(cloudItem);
-          downloadedCount++;
+          // 如果云端数据标记为已同步，则可以根据需要决定是否覆盖本地
         }
       });
 
-      this.saveLocal(localItems);
-      console.log(`✅ [${this.tableName}] 下载成功 ${downloadedCount} 条`);
+      this.saveLocal(localItems); // 保存修改后的本地数据
       return { success: true, downloaded: downloadedCount };
     } catch (error: any) {
       console.error(`${this.tableName} 下载失败:`, error);
       return { success: false, error: error.message, downloaded: 0 };
     }
   }
-
   /**
    * 清理超过 30 天的已删除记录（云端）
    */

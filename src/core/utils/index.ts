@@ -12,3 +12,4 @@ export { getDayStartTimestamp } from "./getDayStartTimestamp";
 export { debounce } from "./debounce";
 export { formatMessage } from "./formatMessage";
 export { formatTime } from "./formatTime";
+export { convertTimestampToISO } from "./convertTimestampToISO";

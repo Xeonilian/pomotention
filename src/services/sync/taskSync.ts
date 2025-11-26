@@ -7,6 +7,7 @@ import { BaseSyncService } from "./baseSyncService";
 import type { Task, EnergyRecord, RewardRecord, InterruptionRecord } from "@/core/types/Task";
 import type { Database } from "@/core/types/Database";
 import type { Ref } from "vue";
+import { convertTimestampToISO } from "@/core/utils";
 
 type CloudTaskInsert = Database["public"]["Tables"]["tasks"]["Insert"];
 
@@ -24,6 +25,7 @@ interface FullTaskFromCloud {
   interruptionRecords: InterruptionRecord[];
   starred: boolean;
   deleted: boolean;
+  last_modified: string;
 }
 
 export class TaskSyncService extends BaseSyncService<Task, CloudTaskInsert> {
@@ -74,7 +76,7 @@ export class TaskSyncService extends BaseSyncService<Task, CloudTaskInsert> {
   /**
    * 覆盖 download 方法：使用 RPC 获取带冗余字段的数据
    */
-  async download(lastSyncTimestamp: number): Promise<{
+  async download(_lastSyncTimestamp: number): Promise<{
     success: boolean;
     error?: string;
     downloaded: number;
@@ -98,26 +100,34 @@ export class TaskSyncService extends BaseSyncService<Task, CloudTaskInsert> {
       const localItems = this.loadLocal();
       let downloadedCount = 0;
 
+      // 将 lastSyncTimestamp 转换为 ISO 格式
+      // const lastSyncISO = convertTimestampToISO(lastSyncTimestamp);
+
       data.forEach((cloudItem: FullTaskFromCloud) => {
-        const cloudEntity = this.mapCloudToLocal(cloudItem);
-        const localIndex = localItems.findIndex((item) => item.id === cloudEntity.id);
+        const localIndex = localItems.findIndex((item) => item.id === cloudItem.id);
 
-        if (localIndex === -1) {
-          // 本地不存在，直接插入
-          localItems.push(cloudEntity);
-          downloadedCount++;
+        if (cloudItem.deleted) {
+          // 如果云端标记为删除并且在本地存在，则删除本地记录
+          if (localIndex !== -1) {
+            localItems.splice(localIndex, 1);
+            downloadedCount++; // 删除计入下载的记录数
+          }
         } else {
-          const localItem = localItems[localIndex];
-
-          // Last Write Wins: 比较本地时间戳
-          if (localItem.synced) {
-            // 如果本地已同步，使用云端数据覆盖
-            localItems[localIndex] = cloudEntity;
+          if (localIndex === -1) {
+            // 本地不存在，直接插入
+            localItems.push(this.mapCloudToLocal(cloudItem));
             downloadedCount++;
-          } else if (localItem.lastModified <= lastSyncTimestamp) {
-            // 云端版本覆盖
-            localItems[localIndex] = cloudEntity;
-            downloadedCount++;
+          } else {
+            const localItem = localItems[localIndex];
+            // console.log(`处理记录 ID: ${cloudItem.id}`);
+            // console.log(`云端 last_modified: ${cloudItem.last_modified}`);
+            // console.log(`本地 lastModified: ${convertTimestampToISO(localItem.lastModified)}`);
+            if (cloudItem.last_modified > convertTimestampToISO(localItem.lastModified)) {
+              // 云端版本覆盖本地
+              localItems[localIndex] = this.mapCloudToLocal(cloudItem);
+              downloadedCount++;
+            }
+            // 如果本地已同步，跳过
           }
         }
       });
