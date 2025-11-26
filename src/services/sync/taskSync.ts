@@ -23,6 +23,7 @@ interface FullTaskFromCloud {
   rewardRecords: RewardRecord[];
   interruptionRecords: InterruptionRecord[];
   starred: boolean;
+  deleted: boolean;
 }
 
 export class TaskSyncService extends BaseSyncService<Task, CloudTaskInsert> {
@@ -66,7 +67,7 @@ export class TaskSyncService extends BaseSyncService<Task, CloudTaskInsert> {
       // 同步元数据（本地生成）
       lastModified: Date.now(),
       synced: true,
-      deleted: false,
+      deleted: cloud.deleted,
     };
   }
 

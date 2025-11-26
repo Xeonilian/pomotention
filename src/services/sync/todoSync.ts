@@ -28,6 +28,7 @@ interface FullTodoFromCloud {
   startTime: number;
   interruption: string;
   globalIndex: number;
+  deleted: boolean;
 }
 
 export class TodoSyncService extends BaseSyncService<Todo, CloudTodoInsert> {
@@ -78,7 +79,7 @@ export class TodoSyncService extends BaseSyncService<Todo, CloudTodoInsert> {
       // 同步元数据（本地生成）
       lastModified: Date.now(),
       synced: true,
-      deleted: false,
+      deleted: cloud.deleted,
     };
   }
 

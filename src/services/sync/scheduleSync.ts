@@ -24,6 +24,7 @@ interface FullScheduleFromCloud {
   isUntaetigkeit: boolean;
   interruption: string;
   projectName: string | null;
+  deleted: boolean;
 }
 
 export class ScheduleSyncService extends BaseSyncService<Schedule, CloudScheduleInsert> {
@@ -65,7 +66,7 @@ export class ScheduleSyncService extends BaseSyncService<Schedule, CloudSchedule
       // 同步元数据（本地生成）
       lastModified: Date.now(),
       synced: true,
-      deleted: false,
+      deleted: cloud.deleted,
     };
   }
 
