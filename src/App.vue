@@ -11,14 +11,14 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, watch } from "vue";
+import { onMounted, ref, watch } from "vue";
 import { storeToRefs } from "pinia";
 import { useRouter } from "vue-router";
 import { supabase, isSupabaseEnabled } from "@/core/services/supabase"; // 确保引入
 import { useDataStore } from "@/stores/useDataStore";
 import { useTagStore } from "@/stores/useTagStore";
 import { useTemplateStore } from "@/stores/useTemplateStore";
-import { initSyncServices } from "@/services/sync";
+import { initSyncServices, syncAll } from "@/services/sync"; // 导入必要的同步服务
 import { uploadAllDebounced } from "@/core/utils/autoSync";
 import BackupAlertDialog from "./components/BackupAlertDialog.vue";
 
@@ -39,16 +39,20 @@ onMounted(async () => {
 
   // ========== 2. 如果 Supabase 可用，则初始化同步服务 ==========
   if (isSupabaseEnabled()) {
-    initSyncServices({
-      activityList: activityList,
-      todoList: todoList,
-      scheduleList: scheduleList,
-      taskList: taskList,
+    await initSyncServices({
+      activityList,
+      todoList,
+      scheduleList,
+      taskList,
       tagList: rawTags,
       templateList: rawTemplates,
     });
 
-    // ========== 3. 监听数据变化，触发自动同步 ==========
+    // ========== 3. 触发第一次同步 ==========
+    await syncAll(); // 确保在服务初始化后立即同步数据
+    console.log("✅ [App] 第一次同步完成");
+
+    // ========== 4. 监听数据变化，触发自动同步 ==========
     watch(
       [activityList, todoList, scheduleList, taskList, rawTemplates, rawTags],
       () => {
@@ -59,7 +63,7 @@ onMounted(async () => {
     );
     console.log("✅ [App] 自动同步已启动");
 
-    // ========== 4. 处理 Supabase 的认证回调 ==========
+    // ========== 5. 处理 Supabase 的认证回调 ==========
     const {
       data: { session },
       error,
@@ -72,7 +76,7 @@ onMounted(async () => {
 
     // 检查用户的登录状态
     if (session) {
-      console.log("用户已登录", session);
+      console.log("用户已登录", session.user.id);
     } else {
       console.log("没有登录用户，跳转到登录页面");
       router.push({ name: "Login" });
