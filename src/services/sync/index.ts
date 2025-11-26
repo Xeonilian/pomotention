@@ -8,7 +8,7 @@ let ScheduleSyncService: any;
 let TaskSyncService: any;
 let TagSyncService: any;
 let TemplateSyncService: any;
-let TimetableSyncService: any;
+// let TimetableSyncService: any;
 
 import type { Activity } from "@/core/types/Activity";
 import type { Todo } from "@/core/types/Todo";
@@ -17,7 +17,7 @@ import { useSyncStore } from "@/stores/useSyncStore";
 import type { Task } from "@/core/types/Task";
 import type { Tag } from "@/core/types/Tag";
 import type { Template } from "@/core/types/Template";
-import type { Block } from "@/core/types/Block";
+// import type { Block } from "@/core/types/Block";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { isSupabaseEnabled } from "@/core/services/supabase";
 
@@ -35,21 +35,28 @@ export async function initSyncServices(dataStore: {
   taskList: Ref<Task[]>;
   tagList: Ref<Tag[]>;
   templateList: Ref<Template[]>;
-  blockList: Ref<Block[]>;
+  // blockList: Ref<Block[]>;
 }) {
   if (isInitialized) {
     console.warn("[Sync] 同步服务已初始化，跳过重复初始化");
     return;
   }
 
-  // 动态载入各服务
-  ActivitySyncService = (await import("./activitySync")).ActivitySyncService;
-  TodoSyncService = (await import("./todoSync")).TodoSyncService;
-  ScheduleSyncService = (await import("./scheduleSync")).ScheduleSyncService;
-  TaskSyncService = (await import("./taskSync")).TaskSyncService;
-  TagSyncService = (await import("./tagSync")).TagSyncService;
-  TemplateSyncService = (await import("./templateSync")).TemplateSyncService;
-  TimetableSyncService = (await import("./timetableSync")).TimetableSyncService;
+  console.log("[Sync] 动态载入同步服务...");
+
+  try {
+    // 动态载入各服务
+    ActivitySyncService = (await import("./activitySync")).ActivitySyncService;
+    TodoSyncService = (await import("./todoSync")).TodoSyncService;
+    ScheduleSyncService = (await import("./scheduleSync")).ScheduleSyncService;
+    TaskSyncService = (await import("./taskSync")).TaskSyncService;
+    TagSyncService = (await import("./tagSync")).TagSyncService;
+    TemplateSyncService = (await import("./templateSync")).TemplateSyncService;
+    // TimetableSyncService = (await import("./timetableSync")).TimetableSyncService;
+  } catch (error) {
+    console.error("[Sync] 动态载入服务失败:", error);
+    return;
+  }
 
   // 创建各表的 syncService 实例（传入响应式数据）
   const activitySync = new ActivitySyncService(dataStore.activityList);
@@ -58,9 +65,8 @@ export async function initSyncServices(dataStore: {
   const taskSync = new TaskSyncService(dataStore.taskList);
   const tagSync = new TagSyncService(dataStore.tagList);
   const templateSync = new TemplateSyncService(dataStore.templateList);
-  const timetableSync = new TimetableSyncService(dataStore.blockList);
+  // const timetableSync = new TimetableSyncService(dataStore.blockList);
 
-  // 填充 syncServices 数组
   syncServices = [
     { name: "Activities", service: activitySync },
     { name: "Todos", service: todoSync },
@@ -68,7 +74,7 @@ export async function initSyncServices(dataStore: {
     { name: "Tasks", service: taskSync },
     { name: "Tags", service: tagSync },
     { name: "Templates", service: templateSync },
-    { name: "Blocks", service: timetableSync },
+    // { name: "Blocks", service: timetableSync },
   ];
 
   isInitialized = true;
