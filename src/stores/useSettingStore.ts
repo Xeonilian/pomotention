@@ -34,6 +34,7 @@ export interface GlobalSettings {
   viewSet: ViewType;
   marquee: string;
   supabaseSync: number[];
+  firstSync: boolean;
   autoSupabaseSync: boolean;
 
   ai?: {
@@ -78,6 +79,7 @@ const defaultSettings: GlobalSettings = {
   viewSet: "day",
   marquee: "", // 保持觉察 🍅 = ⏰ + 🎯 + 👁‍🗨
   supabaseSync: [0, 0],
+  firstSync: true,
   autoSupabaseSync: true,
   ai: {
     activeId: 1,
