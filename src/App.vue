@@ -22,21 +22,44 @@ import { initSyncServices, syncAll } from "@/services/sync"; // 导入必要的�
 import { uploadAllDebounced } from "@/core/utils/autoSync";
 import BackupAlertDialog from "./components/BackupAlertDialog.vue";
 import { initializeTouchHandling, cleanupTouchHandling } from "@/core/utils/touchHandler";
+import { useSettingStore } from "@/stores/useSettingStore";
+import { runMigrations } from "@/services/migrationService";
 
 const showModal = ref(false);
 const router = useRouter();
 const dataStore = useDataStore();
 const tagStore = useTagStore();
 const templateStore = useTemplateStore();
-
+const settingStore = useSettingStore();
 const { activityList, todoList, scheduleList, taskList } = storeToRefs(dataStore);
 const { rawTags } = storeToRefs(tagStore);
 const { rawTemplates } = storeToRefs(templateStore);
 
 onMounted(async () => {
+  settingStore.settings.autoSupabaseSync = true;
   // ========== 1. 初始化本地数据 ==========
   await dataStore.loadAllData(); // 确保返回 Promise
   console.log("✅ [App] 本地数据已加载");
+  console.log("✅ [App] 首次同步", settingStore.settings.firstSync);
+  if (settingStore.settings.firstSync) {
+    const migrationReport = runMigrations();
+    const errors = [];
+    if (migrationReport.errors.length > 0) {
+      console.error("⚠️ [Sync] 迁移过程中出现错误", migrationReport.errors);
+      errors.push(...migrationReport.errors.map((e) => `迁移错误: ${e}`));
+    }
+
+    if (migrationReport.cleaned.length > 0) {
+      console.log(`✅ [Sync] 清理了 ${migrationReport.cleaned.length} 个废弃 key`);
+    }
+
+    if (migrationReport.migrated.length > 0) {
+      console.log(`✅ [Sync] 迁移了 ${migrationReport.migrated.length} 个数据集`);
+    }
+
+    showModal.value = true;
+    settingStore.settings.firstSync = false;
+  }
 
   // ========== 2. 如果 Supabase 可用，则初始化同步服务 ==========
   if (isSupabaseEnabled()) {

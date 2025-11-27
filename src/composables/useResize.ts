@@ -32,11 +32,15 @@ export function useResize(
 
   // 根据事件类型获取坐标
   function getEventCoordinates(e: MouseEvent | TouchEvent): { x: number; y: number } {
-    if (e instanceof TouchEvent) {
+    if (checkTouchEvent(e)) {
       const touch = e.touches[0] || e.changedTouches[0];
       return { x: touch.clientX, y: touch.clientY };
     }
     return { x: e.clientX, y: e.clientY };
+  }
+
+  function checkTouchEvent(e: any): e is TouchEvent {
+    return typeof TouchEvent !== "undefined" && e instanceof TouchEvent;
   }
 
   // 处理拖动
