@@ -5,7 +5,7 @@
  * @returns ISO 格式，保留毫秒 不带时区 如 2025-11-26T10:00:00.000Z
  */
 export function convertTimestampToISO(timestamp: number): string {
-  return new Date(timestamp).toISOString().replace("Z", "");
+  return new Date(timestamp).toISOString();
 }
 
 /**
