@@ -1,19 +1,8 @@
 <template>
   <div class="pomodoro-view-wrapper" ref="pomodoroContainerRef">
-    <div
-      v-if="isMiniMode"
-      class="mini-mode-drag-region"
-      data-tauri-drag-region
-    ></div>
+    <div v-if="isMiniMode" class="mini-mode-drag-region" data-tauri-drag-region></div>
     <div class="mini-mode-controls" v-if="isMiniMode">
-      <n-button
-        @click="exitMiniMode"
-        size="tiny"
-        tertiary
-        type="default"
-        title="退出迷你模式"
-        class="exit-mini-mode-button"
-      >
+      <n-button @click="exitMiniMode" size="tiny" tertiary type="default" title="退出迷你模式" class="exit-mini-mode-button">
         <template #icon>
           <n-icon :component="ArrowExpand24Regular" />
         </template>
@@ -100,9 +89,7 @@ onMounted(() => {
 
   // 如果番茄钟正在运行且来自序列，恢复 pomoSeq 运行状态
   if (timerStore.isActive && timerStore.isFromSequence) {
-    console.log(
-      "[PomotentionTimer] Component mounted, restoring pomoSeq running state"
-    );
+    console.log("[PomotentionTimer] Component mounted, restoring pomoSeq running state");
     isPomoSeqRunning.value = true;
   }
 });
@@ -155,7 +142,6 @@ function handlePomoSeqRunning(status: boolean) {
   position: relative;
   width: 220px;
   box-sizing: border-box;
-  padding: 0;
   background-color: transparent;
 }
 
@@ -177,9 +163,6 @@ function handlePomoSeqRunning(status: boolean) {
   right: 10px;
   z-index: 1000;
   font-size: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   border: 0px solid var(--color-background-dark);
   width: 20px;
   height: 18px;
