@@ -24,6 +24,7 @@ import BackupAlertDialog from "./components/BackupAlertDialog.vue";
 import { initializeTouchHandling, cleanupTouchHandling } from "@/core/utils/touchHandler";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { runMigrations } from "@/services/migrationService";
+import { isTauri } from "@tauri-apps/api/core";
 
 const showModal = ref(false);
 const router = useRouter();
@@ -41,7 +42,7 @@ onMounted(async () => {
   await dataStore.loadAllData(); // 确保返回 Promise
   console.log("✅ [App] 本地数据已加载");
   console.log("✅ [App] 首次同步", settingStore.settings.firstSync);
-  if (settingStore.settings.firstSync) {
+  if (settingStore.settings.firstSync && isTauri()) {
     const migrationReport = runMigrations();
     const errors = [];
     if (migrationReport.errors.length > 0) {
