@@ -46,6 +46,7 @@ import PomodoroSequence from "@/components/PomotentionTimer/PomodoroSequence.vue
 import { useTimerStore } from "@/stores/useTimerStore";
 import { NButton, NIcon } from "naive-ui";
 import { ArrowExpand24Regular } from "@vicons/fluent";
+import { isTauri } from "@tauri-apps/api/core";
 
 const timerStore = useTimerStore();
 let isPomoSeqRunning = ref(false); // 基于运行状态，返回不同的高度
@@ -66,6 +67,7 @@ const emit = defineEmits<{
   (e: "toggle-pomo-seq"): void;
   (e: "report-size", size: { width: number; height: number }): void;
   (e: "exit-mini-mode"): void;
+  (e: "exit-mini-mode-web"): void;
 }>();
 
 function reportSize() {
@@ -122,7 +124,11 @@ watch(
 );
 
 function exitMiniMode() {
-  emit("exit-mini-mode");
+  if (isTauri()) {
+    emit("exit-mini-mode");
+  } else {
+    emit("exit-mini-mode-web");
+  }
 }
 
 function handleTogglePomoSeq() {
@@ -142,6 +148,7 @@ function handlePomoSeqRunning(status: boolean) {
   position: relative;
   width: 220px;
   box-sizing: border-box;
+  padding: 0;
   background-color: transparent;
 }
 
@@ -163,6 +170,9 @@ function handlePomoSeqRunning(status: boolean) {
   right: 10px;
   z-index: 1000;
   font-size: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border: 0px solid var(--color-background-dark);
   width: 20px;
   height: 18px;
