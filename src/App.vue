@@ -11,21 +11,23 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, watch } from "vue";
+import { onMounted, onUnmounted, ref, watch } from "vue";
 import { storeToRefs } from "pinia";
 import { useRouter } from "vue-router";
-import { supabase, isSupabaseEnabled } from "@/core/services/supabase"; // 确保引入
+import { supabase, isSupabaseEnabled } from "@/core/services/supabase";
 import { useDataStore } from "@/stores/useDataStore";
 import { useTagStore } from "@/stores/useTagStore";
 import { useTemplateStore } from "@/stores/useTemplateStore";
-import { initSyncServices, syncAll } from "@/services/sync"; // 导入必要的同步服务
+import { initSyncServices, syncAll } from "@/services/sync";
 import { uploadAllDebounced } from "@/core/utils/autoSync";
 import BackupAlertDialog from "./components/BackupAlertDialog.vue";
 import { initializeTouchHandling, cleanupTouchHandling } from "@/core/utils/touchHandler";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { runMigrations } from "@/services/migrationService";
 import { isTauri } from "@tauri-apps/api/core";
+import { downloadAll } from "@/services/sync";
 
+// state & stores
 const showModal = ref(false);
 const router = useRouter();
 const dataStore = useDataStore();
@@ -36,103 +38,182 @@ const { activityList, todoList, scheduleList, taskList } = storeToRefs(dataStore
 const { rawTags } = storeToRefs(tagStore);
 const { rawTemplates } = storeToRefs(templateStore);
 
-onMounted(async () => {
-  settingStore.settings.autoSupabaseSync = true;
-  // ========== 1. 初始化本地数据 ==========
-  await dataStore.loadAllData(); // 确保返回 Promise
-  console.log("✅ [App] 本地数据已加载");
-  console.log("✅ [App] 首次同步", settingStore.settings.firstSync);
-  if (settingStore.settings.firstSync && isTauri()) {
-    const migrationReport = runMigrations();
-    const errors = [];
-    if (migrationReport.errors.length > 0) {
-      console.error("⚠️ [Sync] 迁移过程中出现错误", migrationReport.errors);
-      errors.push(...migrationReport.errors.map((e) => `迁移错误: ${e}`));
-    }
+// local subscription storage
+const subscriptions: Array<any> = [];
+const tables = ["activities", "todos", "tasks", "schedules", "tags", "templates"];
 
-    if (migrationReport.cleaned.length > 0) {
+// small helper: only trigger download for INSERT/UPDATE/DELETE (or customize)
+function handleBroadcastPayload(table: string, payload: any) {
+  try {
+    // payload structure from realtime.broadcast_changes usually has 'payload' or 'new' / 'old'
+    // adjust logic to only download when needed. Here we conservatively trigger for INSERT/UPDATE/DELETE.
+    const event = payload.event ?? payload.type ?? payload.action ?? payload?.payload?.type;
+    // If event not present, try TG_OP in payload
+    const tgOp = payload?.payload?.record?.operation ?? payload?.payload?.op ?? payload?.op;
+
+    // Consider payload.commit or other shapes depending on your trigger implementation
+    // For simplicity, trigger download for INSERT/UPDATE/DELETE
+    const op = (event || tgOp || payload?.eventType || payload?.type || "").toString().toUpperCase();
+
+    if (["INSERT", "UPDATE", "DELETE"].includes(op) || op === "") {
+      // 防抖/节流：如果短时间内多次调用 downloadAll，downloadAll 自身应该做防抖处理
+      downloadAll(0);
+      console.log(`[Realtime] ${table} => triggered downloadAll due to event:`, op || "unknown");
+    } else {
+      console.log(`[Realtime] ${table} => ignored event:`, op);
+    }
+  } catch (err) {
+    console.error("[Realtime] 处理广播负载时出错:", err);
+  }
+}
+
+onMounted(async () => {
+  // 初始化开关
+  settingStore.settings.autoSupabaseSync = true;
+
+  // 1. 初始化本地数据
+  await dataStore.loadAllData();
+  console.log("✅ [App] 本地数据已加载");
+
+  // 2. Tauri: 首次登陆导出/迁移
+  if (settingStore.settings.firstSync && isTauri()) {
+    console.log("✅ [App] 首次同步");
+    const migrationReport = runMigrations();
+    const errors: string[] = [];
+    if (migrationReport.errors?.length) {
+      console.error("⚠️ [Sync] 迁移过程中出现错误", migrationReport.errors);
+      errors.push(...migrationReport.errors.map((e: any) => `迁移错误: ${e}`));
+    }
+    if (migrationReport.cleaned?.length) {
       console.log(`✅ [Sync] 清理了 ${migrationReport.cleaned.length} 个废弃 key`);
     }
-
-    if (migrationReport.migrated.length > 0) {
+    if (migrationReport.migrated?.length) {
       console.log(`✅ [Sync] 迁移了 ${migrationReport.migrated.length} 个数据集`);
     }
-
     showModal.value = true;
     settingStore.settings.firstSync = false;
   }
 
-  // ========== 2. 如果 Supabase 可用，则初始化同步服务 ==========
-  if (isSupabaseEnabled()) {
-    await initSyncServices({
-      activityList,
-      todoList,
-      scheduleList,
-      taskList,
-      tagList: rawTags,
-      templateList: rawTemplates,
-    });
-
-    // ========== 3. 触发第一次同步 ==========
-    await syncAll(); // 确保在服务初始化后立即同步数据
-    console.log("✅ [App] 第一次同步完成");
-
-    // ========== 4. 监听数据变化，触发自动同步 ==========
-    watch(
-      [activityList, todoList, scheduleList, taskList, rawTemplates, rawTags],
-      () => {
-        dataStore.saveAllDebounced(); // 先保存到 localStorage
-        uploadAllDebounced(); // 再触发云端同步（5秒防抖）
-      },
-      { deep: true }
-    );
-    console.log("✅ [App] 自动同步已启动");
-
-    // ========== 5. 处理 Supabase 的认证回调 ==========
-    const {
-      data: { session },
-      error,
-    } = await supabase!.auth.getSession();
-
+  // 3. Supabase session & 初始化同步
+  let session = null;
+  try {
+    const { data, error } = await supabase!.auth.getSession();
     if (error) {
-      console.error("获取 session 时出现错误:", error.message);
-      return; // 如果获取 session 失败，不继续后面的逻辑
-    }
-
-    // 检查用户的登录状态
-    if (session) {
-      console.log("用户已登录", session.user.id);
+      console.error("获取 session 错误:", error.message ?? error);
     } else {
-      console.log("没有登录用户，跳转到登录页面");
-      router.push({ name: "Login" });
+      session = data?.session ?? null;
+    }
+  } catch (err) {
+    console.error("获取 session 时出现异常:", err);
+  }
+
+  if (session) {
+    console.log("用户已登录", session.user?.id);
+
+    if (isSupabaseEnabled()) {
+      await initSyncServices({
+        activityList,
+        todoList,
+        scheduleList,
+        taskList,
+        tagList: rawTags,
+        templateList: rawTemplates,
+      });
+
+      await syncAll();
+      console.log("✅ [App] 第一次同步完成");
+
+      // 监听本地数据变化触发自动上传（localStorage + 云端）
+      watch(
+        [activityList, todoList, scheduleList, taskList, rawTemplates, rawTags],
+        () => {
+          dataStore.saveAllDebounced();
+          uploadAllDebounced();
+        },
+        { deep: true }
+      );
+
+      console.log("✅ [App] 自动同步已启动");
+
+      // 触摸事件处理（非 Tauri）
+      if (!isTauri()) initializeTouchHandling();
+
+      // 启动 realtime 频道订阅
+      createChannelSubscriptions(tables);
+    } else {
+      console.warn("[Supabase] 当前未启用，跳过 Supabase 相关操作。");
     }
 
-    // 监听认证状态变化
-    supabase!.auth.onAuthStateChange((event, session) => {
-      if (event === "SIGNED_IN" && session) {
-        console.log("用户登录成功，跳转到首页");
+    // 监听认证变化
+    supabase!.auth.onAuthStateChange((event, sess) => {
+      if (event === "SIGNED_IN" && sess) {
+        // 清除 url hash 并跳转
         if (window.location.hash) {
           window.history.replaceState(null, "", window.location.pathname);
         }
         router.push({ name: "Home" });
       }
-
       if (event === "SIGNED_OUT") {
-        console.log("用户已注销，跳转到登录页面");
         router.push({ name: "Login" });
       }
     });
   } else {
-    console.warn("[Supabase] 当前未启用，跳过 Supabase 相关操作。");
-    // 这里可以自行决定要如何处理离线模式
+    console.log("没有登录用户，跳转到登录页面");
+    router.push({ name: "Login" });
   }
-  // 处理触碰
-  initializeTouchHandling();
 });
 
+// 确保卸载时清理
 onUnmounted(() => {
-  cleanupTouchHandling();
+  if (!isTauri()) cleanupTouchHandling();
+  cleanupSubscriptions();
 });
+
+function createChannelSubscriptions(tables: string[]) {
+  if (!supabase) {
+    console.warn("[Realtime] Supabase 客户端未初始化，跳过频道订阅。");
+    return;
+  }
+
+  tables.forEach((table) => {
+    try {
+      const topic = `room:${table}`; // 如果你使用的 topic 结构是 room:<room_id>:messages，请根据实际调整
+      const channel = supabase!.channel(topic, { config: { private: true } });
+
+      // 只订阅 broadcast；用 event 过滤器更细粒度（这里使用 '*'，在处理器内判断）
+      channel
+        .on("broadcast", { event: "*" }, (payload) => {
+          handleBroadcastPayload(table, payload);
+        })
+        .subscribe((status) => {
+          console.log(`[Realtime] 频道 ${topic} 订阅状态:`, status);
+        });
+
+      subscriptions.push({ channel, topic });
+    } catch (err) {
+      console.error(`[Realtime] 创建 ${table} 频道失败:`, err);
+    }
+  });
+}
+
+// 清理所有频道订阅
+function cleanupSubscriptions() {
+  try {
+    subscriptions.forEach((sub) => {
+      try {
+        // supabase .channel returns an object with .unsubscribe() and .name
+        if (sub?.channel?.unsubscribe) {
+          sub.channel.unsubscribe();
+          console.log(`[Realtime] 已取消对频道 ${sub.topic ?? sub.channel?.name ?? "unknown"} 的订阅`);
+        }
+      } catch (e) {
+        console.warn("[Realtime] 取消订阅时出错:", e);
+      }
+    });
+  } finally {
+    subscriptions.length = 0;
+  }
+}
 </script>
 
 <style scoped>
