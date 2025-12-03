@@ -260,3 +260,51 @@ export async function uploadAll(): Promise<{ success: boolean; errors: string[];
     syncStore.isSyncing = false;
   }
 }
+
+/**
+ * 只下载（用于初始化或云端数据更新）
+ */
+export async function downloadAll(lastSync: number): Promise<{ success: boolean; errors: string[]; downloaded: number }> {
+  if (!ensureInitialized()) {
+    return { success: false, errors: ["云同步未启用"], downloaded: 0 };
+  }
+
+  const syncStore = useSyncStore();
+  const errors: string[] = [];
+  let downloaded = 0;
+
+  if (syncStore.isSyncing) {
+    return { success: false, errors: ["同步进行中"], downloaded: 0 };
+  }
+
+  syncStore.isSyncing = true; // 标记为正在同步
+  syncStore.syncError = null;
+
+  try {
+    // 使用并行下载所有表
+    const downloadResults = await Promise.allSettled(
+      syncServices.map(({ name, service }) => service.download(lastSync).then((result: any) => ({ name, result })))
+    );
+
+    downloadResults.forEach((outcome) => {
+      if (outcome.status === "fulfilled") {
+        const { name, result } = outcome.value;
+        if (!result.success && result.error) {
+          errors.push(`${name} 下载失败: ${result.error}`);
+        } else {
+          downloaded += result.downloaded; // 统计下载条目
+        }
+      } else {
+        errors.push(`下载异常: ${outcome.reason}`);
+      }
+    });
+
+    return {
+      success: errors.length === 0,
+      errors,
+      downloaded,
+    };
+  } finally {
+    syncStore.isSyncing = false; // 标记为完成同步
+  }
+}
