@@ -122,12 +122,26 @@ export async function syncAll(): Promise<{ success: boolean; errors: string[]; d
     if (!settingStore.settings.autoSupabaseSync) return { success: false, errors: ["自动同步已暂停"], details };
     const lastSync = syncStore.lastSyncTimestamp;
 
-    // ========== 1. 并行上传所有表 ==========
-    const uploadResults = await Promise.allSettled(
-      syncServices.map(({ name, service }) => service.upload().then((result: any) => ({ name, result })))
+    // ========== 1. 上传活动数据 ==========
+    const activitySyncService = syncServices.find((service) => service.name === "Activities")?.service;
+    if (activitySyncService) {
+      const activityUploadResult = await activitySyncService.upload();
+      if (activityUploadResult.success) {
+        details.uploaded += activityUploadResult.uploaded;
+      } else {
+        errors.push(`活动上传失败: ${activityUploadResult.error}`);
+        return { success: false, errors, details }; // 如果活动上传失败，直接返回
+      }
+    }
+
+    // ========== 2. 上传其他表数据 ==========
+    const otherUploadResults = await Promise.allSettled(
+      syncServices
+        .filter((service) => service.name !== "Activities")
+        .map(({ name, service }) => service.upload().then((result: any) => ({ name, result })))
     );
 
-    uploadResults.forEach((outcome) => {
+    otherUploadResults.forEach((outcome) => {
       if (outcome.status === "fulfilled") {
         const { name, result } = outcome.value;
         if (!result.success && result.error) {
@@ -140,7 +154,7 @@ export async function syncAll(): Promise<{ success: boolean; errors: string[]; d
       }
     });
 
-    // ========== 2. 并行下载所有表 ==========
+    // ========== 3. 下载逻辑不变 ==========
     const downloadResults = await Promise.allSettled(
       syncServices.map(({ name, service }) => service.download(lastSync).then((result: any) => ({ name, result })))
     );
@@ -167,16 +181,14 @@ export async function syncAll(): Promise<{ success: boolean; errors: string[]; d
       console.log("🗑️ 开始清理已删除记录...");
 
       const cleanupResults = await Promise.allSettled(
-        syncServices.map(({ name, service }) => service.cleanupDeleted().then((result: any) => ({ name, result })))
+        syncServices.map(({ service }) => service.cleanupDeleted().then((result: any) => ({ result })))
       );
 
       let allCleanupSuccess = true;
       cleanupResults.forEach((outcome) => {
         if (outcome.status === "fulfilled") {
-          const { name, result } = outcome.value;
-          if (result.success) {
-            console.log(`✅ ${name} 清理完成`);
-          } else {
+          const { result } = outcome.value;
+          if (!result.success) {
             allCleanupSuccess = false;
           }
         } else {
@@ -226,12 +238,26 @@ export async function uploadAll(): Promise<{ success: boolean; errors: string[];
   syncStore.syncError = null;
 
   try {
-    // 并行上传所有表
-    const uploadResults = await Promise.allSettled(
-      syncServices.map(({ name, service }) => service.upload().then((result: any) => ({ name, result })))
+    // ========== 1. 上传活动数据 ==========
+    const activitySyncService = syncServices.find((service) => service.name === "Activities")?.service;
+    if (activitySyncService) {
+      const activityUploadResult = await activitySyncService.upload();
+      if (activityUploadResult.success) {
+        uploaded += activityUploadResult.uploaded;
+      } else {
+        errors.push(`活动上传失败: ${activityUploadResult.error}`);
+        return { success: false, errors, uploaded }; // 如果活动上传失败，直接返回
+      }
+    }
+
+    // ========== 2. 并行上传其他数据表 ==========
+    const otherUploadResults = await Promise.allSettled(
+      syncServices
+        .filter((service) => service.name !== "Activities")
+        .map(({ name, service }) => service.upload().then((result: any) => ({ name, result })))
     );
 
-    uploadResults.forEach((outcome) => {
+    otherUploadResults.forEach((outcome) => {
       if (outcome.status === "fulfilled") {
         const { name, result } = outcome.value;
         if (!result.success && result.error) {
