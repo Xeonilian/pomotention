@@ -74,12 +74,10 @@ export const useDataStore = defineStore(
       isDataLoaded.value = true;
     }
     const activeActivities = computed(() => activityList.value.filter((a) => !a.deleted));
-
     const activeTodos = computed(() => todoList.value.filter((t) => !t.deleted));
-
     const activeSchedules = computed(() => scheduleList.value.filter((s) => !s.deleted));
-
     const activeTasks = computed(() => taskList.value.filter((t) => !t.deleted));
+
     // ======================== 4. 数据索引 (Getters / Computed) ========================
     const activityById = computed(() => new Map(activityList.value.map((a) => [a.id, a])));
     const todoById = computed(() => new Map(todoList.value.map((t) => [t.id, t])));
