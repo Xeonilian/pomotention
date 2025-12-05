@@ -119,6 +119,7 @@ const loggingOut = ref(false);
 
 async function handleLogout() {
   loggingOut.value = true;
+  localStorage.clear();
   await signOut();
   loggingOut.value = false;
   router.push({ name: "Login" });
