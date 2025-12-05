@@ -71,6 +71,13 @@ export const useTemplateStore = defineStore("template", () => {
     return allTemplates.value.find((t) => t.id === id);
   }
 
+  /**
+   * 清空模板数据
+   */
+  function clearData() {
+    rawTemplates.value = [];
+  }
+
   // ================================================================
   // 返回
   // ================================================================
@@ -81,6 +88,7 @@ export const useTemplateStore = defineStore("template", () => {
 
     // 方法
     addTemplate,
+    clearData,
     updateTemplate,
     removeTemplate,
     findById,

@@ -51,6 +51,13 @@ export const useDataStore = defineStore(
     // ======================== 3. 初始化/加载逻辑 (Actions) ========================
     const isDataLoaded = ref(false);
 
+    function clearData() {
+      activityList.value = [];
+      todoList.value = [];
+      scheduleList.value = [];
+      taskList.value = [];
+    }
+
     // 在数据加载后重新计算标签计数
     async function loadAllData() {
       if (isDataLoaded.value) {
@@ -572,6 +579,7 @@ export const useDataStore = defineStore(
 
       // 方法
       saveAllDebounced,
+      clearData,
       loadAllData,
       hasStarredTaskForActivity,
       cleanSelection,

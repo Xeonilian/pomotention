@@ -193,13 +193,22 @@ export const useTagStore = defineStore("tagStore", () => {
     }
   }
 
+  /**
+   * 清空标签数据
+   */
+  function clearData() {
+    rawTags.value = [];
+  }
+
   return {
     // State
     rawTags, // 内部状态管理
     // Getters
     allTags, // UI 使用
     unsyncedTags, // 同步服务使用
+
     // Actions
+    clearData,
     addTag,
     updateTag,
     removeTag,
@@ -208,6 +217,7 @@ export const useTagStore = defineStore("tagStore", () => {
     getTagsByIds,
     getTagNamesByIds,
     findByName,
+
     // Sync Actions
     mergeTags,
     updateSyncedStatus,
