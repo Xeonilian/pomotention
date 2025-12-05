@@ -2,6 +2,15 @@
 import { defineStore } from "pinia";
 import { ref, computed, watch } from "vue"; // 补：watch 需要从 vue 引入
 
+import type { Activity } from "@/core/types/Activity";
+import type { Todo, TodoWithTags, TodoWithTaskRecords } from "@/core/types/Todo";
+import type { Schedule } from "@/core/types/Schedule";
+import type { Task } from "@/core/types/Task";
+import type { Tag } from "@/core/types/Tag";
+import type { DataPoint, MetricName, AggregationType, TimeGranularity } from "@/core/types/Chart";
+
+import { addDays, debounce } from "@/core/utils";
+
 import {
   loadActivities,
   loadTodos,
@@ -13,14 +22,6 @@ import {
   saveTasks,
 } from "@/services/localStorageService";
 
-import type { Schedule } from "@/core/types/Schedule";
-import type { Task } from "@/core/types/Task";
-import type { Activity } from "@/core/types/Activity";
-import type { Tag } from "@/core/types/Tag";
-import { addDays, debounce } from "@/core/utils";
-import type { Todo, TodoWithTags, TodoWithTaskRecords } from "@/core/types/Todo";
-
-import type { DataPoint, MetricName, AggregationType, TimeGranularity } from "@/core/types/Chart";
 import { unifiedDateService } from "@/services/unifiedDateService";
 import { collectPomodoroData, collectTaskRecordData, aggregateByTime } from "@/services/chartDataService";
 import { useTagStore } from "./useTagStore";
@@ -304,6 +305,7 @@ export const useDataStore = defineStore(
 
     function addActivity(newActivity: Activity) {
       activityList.value.push(newActivity);
+      saveActivities(activityList.value);
     }
 
     function setActiveId(id: number | null) {
@@ -342,6 +344,58 @@ export const useDataStore = defineStore(
 
       taskList.value[idx] = { ...taskList.value[idx], starred: next };
       saveTasks(taskList.value);
+    }
+
+    /**
+     * 基于Id更新Activity数据的指定字段
+     */
+    function updateActivityById(id: number, updates: Partial<Activity>) {
+      const activityIndex = activityList.value.findIndex((a) => a.id === id);
+      if (activityIndex !== -1) {
+        activityList.value[activityIndex] = { ...activityList.value[activityIndex], ...updates };
+        saveActivities(activityList.value);
+      } else {
+        console.error("Activity not found:", id);
+      }
+    }
+
+    /**
+     * 基于Id更新Schedule数据的指定字段
+     */
+    function updateScheduleById(id: number, updates: Partial<Schedule>) {
+      const scheduleIndex = scheduleList.value.findIndex((s) => s.id === id);
+      if (scheduleIndex !== -1) {
+        scheduleList.value[scheduleIndex] = { ...scheduleList.value[scheduleIndex], ...updates };
+        saveSchedules(scheduleList.value);
+      } else {
+        console.error("Schedule not found:", id);
+      }
+    }
+
+    /**
+     * 基于Id更新Task数据的指定字段
+     */
+    function updateTaskById(id: number, updates: Partial<Task>) {
+      const taskIndex = taskList.value.findIndex((t) => t.id === id);
+      if (taskIndex !== -1) {
+        taskList.value[taskIndex] = { ...taskList.value[taskIndex], ...updates };
+        saveTasks(taskList.value);
+      } else {
+        console.error("Task not found:", id);
+      }
+    }
+
+    /**
+     * 基于Id更新Todo数据的指定字段
+     */
+    function updateTodoById(id: number, updates: Partial<Todo>) {
+      const todoIndex = todoList.value.findIndex((t) => t.id === id);
+      if (todoIndex !== -1) {
+        todoList.value[todoIndex] = { ...todoList.value[todoIndex], ...updates };
+        saveTodos(todoList.value);
+      } else {
+        console.error("Todo not found:", id);
+      }
     }
 
     // ======================== Tag 关联操作 ========================
@@ -467,13 +521,6 @@ export const useDataStore = defineStore(
       return dataPoints.filter((point) => point.timestamp >= startTime && point.timestamp <= endTime);
     }
     // ======================== 8. 监控 (Watches) ========================
-    watch(
-      [activityList, todoList, scheduleList, taskList],
-      () => {
-        saveAllDebounced();
-      },
-      { deep: true }
-    );
 
     watch(
       activityList,
@@ -588,6 +635,10 @@ export const useDataStore = defineStore(
       setSelectedDate,
       setTaskStar,
       toggleTaskStar,
+      updateActivityById,
+      updateTodoById,
+      updateTaskById,
+      updateScheduleById,
 
       // Tag 相关操作
       addTagToActivity,

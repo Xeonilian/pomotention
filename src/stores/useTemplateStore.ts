@@ -10,6 +10,14 @@ export const useTemplateStore = defineStore("template", () => {
   // 状态
   // ================================================================
   const rawTemplates = ref<Template[]>(loadTemplates());
+  // 每当原始数据变化时，自动保存到 localStorage
+  watch(
+    rawTemplates,
+    (templates) => {
+      saveTemplates(templates);
+    },
+    { deep: true }
+  );
 
   // ================================================================
   // Computed
@@ -20,13 +28,16 @@ export const useTemplateStore = defineStore("template", () => {
     return rawTemplates.value.filter((t) => !t.deleted);
   });
 
+  /**
+   * ✅ 为同步服务提供的 Getter，用于获取所有本地未同步的变更。
+   */
+  const unsyncedTemplates = computed(() => rawTemplates.value.filter((t) => !t.synced));
   // ================================================================
   // 方法
   // ================================================================
 
-  /** 保存到 localStorage */
-  function saveToLocal(): void {
-    saveTemplates(rawTemplates.value);
+  function findTemplateIndex(id: number): number {
+    return rawTemplates.value.findIndex((t) => t.id === id);
   }
 
   /** 新增模板 */
@@ -40,30 +51,38 @@ export const useTemplateStore = defineStore("template", () => {
       lastModified: Date.now(),
     };
     rawTemplates.value.push(template);
-    saveToLocal();
     return template;
   }
 
-  /** 更新模板 */
+  /** 更新模板名字和内容 */
   function updateTemplate(id: number, updates: Partial<Pick<Template, "title" | "content">>): void {
     const template = rawTemplates.value.find((t) => t.id === id);
     if (template) {
       Object.assign(template, updates);
       template.synced = false;
       template.lastModified = Date.now();
-      saveToLocal();
+    }
+  }
+
+  /**
+   * 更新一个 template 的信息。
+   * 所有更新都会自动将 `synced` 设为 false 并更新 `lastModified`。
+   */
+  function updateTemplateById(id: number, patch: Partial<Omit<Template, "id">>) {
+    const index = findTemplateIndex(id);
+    if (index !== -1) {
+      rawTemplates.value[index] = {
+        ...rawTemplates.value[index],
+        ...patch,
+        lastModified: Date.now(),
+        synced: false,
+      };
     }
   }
 
   /** 软删除模板 */
   function removeTemplate(id: number): void {
-    const template = rawTemplates.value.find((t) => t.id === id);
-    if (template) {
-      template.deleted = true;
-      template.synced = false;
-      template.lastModified = Date.now();
-      saveToLocal();
-    }
+    updateTemplateById(id, { deleted: true, synced: false, lastModified: Date.now() });
   }
 
   /** 根据 ID 查找模板 */
@@ -85,13 +104,15 @@ export const useTemplateStore = defineStore("template", () => {
     // 状态
     rawTemplates,
     allTemplates,
+    unsyncedTemplates,
 
     // 方法
-    addTemplate,
     clearData,
+    addTemplate,
+    updateTemplateById,
     updateTemplate,
     removeTemplate,
     findById,
-    saveToLocal,
+    findTemplateIndex,
   };
 });

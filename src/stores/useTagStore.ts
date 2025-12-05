@@ -95,7 +95,7 @@ export const useTagStore = defineStore("tagStore", () => {
    * 更新一个 tag 的信息。
    * 所有更新都会自动将 `synced` 设为 false 并更新 `lastModified`。
    */
-  function updateTag(id: number, patch: Partial<Omit<Tag, "id">>) {
+  function updateTagById(id: number, patch: Partial<Omit<Tag, "id">>) {
     const index = findTagIndex(id);
     if (index !== -1) {
       rawTags.value[index] = {
@@ -111,7 +111,7 @@ export const useTagStore = defineStore("tagStore", () => {
    * 软删除一个 tag。
    */
   function removeTag(id: number) {
-    updateTag(id, { deleted: true });
+    updateTagById(id, { deleted: true });
   }
 
   /**
@@ -203,14 +203,13 @@ export const useTagStore = defineStore("tagStore", () => {
   return {
     // State
     rawTags, // 内部状态管理
-    // Getters
     allTags, // UI 使用
     unsyncedTags, // 同步服务使用
 
     // Actions
     clearData,
     addTag,
-    updateTag,
+    updateTagById,
     removeTag,
     loadInitialTags,
     getTag,
