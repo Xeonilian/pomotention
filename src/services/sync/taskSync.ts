@@ -93,6 +93,9 @@ export class TaskSyncService extends BaseSyncService<Task, CloudTaskInsert> {
       const { data, error } = await supabase.rpc("get_full_tasks", { p_user_id: user.id });
 
       if (error) throw error;
+
+      console.log(`📊 [tasks] 获取数据 ${data.length} 条`);
+
       if (!data || data.length === 0) {
         return { success: true, downloaded: 0 };
       }

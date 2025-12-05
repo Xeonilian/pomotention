@@ -112,6 +112,7 @@ export class TodoSyncService extends BaseSyncService<Todo, CloudTodoInsert> {
         return { success: true, downloaded: 0 };
       }
 
+      console.log(`📊 [todos] 获取数据 ${data.length} 条`);
       const localItems = this.loadLocal();
       let downloadedCount = 0;
 

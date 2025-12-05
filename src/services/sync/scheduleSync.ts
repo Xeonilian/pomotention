@@ -92,10 +92,10 @@ export class ScheduleSyncService extends BaseSyncService<Schedule, CloudSchedule
       const { data, error } = await supabase.rpc("get_full_schedules", { p_user_id: user.id });
 
       if (error) throw error;
+      console.log(`📊 [schedules] 获取数据 ${data.length} 条`);
       if (!data || data.length === 0) {
         return { success: true, downloaded: 0 };
       }
-
       const localItems = this.loadLocal();
       let downloadedCount = 0;
 
