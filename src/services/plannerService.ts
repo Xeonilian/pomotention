@@ -5,7 +5,6 @@ import { useDataStore } from "@/stores/useDataStore";
 import { storeToRefs } from "pinia";
 
 const dataStore = useDataStore();
-const { saveAllDebounced } = dataStore;
 const { activityById, todoById, scheduleById } = storeToRefs(dataStore);
 
 /**
@@ -30,7 +29,6 @@ export function updateScheduleStatus(id: number, doneTime: number | undefined, s
     activity.synced = false;
     activity.lastModified = Date.now();
   }
-  saveAllDebounced();
 }
 
 /**
@@ -60,8 +58,6 @@ export function updateTodoStatus(id: number, doneTime: number | undefined, statu
     activity.synced = false;
     activity.lastModified = Date.now();
   }
-
-  saveAllDebounced();
 }
 
 /**
@@ -123,7 +119,6 @@ export function handleSuspendSchedule(id: number) {
         // 将 dueRange 的时间都加1天
         activity.dueRange = [addDays(activity.dueRange[0], 1), activity.dueRange[1]];
         schedule.activityDueRange = [addDays(schedule.activityDueRange[0], 1), schedule.activityDueRange[1]];
-        saveAllDebounced();
       } else {
         console.log(`Activity with id ${activity.id} does not have dueRange`);
       }
@@ -133,10 +128,6 @@ export function handleSuspendSchedule(id: number) {
   } else {
     console.log(`No schedule found with id ${id}`);
   }
-
-  // // 从 scheduleList 中移除对应的 Schedule
-  // const filteredSchedules = scheduleList.value.filter((schedule) => schedule.id !== id);
-  // scheduleList.value.splice(0, scheduleList.value.length, ...filteredSchedules);
 }
 
 /**

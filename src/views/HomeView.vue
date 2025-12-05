@@ -680,6 +680,7 @@ function onUpdateTodoStatus(id: number, isChecked: boolean) {
     }
   }
   updateTodoStatus(id, doneTime, newStatus);
+  saveAllDebounced();
 }
 
 /** 更新待办事项的番茄钟估计 */
@@ -803,6 +804,7 @@ function onUpdateScheduleStatus(id: number, isChecked: boolean) {
     }
   }
   updateScheduleStatus(id, doneTime, newStatus);
+  saveAllDebounced();
 }
 
 /** 修改日期切换按钮的处理函数 */
