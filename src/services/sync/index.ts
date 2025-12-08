@@ -36,6 +36,15 @@ export async function initSyncServices(dataStore: {
   tagList: Ref<Tag[]>;
   templateList: Ref<Template[]>;
   // blockList: Ref<Block[]>;
+
+  // 添加所有的 indexMap
+  activityById: Map<number, Activity>;
+  todoById: Map<number, Todo>;
+  scheduleById: Map<number, Schedule>;
+  taskById: Map<number, Task>;
+  tagById: Map<number, Tag>;
+  templateById: Map<number, Template>;
+  // blockById: Map<number, Block>;
 }) {
   if (isInitialized) {
     console.warn("[Sync] 同步服务已初始化，跳过重复初始化");
@@ -58,13 +67,13 @@ export async function initSyncServices(dataStore: {
     return;
   }
 
-  // 创建各表的 syncService 实例（传入响应式数据）
-  const activitySync = new ActivitySyncService(dataStore.activityList);
-  const todoSync = new TodoSyncService(dataStore.todoList);
-  const scheduleSync = new ScheduleSyncService(dataStore.scheduleList);
-  const taskSync = new TaskSyncService(dataStore.taskList);
-  const tagSync = new TagSyncService(dataStore.tagList);
-  const templateSync = new TemplateSyncService(dataStore.templateList);
+  // 创建各表的 syncService 实例（传入响应式数据和索引 Map）
+  const activitySync = new ActivitySyncService(dataStore.activityList, dataStore.activityById);
+  const todoSync = new TodoSyncService(dataStore.todoList, dataStore.todoById);
+  const scheduleSync = new ScheduleSyncService(dataStore.scheduleList, dataStore.scheduleById);
+  const taskSync = new TaskSyncService(dataStore.taskList, dataStore.taskById);
+  const tagSync = new TagSyncService(dataStore.tagList, dataStore.tagById);
+  const templateSync = new TemplateSyncService(dataStore.templateList, dataStore.templateById);
   // const timetableSync = new TimetableSyncService(dataStore.blockList);
 
   syncServices = [
@@ -97,6 +106,8 @@ function ensureInitialized() {
   return true;
 }
 
+// src/services/sync/index.ts
+
 /**
  * 执行完整同步（上传 + 下载）
  */
@@ -110,7 +121,6 @@ export async function syncAll(): Promise<{ success: boolean; errors: string[]; d
   const errors: string[] = [];
   const details = { uploaded: 0, downloaded: 0 };
 
-  // 防止重复同步
   if (syncStore.isSyncing) {
     return { success: false, errors: ["同步进行中"], details };
   }
@@ -119,25 +129,34 @@ export async function syncAll(): Promise<{ success: boolean; errors: string[]; d
   syncStore.syncError = null;
 
   try {
-    if (!settingStore.settings.autoSupabaseSync) return { success: false, errors: ["自动同步已暂停"], details };
+    if (!settingStore.settings.autoSupabaseSync) {
+      return { success: false, errors: ["自动同步已暂停"], details };
+    }
+
     const lastSync = syncStore.lastSyncTimestamp;
 
+    // ✅ 首次同步时全量下载
+    const isFirstSync = lastSync === 0;
+    if (isFirstSync) {
+      console.log("🔄 首次同步，执行全量下载...");
+    }
+
     // ========== 1. 上传活动数据 ==========
-    const activitySyncService = syncServices.find((service) => service.name === "Activities")?.service;
+    const activitySyncService = syncServices.find((s) => s.name === "Activities")?.service;
     if (activitySyncService) {
-      const activityUploadResult = await activitySyncService.upload();
-      if (activityUploadResult.success) {
-        details.uploaded += activityUploadResult.uploaded;
+      const result = await activitySyncService.upload();
+      if (result.success) {
+        details.uploaded += result.uploaded;
       } else {
-        errors.push(`活动上传失败: ${activityUploadResult.error}`);
-        return { success: false, errors, details }; // 如果活动上传失败，直接返回
+        errors.push(`活动上传失败: ${result.error}`);
+        return { success: false, errors, details };
       }
     }
 
     // ========== 2. 上传其他表数据 ==========
     const otherUploadResults = await Promise.allSettled(
       syncServices
-        .filter((service) => service.name !== "Activities")
+        .filter((s) => s.name !== "Activities")
         .map(({ name, service }) => service.upload().then((result: any) => ({ name, result })))
     );
 
@@ -154,7 +173,7 @@ export async function syncAll(): Promise<{ success: boolean; errors: string[]; d
       }
     });
 
-    // ========== 3. 下载逻辑不变 ==========
+    // ========== 3. 下载数据（使用 lastSync 做增量优化）==========
     const downloadResults = await Promise.allSettled(
       syncServices.map(({ name, service }) => service.download(lastSync).then((result: any) => ({ name, result })))
     );
@@ -172,47 +191,30 @@ export async function syncAll(): Promise<{ success: boolean; errors: string[]; d
       }
     });
 
-    // ========== 3. 清理超过 30 天的已删除记录（每 24 小时一次）==========
+    // ========== 4. 清理超过 30 天的已删除记录 ==========
     const now = Date.now();
     const oneDayMs = 24 * 60 * 60 * 1000;
     const shouldCleanup = now - syncStore.lastCleanupTimestamp > oneDayMs;
 
     if (shouldCleanup) {
       console.log("🗑️ 开始清理已删除记录...");
+      const cleanupResults = await Promise.allSettled(syncServices.map(({ service }) => service.cleanupDeleted()));
 
-      const cleanupResults = await Promise.allSettled(
-        syncServices.map(({ service }) => service.cleanupDeleted().then((result: any) => ({ result })))
-      );
+      const allSuccess = cleanupResults.every((outcome) => outcome.status === "fulfilled" && outcome.value?.success);
 
-      let allCleanupSuccess = true;
-      cleanupResults.forEach((outcome) => {
-        if (outcome.status === "fulfilled") {
-          const { result } = outcome.value;
-          if (!result.success) {
-            allCleanupSuccess = false;
-          }
-        } else {
-          allCleanupSuccess = false;
-        }
-      });
-
-      if (allCleanupSuccess) {
+      if (allSuccess) {
         syncStore.updateLastCleanupTimestamp();
       }
     }
 
-    // ========== 4. 更新同步时间（只有全部成功才更新）==========
+    // ========== 5. 更新同步时间 ==========
     if (errors.length === 0) {
       syncStore.updateLastSyncTimestamp();
     } else {
       syncStore.syncError = errors.join("; ");
     }
 
-    return {
-      success: errors.length === 0,
-      errors,
-      details,
-    };
+    return { success: errors.length === 0, errors, details };
   } finally {
     syncStore.isSyncing = false;
   }

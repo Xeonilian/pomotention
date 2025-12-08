@@ -16,8 +16,9 @@ export interface Activity {
   tagIds?: number[];
   parentId: number | null;
   lastModified: number; // 最后修改时间戳
+  cloudModified?: number; // 云端修改时间戳
   synced: boolean;
-  deleted: boolean; 
+  deleted: boolean;
 }
 
 export interface ActivitySectionConfig {

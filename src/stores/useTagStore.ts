@@ -206,6 +206,8 @@ export const useTagStore = defineStore("tagStore", () => {
     allTags, // UI 使用
     unsyncedTags, // 同步服务使用
 
+    tagById: computed(() => new Map(rawTags.value.map((t) => [t.id, t]))),
+
     // Actions
     clearData,
     addTag,

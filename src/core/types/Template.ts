@@ -7,4 +7,5 @@ export interface Template {
   synced: boolean; // 是否已同步
   deleted: boolean; // 是否已删除
   lastModified: number; // 最后修改时间
+  cloudModified?: number; // 云端修改时间戳
 }

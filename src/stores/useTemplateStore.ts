@@ -105,6 +105,7 @@ export const useTemplateStore = defineStore("template", () => {
     rawTemplates,
     allTemplates,
     unsyncedTemplates,
+    templateById: computed(() => new Map(rawTemplates.value.map((t) => [t.id, t]))),
 
     // 方法
     clearData,

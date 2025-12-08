@@ -4,14 +4,14 @@ import { BaseSyncService } from "@/services/sync/baseSyncService";
 import type { Activity } from "@/core/types/Activity";
 import type { Database } from "@/core/types/Database";
 import type { Ref } from "vue";
-import { convertTimestampToISO } from "@/core/utils";
+import { convertISOToTimestamp } from "@/core/utils/convertTimestampToISO";
 
 type CloudActivity = Database["public"]["Tables"]["activities"]["Row"];
 type CloudActivityInsert = Database["public"]["Tables"]["activities"]["Insert"];
 
 export class ActivitySyncService extends BaseSyncService<Activity, CloudActivityInsert> {
-  constructor(reactiveList: Ref<Activity[]>) {
-    super("activities", "activitySheet", reactiveList);
+  constructor(reactiveList: Ref<Activity[]>, indexMap: Map<number, Activity>) {
+    super("activities", "activitySheet", reactiveList, indexMap);
   }
 
   protected mapLocalToCloud(local: Activity, userId: string): CloudActivityInsert {
@@ -38,6 +38,7 @@ export class ActivitySyncService extends BaseSyncService<Activity, CloudActivity
   }
 
   protected mapCloudToLocal(cloud: CloudActivity): Activity {
+    const cloudTimestamp = convertISOToTimestamp(cloud.last_modified);
     return {
       id: cloud.timestamp_id,
       title: cloud.title,
@@ -55,6 +56,7 @@ export class ActivitySyncService extends BaseSyncService<Activity, CloudActivity
       taskId: cloud.task_id ?? undefined,
       tagIds: cloud.tag_ids ?? undefined,
       parentId: cloud.parent_id,
+      cloudModified: cloudTimestamp,
       lastModified: Date.now(),
       synced: true,
       deleted: cloud.deleted || false,

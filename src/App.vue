@@ -82,6 +82,13 @@ onMounted(async () => {
         taskList,
         tagList: rawTags,
         templateList: rawTemplates,
+        // Maps
+        activityById: dataStore.activityById,
+        todoById: dataStore.todoById,
+        scheduleById: dataStore.scheduleById,
+        taskById: dataStore.taskById,
+        tagById: tagStore.tagById,
+        templateById: templateStore.templateById,
       });
 
       await syncAll(); // 同步所有数据
