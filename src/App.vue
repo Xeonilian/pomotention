@@ -40,6 +40,34 @@ const { activityList, todoList, scheduleList, taskList } = storeToRefs(dataStore
 const { rawTags } = storeToRefs(tagStore);
 const { rawTemplates } = storeToRefs(templateStore);
 
+const startAppSync = async () => {
+  if (!isSupabaseEnabled()) {
+    console.warn("[Supabase] 当前未启用，跳过同步初始化。");
+    return;
+  }
+
+  console.log("🔄 初始化同步服务...");
+  // 初始化同步服务 (绑定 store 数据)
+  await initSyncServices({
+    activityList,
+    todoList,
+    scheduleList,
+    taskList,
+    tagList: rawTags,
+    templateList: rawTemplates,
+    // Maps
+    activityById: dataStore.activityById,
+    todoById: dataStore.todoById,
+    scheduleById: dataStore.scheduleById,
+    taskById: dataStore.taskById,
+    tagById: tagStore.tagById,
+    templateById: templateStore.templateById,
+  });
+
+  console.log("☁️ 开始全量同步...");
+  await syncAll(); // 同步所有数据
+};
+
 onMounted(async () => {
   // 1. 初始化本地数据
   await dataStore.loadAllData();
@@ -73,28 +101,8 @@ onMounted(async () => {
   if (session) {
     console.log("用户已登录", session.user?.id);
 
-    if (isSupabaseEnabled()) {
-      // 初始化同步服务
-      await initSyncServices({
-        activityList,
-        todoList,
-        scheduleList,
-        taskList,
-        tagList: rawTags,
-        templateList: rawTemplates,
-        // Maps
-        activityById: dataStore.activityById,
-        todoById: dataStore.todoById,
-        scheduleById: dataStore.scheduleById,
-        taskById: dataStore.taskById,
-        tagById: tagStore.tagById,
-        templateById: templateStore.templateById,
-      });
-
-      await syncAll(); // 同步所有数据
-    } else {
-      console.warn("[Supabase] 当前未启用，跳过 Supabase 相关操作。");
-    }
+    // ✅ 场景 A：打开 App 时就已经登录了 -> 启动同步
+    await startAppSync();
 
     // 清除 url hash 并跳转
     if (window.location.hash) {
@@ -114,9 +122,9 @@ onMounted(async () => {
       tagStore.clearData();
       templateStore.clearData();
       router.push({ name: "Login" });
-    } else if (event === "SIGNED_IN") {
+    } else if (event === "SIGNED_IN" || event === "INITIAL_SESSION") {
       // 用户登录时重新加载数据
-      await syncAll(); // 同步数据
+      await startAppSync();
     }
   });
 });
