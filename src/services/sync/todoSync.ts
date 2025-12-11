@@ -6,7 +6,6 @@ import { BaseSyncService } from "./baseSyncService";
 import type { Todo } from "@/core/types/Todo";
 import type { Database } from "@/core/types/Database";
 import type { Ref } from "vue";
-import { convertTimestampToISO } from "@/core/utils";
 
 type CloudTodoInsert = Database["public"]["Tables"]["todos"]["Insert"];
 
@@ -34,8 +33,8 @@ interface FullTodoFromCloud {
 }
 
 export class TodoSyncService extends BaseSyncService<Todo, CloudTodoInsert> {
-  constructor(reactiveList: Ref<Todo[]>) {
-    super("todos", "todayTodo", reactiveList);
+  constructor(reactiveList: Ref<Todo[]>, indexMap: Map<number, Todo>) {
+    super("todos", "todayTodo", reactiveList, indexMap);
   }
 
   /**
@@ -88,14 +87,18 @@ export class TodoSyncService extends BaseSyncService<Todo, CloudTodoInsert> {
   /**
    * 覆盖 download 方法：使用 RPC 获取带冗余字段的数据
    */
-  async download(_lastSyncTimestamp: number): Promise<{
+  /**
+   * 覆盖 download 方法：使用 RPC 获取增量数据
+   * 逻辑完全匹配 BaseSyncService 的响应式设计
+   */
+  async download(lastSyncTimestamp: number): Promise<{
     success: boolean;
     error?: string;
     downloaded: number;
   }> {
     try {
       if (!supabase) {
-        console.warn("[todos] Supabase 未启用，跳过下载 todo 数据");
+        console.warn("[todos] Supabase 未启用，跳过下载");
         return { success: false, error: "云同步未启用", downloaded: 0 };
       }
 
@@ -104,54 +107,90 @@ export class TodoSyncService extends BaseSyncService<Todo, CloudTodoInsert> {
         return { success: false, error: "用户未登录", downloaded: 0 };
       }
 
-      // 从云端获取完整的 todo 数据
-      const { data, error } = await supabase.rpc("get_full_todos", { p_user_id: user.id });
+      // 1. 准备时间参数 (RPC 增量查询)
+      const lastSyncISO = new Date(lastSyncTimestamp > 0 ? lastSyncTimestamp : 0).toISOString();
+
+      // 2. 调用 RPC 获取数据
+      const { data, error } = await supabase.rpc("get_full_todos", {
+        p_user_id: user.id,
+        p_last_modified: lastSyncISO,
+      });
+
       if (error) throw error;
 
       if (!data || data.length === 0) {
         return { success: true, downloaded: 0 };
       }
 
-      console.log(`📊 [todos] 获取数据 ${data.length} 条`);
-      const localItems = this.loadLocal();
+      console.log(`📊 [todos] 增量下载: 获取到 ${data.length} 条更新`);
+
+      // 3. 直接使用 BaseSyncService 中的响应式引用和索引 Map
+      const localItems = this.reactiveList.value;
+      const localMap = this.indexMap;
       let downloadedCount = 0;
 
-      // 将 lastSyncTimestamp 转换为 ISO 格式
-      // const lastSyncISO = convertTimestampToISO(lastSyncTimestamp);
+      for (const cloudItem of data) {
+        // RPC 返回的 id 也是 bigint (number)
+        const cloudId = cloudItem.id;
+        const localItem = localMap.get(cloudId);
 
-      data.forEach((cloudItem: FullTodoFromCloud) => {
-        const localIndex = localItems.findIndex((item) => item.id === cloudItem.id);
+        // 解析云端时间戳
+        const cloudTimestamp = new Date(cloudItem.last_modified).getTime();
 
+        // --- A. 云端标记为删除 ---
         if (cloudItem.deleted) {
-          // 如果云端标记为删除并且在本地存在，则删除本地记录
-          if (localIndex !== -1) {
-            localItems.splice(localIndex, 1);
-            downloadedCount++; // 删除计入下载的记录数
-          }
-        } else {
-          if (localIndex === -1) {
-            // 本地不存在，直接插入
-            localItems.push(this.mapCloudToLocal(cloudItem));
-            downloadedCount++;
-          } else {
-            const localItem = localItems[localIndex];
-            // console.log(`处理记录 ID: ${cloudItem.id}`);
-            // console.log(`云端 last_modified: ${cloudItem.last_modified}`);
-            // console.log(`本地 lastModified: ${convertTimestampToISO(localItem.lastModified)}`);
-            if (cloudItem.last_modified > convertTimestampToISO(localItem.lastModified)) {
-              // 云端版本覆盖本地
-              localItems[localIndex] = this.mapCloudToLocal(cloudItem);
-              downloadedCount++;
+          if (localItem && !localItem.deleted) {
+            // 冲突检测：如果本地有未同步的修改，跳过云端删除
+            if (!localItem.synced) {
+              console.log(`🔒 [todos] ID=${cloudId} 本地有未同步修改，跳过云端删除`);
+              continue;
             }
-            // 如果本地已同步，跳过
-          }
-        }
-      });
 
-      // ✅ 只有真正下载了数据才保存
-      if (downloadedCount > 0) {
-        this.saveLocal(localItems);
+            // 执行软删除 (与 BaseSyncService 保持一致)
+            localItem.deleted = true;
+            localItem.lastModified = Date.now();
+            localItem.cloudModified = cloudTimestamp;
+            localItem.synced = true;
+
+            downloadedCount++;
+            console.log(`🗑️ [todos] 标记删除 ID=${cloudId}`);
+          }
+          continue;
+        }
+
+        // --- B. 本地不存在：新增 ---
+        if (!localItem) {
+          const newItem = this.mapCloudToLocal(cloudItem);
+          localItems.push(newItem);
+          localMap.set(newItem.id, newItem);
+
+          downloadedCount++;
+          console.log(`➕ [todos] 新增 ID=${cloudId}`);
+          continue;
+        }
+
+        // --- C. 本地存在：更新 ---
+        if (!localItem.synced) {
+          console.log(`🔒 [todos] ID=${cloudId} 本地有未同步修改，跳过下载`);
+          continue;
+        }
+
+        // 比较时间戳：如果云端比本地记录的“云端时间”新，或者本地没有记录云端时间
+        // 注意：这里比较的是 cloudModified，而不是 lastModified，因为我们要判断的是“服务器是否有新版本”
+        if (!localItem.cloudModified || cloudTimestamp > localItem.cloudModified) {
+          const updatedItem = this.mapCloudToLocal(cloudItem);
+
+          // 利用 Object.assign 保持引用不变，触发 Vue 响应式更新
+          Object.assign(localItem, updatedItem);
+
+          downloadedCount++;
+          console.log(`🔄 [todos] 更新 ID=${cloudId}`);
+        } else {
+          // console.log(`⏭️ [todos] ID=${cloudId} 云端无变化，跳过`);
+        }
       }
+
+      // 不需要 saveLocal，因为 reactiveList 是响应式的，变更会自动被外部 watcher 捕获并持久化
 
       return { success: true, downloaded: downloadedCount };
     } catch (error: any) {

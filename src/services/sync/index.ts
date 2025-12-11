@@ -125,8 +125,7 @@ export async function syncAll(): Promise<{ success: boolean; errors: string[]; d
     return { success: false, errors: ["同步进行中"], details };
   }
 
-  syncStore.isSyncing = true;
-  syncStore.syncError = null;
+  syncStore.startSync("正在同步...");
 
   try {
     if (!settingStore.settings.autoSupabaseSync) {
@@ -209,14 +208,16 @@ export async function syncAll(): Promise<{ success: boolean; errors: string[]; d
 
     // ========== 5. 更新同步时间 ==========
     if (errors.length === 0) {
-      syncStore.updateLastSyncTimestamp();
+      syncStore.syncSuccess();
     } else {
-      syncStore.syncError = errors.join("; ");
+      syncStore.syncFailed(errors.join("; "));
     }
 
     return { success: errors.length === 0, errors, details };
   } finally {
-    syncStore.isSyncing = false;
+    if (syncStore.isSyncing) {
+      syncStore.syncSuccess("同步结束");
+    }
   }
 }
 
@@ -236,8 +237,7 @@ export async function uploadAll(): Promise<{ success: boolean; errors: string[];
     return { success: false, errors: ["同步进行中"], uploaded: 0 };
   }
 
-  syncStore.isSyncing = true;
-  syncStore.syncError = null;
+  syncStore.startUpload();
 
   try {
     // ========== 1. 上传活动数据 ==========
@@ -274,7 +274,7 @@ export async function uploadAll(): Promise<{ success: boolean; errors: string[];
 
     // 上传成功后更新时间戳
     if (errors.length === 0) {
-      syncStore.updateLastSyncTimestamp();
+      syncStore.syncSuccess("上传完成");
     } else {
       syncStore.syncError = errors.join("; ");
     }
@@ -285,7 +285,9 @@ export async function uploadAll(): Promise<{ success: boolean; errors: string[];
       uploaded,
     };
   } finally {
-    syncStore.isSyncing = false;
+    if (syncStore.isSyncing) {
+      syncStore.syncSuccess("上传结束");
+    }
   }
 }
 
@@ -305,8 +307,7 @@ export async function downloadAll(lastSync: number): Promise<{ success: boolean;
     return { success: false, errors: ["同步进行中"], downloaded: 0 };
   }
 
-  syncStore.isSyncing = true; // 标记为正在同步
-  syncStore.syncError = null;
+  syncStore.startDownload();
 
   try {
     // 使用并行下载所有表
@@ -327,12 +328,20 @@ export async function downloadAll(lastSync: number): Promise<{ success: boolean;
       }
     });
 
+    if (errors.length === 0) {
+      syncStore.syncSuccess("下载完成");
+    } else {
+      syncStore.syncFailed(errors.join("; "));
+    }
+
     return {
       success: errors.length === 0,
       errors,
       downloaded,
     };
   } finally {
-    syncStore.isSyncing = false; // 标记为完成同步
+    if (syncStore.isSyncing) {
+      syncStore.syncSuccess("下载结束");
+    }
   }
 }

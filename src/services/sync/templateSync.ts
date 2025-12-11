@@ -9,8 +9,8 @@ type CloudTemplate = Database["public"]["Tables"]["templates"]["Row"];
 type CloudTemplateInsert = Database["public"]["Tables"]["templates"]["Insert"];
 
 export class TemplateSyncService extends BaseSyncService<Template, CloudTemplateInsert> {
-  constructor(reactiveList: Ref<Template[]>) {
-    super("templates", "writingTemplate", reactiveList);
+  constructor(reactiveList: Ref<Template[]>, indexMap: Map<number, Template>) {
+    super("templates", "writingTemplate", reactiveList, indexMap);
   }
 
   protected mapLocalToCloud(local: Template, userId: string): CloudTemplateInsert {

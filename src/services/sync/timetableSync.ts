@@ -1,4 +1,5 @@
 // src/services/sync/timetableSync.ts
+// 实际上并没有同步，因为出错，而且也不值当
 
 import { BaseSyncService } from "@/services/sync/baseSyncService";
 import type { Block } from "@/core/types/Block";
@@ -9,8 +10,8 @@ type CloudBlock = Database["public"]["Tables"]["timetable_blocks"]["Row"];
 type CloudBlockInsert = Database["public"]["Tables"]["timetable_blocks"]["Insert"];
 
 export class TimetableSyncService extends BaseSyncService<Block, CloudBlockInsert> {
-  constructor(reactiveList: Ref<Block[]>) {
-    super("timetable_blocks", "timeTableBlocks", reactiveList);
+  constructor(reactiveList: Ref<Block[]>, indexMap: Map<number, Block>) {
+    super("timetable_blocks", "timeTableBlocks", reactiveList, indexMap);
   }
 
   protected mapLocalToCloud(local: Block, userId: string): CloudBlockInsert {

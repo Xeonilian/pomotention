@@ -55,7 +55,7 @@ onMounted(async () => {
   }
 
   // 3. Supabase session & 初始化同步
-  settingStore.settings.autoSupabaseSync = false; // 初始化开关测试用
+  settingStore.settings.autoSupabaseSync = true; // 初始化开关测试用
   let session = null;
 
   // 获取用户 session

@@ -9,8 +9,8 @@ type CloudTag = Database["public"]["Tables"]["tags"]["Row"];
 type CloudTagInsert = Database["public"]["Tables"]["tags"]["Insert"];
 
 export class TagSyncService extends BaseSyncService<Tag, CloudTagInsert> {
-  constructor(reactiveList: Ref<Tag[]>) {
-    super("tags", "tag", reactiveList);
+  constructor(reactiveList: Ref<Tag[]>, indexMap: Map<number, Tag>) {
+    super("tags", "tag", reactiveList, indexMap);
   }
 
   protected mapLocalToCloud(local: Tag, userId: string): CloudTagInsert {
