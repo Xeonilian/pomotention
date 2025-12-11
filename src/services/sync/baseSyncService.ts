@@ -66,6 +66,7 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
   }
 
   // baseSyncService.ts 的 upload 方法修改
+
   async upload(): Promise<{ success: boolean; error?: string; uploaded: number }> {
     try {
       if (!supabase) {
@@ -79,6 +80,7 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
         return { success: false, error: "用户未登录", uploaded: 0 };
       }
 
+      // 获取未同步的数据
       const unsyncedItems = this.reactiveList.value.filter((item) => !item.synced);
 
       if (unsyncedItems.length === 0) {
@@ -87,6 +89,7 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
 
       console.log(`📤 [${this.tableName}] 准备上传 ${unsyncedItems.length} 条`);
 
+      // 映射数据并执行上传 (Upsert)
       const cloudData = unsyncedItems.map((item) => this.mapLocalToCloud(item, user.id));
 
       const { error } = await supabase.from(this.tableName).upsert(cloudData as any, {
@@ -96,34 +99,54 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
 
       if (error) throw error;
 
-      // ✅ 上传后获取云端时间戳（方案 A：精确）
-      const uploadedIds = unsyncedItems.map((item) => this.getCloudId(item as any));
-      const { data: cloudItems, error: fetchError } = await supabase
-        .from(this.tableName)
-        .select("timestamp_id,last_modified") // 只查询必要字段
-        .eq("user_id", user.id)
-        .in("timestamp_id", uploadedIds);
+      // ✅ 修复核心：获取云端时间戳（防止 undefined 导致崩溃）
 
+      // 1. 提取 ID 并过滤掉无效值 (undefined/null/'')
+      // 这一步修复了 "invalid input syntax for type bigint" 错误
+      const uploadedIds = unsyncedItems.map((item) => this.getCloudId(item as any)).filter((id) => id !== undefined && id !== null);
+
+      let fetchError = null;
+      let cloudItems = null;
+
+      // 2. 只有存在有效 ID 时才向云端查询
+      if (uploadedIds.length > 0) {
+        const result = await supabase
+          .from(this.tableName)
+          .select("timestamp_id,last_modified") // 只查询必要字段
+          .eq("user_id", user.id)
+          .in("timestamp_id", uploadedIds);
+
+        cloudItems = result.data;
+        fetchError = result.error;
+      }
+
+      // 3. 处理回填逻辑
       if (fetchError) {
         console.warn(`⚠️ [${this.tableName}] 无法获取云端时间戳:`, fetchError.message);
-        // 降级方案：使用当前时间
+        // 降级方案：所有条目使用当前本地时间
         const now = Date.now();
         unsyncedItems.forEach((item) => {
           item.synced = true;
           item.cloudModified = now;
         });
-      } else if (cloudItems) {
-        const cloudMap = new Map(cloudItems.map((ci) => [ci.timestamp_id, new Date(ci.last_modified).getTime()]));
+      } else {
+        // 创建映射 Map: ID -> Timestamp
+        const cloudMap = cloudItems ? new Map(cloudItems.map((ci) => [ci.timestamp_id, new Date(ci.last_modified).getTime()])) : new Map();
 
         unsyncedItems.forEach((item) => {
-          const cloudTimestamp = cloudMap.get(item.id);
+          const cid = this.getCloudId(item as any);
+          // 尝试从云端返回的数据中找到时间
+          const cloudTimestamp = cid && cloudMap.has(cid) ? cloudMap.get(cid) : undefined;
+
           if (cloudTimestamp) {
+            // 找到了精准的云端时间
             item.synced = true;
             item.cloudModified = cloudTimestamp;
           } else {
-            console.warn(`⚠️ [${this.tableName}] 未找到云端数据 ID=${item.id}`);
+            // 没找到（可能是 ID 无效，或者云端没返回），使用当前时间兜底
+            // console.warn(`⚠️ [${this.tableName}] 未找到云端数据 ID=${cid}，使用本地时间`);
             item.synced = true;
-            item.cloudModified = Date.now(); // 降级
+            item.cloudModified = Date.now();
           }
         });
       }
@@ -236,84 +259,6 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
       return { success: false, error: error.message, downloaded: 0 };
     }
   }
-  // /**
-  //  * 从云端下载数据（默认实现：直接查询表）
-  //  * 子类可以覆盖此方法（如 TodoSyncService 使用 RPC）
-  //  */
-  // async download(_lastSyncTimestamp: number): Promise<{
-  //   success: boolean;
-  //   error?: string;
-  //   downloaded: number;
-  // }> {
-  //   try {
-  //     if (!supabase) {
-  //       console.warn(`[${this.tableName}] Supabase 未启用，跳过下载`);
-  //       return { success: false, error: "云同步未启用", downloaded: 0 };
-  //     }
-
-  //     const user = await getCurrentUser();
-  //     if (!user) {
-  //       console.log("用户未登录，跳过下载");
-  //       return { success: false, error: "用户未登录", downloaded: 0 };
-  //     }
-
-  //     // 此处不加入 deleted 的过滤，保持获取所有记录
-  //     // const lastSyncISO = convertTimestampToISO(lastSyncTimestamp);
-
-  //     const { data, error } = await supabase.from(this.tableName).select("*").eq("user_id", user.id); // 获取所有新数据，不过滤 deleted 条件
-  //     //.gt("last_modified", lastSyncISO)
-
-  //     if (error) throw error;
-  //     console.log(`📊 [${this.tableName}] 获取数据 ${data.length} 条`);
-
-  //     if (!data || data.length === 0) {
-  //       return { success: true, downloaded: 0 };
-  //     }
-
-  //     const localItems = this.reactiveList.value; // 加载本地数据
-  //     let downloadedCount = 0;
-
-  //     // 遍历云端数据
-  //     data.forEach((cloudItem: any) => {
-  //       const localIndex = localItems.findIndex((item) => item.id === cloudItem.timestamp_id);
-
-  //       if (cloudItem.deleted) {
-  //         // 云端的记录被标记为删除，处理本地删除
-  //         if (localIndex !== -1) {
-  //           // 如果本地也找到了，删除
-  //           localItems.splice(localIndex, 1);
-  //           downloadedCount++; // 删除计入下载
-  //         }
-  //         return; // 处理下一个记录
-  //       }
-
-  //       if (localIndex === -1) {
-  //         // 本地不存在该记录，插入
-  //         localItems.push(this.mapCloudToLocal(cloudItem));
-  //         downloadedCount++;
-  //       } else {
-  //         const localItem = localItems[localIndex];
-
-  //         // console.log(`处理记录 ID: ${cloudItem.timestamp_id}`);
-  //         // console.log(`云端 last_modified: ${cloudItem.last_modified}`);
-  //         // console.log(`本地 lastModified: ${convertTimestampToISO(localItem.lastModified)}`);
-  //         // console.log(`最后同步时间 lastSyncTimestamp: ${lastSyncISO}`);
-
-  //         // 如果云端的记录时间较新，且没有标记为删除，覆盖本地
-  //         if (cloudItem.last_modified > convertTimestampToISO(localItem.lastModified)) {
-  //           localItems[localIndex] = this.mapCloudToLocal(cloudItem);
-  //           downloadedCount++;
-  //         }
-  //         // 如果云端数据标记为已同步，则可以根据需要决定是否覆盖本地
-  //       }
-  //     });
-
-  //     return { success: true, downloaded: downloadedCount };
-  //   } catch (error: any) {
-  //     console.error(`${this.tableName} 下载失败:`, error);
-  //     return { success: false, error: error.message, downloaded: 0 };
-  //   }
-  // }
   /**
    * 清理超过 30 天的已删除记录（云端）
    */

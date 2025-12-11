@@ -209,6 +209,7 @@ export async function syncAll(): Promise<{ success: boolean; errors: string[]; d
     // ========== 5. 更新同步时间 ==========
     if (errors.length === 0) {
       syncStore.syncSuccess();
+      syncStore.updateLastSyncTimestamp();
     } else {
       syncStore.syncFailed(errors.join("; "));
     }
@@ -330,6 +331,7 @@ export async function downloadAll(lastSync: number): Promise<{ success: boolean;
 
     if (errors.length === 0) {
       syncStore.syncSuccess("下载完成");
+      syncStore.updateLastSyncTimestamp();
     } else {
       syncStore.syncFailed(errors.join("; "));
     }

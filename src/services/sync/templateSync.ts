@@ -4,7 +4,7 @@ import { BaseSyncService } from "@/services/sync/baseSyncService";
 import type { Template } from "@/core/types/Template";
 import type { Database } from "@/core/types/Database";
 import type { Ref } from "vue";
-
+import { convertISOToTimestamp } from "@/core/utils/convertTimestampToISO";
 type CloudTemplate = Database["public"]["Tables"]["templates"]["Row"];
 type CloudTemplateInsert = Database["public"]["Tables"]["templates"]["Insert"];
 
@@ -24,6 +24,7 @@ export class TemplateSyncService extends BaseSyncService<Template, CloudTemplate
   }
 
   protected mapCloudToLocal(cloud: CloudTemplate): Template {
+    const cloudTimestamp = convertISOToTimestamp(cloud.last_modified);
     return {
       id: cloud.timestamp_id,
       title: cloud.title,
@@ -31,6 +32,7 @@ export class TemplateSyncService extends BaseSyncService<Template, CloudTemplate
       lastModified: Date.now(),
       synced: true,
       deleted: cloud.deleted,
+      cloudModified: cloudTimestamp,
     };
   }
 }
