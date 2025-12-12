@@ -213,6 +213,7 @@ export async function syncAll(): Promise<{ success: boolean; errors: string[]; d
     if (errors.length === 0) {
       syncStore.syncSuccess();
       syncStore.updateLastSyncTimestamp();
+      dataStore.saveAllAfterSync();
     } else {
       syncStore.syncFailed(errors.join("; "));
     }
