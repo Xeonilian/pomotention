@@ -48,7 +48,7 @@
       </n-layout-content>
 
       <!-- ✅ 新增：同步状态 Footer -->
-      <n-layout-footer v-if="!isMiniMode" class="sync-footer" bordered>
+      <n-layout-footer v-if="!isMiniMode && syncStore.isSyncing" class="sync-footer" bordered>
         <div class="sync-status">
           <!-- 状态图标 -->
           <div class="sync-status__icon" :class="`sync-status__icon--${syncStore.syncStatus}`">
@@ -69,15 +69,15 @@
           </div>
 
           <!-- 操作按钮 -->
-          <div class="sync-status__actions">
+          <!-- <div class="sync-status__actions">
             <n-button size="tiny" quaternary :loading="syncStore.isSyncing" @click="handleFullSync" title="完整同步（上传+下载）">
               <template #icon>
                 <n-icon><CloudSync24Regular /></n-icon>
               </template>
               同步
-            </n-button>
+            </n-button> -->
 
-            <n-button size="tiny" quaternary :loading="syncStore.isSyncing" @click="handleUpload" title="只上传本地数据">
+          <!-- <n-button size="tiny" quaternary :loading="syncStore.isSyncing" @click="handleUpload" title="只上传本地数据">
               <template #icon>
                 <n-icon><CloudSync24Regular /></n-icon>
               </template>
@@ -89,8 +89,8 @@
                 <n-icon><CloudSync24Regular /></n-icon>
               </template>
               下载
-            </n-button>
-          </div>
+            </n-button> -->
+          <!-- </div> -->
         </div>
       </n-layout-footer>
     </n-layout>
@@ -109,7 +109,7 @@ import { useSyncStore } from "@/stores/useSyncStore";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useTimerStore } from "@/stores/useTimerStore";
 
-import { syncAll, uploadAll, downloadAll } from "@/services/sync";
+// import { syncAll, uploadAll, downloadAll } from "@/services/sync";
 
 import {
   ArrowLeft24Filled,
@@ -126,7 +126,7 @@ import { useDraggable } from "@/composables/useDraggable";
 import { useButtonStyle } from "@/composables/useButtonStyle";
 import { useRelativeTime } from "@/composables/useRelativeTime";
 
-import { CloudSync24Regular } from "@vicons/fluent";
+// import { CloudSync24Regular } from "@vicons/fluent";
 
 import PomotentionTimer from "@/components/PomotentionTimer/PomotentionTimer.vue";
 
@@ -164,30 +164,30 @@ const syncIcon = computed(() => {
 const relativeTime = useRelativeTime(syncStore.lastSyncTimestamp);
 
 // 测试按钮
-async function handleFullSync() {
-  try {
-    await syncAll();
-  } catch (error) {
-    console.error("同步失败:", error);
-  }
-}
+// async function handleFullSync() {
+//   try {
+//     await syncAll();
+//   } catch (error) {
+//     console.error("同步失败:", error);
+//   }
+// }
 
-async function handleUpload() {
-  try {
-    await uploadAll();
-  } catch (error) {
-    console.error("上传失败:", error);
-  }
-}
+// async function handleUpload() {
+//   try {
+//     await uploadAll();
+//   } catch (error) {
+//     console.error("上传失败:", error);
+//   }
+// }
 
-async function handleDownload() {
-  try {
-    const lastSync = syncStore.lastSyncTimestamp;
-    await downloadAll(lastSync);
-  } catch (error) {
-    console.error("下载失败:", error);
-  }
-}
+// async function handleDownload() {
+//   try {
+//     const lastSync = syncStore.lastSyncTimestamp;
+//     await downloadAll(lastSync);
+//   } catch (error) {
+//     console.error("下载失败:", error);
+//   }
+// }
 
 const menuOptions = [
   { label: "首页", key: "/" },
@@ -539,7 +539,7 @@ watch(
 /* 主内容区域样式：占据所有剩余空间 */
 .app-layout__content {
   position: relative;
-  height: calc(100% - 55px); /* 填充整个视口高度 */
+  height: calc(100% - 30px); /* 填充整个视口高度 */
   overflow: hidden;
 }
 
@@ -587,12 +587,16 @@ watch(
 
 /* ✅ 同步 Footer 样式 */
 .sync-footer {
-  flex-shrink: 0; /* ✅ 防止被压缩 */
-  height: 10px; /* ✅ 固定高度 */
+  position: fixed; /* ✅ 固定定位 */
+  bottom: 0; /* ✅ 贴底 */
+  left: 0; /* ✅ 从左侧开始 */
+  right: 0; /* ✅ 延伸到右侧 */
+
+  display: flex;
+  height: 30px;
   padding: 0px 10px;
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(10px);
-  border-top: 1px solid #e0e0e6;
+
+  z-index: 1000; /* ✅ 确保在其他内容上方 */
 }
 
 .sync-status {
