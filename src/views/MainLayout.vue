@@ -59,7 +59,7 @@
           <div class="sync-status__info">
             <span class="sync-status__message">{{ syncStore.syncMessage }}</span>
             <span v-if="syncStore.lastSyncTimestamp" class="sync-status__time">
-              {{ formatSyncTime(syncStore.lastSyncTimestamp) }}
+              {{ relativeTime }}
             </span>
           </div>
 
@@ -70,21 +70,21 @@
 
           <!-- 操作按钮 -->
           <div class="sync-status__actions">
-            <n-button size="small" quaternary :loading="syncStore.isSyncing" @click="handleFullSync" title="完整同步（上传+下载）">
+            <n-button size="tiny" quaternary :loading="syncStore.isSyncing" @click="handleFullSync" title="完整同步（上传+下载）">
               <template #icon>
                 <n-icon><CloudSync24Regular /></n-icon>
               </template>
               同步
             </n-button>
 
-            <n-button size="small" quaternary :loading="syncStore.isSyncing" @click="handleUpload" title="只上传本地数据">
+            <n-button size="tiny" quaternary :loading="syncStore.isSyncing" @click="handleUpload" title="只上传本地数据">
               <template #icon>
                 <n-icon><CloudSync24Regular /></n-icon>
               </template>
               上传
             </n-button>
 
-            <n-button size="small" quaternary :loading="syncStore.isSyncing" @click="handleDownload" title="只下载云端数据">
+            <n-button size="tiny" quaternary :loading="syncStore.isSyncing" @click="handleDownload" title="只下载云端数据">
               <template #icon>
                 <n-icon><CloudSync24Regular /></n-icon>
               </template>
@@ -124,6 +124,7 @@ import {
 import { useAlwaysOnTop } from "@/composables/useAlwaysOnTop";
 import { useDraggable } from "@/composables/useDraggable";
 import { useButtonStyle } from "@/composables/useButtonStyle";
+import { useRelativeTime } from "@/composables/useRelativeTime";
 
 import { CloudSync24Regular } from "@vicons/fluent";
 
@@ -160,14 +161,7 @@ const syncIcon = computed(() => {
 });
 
 // 格式化时间
-function formatSyncTime(timestamp: number) {
-  const now = Date.now();
-  const diff = now - timestamp;
-
-  if (diff < 60 * 1000) return "刚刚";
-  if (diff < 60 * 60 * 1000) return `${Math.floor(diff / 60 / 1000)} 分钟前`;
-  return new Date(timestamp).toLocaleTimeString();
-}
+const relativeTime = useRelativeTime(syncStore.lastSyncTimestamp);
 
 // 测试按钮
 async function handleFullSync() {
@@ -545,7 +539,7 @@ watch(
 /* 主内容区域样式：占据所有剩余空间 */
 .app-layout__content {
   position: relative;
-  height: calc(100% - 80px); /* 填充整个视口高度 */
+  height: calc(100% - 55px); /* 填充整个视口高度 */
   overflow: hidden;
 }
 
@@ -594,7 +588,7 @@ watch(
 /* ✅ 同步 Footer 样式 */
 .sync-footer {
   flex-shrink: 0; /* ✅ 防止被压缩 */
-  height: 20px; /* ✅ 固定高度 */
+  height: 10px; /* ✅ 固定高度 */
   padding: 0px 10px;
   background: rgba(255, 255, 255, 0.8);
   backdrop-filter: blur(10px);
@@ -604,17 +598,17 @@ watch(
 .sync-status {
   display: flex;
   align-items: center;
-  gap: 12px;
-  font-size: 13px;
+  gap: 11px;
+  font-size: 11px;
 }
 
 .sync-status__icon {
-  font-size: 16px;
+  font-size: 11px;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 12px;
-  height: 12px;
+  width: 11px;
+  height: 11px;
 }
 
 .sync-status__icon--syncing,
@@ -642,8 +636,9 @@ watch(
 
 .sync-status__info {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  flex-direction: row;
+  gap: 6px;
+  font-size: 12px;
 }
 
 .sync-status__message {
@@ -652,14 +647,13 @@ watch(
 }
 
 .sync-status__time {
-  font-size: 11px;
   color: #999;
 }
 
 .sync-status__error {
   flex: 1;
   color: #d03050;
-  font-size: 12px;
+  font-size: 11px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -669,5 +663,6 @@ watch(
   margin-left: auto;
   display: flex;
   gap: 8px;
+  font-size: 9px;
 }
 </style>

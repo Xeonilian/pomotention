@@ -25,10 +25,14 @@ import {
 import { unifiedDateService } from "@/services/unifiedDateService";
 import { collectPomodoroData, collectTaskRecordData, aggregateByTime } from "@/services/chartDataService";
 import { useTagStore } from "./useTagStore";
+import { useTemplateStore } from "./useTemplateStore";
 
 export const useDataStore = defineStore(
   "data",
   () => {
+    const tagStore = useTagStore();
+    const templateStore = useTemplateStore();
+
     // ======================== 1. 核心状态 (State) ========================
     const activityList = ref<Activity[]>([]);
     const todoList = ref<Todo[]>([]);
@@ -57,6 +61,8 @@ export const useDataStore = defineStore(
       todoList.value = [];
       scheduleList.value = [];
       taskList.value = [];
+      tagStore.clearData();
+      templateStore.clearData();
     }
 
     // 在数据加载后重新计算标签计数
@@ -299,7 +305,23 @@ export const useDataStore = defineStore(
         console.error("save failed", e);
       }
     };
+
     const saveAllDebounced = debounce(saveAllNow, 800);
+
+    const saveAllAfterSync = () => {
+      try {
+        saveActivities(activityList.value);
+        saveTodos(todoList.value);
+        saveSchedules(scheduleList.value);
+        saveTasks(taskList.value);
+        tagStore.saveTags(tagStore.rawTags);
+        templateStore.saveTemplates(templateStore.rawTemplates);
+
+        console.log("💾 [DataStore] saveAllNow 完成");
+      } catch (e) {
+        console.error("save failed", e);
+      }
+    };
 
     function addActivity(newActivity: Activity) {
       activityList.value.push(newActivity);
@@ -397,7 +419,6 @@ export const useDataStore = defineStore(
     }
 
     // ======================== Tag 关联操作 ========================
-    const tagStore = useTagStore();
     /**
      * 为 Activity 添加标签
      */
@@ -602,6 +623,11 @@ export const useDataStore = defineStore(
       childrenOfActivity,
       tasksBySource,
 
+      tagList: tagStore.rawTags,
+      tagById: tagStore.tagById,
+      templateList: templateStore.rawTemplates,
+      templateById: templateStore.templateById,
+
       // UI 状态
       activeId,
       selectedTaskId,
@@ -624,6 +650,7 @@ export const useDataStore = defineStore(
 
       // 方法
       saveAllDebounced,
+      saveAllAfterSync,
       clearData,
       loadAllData,
       hasStarredTaskForActivity,

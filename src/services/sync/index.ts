@@ -13,11 +13,12 @@ let TemplateSyncService: any;
 import type { Activity } from "@/core/types/Activity";
 import type { Todo } from "@/core/types/Todo";
 import type { Schedule } from "@/core/types/Schedule";
-import { useSyncStore } from "@/stores/useSyncStore";
 import type { Task } from "@/core/types/Task";
 import type { Tag } from "@/core/types/Tag";
 import type { Template } from "@/core/types/Template";
 // import type { Block } from "@/core/types/Block";
+import { useSyncStore } from "@/stores/useSyncStore";
+import { useDataStore } from "@/stores/useDataStore";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { isSupabaseEnabled } from "@/core/services/supabase";
 
@@ -106,8 +107,6 @@ function ensureInitialized() {
   return true;
 }
 
-// src/services/sync/index.ts
-
 /**
  * 执行完整同步（上传 + 下载）
  */
@@ -115,7 +114,6 @@ export async function syncAll(): Promise<{ success: boolean; errors: string[]; d
   if (!ensureInitialized()) {
     return { success: false, errors: ["云同步未启用"], details: { uploaded: 0, downloaded: 0 } };
   }
-
   const syncStore = useSyncStore();
   const settingStore = useSettingStore();
   const errors: string[] = [];
@@ -190,7 +188,12 @@ export async function syncAll(): Promise<{ success: boolean; errors: string[]; d
       }
     });
 
-    // ========== 4. 清理超过 30 天的已删除记录 ==========
+    // ✅ ========== 4. 统一保存所有数据（新增） ==========
+    const dataStore = useDataStore();
+    dataStore.saveAllAfterSync();
+    console.log("💾 [Sync] 同步完成，已保存所有数据到 localStorage");
+
+    // ========== 5. 清理超过 30 天的已删除记录 ==========
     const now = Date.now();
     const oneDayMs = 24 * 60 * 60 * 1000;
     const shouldCleanup = now - syncStore.lastCleanupTimestamp > oneDayMs;
@@ -276,6 +279,10 @@ export async function uploadAll(): Promise<{ success: boolean; errors: string[];
     // 上传成功后更新时间戳
     if (errors.length === 0) {
       syncStore.syncSuccess("上传完成");
+      // ✅ ========== 统一保存所有数据（新增） ==========
+      const dataStore = useDataStore();
+      dataStore.saveAllAfterSync();
+      console.log("💾 [Sync] 上传完成，已保存所有数据到 localStorage");
     } else {
       syncStore.syncError = errors.join("; ");
     }
@@ -332,6 +339,8 @@ export async function downloadAll(lastSync: number): Promise<{ success: boolean;
     if (errors.length === 0) {
       syncStore.syncSuccess("下载完成");
       syncStore.updateLastSyncTimestamp();
+      const dataStore = useDataStore();
+      dataStore.saveAllAfterSync();
     } else {
       syncStore.syncFailed(errors.join("; "));
     }

@@ -5,8 +5,6 @@ import piniaPluginPersistedstate from "pinia-plugin-persistedstate"; // 持久�
 import router from "./router";
 import { NConfigProvider } from "naive-ui";
 import { zhCN, dateZhCN } from "naive-ui";
-import { useTagStore } from "./stores/useTagStore";
-import { DEFAULT_TAGS } from "./core/constants";
 
 // 创建Pinia实例
 const pinia = createPinia();
@@ -35,9 +33,6 @@ import "./styles/colors.css";
 import "./styles/global.css";
 
 app.use(pinia);
-// 不要改这个顺序，要有pinia再用store
-const tagStore = useTagStore(); // 获取 store 实例
-tagStore.loadInitialTags(DEFAULT_TAGS);
 
 app.use(router);
 app.mount("#app");

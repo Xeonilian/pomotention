@@ -83,11 +83,11 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
       // 获取未同步的数据
       const unsyncedItems = this.reactiveList.value.filter((item) => !item.synced);
 
+      console.log(`📤 [${this.tableName}] 准备上传 ${unsyncedItems.length} 条`);
+
       if (unsyncedItems.length === 0) {
         return { success: true, uploaded: 0 };
       }
-
-      console.log(`📤 [${this.tableName}] 准备上传 ${unsyncedItems.length} 条`);
 
       // 映射数据并执行上传 (Upsert)
       const cloudData = unsyncedItems.map((item) => this.mapLocalToCloud(item, user.id));
@@ -228,6 +228,9 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
         // 2. 本地不存在：新增
         if (!localItem) {
           const newItem = this.mapCloudToLocal(cloudItem as TCloud);
+          newItem.synced = true;
+          newItem.cloudModified = cloudTimestamp;
+          newItem.lastModified = cloudTimestamp;
           localItems.push(newItem);
           localMap.set(newItem.id, newItem);
           downloadedCount++;
@@ -244,7 +247,11 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
         // 比较云端时间戳
         if (!localItem.cloudModified || cloudTimestamp > localItem.cloudModified) {
           const updatedItem = this.mapCloudToLocal(cloudItem as TCloud);
-          Object.assign(localItem, updatedItem);
+          Object.assign(localItem, updatedItem, {
+            synced: true,
+            cloudModified: cloudTimestamp,
+            lastModified: cloudTimestamp, // 使用云端时间
+          });
           downloadedCount++;
           console.log(`🔄 [${this.tableName}] 更新 ID=${cloudId}`);
         } else {

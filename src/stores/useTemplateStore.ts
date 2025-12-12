@@ -115,5 +115,8 @@ export const useTemplateStore = defineStore("template", () => {
     removeTemplate,
     findById,
     findTemplateIndex,
+
+    // 保存到 localStorage
+    saveTemplates,
   };
 });

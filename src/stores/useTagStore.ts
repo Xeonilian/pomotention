@@ -195,6 +195,7 @@ export const useTagStore = defineStore("tagStore", () => {
 
   /**
    * 清空标签数据
+   *
    */
   function clearData() {
     rawTags.value = [];
@@ -222,5 +223,8 @@ export const useTagStore = defineStore("tagStore", () => {
     // Sync Actions
     mergeTags,
     updateSyncedStatus,
+
+    // 保存到 localStorage
+    saveTags,
   };
 });
