@@ -141,11 +141,11 @@ const route = useRoute();
 const isMiniMode = ref(false);
 const showPomoSeq = ref(false);
 
-const reportedPomodoroWidth = ref(0);
-const reportedPomodoroHeight = ref(0);
 const PomotentionTimerContainerRef = ref<HTMLElement | null>(null);
-const containerWidth = ref(0);
-const containerHeight = ref(0);
+const reportedPomodoroWidth = ref<number>(221);
+const reportedPomodoroHeight = ref<number>(140);
+const containerWidth = ref<number>(221);
+const containerHeight = ref<number>(140);
 
 const syncIcon = computed(() => {
   switch (syncStore.syncStatus) {

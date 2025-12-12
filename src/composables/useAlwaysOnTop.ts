@@ -1,3 +1,4 @@
+// src/composables/useAlwaysOnTop.ts
 import { ref, Ref } from "vue";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 
