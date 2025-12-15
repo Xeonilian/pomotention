@@ -1,4 +1,5 @@
 // src / services / appCloseHandler.ts;
+
 import { useSyncStore } from "@/stores/useSyncStore";
 import { useDataStore } from "@/stores/useDataStore";
 import { useTagStore } from "@/stores/useTagStore";
@@ -25,22 +26,43 @@ function checkUnsyncedData(): boolean {
 
   const total = Object.values(hasUnsynced).filter(Boolean).length;
 
+  // 只有在真的有未同步数据时才打印，减少失去焦点时的日志干扰
   if (total > 0) {
-    console.log("📊 未同步数据统计:", hasUnsynced);
+    console.log("📊 [自动同步检测] 发现未同步数据:", hasUnsynced);
   }
 
   return total > 0;
 }
 
 /**
- * Tauri 环境：拦截窗口关闭
+ * 尝试执行自动同步（用于失去焦点或特定事件）
+ */
+async function tryAutoSync(source: string) {
+  const syncStore = useSyncStore();
+
+  // 如果正在同步，跳过
+  if (syncStore.isSyncing) return;
+
+  if (checkUnsyncedData()) {
+    console.log(`🔄 [${source}] 触发自动同步...`);
+    try {
+      await uploadAll();
+    } catch (error) {
+      console.error(`❌ [${source}] 同步失败:`, error);
+    }
+  }
+}
+
+/**
+ * Tauri 环境：拦截窗口关闭 & 失去焦点监听
  */
 async function setupTauriCloseHandler() {
   const { getCurrentWindow } = await import("@tauri-apps/api/window");
   const appWindow = getCurrentWindow();
   const syncStore = useSyncStore();
 
-  const unlisten = await appWindow.onCloseRequested(async (event) => {
+  // 1. 监听窗口关闭请求
+  const unlistenClose = await appWindow.onCloseRequested(async (event) => {
     console.log("🚪 Tauri 窗口准备关闭");
 
     // 如果正在同步，等待完成
@@ -66,9 +88,7 @@ async function setupTauriCloseHandler() {
     }
 
     // 检查是否有未同步数据
-    const hasUnsyncedData = checkUnsyncedData();
-
-    if (hasUnsyncedData) {
+    if (checkUnsyncedData()) {
       console.log("📤 有未同步数据，开始上传...");
       event.preventDefault();
 
@@ -85,11 +105,23 @@ async function setupTauriCloseHandler() {
     }
   });
 
-  return unlisten;
+  // 2. ✅ 新增：监听窗口焦点变化
+  const unlistenFocus = await appWindow.onFocusChanged(({ payload: focused }) => {
+    if (!focused) {
+      // 窗口失去焦点（切换到其他软件）
+      tryAutoSync("Tauri Blur");
+    }
+  });
+
+  // 返回组合清理函数
+  return () => {
+    unlistenClose();
+    unlistenFocus();
+  };
 }
 
 /**
- * 浏览器环境：尽力保存
+ * 浏览器环境：关闭保护 & 失去焦点监听
  */
 function setupBrowserCloseHandler() {
   const syncStore = useSyncStore();
@@ -107,12 +139,16 @@ function setupBrowserCloseHandler() {
     }
   };
 
-  // visibilitychange：页面隐藏时保存
+  // visibilitychange：页面隐藏（最小化/切标签）
   const visibilityChangeHandler = () => {
-    if (document.hidden && checkUnsyncedData()) {
-      console.log("📱 页面隐藏，立即上传");
-      uploadAll().catch(console.error);
+    if (document.hidden) {
+      tryAutoSync("Visibility Hidden");
     }
+  };
+
+  // ✅ 新增：blur 页面失去焦点（点击地址栏/开发者工具/其他窗口）
+  const blurHandler = () => {
+    tryAutoSync("Window Blur");
   };
 
   // pagehide：页面即将卸载
@@ -125,23 +161,25 @@ function setupBrowserCloseHandler() {
 
   window.addEventListener("beforeunload", beforeUnloadHandler);
   document.addEventListener("visibilitychange", visibilityChangeHandler);
+  window.addEventListener("blur", blurHandler); // 注册 blur
   window.addEventListener("pagehide", pageHideHandler);
 
   // 返回清理函数
   return () => {
     window.removeEventListener("beforeunload", beforeUnloadHandler);
     document.removeEventListener("visibilitychange", visibilityChangeHandler);
+    window.removeEventListener("blur", blurHandler); // 清理 blur
     window.removeEventListener("pagehide", pageHideHandler);
   };
 }
 
 /**
- * 初始化关闭前同步处理
+ * 初始化关闭及后台同步处理
  */
 export async function initAppCloseHandler() {
   if (isTauri()) {
-    const unlisten = await setupTauriCloseHandler();
-    return unlisten;
+    const cleanup = await setupTauriCloseHandler();
+    return cleanup;
   } else {
     const cleanup = setupBrowserCloseHandler();
     return cleanup;
