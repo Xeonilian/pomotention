@@ -17,11 +17,12 @@ import { useRouter } from "vue-router";
 import { supabase, isSupabaseEnabled } from "@/core/services/supabase";
 import { useDataStore } from "@/stores/useDataStore";
 import { useSettingStore } from "@/stores/useSettingStore";
+import { useSyncStore } from "@/stores/useSyncStore"; // ✅ 新增引入
 
 import UpdateManager from "./components/UpdateManager.vue";
 import BackupAlertDialog from "./components/BackupAlertDialog.vue";
 
-import { initSyncServices, syncAll } from "@/services/sync";
+import { initSyncServices, syncAll, resetSyncServices } from "@/services/sync";
 import { initializeTouchHandling, cleanupTouchHandling } from "@/core/utils/touchHandler";
 import { isTauri } from "@tauri-apps/api/core";
 import { initialMigrate } from "./composables/useMigrate";
@@ -32,6 +33,10 @@ const showModal = ref(false);
 const router = useRouter();
 const settingStore = useSettingStore();
 const dataStore = useDataStore();
+const syncStore = useSyncStore(); // ✅ 获取 syncStore 实例
+
+// 用来存储异步初始化返回的清理函数
+let appCloseCleanup: (() => void) | undefined | null = null;
 
 const { activityList, todoList, scheduleList, taskList, tagList, templateList } = storeToRefs(dataStore);
 
@@ -59,12 +64,12 @@ const startAppSync = async () => {
     templateById: dataStore.templateById,
   });
 
-  console.log("☁️ 开始全量同步...");
+  console.log("☁️ 开始同步..."); // 这里的具体行为取决于 syncStore.lastSyncTimestamp
   await syncAll(); // 同步所有数据
 };
 
 onMounted(async () => {
-  // ✅ 新增：同步初始化标志
+  // 同步初始化标志
   const syncInitialized = ref(false);
 
   // 1. 初始化本地数据
@@ -99,7 +104,7 @@ onMounted(async () => {
   if (session) {
     console.log("✅ 用户已登录", session.user?.id);
 
-    // ✅ 场景 A：打开 App 时已登录 -> 启动同步
+    // 场景 A：打开 App 时已登录 -> 启动同步
     await startAppSync();
     syncInitialized.value = true; // 标记已初始化
 
@@ -118,36 +123,55 @@ onMounted(async () => {
     console.log(`🔔 Auth 事件: ${event}, syncInitialized=${syncInitialized.value}`);
 
     if (event === "SIGNED_OUT") {
+      // 1️⃣ 退出登录：清理一切
+      console.log("👋 用户退出，清理本地数据与状态");
       localStorage.clear();
       dataStore.clearData();
-      syncInitialized.value = false; // ✅ 重置标志
+
+      // ✅ 关键：重置同步时间戳，防止下次登录误判为增量同步
+      syncStore.lastSyncTimestamp = 0;
+      // 如果 syncStore 是用 setup 写法且没有 $reset，手动重置其他状态
+      syncStore.isSyncing = false;
+      syncStore.syncError = null;
+      resetSyncServices();
+      syncInitialized.value = false; // 重置标志
+      settingStore.settings.supabaseSync[0] = 0; // 如果你也用这个存时间，也要重置
+
       router.push({ name: "Login" });
     } else if (event === "SIGNED_IN") {
-      // ✅ 场景 B：用户主动登录（不在 App 启动时）
+      // 2️⃣ 登录成功
       if (!syncInitialized.value) {
-        console.log("🔄 用户登录，开始首次同步");
+        console.log("🔄 用户登录，强制全量同步");
+
+        // ✅ 双重保险：确保登录时从 0 开始同步
+        syncStore.lastSyncTimestamp = 0;
+
         await startAppSync();
         syncInitialized.value = true;
       } else {
         console.log("⏭️ 已完成同步初始化，跳过重复执行");
       }
     } else if (event === "INITIAL_SESSION") {
-      // ✅ 这个事件在 getSession() 后自动触发，跳过
+      // 这个事件在 getSession() 后自动触发，跳过
       console.log("⏭️ INITIAL_SESSION 事件，跳过（已在 getSession 中处理）");
     }
   });
 
-  // ✅ 初始化窗口关闭事件
-  const cleanup = await initAppCloseHandler();
-  // 组件卸载时清理
-  onUnmounted(() => {
-    cleanup?.();
-  });
+  // 初始化窗口关闭事件，并将清理函数赋值给外部变量
+  appCloseCleanup = await initAppCloseHandler();
 });
 
-// 确保卸载时清理
+// 组件卸载时统一清理
 onUnmounted(() => {
-  if (!isTauri()) cleanupTouchHandling();
+  // 清理窗口关闭监听
+  if (appCloseCleanup) {
+    appCloseCleanup();
+  }
+
+  // 清理触摸事件（非 Tauri）
+  if (!isTauri()) {
+    cleanupTouchHandling();
+  }
 });
 </script>
 
