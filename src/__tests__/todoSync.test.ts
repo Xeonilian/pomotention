@@ -1,5 +1,5 @@
 // src/services/sync/__tests__/todoSync.test.ts
-
+// 增加indexMap 增加同步时间参数，但是没有通过测试
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { ref } from "vue";
 import type { Ref } from "vue";
@@ -46,6 +46,7 @@ vi.mock("@/core/services/authServicve", () => ({
 describe("TodoSyncService", () => {
   let service: TodoSyncService;
   let todoListRef: Ref<Todo[]>;
+  let indexMap: Map<number, Todo>;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -55,7 +56,8 @@ describe("TodoSyncService", () => {
     vi.mocked(supabaseClient.rpc).mockResolvedValue({ data: [], error: null, count: null, status: 200, statusText: "OK" });
 
     todoListRef = ref<Todo[]>([]);
-    service = new TodoSyncService(todoListRef);
+    indexMap = new Map<number, Todo>();
+    service = new TodoSyncService(todoListRef, indexMap);
   });
 
   // ==================== 数据转换测试 ====================

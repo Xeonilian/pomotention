@@ -215,7 +215,7 @@ function startEdit(tag: TagWithCount): void {
 function onEditFinish(tag: TagWithCount): void {
   const newVal = editValue.value.trim().replace(/^#+/, "");
   if (newVal && newVal !== tag.name) {
-    tagStore.updateTag(tag.id, { name: newVal });
+    tagStore.updateTagById(tag.id, { name: newVal });
   }
   cancelEdit();
 }
@@ -245,9 +245,9 @@ function updateInputWidth(): void {
  */
 function onColorUpdate(tagId: number, target: "fg" | "bg", color: string): void {
   if (target === "bg") {
-    tagStore.updateTag(tagId, { backgroundColor: color });
+    tagStore.updateTagById(tagId, { backgroundColor: color });
   } else {
-    tagStore.updateTag(tagId, { color });
+    tagStore.updateTagById(tagId, { color });
   }
 }
 
