@@ -3,17 +3,15 @@
 import { BaseSyncService } from "@/services/sync/baseSyncService";
 import type { Activity } from "@/core/types/Activity";
 import type { Database } from "@/core/types/Database";
-import type { Ref } from "vue";
 import { convertISOToTimestamp } from "@/core/utils/convertTimestampToISO";
 
 type CloudActivity = Database["public"]["Tables"]["activities"]["Row"];
 type CloudActivityInsert = Database["public"]["Tables"]["activities"]["Insert"];
 
 export class ActivitySyncService extends BaseSyncService<Activity, CloudActivityInsert> {
-  constructor(reactiveList: Ref<Activity[]>, indexMap: Map<number, Activity>) {
-    super("activities", "activitySheet", reactiveList, indexMap);
+  constructor(getList: () => Activity[], getMap: () => Map<number, Activity>) {
+    super("activities", "activitySheet", getList, getMap);
   }
-
   protected mapLocalToCloud(local: Activity, userId: string): CloudActivityInsert {
     return {
       user_id: userId,
