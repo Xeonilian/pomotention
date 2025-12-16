@@ -13,6 +13,18 @@ export const useTagStore = defineStore("tagStore", () => {
 
   // 原始 tag 数据（单一数据源），从 localStorage 加载
   const rawTags = ref<Tag[]>(loadTags());
+  const _tagById = new Map<number, Tag>();
+  watch(
+    rawTags,
+    (list) => {
+      _tagById.clear();
+      for (const t of list) {
+        _tagById.set(t.id, t);
+      }
+    },
+    { deep: true, immediate: true }
+  );
+  const tagById = computed(() => _tagById);
 
   // 每当原始数据变化时，自动保存到 localStorage
   watch(
@@ -95,7 +107,7 @@ export const useTagStore = defineStore("tagStore", () => {
    * 更新一个 tag 的信息。
    * 所有更新都会自动将 `synced` 设为 false 并更新 `lastModified`。
    */
-  function updateTag(id: number, patch: Partial<Omit<Tag, "id">>) {
+  function updateTagById(id: number, patch: Partial<Omit<Tag, "id">>) {
     const index = findTagIndex(id);
     if (index !== -1) {
       rawTags.value[index] = {
@@ -111,7 +123,7 @@ export const useTagStore = defineStore("tagStore", () => {
    * 软删除一个 tag。
    */
   function removeTag(id: number) {
-    updateTag(id, { deleted: true });
+    updateTagById(id, { deleted: true });
   }
 
   /**
@@ -193,23 +205,39 @@ export const useTagStore = defineStore("tagStore", () => {
     }
   }
 
+  /**
+   * 清空标签数据
+   *
+   */
+  function clearData() {
+    rawTags.value.length = 0;
+  }
+
   return {
     // State
     rawTags, // 内部状态管理
-    // Getters
     allTags, // UI 使用
     unsyncedTags, // 同步服务使用
+
+    tagById,
+    _tagById,
+
     // Actions
+    clearData,
     addTag,
-    updateTag,
+    updateTagById,
     removeTag,
     loadInitialTags,
     getTag,
     getTagsByIds,
     getTagNamesByIds,
     findByName,
+
     // Sync Actions
     mergeTags,
     updateSyncedStatus,
+
+    // 保存到 localStorage
+    saveTags,
   };
 });

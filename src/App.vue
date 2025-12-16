@@ -11,91 +11,68 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, watch } from "vue";
-import { storeToRefs } from "pinia";
+import { onMounted, onUnmounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import { supabase, isSupabaseEnabled } from "@/core/services/supabase";
 import { useDataStore } from "@/stores/useDataStore";
-import { useTagStore } from "@/stores/useTagStore";
-import { useTemplateStore } from "@/stores/useTemplateStore";
-import { initSyncServices, syncAll } from "@/services/sync";
-import { uploadAllDebounced } from "@/core/utils/autoSync";
-import BackupAlertDialog from "./components/BackupAlertDialog.vue";
-import { initializeTouchHandling, cleanupTouchHandling } from "@/core/utils/touchHandler";
 import { useSettingStore } from "@/stores/useSettingStore";
-import { runMigrations } from "@/services/migrationService";
+import { useSyncStore } from "@/stores/useSyncStore"; // ✅ 新增引入
+
+import UpdateManager from "./components/UpdateManager.vue";
+import BackupAlertDialog from "./components/BackupAlertDialog.vue";
+
+import { initSyncServices, syncAll, resetSyncServices } from "@/services/sync";
+import { initializeTouchHandling, cleanupTouchHandling } from "@/core/utils/touchHandler";
 import { isTauri } from "@tauri-apps/api/core";
-import { downloadAll } from "@/services/sync";
+import { initialMigrate } from "./composables/useMigrate";
+import { initAppCloseHandler } from "@/services/appCloseHandler";
 
 // state & stores
 const showModal = ref(false);
 const router = useRouter();
-const dataStore = useDataStore();
-const tagStore = useTagStore();
-const templateStore = useTemplateStore();
 const settingStore = useSettingStore();
-const { activityList, todoList, scheduleList, taskList } = storeToRefs(dataStore);
-const { rawTags } = storeToRefs(tagStore);
-const { rawTemplates } = storeToRefs(templateStore);
+const dataStore = useDataStore();
+const syncStore = useSyncStore(); // ✅ 获取 syncStore 实例
 
-// local subscription storage
-const subscriptions: Array<any> = [];
-const tables = ["activities", "todos", "tasks", "schedules", "tags", "templates"];
+// 用来存储异步初始化返回的清理函数
+let appCloseCleanup: (() => void) | undefined | null = null;
 
-// small helper: only trigger download for INSERT/UPDATE/DELETE (or customize)
-function handleBroadcastPayload(table: string, payload: any) {
-  try {
-    // payload structure from realtime.broadcast_changes usually has 'payload' or 'new' / 'old'
-    // adjust logic to only download when needed. Here we conservatively trigger for INSERT/UPDATE/DELETE.
-    const event = payload.event ?? payload.type ?? payload.action ?? payload?.payload?.type;
-    // If event not present, try TG_OP in payload
-    const tgOp = payload?.payload?.record?.operation ?? payload?.payload?.op ?? payload?.op;
-
-    // Consider payload.commit or other shapes depending on your trigger implementation
-    // For simplicity, trigger download for INSERT/UPDATE/DELETE
-    const op = (event || tgOp || payload?.eventType || payload?.type || "").toString().toUpperCase();
-
-    if (["INSERT", "UPDATE", "DELETE"].includes(op) || op === "") {
-      // 防抖/节流：如果短时间内多次调用 downloadAll，downloadAll 自身应该做防抖处理
-      downloadAll(0);
-      console.log(`[Realtime] ${table} => triggered downloadAll due to event:`, op || "unknown");
-    } else {
-      console.log(`[Realtime] ${table} => ignored event:`, op);
-    }
-  } catch (err) {
-    console.error("[Realtime] 处理广播负载时出错:", err);
+const startAppSync = async () => {
+  if (!isSupabaseEnabled()) {
+    console.warn("[Supabase] 当前未启用，跳过同步初始化。");
+    return;
   }
-}
+
+  console.log("🔄 初始化同步服务...");
+  // 初始化同步服务 (绑定 store 数据)
+  await initSyncServices(dataStore);
+
+  console.log("☁️ 开始同步..."); // 这里的具体行为取决于 syncStore.lastSyncTimestamp
+  await syncAll(); // 同步所有数据
+};
 
 onMounted(async () => {
-  // 初始化开关
-  settingStore.settings.autoSupabaseSync = true;
+  // 同步初始化标志
+  const syncInitialized = ref(false);
 
   // 1. 初始化本地数据
   await dataStore.loadAllData();
-  console.log("✅ [App] 本地数据已加载");
 
-  // 2. Tauri: 首次登陆导出/迁移
+  // 触摸事件处理（非 Tauri）
+  if (!isTauri()) initializeTouchHandling();
+
+  // 2. Tauri: 首次登陆APP导出/迁移
   if (settingStore.settings.firstSync && isTauri()) {
-    console.log("✅ [App] 首次同步");
-    const migrationReport = runMigrations();
-    const errors: string[] = [];
-    if (migrationReport.errors?.length) {
-      console.error("⚠️ [Sync] 迁移过程中出现错误", migrationReport.errors);
-      errors.push(...migrationReport.errors.map((e: any) => `迁移错误: ${e}`));
-    }
-    if (migrationReport.cleaned?.length) {
-      console.log(`✅ [Sync] 清理了 ${migrationReport.cleaned.length} 个废弃 key`);
-    }
-    if (migrationReport.migrated?.length) {
-      console.log(`✅ [Sync] 迁移了 ${migrationReport.migrated.length} 个数据集`);
-    }
+    await initialMigrate();
     showModal.value = true;
     settingStore.settings.firstSync = false;
   }
 
   // 3. Supabase session & 初始化同步
+  settingStore.settings.autoSupabaseSync = true;
   let session = null;
+
+  // 获取用户 session
   try {
     const { data, error } = await supabase!.auth.getSession();
     if (error) {
@@ -108,112 +85,77 @@ onMounted(async () => {
   }
 
   if (session) {
-    console.log("用户已登录", session.user?.id);
+    console.log("✅ 用户已登录", session.user?.id);
 
-    if (isSupabaseEnabled()) {
-      await initSyncServices({
-        activityList,
-        todoList,
-        scheduleList,
-        taskList,
-        tagList: rawTags,
-        templateList: rawTemplates,
-      });
+    // 场景 A：打开 App 时已登录 -> 启动同步
+    await startAppSync();
+    syncInitialized.value = true; // 标记已初始化
 
-      await syncAll();
-      console.log("✅ [App] 第一次同步完成");
-
-      // 监听本地数据变化触发自动上传（localStorage + 云端）
-      watch(
-        [activityList, todoList, scheduleList, taskList, rawTemplates, rawTags],
-        () => {
-          dataStore.saveAllDebounced();
-          uploadAllDebounced();
-        },
-        { deep: true }
-      );
-
-      console.log("✅ [App] 自动同步已启动");
-
-      // 触摸事件处理（非 Tauri）
-      if (!isTauri()) initializeTouchHandling();
-
-      // 启动 realtime 频道订阅
-      createChannelSubscriptions(tables);
-    } else {
-      console.warn("[Supabase] 当前未启用，跳过 Supabase 相关操作。");
+    // 清除 url hash 并跳转
+    if (window.location.hash) {
+      window.history.replaceState(null, "", window.location.pathname);
     }
-
-    // 监听认证变化
-    supabase!.auth.onAuthStateChange((event, sess) => {
-      if (event === "SIGNED_IN" && sess) {
-        // 清除 url hash 并跳转
-        if (window.location.hash) {
-          window.history.replaceState(null, "", window.location.pathname);
-        }
-        router.push({ name: "Home" });
-      }
-      if (event === "SIGNED_OUT") {
-        router.push({ name: "Login" });
-      }
-    });
+    router.push({ name: "Home" });
   } else {
-    console.log("没有登录用户，跳转到登录页面");
+    console.log("❌ 没有登录用户，跳转到登录页面");
     router.push({ name: "Login" });
   }
-});
 
-// 确保卸载时清理
-onUnmounted(() => {
-  if (!isTauri()) cleanupTouchHandling();
-  cleanupSubscriptions();
-});
+  // 监听认证变化
+  supabase!.auth.onAuthStateChange(async (event, _sess) => {
+    console.log(`🔔 Auth 事件: ${event}, syncInitialized=${syncInitialized.value}`);
 
-function createChannelSubscriptions(tables: string[]) {
-  if (!supabase) {
-    console.warn("[Realtime] Supabase 客户端未初始化，跳过频道订阅。");
-    return;
-  }
+    if (event === "SIGNED_OUT") {
+      // 1️⃣ 退出登录：清理一切
+      console.log("👋 用户退出，清理本地数据与状态");
+      localStorage.clear();
+      dataStore.clearData();
 
-  tables.forEach((table) => {
-    try {
-      const topic = `room:${table}`; // 如果你使用的 topic 结构是 room:<room_id>:messages，请根据实际调整
-      const channel = supabase!.channel(topic, { config: { private: true } });
+      // ✅ 关键：重置同步时间戳，防止下次登录误判为增量同步
+      syncStore.lastSyncTimestamp = 0;
+      // 如果 syncStore 是用 setup 写法且没有 $reset，手动重置其他状态
+      syncStore.isSyncing = false;
+      syncStore.syncError = null;
+      resetSyncServices();
+      syncInitialized.value = false; // 重置标志
+      settingStore.settings.supabaseSync[0] = 0; // 如果你也用这个存时间，也要重置
 
-      // 只订阅 broadcast；用 event 过滤器更细粒度（这里使用 '*'，在处理器内判断）
-      channel
-        .on("broadcast", { event: "*" }, (payload) => {
-          handleBroadcastPayload(table, payload);
-        })
-        .subscribe((status) => {
-          console.log(`[Realtime] 频道 ${topic} 订阅状态:`, status);
-        });
+      router.push({ name: "Login" });
+    } else if (event === "SIGNED_IN") {
+      // 2️⃣ 登录成功
+      if (!syncInitialized.value) {
+        console.log("🔄 用户登录，强制全量同步");
 
-      subscriptions.push({ channel, topic });
-    } catch (err) {
-      console.error(`[Realtime] 创建 ${table} 频道失败:`, err);
+        // ✅ 双重保险：确保登录时从 0 开始同步
+        syncStore.lastSyncTimestamp = 0;
+
+        await startAppSync();
+        syncInitialized.value = true;
+      } else {
+        console.log("⏭️ 已完成同步初始化，跳过重复执行");
+      }
+    } else if (event === "INITIAL_SESSION") {
+      // 这个事件在 getSession() 后自动触发，跳过
+      console.log("⏭️ INITIAL_SESSION 事件，跳过（已在 getSession 中处理）");
     }
   });
-}
 
-// 清理所有频道订阅
-function cleanupSubscriptions() {
-  try {
-    subscriptions.forEach((sub) => {
-      try {
-        // supabase .channel returns an object with .unsubscribe() and .name
-        if (sub?.channel?.unsubscribe) {
-          sub.channel.unsubscribe();
-          console.log(`[Realtime] 已取消对频道 ${sub.topic ?? sub.channel?.name ?? "unknown"} 的订阅`);
-        }
-      } catch (e) {
-        console.warn("[Realtime] 取消订阅时出错:", e);
-      }
-    });
-  } finally {
-    subscriptions.length = 0;
+  // 初始化窗口关闭事件，并将清理函数赋值给外部变量
+  appCloseCleanup = await initAppCloseHandler();
+});
+
+// 组件卸载时统一清理
+onUnmounted(() => {
+  // 清理窗口关闭监听
+  if (appCloseCleanup) {
+    appCloseCleanup();
   }
-}
+
+  // 清理触摸事件（非 Tauri）
+  if (!isTauri()) {
+    cleanupTouchHandling();
+  }
+});
 </script>
 
 <style scoped>

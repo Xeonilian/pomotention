@@ -22,6 +22,7 @@ export interface Todo {
   deleted: boolean;
   lastModified: number;
   synced: boolean;
+  cloudModified?: number; // 云端修改时间戳
 }
 
 export interface TodoWithTaskRecords extends Todo {

@@ -1,5 +1,5 @@
 // src/services/sync/__tests__/scheduleSync.test.ts
-
+// 增加indexMap 增加同步时间参数，但是没有通过测试
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { ref } from "vue";
 import type { Ref } from "vue";
@@ -51,6 +51,7 @@ vi.mock("@/core/services/authServicve", () => ({
 describe("ScheduleSyncService", () => {
   let service: ScheduleSyncService;
   let scheduleListRef: Ref<Schedule[]>;
+  let indexMap: Map<number, Schedule>;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -59,9 +60,14 @@ describe("ScheduleSyncService", () => {
     vi.mocked(supabaseClient.rpc).mockResolvedValue({ data: [], error: null, count: null, status: 200, statusText: "OK" });
 
     scheduleListRef = ref<Schedule[]>([]);
-    service = new ScheduleSyncService(scheduleListRef);
-  });
+    indexMap = new Map<number, Schedule>();
 
+    // ✅ 修复：改成传入函数
+    service = new ScheduleSyncService(
+      () => scheduleListRef.value,
+      () => indexMap
+    );
+  });
   // ==================== 数据转换测试 ====================
   describe("数据转换", () => {
     it("mapLocalToCloud: 正确转换本地 Schedule 为云端格式", () => {

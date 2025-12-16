@@ -49,6 +49,7 @@ vi.mock("@/core/services/authServicve", () => ({
 describe("ActivitySyncService", () => {
   let service: ActivitySyncService;
   let activityListRef: Ref<Activity[]>; // ✅ 添加响应式数据
+  let indexMap: Map<number, Activity>;
 
   beforeEach(() => {
     mockLocalStorage.clear();
@@ -56,9 +57,13 @@ describe("ActivitySyncService", () => {
 
     // ✅ 创建响应式数据
     activityListRef = ref<Activity[]>([]);
+    indexMap = new Map<number, Activity>();
 
-    // ✅ 传入响应式数据
-    service = new ActivitySyncService(activityListRef);
+    // ✅ 修复：改成传入函数
+    service = new ActivitySyncService(
+      () => activityListRef.value,
+      () => indexMap
+    );
   });
 
   describe("数据转换 - mapLocalToCloud", () => {
@@ -260,15 +265,12 @@ describe("ActivitySyncService", () => {
       // ✅ 同时设置 localStorage 和响应式数据
       localStorage.setItem("activitySheet", JSON.stringify(activities));
       activityListRef.value = activities;
+      activities.forEach((a) => indexMap.set(a.id, a));
 
       await service.upload();
 
       // ✅ 检查响应式数据
       expect(activityListRef.value[0].synced).toBe(true);
-
-      // ✅ 检查 localStorage
-      const updated = JSON.parse(localStorage.getItem("activitySheet")!);
-      expect(updated[0].synced).toBe(true);
     });
 
     it("没有未同步数据时应该返回 uploaded = 0", async () => {

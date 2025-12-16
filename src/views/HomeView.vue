@@ -680,6 +680,7 @@ function onUpdateTodoStatus(id: number, isChecked: boolean) {
     }
   }
   updateTodoStatus(id, doneTime, newStatus);
+  saveAllDebounced();
 }
 
 /** 更新待办事项的番茄钟估计 */
@@ -803,6 +804,7 @@ function onUpdateScheduleStatus(id: number, isChecked: boolean) {
     }
   }
   updateScheduleStatus(id, doneTime, newStatus);
+  saveAllDebounced();
 }
 
 /** 修改日期切换按钮的处理函数 */
@@ -958,26 +960,7 @@ onUnmounted(() => {
   autoSyncDebounced.flush(); //立即执行
 });
 
-// 2. 页面关闭前保存（浏览器关闭/刷新）
-window.addEventListener("beforeunload", (e) => {
-  const pending = uploadAllDebounced.pending();
-  if (pending) {
-    console.log("页面关闭前保存");
-    uploadAllDebounced.flush(); // 立即执行
-    // 注意：现代浏览器可能不会等待异步操作完成
-    e.preventDefault();
-  }
-});
-
-// 3. 页面隐藏时保存（切换标签页）
-document.addEventListener("visibilitychange", () => {
-  if (document.hidden) {
-    console.log("页面隐藏时保存");
-    uploadAllDebounced.flush(); // 立即保存
-  }
-});
-
-// 4. 路由切换前保存（Vue Router）
+//  路由切换前保存（Vue Router）
 onBeforeRouteLeave(() => {
   console.log("路由切换前保存");
   uploadAllDebounced.flush();

@@ -16,29 +16,31 @@ const DEPRECATED_KEYS = {
   TIMETABLE_ENTERTAINMENT: "timeTableBlocks_entertainment",
 } as const;
 
-export function runMigrations(): MigrationReport {
-  const report: MigrationReport = {
-    cleaned: [],
-    migrated: [],
-    errors: [],
-  };
+export function runMigrations(): Promise<MigrationReport> {
+  return new Promise((resolve, reject) => {
+    const report: MigrationReport = {
+      cleaned: [],
+      migrated: [],
+      errors: [],
+    };
 
-  console.log("🔄 [Migration] 开始数据迁移...");
+    console.log("🔄 [Migration] 开始数据迁移...");
 
-  try {
-    migrateTimetableData(report);
-    migrateTaskSource(report);
-    addSyncedFieldToAllData(report);
-    deduplicateAllData(report);
-    cleanupDeprecatedKeys(report);
+    try {
+      cleanupDeprecatedKeys(report); // 删除
+      addSyncedFieldToAllData(report); // 增加字段
+      deduplicateAllData(report); // 删除重复key一样，保留后面的
+      migrateTimetableData(report); // 将timetable改为2个
+      migrateTaskSource(report); // 修复task
 
-    console.log("✅ [Migration] 迁移完成", report);
-  } catch (error: any) {
-    report.errors.push(`迁移失败: ${error.message}`);
-    console.error("❌ [Migration] 迁移失败", error);
-  }
-
-  return report;
+      console.log("✅ [Migration] 迁移完成", report);
+      resolve(report); // 当所有迁移完成时解析 Promise
+    } catch (error: any) {
+      report.errors.push(`迁移失败: ${error.message}`);
+      console.error("❌ [Migration] 迁移失败", error);
+      reject(report); // 遇到错误时拒绝 Promise
+    }
+  });
 }
 
 export function migrateTimetableData(report: MigrationReport): void {
@@ -131,7 +133,7 @@ export function addSyncedField(storageKey: string, report: MigrationReport): voi
           ...item,
           synced: false,
           deleted: item.deleted ?? false,
-          lastModified: item.lastModified ?? Date.now(),
+          lastModified: item.lastModified ?? 0,
         };
       }
       return item;

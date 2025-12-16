@@ -24,6 +24,7 @@
           </div>
         </div>
       </n-layout-header>
+
       <n-layout-content class="app-layout__content" :class="{ 'app-layout__content--full-height': isMiniMode }">
         <router-view v-if="!isMiniMode" />
         <div class="draggable-container" ref="draggableContainer" v-if="!isMiniMode && settingStore.settings.showPomodoro">
@@ -45,6 +46,53 @@
           @exit-mini-mode-web="handleWebToggle()"
         />
       </n-layout-content>
+
+      <!-- ✅ 新增：同步状态 Footer -->
+      <n-layout-footer v-if="!isMiniMode" class="sync-footer" bordered>
+        <div class="sync-status">
+          <!-- 状态图标 -->
+          <div class="sync-status__icon" :class="`sync-status__icon--${syncStore.syncStatus}`">
+            {{ syncIcon }}
+          </div>
+
+          <!-- 状态信息 -->
+          <div class="sync-status__info">
+            <span class="sync-status__message">{{ syncStore.syncMessage }}</span>
+            <span v-if="syncStore.lastSyncTimestamp" class="sync-status__time">
+              {{ relativeTime }}
+            </span>
+          </div>
+
+          <!-- 错误信息 -->
+          <div v-if="syncStore.syncError" class="sync-status__error">
+            {{ syncStore.syncError }}
+          </div>
+
+          <!-- 操作按钮 -->
+          <div class="sync-status__actions">
+            <!-- <n-button size="tiny" quaternary :loading="syncStore.isSyncing" @click="handleFullSync" title="完整同步（上传+下载）">
+              <template #icon>
+                <n-icon><CloudSync24Regular /></n-icon>
+              </template>
+              同步
+            </n-button> -->
+
+            <n-button size="tiny" quaternary :loading="syncStore.isSyncing" @click="handleUpload" title="只上传本地数据">
+              <template #icon>
+                <n-icon><CloudSync24Regular /></n-icon>
+              </template>
+              上传
+            </n-button>
+
+            <n-button size="tiny" quaternary :loading="syncStore.isSyncing" @click="handleDownload" title="只下载云端数据">
+              <template #icon>
+                <n-icon><CloudSync24Regular /></n-icon>
+              </template>
+              下载
+            </n-button>
+          </div>
+        </div>
+      </n-layout-footer>
     </n-layout>
   </div>
 </template>
@@ -57,8 +105,11 @@ import { isTauri } from "@tauri-apps/api/core";
 
 import { getCurrentWindow, PhysicalPosition, LogicalSize } from "@tauri-apps/api/window";
 
+import { useSyncStore } from "@/stores/useSyncStore";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useTimerStore } from "@/stores/useTimerStore";
+
+import { uploadAll, downloadAll } from "@/services/sync";
 
 import {
   ArrowLeft24Filled,
@@ -73,11 +124,15 @@ import {
 import { useAlwaysOnTop } from "@/composables/useAlwaysOnTop";
 import { useDraggable } from "@/composables/useDraggable";
 import { useButtonStyle } from "@/composables/useButtonStyle";
+import { useRelativeTime } from "@/composables/useRelativeTime";
+
+import { CloudSync24Regular } from "@vicons/fluent";
 
 import PomotentionTimer from "@/components/PomotentionTimer/PomotentionTimer.vue";
 
 const timerStore = useTimerStore();
 const settingStore = useSettingStore();
+const syncStore = useSyncStore();
 
 const { isAlwaysOnTop, toggleAlwaysOnTop } = useAlwaysOnTop();
 const router = useRouter();
@@ -86,11 +141,53 @@ const route = useRoute();
 const isMiniMode = ref(false);
 const showPomoSeq = ref(false);
 
-const reportedPomodoroWidth = ref(0);
-const reportedPomodoroHeight = ref(0);
 const PomotentionTimerContainerRef = ref<HTMLElement | null>(null);
-const containerWidth = ref(0);
-const containerHeight = ref(0);
+const reportedPomodoroWidth = ref<number>(221);
+const reportedPomodoroHeight = ref<number>(140);
+const containerWidth = ref<number>(221);
+const containerHeight = ref<number>(140);
+
+const syncIcon = computed(() => {
+  switch (syncStore.syncStatus) {
+    case "syncing":
+    case "uploading":
+    case "downloading":
+      return "🔄";
+    case "error":
+      return "❌";
+    default:
+      return "✅";
+  }
+});
+
+// 格式化时间
+const relativeTime = useRelativeTime(computed(() => syncStore.lastSyncTimestamp));
+
+// 测试按钮
+// async function handleFullSync() {
+//   try {
+//     await syncAll();
+//   } catch (error) {
+//     console.error("同步失败:", error);
+//   }
+// }
+
+async function handleUpload() {
+  try {
+    await uploadAll();
+  } catch (error) {
+    console.error("上传失败:", error);
+  }
+}
+
+async function handleDownload() {
+  try {
+    const lastSync = syncStore.lastSyncTimestamp;
+    await downloadAll(lastSync);
+  } catch (error) {
+    console.error("下载失败:", error);
+  }
+}
 
 const menuOptions = [
   { label: "首页", key: "/" },
@@ -188,8 +285,6 @@ function toggleSettingPanel(panel: Panel) {
       (settings as any)[toKey("activity")] = false;
     }
   }
-
-  // ⚠️ 注：如果仍然使用 any，字段名拼错编译不会报错
 }
 
 function handleMainLayoutViewToggle(key: string) {
@@ -488,5 +583,90 @@ watch(
 }
 .n-layout {
   background-color: white;
+}
+
+/* ✅ 同步 Footer 样式 */
+.sync-footer {
+  position: fixed; /* ✅ 固定定位 */
+  bottom: 0; /* ✅ 贴底 */
+  left: 0; /* ✅ 从左侧开始 */
+  right: 0; /* ✅ 延伸到右侧 */
+
+  display: flex;
+  height: 30px;
+  padding: 0px 10px;
+
+  z-index: 1000; /* ✅ 确保在其他内容上方 */
+}
+
+.sync-status {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  font-size: 11px;
+}
+
+.sync-status__icon {
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 11px;
+  height: 11px;
+}
+
+.sync-status__icon--syncing,
+.sync-status__icon--uploading,
+.sync-status__icon--downloading {
+  animation: rotate 1s linear infinite;
+}
+
+.sync-status__icon--error {
+  color: #d03050;
+}
+
+.sync-status__icon--idle {
+  color: #18a058;
+}
+
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.sync-status__info {
+  display: flex;
+  flex-direction: row;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.sync-status__message {
+  font-weight: 500;
+  color: #333;
+}
+
+.sync-status__time {
+  color: #999;
+}
+
+.sync-status__error {
+  flex: 1;
+  color: #d03050;
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sync-status__actions {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+  font-size: 9px;
 }
 </style>

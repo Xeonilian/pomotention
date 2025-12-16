@@ -14,20 +14,8 @@ export const taskService = {
   },
 
   updateTask(taskId: number, updates: Partial<Task>): void {
-    const task = this.getTask(taskId);
-    if (task) {
-      Object.assign(task, updates);
-    }
-  },
-
-  upsertTask(task: Task): void {
-    const dataStore = useDataStore(); // 在方法内部调用
-    const idx = dataStore.taskList.findIndex((t) => t.id === task.id);
-    if (idx === -1) {
-      dataStore.taskList.push(task);
-    } else {
-      Object.assign(dataStore.taskList[idx], task);
-    }
+    const dataStore = useDataStore(); // 获取数据存储实例
+    dataStore.updateTaskById(taskId, updates); // 调用数据存储中的更新方法
   },
 
   addEnergyRecord(taskId: number, value: number, description?: string): EnergyRecord | undefined {
@@ -63,6 +51,7 @@ export const taskService = {
       activityType: activityType ?? null,
     };
     const newInterruptionRecords = [...(task.interruptionRecords || []), record];
+    console.log(newInterruptionRecords);
     this.updateTask(taskId, { interruptionRecords: newInterruptionRecords, synced: false, lastModified: Date.now() });
     return record;
   },
@@ -150,7 +139,7 @@ export const taskService = {
       ...(activityClass === "S" && { dueRange: [null, "60"] }),
     };
 
-    useDataStore().addActivity(activity); // 在方法内部调用
+    useDataStore().addActivity(activity); // 在方法内部调用，activity内部做保存
     return activity;
   },
 };

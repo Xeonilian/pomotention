@@ -2,7 +2,7 @@
 
 import { debounce } from "@/core/utils/debounce";
 import { syncAll, uploadAll } from "@/services/sync/index";
-import { getCurrentUser } from "@/core/services/authServicve";
+import { getCurrentUser } from "@/core/services/authService";
 import { useSettingStore } from "@/stores/useSettingStore";
 
 /**
@@ -23,7 +23,10 @@ export const autoSyncDebounced = debounce(async () => {
   const result = await syncAll();
 
   if (result.success) {
-    console.log(`✅ 同步成功: 上传 ${result.details.uploaded} 条，下载 ${result.details.downloaded} 条`);
+    const details = (result as any).details;
+    const up = details?.uploaded ?? 0;
+    const down = details?.downloaded ?? 0;
+    console.log(`✅ [AutoSync] 同步成功: 上传 ${up} 条，下载 ${down} 条`);
   } else {
     console.error("❌ 同步失败:", result.errors);
   }

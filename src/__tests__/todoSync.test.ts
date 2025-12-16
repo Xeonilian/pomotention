@@ -1,5 +1,5 @@
 // src/services/sync/__tests__/todoSync.test.ts
-
+// 增加indexMap 增加同步时间参数，但是没有通过测试
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { ref } from "vue";
 import type { Ref } from "vue";
@@ -46,16 +46,31 @@ vi.mock("@/core/services/authServicve", () => ({
 describe("TodoSyncService", () => {
   let service: TodoSyncService;
   let todoListRef: Ref<Todo[]>;
+  let indexMap: Map<number, Todo>;
 
   beforeEach(() => {
     vi.clearAllMocks();
     mockLocalStorage.clear();
 
     // 重置 rpc mock
-    vi.mocked(supabaseClient.rpc).mockResolvedValue({ data: [], error: null, count: null, status: 200, statusText: "OK" });
+    vi.mocked(supabaseClient.rpc).mockResolvedValue({
+      data: [],
+      error: null,
+      count: null,
+      status: 200,
+      statusText: "OK",
+    });
 
+    // 初始化测试数据容器
     todoListRef = ref<Todo[]>([]);
-    service = new TodoSyncService(todoListRef);
+    indexMap = new Map<number, Todo>();
+
+    // ✅ 修复点：传递“函数”而不是“变量”
+    // Service 内部会调用 getList() 和 getMap() 来获取最新值
+    service = new TodoSyncService(
+      () => todoListRef.value, // 参数 1: 返回数组的函数
+      () => indexMap // 参数 2: 返回 Map 的函数
+    );
   });
 
   // ==================== 数据转换测试 ====================

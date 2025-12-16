@@ -13,7 +13,6 @@
 </template>
 
 <script setup lang="ts">
-import { runMigrations } from "@/services/migrationService";
 import { useDataExport } from "@/composables/useDataExport";
 
 // 定义接收的属性
@@ -35,24 +34,6 @@ const emitClose = () => {
 const handleExportData = async () => {
   const { exportData } = useDataExport();
   await exportData(); // 执行数据导出
-  console.log("🔍 [Sync] 检测到首次同步，执行数据迁移...");
-
-  const migrationReport = runMigrations();
-  const errors = [];
-
-  if (migrationReport.errors.length > 0) {
-    console.error("⚠️ [Sync] 迁移过程中出现错误", migrationReport.errors);
-    errors.push(...migrationReport.errors.map((e) => `迁移错误: ${e}`));
-  }
-
-  if (migrationReport.cleaned.length > 0) {
-    console.log(`✅ [Sync] 清理了 ${migrationReport.cleaned.length} 个废弃 key`);
-  }
-
-  if (migrationReport.migrated.length > 0) {
-    console.log(`✅ [Sync] 迁移了 ${migrationReport.migrated.length} 个数据集`);
-  }
-
   emitClose(); // 导出完成后关闭对话框
 };
 </script>

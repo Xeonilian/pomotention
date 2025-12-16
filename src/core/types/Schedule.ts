@@ -14,4 +14,5 @@ export interface Schedule {
   deleted: boolean;
   lastModified: number;
   synced: boolean;
+  cloudModified?: number; // 云端修改时间戳
 }

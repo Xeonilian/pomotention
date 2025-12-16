@@ -2,6 +2,15 @@
 import { defineStore } from "pinia";
 import { ref, computed, watch } from "vue"; // 补：watch 需要从 vue 引入
 
+import type { Activity } from "@/core/types/Activity";
+import type { Todo, TodoWithTags, TodoWithTaskRecords } from "@/core/types/Todo";
+import type { Schedule } from "@/core/types/Schedule";
+import type { Task } from "@/core/types/Task";
+import type { Tag } from "@/core/types/Tag";
+import type { DataPoint, MetricName, AggregationType, TimeGranularity } from "@/core/types/Chart";
+
+import { addDays, debounce } from "@/core/utils";
+
 import {
   loadActivities,
   loadTodos,
@@ -13,21 +22,17 @@ import {
   saveTasks,
 } from "@/services/localStorageService";
 
-import type { Schedule } from "@/core/types/Schedule";
-import type { Task } from "@/core/types/Task";
-import type { Activity } from "@/core/types/Activity";
-import type { Tag } from "@/core/types/Tag";
-import { addDays, debounce } from "@/core/utils";
-import type { Todo, TodoWithTags, TodoWithTaskRecords } from "@/core/types/Todo";
-
-import type { DataPoint, MetricName, AggregationType, TimeGranularity } from "@/core/types/Chart";
 import { unifiedDateService } from "@/services/unifiedDateService";
 import { collectPomodoroData, collectTaskRecordData, aggregateByTime } from "@/services/chartDataService";
 import { useTagStore } from "./useTagStore";
+import { useTemplateStore } from "./useTemplateStore";
 
 export const useDataStore = defineStore(
   "data",
   () => {
+    const tagStore = useTagStore();
+    const templateStore = useTemplateStore();
+
     // ======================== 1. 核心状态 (State) ========================
     const activityList = ref<Activity[]>([]);
     const todoList = ref<Todo[]>([]);
@@ -51,6 +56,17 @@ export const useDataStore = defineStore(
     // ======================== 3. 初始化/加载逻辑 (Actions) ========================
     const isDataLoaded = ref(false);
 
+    function clearData() {
+      activityList.value.length = 0;
+      todoList.value.length = 0;
+      scheduleList.value.length = 0;
+      taskList.value.length = 0;
+
+      tagStore.clearData();
+      templateStore.clearData();
+      isDataLoaded.value = false;
+    }
+
     // 在数据加载后重新计算标签计数
     async function loadAllData() {
       if (isDataLoaded.value) {
@@ -66,17 +82,64 @@ export const useDataStore = defineStore(
       isDataLoaded.value = true;
     }
     const activeActivities = computed(() => activityList.value.filter((a) => !a.deleted));
-
     const activeTodos = computed(() => todoList.value.filter((t) => !t.deleted));
-
     const activeSchedules = computed(() => scheduleList.value.filter((s) => !s.deleted));
-
     const activeTasks = computed(() => taskList.value.filter((t) => !t.deleted));
+
     // ======================== 4. 数据索引 (Getters / Computed) ========================
-    const activityById = computed(() => new Map(activityList.value.map((a) => [a.id, a])));
-    const todoById = computed(() => new Map(todoList.value.map((t) => [t.id, t])));
-    const scheduleById = computed(() => new Map(scheduleList.value.map((s) => [s.id, s])));
-    const taskById = computed(() => new Map(taskList.value.map((t) => [t.id, t])));
+    const _activityById = new Map<number, Activity>();
+    const _todoById = new Map<number, Todo>();
+    const _scheduleById = new Map<number, Schedule>();
+    const _taskById = new Map<number, Task>();
+
+    watch(
+      activityList,
+      (list) => {
+        _activityById.clear();
+        for (const a of list) {
+          _activityById.set(a.id, a);
+        }
+      },
+      { deep: true }
+    );
+
+    watch(
+      todoList,
+      (list) => {
+        _todoById.clear();
+        for (const t of list) {
+          _todoById.set(t.id, t);
+        }
+      },
+      { deep: true }
+    );
+
+    watch(
+      scheduleList,
+      (list) => {
+        _scheduleById.clear();
+        for (const s of list) {
+          _scheduleById.set(s.id, s);
+        }
+      },
+      { deep: true }
+    );
+
+    watch(
+      taskList,
+      (list) => {
+        _taskById.clear();
+        for (const t of list) {
+          _taskById.set(t.id, t);
+        }
+      },
+      { deep: true }
+    );
+
+    const activityById = computed(() => _activityById);
+    const todoById = computed(() => _todoById);
+    const scheduleById = computed(() => _scheduleById);
+    const taskById = computed(() => _taskById);
 
     const todoByActivityId = computed(() => {
       const map = new Map<number, Todo>();
@@ -293,10 +356,27 @@ export const useDataStore = defineStore(
         console.error("save failed", e);
       }
     };
+
     const saveAllDebounced = debounce(saveAllNow, 800);
+
+    const saveAllAfterSync = () => {
+      try {
+        saveActivities(activityList.value);
+        saveTodos(todoList.value);
+        saveSchedules(scheduleList.value);
+        saveTasks(taskList.value);
+        tagStore.saveTags(tagStore.rawTags);
+        templateStore.saveTemplates(templateStore.rawTemplates);
+
+        console.log("💾 [DataStore] saveAllNow 完成");
+      } catch (e) {
+        console.error("save failed", e);
+      }
+    };
 
     function addActivity(newActivity: Activity) {
       activityList.value.push(newActivity);
+      saveActivities(activityList.value);
     }
 
     function setActiveId(id: number | null) {
@@ -337,8 +417,59 @@ export const useDataStore = defineStore(
       saveTasks(taskList.value);
     }
 
+    /**
+     * 基于Id更新Activity数据的指定字段
+     */
+    function updateActivityById(id: number, updates: Partial<Activity>) {
+      const activityIndex = activityList.value.findIndex((a) => a.id === id);
+      if (activityIndex !== -1) {
+        activityList.value[activityIndex] = { ...activityList.value[activityIndex], ...updates };
+        saveActivities(activityList.value);
+      } else {
+        console.error("Activity not found:", id);
+      }
+    }
+
+    /**
+     * 基于Id更新Schedule数据的指定字段
+     */
+    function updateScheduleById(id: number, updates: Partial<Schedule>) {
+      const scheduleIndex = scheduleList.value.findIndex((s) => s.id === id);
+      if (scheduleIndex !== -1) {
+        scheduleList.value[scheduleIndex] = { ...scheduleList.value[scheduleIndex], ...updates };
+        saveSchedules(scheduleList.value);
+      } else {
+        console.error("Schedule not found:", id);
+      }
+    }
+
+    /**
+     * 基于Id更新Task数据的指定字段
+     */
+    function updateTaskById(id: number, updates: Partial<Task>) {
+      const taskIndex = taskList.value.findIndex((t) => t.id === id);
+      if (taskIndex !== -1) {
+        taskList.value[taskIndex] = { ...taskList.value[taskIndex], ...updates };
+        saveTasks(taskList.value);
+      } else {
+        console.error("Task not found:", id);
+      }
+    }
+
+    /**
+     * 基于Id更新Todo数据的指定字段
+     */
+    function updateTodoById(id: number, updates: Partial<Todo>) {
+      const todoIndex = todoList.value.findIndex((t) => t.id === id);
+      if (todoIndex !== -1) {
+        todoList.value[todoIndex] = { ...todoList.value[todoIndex], ...updates };
+        saveTodos(todoList.value);
+      } else {
+        console.error("Todo not found:", id);
+      }
+    }
+
     // ======================== Tag 关联操作 ========================
-    const tagStore = useTagStore();
     /**
      * 为 Activity 添加标签
      */
@@ -460,13 +591,6 @@ export const useDataStore = defineStore(
       return dataPoints.filter((point) => point.timestamp >= startTime && point.timestamp <= endTime);
     }
     // ======================== 8. 监控 (Watches) ========================
-    watch(
-      [activityList, todoList, scheduleList, taskList],
-      () => {
-        saveAllDebounced();
-      },
-      { deep: true }
-    );
 
     watch(
       activityList,
@@ -544,11 +668,22 @@ export const useDataStore = defineStore(
       todoById,
       scheduleById,
       taskById,
+      _activityById,
+      _todoById,
+      _scheduleById,
+      _taskById,
       todoByActivityId,
       scheduleByActivityId,
       taskByActivityId, // 字段是sourceId 但是以后都只有 activityId
       childrenOfActivity,
       tasksBySource,
+
+      tagList: tagStore.rawTags,
+      tagById: tagStore.tagById,
+      _tagById: tagStore._tagById,
+      templateList: templateStore.rawTemplates,
+      templateById: templateStore.templateById,
+      _templateById: templateStore._templateById,
 
       // UI 状态
       activeId,
@@ -572,6 +707,8 @@ export const useDataStore = defineStore(
 
       // 方法
       saveAllDebounced,
+      saveAllAfterSync,
+      clearData,
       loadAllData,
       hasStarredTaskForActivity,
       cleanSelection,
@@ -580,6 +717,10 @@ export const useDataStore = defineStore(
       setSelectedDate,
       setTaskStar,
       toggleTaskStar,
+      updateActivityById,
+      updateTodoById,
+      updateTaskById,
+      updateScheduleById,
 
       // Tag 相关操作
       addTagToActivity,

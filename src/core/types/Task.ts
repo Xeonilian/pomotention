@@ -13,6 +13,7 @@ export interface Task {
   deleted: boolean;
   synced: boolean;
   lastModified: number;
+  cloudModified?: number; // 云端修改时间戳
 }
 
 export interface EnergyRecord {

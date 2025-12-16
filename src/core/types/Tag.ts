@@ -11,6 +11,7 @@ export interface Tag {
   synced: boolean;
   lastModified: number;
   deleted: boolean;
+  cloudModified?: number; // 云端修改时间戳
 }
 
 export type TagSelectorInstance = {

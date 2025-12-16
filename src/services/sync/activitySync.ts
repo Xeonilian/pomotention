@@ -3,17 +3,15 @@
 import { BaseSyncService } from "@/services/sync/baseSyncService";
 import type { Activity } from "@/core/types/Activity";
 import type { Database } from "@/core/types/Database";
-import type { Ref } from "vue";
+import { convertISOToTimestamp } from "@/core/utils/convertTimestampToISO";
 
 type CloudActivity = Database["public"]["Tables"]["activities"]["Row"];
 type CloudActivityInsert = Database["public"]["Tables"]["activities"]["Insert"];
 
 export class ActivitySyncService extends BaseSyncService<Activity, CloudActivityInsert> {
-  // ✅ 改动1: 构造函数参数改为必传（移除 `?`）
-  constructor(reactiveList: Ref<Activity[]>) {
-    super("activities", "activitySheet", reactiveList);
+  constructor(getList: () => Activity[], getMap: () => Map<number, Activity>) {
+    super("activities", "activitySheet", getList, getMap);
   }
-
   protected mapLocalToCloud(local: Activity, userId: string): CloudActivityInsert {
     return {
       user_id: userId,
@@ -38,6 +36,7 @@ export class ActivitySyncService extends BaseSyncService<Activity, CloudActivity
   }
 
   protected mapCloudToLocal(cloud: CloudActivity): Activity {
+    const cloudTimestamp = convertISOToTimestamp(cloud.last_modified);
     return {
       id: cloud.timestamp_id,
       title: cloud.title,
@@ -55,12 +54,10 @@ export class ActivitySyncService extends BaseSyncService<Activity, CloudActivity
       taskId: cloud.task_id ?? undefined,
       tagIds: cloud.tag_ids ?? undefined,
       parentId: cloud.parent_id,
+      cloudModified: cloudTimestamp,
       lastModified: Date.now(),
       synced: true,
       deleted: cloud.deleted || false,
     };
   }
 }
-
-// ❌ 改动2: 删除单例导出
-// export const activitySync = new ActivitySyncService();
