@@ -88,7 +88,7 @@
 import { ref, onMounted, computed } from "vue";
 import { useRouter } from "vue-router";
 import { NInput, NButton, NAlert, NCheckbox, NSpace, NModal, NScrollbar } from "naive-ui";
-import { signIn, signUp } from "@/core/services/authServicve";
+import { signIn, signUp } from "@/core/services/authService";
 import { supabase } from "@/core/services/supabase";
 import { marked } from "marked";
 

@@ -112,7 +112,7 @@ import { ArrowSync24Regular, PersonAccounts24Filled } from "@vicons/fluent";
 import WebdavInputDialog from "@/components/WebdavInputDialog.vue";
 import SyncPanel from "@/components/SyncPanel.vue";
 import { useRouter } from "vue-router";
-import { signOut } from "@/core/services/authServicve";
+import { signOut } from "@/core/services/authService";
 
 const router = useRouter();
 const loggingOut = ref(false);
