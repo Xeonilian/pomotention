@@ -1,6 +1,6 @@
 // src/stores/useTemplateStore.ts
 
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 import { defineStore } from "pinia";
 import { loadTemplates, saveTemplates } from "@/services/localStorageService";
 import type { Template } from "@/core/types/Template";
@@ -18,6 +18,19 @@ export const useTemplateStore = defineStore("template", () => {
     },
     { deep: true }
   );
+
+  const _templateById = new Map<number, Template>();
+  watch(
+    rawTemplates,
+    (list) => {
+      _templateById.clear();
+      for (const t of list) {
+        _templateById.set(t.id, t);
+      }
+    },
+    { deep: true, immediate: true }
+  );
+  const templateById = computed(() => _templateById);
 
   // ================================================================
   // Computed
@@ -94,7 +107,7 @@ export const useTemplateStore = defineStore("template", () => {
    * 清空模板数据
    */
   function clearData() {
-    rawTemplates.value = [];
+    rawTemplates.value.length = 0;
   }
 
   // ================================================================
@@ -105,7 +118,8 @@ export const useTemplateStore = defineStore("template", () => {
     rawTemplates,
     allTemplates,
     unsyncedTemplates,
-    templateById: computed(() => new Map(rawTemplates.value.map((t) => [t.id, t]))),
+    templateById,
+    _templateById,
 
     // 方法
     clearData,

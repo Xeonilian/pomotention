@@ -57,12 +57,14 @@ export const useDataStore = defineStore(
     const isDataLoaded = ref(false);
 
     function clearData() {
-      activityList.value = [];
-      todoList.value = [];
-      scheduleList.value = [];
-      taskList.value = [];
+      activityList.value.length = 0;
+      todoList.value.length = 0;
+      scheduleList.value.length = 0;
+      taskList.value.length = 0;
+
       tagStore.clearData();
       templateStore.clearData();
+      isDataLoaded.value = false;
     }
 
     // 在数据加载后重新计算标签计数
@@ -85,10 +87,59 @@ export const useDataStore = defineStore(
     const activeTasks = computed(() => taskList.value.filter((t) => !t.deleted));
 
     // ======================== 4. 数据索引 (Getters / Computed) ========================
-    const activityById = computed(() => new Map(activityList.value.map((a) => [a.id, a])));
-    const todoById = computed(() => new Map(todoList.value.map((t) => [t.id, t])));
-    const scheduleById = computed(() => new Map(scheduleList.value.map((s) => [s.id, s])));
-    const taskById = computed(() => new Map(taskList.value.map((t) => [t.id, t])));
+    const _activityById = new Map<number, Activity>();
+    const _todoById = new Map<number, Todo>();
+    const _scheduleById = new Map<number, Schedule>();
+    const _taskById = new Map<number, Task>();
+
+    watch(
+      activityList,
+      (list) => {
+        _activityById.clear();
+        for (const a of list) {
+          _activityById.set(a.id, a);
+        }
+      },
+      { deep: true }
+    );
+
+    watch(
+      todoList,
+      (list) => {
+        _todoById.clear();
+        for (const t of list) {
+          _todoById.set(t.id, t);
+        }
+      },
+      { deep: true }
+    );
+
+    watch(
+      scheduleList,
+      (list) => {
+        _scheduleById.clear();
+        for (const s of list) {
+          _scheduleById.set(s.id, s);
+        }
+      },
+      { deep: true }
+    );
+
+    watch(
+      taskList,
+      (list) => {
+        _taskById.clear();
+        for (const t of list) {
+          _taskById.set(t.id, t);
+        }
+      },
+      { deep: true }
+    );
+
+    const activityById = computed(() => _activityById);
+    const todoById = computed(() => _todoById);
+    const scheduleById = computed(() => _scheduleById);
+    const taskById = computed(() => _taskById);
 
     const todoByActivityId = computed(() => {
       const map = new Map<number, Todo>();
@@ -617,6 +668,10 @@ export const useDataStore = defineStore(
       todoById,
       scheduleById,
       taskById,
+      _activityById,
+      _todoById,
+      _scheduleById,
+      _taskById,
       todoByActivityId,
       scheduleByActivityId,
       taskByActivityId, // 字段是sourceId 但是以后都只有 activityId
@@ -625,8 +680,10 @@ export const useDataStore = defineStore(
 
       tagList: tagStore.rawTags,
       tagById: tagStore.tagById,
+      _tagById: tagStore._tagById,
       templateList: templateStore.rawTemplates,
       templateById: templateStore.templateById,
+      _templateById: templateStore._templateById,
 
       // UI 状态
       activeId,

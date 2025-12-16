@@ -13,6 +13,18 @@ export const useTagStore = defineStore("tagStore", () => {
 
   // 原始 tag 数据（单一数据源），从 localStorage 加载
   const rawTags = ref<Tag[]>(loadTags());
+  const _tagById = new Map<number, Tag>();
+  watch(
+    rawTags,
+    (list) => {
+      _tagById.clear();
+      for (const t of list) {
+        _tagById.set(t.id, t);
+      }
+    },
+    { deep: true, immediate: true }
+  );
+  const tagById = computed(() => _tagById);
 
   // 每当原始数据变化时，自动保存到 localStorage
   watch(
@@ -198,7 +210,7 @@ export const useTagStore = defineStore("tagStore", () => {
    *
    */
   function clearData() {
-    rawTags.value = [];
+    rawTags.value.length = 0;
   }
 
   return {
@@ -207,7 +219,8 @@ export const useTagStore = defineStore("tagStore", () => {
     allTags, // UI 使用
     unsyncedTags, // 同步服务使用
 
-    tagById: computed(() => new Map(rawTags.value.map((t) => [t.id, t]))),
+    tagById,
+    _tagById,
 
     // Actions
     clearData,
