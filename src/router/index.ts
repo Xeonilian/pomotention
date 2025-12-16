@@ -1,7 +1,7 @@
 // src/router/index.ts
 
 import { createRouter, createWebHistory, RouteRecordRaw } from "vue-router";
-import { getSession } from "@/core/services/authServicve"; // 导入获取会话的方法
+import { getSession } from "@/core/services/authService"; // 导入获取会话的方法
 import { isSupabaseEnabled } from "@/core/services/supabase";
 
 // --- 视图组件 ---
