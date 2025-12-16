@@ -12,7 +12,6 @@
 
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from "vue";
-import { storeToRefs } from "pinia";
 import { useRouter } from "vue-router";
 import { supabase, isSupabaseEnabled } from "@/core/services/supabase";
 import { useDataStore } from "@/stores/useDataStore";
@@ -38,8 +37,6 @@ const syncStore = useSyncStore(); // ✅ 获取 syncStore 实例
 // 用来存储异步初始化返回的清理函数
 let appCloseCleanup: (() => void) | undefined | null = null;
 
-const { activityList, todoList, scheduleList, taskList, tagList, templateList } = storeToRefs(dataStore);
-
 const startAppSync = async () => {
   if (!isSupabaseEnabled()) {
     console.warn("[Supabase] 当前未启用，跳过同步初始化。");
@@ -48,21 +45,7 @@ const startAppSync = async () => {
 
   console.log("🔄 初始化同步服务...");
   // 初始化同步服务 (绑定 store 数据)
-  await initSyncServices({
-    activityList,
-    todoList,
-    scheduleList,
-    taskList,
-    tagList,
-    templateList,
-    // Maps
-    activityById: dataStore.activityById,
-    todoById: dataStore.todoById,
-    scheduleById: dataStore.scheduleById,
-    taskById: dataStore.taskById,
-    tagById: dataStore.tagById,
-    templateById: dataStore.templateById,
-  });
+  await initSyncServices(dataStore);
 
   console.log("☁️ 开始同步..."); // 这里的具体行为取决于 syncStore.lastSyncTimestamp
   await syncAll(); // 同步所有数据

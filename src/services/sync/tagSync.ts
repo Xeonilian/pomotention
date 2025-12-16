@@ -3,14 +3,14 @@
 import { BaseSyncService } from "@/services/sync/baseSyncService";
 import type { Tag } from "@/core/types/Tag";
 import type { Database } from "@/core/types/Database";
-import type { Ref } from "vue";
 import { convertISOToTimestamp } from "@/core/utils/convertTimestampToISO";
+
 type CloudTag = Database["public"]["Tables"]["tags"]["Row"];
 type CloudTagInsert = Database["public"]["Tables"]["tags"]["Insert"];
 
 export class TagSyncService extends BaseSyncService<Tag, CloudTagInsert> {
-  constructor(reactiveList: Ref<Tag[]>, indexMap: Map<number, Tag>) {
-    super("tags", "tag", reactiveList, indexMap);
+  constructor(getList: () => Tag[], getMap: () => Map<number, Tag>) {
+    super("tags", "tag", getList, getMap);
   }
 
   protected mapLocalToCloud(local: Tag, userId: string): CloudTagInsert {

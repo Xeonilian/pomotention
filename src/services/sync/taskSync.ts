@@ -2,11 +2,10 @@
 // src/services/sync/taskSync.ts
 
 import { supabase } from "@/core/services/supabase";
-import { getCurrentUser } from "@/core/services/authServicve";
+import { getCurrentUser } from "@/core/services/authService";
 import { BaseSyncService } from "./baseSyncService";
 import type { Task, EnergyRecord, RewardRecord, InterruptionRecord } from "@/core/types/Task";
 import type { Database } from "@/core/types/Database";
-import type { Ref } from "vue";
 
 type CloudTaskInsert = Database["public"]["Tables"]["tasks"]["Insert"];
 
@@ -28,8 +27,8 @@ interface FullTaskFromCloud {
 }
 
 export class TaskSyncService extends BaseSyncService<Task, CloudTaskInsert> {
-  constructor(reactiveList: Ref<Task[]>, indexMap: Map<number, Task>) {
-    super("tasks", "taskTrack", reactiveList, indexMap);
+  constructor(getList: () => Task[], getMap: () => Map<number, Task>) {
+    super("tasks", "taskTrack", getList, getMap);
   }
 
   /**
@@ -111,8 +110,8 @@ export class TaskSyncService extends BaseSyncService<Task, CloudTaskInsert> {
       console.log(`📊 [tasks] 增量下载: 获取到 ${data.length} 条更新`);
 
       // 3. 直接操作 BaseSyncService 的响应式列表
-      const localItems = this.reactiveList.value;
-      const localMap = this.indexMap;
+      const localItems = this.getList();
+      const localMap = this.getMap();
       let downloadedCount = 0;
 
       for (const cloudItem of data) {

@@ -1,21 +1,7 @@
 // src/services/sync/baseSyncService.ts
 
-import type { Ref } from "vue";
 import { supabase } from "@/core/services/supabase";
-import { getCurrentUser } from "@/core/services/authServicve";
-// import { convertTimestampToISO } from "@/core/utils";
-
-// import { STORAGE_KEYS } from "@/core/constants";
-// 使用 STORAGE_KEYS 来引用表名
-// const KEYS_TO_TABLE_NAMES: Record<string, string> = {
-//   [STORAGE_KEYS.ACTIVITY]: "activities",
-//   [STORAGE_KEYS.TODO]: "todos",
-//   [STORAGE_KEYS.SCHEDULE]: "schedules",
-//   [STORAGE_KEYS.TASK]: "tasks",
-//   [STORAGE_KEYS.TAG]: "tags",
-//   [STORAGE_KEYS.WRITING_TEMPLATE]: "writing_templates",
-//   // [STORAGE_KEYS.TIMETABLE_BLOCKS]: "timetable_blocks",
-// };
+import { getCurrentUser } from "@/core/services/authService";
 
 /**
  * 可同步的实体接口（本地数据必须有这些字段）
@@ -36,8 +22,8 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
   constructor(
     protected tableName: string,
     protected localStorageKey: string,
-    protected reactiveList: Ref<TLocal[]>,
-    protected indexMap: Map<number, TLocal>
+    protected getList: () => TLocal[],
+    protected getMap: () => Map<number, TLocal>
   ) {}
 
   /**
@@ -79,9 +65,10 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
         console.log("用户未登录，跳过上传");
         return { success: false, error: "用户未登录", uploaded: 0 };
       }
-
+      const list = this.getList();
+      if (!list) return { success: true, uploaded: 0 }; // 防御性编程
       // 获取未同步的数据
-      const unsyncedItems = this.reactiveList.value.filter((item) => !item.synced);
+      const unsyncedItems = list.filter((item) => !item.synced);
 
       console.log(`📤 [${this.tableName}] 准备上传 ${unsyncedItems.length} 条`);
 
@@ -198,8 +185,8 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
         return { success: true, downloaded: 0 };
       }
 
-      const localItems = this.reactiveList.value;
-      const localMap = this.indexMap;
+      const localItems = this.getList();
+      const localMap = this.getMap();
       let downloadedCount = 0;
 
       for (const cloudItem of data) {

@@ -1,11 +1,10 @@
 // src/services/sync/todoSync.ts
 
 import { supabase } from "@/core/services/supabase";
-import { getCurrentUser } from "@/core/services/authServicve";
+import { getCurrentUser } from "@/core/services/authService";
 import { BaseSyncService } from "./baseSyncService";
 import type { Todo } from "@/core/types/Todo";
 import type { Database } from "@/core/types/Database";
-import type { Ref } from "vue";
 
 type CloudTodoInsert = Database["public"]["Tables"]["todos"]["Insert"];
 
@@ -33,8 +32,8 @@ interface FullTodoFromCloud {
 }
 
 export class TodoSyncService extends BaseSyncService<Todo, CloudTodoInsert> {
-  constructor(reactiveList: Ref<Todo[]>, indexMap: Map<number, Todo>) {
-    super("todos", "todayTodo", reactiveList, indexMap);
+  constructor(getList: () => Todo[], getMap: () => Map<number, Todo>) {
+    super("todos", "todayTodo", getList, getMap);
   }
 
   /**
@@ -125,8 +124,8 @@ export class TodoSyncService extends BaseSyncService<Todo, CloudTodoInsert> {
       console.log(`📊 [todos] 增量下载: 获取到 ${data.length} 条更新`);
 
       // 3. 直接使用 BaseSyncService 中的响应式引用和索引 Map
-      const localItems = this.reactiveList.value;
-      const localMap = this.indexMap;
+      const localItems = this.getList();
+      const localMap = this.getMap();
       let downloadedCount = 0;
 
       for (const cloudItem of data) {

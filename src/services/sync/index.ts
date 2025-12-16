@@ -1,6 +1,5 @@
 // src/services/sync/index.ts
 
-import type { Ref } from "vue";
 // 动态导入各个 SyncService
 let ActivitySyncService: any;
 let TodoSyncService: any;
@@ -10,13 +9,6 @@ let TagSyncService: any;
 let TemplateSyncService: any;
 // let TimetableSyncService: any;
 
-import type { Activity } from "@/core/types/Activity";
-import type { Todo } from "@/core/types/Todo";
-import type { Schedule } from "@/core/types/Schedule";
-import type { Task } from "@/core/types/Task";
-import type { Tag } from "@/core/types/Tag";
-import type { Template } from "@/core/types/Template";
-// import type { Block } from "@/core/types/Block";
 import { useSyncStore } from "@/stores/useSyncStore";
 import { useDataStore } from "@/stores/useDataStore";
 import { useSettingStore } from "@/stores/useSettingStore";
@@ -33,24 +25,7 @@ let isInitialized = false;
 /**
  * 初始化所有同步服务（由 App.vue 调用）
  */
-export async function initSyncServices(dataStore: {
-  activityList: Ref<Activity[]>;
-  todoList: Ref<Todo[]>;
-  scheduleList: Ref<Schedule[]>;
-  taskList: Ref<Task[]>;
-  tagList: Ref<Tag[]>;
-  templateList: Ref<Template[]>;
-  // blockList: Ref<Block[]>;
-
-  // 添加所有的 indexMap
-  activityById: Map<number, Activity>;
-  todoById: Map<number, Todo>;
-  scheduleById: Map<number, Schedule>;
-  taskById: Map<number, Task>;
-  tagById: Map<number, Tag>;
-  templateById: Map<number, Template>;
-  // blockById: Map<number, Block>;
-}) {
+export async function initSyncServices(dataStore: ReturnType<typeof useDataStore>) {
   if (isInitialized) {
     console.warn("[Sync] 同步服务已初始化，跳过重复初始化");
     return;
@@ -59,27 +34,47 @@ export async function initSyncServices(dataStore: {
   console.log("[Sync] 动态载入同步服务...");
 
   try {
-    // 动态载入各服务
     ActivitySyncService = (await import("./activitySync")).ActivitySyncService;
     TodoSyncService = (await import("./todoSync")).TodoSyncService;
     ScheduleSyncService = (await import("./scheduleSync")).ScheduleSyncService;
     TaskSyncService = (await import("./taskSync")).TaskSyncService;
     TagSyncService = (await import("./tagSync")).TagSyncService;
     TemplateSyncService = (await import("./templateSync")).TemplateSyncService;
-    // TimetableSyncService = (await import("./timetableSync")).TimetableSyncService;
   } catch (error) {
     console.error("[Sync] 动态载入服务失败:", error);
     return;
   }
 
-  // 创建各表的 syncService 实例（传入响应式数据和索引 Map）
-  const activitySync = new ActivitySyncService(dataStore.activityList, dataStore.activityById);
-  const todoSync = new TodoSyncService(dataStore.todoList, dataStore.todoById);
-  const scheduleSync = new ScheduleSyncService(dataStore.scheduleList, dataStore.scheduleById);
-  const taskSync = new TaskSyncService(dataStore.taskList, dataStore.taskById);
-  const tagSync = new TagSyncService(dataStore.tagList, dataStore.tagById);
-  const templateSync = new TemplateSyncService(dataStore.templateList, dataStore.templateById);
-  // const timetableSync = new TimetableSyncService(dataStore.blockList);
+  // ✅ 注意：每个 SyncService 都是 2个参数
+  const activitySync = new ActivitySyncService(
+    () => dataStore.activityList,
+    () => dataStore._activityById
+  );
+
+  const todoSync = new TodoSyncService(
+    () => dataStore.todoList,
+    () => dataStore._todoById
+  );
+
+  const scheduleSync = new ScheduleSyncService(
+    () => dataStore.scheduleList,
+    () => dataStore._scheduleById
+  );
+
+  const taskSync = new TaskSyncService(
+    () => dataStore.taskList,
+    () => dataStore._taskById
+  );
+
+  const tagSync = new TagSyncService(
+    () => dataStore.tagList,
+    () => dataStore._tagById
+  );
+
+  const templateSync = new TemplateSyncService(
+    () => dataStore.templateList,
+    () => dataStore._templateById
+  );
 
   syncServices = [
     { name: "Activities", service: activitySync },
@@ -88,13 +83,11 @@ export async function initSyncServices(dataStore: {
     { name: "Tasks", service: taskSync },
     { name: "Tags", service: tagSync },
     { name: "Templates", service: templateSync },
-    // { name: "Blocks", service: timetableSync },
   ];
 
   isInitialized = true;
   console.log("✅ [Sync] 所有同步服务已初始化");
 }
-
 /**
  * 检查是否已初始化
  */

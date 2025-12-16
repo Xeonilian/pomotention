@@ -1,11 +1,10 @@
 // src/services/sync/scheduleSync.ts
 
 import { supabase } from "@/core/services/supabase";
-import { getCurrentUser } from "@/core/services/authServicve";
+import { getCurrentUser } from "@/core/services/authService";
 import { BaseSyncService } from "./baseSyncService";
 import type { Schedule } from "@/core/types/Schedule";
 import type { Database } from "@/core/types/Database";
-import type { Ref } from "vue";
 
 type CloudScheduleInsert = Database["public"]["Tables"]["schedules"]["Insert"];
 
@@ -29,8 +28,8 @@ interface FullScheduleFromCloud {
 }
 
 export class ScheduleSyncService extends BaseSyncService<Schedule, CloudScheduleInsert> {
-  constructor(reactiveList: Ref<Schedule[]>, indexMap: Map<number, Schedule>) {
-    super("schedules", "todaySchedule", reactiveList, indexMap);
+  constructor(getList: () => Schedule[], getMap: () => Map<number, Schedule>) {
+    super("schedules", "todaySchedule", getList, getMap);
   }
 
   /**
@@ -110,8 +109,8 @@ export class ScheduleSyncService extends BaseSyncService<Schedule, CloudSchedule
       console.log(`📊 [schedules] 增量下载: 获取到 ${data.length} 条更新`);
 
       // 3. 直接操作 BaseSyncService 的响应式列表
-      const localItems = this.reactiveList.value;
-      const localMap = this.indexMap;
+      const localItems = this.getList();
+      const localMap = this.getMap();
       let downloadedCount = 0;
 
       for (const cloudItem of data) {

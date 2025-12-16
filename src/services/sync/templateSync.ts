@@ -3,14 +3,13 @@
 import { BaseSyncService } from "@/services/sync/baseSyncService";
 import type { Template } from "@/core/types/Template";
 import type { Database } from "@/core/types/Database";
-import type { Ref } from "vue";
 import { convertISOToTimestamp } from "@/core/utils/convertTimestampToISO";
 type CloudTemplate = Database["public"]["Tables"]["templates"]["Row"];
 type CloudTemplateInsert = Database["public"]["Tables"]["templates"]["Insert"];
 
 export class TemplateSyncService extends BaseSyncService<Template, CloudTemplateInsert> {
-  constructor(reactiveList: Ref<Template[]>, indexMap: Map<number, Template>) {
-    super("templates", "writingTemplate", reactiveList, indexMap);
+  constructor(getList: () => Template[], getMap: () => Map<number, Template>) {
+    super("templates", "writingTemplate", getList, getMap);
   }
 
   protected mapLocalToCloud(local: Template, userId: string): CloudTemplateInsert {
