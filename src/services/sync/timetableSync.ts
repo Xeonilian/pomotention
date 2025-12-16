@@ -4,14 +4,13 @@
 import { BaseSyncService } from "@/services/sync/baseSyncService";
 import type { Block } from "@/core/types/Block";
 import type { Database } from "@/core/types/Database";
-import type { Ref } from "vue";
 
 type CloudBlock = Database["public"]["Tables"]["timetable_blocks"]["Row"];
 type CloudBlockInsert = Database["public"]["Tables"]["timetable_blocks"]["Insert"];
 
 export class TimetableSyncService extends BaseSyncService<Block, CloudBlockInsert> {
-  constructor(reactiveList: Ref<Block[]>, indexMap: Map<number, Block>) {
-    super("timetable_blocks", "timeTableBlocks", reactiveList, indexMap);
+  constructor(getList: () => Block[], getMap: () => Map<number, Block>) {
+    super("timetable_blocks", "timeTableBlocks", getList, getMap);
   }
 
   protected mapLocalToCloud(local: Block, userId: string): CloudBlockInsert {

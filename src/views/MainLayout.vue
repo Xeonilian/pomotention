@@ -109,7 +109,7 @@ import { useSyncStore } from "@/stores/useSyncStore";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useTimerStore } from "@/stores/useTimerStore";
 
-import { syncAll, uploadAll, downloadAll } from "@/services/sync";
+import { uploadAll, downloadAll } from "@/services/sync";
 
 import {
   ArrowLeft24Filled,

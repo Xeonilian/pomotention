@@ -53,11 +53,24 @@ describe("TodoSyncService", () => {
     mockLocalStorage.clear();
 
     // 重置 rpc mock
-    vi.mocked(supabaseClient.rpc).mockResolvedValue({ data: [], error: null, count: null, status: 200, statusText: "OK" });
+    vi.mocked(supabaseClient.rpc).mockResolvedValue({
+      data: [],
+      error: null,
+      count: null,
+      status: 200,
+      statusText: "OK",
+    });
 
+    // 初始化测试数据容器
     todoListRef = ref<Todo[]>([]);
     indexMap = new Map<number, Todo>();
-    service = new TodoSyncService(todoListRef, indexMap);
+
+    // ✅ 修复点：传递“函数”而不是“变量”
+    // Service 内部会调用 getList() 和 getMap() 来获取最新值
+    service = new TodoSyncService(
+      () => todoListRef.value, // 参数 1: 返回数组的函数
+      () => indexMap // 参数 2: 返回 Map 的函数
+    );
   });
 
   // ==================== 数据转换测试 ====================

@@ -59,8 +59,11 @@ describe("ActivitySyncService", () => {
     activityListRef = ref<Activity[]>([]);
     indexMap = new Map<number, Activity>();
 
-    // ✅ 传入响应式数据
-    service = new ActivitySyncService(activityListRef, indexMap);
+    // ✅ 修复：改成传入函数
+    service = new ActivitySyncService(
+      () => activityListRef.value,
+      () => indexMap
+    );
   });
 
   describe("数据转换 - mapLocalToCloud", () => {

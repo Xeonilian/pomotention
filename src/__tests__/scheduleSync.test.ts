@@ -61,9 +61,13 @@ describe("ScheduleSyncService", () => {
 
     scheduleListRef = ref<Schedule[]>([]);
     indexMap = new Map<number, Schedule>();
-    service = new ScheduleSyncService(scheduleListRef, indexMap);
-  });
 
+    // ✅ 修复：改成传入函数
+    service = new ScheduleSyncService(
+      () => scheduleListRef.value,
+      () => indexMap
+    );
+  });
   // ==================== 数据转换测试 ====================
   describe("数据转换", () => {
     it("mapLocalToCloud: 正确转换本地 Schedule 为云端格式", () => {
