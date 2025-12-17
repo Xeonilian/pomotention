@@ -1,6 +1,5 @@
 <!-- 
   Component: ActivitySection.vue 
-
 -->
 <template>
   <div class="section-container">
@@ -41,8 +40,10 @@
       <div
         v-if="item.status !== 'done'"
         class="activity-row"
+        :data-row-id="item.id"
         :class="{
           'highlight-line': item.id === activityId || item.id === props.activeId,
+          'is-dragging-row': dragHandler.draggedItem.value?.id === item.id,
         }"
       >
         <div class="activity-content">
@@ -63,10 +64,8 @@
             <template #prefix>
               <div
                 class="icon-drag-area"
-                @mousedown="onDragStart($event, item)"
-                @touchstart="onDragStart($event, item)"
-                @mouseenter="dragHandler.handleIconMouseEnter(item.id)"
-                @mouseleave="dragHandler.handleIconMouseLeave()"
+                style="touch-action: none; cursor: grab"
+                @pointerdown="onDragStart($event, item)"
                 :title="item.status !== 'cancelled' ? '拖拽调整顺序' : '不支持顺序修改'"
               >
                 <n-icon v-if="item.isUntaetigkeit" :color="'var(--color-blue)'"><Cloud24Regular /></n-icon>
@@ -472,7 +471,7 @@ watch(
 );
 
 // ======================== 拖拽处理 ========================
-function onDragStart(event: MouseEvent | TouchEvent, item: Activity) {
+function onDragStart(event: PointerEvent, item: Activity) {
   dragHandler.startDrag(event, item);
 }
 
@@ -597,6 +596,18 @@ function onInputUpdate(item: Activity, value: string) {
   padding: 1px 0;
   gap: 0px;
   width: 100%;
+  touch-action: pan-y;
+}
+
+.is-dragging-row {
+  /* 确保它在视觉上浮起（可选） */
+  z-index: 999;
+  position: relative;
+}
+
+/* 确保普通行在手机上不会拦截滚动，除了 handle 区域 */
+.activity-row {
+  touch-action: pan-y;
 }
 
 .activity-content .child-activity {
