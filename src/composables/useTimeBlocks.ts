@@ -1,5 +1,5 @@
 // src/composables/useTimeBlocks.ts
-import { ref, computed, type Ref, type ComputedRef } from "vue";
+import { ref, computed, type ComputedRef } from "vue";
 import type { CSSProperties } from "vue";
 import { getTimestampForTimeString } from "@/core/utils";
 import { CategoryColors, POMODORO_COLORS, POMODORO_COLORS_DARK } from "@/core/constants";
@@ -8,6 +8,7 @@ import type { Schedule } from "@/core/types/Schedule";
 import type { Todo } from "@/core/types/Todo";
 import { generateActualTodoSegments } from "@/services/pomoSegService";
 import { useSegStore } from "@/stores/useSegStore";
+import { useTimeBlockDrag } from "./useTimeBlockDrag";
 
 // 第二列显示的schedule segment接口
 export interface ScheduleSegmentForSecondColumn {
@@ -68,8 +69,8 @@ interface UseTimeBlocksReturn {
     draggedIndex: number | null;
     dropTargetGlobalIndex: number | null;
   }>;
-  handleMouseDown: (event: MouseEvent, seg: TodoSegment) => void;
-  handleTouchStart: (event: TouchEvent, seg: TodoSegment) => void;
+  // 这里只保留新的 pointer 方法
+  handlePointerDown: (event: PointerEvent, seg: TodoSegment) => void;
 }
 
 /**
@@ -91,6 +92,8 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
     }
     return map;
   });
+
+  const { dragState, handlePointerDown } = useTimeBlockDrag(props.todos, props.dayStart, pomodoroSegments, occupiedIndices);
 
   // ======= 小时刻度线相关 =======
   const hourStamps = computed(() => {
@@ -410,208 +413,15 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
     return parts.join(" - ");
   }
 
-  // ======= 拖拽TodoSegment功能 =======
-  const dragState = ref<{
-    isDragging: boolean;
-    draggedTodoId: number | null;
-    draggedIndex: number | null;
-    dropTargetGlobalIndex: number | null;
-  }>({
-    isDragging: false,
-    draggedTodoId: null,
-    draggedIndex: null,
-    dropTargetGlobalIndex: null,
-  });
-
-  const mouseState = ref<{
-    isDragging: boolean;
-    startX: number;
-    startY: number;
-    draggedSeg: TodoSegment | null;
-  }>({
-    isDragging: false,
-    startX: 0,
-    startY: 0,
-    draggedSeg: null,
-  });
-
-  // 获取事件坐标的通用函数
-  function getEventCoordinates(event: MouseEvent | TouchEvent): { x: number; y: number } {
-    if (event instanceof TouchEvent) {
-      const touch = event.touches[0] || event.changedTouches[0];
-      return { x: touch.clientX, y: touch.clientY };
-    }
-    return { x: event.clientX, y: event.clientY };
-  }
-
-  function handleStart(event: MouseEvent | TouchEvent, seg: TodoSegment) {
-    mouseState.value.isDragging = true;
-    const coords = getEventCoordinates(event);
-    mouseState.value.startX = coords.x;
-    mouseState.value.startY = coords.y;
-    mouseState.value.draggedSeg = seg;
-
-    // 设置拖拽视觉状态
-    dragState.value.isDragging = true;
-    dragState.value.draggedTodoId = seg.todoId;
-    dragState.value.draggedIndex = seg.todoIndex;
-
-    // 添加全局事件监听
-    document.addEventListener("mousemove", handleMouseMove);
-    document.addEventListener("mouseup", handleMouseUp);
-    document.addEventListener("touchmove", handleTouchMove, { passive: false });
-    document.addEventListener("touchend", handleTouchEnd);
-
-    event.preventDefault();
-    event.stopPropagation();
-  }
-
-  function handleMouseDown(event: MouseEvent, seg: TodoSegment) {
-    handleStart(event, seg);
-  }
-
-  function handleTouchStart(event: TouchEvent, seg: TodoSegment) {
-    handleStart(event, seg);
-  }
-
-  function handleMove(event: MouseEvent | TouchEvent) {
-    if (!mouseState.value.isDragging || !mouseState.value.draggedSeg) {
-      return;
-    }
-    const selector = ".pomo-segment";
-    const { x, y } = getEventCoordinates(event);
-
-    const elementBelow = document.elementFromPoint(x, y) as HTMLElement | null;
-    const targetElement = elementBelow?.closest(selector) as HTMLElement | null;
-
-    // 清空上次 hover
-    dragState.value.dropTargetGlobalIndex = null;
-
-    if (!targetElement) {
-      return;
-    }
-
-    const globalIndexStr = targetElement.dataset.globalIndex;
-    if (!globalIndexStr) {
-      console.debug("[DnD] closest has no data-global-index");
-      return;
-    }
-
-    const globalIndex = Number.parseInt(globalIndexStr, 10);
-    if (!Number.isFinite(globalIndex)) {
-      console.warn("[DnD] invalid globalIndexStr", globalIndexStr);
-      return;
-    }
-
-    const segs = pomodoroSegments.value;
-    if (!Array.isArray(segs)) {
-      console.warn("[DnD] segs not array", segs);
-      return;
-    }
-    if (globalIndex < 0 || globalIndex >= segs.length) {
-      console.warn("[DnD] index out of range", { globalIndex, len: segs.length });
-      return;
-    }
-
-    const targetData = segs[globalIndex];
-    if (!targetData) {
-      console.warn("[DnD] no data at index", globalIndex);
-      return;
-    }
-
-    if (targetData.type === "pomo") {
-      dragState.value.dropTargetGlobalIndex = globalIndex;
-    } else {
-      console.debug("[DnD] type mismatch", {
-        type: targetData.type,
-        expected: "pomo",
-      });
-    }
-    event.preventDefault();
-  }
-
-  function handleMouseMove(event: MouseEvent) {
-    handleMove(event);
-  }
-
-  function handleTouchMove(event: TouchEvent) {
-    handleMove(event);
-  }
-
-  function handleEnd() {
-    if (!mouseState.value.isDragging) return;
-
-    const targetGlobalIndex = dragState.value.dropTargetGlobalIndex;
-
-    // 没有命中有效工作格，直接结束
-    if (targetGlobalIndex === null) {
-      console.log("🟡 Drop on invalid area. No action taken.");
-      cleanupDragState();
-      return;
-    }
-
-    // 找到被拖动的 todo
-    const draggedSeg = mouseState.value.draggedSeg;
-    const draggedTodo = draggedSeg ? props.todos.find((t) => t.id === draggedSeg.todoId) : null;
-
-    if (!draggedTodo) {
-      console.warn("🟠 handleEnd: draggedTodo not found, abort.");
-      cleanupDragState();
-      return;
-    }
-
-    // 仅依据 globalIndex 进行放置
-    const occupyingSeg = occupiedIndices.value.get(targetGlobalIndex);
-    const isOccupiedByOther = occupyingSeg && occupyingSeg.todoId !== draggedTodo.id;
-
-    if (isOccupiedByOther) {
-      console.warn("🔴 Drop failed: Target is occupied!");
-      cleanupDragState();
-      return;
-    }
-
-    draggedTodo.globalIndex = targetGlobalIndex;
-
-    segStore.recalculateTodoAllocations(props.todos, props.dayStart);
-
-    // 结束后恢复状态
-    cleanupDragState();
-  }
-
-  function handleMouseUp() {
-    handleEnd();
-  }
-
-  function handleTouchEnd() {
-    handleEnd();
-  }
-
-  function cleanupDragState() {
-    mouseState.value.isDragging = false;
-    dragState.value.isDragging = false;
-    dragState.value.draggedTodoId = null;
-    dragState.value.draggedIndex = null;
-    dragState.value.dropTargetGlobalIndex = null;
-    document.removeEventListener("mousemove", handleMouseMove);
-    document.removeEventListener("mouseup", handleMouseUp);
-    document.removeEventListener("touchmove", handleTouchMove);
-    document.removeEventListener("touchend", handleTouchEnd);
-  }
-
   return {
-    // Store相关
     pomodoroSegments,
     todoSegments,
-
-    // 时间刻度相关
     hourStamps,
     getHourTickTop,
-
-    // 当前时间线
     currentTimeTop,
     showCurrentLine,
 
-    // 样式计算函数
+    // 样式
     getVerticalBlockStyle,
     getPomodoroStyle,
     getTodoSegmentStyle,
@@ -620,19 +430,18 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
     getActualTodoTimeRangeStyle,
     getActualScheduleTimeRangeStyle,
 
-    // 计算属性
+    // 数据
     scheduleSegmentsForSecondColumn,
     actualSegments,
     actualTodoTimeRanges,
     actualScheduleTimeRanges,
 
-    // 工具函数
+    // 工具
     firstNonDigitLetterWide,
     getScheduleTooltip,
 
-    // 拖拽相关
+    // 拖拽 (来自新 hook)
     dragState,
-    handleMouseDown,
-    handleTouchStart,
+    handlePointerDown,
   };
 }

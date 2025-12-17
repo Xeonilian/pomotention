@@ -15,8 +15,8 @@
     <div
       v-if="settingStore.settings.showSchedule"
       class="resize-handle-horizontal"
-      @mousedown="startLeftResize"
-      @touchstart="startLeftResize"
+      style="touch-action: none"
+      @pointerdown="startLeftResize"
     ></div>
 
     <!-- 中间内容区域 -->
@@ -188,8 +188,8 @@
       <div
         v-if="settingStore.settings.showTask && settingStore.settings.showPlanner"
         class="resize-handle"
-        @mousedown="startVerticalResize"
-        @touchstart="startVerticalResize"
+        style="touch-action: none"
+        @pointerdown="startVerticalResize"
       ></div>
       <!-- 任务视图 -->
       <div v-if="settingStore.settings.showTask" class="middle-bottom" :style="{ height: `calc(100% - ${topHeight}px - 8px)` }">
@@ -201,8 +201,8 @@
     <div
       v-if="settingStore.settings.showActivity || settingStore.settings.showAi"
       class="resize-handle-horizontal"
-      @mousedown="startRightResize"
-      @touchstart="startRightResize"
+      style="touch-action: none"
+      @pointerdown="startRightResize"
     ></div>
 
     <!-- 右侧面板 (活动清单) -->

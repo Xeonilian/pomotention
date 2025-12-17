@@ -22,7 +22,6 @@ import UpdateManager from "./components/UpdateManager.vue";
 import BackupAlertDialog from "./components/BackupAlertDialog.vue";
 
 import { initSyncServices, syncAll, resetSyncServices } from "@/services/sync";
-import { initializeTouchHandling, cleanupTouchHandling } from "@/core/utils/touchHandler";
 import { isTauri } from "@tauri-apps/api/core";
 import { initialMigrate } from "./composables/useMigrate";
 import { initAppCloseHandler } from "@/services/appCloseHandler";
@@ -57,9 +56,6 @@ onMounted(async () => {
 
   // 1. 初始化本地数据
   await dataStore.loadAllData();
-
-  // 触摸事件处理（非 Tauri）
-  if (!isTauri()) initializeTouchHandling();
 
   // 2. Tauri: 首次登陆APP导出/迁移
   if (settingStore.settings.firstSync && isTauri()) {
@@ -149,11 +145,6 @@ onUnmounted(() => {
   // 清理窗口关闭监听
   if (appCloseCleanup) {
     appCloseCleanup();
-  }
-
-  // 清理触摸事件（非 Tauri）
-  if (!isTauri()) {
-    cleanupTouchHandling();
   }
 });
 </script>

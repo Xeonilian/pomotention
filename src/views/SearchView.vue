@@ -95,7 +95,7 @@
 
       <div v-if="filteredActivities.length === 0" class="empty">暂无结果</div>
     </div>
-    <div class="resize-handle-horizontal" @mousedown="resizeSearch.startResize" @touchstart="resizeSearch.startResize"></div>
+    <div class="resize-handle-horizontal" style="touch-action: none" @pointerdown="resizeSearch.startResize"></div>
     <!-- 右侧：Tabs -->
     <div class="right-pane" :style="{ width: `calc(100% - ${searchWidth}px - 20px)` }">
       <n-tabs
