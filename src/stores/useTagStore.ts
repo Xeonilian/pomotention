@@ -24,7 +24,6 @@ export const useTagStore = defineStore("tagStore", () => {
     },
     { deep: true, immediate: true }
   );
-  const tagById = computed(() => _tagById);
 
   // 每当原始数据变化时，自动保存到 localStorage
   watch(
@@ -219,7 +218,7 @@ export const useTagStore = defineStore("tagStore", () => {
     allTags, // UI 使用
     unsyncedTags, // 同步服务使用
 
-    tagById,
+    tagById: computed(() => new Map(rawTags.value.map((t) => [t.id, t]))),
     _tagById,
 
     // Actions

@@ -135,11 +135,10 @@ export const useDataStore = defineStore(
       },
       { deep: true }
     );
-
-    const activityById = computed(() => _activityById);
-    const todoById = computed(() => _todoById);
-    const scheduleById = computed(() => _scheduleById);
-    const taskById = computed(() => _taskById);
+    const activityById = computed(() => new Map(activityList.value.map((a) => [a.id, a])));
+    const todoById = computed(() => new Map(todoList.value.map((t) => [t.id, t])));
+    const scheduleById = computed(() => new Map(scheduleList.value.map((s) => [s.id, s])));
+    const taskById = computed(() => new Map(taskList.value.map((t) => [t.id, t])));
 
     const todoByActivityId = computed(() => {
       const map = new Map<number, Todo>();
