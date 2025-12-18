@@ -82,7 +82,7 @@ export class TaskSyncService extends BaseSyncService<Task, CloudTaskInsert> {
   }> {
     try {
       if (!supabase) {
-        console.warn("[tasks] Supabase 未启用，跳过下载");
+        // console.warn("[tasks] Supabase 未启用，跳过下载");
         return { success: false, error: "云同步未启用", downloaded: 0 };
       }
 
@@ -107,7 +107,7 @@ export class TaskSyncService extends BaseSyncService<Task, CloudTaskInsert> {
         return { success: true, downloaded: 0 };
       }
 
-      console.log(`📊 [tasks] 增量下载: 获取到 ${data.length} 条更新`);
+      // console.log(`📊 [tasks] 增量下载: 获取到 ${data.length} 条更新`);
 
       // 3. 直接操作 BaseSyncService 的响应式列表
       const localItems = this.getList();
@@ -127,7 +127,7 @@ export class TaskSyncService extends BaseSyncService<Task, CloudTaskInsert> {
           if (localItem && !localItem.deleted) {
             // 冲突检测：本地有未同步修改，跳过删除
             if (!localItem.synced) {
-              console.log(`🔒 [tasks] ID=${cloudId} 本地有未同步修改，跳过云端删除`);
+              // console.log(`🔒 [tasks] ID=${cloudId} 本地有未同步修改，跳过云端删除`);
               continue;
             }
 
@@ -138,7 +138,7 @@ export class TaskSyncService extends BaseSyncService<Task, CloudTaskInsert> {
             localItem.synced = true;
 
             downloadedCount++;
-            console.log(`🗑️ [tasks] 标记删除 ID=${cloudId}`);
+            // console.log(`🗑️ [tasks] 标记删除 ID=${cloudId}`);
           }
           continue;
         }
@@ -150,13 +150,13 @@ export class TaskSyncService extends BaseSyncService<Task, CloudTaskInsert> {
           localMap.set(newItem.id, newItem); // 更新索引
 
           downloadedCount++;
-          console.log(`➕ [tasks] 新增 ID=${cloudId}`);
+          // console.log(`➕ [tasks] 新增 ID=${cloudId}`);
           continue;
         }
 
         // --- C. 本地存在：更新 ---
         if (!localItem.synced) {
-          console.log(`🔒 [tasks] ID=${cloudId} 本地有未同步修改，跳过下载`);
+          // console.log(`🔒 [tasks] ID=${cloudId} 本地有未同步修改，跳过下载`);
           continue;
         }
 
@@ -168,7 +168,7 @@ export class TaskSyncService extends BaseSyncService<Task, CloudTaskInsert> {
           Object.assign(localItem, updatedItem);
 
           downloadedCount++;
-          console.log(`🔄 [tasks] 更新 ID=${cloudId}`);
+          // console.log(`🔄 [tasks] 更新 ID=${cloudId}`);
         }
       }
 

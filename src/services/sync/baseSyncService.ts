@@ -56,13 +56,13 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
   async upload(): Promise<{ success: boolean; error?: string; uploaded: number }> {
     try {
       if (!supabase) {
-        console.warn(`[${this.tableName}] Supabase 未启用，跳过上传`);
+        // console.warn(`[${this.tableName}] Supabase 未启用，跳过上传`);
         return { success: false, error: "云同步未启用", uploaded: 0 };
       }
 
       const user = await getCurrentUser();
       if (!user) {
-        console.log("用户未登录，跳过上传");
+        // console.log("用户未登录，跳过上传");
         return { success: false, error: "用户未登录", uploaded: 0 };
       }
       const list = this.getList();
@@ -70,7 +70,7 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
       // 获取未同步的数据
       const unsyncedItems = list.filter((item) => !item.synced);
 
-      console.log(`📤 [${this.tableName}] 准备上传 ${unsyncedItems.length} 条`);
+      // console.log(`📤 [${this.tableName}] 准备上传 ${unsyncedItems.length} 条`);
 
       if (unsyncedItems.length === 0) {
         return { success: true, uploaded: 0 };
@@ -138,7 +138,7 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
         });
       }
 
-      console.log(`✅ [${this.tableName}] 上传成功 ${unsyncedItems.length} 条`);
+      // console.log(`✅ [${this.tableName}] 上传成功 ${unsyncedItems.length} 条`);
       return { success: true, uploaded: unsyncedItems.length };
     } catch (error: any) {
       console.error(`❌ [${this.tableName}] 上传失败:`, error.message);
@@ -171,15 +171,15 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
       if (lastSyncTimestamp > 0) {
         const lastSyncISO = new Date(lastSyncTimestamp).toISOString();
         query = query.gt("last_modified", lastSyncISO);
-        console.log(`📥 [${this.tableName}] 增量下载（自 ${new Date(lastSyncTimestamp).toLocaleString()}）`);
+        // console.log(`📥 [${this.tableName}] 增量下载（自 ${new Date(lastSyncTimestamp).toLocaleString()}）`);
       } else {
-        console.log(`📥 [${this.tableName}] 全量下载`);
+        // console.log(`📥 [${this.tableName}] 全量下载`);
       }
 
       const { data, error } = await query;
 
       if (error) throw error;
-      console.log(`📊 [${this.tableName}] 云端获取 ${data?.length || 0} 条数据`);
+      // console.log(`📊 [${this.tableName}] 云端获取 ${data?.length || 0} 条数据`);
 
       if (!data || data.length === 0) {
         return { success: true, downloaded: 0 };
@@ -207,7 +207,7 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
             localItem.cloudModified = cloudTimestamp;
             localItem.synced = true;
             downloadedCount++;
-            console.log(`🗑️ [${this.tableName}] 标记删除 ID=${cloudId}`);
+            // console.log(`🗑️ [${this.tableName}] 标记删除 ID=${cloudId}`);
           }
           continue;
         }
@@ -221,13 +221,13 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
           localItems.push(newItem);
           localMap.set(newItem.id, newItem);
           downloadedCount++;
-          console.log(`➕ [${this.tableName}] 新增 ID=${cloudId}`);
+          // console.log(`➕ [${this.tableName}] 新增 ID=${cloudId}`);
           continue;
         }
 
         // 3. 本地存在
         if (!localItem.synced) {
-          console.log(`🔒 [${this.tableName}] ID=${cloudId} 本地有未同步修改，跳过下载`);
+          // console.log(`🔒 [${this.tableName}] ID=${cloudId} 本地有未同步修改，跳过下载`);
           continue;
         }
 
@@ -240,13 +240,13 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
             lastModified: cloudTimestamp, // 使用云端时间
           });
           downloadedCount++;
-          console.log(`🔄 [${this.tableName}] 更新 ID=${cloudId}`);
+          // console.log(`🔄 [${this.tableName}] 更新 ID=${cloudId}`);
         } else {
-          console.log(`⏭️ [${this.tableName}] ID=${cloudId} 云端无变化，跳过`);
+          // console.log(`⏭️ [${this.tableName}] ID=${cloudId} 云端无变化，跳过`);
         }
       }
 
-      console.log(`✅ [${this.tableName}] 下载完成，更新 ${downloadedCount} 条数据`);
+      // console.log(`✅ [${this.tableName}] 下载完成，更新 ${downloadedCount} 条数据`);
       return { success: true, downloaded: downloadedCount };
     } catch (error: any) {
       console.error(`❌ [${this.tableName}] 下载失败:`, error);
@@ -265,7 +265,7 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
 
       const user = await getCurrentUser();
       if (!user) {
-        console.log("用户未登录，跳过清理");
+        // console.log("用户未登录，跳过清理");
         return { success: false, error: "用户未登录" };
       }
 

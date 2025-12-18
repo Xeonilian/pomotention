@@ -30,7 +30,7 @@ export const useTemplateStore = defineStore("template", () => {
     },
     { deep: true, immediate: true }
   );
-  const templateById = computed(() => _templateById);
+  const templateById = computed(() => new Map(rawTemplates.value.map((t) => [t.id, t])));
 
   // ================================================================
   // Computed

@@ -97,7 +97,7 @@ export class TodoSyncService extends BaseSyncService<Todo, CloudTodoInsert> {
   }> {
     try {
       if (!supabase) {
-        console.warn("[todos] Supabase 未启用，跳过下载");
+        // console.warn("[todos] Supabase 未启用，跳过下载");
         return { success: false, error: "云同步未启用", downloaded: 0 };
       }
 
@@ -121,7 +121,7 @@ export class TodoSyncService extends BaseSyncService<Todo, CloudTodoInsert> {
         return { success: true, downloaded: 0 };
       }
 
-      console.log(`📊 [todos] 增量下载: 获取到 ${data.length} 条更新`);
+      // console.log(`📊 [todos] 增量下载: 获取到 ${data.length} 条更新`);
 
       // 3. 直接使用 BaseSyncService 中的响应式引用和索引 Map
       const localItems = this.getList();
@@ -141,7 +141,7 @@ export class TodoSyncService extends BaseSyncService<Todo, CloudTodoInsert> {
           if (localItem && !localItem.deleted) {
             // 冲突检测：如果本地有未同步的修改，跳过云端删除
             if (!localItem.synced) {
-              console.log(`🔒 [todos] ID=${cloudId} 本地有未同步修改，跳过云端删除`);
+              // console.log(`🔒 [todos] ID=${cloudId} 本地有未同步修改，跳过云端删除`);
               continue;
             }
 
@@ -152,7 +152,7 @@ export class TodoSyncService extends BaseSyncService<Todo, CloudTodoInsert> {
             localItem.synced = true;
 
             downloadedCount++;
-            console.log(`🗑️ [todos] 标记删除 ID=${cloudId}`);
+            // console.log(`🗑️ [todos] 标记删除 ID=${cloudId}`);
           }
           continue;
         }
@@ -164,13 +164,13 @@ export class TodoSyncService extends BaseSyncService<Todo, CloudTodoInsert> {
           localMap.set(newItem.id, newItem);
 
           downloadedCount++;
-          console.log(`➕ [todos] 新增 ID=${cloudId}`);
+          // console.log(`➕ [todos] 新增 ID=${cloudId}`);
           continue;
         }
 
         // --- C. 本地存在：更新 ---
         if (!localItem.synced) {
-          console.log(`🔒 [todos] ID=${cloudId} 本地有未同步修改，跳过下载`);
+          // console.log(`🔒 [todos] ID=${cloudId} 本地有未同步修改，跳过下载`);
           continue;
         }
 
@@ -183,7 +183,7 @@ export class TodoSyncService extends BaseSyncService<Todo, CloudTodoInsert> {
           Object.assign(localItem, updatedItem);
 
           downloadedCount++;
-          console.log(`🔄 [todos] 更新 ID=${cloudId}`);
+          // console.log(`🔄 [todos] 更新 ID=${cloudId}`);
         } else {
           // console.log(`⏭️ [todos] ID=${cloudId} 云端无变化，跳过`);
         }
