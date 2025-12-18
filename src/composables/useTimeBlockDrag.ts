@@ -10,6 +10,7 @@ import type { Todo } from "@/core/types/Todo";
  * 1. 事件绑定到 document，避免指针移出元素范围失效
  * 2. 使用 setPointerCapture 确保触摸事件稳定
  * 3. 拖拽时 CSS 设置 pointer-events: none，让 elementFromPoint 能穿透
+ * 4. 🆕 拖拽后标记 synced = false，触发数据同步
  */
 export function useTimeBlockDrag(
   todos: Todo[],
@@ -115,9 +116,19 @@ export function useTimeBlockDrag(
       const draggedTodo = todos.find((t) => t.id === draggedSeg!.todoId);
 
       if (draggedTodo) {
-        console.log("🟢 Drop success:", draggedTodo.id, "→", targetGlobalIndex);
-        draggedTodo.globalIndex = targetGlobalIndex;
-        segStore.recalculateTodoAllocations(todos, dayStart);
+        // 检查是否真的改变了位置
+        const hasChanged = draggedTodo.globalIndex !== targetGlobalIndex;
+
+        if (hasChanged) {
+          console.log("🟢 Drop success:", draggedTodo.id, "→", targetGlobalIndex);
+
+          // 🔥 关键修复：同时修改 globalIndex 和 synced
+          draggedTodo.globalIndex = targetGlobalIndex;
+          draggedTodo.synced = false; // 标记为未同步，触发保存
+
+          // 触发 Store 重算
+          segStore.recalculateTodoAllocations(todos, dayStart);
+        }
       }
     }
 

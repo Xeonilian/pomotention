@@ -1,104 +1,70 @@
 <!--
   Component: TimeBlocks.vue
   Parent: TimeTableView.vue
+  优化：拖拽逻辑 + CSS 结构整理
 -->
 
 <template>
   <div class="timetable-bar-container">
-    <!-- 背景：小时刻度线 -->
+    <!-- ========== 背景层：小时刻度线 ========== -->
     <div class="hour-ticks-container">
       <div v-for="(hourStamp, idx) in hourStamps" :key="hourStamp" class="hour-tick" :style="{ top: getHourTickTop(hourStamp) + 'px' }">
         <div class="tick-line"></div>
-        <!-- 最后一条不显示label -->
-        <span class="hour-label" :style="idx === hourStamps.length - 1 ? { display: 'none' } : {}">
+        <span v-if="idx !== hourStamps.length - 1" class="hour-label">
           {{ timestampToTimeString(hourStamp) }}
         </span>
       </div>
     </div>
 
-    <!-- 背景：时间主块 -->
+    <!-- ========== 背景层：时间主块 ========== -->
     <div v-for="block in props.blocks" :key="block.id" :style="getVerticalBlockStyle(block)" class="time-block">
       <span
         class="block-label"
-        :style="
-          block.category === 'living'
-            ? { color: 'var(--color-blue-transparent)' }
-            : block.category === 'working'
-            ? { color: 'var(--color-red-transparent)' }
-            : {}
-        "
+        :class="{
+          'label-living': block.category === 'living',
+          'label-working': block.category === 'working',
+        }"
       >
-        {{
-          block.category === "sleeping"
-            ? "sleep"
-            : block.category === "working"
-            ? "work"
-            : block.category === "living"
-            ? "live"
-            : block.category
-        }}
+        {{ getBlockLabel(block.category) }}
       </span>
     </div>
 
-    <!-- 背景：当前时间指示线 -->
+    <!-- ========== 背景层：当前时间指示线 ========== -->
     <div v-if="showCurrentLine" class="current-time-line" :style="{ top: currentTimeTop + 'px' }" />
   </div>
 
-  <!-- 第一列：番茄+预约时间分段 -->
+  <!-- ========== 第一列：番茄格子 ========== -->
   <div
     v-for="segment in pomodoroSegments"
     :key="segment.globalIndex"
     :data-global-index="segment.globalIndex"
-    :class="[
-      'pomo-segment',
-      segment.type,
-      segment.category,
-      {
-        'drop-target': dragState.isDragging && segment.type === 'pomo',
-        'drop-hover': dragState.dropTargetGlobalIndex === segment.globalIndex,
-      },
-    ]"
+    :class="getPomoSegmentClasses(segment)"
     :style="getPomodoroStyle(segment)"
   >
-    <!-- 仅在显示序号 -->
     <template v-if="segment.type === 'pomo' && segment.categoryIndex != null">
       {{ segment.categoryIndex }}
     </template>
-    <template v-if="segment.type === 'schedule'">S</template>
-    <template v-if="segment.type === 'untaetigkeit'">U</template>
+    <template v-else-if="segment.type === 'schedule'">S</template>
+    <template v-else-if="segment.type === 'untaetigkeit'">U</template>
   </div>
 
-  <!-- 第二列：估计分配的番茄todosegments + 预约scheduleSegments -->
+  <!-- ========== 第二列：估计分配的 Todo 段 ========== -->
   <div
     v-for="seg in todoSegments"
+    :key="`todo-${seg.todoId}-${seg.todoIndex}`"
     :data-global-index="seg.globalIndex"
-    class="todo-segment estimated"
-    :class="{
-      overflow: seg.overflow,
-      completed: seg.completed,
-      'using-real-pomo': seg.usingRealPomo,
-      dragging:
-        dragState.isDragging &&
-        dragState.draggedTodoId === seg.todoId &&
-        dragState.draggedIndex != null &&
-        dragState.draggedIndex === seg.todoIndex,
-    }"
+    :class="getTodoSegmentClasses(seg)"
     :style="getTodoSegmentStyle(seg)"
-    :title="`${seg.pomoType}[${seg.priority}]-${seg.todoIndex} - ${seg.todoTitle} - (估计分配)${seg.overflow ? '-时间冲突' : ''}`"
+    :title="getTodoTooltip(seg)"
+    @pointerdown="handlePointerDown($event, seg)"
   >
-    <span
-      class="priority-badge"
-      v-if="!seg.overflow"
-      :class="['priority-' + seg.priority, { 'cherry-badge': seg.pomoType === '🍒', 'no-title': seg.todoTitle === '' }]"
-      style="touch-action: none; cursor: grab"
-      @pointerdown="handlePointerDown($event, seg)"
-    >
-      {{ seg.priority > 0 ? seg.priority : firstNonDigitLetterWide(seg.todoTitle) || "-" }}
+    <span v-if="!seg.overflow" :class="getPriorityBadgeClasses(seg)" class="priority-badge">
+      {{ getPriorityText(seg) }}
     </span>
-    <span v-else style="touch-action: none; cursor: grab" @pointerdown="handlePointerDown($event, seg)">⚠️</span>
+    <span v-else>⚠️</span>
   </div>
 
-  <!-- 第二列：schedule segments -->
+  <!-- ========== 第二列：Schedule 段 ========== -->
   <div
     v-for="scheduleSeg in scheduleSegmentsForSecondColumn"
     :key="`schedule-${scheduleSeg.scheduleId}`"
@@ -106,10 +72,10 @@
     :style="getScheduleSegmentStyle(scheduleSeg)"
     :title="getScheduleTooltip(scheduleSeg)"
   >
-    {{ firstNonDigitLetterWide(scheduleSeg.title) ? firstNonDigitLetterWide(scheduleSeg.title) : scheduleSeg.isUntaetigkeit ? "U" : "S" }}
+    {{ getScheduleLabel(scheduleSeg) }}
   </div>
 
-  <!-- 第三列：实际执行的番茄actualSegments -->
+  <!-- ========== 第三列：实际执行的番茄 ========== -->
   <div
     v-for="seg in actualSegments"
     :key="`actual-${seg.todoId}-${seg.todoIndex}`"
@@ -120,11 +86,11 @@
     {{ seg.pomoType }}
   </div>
 
-  <!-- 第四列：实际执行时间范围todo schedule -->
+  <!-- ========== 第四列：实际执行时间范围 ========== -->
   <div
     v-for="range in actualTodoTimeRanges"
     :key="`actual-range-${range.id}`"
-    class="actual-time-range"
+    class="actual-time-range todo-range"
     :style="getActualTodoTimeRangeStyle(range)"
     :title="`${range.title} - 实际番茄执行时间`"
   ></div>
@@ -132,7 +98,7 @@
   <div
     v-for="range in actualScheduleTimeRanges"
     :key="`actual-range-${range.id}`"
-    class="actual-time-range"
+    class="actual-time-range schedule-range"
     :style="getActualScheduleTimeRangeStyle(range)"
     :title="`${range.title} - 实际预约执行时间`"
   ></div>
@@ -148,7 +114,7 @@ import type { Todo } from "@/core/types/Todo";
 import { useSegStore } from "@/stores/useSegStore";
 import { useTimeBlocks } from "@/composables/useTimeBlocks";
 
-// ======= Props区域 =======
+// ======= Props =======
 const props = defineProps<{
   dayStart: number;
   blocks: Block[];
@@ -158,7 +124,7 @@ const props = defineProps<{
   todos: Todo[];
 }>();
 
-// ======= 使用composable =======
+// ======= Composable =======
 const {
   pomodoroSegments,
   todoSegments,
@@ -185,7 +151,60 @@ const {
 
 const segStore = useSegStore();
 
-// ======= todos改变时同步 =======
+// ======= Helper Functions =======
+const getBlockLabel = (category: string) => {
+  const labels: Record<string, string> = {
+    sleeping: "sleep",
+    working: "work",
+    living: "live",
+  };
+  return labels[category] || category;
+};
+
+const getTodoTooltip = (seg: any) => {
+  return `${seg.pomoType}[${seg.priority}]-${seg.todoIndex} - ${seg.todoTitle} - (估计分配)${seg.overflow ? "-时间冲突" : ""}`;
+};
+
+const getPriorityText = (seg: any) => {
+  return seg.priority > 0 ? seg.priority : firstNonDigitLetterWide(seg.todoTitle) || "-";
+};
+
+const getScheduleLabel = (scheduleSeg: any) => {
+  const letter = firstNonDigitLetterWide(scheduleSeg.title);
+  return letter || (scheduleSeg.isUntaetigkeit ? "U" : "S");
+};
+
+// ======= Dynamic Classes =======
+const getPomoSegmentClasses = (segment: any) => [
+  "pomo-segment",
+  segment.type,
+  segment.category,
+  {
+    "drop-target": dragState.value.isDragging && segment.type === "pomo",
+    "drop-hover": dragState.value.dropTargetGlobalIndex === segment.globalIndex,
+  },
+];
+
+const getTodoSegmentClasses = (seg: any) => [
+  "todo-segment",
+  "estimated",
+  {
+    overflow: seg.overflow,
+    completed: seg.completed,
+    "using-real-pomo": seg.usingRealPomo,
+    dragging: dragState.value.isDragging && dragState.value.draggedTodoId === seg.todoId && dragState.value.draggedIndex === seg.todoIndex,
+  },
+];
+
+const getPriorityBadgeClasses = (seg: any) => [
+  `priority-${seg.priority}`,
+  {
+    "cherry-badge": seg.pomoType === "🍒",
+    "no-title": seg.todoTitle === "",
+  },
+];
+
+// ======= Watch =======
 watch(
   () => [props.todos, props.blocks, props.schedules, props.dayStart],
   () => {
@@ -196,20 +215,24 @@ watch(
   { immediate: true, deep: true }
 );
 </script>
-
 <style scoped>
+/* ============================================
+     📐 时间表容器和背景层
+     ============================================ */
+
 .timetable-bar-container {
   position: relative;
   overflow: visible;
   height: 100%;
   margin-top: 8px;
   margin-bottom: 0;
-  user-select: none; /* 🔥 禁用选中复制粘贴 */
+  user-select: none;
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
 }
 
+/* ========== 小时刻度线 ========== */
 .hour-ticks-container {
   position: absolute;
   left: 0;
@@ -239,7 +262,7 @@ watch(
   z-index: 5;
   transform: scaleY(0.5);
 }
-/* 文字 */
+
 .hour-label {
   font-size: 10px;
   line-height: 10px;
@@ -250,9 +273,13 @@ watch(
   margin-left: auto;
   z-index: 21;
 }
+
+/* ========== 时间块标签 ========== */
 .block-label {
   z-index: 9;
 }
+
+/* ========== 当前时间指示线 ========== */
 .current-time-line {
   position: absolute;
   left: 0px;
@@ -262,6 +289,7 @@ watch(
   pointer-events: none;
   z-index: 10;
 }
+
 .current-time-line::before {
   content: "🍅";
   position: absolute;
@@ -290,6 +318,11 @@ watch(
     transform: translateY(-50%) rotate(15deg);
   }
 }
+
+/* ============================================
+     🍅 番茄格子 (第一列)
+     ============================================ */
+
 .pomo-segment {
   display: flex;
   justify-content: center;
@@ -298,6 +331,53 @@ watch(
   pointer-events: none;
   font-family: "Arial";
 }
+
+.pomo-segment.work {
+  pointer-events: auto !important;
+}
+
+.pomo-segment.break {
+  color: transparent;
+}
+
+/* 🔥 拖拽目标状态 */
+.pomo-segment.drop-target {
+  outline: 1px dashed var(--color-primary);
+  pointer-events: auto !important;
+}
+
+.pomo-segment.drop-hover {
+  background-color: var(--color-primary-transparent) !important;
+  outline: 2px solid var(--color-primary);
+}
+
+/* ============================================
+     📋 Todo 段 (第二列)
+     ============================================ */
+
+.todo-segment {
+  position: relative;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* 🔥 拖拽中状态 - 让 elementFromPoint 能穿透 */
+.todo-segment.dragging {
+  opacity: 0.5;
+  transform: scale(0.95);
+  cursor: grabbing;
+  pointer-events: none !important;
+}
+
+.todo-segment.completed .priority-badge {
+  opacity: 0.5;
+}
+
+/* ============================================
+     🎯 优先级徽章
+     ============================================ */
 
 .priority-badge {
   display: inline-flex;
@@ -315,22 +395,21 @@ watch(
   user-select: none;
   z-index: 30;
   background-color: var(--color-background-light);
+  pointer-events: none; /* 🔥 徽章不拦截拖拽事件 */
 }
 
 .priority-1 {
-  background-color: #ef53505c; /* 半透明浅底 */
-  color: #ef5350; /* 同色文字 */
+  background-color: #ef53505c;
+  color: #ef5350;
   font-weight: 600;
 }
 
-/* 按 1 的风格修改 */
 .priority-2 {
   background-color: #ff98005c;
-  color: #ff9800; /* 同色文字 */
+  color: #ff9800;
   font-weight: 600;
 }
 
-/* priority-3 保持不变 */
 .priority-3 {
   background-color: #ffeb3bb7;
   color: #3d3d3dc1;
@@ -342,11 +421,13 @@ watch(
   color: #4caf50;
   font-weight: 600;
 }
+
 .priority-5 {
   background-color: #2196f35c;
   color: #2196f3;
   font-weight: 600;
 }
+
 .priority-6 {
   background-color: #d33af65c;
   color: #a156b8;
@@ -358,25 +439,23 @@ watch(
   color: #7e57c2;
   font-weight: 600;
 }
+
 .priority-8 {
   background-color: #26a69a5c;
   color: #26a69a;
   font-weight: 600;
 }
+
 .priority-9 {
   background-color: #7892625c;
   color: #789262;
   font-weight: 600;
 }
+
 .priority-10 {
   background-color: #8d6e635c;
   color: #8d6e63;
   font-weight: 600;
-}
-
-/* 已完成的todo段样式 */
-.todo-segment.completed .priority-badge {
-  opacity: 0.5;
 }
 
 .priority-badge.cherry-badge {
@@ -385,39 +464,10 @@ watch(
   font-size: 12px;
 }
 
-/* 拖拽效果 */
-.priority-badge[draggable="true"] {
-  cursor: grab;
-}
+/* ============================================
+     📅 Schedule 段 (第二列)
+     ============================================ */
 
-.priority-badge[draggable="true"]:active {
-  cursor: grabbing;
-}
-
-.todo-segment.dragging {
-  opacity: 0.5;
-  transform: scale(0.95);
-}
-
-.pomo-segment.drop-target {
-  outline: 1px dashed var(--color-primary);
-  pointer-events: auto !important;
-}
-
-.pomo-segment.drop-hover {
-  background-color: var(--color-primary-transparent) !important;
-  outline: 2px solid var(--color-primary);
-}
-
-.pomo-segment.work {
-  pointer-events: auto !important;
-}
-
-.pomo-segment.break {
-  color: transparent;
-}
-
-/* 第二列schedule segments样式 */
 .schedule-segment.second-column {
   cursor: pointer;
   transition: opacity 0.2s;
