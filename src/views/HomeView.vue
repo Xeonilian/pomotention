@@ -403,7 +403,7 @@ function cancelEdit() {
 
 /** 新增活动 */
 function onAddActivity(newActivity: Activity) {
-  console.log("🔵 添加前，未同步数量:", activityList.value.filter((a) => !a.synced).length);
+  // console.log("🔵 添加前，未同步数量:", activityList.value.filter((a) => !a.synced).length);
 
   activeId.value = null;
   activityList.value.push(newActivity);
@@ -412,11 +412,11 @@ function onAddActivity(newActivity: Activity) {
     activityById: activityById.value,
   });
 
-  console.log("🔵 添加后，未同步数量:", activityList.value.filter((a) => !a.synced).length);
-  console.log(
-    "🔵 未同步的 activities:",
-    activityList.value.filter((a) => !a.synced)
-  );
+  // console.log("🔵 添加后，未同步数量:", activityList.value.filter((a) => !a.synced).length);
+  // console.log(
+  //   "🔵 未同步的 activities:",
+  //   activityList.value.filter((a) => !a.synced)
+  // );
 
   activeId.value = newActivity.id;
   saveAllDebounced();
