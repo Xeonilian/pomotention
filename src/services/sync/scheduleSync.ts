@@ -81,7 +81,7 @@ export class ScheduleSyncService extends BaseSyncService<Schedule, CloudSchedule
   }> {
     try {
       if (!supabase) {
-        console.warn("[schedules] Supabase 未启用，跳过下载");
+        // console.warn("[schedules] Supabase 未启用，跳过下载");
         return { success: false, error: "云同步未启用", downloaded: 0 };
       }
 
@@ -106,7 +106,7 @@ export class ScheduleSyncService extends BaseSyncService<Schedule, CloudSchedule
         return { success: true, downloaded: 0 };
       }
 
-      console.log(`📊 [schedules] 增量下载: 获取到 ${data.length} 条更新`);
+      // console.log(`📊 [schedules] 增量下载: 获取到 ${data.length} 条更新`);
 
       // 3. 直接操作 BaseSyncService 的响应式列表
       const localItems = this.getList();
@@ -126,7 +126,7 @@ export class ScheduleSyncService extends BaseSyncService<Schedule, CloudSchedule
           if (localItem && !localItem.deleted) {
             // 冲突检测：本地有未同步修改，跳过云端删除
             if (!localItem.synced) {
-              console.log(`🔒 [schedules] ID=${cloudId} 本地有未同步修改，跳过云端删除`);
+              // console.log(`🔒 [schedules] ID=${cloudId} 本地有未同步修改，跳过云端删除`);
               continue;
             }
 
@@ -137,7 +137,7 @@ export class ScheduleSyncService extends BaseSyncService<Schedule, CloudSchedule
             localItem.synced = true;
 
             downloadedCount++;
-            console.log(`🗑️ [schedules] 标记删除 ID=${cloudId}`);
+            // console.log(`🗑️ [schedules] 标记删除 ID=${cloudId}`);
           }
           continue;
         }
@@ -149,13 +149,13 @@ export class ScheduleSyncService extends BaseSyncService<Schedule, CloudSchedule
           localMap.set(newItem.id, newItem);
 
           downloadedCount++;
-          console.log(`➕ [schedules] 新增 ID=${cloudId}`);
+          // console.log(`➕ [schedules] 新增 ID=${cloudId}`);
           continue;
         }
 
         // --- C. 本地存在：更新 ---
         if (!localItem.synced) {
-          console.log(`🔒 [schedules] ID=${cloudId} 本地有未同步修改，跳过下载`);
+          // console.log(`🔒 [schedules] ID=${cloudId} 本地有未同步修改，跳过下载`);
           continue;
         }
 
@@ -167,7 +167,7 @@ export class ScheduleSyncService extends BaseSyncService<Schedule, CloudSchedule
           Object.assign(localItem, updatedItem);
 
           downloadedCount++;
-          console.log(`🔄 [schedules] 更新 ID=${cloudId}`);
+          // console.log(`🔄 [schedules] 更新 ID=${cloudId}`);
         }
       }
 

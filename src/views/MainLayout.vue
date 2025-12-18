@@ -156,9 +156,13 @@ watch(route, (newVal) => {
   currentRoutePath.value = newVal.path;
 });
 
-onMounted(async () => {
-  console.log("Pomodoro Container Ref initialized:", PomotentionTimerContainerRef.value?.getAttributeNode("id"));
+// 为了不报错增加的使用 PomotentionTimerContainerRef
+if (!settingStore.settings.showPomodoro) {
+  console.log("PomotentionTimerContainerRef", PomotentionTimerContainerRef.value);
+}
 
+onMounted(async () => {
+  // 如果初始设置是开启的，需要手动触发一次显示逻辑，把 visibility 改为 visible
   // 如果初始设置是开启的，需要手动触发一次显示逻辑，把 visibility 改为 visible
   if (settingStore.settings.showPomodoro) {
     // 必须等待 nextTick，确保 v-if 已经把 DOM 渲染出来了

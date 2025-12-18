@@ -86,7 +86,7 @@ export async function initSyncServices(dataStore: ReturnType<typeof useDataStore
   ];
 
   isInitialized = true;
-  console.log("✅ [Sync] 所有同步服务已初始化");
+  // console.log("✅ [Sync] 所有同步服务已初始化");
 }
 /**
  * 检查是否已初始化

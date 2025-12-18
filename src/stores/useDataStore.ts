@@ -368,7 +368,7 @@ export const useDataStore = defineStore(
         tagStore.saveTags(tagStore.rawTags);
         templateStore.saveTemplates(templateStore.rawTemplates);
 
-        console.log("💾 [DataStore] saveAllNow 完成");
+        // console.log("💾 [DataStore] saveAllNow 完成");
       } catch (e) {
         console.error("save failed", e);
       }

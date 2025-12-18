@@ -950,7 +950,7 @@ function handleEditScheduleDone(id: number, newTm: string) {
 
 // ======================== 8. 生命周期 Hook ========================
 onMounted(() => {
-  console.log("HomeView mounted");
+  // console.log("HomeView mounted");
   dateService.setupSystemDateWatcher();
   dateService.navigateByView("today");
 });
