@@ -70,7 +70,7 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
       // 获取未同步的数据
       const unsyncedItems = list.filter((item) => !item.synced);
 
-      console.log(`📤 [${this.tableName}] 准备上传 ${unsyncedItems.length} 条`);
+      // console.log(`📤 [${this.tableName}] 准备上传 ${unsyncedItems.length} 条`);
 
       if (unsyncedItems.length === 0) {
         return { success: true, uploaded: 0 };
@@ -171,7 +171,7 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
       if (lastSyncTimestamp > 0) {
         const lastSyncISO = new Date(lastSyncTimestamp).toISOString();
         query = query.gt("last_modified", lastSyncISO);
-        console.log(`📥 [${this.tableName}] 增量下载（自 ${new Date(lastSyncTimestamp).toLocaleString()}）`);
+        // console.log(`📥 [${this.tableName}] 增量下载（自 ${new Date(lastSyncTimestamp).toLocaleString()}）`);
       } else {
         console.log(`📥 [${this.tableName}] 全量下载`);
       }
@@ -179,7 +179,7 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
       const { data, error } = await query;
 
       if (error) throw error;
-      console.log(`📊 [${this.tableName}] 云端获取 ${data?.length || 0} 条数据`);
+      // console.log(`📊 [${this.tableName}] 云端获取 ${data?.length || 0} 条数据`);
 
       if (!data || data.length === 0) {
         return { success: true, downloaded: 0 };

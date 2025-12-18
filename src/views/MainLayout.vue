@@ -157,7 +157,7 @@ watch(route, (newVal) => {
 });
 
 onMounted(async () => {
-  console.log("Container Ref initialized:", PomotentionTimerContainerRef.value);
+  console.log("Pomodoro Container Ref initialized:", PomotentionTimerContainerRef.value?.getAttributeNode("id"));
 
   // 如果初始设置是开启的，需要手动触发一次显示逻辑，把 visibility 改为 visible
   if (settingStore.settings.showPomodoro) {

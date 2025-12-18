@@ -42,11 +42,11 @@ const startAppSync = async () => {
     return;
   }
 
-  console.log("🔄 初始化同步服务...");
+  // console.log("🔄 初始化同步服务...");
   // 初始化同步服务 (绑定 store 数据)
   await initSyncServices(dataStore);
 
-  console.log("☁️ 开始同步..."); // 这里的具体行为取决于 syncStore.lastSyncTimestamp
+  // console.log("☁️ 开始同步...");
   await syncAll(); // 同步所有数据
 };
 

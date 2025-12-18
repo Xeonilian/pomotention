@@ -31,7 +31,7 @@ export async function initSyncServices(dataStore: ReturnType<typeof useDataStore
     return;
   }
 
-  console.log("[Sync] 动态载入同步服务...");
+  // console.log("[Sync] 动态载入同步服务...");
 
   try {
     ActivitySyncService = (await import("./activitySync")).ActivitySyncService;
