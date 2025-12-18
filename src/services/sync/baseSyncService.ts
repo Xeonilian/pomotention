@@ -246,7 +246,7 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
         }
       }
 
-      console.log(`✅ [${this.tableName}] 下载完成，更新 ${downloadedCount} 条数据`);
+      // console.log(`✅ [${this.tableName}] 下载完成，更新 ${downloadedCount} 条数据`);
       return { success: true, downloaded: downloadedCount };
     } catch (error: any) {
       console.error(`❌ [${this.tableName}] 下载失败:`, error);
