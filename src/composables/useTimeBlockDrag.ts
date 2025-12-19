@@ -4,6 +4,7 @@ import { ref, type ComputedRef } from "vue";
 import { useSegStore } from "@/stores/useSegStore";
 import type { TodoSegment, PomodoroSegment } from "@/core/types/Block";
 import type { Todo } from "@/core/types/Todo";
+import { nextTick } from "vue";
 
 /**
  * 🔥 核心修复：
@@ -106,9 +107,10 @@ export function useTimeBlockDrag(
   /**
    * 结束拖拽
    */
-  function handlePointerUp(_event: PointerEvent) {
+  function handlePointerUp(event: PointerEvent) {
     if (!dragState.value.isDragging) return;
 
+    event.preventDefault(); // ✅ 关键 1️⃣
     const targetGlobalIndex = dragState.value.dropTargetGlobalIndex;
 
     // 执行放置逻辑
@@ -131,6 +133,8 @@ export function useTimeBlockDrag(
         }
       }
     }
+    // ✅ 关键 2️⃣：解除 Firefox 对 activeElement 的 pointer 绑定
+    (document.activeElement as HTMLElement | null)?.blur?.();
 
     // 清理指针捕获
     if (capturedElement && pointerId !== null && capturedElement.hasPointerCapture(pointerId)) {
@@ -150,6 +154,11 @@ export function useTimeBlockDrag(
     draggedSeg = null;
     capturedElement = null;
     pointerId = null;
+
+    // ✅ 关键 3️⃣：强制结束 gesture 并 flush paint
+    nextTick(() => {
+      document.body.offsetHeight;
+    });
 
     console.log("🔵 Drag ended");
   }

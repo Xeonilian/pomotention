@@ -56,7 +56,7 @@
     :class="getTodoSegmentClasses(seg)"
     :style="getTodoSegmentStyle(seg)"
     :title="getTodoTooltip(seg)"
-    @pointerdown="handlePointerDown($event, seg)"
+    @pointerdown.prevent="handlePointerDown($event, seg)"
   >
     <span v-if="!seg.overflow" :class="getPriorityBadgeClasses(seg)" class="priority-badge">
       {{ getPriorityText(seg) }}
