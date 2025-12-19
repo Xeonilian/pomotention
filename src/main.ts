@@ -5,6 +5,7 @@ import piniaPluginPersistedstate from "pinia-plugin-persistedstate"; // 持久�
 import router from "./router";
 import { NConfigProvider } from "naive-ui";
 import { zhCN, dateZhCN } from "naive-ui";
+import { isTauri } from "@tauri-apps/api/core";
 
 // 创建Pinia实例
 const pinia = createPinia();
@@ -37,7 +38,11 @@ app.use(pinia);
 app.use(router);
 app.mount("#app");
 
-if ("serviceWorker" in navigator) {
+// 最佳判断逻辑：
+// 1. 必须是生产环境 (PROD)
+// 2. 必须支持 ServiceWorker
+// 3. 必须不是 Tauri 环境 (!isTauri())
+if (import.meta.env.PROD && "serviceWorker" in navigator && !isTauri()) {
   window.addEventListener("load", () => {
     navigator.serviceWorker.register("/sw.js").then(
       (registration) => {
@@ -49,8 +54,6 @@ if ("serviceWorker" in navigator) {
     );
   });
 }
-
-import { isTauri } from "@tauri-apps/api/core";
 
 if (isTauri()) {
   document.documentElement.classList.add("platform-tauri");
