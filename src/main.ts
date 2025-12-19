@@ -49,3 +49,11 @@ if ("serviceWorker" in navigator) {
     );
   });
 }
+
+import { isTauri } from "@tauri-apps/api/core";
+
+if (isTauri()) {
+  document.documentElement.classList.add("platform-tauri");
+} else {
+  document.documentElement.classList.add("platform-web");
+}

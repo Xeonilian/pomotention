@@ -35,15 +35,6 @@
             </n-icon>
           </template>
         </n-button>
-        <div class="logout-section">
-          <n-button size="small" type="error" secondary @click="handleLogout" :loading="loggingOut" title="退出登录">
-            <template #icon>
-              <n-icon>
-                <PersonAccounts24Filled />
-              </n-icon>
-            </template>
-          </n-button>
-        </div>
       </div>
       <WebdavInputDialog v-model:show="showWebdavDialog" />
       <n-modal
@@ -108,22 +99,9 @@ import { isTauri } from "@tauri-apps/api/core";
 import { NTag, NSwitch, NButton } from "naive-ui";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { watch } from "vue";
-import { ArrowSync24Regular, PersonAccounts24Filled } from "@vicons/fluent";
+import { ArrowSync24Regular } from "@vicons/fluent";
 import WebdavInputDialog from "@/components/WebdavInputDialog.vue";
 import SyncPanel from "@/components/SyncPanel.vue";
-import { useRouter } from "vue-router";
-import { signOut } from "@/core/services/authService";
-
-const router = useRouter();
-const loggingOut = ref(false);
-
-async function handleLogout() {
-  loggingOut.value = true;
-  localStorage.clear();
-  await signOut();
-  loggingOut.value = false;
-  router.push({ name: "Login" });
-}
 
 const localVersion = ref("");
 const checkVersion = isTauri();
@@ -301,8 +279,11 @@ function trySyncPomotention() {
   transform: translateY(-2px);
   color: var(--color-red);
 }
-
 .version-info {
+  display: none;
+}
+
+html.platform-tauri .version-info {
   text-align: left;
   display: flex;
   justify-content: center;
@@ -332,7 +313,8 @@ function trySyncPomotention() {
 
 .help-info h3 {
   color: var(--color-primary);
-  margin: 0px;
+  margin-top: 20px;
+  margin-bottom: 0px;
   text-align: center;
 }
 
