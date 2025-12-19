@@ -23,6 +23,19 @@
                 <n-icon size="18" :component="control.icon" />
               </template>
             </n-button>
+            <n-popconfirm placement="top-end" positive-text="确认退出" negative-text="取消" @positive-click="handleLogout">
+              <template #trigger>
+                <n-button size="tiny" type="info" secondary :loading="loggingOut" title="退出登录">
+                  <template #icon>
+                    <n-icon>
+                      <PersonAccounts24Filled />
+                    </n-icon>
+                  </template>
+                </n-button>
+              </template>
+
+              确定要退出登录吗？
+            </n-popconfirm>
           </div>
         </div>
       </n-layout-header>
@@ -107,6 +120,7 @@ import { useSyncWidget } from "@/composables/useSyncWidget";
 
 // Icons & Components
 import {
+  PersonAccounts24Filled,
   ArrowLeft24Filled,
   ArrowUp24Filled,
   ArrowDown24Filled,
@@ -163,7 +177,6 @@ if (!settingStore.settings.showPomodoro) {
 
 onMounted(async () => {
   // 如果初始设置是开启的，需要手动触发一次显示逻辑，把 visibility 改为 visible
-  // 如果初始设置是开启的，需要手动触发一次显示逻辑，把 visibility 改为 visible
   if (settingStore.settings.showPomodoro) {
     // 必须等待 nextTick，确保 v-if 已经把 DOM 渲染出来了
     await nextTick();
@@ -171,7 +184,8 @@ onMounted(async () => {
   }
 });
 
-// === 3. 视图控制按钮逻辑 ===
+// === 3. 视图控制按钮===
+
 const viewControls = computed(() => [
   { key: "ontop", icon: Pin24Regular, title: "番茄时钟置顶", show: true },
   { key: "pomodoro", icon: Timer24Regular, title: "切换番茄钟视图", show: settingStore.settings.showPomodoro },
@@ -254,6 +268,18 @@ watch(
     await updateDraggableContainerVisibility(newVal);
   }
 );
+
+// === 5. 退出逻辑 ===
+import { signOut } from "@/core/services/authService";
+
+const loggingOut = ref(false);
+async function handleLogout() {
+  loggingOut.value = true;
+  localStorage.clear();
+  await signOut();
+  loggingOut.value = false;
+  router.push({ name: "Login" });
+}
 </script>
 
 <style scoped>

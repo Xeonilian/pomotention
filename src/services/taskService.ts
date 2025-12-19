@@ -139,7 +139,6 @@ export const taskService = {
       ...(activityClass === "S" && { dueRange: [null, "60"] }),
     };
 
-    useDataStore().addActivity(activity); // 在方法内部调用，activity内部做保存
     return activity;
   },
 };
