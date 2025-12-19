@@ -4,9 +4,11 @@ import { defineStore } from "pinia";
 import { computed } from "vue";
 import { useDataStore } from "./useDataStore";
 import { taskService } from "@/services/taskService";
+import { convertToSchedule } from "@/services/activityService";
 
 export const useTaskTrackerStore = defineStore("taskTracker", () => {
   const dataStore = useDataStore();
+  const { activityList, scheduleList } = storeToRefs(dataStore);
 
   // --- 数据 (State & Getters) ---
 
@@ -48,7 +50,13 @@ export const useTaskTrackerStore = defineStore("taskTracker", () => {
       const record = taskService.addInterruptionRecord(selectedTaskId.value, data.interruptionType, data.description, data.activityType);
       console.log(record);
       if (data.asActivity && record && data.activityType) {
-        taskService.createActivityFromInterruption(selectedTaskId.value, record?.id, data.activityType, data.dueDate);
+        const newActivity = taskService.createActivityFromInterruption(selectedTaskId.value, record?.id, data.activityType, data.dueDate);
+        if (newActivity) {
+          activityList.value.push(newActivity);
+          if (data.activityType === "S") {
+            scheduleList.value.push(convertToSchedule(newActivity));
+          }
+        }
       }
     }
   }
