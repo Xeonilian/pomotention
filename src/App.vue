@@ -87,6 +87,8 @@ onMounted(async () => {
     await startAppSync();
     syncInitialized.value = true; // 标记已初始化
 
+    // 初始化窗口关闭事件，并将清理函数赋值给外部变量
+    appCloseCleanup = await initAppCloseHandler();
     // 清除 url hash 并跳转
     if (window.location.hash) {
       window.history.replaceState(null, "", window.location.pathname);
@@ -135,9 +137,6 @@ onMounted(async () => {
       console.log("⏭️ INITIAL_SESSION 事件，跳过（已在 getSession 中处理）");
     }
   });
-
-  // 初始化窗口关闭事件，并将清理函数赋值给外部变量
-  appCloseCleanup = await initAppCloseHandler();
 });
 
 // 组件卸载时统一清理
