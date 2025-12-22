@@ -69,6 +69,7 @@ import { useSettingStore } from "@/stores/useSettingStore";
 import { Task } from "@/core/types/Task";
 import { useDataStore } from "@/stores/useDataStore";
 import { storeToRefs } from "pinia";
+import { timestampToDatetime } from "@/core/utils";
 
 const dataStore = useDataStore();
 const {
@@ -265,13 +266,13 @@ function pickActivity() {
   // 2. 查找todo中是否有对应的活动
   const relatedTodo = todoByActivityId.value.get(activeId.value);
   if (relatedTodo && !relatedTodo.deleted) {
-    showErrorPopover("【" + relatedTodo.idFormated + "】启动待办");
+    showErrorPopover("【" + timestampToDatetime(relatedTodo.id) + "】启动待办");
     dateService.navigateTo(new Date(relatedTodo.id));
     emit("update-active-id", activeId.value);
     return;
   }
-  const relatedSchedule = scheduleByActivityId.value.get(activeId.value);
 
+  const relatedSchedule = scheduleByActivityId.value.get(activeId.value);
   if (relatedSchedule) {
     if (relatedSchedule.activityDueRange[0]) {
       dateService.navigateTo(new Date(relatedSchedule.activityDueRange[0]));

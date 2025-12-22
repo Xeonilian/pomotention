@@ -51,8 +51,6 @@
     <div v-else class="timetable-time-block" ref="container">
       <TimeBlocks
         :blocks="viewBlocks"
-        :schedules="schedulesForAppDate"
-        :todos="todosForAppDate"
         :timeRange="timeRange"
         :effectivePxPerMinute="effectivePxPerMinute"
         :dayStart="dateService.appDateTimestamp"
@@ -63,7 +61,6 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, computed } from "vue";
-import { storeToRefs } from "pinia";
 import { NButton, NPopconfirm, NIcon } from "naive-ui";
 import { ArrowReset48Filled, Settings24Regular, Beach24Regular, Backpack24Regular } from "@vicons/fluent";
 import TimeTableEditor from "@/components/TimeTable/TimeTableEditor.vue";
@@ -74,7 +71,7 @@ import { useDataStore } from "@/stores/useDataStore";
 import { useTimetableStore } from "@/stores/useTimetableStore";
 
 const dataStore = useDataStore();
-const { todosForAppDate, schedulesForAppDate } = storeToRefs(dataStore);
+
 const dateService = dataStore.dateService;
 const settingStore = useSettingStore();
 const timetableStore = useTimetableStore();

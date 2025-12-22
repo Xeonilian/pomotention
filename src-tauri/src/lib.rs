@@ -3,6 +3,9 @@
 // 1. 所有的 use 语句放在顶部
 use serde::{Deserialize, Serialize};
 use tauri::State;
+use tauri::Manager; 
+use reqwest::Client;
+use serde_json::json;
 
 #[derive(Clone)]
 struct AppState {
@@ -60,9 +63,6 @@ fn resolve_api_key(state: &AppState, input: &ChatInput) -> String {
   input.api_key.clone().unwrap_or_else(|| state.api_key.clone())
 }
 
-use reqwest::Client;
-use serde_json::json;
-
 async fn call_chat_completion(
   client: &Client,
   endpoint: &str,
@@ -113,6 +113,28 @@ async fn chat_completion(state: State<'_, AppState>, input: ChatInput) -> Result
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .setup(|app| {
+            use std::io::Write;
+            
+            // 创建日志文件
+            let mut log = std::fs::File::create("F:\\dev\\pomotention\\debug.log")
+                .expect("Cannot create log");
+            
+            writeln!(log, "🚀 Setup called!").ok();
+            
+            #[cfg(debug_assertions)]
+            {
+                let windows = app.webview_windows();
+                writeln!(log, "Total windows: {}", windows.len()).ok();
+                
+                for (label, window) in windows {
+                    writeln!(log, "Window: {}", label).ok();
+                    window.open_devtools();
+                }
+            }
+            
+            Ok(())
+        })
         .manage(AppState {
             api_key: std::env::var("MOONSHOT_API_KEY").unwrap_or_default(),
         })
@@ -122,7 +144,7 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())     
         .plugin(tauri_plugin_fs::init())       
         .plugin(tauri_plugin_cors_fetch::init())    
-        .invoke_handler(tauri::generate_handler![ chat_completion])
+        .invoke_handler(tauri::generate_handler![chat_completion])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

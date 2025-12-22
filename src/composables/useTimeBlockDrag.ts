@@ -14,7 +14,7 @@ import { nextTick } from "vue";
  * 4. 🆕 拖拽后标记 synced = false，触发数据同步
  */
 export function useTimeBlockDrag(
-  todos: Todo[],
+  todos: ComputedRef<Todo[]>, // 接收可以计算的ref
   dayStart: number,
   pomodoroSegments: ComputedRef<PomodoroSegment[]>,
   occupiedIndices: ComputedRef<Map<number, TodoSegment>>
@@ -115,7 +115,7 @@ export function useTimeBlockDrag(
 
     // 执行放置逻辑
     if (targetGlobalIndex !== null && draggedSeg) {
-      const draggedTodo = todos.find((t) => t.id === draggedSeg!.todoId);
+      const draggedTodo = todos.value.find((t) => t.id === draggedSeg!.todoId);
 
       if (draggedTodo) {
         // 检查是否真的改变了位置
@@ -129,7 +129,7 @@ export function useTimeBlockDrag(
           draggedTodo.synced = false; // 标记为未同步，触发保存
 
           // 触发 Store 重算
-          segStore.recalculateTodoAllocations(todos, dayStart);
+          segStore.recalculateTodoAllocations(todos.value, dayStart);
         }
       }
     }

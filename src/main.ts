@@ -1,3 +1,5 @@
+import { isTauri } from "@tauri-apps/api/core";
+
 import App from "./App.vue";
 import { createApp, h, reactive } from "vue";
 import { createPinia } from "pinia";
@@ -5,7 +7,6 @@ import piniaPluginPersistedstate from "pinia-plugin-persistedstate"; // 持久�
 import router from "./router";
 import { NConfigProvider } from "naive-ui";
 import { zhCN, dateZhCN } from "naive-ui";
-import { isTauri } from "@tauri-apps/api/core";
 
 // 创建Pinia实例
 const pinia = createPinia();
@@ -34,7 +35,6 @@ import "./styles/colors.css";
 import "./styles/global.css";
 
 app.use(pinia);
-
 app.use(router);
 app.mount("#app");
 

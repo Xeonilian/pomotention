@@ -12,7 +12,6 @@
               :key="index"
               size="tiny"
               tertiary
-              strong
               type="default"
               :style="buttonStyle(control.show, control.key)"
               :title="control.title"
@@ -25,7 +24,7 @@
             </n-button>
             <n-popconfirm placement="top-end" positive-text="确认退出" negative-text="取消" @positive-click="handleLogout">
               <template #trigger>
-                <n-button size="tiny" type="info" secondary :loading="loggingOut" title="退出登录">
+                <n-button size="tiny" type="info" secondary :loading="loggingOut" title="退出登录" class="header-button">
                   <template #icon>
                     <n-icon>
                       <PersonAccounts24Filled />
