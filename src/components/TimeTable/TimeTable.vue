@@ -84,6 +84,14 @@ const currentType = ref<"work" | "entertainment">("work");
 
 const viewBlocks = computed(() => timetableStore.getBlocksByType(currentType.value));
 
+watch(todosForAppDate, (val) => {
+  console.log("🔥 todosForAppDate 改变了，数量:", val.length);
+});
+
+watch(dateService.appDateTimestamp, (val) => {
+  console.log("📅 appDateTimestamp 改变了:", val);
+});
+
 function toggleDisplay() {
   showEditor.value = !showEditor.value;
   settingStore.settings.leftWidth = showEditor.value ? 200 : 120;
