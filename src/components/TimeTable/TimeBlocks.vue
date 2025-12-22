@@ -105,13 +105,8 @@
 </template>
 
 <script setup lang="ts">
-import { watch } from "vue";
 import { timestampToTimeString } from "@/core/utils";
 import type { Block } from "@/core/types/Block";
-import { splitIndexPomoBlocksExSchedules } from "@/services/pomoSegService";
-import type { Schedule } from "@/core/types/Schedule";
-import type { Todo } from "@/core/types/Todo";
-import { useSegStore } from "@/stores/useSegStore";
 import { useTimeBlocks } from "@/composables/useTimeBlocks";
 
 // ======= Props =======
@@ -120,8 +115,6 @@ const props = defineProps<{
   blocks: Block[];
   timeRange: { start: number; end: number };
   effectivePxPerMinute: number;
-  schedules: Schedule[];
-  todos: Todo[];
 }>();
 
 // ======= Composable =======
@@ -148,8 +141,6 @@ const {
   dragState,
   handlePointerDown,
 } = useTimeBlocks(props);
-
-const segStore = useSegStore();
 
 // ======= Helper Functions =======
 const getBlockLabel = (category: string) => {
@@ -203,17 +194,6 @@ const getPriorityBadgeClasses = (seg: any) => [
     "no-title": seg.todoTitle === "",
   },
 ];
-
-// ======= Watch =======
-watch(
-  () => [props.todos, props.blocks, props.schedules, props.dayStart],
-  () => {
-    const newPomoSegs = splitIndexPomoBlocksExSchedules(props.dayStart, props.blocks, props.schedules);
-    segStore.setPomodoroSegments(newPomoSegs);
-    segStore.recalculateTodoAllocations(props.todos, props.dayStart);
-  },
-  { immediate: true, deep: true }
-);
 </script>
 <style scoped>
 /* ============================================

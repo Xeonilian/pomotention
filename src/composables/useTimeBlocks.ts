@@ -4,12 +4,14 @@ import type { CSSProperties } from "vue";
 import { getTimestampForTimeString } from "@/core/utils";
 import { CategoryColors, POMODORO_COLORS, POMODORO_COLORS_DARK } from "@/core/constants";
 import type { Block, PomodoroSegment, TodoSegment, ActualTimeRange } from "@/core/types/Block";
-import type { Schedule } from "@/core/types/Schedule";
-import type { Todo } from "@/core/types/Todo";
-import { generateActualTodoSegments } from "@/services/pomoSegService";
+import { generateActualTodoSegments, splitIndexPomoBlocksExSchedules } from "@/services/pomoSegService";
 import { useSegStore } from "@/stores/useSegStore";
 import { useTimeBlockDrag } from "./useTimeBlockDrag";
 
+import { storeToRefs } from "pinia";
+import { useDataStore } from "@/stores/useDataStore";
+const dataStore = useDataStore();
+const { todosForAppDate, schedulesForAppDate } = storeToRefs(dataStore);
 // 第二列显示的schedule segment接口
 export interface ScheduleSegmentForSecondColumn {
   scheduleId: number;
@@ -26,8 +28,6 @@ interface UseTimeBlocksProps {
   blocks: Block[];
   timeRange: { start: number; end: number };
   effectivePxPerMinute: number;
-  schedules: Schedule[];
-  todos: Todo[];
 }
 
 interface UseTimeBlocksReturn {
@@ -69,7 +69,7 @@ interface UseTimeBlocksReturn {
     draggedIndex: number | null;
     dropTargetGlobalIndex: number | null;
   }>;
-  // 这里只保留新的 pointer 方法
+  // pointer 方法
   handlePointerDown: (event: PointerEvent, seg: TodoSegment) => void;
 }
 
@@ -93,7 +93,7 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
     return map;
   });
 
-  const { dragState, handlePointerDown } = useTimeBlockDrag(props.todos, props.dayStart, pomodoroSegments, occupiedIndices);
+  const { dragState, handlePointerDown } = useTimeBlockDrag(todosForAppDate.value, props.dayStart, pomodoroSegments, occupiedIndices);
 
   // ======= 小时刻度线相关 =======
   const hourStamps = computed(() => {
@@ -304,7 +304,7 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
   }
 
   // ======= 计算属性 =======
-  const actualSegments = computed(() => generateActualTodoSegments(props.todos));
+  const actualSegments = computed(() => generateActualTodoSegments(todosForAppDate.value));
 
   const scheduleSegmentsForSecondColumn = computed((): ScheduleSegmentForSecondColumn[] => {
     const scheduleSegs: ScheduleSegmentForSecondColumn[] = [];
@@ -314,7 +314,7 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
 
     for (const pomoSeg of schedulePomoSegs) {
       // 根据时间范围匹配对应的schedule
-      const matchedSchedule = props.schedules.find((schedule) => {
+      const matchedSchedule = schedulesForAppDate.value.find((schedule) => {
         if (!schedule.activityDueRange[0]) return false;
         const scheduleStart = schedule.activityDueRange[0];
         const scheduleDuration = Number(schedule.activityDueRange[1]);
@@ -374,7 +374,7 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
   }
 
   const actualTodoTimeRanges = computed((): ActualTimeRange[] => {
-    return props.todos
+    return todosForAppDate.value
       .filter((todo) => todo.status === "done" && todo.startTime && todo.doneTime)
       .map((todo) => ({
         id: todo.id,
@@ -386,7 +386,7 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
   });
 
   const actualScheduleTimeRanges = computed((): ActualTimeRange[] => {
-    return props.schedules
+    return schedulesForAppDate.value
       .filter((schedule) => schedule.activityDueRange[0] !== null && schedule.doneTime !== undefined)
       .map((schedule) => ({
         id: schedule.id,
@@ -412,6 +412,17 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
     }
     return parts.join(" - ");
   }
+
+  // ======= Watch =======
+  watch(
+    () => [todosForAppDate, props.blocks, schedulesForAppDate, props.dayStart],
+    () => {
+      const newPomoSegs = splitIndexPomoBlocksExSchedules(props.dayStart, props.blocks, schedulesForAppDate.value);
+      segStore.setPomodoroSegments(newPomoSegs);
+      segStore.recalculateTodoAllocations(todosForAppDate.value, props.dayStart);
+    },
+    { immediate: true, deep: true }
+  );
 
   return {
     pomodoroSegments,
