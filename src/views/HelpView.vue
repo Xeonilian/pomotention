@@ -311,6 +311,13 @@ html.platform-tauri .version-info {
   border: 1px solid var(--color-border);
 }
 
+html.platform-tauri .help-info h3 {
+  color: var(--color-primary);
+  margin-top: 0px;
+  margin-bottom: 0px;
+  text-align: center;
+}
+
 .help-info h3 {
   color: var(--color-primary);
   margin-top: 20px;
@@ -320,6 +327,7 @@ html.platform-tauri .version-info {
 
 .help-info ul {
   list-style: none;
+  margin: 0px;
 }
 
 .help-info li {
