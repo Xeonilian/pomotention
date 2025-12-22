@@ -7,11 +7,9 @@ import type { Block, PomodoroSegment, TodoSegment, ActualTimeRange } from "@/cor
 import { generateActualTodoSegments, splitIndexPomoBlocksExSchedules } from "@/services/pomoSegService";
 import { useSegStore } from "@/stores/useSegStore";
 import { useTimeBlockDrag } from "./useTimeBlockDrag";
-
 import { storeToRefs } from "pinia";
 import { useDataStore } from "@/stores/useDataStore";
-const dataStore = useDataStore();
-const { todosForAppDate, schedulesForAppDate } = storeToRefs(dataStore);
+
 // 第二列显示的schedule segment接口
 export interface ScheduleSegmentForSecondColumn {
   scheduleId: number;
@@ -78,9 +76,10 @@ interface UseTimeBlocksReturn {
  * 负责样式计算、时间刻度、拖拽等功能
  */
 export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
-  const segStore = useSegStore();
-
   // ======= Store相关 =======
+  const segStore = useSegStore();
+  const dataStore = useDataStore();
+  const { todosForAppDate, schedulesForAppDate } = storeToRefs(dataStore);
   const pomodoroSegments = computed(() => segStore.pomodoroSegments);
   const todoSegments = computed(() => segStore.todoSegments);
   const occupiedIndices = computed(() => {
@@ -93,8 +92,7 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
     return map;
   });
 
-  const { dragState, handlePointerDown } = useTimeBlockDrag(todosForAppDate.value, props.dayStart, pomodoroSegments, occupiedIndices);
-
+  const { dragState, handlePointerDown } = useTimeBlockDrag(todosForAppDate, props.dayStart, pomodoroSegments, occupiedIndices);
   // ======= 小时刻度线相关 =======
   const hourStamps = computed(() => {
     if (!props.timeRange.start || !props.timeRange.end) return [];
