@@ -24,6 +24,9 @@ pnpm-lock.yaml
 # yarn.lock  
 package-lock.json  
 
+src-tauri/target/
+src-tauri/Cargo.lock
+src-tauri/tauri.conf.json
 
 # Editor directories and files
 .vscode/*
