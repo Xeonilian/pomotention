@@ -6,9 +6,6 @@
   <div class="today-container">
     <div class="todo-container">
       <DayTodo
-        :todos="todosForCurrentViewWithTaskRecords"
-        :activeId="activeId"
-        :selectedRowId="selectedRowId"
         @update-todo-status="updateTodoStatus"
         @suspend-todo="handleSuspendTodo"
         @cancel-todo="handleCancelTodo"
@@ -25,9 +22,6 @@
     </div>
     <div class="schedule-container">
       <DaySchedule
-        :schedules="schedulesForCurrentView"
-        :activeId="activeId"
-        :selectedRowId="selectedRowId"
         @update-schedule-status="updateScheduleStatus"
         @cancel-schedule="handleCancelSchedule"
         @select-activity="handleSelectActivity"
@@ -50,17 +44,7 @@ import { useDataStore } from "@/stores/useDataStore";
 import { storeToRefs } from "pinia";
 
 const dataStore = useDataStore();
-const {
-  activeId,
-  selectedRowId,
-  selectedActivityId,
-  selectedTaskId,
-  todoById,
-  scheduleById,
-  activityById,
-  todosForCurrentViewWithTaskRecords,
-  schedulesForCurrentView,
-} = storeToRefs(dataStore);
+const { activeId, selectedRowId, selectedActivityId, selectedTaskId, todoById, scheduleById, activityById } = storeToRefs(dataStore);
 
 const emit = defineEmits<{
   (e: "update-schedule-status", id: number, checked: boolean): void;

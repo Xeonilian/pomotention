@@ -34,7 +34,7 @@
       </thead>
 
       <tbody>
-        <template v-if="sortedTodos.length > 0">
+        <template v-if="todosForCurrentViewWithTaskRecords && todosForCurrentViewWithTaskRecords!.length > 0">
           <!-- 行 -->
           <tr
             v-for="todo in sortedTodos"
@@ -313,7 +313,7 @@
   </n-modal>
 </template>
 <script setup lang="ts">
-import type { Todo, TodoWithTaskRecords } from "@/core/types/Todo";
+import type { Todo } from "@/core/types/Todo";
 import { timestampToTimeString } from "@/core/utils";
 import {
   ChevronCircleRight48Regular,
@@ -329,6 +329,12 @@ import { ref, computed, nextTick } from "vue";
 import { taskService } from "@/services/taskService";
 import { Task } from "@/core/types/Task";
 
+import { useDataStore } from "@/stores/useDataStore";
+import { storeToRefs } from "pinia";
+
+const dataStore = useDataStore();
+const { activeId, selectedRowId, todosForCurrentViewWithTaskRecords } = storeToRefs(dataStore);
+
 // 编辑用
 const editingRowId = ref<number | null>(null);
 const editingField = ref<null | "title" | "start" | "done">(null);
@@ -343,13 +349,7 @@ const showEstimateInput = ref(false);
 const currentTodoId = ref<number | null>(null);
 const newEstimate = ref<number>(1);
 
-// 定义 Props
-const props = defineProps<{
-  todos: TodoWithTaskRecords[];
-  activeId: number | null | undefined;
-  selectedRowId: number | null; // 新增：从父组件接收选中行ID
-}>();
-
+// 定义 Emit
 const emit = defineEmits<{
   (e: "suspend-todo", id: number): void;
   (e: "cancel-todo", id: number): void;
@@ -370,11 +370,7 @@ const emit = defineEmits<{
 
 // 对待办事项按优先级降序排序（高优先级在前）
 const sortedTodos = computed(() => {
-  if (!props.todos || props.todos.length === 0) {
-    return [];
-  }
-
-  return [...props.todos].sort((a, b) => {
+  return [...todosForCurrentViewWithTaskRecords.value].sort((a, b) => {
     // 0 放最后
     if (a.priority === 0 && b.priority === 0) return 0;
     if (a.priority === 0) return 1;
@@ -433,15 +429,15 @@ function finishEditing() {
   }
 
   const before = new Map<number, number>();
-  props.todos.forEach((t) => before.set(t.id, t.priority));
+  todosForCurrentViewWithTaskRecords.value.forEach((t) => before.set(t.id, t.priority));
 
   // 关键：不再提前修改 priority，而是把 current 和 desired 传给排序函数
   // 让排序函数自己去智能处理
-  relayoutPriority(props.todos, current, desired);
+  relayoutPriority(todosForCurrentViewWithTaskRecords.value, current, desired);
 
   // 后续逻辑不变...
   const updates: Array<{ id: number; priority: number }> = [];
-  props.todos.forEach((t) => {
+  todosForCurrentViewWithTaskRecords.value.forEach((t) => {
     const oldP = before.get(t.id);
     if (oldP !== t.priority) {
       updates.push({ id: t.id, priority: t.priority });
@@ -561,7 +557,7 @@ function handleAddEstimate(todo: Todo) {
 function confirmAddEstimate() {
   if (!currentTodoId.value) return;
 
-  const todo = props.todos.find((t) => t.id === currentTodoId.value);
+  const todo = todosForCurrentViewWithTaskRecords.value.find((t) => t.id === currentTodoId.value);
   if (!todo) return;
 
   // 确保 estPomo 数组存在
@@ -622,7 +618,7 @@ function handleRowClick(todo: Todo) {
 
 // 编辑相关函数
 function startEditing(todoId: number, field: "title" | "start" | "done") {
-  const todo = props.todos.find((t) => t.id === todoId);
+  const todo = todosForCurrentViewWithTaskRecords.value.find((t) => t.id === todoId);
   if (!todo) return;
   editingRowId.value = todoId;
   editingField.value = field;

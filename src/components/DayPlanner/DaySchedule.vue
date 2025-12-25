@@ -36,7 +36,7 @@
 
       <!-- 表格内容部分，可单独调整样式 -->
       <tbody>
-        <template v-if="schedules && schedules!.length > 0">
+        <template v-if="schedulesForCurrentView && schedulesForCurrentView!.length > 0">
           <!-- 行 -->
           <tr
             v-for="schedule in sortedSchedules"
@@ -230,17 +230,17 @@ import { taskService } from "@/services/taskService";
 import { ref, nextTick } from "vue";
 import { Task } from "@/core/types/Task";
 
+import { useDataStore } from "@/stores/useDataStore";
+import { storeToRefs } from "pinia";
+
+const dataStore = useDataStore();
+const { activeId, selectedRowId, schedulesForCurrentView } = storeToRefs(dataStore);
 // 编辑用
 const editingRowId = ref<number | null>(null);
 const editingField = ref<null | "title" | "start" | "done">(null);
 const editingValue = ref("");
 
-// 定义 Props
-const props = defineProps<{
-  schedules: Schedule[];
-  activeId: number | null | undefined;
-  selectedRowId: number | null; // 新增：从父组件接收选中行ID
-}>();
+// 定义 Emit
 
 const emit = defineEmits<{
   (e: "update-schedule-status", id: number, checked: boolean): void;
@@ -265,7 +265,7 @@ const showPopover = ref(false);
 const popoverMessage = ref("");
 
 const sortedSchedules = computed(() =>
-  props.schedules.sort((a, b) => {
+  schedulesForCurrentView.value.sort((a, b) => {
     const aValue = a.activityDueRange?.[0] ?? Infinity;
     const bValue = b.activityDueRange?.[0] ?? Infinity;
     return aValue - bValue;
@@ -285,7 +285,7 @@ function handleRowClick(schedule: Schedule) {
 
 // 编辑相关函数
 function startEditing(scheduleId: number, field: "title" | "start" | "done") {
-  const schedule = props.schedules.find((s) => s.id === scheduleId);
+  const schedule = schedulesForCurrentView.value.find((s) => s.id === scheduleId);
   if (!schedule) return;
   editingRowId.value = scheduleId;
   editingField.value = field;
