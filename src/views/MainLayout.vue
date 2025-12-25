@@ -33,7 +33,7 @@
                 </n-button>
               </template>
 
-              确定要退出登录吗？
+              需备份数据后退出，确定要退出登录吗？
             </n-popconfirm>
           </div>
         </div>
@@ -272,12 +272,61 @@ watch(
 import { signOut } from "@/core/services/authService";
 
 const loggingOut = ref(false);
+
 async function handleLogout() {
   loggingOut.value = true;
+  // App上数据备份
+  // 警告用户: 退出之前请导出数据
+  const confirmExport = confirm("在退出之前，您必须导出数据。是否继续导出？");
+  if (confirmExport) {
+    const exportSuccessful = await handleExport(); // 调用导出方法
+    if (!exportSuccessful) {
+      // 如果导出失败，停止注销
+      loggingOut.value = false;
+      return;
+    }
+  }
   localStorage.clear();
   await signOut();
   loggingOut.value = false;
   router.push({ name: "Login" });
+}
+import { collectLocalData } from "@/services/localStorageService";
+import { open } from "@tauri-apps/plugin-dialog";
+import { writeTextFile } from "@tauri-apps/plugin-fs";
+const debugInfo = ref("");
+async function handleExport() {
+  try {
+    const localdata = collectLocalData();
+
+    // 选择目录
+    const dirPath = await open({
+      directory: true,
+      multiple: false,
+    });
+
+    if (!dirPath || typeof dirPath !== "string") {
+      debugInfo.value = "⚠️导出失败: 指定目录无效";
+      return false; // 返回失败
+    }
+
+    // 分别保存每个数据类型
+    const savePromises = Object.entries(localdata).map(async ([key, value]) => {
+      const fileName = `${key}.json`;
+      const filePath = `${dirPath}/${fileName}`;
+      const jsonData = JSON.stringify(value, null, 2);
+      await writeTextFile(filePath, jsonData);
+      return fileName;
+    });
+
+    await Promise.all(savePromises);
+
+    debugInfo.value = "✔️所有数据文件导出成功: " + dirPath;
+    return true; // 返回成功
+  } catch (error) {
+    debugInfo.value = "⚠️导出失败: " + error;
+    return false; // 返回失败
+  }
 }
 </script>
 
