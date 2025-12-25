@@ -277,13 +277,15 @@ async function handleLogout() {
   loggingOut.value = true;
   // App上数据备份
   // 警告用户: 退出之前请导出数据
-  const confirmExport = confirm("在退出之前，您必须导出数据。是否继续导出？");
-  if (confirmExport) {
-    const exportSuccessful = await handleExport(); // 调用导出方法
-    if (!exportSuccessful) {
-      // 如果导出失败，停止注销
-      loggingOut.value = false;
-      return;
+  if (isTauri()) {
+    const confirmExport = confirm("在退出之前，您必须导出数据。是否继续导出？");
+    if (confirmExport) {
+      const exportSuccessful = await handleExport(); // 调用导出方法
+      if (!exportSuccessful) {
+        // 如果导出失败，停止注销
+        loggingOut.value = false;
+        return;
+      }
     }
   }
   localStorage.clear();
@@ -294,6 +296,7 @@ async function handleLogout() {
 import { collectLocalData } from "@/services/localStorageService";
 import { open } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
+import { isTauri } from "@tauri-apps/api/core";
 const debugInfo = ref("");
 async function handleExport() {
   try {
