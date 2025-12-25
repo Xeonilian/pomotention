@@ -110,13 +110,6 @@ const emit = defineEmits<{
   (e: "pomo-seq-running", status: boolean): void;
 }>();
 
-// const props = defineProps({
-//   isPomoSeqRunning: {
-//     type: Boolean,
-//     default: false,
-//   },
-// });
-
 // 数据
 const sequenceInput = ref<string>(">>>>🍅+05+🍅+05+🍅+05+🍅+15");
 const isRunning = ref<boolean>(false);
