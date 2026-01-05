@@ -10,7 +10,13 @@
         title="请输入筛选条件..."
         :value="props.search"
         @update:value="(val) => $emit('update:search', val)"
-        @focus="$emit('focus-search')"
+        @focus="
+          () => {
+            isSearchFocused = true;
+            $emit('focus-search');
+          }
+        "
+        @blur="() => (isSearchFocused = false)"
       >
         <template #prefix>
           <n-dropdown :options="filterOptions" @select="(key) => $emit('filter', key)">
@@ -348,6 +354,8 @@ const emit = defineEmits<{
   "focus-search": [];
 }>();
 
+const isSearchFocused = ref(false);
+
 // ======================== Stores ========================
 const settingStore = useSettingStore();
 
@@ -433,6 +441,10 @@ function handleNoFocus(id: number) {
 watch(
   () => props.activeId,
   async (id) => {
+    if (isSearchFocused.value) {
+      return;
+    }
+
     if (noFocus.value) {
       noFocus.value = false;
       return;
