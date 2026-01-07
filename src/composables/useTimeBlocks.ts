@@ -259,6 +259,49 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
     const topPx = startMinute * props.effectivePxPerMinute;
     const heightPx = (endMinute - startMinute) * props.effectivePxPerMinute;
 
+    // 如果是特殊priority的todo（有emoji），显示为emoji点
+    if (range.emoji) {
+      // 使用start和end的中心点作为emoji的位置
+      const centerTime = (range.start + range.end) / 2;
+      const centerMinute = (centerTime - props.timeRange.start) / 60000;
+      const centerTopPx = centerMinute * props.effectivePxPerMinute;
+
+      return {
+        position: "absolute",
+        left: "55px",
+        width: "20px",
+        top: `${centerTopPx - 12}px`, // emoji中心对齐到计算的时间位置
+        height: "20px",
+        fontSize: "16px",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        zIndex: 2,
+        cursor: "pointer",
+        userSelect: "none",
+      };
+    }
+
+    // 普通todo的时间范围条
+    // 根据category确定颜色
+    let borderColor: string;
+    let backgroundColor: string;
+
+    if (range.category === "grape") {
+      borderColor = "var(--color-purple)";
+      backgroundColor = "var(--color-purple-transparent)";
+    } else if (range.category === "tomato") {
+      borderColor = "var(--color-red)";
+      backgroundColor = "var(--color-red-transparent)";
+    } else if (range.category === "cherry") {
+      borderColor = "var(--color-green)";
+      backgroundColor = "var(--color-green-transparent)";
+    } else {
+      // 默认绿色
+      borderColor = "var(--color-green)";
+      backgroundColor = "var(--color-green-transparent)";
+    }
+
     return {
       position: "absolute",
       left: "61px",
@@ -266,14 +309,8 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
       top: `${topPx}px`,
       height: `${heightPx}px`,
       border: "1px solid",
-      borderColor:
-        range.category === "grape" ? "var(--color-purple)" : range.category === "tomato" ? "var(--color-red)" : "var(--color-green)",
-      backgroundColor:
-        range.category === "grape"
-          ? "var(--color-purple-transparent )"
-          : range.category === "tomato"
-          ? "var(--color-red-transparent)"
-          : "var(--color-green-transparent)",
+      borderColor,
+      backgroundColor,
       borderRadius: "4px",
       zIndex: 10,
       opacity: 1,
@@ -372,15 +409,74 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
   }
 
   const actualTodoTimeRanges = computed((): ActualTimeRange[] => {
-    return todosForAppDate.value
-      .filter((todo) => todo.status === "done" && todo.startTime && todo.doneTime)
-      .map((todo) => ({
+    const specialPriorities = [66, 88, 99];
+    const ranges: ActualTimeRange[] = [];
+
+    // 处理普通done状态的todo
+    const normalTodos = todosForAppDate.value.filter(
+      (todo) => todo.status === "done" && todo.startTime && todo.doneTime && !specialPriorities.includes(todo.priority)
+    );
+    ranges.push(
+      ...normalTodos.map((todo) => ({
         id: todo.id,
         title: todo.activityTitle,
         start: todo.startTime!,
         end: todo.doneTime!,
         category: todo.pomoType === "🍇" ? "grape" : todo.pomoType === "🍒" ? "cherry" : "tomato",
-      }));
+      }))
+    );
+
+    // 处理特殊priority的todo（66、88、99）
+    const specialTodos = todosForAppDate.value.filter((todo) => specialPriorities.includes(todo.priority));
+    ranges.push(
+      ...specialTodos.map((todo) => {
+        // 计算时间位置：优先使用均值，其次使用单个时间，最后使用todo.id
+        let timePosition: number;
+        if (todo.startTime && todo.doneTime) {
+          // 有开始和结束时间，使用均值
+          timePosition = (todo.startTime + todo.doneTime) / 2;
+        } else if (todo.startTime) {
+          // 只有开始时间
+          timePosition = todo.startTime;
+        } else if (todo.doneTime) {
+          // 只有结束时间
+          timePosition = todo.doneTime;
+        } else {
+          // 都没有，使用todo.id（时间戳）
+          timePosition = todo.id;
+        }
+
+        // 对于emoji显示，使用一个很小的范围（例如1分钟）来定位
+        const duration = 1 * 60 * 1000; // 1分钟
+        const start = timePosition - duration / 2;
+        const end = timePosition + duration / 2;
+
+        // 根据priority确定category和emoji
+        let category: string;
+        let emoji: string;
+        if (todo.priority === 66) {
+          category = "person"; // 人
+          emoji = "💖";
+        } else if (todo.priority === 88) {
+          category = "money"; // 财
+          emoji = "💸";
+        } else {
+          category = "thing"; // 物
+          emoji = "🧸";
+        }
+
+        return {
+          id: todo.id,
+          title: todo.activityTitle,
+          start,
+          end,
+          category,
+          emoji,
+        };
+      })
+    );
+
+    return ranges;
   });
 
   const actualScheduleTimeRanges = computed((): ActualTimeRange[] => {

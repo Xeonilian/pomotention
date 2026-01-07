@@ -108,7 +108,7 @@
                 v-if="editingTodo && editingTodo.id === todo.id"
                 v-model:value="editingPriority"
                 :min="0"
-                :max="21"
+                :max="99"
                 size="small"
                 :show-button="false"
                 placeholder=" "
@@ -117,7 +117,10 @@
               />
 
               <span v-else class="priority-badge" :class="'priority-' + todo.priority">
-                {{ todo.priority > 0 ? todo.priority : "" }}
+                <template v-if="todo.priority === 66">😀</template>
+                <template v-else-if="todo.priority === 88">💰</template>
+                <template v-else-if="todo.priority === 99">🎈</template>
+                <template v-else>{{ todo.priority > 0 ? todo.priority : "" }}</template>
               </span>
             </td>
 
@@ -313,7 +316,7 @@
   </n-modal>
 </template>
 <script setup lang="ts">
-import type { Todo } from "@/core/types/Todo";
+import type { Todo, TodoWithTaskRecords } from "@/core/types/Todo";
 import { timestampToTimeString } from "@/core/utils";
 import {
   ChevronCircleRight48Regular,
@@ -370,14 +373,37 @@ const emit = defineEmits<{
 
 // 对待办事项按优先级降序排序（高优先级在前）
 const sortedTodos = computed(() => {
-  return [...todosForCurrentViewWithTaskRecords.value].sort((a, b) => {
-    // 0 放最后
+  const todos = [...todosForCurrentViewWithTaskRecords.value];
+  // 分离特殊值（66、88、99）和正常值
+  const specialPriorities = [66, 88, 99];
+  const normalTodos: TodoWithTaskRecords[] = [];
+  const specialTodos: TodoWithTaskRecords[] = [];
+
+  todos.forEach((todo) => {
+    if (specialPriorities.includes(todo.priority)) {
+      specialTodos.push(todo);
+    } else {
+      normalTodos.push(todo);
+    }
+  });
+
+  // 正常任务排序：0放最后，其余越小越优先
+  normalTodos.sort((a, b) => {
     if (a.priority === 0 && b.priority === 0) return 0;
     if (a.priority === 0) return 1;
     if (b.priority === 0) return -1;
-    // 其余越小越优先
     return a.priority - b.priority;
   });
+
+  // 特殊值任务按66、88、99顺序排序
+  specialTodos.sort((a, b) => {
+    const orderA = specialPriorities.indexOf(a.priority);
+    const orderB = specialPriorities.indexOf(b.priority);
+    return orderA - orderB;
+  });
+
+  // 合并：正常任务在前，特殊值任务在后
+  return [...normalTodos, ...specialTodos];
 });
 
 // 优先级 排序================
@@ -410,8 +436,10 @@ function finishEditing() {
     editingTodo.value = null;
     return;
   }
-  if (editingPriority.value > 21) {
-    popoverMessage.value = "请输入1-20";
+  // 允许特殊值66、88、99
+  const specialPriorities = [66, 88, 99];
+  if (!specialPriorities.includes(editingPriority.value) && editingPriority.value > 21) {
+    popoverMessage.value = "请输入0-21或66、88、99";
     showPopover.value = true;
     setTimeout(() => {
       showPopover.value = false;
@@ -456,26 +484,35 @@ function finishEditing() {
 
 // 传入 current 和 desired，让排序更智能
 function relayoutPriority(todos: Todo[], current: Todo, desired: number) {
+  // 特殊优先级值，不参与重新分配
+  const specialPriorities = [66, 88, 99];
+
+  // 如果目标是特殊值，直接设置并返回，不参与重新分配
+  if (specialPriorities.includes(desired)) {
+    current.priority = desired;
+    return;
+  }
+
   // 锁定已完成任务的优先级，这部分逻辑不变
   const locked = new Set<number>();
   todos.forEach((t) => {
-    if (t.status === "done" && t.priority > 0) {
+    if (t.status === "done" && t.priority > 0 && !specialPriorities.includes(t.priority)) {
       locked.add(t.priority);
     }
   });
 
-  // 筛选出需要重新排序的活动任务
+  // 筛选出需要重新排序的活动任务，排除特殊值
   const active = todos.filter((t) => t.status !== "done" && t.status !== "cancelled");
 
   // 关键修改：
-  // 找出所有优先级大于 0 的任务
-  const positivePriorityTasks = active.filter((t) => t.priority > 0 && t.id !== current.id);
+  // 找出所有优先级大于 0 且不是特殊值的任务
+  const positivePriorityTasks = active.filter((t) => t.priority > 0 && !specialPriorities.includes(t.priority) && t.id !== current.id);
   // 对它们进行排序
   positivePriorityTasks.sort((a, b) => a.priority - b.priority);
 
   // 将当前正在修改的任务插入到目标位置
   // 如果 desired 是 0 或负数，我们不把它放到排序列表中，因为它不需要参与重新编号
-  if (desired > 0) {
+  if (desired > 0 && !specialPriorities.includes(desired)) {
     // 找到插入点
     const insertIndex = positivePriorityTasks.findIndex((t) => t.priority >= desired);
     if (insertIndex === -1) {
@@ -485,7 +522,7 @@ function relayoutPriority(todos: Todo[], current: Todo, desired: number) {
     }
   }
 
-  // 为被移动的任务重新编号，不触碰 priority <= 0 的任务
+  // 为被移动的任务重新编号，不触碰 priority <= 0 的任务和特殊值
   let next = 1;
   for (const t of positivePriorityTasks) {
     // 跳过锁定的优先级
@@ -988,6 +1025,21 @@ td.status-col {
 .priority-10 {
   background-color: #8d6e635c;
   color: #8d6e63;
+}
+
+.priority-66 {
+  background-color: #ffeb3b5c;
+  color: #f57f17;
+}
+
+.priority-88 {
+  background-color: #ffd54f5c;
+  color: #f9a825;
+}
+
+.priority-99 {
+  background-color: #e1bee75c;
+  color: #ab47bc;
 }
 
 /* 估计番茄数量 */
