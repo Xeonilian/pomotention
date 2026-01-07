@@ -60,8 +60,93 @@
       </template>
     </n-button>
 
+    <!-- 移动端：长按触发 popover -->
     <n-popover
-      trigger="click"
+      v-if="isTouchSupported"
+      trigger="manual"
+      placement="bottom"
+      :show="popoverVisible"
+      @update:show="popoverVisible = $event"
+      @clickoutside="popoverVisible = false"
+      :show-arrow="false"
+      class="popover-container"
+      :style="{
+        padding: '2px 0 2px 0',
+        boxShadow: 'none',
+        backgroundColor: 'var(--color-background)',
+      }"
+    >
+      <template #trigger>
+        <n-badge dot type="info" :offset="[-3, 6]" title="任务缩进|番茄类型" class="clickable-badge">
+          <n-button
+            title="添加任务"
+            circle
+            secondary
+            type="info"
+            size="small"
+            @mousedown.stop.prevent="onLongPressStart"
+            @touchstart.stop.prevent="onLongPressStart"
+            @mouseup.stop="onLongPressEnd"
+            @mouseleave="onLongPressCancel"
+            @touchend.stop="onLongPressEnd"
+            @touchcancel.stop="onLongPressCancel"
+            @click.stop.prevent="onAddTodoClick"
+          >
+            <template #icon>
+              <n-icon><AddCircle24Regular /></n-icon>
+            </template>
+          </n-button>
+        </n-badge>
+      </template>
+
+      <!-- Popover 的内容：按钮 -->
+      <div class="popover-actions">
+        <n-button
+          secondary
+          circle
+          type="info"
+          size="small"
+          title="生成子活动"
+          :disabled="props.activeId === null || isSelectedClassS || !!props.hasParent"
+          @click="() => emit('create-child-activity')"
+        >
+          <template #icon>
+            <n-icon><TextGrammarArrowRight24Regular /></n-icon>
+          </template>
+        </n-button>
+        <n-button
+          secondary
+          type="info"
+          circle
+          size="small"
+          title="升级为兄弟"
+          :disabled="props.activeId === null || isSelectedClassS || !props.hasParent"
+          @click="() => emit('increase-child-activity')"
+        >
+          <template #icon>
+            <n-icon><TextGrammarArrowLeft24Regular /></n-icon>
+          </template>
+        </n-button>
+        <n-button
+          secondary
+          type="info"
+          circle
+          size="small"
+          title="切换番茄类型"
+          :disabled="props.activeId === null || isSelectedClassS"
+          @click="() => emit('toggle-pomo-type')"
+        >
+          <template #icon>
+            <n-icon><LeafTwo24Regular /></n-icon>
+          </template>
+        </n-button>
+      </div>
+    </n-popover>
+
+    <!-- 桌面端：hover 触发 popover -->
+    <n-popover
+      v-else
+      trigger="hover"
       placement="bottom"
       :delay="1000"
       :show-arrow="false"
@@ -74,7 +159,7 @@
     >
       <template #trigger>
         <n-badge dot type="info" :offset="[-3, 6]" title="任务缩进|番茄类型" class="clickable-badge">
-          <n-button title="添加任务" circle secondary type="info" size="small">
+          <n-button title="添加任务" circle secondary type="info" size="small" @click.stop="$emit('add-todo')">
             <template #icon>
               <n-icon><AddCircle24Regular /></n-icon>
             </template>
@@ -82,7 +167,7 @@
         </n-badge>
       </template>
 
-      <!-- Popover 的内容：垂直排列的按钮 -->
+      <!-- Popover 的内容：按钮 -->
       <div class="popover-actions">
         <n-button
           secondary
@@ -141,7 +226,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import { NButton, NIcon, NBadge, NPopover } from "naive-ui";
 import {
   ChevronCircleLeft48Regular,
@@ -155,6 +240,8 @@ import {
   ArrowRepeatAll24Regular,
   Delete24Regular,
 } from "@vicons/fluent";
+import { useLongPress } from "@/composables/useLongPress";
+import { useDevice } from "@/composables/useDevice";
 
 const props = defineProps<{
   activeId: number | null | undefined;
@@ -179,6 +266,27 @@ const emit = defineEmits([
   "create-child-activity",
   "increase-child-activity",
 ]);
+
+// 设备能力（用于区分触摸/非触摸环境）
+const { isTouchSupported } = useDevice();
+
+// 控制 popover 显示状态（由长按触发）
+const popoverVisible = ref(false);
+
+// 使用通用长按 composable
+const { longPressTriggered, onLongPressStart, onLongPressEnd, onLongPressCancel } = useLongPress({
+  // 长按触发时显示 popover
+  onLongPress: () => {
+    popoverVisible.value = true;
+  },
+});
+
+// 点击事件：只有未触发长按时，才视为普通点击，执行添加任务
+const onAddTodoClick = () => {
+  if (!longPressTriggered.value) {
+    emit("add-todo");
+  }
+};
 </script>
 
 <style scoped>
