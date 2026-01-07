@@ -36,6 +36,7 @@ export interface GlobalSettings {
   supabaseSync: number[];
   firstSync: boolean;
   autoSupabaseSync: boolean;
+  lastLoggedInUserId?: string; // 上次登录的用户ID，用于检测用户切换
 
   ai?: {
     activeId: number; // 当前启用的配置
@@ -81,6 +82,7 @@ const defaultSettings: GlobalSettings = {
   supabaseSync: [0, 0],
   firstSync: true,
   autoSupabaseSync: true,
+  lastLoggedInUserId: undefined, // 首次使用，没有上次登录的用户ID
   ai: {
     activeId: 1,
     systemPrompt:
