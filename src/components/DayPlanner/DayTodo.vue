@@ -622,14 +622,30 @@ function startEditing(todoId: number, field: "title" | "start" | "done") {
   if (!todo) return;
   editingRowId.value = todoId;
   editingField.value = field;
-  editingValue.value =
-    field === "title"
-      ? todo.activityTitle || ""
-      : field === "start"
-      ? timestampToTimeString(todo.startTime || todo.taskId || null)
-      : field === "done"
-      ? timestampToTimeString(todo.doneTime || null)
-      : "";
+
+  // 如果是 start 字段且有数据，则替换为当前时间
+  if (field === "start" && todo.startTime) {
+    const now = new Date();
+    const hours = now.getHours().toString().padStart(2, "0");
+    const minutes = now.getMinutes().toString().padStart(2, "0");
+    editingValue.value = `${hours}:${minutes}`;
+  }
+  // 如果是 done 字段且有数据，则替换为当前时间
+  else if (field === "done" && todo.doneTime) {
+    const now = new Date();
+    const hours = now.getHours().toString().padStart(2, "0");
+    const minutes = now.getMinutes().toString().padStart(2, "0");
+    editingValue.value = `${hours}:${minutes}`;
+  } else {
+    editingValue.value =
+      field === "title"
+        ? todo.activityTitle || ""
+        : field === "start"
+        ? timestampToTimeString(todo.startTime || todo.taskId || null)
+        : field === "done"
+        ? timestampToTimeString(todo.doneTime || null)
+        : "";
+  }
 
   // 使用 querySelector 来获取当前编辑的输入框，而不是依赖 ref
   nextTick(() => {
