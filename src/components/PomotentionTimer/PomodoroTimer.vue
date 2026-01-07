@@ -1,8 +1,18 @@
 <template>
   <div class="pomodoro-timer">
     <!-- 1 状态信息 -->
-    <div class="state-text">
-      <n-text>{{ stateMessage }}</n-text>
+    <div class="state-text" @click.stop="startEditing" @pointerdown.stop>
+      <n-input
+        v-if="isEditing"
+        v-model:value="editingMessage"
+        @keydown.enter="saveMessage"
+        @keydown.esc="cancelEditing"
+        @blur="saveMessage"
+        size="small"
+        class="state-input"
+        ref="inputRef"
+      />
+      <n-text v-else class="state-text-clickable">{{ displayMessage }}</n-text>
     </div>
 
     <!-- 2 时钟 -->
@@ -103,9 +113,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, nextTick } from "vue";
 import { useTimerStore } from "@/stores/useTimerStore.ts";
-import { NText, NProgress, NButton, NDropdown } from "naive-ui";
+import { NText, NProgress, NButton, NDropdown, NInput } from "naive-ui";
 import { clickStatsStore } from "@/stores/useClickStatsStore";
 import { useSettingStore } from "@/stores/useSettingStore";
 
@@ -127,6 +137,11 @@ const breakDuration = computed(() => settingStore.settings.durations.breakDurati
 
 const selectedDuration = ref(breakDuration.value);
 
+// 编辑状态管理
+const isEditing = ref(false);
+const editingMessage = ref("");
+const inputRef = ref<InstanceType<typeof NInput> | null>(null);
+
 // 把常量转成 CSS 变量名格式
 const timerStyleVars = computed(() => {
   const barLengthValue = 197; // 动态设置失败 #HACK 现在用的是静态的值
@@ -141,7 +156,8 @@ const timerStyleVars = computed(() => {
 });
 
 // 1 状态信息
-const stateMessage = computed((): string => {
+// 1-1 默认状态消息（根据时间状态）
+const defaultStateMessage = computed((): string => {
   if (timerStore.pomodoroState === "working") {
     if (timerStore.currentPhase === "r1") {
       return "Initial Review";
@@ -156,6 +172,39 @@ const stateMessage = computed((): string => {
     return "Ready to pomodoro!";
   }
 });
+
+// 1-2 显示的消息（优先显示自定义消息，没有则显示默认消息）
+const displayMessage = computed((): string => {
+  return settingStore.settings.pomodoroStateMessage || defaultStateMessage.value;
+});
+
+// 1-3 开始编辑
+function startEditing(): void {
+  isEditing.value = true;
+  editingMessage.value = settingStore.settings.pomodoroStateMessage || defaultStateMessage.value;
+  nextTick(() => {
+    inputRef.value?.focus();
+  });
+}
+
+// 1-4 保存消息
+function saveMessage(): void {
+  const trimmedValue = editingMessage.value.trim();
+  if (trimmedValue === "") {
+    // 如果为空，清除自定义消息
+    settingStore.settings.pomodoroStateMessage = undefined;
+  } else {
+    // 保存自定义消息（即使和默认值相同也保存）
+    settingStore.settings.pomodoroStateMessage = trimmedValue;
+  }
+  isEditing.value = false;
+}
+
+// 1-5 取消编辑
+function cancelEditing(): void {
+  isEditing.value = false;
+  editingMessage.value = "";
+}
 
 // 2 计时器
 const formattedTime = computed((): string => {
@@ -261,7 +310,48 @@ function handleDurationSelect(key: number): void {
 /* 1-状态信息 */
 .state-text {
   margin-bottom: 5px;
-  font: 9px Arial;
+  font: 10px Arial;
+  cursor: pointer;
+  height: 12px; /* 固定高度，避免布局变化 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative; /* 为绝对定位的输入框提供定位上下文 */
+}
+
+.state-text-clickable {
+  user-select: none;
+  width: 100%;
+  text-align: center;
+}
+
+.state-text-clickable:hover {
+  opacity: 0.7;
+}
+
+.state-input {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 180px;
+  font-size: 10px;
+  height: 12px;
+  line-height: 12px;
+}
+
+/* 调整输入框内部文字垂直居中 */
+.state-input :deep(.n-input__input-el) {
+  height: 12px;
+  line-height: 12px;
+  padding: 0;
+  font-size: 9px;
+  font-family: Arial;
+}
+
+.state-input :deep(.n-input-wrapper) {
+  height: 12px;
+  min-height: 12px;
 }
 
 /* 2-计时器 */
