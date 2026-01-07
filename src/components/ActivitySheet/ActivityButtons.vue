@@ -23,11 +23,7 @@
       circle
       type="default"
       size="small"
-      :disabled="
-        activeId === null ||
-        props.selectedTaskId !== null ||
-        activeId === undefined
-      "
+      :disabled="activeId === null || props.selectedTaskId !== null || activeId === undefined"
       title="追踪任务"
     >
       <template #icon>
@@ -45,9 +41,9 @@
       size="small"
       :disabled="activeId === null || activeId === undefined"
     >
-      <template #icon
-        ><n-icon><Delete24Regular /></n-icon
-      ></template>
+      <template #icon>
+        <n-icon><Delete24Regular /></n-icon>
+      </template>
     </n-button>
 
     <n-button
@@ -59,9 +55,9 @@
       size="small"
       :disabled="activeId === null || activeId === undefined"
     >
-      <template #icon
-        ><n-icon><ArrowRepeatAll24Regular /></n-icon
-      ></template>
+      <template #icon>
+        <n-icon><ArrowRepeatAll24Regular /></n-icon>
+      </template>
     </n-button>
 
     <n-popover
@@ -77,21 +73,8 @@
       }"
     >
       <template #trigger>
-        <n-badge
-          dot
-          type="info"
-          :offset="[-3, 6]"
-          title="任务缩进|番茄类型"
-          class="clickable-badge"
-        >
-          <n-button
-            title="添加任务"
-            @click.stop="$emit('add-todo')"
-            circle
-            secondary
-            type="info"
-            size="small"
-          >
+        <n-badge dot type="info" :offset="[-3, 6]" title="任务缩进|番茄类型" class="clickable-badge">
+          <n-button title="添加任务" circle secondary type="info" size="small">
             <template #icon>
               <n-icon><AddCircle24Regular /></n-icon>
             </template>
@@ -107,9 +90,7 @@
           type="info"
           size="small"
           title="生成子活动"
-          :disabled="
-            props.activeId === null || isSelectedClassS || !!props.hasParent
-          "
+          :disabled="props.activeId === null || isSelectedClassS || !!props.hasParent"
           @click="() => emit('create-child-activity')"
         >
           <template #icon>
@@ -122,9 +103,7 @@
           circle
           size="small"
           title="升级为兄弟"
-          :disabled="
-            props.activeId === null || isSelectedClassS || !props.hasParent
-          "
+          :disabled="props.activeId === null || isSelectedClassS || !props.hasParent"
           @click="() => emit('increase-child-activity')"
         >
           <template #icon>
@@ -147,30 +126,16 @@
       </div>
     </n-popover>
 
-    <n-button
-      title="添加预约"
-      @click="$emit('add-schedule')"
-      circle
-      secondary
-      type="info"
-      size="small"
-    >
-      <template #icon
-        ><n-icon><CalendarAdd24Regular /></n-icon
-      ></template>
+    <n-button title="添加预约" @click="$emit('add-schedule')" circle secondary type="info" size="small">
+      <template #icon>
+        <n-icon><CalendarAdd24Regular /></n-icon>
+      </template>
     </n-button>
 
-    <n-button
-      title="添加无所事事"
-      @click="$emit('add-untaetigkeit')"
-      circle
-      secondary
-      type="info"
-      size="small"
-    >
-      <template #icon
-        ><n-icon><CloudAdd20Regular /></n-icon
-      ></template>
+    <n-button title="添加无所事事" @click="$emit('add-untaetigkeit')" circle secondary type="info" size="small">
+      <template #icon>
+        <n-icon><CloudAdd20Regular /></n-icon>
+      </template>
     </n-button>
   </div>
 </template>
