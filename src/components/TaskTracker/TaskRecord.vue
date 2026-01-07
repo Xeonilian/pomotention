@@ -512,6 +512,33 @@ const handleClick = (event: MouseEvent) => {
   padding: 2px;
 }
 
+:deep(.markdown-content table) {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.5em 0;
+  background-color: var(--color-background-light-transparent);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+:deep(.markdown-content th) {
+  background-color: var(--color-background-light);
+  padding: 4px 8px;
+  text-align: left;
+  font-weight: 600;
+  border: 1px solid var(--color-background-dark);
+}
+
+:deep(.markdown-content td) {
+  padding: 4px 8px;
+  border: 1px solid var(--color-background-dark);
+  background-color: var(--color-background);
+}
+
+:deep(.markdown-content tr:nth-child(even) td) {
+  background-color: var(--color-background-light-light);
+}
+
 :deep(.markdown-content ul),
 :deep(.markdown-content ol) {
   padding-left: 2em;
