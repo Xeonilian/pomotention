@@ -1,7 +1,7 @@
 <template>
   <div class="pomodoro-timer">
     <!-- 1 状态信息 -->
-    <div class="state-text" @click.stop="startEditing" @pointerdown.stop>
+    <div class="state-text" @click.stop="startEditing" @pointerdown.stop title="可编辑，回车保存，删除内容恢复默认">
       <n-input
         v-if="isEditing"
         v-model:value="editingMessage"
@@ -181,7 +181,7 @@ const displayMessage = computed((): string => {
 // 1-3 开始编辑
 function startEditing(): void {
   isEditing.value = true;
-  editingMessage.value = settingStore.settings.pomodoroStateMessage || defaultStateMessage.value;
+  editingMessage.value = settingStore.settings.pomodoroStateMessage || "";
   nextTick(() => {
     inputRef.value?.focus();
   });
