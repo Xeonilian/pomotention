@@ -551,6 +551,9 @@ function onDragStart(event: PointerEvent, item: Activity) {
   // 只允许左键 (0) 或 触摸
   if (event.button !== 0 && event.pointerType === "mouse") return;
 
+  // 已删除的活动不支持拖拽
+  if (item.deleted) return;
+
   // 检查输入框逻辑
   const target = event.target as HTMLElement;
   const isInputElement = target.closest("input, textarea, .n-input__input");
@@ -652,6 +655,10 @@ function handleClickDragEnd(event: PointerEvent) {
 
 // 获取拖拽区域的 title 提示
 function getDragAreaTitle(item: Activity): string {
+  if (item.deleted) {
+    return "已删除的活动不支持顺序修改";
+  }
+
   if (item.status === "cancelled") {
     return "不支持顺序修改";
   }

@@ -10,6 +10,7 @@
       :selectedTaskId="selectedTaskId"
       :selectedClass="selectedActivity?.class"
       :hasParent="selectedActivity?.parentId"
+      :isDeleted="selectedActivity?.deleted ?? false"
       @pick-activity="pickActivity"
       @add-todo="addTodoRow"
       @add-schedule="addScheduleRow"
@@ -82,6 +83,7 @@ const {
   todoByActivityId,
   scheduleByActivityId,
 } = storeToRefs(dataStore);
+const { activityList } = storeToRefs(dataStore);
 const dateService = dataStore.dateService;
 
 // ========================
@@ -115,7 +117,7 @@ const filterOptions = [
   { label: "内外打扰", key: "interrupt" },
   { label: "待办活动", key: "todo" },
   { label: "预约活动", key: "schedule" },
-  { label: "取消活动", key: "cancelled" },
+  { label: "已删活动", key: "cancelled" },
 ];
 
 // Kanban多个section参数管理
@@ -178,9 +180,11 @@ function filteredBySection(section: ActivitySectionConfig) {
   if (section.filterKey) {
     switch (section.filterKey) {
       case "all":
-        return activeActivities.value.filter((item) => item.status !== "cancelled");
+        return activeActivities.value;
       case "cancelled":
-        return activeActivities.value.filter((item) => item.status === "cancelled");
+        // 筛选已删除的活动（保持 filterKey 为 "cancelled" 以向后兼容）
+        // 需要使用完整的 activityList，因为 activeActivities 已过滤掉 deleted 的活动
+        return activityList.value.filter((item) => item.deleted === true);
       case "today":
         return activeActivities.value.filter((item) => {
           if (item.class === "T") {
@@ -198,11 +202,11 @@ function filteredBySection(section: ActivitySectionConfig) {
           return false;
         });
       case "interrupt":
-        return activeActivities.value.filter((item) => !!item.interruption && item.status !== "cancelled");
+        return activeActivities.value.filter((item) => !!item.interruption);
       case "todo":
-        return activeActivities.value.filter((item) => item.class === "T" && item.status !== "cancelled");
+        return activeActivities.value.filter((item) => item.class === "T");
       case "schedule":
-        return activeActivities.value.filter((item) => item.class === "S" && item.status !== "cancelled");
+        return activeActivities.value.filter((item) => item.class === "S");
       default:
         break;
     }
@@ -211,7 +215,7 @@ function filteredBySection(section: ActivitySectionConfig) {
   // 没有 filterKey，再看search
   if (section.search) {
     const keyword = section.search.trim().toLowerCase();
-    return activeActivities.value.filter((item) => item.status !== "cancelled" && item.title && item.title.toLowerCase().includes(keyword));
+    return activeActivities.value.filter((item) => item.title && item.title.toLowerCase().includes(keyword));
   }
 
   // 什么条件都没有，返回空

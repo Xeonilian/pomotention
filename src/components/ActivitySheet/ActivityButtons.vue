@@ -33,16 +33,19 @@
       </template>
     </n-button>
     <n-button
-      title="删除活动"
+      :title="props.isDeleted ? '恢复活动' : '删除活动'"
       @click="$emit('delete-active')"
       circle
       secondary
-      type="default"
+      :type="props.isDeleted ? 'error' : 'default'"
       size="small"
       :disabled="activeId === null || activeId === undefined"
     >
       <template #icon>
-        <n-icon><Delete24Regular /></n-icon>
+        <n-icon>
+          <DeleteDismiss24Regular v-if="props.isDeleted" />
+          <Delete24Regular v-else />
+        </n-icon>
       </template>
     </n-button>
 
@@ -239,6 +242,7 @@ import {
   TextGrammarArrowLeft24Regular,
   ArrowRepeatAll24Regular,
   Delete24Regular,
+  DeleteDismiss24Regular,
 } from "@vicons/fluent";
 import { useLongPress } from "@/composables/useLongPress";
 import { useDevice } from "@/composables/useDevice";
@@ -248,6 +252,7 @@ const props = defineProps<{
   selectedClass?: "T" | "S"; // 从父组件传递
   selectedTaskId: number | null;
   hasParent?: number | null;
+  isDeleted?: boolean; // 选中活动是否已删除
 }>();
 
 const isSelectedClassS = computed(() => {
