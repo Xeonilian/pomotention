@@ -12,7 +12,7 @@ if (supabaseUrl && supabaseAnonKey) {
   supabaseInstance = createClient(supabaseUrl, supabaseAnonKey);
 
   supabaseInstance.auth.onAuthStateChange((event) => {
-    // 这段代码会“激活”Supabase客户端的自动刷新功能
+    // 这段代码会"激活"Supabase客户端的自动刷新功能
     // 当令牌快过期时，它会在后台为你自动续期
     console.log("Supabase auth event:", event);
     if (event === "TOKEN_REFRESHED") {
@@ -24,4 +24,26 @@ if (supabaseUrl && supabaseAnonKey) {
 }
 
 export const supabase = supabaseInstance;
-export const isSupabaseEnabled = () => supabaseInstance !== null;
+
+// 检查supabase是否启用（考虑本地模式）
+export const isSupabaseEnabled = () => {
+  // 如果实例不存在，直接返回false
+  if (!supabaseInstance) {
+    return false;
+  }
+  
+  // 动态检查localOnlyMode（避免循环依赖）
+  try {
+    const { useSettingStore } = require("@/stores/useSettingStore");
+    const settingStore = useSettingStore();
+    // 如果是本地模式，禁用supabase
+    if (settingStore.settings.localOnlyMode) {
+      return false;
+    }
+  } catch (err) {
+    // 如果无法获取store，忽略错误，返回实例状态
+    console.warn("[Supabase] 无法检查localOnlyMode，使用默认行为:", err);
+  }
+  
+  return true;
+};

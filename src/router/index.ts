@@ -59,6 +59,17 @@ const router = createRouter({
 
 // --- 全局前置导航守卫 ---
 router.beforeEach(async (to, _from, next) => {
+  // 动态导入 useSettingStore 以避免循环依赖
+  const { useSettingStore } = await import("@/stores/useSettingStore");
+  const settingStore = useSettingStore();
+
+  // 检查是否是本地模式
+  if (settingStore.settings.localOnlyMode) {
+    // 本地模式下，允许直接访问主应用，不需要检查登录状态
+    next();
+    return;
+  }
+
   if (!isSupabaseEnabled()) {
     // 离线模式下跳过鉴权，直接放行
     next();

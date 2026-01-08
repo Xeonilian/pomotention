@@ -111,6 +111,13 @@
             {{ isResetMode ? "返回登录" : "忘记密码？" }}
           </n-button>
         </div>
+
+        <!-- 仅本地使用选项（仅APP环境显示） -->
+        <div v-if="isApp && !isResetMode" class="local-only-option">
+          <n-button text type="default" @click="handleLocalOnlyMode">
+            仅本地使用
+          </n-button>
+        </div>
       </div>
 
       <!-- 用户协议弹窗 -->
@@ -135,6 +142,7 @@ import { supabase } from "@/core/services/supabase";
 import { marked } from "marked";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useDataStore } from "@/stores/useDataStore";
+import { isTauri } from "@tauri-apps/api/core";
 
 const email = ref("");
 const password = ref("");
@@ -149,6 +157,7 @@ const supabaseClient = supabase;
 const supabaseUnavailable = !supabaseClient;
 const settingStore = useSettingStore();
 const dataStore = useDataStore();
+const isApp = isTauri();
 
 // 检测是否有其他用户的数据
 const hasDifferentUserData = computed(() => {
@@ -317,11 +326,24 @@ async function performSignIn() {
   errorMessage.value = "";
   successMessage.value = "";
 
+  // 检查登录前是否是本地模式
+  const wasLocalMode = settingStore.settings.localOnlyMode;
+  if (wasLocalMode) {
+    // 从本地模式登录，设置标志以保护数据
+    settingStore.settings.wasLocalModeBeforeLogin = true;
+    settingStore.settings.localOnlyMode = false;
+  }
+
   const { error } = await signIn({ email: email.value, password: password.value });
 
   loading.value = false;
   if (error) {
     errorMessage.value = `登录失败: ${error.message}`;
+    // 如果登录失败，恢复本地模式状态
+    if (wasLocalMode) {
+      settingStore.settings.localOnlyMode = true;
+      settingStore.settings.wasLocalModeBeforeLogin = false;
+    }
   } else {
     // 用户切换检测和数据清除由 App.vue 的 SIGNED_IN 事件处理
     router.push({ name: "Home" });
@@ -354,6 +376,14 @@ async function performSignUp() {
   errorMessage.value = "";
   successMessage.value = "";
 
+  // 检查注册前是否是本地模式
+  const wasLocalMode = settingStore.settings.localOnlyMode;
+  if (wasLocalMode) {
+    // 从本地模式注册，设置标志以保护数据
+    settingStore.settings.wasLocalModeBeforeLogin = true;
+    settingStore.settings.localOnlyMode = false;
+  }
+
   // 如果检测到用户切换，先清除本地数据
   if (hasDifferentUserData.value) {
     console.log("检测到用户切换，清除本地数据");
@@ -361,6 +391,10 @@ async function performSignUp() {
     dataStore.clearData();
     // 清除用户ID记录
     settingStore.settings.lastLoggedInUserId = undefined;
+    // 如果是从本地模式切换过来的，清除标志
+    if (wasLocalMode) {
+      settingStore.settings.wasLocalModeBeforeLogin = false;
+    }
   }
 
   const { error } = await signUp({ email: email.value, password: password.value });
@@ -368,10 +402,23 @@ async function performSignUp() {
   loading.value = false;
   if (error) {
     errorMessage.value = `注册失败: ${error.message}`;
+    // 如果注册失败，恢复本地模式状态
+    if (wasLocalMode && !hasDifferentUserData.value) {
+      settingStore.settings.localOnlyMode = true;
+      settingStore.settings.wasLocalModeBeforeLogin = false;
+    }
   } else {
     successMessage.value = "注册成功！请检查您的邮箱以完成验证，然后尝试登录。";
     // 注册成功后，如果用户验证并登录，会在登录时更新用户ID
   }
+}
+
+// 处理仅本地使用模式
+function handleLocalOnlyMode() {
+  settingStore.settings.localOnlyMode = true;
+  settingStore.settings.autoSupabaseSync = false;
+  settingStore.settings.wasLocalModeBeforeLogin = false;
+  router.push({ name: "Home" });
 }
 </script>
 
@@ -413,6 +460,11 @@ async function performSignUp() {
 
 .forgot-password {
   margin-top: 0px;
+  text-align: center;
+}
+
+.local-only-option {
+  margin-top: 10px;
   text-align: center;
 }
 
