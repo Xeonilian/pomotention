@@ -248,7 +248,13 @@ import { useResize } from "@/composables/useResize";
 import IcsExportModal from "@/components/IcsExportModal.vue";
 import { Previous24Regular, Next24Regular, Search24Regular, CalendarSettings20Regular, QrCode24Regular } from "@vicons/fluent";
 
-import { handleAddActivity, handleDeleteActivity, passPickedActivity, togglePomoType } from "@/services/activityService";
+import {
+  handleAddActivity,
+  handleDeleteActivity,
+  handleRestoreActivity,
+  passPickedActivity,
+  togglePomoType,
+} from "@/services/activityService";
 import { updateScheduleStatus, updateTodoStatus, handleSuspendTodo } from "@/services/plannerService";
 import { handleExportOrQR, type DataRow } from "@/services/icsService";
 
@@ -422,28 +428,53 @@ function onAddActivity(newActivity: Activity) {
   saveAllDebounced();
 }
 
-/** 删除活动及其关联的 todo/schedule */
+/** 删除或恢复活动及其关联的 todo/schedule */
 function onDeleteActivity(id: number | null | undefined) {
   if (id == null) return;
-  const result = handleDeleteActivity(activityList.value, todoList.value, scheduleList.value, taskList.value, id, {
-    activityById: activityById.value,
-    childrenByParentId: childrenOfActivity.value,
-  });
-  if (!result) {
-    showErrorPopover("请先清空子项目再删除！");
-    return;
-  }
 
-  // 找到被删除的 activity，标记为未同步
-  const activity = activityList.value.find((a) => a.id === id);
-  if (activity) {
-    activity.synced = false;
-    activity.lastModified = Date.now();
-  }
+  // 获取活动信息
+  const activity = activityById.value.get(id);
+  if (!activity) return;
 
-  activeId.value = null;
-  selectedTaskId.value = null;
-  saveAllDebounced();
+  // 根据 deleted 状态决定删除还是恢复
+  if (activity.deleted) {
+    // 恢复活动
+    const result = handleRestoreActivity(activityList.value, todoList.value, scheduleList.value, taskList.value, id, {
+      activityById: activityById.value,
+      childrenByParentId: childrenOfActivity.value,
+    });
+
+    if (result) {
+      activeId.value = null;
+      selectedTaskId.value = null;
+      saveAllDebounced();
+    }
+  } else {
+    // 删除活动
+    const result = handleDeleteActivity(activityList.value, todoList.value, scheduleList.value, taskList.value, id, {
+      activityById: activityById.value,
+      childrenByParentId: childrenOfActivity.value,
+    });
+    if (!result) {
+      showErrorPopover("请先清空子项目再删除！");
+      return;
+    }
+
+    // 清理设置：删除 collapsedActivityIds 和 activityRank 中的相关记录
+    delete settingStore.settings.collapsedActivityIds[id];
+    delete settingStore.settings.activityRank[id];
+
+    // 找到被删除的 activity，标记为未同步
+    const deletedActivity = activityList.value.find((a) => a.id === id);
+    if (deletedActivity) {
+      deletedActivity.synced = false;
+      deletedActivity.lastModified = Date.now();
+    }
+
+    activeId.value = null;
+    selectedTaskId.value = null;
+    saveAllDebounced();
+  }
 }
 
 /** 选中活动，将其转为 todo 并作为 picked */

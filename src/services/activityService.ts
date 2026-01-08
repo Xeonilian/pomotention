@@ -162,6 +162,109 @@ export function handleDeleteActivity(
 }
 
 /**
+ * 恢复一个活动及其所有子孙和关联数据。
+ * 递归恢复所有子活动，并恢复关联的 todos、schedules 和 tasks。
+ * 成功恢复则返回 true。
+ */
+export function handleRestoreActivity(
+  activityList: Activity[],
+  todoList: Todo[],
+  scheduleList: Schedule[],
+  taskList: Task[],
+  idToRestore: number,
+  deps: {
+    activityById: Map<number, Activity>;
+    childrenByParentId?: Map<number, Activity[]>;
+  }
+): boolean {
+  // 递归获取所有需要恢复的 activity 的 id（含自身）
+  const idsToRestore = new Set<number>();
+  function collectAllDescendantIds(currentId: number): void {
+    idsToRestore.add(currentId);
+
+    if (deps.childrenByParentId) {
+      // 使用上层传入的 children map，效率更高
+      const children = deps.childrenByParentId.get(currentId) ?? [];
+      for (const child of children) {
+        collectAllDescendantIds(child.id);
+      }
+    } else {
+      // 退化到全表扫描（保持旧行为）
+      for (const activity of activityList) {
+        if (activity.parentId === currentId) {
+          collectAllDescendantIds(activity.id);
+        }
+      }
+    }
+  }
+  collectAllDescendantIds(idToRestore);
+
+  // 收集需要恢复的关联数据 ID
+  const todoIdsToRestore = new Set<number>();
+  const scheduleIdsToRestore = new Set<number>();
+
+  for (const todo of todoList) {
+    if (idsToRestore.has(todo.activityId)) {
+      todoIdsToRestore.add(todo.id);
+    }
+  }
+
+  for (const schedule of scheduleList) {
+    if (idsToRestore.has(schedule.activityId)) {
+      scheduleIdsToRestore.add(schedule.id);
+    }
+  }
+
+  // 恢复 activities（标记 deleted = false）
+  for (const activity of activityList) {
+    if (idsToRestore.has(activity.id)) {
+      activity.deleted = false;
+      activity.synced = false;
+      activity.lastModified = Date.now();
+    }
+  }
+
+  // 恢复关联的 todos
+  for (const todo of todoList) {
+    if (todoIdsToRestore.has(todo.id)) {
+      todo.deleted = false;
+      todo.synced = false;
+      todo.lastModified = Date.now();
+    }
+  }
+
+  // 恢复关联的 schedules
+  for (const schedule of scheduleList) {
+    if (scheduleIdsToRestore.has(schedule.id)) {
+      schedule.deleted = false;
+      schedule.synced = false;
+      schedule.lastModified = Date.now();
+    }
+  }
+
+  // 恢复关联的 tasks（按 source/sourceId 判定）
+  for (const task of taskList) {
+    let shouldRestore = false;
+
+    if (task.source === "activity") {
+      shouldRestore = idsToRestore.has(task.sourceId);
+    } else if (task.source === "todo") {
+      shouldRestore = todoIdsToRestore.has(task.sourceId);
+    } else if (task.source === "schedule") {
+      shouldRestore = scheduleIdsToRestore.has(task.sourceId);
+    }
+
+    if (shouldRestore) {
+      task.deleted = false;
+      task.synced = false;
+      task.lastModified = Date.now();
+    }
+  }
+
+  return true;
+}
+
+/**
  * 将选中的活动转换为待办事项
  */
 export function passPickedActivity(activity: Activity, appDateTimestamp: number, isToday: boolean): { newTodo: Todo } {
