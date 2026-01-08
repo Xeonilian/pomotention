@@ -44,7 +44,7 @@
     <!-- 内容区 -->
     <div v-for="item in sortedDisplaySheet" :key="item.id">
       <div
-        v-if="item.status !== 'done'"
+        v-if="item.status !== 'done' && shouldShowItem(item)"
         class="activity-row"
         :data-row-id="item.id"
         :class="{
@@ -53,6 +53,12 @@
         }"
       >
         <div class="activity-content">
+          <span
+            v-if="item.parentId"
+            class="child-activity-dot"
+            @click.stop="handleCollapseParent(item.parentId)"
+            title="点击收起父项"
+          ></span>
           <n-input
             v-model:value="item.title"
             :ref="(el) => setRowInputRef(el as InputInst | null, item.id)"
@@ -70,9 +76,10 @@
             <template #prefix>
               <div
                 class="icon-drag-area"
+                :class="{ 'has-children': hasChildren(item.id) }"
                 style="touch-action: none; cursor: grab"
                 @pointerdown="onDragStart($event, item)"
-                :title="item.status !== 'cancelled' ? '拖拽调整顺序' : '不支持顺序修改'"
+                :title="getDragAreaTitle(item)"
               >
                 <n-icon v-if="item.isUntaetigkeit" :color="'var(--color-blue)'"><Cloud24Regular /></n-icon>
                 <n-icon
@@ -411,6 +418,20 @@ const rowInputMap = ref(new Map<number, InputInst>());
 const showTagManager = ref(false);
 const tagSelectorRef = ref<any>(null);
 
+// 点击/拖拽检测状态
+const clickDragState = ref<{
+  startX: number;
+  startY: number;
+  item: Activity | null;
+  target: HTMLElement | null;
+  pointerId: number | null;
+  originalEvent: PointerEvent | null; // 保存原始的 pointerdown 事件
+} | null>(null);
+const DRAG_THRESHOLD = 5; // 拖拽阈值：移动超过5px才算拖拽
+
+// 收起状态：使用 settingStore 持久化存储（Record<number, boolean> 格式）
+const collapsedParentIds = computed(() => settingStore.settings.collapsedActivityIds);
+
 // ======================== 计算属性 ========================
 const currentFilterLabel = computed(() => {
   const match = props.filterOptions.find((o) => o.key === props.currentFilter);
@@ -421,6 +442,49 @@ const tagIdsProxy = computed({
   get: () => tagEditor.tempTagIds.value,
   set: (v) => (tagEditor.tempTagIds.value = v),
 });
+
+// 构建 activityById Map 用于快速查找
+const activityById = computed(() => {
+  const map = new Map<number, Activity>();
+  props.displaySheet.forEach((activity) => {
+    map.set(activity.id, activity);
+  });
+  return map;
+});
+
+// 检查 activity 是否有子项
+function hasChildren(activityId: number): boolean {
+  return props.displaySheet.some((activity) => activity.parentId === activityId && activity.status !== "done");
+}
+
+// 检查 item 是否应该显示（递归检查父项链是否被收起）
+function shouldShowItem(item: Activity): boolean {
+  // 根项始终显示
+  if (!item.parentId) return true;
+
+  // 递归检查父项链
+  let currentParentId: number | null = item.parentId;
+  const visited = new Set<number>(); // 防止循环引用
+
+  while (currentParentId !== null && currentParentId !== undefined) {
+    // 防止循环引用
+    if (visited.has(currentParentId)) break;
+    visited.add(currentParentId);
+
+    // 如果父项被收起，则不显示
+    if (collapsedParentIds.value[currentParentId]) {
+      return false;
+    }
+
+    // 继续向上查找
+    const parent = activityById.value.get(currentParentId);
+    if (!parent) break;
+    currentParentId = parent.parentId;
+  }
+
+  return true;
+}
+
 // ======================== 初始化 ========================
 onMounted(() => {
   settingStore.settings.kanbanSetting[props.sectionId].showTags ??= true;
@@ -484,7 +548,126 @@ watch(
 
 // ======================== 拖拽处理 ========================
 function onDragStart(event: PointerEvent, item: Activity) {
+  // 只允许左键 (0) 或 触摸
+  if (event.button !== 0 && event.pointerType === "mouse") return;
+
+  // 检查输入框逻辑
+  const target = event.target as HTMLElement;
+  const isInputElement = target.closest("input, textarea, .n-input__input");
+  if (isInputElement) return;
+
+  // 如果有子项，先检测是点击还是拖拽
+  if (hasChildren(item.id)) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    clickDragState.value = {
+      startX: event.clientX,
+      startY: event.clientY,
+      item,
+      target,
+      pointerId: event.pointerId,
+      originalEvent: event, // 保存原始的 pointerdown 事件
+    };
+
+    // 锁定指针捕获
+    target.setPointerCapture(event.pointerId);
+
+    // 绑定移动和结束事件
+    target.addEventListener("pointermove", handleClickDragMove);
+    target.addEventListener("pointerup", handleClickDragEnd);
+    target.addEventListener("pointercancel", handleClickDragEnd);
+    return;
+  }
+
+  // 没有子项，直接执行拖拽逻辑
   dragHandler.startDrag(event, item);
+}
+
+function handleClickDragMove(event: PointerEvent) {
+  if (!clickDragState.value) return;
+
+  const state = clickDragState.value;
+  if (!state.target || !state.item || !state.originalEvent) return;
+
+  const dx = Math.abs(event.clientX - state.startX);
+  const dy = Math.abs(event.clientY - state.startY);
+  const distance = Math.hypot(dx, dy);
+
+  // 如果移动距离超过阈值，开始拖拽
+  if (distance > DRAG_THRESHOLD) {
+    // 保存状态
+    const savedTarget = state.target;
+    const savedItem = state.item;
+    const savedOriginalEvent = state.originalEvent;
+    const savedPointerId = state.pointerId;
+
+    // 清理点击检测状态
+    clickDragState.value = null;
+
+    // 移除点击检测的事件监听
+    savedTarget.removeEventListener("pointermove", handleClickDragMove);
+    savedTarget.removeEventListener("pointerup", handleClickDragEnd);
+    savedTarget.removeEventListener("pointercancel", handleClickDragEnd);
+    if (savedPointerId !== null) {
+      savedTarget.releasePointerCapture(savedPointerId);
+    }
+
+    // 使用原始的 pointerdown 事件开始拖拽
+    dragHandler.startDrag(savedOriginalEvent, savedItem);
+  }
+}
+
+function handleClickDragEnd(event: PointerEvent) {
+  if (!clickDragState.value) return;
+
+  const state = clickDragState.value;
+  if (!state.target || !state.item) return;
+
+  const dx = Math.abs(event.clientX - state.startX);
+  const dy = Math.abs(event.clientY - state.startY);
+  const distance = Math.hypot(dx, dy);
+
+  // 清理状态
+  clickDragState.value = null;
+  state.target.removeEventListener("pointermove", handleClickDragMove);
+  state.target.removeEventListener("pointerup", handleClickDragEnd);
+  state.target.removeEventListener("pointercancel", handleClickDragEnd);
+  if (state.pointerId !== null) {
+    state.target.releasePointerCapture(state.pointerId);
+  }
+
+  // 如果移动距离小于阈值，执行点击展开/收起
+  if (distance <= DRAG_THRESHOLD) {
+    const collapsed = settingStore.settings.collapsedActivityIds;
+    if (collapsed[state.item.id]) {
+      // 展开：删除记录
+      delete collapsed[state.item.id];
+    } else {
+      // 收起：添加记录
+      collapsed[state.item.id] = true;
+    }
+  }
+}
+
+// 获取拖拽区域的 title 提示
+function getDragAreaTitle(item: Activity): string {
+  if (item.status === "cancelled") {
+    return "不支持顺序修改";
+  }
+
+  const hasChild = hasChildren(item.id);
+  if (hasChild) {
+    return "点击=展开/收起 | 拖拽调整顺序";
+  }
+
+  return "拖拽调整顺序";
+}
+
+// 点击子项点点收起父项
+function handleCollapseParent(parentId: number) {
+  const collapsed = settingStore.settings.collapsedActivityIds;
+  collapsed[parentId] = true;
 }
 
 // ======================== 标签操作 ========================
@@ -622,21 +805,30 @@ function onInputUpdate(item: Activity, value: string) {
   touch-action: pan-y;
 }
 
-.activity-content .child-activity {
+.activity-content {
   position: relative;
+}
+
+.activity-content .child-activity {
   margin-left: 20px;
 }
 
-.activity-content .child-activity::before {
-  content: "";
+.child-activity-dot {
   position: absolute;
-  left: -12px; /* inside the 20px margin */
-  top: 1em; /* vertically centered */
+  left: 8px; /* inside the 20px margin */
+  top: 50%;
+  transform: translateY(-50%);
   width: 6px;
   height: 6px;
-  background: currentColor;
+  background: var(--color-text-secondary);
   border-radius: 50%;
-  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: background-color 0.2s;
+  z-index: 1;
+}
+
+.child-activity-dot:hover {
+  background: var(--color-text-primary);
 }
 .activity-content {
   display: flex;
@@ -664,7 +856,9 @@ function onInputUpdate(item: Activity, value: string) {
   cursor: grab;
   padding: 2px;
   border-radius: 4px;
+  margin-right: 1px;
   transition: background-color 0.2s;
+  position: relative;
 }
 
 .icon-drag-area:hover {
@@ -674,6 +868,43 @@ function onInputUpdate(item: Activity, value: string) {
 .icon-drag-area:active {
   cursor: grabbing;
   background-color: var(--color-red-light);
+}
+
+.icon-drag-area.has-children::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-color: var(--color-yellow);
+  border-radius: 10px;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.icon-drag-area.has-children > * {
+  position: relative;
+  z-index: 1;
+}
+
+.icon-drag-area.has-children:hover::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-color: var(--color-blue-light);
+  border-radius: 10px;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.icon-drag-area.has-children:active::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-color: var(--color-red-light);
+  border-radius: 10px;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.7;
 }
 
 .icon-tag {

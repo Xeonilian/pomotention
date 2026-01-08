@@ -434,6 +434,10 @@ function onDeleteActivity(id: number | null | undefined) {
     return;
   }
 
+  // 清理设置：删除 collapsedActivityIds 和 activityRank 中的相关记录
+  delete settingStore.settings.collapsedActivityIds[id];
+  delete settingStore.settings.activityRank[id];
+
   // 找到被删除的 activity，标记为未同步
   const activity = activityList.value.find((a) => a.id === id);
   if (activity) {

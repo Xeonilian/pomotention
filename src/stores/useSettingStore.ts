@@ -14,6 +14,7 @@ export interface GlobalSettings {
   style: typeof TimerStyleDefaults;
   miniModeRefactor: number;
   activityRank: Record<number, number>; // 活动排序：{activityId: rank}
+  collapsedActivityIds: Record<number, boolean>; // 收起的活动父项 ID：{activityId: true}
   kanbanSetting: ActivitySectionConfig[];
   showPomodoro: boolean;
   showSchedule: boolean;
@@ -54,6 +55,7 @@ const defaultSettings: GlobalSettings = {
   style: TimerStyleDefaults,
   miniModeRefactor: 1,
   activityRank: {}, // 默认空对象
+  collapsedActivityIds: {}, // 默认全部展开
   kanbanSetting: [
     { id: 1, filterKey: "all", search: "", show: true, showTags: true },
     { id: 2, filterKey: "today", search: "", show: false, showTags: false },
