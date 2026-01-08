@@ -33,9 +33,11 @@ export interface GlobalSettings {
   webdavPath: string;
   viewSet: ViewType;
   marquee: string;
+  pomodoroStateMessage?: string; // 自定义番茄钟状态消息
   supabaseSync: number[];
   firstSync: boolean;
   autoSupabaseSync: boolean;
+  lastLoggedInUserId?: string; // 上次登录的用户ID，用于检测用户切换
 
   ai?: {
     activeId: number; // 当前启用的配置
@@ -78,9 +80,11 @@ const defaultSettings: GlobalSettings = {
   webdavPath: "/PomotentionBackup",
   viewSet: "day",
   marquee: "", // 保持觉察 🍅 = ⏰ + 🎯 + 👁‍🗨
+  pomodoroStateMessage: undefined, // 自定义番茄钟状态消息，未设置时使用默认逻辑
   supabaseSync: [0, 0],
   firstSync: true,
   autoSupabaseSync: true,
+  lastLoggedInUserId: undefined, // 首次使用，没有上次登录的用户ID
   ai: {
     activeId: 1,
     systemPrompt:

@@ -14,23 +14,31 @@ export function handleAddActivity(
   newActivity: Activity,
   deps: { activityById: Map<number, Activity> } // 由调用方传入
 ) {
-  // 如果是 Schedule 类型且是当天的活动，自动创建 Schedule
+  // 如果是 Schedule 类型，立即创建 Schedule（即使 dueRange 为 null/undefined）
   if (newActivity.class === "S") {
-    const today = getLocalDateString(new Date());
+    // 检查 dueRange 是否有效
+    const dueRange = newActivity.dueRange;
+    const dueRangeStart = dueRange && Array.isArray(dueRange) ? dueRange[0] : undefined;
 
-    const activityDate =
-      newActivity.dueRange && newActivity.dueRange[0] && !isNaN(new Date(newActivity.dueRange[0]).getTime())
-        ? getLocalDateString(new Date(newActivity.dueRange[0]))
-        : null;
+    const hasValidDueRange = dueRangeStart !== null && dueRangeStart !== undefined && !isNaN(new Date(dueRangeStart).getTime());
 
-    if (activityDate === today) {
-      // 更新 activityList 中对应的 activity 的 status 为 "ongoing"
-      const activityToUpdate = deps.activityById.get(newActivity.id);
-      if (activityToUpdate) {
-        activityToUpdate.status = "ongoing";
+    // 总是创建 Schedule，即使 dueRange 无效
+    const newSchedule = convertToSchedule(newActivity);
+    scheduleList.push(newSchedule);
+
+    // 只有当 dueRange 有效且是今天时，才更新 status 为 "ongoing"
+    if (hasValidDueRange) {
+      const today = getLocalDateString(new Date());
+      const activityDate = getLocalDateString(new Date(dueRangeStart!));
+
+      if (activityDate === today) {
+        // 更新 activityList 中对应的 activity 的 status 为 "ongoing"
+        const activityToUpdate = deps.activityById.get(newActivity.id);
+        if (activityToUpdate) {
+          activityToUpdate.status = "ongoing";
+        }
       }
     }
-    scheduleList.push(convertToSchedule(newActivity));
   }
 }
 
@@ -238,11 +246,15 @@ export function convertToTodo(activity: Activity): Todo {
  * @returns 新创建的日程安排对象
  */
 export function convertToSchedule(activity: Activity): Schedule {
+  // 允许 dueRange 为 null/undefined，统一转换为 null
+  const dueRangeStart = activity.dueRange && Array.isArray(activity.dueRange) ? activity.dueRange[0] ?? null : null;
+  const dueRangeEnd = activity.dueRange && Array.isArray(activity.dueRange) ? activity.dueRange[1] || "" : "";
+
   return {
     id: Date.now(),
     activityId: activity.id,
     activityTitle: activity.title,
-    activityDueRange: [activity.dueRange![0], activity.dueRange![1]],
+    activityDueRange: [dueRangeStart, dueRangeEnd],
     status: "",
     projectName: activity.projectId ? `项目${activity.projectId}` : undefined,
     location: activity.location || "",

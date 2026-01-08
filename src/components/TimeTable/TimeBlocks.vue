@@ -91,9 +91,12 @@
     v-for="range in actualTodoTimeRanges"
     :key="`actual-range-${range.id}`"
     class="actual-time-range todo-range"
+    :class="{ 'emoji-range': range.emoji }"
     :style="getActualTodoTimeRangeStyle(range)"
-    :title="`${range.title} - 实际番茄执行时间`"
-  ></div>
+    :title="range.emoji ? range.title : `${range.title} - 实际番茄执行时间`"
+  >
+    <span v-if="range.emoji" class="emoji-icon">{{ range.emoji }}</span>
+  </div>
 
   <div
     v-for="range in actualScheduleTimeRanges"
@@ -455,5 +458,25 @@ const getPriorityBadgeClasses = (seg: any) => [
 
 .schedule-segment.second-column:hover {
   opacity: 0.8;
+}
+
+/* ============================================
+     😀 特殊Priority的Emoji显示 (第四列)
+     ============================================ */
+
+.emoji-range {
+  pointer-events: auto;
+}
+
+.emoji-icon {
+  display: inline-block;
+  font-size: 16px;
+  line-height: 1;
+  transition: transform 0.2s ease;
+  user-select: none;
+}
+
+.emoji-range:hover .emoji-icon {
+  transform: scale(1.3);
 }
 </style>

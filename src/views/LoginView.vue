@@ -37,8 +37,47 @@
 
         <!-- 正常登录/注册模式 -->
         <n-space v-if="!isResetMode" :size="10" justify="center" style="width: 100%">
-          <n-button @click="handleSignIn" :loading="loading" strong secondary Default size="large" style="min-width: 140px">登录</n-button>
-          <n-tooltip :disabled="agreedToTerms" trigger="hover">
+          <!-- 登录按钮 -->
+          <n-popconfirm
+            v-if="hasDifferentUserData"
+            placement="top"
+            positive-text="确认登录（清除本地数据）"
+            negative-text="取消"
+            @positive-click="performSignIn"
+          >
+            <template #trigger>
+              <n-button :loading="loading" strong secondary Default size="large" style="min-width: 140px">登录</n-button>
+            </template>
+            <div style="max-width: 280px">
+              检测到本地有其他用户的数据，登录新用户将清除本地数据并从云端同步。
+              <br />
+              <br />
+              建议：如果这是您的数据，请先登录原账户导出数据，然后再登录新账户。
+            </div>
+          </n-popconfirm>
+          <n-button v-else @click="handleSignIn" :loading="loading" strong secondary Default size="large" style="min-width: 140px">
+            登录
+          </n-button>
+
+          <!-- 注册按钮 -->
+          <n-popconfirm
+            v-if="hasDifferentUserData && agreedToTerms"
+            placement="top"
+            positive-text="确认注册（清除本地数据）"
+            negative-text="取消"
+            @positive-click="performSignUp"
+          >
+            <template #trigger>
+              <n-button :loading="loading" strong secondary type="info" size="large" style="min-width: 140px">注册</n-button>
+            </template>
+            <div style="max-width: 280px">
+              检测到本地有其他用户的数据，注册新用户将清除本地数据。
+              <br />
+              <br />
+              建议：如果这是您的数据，请先登录原账户导出数据，然后再注册新账户。
+            </div>
+          </n-popconfirm>
+          <n-tooltip v-else-if="!agreedToTerms" trigger="hover">
             <template #trigger>
               <n-button
                 strong
@@ -55,6 +94,9 @@
             </template>
             请先阅读并同意用户协议
           </n-tooltip>
+          <n-button v-else strong secondary type="info" @click="handleSignUp" :loading="loading" size="large" style="min-width: 140px">
+            注册
+          </n-button>
         </n-space>
 
         <!-- 找回密码模式 -->
@@ -87,10 +129,12 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from "vue";
 import { useRouter } from "vue-router";
-import { NInput, NButton, NAlert, NCheckbox, NSpace, NModal, NScrollbar } from "naive-ui";
+import { NInput, NButton, NAlert, NCheckbox, NSpace, NModal, NScrollbar, NTooltip, NPopconfirm } from "naive-ui";
 import { signIn, signUp } from "@/core/services/authService";
 import { supabase } from "@/core/services/supabase";
 import { marked } from "marked";
+import { useSettingStore } from "@/stores/useSettingStore";
+import { useDataStore } from "@/stores/useDataStore";
 
 const email = ref("");
 const password = ref("");
@@ -103,6 +147,22 @@ const showTerms = ref(false);
 const router = useRouter();
 const supabaseClient = supabase;
 const supabaseUnavailable = !supabaseClient;
+const settingStore = useSettingStore();
+const dataStore = useDataStore();
+
+// 检测是否有其他用户的数据
+const hasDifferentUserData = computed(() => {
+  // 检查是否有本地数据
+  const hasLocalData =
+    dataStore.activityList.length > 0 ||
+    dataStore.todoList.length > 0 ||
+    dataStore.scheduleList.length > 0 ||
+    dataStore.taskList.length > 0;
+
+  // 如果有本地数据，且记录了上次登录的用户ID，说明可能是其他用户的数据
+  // 需要先登录原账户导出数据，然后再登录新账户
+  return hasLocalData && settingStore.settings.lastLoggedInUserId !== undefined;
+});
 
 // 用户协议内容（Markdown格式）
 const termsMarkdown = `
@@ -247,6 +307,12 @@ async function handleSignIn() {
     errorMessage.value = "邮箱和密码不能为空";
     return;
   }
+
+  // 如果没有用户切换，直接登录
+  await performSignIn();
+}
+
+async function performSignIn() {
   loading.value = true;
   errorMessage.value = "";
   successMessage.value = "";
@@ -257,6 +323,7 @@ async function handleSignIn() {
   if (error) {
     errorMessage.value = `登录失败: ${error.message}`;
   } else {
+    // 用户切换检测和数据清除由 App.vue 的 SIGNED_IN 事件处理
     router.push({ name: "Home" });
   }
 }
@@ -278,9 +345,23 @@ async function handleSignUp() {
     return;
   }
 
+  // 如果没有用户切换，直接注册
+  await performSignUp();
+}
+
+async function performSignUp() {
   loading.value = true;
   errorMessage.value = "";
   successMessage.value = "";
+
+  // 如果检测到用户切换，先清除本地数据
+  if (hasDifferentUserData.value) {
+    console.log("检测到用户切换，清除本地数据");
+    localStorage.clear();
+    dataStore.clearData();
+    // 清除用户ID记录
+    settingStore.settings.lastLoggedInUserId = undefined;
+  }
 
   const { error } = await signUp({ email: email.value, password: password.value });
 
@@ -289,6 +370,7 @@ async function handleSignUp() {
     errorMessage.value = `注册失败: ${error.message}`;
   } else {
     successMessage.value = "注册成功！请检查您的邮箱以完成验证，然后尝试登录。";
+    // 注册成功后，如果用户验证并登录，会在登录时更新用户ID
   }
 }
 </script>

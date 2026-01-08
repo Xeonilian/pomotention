@@ -10,6 +10,13 @@
         </n-icon>
       </template>
     </n-button>
+    <!-- 打开标签管理器的按钮 -->
+    <n-button text @click="openTagManager">
+      <template #icon>
+        <n-icon color="var(--color-blue)"><Tag16Regular /></n-icon>
+      </template>
+    </n-button>
+
     <n-button size="small" type="info" secondary circle strong @click="showEnergyDialog = true" :disabled="!taskId" title="能量记录">
       <template #icon>
         <n-icon><BatterySaver20Regular /></n-icon>
@@ -46,16 +53,24 @@
       @confirm="handleTemplateConfirm"
       @delete="handleDeleteTemplate"
     />
+
+    <!-- 标签管理器弹窗 -->
+    <n-modal v-model:show="showTagManager" @after-leave="handleTagManagerClose">
+      <n-card style="width: 420px">
+        <TagManager v-model="tagIdsProxy" />
+      </n-card>
+    </n-modal>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from "vue";
-import { NButton } from "naive-ui";
+import { NButton, NModal, NCard } from "naive-ui";
 import EnergyInputDialog from "@/components/TaskTracker/EnergyInputDialog.vue";
 import RewardInputDialog from "@/components/TaskTracker/RewardInputDialog.vue";
 import InterruptionInputDialog from "@/components/TaskTracker/InterruptionInputDialog.vue";
 import TemplateDialog from "@/components/TaskTracker/TemplateDialog.vue";
+import TagManager from "@/components/TagSystem/TagManager.vue";
 import {
   BatterySaver20Regular,
   Emoji24Regular,
@@ -63,9 +78,15 @@ import {
   CalligraphyPen20Regular,
   Star20Regular,
   Star20Filled,
+  Tag16Regular,
 } from "@vicons/fluent";
 import { useTemplateStore } from "@/stores/useTemplateStore";
 import type { Template } from "@/core/types/Template";
+import { useActivityTagEditor } from "@/composables/useActivityTagEditor";
+import { useDataStore } from "@/stores/useDataStore";
+
+const tagEditor = useActivityTagEditor();
+const dataStore = useDataStore();
 
 // Props
 const props = defineProps<{
@@ -154,6 +175,36 @@ function starTrack() {
   if (props.taskId) {
     emit("star");
   }
+}
+
+const showTagManager = ref(false);
+
+// 标签管理器的 tagIds 代理
+const tagIdsProxy = computed({
+  get: () => tagEditor.tempTagIds.value,
+  set: (v) => (tagEditor.tempTagIds.value = v),
+});
+
+function openTagManager() {
+  // 使用来自 composable 的 activityId
+  // 通过 taskId 在 dataStore 里查找对应的 activityId
+  let activityId = null;
+  if (props.taskId) {
+    const task = dataStore.taskById.get(props.taskId);
+    if (task && task.sourceId) {
+      activityId = task.sourceId;
+    }
+  }
+  if (activityId) {
+    tagEditor.openTagManager(activityId);
+    showTagManager.value = true;
+  }
+}
+
+// 标签管理器关闭处理
+function handleTagManagerClose() {
+  tagEditor.saveAndCloseTagManager();
+  showTagManager.value = false;
 }
 </script>
 

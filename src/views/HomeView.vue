@@ -818,7 +818,12 @@ function onDateSet(direction: "prev" | "next" | "today" | "query") {
       dateService.navigateByView("next");
       break;
     case "today":
-      dateService.navigateByView("today");
+      const day = dateService.navigateByView("today");
+      dataStore.setSelectedDate(day);
+      selectedActivityId.value = null;
+      selectedTaskId.value = null;
+      activeId.value = undefined;
+      selectedRowId.value = null;
       break;
     case "query":
       if (queryDate.value) {

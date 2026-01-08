@@ -25,6 +25,7 @@ import { initSyncServices, syncAll, resetSyncServices } from "@/services/sync";
 import { isTauri } from "@tauri-apps/api/core";
 import { initialMigrate } from "./composables/useMigrate";
 import { initAppCloseHandler } from "@/services/appCloseHandler";
+import { getCurrentUser } from "@/core/services/authService";
 
 // state & stores
 const showModal = ref(false);
@@ -83,6 +84,24 @@ onMounted(async () => {
   if (session) {
     console.log("✅ 用户已登录", session.user?.id);
 
+    // 检测用户切换
+    const currentUserId = session.user?.id;
+    const lastUserId = settingStore.settings.lastLoggedInUserId;
+    if (lastUserId && lastUserId !== currentUserId) {
+      console.log("⚠️ 检测到用户切换，清除本地数据");
+      localStorage.clear();
+      dataStore.clearData();
+      syncStore.lastSyncTimestamp = 0;
+      syncStore.isSyncing = false;
+      syncStore.syncError = null;
+      resetSyncServices();
+    }
+
+    // 更新用户ID
+    if (currentUserId) {
+      settingStore.settings.lastLoggedInUserId = currentUserId;
+    }
+
     // 场景 A：打开 App 时已登录 -> 启动同步
     await startAppSync();
     syncInitialized.value = true; // 标记已初始化
@@ -117,10 +136,32 @@ onMounted(async () => {
       resetSyncServices();
       syncInitialized.value = false; // 重置标志
       settingStore.settings.supabaseSync[0] = 0; // 如果你也用这个存时间，也要重置
+      // 清除用户ID记录
+      settingStore.settings.lastLoggedInUserId = undefined;
 
       router.push({ name: "Login" });
     } else if (event === "SIGNED_IN") {
       // 2️⃣ 登录成功
+      const user = await getCurrentUser();
+      if (user) {
+        const currentUserId = user.id;
+        const lastUserId = settingStore.settings.lastLoggedInUserId;
+
+        // 检测用户切换
+        if (lastUserId && lastUserId !== currentUserId) {
+          console.log("⚠️ 检测到用户切换，清除本地数据");
+          localStorage.clear();
+          dataStore.clearData();
+          syncStore.lastSyncTimestamp = 0;
+          syncStore.isSyncing = false;
+          syncStore.syncError = null;
+          resetSyncServices();
+        }
+
+        // 更新用户ID
+        settingStore.settings.lastLoggedInUserId = currentUserId;
+      }
+
       if (!syncInitialized.value) {
         console.log("🔄 用户登录，强制全量同步");
 

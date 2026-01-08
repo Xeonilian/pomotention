@@ -49,7 +49,7 @@ export function useDraggable(dragThreshold = 5) {
 
     // 忽略交互元素 (输入框、按钮等)
     const target = e.target as HTMLElement;
-    if (target.closest("input, textarea, button, .n-input, .n-slider")) return;
+    if (target.closest("input, textarea, button, .n-input, .n-slider, .state-text, .state-text-clickable")) return;
 
     e.preventDefault();
 

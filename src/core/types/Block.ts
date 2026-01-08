@@ -56,4 +56,5 @@ export interface ActualTimeRange {
   start: number;
   end: number;
   category: string;
+  emoji?: string; // 特殊priority的todo显示的emoji
 }

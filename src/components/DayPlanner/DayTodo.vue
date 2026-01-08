@@ -34,7 +34,7 @@
       </thead>
 
       <tbody>
-        <template v-if="sortedTodos.length > 0">
+        <template v-if="todosForCurrentViewWithTaskRecords && todosForCurrentViewWithTaskRecords!.length > 0">
           <!-- 行 -->
           <tr
             v-for="todo in sortedTodos"
@@ -108,7 +108,7 @@
                 v-if="editingTodo && editingTodo.id === todo.id"
                 v-model:value="editingPriority"
                 :min="0"
-                :max="21"
+                :max="99"
                 size="small"
                 :show-button="false"
                 placeholder=" "
@@ -117,7 +117,10 @@
               />
 
               <span v-else class="priority-badge" :class="'priority-' + todo.priority">
-                {{ todo.priority > 0 ? todo.priority : "" }}
+                <template v-if="todo.priority === 66">😀</template>
+                <template v-else-if="todo.priority === 88">💰</template>
+                <template v-else-if="todo.priority === 99">🎈</template>
+                <template v-else>{{ todo.priority > 0 ? todo.priority : "" }}</template>
               </span>
             </td>
 
@@ -329,6 +332,12 @@ import { ref, computed, nextTick } from "vue";
 import { taskService } from "@/services/taskService";
 import { Task } from "@/core/types/Task";
 
+import { useDataStore } from "@/stores/useDataStore";
+import { storeToRefs } from "pinia";
+
+const dataStore = useDataStore();
+const { activeId, selectedRowId, todosForCurrentViewWithTaskRecords } = storeToRefs(dataStore);
+
 // 编辑用
 const editingRowId = ref<number | null>(null);
 const editingField = ref<null | "title" | "start" | "done">(null);
@@ -343,13 +352,7 @@ const showEstimateInput = ref(false);
 const currentTodoId = ref<number | null>(null);
 const newEstimate = ref<number>(1);
 
-// 定义 Props
-const props = defineProps<{
-  todos: TodoWithTaskRecords[];
-  activeId: number | null | undefined;
-  selectedRowId: number | null; // 新增：从父组件接收选中行ID
-}>();
-
+// 定义 Emit
 const emit = defineEmits<{
   (e: "suspend-todo", id: number): void;
   (e: "cancel-todo", id: number): void;
@@ -370,18 +373,37 @@ const emit = defineEmits<{
 
 // 对待办事项按优先级降序排序（高优先级在前）
 const sortedTodos = computed(() => {
-  if (!props.todos || props.todos.length === 0) {
-    return [];
-  }
+  const todos = [...todosForCurrentViewWithTaskRecords.value];
+  // 分离特殊值（66、88、99）和正常值
+  const specialPriorities = [66, 88, 99];
+  const normalTodos: TodoWithTaskRecords[] = [];
+  const specialTodos: TodoWithTaskRecords[] = [];
 
-  return [...props.todos].sort((a, b) => {
-    // 0 放最后
+  todos.forEach((todo) => {
+    if (specialPriorities.includes(todo.priority)) {
+      specialTodos.push(todo);
+    } else {
+      normalTodos.push(todo);
+    }
+  });
+
+  // 正常任务排序：0放最后，其余越小越优先
+  normalTodos.sort((a, b) => {
     if (a.priority === 0 && b.priority === 0) return 0;
     if (a.priority === 0) return 1;
     if (b.priority === 0) return -1;
-    // 其余越小越优先
     return a.priority - b.priority;
   });
+
+  // 特殊值任务按66、88、99顺序排序
+  specialTodos.sort((a, b) => {
+    const orderA = specialPriorities.indexOf(a.priority);
+    const orderB = specialPriorities.indexOf(b.priority);
+    return orderA - orderB;
+  });
+
+  // 合并：正常任务在前，特殊值任务在后
+  return [...normalTodos, ...specialTodos];
 });
 
 // 优先级 排序================
@@ -414,8 +436,10 @@ function finishEditing() {
     editingTodo.value = null;
     return;
   }
-  if (editingPriority.value > 21) {
-    popoverMessage.value = "请输入1-20";
+  // 允许特殊值66、88、99
+  const specialPriorities = [66, 88, 99];
+  if (!specialPriorities.includes(editingPriority.value) && editingPriority.value > 21) {
+    popoverMessage.value = "请输入0-21或66、88、99";
     showPopover.value = true;
     setTimeout(() => {
       showPopover.value = false;
@@ -433,15 +457,15 @@ function finishEditing() {
   }
 
   const before = new Map<number, number>();
-  props.todos.forEach((t) => before.set(t.id, t.priority));
+  todosForCurrentViewWithTaskRecords.value.forEach((t) => before.set(t.id, t.priority));
 
   // 关键：不再提前修改 priority，而是把 current 和 desired 传给排序函数
   // 让排序函数自己去智能处理
-  relayoutPriority(props.todos, current, desired);
+  relayoutPriority(todosForCurrentViewWithTaskRecords.value, current, desired);
 
   // 后续逻辑不变...
   const updates: Array<{ id: number; priority: number }> = [];
-  props.todos.forEach((t) => {
+  todosForCurrentViewWithTaskRecords.value.forEach((t) => {
     const oldP = before.get(t.id);
     if (oldP !== t.priority) {
       updates.push({ id: t.id, priority: t.priority });
@@ -460,26 +484,35 @@ function finishEditing() {
 
 // 传入 current 和 desired，让排序更智能
 function relayoutPriority(todos: Todo[], current: Todo, desired: number) {
+  // 特殊优先级值，不参与重新分配
+  const specialPriorities = [66, 88, 99];
+
+  // 如果目标是特殊值，直接设置并返回，不参与重新分配
+  if (specialPriorities.includes(desired)) {
+    current.priority = desired;
+    return;
+  }
+
   // 锁定已完成任务的优先级，这部分逻辑不变
   const locked = new Set<number>();
   todos.forEach((t) => {
-    if (t.status === "done" && t.priority > 0) {
+    if (t.status === "done" && t.priority > 0 && !specialPriorities.includes(t.priority)) {
       locked.add(t.priority);
     }
   });
 
-  // 筛选出需要重新排序的活动任务
+  // 筛选出需要重新排序的活动任务，排除特殊值
   const active = todos.filter((t) => t.status !== "done" && t.status !== "cancelled");
 
   // 关键修改：
-  // 找出所有优先级大于 0 的任务
-  const positivePriorityTasks = active.filter((t) => t.priority > 0 && t.id !== current.id);
+  // 找出所有优先级大于 0 且不是特殊值的任务
+  const positivePriorityTasks = active.filter((t) => t.priority > 0 && !specialPriorities.includes(t.priority) && t.id !== current.id);
   // 对它们进行排序
   positivePriorityTasks.sort((a, b) => a.priority - b.priority);
 
   // 将当前正在修改的任务插入到目标位置
   // 如果 desired 是 0 或负数，我们不把它放到排序列表中，因为它不需要参与重新编号
-  if (desired > 0) {
+  if (desired > 0 && !specialPriorities.includes(desired)) {
     // 找到插入点
     const insertIndex = positivePriorityTasks.findIndex((t) => t.priority >= desired);
     if (insertIndex === -1) {
@@ -489,7 +522,7 @@ function relayoutPriority(todos: Todo[], current: Todo, desired: number) {
     }
   }
 
-  // 为被移动的任务重新编号，不触碰 priority <= 0 的任务
+  // 为被移动的任务重新编号，不触碰 priority <= 0 的任务和特殊值
   let next = 1;
   for (const t of positivePriorityTasks) {
     // 跳过锁定的优先级
@@ -561,7 +594,7 @@ function handleAddEstimate(todo: Todo) {
 function confirmAddEstimate() {
   if (!currentTodoId.value) return;
 
-  const todo = props.todos.find((t) => t.id === currentTodoId.value);
+  const todo = todosForCurrentViewWithTaskRecords.value.find((t) => t.id === currentTodoId.value);
   if (!todo) return;
 
   // 确保 estPomo 数组存在
@@ -622,18 +655,34 @@ function handleRowClick(todo: Todo) {
 
 // 编辑相关函数
 function startEditing(todoId: number, field: "title" | "start" | "done") {
-  const todo = props.todos.find((t) => t.id === todoId);
+  const todo = todosForCurrentViewWithTaskRecords.value.find((t) => t.id === todoId);
   if (!todo) return;
   editingRowId.value = todoId;
   editingField.value = field;
-  editingValue.value =
-    field === "title"
-      ? todo.activityTitle || ""
-      : field === "start"
-      ? timestampToTimeString(todo.startTime || todo.taskId || null)
-      : field === "done"
-      ? timestampToTimeString(todo.doneTime || null)
-      : "";
+
+  // 如果是 start 字段且有数据，则替换为当前时间
+  if (field === "start" && todo.startTime) {
+    const now = new Date();
+    const hours = now.getHours().toString().padStart(2, "0");
+    const minutes = now.getMinutes().toString().padStart(2, "0");
+    editingValue.value = `${hours}:${minutes}`;
+  }
+  // 如果是 done 字段且有数据，则替换为当前时间
+  else if (field === "done" && todo.doneTime) {
+    const now = new Date();
+    const hours = now.getHours().toString().padStart(2, "0");
+    const minutes = now.getMinutes().toString().padStart(2, "0");
+    editingValue.value = `${hours}:${minutes}`;
+  } else {
+    editingValue.value =
+      field === "title"
+        ? todo.activityTitle || ""
+        : field === "start"
+        ? timestampToTimeString(todo.startTime || todo.taskId || null)
+        : field === "done"
+        ? timestampToTimeString(todo.doneTime || null)
+        : "";
+  }
 
   // 使用 querySelector 来获取当前编辑的输入框，而不是依赖 ref
   nextTick(() => {
@@ -976,6 +1025,21 @@ td.status-col {
 .priority-10 {
   background-color: #8d6e635c;
   color: #8d6e63;
+}
+
+.priority-66 {
+  background-color: #ffeb3b5c;
+  color: #f57f17;
+}
+
+.priority-88 {
+  background-color: #ffd54f5c;
+  color: #f9a825;
+}
+
+.priority-99 {
+  background-color: #e1bee75c;
+  color: #ab47bc;
 }
 
 /* 估计番茄数量 */
