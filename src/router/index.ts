@@ -45,9 +45,10 @@ const routes: Array<RouteRecordRaw> = [
       { path: "", name: "Home", component: HomeView },
       { path: "statistics", name: "Statistics", component: StatisticView },
       // { path: "settings", name: "Settings", component: SettingView },
-      { path: "help", name: "Help", component: HelpView },
       { path: "search", name: "Search", component: SearchView },
       { path: "chart", name: "Chart", component: ChartView },
+      // 帮助页面（在 MainLayout 内显示，但不需要认证）
+      { path: "help", name: "Help", component: HelpView, meta: { requiresAuth: false } },
     ],
   },
 ];
@@ -59,6 +60,17 @@ const router = createRouter({
 
 // --- 全局前置导航守卫 ---
 router.beforeEach(async (to, _from, next) => {
+  // 动态导入 useSettingStore 以避免循环依赖
+  const { useSettingStore } = await import("@/stores/useSettingStore");
+  const settingStore = useSettingStore();
+
+  // 检查是否是本地模式
+  if (settingStore.settings.localOnlyMode) {
+    // 本地模式下，允许直接访问主应用，不需要检查登录状态
+    next();
+    return;
+  }
+
   if (!isSupabaseEnabled()) {
     // 离线模式下跳过鉴权，直接放行
     next();
@@ -69,9 +81,11 @@ router.beforeEach(async (to, _from, next) => {
   const session = await getSession();
 
   // 检查目标路由是否需要认证
+  // 如果子路由明确设置 requiresAuth: false，则不需要认证
   const requiresAuth = to.matched.some((record) => record.meta.requiresAuth);
+  const explicitlyNoAuth = to.matched.some((record) => record.meta.requiresAuth === false);
 
-  if (requiresAuth && !session) {
+  if (requiresAuth && !explicitlyNoAuth && !session) {
     // 需要认证但用户未登录，重定向到登录页
     next({ name: "Login" });
   } else if (to.name === "Login" && session) {

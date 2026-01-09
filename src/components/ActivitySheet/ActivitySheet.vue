@@ -180,13 +180,16 @@ function filteredBySection(section: ActivitySectionConfig) {
   if (section.filterKey) {
     switch (section.filterKey) {
       case "all":
-        return activeActivities.value;
+        // 全部活动中不显示已取消的活动
+        return activeActivities.value.filter((item) => item.status !== "cancelled");
       case "cancelled":
         // 筛选已删除的活动（保持 filterKey 为 "cancelled" 以向后兼容）
         // 需要使用完整的 activityList，因为 activeActivities 已过滤掉 deleted 的活动
         return activityList.value.filter((item) => item.deleted === true);
       case "today":
         return activeActivities.value.filter((item) => {
+          // 过滤掉已取消的活动
+          if (item.status === "cancelled") return false;
           if (item.class === "T") {
             if (!item.dueDate) return true; // 允许没有日期的项目在今日到期显示
             if (!item.dueDate && item.parentId) return false; // 不允许没有日期的子项目在今日到期显示
@@ -202,11 +205,11 @@ function filteredBySection(section: ActivitySectionConfig) {
           return false;
         });
       case "interrupt":
-        return activeActivities.value.filter((item) => !!item.interruption);
+        return activeActivities.value.filter((item) => item.status !== "cancelled" && !!item.interruption);
       case "todo":
-        return activeActivities.value.filter((item) => item.class === "T");
+        return activeActivities.value.filter((item) => item.status !== "cancelled" && item.class === "T");
       case "schedule":
-        return activeActivities.value.filter((item) => item.class === "S");
+        return activeActivities.value.filter((item) => item.status !== "cancelled" && item.class === "S");
       default:
         break;
     }
@@ -215,7 +218,8 @@ function filteredBySection(section: ActivitySectionConfig) {
   // 没有 filterKey，再看search
   if (section.search) {
     const keyword = section.search.trim().toLowerCase();
-    return activeActivities.value.filter((item) => item.title && item.title.toLowerCase().includes(keyword));
+    // 搜索中也不显示已取消的活动
+    return activeActivities.value.filter((item) => item.status !== "cancelled" && item.title && item.title.toLowerCase().includes(keyword));
   }
 
   // 什么条件都没有，返回空

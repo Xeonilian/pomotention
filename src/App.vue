@@ -65,13 +65,29 @@ onMounted(async () => {
     settingStore.settings.firstSync = false;
   }
 
+  // 检查是否是本地模式
+  if (settingStore.settings.localOnlyMode) {
+    console.log("✅ 本地模式，跳过登录检查，直接进入Home");
+    // 初始化窗口关闭事件
+    appCloseCleanup = await initAppCloseHandler();
+    router.push({ name: "Home" });
+    return;
+  }
+
   // 3. Supabase session & 初始化同步
+  // 如果不是本地模式，检查supabase是否启用
+  if (!isSupabaseEnabled() || !supabase) {
+    console.log("❌ Supabase未启用，跳转到登录页面");
+    router.push({ name: "Login" });
+    return;
+  }
+
   settingStore.settings.autoSupabaseSync = true;
   let session = null;
 
   // 获取用户 session
   try {
-    const { data, error } = await supabase!.auth.getSession();
+    const { data, error } = await supabase.auth.getSession();
     if (error) {
       console.error("获取 session 错误:", error.message ?? error);
     } else {
@@ -87,7 +103,11 @@ onMounted(async () => {
     // 检测用户切换
     const currentUserId = session.user?.id;
     const lastUserId = settingStore.settings.lastLoggedInUserId;
-    if (lastUserId && lastUserId !== currentUserId) {
+    const wasLocalMode = settingStore.settings.wasLocalModeBeforeLogin;
+    
+    // 如果是从本地模式切换过来的，且没有 lastUserId，不清除数据
+    // 如果检测到用户切换，且不是从本地模式切换过来的，清除数据
+    if (lastUserId && lastUserId !== currentUserId && !wasLocalMode) {
       console.log("⚠️ 检测到用户切换，清除本地数据");
       localStorage.clear();
       dataStore.clearData();
@@ -118,26 +138,62 @@ onMounted(async () => {
     router.push({ name: "Login" });
   }
 
-  // 监听认证变化
-  supabase!.auth.onAuthStateChange(async (event, _sess) => {
+  // 监听认证变化（仅在supabase启用时）
+  if (isSupabaseEnabled() && supabase) {
+    supabase.auth.onAuthStateChange(async (event, _sess) => {
     console.log(`🔔 Auth 事件: ${event}, syncInitialized=${syncInitialized.value}`);
 
     if (event === "SIGNED_OUT") {
-      // 1️⃣ 退出登录：清理一切
-      console.log("👋 用户退出，清理本地数据与状态");
-      localStorage.clear();
-      dataStore.clearData();
+      // 1️⃣ 退出登录：根据 wasLocalModeBeforeLogin 决定是否清除数据
+      const wasLocalMode = settingStore.settings.wasLocalModeBeforeLogin;
+      
+      if (wasLocalMode) {
+        // 从本地模式切换过来的，不清除本地数据
+        console.log("👋 用户退出（从本地模式切换），保留本地数据，只清除认证状态");
+        
+        // 只清除认证相关的 localStorage 项
+        try {
+          // 清除 supabase session
+          const keysToRemove: string[] = [];
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && (key.includes("supabase") || key.includes("auth"))) {
+              keysToRemove.push(key);
+            }
+          }
+          keysToRemove.forEach((key) => localStorage.removeItem(key));
+        } catch (err) {
+          console.error("清除认证数据时出错:", err);
+        }
+        
+        // 重置同步时间戳和状态
+        syncStore.lastSyncTimestamp = 0;
+        syncStore.isSyncing = false;
+        syncStore.syncError = null;
+        resetSyncServices();
+        syncInitialized.value = false;
+        settingStore.settings.supabaseSync[0] = 0;
+        // 清除用户ID记录
+        settingStore.settings.lastLoggedInUserId = undefined;
+        // 重置标志
+        settingStore.settings.wasLocalModeBeforeLogin = false;
+      } else {
+        // 正常退出，清除所有数据
+        console.log("👋 用户退出，清理本地数据与状态");
+        localStorage.clear();
+        dataStore.clearData();
 
-      // ✅ 关键：重置同步时间戳，防止下次登录误判为增量同步
-      syncStore.lastSyncTimestamp = 0;
-      // 如果 syncStore 是用 setup 写法且没有 $reset，手动重置其他状态
-      syncStore.isSyncing = false;
-      syncStore.syncError = null;
-      resetSyncServices();
-      syncInitialized.value = false; // 重置标志
-      settingStore.settings.supabaseSync[0] = 0; // 如果你也用这个存时间，也要重置
-      // 清除用户ID记录
-      settingStore.settings.lastLoggedInUserId = undefined;
+        // ✅ 关键：重置同步时间戳，防止下次登录误判为增量同步
+        syncStore.lastSyncTimestamp = 0;
+        // 如果 syncStore 是用 setup 写法且没有 $reset，手动重置其他状态
+        syncStore.isSyncing = false;
+        syncStore.syncError = null;
+        resetSyncServices();
+        syncInitialized.value = false; // 重置标志
+        settingStore.settings.supabaseSync[0] = 0; // 如果你也用这个存时间，也要重置
+        // 清除用户ID记录
+        settingStore.settings.lastLoggedInUserId = undefined;
+      }
 
       router.push({ name: "Login" });
     } else if (event === "SIGNED_IN") {
@@ -147,8 +203,18 @@ onMounted(async () => {
         const currentUserId = user.id;
         const lastUserId = settingStore.settings.lastLoggedInUserId;
 
+        // 检查是否从本地模式登录
+        const wasLocalMode = settingStore.settings.localOnlyMode;
+        if (wasLocalMode) {
+          // 从本地模式登录，设置标志以保护数据
+          settingStore.settings.wasLocalModeBeforeLogin = true;
+          settingStore.settings.localOnlyMode = false;
+          console.log("✅ 从本地模式登录，设置 wasLocalModeBeforeLogin = true");
+        }
+
         // 检测用户切换
-        if (lastUserId && lastUserId !== currentUserId) {
+        // 如果是从本地模式切换过来的，且没有 lastLoggedInUserId，不清除数据
+        if (lastUserId && lastUserId !== currentUserId && !wasLocalMode) {
           console.log("⚠️ 检测到用户切换，清除本地数据");
           localStorage.clear();
           dataStore.clearData();
@@ -177,7 +243,8 @@ onMounted(async () => {
       // 这个事件在 getSession() 后自动触发，跳过
       console.log("⏭️ INITIAL_SESSION 事件，跳过（已在 getSession 中处理）");
     }
-  });
+    });
+  }
 });
 
 // 组件卸载时统一清理

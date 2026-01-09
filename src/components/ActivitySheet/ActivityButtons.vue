@@ -33,13 +33,13 @@
       </template>
     </n-button>
     <n-button
+      v-if="activeId !== null && activeId !== undefined"
       :title="props.isDeleted ? '恢复活动' : '删除活动'"
       @click="$emit('delete-active')"
       circle
       secondary
       :type="props.isDeleted ? 'error' : 'default'"
       size="small"
-      :disabled="activeId === null || activeId === undefined"
     >
       <template #icon>
         <n-icon>

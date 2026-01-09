@@ -117,9 +117,9 @@
               />
 
               <span v-else class="priority-badge" :class="'priority-' + todo.priority">
-                <template v-if="todo.priority === 66">😀</template>
-                <template v-else-if="todo.priority === 88">💰</template>
-                <template v-else-if="todo.priority === 99">🎈</template>
+                <template v-if="todo.priority === 66">💖</template>
+                <template v-else-if="todo.priority === 88">💸</template>
+                <template v-else-if="todo.priority === 99">🧸</template>
                 <template v-else>{{ todo.priority > 0 ? todo.priority : "" }}</template>
               </span>
             </td>
@@ -1028,17 +1028,17 @@ td.status-col {
 }
 
 .priority-66 {
-  background-color: #ffeb3b5c;
+  background-color: #ffffff5c;
   color: #f57f17;
 }
 
 .priority-88 {
-  background-color: #ffd54f5c;
+  background-color: #ffffff5c;
   color: #f9a825;
 }
 
 .priority-99 {
-  background-color: #e1bee75c;
+  background-color: #ffffff5c;
   color: #ab47bc;
 }
 

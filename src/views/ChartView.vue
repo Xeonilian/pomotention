@@ -45,18 +45,53 @@
 </template>
 
 <script setup lang="ts">
-import { ref, defineAsyncComponent } from "vue";
+import { ref, computed, watchEffect, defineAsyncComponent } from "vue";
 import { useChartStats } from "@/composables/useChartStats";
 import { getPresetConfig } from "@/services/chartConfigService";
 import type { ChartConfig } from "@/core/types/ChartConfig";
+import { useDataStore } from "@/stores/useDataStore";
+import { useSyncStore } from "@/stores/useSyncStore";
+import { useSettingStore } from "@/stores/useSettingStore";
 
 const ChartWidget = defineAsyncComponent(() => import("@/components/ChartWidget.vue"));
 const HeatmapChart = defineAsyncComponent(() => import("@/components/HeatmapChart.vue"));
+
+const dataStore = useDataStore();
+const syncStore = useSyncStore();
+const settingStore = useSettingStore();
 
 /**
  * 统计数据
  */
 const stats = useChartStats();
+
+/**
+ * 判断数据是否就绪
+ * 本地模式：数据已加载即可
+ * 在线模式：数据已加载且同步已完成（或无错误）
+ */
+const isDataReady = computed(() => {
+  // 本地模式：检查数据是否已加载
+  if (settingStore.settings.localOnlyMode) {
+    return dataStore.isDataLoaded;
+  }
+  // 在线模式：数据已加载且（同步完成或未启用同步）
+  return dataStore.isDataLoaded && (!syncStore.isSyncing && !syncStore.syncError);
+});
+
+/**
+ * 数据就绪时自动触发计算
+ * 通过访问 stats 属性来确保 computed 被计算
+ */
+watchEffect(() => {
+  if (isDataReady.value) {
+    // 数据已就绪，访问 stats 属性触发 computed 计算
+    // 这确保了统计数据在数据加载/同步完成后立即计算
+    void stats.totalPomodoros;
+    void stats.avgEnergy;
+    void stats.avgReward;
+  }
+});
 
 /**
  * 图表配置列表

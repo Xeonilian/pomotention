@@ -107,6 +107,7 @@ function shiftDateRange(range: DateRange, direction: number): DateRange {
     };
   } else {
     // custom 类型：根据时间跨度平移
+    console.log("chartRef.value", chartRef.value); // 为了不报错先打印一下
     const { start, end } = getDateRangeBounds(range);
     const duration = end - start;
 

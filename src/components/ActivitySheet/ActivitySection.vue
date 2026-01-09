@@ -76,7 +76,7 @@
             <template #prefix>
               <div
                 class="icon-drag-area"
-                :class="{ 'has-children': hasChildren(item.id) }"
+                :class="{ 'has-children': hasChildren(item.id), 'is-collapsed': collapsedParentIds[item.id] }"
                 style="touch-action: none; cursor: grab"
                 @pointerdown="onDragStart($event, item)"
                 :title="getDragAreaTitle(item)"
@@ -880,11 +880,21 @@ function onInputUpdate(item: Activity, value: string) {
 .icon-drag-area.has-children::before {
   content: "";
   position: absolute;
-  inset: 0;
-  background-color: var(--color-yellow);
-  border-radius: 10px;
-  z-index: 0;
-  pointer-events: none;
+  left: -11px;
+  bottom: -14px;
+  width: 14px;
+  height: 14px;
+  border-radius: 2px;
+  transform: rotate(-135deg);
+  transform-origin: 50% 50%;
+  z-index: 1;
+  cursor: pointer;
+  background: var(--color-background-dark);
+  display: block;
+}
+
+.icon-drag-area.has-children.is-collapsed::before {
+  background: var(--color-background-dark-dark);
 }
 
 .icon-drag-area.has-children > * {
