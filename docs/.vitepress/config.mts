@@ -1,16 +1,22 @@
 import { defineConfig } from "vitepress";
 
+// 支持多环境部署：通过环境变量动态设置 base 路径
+// GitHub Pages: /pomotention/
+// Cloudflare Pages: /help
+// 本地 APP: / (相对路径)
+const base = process.env.VITEPRESS_BASE || "/pomotention/";
+
 export default defineConfig({
-  base: "/pomotention/",
+  base,
   title: "Pomotention",
   description: "🍅 基于番茄工作法与执行意图的自我照顾系统",
 
   head: [
-    ["link", { rel: "icon", href: "/pomotention/favicon.ico", sizes: "any" }],
-    ["link", { rel: "icon", type: "image/png", href: "/pomotention/logo.png" }],
+    ["link", { rel: "icon", href: `${base}favicon.ico`, sizes: "any" }],
+    ["link", { rel: "icon", type: "image/png", href: `${base}logo.png` }],
   ],
   themeConfig: {
-    logo: "/logo.png",
+    logo: `${base}logo.png`,
 
     nav: [
       { text: "首页", link: "/" },

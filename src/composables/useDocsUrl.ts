@@ -10,7 +10,12 @@ import { isTauri } from "@tauri-apps/api/core";
  * 优先级顺序：
  * 1. 开发模式：本地 VitePress 开发服务器 (http://localhost:5173)
  * 2. 生产模式（Tauri）：本地打包的文档 (./docs/index.html)
- * 3. 生产模式（Web）：在线版本 (Cloudflare Pages)
+ * 3. 生产模式（Web）：在线版本（优先 Cloudflare Pages，fallback 到 GitHub Pages）
+ *
+ * 三路部署方案：
+ * - GitHub Pages: https://xeonilian.github.io/pomotention/
+ * - Cloudflare Pages: https://pomotention.pages.dev/help/
+ * - 本地 APP: ./docs/index.html (相对路径，离线可用)
  */
 export function useDocsUrl() {
   const isTauriApp = isTauri();
@@ -23,9 +28,11 @@ export function useDocsUrl() {
   // 本地打包文档路径（需要在构建时复制文档到 public/docs）
   const localDocsUrl = "./docs/index.html";
 
-  // Cloudflare Pages 在线文档地址
-  // 注意：VitePress 的 base 是 /pomotention/，所以完整路径需要包含这个前缀
-  const onlineDocsUrl = "https://pomotention.pages.dev/pomotention/";
+  // GitHub Pages 在线文档地址（fallback）
+  const githubPagesUrl = "https://xeonilian.github.io/pomotention/";
+
+  // Cloudflare Pages 在线文档地址（base: /help，优先使用）
+  const cloudflarePagesUrl = "https://pomotention.pages.dev/help/";
 
   // 检测本地开发服务器是否可用
   const isLocalDevServerAvailable = ref(false);
@@ -59,13 +66,13 @@ export function useDocsUrl() {
       return localDocsUrl;
     }
 
-    // 生产模式（Web）：使用在线版本
+    // 生产模式（Web）：优先使用 Cloudflare Pages，fallback 到 GitHub Pages
     if (isProd && !isTauriApp) {
-      return onlineDocsUrl;
+      return cloudflarePagesUrl;
     }
 
-    // 开发模式但本地服务器不可用：fallback 到在线版本
-    return onlineDocsUrl;
+    // 开发模式但本地服务器不可用：fallback 到在线版本（优先 Cloudflare）
+    return cloudflarePagesUrl;
   });
 
   // 文档来源描述（用于调试）
@@ -75,6 +82,9 @@ export function useDocsUrl() {
     }
     if (isProd && isTauriApp) {
       return "本地打包文档";
+    }
+    if (isProd && !isTauriApp) {
+      return "Cloudflare Pages";
     }
     return "在线文档";
   });
