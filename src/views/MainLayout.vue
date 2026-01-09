@@ -32,8 +32,7 @@
                   </template>
                 </n-button>
               </template>
-
-              需备份数据后退出，确定要退出登录吗？
+              {{ isTauri() ? "将弹出数据备份窗口，确定要退出登录吗？" : "确定要退出登录吗？" }}
             </n-popconfirm>
           </div>
         </div>
