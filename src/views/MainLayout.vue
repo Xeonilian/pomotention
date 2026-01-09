@@ -274,20 +274,54 @@ const loggingOut = ref(false);
 
 async function handleLogout() {
   loggingOut.value = true;
-  // App上数据备份
-  // 警告用户: 退出之前请导出数据
-  if (isTauri()) {
-    const confirmExport = confirm("在退出之前，您必须导出数据。是否继续导出？");
-    if (confirmExport) {
-      const exportSuccessful = await handleExport(); // 调用导出方法
-      if (!exportSuccessful) {
-        // 如果导出失败，停止注销
+  
+  // 检查是否从本地模式切换过来的
+  const wasLocalMode = settingStore.settings.wasLocalModeBeforeLogin;
+  
+  if (wasLocalMode) {
+    // 从本地模式切换过来的，不清除本地数据
+    console.log("👋 退出登录（从本地模式切换），保留本地数据");
+    
+    // App上数据备份提示（可选）
+    if (isTauri()) {
+      const confirmExport = confirm("退出登录将保留您的本地数据。是否继续？");
+      if (!confirmExport) {
         loggingOut.value = false;
         return;
       }
     }
+    
+    // 只清除认证相关的 localStorage 项
+    try {
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.includes("supabase") || key.includes("auth"))) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach((key) => localStorage.removeItem(key));
+    } catch (err) {
+      console.error("清除认证数据时出错:", err);
+    }
+  } else {
+    // 正常退出，清除所有数据
+    // App上数据备份
+    // 警告用户: 退出之前请导出数据
+    if (isTauri()) {
+      const confirmExport = confirm("在退出之前，您必须导出数据。是否继续导出？");
+      if (confirmExport) {
+        const exportSuccessful = await handleExport(); // 调用导出方法
+        if (!exportSuccessful) {
+          // 如果导出失败，停止注销
+          loggingOut.value = false;
+          return;
+        }
+      }
+    }
+    localStorage.clear();
   }
-  localStorage.clear();
+  
   await signOut();
   loggingOut.value = false;
   router.push({ name: "Login" });
