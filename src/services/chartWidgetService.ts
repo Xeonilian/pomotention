@@ -188,7 +188,7 @@ export function generateEChartsOption(config: ChartConfig, dataByMetric: Map<Met
     },
     legend: {
       show: config.showLegend,
-      bottom: 10,
+      bottom: 0, // 底边位置
     },
     grid: {
       left: "3%",
