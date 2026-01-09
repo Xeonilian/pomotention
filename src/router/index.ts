@@ -36,6 +36,13 @@ const routes: Array<RouteRecordRaw> = [
     name: "ResetPassword",
     component: ResetPassword,
   },
+  // 帮助页面（不需要认证，可以直接访问）
+  {
+    path: "/help",
+    name: "Help",
+    component: HelpView,
+    meta: { requiresAuth: false },
+  },
   // 主应用布局路由
   {
     path: "/",
@@ -45,7 +52,6 @@ const routes: Array<RouteRecordRaw> = [
       { path: "", name: "Home", component: HomeView },
       { path: "statistics", name: "Statistics", component: StatisticView },
       // { path: "settings", name: "Settings", component: SettingView },
-      { path: "help", name: "Help", component: HelpView },
       { path: "search", name: "Search", component: SearchView },
       { path: "chart", name: "Chart", component: ChartView },
     ],
