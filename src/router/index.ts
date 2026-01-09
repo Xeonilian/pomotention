@@ -36,13 +36,6 @@ const routes: Array<RouteRecordRaw> = [
     name: "ResetPassword",
     component: ResetPassword,
   },
-  // 帮助页面（不需要认证，可以直接访问）
-  {
-    path: "/help",
-    name: "Help",
-    component: HelpView,
-    meta: { requiresAuth: false },
-  },
   // 主应用布局路由
   {
     path: "/",
@@ -54,6 +47,8 @@ const routes: Array<RouteRecordRaw> = [
       // { path: "settings", name: "Settings", component: SettingView },
       { path: "search", name: "Search", component: SearchView },
       { path: "chart", name: "Chart", component: ChartView },
+      // 帮助页面（在 MainLayout 内显示，但不需要认证）
+      { path: "help", name: "Help", component: HelpView, meta: { requiresAuth: false } },
     ],
   },
 ];
@@ -86,9 +81,11 @@ router.beforeEach(async (to, _from, next) => {
   const session = await getSession();
 
   // 检查目标路由是否需要认证
+  // 如果子路由明确设置 requiresAuth: false，则不需要认证
   const requiresAuth = to.matched.some((record) => record.meta.requiresAuth);
+  const explicitlyNoAuth = to.matched.some((record) => record.meta.requiresAuth === false);
 
-  if (requiresAuth && !session) {
+  if (requiresAuth && !explicitlyNoAuth && !session) {
     // 需要认证但用户未登录，重定向到登录页
     next({ name: "Login" });
   } else if (to.name === "Login" && session) {

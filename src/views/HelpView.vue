@@ -23,7 +23,7 @@
         <p>当前文档源不可用：{{ docsUrl }}</p>
         <p>请检查：</p>
         <ul>
-          <li v-if="import.meta.env.DEV">
+          <li v-if="isDev">
             本地 VitePress 开发服务器是否运行（运行
             <code>pnpm docs:dev</code>
             ）
@@ -53,6 +53,7 @@
 import { ref, onMounted } from "vue";
 import { getVersion } from "@tauri-apps/api/app";
 import { isTauri } from "@tauri-apps/api/core";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { NTag, NButton, NDropdown, NAlert } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
 import { useDocsUrl } from "@/composables/useDocsUrl";
@@ -66,8 +67,22 @@ const { docsUrl, docsSource } = useDocsUrl();
 
 const githubUrl = "https://github.com/Xeonilian/pomotention";
 
+// 打开外部链接的统一方法
+const openExternalUrl = async (url: string) => {
+  if (isTauriApp) {
+    // Tauri 应用中使用 opener 插件
+    await openUrl(url);
+  } else {
+    // Web 环境中使用 window.open
+    window.open(url, "_blank");
+  }
+};
+
+// 开发模式标志
+const isDev = import.meta.env.DEV;
+
 // 显示文档来源信息（仅在开发模式或调试时）
-const showSourceInfo = import.meta.env.DEV;
+const showSourceInfo = isDev;
 
 // 下载源配置（支持多个平台）
 const downloadOptions: DropdownOption[] = [
@@ -98,23 +113,25 @@ onMounted(async () => {
 });
 
 // 打开 GitHub
-const openGitHub = () => {
-  window.open(githubUrl, "_blank");
+const openGitHub = async () => {
+  await openExternalUrl(githubUrl);
 };
 
 // 处理下载选择
-const handleDownload = (key: string | number) => {
+const handleDownload = async (key: string | number) => {
+  let url = "";
   switch (key) {
     case "github":
-      window.open(`https://github.com/Xeonilian/pomotention/releases/latest`, "_blank");
+      url = `https://github.com/Xeonilian/pomotention/releases/latest`;
       break;
     case "gitee":
       // 码云 Releases 链接（需要实际创建后更新）
-      window.open(`https://gitee.com/xeonilian/pomotention/releases`, "_blank");
+      url = `https://gitee.com/xeonilian/pomotention/releases`;
       break;
     default:
-      window.open(`https://github.com/Xeonilian/pomotention/releases/latest`, "_blank");
+      url = `https://github.com/Xeonilian/pomotention/releases/latest`;
   }
+  await openExternalUrl(url);
 };
 
 // iframe 加载错误处理
@@ -147,6 +164,7 @@ const reloadIframe = () => {
   display: flex;
   flex-direction: column;
   background: var(--color-background);
+  overflow: hidden;
 }
 
 /* 版本信息栏（仅桌面版） */
@@ -199,5 +217,6 @@ const reloadIframe = () => {
   height: 100%;
   border: none;
   flex: 1;
+  min-height: 0;
 }
 </style>
