@@ -127,7 +127,6 @@ import {
   Timer24Regular,
   Pin24Regular,
   BrainCircuit24Regular,
-  CloudSync24Regular,
 } from "@vicons/fluent";
 import PomotentionTimer from "@/components/PomotentionTimer/PomotentionTimer.vue";
 
@@ -150,7 +149,7 @@ const {
   handlePomotentionTimerSizeReport,
 } = useAppWindow();
 
-const { syncStore, syncIcon, relativeTime, handleUpload, handleDownload } = useSyncWidget();
+const { syncStore, syncIcon, relativeTime } = useSyncWidget(); //, handleUpload, handleDownload
 
 // === 2. 菜单与路由逻辑 ===
 const currentRoutePath = ref(route.path);
