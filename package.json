@@ -8,6 +8,8 @@
     "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
+    "docs:build:local": "cd docs && cross-env VITEPRESS_BASE=/ pnpm docs:build:local",
+    "build:with-docs": "pnpm docs:build:local && pnpm build",
     "new:ctt": "node scripts/new_contract.cjs",
     "new:branch": "node scripts/new_branch.cjs",
     "new:pr": "node scripts/create_pr.cjs",

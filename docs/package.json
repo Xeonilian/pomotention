@@ -2,8 +2,10 @@
   "scripts": {
     "docs:dev": "vitepress dev",
     "docs:build": "vitepress build",
+    "docs:build:cloudflare": "vitepress build",
+    "docs:build:local": "vitepress build",
     "docs:preview": "vitepress preview",
-    "deploy": "vitepress build && npx gh-pages -d .vitepress/dist"
+    "docs:deploy:github": "vitepress build && npx gh-pages -d .vitepress/dist"
   },
   "devDependencies": {
     "gh-pages": "^6.3.0",
