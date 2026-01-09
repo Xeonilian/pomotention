@@ -33,8 +33,7 @@
       </template>
     </n-button>
     <n-button
-      v-if="activeId !== null && activeId !== undefined"
-      :title="props.isDeleted ? '恢复活动' : '删除活动'"
+      :title="props.isDeleted && activeId !== null && activeId !== undefined ? '恢复活动' : '删除活动'"
       @click="$emit('delete-active')"
       circle
       secondary
@@ -43,7 +42,7 @@
     >
       <template #icon>
         <n-icon>
-          <DeleteDismiss24Regular v-if="props.isDeleted" />
+          <DeleteDismiss24Regular v-if="props.isDeleted && activeId !== null && activeId !== undefined" />
           <Delete24Regular v-else />
         </n-icon>
       </template>
