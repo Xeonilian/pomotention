@@ -52,8 +52,13 @@ const debouncedFocusSync = debounce(async (source: string) => {
   if (!settingStore.settings.autoSupabaseSync) return;
   if (syncStore.isSyncing) return;
 
-  console.log(`📥 [${source}] 窗口激活，执行全量同步 (拉取更新)...`);
-  await syncAll(); // 包含 upload + download
+  try {
+    console.log(`📥 [${source}] 窗口激活，执行全量同步 (拉取更新)...`);
+    await syncAll(); // 包含 upload + download
+  } catch (error) {
+    console.error(`❌ [${source}] 全量同步失败`, error);
+    syncStore.isSyncing = false; // 同步报错时重置状态
+  }
 }, 2000);
 
 /**
@@ -69,8 +74,13 @@ const debouncedBlurSync = debounce(async (source: string) => {
 
   // 只有本地有脏数据才上传
   if (checkUnsyncedData(source)) {
-    console.log(`📤 [${source}] 窗口失去焦点，执行上传...`);
-    await uploadAll(); // 只上传
+    try {
+      console.log(`📤 [${source}] 窗口失去焦点，执行上传...`);
+      await uploadAll(); // 只上传
+    } catch (error) {
+      console.error(`❌ [${source}] 上传失败`, error);
+      syncStore.isSyncing = false; // 上传报错时重置状态
+    }
   }
 }, 500);
 
@@ -87,16 +97,32 @@ async function setupTauriCloseHandler() {
     const appWindow = getCurrentWindow();
     const syncStore = useSyncStore();
 
-    // 1. 关闭拦截 (保持原有逻辑，不做防抖，必须立即执行)
+    // 1. 关闭拦截 (优化逻辑，防止状态锁死)
     const unlistenClose = await appWindow.onCloseRequested(async (event) => {
-      if (syncStore.isSyncing) {
-        event.preventDefault();
-        await appWindow.close(); // 或者等待逻辑
-        return;
-      }
-      if (checkUnsyncedData("Tauri Close")) {
-        event.preventDefault();
-        await uploadAll();
+      event.preventDefault(); // 先统一阻止默认关闭
+
+      try {
+        // 如果正在同步，等待500ms再检查
+        if (syncStore.isSyncing) {
+          console.log(`⏳ [Tauri Close] 已有同步任务，等待完成...`);
+          await new Promise((resolve) => setTimeout(resolve, 500));
+        }
+
+        // 检查并上传未同步数据
+        if (checkUnsyncedData("Tauri Close")) {
+          console.log(`📤 [Tauri Close] 执行最终上传...`);
+          const uploadResult = await uploadAll();
+          if (!uploadResult.success) {
+            console.warn("[Tauri Close] 上传失败，强制重置同步状态");
+            syncStore.isSyncing = false;
+          }
+        }
+
+        // 最终关闭窗口
+        await appWindow.close();
+      } catch (error) {
+        console.error(`❌ [Tauri Close] 关闭时同步失败`, error);
+        syncStore.isSyncing = false; // 异常时重置状态
         await appWindow.close();
       }
     });
