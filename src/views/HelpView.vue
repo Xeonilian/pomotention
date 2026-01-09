@@ -28,26 +28,15 @@
           class="switch-button"
           :title="settingStore.settings.checkForUpdate ? '关闭更新' : '启动更新'"
         />
-        <n-button @click="trySyncPomotention" size="small" type="info" secondary>
+        <n-button @click="handleImport" size="small" type="info" secondary title="导入数据">
           <template #icon>
             <n-icon>
-              <ArrowSync24Regular />
+              <DocumentHeaderArrowDown20Regular />
             </n-icon>
           </template>
         </n-button>
       </div>
-      <WebdavInputDialog v-model:show="showWebdavDialog" />
-      <n-modal
-        v-model:show="showSyncPanel"
-        preset="dialog"
-        title="数据同步"
-        size="medium"
-        :bordered="false"
-        :closable="true"
-        :mask-closable="true"
-      >
-        <SyncPanel />
-      </n-modal>
+
       <div class="help-info">
         <h3>📋 功能一览</h3>
         <ul>
@@ -99,15 +88,15 @@ import { isTauri } from "@tauri-apps/api/core";
 import { NTag, NSwitch, NButton } from "naive-ui";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { watch } from "vue";
-import { ArrowSync24Regular } from "@vicons/fluent";
-import WebdavInputDialog from "@/components/WebdavInputDialog.vue";
-import SyncPanel from "@/components/SyncPanel.vue";
+import { DocumentHeaderArrowDown20Regular } from "@vicons/fluent";
+import { open } from "@tauri-apps/plugin-dialog";
+import { readDir } from "@tauri-apps/plugin-fs";
+import { join } from "@tauri-apps/api/path";
+import { handleFileImport, type ImportReport } from "@/services/mergeService";
 
 const localVersion = ref("");
 const checkVersion = isTauri();
 const settingStore = useSettingStore();
-const showWebdavDialog = ref(false);
-const showSyncPanel = ref(false);
 
 // 云端版信息
 const remoteVersion = ref("...");
@@ -180,18 +169,22 @@ async function checkRemoteRelease() {
   }
 }
 
-function trySyncPomotention() {
-  const settingStore = useSettingStore();
-  if (
-    settingStore.settings.webdavId &&
-    settingStore.settings.webdavWebsite &&
-    settingStore.settings.webdavKey &&
-    settingStore.settings.webdavPath
-  ) {
-    showSyncPanel.value = true;
-  } else {
-    showWebdavDialog.value = true;
+const importReport = ref<ImportReport | null>(null);
+async function handleImport() {
+  importReport.value = null;
+  const dirPath = await open({ directory: true, multiple: false });
+  if (!dirPath || typeof dirPath !== "string") return;
+
+  const entries = await readDir(dirPath);
+  const filePaths: { [key: string]: string } = {}; // key 是文件名，value 是完整路径
+
+  for (const entry of entries) {
+    if (entry.name && entry.name.toLowerCase().endsWith(".json")) {
+      const fullPath = await join(dirPath, entry.name);
+      filePaths[entry.name] = fullPath;
+    }
   }
+  importReport.value = await handleFileImport(filePaths);
 }
 </script>
 
