@@ -3,11 +3,11 @@ name: Docs CI
 on:
   pull_request:
     paths:
-      - "docs/**"
+      - "doc/**"
   push:
     branches: [main]
     paths:
-      - "docs/**"
+      - "doc/**"
 
 jobs:
   docs-checks:
