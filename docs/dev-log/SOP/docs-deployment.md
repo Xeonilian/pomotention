@@ -8,7 +8,7 @@
 2. **Cloudflare Pages**：部署到 `pomotention.pages.dev/help`，base: `/help`
 3. **本地 APP**：Tauri 应用内嵌文档，使用相对路径 base: `/`
 
-每次推送到 GitHub 仓库的 `main` 分支时，GitHub Pages 和 Cloudflare Pages 会自动检测并部署更新。
+每次通过 Pull Request 合并到 `main` 分支时，GitHub Pages 和 Cloudflare Pages 会自动检测并部署更新。
 
 **重要说明**：
 
@@ -111,8 +111,9 @@ pnpm docs:preview
 
 **自动部署（推荐）**：
 
-- 推送到 `main` 分支的 `docs/` 目录变更时，GitHub Actions 会自动触发
+- 当 Pull Request 合并到 `main` 分支且包含 `docs/` 目录变更时，GitHub Actions 会自动触发
 - 工作流文件：`.github/workflows/docs-deploy.yml`
+- 触发条件：PR 合并到 `main` 分支（符合分支保护规则，不允许直接 push）
 - 构建命令：`cd docs && pnpm install && pnpm docs:build` (base: `/pomotention/`)
 - 自动推送到 `gh-pages` 分支
 - 访问地址：https://xeonilian.github.io/pomotention/
@@ -128,14 +129,14 @@ pnpm docs:deploy:github
 
 **自动部署（推荐）**：
 
-- 推送到 `main` 分支时，Cloudflare Pages 会自动检测并部署
+- 当 Pull Request 合并到 `main` 分支时，Cloudflare Pages 会自动检测并部署
 - 在 Cloudflare Dashboard 中配置：
   - **构建命令**：`cd docs && pnpm install && VITEPRESS_BASE=/help pnpm docs:build:cloudflare`
   - **构建输出目录**：`docs/.vitepress/dist`
   - **根目录**：`/` (项目根目录)
   - **Node 版本**：20
   - **环境变量**：`VITEPRESS_BASE=/help`
-  - **自动部署触发**：推送到 `main` 分支
+  - **自动部署触发**：Pull Request 合并到 `main` 分支
 - 访问地址：https://pomotention.pages.dev/help/
 
 **手动部署**：
@@ -256,7 +257,7 @@ cp -r docs/.vitepress/dist/* public/docs/
 
 ### 文档未更新
 
-1. 确认代码已推送到 `main` 分支
+1. 确认 Pull Request 已合并到 `main` 分支
 2. 检查 GitHub Actions 和 Cloudflare Dashboard 中的部署状态
 3. 清除浏览器缓存后刷新页面
 4. 检查 base 路径配置是否正确

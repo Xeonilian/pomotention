@@ -30,12 +30,17 @@ concurrency:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    # 只在 PR 合并时执行（如果是 push 事件则跳过此检查）
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        # PR 合并时需要 checkout 合并后的代码
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.merged == true && github.event.pull_request.merge_commit_sha || github.ref }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
