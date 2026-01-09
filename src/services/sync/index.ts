@@ -126,60 +126,95 @@ interface SyncResult {
  * 内部上传逻辑
  */
 async function _internalUpload(): Promise<SyncResult> {
-  const errors: string[] = [];
-  let uploaded = 0;
-
-  // 1. 优先上传 Activities (作为依赖)
-  const activityService = syncServices.find((s) => s.name === "Activities");
-  if (activityService) {
-    const res = await activityService.service.upload();
-    if (!res.success) {
-      errors.push(`Activities 上传失败: ${res.error}`);
-      return { errors, count: uploaded }; // 核心依赖失败，中断
-    }
-    uploaded += res.uploaded;
-  }
-
-  // 2. 并行上传其他
-  const otherServices = syncServices.filter((s) => s.name !== "Activities");
-  const results = await Promise.allSettled(otherServices.map(({ name, service }) => service.upload().then((res: any) => ({ name, res }))));
-
-  results.forEach((outcome) => {
-    if (outcome.status === "fulfilled") {
-      const { name, res } = outcome.value;
-      if (!res.success) errors.push(`${name} 上传失败: ${res.error}`);
-      else uploaded += res.uploaded;
-    } else {
-      errors.push(`上传异常: ${outcome.reason}`);
-    }
+  // 新增：10秒超时兜底
+  const timeoutPromise = new Promise<SyncResult>((_, reject) => {
+    setTimeout(() => reject(new Error("上传操作超时")), 10000);
   });
 
-  return { errors, count: uploaded };
+  const uploadPromise = new Promise<SyncResult>(async (resolve) => {
+    const errors: string[] = [];
+    let uploaded = 0;
+
+    // 1. 优先上传 Activities (作为依赖)
+    const activityService = syncServices.find((s) => s.name === "Activities");
+    if (activityService) {
+      try {
+        const res = await activityService.service.upload();
+        if (!res.success) {
+          errors.push(`Activities 上传失败: ${res.error}`);
+          resolve({ errors, count: uploaded });
+          return;
+        }
+        uploaded += res.uploaded;
+      } catch (e: any) {
+        errors.push(`Activities 上传异常: ${e.message}`);
+        resolve({ errors, count: uploaded });
+        return;
+      }
+    }
+
+    // 2. 并行上传其他
+    const otherServices = syncServices.filter((s) => s.name !== "Activities");
+    const results = await Promise.allSettled(
+      otherServices.map(({ name, service }) => service.upload().then((res: any) => ({ name, res })))
+    );
+
+    results.forEach((outcome) => {
+      if (outcome.status === "fulfilled") {
+        const { name, res } = outcome.value;
+        if (!res.success) errors.push(`${name} 上传失败: ${res.error}`);
+        else uploaded += res.uploaded;
+      } else {
+        errors.push(`上传异常: ${outcome.reason}`);
+      }
+    });
+
+    resolve({ errors, count: uploaded });
+  });
+
+  try {
+    return await Promise.race([uploadPromise, timeoutPromise]);
+  } catch (e: any) {
+    return { errors: [e.message], count: 0 };
+  }
 }
 
 /**
  * 内部下载逻辑
  */
 async function _internalDownload(lastSyncTimestamp: number): Promise<SyncResult> {
-  const errors: string[] = [];
-  let downloaded = 0;
-
-  // 并行下载所有表
-  const results = await Promise.allSettled(
-    syncServices.map(({ name, service }) => service.download(lastSyncTimestamp).then((res: any) => ({ name, res })))
-  );
-
-  results.forEach((outcome) => {
-    if (outcome.status === "fulfilled") {
-      const { name, res } = outcome.value;
-      if (!res.success) errors.push(`${name} 下载失败: ${res.error}`);
-      else downloaded += res.downloaded;
-    } else {
-      errors.push(`下载异常: ${outcome.reason}`);
-    }
+  // 新增：10秒超时兜底
+  const timeoutPromise = new Promise<SyncResult>((_, reject) => {
+    setTimeout(() => reject(new Error("下载操作超时")), 10000);
   });
 
-  return { errors, count: downloaded };
+  const downloadPromise = new Promise<SyncResult>(async (resolve) => {
+    const errors: string[] = [];
+    let downloaded = 0;
+
+    // 并行下载所有表
+    const results = await Promise.allSettled(
+      syncServices.map(({ name, service }) => service.download(lastSyncTimestamp).then((res: any) => ({ name, res })))
+    );
+
+    results.forEach((outcome) => {
+      if (outcome.status === "fulfilled") {
+        const { name, res } = outcome.value;
+        if (!res.success) errors.push(`${name} 下载失败: ${res.error}`);
+        else downloaded += res.downloaded;
+      } else {
+        errors.push(`下载异常: ${outcome.reason}`);
+      }
+    });
+
+    resolve({ errors, count: downloaded });
+  });
+
+  try {
+    return await Promise.race([downloadPromise, timeoutPromise]);
+  } catch (e: any) {
+    return { errors: [e.message], count: 0 };
+  }
 }
 
 /**
@@ -237,14 +272,14 @@ async function runSyncTask(actionName: string, taskFn: () => Promise<{ success: 
     syncStore.syncFailed(e.message);
     return { success: false, errors: [e.message] };
   } finally {
-    // 确保如果还在 loading 状态，强制结束
+    // 核心修复：无论如何都确保 isSyncing 被重置（防止锁死）
     if (syncStore.isSyncing) {
-      // 如果没有报错，那就是成功
-      if (!syncStore.syncError) {
-        syncStore.syncSuccess(`${actionName}完成`);
-      } else {
-        // 如果有错，保持错误状态（通常 syncFailed 会处理 loading = false）
+      if (syncStore.syncError) {
+        // 有错误：保持错误状态，但重置 isSyncing
         syncStore.isSyncing = false;
+      } else {
+        // 无错误：标记为成功
+        syncStore.syncSuccess(`${actionName}完成`);
       }
     }
   }
@@ -298,22 +333,18 @@ export async function syncAll() {
  * 只上传：上传 -> 保存 (不更新下载时间戳)
  */
 export async function uploadAll() {
-  // 注意：uploadAll 应该使用 syncStore.startUpload() 来设置状态，
-  // 为了复用 runSyncTask，我们手动设置一下状态 message 即可，或者稍微修改 runSyncTask
-  // 这里简化处理，直接写逻辑
-
-  if (!ensureInitialized()) return { success: false };
+  if (!ensureInitialized()) return { success: false, errors: ["未初始化"] };
   const syncStore = useSyncStore();
-  if (syncStore.isSyncing) return { success: false };
+  if (syncStore.isSyncing) return { success: false, errors: ["同步进行中"] };
 
-  syncStore.startUpload(); // 设置 isSyncing = true, status = 'uploading'
+  syncStore.startUpload();
 
   try {
     const { errors, count } = await _internalUpload();
 
     if (errors.length === 0) {
       const dataStore = useDataStore();
-      dataStore.saveAllAfterSync(); // 上传后保存，确保 synced 标记被持久化
+      dataStore.saveAllAfterSync();
       console.log("💾 [Sync] 上传成功，状态已保存");
       syncStore.syncSuccess("上传完成");
       return { success: true, errors: [], uploaded: count };
@@ -324,6 +355,14 @@ export async function uploadAll() {
   } catch (e: any) {
     syncStore.syncFailed(e.message);
     return { success: false, errors: [e.message], uploaded: 0 };
+  } finally {
+    // 核心修复：上传流程兜底，防止锁死
+    if (syncStore.isSyncing) {
+      syncStore.isSyncing = false;
+      if (!syncStore.syncError) {
+        syncStore.syncSuccess("上传完成");
+      }
+    }
   }
 }
 
@@ -354,5 +393,13 @@ export async function downloadAll(lastSync: number) {
   } catch (e: any) {
     syncStore.syncFailed(e.message);
     return { success: false, errors: [e.message], downloaded: 0 };
+  } finally {
+    // 核心修复：下载流程兜底，防止锁死
+    if (syncStore.isSyncing) {
+      syncStore.isSyncing = false;
+      if (!syncStore.syncError) {
+        syncStore.syncSuccess("下载完成");
+      }
+    }
   }
 }
