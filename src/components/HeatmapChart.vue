@@ -16,7 +16,7 @@
     </div>
 
     <!-- 热图主体 -->
-    <div class="chart-wrapper">
+    <div ref="chartWrapperRef" class="chart-wrapper">
       <div ref="chartRef" class="chart-container"></div>
     </div>
 
@@ -34,13 +34,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from "vue";
+import { ref, onMounted, onUnmounted, watch, nextTick } from "vue";
 import * as echarts from "echarts/core";
 import { HeatmapChart } from "echarts/charts";
 import { TooltipComponent, VisualMapComponent, CalendarComponent } from "echarts/components";
 import { CanvasRenderer } from "echarts/renderers";
 import type { HeatmapSeriesOption } from "echarts/charts";
 import type { TooltipComponentOption, VisualMapComponentOption, CalendarComponentOption } from "echarts/components";
+import { debounce } from "@/core/utils";
 
 // 注册必需的组件
 echarts.use([HeatmapChart, TooltipComponent, VisualMapComponent, CalendarComponent, CanvasRenderer]);
@@ -63,8 +64,23 @@ const props = defineProps<Props>();
 const dataStore = useDataStore();
 
 const chartRef = ref<HTMLElement>();
+const chartWrapperRef = ref<HTMLElement>();
 const chartInstance = ref<echarts.ECharts>();
 const currentYear = ref(new Date().getFullYear());
+
+// 响应式尺寸管理
+const containerWidth = ref(900);
+const containerHeight = ref(180);
+const calculatedCellSize = ref(10);
+
+// ECharts calendar 配置常量
+const CALENDAR_LEFT = 12;
+const CALENDAR_RIGHT = 0;
+const CALENDAR_TOP = 49;
+const CALENDAR_BOTTOM = 15;
+const WEEK_COUNT = 54; // 最多54周
+const DAYS_PER_WEEK = 7;
+const MONTH_LABEL_HEIGHT = 20; // 月份标签高度估算
 
 /**
  * 获取全年数据
@@ -114,12 +130,65 @@ function formatDate(date: Date): string {
 }
 
 /**
+ * 计算合适的 cellSize，保证格子为正方形
+ */
+function calculateCellSize(width: number, height: number): number {
+  // 计算可用尺寸（减去 padding 和标签空间）
+  const availableWidth = width - CALENDAR_LEFT - CALENDAR_RIGHT;
+  const availableHeight = height - CALENDAR_TOP - CALENDAR_BOTTOM;
+
+  // 根据宽度计算：可用宽度 / 周数
+  const cellSizeByWidth = Math.floor(availableWidth / WEEK_COUNT);
+
+  // 根据高度计算：可用高度 / (天数 + 月份标签空间)
+  const cellSizeByHeight = Math.floor((availableHeight - MONTH_LABEL_HEIGHT) / DAYS_PER_WEEK);
+
+  // 取较小值，保证格子为正方形且不会超出容器
+  const cellSize = Math.min(cellSizeByWidth, cellSizeByHeight);
+
+  // 设置最小值和最大值，保证可读性
+  const MIN_CELL_SIZE = 8;
+  const MAX_CELL_SIZE = 16;
+
+  return Math.max(MIN_CELL_SIZE, Math.min(MAX_CELL_SIZE, cellSize));
+}
+
+/**
+ * 更新容器尺寸并重新计算 cellSize
+ */
+function updateContainerSize() {
+  if (!chartWrapperRef.value) return;
+
+  const rect = chartWrapperRef.value.getBoundingClientRect();
+  containerWidth.value = rect.width;
+  containerHeight.value = rect.height;
+
+  const newCellSize = calculateCellSize(containerWidth.value, containerHeight.value);
+  if (newCellSize !== calculatedCellSize.value) {
+    calculatedCellSize.value = newCellSize;
+    // 更新图表尺寸和配置
+    if (chartInstance.value) {
+      chartInstance.value.resize();
+      updateChart();
+    }
+  }
+}
+
+/**
+ * 防抖的尺寸更新函数
+ */
+const debouncedUpdateSize = debounce(updateContainerSize, 150);
+
+/**
  * 初始化图表
  */
 function initChart() {
   if (!chartRef.value) return;
 
   chartInstance.value = echarts.init(chartRef.value);
+  
+  // 初始化容器尺寸
+  updateContainerSize();
   updateChart();
 }
 
@@ -153,21 +222,24 @@ function updateChart() {
       show: false,
       min: 0,
       max: 16,
-      calculable: false,
+      type: "piecewise",
       pieces: [
         { min: 0, max: 0, color: "#ebedf0" },
         { min: 1, max: 5, color: "#c6e48b" },
         { min: 6, max: 10, color: "#7bc96f" },
         { min: 11, max: 15, color: "#239a3b" },
-        { min: 16, color: "#196127" },
+        { min: 16, max: Infinity, color: "#196127" },
       ],
+      calculable: false,
+      orient: "vertical",
+      left: "right",
     },
     calendar: {
-      top: 49,
-      left: 12,
-      right: 0,
-      bottom: 15,
-      cellSize: 10,
+      top: CALENDAR_TOP,
+      left: CALENDAR_LEFT,
+      right: CALENDAR_RIGHT,
+      bottom: CALENDAR_BOTTOM,
+      cellSize: calculatedCellSize.value, // 使用动态计算的 cellSize
       range: currentYear.value,
       itemStyle: {
         borderWidth: 2,
@@ -217,11 +289,39 @@ function changeYear(offset: number) {
 /**
  * 生命周期
  */
-onMounted(() => {
+let resizeObserver: ResizeObserver | null = null;
+
+onMounted(async () => {
+  // 等待 DOM 渲染完成
+  await nextTick();
+  
   initChart();
+
+  // 初始化 ResizeObserver 监听容器尺寸变化
+  if (chartWrapperRef.value && typeof ResizeObserver !== "undefined") {
+    resizeObserver = new ResizeObserver(() => {
+      debouncedUpdateSize();
+    });
+    resizeObserver.observe(chartWrapperRef.value);
+  } else {
+    // 降级方案：使用 window resize 事件（使用 passive 选项提升性能）
+    window.addEventListener("resize", debouncedUpdateSize, { passive: true });
+  }
+  
+  // 再次更新尺寸，确保初始尺寸正确
+  updateContainerSize();
 });
 
 onUnmounted(() => {
+  // 清理 ResizeObserver
+  if (resizeObserver && chartWrapperRef.value) {
+    resizeObserver.unobserve(chartWrapperRef.value);
+    resizeObserver.disconnect();
+    resizeObserver = null;
+  } else {
+    window.removeEventListener("resize", debouncedUpdateSize);
+  }
+  
   chartInstance.value?.dispose();
 });
 
@@ -229,6 +329,13 @@ onUnmounted(() => {
  * 监听年份变化
  */
 watch(currentYear, () => {
+  updateChart();
+});
+
+/**
+ * 监听 cellSize 变化，更新图表
+ */
+watch(calculatedCellSize, () => {
   updateChart();
 });
 
@@ -282,12 +389,14 @@ watch(
   flex-direction: column;
   max-width: 900px; /* 限制最大宽度 */
   width: 100%;
+  min-width: 0; /* 允许收缩 */
 }
 
 .chart-container {
   width: 100%;
   height: 180px;
-  min-height: 180px;
+  min-height: 150px;
+  position: relative; /* 确保 echarts 可以正确定位 */
 }
 
 /* 自定义图例（右侧垂直） */
@@ -318,5 +427,26 @@ watch(
   cursor: help;
   transition: transform 0.1s;
   flex-shrink: 0; /* 防止压缩 */
+}
+
+/* 响应式优化 */
+@media (max-width: 768px) {
+  .heatmap-chart {
+    padding: 8px;
+    gap: 12px;
+  }
+
+  .chart-wrapper {
+    max-width: 100%;
+  }
+
+  .chart-container {
+    height: 160px;
+    min-height: 130px;
+  }
+
+  .year-text {
+    font-size: 14px;
+  }
 }
 </style>

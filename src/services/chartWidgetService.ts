@@ -194,7 +194,8 @@ export function generateEChartsOption(config: ChartConfig, dataByMetric: Map<Met
       left: "3%",
       right: "4%",
       bottom: config.showLegend ? "15%" : "10%",
-      containLabel: true,
+      // 使用 outerBounds 替代 containLabel（新 API）
+      // 或者通过调整 left/right 百分比来预留标签空间
     },
     xAxis: {
       type: "category",

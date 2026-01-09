@@ -734,6 +734,9 @@ export const useDataStore = defineStore(
       dataByMetric,
       getAggregatedData,
       getDataInRange,
+
+      // 数据加载状态
+      isDataLoaded,
     };
   },
   {

@@ -120,7 +120,8 @@ export function useChart(config: MaybeRefOrGetter<ChartConfig>) {
    */
   onMounted(() => {
     initChart();
-    window.addEventListener("resize", resize);
+    // 使用 passive 选项提升性能
+    window.addEventListener("resize", resize, { passive: true });
   });
 
   /**
