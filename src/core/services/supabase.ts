@@ -1,6 +1,7 @@
 // src/core/services/supabase.ts
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { useSettingStore } from "@/stores/useSettingStore";
 
 // 从环境变量中获取 Supabase 的 URL 和 anon key
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -32,9 +33,8 @@ export const isSupabaseEnabled = () => {
     return false;
   }
   
-  // 动态检查localOnlyMode（避免循环依赖）
+  // 检查localOnlyMode
   try {
-    const { useSettingStore } = require("@/stores/useSettingStore");
     const settingStore = useSettingStore();
     // 如果是本地模式，禁用supabase
     if (settingStore.settings.localOnlyMode) {
