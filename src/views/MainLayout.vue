@@ -83,20 +83,6 @@
             <span v-if="syncStore.lastSyncTimestamp" class="sync-status__time">{{ relativeTime }}</span>
           </div>
           <div v-if="syncStore.syncError" class="sync-status__error">{{ syncStore.syncError }}</div>
-          <div class="sync-status__actions">
-            <n-button size="tiny" quaternary :loading="syncStore.isSyncing" @click="handleUpload" title="只上传本地数据">
-              <template #icon>
-                <n-icon><CloudSync24Regular /></n-icon>
-              </template>
-              上传
-            </n-button>
-            <n-button size="tiny" quaternary :loading="syncStore.isSyncing" @click="handleDownload" title="只下载云端数据">
-              <template #icon>
-                <n-icon><CloudSync24Regular /></n-icon>
-              </template>
-              下载
-            </n-button>
-          </div>
         </div>
       </n-layout-footer>
     </n-layout>
@@ -149,7 +135,7 @@ const {
   handlePomotentionTimerSizeReport,
 } = useAppWindow();
 
-const { syncStore, syncIcon, relativeTime } = useSyncWidget(); //, handleUpload, handleDownload
+const { syncStore, syncIcon, relativeTime } = useSyncWidget();
 
 // === 2. 菜单与路由逻辑 ===
 const currentRoutePath = ref(route.path);
@@ -274,14 +260,14 @@ const loggingOut = ref(false);
 
 async function handleLogout() {
   loggingOut.value = true;
-  
+
   // 检查是否从本地模式切换过来的
   const wasLocalMode = settingStore.settings.wasLocalModeBeforeLogin;
-  
+
   if (wasLocalMode) {
     // 从本地模式切换过来的，不清除本地数据
     console.log("👋 退出登录（从本地模式切换），保留本地数据");
-    
+
     // App上数据备份提示（可选）
     if (isTauri()) {
       const confirmExport = confirm("退出登录将保留您的本地数据。是否继续？");
@@ -290,7 +276,7 @@ async function handleLogout() {
         return;
       }
     }
-    
+
     // 只清除认证相关的 localStorage 项
     try {
       const keysToRemove: string[] = [];
@@ -321,7 +307,7 @@ async function handleLogout() {
     }
     localStorage.clear();
   }
-  
+
   await signOut();
   loggingOut.value = false;
   router.push({ name: "Login" });
