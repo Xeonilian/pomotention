@@ -16,9 +16,9 @@
     </div>
 
     <div class="items">
-      <!-- 时间轴网格容器 -->
-      <div v-if="day.items.length > 0" class="time-grid-container" :style="{ height: timeGridHeight + 'px' }">
-        <!-- 小时刻度线 -->
+      <!-- 时间轴网格容器（始终显示） -->
+      <div class="time-grid-container" :style="{ height: timeGridHeight + 'px' }">
+        <!-- 小时刻度线（始终显示） -->
         <div class="hour-ticks">
           <div v-for="(hour, hourIdx) in hourStamps" :key="hour" class="hour-tick" :style="{ top: getHourTickTop(hour) + 'px' }">
             <div class="tick-line"></div>
@@ -28,33 +28,32 @@
           </div>
         </div>
 
-        <!-- 时间块 -->
-        <WeekBlockItem
-          v-for="block in layoutedWeekBlocks.get(day.index) || getFallbackWeekBlocks(day.items, day.index)"
-          :key="block.id"
-          :block="block"
-          :day-start-ts="day.startTs"
-          :get-week-block-style="getWeekBlockStyle"
-          @item-change="handleItemChange"
-        />
-      </div>
+        <!-- 时间块（仅在有数据时显示） -->
+        <template v-if="day.items.length > 0">
+          <WeekBlockItem
+            v-for="block in layoutedWeekBlocks.get(day.index) || getFallbackWeekBlocks(day.items, day.index)"
+            :key="block.id"
+            :block="block"
+            :day-start-ts="day.startTs"
+            :get-item-block-style="getItemBlockStyle"
+            @item-change="handleItemChange"
+          />
+        </template>
 
-      <!-- 空状态 -->
-      <div v-else class="empty">无</div>
-
-      <!-- 统计信息 -->
-      <div class="card-statistic" v-if="day.items.length > 0">
-        <span v-if="day.items.length > MAX_PER_DAY" class="more">
-          <span class="more-left">+{{ day.items.length - MAX_PER_DAY }}</span>
-          [
-          <span :style="{ color: getPomoColor(day.pomoRatio) }">🍅&nbsp;</span>
-          = {{ day.sumRealPomo }} 🍇 = {{ day.sumRealGrape }}]
-        </span>
-        <span v-else class="pom-sum">
-          [
-          <span :style="{ color: getPomoColor(day.pomoRatio) }">🍅</span>
-          = {{ day.sumRealPomo }} 🍇 = {{ day.sumRealGrape }}]
-        </span>
+        <!-- 统计信息 -->
+        <div v-if="day.items.length > 0" class="card-statistic">
+          <span v-if="day.items.length > MAX_PER_DAY" class="more">
+            <span class="more-left">+{{ day.items.length - MAX_PER_DAY }}</span>
+            [
+            <span :style="{ color: getPomoColor(day.pomoRatio) }">🍅&nbsp;</span>
+            = {{ day.sumRealPomo }} 🍇 = {{ day.sumRealGrape }}]
+          </span>
+          <span v-else class="pom-sum">
+            [
+            <span :style="{ color: getPomoColor(day.pomoRatio) }">🍅</span>
+            = {{ day.sumRealPomo }} 🍇 = {{ day.sumRealGrape }}]
+          </span>
+        </div>
       </div>
     </div>
   </n-card>
@@ -70,7 +69,7 @@ import { useDataStore } from "@/stores/useDataStore";
 import { storeToRefs } from "pinia";
 
 const dataStore = useDataStore();
-const { activeId, selectedRowId, selectedDate } = storeToRefs(dataStore);
+const { selectedDate } = storeToRefs(dataStore);
 // 定义两种返回类型的联合类型（关键修改 1）
 type WeekBlockStyle =
   | { display: string } // 只包含 display 的情况
@@ -93,8 +92,7 @@ const props = defineProps<{
   layoutedWeekBlocks: Map<number, WeekBlockItemType[]>;
   MAX_PER_DAY: number;
   getHourTickTop: (hour: number) => number;
-  // 修改函数类型为返回 WeekBlockStyle（关键修改 2）
-  getWeekBlockStyle: (block: WeekBlockItemType, dayStartTs: number) => WeekBlockStyle;
+  getItemBlockStyle: (block: WeekBlockItemType, dayStartTs: number) => WeekBlockStyle;
 }>();
 
 // 定义emit
@@ -129,25 +127,33 @@ const handleItemChange = (id: number, ts: number, activityId?: number, taskId?: 
   display: flex;
   flex-direction: column;
   height: 100%;
-  overflow: hidden;
+  position: relative;
+  z-index: 10;
 }
 .day-card :deep(.n-card__content) {
   padding: 6px 6px;
 }
-
 .day-header {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   margin-bottom: 6px;
   white-space: nowrap;
+  width: 100%;
+  flex-wrap: nowrap;
+  overflow: hidden;
 }
 
+/* 调整 .dow 占满可用空间，挤压 .date 到边缘 */
 .dow {
   font-weight: 600;
   white-space: nowrap;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
+/* 核心修改 .date：空间不足时自动隐藏 */
 .date {
   display: inline-flex;
   align-items: center;
@@ -162,16 +168,21 @@ const handleItemChange = (id: number, ts: number, activityId?: number, taskId?: 
   color: var(--color-text-secondary);
   background-color: var(--primary-color, #efeded4b);
   flex-shrink: 0;
+  position: relative;
+  transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
 .date.today {
   background-color: var(--color-blue);
   color: white;
   font-weight: 600;
+  z-index: 0;
 }
 
 .date:hover {
   cursor: pointer;
+  background-color: var(--color-blue-transparent);
+  color: var(--color-background);
 }
 
 .items {
@@ -179,14 +190,12 @@ const handleItemChange = (id: number, ts: number, activityId?: number, taskId?: 
   min-width: 0;
   flex: 1;
   min-height: 0;
-  overflow-y: auto;
 }
 
 /* 时间轴网格容器 */
 .time-grid-container {
   position: relative;
   width: 100%;
-  min-height: 100%;
 }
 
 /* 小时刻度线 */
@@ -228,8 +237,11 @@ const handleItemChange = (id: number, ts: number, activityId?: number, taskId?: 
 
 .card-statistic {
   position: absolute;
-  bottom: 0;
-  width: 90%;
+  bottom: -20px;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .card-statistic .more {
