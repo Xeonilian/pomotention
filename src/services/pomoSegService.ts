@@ -277,10 +277,10 @@ export function generateActualTodoSegments(todos: Todo[]): TodoSegment[] {
  * 验证globalIndex是否有效
  * 检查是否在范围内、类型和category是否正确
  */
-function isValidGlobalIndex(globalIndex: number, segments: PomodoroSegment[], targetCategory: string): boolean {
+function isValidGlobalIndex(globalIndex: number, segments: PomodoroSegment[], targetCategory: string, hasGlobalIndex: boolean): boolean {
   if (globalIndex < 0 || globalIndex >= segments.length) return false;
   const seg = segments[globalIndex];
-  return seg.type === "pomo" && seg.category === targetCategory;
+  return seg.type === "pomo" && (hasGlobalIndex ? true : seg.category === targetCategory);
 }
 
 /**
@@ -292,11 +292,12 @@ function findNearestValidGlobalIndex(
   segments: PomodoroSegment[],
   targetCategory: string,
   usedGlobalIndices: Set<number>,
-  maxOffset: number = 20 // 允许的最大偏差
+  maxOffset: number = 20, // 允许的最大偏差
+  hasGlobalIndex: boolean
 ): number | null {
   // 先检查anchorIndex本身（如果未被占用）
   if (anchorIndex >= 0 && anchorIndex < segments.length) {
-    if (isValidGlobalIndex(anchorIndex, segments, targetCategory) && !usedGlobalIndices.has(anchorIndex)) {
+    if (isValidGlobalIndex(anchorIndex, segments, targetCategory, hasGlobalIndex) && !usedGlobalIndices.has(anchorIndex)) {
       return anchorIndex;
     }
   }
@@ -305,12 +306,16 @@ function findNearestValidGlobalIndex(
   for (let offset = 1; offset <= maxOffset; offset++) {
     // 向前搜索
     const prevIndex = anchorIndex - offset;
-    if (prevIndex >= 0 && isValidGlobalIndex(prevIndex, segments, targetCategory) && !usedGlobalIndices.has(prevIndex)) {
+    if (prevIndex >= 0 && isValidGlobalIndex(prevIndex, segments, targetCategory, hasGlobalIndex) && !usedGlobalIndices.has(prevIndex)) {
       return prevIndex;
     }
     // 向后搜索
     const nextIndex = anchorIndex + offset;
-    if (nextIndex < segments.length && isValidGlobalIndex(nextIndex, segments, targetCategory) && !usedGlobalIndices.has(nextIndex)) {
+    if (
+      nextIndex < segments.length &&
+      isValidGlobalIndex(nextIndex, segments, targetCategory, hasGlobalIndex) &&
+      !usedGlobalIndices.has(nextIndex)
+    ) {
       return nextIndex;
     }
   }
@@ -319,7 +324,7 @@ function findNearestValidGlobalIndex(
 
 /**
  * 生成估计的todo时间段分配 (修正版)
- * 不再使用positionIndex会有错误数据，暂不处理 #HACK
+ * 不再使用positionIndex会有错误数据，暂不处理 #TODO
  */
 export function generateEstimatedTodoSegments(appDateTimestamp: number, todos: Todo[], pomodoroSegments: PomodoroSegment[]): TodoSegment[] {
   // 1. 初始化
@@ -366,14 +371,15 @@ export function generateEstimatedTodoSegments(appDateTimestamp: number, todos: T
 
     if (hasGlobalIndex) {
       // 验证globalIndex是否有效
-      if (!isValidGlobalIndex(todo.globalIndex!, pomodoroSegments, targetCategory)) {
+      if (!isValidGlobalIndex(todo.globalIndex!, pomodoroSegments, targetCategory, hasGlobalIndex)) {
         // 尝试在附近寻找最接近的有效位置
         const nearestIndex = findNearestValidGlobalIndex(
           todo.globalIndex!,
           pomodoroSegments,
           targetCategory,
           usedGlobalIndices,
-          20 // 允许20个segment的偏差
+          20, // 允许20个segment的偏差
+          hasGlobalIndex
         );
 
         if (nearestIndex !== null) {
@@ -458,13 +464,14 @@ function _allocateTomatoSegmentsFromIndex(
 
   // 如果hasGlobalIndex但anchorIndex位置无效，尝试在附近搜索
   if (hasGlobalIndex) {
-    if (!isValidGlobalIndex(anchorIndex, segments, targetCategory) || usedGlobalIndices.has(anchorIndex)) {
+    if (!isValidGlobalIndex(anchorIndex, segments, targetCategory, hasGlobalIndex) || usedGlobalIndices.has(anchorIndex)) {
       const nearestIndex = findNearestValidGlobalIndex(
         anchorIndex,
         segments,
         targetCategory,
         usedGlobalIndices,
-        10 // 在手动模式下，允许较小的偏差
+        10, // 在手动模式下，允许较小的偏差
+        hasGlobalIndex
       );
       if (nearestIndex !== null) {
         anchorIndex = nearestIndex;
@@ -492,8 +499,7 @@ function _allocateTomatoSegmentsFromIndex(
 
     const isPomoType = currentPomoSeg.type === "pomo";
     // 自动模式：需要分类严格匹配；手动模式：允许不同分类
-    const mustMatchCategory = !hasGlobalIndex;
-    const isCategoryMatch = mustMatchCategory ? currentPomoSeg.category === targetCategory : true;
+    const isCategoryMatch = hasGlobalIndex ? true : currentPomoSeg.category === targetCategory;
 
     if (!isPomoType || !isCategoryMatch) {
       continue;
@@ -533,7 +539,7 @@ function _allocateTomatoSegmentsFromIndex(
       const nextSegIndex = i + 1;
       if (nextSegIndex < segments.length) {
         const nextSeg = segments[nextSegIndex];
-        const isNextSegCategoryMatch = anchorIndex || nextSeg.category === targetCategory;
+        const isNextSegCategoryMatch = hasGlobalIndex ? true : nextSeg.category === targetCategory;
         if (nextSeg.type === "break" && isNextSegCategoryMatch && !usedGlobalIndices.has(nextSeg.globalIndex!)) {
           lastAdded.end = nextSeg.end;
           usedGlobalIndices.add(nextSeg.globalIndex!);
@@ -576,8 +582,8 @@ function _allocateTomatoSegmentsFromIndex(
 function _allocateGrapeSegmentsFromIndex(
   appDateTimestamp: number,
   needCount: number,
-  startIndex: number,
-  forceStart: boolean, // 手动/自动模式开关：true=手动（仅起点），false=自动（可滑动找窗）
+  anchorIndex: number,
+  hasGlobalIndex: boolean, // 手动/自动模式开关：true=手动（仅起点），false=自动（可滑动找窗）
   usedGlobalIndices: Set<number>,
   todo: Todo,
   segments: PomodoroSegment[],
@@ -586,54 +592,54 @@ function _allocateGrapeSegmentsFromIndex(
   let assignedCount = 0;
   const targetCategory = "living";
 
-  // 如果forceStart但startIndex位置无效，尝试在附近搜索
-  if (forceStart) {
-    if (!isValidGlobalIndex(startIndex, segments, targetCategory) || usedGlobalIndices.has(startIndex)) {
+  // 如果hasGlobalIndex但startIndex位置无效，尝试在附近搜索
+  if (hasGlobalIndex) {
+    if (!isValidGlobalIndex(anchorIndex, segments, targetCategory, hasGlobalIndex) || usedGlobalIndices.has(anchorIndex)) {
       const nearestIndex = findNearestValidGlobalIndex(
-        startIndex,
+        anchorIndex,
         segments,
         targetCategory,
         usedGlobalIndices,
-        10 // 在手动模式下，允许较小的偏差
+        10, // 在手动模式下，允许较小的偏差
+        hasGlobalIndex
       );
       if (nearestIndex !== null) {
-        startIndex = nearestIndex;
+        anchorIndex = nearestIndex;
       } else {
         // 找不到有效位置，降级为自动分配模式
-        forceStart = false;
+        hasGlobalIndex = false;
       }
     }
   }
 
   // 自动模式：尝试滑动寻找满足 needCount 的连续可用窗口（严格匹配 living）
-  if (!forceStart) {
-    const windowStart = findWindowStartIndex(segments, usedGlobalIndices, startIndex, needCount, (seg) => seg.category === targetCategory);
-    if (windowStart !== null && windowStart !== startIndex) {
-      startIndex = windowStart;
+  if (!hasGlobalIndex) {
+    const windowStart = findWindowStartIndex(segments, usedGlobalIndices, anchorIndex, needCount, (seg) => seg.category === targetCategory);
+    if (windowStart !== null && windowStart !== anchorIndex) {
+      anchorIndex = windowStart;
     }
   }
 
-  for (let i = startIndex; i < segments.length && assignedCount < needCount; i++) {
-    const currentSeg = segments[i];
+  for (let i = anchorIndex; i < segments.length && assignedCount < needCount; i++) {
+    const currentPomoSeg = segments[i];
 
-    // 手动模式：只允许在 startIndex 位置或非常接近的位置放置第一块
-    if (forceStart && assignedCount === 0 && i > startIndex + 2) {
+    // 手动模式：只允许在 anchorIndex 位置或非常接近的位置放置第一块
+    if (hasGlobalIndex && assignedCount === 0 && i > anchorIndex + 2) {
       break;
     }
 
-    const isPomoType = currentSeg.type === "pomo";
+    const isPomoType = currentPomoSeg.type === "pomo";
     // 自动模式：必须严格匹配 living；手动模式：放宽分类限制
-    const mustMatchCategory = !forceStart;
-    const isCategoryMatch = mustMatchCategory ? currentSeg.category === targetCategory : true;
+    const isCategoryMatch = hasGlobalIndex ? true : currentPomoSeg.category === targetCategory;
 
     if (!isPomoType || !isCategoryMatch) {
       continue;
     }
 
-    const isConflict = usedGlobalIndices.has(currentSeg.globalIndex!);
+    const isConflict = usedGlobalIndices.has(currentPomoSeg.globalIndex!);
 
     // 自动模式遇冲突直接跳过；手动模式允许占冲突位（标记 conflict/overflow）
-    if (isConflict && !forceStart) {
+    if (isConflict && !hasGlobalIndex) {
       continue;
     }
 
@@ -645,18 +651,18 @@ function _allocateGrapeSegmentsFromIndex(
       priority: todo.priority,
       todoTitle: todo.activityTitle,
       todoIndex: assignedCount + 1,
-      start: currentSeg.start,
-      end: currentSeg.end,
+      start: currentPomoSeg.start,
+      end: currentPomoSeg.end,
       pomoType: "🍇",
-      assignedPomodoroSegment: currentSeg,
-      category: isConflict ? "conflict" : currentSeg.category,
+      assignedPomodoroSegment: currentPomoSeg,
+      category: isConflict ? "conflict" : currentPomoSeg.category,
       overflow: isConflict,
       completed: false,
       usingRealPomo: false,
-      globalIndex: currentSeg.globalIndex,
+      globalIndex: currentPomoSeg.globalIndex,
     });
 
-    usedGlobalIndices.add(currentSeg.globalIndex!);
+    usedGlobalIndices.add(currentPomoSeg.globalIndex!);
     assignedCount++;
 
     // 非冲突时尝试合并紧邻的 break（与 tomato 一致）
@@ -666,7 +672,7 @@ function _allocateGrapeSegmentsFromIndex(
       if (nextSegIndex < segments.length) {
         const nextSeg = segments[nextSegIndex];
         // 自动模式下需类别一致；手动模式放宽
-        const isNextSegCategoryMatch = mustMatchCategory ? nextSeg.category === targetCategory : true;
+        const isNextSegCategoryMatch = hasGlobalIndex ? true : nextSeg.category === targetCategory;
         if (nextSeg.type === "break" && isNextSegCategoryMatch && !usedGlobalIndices.has(nextSeg.globalIndex!)) {
           lastAdded.end = nextSeg.end;
           usedGlobalIndices.add(nextSeg.globalIndex!);
@@ -715,8 +721,8 @@ function _allocateGrapeSegmentsFromIndex(
 function _allocateCherrySegmentsFromIndex(
   appDateTimestamp: number,
   needCount: number, // 预期为 2，代表一个完整的樱桃单元 (100分钟)
-  startIndex: number,
-  forceStart: boolean,
+  anchorIndex: number,
+  hasGlobalIndex: boolean,
   usedGlobalIndices: Set<number>,
   todo: Todo,
   segments: PomodoroSegment[],
@@ -735,51 +741,51 @@ function _allocateCherrySegmentsFromIndex(
       s1.type === "pomo" &&
       s2.type === "break" &&
       s3.type === "pomo" &&
-      (!forceStart || s1.category === targetCategory) &&
+      (!hasGlobalIndex || s1.category === targetCategory) &&
       !usedGlobalIndices.has(s1.globalIndex!) &&
       !usedGlobalIndices.has(s2.globalIndex!) &&
       !usedGlobalIndices.has(s3.globalIndex!)
     );
   };
 
-  // 如果forceStart但startIndex位置无效，尝试在附近搜索
-  if (forceStart) {
-    if (!isCherrySlotValid(startIndex)) {
+  // 如果hasGlobalIndex但startIndex位置无效，尝试在附近搜索
+  if (hasGlobalIndex) {
+    if (!isCherrySlotValid(anchorIndex)) {
       // 在附近搜索有效的cherry slot
       let found = false;
       for (let offset = 1; offset <= 10 && !found; offset++) {
         // 向前搜索
-        const prevIndex = startIndex - offset;
+        const prevIndex = anchorIndex - offset;
         if (prevIndex >= 0 && isCherrySlotValid(prevIndex)) {
-          startIndex = prevIndex;
+          anchorIndex = prevIndex;
           found = true;
         }
         // 向后搜索
         if (!found) {
-          const nextIndex = startIndex + offset;
+          const nextIndex = anchorIndex + offset;
           if (nextIndex < segments.length - 3 && isCherrySlotValid(nextIndex)) {
-            startIndex = nextIndex;
+            anchorIndex = nextIndex;
             found = true;
           }
         }
       }
       if (!found) {
         // 找不到有效位置，降级为自动分配模式
-        forceStart = false;
+        hasGlobalIndex = false;
       }
     }
   }
 
-  // --- 当没有forceStart 步长1验证，forceStart则只检验提供的位置---
-  if (!forceStart) {
-    const windowStart = findWindowStartIndex(segments, usedGlobalIndices, startIndex, needCount, (seg) => seg.category === targetCategory);
-    if (windowStart !== null && windowStart !== startIndex) {
-      startIndex = windowStart;
+  // --- 当没有hasGlobalIndex 步长1验证，hasGlobalIndex则只检验提供的位置---
+  if (!hasGlobalIndex) {
+    const windowStart = findWindowStartIndex(segments, usedGlobalIndices, anchorIndex, needCount, (seg) => seg.category === targetCategory);
+    if (windowStart !== null && windowStart !== anchorIndex) {
+      anchorIndex = windowStart;
     }
   }
-  for (let i = startIndex; i < segments.length - 3; i += 1) {
-    // 如果是手动模式，只检查 startIndex 位置或非常接近的位置
-    if (forceStart && i > startIndex + 2) {
+  for (let i = anchorIndex; i < segments.length - 3; i += 1) {
+    // 如果是手动模式，只检查 anchorIndex 位置或非常接近的位置
+    if (hasGlobalIndex && i > anchorIndex + 2) {
       break;
     }
 
@@ -794,7 +800,7 @@ function _allocateCherrySegmentsFromIndex(
     // --- 将所有检查条件整合到一个函数中，一目了然 ---
     const isSlotValid = (s1: PomodoroSegment, s2: PomodoroSegment, s3: PomodoroSegment): boolean => {
       const category = s1.category;
-      if (!forceStart && category !== "working") return false; // 自动模式下必须是 'working'
+      if (!hasGlobalIndex && category !== "working") return false; // 自动模式下必须是 'working'
 
       // 1. 结构检查 (pomo-break-pomo-break)
       if (s1.type !== "pomo" || s2.type !== "break" || s3.type !== "pomo") return false;
@@ -876,19 +882,19 @@ function _allocateCherrySegmentsFromIndex(
 function findWindowStartIndex(
   segments: PomodoroSegment[],
   usedGlobalIndices: Set<number>,
-  startIndex: number,
+  anchorIndex: number,
   needCount: number,
   categoryPredicate: (seg: PomodoroSegment) => boolean
 ): number | null {
   // console.group(
-  //   `[findWindowStartIndex] startIndex=${startIndex}, needCount=${needCount}`
+  //   `[findWindowStartIndex] anchorIndex=${anchorIndex}, needCount=${needCount}`
   // );
   // console.debug(
   //   "[findWindowStartIndex] usedGlobalIndices:",
   //   Array.from(usedGlobalIndices)
   // );
 
-  for (let i = startIndex; i < segments.length; i++) {
+  for (let i = anchorIndex; i < segments.length; i++) {
     const first = segments[i];
 
     // 起点必须是未占用、类别匹配的 pomo
@@ -965,7 +971,7 @@ function findWindowStartIndex(
     // 如果被阻断了，继续尝试下一个起点 i+1
   }
 
-  console.warn("[findWindowStartIndex] NO WINDOW FOUND (keep original startIndex)");
+  console.warn("[findWindowStartIndex] NO WINDOW FOUND (keep original anchorIndex)");
   // console.groupEnd();
   return null;
 }
