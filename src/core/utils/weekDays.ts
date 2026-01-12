@@ -46,7 +46,7 @@ export function getItemWeekRange(item: UnifiedItem): { start: number; end: numbe
 /**
  * 判断两个时间块是否重叠
  */
-export function isWeekOverlapping(a: { start: number; end: number }, b: { start: number; end: number }): boolean {
+export function isWeekBlockOverlapping(a: { start: number; end: number }, b: { start: number; end: number }): boolean {
   return !(a.end <= b.start || b.end <= a.start);
 }
 

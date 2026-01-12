@@ -83,7 +83,7 @@ export interface DayCardProps {
   layoutedWeekBlocks: Map<number, WeekBlockItem[]>;
   MAX_PER_DAY: number;
   getHourTickTop: (hour: number) => number;
-  getWeekBlockStyle: (block: WeekBlockItem, dayStartTs: number) => Record<string, string | number>;
+  getItemBlockStyle: (block: WeekBlockItem, dayStartTs: number) => Record<string, string | number>;
 }
 
 /**
@@ -93,7 +93,7 @@ export interface DayCardProps {
 export interface WeekBlockItemProps {
   block: WeekBlockItem;
   dayStartTs: number;
-  getWeekBlockStyle: (block: WeekBlockItem, dayStartTs: number) => Record<string, string | number>;
+  getItemBlockStyle: (block: WeekBlockItem, dayStartTs: number) => Record<string, string | number>;
 }
 
 // ======================== 事件类型 ========================
