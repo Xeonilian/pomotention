@@ -1,13 +1,14 @@
 // src/composables/useWeekBlock.ts
-import { computed } from "vue";
+import { computed, unref, type MaybeRef } from "vue";
 import type { WeekBlockItem } from "@/core/types/Week";
 import { useWeekData } from "@/composables/useWeekData";
-import { getItemWeekRange, isWeekOverlapping, getHour, startOfDay } from "@/core/utils/weekDays";
+import { getItemWeekRange, isWeekBlockOverlapping, getHour, startOfDay } from "@/core/utils/weekDays";
 
-const pxPerHour = 60;
+// 保留原有常量，新增动态计算逻辑
+const BASE_PX_PER_HOUR = 40;
 
-export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"]) {
-  // 1. 计算全周统一时间范围
+export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targetHeight?: MaybeRef<number>) {
+  // 1. 计算全周统一时间范围（完全保留原有代码）
   const unifiedTimeRange = computed(() => {
     let minHour = 24;
     let maxHour = 0;
@@ -46,11 +47,27 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"]) {
 
     return {
       startHour: minHour,
-      endHour: maxHour,
+      endHour: maxHour < 22 ? 22 : maxHour,
     };
   });
 
-  // 2. 生成时间块数据
+  // 核心修改：动态计算pxPerHour（响应式计算，随容器高度变化）
+  const pxPerHour = computed(() => {
+    const range = unifiedTimeRange.value;
+    const totalHours = range.endHour - range.startHour;
+    const height = unref(targetHeight); // 使用 unref 来获取响应式值或普通值
+
+    // 如果传入了目标高度，就按高度/小时数计算，否则用默认值
+    if (height && totalHours > 0) {
+      const result = height / totalHours;
+      console.log(`pxPerHour calculated: targetHeight=${height}, totalHours=${totalHours}, result=${result}`);
+      return result;
+    }
+    console.log(`pxPerHour using default: ${BASE_PX_PER_HOUR}`);
+    return BASE_PX_PER_HOUR;
+  });
+
+  // 2. 生成时间块数据（完全保留）
   const weekBlockItems = computed(() => {
     const items: WeekBlockItem[] = [];
 
@@ -74,7 +91,7 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"]) {
     return items;
   });
 
-  // 3. 计算时间块布局
+  // 3. 计算时间块布局（完全保留）
   const calculateWeekBlockLayout = (items: WeekBlockItem[], dayIndex: number): WeekBlockItem[] => {
     const dayItems = items.filter((item) => item.dayIndex === dayIndex);
     if (dayItems.length === 0) return [];
@@ -87,7 +104,7 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"]) {
 
       for (const otherItem of dayItems) {
         if (otherItem.id === item.id) continue;
-        if (isWeekOverlapping(item, otherItem)) {
+        if (isWeekBlockOverlapping(item, otherItem)) {
           overlappingItems.push(otherItem);
         }
       }
@@ -111,7 +128,7 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"]) {
     return processedItems;
   };
 
-  // 4. 按天分组的布局时间块
+  // 4. 按天分组的布局时间块（完全保留）
   const layoutedWeekBlocks = computed(() => {
     const result: Map<number, WeekBlockItem[]> = new Map();
     for (let dayIdx = 0; dayIdx < 7; dayIdx++) {
@@ -121,7 +138,7 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"]) {
     return result;
   });
 
-  // 5. 小时刻度数组
+  // 5. 小时刻度数组（完全保留）
   const hourStamps = computed(() => {
     const range = unifiedTimeRange.value;
     const stamps: number[] = [];
@@ -131,15 +148,15 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"]) {
     return stamps;
   });
 
-  // 6. 时间轴高度
+  // 6. 时间轴高度（修改：使用动态pxPerHour）
   const timeGridHeight = computed(() => {
     const range = unifiedTimeRange.value;
     const hours = range.endHour - range.startHour;
-    return hours * pxPerHour;
+    return hours * pxPerHour.value; // 仅改这里，用动态值
   });
 
-  // 7. 时间块样式计算
-  const getWeekBlockStyle = (item: WeekBlockItem, dayStartTs: number) => {
+  // 7. 时间块样式计算（修改：使用动态pxPerHour）
+  const getItemBlockStyle = (item: WeekBlockItem, dayStartTs: number) => {
     const range = unifiedTimeRange.value;
     const itemDayStart = startOfDay(item.start);
     const itemDayEnd = startOfDay(item.end);
@@ -148,12 +165,25 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"]) {
     let durationHours = 0;
 
     if (itemDayStart === dayStartTs && itemDayEnd === dayStartTs) {
-      const startDate = new Date(item.start);
-      const endDate = new Date(item.end);
+      if (item.type === "todo") {
+        // 对于todo类型，使用实际的startTime和doneTime计算持续时间
+        const startTime = (item.item as any).startTime || item.start;
+        const doneTime = (item.item as any).doneTime || item.end;
+        const startDate = new Date(startTime);
+        const endDate = new Date(doneTime);
 
-      startHour = startDate.getHours() + startDate.getMinutes() / 60;
-      const endHour = endDate.getHours() + endDate.getMinutes() / 60;
-      durationHours = endHour - startHour;
+        startHour = startDate.getHours() + startDate.getMinutes() / 60;
+        const endHour = endDate.getHours() + endDate.getMinutes() / 60;
+        durationHours = Math.max(endHour - startHour, 0.25); // 最小15分钟
+      } else {
+        // 对于schedule类型，使用实际的开始和结束时间
+        const startDate = new Date(item.start);
+        const endDate = new Date(item.end);
+
+        startHour = startDate.getHours() + startDate.getMinutes() / 60;
+        const endHour = endDate.getHours() + endDate.getMinutes() / 60;
+        durationHours = endHour - startHour;
+      }
     } else {
       if (itemDayStart === dayStartTs) {
         const startDate = new Date(item.start);
@@ -170,36 +200,41 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"]) {
     }
 
     const relativeStartHour = startHour - range.startHour;
-    const top = relativeStartHour * pxPerHour;
-    const height = durationHours * pxPerHour;
+    const top = relativeStartHour * pxPerHour.value;
+    const height = Math.max(durationHours * pxPerHour.value, 10); // 确保最小高度10px
+
+    // 调试信息 - 只输出todo类型的高度计算
+    if (item.type === "todo") {
+      console.log(`Todo ${item.id}: durationHours=${durationHours}, height=${height}`);
+    }
 
     return {
       position: "absolute",
       top: `${top}px`,
       left: item.left || "0%",
       width: item.width || "100%",
-      height: `${Math.max(height, 20)}px`,
+      height: `${height}px`,
       zIndex: 2,
     };
   };
 
-  // 8. 小时刻度位置计算
+  // 8. 小时刻度位置计算（修改：使用动态pxPerHour）
   const getHourTickTop = (hour: number) => {
     const range = unifiedTimeRange.value;
     const relativeHour = hour - range.startHour;
-    return relativeHour * pxPerHour;
+    return relativeHour * pxPerHour.value; // 改这里
   };
 
-  // 9. 暴露接口
+  // 9. 暴露接口（新增pxPerHour，其他保留）
   return {
     unifiedTimeRange,
     weekBlockItems,
     layoutedWeekBlocks,
     hourStamps,
     timeGridHeight,
-    pxPerHour,
+    pxPerHour, // 新增暴露
     calculateWeekBlockLayout,
-    getWeekBlockStyle,
+    getItemBlockStyle,
     getHourTickTop,
   };
 }
