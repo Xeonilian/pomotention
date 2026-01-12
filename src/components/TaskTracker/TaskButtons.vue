@@ -11,7 +11,7 @@
       </template>
     </n-button>
     <!-- 打开标签管理器的按钮 -->
-    <n-button text @click="openTagManager">
+    <n-button text @click="openTagManager" :disabled="!taskId">
       <template #icon>
         <n-icon color="var(--color-blue)"><Tag16Regular /></n-icon>
       </template>

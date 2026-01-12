@@ -267,15 +267,6 @@ async function handleLogout() {
     // 从本地模式切换过来的，不清除本地数据
     console.log("👋 退出登录（从本地模式切换），保留本地数据");
 
-    // App上数据备份提示（可选）
-    if (isTauri()) {
-      const confirmExport = confirm("退出登录将保留您的本地数据。是否继续？");
-      if (!confirmExport) {
-        loggingOut.value = false;
-        return;
-      }
-    }
-
     // 只清除认证相关的 localStorage 项
     try {
       const keysToRemove: string[] = [];
