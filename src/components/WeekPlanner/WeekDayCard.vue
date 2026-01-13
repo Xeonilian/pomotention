@@ -84,7 +84,7 @@ type WeekBlockStyle =
     };
 
 // 定义props
-const props = defineProps<{
+defineProps<{
   day: DayItem;
   dayNames: string[];
   timeGridHeight: number;
