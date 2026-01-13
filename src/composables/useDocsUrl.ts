@@ -29,7 +29,7 @@ export function useDocsUrl() {
   const localDocsUrl = "./docs/index.html";
 
   // GitHub Pages 在线文档地址（fallback）
-  const githubPagesUrl = "https://xeonilian.github.io/pomotention/";
+  // const githubPagesUrl = "https://xeonilian.github.io/pomotention/";
 
   // Cloudflare Pages 在线文档地址（base: /help，优先使用）
   const cloudflarePagesUrl = "https://pomotention.pages.dev/help/";
