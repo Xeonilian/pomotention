@@ -6,7 +6,7 @@
         {{ dayName }}
       </n-card>
     </div>
-    <div class="grid">
+    <div ref="gridRef" class="grid">
       <div v-for="(day, idx) in days" :key="idx" class="day-col">
         <n-card
           size="small"
@@ -29,7 +29,7 @@
           <div class="items">
             <template v-if="day.items.length">
               <div
-                v-for="item in day.items.slice(0, MAX_PER_DAY)"
+                v-for="item in day.items.slice(0, day.maxItems)"
                 :key="item.key"
                 class="item"
                 :class="[{ 'item--selected': selectedRowId === item.id }]"
@@ -51,7 +51,7 @@
                 </span>
               </div>
               <div class="more">
-                <span v-if="day.items.length > MAX_PER_DAY">+{{ day.items.length - MAX_PER_DAY }}</span>
+                <span v-if="day.items.length > day.maxItems">+{{ day.items.length - day.maxItems }}</span>
               </div>
             </template>
           </div>
@@ -61,7 +61,7 @@
   </div>
 </template>
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref, onMounted, onUnmounted, nextTick } from "vue";
 import { NCard } from "naive-ui";
 import type { Todo } from "@/core/types/Todo";
 import type { Schedule } from "@/core/types/Schedule";
@@ -108,8 +108,63 @@ const dataStore = useDataStore();
 const { activeId, selectedRowId, todosForCurrentViewWithTags, schedulesForCurrentViewWithTags, selectedDate } = storeToRefs(dataStore);
 const dateService = dataStore.dateService;
 
-const MAX_PER_DAY = 4; // 每天最多显示4个项目
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+// 用于动态计算day card高度的ref
+const gridRef = ref<HTMLElement>();
+const dayCardHeight = ref(105); // 默认最小高度
+let resizeObserver: ResizeObserver | null = null;
+
+// 监听容器大小变化并计算day card高度
+const updateDayCardHeight = () => {
+  if (gridRef.value) {
+    // 获取第一个day card的实际高度
+    const firstDayCard = gridRef.value.querySelector(".day-card") as HTMLElement;
+    if (firstDayCard) {
+      const rect = firstDayCard.getBoundingClientRect();
+      if (rect.height > 0) {
+        dayCardHeight.value = rect.height;
+      }
+    }
+  }
+};
+
+onMounted(() => {
+  nextTick(() => {
+    updateDayCardHeight();
+
+    // 使用ResizeObserver监听容器大小变化
+    if (gridRef.value && window.ResizeObserver) {
+      resizeObserver = new ResizeObserver(() => {
+        // 延迟执行以确保DOM更新完成
+        setTimeout(updateDayCardHeight, 0);
+      });
+      resizeObserver.observe(gridRef.value);
+    } else {
+      // 降级方案：监听窗口resize事件
+      window.addEventListener("resize", updateDayCardHeight);
+    }
+  });
+});
+
+onUnmounted(() => {
+  if (resizeObserver) {
+    resizeObserver.disconnect();
+  } else {
+    window.removeEventListener("resize", updateDayCardHeight);
+  }
+});
+
+// 动态计算每天最多显示的项目数
+const maxItemsPerDay = computed(() => {
+  // date-badge 高度 + margin + top padding = 20 + 7 + 2 = 29px
+  // items padding = 4px
+  // 可用高度 = dayCardHeight - 29 - 4 = dayCardHeight - 33
+  const availableHeight = Math.max(0, dayCardHeight.value - 33);
+  // 每个item高度15px + gap 2px = 17px
+  const itemsPerHeight = Math.floor((availableHeight + 2) / 17);
+  return Math.max(1, itemsPerHeight); // 至少显示1个项目
+});
 
 const days = computed(() => {
   // 获取月份信息
@@ -220,6 +275,7 @@ const days = computed(() => {
       sumRealPomo,
       sumRealGrape,
       pomoRatio: ratio,
+      maxItems: maxItemsPerDay.value,
     };
   });
   return result;
@@ -344,7 +400,9 @@ function getPomoBgColorHEX(ratio: number) {
 }
 .month-header {
   display: grid;
-  grid-template-columns: repeat(7, 1fr); /* 创建7个等宽的列 */
+  flex: 1 1 auto;
+  grid-template-columns: repeat(7, 1fr);
+  grid-auto-rows: minmax(105px, 1fr);
   text-align: center;
   height: 22px;
   gap: 2px;
@@ -362,7 +420,7 @@ function getPomoBgColorHEX(ratio: number) {
   min-height: 0;
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr)); /* 7列（一周7天） */
-  grid-auto-rows: minmax(105px, 1fr); /* 自动行高，最小100px */
+  grid-auto-rows: minmax(105px, 1fr);
   gap: 2px;
 }
 
@@ -384,9 +442,7 @@ function getPomoBgColorHEX(ratio: number) {
   border-color: var(--primary-color, #409eff) !important;
   box-shadow: 0 2px 8px rgba(64, 158, 255, 0.3);
 }
-.day-card--other-month {
-  opacity: 0.4;
-}
+
 /* 日期徽章 - 右上角绝对定位 */
 .date-badge {
   position: absolute;
@@ -404,11 +460,20 @@ function getPomoBgColorHEX(ratio: number) {
   padding: 1px;
 }
 .date-badge.today {
-  background-color: var(--color-blue) !important;
   color: white !important;
+  background-color: var(--color-blue) !important;
+  font-weight: 600;
 }
+
 .date-badge:hover {
   cursor: pointer;
+  background-color: var(--color-blue-light) !important;
+  color: var(--color-background) !important;
+}
+
+.day-card--other-month .date-badge {
+  color: var(--color-background) !important;
+  background-color: var(--color-background-light) !important;
 }
 
 .items {
