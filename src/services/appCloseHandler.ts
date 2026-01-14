@@ -88,6 +88,9 @@ const debouncedBlurSync = debounce(async (source: string) => {
 // 监听器注册
 // =========================================================================
 
+// 全局关闭状态 - 防止多次处理关闭请求
+let isAppClosing = false;
+
 /**
  * Tauri 环境监听
  */
@@ -99,6 +102,15 @@ async function setupTauriCloseHandler() {
 
     // 1. 关闭拦截 (优化逻辑，防止状态锁死)
     const unlistenClose = await appWindow.onCloseRequested(async (event) => {
+      console.log("🔒 [Tauri Close] 收到关闭请求，开始处理...");
+
+      // 防止重复处理关闭请求 - 使用全局状态
+      if (isAppClosing) {
+        console.log("⚠️ [Tauri Close] 已在处理关闭请求，忽略重复请求");
+        return;
+      }
+      isAppClosing = true;
+
       event.preventDefault(); // 先统一阻止默认关闭
 
       try {
@@ -110,19 +122,44 @@ async function setupTauriCloseHandler() {
 
         // 检查并上传未同步数据
         if (checkUnsyncedData("Tauri Close")) {
-          console.log(`📤 [Tauri Close] 执行最终上传...`);
-          const uploadResult = await uploadAll();
-          if (!uploadResult.success) {
-            console.warn("[Tauri Close] 上传失败，强制重置同步状态");
+          console.log(`📤 [Tauri Close] 执行最终上传 (5秒超时)...`);
+
+          // 创建5秒超时的上传任务
+          const uploadPromise = uploadAll();
+          const timeoutPromise = new Promise<{ success: false; errors: string[]; uploaded: number }>((_, reject) => {
+            setTimeout(() => reject(new Error("上传超时 (5秒)")), 5000);
+          });
+
+          try {
+            const uploadResult = await Promise.race([uploadPromise, timeoutPromise]);
+            if (uploadResult.success) {
+              console.log(`✅ [Tauri Close] 上传成功: ${uploadResult.uploaded} 项`);
+              // 短暂显示成功状态
+              syncStore.syncSuccess("关闭前上传成功");
+              await new Promise((resolve) => setTimeout(resolve, 800));
+            } else {
+              console.warn(`⚠️ [Tauri Close] 上传失败: ${uploadResult.errors.join("; ")}`);
+              syncStore.syncFailed(`关闭前上传失败: ${uploadResult.errors.join("; ")}`);
+              await new Promise((resolve) => setTimeout(resolve, 800));
+            }
+          } catch (timeoutError: any) {
+            console.warn(`⏰ [Tauri Close] ${timeoutError.message}`);
+            syncStore.syncFailed(timeoutError.message);
+            // 强制重置同步状态
             syncStore.isSyncing = false;
+            await new Promise((resolve) => setTimeout(resolve, 800));
           }
+        } else {
+          console.log(`📤 [Tauri Close] 无未同步数据，跳过上传`);
         }
 
         // 最终关闭窗口
+        console.log("🚪 [Tauri Close] 开始关闭窗口...");
         await appWindow.close();
       } catch (error) {
         console.error(`❌ [Tauri Close] 关闭时同步失败`, error);
         syncStore.isSyncing = false; // 异常时重置状态
+        isAppClosing = false; // 重置全局关闭标志（异常情况下）
         await appWindow.close();
       }
     });
