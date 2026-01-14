@@ -1,5 +1,5 @@
 // src/composables/useTimeBlocks.ts
-import { ref, computed, type ComputedRef } from "vue";
+import { ref, computed, type ComputedRef, onMounted, onUnmounted } from "vue";
 import type { CSSProperties } from "vue";
 import { getTimestampForTimeString } from "@/core/utils";
 import { CategoryColors, POMODORO_COLORS, POMODORO_COLORS_DARK } from "@/core/constants";
@@ -69,6 +69,8 @@ interface UseTimeBlocksReturn {
   }>;
   // pointer 方法
   handlePointerDown: (event: PointerEvent, seg: TodoSegment) => void;
+  // 优化后的拖拽方法（移动端友好）
+  enhancedHandlePointerDown: (event: PointerEvent, seg: TodoSegment) => void;
 }
 
 /**
@@ -93,6 +95,69 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
   });
 
   const { dragState, handlePointerDown } = useTimeBlockDrag(todosForAppDate, props.dayStart, pomodoroSegments, occupiedIndices);
+
+  // ======= 优化：全局触摸事件拦截 (核心) =======
+  let touchStartTime = 0;
+  const TOUCH_THRESHOLD = 50; // 50ms内判定为快速拖拽
+
+  // 全局触摸开始事件 - 比元素内事件更早响应
+  const handleGlobalTouchStart = (e: TouchEvent) => {
+    touchStartTime = Date.now();
+    // 只拦截Todo段的触摸
+    const target = e.target as HTMLElement;
+    if (target.closest('.todo-segment')) {
+      // 立即阻止默认行为，防止系统长按触发
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  };
+
+  // 全局触摸移动事件 - 快速响应拖拽
+  const handleGlobalTouchMove = (e: TouchEvent) => {
+    // 如果是快速触摸+移动，直接判定为拖拽
+    if (Date.now() - touchStartTime < TOUCH_THRESHOLD) {
+      const target = e.target as HTMLElement;
+      if (target.closest('.todo-segment')) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    }
+  };
+
+  // 挂载/卸载全局事件
+  onMounted(() => {
+    // 使用passive: false确保能preventDefault
+    document.addEventListener('touchstart', handleGlobalTouchStart, { passive: false });
+    document.addEventListener('touchmove', handleGlobalTouchMove, { passive: false });
+  });
+
+  onUnmounted(() => {
+    document.removeEventListener('touchstart', handleGlobalTouchStart);
+    document.removeEventListener('touchmove', handleGlobalTouchMove);
+  });
+
+  // ======= 优化：增强handlePointerDown事件 =======
+  const enhancedHandlePointerDown = (e: PointerEvent, seg: TodoSegment) => {
+    // 1. 立即阻止所有默认行为
+    e.preventDefault();
+    e.stopImmediatePropagation();
+
+    // 2. 标记为拖拽开始，防止系统介入
+    dragState.value.isDragging = true;
+    dragState.value.draggedTodoId = seg.todoId;
+    dragState.value.draggedIndex = seg.todoIndex;
+
+    // 3. 调用原有处理逻辑
+    handlePointerDown(e, seg);
+
+    // 4. 移动端额外处理
+    if (e.pointerType === 'touch') {
+      // 重置触摸时间，确保快速响应
+      touchStartTime = 0;
+      // 禁止浏览器的触摸滚动
+      document.body.style.overflow = 'hidden';
+    }
+  };
   // ======= 小时刻度线相关 =======
   const hourStamps = computed(() => {
     if (!props.timeRange.start || !props.timeRange.end) return [];
@@ -548,5 +613,6 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
     // 拖拽 (来自新 hook)
     dragState,
     handlePointerDown,
+    enhancedHandlePointerDown,
   };
 }

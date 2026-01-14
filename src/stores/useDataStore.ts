@@ -86,6 +86,29 @@ export const useDataStore = defineStore(
     const activeSchedules = computed(() => scheduleList.value.filter((s) => !s.deleted));
     const activeTasks = computed(() => taskList.value.filter((t) => !t.deleted));
 
+    // ======================== 未同步数据汇总 (Computed) ========================
+    const hasUnsyncedData = computed(() => {
+      return (
+        activityList.value.some((item) => !item.synced) ||
+        todoList.value.some((item) => !item.synced) ||
+        scheduleList.value.some((item) => !item.synced) ||
+        taskList.value.some((item) => !item.synced) ||
+        tagStore.rawTags?.some((item) => !item.synced) ||
+        templateStore.rawTemplates?.some((item) => !item.synced)
+      );
+    });
+
+    const unsyncedDataSummary = computed(() => {
+      return {
+        activities: activityList.value.filter((item) => !item.synced).length,
+        todos: todoList.value.filter((item) => !item.synced).length,
+        schedules: scheduleList.value.filter((item) => !item.synced).length,
+        tasks: taskList.value.filter((item) => !item.synced).length,
+        tags: tagStore.rawTags?.filter((item) => !item.synced).length ?? 0,
+        templates: templateStore.rawTemplates?.filter((item) => !item.synced).length ?? 0,
+      };
+    });
+
     // ======================== 4. 数据索引 (Getters / Computed) ========================
     const _activityById = new Map<number, Activity>();
     const _todoById = new Map<number, Todo>();
@@ -737,6 +760,10 @@ export const useDataStore = defineStore(
 
       // 数据加载状态
       isDataLoaded,
+
+      // 未同步数据汇总
+      hasUnsyncedData,
+      unsyncedDataSummary,
     };
   },
   {

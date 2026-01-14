@@ -90,7 +90,7 @@
             @touchstart.stop.prevent="onLongPressStart"
             @mouseup.stop="onLongPressEnd"
             @mouseleave="onLongPressCancel"
-            @touchend.stop="onLongPressEnd"
+            @touchend.stop="handleTouchEnd"
             @touchcancel.stop="onLongPressCancel"
             @click.stop.prevent="onAddTodoClick"
           >
@@ -286,8 +286,21 @@ const { longPressTriggered, onLongPressStart, onLongPressEnd, onLongPressCancel 
 });
 
 // 点击事件：只有未触发长按时，才视为普通点击，执行添加任务
-const onAddTodoClick = () => {
+const handleTouchEnd = () => {
+  onLongPressEnd();
+  // 触摸结束后，立即检查是否触发长按，未触发则执行点击逻辑
   if (!longPressTriggered.value) {
+    // 使用微任务确保状态已更新
+    Promise.resolve().then(() => {
+      emit("add-todo");
+    });
+  }
+};
+
+// 点击事件：只处理鼠标点击（非触摸设备）
+const onAddTodoClick = () => {
+  // 只有非触摸设备且未触发长按才执行
+  if (!isTouchSupported && !longPressTriggered.value) {
     emit("add-todo");
   }
 };

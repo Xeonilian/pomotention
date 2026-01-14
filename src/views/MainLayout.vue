@@ -43,7 +43,6 @@
         <router-view v-if="!isMiniMode" />
 
         <!-- 悬浮番茄钟容器 (正常模式) -->
-        <!-- ✅ 修正：使用 Pointer Event，且加上 touch-action: none -->
         <div
           class="draggable-container"
           ref="draggableContainer"
@@ -72,16 +71,50 @@
       </n-layout-content>
 
       <!-- Sync Footer -->
-      <n-layout-footer v-if="!isMiniMode && syncStore.isSyncing" class="sync-footer" bordered>
-        <div class="sync-status">
-          <div class="sync-status__icon" :class="`sync-status__icon--${syncStore.syncStatus}`">
-            {{ syncIcon }}
+      <n-layout-footer v-if="!isMiniMode" class="sync-footer" bordered>
+        <div class="footer-content">
+          <!-- 左侧：同步状态信息 -->
+          <div class="sync-status">
+            <div class="sync-status__icon" :class="`sync-status__icon--${syncStore.syncStatus}`">
+              {{ syncIcon }}
+            </div>
+            <div class="sync-status__info">
+              <span class="sync-status__message">{{ syncStore.syncMessage }}</span>
+              <span v-if="syncStore.lastSyncTimestamp" class="sync-status__time">{{ relativeTime }}</span>
+              <n-tag v-if="dataStore.hasUnsyncedData" type="warning" size="tiny" style="margin-left: 8px">有未同步数据</n-tag>
+              <span v-if="syncStore.syncError" class="sync-status__error">{{ syncStore.syncError }}</span>
+            </div>
           </div>
-          <div class="sync-status__info">
-            <span class="sync-status__message">{{ syncStore.syncMessage }}</span>
-            <span v-if="syncStore.lastSyncTimestamp" class="sync-status__time">{{ relativeTime }}</span>
+
+          <!-- 右侧：手动操作按钮（text 模式，不太明显） -->
+          <div class="footer-actions">
+            <n-button
+              text
+              size="small"
+              :loading="syncStore.isSyncing && syncStore.syncStatus === 'uploading'"
+              :disabled="syncStore.isSyncing"
+              @click="handleManualUpload"
+              style="opacity: 0.6; font-size: 11px"
+            >
+              <template #icon>
+                <n-icon :size="12"><ArrowUp24Filled /></n-icon>
+              </template>
+              上传
+            </n-button>
+            <n-button
+              text
+              size="small"
+              :loading="syncStore.isSyncing && syncStore.syncStatus === 'downloading'"
+              :disabled="syncStore.isSyncing"
+              @click="handleManualDownload"
+              style="opacity: 0.6; font-size: 11px"
+            >
+              <template #icon>
+                <n-icon :size="12"><ArrowDown24Filled /></n-icon>
+              </template>
+              下载
+            </n-button>
           </div>
-          <div v-if="syncStore.syncError" class="sync-status__error">{{ syncStore.syncError }}</div>
         </div>
       </n-layout-footer>
     </n-layout>
@@ -91,10 +124,11 @@
 <script setup lang="ts">
 import { ref, watch, nextTick, computed, onMounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
-import { NMenu, NButton, NIcon } from "naive-ui";
+import { NMenu, NButton, NIcon, NLayoutFooter, NTag } from "naive-ui";
 
 // Stores
 import { useSettingStore } from "@/stores/useSettingStore";
+import { useDataStore } from "@/stores/useDataStore";
 
 // Composables
 import { useButtonStyle } from "@/composables/useButtonStyle";
@@ -118,6 +152,7 @@ import PomotentionTimer from "@/components/PomotentionTimer/PomotentionTimer.vue
 const router = useRouter();
 const route = useRoute();
 const settingStore = useSettingStore();
+const dataStore = useDataStore();
 
 // === 1. 初始化 Composables ===
 const { buttonStyle, updateButtonStates } = useButtonStyle();
@@ -134,7 +169,7 @@ const {
   handlePomotentionTimerSizeReport,
 } = useAppWindow();
 
-const { syncStore, syncIcon, relativeTime } = useSyncWidget();
+const { syncStore, syncIcon, relativeTime, handleUpload, handleDownload } = useSyncWidget();
 
 // === 2. 菜单与路由逻辑 ===
 const currentRoutePath = ref(route.path);
@@ -307,6 +342,15 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
 import { isTauri } from "@tauri-apps/api/core";
 const debugInfo = ref("");
+// 手动同步操作
+async function handleManualUpload() {
+  await handleUpload();
+}
+
+async function handleManualDownload() {
+  await handleDownload();
+}
+
 async function handleExport() {
   try {
     const localdata = collectLocalData();
@@ -385,7 +429,7 @@ async function handleExport() {
 }
 .app-layout__content {
   position: relative;
-  height: calc(100% - 30px);
+  height: calc(100% - 50px);
   overflow: hidden;
 }
 .app-layout__content--full-height {
@@ -430,16 +474,27 @@ async function handleExport() {
   bottom: 0;
   left: 0;
   right: 0;
-  display: flex;
-  height: 30px;
+  height: 20px;
   padding: 0px 10px;
   z-index: 1000;
+  display: flex;
+  align-items: center;
 }
+
+.footer-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
 .sync-status {
   display: flex;
   align-items: center;
   gap: 11px;
   font-size: 11px;
+  flex: 1;
+  color: var(--color-text-secondary);
 }
 .sync-status__icon {
   font-size: 11px;
@@ -472,11 +527,12 @@ async function handleExport() {
   display: flex;
   flex-direction: row;
   gap: 6px;
-  font-size: 12px;
+  font-size: 11px;
 }
 .sync-status__message {
-  font-weight: 500;
-  color: #333;
+  font-weight: 300;
+  font-size: 11px;
+  color: var(--color-text-primary);
 }
 .sync-status__time {
   color: #999;
@@ -489,10 +545,10 @@ async function handleExport() {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.sync-status__actions {
-  margin-left: auto;
+.footer-actions {
   display: flex;
-  gap: 8px;
-  font-size: 9px;
+  gap: 4px;
+  align-items: center;
+  flex-shrink: 0;
 }
 </style>
