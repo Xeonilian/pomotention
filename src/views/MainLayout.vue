@@ -81,7 +81,7 @@
             <div class="sync-status__info">
               <span class="sync-status__message">{{ syncStore.syncMessage }}</span>
               <span v-if="syncStore.lastSyncTimestamp" class="sync-status__time">{{ relativeTime }}</span>
-              <n-tag v-if="dataStore.hasUnsyncedData" type="warning" size="small" style="margin-left: 8px">有未同步数据</n-tag>
+              <n-tag v-if="dataStore.hasUnsyncedData" type="warning" size="tiny" style="margin-left: 8px">有未同步数据</n-tag>
               <span v-if="syncStore.syncError" class="sync-status__error">{{ syncStore.syncError }}</span>
             </div>
           </div>
