@@ -40,15 +40,9 @@
           />
         </template>
 
-        <!-- 统计信息 -->
-        <div v-if="day.items.length > 0" class="card-statistic">
-          <span v-if="day.items.length > MAX_PER_DAY" class="more">
-            <span class="more-left">+{{ day.items.length - MAX_PER_DAY }}</span>
-            [
-            <span :style="{ color: getPomoColor(day.pomoRatio) }">🍅&nbsp;</span>
-            = {{ day.sumRealPomo }} 🍇 = {{ day.sumRealGrape }}]
-          </span>
-          <span v-else class="pom-sum">
+        <!-- 统计信息 删除more设置-->
+        <div class="card-statistic">
+          <span class="pom-sum">
             [
             <span :style="{ color: getPomoColor(day.pomoRatio) }">🍅</span>
             = {{ day.sumRealPomo }} 🍇 = {{ day.sumRealGrape }}]
@@ -242,19 +236,6 @@ const handleItemChange = (id: number, ts: number, activityId?: number, taskId?: 
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.card-statistic .more {
-  display: flex;
-  align-items: center;
-  color: var(--color-text-secondary);
-  font-size: 12px;
-  font-family: "Segoe UI Symbol", "Noto Emoji", "Twemoji Mozilla", "Apple Symbols", sans-serif;
-  white-space: nowrap;
-}
-
-.more-left {
-  margin-right: auto;
 }
 
 .pom-sum {
