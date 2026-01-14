@@ -14,6 +14,7 @@
         color: tag.color,
         backgroundColor: tag.backgroundColor,
         // border: `1px solid ${tag.color}`,
+        border: 'none !important',
         boxShadow: props.displayLength === null || props.displayLength === 0 ? `3px -2px 0px 0px ${tag.color} inset` : 'none',
       }"
       displayLength="props.displayLength || null"
