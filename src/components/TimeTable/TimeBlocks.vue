@@ -56,7 +56,7 @@
     :class="getTodoSegmentClasses(seg)"
     :style="getTodoSegmentStyle(seg)"
     :title="getTodoTooltip(seg)"
-    @pointerdown.prevent="handlePointerDown($event, seg)"
+    @pointerdown="enhancedHandlePointerDown($event, seg)"
   >
     <span v-if="!seg.overflow" :class="getPriorityBadgeClasses(seg)" class="priority-badge">
       {{ getPriorityText(seg) }}
@@ -142,7 +142,7 @@ const {
   firstNonDigitLetterWide,
   getScheduleTooltip,
   dragState,
-  handlePointerDown,
+  enhancedHandlePointerDown,
 } = useTimeBlocks(props);
 
 // ======= Helper Functions =======
@@ -200,9 +200,50 @@ const getPriorityBadgeClasses = (seg: any) => [
 </script>
 <style scoped>
 /* ============================================
+     📱 移动端拖拽优化 - 核心禁用系统行为
+     ============================================ */
+/* 全局容器禁用所有触摸/选择行为 */
+.timetable-bar-container,
+.pomo-segment,
+.todo-segment,
+.schedule-segment,
+.actual-time-range {
+  /* 禁用文本选择 */
+  user-select: none;
+  -webkit-user-select: none;
+  /* 禁用长按菜单 */
+  -webkit-touch-callout: none;
+  /* 禁用双击缩放 */
+  touch-action: manipulation;
+  /* 禁用高亮反馈 */
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Todo段强化禁用 - 拖拽核心元素 */
+.todo-segment {
+  position: relative;
+  cursor: grab;
+  /* 关键：只允许平移，禁用所有其他触摸行为 */
+  touch-action: pan-y !important;
+  /* 禁用系统默认触摸行为 */
+  pointer-events: auto;
+  /* 防止长按触发的任何视觉反馈 */
+  -webkit-user-drag: none;
+}
+
+/* 🔥 拖拽中状态优化 - 更极致的穿透 */
+.todo-segment.dragging {
+  opacity: 0.5;
+  transform: scale(0.95);
+  cursor: grabbing;
+  pointer-events: none !important;
+  /* 确保拖拽中完全不触发任何系统行为 */
+  touch-action: none !important;
+}
+
+/* ============================================
      📐 时间表容器和背景层
      ============================================ */
-
 .timetable-bar-container {
   position: relative;
   overflow: visible;
@@ -334,25 +375,6 @@ const getPriorityBadgeClasses = (seg: any) => [
   outline: 2px solid var(--color-primary);
 }
 
-/* ============================================
-     📋 Todo 段 (第二列)
-     ============================================ */
-
-.todo-segment {
-  position: relative;
-  cursor: grab;
-  touch-action: none;
-  user-select: none;
-  -webkit-user-select: none;
-}
-
-/* 🔥 拖拽中状态 - 让 elementFromPoint 能穿透 */
-.todo-segment.dragging {
-  opacity: 0.5;
-  transform: scale(0.95);
-  cursor: grabbing;
-  pointer-events: none !important;
-}
 
 .todo-segment.completed .priority-badge {
   opacity: 0.5;

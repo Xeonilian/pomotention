@@ -57,7 +57,12 @@ export function useTimeBlockDrag(
     dragState.value.draggedTodoId = seg.todoId;
     dragState.value.draggedIndex = seg.todoIndex;
 
-    // 5. 🔥 事件绑定到 document，而非 target
+    // 5. 🔥 移动端优化：拖拽开始时禁止页面滚动
+    if (event.pointerType === 'touch') {
+      document.body.style.overflow = 'hidden';
+    }
+
+    // 6. 🔥 事件绑定到 document，而非 target
     document.addEventListener("pointermove", handlePointerMove);
     document.addEventListener("pointerup", handlePointerUp);
     document.addEventListener("pointercancel", handlePointerUp);
@@ -145,6 +150,15 @@ export function useTimeBlockDrag(
     document.removeEventListener("pointermove", handlePointerMove);
     document.removeEventListener("pointerup", handlePointerUp);
     document.removeEventListener("pointercancel", handlePointerUp);
+
+    // 🔥 移动端优化：拖拽结束后恢复页面滚动
+    if (capturedElement && pointerId !== null) {
+      const wasTouch = capturedElement.hasPointerCapture(pointerId) &&
+                      document.pointerLockElement !== null; // 检查是否为触摸事件
+      if (wasTouch) {
+        document.body.style.overflow = '';
+      }
+    }
 
     // 重置状态
     dragState.value.isDragging = false;
