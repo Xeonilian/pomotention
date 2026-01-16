@@ -60,10 +60,10 @@ const debouncedFocusSync = debounce(async (source: string) => {
   }
 
   try {
-    console.log(`📥 [${source}] 窗口激活，执行全量同步 (拉取更新)...`);
+    console.log(`📥 [${source}] 窗口激活，执行同步 (拉取更新)...`);
     if (checkUnsyncedData(source)) {
       const result = await syncAll(); // 包含 upload + download
-      console.log(`✅ [${source}] 全量同步完成:`, result);
+      console.log(`✅ [${source}] 上传下载完成:`, result);
     } else {
       const result = await downloadAll(syncStore.lastSyncTimestamp); // 包含 upload + download
       console.log(`✅ [${source}] 下载完成:`, result);
