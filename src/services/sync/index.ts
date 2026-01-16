@@ -289,6 +289,7 @@ async function runSyncTask(actionName: string, taskFn: () => Promise<{ success: 
  * 完整同步：上传 -> 下载 -> 清理 -> 保存 -> 更新时间
  */
 export async function syncAll() {
+  console.log("🚀 syncAll() 被调用，开始执行全量同步...");
   return runSyncTask("同步", async () => {
     const syncStore = useSyncStore();
     const dataStore = useDataStore();
@@ -333,9 +334,16 @@ export async function syncAll() {
  * 只上传：上传 -> 保存 (不更新下载时间戳)
  */
 export async function uploadAll() {
-  if (!ensureInitialized()) return { success: false, errors: ["未初始化"] };
+  console.log("🚀 uploadAll() 被调用，开始执行上传...");
+  if (!ensureInitialized()) {
+    console.log("❌ uploadAll() 初始化检查失败");
+    return { success: false, errors: ["未初始化"] };
+  }
   const syncStore = useSyncStore();
-  if (syncStore.isSyncing) return { success: false, errors: ["同步进行中"] };
+  if (syncStore.isSyncing) {
+    console.log("❌ uploadAll() 同步进行中，跳过");
+    return { success: false, errors: ["同步进行中"] };
+  }
 
   syncStore.startUpload();
 

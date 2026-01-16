@@ -5,7 +5,7 @@ import { useTagStore } from "@/stores/useTagStore";
 import { useTemplateStore } from "@/stores/useTemplateStore";
 import { useSettingStore } from "@/stores/useSettingStore";
 // ✅ 复用核心同步函数
-import { syncAll, uploadAll } from "@/services/sync";
+import { downloadAll, uploadAll, syncAll } from "@/services/sync";
 // ✅ 复用你的防抖工具
 import { debounce } from "@/core/utils/debounce";
 import { isTauri } from "@tauri-apps/api/core";
@@ -49,14 +49,32 @@ const debouncedFocusSync = debounce(async (source: string) => {
   const settingStore = useSettingStore();
   const syncStore = useSyncStore();
 
-  if (!settingStore.settings.autoSupabaseSync) return;
-  if (syncStore.isSyncing) return;
+  if (!settingStore.settings.autoSupabaseSync) {
+    console.log(`🚫 [${source}] 自动同步已关闭，跳过`);
+    return;
+  }
+
+  if (syncStore.isSyncing) {
+    console.log(`🚫 [${source}] 正在同步中，跳过本次请求`);
+    return;
+  }
 
   try {
     console.log(`📥 [${source}] 窗口激活，执行全量同步 (拉取更新)...`);
-    await syncAll(); // 包含 upload + download
+    if (checkUnsyncedData(source)) {
+      const result = await syncAll(); // 包含 upload + download
+      console.log(`✅ [${source}] 全量同步完成:`, result);
+    } else {
+      const result = await downloadAll(syncStore.lastSyncTimestamp); // 包含 upload + download
+      console.log(`✅ [${source}] 下载完成:`, result);
+    }
   } catch (error) {
     console.error(`❌ [${source}] 全量同步失败`, error);
+    console.log(`🔧 [${source}] 同步失败后状态检查:`, {
+      isSyncing: syncStore.isSyncing,
+      syncStatus: syncStore.syncStatus,
+      syncError: syncStore.syncError,
+    });
     syncStore.isSyncing = false; // 同步报错时重置状态
   }
 }, 2000);
@@ -69,18 +87,36 @@ const debouncedBlurSync = debounce(async (source: string) => {
   const settingStore = useSettingStore();
   const syncStore = useSyncStore();
 
-  if (!settingStore.settings.autoSupabaseSync) return;
-  if (syncStore.isSyncing) return;
+  if (!settingStore.settings.autoSupabaseSync) {
+    console.log(`🚫 [${source}] 自动同步已关闭，跳过`);
+    return;
+  }
+
+  if (syncStore.isSyncing) {
+    console.log(`🚫 [${source}] 正在同步中，跳过上传请求`);
+    return;
+  }
 
   // 只有本地有脏数据才上传
-  if (checkUnsyncedData(source)) {
+  const hasUnsynced = checkUnsyncedData(source);
+  console.log(`🔍 [${source}] 检查未同步数据: ${hasUnsynced}`);
+
+  if (hasUnsynced) {
     try {
       console.log(`📤 [${source}] 窗口失去焦点，执行上传...`);
-      await uploadAll(); // 只上传
+      const result = await uploadAll(); // 只上传
+      console.log(`✅ [${source}] 上传完成:`, result);
     } catch (error) {
       console.error(`❌ [${source}] 上传失败`, error);
+      console.log(`🔧 [${source}] 上传失败后状态检查:`, {
+        isSyncing: syncStore.isSyncing,
+        syncStatus: syncStore.syncStatus,
+        syncError: syncStore.syncError,
+      });
       syncStore.isSyncing = false; // 上传报错时重置状态
     }
+  } else {
+    console.log(`📤 [${source}] 无未同步数据，跳过上传`);
   }
 }, 500);
 
@@ -193,10 +229,18 @@ async function setupTauriCloseHandler() {
  * 浏览器环境监听
  */
 function setupBrowserCloseHandler() {
-  const handleBlur = () => debouncedBlurSync("Window Blur");
-  const handleFocus = () => debouncedFocusSync("Window Focus");
+  const handleBlur = () => {
+    console.log("🎯 浏览器事件: window.blur 触发");
+    debouncedBlurSync("Window Blur");
+  };
+
+  const handleFocus = () => {
+    console.log("🎯 浏览器事件: window.focus 触发");
+    debouncedFocusSync("Window Focus");
+  };
 
   const handleVisibility = () => {
+    console.log(`🎯 浏览器事件: visibilitychange 触发, hidden=${document.hidden}`);
     if (document.hidden) {
       debouncedBlurSync("Visibility Hidden");
     } else {
@@ -204,11 +248,13 @@ function setupBrowserCloseHandler() {
     }
   };
 
+  console.log("🔧 设置浏览器事件监听器...");
   window.addEventListener("blur", handleBlur);
   window.addEventListener("focus", handleFocus);
   document.addEventListener("visibilitychange", handleVisibility);
 
   return () => {
+    console.log("🔧 清理浏览器事件监听器...");
     window.removeEventListener("blur", handleBlur);
     window.removeEventListener("focus", handleFocus);
     document.removeEventListener("visibilitychange", handleVisibility);
