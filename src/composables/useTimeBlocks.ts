@@ -105,7 +105,7 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
     touchStartTime = Date.now();
     // 只拦截Todo段的触摸
     const target = e.target as HTMLElement;
-    if (target.closest('.todo-segment')) {
+    if (target.closest(".todo-segment")) {
       // 立即阻止默认行为，防止系统长按触发
       e.preventDefault();
       e.stopPropagation();
@@ -117,7 +117,7 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
     // 如果是快速触摸+移动，直接判定为拖拽
     if (Date.now() - touchStartTime < TOUCH_THRESHOLD) {
       const target = e.target as HTMLElement;
-      if (target.closest('.todo-segment')) {
+      if (target.closest(".todo-segment")) {
         e.preventDefault();
         e.stopPropagation();
       }
@@ -127,13 +127,13 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
   // 挂载/卸载全局事件
   onMounted(() => {
     // 使用passive: false确保能preventDefault
-    document.addEventListener('touchstart', handleGlobalTouchStart, { passive: false });
-    document.addEventListener('touchmove', handleGlobalTouchMove, { passive: false });
+    document.addEventListener("touchstart", handleGlobalTouchStart, { passive: false });
+    document.addEventListener("touchmove", handleGlobalTouchMove, { passive: false });
   });
 
   onUnmounted(() => {
-    document.removeEventListener('touchstart', handleGlobalTouchStart);
-    document.removeEventListener('touchmove', handleGlobalTouchMove);
+    document.removeEventListener("touchstart", handleGlobalTouchStart);
+    document.removeEventListener("touchmove", handleGlobalTouchMove);
   });
 
   // ======= 优化：增强handlePointerDown事件 =======
@@ -151,11 +151,11 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
     handlePointerDown(e, seg);
 
     // 4. 移动端额外处理
-    if (e.pointerType === 'touch') {
+    if (e.pointerType === "touch") {
       // 重置触摸时间，确保快速响应
       touchStartTime = 0;
       // 禁止浏览器的触摸滚动
-      document.body.style.overflow = 'hidden';
+      document.body.style.overflow = "hidden";
     }
   };
   // ======= 小时刻度线相关 =======
@@ -474,7 +474,7 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
   }
 
   const actualTodoTimeRanges = computed((): ActualTimeRange[] => {
-    const specialPriorities = [66, 88, 99];
+    const specialPriorities = [33, 44, 55, 66, 77, 88, 99];
     const ranges: ActualTimeRange[] = [];
 
     // 处理普通done状态的todo
@@ -517,17 +517,24 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
         const end = timePosition + duration / 2;
 
         // 根据priority确定category和emoji
-        let category: string;
+        const categoryConstant = "emoji";
         let emoji: string;
-        if (todo.priority === 66) {
-          category = "person"; // 人
-          emoji = "💖";
+        if (todo.priority === 33) {
+          emoji = "💤";
+        } else if (todo.priority === 44) {
+          emoji = "🥗";
+        } else if (todo.priority === 55) {
+          emoji = "📚";
+        } else if (todo.priority === 66) {
+          emoji = "🙊";
+        } else if (todo.priority === 77) {
+          emoji = "✨";
         } else if (todo.priority === 88) {
-          category = "money"; // 财
           emoji = "💸";
-        } else {
-          category = "thing"; // 物
+        } else if (todo.priority === 99) {
           emoji = "🧸";
+        } else {
+          emoji = "";
         }
 
         return {
@@ -535,7 +542,7 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
           title: todo.activityTitle,
           start,
           end,
-          category,
+          category: categoryConstant,
           emoji,
         };
       })

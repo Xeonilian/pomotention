@@ -117,7 +117,11 @@
               />
 
               <span v-else class="priority-badge" :class="'priority-' + todo.priority">
-                <template v-if="todo.priority === 66">💖</template>
+                <template v-if="todo.priority === 33">💤</template>
+                <template v-else-if="todo.priority === 44">🥗</template>
+                <template v-else-if="todo.priority === 55">📚</template>
+                <template v-else-if="todo.priority === 66">🙊</template>
+                <template v-else-if="todo.priority === 77">✨</template>
                 <template v-else-if="todo.priority === 88">💸</template>
                 <template v-else-if="todo.priority === 99">🧸</template>
                 <template v-else>{{ todo.priority > 0 ? todo.priority : "" }}</template>
@@ -375,7 +379,7 @@ const emit = defineEmits<{
 const sortedTodos = computed(() => {
   const todos = [...todosForCurrentViewWithTaskRecords.value];
   // 分离特殊值（66、88、99）和正常值
-  const specialPriorities = [66, 88, 99];
+  const specialPriorities = [33, 44, 55, 66, 77, 88, 99];
   const normalTodos: TodoWithTaskRecords[] = [];
   const specialTodos: TodoWithTaskRecords[] = [];
 
@@ -437,7 +441,7 @@ function finishEditing() {
     return;
   }
   // 允许特殊值66、88、99
-  const specialPriorities = [66, 88, 99];
+  const specialPriorities = [33, 44, 55, 66, 77, 88, 99];
   if (!specialPriorities.includes(editingPriority.value) && editingPriority.value > 21) {
     popoverMessage.value = "请输入0-21或66、88、99";
     showPopover.value = true;
@@ -485,7 +489,7 @@ function finishEditing() {
 // 传入 current 和 desired，让排序更智能
 function relayoutPriority(todos: Todo[], current: Todo, desired: number) {
   // 特殊优先级值，不参与重新分配
-  const specialPriorities = [66, 88, 99];
+  const specialPriorities = [33, 44, 55, 66, 77, 88, 99];
 
   // 如果目标是特殊值，直接设置并返回，不参与重新分配
   if (specialPriorities.includes(desired)) {

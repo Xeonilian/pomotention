@@ -504,6 +504,7 @@ const getPriorityBadgeClasses = (seg: any) => [
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;
+  z-index: 20;
 }
 
 .emoji-range:hover .emoji-icon {
