@@ -1,9 +1,11 @@
 // src/composables/useDraggable.ts
-import { ref } from "vue";
+import { ref, nextTick, watch } from "vue";
+import { useSettingStore } from "@/stores/useSettingStore";
 
 export function useDraggable(dragThreshold = 5) {
   const draggableContainer = ref<HTMLElement | null>(null);
   const lastPosition = ref({ x: -1, y: -1 });
+  const settingStore = useSettingStore();
 
   let startX = 0;
   let startY = 0;
@@ -128,10 +130,44 @@ export function useDraggable(dragThreshold = 5) {
     }
   }
 
+  // 控制 Draggable 容器的位置和显示
+  async function updateDraggableContainerVisibility(show: boolean) {
+    await nextTick();
+    if (draggableContainer.value) {
+      if (show) {
+        setInitialPosition();
+        draggableContainer.value.style.visibility = "visible";
+      } else {
+        // 记录位置以便恢复
+        lastPosition.value = {
+          x: draggableContainer.value.offsetLeft,
+          y: draggableContainer.value.offsetTop,
+        };
+        draggableContainer.value.style.visibility = "hidden";
+      }
+    }
+  }
+
+  // 当退出 Mini 模式时的回调
+  async function onExitMiniMode() {
+    lastPosition.value = { x: -1, y: -1 };
+    await updateDraggableContainerVisibility(true);
+  }
+
+  // 监听番茄钟显示开关
+  watch(
+    () => settingStore.settings.showPomodoro,
+    async (newVal) => {
+      await updateDraggableContainerVisibility(newVal);
+    }
+  );
+
   return {
     draggableContainer, // 绑定 ref="draggableContainer"
     setInitialPosition, // 用于初始化
     lastPosition, // 记录位置状态
     handleDragStart, // 绑定 @pointerdown="handleDragStart"
+    updateDraggableContainerVisibility, // 控制可见性
+    onExitMiniMode, // 退出 Mini 模式回调
   };
 }
