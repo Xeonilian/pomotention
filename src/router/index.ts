@@ -80,19 +80,13 @@ router.beforeEach(async (to, _from, next) => {
   // getSession() 返回 Session | null
   const session = await getSession();
 
-  // 检查目标路由是否需要认证
-  // 如果子路由明确设置 requiresAuth: false，则不需要认证
-  const requiresAuth = to.matched.some((record) => record.meta.requiresAuth);
-  const explicitlyNoAuth = to.matched.some((record) => record.meta.requiresAuth === false);
-
-  if (requiresAuth && !explicitlyNoAuth && !session) {
-    // 需要认证但用户未登录，重定向到登录页
-    next({ name: "Login" });
-  } else if (to.name === "Login" && session) {
+  // 允许未登录用户访问所有路由，不再强制重定向到登录页
+  // 如果用户已登录但试图访问登录页，重定向到首页
+  if (to.name === "Login" && session) {
     // 用户已登录但试图访问登录页，重定向到首页
     next({ name: "Home" });
   } else {
-    // 正常放行
+    // 正常放行，包括未登录用户
     next();
   }
 });
