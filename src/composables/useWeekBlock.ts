@@ -60,7 +60,7 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targe
     // 如果传入了目标高度，就按高度/小时数计算，否则用默认值
     if (height && totalHours > 0) {
       const result = height / totalHours;
-      console.log(`pxPerHour calculated: targetHeight=${height}, totalHours=${totalHours}, result=${result}`);
+      // console.log(`pxPerHour calculated: targetHeight=${height}, totalHours=${totalHours}, result=${result}`);
       return result;
     }
     console.log(`pxPerHour using default: ${BASE_PX_PER_HOUR}`);
@@ -205,7 +205,7 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targe
 
     // 调试信息 - 只输出todo类型的高度计算
     if (item.type === "todo") {
-      console.log(`Todo ${item.id}: durationHours=${durationHours}, height=${height}`);
+      // console.log(`Todo ${item.id}: durationHours=${durationHours}, height=${height}`);
     }
 
     return {
