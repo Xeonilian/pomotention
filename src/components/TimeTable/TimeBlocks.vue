@@ -17,14 +17,8 @@
     </div>
 
     <!-- ========== 背景层：时间主块 ========== -->
-    <div v-for="block in props.blocks" :key="block.id" :style="getVerticalBlockStyle(block)" class="time-block">
-      <span
-        class="block-label"
-        :class="{
-          'label-living': block.category === 'living',
-          'label-working': block.category === 'working',
-        }"
-      >
+    <div v-for="block in props.blocks" :key="block.id" :style="getVerticalBlockStyle(block)">
+      <span class="block-label">
         {{ getBlockLabel(block.category) }}
       </span>
     </div>
@@ -79,7 +73,7 @@
   <div
     v-for="seg in actualSegments"
     :key="`actual-${seg.todoId}-${seg.todoIndex}`"
-    class="todo-segment actual"
+    class="todo-segment"
     :style="getActualSegmentStyle(seg)"
     :title="`${seg.pomoType}[${seg.priority}]-${seg.todoIndex} - ${seg.todoTitle}`"
   >
@@ -90,7 +84,7 @@
   <div
     v-for="range in actualTodoTimeRanges"
     :key="`actual-range-${range.id}`"
-    class="actual-time-range todo-range"
+    class="actual-time-range"
     :class="{ 'emoji-range': range.emoji }"
     :style="getActualTodoTimeRangeStyle(range)"
     :title="range.emoji ? range.title : `${range.title} - 实际番茄执行时间`"
@@ -101,7 +95,7 @@
   <div
     v-for="range in actualScheduleTimeRanges"
     :key="`actual-range-${range.id}`"
-    class="actual-time-range schedule-range"
+    class="actual-time-range"
     :style="getActualScheduleTimeRangeStyle(range)"
     :title="`${range.title} - 实际预约执行时间`"
   ></div>
@@ -301,6 +295,11 @@ const getPriorityBadgeClasses = (seg: any) => [
 /* ========== 时间块标签 ========== */
 .block-label {
   z-index: 9;
+  /* 🔥 移动端：禁用文本选择 */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* ========== 当前时间指示线 ========== */
@@ -354,6 +353,10 @@ const getPriorityBadgeClasses = (seg: any) => [
   font-size: 10px;
   pointer-events: none;
   font-family: "Arial";
+  /* 🔥 移动端：强化禁用文本选择 */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .pomo-segment.work {
@@ -374,7 +377,6 @@ const getPriorityBadgeClasses = (seg: any) => [
   background-color: var(--color-primary-transparent) !important;
   outline: 2px solid var(--color-primary);
 }
-
 
 .todo-segment.completed .priority-badge {
   opacity: 0.5;
@@ -488,6 +490,10 @@ const getPriorityBadgeClasses = (seg: any) => [
 
 .emoji-range {
   pointer-events: auto;
+  /* 🔥 移动端：禁用文本选择 */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .emoji-icon {
@@ -496,6 +502,9 @@ const getPriorityBadgeClasses = (seg: any) => [
   line-height: 1;
   transition: transform 0.2s ease;
   user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  z-index: 20;
 }
 
 .emoji-range:hover .emoji-icon {

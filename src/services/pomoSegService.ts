@@ -217,7 +217,7 @@ export function splitIndexPomoBlocksExSchedules(
 export function generateActualTodoSegments(todos: Todo[]): TodoSegment[] {
   const todoSegments: TodoSegment[] = [];
   // 特殊优先级值（66、88、99）不生成TodoSegment
-  const specialPriorities = [66, 88, 99];
+  const specialPriorities = [33, 44, 55, 66, 77, 88, 99];
 
   const todosWithStartTime = todos.filter((todo) => todo.startTime && !specialPriorities.includes(todo.priority));
 
@@ -331,7 +331,7 @@ export function generateEstimatedTodoSegments(appDateTimestamp: number, todos: T
   const usedGlobalIndices: Set<number> = new Set();
   const todoSegments: TodoSegment[] = [];
   // 特殊优先级值（66、88、99）不生成TodoSegment
-  const specialPriorities = [66, 88, 99];
+  const specialPriorities = [33, 44, 55, 66, 77, 88, 99];
   const activeTodos = todos.filter((t) => t.status !== "cancelled" && !specialPriorities.includes(t.priority));
   // 2. 待办事项排序
   const sortedTodos = [...activeTodos].sort((a, b) => {
