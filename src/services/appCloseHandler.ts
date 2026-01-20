@@ -31,7 +31,7 @@ function checkUnsyncedData(source: string = "Unknown"): boolean {
   const total = Object.values(hasUnsynced).filter(Boolean).length;
 
   if (total > 0) {
-    console.log(`📊 [${source}] 发现本地待上传数据`, hasUnsynced);
+    console.log(`📊 [${source}] 发现 ${total} 类未同步数据`);
   }
 
   return total > 0;
@@ -55,26 +55,22 @@ const debouncedFocusSync = debounce(async (source: string) => {
   }
 
   if (syncStore.isSyncing) {
-    console.log(`🚫 [${source}] 正在同步中，跳过本次请求`);
+    return; // 正在同步中，静默跳过
+  }
+
+  if (!syncStore.isLoggedIn) {
+    console.log(`🚫 [${source}] 未登录，跳过同步`);
     return;
   }
 
   try {
-    console.log(`📥 [${source}] 窗口激活，执行同步 (拉取更新)...`);
     if (checkUnsyncedData(source)) {
-      const result = await syncAll(); // 包含 upload + download
-      console.log(`✅ [${source}] 上传下载完成:`, result);
+      await syncAll(); // 包含 upload + download
     } else {
-      const result = await downloadAll(syncStore.lastSyncTimestamp); // 包含 upload + download
-      console.log(`✅ [${source}] 下载完成:`, result);
+      await downloadAll(syncStore.lastSyncTimestamp);
     }
   } catch (error) {
-    console.error(`❌ [${source}] 全量同步失败`, error);
-    console.log(`🔧 [${source}] 同步失败后状态检查:`, {
-      isSyncing: syncStore.isSyncing,
-      syncStatus: syncStore.syncStatus,
-      syncError: syncStore.syncError,
-    });
+    console.error(`❌ [${source}] 同步失败`, error);
     syncStore.isSyncing = false; // 同步报错时重置状态
   }
 }, 2000);
@@ -88,35 +84,21 @@ const debouncedBlurSync = debounce(async (source: string) => {
   const syncStore = useSyncStore();
 
   if (!settingStore.settings.autoSupabaseSync) {
-    console.log(`🚫 [${source}] 自动同步已关闭，跳过`);
-    return;
+    return; // 自动同步已关闭，静默跳过
   }
 
   if (syncStore.isSyncing) {
-    console.log(`🚫 [${source}] 正在同步中，跳过上传请求`);
-    return;
+    return; // 正在同步中，静默跳过
   }
 
   // 只有本地有脏数据才上传
-  const hasUnsynced = checkUnsyncedData(source);
-  console.log(`🔍 [${source}] 检查未同步数据: ${hasUnsynced}`);
-
-  if (hasUnsynced) {
+  if (checkUnsyncedData(source)) {
     try {
-      console.log(`📤 [${source}] 窗口失去焦点，执行上传...`);
-      const result = await uploadAll(); // 只上传
-      console.log(`✅ [${source}] 上传完成:`, result);
+      await uploadAll(); // 只上传
     } catch (error) {
       console.error(`❌ [${source}] 上传失败`, error);
-      console.log(`🔧 [${source}] 上传失败后状态检查:`, {
-        isSyncing: syncStore.isSyncing,
-        syncStatus: syncStore.syncStatus,
-        syncError: syncStore.syncError,
-      });
       syncStore.isSyncing = false; // 上传报错时重置状态
     }
-  } else {
-    console.log(`📤 [${source}] 无未同步数据，跳过上传`);
   }
 }, 500);
 
@@ -138,11 +120,8 @@ async function setupTauriCloseHandler() {
 
     // 1. 关闭拦截 (优化逻辑，防止状态锁死)
     const unlistenClose = await appWindow.onCloseRequested(async (event) => {
-      console.log("🔒 [Tauri Close] 收到关闭请求，开始处理...");
-
       // 防止重复处理关闭请求 - 使用全局状态
       if (isAppClosing) {
-        console.log("⚠️ [Tauri Close] 已在处理关闭请求，忽略重复请求");
         return;
       }
       isAppClosing = true;
@@ -152,14 +131,11 @@ async function setupTauriCloseHandler() {
       try {
         // 如果正在同步，等待500ms再检查
         if (syncStore.isSyncing) {
-          console.log(`⏳ [Tauri Close] 已有同步任务，等待完成...`);
           await new Promise((resolve) => setTimeout(resolve, 500));
         }
 
         // 检查并上传未同步数据
         if (checkUnsyncedData("Tauri Close")) {
-          console.log(`📤 [Tauri Close] 执行最终上传 (5秒超时)...`);
-
           // 创建5秒超时的上传任务
           const uploadPromise = uploadAll();
           const timeoutPromise = new Promise<{ success: false; errors: string[]; uploaded: number }>((_, reject) => {
@@ -169,8 +145,6 @@ async function setupTauriCloseHandler() {
           try {
             const uploadResult = await Promise.race([uploadPromise, timeoutPromise]);
             if (uploadResult.success) {
-              console.log(`✅ [Tauri Close] 上传成功: ${uploadResult.uploaded} 项`);
-              // 短暂显示成功状态
               syncStore.syncSuccess("关闭前上传成功");
               await new Promise((resolve) => setTimeout(resolve, 800));
             } else {
@@ -181,16 +155,11 @@ async function setupTauriCloseHandler() {
           } catch (timeoutError: any) {
             console.warn(`⏰ [Tauri Close] ${timeoutError.message}`);
             syncStore.syncFailed(timeoutError.message);
-            // 强制重置同步状态
             syncStore.isSyncing = false;
             await new Promise((resolve) => setTimeout(resolve, 800));
           }
-        } else {
-          console.log(`📤 [Tauri Close] 无未同步数据，跳过上传`);
         }
 
-        // 最终关闭窗口
-        console.log("🚪 [Tauri Close] 开始关闭窗口...");
         await appWindow.close();
       } catch (error) {
         console.error(`❌ [Tauri Close] 关闭时同步失败`, error);
@@ -230,17 +199,14 @@ async function setupTauriCloseHandler() {
  */
 function setupBrowserCloseHandler() {
   const handleBlur = () => {
-    console.log("🎯 浏览器事件: window.blur 触发");
     debouncedBlurSync("Window Blur");
   };
 
   const handleFocus = () => {
-    console.log("🎯 浏览器事件: window.focus 触发");
     debouncedFocusSync("Window Focus");
   };
 
   const handleVisibility = () => {
-    console.log(`🎯 浏览器事件: visibilitychange 触发, hidden=${document.hidden}`);
     if (document.hidden) {
       debouncedBlurSync("Visibility Hidden");
     } else {
@@ -248,13 +214,11 @@ function setupBrowserCloseHandler() {
     }
   };
 
-  console.log("🔧 设置浏览器事件监听器...");
   window.addEventListener("blur", handleBlur);
   window.addEventListener("focus", handleFocus);
   document.addEventListener("visibilitychange", handleVisibility);
 
   return () => {
-    console.log("🔧 清理浏览器事件监听器...");
     window.removeEventListener("blur", handleBlur);
     window.removeEventListener("focus", handleFocus);
     document.removeEventListener("visibilitychange", handleVisibility);
