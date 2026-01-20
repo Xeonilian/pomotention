@@ -23,7 +23,7 @@
               </template>
             </n-button>
             <!-- 未登录时显示登录按钮 -->
-            <n-button v-if="!isLoggedIn" size="tiny" type="info" secondary title="登录" class="header-button" @click="handleLogin">
+            <n-button v-if="!isLoggedIn" size="tiny" type="info" secondary title="登录/注册" class="header-button" @click="handleLogin">
               <template #icon>
                 <n-icon>
                   <PersonAccounts24Filled />
@@ -33,7 +33,7 @@
             <!-- 已登录时显示退出登录按钮 -->
             <n-popconfirm v-else placement="top-end" positive-text="确认退出" negative-text="取消" @positive-click="handleLogout">
               <template #trigger>
-                <n-button size="tiny" type="info" secondary :loading="loggingOut" title="退出登录" class="header-button">
+                <n-button size="tiny" type="default" secondary :loading="loggingOut" title="退出登录" class="header-button">
                   <template #icon>
                     <n-icon>
                       <PersonAccounts24Filled />
@@ -90,7 +90,9 @@
             <div class="sync-status__info">
               <span class="sync-status__message">{{ syncStore.syncMessage }}</span>
               <span v-if="syncStore.lastSyncTimestamp" class="sync-status__time">{{ relativeTime }}</span>
-              <n-tag v-if="dataStore.hasUnsyncedData" type="warning" size="tiny" style="margin-left: 8px">有未同步数据</n-tag>
+              <n-tag v-if="dataStore.hasUnsyncedData" type="default" size="tiny" style="margin-left: 2px; font-size: 10px; margin-top: 2px">
+                有未同步数据
+              </n-tag>
               <span v-if="syncStore.syncError" class="sync-status__error">{{ syncStore.syncError }}</span>
             </div>
           </div>
