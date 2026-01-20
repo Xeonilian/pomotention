@@ -22,7 +22,16 @@
                 <n-icon size="18" :component="control.icon" />
               </template>
             </n-button>
-            <n-popconfirm placement="top-end" positive-text="确认退出" negative-text="取消" @positive-click="handleLogout">
+            <!-- 未登录时显示登录按钮 -->
+            <n-button v-if="!isLoggedIn" size="tiny" type="info" secondary title="登录" class="header-button" @click="handleLogin">
+              <template #icon>
+                <n-icon>
+                  <PersonAccounts24Filled />
+                </n-icon>
+              </template>
+            </n-button>
+            <!-- 已登录时显示退出登录按钮 -->
+            <n-popconfirm v-else placement="top-end" positive-text="确认退出" negative-text="取消" @positive-click="handleLogout">
               <template #trigger>
                 <n-button size="tiny" type="info" secondary :loading="loggingOut" title="退出登录" class="header-button">
                   <template #icon>
@@ -122,9 +131,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, nextTick, computed, onMounted } from "vue";
+import { ref, watch, nextTick, onMounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
-import { NMenu, NButton, NIcon, NLayoutFooter, NTag } from "naive-ui";
+import { NMenu, NButton, NIcon, NLayoutFooter, NTag, NPopconfirm } from "naive-ui";
 
 // Stores
 import { useSettingStore } from "@/stores/useSettingStore";
@@ -137,17 +146,9 @@ import { useAppWindow } from "@/composables/useAppWindow";
 import { useSyncWidget } from "@/composables/useSyncWidget";
 
 // Icons & Components
-import {
-  PersonAccounts24Filled,
-  ArrowLeft24Filled,
-  ArrowUp24Filled,
-  ArrowDown24Filled,
-  ArrowRight24Filled,
-  Timer24Regular,
-  Pin24Regular,
-  BrainCircuit24Regular,
-} from "@vicons/fluent";
+import { PersonAccounts24Filled, ArrowUp24Filled, ArrowDown24Filled } from "@vicons/fluent";
 import PomotentionTimer from "@/components/PomotentionTimer/PomotentionTimer.vue";
+import { isTauri } from "@tauri-apps/api/core";
 
 const router = useRouter();
 const route = useRoute();
@@ -155,8 +156,8 @@ const settingStore = useSettingStore();
 const dataStore = useDataStore();
 
 // === 1. 初始化 Composables ===
-const { buttonStyle, updateButtonStates } = useButtonStyle();
-const { draggableContainer, setInitialPosition, lastPosition, handleDragStart } = useDraggable(5);
+const { buttonStyle, viewControls, toggleSettingPanel } = useButtonStyle();
+const { draggableContainer, handleDragStart, updateDraggableContainerVisibility, onExitMiniMode } = useDraggable(5);
 
 const {
   isMiniMode,
@@ -169,7 +170,14 @@ const {
   handlePomotentionTimerSizeReport,
 } = useAppWindow();
 
-const { syncStore, syncIcon, relativeTime, handleUpload, handleDownload } = useSyncWidget();
+// 为了不报错增加的使用 PomotentionTimerContainerRef
+if (!settingStore.settings.showPomodoro) {
+  console.log("PomotentionTimerContainerRef", PomotentionTimerContainerRef.value);
+  console.log(draggableContainer.value);
+}
+
+const { syncStore, syncIcon, relativeTime, handleUpload, handleDownload, isLoggedIn, loggingOut, handleLogin, handleLogout } =
+  useSyncWidget();
 
 // === 2. 菜单与路由逻辑 ===
 const currentRoutePath = ref(route.path);
@@ -188,32 +196,7 @@ watch(route, (newVal) => {
   currentRoutePath.value = newVal.path;
 });
 
-// 为了不报错增加的使用 PomotentionTimerContainerRef
-if (!settingStore.settings.showPomodoro) {
-  console.log("PomotentionTimerContainerRef", PomotentionTimerContainerRef.value);
-}
-
-onMounted(async () => {
-  // 如果初始设置是开启的，需要手动触发一次显示逻辑，把 visibility 改为 visible
-  if (settingStore.settings.showPomodoro) {
-    // 必须等待 nextTick，确保 v-if 已经把 DOM 渲染出来了
-    await nextTick();
-    await updateDraggableContainerVisibility(true);
-  }
-});
-
-// === 3. 视图控制按钮===
-
-const viewControls = computed(() => [
-  { key: "ontop", icon: Pin24Regular, title: "番茄时钟置顶", show: true },
-  { key: "pomodoro", icon: Timer24Regular, title: "切换番茄钟视图", show: settingStore.settings.showPomodoro },
-  { key: "schedule", icon: ArrowLeft24Filled, title: "切换日程视图", show: settingStore.settings.showSchedule },
-  { key: "planner", icon: ArrowUp24Filled, title: "切换计划视图", show: settingStore.settings.showPlanner },
-  { key: "task", icon: ArrowDown24Filled, title: "切换执行视图", show: settingStore.settings.showTask },
-  { key: "activity", icon: ArrowRight24Filled, title: "切换活动视图", show: settingStore.settings.showActivity },
-  { key: "ai", icon: BrainCircuit24Regular, title: "切换AI助手", show: settingStore.settings.showAi },
-]);
-
+// === 3. 视图控制按钮 ===
 function handleMainLayoutViewToggle(key: string) {
   if (key === "ontop") {
     // 进入 Mini 模式
@@ -224,165 +207,23 @@ function handleMainLayoutViewToggle(key: string) {
   toggleSettingPanel(key as any);
 }
 
-// 辅助：切换 Store 中的面板显示状态
-function toggleSettingPanel(panel: "schedule" | "activity" | "task" | "today" | "pomodoro" | "ai") {
-  const toKey = (p: string) => ("show" + p.charAt(0).toUpperCase() + p.slice(1)) as keyof typeof settingStore.settings;
-  const key = toKey(panel);
-  const next = !settingStore.settings[key];
-  // @ts-ignore
-  settingStore.settings[key] = next;
-
-  // 互斥逻辑
-  if (next) {
-    if (panel === "activity") settingStore.settings.showAi = false;
-    else if (panel === "ai") settingStore.settings.showActivity = false;
+// === 4. 初始化 ===
+onMounted(async () => {
+  // 如果初始设置是开启的，需要手动触发一次显示逻辑，把 visibility 改为 visible
+  if (settingStore.settings.showPomodoro) {
+    // 必须等待 nextTick，确保 v-if 已经把 DOM 渲染出来了
+    await nextTick();
+    await updateDraggableContainerVisibility(true);
   }
-}
+});
 
-// 监听配置变化更新按钮样式
-watch(
-  () => [
-    settingStore.settings.showSchedule,
-    settingStore.settings.showPlanner,
-    settingStore.settings.showTask,
-    settingStore.settings.showActivity,
-    settingStore.settings.showPomodoro,
-    settingStore.settings.showAi,
-  ],
-  () => updateButtonStates(),
-  { immediate: true }
-);
-
-// === 4. 拖拽容器可见性控制 ===
-
-// 当退出 Mini 模式时的回调
-async function onExitMiniMode() {
-  lastPosition.value = { x: -1, y: -1 };
-  await updateDraggableContainerVisibility(true);
-}
-
-// 控制 Draggable 容器的位置和显示
-async function updateDraggableContainerVisibility(show: boolean) {
-  await nextTick();
-  if (draggableContainer.value) {
-    if (show) {
-      setInitialPosition();
-      draggableContainer.value.style.visibility = "visible";
-    } else {
-      // 记录位置以便恢复
-      lastPosition.value = {
-        x: draggableContainer.value.offsetLeft,
-        y: draggableContainer.value.offsetTop,
-      };
-      draggableContainer.value.style.visibility = "hidden";
-    }
-  }
-}
-
-// 监听番茄钟显示开关
-watch(
-  () => settingStore.settings.showPomodoro,
-  async (newVal) => {
-    await updateDraggableContainerVisibility(newVal);
-  }
-);
-
-// === 5. 退出逻辑 ===
-import { signOut } from "@/core/services/authService";
-
-const loggingOut = ref(false);
-
-async function handleLogout() {
-  loggingOut.value = true;
-
-  // 检查是否从本地模式切换过来的
-  const wasLocalMode = settingStore.settings.wasLocalModeBeforeLogin;
-
-  if (wasLocalMode) {
-    // 从本地模式切换过来的，不清除本地数据
-    console.log("👋 退出登录（从本地模式切换），保留本地数据");
-
-    // 只清除认证相关的 localStorage 项
-    try {
-      const keysToRemove: string[] = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && (key.includes("supabase") || key.includes("auth"))) {
-          keysToRemove.push(key);
-        }
-      }
-      keysToRemove.forEach((key) => localStorage.removeItem(key));
-    } catch (err) {
-      console.error("清除认证数据时出错:", err);
-    }
-  } else {
-    // 正常退出，清除所有数据
-    // App上数据备份
-    // 警告用户: 退出之前请导出数据
-    if (isTauri()) {
-      const confirmExport = confirm("在退出之前，您必须导出数据。是否继续导出？");
-      if (confirmExport) {
-        const exportSuccessful = await handleExport(); // 调用导出方法
-        if (!exportSuccessful) {
-          // 如果导出失败，停止注销
-          loggingOut.value = false;
-          return;
-        }
-      }
-    }
-    localStorage.clear();
-  }
-
-  await signOut();
-  loggingOut.value = false;
-  router.push({ name: "Login" });
-}
-import { collectLocalData } from "@/services/localStorageService";
-import { open } from "@tauri-apps/plugin-dialog";
-import { writeTextFile } from "@tauri-apps/plugin-fs";
-import { isTauri } from "@tauri-apps/api/core";
-const debugInfo = ref("");
-// 手动同步操作
+// === 5. 手动同步操作 ===
 async function handleManualUpload() {
   await handleUpload();
 }
 
 async function handleManualDownload() {
   await handleDownload();
-}
-
-async function handleExport() {
-  try {
-    const localdata = collectLocalData();
-
-    // 选择目录
-    const dirPath = await open({
-      directory: true,
-      multiple: false,
-    });
-
-    if (!dirPath || typeof dirPath !== "string") {
-      debugInfo.value = "⚠️导出失败: 指定目录无效";
-      return false; // 返回失败
-    }
-
-    // 分别保存每个数据类型
-    const savePromises = Object.entries(localdata).map(async ([key, value]) => {
-      const fileName = `${key}.json`;
-      const filePath = `${dirPath}/${fileName}`;
-      const jsonData = JSON.stringify(value, null, 2);
-      await writeTextFile(filePath, jsonData);
-      return fileName;
-    });
-
-    await Promise.all(savePromises);
-
-    debugInfo.value = "✔️所有数据文件导出成功: " + dirPath;
-    return true; // 返回成功
-  } catch (error) {
-    debugInfo.value = "⚠️导出失败: " + error;
-    return false; // 返回失败
-  }
 }
 </script>
 
