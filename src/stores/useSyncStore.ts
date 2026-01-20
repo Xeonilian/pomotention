@@ -17,8 +17,11 @@ export const useSyncStore = defineStore("sync", () => {
   // ✅ 同步状态
   const isSyncing = ref(false);
   const syncError = ref<string | null>(null);
-  const syncMessage = ref<string>("就绪");
+  const currentSyncMessage = ref<string>("就绪");
   const syncStatus = ref<"idle" | "syncing" | "uploading" | "downloading" | "error">("idle");
+
+  // 根据登录状态显示不同的消息
+  const syncMessage = computed(() => (isLoggedIn.value ? currentSyncMessage.value : "未登录"));
 
   // ✅ 登录状态
   const isLoggedIn = ref(false);
@@ -44,7 +47,7 @@ export const useSyncStore = defineStore("sync", () => {
   function startSync(message: string = "正在同步...") {
     isSyncing.value = true;
     syncStatus.value = "syncing";
-    syncMessage.value = message;
+    currentSyncMessage.value = message;
     syncError.value = null;
   }
 
@@ -52,7 +55,7 @@ export const useSyncStore = defineStore("sync", () => {
   function startUpload() {
     isSyncing.value = true;
     syncStatus.value = "uploading";
-    syncMessage.value = "正在上传...";
+    currentSyncMessage.value = "正在上传...";
     syncError.value = null;
   }
 
@@ -60,7 +63,7 @@ export const useSyncStore = defineStore("sync", () => {
   function startDownload() {
     isSyncing.value = true;
     syncStatus.value = "downloading";
-    syncMessage.value = "正在下载...";
+    currentSyncMessage.value = "正在下载...";
     syncError.value = null;
   }
 
@@ -68,7 +71,7 @@ export const useSyncStore = defineStore("sync", () => {
   function syncSuccess(message: string = "同步完成") {
     isSyncing.value = false;
     syncStatus.value = "idle";
-    syncMessage.value = message;
+    currentSyncMessage.value = message;
     syncError.value = null;
     lastSyncTimestamp.value = Date.now();
   }
@@ -77,7 +80,7 @@ export const useSyncStore = defineStore("sync", () => {
   function syncFailed(error: string) {
     isSyncing.value = false;
     syncStatus.value = "error";
-    syncMessage.value = "同步失败";
+    currentSyncMessage.value = "同步失败";
     syncError.value = error;
   }
 
@@ -94,7 +97,7 @@ export const useSyncStore = defineStore("sync", () => {
     lastCleanupTimestamp.value = 0;
     isSyncing.value = false;
     syncError.value = null;
-    syncMessage.value = "就绪";
+    currentSyncMessage.value = "就绪";
     syncStatus.value = "idle";
   }
 
