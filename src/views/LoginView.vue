@@ -106,17 +106,15 @@
         </n-space>
 
         <!-- 忘记密码链接 -->
-        <div class="forgot-password">
+        <div class="text-button">
           <n-button text type="primary" @click="toggleResetMode">
-            {{ isResetMode ? "返回登录" : "忘记密码？" }}
+            {{ isResetMode ? "返回登录" : "忘记密码" }}
           </n-button>
         </div>
 
         <!-- 仅本地使用选项（仅APP环境显示） -->
-        <div v-if="isApp && !isResetMode" class="local-only-option">
-          <n-button text type="default" @click="handleLocalOnlyMode">
-            仅本地使用
-          </n-button>
+        <div v-if="!isResetMode" class="text-button">
+          <n-button text type="default" @click="handleLocalOnlyMode">仅本地使用</n-button>
         </div>
       </div>
 
@@ -142,7 +140,6 @@ import { supabase } from "@/core/services/supabase";
 import { marked } from "marked";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useDataStore } from "@/stores/useDataStore";
-import { isTauri } from "@tauri-apps/api/core";
 
 const email = ref("");
 const password = ref("");
@@ -157,7 +154,6 @@ const supabaseClient = supabase;
 const supabaseUnavailable = !supabaseClient;
 const settingStore = useSettingStore();
 const dataStore = useDataStore();
-const isApp = isTauri();
 
 // 检测是否有其他用户的数据
 const hasDifferentUserData = computed(() => {
@@ -458,13 +454,8 @@ function handleLocalOnlyMode() {
   margin: 0;
 }
 
-.forgot-password {
-  margin-top: 0px;
-  text-align: center;
-}
-
-.local-only-option {
-  margin-top: 10px;
+.text-button {
+  margin: 0px;
   text-align: center;
 }
 
