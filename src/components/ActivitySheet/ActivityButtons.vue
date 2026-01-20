@@ -6,7 +6,7 @@
   <div class="activity-view-button-container">
     <n-button
       @click="$emit('pick-activity')"
-      :disabled="activeId === null || activeId === undefined"
+      :disabled="activeId === null || activeId === null || props.isDeleted"
       secondary
       circle
       type="default"
@@ -23,7 +23,7 @@
       circle
       type="default"
       size="small"
-      :disabled="activeId === null || props.selectedTaskId !== null || activeId === undefined"
+      :disabled="activeId === null || props.selectedTaskId !== null || activeId === undefined || props.isDeleted"
       title="追踪任务"
     >
       <template #icon>
@@ -55,7 +55,7 @@
       secondary
       type="default"
       size="small"
-      :disabled="activeId === null || activeId === undefined"
+      :disabled="activeId === null || activeId === undefined || props.isDeleted"
     >
       <template #icon>
         <n-icon><ArrowRepeatAll24Regular /></n-icon>
