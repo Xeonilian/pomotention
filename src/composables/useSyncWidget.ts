@@ -1,5 +1,5 @@
 // src/composables/useSyncWidget.ts
-import { computed, onMounted, onUnmounted } from "vue";
+import { computed, onMounted } from "vue";
 import { useSyncStore } from "@/stores/useSyncStore";
 import { uploadAll, downloadAll } from "@/services/sync";
 import { useRelativeTime } from "@/composables/useRelativeTime";
@@ -47,12 +47,6 @@ export function useSyncWidget() {
   // 初始化认证监听
   onMounted(async () => {
     await syncStore.checkLoginStatus();
-    syncStore.initAuthListener();
-  });
-
-  // 组件卸载时清理认证监听
-  onUnmounted(() => {
-    syncStore.cleanupAuthListener();
   });
 
   return {
@@ -61,11 +55,5 @@ export function useSyncWidget() {
     relativeTime,
     handleUpload,
     handleDownload,
-    // 登录相关 - 使用 store 中的状态和方法
-    isLoggedIn: computed(() => syncStore.isLoggedIn),
-    loggingOut: computed(() => syncStore.loggingOut),
-    checkLoginStatus: syncStore.checkLoginStatus,
-    handleLogin: syncStore.handleLogin,
-    handleLogout: syncStore.handleLogout,
   };
 }
