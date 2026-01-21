@@ -190,8 +190,7 @@ const {
 
 // 为了不报错增加的使用 PomotentionTimerContainerRef
 if (!settingStore.settings.showPomodoro) {
-  console.log("PomotentionTimerContainerRef", PomotentionTimerContainerRef.value);
-  console.log(draggableContainer.value);
+  console.log("Refs error prevent:", PomotentionTimerContainerRef.value, draggableContainer.value);
 }
 const syncStore = useSyncStore();
 const { syncIcon, relativeTime, handleUpload, handleDownload } = useSyncWidget();
