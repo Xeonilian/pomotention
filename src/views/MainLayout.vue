@@ -100,6 +100,7 @@
           <!-- 右侧：手动操作按钮（text 模式，不太明显） -->
           <div class="footer-actions">
             <n-button
+              v-if="syncStore.isLoggedIn"
               text
               size="small"
               :loading="syncStore.isSyncing && syncStore.syncStatus === 'uploading'"
@@ -113,6 +114,7 @@
               上传
             </n-button>
             <n-button
+              v-if="syncStore.isLoggedIn"
               text
               size="small"
               :loading="syncStore.isSyncing && syncStore.syncStatus === 'downloading'"
