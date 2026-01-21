@@ -5,7 +5,7 @@ import { useSettingStore } from "./useSettingStore";
 import { useRouter } from "vue-router";
 import { signOut, getCurrentUser, getSession } from "@/core/services/authService";
 import { isSupabaseEnabled } from "@/core/services/supabase";
-import { cancelPendingSyncTasks, destroyAppCloseHandler } from "@/services/appCloseHandler";
+import { destroyAppCloseHandler } from "@/services/appCloseHandler";
 
 export const useSyncStore = defineStore("sync", () => {
   const settingStore = useSettingStore();
@@ -100,8 +100,6 @@ export const useSyncStore = defineStore("sync", () => {
   // 销毁同步服务（登出时调用）
   function destroySyncService() {
     syncInitialized.value = false;
-    // 取消所有待处理的同步任务
-    cancelPendingSyncTasks();
     console.log("❌ 同步服务已销毁");
   }
 
@@ -127,7 +125,14 @@ export const useSyncStore = defineStore("sync", () => {
   }
 
   function handleLogin() {
-    router.push({ name: "Login" });
+    console.log("🔐 点击登录按钮，跳转到登录页");
+    router.push({ name: "Login" }).catch((err) => {
+      console.error("❌ 跳转到登录页失败:", err);
+      // 如果名称路由失败，尝试使用路径
+      router.push("/login").catch((pathErr) => {
+        console.error("❌ 使用路径跳转也失败:", pathErr);
+      });
+    });
   }
 
   async function handleLogout() {
