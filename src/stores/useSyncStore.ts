@@ -5,10 +5,6 @@ import { useSettingStore } from "./useSettingStore";
 import { useRouter } from "vue-router";
 import { signOut, getCurrentUser } from "@/core/services/authService";
 import { supabase, isSupabaseEnabled } from "@/core/services/supabase";
-import { collectLocalData } from "@/services/localStorageService";
-import { open } from "@tauri-apps/plugin-dialog";
-import { writeTextFile } from "@tauri-apps/plugin-fs";
-import { isTauri } from "@tauri-apps/api/core";
 
 export const useSyncStore = defineStore("sync", () => {
   const settingStore = useSettingStore();
@@ -140,18 +136,6 @@ export const useSyncStore = defineStore("sync", () => {
       }
     } else {
       // 正常退出，清除所有数据
-      // App上数据备份
-      if (isTauri()) {
-        const confirmExport = confirm("在退出之前，您必须导出数据。是否继续导出？");
-        if (confirmExport) {
-          const exportSuccessful = await handleExport();
-          if (!exportSuccessful) {
-            // 如果导出失败，停止注销
-            loggingOut.value = false;
-            return;
-          }
-        }
-      }
       localStorage.clear();
     }
 
@@ -159,37 +143,6 @@ export const useSyncStore = defineStore("sync", () => {
     loggingOut.value = false;
     // 退出登录后更新登录状态，不强制跳转
     await checkLoginStatus();
-  }
-
-  async function handleExport(): Promise<boolean> {
-    try {
-      const localdata = collectLocalData();
-
-      // 选择目录
-      const dirPath = await open({
-        directory: true,
-        multiple: false,
-      });
-
-      if (!dirPath || typeof dirPath !== "string") {
-        return false;
-      }
-
-      // 分别保存每个数据类型
-      const savePromises = Object.entries(localdata).map(async ([key, value]) => {
-        const fileName = `${key}.json`;
-        const filePath = `${dirPath}/${fileName}`;
-        const jsonData = JSON.stringify(value, null, 2);
-        await writeTextFile(filePath, jsonData);
-        return fileName;
-      });
-
-      await Promise.all(savePromises);
-      return true;
-    } catch (error) {
-      console.error("导出失败:", error);
-      return false;
-    }
   }
 
   // 初始化认证监听
@@ -238,7 +191,6 @@ export const useSyncStore = defineStore("sync", () => {
     checkLoginStatus,
     handleLogin,
     handleLogout,
-    handleExport,
     initAuthListener,
     cleanupAuthListener,
   };
