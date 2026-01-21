@@ -23,7 +23,15 @@
               </template>
             </n-button>
             <!-- 未登录时显示登录按钮 -->
-            <n-button v-if="!isLoggedIn" size="tiny" type="info" secondary title="登录/注册" class="header-button" @click="handleLogin">
+            <n-button
+              v-if="!isLoggedIn"
+              size="tiny"
+              type="info"
+              secondary
+              title="登录/注册"
+              class="header-button"
+              @click="syncStore.handleLogin"
+            >
               <template #icon>
                 <n-icon>
                   <PersonAccounts24Filled />
@@ -31,18 +39,23 @@
               </template>
             </n-button>
             <!-- 已登录时显示退出登录按钮 -->
-            <n-popconfirm v-else placement="top-end" positive-text="确认退出" negative-text="取消" @positive-click="handleLogout">
-              <template #trigger>
-                <n-button size="tiny" type="default" secondary :loading="loggingOut" title="退出登录" class="header-button">
-                  <template #icon>
-                    <n-icon>
-                      <PersonAccounts24Filled />
-                    </n-icon>
-                  </template>
-                </n-button>
+
+            <n-button
+              v-else
+              size="tiny"
+              type="default"
+              secondary
+              :loading="syncStore.loggingOut"
+              title="退出登录"
+              class="header-button"
+              @click="syncStore.handleLogout"
+            >
+              <template #icon>
+                <n-icon>
+                  <PersonAccounts24Filled />
+                </n-icon>
               </template>
-              {{ isTauri() ? "将弹出数据备份窗口，确定要退出登录吗？" : "确定要退出登录吗？" }}
-            </n-popconfirm>
+            </n-button>
           </div>
         </div>
       </n-layout-header>
@@ -137,11 +150,13 @@
 <script setup lang="ts">
 import { ref, watch, nextTick, onMounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
-import { NMenu, NButton, NIcon, NLayoutFooter, NTag, NPopconfirm } from "naive-ui";
+import { NMenu, NButton, NIcon, NLayoutFooter, NTag } from "naive-ui";
+import { storeToRefs } from "pinia";
 
 // Stores
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useDataStore } from "@/stores/useDataStore";
+import { useSyncStore } from "@/stores/useSyncStore";
 
 // Composables
 import { useButtonStyle } from "@/composables/useButtonStyle";
@@ -152,7 +167,6 @@ import { useSyncWidget } from "@/composables/useSyncWidget";
 // Icons & Components
 import { PersonAccounts24Filled, ArrowUp24Filled, ArrowDown24Filled } from "@vicons/fluent";
 import PomotentionTimer from "@/components/PomotentionTimer/PomotentionTimer.vue";
-import { isTauri } from "@tauri-apps/api/core";
 
 const router = useRouter();
 const route = useRoute();
@@ -179,9 +193,9 @@ if (!settingStore.settings.showPomodoro) {
   console.log("PomotentionTimerContainerRef", PomotentionTimerContainerRef.value);
   console.log(draggableContainer.value);
 }
-
-const { syncStore, syncIcon, relativeTime, handleUpload, handleDownload, isLoggedIn, loggingOut, handleLogin, handleLogout } =
-  useSyncWidget();
+const syncStore = useSyncStore();
+const { syncIcon, relativeTime, handleUpload, handleDownload } = useSyncWidget();
+const { isLoggedIn } = storeToRefs(syncStore);
 
 // === 2. 菜单与路由逻辑 ===
 const currentRoutePath = ref(route.path);
