@@ -10,6 +10,10 @@ import { downloadAll, uploadAll, syncAll } from "@/services/sync";
 import { debounce } from "@/core/utils/debounce";
 import { isTauri } from "@tauri-apps/api/core";
 
+// 全局防抖函数引用 - 用于在登出时取消
+let globalDebouncedFocusSync: any = null;
+let globalDebouncedBlurSync: any = null;
+
 /**
  * 检查是否有未同步数据
  * (这是本地检查，速度极快，不需要防抖)
@@ -75,6 +79,9 @@ const debouncedFocusSync = debounce(async (source: string) => {
   }
 }, 2000);
 
+// 保存全局引用，用于登出时取消
+globalDebouncedFocusSync = debouncedFocusSync;
+
 /**
  * 失去焦点时的同步：只需要上传本地修改 (Push)
  * 设置 500ms 短防抖：人走了要尽快保存
@@ -101,6 +108,9 @@ const debouncedBlurSync = debounce(async (source: string) => {
     }
   }
 }, 500);
+
+// 保存全局引用，用于登出时取消
+globalDebouncedBlurSync = debouncedBlurSync;
 
 // =========================================================================
 // 监听器注册
@@ -225,6 +235,20 @@ function setupBrowserCloseHandler() {
     debouncedFocusSync.cancel();
     debouncedBlurSync.cancel();
   };
+}
+
+/**
+ * 取消所有待处理的防抖同步任务
+ * 在登出时调用，防止同步服务已销毁但任务还在队列中执行
+ */
+export function cancelPendingSyncTasks() {
+  if (globalDebouncedFocusSync) {
+    globalDebouncedFocusSync.cancel();
+  }
+  if (globalDebouncedBlurSync) {
+    globalDebouncedBlurSync.cancel();
+  }
+  console.log("🛑 已取消所有待处理的同步任务");
 }
 
 export async function initAppCloseHandler() {
