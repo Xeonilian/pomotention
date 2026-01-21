@@ -322,26 +322,13 @@ async function performSignIn() {
   errorMessage.value = "";
   successMessage.value = "";
 
-  // 检查登录前是否是本地模式
-  const wasLocalMode = settingStore.settings.localOnlyMode;
-  if (wasLocalMode) {
-    // 从本地模式登录，设置标志以保护数据
-    settingStore.settings.wasLocalModeBeforeLogin = true;
-    settingStore.settings.localOnlyMode = false;
-  }
-
   const { error } = await signIn({ email: email.value, password: password.value });
 
   loading.value = false;
   if (error) {
     errorMessage.value = `登录失败: ${error.message}`;
-    // 如果登录失败，恢复本地模式状态
-    if (wasLocalMode) {
-      settingStore.settings.localOnlyMode = true;
-      settingStore.settings.wasLocalModeBeforeLogin = false;
-    }
   } else {
-    // 用户切换检测和数据清除由 App.vue 的 SIGNED_IN 事件处理
+    // 登录后导航，数据清理由 App.vue 统一处理
     router.push({ name: "Home" });
   }
 }
@@ -372,37 +359,11 @@ async function performSignUp() {
   errorMessage.value = "";
   successMessage.value = "";
 
-  // 检查注册前是否是本地模式
-  const wasLocalMode = settingStore.settings.localOnlyMode;
-  if (wasLocalMode) {
-    // 从本地模式注册，设置标志以保护数据
-    settingStore.settings.wasLocalModeBeforeLogin = true;
-    settingStore.settings.localOnlyMode = false;
-  }
-
-  // 如果检测到用户切换，先清除本地数据
-  if (hasDifferentUserData.value) {
-    console.log("检测到用户切换，清除本地数据");
-    localStorage.clear();
-    dataStore.clearData();
-    // 清除用户ID记录
-    settingStore.settings.lastLoggedInUserId = undefined;
-    // 如果是从本地模式切换过来的，清除标志
-    if (wasLocalMode) {
-      settingStore.settings.wasLocalModeBeforeLogin = false;
-    }
-  }
-
   const { error } = await signUp({ email: email.value, password: password.value });
 
   loading.value = false;
   if (error) {
     errorMessage.value = `注册失败: ${error.message}`;
-    // 如果注册失败，恢复本地模式状态
-    if (wasLocalMode && !hasDifferentUserData.value) {
-      settingStore.settings.localOnlyMode = true;
-      settingStore.settings.wasLocalModeBeforeLogin = false;
-    }
   } else {
     successMessage.value = "注册成功！请检查您的邮箱以完成验证，然后尝试登录。";
     // 注册成功后，如果用户验证并登录，会在登录时更新用户ID
