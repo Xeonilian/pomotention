@@ -24,7 +24,7 @@ import BackupAlertDialog from "./components/BackupAlertDialog.vue";
 import { initSyncServices, syncAll, resetSyncServices } from "@/services/sync";
 import { isTauri } from "@tauri-apps/api/core";
 import { initialMigrate } from "./composables/useMigrate";
-import { initAppCloseHandler } from "@/services/appCloseHandler";
+import { initAppCloseHandler, cancelPendingSyncTasks } from "@/services/appCloseHandler";
 import { getCurrentUser } from "@/core/services/authService";
 
 // state & stores
@@ -36,6 +36,9 @@ const syncStore = useSyncStore(); // ✅ 获取 syncStore 实例
 
 // 用来存储异步初始化返回的清理函数
 let appCloseCleanup: (() => void) | undefined | null = null;
+
+// 同步初始化状态 - 移到组件级别，确保在重新登录时能正确重置
+const syncInitialized = ref(false);
 
 const startAppSync = async () => {
   if (!isSupabaseEnabled()) {
@@ -52,9 +55,6 @@ const startAppSync = async () => {
 };
 
 onMounted(async () => {
-  // 同步初始化标志
-  const syncInitialized = ref(false);
-
   // 1. 初始化本地数据
   await dataStore.loadAllData();
 
@@ -164,6 +164,9 @@ onMounted(async () => {
             console.error("清除认证数据时出错:", err);
           }
 
+          // 取消所有待处理的同步任务 #HACK
+          cancelPendingSyncTasks();
+
           // 重置同步时间戳和状态
           syncStore.lastSyncTimestamp = 0;
           syncStore.isSyncing = false;
@@ -183,6 +186,9 @@ onMounted(async () => {
 
           // ✅ 关键：重置同步时间戳，防止下次登录误判为增量同步
           syncStore.lastSyncTimestamp = 0;
+          // 取消所有待处理的同步任务
+          cancelPendingSyncTasks();
+
           // 如果 syncStore 是用 setup 写法且没有 $reset，手动重置其他状态
           syncStore.isSyncing = false;
           syncStore.syncError = null;
@@ -226,16 +232,23 @@ onMounted(async () => {
           settingStore.settings.lastLoggedInUserId = currentUserId;
         }
 
+        // 登录时强制重置同步状态，确保能重新初始化
+        console.log("🔄 用户登录，强制重置同步状态");
+
+        // ✅ 双重保险：确保登录时从 0 开始同步
+        syncStore.lastSyncTimestamp = 0;
+
+        // 强制重置同步服务状态，允许重新初始化
+        resetSyncServices();
+        syncInitialized.value = false;
+
+        // 重新初始化同步服务
         if (!syncInitialized.value) {
-          console.log("🔄 用户登录，强制全量同步");
-
-          // ✅ 双重保险：确保登录时从 0 开始同步
-          syncStore.lastSyncTimestamp = 0;
-
+          console.log("🔄 重新初始化同步服务");
           await startAppSync();
           syncInitialized.value = true;
         } else {
-          console.log("⏭️ 已完成同步初始化，跳过重复执行");
+          console.log("⏭️ 同步服务已初始化，跳过重复执行");
         }
       } else if (event === "INITIAL_SESSION") {
         // 这个事件在 getSession() 后自动触发，跳过
