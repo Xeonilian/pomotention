@@ -3,8 +3,9 @@ import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import { useSettingStore } from "./useSettingStore";
 import { useRouter } from "vue-router";
-import { signOut, getCurrentUser } from "@/core/services/authService";
-import { supabase, isSupabaseEnabled } from "@/core/services/supabase";
+import { signOut, getCurrentUser, getSession } from "@/core/services/authService";
+import { isSupabaseEnabled } from "@/core/services/supabase";
+import { cancelPendingSyncTasks, destroyAppCloseHandler } from "@/services/appCloseHandler";
 
 export const useSyncStore = defineStore("sync", () => {
   const settingStore = useSettingStore();
@@ -16,13 +17,15 @@ export const useSyncStore = defineStore("sync", () => {
   const currentSyncMessage = ref<string>("就绪");
   const syncStatus = ref<"idle" | "syncing" | "uploading" | "downloading" | "error">("idle");
 
+  // 同步服务初始化状态
+  const syncInitialized = ref(false);
+
   // 根据登录状态显示不同的消息
   const syncMessage = computed(() => (isLoggedIn.value ? currentSyncMessage.value : "未登录"));
 
-  // ✅ 登录状态
+  // 登录状态
   const isLoggedIn = ref(false);
   const loggingOut = ref(false);
-  let authStateSubscription: { unsubscribe: () => void } | null = null;
 
   // 时间戳
   const lastSyncTimestamp = computed({
@@ -39,7 +42,7 @@ export const useSyncStore = defineStore("sync", () => {
     },
   });
 
-  // ✅ 开始同步
+  // 开始同步
   function startSync(message: string = "正在同步...") {
     isSyncing.value = true;
     syncStatus.value = "syncing";
@@ -55,7 +58,7 @@ export const useSyncStore = defineStore("sync", () => {
     syncError.value = null;
   }
 
-  // ✅ 开始下载
+  // 开始下载
   function startDownload() {
     isSyncing.value = true;
     syncStatus.value = "downloading";
@@ -63,7 +66,7 @@ export const useSyncStore = defineStore("sync", () => {
     syncError.value = null;
   }
 
-  // ✅ 同步成功
+  // 同步成功
   function syncSuccess(message: string = "同步完成") {
     isSyncing.value = false;
     syncStatus.value = "idle";
@@ -72,7 +75,7 @@ export const useSyncStore = defineStore("sync", () => {
     lastSyncTimestamp.value = Date.now();
   }
 
-  // ✅ 同步失败
+  // 同步失败
   function syncFailed(error: string) {
     isSyncing.value = false;
     syncStatus.value = "error";
@@ -88,6 +91,20 @@ export const useSyncStore = defineStore("sync", () => {
     lastCleanupTimestamp.value = timestamp ?? Date.now();
   }
 
+  // 初始化同步服务（在 App.vue 的 onMounted 中调用）
+  function initSyncService() {
+    syncInitialized.value = true;
+    console.log("✅ 同步服务已初始化");
+  }
+
+  // 销毁同步服务（登出时调用）
+  function destroySyncService() {
+    syncInitialized.value = false;
+    // 取消所有待处理的同步任务
+    cancelPendingSyncTasks();
+    console.log("❌ 同步服务已销毁");
+  }
+
   function resetSync() {
     lastSyncTimestamp.value = 0;
     lastCleanupTimestamp.value = 0;
@@ -95,9 +112,11 @@ export const useSyncStore = defineStore("sync", () => {
     syncError.value = null;
     currentSyncMessage.value = "就绪";
     syncStatus.value = "idle";
+    // 重置时也重置初始化状态
+    syncInitialized.value = false;
   }
 
-  // ✅ 登录状态管理
+  // 登录状态管理
   async function checkLoginStatus() {
     if (!isSupabaseEnabled()) {
       isLoggedIn.value = false;
@@ -112,68 +131,51 @@ export const useSyncStore = defineStore("sync", () => {
   }
 
   async function handleLogout() {
+    // 防止重复调用
+    if (loggingOut.value) {
+      console.log("⚠️ 已在退出登录中，跳过重复调用");
+      return;
+    }
+
     loggingOut.value = true;
 
-    // 检查是否从本地模式切换过来的
-    const wasLocalMode = settingStore.settings.wasLocalModeBeforeLogin;
+    try {
+      // 登出时先销毁同步服务
+      destroySyncService();
 
-    if (wasLocalMode) {
-      // 从本地模式切换过来的，不清除本地数据
-      console.log("👋 退出登录（从本地模式切换），保留本地数据");
-
-      // 只清除认证相关的 localStorage 项
-      try {
-        const keysToRemove: string[] = [];
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          if (key && (key.includes("supabase") || key.includes("auth"))) {
-            keysToRemove.push(key);
-          }
+      // 如果未启用或无会话，直接视为已退出；否则调用远端登出
+      if (!isSupabaseEnabled()) {
+        console.log("👋 未启用 Supabase，直接视为已退出");
+      } else {
+        const session = await getSession();
+        if (!session) {
+          console.log("👋 未检测到有效会话，跳过远端 signOut");
+        } else {
+          console.log("👋 退出登录，切断同步连接");
+          await signOut();
         }
-        keysToRemove.forEach((key) => localStorage.removeItem(key));
-      } catch (err) {
-        console.error("清除认证数据时出错:", err);
       }
-    } else {
-      // 正常退出，清除所有数据
-      localStorage.clear();
-    }
 
-    await signOut();
-    loggingOut.value = false;
-    // 退出登录后更新登录状态，不强制跳转
-    await checkLoginStatus();
-  }
-
-  // 初始化认证监听
-  function initAuthListener() {
-    if (isSupabaseEnabled() && supabase) {
-      const {
-        data: { subscription },
-      } = supabase.auth.onAuthStateChange(async (event) => {
-        console.log(`🔔 SyncStore Auth 事件: ${event}`);
-        await checkLoginStatus();
-      });
-      authStateSubscription = subscription;
-    }
-  }
-
-  // 清理认证监听
-  function cleanupAuthListener() {
-    if (authStateSubscription) {
-      authStateSubscription.unsubscribe();
-      authStateSubscription = null;
+      destroyAppCloseHandler();
+      isLoggedIn.value = false;
+    } catch (error) {
+      console.error("退出登录时出错:", error);
+    } finally {
+      // 无论成功还是失败，都要重置 loading 状态
+      loggingOut.value = false;
     }
   }
 
   return {
-    // 状态
+    // 同步状态
     isSyncing,
     syncError,
     syncMessage,
     syncStatus,
     lastSyncTimestamp,
     lastCleanupTimestamp,
+    syncInitialized,
+
     // 登录状态
     isLoggedIn,
     loggingOut,
@@ -187,11 +189,12 @@ export const useSyncStore = defineStore("sync", () => {
     updateLastSyncTimestamp,
     updateLastCleanupTimestamp,
     resetSync,
+    initSyncService,
+    destroySyncService,
+
     // 登录方法
     checkLoginStatus,
     handleLogin,
     handleLogout,
-    initAuthListener,
-    cleanupAuthListener,
   };
 });
