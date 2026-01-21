@@ -37,9 +37,6 @@ const syncStore = useSyncStore(); // ✅ 获取 syncStore 实例
 // 用来存储异步初始化返回的清理函数
 let appCloseCleanup: (() => void) | undefined | null = null;
 
-// 同步初始化状态 - 移到组件级别，确保在重新登录时能正确重置
-const syncInitialized = ref(false);
-
 const startAppSync = async () => {
   if (!isSupabaseEnabled()) {
     console.warn("[Supabase] 当前未启用，跳过同步初始化。");
@@ -119,7 +116,7 @@ onMounted(async () => {
 
       // 场景 A：打开 App 时已登录 -> 启动同步
       await startAppSync();
-      syncInitialized.value = true; // 标记已初始化
+      syncStore.initSyncService(); // 标记已初始化
     } else {
       console.log("ℹ️ 用户未登录，继续使用本地功能");
     }
@@ -139,7 +136,7 @@ onMounted(async () => {
   // 监听认证变化（仅在supabase启用时）
   if (isSupabaseEnabled() && supabase) {
     supabase.auth.onAuthStateChange(async (event, _sess) => {
-      console.log(`🔔 Auth 事件: ${event}, syncInitialized=${syncInitialized.value}`);
+      console.log(`🔔 Auth 事件: ${event}, syncInitialized=${syncStore.syncInitialized}`);
 
       if (event === "SIGNED_OUT") {
         // 1️⃣ 退出登录：根据 wasLocalModeBeforeLogin 决定是否清除数据
@@ -172,7 +169,7 @@ onMounted(async () => {
           syncStore.isSyncing = false;
           syncStore.syncError = null;
           resetSyncServices();
-          syncInitialized.value = false;
+          syncStore.destroySyncService();
           settingStore.settings.supabaseSync[0] = 0;
           // 清除用户ID记录
           settingStore.settings.lastLoggedInUserId = undefined;
@@ -193,7 +190,7 @@ onMounted(async () => {
           syncStore.isSyncing = false;
           syncStore.syncError = null;
           resetSyncServices();
-          syncInitialized.value = false; // 重置标志
+          syncStore.destroySyncService(); // 重置标志
           settingStore.settings.supabaseSync[0] = 0; // 如果你也用这个存时间，也要重置
           // 清除用户ID记录
           settingStore.settings.lastLoggedInUserId = undefined;
@@ -240,13 +237,13 @@ onMounted(async () => {
 
         // 强制重置同步服务状态，允许重新初始化
         resetSyncServices();
-        syncInitialized.value = false;
+        syncStore.destroySyncService();
 
         // 重新初始化同步服务
-        if (!syncInitialized.value) {
+        if (!syncStore.syncInitialized) {
           console.log("🔄 重新初始化同步服务");
           await startAppSync();
-          syncInitialized.value = true;
+          syncStore.initSyncService();
         } else {
           console.log("⏭️ 同步服务已初始化，跳过重复执行");
         }
