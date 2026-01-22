@@ -78,17 +78,17 @@ router.beforeEach(async (to, _from, next) => {
   }
 
   // getSession() 返回 Session | null
-  const session = await getSession();
+  await getSession();
 
-  // 允许未登录用户访问所有路由，不再强制重定向到登录页
-  // 如果用户已登录但试图访问登录页，重定向到首页
-  if (to.name === "Login" && session) {
-    // 用户已登录但试图访问登录页，重定向到首页
-    next({ name: "Home" });
-  } else {
-    // 正常放行，包括未登录用户
+  // 登录页始终放行，便于用户主动切换账号或重新登录
+  if (to.name === "Login") {
+    console.log("🔐 路由守卫：访问登录页，直接放行");
     next();
+    return;
   }
+
+  // 其余路由保持原有放行策略（已登录、未登录、本地模式都允许）
+  next();
 });
 
 export default router;

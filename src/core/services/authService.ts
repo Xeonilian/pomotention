@@ -75,6 +75,11 @@ export async function signOut() {
 
   const { error } = await supabase.auth.signOut();
   if (error) {
+    // 某些情况下（已无 session）会返回 Auth session missing，忽略为成功
+    if (error.message?.includes("Auth session missing")) {
+      console.warn("[Auth] signOut: session 缺失，忽略为已退出");
+      return null;
+    }
     console.error("Error signing out:", error.message);
     return error;
   }

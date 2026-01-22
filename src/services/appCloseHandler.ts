@@ -1,25 +1,38 @@
-// src / services / appCloseHandler.ts;
+// src/services/appCloseHandler.ts
 import { useSyncStore } from "@/stores/useSyncStore";
 import { useDataStore } from "@/stores/useDataStore";
 import { useTagStore } from "@/stores/useTagStore";
 import { useTemplateStore } from "@/stores/useTemplateStore";
 import { useSettingStore } from "@/stores/useSettingStore";
-// ✅ 复用核心同步函数
 import { downloadAll, uploadAll, syncAll } from "@/services/sync";
-// ✅ 复用你的防抖工具
 import { debounce } from "@/core/utils/debounce";
 import { isTauri } from "@tauri-apps/api/core";
 
+// 全局状态管理
+const globalState = {
+  // 防抖函数实例
+  debouncedFocusSync: null as any,
+  debouncedBlurSync: null as any,
+  // 监听器取消函数（Tauri/浏览器）
+  unlistenHandlers: [] as Array<() => void>,
+  // 防止重复关闭
+  isAppClosing: false,
+  // 防止重复清理
+  isDestroyed: false,
+  tasksCancelled: false,
+};
+
 /**
- * 检查是否有未同步数据
- * (这是本地检查，速度极快，不需要防抖)
+ * 检查是否有未同步的数据
+ * @param source 调用来源（用于日志）
+ * @returns 是否有未同步数据
  */
 function checkUnsyncedData(source: string = "Unknown"): boolean {
   const dataStore = useDataStore();
   const tagStore = useTagStore();
   const templateStore = useTemplateStore();
 
-  const hasUnsynced = {
+  const hasUnsyncedMap = {
     activities: dataStore.activityList.some((item) => !item.synced),
     todos: dataStore.todoList.some((item) => !item.synced),
     schedules: dataStore.scheduleList.some((item) => !item.synced),
@@ -28,245 +41,262 @@ function checkUnsyncedData(source: string = "Unknown"): boolean {
     templates: templateStore.rawTemplates?.some((item) => !item.synced) ?? false,
   };
 
-  const total = Object.values(hasUnsynced).filter(Boolean).length;
+  const unsyncedCount = Object.values(hasUnsyncedMap).filter(Boolean).length;
 
-  if (total > 0) {
-    console.log(`📊 [${source}] 发现本地待上传数据`, hasUnsynced);
+  if (unsyncedCount > 0) {
+    console.log(`📊 [${source}] 发现 ${unsyncedCount} 类未同步数据`);
   }
 
-  return total > 0;
+  return unsyncedCount > 0;
 }
 
-// =========================================================================
-// ✅ 核心逻辑：使用你的 debounce 包装同步请求
-// =========================================================================
-
 /**
- * 获得焦点时的同步：需要拉取云端数据 (Pull)
- * 设置 2000ms 防抖：防止用户频繁切屏导致请求过多
+ * 通用同步前置检查
+ * @returns 是否允许执行同步
  */
-const debouncedFocusSync = debounce(async (source: string) => {
+function checkSyncPreconditions(): boolean {
   const settingStore = useSettingStore();
   const syncStore = useSyncStore();
 
+  // 1. 检查同步服务是否初始化
+  if (!syncStore.syncInitialized) {
+    console.log(`🚫 同步服务未初始化，跳过同步`);
+    return false;
+  }
+
+  // 2. 检查自动同步开关
   if (!settingStore.settings.autoSupabaseSync) {
-    console.log(`🚫 [${source}] 自动同步已关闭，跳过`);
-    return;
+    console.log(`🚫 自动同步已关闭，跳过同步`);
+    return false;
   }
 
+  // 3. 检查是否正在同步中
   if (syncStore.isSyncing) {
-    console.log(`🚫 [${source}] 正在同步中，跳过本次请求`);
-    return;
+    console.log(`🚫 已有同步任务执行中，跳过同步`);
+    return false;
   }
 
-  try {
-    console.log(`📥 [${source}] 窗口激活，执行同步 (拉取更新)...`);
-    if (checkUnsyncedData(source)) {
-      const result = await syncAll(); // 包含 upload + download
-      console.log(`✅ [${source}] 上传下载完成:`, result);
-    } else {
-      const result = await downloadAll(syncStore.lastSyncTimestamp); // 包含 upload + download
-      console.log(`✅ [${source}] 下载完成:`, result);
-    }
-  } catch (error) {
-    console.error(`❌ [${source}] 全量同步失败`, error);
-    console.log(`🔧 [${source}] 同步失败后状态检查:`, {
-      isSyncing: syncStore.isSyncing,
-      syncStatus: syncStore.syncStatus,
-      syncError: syncStore.syncError,
-    });
-    syncStore.isSyncing = false; // 同步报错时重置状态
+  // 4. 检查是否登录（仅焦点同步需要）
+  if (!syncStore.isLoggedIn) {
+    console.log(`🚫 未登录，跳过同步`);
+    return false;
   }
-}, 2000);
+
+  return true;
+}
 
 /**
- * 失去焦点时的同步：只需要上传本地修改 (Push)
- * 设置 500ms 短防抖：人走了要尽快保存
+ * 初始化防抖同步函数（抽离冗余逻辑）
  */
-const debouncedBlurSync = debounce(async (source: string) => {
-  const settingStore = useSettingStore();
-  const syncStore = useSyncStore();
+function initDebouncedSyncFunctions() {
+  // 焦点获取时的同步（拉取/全量同步）
+  globalState.debouncedFocusSync = debounce(async (source: string) => {
+    if (!checkSyncPreconditions()) return;
 
-  if (!settingStore.settings.autoSupabaseSync) {
-    console.log(`🚫 [${source}] 自动同步已关闭，跳过`);
-    return;
-  }
-
-  if (syncStore.isSyncing) {
-    console.log(`🚫 [${source}] 正在同步中，跳过上传请求`);
-    return;
-  }
-
-  // 只有本地有脏数据才上传
-  const hasUnsynced = checkUnsyncedData(source);
-  console.log(`🔍 [${source}] 检查未同步数据: ${hasUnsynced}`);
-
-  if (hasUnsynced) {
     try {
-      console.log(`📤 [${source}] 窗口失去焦点，执行上传...`);
-      const result = await uploadAll(); // 只上传
-      console.log(`✅ [${source}] 上传完成:`, result);
+      if (checkUnsyncedData(source)) {
+        await syncAll();
+      } else {
+        const syncStore = useSyncStore();
+        await downloadAll(syncStore.lastSyncTimestamp);
+      }
     } catch (error) {
-      console.error(`❌ [${source}] 上传失败`, error);
-      console.log(`🔧 [${source}] 上传失败后状态检查:`, {
-        isSyncing: syncStore.isSyncing,
-        syncStatus: syncStore.syncStatus,
-        syncError: syncStore.syncError,
-      });
-      syncStore.isSyncing = false; // 上传报错时重置状态
+      console.error(`❌ [${source}] 同步失败`, error);
+      useSyncStore().isSyncing = false;
     }
-  } else {
-    console.log(`📤 [${source}] 无未同步数据，跳过上传`);
-  }
-}, 500);
+  }, 2000);
 
-// =========================================================================
-// 监听器注册
-// =========================================================================
+  // 焦点丢失时的同步（仅上传）
+  globalState.debouncedBlurSync = debounce(async (source: string) => {
+    const syncStore = useSyncStore();
+    // 抽离通用检查，但模糊同步不需要登录检查
+    if (!syncStore.syncInitialized || !useSettingStore().settings.autoSupabaseSync || syncStore.isSyncing) {
+      console.log(`🚫 [${source}] 同步前置条件不满足，跳过上`);
+      return;
+    }
 
-// 全局关闭状态 - 防止多次处理关闭请求
-let isAppClosing = false;
+    if (checkUnsyncedData(source)) {
+      try {
+        await uploadAll();
+      } catch (error) {
+        console.error(`❌ [${source}] 上传失败`, error);
+        syncStore.isSyncing = false;
+      }
+    }
+  }, 500);
+}
 
 /**
- * Tauri 环境监听
+ * 设置Tauri环境下的关闭/焦点监听
  */
-async function setupTauriCloseHandler() {
+async function setupTauriHandlers() {
   try {
     const { getCurrentWindow } = await import("@tauri-apps/api/window");
     const appWindow = getCurrentWindow();
     const syncStore = useSyncStore();
 
-    // 1. 关闭拦截 (优化逻辑，防止状态锁死)
+    // 窗口关闭请求监听
     const unlistenClose = await appWindow.onCloseRequested(async (event) => {
-      console.log("🔒 [Tauri Close] 收到关闭请求，开始处理...");
+      if (globalState.isAppClosing) return;
+      globalState.isAppClosing = true;
 
-      // 防止重复处理关闭请求 - 使用全局状态
-      if (isAppClosing) {
-        console.log("⚠️ [Tauri Close] 已在处理关闭请求，忽略重复请求");
-        return;
-      }
-      isAppClosing = true;
-
-      event.preventDefault(); // 先统一阻止默认关闭
+      event.preventDefault();
 
       try {
-        // 如果正在同步，等待500ms再检查
+        // 等待当前同步完成
         if (syncStore.isSyncing) {
-          console.log(`⏳ [Tauri Close] 已有同步任务，等待完成...`);
           await new Promise((resolve) => setTimeout(resolve, 500));
         }
 
-        // 检查并上传未同步数据
+        // 有未同步数据则上传
         if (checkUnsyncedData("Tauri Close")) {
-          console.log(`📤 [Tauri Close] 执行最终上传 (5秒超时)...`);
-
-          // 创建5秒超时的上传任务
           const uploadPromise = uploadAll();
-          const timeoutPromise = new Promise<{ success: false; errors: string[]; uploaded: number }>((_, reject) => {
-            setTimeout(() => reject(new Error("上传超时 (5秒)")), 5000);
-          });
+          const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("上传超时 (5秒)")), 5000));
 
           try {
-            const uploadResult = await Promise.race([uploadPromise, timeoutPromise]);
+            const uploadResult: any = await Promise.race([uploadPromise, timeoutPromise]);
             if (uploadResult.success) {
-              console.log(`✅ [Tauri Close] 上传成功: ${uploadResult.uploaded} 项`);
-              // 短暂显示成功状态
               syncStore.syncSuccess("关闭前上传成功");
-              await new Promise((resolve) => setTimeout(resolve, 800));
             } else {
               console.warn(`⚠️ [Tauri Close] 上传失败: ${uploadResult.errors.join("; ")}`);
               syncStore.syncFailed(`关闭前上传失败: ${uploadResult.errors.join("; ")}`);
-              await new Promise((resolve) => setTimeout(resolve, 800));
             }
-          } catch (timeoutError: any) {
+            await new Promise((resolve) => setTimeout(resolve, 800));
+          } catch (timeoutError: any | Error) {
             console.warn(`⏰ [Tauri Close] ${timeoutError.message}`);
             syncStore.syncFailed(timeoutError.message);
-            // 强制重置同步状态
             syncStore.isSyncing = false;
             await new Promise((resolve) => setTimeout(resolve, 800));
           }
-        } else {
-          console.log(`📤 [Tauri Close] 无未同步数据，跳过上传`);
         }
 
-        // 最终关闭窗口
-        console.log("🚪 [Tauri Close] 开始关闭窗口...");
         await appWindow.close();
       } catch (error) {
         console.error(`❌ [Tauri Close] 关闭时同步失败`, error);
-        syncStore.isSyncing = false; // 异常时重置状态
-        isAppClosing = false; // 重置全局关闭标志（异常情况下）
+        syncStore.isSyncing = false;
+        globalState.isAppClosing = false;
         await appWindow.close();
       }
     });
 
-    // 2. 焦点监听 (使用防抖函数)
+    // 窗口焦点变化监听
     const unlistenFocus = await appWindow.onFocusChanged((event) => {
-      const isFocused = event.payload;
-
-      if (isFocused) {
-        // ✅ 获得焦点 -> 拉取
-        debouncedFocusSync("Tauri Focus");
+      if (event.payload) {
+        globalState.debouncedFocusSync("Tauri Focus");
       } else {
-        // 📤 失去焦点 -> 上传
-        debouncedBlurSync("Tauri Blur");
+        globalState.debouncedBlurSync("Tauri Blur");
       }
     });
 
-    return () => {
-      unlistenClose();
-      unlistenFocus();
-      debouncedFocusSync.cancel(); // 清理定时器
-      debouncedBlurSync.cancel();
-    };
+    // 保存取消函数
+    globalState.unlistenHandlers.push(unlistenClose, unlistenFocus);
   } catch (e) {
     console.error("Tauri Listeners Error", e);
-    return () => {};
   }
 }
 
 /**
- * 浏览器环境监听
+ * 设置浏览器环境下的焦点监听
  */
-function setupBrowserCloseHandler() {
-  const handleBlur = () => {
-    console.log("🎯 浏览器事件: window.blur 触发");
-    debouncedBlurSync("Window Blur");
-  };
-
-  const handleFocus = () => {
-    console.log("🎯 浏览器事件: window.focus 触发");
-    debouncedFocusSync("Window Focus");
-  };
-
+function setupBrowserHandlers() {
+  const handleBlur = () => globalState.debouncedBlurSync("Window Blur");
+  const handleFocus = () => globalState.debouncedFocusSync("Window Focus");
   const handleVisibility = () => {
-    console.log(`🎯 浏览器事件: visibilitychange 触发, hidden=${document.hidden}`);
     if (document.hidden) {
-      debouncedBlurSync("Visibility Hidden");
+      globalState.debouncedBlurSync("Visibility Hidden");
     } else {
-      debouncedFocusSync("Visibility Visible");
+      globalState.debouncedFocusSync("Visibility Visible");
     }
   };
 
-  console.log("🔧 设置浏览器事件监听器...");
+  // 添加监听
   window.addEventListener("blur", handleBlur);
   window.addEventListener("focus", handleFocus);
   document.addEventListener("visibilitychange", handleVisibility);
 
-  return () => {
-    console.log("🔧 清理浏览器事件监听器...");
+  // 保存取消函数
+  globalState.unlistenHandlers.push(() => {
     window.removeEventListener("blur", handleBlur);
     window.removeEventListener("focus", handleFocus);
     document.removeEventListener("visibilitychange", handleVisibility);
-    debouncedFocusSync.cancel();
-    debouncedBlurSync.cancel();
-  };
+  });
 }
 
-export async function initAppCloseHandler() {
-  if (isTauri()) {
-    return await setupTauriCloseHandler();
-  } else {
-    return setupBrowserCloseHandler();
+/**
+ * 取消所有待处理的同步任务
+ */
+export function cancelPendingSyncTasks() {
+  if (globalState.tasksCancelled) {
+    return; // 已取消，跳过
   }
+
+  try {
+    if (globalState.debouncedFocusSync) {
+      globalState.debouncedFocusSync.cancel();
+    }
+    if (globalState.debouncedBlurSync) {
+      globalState.debouncedBlurSync.cancel();
+    }
+    globalState.tasksCancelled = true;
+    console.log("🛑 已取消失焦/焦点同步防抖任务");
+  } catch (error) {
+    console.error("❌ 取消同步任务时出错", error);
+  }
+}
+
+/**
+ * 完整关闭所有关闭/焦点同步功能（核心新增函数）
+ */
+export function destroyAppCloseHandler() {
+  if (globalState.isDestroyed) {
+    return; // 已销毁，跳过
+  }
+
+  try {
+    // 1. 取消所有防抖任务
+    cancelPendingSyncTasks();
+
+    // 2. 移除所有监听器
+    globalState.unlistenHandlers.forEach((unlisten) => {
+      try {
+        unlisten();
+      } catch (e) {
+        console.error("❌ 移除监听器失败", e);
+      }
+    });
+    globalState.unlistenHandlers = [];
+
+    // 3. 重置全局状态
+    globalState.isAppClosing = false;
+    globalState.debouncedFocusSync = null;
+    globalState.debouncedBlurSync = null;
+    globalState.isDestroyed = true;
+
+    console.log("✅ 已完整关闭应用关闭/焦点同步处理功能");
+  } catch (error) {
+    console.error("❌ 关闭应用处理功能时出错", error);
+  }
+}
+
+/**
+ * 初始化应用关闭/焦点同步处理
+ * @returns 销毁函数（等价于 destroyAppCloseHandler）
+ */
+export async function initAppCloseHandler() {
+  // 重置销毁状态，允许重新初始化
+  globalState.isDestroyed = false;
+  globalState.tasksCancelled = false;
+
+  // 初始化防抖函数
+  initDebouncedSyncFunctions();
+
+  // 根据环境设置监听
+  if (isTauri()) {
+    await setupTauriHandlers();
+  } else {
+    setupBrowserHandlers();
+  }
+
+  // 返回销毁函数，方便调用
+  return destroyAppCloseHandler;
 }

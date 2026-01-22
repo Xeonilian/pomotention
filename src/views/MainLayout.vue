@@ -23,7 +23,15 @@
               </template>
             </n-button>
             <!-- 未登录时显示登录按钮 -->
-            <n-button v-if="!isLoggedIn" size="tiny" type="info" secondary title="登录" class="header-button" @click="handleLogin">
+            <n-button
+              v-if="!isLoggedIn"
+              size="tiny"
+              type="info"
+              secondary
+              title="登录/注册"
+              class="header-button"
+              @click="syncStore.handleLogin"
+            >
               <template #icon>
                 <n-icon>
                   <PersonAccounts24Filled />
@@ -31,9 +39,15 @@
               </template>
             </n-button>
             <!-- 已登录时显示退出登录按钮 -->
-            <n-popconfirm v-else placement="top-end" positive-text="确认退出" negative-text="取消" @positive-click="handleLogout">
+            <n-popconfirm
+              v-else
+              @positive-click="handleLogoutConfirm"
+              @negative-click="handleLogoutCancel"
+              negative-text="不保留"
+              positive-text="保留"
+            >
               <template #trigger>
-                <n-button size="tiny" type="info" secondary :loading="loggingOut" title="退出登录" class="header-button">
+                <n-button size="tiny" type="default" secondary :loading="syncStore.loggingOut" title="退出登录" class="header-button">
                   <template #icon>
                     <n-icon>
                       <PersonAccounts24Filled />
@@ -41,7 +55,7 @@
                   </template>
                 </n-button>
               </template>
-              {{ isTauri() ? "将弹出数据备份窗口，确定要退出登录吗？" : "确定要退出登录吗？" }}
+              <span>退出登录时是否保留本地数据？</span>
             </n-popconfirm>
           </div>
         </div>
@@ -90,7 +104,9 @@
             <div class="sync-status__info">
               <span class="sync-status__message">{{ syncStore.syncMessage }}</span>
               <span v-if="syncStore.lastSyncTimestamp" class="sync-status__time">{{ relativeTime }}</span>
-              <n-tag v-if="dataStore.hasUnsyncedData" type="warning" size="tiny" style="margin-left: 8px">有未同步数据</n-tag>
+              <n-tag v-if="dataStore.hasUnsyncedData" type="default" size="tiny" style="margin-left: 2px; font-size: 10px; margin-top: 2px">
+                有未同步数据
+              </n-tag>
               <span v-if="syncStore.syncError" class="sync-status__error">{{ syncStore.syncError }}</span>
             </div>
           </div>
@@ -98,6 +114,7 @@
           <!-- 右侧：手动操作按钮（text 模式，不太明显） -->
           <div class="footer-actions">
             <n-button
+              v-if="syncStore.isLoggedIn"
               text
               size="small"
               :loading="syncStore.isSyncing && syncStore.syncStatus === 'uploading'"
@@ -111,6 +128,7 @@
               上传
             </n-button>
             <n-button
+              v-if="syncStore.isLoggedIn"
               text
               size="small"
               :loading="syncStore.isSyncing && syncStore.syncStatus === 'downloading'"
@@ -134,10 +152,12 @@
 import { ref, watch, nextTick, onMounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { NMenu, NButton, NIcon, NLayoutFooter, NTag, NPopconfirm } from "naive-ui";
+import { storeToRefs } from "pinia";
 
 // Stores
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useDataStore } from "@/stores/useDataStore";
+import { useSyncStore } from "@/stores/useSyncStore";
 
 // Composables
 import { useButtonStyle } from "@/composables/useButtonStyle";
@@ -148,7 +168,6 @@ import { useSyncWidget } from "@/composables/useSyncWidget";
 // Icons & Components
 import { PersonAccounts24Filled, ArrowUp24Filled, ArrowDown24Filled } from "@vicons/fluent";
 import PomotentionTimer from "@/components/PomotentionTimer/PomotentionTimer.vue";
-import { isTauri } from "@tauri-apps/api/core";
 
 const router = useRouter();
 const route = useRoute();
@@ -172,12 +191,27 @@ const {
 
 // 为了不报错增加的使用 PomotentionTimerContainerRef
 if (!settingStore.settings.showPomodoro) {
-  console.log("PomotentionTimerContainerRef", PomotentionTimerContainerRef.value);
-  console.log(draggableContainer.value);
+  console.log("Refs error prevent:", PomotentionTimerContainerRef.value, draggableContainer.value);
+}
+const syncStore = useSyncStore();
+const { syncIcon, relativeTime, handleUpload, handleDownload } = useSyncWidget();
+const { isLoggedIn } = storeToRefs(syncStore);
+
+// 处理退出登录确认（保留数据）
+async function handleLogoutConfirm() {
+  // 用户点击"保留"，设置为保留本地数据
+  settingStore.settings.keepLocalDataAfterSignOut = true;
+  // 执行退出登录
+  await syncStore.handleLogout();
 }
 
-const { syncStore, syncIcon, relativeTime, handleUpload, handleDownload, isLoggedIn, loggingOut, handleLogin, handleLogout } =
-  useSyncWidget();
+// 处理退出登录取消（不保留数据）
+async function handleLogoutCancel() {
+  // 用户点击"不保留"，设置为不保留本地数据
+  settingStore.settings.keepLocalDataAfterSignOut = false;
+  // 执行退出登录
+  await syncStore.handleLogout();
+}
 
 // === 2. 菜单与路由逻辑 ===
 const currentRoutePath = ref(route.path);

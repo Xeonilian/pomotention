@@ -41,7 +41,7 @@ export interface GlobalSettings {
   lastLoggedInUserId?: string; // 上次登录的用户ID，用于检测用户切换
   localOnlyMode: boolean; // 当前是否为本地模式
   wasLocalModeBeforeLogin: boolean; // 登录前是否是本地模式，用于退出时保护数据
-
+  keepLocalDataAfterSignOut: boolean; // 默认不清除本地数据
   ai?: {
     activeId: number; // 当前启用的配置
     profiles: Record<string, AiProfile>; // 所有配置集合（字典，键为 id）
@@ -76,7 +76,7 @@ const defaultSettings: GlobalSettings = {
   rightWidth: 300,
   topHeight: 300,
   searchWidth: 400, // 搜索页面title宽度
-  isWhiteNoiseEnabled: false,
+  isWhiteNoiseEnabled: true,
   whiteNoiseSoundTrack: SoundType.WORK_TICK,
   webdavId: "",
   webdavKey: "",
@@ -91,6 +91,7 @@ const defaultSettings: GlobalSettings = {
   lastLoggedInUserId: undefined, // 首次使用，没有上次登录的用户ID
   localOnlyMode: false, // 默认不是本地模式
   wasLocalModeBeforeLogin: false, // 默认不是从本地模式切换过来的
+  keepLocalDataAfterSignOut: false, // 默认不清除本地数据
   ai: {
     activeId: 1,
     systemPrompt:

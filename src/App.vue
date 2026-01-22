@@ -4,252 +4,256 @@
       <n-dialog-provider>
         <router-view />
         <UpdateManager />
-        <BackupAlertDialog v-model:showModal="showModal" @update:showModal="showModal = $event" />
       </n-dialog-provider>
     </n-notification-provider>
   </n-config-provider>
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from "vue";
+import { onMounted, onUnmounted, onErrorCaptured } from "vue";
 import { useRouter } from "vue-router";
 import { supabase, isSupabaseEnabled } from "@/core/services/supabase";
 import { useDataStore } from "@/stores/useDataStore";
 import { useSettingStore } from "@/stores/useSettingStore";
-import { useSyncStore } from "@/stores/useSyncStore"; // ✅ 新增引入
+import { useSyncStore } from "@/stores/useSyncStore";
+import { STORAGE_KEYS } from "@/core/constants";
 
 import UpdateManager from "./components/UpdateManager.vue";
-import BackupAlertDialog from "./components/BackupAlertDialog.vue";
-
 import { initSyncServices, syncAll, resetSyncServices } from "@/services/sync";
-import { isTauri } from "@tauri-apps/api/core";
-import { initialMigrate } from "./composables/useMigrate";
-import { initAppCloseHandler } from "@/services/appCloseHandler";
-import { getCurrentUser } from "@/core/services/authService";
+import { initAppCloseHandler, cancelPendingSyncTasks } from "@/services/appCloseHandler";
 
-// state & stores
-const showModal = ref(false);
+// ========== 状态与依赖 ==========
 const router = useRouter();
 const settingStore = useSettingStore();
 const dataStore = useDataStore();
-const syncStore = useSyncStore(); // ✅ 获取 syncStore 实例
+const syncStore = useSyncStore();
 
-// 用来存储异步初始化返回的清理函数
-let appCloseCleanup: (() => void) | undefined | null = null;
+// 清理函数存储
+let appCloseCleanup: (() => void) | null = null;
+let authStateChangeListener: (() => void) | null = null;
 
-const startAppSync = async () => {
-  if (!isSupabaseEnabled()) {
-    console.warn("[Supabase] 当前未启用，跳过同步初始化。");
-    return;
+// ========== 工具函数（解耦核心逻辑） ==========
+/**
+ * 统一销毁同步生命周期（同步服务 + 关闭/焦点监听）
+ * 仅在已初始化或有挂载监听时执行，避免无谓的销毁日志
+ */
+const cleanupSyncLifecycle = () => {
+  const hasLifecycle = syncStore.syncInitialized || !!appCloseCleanup;
+  if (!hasLifecycle) return;
+
+  cancelPendingSyncTasks();
+
+  if (appCloseCleanup) {
+    appCloseCleanup();
+    appCloseCleanup = null;
   }
 
-  // console.log("🔄 初始化同步服务...");
-  // 初始化同步服务 (绑定 store 数据)
-  await initSyncServices(dataStore);
-
-  // console.log("☁️ 开始同步...");
-  await syncAll(); // 同步所有数据
+  resetSyncServices();
+  syncStore.destroySyncService();
 };
 
-onMounted(async () => {
-  // 同步初始化标志
-  const syncInitialized = ref(false);
+/**
+ * 集中清理用户数据与状态
+ * @param keepLastUserId 是否保留最后一次登录用户ID
+ * @param clearAuthSession 是否清除认证会话（退出登录时需要清除）
+ */
+const clearAllUserState = (keepLastUserId: boolean = false, clearAuthSession: boolean = false, clearUserData: boolean = false) => {
+  // 先停掉同步相关副作用
+  cleanupSyncLifecycle();
 
-  // 1. 初始化本地数据
-  await dataStore.loadAllData();
+  // 清除业务数据
+  dataStore.clearData();
 
-  // 2. Tauri: 首次登陆APP导出/迁移
-  if (settingStore.settings.firstSync && isTauri()) {
-    await initialMigrate();
-    showModal.value = true;
-    settingStore.settings.firstSync = false;
+  // 清除本地存储
+  Object.keys(localStorage).forEach((key) => {
+    // 保留全局设置，便于记录 lastLoggedInUserId 等配置
+    if (key === STORAGE_KEYS.GLOBAL_SETTINGS) return;
+
+    // 认证会话根据标志决定是否清除
+    if (key.startsWith("sb-")) {
+      if (clearAuthSession) {
+        localStorage.removeItem(key);
+      }
+      return;
+    }
+
+    if (clearUserData) {
+      localStorage.removeItem(key);
+    }
+  });
+
+  // 重置同步与标记
+  syncStore.resetSync();
+  settingStore.settings.wasLocalModeBeforeLogin = false;
+
+  if (!keepLastUserId) {
+    settingStore.settings.lastLoggedInUserId = undefined;
   }
+};
 
-  // 检查是否是本地模式
-  if (settingStore.settings.localOnlyMode) {
-    console.log("✅ 本地模式，跳过登录检查，直接进入Home");
-    // 初始化窗口关闭事件
-    appCloseCleanup = await initAppCloseHandler();
-    router.push({ name: "Home" });
+/**
+ * 初始化同步生命周期（同步 + 关闭/焦点监听）
+ */
+const initSyncLifecycle = async () => {
+  if (!isSupabaseEnabled()) {
+    console.warn("[Supabase] 未启用，跳过同步初始化");
     return;
   }
 
-  // 3. Supabase session & 初始化同步
-  // 检查supabase是否启用，如果启用则尝试获取session并启动同步
-  if (isSupabaseEnabled() && supabase) {
-    settingStore.settings.autoSupabaseSync = true;
-    let session = null;
+  if (syncStore.syncInitialized) {
+    console.log("⏭️ 同步已初始化，跳过");
+    return;
+  }
 
-    // 获取用户 session
-    try {
-      const { data, error } = await supabase.auth.getSession();
-      if (error) {
-        console.error("获取 session 错误:", error.message ?? error);
-      } else {
-        session = data?.session ?? null;
-      }
-    } catch (err) {
-      console.error("获取 session 时出现异常:", err);
-    }
+  try {
+    await initSyncServices(dataStore);
+    await syncAll();
+    appCloseCleanup = await initAppCloseHandler();
+    syncStore.initSyncService();
+    console.log("✅ 同步生命周期初始化完成");
+  } catch (error) {
+    console.error("❌ 同步初始化失败:", error);
+    syncStore.syncError = error as string;
+  }
+};
 
-    if (session) {
-      console.log("✅ 用户已登录", session.user?.id);
+/**
+ * 已登录会话处理（包含用户切换判定）
+ */
+const handleSignedInSession = async (session: any) => {
+  const currentUserId = session?.user?.id as string | undefined;
+  if (!currentUserId) return;
 
-      // 检测用户切换
-      const currentUserId = session.user?.id;
-      const lastUserId = settingStore.settings.lastLoggedInUserId;
-      const wasLocalMode = settingStore.settings.wasLocalModeBeforeLogin;
+  const lastUserId = settingStore.settings.lastLoggedInUserId;
+  const userSwitched = !!lastUserId && lastUserId !== currentUserId;
+  const isSameUser = lastUserId === currentUserId;
 
-      // 如果是从本地模式切换过来的，且没有 lastUserId，不清除数据
-      // 如果检测到用户切换，且不是从本地模式切换过来的，清除数据
-      if (lastUserId && lastUserId !== currentUserId && !wasLocalMode) {
-        console.log("⚠️ 检测到用户切换，清除本地数据");
-        localStorage.clear();
-        dataStore.clearData();
-        syncStore.lastSyncTimestamp = 0;
-        syncStore.isSyncing = false;
-        syncStore.syncError = null;
-        resetSyncServices();
-      }
+  // 更新登录状态和用户ID
+  settingStore.settings.localOnlyMode = false;
+  settingStore.settings.wasLocalModeBeforeLogin = false;
+  // 登录成功默认开启自动同步
+  settingStore.settings.autoSupabaseSync = true;
+  settingStore.settings.lastLoggedInUserId = currentUserId;
+  syncStore.isLoggedIn = true;
 
-      // 更新用户ID
-      if (currentUserId) {
-        settingStore.settings.lastLoggedInUserId = currentUserId;
-      }
-
-      // 场景 A：打开 App 时已登录 -> 启动同步
-      await startAppSync();
-      syncInitialized.value = true; // 标记已初始化
-    } else {
-      console.log("ℹ️ 用户未登录，继续使用本地功能");
-    }
+  if (userSwitched) {
+    // 用户切换：清理数据并重新初始化
+    console.log("⚠️ 检测到用户切换，执行本地清理");
+    clearAllUserState(false, false, true);
+    await initSyncLifecycle();
+  } else if (isSameUser && syncStore.syncInitialized) {
+    // 同一用户且已初始化：不需要重新初始化，只确保状态正确
+    console.log("✅ 同一用户已登录且同步已初始化，跳过重复初始化");
+  } else if (syncStore.syncInitialized || appCloseCleanup) {
+    // 同步已初始化但用户ID不匹配（可能是首次设置）：重置并重新初始化
+    console.log("🔄 重置同步状态并重新初始化");
+    cleanupSyncLifecycle();
+    syncStore.resetSync();
+    await initSyncLifecycle();
   } else {
-    console.log("ℹ️ Supabase未启用，使用本地模式");
+    // 首次初始化
+    syncStore.resetSync();
+    await initSyncLifecycle();
   }
+};
 
-  // 无论是否有session都直接进入Home页面
-  // 初始化窗口关闭事件，并将清理函数赋值给外部变量
-  appCloseCleanup = await initAppCloseHandler();
-  // 清除 url hash 并跳转
-  if (window.location.hash) {
-    window.history.replaceState(null, "", window.location.pathname);
-  }
-  router.push({ name: "Home" });
+/**
+ * 处理 SIGNED_OUT 事件
+ */
+const handleSignedOut = () => {
+  console.log("👋 用户已登出，清理同步状态和认证会话");
+  syncStore.isLoggedIn = false;
+  clearAllUserState(true, true, settingStore.settings.keepLocalDataAfterSignOut);
+};
 
-  // 监听认证变化（仅在supabase启用时）
-  if (isSupabaseEnabled() && supabase) {
-    supabase.auth.onAuthStateChange(async (event, _sess) => {
-      console.log(`🔔 Auth 事件: ${event}, syncInitialized=${syncInitialized.value}`);
+/**
+ * 初始化 Auth 状态监听
+ */
+const initAuthStateListener = () => {
+  if (!isSupabaseEnabled() || !supabase) return;
 
-      if (event === "SIGNED_OUT") {
-        // 1️⃣ 退出登录：根据 wasLocalModeBeforeLogin 决定是否清除数据
-        const wasLocalMode = settingStore.settings.wasLocalModeBeforeLogin;
+  const {
+    data: { subscription },
+  } = supabase.auth.onAuthStateChange(async (event, session) => {
+    console.log(`🔔 Auth 事件: ${event}, syncInitialized=${syncStore.syncInitialized}`);
 
-        if (wasLocalMode) {
-          // 从本地模式切换过来的，不清除本地数据
-          console.log("👋 用户退出（从本地模式切换），保留本地数据，只清除认证状态");
+    if (event === "SIGNED_IN") {
+      await handleSignedInSession(session);
+    } else if (event === "SIGNED_OUT") {
+      handleSignedOut();
+    } else if (event === "INITIAL_SESSION") {
+      // INITIAL_SESSION 事件在应用启动时触发，已在 onMounted 中处理，这里跳过避免重复初始化
+      console.log("⏭️ INITIAL_SESSION 事件，已在 onMounted 中处理，跳过");
+    }
+  });
 
-          // 只清除认证相关的 localStorage 项
-          try {
-            // 清除 supabase session
-            const keysToRemove: string[] = [];
-            for (let i = 0; i < localStorage.length; i++) {
-              const key = localStorage.key(i);
-              if (key && (key.includes("supabase") || key.includes("auth"))) {
-                keysToRemove.push(key);
-              }
-            }
-            keysToRemove.forEach((key) => localStorage.removeItem(key));
-          } catch (err) {
-            console.error("清除认证数据时出错:", err);
-          }
+  authStateChangeListener = () => subscription.unsubscribe();
+};
 
-          // 重置同步时间戳和状态
-          syncStore.lastSyncTimestamp = 0;
-          syncStore.isSyncing = false;
-          syncStore.syncError = null;
-          resetSyncServices();
-          syncInitialized.value = false;
-          settingStore.settings.supabaseSync[0] = 0;
-          // 清除用户ID记录
-          settingStore.settings.lastLoggedInUserId = undefined;
-          // 重置标志
-          settingStore.settings.wasLocalModeBeforeLogin = false;
+// ========== 生命周期钩子 ==========
+onMounted(async () => {
+  try {
+    // 1. 初始化本地数据
+    await dataStore.loadAllData();
+
+    // 3. 本地模式直接跳转（仍保留 Auth 监听以便后续切换登录）
+    if (settingStore.settings.localOnlyMode) {
+      console.log("✅ 本地模式，跳过登录检查，直接进入Home");
+      router.push({ name: "Home" });
+      initAuthStateListener();
+      return;
+    }
+
+    // 4. Supabase登录状态检查
+    if (isSupabaseEnabled() && supabase) {
+      settingStore.settings.autoSupabaseSync = true;
+
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        if (error) throw error;
+
+        const session = data?.session ?? null;
+        if (session) {
+          await handleSignedInSession(session);
         } else {
-          // 正常退出，清除所有数据
-          console.log("👋 用户退出，清理本地数据与状态");
-          localStorage.clear();
-          dataStore.clearData();
-
-          // ✅ 关键：重置同步时间戳，防止下次登录误判为增量同步
-          syncStore.lastSyncTimestamp = 0;
-          // 如果 syncStore 是用 setup 写法且没有 $reset，手动重置其他状态
-          syncStore.isSyncing = false;
-          syncStore.syncError = null;
-          resetSyncServices();
-          syncInitialized.value = false; // 重置标志
-          settingStore.settings.supabaseSync[0] = 0; // 如果你也用这个存时间，也要重置
-          // 清除用户ID记录
-          settingStore.settings.lastLoggedInUserId = undefined;
+          console.log("ℹ️ 用户未登录，继续使用本地功能");
+          syncStore.isLoggedIn = false;
         }
-
-        // 退出登录后不强制跳转，保持在当前页面
-      } else if (event === "SIGNED_IN") {
-        // 2️⃣ 登录成功
-        const user = await getCurrentUser();
-        if (user) {
-          const currentUserId = user.id;
-          const lastUserId = settingStore.settings.lastLoggedInUserId;
-
-          // 检查是否从本地模式登录
-          const wasLocalMode = settingStore.settings.localOnlyMode;
-          if (wasLocalMode) {
-            // 从本地模式登录，设置标志以保护数据
-            settingStore.settings.wasLocalModeBeforeLogin = true;
-            settingStore.settings.localOnlyMode = false;
-            console.log("✅ 从本地模式登录，设置 wasLocalModeBeforeLogin = true");
-          }
-
-          // 检测用户切换
-          // 如果是从本地模式切换过来的，且没有 lastLoggedInUserId，不清除数据
-          if (lastUserId && lastUserId !== currentUserId && !wasLocalMode) {
-            console.log("⚠️ 检测到用户切换，清除本地数据");
-            localStorage.clear();
-            dataStore.clearData();
-            syncStore.lastSyncTimestamp = 0;
-            syncStore.isSyncing = false;
-            syncStore.syncError = null;
-            resetSyncServices();
-          }
-
-          // 更新用户ID
-          settingStore.settings.lastLoggedInUserId = currentUserId;
-        }
-
-        if (!syncInitialized.value) {
-          console.log("🔄 用户登录，强制全量同步");
-
-          // ✅ 双重保险：确保登录时从 0 开始同步
-          syncStore.lastSyncTimestamp = 0;
-
-          await startAppSync();
-          syncInitialized.value = true;
-        } else {
-          console.log("⏭️ 已完成同步初始化，跳过重复执行");
-        }
-      } else if (event === "INITIAL_SESSION") {
-        // 这个事件在 getSession() 后自动触发，跳过
-        console.log("⏭️ INITIAL_SESSION 事件，跳过（已在 getSession 中处理）");
+      } catch (error) {
+        console.error("获取Session失败:", error);
       }
-    });
+    } else {
+      console.log("ℹ️ Supabase未启用，使用本地模式");
+    }
+
+    // 5. 清理URL并跳转Home
+    if (window.location.hash) {
+      window.history.replaceState(null, "", window.location.pathname);
+    }
+    router.push({ name: "Home" });
+
+    // 6. 初始化Auth状态监听
+    initAuthStateListener();
+  } catch (error) {
+    console.error("❌ 应用初始化失败:", error);
+    // 初始化失败仍跳转Home，保证基础功能可用
+    router.push({ name: "Home" });
   }
 });
 
-// 组件卸载时统一清理
+// 全局错误捕获
+onErrorCaptured((error) => {
+  console.error("❌ 应用运行时错误:", error);
+  return false; // 不阻止错误向上传播
+});
+
+// 组件卸载清理
 onUnmounted(() => {
-  // 清理窗口关闭监听
-  if (appCloseCleanup) {
-    appCloseCleanup();
+  cleanupSyncLifecycle();
+
+  if (authStateChangeListener) {
+    authStateChangeListener();
+    authStateChangeListener = null;
   }
 });
 </script>
