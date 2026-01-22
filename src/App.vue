@@ -4,14 +4,13 @@
       <n-dialog-provider>
         <router-view />
         <UpdateManager />
-        <BackupAlertDialog v-model:showModal="showModal" @update:showModal="showModal = $event" />
       </n-dialog-provider>
     </n-notification-provider>
   </n-config-provider>
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, onErrorCaptured } from "vue";
+import { onMounted, onUnmounted, onErrorCaptured } from "vue";
 import { useRouter } from "vue-router";
 import { supabase, isSupabaseEnabled } from "@/core/services/supabase";
 import { useDataStore } from "@/stores/useDataStore";
@@ -20,15 +19,10 @@ import { useSyncStore } from "@/stores/useSyncStore";
 import { STORAGE_KEYS } from "@/core/constants";
 
 import UpdateManager from "./components/UpdateManager.vue";
-import BackupAlertDialog from "./components/BackupAlertDialog.vue";
-
 import { initSyncServices, syncAll, resetSyncServices } from "@/services/sync";
-import { isTauri } from "@tauri-apps/api/core";
-import { initialMigrate } from "./composables/useMigrate";
 import { initAppCloseHandler, cancelPendingSyncTasks } from "@/services/appCloseHandler";
 
 // ========== 状态与依赖 ==========
-const showModal = ref(false);
 const router = useRouter();
 const settingStore = useSettingStore();
 const dataStore = useDataStore();
@@ -200,13 +194,6 @@ onMounted(async () => {
   try {
     // 1. 初始化本地数据
     await dataStore.loadAllData();
-
-    // 2. Tauri首次同步处理
-    if (settingStore.settings.firstSync && isTauri()) {
-      await initialMigrate();
-      showModal.value = true;
-      settingStore.settings.firstSync = false;
-    }
 
     // 3. 本地模式直接跳转（仍保留 Auth 监听以便后续切换登录）
     if (settingStore.settings.localOnlyMode) {
