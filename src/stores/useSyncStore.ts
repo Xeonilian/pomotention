@@ -110,7 +110,6 @@ export const useSyncStore = defineStore("sync", () => {
     syncError.value = null;
     currentSyncMessage.value = "就绪";
     syncStatus.value = "idle";
-    // 重置时也重置初始化状态
     syncInitialized.value = false;
   }
 
