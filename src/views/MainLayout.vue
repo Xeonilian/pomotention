@@ -39,23 +39,24 @@
               </template>
             </n-button>
             <!-- 已登录时显示退出登录按钮 -->
-
-            <n-button
+            <n-popconfirm
               v-else
-              size="tiny"
-              type="default"
-              secondary
-              :loading="syncStore.loggingOut"
-              title="退出登录"
-              class="header-button"
-              @click="syncStore.handleLogout"
+              @positive-click="handleLogoutConfirm"
+              @negative-click="handleLogoutCancel"
+              negative-text="不保留"
+              positive-text="保留"
             >
-              <template #icon>
-                <n-icon>
-                  <PersonAccounts24Filled />
-                </n-icon>
+              <template #trigger>
+                <n-button size="tiny" type="default" secondary :loading="syncStore.loggingOut" title="退出登录" class="header-button">
+                  <template #icon>
+                    <n-icon>
+                      <PersonAccounts24Filled />
+                    </n-icon>
+                  </template>
+                </n-button>
               </template>
-            </n-button>
+              <span>退出登录时是否保留本地数据？</span>
+            </n-popconfirm>
           </div>
         </div>
       </n-layout-header>
@@ -150,7 +151,7 @@
 <script setup lang="ts">
 import { ref, watch, nextTick, onMounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
-import { NMenu, NButton, NIcon, NLayoutFooter, NTag } from "naive-ui";
+import { NMenu, NButton, NIcon, NLayoutFooter, NTag, NPopconfirm } from "naive-ui";
 import { storeToRefs } from "pinia";
 
 // Stores
@@ -195,6 +196,22 @@ if (!settingStore.settings.showPomodoro) {
 const syncStore = useSyncStore();
 const { syncIcon, relativeTime, handleUpload, handleDownload } = useSyncWidget();
 const { isLoggedIn } = storeToRefs(syncStore);
+
+// 处理退出登录确认（保留数据）
+async function handleLogoutConfirm() {
+  // 用户点击"保留"，设置为保留本地数据
+  settingStore.settings.keepLocalDataAfterSignOut = true;
+  // 执行退出登录
+  await syncStore.handleLogout();
+}
+
+// 处理退出登录取消（不保留数据）
+async function handleLogoutCancel() {
+  // 用户点击"不保留"，设置为不保留本地数据
+  settingStore.settings.keepLocalDataAfterSignOut = false;
+  // 执行退出登录
+  await syncStore.handleLogout();
+}
 
 // === 2. 菜单与路由逻辑 ===
 const currentRoutePath = ref(route.path);

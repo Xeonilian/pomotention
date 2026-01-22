@@ -57,7 +57,7 @@ const cleanupSyncLifecycle = () => {
  * @param keepLastUserId 是否保留最后一次登录用户ID
  * @param clearAuthSession 是否清除认证会话（退出登录时需要清除）
  */
-const clearAllUserState = (keepLastUserId: boolean = false, clearAuthSession: boolean = false) => {
+const clearAllUserState = (keepLastUserId: boolean = false, clearAuthSession: boolean = false, clearUserData: boolean = false) => {
   // 先停掉同步相关副作用
   cleanupSyncLifecycle();
 
@@ -77,7 +77,9 @@ const clearAllUserState = (keepLastUserId: boolean = false, clearAuthSession: bo
       return;
     }
 
-    localStorage.removeItem(key);
+    if (clearUserData) {
+      localStorage.removeItem(key);
+    }
   });
 
   // 重置同步与标记
@@ -137,7 +139,7 @@ const handleSignedInSession = async (session: any) => {
   if (userSwitched) {
     // 用户切换：清理数据并重新初始化
     console.log("⚠️ 检测到用户切换，执行本地清理");
-    clearAllUserState(false);
+    clearAllUserState(false, false, true);
     await initSyncLifecycle();
   } else if (isSameUser && syncStore.syncInitialized) {
     // 同一用户且已初始化：不需要重新初始化，只确保状态正确
@@ -161,8 +163,7 @@ const handleSignedInSession = async (session: any) => {
 const handleSignedOut = () => {
   console.log("👋 用户已登出，清理同步状态和认证会话");
   syncStore.isLoggedIn = false;
-  // 退出登录时清除认证会话，防止刷新后自动登录
-  clearAllUserState(true, true);
+  clearAllUserState(true, true, settingStore.settings.keepLocalDataAfterSignOut);
 };
 
 /**
