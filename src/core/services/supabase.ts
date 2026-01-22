@@ -7,10 +7,24 @@ import { useSettingStore } from "@/stores/useSettingStore";
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+if (import.meta.env.MODE !== "production") {
+  console.log("[Supabase 调试] 环境变量读取结果：", {
+    url: !!supabaseUrl, // 只显示是否存在，不泄露具体值
+    key: !!supabaseAnonKey,
+    envMode: import.meta.env.MODE,
+  });
+}
+
 let supabaseInstance: SupabaseClient | null = null;
 
 if (supabaseUrl && supabaseAnonKey) {
-  supabaseInstance = createClient(supabaseUrl, supabaseAnonKey);
+  supabaseInstance = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: true,
+    },
+  });
 
   supabaseInstance.auth.onAuthStateChange((event) => {
     console.log("Supabase auth event:", event);
