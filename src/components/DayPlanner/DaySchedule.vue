@@ -58,14 +58,36 @@
                 :checked="schedule.status === 'done'"
                 @update:checked="handleCheckboxChange(schedule.id, $event)"
               />
-              <n-icon v-else class="cancel-icon" color="var(--color-text-secondary)">
+              <n-icon
+                v-else
+                class="cancel-icon"
+                color="var(--color-text-secondary)"
+                style="cursor: pointer"
+                title="点击撤销取消"
+                @click.stop="handleUncancelSchedule(schedule.id)"
+              >
                 <DismissSquare20Filled />
               </n-icon>
             </td>
 
             <!-- 2 开始时间 -->
-            <td class="col-start">
-              {{ schedule.activityDueRange ? timestampToTimeString(schedule.activityDueRange[0]) : "-" }}
+            <td
+              class="col-start"
+              @dblclick.stop="startEditing(schedule.id, 'start')"
+              :title="editingRowId === schedule.id && editingField === 'start' ? '' : '双击编辑'"
+            >
+              <input
+                class="start-input time-input"
+                v-if="editingRowId === schedule.id && editingField === 'start'"
+                v-model="editingValue"
+                @blur="saveEdit(schedule)"
+                @keyup.enter="saveEdit(schedule)"
+                @keyup.esc="cancelEdit"
+                :data-schedule-id="schedule.id"
+                maxlength="5"
+                autocomplete="off"
+              />
+              <span v-else>{{ schedule.activityDueRange?.[0] ? timestampToTimeString(schedule.activityDueRange[0]) : "-" }}</span>
             </td>
 
             <!-- 3 结束时间 -->
@@ -89,8 +111,24 @@
             </td>
 
             <!-- 4 时长 -->
-            <td class="col-duration" :class="{ 'is-empty-min': schedule.activityDueRange?.[1] === '' }">
-              {{ (schedule.activityDueRange?.[1] ?? "") !== "" ? schedule.activityDueRange[1] : "min" }}
+            <td
+              class="col-duration"
+              :class="{ 'is-empty-min': schedule.activityDueRange?.[1] === '' }"
+              @dblclick.stop="startEditing(schedule.id, 'duration')"
+              :title="editingRowId === schedule.id && editingField === 'duration' ? '' : '双击编辑'"
+            >
+              <input
+                class="duration-input time-input"
+                v-if="editingRowId === schedule.id && editingField === 'duration'"
+                v-model="editingValue"
+                @blur="saveEdit(schedule)"
+                @keyup.enter="saveEdit(schedule)"
+                @keyup.esc="cancelEdit"
+                :data-schedule-id="schedule.id"
+                maxlength="4"
+                autocomplete="off"
+              />
+              <span v-else>{{ (schedule.activityDueRange?.[1] ?? "") !== "" ? schedule.activityDueRange[1] : "min" }}</span>
             </td>
 
             <!-- 5 意图 -->
@@ -111,6 +149,8 @@
                 @blur="saveEdit(schedule)"
                 @keyup.enter="saveEdit(schedule)"
                 @keyup.esc="cancelEdit"
+                @input="handleTitleInput(schedule)"
+                @keydown="handleInputKeydown($event, schedule)"
                 @click.stop
                 :data-schedule-id="schedule.id"
               />
@@ -128,8 +168,23 @@
             </td>
 
             <!-- 6 地点 -->
-            <td class="col-location">
-              <span class="ellipsis">
+            <td
+              class="col-location"
+              @dblclick.stop="startEditing(schedule.id, 'location')"
+              :title="editingRowId === schedule.id && editingField === 'location' ? '' : '双击编辑'"
+            >
+              <input
+                class="location-input"
+                v-if="editingRowId === schedule.id && editingField === 'location'"
+                v-model="editingValue"
+                @blur="saveEdit(schedule)"
+                @keyup.enter="saveEdit(schedule)"
+                @keyup.esc="cancelEdit"
+                @click.stop
+                :data-schedule-id="schedule.id"
+                autocomplete="off"
+              />
+              <span class="ellipsis" v-else>
                 {{ schedule.location ?? "-" }}
               </span>
             </td>
@@ -214,6 +269,29 @@
     </template>
     {{ popoverMessage }}
   </n-popover>
+  <!-- Tag Selector Popover -->
+  <n-popover
+    :show="tagEditor.popoverTargetId.value !== null && schedulesForCurrentView.some(s => s.id === tagEditor.popoverTargetId.value)"
+    @update:show="(show) => !show && (tagEditor.popoverTargetId.value = null)"
+    placement="bottom-start"
+    :trap-focus="false"
+    trigger="manual"
+    :show-arrow="false"
+    style="padding: 0; border-radius: 6px; margin-top: -30px; margin-left: 130px"
+    :to="false"
+  >
+    <template #trigger>
+      <span style="position: absolute; pointer-events: none"></span>
+    </template>
+    <TagSelector
+      :ref="(el) => (tagSelectorRef = el)"
+      :search-term="tagEditor.tagSearchTerm.value"
+      :allow-create="true"
+      @select-tag="(tagId: any) => handleTagSelected(tagId)"
+      @create-tag="(tagName: any) => handleTagCreate(tagName)"
+      @close-selector="tagEditor.popoverTargetId.value = null"
+    />
+  </n-popover>
 </template>
 
 <script setup lang="ts">
@@ -227,17 +305,19 @@ import {
   DismissSquare20Filled,
 } from "@vicons/fluent";
 import { taskService } from "@/services/taskService";
-import { ref, nextTick } from "vue";
+import { ref, nextTick, computed } from "vue";
 import { Task } from "@/core/types/Task";
 
 import { useDataStore } from "@/stores/useDataStore";
 import { storeToRefs } from "pinia";
+import { useActivityTagEditor } from "@/composables/useActivityTagEditor";
+import TagSelector from "../TagSystem/TagSelector.vue";
 
 const dataStore = useDataStore();
 const { activeId, selectedRowId, schedulesForCurrentView } = storeToRefs(dataStore);
 // 编辑用
 const editingRowId = ref<number | null>(null);
-const editingField = ref<null | "title" | "start" | "done">(null);
+const editingField = ref<null | "title" | "start" | "done" | "duration" | "location">(null);
 const editingValue = ref("");
 
 // 定义 Emit
@@ -245,12 +325,16 @@ const editingValue = ref("");
 const emit = defineEmits<{
   (e: "update-schedule-status", id: number, checked: boolean): void;
   (e: "cancel-schedule", id: number): void;
+  (e: "uncancel-schedule", id: number): void;
   // (e: "repeat-schedule", id: number): void;
   (e: "select-task", taskId: number | null): void;
   (e: "select-row", id: number | null): void;
   (e: "select-activity", activityId: number | null): void;
   (e: "edit-schedule-title", id: number, newTitle: string): void;
+  (e: "edit-schedule-start", id: number, newTs: string): void;
   (e: "edit-schedule-done", id: number, newTs: string): void;
+  (e: "edit-schedule-duration", id: number, newDurationMin: string): void;
+  (e: "edit-schedule-location", id: number, newLocation: string): void;
   (
     e: "convert-schedule-to-task",
     payload: {
@@ -263,6 +347,10 @@ const emit = defineEmits<{
 // 添加状态来控制提示信息
 const showPopover = ref(false);
 const popoverMessage = ref("");
+
+// Tag Editor
+const tagEditor = useActivityTagEditor();
+const tagSelectorRef = ref<any>(null);
 
 const sortedSchedules = computed(() =>
   schedulesForCurrentView.value.sort((a, b) => {
@@ -284,7 +372,7 @@ function handleRowClick(schedule: Schedule) {
 }
 
 // 编辑相关函数
-function startEditing(scheduleId: number, field: "title" | "start" | "done") {
+function startEditing(scheduleId: number, field: "title" | "start" | "done" | "duration" | "location") {
   const schedule = schedulesForCurrentView.value.find((s) => s.id === scheduleId);
   if (!schedule) return;
   editingRowId.value = scheduleId;
@@ -293,9 +381,11 @@ function startEditing(scheduleId: number, field: "title" | "start" | "done") {
     field === "title"
       ? schedule.activityTitle || ""
       : field === "start"
-      ? schedule.taskId
-        ? timestampToTimeString(schedule.taskId)
-        : ""
+      ? (schedule.activityDueRange?.[0] ? timestampToTimeString(schedule.activityDueRange[0]) : "")
+      : field === "duration"
+      ? (schedule.activityDueRange?.[1] ?? "")
+      : field === "location"
+      ? (schedule.location ?? "")
       : schedule.doneTime
       ? timestampToTimeString(schedule.doneTime)
       : "";
@@ -311,6 +401,12 @@ function startEditing(scheduleId: number, field: "title" | "start" | "done") {
 
 function saveEdit(schedule: Schedule) {
   if (!editingRowId.value) return;
+
+  // 如果输入框中有 # 开头的文本，清理并关闭 popover
+  if (editingValue.value.includes("#") && tagEditor.popoverTargetId.value) {
+    editingValue.value = tagEditor.clearTagTriggerText(editingValue.value);
+    tagEditor.closePopover();
+  }
 
   if (editingField.value === "title") {
     if (editingValue.value.trim()) {
@@ -328,10 +424,39 @@ function saveEdit(schedule: Schedule) {
       }
     }
   }
+
+  if (editingField.value === "start") {
+    if (isValidTimeString(editingValue.value)) {
+      const ts = editingValue.value;
+      emit("edit-schedule-start", schedule.id, ts);
+    } else if (editingValue.value === "") {
+      emit("edit-schedule-start", schedule.id, "");
+    }
+  }
+
+  if (editingField.value === "duration") {
+    // 允许为空（显示为 min），允许数字字符串
+    const raw = editingValue.value.trim();
+    if (raw === "") {
+      emit("edit-schedule-duration", schedule.id, "");
+    } else if (/^\d{1,4}$/.test(raw)) {
+      emit("edit-schedule-duration", schedule.id, raw);
+    }
+  }
+
+  if (editingField.value === "location") {
+    // 地点允许为空
+    emit("edit-schedule-location", schedule.id, editingValue.value.trim());
+  }
   cancelEdit();
 }
 
 function cancelEdit() {
+  // 如果输入框中有 # 开头的文本，清理并关闭 popover
+  if (editingValue.value.includes("#") && tagEditor.popoverTargetId.value) {
+    editingValue.value = tagEditor.clearTagTriggerText(editingValue.value);
+    tagEditor.closePopover();
+  }
   editingRowId.value = null;
   editingField.value = null;
   editingValue.value = "";
@@ -366,6 +491,70 @@ function handleConvertToTask(schedule: Schedule) {
 
 function handleCancelSchedule(id: number) {
   emit("cancel-schedule", id);
+}
+
+// 撤销取消
+function handleUncancelSchedule(id: number) {
+  emit("uncancel-schedule", id);
+}
+
+// Tag 相关函数
+function handleTitleInput(schedule: Schedule) {
+  tagEditor.handleContentInput(schedule.id, editingValue.value);
+}
+
+function handleInputKeydown(event: KeyboardEvent, schedule: Schedule) {
+  if (tagEditor.popoverTargetId.value === schedule.id && tagSelectorRef.value) {
+    switch (event.key) {
+      case "ArrowDown":
+        tagSelectorRef.value.navigateDown();
+        event.preventDefault();
+        break;
+      case "ArrowUp":
+        tagSelectorRef.value.navigateUp();
+        event.preventDefault();
+        break;
+      case "Enter":
+        tagSelectorRef.value.selectHighlighted();
+        event.preventDefault();
+        break;
+      case "Escape":
+        tagEditor.closePopover();
+        event.preventDefault();
+        break;
+    }
+  }
+
+  // 特殊处理：# 键自动打开 popover
+  if (event.key === "#" && !tagEditor.popoverTargetId.value) {
+    tagEditor.popoverTargetId.value = schedule.id;
+  }
+}
+
+function handleTagSelected(tagId: number) {
+  if (!tagEditor.popoverTargetId.value) return;
+  const schedule = schedulesForCurrentView.value.find(s => s.id === tagEditor.popoverTargetId.value);
+  if (!schedule) return;
+  
+  const cleanedTitle = tagEditor.clearTagTriggerText(editingValue.value);
+  editingValue.value = cleanedTitle;
+  
+  // 通过 activityId 给 Activity 添加标签
+  dataStore.addTagToActivity(schedule.activityId, tagId);
+  tagEditor.closePopover();
+}
+
+function handleTagCreate(tagName: string) {
+  if (!tagEditor.popoverTargetId.value) return;
+  const schedule = schedulesForCurrentView.value.find(s => s.id === tagEditor.popoverTargetId.value);
+  if (!schedule) return;
+  
+  const cleanedTitle = tagEditor.clearTagTriggerText(editingValue.value);
+  editingValue.value = cleanedTitle;
+  
+  // 通过 activityId 创建并添加标签到 Activity
+  dataStore.createAndAddTagToActivity(schedule.activityId, tagName);
+  tagEditor.closePopover();
 }
 </script>
 
@@ -407,7 +596,7 @@ col.col-location {
 }
 
 col.col-status {
-  width: 87px;
+  width: 88px;
 }
 
 thead th,
@@ -565,6 +754,30 @@ td.status-col {
   box-sizing: border-box;
   padding: 0px 0px;
   font-size: inherit;
+}
+
+.duration-input {
+  /* 固定时长输入框宽度，避免 focus 时撑开 */
+  width: 26px !important;
+  max-width: 26px !important;
+  min-width: 0 !important;
+  box-sizing: border-box;
+  padding: 0px 0px;
+  font-size: inherit;
+}
+
+.location-input {
+  width: calc(100% - 6px);
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  font-size: inherit;
+  font-family: inherit;
+  outline: none;
+}
+
+.location-input:focus {
+  border-color: #40a9ff;
+  box-shadow: 0 0 0 2px rgba(64, 169, 255, 0.2);
 }
 
 .time-input:focus {

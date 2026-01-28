@@ -18,7 +18,6 @@
       @delete-active="deleteActiveRow"
       @toggle-pomo-type="togglePomoType"
       @repeat-activity="repeatActivity"
-      @convert-activity-to-task="handleConvertToTask"
       @create-child-activity="createChildActivity"
       @increase-child-activity="increaseChildActivity"
     />
@@ -65,9 +64,7 @@ import ActivityButtons from "@/components/ActivitySheet/ActivityButtons.vue";
 import ActivitySection from "@/components/ActivitySheet/ActivitySection.vue";
 import type { Activity, ActivitySectionConfig } from "@/core/types/Activity";
 import { NPopover } from "naive-ui";
-import { taskService } from "@/services/taskService";
 import { useSettingStore } from "@/stores/useSettingStore";
-import { Task } from "@/core/types/Task";
 import { useDataStore } from "@/stores/useDataStore";
 import { storeToRefs } from "pinia";
 import { timestampToDatetime } from "@/core/utils";
@@ -97,13 +94,6 @@ const emit = defineEmits<{
   (e: "toggle-pomo-type", id: number | null | undefined): void; // 切换番茄钟类型
   (e: "repeat-activity", id: number | null | undefined): void; // 重复选中的活动
   (e: "create-child-activity", id: number | null | undefined): void; // 构建选中活动的子活动
-  (
-    e: "convert-activity-to-task",
-    payload: {
-      task: Task;
-      activityId: number | null | undefined;
-    }
-  ): void;
   (e: "increase-child-activity", id: number | null | undefined): void; // 取消子项（名称含义建议确认）
 }>();
 
@@ -407,34 +397,7 @@ function getCountdownClass(dueDate: number | undefined | null): string {
   return "";
 }
 
-function handleConvertToTask() {
-  if (activeId.value == null) return;
-  const activity = activityById.value.get(activeId.value);
-  if (!activity) return;
 
-  if (activity.taskId) {
-    popoverMessage.value = "该活动已转换为任务";
-    showPopover.value = true;
-    setTimeout(() => (showPopover.value = false), 2000);
-    return;
-  }
-
-  console.log("convert", activity.id);
-
-  // 1) 生成任务（不持久化）
-  const task = taskService.createTaskFromActivity(activity.id, activity.title);
-
-  // 3) 只 emit，不在子组件里直接操作父层列表
-  emit("convert-activity-to-task", {
-    task,
-    activityId: activity.id,
-  });
-
-  // 4) 反馈 UI
-  popoverMessage.value = "已转换为任务";
-  showPopover.value = true;
-  setTimeout(() => (showPopover.value = false), 2000);
-}
 </script>
 
 <style scoped>

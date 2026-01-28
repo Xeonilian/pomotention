@@ -3,7 +3,7 @@
   <div class="task-view-container">
     <div class="task-header-container">
       <div v-if="selectedTagIds && selectedTagIds.length > 0 && selectedTaskId" class="task-tag-render-container">
-        <TagRenderer :tag-ids="selectedTagIds" :isCloseable="false" />
+        <TagRenderer :tag-ids="selectedTagIds" :isCloseable="true" @remove-tag="handleRemoveTag" />
       </div>
       <!-- 合并能量/愉悦/打断 记录时间轴 -->
       <div class="combined-timeline-container" v-if="combinedRecords.length">
@@ -62,12 +62,14 @@ const TaskRecord = defineAsyncComponent<Component>(() => import("@/components/Ta
 const TagRenderer = defineAsyncComponent<Component>(() => import("@/components/TagSystem/TagRenderer.vue"));
 import type { EnergyRecord, RewardRecord, InterruptionRecord } from "@/core/types/Task";
 import { useTaskTrackerStore } from "@/stores/useTaskTrackerStore";
+import { useDataStore } from "@/stores/useDataStore";
 
 // UI 状态
 const isMarkdown = ref(false);
 const taskDescription = ref("");
 
 const taskTrackerStore = useTaskTrackerStore();
+const dataStore = useDataStore();
 const { selectedTaskId, selectedTask, selectedTagIds, isStarred } = storeToRefs(taskTrackerStore);
 const { updateTaskDescription, handleEnergyRecord, handleRewardRecord, handleInterruptionRecord, handleStar } = taskTrackerStore;
 
@@ -158,6 +160,13 @@ const getEnergyColor = (value: number) => {
   const g = startColor.g + (endColor.g - startColor.g) * normalizedValue;
   const b = startColor.b + (endColor.b - startColor.b) * normalizedValue;
   return `rgb(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)})`;
+};
+
+// 移除标签
+const handleRemoveTag = (tagId: number) => {
+  const task = selectedTask.value;
+  if (!task || !task.sourceId) return;
+  dataStore.removeTagFromActivity(task.sourceId, tagId);
 };
 </script>
 

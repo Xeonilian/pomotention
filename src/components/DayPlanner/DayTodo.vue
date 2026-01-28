@@ -56,7 +56,14 @@
                 :checked="todo.status === 'done'"
                 @update:checked="handleCheckboxChange(todo.id, $event)"
               />
-              <n-icon v-else class="cancel-icon" color="var(--color-text-secondary)">
+              <n-icon
+                v-else
+                class="cancel-icon"
+                color="var(--color-text-secondary)"
+                style="cursor: pointer"
+                title="点击撤销取消"
+                @click.stop="handleUncancelTodo(todo.id)"
+              >
                 <DismissSquare20Filled />
               </n-icon>
             </td>
@@ -145,6 +152,8 @@
                 @blur="saveEdit(todo)"
                 @keyup.enter="saveEdit(todo)"
                 @keyup.esc="cancelEdit"
+                @input="handleTitleInput(todo)"
+                @keydown="handleInputKeydown($event, todo)"
                 @click.stop
                 :data-todo-id="todo.id"
               />
@@ -237,7 +246,7 @@
                   v-if="todo.status !== 'done' && todo.status !== 'cancelled'"
                 >
                   <!-- 追踪任务按钮 -->
-                  <n-button class="convert-button" v-if="!todo.taskId" text type="info" @click="handleConvertToTask(todo)" title="追踪任务">
+                  <n-button class="convert-button" text type="info" @click="handleQuickStart(todo)" title="开始待办">
                     <template #icon>
                       <n-icon size="18">
                         <ChevronCircleDown48Regular />
@@ -318,6 +327,29 @@
   >
     <n-input-number v-model:value="newEstimate" :min="1" :max="5" placeholder="请输入估计的番茄数" style="width: 100%" />
   </n-modal>
+  <!-- Tag Selector Popover -->
+  <n-popover
+    :show="tagEditor.popoverTargetId.value !== null && todosForCurrentViewWithTaskRecords.some(t => t.id === tagEditor.popoverTargetId.value)"
+    @update:show="(show) => !show && (tagEditor.popoverTargetId.value = null)"
+    placement="bottom-start"
+    :trap-focus="false"
+    trigger="manual"
+    :show-arrow="false"
+    style="padding: 0; border-radius: 6px; margin-top: -30px; margin-left: 130px"
+    :to="false"
+  >
+    <template #trigger>
+      <span style="position: absolute; pointer-events: none"></span>
+    </template>
+    <TagSelector
+      :ref="(el) => (tagSelectorRef = el)"
+      :search-term="tagEditor.tagSearchTerm.value"
+      :allow-create="true"
+      @select-tag="(tagId: any) => handleTagSelected(tagId)"
+      @create-tag="(tagName: any) => handleTagCreate(tagName)"
+      @close-selector="tagEditor.popoverTargetId.value = null"
+    />
+  </n-popover>
 </template>
 <script setup lang="ts">
 import type { Todo, TodoWithTaskRecords } from "@/core/types/Todo";
@@ -333,11 +365,11 @@ import {
 } from "@vicons/fluent";
 import { NCheckbox, NInputNumber, NPopover, NButton, NIcon } from "naive-ui";
 import { ref, computed, nextTick } from "vue";
-import { taskService } from "@/services/taskService";
-import { Task } from "@/core/types/Task";
 
 import { useDataStore } from "@/stores/useDataStore";
 import { storeToRefs } from "pinia";
+import { useActivityTagEditor } from "@/composables/useActivityTagEditor";
+import TagSelector from "../TagSystem/TagSelector.vue";
 
 const dataStore = useDataStore();
 const { activeId, selectedRowId, todosForCurrentViewWithTaskRecords } = storeToRefs(dataStore);
@@ -356,10 +388,15 @@ const showEstimateInput = ref(false);
 const currentTodoId = ref<number | null>(null);
 const newEstimate = ref<number>(1);
 
+// Tag Editor
+const tagEditor = useActivityTagEditor();
+const tagSelectorRef = ref<any>(null);
+
 // 定义 Emit
 const emit = defineEmits<{
   (e: "suspend-todo", id: number): void;
   (e: "cancel-todo", id: number): void;
+  (e: "uncancel-todo", id: number): void;
   // (e: "repeat-todo", id: number): void;
   (e: "update-todo-status", id: number, checked: boolean): void;
   (e: "batch-update-priorities", updates: Array<{ id: number; priority: number }>): void;
@@ -372,7 +409,7 @@ const emit = defineEmits<{
   (e: "edit-todo-title", id: number, newTitle: string): void;
   (e: "edit-todo-start", id: number, newTs: string): void;
   (e: "edit-todo-done", id: number, newTs: string): void;
-  (e: "convert-todo-to-task", payload: { task: Task; activityId: number }): void;
+ 
 }>();
 
 // 对待办事项按优先级降序排序（高优先级在前）
@@ -664,29 +701,15 @@ function startEditing(todoId: number, field: "title" | "start" | "done") {
   editingRowId.value = todoId;
   editingField.value = field;
 
-  // 如果是 start 字段且有数据，则替换为当前时间
-  if (field === "start" && todo.startTime) {
-    const now = new Date();
-    const hours = now.getHours().toString().padStart(2, "0");
-    const minutes = now.getMinutes().toString().padStart(2, "0");
-    editingValue.value = `${hours}:${minutes}`;
-  }
-  // 如果是 done 字段且有数据，则替换为当前时间
-  else if (field === "done" && todo.doneTime) {
-    const now = new Date();
-    const hours = now.getHours().toString().padStart(2, "0");
-    const minutes = now.getMinutes().toString().padStart(2, "0");
-    editingValue.value = `${hours}:${minutes}`;
-  } else {
-    editingValue.value =
-      field === "title"
-        ? todo.activityTitle || ""
-        : field === "start"
-        ? timestampToTimeString(todo.startTime || todo.taskId || null)
-        : field === "done"
-        ? timestampToTimeString(todo.doneTime || null)
-        : "";
-  }
+  // 双击编辑：只带出原值，不自动填充当前时间
+  editingValue.value =
+    field === "title"
+      ? todo.activityTitle || ""
+      : field === "start"
+      ? (todo.startTime ? timestampToTimeString(todo.startTime) : "")
+      : field === "done"
+      ? (todo.doneTime ? timestampToTimeString(todo.doneTime) : "")
+      : "";
 
   // 使用 querySelector 来获取当前编辑的输入框，而不是依赖 ref
   nextTick(() => {
@@ -697,9 +720,36 @@ function startEditing(todoId: number, field: "title" | "start" | "done") {
   });
 }
 
+// 一键开始：不进入编辑态，直接把开始时间写成当前时间并保存
+function handleQuickStart(todo: Todo) {
+  // 已结束的任务不允许开始
+  if (todo.status === "done" || todo.status === "cancelled") {
+    popoverMessage.value = "当前任务已经结束！";
+    showPopover.value = true;
+    setTimeout(() => {
+      showPopover.value = false;
+    }, 2000);
+    return;
+  }
+
+  const now = new Date();
+  const hours = now.getHours().toString().padStart(2, "0");
+  const minutes = now.getMinutes().toString().padStart(2, "0");
+  const ts = `${hours}:${minutes}`;
+
+  // 直接通知父组件更新开始时间（不进入编辑状态）
+  emit("edit-todo-start", todo.id, ts);
+}
+
 // 注意这里是 timestring 不是timestamp，是在Home用currentViewdate进行的转化
 function saveEdit(todo: Todo) {
   if (!editingRowId.value) return;
+
+  // 如果输入框中有 # 开头的文本，清理并关闭 popover
+  if (editingValue.value.includes("#") && tagEditor.popoverTargetId.value) {
+    editingValue.value = tagEditor.clearTagTriggerText(editingValue.value);
+    tagEditor.closePopover();
+  }
 
   if (editingField.value === "title") {
     if (editingValue.value.trim()) {
@@ -728,6 +778,11 @@ function saveEdit(todo: Todo) {
 }
 
 function cancelEdit() {
+  // 如果输入框中有 # 开头的文本，清理并关闭 popover
+  if (editingValue.value.includes("#") && tagEditor.popoverTargetId.value) {
+    editingValue.value = tagEditor.clearTagTriggerText(editingValue.value);
+    tagEditor.closePopover();
+  }
   editingRowId.value = null;
   editingField.value = null;
   editingValue.value = "";
@@ -737,31 +792,6 @@ function isValidTimeString(str: string) {
   return /^\d{2}:\d{2}$/.test(str) && +str.split(":")[0] <= 24 && +str.split(":")[1] < 60;
 }
 
-// 转换为任务
-function handleConvertToTask(todo: Todo) {
-  if (todo.taskId) {
-    popoverMessage.value = "该待办已转换为任务";
-    showPopover.value = true;
-    setTimeout(() => {
-      showPopover.value = false;
-    }, 2000);
-    return;
-  }
-
-  const task = taskService.createTaskFromTodo(todo.activityId, todo.activityTitle, todo.projectName);
-
-  if (task) {
-    // 立即更新本地的 taskId
-    todo.taskId = task.id;
-
-    emit("convert-todo-to-task", { task: task, activityId: todo.activityId });
-    popoverMessage.value = "完成任务转换";
-    showPopover.value = true;
-    setTimeout(() => {
-      showPopover.value = false;
-    }, 2000);
-  }
-}
 
 // suspended Todo
 function handleSuspendTodo(id: number) {
@@ -770,6 +800,11 @@ function handleSuspendTodo(id: number) {
 
 function handleCancelTodo(id: number) {
   emit("cancel-todo", id);
+}
+
+// 撤销取消
+function handleUncancelTodo(id: number) {
+  emit("uncancel-todo", id);
 }
 
 // 取消repeat功能简化页面，Activity部分可以完成同样功能
@@ -800,6 +835,65 @@ function countInterruptions(records: { interruptionType: "E" | "I" }[] | null | 
   let count = 0;
   for (const r of records) if (r?.interruptionType === type) count++;
   return count;
+}
+
+// Tag 相关函数
+function handleTitleInput(todo: Todo) {
+  tagEditor.handleContentInput(todo.id, editingValue.value);
+}
+
+function handleInputKeydown(event: KeyboardEvent, todo: Todo) {
+  if (tagEditor.popoverTargetId.value === todo.id && tagSelectorRef.value) {
+    switch (event.key) {
+      case "ArrowDown":
+        tagSelectorRef.value.navigateDown();
+        event.preventDefault();
+        break;
+      case "ArrowUp":
+        tagSelectorRef.value.navigateUp();
+        event.preventDefault();
+        break;
+      case "Enter":
+        tagSelectorRef.value.selectHighlighted();
+        event.preventDefault();
+        break;
+      case "Escape":
+        tagEditor.closePopover();
+        event.preventDefault();
+        break;
+    }
+  }
+
+  // 特殊处理：# 键自动打开 popover
+  if (event.key === "#" && !tagEditor.popoverTargetId.value) {
+    tagEditor.popoverTargetId.value = todo.id;
+  }
+}
+
+function handleTagSelected(tagId: number) {
+  if (!tagEditor.popoverTargetId.value) return;
+  const todo = todosForCurrentViewWithTaskRecords.value.find(t => t.id === tagEditor.popoverTargetId.value);
+  if (!todo) return;
+  
+  const cleanedTitle = tagEditor.clearTagTriggerText(editingValue.value);
+  editingValue.value = cleanedTitle;
+  
+  // 通过 activityId 给 Activity 添加标签
+  dataStore.addTagToActivity(todo.activityId, tagId);
+  tagEditor.closePopover();
+}
+
+function handleTagCreate(tagName: string) {
+  if (!tagEditor.popoverTargetId.value) return;
+  const todo = todosForCurrentViewWithTaskRecords.value.find(t => t.id === tagEditor.popoverTargetId.value);
+  if (!todo) return;
+  
+  const cleanedTitle = tagEditor.clearTagTriggerText(editingValue.value);
+  editingValue.value = cleanedTitle;
+  
+  // 通过 activityId 创建并添加标签到 Activity
+  dataStore.createAndAddTagToActivity(todo.activityId, tagName);
+  tagEditor.closePopover();
 }
 </script>
 
@@ -844,7 +938,7 @@ col.col-fruit {
 }
 
 col.col-status {
-  width: 87px;
+  width: 88px;
 }
 
 /* 表头样式 */

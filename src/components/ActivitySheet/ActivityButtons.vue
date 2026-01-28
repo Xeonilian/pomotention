@@ -17,21 +17,7 @@
         <n-icon><ChevronCircleLeft48Regular /></n-icon>
       </template>
     </n-button>
-    <n-button
-      @click="$emit('convert-activity-to-task')"
-      secondary
-      circle
-      type="default"
-      size="small"
-      :disabled="activeId === null || props.selectedTaskId !== null || activeId === undefined || props.isDeleted"
-      title="追踪任务"
-    >
-      <template #icon>
-        <n-icon>
-          <ChevronCircleDown48Regular />
-        </n-icon>
-      </template>
-    </n-button>
+
     <n-button
       :title="props.isDeleted && activeId !== null && activeId !== undefined ? '恢复活动' : '删除活动'"
       @click="$emit('delete-active')"
@@ -232,7 +218,6 @@ import { computed, ref } from "vue";
 import { NButton, NIcon, NBadge, NPopover } from "naive-ui";
 import {
   ChevronCircleLeft48Regular,
-  ChevronCircleDown48Regular,
   CloudAdd20Regular,
   CalendarAdd24Regular,
   AddCircle24Regular,
@@ -266,7 +251,6 @@ const emit = defineEmits([
   "delete-active",
   "toggle-pomo-type",
   "repeat-activity",
-  "convert-activity-to-task",
   "create-child-activity",
   "increase-child-activity",
 ]);

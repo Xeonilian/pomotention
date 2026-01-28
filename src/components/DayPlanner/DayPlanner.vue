@@ -9,6 +9,7 @@
         @update-todo-status="updateTodoStatus"
         @suspend-todo="handleSuspendTodo"
         @cancel-todo="handleCancelTodo"
+        @uncancel-todo="handleUncancelTodo"
         @update-todo-pomo="updateTodoPomo"
         @batch-update-priorities="updateTodoPriority"
         @update-todo-est="updateTodoEst"
@@ -24,10 +25,14 @@
       <DaySchedule
         @update-schedule-status="updateScheduleStatus"
         @cancel-schedule="handleCancelSchedule"
+        @uncancel-schedule="handleUncancelSchedule"
         @select-activity="handleSelectActivity"
         @select-row="handleSelectRow"
         @edit-schedule-title="handleEditScheduleTitle"
+        @edit-schedule-start="handleEditScheduleStart"
         @edit-schedule-done="handleEditScheduleDone"
+        @edit-schedule-duration="handleEditScheduleDuration"
+        @edit-schedule-location="handleEditScheduleLocation"
         @convert-schedule-to-task="handleConvertScheduleToTask"
       />
     </div>
@@ -50,9 +55,11 @@ const emit = defineEmits<{
   (e: "update-schedule-status", id: number, checked: boolean): void;
   (e: "edit-schedule-title", id: number, newTitle: string): void;
   (e: "cancel-schedule", id: number): void;
+  (e: "uncancel-schedule", id: number): void;
   (e: "update-todo-status", id: number, checked: boolean): void;
   (e: "suspend-todo", id: number): void;
   (e: "cancel-todo", id: number): void;
+  (e: "uncancel-todo", id: number): void;
   (e: "update-todo-est", id: number, estPomo: number[]): void;
   (e: "update-todo-pomo", id: number, pomo: number[]): void;
   (e: "update-todo-priority", id: number, priority: number): void;
@@ -60,7 +67,10 @@ const emit = defineEmits<{
   (e: "edit-todo-title", id: number, newTitle: string): void;
   (e: "edit-todo-start", id: number, newTs: string): void;
   (e: "edit-todo-done", id: number, newTs: string): void;
+  (e: "edit-schedule-start", id: number, newTs: string): void;
   (e: "edit-schedule-done", id: number, newTs: string): void;
+  (e: "edit-schedule-duration", id: number, newDurationMin: string): void;
+  (e: "edit-schedule-location", id: number, newLocation: string): void;
   (e: "convert-todo-to-task", payload: { task: Task; activityId: number }): void;
   (e: "convert-schedule-to-task", payload: { task: Task; activityId: number }): void;
 }>();
@@ -103,12 +113,20 @@ function handleCancelSchedule(id: number) {
   emit("cancel-schedule", id);
 }
 
+function handleUncancelSchedule(id: number) {
+  emit("uncancel-schedule", id);
+}
+
 function handleSuspendTodo(id: number) {
   emit("suspend-todo", id);
 }
 
 function handleCancelTodo(id: number) {
   emit("cancel-todo", id);
+}
+
+function handleUncancelTodo(id: number) {
+  emit("uncancel-todo", id);
 }
 
 function updateTodoPriority(updates: Array<{ id: number; priority: number }>) {
@@ -126,6 +144,10 @@ function handleEditScheduleTitle(scheduleId: number, newTitle: string) {
   emit("edit-schedule-title", scheduleId, newTitle);
 }
 
+function handleEditScheduleStart(scheduleId: number, newTs: string) {
+  emit("edit-schedule-start", scheduleId, newTs);
+}
+
 function handleEditTodoTitle(todoId: number, newTitle: string) {
   emit("edit-todo-title", todoId, newTitle);
 }
@@ -140,6 +162,14 @@ function handleEditTodoDone(todoId: number, newTs: string) {
 
 function handleEditScheduleDone(scheduleId: number, newTs: string) {
   emit("edit-schedule-done", scheduleId, newTs);
+}
+
+function handleEditScheduleDuration(scheduleId: number, newDurationMin: string) {
+  emit("edit-schedule-duration", scheduleId, newDurationMin);
+}
+
+function handleEditScheduleLocation(scheduleId: number, newLocation: string) {
+  emit("edit-schedule-location", scheduleId, newLocation);
 }
 
 function handleConvertTodoToTask(payload: { task: Task; activityId: number }) {
