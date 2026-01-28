@@ -34,19 +34,7 @@
       </template>
     </n-button>
 
-    <n-button
-      title="重复活动"
-      @click="$emit('repeat-activity')"
-      circle
-      secondary
-      type="default"
-      size="small"
-      :disabled="activeId === null || activeId === undefined || props.isDeleted"
-    >
-      <template #icon>
-        <n-icon><ArrowRepeatAll24Regular /></n-icon>
-      </template>
-    </n-button>
+   
     <n-button v-if=" !props.hasParent"
           secondary
           circle
@@ -104,7 +92,6 @@ import {
   AddCircle24Regular,
   TextGrammarArrowRight24Regular,
   TextGrammarArrowLeft24Regular,
-  ArrowRepeatAll24Regular,
   Delete24Regular,
   DeleteDismiss24Regular,
 } from "@vicons/fluent";
@@ -127,7 +114,6 @@ const emit = defineEmits([
   "add-schedule",
   "add-untaetigkeit",
   "delete-active",
-  "repeat-activity",
   "create-child-activity",
   "increase-child-activity",
 ]);
