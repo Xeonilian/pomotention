@@ -302,6 +302,8 @@
             :isCloseable="true"
             @remove-tag="handleRemoveTag(item.id, $event)"
             class="tagRenderer-container"
+            :display-length="3"
+            size="tiny"
           />
         </div>
       </div>
@@ -845,6 +847,8 @@ function onInputUpdate(item: Activity, value: string) {
   display: flex;
   flex-wrap: wrap;
   width: 100%;
+  justify-content: right;
+  padding-bottom: 2px;
 }
 .child-activity-tag {
   margin-left: 20px;
