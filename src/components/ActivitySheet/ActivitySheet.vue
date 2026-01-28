@@ -17,7 +17,6 @@
       @add-untaetigkeit="addUntaetigkeitRow"
       @delete-active="deleteActiveRow"
       @toggle-pomo-type="togglePomoType"
-      @repeat-activity="repeatActivity"
       @create-child-activity="createChildActivity"
       @increase-child-activity="increaseChildActivity"
     />
@@ -92,7 +91,6 @@ const emit = defineEmits<{
   (e: "delete-activity", id: number | null | undefined): void; // 删除活动
   (e: "update-active-id", id: number | null | undefined): void; // 更新选中活动ID
   (e: "toggle-pomo-type", id: number | null | undefined): void; // 切换番茄钟类型
-  (e: "repeat-activity", id: number | null | undefined): void; // 重复选中的活动
   (e: "create-child-activity", id: number | null | undefined): void; // 构建选中活动的子活动
   (e: "increase-child-activity", id: number | null | undefined): void; // 取消子项（名称含义建议确认）
 }>();
@@ -357,13 +355,6 @@ function handleFocusSearch() {
 function togglePomoType() {
   if (activeId.value !== null) {
     emit("toggle-pomo-type", activeId.value);
-  }
-}
-
-// 重复选中的活动
-function repeatActivity() {
-  if (activeId.value !== null) {
-    emit("repeat-activity", activeId.value);
   }
 }
 
