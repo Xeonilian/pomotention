@@ -5,6 +5,7 @@ import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
 import type { Todo } from "@/core/types/Todo";
 import type { Schedule } from "@/core/types/Schedule";
+import { isTauri } from "@tauri-apps/api/core";
 
 dayjs.extend(utc);
 
@@ -17,7 +18,7 @@ export type ExportResult =
   | { ok: true; mode: "qr"; qrText: string }
   | {
       ok: false;
-      reason: "not_found" | "empty" | "cancelled" | "error";
+      reason: "not_found" | "empty" | "cancelled" | "error" | "not_tauri";
       detail?: string;
     };
 
@@ -180,6 +181,7 @@ export async function handleExportOrQR(
       return { ok: true, mode: "qr", qrText: icsToQR(ics) };
     } else {
       // 批量 -> 文件
+      if (!isTauri()) return { ok: false, reason: "not_tauri", detail: "先选择一条数据" };
       if (!rows?.length) return { ok: false, reason: "empty", detail: "当前无可导出的数据" };
       const icsText = buildCalendarFromRows(rows);
       const defaultName = opts?.filename ?? `${dayjs().format("YYYYMMDD-HHmmss")}.ics`;
