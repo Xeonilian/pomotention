@@ -161,6 +161,7 @@
             @update-todo-status="onUpdateTodoStatus"
             @suspend-todo="onSuspendTodo"
             @cancel-todo="onCancelTodo"
+            @uncancel-todo="onUncancelTodo"
             @update-todo-est="onUpdateTodoEst"
             @update-todo-pomo="onUpdateTodoPomo"
             @batch-update-priorities="onUpdateTodoPriority"
@@ -777,6 +778,43 @@ function onCancelTodo(id: number) {
       child.lastModified = Date.now();
     }
   }
+  saveAllDebounced();
+}
+
+/** Todo 撤销取消（同时联动 Activity） */
+function onUncancelTodo(id: number) {
+  const todo = todoById.value.get(id);
+  if (!todo) return;
+
+  // 只对 cancelled 状态生效，避免误触影响其它状态
+  if (todo.status !== "cancelled") return;
+
+  todo.status = "";
+  todo.synced = false;
+  todo.lastModified = Date.now();
+
+  const activity = activityById.value.get(todo.activityId);
+  if (!activity) {
+    console.warn(`未找到 activityId 为 ${todo.activityId} 的 activity`);
+    saveAllDebounced();
+    return;
+  }
+
+  // 撤销取消：恢复为默认状态（与新增/普通活动一致）
+  activity.status = "" as any;
+  activity.synced = false;
+  activity.lastModified = Date.now();
+
+  // 子活动同步撤销取消
+  const childActivities = childrenOfActivity.value.get(activity.id) ?? [];
+  for (const child of childActivities) {
+    if (child.status === "cancelled") {
+      child.status = "" as any;
+      child.synced = false;
+      child.lastModified = Date.now();
+    }
+  }
+
   saveAllDebounced();
 }
 

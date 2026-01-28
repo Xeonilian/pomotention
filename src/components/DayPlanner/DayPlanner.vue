@@ -9,6 +9,7 @@
         @update-todo-status="updateTodoStatus"
         @suspend-todo="handleSuspendTodo"
         @cancel-todo="handleCancelTodo"
+        @uncancel-todo="handleUncancelTodo"
         @update-todo-pomo="updateTodoPomo"
         @batch-update-priorities="updateTodoPriority"
         @update-todo-est="updateTodoEst"
@@ -53,6 +54,7 @@ const emit = defineEmits<{
   (e: "update-todo-status", id: number, checked: boolean): void;
   (e: "suspend-todo", id: number): void;
   (e: "cancel-todo", id: number): void;
+  (e: "uncancel-todo", id: number): void;
   (e: "update-todo-est", id: number, estPomo: number[]): void;
   (e: "update-todo-pomo", id: number, pomo: number[]): void;
   (e: "update-todo-priority", id: number, priority: number): void;
@@ -109,6 +111,10 @@ function handleSuspendTodo(id: number) {
 
 function handleCancelTodo(id: number) {
   emit("cancel-todo", id);
+}
+
+function handleUncancelTodo(id: number) {
+  emit("uncancel-todo", id);
 }
 
 function updateTodoPriority(updates: Array<{ id: number; priority: number }>) {
