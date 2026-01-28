@@ -18,7 +18,7 @@
         @edit-todo-title="handleEditTodoTitle"
         @edit-todo-start="handleEditTodoStart"
         @edit-todo-done="handleEditTodoDone"
-        @convert-todo-to-task="handleConvertTodoToTask"
+
       />
     </div>
     <div class="schedule-container">
@@ -33,7 +33,6 @@
         @edit-schedule-done="handleEditScheduleDone"
         @edit-schedule-duration="handleEditScheduleDuration"
         @edit-schedule-location="handleEditScheduleLocation"
-        @convert-schedule-to-task="handleConvertScheduleToTask"
       />
     </div>
   </div>
@@ -172,21 +171,7 @@ function handleEditScheduleLocation(scheduleId: number, newLocation: string) {
   emit("edit-schedule-location", scheduleId, newLocation);
 }
 
-function handleConvertTodoToTask(payload: { task: Task; activityId: number }) {
-  const { task, activityId } = payload;
-  emit("convert-todo-to-task", {
-    task,
-    activityId: activityId,
-  });
-}
 
-function handleConvertScheduleToTask(payload: { task: Task; activityId: number }) {
-  const { task, activityId } = payload;
-  emit("convert-schedule-to-task", {
-    task,
-    activityId: activityId,
-  });
-}
 </script>
 <style scoped>
 .today-container {
