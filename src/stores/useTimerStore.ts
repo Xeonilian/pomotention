@@ -32,14 +32,10 @@ export const useTimerStore = defineStore("timer", () => {
   const wDuration = computed(() => (10.5 / 25) * workDuration.value);
   const tDuration = computed(() => (1 / 25) * workDuration.value);
 
-  // 在 useTimerStore.ts 中修正
-  const redBarOffsetPercentage = computed(
-    () => r1Duration.value / workDuration.value // 应该是 2/25 = 0.08
-  );
-
-  const redBarPercentage = computed(
-    () => (wDuration.value * 2) / workDuration.value // 应该是 21/25 = 0.84
-  );
+  // 红色条形的偏移/长度比例是固定常量（总是按照 2/25、21/25、1/25、1/25 分配）
+  // r1: 2/25, w1+w2: 21/25, r2: 1/25, t: 1/25
+  const redBarOffsetPercentage = computed(() => 2 / 25); // r1 的起始位置
+  const redBarPercentage = computed(() => 21 / 25); // w1+w2 的总长度
 
   // 进度条颜色控制
   const isGray = ref<boolean>(false);
