@@ -6,12 +6,12 @@
   <div class="activity-view-button-container">
     <n-button
       @click="$emit('pick-activity')"
-      :disabled="activeId === null || activeId === null || props.isDeleted"
+      :disabled="activeId === null || activeId === undefined || props.isDeleted"
       secondary
       circle
       type="default"
       size="small"
-      :title="isSelectedClassS ? '预约：跳转' : '任务：跳转|选择'"
+      :title="isSelectedClassS ? '预约：跳转日期' : '任务：跳转日期|选择'"
     >
       <template #icon>
         <n-icon><ChevronCircleLeft48Regular /></n-icon>
