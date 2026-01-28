@@ -105,8 +105,8 @@ const handleDateJump = (ts: number) => {
   emit("date-jump", ts);
 };
 
-const handleItemChange = (id: number, ts: number, activityId?: number, taskId?: number) => {
-  emit("date-change", ts);
+const handleItemChange = (id: number, _ts: number, activityId?: number, taskId?: number) => {
+  // emit("date-change", ts);
   emit("item-change", id, activityId, taskId);
 };
 </script>

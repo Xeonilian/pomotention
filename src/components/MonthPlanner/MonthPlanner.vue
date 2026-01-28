@@ -344,8 +344,8 @@ const handleDateJump = (day: number) => {
   emit("date-jump", day);
 };
 
-const handleItemSelect = (id: number, ts: number, activityId?: number, taskId?: number) => {
-  emit("date-change", ts);
+const handleItemSelect = (id: number, _ts: number, activityId?: number, taskId?: number) => {
+  // emit("date-change", ts);
   emit("item-change", id, activityId, taskId);
 };
 
