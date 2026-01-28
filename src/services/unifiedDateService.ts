@@ -8,6 +8,7 @@ import type { Activity } from "@/core/types/Activity";
 import type { Schedule } from "@/core/types/Schedule";
 import type { Todo } from "@/core/types/Todo";
 import { useSettingStore } from "@/stores/useSettingStore";
+import { useDataStore } from "@/stores/useDataStore";
 
 /**
  * unifiedDateService 的配置选项。
@@ -26,7 +27,7 @@ interface DateRange {
 
 export function unifiedDateService({ activityList, scheduleList, todoList }: UnifiedDateServiceOptions) {
   const settingStore = useSettingStore();
-
+  const dataStore = useDataStore();
   // --- 1. 核心状态 ---
   const dateState = reactive({
     app: getDayStartTimestamp(), // 当前基准日期（零点）
@@ -207,6 +208,8 @@ export function unifiedDateService({ activityList, scheduleList, todoList }: Uni
     const target = getDayStartTimestamp(date);
     const curView = settingStore.settings.viewSet;
     dateState.app = curView === "day" ? target : curView === "week" ? getStartOfWeek(target) : getStartOfMonth(target);
+
+    dataStore.setSelectedDate(target);
     return target;
   };
 
