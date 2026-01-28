@@ -111,6 +111,8 @@
                 @blur="saveEdit(schedule)"
                 @keyup.enter="saveEdit(schedule)"
                 @keyup.esc="cancelEdit"
+                @input="handleTitleInput(schedule)"
+                @keydown="handleInputKeydown($event, schedule)"
                 @click.stop
                 :data-schedule-id="schedule.id"
               />
@@ -214,6 +216,29 @@
     </template>
     {{ popoverMessage }}
   </n-popover>
+  <!-- Tag Selector Popover -->
+  <n-popover
+    :show="tagEditor.popoverTargetId.value !== null && schedulesForCurrentView.some(s => s.id === tagEditor.popoverTargetId.value)"
+    @update:show="(show) => !show && (tagEditor.popoverTargetId.value = null)"
+    placement="bottom-start"
+    :trap-focus="false"
+    trigger="manual"
+    :show-arrow="false"
+    style="padding: 0; border-radius: 6px; margin-top: -30px; margin-left: 130px"
+    :to="false"
+  >
+    <template #trigger>
+      <span style="position: absolute; pointer-events: none"></span>
+    </template>
+    <TagSelector
+      :ref="(el) => (tagSelectorRef = el)"
+      :search-term="tagEditor.tagSearchTerm.value"
+      :allow-create="true"
+      @select-tag="(tagId: any) => handleTagSelected(tagId)"
+      @create-tag="(tagName: any) => handleTagCreate(tagName)"
+      @close-selector="tagEditor.popoverTargetId.value = null"
+    />
+  </n-popover>
 </template>
 
 <script setup lang="ts">
@@ -232,6 +257,8 @@ import { Task } from "@/core/types/Task";
 
 import { useDataStore } from "@/stores/useDataStore";
 import { storeToRefs } from "pinia";
+import { useActivityTagEditor } from "@/composables/useActivityTagEditor";
+import TagSelector from "../TagSystem/TagSelector.vue";
 
 const dataStore = useDataStore();
 const { activeId, selectedRowId, schedulesForCurrentView } = storeToRefs(dataStore);
@@ -263,6 +290,10 @@ const emit = defineEmits<{
 // 添加状态来控制提示信息
 const showPopover = ref(false);
 const popoverMessage = ref("");
+
+// Tag Editor
+const tagEditor = useActivityTagEditor();
+const tagSelectorRef = ref<any>(null);
 
 const sortedSchedules = computed(() =>
   schedulesForCurrentView.value.sort((a, b) => {
@@ -312,6 +343,12 @@ function startEditing(scheduleId: number, field: "title" | "start" | "done") {
 function saveEdit(schedule: Schedule) {
   if (!editingRowId.value) return;
 
+  // 如果输入框中有 # 开头的文本，清理并关闭 popover
+  if (editingValue.value.includes("#") && tagEditor.popoverTargetId.value) {
+    editingValue.value = tagEditor.clearTagTriggerText(editingValue.value);
+    tagEditor.closePopover();
+  }
+
   if (editingField.value === "title") {
     if (editingValue.value.trim()) {
       emit("edit-schedule-title", schedule.id, editingValue.value.trim());
@@ -332,6 +369,11 @@ function saveEdit(schedule: Schedule) {
 }
 
 function cancelEdit() {
+  // 如果输入框中有 # 开头的文本，清理并关闭 popover
+  if (editingValue.value.includes("#") && tagEditor.popoverTargetId.value) {
+    editingValue.value = tagEditor.clearTagTriggerText(editingValue.value);
+    tagEditor.closePopover();
+  }
   editingRowId.value = null;
   editingField.value = null;
   editingValue.value = "";
@@ -366,6 +408,65 @@ function handleConvertToTask(schedule: Schedule) {
 
 function handleCancelSchedule(id: number) {
   emit("cancel-schedule", id);
+}
+
+// Tag 相关函数
+function handleTitleInput(schedule: Schedule) {
+  tagEditor.handleContentInput(schedule.id, editingValue.value);
+}
+
+function handleInputKeydown(event: KeyboardEvent, schedule: Schedule) {
+  if (tagEditor.popoverTargetId.value === schedule.id && tagSelectorRef.value) {
+    switch (event.key) {
+      case "ArrowDown":
+        tagSelectorRef.value.navigateDown();
+        event.preventDefault();
+        break;
+      case "ArrowUp":
+        tagSelectorRef.value.navigateUp();
+        event.preventDefault();
+        break;
+      case "Enter":
+        tagSelectorRef.value.selectHighlighted();
+        event.preventDefault();
+        break;
+      case "Escape":
+        tagEditor.closePopover();
+        event.preventDefault();
+        break;
+    }
+  }
+
+  // 特殊处理：# 键自动打开 popover
+  if (event.key === "#" && !tagEditor.popoverTargetId.value) {
+    tagEditor.popoverTargetId.value = schedule.id;
+  }
+}
+
+function handleTagSelected(tagId: number) {
+  if (!tagEditor.popoverTargetId.value) return;
+  const schedule = schedulesForCurrentView.value.find(s => s.id === tagEditor.popoverTargetId.value);
+  if (!schedule) return;
+  
+  const cleanedTitle = tagEditor.clearTagTriggerText(editingValue.value);
+  editingValue.value = cleanedTitle;
+  
+  // 通过 activityId 给 Activity 添加标签
+  dataStore.addTagToActivity(schedule.activityId, tagId);
+  tagEditor.closePopover();
+}
+
+function handleTagCreate(tagName: string) {
+  if (!tagEditor.popoverTargetId.value) return;
+  const schedule = schedulesForCurrentView.value.find(s => s.id === tagEditor.popoverTargetId.value);
+  if (!schedule) return;
+  
+  const cleanedTitle = tagEditor.clearTagTriggerText(editingValue.value);
+  editingValue.value = cleanedTitle;
+  
+  // 通过 activityId 创建并添加标签到 Activity
+  dataStore.createAndAddTagToActivity(schedule.activityId, tagName);
+  tagEditor.closePopover();
 }
 </script>
 

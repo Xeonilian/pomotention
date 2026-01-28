@@ -145,6 +145,8 @@
                 @blur="saveEdit(todo)"
                 @keyup.enter="saveEdit(todo)"
                 @keyup.esc="cancelEdit"
+                @input="handleTitleInput(todo)"
+                @keydown="handleInputKeydown($event, todo)"
                 @click.stop
                 :data-todo-id="todo.id"
               />
@@ -318,6 +320,29 @@
   >
     <n-input-number v-model:value="newEstimate" :min="1" :max="5" placeholder="请输入估计的番茄数" style="width: 100%" />
   </n-modal>
+  <!-- Tag Selector Popover -->
+  <n-popover
+    :show="tagEditor.popoverTargetId.value !== null && todosForCurrentViewWithTaskRecords.some(t => t.id === tagEditor.popoverTargetId.value)"
+    @update:show="(show) => !show && (tagEditor.popoverTargetId.value = null)"
+    placement="bottom-start"
+    :trap-focus="false"
+    trigger="manual"
+    :show-arrow="false"
+    style="padding: 0; border-radius: 6px; margin-top: -30px; margin-left: 130px"
+    :to="false"
+  >
+    <template #trigger>
+      <span style="position: absolute; pointer-events: none"></span>
+    </template>
+    <TagSelector
+      :ref="(el) => (tagSelectorRef = el)"
+      :search-term="tagEditor.tagSearchTerm.value"
+      :allow-create="true"
+      @select-tag="(tagId: any) => handleTagSelected(tagId)"
+      @create-tag="(tagName: any) => handleTagCreate(tagName)"
+      @close-selector="tagEditor.popoverTargetId.value = null"
+    />
+  </n-popover>
 </template>
 <script setup lang="ts">
 import type { Todo, TodoWithTaskRecords } from "@/core/types/Todo";
@@ -338,6 +363,8 @@ import { Task } from "@/core/types/Task";
 
 import { useDataStore } from "@/stores/useDataStore";
 import { storeToRefs } from "pinia";
+import { useActivityTagEditor } from "@/composables/useActivityTagEditor";
+import TagSelector from "../TagSystem/TagSelector.vue";
 
 const dataStore = useDataStore();
 const { activeId, selectedRowId, todosForCurrentViewWithTaskRecords } = storeToRefs(dataStore);
@@ -355,6 +382,10 @@ const popoverMessage = ref("");
 const showEstimateInput = ref(false);
 const currentTodoId = ref<number | null>(null);
 const newEstimate = ref<number>(1);
+
+// Tag Editor
+const tagEditor = useActivityTagEditor();
+const tagSelectorRef = ref<any>(null);
 
 // 定义 Emit
 const emit = defineEmits<{
@@ -701,6 +732,12 @@ function startEditing(todoId: number, field: "title" | "start" | "done") {
 function saveEdit(todo: Todo) {
   if (!editingRowId.value) return;
 
+  // 如果输入框中有 # 开头的文本，清理并关闭 popover
+  if (editingValue.value.includes("#") && tagEditor.popoverTargetId.value) {
+    editingValue.value = tagEditor.clearTagTriggerText(editingValue.value);
+    tagEditor.closePopover();
+  }
+
   if (editingField.value === "title") {
     if (editingValue.value.trim()) {
       emit("edit-todo-title", todo.id, editingValue.value.trim());
@@ -728,6 +765,11 @@ function saveEdit(todo: Todo) {
 }
 
 function cancelEdit() {
+  // 如果输入框中有 # 开头的文本，清理并关闭 popover
+  if (editingValue.value.includes("#") && tagEditor.popoverTargetId.value) {
+    editingValue.value = tagEditor.clearTagTriggerText(editingValue.value);
+    tagEditor.closePopover();
+  }
   editingRowId.value = null;
   editingField.value = null;
   editingValue.value = "";
@@ -800,6 +842,65 @@ function countInterruptions(records: { interruptionType: "E" | "I" }[] | null | 
   let count = 0;
   for (const r of records) if (r?.interruptionType === type) count++;
   return count;
+}
+
+// Tag 相关函数
+function handleTitleInput(todo: Todo) {
+  tagEditor.handleContentInput(todo.id, editingValue.value);
+}
+
+function handleInputKeydown(event: KeyboardEvent, todo: Todo) {
+  if (tagEditor.popoverTargetId.value === todo.id && tagSelectorRef.value) {
+    switch (event.key) {
+      case "ArrowDown":
+        tagSelectorRef.value.navigateDown();
+        event.preventDefault();
+        break;
+      case "ArrowUp":
+        tagSelectorRef.value.navigateUp();
+        event.preventDefault();
+        break;
+      case "Enter":
+        tagSelectorRef.value.selectHighlighted();
+        event.preventDefault();
+        break;
+      case "Escape":
+        tagEditor.closePopover();
+        event.preventDefault();
+        break;
+    }
+  }
+
+  // 特殊处理：# 键自动打开 popover
+  if (event.key === "#" && !tagEditor.popoverTargetId.value) {
+    tagEditor.popoverTargetId.value = todo.id;
+  }
+}
+
+function handleTagSelected(tagId: number) {
+  if (!tagEditor.popoverTargetId.value) return;
+  const todo = todosForCurrentViewWithTaskRecords.value.find(t => t.id === tagEditor.popoverTargetId.value);
+  if (!todo) return;
+  
+  const cleanedTitle = tagEditor.clearTagTriggerText(editingValue.value);
+  editingValue.value = cleanedTitle;
+  
+  // 通过 activityId 给 Activity 添加标签
+  dataStore.addTagToActivity(todo.activityId, tagId);
+  tagEditor.closePopover();
+}
+
+function handleTagCreate(tagName: string) {
+  if (!tagEditor.popoverTargetId.value) return;
+  const todo = todosForCurrentViewWithTaskRecords.value.find(t => t.id === tagEditor.popoverTargetId.value);
+  if (!todo) return;
+  
+  const cleanedTitle = tagEditor.clearTagTriggerText(editingValue.value);
+  editingValue.value = cleanedTitle;
+  
+  // 通过 activityId 创建并添加标签到 Activity
+  dataStore.createAndAddTagToActivity(todo.activityId, tagName);
+  tagEditor.closePopover();
 }
 </script>
 
