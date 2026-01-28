@@ -774,7 +774,7 @@ function onInputUpdate(item: Activity, value: string) {
 
 <style scoped>
 .section-container {
-  border: 2px solid var(--color-background-light);
+  border: 1px solid var(--color-background-dark);
   border-radius: 6px;
   padding: 2px;
   display: flex;
