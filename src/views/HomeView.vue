@@ -156,7 +156,6 @@
             v-if="settingStore.settings.showPlanner && settingStore.settings.viewSet === 'day'"
             @update-schedule-status="onUpdateScheduleStatus"
             @cancel-schedule="onCancelSchedule"
-            @convert-schedule-to-task="onConvertActivityToTask"
             @edit-schedule-done="handleEditScheduleDone"
             @edit-schedule-title="handleEditScheduleTitle"
             @update-todo-status="onUpdateTodoStatus"
@@ -168,7 +167,6 @@
             @edit-todo-title="handleEditTodoTitle"
             @edit-todo-start="handleEditTodoStart"
             @edit-todo-done="handleEditTodoDone"
-            @convert-todo-to-task="onConvertActivityToTask"
           />
           <WeekPlanner
             v-if="settingStore.settings.showPlanner && settingStore.settings.viewSet === 'week'"
@@ -216,7 +214,6 @@
         @repeat-activity="onRepeatActivity"
         @create-child-activity="onCreateChildActivity"
         @increase-child-activity="onIncreaseChildActivity"
-        @convert-activity-to-task="onConvertActivityToTask"
       />
     </div>
     <div v-if="settingStore.settings.showAi" class="right" :style="{ width: rightWidth + 'px' }">
@@ -241,7 +238,6 @@ import { defineAsyncComponent } from "vue";
 import { storeToRefs } from "pinia";
 
 import type { Activity } from "@/core/types/Activity";
-import { Task } from "@/core/types/Task";
 import { getTimestampForTimeString } from "@/core/utils";
 import { ViewType } from "@/core/constants";
 import { useResize } from "@/composables/useResize";
@@ -257,6 +253,7 @@ import {
 } from "@/services/activityService";
 import { updateScheduleStatus, updateTodoStatus, handleSuspendTodo } from "@/services/plannerService";
 import { handleExportOrQR, type DataRow } from "@/services/icsService";
+import { taskService } from "@/services/taskService";
 
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useDataStore } from "@/stores/useDataStore";
@@ -423,13 +420,26 @@ function onAddActivity(newActivity: Activity) {
     activityById: activityById.value,
   });
 
-  // console.log("🔵 添加后，未同步数量:", activityList.value.filter((a) => !a.synced).length);
-  // console.log(
-  //   "🔵 未同步的 activities:",
-  //   activityList.value.filter((a) => !a.synced)
-  // );
+  // 自动转换为任务
+  const task = taskService.createTaskFromActivity(newActivity.id, newActivity.title, newActivity.projectId ? `项目${newActivity.projectId}` : undefined);
+  taskList.value = [...taskList.value, task];
+  
+  // 回写 activity.taskId
+  newActivity.taskId = task.id;
+  newActivity.synced = false;
+  newActivity.lastModified = Date.now();
+  
+  // 更新相关的 todo 和 schedule 的 taskId（如果有的话）
+  const todo = todoByActivityId.value.get(newActivity.id);
+  if (todo) todo.taskId = task.id;
+  const schedule = scheduleByActivityId.value.get(newActivity.id);
+  if (schedule) schedule.taskId = task.id;
 
+  // 同步 UI 选中
   activeId.value = newActivity.id;
+  selectedActivityId.value = newActivity.id;
+  selectedTaskId.value = task.id;
+
   saveAllDebounced();
 }
 
@@ -491,34 +501,6 @@ function onPickActivity(activity: Activity) {
   saveAllDebounced();
 }
 
-// 同步UI选中
-function onConvertActivityToTask(payload: { task: Task; activityId: number | null | undefined }) {
-  const { task, activityId } = payload;
-  if (activityId == null) return;
-
-  // 1) 推入任务列表（替换引用，便于浅 watch 或立即响应）
-  taskList.value = [...taskList.value, task];
-
-  // 2) 回写 activity.taskId
-  const activity = activityById.value.get(activityId);
-  if (activity) {
-    activity.taskId = task.id;
-    activity.synced = false;
-    activity.lastModified = Date.now();
-    const todo = todoByActivityId.value.get(activityId);
-    if (todo) todo.taskId = task.id;
-    const schedule = scheduleByActivityId.value.get(activityId);
-    if (schedule) schedule.taskId = task.id;
-  }
-
-  // 3) 同步 UI 选中（如果你希望）
-  activeId.value = activityId;
-  selectedActivityId.value = activityId;
-  selectedTaskId.value = task.id;
-
-  // 4) 一次性保存
-  saveAllDebounced();
-}
 
 /** 激活红色高亮可以编辑文字 */
 function onUpdateActiveId(id: number | null | undefined) {
