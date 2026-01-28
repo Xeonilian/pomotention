@@ -58,14 +58,36 @@
                 :checked="schedule.status === 'done'"
                 @update:checked="handleCheckboxChange(schedule.id, $event)"
               />
-              <n-icon v-else class="cancel-icon" color="var(--color-text-secondary)">
+              <n-icon
+                v-else
+                class="cancel-icon"
+                color="var(--color-text-secondary)"
+                style="cursor: pointer"
+                title="点击撤销取消"
+                @click.stop="handleUncancelSchedule(schedule.id)"
+              >
                 <DismissSquare20Filled />
               </n-icon>
             </td>
 
             <!-- 2 开始时间 -->
-            <td class="col-start">
-              {{ schedule.activityDueRange ? timestampToTimeString(schedule.activityDueRange[0]) : "-" }}
+            <td
+              class="col-start"
+              @dblclick.stop="startEditing(schedule.id, 'start')"
+              :title="editingRowId === schedule.id && editingField === 'start' ? '' : '双击编辑'"
+            >
+              <input
+                class="start-input time-input"
+                v-if="editingRowId === schedule.id && editingField === 'start'"
+                v-model="editingValue"
+                @blur="saveEdit(schedule)"
+                @keyup.enter="saveEdit(schedule)"
+                @keyup.esc="cancelEdit"
+                :data-schedule-id="schedule.id"
+                maxlength="5"
+                autocomplete="off"
+              />
+              <span v-else>{{ schedule.activityDueRange?.[0] ? timestampToTimeString(schedule.activityDueRange[0]) : "-" }}</span>
             </td>
 
             <!-- 3 结束时间 -->
@@ -89,8 +111,24 @@
             </td>
 
             <!-- 4 时长 -->
-            <td class="col-duration" :class="{ 'is-empty-min': schedule.activityDueRange?.[1] === '' }">
-              {{ (schedule.activityDueRange?.[1] ?? "") !== "" ? schedule.activityDueRange[1] : "min" }}
+            <td
+              class="col-duration"
+              :class="{ 'is-empty-min': schedule.activityDueRange?.[1] === '' }"
+              @dblclick.stop="startEditing(schedule.id, 'duration')"
+              :title="editingRowId === schedule.id && editingField === 'duration' ? '' : '双击编辑'"
+            >
+              <input
+                class="duration-input time-input"
+                v-if="editingRowId === schedule.id && editingField === 'duration'"
+                v-model="editingValue"
+                @blur="saveEdit(schedule)"
+                @keyup.enter="saveEdit(schedule)"
+                @keyup.esc="cancelEdit"
+                :data-schedule-id="schedule.id"
+                maxlength="4"
+                autocomplete="off"
+              />
+              <span v-else>{{ (schedule.activityDueRange?.[1] ?? "") !== "" ? schedule.activityDueRange[1] : "min" }}</span>
             </td>
 
             <!-- 5 意图 -->
@@ -264,7 +302,7 @@ const dataStore = useDataStore();
 const { activeId, selectedRowId, schedulesForCurrentView } = storeToRefs(dataStore);
 // 编辑用
 const editingRowId = ref<number | null>(null);
-const editingField = ref<null | "title" | "start" | "done">(null);
+const editingField = ref<null | "title" | "start" | "done" | "duration">(null);
 const editingValue = ref("");
 
 // 定义 Emit
@@ -272,12 +310,15 @@ const editingValue = ref("");
 const emit = defineEmits<{
   (e: "update-schedule-status", id: number, checked: boolean): void;
   (e: "cancel-schedule", id: number): void;
+  (e: "uncancel-schedule", id: number): void;
   // (e: "repeat-schedule", id: number): void;
   (e: "select-task", taskId: number | null): void;
   (e: "select-row", id: number | null): void;
   (e: "select-activity", activityId: number | null): void;
   (e: "edit-schedule-title", id: number, newTitle: string): void;
+  (e: "edit-schedule-start", id: number, newTs: string): void;
   (e: "edit-schedule-done", id: number, newTs: string): void;
+  (e: "edit-schedule-duration", id: number, newDurationMin: string): void;
   (
     e: "convert-schedule-to-task",
     payload: {
@@ -315,7 +356,7 @@ function handleRowClick(schedule: Schedule) {
 }
 
 // 编辑相关函数
-function startEditing(scheduleId: number, field: "title" | "start" | "done") {
+function startEditing(scheduleId: number, field: "title" | "start" | "done" | "duration") {
   const schedule = schedulesForCurrentView.value.find((s) => s.id === scheduleId);
   if (!schedule) return;
   editingRowId.value = scheduleId;
@@ -324,9 +365,9 @@ function startEditing(scheduleId: number, field: "title" | "start" | "done") {
     field === "title"
       ? schedule.activityTitle || ""
       : field === "start"
-      ? schedule.taskId
-        ? timestampToTimeString(schedule.taskId)
-        : ""
+      ? (schedule.activityDueRange?.[0] ? timestampToTimeString(schedule.activityDueRange[0]) : "")
+      : field === "duration"
+      ? (schedule.activityDueRange?.[1] ?? "")
       : schedule.doneTime
       ? timestampToTimeString(schedule.doneTime)
       : "";
@@ -363,6 +404,25 @@ function saveEdit(schedule: Schedule) {
       if (editingValue.value === "") {
         emit("edit-schedule-done", schedule.id, "");
       }
+    }
+  }
+
+  if (editingField.value === "start") {
+    if (isValidTimeString(editingValue.value)) {
+      const ts = editingValue.value;
+      emit("edit-schedule-start", schedule.id, ts);
+    } else if (editingValue.value === "") {
+      emit("edit-schedule-start", schedule.id, "");
+    }
+  }
+
+  if (editingField.value === "duration") {
+    // 允许为空（显示为 min），允许数字字符串
+    const raw = editingValue.value.trim();
+    if (raw === "") {
+      emit("edit-schedule-duration", schedule.id, "");
+    } else if (/^\d{1,4}$/.test(raw)) {
+      emit("edit-schedule-duration", schedule.id, raw);
     }
   }
   cancelEdit();
@@ -408,6 +468,11 @@ function handleConvertToTask(schedule: Schedule) {
 
 function handleCancelSchedule(id: number) {
   emit("cancel-schedule", id);
+}
+
+// 撤销取消
+function handleUncancelSchedule(id: number) {
+  emit("uncancel-schedule", id);
 }
 
 // Tag 相关函数
@@ -508,7 +573,7 @@ col.col-location {
 }
 
 col.col-status {
-  width: 87px;
+  width: 88px;
 }
 
 thead th,
@@ -662,6 +727,16 @@ td.status-col {
 .done-input {
   width: 32px !important;
   max-width: 32px !important;
+  min-width: 0 !important;
+  box-sizing: border-box;
+  padding: 0px 0px;
+  font-size: inherit;
+}
+
+.duration-input {
+  /* 固定时长输入框宽度，避免 focus 时撑开 */
+  width: 26px !important;
+  max-width: 26px !important;
   min-width: 0 !important;
   box-sizing: border-box;
   padding: 0px 0px;

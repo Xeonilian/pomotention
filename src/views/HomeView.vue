@@ -156,8 +156,11 @@
             v-if="settingStore.settings.showPlanner && settingStore.settings.viewSet === 'day'"
             @update-schedule-status="onUpdateScheduleStatus"
             @cancel-schedule="onCancelSchedule"
+            @uncancel-schedule="onUncancelSchedule"
             @edit-schedule-done="handleEditScheduleDone"
             @edit-schedule-title="handleEditScheduleTitle"
+            @edit-schedule-start="handleEditScheduleStart"
+            @edit-schedule-duration="handleEditScheduleDuration"
             @update-todo-status="onUpdateTodoStatus"
             @suspend-todo="onSuspendTodo"
             @cancel-todo="onCancelTodo"
@@ -838,6 +841,30 @@ function onCancelSchedule(id: number) {
   saveAllDebounced();
 }
 
+/** Schedule 撤销取消（同时联动 Activity） */
+function onUncancelSchedule(id: number) {
+  const schedule = scheduleById.value.get(id);
+  if (!schedule) return;
+  if (schedule.status !== "cancelled") return;
+
+  schedule.status = "";
+  schedule.synced = false;
+  schedule.lastModified = Date.now();
+
+  const activity = activityById.value.get(schedule.activityId);
+  if (!activity) {
+    console.warn(`未找到 activityId 为 ${schedule.activityId} 的 activity`);
+    saveAllDebounced();
+    return;
+  }
+
+  activity.status = "" as any;
+  activity.synced = false;
+  activity.lastModified = Date.now();
+
+  saveAllDebounced();
+}
+
 /** Schedule 勾选完成 */
 function onUpdateScheduleStatus(id: number, isChecked: boolean) {
   const schedule = scheduleById.value.get(id);
@@ -959,6 +986,54 @@ function handleEditTodoTitle(id: number, newTitle: string) {
   saveAllDebounced();
 }
 
+// 编辑开始时间：只更新时:分，不改变日期（基于原 activityDueRange[0] 的日期）
+function handleEditScheduleStart(id: number, newTm: string) {
+  const schedule = scheduleById.value.get(id);
+  if (!schedule) {
+    console.warn(`未找到 id 为 ${id} 的 schedule`);
+    return;
+  }
+
+  const activity = activityById.value.get(schedule.activityId);
+
+  if (newTm === "") {
+    // 清空开始时间
+    schedule.activityDueRange[0] = null;
+    schedule.synced = false;
+    schedule.lastModified = Date.now();
+    if (activity?.dueRange) {
+      activity.dueRange[0] = null;
+      activity.synced = false;
+      activity.lastModified = Date.now();
+    }
+    saveAllDebounced();
+    return;
+  }
+
+  // 基准日期：优先用原 startTs，否则用当前视图日期（只作为日期基准）
+  const baseTs = schedule.activityDueRange?.[0] ?? dateService.appDateTimestamp;
+  const [hh, mm] = newTm.split(":").map((n) => Number(n));
+  const base = new Date(Number(baseTs));
+  base.setHours(hh, mm, 0, 0);
+  const nextTs = base.getTime();
+
+  // 更新 schedule
+  if (!schedule.activityDueRange) schedule.activityDueRange = [null, "0"];
+  schedule.activityDueRange[0] = nextTs;
+  schedule.synced = false;
+  schedule.lastModified = Date.now();
+
+  // 同步 activity.dueRange[0]
+  if (activity) {
+    if (!activity.dueRange) activity.dueRange = [nextTs, schedule.activityDueRange[1] ?? "0"];
+    else activity.dueRange[0] = nextTs;
+    activity.synced = false;
+    activity.lastModified = Date.now();
+  }
+
+  saveAllDebounced();
+}
+
 // 编辑时间
 function handleEditTodoStart(id: number, newTm: string) {
   // 获取当前查看日期的时间戳
@@ -1006,6 +1081,32 @@ function handleEditScheduleDone(id: number, newTm: string) {
   } else {
     schedule.doneTime = getTimestampForTimeString(newTm, viewingDayTimestamp);
   }
+  saveAllDebounced();
+}
+
+// 编辑时长：Schedule.activityDueRange[1]（同时同步 Activity.dueRange[1]）
+function handleEditScheduleDuration(id: number, newDurationMin: string) {
+  const schedule = scheduleById.value.get(id);
+  if (!schedule) {
+    console.warn(`未找到 id 为 ${id} 的 schedule`);
+    return;
+  }
+
+  // 更新 schedule
+  if (!schedule.activityDueRange) schedule.activityDueRange = [null, "0"];
+  schedule.activityDueRange[1] = newDurationMin;
+  schedule.synced = false;
+  schedule.lastModified = Date.now();
+
+  // 同步到 activity（watcher 也会回写到 schedule，这里直接写保证联动一致）
+  const activity = activityById.value.get(schedule.activityId);
+  if (activity) {
+    if (!activity.dueRange) activity.dueRange = [schedule.activityDueRange[0] ?? null, newDurationMin];
+    else activity.dueRange[1] = newDurationMin;
+    activity.synced = false;
+    activity.lastModified = Date.now();
+  }
+
   saveAllDebounced();
 }
 
