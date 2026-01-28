@@ -32,6 +32,7 @@
         @edit-schedule-start="handleEditScheduleStart"
         @edit-schedule-done="handleEditScheduleDone"
         @edit-schedule-duration="handleEditScheduleDuration"
+        @edit-schedule-location="handleEditScheduleLocation"
         @convert-schedule-to-task="handleConvertScheduleToTask"
       />
     </div>
@@ -69,6 +70,7 @@ const emit = defineEmits<{
   (e: "edit-schedule-start", id: number, newTs: string): void;
   (e: "edit-schedule-done", id: number, newTs: string): void;
   (e: "edit-schedule-duration", id: number, newDurationMin: string): void;
+  (e: "edit-schedule-location", id: number, newLocation: string): void;
   (e: "convert-todo-to-task", payload: { task: Task; activityId: number }): void;
   (e: "convert-schedule-to-task", payload: { task: Task; activityId: number }): void;
 }>();
@@ -164,6 +166,10 @@ function handleEditScheduleDone(scheduleId: number, newTs: string) {
 
 function handleEditScheduleDuration(scheduleId: number, newDurationMin: string) {
   emit("edit-schedule-duration", scheduleId, newDurationMin);
+}
+
+function handleEditScheduleLocation(scheduleId: number, newLocation: string) {
+  emit("edit-schedule-location", scheduleId, newLocation);
 }
 
 function handleConvertTodoToTask(payload: { task: Task; activityId: number }) {

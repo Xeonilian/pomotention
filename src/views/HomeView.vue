@@ -161,6 +161,7 @@
             @edit-schedule-title="handleEditScheduleTitle"
             @edit-schedule-start="handleEditScheduleStart"
             @edit-schedule-duration="handleEditScheduleDuration"
+            @edit-schedule-location="handleEditScheduleLocation"
             @update-todo-status="onUpdateTodoStatus"
             @suspend-todo="onSuspendTodo"
             @cancel-todo="onCancelTodo"
@@ -1103,6 +1104,28 @@ function handleEditScheduleDuration(id: number, newDurationMin: string) {
   if (activity) {
     if (!activity.dueRange) activity.dueRange = [schedule.activityDueRange[0] ?? null, newDurationMin];
     else activity.dueRange[1] = newDurationMin;
+    activity.synced = false;
+    activity.lastModified = Date.now();
+  }
+
+  saveAllDebounced();
+}
+
+// 编辑地点：Schedule.location（同时同步 Activity.location）
+function handleEditScheduleLocation(id: number, newLocation: string) {
+  const schedule = scheduleById.value.get(id);
+  if (!schedule) {
+    console.warn(`未找到 id 为 ${id} 的 schedule`);
+    return;
+  }
+
+  schedule.location = newLocation;
+  schedule.synced = false;
+  schedule.lastModified = Date.now();
+
+  const activity = activityById.value.get(schedule.activityId);
+  if (activity) {
+    activity.location = newLocation;
     activity.synced = false;
     activity.lastModified = Date.now();
   }

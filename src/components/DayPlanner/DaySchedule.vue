@@ -168,8 +168,23 @@
             </td>
 
             <!-- 6 地点 -->
-            <td class="col-location">
-              <span class="ellipsis">
+            <td
+              class="col-location"
+              @dblclick.stop="startEditing(schedule.id, 'location')"
+              :title="editingRowId === schedule.id && editingField === 'location' ? '' : '双击编辑'"
+            >
+              <input
+                class="location-input"
+                v-if="editingRowId === schedule.id && editingField === 'location'"
+                v-model="editingValue"
+                @blur="saveEdit(schedule)"
+                @keyup.enter="saveEdit(schedule)"
+                @keyup.esc="cancelEdit"
+                @click.stop
+                :data-schedule-id="schedule.id"
+                autocomplete="off"
+              />
+              <span class="ellipsis" v-else>
                 {{ schedule.location ?? "-" }}
               </span>
             </td>
@@ -290,7 +305,7 @@ import {
   DismissSquare20Filled,
 } from "@vicons/fluent";
 import { taskService } from "@/services/taskService";
-import { ref, nextTick } from "vue";
+import { ref, nextTick, computed } from "vue";
 import { Task } from "@/core/types/Task";
 
 import { useDataStore } from "@/stores/useDataStore";
@@ -302,7 +317,7 @@ const dataStore = useDataStore();
 const { activeId, selectedRowId, schedulesForCurrentView } = storeToRefs(dataStore);
 // 编辑用
 const editingRowId = ref<number | null>(null);
-const editingField = ref<null | "title" | "start" | "done" | "duration">(null);
+const editingField = ref<null | "title" | "start" | "done" | "duration" | "location">(null);
 const editingValue = ref("");
 
 // 定义 Emit
@@ -319,6 +334,7 @@ const emit = defineEmits<{
   (e: "edit-schedule-start", id: number, newTs: string): void;
   (e: "edit-schedule-done", id: number, newTs: string): void;
   (e: "edit-schedule-duration", id: number, newDurationMin: string): void;
+  (e: "edit-schedule-location", id: number, newLocation: string): void;
   (
     e: "convert-schedule-to-task",
     payload: {
@@ -356,7 +372,7 @@ function handleRowClick(schedule: Schedule) {
 }
 
 // 编辑相关函数
-function startEditing(scheduleId: number, field: "title" | "start" | "done" | "duration") {
+function startEditing(scheduleId: number, field: "title" | "start" | "done" | "duration" | "location") {
   const schedule = schedulesForCurrentView.value.find((s) => s.id === scheduleId);
   if (!schedule) return;
   editingRowId.value = scheduleId;
@@ -368,6 +384,8 @@ function startEditing(scheduleId: number, field: "title" | "start" | "done" | "d
       ? (schedule.activityDueRange?.[0] ? timestampToTimeString(schedule.activityDueRange[0]) : "")
       : field === "duration"
       ? (schedule.activityDueRange?.[1] ?? "")
+      : field === "location"
+      ? (schedule.location ?? "")
       : schedule.doneTime
       ? timestampToTimeString(schedule.doneTime)
       : "";
@@ -424,6 +442,11 @@ function saveEdit(schedule: Schedule) {
     } else if (/^\d{1,4}$/.test(raw)) {
       emit("edit-schedule-duration", schedule.id, raw);
     }
+  }
+
+  if (editingField.value === "location") {
+    // 地点允许为空
+    emit("edit-schedule-location", schedule.id, editingValue.value.trim());
   }
   cancelEdit();
 }
@@ -741,6 +764,20 @@ td.status-col {
   box-sizing: border-box;
   padding: 0px 0px;
   font-size: inherit;
+}
+
+.location-input {
+  width: calc(100% - 6px);
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  font-size: inherit;
+  font-family: inherit;
+  outline: none;
+}
+
+.location-input:focus {
+  border-color: #40a9ff;
+  box-shadow: 0 0 0 2px rgba(64, 169, 255, 0.2);
 }
 
 .time-input:focus {
