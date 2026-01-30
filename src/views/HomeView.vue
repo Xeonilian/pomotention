@@ -311,7 +311,6 @@ const {
   taskByActivityId,
   childrenOfActivity,
   todosForCurrentViewWithTags,
-  schedulesForCurrentViewWithTags,
   schedulesForCurrentView,
   todosForCurrentViewWithTaskRecords,
 } = storeToRefs(dataStore);
@@ -711,7 +710,7 @@ const datasetsForCurrentView = computed<DataRow[]>(() => {
     ];
   } else if (viewSet.value === "week") {
     return [
-      ...(schedulesForCurrentViewWithTags.value ?? []).map((s) => ({
+      ...(schedulesForCurrentView.value ?? []).map((s) => ({
         type: "S" as const,
         item: s,
       })),
@@ -722,7 +721,7 @@ const datasetsForCurrentView = computed<DataRow[]>(() => {
     ];
   } else {
     return [
-      ...(schedulesForCurrentViewWithTags.value ?? []).map((s) => ({
+      ...(schedulesForCurrentView.value ?? []).map((s) => ({
         type: "S" as const,
         item: s,
       })),
@@ -1134,6 +1133,15 @@ function handleEditTodoStart(id: number, newTm: string) {
   todo.startTime = getTimestampForTimeString(newTm, viewingDayTimestamp);
   todo.synced = false;
   todo.lastModified = Date.now();
+
+  const task = taskByActivityId.value.get(todo.activityId);
+  if (task) {
+    if (task.description?.trim() === "#") {
+      task.description = `# ${todo.activityTitle}`;
+      task.synced = false;
+      task.lastModified = Date.now();
+    }
+  }
 
   saveAllDebounced();
 }

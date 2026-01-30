@@ -197,15 +197,17 @@
                   'check-mode': schedule.status === 'done' || schedule.status === 'cancelled',
                 }"
               >
-                <div class="records-stat">&nbsp;</div>
+                <div class="records-stat" title="能量值 | 奖赏值 | 内部打扰 | 外部打扰">
+                  <span style="color: var(--color-blue)">{{ averageValue(schedule.energyRecords) }}</span>
+                  |
+                  <span style="color: var(--color-red)">{{ averageValue(schedule.rewardRecords) }}</span>
+                  |{{ countInterruptions(schedule.interruptionRecords, "I") }}|{{ countInterruptions(schedule.interruptionRecords, "E") }}</div>
                 <div
                   class="button-group"
-                  :class="{
-                    converted: !schedule.taskId,
-                  }"
+
                   v-if="schedule.status !== 'done' && schedule.status !== 'cancelled'"
                 >
-                  <n-button
+                  <!-- <n-button
                     class="convert-button"
                     v-if="!schedule.taskId"
                     text
@@ -218,7 +220,7 @@
                         <ChevronCircleDown48Regular />
                       </n-icon>
                     </template>
-                  </n-button>
+                  </n-button> -->
 
                   <!-- <n-button
                   v-if="
@@ -299,12 +301,12 @@ import type { Schedule } from "@/core/types/Schedule";
 import { timestampToTimeString } from "@/core/utils";
 import { NCheckbox, NButton, NIcon, NPopover } from "naive-ui";
 import {
-  ChevronCircleDown48Regular,
+  // ChevronCircleDown48Regular,
   DismissCircle20Regular,
   // ArrowRepeatAll24Regular,
   DismissSquare20Filled,
 } from "@vicons/fluent";
-import { taskService } from "@/services/taskService";
+// import { taskService } from "@/services/taskService";
 import { ref, nextTick, computed } from "vue";
 import { Task } from "@/core/types/Task";
 
@@ -466,28 +468,28 @@ function isValidTimeString(str: string) {
   return /^\d{2}:\d{2}$/.test(str) && +str.split(":")[0] <= 24 && +str.split(":")[1] < 60;
 }
 
-function handleConvertToTask(schedule: Schedule) {
-  console.log("handleConvertToTask", schedule.id, schedule.taskId);
-  if (schedule.taskId) {
-    popoverMessage.value = "该日程已转换为任务";
-    showPopover.value = true;
-    setTimeout(() => {
-      showPopover.value = false;
-    }, 2000);
-    return;
-  }
+// function handleConvertToTask(schedule: Schedule) {
+//   console.log("handleConvertToTask", schedule.id, schedule.taskId);
+//   if (schedule.taskId) {
+//     popoverMessage.value = "该日程已转换为任务";
+//     showPopover.value = true;
+//     setTimeout(() => {
+//       showPopover.value = false;
+//     }, 2000);
+//     return;
+//   }
 
-  const task = taskService.createTaskFromSchedule(schedule.activityId, schedule.activityTitle, schedule.projectName);
-  console.log("DaySch", task);
-  if (task) {
-    emit("convert-schedule-to-task", { task: task, activityId: schedule.activityId });
-    popoverMessage.value = "已转换为任务";
-    showPopover.value = true;
-    setTimeout(() => {
-      showPopover.value = false;
-    }, 2000);
-  }
-}
+//   const task = taskService.createTaskFromSchedule(schedule.activityId, schedule.activityTitle, schedule.projectName);
+//   console.log("DaySch", task);
+//   if (task) {
+//     emit("convert-schedule-to-task", { task: task, activityId: schedule.activityId });
+//     popoverMessage.value = "已转换为任务";
+//     showPopover.value = true;
+//     setTimeout(() => {
+//       showPopover.value = false;
+//     }, 2000);
+//   }
+// }
 
 function handleCancelSchedule(id: number) {
   emit("cancel-schedule", id);
@@ -555,6 +557,29 @@ function handleTagCreate(tagName: string) {
   // 通过 activityId 创建并添加标签到 Activity
   dataStore.createAndAddTagToActivity(schedule.activityId, tagName);
   tagEditor.closePopover();
+}
+
+function averageValue<T extends { value: number }>(records: T[] | null | undefined): number | string {
+  if (!Array.isArray(records) || records.length === 0) return "-";
+  let sum = 0,
+    count = 0;
+  for (const r of records) {
+    const v = r?.value;
+    if (typeof v === "number" && Number.isFinite(v)) {
+      sum += v;
+      count++;
+    }
+  }
+  return count === 0 ? "-" : Math.round(sum / count);
+}
+
+// 2) 统计中断类型数量（"E" 或 "I"）
+// 空、null、undefined 或 [] 返回 null
+function countInterruptions(records: { interruptionType: "E" | "I" }[] | null | undefined, type: "E" | "I"): number | string {
+  if (!Array.isArray(records) || records.length === 0) return "-";
+  let count = 0;
+  for (const r of records) if (r?.interruptionType === type) count++;
+  return count;
 }
 </script>
 

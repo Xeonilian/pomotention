@@ -4,7 +4,7 @@ import { ref, computed, watch } from "vue"; // 补：watch 需要从 vue 引入
 
 import type { Activity } from "@/core/types/Activity";
 import type { Todo, TodoWithTags, TodoWithTaskRecords } from "@/core/types/Todo";
-import type { Schedule } from "@/core/types/Schedule";
+import type { Schedule, ScheduleWithTaskRecords } from "@/core/types/Schedule";
 import type { Task } from "@/core/types/Task";
 import type { Tag } from "@/core/types/Tag";
 import type { DataPoint, MetricName, AggregationType, TimeGranularity } from "@/core/types/Chart";
@@ -283,14 +283,23 @@ export const useDataStore = defineStore(
       return out;
     });
 
-    const schedulesForCurrentView = computed(() => {
+    const schedulesForCurrentView = computed<ScheduleWithTaskRecords[]>(() => {
       const { start, end } = dateService.visibleRange.value;
       if (!scheduleList.value) return [];
-      return activeSchedules.value.filter((schedule) => {
+      const out: ScheduleWithTaskRecords[] = [];
+      for (const schedule of activeSchedules.value) {
         const date = schedule.activityDueRange?.[0];
-        if (date == null) return false;
-        return date >= start && date < end;
-      });
+        if (date == null) continue;
+        if (date < start || date >= end) continue;
+        const relatedTask = schedule.taskId != null ? taskById.value.get(schedule.taskId) : undefined;
+        out.push({
+          ...schedule,
+          energyRecords: relatedTask?.energyRecords ?? [],
+          rewardRecords: relatedTask?.rewardRecords ?? [],
+          interruptionRecords: relatedTask?.interruptionRecords ?? [],
+        });
+      }
+      return out;
     });
 
     type ScheduleWithTags = Schedule & { tagIds?: number[] };

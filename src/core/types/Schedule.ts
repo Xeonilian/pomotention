@@ -1,4 +1,6 @@
 // src/core/types/Schedule.ts
+import type { EnergyRecord, RewardRecord, InterruptionRecord } from "./Task";
+
 export interface Schedule {
   id: number; // 时间戳
   activityId: number;
@@ -15,4 +17,10 @@ export interface Schedule {
   lastModified: number;
   synced: boolean;
   cloudModified?: number; // 云端修改时间戳
+}
+
+export interface ScheduleWithTaskRecords extends Schedule {
+  energyRecords: EnergyRecord[];
+  rewardRecords: RewardRecord[];
+  interruptionRecords: InterruptionRecord[];
 }
