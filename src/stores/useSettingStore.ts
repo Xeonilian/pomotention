@@ -42,6 +42,7 @@ export interface GlobalSettings {
   localOnlyMode: boolean; // 当前是否为本地模式
   wasLocalModeBeforeLogin: boolean; // 登录前是否是本地模式，用于退出时保护数据
   keepLocalDataAfterSignOut: boolean; // 默认不清除本地数据
+  isCompactMode: boolean; // 紧凑模式：只显示状态文字和时钟
   ai?: {
     activeId: number; // 当前启用的配置
     profiles: Record<string, AiProfile>; // 所有配置集合（字典，键为 id）
@@ -92,6 +93,7 @@ const defaultSettings: GlobalSettings = {
   localOnlyMode: false, // 默认不是本地模式
   wasLocalModeBeforeLogin: false, // 默认不是从本地模式切换过来的
   keepLocalDataAfterSignOut: false, // 默认不清除本地数据
+  isCompactMode: false, // 默认不是紧凑模式
   ai: {
     activeId: 1,
     systemPrompt:
