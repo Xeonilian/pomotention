@@ -218,15 +218,22 @@
           <!-- 时间或番茄钟 -->
           <n-input
             v-if="item.class === 'T'"
+            :ref="(el) => setPomoInputRef(el as InputInst | null, item.id)"
             maxlength="1"
             :value="getInputValue(item)"
             :placeholder="item.pomoType"
-            :title="`输入估计${item.pomoType || '🍅'}数量`"
+            :title="pomoInputTitle"
             style="max-width: 32px"
             class="pomo-input"
-            :disabled="item.pomoType === '🍒'"
+            :readonly="item.pomoType === '🍒'"
             @update:value="(val) => onInputUpdate(item, val)"
-            @focus="handleNoFocus(item.id)"
+            @focus="handlePomoInputFocus(item)"
+            @mousedown.stop="(e: MouseEvent) => handlePomoInputMouseDown(e, item)"
+            @touchstart.stop="(e: TouchEvent) => handlePomoInputTouchStart(e, item)"
+            @mouseup.stop="(e: MouseEvent) => handlePomoInputMouseUp(e, item)"
+            @mouseleave.stop="handlePomoInputMouseLeave(item)"
+            @touchend.stop="(e: TouchEvent) => handlePomoInputTouchEnd(e, item)"
+            @touchcancel.stop="handlePomoInputTouchCancel(item)"
             :class="{
               'pomo-red': item.pomoType === '🍅',
               'pomo-purple': item.pomoType === '🍇',
@@ -335,6 +342,9 @@ import type { Activity } from "@/core/types/Activity";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useActivityTagEditor } from "@/composables/useActivityTagEditor";
 import { useActivityDrag } from "@/composables/useActivityDrag";
+import { useLongPress } from "@/composables/useLongPress";
+import { useDevice } from "@/composables/useDevice";
+import { togglePomoType } from "@/services/activityService";
 import TagManager from "../TagSystem/TagManager.vue";
 import TagRenderer from "../TagSystem/TagRenderer.vue";
 import TagSelector from "../TagSystem/TagSelector.vue";
@@ -364,6 +374,9 @@ const emit = defineEmits<{
 }>();
 
 const isSearchFocused = ref(false);
+
+// ======================== Composables ========================
+const { isTouchSupported } = useDevice();
 
 // ======================== Stores ========================
 const settingStore = useSettingStore();
@@ -417,8 +430,38 @@ const dragHandler = useActivityDrag(() => sortedDisplaySheet.value);
 // ======================== 本地状态 ========================
 const noFocus = ref(false);
 const rowInputMap = ref(new Map<number, InputInst>());
+const pomoInputMap = ref(new Map<number, InputInst>());
 const showTagManager = ref(false);
 const tagSelectorRef = ref<any>(null);
+
+// 番茄输入框的长按状态管理（每个输入框独立）
+const pomoLongPressMap = ref(
+  new Map<
+    number,
+    {
+      longPressTriggered: { value: boolean };
+      onLongPressStart: (e: TouchEvent | MouseEvent) => void;
+      onLongPressEnd: () => void;
+      onLongPressCancel: () => void;
+    }
+  >()
+);
+
+// 双击检测状态（桌面端）
+const pomoDoubleClickTimers = ref(new Map<number, number>());
+const DOUBLE_CLICK_DELAY = 300; // 双击检测延迟（毫秒）
+
+// 标记是否应该聚焦（用于双击和长按）
+const pomoShouldFocus = ref(new Map<number, boolean>());
+
+// 防抖：防止快速重复切换
+const pomoToggleTimers = ref(new Map<number, number>());
+const TOGGLE_DEBOUNCE = 100; // 防抖延迟（毫秒）
+
+// 番茄输入框标题提示
+const pomoInputTitle = computed(() => {
+  return `单击编辑数量 | ${isTouchSupported ? "长按" : "双击"}切换类型`;
+});
 
 // 点击/拖拽检测状态
 const clickDragState = ref<{
@@ -496,6 +539,32 @@ onMounted(() => {
 function setRowInputRef(el: InputInst | null, id: number) {
   if (el) rowInputMap.value.set(id, el);
   else rowInputMap.value.delete(id);
+}
+
+function setPomoInputRef(el: InputInst | null, id: number) {
+  if (el) {
+    pomoInputMap.value.set(id, el);
+    // 为每个输入框初始化长按检测
+    if (!pomoLongPressMap.value.has(id)) {
+      const longPressHandler = useLongPress({
+        delay: 600,
+        onLongPress: () => {
+          // 长按触发：进入编辑模式
+          focusPomoInput(id);
+        },
+      });
+      pomoLongPressMap.value.set(id, longPressHandler);
+    }
+  } else {
+    pomoInputMap.value.delete(id);
+    // 清理长按状态
+    const longPress = pomoLongPressMap.value.get(id);
+    if (longPress) {
+      longPress.onLongPressCancel();
+    }
+    pomoLongPressMap.value.delete(id);
+    pomoDoubleClickTimers.value.delete(id);
+  }
 }
 
 function handleNoFocus(id: number) {
@@ -769,6 +838,144 @@ function onInputUpdate(item: Activity, value: string) {
   item.estPomoI = value;
   item.synced = false;
   item.lastModified = Date.now();
+}
+
+// ======================== 番茄输入框交互处理 ========================
+// 聚焦到番茄输入框
+function focusPomoInput(id: number) {
+  pomoShouldFocus.value.set(id, true);
+  const input = pomoInputMap.value.get(id);
+  if (input) {
+    nextTick(() => {
+      if (typeof input.focus === "function") {
+        input.focus();
+      } else {
+        input.inputElRef?.focus?.();
+      }
+      pomoShouldFocus.value.delete(id);
+    });
+  }
+}
+
+// 聚焦事件处理：只有在允许聚焦时才处理
+function handlePomoInputFocus(item: Activity) {
+  if (pomoShouldFocus.value.get(item.id)) {
+    // 允许聚焦：正常处理
+    handleNoFocus(item.id);
+  } else {
+    // 不允许聚焦：立即失焦（可能是通过 Tab 键或其他方式聚焦的）
+    const input = pomoInputMap.value.get(item.id);
+    if (input) {
+      input.blur();
+    }
+  }
+}
+
+// 切换番茄类型（带防抖）
+function handleTogglePomoType(item: Activity) {
+  // 清除已有的防抖定时器
+  const existingTimer = pomoToggleTimers.value.get(item.id);
+  if (existingTimer) {
+    clearTimeout(existingTimer);
+  }
+
+  // 设置防抖定时器
+  const timer = window.setTimeout(() => {
+    togglePomoType(item.id, { activityById: activityById.value });
+    pomoToggleTimers.value.delete(item.id);
+  }, TOGGLE_DEBOUNCE);
+
+  pomoToggleTimers.value.set(item.id, timer);
+}
+
+// 鼠标按下（桌面端长按检测和单击检测）
+function handlePomoInputMouseDown(e: MouseEvent, item: Activity) {
+  // 阻止默认聚焦行为（除非是双击或长按）
+  e.preventDefault();
+  e.stopPropagation();
+
+  const longPress = pomoLongPressMap.value.get(item.id);
+  if (longPress) {
+    longPress.onLongPressStart(e);
+  }
+
+  // 检查是否在双击延迟内（桌面端双击检测）
+  const timer = pomoDoubleClickTimers.value.get(item.id);
+  if (timer) {
+    // 清除双击定时器，说明是双击
+    clearTimeout(timer);
+    pomoDoubleClickTimers.value.delete(item.id);
+    // 双击：进入编辑模式
+    pomoShouldFocus.value.set(item.id, true);
+    handleTogglePomoType(item);
+    return;
+  }
+
+  // 设置双击检测定时器（桌面端）
+  if (!isTouchSupported) {
+    const newTimer = window.setTimeout(() => {
+      pomoDoubleClickTimers.value.delete(item.id);
+      // 单击：切换类型
+      focusPomoInput(item.id);
+    }, DOUBLE_CLICK_DELAY);
+    pomoDoubleClickTimers.value.set(item.id, newTimer);
+  } else {
+    // 移动端：直接切换类型（长按已在长按处理中处理）
+    focusPomoInput(item.id);
+  }
+}
+
+// 触摸开始（移动端长按检测和单击检测）
+function handlePomoInputTouchStart(e: TouchEvent, item: Activity) {
+  // 阻止默认行为
+  e.preventDefault();
+  e.stopPropagation();
+
+  const longPress = pomoLongPressMap.value.get(item.id);
+  if (longPress) {
+    longPress.onLongPressStart(e);
+  }
+}
+
+// 鼠标抬起
+function handlePomoInputMouseUp(_e: MouseEvent, item: Activity) {
+  const longPress = pomoLongPressMap.value.get(item.id);
+  if (longPress) {
+    longPress.onLongPressEnd();
+  }
+}
+
+// 鼠标离开
+function handlePomoInputMouseLeave(item: Activity) {
+  const longPress = pomoLongPressMap.value.get(item.id);
+  if (longPress) {
+    longPress.onLongPressCancel();
+  }
+}
+
+// 触摸结束
+function handlePomoInputTouchEnd(e: TouchEvent, item: Activity) {
+  e.preventDefault();
+  e.stopPropagation();
+
+  const longPress = pomoLongPressMap.value.get(item.id);
+  if (longPress) {
+    longPress.onLongPressEnd();
+    // 如果未触发长按，执行单击切换
+    Promise.resolve().then(() => {
+      if (!(longPress.longPressTriggered as any).value) {
+        handleTogglePomoType(item);
+      }
+    });
+  }
+}
+
+// 触摸取消
+function handlePomoInputTouchCancel(item: Activity) {
+  const longPress = pomoLongPressMap.value.get(item.id);
+  if (longPress) {
+    longPress.onLongPressCancel();
+  }
 }
 </script>
 

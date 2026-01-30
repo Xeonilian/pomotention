@@ -379,7 +379,7 @@ function handleKeydown(event: KeyboardEvent): void {
 // 处理番茄时长输入框回车确认
 function handleDurationConfirm(): void {
   const num = Number(defaultPomoDuration.value);
-  if (Number.isInteger(num) && num >= 15 && num <= 59) {
+  if (Number.isInteger(num) && num >= 1 && num <= 60) {
     dialog.warning({
       title: "确认修改番茄时长",
       content: `确定要将番茄工作时长修改为 ${num} 分钟吗？`,
@@ -400,7 +400,7 @@ function handleDurationConfirm(): void {
 
     dialog.error({
       title: "输入无效",
-      content: "请输入15-59之间的整数作为番茄时长。",
+      content: "请输入1-60之间的整数作为番茄时长。",
       positiveText: "确定",
     });
   }
@@ -409,7 +409,7 @@ function handleDurationConfirm(): void {
 // 处理番茄时长输入框失去焦点时恢复设置
 function handleBlurRestore(): void {
   const num = Number(defaultPomoDuration.value);
-  if (Number.isInteger(num) && num >= 15 && num <= 59) {
+  if (Number.isInteger(num) && num >= 1 && num <= 60) {
     settingStore.settings.durations.workDuration = num;
     console.log("Pomodoro duration restored:", num);
   } else {

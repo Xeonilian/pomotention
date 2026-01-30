@@ -229,12 +229,18 @@ const redProgressPercentage = computed(() => {
   const totalSeconds = timerStore.totalTime;
   const timePassed = totalSeconds - timerStore.timeRemaining;
 
+  // 总时长过小/为 0 时，避免 NaN 导致红条不可见
+  if (totalSeconds <= 0) return 0;
+
   const r1Sec = timerStore.r1Duration * 60;
   const wSec = timerStore.wDuration * 60;
 
   const wStartPercent = (r1Sec / totalSeconds) * 100;
   const wEndPercent = ((r1Sec + 2 * wSec) / totalSeconds) * 100;
   const wRangePercent = wEndPercent - wStartPercent;
+
+  // w 区间为 0 时，避免除 0
+  if (wRangePercent <= 0) return 0;
 
   if ((timePassed / totalSeconds) * 100 <= wStartPercent) return 0;
   if ((timePassed / totalSeconds) * 100 >= wEndPercent) return 100;

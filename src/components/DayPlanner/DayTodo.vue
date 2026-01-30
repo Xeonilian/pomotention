@@ -23,10 +23,24 @@
 
       <thead>
         <tr>
-          <th class="col-check"></th>
+          <th class="col-check">
+            <n-button
+              text
+              type="default"
+              @click.stop="handleQuickAddTodo"
+              title="快速新增待办"
+              style="transform: translateX(2px) translateY(4px);"
+            >
+              <template #icon>
+                <n-icon size="13">
+                  <Add12Regular />
+                </n-icon>
+              </template>
+            </n-button>
+          </th>
           <th class="col-start">开始</th>
           <th class="col-end">结束</th>
-          <th class="col-rank">排序</th>
+          <th class="col-rank" title="Emoji：33=💤 44=🥗 55=📚 66=🙊 77=✨ 88=💸 99=🧸">排序</th>
           <th class="col-intent">意图</th>
           <th class="col-fruit">果果</th>
           <th class="col-status">状态</th>
@@ -232,7 +246,7 @@
                   'check-mode': todo.status === 'done' || todo.status === 'cancelled',
                 }"
               >
-                <div class="records-stat" v-if="todo.taskId" title="能量值 | 奖赏值 | 内部打扰 | 外部打扰">
+                <div class="records-stat" v-if="todo.startTime" title="能量值 | 奖赏值 | 内部打扰 | 外部打扰">
                   <span style="color: var(--color-blue)">{{ averageValue(todo.energyRecords) }}</span>
                   |
                   <span style="color: var(--color-red)">{{ averageValue(todo.rewardRecords) }}</span>
@@ -240,13 +254,10 @@
                 </div>
                 <div
                   class="button-group"
-                  :class="{
-                    converted: !todo.taskId,
-                  }"
                   v-if="todo.status !== 'done' && todo.status !== 'cancelled'"
                 >
                   <!-- 追踪任务按钮 -->
-                  <n-button class="convert-button" text type="info" @click="handleQuickStart(todo)" title="开始待办">
+                  <n-button v-if="!todo.startTime" class="convert-button" text type="info" @click="handleQuickStart(todo)" title="开始待办">
                     <template #icon>
                       <n-icon size="18">
                         <ChevronCircleDown48Regular />
@@ -362,6 +373,7 @@ import {
   DismissSquare20Filled,
   CaretLeft12Filled,
   CaretRight12Filled,
+  Add12Regular,
 } from "@vicons/fluent";
 import { NCheckbox, NInputNumber, NPopover, NButton, NIcon } from "naive-ui";
 import { ref, computed, nextTick } from "vue";
@@ -409,6 +421,7 @@ const emit = defineEmits<{
   (e: "edit-todo-title", id: number, newTitle: string): void;
   (e: "edit-todo-start", id: number, newTs: string): void;
   (e: "edit-todo-done", id: number, newTs: string): void;
+  (e: "quick-add-todo"): void;
  
 }>();
 
@@ -692,6 +705,11 @@ function handleRowClick(todo: Todo) {
   emit("select-row", todo.id); // 新增：发送选中行事件
   emit("select-task", todo.taskId || null);
   emit("select-activity", todo.activityId || null);
+}
+
+// 快速新增待办
+function handleQuickAddTodo() {
+  emit("quick-add-todo");
 }
 
 // 编辑相关函数
@@ -1240,9 +1258,6 @@ td.status-col {
   transform: translateY(1px);
 }
 
-.button-group.converted {
-  padding-left: 38px;
-}
 
 :deep(.n-button) :hover {
   color: var(--color-red);

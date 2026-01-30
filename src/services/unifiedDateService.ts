@@ -8,6 +8,7 @@ import type { Activity } from "@/core/types/Activity";
 import type { Schedule } from "@/core/types/Schedule";
 import type { Todo } from "@/core/types/Todo";
 import { useSettingStore } from "@/stores/useSettingStore";
+import { useDataStore } from "@/stores/useDataStore";
 
 /**
  * unifiedDateService 的配置选项。
@@ -26,7 +27,7 @@ interface DateRange {
 
 export function unifiedDateService({ activityList, scheduleList, todoList }: UnifiedDateServiceOptions) {
   const settingStore = useSettingStore();
-
+  const dataStore = useDataStore();
   // --- 1. 核心状态 ---
   const dateState = reactive({
     app: getDayStartTimestamp(), // 当前基准日期（零点）
@@ -207,6 +208,8 @@ export function unifiedDateService({ activityList, scheduleList, todoList }: Uni
     const target = getDayStartTimestamp(date);
     const curView = settingStore.settings.viewSet;
     dateState.app = curView === "day" ? target : curView === "week" ? getStartOfWeek(target) : getStartOfMonth(target);
+
+    dataStore.setSelectedDate(target);
     return target;
   };
 
@@ -233,6 +236,24 @@ export function unifiedDateService({ activityList, scheduleList, todoList }: Uni
   const setAppDate = (timestamp: number) => {
     const dayStart = getDayStartTimestamp(new Date(timestamp));
     dateState.app = dayStart;
+  };
+
+  // 将 appDateTimestamp 的年月日和给定时间戳的时分秒拼接
+  const combineDateAndTime = (dateTimestamp: number, timeTimestamp: number): number => {
+    const date = new Date(dateTimestamp);
+    const time = new Date(timeTimestamp);
+    
+    const result = new Date(
+      date.getFullYear(),
+      date.getMonth(),
+      date.getDate(),
+      time.getHours(),
+      time.getMinutes(),
+      time.getSeconds(),
+      time.getMilliseconds()
+    );
+    
+    return result.getTime();
   };
 
   // --- 7. 暴露接口 ---
@@ -262,5 +283,7 @@ export function unifiedDateService({ activityList, scheduleList, todoList }: Uni
     navigateByView, // prev/next/today
     navigateTo, // 跳转日期并按当前视图锚定
     setAppDate,
+    // 工具函数
+    combineDateAndTime, // 将日期时间戳的年月日和另一个时间戳的时分秒拼接
   };
 }
