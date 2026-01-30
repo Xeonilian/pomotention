@@ -24,7 +24,19 @@
 
       <thead>
         <tr>
-          <th class="col-check"></th>
+          <th class="col-check">            <n-button
+              text
+              type="default"
+              @click.stop="handleQuickAddSchedule"
+              title="快速新增日程"
+              style="transform: translateX(2px) translateY(4px);"
+            >
+              <template #icon>
+                <n-icon size="13">
+                  <Add12Regular />
+                </n-icon>
+              </template>
+            </n-button></th>
           <th class="col-start">开始</th>
           <th class="col-end">结束</th>
           <th class="col-duration">时长</th>
@@ -302,6 +314,7 @@ import { timestampToTimeString } from "@/core/utils";
 import { NCheckbox, NButton, NIcon, NPopover } from "naive-ui";
 import {
   // ChevronCircleDown48Regular,
+  Add12Regular,
   DismissCircle20Regular,
   // ArrowRepeatAll24Regular,
   DismissSquare20Filled,
@@ -344,6 +357,7 @@ const emit = defineEmits<{
       activityId: number;
     }
   ): void;
+  (e: "quick-add-schedule"): void;
 }>();
 
 // 添加状态来控制提示信息
@@ -371,6 +385,11 @@ function handleRowClick(schedule: Schedule) {
   emit("select-row", schedule.id); // 发送选中行事件
   emit("select-task", schedule.taskId || null);
   emit("select-activity", schedule.activityId || null);
+}
+
+// 快速新增日程
+function handleQuickAddSchedule() {
+  emit("quick-add-schedule");
 }
 
 // 编辑相关函数

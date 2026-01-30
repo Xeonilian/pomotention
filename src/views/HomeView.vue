@@ -183,6 +183,8 @@
             @edit-todo-title="handleEditTodoTitle"
             @edit-todo-start="handleEditTodoStart"
             @edit-todo-done="handleEditTodoDone"
+            @quick-add-todo="onQuickAddTodo"
+            @quick-add-schedule="onQuickAddSchedule"
           />
           <WeekPlanner
             v-if="settingStore.settings.showPlanner && settingStore.settings.viewSet === 'week'"
@@ -385,6 +387,8 @@ const onItemChange = (id: number, activityId?: number, taskId?: number) => {
   }
 };
 
+
+
 // 离开页面兜底（Tauri 桌面端同样可用）
 window.addEventListener("beforeunload", () => {
   try {
@@ -430,10 +434,12 @@ function cancelEdit() {
 function onAddActivity(newActivity: Activity) {
   activeId.value = null;
   activityList.value.push(newActivity);
-
-  handleAddActivity(scheduleList.value, newActivity, {
-    activityById: activityById.value,
-  });
+  
+  if (newActivity.class === "S") {
+    handleAddActivity(scheduleList.value, newActivity, {
+      activityById: activityById.value,
+    });
+  }
 
   // 自动转换为任务
   const task = taskService.createTaskFromActivity(newActivity.id, newActivity.title);
@@ -455,6 +461,89 @@ function onAddActivity(newActivity: Activity) {
   selectedActivityId.value = newActivity.id;
   selectedTaskId.value = task.id;
 
+  saveAllDebounced();
+}
+
+// 快速新增待办
+function onQuickAddTodo() {
+  const newActivity: Activity = {
+    id: Date.now(),
+    class: "T",
+    title: "",
+    estPomoI: "",
+    pomoType: "🍅",
+    status: "",
+    dueDate: dateService.appDateTimestamp.value, // 使用当前视图日期
+    parentId: null,
+    synced: false,
+    deleted: false,
+    lastModified: Date.now(),
+  };
+  activityList.value.push(newActivity);
+  
+  // 创建关联的 task
+  const task = taskService.createTaskFromActivity(newActivity.id, newActivity.title);
+  taskList.value = [...taskList.value, task];
+  
+  // 回写 activity.taskId
+  newActivity.taskId = task.id;
+  newActivity.synced = false;
+  newActivity.lastModified = Date.now();
+
+  // 创建 todo
+  newActivity.status = "ongoing";
+  // 与其他地方保持一致，直接传递 computed ref，Vue 会自动解包
+  const { newTodo } = passPickedActivity(newActivity, dateService.appDateTimestamp.value, dateService.isViewDateToday.value);
+  
+  // 确保 newTodo.id 是有效数字（防御性检查）
+  if (typeof newTodo.id !== 'number' || isNaN(newTodo.id)) {
+    console.error('Invalid todo.id generated, using Date.now() as fallback. Original id:', newTodo.id);
+    newTodo.id = Date.now();
+  }
+  
+  newTodo.taskId = task.id; // 关联 task
+  todoList.value = [...todoList.value, newTodo];
+
+  // 同步 UI 选中
+  activeId.value = newActivity.id;
+  selectedActivityId.value = newActivity.id;
+  selectedTaskId.value = task.id;
+  selectedRowId.value = newTodo.id;
+
+  saveAllDebounced();
+}
+
+// 快速新增日程
+function onQuickAddSchedule() {
+  const newActivity: Activity = {
+    id: Date.now(),
+    class: "S",
+    title: "",
+    estPomoI: "",
+    pomoType: "🍅",
+    status: "",
+    dueRange: [Date.now(), "30"], // 使用当前视图日期
+    parentId: null,
+    synced: false,
+    deleted: false,
+    lastModified: Date.now(),
+  };
+  activityList.value.push(newActivity);
+
+  // 创建关联的 task
+  const task = taskService.createTaskFromActivity(newActivity.id, newActivity.title);
+  taskList.value = [...taskList.value, task];
+  
+  // 回写 activity.taskId
+  newActivity.taskId = task.id;
+  newActivity.synced = false;
+  newActivity.lastModified = Date.now();
+  
+  // 创建新的 todo，使用 appDateTimestamp（选中的日期）
+  if (newActivity.class === "S"){
+    handleAddActivity(scheduleList.value, newActivity, {activityById: activityById.value,});
+  }
+  
   saveAllDebounced();
 }
 

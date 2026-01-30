@@ -18,7 +18,7 @@
         @edit-todo-title="handleEditTodoTitle"
         @edit-todo-start="handleEditTodoStart"
         @edit-todo-done="handleEditTodoDone"
-
+        @quick-add-todo="handleQuickAddTodo"
       />
     </div>
     <div class="schedule-container">
@@ -33,6 +33,7 @@
         @edit-schedule-done="handleEditScheduleDone"
         @edit-schedule-duration="handleEditScheduleDuration"
         @edit-schedule-location="handleEditScheduleLocation"
+        @quick-add-schedule="handleQuickAddSchedule"
       />
     </div>
   </div>
@@ -59,6 +60,8 @@ const emit = defineEmits<{
   (e: "suspend-todo", id: number): void;
   (e: "cancel-todo", id: number): void;
   (e: "uncancel-todo", id: number): void;
+  (e: "quick-add-todo"): void;
+  (e: "quick-add-schedule"): void;
   (e: "update-todo-est", id: number, estPomo: number[]): void;
   (e: "update-todo-pomo", id: number, pomo: number[]): void;
   (e: "update-todo-priority", id: number, priority: number): void;
@@ -139,6 +142,7 @@ function updateTodoEst(id: number, estPomo: number[]) {
   emit("update-todo-est", id, estPomo);
 }
 
+
 function handleEditScheduleTitle(scheduleId: number, newTitle: string) {
   emit("edit-schedule-title", scheduleId, newTitle);
 }
@@ -171,6 +175,13 @@ function handleEditScheduleLocation(scheduleId: number, newLocation: string) {
   emit("edit-schedule-location", scheduleId, newLocation);
 }
 
+function handleQuickAddTodo() {
+  emit("quick-add-todo");
+}
+
+function handleQuickAddSchedule() {
+  emit("quick-add-schedule");
+}
 
 </script>
 <style scoped>
