@@ -460,7 +460,7 @@ const TOGGLE_DEBOUNCE = 100; // 防抖延迟（毫秒）
 
 // 番茄输入框标题提示
 const pomoInputTitle = computed(() => {
-  return `单击切换类型 | ${isTouchSupported ? "长按" : "双击"}编辑数量`;
+  return `单击编辑数量 | ${isTouchSupported ? "长按" : "双击"}切换类型`;
 });
 
 // 点击/拖拽检测状态
@@ -907,7 +907,7 @@ function handlePomoInputMouseDown(e: MouseEvent, item: Activity) {
     pomoDoubleClickTimers.value.delete(item.id);
     // 双击：进入编辑模式
     pomoShouldFocus.value.set(item.id, true);
-    focusPomoInput(item.id);
+    handleTogglePomoType(item);
     return;
   }
 
@@ -916,12 +916,12 @@ function handlePomoInputMouseDown(e: MouseEvent, item: Activity) {
     const newTimer = window.setTimeout(() => {
       pomoDoubleClickTimers.value.delete(item.id);
       // 单击：切换类型
-      handleTogglePomoType(item);
+      focusPomoInput(item.id);
     }, DOUBLE_CLICK_DELAY);
     pomoDoubleClickTimers.value.set(item.id, newTimer);
   } else {
     // 移动端：直接切换类型（长按已在长按处理中处理）
-    handleTogglePomoType(item);
+    focusPomoInput(item.id);
   }
 }
 
