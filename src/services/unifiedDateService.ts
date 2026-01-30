@@ -238,6 +238,24 @@ export function unifiedDateService({ activityList, scheduleList, todoList }: Uni
     dateState.app = dayStart;
   };
 
+  // 将 appDateTimestamp 的年月日和给定时间戳的时分秒拼接
+  const combineDateAndTime = (dateTimestamp: number, timeTimestamp: number): number => {
+    const date = new Date(dateTimestamp);
+    const time = new Date(timeTimestamp);
+    
+    const result = new Date(
+      date.getFullYear(),
+      date.getMonth(),
+      date.getDate(),
+      time.getHours(),
+      time.getMinutes(),
+      time.getSeconds(),
+      time.getMilliseconds()
+    );
+    
+    return result.getTime();
+  };
+
   // --- 7. 暴露接口 ---
   return {
     // 状态
@@ -265,5 +283,7 @@ export function unifiedDateService({ activityList, scheduleList, todoList }: Uni
     navigateByView, // prev/next/today
     navigateTo, // 跳转日期并按当前视图锚定
     setAppDate,
+    // 工具函数
+    combineDateAndTime, // 将日期时间戳的年月日和另一个时间戳的时分秒拼接
   };
 }
