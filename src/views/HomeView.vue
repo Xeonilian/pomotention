@@ -120,7 +120,13 @@
               title="输入示例：2025-01-01"
             >
               <template #date-icon>
-                <n-icon :size="18" :component="Search24Regular" />
+                <n-button size="small" text class="view-toggle-btn" @click.stop="onViewSet()" title="切换视图">
+                  <template #icon>
+                    <n-icon color="var(--color-text-primary)">
+                      <CalendarSettings20Regular />
+                    </n-icon>
+                  </template>
+                </n-button>
               </template>
             </n-date-picker>
 
@@ -153,14 +159,6 @@
                 </n-icon>
               </template>
             </n-button>
-
-            <n-button size="small" circle secondary strong @click="onViewSet()" title="切换视图">
-              <template #icon>
-                <n-icon>
-                  <CalendarSettings20Regular />
-                </n-icon>
-              </template>
-            </n-button>
           </div>
         </div>
         <!-- 今日视图容器 -->
@@ -188,15 +186,15 @@
           />
           <WeekPlanner
             v-if="settingStore.settings.showPlanner && settingStore.settings.viewSet === 'week'"
-            @date-change="onDateChange"
-            @date-jump="onDateJump"
             @item-change="onItemChange"
+            @date-select="onDateSelect"
+            @date-select-day-view="onDateSelectDayView"
           />
           <MonthPlanner
             v-if="settingStore.settings.showPlanner && settingStore.settings.viewSet === 'month'"
-            @date-change="onDateChange"
             @item-change="onItemChange"
-            @date-jump="onDateJump"
+            @date-select="onDateSelect"
+            @date-select-day-view="onDateSelectDayView"
           />
         </div>
       </div>
@@ -260,7 +258,7 @@ import { getTimestampForTimeString } from "@/core/utils";
 import { ViewType } from "@/core/constants";
 import { useResize } from "@/composables/useResize";
 import IcsExportModal from "@/components/IcsExportModal.vue";
-import { Previous24Regular, Next24Regular, Search24Regular, CalendarSettings20Regular, QrCode24Regular, ArrowRepeatAll24Regular } from "@vicons/fluent";
+import { Previous24Regular, Next24Regular, CalendarSettings20Regular, QrCode24Regular, ArrowRepeatAll24Regular } from "@vicons/fluent";
 
 import {
   handleAddActivity,
@@ -344,14 +342,16 @@ const onWeekJump = () => {
   settingStore.settings.topHeight = 610;
 };
 
-const onDateJump = (day: number) => {
+// 选择进入日视图的具体日期
+const onDateSelectDayView = (day: number) => {
   settingStore.settings.viewSet = "day";
   settingStore.settings.topHeight = 300;
   dateService.setAppDate(day);
   dataStore.setSelectedDate(day);
 };
 
-const onDateChange = (day: number) => {
+// #HACK
+const onDateSelect = (day: number) => {
   dateService.setAppDate(day);
   dataStore.setSelectedDate(day);
   selectedActivityId.value = null;
@@ -360,7 +360,7 @@ const onDateChange = (day: number) => {
   selectedRowId.value = null;
 };
 
-// week和month planner 引起选中的任务行 #TODO
+// week和month planner 引起选中的任务行 
 const onItemChange = (id: number, activityId?: number, taskId?: number) => {
   selectedRowId.value = null;
   activeId.value = undefined;
@@ -567,7 +567,12 @@ function onRepeatActivity() {
         deleted: false,
         lastModified: Date.now(),
         ...(selectActivity.dueRange && {
-          dueRange: [null, selectActivity.dueRange[1]] as [number | null, string],
+          dueRange: [
+            !dateService.isViewDateToday
+              ? dateService.combineDateAndTime(dateService.appDateTimestamp, selectActivity.dueRange[0])
+              : null,
+            selectActivity.dueRange[1]
+          ] as [number | null, string],
         }),
       };
       activityList.value.push(newActivity);
@@ -579,9 +584,11 @@ function onRepeatActivity() {
       newActivity.synced = false;
       newActivity.lastModified = Date.now();
       
-      handleAddActivity(scheduleList.value, newActivity, {
-        activityById: activityById.value,
-      });
+      if (newActivity.class === "S"){
+        handleAddActivity(scheduleList.value, newActivity, {
+          activityById: activityById.value,
+        });
+      }
       activeId.value = newActivity.id;
     }
   }
@@ -610,11 +617,11 @@ function onRepeatActivity() {
       deleted: false,
       lastModified: Date.now(),
       ...(sourceActivity.dueRange && {
-        dueRange: [null, sourceActivity.dueRange[1]] as [number | null, string],
+        dueRange: [dateService.combineDateAndTime(dateService.appDateTimestamp, sourceActivity.dueRange[0]), sourceActivity.dueRange[1]] as [number | null, string],
       }),
     };
     activityList.value.push(newActivity);
-    
+
     // 创建关联的 task
     const task = taskService.createTaskFromActivity(newActivity.id, newActivity.title);
     taskList.value = [...taskList.value, task];
@@ -623,9 +630,13 @@ function onRepeatActivity() {
     newActivity.lastModified = Date.now();
     
     // 创建新的 todo，使用 appDateTimestamp（选中的日期）
-    const { newTodo } = passPickedActivity(newActivity, dateService.appDateTimestamp, dateService.isViewDateToday);
-    newTodo.taskId = task.id; // 关联 task
-    todoList.value = [...todoList.value, newTodo];
+    if (newActivity.class === "T"){
+      const { newTodo } = passPickedActivity(newActivity, dateService.appDateTimestamp, dateService.isViewDateToday);
+      newTodo.taskId = task.id; // 关联 task
+      todoList.value = [...todoList.value, newTodo];
+    } else {
+      handleAddActivity(scheduleList.value, newActivity, {activityById: activityById.value,});
+    }
     
     // 同步 UI 选中
     activeId.value = newActivity.id;
@@ -967,7 +978,6 @@ function onDateSet(direction: "prev" | "next" | "today" | "query") {
   switch (direction) {
     case "prev":
       dateService.navigateByView("prev");
-
       break;
     case "next":
       dateService.navigateByView("next");
@@ -982,7 +992,8 @@ function onDateSet(direction: "prev" | "next" | "today" | "query") {
       break;
     case "query":
       if (queryDate.value) {
-        dateService.navigateTo(new Date(queryDate.value));
+        const day = dateService.navigateTo(new Date(queryDate.value));
+        dataStore.setSelectedDate(day);
       }
       queryDate.value = null;
       break;
@@ -1023,7 +1034,7 @@ function handleEditScheduleTitle(id: number, newTitle: string) {
   activity.synced = false;
   activity.lastModified = Date.now();
 
-  // 找到task 并重新赋值 #HACK
+  // 找到task 并重新赋值 
   const relatedTask = taskByActivityId.value.get(schedule.activityId);
   if (relatedTask) {
     relatedTask.activityTitle = newTitle;
@@ -1050,7 +1061,7 @@ function handleEditTodoTitle(id: number, newTitle: string) {
   activity.synced = false;
   activity.lastModified = Date.now();
 
-  // 找到task 并重新赋值 #HACK
+  // 找到task 并重新赋值
   const relatedTask = taskByActivityId.value.get(todo.activityId);
   if (relatedTask) {
     relatedTask.activityTitle = newTitle;
@@ -1426,15 +1437,15 @@ const { startResize: startRightResize } = useResize(
 }
 
 .resize-handle {
-  height: 8px;
-  background: #f0f0f0;
+  height: 4px;
+  background: var(--color-background-light);
   cursor: ns-resize;
   position: relative;
   margin: 0;
 }
 
 .resize-handle:hover {
-  background: #e0e0e0;
+  background: var(--color-background-dark);
 }
 
 .resize-handle::after {
@@ -1450,15 +1461,15 @@ const { startResize: startRightResize } = useResize(
 }
 
 .resize-handle-horizontal {
-  width: 8px;
-  background: #f0f0f0;
+  width: 4px;
+  background: var(--color-background-light);
   cursor: ew-resize;
   position: relative;
   margin: 0;
 }
 
 .resize-handle-horizontal:hover {
-  background: #e0e0e0;
+  background: var(--color-background-dark);
 }
 
 .resize-handle-horizontal::after {
@@ -1483,5 +1494,15 @@ const { startResize: startRightResize } = useResize(
 .search-date :deep(.n-input-wrapper) {
   padding-left: 6px;
   padding-right: 6px;
+}
+
+.view-toggle-btn {
+  margin-right: 2px;
+  transform: translateY(-1px) !important;
+}
+
+.view-toggle-btn:hover {
+  background-color: var(--color-background-light);
+  border-radius: 4px;
 }
 </style>

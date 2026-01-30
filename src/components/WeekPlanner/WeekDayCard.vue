@@ -10,7 +10,7 @@
       <div class="dow">
         {{ dayNames[day.index] }}
       </div>
-      <div class="date" :class="{ today: day.isToday }" @click="() => handleDateJump(day.startTs)">
+      <div class="date" :class="{ today: day.isToday }" @click="() => handleDateSelectDayView(day.startTs)">
         {{ formatMonthDay(day.startTs) }}
       </div>
     </div>
@@ -91,22 +91,22 @@ defineProps<{
 
 // 定义emit
 const emit = defineEmits<{
-  "date-change": [timestamp: number];
-  "date-jump": [timestamp: number];
+  "date-select": [timestamp: number];
+  "date-select-day-view": [timestamp: number];
   "item-change": [id: number, activityId?: number, taskId?: number];
 }>();
 
 // 事件处理
 const handleDateSelect = (ts: number) => {
-  emit("date-change", ts);
+  emit("date-select", ts);
 };
 
-const handleDateJump = (ts: number) => {
-  emit("date-jump", ts);
+const handleDateSelectDayView = (ts: number) => {
+  emit("date-select-day-view", ts);
 };
 
 const handleItemChange = (id: number, _ts: number, activityId?: number, taskId?: number) => {
-  // emit("date-change", ts);
+  // emit("date-select", ts);
   emit("item-change", id, activityId, taskId);
 };
 </script>

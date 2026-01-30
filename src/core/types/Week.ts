@@ -101,8 +101,8 @@ export interface WeekBlockItemProps {
  * WeekPlanner 组件Emits类型
  */
 export interface WeekPlannerEmits {
-  "date-change": [timestamp: number];
-  "date-jump": [timestamp: number];
+  "date-select-day-view": [timestamp: number];
+  "date-select": [timestamp: number];
   "item-change": [id: number, activityId?: number, taskId?: number];
 }
 
@@ -110,8 +110,8 @@ export interface WeekPlannerEmits {
  * DayCard 组件Emits类型
  */
 export interface DayCardEmits {
-  "date-change": [timestamp: number];
-  "date-jump": [timestamp: number];
+  "date-select-day-view": [timestamp: number];
+  "date-select": [timestamp: number];
   "item-change": [id: number, activityId?: number, taskId?: number];
 }
 

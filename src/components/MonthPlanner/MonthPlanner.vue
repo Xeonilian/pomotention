@@ -18,7 +18,7 @@
           <div
             class="date-badge"
             :class="{ today: day.isToday }"
-            @click="() => handleDateJump(day.startTs)"
+            @click="() => handleDateSelectDayView(day.startTs)"
             :style="{
               color: getPomoColor(day.pomoRatio),
               backgroundColor: getPomoBgColorHEX(day.pomoRatio),
@@ -71,8 +71,8 @@ import { useDataStore } from "@/stores/useDataStore";
 import { storeToRefs } from "pinia";
 
 const emit = defineEmits<{
-  "date-change": [timestamp: number];
-  "date-jump": [timestamp: number];
+  "date-select": [timestamp: number];
+  "date-select-day-view": [timestamp: number];
   "item-change": [id: number, activityId?: number, taskId?: number];
 }>();
 
@@ -337,15 +337,14 @@ function formatDay(ts: number) {
 
 // 处理日期选择
 const handleDateSelect = (day: number) => {
-  emit("date-change", day);
+  emit("date-select", day);
 };
 
-const handleDateJump = (day: number) => {
-  emit("date-jump", day);
+const handleDateSelectDayView = (day: number) => {
+  emit("date-select-day-view", day);
 };
 
 const handleItemSelect = (id: number, _ts: number, activityId?: number, taskId?: number) => {
-  // emit("date-change", ts);
   emit("item-change", id, activityId, taskId);
 };
 

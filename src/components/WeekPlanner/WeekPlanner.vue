@@ -13,8 +13,8 @@
         :MAX_PER_DAY="MAX_PER_DAY"
         :get-hour-tick-top="getHourTickTop"
         :get-item-block-style="getItemBlockStyle"
-        @date-change="handleDateSelect"
-        @date-jump="handleDateJump"
+        @date-select="handleDateSelect"
+        @date-select-day-view="handleDateSelectDayView"
         @item-change="handleItemSelect"
       />
     </div>
@@ -81,20 +81,21 @@ const dayNames = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 
 // 4. 事件派发
 const emit = defineEmits<{
-  "date-change": [timestamp: number];
-  "date-jump": [timestamp: number];
+  "date-select": [timestamp: number];
+  "date-select-day-view": [timestamp: number];
   "item-change": [id: number, activityId?: number, taskId?: number];
 }>();
 
 // 5. 事件处理
+// 选择进入周视图的具体日期
 const handleDateSelect = (ts: number) => {
-  emit("date-change", ts);
+  emit("date-select", ts);
 };
-
-const handleDateJump = (ts: number) => {
-  emit("date-jump", ts);
+// 选择进入日视图的具体日期
+const handleDateSelectDayView = (ts: number) => {
+  emit("date-select-day-view", ts);
 };
-
+// 选择进入具体事件
 const handleItemSelect = (id: number, activityId?: number, taskId?: number) => {
   emit("item-change", id, activityId, taskId);
 };
