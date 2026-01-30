@@ -91,7 +91,7 @@ onMounted(() => {
 
   // 如果番茄钟正在运行且来自序列，恢复 pomoSeq 运行状态
   if (timerStore.isActive && timerStore.isFromSequence) {
-    console.log("[PomotentionTimer] Component mounted, restoring pomoSeq running state");
+    console.log("[PomotentionTimer] Component mounted, restoring pomoSeq running state", pomodoroContainerRef.value?.clientHeight);
     isPomoSeqRunning.value = true;
   }
 });
