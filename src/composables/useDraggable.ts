@@ -130,6 +130,25 @@ export function useDraggable(dragThreshold = 5) {
     }
   }
 
+  // 以下边为基准重新定位，避免 showPomoSeq 展开时超出视口
+  // 不传 customHeight 时用容器实际 offsetHeight（含 border/padding），更准
+  function repositionToBottom(customHeight?: number) {
+    if (!draggableContainer.value) return;
+    const parent = draggableContainer.value.parentElement;
+    if (!parent) return;
+    const margin = 20;
+    const parentHeight = parent.clientHeight;
+    const el = draggableContainer.value;
+    const height = customHeight ?? el.offsetHeight ?? 140;
+    // 若传了 customHeight 则加一点余量，避免上报值比实际渲染略小
+    const heightUsed = customHeight != null ? customHeight + 12 : height;
+    const top = Math.max(0, parentHeight - heightUsed - margin);
+    const left = el.offsetLeft;
+    el.style.top = `${top}px`;
+    el.style.left = `${left}px`;
+    lastPosition.value = { x: left, y: top };
+  }
+
   // 控制 Draggable 容器的位置和显示
   async function updateDraggableContainerVisibility(show: boolean) {
     await nextTick();
@@ -165,6 +184,7 @@ export function useDraggable(dragThreshold = 5) {
   return {
     draggableContainer, // 绑定 ref="draggableContainer"
     setInitialPosition, // 用于初始化
+    repositionToBottom, // 以下边为基准重新定位（showPomoSeq 展开/收缩时用）
     lastPosition, // 记录位置状态
     handleDragStart, // 绑定 @pointerdown="handleDragStart"
     updateDraggableContainerVisibility, // 控制可见性
