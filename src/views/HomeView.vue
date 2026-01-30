@@ -350,7 +350,7 @@ const onDateSelectDayView = (day: number) => {
   dataStore.setSelectedDate(day);
 };
 
-// #HACK
+// 选择进入这一天，周月视图使用
 const onDateSelect = (day: number) => {
   dateService.setAppDate(day);
   dataStore.setSelectedDate(day);
@@ -975,16 +975,20 @@ function onUpdateScheduleStatus(id: number, isChecked: boolean) {
 
 /** 修改日期切换按钮的处理函数 */
 function onDateSet(direction: "prev" | "next" | "today" | "query") {
+  let day: number;
   switch (direction) {
     case "prev":
-      dateService.navigateByView("prev");
+      day = dateService.navigateByView("prev");    
+      dataStore.setSelectedDate(day);
       break;
     case "next":
-      dateService.navigateByView("next");
+      day = dateService.navigateByView("next");
+      dataStore.setSelectedDate(day);
       break;
     case "today":
-      const day = dateService.navigateByView("today");
+      day = dateService.navigateByView("today");
       dataStore.setSelectedDate(day);
+      dateService.setAppDate(day);
       selectedActivityId.value = null;
       selectedTaskId.value = null;
       activeId.value = undefined;
@@ -992,8 +996,9 @@ function onDateSet(direction: "prev" | "next" | "today" | "query") {
       break;
     case "query":
       if (queryDate.value) {
-        const day = dateService.navigateTo(new Date(queryDate.value));
+      day = dateService.navigateTo(new Date(queryDate.value));
         dataStore.setSelectedDate(day);
+        dateService.setAppDate(day);
       }
       queryDate.value = null;
       break;
