@@ -130,7 +130,7 @@ const emit = defineEmits([
   z-index: 10;
   background-color: var(--color-background);
   border-radius: 15px;
-  width: 260px;
+  width: 220px;
   height: 40px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
