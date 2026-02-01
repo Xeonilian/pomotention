@@ -176,7 +176,7 @@ const dataStore = useDataStore();
 
 // === 1. 初始化 Composables ===
 const { buttonStyle, viewControls, toggleSettingPanel } = useButtonStyle();
-const { draggableContainer, handleDragStart, updateDraggableContainerVisibility, onExitMiniMode } = useDraggable(5);
+const { draggableContainer, handleDragStart, repositionToBottom, updateDraggableContainerVisibility, onExitMiniMode } = useDraggable(5);
 
 const {
   isMiniMode,
@@ -229,6 +229,19 @@ function handleMenuSelect(key: string) {
 watch(route, (newVal) => {
   currentRoutePath.value = newVal.path;
 });
+
+// showPomoSeq 展开/收缩时以下边为基准重新定位，避免超出视口（等布局完成用容器实际高度算）
+watch(
+  () => reportedPomodoroHeight.value,
+  async () => {
+    if (!isMiniMode.value && settingStore.settings.showPomodoro) {
+      await nextTick();
+      requestAnimationFrame(() => {
+        repositionToBottom(); // 不传参，用容器实际 offsetHeight，避免上报值偏小或 DOM 未更新
+      });
+    }
+  }
+);
 
 // === 3. 视图控制按钮 ===
 function handleMainLayoutViewToggle(key: string) {

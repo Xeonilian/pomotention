@@ -273,15 +273,15 @@ function addPomodoro(): void {
 // 添加 ref
 const progressContainer = ref<HTMLElement | null>(null);
 
-// 创建时间块函数
+// 创建时间块函数（用 flex 比例适配手机窄屏，不写死 px 宽度）
 function createTimeBlock(duration: number, type: string): HTMLElement {
   const block = document.createElement("div");
   block.className = "time-block";
-  // 根据时长设置宽度，保持总长度占满
-  const totalWidth = 196; // 总容器宽度
   const totalDuration = parseSequence(sequenceInput.value).reduce((sum, step) => sum + step.duration, 0);
-  const width = (duration / totalDuration) * totalWidth;
-  block.style.width = `${width}px`;
+  const flexGrow = totalDuration > 0 ? duration / totalDuration : 0;
+  block.style.flexGrow = String(flexGrow);
+  block.style.flexShrink = String(flexGrow);
+  block.style.flexBasis = "0";
   block.style.height = "20px";
   block.style.margin = "0.5px";
   block.style.borderRadius = "2px";
@@ -334,32 +334,7 @@ function initializeProgress(sequence: string): void {
   });
 }
 
-// 添加样式
-const style = document.createElement("style");
-style.textContent = `
-.time-block {
-  transition: background-color 0.3s ease;
-  margin: 0;
-}
-
-.time-block.work {
-  background-color: var(--color-red-light-transparent);
-}
-
-.time-block.break {
-  background-color: var(--color-green-light-transparent);
-}
-
-@keyframes progress-animation {
-  from {
-    background-position: 0 0;
-  }
-  to {
-    background-position: 20px 0;
-  }
-}
-`;
-document.head.appendChild(style);
+// 时间块样式已移至组件 scoped style，用 :deep(.progress-container .time-block) 保证手机端生效
 
 // 切换白噪音
 function handleToggleWhiteNoise(): void {
@@ -468,6 +443,7 @@ function resetWhiteNoise(sound: SoundType) {
 .pomodoro-sequence {
   text-align: center;
   width: 200px;
+  max-width: 100%;
   margin: 0 auto;
   background-color: var(--color-background) !important;
   padding: 2px 10px 0px 10px;
@@ -501,15 +477,35 @@ function resetWhiteNoise(sound: SoundType) {
   display: flex;
   margin: 0px auto;
   width: 200px;
+  max-width: 100%;
+  min-width: 0; /* 允许在窄屏下收缩 */
   height: 0;
   overflow: hidden;
 }
 
-.progress-container:has(.time-block) {
-  height: 25px; /* 增加进度条容器高度 */
+/* 运行中时直接由父级 .running 控制高度，避免依赖 :has()（部分手机不支持） */
+.pomodoro-sequence.running .progress-container {
+  height: 25px;
+  min-height: 25px;
   margin-top: 0px;
   margin-bottom: 0px;
+  overflow: visible;
 }
+
+/* 动态插入的 .time-block 用 :deep 保证在手机端也能被样式命中 */
+:deep(.progress-container .time-block) {
+  transition: background-color 0.3s ease;
+  margin: 0;
+}
+
+:deep(.progress-container .time-block.work) {
+  background-color: var(--color-red-light-transparent);
+}
+
+:deep(.progress-container .time-block.break) {
+  background-color: var(--color-green-light-transparent);
+}
+
 
 .sequence-input {
   max-height: 60px;
@@ -609,5 +605,17 @@ function resetWhiteNoise(sound: SoundType) {
 
 .clickable-badge:hover :deep(.n-badge-sup) {
   background-color: var(--color-red);
+}
+</style>
+
+<style>
+/* 不加 scoped，保证 keyframes 名为 progress-animation，JS 里 element.style.animation 才能找到斜条纹跑动 */
+@keyframes progress-animation {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 20px 0;
+  }
 }
 </style>

@@ -11,18 +11,19 @@
         size="small"
         class="state-input"
         ref="inputRef"
+        placeholder=""
       />
       <n-text v-else class="state-text-clickable">{{ displayMessage }}</n-text>
     </div>
 
     <!-- 2 时钟 -->
-    <div class="timer-container">
+    <div class="timer-container" :class="{ 'is-compact': isCompactMode }">
       <n-text class="timer">{{ formattedTime }}</n-text>
     </div>
 
     <!-- 3 工作进度条 -->
     <!-- 3-1 进度条容器 -->
-    <div v-if="!timerStore.isBreaking" class="progress-container" :style="timerStyleVars">
+    <div v-if="!timerStore.isBreaking && !isCompactMode" class="progress-container" :style="timerStyleVars">
       <!-- 3-2 蓝色进度条 -->
       <n-progress
         :percentage="progressPercentage"
@@ -58,13 +59,13 @@
     </div>
 
     <!-- 4 休息进度条 -->
-    <div class="progress-container-break" v-else>
+    <div v-if="timerStore.isBreaking && !isCompactMode" class="progress-container-break">
       <n-progress :percentage="progressPercentage" :color="'var(--color-green)'" :show-indicator="false" :height="20" :border-radius="2" />
       <!-- 休息模式无需显示分隔线和标签 -->
     </div>
 
     <!-- 5 按钮 -->
-    <div class="button-container">
+    <div v-if="!isCompactMode" class="button-container">
       <!-- 5-1 工作按钮：只在非休息状态显示 -->
       <n-button
         v-if="timerStore.pomodoroState !== 'breaking' && !showPomoSeq"
@@ -124,10 +125,13 @@ const timerStore = useTimerStore();
 const isGray = computed(() => timerStore.isGray); // 进度条设置
 const settingStore = useSettingStore();
 
-// 添加 showPomoSeq prop
-defineProps<{
+// 添加 showPomoSeq 和 isCompactMode prop
+const props = defineProps<{
   showPomoSeq?: boolean;
+  isCompactMode?: boolean;
 }>();
+
+const isCompactMode = computed(() => props.isCompactMode ?? false);
 
 const barLength = computed(() => settingStore.settings.style.barLength);
 const redBarColor = computed(() => settingStore.settings.style.redBarColor);
@@ -372,6 +376,17 @@ function handleDurationSelect(key: number): void {
   line-height: 1em;
 }
 
+/* 紧凑模式下的时钟大小 */
+.timer-container.is-compact .timer {
+  font-size: 2.5em;
+}
+
+/* 紧凑模式下的整体宽度调整 */
+.pomodoro-timer:has(.timer-container.is-compact) {
+  width: 120px;
+  padding: 8px;
+}
+
 /* 3 进度条 */
 /* 3-1 进度条容器 */
 .progress-container {
@@ -530,13 +545,5 @@ function handleDurationSelect(key: number): void {
   display: flex;
   align-items: center;
   justify-content: space-between;
-}
-
-/* #BUG 无用 */
-:deep(.n-dropdown-menu, .n-dropdown-option, .n-dropdown-option-body) {
-  width: 20px !important;
-  height: 20px;
-  font-size: 12px !important;
-  color: red !important;
 }
 </style>

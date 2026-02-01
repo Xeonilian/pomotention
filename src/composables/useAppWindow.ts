@@ -77,7 +77,7 @@ export function useAppWindow() {
             // 限制校准范围，防止算出离谱的数值 (例如 0.0001 或 100)
             if (factorReal > 0.5 && factorReal < 3 && factorReal !== 1) {
               factorReal = Math.ceil(factorReal * 100) / 100;
-              // settingStore.settings.miniModeRefactor = factorReal; // 建议：先注释掉自动更新 factor，这往往是罪魁祸首
+              settingStore.settings.miniModeRefactor = factorReal; // 建议：先注释掉自动更新 factor，这往往是罪魁祸首
               console.log(`[mini] Calculated real factor: ${factorReal} (Container: ${containerW})`);
             }
           } else {
