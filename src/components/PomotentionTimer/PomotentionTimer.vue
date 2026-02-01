@@ -12,11 +12,15 @@
     >
       <n-button
         size="tiny"
-        type="primary"
-        quaternary
+        text
         :title="isMiniMode ? '退出迷你模式' : settingStore.settings.isCompactMode ? '展开' : '紧凑模式'"
         @click="handleToggleCompactMode"
         class="compact-toggle-button"
+        style="
+          --n-text-color-hover: var(--color-text-secondary) !important;
+          --n-text-color-pressed: var(--color-text-secondary) !important;
+          --n-text-color-focus: var(--color-text-secondary) !important;
+        "
       >
         <template #icon>
           <n-icon size="14" :component="ArrowExpand24Regular" />
@@ -82,15 +86,18 @@ const emit = defineEmits<{
 }>();
 
 function reportSize() {
-  const width = 221; // 固定宽度
+  let width; // 固定宽度
   let height; // 根据状态动态调整高度
 
   // 紧凑模式下只显示状态文字和时钟，高度约为 70px
   if (settingStore.settings.isCompactMode) {
+    width = 140;
     height = 70;
   } else if (props.showPomoSeq) {
     height = !isPomoSeqRunning.value ? 240 : 170; // 序列模式
+    width = 221;
   } else {
+    width = 221;
     height = 140; // 非运行和非序列模式
   }
   // console.log("[PomotentionTimer]", width, height);
