@@ -64,7 +64,7 @@ import { storeToRefs } from "pinia";
 
 const dataStore = useDataStore();
 const { selectedDate } = storeToRefs(dataStore);
-// 定义两种返回类型的联合类型（关键修改 1）
+// 定义两种返回类型的联合类型
 type WeekBlockStyle =
   | { display: string } // 只包含 display 的情况
   | {
