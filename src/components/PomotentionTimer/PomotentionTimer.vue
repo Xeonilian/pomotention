@@ -13,7 +13,7 @@
       <n-button
         size="tiny"
         type="primary"
-        quaternary 
+        quaternary
         :title="isMiniMode ? '退出迷你模式' : settingStore.settings.isCompactMode ? '展开' : '紧凑模式'"
         @click="handleToggleCompactMode"
         class="compact-toggle-button"
@@ -109,17 +109,9 @@ onMounted(() => {
 });
 
 // 监听所有影响尺寸的因素变化
-watch(
-  [
-    () => props.showPomoSeq,
-    () => props.isMiniMode,
-    () => isPomoSeqRunning.value,
-    () => settingStore.settings.isCompactMode,
-  ],
-  () => {
-    reportSize();
-  }
-);
+watch([() => props.showPomoSeq, () => props.isMiniMode, () => isPomoSeqRunning.value, () => settingStore.settings.isCompactMode], () => {
+  reportSize();
+});
 
 function exitMiniMode() {
   if (isTauri()) {
@@ -207,7 +199,6 @@ function handlePomoSeqRunning(status: boolean) {
   padding: 0px;
 }
 
-
 .compact-toggle-button:disabled,
 .pomo-toggle-button:disabled {
   opacity: 0.5;
@@ -251,7 +242,6 @@ function handlePomoSeqRunning(status: boolean) {
   z-index: 5;
 }
 
-
 /* miniMode */
 
 .pomodoro-content-area.sequence-mode.is-minimode :deep(.pomodoro-timer) {
@@ -282,10 +272,10 @@ function handlePomoSeqRunning(status: boolean) {
   width: 140px !important;
 }
 .is-compact .compact-toggle-button {
-  left:3px;
+  left: 3px;
   top: 3px;
   color: var(--color-text-secondary);
-  font-size:small;
+  font-size: small;
   background-color: var(--color-background);
 }
 </style>
