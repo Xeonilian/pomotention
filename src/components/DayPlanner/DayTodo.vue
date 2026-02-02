@@ -25,7 +25,6 @@
         <tr>
           <th class="col-check">
             <n-button
-              v-if="dateService.isViewDateToday"
               text
               type="default"
               @click.stop="handleQuickAddTodo"
@@ -384,7 +383,6 @@ import { useActivityTagEditor } from "@/composables/useActivityTagEditor";
 import TagSelector from "../TagSystem/TagSelector.vue";
 const dataStore = useDataStore();
 const { activeId, selectedRowId, todosForCurrentViewWithTaskRecords } = storeToRefs(dataStore);
-const dateService = dataStore.dateService;
 
 // 编辑用
 const editingRowId = ref<number | null>(null);
