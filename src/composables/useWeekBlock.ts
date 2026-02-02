@@ -38,16 +38,17 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targe
     }
 
     if (minHour === 24 && maxHour === 0) {
-      minHour = 0;
-      maxHour = 24;
+      minHour = 6;
+      maxHour = 22;
     }
 
     minHour = Math.floor(minHour);
     maxHour = Math.min(Math.ceil(maxHour), 24);
 
+    // 基础范围是6-22，如果block超出范围则动态扩展
     return {
-      startHour: minHour < 6 ? minHour : 6, // 如果block在6点前开始，时间轴从更早时间开始
-      endHour: maxHour < 22 ? 22 : maxHour,
+      startHour: minHour < 6 ? minHour : 6,
+      endHour: maxHour > 22 ? maxHour : 22,
     };
   });
 
@@ -59,11 +60,8 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targe
 
     // 如果传入了目标高度，就按高度/小时数计算，否则用默认值
     if (height && totalHours > 0) {
-      const result = height / totalHours;
-      // console.log(`pxPerHour calculated: targetHeight=${height}, totalHours=${totalHours}, result=${result}`);
-      return result;
+      return height / totalHours;
     }
-    console.log(`pxPerHour using default: ${BASE_PX_PER_HOUR}`);
     return BASE_PX_PER_HOUR;
   });
 
@@ -174,7 +172,7 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targe
 
         startHour = startDate.getHours() + startDate.getMinutes() / 60;
         const endHour = endDate.getHours() + endDate.getMinutes() / 60;
-        durationHours = Math.max(endHour - startHour, 0.25); // 最小15分钟
+        durationHours = Math.max(endHour - startHour, 0.5); // 最小30分钟
       } else {
         // 对于schedule类型，使用实际的开始和结束时间
         const startDate = new Date(item.start);

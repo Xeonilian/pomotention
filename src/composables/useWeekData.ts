@@ -20,7 +20,7 @@ export function useWeekData() {
 
   // 2. 时间戳提取函数
   const pickTodoTs = (t: Todo): number | null => {
-    return t.startTime ?? t.dueDate ?? t.id ?? null;
+    return t.id ?? t.startTime ?? t.dueDate ?? null;
   };
 
   const pickScheduleTs = (s: Schedule): number | null => {
