@@ -210,7 +210,9 @@
       ></div>
       <!-- 任务视图 -->
       <div v-if="settingStore.settings.showTask" class="middle-bottom" :style="{ height: `calc(100% - ${topHeight}px - 8px)` }">
-        <TaskTracker />
+        <div class="task-container">
+          <TaskTracker />
+        </div>
       </div>
     </div>
 
@@ -1314,12 +1316,12 @@ const topHeight = computed({
   set: (v) => (settingStore.settings.topHeight = v),
 });
 
-const { startResize: startVerticalResize } = useResize(topHeight, "vertical", 0, 610);
+const { startResize: startVerticalResize } = useResize(topHeight, "vertical", 0, 670);
 const { startResize: startLeftResize } = useResize(
   leftWidth,
   "horizontal",
-  10,
-  400,
+  95,
+  150,
   false // 左侧面板
 );
 const { startResize: startRightResize } = useResize(
@@ -1347,7 +1349,7 @@ const { startResize: startRightResize } = useResize(
   overflow: hidden;
   margin-right: 0;
   background: var(--color-background);
-  min-width: 90px;
+  min-width: 0px;
 }
 
 .right {
@@ -1485,13 +1487,21 @@ const { startResize: startRightResize } = useResize(
 
 .middle-bottom {
   background: var(--color-background);
-  overflow: auto;
   padding: 4px;
   box-sizing: border-box;
-  flex: 1;
   display: flex;
   flex-direction: column;
-  z-index: 2;
+
+}
+
+.task-container {
+  background: var(--color-background);
+  flex: 1;
+  overflow: auto;
+  min-height: 0; /* 重要：允许 flex 子项收缩 */
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
 .planner-view-container {
