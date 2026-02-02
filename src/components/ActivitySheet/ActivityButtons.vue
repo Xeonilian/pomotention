@@ -25,6 +25,7 @@
       secondary
       :type="props.isDeleted ? 'error' : 'default'"
       size="small"
+      :disabled="activeId === null || activeId === undefined"
     >
       <template #icon>
         <n-icon>
@@ -34,33 +35,34 @@
       </template>
     </n-button>
 
-   
-    <n-button v-if=" !props.hasParent"
-          secondary
-          circle
-          type="default"
-          size="small"
-          title="生成子活动"
-          :disabled="props.activeId === null || isSelectedClassS || !!props.hasParent"
-          @click="() => emit('create-child-activity')"
-        >
-          <template #icon>
-            <n-icon><TextGrammarArrowRight24Regular /></n-icon>
-          </template>
-        </n-button>
-        <n-button v-else
-          secondary
-          type="default"
-          circle
-          size="small"
-          title="升级为兄弟"
-          :disabled="props.activeId === null || isSelectedClassS || !props.hasParent"
-          @click="() => emit('increase-child-activity')"
-        >
-          <template #icon>
-            <n-icon><TextGrammarArrowLeft24Regular /></n-icon>
-          </template>
-        </n-button>
+    <n-button
+      v-if="!props.hasParent"
+      secondary
+      circle
+      type="default"
+      size="small"
+      title="生成子活动"
+      :disabled="props.activeId === null || activeId === undefined || isSelectedClassS || !!props.hasParent || props.isDeleted"
+      @click="() => emit('create-child-activity')"
+    >
+      <template #icon>
+        <n-icon><TextGrammarArrowRight24Regular /></n-icon>
+      </template>
+    </n-button>
+    <n-button
+      v-else
+      secondary
+      type="default"
+      circle
+      size="small"
+      title="升级为兄弟"
+      :disabled="props.activeId === null || isSelectedClassS || !props.hasParent"
+      @click="() => emit('increase-child-activity')"
+    >
+      <template #icon>
+        <n-icon><TextGrammarArrowLeft24Regular /></n-icon>
+      </template>
+    </n-button>
 
     <n-button title="添加任务" @click="$emit('add-todo')" circle secondary type="info" size="small">
       <template #icon>
