@@ -251,9 +251,10 @@
 
 <script setup lang="ts">
 // ------------------------ 导入依赖 ------------------------
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, onUnmounted, computed, nextTick } from "vue";
 import { defineAsyncComponent } from "vue";
 import { storeToRefs } from "pinia";
+import { onBeforeRouteLeave } from "vue-router";
 
 import type { Activity } from "@/core/types/Activity";
 import { getTimestampForTimeString } from "@/core/utils";
@@ -331,6 +332,7 @@ const { currentDatePomoCount, globalRealPomo } = usePomodoroStats();
 const isViewDateToday = computed(() => dateService.isViewDateToday);
 const isViewDateYesterday = computed(() => dateService.isViewDateYesterday);
 const isViewDateTomorrow = computed(() => dateService.isViewDateTomorrow);
+const appDateTimestamp = computed(() => dateService.appDateTimestamp);
 
 // weekplanner month 引起变化日期
 const onMonthJump = () => {
@@ -493,7 +495,9 @@ function onQuickAddTodo() {
   // 创建 todo
   newActivity.status = "ongoing";
   // 与其他地方保持一致，直接传递 computed ref，Vue 会自动解包
-  const { newTodo } = passPickedActivity(newActivity, dateService.appDateTimestamp.value, dateService.isViewDateToday.value);
+  const { newTodo } = passPickedActivity(newActivity, appDateTimestamp.value, isViewDateToday.value);
+
+  console.log(appDateTimestamp.value,  isViewDateToday.value)
   
   // 确保 newTodo.id 是有效数字（防御性检查）
   if (typeof newTodo.id !== 'number' || isNaN(newTodo.id)) {
@@ -599,7 +603,7 @@ function onDeleteActivity(id: number | null | undefined) {
 /** 选中活动，将其转为 todo 并作为 picked */
 function onPickActivity(activity: Activity) {
   activity.status = "ongoing";
-  const { newTodo } = passPickedActivity(activity, dateService.appDateTimestamp, dateService.isViewDateToday);
+  const { newTodo } = passPickedActivity(activity, appDateTimestamp.value, isViewDateToday.value);
   todoList.value = [...todoList.value, newTodo];
   selectedActivityId.value = activity.id;
   saveAllDebounced();
@@ -656,8 +660,8 @@ function onRepeatActivity() {
         lastModified: Date.now(),
         ...(selectActivity.dueRange && {
           dueRange: [
-            !dateService.isViewDateToday
-              ? dateService.combineDateAndTime(dateService.appDateTimestamp, selectActivity.dueRange[0])
+            !dateService.isViewDateToday.value
+              ? dateService.combineDateAndTime(appDateTimestamp.value, selectActivity.dueRange[0])
               : null,
             selectActivity.dueRange[1]
           ] as [number | null, string],
@@ -705,7 +709,7 @@ function onRepeatActivity() {
       deleted: false,
       lastModified: Date.now(),
       ...(sourceActivity.dueRange && {
-        dueRange: [dateService.combineDateAndTime(dateService.appDateTimestamp, sourceActivity.dueRange[0]), sourceActivity.dueRange[1]] as [number | null, string],
+        dueRange: [dateService.combineDateAndTime(appDateTimestamp.value, sourceActivity.dueRange[0]), sourceActivity.dueRange[1]] as [number | null, string],
       }),
     };
     activityList.value.push(newActivity);
@@ -719,7 +723,7 @@ function onRepeatActivity() {
     
     // 创建新的 todo，使用 appDateTimestamp（选中的日期）
     if (newActivity.class === "T"){
-      const { newTodo } = passPickedActivity(newActivity, dateService.appDateTimestamp, dateService.isViewDateToday);
+      const { newTodo } = passPickedActivity(newActivity, dateService.appDateTimestamp.value, dateService.isViewDateToday.value);
       newTodo.taskId = task.id; // 关联 task
       todoList.value = [...todoList.value, newTodo];
     } else {
@@ -1187,7 +1191,7 @@ function handleEditScheduleStart(id: number, newTm: string) {
   }
 
   // 基准日期：优先用原 startTs，否则用当前视图日期（只作为日期基准）
-  const baseTs = schedule.activityDueRange?.[0] ?? dateService.appDateTimestamp;
+  const baseTs = schedule.activityDueRange?.[0] ?? dateService.appDateTimestamp.value;
   const [hh, mm] = newTm.split(":").map((n) => Number(n));
   const base = new Date(Number(baseTs));
   base.setHours(hh, mm, 0, 0);
@@ -1213,7 +1217,7 @@ function handleEditScheduleStart(id: number, newTm: string) {
 // 编辑时间
 function handleEditTodoStart(id: number, newTm: string) {
   // 获取当前查看日期的时间戳
-  const viewingDayTimestamp = dateService.appDateTimestamp;
+  const viewingDayTimestamp = dateService.appDateTimestamp.value;
   const todo = todoById.value.get(id);
   if (!todo) {
     console.warn(`未找到 id 为 ${id} 的 todo`);
@@ -1237,7 +1241,7 @@ function handleEditTodoStart(id: number, newTm: string) {
 
 function handleEditTodoDone(id: number, newTm: string) {
   // 获取当前查看日期的时间戳
-  const viewingDayTimestamp = dateService.appDateTimestamp;
+  const viewingDayTimestamp = dateService.appDateTimestamp.value;
   const todo = todoById.value.get(id);
   if (!todo) {
     console.warn(`未找到 id 为 ${id} 的 todo`);
@@ -1255,7 +1259,7 @@ function handleEditTodoDone(id: number, newTm: string) {
 
 function handleEditScheduleDone(id: number, newTm: string) {
   // 获取当前查看日期的时间戳
-  const viewingDayTimestamp = dateService.appDateTimestamp;
+  const viewingDayTimestamp = dateService.appDateTimestamp.value;
   const schedule = scheduleById.value.get(id);
   if (!schedule) {
     console.warn(`未找到 id 为 ${id} 的 schedule`);
