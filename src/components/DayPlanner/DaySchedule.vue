@@ -26,7 +26,6 @@
         <tr>
           <th class="col-check">
             <n-button
-              v-if="dateService.isViewDateToday"
               text
               type="default"
               @click.stop="handleQuickAddSchedule"
@@ -334,7 +333,6 @@ const { activeId, selectedRowId, schedulesForCurrentView } = storeToRefs(dataSto
 const editingRowId = ref<number | null>(null);
 const editingField = ref<null | "title" | "start" | "done" | "duration" | "location">(null);
 const editingValue = ref("");
-const dateService = dataStore.dateService;
 
 // 定义 Emit
 
