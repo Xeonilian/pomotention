@@ -216,6 +216,7 @@ function filteredBySection(section: ActivitySectionConfig) {
 
 // 活动筛选，由 section 单独管理
 function handleSectionFilter(idx: number, filterKey: string) {
+  activeId.value = null;
   const option = filterOptions.find((opt) => opt.key === filterKey);
   if (option) {
     sections.value[idx].filterKey = filterKey;
@@ -387,8 +388,6 @@ function getCountdownClass(dueDate: number | undefined | null): string {
   if (diff < 0) return "countdown-boom"; // 已过期
   return "";
 }
-
-
 </script>
 
 <style scoped>
