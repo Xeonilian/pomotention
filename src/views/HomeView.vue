@@ -88,7 +88,7 @@
             quaternary
             :type="selectedRowId === null ? 'default' : 'info'"
             size="small"
-            :disabled="activeId === null && activeId === undefined && selectedRowId === null"
+            :disabled="selectedRowId === null"
           >
             <template #icon>
               <n-icon><ArrowRepeatAll24Regular /></n-icon>
@@ -102,6 +102,7 @@
               strong
               @click="onIcsExport"
               title="导出 ICS / 二维码"
+              :disabled="selectedRowId === null"
             >
               <template #icon>
                 <n-icon>
@@ -351,16 +352,19 @@ const onDateSelectDayView = (day: number) => {
   settingStore.settings.topHeight = 300;
   dateService.setAppDate(day);
   dataStore.setSelectedDate(day);
+  // 进入具体日期后，清除选中状态
+  selectedActivityId.value = null; // ActivitySheet 选中的 activity.id
+  selectedTaskId.value = null; // Planner 选中的 .taskId
+  selectedRowId.value = null; // Planner todo.id 或 schedule.id 用于重复
 };
 
-// 选择进入这一天，周月视图使用
+// 选择周月视图的这一天timetable会加载这天信息
 const onDateSelect = (day: number) => {
   dateService.setAppDate(day);
   dataStore.setSelectedDate(day);
   selectedActivityId.value = null;
   selectedTaskId.value = null;
-  activeId.value = undefined;
-  selectedRowId.value = null;
+  // 不清除selectedRowId.value，因为周月视图里需要选中todo.id 或 schedule.id 用于重复
 };
 
 // week和month planner 引起选中的任务行 
@@ -641,98 +645,59 @@ function onTogglePomoType(id: number | null | undefined) {
 
 /** 重复当前的活动 */
 function onRepeatActivity() {
-  if (activeId.value == null && selectedRowId.value == null) return;
+  if (selectedRowId.value == null) return;
+  // 找到对应的 todo 或 schedule
+  const todo = todoById.value.get(selectedRowId.value);
+  const schedule = scheduleById.value.get(selectedRowId.value);
   
-  // A: 如果activeId不为空，则重复当前活动（只产生activity以及关联的task）
-  if (activeId.value != null) {
-    const selectActivity = activityById.value.get(activeId.value);
-    if (selectActivity) {
-      const newActivity: Activity = {
-        ...selectActivity, // 使用展开运算符复制 activity 的所有属性
-        id: Date.now(), // 设置新的 id
-        status: "" as any,
-        tagIds: selectActivity.tagIds,
-        taskId: undefined,
-        synced: false,
-        deleted: false,
-        lastModified: Date.now(),
-        ...(selectActivity.dueRange && {
-          dueRange: [
-            !dateService.isViewDateToday.value
-              ? dateService.combineDateAndTime(appDateTimestamp.value, selectActivity.dueRange[0])
-              : null,
-            selectActivity.dueRange[1]
-          ] as [number | null, string],
-        }),
-      };
-      activityList.value.push(newActivity);
-      
-      // 创建关联的 task
-      const task = taskService.createTaskFromActivity(newActivity.id, newActivity.title, newActivity.projectId ? `项目${newActivity.projectId}` : undefined);
-      taskList.value = [...taskList.value, task];
-      newActivity.taskId = task.id;
-      newActivity.synced = false;
-      newActivity.lastModified = Date.now();
-      
-      if (newActivity.class === "S"){
-        handleAddActivity(scheduleList.value, newActivity, {
-          activityById: activityById.value,
-        });
-      }
-      activeId.value = newActivity.id;
-    }
-  }
+  // 通过 todo/schedule 找到 activity
+  const sourceActivityId = todo?.activityId || schedule?.activityId;
+  if (!sourceActivityId) return;
   
-  // B: 如果selectedRowId不为空，说明这个已经变成了todo或者schedule，重复是为了减少输入，直接变成todo
-  if (selectedRowId.value != null) {
-    // 找到对应的 todo 或 schedule
-    const todo = todoById.value.get(selectedRowId.value);
-    const schedule = scheduleById.value.get(selectedRowId.value);
-    
-    // 通过 todo/schedule 找到 activity
-    const sourceActivityId = todo?.activityId || schedule?.activityId;
-    if (!sourceActivityId) return;
-    
-    const sourceActivity = activityById.value.get(sourceActivityId);
-    if (!sourceActivity) return;
-    
-    // 创建新的 activity（复制原 activity）
-    const newActivity: Activity = {
-      ...sourceActivity,
-      id: Date.now(),
-      status: "" as any,
-      tagIds: sourceActivity.tagIds,
-      taskId: undefined,
-      synced: false,
-      deleted: false,
-      lastModified: Date.now(),
-      ...(sourceActivity.dueRange && {
-        dueRange: [dateService.combineDateAndTime(appDateTimestamp.value, sourceActivity.dueRange[0]), sourceActivity.dueRange[1]] as [number | null, string],
-      }),
-    };
-    activityList.value.push(newActivity);
+  const sourceActivity = activityById.value.get(sourceActivityId);
+  if (!sourceActivity) return;
+  
+  // 创建新的 activity（复制原 activity）
+  const newActivity: Activity = {
+    ...sourceActivity,
+    id: Date.now(),
+    status: "" as any,
+    title: sourceActivity.title + " re",
+    tagIds: sourceActivity.tagIds,
+    taskId: undefined,
+    synced: false,
+    deleted: false,
+    lastModified: Date.now(),
+    ...(sourceActivity.dueRange && {
+      dueRange: [dateService.combineDateAndTime(appDateTimestamp.value, sourceActivity.dueRange[0]), sourceActivity.dueRange[1]] as [number | null, string],
+    }),
+  };
+  activityList.value.push(newActivity);
 
-    // 创建关联的 task
-    const task = taskService.createTaskFromActivity(newActivity.id, newActivity.title);
-    taskList.value = [...taskList.value, task];
-    newActivity.taskId = task.id;
+  // 创建关联的 task
+  const task = taskService.createTaskFromActivity(newActivity.id, newActivity.title);
+  taskList.value = [...taskList.value, task];
+  newActivity.taskId = task.id;
+  newActivity.synced = false;
+  newActivity.lastModified = Date.now();
+  
+  // 创建新的 todo，使用 appDateTimestamp（选中的日期）
+  if (newActivity.class === "T"){
+    newActivity.status = "ongoing";
+    newActivity.dueDate = appDateTimestamp.value;
     newActivity.synced = false;
     newActivity.lastModified = Date.now();
-    
-    // 创建新的 todo，使用 appDateTimestamp（选中的日期）
-    if (newActivity.class === "T"){
-      const { newTodo } = passPickedActivity(newActivity, dateService.appDateTimestamp.value, dateService.isViewDateToday.value);
-      newTodo.taskId = task.id; // 关联 task
-      todoList.value = [...todoList.value, newTodo];
-    } else {
-      handleAddActivity(scheduleList.value, newActivity, {activityById: activityById.value,});
-    }
-    
-    // 同步 UI 选中
-    activeId.value = newActivity.id;
-    selectedActivityId.value = newActivity.id;
-    selectedTaskId.value = task.id;
+    const { newTodo } = passPickedActivity(newActivity, appDateTimestamp.value, isViewDateToday.value);
+    newTodo.taskId = task.id; // 关联 task
+    todoList.value = [...todoList.value, newTodo];
+  } else {
+    handleAddActivity(scheduleList.value, newActivity, {activityById: activityById.value,});
   }
+  
+  // 同步 UI 选中
+  activeId.value = newActivity.id;
+  selectedActivityId.value = newActivity.id;
+  selectedTaskId.value = task.id;
   
   saveAllDebounced();
 }
@@ -1215,13 +1180,13 @@ function handleEditScheduleStart(id: number, newTm: string) {
 // 编辑时间
 function handleEditTodoStart(id: number, newTm: string) {
   // 获取当前查看日期的时间戳
-  const viewingDayTimestamp = dateService.appDateTimestamp.value;
+
   const todo = todoById.value.get(id);
   if (!todo) {
     console.warn(`未找到 id 为 ${id} 的 todo`);
     return;
   }
-  todo.startTime = getTimestampForTimeString(newTm, viewingDayTimestamp);
+  todo.startTime = getTimestampForTimeString(newTm, appDateTimestamp.value);
   todo.synced = false;
   todo.lastModified = Date.now();
 
@@ -1239,7 +1204,6 @@ function handleEditTodoStart(id: number, newTm: string) {
 
 function handleEditTodoDone(id: number, newTm: string) {
   // 获取当前查看日期的时间戳
-  const viewingDayTimestamp = dateService.appDateTimestamp.value;
   const todo = todoById.value.get(id);
   if (!todo) {
     console.warn(`未找到 id 为 ${id} 的 todo`);
@@ -1248,7 +1212,7 @@ function handleEditTodoDone(id: number, newTm: string) {
   if (newTm === "") {
     todo.doneTime = undefined;
   } else {
-    todo.doneTime = getTimestampForTimeString(newTm, viewingDayTimestamp);
+    todo.doneTime = getTimestampForTimeString(newTm, appDateTimestamp.value);
   }
   todo.synced = false;
   todo.lastModified = Date.now();
@@ -1257,7 +1221,6 @@ function handleEditTodoDone(id: number, newTm: string) {
 
 function handleEditScheduleDone(id: number, newTm: string) {
   // 获取当前查看日期的时间戳
-  const viewingDayTimestamp = dateService.appDateTimestamp.value;
   const schedule = scheduleById.value.get(id);
   if (!schedule) {
     console.warn(`未找到 id 为 ${id} 的 schedule`);
@@ -1266,7 +1229,7 @@ function handleEditScheduleDone(id: number, newTm: string) {
   if (newTm === "") {
     schedule.doneTime = undefined;
   } else {
-    schedule.doneTime = getTimestampForTimeString(newTm, viewingDayTimestamp);
+    schedule.doneTime = getTimestampForTimeString(newTm, appDateTimestamp.value);
   }
   saveAllDebounced();
 }
