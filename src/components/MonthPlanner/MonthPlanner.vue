@@ -467,7 +467,7 @@ function getPomoBgColorHEX(ratio: number) {
 .date-badge:hover {
   cursor: pointer;
   background-color: var(--color-blue-light) !important;
-  color: var(--color-background) !important;
+  color: var(--color-blue) !important;
 }
 
 .day-card--other-month .date-badge {

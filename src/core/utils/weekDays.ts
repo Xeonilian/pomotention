@@ -1,4 +1,4 @@
-// src/views/Home/WeekPlanner/utils.ts
+// src/views/Home/WeekPlanner/weekDays.ts
 import type { UnifiedItem, WeekBlockItem } from "@/core/types/Week";
 
 /**
@@ -32,13 +32,14 @@ export function getItemWeekRange(item: UnifiedItem): { start: number; end: numbe
   if (!item.ts) return null;
 
   if (item.type === "todo") {
-    const start = item.startWeek || item.ts;
-    const end = item.doneWeek || start + 60 * 60 * 1000;
+    // 优先使用 startTime 和 doneTime（与渲染逻辑一致）
+    const start = (item as any).startTime || item.startWeek || item.ts;
+    const end = (item as any).doneTime || item.doneWeek || start + 30 * 60 * 1000; // 默认30分钟（减半）
     return { start, end };
   } else {
     const start = item.activityDueRange?.[0] || item.ts;
     const durationMin = Number(item.activityDueRange?.[1]) || 30;
-    const end = item.doneWeek || start + durationMin * 60 * 1000;
+    const end = (item as any).doneTime || item.doneWeek || start + durationMin * 60 * 1000;
     return { start, end };
   }
 }
@@ -81,7 +82,7 @@ export function getFallbackWeekBlocks(items: UnifiedItem[], dayIndex: number): W
       id: item.key,
       type: item.type,
       start: range?.start || item.ts,
-      end: range?.end || item.ts + 3600000,
+      end: range?.end || item.ts + 1800000,
       dayIndex,
       item,
       column: 0,

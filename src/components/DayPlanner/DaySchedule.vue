@@ -24,19 +24,21 @@
 
       <thead>
         <tr>
-          <th class="col-check">            <n-button
+          <th class="col-check">
+            <n-button
               text
               type="default"
               @click.stop="handleQuickAddSchedule"
               title="快速新增日程"
-              style="transform: translateX(2px) translateY(4px);"
+              style="transform: translateX(2px) translateY(4px)"
             >
               <template #icon>
                 <n-icon size="13">
                   <Add12Regular />
                 </n-icon>
               </template>
-            </n-button></th>
+            </n-button>
+          </th>
           <th class="col-start">开始</th>
           <th class="col-end">结束</th>
           <th class="col-duration">时长</th>
@@ -213,12 +215,9 @@
                   <span style="color: var(--color-blue)">{{ averageValue(schedule.energyRecords) }}</span>
                   |
                   <span style="color: var(--color-red)">{{ averageValue(schedule.rewardRecords) }}</span>
-                  |{{ countInterruptions(schedule.interruptionRecords, "I") }}|{{ countInterruptions(schedule.interruptionRecords, "E") }}</div>
-                <div
-                  class="button-group"
-
-                  v-if="schedule.status !== 'done' && schedule.status !== 'cancelled'"
-                >
+                  |{{ countInterruptions(schedule.interruptionRecords, "I") }}|{{ countInterruptions(schedule.interruptionRecords, "E") }}
+                </div>
+                <div class="button-group" v-if="schedule.status !== 'done' && schedule.status !== 'cancelled'">
                   <!-- <n-button
                     class="convert-button"
                     v-if="!schedule.taskId"
@@ -285,7 +284,7 @@
   </n-popover>
   <!-- Tag Selector Popover -->
   <n-popover
-    :show="tagEditor.popoverTargetId.value !== null && schedulesForCurrentView.some(s => s.id === tagEditor.popoverTargetId.value)"
+    :show="tagEditor.popoverTargetId.value !== null && schedulesForCurrentView.some((s) => s.id === tagEditor.popoverTargetId.value)"
     @update:show="(show) => !show && (tagEditor.popoverTargetId.value = null)"
     placement="bottom-start"
     :trap-focus="false"
@@ -402,11 +401,13 @@ function startEditing(scheduleId: number, field: "title" | "start" | "done" | "d
     field === "title"
       ? schedule.activityTitle || ""
       : field === "start"
-      ? (schedule.activityDueRange?.[0] ? timestampToTimeString(schedule.activityDueRange[0]) : "")
+      ? schedule.activityDueRange?.[0]
+        ? timestampToTimeString(schedule.activityDueRange[0])
+        : ""
       : field === "duration"
-      ? (schedule.activityDueRange?.[1] ?? "")
+      ? schedule.activityDueRange?.[1] ?? ""
       : field === "location"
-      ? (schedule.location ?? "")
+      ? schedule.location ?? ""
       : schedule.doneTime
       ? timestampToTimeString(schedule.doneTime)
       : "";
@@ -554,12 +555,12 @@ function handleInputKeydown(event: KeyboardEvent, schedule: Schedule) {
 
 function handleTagSelected(tagId: number) {
   if (!tagEditor.popoverTargetId.value) return;
-  const schedule = schedulesForCurrentView.value.find(s => s.id === tagEditor.popoverTargetId.value);
+  const schedule = schedulesForCurrentView.value.find((s) => s.id === tagEditor.popoverTargetId.value);
   if (!schedule) return;
-  
+
   const cleanedTitle = tagEditor.clearTagTriggerText(editingValue.value);
   editingValue.value = cleanedTitle;
-  
+
   // 通过 activityId 给 Activity 添加标签
   dataStore.addTagToActivity(schedule.activityId, tagId);
   tagEditor.closePopover();
@@ -567,12 +568,12 @@ function handleTagSelected(tagId: number) {
 
 function handleTagCreate(tagName: string) {
   if (!tagEditor.popoverTargetId.value) return;
-  const schedule = schedulesForCurrentView.value.find(s => s.id === tagEditor.popoverTargetId.value);
+  const schedule = schedulesForCurrentView.value.find((s) => s.id === tagEditor.popoverTargetId.value);
   if (!schedule) return;
-  
+
   const cleanedTitle = tagEditor.clearTagTriggerText(editingValue.value);
   editingValue.value = cleanedTitle;
-  
+
   // 通过 activityId 创建并添加标签到 Activity
   dataStore.createAndAddTagToActivity(schedule.activityId, tagName);
   tagEditor.closePopover();

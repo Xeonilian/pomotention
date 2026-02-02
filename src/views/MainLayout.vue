@@ -104,8 +104,21 @@
             <div class="sync-status__info">
               <span class="sync-status__message">{{ syncStore.syncMessage }}</span>
               <span v-if="syncStore.lastSyncTimestamp" class="sync-status__time">{{ relativeTime }}</span>
-              <n-tag v-if="dataStore.hasUnsyncedData" type="default" size="tiny" style="margin-left: 2px; font-size: 10px; margin-top: 2px">
-                有未同步数据
+              <n-tag
+                v-if="dataStore.hasUnsyncedData"
+                type="default"
+                size="tiny"
+                style="
+                  font-size: 10px;
+                  line-height: 16px;
+                  display: flex;
+                  align-items: center;
+                  height: 16px;
+                  justify-content: center;
+                  margin-top: 1px;
+                "
+              >
+                数据未同步
               </n-tag>
               <span v-if="syncStore.syncError" class="sync-status__error">{{ syncStore.syncError }}</span>
             </div>
@@ -379,7 +392,7 @@ async function handleManualDownload() {
 .sync-status {
   display: flex;
   align-items: center;
-  gap: 11px;
+  gap: 6px;
   font-size: 11px;
   flex: 1;
   color: var(--color-text-secondary);

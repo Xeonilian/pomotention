@@ -38,20 +38,21 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targe
     }
 
     if (minHour === 24 && maxHour === 0) {
-      minHour = 0;
-      maxHour = 24;
+      minHour = 6;
+      maxHour = 22;
     }
 
     minHour = Math.floor(minHour);
     maxHour = Math.min(Math.ceil(maxHour), 24);
 
+    // 基础范围是6-22，如果block超出范围则动态扩展
     return {
-      startHour: minHour,
-      endHour: maxHour < 22 ? 22 : maxHour,
+      startHour: minHour < 6 ? minHour : 6,
+      endHour: maxHour > 22 ? maxHour : 22,
     };
   });
 
-  // 核心修改：动态计算pxPerHour（响应式计算，随容器高度变化）
+  // 动态计算pxPerHour（响应式计算，随容器高度变化）
   const pxPerHour = computed(() => {
     const range = unifiedTimeRange.value;
     const totalHours = range.endHour - range.startHour;
@@ -59,11 +60,8 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targe
 
     // 如果传入了目标高度，就按高度/小时数计算，否则用默认值
     if (height && totalHours > 0) {
-      const result = height / totalHours;
-      // console.log(`pxPerHour calculated: targetHeight=${height}, totalHours=${totalHours}, result=${result}`);
-      return result;
+      return height / totalHours;
     }
-    console.log(`pxPerHour using default: ${BASE_PX_PER_HOUR}`);
     return BASE_PX_PER_HOUR;
   });
 
@@ -128,7 +126,7 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targe
     return processedItems;
   };
 
-  // 4. 按天分组的布局时间块（完全保留）
+  // 4. 按天分组的布局时间块
   const layoutedWeekBlocks = computed(() => {
     const result: Map<number, WeekBlockItem[]> = new Map();
     for (let dayIdx = 0; dayIdx < 7; dayIdx++) {
@@ -148,14 +146,14 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targe
     return stamps;
   });
 
-  // 6. 时间轴高度（修改：使用动态pxPerHour）
+  // 6. 时间轴高度
   const timeGridHeight = computed(() => {
     const range = unifiedTimeRange.value;
     const hours = range.endHour - range.startHour;
     return hours * pxPerHour.value; // 仅改这里，用动态值
   });
 
-  // 7. 时间块样式计算（修改：使用动态pxPerHour）
+  // 7. 时间块样式计算
   const getItemBlockStyle = (item: WeekBlockItem, dayStartTs: number) => {
     const range = unifiedTimeRange.value;
     const itemDayStart = startOfDay(item.start);
@@ -174,7 +172,7 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targe
 
         startHour = startDate.getHours() + startDate.getMinutes() / 60;
         const endHour = endDate.getHours() + endDate.getMinutes() / 60;
-        durationHours = Math.max(endHour - startHour, 0.25); // 最小15分钟
+        durationHours = Math.max(endHour - startHour, 0.5); // 最小30分钟
       } else {
         // 对于schedule类型，使用实际的开始和结束时间
         const startDate = new Date(item.start);
@@ -218,7 +216,7 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targe
     };
   };
 
-  // 8. 小时刻度位置计算（修改：使用动态pxPerHour）
+  // 8. 小时刻度位置计算
   const getHourTickTop = (hour: number) => {
     const range = unifiedTimeRange.value;
     const relativeHour = hour - range.startHour;

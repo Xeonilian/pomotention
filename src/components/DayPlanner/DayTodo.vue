@@ -29,7 +29,7 @@
               type="default"
               @click.stop="handleQuickAddTodo"
               title="快速新增待办"
-              style="transform: translateX(2px) translateY(4px);"
+              style="transform: translateX(2px) translateY(4px)"
             >
               <template #icon>
                 <n-icon size="13">
@@ -252,10 +252,7 @@
                   <span style="color: var(--color-red)">{{ averageValue(todo.rewardRecords) }}</span>
                   |{{ countInterruptions(todo.interruptionRecords, "I") }}|{{ countInterruptions(todo.interruptionRecords, "E") }}
                 </div>
-                <div
-                  class="button-group"
-                  v-if="todo.status !== 'done' && todo.status !== 'cancelled'"
-                >
+                <div class="button-group" v-if="todo.status !== 'done' && todo.status !== 'cancelled'">
                   <!-- 追踪任务按钮 -->
                   <n-button v-if="!todo.startTime" class="convert-button" text type="info" @click="handleQuickStart(todo)" title="开始待办">
                     <template #icon>
@@ -340,7 +337,9 @@
   </n-modal>
   <!-- Tag Selector Popover -->
   <n-popover
-    :show="tagEditor.popoverTargetId.value !== null && todosForCurrentViewWithTaskRecords.some(t => t.id === tagEditor.popoverTargetId.value)"
+    :show="
+      tagEditor.popoverTargetId.value !== null && todosForCurrentViewWithTaskRecords.some((t) => t.id === tagEditor.popoverTargetId.value)
+    "
     @update:show="(show) => !show && (tagEditor.popoverTargetId.value = null)"
     placement="bottom-start"
     :trap-focus="false"
@@ -382,7 +381,6 @@ import { useDataStore } from "@/stores/useDataStore";
 import { storeToRefs } from "pinia";
 import { useActivityTagEditor } from "@/composables/useActivityTagEditor";
 import TagSelector from "../TagSystem/TagSelector.vue";
-
 const dataStore = useDataStore();
 const { activeId, selectedRowId, todosForCurrentViewWithTaskRecords } = storeToRefs(dataStore);
 
@@ -422,7 +420,6 @@ const emit = defineEmits<{
   (e: "edit-todo-start", id: number, newTs: string): void;
   (e: "edit-todo-done", id: number, newTs: string): void;
   (e: "quick-add-todo"): void;
- 
 }>();
 
 // 对待办事项按优先级降序排序（高优先级在前）
@@ -724,9 +721,13 @@ function startEditing(todoId: number, field: "title" | "start" | "done") {
     field === "title"
       ? todo.activityTitle || ""
       : field === "start"
-      ? (todo.startTime ? timestampToTimeString(todo.startTime) : "")
+      ? todo.startTime
+        ? timestampToTimeString(todo.startTime)
+        : ""
       : field === "done"
-      ? (todo.doneTime ? timestampToTimeString(todo.doneTime) : "")
+      ? todo.doneTime
+        ? timestampToTimeString(todo.doneTime)
+        : ""
       : "";
 
   // 使用 querySelector 来获取当前编辑的输入框，而不是依赖 ref
@@ -810,7 +811,6 @@ function isValidTimeString(str: string) {
   return /^\d{2}:\d{2}$/.test(str) && +str.split(":")[0] <= 24 && +str.split(":")[1] < 60;
 }
 
-
 // suspended Todo
 function handleSuspendTodo(id: number) {
   emit("suspend-todo", id);
@@ -890,12 +890,12 @@ function handleInputKeydown(event: KeyboardEvent, todo: Todo) {
 
 function handleTagSelected(tagId: number) {
   if (!tagEditor.popoverTargetId.value) return;
-  const todo = todosForCurrentViewWithTaskRecords.value.find(t => t.id === tagEditor.popoverTargetId.value);
+  const todo = todosForCurrentViewWithTaskRecords.value.find((t) => t.id === tagEditor.popoverTargetId.value);
   if (!todo) return;
-  
+
   const cleanedTitle = tagEditor.clearTagTriggerText(editingValue.value);
   editingValue.value = cleanedTitle;
-  
+
   // 通过 activityId 给 Activity 添加标签
   dataStore.addTagToActivity(todo.activityId, tagId);
   tagEditor.closePopover();
@@ -903,12 +903,12 @@ function handleTagSelected(tagId: number) {
 
 function handleTagCreate(tagName: string) {
   if (!tagEditor.popoverTargetId.value) return;
-  const todo = todosForCurrentViewWithTaskRecords.value.find(t => t.id === tagEditor.popoverTargetId.value);
+  const todo = todosForCurrentViewWithTaskRecords.value.find((t) => t.id === tagEditor.popoverTargetId.value);
   if (!todo) return;
-  
+
   const cleanedTitle = tagEditor.clearTagTriggerText(editingValue.value);
   editingValue.value = cleanedTitle;
-  
+
   // 通过 activityId 创建并添加标签到 Activity
   dataStore.createAndAddTagToActivity(todo.activityId, tagName);
   tagEditor.closePopover();
@@ -1257,7 +1257,6 @@ td.status-col {
   height: 20px;
   transform: translateY(1px);
 }
-
 
 :deep(.n-button) :hover {
   color: var(--color-red);
