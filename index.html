@@ -8,12 +8,27 @@
     <link rel="manifest" href="/manifest.webmanifest" />
     <meta name="theme-color" content="#ffffff" />
 
+    <!-- 移动端 Web App 支持 -->
     <meta name="mobile-web-app-capable" content="yes" />
-    <!-- 保留旧标签以确保向后兼容 -->
+    
+    <!-- Apple iOS 配置 -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Pomotention" />
-    <link rel="apple-touch-icon" href="/icon-128.png" />
+    
+    <!-- Apple Touch Icons - 多尺寸支持 -->
+    <link rel="apple-touch-icon" href="/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="128x128" href="/icon-128.png" />
+    <link rel="apple-touch-icon" sizes="192x192" href="/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="512x512" href="/icon-512.png" />
+    
+    <!-- Apple 启动画面 - 针对不同设备尺寸 -->
+    <link rel="apple-touch-startup-image" href="/icon-512.png" />
+    
+    <!-- 移动端优化标签 -->
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="msapplication-TileColor" content="#ffffff" />
+    <meta name="msapplication-config" content="/browserconfig.xml" />
   </head>
 
   <body>
