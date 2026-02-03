@@ -400,11 +400,15 @@ function getPomoBgColorHEX(ratio: number) {
 .month-header {
   display: grid;
   flex: 1 1 auto;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   grid-auto-rows: minmax(105px, 1fr);
   text-align: center;
   height: 22px;
   gap: 2px;
+}
+.header-card {
+  min-width: 0;
+  overflow: hidden;
 }
 .header-card :deep(.n-card__content) {
   font-size: 14px;
@@ -413,6 +417,7 @@ function getPomoBgColorHEX(ratio: number) {
   height: 20px;
   white-space: nowrap;
   padding: 0 !important;
+  overflow: hidden;
 }
 .grid {
   flex: 1 1 auto;
