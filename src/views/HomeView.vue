@@ -345,7 +345,7 @@ const onMonthJump = () => {
 
 const onWeekJump = () => {
   settingStore.settings.viewSet = "week";
-  settingStore.settings.topHeight = 610;
+  settingStore.settings.topHeight = 510;
 };
 
 // 选择进入日视图的具体日期
