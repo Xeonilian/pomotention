@@ -79,6 +79,7 @@ const totalOptions = computed(() => {
   return baseCount;
 });
 
+console.log(selectorRef);
 // --- Watchers ---
 // 当搜索词变化时，重置高亮位置到顶部
 watch(
