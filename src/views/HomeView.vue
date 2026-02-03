@@ -186,6 +186,7 @@
             @edit-todo-done="handleEditTodoDone"
             @quick-add-todo="onQuickAddTodo"
             @quick-add-schedule="onQuickAddSchedule"
+            @toggle-pomo-type="handleTogglePomoTypeTodoId"
           />
           <WeekPlanner
             v-if="settingStore.settings.showPlanner && settingStore.settings.viewSet === 'week'"
@@ -643,6 +644,21 @@ function onTogglePomoType(id: number | null | undefined) {
     showErrorPopover("活动的类型已切换！");
   }
   activeId.value = id;
+  saveAllDebounced();
+}
+
+function handleTogglePomoTypeTodoId(id: number | null | undefined) {
+  if (id == null) return;
+  const todo = todoById.value.get(id);
+  if (todo) {
+    todo.globalIndex = undefined;
+    const result = togglePomoType(todo.activityId, { activityById: activityById.value });
+    if (result) {
+      showErrorPopover("活动的类型已切换！");
+    }
+
+    saveAllDebounced();
+  }
 }
 
 /** 重复当前的活动 */

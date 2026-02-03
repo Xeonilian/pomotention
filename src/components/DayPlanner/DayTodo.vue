@@ -42,7 +42,14 @@
           <th class="col-end">结束</th>
           <th class="col-rank" title="Emoji：33=💤 44=🥗 55=📚 66=🙊 77=✨ 88=💸 99=🧸">排序</th>
           <th class="col-intent">意图</th>
-          <th class="col-fruit">果果</th>
+          <th
+            class="col-fruit"
+            :class="{ 'disabled-toggle': !canTogglePomoType }"
+            @click.stop="canTogglePomoType && handleTogglePomoType()"
+            :title="canTogglePomoType ? '点击切换类型' : '不能切换类型'">
+          
+            {{ selectedRowId ? (currentPomoType || "果果") : "果果" }}
+          </th>
           <th class="col-status">状态</th>
         </tr>
       </thead>
@@ -384,6 +391,23 @@ import TagSelector from "../TagSystem/TagSelector.vue";
 const dataStore = useDataStore();
 const { activeId, selectedRowId, todosForCurrentViewWithTaskRecords } = storeToRefs(dataStore);
 
+// 根据 selectedRowId 找到对应的 todo
+const selectedTodo = computed(() => {
+  if (!selectedRowId.value) return null;
+  return todosForCurrentViewWithTaskRecords.value.find((t) => t.id === selectedRowId.value) || null;
+});
+
+// 判断果果是否可以切换（todo 不是 done 和 cancelled 状态）
+const canTogglePomoType = computed(() => {
+  if (!selectedTodo.value) return false;
+  return selectedTodo.value.status !== "done" && selectedTodo.value.status !== "cancelled";
+});
+
+// 获取当前选中 todo 的果果类型
+const currentPomoType = computed(() => {
+  return selectedTodo.value?.pomoType || "";
+});
+
 // 编辑用
 const editingRowId = ref<number | null>(null);
 const editingField = ref<null | "title" | "start" | "done">(null);
@@ -420,6 +444,7 @@ const emit = defineEmits<{
   (e: "edit-todo-start", id: number, newTs: string): void;
   (e: "edit-todo-done", id: number, newTs: string): void;
   (e: "quick-add-todo"): void;
+  (e: "toggle-pomo-type", id: number): void;
 }>();
 
 // 对待办事项按优先级降序排序（高优先级在前）
@@ -913,6 +938,12 @@ function handleTagCreate(tagName: string) {
   dataStore.createAndAddTagToActivity(todo.activityId, tagName);
   tagEditor.closePopover();
 }
+
+function handleTogglePomoType() {
+  if (selectedRowId.value) {
+    emit("toggle-pomo-type", selectedRowId.value);
+  }
+}
 </script>
 
 <style scoped>
@@ -973,6 +1004,11 @@ thead th {
   background-color: var(--color-background) !important;
   line-height: 1.3;
   box-sizing: border-box;
+}
+
+/* 果果列禁用状态 */
+th.col-fruit.disabled-toggle {
+  cursor: not-allowed;
 }
 
 /* 行样式 */

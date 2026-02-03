@@ -19,6 +19,7 @@
         @edit-todo-start="handleEditTodoStart"
         @edit-todo-done="handleEditTodoDone"
         @quick-add-todo="handleQuickAddTodo"
+        @toggle-pomo-type="handleTogglePomoType"
       />
     </div>
     <div class="schedule-container">
@@ -75,6 +76,7 @@ const emit = defineEmits<{
   (e: "edit-schedule-location", id: number, newLocation: string): void;
   (e: "convert-todo-to-task", payload: { task: Task; activityId: number }): void;
   (e: "convert-schedule-to-task", payload: { task: Task; activityId: number }): void;
+  (e: "toggle-pomo-type", id: number): void;
 }>();
 
 // 处理选中行事件
@@ -181,6 +183,10 @@ function handleQuickAddTodo() {
 
 function handleQuickAddSchedule() {
   emit("quick-add-schedule");
+}
+
+function handleTogglePomoType(id: number) {
+  emit("toggle-pomo-type", id);
 }
 
 </script>
