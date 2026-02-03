@@ -1,5 +1,9 @@
 <template>
-  <div class="pomodoro-view-wrapper" ref="pomodoroContainerRef">
+  <div 
+    class="pomodoro-view-wrapper" 
+    :class="{ 'is-compact': settingStore.settings.isCompactMode }"
+    ref="pomodoroContainerRef"
+  >
     <div v-if="isMiniMode" class="mini-mode-drag-region" data-tauri-drag-region></div>
     <div
       class="pomodoro-content-area"
@@ -43,7 +47,7 @@
 
       <PomodoroTimer class="time" :show-pomo-seq="showPomoSeq" :is-compact-mode="settingStore.settings.isCompactMode" />
       <PomodoroSequence
-        v-if="showPomoSeq && !settingStore.settings.isCompactMode"
+        v-show="showPomoSeq && !settingStore.settings.isCompactMode"
         class="sequence"
         @pomo-seq-running="handlePomoSeqRunning"
         :is-pomo-seq-running="isPomoSeqRunning"
@@ -160,7 +164,7 @@ function handlePomoSeqRunning(status: boolean) {
 }
 
 /* 紧凑模式下的宽度调整 */
-.pomodoro-view-wrapper:has(.is-compact) {
+.pomodoro-view-wrapper.is-compact {
   width: 140px;
 }
 
@@ -185,7 +189,7 @@ function handlePomoSeqRunning(status: boolean) {
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 0px solid var(--color-background-dark);
+  border: none;
   width: 20px;
   height: 18px;
   padding: 0px;

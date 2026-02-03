@@ -149,6 +149,63 @@ export function useDraggable(dragThreshold = 5) {
     lastPosition.value = { x: left, y: top };
   }
 
+  // 检查并调整位置，只在超出边界时才重定位，否则保持当前位置
+  function ensureWithinBounds(customWidth?: number, customHeight?: number) {
+    if (!draggableContainer.value) return;
+    const parent = draggableContainer.value.parentElement;
+    if (!parent) return;
+
+    const el = draggableContainer.value;
+    const margin = 20;
+    const parentWidth = parent.clientWidth;
+    const parentHeight = parent.clientHeight;
+
+    // 获取当前实际尺寸或使用传入的尺寸
+    const elementWidth = customWidth ?? el.offsetWidth ?? 220;
+    const elementHeight = customHeight ?? el.offsetHeight ?? 140;
+    const heightUsed = customHeight != null ? customHeight + 12 : elementHeight;
+
+    // 获取当前位置
+    const currentLeft = el.offsetLeft;
+    const currentTop = el.offsetTop;
+
+    // 计算边界
+    const maxLeft = parentWidth - elementWidth - margin;
+    const maxTop = parentHeight - heightUsed - margin;
+    const minLeft = margin;
+    const minTop = margin;
+
+    // 检查是否需要调整位置
+    let needsAdjustment = false;
+    let newLeft = currentLeft;
+    let newTop = currentTop;
+
+    // 检查右边界和左边界
+    if (currentLeft + elementWidth + margin > parentWidth) {
+      newLeft = Math.max(minLeft, maxLeft);
+      needsAdjustment = true;
+    } else if (currentLeft < minLeft) {
+      newLeft = minLeft;
+      needsAdjustment = true;
+    }
+
+    // 检查下边界和上边界
+    if (currentTop + heightUsed + margin > parentHeight) {
+      newTop = Math.max(minTop, maxTop);
+      needsAdjustment = true;
+    } else if (currentTop < minTop) {
+      newTop = minTop;
+      needsAdjustment = true;
+    }
+
+    // 只在需要时才更新位置
+    if (needsAdjustment) {
+      el.style.left = `${newLeft}px`;
+      el.style.top = `${newTop}px`;
+      lastPosition.value = { x: newLeft, y: newTop };
+    }
+  }
+
   // 控制 Draggable 容器的位置和显示
   async function updateDraggableContainerVisibility(show: boolean) {
     await nextTick();
@@ -185,6 +242,7 @@ export function useDraggable(dragThreshold = 5) {
     draggableContainer, // 绑定 ref="draggableContainer"
     setInitialPosition, // 用于初始化
     repositionToBottom, // 以下边为基准重新定位（showPomoSeq 展开/收缩时用）
+    ensureWithinBounds, // 检查并调整位置，只在超出边界时才重定位
     lastPosition, // 记录位置状态
     handleDragStart, // 绑定 @pointerdown="handleDragStart"
     updateDraggableContainerVisibility, // 控制可见性
