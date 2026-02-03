@@ -2,6 +2,7 @@
   <n-config-provider>
     <n-notification-provider>
       <n-dialog-provider>
+        <PwaSplashScreen />
         <router-view />
         <UpdateManager />
         <PwaInstallBanner />
@@ -21,6 +22,7 @@ import { STORAGE_KEYS } from "@/core/constants";
 
 import UpdateManager from "./components/UpdateManager.vue";
 import PwaInstallBanner from "./components/PwaInstallBanner.vue";
+import PwaSplashScreen from "./components/PwaSplashScreen.vue";
 import { initSyncServices, syncAll, resetSyncServices } from "@/services/sync";
 import { initAppCloseHandler, cancelPendingSyncTasks } from "@/services/appCloseHandler";
 
