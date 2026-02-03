@@ -89,6 +89,14 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targe
     return items;
   });
 
+  // 计算两个时间块的重叠时长（毫秒）
+  const getOverlapDuration = (a: { start: number; end: number }, b: { start: number; end: number }): number => {
+    if (!isWeekBlockOverlapping(a, b)) return 0;
+    const overlapStart = Math.max(a.start, b.start);
+    const overlapEnd = Math.min(a.end, b.end);
+    return Math.max(0, overlapEnd - overlapStart);
+  };
+
   // 3. 计算时间块布局（完全保留）
   const calculateWeekBlockLayout = (items: WeekBlockItem[], dayIndex: number): WeekBlockItem[] => {
     const dayItems = items.filter((item) => item.dayIndex === dayIndex);
@@ -97,12 +105,17 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targe
     dayItems.sort((a, b) => a.start - b.start);
     const processedItems: WeekBlockItem[] = [];
 
+    // 5分钟阈值（毫秒）
+    const MIN_OVERLAP_DURATION = 5 * 60 * 1000;
+
     for (const item of dayItems) {
       const overlappingItems: WeekBlockItem[] = [item];
 
       for (const otherItem of dayItems) {
         if (otherItem.id === item.id) continue;
-        if (isWeekBlockOverlapping(item, otherItem)) {
+        // 只有当重叠时长超过5分钟时，才视为重叠
+        const overlapDuration = getOverlapDuration(item, otherItem);
+        if (overlapDuration > MIN_OVERLAP_DURATION) {
           overlappingItems.push(otherItem);
         }
       }
