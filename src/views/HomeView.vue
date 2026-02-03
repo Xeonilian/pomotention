@@ -88,7 +88,7 @@
             quaternary
             :type="selectedRowId === null ? 'default' : 'info'"
             size="small"
-            :disabled="selectedRowId === null"
+            :disabled="selectedRowId === null && activeId === null"
           >
             <template #icon>
               <n-icon><ArrowRepeatAll24Regular /></n-icon>
@@ -663,60 +663,83 @@ function handleTogglePomoTypeTodoId(id: number | null | undefined) {
 
 /** 重复当前的活动 */
 function onRepeatActivity() {
-  if (selectedRowId.value == null) return;
-  // 找到对应的 todo 或 schedule
-  const todo = todoById.value.get(selectedRowId.value);
-  const schedule = scheduleById.value.get(selectedRowId.value);
-  
-  // 通过 todo/schedule 找到 activity
-  const sourceActivityId = todo?.activityId || schedule?.activityId;
-  if (!sourceActivityId) return;
-  
-  const sourceActivity = activityById.value.get(sourceActivityId);
-  if (!sourceActivity) return;
-  
-  // 创建新的 activity（复制原 activity）
-  const newActivity: Activity = {
-    ...sourceActivity,
-    id: Date.now(),
-    status: "" as any,
-    title: sourceActivity.title + " re",
-    tagIds: sourceActivity.tagIds,
-    taskId: undefined,
-    synced: false,
-    deleted: false,
-    lastModified: Date.now(),
-    ...(sourceActivity.dueRange && {
-      dueRange: [dateService.combineDateAndTime(appDateTimestamp.value, sourceActivity.dueRange[0]), sourceActivity.dueRange[1]] as [number | null, string],
-    }),
-  };
-  activityList.value.push(newActivity);
+  if (selectedRowId.value == null && activeId.value == null) return;
+  if (selectedRowId.value != null) {
+    // 找到对应的 todo 或 schedule
+    const todo = todoById.value.get(selectedRowId.value);
+    const schedule = scheduleById.value.get(selectedRowId.value);
+    
+    // 通过 todo/schedule 找到 activity
+    const sourceActivityId = todo?.activityId || schedule?.activityId;
+    if (!sourceActivityId) return;
+    
+    const sourceActivity = activityById.value.get(sourceActivityId);
+    if (!sourceActivity) return;
+    
+    // 创建新的 activity（复制原 activity）
+    const newActivity: Activity = {
+      ...sourceActivity,
+      id: Date.now(),
+      status: "" as any,
+      title: sourceActivity.title + " re",
+      tagIds: sourceActivity.tagIds,
+      taskId: undefined,
+      synced: false,
+      deleted: false,
+      lastModified: Date.now(),
+      ...(sourceActivity.dueRange && {
+        dueRange: [dateService.combineDateAndTime(appDateTimestamp.value, sourceActivity.dueRange[0]), sourceActivity.dueRange[1]] as [number | null, string],
+      }),
+    };
+    activityList.value.push(newActivity);
 
-  // 创建关联的 task
-  const task = taskService.createTaskFromActivity(newActivity.id, newActivity.title);
-  taskList.value = [...taskList.value, task];
-  newActivity.taskId = task.id;
-  newActivity.synced = false;
-  newActivity.lastModified = Date.now();
-  
-  // 创建新的 todo，使用 appDateTimestamp（选中的日期）
-  if (newActivity.class === "T"){
-    newActivity.status = "ongoing";
-    newActivity.dueDate = appDateTimestamp.value;
+    // 创建关联的 task
+    const task = taskService.createTaskFromActivity(newActivity.id, newActivity.title);
+    taskList.value = [...taskList.value, task];
+    newActivity.taskId = task.id;
     newActivity.synced = false;
     newActivity.lastModified = Date.now();
-    const { newTodo } = passPickedActivity(newActivity, appDateTimestamp.value, isViewDateToday.value);
-    newTodo.taskId = task.id; // 关联 task
-    todoList.value = [...todoList.value, newTodo];
-  } else {
-    handleAddActivity(scheduleList.value, newActivity, {activityById: activityById.value,});
+    
+    // 创建新的 todo，使用 appDateTimestamp（选中的日期）
+    if (newActivity.class === "T"){
+      newActivity.status = "ongoing";
+      newActivity.dueDate = appDateTimestamp.value;
+      newActivity.synced = false;
+      newActivity.lastModified = Date.now();
+      const { newTodo } = passPickedActivity(newActivity, appDateTimestamp.value, isViewDateToday.value);
+      newTodo.taskId = task.id; // 关联 task
+      todoList.value = [...todoList.value, newTodo];
+    } else {
+      handleAddActivity(scheduleList.value, newActivity, {activityById: activityById.value,});
+    }
+    
+    // 同步 UI 选中
+    activeId.value = newActivity.id;
+    selectedActivityId.value = newActivity.id;
+    selectedTaskId.value = task.id;
+  } else if (activeId.value != null) {
+    const activity = activityById.value.get(activeId.value);
+    if (!activity) return;
+    const newActivity: Activity = {
+      ...activity,
+      id: Date.now(),
+      status: "ongoing",
+      title: activity.title + " re",
+      tagIds: activity.tagIds,
+      taskId: undefined,
+      synced: false,
+      lastModified: Date.now(),
+    };
+    activityList.value.push(newActivity);
+    const task = taskService.createTaskFromActivity(newActivity.id, newActivity.title);
+    taskList.value = [...taskList.value, task];
+    newActivity.taskId = task.id;
+    newActivity.synced = false;
+    newActivity.lastModified = Date.now();
+    activeId.value = newActivity.id;
+    selectedActivityId.value = newActivity.id;
+    selectedTaskId.value = task.id;
   }
-  
-  // 同步 UI 选中
-  activeId.value = newActivity.id;
-  selectedActivityId.value = newActivity.id;
-  selectedTaskId.value = task.id;
-  
   saveAllDebounced();
 }
 
