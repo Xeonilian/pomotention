@@ -4,6 +4,7 @@
       <n-dialog-provider>
         <router-view />
         <UpdateManager />
+        <PwaInstallBanner />
       </n-dialog-provider>
     </n-notification-provider>
   </n-config-provider>
@@ -19,6 +20,7 @@ import { useSyncStore } from "@/stores/useSyncStore";
 import { STORAGE_KEYS } from "@/core/constants";
 
 import UpdateManager from "./components/UpdateManager.vue";
+import PwaInstallBanner from "./components/PwaInstallBanner.vue";
 import { initSyncServices, syncAll, resetSyncServices } from "@/services/sync";
 import { initAppCloseHandler, cancelPendingSyncTasks } from "@/services/appCloseHandler";
 
