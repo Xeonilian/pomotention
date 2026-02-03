@@ -210,7 +210,7 @@
         @pointerdown="startVerticalResize"
       ></div>
       <!-- 任务视图 -->
-      <div v-if="settingStore.settings.showTask" class="middle-bottom" :style="{ height: `calc(100% - ${topHeight}px - 8px)` }">
+      <div v-if="settingStore.settings.showTask" class="middle-bottom">
         <div class="task-container">
           <TaskTracker />
         </div>
@@ -1421,6 +1421,7 @@ const { startResize: startRightResize } = useResize(
   box-sizing: border-box;
   flex-direction: column;
   display: flex;
+  flex-shrink: 0;
 }
 
 .planner-header {
@@ -1525,12 +1526,13 @@ const { startResize: startRightResize } = useResize(
 }
 
 .middle-bottom {
+  flex: 1;
+  min-height: 0;
   background: var(--color-background);
   padding: 4px;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-
 }
 
 .task-container {
