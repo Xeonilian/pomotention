@@ -449,10 +449,10 @@ const handleClick = (event: MouseEvent) => {
   background-color: var(--color-background-light-transparent);
 }
 .task-textarea {
-  width: 100%;
-  height: 100%;
+  width: calc(100% - 2px);
+  height: calc(100% - 2px);
   padding: 10px;
-
+  border: 1px solid var(--color-background-dark);
   border-radius: 4px;
   font-family: inherit;
   font-weight: normal;
@@ -462,6 +462,7 @@ const handleClick = (event: MouseEvent) => {
   overflow: hidden;
   outline: none;
   transition: border-color 0.2s;
+  resize: none;
 }
 
 .task-textarea:focus {

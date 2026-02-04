@@ -1,9 +1,9 @@
 <!-- TaskTracker.vue -->
 <template>
   <div class="task-view-container">
-    <div class="task-header-container">
+    <div class="task-header-container" ref="headerContainerRef">
       <div v-if="selectedTagIds && selectedTagIds.length > 0 && selectedTaskId" class="task-tag-render-container">
-        <TagRenderer :tag-ids="selectedTagIds" :isCloseable="true" @remove-tag="handleRemoveTag" />
+        <TagRenderer :tag-ids="selectedTagIds" :isCloseable="true" :displayLength="tagDisplayLength" @remove-tag="handleRemoveTag" />
       </div>
       <!-- 合并能量/愉悦/打断 记录时间轴 -->
       <div class="combined-timeline-container" v-if="combinedRecords.length">
@@ -53,7 +53,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed, defineAsyncComponent } from "vue";
+import { ref, watch, computed, defineAsyncComponent, onMounted, onUnmounted } from "vue";
 import { storeToRefs } from "pinia";
 import type { Component } from "vue";
 
@@ -67,6 +67,12 @@ import { useDataStore } from "@/stores/useDataStore";
 // UI 状态
 const isMarkdown = ref(false);
 const taskDescription = ref("");
+const headerContainerRef = ref<HTMLElement | null>(null);
+const tagDisplayLength = ref<number | null>(null);
+
+// 断点值配置
+const TAG_COLLAPSE_BREAKPOINT = 600; // 第一个值：标签收缩为3
+const BUTTON_COLLAPSE_BREAKPOINT = 400; // 第二个值：按钮收缩
 
 const taskTrackerStore = useTaskTrackerStore();
 const dataStore = useDataStore();
@@ -168,6 +174,43 @@ const handleRemoveTag = (tagId: number) => {
   if (!task || !task.sourceId) return;
   dataStore.removeTagFromActivity(task.sourceId, tagId);
 };
+
+// 检测容器宽度并更新状态
+const checkWidth = () => {
+  if (!headerContainerRef.value) return;
+  const containerWidth = headerContainerRef.value.clientWidth;
+  
+  // 当宽度小于第一个值时，标签 displayLength 变为 3
+  tagDisplayLength.value = containerWidth < TAG_COLLAPSE_BREAKPOINT ? 3 : null;
+  
+  // 通知 TaskButtons 组件是否需要收缩（通过 provide/inject 或事件）
+  // 这里我们通过 CSS 类来控制
+  if (containerWidth < BUTTON_COLLAPSE_BREAKPOINT) {
+    headerContainerRef.value.classList.add('buttons-collapsed');
+  } else {
+    headerContainerRef.value.classList.remove('buttons-collapsed');
+  }
+};
+
+// 监听容器大小变化
+let resizeObserver: ResizeObserver | null = null;
+
+onMounted(() => {
+  if (headerContainerRef.value) {
+    resizeObserver = new ResizeObserver(() => {
+      checkWidth();
+    });
+    resizeObserver.observe(headerContainerRef.value);
+    // 初始检查
+    checkWidth();
+  }
+});
+
+onUnmounted(() => {
+  if (resizeObserver) {
+    resizeObserver.disconnect();
+  }
+});
 </script>
 
 <style scoped>
@@ -182,6 +225,21 @@ const handleRemoveTag = (tagId: number) => {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  overflow: hidden;
+}
+
+/* 按钮区域优先显示 */
+.task-buttons-container {
+  flex-shrink: 0;
+  order: 999; /* 确保按钮在最后，但不会被压缩 */
+}
+
+/* 标签和时间轴可以收缩 */
+.task-tag-render-container,
+.combined-timeline-container {
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .task-buttons-container {

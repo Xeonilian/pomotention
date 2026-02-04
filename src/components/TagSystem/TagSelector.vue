@@ -9,7 +9,7 @@
       @click="$emit('select-tag', tag.id)"
       @mouseenter="highlightedIndex = index"
     >
-      <div class="tag-color-dot" :style="{ backgroundColor: tag.color }"></div>
+      <div class="tag-color-dot" :style="{ backgroundColor: tag.backgroundColor }"></div>
       <span class="tag-name">{{ tag.name }}</span>
       <span class="tag-count">[{{ tag.count }}]</span>
     </div>
@@ -79,6 +79,7 @@ const totalOptions = computed(() => {
   return baseCount;
 });
 
+console.log(selectorRef);
 // --- Watchers ---
 // 当搜索词变化时，重置高亮位置到顶部
 watch(
@@ -165,16 +166,28 @@ defineExpose({
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  margin-right: 10px;
+  margin-right: 5px;
   border: 1px solid rgba(0, 0, 0, 0.1);
+  flex-shrink: 0; /* 固定宽度，不被压缩 */
 }
 
 .tag-count {
   margin-left: auto;
+  text-align: right; /* 右对齐 */
+  white-space: nowrap;
+  
+  flex-shrink: 0; /* 不被压缩 */
+  min-width: 20px; /* 1位数字 [1] 的最小宽度 */
+  max-width: 50px; /* 5位数字 [12345] 的最大宽度 */
 }
 
 .tag-name {
+  flex: 1; /* 占用剩余空间 */
+  min-width: 0; /* 允许缩小，确保省略号生效 */
   text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+  margin-right: 5px;
 }
 
 .no-results {

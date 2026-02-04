@@ -5,7 +5,30 @@
       <!-- Header -->
       <n-layout-header class="app-layout__header" :class="{ 'app-layout__header--hidden': isMiniMode }">
         <div class="app-layout__header-content">
-          <n-menu :options="menuOptions" mode="horizontal" :value="currentRoutePath" @update:value="handleMenuSelect" />
+          <!-- 桌面端显示完整菜单 -->
+          <n-menu
+            v-if="!isMobile"
+            :options="menuOptions"
+            mode="horizontal"
+            :value="currentRoutePath"
+            @update:value="handleMenuSelect"
+            class="desktop-menu"
+          />
+          <!-- 移动端显示下拉菜单按钮 -->
+          <n-dropdown
+            v-else
+            :options="dropdownMenuOptions"
+            :value="currentRoutePath"
+            @select="handleMenuSelect"
+            trigger="click"
+            placement="bottom-start"
+          >
+            <n-button size="tiny" text class="mobile-menu-button" title="菜单">
+              <template #icon>
+                <n-icon size="18" :component="List24Filled" />
+              </template>
+            </n-button>
+          </n-dropdown>
           <div class="app-layout__view-controls">
             <n-button
               v-for="(control, index) in viewControls"
@@ -164,7 +187,7 @@
 <script setup lang="ts">
 import { ref, watch, nextTick, onMounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
-import { NMenu, NButton, NIcon, NLayoutFooter, NTag, NPopconfirm } from "naive-ui";
+import { NMenu, NButton, NIcon, NLayoutFooter, NTag, NPopconfirm, NDropdown } from "naive-ui";
 import { storeToRefs } from "pinia";
 
 // Stores
@@ -177,9 +200,10 @@ import { useButtonStyle } from "@/composables/useButtonStyle";
 import { useDraggable } from "@/composables/useDraggable";
 import { useAppWindow } from "@/composables/useAppWindow";
 import { useSyncWidget } from "@/composables/useSyncWidget";
+import { useDevice } from "@/composables/useDevice";
 
 // Icons & Components
-import { PersonAccounts24Filled, ArrowUp24Filled, ArrowDown24Filled } from "@vicons/fluent";
+import { PersonAccounts24Filled, ArrowUp24Filled, ArrowDown24Filled, List24Filled } from "@vicons/fluent";
 import PomotentionTimer from "@/components/PomotentionTimer/PomotentionTimer.vue";
 
 const router = useRouter();
@@ -189,7 +213,7 @@ const dataStore = useDataStore();
 
 // === 1. 初始化 Composables ===
 const { buttonStyle, viewControls, toggleSettingPanel } = useButtonStyle();
-const { draggableContainer, handleDragStart, repositionToBottom, updateDraggableContainerVisibility, onExitMiniMode } = useDraggable(5);
+const { draggableContainer, handleDragStart, ensureWithinBounds, updateDraggableContainerVisibility, onExitMiniMode } = useDraggable(5);
 
 const {
   isMiniMode,
@@ -209,6 +233,7 @@ if (!settingStore.settings.showPomodoro) {
 const syncStore = useSyncStore();
 const { syncIcon, relativeTime, handleUpload, handleDownload } = useSyncWidget();
 const { isLoggedIn } = storeToRefs(syncStore);
+const { isMobile } = useDevice();
 
 // 处理退出登录确认（保留数据）
 async function handleLogoutConfirm() {
@@ -235,6 +260,14 @@ const menuOptions = [
   { label: "帮助", key: "/help" },
 ];
 
+// 移动端下拉菜单选项
+const dropdownMenuOptions = [
+  { label: "首页", key: "/" },
+  { label: "数据", key: "/search" },
+  { label: "仪表盘", key: "/chart" },
+  { label: "帮助", key: "/help" },
+];
+
 function handleMenuSelect(key: string) {
   if (key !== route.path) router.push(key);
 }
@@ -243,14 +276,15 @@ watch(route, (newVal) => {
   currentRoutePath.value = newVal.path;
 });
 
-// showPomoSeq 展开/收缩时以下边为基准重新定位，避免超出视口（等布局完成用容器实际高度算）
+// 监听尺寸变化，只在超出边界时才重定位，否则保持当前位置
 watch(
-  () => reportedPomodoroHeight.value,
+  [() => reportedPomodoroWidth.value, () => reportedPomodoroHeight.value],
   async () => {
     if (!isMiniMode.value && settingStore.settings.showPomodoro) {
       await nextTick();
       requestAnimationFrame(() => {
-        repositionToBottom(); // 不传参，用容器实际 offsetHeight，避免上报值偏小或 DOM 未更新
+        // 只在超出边界时才重定位，否则保持当前位置
+        ensureWithinBounds(reportedPomodoroWidth.value, reportedPomodoroHeight.value);
       });
     }
   }
@@ -322,7 +356,20 @@ async function handleManualDownload() {
   justify-content: space-between;
   align-items: center;
   width: 100%;
+  gap: 8px;
 }
+.desktop-menu {
+  flex: 1;
+}
+.mobile-menu-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  --n-text-color-pressed: var(--color-blue) !important;
+  --n-text-color-hover: var(--color-blue) !important;
+}
+
 .app-layout__view-controls {
   display: flex;
   gap: 2px;
