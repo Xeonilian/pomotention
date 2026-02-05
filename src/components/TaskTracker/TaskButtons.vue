@@ -1,24 +1,23 @@
 <template>
   <div class="task-buttons" ref="buttonsContainerRef">
+    <n-button type="warning" text @click="starTrack" :disabled="!taskId">
+      <template #icon>
+        <n-icon v-if="isStarred">
+          <Star20Filled />
+        </n-icon>
+        <n-icon v-else>
+          <Star20Regular />
+        </n-icon>
+      </template>
+    </n-button>
+    <!-- 打开标签管理器的按钮 -->
+    <n-button text @click="openTagManager" :disabled="!taskId">
+      <template #icon>
+        <n-icon color="var(--color-blue)"><Tag16Regular /></n-icon>
+      </template>
+    </n-button>
     <!-- 展开状态：显示所有按钮 -->
     <template v-if="!isCollapsed">
-      <n-button type="warning" text @click="starTrack" :disabled="!taskId">
-        <template #icon>
-          <n-icon v-if="isStarred">
-            <Star20Filled />
-          </n-icon>
-          <n-icon v-else>
-            <Star20Regular />
-          </n-icon>
-        </template>
-      </n-button>
-      <!-- 打开标签管理器的按钮 -->
-      <n-button text @click="openTagManager" :disabled="!taskId">
-        <template #icon>
-          <n-icon color="var(--color-blue)"><Tag16Regular /></n-icon>
-        </template>
-      </n-button>
-
       <n-button size="small" type="info" secondary circle strong @click="showEnergyDialog = true" :disabled="!taskId" title="能量记录">
         <template #icon>
           <n-icon><BatterySaver20Regular /></n-icon>
@@ -29,7 +28,16 @@
           <n-icon><Emoji24Regular /></n-icon>
         </template>
       </n-button>
-      <n-button size="small" type="info" circle strong secondary @click="showInterruptionDialog = true" :disabled="!taskId" title="打扰记录">
+      <n-button
+        size="small"
+        type="info"
+        circle
+        strong
+        secondary
+        @click="showInterruptionDialog = true"
+        :disabled="!taskId"
+        title="打扰记录"
+      >
         <template #icon>
           <n-icon><CalendarAssistant20Regular /></n-icon>
         </template>
@@ -53,37 +61,58 @@
         </n-button>
       </template>
       <div class="collapsed-buttons">
-        <n-button type="warning" text @click="handleCollapsedAction(starTrack)" :disabled="!taskId">
-          <template #icon>
-            <n-icon v-if="isStarred">
-              <Star20Filled />
-            </n-icon>
-            <n-icon v-else>
-              <Star20Regular />
-            </n-icon>
-          </template>
-        </n-button>
-        <n-button text @click="handleCollapsedAction(openTagManager)" :disabled="!taskId">
-          <template #icon>
-            <n-icon color="var(--color-blue)"><Tag16Regular /></n-icon>
-          </template>
-        </n-button>
-        <n-button size="small" type="info" secondary circle strong @click="handleCollapsedAction(() => showEnergyDialog = true)" :disabled="!taskId" title="能量记录">
+        <n-button
+          size="small"
+          type="info"
+          secondary
+          circle
+          strong
+          @click="handleCollapsedAction(() => (showEnergyDialog = true))"
+          :disabled="!taskId"
+          title="能量记录"
+        >
           <template #icon>
             <n-icon><BatterySaver20Regular /></n-icon>
           </template>
         </n-button>
-        <n-button size="small" type="info" secondary circle strong @click="handleCollapsedAction(() => showRewardDialog = true)" :disabled="!taskId" title="奖赏记录">
+        <n-button
+          size="small"
+          type="info"
+          secondary
+          circle
+          strong
+          @click="handleCollapsedAction(() => (showRewardDialog = true))"
+          :disabled="!taskId"
+          title="奖赏记录"
+        >
           <template #icon>
             <n-icon><Emoji24Regular /></n-icon>
           </template>
         </n-button>
-        <n-button size="small" type="info" circle strong secondary @click="handleCollapsedAction(() => showInterruptionDialog = true)" :disabled="!taskId" title="打扰记录">
+        <n-button
+          size="small"
+          type="info"
+          circle
+          strong
+          secondary
+          @click="handleCollapsedAction(() => (showInterruptionDialog = true))"
+          :disabled="!taskId"
+          title="打扰记录"
+        >
           <template #icon>
             <n-icon><CalendarAssistant20Regular /></n-icon>
           </template>
         </n-button>
-        <n-button type="default" size="small" circle strong secondary :disabled="!taskId" @click="handleCollapsedAction(() => showTemplateDialog = true)" title="模板管理">
+        <n-button
+          type="default"
+          size="small"
+          circle
+          strong
+          secondary
+          :disabled="!taskId"
+          @click="handleCollapsedAction(() => (showTemplateDialog = true))"
+          title="模板管理"
+        >
           <template #icon>
             <n-icon><CalligraphyPen20Regular /></n-icon>
           </template>
@@ -107,7 +136,7 @@
 
     <!-- 标签管理器弹窗 -->
     <n-modal v-model:show="showTagManager" @after-leave="handleTagManagerClose">
-      <n-card style="width: 420px">
+      <n-card style="width: 350px">
         <TagManager v-model="tagIdsProxy" />
       </n-card>
     </n-modal>
@@ -173,9 +202,9 @@ const checkCollapse = () => {
   if (!buttonsContainerRef.value) return;
   const container = buttonsContainerRef.value.parentElement;
   if (!container) return;
-  
+
   // 检查父容器是否有 buttons-collapsed 类
-  isCollapsed.value = container.classList.contains('buttons-collapsed');
+  isCollapsed.value = container.classList.contains("buttons-collapsed");
 };
 
 // 监听父容器类名变化
@@ -185,14 +214,14 @@ onMounted(() => {
   if (buttonsContainerRef.value?.parentElement) {
     // 初始检查
     checkCollapse();
-    
+
     // 监听类名变化
     mutationObserver = new MutationObserver(() => {
       checkCollapse();
     });
     mutationObserver.observe(buttonsContainerRef.value.parentElement, {
       attributes: true,
-      attributeFilter: ['class']
+      attributeFilter: ["class"],
     });
   }
 });

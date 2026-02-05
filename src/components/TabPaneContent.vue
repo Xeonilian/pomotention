@@ -60,7 +60,7 @@
 
     <!-- 标签管理器 Modal -->
     <n-modal v-model:show="showTagManager" @after-leave="handleTagManagerClose">
-      <n-card style="width: 420px">
+      <n-card style="width: 350px" :content-style="{ overflow: 'visible' }">
         <TagManager v-model="tagIdsProxy" />
       </n-card>
     </n-modal>

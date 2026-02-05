@@ -72,7 +72,7 @@ const tagDisplayLength = ref<number | null>(null);
 
 // 断点值配置
 const TAG_COLLAPSE_BREAKPOINT = 600; // 第一个值：标签收缩为3
-const BUTTON_COLLAPSE_BREAKPOINT = 400; // 第二个值：按钮收缩
+const BUTTON_COLLAPSE_BREAKPOINT = 220; // 第二个值：按钮收缩
 
 const taskTrackerStore = useTaskTrackerStore();
 const dataStore = useDataStore();
@@ -179,16 +179,16 @@ const handleRemoveTag = (tagId: number) => {
 const checkWidth = () => {
   if (!headerContainerRef.value) return;
   const containerWidth = headerContainerRef.value.clientWidth;
-  
+
   // 当宽度小于第一个值时，标签 displayLength 变为 3
   tagDisplayLength.value = containerWidth < TAG_COLLAPSE_BREAKPOINT ? 3 : null;
-  
+
   // 通知 TaskButtons 组件是否需要收缩（通过 provide/inject 或事件）
   // 这里我们通过 CSS 类来控制
   if (containerWidth < BUTTON_COLLAPSE_BREAKPOINT) {
-    headerContainerRef.value.classList.add('buttons-collapsed');
+    headerContainerRef.value.classList.add("buttons-collapsed");
   } else {
-    headerContainerRef.value.classList.remove('buttons-collapsed');
+    headerContainerRef.value.classList.remove("buttons-collapsed");
   }
 };
 
@@ -230,8 +230,12 @@ onUnmounted(() => {
 
 /* 按钮区域优先显示 */
 .task-buttons-container {
-  flex-shrink: 0;
+  background-color: transparent;
   order: 999; /* 确保按钮在最后，但不会被压缩 */
+  flex-direction: row;
+  margin: 5px;
+  align-items: center;
+  margin-left: auto;
 }
 
 /* 标签和时间轴可以收缩 */
@@ -242,14 +246,6 @@ onUnmounted(() => {
   overflow: hidden;
 }
 
-.task-buttons-container {
-  display: flex;
-  flex-direction: row;
-  margin: 5px;
-  align-items: center;
-  margin-left: auto;
-}
-
 .task-tag-render-container {
   border-radius: 4px;
   padding: 2px;
@@ -258,18 +254,20 @@ onUnmounted(() => {
 }
 
 .combined-timeline-container {
-  margin-left: 8px;
+  margin-left: 2px;
   margin-right: 2px;
   transform: translateY(-2px);
   display: flex;
   align-items: center;
   overflow: hidden;
   gap: 4px;
+  background-color: transparent;
 }
 
 .timeline-point {
   width: 24px;
   height: 30px;
+  background-color: transparent;
 }
 
 .point-icon {

@@ -27,11 +27,7 @@
           @click="onClickTag(t)"
         >
           <!-- 标签名显示，双击可进入编辑状态 -->
-          <span
-            v-if="editingId !== t.id"
-            @dblclick.stop="startEdit(t)"
-            style="max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap"
-          >
+          <span v-if="editingId !== t.id" @dblclick.stop="startEdit(t)">
             {{ t.name }}
           </span>
 
@@ -289,19 +285,20 @@ function handleEditKeydown(e: KeyboardEvent, tag: TagWithCount): void {
 
 <style scoped>
 .tag-manager {
-  width: 400px;
+  width: 100%;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
   position: relative;
-  min-height: 220px;
+  min-height: 200px;
   overflow-x: hidden;
+  padding: 6px 4px;
 }
 
 .tag-search {
   display: flex;
   gap: 6px;
-  width: 370px;
+  width: 100%;
 }
 
 .tag-suggestions {
@@ -317,16 +314,40 @@ function handleEditKeydown(e: KeyboardEvent, tag: TagWithCount): void {
 }
 
 .custom-tag {
+  overflow: visible;
   display: flex;
   align-items: center;
   border-radius: 16px;
-  padding: 0 6px;
+  padding: 2px 6px;
   height: 28px;
   font-size: 15px;
+  max-width: 128px;
+  min-width: 0;
   /* box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08); */
   cursor: pointer;
-  border: 2px solid transparent;
+
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+/* 仅对标签名做省略，不作用到 .tag-count */
+.custom-tag > span:not(.tag-count) {
+  user-select: none;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  transform: translateX(3px);
+}
+
+.tag-count {
+  font-size: 12px;
+  align-items: center;
+  font-family: "Courier New", Courier, monospace;
+  font-weight: bold;
+  padding-left: 2px;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 /* 悬浮在“未选中”的标签上时的效果 */
@@ -344,7 +365,8 @@ function handleEditKeydown(e: KeyboardEvent, tag: TagWithCount): void {
 /* “已选中”标签的固定样式 */
 .custom-tag.selected {
   transform: translateY(-2px);
-  border: 2px solid var(--color-background-dark);
+  border-bottom: 2px solid var(--color-text-primary);
+  box-shadow: 6px 0px 0px 0px var(--color-text-secondary) inset;
 }
 
 /* 悬浮在“已选中”的标签上时的增强效果 */
@@ -362,11 +384,6 @@ function handleEditKeydown(e: KeyboardEvent, tag: TagWithCount): void {
   opacity: 0;
 }
 
-.custom-tag span {
-  padding: 0 4px;
-  user-select: none;
-}
-
 .input-sizer {
   position: absolute;
   visibility: hidden;
@@ -376,13 +393,5 @@ function handleEditKeydown(e: KeyboardEvent, tag: TagWithCount): void {
   font-weight: 500;
   padding: 0 7px;
   pointer-events: none;
-}
-
-.tag-count {
-  font-size: 12px;
-  align-items: center;
-  font-family: "Courier New", Courier, monospace;
-  font-weight: bold;
-  padding-left: 2px;
 }
 </style>
