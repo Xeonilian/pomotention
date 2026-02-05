@@ -6,9 +6,7 @@
         <span class="pwa-install-banner__arrow">→</span>
         选择「添加到主屏幕」
       </span>
-      <button type="button" class="pwa-install-banner__close" aria-label="关闭" @click="dismiss">
-        ×
-      </button>
+      <button type="button" class="pwa-install-banner__close" aria-label="关闭" @click="dismiss">×</button>
     </div>
   </Transition>
 </template>
@@ -31,7 +29,7 @@ const { showIosInstallBanner, dismiss } = usePwaInstall();
   justify-content: space-between;
   gap: 8px;
   padding: 10px 12px 10px 14px;
-  background: linear-gradient(135deg, #1a7f37 0%, #2d9d4a 100%);
+  background: var(--color-blue-light);
   color: #fff;
   font-size: 13px;
   line-height: 1.4;
