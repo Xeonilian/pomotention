@@ -1,7 +1,10 @@
 <template>
-  <div 
-    class="pomodoro-view-wrapper" 
-    :class="{ 'is-compact': settingStore.settings.isCompactMode }"
+  <div
+    class="pomodoro-view-wrapper"
+    :class="{
+      'is-compact': settingStore.settings.isCompactMode,
+      'is-phone-mode': isPhoneMode,
+    }"
     ref="pomodoroContainerRef"
   >
     <div v-if="isMiniMode" class="mini-mode-drag-region" data-tauri-drag-region></div>
@@ -57,7 +60,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, watch, ref } from "vue";
+import { onMounted, watch, ref, computed } from "vue";
 import PomodoroTimer from "@/components/PomotentionTimer/PomodoroTimer.vue";
 import PomodoroSequence from "@/components/PomotentionTimer/PomodoroSequence.vue";
 import { useTimerStore } from "@/stores/useTimerStore";
@@ -69,6 +72,9 @@ import { isTauri } from "@tauri-apps/api/core";
 const timerStore = useTimerStore();
 const settingStore = useSettingStore();
 let isPomoSeqRunning = ref(false); // 基于运行状态，返回不同的高度
+
+// 手机模式：置顶(mini) + 移动端时，timer 全屏宽、布局放大、上下居中
+const isPhoneMode = computed(() => props.isMiniMode && props.isMobile);
 const pomodoroContainerRef = ref<HTMLElement | null>(null); // 自动识别正确高度
 
 const props = defineProps({
@@ -77,6 +83,10 @@ const props = defineProps({
     required: true,
   },
   isMiniMode: {
+    type: Boolean,
+    default: false,
+  },
+  isMobile: {
     type: Boolean,
     default: false,
   },
@@ -193,6 +203,7 @@ function handlePomoSeqRunning(status: boolean) {
   width: 20px;
   height: 18px;
   padding: 0px;
+  background-color: transparent;
 }
 
 .pomo-toggle-button {
@@ -288,5 +299,24 @@ function handlePomoSeqRunning(status: boolean) {
   color: var(--color-text-secondary);
   font-size: small;
   background-color: var(--color-background);
+}
+
+/* 手机模式：置顶 + 移动端时，timer 与屏幕同宽、布局等比放大、上下左右居中 */
+.pomodoro-view-wrapper.is-phone-mode {
+  width: 100vw;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-sizing: border-box;
+  --phone-design-width: 220px;
+}
+.pomodoro-view-wrapper.is-phone-mode.is-compact {
+  --phone-design-width: 140px;
+}
+.pomodoro-view-wrapper.is-phone-mode .pomodoro-content-area {
+  width: var(--phone-design-width);
+  transform: scale(calc(100vw / var(--phone-design-width)));
+  transform-origin: center center;
 }
 </style>

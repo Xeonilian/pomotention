@@ -104,11 +104,12 @@
           />
         </div>
 
-        <!-- 独立番茄钟 (Mini模式) -->
+        <!-- 独立番茄钟 (Mini模式)，手机端传入 isMobile 以启用全屏居中布局 -->
         <PomotentionTimer
           v-if="isMiniMode"
           :showPomoSeq="showPomoSeq"
           :isMiniMode="isMiniMode"
+          :isMobile="isMobile"
           @toggle-pomo-seq="showPomoSeq = !showPomoSeq"
           @report-size="handlePomotentionTimerSizeReport"
           @exit-mini-mode="handleToggleOntopMode(reportedPomodoroWidth, reportedPomodoroHeight, onExitMiniMode)"
