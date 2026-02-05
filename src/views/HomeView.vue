@@ -43,27 +43,27 @@
             }"
           >
             <span @click="onWeekJump" class="day-status">{{ dateService.displayDateInfo }}</span>
-            <span class="global-pomo">
+            <span v-if="!isMobile" class="global-pomo">
               <span class="today-pomo">🍅{{ currentDatePomoCount }}/</span>
               <span class="total-pomo">{{ globalRealPomo }}</span>
             </span>
           </div>
           <div v-if="settingStore.settings.viewSet === 'week'" class="day-info">
             <span @click="onMonthJump" class="day-status">{{ dateService.displayWeekInfo }}</span>
-            <span class="global-pomo">
+            <span v-if="!isMobile" class="global-pomo">
               <span class="total-pomo">🍅{{ globalRealPomo }}</span>
             </span>
           </div>
           <div v-if="settingStore.settings.viewSet === 'month'" class="day-info">
             <span @click="onWeekJump" class="day-status">{{ dateService.displayMonthInfo }}</span>
-            <span class="global-pomo">
+            <span v-if="!isMobile" class="global-pomo">
               <span class="total-pomo">🍅{{ globalRealPomo }}</span>
             </span>
           </div>
           <div
             class="marquee"
             :class="{ 'marquee-empty': settingStore.settings.marquee === '' }"
-            v-if="!isEditing"
+            v-if="!isEditing || !isMobile"
             @click="startEdit"
             title="点击编辑跑马灯"
           >
@@ -82,21 +82,22 @@
           />
           <div class="button-group">
             <n-button
-            title="重复活动"
-            @click="onRepeatActivity"
-            circle
-            quaternary
-            :type="selectedRowId === null ? 'default' : 'info'"
-            size="small"
-            :disabled="selectedRowId === null && activeId === null"
-          >
-            <template #icon>
-              <n-icon><ArrowRepeatAll24Regular /></n-icon>
-            </template>
-          </n-button>
+              title="重复活动"
+              @click="onRepeatActivity"
+              circle
+              quaternary
+              :type="selectedRowId === null ? 'default' : 'info'"
+              size="small"
+              :disabled="selectedRowId === null && activeId === null"
+            >
+              <template #icon>
+                <n-icon><ArrowRepeatAll24Regular /></n-icon>
+              </template>
+            </n-button>
             <n-button
-            :type="selectedRowId === null ? 'default' : 'info'"
-            size="small"
+              v-if="!isMobile"
+              :type="selectedRowId === null ? 'default' : 'info'"
+              size="small"
               circle
               quaternary
               strong
@@ -113,9 +114,9 @@
             <n-date-picker
               v-model:value="queryDate"
               type="date"
-              placeholder="点击到今天"
+              placeholder="回到今天"
               @update:value="onDateSet('query')"
-              style="width: 92px"
+              style="width: 80px"
               class="search-date"
               @click="onDateSet('today')"
               title="输入示例：2025-01-01"
@@ -233,7 +234,6 @@
         @delete-activity="onDeleteActivity"
         @update-active-id="onUpdateActiveId"
         @toggle-pomo-type="onTogglePomoType"
-
         @create-child-activity="onCreateChildActivity"
         @increase-child-activity="onIncreaseChildActivity"
       />
@@ -281,9 +281,11 @@ import { taskService } from "@/services/taskService";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useDataStore } from "@/stores/useDataStore";
 import { autoSyncDebounced, uploadAllDebounced } from "@/core/utils/autoSync";
+import { useDevice } from "@/composables/useDevice";
 
 // ======================== 响应式状态与初始化 ========================
 // 不直接import Naive和以下组建加速启动
+const { isMobile } = useDevice();
 const TimeTable = defineAsyncComponent(() => import("@/components/TimeTable/TimeTable.vue"));
 const DayPlanner = defineAsyncComponent(() => import("@/components/DayPlanner/DayPlanner.vue"));
 const WeekPlanner = defineAsyncComponent(() => import("@/components/WeekPlanner/WeekPlanner.vue"));
@@ -370,7 +372,7 @@ const onDateSelect = (day: number) => {
   // 不清除selectedRowId.value，因为周月视图里需要选中todo.id 或 schedule.id 用于重复
 };
 
-// week和month planner 引起选中的任务行 
+// week和month planner 引起选中的任务行
 const onItemChange = (id: number, activityId?: number, taskId?: number) => {
   selectedRowId.value = null;
   activeId.value = undefined;
@@ -395,8 +397,6 @@ const onItemChange = (id: number, activityId?: number, taskId?: number) => {
     selectedTaskId.value = null;
   }
 };
-
-
 
 // 离开页面兜底（Tauri 桌面端同样可用）
 window.addEventListener("beforeunload", () => {
@@ -443,7 +443,7 @@ function cancelEdit() {
 function onAddActivity(newActivity: Activity) {
   activeId.value = null;
   activityList.value.push(newActivity);
-  
+
   if (newActivity.class === "S") {
     handleAddActivity(scheduleList.value, newActivity, {
       activityById: activityById.value,
@@ -453,12 +453,12 @@ function onAddActivity(newActivity: Activity) {
   // 自动转换为任务
   const task = taskService.createTaskFromActivity(newActivity.id, newActivity.title);
   taskList.value = [...taskList.value, task];
-  
+
   // 回写 activity.taskId
   newActivity.taskId = task.id;
   newActivity.synced = false;
   newActivity.lastModified = Date.now();
-  
+
   // 更新相关的 todo 和 schedule 的 taskId（如果有的话）
   const todo = todoByActivityId.value.get(newActivity.id);
   if (todo) todo.taskId = task.id;
@@ -489,11 +489,11 @@ function onQuickAddTodo() {
     lastModified: Date.now(),
   };
   activityList.value.push(newActivity);
-  
+
   // 创建关联的 task
   const task = taskService.createTaskFromActivity(newActivity.id, newActivity.title);
   taskList.value = [...taskList.value, task];
-  
+
   // 回写 activity.taskId
   newActivity.taskId = task.id;
   newActivity.synced = false;
@@ -503,13 +503,13 @@ function onQuickAddTodo() {
   newActivity.status = "ongoing";
   // 与其他地方保持一致，直接传递 computed ref，Vue 会自动解包
   const { newTodo } = passPickedActivity(newActivity, appDateTimestamp.value, isViewDateToday.value);
-  
+
   // 确保 newTodo.id 是有效数字（防御性检查）
-  if (typeof newTodo.id !== 'number' || isNaN(newTodo.id)) {
-    console.error('Invalid todo.id generated, using Date.now() as fallback. Original id:', newTodo.id);
+  if (typeof newTodo.id !== "number" || isNaN(newTodo.id)) {
+    console.error("Invalid todo.id generated, using Date.now() as fallback. Original id:", newTodo.id);
     newTodo.id = Date.now();
   }
-  
+
   newTodo.taskId = task.id; // 关联 task
   todoList.value = [...todoList.value, newTodo];
 
@@ -542,17 +542,17 @@ function onQuickAddSchedule() {
   // 创建关联的 task
   const task = taskService.createTaskFromActivity(newActivity.id, newActivity.title);
   taskList.value = [...taskList.value, task];
-  
+
   // 回写 activity.taskId
   newActivity.taskId = task.id;
   newActivity.synced = false;
   newActivity.lastModified = Date.now();
-  
+
   // 创建新的 todo，使用 appDateTimestamp（选中的日期）
-  if (newActivity.class === "S"){
-    handleAddActivity(scheduleList.value, newActivity, {activityById: activityById.value,});
+  if (newActivity.class === "S") {
+    handleAddActivity(scheduleList.value, newActivity, { activityById: activityById.value });
   }
-  
+
   saveAllDebounced();
 }
 
@@ -614,7 +614,6 @@ function onPickActivity(activity: Activity) {
   saveAllDebounced();
 }
 
-
 /** 激活红色高亮可以编辑文字 */
 function onUpdateActiveId(id: number | null | undefined) {
   activeId.value = id;
@@ -668,14 +667,14 @@ function onRepeatActivity() {
     // 找到对应的 todo 或 schedule
     const todo = todoById.value.get(selectedRowId.value);
     const schedule = scheduleById.value.get(selectedRowId.value);
-    
+
     // 通过 todo/schedule 找到 activity
     const sourceActivityId = todo?.activityId || schedule?.activityId;
     if (!sourceActivityId) return;
-    
+
     const sourceActivity = activityById.value.get(sourceActivityId);
     if (!sourceActivity) return;
-    
+
     // 创建新的 activity（复制原 activity）
     const newActivity: Activity = {
       ...sourceActivity,
@@ -688,7 +687,10 @@ function onRepeatActivity() {
       deleted: false,
       lastModified: Date.now(),
       ...(sourceActivity.dueRange && {
-        dueRange: [dateService.combineDateAndTime(appDateTimestamp.value, sourceActivity.dueRange[0]), sourceActivity.dueRange[1]] as [number | null, string],
+        dueRange: [dateService.combineDateAndTime(appDateTimestamp.value, sourceActivity.dueRange[0]), sourceActivity.dueRange[1]] as [
+          number | null,
+          string
+        ],
       }),
     };
     activityList.value.push(newActivity);
@@ -699,9 +701,9 @@ function onRepeatActivity() {
     newActivity.taskId = task.id;
     newActivity.synced = false;
     newActivity.lastModified = Date.now();
-    
+
     // 创建新的 todo，使用 appDateTimestamp（选中的日期）
-    if (newActivity.class === "T"){
+    if (newActivity.class === "T") {
       newActivity.status = "ongoing";
       newActivity.dueDate = appDateTimestamp.value;
       newActivity.synced = false;
@@ -710,9 +712,9 @@ function onRepeatActivity() {
       newTodo.taskId = task.id; // 关联 task
       todoList.value = [...todoList.value, newTodo];
     } else {
-      handleAddActivity(scheduleList.value, newActivity, {activityById: activityById.value,});
+      handleAddActivity(scheduleList.value, newActivity, { activityById: activityById.value });
     }
-    
+
     // 同步 UI 选中
     activeId.value = newActivity.id;
     selectedActivityId.value = newActivity.id;
@@ -763,7 +765,7 @@ function onCreateChildActivity(id: number | null | undefined) {
 
     const task = taskService.createTaskFromActivity(newActivity.id, newActivity.title);
     taskList.value = [...taskList.value, task];
-  
+
     // 回写 activity.taskId
     newActivity.taskId = task.id;
     newActivity.synced = false;
@@ -1074,7 +1076,7 @@ function onDateSet(direction: "prev" | "next" | "today" | "query") {
   let day: number;
   switch (direction) {
     case "prev":
-      day = dateService.navigateByView("prev");    
+      day = dateService.navigateByView("prev");
       dataStore.setSelectedDate(day);
       break;
     case "next":
@@ -1092,7 +1094,7 @@ function onDateSet(direction: "prev" | "next" | "today" | "query") {
       break;
     case "query":
       if (queryDate.value) {
-      day = dateService.navigateTo(new Date(queryDate.value));
+        day = dateService.navigateTo(new Date(queryDate.value));
         dataStore.setSelectedDate(day);
         dateService.setAppDate(day);
       }
@@ -1135,7 +1137,7 @@ function handleEditScheduleTitle(id: number, newTitle: string) {
   activity.synced = false;
   activity.lastModified = Date.now();
 
-  // 找到task 并重新赋值 
+  // 找到task 并重新赋值
   const relatedTask = taskByActivityId.value.get(schedule.activityId);
   if (relatedTask) {
     relatedTask.activityTitle = newTitle;
