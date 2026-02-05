@@ -448,22 +448,28 @@ const emit = defineEmits<{
 }>();
 
 // 对待办事项按优先级降序排序（高优先级在前）
+// 增加规则：一旦done，特殊值（33/44/55/66/77/88/99）按 startTime 排序
 const sortedTodos = computed(() => {
   const todos = [...todosForCurrentViewWithTaskRecords.value];
-  // 分离特殊值（66、88、99）和正常值
   const specialPriorities = [33, 44, 55, 66, 77, 88, 99];
+
   const normalTodos: TodoWithTaskRecords[] = [];
-  const specialTodos: TodoWithTaskRecords[] = [];
+  const specialTodosNotDone: TodoWithTaskRecords[] = [];
+  const specialTodosDone: TodoWithTaskRecords[] = [];
 
   todos.forEach((todo) => {
     if (specialPriorities.includes(todo.priority)) {
-      specialTodos.push(todo);
+      if (todo.status === "done") {
+        specialTodosDone.push(todo);
+      } else {
+        specialTodosNotDone.push(todo);
+      }
     } else {
       normalTodos.push(todo);
     }
   });
 
-  // 正常任务排序：0放最后，其余越小越优先
+  // 正常任务排序：0放最后，其余越小优先
   normalTodos.sort((a, b) => {
     if (a.priority === 0 && b.priority === 0) return 0;
     if (a.priority === 0) return 1;
@@ -471,15 +477,23 @@ const sortedTodos = computed(() => {
     return a.priority - b.priority;
   });
 
-  // 特殊值任务按66、88、99顺序排序
-  specialTodos.sort((a, b) => {
+  // 未完成的特殊任务按特殊值顺序
+  specialTodosNotDone.sort((a, b) => {
     const orderA = specialPriorities.indexOf(a.priority);
     const orderB = specialPriorities.indexOf(b.priority);
     return orderA - orderB;
   });
 
-  // 合并：正常任务在前，特殊值任务在后
-  return [...normalTodos, ...specialTodos];
+  // 已完成（done）的特殊任务按 startTime 升序（无 startTime 排后面）
+  specialTodosDone.sort((a, b) => {
+    if (!a.startTime && !b.startTime) return 0;
+    if (!a.startTime) return 1;
+    if (!b.startTime) return -1;
+    return String(a.startTime).localeCompare(String(b.startTime));
+  });
+
+  // 合并：正常 > 未完成特殊 > 已完成特殊
+  return [...normalTodos, ...specialTodosNotDone, ...specialTodosDone];
 });
 
 // 优先级 排序================
