@@ -42,14 +42,16 @@
               tomorrow: isViewDateTomorrow,
             }"
           >
-            <span @click="onWeekJump" class="day-status">{{ dateService.displayDateInfo }}</span>
+            <span @click="onWeekJump" class="day-status">{{ isMobile ? dateService.appDateKey : dateService.displayDateInfo }}</span>
             <span v-if="!isMobile" class="global-pomo">
               <span class="today-pomo">🍅{{ currentDatePomoCount }}/</span>
               <span class="total-pomo">{{ globalRealPomo }}</span>
             </span>
           </div>
           <div v-if="settingStore.settings.viewSet === 'week'" class="day-info">
-            <span @click="onMonthJump" class="day-status">{{ dateService.displayWeekInfo }}</span>
+            <span @click="onMonthJump" class="day-status">
+              {{ isMobile ? dateService.displayWeekInfoMobile : dateService.displayWeekInfo }}
+            </span>
             <span v-if="!isMobile" class="global-pomo">
               <span class="total-pomo">🍅{{ globalRealPomo }}</span>
             </span>
@@ -114,9 +116,9 @@
             <n-date-picker
               v-model:value="queryDate"
               type="date"
-              placeholder="回到今天"
+              placeholder="日期选择"
               @update:value="onDateSet('query')"
-              style="width: 80px"
+              :style="`width: ${isMobile ? 80 : 92}px`"
               class="search-date"
               @click="onDateSet('today')"
               title="输入示例：2025-01-01"
