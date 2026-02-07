@@ -1,91 +1,101 @@
 <template>
-  <div class="tag-manager">
-    <!-- 顶部搜索和新建区域 -->
-    <div class="tag-search">
-      <n-input v-model:value="inputText" placeholder="搜索或新建标签" @keydown.enter="onAddTag" size="medium" clearable style="width: 100%">
-        <template #prefix>
-          <n-icon color="var(--color-text)">
-            <TagSearch20Filled />
-          </n-icon>
-        </template>
-      </n-input>
-      <n-button type="info" secondary :disabled="!inputText.trim()" @click="onAddTag" title="增加标签">
-        <n-icon size="18px"><Add20Filled /></n-icon>
-      </n-button>
-    </div>
-
-    <!-- 标签列表显示区域 -->
-    <div class="tag-suggestions">
-      <template v-for="t in filteredTags" :key="t.id">
-        <div
-          class="custom-tag"
-          :class="{ selected: isTagSelected(t.id) }"
-          :style="{
-            color: t.color,
-            backgroundColor: t.backgroundColor,
-          }"
-          @click="onClickTag(t)"
+  <n-modal v-model:show="showModal" @after-leave="emit('after-leave')" class="tag-manager">
+    <div class="tag-manager-inner">
+      <!-- 顶部搜索和新建区域 -->
+      <div class="tag-search">
+        <n-input
+          primary
+          type="text"
+          v-model:value="inputText"
+          placeholder="搜索或新建标签"
+          @keydown.enter="onAddTag"
+          size="medium"
+          clearable
         >
-          <!-- 标签名显示，双击可进入编辑状态 -->
-          <span v-if="editingId !== t.id" @dblclick.stop="startEdit(t)">
-            {{ t.name }}
-          </span>
+          <template #prefix>
+            <n-icon color="var(--color-text)">
+              <TagSearch20Filled />
+            </n-icon>
+          </template>
+        </n-input>
+        <n-button primary type="info" :disabled="!inputText.trim()" @click="onAddTag" title="增加标签">
+          <n-icon size="18px"><Add20Filled /></n-icon>
+        </n-button>
+      </div>
 
-          <!-- 标签名编辑输入框（编辑态） -->
-          <n-input
-            v-else
-            v-model:value="editValue"
-            size="tiny"
+      <!-- 标签列表显示区域 -->
+      <div class="tag-suggestions">
+        <template v-for="t in filteredTags" :key="t.id">
+          <div
+            class="custom-tag"
+            :class="{ selected: isTagSelected(t.id) }"
             :style="{
-              width: editInputWidth + 'px',
-              minWidth: '30px',
-              transition: 'width 0.2s',
+              color: t.color,
+              backgroundColor: t.backgroundColor,
             }"
-            @blur="onEditFinish(t)"
-            @input="updateInputWidth"
-            @keydown="(e) => handleEditKeydown(e, t)"
-            @click.stop
-          />
+            @click="onClickTag(t)"
+          >
+            <!-- 标签名显示，双击可进入编辑状态 -->
+            <span v-if="editingId !== t.id" @dblclick.stop="startEdit(t)">
+              {{ t.name }}
+            </span>
 
-          <!-- 文本颜色选择器 -->
-          <n-popover trigger="click" placement="bottom" :style="{ padding: '10px', width: '240px' }">
-            <template #trigger>
-              <n-button text :color="t.color" @click.stop>
-                <n-icon><Heart16Filled /></n-icon>
-              </n-button>
-            </template>
-            <n-color-picker :value="t.color" :show-alpha="false" @update:value="(color) => onColorUpdate(t.id, 'fg', color)" />
-          </n-popover>
+            <!-- 标签名编辑输入框（编辑态） -->
+            <n-input
+              v-else
+              v-model:value="editValue"
+              size="tiny"
+              :style="{
+                width: editInputWidth + 'px',
+                minWidth: '30px',
+                transition: 'width 0.2s',
+              }"
+              @blur="onEditFinish(t)"
+              @input="updateInputWidth"
+              @keydown="(e) => handleEditKeydown(e, t)"
+              @click.stop
+            />
 
-          <!-- 背景颜色选择器 -->
-          <n-popover trigger="click" placement="bottom" :style="{ width: '200px' }">
-            <template #trigger>
-              <n-button text @click.stop>
-                <n-icon><HeartCircle16Regular /></n-icon>
-              </n-button>
-            </template>
-            <n-color-picker :value="t.backgroundColor" :show-alpha="false" @update:value="(color) => onColorUpdate(t.id, 'bg', color)" />
-          </n-popover>
+            <!-- 文本颜色选择器 -->
+            <n-popover trigger="click" placement="bottom" :style="{ padding: '10px', width: '200px' }">
+              <template #trigger>
+                <n-button text :color="t.color" @click.stop>
+                  <n-icon><Heart16Filled /></n-icon>
+                </n-button>
+              </template>
+              <n-color-picker :value="t.color" :show-alpha="false" @update:value="(color) => onColorUpdate(t.id, 'fg', color)" />
+            </n-popover>
 
-          <!-- 删除按钮，点击弹出确认对话框 -->
-          <n-button text @click.stop="confirmRemoveTag(t)">
-            <n-icon><TagDismiss16Regular /></n-icon>
-          </n-button>
+            <!-- 背景颜色选择器 -->
+            <n-popover trigger="click" placement="bottom" :style="{ width: '200px' }">
+              <template #trigger>
+                <n-button text @click.stop>
+                  <n-icon><HeartCircle16Regular /></n-icon>
+                </n-button>
+              </template>
+              <n-color-picker :value="t.backgroundColor" :show-alpha="false" @update:value="(color) => onColorUpdate(t.id, 'bg', color)" />
+            </n-popover>
 
-          <!-- 标签引用计数 -->
-          <span class="tag-count">[{{ t.count }}]</span>
-        </div>
-      </template>
+            <!-- 删除按钮，点击弹出确认对话框 -->
+            <n-button text @click.stop="confirmRemoveTag(t)">
+              <n-icon><TagDismiss16Regular /></n-icon>
+            </n-button>
 
-      <!-- 用于保证列表高度稳定的透明占位符 -->
-      <div v-for="idx in emptyCount" :key="'empty-tag-' + idx" class="custom-tag empty-tag">-</div>
+            <!-- 标签引用计数 -->
+            <span class="tag-count">[{{ t.count }}]</span>
+          </div>
+        </template>
+
+        <!-- 用于保证列表高度稳定的透明占位符 -->
+        <div v-for="idx in emptyCount" :key="'empty-tag-' + idx" class="custom-tag empty-tag">-</div>
+      </div>
+
+      <!-- 用于动态测量编辑输入框宽度的隐藏元素 -->
+      <span ref="sizerRef" class="input-sizer">
+        {{ editValue }}
+      </span>
     </div>
-
-    <!-- 用于动态测量编辑输入框宽度的隐藏元素 -->
-    <span ref="sizerRef" class="input-sizer">
-      {{ editValue }}
-    </span>
-  </div>
+  </n-modal>
 </template>
 
 <script setup lang="ts">
@@ -105,11 +115,14 @@ const dialog = useDialog();
 // Props & Emits
 // ================================================================
 const props = defineProps<{
-  modelValue: number[]; // 已选中的标签 ID 数组
+  modelValue: number[];
+  show?: boolean;
 }>();
 
 const emit = defineEmits<{
   "update:modelValue": [value: number[]];
+  "update:show": [value: boolean];
+  "after-leave": [];
 }>();
 
 // ================================================================
@@ -120,7 +133,13 @@ const editingId = ref<number | null>(null);
 const editValue = ref("");
 const editInputWidth = ref(40);
 const sizerRef = ref<HTMLElement | null>(null);
-
+// 弹窗显示：未传 show 时由外层 modal 控制，内层始终显示；传了 show 则跟随父组件
+const showModal = computed({
+  get: () => (props.show === undefined ? true : !!props.show),
+  set: (v) => {
+    if (!v) emit("update:show", false);
+  },
+});
 // ================================================================
 // Computed
 // ================================================================
@@ -285,20 +304,29 @@ function handleEditKeydown(e: KeyboardEvent, tag: TagWithCount): void {
 
 <style scoped>
 .tag-manager {
-  width: 100%;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
   position: relative;
   min-height: 200px;
   overflow-x: hidden;
-  padding: 6px 4px;
+  padding: 10px 12px;
+  background-color: var(--color-background);
+  width: 400px;
+}
+
+.tag-manager-inner {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  min-height: 200px;
+  box-sizing: border-box;
+  overflow-x: hidden;
 }
 
 .tag-search {
   display: flex;
   gap: 6px;
-  width: 100%;
 }
 
 .tag-suggestions {
@@ -307,7 +335,6 @@ function handleEditKeydown(e: KeyboardEvent, tag: TagWithCount): void {
   gap: 8px;
   padding-top: 14px;
   padding-left: 2px;
-  width: 380px;
   overflow-y: auto;
   overflow: visible;
   padding-bottom: 5px;
@@ -319,13 +346,14 @@ function handleEditKeydown(e: KeyboardEvent, tag: TagWithCount): void {
   align-items: center;
   border-radius: 16px;
   padding: 2px 6px;
-  height: 28px;
-  font-size: 15px;
-  max-width: 128px;
+  height: 20px;
+  margin: 2px 0;
+  font-size: 14px;
+  flex: 0 1 auto;
+  max-width: calc(35%);
+  box-sizing: border-box;
   min-width: 0;
-  /* box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08); */
   cursor: pointer;
-
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
@@ -337,7 +365,6 @@ function handleEditKeydown(e: KeyboardEvent, tag: TagWithCount): void {
   text-overflow: ellipsis;
   white-space: nowrap;
   min-width: 0;
-  transform: translateX(3px);
 }
 
 .tag-count {
@@ -366,7 +393,7 @@ function handleEditKeydown(e: KeyboardEvent, tag: TagWithCount): void {
 .custom-tag.selected {
   transform: translateY(-2px);
   border-bottom: 2px solid var(--color-text-primary);
-  box-shadow: 6px 0px 0px 0px var(--color-text-secondary) inset;
+  box-shadow: 4px 0px 0px 0px var(--color-text-secondary) inset;
 }
 
 /* 悬浮在“已选中”的标签上时的增强效果 */

@@ -59,17 +59,19 @@
     </div>
 
     <!-- 标签管理器 Modal -->
-    <n-modal v-model:show="showTagManager" @after-leave="handleTagManagerClose">
-      <n-card style="width: 350px" :content-style="{ overflow: 'visible' }">
-        <TagManager v-model="tagIdsProxy" />
-      </n-card>
-    </n-modal>
+    <TagManager
+      v-model="tagIdsProxy"
+      :show="showTagManager"
+      @update:show="showTagManager = $event"
+      @after-leave="handleTagManagerClose"
+      :tabId="tab.id"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, toRef } from "vue";
-import { NButton, NIcon, NModal, NCard } from "naive-ui";
+import { NButton, NIcon } from "naive-ui";
 import { marked } from "marked";
 import { Star20Filled, Star20Regular, Tag16Regular } from "@vicons/fluent";
 

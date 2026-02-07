@@ -135,17 +135,13 @@
     />
 
     <!-- 标签管理器弹窗 -->
-    <n-modal v-model:show="showTagManager" @after-leave="handleTagManagerClose">
-      <n-card style="width: 350px">
-        <TagManager v-model="tagIdsProxy" />
-      </n-card>
-    </n-modal>
+    <TagManager v-model="tagIdsProxy" :show="showTagManager" @update:show="showTagManager = $event" @after-leave="handleTagManagerClose" :taskId="taskId" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from "vue";
-import { NButton, NModal, NCard, NPopover, NIcon } from "naive-ui";
+import { NButton, NPopover, NIcon } from "naive-ui";
 import EnergyInputDialog from "@/components/TaskTracker/EnergyInputDialog.vue";
 import RewardInputDialog from "@/components/TaskTracker/RewardInputDialog.vue";
 import InterruptionInputDialog from "@/components/TaskTracker/InterruptionInputDialog.vue";
