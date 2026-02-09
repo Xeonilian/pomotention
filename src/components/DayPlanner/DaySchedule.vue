@@ -30,11 +30,11 @@
               type="default"
               @click.stop="handleQuickAddSchedule"
               title="快速新增日程"
-              style="transform: translateX(2px) translateY(4px)"
+              class="add-schedule-button"
             >
               <template #icon>
-                <n-icon size="13">
-                  <Add12Regular />
+                <n-icon size="20">
+                  <CalendarAdd24Regular />
                 </n-icon>
               </template>
             </n-button>
@@ -290,8 +290,8 @@
     :trap-focus="false"
     trigger="manual"
     :show-arrow="false"
-    style="padding: 0; border-radius: 6px; margin-top: -30px; margin-left: 130px"
-    :to="false"
+    style="padding: 0; border-radius: 6px; margin-top: -30px; margin-left: 130px; z-index: 10000"
+    :z-index="10000"
   >
     <template #trigger>
       <span style="position: absolute; pointer-events: none"></span>
@@ -313,7 +313,7 @@ import { timestampToTimeString } from "@/core/utils";
 import { NCheckbox, NButton, NIcon, NPopover } from "naive-ui";
 import {
   // ChevronCircleDown48Regular,
-  Add12Regular,
+  CalendarAdd24Regular,
   DismissCircle20Regular,
   // ArrowRepeatAll24Regular,
   DismissSquare20Filled,
@@ -1123,5 +1123,11 @@ td.status-col {
   z-index: 10;
   background: rgba(255, 255, 255, 0.1);
   border-radius: 3px;
+}
+
+.add-schedule-button {
+  color: var(--color-blue);
+  cursor: pointer;
+  transform: translateY(3px);
 }
 </style>

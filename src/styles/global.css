@@ -20,13 +20,31 @@
   background-color: rgba(0, 0, 0, 0.1) !important;
 }
 
-/* 移动端触摸优化 */
+/* 移动端触摸优化 + 全屏高度 */
 html,
 body {
   /* 防止移动端双击缩放 */
   touch-action: manipulation;
   /* iOS Safari 平滑滚动 */
   -webkit-overflow-scrolling: touch;
+  height: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
+/* iPhone 刘海/安全区：避免顶部被状态栏遮挡，并修正左右按键对位 */
+#app {
+  box-sizing: border-box;
+  height: 100%;
+  min-height: 100vh;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  overflow: hidden;
+}
+#app > * {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
 }
 
 /* 可滚动容器优化 */

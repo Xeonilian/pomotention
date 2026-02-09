@@ -2,8 +2,10 @@
   <n-config-provider>
     <n-notification-provider>
       <n-dialog-provider>
+        <PwaSplashScreen />
         <router-view />
         <UpdateManager />
+        <PwaInstallBanner />
       </n-dialog-provider>
     </n-notification-provider>
   </n-config-provider>
@@ -19,6 +21,8 @@ import { useSyncStore } from "@/stores/useSyncStore";
 import { STORAGE_KEYS } from "@/core/constants";
 
 import UpdateManager from "./components/UpdateManager.vue";
+import PwaInstallBanner from "./components/PwaInstallBanner.vue";
+import PwaSplashScreen from "./components/PwaSplashScreen.vue";
 import { initSyncServices, syncAll, resetSyncServices } from "@/services/sync";
 import { initAppCloseHandler, cancelPendingSyncTasks } from "@/services/appCloseHandler";
 
@@ -257,14 +261,3 @@ onUnmounted(() => {
   }
 });
 </script>
-
-<style scoped>
-html,
-body,
-#app {
-  height: 100vh;
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
-}
-</style>

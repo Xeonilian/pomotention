@@ -29,11 +29,11 @@
               type="default"
               @click.stop="handleQuickAddTodo"
               title="快速新增待办"
-              style="transform: translateX(2px) translateY(4px)"
+              class="add-todo-button"
             >
               <template #icon>
-                <n-icon size="13">
-                  <Add12Regular />
+                <n-icon size="20">
+                  <AddCircle24Regular />
                 </n-icon>
               </template>
             </n-button>
@@ -145,13 +145,13 @@
               />
 
               <span v-else class="priority-badge" :class="'priority-' + todo.priority">
-                <template v-if="todo.priority === 33">💤</template>
+                <template v-if="todo.priority === 33">🧸</template>
                 <template v-else-if="todo.priority === 44">🥗</template>
                 <template v-else-if="todo.priority === 55">📚</template>
                 <template v-else-if="todo.priority === 66">🙊</template>
                 <template v-else-if="todo.priority === 77">✨</template>
                 <template v-else-if="todo.priority === 88">💸</template>
-                <template v-else-if="todo.priority === 99">🧸</template>
+                <template v-else-if="todo.priority === 99">💤</template>
                 <template v-else>{{ todo.priority > 0 ? todo.priority : "" }}</template>
               </span>
             </td>
@@ -352,8 +352,8 @@
     :trap-focus="false"
     trigger="manual"
     :show-arrow="false"
-    style="padding: 0; border-radius: 6px; margin-top: -30px; margin-left: 130px"
-    :to="false"
+    style="padding: 0; border-radius: 6px; margin-top: -30px; margin-left: 130px; z-index: 10000"
+    :z-index="10000"
   >
     <template #trigger>
       <span style="position: absolute; pointer-events: none"></span>
@@ -379,7 +379,7 @@ import {
   DismissSquare20Filled,
   CaretLeft12Filled,
   CaretRight12Filled,
-  Add12Regular,
+  AddCircle24Regular,
 } from "@vicons/fluent";
 import { NCheckbox, NInputNumber, NPopover, NButton, NIcon } from "naive-ui";
 import { ref, computed, nextTick } from "vue";
@@ -448,22 +448,28 @@ const emit = defineEmits<{
 }>();
 
 // 对待办事项按优先级降序排序（高优先级在前）
+// 增加规则：一旦done，特殊值（33/44/55/66/77/88/99）按 startTime 排序
 const sortedTodos = computed(() => {
   const todos = [...todosForCurrentViewWithTaskRecords.value];
-  // 分离特殊值（66、88、99）和正常值
   const specialPriorities = [33, 44, 55, 66, 77, 88, 99];
+
   const normalTodos: TodoWithTaskRecords[] = [];
-  const specialTodos: TodoWithTaskRecords[] = [];
+  const specialTodosNotDone: TodoWithTaskRecords[] = [];
+  const specialTodosDone: TodoWithTaskRecords[] = [];
 
   todos.forEach((todo) => {
     if (specialPriorities.includes(todo.priority)) {
-      specialTodos.push(todo);
+      if (todo.status === "done") {
+        specialTodosDone.push(todo);
+      } else {
+        specialTodosNotDone.push(todo);
+      }
     } else {
       normalTodos.push(todo);
     }
   });
 
-  // 正常任务排序：0放最后，其余越小越优先
+  // 正常任务排序：0放最后，其余越小优先
   normalTodos.sort((a, b) => {
     if (a.priority === 0 && b.priority === 0) return 0;
     if (a.priority === 0) return 1;
@@ -471,15 +477,23 @@ const sortedTodos = computed(() => {
     return a.priority - b.priority;
   });
 
-  // 特殊值任务按66、88、99顺序排序
-  specialTodos.sort((a, b) => {
+  // 未完成的特殊任务按特殊值顺序
+  specialTodosNotDone.sort((a, b) => {
     const orderA = specialPriorities.indexOf(a.priority);
     const orderB = specialPriorities.indexOf(b.priority);
     return orderA - orderB;
   });
 
-  // 合并：正常任务在前，特殊值任务在后
-  return [...normalTodos, ...specialTodos];
+  // 已完成（done）的特殊任务按 startTime 升序（无 startTime 排后面）
+  specialTodosDone.sort((a, b) => {
+    if (!a.startTime && !b.startTime) return 0;
+    if (!a.startTime) return 1;
+    if (!b.startTime) return -1;
+    return String(a.startTime).localeCompare(String(b.startTime));
+  });
+
+  // 合并：正常 > 未完成特殊 > 已完成特殊
+  return [...normalTodos, ...specialTodosNotDone, ...specialTodosDone];
 });
 
 // 优先级 排序================
@@ -1009,6 +1023,12 @@ thead th {
 /* 果果列禁用状态 */
 th.col-fruit.disabled-toggle {
   cursor: not-allowed;
+}
+
+.add-todo-button {
+  cursor: pointer;
+  transform: translateY(3px);
+  color: var(--color-blue);
 }
 
 /* 行样式 */

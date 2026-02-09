@@ -9,10 +9,10 @@ import {
   ArrowRight24Filled,
   Timer24Regular,
   Pin24Regular,
-  BrainCircuit24Regular,
+  //BrainCircuit24Regular,
 } from "@vicons/fluent";
 
-type ViewKey = "ontop" | "pomodoro" | "schedule" | "planner" | "task" | "activity" | "ai";
+type ViewKey = "ontop" | "pomodoro" | "schedule" | "planner" | "task" | "activity"; //| "ai"
 
 export function useButtonStyle() {
   const timerStore = useTimerStore();
@@ -25,7 +25,7 @@ export function useButtonStyle() {
     planner: false,
     task: false,
     activity: false,
-    ai: false,
+    //ai: false,
   });
 
   const buttonStyle = (show: boolean, key: string) => {
@@ -49,7 +49,7 @@ export function useButtonStyle() {
     buttonStates.value.planner = settingStore.settings.showPlanner;
     buttonStates.value.task = settingStore.settings.showTask;
     buttonStates.value.activity = settingStore.settings.showActivity;
-    buttonStates.value.ai = settingStore.settings.showAi;
+    //buttonStates.value.ai = settingStore.settings.showAi;
   };
 
   // 视图控制配置
@@ -60,22 +60,23 @@ export function useButtonStyle() {
     { key: "planner", icon: ArrowUp24Filled, title: "切换计划视图", show: settingStore.settings.showPlanner },
     { key: "task", icon: ArrowDown24Filled, title: "切换执行视图", show: settingStore.settings.showTask },
     { key: "activity", icon: ArrowRight24Filled, title: "切换活动视图", show: settingStore.settings.showActivity },
-    { key: "ai", icon: BrainCircuit24Regular, title: "切换AI助手", show: settingStore.settings.showAi },
+    //{ key: "ai", icon: BrainCircuit24Regular, title: "切换AI助手", show: settingStore.settings.showAi },
   ]);
 
   // 切换设置面板显示状态
-  function toggleSettingPanel(panel: "schedule" | "activity" | "task" | "today" | "pomodoro" | "ai") {
+  function toggleSettingPanel(panel: "schedule" | "activity" | "task" | "today" | "pomodoro") {
+    //| "ai"
     const toKey = (p: string) => ("show" + p.charAt(0).toUpperCase() + p.slice(1)) as keyof typeof settingStore.settings;
     const key = toKey(panel);
     const next = !settingStore.settings[key];
     // @ts-ignore
     settingStore.settings[key] = next;
 
-    // 互斥逻辑
-    if (next) {
-      if (panel === "activity") settingStore.settings.showAi = false;
-      else if (panel === "ai") settingStore.settings.showActivity = false;
-    }
+    // 互斥逻辑 ai activity 暂不需要
+    // if (next) {
+    //   if (panel === "activity") settingStore.settings.showAi = false;
+    //   else if (panel === "ai") settingStore.settings.showActivity = false;
+    // }
   }
 
   // 监听配置变化更新按钮样式
@@ -86,7 +87,7 @@ export function useButtonStyle() {
       settingStore.settings.showTask,
       settingStore.settings.showActivity,
       settingStore.settings.showPomodoro,
-      settingStore.settings.showAi,
+      //settingStore.settings.showAi,
     ],
     () => updateButtonStates(),
     { immediate: true }

@@ -1,11 +1,13 @@
 // src/composables/useDraggable.ts
 import { ref, nextTick, watch } from "vue";
 import { useSettingStore } from "@/stores/useSettingStore";
+import { useDevice } from "./useDevice";
 
 export function useDraggable(dragThreshold = 5) {
   const draggableContainer = ref<HTMLElement | null>(null);
   const lastPosition = ref({ x: -1, y: -1 });
   const settingStore = useSettingStore();
+  const { isMobile } = useDevice();
 
   let startX = 0;
   let startY = 0;
@@ -26,6 +28,7 @@ export function useDraggable(dragThreshold = 5) {
     const elementHeight = draggableContainer.value.offsetHeight || 140;
 
     let targetLeft, targetTop;
+    const defaultOffsetY = isMobile ? 20 : 0;
 
     // 如果有历史位置，优先使用
     if (lastPosition.value.x !== -1) {
@@ -35,7 +38,7 @@ export function useDraggable(dragThreshold = 5) {
       // 默认右下角
       const margin = 20;
       targetLeft = Math.max(0, parentWidth - elementWidth - margin);
-      targetTop = Math.max(0, parentHeight - elementHeight - margin);
+      targetTop = Math.max(0, parentHeight - elementHeight - margin - defaultOffsetY);
     }
 
     draggableContainer.value.style.left = `${targetLeft}px`;

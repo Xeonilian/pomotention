@@ -104,6 +104,13 @@ export function unifiedDateService({ activityList, scheduleList, todoList }: Uni
     return `${isoYear} ${monthName} Week ${weekNumber}`;
   });
 
+  const displayWeekInfoMobile = computed(() => {
+    const start = new Date(weekStartTs.value);
+    const { isoYear, weekNumber } = getISOWeekInfo(weekStartTs.value);
+    const monthName = start.toLocaleString("en-US", { month: "short" }); // Aug
+    return `${isoYear} ${monthName} W${weekNumber}`;
+  });
+
   const monthStartTs = computed(() => getStartOfMonth(dateState.app));
   const monthKey = computed(() => getMonthKey(dateState.app));
   const displayMonthInfo = computed(() => {
@@ -242,7 +249,7 @@ export function unifiedDateService({ activityList, scheduleList, todoList }: Uni
   const combineDateAndTime = (dateTimestamp: number, timeTimestamp: number): number => {
     const date = new Date(dateTimestamp);
     const time = new Date(timeTimestamp);
-    
+
     const result = new Date(
       date.getFullYear(),
       date.getMonth(),
@@ -252,7 +259,7 @@ export function unifiedDateService({ activityList, scheduleList, todoList }: Uni
       time.getSeconds(),
       time.getMilliseconds()
     );
-    
+
     return result.getTime();
   };
 
@@ -269,6 +276,7 @@ export function unifiedDateService({ activityList, scheduleList, todoList }: Uni
     weekStartTs,
     weekKey,
     displayWeekInfo,
+    displayWeekInfoMobile,
     monthStartTs,
     monthKey,
     displayMonthInfo,

@@ -317,16 +317,18 @@
     </div>
   </div>
   <!-- 弹出tag管理 -->
-  <n-modal v-model:show="showTagManager" @after-leave="handleTagManagerClose">
-    <n-card style="width: 420px">
-      <TagManager v-model="tagIdsProxy" />
-    </n-card>
-  </n-modal>
+  <TagManager
+    v-model="tagIdsProxy"
+    :show="showTagManager"
+    @update:show="showTagManager = $event"
+    @after-leave="handleTagManagerClose"
+    :activityId="activityId"
+  />
 </template>
 
 <script setup lang="ts">
 import { computed, watch, nextTick, ref, onMounted } from "vue";
-import { NInput, NDatePicker, NIcon, NDropdown, NPopover, NButton, NCard, NModal } from "naive-ui";
+import { NInput, NDatePicker, NIcon, NDropdown, NPopover, NButton } from "naive-ui";
 import {
   VideoPersonCall24Regular,
   ApprovalsApp24Regular,

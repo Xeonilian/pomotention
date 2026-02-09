@@ -1,13 +1,18 @@
 {
+  "id": "/",
   "name": "Pomotention",
   "short_name": "Pomotention",
+  "description": "专注力提升工具，结合番茄工作法和专注力训练",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
+  "orientation": "any",
   "background_color": "#ffffff",
   "theme_color": "#ffffff",
+  "categories": ["productivity", "utilities"],
   "icons": [
-    { "src": "/icon-128.png", "sizes": "128x128", "type": "image/png" },
-    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" }
+    { "src": "/icon-128.png", "sizes": "128x128", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
   ]
 }
