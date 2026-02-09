@@ -43,7 +43,7 @@
             }"
           >
             <span @click="onWeekJump" class="day-status">{{ isMobile ? dateService.appDateKey : dateService.displayDateInfo }}</span>
-            <span v-if="!isMobile" class="global-pomo">
+            <span class="global-pomo">
               <span class="today-pomo">🍅{{ currentDatePomoCount }}/</span>
               <span class="total-pomo">{{ globalRealPomo }}</span>
             </span>
