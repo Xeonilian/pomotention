@@ -216,10 +216,9 @@ export function splitIndexPomoBlocksExSchedules(
  */
 export function generateActualTodoSegments(todos: Todo[]): TodoSegment[] {
   const todoSegments: TodoSegment[] = [];
-  // 特殊优先级值（66、88、99）不生成TodoSegment
-  const specialPriorities = [33, 44, 55, 66, 77, 88, 99];
+  // 特殊优先级值也正常生成TodoSegment，在第三列正常显示
 
-  const todosWithStartTime = todos.filter((todo) => todo.startTime && !specialPriorities.includes(todo.priority));
+  const todosWithStartTime = todos.filter((todo) => todo.startTime);
 
   for (const todo of todosWithStartTime) {
     if (!todo.startTime) continue;

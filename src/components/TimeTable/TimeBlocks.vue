@@ -69,6 +69,17 @@
     {{ getScheduleLabel(scheduleSeg) }}
   </div>
 
+  <!-- ========== 第二列：特殊优先级 Emoji ========== -->
+  <div
+    v-for="emoji in specialPriorityEmojisForSecondColumn"
+    :key="`special-emoji-${emoji.todoId}`"
+    class="special-priority-emoji second-column"
+    :style="getSpecialPriorityEmojiStyle(emoji)"
+    :title="emoji.title"
+  >
+    {{ emoji.emoji }}
+  </div>
+
   <!-- ========== 第三列：实际执行的番茄 ========== -->
   <div
     v-for="seg in actualSegments"
@@ -85,12 +96,9 @@
     v-for="range in actualTodoTimeRanges"
     :key="`actual-range-${range.id}`"
     class="actual-time-range"
-    :class="{ 'emoji-range': range.emoji }"
     :style="getActualTodoTimeRangeStyle(range)"
-    :title="range.emoji ? range.title : `${range.title} - 实际番茄执行时间`"
-  >
-    <span v-if="range.emoji" class="emoji-icon">{{ range.emoji }}</span>
-  </div>
+    :title="`${range.title} - 实际番茄执行时间`"
+  ></div>
 
   <div
     v-for="range in actualScheduleTimeRanges"
@@ -126,10 +134,12 @@ const {
   getPomodoroStyle,
   getTodoSegmentStyle,
   getScheduleSegmentStyle,
+  getSpecialPriorityEmojiStyle,
   getActualSegmentStyle,
   getActualTodoTimeRangeStyle,
   getActualScheduleTimeRangeStyle,
   scheduleSegmentsForSecondColumn,
+  specialPriorityEmojisForSecondColumn,
   actualSegments,
   actualTodoTimeRanges,
   actualScheduleTimeRanges,
@@ -482,6 +492,23 @@ const getPriorityBadgeClasses = (seg: any) => [
 
 .schedule-segment.second-column:hover {
   opacity: 0.8;
+}
+
+/* ============================================
+     😀 特殊Priority的Emoji显示 (第二列)
+     ============================================ */
+
+.special-priority-emoji.second-column {
+  cursor: pointer;
+  transition: transform 0.2s ease;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.special-priority-emoji.second-column:hover {
+  transform: scale(1.3);
 }
 
 /* ============================================

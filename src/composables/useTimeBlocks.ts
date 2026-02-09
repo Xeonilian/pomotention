@@ -1,5 +1,5 @@
 // src/composables/useTimeBlocks.ts
-import { ref, computed, type ComputedRef, onMounted, onUnmounted } from "vue";
+import { ref, computed, type ComputedRef, onMounted, onUnmounted, watch } from "vue";
 import type { CSSProperties } from "vue";
 import { getTimestampForTimeString } from "@/core/utils";
 import { CategoryColors, POMODORO_COLORS, POMODORO_COLORS_DARK } from "@/core/constants";
@@ -19,6 +19,14 @@ export interface ScheduleSegmentForSecondColumn {
   end: number;
   category: string;
   isUntaetigkeit: boolean;
+}
+
+// 第二列显示的特殊优先级emoji接口
+export interface SpecialPriorityEmojiForSecondColumn {
+  todoId: number;
+  title: string;
+  emoji: string;
+  timePosition: number; // 用于计算显示位置的时间戳
 }
 
 interface UseTimeBlocksProps {
@@ -46,12 +54,14 @@ interface UseTimeBlocksReturn {
   getPomodoroStyle: (seg: PomodoroSegment) => CSSProperties; // 第一列 番茄+预约时间分段
   getTodoSegmentStyle: (seg: TodoSegment) => CSSProperties; // 第二列：估计分配的番茄todosegments + 预约scheduleSegments
   getScheduleSegmentStyle: (seg: ScheduleSegmentForSecondColumn) => CSSProperties; // 第二列：预约scheduleSegments
+  getSpecialPriorityEmojiStyle: (emoji: SpecialPriorityEmojiForSecondColumn) => CSSProperties; // 第二列：特殊优先级emoji
   getActualSegmentStyle: (seg: TodoSegment) => CSSProperties; // 第三列：实际执行的番茄actualSegments
   getActualTodoTimeRangeStyle: (range: ActualTimeRange) => CSSProperties; // 第四列：实际执行时间范围todo
   getActualScheduleTimeRangeStyle: (range: ActualTimeRange) => CSSProperties; // 第四列：实际执行时间范围schedule
 
   // 计算属性
   scheduleSegmentsForSecondColumn: ComputedRef<ScheduleSegmentForSecondColumn[]>;
+  specialPriorityEmojisForSecondColumn: ComputedRef<SpecialPriorityEmojiForSecondColumn[]>;
   actualSegments: ComputedRef<TodoSegment[]>;
   actualTodoTimeRanges: ComputedRef<ActualTimeRange[]>;
   actualScheduleTimeRanges: ComputedRef<ActualTimeRange[]>;
@@ -324,30 +334,6 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
     const topPx = startMinute * props.effectivePxPerMinute;
     const heightPx = (endMinute - startMinute) * props.effectivePxPerMinute;
 
-    // 如果是特殊priority的todo（有emoji），显示为emoji点
-    if (range.emoji) {
-      // 使用start和end的中心点作为emoji的位置
-      const centerTime = (range.start + range.end) / 2;
-      const centerMinute = (centerTime - props.timeRange.start) / 60000;
-      const centerTopPx = centerMinute * props.effectivePxPerMinute;
-
-      return {
-        position: "absolute",
-        left: "55px",
-        width: "20px",
-        top: `${centerTopPx - 12}px`, // emoji中心对齐到计算的时间位置
-        height: "20px",
-        fontSize: "16px",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        zIndex: 2,
-        cursor: "pointer",
-        userSelect: "none",
-      };
-    }
-
-    // 普通todo的时间范围条
     // 根据category确定颜色
     let borderColor: string;
     let backgroundColor: string;
@@ -473,6 +459,81 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
     };
   }
 
+  // 第二列：特殊优先级emoji显示（每个todo只显示一个emoji）
+  const specialPriorityEmojisForSecondColumn = computed((): SpecialPriorityEmojiForSecondColumn[] => {
+    const specialPriorities = [33, 44, 55, 66, 77, 88, 99];
+    const specialTodos = todosForAppDate.value.filter(
+      (todo) => todo.status !== "cancelled" && specialPriorities.includes(todo.priority)
+    );
+
+    return specialTodos.map((todo) => {
+      // 计算时间位置：优先使用均值，其次使用单个时间，最后使用todo.id
+      let timePosition: number;
+      if (todo.startTime && todo.doneTime) {
+        // 有开始和结束时间，使用均值
+        timePosition = (todo.startTime + todo.doneTime) / 2;
+      } else if (todo.startTime) {
+        // 只有开始时间
+        timePosition = todo.startTime;
+      } else if (todo.doneTime) {
+        // 只有结束时间
+        timePosition = todo.doneTime;
+      } else {
+        // 都没有，使用todo.id（时间戳）
+        timePosition = todo.id;
+      }
+
+      // 根据priority确定emoji
+      let emoji: string;
+      if (todo.priority === 33) {
+        emoji = "🧸";
+      } else if (todo.priority === 44) {
+        emoji = "🥗";
+      } else if (todo.priority === 55) {
+        emoji = "📚";
+      } else if (todo.priority === 66) {
+        emoji = "🙊";
+      } else if (todo.priority === 77) {
+        emoji = "✨";
+      } else if (todo.priority === 88) {
+        emoji = "💸";
+      } else if (todo.priority === 99) {
+        emoji = "💤";
+      } else {
+        emoji = "";
+      }
+
+      return {
+        todoId: todo.id,
+        title: todo.activityTitle,
+        emoji,
+        timePosition,
+      };
+    });
+  });
+
+  function getSpecialPriorityEmojiStyle(emoji: SpecialPriorityEmojiForSecondColumn): CSSProperties {
+    // 使用时间位置计算显示位置
+    const centerMinute = (emoji.timePosition - props.timeRange.start) / 60000;
+    const centerTopPx = centerMinute * props.effectivePxPerMinute;
+
+    return {
+      position: "absolute",
+      left: "22px",
+      width: "13px",
+      top: `${centerTopPx - 10}px`, // emoji中心对齐到计算的时间位置
+      height: "20px",
+      fontSize: "16px",
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center",
+      zIndex: 32,
+      cursor: "pointer",
+      userSelect: "none",
+      pointerEvents: "auto",
+    };
+  }
+
   const actualTodoTimeRanges = computed((): ActualTimeRange[] => {
     const specialPriorities = [33, 44, 55, 66, 77, 88, 99];
     const ranges: ActualTimeRange[] = [];
@@ -491,61 +552,18 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
       }))
     );
 
-    // 处理特殊priority的todo（66、88、99）
-    const specialTodos = todosForAppDate.value.filter((todo) => specialPriorities.includes(todo.priority));
+    // 处理特殊priority的todo（在第四列正常显示）
+    const specialTodos = todosForAppDate.value.filter(
+      (todo) => todo.status === "done" && todo.startTime && todo.doneTime && specialPriorities.includes(todo.priority)
+    );
     ranges.push(
-      ...specialTodos.map((todo) => {
-        // 计算时间位置：优先使用均值，其次使用单个时间，最后使用todo.id
-        let timePosition: number;
-        if (todo.startTime && todo.doneTime) {
-          // 有开始和结束时间，使用均值
-          timePosition = (todo.startTime + todo.doneTime) / 2;
-        } else if (todo.startTime) {
-          // 只有开始时间
-          timePosition = todo.startTime;
-        } else if (todo.doneTime) {
-          // 只有结束时间
-          timePosition = todo.doneTime;
-        } else {
-          // 都没有，使用todo.id（时间戳）
-          timePosition = todo.id;
-        }
-
-        // 对于emoji显示，使用一个很小的范围（例如1分钟）来定位
-        const duration = 1 * 60 * 1000; // 1分钟
-        const start = timePosition - duration / 2;
-        const end = timePosition + duration / 2;
-
-        // 根据priority确定category和emoji
-        const categoryConstant = "emoji";
-        let emoji: string;
-        if (todo.priority === 33) {
-          emoji = "💤";
-        } else if (todo.priority === 44) {
-          emoji = "🥗";
-        } else if (todo.priority === 55) {
-          emoji = "📚";
-        } else if (todo.priority === 66) {
-          emoji = "🙊";
-        } else if (todo.priority === 77) {
-          emoji = "✨";
-        } else if (todo.priority === 88) {
-          emoji = "💸";
-        } else if (todo.priority === 99) {
-          emoji = "🧸";
-        } else {
-          emoji = "";
-        }
-
-        return {
-          id: todo.id,
-          title: todo.activityTitle,
-          start,
-          end,
-          category: categoryConstant,
-          emoji,
-        };
-      })
+      ...specialTodos.map((todo) => ({
+        id: todo.id,
+        title: todo.activityTitle,
+        start: todo.startTime!,
+        end: todo.doneTime!,
+        category: todo.pomoType === "🍇" ? "grape" : todo.pomoType === "🍒" ? "cherry" : "tomato",
+      }))
     );
 
     return ranges;
@@ -603,12 +621,14 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
     getPomodoroStyle,
     getTodoSegmentStyle,
     getScheduleSegmentStyle,
+    getSpecialPriorityEmojiStyle,
     getActualSegmentStyle,
     getActualTodoTimeRangeStyle,
     getActualScheduleTimeRangeStyle,
 
     // 数据
     scheduleSegmentsForSecondColumn,
+    specialPriorityEmojisForSecondColumn,
     actualSegments,
     actualTodoTimeRanges,
     actualScheduleTimeRanges,
