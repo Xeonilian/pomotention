@@ -6,7 +6,7 @@
       :key="tag.id"
       class="tag-option"
       :class="{ highlighted: highlightedIndex === index }"
-      @click="$emit('select-tag', tag.id)"
+      @click.stop="$emit('select-tag', tag.id)"
       @mouseenter="highlightedIndex = index"
     >
       <div class="tag-color-dot" :style="{ backgroundColor: tag.backgroundColor }"></div>
@@ -19,7 +19,7 @@
       v-if="allowCreate && searchTerm.trim() && !tagExists"
       class="tag-option create-option"
       :class="{ highlighted: highlightedIndex === filteredTags.length }"
-      @click="$emit('create-tag', searchTerm.trim())"
+      @click.stop="$emit('create-tag', searchTerm.trim())"
       @mouseenter="highlightedIndex = filteredTags.length"
     >
       <n-icon><Add20Filled /></n-icon>
@@ -137,6 +137,9 @@ defineExpose({
   padding: 4px;
   outline: none; /* 移除聚焦时的蓝色边框 */
   margin-top: 30px;
+  position: relative;
+  z-index: 10001;
+  pointer-events: auto;
 }
 
 .tag-option {
@@ -148,6 +151,8 @@ defineExpose({
   transition: background-color 0.2s;
   font-size: 14px;
   font-family: "Consolas", Consolas, monospace;
+  pointer-events: auto;
+  touch-action: manipulation;
 }
 
 .tag-option.highlighted {

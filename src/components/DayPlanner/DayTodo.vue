@@ -352,8 +352,8 @@
     :trap-focus="false"
     trigger="manual"
     :show-arrow="false"
-    style="padding: 0; border-radius: 6px; margin-top: -30px; margin-left: 130px"
-    :to="false"
+    style="padding: 0; border-radius: 6px; margin-top: -30px; margin-left: 130px; z-index: 10000"
+    :z-index="10000"
   >
     <template #trigger>
       <span style="position: absolute; pointer-events: none"></span>
