@@ -29,11 +29,11 @@
               type="default"
               @click.stop="handleQuickAddTodo"
               title="快速新增待办"
-              style="transform: translateX(2px) translateY(4px)"
+              class="add-todo-button"
             >
               <template #icon>
-                <n-icon size="13">
-                  <Add12Regular />
+                <n-icon size="20">
+                  <AddCircle24Regular />
                 </n-icon>
               </template>
             </n-button>
@@ -379,7 +379,7 @@ import {
   DismissSquare20Filled,
   CaretLeft12Filled,
   CaretRight12Filled,
-  Add12Regular,
+  AddCircle24Regular,
 } from "@vicons/fluent";
 import { NCheckbox, NInputNumber, NPopover, NButton, NIcon } from "naive-ui";
 import { ref, computed, nextTick } from "vue";
@@ -1023,6 +1023,12 @@ thead th {
 /* 果果列禁用状态 */
 th.col-fruit.disabled-toggle {
   cursor: not-allowed;
+}
+
+.add-todo-button {
+  cursor: pointer;
+  transform: translateY(3px);
+  color: var(--color-blue);
 }
 
 /* 行样式 */
