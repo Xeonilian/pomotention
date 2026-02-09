@@ -49,6 +49,7 @@
                 width: editInputWidth + 'px',
                 minWidth: '30px',
                 transition: 'width 0.2s',
+                fontSize:'11px'
               }"
               @blur="onEditFinish(t)"
               @input="updateInputWidth"
@@ -57,7 +58,13 @@
             />
 
             <!-- 文本颜色选择器 -->
-            <n-popover trigger="click" placement="bottom" :style="{ padding: '10px', width: '200px' }">
+            <n-popover 
+              trigger="click" 
+              placement="bottom" 
+              :style="{ padding: '5px', width: '120px' }"
+              :z-index="10000"
+              :to="true"
+            >
               <template #trigger>
                 <n-button text :color="t.color" @click.stop>
                   <n-icon><Heart16Filled /></n-icon>
@@ -67,7 +74,13 @@
             </n-popover>
 
             <!-- 背景颜色选择器 -->
-            <n-popover trigger="click" placement="bottom" :style="{ width: '200px' }">
+            <n-popover 
+              trigger="click" 
+              placement="bottom" 
+              :style="{padding: '5px', width: '120px' }"
+              :z-index="10000"
+              :to="true"
+            >
               <template #trigger>
                 <n-button text @click.stop>
                   <n-icon><HeartCircle16Regular /></n-icon>
@@ -104,6 +117,7 @@ import { useTagStore, type TagWithCount } from "@/stores/useTagStore";
 import { useDialog } from "naive-ui";
 import { TagSearch20Filled, Add20Filled, HeartCircle16Regular, Heart16Filled, TagDismiss16Regular } from "@vicons/fluent";
 import { NInput, NButton, NPopover, NColorPicker, NIcon } from "naive-ui";
+import { useDevice } from "@/composables/useDevice";
 
 // ================================================================
 // 初始化
@@ -153,7 +167,11 @@ const filteredTags = computed<TagWithCount[]>(() => {
   if (keyword) {
     return tagStore.findByName(keyword);
   }
-  return [...tagStore.allTags].sort((a, b) => b.count - a.count).slice(0, 20);
+  if (useDevice().isMobile.value) {
+    return [...tagStore.allTags].sort((a, b) => b.count - a.count).slice(0, 18);
+  } else {
+    return [...tagStore.allTags];
+  }
 });
 
 /**
@@ -308,18 +326,19 @@ function handleEditKeydown(e: KeyboardEvent, tag: TagWithCount): void {
   display: flex;
   flex-direction: column;
   position: relative;
-  min-height: 200px;
+  min-height: 300px;
   overflow-x: hidden;
   padding: 10px 12px;
+  border-radius: 6px;
   background-color: var(--color-background);
-  width: 400px;
+  width: 450px;
 }
 
 .tag-manager-inner {
   display: flex;
   flex-direction: column;
   position: relative;
-  min-height: 200px;
+  min-height: 300px;
   box-sizing: border-box;
   overflow-x: hidden;
 }
@@ -350,7 +369,7 @@ function handleEditKeydown(e: KeyboardEvent, tag: TagWithCount): void {
   margin: 2px 0;
   font-size: 14px;
   flex: 0 1 auto;
-  max-width: calc(35%);
+  max-width: calc(32%);
   box-sizing: border-box;
   min-width: 0;
   cursor: pointer;
@@ -420,5 +439,23 @@ function handleEditKeydown(e: KeyboardEvent, tag: TagWithCount): void {
   font-weight: 500;
   padding: 0 7px;
   pointer-events: none;
+}
+
+/* 移动端优化：确保颜色选择器在屏幕上居中显示，避免被遮挡 */
+@media (max-width: 768px) {
+  :deep(.n-popover) {
+    position: fixed !important;
+    left: 50% !important;
+    top: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    max-width: min(90vw, 300px);
+    max-height: min(90vh, 400px);
+    overflow-y: auto;
+    z-index: 10000 !important;
+  }
+  
+  :deep(.n-color-picker) {
+    width: 100%;
+  }
 }
 </style>
