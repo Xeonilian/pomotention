@@ -145,13 +145,13 @@
               />
 
               <span v-else class="priority-badge" :class="'priority-' + todo.priority">
-                <template v-if="todo.priority === 33">💤</template>
+                <template v-if="todo.priority === 33">🧸</template>
                 <template v-else-if="todo.priority === 44">🥗</template>
                 <template v-else-if="todo.priority === 55">📚</template>
                 <template v-else-if="todo.priority === 66">🙊</template>
                 <template v-else-if="todo.priority === 77">✨</template>
                 <template v-else-if="todo.priority === 88">💸</template>
-                <template v-else-if="todo.priority === 99">🧸</template>
+                <template v-else-if="todo.priority === 99">💤</template>
                 <template v-else>{{ todo.priority > 0 ? todo.priority : "" }}</template>
               </span>
             </td>
