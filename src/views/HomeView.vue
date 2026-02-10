@@ -121,7 +121,7 @@
               :style="`width: ${isMobile ? 80 : 92}px`"
               class="search-date"
               @click="onDateSet('today')"
-              title="输入示例：2025-01-01"
+              title="输入示例：2026-01-01"
             >
               <template #date-icon>
                 <n-button size="small" text class="view-toggle-btn" @click.stop="onViewSet()" title="切换视图">
@@ -1567,7 +1567,7 @@ const { startResize: startRightResize } = useResize(
 }
 
 .resize-handle:hover {
-  background: var(--color-background-dark);
+  background: var(--color-blue-light);
 }
 
 .resize-handle::after {
@@ -1591,7 +1591,7 @@ const { startResize: startRightResize } = useResize(
 }
 
 .resize-handle-horizontal:hover {
-  background: var(--color-background-dark);
+  background: var(--color-blue-light);
 }
 
 .resize-handle-horizontal::after {
