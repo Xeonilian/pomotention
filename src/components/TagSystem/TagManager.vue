@@ -112,7 +112,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick } from "vue";
+import { ref, computed, nextTick, watch } from "vue";
 import { useTagStore, type TagWithCount } from "@/stores/useTagStore";
 import { useDialog } from "naive-ui";
 import { TagSearch20Filled, Add20Filled, HeartCircle16Regular, Heart16Filled, TagDismiss16Regular } from "@vicons/fluent";
@@ -154,6 +154,22 @@ const showModal = computed({
     if (!v) emit("update:show", false);
   },
 });
+
+/**
+ * 弹窗打开时重置输入与编辑态：确保每次打开都是空白状态
+ */
+function resetModalState(): void {
+  inputText.value = "";
+  cancelEdit();
+}
+
+watch(
+  showModal,
+  (visible) => {
+    if (visible) resetModalState();
+  },
+  { immediate: true }
+);
 // ================================================================
 // Computed
 // ================================================================
@@ -168,7 +184,7 @@ const filteredTags = computed<TagWithCount[]>(() => {
     return tagStore.findByName(keyword);
   }
   if (useDevice().isMobile.value) {
-    return [...tagStore.allTags].sort((a, b) => b.count - a.count).slice(0, 18);
+    return [...tagStore.allTags].sort((a, b) => b.count - a.count).slice(0, 16);
   } else {
     return [...tagStore.allTags];
   }
@@ -364,12 +380,12 @@ function handleEditKeydown(e: KeyboardEvent, tag: TagWithCount): void {
   display: flex;
   align-items: center;
   border-radius: 16px;
-  padding: 2px 6px;
-  height: 20px;
+  padding: 4px 6px;
+  height: 22px;
   margin: 2px 0;
   font-size: 14px;
   flex: 0 1 auto;
-  max-width: calc(32%);
+  max-width: calc(45%);
   box-sizing: border-box;
   min-width: 0;
   cursor: pointer;
@@ -399,7 +415,7 @@ function handleEditKeydown(e: KeyboardEvent, tag: TagWithCount): void {
 /* 悬浮在“未选中”的标签上时的效果 */
 .custom-tag:not(.selected):hover {
   transform: translateY(-3px) scale(1.02);
-  box-shadow: 0 6px 4px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 6px 4px rgba(255, 255, 255, 0.3);
 }
 
 /* “未选中”标签的固定样式 */
@@ -411,8 +427,9 @@ function handleEditKeydown(e: KeyboardEvent, tag: TagWithCount): void {
 /* “已选中”标签的固定样式 */
 .custom-tag.selected {
   transform: translateY(-2px);
-  border-bottom: 2px solid var(--color-text-primary);
-  box-shadow: 4px 0px 0px 0px var(--color-text-secondary) inset;
+  border-bottom: 2px solid var(--color-text-secondary);
+  border-left: 2px solid var(--color-text-secondary);
+  box-shadow: 4px 0px 0px 0px var(--color-background) inset;
 }
 
 /* 悬浮在“已选中”的标签上时的增强效果 */
