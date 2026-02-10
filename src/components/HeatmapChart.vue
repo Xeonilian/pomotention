@@ -1,16 +1,22 @@
 <template>
-  <div class="heatmap-chart">
-    <!-- 年份选择器（左侧垂直） -->
+  <div class="heatmap-chart" :class="{ 'is-mobile': isMobile }">
+    <!-- 年份选择器（桌面：左侧垂直；手机：图下方水平） -->
     <div class="year-selector">
       <n-button @click="changeYear(-1)" text size="small">
         <template #icon>
-          <n-icon><ArrowUp24Filled /></n-icon>
+          <n-icon>
+            <ArrowLeft24Filled v-if="isMobile" />
+            <ArrowUp24Filled v-else />
+          </n-icon>
         </template>
       </n-button>
       <span class="year-text">{{ currentYear }}</span>
       <n-button @click="changeYear(1)" text size="small">
         <template #icon>
-          <n-icon><ArrowDown24Filled /></n-icon>
+          <n-icon>
+            <ArrowRight24Filled v-if="isMobile" />
+            <ArrowDown24Filled v-else />
+          </n-icon>
         </template>
       </n-button>
     </div>
@@ -20,14 +26,16 @@
       <div ref="chartRef" class="chart-container"></div>
     </div>
 
-    <!-- 自定义图例（右侧垂直） -->
+    <!-- 自定义图例（桌面：右侧垂直；手机：图下方水平） -->
     <div class="custom-legend">
       <span class="legend-label">More</span>
-      <div class="legend-item" style="background: #196127" title="16+"></div>
-      <div class="legend-item" style="background: #239a3b" title="11-15"></div>
-      <div class="legend-item" style="background: #7bc96f" title="6-10"></div>
-      <div class="legend-item" style="background: #c6e48b" title="1-5"></div>
-      <div class="legend-item" style="background: #ebedf0" title="0"></div>
+      <div
+        v-for="piece in legendPieces"
+        :key="piece.title"
+        class="legend-item"
+        :style="{ background: piece.color }"
+        :title="piece.title"
+      ></div>
       <span class="legend-label">Less</span>
     </div>
   </div>
@@ -50,8 +58,9 @@ echarts.use([HeatmapChart, TooltipComponent, VisualMapComponent, CalendarCompone
 type ECOption = echarts.ComposeOption<HeatmapSeriesOption | TooltipComponentOption | VisualMapComponentOption | CalendarComponentOption>;
 
 import { NButton, NIcon } from "naive-ui";
-import { ArrowUp24Filled, ArrowDown24Filled } from "@vicons/fluent";
+import { ArrowUp24Filled, ArrowDown24Filled, ArrowLeft24Filled, ArrowRight24Filled } from "@vicons/fluent";
 import { useDataStore } from "@/stores/useDataStore";
+import { useDevice } from "@/composables/useDevice";
 
 interface Props {
   config: {
@@ -62,11 +71,21 @@ interface Props {
 
 const props = defineProps<Props>();
 const dataStore = useDataStore();
+const { isMobile } = useDevice();
 
 const chartRef = ref<HTMLElement>();
 const chartWrapperRef = ref<HTMLElement>();
 const chartInstance = ref<echarts.ECharts>();
 const currentYear = ref(new Date().getFullYear());
+
+// 图例配置（复用：桌面竖排 / 手机横排）
+const legendPieces = [
+  { color: "#196127", title: "16+" },
+  { color: "#239a3b", title: "11-15" },
+  { color: "#7bc96f", title: "6-10" },
+  { color: "#c6e48b", title: "1-5" },
+  { color: "#ebedf0", title: "0" },
+];
 
 // 响应式尺寸管理
 const containerWidth = ref(900);
@@ -349,6 +368,16 @@ watch(
   },
   { deep: true }
 );
+
+/**
+ * 监听设备类型变化（避免手机/桌面布局切换后图表尺寸不正确）
+ */
+watch(isMobile, async () => {
+  await nextTick();
+  updateContainerSize();
+  chartInstance.value?.resize();
+  updateChart();
+});
 </script>
 
 <style scoped>
@@ -427,6 +456,48 @@ watch(
   cursor: help;
   transition: transform 0.1s;
   flex-shrink: 0; /* 防止压缩 */
+}
+
+/* 手机布局：图在上，年切换和图例在下 */
+.heatmap-chart.is-mobile {
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 10px;
+}
+
+.heatmap-chart.is-mobile .chart-wrapper {
+  order: 1;
+  max-width: 100%;
+}
+
+.heatmap-chart.is-mobile .year-selector {
+  order: 2;
+  flex-direction: row;
+  justify-content: center;
+  gap: 10px;
+  padding-top: 0;
+}
+
+.heatmap-chart.is-mobile .year-text {
+  writing-mode: horizontal-tb;
+  text-orientation: mixed;
+  letter-spacing: 1px;
+}
+
+.heatmap-chart.is-mobile .custom-legend {
+  order: 3;
+  flex-direction: row;
+  justify-content: center;
+  gap: 6px;
+  padding-left: 0;
+  border-left: none;
+  border-top: 1px solid #f0f0f0;
+  padding-top: 10px;
+}
+
+.heatmap-chart.is-mobile .legend-label {
+  margin: 0 4px;
 }
 
 /* 响应式优化 */
