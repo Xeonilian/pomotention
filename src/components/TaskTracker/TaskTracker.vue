@@ -72,7 +72,7 @@ const tagDisplayLength = ref<number | null>(null);
 
 // 断点值配置
 const TAG_COLLAPSE_BREAKPOINT = 600; // 第一个值：标签收缩为3
-const BUTTON_COLLAPSE_BREAKPOINT = 220; // 第二个值：按钮收缩
+const BUTTON_COLLAPSE_BREAKPOINT = 300; // 第二个值：按钮收缩
 
 const taskTrackerStore = useTaskTrackerStore();
 const dataStore = useDataStore();
