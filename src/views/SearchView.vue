@@ -167,8 +167,11 @@ const tagSelectorRef = ref<InstanceType<typeof TagSelector> | null>(null);
 
 // 左右拖动功能
 const { isMobile } = useDevice(); // 假设有 isMobile 标志
+if (isMobile.value) {
+  settingStore.settings.searchWidth = 100;
+}
 const searchWidth = computed({
-  get: () => isMobile.value ? 100 : settingStore.settings.searchWidth,
+  get: () => settingStore.settings.searchWidth,
   set: (v) => (settingStore.settings.searchWidth = v),
 });
 
