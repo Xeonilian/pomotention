@@ -6,7 +6,7 @@
         <n-input
           ref="searchInputRef"
           :value="searchQuery"
-          placeholder="搜索或输入#选择标签..."
+          placeholder="文字/#标签..."
           clearable
           style="flex: 1"
           @update:value="handleSearchInput"
@@ -73,19 +73,22 @@
           <span class="left-icon">
             {{ row.class === "T" ? "📝" : "📅" }}
 
-            <span class="title-name">{{ row.title || "（无标题）" }}</span>
+
           </span>
+          <span class="title-name">{{ row.title || "（无标题）" }}</span>
           <span class="right-info">
-            <n-icon v-if="row.hasStarred" size="16" class="star-on"><Star20Filled /></n-icon>
-            <span class="tag-renderer-container">
-              <TagRenderer
-                :tag-ids="row.tagIds ?? []"
-                :isCloseable="false"
-                size="tiny"
-                :displayLength="Number(3)"
-                :showIdx="Number(2)"
-                @tag-click="handleTagClick"
-              />
+            <span class="right-info-left">
+              <n-icon v-if="row.hasStarred" size="16" class="star-on"><Star20Filled /></n-icon>
+              <span class="tag-renderer-container">
+                <TagRenderer
+                  :tag-ids="row.tagIds ?? []"
+                  :isCloseable="false"
+                  size="tiny"
+                  :displayLength="Number(3)"
+                  :showIdx="Number(2)"
+                  @tag-click="handleTagClick"
+                />
+              </span>
             </span>
 
             <span class="date">{{ formatMMDD(row.primaryTime) }}</span>
@@ -140,6 +143,7 @@ import { useTagStore } from "@/stores/useTagStore";
 // 引入业务类型和组合式函数
 import { useResize } from "@/composables/useResize";
 import { useSearchFilter } from "@/composables/useSearchFilter";
+import { useDevice } from "@/composables/useDevice";
 
 // 实例化所有需要的 stores
 const searchUiStore = useSearchUiStore();
@@ -162,8 +166,9 @@ const searchInputRef = ref<InstanceType<typeof NInput> | null>(null);
 const tagSelectorRef = ref<InstanceType<typeof TagSelector> | null>(null);
 
 // 左右拖动功能
+const { isMobile } = useDevice(); // 假设有 isMobile 标志
 const searchWidth = computed({
-  get: () => settingStore.settings.searchWidth,
+  get: () => isMobile.value ? 100 : settingStore.settings.searchWidth,
   set: (v) => (settingStore.settings.searchWidth = v),
 });
 
@@ -265,7 +270,7 @@ const formatMMDD = (ts?: number) => (ts ? new Date(ts).toLocaleDateString(undefi
 }
 
 .resize-handle-horizontal {
-  width: 8px;
+  width: 4px;
   background: var(--color-background-light-light);
   cursor: ew-resize;
   position: relative;
@@ -273,7 +278,7 @@ const formatMMDD = (ts?: number) => (ts ? new Date(ts).toLocaleDateString(undefi
 }
 
 .resize-handle-horizontal:hover {
-  background: var(--color-background-light);
+  background: var(--color-blue-light);
 }
 
 .resize-handle-horizontal::after {
@@ -337,7 +342,6 @@ const formatMMDD = (ts?: number) => (ts ? new Date(ts).toLocaleDateString(undefi
 .title-item {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -350,24 +354,57 @@ const formatMMDD = (ts?: number) => (ts ? new Date(ts).toLocaleDateString(undefi
 
 .title-item .left-icon {
   display: flex;
-  gap: 4px;
+  gap: 2px;
   align-items: center;
   overflow: hidden;
+  z-index: 1000;
+  flex-shrink: 0;
 }
 
 .tag-renderer-container {
+  display: flex;
   margin-left: 4px;
+  overflow: hidden;
+  flex-shrink: 1;
+  min-width: 0;
 }
 
 .title-item .title-name {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+  flex-shrink: 1;
+  min-width: 0;
+  margin-left: 2px;
 }
+
 .title-item .right-info {
   display: flex;
   align-items: center;
+  margin-left: auto;
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.title-item .right-info-left {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  overflow: hidden;
+  flex: 1 1 auto;
+}
+
+.title-item .right-info .n-icon {
   flex-shrink: 0;
+}
+
+.title-item .date {
+  margin-left: 4px;
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .title-item.active {
@@ -387,6 +424,7 @@ const formatMMDD = (ts?: number) => (ts ? new Date(ts).toLocaleDateString(undefi
   margin-left: 4px;
   color: var(--color-text-secondary);
   font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
 }
 
 .star-on {
