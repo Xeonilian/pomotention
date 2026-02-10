@@ -70,10 +70,8 @@
           @click="openRow(row)"
           :title="row.title"
         >
-          <span class="left-icon">
+          <span v-if="!isMobile" class="left-icon">
             {{ row.class === "T" ? "📝" : "📅" }}
-
-
           </span>
           <span class="title-name">{{ row.title || "（无标题）" }}</span>
           <span class="right-info">
