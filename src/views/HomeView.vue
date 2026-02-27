@@ -52,7 +52,7 @@
             <span @click="onMonthJump" class="day-status">
               {{ isMobile ? dateService.displayWeekInfoMobile : dateService.displayWeekInfo }}
             </span>
-            <span v-if="!isMobile" class="global-pomo">
+            <span class="global-pomo">
               <span class="total-pomo">🍅{{ globalRealPomo }}</span>
             </span>
           </div>
@@ -65,7 +65,7 @@
           <div
             class="marquee"
             :class="{ 'marquee-empty': settingStore.settings.marquee === '' }"
-            v-if="!isEditing || !isMobile"
+            v-if="!isEditing"
             @click="startEdit"
             title="点击编辑跑马灯"
           >
@@ -1458,6 +1458,23 @@ const { startResize: startRightResize } = useResize(
 @media (max-width: 650px) {
   .marquee {
     display: none;
+  }
+
+  .marquee-input {
+    display: block;
+  }
+
+  .global-pomo {
+    padding: 2px 4px !important;
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .today-pomo,
+  .total-pomo {
+    font-size: 14px;
+    padding-left: 0;
+    padding-right: 0;
   }
 }
 
