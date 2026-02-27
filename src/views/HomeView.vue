@@ -42,7 +42,9 @@
               tomorrow: isViewDateTomorrow,
             }"
           >
-            <span @click="onWeekJump" class="day-status">{{ isMobile ? dateService.displayDateInfoMobile : dateService.displayDateInfo }}</span>
+            <span @click="onWeekJump" class="day-status">
+              {{ isMobile ? dateService.displayDateInfoMobile : dateService.displayDateInfo }}
+            </span>
             <span class="global-pomo">
               <span class="today-pomo">🍅{{ currentDatePomoCount }}</span>
               <span v-if="!isMobile" class="total-pomo">/{{ globalRealPomo }}</span>
@@ -52,7 +54,7 @@
             <span @click="onMonthJump" class="day-status">
               {{ isMobile ? dateService.displayWeekInfoMobile : dateService.displayWeekInfo }}
             </span>
-            <span class="global-pomo">
+            <span v-if="!isMobile" class="global-pomo">
               <span class="total-pomo">🍅{{ globalRealPomo }}</span>
             </span>
           </div>
@@ -691,7 +693,7 @@ function onRepeatActivity() {
       ...(sourceActivity.dueRange && {
         dueRange: [dateService.combineDateAndTime(appDateTimestamp.value, sourceActivity.dueRange[0]), sourceActivity.dueRange[1]] as [
           number | null,
-          string
+          string,
         ],
       }),
     };
@@ -1365,14 +1367,14 @@ const { startResize: startLeftResize } = useResize(
   "horizontal",
   95,
   150,
-  false // 左侧面板
+  false, // 左侧面板
 );
 const { startResize: startRightResize } = useResize(
   rightWidth,
   "horizontal",
   50,
   1600,
-  true // 右侧面板
+  true, // 右侧面板
 );
 </script>
 
