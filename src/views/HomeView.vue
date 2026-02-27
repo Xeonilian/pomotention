@@ -42,10 +42,10 @@
               tomorrow: isViewDateTomorrow,
             }"
           >
-            <span @click="onWeekJump" class="day-status">{{ isMobile ? dateService.appDateKey : dateService.displayDateInfo }}</span>
+            <span @click="onWeekJump" class="day-status">{{ isMobile ? dateService.displayDateInfoMobile : dateService.displayDateInfo }}</span>
             <span class="global-pomo">
-              <span class="today-pomo">🍅{{ currentDatePomoCount }}/</span>
-              <span class="total-pomo">{{ globalRealPomo }}</span>
+              <span class="today-pomo">🍅{{ currentDatePomoCount }}</span>
+              <span v-if="!isMobile" class="total-pomo">/{{ globalRealPomo }}</span>
             </span>
           </div>
           <div v-if="settingStore.settings.viewSet === 'week'" class="day-info">

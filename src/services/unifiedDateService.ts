@@ -95,6 +95,14 @@ export function unifiedDateService({ activityList, scheduleList, todoList }: Uni
     return `${dateString} ${weekDay} w${weekNumber}`;
   });
 
+  const displayDateInfoMobile = computed(() => {
+    const date = new Date(dateState.app);
+    const mm = String(date.getMonth() + 1).padStart(2, "0");
+    const dd = String(date.getDate()).padStart(2, "0");
+    const weekDay = date.toLocaleDateString("en-US", { weekday: "short" });
+    return `${mm}-${dd} ${weekDay}`;
+  });
+
   const weekStartTs = computed(() => getStartOfWeek(dateState.app));
   const weekKey = computed(() => getWeekKey(dateState.app));
   const displayWeekInfo = computed(() => {
@@ -273,6 +281,7 @@ export function unifiedDateService({ activityList, scheduleList, todoList }: Uni
 
     // 日/周/月信息
     displayDateInfo,
+    displayDateInfoMobile,
     weekStartTs,
     weekKey,
     displayWeekInfo,
