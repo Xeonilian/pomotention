@@ -1,5 +1,11 @@
 <template>
-  <n-modal v-model:show="showModal" @after-leave="emit('after-leave')" class="tag-manager" :align-center="!isMobile">
+  <n-modal
+    v-model:show="showModal"
+    @after-leave="emit('after-leave')"
+    class="tag-manager"
+    :align-center="!isMobile"
+    :style="modalStyle"
+  >
     <div class="tag-manager-inner">
       <!-- 顶部搜索和新建区域 -->
       <div class="tag-search">
@@ -217,6 +223,16 @@ const showModal = computed({
   set: (v) => {
     if (!v) emit("update:show", false);
   },
+});
+
+/**
+ * 移动端弹窗位置样式：左右居中、上下靠上
+ */
+const modalStyle = computed(() => {
+  if (!isMobile.value) return {};
+  return {
+    top: "8px",
+  };
 });
 
 /**
