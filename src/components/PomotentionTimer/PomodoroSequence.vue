@@ -111,7 +111,7 @@ const emit = defineEmits<{
 }>();
 
 // 数据
-const sequenceInput = ref<string>(">>>>🍅+05+🍅+05+🍅+05+🍅+15");
+const sequenceInput = ref<string>(settingStore.settings.pomoSequenceInput ?? ">>>>🍅+05+🍅+05+🍅+05+🍅+15");
 const isRunning = ref<boolean>(false);
 const timeoutHandles = ref<NodeJS.Timeout[]>([]);
 const currentStep = ref<number>(0);
@@ -257,9 +257,16 @@ function stopPomodoro(): void {
     progressContainer.value.innerHTML = "";
   }
 
-  // 重置序列输入
-  sequenceInput.value = ">>>>🍅+05+🍅+05+🍅+05+🍅+15";
 }
+
+// 持久化序列输入到全局设置
+watch(
+  sequenceInput,
+  (val) => {
+    settingStore.settings.pomoSequenceInput = val;
+  },
+  { immediate: true }
+);
 
 // 添加番茄钟序列
 function addPomodoro(): void {

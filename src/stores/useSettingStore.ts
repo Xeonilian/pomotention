@@ -35,6 +35,7 @@ export interface GlobalSettings {
   viewSet: ViewType;
   marquee: string;
   pomodoroStateMessage?: string; // 自定义番茄钟状态消息
+  pomoSequenceInput?: string; // 序列模式默认输入
   supabaseSync: number[];
   firstSync: boolean;
   autoSupabaseSync: boolean;
@@ -48,6 +49,8 @@ export interface GlobalSettings {
     profiles: Record<string, AiProfile>; // 所有配置集合（字典，键为 id）
     systemPrompt?: string;
   };
+  /** 排序列 7 个槽位绑定的 tag：priority -> tagId，用户双击表头在绑定弹层里设置 */
+  priorityCategoryTagIds: Record<number, number>;
   // 以后新增全局设置项就在这里补充
 }
 
@@ -86,6 +89,7 @@ const defaultSettings: GlobalSettings = {
   viewSet: "day",
   marquee: "", // 保持觉察 🍅 = ⏰ + 🎯 + 👁‍🗨
   pomodoroStateMessage: undefined, // 自定义番茄钟状态消息，未设置时使用默认逻辑
+  pomoSequenceInput: ">>>>🍅+05+🍅+05+🍅+05+🍅+15", // 序列模式默认输入
   supabaseSync: [0, 0],
   firstSync: true,
   autoSupabaseSync: true,
@@ -94,6 +98,7 @@ const defaultSettings: GlobalSettings = {
   wasLocalModeBeforeLogin: false, // 默认不是从本地模式切换过来的
   keepLocalDataAfterSignOut: false, // 默认不清除本地数据
   isCompactMode: false, // 默认不是紧凑模式
+  priorityCategoryTagIds: {},
   ai: {
     activeId: 1,
     systemPrompt:

@@ -4,6 +4,7 @@
     v-model:show="showModal"
     preset="dialog"
     title="记录愉悦值"
+    class="mobile-dialog-top"
     :on-after-leave="handleCancel"
     @keyup.enter="handleConfirm"
     @after-enter="focusSlider"

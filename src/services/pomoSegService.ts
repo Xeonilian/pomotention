@@ -2,6 +2,7 @@
 import type { Block, TodoSegment, PomodoroSegment } from "@/core/types/Block";
 import type { Todo } from "@/core/types/Todo";
 import { getTimestampForTimeString } from "@/core/utils";
+import { SPECIAL_PRIORITIES } from "@/core/priorityCategories";
 
 // ========== 辅助工具函数 ==========
 
@@ -329,9 +330,8 @@ export function generateEstimatedTodoSegments(appDateTimestamp: number, todos: T
   // 1. 初始化
   const usedGlobalIndices: Set<number> = new Set();
   const todoSegments: TodoSegment[] = [];
-  // 特殊优先级值（66、88、99）不生成TodoSegment
-  const specialPriorities = [33, 44, 55, 66, 77, 88, 99];
-  const activeTodos = todos.filter((t) => t.status !== "cancelled" && !specialPriorities.includes(t.priority));
+  // 特殊优先级值不生成TodoSegment
+  const activeTodos = todos.filter((t) => t.status !== "cancelled" && !SPECIAL_PRIORITIES.includes(t.priority));
   // 2. 待办事项排序
   const sortedTodos = [...activeTodos].sort((a, b) => {
     // 这是为了不存在globalIndex而准备的
