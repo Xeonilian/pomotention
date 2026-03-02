@@ -191,30 +191,14 @@ function handleTogglePomoType(id: number) {
 
 </script>
 <style scoped>
-/* 今日区域：flex 纵向，先 todo 后 schedule；todo 约占 70%，schedule 约占 30% */
 .today-container {
   margin: 5px;
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-}
-.todo-container {
-  flex: 0 0 70%;
-  max-height: 70%;
-  min-height: 140px;
-  margin-bottom: 2px;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  overflow: hidden;
 }
 .schedule-container {
-  flex: 0 0 30%;
-  min-height: 0;
   margin-top: 3px;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+}
+
+.todo-container {
+  margin-bottom: 2px;
 }
 </style>

@@ -632,13 +632,10 @@ function countInterruptions(records: { interruptionType: "E" | "I" }[] | null | 
 </script>
 
 <style scoped>
-/* 表格容器：占满父级高度，内部纵向滚动，表头在容器内冻结 */
+/* 表格容器样式，占满页面 */
 .table-container {
   width: 100%;
-  flex: 1;
-  min-height: 0;
   overflow-x: auto;
-  overflow-y: auto;
 }
 
 /* 表格占满宽度 */
@@ -683,11 +680,8 @@ tbody td {
   text-overflow: ellipsis;
 }
 
-/* 表头样式：固定表头，滚动时始终可见 */
+/* 表头样式 */
 thead th {
-  position: sticky;
-  top: 0;
-  z-index: 2;
   padding: 2px;
   text-align: center;
   text-overflow: ellipsis;
@@ -700,7 +694,6 @@ thead th {
   background-color: var(--color-background) !important;
   line-height: 1.3;
   box-sizing: border-box;
-  box-shadow: 0 1px 0 var(--color-background-dark);
 }
 
 /* 开始/结束表头可点击，悬停为手型 */
