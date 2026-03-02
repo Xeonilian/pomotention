@@ -1,5 +1,11 @@
 <template>
-  <n-modal v-model:show="showModal" @after-leave="emit('after-leave')" class="tag-manager">
+  <n-modal
+    v-model:show="showModal"
+    @after-leave="emit('after-leave')"
+    class="tag-manager"
+    :align-center="!isMobile"
+    :style="modalStyle"
+  >
     <div class="tag-manager-inner">
       <!-- 顶部搜索和新建区域 -->
       <div class="tag-search">
@@ -23,84 +29,128 @@
         </n-button>
       </div>
 
-      <!-- 标签列表显示区域 -->
-      <div class="tag-suggestions">
-        <template v-for="t in filteredTags" :key="t.id">
-          <div
-            class="custom-tag"
-            :class="{ selected: isTagSelected(t.id) }"
-            :style="{
-              color: t.color,
-              backgroundColor: t.backgroundColor,
-            }"
-            @click="onClickTag(t)"
-          >
-            <!-- 标签名显示，双击可进入编辑状态 -->
-            <span v-if="editingId !== t.id" @dblclick.stop="startEdit(t)">
-              {{ t.name }}
-            </span>
-
-            <!-- 标签名编辑输入框（编辑态） -->
-            <n-input
-              v-else
-              v-model:value="editValue"
-              size="tiny"
+      <!-- 标签列表 + 底部工具条 -->
+      <div class="tag-list-wrapper">
+        <!-- 标签列表显示区域 -->
+        <div class="tag-suggestions">
+          <template v-for="t in filteredTags" :key="t.id">
+            <div
+              class="custom-tag"
+              :class="{ selected: isTagSelected(t.id) }"
               :style="{
-                width: editInputWidth + 'px',
-                minWidth: '30px',
-                transition: 'width 0.2s',
-                fontSize:'11px'
+                color: t.color,
+                backgroundColor: t.backgroundColor,
               }"
-              @blur="onEditFinish(t)"
-              @input="updateInputWidth"
-              @keydown="(e) => handleEditKeydown(e, t)"
-              @click.stop
-            />
-
-            <!-- 文本颜色选择器 -->
-            <n-popover 
-              trigger="click" 
-              placement="bottom" 
-              :style="{ padding: '5px', width: '120px' }"
-              :z-index="10000"
-              :to="true"
+              @click="onClickTag(t)"
             >
-              <template #trigger>
-                <n-button text :color="t.color" @click.stop>
-                  <n-icon><Heart16Filled /></n-icon>
-                </n-button>
-              </template>
-              <n-color-picker :value="t.color" :show-alpha="false" @update:value="(color) => onColorUpdate(t.id, 'fg', color)" />
-            </n-popover>
+              <!-- 标签名显示，双击可进入编辑状态 -->
+              <span v-if="editingId !== t.id" @dblclick.stop="startEdit(t)">
+                {{ t.name }}
+              </span>
 
-            <!-- 背景颜色选择器 -->
-            <n-popover 
-              trigger="click" 
-              placement="bottom" 
-              :style="{padding: '5px', width: '120px' }"
-              :z-index="10000"
-              :to="true"
+              <!-- 标签名编辑输入框（编辑态） -->
+              <n-input
+                v-else
+                v-model:value="editValue"
+                size="tiny"
+                :style="{
+                  width: editInputWidth + 'px',
+                  minWidth: '30px',
+                  transition: 'width 0.2s',
+                  fontSize: '11px',
+                }"
+                @blur="onEditFinish(t)"
+                @input="updateInputWidth"
+                @keydown="(e) => handleEditKeydown(e, t)"
+                @click.stop
+              />
+
+              <!-- 文本颜色选择器 -->
+              <n-popover trigger="click" placement="bottom" :style="{ padding: '5px', width: '120px' }" :z-index="10000" :to="true">
+                <template #trigger>
+                  <n-button text :color="t.color" @click.stop>
+                    <n-icon><Heart16Filled /></n-icon>
+                  </n-button>
+                </template>
+                <n-color-picker :value="t.color" :show-alpha="false" @update:value="(color) => onColorUpdate(t.id, 'fg', color)" />
+              </n-popover>
+
+              <!-- 背景颜色选择器 -->
+              <n-popover trigger="click" placement="bottom" :style="{ padding: '5px', width: '120px' }" :z-index="10000" :to="true">
+                <template #trigger>
+                  <n-button text @click.stop>
+                    <n-icon><HeartCircle16Regular /></n-icon>
+                  </n-button>
+                </template>
+                <n-color-picker
+                  :value="t.backgroundColor"
+                  :show-alpha="false"
+                  @update:value="(color) => onColorUpdate(t.id, 'bg', color)"
+                />
+              </n-popover>
+
+              <!-- 删除按钮，点击弹出确认对话框 -->
+              <n-button text @click.stop="confirmRemoveTag(t)">
+                <n-icon><TagDismiss16Regular /></n-icon>
+              </n-button>
+
+              <!-- 标签引用计数 -->
+              <span class="tag-count">[{{ t.count }}]</span>
+            </div>
+          </template>
+        </div>
+
+        <!-- 底部排序和翻页工具条 -->
+        <div class="tag-footer">
+          <div class="tag-sort">
+            <n-button
+              size="tiny"
+              quaternary
+              :type="sortKey === 'count' && sortDirection === 'desc' ? 'primary' : 'default'"
+              @click="setSort('count', 'desc')"
             >
-              <template #trigger>
-                <n-button text @click.stop>
-                  <n-icon><HeartCircle16Regular /></n-icon>
-                </n-button>
-              </template>
-              <n-color-picker :value="t.backgroundColor" :show-alpha="false" @update:value="(color) => onColorUpdate(t.id, 'bg', color)" />
-            </n-popover>
-
-            <!-- 删除按钮，点击弹出确认对话框 -->
-            <n-button text @click.stop="confirmRemoveTag(t)">
-              <n-icon><TagDismiss16Regular /></n-icon>
+              <n-icon><ArrowSortUp24Filled /></n-icon>
             </n-button>
-
-            <!-- 标签引用计数 -->
-            <span class="tag-count">[{{ t.count }}]</span>
+            <n-button
+              size="tiny"
+              quaternary
+              :type="sortKey === 'count' && sortDirection === 'asc' ? 'primary' : 'default'"
+              @click="setSort('count', 'asc')"
+            >
+              <n-icon><ArrowSortDown24Filled /></n-icon>
+            </n-button>
+            <n-button
+              size="tiny"
+              quaternary
+              :type="sortKey === 'name' && sortDirection === 'asc' ? 'primary' : 'default'"
+              @click="setSort('name', 'asc')"
+            >
+              <n-icon><TextSortAscending16Regular /></n-icon>
+            </n-button>
+            <n-button
+              size="tiny"
+              quaternary
+              :type="sortKey === 'name' && sortDirection === 'desc' ? 'primary' : 'default'"
+              @click="setSort('name', 'desc')"
+            >
+              <n-icon><TextSortDescending20Regular /></n-icon>
+            </n-button>
           </div>
-        </template>
 
-        <!-- 用于保证列表高度稳定的透明占位符 -->
-        <div v-for="idx in emptyCount" :key="'empty-tag-' + idx" class="custom-tag empty-tag">-</div>
+          <div class="tag-pagination">
+            <n-button text size="tiny" :disabled="currentPage <= 1" @click="goPrevPage">
+              <n-icon>
+                <CaretLeft12Filled />
+              </n-icon>
+            </n-button>
+            <span class="page-info">{{ currentPage }} / {{ totalPages }}</span>
+            <n-button text size="tiny" :disabled="currentPage >= totalPages" @click="goNextPage">
+              <n-icon>
+                <CaretRight12Filled />
+              </n-icon>
+            </n-button>
+          </div>
+        </div>
       </div>
 
       <!-- 用于动态测量编辑输入框宽度的隐藏元素 -->
@@ -115,7 +165,19 @@
 import { ref, computed, nextTick, watch } from "vue";
 import { useTagStore, type TagWithCount } from "@/stores/useTagStore";
 import { useDialog } from "naive-ui";
-import { TagSearch20Filled, Add20Filled, HeartCircle16Regular, Heart16Filled, TagDismiss16Regular } from "@vicons/fluent";
+import {
+  TagSearch20Filled,
+  Add20Filled,
+  HeartCircle16Regular,
+  Heart16Filled,
+  TagDismiss16Regular,
+  CaretLeft12Filled,
+  CaretRight12Filled,
+  TextSortAscending16Regular,
+  TextSortDescending20Regular,
+  ArrowSortDown24Filled,
+  ArrowSortUp24Filled,
+} from "@vicons/fluent";
 import { NInput, NButton, NPopover, NColorPicker, NIcon } from "naive-ui";
 import { useDevice } from "@/composables/useDevice";
 
@@ -147,12 +209,30 @@ const editingId = ref<number | null>(null);
 const editValue = ref("");
 const editInputWidth = ref(40);
 const sizerRef = ref<HTMLElement | null>(null);
+const { isMobile } = useDevice();
+
+// 排序与分页
+const sortKey = ref<"count" | "name">("count");
+const sortDirection = ref<"asc" | "desc">("desc");
+const currentPage = ref(1);
+
+const pageSize = computed(() => (isMobile.value ? 16 : 34));
 // 弹窗显示：未传 show 时由外层 modal 控制，内层始终显示；传了 show 则跟随父组件
 const showModal = computed({
   get: () => (props.show === undefined ? true : !!props.show),
   set: (v) => {
     if (!v) emit("update:show", false);
   },
+});
+
+/**
+ * 移动端弹窗位置样式：左右居中、上下靠上
+ */
+const modalStyle = computed(() => {
+  if (!isMobile.value) return {};
+  return {
+    top: "8px",
+  };
 });
 
 /**
@@ -168,32 +248,55 @@ watch(
   (visible) => {
     if (visible) resetModalState();
   },
-  { immediate: true }
+  { immediate: true },
 );
 // ================================================================
 // Computed
 // ================================================================
 
 /**
- * 根据输入关键词过滤标签列表
- * 如果无输入，显示引用次数最多的前 20 个
+ * 根据输入关键词 + 排序配置得到完整标签列表（未分页）
  */
-const filteredTags = computed<TagWithCount[]>(() => {
+const sortedTags = computed<TagWithCount[]>(() => {
   const keyword = inputText.value.trim();
-  if (keyword) {
-    return tagStore.findByName(keyword);
-  }
-  if (useDevice().isMobile.value) {
-    return [...tagStore.allTags].sort((a, b) => b.count - a.count).slice(0, 16);
-  } else {
-    return [...tagStore.allTags];
-  }
+  const baseList = keyword ? tagStore.findByName(keyword) : [...tagStore.allTags];
+
+  return baseList.sort((a, b) => {
+    if (sortKey.value === "count") {
+      const diff = sortDirection.value === "desc" ? b.count - a.count : a.count - b.count;
+      if (diff !== 0) return diff;
+      return a.name.localeCompare(b.name);
+    } else {
+      const nameCompare = a.name.localeCompare(b.name);
+      if (nameCompare !== 0) {
+        return sortDirection.value === "desc" ? -nameCompare : nameCompare;
+      }
+      return b.count - a.count;
+    }
+  });
 });
 
 /**
- * 计算空位数量以维持布局稳定（最少显示 10 个位置）
+ * 当前页的标签列表（分页后）
  */
-const emptyCount = computed(() => Math.max(0, 10 - filteredTags.value.length));
+const filteredTags = computed<TagWithCount[]>(() => {
+  const start = (currentPage.value - 1) * pageSize.value;
+  const end = start + pageSize.value;
+  return sortedTags.value.slice(start, end);
+});
+
+/**
+ * 总页数
+ */
+const totalPages = computed(() => {
+  if (sortedTags.value.length === 0) return 1;
+  return Math.max(1, Math.ceil(sortedTags.value.length / pageSize.value));
+});
+
+// 当输入、排序或设备类型变化时，重置到第 1 页
+watch([inputText, sortKey, sortDirection, isMobile], () => {
+  currentPage.value = 1;
+});
 
 // ================================================================
 // Methods
@@ -334,6 +437,32 @@ function handleEditKeydown(e: KeyboardEvent, tag: TagWithCount): void {
     cancelEdit();
   }
 }
+
+/**
+ * 设置排序方式
+ */
+function setSort(key: "count" | "name", direction: "asc" | "desc"): void {
+  sortKey.value = key;
+  sortDirection.value = direction;
+}
+
+/**
+ * 上一页
+ */
+function goPrevPage(): void {
+  if (currentPage.value > 1) {
+    currentPage.value -= 1;
+  }
+}
+
+/**
+ * 下一页
+ */
+function goNextPage(): void {
+  if (currentPage.value < totalPages.value) {
+    currentPage.value += 1;
+  }
+}
 </script>
 
 <style scoped>
@@ -355,8 +484,16 @@ function handleEditKeydown(e: KeyboardEvent, tag: TagWithCount): void {
   flex-direction: column;
   position: relative;
   min-height: 300px;
+  height: 360px;
   box-sizing: border-box;
   overflow-x: hidden;
+}
+
+.tag-list-wrapper {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
 }
 
 .tag-search {
@@ -367,11 +504,13 @@ function handleEditKeydown(e: KeyboardEvent, tag: TagWithCount): void {
 .tag-suggestions {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  padding-top: 14px;
+  gap: 6px;
+  padding-top: 12px;
   padding-left: 2px;
+  align-content: flex-start;
   overflow-y: auto;
   overflow: visible;
+  flex: 1;
   padding-bottom: 5px;
 }
 
@@ -381,15 +520,18 @@ function handleEditKeydown(e: KeyboardEvent, tag: TagWithCount): void {
   align-items: center;
   border-radius: 16px;
   padding: 4px 6px;
-  height: 22px;
-  margin: 2px 0;
+  height: 24px;
+  margin: 0;
   font-size: 14px;
   flex: 0 1 auto;
   max-width: calc(45%);
   box-sizing: border-box;
   min-width: 0;
   cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
 }
 
 /* 仅对标签名做省略，不作用到 .tag-count */
@@ -435,16 +577,7 @@ function handleEditKeydown(e: KeyboardEvent, tag: TagWithCount): void {
 /* 悬浮在“已选中”的标签上时的增强效果 */
 .custom-tag.selected:hover {
   transform: translateY(-2px);
-  /* box-shadow: 0 2px 2px rgba(0, 0, 0, 0.12); */
   cursor: default;
-}
-
-.custom-tag.empty-tag {
-  background: transparent !important;
-  box-shadow: none !important;
-  border-color: transparent !important;
-  pointer-events: none;
-  opacity: 0;
 }
 
 .input-sizer {
@@ -458,8 +591,53 @@ function handleEditKeydown(e: KeyboardEvent, tag: TagWithCount): void {
   pointer-events: none;
 }
 
+.tag-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px solid var(--divider-color);
+  font-size: 12px;
+}
+
+.tag-sort {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.tag-sort-label {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.tag-pagination {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.page-info {
+  min-width: 52px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
 /* 移动端优化：确保颜色选择器在屏幕上居中显示，避免被遮挡 */
 @media (max-width: 768px) {
+  .tag-manager {
+    width: 100%;
+    max-width: 100%;
+    border-radius: 0;
+    max-height: 80vh;
+  }
+
+  .tag-manager-inner {
+    height: 100%;
+  }
+
   :deep(.n-popover) {
     position: fixed !important;
     left: 50% !important;
@@ -470,7 +648,7 @@ function handleEditKeydown(e: KeyboardEvent, tag: TagWithCount): void {
     overflow-y: auto;
     z-index: 10000 !important;
   }
-  
+
   :deep(.n-color-picker) {
     width: 100%;
   }

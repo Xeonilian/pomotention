@@ -43,9 +43,14 @@
         <!-- 统计信息 删除more设置-->
         <div class="card-statistic">
           <span class="pom-sum">
-            [
-            <span :style="{ color: getPomoColor(day.pomoRatio) }">🍅</span>
-            = {{ day.sumRealPomo }} 🍇 = {{ day.sumRealGrape }}]
+            <template v-if="isMobile">
+            🍅 {{ day.sumRealPomo }}
+            </template>
+            <template v-else>
+              [
+              <span :style="{ color: getPomoColor(day.pomoRatio) }">🍅</span>
+              = {{ day.sumRealPomo }} 🍇 = {{ day.sumRealGrape }}]
+            </template>
           </span>
         </div>
       </div>
@@ -61,9 +66,11 @@ import WeekBlockItem from "./WeekBlockItem.vue";
 import { formatMonthDay, getPomoColor, getFallbackWeekBlocks } from "@/core/utils/weekDays";
 import { useDataStore } from "@/stores/useDataStore";
 import { storeToRefs } from "pinia";
-
+import { useDevice } from "@/composables/useDevice";
+const { isMobile } = useDevice();
 const dataStore = useDataStore();
 const { selectedDate } = storeToRefs(dataStore);
+
 // 定义两种返回类型的联合类型
 type WeekBlockStyle =
   | { display: string } // 只包含 display 的情况

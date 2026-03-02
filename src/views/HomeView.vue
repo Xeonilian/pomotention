@@ -42,10 +42,12 @@
               tomorrow: isViewDateTomorrow,
             }"
           >
-            <span @click="onWeekJump" class="day-status">{{ isMobile ? dateService.appDateKey : dateService.displayDateInfo }}</span>
+            <span @click="onWeekJump" class="day-status">
+              {{ isMobile ? dateService.displayDateInfoMobile : dateService.displayDateInfo }}
+            </span>
             <span class="global-pomo">
-              <span class="today-pomo">🍅{{ currentDatePomoCount }}/</span>
-              <span class="total-pomo">{{ globalRealPomo }}</span>
+              <span class="today-pomo">🍅{{ currentDatePomoCount }}</span>
+              <span v-if="!isMobile" class="total-pomo">/{{ globalRealPomo }}</span>
             </span>
           </div>
           <div v-if="settingStore.settings.viewSet === 'week'" class="day-info">
@@ -65,7 +67,7 @@
           <div
             class="marquee"
             :class="{ 'marquee-empty': settingStore.settings.marquee === '' }"
-            v-if="!isEditing || !isMobile"
+            v-if="!isEditing"
             @click="startEdit"
             title="点击编辑跑马灯"
           >
@@ -691,7 +693,7 @@ function onRepeatActivity() {
       ...(sourceActivity.dueRange && {
         dueRange: [dateService.combineDateAndTime(appDateTimestamp.value, sourceActivity.dueRange[0]), sourceActivity.dueRange[1]] as [
           number | null,
-          string
+          string,
         ],
       }),
     };
@@ -1365,14 +1367,14 @@ const { startResize: startLeftResize } = useResize(
   "horizontal",
   95,
   150,
-  false // 左侧面板
+  false, // 左侧面板
 );
 const { startResize: startRightResize } = useResize(
   rightWidth,
   "horizontal",
   50,
   1600,
-  true // 右侧面板
+  true, // 右侧面板
 );
 </script>
 
@@ -1458,6 +1460,23 @@ const { startResize: startRightResize } = useResize(
 @media (max-width: 650px) {
   .marquee {
     display: none;
+  }
+
+  .marquee-input {
+    display: block;
+  }
+
+  .global-pomo {
+    padding: 2px 4px !important;
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .today-pomo,
+  .total-pomo {
+    font-size: 14px;
+    padding-left: 0;
+    padding-right: 0;
   }
 }
 
