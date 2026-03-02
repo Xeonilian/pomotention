@@ -31,12 +31,18 @@
 import { ref, computed, watch, nextTick, onMounted } from "vue";
 import { getClickContextFragments, findFragmentSequenceInSource } from "@/services/taskRecordService";
 import { useCaretFlash } from "@/composables/useCaretFlash";
+import { useDevice } from "@/composables/useDevice";
+import { useSettingStore } from "@/stores/useSettingStore";
 import "highlight.js/styles/github.css";
 
 const { showCaretFlash, caretFlashStyle, flashCaretFlash } = useCaretFlash();
+const { isMobile } = useDevice();
+const settingStore = useSettingStore();
+// 移动端进入编辑时暂存原 topHeight，退出时恢复
+const savedTopHeight = ref<number | null>(null);
 
 const markdownLoaded = ref(false);
-let markedInstance: typeof import("marked")["marked"] | null = null;
+let markedInstance: (typeof import("marked"))["marked"] | null = null;
 
 async function ensureMarkdownEngine() {
   if (markedInstance) {
@@ -123,11 +129,16 @@ watch(
   () => props.initialContent,
   (newContent) => {
     content.value = newContent;
-  }
+  },
 );
 
 const startEditing = () => {
   isEditing.value = true;
+  // 手机上空间不够，进入编辑时只保留 50px 给顶部，把空间让给编辑区
+  if (isMobile.value) {
+    savedTopHeight.value = settingStore.settings.topHeight;
+    settingStore.settings.topHeight = 110;
+  }
   nextTick(() => {
     setTimeout(() => {
       const ta = textarea.value;
@@ -141,6 +152,10 @@ const startEditing = () => {
 
 const stopEditing = () => {
   isEditing.value = false;
+  if (isMobile.value && savedTopHeight.value != null) {
+    settingStore.settings.topHeight = savedTopHeight.value;
+    savedTopHeight.value = null;
+  }
   emit("update:content", content.value);
 };
 
