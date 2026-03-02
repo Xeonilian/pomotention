@@ -1,6 +1,13 @@
 <!-- TemplateDialog.vue -->
 <template>
-  <n-modal v-model:show="showModal" preset="dialog" title="书写模板" :on-after-leave="resetForm" style="width: 500px; height: 410px">
+  <n-modal
+    v-model:show="showModal"
+    preset="dialog"
+    title="书写模板"
+    class="mobile-dialog-top"
+    :on-after-leave="resetForm"
+    style="width: 500px; height: 410px"
+  >
     <n-layout has-sider class="template-container">
       <n-layout-sider bordered width="150">
         <n-list>

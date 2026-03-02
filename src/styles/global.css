@@ -20,6 +20,14 @@
   background-color: rgba(0, 0, 0, 0.1) !important;
 }
 
+/* 移动端部分弹窗贴顶，避免输入法导致视口变化时位移 */
+@media (max-width: 768px) {
+  .n-modal-body-wrapper .mobile-dialog-top {
+    align-self: flex-start !important;
+    margin: 8px auto 0 auto !important;
+  }
+}
+
 /* 移动端触摸优化 + 全屏高度 */
 html,
 body {

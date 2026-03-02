@@ -3,6 +3,7 @@
     v-model:show="showModal"
     preset="dialog"
     title="记录打扰"
+    class="mobile-dialog-top"
     :on-after-leave="handleCancel"
   >
     <n-space vertical size="large">
