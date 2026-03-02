@@ -35,6 +35,7 @@ export interface GlobalSettings {
   viewSet: ViewType;
   marquee: string;
   pomodoroStateMessage?: string; // 自定义番茄钟状态消息
+  pomoSequenceInput?: string; // 序列模式默认输入
   supabaseSync: number[];
   firstSync: boolean;
   autoSupabaseSync: boolean;
@@ -88,6 +89,7 @@ const defaultSettings: GlobalSettings = {
   viewSet: "day",
   marquee: "", // 保持觉察 🍅 = ⏰ + 🎯 + 👁‍🗨
   pomodoroStateMessage: undefined, // 自定义番茄钟状态消息，未设置时使用默认逻辑
+  pomoSequenceInput: ">>>>🍅+05+🍅+05+🍅+05+🍅+15", // 序列模式默认输入
   supabaseSync: [0, 0],
   firstSync: true,
   autoSupabaseSync: true,
