@@ -226,13 +226,11 @@ const showModal = computed({
 });
 
 /**
- * 移动端弹窗位置样式：左右居中、上下靠上
+ * 移动端弹窗位置样式：仅占位，具体 top 对齐由 CSS 控制，避免输入法打开时视口变化导致位移
  */
 const modalStyle = computed(() => {
   if (!isMobile.value) return {};
-  return {
-    top: "8px",
-  };
+  return {};
 });
 
 /**
@@ -325,6 +323,11 @@ function onClickTag(tag: TagWithCount): void {
   }
 
   emit("update:modelValue", current);
+
+  // 点击选中/取消选中时，若有搜索内容则清空
+  if (inputText.value.trim()) {
+    inputText.value = "";
+  }
 }
 
 /**
@@ -489,18 +492,22 @@ function goNextPage(): void {
   overflow-x: hidden;
 }
 
+/* 列表+底部栏容器：占满剩余高度，底部栏固定在最下方 */
 .tag-list-wrapper {
   display: flex;
   flex-direction: column;
   flex: 1;
   min-height: 0;
+  overflow: hidden;
 }
 
 .tag-search {
   display: flex;
   gap: 6px;
+  flex-shrink: 0;
 }
 
+/* 标签列表：可滚动区域，高度由父级约束 */
 .tag-suggestions {
   display: flex;
   flex-wrap: wrap;
@@ -509,8 +516,9 @@ function goNextPage(): void {
   padding-left: 2px;
   align-content: flex-start;
   overflow-y: auto;
-  overflow: visible;
+  overflow-x: hidden;
   flex: 1;
+  min-height: 0;
   padding-bottom: 5px;
 }
 
@@ -591,21 +599,27 @@ function goNextPage(): void {
   pointer-events: none;
 }
 
+/* 底部工具条：固定在最下方，排序与翻页同一行 */
 .tag-footer {
   display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: space-between;
+  flex-shrink: 0;
   margin-top: 8px;
   padding-top: 6px;
   border-top: 1px solid var(--divider-color);
   font-size: 12px;
+  gap: 8px;
 }
 
 .tag-sort {
   display: flex;
   align-items: center;
   gap: 4px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
 }
 
 .tag-sort-label {
@@ -617,6 +631,7 @@ function goNextPage(): void {
   display: flex;
   align-items: center;
   gap: 2px;
+  flex-shrink: 0;
 }
 
 .page-info {
@@ -632,6 +647,9 @@ function goNextPage(): void {
     max-width: 100%;
     border-radius: 0;
     max-height: 80vh;
+    /* 始终贴顶部，不随输入法导致的视口变化而上下居中 */
+    align-self: flex-start !important;
+    margin: 8px auto 0 auto !important;
   }
 
   .tag-manager-inner {
