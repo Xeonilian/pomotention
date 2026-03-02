@@ -24,13 +24,7 @@
       <thead>
         <tr>
           <th class="col-check">
-            <n-button
-              text
-              type="default"
-              @click.stop="handleQuickAddTodo"
-              title="快速新增待办"
-              class="add-todo-button"
-            >
+            <n-button text type="default" @click.stop="handleQuickAddTodo" title="快速新增待办" class="add-todo-button">
               <template #icon>
                 <n-icon size="20">
                   <AddCircle24Regular />
@@ -42,25 +36,27 @@
             class="col-start"
             :class="{ 'disabled-toggle': !selectedRowId }"
             @click.stop="selectedRowId && handleFillCurrentTimeStart()"
-            :title="selectedRowId ? '点击填入当前时间' : '请先选中一行'">
+            :title="selectedRowId ? '点击填入当前时间' : '请先选中一行'"
+          >
             开始
           </th>
           <th
             class="col-end"
             :class="{ 'disabled-toggle': !selectedRowId }"
             @click.stop="selectedRowId && handleFillCurrentTimeEnd()"
-            :title="selectedRowId ? '点击填入当前时间' : '请先选中一行'">
+            :title="selectedRowId ? '点击填入当前时间' : '请先选中一行'"
+          >
             结束
           </th>
-          <th class="col-rank" title="Emoji：33=💤 44=🥗 55=📚 66=🙊 77=✨ 88=💸 99=🧸">排序</th>
+          <th class="col-rank" :title="rankHeaderTitle" @click.stop="openPriorityBindingModal">排序</th>
           <th class="col-intent">意图</th>
           <th
             class="col-fruit"
             :class="{ 'disabled-toggle': !canTogglePomoType }"
             @click.stop="canTogglePomoType && handleTogglePomoType()"
-            :title="canTogglePomoType ? '点击切换类型' : '不能切换类型'">
-          
-            {{ selectedRowId ? (currentPomoType || "果果") : "果果" }}
+            :title="canTogglePomoType ? '点击切换类型' : '不能切换类型'"
+          >
+            {{ selectedRowId ? currentPomoType || "果果" : "果果" }}
           </th>
           <th class="col-status">状态</th>
         </tr>
@@ -141,31 +137,44 @@
               <span v-else>{{ todo.doneTime ? timestampToTimeString(todo.doneTime) : "-" }}</span>
             </td>
 
-            <!-- 4 排序 -->
-            <td class="col-rank" @click.stop="startEditingPriority(todo)" title="点击编辑优先级">
-              <n-input-number
-                class="rank-input"
-                v-if="editingTodo && editingTodo.id === todo.id"
-                v-model:value="editingPriority"
-                :min="0"
-                :max="99"
-                size="small"
-                :show-button="false"
-                placeholder=" "
-                @blur="finishEditing"
-                @keydown.enter="finishEditing"
-              />
-
-              <span v-else class="priority-badge" :class="'priority-' + todo.priority">
-                <template v-if="todo.priority === 33">🧸</template>
-                <template v-else-if="todo.priority === 44">🥗</template>
-                <template v-else-if="todo.priority === 55">📚</template>
-                <template v-else-if="todo.priority === 66">🙊</template>
-                <template v-else-if="todo.priority === 77">✨</template>
-                <template v-else-if="todo.priority === 88">💸</template>
-                <template v-else-if="todo.priority === 99">💤</template>
-                <template v-else>{{ todo.priority > 0 ? todo.priority : "" }}</template>
-              </span>
+            <!-- 4 排序：点击弹出 emoji 选择，选后写 priority 并打上绑定的 tag -->
+            <td
+              class="col-rank"
+              :class="{ 'col-rank-disabled': todo.status === 'done' || todo.status === 'cancelled' }"
+              :title="todo.status === 'done' || todo.status === 'cancelled' ? '不能切换' : '点击选择分类'"
+            >
+              <n-popover
+                :show="rankPopoverTodoId === todo.id"
+                @update:show="(v) => !v && (rankPopoverTodoId = null)"
+                trigger="manual"
+                placement="bottom"
+                :z-index="10001"
+              >
+                <template #trigger>
+                  <span class="priority-badge" :class="'priority-' + todo.priority" @click.stop="openRankPopoverIfActive(todo)">
+                    {{ getEmojiForPriority(todo.priority) || (todo.priority > 0 ? todo.priority : "") }}
+                  </span>
+                </template>
+                <div class="rank-emoji-options">
+                  <button
+                    type="button"
+                    class="rank-emoji-btn"
+                    title="从 1 起第一个可用数字"
+                    @click.stop="applyFirstAvailablePriority(todo)"
+                  >
+                    1️⃣
+                  </button>
+                  <button
+                    v-for="cat in PRIORITY_CATEGORIES"
+                    :key="cat.priority"
+                    type="button"
+                    class="rank-emoji-btn"
+                    @click.stop="applyPriorityAndTag(todo, cat.priority)"
+                  >
+                    {{ cat.emoji }}
+                  </button>
+                </div>
+              </n-popover>
             </td>
 
             <!-- 5 意图 -->
@@ -210,10 +219,7 @@
                           }"
                           :checked="isPomoCompleted(todo, index, i)"
                           :disabled="todo.status === 'cancelled'"
-                          @update:checked="
-                            (checked: any) =>
-                              handlePomoCheck(todo, index, i, checked)
-                          "
+                          @update:checked="(checked: any) => handlePomoCheck(todo, index, i, checked)"
                         />
                       </template>
                       <span class="pomo-separator" v-if="todo.estPomo && index < todo.estPomo.length - 1">|</span>
@@ -380,10 +386,42 @@
       @close-selector="tagEditor.popoverTargetId.value = null"
     />
   </n-popover>
+
+  <!-- 排序槽位绑定 tag：双击表头「排序」打开，失去焦点自动保存 -->
+  <n-modal
+    v-model:show="showPriorityBindingModal"
+    preset="card"
+    title="排序分类绑定标签"
+    class="mobile-dialog-top"
+    style="width: 420px"
+    :mask-closable="true"
+    @update:show="
+      (v) => {
+        if (!v) savePriorityBinding();
+      }
+    "
+  >
+    <div class="priority-binding-list">
+      <div v-for="cat in PRIORITY_CATEGORIES" :key="cat.priority" class="priority-binding-row">
+        <span class="priority-binding-emoji">{{ cat.emoji }}</span>
+        <n-select
+          v-model:value="priorityBindingDraft[cat.priority]"
+          :options="tagOptionsForBinding"
+          placeholder="选择标签"
+          clearable
+          size="small"
+          style="flex: 1; min-width: 120px"
+          :render-label="renderTagOptionLabel"
+        />
+        <n-button quaternary size="tiny" @click="clearPriorityBinding(cat.priority)">清空</n-button>
+      </div>
+    </div>
+  </n-modal>
 </template>
 <script setup lang="ts">
 import type { Todo, TodoWithTaskRecords } from "@/core/types/Todo";
 import { timestampToTimeString } from "@/core/utils";
+import { PRIORITY_CATEGORIES, SPECIAL_PRIORITIES, getEmojiForPriority } from "@/core/priorityCategories";
 import {
   ChevronCircleRight48Regular,
   ChevronCircleDown48Regular,
@@ -394,15 +432,22 @@ import {
   CaretRight12Filled,
   AddCircle24Regular,
 } from "@vicons/fluent";
-import { NCheckbox, NInputNumber, NPopover, NButton, NIcon } from "naive-ui";
-import { ref, computed, nextTick } from "vue";
+import { NCheckbox, NInputNumber, NPopover, NButton, NIcon, NModal, NSelect } from "naive-ui";
+import { ref, computed, nextTick, reactive, watch, onBeforeUnmount } from "vue";
 
 import { useDataStore } from "@/stores/useDataStore";
+import { useSettingStore } from "@/stores/useSettingStore";
+import { useTagStore } from "@/stores/useTagStore";
 import { storeToRefs } from "pinia";
 import { useActivityTagEditor } from "@/composables/useActivityTagEditor";
 import TagSelector from "../TagSystem/TagSelector.vue";
+import type { SelectOption } from "naive-ui";
+
 const dataStore = useDataStore();
+const settingStore = useSettingStore();
+const tagStore = useTagStore();
 const { activeId, selectedRowId, todosForCurrentViewWithTaskRecords } = storeToRefs(dataStore);
+const { allTags: allTagsFromStore } = storeToRefs(tagStore);
 
 // 根据 selectedRowId 找到对应的 todo
 const selectedTodo = computed(() => {
@@ -442,6 +487,69 @@ const tagSelectorRef = ref<any>(null);
 const selectingTagViaEnter = ref(false);
 const titleInputRef = ref<HTMLInputElement | null>(null);
 
+// 排序列：emoji 弹窗与绑定设置
+const rankPopoverTodoId = ref<number | null>(null);
+const showPriorityBindingModal = ref(false);
+
+// 点击 popover 外视为放弃，关闭排序选择
+function handleRankPopoverClickOutside(e: MouseEvent | TouchEvent) {
+  const target = e.target as Node;
+  if (target && document.body.contains(target) && !(target as Element).closest?.(".rank-emoji-options")) {
+    rankPopoverTodoId.value = null;
+  }
+}
+let rankPopoverOutsideCleanup: (() => void) | null = null;
+watch(
+  rankPopoverTodoId,
+  (id) => {
+    if (rankPopoverOutsideCleanup) {
+      rankPopoverOutsideCleanup();
+      rankPopoverOutsideCleanup = null;
+    }
+    if (id != null) {
+      nextTick(() => {
+        const onDown = (e: MouseEvent | TouchEvent) => handleRankPopoverClickOutside(e);
+        document.addEventListener("mousedown", onDown, true);
+        document.addEventListener("touchstart", onDown, true);
+        rankPopoverOutsideCleanup = () => {
+          document.removeEventListener("mousedown", onDown, true);
+          document.removeEventListener("touchstart", onDown, true);
+        };
+      });
+    }
+  },
+  { flush: "sync" }
+);
+onBeforeUnmount(() => {
+  if (rankPopoverOutsideCleanup) rankPopoverOutsideCleanup();
+});
+const priorityBindingDraft = reactive<Record<number, number | null>>({});
+const rankHeaderTitle = computed(
+  () => "Emoji：" + PRIORITY_CATEGORIES.map((c) => `${c.priority}=${c.emoji}`).join(" ") + "；双击打开绑定标签",
+);
+const tagOptionsForBinding = computed<SelectOption[]>(() => allTagsFromStore.value.map((t) => ({ label: t.name, value: t.id })));
+function renderTagOptionLabel(option: SelectOption) {
+  return option.label as string;
+}
+function openPriorityBindingModal() {
+  Object.keys(priorityBindingDraft).forEach((k) => delete priorityBindingDraft[Number(k)]);
+  const saved = settingStore.settings.priorityCategoryTagIds;
+  Object.keys(saved).forEach((k) => {
+    priorityBindingDraft[Number(k)] = saved[Number(k)];
+  });
+  showPriorityBindingModal.value = true;
+}
+function clearPriorityBinding(priority: number) {
+  delete priorityBindingDraft[priority];
+}
+function savePriorityBinding() {
+  const ids: Record<number, number> = {};
+  Object.entries(priorityBindingDraft).forEach(([p, tagId]) => {
+    if (typeof tagId === "number") ids[Number(p)] = tagId;
+  });
+  settingStore.settings.priorityCategoryTagIds = ids;
+}
+
 // 定义 Emit
 const emit = defineEmits<{
   (e: "suspend-todo", id: number): void;
@@ -467,7 +575,7 @@ const emit = defineEmits<{
 // 增加规则：一旦done，特殊值（33/44/55/66/77/88/99）按 startTime 排序
 const sortedTodos = computed(() => {
   const todos = [...todosForCurrentViewWithTaskRecords.value];
-  const specialPriorities = [33, 44, 55, 66, 77, 88, 99];
+  const specialPriorities = SPECIAL_PRIORITIES;
 
   const normalTodos: TodoWithTaskRecords[] = [];
   const specialTodosNotDone: TodoWithTaskRecords[] = [];
@@ -512,64 +620,56 @@ const sortedTodos = computed(() => {
   return [...normalTodos, ...specialTodosNotDone, ...specialTodosDone];
 });
 
-// 优先级 排序================
-const editingTodo = ref<Todo | null>(null);
-const editingPriority = ref<number>(0);
-
-// 开始编辑优先级
-function startEditingPriority(todo: Todo) {
-  editingTodo.value = todo;
-  editingPriority.value = todo.priority;
-  nextTick(() => {
-    const input = document.querySelector(".rank-input .n-input__input-el");
-    if (input) {
-      (input as HTMLInputElement).select();
-    }
-  });
+function openRankPopoverIfActive(todo: Todo) {
+  if (todo.status === "done" || todo.status === "cancelled") return;
+  rankPopoverTodoId.value = todo.id;
 }
 
-function finishEditing() {
-  if (!editingTodo.value) return;
-  if (editingPriority.value === null) {
-    editingPriority.value = 0;
+/** 从 1 起第一个可用的优先级（1–21），考虑已完成锁定和其余进行中任务占用 */
+function getFirstAvailablePriority(todos: Todo[], current: Todo): number {
+  const locked = new Set<number>();
+  const used = new Set<number>();
+  todos.forEach((t) => {
+    if (t.status === "done" && t.priority >= 1 && t.priority <= 21 && !SPECIAL_PRIORITIES.includes(t.priority)) {
+      locked.add(t.priority);
+    }
+    if (
+      t.status !== "done" &&
+      t.status !== "cancelled" &&
+      t.id !== current.id &&
+      t.priority >= 1 &&
+      t.priority <= 21 &&
+      !SPECIAL_PRIORITIES.includes(t.priority)
+    ) {
+      used.add(t.priority);
+    }
+  });
+  for (let n = 1; n <= 21; n++) {
+    if (!locked.has(n) && !used.has(n)) return n;
   }
-  if (editingTodo.value.status === "done" || editingTodo.value.status === "cancelled") {
+  return 1;
+}
+
+function applyFirstAvailablePriority(todo: Todo) {
+  const desired = getFirstAvailablePriority(todosForCurrentViewWithTaskRecords.value, todo);
+  applyPriorityAndTag(todo, desired);
+}
+
+// 排序列：选择 emoji 后写入 priority 并打上绑定的 tag
+function applyPriorityAndTag(todo: Todo, desired: number) {
+  rankPopoverTodoId.value = null;
+  if (todo.status === "done" || todo.status === "cancelled") {
     popoverMessage.value = "当前任务已经结束！";
     showPopover.value = true;
-    setTimeout(() => {
-      showPopover.value = false;
-    }, 2000);
-    editingTodo.value = null;
+    setTimeout(() => (showPopover.value = false), 2000);
     return;
   }
-  // 允许特殊值66、88、99
-  const specialPriorities = [33, 44, 55, 66, 77, 88, 99];
-  if (!specialPriorities.includes(editingPriority.value) && editingPriority.value > 21) {
-    popoverMessage.value = "请输入0-21或66、88、99";
-    showPopover.value = true;
-    setTimeout(() => {
-      showPopover.value = false;
-    }, 2000);
-    editingTodo.value = null;
-    return;
-  }
-
-  const current = editingTodo.value;
-  const desired = editingPriority.value;
-
-  if (current.priority === desired) {
-    editingTodo.value = null;
-    return;
-  }
+  if (todo.priority === desired) return;
 
   const before = new Map<number, number>();
   todosForCurrentViewWithTaskRecords.value.forEach((t) => before.set(t.id, t.priority));
+  relayoutPriority(todosForCurrentViewWithTaskRecords.value, todo, desired);
 
-  // 关键：不再提前修改 priority，而是把 current 和 desired 传给排序函数
-  // 让排序函数自己去智能处理
-  relayoutPriority(todosForCurrentViewWithTaskRecords.value, current, desired);
-
-  // 后续逻辑不变...
   const updates: Array<{ id: number; priority: number }> = [];
   todosForCurrentViewWithTaskRecords.value.forEach((t) => {
     const oldP = before.get(t.id);
@@ -577,7 +677,6 @@ function finishEditing() {
       updates.push({ id: t.id, priority: t.priority });
     }
   });
-
   if (updates.length > 0) {
     popoverMessage.value = "优先级已更新";
     showPopover.value = true;
@@ -585,13 +684,15 @@ function finishEditing() {
     emit("batch-update-priorities", updates);
   }
 
-  editingTodo.value = null;
+  const tagId = settingStore.settings.priorityCategoryTagIds[desired];
+  if (tagId != null) {
+    dataStore.addTagToActivity(todo.activityId, tagId);
+  }
 }
 
 // 传入 current 和 desired，让排序更智能
 function relayoutPriority(todos: Todo[], current: Todo, desired: number) {
-  // 特殊优先级值，不参与重新分配
-  const specialPriorities = [33, 44, 55, 66, 77, 88, 99];
+  const specialPriorities = SPECIAL_PRIORITIES;
 
   // 如果目标是特殊值，直接设置并返回，不参与重新分配
   if (specialPriorities.includes(desired)) {
@@ -776,14 +877,14 @@ function startEditing(todoId: number, field: "title" | "start" | "done") {
     field === "title"
       ? todo.activityTitle || ""
       : field === "start"
-      ? todo.startTime
-        ? timestampToTimeString(todo.startTime)
-        : ""
-      : field === "done"
-      ? todo.doneTime
-        ? timestampToTimeString(todo.doneTime)
-        : ""
-      : "";
+        ? todo.startTime
+          ? timestampToTimeString(todo.startTime)
+          : ""
+        : field === "done"
+          ? todo.doneTime
+            ? timestampToTimeString(todo.doneTime)
+            : ""
+          : "";
 
   // 使用 querySelector 来获取当前编辑的输入框，而不是依赖 ref
   nextTick(() => {
@@ -1030,6 +1131,10 @@ col.col-end {
 
 col.col-rank {
   width: 35px;
+}
+
+td.col-rank-disabled {
+  cursor: not-allowed;
 }
 
 col.col-intent {
@@ -1395,6 +1500,48 @@ td.col-check {
   display: block;
   width: 100%;
   height: 100%;
+}
+
+/* 排序列 emoji 弹窗：8 个选项 4×2 网格，不留多余空白 */
+.rank-emoji-options {
+  display: grid;
+  grid-template-columns: repeat(4, 32px);
+  grid-template-rows: repeat(2, 32px);
+  gap: 6px;
+  padding: 4px;
+  width: fit-content;
+}
+.rank-emoji-btn {
+  width: 32px;
+  height: 32px;
+  font-size: 18px;
+  border: 1px solid var(--n-border-color);
+  border-radius: 6px;
+  background: var(--n-color);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.rank-emoji-btn:hover {
+  background: var(--n-color-hover);
+}
+
+/* 排序绑定标签弹层 */
+.priority-binding-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.priority-binding-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.priority-binding-emoji {
+  font-size: 20px;
+  width: 28px;
+  text-align: center;
 }
 
 .rank-input {

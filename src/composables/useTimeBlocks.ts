@@ -3,6 +3,7 @@ import { ref, computed, type ComputedRef, onMounted, onUnmounted, watch } from "
 import type { CSSProperties } from "vue";
 import { getTimestampForTimeString } from "@/core/utils";
 import { CategoryColors, POMODORO_COLORS, POMODORO_COLORS_DARK } from "@/core/constants";
+import { SPECIAL_PRIORITIES, getEmojiForPriority } from "@/core/priorityCategories";
 import type { Block, PomodoroSegment, TodoSegment, ActualTimeRange } from "@/core/types/Block";
 import { generateActualTodoSegments, splitIndexPomoBlocksExSchedules } from "@/services/pomoSegService";
 import { useSegStore } from "@/stores/useSegStore";
@@ -461,52 +462,26 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
 
   // 第二列：特殊优先级emoji显示（每个todo只显示一个emoji）
   const specialPriorityEmojisForSecondColumn = computed((): SpecialPriorityEmojiForSecondColumn[] => {
-    const specialPriorities = [33, 44, 55, 66, 77, 88, 99];
     const specialTodos = todosForAppDate.value.filter(
-      (todo) => todo.status !== "cancelled" && specialPriorities.includes(todo.priority)
+      (todo) => todo.status !== "cancelled" && SPECIAL_PRIORITIES.includes(todo.priority)
     );
 
     return specialTodos.map((todo) => {
-      // 计算时间位置：优先使用均值，其次使用单个时间，最后使用todo.id
       let timePosition: number;
       if (todo.startTime && todo.doneTime) {
-        // 有开始和结束时间，使用均值
         timePosition = (todo.startTime + todo.doneTime) / 2;
       } else if (todo.startTime) {
-        // 只有开始时间
         timePosition = todo.startTime;
       } else if (todo.doneTime) {
-        // 只有结束时间
         timePosition = todo.doneTime;
       } else {
-        // 都没有，使用todo.id（时间戳）
         timePosition = todo.id;
-      }
-
-      // 根据priority确定emoji
-      let emoji: string;
-      if (todo.priority === 33) {
-        emoji = "🧸";
-      } else if (todo.priority === 44) {
-        emoji = "🥗";
-      } else if (todo.priority === 55) {
-        emoji = "📚";
-      } else if (todo.priority === 66) {
-        emoji = "🙊";
-      } else if (todo.priority === 77) {
-        emoji = "✨";
-      } else if (todo.priority === 88) {
-        emoji = "💸";
-      } else if (todo.priority === 99) {
-        emoji = "💤";
-      } else {
-        emoji = "";
       }
 
       return {
         todoId: todo.id,
         title: todo.activityTitle,
-        emoji,
+        emoji: getEmojiForPriority(todo.priority),
         timePosition,
       };
     });
@@ -535,12 +510,15 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
   }
 
   const actualTodoTimeRanges = computed((): ActualTimeRange[] => {
-    const specialPriorities = [33, 44, 55, 66, 77, 88, 99];
     const ranges: ActualTimeRange[] = [];
 
     // 处理普通done状态的todo
     const normalTodos = todosForAppDate.value.filter(
-      (todo) => todo.status === "done" && todo.startTime && todo.doneTime && !specialPriorities.includes(todo.priority)
+      (todo) =>
+        todo.status === "done" &&
+        todo.startTime &&
+        todo.doneTime &&
+        !SPECIAL_PRIORITIES.includes(todo.priority)
     );
     ranges.push(
       ...normalTodos.map((todo) => ({
@@ -554,7 +532,11 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
 
     // 处理特殊priority的todo（在第四列正常显示）
     const specialTodos = todosForAppDate.value.filter(
-      (todo) => todo.status === "done" && todo.startTime && todo.doneTime && specialPriorities.includes(todo.priority)
+      (todo) =>
+        todo.status === "done" &&
+        todo.startTime &&
+        todo.doneTime &&
+        SPECIAL_PRIORITIES.includes(todo.priority)
     );
     ranges.push(
       ...specialTodos.map((todo) => ({

@@ -48,6 +48,8 @@ export interface GlobalSettings {
     profiles: Record<string, AiProfile>; // 所有配置集合（字典，键为 id）
     systemPrompt?: string;
   };
+  /** 排序列 7 个槽位绑定的 tag：priority -> tagId，用户双击表头在绑定弹层里设置 */
+  priorityCategoryTagIds: Record<number, number>;
   // 以后新增全局设置项就在这里补充
 }
 
@@ -94,6 +96,7 @@ const defaultSettings: GlobalSettings = {
   wasLocalModeBeforeLogin: false, // 默认不是从本地模式切换过来的
   keepLocalDataAfterSignOut: false, // 默认不清除本地数据
   isCompactMode: false, // 默认不是紧凑模式
+  priorityCategoryTagIds: {},
   ai: {
     activeId: 1,
     systemPrompt:
