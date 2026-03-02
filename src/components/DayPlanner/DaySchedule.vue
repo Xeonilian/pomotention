@@ -39,8 +39,20 @@
               </template>
             </n-button>
           </th>
-          <th class="col-start">开始</th>
-          <th class="col-end">结束</th>
+          <th
+            class="col-start"
+            :class="{ 'disabled-toggle': !selectedRowId }"
+            @click.stop="selectedRowId && handleFillCurrentTimeStart()"
+            :title="selectedRowId ? '点击填入当前时间' : '请先选中一行'">
+            开始
+          </th>
+          <th
+            class="col-end"
+            :class="{ 'disabled-toggle': !selectedRowId }"
+            @click.stop="selectedRowId && handleFillCurrentTimeEnd()"
+            :title="selectedRowId ? '点击填入当前时间' : '请先选中一行'">
+            结束
+          </th>
           <th class="col-duration">时长</th>
           <th class="col-intent">意图</th>
           <th class="col-location">地点</th>
@@ -391,6 +403,22 @@ function handleQuickAddSchedule() {
   emit("quick-add-schedule");
 }
 
+// 表头点击「开始」：给选中行填入当前时间（HH:mm），对应 activityDueRange[0]
+function handleFillCurrentTimeStart() {
+  if (!selectedRowId.value) return;
+  const now = new Date();
+  const ts = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
+  emit("edit-schedule-start", selectedRowId.value, ts);
+}
+
+// 表头点击「结束」：给选中行填入当前时间（HH:mm），对应 doneTime
+function handleFillCurrentTimeEnd() {
+  if (!selectedRowId.value) return;
+  const now = new Date();
+  const ts = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
+  emit("edit-schedule-done", selectedRowId.value, ts);
+}
+
 // 编辑相关函数
 function startEditing(scheduleId: number, field: "title" | "start" | "done" | "duration" | "location") {
   const schedule = schedulesForCurrentView.value.find((s) => s.id === scheduleId);
@@ -666,6 +694,18 @@ thead th {
   background-color: var(--color-background) !important;
   line-height: 1.3;
   box-sizing: border-box;
+}
+
+/* 开始/结束表头可点击，悬停为手型 */
+th.col-start,
+th.col-end {
+  cursor: pointer;
+}
+
+/* 开始/结束表头无选中行时禁用 */
+th.col-start.disabled-toggle,
+th.col-end.disabled-toggle {
+  cursor: not-allowed;
 }
 
 /* 行样式 */
