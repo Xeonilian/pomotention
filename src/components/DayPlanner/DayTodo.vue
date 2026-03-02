@@ -169,6 +169,7 @@
               <input
                 class="title-input"
                 v-if="editingRowId === todo.id && editingField === 'title'"
+                :ref="(el: any) => (titleInputRef = el)"
                 v-model="editingValue"
                 @blur="saveEdit(todo)"
                 @keyup.enter="saveEdit(todo)"
@@ -425,6 +426,9 @@ const newEstimate = ref<number>(1);
 // Tag Editor
 const tagEditor = useActivityTagEditor();
 const tagSelectorRef = ref<any>(null);
+// Enter 选中标签时置为 true，saveEdit 会跳过结束编辑以保持继续输入
+const selectingTagViaEnter = ref(false);
+const titleInputRef = ref<HTMLInputElement | null>(null);
 
 // 定义 Emit
 const emit = defineEmits<{
@@ -802,6 +806,11 @@ function handleQuickStart(todo: Todo) {
 // 注意这里是 timestring 不是timestamp，是在Home用currentViewdate进行的转化
 function saveEdit(todo: Todo) {
   if (!editingRowId.value) return;
+  // Enter 选中标签后 keyup.enter 仍会触发 saveEdit，此时不结束编辑以便继续输入
+  if (selectingTagViaEnter.value) {
+    selectingTagViaEnter.value = false;
+    return;
+  }
 
   // 如果输入框中有 # 开头的文本，清理并关闭 popover
   if (editingValue.value.includes("#") && tagEditor.popoverTargetId.value) {
@@ -911,6 +920,7 @@ function handleInputKeydown(event: KeyboardEvent, todo: Todo) {
         event.preventDefault();
         break;
       case "Enter":
+        selectingTagViaEnter.value = true;
         tagSelectorRef.value.selectHighlighted();
         event.preventDefault();
         break;
@@ -938,6 +948,10 @@ function handleTagSelected(tagId: number) {
   // 通过 activityId 给 Activity 添加标签
   dataStore.addTagToActivity(todo.activityId, tagId);
   tagEditor.closePopover();
+  // Enter 选中时把焦点拉回输入框以便继续编辑
+  if (selectingTagViaEnter.value) {
+    nextTick(() => titleInputRef.value?.focus());
+  }
 }
 
 function handleTagCreate(tagName: string) {
