@@ -4,12 +4,12 @@
     v-model:show="showModal"
     preset="dialog"
     title="书写模板"
-    class="mobile-dialog-top"
+    class="mobile-dialog-top template-dialog"
     :on-after-leave="resetForm"
     style="width: 500px; height: 410px"
   >
     <n-layout has-sider class="template-container">
-      <n-layout-sider bordered width="150">
+      <n-layout-sider bordered width="150" class="template-sider">
         <n-list>
           <n-list-item
             v-for="template in templates"
@@ -47,8 +47,8 @@
       </n-layout-content>
     </n-layout>
 
-    <n-layout-footer>
-      <n-space justify="center">
+    <n-layout-footer class="template-footer">
+      <n-space justify="center" class="template-footer-actions">
         <n-button type="info" secondary :disabled="!selectedTemplate" @click="copyToClipboard(selectedTemplate?.content)">
           {{ copyMessage }}
         </n-button>
@@ -96,7 +96,7 @@ const contentPlaceholder = computed(() => (addNew.value ? "输入新模板内容
 // ==================== 监听器 ====================
 watch(
   () => props.show,
-  (val) => (showModal.value = val)
+  (val) => (showModal.value = val),
 );
 
 watch(
@@ -124,7 +124,7 @@ watch(
       }
     }
   },
-  { deep: true }
+  { deep: true },
 );
 
 // ==================== 方法 ====================
@@ -234,5 +234,38 @@ const resetForm = () => {
 .n-layout-footer {
   padding: 8px;
   background-color: var(--color-background);
+}
+
+/* 移动端：适应宽度、收矮高度，左侧变窄、按钮单行缩小 */
+@media (max-width: 768px) {
+  .template-container {
+    width: 100% !important;
+    max-width: 100%;
+    height: 100% !important;
+    min-height: 0;
+  }
+
+  .template-sider {
+    width: 95px !important;
+    min-width: 95px !important;
+  }
+
+  .template-footer {
+    padding: 16px 0px;
+  }
+
+  .template-footer-actions {
+    flex-wrap: nowrap !important;
+    gap: 4px !important;
+    overflow-x: auto;
+    justify-content: center;
+  }
+
+  .template-footer-actions :deep(.n-button) {
+    font-size: 14px;
+    padding: 6px 6px;
+    min-width: auto;
+    margin: 0 2px;
+  }
 }
 </style>
