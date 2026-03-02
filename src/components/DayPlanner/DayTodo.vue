@@ -38,8 +38,20 @@
               </template>
             </n-button>
           </th>
-          <th class="col-start">开始</th>
-          <th class="col-end">结束</th>
+          <th
+            class="col-start"
+            :class="{ 'disabled-toggle': !selectedRowId }"
+            @click.stop="selectedRowId && handleFillCurrentTimeStart()"
+            :title="selectedRowId ? '点击填入当前时间' : '请先选中一行'">
+            开始
+          </th>
+          <th
+            class="col-end"
+            :class="{ 'disabled-toggle': !selectedRowId }"
+            @click.stop="selectedRowId && handleFillCurrentTimeEnd()"
+            :title="selectedRowId ? '点击填入当前时间' : '请先选中一行'">
+            结束
+          </th>
           <th class="col-rank" title="Emoji：33=💤 44=🥗 55=📚 66=🙊 77=✨ 88=💸 99=🧸">排序</th>
           <th class="col-intent">意图</th>
           <th
@@ -782,6 +794,22 @@ function startEditing(todoId: number, field: "title" | "start" | "done") {
   });
 }
 
+// 表头点击「开始」：给选中行填入当前时间（HH:mm）
+function handleFillCurrentTimeStart() {
+  if (!selectedRowId.value) return;
+  const now = new Date();
+  const ts = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
+  emit("edit-todo-start", selectedRowId.value, ts);
+}
+
+// 表头点击「结束」：给选中行填入当前时间（HH:mm）
+function handleFillCurrentTimeEnd() {
+  if (!selectedRowId.value) return;
+  const now = new Date();
+  const ts = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
+  emit("edit-todo-done", selectedRowId.value, ts);
+}
+
 // 一键开始：不进入编辑态，直接把开始时间写成当前时间并保存
 function handleQuickStart(todo: Todo) {
   // 已结束的任务不允许开始
@@ -1034,8 +1062,16 @@ thead th {
   box-sizing: border-box;
 }
 
-/* 果果列禁用状态 */
-th.col-fruit.disabled-toggle {
+/* 开始/结束表头可点击，悬停为手型 */
+th.col-start,
+th.col-end {
+  cursor: pointer;
+}
+
+/* 果果列及开始/结束列禁用状态 */
+th.col-fruit.disabled-toggle,
+th.col-start.disabled-toggle,
+th.col-end.disabled-toggle {
   cursor: not-allowed;
 }
 
