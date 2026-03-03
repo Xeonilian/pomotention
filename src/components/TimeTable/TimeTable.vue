@@ -170,6 +170,16 @@ const effectivePxPerMinute = computed(() => {
   touch-action: manipulation;
 }
 
+/* 深度禁用：timetable 内所有子元素都不能被选中或长按复制 */
+.timetable-time-block :deep(*) {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
 /* 添加这些样式来确保按钮居中 */
 .timetable-view-button-container :deep(.n-button) {
   margin: 0 !important;

@@ -17,7 +17,7 @@
     </div>
 
     <!-- ========== 背景层：时间主块 ========== -->
-    <div v-for="block in props.blocks" :key="block.id" :style="getVerticalBlockStyle(block)">
+    <div v-for="block in props.blocks" :key="block.id" class="timeblock-bg" :style="getVerticalBlockStyle(block)">
       <span class="block-label">
         {{ getBlockLabel(block.category) }}
       </span>
@@ -308,6 +308,16 @@ const getPriorityBadgeClasses = (seg: any) => [
   /* 🔥 移动端：禁用文本选择 */
   user-select: none;
   -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* live / work / sleep 背景块：彻底禁用选中和复制 */
+.timeblock-bg {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
   -webkit-touch-callout: none;
   -webkit-tap-highlight-color: transparent;
 }
