@@ -494,11 +494,11 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
 
     return {
       position: "absolute",
-      left: "22px",
+      left: "42px", // 第三列，top 计算不变
       width: "13px",
-      top: `${centerTopPx - 10}px`, // emoji中心对齐到计算的时间位置
-      height: "20px",
-      fontSize: "16px",
+      top: `${centerTopPx - 6}px`, // emoji中心对齐到计算的时间位置
+      height: "12px",
+      fontSize: "12px",
       display: "flex",
       justifyContent: "center",
       alignItems: "center",

@@ -69,11 +69,11 @@
     {{ getScheduleLabel(scheduleSeg) }}
   </div>
 
-  <!-- ========== 第二列：特殊优先级 Emoji ========== -->
+  <!-- ========== 第三列：特殊优先级 Emoji ========== -->
   <div
     v-for="emoji in specialPriorityEmojisForSecondColumn"
     :key="`special-emoji-${emoji.todoId}`"
-    class="special-priority-emoji second-column"
+    class="special-priority-emoji third-column"
     :style="getSpecialPriorityEmojiStyle(emoji)"
     :title="emoji.title"
   >
@@ -495,20 +495,15 @@ const getPriorityBadgeClasses = (seg: any) => [
 }
 
 /* ============================================
-     😀 特殊Priority的Emoji显示 (第二列)
+     😀 特殊Priority的Emoji显示 (第三列，无 hover 放大)
      ============================================ */
 
-.special-priority-emoji.second-column {
+.special-priority-emoji.third-column {
   cursor: pointer;
-  transition: transform 0.2s ease;
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;
   -webkit-tap-highlight-color: transparent;
-}
-
-.special-priority-emoji.second-column:hover {
-  transform: scale(1.3);
 }
 
 /* ============================================
