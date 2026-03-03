@@ -160,6 +160,14 @@ const effectivePxPerMinute = computed(() => {
   height: calc(100% - 45px);
   position: relative;
   bottom: 0px;
+  /* 移动端：整个时间表区域禁用文本选择和长按复制 */
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 /* 添加这些样式来确保按钮居中 */

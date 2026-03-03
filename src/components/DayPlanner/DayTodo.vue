@@ -141,7 +141,7 @@
             <td
               class="col-rank"
               :class="{ 'col-rank-disabled': todo.status === 'done' || todo.status === 'cancelled' }"
-              :title="todo.status === 'done' || todo.status === 'cancelled' ? '不能切换' : '点击选择分类'"
+              :title="todo.status === 'done' || todo.status === 'cancelled' ? '不能切换' : '双击选择分类'"
             >
               <n-popover
                 :show="rankPopoverTodoId === todo.id"
@@ -151,11 +151,12 @@
                 :z-index="10001"
               >
                 <template #trigger>
-                  <span class="priority-badge" :class="'priority-' + todo.priority" @click.stop="openRankPopoverIfActive(todo)">
+                  <span class="priority-badge" :class="'priority-' + todo.priority" @dblclick.stop="openRankPopoverIfActive(todo)">
                     {{ getEmojiForPriority(todo.priority) || (todo.priority > 0 ? todo.priority : "") }}
                   </span>
                 </template>
                 <div class="rank-emoji-options">
+                  <button type="button" class="rank-emoji-btn" title="清除当前优先级" @click.stop="applyPriorityAndTag(todo, 0)">⚪</button>
                   <button
                     type="button"
                     class="rank-emoji-btn"
@@ -518,7 +519,7 @@ watch(
       });
     }
   },
-  { flush: "sync" }
+  { flush: "sync" },
 );
 onBeforeUnmount(() => {
   if (rankPopoverOutsideCleanup) rankPopoverOutsideCleanup();
@@ -527,7 +528,12 @@ const priorityBindingDraft = reactive<Record<number, number | null>>({});
 const rankHeaderTitle = computed(
   () => "Emoji：" + PRIORITY_CATEGORIES.map((c) => `${c.priority}=${c.emoji}`).join(" ") + "；双击打开绑定标签",
 );
-const tagOptionsForBinding = computed<SelectOption[]>(() => allTagsFromStore.value.map((t) => ({ label: t.name, value: t.id })));
+const tagOptionsForBinding = computed<SelectOption[]>(() =>
+  [...allTagsFromStore.value]
+    .slice()
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map((t) => ({ label: t.name, value: t.id })),
+);
 function renderTagOptionLabel(option: SelectOption) {
   return option.label as string;
 }
@@ -1502,19 +1508,19 @@ td.col-check {
   height: 100%;
 }
 
-/* 排序列 emoji 弹窗：8 个选项 4×2 网格，不留多余空白 */
+/* 排序列 emoji 弹窗：10 个选项 5×2 网格，不留多余空白 */
 .rank-emoji-options {
   display: grid;
-  grid-template-columns: repeat(4, 32px);
-  grid-template-rows: repeat(2, 32px);
+  grid-template-columns: repeat(5, 24px);
+  grid-template-rows: repeat(2, 24px);
   gap: 6px;
-  padding: 4px;
+  padding: 0px;
   width: fit-content;
 }
 .rank-emoji-btn {
-  width: 32px;
-  height: 32px;
-  font-size: 18px;
+  width: 24px;
+  height: 24px;
+  font-size: 16px;
   border: 1px solid var(--n-border-color);
   border-radius: 6px;
   background: var(--n-color);

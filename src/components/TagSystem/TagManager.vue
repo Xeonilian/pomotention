@@ -1,11 +1,5 @@
 <template>
-  <n-modal
-    v-model:show="showModal"
-    @after-leave="emit('after-leave')"
-    class="tag-manager"
-    :align-center="!isMobile"
-    :style="modalStyle"
-  >
+  <n-modal v-model:show="showModal" @after-leave="emit('after-leave')" class="tag-manager" :align-center="!isMobile" :style="modalStyle">
     <div class="tag-manager-inner">
       <!-- 顶部搜索和新建区域 -->
       <div class="tag-search">
@@ -607,7 +601,7 @@ function goNextPage(): void {
   align-items: center;
   justify-content: space-between;
   flex-shrink: 0;
-  margin-top: 8px;
+  margin-top: 0px;
   padding-top: 6px;
   border-top: 1px solid var(--divider-color);
   font-size: 12px;
