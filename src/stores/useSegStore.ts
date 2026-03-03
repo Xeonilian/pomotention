@@ -2,7 +2,7 @@
 import { defineStore } from "pinia";
 import type { PomodoroSegment, TodoSegment } from "@/core/types/Block";
 import type { Todo } from "@/core/types/Todo";
-import { generateEstimatedTodoSegments } from "@/services/pomoSegService";
+import { generateEstimatedTodoSegments } from "@/services/todoSegService";
 
 export const useSegStore = defineStore("seg", {
   state: () => ({

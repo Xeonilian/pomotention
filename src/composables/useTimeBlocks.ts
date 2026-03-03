@@ -494,11 +494,11 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
 
     return {
       position: "absolute",
-      left: "22px",
+      left: "42px", // 第三列，top 计算不变
       width: "13px",
-      top: `${centerTopPx - 10}px`, // emoji中心对齐到计算的时间位置
-      height: "20px",
-      fontSize: "16px",
+      top: `${centerTopPx - 6}px`, // emoji中心对齐到计算的时间位置
+      height: "12px",
+      fontSize: "12px",
       display: "flex",
       justifyContent: "center",
       alignItems: "center",
@@ -581,7 +581,9 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
 
   // ======= Watch =======
   watch(
-    () => [todosForAppDate, props.blocks, schedulesForAppDate, props.dayStart],
+    // 使用 .value 确保当日 todo / schedule 内容本身变化时能立即触发重算，
+    // 避免需要“再拖一次”才看到上次变更生效。
+    () => [todosForAppDate.value, props.blocks, schedulesForAppDate.value, props.dayStart],
     () => {
       const newPomoSegs = splitIndexPomoBlocksExSchedules(props.dayStart, props.blocks, schedulesForAppDate.value);
       segStore.setPomodoroSegments(newPomoSegs);

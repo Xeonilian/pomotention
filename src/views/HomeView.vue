@@ -635,13 +635,9 @@ function onUpdateActiveId(id: number | null | undefined) {
   saveAllDebounced();
 }
 
-/** 修改番茄类型时的提示处理 */
+/** 修改番茄类型时的提示处理（不清 globalIndex，切换类型后位置不变） */
 function onTogglePomoType(id: number | null | undefined) {
   if (id == null) return;
-  const todo = todoByActivityId.value.get(id);
-  if (todo) {
-    todo.globalIndex = undefined;
-  } // 先取消当前TimeTable的位置
   const result = togglePomoType(id, { activityById: activityById.value });
   if (result) {
     showErrorPopover("活动的类型已切换！");
@@ -654,12 +650,10 @@ function handleTogglePomoTypeTodoId(id: number | null | undefined) {
   if (id == null) return;
   const todo = todoById.value.get(id);
   if (todo) {
-    todo.globalIndex = undefined;
     const result = togglePomoType(todo.activityId, { activityById: activityById.value });
     if (result) {
       showErrorPopover("活动的类型已切换！");
     }
-
     saveAllDebounced();
   }
 }
