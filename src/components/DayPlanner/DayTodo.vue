@@ -359,6 +359,7 @@
     @positive-click="confirmAddEstimate"
     @negative-click="cancelAddEstimate"
     style="width: 300px"
+    class="mobile-dialog-top"
   >
     <n-input-number v-model:value="newEstimate" :min="1" :max="5" placeholder="请输入估计的番茄数" style="width: 100%" />
   </n-modal>
