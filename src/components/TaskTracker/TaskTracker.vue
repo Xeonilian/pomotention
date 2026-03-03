@@ -24,7 +24,7 @@
                   : 'var(--color-red)',
             }"
           >
-            {{ record.type === "interruption" ? record.interruptionType : record.value }}
+            {{ formatRecordValue(record) }}
           </span>
           <div class="point-time">{{ formatTime(record.id) }}</div>
         </div>
@@ -144,7 +144,7 @@ const formatTime = (timestamp: number) => {
   });
 };
 
-// 根据能量值获取颜色
+// 根据愉悦值获取颜色
 const getRewardColor = (value: number) => {
   const clampedValue = Math.max(1, Math.min(10, value));
   const normalizedValue = (clampedValue - 1) / 9;
@@ -156,7 +156,7 @@ const getRewardColor = (value: number) => {
   return `rgb(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)})`;
 };
 
-// 根据愉悦值获取颜色
+// 根据能量值获取颜色
 const getEnergyColor = (value: number) => {
   const clampedValue = Math.max(1, Math.min(10, value));
   const normalizedValue = (clampedValue - 1) / 9;
@@ -166,6 +166,12 @@ const getEnergyColor = (value: number) => {
   const g = startColor.g + (endColor.g - startColor.g) * normalizedValue;
   const b = startColor.b + (endColor.b - startColor.b) * normalizedValue;
   return `rgb(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)})`;
+};
+
+// 显示记录值，10 显示为 X 以保持对齐
+const formatRecordValue = (record: CombinedRecord) => {
+  if (record.type === "interruption") return record.interruptionType;
+  return record.value === 10 ? "X" : String(record.value);
 };
 
 // 移除标签
