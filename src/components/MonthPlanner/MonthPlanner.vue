@@ -85,6 +85,7 @@ type UnifiedItem = {
   ts: number; // 用于分桶与排序的时间戳（毫秒）
   type: "todo" | "schedule";
   title: string;
+  priority?: number;
   // 可选携带的原字段，便于后续交互扩展
   activityId?: number;
   activityTitle?: string;
@@ -160,9 +161,9 @@ const maxItemsPerDay = computed(() => {
   // date-badge 高度 + margin + top padding = 20 + 7 + 2 = 29px
   // items padding = 4px
   // 可用高度 = dayCardHeight - 29 - 4 = dayCardHeight - 33
-  const availableHeight = Math.max(0, dayCardHeight.value - 33);
-  // 每个item高度15px + gap 2px = 17px
-  const itemsPerHeight = Math.floor((availableHeight + 2) / 17);
+  const availableHeight = Math.max(0, dayCardHeight.value - 30);
+  // 每个item高度12px + gap 2px = 17px
+  const itemsPerHeight = Math.floor((availableHeight + 2) / 14);
   return Math.max(1, itemsPerHeight); // 至少显示1个项目
 });
 
@@ -192,6 +193,7 @@ const days = computed(() => {
         estPomo: t.estPomo,
         realPomo: t.realPomo,
         status: t.status,
+        priority: t.priority,
         pomoType: t.pomoType,
         dueDate: t.dueDate,
         doneTime: t.doneTime,
@@ -242,10 +244,30 @@ const days = computed(() => {
   const result = Array.from({ length: totalDays }, (_, idx) => {
     const dayTs = calendarStart + idx * DAY_MS;
     const dayDate = new Date(dayTs);
-    const sorted = buckets[idx].slice().sort((a, b) => a.ts - b.ts);
+    const bucket = buckets[idx];
+
+    const schedules = bucket.filter((i) => i.type === "schedule");
+    const todos = bucket.filter((i) => i.type === "todo");
+
+    const prioritizedTodos = todos
+      .filter((i) => (i.priority ?? 0) > 0)
+      .slice()
+      .sort((a, b) => {
+        const pa = a.priority ?? 0;
+        const pb = b.priority ?? 0;
+        if (pa === pb) return a.ts - b.ts;
+        return pa - pb;
+      });
+
+    const otherTodos = todos
+      .filter((i) => (i.priority ?? 0) <= 0)
+      .slice()
+      .sort((a, b) => a.ts - b.ts);
+
+    const sorted = [...schedules.slice().sort((a, b) => a.ts - b.ts), ...prioritizedTodos, ...otherTodos];
 
     // 聚合当日 realPomo
-    const sumRealPomo = sorted
+    const sumRealPomo = bucket
       .filter((i) => i.type === "todo" && i.pomoType === "🍅")
       .reduce((sum, item) => {
         const arr = item.realPomo;
@@ -254,7 +276,7 @@ const days = computed(() => {
         return sum + itemSum;
       }, 0);
 
-    const sumRealGrape = sorted
+    const sumRealGrape = bucket
       .filter((i) => i.type === "todo" && i.pomoType === "🍇")
       .reduce((sum, item) => {
         const arr = item.realPomo;
@@ -442,6 +464,34 @@ function getPomoBgColorHEX(ratio: number) {
   height: 100%;
   position: relative;
 }
+
+@media (max-width: 400px) {
+  .day-card :deep(.n-card__content) {
+    padding: 4px 2px 4px 2px;
+  }
+  :deep(.items) {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0px !important;
+    padding: 2px 2px !important; /* 给右上角日期留出一点空间 */
+    margin-top: 10px !important;
+    z-index: 0 !important;
+  }
+
+  :deep(.item) {
+    font-size: 11px !important;
+    padding: 1px 1px !important;
+    gap: 2px !important;
+  }
+
+  :deep(.title) {
+    text-overflow: unset !important;
+  }
+  :deep(.more) {
+    display: none !important;
+  }
+}
+
 .day-card--selected {
   border-color: var(--primary-color, #409eff) !important;
   box-shadow: 0 2px 8px rgba(64, 158, 255, 0.3);
@@ -467,6 +517,7 @@ function getPomoBgColorHEX(ratio: number) {
   color: white !important;
   background-color: var(--color-blue) !important;
   font-weight: 600;
+  z-index: 0;
 }
 
 .date-badge:hover {
@@ -488,21 +539,22 @@ function getPomoBgColorHEX(ratio: number) {
   flex: 1;
   overflow: visible;
   padding: 2px 2px; /* 给右上角日期留出一点空间 */
-  margin-top: 7px;
+  margin-top: 3px;
+  z-index: 2;
 }
 .item {
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 12px;
-  line-height: 1.3;
-  min-height: 15px;
+  font-size: 11px;
+  line-height: 1;
   color: var(--text-color);
   cursor: pointer;
-  padding: 1px 2px;
+  padding: 0px 1px;
   border-radius: 2px;
   transition: background-color 0.2s;
 }
+
 .item:hover:not(.item--selected) {
   background-color: var(--color-hover, rgba(0, 0, 0, 0.05));
 }
