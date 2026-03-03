@@ -581,7 +581,9 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
 
   // ======= Watch =======
   watch(
-    () => [todosForAppDate, props.blocks, schedulesForAppDate, props.dayStart],
+    // 使用 .value 确保当日 todo / schedule 内容本身变化时能立即触发重算，
+    // 避免需要“再拖一次”才看到上次变更生效。
+    () => [todosForAppDate.value, props.blocks, schedulesForAppDate.value, props.dayStart],
     () => {
       const newPomoSegs = splitIndexPomoBlocksExSchedules(props.dayStart, props.blocks, schedulesForAppDate.value);
       segStore.setPomodoroSegments(newPomoSegs);
