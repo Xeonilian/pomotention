@@ -43,9 +43,7 @@
         <!-- 统计信息 删除more设置-->
         <div class="card-statistic">
           <span class="pom-sum">
-            <template v-if="isMobile">
-            🍅 {{ day.sumRealPomo }}
-            </template>
+            <template class="mobile-pomo-sum" v-if="isMobile">🍅 {{ day.sumRealPomo }}</template>
             <template v-else>
               [
               <span :style="{ color: getPomoColor(day.pomoRatio) }">🍅</span>
@@ -134,6 +132,12 @@ const handleItemChange = (id: number, _ts: number, activityId?: number, taskId?:
 .day-card :deep(.n-card__content) {
   padding: 6px 6px;
 }
+
+@media (max-width: 400px) {
+  .day-card :deep(.n-card__content) {
+    padding: 4px 2px 4px 2px;
+  }
+}
 .day-header {
   display: flex;
   align-items: baseline;
@@ -170,7 +174,9 @@ const handleItemChange = (id: number, _ts: number, activityId?: number, taskId?:
   background-color: var(--primary-color, #efeded4b);
   flex-shrink: 0;
   position: relative;
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
 }
 
 .date.today {
