@@ -25,13 +25,7 @@
       <thead>
         <tr>
           <th class="col-check">
-            <n-button
-              text
-              type="default"
-              @click.stop="handleQuickAddSchedule"
-              title="快速新增日程"
-              class="add-schedule-button"
-            >
+            <n-button text type="default" @click.stop="handleQuickAddSchedule" title="快速新增日程" class="add-schedule-button">
               <template #icon>
                 <n-icon size="20">
                   <CalendarAdd24Regular />
@@ -43,14 +37,16 @@
             class="col-start"
             :class="{ 'disabled-toggle': !selectedRowId }"
             @click.stop="selectedRowId && handleFillCurrentTimeStart()"
-            :title="selectedRowId ? '点击填入当前时间' : '请先选中一行'">
+            :title="selectedRowId ? '点击填入当前时间' : '请先选中一行'"
+          >
             开始
           </th>
           <th
             class="col-end"
             :class="{ 'disabled-toggle': !selectedRowId }"
             @click.stop="selectedRowId && handleFillCurrentTimeEnd()"
-            :title="selectedRowId ? '点击填入当前时间' : '请先选中一行'">
+            :title="selectedRowId ? '点击填入当前时间' : '请先选中一行'"
+          >
             结束
           </th>
           <th class="col-duration">时长</th>
@@ -323,13 +319,7 @@
 import type { Schedule } from "@/core/types/Schedule";
 import { timestampToTimeString } from "@/core/utils";
 import { NCheckbox, NButton, NIcon, NPopover } from "naive-ui";
-import {
-  // ChevronCircleDown48Regular,
-  CalendarAdd24Regular,
-  DismissCircle20Regular,
-  // ArrowRepeatAll24Regular,
-  DismissSquare20Filled,
-} from "@vicons/fluent";
+import { CalendarAdd24Regular, DismissCircle20Regular, DismissSquare20Filled } from "@vicons/fluent";
 // import { taskService } from "@/services/taskService";
 import { ref, nextTick, computed } from "vue";
 import { Task } from "@/core/types/Task";
@@ -340,7 +330,7 @@ import { useActivityTagEditor } from "@/composables/useActivityTagEditor";
 import TagSelector from "../TagSystem/TagSelector.vue";
 
 const dataStore = useDataStore();
-const { activeId, selectedRowId, schedulesForCurrentView } = storeToRefs(dataStore);
+const { activeId, selectedRowId, selectedActivityId, selectedTaskId, schedulesForCurrentView } = storeToRefs(dataStore);
 // 编辑用
 const editingRowId = ref<number | null>(null);
 const editingField = ref<null | "title" | "start" | "done" | "duration" | "location">(null);
@@ -352,10 +342,6 @@ const emit = defineEmits<{
   (e: "update-schedule-status", id: number, checked: boolean): void;
   (e: "cancel-schedule", id: number): void;
   (e: "uncancel-schedule", id: number): void;
-  // (e: "repeat-schedule", id: number): void;
-  (e: "select-task", taskId: number | null): void;
-  (e: "select-row", id: number | null): void;
-  (e: "select-activity", activityId: number | null): void;
   (e: "edit-schedule-title", id: number, newTitle: string): void;
   (e: "edit-schedule-start", id: number, newTs: string): void;
   (e: "edit-schedule-done", id: number, newTs: string): void;
@@ -366,7 +352,7 @@ const emit = defineEmits<{
     payload: {
       task: Task;
       activityId: number;
-    }
+    },
   ): void;
   (e: "quick-add-schedule"): void;
 }>();
@@ -384,7 +370,7 @@ const sortedSchedules = computed(() =>
     const aValue = a.activityDueRange?.[0] ?? Infinity;
     const bValue = b.activityDueRange?.[0] ?? Infinity;
     return aValue - bValue;
-  })
+  }),
 );
 
 function handleCheckboxChange(id: number, checked: boolean) {
@@ -393,9 +379,14 @@ function handleCheckboxChange(id: number, checked: boolean) {
 
 // 修改点击行处理函数
 function handleRowClick(schedule: Schedule) {
-  emit("select-row", schedule.id); // 发送选中行事件
-  emit("select-task", schedule.taskId || null);
-  emit("select-activity", schedule.activityId || null);
+  if (schedule.status !== "done" && schedule.status !== "cancelled") {
+    activeId.value = schedule.activityId;
+  } else {
+    activeId.value = undefined;
+  }
+  selectedRowId.value = schedule.id;
+  selectedActivityId.value = schedule.activityId;
+  selectedTaskId.value = schedule.taskId ?? null;
 }
 
 // 快速新增日程
@@ -429,16 +420,16 @@ function startEditing(scheduleId: number, field: "title" | "start" | "done" | "d
     field === "title"
       ? schedule.activityTitle || ""
       : field === "start"
-      ? schedule.activityDueRange?.[0]
-        ? timestampToTimeString(schedule.activityDueRange[0])
-        : ""
-      : field === "duration"
-      ? schedule.activityDueRange?.[1] ?? ""
-      : field === "location"
-      ? schedule.location ?? ""
-      : schedule.doneTime
-      ? timestampToTimeString(schedule.doneTime)
-      : "";
+        ? schedule.activityDueRange?.[0]
+          ? timestampToTimeString(schedule.activityDueRange[0])
+          : ""
+        : field === "duration"
+          ? (schedule.activityDueRange?.[1] ?? "")
+          : field === "location"
+            ? (schedule.location ?? "")
+            : schedule.doneTime
+              ? timestampToTimeString(schedule.doneTime)
+              : "";
 
   // 使用 querySelector 来获取当前编辑的输入框，而不是依赖 ref
   nextTick(() => {
@@ -950,7 +941,9 @@ td.status-col {
 .cloud-1 {
   top: 25%;
   left: -8%;
-  animation: floatMove1 45s infinite linear, fadeIn 1.5s forwards;
+  animation:
+    floatMove1 45s infinite linear,
+    fadeIn 1.5s forwards;
   opacity: 0;
 }
 
@@ -961,15 +954,24 @@ td.status-col {
   height: 30px;
   background: rgba(255, 255, 255, 0.8);
   border-radius: 50px;
-  box-shadow: 15px 5px 0 5px rgba(255, 255, 255, 0.7), 25px -10px 0 -5px rgba(255, 255, 255, 0.8), 40px -5px 0 rgba(255, 255, 255, 0.6),
-    55px 2px 0 -8px rgba(255, 255, 255, 0.7), 25px 8px 0 -5px rgba(255, 255, 255, 0.8), 35px 15px 0 -10px rgba(255, 255, 255, 0.6);
+  box-shadow:
+    15px 5px 0 5px rgba(255, 255, 255, 0.7),
+    25px -10px 0 -5px rgba(255, 255, 255, 0.8),
+    40px -5px 0 rgba(255, 255, 255, 0.6),
+    55px 2px 0 -8px rgba(255, 255, 255, 0.7),
+    25px 8px 0 -5px rgba(255, 255, 255, 0.8),
+    35px 15px 0 -10px rgba(255, 255, 255, 0.6);
 }
 
 .cloud-2 {
   top: 45%;
   left: -6%;
-  animation: fadeIn 1.5s forwards, floatMove2 50s infinite linear;
-  animation-delay: 2s, -10s;
+  animation:
+    fadeIn 1.5s forwards,
+    floatMove2 50s infinite linear;
+  animation-delay:
+    2s,
+    -10s;
   opacity: 0;
 }
 
@@ -980,15 +982,23 @@ td.status-col {
   height: 25px;
   background: rgba(255, 255, 255, 0.7);
   border-radius: 40px;
-  box-shadow: 10px 3px 0 3px rgba(255, 255, 255, 0.8), 20px -8px 0 -3px rgba(255, 255, 255, 0.7), 32px -3px 0 rgba(255, 255, 255, 0.6),
-    42px 1px 0 -5px rgba(255, 255, 255, 0.8), 20px 6px 0 -3px rgba(255, 255, 255, 0.7);
+  box-shadow:
+    10px 3px 0 3px rgba(255, 255, 255, 0.8),
+    20px -8px 0 -3px rgba(255, 255, 255, 0.7),
+    32px -3px 0 rgba(255, 255, 255, 0.6),
+    42px 1px 0 -5px rgba(255, 255, 255, 0.8),
+    20px 6px 0 -3px rgba(255, 255, 255, 0.7);
 }
 
 .cloud-3 {
   top: 35%;
   left: -10%;
-  animation: fadeIn 1.5s forwards, floatMove3 40s infinite linear;
-  animation-delay: 1s, -25s;
+  animation:
+    fadeIn 1.5s forwards,
+    floatMove3 40s infinite linear;
+  animation-delay:
+    1s,
+    -25s;
   opacity: 0;
 }
 
@@ -999,17 +1009,26 @@ td.status-col {
   height: 35px;
   background: rgba(255, 255, 255, 0.75);
   border-radius: 60px;
-  box-shadow: 18px 6px 0 6px rgba(255, 255, 255, 0.8), 30px -12px 0 -6px rgba(255, 255, 255, 0.7), 50px -6px 0 rgba(255, 255, 255, 0.65),
-    68px 3px 0 -10px rgba(255, 255, 255, 0.8), 30px 10px 0 -6px rgba(255, 255, 255, 0.75), 42px 18px 0 -12px rgba(255, 255, 255, 0.6),
+  box-shadow:
+    18px 6px 0 6px rgba(255, 255, 255, 0.8),
+    30px -12px 0 -6px rgba(255, 255, 255, 0.7),
+    50px -6px 0 rgba(255, 255, 255, 0.65),
+    68px 3px 0 -10px rgba(255, 255, 255, 0.8),
+    30px 10px 0 -6px rgba(255, 255, 255, 0.75),
+    42px 18px 0 -12px rgba(255, 255, 255, 0.6),
     15px -5px 0 -8px rgba(255, 255, 255, 0.7);
 }
 
 .cloud-4 {
   top: 25%;
   left: -8%;
-  animation: fadeIn 3s, forwards floatMove1 45s infinite linear;
+  animation:
+    fadeIn 3s,
+    forwards floatMove1 45s infinite linear;
   opacity: 0;
-  animation-delay: 1s, -15s;
+  animation-delay:
+    1s,
+    -15s;
 }
 
 .cloud-4::before {
@@ -1019,15 +1038,24 @@ td.status-col {
   height: 30px;
   background: rgba(255, 255, 255, 0.8);
   border-radius: 50px;
-  box-shadow: 15px 5px 0 5px rgba(255, 255, 255, 0.7), 25px -10px 0 -5px rgba(255, 255, 255, 0.8), 40px -5px 0 rgba(255, 255, 255, 0.6),
-    55px 2px 0 -8px rgba(255, 255, 255, 0.7), 25px 8px 0 -5px rgba(255, 255, 255, 0.8), 35px 15px 0 -10px rgba(255, 255, 255, 0.6);
+  box-shadow:
+    15px 5px 0 5px rgba(255, 255, 255, 0.7),
+    25px -10px 0 -5px rgba(255, 255, 255, 0.8),
+    40px -5px 0 rgba(255, 255, 255, 0.6),
+    55px 2px 0 -8px rgba(255, 255, 255, 0.7),
+    25px 8px 0 -5px rgba(255, 255, 255, 0.8),
+    35px 15px 0 -10px rgba(255, 255, 255, 0.6);
 }
 
 .cloud-5 {
   top: 45%;
   left: -6%;
-  animation: fadeIn 1.5s forwards, floatMove3 50s linear infinite;
-  animation-delay: 1s, -45s;
+  animation:
+    fadeIn 1.5s forwards,
+    floatMove3 50s linear infinite;
+  animation-delay:
+    1s,
+    -45s;
   opacity: 0;
 }
 
@@ -1038,15 +1066,23 @@ td.status-col {
   height: 30px;
   background: rgba(255, 255, 255, 0.7);
   border-radius: 40px;
-  box-shadow: 10px 3px 0 3px rgba(255, 255, 255, 0.8), 20px -8px 0 -3px rgba(255, 255, 255, 0.7), 32px -3px 0 rgba(255, 255, 255, 0.6),
-    42px 1px 0 -5px rgba(255, 255, 255, 0.8), 20px 6px 0 -3px rgba(255, 255, 255, 0.7);
+  box-shadow:
+    10px 3px 0 3px rgba(255, 255, 255, 0.8),
+    20px -8px 0 -3px rgba(255, 255, 255, 0.7),
+    32px -3px 0 rgba(255, 255, 255, 0.6),
+    42px 1px 0 -5px rgba(255, 255, 255, 0.8),
+    20px 6px 0 -3px rgba(255, 255, 255, 0.7);
 }
 
 .cloud-6 {
   top: 35%;
   left: -10%;
-  animation: fadeIn 1.5s forwards, floatMove2 50s linear infinite;
-  animation-delay: 1s, -5s;
+  animation:
+    fadeIn 1.5s forwards,
+    floatMove2 50s linear infinite;
+  animation-delay:
+    1s,
+    -5s;
   opacity: 0;
 }
 
@@ -1057,8 +1093,13 @@ td.status-col {
   height: 35px;
   background: rgba(255, 255, 255, 0.75);
   border-radius: 60px;
-  box-shadow: 18px 6px 0 6px rgba(255, 255, 255, 0.8), 30px -12px 0 -6px rgba(255, 255, 255, 0.7), 50px -6px 0 rgba(255, 255, 255, 0.65),
-    68px 3px 0 -10px rgba(255, 255, 255, 0.8), 30px 10px 0 -6px rgba(255, 255, 255, 0.75), 42px 18px 0 -12px rgba(255, 255, 255, 0.6),
+  box-shadow:
+    18px 6px 0 6px rgba(255, 255, 255, 0.8),
+    30px -12px 0 -6px rgba(255, 255, 255, 0.7),
+    50px -6px 0 rgba(255, 255, 255, 0.65),
+    68px 3px 0 -10px rgba(255, 255, 255, 0.8),
+    30px 10px 0 -6px rgba(255, 255, 255, 0.75),
+    42px 18px 0 -12px rgba(255, 255, 255, 0.6),
     15px -5px 0 -8px rgba(255, 255, 255, 0.7);
 }
 

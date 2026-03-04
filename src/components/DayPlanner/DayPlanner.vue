@@ -13,8 +13,6 @@
         @update-todo-pomo="updateTodoPomo"
         @batch-update-priorities="updateTodoPriority"
         @update-todo-est="updateTodoEst"
-        @select-activity="handleSelectActivity"
-        @select-row="handleSelectRow"
         @edit-todo-title="handleEditTodoTitle"
         @edit-todo-start="handleEditTodoStart"
         @edit-todo-done="handleEditTodoDone"
@@ -27,8 +25,6 @@
         @update-schedule-status="updateScheduleStatus"
         @cancel-schedule="handleCancelSchedule"
         @uncancel-schedule="handleUncancelSchedule"
-        @select-activity="handleSelectActivity"
-        @select-row="handleSelectRow"
         @edit-schedule-title="handleEditScheduleTitle"
         @edit-schedule-start="handleEditScheduleStart"
         @edit-schedule-done="handleEditScheduleDone"
@@ -46,11 +42,6 @@
 import DayTodo from "@/components/DayPlanner/DayTodo.vue";
 import DaySchedule from "@/components/DayPlanner/DaySchedule.vue";
 import type { Task } from "@/core/types/Task";
-import { useDataStore } from "@/stores/useDataStore";
-import { storeToRefs } from "pinia";
-
-const dataStore = useDataStore();
-const { activeId, selectedRowId, selectedActivityId, selectedTaskId, todoById, scheduleById, activityById } = storeToRefs(dataStore);
 
 const emit = defineEmits<{
   (e: "update-schedule-status", id: number, checked: boolean): void;
@@ -78,32 +69,6 @@ const emit = defineEmits<{
   (e: "convert-schedule-to-task", payload: { task: Task; activityId: number }): void;
   (e: "toggle-pomo-type", id: number): void;
 }>();
-
-// 处理选中行事件
-function handleSelectActivity(activityId: number | null) {
-  if (activityId == null) return;
-  selectedActivityId.value = activityId;
-}
-
-function handleSelectRow(id: number | null) {
-  activeId.value = undefined;
-  selectedRowId.value = null;
-  selectedTaskId.value = null;
-  if (id === null) {
-    return;
-  }
-  const todo = todoById.value.get(id);
-  const schedule = scheduleById.value.get(id);
-  const activityId = todo?.activityId ?? schedule?.activityId ?? null;
-
-  if (activityId != null) {
-    const activity = activityById.value.get(activityId);
-
-    selectedTaskId.value = activity?.taskId ?? todo?.taskId ?? schedule?.taskId ?? null;
-  }
-
-  selectedRowId.value = id;
-}
 
 function updateScheduleStatus(id: number, checked: boolean) {
   emit("update-schedule-status", id, checked);
@@ -143,7 +108,6 @@ function updateTodoPomo(id: number, pomo: number[]) {
 function updateTodoEst(id: number, estPomo: number[]) {
   emit("update-todo-est", id, estPomo);
 }
-
 
 function handleEditScheduleTitle(scheduleId: number, newTitle: string) {
   emit("edit-schedule-title", scheduleId, newTitle);
@@ -188,7 +152,6 @@ function handleQuickAddSchedule() {
 function handleTogglePomoType(id: number) {
   emit("toggle-pomo-type", id);
 }
-
 </script>
 <style scoped>
 .today-container {

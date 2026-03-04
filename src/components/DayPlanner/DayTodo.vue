@@ -446,9 +446,10 @@ import TagSelector from "../TagSystem/TagSelector.vue";
 import type { SelectOption } from "naive-ui";
 
 const dataStore = useDataStore();
+
 const settingStore = useSettingStore();
 const tagStore = useTagStore();
-const { activeId, selectedRowId, todosForCurrentViewWithTaskRecords } = storeToRefs(dataStore);
+const { activeId, selectedRowId, selectedActivityId, selectedTaskId, todosForCurrentViewWithTaskRecords } = storeToRefs(dataStore);
 const { allTags: allTagsFromStore } = storeToRefs(tagStore);
 
 // 根据 selectedRowId 找到对应的 todo
@@ -567,10 +568,6 @@ const emit = defineEmits<{
   (e: "batch-update-priorities", updates: Array<{ id: number; priority: number }>): void;
   (e: "update-todo-pomo", id: number, realPomo: number[]): void;
   (e: "update-todo-est", id: number, estPomo: number[]): void;
-
-  (e: "select-task", taskId: number | null): void;
-  (e: "select-row", id: number | null): void;
-  (e: "select-activity", activityId: number | null): void;
   (e: "edit-todo-title", id: number, newTitle: string): void;
   (e: "edit-todo-start", id: number, newTs: string): void;
   (e: "edit-todo-done", id: number, newTs: string): void;
@@ -862,9 +859,14 @@ function handleDeleteEstimate(todo: Todo) {
 
 // 修改点击行处理函数
 function handleRowClick(todo: Todo) {
-  emit("select-row", todo.id); // 新增：发送选中行事件
-  emit("select-task", todo.taskId || null);
-  emit("select-activity", todo.activityId || null);
+  if (todo.status !== "done" && todo.status !== "cancelled") {
+    activeId.value = todo.activityId;
+  } else {
+    activeId.value = undefined;
+  }
+  selectedRowId.value = todo.id;
+  selectedActivityId.value = todo.activityId;
+  selectedTaskId.value = todo.taskId ?? null;
 }
 
 // 快速新增待办
