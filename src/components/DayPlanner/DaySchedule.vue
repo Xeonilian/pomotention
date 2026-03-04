@@ -926,6 +926,34 @@ td.status-col {
   height: 100%;
 }
 
+@media (max-width: 400px) {
+  col.col-check {
+    width: 20px;
+  }
+
+  col.col-start {
+    width: 38px;
+  }
+
+  col.col-end {
+    width: 38px;
+  }
+
+  col.col-rank {
+    width: 32px;
+  }
+
+  col.col-status {
+    width: 54px;
+  }
+  td.col-start,
+  td.col-end,
+  .time-input {
+    font-size: 13px;
+    text-overflow: clip;
+  }
+}
+
 /* 云朵样式 */
 .cloud-background {
   position: relative;
