@@ -247,13 +247,26 @@ watch(
 // ================================================================
 
 /**
- * 根据输入关键词 + 排序配置得到完整标签列表（未分页）
+ * 当前已选中的标签 ID 集合，用于在排序时优先展示
+ */
+const selectedIdSet = computed<Set<number>>(() => new Set(props.modelValue));
+
+/**
+ * 根据输入关键词 + 排序配置得到完整标签列表（未分页），并优先显示已选中的标签
  */
 const sortedTags = computed<TagWithCount[]>(() => {
   const keyword = inputText.value.trim();
   const baseList = keyword ? tagStore.findByName(keyword) : [...tagStore.allTags];
 
   return baseList.sort((a, b) => {
+    const aSelected = selectedIdSet.value.has(a.id) ? 1 : 0;
+    const bSelected = selectedIdSet.value.has(b.id) ? 1 : 0;
+
+    // 已选中的标签优先显示
+    if (aSelected !== bSelected) {
+      return bSelected - aSelected;
+    }
+
     if (sortKey.value === "count") {
       const diff = sortDirection.value === "desc" ? b.count - a.count : a.count - b.count;
       if (diff !== 0) return diff;
