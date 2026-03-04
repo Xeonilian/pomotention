@@ -90,7 +90,7 @@
               @click="onRepeatActivity"
               circle
               quaternary
-              :type="selectedRowId === null ? 'default' : 'info'"
+              type="info"
               size="small"
               :disabled="selectedRowId === null && activeId === null"
             >
