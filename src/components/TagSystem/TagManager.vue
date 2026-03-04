@@ -98,7 +98,7 @@
         <div class="tag-footer">
           <div class="tag-sort">
             <n-button
-              size="tiny"
+              text
               quaternary
               :type="sortKey === 'count' && sortDirection === 'desc' ? 'primary' : 'default'"
               @click="setSort('count', 'desc')"
@@ -106,7 +106,7 @@
               <n-icon><ArrowSortUp24Filled /></n-icon>
             </n-button>
             <n-button
-              size="tiny"
+              text
               quaternary
               :type="sortKey === 'count' && sortDirection === 'asc' ? 'primary' : 'default'"
               @click="setSort('count', 'asc')"
@@ -114,7 +114,7 @@
               <n-icon><ArrowSortDown24Filled /></n-icon>
             </n-button>
             <n-button
-              size="tiny"
+              text
               quaternary
               :type="sortKey === 'name' && sortDirection === 'asc' ? 'primary' : 'default'"
               @click="setSort('name', 'asc')"
@@ -122,7 +122,7 @@
               <n-icon><TextSortAscending16Regular /></n-icon>
             </n-button>
             <n-button
-              size="tiny"
+              text
               quaternary
               :type="sortKey === 'name' && sortDirection === 'desc' ? 'primary' : 'default'"
               @click="setSort('name', 'desc')"
@@ -518,15 +518,13 @@ function goNextPage(): void {
 .tag-suggestions {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 8px;
   padding-top: 12px;
   padding-left: 2px;
   align-content: flex-start;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: visible; /* 允许内容（如子元素阴影）显示 */
   flex: 1;
-  min-height: 0;
-  padding-bottom: 5px;
+  padding-bottom: 0px;
 }
 
 .custom-tag {
@@ -614,24 +612,21 @@ function goNextPage(): void {
   align-items: center;
   justify-content: space-between;
   flex-shrink: 0;
-  margin-top: 0px;
-  padding-top: 6px;
-  border-top: 1px solid var(--divider-color);
-  font-size: 12px;
-  gap: 8px;
+  padding-top: 2px;
 }
 
 .tag-sort {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   flex-wrap: nowrap;
   flex-shrink: 0;
+  margin-left: 6px;
+  transform: translateY(3px);
 }
 
 .tag-sort-label {
   color: var(--color-text-secondary);
-  font-size: 12px;
 }
 
 .tag-pagination {
