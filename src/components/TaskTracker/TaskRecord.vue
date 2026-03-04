@@ -105,7 +105,6 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: "update:content", content: string): void;
-  (e: "toggle-markdown"): void;
   (e: "activetaskId", taskId: number | null): void;
 }>();
 
