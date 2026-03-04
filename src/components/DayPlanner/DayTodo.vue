@@ -58,7 +58,37 @@
           >
             {{ selectedRowId ? currentPomoType || "果果" : "果果" }}
           </th>
-          <th class="col-status">状态</th>
+          <th class="col-status">
+            <!-- 表头操作：对选中行执行取消/退回，仅对进行中(ongoing)任务生效 -->
+            <n-button
+              class="cancel-button"
+              v-if="selectedTodo && selectedTodo.status !== 'done' && selectedTodo.status !== 'cancelled' && !selectedTodo.realPomo"
+              text
+              type="info"
+              @click.stop="handleCancelSelectedTodo"
+              title="取消选中任务，不退回活动清单"
+            >
+              <template #icon>
+                <n-icon size="20">
+                  <DismissCircle20Regular />
+                </n-icon>
+              </template>
+            </n-button>
+            <n-button
+              class="suspend-button"
+              v-if="selectedTodo && selectedTodo.status !== 'done' && selectedTodo.status !== 'cancelled' && !selectedTodo.realPomo"
+              text
+              type="info"
+              @click.stop="handleSuspendSelectedTodo"
+              title="撤销选中任务，退回活动清单"
+            >
+              <template #icon>
+                <n-icon size="20">
+                  <ChevronCircleRight48Regular />
+                </n-icon>
+              </template>
+            </n-button>
+          </th>
         </tr>
       </thead>
 
@@ -104,7 +134,7 @@
               :title="editingRowId === todo.id && editingField === 'start' ? '' : '双击编辑'"
             >
               <input
-                class="start-input time-input"
+                class="time-input"
                 v-if="editingRowId === todo.id && editingField === 'start'"
                 v-model="editingValue"
                 @blur="saveEdit(todo)"
@@ -124,7 +154,7 @@
               :title="editingRowId === todo.id && editingField === 'done' ? '' : '双击编辑'"
             >
               <input
-                class="done-input time-input"
+                class="time-input"
                 v-if="editingRowId === todo.id && editingField === 'done'"
                 v-model="editingValue"
                 @blur="saveEdit(todo)"
@@ -267,71 +297,12 @@
 
             <!-- 7 状态 -->
             <td class="status-col">
-              <div
-                class="status-cell"
-                :class="{
-                  'check-mode': todo.status === 'done' || todo.status === 'cancelled',
-                }"
-              >
+              <div class="status-cell">
                 <div class="records-stat" v-if="todo.startTime" title="能量值 | 奖赏值 | 内部打扰 | 外部打扰">
                   <span style="color: var(--color-blue)">{{ averageValue(todo.energyRecords) }}</span>
                   |
                   <span style="color: var(--color-red)">{{ averageValue(todo.rewardRecords) }}</span>
                   |{{ countInterruptions(todo.interruptionRecords, "I") }}|{{ countInterruptions(todo.interruptionRecords, "E") }}
-                </div>
-                <div class="button-group" v-if="todo.status !== 'done' && todo.status !== 'cancelled'">
-                  <!-- 追踪任务按钮 -->
-                  <n-button v-if="!todo.startTime" class="convert-button" text type="info" @click="handleQuickStart(todo)" title="开始待办">
-                    <template #icon>
-                      <n-icon size="18">
-                        <ChevronCircleDown48Regular />
-                      </n-icon>
-                    </template>
-                  </n-button>
-                  <!-- <n-button
-                  v-if="todo.status !== 'done'"
-                  text
-                  type="info"
-                  @click="handleRepeatTodo(todo.id)"
-                  title="重复待办，新建活动"
-                >
-                  <template #icon>
-                    <n-icon size="18">
-                      <ArrowRepeatAll24Regular />
-                    </n-icon>
-                  </template>
-                </n-button> -->
-
-                  <!-- 取消任务按钮 -->
-                  <n-button
-                    class="cancel-button"
-                    v-if="!todo.realPomo"
-                    text
-                    type="info"
-                    @click="handleCancelTodo(todo.id)"
-                    title="取消任务，不退回活动清单"
-                  >
-                    <template #icon>
-                      <n-icon size="18">
-                        <DismissCircle20Regular />
-                      </n-icon>
-                    </template>
-                  </n-button>
-                  <!-- 退回任务按钮 = 不再在今日 -->
-                  <n-button
-                    class="suspend-button"
-                    v-if="!todo.realPomo"
-                    text
-                    type="info"
-                    @click="handleSuspendTodo(todo.id)"
-                    title="撤销任务，退回活动清单"
-                  >
-                    <template #icon>
-                      <n-icon size="18">
-                        <ChevronCircleRight48Regular />
-                      </n-icon>
-                    </template>
-                  </n-button>
                 </div>
               </div>
             </td>
@@ -426,9 +397,7 @@ import { timestampToTimeString } from "@/core/utils";
 import { PRIORITY_CATEGORIES, SPECIAL_PRIORITIES, getEmojiForPriority } from "@/core/priorityCategories";
 import {
   ChevronCircleRight48Regular,
-  ChevronCircleDown48Regular,
   DismissCircle20Regular,
-  // ArrowRepeatAll24Regular,
   DismissSquare20Filled,
   CaretLeft12Filled,
   CaretRight12Filled,
@@ -920,25 +889,28 @@ function handleFillCurrentTimeEnd() {
   emit("edit-todo-done", selectedRowId.value, ts);
 }
 
-// 一键开始：不进入编辑态，直接把开始时间写成当前时间并保存
-function handleQuickStart(todo: Todo) {
-  // 已结束的任务不允许开始
-  if (todo.status === "done" || todo.status === "cancelled") {
-    popoverMessage.value = "当前任务已经结束！";
-    showPopover.value = true;
-    setTimeout(() => {
-      showPopover.value = false;
-    }, 2000);
+// 表头按钮：对当前选中行执行撤销任务（退回活动清单）
+function handleSuspendSelectedTodo() {
+  if (
+    !selectedTodo.value ||
+    selectedTodo.value.status === "done" ||
+    selectedTodo.value.status === "cancelled" ||
+    selectedTodo.value.realPomo
+  )
     return;
-  }
+  emit("suspend-todo", selectedTodo.value.id);
+}
 
-  const now = new Date();
-  const hours = now.getHours().toString().padStart(2, "0");
-  const minutes = now.getMinutes().toString().padStart(2, "0");
-  const ts = `${hours}:${minutes}`;
-
-  // 直接通知父组件更新开始时间（不进入编辑状态）
-  emit("edit-todo-start", todo.id, ts);
+// 表头按钮：对当前选中行执行取消任务（不退回活动清单）
+function handleCancelSelectedTodo() {
+  if (
+    !selectedTodo.value ||
+    selectedTodo.value.status === "done" ||
+    selectedTodo.value.status === "cancelled" ||
+    selectedTodo.value.realPomo
+  )
+    return;
+  emit("cancel-todo", selectedTodo.value.id);
 }
 
 // 注意这里是 timestring 不是timestamp，是在Home用currentViewdate进行的转化
@@ -995,15 +967,6 @@ function cancelEdit() {
 
 function isValidTimeString(str: string) {
   return /^\d{2}:\d{2}$/.test(str) && +str.split(":")[0] <= 24 && +str.split(":")[1] < 60;
-}
-
-// suspended Todo
-function handleSuspendTodo(id: number) {
-  emit("suspend-todo", id);
-}
-
-function handleCancelTodo(id: number) {
-  emit("cancel-todo", id);
 }
 
 // 撤销取消
@@ -1148,16 +1111,44 @@ td.col-rank-disabled {
 
 col.col-intent {
   width: 60%;
-  min-width: 140px;
+  min-width: 0px;
 }
 
 col.col-fruit {
   width: 40%;
-  min-width: 75px;
+  min-width: 0px;
 }
 
 col.col-status {
-  width: 88px;
+  width: 60px;
+}
+
+@media (max-width: 400px) {
+  col.col-check {
+    width: 20px;
+  }
+
+  col.col-start {
+    width: 38px;
+  }
+
+  col.col-end {
+    width: 38px;
+  }
+
+  col.col-rank {
+    width: 32px;
+  }
+
+  col.col-status {
+    width: 54px;
+  }
+  td.col-start,
+  td.col-end,
+  .time-input {
+    font-size: 13px;
+    text-overflow: clip;
+  }
 }
 
 /* 表头样式 */
@@ -1168,7 +1159,7 @@ thead th {
   white-space: nowrap;
   overflow: hidden;
   height: 20px;
-  font-weight: 400;
+  font-weight: 500;
   border-bottom: 2px solid var(--color-background-dark);
   color: var(--color-text-primary);
   background-color: var(--color-background) !important;
@@ -1468,27 +1459,19 @@ td.status-col {
   display: inline-flex;
   font-family: Consolas, "Courier New", Courier, monospace;
   font-size: 14px;
-  padding-right: 2px;
-}
-
-/* 按钮组为内联块，不再强制贴右（因为整列已右对齐） */
-.button-group {
-  display: inline-flex;
-  height: 20px;
-  transform: translateY(1px);
+  padding-right: 4px;
 }
 
 :deep(.n-button) :hover {
   color: var(--color-red);
 }
-.convert-button {
-  right: 0px;
-}
 .cancel-button {
-  right: 2px;
+  right: -2px;
+  transform: translateY(3px);
 }
 .suspend-button {
-  right: 4px;
+  right: -6px;
+  transform: translateY(3px);
 }
 
 td.col-check {
@@ -1586,15 +1569,5 @@ td.col-check {
   border: 1px solid #40a9ff;
   border-radius: 4px;
   outline: none;
-}
-
-.start-input,
-.done-input {
-  width: 32px !important;
-  max-width: 32px !important;
-  min-width: 0 !important;
-  box-sizing: border-box;
-  padding: 0px 0px;
-  font-size: inherit;
 }
 </style>
