@@ -68,6 +68,7 @@
             @input="handleTitleInput(item, $event)"
             @keydown="handleInputKeydown($event, item)"
             @focus="handleNoFocus(item.id)"
+            @blur="handleBlur"
             :class="{
               'force-hover': dragHandler.hoveredRowId.value === item.id,
               'child-activity': item.parentId,
@@ -88,12 +89,12 @@
                     item.status === 'ongoing'
                       ? 'var(--color-red)'
                       : item.status === 'delayed'
-                      ? 'var(--color-blue)'
-                      : item.status === 'suspended'
-                      ? 'var(--color-orange)'
-                      : item.status === 'cancelled'
-                      ? 'var(--color-text-primary)'
-                      : 'var(--color-text-secondary)'
+                        ? 'var(--color-blue)'
+                        : item.status === 'suspended'
+                          ? 'var(--color-orange)'
+                          : item.status === 'cancelled'
+                            ? 'var(--color-text-primary)'
+                            : 'var(--color-text-secondary)'
                   "
                 >
                   <Chat24Regular />
@@ -104,12 +105,12 @@
                     item.status === 'ongoing'
                       ? 'var(--color-red)'
                       : item.status === 'delayed'
-                      ? 'var(--color-blue)'
-                      : item.status === 'suspended'
-                      ? 'var(--color-orange)'
-                      : item.status === 'cancelled'
-                      ? 'var(--color-text-primary)'
-                      : 'var(--color-text-secondary)'
+                        ? 'var(--color-blue)'
+                        : item.status === 'suspended'
+                          ? 'var(--color-orange)'
+                          : item.status === 'cancelled'
+                            ? 'var(--color-text-primary)'
+                            : 'var(--color-text-secondary)'
                   "
                 >
                   <VideoPersonCall24Regular />
@@ -120,12 +121,12 @@
                     item.status === 'ongoing'
                       ? 'var(--color-red)'
                       : item.status === 'delayed'
-                      ? 'var(--color-blue)'
-                      : item.status === 'suspended'
-                      ? 'var(--color-orange)'
-                      : item.status === 'cancelled'
-                      ? 'var(--color-text-primary)'
-                      : 'var(--color-text-secondary)'
+                        ? 'var(--color-blue)'
+                        : item.status === 'suspended'
+                          ? 'var(--color-orange)'
+                          : item.status === 'cancelled'
+                            ? 'var(--color-text-primary)'
+                            : 'var(--color-text-secondary)'
                   "
                 >
                   <ApprovalsApp24Regular />
@@ -136,12 +137,12 @@
                     item.status === 'ongoing'
                       ? 'var(--color-red)'
                       : item.status === 'delayed'
-                      ? 'var(--color-blue)'
-                      : item.status === 'suspended'
-                      ? 'var(--color-orange)'
-                      : item.status === 'cancelled'
-                      ? 'var(--color-text-primary)'
-                      : 'var(--color-text-secondary)'
+                        ? 'var(--color-blue)'
+                        : item.status === 'suspended'
+                          ? 'var(--color-orange)'
+                          : item.status === 'cancelled'
+                            ? 'var(--color-text-primary)'
+                            : 'var(--color-text-secondary)'
                   "
                 >
                   <CalendarCheckmark20Regular />
@@ -204,6 +205,7 @@
             v-model:value="item.location"
             style="max-width: 50px"
             @focus="handleNoFocus(item.id)"
+            @blur="handleBlur"
             placeholder="地点"
             :class="{ 'force-hover': dragHandler.hoveredRowId.value === item.id }"
             @update:value="
@@ -228,6 +230,7 @@
             :readonly="item.pomoType === '🍒'"
             @update:value="(val) => onInputUpdate(item, val)"
             @focus="handlePomoInputFocus(item)"
+            @blur="handleBlur"
             @mousedown.stop="(e: MouseEvent) => handlePomoInputMouseDown(e, item)"
             @touchstart.stop="(e: TouchEvent) => handlePomoInputTouchStart(e, item)"
             @mouseup.stop="(e: MouseEvent) => handlePomoInputMouseUp(e, item)"
@@ -254,6 +257,7 @@
               }
             "
             @focus="handleNoFocus(item.id)"
+            @blur="handleBlur"
             title="持续时间(分钟)"
             placeholder="min"
             class="input-center input-min"
@@ -269,6 +273,7 @@
             style="max-width: 63px"
             format="MM/dd"
             @focus="handleNoFocus(item.id)"
+            @blur="handleBlur"
             title="死线日期"
             :class="getCountdownClass(item.dueDate)"
             @update:value="
@@ -293,6 +298,7 @@
             clearable
             format="HH:mm"
             @focus="handleNoFocus(item.id)"
+            @blur="handleBlur"
             title="约定时间"
             :class="getCountdownClass(item.dueRange && item.dueRange[0])"
           />
@@ -323,6 +329,7 @@
     @update:show="showTagManager = $event"
     @after-leave="handleTagManagerClose"
     :activityId="activityId"
+    class="mobile-dialog-top"
   />
 </template>
 
@@ -382,6 +389,9 @@ const { isTouchSupported } = useDevice();
 
 // ======================== Stores ========================
 const settingStore = useSettingStore();
+const { isMobile } = useDevice();
+// 移动端进入编辑时暂存原 topHeight，退出时恢复
+const savedTopHeight = ref<number | null>(null);
 
 // ======================== 排序逻辑 ========================
 const sortedDisplaySheet = computed(() => {
@@ -446,7 +456,7 @@ const pomoLongPressMap = ref(
       onLongPressEnd: () => void;
       onLongPressCancel: () => void;
     }
-  >()
+  >(),
 );
 
 // 双击检测状态（桌面端）
@@ -571,7 +581,20 @@ function setPomoInputRef(el: InputInst | null, id: number) {
 
 function handleNoFocus(id: number) {
   noFocus.value = true;
+  if (isMobile.value) {
+    // 聚焦时压缩顶部区域高度
+    savedTopHeight.value = settingStore.settings.topHeight;
+    settingStore.settings.topHeight = 110;
+  }
   emit("focus-row", id);
+}
+
+function handleBlur() {
+  if (!isMobile.value) return;
+  if (savedTopHeight.value === null) return;
+  // 失焦时恢复顶部区域高度
+  settingStore.settings.topHeight = savedTopHeight.value;
+  savedTopHeight.value = null;
 }
 
 // ======================== 焦点管理 ========================
@@ -584,6 +607,7 @@ watch(
 
     if (noFocus.value) {
       noFocus.value = false;
+
       return;
     }
 
@@ -616,7 +640,7 @@ watch(
     } else {
       inst.inputElRef?.focus?.();
     }
-  }
+  },
 );
 
 // ======================== 拖拽处理 ========================
