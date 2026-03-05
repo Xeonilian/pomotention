@@ -253,6 +253,9 @@ async function runSyncTask(actionName: string, taskFn: () => Promise<{ success: 
   const syncStore = useSyncStore();
   if (syncStore.isSyncing) return { success: false, errors: ["同步进行中"] };
 
+  // 同步前先执行钩子（如 TaskRecord 正在编辑则先保存到本地再同步，避免被覆盖）
+  await syncStore.runBeforeSync();
+
   syncStore.startSync(actionName); // 这里可以复用 startSync 或 startUpload/Download
 
   try {
@@ -345,6 +348,7 @@ export async function uploadAll() {
     return { success: false, errors: ["同步进行中"] };
   }
 
+  await syncStore.runBeforeSync();
   syncStore.startUpload();
 
   try {
@@ -382,6 +386,7 @@ export async function downloadAll(lastSync: number) {
   const syncStore = useSyncStore();
   if (syncStore.isSyncing) return { success: false };
 
+  await syncStore.runBeforeSync();
   syncStore.startDownload();
 
   try {

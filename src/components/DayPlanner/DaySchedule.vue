@@ -25,38 +25,65 @@
       <thead>
         <tr>
           <th class="col-check">
-            <n-button
-              text
-              type="default"
-              @click.stop="handleQuickAddSchedule"
-              title="快速新增日程"
-              class="add-schedule-button"
-            >
+            <n-button text type="info" @click.stop="handleQuickAddSchedule" title="快速新增日程" class="add-schedule-button">
               <template #icon>
                 <n-icon size="20">
-                  <CalendarAdd24Regular />
+                  <CalendarAdd20Regular />
                 </n-icon>
               </template>
             </n-button>
           </th>
           <th
             class="col-start"
-            :class="{ 'disabled-toggle': !selectedRowId }"
+            :class="{ 'disabled-toggle': !selectedSchedule, 'header-active': !!selectedSchedule }"
             @click.stop="selectedRowId && handleFillCurrentTimeStart()"
-            :title="selectedRowId ? '点击填入当前时间' : '请先选中一行'">
-            开始
+            :title="selectedRowId ? '点击填入当前时间' : '请先选中一行'"
+          >
+            <n-icon size="20" class="header-icon">
+              <Play20Regular />
+            </n-icon>
           </th>
           <th
             class="col-end"
-            :class="{ 'disabled-toggle': !selectedRowId }"
+            :class="{ 'disabled-toggle': !selectedSchedule, 'header-active': !!selectedSchedule }"
             @click.stop="selectedRowId && handleFillCurrentTimeEnd()"
-            :title="selectedRowId ? '点击填入当前时间' : '请先选中一行'">
-            结束
+            :title="selectedRowId ? '点击填入当前时间' : '请先选中一行'"
+          >
+            <n-icon size="20" class="header-icon">
+              <RecordStop20Regular />
+            </n-icon>
           </th>
-          <th class="col-duration">时长</th>
-          <th class="col-intent">意图</th>
-          <th class="col-location">地点</th>
-          <th class="col-status">状态</th>
+          <th class="col-duration">
+            <n-icon size="20" class="header-icon">
+              <ShiftsActivity20Regular />
+            </n-icon>
+          </th>
+          <th class="col-intent" @click.stop="selectedRowId && handleFillCurrentTitle()" title="将当前日程意图复制到任务备注">
+            <n-icon size="20" title="意图" class="header-icon"><Thinking20Regular /></n-icon>
+          </th>
+          <th class="col-location">
+            <n-icon size="20" class="header-icon">
+              <Location20Regular />
+            </n-icon>
+          </th>
+          <th class="col-status">
+            <!-- 表头操作：对选中行执行取消，仅对未完成日程生效 -->
+            <n-button
+              class="cancel-button"
+              v-if="selectedSchedule && selectedSchedule.status !== 'done' && selectedSchedule.status !== 'cancelled'"
+              text
+              type="default"
+              @click.stop="handleCancelSelectedSchedule"
+              title="取消选中日程"
+              :class="{ 'disabled-toggle': !selectedRowId, 'header-active': !!selectedRowId }"
+            >
+              <template #icon>
+                <n-icon size="20">
+                  <DismissCircle20Regular />
+                </n-icon>
+              </template>
+            </n-button>
+          </th>
         </tr>
       </thead>
 
@@ -229,55 +256,6 @@
                   <span style="color: var(--color-red)">{{ averageValue(schedule.rewardRecords) }}</span>
                   |{{ countInterruptions(schedule.interruptionRecords, "I") }}|{{ countInterruptions(schedule.interruptionRecords, "E") }}
                 </div>
-                <div class="button-group" v-if="schedule.status !== 'done' && schedule.status !== 'cancelled'">
-                  <!-- <n-button
-                    class="convert-button"
-                    v-if="!schedule.taskId"
-                    text
-                    type="info"
-                    @click="handleConvertToTask(schedule)"
-                    title="追踪任务"
-                  >
-                    <template #icon>
-                      <n-icon size="18">
-                        <ChevronCircleDown48Regular />
-                      </n-icon>
-                    </template>
-                  </n-button> -->
-
-                  <!-- <n-button
-                  v-if="
-                    schedule.status !== 'done' &&
-                    schedule.isUntaetigkeit !== true
-                  "
-                  text
-                  type="info"
-                  @click="handleRepeatSchedule(schedule.id)"
-                  title="重复待办，新建活动"
-                >
-                  <template #icon>
-                    <n-icon size="18">
-                      <ArrowRepeatAll24Regular />
-                    </n-icon>
-                  </template>
-                </n-button> -->
-
-                  <!-- 取消任务按钮 -->
-                  <n-button
-                    class="cancel-button"
-                    v-if="schedule.isUntaetigkeit !== true"
-                    text
-                    type="info"
-                    @click="handleCancelSchedule(schedule.id)"
-                    title="取消任务，不退回活动清单"
-                  >
-                    <template #icon>
-                      <n-icon size="18">
-                        <DismissCircle20Regular />
-                      </n-icon>
-                    </template>
-                  </n-button>
-                </div>
               </div>
             </td>
           </tr>
@@ -324,11 +302,14 @@ import type { Schedule } from "@/core/types/Schedule";
 import { timestampToTimeString } from "@/core/utils";
 import { NCheckbox, NButton, NIcon, NPopover } from "naive-ui";
 import {
-  // ChevronCircleDown48Regular,
-  CalendarAdd24Regular,
+  CalendarAdd20Regular,
   DismissCircle20Regular,
-  // ArrowRepeatAll24Regular,
   DismissSquare20Filled,
+  Play20Regular,
+  RecordStop20Regular,
+  Thinking20Regular,
+  ShiftsActivity20Regular,
+  Location20Regular,
 } from "@vicons/fluent";
 // import { taskService } from "@/services/taskService";
 import { ref, nextTick, computed } from "vue";
@@ -340,7 +321,7 @@ import { useActivityTagEditor } from "@/composables/useActivityTagEditor";
 import TagSelector from "../TagSystem/TagSelector.vue";
 
 const dataStore = useDataStore();
-const { activeId, selectedRowId, schedulesForCurrentView } = storeToRefs(dataStore);
+const { activeId, selectedRowId, selectedActivityId, selectedTaskId, selectedTask, schedulesForCurrentView } = storeToRefs(dataStore);
 // 编辑用
 const editingRowId = ref<number | null>(null);
 const editingField = ref<null | "title" | "start" | "done" | "duration" | "location">(null);
@@ -352,10 +333,6 @@ const emit = defineEmits<{
   (e: "update-schedule-status", id: number, checked: boolean): void;
   (e: "cancel-schedule", id: number): void;
   (e: "uncancel-schedule", id: number): void;
-  // (e: "repeat-schedule", id: number): void;
-  (e: "select-task", taskId: number | null): void;
-  (e: "select-row", id: number | null): void;
-  (e: "select-activity", activityId: number | null): void;
   (e: "edit-schedule-title", id: number, newTitle: string): void;
   (e: "edit-schedule-start", id: number, newTs: string): void;
   (e: "edit-schedule-done", id: number, newTs: string): void;
@@ -366,7 +343,7 @@ const emit = defineEmits<{
     payload: {
       task: Task;
       activityId: number;
-    }
+    },
   ): void;
   (e: "quick-add-schedule"): void;
 }>();
@@ -384,7 +361,12 @@ const sortedSchedules = computed(() =>
     const aValue = a.activityDueRange?.[0] ?? Infinity;
     const bValue = b.activityDueRange?.[0] ?? Infinity;
     return aValue - bValue;
-  })
+  }),
+);
+
+// 当前选中的日程（表头取消按钮用）
+const selectedSchedule = computed(() =>
+  selectedRowId.value == null ? null : (sortedSchedules.value.find((s) => s.id === selectedRowId.value) ?? null),
 );
 
 function handleCheckboxChange(id: number, checked: boolean) {
@@ -393,14 +375,45 @@ function handleCheckboxChange(id: number, checked: boolean) {
 
 // 修改点击行处理函数
 function handleRowClick(schedule: Schedule) {
-  emit("select-row", schedule.id); // 发送选中行事件
-  emit("select-task", schedule.taskId || null);
-  emit("select-activity", schedule.activityId || null);
+  // 取消激活活动
+  // if (schedule.status !== "done" && schedule.status !== "cancelled") {
+  //   activeId.value = schedule.activityId;
+  // } else {
+  //   activeId.value = undefined;
+  // }
+  selectedRowId.value = schedule.id;
+  selectedActivityId.value = schedule.activityId;
+  selectedTaskId.value = schedule.taskId ?? null;
 }
 
 // 快速新增日程
 function handleQuickAddSchedule() {
   emit("quick-add-schedule");
+}
+
+// 将当前选中待办的意图同步到任务备注
+function handleFillCurrentTitle() {
+  if (!selectedRowId.value) return;
+  const schedule = schedulesForCurrentView.value.find((s) => s.id === selectedRowId.value);
+  if (!schedule) return;
+  const taskId = selectedTaskId.value;
+  if (taskId == null) return;
+  const titleForHeader = (schedule.activityTitle ?? "").trim();
+  const originalDescription = selectedTask.value?.description ?? "";
+  let newDescription = originalDescription;
+  const trimmed = originalDescription.trim();
+  if (!trimmed || trimmed === "#") {
+    // 如果任务描述为空或只有一个 #，写入「# 标题\n」
+    newDescription = titleForHeader ? `# ${titleForHeader}\n` : originalDescription;
+  } else if (titleForHeader) {
+    // 如果已有内容，只替换第一个换行前的内容
+    const firstNewlineIndex = originalDescription.indexOf("\n");
+    const rest = firstNewlineIndex !== -1 ? originalDescription.slice(firstNewlineIndex) : "\n";
+    newDescription = `# ${titleForHeader}${rest}`;
+  }
+  dataStore.updateTaskById(taskId, {
+    description: newDescription,
+  });
 }
 
 // 表头点击「开始」：给选中行填入当前时间（HH:mm），对应 activityDueRange[0]
@@ -409,6 +422,29 @@ function handleFillCurrentTimeStart() {
   const now = new Date();
   const ts = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
   emit("edit-schedule-start", selectedRowId.value, ts);
+  // 将当前选中待办的意图同步到任务备注
+
+  if (!selectedRowId.value) return;
+  const schedule = schedulesForCurrentView.value.find((s) => s.id === selectedRowId.value);
+  if (!schedule) return;
+  const taskId = selectedTaskId.value;
+  if (taskId == null) return;
+  const titleForHeader = (schedule.activityTitle ?? "").trim();
+  const originalDescription = selectedTask.value?.description ?? "";
+  let newDescription = originalDescription;
+  const trimmed = originalDescription.trim();
+  if (!trimmed || trimmed === "#") {
+    // 如果任务描述为空或只有一个 #，写入「# 标题\n」
+    newDescription = titleForHeader ? `# ${titleForHeader}\n` : originalDescription;
+  } else if (titleForHeader) {
+    // 如果已有内容，只替换第一个换行前的内容
+    const firstNewlineIndex = originalDescription.indexOf("\n");
+    const rest = firstNewlineIndex !== -1 ? originalDescription.slice(firstNewlineIndex) : "\n";
+    newDescription = `# ${titleForHeader}${rest}`;
+  }
+  dataStore.updateTaskById(taskId, {
+    description: newDescription,
+  });
 }
 
 // 表头点击「结束」：给选中行填入当前时间（HH:mm），对应 doneTime
@@ -429,16 +465,16 @@ function startEditing(scheduleId: number, field: "title" | "start" | "done" | "d
     field === "title"
       ? schedule.activityTitle || ""
       : field === "start"
-      ? schedule.activityDueRange?.[0]
-        ? timestampToTimeString(schedule.activityDueRange[0])
-        : ""
-      : field === "duration"
-      ? schedule.activityDueRange?.[1] ?? ""
-      : field === "location"
-      ? schedule.location ?? ""
-      : schedule.doneTime
-      ? timestampToTimeString(schedule.doneTime)
-      : "";
+        ? schedule.activityDueRange?.[0]
+          ? timestampToTimeString(schedule.activityDueRange[0])
+          : ""
+        : field === "duration"
+          ? (schedule.activityDueRange?.[1] ?? "")
+          : field === "location"
+            ? (schedule.location ?? "")
+            : schedule.doneTime
+              ? timestampToTimeString(schedule.doneTime)
+              : "";
 
   // 使用 querySelector 来获取当前编辑的输入框，而不是依赖 ref
   nextTick(() => {
@@ -516,31 +552,12 @@ function isValidTimeString(str: string) {
   return /^\d{2}:\d{2}$/.test(str) && +str.split(":")[0] <= 24 && +str.split(":")[1] < 60;
 }
 
-// function handleConvertToTask(schedule: Schedule) {
-//   console.log("handleConvertToTask", schedule.id, schedule.taskId);
-//   if (schedule.taskId) {
-//     popoverMessage.value = "该日程已转换为任务";
-//     showPopover.value = true;
-//     setTimeout(() => {
-//       showPopover.value = false;
-//     }, 2000);
-//     return;
-//   }
-
-//   const task = taskService.createTaskFromSchedule(schedule.activityId, schedule.activityTitle, schedule.projectName);
-//   console.log("DaySch", task);
-//   if (task) {
-//     emit("convert-schedule-to-task", { task: task, activityId: schedule.activityId });
-//     popoverMessage.value = "已转换为任务";
-//     showPopover.value = true;
-//     setTimeout(() => {
-//       showPopover.value = false;
-//     }, 2000);
-//   }
-// }
-
-function handleCancelSchedule(id: number) {
-  emit("cancel-schedule", id);
+// 表头按钮：取消当前选中的日程
+function handleCancelSelectedSchedule() {
+  if (selectedRowId.value == null) return;
+  const s = selectedSchedule.value;
+  if (!s || s.status === "done" || s.status === "cancelled") return;
+  emit("cancel-schedule", selectedRowId.value);
 }
 
 // 撤销取消
@@ -660,16 +677,16 @@ col.col-duration {
   width: 35px;
 }
 col.col-intent {
-  width: 60%;
-  min-width: 140px;
+  width: 55%;
+  min-width: 0px;
 }
 col.col-location {
-  width: 40%;
-  min-width: 75px;
+  width: 45%;
+  min-width: 0px;
 }
 
 col.col-status {
-  width: 88px;
+  width: 60px;
 }
 
 thead th,
@@ -708,6 +725,15 @@ th.col-end.disabled-toggle {
   cursor: not-allowed;
 }
 
+/* 有行选中时表头图标高亮为蓝色，表示可操作 */
+th.col-start.header-active .header-icon,
+th.col-end.header-active .header-icon {
+  color: var(--color-textprimary);
+}
+
+.header-icon {
+  transform: translateY(3px);
+}
 /* 行样式 */
 /* 隔行变色 */
 tr:nth-child(even) {
@@ -935,6 +961,41 @@ td.status-col {
   height: 100%;
 }
 
+.cancel-button {
+  right: -2px;
+  transform: translateY(3px);
+}
+
+@media (max-width: 400px) {
+  col.col-check {
+    width: 20px;
+    text-overflow: clip;
+  }
+
+  col.col-start {
+    width: 36px;
+  }
+
+  col.col-end {
+    width: 36px;
+  }
+
+  col.col-duration {
+    width: 20px;
+  }
+
+  col.col-status {
+    width: 54px;
+  }
+  td.col-start,
+  td.col-end,
+  td.col-duration,
+  .time-input {
+    font-size: 13px;
+    text-overflow: clip;
+  }
+}
+
 /* 云朵样式 */
 .cloud-background {
   position: relative;
@@ -950,7 +1011,9 @@ td.status-col {
 .cloud-1 {
   top: 25%;
   left: -8%;
-  animation: floatMove1 45s infinite linear, fadeIn 1.5s forwards;
+  animation:
+    floatMove1 45s infinite linear,
+    fadeIn 1.5s forwards;
   opacity: 0;
 }
 
@@ -961,15 +1024,24 @@ td.status-col {
   height: 30px;
   background: rgba(255, 255, 255, 0.8);
   border-radius: 50px;
-  box-shadow: 15px 5px 0 5px rgba(255, 255, 255, 0.7), 25px -10px 0 -5px rgba(255, 255, 255, 0.8), 40px -5px 0 rgba(255, 255, 255, 0.6),
-    55px 2px 0 -8px rgba(255, 255, 255, 0.7), 25px 8px 0 -5px rgba(255, 255, 255, 0.8), 35px 15px 0 -10px rgba(255, 255, 255, 0.6);
+  box-shadow:
+    15px 5px 0 5px rgba(255, 255, 255, 0.7),
+    25px -10px 0 -5px rgba(255, 255, 255, 0.8),
+    40px -5px 0 rgba(255, 255, 255, 0.6),
+    55px 2px 0 -8px rgba(255, 255, 255, 0.7),
+    25px 8px 0 -5px rgba(255, 255, 255, 0.8),
+    35px 15px 0 -10px rgba(255, 255, 255, 0.6);
 }
 
 .cloud-2 {
   top: 45%;
   left: -6%;
-  animation: fadeIn 1.5s forwards, floatMove2 50s infinite linear;
-  animation-delay: 2s, -10s;
+  animation:
+    fadeIn 1.5s forwards,
+    floatMove2 50s infinite linear;
+  animation-delay:
+    2s,
+    -10s;
   opacity: 0;
 }
 
@@ -980,15 +1052,23 @@ td.status-col {
   height: 25px;
   background: rgba(255, 255, 255, 0.7);
   border-radius: 40px;
-  box-shadow: 10px 3px 0 3px rgba(255, 255, 255, 0.8), 20px -8px 0 -3px rgba(255, 255, 255, 0.7), 32px -3px 0 rgba(255, 255, 255, 0.6),
-    42px 1px 0 -5px rgba(255, 255, 255, 0.8), 20px 6px 0 -3px rgba(255, 255, 255, 0.7);
+  box-shadow:
+    10px 3px 0 3px rgba(255, 255, 255, 0.8),
+    20px -8px 0 -3px rgba(255, 255, 255, 0.7),
+    32px -3px 0 rgba(255, 255, 255, 0.6),
+    42px 1px 0 -5px rgba(255, 255, 255, 0.8),
+    20px 6px 0 -3px rgba(255, 255, 255, 0.7);
 }
 
 .cloud-3 {
   top: 35%;
   left: -10%;
-  animation: fadeIn 1.5s forwards, floatMove3 40s infinite linear;
-  animation-delay: 1s, -25s;
+  animation:
+    fadeIn 1.5s forwards,
+    floatMove3 40s infinite linear;
+  animation-delay:
+    1s,
+    -25s;
   opacity: 0;
 }
 
@@ -999,17 +1079,26 @@ td.status-col {
   height: 35px;
   background: rgba(255, 255, 255, 0.75);
   border-radius: 60px;
-  box-shadow: 18px 6px 0 6px rgba(255, 255, 255, 0.8), 30px -12px 0 -6px rgba(255, 255, 255, 0.7), 50px -6px 0 rgba(255, 255, 255, 0.65),
-    68px 3px 0 -10px rgba(255, 255, 255, 0.8), 30px 10px 0 -6px rgba(255, 255, 255, 0.75), 42px 18px 0 -12px rgba(255, 255, 255, 0.6),
+  box-shadow:
+    18px 6px 0 6px rgba(255, 255, 255, 0.8),
+    30px -12px 0 -6px rgba(255, 255, 255, 0.7),
+    50px -6px 0 rgba(255, 255, 255, 0.65),
+    68px 3px 0 -10px rgba(255, 255, 255, 0.8),
+    30px 10px 0 -6px rgba(255, 255, 255, 0.75),
+    42px 18px 0 -12px rgba(255, 255, 255, 0.6),
     15px -5px 0 -8px rgba(255, 255, 255, 0.7);
 }
 
 .cloud-4 {
   top: 25%;
   left: -8%;
-  animation: fadeIn 3s, forwards floatMove1 45s infinite linear;
+  animation:
+    fadeIn 3s,
+    forwards floatMove1 45s infinite linear;
   opacity: 0;
-  animation-delay: 1s, -15s;
+  animation-delay:
+    1s,
+    -15s;
 }
 
 .cloud-4::before {
@@ -1019,15 +1108,24 @@ td.status-col {
   height: 30px;
   background: rgba(255, 255, 255, 0.8);
   border-radius: 50px;
-  box-shadow: 15px 5px 0 5px rgba(255, 255, 255, 0.7), 25px -10px 0 -5px rgba(255, 255, 255, 0.8), 40px -5px 0 rgba(255, 255, 255, 0.6),
-    55px 2px 0 -8px rgba(255, 255, 255, 0.7), 25px 8px 0 -5px rgba(255, 255, 255, 0.8), 35px 15px 0 -10px rgba(255, 255, 255, 0.6);
+  box-shadow:
+    15px 5px 0 5px rgba(255, 255, 255, 0.7),
+    25px -10px 0 -5px rgba(255, 255, 255, 0.8),
+    40px -5px 0 rgba(255, 255, 255, 0.6),
+    55px 2px 0 -8px rgba(255, 255, 255, 0.7),
+    25px 8px 0 -5px rgba(255, 255, 255, 0.8),
+    35px 15px 0 -10px rgba(255, 255, 255, 0.6);
 }
 
 .cloud-5 {
   top: 45%;
   left: -6%;
-  animation: fadeIn 1.5s forwards, floatMove3 50s linear infinite;
-  animation-delay: 1s, -45s;
+  animation:
+    fadeIn 1.5s forwards,
+    floatMove3 50s linear infinite;
+  animation-delay:
+    1s,
+    -45s;
   opacity: 0;
 }
 
@@ -1038,15 +1136,23 @@ td.status-col {
   height: 30px;
   background: rgba(255, 255, 255, 0.7);
   border-radius: 40px;
-  box-shadow: 10px 3px 0 3px rgba(255, 255, 255, 0.8), 20px -8px 0 -3px rgba(255, 255, 255, 0.7), 32px -3px 0 rgba(255, 255, 255, 0.6),
-    42px 1px 0 -5px rgba(255, 255, 255, 0.8), 20px 6px 0 -3px rgba(255, 255, 255, 0.7);
+  box-shadow:
+    10px 3px 0 3px rgba(255, 255, 255, 0.8),
+    20px -8px 0 -3px rgba(255, 255, 255, 0.7),
+    32px -3px 0 rgba(255, 255, 255, 0.6),
+    42px 1px 0 -5px rgba(255, 255, 255, 0.8),
+    20px 6px 0 -3px rgba(255, 255, 255, 0.7);
 }
 
 .cloud-6 {
   top: 35%;
   left: -10%;
-  animation: fadeIn 1.5s forwards, floatMove2 50s linear infinite;
-  animation-delay: 1s, -5s;
+  animation:
+    fadeIn 1.5s forwards,
+    floatMove2 50s linear infinite;
+  animation-delay:
+    1s,
+    -5s;
   opacity: 0;
 }
 
@@ -1057,8 +1163,13 @@ td.status-col {
   height: 35px;
   background: rgba(255, 255, 255, 0.75);
   border-radius: 60px;
-  box-shadow: 18px 6px 0 6px rgba(255, 255, 255, 0.8), 30px -12px 0 -6px rgba(255, 255, 255, 0.7), 50px -6px 0 rgba(255, 255, 255, 0.65),
-    68px 3px 0 -10px rgba(255, 255, 255, 0.8), 30px 10px 0 -6px rgba(255, 255, 255, 0.75), 42px 18px 0 -12px rgba(255, 255, 255, 0.6),
+  box-shadow:
+    18px 6px 0 6px rgba(255, 255, 255, 0.8),
+    30px -12px 0 -6px rgba(255, 255, 255, 0.7),
+    50px -6px 0 rgba(255, 255, 255, 0.65),
+    68px 3px 0 -10px rgba(255, 255, 255, 0.8),
+    30px 10px 0 -6px rgba(255, 255, 255, 0.75),
+    42px 18px 0 -12px rgba(255, 255, 255, 0.6),
     15px -5px 0 -8px rgba(255, 255, 255, 0.7);
 }
 
@@ -1166,8 +1277,14 @@ td.status-col {
 }
 
 .add-schedule-button {
-  color: var(--color-blue);
   cursor: pointer;
-  transform: translateY(3px);
+  transform: translate(-1px, 3px);
+}
+
+.cancel-button.header-active {
+  color: var(--color-textprimary);
+}
+.cancel-button.header-active :deep(.n-icon) {
+  color: var(--color-textprimary);
 }
 </style>

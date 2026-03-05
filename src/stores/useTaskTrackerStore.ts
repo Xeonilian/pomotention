@@ -8,7 +8,7 @@ import { convertToSchedule } from "@/services/activityService";
 
 export const useTaskTrackerStore = defineStore("taskTracker", () => {
   const dataStore = useDataStore();
-  const { activityList, scheduleList } = storeToRefs(dataStore);
+  const { activityList, scheduleList, taskList } = storeToRefs(dataStore);
 
   // --- 数据 (State & Getters) ---
 
@@ -56,6 +56,12 @@ export const useTaskTrackerStore = defineStore("taskTracker", () => {
           if (data.activityType === "S") {
             scheduleList.value.push(convertToSchedule(newActivity));
           }
+          // 由 activity 产生对应的 task 并回写 activity.taskId
+          const task = taskService.createTaskFromActivity(newActivity.id, newActivity.title);
+          taskList.value = [...taskList.value, task];
+          newActivity.taskId = task.id;
+          newActivity.synced = false;
+          newActivity.lastModified = Date.now();
         }
       }
     }

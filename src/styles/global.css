@@ -24,7 +24,7 @@
 @media (max-width: 768px) {
   .n-modal-body-wrapper .mobile-dialog-top {
     align-self: flex-start !important;
-    margin: 8px auto 0 auto !important;
+    margin: 30px auto 0 auto !important;
   }
   /* 书写模板弹窗：移动端适应宽度，高度收矮 */
   .n-modal-body-wrapper .template-dialog {

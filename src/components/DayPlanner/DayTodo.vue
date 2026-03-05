@@ -24,7 +24,7 @@
       <thead>
         <tr>
           <th class="col-check">
-            <n-button text type="default" @click.stop="handleQuickAddTodo" title="快速新增待办" class="add-todo-button">
+            <n-button text type="info" @click.stop="handleQuickAddTodo" title="快速新增待办" class="add-todo-button">
               <template #icon>
                 <n-icon size="20">
                   <AddCircle24Regular />
@@ -38,7 +38,9 @@
             @click.stop="selectedRowId && handleFillCurrentTimeStart()"
             :title="selectedRowId ? '点击填入当前时间' : '请先选中一行'"
           >
-            开始
+            <n-icon size="20" class="header-icon">
+              <Play20Regular />
+            </n-icon>
           </th>
           <th
             class="col-end"
@@ -46,19 +48,63 @@
             @click.stop="selectedRowId && handleFillCurrentTimeEnd()"
             :title="selectedRowId ? '点击填入当前时间' : '请先选中一行'"
           >
-            结束
+            <n-icon size="20" class="header-icon">
+              <RecordStop20Regular />
+            </n-icon>
           </th>
-          <th class="col-rank" :title="rankHeaderTitle" @click.stop="openPriorityBindingModal">排序</th>
-          <th class="col-intent">意图</th>
+          <th class="col-rank" :title="rankHeaderTitle" @click.stop="openPriorityBindingModal">
+            <n-icon size="20" class="header-icon"><Important20Regular /></n-icon>
+          </th>
+          <th class="col-intent" @click.stop="selectedRowId && handleFillCurrentTitle()" title="将当前待办意图复制到任务备注">
+            <n-icon size="20" title="意图" class="header-icon"><Thinking20Regular /></n-icon>
+          </th>
           <th
             class="col-fruit"
             :class="{ 'disabled-toggle': !canTogglePomoType }"
             @click.stop="canTogglePomoType && handleTogglePomoType()"
             :title="canTogglePomoType ? '点击切换类型' : '不能切换类型'"
           >
-            {{ selectedRowId ? currentPomoType || "果果" : "果果" }}
+            <template v-if="selectedRowId">
+              <span v-if="currentPomoType">{{ currentPomoType }}</span>
+              <n-icon v-else size="20" class="header-icon">
+                <FoodPizza20Regular />
+              </n-icon>
+            </template>
+            <template v-else>
+              <n-icon size="20" class="header-icon">
+                <FoodPizza20Regular />
+              </n-icon>
+            </template>
           </th>
-          <th class="col-status">状态</th>
+          <th class="col-status">
+            <!-- 表头操作：对选中行执行取消/退回，仅对进行中(ongoing)任务生效 -->
+            <n-button
+              class="cancel-button"
+              v-if="selectedTodo && selectedTodo.status !== 'done' && selectedTodo.status !== 'cancelled' && !selectedTodo.realPomo"
+              text
+              @click.stop="handleCancelSelectedTodo"
+              title="取消选中任务，不退回活动清单"
+            >
+              <template #icon>
+                <n-icon size="20">
+                  <DismissCircle20Regular />
+                </n-icon>
+              </template>
+            </n-button>
+            <n-button
+              class="suspend-button"
+              v-if="selectedTodo && selectedTodo.status !== 'done' && selectedTodo.status !== 'cancelled' && !selectedTodo.realPomo"
+              text
+              @click.stop="handleSuspendSelectedTodo"
+              title="撤销选中任务，退回活动清单"
+            >
+              <template #icon>
+                <n-icon size="20">
+                  <ChevronCircleRight48Regular />
+                </n-icon>
+              </template>
+            </n-button>
+          </th>
         </tr>
       </thead>
 
@@ -104,7 +150,7 @@
               :title="editingRowId === todo.id && editingField === 'start' ? '' : '双击编辑'"
             >
               <input
-                class="start-input time-input"
+                class="time-input"
                 v-if="editingRowId === todo.id && editingField === 'start'"
                 v-model="editingValue"
                 @blur="saveEdit(todo)"
@@ -124,7 +170,7 @@
               :title="editingRowId === todo.id && editingField === 'done' ? '' : '双击编辑'"
             >
               <input
-                class="done-input time-input"
+                class="time-input"
                 v-if="editingRowId === todo.id && editingField === 'done'"
                 v-model="editingValue"
                 @blur="saveEdit(todo)"
@@ -267,71 +313,12 @@
 
             <!-- 7 状态 -->
             <td class="status-col">
-              <div
-                class="status-cell"
-                :class="{
-                  'check-mode': todo.status === 'done' || todo.status === 'cancelled',
-                }"
-              >
+              <div class="status-cell">
                 <div class="records-stat" v-if="todo.startTime" title="能量值 | 奖赏值 | 内部打扰 | 外部打扰">
                   <span style="color: var(--color-blue)">{{ averageValue(todo.energyRecords) }}</span>
                   |
                   <span style="color: var(--color-red)">{{ averageValue(todo.rewardRecords) }}</span>
                   |{{ countInterruptions(todo.interruptionRecords, "I") }}|{{ countInterruptions(todo.interruptionRecords, "E") }}
-                </div>
-                <div class="button-group" v-if="todo.status !== 'done' && todo.status !== 'cancelled'">
-                  <!-- 追踪任务按钮 -->
-                  <n-button v-if="!todo.startTime" class="convert-button" text type="info" @click="handleQuickStart(todo)" title="开始待办">
-                    <template #icon>
-                      <n-icon size="18">
-                        <ChevronCircleDown48Regular />
-                      </n-icon>
-                    </template>
-                  </n-button>
-                  <!-- <n-button
-                  v-if="todo.status !== 'done'"
-                  text
-                  type="info"
-                  @click="handleRepeatTodo(todo.id)"
-                  title="重复待办，新建活动"
-                >
-                  <template #icon>
-                    <n-icon size="18">
-                      <ArrowRepeatAll24Regular />
-                    </n-icon>
-                  </template>
-                </n-button> -->
-
-                  <!-- 取消任务按钮 -->
-                  <n-button
-                    class="cancel-button"
-                    v-if="!todo.realPomo"
-                    text
-                    type="info"
-                    @click="handleCancelTodo(todo.id)"
-                    title="取消任务，不退回活动清单"
-                  >
-                    <template #icon>
-                      <n-icon size="18">
-                        <DismissCircle20Regular />
-                      </n-icon>
-                    </template>
-                  </n-button>
-                  <!-- 退回任务按钮 = 不再在今日 -->
-                  <n-button
-                    class="suspend-button"
-                    v-if="!todo.realPomo"
-                    text
-                    type="info"
-                    @click="handleSuspendTodo(todo.id)"
-                    title="撤销任务，退回活动清单"
-                  >
-                    <template #icon>
-                      <n-icon size="18">
-                        <ChevronCircleRight48Regular />
-                      </n-icon>
-                    </template>
-                  </n-button>
                 </div>
               </div>
             </td>
@@ -426,13 +413,16 @@ import { timestampToTimeString } from "@/core/utils";
 import { PRIORITY_CATEGORIES, SPECIAL_PRIORITIES, getEmojiForPriority } from "@/core/priorityCategories";
 import {
   ChevronCircleRight48Regular,
-  ChevronCircleDown48Regular,
   DismissCircle20Regular,
-  // ArrowRepeatAll24Regular,
   DismissSquare20Filled,
   CaretLeft12Filled,
   CaretRight12Filled,
   AddCircle24Regular,
+  Important20Regular,
+  Thinking20Regular,
+  Play20Regular,
+  RecordStop20Regular,
+  FoodPizza20Regular,
 } from "@vicons/fluent";
 import { NCheckbox, NInputNumber, NPopover, NButton, NIcon, NModal, NSelect } from "naive-ui";
 import { ref, computed, nextTick, reactive, watch, onBeforeUnmount } from "vue";
@@ -446,9 +436,11 @@ import TagSelector from "../TagSystem/TagSelector.vue";
 import type { SelectOption } from "naive-ui";
 
 const dataStore = useDataStore();
+
 const settingStore = useSettingStore();
 const tagStore = useTagStore();
-const { activeId, selectedRowId, todosForCurrentViewWithTaskRecords } = storeToRefs(dataStore);
+const { activeId, selectedRowId, selectedActivityId, selectedTaskId, selectedTask, todosForCurrentViewWithTaskRecords } =
+  storeToRefs(dataStore);
 const { allTags: allTagsFromStore } = storeToRefs(tagStore);
 
 // 根据 selectedRowId 找到对应的 todo
@@ -567,10 +559,6 @@ const emit = defineEmits<{
   (e: "batch-update-priorities", updates: Array<{ id: number; priority: number }>): void;
   (e: "update-todo-pomo", id: number, realPomo: number[]): void;
   (e: "update-todo-est", id: number, estPomo: number[]): void;
-
-  (e: "select-task", taskId: number | null): void;
-  (e: "select-row", id: number | null): void;
-  (e: "select-activity", activityId: number | null): void;
   (e: "edit-todo-title", id: number, newTitle: string): void;
   (e: "edit-todo-start", id: number, newTs: string): void;
   (e: "edit-todo-done", id: number, newTs: string): void;
@@ -862,9 +850,15 @@ function handleDeleteEstimate(todo: Todo) {
 
 // 修改点击行处理函数
 function handleRowClick(todo: Todo) {
-  emit("select-row", todo.id); // 新增：发送选中行事件
-  emit("select-task", todo.taskId || null);
-  emit("select-activity", todo.activityId || null);
+  // 取消激活活动
+  // if (todo.status !== "done" && todo.status !== "cancelled") {
+  //   activeId.value = todo.activityId;
+  // } else {
+  //   activeId.value = undefined;
+  // }
+  selectedRowId.value = todo.id;
+  selectedActivityId.value = todo.activityId;
+  selectedTaskId.value = todo.taskId ?? null;
 }
 
 // 快速新增待办
@@ -908,6 +902,28 @@ function handleFillCurrentTimeStart() {
   const now = new Date();
   const ts = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
   emit("edit-todo-start", selectedRowId.value, ts);
+
+  // 将当前选中待办的意图同步到任务备注
+  const todo = todosForCurrentViewWithTaskRecords.value.find((t) => t.id === selectedRowId.value);
+  if (!todo) return;
+  const taskId = selectedTaskId.value;
+  if (taskId == null) return;
+  const titleForHeader = (todo.activityTitle ?? "").trim();
+  const originalDescription = selectedTask.value?.description ?? "";
+  let newDescription = originalDescription;
+  const trimmed = originalDescription.trim();
+  if (!trimmed || trimmed === "#") {
+    // 如果任务描述为空或只有一个 #，写入「# 标题\n」
+    newDescription = titleForHeader ? `# ${titleForHeader}\n` : originalDescription;
+  } else if (titleForHeader) {
+    // 如果已有内容，只替换第一个换行前的内容
+    const firstNewlineIndex = originalDescription.indexOf("\n");
+    const rest = firstNewlineIndex !== -1 ? originalDescription.slice(firstNewlineIndex) : "\n";
+    newDescription = `# ${titleForHeader}${rest}`;
+  }
+  dataStore.updateTaskById(taskId, {
+    description: newDescription,
+  });
 }
 
 // 表头点击「结束」：给选中行填入当前时间（HH:mm）
@@ -918,25 +934,53 @@ function handleFillCurrentTimeEnd() {
   emit("edit-todo-done", selectedRowId.value, ts);
 }
 
-// 一键开始：不进入编辑态，直接把开始时间写成当前时间并保存
-function handleQuickStart(todo: Todo) {
-  // 已结束的任务不允许开始
-  if (todo.status === "done" || todo.status === "cancelled") {
-    popoverMessage.value = "当前任务已经结束！";
-    showPopover.value = true;
-    setTimeout(() => {
-      showPopover.value = false;
-    }, 2000);
-    return;
+// 将当前选中待办的意图同步到任务备注
+function handleFillCurrentTitle() {
+  if (!selectedRowId.value) return;
+  const todo = todosForCurrentViewWithTaskRecords.value.find((t) => t.id === selectedRowId.value);
+  if (!todo) return;
+  const taskId = selectedTaskId.value;
+  if (taskId == null) return;
+  const titleForHeader = (todo.activityTitle ?? "").trim();
+  const originalDescription = selectedTask.value?.description ?? "";
+  let newDescription = originalDescription;
+  const trimmed = originalDescription.trim();
+  if (!trimmed || trimmed === "#") {
+    // 如果任务描述为空或只有一个 #，写入「# 标题\n」
+    newDescription = titleForHeader ? `# ${titleForHeader}\n` : originalDescription;
+  } else if (titleForHeader) {
+    // 如果已有内容，只替换第一个换行前的内容
+    const firstNewlineIndex = originalDescription.indexOf("\n");
+    const rest = firstNewlineIndex !== -1 ? originalDescription.slice(firstNewlineIndex) : "\n";
+    newDescription = `# ${titleForHeader}${rest}`;
   }
+  dataStore.updateTaskById(taskId, {
+    description: newDescription,
+  });
+}
 
-  const now = new Date();
-  const hours = now.getHours().toString().padStart(2, "0");
-  const minutes = now.getMinutes().toString().padStart(2, "0");
-  const ts = `${hours}:${minutes}`;
+// 表头按钮：对当前选中行执行撤销任务（退回活动清单）
+function handleSuspendSelectedTodo() {
+  if (
+    !selectedTodo.value ||
+    selectedTodo.value.status === "done" ||
+    selectedTodo.value.status === "cancelled" ||
+    selectedTodo.value.realPomo
+  )
+    return;
+  emit("suspend-todo", selectedTodo.value.id);
+}
 
-  // 直接通知父组件更新开始时间（不进入编辑状态）
-  emit("edit-todo-start", todo.id, ts);
+// 表头按钮：对当前选中行执行取消任务（不退回活动清单）
+function handleCancelSelectedTodo() {
+  if (
+    !selectedTodo.value ||
+    selectedTodo.value.status === "done" ||
+    selectedTodo.value.status === "cancelled" ||
+    selectedTodo.value.realPomo
+  )
+    return;
+  emit("cancel-todo", selectedTodo.value.id);
 }
 
 // 注意这里是 timestring 不是timestamp，是在Home用currentViewdate进行的转化
@@ -993,15 +1037,6 @@ function cancelEdit() {
 
 function isValidTimeString(str: string) {
   return /^\d{2}:\d{2}$/.test(str) && +str.split(":")[0] <= 24 && +str.split(":")[1] < 60;
-}
-
-// suspended Todo
-function handleSuspendTodo(id: number) {
-  emit("suspend-todo", id);
-}
-
-function handleCancelTodo(id: number) {
-  emit("cancel-todo", id);
 }
 
 // 撤销取消
@@ -1145,17 +1180,46 @@ td.col-rank-disabled {
 }
 
 col.col-intent {
-  width: 60%;
-  min-width: 140px;
+  width: 55%;
+  min-width: 0px;
 }
 
 col.col-fruit {
-  width: 40%;
-  min-width: 75px;
+  width: 45%;
+  min-width: 0px;
 }
 
 col.col-status {
-  width: 88px;
+  width: 60px;
+}
+
+@media (max-width: 400px) {
+  col.col-check {
+    width: 20px;
+  }
+
+  col.col-start {
+    width: 36px;
+  }
+
+  col.col-end {
+    width: 36px;
+  }
+
+  col.col-rank {
+    width: 26px;
+  }
+
+  col.col-status {
+    width: 54px;
+  }
+
+  td.col-start,
+  td.col-end,
+  .time-input {
+    font-size: 13px;
+    text-overflow: clip;
+  }
 }
 
 /* 表头样式 */
@@ -1166,7 +1230,7 @@ thead th {
   white-space: nowrap;
   overflow: hidden;
   height: 20px;
-  font-weight: 400;
+  font-weight: 500;
   border-bottom: 2px solid var(--color-background-dark);
   color: var(--color-text-primary);
   background-color: var(--color-background) !important;
@@ -1189,10 +1253,12 @@ th.col-end.disabled-toggle {
 
 .add-todo-button {
   cursor: pointer;
-  transform: translateY(3px);
-  color: var(--color-blue);
+  transform: translate(-1px, 3px);
 }
 
+.header-icon {
+  transform: translateY(3px);
+}
 /* 行样式 */
 /* 隔行变色 */
 tr:nth-child(even) {
@@ -1438,20 +1504,17 @@ td.status-col {
 }
 
 .button-left {
-  position: relative;
-  left: -4px;
+  margin-left: -4px;
   z-index: 1;
 }
 
 .button-right {
-  position: relative;
-  left: -12px;
+  margin-left: -8px;
   z-index: 2;
 }
 
 .button-right.one-mode {
-  position: relative;
-  left: -4px;
+  margin-left: -4px;
   z-index: 2;
 }
 
@@ -1466,27 +1529,19 @@ td.status-col {
   display: inline-flex;
   font-family: Consolas, "Courier New", Courier, monospace;
   font-size: 14px;
-  padding-right: 2px;
-}
-
-/* 按钮组为内联块，不再强制贴右（因为整列已右对齐） */
-.button-group {
-  display: inline-flex;
-  height: 20px;
-  transform: translateY(1px);
+  padding-right: 4px;
 }
 
 :deep(.n-button) :hover {
   color: var(--color-red);
 }
-.convert-button {
-  right: 0px;
-}
 .cancel-button {
-  right: 2px;
+  right: -2px;
+  transform: translateY(3px);
 }
 .suspend-button {
-  right: 4px;
+  right: -6px;
+  transform: translateY(3px);
 }
 
 td.col-check {
@@ -1584,15 +1639,5 @@ td.col-check {
   border: 1px solid #40a9ff;
   border-radius: 4px;
   outline: none;
-}
-
-.start-input,
-.done-input {
-  width: 32px !important;
-  max-width: 32px !important;
-  min-width: 0 !important;
-  box-sizing: border-box;
-  padding: 0px 0px;
-  font-size: inherit;
 }
 </style>

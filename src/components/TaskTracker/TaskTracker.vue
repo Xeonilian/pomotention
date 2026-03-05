@@ -3,7 +3,7 @@
   <div class="task-view-container">
     <div class="task-header-container" ref="headerContainerRef">
       <div v-if="selectedTagIds && selectedTagIds.length > 0 && selectedTaskId" class="task-tag-render-container">
-        <TagRenderer :tag-ids="selectedTagIds" :isCloseable="true" :displayLength="tagDisplayLength" @remove-tag="handleRemoveTag" />
+        <TagRenderer :tag-ids="selectedTagIds" :isCloseable="false" :displayLength="tagDisplayLength" @remove-tag="handleRemoveTag" />
       </div>
       <!-- 合并能量/愉悦/打断 记录时间轴 -->
       <div class="combined-timeline-container" v-if="combinedRecords.length">
@@ -18,10 +18,10 @@
                 record.type === 'energy'
                   ? getEnergyColor(record.value)
                   : record.type === 'reward'
-                  ? getRewardColor(record.value)
-                  : record.interruptionType === 'I'
-                  ? 'var(--color-blue)'
-                  : 'var(--color-red)',
+                    ? getRewardColor(record.value)
+                    : record.interruptionType === 'I'
+                      ? 'var(--color-blue)'
+                      : 'var(--color-red)',
             }"
           >
             {{ formatRecordValue(record) }}
@@ -72,7 +72,7 @@ const tagDisplayLength = ref<number | null>(null);
 
 // 断点值配置
 const TAG_COLLAPSE_BREAKPOINT = 600; // 第一个值：标签收缩为3
-const BUTTON_COLLAPSE_BREAKPOINT = 300; // 第二个值：按钮收缩
+const BUTTON_COLLAPSE_BREAKPOINT = 400; // 第二个值：按钮收缩
 
 const taskTrackerStore = useTaskTrackerStore();
 const dataStore = useDataStore();
@@ -85,7 +85,7 @@ watch(
   (t) => {
     taskDescription.value = t?.description || "";
   },
-  { immediate: true, deep: true } // 加上 deep: true 确保监听对象内部变化
+  { immediate: true, deep: true }, // 加上 deep: true 确保监听对象内部变化
 );
 
 // 描述更新
@@ -191,7 +191,7 @@ const checkWidth = () => {
 
   // 通知 TaskButtons 组件是否需要收缩（通过 provide/inject 或事件）
   // 这里我们通过 CSS 类来控制
-  if (containerWidth < BUTTON_COLLAPSE_BREAKPOINT) {
+  if (selectedTagIds.value && selectedTagIds.value.length > 1 && containerWidth < BUTTON_COLLAPSE_BREAKPOINT) {
     headerContainerRef.value.classList.add("buttons-collapsed");
   } else {
     headerContainerRef.value.classList.remove("buttons-collapsed");

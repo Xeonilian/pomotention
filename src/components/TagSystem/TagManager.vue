@@ -98,7 +98,7 @@
         <div class="tag-footer">
           <div class="tag-sort">
             <n-button
-              size="tiny"
+              text
               quaternary
               :type="sortKey === 'count' && sortDirection === 'desc' ? 'primary' : 'default'"
               @click="setSort('count', 'desc')"
@@ -106,7 +106,7 @@
               <n-icon><ArrowSortUp24Filled /></n-icon>
             </n-button>
             <n-button
-              size="tiny"
+              text
               quaternary
               :type="sortKey === 'count' && sortDirection === 'asc' ? 'primary' : 'default'"
               @click="setSort('count', 'asc')"
@@ -114,7 +114,7 @@
               <n-icon><ArrowSortDown24Filled /></n-icon>
             </n-button>
             <n-button
-              size="tiny"
+              text
               quaternary
               :type="sortKey === 'name' && sortDirection === 'asc' ? 'primary' : 'default'"
               @click="setSort('name', 'asc')"
@@ -122,7 +122,7 @@
               <n-icon><TextSortAscending16Regular /></n-icon>
             </n-button>
             <n-button
-              size="tiny"
+              text
               quaternary
               :type="sortKey === 'name' && sortDirection === 'desc' ? 'primary' : 'default'"
               @click="setSort('name', 'desc')"
@@ -247,13 +247,26 @@ watch(
 // ================================================================
 
 /**
- * 根据输入关键词 + 排序配置得到完整标签列表（未分页）
+ * 当前已选中的标签 ID 集合，用于在排序时优先展示
+ */
+const selectedIdSet = computed<Set<number>>(() => new Set(props.modelValue));
+
+/**
+ * 根据输入关键词 + 排序配置得到完整标签列表（未分页），并优先显示已选中的标签
  */
 const sortedTags = computed<TagWithCount[]>(() => {
   const keyword = inputText.value.trim();
   const baseList = keyword ? tagStore.findByName(keyword) : [...tagStore.allTags];
 
   return baseList.sort((a, b) => {
+    const aSelected = selectedIdSet.value.has(a.id) ? 1 : 0;
+    const bSelected = selectedIdSet.value.has(b.id) ? 1 : 0;
+
+    // 已选中的标签优先显示
+    if (aSelected !== bSelected) {
+      return bSelected - aSelected;
+    }
+
     if (sortKey.value === "count") {
       const diff = sortDirection.value === "desc" ? b.count - a.count : a.count - b.count;
       if (diff !== 0) return diff;
@@ -505,15 +518,13 @@ function goNextPage(): void {
 .tag-suggestions {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 8px;
   padding-top: 12px;
   padding-left: 2px;
   align-content: flex-start;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: visible; /* 允许内容（如子元素阴影）显示 */
   flex: 1;
-  min-height: 0;
-  padding-bottom: 5px;
+  padding-bottom: 0px;
 }
 
 .custom-tag {
@@ -601,24 +612,21 @@ function goNextPage(): void {
   align-items: center;
   justify-content: space-between;
   flex-shrink: 0;
-  margin-top: 0px;
-  padding-top: 6px;
-  border-top: 1px solid var(--divider-color);
-  font-size: 12px;
-  gap: 8px;
+  padding-top: 2px;
 }
 
 .tag-sort {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   flex-wrap: nowrap;
   flex-shrink: 0;
+  margin-left: 6px;
+  transform: translateY(3px);
 }
 
 .tag-sort-label {
   color: var(--color-text-secondary);
-  font-size: 12px;
 }
 
 .tag-pagination {
