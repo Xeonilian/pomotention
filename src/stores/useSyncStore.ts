@@ -113,6 +113,21 @@ export const useSyncStore = defineStore("sync", () => {
     syncInitialized.value = false;
   }
 
+  // 同步前钩子：在真正执行上传/下载前执行，用于把未保存的编辑先落库（如 TaskRecord 正在编辑时先 commit）
+  const beforeSyncCallbacks = new Set<() => void | Promise<void>>();
+
+  function registerBeforeSync(cb: () => void | Promise<void>) {
+    beforeSyncCallbacks.add(cb);
+  }
+
+  function unregisterBeforeSync(cb: () => void | Promise<void>) {
+    beforeSyncCallbacks.delete(cb);
+  }
+
+  async function runBeforeSync() {
+    await Promise.all(Array.from(beforeSyncCallbacks).map((fn) => Promise.resolve(fn())));
+  }
+
   // 登录状态管理
   async function checkLoginStatus() {
     if (!isSupabaseEnabled()) {
@@ -195,6 +210,10 @@ export const useSyncStore = defineStore("sync", () => {
     resetSync,
     initSyncService,
     destroySyncService,
+
+    registerBeforeSync,
+    unregisterBeforeSync,
+    runBeforeSync,
 
     // 登录方法
     checkLoginStatus,

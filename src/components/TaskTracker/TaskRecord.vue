@@ -28,16 +28,18 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick, onMounted } from "vue";
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from "vue";
 import { getClickContextFragments, findFragmentSequenceInSource } from "@/services/taskRecordService";
 import { useCaretFlash } from "@/composables/useCaretFlash";
 import { useDevice } from "@/composables/useDevice";
 import { useSettingStore } from "@/stores/useSettingStore";
+import { useSyncStore } from "@/stores/useSyncStore";
 import "highlight.js/styles/github.css";
 
 const { showCaretFlash, caretFlashStyle, flashCaretFlash } = useCaretFlash();
 const { isMobile } = useDevice();
 const settingStore = useSettingStore();
+const syncStore = useSyncStore();
 // 移动端进入编辑时暂存原 topHeight，退出时恢复
 const savedTopHeight = ref<number | null>(null);
 
@@ -120,9 +122,6 @@ const renderedMarkdown = computed(() => {
   return text.replace(/\n/g, "<br />");
 });
 
-onMounted(() => {
-  ensureMarkdownEngine();
-});
 
 watch(
   () => props.initialContent,
@@ -157,6 +156,22 @@ const stopEditing = () => {
   }
   emit("update:content", content.value);
 };
+
+// 同步前钩子：若正在编辑则先保存到本地，再让同步执行，避免本地未保存内容被覆盖
+function commitIfEditing() {
+  if (isEditing.value) {
+    stopEditing();
+  }
+}
+
+onMounted(() => {
+  ensureMarkdownEngine();
+  syncStore.registerBeforeSync(commitIfEditing);
+});
+
+onUnmounted(() => {
+  syncStore.unregisterBeforeSync(commitIfEditing);
+});
 
 const handleKeydown = (event: KeyboardEvent) => {
   // 阻止默认行为的通用检查
