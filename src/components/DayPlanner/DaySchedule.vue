@@ -58,8 +58,8 @@
               <ShiftsActivity20Regular />
             </n-icon>
           </th>
-          <th class="col-intent">
-            <n-icon size="20" class="header-icon"><Thinking20Regular /></n-icon>
+          <th class="col-intent" @click.stop="selectedRowId && handleFillCurrentTitle()" title="将当前日程意图复制到任务备注">
+            <n-icon size="20" title="意图" class="header-icon"><Thinking20Regular /></n-icon>
           </th>
           <th class="col-location">
             <n-icon size="20" class="header-icon">
@@ -321,7 +321,7 @@ import { useActivityTagEditor } from "@/composables/useActivityTagEditor";
 import TagSelector from "../TagSystem/TagSelector.vue";
 
 const dataStore = useDataStore();
-const { activeId, selectedRowId, selectedActivityId, selectedTaskId, schedulesForCurrentView } = storeToRefs(dataStore);
+const { activeId, selectedRowId, selectedActivityId, selectedTaskId, selectedTask, schedulesForCurrentView } = storeToRefs(dataStore);
 // 编辑用
 const editingRowId = ref<number | null>(null);
 const editingField = ref<null | "title" | "start" | "done" | "duration" | "location">(null);
@@ -391,12 +391,60 @@ function handleQuickAddSchedule() {
   emit("quick-add-schedule");
 }
 
+// 将当前选中待办的意图同步到任务备注
+function handleFillCurrentTitle() {
+  if (!selectedRowId.value) return;
+  const schedule = schedulesForCurrentView.value.find((s) => s.id === selectedRowId.value);
+  if (!schedule) return;
+  const taskId = selectedTaskId.value;
+  if (taskId == null) return;
+  const titleForHeader = (schedule.activityTitle ?? "").trim();
+  const originalDescription = selectedTask.value?.description ?? "";
+  let newDescription = originalDescription;
+  const trimmed = originalDescription.trim();
+  if (!trimmed || trimmed === "#") {
+    // 如果任务描述为空或只有一个 #，写入「# 标题\n」
+    newDescription = titleForHeader ? `# ${titleForHeader}\n` : originalDescription;
+  } else if (titleForHeader) {
+    // 如果已有内容，只替换第一个换行前的内容
+    const firstNewlineIndex = originalDescription.indexOf("\n");
+    const rest = firstNewlineIndex !== -1 ? originalDescription.slice(firstNewlineIndex) : "\n";
+    newDescription = `# ${titleForHeader}${rest}`;
+  }
+  dataStore.updateTaskById(taskId, {
+    description: newDescription,
+  });
+}
+
 // 表头点击「开始」：给选中行填入当前时间（HH:mm），对应 activityDueRange[0]
 function handleFillCurrentTimeStart() {
   if (!selectedRowId.value) return;
   const now = new Date();
   const ts = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
   emit("edit-schedule-start", selectedRowId.value, ts);
+  // 将当前选中待办的意图同步到任务备注
+
+  if (!selectedRowId.value) return;
+  const schedule = schedulesForCurrentView.value.find((s) => s.id === selectedRowId.value);
+  if (!schedule) return;
+  const taskId = selectedTaskId.value;
+  if (taskId == null) return;
+  const titleForHeader = (schedule.activityTitle ?? "").trim();
+  const originalDescription = selectedTask.value?.description ?? "";
+  let newDescription = originalDescription;
+  const trimmed = originalDescription.trim();
+  if (!trimmed || trimmed === "#") {
+    // 如果任务描述为空或只有一个 #，写入「# 标题\n」
+    newDescription = titleForHeader ? `# ${titleForHeader}\n` : originalDescription;
+  } else if (titleForHeader) {
+    // 如果已有内容，只替换第一个换行前的内容
+    const firstNewlineIndex = originalDescription.indexOf("\n");
+    const rest = firstNewlineIndex !== -1 ? originalDescription.slice(firstNewlineIndex) : "\n";
+    newDescription = `# ${titleForHeader}${rest}`;
+  }
+  dataStore.updateTaskById(taskId, {
+    description: newDescription,
+  });
 }
 
 // 表头点击「结束」：给选中行填入当前时间（HH:mm），对应 doneTime
