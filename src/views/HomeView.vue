@@ -120,8 +120,8 @@
               type="date"
               placeholder="日期选择"
               @update:value="onDateSet('query')"
-              :style="`width: ${isMobile ? 80 : 92}px`"
               class="search-date"
+              placement="bottom"
               @click="onDateSet('today')"
               title="输入示例：2026-01-01"
             >
@@ -1359,7 +1359,7 @@ const { startResize: startVerticalResize } = useResize(topHeight, "vertical", 0,
 const { startResize: startLeftResize } = useResize(
   leftWidth,
   "horizontal",
-  95,
+  75,
   150,
   false, // 左侧面板
 );
@@ -1471,6 +1471,15 @@ const { startResize: startRightResize } = useResize(
     font-size: 14px;
     padding-left: 0;
     padding-right: 0;
+  }
+  .search-date {
+    max-width: 79px !important;
+  }
+  .left {
+    padding: 5px 6px 15px 6px !important;
+  }
+  .right {
+    padding: 5px 6px 15px 6px !important;
   }
 }
 
@@ -1630,6 +1639,28 @@ const { startResize: startRightResize } = useResize(
   padding-left: 6px;
   padding-right: 6px;
 }
+
+/* 方案 1：通过 v-binder 的水平偏移变量来右移（推荐先看这个效果） */
+:deep(.v-binder-follower-content) {
+  /* 数值越大越往右，比如 10 / 20 / 40 */
+  --v-offset-right: 30px !important;
+  background-color: red !important;
+  font-size: 20px !important;
+}
+
+/* 方案 2：直接改日历面板自身的 transform（如果 1 不明显可以试着打开） */
+/*
+:deep(.n-date-panel) {
+  transform: translateX(40px) !important;
+}
+*/
+
+/* 方案 3：用 margin 再叠加一层偏移（配合上面任选其一） */
+/*
+:deep(.n-date-panel) {
+  margin-left: 20px !important;
+}
+*/
 
 .view-toggle-btn {
   margin-right: 2px;
