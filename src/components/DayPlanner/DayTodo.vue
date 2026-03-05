@@ -55,8 +55,8 @@
           <th class="col-rank" :title="rankHeaderTitle" @click.stop="openPriorityBindingModal">
             <n-icon size="20" class="header-icon"><Important20Regular /></n-icon>
           </th>
-          <th class="col-intent">
-            <n-icon size="20" class="header-icon"><Thinking20Regular /></n-icon>
+          <th class="col-intent" @click.stop="selectedRowId && handleFillCurrentTitle()" title="将当前待办意图复制到任务备注">
+            <n-icon size="20" title="意图" class="header-icon"><Thinking20Regular /></n-icon>
           </th>
           <th
             class="col-fruit"
@@ -439,7 +439,8 @@ const dataStore = useDataStore();
 
 const settingStore = useSettingStore();
 const tagStore = useTagStore();
-const { activeId, selectedRowId, selectedActivityId, selectedTaskId, todosForCurrentViewWithTaskRecords } = storeToRefs(dataStore);
+const { activeId, selectedRowId, selectedActivityId, selectedTaskId, selectedTask, todosForCurrentViewWithTaskRecords } =
+  storeToRefs(dataStore);
 const { allTags: allTagsFromStore } = storeToRefs(tagStore);
 
 // 根据 selectedRowId 找到对应的 todo
@@ -849,11 +850,12 @@ function handleDeleteEstimate(todo: Todo) {
 
 // 修改点击行处理函数
 function handleRowClick(todo: Todo) {
-  if (todo.status !== "done" && todo.status !== "cancelled") {
-    activeId.value = todo.activityId;
-  } else {
-    activeId.value = undefined;
-  }
+  // 取消激活活动
+  // if (todo.status !== "done" && todo.status !== "cancelled") {
+  //   activeId.value = todo.activityId;
+  // } else {
+  //   activeId.value = undefined;
+  // }
   selectedRowId.value = todo.id;
   selectedActivityId.value = todo.activityId;
   selectedTaskId.value = todo.taskId ?? null;
@@ -900,6 +902,28 @@ function handleFillCurrentTimeStart() {
   const now = new Date();
   const ts = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
   emit("edit-todo-start", selectedRowId.value, ts);
+
+  // 将当前选中待办的意图同步到任务备注
+  const todo = todosForCurrentViewWithTaskRecords.value.find((t) => t.id === selectedRowId.value);
+  if (!todo) return;
+  const taskId = selectedTaskId.value;
+  if (taskId == null) return;
+  const titleForHeader = (todo.activityTitle ?? "").trim();
+  const originalDescription = selectedTask.value?.description ?? "";
+  let newDescription = originalDescription;
+  const trimmed = originalDescription.trim();
+  if (!trimmed || trimmed === "#") {
+    // 如果任务描述为空或只有一个 #，写入「# 标题\n」
+    newDescription = titleForHeader ? `# ${titleForHeader}\n` : originalDescription;
+  } else if (titleForHeader) {
+    // 如果已有内容，只替换第一个换行前的内容
+    const firstNewlineIndex = originalDescription.indexOf("\n");
+    const rest = firstNewlineIndex !== -1 ? originalDescription.slice(firstNewlineIndex) : "\n";
+    newDescription = `# ${titleForHeader}${rest}`;
+  }
+  dataStore.updateTaskById(taskId, {
+    description: newDescription,
+  });
 }
 
 // 表头点击「结束」：给选中行填入当前时间（HH:mm）
@@ -908,6 +932,31 @@ function handleFillCurrentTimeEnd() {
   const now = new Date();
   const ts = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
   emit("edit-todo-done", selectedRowId.value, ts);
+}
+
+// 将当前选中待办的意图同步到任务备注
+function handleFillCurrentTitle() {
+  if (!selectedRowId.value) return;
+  const todo = todosForCurrentViewWithTaskRecords.value.find((t) => t.id === selectedRowId.value);
+  if (!todo) return;
+  const taskId = selectedTaskId.value;
+  if (taskId == null) return;
+  const titleForHeader = (todo.activityTitle ?? "").trim();
+  const originalDescription = selectedTask.value?.description ?? "";
+  let newDescription = originalDescription;
+  const trimmed = originalDescription.trim();
+  if (!trimmed || trimmed === "#") {
+    // 如果任务描述为空或只有一个 #，写入「# 标题\n」
+    newDescription = titleForHeader ? `# ${titleForHeader}\n` : originalDescription;
+  } else if (titleForHeader) {
+    // 如果已有内容，只替换第一个换行前的内容
+    const firstNewlineIndex = originalDescription.indexOf("\n");
+    const rest = firstNewlineIndex !== -1 ? originalDescription.slice(firstNewlineIndex) : "\n";
+    newDescription = `# ${titleForHeader}${rest}`;
+  }
+  dataStore.updateTaskById(taskId, {
+    description: newDescription,
+  });
 }
 
 // 表头按钮：对当前选中行执行撤销任务（退回活动清单）

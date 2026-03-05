@@ -375,11 +375,12 @@ function handleCheckboxChange(id: number, checked: boolean) {
 
 // 修改点击行处理函数
 function handleRowClick(schedule: Schedule) {
-  if (schedule.status !== "done" && schedule.status !== "cancelled") {
-    activeId.value = schedule.activityId;
-  } else {
-    activeId.value = undefined;
-  }
+  // 取消激活活动
+  // if (schedule.status !== "done" && schedule.status !== "cancelled") {
+  //   activeId.value = schedule.activityId;
+  // } else {
+  //   activeId.value = undefined;
+  // }
   selectedRowId.value = schedule.id;
   selectedActivityId.value = schedule.activityId;
   selectedTaskId.value = schedule.taskId ?? null;

@@ -48,7 +48,7 @@
         class="activity-row"
         :data-row-id="item.id"
         :class="{
-          'highlight-line': item.id === activityId || item.id === props.activeId,
+          'highlight-line': item.id === activityId,
           'is-dragging-row': dragHandler.draggedItem.value?.id === item.id,
         }"
       >
