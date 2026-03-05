@@ -24,7 +24,7 @@
       <thead>
         <tr>
           <th class="col-check">
-            <n-button text type="default" @click.stop="handleQuickAddTodo" title="快速新增待办" class="add-todo-button">
+            <n-button text type="info" @click.stop="handleQuickAddTodo" title="快速新增待办" class="add-todo-button">
               <template #icon>
                 <n-icon size="20">
                   <AddCircle24Regular />
@@ -38,7 +38,9 @@
             @click.stop="selectedRowId && handleFillCurrentTimeStart()"
             :title="selectedRowId ? '点击填入当前时间' : '请先选中一行'"
           >
-            开始
+            <n-icon size="20" class="header-icon">
+              <Play20Regular />
+            </n-icon>
           </th>
           <th
             class="col-end"
@@ -46,17 +48,33 @@
             @click.stop="selectedRowId && handleFillCurrentTimeEnd()"
             :title="selectedRowId ? '点击填入当前时间' : '请先选中一行'"
           >
-            结束
+            <n-icon size="20" class="header-icon">
+              <RecordStop20Regular />
+            </n-icon>
           </th>
-          <th class="col-rank" :title="rankHeaderTitle" @click.stop="openPriorityBindingModal">排序</th>
-          <th class="col-intent">意图</th>
+          <th class="col-rank" :title="rankHeaderTitle" @click.stop="openPriorityBindingModal">
+            <n-icon size="20" class="header-icon"><Important20Regular /></n-icon>
+          </th>
+          <th class="col-intent">
+            <n-icon size="20" class="header-icon"><Thinking20Regular /></n-icon>
+          </th>
           <th
             class="col-fruit"
             :class="{ 'disabled-toggle': !canTogglePomoType }"
             @click.stop="canTogglePomoType && handleTogglePomoType()"
             :title="canTogglePomoType ? '点击切换类型' : '不能切换类型'"
           >
-            {{ selectedRowId ? currentPomoType || "果果" : "果果" }}
+            <template v-if="selectedRowId">
+              <span v-if="currentPomoType">{{ currentPomoType }}</span>
+              <n-icon v-else size="20" class="header-icon">
+                <FoodPizza20Regular />
+              </n-icon>
+            </template>
+            <template v-else>
+              <n-icon size="20" class="header-icon">
+                <FoodPizza20Regular />
+              </n-icon>
+            </template>
           </th>
           <th class="col-status">
             <!-- 表头操作：对选中行执行取消/退回，仅对进行中(ongoing)任务生效 -->
@@ -64,7 +82,6 @@
               class="cancel-button"
               v-if="selectedTodo && selectedTodo.status !== 'done' && selectedTodo.status !== 'cancelled' && !selectedTodo.realPomo"
               text
-              type="info"
               @click.stop="handleCancelSelectedTodo"
               title="取消选中任务，不退回活动清单"
             >
@@ -78,7 +95,6 @@
               class="suspend-button"
               v-if="selectedTodo && selectedTodo.status !== 'done' && selectedTodo.status !== 'cancelled' && !selectedTodo.realPomo"
               text
-              type="info"
               @click.stop="handleSuspendSelectedTodo"
               title="撤销选中任务，退回活动清单"
             >
@@ -402,6 +418,11 @@ import {
   CaretLeft12Filled,
   CaretRight12Filled,
   AddCircle24Regular,
+  Important20Regular,
+  Thinking20Regular,
+  Play20Regular,
+  RecordStop20Regular,
+  FoodPizza20Regular,
 } from "@vicons/fluent";
 import { NCheckbox, NInputNumber, NPopover, NButton, NIcon, NModal, NSelect } from "naive-ui";
 import { ref, computed, nextTick, reactive, watch, onBeforeUnmount } from "vue";
@@ -1110,12 +1131,12 @@ td.col-rank-disabled {
 }
 
 col.col-intent {
-  width: 60%;
+  width: 55%;
   min-width: 0px;
 }
 
 col.col-fruit {
-  width: 40%;
+  width: 45%;
   min-width: 0px;
 }
 
@@ -1129,20 +1150,21 @@ col.col-status {
   }
 
   col.col-start {
-    width: 38px;
+    width: 36px;
   }
 
   col.col-end {
-    width: 38px;
+    width: 36px;
   }
 
   col.col-rank {
-    width: 32px;
+    width: 26px;
   }
 
   col.col-status {
     width: 54px;
   }
+
   td.col-start,
   td.col-end,
   .time-input {
@@ -1182,10 +1204,12 @@ th.col-end.disabled-toggle {
 
 .add-todo-button {
   cursor: pointer;
-  transform: translateY(3px);
-  color: var(--color-blue);
+  transform: translate(-1px, 3px);
 }
 
+.header-icon {
+  transform: translateY(3px);
+}
 /* 行样式 */
 /* 隔行变色 */
 tr:nth-child(even) {
@@ -1431,20 +1455,17 @@ td.status-col {
 }
 
 .button-left {
-  position: relative;
-  left: -4px;
+  margin-left: -4px;
   z-index: 1;
 }
 
 .button-right {
-  position: relative;
-  left: -12px;
+  margin-left: -8px;
   z-index: 2;
 }
 
 .button-right.one-mode {
-  position: relative;
-  left: -4px;
+  margin-left: -4px;
   z-index: 2;
 }
 

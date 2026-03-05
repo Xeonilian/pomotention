@@ -25,34 +25,65 @@
       <thead>
         <tr>
           <th class="col-check">
-            <n-button text type="default" @click.stop="handleQuickAddSchedule" title="快速新增日程" class="add-schedule-button">
+            <n-button text type="info" @click.stop="handleQuickAddSchedule" title="快速新增日程" class="add-schedule-button">
               <template #icon>
                 <n-icon size="20">
-                  <CalendarAdd24Regular />
+                  <CalendarAdd20Regular />
                 </n-icon>
               </template>
             </n-button>
           </th>
           <th
             class="col-start"
-            :class="{ 'disabled-toggle': !selectedRowId }"
+            :class="{ 'disabled-toggle': !selectedSchedule, 'header-active': !!selectedSchedule }"
             @click.stop="selectedRowId && handleFillCurrentTimeStart()"
             :title="selectedRowId ? '点击填入当前时间' : '请先选中一行'"
           >
-            开始
+            <n-icon size="20" class="header-icon">
+              <Play20Regular />
+            </n-icon>
           </th>
           <th
             class="col-end"
-            :class="{ 'disabled-toggle': !selectedRowId }"
+            :class="{ 'disabled-toggle': !selectedSchedule, 'header-active': !!selectedSchedule }"
             @click.stop="selectedRowId && handleFillCurrentTimeEnd()"
             :title="selectedRowId ? '点击填入当前时间' : '请先选中一行'"
           >
-            结束
+            <n-icon size="20" class="header-icon">
+              <RecordStop20Regular />
+            </n-icon>
           </th>
-          <th class="col-duration">时长</th>
-          <th class="col-intent">意图</th>
-          <th class="col-location">地点</th>
-          <th class="col-status">状态</th>
+          <th class="col-duration">
+            <n-icon size="20" class="header-icon">
+              <ShiftsActivity20Regular />
+            </n-icon>
+          </th>
+          <th class="col-intent">
+            <n-icon size="20" class="header-icon"><Thinking20Regular /></n-icon>
+          </th>
+          <th class="col-location">
+            <n-icon size="20" class="header-icon">
+              <Location20Regular />
+            </n-icon>
+          </th>
+          <th class="col-status">
+            <!-- 表头操作：对选中行执行取消，仅对未完成日程生效 -->
+            <n-button
+              class="cancel-button"
+              v-if="selectedSchedule && selectedSchedule.status !== 'done' && selectedSchedule.status !== 'cancelled'"
+              text
+              type="default"
+              @click.stop="handleCancelSelectedSchedule"
+              title="取消选中日程"
+              :class="{ 'disabled-toggle': !selectedRowId, 'header-active': !!selectedRowId }"
+            >
+              <template #icon>
+                <n-icon size="20">
+                  <DismissCircle20Regular />
+                </n-icon>
+              </template>
+            </n-button>
+          </th>
         </tr>
       </thead>
 
@@ -225,55 +256,6 @@
                   <span style="color: var(--color-red)">{{ averageValue(schedule.rewardRecords) }}</span>
                   |{{ countInterruptions(schedule.interruptionRecords, "I") }}|{{ countInterruptions(schedule.interruptionRecords, "E") }}
                 </div>
-                <div class="button-group" v-if="schedule.status !== 'done' && schedule.status !== 'cancelled'">
-                  <!-- <n-button
-                    class="convert-button"
-                    v-if="!schedule.taskId"
-                    text
-                    type="info"
-                    @click="handleConvertToTask(schedule)"
-                    title="追踪任务"
-                  >
-                    <template #icon>
-                      <n-icon size="18">
-                        <ChevronCircleDown48Regular />
-                      </n-icon>
-                    </template>
-                  </n-button> -->
-
-                  <!-- <n-button
-                  v-if="
-                    schedule.status !== 'done' &&
-                    schedule.isUntaetigkeit !== true
-                  "
-                  text
-                  type="info"
-                  @click="handleRepeatSchedule(schedule.id)"
-                  title="重复待办，新建活动"
-                >
-                  <template #icon>
-                    <n-icon size="18">
-                      <ArrowRepeatAll24Regular />
-                    </n-icon>
-                  </template>
-                </n-button> -->
-
-                  <!-- 取消任务按钮 -->
-                  <n-button
-                    class="cancel-button"
-                    v-if="schedule.isUntaetigkeit !== true"
-                    text
-                    type="info"
-                    @click="handleCancelSchedule(schedule.id)"
-                    title="取消任务，不退回活动清单"
-                  >
-                    <template #icon>
-                      <n-icon size="18">
-                        <DismissCircle20Regular />
-                      </n-icon>
-                    </template>
-                  </n-button>
-                </div>
               </div>
             </td>
           </tr>
@@ -319,7 +301,16 @@
 import type { Schedule } from "@/core/types/Schedule";
 import { timestampToTimeString } from "@/core/utils";
 import { NCheckbox, NButton, NIcon, NPopover } from "naive-ui";
-import { CalendarAdd24Regular, DismissCircle20Regular, DismissSquare20Filled } from "@vicons/fluent";
+import {
+  CalendarAdd20Regular,
+  DismissCircle20Regular,
+  DismissSquare20Filled,
+  Play20Regular,
+  RecordStop20Regular,
+  Thinking20Regular,
+  ShiftsActivity20Regular,
+  Location20Regular,
+} from "@vicons/fluent";
 // import { taskService } from "@/services/taskService";
 import { ref, nextTick, computed } from "vue";
 import { Task } from "@/core/types/Task";
@@ -371,6 +362,11 @@ const sortedSchedules = computed(() =>
     const bValue = b.activityDueRange?.[0] ?? Infinity;
     return aValue - bValue;
   }),
+);
+
+// 当前选中的日程（表头取消按钮用）
+const selectedSchedule = computed(() =>
+  selectedRowId.value == null ? null : (sortedSchedules.value.find((s) => s.id === selectedRowId.value) ?? null),
 );
 
 function handleCheckboxChange(id: number, checked: boolean) {
@@ -507,31 +503,12 @@ function isValidTimeString(str: string) {
   return /^\d{2}:\d{2}$/.test(str) && +str.split(":")[0] <= 24 && +str.split(":")[1] < 60;
 }
 
-// function handleConvertToTask(schedule: Schedule) {
-//   console.log("handleConvertToTask", schedule.id, schedule.taskId);
-//   if (schedule.taskId) {
-//     popoverMessage.value = "该日程已转换为任务";
-//     showPopover.value = true;
-//     setTimeout(() => {
-//       showPopover.value = false;
-//     }, 2000);
-//     return;
-//   }
-
-//   const task = taskService.createTaskFromSchedule(schedule.activityId, schedule.activityTitle, schedule.projectName);
-//   console.log("DaySch", task);
-//   if (task) {
-//     emit("convert-schedule-to-task", { task: task, activityId: schedule.activityId });
-//     popoverMessage.value = "已转换为任务";
-//     showPopover.value = true;
-//     setTimeout(() => {
-//       showPopover.value = false;
-//     }, 2000);
-//   }
-// }
-
-function handleCancelSchedule(id: number) {
-  emit("cancel-schedule", id);
+// 表头按钮：取消当前选中的日程
+function handleCancelSelectedSchedule() {
+  if (selectedRowId.value == null) return;
+  const s = selectedSchedule.value;
+  if (!s || s.status === "done" || s.status === "cancelled") return;
+  emit("cancel-schedule", selectedRowId.value);
 }
 
 // 撤销取消
@@ -651,16 +628,16 @@ col.col-duration {
   width: 35px;
 }
 col.col-intent {
-  width: 60%;
-  min-width: 140px;
+  width: 55%;
+  min-width: 0px;
 }
 col.col-location {
-  width: 40%;
-  min-width: 75px;
+  width: 45%;
+  min-width: 0px;
 }
 
 col.col-status {
-  width: 88px;
+  width: 60px;
 }
 
 thead th,
@@ -699,6 +676,15 @@ th.col-end.disabled-toggle {
   cursor: not-allowed;
 }
 
+/* 有行选中时表头图标高亮为蓝色，表示可操作 */
+th.col-start.header-active .header-icon,
+th.col-end.header-active .header-icon {
+  color: var(--color-textprimary);
+}
+
+.header-icon {
+  transform: translateY(3px);
+}
 /* 行样式 */
 /* 隔行变色 */
 tr:nth-child(even) {
@@ -926,21 +912,27 @@ td.status-col {
   height: 100%;
 }
 
+.cancel-button {
+  right: -2px;
+  transform: translateY(3px);
+}
+
 @media (max-width: 400px) {
   col.col-check {
     width: 20px;
+    text-overflow: clip;
   }
 
   col.col-start {
-    width: 38px;
+    width: 36px;
   }
 
   col.col-end {
-    width: 38px;
+    width: 36px;
   }
 
-  col.col-rank {
-    width: 32px;
+  col.col-duration {
+    width: 20px;
   }
 
   col.col-status {
@@ -948,6 +940,7 @@ td.status-col {
   }
   td.col-start,
   td.col-end,
+  td.col-duration,
   .time-input {
     font-size: 13px;
     text-overflow: clip;
@@ -1235,8 +1228,14 @@ td.status-col {
 }
 
 .add-schedule-button {
-  color: var(--color-blue);
   cursor: pointer;
-  transform: translateY(3px);
+  transform: translate(-1px, 3px);
+}
+
+.cancel-button.header-active {
+  color: var(--color-textprimary);
+}
+.cancel-button.header-active :deep(.n-icon) {
+  color: var(--color-textprimary);
 }
 </style>
