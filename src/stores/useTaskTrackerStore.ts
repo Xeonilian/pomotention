@@ -11,11 +11,19 @@ export const useTaskTrackerStore = defineStore("taskTracker", () => {
   const { activityList, scheduleList, taskList } = storeToRefs(dataStore);
 
   // --- 数据 (State & Getters) ---
+  // Tracker 展示与操作均基于 displayedTaskId（当前显示的 task），与 Planner 选中的 selectedTaskId 区分
 
-  // 1. 从 dataStore 获取核心数据
-  const selectedTaskId = computed(() => dataStore.selectedTaskId);
-  const selectedTask = computed(() => dataStore.selectedTask);
-  const selectedTagIds = computed(() => dataStore.selectedTagIds);
+  const selectedTaskId = computed(() => dataStore.displayedTaskId);
+  const selectedTask = computed(() => {
+    const id = dataStore.displayedTaskId;
+    if (id == null) return null;
+    return dataStore.taskById.get(id) ?? null;
+  });
+  const selectedTagIds = computed(() => {
+    const t = selectedTask.value;
+    if (!t?.sourceId) return null;
+    return dataStore.activityById.get(t.sourceId)?.tagIds ?? null;
+  });
 
   // 2. 派生状态 (原组件中的 computed)
   const isStarred = computed(() => selectedTask.value?.starred ?? false);

@@ -16,6 +16,17 @@
         <n-icon color="var(--color-blue)"><Tag16Regular /></n-icon>
       </template>
     </n-button>
+    <!-- 上一个/下一个 task 显示切换 -->
+    <n-button text @click="dataStore.goDisplayedPrev()" title="上一个任务">
+      <template #icon>
+        <n-icon><CaretLeft12Filled /></n-icon>
+      </template>
+    </n-button>
+    <n-button text @click="dataStore.goDisplayedNext()" title="下一个任务">
+      <template #icon>
+        <n-icon><CaretRight12Filled /></n-icon>
+      </template>
+    </n-button>
     <!-- 展开状态：显示所有按钮 -->
     <template v-if="!isCollapsed">
       <n-button size="small" type="info" secondary circle strong @click="showEnergyDialog = true" :disabled="!taskId" title="能量记录">
@@ -135,7 +146,13 @@
     />
 
     <!-- 标签管理器弹窗 -->
-    <TagManager v-model="tagIdsProxy" :show="showTagManager" @update:show="showTagManager = $event" @after-leave="handleTagManagerClose" :taskId="taskId" />
+    <TagManager
+      v-model="tagIdsProxy"
+      :show="showTagManager"
+      @update:show="showTagManager = $event"
+      @after-leave="handleTagManagerClose"
+      :taskId="taskId"
+    />
   </div>
 </template>
 
@@ -156,7 +173,10 @@ import {
   Star20Filled,
   Tag16Regular,
   ChevronDoubleLeft16Regular,
+  CaretLeft12Filled,
+  CaretRight12Filled,
 } from "@vicons/fluent";
+
 import { useTemplateStore } from "@/stores/useTemplateStore";
 import type { Template } from "@/core/types/Template";
 import { useActivityTagEditor } from "@/composables/useActivityTagEditor";
@@ -240,7 +260,7 @@ const emit = defineEmits<{
       asActivity: boolean;
       activityType?: "T" | "S";
       dueDate?: number | null;
-    }
+    },
   ): void;
   (e: "star"): void;
 }>();
