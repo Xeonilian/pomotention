@@ -84,7 +84,7 @@
               </n-popover>
 
               <!-- 删除按钮，点击弹出确认对话框 -->
-              <n-button text @click.stop="confirmRemoveTag(t)">
+              <n-button text @dblclick.stop="confirmRemoveTag(t)" @click.stop>
                 <n-icon><TagDismiss16Regular /></n-icon>
               </n-button>
 
@@ -514,17 +514,19 @@ function goNextPage(): void {
   flex-shrink: 0;
 }
 
-/* 标签列表：可滚动区域，高度由父级约束 */
+/* 标签列表：可滚动区域，高度由父级约束，保证底部 footer 始终可见 */
 .tag-suggestions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   padding-top: 12px;
   padding-left: 2px;
+  padding-bottom: 8px; /* 留出最后一排阴影空间 */
   align-content: flex-start;
-  overflow: visible; /* 允许内容（如子元素阴影）显示 */
   flex: 1;
-  padding-bottom: 0px;
+  min-height: 0; /* flex 子项可被压缩，才能产生滚动 */
+  overflow-y: hidden;
+  overflow-x: hidden;
 }
 
 .custom-tag {
@@ -604,7 +606,7 @@ function goNextPage(): void {
   pointer-events: none;
 }
 
-/* 底部工具条：固定在最下方，排序与翻页同一行 */
+/* 底部工具条：固定在最下方，无论列表多高都始终可见 */
 .tag-footer {
   display: flex;
   flex-direction: row;
@@ -613,6 +615,7 @@ function goNextPage(): void {
   justify-content: space-between;
   flex-shrink: 0;
   padding-top: 2px;
+  margin-top: auto; /* 在弹性布局中贴底，与 .tag-suggestions 的 flex:1 配合 */
 }
 
 .tag-sort {
