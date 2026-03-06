@@ -1,17 +1,16 @@
 <template>
-  <n-modal v-model:show="showModal" @after-leave="emit('after-leave')" class="tag-manager" :align-center="!isMobile" :style="modalStyle">
+  <n-modal
+    v-model:show="showModal"
+    @after-leave="emit('after-leave')"
+    class="tag-manager"
+    :align-center="!isMobile"
+    :style="modalStyle"
+    :auto-focus="false"
+  >
     <div class="tag-manager-inner">
       <!-- 顶部搜索和新建区域 -->
       <div class="tag-search">
-        <n-input
-          primary
-          type="text"
-          v-model:value="inputText"
-          placeholder="搜索或新建标签"
-          @keydown.enter="onAddTag"
-          size="medium"
-          clearable
-        >
+        <n-input primary v-model:value="inputText" placeholder="搜索或新建标签" @keydown.enter="onAddTag" size="medium" clearable>
           <template #prefix>
             <n-icon color="var(--color-text)">
               <TagSearch20Filled />
@@ -99,18 +98,12 @@
           <div class="tag-sort">
             <n-button
               text
-              quaternary
               :type="sortKey === 'count' && sortDirection === 'desc' ? 'primary' : 'default'"
               @click="setSort('count', 'desc')"
             >
               <n-icon><ArrowSortUp24Filled /></n-icon>
             </n-button>
-            <n-button
-              text
-              quaternary
-              :type="sortKey === 'count' && sortDirection === 'asc' ? 'primary' : 'default'"
-              @click="setSort('count', 'asc')"
-            >
+            <n-button text :type="sortKey === 'count' && sortDirection === 'asc' ? 'primary' : 'default'" @click="setSort('count', 'asc')">
               <n-icon><ArrowSortDown24Filled /></n-icon>
             </n-button>
             <n-button
