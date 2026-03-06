@@ -132,6 +132,7 @@
               <input
                 class="start-input time-input"
                 v-if="editingRowId === schedule.id && editingField === 'start'"
+                :ref="(el: any) => (startInputRef = el)"
                 v-model="editingValue"
                 @blur="saveEdit(schedule)"
                 @keyup.enter="saveEdit(schedule)"
@@ -152,6 +153,7 @@
               <input
                 class="done-input time-input"
                 v-if="editingRowId === schedule.id && editingField === 'done'"
+                :ref="(el: any) => (doneInputRef = el)"
                 v-model="editingValue"
                 @blur="saveEdit(schedule)"
                 @keyup.enter="saveEdit(schedule)"
@@ -173,6 +175,7 @@
               <input
                 class="duration-input time-input"
                 v-if="editingRowId === schedule.id && editingField === 'duration'"
+                :ref="(el: any) => (durationInputRef = el)"
                 v-model="editingValue"
                 @blur="saveEdit(schedule)"
                 @keyup.enter="saveEdit(schedule)"
@@ -198,6 +201,7 @@
               <input
                 class="title-input"
                 v-if="editingRowId === schedule.id && editingField === 'title'"
+                :ref="(el: any) => (titleInputRef = el)"
                 v-model="editingValue"
                 @blur="saveEdit(schedule)"
                 @keyup.enter="saveEdit(schedule)"
@@ -229,6 +233,7 @@
               <input
                 class="location-input"
                 v-if="editingRowId === schedule.id && editingField === 'location'"
+                :ref="(el: any) => (locationInputRef = el)"
                 v-model="editingValue"
                 @blur="saveEdit(schedule)"
                 @keyup.enter="saveEdit(schedule)"
@@ -252,9 +257,9 @@
               >
                 <div class="records-stat" title="能量值 | 奖赏值 | 内部打扰 | 外部打扰">
                   <span style="color: var(--color-blue)">{{ averageValue(schedule.energyRecords) }}</span>
-                  |
-                  <span style="color: var(--color-red)">{{ averageValue(schedule.rewardRecords) }}</span>
-                  |{{ countInterruptions(schedule.interruptionRecords, "I") }}|{{ countInterruptions(schedule.interruptionRecords, "E") }}
+                  <span style="color: var(--color-text-secondary)">{{ averageValue(schedule.rewardRecords) }}</span>
+                  <span style="color: var(--color-red)">{{ countInterruptions(schedule.interruptionRecords, "I") }}</span>
+                  <span style="color: var(--color-text-secondary)">{{ countInterruptions(schedule.interruptionRecords, "E") }}</span>
                 </div>
               </div>
             </td>
@@ -326,6 +331,11 @@ const { activeId, selectedRowId, selectedActivityId, selectedTaskId, selectedTas
 const editingRowId = ref<number | null>(null);
 const editingField = ref<null | "title" | "start" | "done" | "duration" | "location">(null);
 const editingValue = ref("");
+const titleInputRef = ref<HTMLInputElement | null>(null);
+const startInputRef = ref<HTMLInputElement | null>(null);
+const doneInputRef = ref<HTMLInputElement | null>(null);
+const durationInputRef = ref<HTMLInputElement | null>(null);
+const locationInputRef = ref<HTMLInputElement | null>(null);
 
 // 定义 Emit
 
@@ -381,6 +391,7 @@ function handleRowClick(schedule: Schedule) {
   // } else {
   //   activeId.value = undefined;
   // }
+  activeId.value = undefined;
   selectedRowId.value = schedule.id;
   selectedActivityId.value = schedule.activityId;
   selectedTaskId.value = schedule.taskId ?? null;
@@ -476,12 +487,15 @@ function startEditing(scheduleId: number, field: "title" | "start" | "done" | "d
               ? timestampToTimeString(schedule.doneTime)
               : "";
 
-  // 使用 querySelector 来获取当前编辑的输入框，而不是依赖 ref
+  // 双击后激活光标：用 ref 聚焦，与 DayTodo 一致；v-if 挂载后再等一帧
   nextTick(() => {
-    const input = document.querySelector(`input.${field}-input[data-schedule-id="${scheduleId}"]`);
-    if (input) {
-      (input as HTMLInputElement).focus();
-    }
+    nextTick(() => {
+      if (field === "title") titleInputRef.value?.focus();
+      else if (field === "start") startInputRef.value?.focus();
+      else if (field === "done") doneInputRef.value?.focus();
+      else if (field === "duration") durationInputRef.value?.focus();
+      else if (field === "location") locationInputRef.value?.focus();
+    });
   });
 }
 
@@ -635,7 +649,8 @@ function averageValue<T extends { value: number }>(records: T[] | null | undefin
       count++;
     }
   }
-  return count === 0 ? "-" : Math.round(sum / count);
+  const average = Math.round(sum / count);
+  return count === 0 ? "-" : average === 10 ? "x" : average;
 }
 
 // 2) 统计中断类型数量（"E" 或 "I"）
@@ -644,7 +659,7 @@ function countInterruptions(records: { interruptionType: "E" | "I" }[] | null | 
   if (!Array.isArray(records) || records.length === 0) return "-";
   let count = 0;
   for (const r of records) if (r?.interruptionType === type) count++;
-  return count;
+  return count === 0 ? "-" : count > 10 ? "X" : count;
 }
 </script>
 
@@ -912,18 +927,22 @@ td.status-col {
   border-width: 1.2px;
 }
 
-/* 单元格内部容器不必撑满：用 inline-flex 即可 */
+/* 状态信息 */
 .status-cell {
-  display: inline-flex;
+  display: flex;
+  justify-content: center;
   align-items: center;
+  margin: 0 auto;
 }
 
 /* 统计值为内联块，避免撑满 */
 .records-stat {
   display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 2px;
   font-family: Consolas, "Courier New", Courier, monospace;
   font-size: 14px;
-  padding-right: 2px;
 }
 
 /* 按钮组为内联块，不再强制贴右（因为整列已右对齐） */
@@ -981,12 +1000,18 @@ td.status-col {
   }
 
   col.col-duration {
-    width: 20px;
+    width: 24px;
+    text-overflow: clip;
   }
 
   col.col-status {
-    width: 54px;
+    width: 40px;
   }
+
+  col.col-intent {
+    text-overflow: clip;
+  }
+
   td.col-start,
   td.col-end,
   td.col-duration,
@@ -994,6 +1019,18 @@ td.status-col {
     font-size: 13px;
     text-overflow: clip;
   }
+}
+
+.add-schedule-button {
+  cursor: pointer;
+  transform: translate(-1px, 3px);
+}
+
+.cancel-button.header-active {
+  color: var(--color-textprimary);
+}
+.cancel-button.header-active :deep(.n-icon) {
+  color: var(--color-textprimary);
 }
 
 /* 云朵样式 */
@@ -1274,17 +1311,5 @@ td.status-col {
   z-index: 10;
   background: rgba(255, 255, 255, 0.1);
   border-radius: 3px;
-}
-
-.add-schedule-button {
-  cursor: pointer;
-  transform: translate(-1px, 3px);
-}
-
-.cancel-button.header-active {
-  color: var(--color-textprimary);
-}
-.cancel-button.header-active :deep(.n-icon) {
-  color: var(--color-textprimary);
 }
 </style>

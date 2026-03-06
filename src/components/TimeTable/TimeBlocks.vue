@@ -43,42 +43,84 @@
   </div>
 
   <!-- ========== 第二列：估计分配的 Todo 段 ========== -->
-  <div
-    v-for="seg in todoSegments"
-    :key="`todo-${seg.todoId}-${seg.todoIndex}`"
-    :data-global-index="seg.globalIndex"
-    :class="getTodoSegmentClasses(seg)"
-    :style="getTodoSegmentStyle(seg)"
-    :title="getTodoTooltip(seg)"
-    @pointerdown="enhancedHandlePointerDown($event, seg)"
-  >
-    <span v-if="!seg.overflow" :class="getPriorityBadgeClasses(seg)" class="priority-badge">
-      {{ getPriorityText(seg) }}
-    </span>
-    <span v-else>⚠️</span>
-  </div>
+  <template v-for="seg in todoSegments" :key="`todo-${seg.todoId}-${seg.todoIndex}`">
+    <NPopover v-if="isMobile" trigger="click" placement="top" to="body" :show-arrow="true" :style="{ maxWidth: '280px' }">
+      <template #trigger>
+        <div
+          :data-global-index="seg.globalIndex"
+          :class="getTodoSegmentClasses(seg)"
+          :style="getTodoSegmentStyle(seg)"
+          @pointerdown="enhancedHandlePointerDown($event, seg)"
+        >
+          <span v-if="!seg.overflow" :class="getPriorityBadgeClasses(seg)" class="priority-badge">
+            {{ getPriorityText(seg) }}
+          </span>
+          <span v-else>⚠️</span>
+        </div>
+      </template>
+      <p class="timetable-popover-text">{{ getTodoTooltip(seg) }}</p>
+    </NPopover>
+
+    <div
+      v-else
+      :data-global-index="seg.globalIndex"
+      :class="getTodoSegmentClasses(seg)"
+      :style="getTodoSegmentStyle(seg)"
+      :title="getTodoTooltip(seg)"
+      @pointerdown="enhancedHandlePointerDown($event, seg)"
+    >
+      <span v-if="!seg.overflow" :class="getPriorityBadgeClasses(seg)" class="priority-badge">
+        {{ getPriorityText(seg) }}
+      </span>
+      <span v-else>⚠️</span>
+    </div>
+  </template>
 
   <!-- ========== 第二列：Schedule 段 ========== -->
-  <div
-    v-for="scheduleSeg in scheduleSegmentsForSecondColumn"
-    :key="`schedule-${scheduleSeg.scheduleId}`"
-    class="schedule-segment second-column"
-    :style="getScheduleSegmentStyle(scheduleSeg)"
-    :title="getScheduleTooltip(scheduleSeg)"
-  >
-    {{ getScheduleLabel(scheduleSeg) }}
-  </div>
+  <template v-for="scheduleSeg in scheduleSegmentsForSecondColumn" :key="`schedule-${scheduleSeg.scheduleId}`">
+    <NPopover v-if="isMobile" trigger="click" placement="top" to="body" :show-arrow="true" :style="{ maxWidth: '280px' }">
+      <template #trigger>
+        <div class="schedule-segment second-column" :style="getScheduleSegmentStyle(scheduleSeg)">
+          {{ getScheduleLabel(scheduleSeg) }}
+        </div>
+      </template>
+      <p class="timetable-popover-text">{{ getScheduleTooltip(scheduleSeg) }}</p>
+    </NPopover>
+
+    <div
+      v-else
+      class="schedule-segment second-column"
+      :style="getScheduleSegmentStyle(scheduleSeg)"
+      :title="getScheduleTooltip(scheduleSeg)"
+    >
+      {{ getScheduleLabel(scheduleSeg) }}
+    </div>
+  </template>
 
   <!-- ========== 第三列：特殊优先级 Emoji ========== -->
-  <div
-    v-for="emoji in specialPriorityEmojisForSecondColumn"
-    :key="`special-emoji-${emoji.todoId}`"
-    class="special-priority-emoji third-column"
-    :style="getSpecialPriorityEmojiStyle(emoji)"
-    :title="emoji.title"
-  >
-    {{ emoji.emoji }}
-  </div>
+  <template v-for="emoji in specialPriorityEmojisForSecondColumn" :key="`special-emoji-${emoji.todoId}`">
+    <NPopover
+      v-if="isMobile"
+      trigger="click"
+      placement="top"
+      to="body"
+      :show-arrow="true"
+      :style="{ maxWidth: '280px' }"
+      :show="activeEmojiPopoverTodoId === emoji.todoId"
+      @update:show="(next) => handleUpdateEmojiPopoverShow(emoji.todoId, next)"
+    >
+      <template #trigger>
+        <div class="special-priority-emoji third-column" :style="getSpecialPriorityEmojiStyle(emoji)">
+          {{ emoji.emoji }}
+        </div>
+      </template>
+      <p class="timetable-popover-text">{{ emoji.title }}</p>
+    </NPopover>
+
+    <div v-else class="special-priority-emoji third-column" :style="getSpecialPriorityEmojiStyle(emoji)" :title="emoji.title">
+      {{ emoji.emoji }}
+    </div>
+  </template>
 
   <!-- ========== 第三列：实际执行的番茄 ========== -->
   <div
@@ -110,9 +152,12 @@
 </template>
 
 <script setup lang="ts">
+import { onUnmounted, ref } from "vue";
 import { timestampToTimeString } from "@/core/utils";
 import type { Block } from "@/core/types/Block";
 import { useTimeBlocks } from "@/composables/useTimeBlocks";
+import { useDevice } from "@/composables/useDevice";
+import { NPopover } from "naive-ui";
 
 // ======= Props =======
 const props = defineProps<{
@@ -148,6 +193,48 @@ const {
   dragState,
   enhancedHandlePointerDown,
 } = useTimeBlocks(props);
+
+const { isMobile } = useDevice();
+
+const activeEmojiPopoverTodoId = ref<number | null>(null);
+let emojiPopoverTimer: ReturnType<typeof window.setTimeout> | null = null;
+
+const clearEmojiPopoverTimer = () => {
+  if (emojiPopoverTimer != null) {
+    window.clearTimeout(emojiPopoverTimer);
+    emojiPopoverTimer = null;
+  }
+};
+
+const openEmojiPopoverFor3s = (todoId: number) => {
+  activeEmojiPopoverTodoId.value = todoId;
+  clearEmojiPopoverTimer();
+  let timer: number | null = null;
+  timer = window.setTimeout(
+    () => {
+      if (activeEmojiPopoverTodoId.value === todoId) {
+        activeEmojiPopoverTodoId.value = null;
+      }
+    },
+    5000,
+    timer,
+  );
+};
+
+const handleUpdateEmojiPopoverShow = (todoId: number, nextShow: boolean) => {
+  if (nextShow) {
+    openEmojiPopoverFor3s(todoId);
+    return;
+  }
+  if (activeEmojiPopoverTodoId.value === todoId) {
+    activeEmojiPopoverTodoId.value = null;
+  }
+  clearEmojiPopoverTimer();
+};
+
+onUnmounted(() => {
+  clearEmojiPopoverTimer();
+});
 
 // ======= Helper Functions =======
 const getBlockLabel = (category: string) => {
@@ -489,6 +576,13 @@ const getPriorityBadgeClasses = (seg: any) => [
   width: 15px;
   height: 15px;
   font-size: 12px;
+}
+
+.timetable-popover-text {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--color-text-primary, #333);
 }
 
 /* ============================================

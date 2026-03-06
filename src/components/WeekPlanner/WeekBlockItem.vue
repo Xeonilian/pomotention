@@ -17,7 +17,7 @@
       :tag-ids="block.item.tagIds ?? []"
       :isCloseable="false"
       size="tiny"
-      :displayLength="Number(3)"
+      :displayLength="isMobile ? Number(1) : Number(3)"
       :showIdx="Number(2)"
       class="tag-renderer"
     />
@@ -38,11 +38,12 @@ import { useTagStore } from "@/stores/useTagStore";
 import { storeToRefs } from "pinia";
 import { computed } from "vue";
 import { timestampToTimeString } from "@/core/utils";
+import { useDevice } from "@/composables/useDevice";
 
 const dataStore = useDataStore();
 const tagStore = useTagStore();
 const { activeId, selectedRowId } = storeToRefs(dataStore);
-
+const { isMobile } = useDevice();
 // 定义props
 const props = defineProps<{
   block: WeekBlockItemType;

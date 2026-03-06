@@ -115,7 +115,7 @@
             v-for="todo in sortedTodos"
             :key="todo.id"
             :class="{
-              'active-row': todo.activityId === activeId,
+              'active-row': todo.activityId === activeId && activeId !== null,
               'selected-row': todo.id === selectedRowId,
               'done-row': todo.status === 'done',
               'cancel-row': todo.status === 'cancelled',
@@ -150,8 +150,9 @@
               :title="editingRowId === todo.id && editingField === 'start' ? '' : '双击编辑'"
             >
               <input
-                class="time-input"
+                class="start-input time-input"
                 v-if="editingRowId === todo.id && editingField === 'start'"
+                :ref="(el: any) => (startInputRef = el)"
                 v-model="editingValue"
                 @blur="saveEdit(todo)"
                 @keyup.enter="saveEdit(todo)"
@@ -170,8 +171,9 @@
               :title="editingRowId === todo.id && editingField === 'done' ? '' : '双击编辑'"
             >
               <input
-                class="time-input"
+                class="done-input time-input"
                 v-if="editingRowId === todo.id && editingField === 'done'"
+                :ref="(el: any) => (doneInputRef = el)"
                 v-model="editingValue"
                 @blur="saveEdit(todo)"
                 @keyup.enter="saveEdit(todo)"
@@ -316,9 +318,10 @@
               <div class="status-cell">
                 <div class="records-stat" v-if="todo.startTime" title="能量值 | 奖赏值 | 内部打扰 | 外部打扰">
                   <span style="color: var(--color-blue)">{{ averageValue(todo.energyRecords) }}</span>
-                  |
-                  <span style="color: var(--color-red)">{{ averageValue(todo.rewardRecords) }}</span>
-                  |{{ countInterruptions(todo.interruptionRecords, "I") }}|{{ countInterruptions(todo.interruptionRecords, "E") }}
+
+                  <span style="color: var(--color-text-secondary)">{{ averageValue(todo.rewardRecords) }}</span>
+                  <span style="color: var(--color-red)">{{ countInterruptions(todo.interruptionRecords, "I") }}</span>
+                  <span style="color: var(--color-text-secondary)">{{ countInterruptions(todo.interruptionRecords, "E") }}</span>
                 </div>
               </div>
             </td>
@@ -480,6 +483,8 @@ const tagSelectorRef = ref<any>(null);
 // Enter 选中标签时置为 true，saveEdit 会跳过结束编辑以保持继续输入
 const selectingTagViaEnter = ref(false);
 const titleInputRef = ref<HTMLInputElement | null>(null);
+const startInputRef = ref<HTMLInputElement | null>(null);
+const doneInputRef = ref<HTMLInputElement | null>(null);
 
 // 排序列：emoji 弹窗与绑定设置
 const rankPopoverTodoId = ref<number | null>(null);
@@ -856,6 +861,7 @@ function handleRowClick(todo: Todo) {
   // } else {
   //   activeId.value = undefined;
   // }
+  activeId.value = undefined;
   selectedRowId.value = todo.id;
   selectedActivityId.value = todo.activityId;
   selectedTaskId.value = todo.taskId ?? null;
@@ -887,12 +893,13 @@ function startEditing(todoId: number, field: "title" | "start" | "done") {
             : ""
           : "";
 
-  // 使用 querySelector 来获取当前编辑的输入框，而不是依赖 ref
+  // 双击后激活光标：用 ref 聚焦，与 col-intent 一致；v-if 挂载后再等一帧
   nextTick(() => {
-    const input = document.querySelector(`input.${field}-input[data-todo-id="${todoId}"]`);
-    if (input) {
-      (input as HTMLInputElement).focus();
-    }
+    nextTick(() => {
+      if (field === "title") titleInputRef.value?.focus();
+      else if (field === "start") startInputRef.value?.focus();
+      else if (field === "done") doneInputRef.value?.focus();
+    });
   });
 }
 
@@ -1062,7 +1069,8 @@ function averageValue<T extends { value: number }>(records: T[] | null | undefin
       count++;
     }
   }
-  return count === 0 ? "-" : Math.round(sum / count);
+  const average = Math.round(sum / count);
+  return count === 0 ? "-" : average === 10 ? "x" : average;
 }
 
 // 2) 统计中断类型数量（"E" 或 "I"）
@@ -1071,7 +1079,7 @@ function countInterruptions(records: { interruptionType: "E" | "I" }[] | null | 
   if (!Array.isArray(records) || records.length === 0) return "-";
   let count = 0;
   for (const r of records) if (r?.interruptionType === type) count++;
-  return count;
+  return count === 0 ? "-" : count > 10 ? "X" : count;
 }
 
 // Tag 相关函数
@@ -1207,11 +1215,15 @@ col.col-status {
   }
 
   col.col-rank {
-    width: 26px;
+    width: 24px;
   }
 
   col.col-status {
-    width: 54px;
+    width: 40px;
+  }
+
+  col.col-intent {
+    text-overflow: clip;
   }
 
   td.col-start,
@@ -1236,6 +1248,12 @@ thead th {
   background-color: var(--color-background) !important;
   line-height: 1.3;
   box-sizing: border-box;
+}
+
+/* 状态列表头不放省略号，保证取消/退回按钮完整显示 */
+th.col-status {
+  overflow: visible;
+  text-overflow: clip;
 }
 
 /* 开始/结束表头可点击，悬停为手型 */
@@ -1357,6 +1375,16 @@ td.status-col {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.start-input,
+.done-input {
+  width: 32px !important;
+  max-width: 32px !important;
+  min-width: 0 !important;
+  box-sizing: border-box;
+  padding: 0px 0px;
+  font-size: inherit;
 }
 
 .priority-badge {
@@ -1520,27 +1548,29 @@ td.status-col {
 
 /* 状态信息 */
 .status-cell {
-  display: inline-flex;
+  display: flex;
+  justify-content: center;
   align-items: center;
+  margin: 0 auto;
 }
 
 /* 统计值为内联块，避免撑满 */
 .records-stat {
   display: inline-flex;
+  justify-content: center;
+  align-items: center;
   font-family: Consolas, "Courier New", Courier, monospace;
   font-size: 14px;
-  padding-right: 4px;
+  gap: 2px;
 }
 
 :deep(.n-button) :hover {
   color: var(--color-red);
 }
 .cancel-button {
-  right: -2px;
   transform: translateY(3px);
 }
 .suspend-button {
-  right: -6px;
   transform: translateY(3px);
 }
 

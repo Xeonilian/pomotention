@@ -49,6 +49,7 @@ export const useDataStore = defineStore(
 
     const activeId = ref<number | null | undefined>(null); // ActivitySheet 选中的 activity.id
     const selectedTaskId = ref<number | null>(null); // Planner 选中的 .taskId
+    const displayedTaskId = ref<number | null>(null); // TaskTracker 当前展示的 task，与 selectedTaskId 同步或由 prev/next 切换
     const selectedActivityId = ref<number | null>(null); // Planner 选中的 .activityId
     const selectedRowId = ref<number | null>(null); // todo.id 或 schedule.id
     const selectedDate = ref<number | null>(null); // todo.id 或 schedule.id
@@ -123,7 +124,7 @@ export const useDataStore = defineStore(
           _activityById.set(a.id, a);
         }
       },
-      { deep: true }
+      { deep: true },
     );
 
     watch(
@@ -134,7 +135,7 @@ export const useDataStore = defineStore(
           _todoById.set(t.id, t);
         }
       },
-      { deep: true }
+      { deep: true },
     );
 
     watch(
@@ -145,7 +146,7 @@ export const useDataStore = defineStore(
           _scheduleById.set(s.id, s);
         }
       },
-      { deep: true }
+      { deep: true },
     );
 
     watch(
@@ -156,7 +157,7 @@ export const useDataStore = defineStore(
           _taskById.set(t.id, t);
         }
       },
-      { deep: true }
+      { deep: true },
     );
     const activityById = computed(() => new Map(activityList.value.map((a) => [a.id, a])));
     const todoById = computed(() => new Map(todoList.value.map((t) => [t.id, t])));
@@ -302,6 +303,25 @@ export const useDataStore = defineStore(
       return out;
     });
 
+    // 当前视图中带 taskId 的 task 有序列表（先 schedules 后 todos），用于 prev/next 切换显示
+    const taskIdsInCurrentViewOrder = computed<number[]>(() => {
+      const ids: number[] = [];
+      for (const s of schedulesForCurrentView.value) {
+        if (s.taskId != null) ids.push(s.taskId);
+      }
+      for (const t of todosForCurrentViewWithTaskRecords.value) {
+        if (t.taskId != null) ids.push(t.taskId);
+      }
+      return ids;
+    });
+
+    // 循环列表：每次 select 新 task 时视为「把 list 最后一个剔除」，用此列表做 prev/next 循环（到头后绕回）
+    const taskIdsCycleList = computed<number[]>(() => {
+      const full = taskIdsInCurrentViewOrder.value;
+      if (full.length <= 1) return full;
+      return full.slice(0, -1);
+    });
+
     type ScheduleWithTags = Schedule & { tagIds?: number[] };
     const schedulesForCurrentViewWithTags = computed<ScheduleWithTags[]>(() => {
       const { start, end } = dateService.visibleRange.value;
@@ -375,6 +395,66 @@ export const useDataStore = defineStore(
     function cleanSelection() {
       selectedRowId.value = null;
       selectedActivityId.value = null;
+    }
+
+    function setDisplayedTaskId(id: number | null) {
+      displayedTaskId.value = id;
+    }
+
+    function goDisplayedPrev() {
+      const id = displayedTaskId.value;
+      if (id == null) return;
+      const cycle = taskIdsCycleList.value;
+      if (cycle.length === 0) return;
+      const inCycle = cycle.indexOf(id);
+      if (inCycle >= 0) {
+        const prevIdx = (inCycle - 1 + cycle.length) % cycle.length;
+        setDisplayedTaskId(cycle[prevIdx]);
+      } else {
+        // 当前是 full 的最后一个（被剔除的），prev 到 cycle 的最后一个
+        setDisplayedTaskId(cycle[cycle.length - 1]);
+      }
+      const activityId = taskById.value.get(id)?.sourceId;
+      if (activityId != null) {
+        selectedActivityId.value = activityId;
+        const todoId = todoByActivityId.value.get(activityId)?.id;
+        if (todoId != null) {
+          selectedRowId.value = todoId;
+          return;
+        }
+        const scheduleId = scheduleByActivityId.value.get(activityId)?.id;
+        if (scheduleId != null) {
+          selectedRowId.value = scheduleId;
+        }
+      }
+    }
+
+    function goDisplayedNext() {
+      const id = displayedTaskId.value;
+      if (id == null) return;
+      const cycle = taskIdsCycleList.value;
+      if (cycle.length === 0) return;
+      const inCycle = cycle.indexOf(id);
+      if (inCycle >= 0) {
+        const nextIdx = (inCycle + 1) % cycle.length;
+        setDisplayedTaskId(cycle[nextIdx]);
+      } else {
+        // 当前是 full 的最后一个，next 到 cycle 的第一个（循环）
+        setDisplayedTaskId(cycle[0]);
+      }
+      const activityId = taskById.value.get(id)?.sourceId;
+      if (activityId != null) {
+        selectedActivityId.value = activityId;
+        const todoId = todoByActivityId.value.get(activityId)?.id;
+        if (todoId != null) {
+          selectedRowId.value = todoId;
+          return;
+        }
+        const scheduleId = scheduleByActivityId.value.get(activityId)?.id;
+        if (scheduleId != null) {
+          selectedRowId.value = scheduleId;
+        }
+      }
     }
 
     const saveAllNow = () => {
@@ -518,7 +598,7 @@ export const useDataStore = defineStore(
       if (!activity.tagIds.includes(tagId)) return false;
       return setActivityTags(
         activityId,
-        activity.tagIds.filter((id) => id !== tagId)
+        activity.tagIds.filter((id) => id !== tagId),
       );
     }
 
@@ -608,7 +688,7 @@ export const useDataStore = defineStore(
     function getAggregatedData(
       metric: MetricName,
       timeGranularity: TimeGranularity = "day",
-      aggregationType: AggregationType = "sum"
+      aggregationType: AggregationType = "sum",
     ): Map<string, number> {
       const dataPoints = dataByMetric.value.get(metric) || [];
       return aggregateByTime(dataPoints, timeGranularity, aggregationType);
@@ -622,6 +702,11 @@ export const useDataStore = defineStore(
       return dataPoints.filter((point) => point.timestamp >= startTime && point.timestamp <= endTime);
     }
     // ======================== 8. 监控 (Watches) ========================
+
+    // 点击 Planner 行时同步展示的 task
+    watch(selectedTaskId, (id) => {
+      displayedTaskId.value = id;
+    });
 
     watch(
       activityList,
@@ -655,7 +740,7 @@ export const useDataStore = defineStore(
           }
         });
       },
-      { deep: true }
+      { deep: true },
     );
 
     watch(
@@ -679,7 +764,7 @@ export const useDataStore = defineStore(
             if (activity.status != "cancelled") activity.status = "";
           }
         });
-      }
+      },
     );
 
     // ======================== 8. 暴露接口 ========================
@@ -719,9 +804,12 @@ export const useDataStore = defineStore(
       // UI 状态
       activeId,
       selectedTaskId,
+      displayedTaskId,
       selectedActivityId,
       selectedRowId,
       selectedDate,
+      taskIdsInCurrentViewOrder,
+      taskIdsCycleList,
 
       // 派生UI状态
       selectedActivity,
@@ -746,6 +834,9 @@ export const useDataStore = defineStore(
       addActivity,
       setActiveId,
       setSelectedDate,
+      setDisplayedTaskId,
+      goDisplayedPrev,
+      goDisplayedNext,
       setTaskStar,
       toggleTaskStar,
       updateActivityById,
@@ -781,5 +872,5 @@ export const useDataStore = defineStore(
       key: "data-store-ui-state",
       pick: ["activeId", "selectedTaskId", "selectedActivityId", "selectedRowId", "selectedDate"],
     },
-  }
+  },
 );

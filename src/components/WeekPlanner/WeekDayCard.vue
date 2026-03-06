@@ -8,7 +8,7 @@
   >
     <div class="day-header">
       <div class="dow">
-        {{ dayNames[day.index] }}
+        {{ isMobile ? dayNames[day.index][0] : dayNames[day.index] }}
       </div>
       <div class="date" :class="{ today: day.isToday }" @click="() => handleDateSelectDayView(day.startTs)">
         {{ formatMonthDay(day.startTs) }}
@@ -156,6 +156,7 @@ const handleItemChange = (id: number, _ts: number, activityId?: number, taskId?:
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
+  padding-left: 2px;
 }
 
 /* 核心修改 .date：空间不足时自动隐藏 */

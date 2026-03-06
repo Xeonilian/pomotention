@@ -510,14 +510,14 @@ function getPomoBgColorHEX(ratio: number) {
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  z-index: 1;
+  z-index: 5;
   padding: 1px;
 }
 .date-badge.today {
   color: white !important;
   background-color: var(--color-blue) !important;
   font-weight: 600;
-  z-index: 0;
+  z-index: 10;
 }
 
 .date-badge:hover {
