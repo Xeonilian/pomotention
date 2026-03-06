@@ -15,6 +15,8 @@
             to="body"
             :show-arrow="true"
             :style="{ maxWidth: '280px' }"
+            :show="activeTimelinePopoverRecordId === record.id"
+            @update:show="(next) => handleUpdateTimelinePopoverShow(record.id, next)"
           >
             <template #trigger>
               <div class="timeline-point" :title="record.description" role="button" :aria-label="record.description || '查看说明'">
@@ -225,6 +227,42 @@ const checkWidth = () => {
   tagDisplayLength.value = containerWidth < TAG_COLLAPSE_BREAKPOINT ? 3 : null;
 };
 
+const activeTimelinePopoverRecordId = ref<number | null>(null);
+let timelinePopoverTimer: ReturnType<typeof window.setTimeout> | null = null;
+
+const clearTimelinePopoverTimer = () => {
+  if (timelinePopoverTimer != null) {
+    window.clearTimeout(timelinePopoverTimer);
+    timelinePopoverTimer = null;
+  }
+};
+
+const openTimelinePopoverFor3s = (recordId: number) => {
+  activeTimelinePopoverRecordId.value = recordId;
+  clearTimelinePopoverTimer();
+  let timer: number | null = null;
+  timer = window.setTimeout(
+    () => {
+      if (activeTimelinePopoverRecordId.value === recordId) {
+        activeTimelinePopoverRecordId.value = null;
+      }
+    },
+    3000,
+    timer,
+  );
+};
+
+const handleUpdateTimelinePopoverShow = (recordId: number, nextShow: boolean) => {
+  if (nextShow) {
+    openTimelinePopoverFor3s(recordId);
+    return;
+  }
+  if (activeTimelinePopoverRecordId.value === recordId) {
+    activeTimelinePopoverRecordId.value = null;
+  }
+  clearTimelinePopoverTimer();
+};
+
 // 监听容器大小变化
 let resizeObserver: ResizeObserver | null = null;
 
@@ -240,6 +278,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  clearTimelinePopoverTimer();
   if (resizeObserver) {
     resizeObserver.disconnect();
   }
