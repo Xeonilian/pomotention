@@ -3,7 +3,13 @@
   <div class="task-view-container">
     <div class="task-header-container" ref="headerContainerRef">
       <div v-if="selectedTagIds && selectedTagIds.length > 0 && selectedTaskId" class="task-tag-render-container">
-        <TagRenderer :tag-ids="selectedTagIds" :isCloseable="false" :displayLength="tagDisplayLength" @remove-tag="handleRemoveTag" />
+        <TagRenderer
+          :tag-ids="selectedTagIds"
+          :isCloseable="dataStore.filterTagIds.length > 0"
+          :displayLength="tagDisplayLength"
+          @tag-click="handleTagClick"
+          @remove-tag="handleRemoveTag"
+        />
       </div>
       <!-- 合并能量/愉悦/打断 记录时间轴 -->
       <div class="combined-timeline-container" v-if="combinedRecords.length">
@@ -213,9 +219,11 @@ const formatRecordValue = (record: CombinedRecord) => {
 
 // 移除标签
 const handleRemoveTag = (tagId: number) => {
-  const task = selectedTask.value;
-  if (!task || !task.sourceId) return;
-  dataStore.removeTagFromActivity(task.sourceId, tagId);
+  dataStore.removeFilterTagId(tagId);
+};
+
+const handleTagClick = (tagId: number) => {
+  dataStore.toggleFilterTagId(tagId);
 };
 
 // 检测容器宽度并更新状态
