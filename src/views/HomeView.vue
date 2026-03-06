@@ -45,22 +45,22 @@
             <span @click="onWeekJump" class="day-status">
               {{ isMobile ? dateService.displayDateInfoMobile : dateService.displayDateInfo }}
             </span>
-            <span class="global-pomo">
+            <span @click="onDateSet('today')" class="global-pomo">
               <span class="today-pomo">🍅{{ currentDatePomoCount }}</span>
-              <span v-if="!isMobile" class="total-pomo">/{{ globalRealPomo }}</span>
+              <span class="total-pomo">/{{ globalRealPomo }}</span>
             </span>
           </div>
           <div v-if="settingStore.settings.viewSet === 'week'" class="day-info">
             <span @click="onMonthJump" class="day-status">
               {{ isMobile ? dateService.displayWeekInfoMobile : dateService.displayWeekInfo }}
             </span>
-            <span v-if="!isMobile" class="global-pomo">
+            <span @click="onDateSet('today')" class="global-pomo">
               <span class="total-pomo">🍅{{ globalRealPomo }}</span>
             </span>
           </div>
           <div v-if="settingStore.settings.viewSet === 'month'" class="day-info">
             <span @click="onWeekJump" class="day-status">{{ dateService.displayMonthInfo }}</span>
-            <span v-if="!isMobile" class="global-pomo">
+            <span @click="onDateSet('today')" class="global-pomo">
               <span class="total-pomo">🍅{{ globalRealPomo }}</span>
             </span>
           </div>
@@ -116,6 +116,7 @@
               </template>
             </n-button>
             <n-date-picker
+              v-if="!isMobile"
               v-model:value="queryDate"
               type="date"
               placeholder="日期选择"
@@ -1472,9 +1473,7 @@ const { startResize: startRightResize } = useResize(
     padding-left: 0;
     padding-right: 0;
   }
-  .search-date {
-    max-width: 79px !important;
-  }
+
   .left {
     padding: 5px 6px 15px 6px !important;
   }
@@ -1489,6 +1488,9 @@ const { startResize: startRightResize } = useResize(
 }
 .marquee-empty:before {
   content: "💡";
+}
+.search-date {
+  max-width: 100px !important;
 }
 
 .button-group {
