@@ -7,27 +7,62 @@
       </div>
       <!-- 合并能量/愉悦/打断 记录时间轴 -->
       <div class="combined-timeline-container" v-if="combinedRecords.length">
-        <div v-for="record in combinedRecords" :key="`${record.type}-${record.id}`" class="timeline-point" :title="record.description">
-          <span class="point-icon">
-            {{ record.type === "energy" ? "⚡" : record.type === "reward" ? "🏵️" : record.interruptionType === "I" ? "💭" : "🗣️" }}
-          </span>
-          <span
-            class="point-value"
-            :style="{
-              color:
-                record.type === 'energy'
-                  ? getEnergyColor(record.value)
-                  : record.type === 'reward'
-                    ? getRewardColor(record.value)
-                    : record.interruptionType === 'I'
-                      ? 'var(--color-blue)'
-                      : 'var(--color-red)',
-            }"
+        <template v-for="record in combinedRecords" :key="`${record.type}-${record.id}`">
+          <NPopover
+            v-if="record.description?.trim()"
+            trigger="click"
+            placement="top"
+            to="body"
+            :show-arrow="true"
+            :style="{ maxWidth: '280px' }"
           >
-            {{ formatRecordValue(record) }}
-          </span>
-          <div class="point-time">{{ formatTime(record.id) }}</div>
-        </div>
+            <template #trigger>
+              <div class="timeline-point" :title="record.description" role="button" :aria-label="record.description || '查看说明'">
+                <span class="point-icon">
+                  {{ record.type === "energy" ? "⚡" : record.type === "reward" ? "🏵️" : record.interruptionType === "I" ? "💭" : "🗣️" }}
+                </span>
+                <span
+                  class="point-value"
+                  :style="{
+                    color:
+                      record.type === 'energy'
+                        ? getEnergyColor(record.value)
+                        : record.type === 'reward'
+                          ? getRewardColor(record.value)
+                          : record.interruptionType === 'I'
+                            ? 'var(--color-blue)'
+                            : 'var(--color-red)',
+                  }"
+                >
+                  {{ formatRecordValue(record) }}
+                </span>
+                <div class="point-time">{{ formatTime(record.id) }}</div>
+              </div>
+            </template>
+            <p class="timeline-popover-text">{{ record.description }}</p>
+          </NPopover>
+          <div v-else class="timeline-point" :title="record.description" role="button" :aria-label="'查看说明'">
+            <span class="point-icon">
+              {{ record.type === "energy" ? "⚡" : record.type === "reward" ? "🏵️" : record.interruptionType === "I" ? "💭" : "🗣️" }}
+            </span>
+            <span
+              class="point-value"
+              :style="{
+                color:
+                  record.type === 'energy'
+                    ? getEnergyColor(record.value)
+                    : record.type === 'reward'
+                      ? getRewardColor(record.value)
+                      : record.interruptionType === 'I'
+                        ? 'var(--color-blue)'
+                        : 'var(--color-red)',
+              }"
+            >
+              {{ formatRecordValue(record) }}
+            </span>
+            <div class="point-time">{{ formatTime(record.id) }}</div>
+          </div>
+        </template>
       </div>
 
       <TaskButtons
@@ -56,13 +91,14 @@
 import { ref, watch, computed, defineAsyncComponent, onMounted, onUnmounted } from "vue";
 import { storeToRefs } from "pinia";
 import type { Component } from "vue";
+import { NPopover } from "naive-ui";
+import type { EnergyRecord, RewardRecord, InterruptionRecord } from "@/core/types/Task";
+import { useTaskTrackerStore } from "@/stores/useTaskTrackerStore";
+import { useDataStore } from "@/stores/useDataStore";
 
 const TaskButtons = defineAsyncComponent<Component>(() => import("@/components/TaskTracker/TaskButtons.vue"));
 const TaskRecord = defineAsyncComponent<Component>(() => import("@/components/TaskTracker/TaskRecord.vue"));
 const TagRenderer = defineAsyncComponent<Component>(() => import("@/components/TagSystem/TagRenderer.vue"));
-import type { EnergyRecord, RewardRecord, InterruptionRecord } from "@/core/types/Task";
-import { useTaskTrackerStore } from "@/stores/useTaskTrackerStore";
-import { useDataStore } from "@/stores/useDataStore";
 
 // UI 状态
 const isMarkdown = ref(false);
@@ -72,7 +108,6 @@ const tagDisplayLength = ref<number | null>(null);
 
 // 断点值配置
 const TAG_COLLAPSE_BREAKPOINT = 600; // 第一个值：标签收缩为3
-const BUTTON_COLLAPSE_BREAKPOINT = 400; // 第二个值：按钮收缩
 
 const taskTrackerStore = useTaskTrackerStore();
 const dataStore = useDataStore();
@@ -188,14 +223,6 @@ const checkWidth = () => {
 
   // 当宽度小于第一个值时，标签 displayLength 变为 3
   tagDisplayLength.value = containerWidth < TAG_COLLAPSE_BREAKPOINT ? 3 : null;
-
-  // 通知 TaskButtons 组件是否需要收缩（通过 provide/inject 或事件）
-  // 这里我们通过 CSS 类来控制
-  if (selectedTagIds.value && selectedTagIds.value.length > 1 && containerWidth < BUTTON_COLLAPSE_BREAKPOINT) {
-    headerContainerRef.value.classList.add("buttons-collapsed");
-  } else {
-    headerContainerRef.value.classList.remove("buttons-collapsed");
-  }
 };
 
 // 监听容器大小变化
@@ -274,6 +301,8 @@ onUnmounted(() => {
   width: 24px;
   height: 30px;
   background-color: transparent;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .point-icon {
@@ -314,5 +343,13 @@ onUnmounted(() => {
 .task-record-container :deep(.task-textarea) {
   flex: 1;
   overflow-y: auto;
+}
+
+/* 时间轴节点 popover 内文案 */
+.timeline-popover-text {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--color-text-primary, #333);
 }
 </style>
