@@ -53,6 +53,7 @@ export const useDataStore = defineStore(
     const selectedActivityId = ref<number | null>(null); // Planner 选中的 .activityId
     const selectedRowId = ref<number | null>(null); // todo.id 或 schedule.id
     const selectedDate = ref<number | null>(null); // todo.id 或 schedule.id
+    const filterTagIds = ref<number[]>([]); // day/week/month tag filter (AND)
 
     // ======================== 3. 初始化/加载逻辑 (Actions) ========================
     const isDataLoaded = ref(false);
@@ -250,6 +251,12 @@ export const useDataStore = defineStore(
       return null;
     });
 
+    const matchesTagFilter = (activityTagIds?: number[] | null): boolean => {
+      if (!filterTagIds.value || filterTagIds.value.length === 0) return true;
+      const tags = activityTagIds ?? [];
+      return filterTagIds.value.every((filterId) => tags.includes(filterId));
+    };
+
     const todosForCurrentViewWithTaskRecords = computed<TodoWithTaskRecords[]>(() => {
       const { start, end } = dateService.visibleRange.value;
       if (!todoList.value) return [];
@@ -257,6 +264,8 @@ export const useDataStore = defineStore(
       for (const todo of todoList.value) {
         if (todo.deleted) continue;
         if (todo.id < start || todo.id >= end) continue;
+        const activity = todo.activityId != null ? activityById.value.get(todo.activityId) : undefined;
+        if (!matchesTagFilter(activity?.tagIds)) continue;
         const relatedTask = todo.taskId != null ? taskById.value.get(todo.taskId) : undefined;
         out.push({
           ...todo,
@@ -276,6 +285,7 @@ export const useDataStore = defineStore(
         if (todo.deleted) continue;
         if (todo.id < start || todo.id >= end) continue;
         const activity = todo.activityId != null ? activityById.value.get(todo.activityId) : undefined;
+        if (!matchesTagFilter(activity?.tagIds)) continue;
         out.push({
           ...todo,
           tagIds: activity?.tagIds ?? [],
@@ -329,7 +339,9 @@ export const useDataStore = defineStore(
       return activeSchedules.value
         .filter((schedule) => {
           const date = schedule.activityDueRange?.[0];
-          return date != null && date >= start && date < end;
+          if (date == null || date < start || date >= end) return false;
+          const activity = schedule.activityId != null ? activityById.value.get(schedule.activityId) : undefined;
+          return matchesTagFilter(activity?.tagIds);
         })
         .map((schedule) => {
           const activity = schedule.activityId != null ? activityById.value.get(schedule.activityId) : undefined;
@@ -359,6 +371,24 @@ export const useDataStore = defineStore(
     });
 
     // ======================== 6. 方法 (Actions) ========================
+    function toggleFilterTagId(tagId: number) {
+      const index = filterTagIds.value.indexOf(tagId);
+      if (index >= 0) {
+        filterTagIds.value.splice(index, 1);
+      } else {
+        filterTagIds.value.push(tagId);
+      }
+    }
+
+    function removeFilterTagId(tagId: number) {
+      const index = filterTagIds.value.indexOf(tagId);
+      if (index >= 0) filterTagIds.value.splice(index, 1);
+    }
+
+    function clearFilterTags() {
+      filterTagIds.value = [];
+    }
+
     function hasStarredTaskForActivity(activityId: number): boolean {
       const tasksOfAct = tasksBySource.value.activity.get(activityId);
       if (tasksOfAct?.some((t) => t.starred)) return true;
@@ -808,6 +838,7 @@ export const useDataStore = defineStore(
       selectedActivityId,
       selectedRowId,
       selectedDate,
+      filterTagIds,
       taskIdsInCurrentViewOrder,
       taskIdsCycleList,
 
@@ -852,6 +883,11 @@ export const useDataStore = defineStore(
       createAndAddTagToActivity,
       getActivityTags,
 
+      // Tag filter (day/week/month)
+      toggleFilterTagId,
+      removeFilterTagId,
+      clearFilterTags,
+
       // Chart 相关
       allDataPoints,
       dataByMetric,
@@ -870,7 +906,7 @@ export const useDataStore = defineStore(
     // ======================== 9. 精细化持久化配置（v3 语法） ========================
     persist: {
       key: "data-store-ui-state",
-      pick: ["activeId", "selectedTaskId", "selectedActivityId", "selectedRowId", "selectedDate"],
+      pick: ["activeId", "selectedTaskId", "selectedActivityId", "selectedRowId", "selectedDate", "filterTagIds"],
     },
   },
 );

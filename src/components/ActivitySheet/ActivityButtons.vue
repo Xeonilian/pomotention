@@ -3,7 +3,7 @@
 -->
 
 <template>
-  <div class="activity-view-button-container">
+  <div class="activity-view-button-container" :class="{ 'sections-more-than-1': sectionCount > 1 }">
     <n-button
       @click="$emit('pick-activity')"
       :disabled="activeId === null || activeId === undefined || props.isDeleted"
@@ -99,6 +99,7 @@ import {
 } from "@vicons/fluent";
 
 const props = defineProps<{
+  sectionCount: number;
   activeId: number | null | undefined;
   selectedClass?: "T" | "S"; // 从父组件传递
   selectedTaskId: number | null;
@@ -126,14 +127,19 @@ const emit = defineEmits([
   display: flex;
   justify-content: center;
   align-items: center;
-  margin: 0 auto 10px auto;
   gap: 8px;
-  top: 0;
   z-index: 10;
-  background-color: var(--color-background);
-  border-radius: 15px;
-  width: 220px;
   height: 40px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+@media (max-width: 600px) {
+  .activity-view-button-container:not(.sections-more-than-1) {
+    justify-content: flex-start;
+    gap: 4px;
+  }
+  .activity-view-button-container.sections-more-than-1 {
+    justify-content: flex-end;
+    gap: 4px;
+  }
 }
 </style>

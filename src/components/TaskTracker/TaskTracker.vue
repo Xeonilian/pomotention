@@ -3,7 +3,13 @@
   <div class="task-view-container">
     <div class="task-header-container" ref="headerContainerRef">
       <div v-if="selectedTagIds && selectedTagIds.length > 0 && selectedTaskId" class="task-tag-render-container">
-        <TagRenderer :tag-ids="selectedTagIds" :isCloseable="false" :displayLength="tagDisplayLength" @remove-tag="handleRemoveTag" />
+        <TagRenderer
+          :tag-ids="selectedTagIds"
+          :isCloseable="dataStore.filterTagIds.length > 0"
+          :displayLength="tagDisplayLength"
+          @tag-click="handleTagClick"
+          @remove-tag="handleRemoveTag"
+        />
       </div>
       <!-- 合并能量/愉悦/打断 记录时间轴 -->
       <div class="combined-timeline-container" v-if="combinedRecords.length">
@@ -15,6 +21,8 @@
             to="body"
             :show-arrow="true"
             :style="{ maxWidth: '280px' }"
+            :show="activeTimelinePopoverRecordId === record.id"
+            @update:show="(next) => handleUpdateTimelinePopoverShow(record.id, next)"
           >
             <template #trigger>
               <div class="timeline-point" :title="record.description" role="button" :aria-label="record.description || '查看说明'">
@@ -211,9 +219,11 @@ const formatRecordValue = (record: CombinedRecord) => {
 
 // 移除标签
 const handleRemoveTag = (tagId: number) => {
-  const task = selectedTask.value;
-  if (!task || !task.sourceId) return;
-  dataStore.removeTagFromActivity(task.sourceId, tagId);
+  dataStore.removeFilterTagId(tagId);
+};
+
+const handleTagClick = (tagId: number) => {
+  dataStore.toggleFilterTagId(tagId);
 };
 
 // 检测容器宽度并更新状态
@@ -223,6 +233,42 @@ const checkWidth = () => {
 
   // 当宽度小于第一个值时，标签 displayLength 变为 3
   tagDisplayLength.value = containerWidth < TAG_COLLAPSE_BREAKPOINT ? 3 : null;
+};
+
+const activeTimelinePopoverRecordId = ref<number | null>(null);
+let timelinePopoverTimer: ReturnType<typeof window.setTimeout> | null = null;
+
+const clearTimelinePopoverTimer = () => {
+  if (timelinePopoverTimer != null) {
+    window.clearTimeout(timelinePopoverTimer);
+    timelinePopoverTimer = null;
+  }
+};
+
+const openTimelinePopoverFor3s = (recordId: number) => {
+  activeTimelinePopoverRecordId.value = recordId;
+  clearTimelinePopoverTimer();
+  let timer: number | null = null;
+  timer = window.setTimeout(
+    () => {
+      if (activeTimelinePopoverRecordId.value === recordId) {
+        activeTimelinePopoverRecordId.value = null;
+      }
+    },
+    3000,
+    timer,
+  );
+};
+
+const handleUpdateTimelinePopoverShow = (recordId: number, nextShow: boolean) => {
+  if (nextShow) {
+    openTimelinePopoverFor3s(recordId);
+    return;
+  }
+  if (activeTimelinePopoverRecordId.value === recordId) {
+    activeTimelinePopoverRecordId.value = null;
+  }
+  clearTimelinePopoverTimer();
 };
 
 // 监听容器大小变化
@@ -240,6 +286,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  clearTimelinePopoverTimer();
   if (resizeObserver) {
     resizeObserver.disconnect();
   }

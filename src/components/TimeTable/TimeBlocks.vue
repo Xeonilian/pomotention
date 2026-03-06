@@ -216,7 +216,7 @@ const openEmojiPopoverFor3s = (todoId: number) => {
         activeEmojiPopoverTodoId.value = null;
       }
     },
-    5000,
+    3000,
     timer,
   );
 };
