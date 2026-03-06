@@ -4,8 +4,9 @@
 
 <template>
   <!-- 顶部固定按钮区域 -->
-  <div class="activity-buttons-sticky">
+  <div class="activity-button-container">
     <ActivityButtons
+      :sectionCount="sections.length"
       :activeId="activeId"
       :selectedTaskId="selectedTaskId"
       :selectedClass="selectedActivity?.class"
@@ -232,7 +233,7 @@ function handleSectionSearch(id: number, val: string) {
     console.log(val);
     // 支持用label和key来判断
     const match = filterOptions.find(
-      (opt) => opt.label.trim().toLowerCase() === val.trim().toLowerCase() || opt.key.trim().toLowerCase() === val.trim().toLowerCase()
+      (opt) => opt.label.trim().toLowerCase() === val.trim().toLowerCase() || opt.key.trim().toLowerCase() === val.trim().toLowerCase(),
     );
     section.filterKey = match ? match.key : null;
   }
@@ -392,9 +393,8 @@ function getCountdownClass(dueDate: number | undefined | null): string {
 
 <style scoped>
 /* 顶部固定按钮容器样式 */
-.activity-buttons-sticky {
-  position: sticky;
-  height: 45px;
+.activity-button-container {
+  height: 40px;
 }
 
 .kanban-columns {
