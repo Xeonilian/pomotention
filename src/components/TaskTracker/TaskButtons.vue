@@ -138,12 +138,12 @@
       </n-button>
     </template>
     <!-- 上一个/下一个 task 显示切换 -->
-    <n-button text @click="dataStore.goDisplayedPrev()" title="上一个任务">
+    <n-button text @click="displayStore.goPrev()" :disabled="!displayStore.hasPrev" title="上一个任务">
       <template #icon>
         <n-icon><ChevronCircleLeft20Regular /></n-icon>
       </template>
     </n-button>
-    <n-button text @click="dataStore.goDisplayedNext()" title="下一个任务">
+    <n-button text @click="displayStore.goNext()" :disabled="!displayStore.hasNext" title="下一个任务">
       <template #icon>
         <n-icon><ChevronCircleRight20Regular /></n-icon>
       </template>
@@ -199,10 +199,12 @@ import { useTemplateStore } from "@/stores/useTemplateStore";
 import type { Template } from "@/core/types/Template";
 import { useActivityTagEditor } from "@/composables/useActivityTagEditor";
 import { useDataStore } from "@/stores/useDataStore";
+import { useDisplayedTaskStore } from "@/stores/useDisplayedTaskStore";
 import { useDevice } from "@/composables/useDevice";
 
 const tagEditor = useActivityTagEditor();
 const dataStore = useDataStore();
+const displayStore = useDisplayedTaskStore();
 const { isMobile } = useDevice();
 // Props
 const props = defineProps<{
