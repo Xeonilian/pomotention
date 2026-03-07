@@ -236,6 +236,31 @@ export const useDataStore = defineStore(
       return taskById.value.get(id) ?? null;
     });
 
+    const isSelectedRowDone = computed(() => {
+      const rowId = selectedRowId.value;
+      if (rowId == null) return false;
+      const todo = todoById.value.get(rowId);
+      if (todo) {
+        return todo.status === "done" ? true : false;
+      } else {
+        const schedule = scheduleById.value.get(rowId);
+        if (schedule == null) return false;
+        return schedule.status === "done" ? true : false;
+      }
+      return false;
+    });
+
+    const selectedRowHasParent = computed(() => {
+      const rowId = selectedRowId.value;
+      if (rowId == null) return null;
+      const todo = todoById.value.get(rowId);
+      if (todo) {
+        const activity = activityById.value.get(todo.activityId);
+        if (activity == null) return null;
+        return activity.parentId;
+      }
+    });
+
     const selectedTagIds = computed(() => {
       if (activeId.value != null) {
         return activityById.value.get(activeId.value)?.tagIds ?? null;
@@ -667,19 +692,19 @@ export const useDataStore = defineStore(
         selectionSyncedFromDisplayStore = true;
         selectedTaskId.value = taskId;
         const activityId = taskById.value.get(taskId)?.sourceId;
-      if (activityId != null) {
-        selectedActivityId.value = activityId;
-        const todoId = todoByActivityId.value.get(activityId)?.id;
-        if (todoId != null) {
-          selectedRowId.value = todoId;
-        } else {
-          const scheduleId = scheduleByActivityId.value.get(activityId)?.id;
-          if (scheduleId != null) selectedRowId.value = scheduleId;
+        if (activityId != null) {
+          selectedActivityId.value = activityId;
+          const todoId = todoByActivityId.value.get(activityId)?.id;
+          if (todoId != null) {
+            selectedRowId.value = todoId;
+          } else {
+            const scheduleId = scheduleByActivityId.value.get(activityId)?.id;
+            if (scheduleId != null) selectedRowId.value = scheduleId;
+          }
         }
-      }
-      nextTick(() => {
-        selectionSyncedFromDisplayStore = false;
-      });
+        nextTick(() => {
+          selectionSyncedFromDisplayStore = false;
+        });
       },
     );
     // 点击 Planner 行时把该 task 推入展示历史；immediate 保证初始/恢复持久化后 displayStore 也能接到当前选中
@@ -791,6 +816,8 @@ export const useDataStore = defineStore(
       displayedTaskId,
       selectedActivityId,
       selectedRowId,
+      isSelectedRowDone,
+      selectedRowHasParent,
       selectedDate,
       filterTagIds,
 

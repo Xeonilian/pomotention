@@ -7,6 +7,8 @@
   <div class="activity-button-container">
     <ActivityButtons
       :activeId="activeId"
+      :isSelectedRowDone="isSelectedRowDone"
+      :selectedRowHasParent="selectedRowHasParent"
       :selectedTaskId="selectedTaskId"
       :selectedClass="selectedActivity?.class"
       :hasParent="selectedActivity?.parentId"
@@ -78,6 +80,8 @@ const {
   activityById,
   todoByActivityId,
   scheduleByActivityId,
+  isSelectedRowDone,
+  selectedRowHasParent,
 } = storeToRefs(dataStore);
 const { activityList } = storeToRefs(dataStore);
 const dateService = dataStore.dateService;
@@ -338,9 +342,7 @@ function addTodoRow() {
 
 // 删除当前选中的活动
 function deleteActiveRow() {
-  if (activeId.value !== null) {
-    emit("delete-activity", activeId.value);
-  }
+  emit("delete-activity", activeId.value || selectedActivityId.value || null);
 }
 
 // 处理行聚焦事件
@@ -361,16 +363,12 @@ function togglePomoType() {
 
 // 构建选中活动的子活动
 function createChildActivity() {
-  if (activeId.value !== null) {
-    emit("create-child-activity", activeId.value);
-  }
+  emit("create-child-activity", activeId.value || selectedActivityId.value || null);
 }
 
 // 恢复选中活动的子活动
 function increaseChildActivity() {
-  if (activeId.value !== null) {
-    emit("increase-child-activity", activeId.value);
-  }
+  emit("increase-child-activity", activeId.value || selectedActivityId.value || null);
 }
 
 // 根据截止日期计算倒计时样式类名

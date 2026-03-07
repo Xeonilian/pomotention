@@ -115,7 +115,7 @@
             v-for="todo in sortedTodos"
             :key="todo.id"
             :class="{
-              'active-row': todo.activityId === activeId && activeId !== null,
+              'active-row': todo.activityId === activeId && activeId !== undefined,
               'selected-row': todo.id === selectedRowId,
               'done-row': todo.status === 'done',
               'cancel-row': todo.status === 'cancelled',
