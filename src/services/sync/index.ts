@@ -9,7 +9,7 @@ let TagSyncService: any;
 let TemplateSyncService: any;
 // let TimetableSyncService: any;
 
-import { useSyncStore } from "@/stores/useSyncStore";
+import { useSyncStore, runBeforeSyncHook } from "@/stores/useSyncStore";
 import { useDataStore } from "@/stores/useDataStore";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { isSupabaseEnabled } from "@/core/services/supabase";
@@ -254,7 +254,7 @@ async function runSyncTask(actionName: string, taskFn: () => Promise<{ success: 
   if (syncStore.isSyncing) return { success: false, errors: ["同步进行中"] };
 
   // 同步前先执行钩子（如 TaskRecord 正在编辑则先保存到本地再同步，避免被覆盖）
-  await syncStore.runBeforeSync();
+  await runBeforeSyncHook();
 
   syncStore.startSync(actionName); // 这里可以复用 startSync 或 startUpload/Download
 
@@ -348,7 +348,7 @@ export async function uploadAll() {
     return { success: false, errors: ["同步进行中"] };
   }
 
-  await syncStore.runBeforeSync();
+  await runBeforeSyncHook();
   syncStore.startUpload();
 
   try {
@@ -386,7 +386,7 @@ export async function downloadAll(lastSync: number) {
   const syncStore = useSyncStore();
   if (syncStore.isSyncing) return { success: false };
 
-  await syncStore.runBeforeSync();
+  await runBeforeSyncHook();
   syncStore.startDownload();
 
   try {
