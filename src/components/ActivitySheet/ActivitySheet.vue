@@ -6,7 +6,6 @@
   <!-- 顶部固定按钮区域 -->
   <div class="activity-button-container">
     <ActivityButtons
-      :sectionCount="sections.length"
       :activeId="activeId"
       :selectedTaskId="selectedTaskId"
       :selectedClass="selectedActivity?.class"
@@ -402,8 +401,10 @@ function getCountdownClass(dueDate: number | undefined | null): string {
   flex-direction: row;
   gap: 8px;
   align-items: stretch;
-  height: calc(100% - 45px);
+  height: calc(100% - 40px);
+  overflow-x: auto;
 }
+
 .kanban-column {
   flex: 1 0 0;
   min-width: 240px;
