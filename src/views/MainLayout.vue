@@ -118,7 +118,7 @@
       </n-layout-content>
 
       <!-- Sync Footer -->
-      <n-layout-footer v-if="!isMiniMode" class="sync-footer" bordered>
+      <n-layout-footer v-if="!isMiniMode && !isMobile" class="sync-footer" bordered>
         <div class="footer-content">
           <!-- 左侧：同步状态信息 -->
           <div class="sync-status">
@@ -278,18 +278,15 @@ watch(route, (newVal) => {
 });
 
 // 监听尺寸变化，只在超出边界时才重定位，否则保持当前位置
-watch(
-  [() => reportedPomodoroWidth.value, () => reportedPomodoroHeight.value],
-  async () => {
-    if (!isMiniMode.value && settingStore.settings.showPomodoro) {
-      await nextTick();
-      requestAnimationFrame(() => {
-        // 只在超出边界时才重定位，否则保持当前位置
-        ensureWithinBounds(reportedPomodoroWidth.value, reportedPomodoroHeight.value);
-      });
-    }
+watch([() => reportedPomodoroWidth.value, () => reportedPomodoroHeight.value], async () => {
+  if (!isMiniMode.value && settingStore.settings.showPomodoro) {
+    await nextTick();
+    requestAnimationFrame(() => {
+      // 只在超出边界时才重定位，否则保持当前位置
+      ensureWithinBounds(reportedPomodoroWidth.value, reportedPomodoroHeight.value);
+    });
   }
-);
+});
 
 // === 3. 视图控制按钮 ===
 function handleMainLayoutViewToggle(key: string) {
@@ -499,5 +496,6 @@ async function handleManualDownload() {
   gap: 4px;
   align-items: center;
   flex-shrink: 0;
+  z-index: 1000;
 }
 </style>

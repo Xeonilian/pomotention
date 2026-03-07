@@ -1395,7 +1395,8 @@ const { startResize: startRightResize } = useResize(
 .right {
   padding: 8px;
   box-sizing: border-box;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
   margin-left: 0;
   background: var(--color-background);
   min-width: 90px;

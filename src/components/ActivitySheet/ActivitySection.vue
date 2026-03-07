@@ -598,46 +598,55 @@ function handleBlur() {
 }
 
 // ======================== 焦点管理 ========================
+// 监听 activeId 的变化，决定是否自动聚焦到对应行输入框
 watch(
   () => props.activeId,
   async (id) => {
+    // 若当前正在搜索输入框聚焦，则忽略本次聚焦
     if (isSearchFocused.value) {
       return;
     }
 
+    // 防止本 watch 递归或误触焦点，noFocus 标识为 true 则只重置为 false 不聚焦
     if (noFocus.value) {
       noFocus.value = false;
-
       return;
     }
 
+    // activeId 未定义时直接返回
     if (id === undefined) return;
 
     let targetFocusId = null;
 
+    // activeId 为 null，默认聚焦最后一条数据
     if (id === null) {
-      const list = sortedDisplaySheet.value;
-      const last = list[list.length - 1];
+      const list = sortedDisplaySheet.value; // 当前排序后的清单
+      const last = list[list.length - 1]; // 获取最后一项
+      // 若最后一项存在，聚焦其输入框
       if (last && last.id !== null && last.id !== undefined) {
         targetFocusId = last.id;
       } else {
-        noFocus.value = false;
+        noFocus.value = false; // 没有可聚焦项
         return;
       }
     } else {
+      // 正常聚焦指定 id 行
       targetFocusId = id;
     }
 
     if (targetFocusId === null) return;
 
+    // 等待 DOM 更新后再尝试获取输入框实例
     await nextTick();
     const inst = rowInputMap.value.get(targetFocusId);
     if (!inst) return;
 
+    // 如果输入框实例有 focus 方法则直接聚焦
     if (typeof inst.focus === "function") {
       inst.focus();
       noFocus.value = false;
     } else {
+      // 否则尝试获取 input 元素聚焦（兼容 n-input 组件实现）
       inst.inputElRef?.focus?.();
     }
   },

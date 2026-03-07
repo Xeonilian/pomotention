@@ -5,7 +5,7 @@
       :key="tag.id"
       round
       :size="props.size || 'small'"
-      :closable="props.isCloseable"
+      :closable="getClosable(tag.id)"
       :title="getTagTitle(tag)"
       @close="removeTag(tag.id)"
       @click.stop="handleTagClick(tag.id)"
@@ -34,7 +34,10 @@ import { storeToRefs } from "pinia";
 // ================================================================
 const props = defineProps<{
   tagIds: number[];
-  isCloseable: boolean;
+  /** 全局：是否所有标签都可关闭 */
+  isCloseable?: boolean;
+  /** 按标签：只有在此列表中的 tagId 显示关闭按钮（用于筛选：每个 x 只管本 tag） */
+  closeableTagIds?: number[];
   size?: "medium" | "small" | "large" | "tiny";
   displayLength?: number | null; // ✅ 允许 null
   showIdx?: number;
@@ -94,6 +97,14 @@ const renderedTags = computed(() => {
 // ================================================================
 // Methods
 // ================================================================
+
+/** 每个 tag 是否显示关闭按钮：若传了 closeableTagIds 则按 tag 判断，否则用 isCloseable */
+function getClosable(tagId: number): boolean {
+  if (props.closeableTagIds && props.closeableTagIds.length > 0) {
+    return props.closeableTagIds.includes(tagId);
+  }
+  return props.isCloseable === true;
+}
 
 /**
  * 移除标签

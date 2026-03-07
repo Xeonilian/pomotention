@@ -146,12 +146,19 @@ const effectivePxPerMinute = computed(() => {
   height: 40px;
 }
 
+@media (max-width: 600px) {
+  .timetable-view-button-container {
+    justify-content: center;
+    gap: 4px;
+  }
+}
+
 .timetable-editor {
   height: 100%;
 }
 
 .timetable-time-block {
-  height: calc(100% - 45px);
+  height: calc(100% - 40px);
   position: relative;
   bottom: 0px;
   /* 移动端：整个时间表区域禁用文本选择和长按复制 */

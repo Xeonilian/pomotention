@@ -221,3 +221,9 @@ export const useSyncStore = defineStore("sync", () => {
     handleLogout,
   };
 });
+
+// 供外部（如 sync 服务）调用的同步前钩子入口，避免 Pinia Store 类型只暴露 state 导致 runBeforeSync 不可见
+export async function runBeforeSyncHook() {
+  const store = useSyncStore();
+  await (store as { runBeforeSync: () => Promise<void> }).runBeforeSync();
+}

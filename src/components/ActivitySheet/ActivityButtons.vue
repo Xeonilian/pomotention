@@ -3,10 +3,10 @@
 -->
 
 <template>
-  <div class="activity-view-button-container" :class="{ 'sections-more-than-1': sectionCount > 1 }">
+  <div class="activity-view-button-container">
     <n-button
       @click="$emit('pick-activity')"
-      :disabled="activeId === null || activeId === undefined || props.isDeleted"
+      :disabled="activeId === undefined || props.isDeleted || isSelectedRowDone"
       secondary
       circle
       type="default"
@@ -25,24 +25,24 @@
       secondary
       :type="props.isDeleted ? 'error' : 'default'"
       size="small"
-      :disabled="activeId === null || activeId === undefined"
+      :disabled="activeId === null || isSelectedRowDone"
     >
       <template #icon>
         <n-icon>
-          <DeleteDismiss24Regular v-if="props.isDeleted && activeId !== null && activeId !== undefined" />
+          <DeleteDismiss24Regular v-if="props.isDeleted && activeId !== null" />
           <Delete24Regular v-else />
         </n-icon>
       </template>
     </n-button>
 
     <n-button
-      v-if="!props.hasParent"
+      v-if="!props.hasParent && !props.selectedRowHasParent"
       secondary
       circle
       type="default"
       size="small"
       title="生成子活动"
-      :disabled="props.activeId === null || activeId === undefined || isSelectedClassS || !!props.hasParent || props.isDeleted"
+      :disabled="props.activeId === null || isSelectedRowDone || isSelectedClassS || props.isDeleted"
       @click="() => emit('create-child-activity')"
     >
       <template #icon>
@@ -52,11 +52,11 @@
     <n-button
       v-else
       secondary
-      type="default"
+      type="success"
       circle
       size="small"
       title="升级为兄弟"
-      :disabled="props.activeId === null || isSelectedClassS || !props.hasParent"
+      :disabled="props.activeId === null || isSelectedClassS"
       @click="() => emit('increase-child-activity')"
     >
       <template #icon>
@@ -99,12 +99,13 @@ import {
 } from "@vicons/fluent";
 
 const props = defineProps<{
-  sectionCount: number;
   activeId: number | null | undefined;
   selectedClass?: "T" | "S"; // 从父组件传递
   selectedTaskId: number | null;
   hasParent?: number | null;
+  selectedRowHasParent?: number | null; // 选中行是否有父活动
   isDeleted?: boolean; // 选中活动是否已删除
+  isSelectedRowDone?: boolean;
 }>();
 
 const isSelectedClassS = computed(() => {
@@ -133,12 +134,7 @@ const emit = defineEmits([
 }
 
 @media (max-width: 600px) {
-  .activity-view-button-container:not(.sections-more-than-1) {
-    justify-content: flex-start;
-    gap: 4px;
-  }
-  .activity-view-button-container.sections-more-than-1 {
-    justify-content: flex-end;
+  .activity-view-button-container {
     gap: 4px;
   }
 }
