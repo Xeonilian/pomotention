@@ -191,8 +191,6 @@ import {
   Star20Filled,
   Tag16Regular,
   ChevronDoubleLeft16Regular,
-  CaretLeft12Filled,
-  CaretRight12Filled,
   ChevronCircleRight20Regular,
   ChevronCircleLeft20Regular,
 } from "@vicons/fluent";
@@ -352,7 +350,7 @@ function handleTagManagerClose() {
 
 @media (max-width: 600px) {
   .task-buttons {
-    gap: 2px;
+    gap: 4px;
   }
 }
 </style>
