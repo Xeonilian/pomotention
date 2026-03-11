@@ -1208,10 +1208,12 @@ col.col-status {
 
   col.col-start {
     width: 36px;
+    font-family: Consolas, "Courier New", Courier, monospace;
   }
 
   col.col-end {
     width: 36px;
+    font-family: Consolas, "Courier New", Courier, monospace;
   }
 
   col.col-rank {
@@ -1222,22 +1224,26 @@ col.col-status {
     width: 40px;
   }
 
-  col.col-title {
-    text-overflow: clip;
+  td.col-intent {
+    text-overflow: clip !important;
+  }
+
+  td.col-intent .ellipsis {
+    text-overflow: clip !important;
   }
 
   td.col-start,
   td.col-end,
   .time-input {
-    font-size: 13px;
-    text-overflow: clip;
-  }
-  td.col-title {
-    font-size: 13px;
+    font-size: 12px;
     text-overflow: clip;
   }
 }
 
+td.col-start,
+td.col-end {
+  font-family: Consolas, "Courier New", Courier, monospace;
+}
 /* 表头样式 */
 thead th {
   padding: 2px;
@@ -1364,7 +1370,7 @@ td.status-col {
 }
 
 /* 允许描述列显示省略号 */
-.col-intent.ellipsis {
+td.col-intent .ellipsis {
   display: block;
   width: 100%;
   min-width: 0;
@@ -1393,13 +1399,15 @@ td.status-col {
   border-radius: 50%;
   font-size: 12px;
   font-weight: bold;
+  top: -1px;
+  font-family: Courier, "Courier New", Consolas, monospace;
 }
 
 /* 可按 priority 分不同色 */
 .priority-0 {
   background-color: var(--color-background-light);
   color: var(--color-text-secondary);
-  top: 2px;
+  top: 2px; /* 修复偏移 因为没有字就没有因为行高产生的定位*/
 }
 
 /* 可按 priority 分不同色 */

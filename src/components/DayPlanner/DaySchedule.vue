@@ -992,10 +992,6 @@ td.status-col {
     width: 40px;
   }
 
-  col.col-title {
-    text-overflow: clip;
-  }
-
   td.col-start,
   td.col-end,
   td.col-duration,
@@ -1004,9 +1000,12 @@ td.status-col {
     text-overflow: clip;
   }
 
-  td.col-title {
-    font-size: 13px;
-    text-overflow: clip;
+  td.col-intent {
+    text-overflow: clip !important;
+  }
+
+  td.col-intent .ellipsis {
+    text-overflow: clip !important;
   }
 }
 
