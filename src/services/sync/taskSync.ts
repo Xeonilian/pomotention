@@ -109,8 +109,8 @@ export class TaskSyncService extends BaseSyncService<Task, CloudTaskInsert> {
 
       // console.log(`📊 [tasks] 增量下载: 获取到 ${data.length} 条更新`);
 
-      // 3. 直接操作 BaseSyncService 的响应式列表
-      const localItems = this.getList();
+      // 3. 直接操作 BaseSyncService 的响应式列表（解包 ref 得到数组）
+      const localItems = this.getListArray();
       const localMap = this.getMap();
       let downloadedCount = 0;
 

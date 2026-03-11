@@ -124,7 +124,7 @@ export class TodoSyncService extends BaseSyncService<Todo, CloudTodoInsert> {
       // console.log(`📊 [todos] 增量下载: 获取到 ${data.length} 条更新`);
 
       // 3. 直接使用 BaseSyncService 中的响应式引用和索引 Map
-      const localItems = this.getList();
+      const localItems = this.getListArray();
       const localMap = this.getMap();
       let downloadedCount = 0;
 
