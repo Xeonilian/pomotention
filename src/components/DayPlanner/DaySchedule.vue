@@ -860,16 +860,12 @@ td.status-col {
 
 .title-input {
   width: calc(100% - 10px);
-  border: 1px solid #d9d9d9;
+  border: 1px solid #40a9ff;
   border-radius: 4px;
   font-size: inherit;
   font-family: inherit;
   outline: none;
-}
-
-.title-input:focus {
-  border-color: #40a9ff;
-  box-shadow: 0 0 0 2px rgba(64, 169, 255, 0.2);
+  background-color: #ffffff;
 }
 
 .start-input,
@@ -888,35 +884,28 @@ td.status-col {
   max-width: 26px !important;
   min-width: 0 !important;
   box-sizing: border-box;
-  padding: 0px 0px;
+  padding-left: 1px;
   font-size: inherit;
 }
 
 .location-input {
   width: calc(100% - 6px);
-  border: 1px solid #d9d9d9;
+  border: 1px solid #40a9ff;
   border-radius: 4px;
   font-size: inherit;
   font-family: inherit;
   outline: none;
+  background-color: #ffffff;
 }
 
-.location-input:focus {
-  border-color: #40a9ff;
-  box-shadow: 0 0 0 2px rgba(64, 169, 255, 0.2);
-}
-
-.time-input:focus {
-  border-color: #40a9ff;
-  box-shadow: 0 0 0 2px rgba(64, 169, 255, 0.2);
-}
 .time-input {
-  border: 1px solid #d9d9d9;
+  border: 1px solid #40a9ff;
   max-width: 100%;
   border-radius: 4px;
   font-size: inherit;
   font-family: inherit;
   outline: none;
+  background-color: #ffffff;
 }
 
 /* 勾选 */
@@ -1305,7 +1294,12 @@ td.status-col {
 }
 
 /* 确保文字内容在云朵之上 */
-.title-input,
+.title-input {
+  position: relative;
+  z-index: 10;
+  background-color: #ffffff;
+}
+
 .cloud-background span {
   position: relative;
   z-index: 10;
