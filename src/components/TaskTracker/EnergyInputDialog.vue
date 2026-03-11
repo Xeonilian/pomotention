@@ -10,14 +10,7 @@
     @after-enter="focusSlider"
   >
     <n-space vertical>
-      <n-slider
-        v-model:value="energyValue"
-        :min="1"
-        :max="10"
-        :step="1"
-        :marks="marks"
-        ref="sliderRef"
-      />
+      <n-slider v-model:value="energyValue" :min="1" :max="10" :step="1" :marks="marks" ref="sliderRef" />
       <n-space justify="space-between">
         <n-text>当前精力值: {{ energyValue }}</n-text>
         <n-button @click="showHelp = true">
@@ -26,12 +19,7 @@
           </template>
         </n-button>
       </n-space>
-      <n-input
-        v-model:value="description"
-        placeholder="请输入内容"
-        maxlength="40"
-        show-count
-      />
+      <n-input v-model:value="description" placeholder="请输入内容" maxlength="40" show-count />
     </n-space>
 
     <template #action>
@@ -41,13 +29,7 @@
   </n-modal>
 
   <n-modal v-model:show="showHelp" preset="dialog" title="精力值说明">
-    <n-data-table
-      :columns="columns"
-      :data="data"
-      :bordered="false"
-      :single-line="true"
-      class="table"
-    />
+    <n-data-table :columns="columns" :data="data" :bordered="false" :single-line="true" class="table" />
   </n-modal>
 </template>
 
@@ -83,9 +65,7 @@ async function focusSlider() {
     sliderRef.value.focus();
   } else {
     const el: HTMLElement | null = sliderRef.value?.$el ?? sliderRef.value;
-    el?.querySelector<HTMLElement>(
-      '[tabindex], input, button, [role="slider"]'
-    )?.focus();
+    el?.querySelector<HTMLElement>('[tabindex], input, button, [role="slider"]')?.focus();
   }
 }
 
@@ -95,19 +75,22 @@ const createColumns = (): DataTableColumns<RowData> => {
       title: "分数",
       key: "score",
       align: "center",
-      width: 40,
+      width: 30,
     },
     {
       title: "身体状态",
       key: "physical",
+      width: 110,
     },
     {
       title: "心理/思维状态",
       key: "mental",
+      width: 130,
     },
     {
       title: "整体描述",
       key: "overall",
+      width: 55,
     },
   ];
 };
@@ -116,62 +99,62 @@ const columns = createColumns();
 const data: RowData[] = [
   {
     score: "1分",
-    physical: "极度疲惫, 难以行动",
-    mental: "思维断片, 无法处理信息",
+    physical: "极度疲惫，难以行动",
+    mental: "思维断片，无法处理信息",
     overall: "崩溃状态",
   },
   {
     score: "2分",
-    physical: "沉重, 基本动作困难",
-    mental: "思维涣散, 极度困倦",
+    physical: "沉重，基本动作困难",
+    mental: "思维涣散，极度困倦",
     overall: "极度疲惫",
   },
   {
     score: "3分",
-    physical: "乏力, 动作迟缓",
-    mental: "注意力涣散, 需要休息",
+    physical: "乏力，动作迟缓",
+    mental: "注意力涣散，需要休息",
     overall: "明显疲惫",
   },
   {
     score: "4分",
-    physical: "略显沉重, 勉强活动",
-    mental: "思维迟缓, 易出错",
+    physical: "略显沉重，勉强活动",
+    mental: "思维迟缓，易出错",
     overall: "低效状态",
   },
   {
     score: "5分",
-    physical: "轻微疲惫, 可维持活动",
-    mental: "注意力一般, 需要调动",
+    physical: "轻微疲惫，维持活动",
+    mental: "注意力一般，需要调动",
     overall: "及格状态",
   },
   {
     score: "6分",
-    physical: "基本正常, 偶有疲意",
-    mental: "思维清晰, 专注一般",
+    physical: "基本正常，偶有疲意",
+    mental: "思维清晰，专注一般",
     overall: "正常水平",
   },
   {
     score: "7分",
-    physical: "状态良好, 行动自如",
-    mental: "思维清醒, 易于专注",
+    physical: "状态良好，行动自如",
+    mental: "思维清醒，易于专注",
     overall: "良好状态",
   },
   {
     score: "8分",
-    physical: "充沛, 动作协调",
-    mental: "思维活跃, 高度专注",
+    physical: "充沛，动作协调",
+    mental: "思维活跃，高度专注",
     overall: "充满动力",
   },
   {
     score: "9分",
-    physical: "轻快, 行动自如",
-    mental: "头脑敏捷, 创意丰富",
+    physical: "轻快，行动自如",
+    mental: "头脑敏捷，创意丰富",
     overall: "极佳状态",
   },
   {
     score: "10分",
-    physical: "精力充沛, 活力满满",
-    mental: "清晰敏锐, 专注兴奋",
+    physical: "精力充沛，活力满满",
+    mental: "清晰敏锐，专注兴奋",
     overall: "巅峰状态",
   },
 ];
@@ -204,10 +187,14 @@ const handleCancel = () => {
 <style>
 .table .n-data-table-td,
 .table .n-data-table-th {
-  padding: 4px 2px !important;
+  padding: 4px 0px !important;
 }
 
 .table .n-data-table-th {
   font-weight: bold !important;
+}
+
+.table .n-data-table-td {
+  font-size: 13px !important;
 }
 </style>
