@@ -97,7 +97,7 @@
             :class="{
               'active-row': schedule.activityId === activeId,
               'selected-row': schedule.id === selectedRowId,
-              'done-row': schedule.status === 'done',
+              'done-row': schedule.status === 'done' && isViewDateToday,
               'cancel-row': schedule.status === 'cancelled',
             }"
             @click.stop="handleRowClick(schedule)"
@@ -191,9 +191,7 @@
             <td
               class="col-intent"
               :class="{
-                'done-cell': schedule.status === 'done',
                 'cloud-background': schedule.isUntaetigkeit === true,
-                'cancel-cell': schedule.status === 'cancelled',
               }"
               @dblclick.stop="startEditing(schedule.id, 'title')"
               :title="editingRowId === schedule.id && editingField === 'title' ? '' : '双击编辑'"
@@ -327,6 +325,11 @@ import TagSelector from "../TagSystem/TagSelector.vue";
 
 const dataStore = useDataStore();
 const { activeId, selectedRowId, selectedActivityId, selectedTaskId, selectedTask, schedulesForCurrentView } = storeToRefs(dataStore);
+
+// 当前视图是否为今天（仅今天时已完成行才变灰）
+const dateService = dataStore.dateService;
+const isViewDateToday = computed(() => dateService.isViewDateToday);
+
 // 编辑用
 const editingRowId = ref<number | null>(null);
 const editingField = ref<null | "title" | "start" | "done" | "duration" | "location">(null);
@@ -788,16 +791,8 @@ tr.done-row {
   color: var(--color-text-secondary);
 }
 
-/* tr.done-cell {
-  text-decoration: line-through var(--color-text-secondary) 0.5px;
-} */
-
 tr.cancel-row {
   color: var(--color-text-secondary);
-}
-
-tr.cancel-cell {
-  font-style: italic;
 }
 
 tr.empty-row {
