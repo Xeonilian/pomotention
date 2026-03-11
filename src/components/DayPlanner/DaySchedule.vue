@@ -36,7 +36,7 @@
           <th
             class="col-start"
             :class="{ 'disabled-toggle': !selectedSchedule, 'header-active': !!selectedSchedule }"
-            @click.stop="selectedRowId && handleFillCurrentTimeStart()"
+            @dblclick.stop="selectedRowId && handleFillCurrentTimeStart()"
             :title="selectedRowId ? '点击填入当前时间' : '请先选中一行'"
           >
             <n-icon size="20" class="header-icon">
@@ -46,7 +46,7 @@
           <th
             class="col-end"
             :class="{ 'disabled-toggle': !selectedSchedule, 'header-active': !!selectedSchedule }"
-            @click.stop="selectedRowId && handleFillCurrentTimeEnd()"
+            @dblclick.stop="selectedRowId && handleFillCurrentTimeEnd()"
             :title="selectedRowId ? '点击填入当前时间' : '请先选中一行'"
           >
             <n-icon size="20" class="header-icon">
