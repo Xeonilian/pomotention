@@ -977,10 +977,12 @@ td.status-col {
 
   col.col-start {
     width: 36px;
+    font-family: Consolas, "Courier New", Courier, monospace;
   }
 
   col.col-end {
     width: 36px;
+    font-family: Consolas, "Courier New", Courier, monospace;
   }
 
   col.col-duration {
@@ -998,6 +1000,7 @@ td.status-col {
   .time-input {
     font-size: 13px;
     text-overflow: clip;
+    font-family: Consolas, "Courier New", Courier, monospace;
   }
 
   td.col-intent {
