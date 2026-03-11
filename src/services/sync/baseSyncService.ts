@@ -22,9 +22,19 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
   constructor(
     protected tableName: string,
     protected localStorageKey: string,
-    protected getList: () => TLocal[],
+    protected getList: () => TLocal[] | { value: TLocal[] },
     protected getMap: () => Map<number, TLocal>
   ) {}
+
+  /** 统一解包：getList 可能返回 Pinia ref，需要 .value 得到数组 */
+  protected getListArray(): TLocal[] {
+    const raw = this.getList();
+    if (Array.isArray(raw)) return raw;
+    if (raw && typeof raw === "object" && "value" in raw && Array.isArray((raw as { value: TLocal[] }).value)) {
+      return (raw as { value: TLocal[] }).value;
+    }
+    return [];
+  }
 
   /**
    * 子类必须实现：本地 → 云端格式转换
@@ -65,8 +75,8 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
         // console.log("用户未登录，跳过上传");
         return { success: false, error: "用户未登录", uploaded: 0 };
       }
-      const list = this.getList();
-      if (!list) return { success: true, uploaded: 0 }; // 防御性编程
+      const list = this.getListArray();
+      if (!list.length) return { success: true, uploaded: 0 }; // 防御性编程（空数组也直接返回）
       // 获取未同步的数据
       const unsyncedItems = list.filter((item) => !item.synced);
 
@@ -169,9 +179,12 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
 
       // 如果有上次同步时间，只下载更新的数据
       if (lastSyncTimestamp > 0) {
-        const lastSyncISO = new Date(lastSyncTimestamp).toISOString();
+        // 为了防止边界时间戳导致“刚好等于 lastSyncTimestamp 的记录被跳过”，这里预留 5 秒冗余
+        const SAFETY_MARGIN_MS = 5000;
+        const effectiveTimestamp = Math.max(0, lastSyncTimestamp - SAFETY_MARGIN_MS);
+        const lastSyncISO = new Date(effectiveTimestamp).toISOString();
         query = query.gt("last_modified", lastSyncISO);
-        // console.log(`📥 [${this.tableName}] 增量下载（自 ${new Date(lastSyncTimestamp).toLocaleString()}）`);
+        // console.log(`📥 [${this.tableName}] 增量下载（自 ${new Date(effectiveTimestamp).toLocaleString()}，含 5 秒冗余）`);
       } else {
         // console.log(`📥 [${this.tableName}] 全量下载`);
       }
@@ -185,7 +198,7 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
         return { success: true, downloaded: 0 };
       }
 
-      const localItems = this.getList();
+      const localItems = this.getListArray();
       const localMap = this.getMap();
       let downloadedCount = 0;
 

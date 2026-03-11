@@ -4,7 +4,7 @@ import { useDataStore } from "@/stores/useDataStore";
 import { useTagStore } from "@/stores/useTagStore";
 import { useTemplateStore } from "@/stores/useTemplateStore";
 import { useSettingStore } from "@/stores/useSettingStore";
-import { downloadAll, uploadAll, syncAll } from "@/services/sync";
+import { downloadAll, uploadAll, syncAll, downloadActivitiesFullOnClose } from "@/services/sync";
 import { debounce } from "@/core/utils/debounce";
 import { isTauri } from "@tauri-apps/api/core";
 
@@ -168,6 +168,16 @@ async function setupTauriHandlers() {
             syncStore.isSyncing = false;
             await new Promise((resolve) => setTimeout(resolve, 800));
           }
+        }
+
+        // 无论是否有未同步数据，关闭前都尝试为 activities 做一次全量补下载
+        try {
+          const res = await downloadActivitiesFullOnClose();
+          if (!res.success) {
+            console.warn(`[Tauri Close] 活动全量下载失败: ${res.errors?.join("; ")}`);
+          }
+        } catch (e) {
+          console.warn("[Tauri Close] 活动全量下载异常:", e);
         }
 
         await appWindow.close();
