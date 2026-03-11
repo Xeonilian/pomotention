@@ -63,7 +63,8 @@ const filteredTags = computed<TagWithCount[]>(() => {
     return [...tagStore.allTags].sort((a, b) => (b.count || 0) - (a.count || 0)).slice(0, 10);
   }
 
-  return tagStore.findByName(props.searchTerm);
+  const found = tagStore.findByName(props.searchTerm);
+  return [...found].sort((a, b) => (b.count || 0) - (a.count || 0));
 });
 
 const tagExists = computed(() => {
