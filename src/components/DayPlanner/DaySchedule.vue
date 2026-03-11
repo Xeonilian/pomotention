@@ -684,15 +684,15 @@ col.col-check {
 }
 
 col.col-start {
-  width: 40px;
+  width: 46px;
 }
 
 col.col-end {
-  width: 40px;
+  width: 46px;
 }
 
 col.col-duration {
-  width: 35px;
+  width: 24px;
 }
 col.col-intent {
   width: 55%;
@@ -729,6 +729,12 @@ thead th {
   background-color: var(--color-background) !important;
   line-height: 1.3;
   box-sizing: border-box;
+}
+
+td.col-start,
+td.col-end,
+td.col-duration {
+  font-family: Consolas, "Courier New", Courier, monospace;
 }
 
 /* 开始/结束表头可点击，悬停为手型 */
@@ -977,10 +983,12 @@ td.status-col {
 
   col.col-start {
     width: 36px;
+    font-family: Consolas, "Courier New", Courier, monospace;
   }
 
   col.col-end {
     width: 36px;
+    font-family: Consolas, "Courier New", Courier, monospace;
   }
 
   col.col-duration {
@@ -992,21 +1000,21 @@ td.status-col {
     width: 40px;
   }
 
-  col.col-title {
-    text-overflow: clip;
-  }
-
   td.col-start,
   td.col-end,
   td.col-duration,
   .time-input {
     font-size: 13px;
     text-overflow: clip;
+    font-family: Consolas, "Courier New", Courier, monospace;
   }
 
-  td.col-title {
-    font-size: 13px;
-    text-overflow: clip;
+  td.col-intent {
+    text-overflow: clip !important;
+  }
+
+  td.col-intent .ellipsis {
+    text-overflow: clip !important;
   }
 }
 

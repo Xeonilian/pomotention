@@ -48,32 +48,32 @@ export async function initSyncServices(dataStore: ReturnType<typeof useDataStore
   // ✅ 注意：每个 SyncService 都是 2个参数
   const activitySync = new ActivitySyncService(
     () => dataStore.activityList,
-    () => dataStore._activityById
+    () => dataStore._activityById,
   );
 
   const todoSync = new TodoSyncService(
     () => dataStore.todoList,
-    () => dataStore._todoById
+    () => dataStore._todoById,
   );
 
   const scheduleSync = new ScheduleSyncService(
     () => dataStore.scheduleList,
-    () => dataStore._scheduleById
+    () => dataStore._scheduleById,
   );
 
   const taskSync = new TaskSyncService(
     () => dataStore.taskList,
-    () => dataStore._taskById
+    () => dataStore._taskById,
   );
 
   const tagSync = new TagSyncService(
     () => dataStore.tagList,
-    () => dataStore._tagById
+    () => dataStore._tagById,
   );
 
   const templateSync = new TemplateSyncService(
     () => dataStore.templateList,
-    () => dataStore._templateById
+    () => dataStore._templateById,
   );
 
   syncServices = [
@@ -156,7 +156,7 @@ async function _internalUpload(): Promise<SyncResult> {
     // 2. 并行上传其他
     const otherServices = syncServices.filter((s) => s.name !== "Activities");
     const results = await Promise.allSettled(
-      otherServices.map(({ name, service }) => service.upload().then((res: any) => ({ name, res })))
+      otherServices.map(({ name, service }) => service.upload().then((res: any) => ({ name, res }))),
     );
 
     results.forEach((outcome) => {
@@ -194,7 +194,7 @@ async function _internalDownload(lastSyncTimestamp: number): Promise<SyncResult>
 
     // 并行下载所有表
     const results = await Promise.allSettled(
-      syncServices.map(({ name, service }) => service.download(lastSyncTimestamp).then((res: any) => ({ name, res })))
+      syncServices.map(({ name, service }) => service.download(lastSyncTimestamp).then((res: any) => ({ name, res }))),
     );
 
     results.forEach((outcome) => {
@@ -238,37 +238,6 @@ async function _internalCleanup(): Promise<boolean> {
     syncStore.updateLastCleanupTimestamp();
   }
   return allSuccess;
-}
-
-/**
- * 仅在应用关闭前，为 activities 表执行一次「全量下载」用于补数据。
- * 注意：不会更新 lastSyncTimestamp，只是单独把 activities 补齐到本地。
- */
-export async function downloadActivitiesFullOnClose() {
-  if (!ensureInitialized()) {
-    return { success: false, errors: ["未初始化"], downloaded: 0 };
-  }
-
-  const activityService = syncServices.find((s) => s.name === "Activities");
-  if (!activityService) {
-    return { success: false, errors: ["ActivitySync 未初始化"], downloaded: 0 };
-  }
-
-  try {
-    // 传入 0 表示全量下载，避免受 lastSyncTimestamp 影响
-    const { success, error, downloaded } = await activityService.service.download(0);
-    if (!success) {
-      return { success: false, errors: [error ?? "活动全量下载失败"], downloaded };
-    }
-
-    const dataStore = useDataStore();
-    // 下载活动后直接保存一次到本地存储，防止丢失
-    dataStore.saveAllAfterSync();
-    return { success: true, errors: [], downloaded };
-  } catch (e: any) {
-    console.error("[Sync] 活动全量下载异常:", e);
-    return { success: false, errors: [e.message ?? String(e)], downloaded: 0 };
-  }
 }
 
 // ===================================================================================

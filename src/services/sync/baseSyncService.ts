@@ -179,11 +179,24 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
 
       // 如果有上次同步时间，只下载更新的数据
       if (lastSyncTimestamp > 0) {
-        // 为了防止边界时间戳导致“刚好等于 lastSyncTimestamp 的记录被跳过”，这里预留 5 秒冗余
+        // 为了避免 lastSyncTimestamp 异常（过新/时序问题/设备时间不准）导致“完全下不下来”
+        // 这里增加 24 小时兜底窗口：起点使用 min(lastSyncTimestamp, now-24h)
+        // 同时，为了防止边界时间戳导致“刚好等于 lastSyncTimestamp 的记录被跳过”，预留 5 秒冗余
+        const FALLBACK_WINDOW_MS = 24 * 60 * 60 * 1000;
         const SAFETY_MARGIN_MS = 5000;
-        const effectiveTimestamp = Math.max(0, lastSyncTimestamp - SAFETY_MARGIN_MS);
+        const fallbackFromMs = Date.now() - FALLBACK_WINDOW_MS;
+        const effectiveFromMs = Math.min(lastSyncTimestamp, fallbackFromMs);
+        const effectiveTimestamp = Math.max(0, effectiveFromMs - SAFETY_MARGIN_MS);
         const lastSyncISO = new Date(effectiveTimestamp).toISOString();
         query = query.gt("last_modified", lastSyncISO);
+        // 低噪日志：只有当兜底窗口生效时才输出（方便定位 lastSyncTimestamp 过新的问题）
+        if (effectiveFromMs !== lastSyncTimestamp) {
+          console.debug(
+            `[Sync][${this.tableName}] lastSyncTimestamp too new, fallback to 24h window: lastSync=${new Date(lastSyncTimestamp).toISOString()} effectiveFrom=${new Date(
+              effectiveFromMs,
+            ).toISOString()}`,
+          );
+        }
         // console.log(`📥 [${this.tableName}] 增量下载（自 ${new Date(effectiveTimestamp).toLocaleString()}，含 5 秒冗余）`);
       } else {
         // console.log(`📥 [${this.tableName}] 全量下载`);
