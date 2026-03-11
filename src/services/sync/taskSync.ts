@@ -93,7 +93,18 @@ export class TaskSyncService extends BaseSyncService<Task, CloudTaskInsert> {
 
       // 1. 准备时间参数：将 lastSyncTimestamp 转换为 ISO 格式
       // 如果是 0 (新机器/重置)，则为 1970，拉取全量数据
-      const lastSyncISO = new Date(lastSyncTimestamp > 0 ? lastSyncTimestamp : 0).toISOString();
+      // 为了避免 lastSyncTimestamp 异常过新导致“完全下不下来”，这里增加最近 24h 兜底窗口
+      const FALLBACK_WINDOW_MS = 24 * 60 * 60 * 1000;
+      const fallbackFromMs = Date.now() - FALLBACK_WINDOW_MS;
+      const effectiveFromMs = lastSyncTimestamp > 0 ? Math.min(lastSyncTimestamp, fallbackFromMs) : 0;
+      const lastSyncISO = new Date(effectiveFromMs).toISOString();
+      if (lastSyncTimestamp > 0 && effectiveFromMs !== lastSyncTimestamp) {
+        console.debug(
+          `[Sync][tasks] lastSyncTimestamp too new, fallback to 24h window: lastSync=${new Date(lastSyncTimestamp).toISOString()} effectiveFrom=${new Date(
+            effectiveFromMs,
+          ).toISOString()}`,
+        );
+      }
 
       // 2. 调用 RPC，传入 p_last_modified
       const { data, error } = await supabase.rpc("get_full_tasks", {
