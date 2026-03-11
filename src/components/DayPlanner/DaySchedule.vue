@@ -997,7 +997,7 @@ td.status-col {
     width: 40px;
   }
 
-  col.col-intent {
+  col.col-title {
     text-overflow: clip;
   }
 
@@ -1005,6 +1005,11 @@ td.status-col {
   td.col-end,
   td.col-duration,
   .time-input {
+    font-size: 13px;
+    text-overflow: clip;
+  }
+
+  td.col-title {
     font-size: 13px;
     text-overflow: clip;
   }

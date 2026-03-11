@@ -1222,13 +1222,17 @@ col.col-status {
     width: 40px;
   }
 
-  col.col-intent {
+  col.col-title {
     text-overflow: clip;
   }
 
   td.col-start,
   td.col-end,
   .time-input {
+    font-size: 13px;
+    text-overflow: clip;
+  }
+  td.col-title {
     font-size: 13px;
     text-overflow: clip;
   }
@@ -1391,10 +1395,9 @@ td.status-col {
   display: inline-flex;
   align-items: center !important;
   justify-content: center !important;
-  width: 16px;
-  height: 16px;
+  width: 15px;
+  height: 15px;
   position: relative;
-
   border-radius: 50%;
   font-size: 12px;
   font-weight: bold;
