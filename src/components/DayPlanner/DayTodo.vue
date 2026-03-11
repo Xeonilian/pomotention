@@ -117,7 +117,7 @@
             :class="{
               'active-row': todo.activityId === activeId && activeId !== undefined,
               'selected-row': todo.id === selectedRowId,
-              'done-row': todo.status === 'done',
+              'done-row': todo.status === 'done' && isViewDateToday,
               'cancel-row': todo.status === 'cancelled',
             }"
             @click.stop="handleRowClick(todo)"
@@ -229,10 +229,6 @@
             <!-- 5 意图 -->
             <td
               class="col-intent"
-              :class="{
-                'done-cell': todo.status === 'done',
-                'cancel-cell': todo.status === 'cancelled',
-              }"
               @dblclick.stop="startEditing(todo.id, 'title')"
               :title="editingRowId === todo.id && editingField === 'title' ? '' : '双击编辑'"
             >
@@ -445,6 +441,10 @@ const tagStore = useTagStore();
 const { activeId, selectedRowId, selectedActivityId, selectedTaskId, selectedTask, todosForCurrentViewWithTaskRecords } =
   storeToRefs(dataStore);
 const { allTags: allTagsFromStore } = storeToRefs(tagStore);
+
+// 当前视图是否为今天（仅今天时已完成行才变灰）
+const dateService = dataStore.dateService;
+const isViewDateToday = computed(() => dateService.isViewDateToday);
 
 // 根据 selectedRowId 找到对应的 todo
 const selectedTodo = computed(() => {
@@ -1320,16 +1320,8 @@ tr.done-row {
   color: var(--color-text-secondary);
 }
 
-tr.done-cell {
-  text-decoration: line-through var(--color-text-secondary) 0.5px;
-}
-
 tr.cancel-row {
   color: var(--color-text-secondary);
-}
-
-tr.cancel-cell {
-  font-style: italic;
 }
 
 tr.empty-row {
