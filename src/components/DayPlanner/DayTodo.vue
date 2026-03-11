@@ -35,7 +35,7 @@
           <th
             class="col-start"
             :class="{ 'disabled-toggle': !selectedRowId }"
-            @click.stop="selectedRowId && handleFillCurrentTimeStart()"
+            @dblclick.stop="selectedRowId && handleFillCurrentTimeStart()"
             :title="selectedRowId ? '点击填入当前时间' : '请先选中一行'"
           >
             <n-icon size="20" class="header-icon">
@@ -45,7 +45,7 @@
           <th
             class="col-end"
             :class="{ 'disabled-toggle': !selectedRowId }"
-            @click.stop="selectedRowId && handleFillCurrentTimeEnd()"
+            @dblclick.stop="selectedRowId && handleFillCurrentTimeEnd()"
             :title="selectedRowId ? '点击填入当前时间' : '请先选中一行'"
           >
             <n-icon size="20" class="header-icon">
@@ -117,7 +117,7 @@
             :class="{
               'active-row': todo.activityId === activeId && activeId !== undefined,
               'selected-row': todo.id === selectedRowId,
-              'done-row': todo.status === 'done',
+              'done-row': todo.status === 'done' && isViewDateToday,
               'cancel-row': todo.status === 'cancelled',
             }"
             @click.stop="handleRowClick(todo)"
@@ -229,10 +229,6 @@
             <!-- 5 意图 -->
             <td
               class="col-intent"
-              :class="{
-                'done-cell': todo.status === 'done',
-                'cancel-cell': todo.status === 'cancelled',
-              }"
               @dblclick.stop="startEditing(todo.id, 'title')"
               :title="editingRowId === todo.id && editingField === 'title' ? '' : '双击编辑'"
             >
@@ -445,6 +441,10 @@ const tagStore = useTagStore();
 const { activeId, selectedRowId, selectedActivityId, selectedTaskId, selectedTask, todosForCurrentViewWithTaskRecords } =
   storeToRefs(dataStore);
 const { allTags: allTagsFromStore } = storeToRefs(tagStore);
+
+// 当前视图是否为今天（仅今天时已完成行才变灰）
+const dateService = dataStore.dateService;
+const isViewDateToday = computed(() => dateService.isViewDateToday);
 
 // 根据 selectedRowId 找到对应的 todo
 const selectedTodo = computed(() => {
@@ -1222,13 +1222,17 @@ col.col-status {
     width: 40px;
   }
 
-  col.col-intent {
+  col.col-title {
     text-overflow: clip;
   }
 
   td.col-start,
   td.col-end,
   .time-input {
+    font-size: 13px;
+    text-overflow: clip;
+  }
+  td.col-title {
     font-size: 13px;
     text-overflow: clip;
   }
@@ -1316,16 +1320,8 @@ tr.done-row {
   color: var(--color-text-secondary);
 }
 
-tr.done-cell {
-  text-decoration: line-through var(--color-text-secondary) 0.5px;
-}
-
 tr.cancel-row {
   color: var(--color-text-secondary);
-}
-
-tr.cancel-cell {
-  font-style: italic;
 }
 
 tr.empty-row {
@@ -1391,10 +1387,9 @@ td.status-col {
   display: inline-flex;
   align-items: center !important;
   justify-content: center !important;
-  width: 16px;
-  height: 16px;
+  width: 15px;
+  height: 15px;
   position: relative;
-
   border-radius: 50%;
   font-size: 12px;
   font-weight: bold;

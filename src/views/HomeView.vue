@@ -486,13 +486,14 @@ function onQuickAddTodo() {
     title: "",
     estPomoI: "",
     pomoType: "🍅",
-    status: "",
+    status: "ongoing",
     dueDate: appDateTimestamp.value, // 使用当前视图日期
     parentId: null,
     synced: false,
     deleted: false,
     lastModified: Date.now(),
   };
+
   activityList.value.push(newActivity);
 
   // 创建关联的 task
@@ -505,9 +506,8 @@ function onQuickAddTodo() {
   newActivity.lastModified = Date.now();
 
   // 创建 todo
-  newActivity.status = "ongoing";
-  // 与其他地方保持一致，直接传递 computed ref，Vue 会自动解包
   const { newTodo } = passPickedActivity(newActivity, appDateTimestamp.value, isViewDateToday.value);
+  newTodo.startTime = Date.now();
 
   // 确保 newTodo.id 是有效数字（防御性检查）
   if (typeof newTodo.id !== "number" || isNaN(newTodo.id)) {
@@ -553,7 +553,7 @@ function onQuickAddSchedule() {
   newActivity.synced = false;
   newActivity.lastModified = Date.now();
 
-  // 创建新的 todo，使用 appDateTimestamp（选中的日期）
+  // 创建新的 schedule，使用 appDateTimestamp（选中的日期）
   if (newActivity.class === "S") {
     handleAddActivity(scheduleList.value, newActivity, { activityById: activityById.value });
   }

@@ -36,7 +36,7 @@
           <th
             class="col-start"
             :class="{ 'disabled-toggle': !selectedSchedule, 'header-active': !!selectedSchedule }"
-            @click.stop="selectedRowId && handleFillCurrentTimeStart()"
+            @dblclick.stop="selectedRowId && handleFillCurrentTimeStart()"
             :title="selectedRowId ? '点击填入当前时间' : '请先选中一行'"
           >
             <n-icon size="20" class="header-icon">
@@ -46,7 +46,7 @@
           <th
             class="col-end"
             :class="{ 'disabled-toggle': !selectedSchedule, 'header-active': !!selectedSchedule }"
-            @click.stop="selectedRowId && handleFillCurrentTimeEnd()"
+            @dblclick.stop="selectedRowId && handleFillCurrentTimeEnd()"
             :title="selectedRowId ? '点击填入当前时间' : '请先选中一行'"
           >
             <n-icon size="20" class="header-icon">
@@ -97,7 +97,7 @@
             :class="{
               'active-row': schedule.activityId === activeId,
               'selected-row': schedule.id === selectedRowId,
-              'done-row': schedule.status === 'done',
+              'done-row': schedule.status === 'done' && isViewDateToday,
               'cancel-row': schedule.status === 'cancelled',
             }"
             @click.stop="handleRowClick(schedule)"
@@ -191,9 +191,7 @@
             <td
               class="col-intent"
               :class="{
-                'done-cell': schedule.status === 'done',
                 'cloud-background': schedule.isUntaetigkeit === true,
-                'cancel-cell': schedule.status === 'cancelled',
               }"
               @dblclick.stop="startEditing(schedule.id, 'title')"
               :title="editingRowId === schedule.id && editingField === 'title' ? '' : '双击编辑'"
@@ -327,6 +325,11 @@ import TagSelector from "../TagSystem/TagSelector.vue";
 
 const dataStore = useDataStore();
 const { activeId, selectedRowId, selectedActivityId, selectedTaskId, selectedTask, schedulesForCurrentView } = storeToRefs(dataStore);
+
+// 当前视图是否为今天（仅今天时已完成行才变灰）
+const dateService = dataStore.dateService;
+const isViewDateToday = computed(() => dateService.isViewDateToday);
+
 // 编辑用
 const editingRowId = ref<number | null>(null);
 const editingField = ref<null | "title" | "start" | "done" | "duration" | "location">(null);
@@ -788,16 +791,8 @@ tr.done-row {
   color: var(--color-text-secondary);
 }
 
-/* tr.done-cell {
-  text-decoration: line-through var(--color-text-secondary) 0.5px;
-} */
-
 tr.cancel-row {
   color: var(--color-text-secondary);
-}
-
-tr.cancel-cell {
-  font-style: italic;
 }
 
 tr.empty-row {
@@ -860,16 +855,12 @@ td.status-col {
 
 .title-input {
   width: calc(100% - 10px);
-  border: 1px solid #d9d9d9;
+  border: 1px solid #40a9ff;
   border-radius: 4px;
   font-size: inherit;
   font-family: inherit;
   outline: none;
-}
-
-.title-input:focus {
-  border-color: #40a9ff;
-  box-shadow: 0 0 0 2px rgba(64, 169, 255, 0.2);
+  background-color: #ffffff;
 }
 
 .start-input,
@@ -888,35 +879,28 @@ td.status-col {
   max-width: 26px !important;
   min-width: 0 !important;
   box-sizing: border-box;
-  padding: 0px 0px;
+  padding-left: 1px;
   font-size: inherit;
 }
 
 .location-input {
   width: calc(100% - 6px);
-  border: 1px solid #d9d9d9;
+  border: 1px solid #40a9ff;
   border-radius: 4px;
   font-size: inherit;
   font-family: inherit;
   outline: none;
+  background-color: #ffffff;
 }
 
-.location-input:focus {
-  border-color: #40a9ff;
-  box-shadow: 0 0 0 2px rgba(64, 169, 255, 0.2);
-}
-
-.time-input:focus {
-  border-color: #40a9ff;
-  box-shadow: 0 0 0 2px rgba(64, 169, 255, 0.2);
-}
 .time-input {
-  border: 1px solid #d9d9d9;
+  border: 1px solid #40a9ff;
   max-width: 100%;
   border-radius: 4px;
   font-size: inherit;
   font-family: inherit;
   outline: none;
+  background-color: #ffffff;
 }
 
 /* 勾选 */
@@ -1008,7 +992,7 @@ td.status-col {
     width: 40px;
   }
 
-  col.col-intent {
+  col.col-title {
     text-overflow: clip;
   }
 
@@ -1016,6 +1000,11 @@ td.status-col {
   td.col-end,
   td.col-duration,
   .time-input {
+    font-size: 13px;
+    text-overflow: clip;
+  }
+
+  td.col-title {
     font-size: 13px;
     text-overflow: clip;
   }
@@ -1305,7 +1294,12 @@ td.status-col {
 }
 
 /* 确保文字内容在云朵之上 */
-.title-input,
+.title-input {
+  position: relative;
+  z-index: 10;
+  background-color: #ffffff;
+}
+
 .cloud-background span {
   position: relative;
   z-index: 10;
