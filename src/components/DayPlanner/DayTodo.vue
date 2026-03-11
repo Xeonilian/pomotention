@@ -1172,15 +1172,15 @@ col.col-check {
 }
 
 col.col-start {
-  width: 40px;
+  width: 46px;
 }
 
 col.col-end {
-  width: 40px;
+  width: 46px;
 }
 
 col.col-rank {
-  width: 35px;
+  width: 24px;
 }
 
 td.col-rank-disabled {
@@ -1393,6 +1393,7 @@ td.col-intent .ellipsis {
   display: inline-flex;
   align-items: center !important;
   justify-content: center !important;
+  line-height: 1;
   width: 15px;
   height: 15px;
   position: relative;
@@ -1400,7 +1401,6 @@ td.col-intent .ellipsis {
   font-size: 12px;
   font-weight: bold;
   top: -1px;
-  font-family: Courier, "Courier New", Consolas, monospace;
 }
 
 /* 可按 priority 分不同色 */
