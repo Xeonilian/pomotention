@@ -180,6 +180,7 @@
             trigger="manual"
             :show-arrow="false"
             style="padding: 0; border-radius: 6px"
+            :style="{ '--n-space': '30px' }"
             :to="false"
           >
             <template #trigger>
