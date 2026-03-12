@@ -3,48 +3,50 @@
 -->
 
 <template>
-  <!-- 顶部固定按钮区域 -->
-  <div class="activity-button-container">
-    <ActivityButtons
-      :activeId="activeId"
-      :isSelectedRowDone="isSelectedRowDone"
-      :selectedRowHasParent="selectedRowHasParent"
-      :selectedTaskId="selectedTaskId"
-      :selectedClass="selectedActivity?.class"
-      :hasParent="selectedActivity?.parentId"
-      :isDeleted="selectedActivity?.deleted ?? false"
-      @pick-activity="pickActivity"
-      @add-todo="addTodoRow"
-      @add-schedule="addScheduleRow"
-      @add-untaetigkeit="addUntaetigkeitRow"
-      @delete-active="deleteActiveRow"
-      @toggle-pomo-type="togglePomoType"
-      @create-child-activity="createChildActivity"
-      @increase-child-activity="increaseChildActivity"
-    />
-  </div>
-  <!-- 看板列容器 -->
-  <div class="kanban-columns">
-    <div v-for="(section, idx) in sections" :key="section.id" class="kanban-column">
-      <!-- 活动列表展示区域 -->
-      <ActivitySection
-        :filterOptions="filterOptions"
-        :displaySheet="filteredBySection(section)"
-        :getCountdownClass="getCountdownClass"
-        :activityId="selectedActivityId"
-        :currentFilter="section.filterKey"
-        :isAddButton="section.id === 1 && sections.length < 6"
-        :isRemoveButton="section.id !== 1"
-        :sectionId="section.id"
-        :search="section.search"
+  <div class="activity-container">
+    <!-- 顶部固定按钮区域 -->
+    <div class="activity-button-container">
+      <ActivityButtons
         :activeId="activeId"
-        @add-section="addSection"
-        @remove-section="removeSection"
-        @focus-row="handleFocusRow"
-        @filter="(filterKey) => handleSectionFilter(idx, filterKey)"
-        @update:search="(val) => handleSectionSearch(section.id, val)"
-        @focus-search="handleFocusSearch"
+        :isSelectedRowDone="isSelectedRowDone"
+        :selectedRowHasParent="selectedRowHasParent"
+        :selectedTaskId="selectedTaskId"
+        :selectedClass="selectedActivity?.class"
+        :hasParent="selectedActivity?.parentId"
+        :isDeleted="selectedActivity?.deleted ?? false"
+        @pick-activity="pickActivity"
+        @add-todo="addTodoRow"
+        @add-schedule="addScheduleRow"
+        @add-untaetigkeit="addUntaetigkeitRow"
+        @delete-active="deleteActiveRow"
+        @toggle-pomo-type="togglePomoType"
+        @create-child-activity="createChildActivity"
+        @increase-child-activity="increaseChildActivity"
       />
+    </div>
+    <!-- 看板列容器 -->
+    <div class="kanban-columns">
+      <div v-for="(section, idx) in sections" :key="section.id" class="kanban-column">
+        <!-- 活动列表展示区域 -->
+        <ActivitySection
+          :filterOptions="filterOptions"
+          :displaySheet="filteredBySection(section)"
+          :getCountdownClass="getCountdownClass"
+          :activityId="selectedActivityId"
+          :currentFilter="section.filterKey"
+          :isAddButton="section.id === 1 && sections.length < 6"
+          :isRemoveButton="section.id !== 1"
+          :sectionId="section.id"
+          :search="section.search"
+          :activeId="activeId"
+          @add-section="addSection"
+          @remove-section="removeSection"
+          @focus-row="handleFocusRow"
+          @filter="(filterKey) => handleSectionFilter(idx, filterKey)"
+          @update:search="(val) => handleSectionSearch(section.id, val)"
+          @focus-search="handleFocusSearch"
+        />
+      </div>
     </div>
   </div>
   <!-- 错误提示弹窗 -->
@@ -389,6 +391,9 @@ function getCountdownClass(dueDate: number | undefined | null): string {
 </script>
 
 <style scoped>
+.activity-container {
+  height: 100%;
+}
 /* 顶部固定按钮容器样式 */
 .activity-button-container {
   height: 40px;

@@ -180,6 +180,7 @@
             trigger="manual"
             :show-arrow="false"
             style="padding: 0; border-radius: 6px"
+            :style="{ '--n-space': '30px' }"
             :to="false"
           >
             <template #trigger>
@@ -1016,9 +1017,6 @@ function handlePomoInputTouchCancel(item: Activity) {
 
 <style scoped>
 .section-container {
-  border: 1px solid var(--color-background-dark);
-  border-radius: 6px;
-  padding: 2px;
   display: flex;
   flex-direction: column;
   height: 100%;

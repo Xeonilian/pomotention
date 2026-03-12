@@ -11,11 +11,11 @@
           @remove-tag="handleRemoveTag"
         />
         <!-- 有筛选时在区域后单独按钮，一键清除全部筛选 -->
-        <n-button text v-if="dataStore.filterTagIds.length > 0" aria-label="清除全部标签筛选" @click="handleClearAllFilter">
+        <!-- <n-button text v-if="dataStore.filterTagIds.length > 0" aria-label="清除全部标签筛选" @click="handleClearAllFilter">
           <template #icon>
             <n-icon><TagOff20Regular /></n-icon>
           </template>
-        </n-button>
+        </n-button> -->
       </div>
       <!-- 合并能量/愉悦/打断 记录时间轴 -->
       <div class="combined-timeline-container" v-if="combinedRecords.length">
@@ -109,7 +109,7 @@ import { NPopover } from "naive-ui";
 import type { EnergyRecord, RewardRecord, InterruptionRecord } from "@/core/types/Task";
 import { useTaskTrackerStore } from "@/stores/useTaskTrackerStore";
 import { useDataStore } from "@/stores/useDataStore";
-import { TagOff20Regular } from "@vicons/fluent";
+// import { TagOff20Regular } from "@vicons/fluent";
 
 const TaskButtons = defineAsyncComponent<Component>(() => import("@/components/TaskTracker/TaskButtons.vue"));
 const TaskRecord = defineAsyncComponent<Component>(() => import("@/components/TaskTracker/TaskRecord.vue"));
@@ -234,9 +234,9 @@ const handleTagClick = (tagId: number) => {
 };
 
 // 清除全部标签筛选
-const handleClearAllFilter = () => {
-  dataStore.clearFilterTags();
-};
+// const handleClearAllFilter = () => {
+//   dataStore.clearFilterTags();
+// };
 
 // 检测容器宽度并更新状态
 const checkWidth = () => {
@@ -394,10 +394,8 @@ onUnmounted(() => {
   flex: 1;
   display: flex;
   flex-direction: column;
-  margin-left: 5px;
-  margin-right: 5px;
-  margin-bottom: 5px;
-  margin-top: 3px;
+  margin: 2px;
+
   overflow: hidden;
 }
 

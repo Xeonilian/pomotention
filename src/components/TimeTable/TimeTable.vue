@@ -139,7 +139,7 @@ const effectivePxPerMinute = computed(() => {
 }
 .timetable-view-button-container {
   display: flex;
-  justify-content: flex-start;
+  justify-content: center;
   align-items: center;
   gap: 8px;
   z-index: 10;
@@ -148,13 +148,12 @@ const effectivePxPerMinute = computed(() => {
 
 @media (max-width: 600px) {
   .timetable-view-button-container {
-    justify-content: center;
     gap: 4px;
   }
 }
 
 .timetable-editor {
-  height: 100%;
+  height: calc(100% - 40px);
 }
 
 .timetable-time-block {

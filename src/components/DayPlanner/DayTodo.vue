@@ -161,7 +161,7 @@
                 maxlength="5"
                 autocomplete="off"
               />
-              <span v-else>{{ todo.startTime ? timestampToTimeString(todo.startTime) : "-" }}</span>
+              <span v-else>{{ formatTimeForDisplay(todo.startTime) }}</span>
             </td>
 
             <!-- 3 结束时间 -->
@@ -182,7 +182,7 @@
                 maxlength="5"
                 autocomplete="off"
               />
-              <span v-else>{{ todo.doneTime ? timestampToTimeString(todo.doneTime) : "-" }}</span>
+              <span v-else>{{ formatTimeForDisplay(todo.doneTime) }}</span>
             </td>
 
             <!-- 4 排序：点击弹出 emoji 选择，选后写 priority 并打上绑定的 tag -->
@@ -433,8 +433,10 @@ import { storeToRefs } from "pinia";
 import { useActivityTagEditor } from "@/composables/useActivityTagEditor";
 import TagSelector from "../TagSystem/TagSelector.vue";
 import type { SelectOption } from "naive-ui";
+import { useDevice } from "@/composables/useDevice";
 
 const dataStore = useDataStore();
+const { isMobile } = useDevice();
 
 const settingStore = useSettingStore();
 const tagStore = useTagStore();
@@ -534,6 +536,16 @@ const tagOptionsForBinding = computed<SelectOption[]>(() =>
 );
 function renderTagOptionLabel(option: SelectOption) {
   return option.label as string;
+}
+
+// 根据设备类型格式化时间显示，移动端去掉冒号
+function formatTimeForDisplay(timestamp?: number | null) {
+  if (!timestamp) return "-";
+  const timeString = timestampToTimeString(timestamp);
+  if (isMobile.value) {
+    return timeString.replace(":", "");
+  }
+  return timeString;
 }
 function openPriorityBindingModal() {
   Object.keys(priorityBindingDraft).forEach((k) => delete priorityBindingDraft[Number(k)]);
@@ -1012,20 +1024,18 @@ function saveEdit(todo: Todo) {
   }
 
   if (editingField.value === "start") {
-    if (isValidTimeString(editingValue.value)) {
-      const ts = editingValue.value;
-      emit("edit-todo-start", todo.id, ts);
+    const normalized = normalizeTimeInput(editingValue.value);
+    if (normalized && normalized !== "") {
+      emit("edit-todo-start", todo.id, normalized);
     }
   }
 
   if (editingField.value === "done") {
-    if (isValidTimeString(editingValue.value)) {
-      const ts = editingValue.value;
-      emit("edit-todo-done", todo.id, ts);
-    } else {
-      if (editingValue.value === "") {
-        emit("edit-todo-done", todo.id, "");
-      }
+    const normalized = normalizeTimeInput(editingValue.value);
+    if (normalized === "") {
+      emit("edit-todo-done", todo.id, "");
+    } else if (typeof normalized === "string") {
+      emit("edit-todo-done", todo.id, normalized);
     }
   }
   cancelEdit();
@@ -1042,9 +1052,51 @@ function cancelEdit() {
   editingValue.value = "";
 }
 
-function isValidTimeString(str: string) {
-  return /^\d{2}:\d{2}$/.test(str) && +str.split(":")[0] <= 24 && +str.split(":")[1] < 60;
+// 规范化时间输入，支持多种格式并返回 HH:mm
+function normalizeTimeInput(raw: string): string | "" | null {
+  const value = raw.trim();
+  if (!value) return "";
+
+  // 带冒号形式，如 7:3 / 07:11
+  const colonMatch = value.match(/^(\d{1,2}):(\d{1,2})$/);
+  if (colonMatch) {
+    let hours = parseInt(colonMatch[1], 10);
+    let minutes = parseInt(colonMatch[2], 10);
+    if (Number.isNaN(hours) || Number.isNaN(minutes)) return null;
+    if (hours < 0 || hours > 24 || minutes < 0 || minutes >= 60) return null;
+    const h = hours.toString().padStart(2, "0");
+    const m = minutes.toString().padStart(2, "0");
+    return `${h}:${m}`;
+  }
+
+  // 四位纯数字，如 0711 / 1234
+  if (/^\d{4}$/.test(value)) {
+    const hours = parseInt(value.slice(0, 2), 10);
+    const minutes = parseInt(value.slice(2), 10);
+    if (Number.isNaN(hours) || Number.isNaN(minutes)) return null;
+    if (hours < 0 || hours > 24 || minutes < 0 || minutes >= 60) return null;
+    const h = hours.toString().padStart(2, "0");
+    const m = minutes.toString().padStart(2, "0");
+    return `${h}:${m}`;
+  }
+
+  // 三位纯数字，前 1 位小时，后 2 位分钟，如 711 / 930 / 111
+  if (/^\d{3}$/.test(value)) {
+    const hours = parseInt(value.slice(0, 1), 10);
+    const minutes = parseInt(value.slice(1), 10);
+    if (Number.isNaN(hours) || Number.isNaN(minutes)) return null;
+    if (hours < 0 || hours > 24 || minutes < 0 || minutes >= 60) return null;
+    const h = hours.toString().padStart(2, "0");
+    const m = minutes.toString().padStart(2, "0");
+    return `${h}:${m}`;
+  }
+
+  return null;
 }
+
+// 保持旧 API 以兼容其他调用方（目前未使用，占位以防其他模块引用）
+// @ts-expect-error keep API for potential external usage
+const isValidTimeString: (str: string) => string | "" | null = normalizeTimeInput;
 
 // 撤销取消
 function handleUncancelTodo(id: number) {

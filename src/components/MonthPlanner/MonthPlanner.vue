@@ -426,6 +426,7 @@ function getPomoBgColorHEX(ratio: number) {
   grid-auto-rows: minmax(105px, 1fr);
   text-align: center;
   height: 22px;
+  max-height: 22px;
   gap: 2px;
 }
 .header-card {
@@ -513,6 +514,7 @@ function getPomoBgColorHEX(ratio: number) {
   z-index: 5;
   padding: 1px;
 }
+
 .date-badge.today {
   color: white !important;
   background-color: var(--color-blue) !important;

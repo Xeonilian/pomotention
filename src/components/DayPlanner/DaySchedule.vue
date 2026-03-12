@@ -141,7 +141,9 @@
                 maxlength="5"
                 autocomplete="off"
               />
-              <span v-else>{{ schedule.activityDueRange?.[0] ? timestampToTimeString(schedule.activityDueRange[0]) : "-" }}</span>
+              <span v-else>{{
+                schedule.activityDueRange?.[0] ? formatTimeForDisplay(schedule.activityDueRange[0]) : "-"
+              }}</span>
             </td>
 
             <!-- 3 结束时间 -->
@@ -162,7 +164,7 @@
                 maxlength="5"
                 autocomplete="off"
               />
-              <span v-else>{{ schedule.doneTime ? timestampToTimeString(schedule.doneTime) : "-" }}</span>
+              <span v-else>{{ schedule.doneTime ? formatTimeForDisplay(schedule.doneTime) : "-" }}</span>
             </td>
 
             <!-- 4 时长 -->
@@ -322,8 +324,10 @@ import { useDataStore } from "@/stores/useDataStore";
 import { storeToRefs } from "pinia";
 import { useActivityTagEditor } from "@/composables/useActivityTagEditor";
 import TagSelector from "../TagSystem/TagSelector.vue";
+import { useDevice } from "@/composables/useDevice";
 
 const dataStore = useDataStore();
+const { isMobile } = useDevice();
 const { activeId, selectedRowId, selectedActivityId, selectedTaskId, selectedTask, schedulesForCurrentView } = storeToRefs(dataStore);
 
 // 当前视图是否为今天（仅今天时已完成行才变灰）
@@ -368,6 +372,16 @@ const popoverMessage = ref("");
 // Tag Editor
 const tagEditor = useActivityTagEditor();
 const tagSelectorRef = ref<any>(null);
+
+// 根据设备类型格式化时间显示，移动端去掉冒号
+function formatTimeForDisplay(timestamp?: number | null) {
+  if (!timestamp) return "-";
+  const timeString = timestampToTimeString(timestamp);
+  if (isMobile.value) {
+    return timeString.replace(":", "");
+  }
+  return timeString;
+}
 
 const sortedSchedules = computed(() =>
   schedulesForCurrentView.value.sort((a, b) => {
@@ -518,20 +532,18 @@ function saveEdit(schedule: Schedule) {
   }
 
   if (editingField.value === "done") {
-    if (isValidTimeString(editingValue.value)) {
-      const ts = editingValue.value;
-      emit("edit-schedule-done", schedule.id, ts); // 注意这里是 timestring 不是timestamp，是在Home用currentViewdate进行的转化
-    } else {
-      if (editingValue.value === "") {
-        emit("edit-schedule-done", schedule.id, "");
-      }
+    const normalized = normalizeTimeInput(editingValue.value);
+    if (normalized === "") {
+      emit("edit-schedule-done", schedule.id, "");
+    } else if (typeof normalized === "string") {
+      emit("edit-schedule-done", schedule.id, normalized); // 注意这里是 timestring 不是timestamp，是在Home用currentViewdate进行的转化
     }
   }
 
   if (editingField.value === "start") {
-    if (isValidTimeString(editingValue.value)) {
-      const ts = editingValue.value;
-      emit("edit-schedule-start", schedule.id, ts);
+    const normalized = normalizeTimeInput(editingValue.value);
+    if (typeof normalized === "string" && normalized !== "") {
+      emit("edit-schedule-start", schedule.id, normalized);
     } else if (editingValue.value === "") {
       emit("edit-schedule-start", schedule.id, "");
     }
@@ -565,8 +577,46 @@ function cancelEdit() {
   editingValue.value = "";
 }
 
-function isValidTimeString(str: string) {
-  return /^\d{2}:\d{2}$/.test(str) && +str.split(":")[0] <= 24 && +str.split(":")[1] < 60;
+// 规范化时间输入，支持多种格式并返回 HH:mm
+function normalizeTimeInput(raw: string): string | "" | null {
+  const value = raw.trim();
+  if (!value) return "";
+
+  // 带冒号形式，如 7:3 / 07:11
+  const colonMatch = value.match(/^(\d{1,2}):(\d{1,2})$/);
+  if (colonMatch) {
+    let hours = parseInt(colonMatch[1], 10);
+    let minutes = parseInt(colonMatch[2], 10);
+    if (Number.isNaN(hours) || Number.isNaN(minutes)) return null;
+    if (hours < 0 || hours > 24 || minutes < 0 || minutes >= 60) return null;
+    const h = hours.toString().padStart(2, "0");
+    const m = minutes.toString().padStart(2, "0");
+    return `${h}:${m}`;
+  }
+
+  // 四位纯数字，如 0711 / 1234
+  if (/^\d{4}$/.test(value)) {
+    const hours = parseInt(value.slice(0, 2), 10);
+    const minutes = parseInt(value.slice(2), 10);
+    if (Number.isNaN(hours) || Number.isNaN(minutes)) return null;
+    if (hours < 0 || hours > 24 || minutes < 0 || minutes >= 60) return null;
+    const h = hours.toString().padStart(2, "0");
+    const m = minutes.toString().padStart(2, "0");
+    return `${h}:${m}`;
+  }
+
+  // 三位纯数字，前 1 位小时，后 2 位分钟，如 711 / 930 / 111
+  if (/^\d{3}$/.test(value)) {
+    const hours = parseInt(value.slice(0, 1), 10);
+    const minutes = parseInt(value.slice(1), 10);
+    if (Number.isNaN(hours) || Number.isNaN(minutes)) return null;
+    if (hours < 0 || hours > 24 || minutes < 0 || minutes >= 60) return null;
+    const h = hours.toString().padStart(2, "0");
+    const m = minutes.toString().padStart(2, "0");
+    return `${h}:${m}`;
+  }
+
+  return null;
 }
 
 // 表头按钮：取消当前选中的日程

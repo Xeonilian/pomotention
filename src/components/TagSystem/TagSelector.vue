@@ -63,7 +63,8 @@ const filteredTags = computed<TagWithCount[]>(() => {
     return [...tagStore.allTags].sort((a, b) => (b.count || 0) - (a.count || 0)).slice(0, 10);
   }
 
-  return tagStore.findByName(props.searchTerm);
+  const found = tagStore.findByName(props.searchTerm);
+  return [...found].sort((a, b) => (b.count || 0) - (a.count || 0));
 });
 
 const tagExists = computed(() => {
@@ -86,7 +87,7 @@ watch(
   () => props.searchTerm,
   () => {
     highlightedIndex.value = 0;
-  }
+  },
 );
 
 // --- Methods ---
@@ -131,12 +132,11 @@ defineExpose({
 <style scoped>
 .tag-selector {
   width: 160px;
-  background-color: var(--n-color);
   border-radius: 6px;
   box-shadow: var(--n-box-shadow-focus);
   padding: 4px;
   outline: none; /* 移除聚焦时的蓝色边框 */
-  margin-top: 30px;
+
   position: relative;
   z-index: 10001;
   pointer-events: auto;
@@ -180,7 +180,7 @@ defineExpose({
   margin-left: auto;
   text-align: right; /* 右对齐 */
   white-space: nowrap;
-  
+
   flex-shrink: 0; /* 不被压缩 */
   min-width: 20px; /* 1位数字 [1] 的最小宽度 */
   max-width: 50px; /* 5位数字 [12345] 的最大宽度 */
