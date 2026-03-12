@@ -62,25 +62,25 @@ type RowData = {
 
 const createColumns = (): DataTableColumns<RowData> => {
   return [
-    { title: "", key: "score", align: "center", width: 30 },
-    { title: "情绪体验", key: "emotion", width: 110 },
-    { title: "成就感/满足感", key: "satisfaction", width: 130 },
-    { title: "整体描述", key: "overall", width: 55 },
+    { title: "", key: "score", align: "center", width: 40 },
+    { title: "情绪体验", key: "emotion" },
+    { title: "成就感/满足感", key: "satisfaction" },
+    { title: "整体\n描述", key: "overall" },
   ];
 };
 
 const columns = createColumns();
 const helpData: RowData[] = [
-  { score: "1分", emotion: "情绪崩溃，痛苦烦躁", satisfaction: "自我厌恶，认为毫无价值", overall: "崩溃状态" },
-  { score: "2分", emotion: "情绪低落，压抑沮丧", satisfaction: "自我否定，做得很差", overall: "否定状态" },
-  { score: "3分", emotion: "情绪不佳，烦闷不安", satisfaction: "明显不满意，漏洞百出", overall: "不满状态" },
-  { score: "4分", emotion: "情绪一般，略有波动", satisfaction: "方向迷茫，试错中摸索", overall: "迷茫状态" },
-  { score: "5分", emotion: "情绪稳定，稍感轻松", satisfaction: "方向踟蹰，但日拱一卒", overall: "执行状态" },
-  { score: "6分", emotion: "情绪向好，轻松舒适", satisfaction: "方向确定，认可努力", overall: "良好状态" },
-  { score: "7分", emotion: "情绪积极，心情愉悦", satisfaction: "感到满意，推进顺利", overall: "满意状态" },
-  { score: "8分", emotion: "情绪高涨，兴奋满足", satisfaction: "明显自豪，发现亮点", overall: "自豪状态" },
-  { score: "9分", emotion: "情绪极佳，充满喜悦", satisfaction: "非常自豪，感到价值意义", overall: "喜悦状态" },
-  { score: "10分", emotion: "情绪巅峰，幸福充盈", satisfaction: "极度自豪，自我实现感", overall: "巅峰状态" },
+  { score: "1分", emotion: "情绪崩溃，痛苦烦躁", satisfaction: "自我厌恶，认为毫无价值", overall: "崩溃\n状态" },
+  { score: "2分", emotion: "情绪低落，压抑沮丧", satisfaction: "自我否定，做得很差", overall: "否定\n状态" },
+  { score: "3分", emotion: "情绪不佳，烦闷不安", satisfaction: "明显不满意，漏洞百出", overall: "不满\n状态" },
+  { score: "4分", emotion: "情绪一般，略有波动", satisfaction: "方向迷茫，试错中摸索", overall: "迷茫\n状态" },
+  { score: "5分", emotion: "情绪稳定，稍感轻松", satisfaction: "方向踟蹰，但日拱一卒", overall: "执行\n状态" },
+  { score: "6分", emotion: "情绪向好，轻松舒适", satisfaction: "方向确定，认可努力", overall: "良好\n状态" },
+  { score: "7分", emotion: "情绪积极，心情愉悦", satisfaction: "感到满意，推进顺利", overall: "满意\n状态" },
+  { score: "8分", emotion: "情绪高涨，兴奋满足", satisfaction: "明显自豪，发现亮点", overall: "自豪\n状态" },
+  { score: "9分", emotion: "情绪极佳，充满喜悦", satisfaction: "非常自豪，感到价值意义", overall: "喜悦\n状态" },
+  { score: "10分", emotion: "情绪巅峰，幸福充盈", satisfaction: "极度自豪，自我实现感", overall: "巅峰\n状态" },
 ];
 
 const sliderRef = ref<any>(null);
@@ -140,5 +140,6 @@ const handleCancel = () => {
 
 .table .n-data-table-th {
   font-weight: bold !important;
+  white-space: pre-line;
 }
 </style>

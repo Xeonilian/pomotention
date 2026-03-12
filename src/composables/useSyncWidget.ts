@@ -3,6 +3,7 @@ import { computed, onMounted } from "vue";
 import { useSyncStore } from "@/stores/useSyncStore";
 import { uploadAll, downloadAll } from "@/services/sync";
 import { useRelativeTime } from "@/composables/useRelativeTime";
+import { LockClosed20Regular, ArrowSyncCircle20Regular, DismissCircle20Regular, CheckmarkCircle20Regular } from "@vicons/fluent";
 
 export function useSyncWidget() {
   const syncStore = useSyncStore();
@@ -10,18 +11,18 @@ export function useSyncWidget() {
   const syncIcon = computed(() => {
     // 未登录状态优先显示
     if (!syncStore.isLoggedIn) {
-      return "🔒";
+      return LockClosed20Regular;
     }
 
     switch (syncStore.syncStatus) {
       case "syncing":
       case "uploading":
       case "downloading":
-        return "🔄";
+        return ArrowSyncCircle20Regular;
       case "error":
-        return "❌";
+        return DismissCircle20Regular;
       default:
-        return "✅";
+        return CheckmarkCircle20Regular;
     }
   });
 

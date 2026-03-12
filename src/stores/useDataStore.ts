@@ -430,30 +430,8 @@ export const useDataStore = defineStore(
           continue;
         }
 
-        // 无标签筛选时：沿用原逻辑（Priority1 Todo 的第一个标签色）
-        const todosOfDay = activeTodos.value.filter((t) => {
-          const ts = pickTodoTsForDay(t);
-          if (ts == null) return false;
-          if (ts < dayStartTs || ts >= dayEnd) return false;
-          const activity = t.activityId != null ? activityById.value.get(t.activityId) : undefined;
-          return matchesTagFilter(activity?.tagIds);
-        });
-        const priority1Todo = todosOfDay
-          .filter((t) => t.priority === 1)
-          .sort((a, b) => (pickTodoTsForDay(a) ?? 0) - (pickTodoTsForDay(b) ?? 0))[0];
-        let tagColor: string | null = null;
-        let textColor: string | null = null;
-        if (priority1Todo?.activityId != null) {
-          const activity = activityById.value.get(priority1Todo.activityId);
-          const tagIds = activity?.tagIds ?? [];
-          const firstTagId = tagIds[0];
-          if (firstTagId != null) {
-            const tag = tagStore.getTag(firstTagId);
-            tagColor = tag?.backgroundColor ?? tag?.color ?? null;
-            textColor = tag?.color ?? null;
-          }
-        }
-        out.push({ dayStartTs, tagColor, textColor });
+        // 无标签筛选时：不使用 tag 颜色，交给 YearPlanner 的 CSS 默认样式
+        out.push({ dayStartTs, tagColor: null, textColor: null });
       }
       return out;
     });
