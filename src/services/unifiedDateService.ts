@@ -9,9 +9,9 @@ import type { Schedule } from "@/core/types/Schedule";
 import type { Todo } from "@/core/types/Todo";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useDataStore } from "@/stores/useDataStore";
-import { useDevice } from "@/composables/useDevice";
+// import { useDevice } from "@/composables/useDevice";
 
-const { isMobile } = useDevice();
+// const { isMobile } = useDevice();
 
 /**
  * unifiedDateService 的配置选项。
@@ -142,7 +142,7 @@ export function unifiedDateService({ activityList, scheduleList, todoList }: Uni
   // 2026
   const displayYearInfo = computed(() => {
     const d = new Date(yearStartTs.value);
-    return isMobile ? String(d.getFullYear()).slice(-2) : String(d.getFullYear());
+    return String(d.getFullYear());
   });
 
   // --- 3.1 可见范围（新） ---

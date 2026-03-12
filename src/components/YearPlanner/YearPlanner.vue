@@ -1,7 +1,7 @@
 <!-- 年视图：4×3 月格，每天显示日期数字+点，每行开头周编号；点击月份/周编号跳转 -->
 <template>
   <div class="year-planner">
-    <div class="year-grid months-4x3">
+    <div class="year-grid months-nxn">
       <div v-for="month in months" :key="month.monthIndex" class="month-cell">
         <div class="month-cell-title" title="点击进入月视图" @click="handleMonthTitleClick(month.monthStartTs)">
           {{ month.title }}
@@ -209,10 +209,10 @@ function handleWeekClick(weekStartTs: number) {
   overflow: auto;
 }
 
-.year-grid.months-4x3 {
+.year-grid.months-nxn {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  grid-template-rows: repeat(3, min-content);
+  grid-template-columns: repeat(6, 1fr);
+  grid-template-rows: repeat(2, min-content);
   gap: 8px;
   padding: 2px;
   min-height: min-content;
@@ -226,7 +226,7 @@ function handleWeekClick(weekStartTs: number) {
 }
 
 .month-cell-title {
-  font-family: "consolas", monospace;
+  font-family: Consolas, "Courier New", Courier, monospace;
   font-size: 14px;
   font-weight: 600;
   flex-shrink: 0;
@@ -240,14 +240,14 @@ function handleWeekClick(weekStartTs: number) {
 .month-dots {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+
   overflow: visible;
 }
 
 .month-dots-row {
   display: grid;
   grid-template-columns: 22px repeat(7, minmax(0, 1fr));
-  gap: 2px;
+
   align-items: center;
   min-height: 24px;
   flex-shrink: 0;
@@ -256,7 +256,7 @@ function handleWeekClick(weekStartTs: number) {
 .month-dots-row.month-dots-header {
   font-size: 12px;
   color: var(--color-text-secondary);
-  font-family: "consolas", monospace;
+  font-family: Consolas, "Courier New", Courier, monospace;
 }
 
 .dot-header {
@@ -279,7 +279,7 @@ function handleWeekClick(weekStartTs: number) {
   color: var(--color-text-secondary);
   font-weight: 500;
   text-align: center;
-  font-family: "consolas", monospace;
+  font-family: Consolas, "Courier New", Courier, monospace;
 }
 
 .week-num-wrap:hover {
@@ -325,7 +325,7 @@ function handleWeekClick(weekStartTs: number) {
 .day-num {
   font-size: 10px;
   line-height: 1;
-  color: var(--color-text);
+  color: var(--color-text-secondary);
   font-weight: 600;
 }
 
@@ -357,5 +357,80 @@ function handleWeekClick(weekStartTs: number) {
   background-color: var(--color-blue-light);
   color: var(--color-blue);
   border-radius: 50%;
+}
+
+/* 小屏：宽度 < 1000px 时整体压缩为 4×3 月格，但保持圆点原始尺寸，避免被压扁 */
+@media (max-width: 1000px) {
+  .year-grid.months-nxn {
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: repeat(3, min-content);
+    gap: 2px;
+  }
+}
+@media (max-width: 800px) {
+  .year-grid.months-nxn {
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(4, min-content);
+    gap: 3px;
+  }
+
+  .day-dot {
+    width: 16px;
+    height: 16px;
+    min-width: 16px;
+    min-height: 16px;
+  }
+  .day-num {
+    font-size: 11px;
+  }
+
+  .month-dots-row {
+    max-height: 16px;
+  }
+}
+
+@media (max-width: 600px) {
+  .year-grid.months-nxn {
+    gap: 2px;
+  }
+  .day-dot {
+    width: 15px;
+    height: 15px;
+    min-width: 15px;
+    min-height: 15px;
+  }
+  .day-num {
+    font-size: 9px;
+  }
+
+  .month-dots-row {
+    max-height: 15px;
+  }
+}
+
+/* 极小屏：宽度 < 400px 时隐藏星期几表头行，同样不改变圆点尺寸 */
+@media (max-width: 410px) {
+  .year-grid.months-nxn {
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: repeat(6, min-content);
+    gap: 3px;
+  }
+  .month-dots-row.month-dots-header {
+    display: none;
+  }
+
+  .day-dot {
+    width: 16px;
+    height: 16px;
+    min-width: 16px;
+    min-height: 16px;
+  }
+  .day-num {
+    font-size: 10px;
+  }
+
+  .month-dots-row {
+    max-height: 16px;
+  }
 }
 </style>
