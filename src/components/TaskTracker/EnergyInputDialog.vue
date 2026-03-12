@@ -75,22 +75,19 @@ const createColumns = (): DataTableColumns<RowData> => {
       title: "",
       key: "score",
       align: "center",
-      width: 30,
+      width: 40,
     },
     {
       title: "身体状态",
       key: "physical",
-      width: 110,
     },
     {
       title: "心理/思维状态",
       key: "mental",
-      width: 130,
     },
     {
-      title: "整体描述",
+      title: "整体\n描述",
       key: "overall",
-      width: 55,
     },
   ];
 };
@@ -101,61 +98,61 @@ const data: RowData[] = [
     score: "1分",
     physical: "极度疲惫，难以行动",
     mental: "思维断片，无法处理信息",
-    overall: "崩溃状态",
+    overall: "崩溃\n状态",
   },
   {
     score: "2分",
     physical: "沉重，基本动作困难",
     mental: "思维涣散，极度困倦",
-    overall: "极度疲惫",
+    overall: "极度\n状态",
   },
   {
     score: "3分",
     physical: "乏力，动作迟缓",
     mental: "注意力涣散，需要休息",
-    overall: "明显疲惫",
+    overall: "明显\n疲惫",
   },
   {
     score: "4分",
     physical: "略显沉重，勉强活动",
     mental: "思维迟缓，易出错",
-    overall: "低效状态",
+    overall: "低效\n状态",
   },
   {
     score: "5分",
     physical: "轻微疲惫，维持活动",
     mental: "注意力一般，需要调动",
-    overall: "及格状态",
+    overall: "及格\n状态",
   },
   {
     score: "6分",
     physical: "基本正常，偶有疲意",
     mental: "思维清晰，专注一般",
-    overall: "正常水平",
+    overall: "正常\n水平",
   },
   {
     score: "7分",
     physical: "状态良好，行动自如",
     mental: "思维清醒，易于专注",
-    overall: "良好状态",
+    overall: "良好\n状态",
   },
   {
     score: "8分",
     physical: "充沛，动作协调",
     mental: "思维活跃，高度专注",
-    overall: "充满动力",
+    overall: "充满\n动力",
   },
   {
     score: "9分",
     physical: "轻快，行动自如",
     mental: "头脑敏捷，创意丰富",
-    overall: "极佳状态",
+    overall: "极佳\n状态",
   },
   {
     score: "10分",
     physical: "精力充沛，活力满满",
     mental: "清晰敏锐，专注兴奋",
-    overall: "巅峰状态",
+    overall: "巅峰\n状态",
   },
 ];
 // 修复 v-model 问题
@@ -192,5 +189,6 @@ const handleCancel = () => {
 
 .table .n-data-table-th {
   font-weight: bold !important;
+  white-space: pre-line;
 }
 </style>
