@@ -118,12 +118,14 @@
       </n-layout-content>
 
       <!-- Sync Footer -->
-      <n-layout-footer v-if="!isMiniMode && !isMobile" class="sync-footer" bordered>
+      <n-layout-footer v-if="!isMiniMode" class="sync-footer" bordered>
         <div class="footer-content">
           <!-- 左侧：同步状态信息 -->
           <div class="sync-status">
             <div class="sync-status__icon" :class="`sync-status__icon--${syncStore.syncStatus}`">
-              {{ syncIcon }}
+              <n-icon>
+                <component :is="syncIcon" :size="14" color="var(--color-blue)" />
+              </n-icon>
             </div>
             <div class="sync-status__info">
               <span class="sync-status__message">{{ syncStore.syncMessage }}</span>
@@ -443,12 +445,13 @@ async function handleManualDownload() {
   color: var(--color-text-secondary);
 }
 .sync-status__icon {
-  font-size: 11px;
+  font-size: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 11px;
-  height: 11px;
+  width: 14px;
+  height: 14px;
+  color: var(--color-text-secondary);
 }
 .sync-status__icon--syncing,
 .sync-status__icon--uploading,
