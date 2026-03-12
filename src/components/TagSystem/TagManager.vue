@@ -607,7 +607,7 @@ function goNextPage(): void {
   align-items: center;
   justify-content: space-between;
   flex-shrink: 0;
-  padding-top: 2px;
+  padding-top: 0px;
   margin-top: auto; /* 在弹性布局中贴底，与 .tag-suggestions 的 flex:1 配合 */
 }
 
@@ -617,8 +617,7 @@ function goNextPage(): void {
   gap: 6px;
   flex-wrap: nowrap;
   flex-shrink: 0;
-  margin-left: 6px;
-  transform: translateY(3px);
+  margin-left: 8px;
 }
 
 .tag-sort-label {
@@ -630,6 +629,8 @@ function goNextPage(): void {
   align-items: center;
   gap: 2px;
   flex-shrink: 0;
+  font-family: Consolas, "Courier New", Courier, monospace;
+  line-height: 1;
 }
 
 .page-info {
