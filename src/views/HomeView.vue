@@ -560,7 +560,6 @@ function onQuickAddTodo() {
 
   // 创建 todo
   const { newTodo } = passPickedActivity(newActivity, appDateTimestamp.value, isViewDateToday.value);
-  newTodo.startTime = Date.now();
 
   // 确保 newTodo.id 是有效数字（防御性检查）
   if (typeof newTodo.id !== "number" || isNaN(newTodo.id)) {
