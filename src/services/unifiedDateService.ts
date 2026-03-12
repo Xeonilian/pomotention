@@ -9,6 +9,9 @@ import type { Schedule } from "@/core/types/Schedule";
 import type { Todo } from "@/core/types/Todo";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useDataStore } from "@/stores/useDataStore";
+import { useDevice } from "@/composables/useDevice";
+
+const { isMobile } = useDevice();
 
 /**
  * unifiedDateService 的配置选项。
@@ -101,45 +104,33 @@ export function unifiedDateService({ activityList, scheduleList, todoList }: Uni
   // --- 3. 派生状态 ---
   const appDateKey = computed(() => getDateKey(dateState.app));
 
+  // 04/09 Mon
   const displayDateInfo = computed(() => {
-    const date = new Date(dateState.app);
-    const dateString = getDateKey(dateState.app);
-    const weekDay = date.toLocaleDateString("en-US", { weekday: "short" });
-    const { weekNumber } = getISOWeekInfo(dateState.app);
-    return `${dateString} ${weekDay} w${weekNumber}`;
-  });
-
-  const displayDateInfoMobile = computed(() => {
     const date = new Date(dateState.app);
     const mm = String(date.getMonth() + 1).padStart(2, "0");
     const dd = String(date.getDate()).padStart(2, "0");
     const weekDay = date.toLocaleDateString("en-US", { weekday: "short" });
-    return `${mm}-${dd} ${weekDay}`;
+    return `${mm}/${dd} ${weekDay}`;
   });
 
   const weekStartTs = computed(() => getStartOfWeek(dateState.app));
   const weekKey = computed(() => getWeekKey(dateState.app));
-  const displayWeekInfo = computed(() => {
-    const start = new Date(weekStartTs.value);
-    const { isoYear, weekNumber } = getISOWeekInfo(weekStartTs.value);
-    const monthName = start.toLocaleString("en-US", { month: "long" }); // August
-    return `${isoYear} ${monthName} Week ${weekNumber}`;
-  });
 
-  const displayWeekInfoMobile = computed(() => {
-    const start = new Date(weekStartTs.value);
-    const { isoYear, weekNumber } = getISOWeekInfo(weekStartTs.value);
-    const monthName = start.toLocaleString("en-US", { month: "short" }); // Aug
-    return `${isoYear} ${monthName} W${weekNumber}`;
+  // Week10
+  const displayWeekInfo = computed(() => {
+    // const start = new Date(weekStartTs.value);
+    const { weekNumber } = getISOWeekInfo(weekStartTs.value);
+    // const monthName = start.toLocaleString("en-US", { month: "long" }); // August
+    return `Week${weekNumber}`;
   });
 
   const monthStartTs = computed(() => getStartOfMonth(dateState.app));
   const monthKey = computed(() => getMonthKey(dateState.app));
+  // Aug
   const displayMonthInfo = computed(() => {
     const d = new Date(monthStartTs.value);
-    const year = d.getFullYear();
     const monthName = d.toLocaleString("en-US", { month: "long" }); // August
-    return `${year} ${monthName}`;
+    return `${monthName}`;
   });
 
   const yearStartTs = computed(() => getStartOfYear(dateState.app));
@@ -147,9 +138,11 @@ export function unifiedDateService({ activityList, scheduleList, todoList }: Uni
     const d = new Date(yearStartTs.value);
     return String(d.getFullYear());
   });
+
+  // 2026
   const displayYearInfo = computed(() => {
     const d = new Date(yearStartTs.value);
-    return String(d.getFullYear());
+    return isMobile ? String(d.getFullYear()).slice(-2) : String(d.getFullYear());
   });
 
   // --- 3.1 可见范围（新） ---
@@ -319,7 +312,7 @@ export function unifiedDateService({ activityList, scheduleList, todoList }: Uni
       time.getHours(),
       time.getMinutes(),
       time.getSeconds(),
-      time.getMilliseconds()
+      time.getMilliseconds(),
     );
 
     return result.getTime();
@@ -335,11 +328,9 @@ export function unifiedDateService({ activityList, scheduleList, todoList }: Uni
 
     // 日/周/月信息
     displayDateInfo,
-    displayDateInfoMobile,
     weekStartTs,
     weekKey,
     displayWeekInfo,
-    displayWeekInfoMobile,
     monthStartTs,
     monthKey,
     displayMonthInfo,

@@ -35,12 +35,16 @@
         <!-- 任务计划的头部和控件 -->
         <div class="planner-header" @click.stop="cleanSelection">
           <!-- 年入口：仅显示年份，点击进入年视图；在年视图时也只显示年份 -->
-          <div class="year-entry">
+          <div class="day-info">
             <template v-if="settingStore.settings.viewSet !== 'year'">
               <span @click="onYearJump" class="day-status" title="进入年视图">{{ dateService.displayYearInfo }}</span>
             </template>
             <template v-else>
-              <span class="day-status year-current">{{ dateService.displayYearInfo }}</span>
+              <span class="day-status">{{ dateService.displayYearInfo }}</span>
+              <span @click="onDateSet('today')" class="global-pomo">
+                <span class="today-pomo">🍅{{ currentDatePomoCount }}</span>
+                <span class="total-pomo">/{{ globalRealPomo }}</span>
+              </span>
             </template>
           </div>
           <div
@@ -52,7 +56,7 @@
             }"
           >
             <span @click="onWeekJump" class="day-status">
-              {{ isMobile ? dateService.displayDateInfoMobile : dateService.displayDateInfo }}
+              {{ dateService.displayDateInfo }}
             </span>
             <span @click="onDateSet('today')" class="global-pomo">
               <span class="today-pomo">🍅{{ currentDatePomoCount }}</span>
@@ -61,7 +65,7 @@
           </div>
           <div v-if="settingStore.settings.viewSet === 'week'" class="day-info">
             <span @click="onMonthJump" class="day-status">
-              {{ isMobile ? dateService.displayWeekInfoMobile : dateService.displayWeekInfo }}
+              {{ dateService.displayWeekInfo }}
             </span>
             <span @click="onDateSet('today')" class="global-pomo">
               <span class="total-pomo">🍅{{ globalRealPomo }}</span>
@@ -1558,24 +1562,6 @@ const { startResize: startRightResize } = useResize(
   z-index: 5;
 }
 
-.year-entry {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-  z-index: 2;
-  margin-right: 4px;
-}
-
-.year-entry .year-current {
-  cursor: default;
-}
-
-.day-status-sep {
-  margin: 0 4px;
-  color: var(--color-text-tertiary);
-  cursor: default;
-}
-
 .day-info {
   display: flex;
   align-items: center;
@@ -1590,10 +1576,18 @@ const { startResize: startRightResize } = useResize(
   font-family: Consolas, "Courier New", Courier, Monaco, "Liberation Mono", "Menlo", monospace;
   color: var(--color-text);
   border-radius: 12px;
-  padding: 0px 8px 0px 8px;
+  padding: 0px 4px 0px 4px;
   margin: 2px;
   cursor: pointer;
   background-color: var(--color-background);
+}
+
+.day-info.tomorrow .day-status {
+  box-shadow: -4px 0px 0px 0px var(--color-red-light) inset;
+}
+
+.day-info.yesterday .day-status {
+  box-shadow: 4px 0px 0px 0px var(--color-blue-light) inset;
 }
 
 .global-pomo {
@@ -1612,16 +1606,6 @@ const { startResize: startRightResize } = useResize(
   color: var(--color-blue);
   font-family: Consolas, "Courier New", Courier, monospace;
   font-weight: 500;
-}
-
-.day-info.tomorrow .day-status {
-  background: var(--color-background-light-transparent);
-  box-shadow: -4px 0px 0px 0px var(--color-red-light) inset;
-}
-
-.day-info.yesterday .day-status {
-  background: var(--color-background-light-transparent);
-  box-shadow: 4px 0px 0px 0px var(--color-blue-light) inset;
 }
 
 .middle-bottom {
