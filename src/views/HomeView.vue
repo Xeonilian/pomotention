@@ -34,6 +34,15 @@
       >
         <!-- 任务计划的头部和控件 -->
         <div class="planner-header" @click.stop="cleanSelection">
+          <!-- 年入口：仅显示年份，点击进入年视图；在年视图时也只显示年份 -->
+          <div class="year-entry">
+            <template v-if="settingStore.settings.viewSet !== 'year'">
+              <span @click="onYearJump" class="day-status" title="进入年视图">{{ dateService.displayYearInfo }}</span>
+            </template>
+            <template v-else>
+              <span class="day-status year-current">{{ dateService.displayYearInfo }}</span>
+            </template>
+          </div>
           <div
             v-if="settingStore.settings.viewSet === 'day'"
             class="day-info"
@@ -143,7 +152,7 @@
               secondary
               strong
               @click="onDateSet('prev')"
-              :title="settingStore.settings.viewSet === 'day' ? '上一天' : settingStore.settings.viewSet === 'week' ? '上一周' : '上一月'"
+              :title="settingStore.settings.viewSet === 'day' ? '上一天' : settingStore.settings.viewSet === 'week' ? '上一周' : settingStore.settings.viewSet === 'year' ? '上一年' : '上一月'"
             >
               <template #icon>
                 <n-icon>
@@ -158,7 +167,7 @@
               secondary
               strong
               @click="onDateSet('next')"
-              :title="settingStore.settings.viewSet === 'day' ? '下一天' : settingStore.settings.viewSet === 'week' ? '下一周' : '下一月'"
+              :title="settingStore.settings.viewSet === 'day' ? '下一天' : settingStore.settings.viewSet === 'week' ? '下一周' : settingStore.settings.viewSet === 'year' ? '下一年' : '下一月'"
             >
               <template #icon>
                 <n-icon>
@@ -205,6 +214,13 @@
             @item-change="onItemChange"
             @date-select="onDateSelect"
             @date-select-day-view="onDateSelectDayView"
+          />
+          <YearPlanner
+            v-if="settingStore.settings.showPlanner && settingStore.settings.viewSet === 'year'"
+            :key="dateService.displayYearInfo"
+            @date-select-day-view="onDateSelectDayView"
+            @navigate-to-month="onYearNavigateToMonth"
+            @navigate-to-week="onYearNavigateToWeek"
           />
         </div>
       </div>
@@ -295,6 +311,7 @@ const TimeTable = defineAsyncComponent(() => import("@/components/TimeTable/Time
 const DayPlanner = defineAsyncComponent(() => import("@/components/DayPlanner/DayPlanner.vue"));
 const WeekPlanner = defineAsyncComponent(() => import("@/components/WeekPlanner/WeekPlanner.vue"));
 const MonthPlanner = defineAsyncComponent(() => import("@/components/MonthPlanner/MonthPlanner.vue"));
+const YearPlanner = defineAsyncComponent(() => import("@/components/YearPlanner/YearPlanner.vue"));
 const TaskTracker = defineAsyncComponent(() => import("@/components/TaskTracker/TaskTracker.vue"));
 const ActivitySheet = defineAsyncComponent(() => import("@/components/ActivitySheet/ActivitySheet.vue"));
 const AIChatDialog = defineAsyncComponent(() => import("@/components/AiChat/AiChatDialog.vue"));
@@ -344,6 +361,26 @@ const isViewDateToday = computed(() => dateService.isViewDateToday);
 const isViewDateYesterday = computed(() => dateService.isViewDateYesterday);
 const isViewDateTomorrow = computed(() => dateService.isViewDateTomorrow);
 const appDateTimestamp = computed(() => dateService.appDateTimestamp);
+
+// 进入年视图（点击头部年份）
+const onYearJump = () => {
+  settingStore.settings.viewSet = "year";
+  settingStore.settings.topHeight = 480;
+};
+
+// 年视图中点击月份标题 → 进入月视图并定位到该月
+const onYearNavigateToMonth = (monthStartTs: number) => {
+  settingStore.settings.viewSet = "month";
+  settingStore.settings.topHeight = 610;
+  dateService.navigateTo(monthStartTs);
+};
+
+// 年视图中点击周编号 → 进入周视图并定位到该周
+const onYearNavigateToWeek = (weekStartTs: number) => {
+  settingStore.settings.viewSet = "week";
+  settingStore.settings.topHeight = 510;
+  dateService.navigateTo(weekStartTs);
+};
 
 // weekplanner month 引起变化日期
 const onMonthJump = () => {
@@ -792,7 +829,7 @@ const icsQRText = ref("");
 
 // 视图数据汇总
 // 将你现有视图数据，映射为 DataRow[]
-const viewSet = computed(() => settingStore.settings.viewSet as "day" | "week" | "month");
+const viewSet = computed(() => settingStore.settings.viewSet as "day" | "week" | "month" | "year");
 
 const datasetsForCurrentView = computed<DataRow[]>(() => {
   if (viewSet.value === "day") {
@@ -1504,6 +1541,24 @@ const { startResize: startRightResize } = useResize(
   background-color: var(--color-background);
   margin-left: auto;
   z-index: 5;
+}
+
+.year-entry {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  z-index: 2;
+  margin-right: 4px;
+}
+
+.year-entry .year-current {
+  cursor: default;
+}
+
+.day-status-sep {
+  margin: 0 4px;
+  color: var(--color-text-tertiary);
+  cursor: default;
 }
 
 .day-info {

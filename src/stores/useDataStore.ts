@@ -380,6 +380,44 @@ export const useDataStore = defineStore(
       });
     });
 
+    // 年视图：每天一个点，颜色为当日 Priority1 Todo 的 tag 色（用于 YearPlanner）
+    const DAY_MS = 24 * 60 * 60 * 1000;
+    const pickTodoTsForDay = (t: Todo): number | null => t.id ?? t.dueDate ?? t.startTime ?? null;
+
+    const yearDayDots = computed<{ dayStartTs: number; tagColor: string | null }[]>(() => {
+      const start = dateService.yearStartTs.value;
+      const y = new Date(start).getFullYear();
+      const end = new Date(y + 1, 0, 1).getTime();
+      const numDays = Math.round((end - start) / DAY_MS);
+      const out: { dayStartTs: number; tagColor: string | null }[] = [];
+      for (let i = 0; i < numDays; i++) {
+        const dayStartTs = start + i * DAY_MS;
+        const dayEnd = dayStartTs + DAY_MS;
+        const todosOfDay = activeTodos.value.filter((t) => {
+          const ts = pickTodoTsForDay(t);
+          if (ts == null) return false;
+          if (ts < dayStartTs || ts >= dayEnd) return false;
+          const activity = t.activityId != null ? activityById.value.get(t.activityId) : undefined;
+          return matchesTagFilter(activity?.tagIds);
+        });
+        const priority1Todo = todosOfDay
+          .filter((t) => t.priority === 1)
+          .sort((a, b) => (pickTodoTsForDay(a) ?? 0) - (pickTodoTsForDay(b) ?? 0))[0];
+        let tagColor: string | null = null;
+        if (priority1Todo?.activityId != null) {
+          const activity = activityById.value.get(priority1Todo.activityId);
+          const tagIds = activity?.tagIds ?? [];
+          const firstTagId = tagIds[0];
+          if (firstTagId != null) {
+            const tag = tagStore.getTag(firstTagId);
+            tagColor = tag?.backgroundColor ?? tag?.color ?? null;
+          }
+        }
+        out.push({ dayStartTs, tagColor });
+      }
+      return out;
+    });
+
     // ======================== 6. 方法 (Actions) ========================
     function toggleFilterTagId(tagId: number) {
       const index = filterTagIds.value.indexOf(tagId);
@@ -831,6 +869,7 @@ export const useDataStore = defineStore(
       todosForAppDate,
       schedulesForCurrentView,
       todosForCurrentViewWithTaskRecords,
+      yearDayDots,
 
       dateService,
 

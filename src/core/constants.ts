@@ -2,7 +2,7 @@
 
 import type { Tag } from "@/core/types/Tag";
 
-export type ViewType = "day" | "week" | "month";
+export type ViewType = "day" | "week" | "month" | "year";
 
 export const PomodoroDurations = {
   workDuration: 25,

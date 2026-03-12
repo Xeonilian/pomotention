@@ -60,6 +60,20 @@ export function unifiedDateService({ activityList, scheduleList, todoList }: Uni
     return next.getTime();
   };
 
+  const getStartOfYear = (ts: number) => {
+    const d = new Date(ts);
+    const y0 = new Date(d.getFullYear(), 0, 1);
+    y0.setHours(0, 0, 0, 0);
+    return y0.getTime();
+  };
+
+  const getStartOfNextYear = (ts: number) => {
+    const d = new Date(getStartOfYear(ts));
+    const next = new Date(d.getFullYear() + 1, 0, 1);
+    next.setHours(0, 0, 0, 0);
+    return next.getTime();
+  };
+
   // ISO week 信息
   const getISOWeekInfo = (ts: number) => {
     const d = new Date(ts);
@@ -128,6 +142,16 @@ export function unifiedDateService({ activityList, scheduleList, todoList }: Uni
     return `${year} ${monthName}`;
   });
 
+  const yearStartTs = computed(() => getStartOfYear(dateState.app));
+  const yearKey = computed(() => {
+    const d = new Date(yearStartTs.value);
+    return String(d.getFullYear());
+  });
+  const displayYearInfo = computed(() => {
+    const d = new Date(yearStartTs.value);
+    return String(d.getFullYear());
+  });
+
   // --- 3.1 可见范围（新） ---
 
   // 半开区间 [start, end)
@@ -144,8 +168,13 @@ export function unifiedDateService({ activityList, scheduleList, todoList }: Uni
       const end = getStartOfNextWeek(app);
       return { start, end };
     }
+    if (curView === "year") {
+      const start = getStartOfYear(app);
+      const end = getStartOfNextYear(app);
+      return { start, end };
+    }
 
-    // 方案A：严格自然月
+    // month：严格自然月
     const mStart = getStartOfMonth(app);
     const mEnd = getStartOfNextMonth(app);
     return { start: mStart, end: mEnd };
@@ -191,8 +220,15 @@ export function unifiedDateService({ activityList, scheduleList, todoList }: Uni
 
     if (type === "today") {
       const base = dateState.system;
-      dateState.app = curView === "day" ? base : curView === "week" ? getStartOfWeek(base) : getStartOfMonth(base);
-      return base;
+      dateState.app =
+        curView === "day"
+          ? base
+          : curView === "week"
+            ? getStartOfWeek(base)
+            : curView === "year"
+              ? getStartOfYear(base)
+              : getStartOfMonth(base);
+      return dateState.app;
     }
 
     if (curView === "day") {
@@ -204,6 +240,17 @@ export function unifiedDateService({ activityList, scheduleList, todoList }: Uni
       const start = getStartOfWeek(dateState.app);
       const step = type === "prev" ? -7 : 7;
       dateState.app = addDays(start, step);
+      return dateState.app;
+    }
+
+    if (curView === "year") {
+      const appTs = getDayStartTimestamp(dateState.app);
+      const d = new Date(appTs);
+      const currentYear = d.getFullYear();
+      const prevYear = type === "prev";
+      const targetYear = prevYear ? currentYear - 1 : currentYear + 1;
+      const targetTs = getDayStartTimestamp(new Date(targetYear, 0, 1));
+      dateState.app = targetTs;
       return dateState.app;
     }
 
@@ -222,7 +269,14 @@ export function unifiedDateService({ activityList, scheduleList, todoList }: Uni
   const navigateTo = (date: Date | number): number => {
     const target = getDayStartTimestamp(date);
     const curView = settingStore.settings.viewSet;
-    dateState.app = curView === "day" ? target : curView === "week" ? getStartOfWeek(target) : getStartOfMonth(target);
+    dateState.app =
+      curView === "day"
+        ? target
+        : curView === "week"
+          ? getStartOfWeek(target)
+          : curView === "year"
+            ? getStartOfYear(target)
+            : getStartOfMonth(target);
 
     dataStore.setSelectedDate(target);
     return target;
@@ -289,6 +343,9 @@ export function unifiedDateService({ activityList, scheduleList, todoList }: Uni
     monthStartTs,
     monthKey,
     displayMonthInfo,
+    yearStartTs,
+    yearKey,
+    displayYearInfo,
 
     // 关系判断
     isViewDateToday,
