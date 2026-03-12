@@ -20,13 +20,13 @@
               :key="day ? day.startTs : `empty-${rowIdx}-${colIdx}`"
               type="button"
               class="day-dot-wrap"
-              :class="{ 'day-dot--other-month': day && !day.isCurrentMonth, 'day-dot--today': day?.isToday }"
-              :title="day ? formatDayTitle(day.startTs) : ''"
-              @click="day ? handleDayClick(day.startTs) : undefined"
+              :class="{ 'day-dot--today': day && day.isCurrentMonth && day.isToday }"
+              :title="day && day.isCurrentMonth ? formatDayTitle(day.startTs) : ''"
+              @click="day && day.isCurrentMonth ? handleDayClick(day.startTs) : undefined"
             >
-              <template v-if="day">
-                <span class="day-dot" :style="getDotStyle(day.startTs)">
-                  <span class="day-num">{{ day.dayOfMonth }}</span>
+              <template v-if="day && day.isCurrentMonth">
+                <span class="day-dot" :style="getDotBgStyle(day.startTs)">
+                  <span class="day-num" :style="getDayNumStyle(day.startTs)">{{ day.dayOfMonth }}</span>
                 </span>
               </template>
               <span v-else class="day-dot day-dot--empty" />
@@ -128,6 +128,18 @@ function getDotStyle(dayStartTs: number): { backgroundColor?: string; color?: st
   const fg = item?.textColor ?? undefined;
   if (!bg && !fg) return {};
   return { backgroundColor: bg, color: fg };
+}
+
+// 圆点底色样式（只取背景色）
+function getDotBgStyle(dayStartTs: number): { backgroundColor?: string } {
+  const { backgroundColor } = getDotStyle(dayStartTs);
+  return backgroundColor ? { backgroundColor } : {};
+}
+
+// 日期文字样式（只取前景色）
+function getDayNumStyle(dayStartTs: number): { color?: string } {
+  const { color } = getDotStyle(dayStartTs);
+  return color ? { color } : {};
 }
 
 function formatDayTitle(ts: number): string {
