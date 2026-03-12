@@ -383,16 +383,54 @@ export const useDataStore = defineStore(
     // 年视图：每天一个点，颜色为当日 Priority1 Todo 的 tag 色（用于 YearPlanner）
     const DAY_MS = 24 * 60 * 60 * 1000;
     const pickTodoTsForDay = (t: Todo): number | null => t.id ?? t.dueDate ?? t.startTime ?? null;
+    const pickScheduleTsForDay = (s: Schedule): number | null => s.activityDueRange?.[0] ?? s.id ?? null;
 
-    const yearDayDots = computed<{ dayStartTs: number; tagColor: string | null }[]>(() => {
+    const yearDayDots = computed<{ dayStartTs: number; tagColor: string | null; textColor: string | null }[]>(() => {
       const start = dateService.yearStartTs.value;
       const y = new Date(start).getFullYear();
       const end = new Date(y + 1, 0, 1).getTime();
       const numDays = Math.round((end - start) / DAY_MS);
-      const out: { dayStartTs: number; tagColor: string | null }[] = [];
+      const out: { dayStartTs: number; tagColor: string | null; textColor: string | null }[] = [];
       for (let i = 0; i < numDays; i++) {
         const dayStartTs = start + i * DAY_MS;
         const dayEnd = dayStartTs + DAY_MS;
+        // 有标签筛选时：把匹配到的日期 dot 统一渲染为筛选标签色
+        if (filterTagIds.value && filterTagIds.value.length > 0) {
+          // 找到“这一天里，真正包含筛选标签”的任意一个 activity（todo/schedule 都算）
+          // 取第一个命中的 tag 来着色（同一天多个命中时按时间最早者优先）
+          const candidates: Array<{ ts: number; activityTagIds: number[] }> = [];
+
+          for (const t of activeTodos.value) {
+            const ts = pickTodoTsForDay(t);
+            if (ts == null || ts < dayStartTs || ts >= dayEnd) continue;
+            const activity = t.activityId != null ? activityById.value.get(t.activityId) : undefined;
+            if (!matchesTagFilter(activity?.tagIds)) continue;
+            candidates.push({ ts, activityTagIds: activity?.tagIds ?? [] });
+          }
+
+          for (const s of activeSchedules.value) {
+            const ts = pickScheduleTsForDay(s);
+            if (ts == null || ts < dayStartTs || ts >= dayEnd) continue;
+            const activity = s.activityId != null ? activityById.value.get(s.activityId) : undefined;
+            if (!matchesTagFilter(activity?.tagIds)) continue;
+            candidates.push({ ts, activityTagIds: activity?.tagIds ?? [] });
+          }
+
+          if (candidates.length === 0) {
+            out.push({ dayStartTs, tagColor: null, textColor: null });
+            continue;
+          }
+
+          candidates.sort((a, b) => a.ts - b.ts);
+          const activityTagIds = candidates[0].activityTagIds ?? [];
+          const displayTagId = activityTagIds.find((id) => filterTagIds.value.includes(id)) ?? filterTagIds.value[0];
+          const tag = displayTagId != null ? tagStore.getTag(displayTagId) : undefined;
+
+          out.push({ dayStartTs, tagColor: tag?.backgroundColor ?? tag?.color ?? null, textColor: tag?.color ?? null });
+          continue;
+        }
+
+        // 无标签筛选时：沿用原逻辑（Priority1 Todo 的第一个标签色）
         const todosOfDay = activeTodos.value.filter((t) => {
           const ts = pickTodoTsForDay(t);
           if (ts == null) return false;
@@ -404,6 +442,7 @@ export const useDataStore = defineStore(
           .filter((t) => t.priority === 1)
           .sort((a, b) => (pickTodoTsForDay(a) ?? 0) - (pickTodoTsForDay(b) ?? 0))[0];
         let tagColor: string | null = null;
+        let textColor: string | null = null;
         if (priority1Todo?.activityId != null) {
           const activity = activityById.value.get(priority1Todo.activityId);
           const tagIds = activity?.tagIds ?? [];
@@ -411,9 +450,10 @@ export const useDataStore = defineStore(
           if (firstTagId != null) {
             const tag = tagStore.getTag(firstTagId);
             tagColor = tag?.backgroundColor ?? tag?.color ?? null;
+            textColor = tag?.color ?? null;
           }
         }
-        out.push({ dayStartTs, tagColor });
+        out.push({ dayStartTs, tagColor, textColor });
       }
       return out;
     });

@@ -98,6 +98,42 @@
             ref="inputRef"
           />
           <div class="button-group">
+            <!-- 标签筛选：无筛选时打开 TagSelector；有筛选时一键清除 -->
+            <n-popover
+              v-model:show="showHomeTagSelector"
+              trigger="manual"
+              placement="bottom"
+              :show-arrow="false"
+              :style="{ '--n-padding': '0px' }"
+            >
+              <template #trigger>
+                <n-button
+                  ref="homeTagFilterBtnRef"
+                  size="small"
+                  circle
+                  quaternary
+                  strong
+                  :type="dataStore.filterTagIds.length > 0 ? 'warning' : 'default'"
+                  :title="dataStore.filterTagIds.length > 0 ? '清除标签筛选' : '标签筛选'"
+                  @click.stop="handleHomeTagFilterButtonClick"
+                >
+                  <template #icon>
+                    <n-icon>
+                      <TagOff20Regular v-if="dataStore.filterTagIds.length > 0" />
+                      <TagSearch20Regular v-else />
+                    </n-icon>
+                  </template>
+                </n-button>
+              </template>
+
+              <TagSelector
+                :search-term="tagEditor.tagSearchTerm.value"
+                :allow-create="true"
+                @select-tag="handleTagSelectForFilter"
+                @close-selector="showHomeTagSelector = false"
+              />
+            </n-popover>
+
             <n-button
               title="重复活动"
               @click="onRepeatActivity"
@@ -296,8 +332,8 @@
 
 <script setup lang="ts">
 // ------------------------ 导入依赖 ------------------------
-import { ref, onMounted, onUnmounted, computed, nextTick } from "vue";
-import { defineAsyncComponent } from "vue";
+import { ref, onMounted, onUnmounted, computed, nextTick, defineAsyncComponent } from "vue";
+import type { Component } from "vue";
 import { storeToRefs } from "pinia";
 import { onBeforeRouteLeave } from "vue-router";
 
@@ -307,6 +343,7 @@ import { ViewType } from "@/core/constants";
 import { useResize } from "@/composables/useResize";
 import IcsExportModal from "@/components/IcsExportModal.vue";
 import { Previous24Regular, Next24Regular, CalendarSettings20Regular, QrCode24Regular, ArrowRepeatAll24Regular } from "@vicons/fluent";
+import { TagOff20Regular, TagSearch20Regular } from "@vicons/fluent";
 
 import {
   handleAddActivity,
@@ -321,6 +358,7 @@ import { taskService } from "@/services/taskService";
 
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useDataStore } from "@/stores/useDataStore";
+import { useActivityTagEditor } from "@/composables/useActivityTagEditor";
 import { autoSyncDebounced, uploadAllDebounced } from "@/core/utils/autoSync";
 import { useDevice } from "@/composables/useDevice";
 
@@ -335,10 +373,15 @@ const YearPlanner = defineAsyncComponent(() => import("@/components/YearPlanner/
 const TaskTracker = defineAsyncComponent(() => import("@/components/TaskTracker/TaskTracker.vue"));
 const ActivitySheet = defineAsyncComponent(() => import("@/components/ActivitySheet/ActivitySheet.vue"));
 const AIChatDialog = defineAsyncComponent(() => import("@/components/AiChat/AiChatDialog.vue"));
+const TagSelector = defineAsyncComponent<Component>(() => import("@/components/TagSystem/TagSelector.vue"));
 
 // -- 基础UI状态
 const settingStore = useSettingStore();
 const dataStore = useDataStore();
+const tagEditor = useActivityTagEditor();
+
+const showHomeTagSelector = ref(false);
+const homeTagFilterBtnRef = ref<HTMLElement | null>(null);
 
 const queryDate = ref<number | null>(null);
 const showPopover = ref(false);
@@ -475,6 +518,23 @@ function showErrorPopover(message: string) {
   setTimeout(() => {
     showPopover.value = false;
   }, 3000);
+}
+
+function handleHomeTagFilterButtonClick() {
+  if (dataStore.filterTagIds.length > 0) {
+    dataStore.clearFilterTags();
+    showHomeTagSelector.value = false;
+    return;
+  }
+
+  tagEditor.popoverTargetId.value = "home-tag-filter";
+  tagEditor.tagSearchTerm.value = "";
+  showHomeTagSelector.value = true;
+}
+
+function handleTagSelectForFilter(tagId: number) {
+  dataStore.toggleFilterTagId(tagId);
+  showHomeTagSelector.value = false;
 }
 
 /**  marquee 功能*/
@@ -1392,6 +1452,32 @@ onUnmounted(() => {
   autoSyncDebounced.flush(); //立即执行
 });
 
+function handleHomeTagSelectorPointerDownCapture(e: PointerEvent) {
+  if (!showHomeTagSelector.value) return;
+  const path = (typeof e.composedPath === "function" ? e.composedPath() : []) as Array<EventTarget>;
+  const clickedTrigger = homeTagFilterBtnRef.value != null && path.includes(homeTagFilterBtnRef.value);
+  const clickedInsidePopover = path.some((node) => {
+    if (!(node instanceof HTMLElement)) return false;
+    return node.classList.contains("n-popover") || node.classList.contains("tag-selector");
+  });
+
+  if (!clickedTrigger && !clickedInsidePopover) {
+    showHomeTagSelector.value = false;
+  }
+}
+
+watch(
+  showHomeTagSelector,
+  (next) => {
+    if (next) {
+      window.addEventListener("pointerdown", handleHomeTagSelectorPointerDownCapture, true);
+    } else {
+      window.removeEventListener("pointerdown", handleHomeTagSelectorPointerDownCapture, true);
+    }
+  },
+  { immediate: true },
+);
+
 //  路由切换前保存（Vue Router）
 onBeforeRouteLeave(() => {
   console.log("路由切换前保存");
@@ -1698,28 +1784,6 @@ const { startResize: startRightResize } = useResize(
   padding-left: 6px;
   padding-right: 6px;
 }
-
-/* 方案 1：通过 v-binder 的水平偏移变量来右移（推荐先看这个效果） */
-:deep(.v-binder-follower-content) {
-  /* 数值越大越往右，比如 10 / 20 / 40 */
-  --v-offset-right: 30px !important;
-  background-color: red !important;
-  font-size: 20px !important;
-}
-
-/* 方案 2：直接改日历面板自身的 transform（如果 1 不明显可以试着打开） */
-/*
-:deep(.n-date-panel) {
-  transform: translateX(40px) !important;
-}
-*/
-
-/* 方案 3：用 margin 再叠加一层偏移（配合上面任选其一） */
-/*
-:deep(.n-date-panel) {
-  margin-left: 20px !important;
-}
-*/
 
 .view-toggle-btn {
   margin-right: 2px;

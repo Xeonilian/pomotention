@@ -25,7 +25,7 @@
               @click="day ? handleDayClick(day.startTs) : undefined"
             >
               <template v-if="day">
-                <span class="day-dot" :style="{ backgroundColor: getDotColor(day.startTs) }">
+                <span class="day-dot" :style="getDotStyle(day.startTs)">
                   <span class="day-num">{{ day.dayOfMonth }}</span>
                 </span>
               </template>
@@ -115,15 +115,19 @@ const yearStart = computed(() => {
 });
 const todayStart = computed(() => startOfDay(Date.now()));
 
-const GRAY = "#999999";
-function getDotColor(dayStartTs: number): string {
+function getDotStyle(dayStartTs: number): { backgroundColor?: string; color?: string } {
   const start = yearStart.value;
   const dots = dataStore.yearDayDots;
-  if (!dots || dots.length === 0) return GRAY;
+  // 没有 dots 时走 CSS 默认底色
+  if (!dots || dots.length === 0) return {};
   const idx = Math.floor((dayStartTs - start) / DAY_MS);
-  if (idx < 0 || idx >= dots.length) return GRAY;
+  if (idx < 0 || idx >= dots.length) return {};
   const item = dots[idx];
-  return item?.tagColor ?? GRAY;
+  // 没有 tagColor 时走 CSS 默认底色（你说的“初始颜色配置”）
+  const bg = item?.tagColor ?? undefined;
+  const fg = item?.textColor ?? undefined;
+  if (!bg && !fg) return {};
+  return { backgroundColor: bg, color: fg };
 }
 
 function formatDayTitle(ts: number): string {
@@ -301,8 +305,8 @@ function handleWeekClick(weekStartTs: number) {
 
 .day-dot-wrap.day-dot--other-month .day-num,
 .day-dot-wrap.day-dot--other-month .day-dot {
-  color: var(--color-background) !important;
-  background-color: var(--color-background-light) !important;
+  color: var(--color-background);
+  background-color: var(--color-background-light);
 }
 
 /* 今日：整格底色与圆点填充均为蓝色 */
@@ -335,7 +339,7 @@ function handleWeekClick(weekStartTs: number) {
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: var(--color-background-light) !important;
+  background-color: var(--color-background-light);
 }
 
 .day-dot--empty {
@@ -350,8 +354,8 @@ function handleWeekClick(weekStartTs: number) {
 /* hover 只作用在固定尺寸的圆点上，避免 button 宽度导致椭圆 */
 .day-dot-wrap:hover .day-dot {
   cursor: pointer;
-  background-color: var(--color-blue-light) !important;
-  color: var(--color-blue) !important;
+  background-color: var(--color-blue-light);
+  color: var(--color-blue);
   border-radius: 50%;
 }
 </style>
