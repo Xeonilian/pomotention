@@ -60,7 +60,7 @@
             </span>
             <span @click="onDateSet('today')" class="global-pomo">
               <span class="today-pomo">🍅{{ currentDatePomoCount }}</span>
-              <span class="total-pomo">/{{ globalRealPomo }}</span>
+              <span v-if="isMobile" class="total-pomo">/{{ globalRealPomo }}</span>
             </span>
           </div>
           <div v-if="settingStore.settings.viewSet === 'week'" class="day-info">
