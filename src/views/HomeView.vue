@@ -1583,11 +1583,11 @@ const { startResize: startRightResize } = useResize(
 }
 
 .day-info.tomorrow .day-status {
-  box-shadow: -4px 0px 0px 0px var(--color-red-light) inset;
+  box-shadow: 0px -1px 1px 1px var(--color-red-light) inset;
 }
 
 .day-info.yesterday .day-status {
-  box-shadow: 4px 0px 0px 0px var(--color-blue-light) inset;
+  box-shadow: 0px -1px 1px 1px var(--color-blue-light) inset;
 }
 
 .global-pomo {
