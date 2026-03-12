@@ -1016,9 +1016,6 @@ function handlePomoInputTouchCancel(item: Activity) {
 
 <style scoped>
 .section-container {
-  border: 1px solid var(--color-background-dark);
-  border-radius: 6px;
-  padding: 2px;
   display: flex;
   flex-direction: column;
   height: 100%;

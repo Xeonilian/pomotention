@@ -122,7 +122,6 @@ const renderedMarkdown = computed(() => {
   return text.replace(/\n/g, "<br />");
 });
 
-
 watch(
   () => props.initialContent,
   (newContent) => {
@@ -459,7 +458,6 @@ const handleClick = (event: MouseEvent) => {
 .task-record {
   width: 100%;
   height: 100%;
-  margin: 0px 0;
   overflow: hidden; /* 防止出现滚动条 */
 }
 
