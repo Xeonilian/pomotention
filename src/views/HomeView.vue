@@ -152,7 +152,15 @@
               secondary
               strong
               @click="onDateSet('prev')"
-              :title="settingStore.settings.viewSet === 'day' ? '上一天' : settingStore.settings.viewSet === 'week' ? '上一周' : settingStore.settings.viewSet === 'year' ? '上一年' : '上一月'"
+              :title="
+                settingStore.settings.viewSet === 'day'
+                  ? '上一天'
+                  : settingStore.settings.viewSet === 'week'
+                    ? '上一周'
+                    : settingStore.settings.viewSet === 'year'
+                      ? '上一年'
+                      : '上一月'
+              "
             >
               <template #icon>
                 <n-icon>
@@ -167,7 +175,15 @@
               secondary
               strong
               @click="onDateSet('next')"
-              :title="settingStore.settings.viewSet === 'day' ? '下一天' : settingStore.settings.viewSet === 'week' ? '下一周' : settingStore.settings.viewSet === 'year' ? '下一年' : '下一月'"
+              :title="
+                settingStore.settings.viewSet === 'day'
+                  ? '下一天'
+                  : settingStore.settings.viewSet === 'week'
+                    ? '下一周'
+                    : settingStore.settings.viewSet === 'year'
+                      ? '下一年'
+                      : '下一月'
+              "
             >
               <template #icon>
                 <n-icon>
@@ -1639,18 +1655,19 @@ const { startResize: startRightResize } = useResize(
 }
 
 .resize-handle {
-  height: 4px;
-  background: var(--color-background-light);
+  height: 1px;
+  background: var(--color-background-dark);
   cursor: ns-resize;
   position: relative;
   margin: 0;
 }
 
 .resize-handle:hover {
-  background: var(--color-blue-light);
+  background: var(--color-blue);
+  height: 2px;
 }
 
-.resize-handle::after {
+/* .resize-handle::after {
   content: "";
   position: absolute;
   left: 50%;
@@ -1660,21 +1677,22 @@ const { startResize: startRightResize } = useResize(
   height: 4px;
   background: #ccc;
   border-radius: 2px;
-}
+} */
 
 .resize-handle-horizontal {
-  width: 4px;
-  background: var(--color-background-light);
+  width: 1px;
+  background: var(--color-background-dark);
   cursor: ew-resize;
   position: relative;
   margin: 0;
 }
 
 .resize-handle-horizontal:hover {
-  background: var(--color-blue-light);
+  background: var(--color-blue);
+  width: 2px;
 }
 
-.resize-handle-horizontal::after {
+/* .resize-handle-horizontal::after {
   content: "";
   position: absolute;
   left: 50%;
@@ -1684,7 +1702,7 @@ const { startResize: startRightResize } = useResize(
   height: 30px;
   background: #ccc;
   border-radius: 2px;
-}
+} */
 
 .search-date :deep(.n-input) {
   --n-height: 25px !important;
