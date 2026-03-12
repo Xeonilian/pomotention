@@ -72,7 +72,7 @@ async function focusSlider() {
 const createColumns = (): DataTableColumns<RowData> => {
   return [
     {
-      title: "分数",
+      title: "",
       key: "score",
       align: "center",
       width: 30,
@@ -192,9 +192,5 @@ const handleCancel = () => {
 
 .table .n-data-table-th {
   font-weight: bold !important;
-}
-
-.table .n-data-table-td {
-  font-size: 13px !important;
 }
 </style>

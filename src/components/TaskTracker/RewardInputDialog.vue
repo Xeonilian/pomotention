@@ -27,7 +27,7 @@
     </template>
   </n-modal>
 
-  <n-modal v-model:show="showHelp" preset="dialog" title="愉悦值说明" style="--n-body-padding: 8px">
+  <n-modal v-model:show="showHelp" preset="dialog" title="愉悦值说明">
     <div class="table-wrap">
       <n-data-table :columns="columns" :data="helpData" :bordered="false" :single-line="true" class="table" />
     </div>
@@ -62,7 +62,7 @@ type RowData = {
 
 const createColumns = (): DataTableColumns<RowData> => {
   return [
-    { title: "分数", key: "score", align: "center", width: 30 },
+    { title: "", key: "score", align: "center", width: 30 },
     { title: "情绪体验", key: "emotion", width: 110 },
     { title: "成就感/满足感", key: "satisfaction", width: 130 },
     { title: "整体描述", key: "overall", width: 55 },
@@ -140,9 +140,5 @@ const handleCancel = () => {
 
 .table .n-data-table-th {
   font-weight: bold !important;
-}
-
-.table .n-data-table-td {
-  font-size: 13px !important;
 }
 </style>
