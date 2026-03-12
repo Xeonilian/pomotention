@@ -217,18 +217,14 @@ function handleWeekClick(weekStartTs: number) {
 .month-cell {
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  padding: 6px;
-  background: var(--color-background);
+  padding: 1px;
   overflow: visible;
 }
 
 .month-cell-title {
-  font-size: 13px;
+  font-family: "consolas", monospace;
+  font-size: 14px;
   font-weight: 600;
-  color: var(--color-text);
-  margin-bottom: 6px;
   flex-shrink: 0;
   cursor: pointer;
 }
@@ -254,8 +250,9 @@ function handleWeekClick(weekStartTs: number) {
 }
 
 .month-dots-row.month-dots-header {
-  font-size: 10px;
-  color: var(--color-text);
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  font-family: "consolas", monospace;
 }
 
 .dot-header {
@@ -264,23 +261,27 @@ function handleWeekClick(weekStartTs: number) {
 
 .dot-header.week-col {
   font-weight: 500;
+  padding-left: 2px;
 }
 
 .week-num-wrap {
   margin: 0;
-  padding: 0;
+  padding-left: 2px;
   border: none;
   background: none;
   cursor: pointer;
   font-size: 11px;
   line-height: 1;
   color: var(--color-text-secondary);
-  font-weight: 600;
+  font-weight: 500;
   text-align: center;
+  font-family: "consolas", monospace;
 }
 
 .week-num-wrap:hover {
   color: var(--color-blue);
+  font-weight: 600;
+  font-size: 12px;
 }
 
 .day-dot-wrap {
@@ -300,15 +301,19 @@ function handleWeekClick(weekStartTs: number) {
 
 .day-dot-wrap.day-dot--other-month .day-num,
 .day-dot-wrap.day-dot--other-month .day-dot {
-  opacity: 0.4;
+  color: var(--color-background) !important;
+  background-color: var(--color-background-light) !important;
 }
 
 /* 今日：整格底色与圆点填充均为蓝色 */
 
 .day-dot-wrap.day-dot--today .day-dot {
-  background: var(--color-blue) !important;
-  border-radius: 50%;
+  color: white !important;
+  background-color: var(--color-blue) !important;
+  font-weight: 600;
+  z-index: 10;
 }
+
 .day-dot-wrap.day-dot--today .day-num {
   color: #fff;
 }
@@ -330,6 +335,7 @@ function handleWeekClick(weekStartTs: number) {
   display: flex;
   align-items: center;
   justify-content: center;
+  background-color: var(--color-background-light) !important;
 }
 
 .day-dot--empty {
@@ -339,5 +345,13 @@ function handleWeekClick(weekStartTs: number) {
 
 .day-dot-wrap:has(.day-dot--empty) {
   cursor: default;
+}
+
+/* hover 只作用在固定尺寸的圆点上，避免 button 宽度导致椭圆 */
+.day-dot-wrap:hover .day-dot {
+  cursor: pointer;
+  background-color: var(--color-blue-light) !important;
+  color: var(--color-blue) !important;
+  border-radius: 50%;
 }
 </style>
