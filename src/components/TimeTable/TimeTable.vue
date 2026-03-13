@@ -1,28 +1,11 @@
 <!-- TimeTable.vue -->
 <template>
   <div class="timetable-container">
-    <!-- 1 按钮 -->
+    <!-- 0 入口按钮（始终可见） -->
     <div class="timetable-view-button-container">
       <n-button
-        secondary
-        circle
-        type="info"
-        size="small"
-        :disabled="showEditor"
-        :title="currentType === 'work' ? '切换到娱乐时间表' : '切换到工作时间表'"
-        @click="toggleType"
-      >
-        <template #icon>
-          <n-icon>
-            <Backpack24Regular v-if="currentType === 'work'" />
-            <Beach24Regular v-else />
-          </n-icon>
-        </template>
-      </n-button>
-      <n-button
         @click="toggleDisplay"
-        secondary
-        circle
+        text
         type="default"
         size="small"
         class="timetable-button"
@@ -32,19 +15,25 @@
           <n-icon><Settings24Regular /></n-icon>
         </template>
       </n-button>
-      <n-popconfirm @positive-click="handleReset" negative-text="取消" positive-text="确定">
-        <template #trigger>
-          <n-button secondary circle size="small" type="default" title="复位为默认时间表" strong :disabled="!showEditor">
-            <n-icon size="20">
-              <ArrowReset48Filled />
-            </n-icon>
-          </n-button>
-        </template>
-        <span>确定要将当前时间表复位为默认吗？</span>
-      </n-popconfirm>
     </div>
-    <!-- 2 编辑区 -->
+    <!-- 1 编辑区 -->
     <div v-if="showEditor" class="timetable-editor">
+      <div class="timetable-editor-header">
+        <n-button
+          text
+          type="info"
+          size="small"
+          :title="currentType === 'work' ? '切换到娱乐时间表' : '切换到工作时间表'"
+          @click="toggleType"
+        >
+          <template #icon>
+            <n-icon>
+              <Backpack24Regular v-if="currentType === 'work'" />
+              <Beach24Regular v-else />
+            </n-icon>
+          </template>
+        </n-button>
+      </div>
       <TimeTableEditor :current-type="currentType" />
     </div>
     <!-- 3 显示区 -->
@@ -61,8 +50,8 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, computed, nextTick } from "vue";
-import { NButton, NPopconfirm, NIcon } from "naive-ui";
-import { ArrowReset48Filled, Settings24Regular, Beach24Regular, Backpack24Regular } from "@vicons/fluent";
+import { NButton, NIcon } from "naive-ui";
+import { Settings24Regular, Beach24Regular, Backpack24Regular } from "@vicons/fluent";
 import TimeTableEditor from "@/components/TimeTable/TimeTableEditor.vue";
 import TimeBlocks from "@/components/TimeTable/TimeBlocks.vue";
 import { getTimestampForTimeString } from "@/core/utils";
@@ -84,10 +73,6 @@ const viewBlocks = computed(() => timetableStore.getBlocksByType(currentType.val
 function toggleDisplay() {
   showEditor.value = !showEditor.value;
   settingStore.settings.leftWidth = showEditor.value ? 200 : 120;
-}
-
-function handleReset() {
-  timetableStore.resetToDefaults(currentType.value);
 }
 
 function toggleType() {
@@ -164,26 +149,21 @@ const effectivePxPerMinute = computed(() => {
   overflow: visible;
 }
 .timetable-view-button-container {
+  position: fixed;
+  bottom: 30px;
   display: flex;
   justify-content: center;
   align-items: center;
   gap: 8px;
   z-index: 10;
-  height: 40px;
-}
-
-@media (max-width: 600px) {
-  .timetable-view-button-container {
-    gap: 4px;
-  }
 }
 
 .timetable-editor {
-  height: calc(100% - 40px);
+  height: 100%;
 }
 
 .timetable-time-block {
-  height: calc(100% - 40px);
+  height: 100%;
   position: relative;
   bottom: 0px;
   /* 移动端：整个时间表区域禁用文本选择和长按复制 */
