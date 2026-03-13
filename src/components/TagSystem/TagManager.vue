@@ -37,7 +37,7 @@
               @click="onClickTag(t)"
             >
               <!-- 标签名显示，双击可进入编辑状态 -->
-              <span v-if="editingId !== t.id" @dblclick.stop="startEdit(t)">
+              <span v-if="editingId !== t.id" @click.stop="startEdit(t)">
                 {{ t.name }}
               </span>
 
@@ -83,7 +83,7 @@
               </n-popover>
 
               <!-- 删除按钮，点击弹出确认对话框 -->
-              <n-button text @dblclick.stop="confirmRemoveTag(t)" @click.stop>
+              <n-button text @click.stop="confirmRemoveTag(t)">
                 <n-icon><TagDismiss16Regular /></n-icon>
               </n-button>
 
