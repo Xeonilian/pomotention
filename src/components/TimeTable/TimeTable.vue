@@ -60,7 +60,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch, computed } from "vue";
+import { ref, onMounted, onUnmounted, watch, computed, nextTick } from "vue";
 import { NButton, NPopconfirm, NIcon } from "naive-ui";
 import { ArrowReset48Filled, Settings24Regular, Beach24Regular, Backpack24Regular } from "@vicons/fluent";
 import TimeTableEditor from "@/components/TimeTable/TimeTableEditor.vue";
@@ -94,26 +94,52 @@ function toggleType() {
   currentType.value = currentType.value === "work" ? "entertainment" : "work";
 }
 
-// 容器高度
+// 容器高度（使用 ResizeObserver 以兼容 iOS 首次渲染）
 const container = ref<HTMLElement | null>(null);
-const containerHeight = ref(400);
+const containerHeight = ref(800);
+// 使用 ResizeObserver 记录实例，优先使用容器尺寸变化监听，其次回退到 window resize
+let containerResizeObserver: ResizeObserver | null = null;
 
 const updateHeight = () => {
   if (container.value) {
-    containerHeight.value = container.value.clientHeight;
+    // 在 Safari / iOS 上，初次渲染时高度可能为 0，这里做一次保护
+    const height = container.value.clientHeight;
+    if (height > 0) {
+      containerHeight.value = height;
+    }
   }
 };
 
 onMounted(() => {
-  updateHeight();
-  window.addEventListener("resize", updateHeight);
+  // 等待下一次 DOM 更新，确保容器已经完成布局
+  nextTick(() => {
+    updateHeight();
+
+    if (container.value && "ResizeObserver" in window) {
+      containerResizeObserver = new ResizeObserver(() => {
+        updateHeight();
+      });
+      containerResizeObserver.observe(container.value);
+    } else {
+      window.addEventListener("resize", updateHeight);
+    }
+  });
 });
 
 onUnmounted(() => {
+  if (containerResizeObserver && container.value) {
+    containerResizeObserver.unobserve(container.value);
+    containerResizeObserver.disconnect();
+  }
   window.removeEventListener("resize", updateHeight);
 });
 
-watch(viewBlocks, updateHeight);
+// 当时间块数据变化时，下一帧再读取高度，避免布局尚未完成
+watch(viewBlocks, () => {
+  nextTick(() => {
+    updateHeight();
+  });
+});
 
 // 时间范围计算
 const timeRange = computed(() => {
