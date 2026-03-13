@@ -312,7 +312,7 @@
             <!-- 7 状态 -->
             <td class="status-col">
               <div class="status-cell">
-                <div class="records-stat" v-if="todo.startTime" title="能量值 | 奖赏值 | 内部打扰 | 外部打扰">
+                <div class="records-stat" title="能量值 | 奖赏值 | 内部打扰 | 外部打扰">
                   <span style="color: var(--color-blue)">{{ averageValue(todo.energyRecords) }}</span>
 
                   <span style="color: var(--color-text-secondary)">{{ averageValue(todo.rewardRecords) }}</span>
