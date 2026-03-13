@@ -23,9 +23,18 @@ function getCurrentBranch() {
   return exec("git branch --show-current");
 }
 
-// 获取相对于 main 的所有 commits
-function getCommits() {
-  const log = exec('git log main..HEAD --pretty=format:"%s|||%b"');
+// 根据当前分支确定 PR 目标（base）和用于统计 commits 的基准
+// dev → main 发布 PR；feat/fix 等 → dev 功能 PR
+function getPRTarget() {
+  const branch = getCurrentBranch();
+  if (branch === "main") return null;
+  if (branch === "dev") return { base: "main", compare: "main" };
+  return { base: "dev", compare: "dev" };
+}
+
+// 获取相对于指定基准分支的所有 commits
+function getCommits(compareBase) {
+  const log = exec(`git log ${compareBase}..HEAD --pretty=format:"%s|||%b"`);
   if (!log) return [];
 
   return log.split("\n").map((line) => {
@@ -195,16 +204,20 @@ function main() {
   console.log("🤖 正在分析 commits 并生成 PR...\n");
 
   const branch = getCurrentBranch();
-  if (branch === "main") {
+  const target = getPRTarget();
+  if (!target) {
     console.error("❌ 不能在 main 分支创建 PR");
     process.exit(1);
   }
 
-  const commits = getCommits();
+  const commits = getCommits(target.compare);
   if (commits.length === 0) {
-    console.error("❌ 没有找到相对于 main 的新 commits");
+    console.error(`❌ 没有找到相对于 ${target.compare} 的新 commits，无法创建 PR`);
+    console.error(`   请确认已在当前分支提交代码，且 ${branch} 比 ${target.compare} 有新增提交`);
     process.exit(1);
   }
+
+  console.log(`📌 目标: ${branch} → ${target.base}\n`);
 
   console.log(`📝 找到 ${commits.length} 个 commits:`);
   commits.forEach((c) => console.log(`   - ${c.subject}`));
@@ -253,17 +266,17 @@ function main() {
       console.log("编辑完成后，运行以下命令创建 PR:\n");
       const title = generateTitle(commits, analysis);
       console.log(`  git push origin ${branch}`);
-      console.log(`  gh pr create --title "${title}" --body-file "${tempFile}"`);
+      console.log(`  gh pr create --base ${target.base} --head ${branch} --title "${title}" --body-file "${tempFile}"`);
       console.log(`\n或者删除 ${tempFile} 后重新运行 pnpm new:pr\n`);
       process.exit(0);
     }
 
     // 默认选项 1：直接创建
-    createPR(branch, tempFile, commits, analysis);
+    createPR(branch, target, tempFile, commits, analysis);
   });
 }
 
-function createPR(branch, tempFile, commits, analysis) {
+function createPR(branch, target, tempFile, commits, analysis) {
   // 推送分支
   console.log("\n🚀 正在推送分支...");
   try {
@@ -273,11 +286,11 @@ function createPR(branch, tempFile, commits, analysis) {
     console.log("ℹ️  分支可能已经推送过了\n");
   }
 
-  // 创建 PR
-  console.log("🎯 正在创建 PR...");
+  // 创建 PR，显式指定 base 和 head 避免 gh 推断错误
+  console.log(`🎯 正在创建 PR (${branch} → ${target.base})...`);
   try {
     const title = generateTitle(commits, analysis);
-    const result = exec(`gh pr create --title "${title}" --body-file "${tempFile}"`);
+    const result = exec(`gh pr create --base ${target.base} --head ${branch} --title "${title}" --body-file "${tempFile}"`);
     console.log("✅ PR 创建成功!");
     console.log(result);
 
