@@ -50,19 +50,19 @@ function getCurrentBranch() {
   return run("git branch --show-current", true).trim();
 }
 
-// 更新 main 分支
-function updateMain() {
+// 更新 dev 分支（作为所有开发分支的基线）
+function updateDev() {
   const currentBranch = getCurrentBranch();
 
-  console.log(c("cyan", "\n📥 正在更新 main 分支..."));
+  console.log(c("cyan", "\n📥 正在更新 dev 分支..."));
 
-  // 如果不在 main，先切换
-  if (currentBranch !== "main") {
-    run("git checkout main");
+  // 如果不在 dev，先切换
+  if (currentBranch !== "dev") {
+    run("git checkout dev");
   }
 
-  run("git pull origin main");
-  console.log(c("green", "✅ main 已更新到最新版本\n"));
+  run("git pull origin dev");
+  console.log(c("green", "✅ dev 已更新到最新版本\n"));
 }
 
 // 交互式输入
@@ -137,7 +137,7 @@ async function main() {
     process.exit(1);
   }
 
-  // 构造完整分支名
+  // 构造完整分支名（如 feat/iphone-click-fix）
   const fullBranchName = `${branchType}/${branchTopic}`;
 
   // 确认
@@ -153,8 +153,8 @@ async function main() {
     }
   }
 
-  // 更新 main
-  updateMain();
+  // 基于最新 dev 创建开发分支
+  updateDev();
 
   // 创建并切换分支
   console.log(c("cyan", `🔀 创建分支 ${fullBranchName}...`));
@@ -163,7 +163,7 @@ async function main() {
   // 完成
   console.log(c("dim", "\n━".repeat(3)));
   console.log(c("green", `✅ 成功！当前分支: ${fullBranchName}`));
-  console.log(c("dim", `   基于: main (latest)\n`));
+  console.log(c("dim", `   基于: dev (latest)\n`));
 
   // 询问是否发布
   const shouldPublish = await prompt(c("cyan", "📤 是否立即发布到远程？(Y/n): "));
