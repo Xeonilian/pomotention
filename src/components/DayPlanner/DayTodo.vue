@@ -93,7 +93,13 @@
             </n-button>
             <n-button
               class="suspend-button"
-              v-if="selectedTodo && selectedTodo.status !== 'done' && selectedTodo.status !== 'cancelled' && !selectedTodo.realPomo"
+              v-if="
+                selectedTodo &&
+                selectedTodo.status !== 'done' &&
+                selectedTodo.status !== 'cancelled' &&
+                !selectedTodo.realPomo &&
+                !selectedTodo.startTime
+              "
               text
               @click.stop="handleSuspendSelectedTodo"
               title="撤销选中任务，退回活动清单"
