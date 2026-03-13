@@ -1,10 +1,3 @@
-<!--
-Component: TimeTableEditor.vue 
-Description: 编辑界面，接收数据，回传
-Props:
-Emits:
-Parent: HomeView.vue  
--->
 <template>
   <table class="compact-table">
     <thead>
@@ -65,6 +58,16 @@ Parent: HomeView.vue
         <n-icon><Delete24Regular /></n-icon>
       </template>
     </n-button>
+    <n-popconfirm @positive-click="handleReset" negative-text="取消" positive-text="确定">
+      <template #trigger>
+        <n-button text size="small" type="default" title="复位为默认时间表" strong>
+          <n-icon size="20">
+            <ArrowReset48Filled />
+          </n-icon>
+        </n-button>
+      </template>
+      <span>确定要将当前时间表复位为默认吗？</span>
+    </n-popconfirm>
   </div>
   <span v-if="!canAddBlock" style="margin-left: 8px; color: #999">24小时添加完毕</span>
 </template>
@@ -72,11 +75,11 @@ Parent: HomeView.vue
 <script setup lang="ts">
 import { computed } from "vue";
 import { storeToRefs } from "pinia";
-import { NSelect, NTimePicker, NButton, NIcon } from "naive-ui";
+import { NSelect, NTimePicker, NButton, NIcon, NPopconfirm } from "naive-ui";
 import { getTimestampForTimeString, timestampToTimeString } from "@/core/utils";
 import { useTimetableStore } from "@/stores/useTimetableStore";
 import { CategoryColors } from "@/core/constants";
-import { AddCircle24Regular, Delete24Regular } from "@vicons/fluent";
+import { AddCircle24Regular, Delete24Regular, ArrowReset48Filled } from "@vicons/fluent";
 const labelMap = { sleeping: "睡眠", living: "生活", working: "工作" };
 type Category = keyof typeof CategoryColors;
 const categories = Object.keys(CategoryColors) as Category[];
@@ -130,6 +133,10 @@ function deleteLastBlock() {
   if (blocks.length === 0) return;
   const lastBlock = blocks[blocks.length - 1];
   timetableStore.removeBlock(lastBlock.id);
+}
+
+function handleReset() {
+  timetableStore.resetToDefaults(props.currentType);
 }
 
 function handleTimeChange(val: number | null, id: number, field: "start" | "end") {
