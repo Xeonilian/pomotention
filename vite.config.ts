@@ -67,7 +67,7 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 1420,
       strictPort: true,
-      host: host || false,
+      host: host || "0.0.0.0", // 默认监听所有网卡，方便手机访问 false就是不准
       hmr: host
         ? {
             protocol: "ws",

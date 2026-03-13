@@ -27,7 +27,6 @@ git rebase main
 ```
 
 - 若遇到冲突：
-
   - 解决冲突文件后：
 
     ```bash
@@ -103,4 +102,9 @@ git rebase main
 # 解决冲突 -> git add <file> ; git rebase --continue
 # 验证后推送
 git push origin feature --force-with-lease
+git diff # 查看未暂存的改动
+git diff --cached # 查看已暂存的改动
+git reset --hard HEAD~1 # 回退到最新提交
+git reset --mixed HEAD~1
+git revert <commit> # 撤销某次提交（保留记录）
 ```
