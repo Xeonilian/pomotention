@@ -140,12 +140,12 @@
     <!-- 上一个/下一个 task 显示切换 -->
     <n-button text @click="displayStore.goPrev()" :disabled="!displayStore.hasPrev" title="上一个任务">
       <template #icon>
-        <n-icon><ChevronCircleLeft20Regular /></n-icon>
+        <n-icon><ChevronLeft20Regular /></n-icon>
       </template>
     </n-button>
     <n-button text @click="displayStore.goNext()" :disabled="!displayStore.hasNext" title="下一个任务">
       <template #icon>
-        <n-icon><ChevronCircleRight20Regular /></n-icon>
+        <n-icon><ChevronRight20Regular /></n-icon>
       </template>
     </n-button>
 
@@ -191,8 +191,8 @@ import {
   Star20Filled,
   Tag16Regular,
   ChevronDoubleLeft16Regular,
-  ChevronCircleRight20Regular,
-  ChevronCircleLeft20Regular,
+  ChevronRight20Regular,
+  ChevronLeft20Regular,
 } from "@vicons/fluent";
 
 import { useTemplateStore } from "@/stores/useTemplateStore";
