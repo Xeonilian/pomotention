@@ -220,3 +220,10 @@ export function saveData<T>(key: string, data: T): void {
 export function removeData(key: string): void {
   localStorage.removeItem(key);
 }
+
+// 清除本应用所有 localStorage（仅 dev 环境用于测试重置）
+export function clearAllAppStorage(): void {
+  for (const key of Object.values(STORAGE_KEYS)) {
+    localStorage.removeItem(key);
+  }
+}

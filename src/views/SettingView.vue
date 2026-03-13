@@ -4,6 +4,11 @@
     size="large"
     style="max-width: 800px; width: 90%; margin: 20px auto; padding: 20px; max-height: calc(100vh - 100px); overflow-y: auto"
   >
+    <!-- 仅 Preview（dev）环境显示：清除本地数据 -->
+    <n-card v-if="isDev" title="开发工具">
+      <n-button type="error" @click="handleClearLocal">清除本地数据</n-button>
+      <template #footer>仅在 dev 预览环境显示，正式站不显示。</template>
+    </n-card>
     <n-card title="设置番茄时长">
       <n-form>
         <n-form-item label="工作时长（分钟）">
@@ -36,40 +41,23 @@
       </n-form>
       <n-button @click="resetStyle" type="error" style="margin-top: 12px">恢复默认样式</n-button>
     </n-card>
-
-    <n-card title="调试信息" style="max-height: 300px; overflow: auto; white-space: pre-wrap">
-      <div>
-        <strong>当前工作时长:</strong>
-        {{ settingStore.settings.durations.workDuration }} 分钟
-        <br />
-        <strong>当前休息时长:</strong>
-        {{ settingStore.settings.durations.breakDuration }} 分钟
-        <br />
-        <strong>当前进度条长度:</strong>
-        {{ settingStore.settings.style.barLength }}
-        <br />
-        <strong>红色条颜色:</strong>
-        {{ settingStore.settings.style.redBarColor }}
-        <br />
-        <strong>蓝色条颜色:</strong>
-        {{ settingStore.settings.style.blueBarColor }}
-        <br />
-      </div>
-
-      <hr />
-      <div><strong>当前Durations对象（JSON）:</strong></div>
-      <pre>{{ JSON.stringify(settingStore.settings.durations, null, 2) }}</pre>
-      <div><strong>当前Style对象（JSON）:</strong></div>
-      <pre>{{ JSON.stringify(settingStore.settings.style, null, 2) }}</pre>
-    </n-card>
   </n-space>
 </template>
 
 <script setup lang="ts">
+import { computed } from "vue";
 import { NSpace, NCard, NForm, NFormItem, NInput, NInputNumber, NButton, NColorPicker, NSelect } from "naive-ui";
 import { useSettingStore } from "../stores/useSettingStore";
+import { useDataStore } from "../stores/useDataStore";
+import { useSyncStore } from "../stores/useSyncStore";
+import { clearAllAppStorage } from "../services/localStorageService";
 
 const settingStore = useSettingStore();
+const dataStore = useDataStore();
+const syncStore = useSyncStore();
+
+// 本地 pnpm dev 时 DEV 为 true；或 Cloudflare Preview 配置了 VITE_APP_DEV；正式站两者皆无故不显示
+const isDev = computed(() => !!import.meta.env.VITE_APP_DEV || import.meta.env.DEV);
 
 const breakOptions = [
   { label: "2", value: 2 },
@@ -85,11 +73,17 @@ function resetDurations() {
 function resetStyle() {
   settingStore.resetStyle();
 }
+
+function handleClearLocal() {
+  clearAllAppStorage();
+  dataStore.clearData();
+  syncStore.resetSync();
+  window.location.reload();
+}
 </script>
 
 <style scoped>
 .container {
-  max-width: 800px;
   margin: 0 auto;
   padding: 20px;
 }
