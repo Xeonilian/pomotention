@@ -60,7 +60,7 @@ const highlightedIndex = ref(0); // 追踪高亮项的索引
 const filteredTags = computed<TagWithCount[]>(() => {
   const searchTerm = props.searchTerm.trim();
   if (!searchTerm || searchTerm === "#") {
-    return [...tagStore.allTags].sort((a, b) => (b.count || 0) - (a.count || 0)).slice(0, 10);
+    return [...tagStore.allTags].sort((a, b) => (b.count || 0) - (a.count || 0)).slice(0, 15);
   }
 
   const found = tagStore.findByName(props.searchTerm);

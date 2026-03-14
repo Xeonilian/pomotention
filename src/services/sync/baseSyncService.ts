@@ -211,6 +211,7 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
         return { success: true, downloaded: 0 };
       }
 
+      const isFullDownload = lastSyncTimestamp === 0;
       const localItems = this.getListArray();
       const localMap = this.getMap();
       let downloadedCount = 0;
@@ -218,7 +219,9 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
       for (const cloudItem of data) {
         const cloudId = this.getCloudId(cloudItem as TCloud);
         const localItem = localMap.get(cloudId);
-        const cloudTimestamp = new Date(cloudItem.last_modified).getTime();
+        // 全量下载时不解析时间戳，避免 Safari 对历史异常格式返回 NaN 导致跳过
+        const rawTs = new Date(cloudItem.last_modified).getTime();
+        const cloudTimestamp = isFullDownload || Number.isNaN(rawTs) ? 0 : rawTs;
 
         // 1. 云端标记删除
         if (cloudItem.deleted) {
@@ -251,14 +254,15 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
           continue;
         }
 
-        // 3. 本地存在
-        if (!localItem.synced) {
+        // 3. 本地存在：增量时如有未同步修改则跳过；全量时直接放行
+        if (!isFullDownload && !localItem.synced) {
           // console.log(`🔒 [${this.tableName}] ID=${cloudId} 本地有未同步修改，跳过下载`);
           continue;
         }
 
-        // 比较云端时间戳
-        if (!localItem.cloudModified || cloudTimestamp > localItem.cloudModified) {
+        // 全量下载时不比较时间戳，直接采用云端数据；增量下载才比较
+        const shouldUpdate = isFullDownload || !localItem.cloudModified || cloudTimestamp > localItem.cloudModified;
+        if (shouldUpdate) {
           const updatedItem = this.mapCloudToLocal(cloudItem as TCloud);
           Object.assign(localItem, updatedItem, {
             synced: true,
