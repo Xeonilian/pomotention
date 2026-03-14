@@ -1,28 +1,11 @@
 <!-- TimeTable.vue -->
 <template>
   <div class="timetable-container">
-    <!-- 1 按钮 -->
+    <!-- 0 入口按钮（始终可见） -->
     <div class="timetable-view-button-container">
       <n-button
-        secondary
-        circle
-        type="info"
-        size="small"
-        :disabled="showEditor"
-        :title="currentType === 'work' ? '切换到娱乐时间表' : '切换到工作时间表'"
-        @click="toggleType"
-      >
-        <template #icon>
-          <n-icon>
-            <Backpack24Regular v-if="currentType === 'work'" />
-            <Beach24Regular v-else />
-          </n-icon>
-        </template>
-      </n-button>
-      <n-button
         @click="toggleDisplay"
-        secondary
-        circle
+        text
         type="default"
         size="small"
         class="timetable-button"
@@ -32,19 +15,25 @@
           <n-icon><Settings24Regular /></n-icon>
         </template>
       </n-button>
-      <n-popconfirm @positive-click="handleReset" negative-text="取消" positive-text="确定">
-        <template #trigger>
-          <n-button secondary circle size="small" type="default" title="复位为默认时间表" strong :disabled="!showEditor">
-            <n-icon size="20">
-              <ArrowReset48Filled />
-            </n-icon>
-          </n-button>
-        </template>
-        <span>确定要将当前时间表复位为默认吗？</span>
-      </n-popconfirm>
     </div>
-    <!-- 2 编辑区 -->
+    <!-- 1 编辑区 -->
     <div v-if="showEditor" class="timetable-editor">
+      <div class="timetable-editor-header">
+        <n-button
+          text
+          type="info"
+          size="small"
+          :title="currentType === 'work' ? '切换到娱乐时间表' : '切换到工作时间表'"
+          @click="toggleType"
+        >
+          <template #icon>
+            <n-icon>
+              <Backpack24Regular v-if="currentType === 'work'" />
+              <Beach24Regular v-else />
+            </n-icon>
+          </template>
+        </n-button>
+      </div>
       <TimeTableEditor :current-type="currentType" />
     </div>
     <!-- 3 显示区 -->
@@ -60,9 +49,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch, computed } from "vue";
-import { NButton, NPopconfirm, NIcon } from "naive-ui";
-import { ArrowReset48Filled, Settings24Regular, Beach24Regular, Backpack24Regular } from "@vicons/fluent";
+import { ref, onMounted, onUnmounted, watch, computed, nextTick } from "vue";
+import { NButton, NIcon } from "naive-ui";
+import { Settings24Regular, Beach24Regular, Backpack24Regular } from "@vicons/fluent";
 import TimeTableEditor from "@/components/TimeTable/TimeTableEditor.vue";
 import TimeBlocks from "@/components/TimeTable/TimeBlocks.vue";
 import { getTimestampForTimeString } from "@/core/utils";
@@ -86,34 +75,56 @@ function toggleDisplay() {
   settingStore.settings.leftWidth = showEditor.value ? 200 : 120;
 }
 
-function handleReset() {
-  timetableStore.resetToDefaults(currentType.value);
-}
-
 function toggleType() {
   currentType.value = currentType.value === "work" ? "entertainment" : "work";
 }
 
-// 容器高度
+// 容器高度（使用 ResizeObserver 以兼容 iOS 首次渲染）
 const container = ref<HTMLElement | null>(null);
-const containerHeight = ref(400);
+const containerHeight = ref(800);
+// 使用 ResizeObserver 记录实例，优先使用容器尺寸变化监听，其次回退到 window resize
+let containerResizeObserver: ResizeObserver | null = null;
 
 const updateHeight = () => {
   if (container.value) {
-    containerHeight.value = container.value.clientHeight;
+    // 在 Safari / iOS 上，初次渲染时高度可能为 0，这里做一次保护
+    const height = container.value.clientHeight;
+    if (height > 0) {
+      containerHeight.value = height;
+    }
   }
 };
 
 onMounted(() => {
-  updateHeight();
-  window.addEventListener("resize", updateHeight);
+  // 等待下一次 DOM 更新，确保容器已经完成布局
+  nextTick(() => {
+    updateHeight();
+
+    if (container.value && "ResizeObserver" in window) {
+      containerResizeObserver = new ResizeObserver(() => {
+        updateHeight();
+      });
+      containerResizeObserver.observe(container.value);
+    } else {
+      window.addEventListener("resize", updateHeight);
+    }
+  });
 });
 
 onUnmounted(() => {
+  if (containerResizeObserver && container.value) {
+    containerResizeObserver.unobserve(container.value);
+    containerResizeObserver.disconnect();
+  }
   window.removeEventListener("resize", updateHeight);
 });
 
-watch(viewBlocks, updateHeight);
+// 当时间块数据变化时，下一帧再读取高度，避免布局尚未完成
+watch(viewBlocks, () => {
+  nextTick(() => {
+    updateHeight();
+  });
+});
 
 // 时间范围计算
 const timeRange = computed(() => {
@@ -138,26 +149,21 @@ const effectivePxPerMinute = computed(() => {
   overflow: visible;
 }
 .timetable-view-button-container {
+  position: fixed;
+  bottom: 30px;
   display: flex;
   justify-content: center;
   align-items: center;
   gap: 8px;
   z-index: 10;
-  height: 40px;
-}
-
-@media (max-width: 600px) {
-  .timetable-view-button-container {
-    gap: 4px;
-  }
 }
 
 .timetable-editor {
-  height: calc(100% - 40px);
+  height: 100%;
 }
 
 .timetable-time-block {
-  height: calc(100% - 40px);
+  height: 100%;
   position: relative;
   bottom: 0px;
   /* 移动端：整个时间表区域禁用文本选择和长按复制 */

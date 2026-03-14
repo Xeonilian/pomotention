@@ -35,7 +35,7 @@
           <th
             class="col-start"
             :class="{ 'disabled-toggle': !selectedRowId }"
-            @dblclick.stop="selectedRowId && handleFillCurrentTimeStart()"
+            @click.stop="selectedRowId && handleFillCurrentTimeStart()"
             :title="selectedRowId ? '点击填入当前时间' : '请先选中一行'"
           >
             <n-icon size="20" class="header-icon">
@@ -45,7 +45,7 @@
           <th
             class="col-end"
             :class="{ 'disabled-toggle': !selectedRowId }"
-            @dblclick.stop="selectedRowId && handleFillCurrentTimeEnd()"
+            @click.stop="selectedRowId && handleFillCurrentTimeEnd()"
             :title="selectedRowId ? '点击填入当前时间' : '请先选中一行'"
           >
             <n-icon size="20" class="header-icon">
@@ -93,7 +93,13 @@
             </n-button>
             <n-button
               class="suspend-button"
-              v-if="selectedTodo && selectedTodo.status !== 'done' && selectedTodo.status !== 'cancelled' && !selectedTodo.realPomo"
+              v-if="
+                selectedTodo &&
+                selectedTodo.status !== 'done' &&
+                selectedTodo.status !== 'cancelled' &&
+                !selectedTodo.realPomo &&
+                !selectedTodo.startTime
+              "
               text
               @click.stop="handleSuspendSelectedTodo"
               title="撤销选中任务，退回活动清单"
@@ -146,8 +152,8 @@
             <!-- 2 开始时间 -->
             <td
               class="col-start"
-              @dblclick.stop="startEditing(todo.id, 'start')"
-              :title="editingRowId === todo.id && editingField === 'start' ? '' : '双击编辑'"
+              @click.stop="startEditing(todo.id, 'start')"
+              :title="editingRowId === todo.id && editingField === 'start' ? '' : '单击编辑'"
             >
               <input
                 class="start-input time-input"
@@ -167,8 +173,8 @@
             <!-- 3 结束时间 -->
             <td
               class="col-end"
-              @dblclick.stop="startEditing(todo.id, 'done')"
-              :title="editingRowId === todo.id && editingField === 'done' ? '' : '双击编辑'"
+              @click.stop="startEditing(todo.id, 'done')"
+              :title="editingRowId === todo.id && editingField === 'done' ? '' : '单击编辑'"
             >
               <input
                 class="done-input time-input"
@@ -189,7 +195,7 @@
             <td
               class="col-rank"
               :class="{ 'col-rank-disabled': todo.status === 'done' || todo.status === 'cancelled' }"
-              :title="todo.status === 'done' || todo.status === 'cancelled' ? '不能切换' : '双击选择分类'"
+              :title="todo.status === 'done' || todo.status === 'cancelled' ? '不能切换' : '单击选择分类'"
             >
               <n-popover
                 :show="rankPopoverTodoId === todo.id"
@@ -199,7 +205,7 @@
                 :z-index="10001"
               >
                 <template #trigger>
-                  <span class="priority-badge" :class="'priority-' + todo.priority" @dblclick.stop="openRankPopoverIfActive(todo)">
+                  <span class="priority-badge" :class="'priority-' + todo.priority" @click.stop="openRankPopoverIfActive(todo)">
                     {{ getEmojiForPriority(todo.priority) || (todo.priority > 0 ? todo.priority : "") }}
                   </span>
                 </template>
@@ -229,8 +235,8 @@
             <!-- 5 意图 -->
             <td
               class="col-intent"
-              @dblclick.stop="startEditing(todo.id, 'title')"
-              :title="editingRowId === todo.id && editingField === 'title' ? '' : '双击编辑'"
+              @click.stop="startEditing(todo.id, 'title')"
+              :title="editingRowId === todo.id && editingField === 'title' ? '' : '单击编辑'"
             >
               <input
                 class="title-input"
@@ -312,7 +318,7 @@
             <!-- 7 状态 -->
             <td class="status-col">
               <div class="status-cell">
-                <div class="records-stat" v-if="todo.startTime" title="能量值 | 奖赏值 | 内部打扰 | 外部打扰">
+                <div class="records-stat" title="能量值 | 奖赏值 | 内部打扰 | 外部打扰">
                   <span style="color: var(--color-blue)">{{ averageValue(todo.energyRecords) }}</span>
 
                   <span style="color: var(--color-text-secondary)">{{ averageValue(todo.rewardRecords) }}</span>
@@ -375,7 +381,7 @@
     />
   </n-popover>
 
-  <!-- 排序槽位绑定 tag：双击表头「排序」打开，失去焦点自动保存 -->
+  <!-- 排序槽位绑定 tag：单击表头「排序」打开，失去焦点自动保存 -->
   <n-modal
     v-model:show="showPriorityBindingModal"
     preset="card"
@@ -526,7 +532,7 @@ onBeforeUnmount(() => {
 });
 const priorityBindingDraft = reactive<Record<number, number | null>>({});
 const rankHeaderTitle = computed(
-  () => "Emoji：" + PRIORITY_CATEGORIES.map((c) => `${c.priority}=${c.emoji}`).join(" ") + "；双击打开绑定标签",
+  () => "Emoji：" + PRIORITY_CATEGORIES.map((c) => `${c.priority}=${c.emoji}`).join(" ") + "；单击打开绑定标签",
 );
 const tagOptionsForBinding = computed<SelectOption[]>(() =>
   [...allTagsFromStore.value]
@@ -891,7 +897,7 @@ function startEditing(todoId: number, field: "title" | "start" | "done") {
   editingRowId.value = todoId;
   editingField.value = field;
 
-  // 双击编辑：只带出原值，不自动填充当前时间
+  // 单击编辑：只带出原值，不自动填充当前时间
   editingValue.value =
     field === "title"
       ? todo.activityTitle || ""
@@ -905,7 +911,7 @@ function startEditing(todoId: number, field: "title" | "start" | "done") {
             : ""
           : "";
 
-  // 双击后激活光标：用 ref 聚焦，与 col-intent 一致；v-if 挂载后再等一帧
+  // 单击后激活光标：用 ref 聚焦，与 col-intent 一致；v-if 挂载后再等一帧
   nextTick(() => {
     nextTick(() => {
       if (field === "title") titleInputRef.value?.focus();

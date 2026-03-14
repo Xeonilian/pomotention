@@ -34,48 +34,46 @@
       >
         <!-- 任务计划的头部和控件 -->
         <div class="planner-header" @click.stop="cleanSelection">
-          <!-- 年入口：仅显示年份，点击进入年视图；在年视图时也只显示年份 -->
-          <div class="day-info">
-            <template v-if="settingStore.settings.viewSet !== 'year'">
-              <span @click="onYearJump" class="day-status" title="进入年视图">{{ dateService.displayYearInfo }}</span>
-            </template>
-            <template v-else>
-              <span class="day-status">{{ dateService.displayYearInfo }}</span>
+          <div class="planner-header-left">
+            <!-- 年入口：仅显示年份，点击进入年视图；在年视图时也只显示年份 -->
+            <div class="day-info">
+              <template v-if="settingStore.settings.viewSet !== 'year'">
+                <span @click="onYearJump" class="day-status" title="进入年视图">{{ dateService.displayYearInfo }}</span>
+              </template>
+              <template v-else>
+                <span @click="onDayJump" class="day-status" title="进入日视图">{{ dateService.displayYearInfo }}</span>
+                <span @click="onDateSet('today')" class="global-pomo">
+                  <span class="today-pomo">🍅{{ currentDatePomoCount }}</span>
+                  <span class="total-pomo">/{{ globalRealPomo }}</span>
+                </span>
+              </template>
+            </div>
+            <div
+              v-if="settingStore.settings.viewSet === 'day'"
+              class="day-info"
+              :class="{
+                yesterday: isViewDateYesterday,
+                tomorrow: isViewDateTomorrow,
+              }"
+            >
+              <span @click="onWeekJump" class="day-status">{{ dateService.displayDateInfo }}</span>
               <span @click="onDateSet('today')" class="global-pomo">
                 <span class="today-pomo">🍅{{ currentDatePomoCount }}</span>
                 <span class="total-pomo">/{{ globalRealPomo }}</span>
               </span>
-            </template>
-          </div>
-          <div
-            v-if="settingStore.settings.viewSet === 'day'"
-            class="day-info"
-            :class="{
-              yesterday: isViewDateYesterday,
-              tomorrow: isViewDateTomorrow,
-            }"
-          >
-            <span @click="onWeekJump" class="day-status">
-              {{ dateService.displayDateInfo }}
-            </span>
-            <span @click="onDateSet('today')" class="global-pomo">
-              <span class="today-pomo">🍅{{ currentDatePomoCount }}</span>
-              <span v-if="isMobile" class="total-pomo">/{{ globalRealPomo }}</span>
-            </span>
-          </div>
-          <div v-if="settingStore.settings.viewSet === 'week'" class="day-info">
-            <span @click="onMonthJump" class="day-status">
-              {{ dateService.displayWeekInfo }}
-            </span>
-            <span @click="onDateSet('today')" class="global-pomo">
-              <span class="total-pomo">🍅{{ globalRealPomo }}</span>
-            </span>
-          </div>
-          <div v-if="settingStore.settings.viewSet === 'month'" class="day-info">
-            <span @click="onWeekJump" class="day-status">{{ dateService.displayMonthInfo }}</span>
-            <span @click="onDateSet('today')" class="global-pomo">
-              <span class="total-pomo">🍅{{ globalRealPomo }}</span>
-            </span>
+            </div>
+            <div v-if="settingStore.settings.viewSet === 'week'" class="day-info">
+              <span @click="onMonthJump" class="day-status">&nbsp;{{ dateService.displayWeekInfo }}</span>
+              <span @click="onDateSet('today')" class="global-pomo">
+                <span class="total-pomo">🍅{{ globalRealPomo }}</span>
+              </span>
+            </div>
+            <div v-if="settingStore.settings.viewSet === 'month'" class="day-info">
+              <span @click="onWeekJump" class="day-status">&nbsp;{{ dateService.displayMonthInfo }}</span>
+              <span @click="onDateSet('today')" class="global-pomo">
+                <span class="total-pomo">🍅{{ globalRealPomo }}</span>
+              </span>
+            </div>
           </div>
           <div
             class="marquee"
@@ -110,10 +108,8 @@
                 <n-button
                   ref="homeTagFilterBtnRef"
                   size="small"
-                  circle
-                  quaternary
-                  strong
-                  :type="dataStore.filterTagIds.length > 0 ? 'warning' : 'default'"
+                  text
+                  :type="dataStore.filterTagIds.length > 0 ? 'info' : 'default'"
                   :title="dataStore.filterTagIds.length > 0 ? '清除标签筛选' : '标签筛选'"
                   @click.stop="handleHomeTagFilterButtonClick"
                 >
@@ -136,9 +132,9 @@
 
             <n-button
               title="重复活动"
+              v-if="!isMobile"
               @click="onRepeatActivity"
-              circle
-              quaternary
+              text
               type="info"
               size="small"
               :disabled="selectedRowId === null && activeId === null"
@@ -151,9 +147,7 @@
               v-if="!isMobile"
               :type="selectedRowId === null ? 'default' : 'info'"
               size="small"
-              circle
-              quaternary
-              strong
+              text
               @click="onIcsExport"
               title="导出 ICS / 二维码"
               :disabled="selectedRowId === null"
@@ -175,22 +169,18 @@
               @click="onDateSet('today')"
               title="输入示例：2026-01-01"
             >
-              <template #date-icon>
-                <n-button size="small" text class="view-toggle-btn" @click.stop="onViewSet()" title="切换视图">
-                  <template #icon>
-                    <n-icon color="var(--color-text-primary)">
-                      <CalendarSettings20Regular />
-                    </n-icon>
-                  </template>
-                </n-button>
-              </template>
+              <template #date-icon></template>
             </n-date-picker>
-
+            <n-button v-if="!isMobile" size="small" text @click.stop="onViewSet()" title="切换视图">
+              <template #icon>
+                <n-icon color="var(--color-text-primary)">
+                  <CalendarSettings20Regular />
+                </n-icon>
+              </template>
+            </n-button>
             <n-button
               size="small"
-              circle
-              secondary
-              strong
+              text
               @click="onDateSet('prev')"
               :title="
                 settingStore.settings.viewSet === 'day'
@@ -204,16 +194,14 @@
             >
               <template #icon>
                 <n-icon>
-                  <Previous24Regular />
+                  <ChevronLeft20Regular />
                 </n-icon>
               </template>
             </n-button>
 
             <n-button
               size="small"
-              circle
-              secondary
-              strong
+              text
               @click="onDateSet('next')"
               :title="
                 settingStore.settings.viewSet === 'day'
@@ -227,7 +215,7 @@
             >
               <template #icon>
                 <n-icon>
-                  <Next24Regular />
+                  <ChevronRight20Regular />
                 </n-icon>
               </template>
             </n-button>
@@ -342,7 +330,13 @@ import { getTimestampForTimeString } from "@/core/utils";
 import { ViewType } from "@/core/constants";
 import { useResize } from "@/composables/useResize";
 import IcsExportModal from "@/components/IcsExportModal.vue";
-import { Previous24Regular, Next24Regular, CalendarSettings20Regular, QrCode24Regular, ArrowRepeatAll24Regular } from "@vicons/fluent";
+import {
+  CalendarSettings20Regular,
+  QrCode24Regular,
+  ArrowRepeatAll24Regular,
+  ChevronLeft20Regular,
+  ChevronRight20Regular,
+} from "@vicons/fluent";
 import { TagOff20Regular, TagSearch20Regular } from "@vicons/fluent";
 
 import {
@@ -429,6 +423,11 @@ const appDateTimestamp = computed(() => dateService.appDateTimestamp);
 const onYearJump = () => {
   settingStore.settings.viewSet = "year";
   settingStore.settings.topHeight = 480;
+};
+
+const onDayJump = () => {
+  settingStore.settings.viewSet = "day";
+  settingStore.settings.topHeight = 300;
 };
 
 // 年视图中点击月份标题 → 进入月视图并定位到该月
@@ -1580,6 +1579,12 @@ const { startResize: startRightResize } = useResize(
   text-overflow: ellipsis;
 }
 
+.planner-header-left {
+  display: flex;
+  align-items: center;
+  margin-left: 2px;
+}
+
 .marquee {
   flex: 1;
   margin-left: 8px;
@@ -1602,12 +1607,6 @@ const { startResize: startRightResize } = useResize(
 
   .marquee-input {
     display: block;
-  }
-
-  .global-pomo {
-    padding: 2px 4px !important;
-    font-size: 14px;
-    font-weight: 700;
   }
 
   .today-pomo,
@@ -1638,7 +1637,7 @@ const { startResize: startRightResize } = useResize(
 
 .button-group {
   display: flex;
-  gap: 2px;
+  gap: 8px;
   padding: 1px;
   align-items: center;
   flex-shrink: 0;
@@ -1646,6 +1645,12 @@ const { startResize: startRightResize } = useResize(
   background-color: var(--color-background);
   margin-left: auto;
   z-index: 5;
+}
+
+@media (max-width: 650px) {
+  .button-group {
+    gap: 4px;
+  }
 }
 
 .day-info {
@@ -1661,20 +1666,18 @@ const { startResize: startRightResize } = useResize(
   font-size: 18px;
   font-family: Consolas, "Courier New", Courier, Monaco, "Liberation Mono", "Menlo", monospace;
   color: var(--color-text);
-  border-radius: 12px;
-  padding: 0px 4px 0px 4px;
-  margin: 2px;
+
   cursor: pointer;
   background-color: var(--color-background);
 }
 
-.day-info.tomorrow .day-status {
+/* .day-info.tomorrow .day-status {
   box-shadow: 0px -1px 1px 1px var(--color-red-light) inset;
 }
 
 .day-info.yesterday .day-status {
   box-shadow: 0px -1px 1px 1px var(--color-blue-light) inset;
-}
+} */
 
 .global-pomo {
   display: inline-flex;
@@ -1682,10 +1685,11 @@ const { startResize: startRightResize } = useResize(
   font-size: 16px;
   color: var(--color-text);
   background: var(--color-background-light-transparent);
-  padding: 2px 8px;
+  padding: 2px 4px;
   border-radius: 12px;
   font-family: Consolas, "Courier New", Courier, monospace;
   font-weight: 500;
+  margin-left: 16px;
 }
 
 .today-pomo {
@@ -1783,15 +1787,5 @@ const { startResize: startRightResize } = useResize(
 .search-date :deep(.n-input-wrapper) {
   padding-left: 6px;
   padding-right: 6px;
-}
-
-.view-toggle-btn {
-  margin-right: 2px;
-  transform: translateY(-1px) !important;
-}
-
-.view-toggle-btn:hover {
-  background-color: var(--color-background-light);
-  border-radius: 4px;
 }
 </style>

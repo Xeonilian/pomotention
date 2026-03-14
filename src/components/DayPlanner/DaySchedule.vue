@@ -36,7 +36,7 @@
           <th
             class="col-start"
             :class="{ 'disabled-toggle': !selectedSchedule, 'header-active': !!selectedSchedule }"
-            @dblclick.stop="selectedRowId && handleFillCurrentTimeStart()"
+            @click.stop="selectedRowId && handleFillCurrentTimeStart()"
             :title="selectedRowId ? '点击填入当前时间' : '请先选中一行'"
           >
             <n-icon size="20" class="header-icon">
@@ -46,7 +46,7 @@
           <th
             class="col-end"
             :class="{ 'disabled-toggle': !selectedSchedule, 'header-active': !!selectedSchedule }"
-            @dblclick.stop="selectedRowId && handleFillCurrentTimeEnd()"
+            @click.stop="selectedRowId && handleFillCurrentTimeEnd()"
             :title="selectedRowId ? '点击填入当前时间' : '请先选中一行'"
           >
             <n-icon size="20" class="header-icon">
@@ -126,8 +126,8 @@
             <!-- 2 开始时间 -->
             <td
               class="col-start"
-              @dblclick.stop="startEditing(schedule.id, 'start')"
-              :title="editingRowId === schedule.id && editingField === 'start' ? '' : '双击编辑'"
+              @click.stop="startEditing(schedule.id, 'start')"
+              :title="editingRowId === schedule.id && editingField === 'start' ? '' : '单击编辑'"
             >
               <input
                 class="start-input time-input"
@@ -141,16 +141,14 @@
                 maxlength="5"
                 autocomplete="off"
               />
-              <span v-else>{{
-                schedule.activityDueRange?.[0] ? formatTimeForDisplay(schedule.activityDueRange[0]) : "-"
-              }}</span>
+              <span v-else>{{ schedule.activityDueRange?.[0] ? formatTimeForDisplay(schedule.activityDueRange[0]) : "-" }}</span>
             </td>
 
             <!-- 3 结束时间 -->
             <td
               class="col-end"
-              @dblclick.stop="startEditing(schedule.id, 'done')"
-              :title="editingRowId === schedule.id && editingField === 'done' ? '' : '双击编辑'"
+              @click.stop="startEditing(schedule.id, 'done')"
+              :title="editingRowId === schedule.id && editingField === 'done' ? '' : '单击编辑'"
             >
               <input
                 class="done-input time-input"
@@ -171,8 +169,8 @@
             <td
               class="col-duration"
               :class="{ 'is-empty-min': schedule.activityDueRange?.[1] === '' }"
-              @dblclick.stop="startEditing(schedule.id, 'duration')"
-              :title="editingRowId === schedule.id && editingField === 'duration' ? '' : '双击编辑'"
+              @click.stop="startEditing(schedule.id, 'duration')"
+              :title="editingRowId === schedule.id && editingField === 'duration' ? '' : '单击编辑'"
             >
               <input
                 class="duration-input time-input"
@@ -195,8 +193,8 @@
               :class="{
                 'cloud-background': schedule.isUntaetigkeit === true,
               }"
-              @dblclick.stop="startEditing(schedule.id, 'title')"
-              :title="editingRowId === schedule.id && editingField === 'title' ? '' : '双击编辑'"
+              @click.stop="startEditing(schedule.id, 'title')"
+              :title="editingRowId === schedule.id && editingField === 'title' ? '' : '单击编辑'"
             >
               <input
                 class="title-input"
@@ -227,8 +225,8 @@
             <!-- 6 地点 -->
             <td
               class="col-location"
-              @dblclick.stop="startEditing(schedule.id, 'location')"
-              :title="editingRowId === schedule.id && editingField === 'location' ? '' : '双击编辑'"
+              @click.stop="startEditing(schedule.id, 'location')"
+              :title="editingRowId === schedule.id && editingField === 'location' ? '' : '单击编辑'"
             >
               <input
                 class="location-input"
@@ -504,7 +502,7 @@ function startEditing(scheduleId: number, field: "title" | "start" | "done" | "d
               ? timestampToTimeString(schedule.doneTime)
               : "";
 
-  // 双击后激活光标：用 ref 聚焦，与 DayTodo 一致；v-if 挂载后再等一帧
+  // 单击后激活光标：用 ref 聚焦，与 DayTodo 一致；v-if 挂载后再等一帧
   nextTick(() => {
     nextTick(() => {
       if (field === "title") titleInputRef.value?.focus();
