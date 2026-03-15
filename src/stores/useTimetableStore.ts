@@ -72,12 +72,16 @@ export const useTimetableStore = defineStore("timetable", () => {
   }
 
   function updateBlock(id: number, updates: Partial<Pick<Block, "category" | "start" | "end">>): void {
-    const block = blocks.value.find((b) => b.id === id);
+    const index = blocks.value.findIndex((b) => b.id === id);
 
-    if (block) {
-      Object.assign(block, updates);
-      block.synced = false;
-      block.lastModified = Date.now();
+    if (index !== -1) {
+      const block = blocks.value[index];
+      blocks.value[index] = {
+        ...block,
+        ...updates,
+        synced: false,
+        lastModified: Date.now(),
+      };
       saveToLocal();
     }
   }

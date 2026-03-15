@@ -1,42 +1,15 @@
 <!-- TimeTable.vue -->
 <template>
   <div class="timetable-container">
-    <!-- 0 入口按钮（始终可见） -->
-    <div class="timetable-view-button-container">
-      <n-button
-        @click="toggleDisplay"
-        text
-        type="default"
-        size="small"
-        class="timetable-button"
-        :title="showEditor ? '完成编辑' : '开始编辑'"
-      >
-        <template #icon>
-          <n-icon><Settings24Regular /></n-icon>
-        </template>
-      </n-button>
-    </div>
-    <!-- 1 编辑区 -->
+    <!-- 编辑区 -->
     <div v-if="showEditor" class="timetable-editor">
-      <div class="timetable-editor-header">
-        <n-button
-          text
-          type="info"
-          size="small"
-          :title="currentType === 'work' ? '切换到娱乐时间表' : '切换到工作时间表'"
-          @click="toggleType"
-        >
-          <template #icon>
-            <n-icon>
-              <Backpack24Regular v-if="currentType === 'work'" />
-              <Beach24Regular v-else />
-            </n-icon>
-          </template>
-        </n-button>
-      </div>
-      <TimeTableEditor :current-type="currentType" />
+      <TimeTableEditor
+        :current-type="currentType"
+        @exit="onExitEditor"
+        @toggle-type="toggleType"
+      />
     </div>
-    <!-- 3 显示区 -->
+    <!-- 显示区：无按钮，仅底部 icon 进入编辑 -->
     <div v-else class="timetable-time-block" ref="container">
       <TimeBlocks
         :blocks="viewBlocks"
@@ -44,14 +17,25 @@
         :effectivePxPerMinute="effectivePxPerMinute"
         :dayStart="dateService.appDateTimestamp"
       />
+      <button
+        type="button"
+        class="timetable-enter-editor-icon"
+        title="开始编辑"
+        aria-label="开始编辑"
+        @click="toggleDisplay"
+      >
+        <n-icon size="22">
+          <Settings24Regular />
+        </n-icon>
+      </button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch, computed, nextTick } from "vue";
-import { NButton, NIcon } from "naive-ui";
-import { Settings24Regular, Beach24Regular, Backpack24Regular } from "@vicons/fluent";
+import { ref, onMounted, onUnmounted, watch, computed } from "vue";
+import { NIcon } from "naive-ui";
+import { Settings24Regular } from "@vicons/fluent";
 import TimeTableEditor from "@/components/TimeTable/TimeTableEditor.vue";
 import TimeBlocks from "@/components/TimeTable/TimeBlocks.vue";
 import { getTimestampForTimeString } from "@/core/utils";
@@ -71,60 +55,39 @@ const currentType = ref<"work" | "entertainment">("work");
 const viewBlocks = computed(() => timetableStore.getBlocksByType(currentType.value));
 
 function toggleDisplay() {
-  showEditor.value = !showEditor.value;
-  settingStore.settings.leftWidth = showEditor.value ? 200 : 120;
+  showEditor.value = true;
+  settingStore.settings.leftWidth = 200;
+}
+
+function onExitEditor() {
+  showEditor.value = false;
+  settingStore.settings.leftWidth = 120;
 }
 
 function toggleType() {
   currentType.value = currentType.value === "work" ? "entertainment" : "work";
 }
 
-// 容器高度（使用 ResizeObserver 以兼容 iOS 首次渲染）
+// 容器高度
 const container = ref<HTMLElement | null>(null);
-const containerHeight = ref(800);
-// 使用 ResizeObserver 记录实例，优先使用容器尺寸变化监听，其次回退到 window resize
-let containerResizeObserver: ResizeObserver | null = null;
+const containerHeight = ref(400);
 
 const updateHeight = () => {
   if (container.value) {
-    // 在 Safari / iOS 上，初次渲染时高度可能为 0，这里做一次保护
-    const height = container.value.clientHeight;
-    if (height > 0) {
-      containerHeight.value = height;
-    }
+    containerHeight.value = container.value.clientHeight;
   }
 };
 
 onMounted(() => {
-  // 等待下一次 DOM 更新，确保容器已经完成布局
-  nextTick(() => {
-    updateHeight();
-
-    if (container.value && "ResizeObserver" in window) {
-      containerResizeObserver = new ResizeObserver(() => {
-        updateHeight();
-      });
-      containerResizeObserver.observe(container.value);
-    } else {
-      window.addEventListener("resize", updateHeight);
-    }
-  });
+  updateHeight();
+  window.addEventListener("resize", updateHeight);
 });
 
 onUnmounted(() => {
-  if (containerResizeObserver && container.value) {
-    containerResizeObserver.unobserve(container.value);
-    containerResizeObserver.disconnect();
-  }
   window.removeEventListener("resize", updateHeight);
 });
 
-// 当时间块数据变化时，下一帧再读取高度，避免布局尚未完成
-watch(viewBlocks, () => {
-  nextTick(() => {
-    updateHeight();
-  });
-});
+watch(viewBlocks, updateHeight);
 
 // 时间范围计算
 const timeRange = computed(() => {
@@ -148,15 +111,6 @@ const effectivePxPerMinute = computed(() => {
   height: 100%;
   overflow: visible;
 }
-.timetable-view-button-container {
-  position: fixed;
-  bottom: 30px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 8px;
-  z-index: 10;
-}
 
 .timetable-editor {
   height: 100%;
@@ -165,7 +119,6 @@ const effectivePxPerMinute = computed(() => {
 .timetable-time-block {
   height: 100%;
   position: relative;
-  bottom: 0px;
   /* 移动端：整个时间表区域禁用文本选择和长按复制 */
   user-select: none;
   -webkit-user-select: none;
@@ -176,6 +129,29 @@ const effectivePxPerMinute = computed(() => {
   touch-action: manipulation;
 }
 
+/* 进入编辑的 icon：下边缘靠上 10px */
+.timetable-enter-editor-icon {
+  position: absolute;
+  left: 50%;
+  bottom: 10px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--n-button-color-hover, rgba(0, 0, 0, 0.06));
+  color: var(--n-button-text-color, #333);
+  cursor: pointer;
+  z-index: 10;
+}
+.timetable-enter-editor-icon:hover {
+  background: var(--n-button-color-pressed, rgba(0, 0, 0, 0.1));
+}
+
 /* 深度禁用：timetable 内所有子元素都不能被选中或长按复制 */
 .timetable-time-block :deep(*) {
   user-select: none;
@@ -184,13 +160,5 @@ const effectivePxPerMinute = computed(() => {
   -ms-user-select: none;
   -webkit-touch-callout: none;
   -webkit-tap-highlight-color: transparent;
-}
-
-/* 添加这些样式来确保按钮居中 */
-.timetable-view-button-container :deep(.n-button) {
-  margin: 0 !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
 }
 </style>
