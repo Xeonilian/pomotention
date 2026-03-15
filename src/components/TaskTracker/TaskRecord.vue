@@ -457,9 +457,7 @@ const handleClick = (event: MouseEvent) => {
 }
 
 .markdown-content {
-  padding: 10px;
-
-  border-radius: 4px;
+  padding: 2px 4px;
   height: 100%;
   cursor: text;
   box-sizing: border-box;
