@@ -3,7 +3,7 @@
     v-model:show="showModal"
     @after-leave="emit('after-leave')"
     class="tag-manager"
-    :align-center="!isMobile"
+    align-center
     :style="modalStyle"
     :auto-focus="false"
   >
@@ -646,9 +646,9 @@ function goNextPage(): void {
     max-width: 100%;
     border-radius: 0;
     max-height: 80vh;
-    /* 始终贴顶部，不随输入法导致的视口变化而上下居中 */
-    align-self: flex-start !important;
-    margin: 8px auto 0 auto !important;
+    /* 上下居中 */
+    align-self: center !important;
+    margin: auto !important;
   }
 
   .tag-manager-inner {
