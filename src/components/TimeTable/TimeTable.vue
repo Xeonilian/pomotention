@@ -3,11 +3,7 @@
   <div class="timetable-container">
     <!-- 编辑区 -->
     <div v-if="showEditor" class="timetable-editor">
-      <TimeTableEditor
-        :current-type="currentType"
-        @exit="onExitEditor"
-        @toggle-type="toggleType"
-      />
+      <TimeTableEditor :current-type="currentType" @exit="onExitEditor" @toggle-type="toggleType" />
     </div>
     <!-- 显示区：无按钮，仅底部 icon 进入编辑 -->
     <div v-else class="timetable-time-block" ref="container">
@@ -17,17 +13,11 @@
         :effectivePxPerMinute="effectivePxPerMinute"
         :dayStart="dateService.appDateTimestamp"
       />
-      <button
-        type="button"
-        class="timetable-enter-editor-icon"
-        title="开始编辑"
-        aria-label="开始编辑"
-        @click="toggleDisplay"
-      >
-        <n-icon size="22">
-          <Settings24Regular />
+      <n-button text class="timetable-enter-editor-icon" title="开始编辑" aria-label="开始编辑" @click="toggleDisplay">
+        <n-icon>
+          <ChevronDoubleRight16Regular />
         </n-icon>
-      </button>
+      </n-button>
     </div>
   </div>
 </template>
@@ -35,7 +25,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, computed } from "vue";
 import { NIcon } from "naive-ui";
-import { Settings24Regular } from "@vicons/fluent";
+import { ChevronDoubleRight16Regular } from "@vicons/fluent";
 import TimeTableEditor from "@/components/TimeTable/TimeTableEditor.vue";
 import TimeBlocks from "@/components/TimeTable/TimeBlocks.vue";
 import { getTimestampForTimeString } from "@/core/utils";
@@ -132,24 +122,11 @@ const effectivePxPerMinute = computed(() => {
 /* 进入编辑的 icon：下边缘靠上 10px */
 .timetable-enter-editor-icon {
   position: absolute;
-  left: 50%;
   bottom: 10px;
-  transform: translateX(-50%);
   display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
   padding: 0;
-  border: none;
-  border-radius: 50%;
-  background: var(--n-button-color-hover, rgba(0, 0, 0, 0.06));
-  color: var(--n-button-text-color, #333);
   cursor: pointer;
-  z-index: 10;
-}
-.timetable-enter-editor-icon:hover {
-  background: var(--n-button-color-pressed, rgba(0, 0, 0, 0.1));
+  z-index: 100;
 }
 
 /* 深度禁用：timetable 内所有子元素都不能被选中或长按复制 */
