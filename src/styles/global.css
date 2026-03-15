@@ -48,12 +48,12 @@ body {
   padding: 0;
 }
 
-/* iPhone 刘海/安全区：避免顶部被状态栏遮挡，并修正左右按键对位 */
+/* iPhone 刘海/安全区：仅顶部与左右，底部由 MainLayout 的固定 footer 用 bottom 避开 */
 #app {
   box-sizing: border-box;
   height: 100%;
   min-height: 100vh;
-  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) 0px env(safe-area-inset-left);
   overflow: hidden;
 }
 #app > * {

@@ -404,7 +404,7 @@ function getCountdownClass(dueDate: number | undefined | null): string {
   flex-direction: row;
   gap: 8px;
   align-items: stretch;
-  height: calc(100% - 40px);
+  height: calc(100% - 40px - env(safe-area-inset-bottom));
   overflow-x: auto;
 }
 

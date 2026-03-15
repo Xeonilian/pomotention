@@ -32,9 +32,10 @@ import { getTimestampForTimeString } from "@/core/utils";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useDataStore } from "@/stores/useDataStore";
 import { useTimetableStore } from "@/stores/useTimetableStore";
+// import { useDevice } from "@/composables/useDevice";
 
 const dataStore = useDataStore();
-
+// const { isMobile, isIOSDevice, isDesktop } = useDevice();
 const dateService = dataStore.dateService;
 const settingStore = useSettingStore();
 const timetableStore = useTimetableStore();
@@ -89,7 +90,8 @@ const timeRange = computed(() => {
 });
 
 const totalMinutes = computed(() => (timeRange.value.end - timeRange.value.start) / (1000 * 60));
-const adjPara = ref(0);
+
+const adjPara = ref(0); // #BUG isMobile可以控制华为，但需要优化
 const effectivePxPerMinute = computed(() => {
   if (totalMinutes.value <= 0) return 0;
   return (containerHeight.value - adjPara.value) / totalMinutes.value;
@@ -98,7 +100,7 @@ const effectivePxPerMinute = computed(() => {
 
 <style scoped>
 .timetable-container {
-  height: 100%;
+  height: calc(100% - env(safe-area-inset-bottom));
   overflow: visible;
 }
 

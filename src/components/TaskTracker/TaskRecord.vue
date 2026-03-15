@@ -465,10 +465,11 @@ const handleClick = (event: MouseEvent) => {
 }
 
 .task-textarea {
-  width: calc(100% - 2px);
-  height: calc(100% - 2px);
-  padding: 10px;
-  border-radius: 4px;
+  width: calc(100% - 4px);
+  height: calc(100% - env(safe-area-inset-bottom));
+  margin: 2px;
+  padding: 6px 12px;
+  border-radius: 12px;
   font-family: inherit;
   font-weight: normal;
   box-sizing: border-box;
@@ -478,9 +479,16 @@ const handleClick = (event: MouseEvent) => {
   outline: none;
   resize: none;
 }
+@media (max-width: 768px) {
+  .task-textarea {
+    border-radius: 6px;
+    padding: 2px 6px;
+  }
+}
 
 .task-textarea:focus {
-  border: 1px solid var(--color-primary);
+  background-color: var(--color-background-light-transparent);
+  border: none;
 }
 
 :deep(.markdown-content) {

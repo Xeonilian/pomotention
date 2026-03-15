@@ -1525,7 +1525,7 @@ const { startResize: startRightResize } = useResize(
 }
 
 .left {
-  padding: 5px 10px 15px 10px;
+  padding: 5px 10px 0px 10px;
   box-sizing: border-box;
   overflow: hidden;
   margin-right: 0;
@@ -1534,7 +1534,7 @@ const { startResize: startRightResize } = useResize(
 }
 
 .right {
-  padding: 8px;
+  padding: 8px 8px 0px 8px;
   box-sizing: border-box;
   overflow-x: hidden;
   overflow-y: auto;

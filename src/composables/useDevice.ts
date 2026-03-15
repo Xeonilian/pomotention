@@ -44,6 +44,8 @@ export function useDevice() {
     return !isMobile.value && !isTablet.value;
   });
 
+  const isIOSDevice = computed(() => /iPad/.test(navigator.userAgent));
+
   return {
     isTauri: isTauriApp,
     isWeb: !isTauriApp,
@@ -52,5 +54,6 @@ export function useDevice() {
     isDesktop,
     isTouchSupported, // 组件应该用这个来决定是否开启触摸增强，而不是关闭鼠标
     width,
+    isIOSDevice,
   };
 }
