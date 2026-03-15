@@ -1635,21 +1635,24 @@ const { startResize: startRightResize } = useResize(
   max-width: 100px !important;
 }
 
+/* 禁止随父级 flex 收缩，保持按钮组尺寸 */
 .button-group {
   display: flex;
-  gap: 8px;
-  padding: 1px;
-  align-items: center;
   flex-shrink: 0;
-  flex-grow: 0;
+  gap: 8px;
+  align-items: center;
   background-color: var(--color-background);
-  margin-left: auto;
   z-index: 5;
+  margin-right: 6px;
+  order: 999;
 }
 
 @media (max-width: 650px) {
   .button-group {
     gap: 4px;
+  }
+  .global-pomo {
+    margin-left: 2px !important;
   }
 }
 
