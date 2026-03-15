@@ -96,3 +96,33 @@ git pull origin feature/your-branch-name
 2. **频繁同步**：每天开始和结束工作时都要 pull/push
 3. **小步提交**：频繁提交小的改动，便于追踪和回滚
 4. **分支保护**：重要分支设置保护规则，避免直接推送
+
+## 特例单台电脑
+
+```bash
+# 1. 确保 dev 是最新的
+git checkout dev
+git pull origin dev
+
+# 2. 基于 dev 新建本地分支
+git checkout -b feature/xxx
+
+# 3. 改代码，提交
+git add -A
+git commit -m "feat(xxx): 你的改动说明"
+
+# 4. 切回 dev
+git checkout dev
+
+# 5. 合并（二选一）
+git merge feature/xxx                    # 保留提交历史
+# 或
+git merge --squash feature/xxx            # 压成一次提交（类似 PR 的 squash）
+git commit -m "feat(xxx): 你的改动说明"   # squash 时需要再提交一次
+
+# 6. 删除本地 feature 分支
+git branch -d feature/xxx
+
+# 7. 推送 dev 到远程
+git push origin dev
+```
