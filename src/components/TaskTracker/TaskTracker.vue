@@ -340,7 +340,7 @@ onUnmounted(() => {
 
 .task-tag-render-container {
   border: none;
-  padding: 2px;
+  padding: 4px;
   margin-left: 2px;
   margin-right: 2px;
   display: flex;
@@ -372,16 +372,16 @@ onUnmounted(() => {
 }
 
 .point-value {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: bold;
   font-family: "consolas", monospace;
 }
 
 .point-time {
-  font-size: 8px;
+  font-size: 7px;
   color: var(--color-text-primary);
   font-family: "consolas", monospace;
-  transform: translateY(-4px);
+  transform: translate(1px, -4px);
 }
 
 .task-record-container :deep(.task-record) {
@@ -394,8 +394,6 @@ onUnmounted(() => {
   flex: 1;
   display: flex;
   flex-direction: column;
-  margin: 2px;
-
   overflow: hidden;
 }
 
