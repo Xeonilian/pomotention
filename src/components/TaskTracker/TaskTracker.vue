@@ -339,7 +339,7 @@ onUnmounted(() => {
 }
 
 .task-tag-render-container {
-  border-radius: 4px;
+  border: none;
   padding: 2px;
   margin-left: 2px;
   margin-right: 2px;

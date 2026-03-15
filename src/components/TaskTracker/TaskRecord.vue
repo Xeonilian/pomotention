@@ -1,15 +1,8 @@
 <!-- TaskRecord.vue -->
 <template>
   <div class="task-record">
-    <div
-      v-if="!isEditing"
-      class="markdown-content"
-      :class="{ disabled: !taskId }"
-      @click="handleClick"
-      :title="isEditing ? '单击启动编辑' : ''"
-    >
-      <div v-if="!taskId" class="placeholder">请选择追踪的任务...</div>
-      <div v-else-if="!content" class="placeholder">点击此处追踪执行意图...</div>
+    <div v-if="!isEditing" class="markdown-content" @click="handleClick" :title="isEditing ? '单击启动编辑' : ''">
+      <div v-if="!hasContent" class="placeholder">点击此处追踪执行意图...</div>
       <div v-else v-html="renderedMarkdown"></div>
     </div>
     <div v-else style="position: relative; width: 100%; height: 100%">
@@ -111,6 +104,8 @@ const emit = defineEmits<{
 }>();
 
 const content = ref(props.initialContent);
+// 是否有实质内容（排除空串和纯空白），用于占位符显隐
+const hasContent = computed(() => (content.value || "").trim().length > 1);
 const isEditing = ref(false);
 const textarea = ref<HTMLTextAreaElement | null>(null);
 
@@ -463,7 +458,7 @@ const handleClick = (event: MouseEvent) => {
 
 .markdown-content {
   padding: 10px;
-  border: 1px solid var(--color-background-dark);
+
   border-radius: 4px;
   height: 100%;
   cursor: text;
@@ -471,15 +466,10 @@ const handleClick = (event: MouseEvent) => {
   font-weight: normal; /* 确保字体不会变粗 */
 }
 
-.markdown-content.disabled {
-  cursor: not-allowed;
-  background-color: var(--color-background-light-transparent);
-}
 .task-textarea {
   width: calc(100% - 2px);
   height: calc(100% - 2px);
   padding: 10px;
-  border: 1px solid var(--color-background-dark);
   border-radius: 4px;
   font-family: inherit;
   font-weight: normal;
@@ -488,7 +478,6 @@ const handleClick = (event: MouseEvent) => {
   line-height: 1.6;
   overflow: hidden;
   outline: none;
-  transition: border-color 0.2s;
   resize: none;
 }
 
@@ -505,6 +494,10 @@ const handleClick = (event: MouseEvent) => {
 :deep(.markdown-content h3) {
   margin-top: 0em;
   margin-bottom: 0.1em;
+}
+
+:deep(.markdown-content h1) {
+  font-size: 18px;
 }
 
 :deep(.markdown-content p) {
