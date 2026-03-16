@@ -396,7 +396,7 @@ function handleWeekClick(weekStartTs: number) {
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: var(--color-background-dark);
+  background-color: var(--color-background-light);
 }
 
 .day-dot--empty {
