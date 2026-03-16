@@ -822,15 +822,16 @@ export const useDataStore = defineStore(
 
         activityList.value.forEach((activity) => {
           if (!activity.dueRange || !activity.dueRange[0]) return;
-          if (activity.status === "done") return;
+          // 已取消或已完成的活动，不再被自动状态机覆盖
+          if (activity.status === "done" || activity.status === "cancelled") return;
           const dueMs = typeof activity.dueRange[0] === "string" ? Date.parse(activity.dueRange[0]) : Number(activity.dueRange[0]);
 
           if (dueMs >= startOfDay && dueMs <= endOfDay) {
             activity.status = "ongoing";
-          } else if (dueMs < now && activity.status != "cancelled") {
+          } else if (dueMs < now) {
             activity.status = "delayed";
           } else {
-            if (activity.status != "cancelled") activity.status = "";
+            activity.status = "";
           }
         });
       },
