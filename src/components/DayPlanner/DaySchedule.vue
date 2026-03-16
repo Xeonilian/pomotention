@@ -193,7 +193,11 @@
               :class="{
                 'cloud-background': schedule.isUntaetigkeit === true,
               }"
-              @click.stop="startEditing(schedule.id, 'title')"
+              @click.stop="handleRowClick(schedule)"
+              @dblclick.stop="startEditing(schedule.id, 'title')"
+              @touchstart.stop.prevent="handleTitleTouchStart($event, schedule)"
+              @touchend.stop.prevent="handleTitleTouchEnd($event, schedule)"
+              @touchcancel.stop.prevent="handleTitleTouchCancel(schedule)"
               :title="editingRowId === schedule.id && editingField === 'title' ? '' : '单击编辑'"
             >
               <input
@@ -225,7 +229,11 @@
             <!-- 6 地点 -->
             <td
               class="col-location"
-              @click.stop="startEditing(schedule.id, 'location')"
+              @click.stop="handleRowClick(schedule)"
+              @dblclick.stop="startEditing(schedule.id, 'location')"
+              @touchstart.stop.prevent="handleLocationTouchStart($event, schedule)"
+              @touchend.stop.prevent="handleLocationTouchEnd($event, schedule)"
+              @touchcancel.stop.prevent="handleLocationTouchCancel(schedule)"
               :title="editingRowId === schedule.id && editingField === 'location' ? '' : '单击编辑'"
             >
               <input
@@ -323,6 +331,7 @@ import { storeToRefs } from "pinia";
 import { useActivityTagEditor } from "@/composables/useActivityTagEditor";
 import TagSelector from "../TagSystem/TagSelector.vue";
 import { useDevice } from "@/composables/useDevice";
+import { useLongPress } from "@/composables/useLongPress";
 
 const dataStore = useDataStore();
 const { isMobile } = useDevice();
@@ -341,6 +350,28 @@ const startInputRef = ref<HTMLInputElement | null>(null);
 const doneInputRef = ref<HTMLInputElement | null>(null);
 const durationInputRef = ref<HTMLInputElement | null>(null);
 const locationInputRef = ref<HTMLInputElement | null>(null);
+const titleLongPressMap = ref(
+  new Map<
+    number,
+    {
+      longPressTriggered: { value: boolean };
+      onLongPressStart: (e: TouchEvent | MouseEvent) => void;
+      onLongPressEnd: () => void;
+      onLongPressCancel: () => void;
+    }
+  >(),
+);
+const locationLongPressMap = ref(
+  new Map<
+    number,
+    {
+      longPressTriggered: { value: boolean };
+      onLongPressStart: (e: TouchEvent | MouseEvent) => void;
+      onLongPressEnd: () => void;
+      onLongPressCancel: () => void;
+    }
+  >(),
+);
 
 // 定义 Emit
 
@@ -663,6 +694,68 @@ function handleInputKeydown(event: KeyboardEvent, schedule: Schedule) {
   }
 }
 
+function getTitleLongPress(scheduleId: number) {
+  let handler = titleLongPressMap.value.get(scheduleId);
+  if (!handler) {
+    handler = useLongPress({
+      delay: 600,
+      onLongPress: () => {
+        startEditing(scheduleId, "title");
+      },
+    });
+    titleLongPressMap.value.set(scheduleId, handler);
+  }
+  return handler;
+}
+
+function handleTitleTouchStart(e: TouchEvent, schedule: Schedule) {
+  const longPress = getTitleLongPress(schedule.id);
+  longPress.onLongPressStart(e);
+}
+
+function handleTitleTouchEnd(e: TouchEvent, schedule: Schedule) {
+  e.stopPropagation();
+  const longPress = getTitleLongPress(schedule.id);
+  longPress.onLongPressEnd();
+  handleRowClick(schedule);
+}
+
+function handleTitleTouchCancel(schedule: Schedule) {
+  const longPress = getTitleLongPress(schedule.id);
+  longPress.onLongPressCancel();
+}
+
+function getLocationLongPress(scheduleId: number) {
+  let handler = locationLongPressMap.value.get(scheduleId);
+  if (!handler) {
+    handler = useLongPress({
+      delay: 600,
+      onLongPress: () => {
+        startEditing(scheduleId, "location");
+      },
+    });
+    locationLongPressMap.value.set(scheduleId, handler);
+  }
+  return handler;
+}
+
+function handleLocationTouchStart(e: TouchEvent, schedule: Schedule) {
+  const longPress = getLocationLongPress(schedule.id);
+  longPress.onLongPressStart(e);
+}
+
+function handleLocationTouchEnd(e: TouchEvent, schedule: Schedule) {
+  e.stopPropagation();
+  const longPress = getLocationLongPress(schedule.id);
+  longPress.onLongPressEnd();
+  handleRowClick(schedule);
+}
+
+function handleLocationTouchCancel(schedule: Schedule) {
+  const longPress = getLocationLongPress(schedule.id);
+  longPress.onLongPressCancel();
+}
+
 function handleTagSelected(tagId: number) {
   if (!tagEditor.popoverTargetId.value) return;
   const schedule = schedulesForCurrentView.value.find((s) => s.id === tagEditor.popoverTargetId.value);
@@ -908,7 +1001,8 @@ td.status-col {
 }
 
 .title-input {
-  width: calc(100% - 10px);
+  padding: 0px 0px;
+  width: calc(100% - 4px);
   border: 1px solid #40a9ff;
   border-radius: 4px;
   font-size: inherit;
@@ -929,16 +1023,17 @@ td.status-col {
 
 .duration-input {
   /* 固定时长输入框宽度，避免 focus 时撑开 */
-  width: 26px !important;
-  max-width: 26px !important;
+  width: 24px !important;
+  max-width: 24px !important;
   min-width: 0 !important;
   box-sizing: border-box;
-  padding-left: 1px;
+  padding: 0px 0px;
   font-size: inherit;
 }
 
 .location-input {
-  width: calc(100% - 6px);
+  padding: 0px 0px;
+  width: calc(100% - 4px);
   border: 1px solid #40a9ff;
   border-radius: 4px;
   font-size: inherit;
@@ -1030,12 +1125,12 @@ td.status-col {
   }
 
   col.col-start {
-    width: 36px;
+    width: 34px;
     font-family: Consolas, "Courier New", Courier, monospace;
   }
 
   col.col-end {
-    width: 36px;
+    width: 34px;
     font-family: Consolas, "Courier New", Courier, monospace;
   }
 
@@ -1068,7 +1163,7 @@ td.status-col {
 
 .add-schedule-button {
   cursor: pointer;
-  transform: translate(-1px, 3px);
+  transform: translate(0px, 3px);
 }
 
 .cancel-button.header-active {

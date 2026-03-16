@@ -235,7 +235,11 @@
             <!-- 5 意图 -->
             <td
               class="col-intent"
-              @click.stop="startEditing(todo.id, 'title')"
+              @click.stop="handleRowClick(todo)"
+              @dblclick.stop="startEditing(todo.id, 'title')"
+              @touchstart.stop.prevent="handleTitleTouchStart($event, todo)"
+              @touchend.stop.prevent="handleTitleTouchEnd($event, todo)"
+              @touchcancel.stop.prevent="handleTitleTouchCancel(todo)"
               :title="editingRowId === todo.id && editingField === 'title' ? '' : '单击编辑'"
             >
               <input
@@ -440,6 +444,7 @@ import { useActivityTagEditor } from "@/composables/useActivityTagEditor";
 import TagSelector from "../TagSystem/TagSelector.vue";
 import type { SelectOption } from "naive-ui";
 import { useDevice } from "@/composables/useDevice";
+import { useLongPress } from "@/composables/useLongPress";
 
 const dataStore = useDataStore();
 const { isMobile } = useDevice();
@@ -493,6 +498,18 @@ const selectingTagViaEnter = ref(false);
 const titleInputRef = ref<HTMLInputElement | null>(null);
 const startInputRef = ref<HTMLInputElement | null>(null);
 const doneInputRef = ref<HTMLInputElement | null>(null);
+// 标题列长按状态
+const titleLongPressMap = ref(
+  new Map<
+    number,
+    {
+      longPressTriggered: { value: boolean };
+      onLongPressStart: (e: TouchEvent | MouseEvent) => void;
+      onLongPressEnd: () => void;
+      onLongPressCancel: () => void;
+    }
+  >(),
+);
 
 // 排序列：emoji 弹窗与绑定设置
 const rankPopoverTodoId = ref<number | null>(null);
@@ -1174,6 +1191,37 @@ function handleInputKeydown(event: KeyboardEvent, todo: Todo) {
   }
 }
 
+function getTitleLongPress(todoId: number) {
+  let handler = titleLongPressMap.value.get(todoId);
+  if (!handler) {
+    handler = useLongPress({
+      delay: 600,
+      onLongPress: () => {
+        startEditing(todoId, "title");
+      },
+    });
+    titleLongPressMap.value.set(todoId, handler);
+  }
+  return handler;
+}
+
+function handleTitleTouchStart(e: TouchEvent, todo: Todo) {
+  const longPress = getTitleLongPress(todo.id);
+  longPress.onLongPressStart(e);
+}
+
+function handleTitleTouchEnd(e: TouchEvent, todo: Todo) {
+  e.stopPropagation();
+  const longPress = getTitleLongPress(todo.id);
+  longPress.onLongPressEnd();
+  handleRowClick(todo);
+}
+
+function handleTitleTouchCancel(todo: Todo) {
+  const longPress = getTitleLongPress(todo.id);
+  longPress.onLongPressCancel();
+}
+
 function handleTagSelected(tagId: number) {
   if (!tagEditor.popoverTargetId.value) return;
   const todo = todosForCurrentViewWithTaskRecords.value.find((t) => t.id === tagEditor.popoverTargetId.value);
@@ -1265,12 +1313,12 @@ col.col-status {
   }
 
   col.col-start {
-    width: 36px;
+    width: 34px;
     font-family: Consolas, "Courier New", Courier, monospace;
   }
 
   col.col-end {
-    width: 36px;
+    width: 34px;
     font-family: Consolas, "Courier New", Courier, monospace;
   }
 
@@ -1339,7 +1387,7 @@ th.col-end.disabled-toggle {
 
 .add-todo-button {
   cursor: pointer;
-  transform: translate(-1px, 3px);
+  transform: translate(0px, 3px);
 }
 
 .header-icon {
@@ -1720,7 +1768,8 @@ td.col-check {
 }
 
 .title-input {
-  width: calc(100% - 10px);
+  width: calc(100% - 4px);
+  padding: 0px 0px;
   border: 1px solid #40a9ff;
   border-radius: 4px;
   outline: none;
