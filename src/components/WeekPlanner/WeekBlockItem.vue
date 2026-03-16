@@ -18,7 +18,7 @@
       :isCloseable="false"
       size="tiny"
       :displayLength="isMobile ? Number(1) : Number(3)"
-      :showIdx="Number(2)"
+      :showIdx="isMobile ? null : Number(2)"
       class="tag-renderer"
     />
     <span v-if="block.item.activityDueRange?.[0]" class="schedule-time">
@@ -160,5 +160,41 @@ const handleClick = () => {
   height: 100%;
   align-items: center;
   gap: 2px;
+}
+
+@media (max-width: 400px) {
+  .item {
+    /* 小屏下使用纵向布局，并在块内垂直居中，保证时间和标题都能完整显示 */
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    font-size: 9px;
+    padding: 1px;
+  }
+  .item .title {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    width: auto;
+  }
+
+  .schedule-time {
+    font-size: 7px;
+    box-shadow: none;
+    margin-left: 0px;
+    padding: 0px 2px;
+    /* 小屏下让时间文字在小标签内部垂直居中，避免视觉上“贴到底部” */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+  }
+  .time-block--todo,
+  .time-block--schedule {
+    border-left: 6px solid;
+  }
+  .tag-renderer {
+    display: none;
+  }
 }
 </style>
