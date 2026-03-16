@@ -194,7 +194,7 @@ const handleClick = () => {
     border-left: 6px solid;
   }
   .tag-renderer {
-    display: none;
+    display: flex;
   }
 }
 </style>

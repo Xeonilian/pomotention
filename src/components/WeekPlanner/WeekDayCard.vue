@@ -20,9 +20,19 @@
       <div class="time-grid-container" :style="{ height: timeGridHeight + 'px' }">
         <!-- 小时刻度线（始终显示） -->
         <div class="hour-ticks">
-          <div v-for="(hour, hourIdx) in hourStamps" :key="hour" class="hour-tick" :style="{ top: getHourTickTop(hour) + 'px' }">
-            <div class="tick-line"></div>
-            <span v-if="hourIdx !== hourStamps.length - 1" class="hour-label">
+          <div
+            v-for="(hour, hourIdx) in hourStamps"
+            :key="hour"
+            class="hour-tick"
+            :class="{ 'hour-tick--major': [12].includes(hour) }"
+            :style="{ top: getHourTickTop(hour) + 'px' }"
+          >
+            <div class="tick-line" :class="{ 'tick-line--major': [6, 9, 12, 15, 18, 21].includes(hour) }"></div>
+            <span
+              v-if="(!isMobile && hourIdx !== hourStamps.length - 1) || (isMobile && [6, 9, 12, 15, 18, 21].includes(hour))"
+              class="hour-label"
+              :class="{ 'hour-label--major': [6, 9, 12, 15, 18, 21].includes(hour) }"
+            >
               {{ hour.toString().padStart(2, "0") }}
             </span>
           </div>
@@ -145,6 +155,10 @@ const handleItemChange = (id: number, _ts: number, activityId?: number, taskId?:
   .hour-label {
     display: none;
   }
+
+  .hour-label.hour-label--major {
+    display: inline-block;
+  }
 }
 .day-header {
   display: flex;
@@ -243,12 +257,20 @@ const handleItemChange = (id: number, _ts: number, activityId?: number, taskId?:
   margin-bottom: 2px;
 }
 
+.tick-line--major {
+  background-color: var(--color-text-secondary);
+}
+
 .hour-label {
   font-size: 10px;
   line-height: 10px;
   color: var(--color-text-secondary);
   opacity: 0.6;
   font-family: "consolas", monospace;
+}
+
+.hour-label--major {
+  color: var(--color-text-secondary);
 }
 
 .card-statistic {
