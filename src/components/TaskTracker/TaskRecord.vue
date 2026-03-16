@@ -2,7 +2,7 @@
 <template>
   <div class="task-record">
     <div v-if="!isEditing" class="markdown-content" @click="handleClick" :title="isEditing ? '单击启动编辑' : ''">
-      <div v-if="!hasContent" class="placeholder">点击追踪执行意图...</div>
+      <div v-if="!hasContent" class="placeholder">🪄追踪执行意图...</div>
       <div v-else v-html="renderedMarkdown"></div>
     </div>
     <div v-else style="position: relative; width: 100%; height: 100%">
