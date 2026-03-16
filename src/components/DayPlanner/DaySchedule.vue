@@ -944,7 +944,7 @@ tr.cancel-row {
 }
 
 tr.empty-row {
-  height: 30px;
+  height: 60px;
   text-align: center;
   color: var(--color-text-secondary);
   width: 100%;
@@ -1119,7 +1119,15 @@ td.status-col {
   transform: translateY(3px);
 }
 
-@media (max-width: 400px) {
+@media (max-width: 430px) {
+  thead th {
+    border-bottom: 1px solid var(--color-background-dark) !important;
+  }
+
+  tbody td {
+    border-bottom: 0px !important;
+  }
+
   col.col-check {
     width: 20px;
     text-overflow: clip;
@@ -1142,6 +1150,16 @@ td.status-col {
 
   col.col-status {
     width: 40px;
+  }
+
+  col.col-intent {
+    width: 62%;
+    min-width: 0px;
+  }
+
+  col.col-location {
+    width: 38%;
+    min-width: 0px;
   }
 
   td.col-start,

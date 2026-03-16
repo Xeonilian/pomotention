@@ -350,9 +350,9 @@ function handleTagManagerClose() {
   flex-wrap: wrap;
 }
 
-@media (max-width: 600px) {
+@media (max-width: 430px) {
   .task-buttons {
-    gap: 4px;
+    gap: 6px;
   }
 }
 </style>

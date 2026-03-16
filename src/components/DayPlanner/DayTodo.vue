@@ -1324,7 +1324,15 @@ col.col-status {
   width: 60px;
 }
 
-@media (max-width: 400px) {
+@media (max-width: 430px) {
+  thead th {
+    border-bottom: 1px solid var(--color-background-dark) !important;
+  }
+
+  tbody td {
+    border-bottom: 0px !important;
+  }
+
   col.col-check {
     width: 20px;
   }
@@ -1359,12 +1367,12 @@ col.col-status {
   }
 
   col.col-intent {
-    width: 58%;
+    width: 62%;
     min-width: 0px;
   }
 
   col.col-fruit {
-    width: 42%;
+    width: 38%;
     min-width: 0px;
   }
 
@@ -1465,7 +1473,7 @@ tr.cancel-row {
 }
 
 tr.empty-row {
-  height: 30px;
+  height: 60px;
   text-align: center;
   color: var(--color-text-secondary);
   width: 100%;

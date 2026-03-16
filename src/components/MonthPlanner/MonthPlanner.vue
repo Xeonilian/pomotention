@@ -595,7 +595,7 @@ function getPomoBgColorHEX(ratio: number) {
   padding-right: 6px;
 }
 
-@media (max-width: 400px) {
+@media (max-width: 430px) {
   .header-card,
   .day-card {
     border: 0.5px solid var(--color-background-dark);

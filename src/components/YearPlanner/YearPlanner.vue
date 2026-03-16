@@ -381,9 +381,10 @@ function handleWeekClick(weekStartTs: number) {
 
 .day-num {
   font-size: 10px;
-  line-height: 1;
+  line-height: 1.2;
   color: var(--color-background);
   font-weight: 600;
+  font-family: Consolas, "Courier New", Courier, monospace;
 }
 
 .day-dot {
@@ -466,7 +467,7 @@ function handleWeekClick(weekStartTs: number) {
 }
 
 /* 极小屏：宽度 < 400px 时隐藏星期几表头行，同样不改变圆点尺寸 */
-@media (max-width: 410px) {
+@media (max-width: 430px) {
   .year-grid.months-nxn {
     grid-template-columns: repeat(2, 1fr);
     grid-template-rows: repeat(6, min-content);

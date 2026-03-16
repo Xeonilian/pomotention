@@ -1647,9 +1647,9 @@ const { startResize: startRightResize } = useResize(
   order: 999;
 }
 
-@media (max-width: 650px) {
+@media (max-width: 430px) {
   .button-group {
-    gap: 4px;
+    gap: 6px;
   }
   .global-pomo {
     margin-left: 2px !important;
