@@ -2,6 +2,7 @@
 import { useTimerStore } from "@/stores/useTimerStore";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { ref, computed, watch } from "vue";
+import { isTauri } from "@tauri-apps/api/core";
 import {
   ArrowLeft24Filled,
   ArrowUp24Filled,
@@ -54,7 +55,7 @@ export function useButtonStyle() {
 
   // 视图控制配置
   const viewControls = computed(() => [
-    { key: "ontop", icon: Pin24Regular, title: "番茄时钟置顶", show: true },
+    { key: "ontop", icon: Pin24Regular, title: "番茄时钟置顶", show: isTauri() },
     { key: "pomodoro", icon: Timer24Regular, title: "切换番茄钟视图", show: settingStore.settings.showPomodoro },
     { key: "schedule", icon: ArrowLeft24Filled, title: "切换日程视图", show: settingStore.settings.showSchedule },
     { key: "planner", icon: ArrowUp24Filled, title: "切换计划视图", show: settingStore.settings.showPlanner },
@@ -90,7 +91,7 @@ export function useButtonStyle() {
       //settingStore.settings.showAi,
     ],
     () => updateButtonStates(),
-    { immediate: true }
+    { immediate: true },
   );
 
   return {

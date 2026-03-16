@@ -31,7 +31,7 @@
           </n-dropdown>
           <div class="app-layout__view-controls">
             <n-button
-              v-for="(control, index) in viewControls"
+              v-for="(control, index) in filteredViewControls"
               :key="index"
               size="tiny"
               tertiary
@@ -101,6 +101,7 @@
             :isMiniMode="isMiniMode"
             @toggle-pomo-seq="showPomoSeq = !showPomoSeq"
             @report-size="handlePomotentionTimerSizeReport"
+            @enter-mini="() => handleToggleOntopMode(reportedPomodoroWidth, reportedPomodoroHeight)"
           />
         </div>
 
@@ -188,7 +189,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, nextTick, onMounted } from "vue";
+import { ref, computed, watch, nextTick, onMounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { NMenu, NButton, NIcon, NLayoutFooter, NTag, NPopconfirm, NDropdown } from "naive-ui";
 import { storeToRefs } from "pinia";
@@ -286,6 +287,13 @@ watch([() => reportedPomodoroWidth.value, () => reportedPomodoroHeight.value], a
     });
   }
 });
+
+// 三段式（紧凑/迷你/全屏）激活时隐藏 header 的 ontop 按钮
+const isThreeStageActive = computed(() => settingStore.settings.isCompactMode || isMiniMode.value);
+// 只对 ontop 做隐藏：非 Tauri 不显示；Tauri 下三段式激活时不显示。其余按钮始终显示，由 buttonStyle(control.show) 控制灰显
+const filteredViewControls = computed(() =>
+  viewControls.value.filter((c) => c.key !== "ontop" || (c.show && !isThreeStageActive.value))
+);
 
 // === 3. 视图控制按钮 ===
 function handleMainLayoutViewToggle(key: string) {

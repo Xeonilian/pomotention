@@ -20,7 +20,7 @@
       <n-button
         size="tiny"
         text
-        :title="isMiniMode ? '退出迷你模式' : settingStore.settings.isCompactMode ? '展开' : '紧凑模式'"
+        :title="compactCycleButtonTitle"
         @click="handleToggleCompactMode"
         class="compact-toggle-button"
         style="
@@ -75,6 +75,13 @@ let isPomoSeqRunning = ref(false); // 基于运行状态，返回不同的高度
 
 // 手机模式：置顶(mini) + 移动端时，timer 全屏宽、布局放大、上下居中
 const isPhoneMode = computed(() => props.isMiniMode && props.isMobile);
+
+// 紧凑/迷你/全屏 三态循环按钮的 title
+const compactCycleButtonTitle = computed(() => {
+  if (props.isMiniMode) return isTauri() ? "退出迷你模式" : "退出全屏";
+  if (settingStore.settings.isCompactMode) return isTauri() ? "迷你模式" : "全屏";
+  return "紧凑模式";
+});
 const pomodoroContainerRef = ref<HTMLElement | null>(null); // 自动识别正确高度
 
 const props = defineProps({
@@ -97,6 +104,7 @@ const emit = defineEmits<{
   (e: "report-size", size: { width: number; height: number }): void;
   (e: "exit-mini-mode"): void;
   (e: "exit-mini-mode-web"): void;
+  (e: "enter-mini"): void;
 }>();
 
 function reportSize() {
@@ -143,13 +151,18 @@ function exitMiniMode() {
 }
 
 function handleToggleCompactMode() {
-  // 在 miniMode 下，点击退出 miniMode
+  // 迷你/全屏：点击退出
   if (props.isMiniMode) {
     exitMiniMode();
     return;
   }
-  // 正常模式下，切换紧凑模式
-  settingStore.settings.isCompactMode = !settingStore.settings.isCompactMode;
+  // 紧凑：点击进入迷你/全屏
+  if (settingStore.settings.isCompactMode) {
+    emit("enter-mini");
+    return;
+  }
+  // 展开：点击进入紧凑
+  settingStore.settings.isCompactMode = true;
 }
 
 function handleTogglePomoSeq() {
