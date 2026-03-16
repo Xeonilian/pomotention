@@ -237,9 +237,9 @@
               class="col-intent"
               @click.stop="handleRowClick(todo)"
               @dblclick.stop="startEditing(todo.id, 'title')"
-              @touchstart.stop.prevent="handleTitleTouchStart($event, todo)"
-              @touchend.stop.prevent="handleTitleTouchEnd($event, todo)"
-              @touchcancel.stop.prevent="handleTitleTouchCancel(todo)"
+              @touchstart.stop="handleTitleTouchStart($event, todo)"
+              @touchend.stop="handleTitleTouchEnd($event, todo)"
+              @touchcancel.stop="handleTitleTouchCancel(todo)"
               :title="editingRowId === todo.id && editingField === 'title' ? '' : '单击编辑'"
             >
               <input

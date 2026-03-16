@@ -195,9 +195,9 @@
               }"
               @click.stop="handleRowClick(schedule)"
               @dblclick.stop="startEditing(schedule.id, 'title')"
-              @touchstart.stop.prevent="handleTitleTouchStart($event, schedule)"
-              @touchend.stop.prevent="handleTitleTouchEnd($event, schedule)"
-              @touchcancel.stop.prevent="handleTitleTouchCancel(schedule)"
+              @touchstart.stop="handleTitleTouchStart($event, schedule)"
+              @touchend.stop="handleTitleTouchEnd($event, schedule)"
+              @touchcancel.stop="handleTitleTouchCancel(schedule)"
               :title="editingRowId === schedule.id && editingField === 'title' ? '' : '单击编辑'"
             >
               <input
@@ -231,9 +231,9 @@
               class="col-location"
               @click.stop="handleRowClick(schedule)"
               @dblclick.stop="startEditing(schedule.id, 'location')"
-              @touchstart.stop.prevent="handleLocationTouchStart($event, schedule)"
-              @touchend.stop.prevent="handleLocationTouchEnd($event, schedule)"
-              @touchcancel.stop.prevent="handleLocationTouchCancel(schedule)"
+              @touchstart.stop="handleLocationTouchStart($event, schedule)"
+              @touchend.stop="handleLocationTouchEnd($event, schedule)"
+              @touchcancel.stop="handleLocationTouchCancel(schedule)"
               :title="editingRowId === schedule.id && editingField === 'location' ? '' : '单击编辑'"
             >
               <input
