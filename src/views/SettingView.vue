@@ -4,6 +4,36 @@
     size="large"
     style="max-width: 800px; width: 90%; margin: 20px auto; padding: 20px; max-height: calc(100vh - 100px); overflow-y: auto"
   >
+    <!-- 设备检测测试：用于确认 safe-area 等该用哪项判断 -->
+    <n-card title="设备检测测试">
+      <n-code :code="uaString" language="text" word-wrap style="font-size: 12px; max-height: 80px; overflow: auto" />
+      <n-descriptions label-placement="left" :column="1" bordered style="margin-top: 12px">
+        <n-descriptions-item label="useDevice.isMobile">{{ device.isMobile }}</n-descriptions-item>
+        <n-descriptions-item label="useDevice.isTablet">{{ device.isTablet }}</n-descriptions-item>
+        <n-descriptions-item label="useDevice.isDesktop">{{ device.isDesktop }}</n-descriptions-item>
+        <n-descriptions-item label="useDevice.isTouchSupported">{{ device.isTouchSupported }}</n-descriptions-item>
+        <n-descriptions-item label="useDevice.width">{{ device.width }}</n-descriptions-item>
+        <n-descriptions-item label="useDevice.isIOSDevice (仅 iPad)">
+          {{ device.isIOSDevice }} <span class="detection-hint">仅匹配 iPad</span>
+        </n-descriptions-item>
+        <n-descriptions-item label="useDevice.isIOS">
+          {{ device.isIOS }} <span class="detection-hint">当前逻辑：仅 iPhone</span>
+        </n-descriptions-item>
+        <n-descriptions-item label="usePwaInstall.isIOS">
+          {{ pwaIsIOS }} <span class="detection-hint">iPhone | iPad | iPod</span>
+        </n-descriptions-item>
+        <n-descriptions-item label="原始 /iphone/.test(ua)"> {{ raw.iphone }} </n-descriptions-item>
+        <n-descriptions-item label="原始 /ipad/.test(ua)"> {{ raw.ipad }} </n-descriptions-item>
+        <n-descriptions-item label="原始 /ipod/.test(ua)"> {{ raw.ipod }} </n-descriptions-item>
+        <n-descriptions-item label="原始 /iphone|ipad|ipod/.test(ua)"> {{ raw.anyIos }} </n-descriptions-item>
+      </n-descriptions>
+      <div class="recommendation">
+        <strong>底部 safe-area 只对 iPhone 生效时：</strong>用 <code>useDevice.isIOS</code>（仅 iPhone）或原始
+        <code>/iphone/.test(ua)</code>。若对 iPad 也要生效则用 <code>/iphone|ipad|ipod/.test(ua)</code> 或
+        <code>usePwaInstall.isIOS</code>。
+      </div>
+    </n-card>
+
     <!-- 仅 Preview（dev）环境显示：清除本地数据 -->
     <n-card v-if="isDev" title="开发工具">
       <n-button type="error" @click="handleClearLocal">清除本地数据</n-button>
@@ -45,14 +75,33 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
-import { NSpace, NCard, NForm, NFormItem, NInput, NInputNumber, NButton, NColorPicker, NSelect } from "naive-ui";
+import { computed, ref, onMounted } from "vue";
+import { NSpace, NCard, NForm, NFormItem, NInput, NInputNumber, NButton, NColorPicker, NSelect, NCode, NDescriptions, NDescriptionsItem } from "naive-ui";
 import { useSettingStore } from "../stores/useSettingStore";
 import { useDataStore } from "../stores/useDataStore";
 import { useSyncStore } from "../stores/useSyncStore";
 import { clearAllAppStorage } from "../services/localStorageService";
+import { useDevice } from "@/composables/useDevice";
+import { usePwaInstall } from "@/composables/usePwaInstall";
 
 const settingStore = useSettingStore();
+const device = useDevice();
+const { isIOS: pwaIsIOS } = usePwaInstall();
+
+const uaString = ref("");
+const raw = ref({ iphone: false, ipad: false, ipod: false, anyIos: false });
+
+onMounted(() => {
+  const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
+  uaString.value = ua || "(无)";
+  const lower = ua.toLowerCase();
+  raw.value = {
+    iphone: /iphone/.test(lower),
+    ipad: /ipad/.test(lower),
+    ipod: /ipod/.test(lower),
+    anyIos: /iphone|ipad|ipod/.test(lower),
+  };
+});
 const dataStore = useDataStore();
 const syncStore = useSyncStore();
 
@@ -86,5 +135,26 @@ function handleClearLocal() {
 .container {
   margin: 0 auto;
   padding: 20px;
+}
+
+.detection-hint {
+  margin-left: 8px;
+  color: var(--n-text-color-3);
+  font-size: 12px;
+}
+
+.recommendation {
+  margin-top: 12px;
+  padding: 10px;
+  background: var(--n-color-target);
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.recommendation code {
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--n-color-target);
+  border: 1px solid var(--n-border-color);
 }
 </style>

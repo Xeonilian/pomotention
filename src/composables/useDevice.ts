@@ -45,6 +45,8 @@ export function useDevice() {
   });
 
   const isIOSDevice = computed(() => /iPad/.test(navigator.userAgent));
+  // iPhone/iPad/iPod：用于 safe-area 等仅需在 iOS 上生效的样式（避免 Android 被误减）
+  const isIOS = /iphone/.test(userAgent);
 
   return {
     isTauri: isTauriApp,
@@ -55,5 +57,6 @@ export function useDevice() {
     isTouchSupported, // 组件应该用这个来决定是否开启触摸增强，而不是关闭鼠标
     width,
     isIOSDevice,
+    isIOS,
   };
 }
