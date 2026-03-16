@@ -288,11 +288,9 @@ watch([() => reportedPomodoroWidth.value, () => reportedPomodoroHeight.value], a
   }
 });
 
-// 三段式（紧凑/迷你/全屏）激活时隐藏 header 的 ontop 按钮
-const isThreeStageActive = computed(() => settingStore.settings.isCompactMode || isMiniMode.value);
-// 只对 ontop 做隐藏：非 Tauri 不显示；Tauri 下三段式激活时不显示。其余按钮始终显示，由 buttonStyle(control.show) 控制灰显
+// 只对 ontop 做隐藏：非 Tauri 不显示；Tauri 下始终显示。其余按钮始终显示，由 buttonStyle(control.show) 控制灰显
 const filteredViewControls = computed(() =>
-  viewControls.value.filter((c) => c.key !== "ontop" || (c.show && !isThreeStageActive.value))
+  viewControls.value.filter((c) => c.key !== "ontop" || c.show)
 );
 
 // === 3. 视图控制按钮 ===
