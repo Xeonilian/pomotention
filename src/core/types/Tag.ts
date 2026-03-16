@@ -12,6 +12,7 @@ export interface Tag {
   lastModified: number;
   deleted: boolean;
   cloudModified?: number; // 云端修改时间戳
+  lastUsed?: number; // 最后使用时间
 }
 
 export type TagSelectorInstance = {
