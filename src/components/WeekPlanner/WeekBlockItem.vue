@@ -162,7 +162,7 @@ const handleClick = () => {
   gap: 2px;
 }
 
-@media (max-width: 400px) {
+@media (max-width: 430px) {
   .item {
     /* 小屏下使用纵向布局，并在块内垂直居中，保证时间和标题都能完整显示 */
     flex-direction: column;

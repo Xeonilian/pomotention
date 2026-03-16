@@ -143,7 +143,7 @@ const handleItemChange = (id: number, _ts: number, activityId?: number, taskId?:
   padding: 6px 6px;
 }
 
-@media (max-width: 400px) {
+@media (max-width: 430px) {
   .day-card :deep(.n-card__content) {
     padding: 4px 2px 4px 2px;
   }
