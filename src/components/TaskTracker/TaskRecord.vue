@@ -2,7 +2,7 @@
 <template>
   <div class="task-record">
     <div v-if="!isEditing" class="markdown-content" @click="handleClick" :title="isEditing ? '单击启动编辑' : ''">
-      <div v-if="!hasContent" class="placeholder">点击此处追踪执行意图...</div>
+      <div v-if="!hasContent" class="placeholder">点击追踪执行意图...</div>
       <div v-else v-html="renderedMarkdown"></div>
     </div>
     <div v-else style="position: relative; width: 100%; height: 100%">
@@ -457,7 +457,7 @@ const handleClick = (event: MouseEvent) => {
 }
 
 .markdown-content {
-  padding: 2px 4px;
+  padding: 0px 10px;
   height: 100%;
   cursor: text;
   box-sizing: border-box;
@@ -482,7 +482,10 @@ const handleClick = (event: MouseEvent) => {
 @media (max-width: 768px) {
   .task-textarea {
     border-radius: 6px;
-    padding: 2px 6px;
+    padding: 4px 6px;
+  }
+  .markdown-content {
+    padding: 0px 6px;
   }
 }
 
@@ -503,7 +506,7 @@ const handleClick = (event: MouseEvent) => {
 }
 
 :deep(.markdown-content h1) {
-  font-size: 18px;
+  font-size: 20px;
 }
 
 :deep(.markdown-content p) {
@@ -628,6 +631,10 @@ const handleClick = (event: MouseEvent) => {
 .placeholder {
   color: var(--color-text-secondary);
   font-style: italic;
+  align-items: center;
+  justify-content: center;
+  display: flex;
+  margin-top: 10px;
 }
 
 .caret-flash {
