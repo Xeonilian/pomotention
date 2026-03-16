@@ -121,7 +121,7 @@ export function unifiedDateService({ activityList, scheduleList, todoList }: Uni
     // const start = new Date(weekStartTs.value);
     const { weekNumber } = getISOWeekInfo(weekStartTs.value);
     // const monthName = start.toLocaleString("en-US", { month: "long" }); // August
-    return `Week${weekNumber}`;
+    return `Week ${weekNumber}`;
   });
 
   const monthStartTs = computed(() => getStartOfMonth(dateState.app));
