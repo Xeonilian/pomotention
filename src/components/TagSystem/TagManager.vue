@@ -577,9 +577,6 @@ function goNextPage(): void {
 /* “已选中”标签的固定样式 */
 .custom-tag.selected {
   transform: translateY(-2px);
-  border-bottom: 2px solid var(--color-text-secondary);
-  border-left: 2px solid var(--color-text-secondary);
-  box-shadow: 4px 0px 0px 0px var(--color-background) inset;
 }
 
 /* 悬浮在“已选中”的标签上时的增强效果 */
