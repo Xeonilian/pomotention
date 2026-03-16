@@ -135,6 +135,7 @@
               <n-checkbox
                 v-if="todo.status !== 'cancelled'"
                 :checked="todo.status === 'done'"
+                :size="isMobile ? 'small' : 'medium'"
                 @update:checked="handleCheckboxChange(todo.id, $event)"
               />
               <n-icon
@@ -267,6 +268,7 @@
                     <div class="pomo-group">
                       <template v-for="i in est" :key="i">
                         <n-checkbox
+                          :size="isMobile ? 'small' : 'medium'"
                           :class="{
                             'pomo-cherry': todo.pomoType === '🍒',
                             'pomo-grape': todo.pomoType === '🍇',
@@ -1313,12 +1315,12 @@ col.col-status {
   }
 
   col.col-start {
-    width: 34px;
+    width: 32px;
     font-family: Consolas, "Courier New", Courier, monospace;
   }
 
   col.col-end {
-    width: 34px;
+    width: 32px;
     font-family: Consolas, "Courier New", Courier, monospace;
   }
 
@@ -1331,11 +1333,7 @@ col.col-status {
   }
 
   td.col-intent {
-    text-overflow: clip !important;
-  }
-
-  td.col-intent .ellipsis {
-    text-overflow: clip !important;
+    text-overflow: ellipsis !important;
   }
 
   td.col-start,
@@ -1343,6 +1341,21 @@ col.col-status {
   .time-input {
     font-size: 12px;
     text-overflow: clip;
+  }
+
+  col.col-intent {
+    width: 58%;
+    min-width: 0px;
+  }
+
+  col.col-fruit {
+    width: 42%;
+    min-width: 0px;
+  }
+
+  .cancel-icon {
+    width: 14px !important;
+    height: 14px !important;
   }
 }
 

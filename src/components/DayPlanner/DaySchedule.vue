@@ -108,6 +108,7 @@
             <td class="col-check">
               <n-checkbox
                 v-if="schedule.status !== 'cancelled'"
+                :size="isMobile ? 'small' : 'medium'"
                 :checked="schedule.status === 'done'"
                 @update:checked="handleCheckboxChange(schedule.id, $event)"
               />
@@ -1125,12 +1126,12 @@ td.status-col {
   }
 
   col.col-start {
-    width: 34px;
+    width: 32px;
     font-family: Consolas, "Courier New", Courier, monospace;
   }
 
   col.col-end {
-    width: 34px;
+    width: 32px;
     font-family: Consolas, "Courier New", Courier, monospace;
   }
 
@@ -1147,7 +1148,7 @@ td.status-col {
   td.col-end,
   td.col-duration,
   .time-input {
-    font-size: 13px;
+    font-size: 12px;
     text-overflow: clip;
     font-family: Consolas, "Courier New", Courier, monospace;
   }
@@ -1157,7 +1158,12 @@ td.status-col {
   }
 
   td.col-intent .ellipsis {
-    text-overflow: clip !important;
+    text-overflow: ellipsis !important;
+  }
+
+  .cancel-icon {
+    width: 14px !important;
+    height: 14px !important;
   }
 }
 
