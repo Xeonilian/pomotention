@@ -201,7 +201,7 @@
               <n-popover
                 :show="rankPopoverTodoId === todo.id"
                 @update:show="(v) => !v && (rankPopoverTodoId = null)"
-                trigger="manual"
+                trigger="click"
                 placement="bottom"
                 :z-index="10001"
               >
@@ -515,6 +515,7 @@ const titleLongPressMap = ref(
 
 // 排序列：emoji 弹窗与绑定设置
 const rankPopoverTodoId = ref<number | null>(null);
+let rankPopoverTimer: number | null = null; // 自动关闭排序弹窗的定时器
 const showPriorityBindingModal = ref(false);
 
 // 点击 popover 外视为放弃，关闭排序选择
@@ -528,6 +529,11 @@ let rankPopoverOutsideCleanup: (() => void) | null = null;
 watch(
   rankPopoverTodoId,
   (id) => {
+    // 每次 id 变化都先清理自动关闭定时器
+    if (rankPopoverTimer !== null) {
+      clearTimeout(rankPopoverTimer);
+      rankPopoverTimer = null;
+    }
     if (rankPopoverOutsideCleanup) {
       rankPopoverOutsideCleanup();
       rankPopoverOutsideCleanup = null;
@@ -659,7 +665,16 @@ const sortedTodos = computed(() => {
 
 function openRankPopoverIfActive(todo: Todo) {
   if (todo.status === "done" || todo.status === "cancelled") return;
+  // 立刻打开弹窗
   rankPopoverTodoId.value = todo.id;
+  // 设置 3000ms 后自动关闭
+  rankPopoverTimer = window.setTimeout(() => {
+    // 只在当前仍然是这个 todo 时才关闭，防止误关其他项
+    if (rankPopoverTodoId.value === todo.id) {
+      rankPopoverTodoId.value = null;
+    }
+    rankPopoverTimer = null;
+  }, 3000);
 }
 
 /** 从 1 起第一个可用的优先级（1–21），考虑已完成锁定和其余进行中任务占用 */
