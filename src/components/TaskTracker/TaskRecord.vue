@@ -126,19 +126,29 @@ watch(
 
 const startEditing = () => {
   isEditing.value = true;
-  // 手机上空间不够，进入编辑时只保留 50px 给顶部，把空间让给编辑区
+  // 手机上的空间有限，进入编辑时压缩顶部高度，把空间让给编辑区
   if (isMobile.value) {
     savedTopHeight.value = settingStore.settings.topHeight;
     settingStore.settings.topHeight = 110;
   }
+
   nextTick(() => {
+    // iOS 上布局变动后立刻 focus 会被吃掉，需要稍微延迟一下
+    const delay = isMobile.value ? 260 : 0;
     setTimeout(() => {
       const ta = textarea.value;
       if (ta && ta instanceof HTMLTextAreaElement && document.body.contains(ta)) {
+        // 确保键盘弹出：重新设置选区到末尾并执行 focus
+        const len = ta.value.length;
+        try {
+          ta.setSelectionRange(len, len);
+        } catch {
+          // 某些浏览器不支持 setSelectionRange，直接退化为 focus
+        }
         ta.focus();
         flashCaretFlash(ta);
       }
-    }, 0);
+    }, delay);
   });
 };
 
