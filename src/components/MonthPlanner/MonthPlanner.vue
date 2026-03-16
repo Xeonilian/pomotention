@@ -39,7 +39,7 @@
                   :tag-ids="normalizeTagIds(item.tagIds)"
                   :isCloseable="false"
                   size="tiny"
-                  :displayLength="Number(0)"
+                  :displayLength="Number(1)"
                   :showIdx="Number(1)"
                   class="tag"
                 />
@@ -69,6 +69,9 @@ import TagRenderer from "../TagSystem/TagRenderer.vue";
 import { timestampToTimeString } from "@/core/utils";
 import { useDataStore } from "@/stores/useDataStore";
 import { storeToRefs } from "pinia";
+import { useDevice } from "@/composables/useDevice";
+
+const { isMobile } = useDevice();
 
 const emit = defineEmits<{
   "date-select": [timestamp: number];
@@ -158,13 +161,10 @@ onUnmounted(() => {
 
 // 动态计算每天最多显示的项目数
 const maxItemsPerDay = computed(() => {
-  // date-badge 高度 + margin + top padding = 20 + 7 + 2 = 29px
-  // items padding = 4px
-  // 可用高度 = dayCardHeight - 29 - 4 = dayCardHeight - 33
   const availableHeight = Math.max(0, dayCardHeight.value - 30);
-  // 每个item高度12px + gap 2px = 17px
   const itemsPerHeight = Math.floor((availableHeight + 2) / 14);
-  return Math.max(1, itemsPerHeight); // 至少显示1个项目
+  const itemsMobilePerHeight = Math.floor((availableHeight + 2) / 12);
+  return Math.max(1, isMobile ? itemsMobilePerHeight : itemsPerHeight); // 至少显示1个项目
 });
 
 const days = computed(() => {
@@ -432,6 +432,7 @@ function getPomoBgColorHEX(ratio: number) {
 .header-card {
   min-width: 0;
   overflow: hidden;
+  border: 0.5px solid var(--color-blue-light);
 }
 .header-card :deep(.n-card__content) {
   font-size: 14px;
@@ -466,33 +467,6 @@ function getPomoBgColorHEX(ratio: number) {
   position: relative;
 }
 
-@media (max-width: 400px) {
-  .day-card :deep(.n-card__content) {
-    padding: 4px 2px 4px 2px;
-  }
-  :deep(.items) {
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 0px !important;
-    padding: 2px 2px !important; /* 给右上角日期留出一点空间 */
-    margin-top: 10px !important;
-    z-index: 0 !important;
-  }
-
-  :deep(.item) {
-    font-size: 11px !important;
-    padding: 1px 1px !important;
-    gap: 2px !important;
-  }
-
-  :deep(.title) {
-    text-overflow: unset !important;
-  }
-  :deep(.more) {
-    display: none !important;
-  }
-}
-
 .day-card--selected {
   border-color: var(--primary-color, #409eff) !important;
   box-shadow: 0 2px 8px rgba(64, 158, 255, 0.3);
@@ -511,7 +485,7 @@ function getPomoBgColorHEX(ratio: number) {
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  z-index: 5;
+  z-index: 1;
   padding: 1px;
 }
 
@@ -519,7 +493,7 @@ function getPomoBgColorHEX(ratio: number) {
   color: white !important;
   background-color: var(--color-blue) !important;
   font-weight: 600;
-  z-index: 10;
+  z-index: 1;
 }
 
 .date-badge:hover {
@@ -536,11 +510,11 @@ function getPomoBgColorHEX(ratio: number) {
 .items {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
   min-width: 0;
   flex: 1;
   overflow: visible;
-  padding: 2px 2px; /* 给右上角日期留出一点空间 */
+  padding: 1px 2px; /* 给右上角日期留出一点空间 */
   margin-top: 3px;
   z-index: 2;
 }
@@ -550,11 +524,10 @@ function getPomoBgColorHEX(ratio: number) {
   gap: 4px;
   font-size: 11px;
   line-height: 1;
-  color: var(--text-color);
+  color: var(--color-text-primary);
   cursor: pointer;
   padding: 0px 1px;
   border-radius: 2px;
-  transition: background-color 0.2s;
 }
 
 .item:hover:not(.item--selected) {
@@ -574,34 +547,32 @@ function getPomoBgColorHEX(ratio: number) {
   background-color: var(--color-red-light) !important;
 }
 
-/* 基础小圆点 没有了 */
-.type-dot {
-  display: inline-block;
-  width: 4px;
-  height: 4px;
-  display: none;
-  border-radius: 50%;
-  flex-shrink: 0;
-  margin-right: 0px;
-}
-
 /* 提示点的tag的位置 */
 .tag {
-  height: 15px;
-  width: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-/* 提示点的tag的大小及位置 */
 .tag :deep(.n-tag) {
-  left: -2px;
-  top: 3px;
-  height: 0px; /* 提示点的tag的大小 */
-  padding: 4px; /* 提示点的tag的大小 */
-  border: 1px solid var(--color-background-dark);
+  height: 12px;
+  width: 12px;
+}
+
+.tag :deep(.n-tag__content) {
+  font-size: 8px;
+}
+
+.tag :deep(.n-tag.n-tag--round) {
+  padding: 0px;
+  align-items: center;
+  justify-content: center;
 }
 
 .schedule-time {
-  margin-left: 1px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: 11px;
   font-family: "consolas", monospace;
   color: var(--color-text);
@@ -609,8 +580,7 @@ function getPomoBgColorHEX(ratio: number) {
   border-radius: 2px;
   border: 1px solid var(--color-blue-light);
   box-shadow: 1px 1px 0px var(--color-background-dark);
-  padding-left: 1px;
-  padding-right: 1px;
+  padding: 0px;
 }
 
 .more {
@@ -624,5 +594,73 @@ function getPomoBgColorHEX(ratio: number) {
   font-family: "Segoe UI Symbol", "Noto Emoji", "Twemoji Mozilla", "Apple Symbols", sans-serif;
   white-space: nowrap;
   padding-right: 6px;
+}
+
+@media (max-width: 400px) {
+  .day-card :deep(.n-card__content) {
+    padding: 0px;
+  }
+
+  .month-header {
+    gap: 0px !important;
+  }
+
+  :deep(.items) {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 1px !important;
+    padding: 0px !important; /* 给右上角日期留出一点空间 */
+    margin-top: 20px !important;
+    z-index: 0 !important;
+    border: none !important;
+  }
+
+  :deep(.item) {
+    font-size: 10px !important;
+    padding: 1px 1px !important;
+    gap: 1px !important;
+    border: none !important;
+    border-radius: 0px !important;
+  }
+
+  :deep(.title) {
+    text-overflow: unset !important;
+  }
+  :deep(.more) {
+    display: none !important;
+  }
+
+  .schedule-time {
+    font-size: 9px;
+    background-color: var(--color-background);
+    border: 1px solid var(--color-blue-light);
+    box-shadow: none;
+  }
+  .grid {
+    gap: 0px !important;
+  }
+  .day-card {
+    gap: 0px !important;
+  }
+
+  .date-badge {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    font-size: 12px;
+    width: 16px;
+    height: 16px;
+  }
+
+  .date-badge.today {
+    color: var(--color-blue) !important;
+    background-color: var(--color-blue-light) !important;
+    z-index: 1;
+  }
+
+  .tag :deep(.n-tag) {
+    height: 11px;
+    width: 11px;
+  }
 }
 </style>
