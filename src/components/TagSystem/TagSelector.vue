@@ -59,7 +59,7 @@ const highlightedIndex = ref(0); // 追踪高亮项的索引
 // --- Computed ---
 const filteredTags = computed<TagWithCount[]>(() => {
   const searchTerm = props.searchTerm.trim();
-  if (!searchTerm || searchTerm === "#") {
+  if (!searchTerm || searchTerm === "#" || searchTerm === "@") {
     return [...tagStore.allTags].sort((a, b) => (b.count || 0) - (a.count || 0)).slice(0, 15);
   }
 

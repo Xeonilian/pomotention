@@ -151,22 +151,11 @@
             </template>
             <template #suffix>
               <n-icon
-                v-if="!item.tagIds"
                 text
-                color="var(--color-text-secondary)"
-                @click="handleTagIconClick($event, item.id)"
+                :color="item.tagIds ? 'var(--color-blue)' : 'var(--color-text-secondary)'"
+                @click="handleTagIconClick()"
                 class="icon-tag"
-                title="添加标签"
-              >
-                <Tag16Regular />
-              </n-icon>
-              <n-icon
-                v-else
-                text
-                color="var(--color-blue)"
-                @click="handleTagIconClick($event, item.id)"
-                class="icon-tag"
-                title="Alt+点击=切换显示 | 点击=管理标签"
+                title="显示/隐藏标签"
               >
                 <Tag16Regular />
               </n-icon>
@@ -785,15 +774,9 @@ function handleCollapseParent(parentId: number) {
 }
 
 // ======================== 标签操作 ========================
-function handleTagIconClick(event: MouseEvent, activityId: number) {
-  if (event.altKey) {
-    event.preventDefault();
-    const setting = settingStore.settings.kanbanSetting[props.sectionId];
-    setting.showTags = !setting.showTags;
-  } else {
-    tagEditor.openTagManager(activityId);
-    showTagManager.value = true;
-  }
+function handleTagIconClick() {
+  const setting = settingStore.settings.kanbanSetting[props.sectionId];
+  setting.showTags = !setting.showTags;
 }
 
 function handleTagManagerClose() {
@@ -855,7 +838,7 @@ function handleInputKeydown(event: KeyboardEvent, activity: Activity) {
   }
 
   // 特殊处理：# 键自动打开 popover
-  if (event.key === "#" && !tagEditor.popoverTargetId.value) {
+  if ((event.key === "#" || event.key === "@") && !tagEditor.popoverTargetId.value) {
     tagEditor.popoverTargetId.value = activity.id;
   }
 }
@@ -1087,8 +1070,8 @@ function handlePomoInputTouchCancel(item: Activity) {
   display: flex;
   flex-wrap: wrap;
   width: 100%;
-  justify-content: right;
-  padding-bottom: 2px;
+  justify-content: left;
+  padding: 2px;
 }
 .child-activity-tag {
   margin-left: 20px;
