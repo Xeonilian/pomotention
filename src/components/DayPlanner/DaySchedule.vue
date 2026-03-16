@@ -689,7 +689,7 @@ function handleInputKeydown(event: KeyboardEvent, schedule: Schedule) {
   }
 
   // 特殊处理：# 键自动打开 popover
-  if (event.key === "#" && !tagEditor.popoverTargetId.value) {
+  if ((event.key === "#" || event.key === "@") && !tagEditor.popoverTargetId.value) {
     tagEditor.popoverTargetId.value = schedule.id;
   }
 }

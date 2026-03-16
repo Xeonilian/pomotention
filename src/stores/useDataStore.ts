@@ -647,6 +647,10 @@ export const useDataStore = defineStore(
       activity.synced = false;
 
       saveActivities(activityList.value);
+
+      // 标签被实际应用到 Activity 时，更新本地 lastUsed（不触发云同步）
+      tagStore.touchTagsLastUsed(newTagIds);
+
       return true;
     }
 
