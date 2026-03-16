@@ -462,7 +462,9 @@ const TOGGLE_DEBOUNCE = 100; // 防抖延迟（毫秒）
 
 // 番茄输入框标题提示
 const pomoInputTitle = computed(() => {
-  return `单击编辑数量 | ${isTouchSupported ? "长按" : "双击"}切换类型`;
+  return isTouchSupported
+    ? "单击修改数量 | 长按切换类型"
+    : "单击编辑数量 | 双击切换类型";
 });
 
 // 点击/拖拽检测状态
@@ -551,8 +553,17 @@ function setPomoInputRef(el: InputInst | null, id: number) {
       const longPressHandler = useLongPress({
         delay: 600,
         onLongPress: () => {
-          // 长按触发：进入编辑模式
-          focusPomoInput(id);
+          // 长按触发：区分设备类型
+          // 触屏设备：长按切换番茄类型
+          // 桌面设备：长按进入编辑模式
+          if (isTouchSupported) {
+            const activity = activityById.value.get(id);
+            if (activity) {
+              handleTogglePomoType(activity);
+            }
+          } else {
+            focusPomoInput(id);
+          }
         },
       });
       pomoLongPressMap.value.set(id, longPressHandler);
@@ -980,10 +991,10 @@ function handlePomoInputTouchEnd(e: TouchEvent, item: Activity) {
   const longPress = pomoLongPressMap.value.get(item.id);
   if (longPress) {
     longPress.onLongPressEnd();
-    // 如果未触发长按，执行单击切换
+    // 如果未触发长按，执行单击编辑（聚焦输入框）
     Promise.resolve().then(() => {
       if (!(longPress.longPressTriggered as any).value) {
-        handleTogglePomoType(item);
+        focusPomoInput(item.id);
       }
     });
   }
