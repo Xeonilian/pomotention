@@ -432,7 +432,6 @@ function getPomoBgColorHEX(ratio: number) {
 .header-card {
   min-width: 0;
   overflow: hidden;
-  border: 0.5px solid var(--color-blue-light);
 }
 .header-card :deep(.n-card__content) {
   font-size: 14px;
@@ -597,6 +596,10 @@ function getPomoBgColorHEX(ratio: number) {
 }
 
 @media (max-width: 400px) {
+  .header-card,
+  .day-card {
+    border: 0.5px solid var(--color-background-dark);
+  }
   .day-card :deep(.n-card__content) {
     padding: 0px;
   }
