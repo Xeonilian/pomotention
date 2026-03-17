@@ -17,6 +17,7 @@
           }
         "
         @blur="() => (isSearchFocused = false)"
+        class="input-focus-none"
       >
         <template #prefix>
           <n-dropdown :options="filterOptions" @select="(key) => $emit('filter', key)">
@@ -73,6 +74,7 @@
               'force-hover': dragHandler.hoveredRowId.value === item.id,
               'child-activity': item.parentId,
             }"
+            class="input-focus-none"
           >
             <template #prefix>
               <div
@@ -194,6 +196,7 @@
             v-if="item.class === 'S'"
             v-model:value="item.location"
             style="max-width: 50px"
+            class="input-focus-none"
             @focus="handleNoFocus(item.id)"
             @blur="handleBlur"
             placeholder="地点"
@@ -216,7 +219,7 @@
             :placeholder="item.pomoType"
             :title="pomoInputTitle"
             style="max-width: 32px"
-            class="pomo-input"
+            class="pomo-input input-focus-none"
             :readonly="item.pomoType === '🍒'"
             @update:value="(val) => onInputUpdate(item, val)"
             @focus="handlePomoInputFocus(item)"
@@ -250,7 +253,7 @@
             @blur="handleBlur"
             title="持续时间(分钟)"
             placeholder="min"
-            class="input-center input-min"
+            class="input-center input-min input-focus-none"
             :class="{ 'force-hover': dragHandler.hoveredRowId.value === item.id }"
           />
 
@@ -266,12 +269,14 @@
             @blur="handleBlur"
             title="死线日期"
             :class="getCountdownClass(item.dueDate)"
+            placeholder="日期"
             @update:value="
               () => {
                 item.synced = false;
                 item.lastModified = Date.now();
               }
             "
+            class="input-focus-none"
           />
           <n-date-picker
             v-else
@@ -291,6 +296,8 @@
             @blur="handleBlur"
             title="约定时间"
             :class="getCountdownClass(item.dueRange && item.dueRange[0])"
+            placeholder="时间"
+            class="input-focus-none"
           />
         </div>
 
@@ -324,7 +331,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, watch, nextTick, ref, onMounted } from "vue";
+import { computed, nextTick, ref, onMounted } from "vue";
 import { NInput, NDatePicker, NIcon, NDropdown, NPopover, NButton } from "naive-ui";
 import {
   VideoPersonCall24Regular,
@@ -462,9 +469,7 @@ const TOGGLE_DEBOUNCE = 100; // 防抖延迟（毫秒）
 
 // 番茄输入框标题提示
 const pomoInputTitle = computed(() => {
-  return isTouchSupported
-    ? "单击修改数量 | 长按切换类型"
-    : "单击编辑数量 | 双击切换类型";
+  return isTouchSupported ? "单击修改数量 | 长按切换类型" : "单击编辑数量 | 双击切换类型";
 });
 
 // 点击/拖拽检测状态
@@ -597,61 +602,6 @@ function handleBlur() {
   settingStore.settings.topHeight = savedTopHeight.value;
   savedTopHeight.value = null;
 }
-
-// ======================== 焦点管理 ========================
-// 监听 activeId 的变化，决定是否自动聚焦到对应行输入框
-watch(
-  () => props.activeId,
-  async (id) => {
-    // 若当前正在搜索输入框聚焦，则忽略本次聚焦
-    if (isSearchFocused.value) {
-      return;
-    }
-
-    // 防止本 watch 递归或误触焦点，noFocus 标识为 true 则只重置为 false 不聚焦
-    if (noFocus.value) {
-      noFocus.value = false;
-      return;
-    }
-
-    // activeId 未定义时直接返回
-    if (id === undefined) return;
-
-    let targetFocusId = null;
-
-    // activeId 为 null，默认聚焦最后一条数据
-    if (id === null) {
-      const list = sortedDisplaySheet.value; // 当前排序后的清单
-      const last = list[list.length - 1]; // 获取最后一项
-      // 若最后一项存在，聚焦其输入框
-      if (last && last.id !== null && last.id !== undefined) {
-        targetFocusId = last.id;
-      } else {
-        noFocus.value = false; // 没有可聚焦项
-        return;
-      }
-    } else {
-      // 正常聚焦指定 id 行
-      targetFocusId = id;
-    }
-
-    if (targetFocusId === null) return;
-
-    // 等待 DOM 更新后再尝试获取输入框实例
-    await nextTick();
-    const inst = rowInputMap.value.get(targetFocusId);
-    if (!inst) return;
-
-    // 如果输入框实例有 focus 方法则直接聚焦
-    if (typeof inst.focus === "function") {
-      inst.focus();
-      noFocus.value = false;
-    } else {
-      // 否则尝试获取 input 元素聚焦（兼容 n-input 组件实现）
-      inst.inputElRef?.focus?.();
-    }
-  },
-);
 
 // ======================== 拖拽处理 ========================
 function onDragStart(event: PointerEvent, item: Activity) {
@@ -1171,7 +1121,7 @@ function handlePomoInputTouchCancel(item: Activity) {
 
 .icon-tag:hover {
   cursor: pointer;
-  background-color: var(--color-red-light);
+  background-color: var(--color-background-light);
 }
 
 .input-min :deep(.n-input-wrapper) {
@@ -1202,17 +1152,25 @@ function handlePomoInputTouchCancel(item: Activity) {
 
 .countdown-0 :deep(.n-input) {
   background: var(--color-red-light-transparent);
+  --n-box-shadow-focus: none !important;
+  --n-border-hover: 1px solid var(--color-blue) !important;
 }
 
 .countdown-1 :deep(.n-input) {
   background: var(--color-background-light-transparent);
+  --n-box-shadow-focus: none !important;
+  --n-border-hover: 1px solid var(--color-blue) !important;
 }
 .countdown-2 :deep(.n-input) {
   background: var(--color-background-transparent);
+  --n-box-shadow-focus: none !important;
+  --n-border-hover: 1px solid var(--color-blue) !important;
 }
 
 .countdown-boom :deep(.n-input) {
   background: var(--color-blue-light-transparent);
+  --n-box-shadow-focus: none !important;
+  --n-border-hover: 1px solid var(--color-blue) !important;
 }
 .pomo-input :deep(.n-input__placeholder) {
   opacity: 0.45; /* 50% 透明度 */
@@ -1246,17 +1204,13 @@ function handlePomoInputTouchCancel(item: Activity) {
   background-color: var(--color-yellow-light);
 }
 
-/* 强制 n-input 显示 hover 效果 */
-.force-hover :deep(.n-input) {
-  border-color: var(--n-border-hover) !important;
-  box-shadow: var(--n-box-shadow-focus) !important;
-  background-color: var(--n-color-hover) !important;
-}
-.force-hover :deep(.n-input__input) {
-  background-color: var(--n-color-hover) !important;
+:deep(.n-input.input-focus-none) {
+  --n-box-shadow-focus: none !important;
+  --n-border-hover: 1px solid var(--color-blue) !important;
 }
 
-.n-modal-mask {
-  background-color: rgba(0, 0, 0, 0.1) !important;
+.input-focus-none :deep(.n-input) {
+  --n-box-shadow-focus: none !important;
+  --n-border-hover: 1px solid var(--color-blue) !important;
 }
 </style>
