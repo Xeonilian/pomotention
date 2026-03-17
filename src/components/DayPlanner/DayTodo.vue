@@ -1212,7 +1212,7 @@ function getTitleLongPress(todoId: number) {
   let handler = titleLongPressMap.value.get(todoId);
   if (!handler) {
     handler = useLongPress({
-      delay: 600,
+      delay: 500,
       onLongPress: () => {
         startEditing(todoId, "title");
       },
@@ -1326,13 +1326,15 @@ col.col-status {
 
 @media (max-width: 430px) {
   thead th {
-    border-bottom: 1px solid var(--color-background-dark) !important;
+    border-bottom: 0px solid var(--color-background-dark) !important;
   }
 
   tbody td {
     border-bottom: 0px !important;
   }
-
+  tr:hover {
+    background-color: inherit !important;
+  }
   col.col-check {
     width: 20px;
   }
@@ -1364,6 +1366,12 @@ col.col-status {
   .time-input {
     font-size: 12px;
     text-overflow: clip;
+  }
+
+  /* 移动端聚焦输入时，避免浏览器自动缩放造成表格行高抖动 */
+  input.title-input {
+    font-size: 14px !important;
+    height: 18px;
   }
 
   col.col-intent {
@@ -1435,9 +1443,11 @@ tr:nth-child(even) {
   background-color: var(--color-background-light-transparent);
 }
 
-/* hover 高亮（不加 !important，便于被 selected/active 覆盖） */
-tr:hover {
-  background-color: var(--color-cyan-light-transparent);
+@media (min-width: 650px) {
+  /* hover 高亮（不加 !important，便于被 selected/active 覆盖） */
+  tr:hover {
+    background-color: var(--color-cyan-light-transparent);
+  }
 }
 
 /* 激活行样式（覆盖一切） */
@@ -1473,7 +1483,7 @@ tr.cancel-row {
 }
 
 tr.empty-row {
-  height: 60px;
+  height: 80px;
   text-align: center;
   color: var(--color-text-secondary);
   width: 100%;

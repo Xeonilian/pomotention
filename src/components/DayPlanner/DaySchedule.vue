@@ -699,7 +699,7 @@ function getTitleLongPress(scheduleId: number) {
   let handler = titleLongPressMap.value.get(scheduleId);
   if (!handler) {
     handler = useLongPress({
-      delay: 600,
+      delay: 500,
       onLongPress: () => {
         startEditing(scheduleId, "title");
       },
@@ -905,10 +905,11 @@ th.col-end.header-active .header-icon {
 tr:nth-child(even) {
   background-color: var(--color-background-light-transparent);
 }
-
-/* hover 高亮（不加 !important，便于被 selected/active 覆盖） */
-tr:hover {
-  background-color: var(--color-cyan-light-transparent);
+@media (min-width: 650px) {
+  /* hover 高亮（不加 !important，便于被 selected/active 覆盖） */
+  tr:hover {
+    background-color: var(--color-cyan-light-transparent);
+  }
 }
 
 /* 激活行样式（覆盖一切） */
@@ -944,7 +945,7 @@ tr.cancel-row {
 }
 
 tr.empty-row {
-  height: 60px;
+  height: 80px;
   text-align: center;
   color: var(--color-text-secondary);
   width: 100%;
@@ -1121,7 +1122,7 @@ td.status-col {
 
 @media (max-width: 430px) {
   thead th {
-    border-bottom: 1px solid var(--color-background-dark) !important;
+    border-bottom: 0px solid var(--color-background-dark) !important;
   }
 
   tbody td {
@@ -1130,7 +1131,6 @@ td.status-col {
 
   col.col-check {
     width: 20px;
-    text-overflow: clip;
   }
 
   col.col-start {
@@ -1145,7 +1145,6 @@ td.status-col {
 
   col.col-duration {
     width: 24px;
-    text-overflow: clip;
   }
 
   col.col-status {
@@ -1171,6 +1170,11 @@ td.status-col {
     font-family: Consolas, "Courier New", Courier, monospace;
   }
 
+  input.title-input,
+  input.location-input {
+    font-size: 14px !important;
+    height: 18px;
+  }
   td.col-intent {
     text-overflow: clip !important;
   }
