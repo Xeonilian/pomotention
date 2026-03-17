@@ -79,6 +79,8 @@ export class TaskSyncService extends BaseSyncService<Task, CloudTaskInsert> {
     success: boolean;
     error?: string;
     downloaded: number;
+    fetched?: number;
+    cloudDeleted?: number;
   }> {
     try {
       if (!supabase) {
@@ -106,19 +108,39 @@ export class TaskSyncService extends BaseSyncService<Task, CloudTaskInsert> {
         );
       }
 
-      // 2. 调用 RPC，传入 p_last_modified
-      const { data, error } = await supabase.rpc("get_full_tasks", {
-        p_user_id: user.id,
-        p_last_modified: lastSyncISO,
-      });
-
-      if (error) throw error;
-
-      if (!data || data.length === 0) {
-        return { success: true, downloaded: 0 };
+      // 2. 调用 RPC（分页拉取以绕过 PostgREST 1000 行上限；若 RPC 未支持 p_limit/p_offset 则单次调用）
+      const PAGE = 1000;
+      let data: any[] = [];
+      let offset = 0;
+      let usePagination = true;
+      while (true) {
+        const params: Record<string, unknown> = {
+          p_user_id: user.id,
+          p_last_modified: lastSyncISO,
+        };
+        if (usePagination) {
+          params.p_limit = PAGE;
+          params.p_offset = offset;
+        }
+        const { data: page, error } = await supabase.rpc("get_full_tasks", params);
+        if (error) {
+          if (offset === 0 && usePagination) {
+            usePagination = false;
+            continue;
+          }
+          throw error;
+        }
+        if (!page?.length) break;
+        data = data.concat(page);
+        if (page.length < PAGE || !usePagination) break;
+        offset += PAGE;
       }
 
-      // console.log(`📊 [tasks] 增量下载: 获取到 ${data.length} 条更新`);
+      const fetched = data.length;
+      const cloudDeleted = data.filter((i: any) => i.deleted).length;
+      if (data.length === 0) {
+        return { success: true, downloaded: 0, fetched, cloudDeleted };
+      }
 
       // 3. 直接操作 BaseSyncService 的响应式列表（解包 ref 得到数组）
       const localItems = this.getListArray();
@@ -136,20 +158,12 @@ export class TaskSyncService extends BaseSyncService<Task, CloudTaskInsert> {
         // --- A. 云端标记为删除 ---
         if (cloudItem.deleted) {
           if (localItem && !localItem.deleted) {
-            // 冲突检测：本地有未同步修改，跳过删除
-            if (!localItem.synced) {
-              // console.log(`🔒 [tasks] ID=${cloudId} 本地有未同步修改，跳过云端删除`);
-              continue;
-            }
-
-            // 执行软删除
+            if (!localItem.synced) continue;
             localItem.deleted = true;
             localItem.lastModified = Date.now();
             localItem.cloudModified = cloudTimestamp;
             localItem.synced = true;
-
             downloadedCount++;
-            // console.log(`🗑️ [tasks] 标记删除 ID=${cloudId}`);
           }
           continue;
         }
@@ -183,10 +197,10 @@ export class TaskSyncService extends BaseSyncService<Task, CloudTaskInsert> {
         }
       }
 
-      return { success: true, downloaded: downloadedCount };
+      return { success: true, downloaded: downloadedCount, fetched, cloudDeleted };
     } catch (error: any) {
       console.error("下载 tasks 失败:", error);
-      return { success: false, error: error.message, downloaded: 0 };
+      return { success: false, error: error.message, downloaded: 0, fetched: 0, cloudDeleted: 0 };
     }
   }
 }

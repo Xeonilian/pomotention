@@ -94,6 +94,8 @@ export class TodoSyncService extends BaseSyncService<Todo, CloudTodoInsert> {
     success: boolean;
     error?: string;
     downloaded: number;
+    fetched?: number;
+    cloudDeleted?: number;
   }> {
     try {
       if (!supabase) {
@@ -120,19 +122,39 @@ export class TodoSyncService extends BaseSyncService<Todo, CloudTodoInsert> {
         );
       }
 
-      // 2. 调用 RPC 获取数据
-      const { data, error } = await supabase.rpc("get_full_todos", {
-        p_user_id: user.id,
-        p_last_modified: lastSyncISO,
-      });
-
-      if (error) throw error;
-
-      if (!data || data.length === 0) {
-        return { success: true, downloaded: 0 };
+      // 2. 调用 RPC（分页拉取以绕过 1000 行上限；若 RPC 未支持 p_limit/p_offset 则单次调用）
+      const PAGE = 1000;
+      let data: any[] = [];
+      let offset = 0;
+      let usePagination = true;
+      while (true) {
+        const params: Record<string, unknown> = {
+          p_user_id: user.id,
+          p_last_modified: lastSyncISO,
+        };
+        if (usePagination) {
+          params.p_limit = PAGE;
+          params.p_offset = offset;
+        }
+        const { data: page, error } = await supabase.rpc("get_full_todos", params);
+        if (error) {
+          if (offset === 0 && usePagination) {
+            usePagination = false;
+            continue;
+          }
+          throw error;
+        }
+        if (!page?.length) break;
+        data = data.concat(page);
+        if (page.length < PAGE || !usePagination) break;
+        offset += PAGE;
       }
 
-      // console.log(`📊 [todos] 增量下载: 获取到 ${data.length} 条更新`);
+      const fetched = data.length;
+      const cloudDeleted = data.filter((i: any) => i.deleted).length;
+      if (data.length === 0) {
+        return { success: true, downloaded: 0, fetched, cloudDeleted };
+      }
 
       // 3. 直接使用 BaseSyncService 中的响应式引用和索引 Map
       const localItems = this.getListArray();
@@ -202,10 +224,10 @@ export class TodoSyncService extends BaseSyncService<Todo, CloudTodoInsert> {
 
       // 不需要 saveLocal，因为 reactiveList 是响应式的，变更会自动被外部 watcher 捕获并持久化
 
-      return { success: true, downloaded: downloadedCount };
+      return { success: true, downloaded: downloadedCount, fetched, cloudDeleted };
     } catch (error: any) {
       console.error("下载 todos 失败:", error);
-      return { success: false, error: error.message, downloaded: 0 };
+      return { success: false, error: error.message, downloaded: 0, fetched: 0, cloudDeleted: 0 };
     }
   }
 }
