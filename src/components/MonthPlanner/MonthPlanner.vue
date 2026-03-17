@@ -384,6 +384,7 @@ function getPomoBgColorHEX(ratio: number) {
 .header-card {
   min-width: 0;
   overflow: hidden;
+  height: 22px;
 }
 .header-card :deep(.n-card__content) {
   font-size: 14px;
@@ -558,7 +559,7 @@ function getPomoBgColorHEX(ratio: number) {
   }
 
   .month-header {
-    gap: 0px !important;
+    gap: 1px !important;
   }
 
   :deep(.items) {
@@ -593,7 +594,11 @@ function getPomoBgColorHEX(ratio: number) {
     box-shadow: none;
   }
   .grid {
-    gap: 0px !important;
+    gap: 1px !important;
+    flex: 1 1 auto;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr)); /* 7列（一周7天） */
     grid-auto-rows: minmax(90px, 1fr) !important;
   }
   .day-card {
