@@ -540,12 +540,46 @@ watch(
     }
     if (id != null) {
       nextTick(() => {
-        const onDown = (e: MouseEvent | TouchEvent) => handleRankPopoverClickOutside(e);
+        const onDown = (e: MouseEvent | TouchEvent) => {
+          // #region agent log
+          if (e && (e as TouchEvent).type === "touchstart") {
+            fetch("http://127.0.0.1:7242/ingest/a855573f-7487-43d2-8f8d-5dee3311857f", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "e8bfe0" },
+              body: JSON.stringify({
+                sessionId: "e8bfe0",
+                runId: "pre-fix",
+                hypothesisId: "H1",
+                location: "DayTodo.vue:~543",
+                message: "rank popover onDown touchstart",
+                data: { defaultPrevented: (e as TouchEvent).defaultPrevented },
+                timestamp: Date.now(),
+              }),
+            }).catch(() => {});
+          }
+          // #endregion agent log
+          handleRankPopoverClickOutside(e);
+        };
         document.addEventListener("mousedown", onDown, true);
-        document.addEventListener("touchstart", onDown, true);
+        // #region agent log
+        fetch("http://127.0.0.1:7242/ingest/a855573f-7487-43d2-8f8d-5dee3311857f", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "e8bfe0" },
+          body: JSON.stringify({
+            sessionId: "e8bfe0",
+            runId: "pre-fix",
+            hypothesisId: "H1",
+            location: "DayTodo.vue:~545",
+            message: "addEventListener touchstart for rank popover",
+            data: { capture: true, passive: true },
+            timestamp: Date.now(),
+          }),
+        }).catch(() => {});
+        // #endregion agent log
+        document.addEventListener("touchstart", onDown, { capture: true, passive: true });
         rankPopoverOutsideCleanup = () => {
           document.removeEventListener("mousedown", onDown, true);
-          document.removeEventListener("touchstart", onDown, true);
+          document.removeEventListener("touchstart", onDown, { capture: true });
         };
       });
     }

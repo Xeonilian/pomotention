@@ -190,12 +190,12 @@ async function _internalDownload(lastSyncTimestamp: number): Promise<SyncResult>
     setTimeout(() => reject(new Error("下载操作超时")), 10000);
   });
 
-    const downloadPromise = new Promise<SyncResult>(async (resolve) => {
+  const downloadPromise = new Promise<SyncResult>(async (resolve) => {
     const errors: string[] = [];
     let downloaded = 0;
     const details: { name: string; fetched: number; downloaded: number; cloudDeleted?: number }[] = [];
 
-    // 并行下载所有表
+    // 并行下载所有表 #HACK
     const results = await Promise.allSettled(
       syncServices.map(({ name, service }) => service.download(lastSyncTimestamp).then((res: any) => ({ name, res }))),
     );
@@ -398,7 +398,7 @@ export async function downloadAll(lastSync: number) {
  */
 export async function downloadAllWithDiagnostics(
   lastSync: number,
-  opts?: { updateTimestamp?: boolean }
+  opts?: { updateTimestamp?: boolean },
 ): Promise<{
   success: boolean;
   errors: string[];
