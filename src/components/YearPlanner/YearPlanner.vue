@@ -362,8 +362,7 @@ function handleWeekClick(weekStartTs: number) {
 
 .day-dot-wrap.day-dot--other-month .day-num,
 .day-dot-wrap.day-dot--other-month .day-dot {
-  color: var(--color-background);
-  background-color: var(--color-background-light);
+  display: none;
 }
 
 /* 今日：整格底色与圆点填充均为蓝色 */
@@ -380,7 +379,7 @@ function handleWeekClick(weekStartTs: number) {
 }
 
 .day-num {
-  font-size: 10px;
+  font-size: 12px;
   line-height: 1.2;
   color: var(--color-background);
   font-weight: 600;
@@ -401,11 +400,13 @@ function handleWeekClick(weekStartTs: number) {
 }
 
 .day-dot--empty {
+  display: none;
   background: transparent;
   cursor: default;
 }
 
 .day-dot-wrap:has(.day-dot--empty) {
+  display: none;
   cursor: default;
 }
 
@@ -439,7 +440,7 @@ function handleWeekClick(weekStartTs: number) {
     min-height: 16px;
   }
   .day-num {
-    font-size: 11px;
+    font-size: 12px;
   }
 
   .month-dots-row {
@@ -466,7 +467,7 @@ function handleWeekClick(weekStartTs: number) {
   }
 }
 
-/* 极小屏：宽度 < 400px 时隐藏星期几表头行，同样不改变圆点尺寸 */
+/* 极小屏：宽度 < 400px 时隐藏星期几表头行，同样不改变圆点尺寸 #TODO */
 @media (max-width: 430px) {
   .year-grid.months-nxn {
     grid-template-columns: repeat(2, 1fr);
