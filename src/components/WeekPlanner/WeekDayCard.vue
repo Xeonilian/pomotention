@@ -50,7 +50,7 @@
           />
         </template>
 
-        <!-- 统计信息 删除more设置-->
+        <!-- 统计信息-->
         <div class="card-statistic">
           <span class="pom-sum">
             <template v-if="isMobile">🍅 {{ day.sumRealPomo }}</template>
@@ -139,27 +139,11 @@ const handleItemChange = (id: number, _ts: number, activityId?: number, taskId?:
   position: relative;
   z-index: 10;
 }
+
 .day-card :deep(.n-card__content) {
   padding: 6px 6px;
 }
 
-@media (max-width: 430px) {
-  .day-card :deep(.n-card__content) {
-    padding: 4px 2px 4px 2px;
-  }
-
-  .pom-sum {
-    font-size: 10px;
-  }
-
-  .hour-label {
-    display: none;
-  }
-
-  .hour-label.hour-label--major {
-    display: inline-block;
-  }
-}
 .day-header {
   display: flex;
   align-items: baseline;
@@ -186,7 +170,7 @@ const handleItemChange = (id: number, _ts: number, activityId?: number, taskId?:
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  font-size: 13px;
   overflow: hidden;
   width: 20px;
   height: 20px;
@@ -194,12 +178,9 @@ const handleItemChange = (id: number, _ts: number, activityId?: number, taskId?:
   border-radius: 50%;
   z-index: 1;
   color: var(--color-text-secondary);
-  background-color: var(--primary-color, #efeded4b);
+  background-color: var(--color-background-light);
   flex-shrink: 0;
   position: relative;
-  transition:
-    opacity 0.2s ease,
-    transform 0.2s ease;
 }
 
 .date.today {
@@ -296,5 +277,31 @@ const handleItemChange = (id: number, _ts: number, activityId?: number, taskId?:
   font-size: 12px;
   padding: 10px 0;
   text-align: center;
+}
+
+@media (max-width: 430px) {
+  .day-card :deep(.n-card__content) {
+    padding: 0px !important;
+  }
+
+  .pom-sum {
+    font-size: 10px;
+    transform: translateY(1px);
+    padding-right: 2px;
+  }
+
+  .hour-label {
+    display: none;
+  }
+
+  .hour-label.hour-label--major {
+    display: inline-block;
+  }
+  .date {
+    font-size: 12px;
+    width: 18px;
+    height: 18px;
+    margin-right: 2px;
+  }
 }
 </style>

@@ -25,7 +25,7 @@
       {{ timestampToTimeString(block.item.activityDueRange?.[0]) }}
     </span>
     <span class="title" :title="block.item.title" :class="[{ 'activity--selected': activeId === block.item.activityId }]">
-      {{ block.item.title }}
+      {{ isMobile ? mobileDisplayTitle : block.item.title }}
     </span>
   </div>
 </template>
@@ -50,6 +50,17 @@ const props = defineProps<{
   dayStartTs: number;
   getItemBlockStyle: (block: WeekBlockItemType, dayStartTs: number) => Record<string, string | number>;
 }>();
+
+// 手机端：根据时长动态决定标题显示长度（单位：分钟）
+const mobileDisplayTitle = computed(() => {
+  const title = props.block.item.title ?? "";
+  if (!title) return "";
+
+  const durationMinutes = Math.max(0, Math.round((props.block.end - props.block.start) / 60000));
+  const maxChars = durationMinutes < 45 ? 4 : durationMinutes < 75 ? 8 : 12;
+
+  return title.slice(0, maxChars);
+});
 
 // 定义emit
 const emit = defineEmits<{
@@ -169,7 +180,7 @@ const handleClick = () => {
     align-items: flex-start;
     justify-content: center;
     font-size: 9px;
-    padding: 1px;
+    padding: 0px;
   }
   .item .title {
     white-space: normal;
@@ -191,10 +202,10 @@ const handleClick = () => {
   }
   .time-block--todo,
   .time-block--schedule {
-    border-left: 6px solid;
+    border-left: 4px solid;
   }
   .tag-renderer {
-    display: flex;
+    display: none;
   }
 }
 </style>

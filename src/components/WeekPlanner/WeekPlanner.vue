@@ -120,4 +120,10 @@ const handleItemSelect = (id: number, activityId?: number, taskId?: number) => {
   overflow-x: hidden;
   scrollbar-width: thin;
 }
+
+@media (max-width: 430px) {
+  .grid {
+    gap: 1px;
+  }
+}
 </style>

@@ -565,7 +565,7 @@ function getPomoBgColorHEX(ratio: number) {
   :deep(.items) {
     display: flex !important;
     flex-direction: column !important;
-    gap: 1px !important;
+    gap: 2px !important;
     padding: 0px !important; /* 给右上角日期留出一点空间 */
     margin-top: 20px !important;
     z-index: 0 !important;
@@ -575,7 +575,7 @@ function getPomoBgColorHEX(ratio: number) {
   :deep(.item) {
     font-size: 10px !important;
     padding: 1px 1px !important;
-    gap: 1px !important;
+    gap: 2px !important;
     border: none !important;
     border-radius: 0px !important;
   }
@@ -621,8 +621,11 @@ function getPomoBgColorHEX(ratio: number) {
   }
 
   .tag :deep(.n-tag) {
-    height: 11px;
-    width: 11px;
+    height: 10px;
+    width: 10px;
+  }
+  .tag :deep(.n-tag__content) {
+    font-size: 7px;
   }
 }
 </style>
