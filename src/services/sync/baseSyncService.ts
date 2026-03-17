@@ -23,8 +23,12 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
     protected tableName: string,
     protected localStorageKey: string,
     protected getList: () => TLocal[] | { value: TLocal[] },
-    protected getMap: () => Map<number, TLocal>
+    protected getMap: () => Map<number, TLocal>,
   ) {}
+
+  // 自动上传相关的内部状态（每个实体一个定时器）
+  private autoUploadTimer: ReturnType<typeof setTimeout> | null = null;
+  private static readonly AUTO_UPLOAD_DEBOUNCE_MS = 5000;
 
   /** 统一解包：getList 可能返回 Pinia ref，需要 .value 得到数组 */
   protected getListArray(): TLocal[] {
@@ -59,6 +63,39 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
    */
   protected getCloudIdColumnName(): string {
     return "timestamp_id"; // 子类可以重写
+  }
+
+  /**
+   * 安排一次延迟上传（用于本地编辑后的轻量自动同步）
+   * 会在一段时间内合并多次修改，最终只触发一次 upload
+   */
+  scheduleAutoUpload(delayMs: number = BaseSyncService.AUTO_UPLOAD_DEBOUNCE_MS): void {
+    if (this.autoUploadTimer !== null) {
+      clearTimeout(this.autoUploadTimer);
+    }
+
+    this.autoUploadTimer = setTimeout(async () => {
+      this.autoUploadTimer = null;
+      try {
+        await this.upload();
+      } catch (error) {
+        // 本地自动上传失败时只打日志，不打断用户操作
+        // eslint-disable-next-line no-console
+        console.error(`[${this.tableName}] auto upload failed`, error);
+      }
+    }, delayMs);
+  }
+
+  /**
+   * 立即执行一次上传（可用于窗口关闭前的兜底）
+   * 不再等待当前的防抖定时器
+   */
+  async flushAutoUpload(): Promise<void> {
+    if (this.autoUploadTimer !== null) {
+      clearTimeout(this.autoUploadTimer);
+      this.autoUploadTimer = null;
+    }
+    await this.upload();
   }
 
   // baseSyncService.ts 的 upload 方法修改
@@ -161,6 +198,9 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
     success: boolean;
     error?: string;
     downloaded: number;
+    fetched?: number;
+    /** 云端返回中 deleted=true 的条数，用于诊断验证「未 applied 是否全是已删除」 */
+    cloudDeleted?: number;
   }> {
     try {
       if (!supabase) {
@@ -202,13 +242,25 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
         // console.log(`📥 [${this.tableName}] 全量下载`);
       }
 
-      const { data, error } = await query;
+      // 分页拉取，绕过 PostgREST 默认 1000 行上限
+      const PAGE = 1000;
+      const data: any[] = [];
+      let offset = 0;
+      while (true) {
+        const { data: page, error } = await query.range(offset, offset + PAGE - 1);
+        if (error) throw error;
+        if (!page?.length) break;
+        data.push(...page);
+        if (page.length < PAGE) break;
+        offset += PAGE;
+      }
 
-      if (error) throw error;
       // console.log(`📊 [${this.tableName}] 云端获取 ${data?.length || 0} 条数据`);
 
-      if (!data || data.length === 0) {
-        return { success: true, downloaded: 0 };
+      const fetched = data.length;
+      const cloudDeleted = data.filter((i: any) => i.deleted).length;
+      if (data.length === 0) {
+        return { success: true, downloaded: 0, fetched, cloudDeleted };
       }
 
       const isFullDownload = lastSyncTimestamp === 0;
@@ -277,10 +329,10 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
       }
 
       // console.log(`✅ [${this.tableName}] 下载完成，更新 ${downloadedCount} 条数据`);
-      return { success: true, downloaded: downloadedCount };
+      return { success: true, downloaded: downloadedCount, fetched, cloudDeleted };
     } catch (error: any) {
       console.error(`❌ [${this.tableName}] 下载失败:`, error);
-      return { success: false, error: error.message, downloaded: 0 };
+      return { success: false, error: error.message, downloaded: 0, fetched: 0, cloudDeleted: 0 };
     }
   }
   /**
