@@ -12,12 +12,22 @@ import {
   Pin24Regular,
   //BrainCircuit24Regular,
 } from "@vicons/fluent";
+import { useDevice } from "./useDevice";
 
 type ViewKey = "ontop" | "pomodoro" | "schedule" | "planner" | "task" | "activity"; //| "ai"
 
 export function useButtonStyle() {
   const timerStore = useTimerStore();
   const settingStore = useSettingStore();
+  const { isMobile } = useDevice();
+
+  // 移动端：进入“仅 Activity”前保存现场，用于再次点击时恢复
+  const mobileRestoreState = ref<null | {
+    showSchedule: boolean;
+    showPlanner: boolean;
+    showTask: boolean;
+    showActivity: boolean;
+  }>(null);
 
   const buttonStates = ref<Record<ViewKey, boolean>>({
     ontop: false,
@@ -65,19 +75,65 @@ export function useButtonStyle() {
   ]);
 
   // 切换设置面板显示状态
-  function toggleSettingPanel(panel: "schedule" | "activity" | "task" | "today" | "pomodoro") {
+  function toggleSettingPanel(panel: "schedule" | "activity" | "task" | "today" | "pomodoro" | "planner") {
     //| "ai"
     const toKey = (p: string) => ("show" + p.charAt(0).toUpperCase() + p.slice(1)) as keyof typeof settingStore.settings;
     const key = toKey(panel);
-    const next = !settingStore.settings[key];
-    // @ts-ignore
-    settingStore.settings[key] = next;
 
-    // 互斥逻辑 ai activity 暂不需要
-    // if (next) {
-    //   if (panel === "activity") settingStore.settings.showAi = false;
-    //   else if (panel === "ai") settingStore.settings.showActivity = false;
-    // }
+    if (!isMobile.value) {
+      const next = !settingStore.settings[key];
+      // @ts-ignore
+      settingStore.settings[key] = next;
+      // 互斥逻辑 ai activity 暂不需要
+      // if (next) {
+      //   if (panel === "activity") settingStore.settings.showAi = false;
+      //   else if (panel === "ai") settingStore.settings.showActivity = false;
+      // }
+    } else {
+      // 移动端交互规则：
+      // - 点击 activity：只显示 activity；再次点击恢复进入前的显示状态
+      // - 点击 schedule：仅在不显示 activity 时才允许切换 schedule
+      if (panel === "activity") {
+        const isActivityOnly =
+          settingStore.settings.showActivity &&
+          !settingStore.settings.showPlanner &&
+          !settingStore.settings.showTask &&
+          !settingStore.settings.showSchedule;
+
+        if (isActivityOnly && mobileRestoreState.value) {
+          settingStore.settings.showSchedule = mobileRestoreState.value.showSchedule;
+          settingStore.settings.showPlanner = mobileRestoreState.value.showPlanner;
+          settingStore.settings.showTask = mobileRestoreState.value.showTask;
+          settingStore.settings.showActivity = mobileRestoreState.value.showActivity;
+          mobileRestoreState.value = null;
+          return;
+        }
+
+        mobileRestoreState.value = {
+          showSchedule: settingStore.settings.showSchedule,
+          showPlanner: settingStore.settings.showPlanner,
+          showTask: settingStore.settings.showTask,
+          showActivity: settingStore.settings.showActivity,
+        };
+
+        settingStore.settings.showSchedule = false;
+        settingStore.settings.showPlanner = false;
+        settingStore.settings.showTask = false;
+        settingStore.settings.showActivity = true;
+        return;
+      }
+
+      if (panel === "schedule") {
+        if (settingStore.settings.showActivity) return;
+        settingStore.settings.showSchedule = !settingStore.settings.showSchedule;
+        return;
+      }
+
+      // 其它面板：保持普通开关行为
+      const next = !settingStore.settings[key];
+      // @ts-ignore
+      settingStore.settings[key] = next;
+    }
   }
 
   // 监听配置变化更新按钮样式
