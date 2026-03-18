@@ -331,11 +331,11 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
     const heightPx = (endMinute - startMinute) * props.effectivePxPerMinute;
     return {
       position: "absolute",
-      left: "22px",
+      left: isMobile.value ? "20px" : "22px",
       top: `${topPx}px`,
-      width: "13px",
+      width: isMobile.value ? "11px" : "13px",
       height: `${heightPx}px`,
-      fontSize: "12px",
+      fontSize: isMobile.value ? "10px" : "12px",
       zIndex: seg.overflow ? 33 : 30,
       display: "flex",
       alignItems: "center",
@@ -351,7 +351,7 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
 
     return {
       position: "absolute",
-      left: "42px",
+      left: isMobile.value ? "38px" : "42px",
       width: "13px",
       top: `${topPx}px`,
       height: `${heightPx}px`,
@@ -393,16 +393,16 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
 
     return {
       position: "absolute",
-      left: "61px",
-      width: "8px",
+      left: isMobile.value ? "56px" : "61px",
+      width: isMobile.value ? "9px" : "8px",
       top: `${topPx}px`,
       height: `${heightPx}px`,
       border: `${borderWidth}px solid`,
       borderColor,
       backgroundColor,
-      borderRadius: "4px",
+      borderRadius: "6px",
       zIndex: 10,
-      opacity: 1,
+      opacity: 0.7,
     };
   }
 
@@ -414,16 +414,16 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
 
     return {
       position: "absolute",
-      left: "61px",
-      width: "8px",
+      left: isMobile.value ? "56px" : "61px",
+      width: isMobile.value ? "9px" : "8px",
       top: `${topPx}px`,
       height: `${heightPx}px`,
       border: `${borderWidth}px solid`,
       borderColor: "var(--color-text-secondary)",
       backgroundColor: "var(--color-text-secondary-transparent)",
       borderRadius: "4px",
-      zIndex: 10,
-      opacity: 1,
+      zIndex: 3,
+      opacity: 0.7,
     };
   }
 
@@ -529,11 +529,11 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
 
     return {
       position: "absolute",
-      left: "42px", // 第三列，top 计算不变
-      width: "13px",
+      left: isMobile.value ? "38px" : "42px", // 第三列，top 计算不变
+      width: isMobile.value ? "13px" : "13px",
       top: `${centerTopPx - 6}px`, // emoji中心对齐到计算的时间位置
-      height: "12px",
-      fontSize: "12px",
+      height: isMobile.value ? "12px" : "12px",
+      fontSize: isMobile.value ? "12px" : "12px",
       display: "flex",
       justifyContent: "center",
       alignItems: "center",
