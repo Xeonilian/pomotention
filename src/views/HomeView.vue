@@ -1785,7 +1785,7 @@ const { startResize: startRightResize } = useResize(
   }
 
   .left {
-    padding: 5px 2px 15px 6px !important;
+    padding: 5px 2px 15px 8px !important;
   }
   .right {
     padding: 5px 6px 15px 6px !important;

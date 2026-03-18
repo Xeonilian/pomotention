@@ -13,7 +13,8 @@ import { useDataStore } from "@/stores/useDataStore";
 import { useDevice } from "./useDevice";
 
 const { isMobile } = useDevice();
-const borderWidth = isMobile.value ? 0.5 : 1;
+const borderWidth = isMobile.value ? 0 : 1;
+const mobileFontSize = isMobile.value ? 9 : 11;
 
 // 第二列显示的schedule segment接口
 export interface ScheduleSegmentForSecondColumn {
@@ -305,7 +306,7 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
       top: `${topPx}px`,
       width: "13px",
       height: `${heightPx}px`,
-      fontSize: "11px",
+      fontSize: mobileFontSize + "px",
       backgroundColor: color,
       color: "var(--color-background)",
       border: `${borderWidth}px solid ${colorDark}`,
@@ -319,6 +320,7 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
       overflow: "hidden",
       pointerEvents: seg.type === "pomo" ? "auto" : "none",
       userSelect: "none",
+      paddingRight: "0.5px",
     };
   }
 

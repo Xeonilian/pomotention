@@ -16,10 +16,10 @@
       </div>
     </div>
 
-    <!-- ========== 背景层：时间主块 ========== #TODO-->
+    <!-- ========== 背景层：时间主块 ========== -->
     <div v-for="block in props.blocks" :key="block.id" class="timeblock-bg" :style="getVerticalBlockStyle(block)">
       <span class="block-label">
-        {{ getBlockLabel(block.category) }}
+        {{ isMobile ? getBlockLabel(block.category).slice(0, 0) : getBlockLabel(block.category) }}
       </span>
     </div>
 
@@ -478,7 +478,7 @@ const getPriorityBadgeClasses = (seg: any) => [
 
 /* 🔥 拖拽目标状态 */
 .pomo-segment.drop-target {
-  outline: 1px dashed var(--color-primary);
+  outline: 1px dashed var(--color-text-secondary);
   pointer-events: auto !important;
 }
 
@@ -644,12 +644,19 @@ const getPriorityBadgeClasses = (seg: any) => [
     font-size: 8px;
     margin-left: -2px;
   }
-  .tick-line {
+  /* .tick-line {
     width: 20%;
   }
   .hour-tick:first-child .tick-line,
   .hour-tick:last-child .tick-line {
     width: 100%;
+  } */
+  .current-time-line::before {
+    font-size: 14px;
+  }
+
+  .pomo-segment.drop-target {
+    outline: 0.8px dashed var(--color-purple);
   }
 }
 </style>
