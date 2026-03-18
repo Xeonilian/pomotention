@@ -1,7 +1,19 @@
 <!-- TaskTracker.vue -->
 <template>
-  <div class="task-view-container">
+  <div class="task-view-container" ref="taskViewContainerRef">
     <div class="task-header-container" ref="headerContainerRef">
+      <n-button
+        v-if="isMobile"
+        text
+        size="tiny"
+        class="task-fullscreen-toggle"
+        :title="isTaskContainerFullscreen ? '退出全屏' : '全屏'"
+        @click="toggleTaskContainerFullscreen"
+      >
+        <template #icon>
+          <n-icon><ChevronUpDown20Regular /></n-icon>
+        </template>
+      </n-button>
       <div v-if="selectedTagIds && selectedTagIds.length > 0 && selectedTaskId" class="task-tag-render-container">
         <TagRenderer
           :tag-ids="selectedTagIds"
@@ -102,13 +114,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed, defineAsyncComponent, onMounted, onUnmounted } from "vue";
+import { ref, watch, computed, defineAsyncComponent, onMounted, onUnmounted, provide } from "vue";
 import { storeToRefs } from "pinia";
 import type { Component } from "vue";
 import { NPopover } from "naive-ui";
 import type { EnergyRecord, RewardRecord, InterruptionRecord } from "@/core/types/Task";
 import { useTaskTrackerStore } from "@/stores/useTaskTrackerStore";
 import { useDataStore } from "@/stores/useDataStore";
+import { useDevice } from "@/composables/useDevice";
+import { ChevronUpDown20Regular } from "@vicons/fluent";
 // import { TagOff20Regular } from "@vicons/fluent";
 
 const TaskButtons = defineAsyncComponent<Component>(() => import("@/components/TaskTracker/TaskButtons.vue"));
@@ -118,6 +132,7 @@ const TagRenderer = defineAsyncComponent<Component>(() => import("@/components/T
 // UI 状态
 const isMarkdown = ref(false);
 const taskDescription = ref("");
+const taskViewContainerRef = ref<HTMLElement | null>(null);
 const headerContainerRef = ref<HTMLElement | null>(null);
 const tagDisplayLength = ref<number | null>(null);
 
@@ -126,8 +141,41 @@ const TAG_COLLAPSE_BREAKPOINT = 600; // 第一个值：标签收缩为3
 
 const taskTrackerStore = useTaskTrackerStore();
 const dataStore = useDataStore();
+const { isMobile } = useDevice();
 const { selectedTaskId, selectedTask, selectedTagIds, isStarred } = storeToRefs(taskTrackerStore);
 const { updateTaskDescription, handleEnergyRecord, handleRewardRecord, handleInterruptionRecord, handleStar } = taskTrackerStore;
+
+const isTaskContainerFullscreen = ref(false);
+
+provide("taskTrackerFullscreenContainerRef", taskViewContainerRef);
+provide("isTaskTrackerFullscreen", isTaskContainerFullscreen);
+
+const syncTaskContainerFullscreenState = () => {
+  const el = taskViewContainerRef.value;
+  if (!el) return;
+  isTaskContainerFullscreen.value = document.fullscreenElement === el;
+};
+
+async function toggleTaskContainerFullscreen() {
+  const el = taskViewContainerRef.value;
+  if (!el) return;
+  if (!("fullscreenEnabled" in document) || !(document as Document).fullscreenEnabled) return;
+
+  try {
+    if (document.fullscreenElement === el) {
+      await document.exitFullscreen();
+      return;
+    }
+
+    if (document.fullscreenElement && document.fullscreenElement !== el) {
+      await document.exitFullscreen();
+    }
+
+    await el.requestFullscreen();
+  } finally {
+    syncTaskContainerFullscreenState();
+  }
+}
 
 // 描述从 store 同步为受控值
 watch(
@@ -244,7 +292,7 @@ const checkWidth = () => {
   const containerWidth = headerContainerRef.value.clientWidth;
 
   // 当宽度小于第一个值时，标签 displayLength 变为 3
-  tagDisplayLength.value = containerWidth < TAG_COLLAPSE_BREAKPOINT ? 3 : null;
+  tagDisplayLength.value = containerWidth < TAG_COLLAPSE_BREAKPOINT ? 2 : null;
 };
 
 const activeTimelinePopoverRecordId = ref<number | null>(null);
@@ -287,6 +335,7 @@ const handleUpdateTimelinePopoverShow = (recordId: number, nextShow: boolean) =>
 let resizeObserver: ResizeObserver | null = null;
 
 onMounted(() => {
+  document.addEventListener("fullscreenchange", syncTaskContainerFullscreenState);
   if (headerContainerRef.value) {
     resizeObserver = new ResizeObserver(() => {
       checkWidth();
@@ -299,6 +348,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   clearTimelinePopoverTimer();
+  document.removeEventListener("fullscreenchange", syncTaskContainerFullscreenState);
   if (resizeObserver) {
     resizeObserver.disconnect();
   }
@@ -312,12 +362,26 @@ onUnmounted(() => {
   height: 100%;
 }
 
+/* 全屏时浏览器可能给出默认黑底，这里强制使用应用主题背景 */
+.task-view-container:fullscreen {
+  background-color: var(--color-bg-base, #fff);
+  color: var(--color-text-primary, #333);
+  height: 100vh;
+  width: 100vw;
+}
+
 .task-header-container {
   height: 36px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   overflow: hidden;
+}
+
+.task-fullscreen-toggle {
+  flex-shrink: 0;
+  margin-left: 6px;
+  margin-right: 2px;
 }
 
 /* 按钮区域优先显示 */
