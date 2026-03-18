@@ -1,6 +1,6 @@
 <!-- TaskTracker.vue -->
 <template>
-  <div class="task-view-container" ref="taskViewContainerRef">
+  <div class="task-view-container" :class="{ 'is-pseudo-fullscreen': isTaskContainerFullscreen }" ref="taskViewContainerRef">
     <div class="task-header-container" ref="headerContainerRef">
       <n-button
         v-if="isMobile"
@@ -123,6 +123,8 @@ import { useTaskTrackerStore } from "@/stores/useTaskTrackerStore";
 import { useDataStore } from "@/stores/useDataStore";
 import { useDevice } from "@/composables/useDevice";
 import { ChevronUpDown20Regular } from "@vicons/fluent";
+import { useSettingStore } from "@/stores/useSettingStore";
+const settingStore = useSettingStore();
 // import { TagOff20Regular } from "@vicons/fluent";
 
 const TaskButtons = defineAsyncComponent<Component>(() => import("@/components/TaskTracker/TaskButtons.vue"));
@@ -146,6 +148,8 @@ const { selectedTaskId, selectedTask, selectedTagIds, isStarred } = storeToRefs(
 const { updateTaskDescription, handleEnergyRecord, handleRewardRecord, handleInterruptionRecord, handleStar } = taskTrackerStore;
 
 const isTaskContainerFullscreen = ref(false);
+const isPseudoFullscreen = ref(false);
+let prevBodyOverflow: string | null = null;
 
 provide("taskTrackerFullscreenContainerRef", taskViewContainerRef);
 provide("isTaskTrackerFullscreen", isTaskContainerFullscreen);
@@ -153,27 +157,94 @@ provide("isTaskTrackerFullscreen", isTaskContainerFullscreen);
 const syncTaskContainerFullscreenState = () => {
   const el = taskViewContainerRef.value;
   if (!el) return;
-  isTaskContainerFullscreen.value = document.fullscreenElement === el;
+  const isNativeFullscreen = document.fullscreenElement === el;
+  // 如果原生进入了全屏，则关闭伪全屏状态，避免样式/状态冲突
+  if (isNativeFullscreen) {
+    isPseudoFullscreen.value = false;
+  }
+  isTaskContainerFullscreen.value = isPseudoFullscreen.value || isNativeFullscreen;
+};
+
+const restoreBodyScroll = () => {
+  if (prevBodyOverflow != null) {
+    document.body.style.overflow = prevBodyOverflow;
+  } else {
+    document.body.style.overflow = "";
+  }
+  prevBodyOverflow = null;
+};
+
+const enablePseudoFullscreen = () => {
+  settingStore.settings.showSchedule = false;
+  if (isPseudoFullscreen.value) return;
+  isPseudoFullscreen.value = true;
+  isTaskContainerFullscreen.value = true;
+
+  prevBodyOverflow = document.body.style.overflow;
+  // iOS 下如果不禁用背景滚动，体验会很差（内容会“顶开/回弹”）
+  document.body.style.overflow = "hidden";
+};
+
+const disablePseudoFullscreen = async () => {
+  if (!isPseudoFullscreen.value) return;
+  isPseudoFullscreen.value = false;
+
+  const el = taskViewContainerRef.value;
+  // 如果当时其实已经进入了原生 fullscreen，这里退出以保持一致
+  if (el && document.fullscreenElement === el && "exitFullscreen" in document) {
+    try {
+      await document.exitFullscreen();
+    } catch {
+      // 忽略，降级模式不要求原生一定能退出
+    }
+  }
+
+  isTaskContainerFullscreen.value = false;
+  restoreBodyScroll();
 };
 
 async function toggleTaskContainerFullscreen() {
   const el = taskViewContainerRef.value;
   if (!el) return;
-  if (!("fullscreenEnabled" in document) || !(document as Document).fullscreenEnabled) return;
+
+  // 若当前是伪全屏，则直接退出（避免在 iPhone 上再触发无效的原生 fullscreen）
+  if (isPseudoFullscreen.value) {
+    await disablePseudoFullscreen();
+    return;
+  }
+
+  const canNativeFullscreen =
+    "fullscreenEnabled" in document && (document as Document).fullscreenEnabled && typeof (el as any).requestFullscreen === "function";
 
   try {
+    // 已经处于原生全屏时，优先退出；否则会表现为“切换无效”
     if (document.fullscreenElement === el) {
       await document.exitFullscreen();
+      syncTaskContainerFullscreenState();
       return;
     }
 
-    if (document.fullscreenElement && document.fullscreenElement !== el) {
+    if (document.fullscreenElement && document.fullscreenElement !== el && "exitFullscreen" in document) {
       await document.exitFullscreen();
     }
 
-    await el.requestFullscreen();
-  } finally {
-    syncTaskContainerFullscreenState();
+    if (canNativeFullscreen) {
+      await el.requestFullscreen();
+
+      // iOS 可能“静默失败”，所以这里做一次验证；验证失败就降级为伪全屏
+      await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
+      syncTaskContainerFullscreenState();
+      if (!isTaskContainerFullscreen.value) {
+        enablePseudoFullscreen();
+      }
+      return;
+    }
+
+    // 不支持原生 fullscreen：降级为伪全屏
+    enablePseudoFullscreen();
+  } catch {
+    // 原生 fullscreen 失败：降级为伪全屏
+    enablePseudoFullscreen();
   }
 }
 
@@ -352,6 +423,13 @@ onUnmounted(() => {
   if (resizeObserver) {
     resizeObserver.disconnect();
   }
+
+  // 防止异常退出导致页面滚动状态被卡住
+  if (isPseudoFullscreen.value) {
+    isPseudoFullscreen.value = false;
+    isTaskContainerFullscreen.value = false;
+    restoreBodyScroll();
+  }
 });
 </script>
 
@@ -370,12 +448,28 @@ onUnmounted(() => {
   width: 100vw;
 }
 
+.task-view-container.is-pseudo-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background-color: var(--color-bg-base, #fff);
+  color: var(--color-text-primary, #333);
+  margin-top: 30px;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+}
+
 .task-header-container {
   height: 36px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   overflow: hidden;
+}
+
+.task-view-container.is-pseudo-fullscreen .task-header-container {
+  padding-top: env(safe-area-inset-top, 0px);
 }
 
 .task-fullscreen-toggle {
