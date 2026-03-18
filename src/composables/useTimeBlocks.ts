@@ -10,6 +10,10 @@ import { useSegStore } from "@/stores/useSegStore";
 import { useTimeBlockDrag } from "./useTimeBlockDrag";
 import { storeToRefs } from "pinia";
 import { useDataStore } from "@/stores/useDataStore";
+import { useDevice } from "./useDevice";
+
+const { isMobile } = useDevice();
+const borderWidth = isMobile.value ? 0.5 : 1;
 
 // 第二列显示的schedule segment接口
 export interface ScheduleSegmentForSecondColumn {
@@ -272,6 +276,7 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
     const heightPx = ((seg.end - seg.start) / 60000) * props.effectivePxPerMinute;
 
     // 类型的颜色处理
+
     let color;
     if (seg.type === "pomo") {
       color = POMODORO_COLORS[seg.category];
@@ -303,7 +308,7 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
       fontSize: "11px",
       backgroundColor: color,
       color: "var(--color-background)",
-      border: `1px solid ${colorDark}`,
+      border: `${borderWidth}px solid ${colorDark}`,
       borderRadius: "2px",
       zIndex: 2,
       display: "flex",
@@ -390,7 +395,7 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
       width: "8px",
       top: `${topPx}px`,
       height: `${heightPx}px`,
-      border: "1px solid",
+      border: `${borderWidth}px solid`,
       borderColor,
       backgroundColor,
       borderRadius: "4px",
@@ -411,7 +416,7 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
       width: "8px",
       top: `${topPx}px`,
       height: `${heightPx}px`,
-      border: "1px solid",
+      border: `${borderWidth}px solid`,
       borderColor: "var(--color-text-secondary)",
       backgroundColor: "var(--color-text-secondary-transparent)",
       borderRadius: "4px",
@@ -492,9 +497,7 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
 
   // 第二列：特殊优先级emoji显示（每个todo只显示一个emoji）
   const specialPriorityEmojisForSecondColumn = computed((): SpecialPriorityEmojiForSecondColumn[] => {
-    const specialTodos = todosForAppDate.value.filter(
-      (todo) => todo.status !== "cancelled" && SPECIAL_PRIORITIES.includes(todo.priority)
-    );
+    const specialTodos = todosForAppDate.value.filter((todo) => todo.status !== "cancelled" && SPECIAL_PRIORITIES.includes(todo.priority));
 
     return specialTodos.map((todo) => {
       let timePosition: number;
@@ -544,11 +547,7 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
 
     // 处理普通done状态的todo
     const normalTodos = todosForAppDate.value.filter(
-      (todo) =>
-        todo.status === "done" &&
-        todo.startTime &&
-        todo.doneTime &&
-        !SPECIAL_PRIORITIES.includes(todo.priority)
+      (todo) => todo.status === "done" && todo.startTime && todo.doneTime && !SPECIAL_PRIORITIES.includes(todo.priority),
     );
     ranges.push(
       ...normalTodos.map((todo) => ({
@@ -557,16 +556,12 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
         start: todo.startTime!,
         end: todo.doneTime!,
         category: todo.pomoType === "🍇" ? "grape" : todo.pomoType === "🍒" ? "cherry" : "tomato",
-      }))
+      })),
     );
 
     // 处理特殊priority的todo（在第四列正常显示）
     const specialTodos = todosForAppDate.value.filter(
-      (todo) =>
-        todo.status === "done" &&
-        todo.startTime &&
-        todo.doneTime &&
-        SPECIAL_PRIORITIES.includes(todo.priority)
+      (todo) => todo.status === "done" && todo.startTime && todo.doneTime && SPECIAL_PRIORITIES.includes(todo.priority),
     );
     ranges.push(
       ...specialTodos.map((todo) => ({
@@ -575,7 +570,7 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
         start: todo.startTime!,
         end: todo.doneTime!,
         category: todo.pomoType === "🍇" ? "grape" : todo.pomoType === "🍒" ? "cherry" : "tomato",
-      }))
+      })),
     );
 
     return ranges;
@@ -619,7 +614,7 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
       segStore.setPomodoroSegments(newPomoSegs);
       segStore.recalculateTodoAllocations(todosForAppDate.value, props.dayStart);
     },
-    { immediate: true, deep: true }
+    { immediate: true, deep: true },
   );
 
   return {
