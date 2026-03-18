@@ -105,7 +105,7 @@
       placement="top"
       to="body"
       :show-arrow="true"
-      :style="{ maxWidth: '280px' }"
+      :style="{ maxWidth: '240px' }"
       :show="activeEmojiPopoverTodoId === emoji.todoId"
       @update:show="(next) => handleUpdateEmojiPopoverShow(emoji.todoId, next)"
     >
@@ -130,7 +130,7 @@
       placement="top"
       to="body"
       :show-arrow="true"
-      :style="{ maxWidth: '280px' }"
+      :style="{ maxWidth: '240px' }"
       :show="activeActualPopoverKey === `${seg.todoId}-${seg.todoIndex}`"
       @update:show="(next) => handleUpdateActualPopoverShow(`${seg.todoId}-${seg.todoIndex}`, next)"
     >
