@@ -554,6 +554,10 @@ function getPomoBgColorHEX(ratio: number) {
   .day-card {
     border: 0.5px solid var(--color-background-dark);
   }
+
+  .header-card :deep(.n-card__content) {
+    font-size: 13px;
+  }
   .day-card :deep(.n-card__content) {
     padding: 0px;
   }
