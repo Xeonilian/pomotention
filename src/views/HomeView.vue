@@ -1716,7 +1716,7 @@ const { startResize: startRightResize } = useResize(
 
 .resize-handle:hover {
   background: var(--color-blue);
-  height: 2px;
+  height: 4px;
 }
 
 /* .resize-handle::after {
@@ -1741,7 +1741,7 @@ const { startResize: startRightResize } = useResize(
 
 .resize-handle-horizontal:hover {
   background: var(--color-blue);
-  width: 2px;
+  width: 4px;
 }
 
 /* .resize-handle-horizontal::after {
@@ -1786,9 +1786,11 @@ const { startResize: startRightResize } = useResize(
 
   .left {
     padding: 5px 2px 15px 8px !important;
+    width: 80px !important;
   }
   .right {
     padding: 5px 6px 15px 6px !important;
+    width: 100% !important;
   }
 
   .resize-handle-horizontal,

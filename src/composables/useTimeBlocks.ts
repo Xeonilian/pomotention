@@ -13,7 +13,7 @@ import { useDataStore } from "@/stores/useDataStore";
 import { useDevice } from "./useDevice";
 
 const { isMobile } = useDevice();
-const borderWidth = isMobile.value ? 0 : 1;
+const borderWidth = isMobile.value ? 0.5 : 1;
 const mobileFontSize = isMobile.value ? 9 : 11;
 
 // 第二列显示的schedule segment接口
@@ -331,7 +331,7 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
     const heightPx = (endMinute - startMinute) * props.effectivePxPerMinute;
     return {
       position: "absolute",
-      left: isMobile.value ? "20px" : "22px",
+      left: isMobile.value ? "22px" : "22px",
       top: `${topPx}px`,
       width: isMobile.value ? "11px" : "13px",
       height: `${heightPx}px`,
@@ -351,7 +351,7 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
 
     return {
       position: "absolute",
-      left: isMobile.value ? "38px" : "42px",
+      left: isMobile.value ? "40px" : "42px",
       width: "13px",
       top: `${topPx}px`,
       height: `${heightPx}px`,
@@ -393,8 +393,8 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
 
     return {
       position: "absolute",
-      left: isMobile.value ? "56px" : "61px",
-      width: isMobile.value ? "9px" : "8px",
+      left: isMobile.value ? "67px" : "61px",
+      width: isMobile.value ? "3px" : "8px",
       top: `${topPx}px`,
       height: `${heightPx}px`,
       border: `${borderWidth}px solid`,
@@ -414,8 +414,8 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
 
     return {
       position: "absolute",
-      left: isMobile.value ? "56px" : "61px",
-      width: isMobile.value ? "9px" : "8px",
+      left: isMobile.value ? "65px" : "61px",
+      width: isMobile.value ? "3px" : "8px",
       top: `${topPx}px`,
       height: `${heightPx}px`,
       border: `${borderWidth}px solid`,
@@ -477,23 +477,28 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
 
     return {
       position: "absolute",
-      left: "22px",
+      left: isMobile.value ? "22px" : "22px",
       top: `${topPx}px`,
-      width: "13px",
+      width: isMobile.value ? "11px" : "13px",
       height: `${heightPx}px`,
-      fontSize: "11px",
+      fontSize: isMobile.value ? "9px" : "11px",
       backgroundColor: color,
       color: `${colorDark}`,
       borderRadius: "2px",
       zIndex: 31,
       display: "flex",
-      justifyContent: "center",
+      flexDirection: "column", // 让内容竖着排列
+      justifyContent: "flex-start", // 让内容从上到下填充
       alignItems: "center",
+      writingMode: "vertical-rl", // 让字竖排
+      textOrientation: "upright", // 保持文字直立而不是旋转
       letterSpacing: "0px",
       overflow: "hidden",
       userSelect: "none",
       pointerEvents: "auto",
       fontWeight: "bold",
+      lineHeight: 1.2,
+      whiteSpace: "normal",
     };
   }
 
@@ -529,7 +534,7 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
 
     return {
       position: "absolute",
-      left: isMobile.value ? "38px" : "42px", // 第三列，top 计算不变
+      left: isMobile.value ? "40px" : "42px", // 第三列，top 计算不变
       width: isMobile.value ? "13px" : "13px",
       top: `${centerTopPx - 6}px`, // emoji中心对齐到计算的时间位置
       height: isMobile.value ? "12px" : "12px",
