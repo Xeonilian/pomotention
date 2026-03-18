@@ -220,12 +220,13 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
       // 如果有上次同步时间，只下载更新的数据
       if (lastSyncTimestamp > 0) {
         // 为了避免 lastSyncTimestamp 异常（过新/时序问题/设备时间不准）导致“完全下不下来”
-        // 这里增加 24 小时兜底窗口：起点使用 min(lastSyncTimestamp, now-24h)
+        // 这里增加 24 小时兜底窗口：仅当 lastSyncTimestamp 在未来时才回退到 now-24h（避免正常情况下每次都扩大窗口）
         // 同时，为了防止边界时间戳导致“刚好等于 lastSyncTimestamp 的记录被跳过”，预留 5 秒冗余
         const FALLBACK_WINDOW_MS = 24 * 60 * 60 * 1000;
         const SAFETY_MARGIN_MS = 5000;
-        const fallbackFromMs = Date.now() - FALLBACK_WINDOW_MS;
-        const effectiveFromMs = Math.min(lastSyncTimestamp, fallbackFromMs);
+        const nowMs = Date.now();
+        const fallbackFromMs = nowMs - FALLBACK_WINDOW_MS;
+        const effectiveFromMs = lastSyncTimestamp > nowMs ? fallbackFromMs : lastSyncTimestamp;
         const effectiveTimestamp = Math.max(0, effectiveFromMs - SAFETY_MARGIN_MS);
         const lastSyncISO = new Date(effectiveTimestamp).toISOString();
         query = query.gt("last_modified", lastSyncISO);
@@ -236,6 +237,21 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
               effectiveFromMs,
             ).toISOString()}`,
           );
+          // #region agent log
+          fetch("http://127.0.0.1:7242/ingest/a855573f-7487-43d2-8f8d-5dee3311857f", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "e164ec" },
+            body: JSON.stringify({
+              sessionId: "e164ec",
+              runId: "post-fix",
+              hypothesisId: "F",
+              location: "src/services/sync/baseSyncService.ts:download",
+              message: "fallback window applied (lastSyncTimestamp in future)",
+              data: { table: this.tableName, lastSyncTimestamp, nowMs, effectiveFromMs },
+              timestamp: Date.now(),
+            }),
+          }).catch(() => {});
+          // #endregion
         }
         // console.log(`📥 [${this.tableName}] 增量下载（自 ${new Date(effectiveTimestamp).toLocaleString()}，含 5 秒冗余）`);
       } else {

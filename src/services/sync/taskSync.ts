@@ -97,8 +97,9 @@ export class TaskSyncService extends BaseSyncService<Task, CloudTaskInsert> {
       // 如果是 0 (新机器/重置)，则为 1970，拉取全量数据
       // 为了避免 lastSyncTimestamp 异常过新导致“完全下不下来”，这里增加最近 24h 兜底窗口
       const FALLBACK_WINDOW_MS = 24 * 60 * 60 * 1000;
-      const fallbackFromMs = Date.now() - FALLBACK_WINDOW_MS;
-      const effectiveFromMs = lastSyncTimestamp > 0 ? Math.min(lastSyncTimestamp, fallbackFromMs) : 0;
+      const nowMs = Date.now();
+      const fallbackFromMs = nowMs - FALLBACK_WINDOW_MS;
+      const effectiveFromMs = lastSyncTimestamp > 0 ? (lastSyncTimestamp > nowMs ? fallbackFromMs : lastSyncTimestamp) : 0;
       const lastSyncISO = new Date(effectiveFromMs).toISOString();
       if (lastSyncTimestamp > 0 && effectiveFromMs !== lastSyncTimestamp) {
         console.debug(

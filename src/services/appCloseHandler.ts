@@ -47,6 +47,22 @@ function checkUnsyncedData(source: string = "Unknown"): boolean {
     console.log(`📊 [${source}] 发现 ${unsyncedCount} 类未同步数据`);
   }
 
+  // #region agent log
+  fetch("http://127.0.0.1:7242/ingest/a855573f-7487-43d2-8f8d-5dee3311857f", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "e164ec" },
+    body: JSON.stringify({
+      sessionId: "e164ec",
+      runId: "post-fix",
+      hypothesisId: "G",
+      location: "src/services/appCloseHandler.ts:checkUnsyncedData",
+      message: "unsynced summary for focus/blur sync decision",
+      data: { source, unsyncedCount, hasUnsyncedMap },
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+  // #endregion
+
   return unsyncedCount > 0;
 }
 
@@ -94,7 +110,24 @@ function initDebouncedSyncFunctions() {
     if (!checkSyncPreconditions()) return;
 
     try {
-      if (checkUnsyncedData(source)) {
+      const hasUnsynced = checkUnsyncedData(source);
+      // #region agent log
+      fetch("http://127.0.0.1:7242/ingest/a855573f-7487-43d2-8f8d-5dee3311857f", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "e164ec" },
+        body: JSON.stringify({
+          sessionId: "e164ec",
+          runId: "post-fix",
+          hypothesisId: "H",
+          location: "src/services/appCloseHandler.ts:debouncedFocusSync",
+          message: "focus sync triggered",
+          data: { source, hasUnsynced, lastSyncTimestamp: useSyncStore().lastSyncTimestamp },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion
+
+      if (hasUnsynced) {
         await syncAll();
       } else {
         const syncStore = useSyncStore();

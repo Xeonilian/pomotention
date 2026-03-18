@@ -299,7 +299,7 @@ async function runSyncTask(actionName: string, taskFn: () => Promise<{ success: 
  * 完整同步：上传 -> 下载 -> 清理 -> 保存 -> 更新时间
  */
 export async function syncAll() {
-  console.log("🚀 syncAll() 被调用，开始执行全量同步...");
+  console.log("🚀 syncAll() 被调用，执行同步...");
   return runSyncTask("同步", async () => {
     const syncStore = useSyncStore();
     const dataStore = useDataStore();
@@ -318,6 +318,21 @@ export async function syncAll() {
     // 决定是否全量：如果是 0，或者上次同步距今太久(可选)，则全量
     const lastSync = syncStore.lastSyncTimestamp;
     const isFirstSync = lastSync === 0;
+    // #region agent log
+    fetch("http://127.0.0.1:7242/ingest/a855573f-7487-43d2-8f8d-5dee3311857f", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "e164ec" },
+      body: JSON.stringify({
+        sessionId: "e164ec",
+        runId: "post-fix",
+        hypothesisId: "E",
+        location: "src/services/sync/index.ts:syncAll",
+        message: "syncAll download decision",
+        data: { lastSync, isFirstSync, autoSupabaseSync: settingStore.settings.autoSupabaseSync },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
     if (isFirstSync) console.log("🔄 首次同步，执行全量下载");
 
     const downRes = await _internalDownload(lastSync);
