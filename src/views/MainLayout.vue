@@ -305,9 +305,13 @@ watch([() => reportedPomodoroWidth.value, () => reportedPomodoroHeight.value], a
 });
 
 // 只对 ontop 做隐藏：非 Tauri 不显示；Tauri 下始终显示。其余按钮始终显示，由 buttonStyle(control.show) 控制灰显
-const filteredViewControls = computed(() =>
-  viewControls.value.filter((c) => c.key !== "ontop" || c.show)
-);
+// 移动端不显示 planner/task
+const filteredViewControls = computed(() => {
+  const controls = viewControls.value.filter((c) => c.key !== "ontop" || c.show);
+  if (!isMobile.value) return controls;
+
+  return controls.filter((c) => c.key !== "planner" && c.key !== "task");
+});
 
 // === 3. 视图控制按钮 ===
 function handleMainLayoutViewToggle(key: string) {
