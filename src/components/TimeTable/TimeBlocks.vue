@@ -703,21 +703,21 @@ const getPriorityBadgeClasses = (seg: any) => [
   transform: scale(1.3);
 }
 
-@media (max-width: 600px) {
+@media (max-width: 430px) {
   .hour-label {
     font-size: 7px;
-    margin-left: 0px;
-    opacity: 1;
+    margin-left: -8px;
+    opacity: 0.7;
     z-index: 4;
+    transform: translateY(-2px);
   }
   /* .tick-line {
     width: 20%;
-  }
-  .hour-tick:first-child .tick-line,
+  } */
+  /* .hour-tick:first-child .tick-line,
   .hour-tick:last-child .tick-line {
     width: 100%;
   } */
-
   .pomo-segment.drop-target {
     outline: 0.8px dashed var(--color-purple);
   }
