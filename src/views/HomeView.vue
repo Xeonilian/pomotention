@@ -1600,30 +1600,6 @@ const { startResize: startRightResize } = useResize(
   outline: none;
 }
 
-@media (max-width: 650px) {
-  .marquee {
-    display: none;
-  }
-
-  .marquee-input {
-    display: block;
-  }
-
-  .today-pomo,
-  .total-pomo {
-    font-size: 14px;
-    padding-left: 0;
-    padding-right: 0;
-  }
-
-  .left {
-    padding: 5px 6px 15px 6px !important;
-  }
-  .right {
-    padding: 5px 6px 15px 6px !important;
-  }
-}
-
 .marquee-input {
   border: 1px solid var(--color-blue);
   outline: none;
@@ -1790,5 +1766,34 @@ const { startResize: startRightResize } = useResize(
 .search-date :deep(.n-input-wrapper) {
   padding-left: 6px;
   padding-right: 6px;
+}
+
+@media (max-width: 650px) {
+  .marquee {
+    display: none;
+  }
+
+  .marquee-input {
+    display: block;
+  }
+
+  .today-pomo,
+  .total-pomo {
+    font-size: 14px;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .left {
+    padding: 5px 2px 15px 6px !important;
+  }
+  .right {
+    padding: 5px 6px 15px 6px !important;
+  }
+
+  .resize-handle-horizontal,
+  .resize-handle {
+    display: none;
+  }
 }
 </style>

@@ -6,17 +6,17 @@
 
 <template>
   <div class="timetable-bar-container">
-    <!-- ========== 背景层：小时刻度线 ========== -->
+    <!-- ========== 背景层：小时刻度线 ==========  -->
     <div class="hour-ticks-container">
       <div v-for="(hourStamp, idx) in hourStamps" :key="hourStamp" class="hour-tick" :style="{ top: getHourTickTop(hourStamp) + 'px' }">
         <div class="tick-line"></div>
         <span v-if="idx !== hourStamps.length - 1" class="hour-label">
-          {{ timestampToTimeString(hourStamp) }}
+          {{ isMobile ? timestampToTimeString(hourStamp).slice(0, 2) : timestampToTimeString(hourStamp) }}
         </span>
       </div>
     </div>
 
-    <!-- ========== 背景层：时间主块 ========== -->
+    <!-- ========== 背景层：时间主块 ========== #TODO-->
     <div v-for="block in props.blocks" :key="block.id" class="timeblock-bg" :style="getVerticalBlockStyle(block)">
       <span class="block-label">
         {{ getBlockLabel(block.category) }}
@@ -365,16 +365,17 @@ const getPriorityBadgeClasses = (seg: any) => [
   flex-direction: column;
   align-items: center;
   user-select: none;
+  font-family: "consolas", monospace;
 }
 
 .tick-line {
   height: 1px;
-  width: calc(100% - 0px);
+  width: 100%;
   flex-shrink: 0;
-  background-color: var(--color-text-secondary);
+  background-color: var(--color-background-dark);
   margin-bottom: 2px;
   margin-left: auto;
-  z-index: 5;
+  z-index: 2;
   transform: scaleY(0.5);
 }
 
@@ -385,8 +386,9 @@ const getPriorityBadgeClasses = (seg: any) => [
   text-align: right;
   flex-shrink: 0;
   color: var(--color-text-secondary);
+  opacity: 0.6;
   margin-left: auto;
-  z-index: 21;
+  z-index: 2;
 }
 
 /* ========== 时间块标签 ========== */
@@ -635,5 +637,19 @@ const getPriorityBadgeClasses = (seg: any) => [
 
 .emoji-range:hover .emoji-icon {
   transform: scale(1.3);
+}
+
+@media (max-width: 600px) {
+  .hour-label {
+    font-size: 8px;
+    margin-left: -2px;
+  }
+  .tick-line {
+    width: 20%;
+  }
+  .hour-tick:first-child .tick-line,
+  .hour-tick:last-child .tick-line {
+    width: 100%;
+  }
 }
 </style>
