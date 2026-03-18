@@ -170,12 +170,13 @@
       @update:show="showTagManager = $event"
       @after-leave="handleTagManagerClose"
       :taskId="taskId"
+      :modalTo="tagManagerModalTo"
     />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, inject } from "vue";
 import { NButton, NPopover, NIcon } from "naive-ui";
 import EnergyInputDialog from "@/components/TaskTracker/EnergyInputDialog.vue";
 import RewardInputDialog from "@/components/TaskTracker/RewardInputDialog.vue";
@@ -206,6 +207,9 @@ const tagEditor = useActivityTagEditor();
 const dataStore = useDataStore();
 const displayStore = useDisplayedTaskStore();
 const { isMobile } = useDevice();
+
+const fullscreenContainerRef = inject<{ value: HTMLElement | null }>("taskTrackerFullscreenContainerRef", { value: null });
+const isTaskTrackerFullscreen = inject<{ value: boolean }>("isTaskTrackerFullscreen", { value: false });
 // Props
 const props = defineProps<{
   taskId: number | null;
@@ -305,6 +309,10 @@ function starTrack() {
 }
 
 const showTagManager = ref(false);
+const tagManagerModalTo = computed<string | HTMLElement>(() => {
+  if (!isTaskTrackerFullscreen.value) return "body";
+  return fullscreenContainerRef.value ?? "body";
+});
 
 // 标签管理器的 tagIds 代理
 const tagIdsProxy = computed({
