@@ -152,11 +152,11 @@ const handleSignedInSession = async (session: any) => {
     // 同步已初始化但用户ID不匹配（可能是首次设置）：重置并重新初始化
     console.log("🔄 重置同步状态并重新初始化");
     cleanupSyncLifecycle();
-    syncStore.resetSync();
+    syncStore.resetSyncState();
     await initSyncLifecycle();
   } else {
     // 首次初始化
-    syncStore.resetSync();
+    syncStore.resetSyncState();
     await initSyncLifecycle();
   }
 };
