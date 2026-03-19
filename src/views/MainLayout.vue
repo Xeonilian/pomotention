@@ -310,7 +310,14 @@ const filteredViewControls = computed(() => {
   const controls = viewControls.value.filter((c) => c.key !== "ontop" || c.show);
   if (!isMobile.value) return controls;
 
-  return controls.filter((c) => c.key !== "planner" && c.key !== "task");
+  // 移除 planner 和 task，并将 pomodoro 移到最后
+  const filtered = controls.filter((c) => c.key !== "planner" && c.key !== "task");
+  const pomodoroIndex = filtered.findIndex((c) => c.key === "pomodoro");
+  if (pomodoroIndex !== -1) {
+    const [pomodoroControl] = filtered.splice(pomodoroIndex, 1);
+    filtered.push(pomodoroControl);
+  }
+  return filtered;
 });
 
 // === 3. 视图控制按钮 ===
