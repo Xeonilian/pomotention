@@ -437,7 +437,7 @@ const onDayJump = () => {
 // 年视图中点击月份标题 → 进入月视图并定位到该月
 const onYearNavigateToMonth = (monthStartTs: number) => {
   settingStore.settings.viewSet = "month";
-  settingStore.settings.topHeight = isMobile.value ? 500 : 610;
+  settingStore.settings.topHeight = isMobile.value ? 525 : 610;
   dateService.navigateTo(monthStartTs);
 };
 
@@ -451,7 +451,7 @@ const onYearNavigateToWeek = (weekStartTs: number) => {
 // weekplanner month 引起变化日期
 const onMonthJump = () => {
   settingStore.settings.viewSet = "month";
-  settingStore.settings.topHeight = isMobile.value ? 500 : 610;
+  settingStore.settings.topHeight = isMobile.value ? 525 : 610;
 };
 
 const onWeekJump = () => {
