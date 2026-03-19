@@ -454,7 +454,7 @@ onUnmounted(() => {
   width: 100vw;
   box-sizing: border-box;
   /* iOS/安卓刘海屏：避免内容贴边 */
-  padding-top: max(env(safe-area-inset-top, 0px), 8px);
+  padding-top: env(safe-area-inset-top, 8px);
   padding-right: max(6px, env(safe-area-inset-right, 0px));
   padding-bottom: max(6px, env(safe-area-inset-bottom, 0px));
   padding-left: max(6px, env(safe-area-inset-left, 0px));
@@ -466,7 +466,7 @@ onUnmounted(() => {
   z-index: 9999;
   background-color: var(--color-bg-base, #fff);
   color: var(--color-text-primary, #333);
-  margin-top: 35px;
+  margin-top: env(safe-area-inset-top, 0px);
   height: 100vh;
   width: 100vw;
   overflow: hidden;
