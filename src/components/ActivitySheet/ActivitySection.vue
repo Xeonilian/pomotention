@@ -21,7 +21,7 @@
       >
         <template #prefix>
           <n-dropdown :options="filterOptions" @select="(key) => $emit('filter', key)">
-            <n-button text type="default" title="筛选活动">
+            <n-button text type="default" title="筛选活动" @pointerdown.stop @mousedown.prevent.stop @touchstart.stop>
               <template #icon>
                 <n-icon><DocumentTableSearch24Regular /></n-icon>
               </template>
@@ -81,7 +81,9 @@
                 class="icon-drag-area"
                 :class="{ 'has-children': hasChildren(item.id), 'is-collapsed': collapsedParentIds[item.id] }"
                 style="touch-action: none; cursor: grab"
-                @pointerdown="onDragStart($event, item)"
+                @pointerdown.prevent.stop="onDragStart($event, item)"
+                @mousedown.prevent.stop
+                @touchstart.stop
                 :title="getDragAreaTitle(item)"
               >
                 <n-icon v-if="item.isUntaetigkeit" :color="'var(--color-blue)'"><Cloud24Regular /></n-icon>
@@ -156,6 +158,9 @@
                 text
                 :color="item.tagIds ? 'var(--color-blue)' : 'var(--color-text-secondary)'"
                 @click="handleTagIconClick()"
+                @pointerdown.stop
+                @mousedown.prevent.stop
+                @touchstart.stop
                 class="icon-tag"
                 title="显示/隐藏标签"
               >
@@ -1179,12 +1184,12 @@ function handlePomoInputTouchCancel(item: Activity) {
 .pomo-red {
   background: var(--color-background) !important;
 }
-.pomo-purple {
+/* .pomo-purple {
   background: var(--color-purple-light-transparent) !important;
 }
 .pomo-green {
   background: var(--color-green-light-transparent) !important;
-}
+} */
 
 /* 文本居中 */
 .input-center :deep(.n-input__input) {
