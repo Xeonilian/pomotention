@@ -3,7 +3,7 @@ import { computed, onMounted } from "vue";
 import { useSyncStore } from "@/stores/useSyncStore";
 import { uploadAll, downloadAll } from "@/services/sync";
 import { useRelativeTime } from "@/composables/useRelativeTime";
-import { LockClosed20Regular, ArrowSyncCircle20Regular, DismissCircle20Regular, CheckmarkCircle20Regular } from "@vicons/fluent";
+import { LockClosed20Regular, ArrowSync20Regular, DismissCircle20Regular, CheckmarkCircle20Regular } from "@vicons/fluent";
 
 export function useSyncWidget() {
   const syncStore = useSyncStore();
@@ -18,7 +18,7 @@ export function useSyncWidget() {
       case "syncing":
       case "uploading":
       case "downloading":
-        return ArrowSyncCircle20Regular;
+        return ArrowSync20Regular;
       case "error":
         return DismissCircle20Regular;
       default:

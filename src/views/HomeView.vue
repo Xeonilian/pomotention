@@ -38,10 +38,14 @@
             <!-- 年入口：仅显示年份，点击进入年视图；在年视图时也只显示年份 -->
             <div class="day-info">
               <template v-if="settingStore.settings.viewSet !== 'year'">
-                <span @click="onYearJump" class="day-status" title="进入年视图">{{ dateService.displayYearInfo }}</span>
+                <span @click="onYearJump" class="day-status" title="进入年视图">
+                  {{ settingStore.settings.showSchedule && isMobile ? dateService.displayYearInfo.slice(2) : dateService.displayYearInfo }}
+                </span>
               </template>
               <template v-else>
-                <span @click="onDayJump" class="day-status" title="进入日视图">{{ dateService.displayYearInfo }}</span>
+                <span @click="onDayJump" class="day-status" title="进入日视图">
+                  {{ dateService.displayYearInfo }}
+                </span>
                 <span @click="onDateSet('today')" class="global-pomo">
                   <span class="today-pomo">🍅{{ currentDatePomoCount }}</span>
                   <span class="total-pomo">/{{ globalRealPomo }}</span>
@@ -422,37 +426,37 @@ const appDateTimestamp = computed(() => dateService.appDateTimestamp);
 // 进入年视图（点击头部年份）
 const onYearJump = () => {
   settingStore.settings.viewSet = "year";
-  settingStore.settings.topHeight = 480;
+  settingStore.settings.topHeight = 490;
 };
 
 const onDayJump = () => {
   settingStore.settings.viewSet = "day";
-  settingStore.settings.topHeight = 300;
+  settingStore.settings.topHeight = isMobile.value ? 300 : 300;
 };
 
 // 年视图中点击月份标题 → 进入月视图并定位到该月
 const onYearNavigateToMonth = (monthStartTs: number) => {
   settingStore.settings.viewSet = "month";
-  settingStore.settings.topHeight = 610;
+  settingStore.settings.topHeight = isMobile.value ? 525 : 610;
   dateService.navigateTo(monthStartTs);
 };
 
 // 年视图中点击周编号 → 进入周视图并定位到该周
 const onYearNavigateToWeek = (weekStartTs: number) => {
   settingStore.settings.viewSet = "week";
-  settingStore.settings.topHeight = 510;
+  settingStore.settings.topHeight = isMobile.value ? 490 : 510;
   dateService.navigateTo(weekStartTs);
 };
 
 // weekplanner month 引起变化日期
 const onMonthJump = () => {
   settingStore.settings.viewSet = "month";
-  settingStore.settings.topHeight = 610;
+  settingStore.settings.topHeight = isMobile.value ? 525 : 610;
 };
 
 const onWeekJump = () => {
   settingStore.settings.viewSet = "week";
-  settingStore.settings.topHeight = 510;
+  settingStore.settings.topHeight = isMobile.value ? 490 : 510;
 };
 
 // 选择进入日视图的具体日期
@@ -1219,7 +1223,7 @@ function onDateSet(direction: "prev" | "next" | "today" | "query") {
 
 // 切换视图
 function onViewSet() {
-  const order: readonly ViewType[] = ["day", "week", "month"] as const;
+  const order: readonly ViewType[] = ["day", "week", "month", "year"] as const;
   const cur = settingStore.settings.viewSet as ViewType;
   const idx = order.indexOf(cur);
   const next = order[(idx + 1) % order.length];
@@ -1229,6 +1233,8 @@ function onViewSet() {
   } else if (cur === "day") {
     settingStore.settings.topHeight = 610;
   } else if (cur === "month") {
+    settingStore.settings.topHeight = 480;
+  } else if (cur === "year") {
     settingStore.settings.topHeight = 300;
   }
 }
@@ -1600,30 +1606,6 @@ const { startResize: startRightResize } = useResize(
   outline: none;
 }
 
-@media (max-width: 650px) {
-  .marquee {
-    display: none;
-  }
-
-  .marquee-input {
-    display: block;
-  }
-
-  .today-pomo,
-  .total-pomo {
-    font-size: 14px;
-    padding-left: 0;
-    padding-right: 0;
-  }
-
-  .left {
-    padding: 5px 6px 15px 6px !important;
-  }
-  .right {
-    padding: 5px 6px 15px 6px !important;
-  }
-}
-
 .marquee-input {
   border: 1px solid var(--color-blue);
   outline: none;
@@ -1740,7 +1722,7 @@ const { startResize: startRightResize } = useResize(
 
 .resize-handle:hover {
   background: var(--color-blue);
-  height: 2px;
+  height: 4px;
 }
 
 /* .resize-handle::after {
@@ -1765,7 +1747,7 @@ const { startResize: startRightResize } = useResize(
 
 .resize-handle-horizontal:hover {
   background: var(--color-blue);
-  width: 2px;
+  width: 4px;
 }
 
 /* .resize-handle-horizontal::after {
@@ -1790,5 +1772,36 @@ const { startResize: startRightResize } = useResize(
 .search-date :deep(.n-input-wrapper) {
   padding-left: 6px;
   padding-right: 6px;
+}
+
+@media (max-width: 650px) {
+  .marquee {
+    display: none;
+  }
+
+  .marquee-input {
+    display: block;
+  }
+
+  .today-pomo,
+  .total-pomo {
+    font-size: 14px;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .left {
+    padding: 5px 2px 15px 8px !important;
+    width: 80px !important;
+  }
+  .right {
+    padding: 5px 6px 15px 6px !important;
+    width: 100% !important;
+  }
+
+  .resize-handle-horizontal,
+  .resize-handle {
+    display: none;
+  }
 }
 </style>

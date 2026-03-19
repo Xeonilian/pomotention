@@ -6,6 +6,7 @@
     align-center
     :style="modalStyle"
     :auto-focus="false"
+    :to="modalTo"
   >
     <div class="tag-manager-inner">
       <!-- 顶部搜索和新建区域 -->
@@ -180,6 +181,7 @@ const dialog = useDialog();
 const props = defineProps<{
   modelValue: number[];
   show?: boolean;
+  modalTo?: string | HTMLElement;
 }>();
 
 const emit = defineEmits<{
@@ -211,6 +213,8 @@ const showModal = computed({
     if (!v) emit("update:show", false);
   },
 });
+
+const modalTo = computed<string | HTMLElement>(() => props.modalTo ?? "body");
 
 /**
  * 移动端弹窗位置样式：仅占位，具体 top 对齐由 CSS 控制，避免输入法打开时视口变化导致位移

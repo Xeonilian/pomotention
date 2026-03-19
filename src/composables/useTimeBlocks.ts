@@ -14,6 +14,7 @@ import { useDevice } from "./useDevice";
 
 const { isMobile } = useDevice();
 const borderWidth = isMobile.value ? 0.5 : 1;
+const mobileFontSize = isMobile.value ? 9 : 11;
 
 // 第二列显示的schedule segment接口
 export interface ScheduleSegmentForSecondColumn {
@@ -305,7 +306,7 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
       top: `${topPx}px`,
       width: "13px",
       height: `${heightPx}px`,
-      fontSize: "11px",
+      fontSize: mobileFontSize + "px",
       backgroundColor: color,
       color: "var(--color-background)",
       border: `${borderWidth}px solid ${colorDark}`,
@@ -319,6 +320,7 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
       overflow: "hidden",
       pointerEvents: seg.type === "pomo" ? "auto" : "none",
       userSelect: "none",
+      paddingRight: "0.5px",
     };
   }
 
@@ -329,11 +331,11 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
     const heightPx = (endMinute - startMinute) * props.effectivePxPerMinute;
     return {
       position: "absolute",
-      left: "22px",
+      left: isMobile.value ? "22px" : "22px",
       top: `${topPx}px`,
-      width: "13px",
+      width: isMobile.value ? "11px" : "13px",
       height: `${heightPx}px`,
-      fontSize: "12px",
+      fontSize: isMobile.value ? "10px" : "12px",
       zIndex: seg.overflow ? 33 : 30,
       display: "flex",
       alignItems: "center",
@@ -349,7 +351,7 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
 
     return {
       position: "absolute",
-      left: "42px",
+      left: isMobile.value ? "40px" : "42px",
       width: "13px",
       top: `${topPx}px`,
       height: `${heightPx}px`,
@@ -391,16 +393,16 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
 
     return {
       position: "absolute",
-      left: "61px",
-      width: "8px",
+      left: isMobile.value ? "67px" : "61px",
+      width: isMobile.value ? "3px" : "8px",
       top: `${topPx}px`,
       height: `${heightPx}px`,
       border: `${borderWidth}px solid`,
       borderColor,
       backgroundColor,
-      borderRadius: "4px",
+      borderRadius: "6px",
       zIndex: 10,
-      opacity: 1,
+      opacity: 0.7,
     };
   }
 
@@ -412,16 +414,16 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
 
     return {
       position: "absolute",
-      left: "61px",
-      width: "8px",
+      left: isMobile.value ? "65px" : "61px",
+      width: isMobile.value ? "3px" : "8px",
       top: `${topPx}px`,
       height: `${heightPx}px`,
       border: `${borderWidth}px solid`,
       borderColor: "var(--color-text-secondary)",
       backgroundColor: "var(--color-text-secondary-transparent)",
       borderRadius: "4px",
-      zIndex: 10,
-      opacity: 1,
+      zIndex: 3,
+      opacity: 0.7,
     };
   }
 
@@ -475,23 +477,28 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
 
     return {
       position: "absolute",
-      left: "22px",
+      left: isMobile.value ? "22px" : "22px",
       top: `${topPx}px`,
-      width: "13px",
+      width: isMobile.value ? "11px" : "13px",
       height: `${heightPx}px`,
-      fontSize: "11px",
+      fontSize: isMobile.value ? "9px" : "11px",
       backgroundColor: color,
       color: `${colorDark}`,
       borderRadius: "2px",
       zIndex: 31,
       display: "flex",
-      justifyContent: "center",
+      flexDirection: "column", // 让内容竖着排列
+      justifyContent: "flex-start", // 让内容从上到下填充
       alignItems: "center",
+      writingMode: "vertical-rl", // 让字竖排
+      textOrientation: "upright", // 保持文字直立而不是旋转
       letterSpacing: "0px",
       overflow: "hidden",
       userSelect: "none",
       pointerEvents: "auto",
       fontWeight: "bold",
+      lineHeight: 1.2,
+      whiteSpace: "normal",
     };
   }
 
@@ -527,11 +534,11 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
 
     return {
       position: "absolute",
-      left: "42px", // 第三列，top 计算不变
-      width: "13px",
+      left: isMobile.value ? "40px" : "42px", // 第三列，top 计算不变
+      width: isMobile.value ? "13px" : "13px",
       top: `${centerTopPx - 6}px`, // emoji中心对齐到计算的时间位置
-      height: "12px",
-      fontSize: "12px",
+      height: isMobile.value ? "12px" : "12px",
+      fontSize: isMobile.value ? "12px" : "12px",
       display: "flex",
       justifyContent: "center",
       alignItems: "center",

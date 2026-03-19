@@ -33,8 +33,6 @@ const { showCaretFlash, caretFlashStyle, flashCaretFlash } = useCaretFlash();
 const { isMobile } = useDevice();
 const settingStore = useSettingStore();
 const syncStore = useSyncStore();
-// 移动端进入编辑时暂存原 topHeight，退出时恢复
-const savedTopHeight = ref<number | null>(null);
 
 const markdownLoaded = ref(false);
 let markedInstance: (typeof import("marked"))["marked"] | null = null;
@@ -128,8 +126,7 @@ const startEditing = () => {
   isEditing.value = true;
   // 手机上的空间有限，进入编辑时压缩顶部高度，把空间让给编辑区
   if (isMobile.value) {
-    savedTopHeight.value = settingStore.settings.topHeight;
-    settingStore.settings.topHeight = 110;
+    settingStore.settings.showPlanner = false;
   }
 
   nextTick(() => {
@@ -154,9 +151,8 @@ const startEditing = () => {
 
 const stopEditing = () => {
   isEditing.value = false;
-  if (isMobile.value && savedTopHeight.value != null) {
-    settingStore.settings.topHeight = savedTopHeight.value;
-    savedTopHeight.value = null;
+  if (isMobile.value) {
+    settingStore.settings.showPlanner = true;
   }
   emit("update:content", content.value);
 };
@@ -489,15 +485,6 @@ const handleClick = (event: MouseEvent) => {
   outline: none;
   resize: none;
 }
-@media (max-width: 768px) {
-  .task-textarea {
-    border-radius: 6px;
-    padding: 4px 6px;
-  }
-  .markdown-content {
-    padding: 0px 6px;
-  }
-}
 
 .task-textarea:focus {
   background-color: var(--color-background-light-transparent);
@@ -508,15 +495,22 @@ const handleClick = (event: MouseEvent) => {
   line-height: 1.6;
 }
 
-:deep(.markdown-content h1),
-:deep(.markdown-content h2),
-:deep(.markdown-content h3) {
-  margin-top: 0em;
+:deep(.markdown-content h1) {
+  font-size: 22px;
+  margin-top: 0.5em;
   margin-bottom: 0.1em;
 }
 
-:deep(.markdown-content h1) {
-  font-size: 20px;
+:deep(.markdown-content h2) {
+  font-size: 18px;
+  margin-top: 0.3em;
+  margin-bottom: 0.1em;
+}
+
+:deep(.markdown-content h3) {
+  font-size: 16px;
+  margin-top: 0.1em;
+  margin-bottom: 0.1em;
 }
 
 :deep(.markdown-content p) {
@@ -670,6 +664,16 @@ const handleClick = (event: MouseEvent) => {
   100% {
     opacity: 0;
     transform: scale(1, 1);
+  }
+}
+
+@media (max-width: 430px) {
+  .task-textarea {
+    border-radius: 6px;
+    padding: 4px 6px;
+  }
+  .markdown-content {
+    padding: 0px 6px;
   }
 }
 </style>

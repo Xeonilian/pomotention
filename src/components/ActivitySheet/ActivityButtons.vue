@@ -9,6 +9,7 @@
       :disabled="activeId === undefined || props.isDeleted || isSelectedRowDone"
       secondary
       circle
+      text
       type="default"
       size="small"
       :title="isSelectedClassS ? '预约：跳转日期' : '任务：跳转日期|选择'"
@@ -23,6 +24,7 @@
       @click="$emit('delete-active')"
       circle
       secondary
+      text
       :type="props.isDeleted ? 'error' : 'default'"
       size="small"
       :disabled="activeId === null || isSelectedRowDone"
@@ -38,6 +40,7 @@
     <n-button
       v-if="!props.hasParent && !props.selectedRowHasParent"
       secondary
+      text
       circle
       type="default"
       size="small"
@@ -52,6 +55,7 @@
     <n-button
       v-else
       secondary
+      text
       type="success"
       circle
       size="small"
@@ -64,19 +68,19 @@
       </template>
     </n-button>
 
-    <n-button title="添加任务" @click="$emit('add-todo')" circle secondary type="info" size="small">
+    <n-button title="添加任务" @click="$emit('add-todo')" circle secondary text type="info" size="small">
       <template #icon>
         <n-icon><AddCircle24Regular /></n-icon>
       </template>
     </n-button>
 
-    <n-button title="添加预约" @click="$emit('add-schedule')" circle secondary type="info" size="small">
+    <n-button title="添加预约" @click="$emit('add-schedule')" circle secondary text type="info" size="small">
       <template #icon>
         <n-icon><CalendarAdd24Regular /></n-icon>
       </template>
     </n-button>
 
-    <n-button title="添加无所事事" @click="$emit('add-untaetigkeit')" circle secondary type="info" size="small">
+    <n-button title="添加无所事事" @click="$emit('add-untaetigkeit')" circle secondary text type="info" size="small">
       <template #icon>
         <n-icon><CloudAdd20Regular /></n-icon>
       </template>
@@ -128,14 +132,14 @@ const emit = defineEmits([
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
   z-index: 10;
   height: 40px;
 }
 
 @media (max-width: 600px) {
   .activity-view-button-container {
-    gap: 4px;
+    gap: 12px;
   }
 }
 </style>

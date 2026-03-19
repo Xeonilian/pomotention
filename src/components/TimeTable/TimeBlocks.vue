@@ -6,12 +6,12 @@
 
 <template>
   <div class="timetable-bar-container">
-    <!-- ========== 背景层：小时刻度线 ========== -->
+    <!-- ========== 背景层：小时刻度线 ==========  -->
     <div class="hour-ticks-container">
       <div v-for="(hourStamp, idx) in hourStamps" :key="hourStamp" class="hour-tick" :style="{ top: getHourTickTop(hourStamp) + 'px' }">
         <div class="tick-line"></div>
         <span v-if="idx !== hourStamps.length - 1" class="hour-label">
-          {{ timestampToTimeString(hourStamp) }}
+          {{ isMobile ? timestampToTimeString(hourStamp).slice(0, 2) : timestampToTimeString(hourStamp) }}
         </span>
       </div>
     </div>
@@ -19,7 +19,7 @@
     <!-- ========== 背景层：时间主块 ========== -->
     <div v-for="block in props.blocks" :key="block.id" class="timeblock-bg" :style="getVerticalBlockStyle(block)">
       <span class="block-label">
-        {{ getBlockLabel(block.category) }}
+        {{ isMobile ? getBlockLabel(block.category).slice(0, 0) : getBlockLabel(block.category) }}
       </span>
     </div>
 
@@ -105,7 +105,7 @@
       placement="top"
       to="body"
       :show-arrow="true"
-      :style="{ maxWidth: '280px' }"
+      :style="{ maxWidth: '240px' }"
       :show="activeEmojiPopoverTodoId === emoji.todoId"
       @update:show="(next) => handleUpdateEmojiPopoverShow(emoji.todoId, next)"
     >
@@ -123,15 +123,34 @@
   </template>
 
   <!-- ========== 第三列：实际执行的番茄 ========== -->
-  <div
-    v-for="seg in actualSegments"
-    :key="`actual-${seg.todoId}-${seg.todoIndex}`"
-    class="todo-segment"
-    :style="getActualSegmentStyle(seg)"
-    :title="`${seg.pomoType}[${seg.priority}]-${seg.todoIndex} - ${seg.todoTitle}`"
-  >
-    {{ seg.pomoType }}
-  </div>
+  <template v-for="seg in actualSegments" :key="`actual-${seg.todoId}-${seg.todoIndex}`">
+    <NPopover
+      v-if="isMobile"
+      trigger="click"
+      placement="top"
+      to="body"
+      :show-arrow="true"
+      :style="{ maxWidth: '240px' }"
+      :show="activeActualPopoverKey === `${seg.todoId}-${seg.todoIndex}`"
+      @update:show="(next) => handleUpdateActualPopoverShow(`${seg.todoId}-${seg.todoIndex}`, next)"
+    >
+      <template #trigger>
+        <div class="actual-segment" :style="getActualSegmentStyle(seg)">
+          {{ seg.pomoType }}
+        </div>
+      </template>
+      <p class="timetable-popover-text">{{ seg.todoTitle }}</p>
+    </NPopover>
+
+    <div
+      v-else
+      class="actual-segment"
+      :style="getActualSegmentStyle(seg)"
+      :title="`${seg.pomoType}[${seg.priority}]-${seg.todoIndex} - ${seg.todoTitle}`"
+    >
+      {{ seg.pomoType }}
+    </div>
+  </template>
 
   <!-- ========== 第四列：实际执行时间范围 ========== -->
   <div
@@ -199,10 +218,20 @@ const { isMobile } = useDevice();
 const activeEmojiPopoverTodoId = ref<number | null>(null);
 let emojiPopoverTimer: ReturnType<typeof window.setTimeout> | null = null;
 
+const activeActualPopoverKey = ref<string | null>(null);
+let actualPopoverTimer: ReturnType<typeof window.setTimeout> | null = null;
+
 const clearEmojiPopoverTimer = () => {
   if (emojiPopoverTimer != null) {
     window.clearTimeout(emojiPopoverTimer);
     emojiPopoverTimer = null;
+  }
+};
+
+const clearActualPopoverTimer = () => {
+  if (actualPopoverTimer != null) {
+    window.clearTimeout(actualPopoverTimer);
+    actualPopoverTimer = null;
   }
 };
 
@@ -232,8 +261,35 @@ const handleUpdateEmojiPopoverShow = (todoId: number, nextShow: boolean) => {
   clearEmojiPopoverTimer();
 };
 
+const openActualPopoverFor3s = (key: string) => {
+  activeActualPopoverKey.value = key;
+  clearActualPopoverTimer();
+  let timer: number | null = null;
+  timer = window.setTimeout(
+    () => {
+      if (activeActualPopoverKey.value === key) {
+        activeActualPopoverKey.value = null;
+      }
+    },
+    3000,
+    timer,
+  );
+};
+
+const handleUpdateActualPopoverShow = (key: string, nextShow: boolean) => {
+  if (nextShow) {
+    openActualPopoverFor3s(key);
+    return;
+  }
+  if (activeActualPopoverKey.value === key) {
+    activeActualPopoverKey.value = null;
+  }
+  clearActualPopoverTimer();
+};
+
 onUnmounted(() => {
   clearEmojiPopoverTimer();
+  clearActualPopoverTimer();
 });
 
 // ======= Helper Functions =======
@@ -298,6 +354,7 @@ const getPriorityBadgeClasses = (seg: any) => [
 .pomo-segment,
 .todo-segment,
 .schedule-segment,
+.actual-segment,
 .actual-time-range {
   /* 禁用文本选择 */
   user-select: none;
@@ -330,6 +387,13 @@ const getPriorityBadgeClasses = (seg: any) => [
   pointer-events: none !important;
   /* 确保拖拽中完全不触发任何系统行为 */
   touch-action: none !important;
+}
+
+.actual-segment {
+  cursor: pointer;
+  touch-action: pan-y !important;
+  pointer-events: auto;
+  -webkit-user-drag: none;
 }
 
 /* ============================================
@@ -365,33 +429,35 @@ const getPriorityBadgeClasses = (seg: any) => [
   flex-direction: column;
   align-items: center;
   user-select: none;
+  font-family: "consolas", monospace;
 }
 
 .tick-line {
   height: 1px;
-  width: calc(100% - 0px);
+  width: 100%;
   flex-shrink: 0;
-  background-color: var(--color-text-secondary);
+  background-color: var(--color-background-dark);
   margin-bottom: 2px;
   margin-left: auto;
-  z-index: 5;
+  z-index: 2;
   transform: scaleY(0.5);
 }
 
 .hour-label {
-  font-size: 10px;
-  line-height: 10px;
+  font-size: 11px;
+  line-height: 11px;
   width: 100%;
   text-align: right;
   flex-shrink: 0;
   color: var(--color-text-secondary);
+  opacity: 0.6;
   margin-left: auto;
-  z-index: 21;
+  z-index: 2;
 }
 
 /* ========== 时间块标签 ========== */
 .block-label {
-  z-index: 9;
+  z-index: 2;
   /* 🔥 移动端：禁用文本选择 */
   user-select: none;
   -webkit-user-select: none;
@@ -476,13 +542,13 @@ const getPriorityBadgeClasses = (seg: any) => [
 
 /* 🔥 拖拽目标状态 */
 .pomo-segment.drop-target {
-  outline: 1px dashed var(--color-primary);
+  outline: 1px dashed var(--color-purple);
   pointer-events: auto !important;
 }
 
 .pomo-segment.drop-hover {
-  background-color: var(--color-primary-transparent) !important;
-  outline: 2px solid var(--color-primary);
+  background-color: var(--color-purple-transparent) !important;
+  outline: 1px solid var(--color-purple-light);
 }
 
 .todo-segment.completed .priority-badge {
@@ -635,5 +701,42 @@ const getPriorityBadgeClasses = (seg: any) => [
 
 .emoji-range:hover .emoji-icon {
   transform: scale(1.3);
+}
+
+@media (max-width: 430px) {
+  .hour-label {
+    font-size: 7px;
+    margin-left: -8px;
+    opacity: 0.7;
+    z-index: 4;
+    transform: translateY(-2px);
+  }
+  /* .tick-line {
+    width: 20%;
+  } */
+  /* .hour-tick:first-child .tick-line,
+  .hour-tick:last-child .tick-line {
+    width: 100%;
+  } */
+  .pomo-segment.drop-target {
+    outline: 0.8px dashed var(--color-purple);
+  }
+
+  .priority-badge {
+    width: 13px;
+    height: 13px;
+    font-size: 10px;
+    line-height: 12px;
+  }
+
+  .current-time-line {
+    height: 0.5px;
+    width: 79%;
+    left: 21%;
+  }
+  .current-time-line::before {
+    right: -4px;
+    font-size: 14px;
+  }
 }
 </style>

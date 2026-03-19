@@ -34,7 +34,7 @@
               <n-button
                 v-for="(control, index) in filteredViewControls"
                 :key="index"
-                size="tiny"
+                :size="isMobile ? 'large' : 'medium'"
                 tertiary
                 type="default"
                 :style="buttonStyle(control.show, control.key)"
@@ -43,13 +43,13 @@
                 class="header-button"
               >
                 <template #icon>
-                  <n-icon size="18" :component="control.icon" />
+                  <n-icon :component="control.icon" />
                 </template>
               </n-button>
               <!-- 未登录时显示登录按钮 -->
               <n-button
                 v-if="!isLoggedIn"
-                size="tiny"
+                :size="isMobile ? 'large' : 'medium'"
                 type="info"
                 secondary
                 title="登录/注册"
@@ -71,10 +71,17 @@
                 positive-text="保留"
               >
                 <template #trigger>
-                  <n-button size="tiny" type="default" secondary :loading="syncStore.loggingOut" title="退出登录" class="header-button">
+                  <n-button
+                    :size="isMobile ? 'large' : 'medium'"
+                    type="default"
+                    secondary
+                    :loading="syncStore.loggingOut"
+                    title="退出登录"
+                    class="header-button"
+                  >
                     <template #icon>
                       <n-icon>
-                        <PersonAccounts24Filled />
+                        <PersonAccounts24Regular />
                       </n-icon>
                     </template>
                   </n-button>
@@ -216,7 +223,7 @@ import { useSyncWidget } from "@/composables/useSyncWidget";
 import { useDevice } from "@/composables/useDevice";
 
 // Icons & Components
-import { PersonAccounts24Filled, ArrowUp24Filled, ArrowDown24Filled, List24Filled } from "@vicons/fluent";
+import { PersonAccounts24Filled, ArrowUp24Filled, ArrowDown24Filled, List24Filled, PersonAccounts24Regular } from "@vicons/fluent";
 import PomotentionTimer from "@/components/PomotentionTimer/PomotentionTimer.vue";
 
 hljs.registerLanguage("javascript", javascript);
@@ -305,9 +312,20 @@ watch([() => reportedPomodoroWidth.value, () => reportedPomodoroHeight.value], a
 });
 
 // 只对 ontop 做隐藏：非 Tauri 不显示；Tauri 下始终显示。其余按钮始终显示，由 buttonStyle(control.show) 控制灰显
-const filteredViewControls = computed(() =>
-  viewControls.value.filter((c) => c.key !== "ontop" || c.show)
-);
+// 移动端不显示 planner/task
+const filteredViewControls = computed(() => {
+  const controls = viewControls.value.filter((c) => c.key !== "ontop" || c.show);
+  if (!isMobile.value) return controls;
+
+  // 移除 planner 和 task，并将 pomodoro 移到最后
+  const filtered = controls.filter((c) => c.key !== "planner" && c.key !== "task");
+  const pomodoroIndex = filtered.findIndex((c) => c.key === "pomodoro");
+  if (pomodoroIndex !== -1) {
+    const [pomodoroControl] = filtered.splice(pomodoroIndex, 1);
+    filtered.push(pomodoroControl);
+  }
+  return filtered;
+});
 
 // === 3. 视图控制按钮 ===
 function handleMainLayoutViewToggle(key: string) {
@@ -380,6 +398,7 @@ async function handleManualDownload() {
 .desktop-menu {
   flex: 1;
 }
+/* 移动端菜收起钮样式 */
 .mobile-menu-button {
   display: flex;
   align-items: center;
@@ -409,6 +428,7 @@ async function handleManualDownload() {
 .pomodoro-mini-view-wrapper:deep(.n-layout .n-layout-scroll-container) {
   overflow-y: hidden !important;
 }
+
 .header-button {
   width: 30px;
   height: 25px;
@@ -418,9 +438,11 @@ async function handleManualDownload() {
   padding: 0;
   font-size: 14px;
 }
+
 .header-button:hover {
   background-color: var(--color-blue-light) !important;
 }
+
 /* draggable-container 样式 */
 .draggable-container {
   position: absolute;
@@ -519,5 +541,15 @@ async function handleManualDownload() {
   align-items: center;
   flex-shrink: 0;
   z-index: 1000;
+}
+
+@media (max-width: 430px) {
+  .header-button:hover {
+    background-color: transparent !important;
+  }
+  .header-button {
+    background-color: transparent !important;
+    /* --n-text-color-hover: transparent !important; */
+  }
 }
 </style>
