@@ -36,9 +36,9 @@
             v-if="record.description?.trim()"
             trigger="click"
             placement="top"
-            to="body"
+            :to="timelinePopoverTo"
             :show-arrow="true"
-            :style="{ maxWidth: '280px' }"
+            :style="{ maxWidth: '240px' }"
             :show="activeTimelinePopoverRecordId === record.id"
             @update:show="(next) => handleUpdateTimelinePopoverShow(record.id, next)"
           >
@@ -153,6 +153,12 @@ let prevBodyOverflow: string | null = null;
 
 provide("taskTrackerFullscreenContainerRef", taskViewContainerRef);
 provide("isTaskTrackerFullscreen", isTaskContainerFullscreen);
+
+const timelinePopoverTo = computed(() => {
+  // 全屏时不要挂到 body：可能会被 fullscreen 顶层规则遮挡
+  if (isTaskContainerFullscreen.value && taskViewContainerRef.value) return taskViewContainerRef.value;
+  return "body";
+});
 
 const syncTaskContainerFullscreenState = () => {
   const el = taskViewContainerRef.value;
@@ -505,8 +511,8 @@ onUnmounted(() => {
 .task-tag-render-container {
   border: none;
   padding: 4px;
-  margin-left: 2px;
-  margin-right: 2px;
+  margin-left: 0px;
+
   display: flex;
   align-items: center;
   gap: 4px;
@@ -545,7 +551,9 @@ onUnmounted(() => {
   font-size: 7px;
   color: var(--color-text-primary);
   font-family: "consolas", monospace;
-  transform: translate(1px, -4px);
+  width: 100%;
+  text-align: center;
+  transform: translateY(-4px);
 }
 
 .task-record-container :deep(.task-record) {
@@ -580,9 +588,14 @@ onUnmounted(() => {
     height: 28px;
     margin-bottom: 2px;
   }
+
+  .point-time {
+    transform: translateY(-4px) translateX(-1.5px) scale(0.9);
+  }
 }
 
 .task-view-container:fullscreen .task-header-container {
-  margin: 8px;
+  margin-top: 8px;
+  margin-left: -2px;
 }
 </style>
