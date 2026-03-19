@@ -33,8 +33,6 @@ const { showCaretFlash, caretFlashStyle, flashCaretFlash } = useCaretFlash();
 const { isMobile } = useDevice();
 const settingStore = useSettingStore();
 const syncStore = useSyncStore();
-// 移动端进入编辑时暂存原 topHeight，退出时恢复
-const savedTopHeight = ref<number | null>(null);
 
 const markdownLoaded = ref(false);
 let markedInstance: (typeof import("marked"))["marked"] | null = null;
@@ -128,8 +126,7 @@ const startEditing = () => {
   isEditing.value = true;
   // 手机上的空间有限，进入编辑时压缩顶部高度，把空间让给编辑区
   if (isMobile.value) {
-    savedTopHeight.value = settingStore.settings.topHeight;
-    settingStore.settings.topHeight = 110;
+    settingStore.settings.showPlanner = false;
   }
 
   nextTick(() => {
@@ -154,9 +151,8 @@ const startEditing = () => {
 
 const stopEditing = () => {
   isEditing.value = false;
-  if (isMobile.value && savedTopHeight.value != null) {
-    settingStore.settings.topHeight = savedTopHeight.value;
-    savedTopHeight.value = null;
+  if (isMobile.value) {
+    settingStore.settings.showPlanner = true;
   }
   emit("update:content", content.value);
 };
