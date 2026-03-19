@@ -5,7 +5,7 @@
       <n-button
         v-if="isMobile"
         text
-        size="tiny"
+        size="small"
         class="task-fullscreen-toggle"
         :title="isTaskContainerFullscreen ? '退出全屏' : '全屏'"
         @click="toggleTaskContainerFullscreen"
@@ -362,8 +362,8 @@ const checkWidth = () => {
   if (!headerContainerRef.value) return;
   const containerWidth = headerContainerRef.value.clientWidth;
 
-  // 当宽度小于第一个值时，标签 displayLength 变为 3
-  tagDisplayLength.value = containerWidth < TAG_COLLAPSE_BREAKPOINT ? 2 : null;
+  // 当宽度小于第一个值时，标签 displayLength 变为 2
+  tagDisplayLength.value = isMobile.value && settingStore.settings.showSchedule ? 1 : containerWidth < TAG_COLLAPSE_BREAKPOINT ? 2 : null;
 };
 
 const activeTimelinePopoverRecordId = ref<number | null>(null);
