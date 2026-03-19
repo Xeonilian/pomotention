@@ -446,6 +446,12 @@ onUnmounted(() => {
   color: var(--color-text-primary, #333);
   height: 100vh;
   width: 100vw;
+  box-sizing: border-box;
+  /* iOS/安卓刘海屏：避免内容贴边 */
+  padding-top: max(env(safe-area-inset-top, 0px), 8px);
+  padding-right: max(6px, env(safe-area-inset-right, 0px));
+  padding-bottom: max(6px, env(safe-area-inset-bottom, 0px));
+  padding-left: max(6px, env(safe-area-inset-left, 0px));
 }
 
 .task-view-container.is-pseudo-fullscreen {
@@ -454,7 +460,7 @@ onUnmounted(() => {
   z-index: 9999;
   background-color: var(--color-bg-base, #fff);
   color: var(--color-text-primary, #333);
-  margin-top: 30px;
+  margin-top: 35px;
   height: 100vh;
   width: 100vw;
   overflow: hidden;
@@ -567,5 +573,16 @@ onUnmounted(() => {
   white-space: pre-wrap;
   word-break: break-word;
   color: var(--color-text-primary, #333);
+}
+
+@media (max-width: 430px) {
+  .task-header-container {
+    height: 28px;
+    margin-bottom: 2px;
+  }
+}
+
+.task-view-container:fullscreen .task-header-container {
+  margin: 8px;
 }
 </style>
