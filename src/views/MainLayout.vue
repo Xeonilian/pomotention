@@ -34,7 +34,7 @@
               <n-button
                 v-for="(control, index) in filteredViewControls"
                 :key="index"
-                size="tiny"
+                :size="isMobile ? 'large' : 'medium'"
                 tertiary
                 type="default"
                 :style="buttonStyle(control.show, control.key)"
@@ -43,13 +43,13 @@
                 class="header-button"
               >
                 <template #icon>
-                  <n-icon size="18" :component="control.icon" />
+                  <n-icon :component="control.icon" />
                 </template>
               </n-button>
               <!-- 未登录时显示登录按钮 -->
               <n-button
                 v-if="!isLoggedIn"
-                size="tiny"
+                :size="isMobile ? 'large' : 'medium'"
                 type="info"
                 secondary
                 title="登录/注册"
@@ -71,7 +71,14 @@
                 positive-text="保留"
               >
                 <template #trigger>
-                  <n-button size="tiny" type="default" secondary :loading="syncStore.loggingOut" title="退出登录" class="header-button">
+                  <n-button
+                    :size="isMobile ? 'large' : 'medium'"
+                    type="default"
+                    secondary
+                    :loading="syncStore.loggingOut"
+                    title="退出登录"
+                    class="header-button"
+                  >
                     <template #icon>
                       <n-icon>
                         <PersonAccounts24Filled />
