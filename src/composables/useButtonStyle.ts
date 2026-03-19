@@ -4,10 +4,14 @@ import { useSettingStore } from "@/stores/useSettingStore";
 import { ref, computed, watch } from "vue";
 import { isTauri } from "@tauri-apps/api/core";
 import {
-  ArrowLeft24Filled,
-  ArrowUp24Filled,
-  ArrowDown24Filled,
-  ArrowRight24Filled,
+  // ArrowLeft24Filled,
+  // ArrowUp24Filled,
+  // ArrowDown24Filled,
+  // ArrowRight24Filled,
+  Timeline20Regular,
+  BookLetter20Regular,
+  CalligraphyPen20Regular,
+  TasksApp20Regular,
   Timer24Regular,
   Pin24Regular,
   //BrainCircuit24Regular,
@@ -67,10 +71,10 @@ export function useButtonStyle() {
   const viewControls = computed(() => [
     { key: "ontop", icon: Pin24Regular, title: "番茄时钟置顶", show: isTauri() },
     { key: "pomodoro", icon: Timer24Regular, title: "切换番茄钟视图", show: settingStore.settings.showPomodoro },
-    { key: "schedule", icon: ArrowLeft24Filled, title: "切换日程视图", show: settingStore.settings.showSchedule },
-    { key: "planner", icon: ArrowUp24Filled, title: "切换计划视图", show: settingStore.settings.showPlanner },
-    { key: "task", icon: ArrowDown24Filled, title: "切换执行视图", show: settingStore.settings.showTask },
-    { key: "activity", icon: ArrowRight24Filled, title: "切换活动视图", show: settingStore.settings.showActivity },
+    { key: "schedule", icon: Timeline20Regular, title: "切换日程视图", show: settingStore.settings.showSchedule },
+    { key: "planner", icon: TasksApp20Regular, title: "切换计划视图", show: settingStore.settings.showPlanner },
+    { key: "task", icon: CalligraphyPen20Regular, title: "切换执行视图", show: settingStore.settings.showTask },
+    { key: "activity", icon: BookLetter20Regular, title: "切换活动视图", show: settingStore.settings.showActivity },
     //{ key: "ai", icon: BrainCircuit24Regular, title: "切换AI助手", show: settingStore.settings.showAi },
   ]);
 
