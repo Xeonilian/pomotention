@@ -50,15 +50,15 @@
               <n-button
                 v-if="!isLoggedIn"
                 :size="isMobile ? 'large' : 'medium'"
-                type="info"
-                secondary
+                type="error"
                 title="登录/注册"
+                tertiary
                 class="header-button"
                 @click="syncStore.handleLogin"
               >
                 <template #icon>
                   <n-icon>
-                    <PersonAccounts24Filled />
+                    <Person20Filled />
                   </n-icon>
                 </template>
               </n-button>
@@ -74,14 +74,14 @@
                   <n-button
                     :size="isMobile ? 'large' : 'medium'"
                     type="default"
-                    secondary
+                    tertiary
                     :loading="syncStore.loggingOut"
                     title="退出登录"
                     class="header-button"
                   >
                     <template #icon>
                       <n-icon>
-                        <PersonAccounts24Regular />
+                        <Person20Regular />
                       </n-icon>
                     </template>
                   </n-button>
@@ -223,7 +223,7 @@ import { useSyncWidget } from "@/composables/useSyncWidget";
 import { useDevice } from "@/composables/useDevice";
 
 // Icons & Components
-import { PersonAccounts24Filled, ArrowUp24Filled, ArrowDown24Filled, List24Filled, PersonAccounts24Regular } from "@vicons/fluent";
+import { Person20Filled, ArrowUp24Filled, ArrowDown24Filled, List24Filled, Person20Regular } from "@vicons/fluent";
 import PomotentionTimer from "@/components/PomotentionTimer/PomotentionTimer.vue";
 
 hljs.registerLanguage("javascript", javascript);
@@ -318,13 +318,13 @@ const filteredViewControls = computed(() => {
   if (!isMobile.value) return controls;
 
   // 移除 planner 和 task，并将 pomodoro 移到最后
-  const filtered = controls.filter((c) => c.key !== "planner" && c.key !== "task");
-  const pomodoroIndex = filtered.findIndex((c) => c.key === "pomodoro");
+  // const filtered = controls.filter((c) => c.key !== "planner" && c.key !== "task");
+  const pomodoroIndex = controls.findIndex((c) => c.key === "pomodoro");
   if (pomodoroIndex !== -1) {
-    const [pomodoroControl] = filtered.splice(pomodoroIndex, 1);
-    filtered.push(pomodoroControl);
+    const [pomodoroControl] = controls.splice(pomodoroIndex, 1);
+    controls.push(pomodoroControl);
   }
-  return filtered;
+  return controls;
 });
 
 // === 3. 视图控制按钮 ===
@@ -437,6 +437,7 @@ async function handleManualDownload() {
   justify-content: center;
   padding: 0;
   font-size: 14px;
+  background-color: transparent !important;
 }
 
 .header-button:hover {
@@ -546,10 +547,6 @@ async function handleManualDownload() {
 @media (max-width: 430px) {
   .header-button:hover {
     background-color: transparent !important;
-  }
-  .header-button {
-    background-color: transparent !important;
-    /* --n-text-color-hover: transparent !important; */
   }
 }
 </style>

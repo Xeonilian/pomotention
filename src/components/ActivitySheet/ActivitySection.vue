@@ -35,6 +35,7 @@
         large
         type="default"
         title="增加一列"
+        quaternary
         class="section-button"
         @click="$emit('add-section', props.sectionId)"
       >
@@ -47,6 +48,7 @@
         large
         type="default"
         title="删除本列"
+        quaternary
         @click="$emit('remove-section', props.sectionId)"
         class="section-button"
       >
@@ -1232,6 +1234,12 @@ function handlePomoInputTouchCancel(item: Activity) {
 
 .highlight-line {
   background-color: var(--color-yellow-light);
+}
+
+/* 一个给n-date-picker 一个给n-input */
+.input-focus-none :deep(.n-input) {
+  --n-box-shadow-focus: none !important;
+  --n-border-hover: none !important;
 }
 
 :deep(.n-input.input-focus-none) {

@@ -18,7 +18,7 @@ import {
 } from "@vicons/fluent";
 import { useDevice } from "./useDevice";
 
-type ViewKey = "ontop" | "pomodoro" | "schedule" | "planner" | "task" | "activity"; //| "ai"
+type ViewKey = "ontop" | "pomodoro" | "schedule" | "task" | "planner" | "activity"; //| "ai"
 
 export function useButtonStyle() {
   const timerStore = useTimerStore();
@@ -36,8 +36,7 @@ export function useButtonStyle() {
   });
 
   const buttonStyle = (show: boolean, key: string) => {
-    const isDisabled =
-      (key === "pomodoro" && timerStore.isActive) || (key === "schedule" && settingStore.settings.showActivity && isMobile.value);
+    const isDisabled = key === "pomodoro" && timerStore.isActive;
     const isOntop = key === "ontop";
 
     return {
@@ -91,32 +90,49 @@ export function useButtonStyle() {
       // 移动端交互规则：
       // - 点击 activity：只显示 activity；再次点击恢复进入前的显示状态
       // - 点击 schedule：仅在不显示 activity 时才允许切换 schedule
-      if (panel === "activity") {
-        if (settingStore.settings.showActivity) {
-          settingStore.settings.showSchedule = true;
-          settingStore.settings.showPlanner = true;
-          settingStore.settings.showTask = true;
-          settingStore.settings.showActivity = false;
-          return;
-        } else {
-          settingStore.settings.showSchedule = false;
-          settingStore.settings.showPlanner = false;
-          settingStore.settings.showTask = false;
-          settingStore.settings.showActivity = true;
-          return;
-        }
-      }
-
-      if (panel === "schedule") {
-        if (settingStore.settings.showActivity) return;
-        settingStore.settings.showSchedule = !settingStore.settings.showSchedule;
-        return;
-      }
-
-      // 其它面板：保持普通开关行为
       const next = !settingStore.settings[key];
       // @ts-ignore
       settingStore.settings[key] = next;
+      // 其它面板：保持普通开关行为
+      if (next) {
+        // 打开面板时的逻辑
+        if (panel === "activity") {
+          // Activity 打开时，其他全部关闭
+          settingStore.settings.showSchedule = false;
+          settingStore.settings.showPlanner = false;
+          settingStore.settings.showTask = false;
+        } else if (panel === "schedule") {
+          settingStore.settings.showPlanner = true;
+          settingStore.settings.showActivity = false;
+        } else if (panel === "planner") {
+          settingStore.settings.showSchedule = false;
+          settingStore.settings.showTask = true;
+          settingStore.settings.showActivity = false;
+        } else if (panel === "task") {
+          settingStore.settings.showSchedule = false;
+          settingStore.settings.showActivity = false;
+        } else {
+          // 其他面板打开时，只关闭 activity
+          settingStore.settings.showActivity = false;
+        }
+      } else {
+        // 关闭面板时的逻辑
+        const { showActivity, showPlanner, showTask, showSchedule } = settingStore.settings;
+
+        // 检查是否所有面板都关闭了
+        const allClosed = !showActivity && !showPlanner && !showTask && !showSchedule;
+
+        if (allClosed) {
+          // 如果全关了，默认打开 planner
+          settingStore.settings.showPlanner = true;
+        } else if (panel === "planner" && !showTask) {
+          // 关了 planner 且 task 也没开，打开 task
+          settingStore.settings.showTask = true;
+        } else if (panel === "task" && !showPlanner) {
+          // 关了 task 且 planner 也没开，打开 planner
+          settingStore.settings.showPlanner = true;
+        }
+      }
     }
   }
 

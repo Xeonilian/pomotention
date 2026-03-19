@@ -18,33 +18,24 @@
           <n-icon color="var(--color-blue)"><Tag16Regular /></n-icon>
         </template>
       </n-button>
-      <n-button size="small" type="info" secondary circle strong @click="showEnergyDialog = true" :disabled="!taskId" title="能量记录">
+      <n-button size="small" type="info" secondary circle @click="showEnergyDialog = true" :disabled="!taskId" title="能量记录">
         <template #icon>
           <n-icon><BatterySaver20Regular /></n-icon>
         </template>
       </n-button>
-      <n-button size="small" type="info" secondary circle strong @click="showRewardDialog = true" :disabled="!taskId" title="奖赏记录">
+      <n-button size="small" type="info" secondary circle @click="showRewardDialog = true" :disabled="!taskId" title="奖赏记录">
         <template #icon>
           <n-icon><Emoji24Regular /></n-icon>
         </template>
       </n-button>
-      <n-button
-        size="small"
-        type="info"
-        circle
-        strong
-        secondary
-        @click="showInterruptionDialog = true"
-        :disabled="!taskId"
-        title="打扰记录"
-      >
+      <n-button size="small" type="info" circle secondary @click="showInterruptionDialog = true" :disabled="!taskId" title="打扰记录">
         <template #icon>
           <n-icon><CalendarAssistant20Regular /></n-icon>
         </template>
       </n-button>
 
       <!-- 模板管理按钮 -->
-      <n-button type="default" size="small" circle strong secondary :disabled="!taskId" @click="showTemplateDialog = true" title="模板管理">
+      <n-button type="default" size="small" circle secondary :disabled="!taskId" @click="showTemplateDialog = true" title="模板管理">
         <template #icon>
           <n-icon><CalligraphyPen20Regular /></n-icon>
         </template>
@@ -67,7 +58,6 @@
             type="info"
             secondary
             circle
-            strong
             @click="handleCollapsedAction(() => (showEnergyDialog = true))"
             :disabled="!taskId"
             title="能量记录"
@@ -81,7 +71,6 @@
             type="info"
             secondary
             circle
-            strong
             @click="handleCollapsedAction(() => (showRewardDialog = true))"
             :disabled="!taskId"
             title="奖赏记录"
@@ -94,7 +83,6 @@
             size="small"
             type="info"
             circle
-            strong
             secondary
             @click="handleCollapsedAction(() => (showInterruptionDialog = true))"
             :disabled="!taskId"
@@ -108,7 +96,6 @@
             type="default"
             size="small"
             circle
-            strong
             secondary
             :disabled="!taskId"
             @click="handleCollapsedAction(() => (showTemplateDialog = true))"
