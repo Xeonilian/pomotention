@@ -1,53 +1,11 @@
 <!-- TimeTable.vue -->
 <template>
   <div class="timetable-container">
-    <!-- 1 按钮 -->
-    <div class="timetable-view-button-container">
-      <n-button
-        secondary
-        circle
-        type="info"
-        size="small"
-        :disabled="showEditor"
-        :title="currentType === 'work' ? '切换到娱乐时间表' : '切换到工作时间表'"
-        @click="toggleType"
-      >
-        <template #icon>
-          <n-icon>
-            <Backpack24Regular v-if="currentType === 'work'" />
-            <Beach24Regular v-else />
-          </n-icon>
-        </template>
-      </n-button>
-      <n-button
-        @click="toggleDisplay"
-        secondary
-        circle
-        type="default"
-        size="small"
-        class="timetable-button"
-        :title="showEditor ? '完成编辑' : '开始编辑'"
-      >
-        <template #icon>
-          <n-icon><Settings24Regular /></n-icon>
-        </template>
-      </n-button>
-      <n-popconfirm @positive-click="handleReset" negative-text="取消" positive-text="确定">
-        <template #trigger>
-          <n-button secondary circle size="small" type="default" title="复位为默认时间表" strong :disabled="!showEditor">
-            <n-icon size="20">
-              <ArrowReset48Filled />
-            </n-icon>
-          </n-button>
-        </template>
-        <span>确定要将当前时间表复位为默认吗？</span>
-      </n-popconfirm>
-    </div>
-    <!-- 2 编辑区 -->
+    <!-- 编辑区 -->
     <div v-if="showEditor" class="timetable-editor">
-      <TimeTableEditor :current-type="currentType" />
+      <TimeTableEditor :current-type="currentType" @exit="onExitEditor" @toggle-type="toggleType" />
     </div>
-    <!-- 3 显示区 -->
+    <!-- 显示区：无按钮，仅底部 icon 进入编辑 -->
     <div v-else class="timetable-time-block" ref="container">
       <TimeBlocks
         :blocks="viewBlocks"
@@ -55,23 +13,29 @@
         :effectivePxPerMinute="effectivePxPerMinute"
         :dayStart="dateService.appDateTimestamp"
       />
+      <n-button text class="timetable-enter-editor-icon" title="开始编辑" aria-label="开始编辑" @click="toggleDisplay">
+        <n-icon>
+          <ChevronDoubleRight16Regular />
+        </n-icon>
+      </n-button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, computed } from "vue";
-import { NButton, NPopconfirm, NIcon } from "naive-ui";
-import { ArrowReset48Filled, Settings24Regular, Beach24Regular, Backpack24Regular } from "@vicons/fluent";
+import { NIcon } from "naive-ui";
+import { ChevronDoubleRight16Regular } from "@vicons/fluent";
 import TimeTableEditor from "@/components/TimeTable/TimeTableEditor.vue";
 import TimeBlocks from "@/components/TimeTable/TimeBlocks.vue";
 import { getTimestampForTimeString } from "@/core/utils";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useDataStore } from "@/stores/useDataStore";
 import { useTimetableStore } from "@/stores/useTimetableStore";
+// import { useDevice } from "@/composables/useDevice";
 
 const dataStore = useDataStore();
-
+// const { isMobile, isIOSDevice, isDesktop } = useDevice();
 const dateService = dataStore.dateService;
 const settingStore = useSettingStore();
 const timetableStore = useTimetableStore();
@@ -82,12 +46,13 @@ const currentType = ref<"work" | "entertainment">("work");
 const viewBlocks = computed(() => timetableStore.getBlocksByType(currentType.value));
 
 function toggleDisplay() {
-  showEditor.value = !showEditor.value;
-  settingStore.settings.leftWidth = showEditor.value ? 200 : 120;
+  showEditor.value = true;
+  settingStore.settings.leftWidth = 200;
 }
 
-function handleReset() {
-  timetableStore.resetToDefaults(currentType.value);
+function onExitEditor() {
+  showEditor.value = false;
+  settingStore.settings.leftWidth = 120;
 }
 
 function toggleType() {
@@ -125,7 +90,8 @@ const timeRange = computed(() => {
 });
 
 const totalMinutes = computed(() => (timeRange.value.end - timeRange.value.start) / (1000 * 60));
-const adjPara = ref(0);
+
+const adjPara = ref(0); // #BUG isMobile可以控制华为，但需要优化
 const effectivePxPerMinute = computed(() => {
   if (totalMinutes.value <= 0) return 0;
   return (containerHeight.value - adjPara.value) / totalMinutes.value;
@@ -134,32 +100,17 @@ const effectivePxPerMinute = computed(() => {
 
 <style scoped>
 .timetable-container {
-  height: 100%;
+  height: calc(100% - env(safe-area-inset-bottom));
   overflow: visible;
-}
-.timetable-view-button-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 8px;
-  z-index: 10;
-  height: 40px;
-}
-
-@media (max-width: 600px) {
-  .timetable-view-button-container {
-    gap: 4px;
-  }
 }
 
 .timetable-editor {
-  height: calc(100% - 40px);
+  height: 100%;
 }
 
 .timetable-time-block {
-  height: calc(100% - 40px);
+  height: 100%;
   position: relative;
-  bottom: 0px;
   /* 移动端：整个时间表区域禁用文本选择和长按复制 */
   user-select: none;
   -webkit-user-select: none;
@@ -170,6 +121,16 @@ const effectivePxPerMinute = computed(() => {
   touch-action: manipulation;
 }
 
+/* 进入编辑的 icon：下边缘靠上 10px */
+.timetable-enter-editor-icon {
+  position: absolute;
+  bottom: 10px;
+  display: flex;
+  padding: 0;
+  cursor: pointer;
+  z-index: 100;
+}
+
 /* 深度禁用：timetable 内所有子元素都不能被选中或长按复制 */
 .timetable-time-block :deep(*) {
   user-select: none;
@@ -178,13 +139,5 @@ const effectivePxPerMinute = computed(() => {
   -ms-user-select: none;
   -webkit-touch-callout: none;
   -webkit-tap-highlight-color: transparent;
-}
-
-/* 添加这些样式来确保按钮居中 */
-.timetable-view-button-container :deep(.n-button) {
-  margin: 0 !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
 }
 </style>

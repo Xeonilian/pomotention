@@ -15,7 +15,7 @@ const ChartView = () => import("@/views/ChartView.vue");
 const LoginView = () => import("@/views/LoginView.vue");
 const AuthCallbackView = () => import("@/views/AuthCallbackView.vue");
 const ResetPassword = () => import("@/views/ResetPasswordView.vue");
-// const SettingView = () => import("@/views/SettingView.vue");
+const SettingView = () => import("@/views/SettingView.vue");
 
 // --- 路由定义 ---
 const routes: Array<RouteRecordRaw> = [
@@ -44,7 +44,7 @@ const routes: Array<RouteRecordRaw> = [
     children: [
       { path: "", name: "Home", component: HomeView },
       { path: "statistics", name: "Statistics", component: StatisticView },
-      // { path: "settings", name: "Settings", component: SettingView },
+      { path: "settings", name: "Settings", component: SettingView, meta: { devOnly: true } },
       { path: "search", name: "Search", component: SearchView },
       { path: "chart", name: "Chart", component: ChartView },
       // 帮助页面（在 MainLayout 内显示，但不需要认证）
@@ -84,6 +84,13 @@ router.beforeEach(async (to, _from, next) => {
   if (to.name === "Login") {
     console.log("🔐 路由守卫：访问登录页，直接放行");
     next();
+    return;
+  }
+
+  // 仅 dev 可访问的路由（本地 pnpm dev 或 Preview 环境）
+  const isDev = !!import.meta.env.VITE_APP_DEV || import.meta.env.DEV;
+  if (to.meta.devOnly && !isDev) {
+    next({ path: "/" });
     return;
   }
 

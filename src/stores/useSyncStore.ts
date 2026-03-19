@@ -29,9 +29,42 @@ export const useSyncStore = defineStore("sync", () => {
 
   // 时间戳
   const lastSyncTimestamp = computed({
-    get: () => settingStore.settings.supabaseSync[0] || 0,
+    get: () => {
+      const v = settingStore.settings.supabaseSync[0] || 0;
+      // #region agent log
+      fetch("http://127.0.0.1:7242/ingest/a855573f-7487-43d2-8f8d-5dee3311857f", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "e164ec" },
+        body: JSON.stringify({
+          sessionId: "e164ec",
+          runId: "pre-fix",
+          hypothesisId: "B",
+          location: "src/stores/useSyncStore.ts:lastSyncTimestamp.get",
+          message: "read lastSyncTimestamp from settings.supabaseSync[0]",
+          data: { value: v },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion
+      return v;
+    },
     set: (val: number) => {
       settingStore.settings.supabaseSync[0] = val;
+      // #region agent log
+      fetch("http://127.0.0.1:7242/ingest/a855573f-7487-43d2-8f8d-5dee3311857f", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "e164ec" },
+        body: JSON.stringify({
+          sessionId: "e164ec",
+          runId: "pre-fix",
+          hypothesisId: "A",
+          location: "src/stores/useSyncStore.ts:lastSyncTimestamp.set",
+          message: "write lastSyncTimestamp to settings.supabaseSync[0]",
+          data: { value: val },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion
     },
   });
 
@@ -73,6 +106,21 @@ export const useSyncStore = defineStore("sync", () => {
     currentSyncMessage.value = message;
     syncError.value = null;
     lastSyncTimestamp.value = Date.now();
+    // #region agent log
+    fetch("http://127.0.0.1:7242/ingest/a855573f-7487-43d2-8f8d-5dee3311857f", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "e164ec" },
+      body: JSON.stringify({
+        sessionId: "e164ec",
+        runId: "pre-fix",
+        hypothesisId: "D",
+        location: "src/stores/useSyncStore.ts:syncSuccess",
+        message: "sync success updated lastSyncTimestamp",
+        data: { value: lastSyncTimestamp.value },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
   }
 
   // 同步失败
@@ -111,6 +159,45 @@ export const useSyncStore = defineStore("sync", () => {
     currentSyncMessage.value = "就绪";
     syncStatus.value = "idle";
     syncInitialized.value = false;
+    // #region agent log
+    fetch("http://127.0.0.1:7242/ingest/a855573f-7487-43d2-8f8d-5dee3311857f", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "e164ec" },
+      body: JSON.stringify({
+        sessionId: "e164ec",
+        runId: "pre-fix",
+        hypothesisId: "C",
+        location: "src/stores/useSyncStore.ts:resetSync",
+        message: "resetSync set timestamps to 0",
+        data: { lastSync: lastSyncTimestamp.value, lastCleanup: lastCleanupTimestamp.value },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
+  }
+
+  function resetSyncState() {
+    isSyncing.value = false;
+    syncError.value = null;
+    currentSyncMessage.value = "就绪";
+    syncStatus.value = "idle";
+    syncInitialized.value = false;
+
+    // #region agent log
+    fetch("http://127.0.0.1:7242/ingest/a855573f-7487-43d2-8f8d-5dee3311857f", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "e164ec" },
+      body: JSON.stringify({
+        sessionId: "e164ec",
+        runId: "post-fix",
+        hypothesisId: "FIX",
+        location: "src/stores/useSyncStore.ts:resetSyncState",
+        message: "resetSyncState reset transient sync state (kept timestamps)",
+        data: { lastSync: lastSyncTimestamp.value, lastCleanup: lastCleanupTimestamp.value },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
   }
 
   // 同步前钩子：在真正执行上传/下载前执行，用于把未保存的编辑先落库（如 TaskRecord 正在编辑时先 commit）
@@ -208,6 +295,7 @@ export const useSyncStore = defineStore("sync", () => {
     updateLastSyncTimestamp,
     updateLastCleanupTimestamp,
     resetSync,
+    resetSyncState,
     initSyncService,
     destroySyncService,
 

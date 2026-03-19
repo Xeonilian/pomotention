@@ -36,7 +36,7 @@
           <th
             class="col-start"
             :class="{ 'disabled-toggle': !selectedSchedule, 'header-active': !!selectedSchedule }"
-            @dblclick.stop="selectedRowId && handleFillCurrentTimeStart()"
+            @click.stop="selectedRowId && handleFillCurrentTimeStart()"
             :title="selectedRowId ? '点击填入当前时间' : '请先选中一行'"
           >
             <n-icon size="20" class="header-icon">
@@ -46,7 +46,7 @@
           <th
             class="col-end"
             :class="{ 'disabled-toggle': !selectedSchedule, 'header-active': !!selectedSchedule }"
-            @dblclick.stop="selectedRowId && handleFillCurrentTimeEnd()"
+            @click.stop="selectedRowId && handleFillCurrentTimeEnd()"
             :title="selectedRowId ? '点击填入当前时间' : '请先选中一行'"
           >
             <n-icon size="20" class="header-icon">
@@ -108,6 +108,7 @@
             <td class="col-check">
               <n-checkbox
                 v-if="schedule.status !== 'cancelled'"
+                :size="isMobile ? 'small' : 'medium'"
                 :checked="schedule.status === 'done'"
                 @update:checked="handleCheckboxChange(schedule.id, $event)"
               />
@@ -126,8 +127,8 @@
             <!-- 2 开始时间 -->
             <td
               class="col-start"
-              @dblclick.stop="startEditing(schedule.id, 'start')"
-              :title="editingRowId === schedule.id && editingField === 'start' ? '' : '双击编辑'"
+              @click.stop="startEditing(schedule.id, 'start')"
+              :title="editingRowId === schedule.id && editingField === 'start' ? '' : '单击编辑'"
             >
               <input
                 class="start-input time-input"
@@ -141,16 +142,14 @@
                 maxlength="5"
                 autocomplete="off"
               />
-              <span v-else>{{
-                schedule.activityDueRange?.[0] ? formatTimeForDisplay(schedule.activityDueRange[0]) : "-"
-              }}</span>
+              <span v-else>{{ schedule.activityDueRange?.[0] ? formatTimeForDisplay(schedule.activityDueRange[0]) : "-" }}</span>
             </td>
 
             <!-- 3 结束时间 -->
             <td
               class="col-end"
-              @dblclick.stop="startEditing(schedule.id, 'done')"
-              :title="editingRowId === schedule.id && editingField === 'done' ? '' : '双击编辑'"
+              @click.stop="startEditing(schedule.id, 'done')"
+              :title="editingRowId === schedule.id && editingField === 'done' ? '' : '单击编辑'"
             >
               <input
                 class="done-input time-input"
@@ -171,8 +170,8 @@
             <td
               class="col-duration"
               :class="{ 'is-empty-min': schedule.activityDueRange?.[1] === '' }"
-              @dblclick.stop="startEditing(schedule.id, 'duration')"
-              :title="editingRowId === schedule.id && editingField === 'duration' ? '' : '双击编辑'"
+              @click.stop="startEditing(schedule.id, 'duration')"
+              :title="editingRowId === schedule.id && editingField === 'duration' ? '' : '单击编辑'"
             >
               <input
                 class="duration-input time-input"
@@ -195,8 +194,12 @@
               :class="{
                 'cloud-background': schedule.isUntaetigkeit === true,
               }"
+              @click.stop="handleRowClick(schedule)"
               @dblclick.stop="startEditing(schedule.id, 'title')"
-              :title="editingRowId === schedule.id && editingField === 'title' ? '' : '双击编辑'"
+              @touchstart.stop="handleTitleTouchStart($event, schedule)"
+              @touchend.stop="handleTitleTouchEnd($event, schedule)"
+              @touchcancel.stop="handleTitleTouchCancel(schedule)"
+              :title="editingRowId === schedule.id && editingField === 'title' ? '' : '单击编辑'"
             >
               <input
                 class="title-input"
@@ -227,8 +230,12 @@
             <!-- 6 地点 -->
             <td
               class="col-location"
+              @click.stop="handleRowClick(schedule)"
               @dblclick.stop="startEditing(schedule.id, 'location')"
-              :title="editingRowId === schedule.id && editingField === 'location' ? '' : '双击编辑'"
+              @touchstart.stop="handleLocationTouchStart($event, schedule)"
+              @touchend.stop="handleLocationTouchEnd($event, schedule)"
+              @touchcancel.stop="handleLocationTouchCancel(schedule)"
+              :title="editingRowId === schedule.id && editingField === 'location' ? '' : '单击编辑'"
             >
               <input
                 class="location-input"
@@ -325,6 +332,7 @@ import { storeToRefs } from "pinia";
 import { useActivityTagEditor } from "@/composables/useActivityTagEditor";
 import TagSelector from "../TagSystem/TagSelector.vue";
 import { useDevice } from "@/composables/useDevice";
+import { useLongPress } from "@/composables/useLongPress";
 
 const dataStore = useDataStore();
 const { isMobile } = useDevice();
@@ -343,6 +351,28 @@ const startInputRef = ref<HTMLInputElement | null>(null);
 const doneInputRef = ref<HTMLInputElement | null>(null);
 const durationInputRef = ref<HTMLInputElement | null>(null);
 const locationInputRef = ref<HTMLInputElement | null>(null);
+const titleLongPressMap = ref(
+  new Map<
+    number,
+    {
+      longPressTriggered: { value: boolean };
+      onLongPressStart: (e: TouchEvent | MouseEvent) => void;
+      onLongPressEnd: () => void;
+      onLongPressCancel: () => void;
+    }
+  >(),
+);
+const locationLongPressMap = ref(
+  new Map<
+    number,
+    {
+      longPressTriggered: { value: boolean };
+      onLongPressStart: (e: TouchEvent | MouseEvent) => void;
+      onLongPressEnd: () => void;
+      onLongPressCancel: () => void;
+    }
+  >(),
+);
 
 // 定义 Emit
 
@@ -504,7 +534,7 @@ function startEditing(scheduleId: number, field: "title" | "start" | "done" | "d
               ? timestampToTimeString(schedule.doneTime)
               : "";
 
-  // 双击后激活光标：用 ref 聚焦，与 DayTodo 一致；v-if 挂载后再等一帧
+  // 单击后激活光标：用 ref 聚焦，与 DayTodo 一致；v-if 挂载后再等一帧
   nextTick(() => {
     nextTick(() => {
       if (field === "title") titleInputRef.value?.focus();
@@ -660,9 +690,71 @@ function handleInputKeydown(event: KeyboardEvent, schedule: Schedule) {
   }
 
   // 特殊处理：# 键自动打开 popover
-  if (event.key === "#" && !tagEditor.popoverTargetId.value) {
+  if ((event.key === "#" || event.key === "@") && !tagEditor.popoverTargetId.value) {
     tagEditor.popoverTargetId.value = schedule.id;
   }
+}
+
+function getTitleLongPress(scheduleId: number) {
+  let handler = titleLongPressMap.value.get(scheduleId);
+  if (!handler) {
+    handler = useLongPress({
+      delay: 500,
+      onLongPress: () => {
+        startEditing(scheduleId, "title");
+      },
+    });
+    titleLongPressMap.value.set(scheduleId, handler);
+  }
+  return handler;
+}
+
+function handleTitleTouchStart(e: TouchEvent, schedule: Schedule) {
+  const longPress = getTitleLongPress(schedule.id);
+  longPress.onLongPressStart(e);
+}
+
+function handleTitleTouchEnd(e: TouchEvent, schedule: Schedule) {
+  e.stopPropagation();
+  const longPress = getTitleLongPress(schedule.id);
+  longPress.onLongPressEnd();
+  handleRowClick(schedule);
+}
+
+function handleTitleTouchCancel(schedule: Schedule) {
+  const longPress = getTitleLongPress(schedule.id);
+  longPress.onLongPressCancel();
+}
+
+function getLocationLongPress(scheduleId: number) {
+  let handler = locationLongPressMap.value.get(scheduleId);
+  if (!handler) {
+    handler = useLongPress({
+      delay: 600,
+      onLongPress: () => {
+        startEditing(scheduleId, "location");
+      },
+    });
+    locationLongPressMap.value.set(scheduleId, handler);
+  }
+  return handler;
+}
+
+function handleLocationTouchStart(e: TouchEvent, schedule: Schedule) {
+  const longPress = getLocationLongPress(schedule.id);
+  longPress.onLongPressStart(e);
+}
+
+function handleLocationTouchEnd(e: TouchEvent, schedule: Schedule) {
+  e.stopPropagation();
+  const longPress = getLocationLongPress(schedule.id);
+  longPress.onLongPressEnd();
+  handleRowClick(schedule);
+}
+
+function handleLocationTouchCancel(schedule: Schedule) {
+  const longPress = getLocationLongPress(schedule.id);
+  longPress.onLongPressCancel();
 }
 
 function handleTagSelected(tagId: number) {
@@ -813,10 +905,11 @@ th.col-end.header-active .header-icon {
 tr:nth-child(even) {
   background-color: var(--color-background-light-transparent);
 }
-
-/* hover 高亮（不加 !important，便于被 selected/active 覆盖） */
-tr:hover {
-  background-color: var(--color-cyan-light-transparent);
+@media (min-width: 650px) {
+  /* hover 高亮（不加 !important，便于被 selected/active 覆盖） */
+  tr:hover {
+    background-color: var(--color-cyan-light-transparent);
+  }
 }
 
 /* 激活行样式（覆盖一切） */
@@ -852,7 +945,7 @@ tr.cancel-row {
 }
 
 tr.empty-row {
-  height: 30px;
+  height: 80px;
   text-align: center;
   color: var(--color-text-secondary);
   width: 100%;
@@ -910,7 +1003,8 @@ td.status-col {
 }
 
 .title-input {
-  width: calc(100% - 10px);
+  padding: 0px 0px;
+  width: calc(100% - 4px);
   border: 1px solid #40a9ff;
   border-radius: 4px;
   font-size: inherit;
@@ -931,16 +1025,17 @@ td.status-col {
 
 .duration-input {
   /* 固定时长输入框宽度，避免 focus 时撑开 */
-  width: 26px !important;
-  max-width: 26px !important;
+  width: 24px !important;
+  max-width: 24px !important;
   min-width: 0 !important;
   box-sizing: border-box;
-  padding-left: 1px;
+  padding: 0px 0px;
   font-size: inherit;
 }
 
 .location-input {
-  width: calc(100% - 6px);
+  padding: 0px 0px;
+  width: calc(100% - 4px);
   border: 1px solid #40a9ff;
   border-radius: 4px;
   font-size: inherit;
@@ -1025,52 +1120,78 @@ td.status-col {
   transform: translateY(3px);
 }
 
-@media (max-width: 400px) {
+@media (max-width: 430px) {
+  thead th {
+    border-bottom: 0px solid var(--color-background-dark) !important;
+  }
+
+  tbody td {
+    border-bottom: 0px !important;
+  }
+
   col.col-check {
     width: 20px;
-    text-overflow: clip;
   }
 
   col.col-start {
-    width: 36px;
+    width: 32px;
     font-family: Consolas, "Courier New", Courier, monospace;
   }
 
   col.col-end {
-    width: 36px;
+    width: 32px;
     font-family: Consolas, "Courier New", Courier, monospace;
   }
 
   col.col-duration {
     width: 24px;
-    text-overflow: clip;
   }
 
   col.col-status {
     width: 40px;
   }
 
+  col.col-intent {
+    width: 62%;
+    min-width: 0px;
+  }
+
+  col.col-location {
+    width: 38%;
+    min-width: 0px;
+  }
+
   td.col-start,
   td.col-end,
   td.col-duration,
   .time-input {
-    font-size: 13px;
+    font-size: 12px;
     text-overflow: clip;
     font-family: Consolas, "Courier New", Courier, monospace;
   }
 
+  input.title-input,
+  input.location-input {
+    font-size: 14px !important;
+    height: 18px;
+  }
   td.col-intent {
     text-overflow: clip !important;
   }
 
   td.col-intent .ellipsis {
-    text-overflow: clip !important;
+    text-overflow: ellipsis !important;
+  }
+
+  .cancel-icon {
+    width: 14px !important;
+    height: 14px !important;
   }
 }
 
 .add-schedule-button {
   cursor: pointer;
-  transform: translate(-1px, 3px);
+  transform: translate(0px, 3px);
 }
 
 .cancel-button.header-active {

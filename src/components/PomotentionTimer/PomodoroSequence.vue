@@ -11,13 +11,24 @@
     <div class="button-row">
       <n-button class="action-button" @click="startPomodoroCircle" :disabled="isRunning" tertiary circle>
         <template #icon>
-          <n-icon :component="PlayCircle24Regular" />
+          <n-icon :component="Play24Regular" />
         </template>
       </n-button>
 
       <n-button class="action-button" @click="stopPomodoro" tertiary circle>
         <template #icon>
-          <n-icon :component="RecordStop24Regular" />
+          <n-icon size="14" :component="Stop20Filled" />
+        </template>
+      </n-button>
+      <n-button
+        class="action-button"
+        @click="handleToggleWhiteNoise"
+        :title="isWhiteNoiseEnabled ? '关闭白噪音' : '开启白噪音'"
+        tertiary
+        circle
+      >
+        <template #icon>
+          <n-icon :component="isWhiteNoiseEnabled ? Speaker224Regular : SpeakerMute24Regular" />
         </template>
       </n-button>
       <n-popover
@@ -33,19 +44,11 @@
         }"
       >
         <template #trigger>
-          <n-badge dot type="default" :offset="[-2, 2]" title="选择白噪音" class="clickable-badge">
-            <n-button
-              class="action-button"
-              @click="handleToggleWhiteNoise"
-              :title="isWhiteNoiseEnabled ? '关闭白噪音' : '开启白噪音'"
-              tertiary
-              circle
-            >
-              <template #icon>
-                <n-icon :component="isWhiteNoiseEnabled ? Speaker224Regular : SpeakerMute24Regular" />
-              </template>
-            </n-button>
-          </n-badge>
+          <n-button class="action-button" title="选择白噪音" tertiary circle>
+            <template #icon>
+              <n-icon :component="MusicNote124Filled" />
+            </template>
+          </n-button>
         </template>
 
         <!-- Popover 的内容：垂直排列的按钮 -->
@@ -62,6 +65,7 @@
           </n-button>
         </div>
       </n-popover>
+
       <n-button class="action-button" @click="addPomodoro" title="insert 🍅+05" :disabled="isRunning" tertiary circle>🍅</n-button>
       <div class="pomo-duration-input-container" :class="{ disabled: isRunning }">
         =
@@ -84,17 +88,18 @@
 
 <script setup lang="ts">
 import { ref, watch, onMounted, computed } from "vue";
-import { NButton, NIcon, NInput, useDialog, NBadge } from "naive-ui";
+import { NButton, NIcon, NInput, useDialog } from "naive-ui";
 import { useTimerStore } from "@/stores/useTimerStore";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { toggleWhiteNoise, setPomodoroRunning, stopWhiteNoise, startWhiteNoise } from "@/core/sounds.ts";
 import {
   Speaker224Regular,
   SpeakerMute24Regular,
-  PlayCircle24Regular,
-  RecordStop24Regular,
+  Play24Regular,
+  Stop20Filled,
   WeatherThunderstorm20Regular,
   ClockAlarm24Regular,
+  MusicNote124Filled,
 } from "@vicons/fluent";
 import { SoundType } from "@/core/sounds.ts";
 type PomodoroStep = {
@@ -135,7 +140,7 @@ watch(
     if (isRunning.value && progressContainer.value) {
       updateProgressStatus(currentStep.value);
     }
-  }
+  },
 );
 
 // 监听settingStore中的工作时长变化
@@ -143,7 +148,7 @@ watch(
   () => settingStore.settings.durations.workDuration,
   (newValue) => {
     defaultPomoDuration.value = newValue.toString();
-  }
+  },
 );
 
 // 解析序列
@@ -256,7 +261,6 @@ function stopPomodoro(): void {
   if (progressContainer.value) {
     progressContainer.value.innerHTML = "";
   }
-
 }
 
 // 持久化序列输入到全局设置
@@ -265,7 +269,7 @@ watch(
   (val) => {
     settingStore.settings.pomoSequenceInput = val;
   },
-  { immediate: true }
+  { immediate: true },
 );
 
 // 添加番茄钟序列
@@ -513,7 +517,6 @@ function resetWhiteNoise(sound: SoundType) {
   background-color: var(--color-green-light-transparent);
 }
 
-
 .sequence-input {
   max-height: 60px;
   font-family: "Consolas", "Courier New", Courier, "Lucida Console", Monaco, "Liberation Mono", "Menlo", monospace;
@@ -539,10 +542,9 @@ function resetWhiteNoise(sound: SoundType) {
 
 .button-row {
   display: flex;
-  justify-content: center; /* 聚拢到中间 */
   align-items: center;
   gap: 4px; /* 计算好间距后聚拢 */
-  width: 180px; /* 增加宽度以适应新按钮 */
+  width: 220px; /* 增加宽度以适应新按钮 */
   margin: 0 auto;
   font-size: 12px;
   padding-top: 4px;
@@ -604,14 +606,6 @@ function resetWhiteNoise(sound: SoundType) {
   gap: 8px; /* 按钮之间的垂直间距 */
   margin: 0px;
   padding: 0;
-}
-
-.clickable-badge:hover {
-  cursor: default;
-}
-
-.clickable-badge:hover :deep(.n-badge-sup) {
-  background-color: var(--color-red);
 }
 </style>
 

@@ -78,6 +78,8 @@ export class ScheduleSyncService extends BaseSyncService<Schedule, CloudSchedule
     success: boolean;
     error?: string;
     downloaded: number;
+    fetched?: number;
+    cloudDeleted?: number;
   }> {
     try {
       if (!supabase) {
@@ -94,8 +96,9 @@ export class ScheduleSyncService extends BaseSyncService<Schedule, CloudSchedule
       // 如果是 0 (新机器/重置)，则为 1970，拉取全量数据
       // 为了避免 lastSyncTimestamp 异常过新导致“完全下不下来”，这里增加最近 24h 兜底窗口
       const FALLBACK_WINDOW_MS = 24 * 60 * 60 * 1000;
-      const fallbackFromMs = Date.now() - FALLBACK_WINDOW_MS;
-      const effectiveFromMs = lastSyncTimestamp > 0 ? Math.min(lastSyncTimestamp, fallbackFromMs) : 0;
+      const nowMs = Date.now();
+      const fallbackFromMs = nowMs - FALLBACK_WINDOW_MS;
+      const effectiveFromMs = lastSyncTimestamp > 0 ? (lastSyncTimestamp > nowMs ? fallbackFromMs : lastSyncTimestamp) : 0;
       const lastSyncISO = new Date(effectiveFromMs).toISOString();
       if (lastSyncTimestamp > 0 && effectiveFromMs !== lastSyncTimestamp) {
         console.debug(
@@ -105,19 +108,40 @@ export class ScheduleSyncService extends BaseSyncService<Schedule, CloudSchedule
         );
       }
 
-      // 2. 调用 RPC，传入 p_last_modified 实现增量获取
-      const { data, error } = await supabase.rpc("get_full_schedules", {
-        p_user_id: user.id,
-        p_last_modified: lastSyncISO,
-      });
-
-      if (error) throw error;
-
-      if (!data || data.length === 0) {
-        return { success: true, downloaded: 0 };
+      // 2. 调用 RPC（分页拉取以绕过 1000 行上限；若 RPC 未支持 p_limit/p_offset 则单次调用）
+      const PAGE = 1000;
+      let data: any[] = [];
+      let offset = 0;
+      let usePagination = true;
+      while (true) {
+        const params: Record<string, unknown> = {
+          p_user_id: user.id,
+          p_last_modified: lastSyncISO,
+        };
+        if (usePagination) {
+          params.p_limit = PAGE;
+          params.p_offset = offset;
+        }
+        const { data: page, error } = await supabase.rpc("get_full_schedules", params);
+        if (error) {
+          if (offset === 0 && usePagination) {
+            usePagination = false;
+            continue;
+          }
+          throw error;
+        }
+        if (!page?.length) break;
+        data = data.concat(page);
+        if (page.length < PAGE || !usePagination) break;
+        offset += PAGE;
       }
 
-      // console.log(`📊 [schedules] 增量下载: 获取到 ${data.length} 条更新`);
+      const fetched = data.length;
+      const cloudDeleted = data.filter((i: any) => i.deleted).length;
+      if (data.length === 0) {
+        return { success: true, downloaded: 0, fetched, cloudDeleted };
+      }
+
       // 3. 直接操作 BaseSyncService 的响应式列表（解包 ref 得到数组）
       const localItems = this.getListArray();
       const localMap = this.getMap();
@@ -181,10 +205,10 @@ export class ScheduleSyncService extends BaseSyncService<Schedule, CloudSchedule
         }
       }
 
-      return { success: true, downloaded: downloadedCount };
+      return { success: true, downloaded: downloadedCount, fetched, cloudDeleted };
     } catch (error: any) {
       console.error("下载 schedules 失败:", error);
-      return { success: false, error: error.message, downloaded: 0 };
+      return { success: false, error: error.message, downloaded: 0, fetched: 0, cloudDeleted: 0 };
     }
   }
 }

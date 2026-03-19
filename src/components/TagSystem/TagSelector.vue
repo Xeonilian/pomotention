@@ -53,18 +53,37 @@ const emit = defineEmits<{
 
 // --- State ---
 const tagStore = useTagStore();
-const selectorRef = ref<HTMLElement | null>(null);
 const highlightedIndex = ref(0); // 追踪高亮项的索引
 
 // --- Computed ---
 const filteredTags = computed<TagWithCount[]>(() => {
   const searchTerm = props.searchTerm.trim();
-  if (!searchTerm || searchTerm === "#") {
-    return [...tagStore.allTags].sort((a, b) => (b.count || 0) - (a.count || 0)).slice(0, 10);
+
+  const sortByUsageAndCount = (a: TagWithCount, b: TagWithCount, prioritizeLastUsed: boolean) => {
+    const aLast = a.lastUsed ?? 0;
+    const bLast = b.lastUsed ?? 0;
+
+    if (prioritizeLastUsed && aLast !== bLast) {
+      return bLast - aLast;
+    }
+
+    const countDiff = (b.count || 0) - (a.count || 0);
+    if (countDiff !== 0) return countDiff;
+
+    if (!prioritizeLastUsed && aLast !== bLast) {
+      return bLast - aLast;
+    }
+
+    return a.name.localeCompare(b.name);
+  };
+
+  if (!searchTerm || searchTerm === "#" || searchTerm === "@") {
+    const all = [...tagStore.allTags];
+    return all.sort((a, b) => sortByUsageAndCount(a, b, false));
   }
 
-  const found = tagStore.findByName(props.searchTerm);
-  return [...found].sort((a, b) => (b.count || 0) - (a.count || 0));
+  const found = [...tagStore.findByName(props.searchTerm)];
+  return found.sort((a, b) => sortByUsageAndCount(a, b, true));
 });
 
 const tagExists = computed(() => {
@@ -80,7 +99,6 @@ const totalOptions = computed(() => {
   return baseCount;
 });
 
-console.log(selectorRef);
 // --- Watchers ---
 // 当搜索词变化时，重置高亮位置到顶部
 watch(
@@ -140,6 +158,8 @@ defineExpose({
   position: relative;
   z-index: 10001;
   pointer-events: auto;
+  max-height: 240px;
+  overflow-y: auto;
 }
 
 .tag-option {

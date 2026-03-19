@@ -17,10 +17,12 @@
         'is-compact': settingStore.settings.isCompactMode,
       }"
     >
+      <!-- Web: 紧凑/全屏循环；Tauri: 仅迷你窗内显示，只负责退出 -->
       <n-button
+        v-if="showCompactCycleButton"
         size="tiny"
         text
-        :title="isMiniMode ? '退出迷你模式' : settingStore.settings.isCompactMode ? '展开' : '紧凑模式'"
+        :title="compactCycleButtonTitle"
         @click="handleToggleCompactMode"
         class="compact-toggle-button"
         style="
@@ -75,6 +77,15 @@ let isPomoSeqRunning = ref(false); // 基于运行状态，返回不同的高度
 
 // 手机模式：置顶(mini) + 移动端时，timer 全屏宽、布局放大、上下居中
 const isPhoneMode = computed(() => props.isMiniMode && props.isMobile);
+
+// Tauri 下不展示紧凑，仅 ontop 进入迷你；toggle 只在迷你窗内显示且只负责退出
+const showCompactCycleButton = computed(() => !isTauri() || props.isMiniMode);
+// 紧凑/迷你/全屏 循环按钮的 title（Tauri 下仅迷你时显示，故只可能是「退出迷你模式」）
+const compactCycleButtonTitle = computed(() => {
+  if (props.isMiniMode) return isTauri() ? "退出迷你模式" : "退出全屏";
+  if (settingStore.settings.isCompactMode) return "全屏";
+  return "紧凑模式";
+});
 const pomodoroContainerRef = ref<HTMLElement | null>(null); // 自动识别正确高度
 
 const props = defineProps({
@@ -97,6 +108,7 @@ const emit = defineEmits<{
   (e: "report-size", size: { width: number; height: number }): void;
   (e: "exit-mini-mode"): void;
   (e: "exit-mini-mode-web"): void;
+  (e: "enter-mini"): void;
 }>();
 
 function reportSize() {
@@ -143,13 +155,18 @@ function exitMiniMode() {
 }
 
 function handleToggleCompactMode() {
-  // 在 miniMode 下，点击退出 miniMode
+  // 迷你/全屏：点击仅退出（Tauri 仅 header ontop 进入迷你，此处不触发进入）
   if (props.isMiniMode) {
     exitMiniMode();
     return;
   }
-  // 正常模式下，切换紧凑模式
-  settingStore.settings.isCompactMode = !settingStore.settings.isCompactMode;
+  if (isTauri()) return; // Tauri 下无紧凑，进入迷你仅靠 header ontop，此处不处理
+  // Web：紧凑 → 全屏；展开 → 紧凑
+  if (settingStore.settings.isCompactMode) {
+    emit("enter-mini");
+    return;
+  }
+  settingStore.settings.isCompactMode = true;
 }
 
 function handleTogglePomoSeq() {

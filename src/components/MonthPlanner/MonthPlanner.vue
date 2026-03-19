@@ -39,7 +39,7 @@
                   :tag-ids="normalizeTagIds(item.tagIds)"
                   :isCloseable="false"
                   size="tiny"
-                  :displayLength="Number(0)"
+                  :displayLength="Number(1)"
                   :showIdx="Number(1)"
                   class="tag"
                 />
@@ -61,7 +61,7 @@
   </div>
 </template>
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted, nextTick } from "vue";
+import { computed } from "vue";
 import { NCard } from "naive-ui";
 import type { Todo } from "@/core/types/Todo";
 import type { Schedule } from "@/core/types/Schedule";
@@ -69,6 +69,9 @@ import TagRenderer from "../TagSystem/TagRenderer.vue";
 import { timestampToTimeString } from "@/core/utils";
 import { useDataStore } from "@/stores/useDataStore";
 import { storeToRefs } from "pinia";
+import { useDevice } from "@/composables/useDevice";
+
+const { isMobile } = useDevice();
 
 const emit = defineEmits<{
   "date-select": [timestamp: number];
@@ -111,60 +114,9 @@ const dateService = dataStore.dateService;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-// 用于动态计算day card高度的ref
-const gridRef = ref<HTMLElement>();
-const dayCardHeight = ref(105); // 默认最小高度
-let resizeObserver: ResizeObserver | null = null;
-
-// 监听容器大小变化并计算day card高度
-const updateDayCardHeight = () => {
-  if (gridRef.value) {
-    // 获取第一个day card的实际高度
-    const firstDayCard = gridRef.value.querySelector(".day-card") as HTMLElement;
-    if (firstDayCard) {
-      const rect = firstDayCard.getBoundingClientRect();
-      if (rect.height > 0) {
-        dayCardHeight.value = rect.height;
-      }
-    }
-  }
-};
-
-onMounted(() => {
-  nextTick(() => {
-    updateDayCardHeight();
-
-    // 使用ResizeObserver监听容器大小变化
-    if (gridRef.value && window.ResizeObserver) {
-      resizeObserver = new ResizeObserver(() => {
-        // 延迟执行以确保DOM更新完成
-        setTimeout(updateDayCardHeight, 0);
-      });
-      resizeObserver.observe(gridRef.value);
-    } else {
-      // 降级方案：监听窗口resize事件
-      window.addEventListener("resize", updateDayCardHeight);
-    }
-  });
-});
-
-onUnmounted(() => {
-  if (resizeObserver) {
-    resizeObserver.disconnect();
-  } else {
-    window.removeEventListener("resize", updateDayCardHeight);
-  }
-});
-
-// 动态计算每天最多显示的项目数
+// 每日显示项目数
 const maxItemsPerDay = computed(() => {
-  // date-badge 高度 + margin + top padding = 20 + 7 + 2 = 29px
-  // items padding = 4px
-  // 可用高度 = dayCardHeight - 29 - 4 = dayCardHeight - 33
-  const availableHeight = Math.max(0, dayCardHeight.value - 30);
-  // 每个item高度12px + gap 2px = 17px
-  const itemsPerHeight = Math.floor((availableHeight + 2) / 14);
-  return Math.max(1, itemsPerHeight); // 至少显示1个项目
+  return isMobile.value ? 5 : 6; // 至少显示1个项目
 });
 
 const days = computed(() => {
@@ -432,6 +384,7 @@ function getPomoBgColorHEX(ratio: number) {
 .header-card {
   min-width: 0;
   overflow: hidden;
+  height: 22px;
 }
 .header-card :deep(.n-card__content) {
   font-size: 14px;
@@ -466,33 +419,6 @@ function getPomoBgColorHEX(ratio: number) {
   position: relative;
 }
 
-@media (max-width: 400px) {
-  .day-card :deep(.n-card__content) {
-    padding: 4px 2px 4px 2px;
-  }
-  :deep(.items) {
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 0px !important;
-    padding: 2px 2px !important; /* 给右上角日期留出一点空间 */
-    margin-top: 10px !important;
-    z-index: 0 !important;
-  }
-
-  :deep(.item) {
-    font-size: 11px !important;
-    padding: 1px 1px !important;
-    gap: 2px !important;
-  }
-
-  :deep(.title) {
-    text-overflow: unset !important;
-  }
-  :deep(.more) {
-    display: none !important;
-  }
-}
-
 .day-card--selected {
   border-color: var(--primary-color, #409eff) !important;
   box-shadow: 0 2px 8px rgba(64, 158, 255, 0.3);
@@ -511,7 +437,7 @@ function getPomoBgColorHEX(ratio: number) {
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  z-index: 5;
+  z-index: 1;
   padding: 1px;
 }
 
@@ -519,7 +445,7 @@ function getPomoBgColorHEX(ratio: number) {
   color: white !important;
   background-color: var(--color-blue) !important;
   font-weight: 600;
-  z-index: 10;
+  z-index: 1;
 }
 
 .date-badge:hover {
@@ -536,12 +462,12 @@ function getPomoBgColorHEX(ratio: number) {
 .items {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
   min-width: 0;
   flex: 1;
   overflow: visible;
-  padding: 2px 2px; /* 给右上角日期留出一点空间 */
-  margin-top: 3px;
+  padding: 1px 2px; /* 给右上角日期留出一点空间 */
+  margin-top: 6px;
   z-index: 2;
 }
 .item {
@@ -550,11 +476,10 @@ function getPomoBgColorHEX(ratio: number) {
   gap: 4px;
   font-size: 11px;
   line-height: 1;
-  color: var(--text-color);
+  color: var(--color-text-primary);
   cursor: pointer;
   padding: 0px 1px;
   border-radius: 2px;
-  transition: background-color 0.2s;
 }
 
 .item:hover:not(.item--selected) {
@@ -574,34 +499,32 @@ function getPomoBgColorHEX(ratio: number) {
   background-color: var(--color-red-light) !important;
 }
 
-/* 基础小圆点 没有了 */
-.type-dot {
-  display: inline-block;
-  width: 4px;
-  height: 4px;
-  display: none;
-  border-radius: 50%;
-  flex-shrink: 0;
-  margin-right: 0px;
-}
-
 /* 提示点的tag的位置 */
 .tag {
-  height: 15px;
-  width: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-/* 提示点的tag的大小及位置 */
 .tag :deep(.n-tag) {
-  left: -2px;
-  top: 3px;
-  height: 0px; /* 提示点的tag的大小 */
-  padding: 4px; /* 提示点的tag的大小 */
-  border: 1px solid var(--color-background-dark);
+  height: 12px;
+  width: 12px;
+}
+
+.tag :deep(.n-tag__content) {
+  font-size: 8px;
+}
+
+.tag :deep(.n-tag.n-tag--round) {
+  padding: 0px;
+  align-items: center;
+  justify-content: center;
 }
 
 .schedule-time {
-  margin-left: 1px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: 11px;
   font-family: "consolas", monospace;
   color: var(--color-text);
@@ -609,8 +532,7 @@ function getPomoBgColorHEX(ratio: number) {
   border-radius: 2px;
   border: 1px solid var(--color-blue-light);
   box-shadow: 1px 1px 0px var(--color-background-dark);
-  padding-left: 1px;
-  padding-right: 1px;
+  padding: 0px;
 }
 
 .more {
@@ -618,11 +540,96 @@ function getPomoBgColorHEX(ratio: number) {
   bottom: -2px;
   left: 0;
   right: 0;
-  text-align: center;
+  text-align: right;
   color: var(--color-text-secondary);
   font-size: 12px;
   font-family: "Segoe UI Symbol", "Noto Emoji", "Twemoji Mozilla", "Apple Symbols", sans-serif;
   white-space: nowrap;
   padding-right: 6px;
+}
+
+/* #TODO  */
+@media (max-width: 430px) {
+  .header-card,
+  .day-card {
+    border: 0.5px solid var(--color-background-dark);
+  }
+
+  .header-card :deep(.n-card__content) {
+    font-size: 13px;
+  }
+  .day-card :deep(.n-card__content) {
+    padding: 0px;
+  }
+
+  .month-header {
+    gap: 1px !important;
+  }
+
+  :deep(.items) {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 2px !important;
+    padding: 0px !important; /* 给右上角日期留出一点空间 */
+    margin-top: 20px !important;
+    z-index: 0 !important;
+    border: none !important;
+  }
+
+  :deep(.item) {
+    font-size: 10px !important;
+    padding: 1px 1px !important;
+    gap: 2px !important;
+    border: none !important;
+    border-radius: 0px !important;
+  }
+
+  :deep(.title) {
+    text-overflow: unset !important;
+  }
+  :deep(.more) {
+    display: none !important;
+  }
+
+  .schedule-time {
+    font-size: 9px;
+    background-color: var(--color-background);
+    border: 1px solid var(--color-blue-light);
+    box-shadow: none;
+  }
+  .grid {
+    gap: 1px !important;
+    flex: 1 1 auto;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr)); /* 7列（一周7天） */
+    grid-auto-rows: minmax(90px, 1fr) !important;
+  }
+  .day-card {
+    gap: 0px !important;
+  }
+
+  .date-badge {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    font-size: 12px;
+    width: 16px;
+    height: 16px;
+  }
+
+  .date-badge.today {
+    color: var(--color-blue) !important;
+    background-color: var(--color-blue-light) !important;
+    z-index: 1;
+  }
+
+  .tag :deep(.n-tag) {
+    height: 10px;
+    width: 10px;
+  }
+  .tag :deep(.n-tag__content) {
+    font-size: 7px;
+  }
 }
 </style>

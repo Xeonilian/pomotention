@@ -34,48 +34,50 @@
       >
         <!-- 任务计划的头部和控件 -->
         <div class="planner-header" @click.stop="cleanSelection">
-          <!-- 年入口：仅显示年份，点击进入年视图；在年视图时也只显示年份 -->
-          <div class="day-info">
-            <template v-if="settingStore.settings.viewSet !== 'year'">
-              <span @click="onYearJump" class="day-status" title="进入年视图">{{ dateService.displayYearInfo }}</span>
-            </template>
-            <template v-else>
-              <span class="day-status">{{ dateService.displayYearInfo }}</span>
+          <div class="planner-header-left">
+            <!-- 年入口：仅显示年份，点击进入年视图；在年视图时也只显示年份 -->
+            <div class="day-info">
+              <template v-if="settingStore.settings.viewSet !== 'year'">
+                <span @click="onYearJump" class="day-status" title="进入年视图">
+                  {{ settingStore.settings.showSchedule && isMobile ? dateService.displayYearInfo.slice(2) : dateService.displayYearInfo }}
+                </span>
+              </template>
+              <template v-else>
+                <span @click="onDayJump" class="day-status" title="进入日视图">
+                  {{ dateService.displayYearInfo }}
+                </span>
+                <span @click="onDateSet('today')" class="global-pomo">
+                  <span class="today-pomo">🍅{{ currentDatePomoCount }}</span>
+                  <span class="total-pomo">/{{ globalRealPomo }}</span>
+                </span>
+              </template>
+            </div>
+            <div
+              v-if="settingStore.settings.viewSet === 'day'"
+              class="day-info"
+              :class="{
+                yesterday: isViewDateYesterday,
+                tomorrow: isViewDateTomorrow,
+              }"
+            >
+              <span @click="onWeekJump" class="day-status">{{ dateService.displayDateInfo }}</span>
               <span @click="onDateSet('today')" class="global-pomo">
                 <span class="today-pomo">🍅{{ currentDatePomoCount }}</span>
                 <span class="total-pomo">/{{ globalRealPomo }}</span>
               </span>
-            </template>
-          </div>
-          <div
-            v-if="settingStore.settings.viewSet === 'day'"
-            class="day-info"
-            :class="{
-              yesterday: isViewDateYesterday,
-              tomorrow: isViewDateTomorrow,
-            }"
-          >
-            <span @click="onWeekJump" class="day-status">
-              {{ dateService.displayDateInfo }}
-            </span>
-            <span @click="onDateSet('today')" class="global-pomo">
-              <span class="today-pomo">🍅{{ currentDatePomoCount }}</span>
-              <span class="total-pomo">/{{ globalRealPomo }}</span>
-            </span>
-          </div>
-          <div v-if="settingStore.settings.viewSet === 'week'" class="day-info">
-            <span @click="onMonthJump" class="day-status">
-              {{ dateService.displayWeekInfo }}
-            </span>
-            <span @click="onDateSet('today')" class="global-pomo">
-              <span class="total-pomo">🍅{{ globalRealPomo }}</span>
-            </span>
-          </div>
-          <div v-if="settingStore.settings.viewSet === 'month'" class="day-info">
-            <span @click="onWeekJump" class="day-status">{{ dateService.displayMonthInfo }}</span>
-            <span @click="onDateSet('today')" class="global-pomo">
-              <span class="total-pomo">🍅{{ globalRealPomo }}</span>
-            </span>
+            </div>
+            <div v-if="settingStore.settings.viewSet === 'week'" class="day-info">
+              <span @click="onMonthJump" class="day-status">&nbsp;{{ dateService.displayWeekInfo }}</span>
+              <span @click="onDateSet('today')" class="global-pomo">
+                <span class="total-pomo">🍅{{ globalRealPomo }}</span>
+              </span>
+            </div>
+            <div v-if="settingStore.settings.viewSet === 'month'" class="day-info">
+              <span @click="onWeekJump" class="day-status">&nbsp;{{ dateService.displayMonthInfo }}</span>
+              <span @click="onDateSet('today')" class="global-pomo">
+                <span class="total-pomo">🍅{{ globalRealPomo }}</span>
+              </span>
+            </div>
           </div>
           <div
             class="marquee"
@@ -110,10 +112,8 @@
                 <n-button
                   ref="homeTagFilterBtnRef"
                   size="small"
-                  circle
-                  quaternary
-                  strong
-                  :type="dataStore.filterTagIds.length > 0 ? 'warning' : 'default'"
+                  text
+                  :type="dataStore.filterTagIds.length > 0 ? 'info' : 'default'"
                   :title="dataStore.filterTagIds.length > 0 ? '清除标签筛选' : '标签筛选'"
                   @click.stop="handleHomeTagFilterButtonClick"
                 >
@@ -136,9 +136,9 @@
 
             <n-button
               title="重复活动"
+              v-if="!isMobile"
               @click="onRepeatActivity"
-              circle
-              quaternary
+              text
               type="info"
               size="small"
               :disabled="selectedRowId === null && activeId === null"
@@ -151,9 +151,7 @@
               v-if="!isMobile"
               :type="selectedRowId === null ? 'default' : 'info'"
               size="small"
-              circle
-              quaternary
-              strong
+              text
               @click="onIcsExport"
               title="导出 ICS / 二维码"
               :disabled="selectedRowId === null"
@@ -175,22 +173,18 @@
               @click="onDateSet('today')"
               title="输入示例：2026-01-01"
             >
-              <template #date-icon>
-                <n-button size="small" text class="view-toggle-btn" @click.stop="onViewSet()" title="切换视图">
-                  <template #icon>
-                    <n-icon color="var(--color-text-primary)">
-                      <CalendarSettings20Regular />
-                    </n-icon>
-                  </template>
-                </n-button>
-              </template>
+              <template #date-icon></template>
             </n-date-picker>
-
+            <n-button v-if="!isMobile" size="small" text @click.stop="onViewSet()" title="切换视图">
+              <template #icon>
+                <n-icon color="var(--color-text-primary)">
+                  <CalendarSettings20Regular />
+                </n-icon>
+              </template>
+            </n-button>
             <n-button
               size="small"
-              circle
-              secondary
-              strong
+              text
               @click="onDateSet('prev')"
               :title="
                 settingStore.settings.viewSet === 'day'
@@ -204,16 +198,14 @@
             >
               <template #icon>
                 <n-icon>
-                  <Previous24Regular />
+                  <ChevronLeft20Regular />
                 </n-icon>
               </template>
             </n-button>
 
             <n-button
               size="small"
-              circle
-              secondary
-              strong
+              text
               @click="onDateSet('next')"
               :title="
                 settingStore.settings.viewSet === 'day'
@@ -227,7 +219,7 @@
             >
               <template #icon>
                 <n-icon>
-                  <Next24Regular />
+                  <ChevronRight20Regular />
                 </n-icon>
               </template>
             </n-button>
@@ -342,7 +334,13 @@ import { getTimestampForTimeString } from "@/core/utils";
 import { ViewType } from "@/core/constants";
 import { useResize } from "@/composables/useResize";
 import IcsExportModal from "@/components/IcsExportModal.vue";
-import { Previous24Regular, Next24Regular, CalendarSettings20Regular, QrCode24Regular, ArrowRepeatAll24Regular } from "@vicons/fluent";
+import {
+  CalendarSettings20Regular,
+  QrCode24Regular,
+  ArrowRepeatAll24Regular,
+  ChevronLeft20Regular,
+  ChevronRight20Regular,
+} from "@vicons/fluent";
 import { TagOff20Regular, TagSearch20Regular } from "@vicons/fluent";
 
 import {
@@ -428,32 +426,37 @@ const appDateTimestamp = computed(() => dateService.appDateTimestamp);
 // 进入年视图（点击头部年份）
 const onYearJump = () => {
   settingStore.settings.viewSet = "year";
-  settingStore.settings.topHeight = 480;
+  settingStore.settings.topHeight = 490;
+};
+
+const onDayJump = () => {
+  settingStore.settings.viewSet = "day";
+  settingStore.settings.topHeight = isMobile.value ? 300 : 300;
 };
 
 // 年视图中点击月份标题 → 进入月视图并定位到该月
 const onYearNavigateToMonth = (monthStartTs: number) => {
   settingStore.settings.viewSet = "month";
-  settingStore.settings.topHeight = 610;
+  settingStore.settings.topHeight = isMobile.value ? 525 : 610;
   dateService.navigateTo(monthStartTs);
 };
 
 // 年视图中点击周编号 → 进入周视图并定位到该周
 const onYearNavigateToWeek = (weekStartTs: number) => {
   settingStore.settings.viewSet = "week";
-  settingStore.settings.topHeight = 510;
+  settingStore.settings.topHeight = isMobile.value ? 490 : 510;
   dateService.navigateTo(weekStartTs);
 };
 
 // weekplanner month 引起变化日期
 const onMonthJump = () => {
   settingStore.settings.viewSet = "month";
-  settingStore.settings.topHeight = 610;
+  settingStore.settings.topHeight = isMobile.value ? 525 : 610;
 };
 
 const onWeekJump = () => {
   settingStore.settings.viewSet = "week";
-  settingStore.settings.topHeight = 510;
+  settingStore.settings.topHeight = isMobile.value ? 490 : 510;
 };
 
 // 选择进入日视图的具体日期
@@ -1220,7 +1223,7 @@ function onDateSet(direction: "prev" | "next" | "today" | "query") {
 
 // 切换视图
 function onViewSet() {
-  const order: readonly ViewType[] = ["day", "week", "month"] as const;
+  const order: readonly ViewType[] = ["day", "week", "month", "year"] as const;
   const cur = settingStore.settings.viewSet as ViewType;
   const idx = order.indexOf(cur);
   const next = order[(idx + 1) % order.length];
@@ -1230,6 +1233,8 @@ function onViewSet() {
   } else if (cur === "day") {
     settingStore.settings.topHeight = 610;
   } else if (cur === "month") {
+    settingStore.settings.topHeight = 480;
+  } else if (cur === "year") {
     settingStore.settings.topHeight = 300;
   }
 }
@@ -1526,7 +1531,7 @@ const { startResize: startRightResize } = useResize(
 }
 
 .left {
-  padding: 5px 10px 15px 10px;
+  padding: 5px 10px 0px 10px;
   box-sizing: border-box;
   overflow: hidden;
   margin-right: 0;
@@ -1535,7 +1540,7 @@ const { startResize: startRightResize } = useResize(
 }
 
 .right {
-  padding: 8px;
+  padding: 8px 8px 0px 8px;
   box-sizing: border-box;
   overflow-x: hidden;
   overflow-y: auto;
@@ -1580,6 +1585,12 @@ const { startResize: startRightResize } = useResize(
   text-overflow: ellipsis;
 }
 
+.planner-header-left {
+  display: flex;
+  align-items: center;
+  margin-left: 2px;
+}
+
 .marquee {
   flex: 1;
   margin-left: 8px;
@@ -1595,36 +1606,6 @@ const { startResize: startRightResize } = useResize(
   outline: none;
 }
 
-@media (max-width: 650px) {
-  .marquee {
-    display: none;
-  }
-
-  .marquee-input {
-    display: block;
-  }
-
-  .global-pomo {
-    padding: 2px 4px !important;
-    font-size: 14px;
-    font-weight: 700;
-  }
-
-  .today-pomo,
-  .total-pomo {
-    font-size: 14px;
-    padding-left: 0;
-    padding-right: 0;
-  }
-
-  .left {
-    padding: 5px 6px 15px 6px !important;
-  }
-  .right {
-    padding: 5px 6px 15px 6px !important;
-  }
-}
-
 .marquee-input {
   border: 1px solid var(--color-blue);
   outline: none;
@@ -1636,16 +1617,25 @@ const { startResize: startRightResize } = useResize(
   max-width: 100px !important;
 }
 
+/* 禁止随父级 flex 收缩，保持按钮组尺寸 */
 .button-group {
   display: flex;
-  gap: 2px;
-  padding: 1px;
-  align-items: center;
   flex-shrink: 0;
-  flex-grow: 0;
+  gap: 8px;
+  align-items: center;
   background-color: var(--color-background);
-  margin-left: auto;
   z-index: 5;
+  margin-right: 6px;
+  order: 999;
+}
+
+@media (max-width: 430px) {
+  .button-group {
+    gap: 6px;
+  }
+  .global-pomo {
+    margin-left: 2px !important;
+  }
 }
 
 .day-info {
@@ -1661,20 +1651,18 @@ const { startResize: startRightResize } = useResize(
   font-size: 18px;
   font-family: Consolas, "Courier New", Courier, Monaco, "Liberation Mono", "Menlo", monospace;
   color: var(--color-text);
-  border-radius: 12px;
-  padding: 0px 4px 0px 4px;
-  margin: 2px;
+
   cursor: pointer;
   background-color: var(--color-background);
 }
 
-.day-info.tomorrow .day-status {
+/* .day-info.tomorrow .day-status {
   box-shadow: 0px -1px 1px 1px var(--color-red-light) inset;
 }
 
 .day-info.yesterday .day-status {
   box-shadow: 0px -1px 1px 1px var(--color-blue-light) inset;
-}
+} */
 
 .global-pomo {
   display: inline-flex;
@@ -1682,10 +1670,11 @@ const { startResize: startRightResize } = useResize(
   font-size: 16px;
   color: var(--color-text);
   background: var(--color-background-light-transparent);
-  padding: 2px 8px;
+  padding: 2px 4px;
   border-radius: 12px;
   font-family: Consolas, "Courier New", Courier, monospace;
   font-weight: 500;
+  margin-left: 16px;
 }
 
 .today-pomo {
@@ -1733,7 +1722,7 @@ const { startResize: startRightResize } = useResize(
 
 .resize-handle:hover {
   background: var(--color-blue);
-  height: 2px;
+  height: 4px;
 }
 
 /* .resize-handle::after {
@@ -1758,7 +1747,7 @@ const { startResize: startRightResize } = useResize(
 
 .resize-handle-horizontal:hover {
   background: var(--color-blue);
-  width: 2px;
+  width: 4px;
 }
 
 /* .resize-handle-horizontal::after {
@@ -1785,13 +1774,34 @@ const { startResize: startRightResize } = useResize(
   padding-right: 6px;
 }
 
-.view-toggle-btn {
-  margin-right: 2px;
-  transform: translateY(-1px) !important;
-}
+@media (max-width: 650px) {
+  .marquee {
+    display: none;
+  }
 
-.view-toggle-btn:hover {
-  background-color: var(--color-background-light);
-  border-radius: 4px;
+  .marquee-input {
+    display: block;
+  }
+
+  .today-pomo,
+  .total-pomo {
+    font-size: 14px;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .left {
+    padding: 5px 2px 15px 8px !important;
+    width: 80px !important;
+  }
+  .right {
+    padding: 5px 6px 15px 6px !important;
+    width: 100% !important;
+  }
+
+  .resize-handle-horizontal,
+  .resize-handle {
+    display: none;
+  }
 }
 </style>

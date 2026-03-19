@@ -18,33 +18,24 @@
           <n-icon color="var(--color-blue)"><Tag16Regular /></n-icon>
         </template>
       </n-button>
-      <n-button size="small" type="info" secondary circle strong @click="showEnergyDialog = true" :disabled="!taskId" title="能量记录">
+      <n-button size="small" type="info" secondary circle @click="showEnergyDialog = true" :disabled="!taskId" title="能量记录">
         <template #icon>
           <n-icon><BatterySaver20Regular /></n-icon>
         </template>
       </n-button>
-      <n-button size="small" type="info" secondary circle strong @click="showRewardDialog = true" :disabled="!taskId" title="奖赏记录">
+      <n-button size="small" type="info" secondary circle @click="showRewardDialog = true" :disabled="!taskId" title="奖赏记录">
         <template #icon>
           <n-icon><Emoji24Regular /></n-icon>
         </template>
       </n-button>
-      <n-button
-        size="small"
-        type="info"
-        circle
-        strong
-        secondary
-        @click="showInterruptionDialog = true"
-        :disabled="!taskId"
-        title="打扰记录"
-      >
+      <n-button size="small" type="info" circle secondary @click="showInterruptionDialog = true" :disabled="!taskId" title="打扰记录">
         <template #icon>
           <n-icon><CalendarAssistant20Regular /></n-icon>
         </template>
       </n-button>
 
       <!-- 模板管理按钮 -->
-      <n-button type="default" size="small" circle strong secondary :disabled="!taskId" @click="showTemplateDialog = true" title="模板管理">
+      <n-button type="default" size="small" circle secondary :disabled="!taskId" @click="showTemplateDialog = true" title="模板管理">
         <template #icon>
           <n-icon><CalligraphyPen20Regular /></n-icon>
         </template>
@@ -67,7 +58,6 @@
             type="info"
             secondary
             circle
-            strong
             @click="handleCollapsedAction(() => (showEnergyDialog = true))"
             :disabled="!taskId"
             title="能量记录"
@@ -81,7 +71,6 @@
             type="info"
             secondary
             circle
-            strong
             @click="handleCollapsedAction(() => (showRewardDialog = true))"
             :disabled="!taskId"
             title="奖赏记录"
@@ -94,7 +83,6 @@
             size="small"
             type="info"
             circle
-            strong
             secondary
             @click="handleCollapsedAction(() => (showInterruptionDialog = true))"
             :disabled="!taskId"
@@ -108,7 +96,6 @@
             type="default"
             size="small"
             circle
-            strong
             secondary
             :disabled="!taskId"
             @click="handleCollapsedAction(() => (showTemplateDialog = true))"
@@ -140,12 +127,12 @@
     <!-- 上一个/下一个 task 显示切换 -->
     <n-button text @click="displayStore.goPrev()" :disabled="!displayStore.hasPrev" title="上一个任务">
       <template #icon>
-        <n-icon><ChevronCircleLeft20Regular /></n-icon>
+        <n-icon><ChevronLeft20Regular /></n-icon>
       </template>
     </n-button>
     <n-button text @click="displayStore.goNext()" :disabled="!displayStore.hasNext" title="下一个任务">
       <template #icon>
-        <n-icon><ChevronCircleRight20Regular /></n-icon>
+        <n-icon><ChevronRight20Regular /></n-icon>
       </template>
     </n-button>
 
@@ -170,12 +157,13 @@
       @update:show="showTagManager = $event"
       @after-leave="handleTagManagerClose"
       :taskId="taskId"
+      :modalTo="tagManagerModalTo"
     />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, inject } from "vue";
 import { NButton, NPopover, NIcon } from "naive-ui";
 import EnergyInputDialog from "@/components/TaskTracker/EnergyInputDialog.vue";
 import RewardInputDialog from "@/components/TaskTracker/RewardInputDialog.vue";
@@ -191,8 +179,8 @@ import {
   Star20Filled,
   Tag16Regular,
   ChevronDoubleLeft16Regular,
-  ChevronCircleRight20Regular,
-  ChevronCircleLeft20Regular,
+  ChevronRight20Regular,
+  ChevronLeft20Regular,
 } from "@vicons/fluent";
 
 import { useTemplateStore } from "@/stores/useTemplateStore";
@@ -206,6 +194,9 @@ const tagEditor = useActivityTagEditor();
 const dataStore = useDataStore();
 const displayStore = useDisplayedTaskStore();
 const { isMobile } = useDevice();
+
+const fullscreenContainerRef = inject<{ value: HTMLElement | null }>("taskTrackerFullscreenContainerRef", { value: null });
+const isTaskTrackerFullscreen = inject<{ value: boolean }>("isTaskTrackerFullscreen", { value: false });
 // Props
 const props = defineProps<{
   taskId: number | null;
@@ -305,6 +296,10 @@ function starTrack() {
 }
 
 const showTagManager = ref(false);
+const tagManagerModalTo = computed<string | HTMLElement>(() => {
+  if (!isTaskTrackerFullscreen.value) return "body";
+  return fullscreenContainerRef.value ?? "body";
+});
 
 // 标签管理器的 tagIds 代理
 const tagIdsProxy = computed({
@@ -350,9 +345,9 @@ function handleTagManagerClose() {
   flex-wrap: wrap;
 }
 
-@media (max-width: 600px) {
+@media (max-width: 430px) {
   .task-buttons {
-    gap: 4px;
+    gap: 6px;
   }
 }
 </style>

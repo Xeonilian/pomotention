@@ -4,11 +4,11 @@
     v-model:show="showModal"
     preset="dialog"
     title="书写模板"
-    class="mobile-dialog-top template-dialog"
+    class="mobile-dialog-top"
+    :class="{ 'template-dialog--ios': isIOS }"
     :on-after-leave="resetForm"
-    style="width: 500px; height: 410px"
   >
-    <n-layout has-sider class="template-container">
+    <n-layout has-sider>
       <n-layout-sider bordered width="150" class="template-sider">
         <n-list>
           <n-list-item
@@ -21,7 +21,7 @@
               background: selectedTemplate?.id === template.id ? 'var(--color-blue-light)' : 'var(--color-background)',
             }"
           >
-            {{ template.title }}
+            <span class="template-item-title">{{ listItemTitle(template.title) }}</span>
           </n-list-item>
         </n-list>
       </n-layout-sider>
@@ -67,6 +67,7 @@
 import { ref, computed, watch } from "vue";
 import { NModal, NInput, NButton, NSpace, NList, NListItem, NLayout } from "naive-ui";
 import { Template } from "@/core/types/Template";
+import { useDevice } from "@/composables/useDevice";
 
 const props = defineProps<{
   show: boolean;
@@ -80,6 +81,7 @@ const emit = defineEmits<{
 }>();
 
 // ==================== 状态 ====================
+const { isMobile, isIOS } = useDevice();
 const showModal = ref(props.show);
 const selectedTemplate = ref<Template | null>(null);
 const editableTemplateTitle = ref("");
@@ -128,6 +130,12 @@ watch(
 );
 
 // ==================== 方法 ====================
+/** 手机端左侧只显示前 6 个字，避免布局/省略号问题 */
+const listItemTitle = (title: string) => {
+  if (isMobile.value && title.length > 6) return title.slice(0, 5) + "…";
+  return title;
+};
+
 const selectTemplate = (template: Template) => {
   selectedTemplate.value = template;
   editableTemplateTitle.value = template.title;
@@ -206,17 +214,26 @@ const resetForm = () => {
 
 <style scoped>
 /* 额外的样式调整 */
-.template-container {
-  height: 305px;
-  width: 445px;
-}
-
 .n-layout-content {
   background-color: var(--color-background-light);
 }
 
 .n-layout-sider {
   width: 150px;
+}
+
+.template-sider .n-list-item {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Naive 列表项内部可能再包一层，省略号需作用到实际文字容器 */
+
+.template-sider .n-list-item :deep(.n-list-item__main) {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .n-list {
@@ -236,36 +253,75 @@ const resetForm = () => {
   background-color: var(--color-background);
 }
 
-/* 移动端：适应宽度、收矮高度，左侧变窄、按钮单行缩小 */
+/* 移动端：适应宽度、左侧可滚动并显示完整标题、按钮单行缩小 */
 @media (max-width: 768px) {
-  .template-container {
-    width: 100% !important;
-    max-width: 100%;
-    height: 100% !important;
-    min-height: 0;
+  /* 仅 iOS 底部多一截：类直接绑在 .template-container 上，不依赖 modal 根节点（teleport 后层级会断） */
+  .template-container--ios {
+    height: 280px !important;
   }
 
   .template-sider {
-    width: 95px !important;
-    min-width: 95px !important;
+    width: 100px !important;
+    min-width: 100px !important;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .template-sider .n-list {
+    overflow-y: auto;
+    overflow-x: hidden;
+    flex: 1;
+    min-height: 0;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .template-sider .n-list-item {
+    display: block;
+    width: 100%;
+    line-height: 1.3;
+    min-height: auto;
+    min-width: 0;
+    max-width: 100%;
+    padding: 6px 8px !important;
+    overflow: hidden;
+    box-sizing: border-box;
+  }
+
+  /* 包住标题的 Naive 容器也要限制宽度，否则 span 的 100% 仍会被撑开 */
+  .template-sider .n-list-item :deep(.n-list-item__main) {
+    display: block;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    box-sizing: border-box;
+  }
+
+  /* 用自家 span 控制省略，不依赖 Naive 内部宽度 */
+  .template-sider .template-item-title {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    box-sizing: border-box;
   }
 
   .template-footer {
-    padding: 16px 0px;
+    padding: 10px 0px;
   }
 
   .template-footer-actions {
     flex-wrap: nowrap !important;
-    gap: 4px !important;
-    overflow-x: auto;
+    gap: 8px !important;
+    overflow: hidden;
     justify-content: center;
   }
 
   .template-footer-actions :deep(.n-button) {
-    font-size: 14px;
-    padding: 6px 6px;
-    min-width: auto;
-    margin: 0 2px;
+    font-size: 12px;
+    padding: 8px;
   }
 }
 </style>

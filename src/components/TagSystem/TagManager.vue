@@ -3,9 +3,10 @@
     v-model:show="showModal"
     @after-leave="emit('after-leave')"
     class="tag-manager"
-    :align-center="!isMobile"
+    align-center
     :style="modalStyle"
     :auto-focus="false"
+    :to="modalTo"
   >
     <div class="tag-manager-inner">
       <!-- 顶部搜索和新建区域 -->
@@ -37,7 +38,7 @@
               @click="onClickTag(t)"
             >
               <!-- 标签名显示，双击可进入编辑状态 -->
-              <span v-if="editingId !== t.id" @dblclick.stop="startEdit(t)">
+              <span v-if="editingId !== t.id" @click.stop="startEdit(t)">
                 {{ t.name }}
               </span>
 
@@ -83,7 +84,7 @@
               </n-popover>
 
               <!-- 删除按钮，点击弹出确认对话框 -->
-              <n-button text @dblclick.stop="confirmRemoveTag(t)" @click.stop>
+              <n-button text @click.stop="confirmRemoveTag(t)">
                 <n-icon><TagDismiss16Regular /></n-icon>
               </n-button>
 
@@ -180,6 +181,7 @@ const dialog = useDialog();
 const props = defineProps<{
   modelValue: number[];
   show?: boolean;
+  modalTo?: string | HTMLElement;
 }>();
 
 const emit = defineEmits<{
@@ -211,6 +213,8 @@ const showModal = computed({
     if (!v) emit("update:show", false);
   },
 });
+
+const modalTo = computed<string | HTMLElement>(() => props.modalTo ?? "body");
 
 /**
  * 移动端弹窗位置样式：仅占位，具体 top 对齐由 CSS 控制，避免输入法打开时视口变化导致位移
@@ -577,9 +581,6 @@ function goNextPage(): void {
 /* “已选中”标签的固定样式 */
 .custom-tag.selected {
   transform: translateY(-2px);
-  border-bottom: 2px solid var(--color-text-secondary);
-  border-left: 2px solid var(--color-text-secondary);
-  box-shadow: 4px 0px 0px 0px var(--color-background) inset;
 }
 
 /* 悬浮在“已选中”的标签上时的增强效果 */
@@ -646,9 +647,9 @@ function goNextPage(): void {
     max-width: 100%;
     border-radius: 0;
     max-height: 80vh;
-    /* 始终贴顶部，不随输入法导致的视口变化而上下居中 */
-    align-self: flex-start !important;
-    margin: 8px auto 0 auto !important;
+    /* 上下居中 */
+    align-self: center !important;
+    margin: auto !important;
   }
 
   .tag-manager-inner {

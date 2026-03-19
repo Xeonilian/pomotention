@@ -1,7 +1,23 @@
 <!-- TaskTracker.vue -->
 <template>
-  <div class="task-view-container">
+  <div
+    class="task-view-container"
+    :class="{ 'is-pseudo-fullscreen': isTaskContainerFullscreen, 'is-ios-device': isIOSDevice }"
+    ref="taskViewContainerRef"
+  >
     <div class="task-header-container" ref="headerContainerRef">
+      <n-button
+        v-if="isMobile"
+        text
+        size="small"
+        class="task-fullscreen-toggle"
+        :title="isTaskContainerFullscreen ? '退出全屏' : '全屏'"
+        @click="toggleTaskContainerFullscreen"
+      >
+        <template #icon>
+          <n-icon><ChevronUpDown20Regular /></n-icon>
+        </template>
+      </n-button>
       <div v-if="selectedTagIds && selectedTagIds.length > 0 && selectedTaskId" class="task-tag-render-container">
         <TagRenderer
           :tag-ids="selectedTagIds"
@@ -24,9 +40,9 @@
             v-if="record.description?.trim()"
             trigger="click"
             placement="top"
-            to="body"
+            :to="timelinePopoverTo"
             :show-arrow="true"
-            :style="{ maxWidth: '280px' }"
+            :style="{ maxWidth: '240px' }"
             :show="activeTimelinePopoverRecordId === record.id"
             @update:show="(next) => handleUpdateTimelinePopoverShow(record.id, next)"
           >
@@ -102,13 +118,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed, defineAsyncComponent, onMounted, onUnmounted } from "vue";
+import { ref, watch, computed, defineAsyncComponent, onMounted, onUnmounted, provide } from "vue";
 import { storeToRefs } from "pinia";
 import type { Component } from "vue";
 import { NPopover } from "naive-ui";
 import type { EnergyRecord, RewardRecord, InterruptionRecord } from "@/core/types/Task";
 import { useTaskTrackerStore } from "@/stores/useTaskTrackerStore";
 import { useDataStore } from "@/stores/useDataStore";
+import { useDevice } from "@/composables/useDevice";
+import { ChevronUpDown20Regular } from "@vicons/fluent";
+import { useSettingStore } from "@/stores/useSettingStore";
+const settingStore = useSettingStore();
 // import { TagOff20Regular } from "@vicons/fluent";
 
 const TaskButtons = defineAsyncComponent<Component>(() => import("@/components/TaskTracker/TaskButtons.vue"));
@@ -118,6 +138,7 @@ const TagRenderer = defineAsyncComponent<Component>(() => import("@/components/T
 // UI 状态
 const isMarkdown = ref(false);
 const taskDescription = ref("");
+const taskViewContainerRef = ref<HTMLElement | null>(null);
 const headerContainerRef = ref<HTMLElement | null>(null);
 const tagDisplayLength = ref<number | null>(null);
 
@@ -126,8 +147,124 @@ const TAG_COLLAPSE_BREAKPOINT = 600; // 第一个值：标签收缩为3
 
 const taskTrackerStore = useTaskTrackerStore();
 const dataStore = useDataStore();
+const { isMobile } = useDevice();
 const { selectedTaskId, selectedTask, selectedTagIds, isStarred } = storeToRefs(taskTrackerStore);
 const { updateTaskDescription, handleEnergyRecord, handleRewardRecord, handleInterruptionRecord, handleStar } = taskTrackerStore;
+
+const isTaskContainerFullscreen = ref(false);
+const isPseudoFullscreen = ref(false);
+let prevBodyOverflow: string | null = null;
+const isIOSDevice = (() => {
+  const ua = navigator.userAgent || "";
+  const platform = navigator.platform || "";
+  const isIOSLike = /iPhone|iPad|iPod/i.test(ua);
+  // iPadOS 13+ may report MacIntel, but still has touch points.
+  const isIPadOS = platform === "MacIntel" && navigator.maxTouchPoints > 1;
+  return isIOSLike || isIPadOS;
+})();
+
+provide("taskTrackerFullscreenContainerRef", taskViewContainerRef);
+provide("isTaskTrackerFullscreen", isTaskContainerFullscreen);
+
+const timelinePopoverTo = computed(() => {
+  // 全屏时不要挂到 body：可能会被 fullscreen 顶层规则遮挡
+  if (isTaskContainerFullscreen.value && taskViewContainerRef.value) return taskViewContainerRef.value;
+  return "body";
+});
+
+const syncTaskContainerFullscreenState = () => {
+  const el = taskViewContainerRef.value;
+  if (!el) return;
+  const isNativeFullscreen = document.fullscreenElement === el;
+  // 如果原生进入了全屏，则关闭伪全屏状态，避免样式/状态冲突
+  if (isNativeFullscreen) {
+    isPseudoFullscreen.value = false;
+  }
+  isTaskContainerFullscreen.value = isPseudoFullscreen.value || isNativeFullscreen;
+};
+
+const restoreBodyScroll = () => {
+  if (prevBodyOverflow != null) {
+    document.body.style.overflow = prevBodyOverflow;
+  } else {
+    document.body.style.overflow = "";
+  }
+  prevBodyOverflow = null;
+};
+
+const enablePseudoFullscreen = () => {
+  settingStore.settings.showSchedule = false;
+  if (isPseudoFullscreen.value) return;
+  isPseudoFullscreen.value = true;
+  isTaskContainerFullscreen.value = true;
+
+  prevBodyOverflow = document.body.style.overflow;
+  // iOS 下如果不禁用背景滚动，体验会很差（内容会“顶开/回弹”）
+  document.body.style.overflow = "hidden";
+};
+
+const disablePseudoFullscreen = async () => {
+  if (!isPseudoFullscreen.value) return;
+  isPseudoFullscreen.value = false;
+
+  const el = taskViewContainerRef.value;
+  // 如果当时其实已经进入了原生 fullscreen，这里退出以保持一致
+  if (el && document.fullscreenElement === el && "exitFullscreen" in document) {
+    try {
+      await document.exitFullscreen();
+    } catch {
+      // 忽略，降级模式不要求原生一定能退出
+    }
+  }
+
+  isTaskContainerFullscreen.value = false;
+  restoreBodyScroll();
+};
+
+async function toggleTaskContainerFullscreen() {
+  const el = taskViewContainerRef.value;
+  if (!el) return;
+
+  // 若当前是伪全屏，则直接退出（避免在 iPhone 上再触发无效的原生 fullscreen）
+  if (isPseudoFullscreen.value) {
+    await disablePseudoFullscreen();
+    return;
+  }
+
+  const canNativeFullscreen =
+    "fullscreenEnabled" in document && (document as Document).fullscreenEnabled && typeof (el as any).requestFullscreen === "function";
+
+  try {
+    // 已经处于原生全屏时，优先退出；否则会表现为“切换无效”
+    if (document.fullscreenElement === el) {
+      await document.exitFullscreen();
+      syncTaskContainerFullscreenState();
+      return;
+    }
+
+    if (document.fullscreenElement && document.fullscreenElement !== el && "exitFullscreen" in document) {
+      await document.exitFullscreen();
+    }
+
+    if (canNativeFullscreen) {
+      await el.requestFullscreen();
+
+      // iOS 可能“静默失败”，所以这里做一次验证；验证失败就降级为伪全屏
+      await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
+      syncTaskContainerFullscreenState();
+      if (!isTaskContainerFullscreen.value) {
+        enablePseudoFullscreen();
+      }
+      return;
+    }
+
+    // 不支持原生 fullscreen：降级为伪全屏
+    enablePseudoFullscreen();
+  } catch {
+    // 原生 fullscreen 失败：降级为伪全屏
+    enablePseudoFullscreen();
+  }
+}
 
 // 描述从 store 同步为受控值
 watch(
@@ -243,8 +380,8 @@ const checkWidth = () => {
   if (!headerContainerRef.value) return;
   const containerWidth = headerContainerRef.value.clientWidth;
 
-  // 当宽度小于第一个值时，标签 displayLength 变为 3
-  tagDisplayLength.value = containerWidth < TAG_COLLAPSE_BREAKPOINT ? 3 : null;
+  // 当宽度小于第一个值时，标签 displayLength 变为 2
+  tagDisplayLength.value = isMobile.value && settingStore.settings.showSchedule ? 1 : containerWidth < TAG_COLLAPSE_BREAKPOINT ? 2 : null;
 };
 
 const activeTimelinePopoverRecordId = ref<number | null>(null);
@@ -287,6 +424,7 @@ const handleUpdateTimelinePopoverShow = (recordId: number, nextShow: boolean) =>
 let resizeObserver: ResizeObserver | null = null;
 
 onMounted(() => {
+  document.addEventListener("fullscreenchange", syncTaskContainerFullscreenState);
   if (headerContainerRef.value) {
     resizeObserver = new ResizeObserver(() => {
       checkWidth();
@@ -299,8 +437,16 @@ onMounted(() => {
 
 onUnmounted(() => {
   clearTimelinePopoverTimer();
+  document.removeEventListener("fullscreenchange", syncTaskContainerFullscreenState);
   if (resizeObserver) {
     resizeObserver.disconnect();
+  }
+
+  // 防止异常退出导致页面滚动状态被卡住
+  if (isPseudoFullscreen.value) {
+    isPseudoFullscreen.value = false;
+    isTaskContainerFullscreen.value = false;
+    restoreBodyScroll();
   }
 });
 </script>
@@ -312,12 +458,46 @@ onUnmounted(() => {
   height: 100%;
 }
 
+/* 全屏时浏览器可能给出默认黑底，这里强制使用应用主题背景 */
+.task-view-container:fullscreen {
+  background-color: var(--color-bg-base, #fff);
+  color: var(--color-text-primary, #333);
+  height: 100vh;
+  width: 100vw;
+  box-sizing: border-box;
+}
+
+.task-view-container.is-pseudo-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background-color: var(--color-bg-base, #fff);
+  color: var(--color-text-primary, #333);
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+}
+
 .task-header-container {
   height: 36px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   overflow: hidden;
+}
+
+.task-view-container.is-pseudo-fullscreen.is-ios-device {
+  margin-top: env(safe-area-inset-top, 0px);
+}
+
+.task-view-container.is-pseudo-fullscreen.is-ios-device .task-header-container {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.task-fullscreen-toggle {
+  flex-shrink: 0;
+  margin-left: 6px;
+  margin-right: 2px;
 }
 
 /* 按钮区域优先显示 */
@@ -339,10 +519,10 @@ onUnmounted(() => {
 }
 
 .task-tag-render-container {
-  border-radius: 4px;
-  padding: 2px;
-  margin-left: 2px;
-  margin-right: 2px;
+  border: none;
+  padding: 4px;
+  margin-left: 0px;
+
   display: flex;
   align-items: center;
   gap: 4px;
@@ -372,15 +552,17 @@ onUnmounted(() => {
 }
 
 .point-value {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: bold;
   font-family: "consolas", monospace;
 }
 
 .point-time {
-  font-size: 8px;
+  font-size: 7px;
   color: var(--color-text-primary);
   font-family: "consolas", monospace;
+  width: 100%;
+  text-align: center;
   transform: translateY(-4px);
 }
 
@@ -394,8 +576,6 @@ onUnmounted(() => {
   flex: 1;
   display: flex;
   flex-direction: column;
-  margin: 2px;
-
   overflow: hidden;
 }
 
@@ -411,5 +591,21 @@ onUnmounted(() => {
   white-space: pre-wrap;
   word-break: break-word;
   color: var(--color-text-primary, #333);
+}
+
+@media (max-width: 430px) {
+  .task-header-container {
+    height: 28px;
+    margin-bottom: 2px;
+  }
+
+  .point-time {
+    transform: translateY(-4px) translateX(-1.5px) scale(0.9);
+  }
+}
+
+.task-view-container:fullscreen .task-header-container {
+  margin-top: 8px;
+  margin-left: -2px;
 }
 </style>

@@ -1,15 +1,8 @@
 <!-- TaskRecord.vue -->
 <template>
   <div class="task-record">
-    <div
-      v-if="!isEditing"
-      class="markdown-content"
-      :class="{ disabled: !taskId }"
-      @click="handleClick"
-      :title="isEditing ? '单击启动编辑' : ''"
-    >
-      <div v-if="!taskId" class="placeholder">请选择追踪的任务...</div>
-      <div v-else-if="!content" class="placeholder">点击此处追踪执行意图...</div>
+    <div v-if="!isEditing" class="markdown-content" @click="handleClick" :title="isEditing ? '单击启动编辑' : ''">
+      <div v-if="!hasContent" class="placeholder">🪄追踪执行意图...</div>
       <div v-else v-html="renderedMarkdown"></div>
     </div>
     <div v-else style="position: relative; width: 100%; height: 100%">
@@ -40,8 +33,7 @@ const { showCaretFlash, caretFlashStyle, flashCaretFlash } = useCaretFlash();
 const { isMobile } = useDevice();
 const settingStore = useSettingStore();
 const syncStore = useSyncStore();
-// 移动端进入编辑时暂存原 topHeight，退出时恢复
-const savedTopHeight = ref<number | null>(null);
+const savedTopHeight = ref(settingStore.settings.topHeight);
 
 const markdownLoaded = ref(false);
 let markedInstance: (typeof import("marked"))["marked"] | null = null;
@@ -111,6 +103,8 @@ const emit = defineEmits<{
 }>();
 
 const content = ref(props.initialContent);
+// 是否有实质内容（排除空串和纯空白），用于占位符显隐
+const hasContent = computed(() => (content.value || "").trim().length > 1);
 const isEditing = ref(false);
 const textarea = ref<HTMLTextAreaElement | null>(null);
 
@@ -131,27 +125,37 @@ watch(
 
 const startEditing = () => {
   isEditing.value = true;
-  // 手机上空间不够，进入编辑时只保留 50px 给顶部，把空间让给编辑区
+  // 手机上的空间有限，进入编辑时压缩顶部高度，把空间让给编辑区
   if (isMobile.value) {
+    settingStore.settings.showPlanner = false;
     savedTopHeight.value = settingStore.settings.topHeight;
-    settingStore.settings.topHeight = 110;
   }
+
   nextTick(() => {
+    // iOS 上布局变动后立刻 focus 会被吃掉，需要稍微延迟一下
+    const delay = isMobile.value ? 260 : 0;
     setTimeout(() => {
       const ta = textarea.value;
       if (ta && ta instanceof HTMLTextAreaElement && document.body.contains(ta)) {
+        // 确保键盘弹出：重新设置选区到末尾并执行 focus
+        const len = ta.value.length;
+        try {
+          ta.setSelectionRange(len, len);
+        } catch {
+          // 某些浏览器不支持 setSelectionRange，直接退化为 focus
+        }
         ta.focus();
         flashCaretFlash(ta);
       }
-    }, 0);
+    }, delay);
   });
 };
 
 const stopEditing = () => {
   isEditing.value = false;
-  if (isMobile.value && savedTopHeight.value != null) {
+  if (isMobile.value) {
+    settingStore.settings.showPlanner = true;
     settingStore.settings.topHeight = savedTopHeight.value;
-    savedTopHeight.value = null;
   }
   emit("update:content", content.value);
 };
@@ -462,25 +466,19 @@ const handleClick = (event: MouseEvent) => {
 }
 
 .markdown-content {
-  padding: 10px;
-  border: 1px solid var(--color-background-dark);
-  border-radius: 4px;
+  padding: 0px 10px;
   height: 100%;
   cursor: text;
   box-sizing: border-box;
   font-weight: normal; /* 确保字体不会变粗 */
 }
 
-.markdown-content.disabled {
-  cursor: not-allowed;
-  background-color: var(--color-background-light-transparent);
-}
 .task-textarea {
-  width: calc(100% - 2px);
-  height: calc(100% - 2px);
-  padding: 10px;
-  border: 1px solid var(--color-background-dark);
-  border-radius: 4px;
+  width: calc(100% - 4px);
+  height: calc(100% - env(safe-area-inset-bottom));
+  margin: 2px;
+  padding: 6px 12px;
+  border-radius: 12px;
   font-family: inherit;
   font-weight: normal;
   box-sizing: border-box;
@@ -488,22 +486,33 @@ const handleClick = (event: MouseEvent) => {
   line-height: 1.6;
   overflow: hidden;
   outline: none;
-  transition: border-color 0.2s;
   resize: none;
 }
 
 .task-textarea:focus {
-  border: 1px solid var(--color-primary);
+  background-color: var(--color-background-light-transparent);
+  border: none;
 }
 
 :deep(.markdown-content) {
   line-height: 1.6;
 }
 
-:deep(.markdown-content h1),
-:deep(.markdown-content h2),
+:deep(.markdown-content h1) {
+  font-size: 22px;
+  margin-top: 0.5em;
+  margin-bottom: 0.1em;
+}
+
+:deep(.markdown-content h2) {
+  font-size: 18px;
+  margin-top: 0.3em;
+  margin-bottom: 0.1em;
+}
+
 :deep(.markdown-content h3) {
-  margin-top: 0em;
+  font-size: 16px;
+  margin-top: 0.1em;
   margin-bottom: 0.1em;
 }
 
@@ -629,6 +638,10 @@ const handleClick = (event: MouseEvent) => {
 .placeholder {
   color: var(--color-text-secondary);
   font-style: italic;
+  align-items: center;
+  justify-content: center;
+  display: flex;
+  margin-top: 10px;
 }
 
 .caret-flash {
@@ -654,6 +667,16 @@ const handleClick = (event: MouseEvent) => {
   100% {
     opacity: 0;
     transform: scale(1, 1);
+  }
+}
+
+@media (max-width: 430px) {
+  .task-textarea {
+    border-radius: 6px;
+    padding: 4px 6px;
+  }
+  .markdown-content {
+    padding: 0px 6px;
   }
 }
 </style>

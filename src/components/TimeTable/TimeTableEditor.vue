@@ -1,82 +1,121 @@
-<!--
-Component: TimeTableEditor.vue 
-Description: 编辑界面，接收数据，回传
-Props:
-Emits:
-Parent: HomeView.vue  
--->
 <template>
-  <table class="compact-table">
-    <thead>
-      <tr>
-        <th style="width: 45px">分类</th>
-        <th style="width: 60px">开始</th>
-        <th style="width: 60px">结束</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr v-for="(block, _idx) in currentBlocks" :key="block.id">
-        <td style="width: 54px">
-          <n-select
-            size="small"
-            :value="block.category"
-            :options="categoryOptions"
-            @update:value="(val) => handleCategoryChange(val, block.id)"
-            :show-arrow="true"
-          />
-        </td>
-        <td style="width: 80px">
-          <n-time-picker
-            size="small"
-            :value="getTimestampForTimeString(block.start, systemDate)"
-            :show-icon="false"
-            format="HH:mm"
-            @update:value="(val) => handleTimeChange(val, block.id, 'start')"
-          />
-        </td>
-        <td style="width: 80px">
-          <n-time-picker
-            size="small"
-            :value="getTimestampForTimeString(block.end, systemDate)"
-            format="HH:mm"
-            :show-icon="false"
-            @update:value="(val) => handleTimeChange(val, block.id, 'end')"
-          />
-        </td>
-      </tr>
-    </tbody>
-  </table>
-  <div class="editor-botton-container">
-    <n-button circle secondary type="success" size="small" :disabled="!canAddBlock" @click="addBlock" title="新增最后一行">
-      <template #icon>
-        <n-icon><AddCircle24Regular /></n-icon>
-      </template>
-    </n-button>
-    <n-button
-      circle
-      secondary
-      type="error"
-      size="small"
-      :disabled="currentBlocks.length === 0"
-      @click="deleteLastBlock"
-      title="删除最后一行"
-    >
-      <template #icon>
-        <n-icon><Delete24Regular /></n-icon>
-      </template>
-    </n-button>
+  <div class="editor-wrap">
+    <!-- 上：切换类型、退出编辑 -->
+    <div class="editor-top-bar">
+      <n-button
+        secondary
+        circle
+        type="info"
+        size="small"
+        :title="props.currentType === 'work' ? '切换到娱乐时间表' : '切换到工作时间表'"
+        @click="emit('toggle-type')"
+      >
+        <template #icon>
+          <n-icon>
+            <Backpack24Regular v-if="props.currentType === 'work'" />
+            <Beach24Regular v-else />
+          </n-icon>
+        </template>
+      </n-button>
+      <n-button secondary circle type="default" size="small" title="完成编辑" @click="emit('exit')">
+        <template #icon>
+          <n-icon><Dismiss24Regular /></n-icon>
+        </template>
+      </n-button>
+    </div>
+    <!-- 表格：可滚动，不拉伸高度 -->
+    <div class="editor-table-scroll">
+      <table class="compact-table">
+        <thead>
+          <tr>
+            <th style="width: 45px">分类</th>
+            <th style="width: 60px">开始</th>
+            <th style="width: 60px">结束</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="(block, _idx) in currentBlocks" :key="block.id">
+            <td style="width: 54px">
+              <n-select
+                size="small"
+                :value="block.category"
+                :options="categoryOptions"
+                @update:value="(val) => handleCategoryChange(val, block.id)"
+                :show-arrow="true"
+              />
+            </td>
+            <td style="width: 80px">
+              <n-time-picker
+                size="small"
+                :value="getTimestampForTimeString(block.start, systemDate)"
+                :show-icon="false"
+                format="HH:mm"
+                @update:value="(val) => handleTimeChange(val, block.id, 'start')"
+              />
+            </td>
+            <td style="width: 80px">
+              <n-time-picker
+                size="small"
+                :value="getTimestampForTimeString(block.end, systemDate)"
+                format="HH:mm"
+                :show-icon="false"
+                @update:value="(val) => handleTimeChange(val, block.id, 'end')"
+              />
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <!-- 下：复位、新增、删除 -->
+    <div class="editor-bottom-bar">
+      <n-popconfirm @positive-click="handleReset" negative-text="取消" positive-text="确定">
+        <template #trigger>
+          <n-button secondary circle size="small" type="default" title="复位为默认时间表">
+            <template #icon>
+              <n-icon><ArrowReset48Filled /></n-icon>
+            </template>
+          </n-button>
+        </template>
+        <span>确定要将当前时间表复位为默认吗？</span>
+      </n-popconfirm>
+      <n-button circle secondary type="success" size="small" :disabled="!canAddBlock" @click="addBlock" title="新增最后一行">
+        <template #icon>
+          <n-icon><AddCircle24Regular /></n-icon>
+        </template>
+      </n-button>
+      <n-button
+        circle
+        secondary
+        type="error"
+        size="small"
+        :disabled="currentBlocks.length === 0"
+        @click="deleteLastBlock"
+        title="删除最后一行"
+      >
+        <template #icon>
+          <n-icon><Delete24Regular /></n-icon>
+        </template>
+      </n-button>
+    </div>
+    <span v-if="!canAddBlock" class="editor-hint">24小时添加完毕</span>
   </div>
-  <span v-if="!canAddBlock" style="margin-left: 8px; color: #999">24小时添加完毕</span>
 </template>
 
 <script setup lang="ts">
 import { computed } from "vue";
 import { storeToRefs } from "pinia";
-import { NSelect, NTimePicker, NButton, NIcon } from "naive-ui";
+import { NSelect, NTimePicker, NButton, NIcon, NPopconfirm } from "naive-ui";
 import { getTimestampForTimeString, timestampToTimeString } from "@/core/utils";
 import { useTimetableStore } from "@/stores/useTimetableStore";
 import { CategoryColors } from "@/core/constants";
-import { AddCircle24Regular, Delete24Regular } from "@vicons/fluent";
+import {
+  AddCircle24Regular,
+  Delete24Regular,
+  ArrowReset48Filled,
+  Backpack24Regular,
+  Beach24Regular,
+  Dismiss24Regular,
+} from "@vicons/fluent";
 const labelMap = { sleeping: "睡眠", living: "生活", working: "工作" };
 type Category = keyof typeof CategoryColors;
 const categories = Object.keys(CategoryColors) as Category[];
@@ -88,6 +127,11 @@ const categoryOptions = categories.map((c) => ({
 
 const props = defineProps<{
   currentType: "work" | "entertainment";
+}>();
+
+const emit = defineEmits<{
+  exit: [];
+  "toggle-type": [];
 }>();
 
 const timetableStore = useTimetableStore();
@@ -130,6 +174,10 @@ function deleteLastBlock() {
   if (blocks.length === 0) return;
   const lastBlock = blocks[blocks.length - 1];
   timetableStore.removeBlock(lastBlock.id);
+}
+
+function handleReset() {
+  timetableStore.resetToDefaults(props.currentType);
 }
 
 function handleTimeChange(val: number | null, id: number, field: "start" | "end") {
@@ -202,9 +250,35 @@ const canAddBlock = computed(() => {
 </script>
 
 <style scoped>
+.editor-wrap {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.editor-top-bar {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  flex-shrink: 0;
+  padding: 6px 0;
+}
+
+/* 表格区域贴表格高度，可滚动；按钮紧贴表格下缘 */
+.editor-table-scroll {
+  flex: 0 0 auto;
+  max-height: min(60vh, 400px);
+  min-height: 0;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 .compact-table {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
 }
 .compact-table th,
 .compact-table td {
@@ -221,11 +295,19 @@ const canAddBlock = computed(() => {
   padding: 0 !important;
 }
 
-.editor-botton-container {
+.editor-bottom-bar {
   display: flex;
   justify-content: center;
+  align-items: center;
   gap: 16px;
-  width: 100%;
-  margin: 10px;
+  flex-shrink: 0;
+  padding: 10px 0;
+}
+
+.editor-hint {
+  flex-shrink: 0;
+  color: #999;
+  font-size: 12px;
+  margin: 0 auto;
 }
 </style>

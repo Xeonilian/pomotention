@@ -98,12 +98,12 @@ export function useActivityTagEditor() {
    */
   function handleTitleInput(
     activityId: number,
-    title: string
+    title: string,
   ): {
     shouldShowPopover: boolean;
     searchTerm: string;
   } {
-    const match = title.match(/#([\p{L}\p{N}_]*)$/u);
+    const match = title.match(/[#@]([\p{L}\p{N}_]*)$/u);
 
     if (match) {
       popoverTargetId.value = activityId;
@@ -124,7 +124,7 @@ export function useActivityTagEditor() {
    * @returns boolean - 是否成功触发了标签选择器
    */
   function handleContentInput(ownerId: number | string, content: string): boolean {
-    const match = content.match(/#([\p{L}\p{N}_]*)$/u);
+    const match = content.match(/[#@]([\p{L}\p{N}_]*)$/u);
 
     if (match) {
       // @ts-ignore - 我们接受 number | string 作为 ID
@@ -144,7 +144,7 @@ export function useActivityTagEditor() {
    * @returns 清理后的标题
    */
   function selectTagFromPopover(activityId: number, tagId: number, currentTitle: string): string {
-    const cleanedTitle = currentTitle.replace(/#[\p{L}\p{N}_]*$/u, "").trim();
+    const cleanedTitle = currentTitle.replace(/[#@][\p{L}\p{N}_]*$/u, "").trim();
 
     dataStore.addTagToActivity(activityId, tagId);
     closePopover();
@@ -163,7 +163,7 @@ export function useActivityTagEditor() {
     color?: string,
     backgroundColor?: string
   ): string {
-    const cleanedTitle = currentTitle.replace(/#[\p{L}\p{N}_]*$/u, "").trim();
+    const cleanedTitle = currentTitle.replace(/[#@][\p{L}\p{N}_]*$/u, "").trim();
 
     dataStore.createAndAddTagToActivity(activityId, tagName, color, backgroundColor);
     closePopover();
@@ -176,7 +176,7 @@ export function useActivityTagEditor() {
    * @returns string - 清理后的内容
    */
   function clearTagTriggerText(content: string): string {
-    return content.replace(/#[\p{L}\p{N}_]*$/u, "").trim();
+    return content.replace(/[#@][\p{L}\p{N}_]*$/u, "").trim();
   }
   /**
    * 关闭 Popover

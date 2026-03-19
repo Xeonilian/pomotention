@@ -1,197 +1,214 @@
 <template>
   <!-- 绑定 Ref 到 composable 返回的变量 -->
   <div class="pomodoro-mini-view-wrapper" ref="PomotentionTimerContainerRef">
-    <n-layout class="app-layout">
-      <!-- Header -->
-      <n-layout-header class="app-layout__header" :class="{ 'app-layout__header--hidden': isMiniMode }">
-        <div class="app-layout__header-content">
-          <!-- 桌面端显示完整菜单 -->
-          <n-menu
-            v-if="!isMobile"
-            :options="menuOptions"
-            mode="horizontal"
-            :value="currentRoutePath"
-            @update:value="handleMenuSelect"
-            class="desktop-menu"
-          />
-          <!-- 移动端显示下拉菜单按钮 -->
-          <n-dropdown
-            v-else
-            :options="dropdownMenuOptions"
-            :value="currentRoutePath"
-            @select="handleMenuSelect"
-            trigger="click"
-            placement="bottom-start"
-          >
-            <n-button size="tiny" text class="mobile-menu-button" title="菜单">
-              <template #icon>
-                <n-icon size="18" :component="List24Filled" />
-              </template>
-            </n-button>
-          </n-dropdown>
-          <div class="app-layout__view-controls">
-            <n-button
-              v-for="(control, index) in viewControls"
-              :key="index"
-              size="tiny"
-              tertiary
-              type="default"
-              :style="buttonStyle(control.show, control.key)"
-              :title="control.title"
-              @click="handleMainLayoutViewToggle(control.key)"
-              class="header-button"
-            >
-              <template #icon>
-                <n-icon size="18" :component="control.icon" />
-              </template>
-            </n-button>
-            <!-- 未登录时显示登录按钮 -->
-            <n-button
-              v-if="!isLoggedIn"
-              size="tiny"
-              type="info"
-              secondary
-              title="登录/注册"
-              class="header-button"
-              @click="syncStore.handleLogin"
-            >
-              <template #icon>
-                <n-icon>
-                  <PersonAccounts24Filled />
-                </n-icon>
-              </template>
-            </n-button>
-            <!-- 已登录时显示退出登录按钮 -->
-            <n-popconfirm
+    <n-config-provider :hljs="hljs">
+      <n-layout class="app-layout">
+        <!-- Header -->
+        <n-layout-header class="app-layout__header" :class="{ 'app-layout__header--hidden': isMiniMode }">
+          <div class="app-layout__header-content">
+            <!-- 桌面端显示完整菜单 -->
+            <n-menu
+              v-if="!isMobile"
+              :options="menuOptions"
+              mode="horizontal"
+              :value="currentRoutePath"
+              @update:value="handleMenuSelect"
+              class="desktop-menu"
+            />
+            <!-- 移动端显示下拉菜单按钮 -->
+            <n-dropdown
               v-else
-              @positive-click="handleLogoutConfirm"
-              @negative-click="handleLogoutCancel"
-              negative-text="不保留"
-              positive-text="保留"
+              :options="dropdownMenuOptions"
+              :value="currentRoutePath"
+              @select="handleMenuSelect"
+              trigger="click"
+              placement="bottom-start"
             >
-              <template #trigger>
-                <n-button size="tiny" type="default" secondary :loading="syncStore.loggingOut" title="退出登录" class="header-button">
-                  <template #icon>
-                    <n-icon>
-                      <PersonAccounts24Filled />
-                    </n-icon>
-                  </template>
-                </n-button>
-              </template>
-              <span>退出登录时是否保留本地数据？</span>
-            </n-popconfirm>
+              <n-button size="tiny" text class="mobile-menu-button" title="菜单">
+                <template #icon>
+                  <n-icon size="18" :component="List24Filled" />
+                </template>
+              </n-button>
+            </n-dropdown>
+            <div class="app-layout__view-controls">
+              <n-button
+                v-for="(control, index) in filteredViewControls"
+                :key="index"
+                :size="isMobile ? 'large' : 'medium'"
+                tertiary
+                type="default"
+                :style="buttonStyle(control.show, control.key)"
+                :title="control.title"
+                @click="handleMainLayoutViewToggle(control.key)"
+                class="header-button"
+              >
+                <template #icon>
+                  <n-icon :component="control.icon" />
+                </template>
+              </n-button>
+              <!-- 未登录时显示登录按钮 -->
+              <n-button
+                v-if="!isLoggedIn"
+                :size="isMobile ? 'large' : 'medium'"
+                type="error"
+                title="登录/注册"
+                tertiary
+                class="header-button"
+                @click="syncStore.handleLogin"
+              >
+                <template #icon>
+                  <n-icon>
+                    <Person20Filled />
+                  </n-icon>
+                </template>
+              </n-button>
+              <!-- 已登录时显示退出登录按钮 -->
+              <n-popconfirm
+                v-else
+                @positive-click="handleLogoutConfirm"
+                @negative-click="handleLogoutCancel"
+                negative-text="不保留"
+                positive-text="保留"
+              >
+                <template #trigger>
+                  <n-button
+                    :size="isMobile ? 'large' : 'medium'"
+                    type="default"
+                    tertiary
+                    :loading="syncStore.loggingOut"
+                    title="退出登录"
+                    class="header-button"
+                  >
+                    <template #icon>
+                      <n-icon>
+                        <Person20Regular />
+                      </n-icon>
+                    </template>
+                  </n-button>
+                </template>
+                <span>退出登录时是否保留本地数据？</span>
+              </n-popconfirm>
+            </div>
           </div>
-        </div>
-      </n-layout-header>
+        </n-layout-header>
 
-      <!-- Content -->
-      <n-layout-content class="app-layout__content" :class="{ 'app-layout__content--full-height': isMiniMode }">
-        <router-view v-if="!isMiniMode" />
+        <!-- Content -->
+        <n-layout-content class="app-layout__content" :class="{ 'app-layout__content--full-height': isMiniMode }">
+          <router-view v-if="!isMiniMode" />
 
-        <!-- 悬浮番茄钟容器 (正常模式) -->
-        <div
-          class="draggable-container"
-          ref="draggableContainer"
-          v-if="!isMiniMode && settingStore.settings.showPomodoro"
-          style="touch-action: none"
-          @pointerdown="handleDragStart"
-        >
+          <!-- 悬浮番茄钟容器 (正常模式) -->
+          <div
+            class="draggable-container"
+            ref="draggableContainer"
+            v-if="!isMiniMode && settingStore.settings.showPomodoro"
+            style="touch-action: none"
+            @pointerdown="handleDragStart"
+          >
+            <PomotentionTimer
+              :showPomoSeq="showPomoSeq"
+              :isMiniMode="isMiniMode"
+              @toggle-pomo-seq="showPomoSeq = !showPomoSeq"
+              @report-size="handlePomotentionTimerSizeReport"
+              @enter-mini="() => handleToggleOntopMode(reportedPomodoroWidth, reportedPomodoroHeight)"
+            />
+          </div>
+
+          <!-- 独立番茄钟 (Mini模式)，手机端传入 isMobile 以启用全屏居中布局 -->
           <PomotentionTimer
+            v-if="isMiniMode"
             :showPomoSeq="showPomoSeq"
             :isMiniMode="isMiniMode"
+            :isMobile="isMobile"
             @toggle-pomo-seq="showPomoSeq = !showPomoSeq"
             @report-size="handlePomotentionTimerSizeReport"
+            @exit-mini-mode="handleToggleOntopMode(reportedPomodoroWidth, reportedPomodoroHeight, onExitMiniMode)"
+            @exit-mini-mode-web="handleWebToggle(onExitMiniMode)"
           />
-        </div>
+        </n-layout-content>
 
-        <!-- 独立番茄钟 (Mini模式)，手机端传入 isMobile 以启用全屏居中布局 -->
-        <PomotentionTimer
-          v-if="isMiniMode"
-          :showPomoSeq="showPomoSeq"
-          :isMiniMode="isMiniMode"
-          :isMobile="isMobile"
-          @toggle-pomo-seq="showPomoSeq = !showPomoSeq"
-          @report-size="handlePomotentionTimerSizeReport"
-          @exit-mini-mode="handleToggleOntopMode(reportedPomodoroWidth, reportedPomodoroHeight, onExitMiniMode)"
-          @exit-mini-mode-web="handleWebToggle(onExitMiniMode)"
-        />
-      </n-layout-content>
-
-      <!-- Sync Footer -->
-      <n-layout-footer v-if="!isMiniMode" class="sync-footer" bordered>
-        <div class="footer-content">
-          <!-- 左侧：同步状态信息 -->
-          <div class="sync-status">
-            <div class="sync-status__icon" :class="`sync-status__icon--${syncStore.syncStatus}`">
-              <n-icon>
-                <component :is="syncIcon" :size="14" color="var(--color-blue)" />
-              </n-icon>
+        <!-- Sync Footer -->
+        <n-layout-footer v-if="!isMiniMode" class="sync-footer" bordered>
+          <div class="footer-content">
+            <!-- 左侧：同步状态信息 -->
+            <div class="sync-status">
+              <div class="sync-status__icon" :class="`sync-status__icon--${syncStore.syncStatus}`">
+                <n-icon>
+                  <component :is="syncIcon" :size="14" color="var(--color-blue)" />
+                </n-icon>
+              </div>
+              <div class="sync-status__info">
+                <span class="sync-status__message">{{ syncStore.syncMessage }}</span>
+                <span v-if="syncStore.lastSyncTimestamp" class="sync-status__time">{{ relativeTime }}</span>
+                <n-tag
+                  v-if="dataStore.hasUnsyncedData"
+                  type="default"
+                  size="tiny"
+                  style="
+                    font-size: 10px;
+                    line-height: 16px;
+                    display: flex;
+                    align-items: center;
+                    height: 16px;
+                    justify-content: center;
+                    margin-top: 1px;
+                  "
+                >
+                  数据未同步
+                </n-tag>
+                <span v-if="syncStore.syncError" class="sync-status__error">{{ syncStore.syncError }}</span>
+              </div>
             </div>
-            <div class="sync-status__info">
-              <span class="sync-status__message">{{ syncStore.syncMessage }}</span>
-              <span v-if="syncStore.lastSyncTimestamp" class="sync-status__time">{{ relativeTime }}</span>
-              <n-tag
-                v-if="dataStore.hasUnsyncedData"
-                type="default"
-                size="tiny"
-                style="
-                  font-size: 10px;
-                  line-height: 16px;
-                  display: flex;
-                  align-items: center;
-                  height: 16px;
-                  justify-content: center;
-                  margin-top: 1px;
-                "
+
+            <!-- 右侧：手动操作按钮（text 模式，不太明显） -->
+            <div class="footer-actions">
+              <n-button
+                v-if="syncStore.isLoggedIn"
+                text
+                size="small"
+                :loading="syncStore.isSyncing && syncStore.syncStatus === 'uploading'"
+                :disabled="syncStore.isSyncing"
+                @click="handleManualUpload"
+                style="opacity: 0.6; font-size: 11px"
               >
-                数据未同步
-              </n-tag>
-              <span v-if="syncStore.syncError" class="sync-status__error">{{ syncStore.syncError }}</span>
+                <template #icon>
+                  <n-icon :size="12"><ArrowUp24Filled /></n-icon>
+                </template>
+                上传
+              </n-button>
+              <n-button
+                v-if="syncStore.isLoggedIn"
+                text
+                size="small"
+                :loading="syncStore.isSyncing && syncStore.syncStatus === 'downloading'"
+                :disabled="syncStore.isSyncing"
+                @click="handleManualDownload"
+                style="opacity: 0.6; font-size: 11px"
+              >
+                <template #icon>
+                  <n-icon :size="12"><ArrowDown24Filled /></n-icon>
+                </template>
+                下载
+              </n-button>
             </div>
           </div>
-
-          <!-- 右侧：手动操作按钮（text 模式，不太明显） -->
-          <div class="footer-actions">
-            <n-button
-              v-if="syncStore.isLoggedIn"
-              text
-              size="small"
-              :loading="syncStore.isSyncing && syncStore.syncStatus === 'uploading'"
-              :disabled="syncStore.isSyncing"
-              @click="handleManualUpload"
-              style="opacity: 0.6; font-size: 11px"
-            >
-              <template #icon>
-                <n-icon :size="12"><ArrowUp24Filled /></n-icon>
-              </template>
-              上传
-            </n-button>
-            <n-button
-              v-if="syncStore.isLoggedIn"
-              text
-              size="small"
-              :loading="syncStore.isSyncing && syncStore.syncStatus === 'downloading'"
-              :disabled="syncStore.isSyncing"
-              @click="handleManualDownload"
-              style="opacity: 0.6; font-size: 11px"
-            >
-              <template #icon>
-                <n-icon :size="12"><ArrowDown24Filled /></n-icon>
-              </template>
-              下载
-            </n-button>
-          </div>
-        </div>
-      </n-layout-footer>
-    </n-layout>
+        </n-layout-footer>
+      </n-layout>
+    </n-config-provider>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch, nextTick, onMounted } from "vue";
+import { ref, computed, watch, nextTick, onMounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
-import { NMenu, NButton, NIcon, NLayoutFooter, NTag, NPopconfirm, NDropdown } from "naive-ui";
+import { NMenu, NButton, NIcon, NLayoutFooter, NTag, NPopconfirm, NDropdown, NConfigProvider } from "naive-ui";
 import { storeToRefs } from "pinia";
+import hljs from "highlight.js/lib/core";
+import javascript from "highlight.js/lib/languages/javascript";
+import typescript from "highlight.js/lib/languages/typescript";
+import json from "highlight.js/lib/languages/json";
+import sql from "highlight.js/lib/languages/sql";
+import bash from "highlight.js/lib/languages/bash";
+import markdown from "highlight.js/lib/languages/markdown";
 
 // Stores
 import { useSettingStore } from "@/stores/useSettingStore";
@@ -206,8 +223,15 @@ import { useSyncWidget } from "@/composables/useSyncWidget";
 import { useDevice } from "@/composables/useDevice";
 
 // Icons & Components
-import { PersonAccounts24Filled, ArrowUp24Filled, ArrowDown24Filled, List24Filled } from "@vicons/fluent";
+import { Person20Filled, ArrowUp24Filled, ArrowDown24Filled, List24Filled, Person20Regular } from "@vicons/fluent";
 import PomotentionTimer from "@/components/PomotentionTimer/PomotentionTimer.vue";
+
+hljs.registerLanguage("javascript", javascript);
+hljs.registerLanguage("typescript", typescript);
+hljs.registerLanguage("json", json);
+hljs.registerLanguage("sql", sql);
+hljs.registerLanguage("bash", bash);
+hljs.registerLanguage("markdown", markdown);
 
 const router = useRouter();
 const route = useRoute();
@@ -256,20 +280,17 @@ async function handleLogoutCancel() {
 
 // === 2. 菜单与路由逻辑 ===
 const currentRoutePath = ref(route.path);
-const menuOptions = [
-  { label: "首页", key: "/" },
-  { label: "数据", key: "/search" },
-  { label: "仪表盘", key: "/chart" },
-  { label: "帮助", key: "/help" },
-];
+const isDev = !!import.meta.env.VITE_APP_DEV || import.meta.env.DEV;
 
-// 移动端下拉菜单选项
-const dropdownMenuOptions = [
+const baseMenuItems = [
   { label: "首页", key: "/" },
   { label: "数据", key: "/search" },
   { label: "仪表盘", key: "/chart" },
   { label: "帮助", key: "/help" },
+  ...(isDev ? [{ label: "设置", key: "/settings" }] : []),
 ];
+const menuOptions = baseMenuItems;
+const dropdownMenuOptions = baseMenuItems;
 
 function handleMenuSelect(key: string) {
   if (key !== route.path) router.push(key);
@@ -288,6 +309,22 @@ watch([() => reportedPomodoroWidth.value, () => reportedPomodoroHeight.value], a
       ensureWithinBounds(reportedPomodoroWidth.value, reportedPomodoroHeight.value);
     });
   }
+});
+
+// 只对 ontop 做隐藏：非 Tauri 不显示；Tauri 下始终显示。其余按钮始终显示，由 buttonStyle(control.show) 控制灰显
+// 移动端不显示 planner/task
+const filteredViewControls = computed(() => {
+  const controls = viewControls.value.filter((c) => c.key !== "ontop" || c.show);
+  if (!isMobile.value) return controls;
+
+  // 移除 planner 和 task，并将 pomodoro 移到最后
+  // const filtered = controls.filter((c) => c.key !== "planner" && c.key !== "task");
+  const pomodoroIndex = controls.findIndex((c) => c.key === "pomodoro");
+  if (pomodoroIndex !== -1) {
+    const [pomodoroControl] = controls.splice(pomodoroIndex, 1);
+    controls.push(pomodoroControl);
+  }
+  return controls;
 });
 
 // === 3. 视图控制按钮 ===
@@ -361,6 +398,7 @@ async function handleManualDownload() {
 .desktop-menu {
   flex: 1;
 }
+/* 移动端菜收起钮样式 */
 .mobile-menu-button {
   display: flex;
   align-items: center;
@@ -390,6 +428,7 @@ async function handleManualDownload() {
 .pomodoro-mini-view-wrapper:deep(.n-layout .n-layout-scroll-container) {
   overflow-y: hidden !important;
 }
+
 .header-button {
   width: 30px;
   height: 25px;
@@ -398,10 +437,13 @@ async function handleManualDownload() {
   justify-content: center;
   padding: 0;
   font-size: 14px;
+  background-color: transparent !important;
 }
+
 .header-button:hover {
   background-color: var(--color-blue-light) !important;
 }
+
 /* draggable-container 样式 */
 .draggable-container {
   position: absolute;
@@ -500,5 +542,11 @@ async function handleManualDownload() {
   align-items: center;
   flex-shrink: 0;
   z-index: 1000;
+}
+
+@media (max-width: 430px) {
+  .header-button:hover {
+    background-color: transparent !important;
+  }
 }
 </style>

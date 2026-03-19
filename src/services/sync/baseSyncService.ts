@@ -23,8 +23,12 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
     protected tableName: string,
     protected localStorageKey: string,
     protected getList: () => TLocal[] | { value: TLocal[] },
-    protected getMap: () => Map<number, TLocal>
+    protected getMap: () => Map<number, TLocal>,
   ) {}
+
+  // 自动上传相关的内部状态（每个实体一个定时器）
+  private autoUploadTimer: ReturnType<typeof setTimeout> | null = null;
+  private static readonly AUTO_UPLOAD_DEBOUNCE_MS = 5000;
 
   /** 统一解包：getList 可能返回 Pinia ref，需要 .value 得到数组 */
   protected getListArray(): TLocal[] {
@@ -59,6 +63,39 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
    */
   protected getCloudIdColumnName(): string {
     return "timestamp_id"; // 子类可以重写
+  }
+
+  /**
+   * 安排一次延迟上传（用于本地编辑后的轻量自动同步）
+   * 会在一段时间内合并多次修改，最终只触发一次 upload
+   */
+  scheduleAutoUpload(delayMs: number = BaseSyncService.AUTO_UPLOAD_DEBOUNCE_MS): void {
+    if (this.autoUploadTimer !== null) {
+      clearTimeout(this.autoUploadTimer);
+    }
+
+    this.autoUploadTimer = setTimeout(async () => {
+      this.autoUploadTimer = null;
+      try {
+        await this.upload();
+      } catch (error) {
+        // 本地自动上传失败时只打日志，不打断用户操作
+        // eslint-disable-next-line no-console
+        console.error(`[${this.tableName}] auto upload failed`, error);
+      }
+    }, delayMs);
+  }
+
+  /**
+   * 立即执行一次上传（可用于窗口关闭前的兜底）
+   * 不再等待当前的防抖定时器
+   */
+  async flushAutoUpload(): Promise<void> {
+    if (this.autoUploadTimer !== null) {
+      clearTimeout(this.autoUploadTimer);
+      this.autoUploadTimer = null;
+    }
+    await this.upload();
   }
 
   // baseSyncService.ts 的 upload 方法修改
@@ -161,6 +198,9 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
     success: boolean;
     error?: string;
     downloaded: number;
+    fetched?: number;
+    /** 云端返回中 deleted=true 的条数，用于诊断验证「未 applied 是否全是已删除」 */
+    cloudDeleted?: number;
   }> {
     try {
       if (!supabase) {
@@ -180,12 +220,13 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
       // 如果有上次同步时间，只下载更新的数据
       if (lastSyncTimestamp > 0) {
         // 为了避免 lastSyncTimestamp 异常（过新/时序问题/设备时间不准）导致“完全下不下来”
-        // 这里增加 24 小时兜底窗口：起点使用 min(lastSyncTimestamp, now-24h)
+        // 这里增加 24 小时兜底窗口：仅当 lastSyncTimestamp 在未来时才回退到 now-24h（避免正常情况下每次都扩大窗口）
         // 同时，为了防止边界时间戳导致“刚好等于 lastSyncTimestamp 的记录被跳过”，预留 5 秒冗余
         const FALLBACK_WINDOW_MS = 24 * 60 * 60 * 1000;
         const SAFETY_MARGIN_MS = 5000;
-        const fallbackFromMs = Date.now() - FALLBACK_WINDOW_MS;
-        const effectiveFromMs = Math.min(lastSyncTimestamp, fallbackFromMs);
+        const nowMs = Date.now();
+        const fallbackFromMs = nowMs - FALLBACK_WINDOW_MS;
+        const effectiveFromMs = lastSyncTimestamp > nowMs ? fallbackFromMs : lastSyncTimestamp;
         const effectiveTimestamp = Math.max(0, effectiveFromMs - SAFETY_MARGIN_MS);
         const lastSyncISO = new Date(effectiveTimestamp).toISOString();
         query = query.gt("last_modified", lastSyncISO);
@@ -196,21 +237,49 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
               effectiveFromMs,
             ).toISOString()}`,
           );
+          // #region agent log
+          fetch("http://127.0.0.1:7242/ingest/a855573f-7487-43d2-8f8d-5dee3311857f", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "e164ec" },
+            body: JSON.stringify({
+              sessionId: "e164ec",
+              runId: "post-fix",
+              hypothesisId: "F",
+              location: "src/services/sync/baseSyncService.ts:download",
+              message: "fallback window applied (lastSyncTimestamp in future)",
+              data: { table: this.tableName, lastSyncTimestamp, nowMs, effectiveFromMs },
+              timestamp: Date.now(),
+            }),
+          }).catch(() => {});
+          // #endregion
         }
         // console.log(`📥 [${this.tableName}] 增量下载（自 ${new Date(effectiveTimestamp).toLocaleString()}，含 5 秒冗余）`);
       } else {
         // console.log(`📥 [${this.tableName}] 全量下载`);
       }
 
-      const { data, error } = await query;
-
-      if (error) throw error;
-      // console.log(`📊 [${this.tableName}] 云端获取 ${data?.length || 0} 条数据`);
-
-      if (!data || data.length === 0) {
-        return { success: true, downloaded: 0 };
+      // 分页拉取，绕过 PostgREST 默认 1000 行上限
+      const PAGE = 1000;
+      const data: any[] = [];
+      let offset = 0;
+      while (true) {
+        const { data: page, error } = await query.range(offset, offset + PAGE - 1);
+        if (error) throw error;
+        if (!page?.length) break;
+        data.push(...page);
+        if (page.length < PAGE) break;
+        offset += PAGE;
       }
 
+      // console.log(`📊 [${this.tableName}] 云端获取 ${data?.length || 0} 条数据`);
+
+      const fetched = data.length;
+      const cloudDeleted = data.filter((i: any) => i.deleted).length;
+      if (data.length === 0) {
+        return { success: true, downloaded: 0, fetched, cloudDeleted };
+      }
+
+      const isFullDownload = lastSyncTimestamp === 0;
       const localItems = this.getListArray();
       const localMap = this.getMap();
       let downloadedCount = 0;
@@ -218,7 +287,9 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
       for (const cloudItem of data) {
         const cloudId = this.getCloudId(cloudItem as TCloud);
         const localItem = localMap.get(cloudId);
-        const cloudTimestamp = new Date(cloudItem.last_modified).getTime();
+        // 全量下载时不解析时间戳，避免 Safari 对历史异常格式返回 NaN 导致跳过
+        const rawTs = new Date(cloudItem.last_modified).getTime();
+        const cloudTimestamp = isFullDownload || Number.isNaN(rawTs) ? 0 : rawTs;
 
         // 1. 云端标记删除
         if (cloudItem.deleted) {
@@ -251,14 +322,15 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
           continue;
         }
 
-        // 3. 本地存在
-        if (!localItem.synced) {
+        // 3. 本地存在：增量时如有未同步修改则跳过；全量时直接放行
+        if (!isFullDownload && !localItem.synced) {
           // console.log(`🔒 [${this.tableName}] ID=${cloudId} 本地有未同步修改，跳过下载`);
           continue;
         }
 
-        // 比较云端时间戳
-        if (!localItem.cloudModified || cloudTimestamp > localItem.cloudModified) {
+        // 全量下载时不比较时间戳，直接采用云端数据；增量下载才比较
+        const shouldUpdate = isFullDownload || !localItem.cloudModified || cloudTimestamp > localItem.cloudModified;
+        if (shouldUpdate) {
           const updatedItem = this.mapCloudToLocal(cloudItem as TCloud);
           Object.assign(localItem, updatedItem, {
             synced: true,
@@ -273,10 +345,10 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
       }
 
       // console.log(`✅ [${this.tableName}] 下载完成，更新 ${downloadedCount} 条数据`);
-      return { success: true, downloaded: downloadedCount };
+      return { success: true, downloaded: downloadedCount, fetched, cloudDeleted };
     } catch (error: any) {
       console.error(`❌ [${this.tableName}] 下载失败:`, error);
-      return { success: false, error: error.message, downloaded: 0 };
+      return { success: false, error: error.message, downloaded: 0, fetched: 0, cloudDeleted: 0 };
     }
   }
   /**

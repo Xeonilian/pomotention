@@ -20,9 +20,19 @@
       <div class="time-grid-container" :style="{ height: timeGridHeight + 'px' }">
         <!-- 小时刻度线（始终显示） -->
         <div class="hour-ticks">
-          <div v-for="(hour, hourIdx) in hourStamps" :key="hour" class="hour-tick" :style="{ top: getHourTickTop(hour) + 'px' }">
-            <div class="tick-line"></div>
-            <span v-if="hourIdx !== hourStamps.length - 1" class="hour-label">
+          <div
+            v-for="(hour, hourIdx) in hourStamps"
+            :key="hour"
+            class="hour-tick"
+            :class="{ 'hour-tick--major': [12].includes(hour) }"
+            :style="{ top: getHourTickTop(hour) + 'px' }"
+          >
+            <div class="tick-line" :class="{ 'tick-line--major': [6, 9, 12, 15, 18, 21].includes(hour) }"></div>
+            <span
+              v-if="(!isMobile && hourIdx !== hourStamps.length - 1) || (isMobile && [6, 9, 12, 15, 18, 21].includes(hour))"
+              class="hour-label"
+              :class="{ 'hour-label--major': [6, 9, 12, 15, 18, 21].includes(hour) }"
+            >
               {{ hour.toString().padStart(2, "0") }}
             </span>
           </div>
@@ -40,10 +50,10 @@
           />
         </template>
 
-        <!-- 统计信息 删除more设置-->
+        <!-- 统计信息-->
         <div class="card-statistic">
           <span class="pom-sum">
-            <template class="mobile-pomo-sum" v-if="isMobile">🍅 {{ day.sumRealPomo }}</template>
+            <template v-if="isMobile">🍅 {{ day.sumRealPomo }}</template>
             <template v-else>
               [
               <span :style="{ color: getPomoColor(day.pomoRatio) }">🍅</span>
@@ -129,15 +139,11 @@ const handleItemChange = (id: number, _ts: number, activityId?: number, taskId?:
   position: relative;
   z-index: 10;
 }
+
 .day-card :deep(.n-card__content) {
   padding: 6px 6px;
 }
 
-@media (max-width: 400px) {
-  .day-card :deep(.n-card__content) {
-    padding: 4px 2px 4px 2px;
-  }
-}
 .day-header {
   display: flex;
   align-items: baseline;
@@ -164,7 +170,7 @@ const handleItemChange = (id: number, _ts: number, activityId?: number, taskId?:
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  font-size: 13px;
   overflow: hidden;
   width: 20px;
   height: 20px;
@@ -172,12 +178,9 @@ const handleItemChange = (id: number, _ts: number, activityId?: number, taskId?:
   border-radius: 50%;
   z-index: 1;
   color: var(--color-text-secondary);
-  background-color: var(--primary-color, #efeded4b);
+  background-color: var(--color-background-light);
   flex-shrink: 0;
   position: relative;
-  transition:
-    opacity 0.2s ease,
-    transform 0.2s ease;
 }
 
 .date.today {
@@ -235,12 +238,20 @@ const handleItemChange = (id: number, _ts: number, activityId?: number, taskId?:
   margin-bottom: 2px;
 }
 
+.tick-line--major {
+  background-color: var(--color-text-secondary);
+}
+
 .hour-label {
   font-size: 10px;
   line-height: 10px;
   color: var(--color-text-secondary);
   opacity: 0.6;
   font-family: "consolas", monospace;
+}
+
+.hour-label--major {
+  color: var(--color-text-secondary);
 }
 
 .card-statistic {
@@ -266,5 +277,31 @@ const handleItemChange = (id: number, _ts: number, activityId?: number, taskId?:
   font-size: 12px;
   padding: 10px 0;
   text-align: center;
+}
+
+@media (max-width: 430px) {
+  .day-card :deep(.n-card__content) {
+    padding: 0px !important;
+  }
+
+  .pom-sum {
+    font-size: 10px;
+    transform: translateY(1px);
+    padding-right: 2px;
+  }
+
+  .hour-label {
+    display: none;
+  }
+
+  .hour-label.hour-label--major {
+    display: inline-block;
+  }
+  .date {
+    font-size: 12px;
+    width: 18px;
+    height: 18px;
+    margin-right: 2px;
+  }
 }
 </style>

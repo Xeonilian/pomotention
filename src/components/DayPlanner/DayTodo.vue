@@ -35,7 +35,7 @@
           <th
             class="col-start"
             :class="{ 'disabled-toggle': !selectedRowId }"
-            @dblclick.stop="selectedRowId && handleFillCurrentTimeStart()"
+            @click.stop="selectedRowId && handleFillCurrentTimeStart()"
             :title="selectedRowId ? '点击填入当前时间' : '请先选中一行'"
           >
             <n-icon size="20" class="header-icon">
@@ -45,7 +45,7 @@
           <th
             class="col-end"
             :class="{ 'disabled-toggle': !selectedRowId }"
-            @dblclick.stop="selectedRowId && handleFillCurrentTimeEnd()"
+            @click.stop="selectedRowId && handleFillCurrentTimeEnd()"
             :title="selectedRowId ? '点击填入当前时间' : '请先选中一行'"
           >
             <n-icon size="20" class="header-icon">
@@ -93,7 +93,13 @@
             </n-button>
             <n-button
               class="suspend-button"
-              v-if="selectedTodo && selectedTodo.status !== 'done' && selectedTodo.status !== 'cancelled' && !selectedTodo.realPomo"
+              v-if="
+                selectedTodo &&
+                selectedTodo.status !== 'done' &&
+                selectedTodo.status !== 'cancelled' &&
+                !selectedTodo.realPomo &&
+                !selectedTodo.startTime
+              "
               text
               @click.stop="handleSuspendSelectedTodo"
               title="撤销选中任务，退回活动清单"
@@ -129,6 +135,7 @@
               <n-checkbox
                 v-if="todo.status !== 'cancelled'"
                 :checked="todo.status === 'done'"
+                :size="isMobile ? 'small' : 'medium'"
                 @update:checked="handleCheckboxChange(todo.id, $event)"
               />
               <n-icon
@@ -146,8 +153,8 @@
             <!-- 2 开始时间 -->
             <td
               class="col-start"
-              @dblclick.stop="startEditing(todo.id, 'start')"
-              :title="editingRowId === todo.id && editingField === 'start' ? '' : '双击编辑'"
+              @click.stop="startEditing(todo.id, 'start')"
+              :title="editingRowId === todo.id && editingField === 'start' ? '' : '单击编辑'"
             >
               <input
                 class="start-input time-input"
@@ -167,8 +174,8 @@
             <!-- 3 结束时间 -->
             <td
               class="col-end"
-              @dblclick.stop="startEditing(todo.id, 'done')"
-              :title="editingRowId === todo.id && editingField === 'done' ? '' : '双击编辑'"
+              @click.stop="startEditing(todo.id, 'done')"
+              :title="editingRowId === todo.id && editingField === 'done' ? '' : '单击编辑'"
             >
               <input
                 class="done-input time-input"
@@ -189,17 +196,17 @@
             <td
               class="col-rank"
               :class="{ 'col-rank-disabled': todo.status === 'done' || todo.status === 'cancelled' }"
-              :title="todo.status === 'done' || todo.status === 'cancelled' ? '不能切换' : '双击选择分类'"
+              :title="todo.status === 'done' || todo.status === 'cancelled' ? '不能切换' : '单击选择分类'"
             >
               <n-popover
                 :show="rankPopoverTodoId === todo.id"
                 @update:show="(v) => !v && (rankPopoverTodoId = null)"
-                trigger="manual"
+                trigger="click"
                 placement="bottom"
                 :z-index="10001"
               >
                 <template #trigger>
-                  <span class="priority-badge" :class="'priority-' + todo.priority" @dblclick.stop="openRankPopoverIfActive(todo)">
+                  <span class="priority-badge" :class="'priority-' + todo.priority" @click.stop="openRankPopoverIfActive(todo)">
                     {{ getEmojiForPriority(todo.priority) || (todo.priority > 0 ? todo.priority : "") }}
                   </span>
                 </template>
@@ -229,8 +236,12 @@
             <!-- 5 意图 -->
             <td
               class="col-intent"
+              @click.stop="handleRowClick(todo)"
               @dblclick.stop="startEditing(todo.id, 'title')"
-              :title="editingRowId === todo.id && editingField === 'title' ? '' : '双击编辑'"
+              @touchstart.stop="handleTitleTouchStart($event, todo)"
+              @touchend.stop="handleTitleTouchEnd($event, todo)"
+              @touchcancel.stop="handleTitleTouchCancel(todo)"
+              :title="editingRowId === todo.id && editingField === 'title' ? '' : '单击编辑'"
             >
               <input
                 class="title-input"
@@ -257,6 +268,7 @@
                     <div class="pomo-group">
                       <template v-for="i in est" :key="i">
                         <n-checkbox
+                          :size="isMobile ? 'small' : 'medium'"
                           :class="{
                             'pomo-cherry': todo.pomoType === '🍒',
                             'pomo-grape': todo.pomoType === '🍇',
@@ -312,7 +324,7 @@
             <!-- 7 状态 -->
             <td class="status-col">
               <div class="status-cell">
-                <div class="records-stat" v-if="todo.startTime" title="能量值 | 奖赏值 | 内部打扰 | 外部打扰">
+                <div class="records-stat" title="能量值 | 奖赏值 | 内部打扰 | 外部打扰">
                   <span style="color: var(--color-blue)">{{ averageValue(todo.energyRecords) }}</span>
 
                   <span style="color: var(--color-text-secondary)">{{ averageValue(todo.rewardRecords) }}</span>
@@ -375,7 +387,7 @@
     />
   </n-popover>
 
-  <!-- 排序槽位绑定 tag：双击表头「排序」打开，失去焦点自动保存 -->
+  <!-- 排序槽位绑定 tag：单击表头「排序」打开，失去焦点自动保存 -->
   <n-modal
     v-model:show="showPriorityBindingModal"
     preset="card"
@@ -434,6 +446,7 @@ import { useActivityTagEditor } from "@/composables/useActivityTagEditor";
 import TagSelector from "../TagSystem/TagSelector.vue";
 import type { SelectOption } from "naive-ui";
 import { useDevice } from "@/composables/useDevice";
+import { useLongPress } from "@/composables/useLongPress";
 
 const dataStore = useDataStore();
 const { isMobile } = useDevice();
@@ -487,9 +500,22 @@ const selectingTagViaEnter = ref(false);
 const titleInputRef = ref<HTMLInputElement | null>(null);
 const startInputRef = ref<HTMLInputElement | null>(null);
 const doneInputRef = ref<HTMLInputElement | null>(null);
+// 标题列长按状态
+const titleLongPressMap = ref(
+  new Map<
+    number,
+    {
+      longPressTriggered: { value: boolean };
+      onLongPressStart: (e: TouchEvent | MouseEvent) => void;
+      onLongPressEnd: () => void;
+      onLongPressCancel: () => void;
+    }
+  >(),
+);
 
 // 排序列：emoji 弹窗与绑定设置
 const rankPopoverTodoId = ref<number | null>(null);
+let rankPopoverTimer: number | null = null; // 自动关闭排序弹窗的定时器
 const showPriorityBindingModal = ref(false);
 
 // 点击 popover 外视为放弃，关闭排序选择
@@ -503,18 +529,57 @@ let rankPopoverOutsideCleanup: (() => void) | null = null;
 watch(
   rankPopoverTodoId,
   (id) => {
+    // 每次 id 变化都先清理自动关闭定时器
+    if (rankPopoverTimer !== null) {
+      clearTimeout(rankPopoverTimer);
+      rankPopoverTimer = null;
+    }
     if (rankPopoverOutsideCleanup) {
       rankPopoverOutsideCleanup();
       rankPopoverOutsideCleanup = null;
     }
     if (id != null) {
       nextTick(() => {
-        const onDown = (e: MouseEvent | TouchEvent) => handleRankPopoverClickOutside(e);
+        const onDown = (e: MouseEvent | TouchEvent) => {
+          // #region agent log
+          if (e && (e as TouchEvent).type === "touchstart") {
+            fetch("http://127.0.0.1:7242/ingest/a855573f-7487-43d2-8f8d-5dee3311857f", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "e8bfe0" },
+              body: JSON.stringify({
+                sessionId: "e8bfe0",
+                runId: "pre-fix",
+                hypothesisId: "H1",
+                location: "DayTodo.vue:~543",
+                message: "rank popover onDown touchstart",
+                data: { defaultPrevented: (e as TouchEvent).defaultPrevented },
+                timestamp: Date.now(),
+              }),
+            }).catch(() => {});
+          }
+          // #endregion agent log
+          handleRankPopoverClickOutside(e);
+        };
         document.addEventListener("mousedown", onDown, true);
-        document.addEventListener("touchstart", onDown, true);
+        // #region agent log
+        fetch("http://127.0.0.1:7242/ingest/a855573f-7487-43d2-8f8d-5dee3311857f", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "e8bfe0" },
+          body: JSON.stringify({
+            sessionId: "e8bfe0",
+            runId: "pre-fix",
+            hypothesisId: "H1",
+            location: "DayTodo.vue:~545",
+            message: "addEventListener touchstart for rank popover",
+            data: { capture: true, passive: true },
+            timestamp: Date.now(),
+          }),
+        }).catch(() => {});
+        // #endregion agent log
+        document.addEventListener("touchstart", onDown, { capture: true, passive: true });
         rankPopoverOutsideCleanup = () => {
           document.removeEventListener("mousedown", onDown, true);
-          document.removeEventListener("touchstart", onDown, true);
+          document.removeEventListener("touchstart", onDown, { capture: true });
         };
       });
     }
@@ -526,7 +591,7 @@ onBeforeUnmount(() => {
 });
 const priorityBindingDraft = reactive<Record<number, number | null>>({});
 const rankHeaderTitle = computed(
-  () => "Emoji：" + PRIORITY_CATEGORIES.map((c) => `${c.priority}=${c.emoji}`).join(" ") + "；双击打开绑定标签",
+  () => "Emoji：" + PRIORITY_CATEGORIES.map((c) => `${c.priority}=${c.emoji}`).join(" ") + "；单击打开绑定标签",
 );
 const tagOptionsForBinding = computed<SelectOption[]>(() =>
   [...allTagsFromStore.value]
@@ -634,7 +699,16 @@ const sortedTodos = computed(() => {
 
 function openRankPopoverIfActive(todo: Todo) {
   if (todo.status === "done" || todo.status === "cancelled") return;
+  // 立刻打开弹窗
   rankPopoverTodoId.value = todo.id;
+  // 设置 3000ms 后自动关闭
+  rankPopoverTimer = window.setTimeout(() => {
+    // 只在当前仍然是这个 todo 时才关闭，防止误关其他项
+    if (rankPopoverTodoId.value === todo.id) {
+      rankPopoverTodoId.value = null;
+    }
+    rankPopoverTimer = null;
+  }, 3000);
 }
 
 /** 从 1 起第一个可用的优先级（1–21），考虑已完成锁定和其余进行中任务占用 */
@@ -891,7 +965,7 @@ function startEditing(todoId: number, field: "title" | "start" | "done") {
   editingRowId.value = todoId;
   editingField.value = field;
 
-  // 双击编辑：只带出原值，不自动填充当前时间
+  // 单击编辑：只带出原值，不自动填充当前时间
   editingValue.value =
     field === "title"
       ? todo.activityTitle || ""
@@ -905,7 +979,7 @@ function startEditing(todoId: number, field: "title" | "start" | "done") {
             : ""
           : "";
 
-  // 双击后激活光标：用 ref 聚焦，与 col-intent 一致；v-if 挂载后再等一帧
+  // 单击后激活光标：用 ref 聚焦，与 col-intent 一致；v-if 挂载后再等一帧
   nextTick(() => {
     nextTick(() => {
       if (field === "title") titleInputRef.value?.focus();
@@ -1163,9 +1237,40 @@ function handleInputKeydown(event: KeyboardEvent, todo: Todo) {
   }
 
   // 特殊处理：# 键自动打开 popover
-  if (event.key === "#" && !tagEditor.popoverTargetId.value) {
+  if ((event.key === "#" || event.key === "@") && !tagEditor.popoverTargetId.value) {
     tagEditor.popoverTargetId.value = todo.id;
   }
+}
+
+function getTitleLongPress(todoId: number) {
+  let handler = titleLongPressMap.value.get(todoId);
+  if (!handler) {
+    handler = useLongPress({
+      delay: 500,
+      onLongPress: () => {
+        startEditing(todoId, "title");
+      },
+    });
+    titleLongPressMap.value.set(todoId, handler);
+  }
+  return handler;
+}
+
+function handleTitleTouchStart(e: TouchEvent, todo: Todo) {
+  const longPress = getTitleLongPress(todo.id);
+  longPress.onLongPressStart(e);
+}
+
+function handleTitleTouchEnd(e: TouchEvent, todo: Todo) {
+  e.stopPropagation();
+  const longPress = getTitleLongPress(todo.id);
+  longPress.onLongPressEnd();
+  handleRowClick(todo);
+}
+
+function handleTitleTouchCancel(todo: Todo) {
+  const longPress = getTitleLongPress(todo.id);
+  longPress.onLongPressCancel();
 }
 
 function handleTagSelected(tagId: number) {
@@ -1253,18 +1358,28 @@ col.col-status {
   width: 60px;
 }
 
-@media (max-width: 400px) {
+@media (max-width: 430px) {
+  thead th {
+    border-bottom: 0px solid var(--color-background-dark) !important;
+  }
+
+  tbody td {
+    border-bottom: 0px !important;
+  }
+  tr:hover {
+    background-color: inherit !important;
+  }
   col.col-check {
     width: 20px;
   }
 
   col.col-start {
-    width: 36px;
+    width: 32px;
     font-family: Consolas, "Courier New", Courier, monospace;
   }
 
   col.col-end {
-    width: 36px;
+    width: 32px;
     font-family: Consolas, "Courier New", Courier, monospace;
   }
 
@@ -1277,11 +1392,7 @@ col.col-status {
   }
 
   td.col-intent {
-    text-overflow: clip !important;
-  }
-
-  td.col-intent .ellipsis {
-    text-overflow: clip !important;
+    text-overflow: ellipsis !important;
   }
 
   td.col-start,
@@ -1289,6 +1400,27 @@ col.col-status {
   .time-input {
     font-size: 12px;
     text-overflow: clip;
+  }
+
+  /* 移动端聚焦输入时，避免浏览器自动缩放造成表格行高抖动 */
+  input.title-input {
+    font-size: 14px !important;
+    height: 18px;
+  }
+
+  col.col-intent {
+    width: 62%;
+    min-width: 0px;
+  }
+
+  col.col-fruit {
+    width: 38%;
+    min-width: 0px;
+  }
+
+  .cancel-icon {
+    width: 14px !important;
+    height: 14px !important;
   }
 }
 
@@ -1333,7 +1465,7 @@ th.col-end.disabled-toggle {
 
 .add-todo-button {
   cursor: pointer;
-  transform: translate(-1px, 3px);
+  transform: translate(0px, 3px);
 }
 
 .header-icon {
@@ -1345,9 +1477,11 @@ tr:nth-child(even) {
   background-color: var(--color-background-light-transparent);
 }
 
-/* hover 高亮（不加 !important，便于被 selected/active 覆盖） */
-tr:hover {
-  background-color: var(--color-cyan-light-transparent);
+@media (min-width: 650px) {
+  /* hover 高亮（不加 !important，便于被 selected/active 覆盖） */
+  tr:hover {
+    background-color: var(--color-cyan-light-transparent);
+  }
 }
 
 /* 激活行样式（覆盖一切） */
@@ -1383,7 +1517,7 @@ tr.cancel-row {
 }
 
 tr.empty-row {
-  height: 30px;
+  height: 80px;
   text-align: center;
   color: var(--color-text-secondary);
   width: 100%;
@@ -1714,7 +1848,8 @@ td.col-check {
 }
 
 .title-input {
-  width: calc(100% - 10px);
+  width: calc(100% - 4px);
+  padding: 0px 0px;
   border: 1px solid #40a9ff;
   border-radius: 4px;
   outline: none;

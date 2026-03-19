@@ -28,6 +28,7 @@ export function useAppWindow() {
   async function handleToggleOntopMode(width: number, height: number, onExitCallback?: () => void) {
     if (!isTauri()) {
       isMiniMode.value = true;
+      settingStore.settings.isCompactMode = false; // 全屏时保持展开形态，非紧凑
       return;
     }
 
@@ -58,6 +59,7 @@ export function useAppWindow() {
 
       try {
         isMiniMode.value = true;
+        settingStore.settings.isCompactMode = false; // 迷你窗保持展开形态，非紧凑
         await appWindow.setDecorations(false);
 
         // 🔴 安全气囊4：设置一个绝对最小尺寸 (例如 150x100)，防止缩成点
@@ -97,6 +99,7 @@ export function useAppWindow() {
       // ... 保持原有逻辑，建议也加上 Math.max 保护 ...
       console.log("[mini] Exiting mini mode...");
       isMiniMode.value = false;
+      settingStore.settings.isCompactMode = false;
 
       try {
         await appWindow.setDecorations(true);
@@ -136,6 +139,7 @@ export function useAppWindow() {
   // 🔴 修正：使用 setTimeout 延迟执行回调，给 Vue 渲染 DOM 的时间
   function handleWebToggle(callback?: () => void) {
     isMiniMode.value = false;
+    settingStore.settings.isCompactMode = false;
 
     if (callback) {
       // nextTick 有时候在复杂组件切换中不够用，setTimeout(..., 50) 是最稳妥的

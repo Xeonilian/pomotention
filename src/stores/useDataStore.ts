@@ -380,6 +380,61 @@ export const useDataStore = defineStore(
       });
     });
 
+    // 按“优先级优先 + 时间最早 + tag 匹配”选出当日用于 Year 视图圆点的 activity 对应的 taskId
+    const firstTaggedTaskIdForAppDate = computed<number | null>(() => {
+      const startOfDay = dateService.appDateTimestamp.value;
+      const endOfDay = addDays(startOfDay, 1);
+
+      const candidates: Array<{ ts: number; priority: number; activityTagIds: number[]; taskId: number | null }> = [];
+
+      for (const t of activeTodos.value) {
+        const ts = pickTodoTsForDay(t);
+        if (ts == null || ts < startOfDay || ts >= endOfDay) continue;
+        const activity = t.activityId != null ? activityById.value.get(t.activityId) : undefined;
+        const activityTagIds = activity?.tagIds ?? [];
+        if (!activityTagIds.length) continue;
+        candidates.push({
+          ts,
+          priority: t.priority ?? 0,
+          activityTagIds,
+          taskId: t.taskId ?? activity?.taskId ?? null,
+        });
+      }
+
+      for (const s of activeSchedules.value) {
+        const ts = pickScheduleTsForDay(s);
+        if (ts == null || ts < startOfDay || ts >= endOfDay) continue;
+        const activity = s.activityId != null ? activityById.value.get(s.activityId) : undefined;
+        const activityTagIds = activity?.tagIds ?? [];
+        if (!activityTagIds.length) continue;
+        candidates.push({
+          ts,
+          priority: 0,
+          activityTagIds,
+          taskId: s.taskId ?? activity?.taskId ?? null,
+        });
+      }
+
+      if (candidates.length === 0) return null;
+
+      candidates.sort((a, b) => {
+        const pa = a.priority ?? 0;
+        const pb = b.priority ?? 0;
+        const hasPa = pa > 0;
+        const hasPb = pb > 0;
+        if (hasPa !== hasPb) {
+          return hasPa ? -1 : 1;
+        }
+        if (pa !== pb) {
+          return pa - pb;
+        }
+        return a.ts - b.ts;
+      });
+
+      const first = candidates[0];
+      return first.taskId ?? null;
+    });
+
     // 年视图：每天一个点，颜色为当日 Priority1 Todo 的 tag 色（用于 YearPlanner）
     const DAY_MS = 24 * 60 * 60 * 1000;
     const pickTodoTsForDay = (t: Todo): number | null => t.id ?? t.dueDate ?? t.startTime ?? null;
@@ -417,7 +472,7 @@ export const useDataStore = defineStore(
           }
 
           if (candidates.length === 0) {
-            out.push({ dayStartTs, tagColor: null, textColor: null });
+            out.push({ dayStartTs, tagColor: null, textColor: null, });
             continue;
           }
 
@@ -430,8 +485,63 @@ export const useDataStore = defineStore(
           continue;
         }
 
-        // 无标签筛选时：不使用 tag 颜色，交给 YearPlanner 的 CSS 默认样式
-        out.push({ dayStartTs, tagColor: null, textColor: null });
+        // 无标签筛选时：选择当日的第一条事项（优先级优先，其次时间最早）作为 dot 的 tag 颜色
+        const candidates: Array<{ ts: number; priority: number; activityTagIds: number[] }> = [];
+
+        for (const t of activeTodos.value) {
+          const ts = pickTodoTsForDay(t);
+          if (ts == null || ts < dayStartTs || ts >= dayEnd) continue;
+          const activity = t.activityId != null ? activityById.value.get(t.activityId) : undefined;
+          const activityTagIds = activity?.tagIds ?? [];
+          if (!activityTagIds.length) continue;
+          candidates.push({
+            ts,
+            priority: t.priority ?? 0,
+            activityTagIds,
+          });
+        }
+
+        for (const s of activeSchedules.value) {
+          const ts = pickScheduleTsForDay(s);
+          if (ts == null || ts < dayStartTs || ts >= dayEnd) continue;
+          const activity = s.activityId != null ? activityById.value.get(s.activityId) : undefined;
+          const activityTagIds = activity?.tagIds ?? [];
+          if (!activityTagIds.length) continue;
+          // 日程本身没有优先级，视为 0，排在有优先级的 todo 后面、无优先级 todo 之前或之后可按需要调整
+          candidates.push({
+            ts,
+            priority: 0,
+            activityTagIds,
+          });
+        }
+
+        if (candidates.length === 0) {
+          out.push({ dayStartTs, tagColor: null, textColor: null });
+          continue;
+        }
+
+        candidates.sort((a, b) => {
+          const pa = a.priority ?? 0;
+          const pb = b.priority ?? 0;
+          const hasPa = pa > 0;
+          const hasPb = pb > 0;
+          if (hasPa !== hasPb) {
+            return hasPa ? -1 : 1;
+          }
+          if (pa !== pb) {
+            return pa - pb;
+          }
+          return a.ts - b.ts;
+        });
+
+        const first = candidates[0];
+        const displayTagId = first.activityTagIds[0];
+        const tag = displayTagId != null ? tagStore.getTag(displayTagId) : undefined;
+        out.push({
+          dayStartTs,
+          tagColor: tag?.backgroundColor ?? tag?.color ?? null,
+          textColor: tag?.color ?? null,
+        });
       }
       return out;
     });
@@ -647,6 +757,10 @@ export const useDataStore = defineStore(
       activity.synced = false;
 
       saveActivities(activityList.value);
+
+      // 标签被实际应用到 Activity 时，更新本地 lastUsed（不触发云同步）
+      tagStore.touchTagsLastUsed(newTagIds);
+
       return true;
     }
 
@@ -818,15 +932,16 @@ export const useDataStore = defineStore(
 
         activityList.value.forEach((activity) => {
           if (!activity.dueRange || !activity.dueRange[0]) return;
-          if (activity.status === "done") return;
+          // 已取消或已完成的活动，不再被自动状态机覆盖
+          if (activity.status === "done" || activity.status === "cancelled") return;
           const dueMs = typeof activity.dueRange[0] === "string" ? Date.parse(activity.dueRange[0]) : Number(activity.dueRange[0]);
 
           if (dueMs >= startOfDay && dueMs <= endOfDay) {
             activity.status = "ongoing";
-          } else if (dueMs < now && activity.status != "cancelled") {
+          } else if (dueMs < now) {
             activity.status = "delayed";
           } else {
-            if (activity.status != "cancelled") activity.status = "";
+            activity.status = "";
           }
         });
       },
@@ -884,6 +999,7 @@ export const useDataStore = defineStore(
       todosForCurrentViewWithTags,
       schedulesForCurrentViewWithTags,
       schedulesForAppDate,
+      firstTaggedTaskIdForAppDate,
       todosForAppDate,
       schedulesForCurrentView,
       todosForCurrentViewWithTaskRecords,

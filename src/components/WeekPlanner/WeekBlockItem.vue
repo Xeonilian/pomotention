@@ -18,14 +18,14 @@
       :isCloseable="false"
       size="tiny"
       :displayLength="isMobile ? Number(1) : Number(3)"
-      :showIdx="Number(2)"
+      :showIdx="isMobile ? null : Number(2)"
       class="tag-renderer"
     />
     <span v-if="block.item.activityDueRange?.[0]" class="schedule-time">
       {{ timestampToTimeString(block.item.activityDueRange?.[0]) }}
     </span>
     <span class="title" :title="block.item.title" :class="[{ 'activity--selected': activeId === block.item.activityId }]">
-      {{ block.item.title }}
+      {{ isMobile ? mobileDisplayTitle : block.item.title }}
     </span>
   </div>
 </template>
@@ -50,6 +50,17 @@ const props = defineProps<{
   dayStartTs: number;
   getItemBlockStyle: (block: WeekBlockItemType, dayStartTs: number) => Record<string, string | number>;
 }>();
+
+// 手机端：根据时长动态决定标题显示长度（单位：分钟）
+const mobileDisplayTitle = computed(() => {
+  const title = props.block.item.title ?? "";
+  if (!title) return "";
+
+  const durationMinutes = Math.max(0, Math.round((props.block.end - props.block.start) / 60000));
+  const maxChars = durationMinutes < 45 ? 4 : durationMinutes < 75 ? 8 : 12;
+
+  return title.slice(0, maxChars);
+});
 
 // 定义emit
 const emit = defineEmits<{
@@ -160,5 +171,41 @@ const handleClick = () => {
   height: 100%;
   align-items: center;
   gap: 2px;
+}
+
+@media (max-width: 430px) {
+  .item {
+    /* 小屏下使用纵向布局，并在块内垂直居中，保证时间和标题都能完整显示 */
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    font-size: 9px;
+    padding: 0px;
+  }
+  .item .title {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    width: auto;
+  }
+
+  .schedule-time {
+    font-size: 7px;
+    box-shadow: none;
+    margin-left: 0px;
+    padding: 0px 2px;
+    /* 小屏下让时间文字在小标签内部垂直居中，避免视觉上“贴到底部” */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+  }
+  .time-block--todo,
+  .time-block--schedule {
+    border-left: 4px solid;
+  }
+  .tag-renderer {
+    display: none;
+  }
 }
 </style>

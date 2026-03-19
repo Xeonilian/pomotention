@@ -9,9 +9,9 @@ import type { Schedule } from "@/core/types/Schedule";
 import type { Todo } from "@/core/types/Todo";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useDataStore } from "@/stores/useDataStore";
-// import { useDevice } from "@/composables/useDevice";
+import { useDevice } from "@/composables/useDevice";
 
-// const { isMobile } = useDevice();
+const { isMobile } = useDevice();
 
 /**
  * unifiedDateService 的配置选项。
@@ -110,7 +110,7 @@ export function unifiedDateService({ activityList, scheduleList, todoList }: Uni
     const mm = String(date.getMonth() + 1).padStart(2, "0");
     const dd = String(date.getDate()).padStart(2, "0");
     const weekDay = date.toLocaleDateString("en-US", { weekday: "short" });
-    return `${mm}/${dd} ${weekDay}`;
+    return isMobile ? `-${mm}-${dd}` : `-${mm}-${dd} ${weekDay}`;
   });
 
   const weekStartTs = computed(() => getStartOfWeek(dateState.app));
@@ -121,7 +121,7 @@ export function unifiedDateService({ activityList, scheduleList, todoList }: Uni
     // const start = new Date(weekStartTs.value);
     const { weekNumber } = getISOWeekInfo(weekStartTs.value);
     // const monthName = start.toLocaleString("en-US", { month: "long" }); // August
-    return `Week${weekNumber}`;
+    return `Week ${weekNumber}`;
   });
 
   const monthStartTs = computed(() => getStartOfMonth(dateState.app));

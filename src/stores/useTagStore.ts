@@ -119,6 +119,29 @@ export const useTagStore = defineStore("tagStore", () => {
   }
 
   /**
+   * 仅本地更新标签的最后使用时间，不修改同步状态
+   */
+  function touchTagLastUsed(id: number) {
+    const index = findTagIndex(id);
+    if (index === -1) return;
+    rawTags.value[index].lastUsed = Date.now();
+  }
+
+  /**
+   * 批量本地更新多个标签的最后使用时间，不修改同步状态
+   */
+  function touchTagsLastUsed(ids: number[]) {
+    if (!ids || ids.length === 0) return;
+    const idSet = new Set(ids);
+    const now = Date.now();
+    for (let i = 0; i < rawTags.value.length; i++) {
+      const tag = rawTags.value[i];
+      if (!idSet.has(tag.id)) continue;
+      rawTags.value[i].lastUsed = now;
+    }
+  }
+
+  /**
    * 软删除一个 tag。
    */
   function removeTag(id: number) {
@@ -227,6 +250,8 @@ export const useTagStore = defineStore("tagStore", () => {
     updateTagById,
     removeTag,
     loadInitialTags,
+    touchTagLastUsed,
+    touchTagsLastUsed,
     getTag,
     getTagsByIds,
     getTagNamesByIds,

@@ -120,6 +120,8 @@ export function resetSyncServices() {
 interface SyncResult {
   errors: string[];
   count: number;
+  /** 各实体：从 DB 拉取条数 / 实际写入条数 / 云端 deleted 条数（诊断用） */
+  details?: { name: string; fetched: number; downloaded: number; cloudDeleted?: number }[];
 }
 
 /**
@@ -180,7 +182,7 @@ async function _internalUpload(): Promise<SyncResult> {
 }
 
 /**
- * 内部下载逻辑
+ * 内部下载逻辑（返回各实体 fetched/downloaded 供诊断）
  */
 async function _internalDownload(lastSyncTimestamp: number): Promise<SyncResult> {
   // 新增：10秒超时兜底
@@ -191,8 +193,9 @@ async function _internalDownload(lastSyncTimestamp: number): Promise<SyncResult>
   const downloadPromise = new Promise<SyncResult>(async (resolve) => {
     const errors: string[] = [];
     let downloaded = 0;
+    const details: { name: string; fetched: number; downloaded: number; cloudDeleted?: number }[] = [];
 
-    // 并行下载所有表
+    // 并行下载所有表 #HACK
     const results = await Promise.allSettled(
       syncServices.map(({ name, service }) => service.download(lastSyncTimestamp).then((res: any) => ({ name, res }))),
     );
@@ -200,20 +203,24 @@ async function _internalDownload(lastSyncTimestamp: number): Promise<SyncResult>
     results.forEach((outcome) => {
       if (outcome.status === "fulfilled") {
         const { name, res } = outcome.value;
+        const fetched = res.fetched ?? 0;
+        const applied = res.downloaded ?? 0;
+        const cloudDeleted = res.cloudDeleted ?? 0;
+        details.push({ name, fetched, downloaded: applied, cloudDeleted });
         if (!res.success) errors.push(`${name} 下载失败: ${res.error}`);
-        else downloaded += res.downloaded;
+        else downloaded += applied;
       } else {
         errors.push(`下载异常: ${outcome.reason}`);
       }
     });
 
-    resolve({ errors, count: downloaded });
+    resolve({ errors, count: downloaded, details });
   });
 
   try {
     return await Promise.race([downloadPromise, timeoutPromise]);
   } catch (e: any) {
-    return { errors: [e.message], count: 0 };
+    return { errors: [e.message], count: 0, details: [] };
   }
 }
 
@@ -292,7 +299,7 @@ async function runSyncTask(actionName: string, taskFn: () => Promise<{ success: 
  * 完整同步：上传 -> 下载 -> 清理 -> 保存 -> 更新时间
  */
 export async function syncAll() {
-  console.log("🚀 syncAll() 被调用，开始执行全量同步...");
+  console.log("🚀 syncAll() 被调用，执行同步...");
   return runSyncTask("同步", async () => {
     const syncStore = useSyncStore();
     const dataStore = useDataStore();
@@ -311,6 +318,21 @@ export async function syncAll() {
     // 决定是否全量：如果是 0，或者上次同步距今太久(可选)，则全量
     const lastSync = syncStore.lastSyncTimestamp;
     const isFirstSync = lastSync === 0;
+    // #region agent log
+    fetch("http://127.0.0.1:7242/ingest/a855573f-7487-43d2-8f8d-5dee3311857f", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "e164ec" },
+      body: JSON.stringify({
+        sessionId: "e164ec",
+        runId: "post-fix",
+        hypothesisId: "E",
+        location: "src/services/sync/index.ts:syncAll",
+        message: "syncAll download decision",
+        data: { lastSync, isFirstSync, autoSupabaseSync: settingStore.settings.autoSupabaseSync },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
     if (isFirstSync) console.log("🔄 首次同步，执行全量下载");
 
     const downRes = await _internalDownload(lastSync);
@@ -382,32 +404,53 @@ export async function uploadAll() {
  * 只下载：下载 -> 保存 -> 更新时间
  */
 export async function downloadAll(lastSync: number) {
-  if (!ensureInitialized()) return { success: false };
+  const out = await downloadAllWithDiagnostics(lastSync, { updateTimestamp: true });
+  return { success: out.success, errors: out.errors, downloaded: out.downloaded };
+}
+
+/**
+ * 带诊断的下载：返回各实体 fetched/applied，并可选择是否更新时间戳（测试时可不更新）
+ */
+export async function downloadAllWithDiagnostics(
+  lastSync: number,
+  opts?: { updateTimestamp?: boolean },
+): Promise<{
+  success: boolean;
+  errors: string[];
+  downloaded: number;
+  details: { name: string; fetched: number; downloaded: number; cloudDeleted?: number }[];
+}> {
+  if (!ensureInitialized()) {
+    return { success: false, errors: ["未初始化"], downloaded: 0, details: [] };
+  }
   const syncStore = useSyncStore();
-  if (syncStore.isSyncing) return { success: false };
+  if (syncStore.isSyncing) {
+    return { success: false, errors: ["同步进行中"], downloaded: 0, details: [] };
+  }
 
   await runBeforeSyncHook();
   syncStore.startDownload();
 
   try {
-    const { errors, count } = await _internalDownload(lastSync);
+    const { errors, count, details = [] } = await _internalDownload(lastSync);
 
     if (errors.length === 0) {
-      syncStore.updateLastSyncTimestamp(); // 下载成功才更新时间
+      if (opts?.updateTimestamp !== false) {
+        syncStore.updateLastSyncTimestamp();
+      }
       const dataStore = useDataStore();
       dataStore.saveAllAfterSync();
       console.log("💾 [Sync] 下载成功，数据已保存");
       syncStore.syncSuccess("下载完成");
-      return { success: true, errors: [], downloaded: count };
+      return { success: true, errors: [], downloaded: count, details };
     } else {
       syncStore.syncFailed(errors.join("; "));
-      return { success: false, errors, downloaded: count };
+      return { success: false, errors, downloaded: count, details };
     }
   } catch (e: any) {
     syncStore.syncFailed(e.message);
-    return { success: false, errors: [e.message], downloaded: 0 };
+    return { success: false, errors: [e.message], downloaded: 0, details: [] };
   } finally {
-    // 核心修复：下载流程兜底，防止锁死
     if (syncStore.isSyncing) {
       syncStore.isSyncing = false;
       if (!syncStore.syncError) {

@@ -15,7 +15,7 @@
         backgroundColor: tag.backgroundColor,
         // border: `1px solid ${tag.color}`,
         border: 'none !important',
-        boxShadow:  props.displayLength === 0 ? `3px -2px 0px 0px ${tag.color} inset` : 'none',
+        boxShadow: props.displayLength === 0 ? `3px -2px 0px 0px ${tag.color} inset` : 'none',
       }"
       displayLength="props.displayLength || null"
     >
@@ -40,7 +40,7 @@ const props = defineProps<{
   closeableTagIds?: number[];
   size?: "medium" | "small" | "large" | "tiny";
   displayLength?: number | null; // ✅ 允许 null
-  showIdx?: number;
+  showIdx?: number | null;
   title?: string;
 }>();
 
@@ -90,7 +90,8 @@ const renderedTags = computed(() => {
 
   // 如果指定了 showIdx，只显示前 n 个
   const n = props.showIdx;
-  if (n == null || n <= 0) return result;
+  if (n === null) return;
+  if (n === undefined || n <= 0) return result;
   return result.slice(0, n);
 });
 
