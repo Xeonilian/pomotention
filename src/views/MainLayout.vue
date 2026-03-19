@@ -384,6 +384,7 @@ async function handleManualDownload() {
 .desktop-menu {
   flex: 1;
 }
+/* 移动端菜收起钮样式 */
 .mobile-menu-button {
   display: flex;
   align-items: center;
@@ -413,6 +414,7 @@ async function handleManualDownload() {
 .pomodoro-mini-view-wrapper:deep(.n-layout .n-layout-scroll-container) {
   overflow-y: hidden !important;
 }
+
 .header-button {
   width: 30px;
   height: 25px;
@@ -422,9 +424,11 @@ async function handleManualDownload() {
   padding: 0;
   font-size: 14px;
 }
+
 .header-button:hover {
   background-color: var(--color-blue-light) !important;
 }
+
 /* draggable-container 样式 */
 .draggable-container {
   position: absolute;
@@ -523,5 +527,15 @@ async function handleManualDownload() {
   align-items: center;
   flex-shrink: 0;
   z-index: 1000;
+}
+
+@media (max-width: 430px) {
+  .header-button:hover {
+    background-color: transparent !important;
+  }
+  .header-button {
+    background-color: transparent !important;
+    /* --n-text-color-hover: transparent !important; */
+  }
 }
 </style>

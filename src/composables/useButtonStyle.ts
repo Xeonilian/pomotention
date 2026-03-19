@@ -25,14 +25,6 @@ export function useButtonStyle() {
   const settingStore = useSettingStore();
   const { isMobile } = useDevice();
 
-  // 移动端：进入“仅 Activity”前保存现场，用于再次点击时恢复
-  const mobileRestoreState = ref<null | {
-    showSchedule: boolean;
-    showPlanner: boolean;
-    showTask: boolean;
-    showActivity: boolean;
-  }>(null);
-
   const buttonStates = ref<Record<ViewKey, boolean>>({
     ontop: false,
     pomodoro: false,
@@ -44,17 +36,19 @@ export function useButtonStyle() {
   });
 
   const buttonStyle = (show: boolean, key: string) => {
-    const isDisabled = key === "pomodoro" && timerStore.isActive;
+    const isDisabled =
+      (key === "pomodoro" && timerStore.isActive) || (key === "schedule" && settingStore.settings.showActivity && isMobile.value);
     const isOntop = key === "ontop";
 
     return {
-      filter: show ? (isDisabled ? "grayscale(50%)" : "none") : "grayscale(100%)",
-      opacity: show ? (isDisabled ? 0.4 : 1) : 0.6,
+      opacity: show ? (isDisabled ? 0.3 : 1) : 0.4,
       backgroundColor: show ? "var(--color-background)" : "var(--color-background-light)",
       borderRadius: "4px",
       transition: "all 0.3s ease",
       cursor: isOntop ? "pointer" : isDisabled ? "not-allowed" : "pointer",
+      filter: isDisabled ? "grayscale(50%)" : "none",
       transform: isDisabled ? "scale(0.95)" : "scale(1)",
+      color: isDisabled ? "var(--color-red) !important" : "var(--color-text-primary)",
     };
   };
 
@@ -98,33 +92,19 @@ export function useButtonStyle() {
       // - 点击 activity：只显示 activity；再次点击恢复进入前的显示状态
       // - 点击 schedule：仅在不显示 activity 时才允许切换 schedule
       if (panel === "activity") {
-        const isActivityOnly =
-          settingStore.settings.showActivity &&
-          !settingStore.settings.showPlanner &&
-          !settingStore.settings.showTask &&
-          !settingStore.settings.showSchedule;
-
-        if (isActivityOnly && mobileRestoreState.value) {
-          settingStore.settings.showSchedule = mobileRestoreState.value.showSchedule;
-          settingStore.settings.showPlanner = mobileRestoreState.value.showPlanner;
-          settingStore.settings.showTask = mobileRestoreState.value.showTask;
-          settingStore.settings.showActivity = mobileRestoreState.value.showActivity;
-          mobileRestoreState.value = null;
+        if (settingStore.settings.showActivity) {
+          settingStore.settings.showSchedule = true;
+          settingStore.settings.showPlanner = true;
+          settingStore.settings.showTask = true;
+          settingStore.settings.showActivity = false;
+          return;
+        } else {
+          settingStore.settings.showSchedule = false;
+          settingStore.settings.showPlanner = false;
+          settingStore.settings.showTask = false;
+          settingStore.settings.showActivity = true;
           return;
         }
-
-        mobileRestoreState.value = {
-          showSchedule: settingStore.settings.showSchedule,
-          showPlanner: settingStore.settings.showPlanner,
-          showTask: settingStore.settings.showTask,
-          showActivity: settingStore.settings.showActivity,
-        };
-
-        settingStore.settings.showSchedule = false;
-        settingStore.settings.showPlanner = false;
-        settingStore.settings.showTask = false;
-        settingStore.settings.showActivity = true;
-        return;
       }
 
       if (panel === "schedule") {
