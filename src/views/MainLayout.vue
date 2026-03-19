@@ -81,7 +81,7 @@
                   >
                     <template #icon>
                       <n-icon>
-                        <PersonAccounts24Filled />
+                        <PersonAccounts24Regular />
                       </n-icon>
                     </template>
                   </n-button>
@@ -223,7 +223,7 @@ import { useSyncWidget } from "@/composables/useSyncWidget";
 import { useDevice } from "@/composables/useDevice";
 
 // Icons & Components
-import { PersonAccounts24Filled, ArrowUp24Filled, ArrowDown24Filled, List24Filled } from "@vicons/fluent";
+import { PersonAccounts24Filled, ArrowUp24Filled, ArrowDown24Filled, List24Filled, PersonAccounts24Regular } from "@vicons/fluent";
 import PomotentionTimer from "@/components/PomotentionTimer/PomotentionTimer.vue";
 
 hljs.registerLanguage("javascript", javascript);
