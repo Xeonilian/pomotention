@@ -1,6 +1,10 @@
 <!-- TaskTracker.vue -->
 <template>
-  <div class="task-view-container" :class="{ 'is-pseudo-fullscreen': isTaskContainerFullscreen }" ref="taskViewContainerRef">
+  <div
+    class="task-view-container"
+    :class="{ 'is-pseudo-fullscreen': isTaskContainerFullscreen, 'is-ios-device': isIOSDevice }"
+    ref="taskViewContainerRef"
+  >
     <div class="task-header-container" ref="headerContainerRef">
       <n-button
         v-if="isMobile"
@@ -150,6 +154,14 @@ const { updateTaskDescription, handleEnergyRecord, handleRewardRecord, handleInt
 const isTaskContainerFullscreen = ref(false);
 const isPseudoFullscreen = ref(false);
 let prevBodyOverflow: string | null = null;
+const isIOSDevice = (() => {
+  const ua = navigator.userAgent || "";
+  const platform = navigator.platform || "";
+  const isIOSLike = /iPhone|iPad|iPod/i.test(ua);
+  // iPadOS 13+ may report MacIntel, but still has touch points.
+  const isIPadOS = platform === "MacIntel" && navigator.maxTouchPoints > 1;
+  return isIOSLike || isIPadOS;
+})();
 
 provide("taskTrackerFullscreenContainerRef", taskViewContainerRef);
 provide("isTaskTrackerFullscreen", isTaskContainerFullscreen);
@@ -453,11 +465,6 @@ onUnmounted(() => {
   height: 100vh;
   width: 100vw;
   box-sizing: border-box;
-  /* iOS/安卓刘海屏：避免内容贴边 */
-  padding-top: env(safe-area-inset-top, 8px);
-  padding-right: max(6px, env(safe-area-inset-right, 0px));
-  padding-bottom: max(6px, env(safe-area-inset-bottom, 0px));
-  padding-left: max(6px, env(safe-area-inset-left, 0px));
 }
 
 .task-view-container.is-pseudo-fullscreen {
@@ -466,7 +473,6 @@ onUnmounted(() => {
   z-index: 9999;
   background-color: var(--color-bg-base, #fff);
   color: var(--color-text-primary, #333);
-  margin-top: env(safe-area-inset-top, 0px);
   height: 100vh;
   width: 100vw;
   overflow: hidden;
@@ -480,7 +486,11 @@ onUnmounted(() => {
   overflow: hidden;
 }
 
-.task-view-container.is-pseudo-fullscreen .task-header-container {
+.task-view-container.is-pseudo-fullscreen.is-ios-device {
+  margin-top: env(safe-area-inset-top, 0px);
+}
+
+.task-view-container.is-pseudo-fullscreen.is-ios-device .task-header-container {
   padding-top: env(safe-area-inset-top, 0px);
 }
 
