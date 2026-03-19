@@ -142,7 +142,7 @@ export function unifiedDateService({ activityList, scheduleList, todoList }: Uni
   // 2026
   const displayYearInfo = computed(() => {
     const d = new Date(yearStartTs.value);
-    return isMobile ? String(d.getFullYear()).slice(2) : String(d.getFullYear());
+    return String(d.getFullYear());
   });
 
   // --- 3.1 可见范围（新） ---

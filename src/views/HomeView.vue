@@ -38,10 +38,14 @@
             <!-- 年入口：仅显示年份，点击进入年视图；在年视图时也只显示年份 -->
             <div class="day-info">
               <template v-if="settingStore.settings.viewSet !== 'year'">
-                <span @click="onYearJump" class="day-status" title="进入年视图">{{ dateService.displayYearInfo }}</span>
+                <span @click="onYearJump" class="day-status" title="进入年视图">
+                  {{ settingStore.settings.showSchedule && isMobile ? dateService.displayYearInfo.slice(2) : dateService.displayYearInfo }}
+                </span>
               </template>
               <template v-else>
-                <span @click="onDayJump" class="day-status" title="进入日视图">{{ dateService.displayYearInfo }}</span>
+                <span @click="onDayJump" class="day-status" title="进入日视图">
+                  {{ dateService.displayYearInfo }}
+                </span>
                 <span @click="onDateSet('today')" class="global-pomo">
                   <span class="today-pomo">🍅{{ currentDatePomoCount }}</span>
                   <span class="total-pomo">/{{ globalRealPomo }}</span>
@@ -433,7 +437,7 @@ const onDayJump = () => {
 // 年视图中点击月份标题 → 进入月视图并定位到该月
 const onYearNavigateToMonth = (monthStartTs: number) => {
   settingStore.settings.viewSet = "month";
-  settingStore.settings.topHeight = isMobile.value ? 490 : 610;
+  settingStore.settings.topHeight = isMobile.value ? 500 : 610;
   dateService.navigateTo(monthStartTs);
 };
 
@@ -447,7 +451,7 @@ const onYearNavigateToWeek = (weekStartTs: number) => {
 // weekplanner month 引起变化日期
 const onMonthJump = () => {
   settingStore.settings.viewSet = "month";
-  settingStore.settings.topHeight = isMobile.value ? 490 : 610;
+  settingStore.settings.topHeight = isMobile.value ? 500 : 610;
 };
 
 const onWeekJump = () => {
@@ -1219,7 +1223,7 @@ function onDateSet(direction: "prev" | "next" | "today" | "query") {
 
 // 切换视图
 function onViewSet() {
-  const order: readonly ViewType[] = ["day", "week", "month"] as const;
+  const order: readonly ViewType[] = ["day", "week", "month", "year"] as const;
   const cur = settingStore.settings.viewSet as ViewType;
   const idx = order.indexOf(cur);
   const next = order[(idx + 1) % order.length];
@@ -1229,6 +1233,8 @@ function onViewSet() {
   } else if (cur === "day") {
     settingStore.settings.topHeight = 610;
   } else if (cur === "month") {
+    settingStore.settings.topHeight = 480;
+  } else if (cur === "year") {
     settingStore.settings.topHeight = 300;
   }
 }
