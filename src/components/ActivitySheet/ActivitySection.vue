@@ -17,7 +17,7 @@
           }
         "
         @blur="() => (isSearchFocused = false)"
-        class="input-focus-none"
+        class="input-focus-none search-input"
       >
         <template #prefix>
           <n-dropdown :options="filterOptions" @select="(key) => $emit('filter', key)">
@@ -1236,17 +1236,54 @@ function handlePomoInputTouchCancel(item: Activity) {
 
 :deep(.n-input.input-focus-none) {
   --n-box-shadow-focus: none !important;
-  --n-border-hover: 1px solid var(--color-blue) !important;
-}
-
-.input-focus-none :deep(.n-input) {
-  --n-box-shadow-focus: none !important;
-  --n-border-hover: 1px solid var(--color-blue) !important;
+  --n-border-hover: none !important;
 }
 
 :deep(.n-button.section-button) {
   --n-border: none !important;
   --n-icon-size: 20px !important;
   --n-padding: 4px !important;
+}
+
+.search-input :deep(.n-input) {
+  height: 34px !important;
+  max-height: 34px !important;
+}
+
+.search-input :deep(.n-input-wrapper) {
+  height: 34px !important;
+  min-height: 34px !important;
+}
+
+.search-input :deep(.n-input__input-el) {
+  height: 34px !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  line-height: normal !important;
+}
+
+/* iPhone Safari：锁定输入区基线，避免清空后再输入时文字与光标下沉 */
+@supports (-webkit-touch-callout: none) {
+  .search-input :deep(.n-input),
+  .search-input :deep(.n-input-wrapper) {
+    height: 34px !important;
+    min-height: 34px !important;
+  }
+
+  .search-input :deep(.n-input__input) {
+    display: flex;
+    align-items: center;
+    height: 100%;
+  }
+
+  .search-input :deep(.n-input__input-el) {
+    height: 100% !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    font-size: 16px !important;
+    line-height: 1.2 !important;
+    text-size-adjust: 100%;
+    -webkit-text-size-adjust: 100%;
+  }
 }
 </style>
