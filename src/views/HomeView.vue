@@ -422,37 +422,37 @@ const appDateTimestamp = computed(() => dateService.appDateTimestamp);
 // 进入年视图（点击头部年份）
 const onYearJump = () => {
   settingStore.settings.viewSet = "year";
-  settingStore.settings.topHeight = 480;
+  settingStore.settings.topHeight = 490;
 };
 
 const onDayJump = () => {
   settingStore.settings.viewSet = "day";
-  settingStore.settings.topHeight = 300;
+  settingStore.settings.topHeight = isMobile.value ? 300 : 300;
 };
 
 // 年视图中点击月份标题 → 进入月视图并定位到该月
 const onYearNavigateToMonth = (monthStartTs: number) => {
   settingStore.settings.viewSet = "month";
-  settingStore.settings.topHeight = 610;
+  settingStore.settings.topHeight = isMobile.value ? 490 : 610;
   dateService.navigateTo(monthStartTs);
 };
 
 // 年视图中点击周编号 → 进入周视图并定位到该周
 const onYearNavigateToWeek = (weekStartTs: number) => {
   settingStore.settings.viewSet = "week";
-  settingStore.settings.topHeight = 510;
+  settingStore.settings.topHeight = isMobile.value ? 490 : 510;
   dateService.navigateTo(weekStartTs);
 };
 
 // weekplanner month 引起变化日期
 const onMonthJump = () => {
   settingStore.settings.viewSet = "month";
-  settingStore.settings.topHeight = 610;
+  settingStore.settings.topHeight = isMobile.value ? 490 : 610;
 };
 
 const onWeekJump = () => {
   settingStore.settings.viewSet = "week";
-  settingStore.settings.topHeight = 510;
+  settingStore.settings.topHeight = isMobile.value ? 490 : 510;
 };
 
 // 选择进入日视图的具体日期
