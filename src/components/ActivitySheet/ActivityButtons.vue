@@ -7,7 +7,6 @@
     <n-button
       @click="$emit('pick-activity')"
       :disabled="activeId === undefined || props.isDeleted || isSelectedRowDone"
-      secondary
       circle
       text
       type="default"
@@ -23,7 +22,6 @@
       :title="props.isDeleted && activeId !== null && activeId !== undefined ? '恢复活动' : '删除活动'"
       @click="$emit('delete-active')"
       circle
-      secondary
       text
       :type="props.isDeleted ? 'error' : 'default'"
       size="small"
@@ -39,7 +37,6 @@
 
     <n-button
       v-if="!props.hasParent && !props.selectedRowHasParent"
-      secondary
       text
       circle
       type="default"
@@ -68,19 +65,19 @@
       </template>
     </n-button>
 
-    <n-button title="添加任务" @click="$emit('add-todo')" circle secondary text type="info" size="small">
+    <n-button title="添加任务" @click="$emit('add-todo')" circle text type="info" size="small">
       <template #icon>
         <n-icon><AddCircle24Regular /></n-icon>
       </template>
     </n-button>
 
-    <n-button title="添加预约" @click="$emit('add-schedule')" circle secondary text type="info" size="small">
+    <n-button title="添加预约" @click="$emit('add-schedule')" circle text type="info" size="small">
       <template #icon>
         <n-icon><CalendarAdd24Regular /></n-icon>
       </template>
     </n-button>
 
-    <n-button title="添加无所事事" @click="$emit('add-untaetigkeit')" circle secondary text type="info" size="small">
+    <n-button title="添加无所事事" @click="$emit('add-untaetigkeit')" circle text type="info" size="small">
       <template #icon>
         <n-icon><CloudAdd20Regular /></n-icon>
       </template>
