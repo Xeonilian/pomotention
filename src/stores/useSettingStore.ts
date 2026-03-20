@@ -172,9 +172,25 @@ function loadFromStorage<T extends Record<string, any>>(key: string, defaultValu
   }
 }
 
+const MAX_AUDIO_DEBUG_LINES = 200;
+
 export const useSettingStore = defineStore("setting", () => {
   // 所有设置统一存于 settings
   const settings = ref<GlobalSettings>(loadFromStorage(STORAGE_KEYS.GLOBAL_SETTINGS, defaultSettings));
+
+  /** 音频诊断日志（仅内存，不入 localStorage，供设置页排查 iOS/PWA 播放问题） */
+  const audioDebugLogs = ref<string[]>([]);
+
+  function pushAudioDebugLog(message: string) {
+    const line = `${new Date().toISOString()} ${message}`;
+    const next = [...audioDebugLogs.value, line];
+    audioDebugLogs.value =
+      next.length > MAX_AUDIO_DEBUG_LINES ? next.slice(-MAX_AUDIO_DEBUG_LINES) : next;
+  }
+
+  function clearAudioDebugLogs() {
+    audioDebugLogs.value = [];
+  }
 
   // Log loaded settings
   // console.log("Initialized settings:", settings.value);
@@ -303,6 +319,9 @@ export const useSettingStore = defineStore("setting", () => {
   // 返回
   return {
     settings,
+    audioDebugLogs,
+    pushAudioDebugLog,
+    clearAudioDebugLogs,
     resetSettings,
     resetDurations,
     resetStyle,

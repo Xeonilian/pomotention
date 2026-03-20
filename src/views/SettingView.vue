@@ -4,67 +4,90 @@
     size="large"
     style="max-width: 800px; width: 90%; margin: 20px auto; padding: 20px; max-height: calc(100vh - 100px); overflow-y: auto"
   >
-    <!-- 设备检测测试：用于确认 safe-area 等该用哪项判断 -->
-    <n-card title="设备检测测试">
-      <n-code :code="uaString" language="text" word-wrap style="font-size: 12px; max-height: 80px; overflow: auto" />
-      <n-descriptions label-placement="left" :column="1" bordered style="margin-top: 12px">
-        <n-descriptions-item label="useDevice.isMobile">{{ device.isMobile }}</n-descriptions-item>
-        <n-descriptions-item label="useDevice.isTablet">{{ device.isTablet }}</n-descriptions-item>
-        <n-descriptions-item label="useDevice.isDesktop">{{ device.isDesktop }}</n-descriptions-item>
-        <n-descriptions-item label="useDevice.isTouchSupported">{{ device.isTouchSupported }}</n-descriptions-item>
-        <n-descriptions-item label="useDevice.width">{{ device.width }}</n-descriptions-item>
-        <n-descriptions-item label="useDevice.isIOSDevice (仅 iPad)">
-          {{ device.isIOSDevice }}
-          <span class="detection-hint">仅匹配 iPad</span>
-        </n-descriptions-item>
-        <n-descriptions-item label="useDevice.isIOS">
-          {{ device.isIOS }}
-          <span class="detection-hint">当前逻辑：仅 iPhone</span>
-        </n-descriptions-item>
-        <n-descriptions-item label="usePwaInstall.isIOS">
-          {{ pwaIsIOS }}
-          <span class="detection-hint">iPhone | iPad | iPod</span>
-        </n-descriptions-item>
-        <n-descriptions-item label="原始 /iphone/.test(ua)">{{ raw.iphone }}</n-descriptions-item>
-        <n-descriptions-item label="原始 /ipad/.test(ua)">{{ raw.ipad }}</n-descriptions-item>
-        <n-descriptions-item label="原始 /ipod/.test(ua)">{{ raw.ipod }}</n-descriptions-item>
-        <n-descriptions-item label="原始 /iphone|ipad|ipod/.test(ua)">{{ raw.anyIos }}</n-descriptions-item>
-      </n-descriptions>
-    </n-card>
-
-    <!-- 同步诊断：下载测试、本底验证、fetched/applied 指标（需登录且 Supabase 启用） -->
-    <n-card v-if="supabaseEnabled && syncStore.isLoggedIn" title="同步诊断（Supabase）">
-      <n-descriptions label-placement="left" :column="1" bordered size="small" style="margin-bottom: 12px">
-        <n-descriptions-item label="lastSyncTimestamp">{{ syncStore.lastSyncTimestamp }} ({{ lastSyncDisplay }})</n-descriptions-item>
-        <n-descriptions-item label="本地条数">
-          activities: {{ dataStore.activityList.length }}, tasks: {{ dataStore.taskList.length }}, todos: {{ dataStore.todoList.length }},
-          schedules: {{ dataStore.scheduleList.length }}
-        </n-descriptions-item>
-        <n-descriptions-item label="未同步">
-          {{ dataStore.unsyncedDataSummary?.activities ?? 0 }} activities, {{ dataStore.unsyncedDataSummary?.tasks ?? 0 }} tasks
-        </n-descriptions-item>
-      </n-descriptions>
-      <n-space>
-        <n-button type="primary" :loading="diagnosticLoading" @click="runDownloadTest">下载测试（全量，不更新时间戳）</n-button>
-        <n-button type="warning" :loading="diagnosticLoading" @click="runClearThenDownloadTest">清除后下载测试</n-button>
-      </n-space>
-      <div
-        v-if="diagnosticResult"
-        style="margin-top: 12px; font-size: 12px; white-space: pre-wrap; max-height: 320px; overflow: auto"
-        class="diagnostic-log"
-      >
-        {{ diagnosticResult }}
-      </div>
-      <template #footer>
-        用于确认：本底是否为空、从 DB 拉取条数(fetched) vs 实际写入条数(applied)、lastSyncTimestamp 前后变化。结果会发送到调试端点。
+    <!-- 调试 / 诊断：默认折叠 -->
+    <n-card size="small" class="settings-diagnostics-card" :bordered="true">
+      <template #header>
+        <span class="settings-diagnostics-header">调试与诊断</span>
+        <span class="settings-diagnostics-sub">设备检测、音频日志、同步测试等，点击各分区标题展开</span>
       </template>
+      <n-collapse :default-expanded-names="[]" display-directive="show">
+        <n-collapse-item title="设备检测测试" name="device">
+          <n-code :code="uaString" language="text" word-wrap style="font-size: 12px; max-height: 80px; overflow: auto" />
+          <n-descriptions label-placement="left" :column="1" bordered style="margin-top: 12px">
+            <n-descriptions-item label="useDevice.isMobile">{{ device.isMobile }}</n-descriptions-item>
+            <n-descriptions-item label="useDevice.isTablet">{{ device.isTablet }}</n-descriptions-item>
+            <n-descriptions-item label="useDevice.isDesktop">{{ device.isDesktop }}</n-descriptions-item>
+            <n-descriptions-item label="useDevice.isTouchSupported">{{ device.isTouchSupported }}</n-descriptions-item>
+            <n-descriptions-item label="useDevice.width">{{ device.width }}</n-descriptions-item>
+            <n-descriptions-item label="useDevice.isIOSDevice (仅 iPad)">
+              {{ device.isIOSDevice }}
+              <span class="detection-hint">仅匹配 iPad</span>
+            </n-descriptions-item>
+            <n-descriptions-item label="useDevice.isIOS">
+              {{ device.isIOS }}
+              <span class="detection-hint">当前逻辑：仅 iPhone</span>
+            </n-descriptions-item>
+            <n-descriptions-item label="usePwaInstall.isIOS">
+              {{ pwaIsIOS }}
+              <span class="detection-hint">iPhone | iPad | iPod</span>
+            </n-descriptions-item>
+            <n-descriptions-item label="原始 /iphone/.test(ua)">{{ raw.iphone }}</n-descriptions-item>
+            <n-descriptions-item label="原始 /ipad/.test(ua)">{{ raw.ipad }}</n-descriptions-item>
+            <n-descriptions-item label="原始 /ipod/.test(ua)">{{ raw.ipod }}</n-descriptions-item>
+            <n-descriptions-item label="原始 /iphone|ipad|ipod/.test(ua)">{{ raw.anyIos }}</n-descriptions-item>
+          </n-descriptions>
+        </n-collapse-item>
+
+        <n-collapse-item title="音频诊断（iOS / PWA）" name="audio">
+          <p class="audio-dbg-hint">
+            记录阶段提示音（HTMLAudio）与白噪音（Web Audio）的关键事件；仅保存在内存，刷新页面会清空。出现
+            <code>play FAIL</code>
+            或
+            <code>statechange suspended</code>
+            时可与现象对照。
+          </p>
+          <n-space style="margin-bottom: 8px">
+            <n-button size="small" @click="settingStore.clearAudioDebugLogs()">清空日志</n-button>
+          </n-space>
+          <div class="audio-dbg-log">
+            {{ audioDebugText }}
+          </div>
+        </n-collapse-item>
+
+        <n-collapse-item v-if="supabaseEnabled && syncStore.isLoggedIn" title="同步诊断（Supabase）" name="sync">
+          <n-descriptions label-placement="left" :column="1" bordered size="small" style="margin-bottom: 12px">
+            <n-descriptions-item label="lastSyncTimestamp">{{ syncStore.lastSyncTimestamp }} ({{ lastSyncDisplay }})</n-descriptions-item>
+            <n-descriptions-item label="本地条数">
+              activities: {{ dataStore.activityList.length }}, tasks: {{ dataStore.taskList.length }}, todos: {{ dataStore.todoList.length }},
+              schedules: {{ dataStore.scheduleList.length }}
+            </n-descriptions-item>
+            <n-descriptions-item label="未同步">
+              {{ dataStore.unsyncedDataSummary?.activities ?? 0 }} activities, {{ dataStore.unsyncedDataSummary?.tasks ?? 0 }} tasks
+            </n-descriptions-item>
+          </n-descriptions>
+          <n-space>
+            <n-button type="primary" :loading="diagnosticLoading" @click="runDownloadTest">下载测试（全量，不更新时间戳）</n-button>
+            <n-button type="warning" :loading="diagnosticLoading" @click="runClearThenDownloadTest">清除后下载测试</n-button>
+          </n-space>
+          <div
+            v-if="diagnosticResult"
+            style="margin-top: 12px; font-size: 12px; white-space: pre-wrap; max-height: 320px; overflow: auto"
+            class="diagnostic-log"
+          >
+            {{ diagnosticResult }}
+          </div>
+          <p class="sync-diag-footer">
+            用于确认：本底是否为空、从 DB 拉取条数(fetched) vs 实际写入条数(applied)、lastSyncTimestamp 前后变化。结果会发送到调试端点。
+          </p>
+        </n-collapse-item>
+
+        <n-collapse-item v-if="isDev" title="开发工具" name="dev">
+          <n-button type="error" @click="handleClearLocal">清除本地数据</n-button>
+          <p class="sync-diag-footer">仅在 dev 预览环境显示，正式站不显示。</p>
+        </n-collapse-item>
+      </n-collapse>
     </n-card>
 
-    <!-- 仅 Preview（dev）环境显示：清除本地数据 -->
-    <n-card v-if="isDev" title="开发工具">
-      <n-button type="error" @click="handleClearLocal">清除本地数据</n-button>
-      <template #footer>仅在 dev 预览环境显示，正式站不显示。</template>
-    </n-card>
     <n-card title="设置番茄时长">
       <n-form>
         <n-form-item label="工作时长（分钟）">
@@ -115,6 +138,8 @@ import {
   NCode,
   NDescriptions,
   NDescriptionsItem,
+  NCollapse,
+  NCollapseItem,
 } from "naive-ui";
 import { useSettingStore } from "../stores/useSettingStore";
 import { useDataStore } from "../stores/useDataStore";
@@ -127,6 +152,12 @@ import { useDevice } from "@/composables/useDevice";
 import { usePwaInstall } from "@/composables/usePwaInstall";
 
 const settingStore = useSettingStore();
+
+const audioDebugText = computed(() => {
+  const lines = settingStore.audioDebugLogs;
+  return lines.length ? lines.join("\n") : "暂无记录。请先开始番茄钟、切换阶段或开关白噪音。";
+});
+
 const device = useDevice();
 const { isIOS: pwaIsIOS } = usePwaInstall();
 
@@ -203,7 +234,7 @@ async function runDownloadTest() {
       "details (fetched / applied / cloudDeleted，若 applied+cloudDeleted=fetched 则未写入的全是云端已删除):",
       ...(out.details || []).map(
         (d) =>
-          `  ${d.name}: fetched=${d.fetched} applied=${d.downloaded} cloudDeleted=${d.cloudDeleted ?? "-"}  ${d.fetched === (d.downloaded + (d.cloudDeleted ?? 0)) ? "✓" : "?"}`,
+          `  ${d.name}: fetched=${d.fetched} applied=${d.downloaded} cloudDeleted=${d.cloudDeleted ?? "-"}  ${d.fetched === d.downloaded + (d.cloudDeleted ?? 0) ? "✓" : "?"}`,
       ),
     ];
     diagnosticResult.value = lines.join("\n");
@@ -237,7 +268,7 @@ async function runClearThenDownloadTest() {
       "details (fetched / applied / cloudDeleted，若 applied+cloudDeleted=fetched 则未写入的全是云端已删除):",
       ...(out.details || []).map(
         (d) =>
-          `  ${d.name}: fetched=${d.fetched} applied=${d.downloaded} cloudDeleted=${d.cloudDeleted ?? "-"}  ${d.fetched === (d.downloaded + (d.cloudDeleted ?? 0)) ? "✓" : "?"}`,
+          `  ${d.name}: fetched=${d.fetched} applied=${d.downloaded} cloudDeleted=${d.cloudDeleted ?? "-"}  ${d.fetched === d.downloaded + (d.cloudDeleted ?? 0) ? "✓" : "?"}`,
       ),
     ];
     diagnosticResult.value = lines.join("\n");
@@ -311,5 +342,63 @@ function handleClearLocal() {
   border-radius: 4px;
   border: 1px solid var(--n-border-color);
   color: var(--color-background);
+}
+
+.audio-dbg-hint {
+  margin: 0 0 12px;
+  font-size: 12px;
+  color: var(--n-text-color-3);
+  line-height: 1.5;
+}
+
+.audio-dbg-hint code {
+  font-size: 11px;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: var(--n-color-target);
+  border: 1px solid var(--n-border-color);
+}
+
+.audio-dbg-log {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 320px;
+  overflow: auto;
+  padding: 10px;
+  background: var(--n-color-target);
+  border-radius: 6px;
+  border: 1px solid var(--n-border-color);
+  color: var(--color-background);
+}
+
+.settings-diagnostics-header {
+  font-weight: 600;
+  display: block;
+}
+
+.settings-diagnostics-sub {
+  display: block;
+  font-size: 12px;
+  font-weight: normal;
+  color: var(--n-text-color-3);
+  margin-top: 4px;
+}
+
+.settings-diagnostics-card :deep(.n-collapse-item__header) {
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.settings-diagnostics-card :deep(.n-collapse-item__content-wrapper) {
+  padding-bottom: 8px;
+}
+
+.sync-diag-footer {
+  margin: 12px 0 0;
+  font-size: 12px;
+  color: var(--n-text-color-3);
+  line-height: 1.5;
 }
 </style>
