@@ -127,7 +127,7 @@
         </n-layout-content>
 
         <!-- Sync Footer -->
-        <n-layout-footer v-if="!isMiniMode" class="sync-footer" bordered>
+        <n-layout-footer v-if="!isMiniMode && !isMobile" class="sync-footer" bordered>
           <div class="footer-content">
             <!-- 左侧：同步状态信息 -->
             <div class="sync-status">
@@ -415,7 +415,7 @@ async function handleManualDownload() {
 }
 .app-layout__content {
   position: relative;
-  height: calc(100% - 50px);
+  height: calc(100% - 35px);
   overflow: hidden;
 }
 .app-layout__content--full-height {

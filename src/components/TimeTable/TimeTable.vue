@@ -29,7 +29,6 @@ import { ChevronDoubleRight16Regular } from "@vicons/fluent";
 import TimeTableEditor from "@/components/TimeTable/TimeTableEditor.vue";
 import TimeBlocks from "@/components/TimeTable/TimeBlocks.vue";
 import { getTimestampForTimeString } from "@/core/utils";
-import { useSettingStore } from "@/stores/useSettingStore";
 import { useDataStore } from "@/stores/useDataStore";
 import { useTimetableStore } from "@/stores/useTimetableStore";
 // import { useDevice } from "@/composables/useDevice";
@@ -37,8 +36,9 @@ import { useTimetableStore } from "@/stores/useTimetableStore";
 const dataStore = useDataStore();
 // const { isMobile, isIOSDevice, isDesktop } = useDevice();
 const dateService = dataStore.dateService;
-const settingStore = useSettingStore();
 const timetableStore = useTimetableStore();
+
+const emit = defineEmits<{ (e: "timetable-edit", editing: boolean): void }>();
 
 const showEditor = ref(false);
 const currentType = ref<"work" | "entertainment">("work");
@@ -47,12 +47,12 @@ const viewBlocks = computed(() => timetableStore.getBlocksByType(currentType.val
 
 function toggleDisplay() {
   showEditor.value = true;
-  settingStore.settings.leftWidth = 200;
+  emit("timetable-edit", true);
 }
 
 function onExitEditor() {
   showEditor.value = false;
-  settingStore.settings.leftWidth = 120;
+  emit("timetable-edit", false);
 }
 
 function toggleType() {
@@ -100,7 +100,7 @@ const effectivePxPerMinute = computed(() => {
 
 <style scoped>
 .timetable-container {
-  height: calc(100% - env(safe-area-inset-bottom));
+  height: calc(100% - env(safe-area-inset-bottom) - 13px);
   overflow: visible;
 }
 
