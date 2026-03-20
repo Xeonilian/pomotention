@@ -331,5 +331,6 @@ function handlePomoSeqRunning(status: boolean) {
   width: var(--phone-design-width);
   transform: scale(calc(100vw / var(--phone-design-width)));
   transform-origin: center center;
+  padding-bottom: env(safe-area-inset-bottom);
 }
 </style>
