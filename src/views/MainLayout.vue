@@ -31,21 +31,23 @@
               </n-button>
             </n-dropdown>
             <div class="app-layout__view-controls">
-              <n-button
-                v-for="(control, index) in filteredViewControls"
-                :key="index"
-                :size="isMobile ? 'large' : 'medium'"
-                tertiary
-                type="default"
-                :style="buttonStyle(control.show, control.key)"
-                :title="control.title"
-                @click="handleMainLayoutViewToggle(control.key)"
-                class="header-button"
-              >
-                <template #icon>
-                  <n-icon :component="control.icon" />
-                </template>
-              </n-button>
+              <template v-if="isHomeRoute">
+                <n-button
+                  v-for="(control, index) in filteredViewControls"
+                  :key="index"
+                  :size="isMobile ? 'large' : 'medium'"
+                  tertiary
+                  type="default"
+                  :style="buttonStyle(control.show, control.key)"
+                  :title="control.title"
+                  @click="handleMainLayoutViewToggle(control.key)"
+                  class="header-button"
+                >
+                  <template #icon>
+                    <n-icon :component="control.icon" />
+                  </template>
+                </n-button>
+              </template>
               <!-- 未登录时显示登录按钮 -->
               <n-button
                 v-if="!isLoggedIn"
@@ -299,6 +301,9 @@ function handleMenuSelect(key: string) {
 watch(route, (newVal) => {
   currentRoutePath.value = newVal.path;
 });
+
+// 视图切换按钮仅在首页显示
+const isHomeRoute = computed(() => route.name === "Home");
 
 // 监听尺寸变化，只在超出边界时才重定位，否则保持当前位置
 watch([() => reportedPomodoroWidth.value, () => reportedPomodoroHeight.value], async () => {
