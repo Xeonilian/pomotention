@@ -25,6 +25,7 @@ import PwaInstallBanner from "./components/PwaInstallBanner.vue";
 import PwaSplashScreen from "./components/PwaSplashScreen.vue";
 import { initSyncServices, syncAll, resetSyncServices } from "@/services/sync";
 import { initAppCloseHandler, cancelPendingSyncTasks } from "@/services/appCloseHandler";
+import { resumeAudioIfNeeded } from "@/core/sounds";
 
 // ========== 状态与依赖 ==========
 const router = useRouter();
@@ -251,8 +252,20 @@ onErrorCaptured((error) => {
   return false; // 不阻止错误向上传播
 });
 
+// 页面回到前台时尝试恢复 Web Audio（与计时 store 解耦，便于分层验收）
+const handleVisibilityResumeAudio = () => {
+  if (document.visibilityState === "visible") {
+    void resumeAudioIfNeeded();
+  }
+};
+
+onMounted(() => {
+  document.addEventListener("visibilitychange", handleVisibilityResumeAudio);
+});
+
 // 组件卸载清理
 onUnmounted(() => {
+  document.removeEventListener("visibilitychange", handleVisibilityResumeAudio);
   cleanupSyncLifecycle();
 
   if (authStateChangeListener) {

@@ -194,14 +194,7 @@ function startPomodoroCircle(): void {
     // 初始化进度条
     initializeProgress(sequenceInput.value);
     updateProgressStatus(currentStep.value);
-    // 开始第一个工作周期
-    const firstStep = steps[0];
-    if (firstStep.type === "work") {
-      timerStore.startWorking(firstStep.duration);
-    } else {
-      timerStore.startBreak(firstStep.duration);
-    }
-
+    // 仅由 runStep 启动当前步，避免重复 startWorking/startBreak（双提示音与双 interval 边缘问题）
     runStep(steps);
   } catch (error) {
     alert((error as Error).message);
@@ -246,7 +239,7 @@ function stopPomodoro(): void {
   emit("pomo-seq-running", false);
   // 然后更新本地状态
   isRunning.value = false;
-  setPomodoroRunning(false); // 设置番茄钟停止状态
+  // resetTimer 内已 setPomodoroRunning(false)，此处重复会连续两次 stopWhiteNoise（调试日志 gen 连续 +1）
   timeoutHandles.value.forEach((handle) => clearTimeout(handle));
   timeoutHandles.value = [];
   // console.log("Stopping pomodoro...");
@@ -438,6 +431,10 @@ onMounted(() => {
     currentPomodoro.value = steps.slice(0, currentStep.value).filter((step) => step.type === "work").length + 1;
 
     updateProgressStatus(currentStep.value);
+
+    if (timerStore.isWorking && settingStore.settings.isWhiteNoiseEnabled) {
+      startWhiteNoise();
+    }
   }
 });
 

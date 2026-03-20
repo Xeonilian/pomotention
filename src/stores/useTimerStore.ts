@@ -165,11 +165,9 @@ export const useTimerStore = defineStore("timer", () => {
     isGray.value = false;
     isFromSequence.value = !!onFinish;
 
-    // 播放工作开始声音
-    // console.log("Playing work start sound");
-    playSound(SoundType.WORK_START);
-    // 开始播放白噪音
+    // 先拉起白噪音 decode，再播 HTML 提示音（减少 iOS 上双音频路径冲突）
     startWhiteNoise();
+    playSound(SoundType.WORK_START);
 
     timerInterval.value = window.setInterval(() => {
       if (startTime.value) {
@@ -186,10 +184,9 @@ export const useTimerStore = defineStore("timer", () => {
 
           // 播放工作结束声音
           playSound(SoundType.WORK_END);
-          // 停止白噪音
-          stopWhiteNoise();
 
           if (onFinish) {
+            stopWhiteNoise();
             onFinish();
           } else {
             resetTimer();
@@ -278,8 +275,6 @@ export const useTimerStore = defineStore("timer", () => {
     // 如果正在工作，播放工作结束声音
     if (isWorking.value) {
       playSound(SoundType.WORK_END);
-      // 停止白噪音
-      stopWhiteNoise();
     }
     // 如果正在休息，播放休息结束声音
     else if (isBreaking.value) {
