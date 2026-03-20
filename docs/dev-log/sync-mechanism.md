@@ -41,6 +41,8 @@
 - **applied（downloaded）**：通过时间戳/冲突判断后实际写入本地的条数。
 - **清除后本底**：清除本地数据并重置 lastSyncTimestamp 后，本地列表应为空；再全量下载可验证「本底空 + 云端拉取数 = 写入数」。
 
-## 5. 后续可做：编辑后 debounce 上传
+## 5. 编辑后 debounce 上传（已实现）
 
-在本地编辑（task/activity 等）时标记 `synced = false`，并增加带 debounce 的「编辑后上传」逻辑，可减少「有数据但未上传」导致的缺失。
+- **本地写入链**：业务侧 `saveAllDebounced()`（约 800ms 合并）→ `useDataStore.saveAllNow` 写 activities/todos/schedules/tasks → 成功后 **动态** `import("@/core/utils/autoSync")` 调用 `uploadAllDebounced()`（**5s** 合并多次保存，再执行 `uploadAll()`）。
+- **前置条件**：`settings.autoSupabaseSync` 开启且已登录；否则 `uploadAllDebounced` 内部会直接返回。
+- **其它触发**仍保留：失焦/切后台 `src/services/appCloseHandler.ts` 短防抖上传、回前台防抖下载/全量同步；`BaseSyncService.scheduleAutoUpload` 仍为表级可选能力，当前主路径不依赖它。

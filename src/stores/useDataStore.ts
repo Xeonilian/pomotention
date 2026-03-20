@@ -609,6 +609,8 @@ export const useDataStore = defineStore(
         saveTodos(todoList.value);
         saveSchedules(scheduleList.value);
         saveTasks(taskList.value);
+        // 本地落盘后调度防抖上传（动态 import 避免 dataStore → autoSync → sync → dataStore 静态循环依赖）
+        void import("@/core/utils/autoSync").then((m) => m.uploadAllDebounced());
       } catch (e) {
         console.error("save failed", e);
       }
