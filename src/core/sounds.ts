@@ -321,7 +321,8 @@ async function playSoundAsync(type: SoundType): Promise<void> {
   const ctx = audioCtx;
   if (ctx) {
     await ctx.resume().catch(() => {});
-    if (ctx.state === "interrupted") {
+    // WebKit 会给出 "interrupted"，DOM 类型定义里尚未包含
+    if ((ctx.state as AudioContextState | "interrupted") === "interrupted") {
       await ctx.resume().catch(() => {});
     }
     if (ctx.state === "running") {
