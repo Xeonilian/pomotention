@@ -107,20 +107,10 @@
             <n-button text :type="sortKey === 'count' && sortDirection === 'asc' ? 'primary' : 'default'" @click="setSort('count', 'asc')">
               <n-icon><ArrowSortDown24Filled /></n-icon>
             </n-button>
-            <n-button
-              text
-              quaternary
-              :type="sortKey === 'name' && sortDirection === 'asc' ? 'primary' : 'default'"
-              @click="setSort('name', 'asc')"
-            >
+            <n-button text :type="sortKey === 'name' && sortDirection === 'asc' ? 'primary' : 'default'" @click="setSort('name', 'asc')">
               <n-icon><TextSortAscending16Regular /></n-icon>
             </n-button>
-            <n-button
-              text
-              quaternary
-              :type="sortKey === 'name' && sortDirection === 'desc' ? 'primary' : 'default'"
-              @click="setSort('name', 'desc')"
-            >
+            <n-button text :type="sortKey === 'name' && sortDirection === 'desc' ? 'primary' : 'default'" @click="setSort('name', 'desc')">
               <n-icon><TextSortDescending20Regular /></n-icon>
             </n-button>
           </div>
