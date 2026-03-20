@@ -122,21 +122,6 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
     // 只拦截Todo段的触摸
     const target = e.target as HTMLElement;
     if (target.closest(".todo-segment")) {
-      // #region agent log
-      fetch("http://127.0.0.1:7242/ingest/a855573f-7487-43d2-8f8d-5dee3311857f", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "e8bfe0" },
-        body: JSON.stringify({
-          sessionId: "e8bfe0",
-          runId: "pre-fix",
-          hypothesisId: "H2",
-          location: "useTimeBlocks.ts:~115",
-          message: "global touchstart intercepted on todo-segment",
-          data: { defaultPreventedBefore: e.defaultPrevented },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion agent log
       // 立即阻止默认行为，防止系统长按触发
       e.preventDefault();
       e.stopPropagation();
@@ -158,21 +143,6 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
   // 挂载/卸载全局事件
   onMounted(() => {
     // 使用passive: false确保能preventDefault
-    // #region agent log
-    fetch("http://127.0.0.1:7242/ingest/a855573f-7487-43d2-8f8d-5dee3311857f", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "e8bfe0" },
-      body: JSON.stringify({
-        sessionId: "e8bfe0",
-        runId: "pre-fix",
-        hypothesisId: "H2",
-        location: "useTimeBlocks.ts:~139",
-        message: "mount global touch listeners",
-        data: { touchstart: { passive: false }, touchmove: { passive: false }, thresholdMs: TOUCH_THRESHOLD },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion agent log
     document.addEventListener("touchstart", handleGlobalTouchStart, { passive: false });
     document.addEventListener("touchmove", handleGlobalTouchMove, { passive: false });
   });

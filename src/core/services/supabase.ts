@@ -36,11 +36,6 @@ if (supabaseUrl && supabaseAnonKey) {
 } else {
   console.warn("[Supabase] 未检测到 VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY，自动进入离线模式。云同步与登录相关功能将被跳过。");
 }
-console.log("[Supabase 调试] 环境变量读取结果：", {
-  url: !!supabaseUrl,
-  key: !!supabaseAnonKey,
-  envMode: import.meta.env.MODE,
-});
 export const supabase = supabaseInstance;
 
 // 检查supabase是否启用（考虑本地模式）

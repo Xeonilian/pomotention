@@ -121,21 +121,6 @@ export class TodoSyncService extends BaseSyncService<Todo, CloudTodoInsert> {
             effectiveFromMs,
           ).toISOString()}`,
         );
-        // #region agent log
-        fetch("http://127.0.0.1:7242/ingest/a855573f-7487-43d2-8f8d-5dee3311857f", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "e164ec" },
-          body: JSON.stringify({
-            sessionId: "e164ec",
-            runId: "post-fix",
-            hypothesisId: "F",
-            location: "src/services/sync/todoSync.ts:download",
-            message: "todo fallback window applied (lastSyncTimestamp in future)",
-            data: { lastSyncTimestamp, nowMs, effectiveFromMs },
-            timestamp: Date.now(),
-          }),
-        }).catch(() => {});
-        // #endregion
       }
 
       // 2. 调用 RPC（分页拉取以绕过 1000 行上限；若 RPC 未支持 p_limit/p_offset 则单次调用）

@@ -58,8 +58,8 @@
           <n-descriptions label-placement="left" :column="1" bordered size="small" style="margin-bottom: 12px">
             <n-descriptions-item label="lastSyncTimestamp">{{ syncStore.lastSyncTimestamp }} ({{ lastSyncDisplay }})</n-descriptions-item>
             <n-descriptions-item label="本地条数">
-              activities: {{ dataStore.activityList.length }}, tasks: {{ dataStore.taskList.length }}, todos: {{ dataStore.todoList.length }},
-              schedules: {{ dataStore.scheduleList.length }}
+              activities: {{ dataStore.activityList.length }}, tasks: {{ dataStore.taskList.length }}, todos:
+              {{ dataStore.todoList.length }}, schedules: {{ dataStore.scheduleList.length }}
             </n-descriptions-item>
             <n-descriptions-item label="未同步">
               {{ dataStore.unsyncedDataSummary?.activities ?? 0 }} activities, {{ dataStore.unsyncedDataSummary?.tasks ?? 0 }} tasks
@@ -202,23 +202,6 @@ function snapshot() {
   };
 }
 
-// #region agent log
-const DEBUG_LOG_ENDPOINT = "http://127.0.0.1:7242/ingest/a855573f-7487-43d2-8f8d-5dee3311857f";
-function sendDebugLog(message: string, data: Record<string, unknown>) {
-  fetch(DEBUG_LOG_ENDPOINT, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "64f48d" },
-    body: JSON.stringify({
-      sessionId: "64f48d",
-      location: "SettingView.vue:downloadTest",
-      message,
-      data,
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-}
-// #endregion
-
 async function runDownloadTest() {
   diagnosticLoading.value = true;
   diagnosticResult.value = "";
@@ -238,11 +221,9 @@ async function runDownloadTest() {
       ),
     ];
     diagnosticResult.value = lines.join("\n");
-    sendDebugLog("downloadTest", { before, after, success: out.success, errors: out.errors, details: out.details });
   } catch (e: any) {
     const msg = e?.message ?? String(e);
     diagnosticResult.value = `[下载测试] 异常: ${msg}`;
-    sendDebugLog("downloadTestError", { error: msg });
   } finally {
     diagnosticLoading.value = false;
   }
@@ -272,11 +253,9 @@ async function runClearThenDownloadTest() {
       ),
     ];
     diagnosticResult.value = lines.join("\n");
-    sendDebugLog("clearThenDownloadTest", { afterClear, after, success: out.success, errors: out.errors, details: out.details });
   } catch (e: any) {
     const msg = e?.message ?? String(e);
     diagnosticResult.value = `[清除后下载测试] 异常: ${msg}`;
-    sendDebugLog("clearThenDownloadTestError", { error: msg });
   } finally {
     diagnosticLoading.value = false;
   }
