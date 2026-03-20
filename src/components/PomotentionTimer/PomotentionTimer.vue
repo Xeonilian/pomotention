@@ -383,6 +383,6 @@ function handlePomoSeqRunning(status: boolean) {
   /* --phone-scale 由脚本根据 visualViewport / innerWidth 写入，避免 Android 上纯 CSS calc+scale 不生效 */
   transform: scale(var(--phone-scale, 1));
   transform-origin: center center;
-  padding-bottom: env(safe-area-inset-bottom);
+  padding-bottom: calc(env(safe-area-inset-bottom));
 }
 </style>

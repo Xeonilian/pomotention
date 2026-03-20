@@ -273,7 +273,7 @@
           </tr>
         </template>
         <tr v-else class="empty-row">
-          <td colspan="7" style="text-align: center; padding: 10px">暂无日程</td>
+          <td colspan="7" style="text-align: center; padding: 10px">{{ isMobile ? "" : "暂无日程" }}</td>
         </tr>
       </tbody>
     </table>

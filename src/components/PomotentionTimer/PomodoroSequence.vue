@@ -67,8 +67,7 @@
       </n-popover>
 
       <n-button class="action-button" @click="addPomodoro" title="insert 🍅+05" :disabled="isRunning" tertiary circle>🍅</n-button>
-      <div class="pomo-duration-input-container" :class="{ disabled: isRunning }">
-        =
+      <div class="pomo-duration-input-container">
         <n-input
           ref="pomoDurationInput"
           v-model:value="defaultPomoDuration"
@@ -571,15 +570,15 @@ function resetWhiteNoise(sound: SoundType) {
   font-size: 10px;
 }
 .pomo-duration-input {
-  width: 24px;
-  height: 24px;
+  width: 25px;
+  height: 25px;
   display: inline-block;
   pointer-events: auto;
 }
 
 .pomo-duration-input :deep(.n-input-wrapper) {
-  width: 24px;
-  height: 24px;
+  width: 25px;
+  height: 25px;
   padding: 0px;
   pointer-events: auto;
 }
@@ -602,8 +601,11 @@ function resetWhiteNoise(sound: SoundType) {
   appearance: none;
 }
 
+/* 类在根节点 .n-input 上，非 .n-input__input；禁用态边框用 --n-border-disabled，需 !important 盖过组件内联变量 */
 :deep(.n-input.pomo-duration-input) {
   --n-box-shadow-focus: none !important;
+  --n-border: 0px solid var(--color-background-dark) !important;
+  --n-border-disabled: 0px solid var(--color-background-dark) !important;
 }
 
 /* iPhone Safari：聚焦时避免行高/基线被重算导致整块错位；逻辑同 ActivitySection.search-input */
@@ -619,6 +621,7 @@ function resetWhiteNoise(sound: SoundType) {
     width: 100% !important;
     height: 25px !important;
     min-height: 25px !important;
+    border: 0px solid var(--color-background-dark);
   }
 
   .pomo-duration-input :deep(.n-input__input) {
@@ -655,10 +658,6 @@ function resetWhiteNoise(sound: SoundType) {
   }
 }
 
-.disabled {
-  color: var(--color-text-secondary);
-}
-
 /* 为 popover 内容里的按钮容器添加样式 */
 .popover-actions {
   display: flex;
@@ -674,6 +673,10 @@ function resetWhiteNoise(sound: SoundType) {
   }
   .action-button:hover {
     background-color: transparent;
+  }
+  :deep(.n-input.pomo-duration-input) {
+    --n-border: none !important;
+    --n-border-disabled: none !important;
   }
 }
 </style>

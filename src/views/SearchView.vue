@@ -94,7 +94,7 @@
         </div>
       </div>
 
-      <div v-if="filteredActivities.length === 0" class="empty">暂无结果</div>
+      <div v-if="filteredActivities.length === 0" class="empty">{{ isMobile ? "" : "暂无结果" }}</div>
     </div>
     <div class="resize-handle-horizontal" style="touch-action: none" @pointerdown="resizeSearch.startResize"></div>
     <!-- 右侧：Tabs -->
