@@ -33,9 +33,10 @@
         :border-radius="2"
         class="progress-bar blue-bar"
       />
-      <!-- 3-3 红色进度条 -->
+      <!-- 3-3 红色进度条（W >= 5 分钟才显示；短时仅蓝条） -->
 
       <n-progress
+        v-if="showPhaseDetail"
         :percentage="redProgressPercentage"
         :border-radius="0"
         :color="isGray ? '#EBEBEB' : redBarColor"
@@ -45,7 +46,7 @@
       />
 
       <!-- 3-4 阶段标签 (在进度条正上方) -->
-      <div class="phase-labels">
+      <div v-if="showPhaseDetail" class="phase-labels">
         <span class="phase-label">r</span>
         <span class="divider"></span>
         <span class="phase-label">w</span>
@@ -146,16 +147,46 @@ const isEditing = ref(false);
 const editingMessage = ref("");
 const inputRef = ref<InstanceType<typeof NInput> | null>(null);
 
+/** 与 store.effectiveWorkMinutes 一致：>=5 显示红条与阶段标签 */
+const showPhaseDetail = computed(
+  () => timerStore.effectiveWorkMinutes >= 5,
+);
+
 // 把常量转成 CSS 变量名格式
 const timerStyleVars = computed(() => {
   const barLengthValue = 197; // 动态设置失败 #HACK 现在用的是静态的值
 
+  const base: Record<string, string> = {
+    "--bar-length": barLength.value,
+  };
+
+  if (!showPhaseDetail.value) {
+    return {
+      ...base,
+      "--red-bar-length": "0px",
+      "--red-bar-offset": "0px",
+    };
+  }
+
+  const W = timerStore.effectiveWorkMinutes;
+  const w = timerStore.wDuration;
+  const pct = (x: number) => `${(x / W) * 100}%`;
+
   const calculatedLength = barLengthValue * timerStore.redBarPercentage + 2;
   const calculatedOffset = barLengthValue * timerStore.redBarOffsetPercentage + 0.5;
+
   return {
-    "--bar-length": barLength.value,
+    ...base,
     "--red-bar-length": `${calculatedLength}px`,
     "--red-bar-offset": `${calculatedOffset}px`,
+    "--ph-label-r1": pct(2),
+    "--ph-label-w": pct(w),
+    "--ph-label-r2": pct(1),
+    "--ph-label-t": pct(1),
+    "--ph-div-1": pct(2),
+    "--ph-div-2": pct(2 + w),
+    "--ph-div-3": pct(2 + 2 * w),
+    "--ph-div-4": pct(2 + 2 * w + 1),
   };
 });
 
@@ -474,56 +505,41 @@ function handleDurationSelect(key: number): void {
   z-index: 5;
 }
 
-/* 3-3-3  设置分隔线位置 */
-.phase-labels .divider:nth-child(2) {
-  left: 8%;
-}
-.phase-labels .divider:nth-child(4) {
-  left: 50%;
-}
-.phase-labels .divider:nth-child(6) {
-  left: 92%;
-}
-.phase-labels .divider:nth-child(8) {
-  left: 96%;
-}
-
-/* 重新计算每个元素的宽度 */
+/* 3-3-3 阶段宽度与分隔线：由 progress-container 上 CSS 变量注入 */
 .phase-labels .phase-label:nth-child(1) {
-  width: 8%;
-} /* r: 2/25 ≈ 8% */
+  width: var(--ph-label-r1);
+}
 .phase-labels .phase-label:nth-child(3) {
-  width: 42%;
-} /* w: 10.5/25 ≈ 42% */
+  width: var(--ph-label-w);
+}
 .phase-labels .phase-label:nth-child(5) {
-  width: 42%;
-} /* w: 10.5/25 ≈ 42% */
+  width: var(--ph-label-w);
+}
 .phase-labels .phase-label:nth-child(7) {
-  width: 4%;
-} /* r: 1/25 ≈ 4% */
+  width: var(--ph-label-r2);
+}
 .phase-labels .phase-label:nth-child(9) {
-  width: 4%;
-} /* t: 1/25 ≈ 4% */
+  width: var(--ph-label-t);
+}
 
-/* 调整分隔符位置，确保恰好位于边界上 */
 .phase-labels .divider:nth-child(2) {
   position: absolute;
-  left: 8%;
+  left: var(--ph-div-1);
   transform: translateX(-50%);
 }
 .phase-labels .divider:nth-child(4) {
   position: absolute;
-  left: 50%;
+  left: var(--ph-div-2);
   transform: translateX(-50%);
 }
 .phase-labels .divider:nth-child(6) {
   position: absolute;
-  left: 92%;
+  left: var(--ph-div-3);
   transform: translateX(-50%);
 }
 .phase-labels .divider:nth-child(8) {
   position: absolute;
-  left: 96%;
+  left: var(--ph-div-4);
   transform: translateX(-50%);
 }
 

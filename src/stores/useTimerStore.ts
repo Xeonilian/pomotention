@@ -30,16 +30,41 @@ export const useTimerStore = defineStore(
     const phaseFinishCallback = ref<(() => void) | null>(null);
 
     const settingStore = useSettingStore();
-    const workDuration = ref(settingStore.settings.durations.workDuration);
     const breakDuration = ref(settingStore.settings.durations.breakDuration);
 
-    const r1Duration = computed(() => (2 / 25) * workDuration.value);
-    const r2Duration = computed(() => (1 / 25) * workDuration.value);
-    const wDuration = computed(() => (10.5 / 25) * workDuration.value);
-    const tDuration = computed(() => (1 / 25) * workDuration.value);
+    /** 固定阶段（分钟）：r1 / r2 / t；其余时间为两段 w 平分 */
+    const R1_MIN = 2;
+    const R2_MIN = 1;
+    const T_MIN = 1;
+    const FIXED_PHASE_TAIL_MIN = R1_MIN + R2_MIN + T_MIN;
 
-    const redBarOffsetPercentage = computed(() => 2 / 25);
-    const redBarPercentage = computed(() => 21 / 25);
+    /** 工作中用 totalTime，否则用设置，避免阶段与倒计时不一致 */
+    const effectiveWorkMinutes = computed(() => {
+      if (pomodoroState.value === "working" && totalTime.value > 0) {
+        return totalTime.value / 60;
+      }
+      return settingStore.settings.durations.workDuration;
+    });
+
+    const r1Duration = computed(() => R1_MIN);
+    const r2Duration = computed(() => R2_MIN);
+    const tDuration = computed(() => T_MIN);
+    const wDuration = computed(() => {
+      const W = effectiveWorkMinutes.value;
+      return Math.max(0, (W - FIXED_PHASE_TAIL_MIN) / 2);
+    });
+
+    const redBarOffsetPercentage = computed(() => {
+      const W = effectiveWorkMinutes.value;
+      if (W <= 0) return 0;
+      return R1_MIN / W;
+    });
+
+    const redBarPercentage = computed(() => {
+      const W = effectiveWorkMinutes.value;
+      if (W <= 0) return 0;
+      return (2 * wDuration.value) / W;
+    });
 
     const isGray = ref<boolean>(false);
 
@@ -119,6 +144,7 @@ export const useTimerStore = defineStore(
           break;
       }
 
+      if (phaseDuration <= 0) return 0;
       return ((elapsedMinutes - phaseStart) / phaseDuration) * 100;
     });
 
@@ -264,7 +290,8 @@ export const useTimerStore = defineStore(
       beginNewPhase(onFinish);
 
       pomodoroState.value = "working";
-      const dur = duration ?? workDuration.value;
+      const dur =
+        duration ?? settingStore.settings.durations.workDuration;
       totalTime.value = dur * 60;
       timeRemaining.value = totalTime.value;
       startTime.value = Date.now();
@@ -365,6 +392,7 @@ export const useTimerStore = defineStore(
       totalTime,
       phaseEndsAt,
       breakReminderCount,
+      effectiveWorkMinutes,
       r1Duration,
       r2Duration,
       wDuration,
