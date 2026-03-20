@@ -518,6 +518,7 @@ function resetWhiteNoise(sound: SoundType) {
 }
 
 .sequence-input {
+  height: 60px;
   max-height: 60px;
   font-family: "Consolas", "Courier New", Courier, "Lucida Console", Monaco, "Liberation Mono", "Menlo", monospace;
   font-size: 12px;
@@ -531,7 +532,8 @@ function resetWhiteNoise(sound: SoundType) {
 }
 
 :deep(.n-input-wrapper) {
-  width: 190px;
+  width: 90%;
+  height: 100%;
 }
 
 .hint-text {

@@ -1,7 +1,7 @@
 <template>
   <div class="pomodoro-timer">
-    <!-- 1 状态信息 -->
-    <div class="state-text" @click.stop="startEditing" @pointerdown.stop title="可编辑，回车保存，删除内容恢复默认">
+    <!-- 1 状态信息：紧凑模式仅保留时钟，不展示可编辑文案 -->
+    <div v-if="!isCompactMode" class="state-text" @click.stop="startEditing" @pointerdown.stop title="可编辑，回车保存，删除内容恢复默认">
       <n-input
         v-if="isEditing"
         v-model:value="editingMessage"
@@ -297,7 +297,7 @@ function handleDurationSelect(key: number): void {
 }
 </script>
 
-<style>
+<style scoped>
 /* 0-整体 */
 .pomodoro-timer {
   text-align: center;
@@ -322,11 +322,20 @@ function handleDurationSelect(key: number): void {
   margin-bottom: 5px;
   font: 10px Arial;
   cursor: pointer;
-  height: 12px; /* 固定高度，避免布局变化 */
+  height: 16px; /* 固定高度，避免布局变化 */
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative; /* 为绝对定位的输入框提供定位上下文 */
+  width: 140px;
+  transform: translateX(20%);
+}
+
+:deep(.n-input.state-input) {
+  /* 去掉 hover 时的红色边框 */
+
+  /* 强制去掉 focus 时的 box-shadow。此变量其实就是原生 n-input 的 n-box-shadow-focus */
+  --n-box-shadow-focus: none !important;
 }
 
 .state-text-clickable {
@@ -347,7 +356,9 @@ function handleDurationSelect(key: number): void {
   width: 180px;
   font-size: 10px;
   height: 12px;
-  line-height: 12px;
+  line-height: 10px;
+  margin: 0;
+  padding: 0;
 }
 
 /* 调整输入框内部文字垂直居中 */
@@ -369,22 +380,39 @@ function handleDurationSelect(key: number): void {
 .timer-container {
   margin-bottom: 0px;
 }
+
+/* 紧凑：容器占满父级竖向空间并居中时钟 */
+.timer-container.is-compact {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 0;
+}
+
 /* 2-2 计时器 */
 .timer {
   font-size: 3em;
   display: block;
-  line-height: 1em;
+  line-height: 0.9em;
 }
 
-/* 紧凑模式下的时钟大小 */
+/* 紧凑模式：时钟略大于普通模式，竖向由容器 flex 居中 */
 .timer-container.is-compact .timer {
-  font-size: 2.5em;
+  font-size: 3em;
+  line-height: 0.9em;
+  text-align: center;
 }
 
-/* 紧凑模式下的整体宽度调整 */
+/* 紧凑模式下的整体：flex 列 + 子项 flex:1 实现上下居中 */
 .pomodoro-timer:has(.timer-container.is-compact) {
   width: 120px;
   padding: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  box-sizing: border-box;
 }
 
 /* 3 进度条 */

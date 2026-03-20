@@ -25,11 +25,6 @@
         :title="compactCycleButtonTitle"
         @click="handleToggleCompactMode"
         class="compact-toggle-button"
-        style="
-          --n-text-color-hover: var(--color-text-secondary) !important;
-          --n-text-color-pressed: var(--color-text-secondary) !important;
-          --n-text-color-focus: var(--color-text-secondary) !important;
-        "
       >
         <template #icon>
           <n-icon size="14" :component="ArrowExpand24Regular" />
@@ -196,6 +191,8 @@ function handlePomoSeqRunning(status: boolean) {
 }
 
 .pomodoro-content-area {
+  /* 包含角上绝对定位按钮，否则在 Android/手机全屏下会相对外层 wrapper 贴顶 */
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -204,7 +201,7 @@ function handlePomoSeqRunning(status: boolean) {
   border-radius: 4px;
   width: 100%;
   box-sizing: border-box;
-  background-color: transparent;
+  background-color: none !important;
 }
 
 .compact-toggle-button {
@@ -217,6 +214,7 @@ function handlePomoSeqRunning(status: boolean) {
   align-items: center;
   justify-content: center;
   border: none;
+  border-radius: 4px;
   width: 20px;
   height: 18px;
   padding: 0px;
@@ -311,11 +309,9 @@ function handlePomoSeqRunning(status: boolean) {
   width: 140px !important;
 }
 .is-compact .compact-toggle-button {
-  left: 3px;
-  top: 3px;
+  left: 2px;
+  top: 2px;
   color: var(--color-text-secondary);
-  font-size: small;
-  background-color: var(--color-background);
 }
 
 /* 手机模式：置顶 + 移动端时，timer 与屏幕同宽、布局等比放大、上下左右居中 */
