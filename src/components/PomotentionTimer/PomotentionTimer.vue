@@ -36,8 +36,7 @@
       <n-button
         v-if="!settingStore.settings.isCompactMode"
         size="tiny"
-        tertiary
-        type="default"
+        text
         :title="showPomoSeq ? '变为番茄' : '变为序列|打开设置'"
         @click="handleTogglePomoSeq"
         class="pomo-toggle-button"
@@ -328,7 +327,9 @@ function handlePomoSeqRunning(status: boolean) {
   cursor: grab;
   z-index: 5;
 }
-
+.pomo-toggle-button:hover {
+  background-color: transparent;
+}
 /* miniMode */
 
 .pomodoro-content-area.sequence-mode.is-minimode :deep(.pomodoro-timer) {

@@ -80,7 +80,7 @@
           title="设置番茄时长/回车确认"
           :disabled="isRunning"
         />
-        <span class="pomo-duration-input-unit">min</span>
+        <span>&nbsp;min</span>
       </div>
     </div>
   </div>
@@ -457,7 +457,7 @@ function resetWhiteNoise(sound: SoundType) {
   min-height: 120px;
   border: 0px solid var(--color-text-secondary);
   border-radius: 8px;
-  box-shadow: 1px 2px 6px var(--color-background-light-transparent);
+  /* box-shadow: 1px 2px 6px var(--color-background-light-transparent); */
 }
 
 .pomodoro-sequence.running {
@@ -555,7 +555,7 @@ function resetWhiteNoise(sound: SoundType) {
   justify-content: center;
   border-radius: 20%;
   cursor: pointer;
-  border: 1px solid var(--color-background-dark);
+  border: 0px solid var(--color-background-dark);
 }
 
 .action-button:hover {
@@ -567,24 +567,21 @@ function resetWhiteNoise(sound: SoundType) {
   cursor: not-allowed;
 }
 
+.pomo-duration-input-container {
+  font-size: 10px;
+}
 .pomo-duration-input {
-  width: 25px;
-  height: 25px;
+  width: 24px;
+  height: 24px;
   display: inline-block;
   pointer-events: auto;
 }
 
 .pomo-duration-input :deep(.n-input-wrapper) {
-  width: 25px;
-  height: 25px;
+  width: 24px;
+  height: 24px;
   padding: 0px;
   pointer-events: auto;
-  background-color: var(--color-background-light-transparent);
-  transition: background-color 0.3s ease;
-}
-
-.pomo-duration-input:focus-within :deep(.n-input-wrapper) {
-  background-color: var(--color-background);
 }
 
 .pomo-duration-input :deep(.n-input__input) {
@@ -665,6 +662,15 @@ function resetWhiteNoise(sound: SoundType) {
   gap: 8px; /* 按钮之间的垂直间距 */
   margin: 0px;
   padding: 0;
+}
+
+@media (max-width: 430px) {
+  .action-button {
+    background-color: transparent;
+  }
+  .action-button:hover {
+    background-color: transparent;
+  }
 }
 </style>
 
