@@ -91,7 +91,7 @@ import { ref, watch, onMounted, computed } from "vue";
 import { NButton, NIcon, NInput, useDialog } from "naive-ui";
 import { useTimerStore } from "@/stores/useTimerStore";
 import { useSettingStore } from "@/stores/useSettingStore";
-import { toggleWhiteNoise, setPomodoroRunning, stopWhiteNoise, startWhiteNoise } from "@/core/sounds.ts";
+import { toggleWhiteNoise, stopWhiteNoise, startWhiteNoise } from "@/core/sounds.ts";
 import {
   Speaker224Regular,
   SpeakerMute24Regular,
@@ -186,7 +186,6 @@ function startPomodoroCircle(): void {
     emit("pomo-seq-running", true);
 
     isRunning.value = true;
-    setPomodoroRunning(true); // 设置番茄钟运行状态
     currentStep.value = 0;
     totalPomodoros.value = steps.filter((step) => step.type === "work").length;
     currentPomodoro.value = 1;
@@ -239,7 +238,7 @@ function stopPomodoro(): void {
   emit("pomo-seq-running", false);
   // 然后更新本地状态
   isRunning.value = false;
-  // resetTimer 内已 setPomodoroRunning(false)，此处重复会连续两次 stopWhiteNoise（调试日志 gen 连续 +1）
+  // resetTimer 内已 stopWhiteNoise()
   timeoutHandles.value.forEach((handle) => clearTimeout(handle));
   timeoutHandles.value = [];
   // console.log("Stopping pomodoro...");
@@ -405,7 +404,6 @@ onMounted(() => {
     // );
     isRunning.value = true;
     emit("pomo-seq-running", true);
-    setPomodoroRunning(true);
 
     // 恢复进度条
     initializeProgress(sequenceInput.value);

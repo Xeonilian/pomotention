@@ -43,9 +43,6 @@ let audioCtx: AudioContext | null = null;
 let whiteNoiseSource: AudioBufferSourceNode | null = null;
 let whiteNoiseGain: GainNode | null = null;
 
-// 白噪音状态
-let isPomodoroRunning = false;
-
 // 获取声音对象
 function getSound(type: SoundType): HTMLAudioElement {
   if (!soundCache.has(type)) {
@@ -212,25 +209,26 @@ export function stopWhiteNoise(): void {
     console.log("[WN] stopWhiteNoise 外层错误:", e);
   }
 }
-// 设置番茄钟运行状态
-export function setPomodoroRunning(running: boolean): void {
-  const settingStore = useSettingStore();
-  isPomodoroRunning = running;
-  if (!running) {
-    stopWhiteNoise();
-  } else if (settingStore.settings.isWhiteNoiseEnabled) {
-    startWhiteNoise();
-  }
-}
 
-// 切换白噪音状态
+// 切换白噪音状态（是否在跑以 Pinia timer 为准，与持久化恢复一致）
 export function toggleWhiteNoise(): void {
   const settingStore = useSettingStore();
   settingStore.settings.isWhiteNoiseEnabled =
     !settingStore.settings.isWhiteNoiseEnabled;
   if (!settingStore.settings.isWhiteNoiseEnabled) {
     stopWhiteNoise();
-  } else if (isPomodoroRunning) {
-    startWhiteNoise();
+    return;
   }
+  void import("@/stores/useTimerStore")
+    .then(({ useTimerStore }) => {
+      if (!useSettingStore().settings.isWhiteNoiseEnabled) return;
+      const ts = useTimerStore();
+      // 专注中、或序列整场未结束（含休息）时允许恢复白噪音
+      if (ts.isActive && (ts.isWorking || ts.isFromSequence)) {
+        startWhiteNoise();
+      }
+    })
+    .catch(() => {
+      /* Pinia 未就绪等 */
+    });
 }
