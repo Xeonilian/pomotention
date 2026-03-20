@@ -408,7 +408,7 @@ function handleDurationSelect(key: number): void {
 /* 紧凑模式下的整体：flex 列 + 子项 flex:1 实现上下居中 */
 .pomodoro-timer:has(.timer-container.is-compact) {
   width: 120px;
-  padding: 8px;
+  padding: 18px;
   display: flex;
   flex-direction: column;
   align-items: stretch;
