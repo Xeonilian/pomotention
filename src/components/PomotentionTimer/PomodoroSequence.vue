@@ -602,6 +602,10 @@ function resetWhiteNoise(sound: SoundType) {
   appearance: none;
 }
 
+:deep(.n-input.pomo-duration-input) {
+  --n-box-shadow-focus: none !important;
+}
+
 /* iPhone Safari：聚焦时避免行高/基线被重算导致整块错位；逻辑同 ActivitySection.search-input */
 @supports (-webkit-touch-callout: none) {
   /* 16px 字体略宽于 12px，略增宽度避免两位数被裁切 */

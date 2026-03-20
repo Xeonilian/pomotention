@@ -361,10 +361,7 @@ function handleDurationSelect(key: number): void {
 }
 
 :deep(.n-input.state-input) {
-  /* 去掉 hover 时的红色边框 */
-
-  /* 强制去掉 focus 时的 box-shadow。此变量其实就是原生 n-input 的 n-box-shadow-focus */
-  --n-box-shadow-focus: none;
+  --n-box-shadow-focus: none !important;
 }
 
 .state-text-clickable {
