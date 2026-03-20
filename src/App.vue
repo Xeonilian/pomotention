@@ -26,6 +26,7 @@ import PwaSplashScreen from "./components/PwaSplashScreen.vue";
 import { initSyncServices, syncAll, resetSyncServices } from "@/services/sync";
 import { initAppCloseHandler, cancelPendingSyncTasks } from "@/services/appCloseHandler";
 import { useTimerStore } from "@/stores/useTimerStore";
+import { resumeSharedAudioAfterForeground } from "@/core/sounds";
 
 // ========== 状态与依赖 ==========
 const router = useRouter();
@@ -256,11 +257,13 @@ onErrorCaptured((error) => {
 // 回到前台：墙钟校准（与 main 启动时同一 reconcile 入口）
 const handleVisibilityReconcileTimer = () => {
   if (document.visibilityState === "visible") {
+    resumeSharedAudioAfterForeground();
     timerStore.reconcilePhaseFromWallClock();
   }
 };
 
 const handlePageShow = (e: PageTransitionEvent) => {
+  resumeSharedAudioAfterForeground();
   if (e.persisted) timerStore.reconcilePhaseFromWallClock();
 };
 
