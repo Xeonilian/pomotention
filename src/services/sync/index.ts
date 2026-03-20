@@ -195,7 +195,7 @@ async function _internalDownload(lastSyncTimestamp: number): Promise<SyncResult>
     let downloaded = 0;
     const details: { name: string; fetched: number; downloaded: number; cloudDeleted?: number }[] = [];
 
-    // 并行下载所有表 #HACK
+    // 并行下载所有表
     const results = await Promise.allSettled(
       syncServices.map(({ name, service }) => service.download(lastSyncTimestamp).then((res: any) => ({ name, res }))),
     );
@@ -318,21 +318,7 @@ export async function syncAll() {
     // 决定是否全量：如果是 0，或者上次同步距今太久(可选)，则全量
     const lastSync = syncStore.lastSyncTimestamp;
     const isFirstSync = lastSync === 0;
-    // #region agent log
-    fetch("http://127.0.0.1:7242/ingest/a855573f-7487-43d2-8f8d-5dee3311857f", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "e164ec" },
-      body: JSON.stringify({
-        sessionId: "e164ec",
-        runId: "post-fix",
-        hypothesisId: "E",
-        location: "src/services/sync/index.ts:syncAll",
-        message: "syncAll download decision",
-        data: { lastSync, isFirstSync, autoSupabaseSync: settingStore.settings.autoSupabaseSync },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
+
     if (isFirstSync) console.log("🔄 首次同步，执行全量下载");
 
     const downRes = await _internalDownload(lastSync);
