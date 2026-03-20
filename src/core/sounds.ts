@@ -61,7 +61,8 @@ function preferHtmlAudioWhiteNoiseOnThisDevice(): boolean {
   if (typeof navigator === "undefined") return false;
   const ua = navigator.userAgent.toLowerCase();
   const iosUa = /iphone|ipad|ipod/.test(ua);
-  const iPadDesktopMode = navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+  // iPadOS 桌面 UA 含 Macintosh，用 maxTouchPoints 区分真 Mac（避免弃用 navigator.platform）
+  const iPadDesktopMode = /macintosh/.test(ua) && navigator.maxTouchPoints > 1;
   return iosUa || iPadDesktopMode;
 }
 
