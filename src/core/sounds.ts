@@ -70,7 +70,7 @@ function preferHtmlAudioWhiteNoiseOnThisDevice(): boolean {
 /** 双轨重叠与其它参数：想试听感主要改 ratioOfDuration、minSec、maxSec */
 const HTML_WN_CROSSFADE = {
   /** 重叠时长（秒）≈ min(max(时长×ratio, minSec), maxSec)，再受 tooLongRatio/capRatio 约束 */
-  ratioOfDuration: 0.03, // 听起来只是加重一下
+  ratioOfDuration: 0.0291, // 听起来只是加重一下
   minSec: 0.2,
   maxSec: 0.3,
   /** 若重叠 > 时长×tooLongRatio，则改为 时长×capRatio */
