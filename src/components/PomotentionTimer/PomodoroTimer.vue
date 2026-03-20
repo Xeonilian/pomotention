@@ -170,6 +170,22 @@ const timerStyleVars = computed(() => {
   const w = timerStore.wDuration;
   const pct = (x: number) => `${(x / W) * 100}%`;
 
+  const base: Record<string, string> = {
+    "--bar-length": barLength.value,
+  };
+
+  if (!showPhaseDetail.value) {
+    return {
+      ...base,
+      "--red-bar-length": "0px",
+      "--red-bar-offset": "0px",
+    };
+  }
+
+  const W = timerStore.effectiveWorkMinutes;
+  const w = timerStore.wDuration;
+  const pct = (x: number) => `${(x / W) * 100}%`;
+
   const calculatedLength = barLengthValue * timerStore.redBarPercentage + 2;
   const calculatedOffset = barLengthValue * timerStore.redBarOffsetPercentage + 0.5;
 
