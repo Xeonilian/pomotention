@@ -17,6 +17,15 @@ export function useAppWindow() {
   const isMiniMode = ref(false);
   const showPomoSeq = ref(false);
 
+  // 序列运行时 UI 必须停留在 🍕 模式；刷新后 ref 会丢，但 timer 从持久化恢复时 isFromSequence 仍为 true
+  watch(
+    () => timerStore.isActive && timerStore.isFromSequence,
+    (seqRunning) => {
+      if (seqRunning) showPomoSeq.value = true;
+    },
+    { immediate: true },
+  );
+
   // 容器 Ref，用于计算缩放比例
   const PomotentionTimerContainerRef = ref<HTMLElement | null>(null);
 

@@ -25,12 +25,14 @@ import PwaInstallBanner from "./components/PwaInstallBanner.vue";
 import PwaSplashScreen from "./components/PwaSplashScreen.vue";
 import { initSyncServices, syncAll, resetSyncServices } from "@/services/sync";
 import { initAppCloseHandler, cancelPendingSyncTasks } from "@/services/appCloseHandler";
+import { useTimerStore } from "@/stores/useTimerStore";
 
 // ========== 状态与依赖 ==========
 const router = useRouter();
 const settingStore = useSettingStore();
 const dataStore = useDataStore();
 const syncStore = useSyncStore();
+const timerStore = useTimerStore();
 
 // 清理函数存储
 let appCloseCleanup: (() => void) | null = null;
@@ -251,8 +253,26 @@ onErrorCaptured((error) => {
   return false; // 不阻止错误向上传播
 });
 
+// 回到前台：墙钟校准（与 main 启动时同一 reconcile 入口）
+const handleVisibilityReconcileTimer = () => {
+  if (document.visibilityState === "visible") {
+    timerStore.reconcilePhaseFromWallClock();
+  }
+};
+
+const handlePageShow = (e: PageTransitionEvent) => {
+  if (e.persisted) timerStore.reconcilePhaseFromWallClock();
+};
+
+onMounted(() => {
+  document.addEventListener("visibilitychange", handleVisibilityReconcileTimer);
+  window.addEventListener("pageshow", handlePageShow);
+});
+
 // 组件卸载清理
 onUnmounted(() => {
+  document.removeEventListener("visibilitychange", handleVisibilityReconcileTimer);
+  window.removeEventListener("pageshow", handlePageShow);
   cleanupSyncLifecycle();
 
   if (authStateChangeListener) {

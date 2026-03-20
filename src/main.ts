@@ -4,6 +4,7 @@ import App from "./App.vue";
 import { createApp, h, reactive } from "vue";
 import { createPinia } from "pinia";
 import piniaPluginPersistedstate from "pinia-plugin-persistedstate"; // 持久化插件
+import { useTimerStore } from "./stores/useTimerStore";
 import router from "./router";
 import { NConfigProvider } from "naive-ui";
 import { zhCN, dateZhCN } from "naive-ui";
@@ -35,6 +36,8 @@ import "./styles/colors.css";
 import "./styles/global.css";
 
 app.use(pinia);
+// 在任意组件 mount 前用墙钟收束阶段并补挂 interval（持久化恢复与后台回补同一入口）
+useTimerStore().reconcilePhaseFromWallClock();
 app.use(router);
 app.mount("#app");
 

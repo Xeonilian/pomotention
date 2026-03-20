@@ -155,7 +155,7 @@
                 >
                   数据未同步
                 </n-tag>
-                <span v-if="syncStore.syncError" class="sync-status__error">{{ syncStore.syncError }}</span>
+                <span v-if="syncStore.syncError && !isMobile" class="sync-status__error">{{ syncStore.syncError }}</span>
               </div>
             </div>
 

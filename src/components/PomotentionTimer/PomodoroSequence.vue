@@ -91,7 +91,7 @@ import { ref, watch, onMounted, computed } from "vue";
 import { NButton, NIcon, NInput, useDialog } from "naive-ui";
 import { useTimerStore } from "@/stores/useTimerStore";
 import { useSettingStore } from "@/stores/useSettingStore";
-import { toggleWhiteNoise, setPomodoroRunning, stopWhiteNoise, startWhiteNoise } from "@/core/sounds.ts";
+import { toggleWhiteNoise, stopWhiteNoise, startWhiteNoise } from "@/core/sounds.ts";
 import {
   Speaker224Regular,
   SpeakerMute24Regular,
@@ -186,7 +186,6 @@ function startPomodoroCircle(): void {
     emit("pomo-seq-running", true);
 
     isRunning.value = true;
-    setPomodoroRunning(true); // 设置番茄钟运行状态
     currentStep.value = 0;
     totalPomodoros.value = steps.filter((step) => step.type === "work").length;
     currentPomodoro.value = 1;
@@ -194,14 +193,7 @@ function startPomodoroCircle(): void {
     // 初始化进度条
     initializeProgress(sequenceInput.value);
     updateProgressStatus(currentStep.value);
-    // 开始第一个工作周期
-    const firstStep = steps[0];
-    if (firstStep.type === "work") {
-      timerStore.startWorking(firstStep.duration);
-    } else {
-      timerStore.startBreak(firstStep.duration);
-    }
-
+    // 仅由 runStep 启动当前步，避免重复 startWorking/startBreak（双提示音与双 interval 边缘问题）
     runStep(steps);
   } catch (error) {
     alert((error as Error).message);
@@ -246,7 +238,7 @@ function stopPomodoro(): void {
   emit("pomo-seq-running", false);
   // 然后更新本地状态
   isRunning.value = false;
-  setPomodoroRunning(false); // 设置番茄钟停止状态
+  // resetTimer 内已 stopWhiteNoise()
   timeoutHandles.value.forEach((handle) => clearTimeout(handle));
   timeoutHandles.value = [];
   // console.log("Stopping pomodoro...");
@@ -412,7 +404,6 @@ onMounted(() => {
     // );
     isRunning.value = true;
     emit("pomo-seq-running", true);
-    setPomodoroRunning(true);
 
     // 恢复进度条
     initializeProgress(sequenceInput.value);
@@ -438,6 +429,10 @@ onMounted(() => {
     currentPomodoro.value = steps.slice(0, currentStep.value).filter((step) => step.type === "work").length + 1;
 
     updateProgressStatus(currentStep.value);
+
+    if (timerStore.isWorking && settingStore.settings.isWhiteNoiseEnabled) {
+      startWhiteNoise();
+    }
   }
 });
 
@@ -518,6 +513,7 @@ function resetWhiteNoise(sound: SoundType) {
 }
 
 .sequence-input {
+  height: 60px;
   max-height: 60px;
   font-family: "Consolas", "Courier New", Courier, "Lucida Console", Monaco, "Liberation Mono", "Menlo", monospace;
   font-size: 12px;
@@ -531,7 +527,8 @@ function resetWhiteNoise(sound: SoundType) {
 }
 
 :deep(.n-input-wrapper) {
-  width: 190px;
+  width: 90%;
+  height: 100%;
 }
 
 .hint-text {
