@@ -66,23 +66,36 @@ export async function signIn(credentials: SignInWithPasswordCredentials) {
   return { user: data.user, error: null };
 }
 
-// 用户退出登录
+/** 清除本地残留的 Supabase Auth 存储（与 signOut 互补，避免刷新后仍自动登录） */
+export function purgeSupabaseAuthStorage(): void {
+  if (typeof localStorage === "undefined") return;
+  for (const key of Object.keys(localStorage)) {
+    if (key.startsWith("sb-")) {
+      localStorage.removeItem(key);
+    }
+  }
+}
+
+// 用户退出登录（须与 supabase 实例是否存在挂钩，勿用 isSupabaseEnabled：本地模式开关会误跳过清会话）
 export async function signOut() {
   if (!supabase) {
     console.warn("[Auth] Supabase 未启用，signOut 直接返回");
     return null;
   }
 
-  const { error } = await supabase.auth.signOut();
+  const { error } = await supabase.auth.signOut({ scope: "local" });
   if (error) {
     // 某些情况下（已无 session）会返回 Auth session missing，忽略为成功
     if (error.message?.includes("Auth session missing")) {
       console.warn("[Auth] signOut: session 缺失，忽略为已退出");
+      purgeSupabaseAuthStorage();
       return null;
     }
     console.error("Error signing out:", error.message);
+    purgeSupabaseAuthStorage();
     return error;
   }
+  purgeSupabaseAuthStorage();
   return null;
 }
 

@@ -156,10 +156,9 @@ const isPseudoFullscreen = ref(false);
 let prevBodyOverflow: string | null = null;
 const isIOSDevice = (() => {
   const ua = navigator.userAgent || "";
-  const platform = navigator.platform || "";
   const isIOSLike = /iPhone|iPad|iPod/i.test(ua);
-  // iPadOS 13+ may report MacIntel, but still has touch points.
-  const isIPadOS = platform === "MacIntel" && navigator.maxTouchPoints > 1;
+  const isIPadOS =
+    /macintosh/i.test(ua) && navigator.maxTouchPoints > 1;
   return isIOSLike || isIPadOS;
 })();
 

@@ -237,21 +237,6 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
               effectiveFromMs,
             ).toISOString()}`,
           );
-          // #region agent log
-          fetch("http://127.0.0.1:7242/ingest/a855573f-7487-43d2-8f8d-5dee3311857f", {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "e164ec" },
-            body: JSON.stringify({
-              sessionId: "e164ec",
-              runId: "post-fix",
-              hypothesisId: "F",
-              location: "src/services/sync/baseSyncService.ts:download",
-              message: "fallback window applied (lastSyncTimestamp in future)",
-              data: { table: this.tableName, lastSyncTimestamp, nowMs, effectiveFromMs },
-              timestamp: Date.now(),
-            }),
-          }).catch(() => {});
-          // #endregion
         }
         // console.log(`📥 [${this.tableName}] 增量下载（自 ${new Date(effectiveTimestamp).toLocaleString()}，含 5 秒冗余）`);
       } else {

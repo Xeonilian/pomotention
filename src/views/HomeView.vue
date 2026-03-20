@@ -8,7 +8,7 @@
   <div class="home-content">
     <!-- 左侧面板 (日程表) -->
     <div v-if="settingStore.settings.showSchedule" class="left" :style="{ width: leftWidth + 'px' }">
-      <TimeTable />
+      <TimeTable @timetable-edit="onTimetableEdit" />
     </div>
 
     <!-- 左侧面板调整大小手柄 -->
@@ -431,7 +431,7 @@ const onYearJump = () => {
 
 const onDayJump = () => {
   settingStore.settings.viewSet = "day";
-  settingStore.settings.topHeight = isMobile.value ? 300 : 300;
+  settingStore.settings.topHeight = isMobile.value ? 305 : 300;
 };
 
 // 年视图中点击月份标题 → 进入月视图并定位到该月
@@ -1494,6 +1494,11 @@ const leftWidth = computed({
   get: () => settingStore.settings.leftWidth,
   set: (v) => (settingStore.settings.leftWidth = v),
 });
+
+// 日程表进入/退出编辑时左栏目标宽度（与 TimeTable 约定）
+function onTimetableEdit(editing: boolean) {
+  leftWidth.value = editing ? 200 : 80;
+}
 const rightWidth = computed({
   get: () => settingStore.settings.rightWidth,
   set: (v) => (settingStore.settings.rightWidth = v),
@@ -1508,8 +1513,8 @@ const { startResize: startLeftResize } = useResize(
   leftWidth,
   "horizontal",
   75,
-  150,
-  false, // 左侧面板
+  320,
+  false, // 左侧面板（max 需 ≥ 日程表编辑宽度 TIMETABLE_LEFT_EDIT）
 );
 const { startResize: startRightResize } = useResize(
   rightWidth,
@@ -1536,6 +1541,8 @@ const { startResize: startRightResize } = useResize(
   overflow: hidden;
   margin-right: 0;
   background: var(--color-background);
+  /* flex 子项默认会 shrink，不写则 store 里 leftWidth=200 也会被压成很窄 */
+  flex-shrink: 0;
   min-width: 0px;
 }
 
@@ -1791,11 +1798,10 @@ const { startResize: startRightResize } = useResize(
   }
 
   .left {
-    padding: 5px 2px 15px 8px !important;
-    width: 80px !important;
+    padding: 5px 2px 0px 8px !important;
   }
   .right {
-    padding: 5px 6px 15px 6px !important;
+    padding: 5px 6px 0px 6px !important;
     width: 100% !important;
   }
 

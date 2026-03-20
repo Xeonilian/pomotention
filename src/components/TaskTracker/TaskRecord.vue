@@ -500,7 +500,7 @@ const handleClick = (event: MouseEvent) => {
 
 :deep(.markdown-content h1) {
   font-size: 22px;
-  margin-top: 0.5em;
+  margin-top: 0.3em;
   margin-bottom: 0.1em;
 }
 

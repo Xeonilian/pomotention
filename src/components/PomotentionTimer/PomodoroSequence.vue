@@ -80,7 +80,7 @@
           title="设置番茄时长/回车确认"
           :disabled="isRunning"
         />
-        <span class="pomo-duration-input-unit">min</span>
+        <span>&nbsp;min</span>
       </div>
     </div>
   </div>
@@ -457,7 +457,7 @@ function resetWhiteNoise(sound: SoundType) {
   min-height: 120px;
   border: 0px solid var(--color-text-secondary);
   border-radius: 8px;
-  box-shadow: 1px 2px 6px var(--color-background-light-transparent);
+  /* box-shadow: 1px 2px 6px var(--color-background-light-transparent); */
 }
 
 .pomodoro-sequence.running {
@@ -555,7 +555,7 @@ function resetWhiteNoise(sound: SoundType) {
   justify-content: center;
   border-radius: 20%;
   cursor: pointer;
-  border: 1px solid var(--color-background-dark);
+  border: 0px solid var(--color-background-dark);
 }
 
 .action-button:hover {
@@ -567,24 +567,21 @@ function resetWhiteNoise(sound: SoundType) {
   cursor: not-allowed;
 }
 
+.pomo-duration-input-container {
+  font-size: 10px;
+}
 .pomo-duration-input {
-  width: 25px;
-  height: 25px;
+  width: 24px;
+  height: 24px;
   display: inline-block;
   pointer-events: auto;
 }
 
 .pomo-duration-input :deep(.n-input-wrapper) {
-  width: 25px;
-  height: 25px;
+  width: 24px;
+  height: 24px;
   padding: 0px;
   pointer-events: auto;
-  background-color: var(--color-background-light-transparent);
-  transition: background-color 0.3s ease;
-}
-
-.pomo-duration-input:focus-within :deep(.n-input-wrapper) {
-  background-color: var(--color-background);
 }
 
 .pomo-duration-input :deep(.n-input__input) {
@@ -592,6 +589,72 @@ function resetWhiteNoise(sound: SoundType) {
   font-size: 12px;
   pointer-events: auto;
 }
+
+/* 原生 input 在 .n-input__input-el，仅此层设置行高才能在 iOS 上稳定行盒 */
+.pomo-duration-input :deep(.n-input__input-el) {
+  height: 25px;
+  line-height: 25px;
+  padding: 0;
+  text-align: center;
+  font-size: 12px;
+  box-sizing: border-box;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+:deep(.n-input.pomo-duration-input) {
+  --n-box-shadow-focus: none !important;
+}
+
+/* iPhone Safari：聚焦时避免行高/基线被重算导致整块错位；逻辑同 ActivitySection.search-input */
+@supports (-webkit-touch-callout: none) {
+  /* 16px 字体略宽于 12px，略增宽度避免两位数被裁切 */
+  .pomo-duration-input {
+    width: 30px;
+    min-width: 30px;
+  }
+
+  .pomo-duration-input :deep(.n-input),
+  .pomo-duration-input :deep(.n-input-wrapper) {
+    width: 100% !important;
+    height: 25px !important;
+    min-height: 25px !important;
+  }
+
+  .pomo-duration-input :deep(.n-input__input) {
+    display: flex;
+    align-items: center;
+    height: 100%;
+  }
+
+  .pomo-duration-input :deep(.n-input__input-el) {
+    height: 100% !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    /* 小于 16px 时 iOS 会放大页面，表现为「整块布局跳变」，常被误认为行高变了 */
+    font-size: 16px !important;
+    line-height: 1.2 !important;
+    text-size-adjust: 100%;
+    -webkit-text-size-adjust: 100%;
+  }
+}
+
+/* 序列 textarea：锁定行高，减少聚焦时 WebKit 重排 textarea 行盒 */
+.sequence-input :deep(.n-input__textarea-el) {
+  line-height: 1.35;
+  font-size: 12px;
+  box-sizing: border-box;
+}
+
+@supports (-webkit-touch-callout: none) {
+  .sequence-input :deep(.n-input__textarea-el) {
+    font-size: 16px !important;
+    line-height: 1.35 !important;
+    text-size-adjust: 100%;
+    -webkit-text-size-adjust: 100%;
+  }
+}
+
 .disabled {
   color: var(--color-text-secondary);
 }
@@ -603,6 +666,15 @@ function resetWhiteNoise(sound: SoundType) {
   gap: 8px; /* 按钮之间的垂直间距 */
   margin: 0px;
   padding: 0;
+}
+
+@media (max-width: 430px) {
+  .action-button {
+    background-color: transparent;
+  }
+  .action-button:hover {
+    background-color: transparent;
+  }
 }
 </style>
 

@@ -41,6 +41,12 @@
 - **applied（downloaded）**：通过时间戳/冲突判断后实际写入本地的条数。
 - **清除后本底**：清除本地数据并重置 lastSyncTimestamp 后，本地列表应为空；再全量下载可验证「本底空 + 云端拉取数 = 写入数」。
 
-## 5. 后续可做：编辑后 debounce 上传
+## 5. 编辑后 debounce 上传（已实现）
 
-在本地编辑（task/activity 等）时标记 `synced = false`，并增加带 debounce 的「编辑后上传」逻辑，可减少「有数据但未上传」导致的缺失。
+- **本地写入链**（统一入口 `src/core/utils/scheduleDebouncedCloudUpload.ts`，再动态加载 `uploadAllDebounced`）：  
+  - **批量**：`saveAllDebounced()`（约 800ms）→ `saveAllNow` → `scheduleDebouncedCloudUpload()`。  
+  - **单实体**：`updateTaskById` / `updateTodoById` / `updateActivityById` / `updateScheduleById` 等在 `save*` 成功后同样调用。  
+  - **Tag / Template**：`useTagStore` / `useTemplateStore` 内对 `rawTags` / `rawTemplates` 的 `watch` → `saveTags` / `saveTemplates` 后调用同一函数。  
+  - 以上均在约 **5s** 内合并为一次 `uploadAll()`（由 `autoSync.uploadAllDebounced` 实现）。
+- **前置条件**：`settings.autoSupabaseSync` 开启且已登录；否则 `uploadAllDebounced` 内部会直接返回。
+- **其它触发**仍保留：失焦/切后台 `src/services/appCloseHandler.ts` 短防抖上传、回前台防抖下载/全量同步；`BaseSyncService.scheduleAutoUpload` 仍为表级可选能力，当前主路径不依赖它。

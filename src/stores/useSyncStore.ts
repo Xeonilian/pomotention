@@ -3,8 +3,8 @@ import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import { useSettingStore } from "./useSettingStore";
 import { useRouter } from "vue-router";
-import { signOut, getCurrentUser, getSession } from "@/core/services/authService";
-import { isSupabaseEnabled } from "@/core/services/supabase";
+import { signOut, getCurrentUser } from "@/core/services/authService";
+import { isSupabaseEnabled, supabase } from "@/core/services/supabase";
 import { destroyAppCloseHandler } from "@/services/appCloseHandler";
 
 export const useSyncStore = defineStore("sync", () => {
@@ -31,40 +31,11 @@ export const useSyncStore = defineStore("sync", () => {
   const lastSyncTimestamp = computed({
     get: () => {
       const v = settingStore.settings.supabaseSync[0] || 0;
-      // #region agent log
-      fetch("http://127.0.0.1:7242/ingest/a855573f-7487-43d2-8f8d-5dee3311857f", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "e164ec" },
-        body: JSON.stringify({
-          sessionId: "e164ec",
-          runId: "pre-fix",
-          hypothesisId: "B",
-          location: "src/stores/useSyncStore.ts:lastSyncTimestamp.get",
-          message: "read lastSyncTimestamp from settings.supabaseSync[0]",
-          data: { value: v },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
+
       return v;
     },
     set: (val: number) => {
       settingStore.settings.supabaseSync[0] = val;
-      // #region agent log
-      fetch("http://127.0.0.1:7242/ingest/a855573f-7487-43d2-8f8d-5dee3311857f", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "e164ec" },
-        body: JSON.stringify({
-          sessionId: "e164ec",
-          runId: "pre-fix",
-          hypothesisId: "A",
-          location: "src/stores/useSyncStore.ts:lastSyncTimestamp.set",
-          message: "write lastSyncTimestamp to settings.supabaseSync[0]",
-          data: { value: val },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
     },
   });
 
@@ -106,21 +77,6 @@ export const useSyncStore = defineStore("sync", () => {
     currentSyncMessage.value = message;
     syncError.value = null;
     lastSyncTimestamp.value = Date.now();
-    // #region agent log
-    fetch("http://127.0.0.1:7242/ingest/a855573f-7487-43d2-8f8d-5dee3311857f", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "e164ec" },
-      body: JSON.stringify({
-        sessionId: "e164ec",
-        runId: "pre-fix",
-        hypothesisId: "D",
-        location: "src/stores/useSyncStore.ts:syncSuccess",
-        message: "sync success updated lastSyncTimestamp",
-        data: { value: lastSyncTimestamp.value },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
   }
 
   // 同步失败
@@ -159,21 +115,6 @@ export const useSyncStore = defineStore("sync", () => {
     currentSyncMessage.value = "就绪";
     syncStatus.value = "idle";
     syncInitialized.value = false;
-    // #region agent log
-    fetch("http://127.0.0.1:7242/ingest/a855573f-7487-43d2-8f8d-5dee3311857f", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "e164ec" },
-      body: JSON.stringify({
-        sessionId: "e164ec",
-        runId: "pre-fix",
-        hypothesisId: "C",
-        location: "src/stores/useSyncStore.ts:resetSync",
-        message: "resetSync set timestamps to 0",
-        data: { lastSync: lastSyncTimestamp.value, lastCleanup: lastCleanupTimestamp.value },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
   }
 
   function resetSyncState() {
@@ -182,22 +123,6 @@ export const useSyncStore = defineStore("sync", () => {
     currentSyncMessage.value = "就绪";
     syncStatus.value = "idle";
     syncInitialized.value = false;
-
-    // #region agent log
-    fetch("http://127.0.0.1:7242/ingest/a855573f-7487-43d2-8f8d-5dee3311857f", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "e164ec" },
-      body: JSON.stringify({
-        sessionId: "e164ec",
-        runId: "post-fix",
-        hypothesisId: "FIX",
-        location: "src/stores/useSyncStore.ts:resetSyncState",
-        message: "resetSyncState reset transient sync state (kept timestamps)",
-        data: { lastSync: lastSyncTimestamp.value, lastCleanup: lastCleanupTimestamp.value },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
   }
 
   // 同步前钩子：在真正执行上传/下载前执行，用于把未保存的编辑先落库（如 TaskRecord 正在编辑时先 commit）
@@ -249,17 +174,12 @@ export const useSyncStore = defineStore("sync", () => {
       // 登出时先销毁同步服务
       destroySyncService();
 
-      // 如果未启用或无会话，直接视为已退出；否则调用远端登出
-      if (!isSupabaseEnabled()) {
-        console.log("👋 未启用 Supabase，直接视为已退出");
+      // 必须用 supabase 实例判断：isSupabaseEnabled() 在 localOnlyMode 时为 false，会跳过 signOut，导致会话仍留在 localStorage，刷新又自动登录
+      if (!supabase) {
+        console.log("👋 无 Supabase 客户端，跳过远端 signOut");
       } else {
-        const session = await getSession();
-        if (!session) {
-          console.log("👋 未检测到有效会话，跳过远端 signOut");
-        } else {
-          console.log("👋 退出登录，切断同步连接");
-          await signOut();
-        }
+        console.log("👋 退出登录，切断同步连接");
+        await signOut();
       }
 
       destroyAppCloseHandler();

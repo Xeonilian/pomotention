@@ -140,28 +140,6 @@ function loadFromStorage<T extends Record<string, any>>(key: string, defaultValu
     // 仅在 loadedData 存在，需要合并的情况下才合并
     const mergedData = hasUndefined ? { ...defaultValue, ...loadedData } : loadedData;
 
-    // #region agent log
-    fetch("http://127.0.0.1:7242/ingest/a855573f-7487-43d2-8f8d-5dee3311857f", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "e164ec" },
-      body: JSON.stringify({
-        sessionId: "e164ec",
-        runId: "pre-fix",
-        hypothesisId: "A",
-        location: "src/stores/useSettingStore.ts:loadFromStorage",
-        message: "load global settings from localStorage",
-        data: {
-          hasStored: !!stored,
-          hasUndefined,
-          supabaseSyncType: typeof (mergedData as any)?.supabaseSync,
-          supabaseSync0: Array.isArray((mergedData as any)?.supabaseSync) ? (mergedData as any).supabaseSync[0] : undefined,
-          supabaseSync1: Array.isArray((mergedData as any)?.supabaseSync) ? (mergedData as any).supabaseSync[1] : undefined,
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
-
     // 保存合并后的数据到 localStorage
     localStorage.setItem(key, JSON.stringify(mergedData));
 
@@ -172,9 +150,24 @@ function loadFromStorage<T extends Record<string, any>>(key: string, defaultValu
   }
 }
 
+const MAX_AUDIO_DEBUG_LINES = 200;
+
 export const useSettingStore = defineStore("setting", () => {
   // 所有设置统一存于 settings
   const settings = ref<GlobalSettings>(loadFromStorage(STORAGE_KEYS.GLOBAL_SETTINGS, defaultSettings));
+
+  /** 音频诊断日志（仅内存，不入 localStorage，供设置页排查 iOS/PWA 播放问题） */
+  const audioDebugLogs = ref<string[]>([]);
+
+  function pushAudioDebugLog(message: string) {
+    const line = `${new Date().toISOString()} ${message}`;
+    const next = [...audioDebugLogs.value, line];
+    audioDebugLogs.value = next.length > MAX_AUDIO_DEBUG_LINES ? next.slice(-MAX_AUDIO_DEBUG_LINES) : next;
+  }
+
+  function clearAudioDebugLogs() {
+    audioDebugLogs.value = [];
+  }
 
   // Log loaded settings
   // console.log("Initialized settings:", settings.value);
@@ -186,30 +179,11 @@ export const useSettingStore = defineStore("setting", () => {
       try {
         // console.log("Saving to localStorage:", JSON.stringify(newValue)); // 日志检查
         localStorage.setItem(STORAGE_KEYS.GLOBAL_SETTINGS, JSON.stringify(newValue));
-
-        // #region agent log
-        fetch("http://127.0.0.1:7242/ingest/a855573f-7487-43d2-8f8d-5dee3311857f", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "e164ec" },
-          body: JSON.stringify({
-            sessionId: "e164ec",
-            runId: "pre-fix",
-            hypothesisId: "A",
-            location: "src/stores/useSettingStore.ts:watch(settings)",
-            message: "saved global settings to localStorage",
-            data: {
-              supabaseSync0: Array.isArray((newValue as any)?.supabaseSync) ? (newValue as any).supabaseSync[0] : undefined,
-              supabaseSync1: Array.isArray((newValue as any)?.supabaseSync) ? (newValue as any).supabaseSync[1] : undefined,
-            },
-            timestamp: Date.now(),
-          }),
-        }).catch(() => {});
-        // #endregion
       } catch (error) {
         console.error("Failed to save to localStorage:", error);
       }
     },
-    { deep: true } // 深度监视
+    { deep: true }, // 深度监视
   );
 
   // 重置全部设置为默认
@@ -303,6 +277,9 @@ export const useSettingStore = defineStore("setting", () => {
   // 返回
   return {
     settings,
+    audioDebugLogs,
+    pushAudioDebugLog,
+    clearAudioDebugLogs,
     resetSettings,
     resetDurations,
     resetStyle,

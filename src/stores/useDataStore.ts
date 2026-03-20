@@ -9,7 +9,7 @@ import type { Task } from "@/core/types/Task";
 import type { Tag } from "@/core/types/Tag";
 import type { DataPoint, MetricName, AggregationType, TimeGranularity } from "@/core/types/Chart";
 
-import { addDays, debounce } from "@/core/utils";
+import { addDays, debounce, scheduleDebouncedCloudUpload } from "@/core/utils";
 
 import {
   loadActivities,
@@ -609,6 +609,7 @@ export const useDataStore = defineStore(
         saveTodos(todoList.value);
         saveSchedules(scheduleList.value);
         saveTasks(taskList.value);
+        scheduleDebouncedCloudUpload();
       } catch (e) {
         console.error("save failed", e);
       }
@@ -634,6 +635,7 @@ export const useDataStore = defineStore(
     function addActivity(newActivity: Activity) {
       activityList.value.push(newActivity);
       saveActivities(activityList.value);
+      scheduleDebouncedCloudUpload();
     }
 
     function setActiveId(id: number | null) {
@@ -655,6 +657,7 @@ export const useDataStore = defineStore(
       if (taskList.value[idx].starred !== next) {
         taskList.value[idx] = { ...taskList.value[idx], starred: next };
         saveTasks(taskList.value);
+        scheduleDebouncedCloudUpload();
       }
     }
 
@@ -672,6 +675,7 @@ export const useDataStore = defineStore(
 
       taskList.value[idx] = { ...taskList.value[idx], starred: next };
       saveTasks(taskList.value);
+      scheduleDebouncedCloudUpload();
     }
 
     /**
@@ -682,6 +686,7 @@ export const useDataStore = defineStore(
       if (activityIndex !== -1) {
         activityList.value[activityIndex] = { ...activityList.value[activityIndex], ...updates };
         saveActivities(activityList.value);
+        scheduleDebouncedCloudUpload();
       } else {
         console.error("Activity not found:", id);
       }
@@ -695,6 +700,7 @@ export const useDataStore = defineStore(
       if (scheduleIndex !== -1) {
         scheduleList.value[scheduleIndex] = { ...scheduleList.value[scheduleIndex], ...updates };
         saveSchedules(scheduleList.value);
+        scheduleDebouncedCloudUpload();
       } else {
         console.error("Schedule not found:", id);
       }
@@ -708,6 +714,7 @@ export const useDataStore = defineStore(
       if (taskIndex !== -1) {
         taskList.value[taskIndex] = { ...taskList.value[taskIndex], ...updates };
         saveTasks(taskList.value);
+        scheduleDebouncedCloudUpload();
       } else {
         console.error("Task not found:", id);
       }
@@ -721,6 +728,7 @@ export const useDataStore = defineStore(
       if (todoIndex !== -1) {
         todoList.value[todoIndex] = { ...todoList.value[todoIndex], ...updates };
         saveTodos(todoList.value);
+        scheduleDebouncedCloudUpload();
       } else {
         console.error("Todo not found:", id);
       }
@@ -757,8 +765,9 @@ export const useDataStore = defineStore(
       activity.synced = false;
 
       saveActivities(activityList.value);
+      scheduleDebouncedCloudUpload();
 
-      // 标签被实际应用到 Activity 时，更新本地 lastUsed（不触发云同步）
+      // 标签被实际应用到 Activity 时，更新本地 tag 的 lastUsed（不单独 saveTags；activity 已标记 unsynced 并由上方防抖上传覆盖）
       tagStore.touchTagsLastUsed(newTagIds);
 
       return true;
