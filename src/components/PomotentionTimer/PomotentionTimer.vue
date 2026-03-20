@@ -5,6 +5,7 @@
       'is-compact': settingStore.settings.isCompactMode,
       'is-phone-mode': isPhoneMode,
     }"
+    :style="phoneModeWrapperStyle"
     ref="pomodoroContainerRef"
   >
     <div v-if="isMiniMode" class="mini-mode-drag-region" data-tauri-drag-region></div>
@@ -57,7 +58,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, watch, ref, computed } from "vue";
+import { onMounted, onUnmounted, watch, ref, computed } from "vue";
 import PomodoroTimer from "@/components/PomotentionTimer/PomodoroTimer.vue";
 import PomodoroSequence from "@/components/PomotentionTimer/PomodoroSequence.vue";
 import { useTimerStore } from "@/stores/useTimerStore";
@@ -106,6 +107,48 @@ const emit = defineEmits<{
   (e: "enter-mini"): void;
 }>();
 
+// Android 上 calc(100vw/…) 放进 scale() 常不生效，用 visualViewport / innerWidth 写 --phone-scale 更稳
+function readPhoneViewportWidthPx(): number {
+  if (typeof window === "undefined") return 0;
+  return window.visualViewport?.width ?? window.innerWidth;
+}
+
+const phoneViewportWidthPx = ref(0);
+
+function syncPhoneViewportWidth() {
+  if (!isPhoneMode.value) return;
+  phoneViewportWidthPx.value = readPhoneViewportWidthPx();
+}
+
+const phoneDesignWidthPx = computed(() => (settingStore.settings.isCompactMode ? 140 : 220));
+
+const phoneModeWrapperStyle = computed(() => {
+  if (!isPhoneMode.value) return undefined;
+  const w = phoneViewportWidthPx.value > 0 ? phoneViewportWidthPx.value : readPhoneViewportWidthPx();
+  const base = phoneDesignWidthPx.value;
+  const scale = base > 0 && w > 0 ? Math.max(w / base, 0.01) : 1;
+  return { "--phone-scale": String(scale) } as Record<string, string>;
+});
+
+watch(
+  isPhoneMode,
+  (phone) => {
+    if (typeof window !== "undefined") {
+      window.removeEventListener("resize", syncPhoneViewportWidth);
+      window.visualViewport?.removeEventListener("resize", syncPhoneViewportWidth);
+    }
+    if (!phone) {
+      phoneViewportWidthPx.value = 0;
+      return;
+    }
+    syncPhoneViewportWidth();
+    if (typeof window === "undefined") return;
+    window.addEventListener("resize", syncPhoneViewportWidth);
+    window.visualViewport?.addEventListener("resize", syncPhoneViewportWidth);
+  },
+  { immediate: true },
+);
+
 function reportSize() {
   let width; // 固定宽度
   let height; // 根据状态动态调整高度
@@ -127,6 +170,7 @@ function reportSize() {
 
 // 挂载组件时报告尺寸
 onMounted(() => {
+  if (isPhoneMode.value) syncPhoneViewportWidth();
   reportSize();
 
   // 如果番茄钟正在运行且来自序列，恢复 pomoSeq 运行状态
@@ -134,6 +178,12 @@ onMounted(() => {
     console.log("[PomotentionTimer] Component mounted, restoring pomoSeq running state", pomodoroContainerRef.value?.clientHeight);
     isPomoSeqRunning.value = true;
   }
+});
+
+onUnmounted(() => {
+  if (typeof window === "undefined") return;
+  window.removeEventListener("resize", syncPhoneViewportWidth);
+  window.visualViewport?.removeEventListener("resize", syncPhoneViewportWidth);
 });
 
 // 监听所有影响尺寸的因素变化
@@ -329,7 +379,8 @@ function handlePomoSeqRunning(status: boolean) {
 }
 .pomodoro-view-wrapper.is-phone-mode .pomodoro-content-area {
   width: var(--phone-design-width);
-  transform: scale(calc(100vw / var(--phone-design-width)));
+  /* --phone-scale 由脚本根据 visualViewport / innerWidth 写入，避免 Android 上纯 CSS calc+scale 不生效 */
+  transform: scale(var(--phone-scale, 1));
   transform-origin: center center;
   padding-bottom: env(safe-area-inset-bottom);
 }
