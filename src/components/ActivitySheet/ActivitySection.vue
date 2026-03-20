@@ -990,7 +990,7 @@ function handlePomoInputTouchCancel(item: Activity) {
   overflow-y: hidden;
   overflow-x: hidden;
   margin-left: 4px;
-  margin-right: 4px;
+  margin-right: 2px;
 }
 
 .section-header {
@@ -1007,6 +1007,8 @@ function handlePomoInputTouchCancel(item: Activity) {
 }
 
 .section-content-container {
+  /* 预留纵向滚动条槽位，避免 overflow 时出现滚动条导致行内 flex 宽度被挤变窄 */
+  scrollbar-gutter: stable;
   overflow-y: auto;
   overflow-x: hidden;
 }
