@@ -592,6 +592,68 @@ function resetWhiteNoise(sound: SoundType) {
   font-size: 12px;
   pointer-events: auto;
 }
+
+/* 原生 input 在 .n-input__input-el，仅此层设置行高才能在 iOS 上稳定行盒 */
+.pomo-duration-input :deep(.n-input__input-el) {
+  height: 25px;
+  line-height: 25px;
+  padding: 0;
+  text-align: center;
+  font-size: 12px;
+  box-sizing: border-box;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* iPhone Safari：聚焦时避免行高/基线被重算导致整块错位；逻辑同 ActivitySection.search-input */
+@supports (-webkit-touch-callout: none) {
+  /* 16px 字体略宽于 12px，略增宽度避免两位数被裁切 */
+  .pomo-duration-input {
+    width: 30px;
+    min-width: 30px;
+  }
+
+  .pomo-duration-input :deep(.n-input),
+  .pomo-duration-input :deep(.n-input-wrapper) {
+    width: 100% !important;
+    height: 25px !important;
+    min-height: 25px !important;
+  }
+
+  .pomo-duration-input :deep(.n-input__input) {
+    display: flex;
+    align-items: center;
+    height: 100%;
+  }
+
+  .pomo-duration-input :deep(.n-input__input-el) {
+    height: 100% !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    /* 小于 16px 时 iOS 会放大页面，表现为「整块布局跳变」，常被误认为行高变了 */
+    font-size: 16px !important;
+    line-height: 1.2 !important;
+    text-size-adjust: 100%;
+    -webkit-text-size-adjust: 100%;
+  }
+}
+
+/* 序列 textarea：锁定行高，减少聚焦时 WebKit 重排 textarea 行盒 */
+.sequence-input :deep(.n-input__textarea-el) {
+  line-height: 1.35;
+  font-size: 12px;
+  box-sizing: border-box;
+}
+
+@supports (-webkit-touch-callout: none) {
+  .sequence-input :deep(.n-input__textarea-el) {
+    font-size: 16px !important;
+    line-height: 1.35 !important;
+    text-size-adjust: 100%;
+    -webkit-text-size-adjust: 100%;
+  }
+}
+
 .disabled {
   color: var(--color-text-secondary);
 }
