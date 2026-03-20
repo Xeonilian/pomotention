@@ -3,6 +3,7 @@
 import { ref, computed, watch } from "vue";
 import { defineStore } from "pinia";
 import { loadTemplates, saveTemplates } from "@/services/localStorageService";
+import { scheduleDebouncedCloudUpload } from "@/core/utils";
 import type { Template } from "@/core/types/Template";
 
 export const useTemplateStore = defineStore("template", () => {
@@ -15,8 +16,9 @@ export const useTemplateStore = defineStore("template", () => {
     rawTemplates,
     (templates) => {
       saveTemplates(templates);
+      scheduleDebouncedCloudUpload();
     },
-    { deep: true }
+    { deep: true },
   );
 
   const _templateById = new Map<number, Template>();

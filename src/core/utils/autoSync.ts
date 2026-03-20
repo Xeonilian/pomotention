@@ -6,7 +6,7 @@ import { getCurrentUser } from "@/core/services/authService";
 import { useSettingStore } from "@/stores/useSettingStore";
 
 /**
- * 防抖的自动同步函数（保存后 2 秒触发）
+ * 防抖全量同步（上传+下载+清理），5s 内合并多次触发
  */
 export const autoSyncDebounced = debounce(async () => {
   const settingStore = useSettingStore();

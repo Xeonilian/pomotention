@@ -1,6 +1,7 @@
 import { ref, computed, watch } from "vue";
 import { defineStore } from "pinia";
 import { loadTags, saveTags } from "@/services/localStorageService";
+import { scheduleDebouncedCloudUpload } from "@/core/utils";
 import { useDataStore } from "./useDataStore"; // 依赖 activity 数据
 import type { Tag } from "@/core/types/Tag";
 
@@ -30,8 +31,9 @@ export const useTagStore = defineStore("tagStore", () => {
     rawTags,
     (tags) => {
       saveTags(tags);
+      scheduleDebouncedCloudUpload();
     },
-    { deep: true }
+    { deep: true },
   );
 
   // ----------------------------------------------------------------

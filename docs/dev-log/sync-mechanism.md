@@ -43,6 +43,10 @@
 
 ## 5. 编辑后 debounce 上传（已实现）
 
-- **本地写入链**：业务侧 `saveAllDebounced()`（约 800ms 合并）→ `useDataStore.saveAllNow` 写 activities/todos/schedules/tasks → 成功后 **动态** `import("@/core/utils/autoSync")` 调用 `uploadAllDebounced()`（**5s** 合并多次保存，再执行 `uploadAll()`）。
+- **本地写入链**（统一入口 `src/core/utils/scheduleDebouncedCloudUpload.ts`，再动态加载 `uploadAllDebounced`）：  
+  - **批量**：`saveAllDebounced()`（约 800ms）→ `saveAllNow` → `scheduleDebouncedCloudUpload()`。  
+  - **单实体**：`updateTaskById` / `updateTodoById` / `updateActivityById` / `updateScheduleById` 等在 `save*` 成功后同样调用。  
+  - **Tag / Template**：`useTagStore` / `useTemplateStore` 内对 `rawTags` / `rawTemplates` 的 `watch` → `saveTags` / `saveTemplates` 后调用同一函数。  
+  - 以上均在约 **5s** 内合并为一次 `uploadAll()`（由 `autoSync.uploadAllDebounced` 实现）。
 - **前置条件**：`settings.autoSupabaseSync` 开启且已登录；否则 `uploadAllDebounced` 内部会直接返回。
 - **其它触发**仍保留：失焦/切后台 `src/services/appCloseHandler.ts` 短防抖上传、回前台防抖下载/全量同步；`BaseSyncService.scheduleAutoUpload` 仍为表级可选能力，当前主路径不依赖它。
