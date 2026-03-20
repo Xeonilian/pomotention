@@ -19,9 +19,9 @@ export function useRelativeTime(timestamp: Ref<number> | number) {
     const ts = unref(timestamp);
     const diff = now.value - ts;
 
-    if (diff < 60 * 1000) return "now";
-    if (diff < 60 * 60 * 1000) return `${Math.floor(diff / 60 / 1000)} min`;
-    if (diff < 24 * 60 * 60 * 1000) return `${Math.floor(diff / 60 / 60 / 1000)} h`;
+    if (diff < 60 * 1000) return "刚刚";
+    if (diff < 60 * 60 * 1000) return `${Math.floor(diff / 60 / 1000)} 分钟前`;
+    if (diff < 24 * 60 * 60 * 1000) return `${Math.floor(diff / 60 / 60 / 1000)} 小时前`;
 
     return new Date(ts).toLocaleString();
   });

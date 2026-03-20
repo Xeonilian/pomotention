@@ -73,7 +73,7 @@
                 <template #trigger>
                   <n-button
                     :size="isMobile ? 'large' : 'medium'"
-                    type="default"
+                    :type="dataStore.hasUnsyncedData || syncStore.isSyncing ? 'info' : 'default'"
                     tertiary
                     :loading="syncStore.loggingOut"
                     title="退出登录"
@@ -81,7 +81,7 @@
                   >
                     <template #icon>
                       <n-icon>
-                        <Person20Regular />
+                        <component :is="syncStore.isSyncing ? CloudSync20Regular : Person20Regular" />
                       </n-icon>
                     </template>
                   </n-button>
@@ -223,7 +223,7 @@ import { useSyncWidget } from "@/composables/useSyncWidget";
 import { useDevice } from "@/composables/useDevice";
 
 // Icons & Components
-import { Person20Filled, ArrowUp24Filled, ArrowDown24Filled, List24Filled, Person20Regular } from "@vicons/fluent";
+import { Person20Filled, ArrowUp24Filled, ArrowDown24Filled, List24Filled, Person20Regular, CloudSync20Regular } from "@vicons/fluent";
 import PomotentionTimer from "@/components/PomotentionTimer/PomotentionTimer.vue";
 
 hljs.registerLanguage("javascript", javascript);
