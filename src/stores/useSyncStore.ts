@@ -3,8 +3,8 @@ import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import { useSettingStore } from "./useSettingStore";
 import { useRouter } from "vue-router";
-import { signOut, getCurrentUser, getSession } from "@/core/services/authService";
-import { isSupabaseEnabled } from "@/core/services/supabase";
+import { signOut, getCurrentUser } from "@/core/services/authService";
+import { isSupabaseEnabled, supabase } from "@/core/services/supabase";
 import { destroyAppCloseHandler } from "@/services/appCloseHandler";
 
 export const useSyncStore = defineStore("sync", () => {
@@ -174,17 +174,12 @@ export const useSyncStore = defineStore("sync", () => {
       // 登出时先销毁同步服务
       destroySyncService();
 
-      // 如果未启用或无会话，直接视为已退出；否则调用远端登出
-      if (!isSupabaseEnabled()) {
-        console.log("👋 未启用 Supabase，直接视为已退出");
+      // 必须用 supabase 实例判断：isSupabaseEnabled() 在 localOnlyMode 时为 false，会跳过 signOut，导致会话仍留在 localStorage，刷新又自动登录
+      if (!supabase) {
+        console.log("👋 无 Supabase 客户端，跳过远端 signOut");
       } else {
-        const session = await getSession();
-        if (!session) {
-          console.log("👋 未检测到有效会话，跳过远端 signOut");
-        } else {
-          console.log("👋 退出登录，切断同步连接");
-          await signOut();
-        }
+        console.log("👋 退出登录，切断同步连接");
+        await signOut();
       }
 
       destroyAppCloseHandler();

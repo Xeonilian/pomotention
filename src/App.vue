@@ -63,6 +63,7 @@ const cleanupSyncLifecycle = () => {
  * 集中清理用户数据与状态
  * @param keepLastUserId 是否保留最后一次登录用户ID
  * @param clearAuthSession 是否清除认证会话（退出登录时需要清除）
+ * @param clearUserData 是否删除除 globalSettings 外的业务类 localStorage（登出「不保留」时为 true）
  */
 const clearAllUserState = (keepLastUserId: boolean = false, clearAuthSession: boolean = false, clearUserData: boolean = false) => {
   // 先停掉同步相关副作用
@@ -166,11 +167,17 @@ const handleSignedInSession = async (session: any) => {
 
 /**
  * 处理 SIGNED_OUT 事件
+ * keepLocalDataAfterSignOut=true → 保留本地业务数据与上次用户 id；false → 清空业务存储并恢复默认设置（下次等同全新安装）
  */
-const handleSignedOut = () => {
+const handleSignedOut = async () => {
   console.log("👋 用户已登出，清理同步状态和认证会话");
   syncStore.isLoggedIn = false;
-  clearAllUserState(true, true, settingStore.settings.keepLocalDataAfterSignOut);
+  const keep = settingStore.settings.keepLocalDataAfterSignOut;
+  clearAllUserState(keep, true, !keep);
+  if (!keep) {
+    settingStore.resetSettings();
+  }
+  await dataStore.loadAllData();
 };
 
 /**
@@ -187,7 +194,7 @@ const initAuthStateListener = () => {
     if (event === "SIGNED_IN") {
       await handleSignedInSession(session);
     } else if (event === "SIGNED_OUT") {
-      handleSignedOut();
+      await handleSignedOut();
     } else if (event === "INITIAL_SESSION") {
       // INITIAL_SESSION 事件在应用启动时触发，已在 onMounted 中处理，这里跳过避免重复初始化
       console.log("⏭️ INITIAL_SESSION 事件，已在 onMounted 中处理，跳过");
