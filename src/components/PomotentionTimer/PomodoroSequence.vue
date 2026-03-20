@@ -68,6 +68,7 @@
 
       <n-button class="action-button" @click="addPomodoro" title="insert 🍅+05" :disabled="isRunning" tertiary circle>🍅</n-button>
       <div class="pomo-duration-input-container">
+        =
         <n-input
           ref="pomoDurationInput"
           v-model:value="defaultPomoDuration"
