@@ -148,13 +148,11 @@ const editingMessage = ref("");
 const inputRef = ref<InstanceType<typeof NInput> | null>(null);
 
 /** 与 store.effectiveWorkMinutes 一致：>=5 显示红条与阶段标签 */
-const showPhaseDetail = computed(
-  () => timerStore.effectiveWorkMinutes >= 5,
-);
+const showPhaseDetail = computed(() => timerStore.effectiveWorkMinutes >= 5);
 
 // 把常量转成 CSS 变量名格式
 const timerStyleVars = computed(() => {
-  const barLengthValue = 197; // 动态设置失败 #HACK 现在用的是静态的值
+  const barLengthValue = 197;
 
   const base: Record<string, string> = {
     "--bar-length": barLength.value,
@@ -366,7 +364,7 @@ function handleDurationSelect(key: number): void {
   /* 去掉 hover 时的红色边框 */
 
   /* 强制去掉 focus 时的 box-shadow。此变量其实就是原生 n-input 的 n-box-shadow-focus */
-  --n-box-shadow-focus: none !important;
+  --n-box-shadow-focus: none;
 }
 
 .state-text-clickable {
@@ -458,9 +456,9 @@ function handleDurationSelect(key: number): void {
 /* 3-2 红色进度条 */
 .red-bar {
   position: absolute;
-  width: var(--red-bar-length) !important;
+  width: var(--red-bar-length);
   top: 0px;
-  left: var(--red-bar-offset) !important ;
+  left: var(--red-bar-offset);
   z-index: 2;
 }
 
@@ -557,21 +555,21 @@ function handleDurationSelect(key: number): void {
 
 /* 4-2 工作按钮  */
 .work-button {
-  min-width: unset !important;
-  width: 60px !important;
-  height: 24px !important;
+  min-width: unset;
+  width: 60px;
+  height: 24px;
   flex-shrink: 0; /* 防止按钮被压缩 */
-  padding: 0 4px !important; /* 较小的内边距 */
+  padding: 0 4px; /* 较小的内边距 */
   font-size: 13px;
 }
 
 /* 4-3 休息按钮  */
 .break-button {
-  min-width: unset !important;
-  width: 60px !important;
-  height: 24px !important;
+  min-width: unset;
+  width: 60px;
+  height: 24px;
   flex-shrink: 0; /* 防止按钮被压缩 */
-  padding: 0 4px !important; /* 较小的内边距 */
+  padding: 0 4px; /* 较小的内边距 */
   font-size: 13px;
 }
 
@@ -585,7 +583,7 @@ function handleDurationSelect(key: number): void {
 /* 4-4-2 休息时间选择下拉菜单 */
 .duration-display {
   min-width: 24px;
-  height: 24px !important;
+  height: 24px;
   padding: 0 4px;
   display: flex;
   align-items: center;
