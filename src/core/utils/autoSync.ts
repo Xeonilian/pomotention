@@ -1,4 +1,4 @@
-// src/utils/autoSync.ts
+// src/core/utils/autoSync.ts
 
 import { debounce } from "@/core/utils/debounce";
 import { syncAll, uploadAll } from "@/services/sync/index";
@@ -33,7 +33,7 @@ export const autoSyncDebounced = debounce(async () => {
 }, 5000);
 
 /**
- * 防抖的自动同步函数（保存后 2 秒触发）
+ * 防抖仅上传：供本地 saveAll 后调度，5s 内合并多次保存
  */
 export const uploadAllDebounced = debounce(async () => {
   const settingStore = useSettingStore();
@@ -54,4 +54,4 @@ export const uploadAllDebounced = debounce(async () => {
   } else {
     console.error("❌ 上传失败:", result.errors);
   }
-}, 5000); // 可以改到 10s 测试完成后
+}, 5000);
