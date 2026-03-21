@@ -81,7 +81,6 @@
           :disabled="isRunning"
         />
         <span>&nbsp;min</span>
-        <span>&nbsp;min</span>
       </div>
     </div>
   </div>
