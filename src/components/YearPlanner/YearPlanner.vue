@@ -23,8 +23,9 @@
               :class="{
                 'day-dot--today': day && day.isCurrentMonth && day.isToday,
                 'day-dot--selected': day && day.isCurrentMonth && selectedDate === day.startTs,
+                'day-dot--other-month': day && !day.isCurrentMonth,
               }"
-              :title="day && day.isCurrentMonth ? formatDayTitle(day.startTs) : ''"
+              :title="day ? formatDayTitle(day.startTs) : ''"
               @click="day && day.isCurrentMonth ? handleDayClick(day.startTs) : undefined"
               @dblclick.stop="day && day.isCurrentMonth ? handleDayDblClick(day.startTs) : undefined"
               @touchstart.stop="day && day.isCurrentMonth ? handleDayTouchStart($event, day.startTs) : undefined"
@@ -36,6 +37,10 @@
                   <span class="day-num" :style="getDayNumStyle(day.startTs)">{{ day.dayOfMonth }}</span>
                 </span>
               </template>
+              <!-- 邻月日期：可见弱化格；勿用 day-dot--empty，否则整格被 :has 规则隐藏 -->
+              <span v-else-if="day" class="day-dot day-dot--outside-month">
+                <span class="day-num">{{ day.dayOfMonth }}</span>
+              </span>
               <span v-else class="day-dot day-dot--empty" />
             </button>
           </div>
@@ -365,9 +370,18 @@ function handleWeekClick(weekStartTs: number) {
   min-height: 20px;
 }
 
-.day-dot-wrap.day-dot--other-month .day-num,
-.day-dot-wrap.day-dot--other-month .day-dot {
-  display: none;
+/* 邻月：圆点与数字弱化（原先邻月走了 day-dot--empty，整格被隐藏，other-month 样式无效） */
+.day-dot-wrap.day-dot--other-month {
+  cursor: default;
+}
+
+.day-dot-wrap.day-dot--other-month .day-dot--outside-month {
+  background-color: var(--color-background);
+  opacity: 0.55;
+}
+
+.day-dot-wrap.day-dot--other-month .day-num {
+  color: var(--color-background);
 }
 
 /* 今日：整格底色与圆点填充均为蓝色 */
@@ -429,14 +443,14 @@ function handleWeekClick(weekStartTs: number) {
   cursor: default;
 }
 
-/* 触控按下瞬间反馈（不依赖 hover） */
-.day-dot-wrap:active .day-dot {
+/* 触控按下瞬间反馈（不依赖 hover）；邻月不可点，无缩放反馈 */
+.day-dot-wrap:not(.day-dot--other-month):active .day-dot {
   transform: scale(1.1);
 }
 
 /* 仅真实可悬停设备使用 hover，避免手机伪 hover 不稳定 */
 @media (hover: hover) and (pointer: fine) {
-  .day-dot:hover {
+  .day-dot-wrap:not(.day-dot--other-month) .day-dot:hover {
     cursor: pointer;
     background-color: var(--color-blue);
     border-radius: 50%;
