@@ -1,7 +1,7 @@
 <template>
   <div class="search-container">
     <!-- 左侧：Activity 主列表 -->
-    <div class="left-pane" :style="{ width: searchWidth + 'px' }">
+    <div class="left-pane" :class="{ 'left-pane--mobile-split': isMobile }" :style="{ width: searchWidth + 'px' }">
       <div class="search-tool">
         <n-input
           ref="searchInputRef"
@@ -50,6 +50,21 @@
             </n-icon>
           </template>
         </n-button>
+        <n-button
+          v-if="isMobile"
+          text
+          size="small"
+          class="pane-chevron-btn search-tool-chevron"
+          @click="onLeftPaneToggle"
+          :title="leftPaneToggleTitle"
+        >
+          <template #icon>
+            <n-icon size="18">
+              <ChevronLeft20Regular v-if="leftPaneChevronIsLeft" />
+              <ChevronRight20Regular v-else />
+            </n-icon>
+          </template>
+        </n-button>
       </div>
       <div v-if="currentFilterTags.length > 0" class="filter-status-bar">
         <TagRenderer class="filter-tags" :tag-ids="filterTagIds" :isCloseable="false" @remove-tag="toggleFilterTagId" size="small" />
@@ -82,8 +97,8 @@
                   :tag-ids="row.tagIds ?? []"
                   :isCloseable="false"
                   size="tiny"
-                  :displayLength="Number(3)"
-                  :showIdx="Number(2)"
+                  :displayLength="isMobile ? Number(1) : Number(3)"
+                  :showIdx="isMobile ? Number(1) : Number(2)"
                   @tag-click="handleTagClick"
                 />
               </span>
@@ -105,8 +120,18 @@
         closable
         @close="closeTab"
         @update:value="searchUiStore.activeTabKey = $event"
-        class="tab-container"
+        :class="['tab-container', { 'tab-container--empty-tabs': openedTabs.length === 0 }]"
       >
+        <template v-if="isMobile" #prefix>
+          <n-button text size="small" class="pane-chevron-btn tabs-nav-chevron" @click="onRightPaneToggle" :title="rightPaneToggleTitle">
+            <template #icon>
+              <n-icon size="18">
+                <ChevronRight20Regular v-if="rightPaneChevronIsRight" />
+                <ChevronLeft20Regular v-else />
+              </n-icon>
+            </template>
+          </n-button>
+        </template>
         <template #suffix>
           <n-button v-if="openedTabs.length > 0" text @click="closeAllTabs">
             <template #icon>
@@ -128,7 +153,14 @@ import { storeToRefs } from "pinia";
 import { NInput, NButton, NIcon, NTabs, NTabPane, NPopover } from "naive-ui";
 import type { Tag } from "@/core/types/Tag";
 
-import { Star20Filled, Star20Regular, Dismiss12Regular, Search20Regular } from "@vicons/fluent";
+import {
+  Star20Filled,
+  Star20Regular,
+  Dismiss12Regular,
+  Search20Regular,
+  ChevronLeft20Regular,
+  ChevronRight20Regular,
+} from "@vicons/fluent";
 import TagSelector from "@/components/TagSystem/TagSelector.vue";
 import TagRenderer from "@/components/TagSystem/TagRenderer.vue";
 
@@ -174,6 +206,49 @@ const searchWidth = computed({
 });
 
 const resizeSearch = useResize(searchWidth, "horizontal", 10, 600, false);
+
+// 与 useResize 一致；按钮贴边判断用容差避免拖拽误差
+const SEARCH_PANE_MIN = 10;
+const SEARCH_PANE_MAX = 200;
+const SEARCH_PANE_DEFAULT_RESTORE = 200;
+
+/** 从极端宽度恢复时使用的快照（仅内存，不入 settings） */
+const snapRestoreWidth = ref<number | null>(null);
+
+const atSearchPaneMax = computed(() => searchWidth.value >= SEARCH_PANE_MAX - 20);
+const atSearchPaneMin = computed(() => searchWidth.value <= SEARCH_PANE_MIN + 40);
+
+const leftPaneChevronIsLeft = computed(() => atSearchPaneMax.value);
+const leftPaneToggleTitle = computed(() => (atSearchPaneMax.value ? "恢复左栏宽度" : "展开左栏"));
+
+const rightPaneChevronIsRight = computed(() => atSearchPaneMin.value || atSearchPaneMax.value);
+const rightPaneToggleTitle = computed(() => (atSearchPaneMin.value || atSearchPaneMax.value ? "恢复分栏宽度" : "展开右栏"));
+
+function clampSearchWidth(w: number) {
+  return Math.max(SEARCH_PANE_MIN, Math.min(SEARCH_PANE_MAX, w));
+}
+
+function restoreSearchPaneWidth() {
+  searchWidth.value = clampSearchWidth(snapRestoreWidth.value ?? SEARCH_PANE_DEFAULT_RESTORE);
+}
+
+function onLeftPaneToggle() {
+  if (atSearchPaneMax.value) {
+    restoreSearchPaneWidth();
+    return;
+  }
+  snapRestoreWidth.value = searchWidth.value;
+  searchWidth.value = SEARCH_PANE_MAX;
+}
+
+function onRightPaneToggle() {
+  if (atSearchPaneMin.value || atSearchPaneMax.value) {
+    restoreSearchPaneWidth();
+    return;
+  }
+  snapRestoreWidth.value = searchWidth.value;
+  searchWidth.value = SEARCH_PANE_MIN;
+}
 
 // 搜索防抖
 let searchDebounceTimer: number | null = null;
@@ -260,7 +335,44 @@ const formatMMDD = (ts?: number) => (ts ? new Date(ts).toLocaleDateString(undefi
 </script>
 
 <style scoped>
-/* 所有样式保持不变 */
+.pane-chevron-btn {
+  flex-shrink: 0;
+  padding: 0 2px;
+}
+
+.search-tool-chevron {
+  margin-left: -2px;
+}
+
+/* 标签栏 prefix：与 card tab 同一行、贴最左 */
+.tab-container :deep(.n-tabs-nav__prefix) {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding-right: 2px;
+  --n-tab-border-color: var(--color-background) !important;
+}
+
+.tabs-nav-chevron {
+  align-self: center;
+}
+
+/* 无已打开标签时 card 顶栏会塌缩；保留高度以免右侧（含 prefix 箭头）视觉上过扁 */
+.tab-container.tab-container--empty-tabs :deep(.n-tabs-nav) {
+  min-height: 34px;
+  align-items: center;
+  box-sizing: border-box;
+}
+
+.tab-container.tab-container--empty-tabs :deep(.n-tabs-nav-scroll-wrapper) {
+  min-height: 34px;
+}
+
+.tab-container.tab-container--empty-tabs :deep(.n-tabs-nav-scroll-content) {
+  min-height: 10px;
+  align-items: center;
+}
+
 .search-container {
   height: 100%;
   display: flex;
@@ -271,7 +383,7 @@ const formatMMDD = (ts?: number) => (ts ? new Date(ts).toLocaleDateString(undefi
 }
 
 .resize-handle-horizontal {
-  width: 4px;
+  width: 1px;
   background: var(--color-background-light-light);
   cursor: ew-resize;
   position: relative;
@@ -279,10 +391,11 @@ const formatMMDD = (ts?: number) => (ts ? new Date(ts).toLocaleDateString(undefi
 }
 
 .resize-handle-horizontal:hover {
-  background: var(--color-blue-light);
+  background: var(--color-blue);
+  width: 4px;
 }
 
-.resize-handle-horizontal::after {
+/* .resize-handle-horizontal::after {
   content: "";
   position: absolute;
   left: 50%;
@@ -292,7 +405,7 @@ const formatMMDD = (ts?: number) => (ts ? new Date(ts).toLocaleDateString(undefi
   height: 30px;
   background: var(--color-background-dark);
   border-radius: 2px;
-}
+} */
 
 .left-pane {
   display: flex;
@@ -302,6 +415,12 @@ const formatMMDD = (ts?: number) => (ts ? new Date(ts).toLocaleDateString(undefi
   margin-right: 0;
   padding: 6px 2px;
   overflow-y: auto;
+}
+
+/* 手机分栏：勿用 90px 下限，否则 searchWidth=10 时实际仍 ~90，右键展开右栏几乎无感 */
+.left-pane--mobile-split {
+  min-width: 20px;
+  overflow-x: hidden;
 }
 
 .search-tool {
@@ -473,5 +592,27 @@ const formatMMDD = (ts?: number) => (ts ? new Date(ts).toLocaleDateString(undefi
 .tab-container {
   overflow-y: auto;
   overflow-x: hidden;
+}
+
+@media (max-width: 430px) {
+  .search-container {
+    margin-left: 6px;
+  }
+
+  .title-item {
+    padding: 2px 2px;
+  }
+
+  /* 手机端收紧搜索框前缀图标侧留白 */
+  .search-tool :deep(.n-input-wrapper) {
+    padding-left: 2px;
+    padding-right: 2px;
+  }
+
+  .search-tool :deep(.n-input .n-input__prefix),
+  .search-tool :deep(.n-input .n-input__suffix) {
+    margin-right: 1px;
+    margin-left: 1px;
+  }
 }
 </style>
