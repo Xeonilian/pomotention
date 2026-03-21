@@ -67,7 +67,7 @@
       </n-popover>
 
       <n-button class="action-button" @click="addPomodoro" title="insert 🍅+05" :disabled="isRunning" tertiary circle>🍅</n-button>
-      <div class="pomo-duration-input-container" :class="{ disabled: isRunning }">
+      <div class="pomo-duration-input-container">
         =
         <n-input
           ref="pomoDurationInput"
@@ -80,6 +80,7 @@
           title="设置番茄时长/回车确认"
           :disabled="isRunning"
         />
+        <span>&nbsp;min</span>
         <span>&nbsp;min</span>
       </div>
     </div>
@@ -570,6 +571,9 @@ function resetWhiteNoise(sound: SoundType) {
 .pomo-duration-input-container {
   font-size: 10px;
 }
+.pomo-duration-input-container {
+  font-size: 10px;
+}
 .pomo-duration-input {
   width: 24px;
   height: 24px;
@@ -655,8 +659,73 @@ function resetWhiteNoise(sound: SoundType) {
   }
 }
 
-.disabled {
-  color: var(--color-text-secondary);
+/* 原生 input 在 .n-input__input-el，仅此层设置行高才能在 iOS 上稳定行盒 */
+.pomo-duration-input :deep(.n-input__input-el) {
+  height: 25px;
+  line-height: 25px;
+  padding: 0;
+  text-align: center;
+  font-size: 12px;
+  box-sizing: border-box;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* 类在根节点 .n-input 上，非 .n-input__input；禁用态边框用 --n-border-disabled，需 !important 盖过组件内联变量 */
+:deep(.n-input.pomo-duration-input) {
+  --n-box-shadow-focus: none !important;
+  --n-border: 0px solid var(--color-background-dark) !important;
+  --n-border-disabled: 0px solid var(--color-background-dark) !important;
+}
+
+/* iPhone Safari：聚焦时避免行高/基线被重算导致整块错位；逻辑同 ActivitySection.search-input */
+@supports (-webkit-touch-callout: none) {
+  /* 16px 字体略宽于 12px，略增宽度避免两位数被裁切 */
+  .pomo-duration-input {
+    width: 30px;
+    min-width: 30px;
+  }
+
+  .pomo-duration-input :deep(.n-input),
+  .pomo-duration-input :deep(.n-input-wrapper) {
+    width: 100% !important;
+    height: 25px !important;
+    min-height: 25px !important;
+    border: 0px solid var(--color-background-dark);
+  }
+
+  .pomo-duration-input :deep(.n-input__input) {
+    display: flex;
+    align-items: center;
+    height: 100%;
+  }
+
+  .pomo-duration-input :deep(.n-input__input-el) {
+    height: 100% !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    /* 小于 16px 时 iOS 会放大页面，表现为「整块布局跳变」，常被误认为行高变了 */
+    font-size: 16px !important;
+    line-height: 1.2 !important;
+    text-size-adjust: 100%;
+    -webkit-text-size-adjust: 100%;
+  }
+}
+
+/* 序列 textarea：锁定行高，减少聚焦时 WebKit 重排 textarea 行盒 */
+.sequence-input :deep(.n-input__textarea-el) {
+  line-height: 1.35;
+  font-size: 12px;
+  box-sizing: border-box;
+}
+
+@supports (-webkit-touch-callout: none) {
+  .sequence-input :deep(.n-input__textarea-el) {
+    font-size: 16px !important;
+    line-height: 1.35 !important;
+    text-size-adjust: 100%;
+    -webkit-text-size-adjust: 100%;
+  }
 }
 
 /* 为 popover 内容里的按钮容器添加样式 */

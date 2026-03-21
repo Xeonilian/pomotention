@@ -170,6 +170,7 @@ function reportSize() {
 // 挂载组件时报告尺寸
 onMounted(() => {
   if (isPhoneMode.value) syncPhoneViewportWidth();
+  if (isPhoneMode.value) syncPhoneViewportWidth();
   reportSize();
 
   // 如果番茄钟正在运行且来自序列，恢复 pomoSeq 运行状态
@@ -177,6 +178,12 @@ onMounted(() => {
     console.log("[PomotentionTimer] Component mounted, restoring pomoSeq running state", pomodoroContainerRef.value?.clientHeight);
     isPomoSeqRunning.value = true;
   }
+});
+
+onUnmounted(() => {
+  if (typeof window === "undefined") return;
+  window.removeEventListener("resize", syncPhoneViewportWidth);
+  window.visualViewport?.removeEventListener("resize", syncPhoneViewportWidth);
 });
 
 onUnmounted(() => {
@@ -330,6 +337,9 @@ function handlePomoSeqRunning(status: boolean) {
 .pomo-toggle-button:hover {
   background-color: transparent;
 }
+.pomo-toggle-button:hover {
+  background-color: transparent;
+}
 /* miniMode */
 
 .pomodoro-content-area.sequence-mode.is-minimode :deep(.pomodoro-timer) {
@@ -382,7 +392,9 @@ function handlePomoSeqRunning(status: boolean) {
   width: var(--phone-design-width);
   /* --phone-scale 由脚本根据 visualViewport / innerWidth 写入，避免 Android 上纯 CSS calc+scale 不生效 */
   transform: scale(var(--phone-scale, 1));
+  /* --phone-scale 由脚本根据 visualViewport / innerWidth 写入，避免 Android 上纯 CSS calc+scale 不生效 */
+  transform: scale(var(--phone-scale, 1));
   transform-origin: center center;
-  padding-bottom: env(safe-area-inset-bottom);
+  padding-bottom: calc(env(safe-area-inset-bottom));
 }
 </style>

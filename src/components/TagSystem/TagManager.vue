@@ -505,10 +505,11 @@ function goNextPage(): void {
 .tag-suggestions {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 10px;
   padding-top: 12px;
-  padding-left: 2px;
-  padding-bottom: 8px; /* 留出最后一排阴影空间 */
+  padding-left: 4px;
+  padding-right: 4px;
+  padding-bottom: 12px; /* 描边/阴影不被父级裁切过多 */
   align-content: flex-start;
   flex: 1;
   min-height: 0; /* flex 子项可被压缩，才能产生滚动 */
@@ -518,6 +519,8 @@ function goNextPage(): void {
 
 .custom-tag {
   overflow: visible;
+  position: relative;
+  z-index: 0;
   display: flex;
   align-items: center;
   border-radius: 16px;
@@ -530,10 +533,10 @@ function goNextPage(): void {
   box-sizing: border-box;
   min-width: 0;
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
   transition:
-    transform 0.2s ease,
-    box-shadow 0.2s ease,
-    border-color 0.2s ease;
+    transform 0.12s ease-out,
+    box-shadow 0.2s ease;
 }
 
 /* 仅对标签名做省略，不作用到 .tag-count */
@@ -556,27 +559,39 @@ function goNextPage(): void {
   white-space: nowrap;
 }
 
-/* 悬浮在“未选中”的标签上时的效果 */
-.custom-tag:not(.selected):hover {
-  transform: translateY(-3px) scale(1.02);
-  box-shadow: 0 6px 4px rgba(255, 255, 255, 0.3);
-}
-
-/* “未选中”标签的固定样式 */
+/* 未选中：轻微浮起，与已选主色环区分 */
 .custom-tag:not(.selected) {
   transform: translateY(-2px);
-  box-shadow: 0 4px 4px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
-/* “已选中”标签的固定样式 */
+/* 已选中：与月/年视图一致的描边 + 光晕，排序靠前之外也能一眼认出 */
 .custom-tag.selected {
   transform: translateY(-2px);
+  z-index: 1;
+  box-shadow:
+    0 0 0 1px var(--color-background-dark),
+    0 2px 6px var(--color-yellow-light);
 }
 
-/* 悬浮在“已选中”的标签上时的增强效果 */
-.custom-tag.selected:hover {
-  transform: translateY(-2px);
-  cursor: default;
+/* 按下瞬间反馈（触控不依赖 hover） */
+.custom-tag:active {
+  transform: translateY(0) scale(0.98);
+}
+
+/* 仅键鼠悬停：避免手机伪 hover；已选也可悬停以略增强描边 */
+@media (hover: hover) and (pointer: fine) {
+  .custom-tag:not(.selected):hover {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.22);
+  }
+
+  .custom-tag.selected:hover {
+    transform: translateY(-2px);
+    box-shadow:
+      0 0 0 2px var(--primary-color, #409eff),
+      0 6px 16px rgba(64, 158, 255, 0.38);
+  }
 }
 
 .input-sizer {
