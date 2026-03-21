@@ -107,6 +107,19 @@ const content = ref(props.initialContent);
 const hasContent = computed(() => (content.value || "").trim().length > 1);
 const isEditing = ref(false);
 const textarea = ref<HTMLTextAreaElement | null>(null);
+// 进入编辑瞬间的文案快照：无改动则 blur / 同步钩子不写 store、不标 unsynced
+const editSessionBaseline = ref("");
+
+function contentIsDirty(): boolean {
+  return content.value !== editSessionBaseline.value;
+}
+
+/** 相对编辑基线有变化时才回写父级与 store，并刷新基线（避免同步前钩子重复 emit） */
+function flushDescriptionIfDirty() {
+  if (!contentIsDirty()) return;
+  emit("update:content", content.value);
+  editSessionBaseline.value = content.value;
+}
 
 const renderedMarkdown = computed(() => {
   const text = content.value;
@@ -124,6 +137,7 @@ watch(
 );
 
 const startEditing = () => {
+  editSessionBaseline.value = content.value;
   isEditing.value = true;
   // 手机上的空间有限，进入编辑时压缩顶部高度，把空间让给编辑区
   if (isMobile.value) {
@@ -157,13 +171,13 @@ const stopEditing = () => {
     settingStore.settings.showPlanner = true;
     settingStore.settings.topHeight = savedTopHeight.value;
   }
-  emit("update:content", content.value);
+  flushDescriptionIfDirty();
 };
 
-// 同步前钩子：若正在编辑则先保存到本地，再让同步执行，避免本地未保存内容被覆盖
+// 同步前钩子：把未保存的编辑 flush 到本地，但不退出编辑态（避免手机端布局被同步打断）
 function commitIfEditing() {
   if (isEditing.value) {
-    stopEditing();
+    flushDescriptionIfDirty();
   }
 }
 
