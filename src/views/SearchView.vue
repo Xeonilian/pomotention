@@ -1,5 +1,5 @@
 <template>
-  <div class="search-container">
+  <div class="search-container" ref="searchContainerRef">
     <!-- 左侧：Activity 主列表 -->
     <div class="left-pane" :class="{ 'left-pane--mobile-split': isMobile }" :style="{ width: searchWidth + 'px' }">
       <div class="search-tool">
@@ -148,7 +148,7 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, ref, nextTick } from "vue";
+import { computed, ref, nextTick, onMounted, onUnmounted } from "vue";
 import { storeToRefs } from "pinia";
 import { NInput, NButton, NIcon, NTabs, NTabPane, NPopover } from "naive-ui";
 import type { Tag } from "@/core/types/Tag";
@@ -194,9 +194,31 @@ const tagEditor = useActivityTagEditor();
 const POPOVER_ID = "search-input";
 const searchInputRef = ref<InstanceType<typeof NInput> | null>(null);
 const tagSelectorRef = ref<InstanceType<typeof TagSelector> | null>(null);
+const searchContainerRef = ref<HTMLElement | null>(null);
+/** 搜索区分栏容器宽度，用于左栏「全宽」像素目标 */
+const searchLayoutWidth = ref(0);
+
+function updateSearchLayoutWidth() {
+  const el = searchContainerRef.value;
+  searchLayoutWidth.value = el?.clientWidth ?? 0;
+}
+
+let searchLayoutRo: ResizeObserver | null = null;
+onMounted(() => {
+  updateSearchLayoutWidth();
+  const el = searchContainerRef.value;
+  if (el && typeof ResizeObserver !== "undefined") {
+    searchLayoutRo = new ResizeObserver(() => updateSearchLayoutWidth());
+    searchLayoutRo.observe(el);
+  }
+});
+onUnmounted(() => {
+  searchLayoutRo?.disconnect();
+  searchLayoutRo = null;
+});
 
 // 左右拖动功能
-const { isMobile } = useDevice(); // 假设有 isMobile 标志
+const { isMobile } = useDevice();
 if (isMobile.value) {
   settingStore.settings.searchWidth = 100;
 }
@@ -207,43 +229,73 @@ const searchWidth = computed({
 
 const resizeSearch = useResize(searchWidth, "horizontal", 10, 600, false);
 
-// 与 useResize 一致；按钮贴边判断用容差避免拖拽误差
+// 与 useResize 一致；右键收到最窄用 MIN，左键全宽用布局宽度算目标
 const SEARCH_PANE_MIN = 10;
-const SEARCH_PANE_MAX = 200;
-const SEARCH_PANE_DEFAULT_RESTORE = 200;
+const RESIZE_MAX = 600;
+/** 与右侧 .right-pane 的 calc(100% - x - 20px) 中常数对齐 */
+const SEARCH_PANE_LAYOUT_FUDGE = 20;
+const SEARCH_PANE_HANDLE_RESERVE = 4;
 
-/** 从极端宽度恢复时使用的快照（仅内存，不入 settings） */
+/** 右键把左栏收到最窄前的宽度，用于恢复普通分栏 */
 const snapRestoreWidth = ref<number | null>(null);
+/** 左键展开全宽前的宽度，用于恢复普通分栏 */
+const snapWidthBeforeLeftFull = ref<number | null>(null);
 
-const atSearchPaneMax = computed(() => searchWidth.value >= SEARCH_PANE_MAX - 20);
-const atSearchPaneMin = computed(() => searchWidth.value <= SEARCH_PANE_MIN + 40);
-
-const leftPaneChevronIsLeft = computed(() => atSearchPaneMax.value);
-const leftPaneToggleTitle = computed(() => (atSearchPaneMax.value ? "恢复左栏宽度" : "展开左栏"));
-
-const rightPaneChevronIsRight = computed(() => atSearchPaneMin.value || atSearchPaneMax.value);
-const rightPaneToggleTitle = computed(() => (atSearchPaneMin.value || atSearchPaneMax.value ? "恢复分栏宽度" : "展开右栏"));
-
-function clampSearchWidth(w: number) {
-  return Math.max(SEARCH_PANE_MIN, Math.min(SEARCH_PANE_MAX, w));
+function clampResizeRange(w: number) {
+  return Math.max(SEARCH_PANE_MIN, Math.min(RESIZE_MAX, Math.round(w)));
 }
 
+function normalDefaultWidth() {
+  return isMobile.value ? 100 : 400;
+}
+
+/** 左栏尽可能占满：总宽 − 拖拽条 − 与 calc 对齐的留白 − 右栏最小保留 */
+function leftFullWidthTargetPx(): number {
+  let total = searchLayoutWidth.value;
+  if (total < 80) {
+    total = searchContainerRef.value?.clientWidth ?? (typeof document !== "undefined" ? document.documentElement.clientWidth : 0);
+  }
+  if (total < 80) return RESIZE_MAX;
+  const rightMin = isMobile.value ? 48 : 140;
+  const w = total - SEARCH_PANE_HANDLE_RESERVE - SEARCH_PANE_LAYOUT_FUDGE - rightMin;
+  return clampResizeRange(w);
+}
+
+const atSearchPaneMin = computed(() => searchWidth.value <= SEARCH_PANE_MIN + 40);
+
+const atLeftFullWidth = computed(() => {
+  const target = leftFullWidthTargetPx();
+  if (target < SEARCH_PANE_MIN + 20) return false;
+  return searchWidth.value >= target;
+});
+
+const leftPaneChevronIsLeft = computed(() => atLeftFullWidth.value);
+const leftPaneToggleTitle = computed(() => (atLeftFullWidth.value ? "恢复普通分栏" : "左栏全宽"));
+
+const rightPaneChevronIsRight = computed(() => atSearchPaneMin.value || atLeftFullWidth.value);
+const rightPaneToggleTitle = computed(() => (atSearchPaneMin.value || atLeftFullWidth.value ? "恢复分栏宽度" : "展开右栏"));
+
 function restoreSearchPaneWidth() {
-  searchWidth.value = clampSearchWidth(snapRestoreWidth.value ?? SEARCH_PANE_DEFAULT_RESTORE);
+  searchWidth.value = clampResizeRange(snapRestoreWidth.value ?? normalDefaultWidth());
 }
 
 function onLeftPaneToggle() {
-  if (atSearchPaneMax.value) {
-    restoreSearchPaneWidth();
+  if (atLeftFullWidth.value) {
+    searchWidth.value = clampResizeRange(snapWidthBeforeLeftFull.value ?? normalDefaultWidth());
     return;
   }
-  snapRestoreWidth.value = searchWidth.value;
-  searchWidth.value = SEARCH_PANE_MAX;
+  updateSearchLayoutWidth();
+  snapWidthBeforeLeftFull.value = searchWidth.value;
+  searchWidth.value = leftFullWidthTargetPx();
 }
 
 function onRightPaneToggle() {
-  if (atSearchPaneMin.value || atSearchPaneMax.value) {
+  if (atSearchPaneMin.value) {
     restoreSearchPaneWidth();
+    return;
+  }
+  if (atLeftFullWidth.value) {
+    searchWidth.value = clampResizeRange(snapWidthBeforeLeftFull.value ?? normalDefaultWidth());
     return;
   }
   snapRestoreWidth.value = searchWidth.value;
