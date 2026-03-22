@@ -570,7 +570,7 @@ function goNextPage(): void {
   transform: translateY(-2px);
   z-index: 1;
   box-shadow:
-    0 0 0 1px var(--color-background-dark),
+    0 0 0 1px var(--color-blue),
     0 2px 6px var(--color-yellow-light);
 }
 
