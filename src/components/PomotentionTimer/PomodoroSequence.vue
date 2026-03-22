@@ -34,7 +34,6 @@
       <n-popover
         trigger="click"
         placement="top"
-        :delay="1000"
         :show-arrow="false"
         class="popover-container"
         :style="{
@@ -42,6 +41,8 @@
           boxShadow: 'none',
           backgroundColor: 'var(--color-background)',
         }"
+        :duration="500"
+        :delay="500"
       >
         <template #trigger>
           <n-button class="action-button" title="选择白噪音" tertiary circle>
@@ -53,7 +54,7 @@
 
         <!-- Popover 的内容：垂直排列的按钮 -->
         <div class="popover-actions">
-          <n-button secondary circle type="info" size="small" title="雨声" @click="resetWhiteNoise(SoundType.WHITE_NOISE)">
+          <n-button secondary circle type="info" size="small" title="雨声" @click="resetWhiteNoise(SoundType.WHITE_NOISE_RAIN)">
             <template #icon>
               <n-icon><WeatherThunderstorm20Regular /></n-icon>
             </template>
@@ -61,6 +62,11 @@
           <n-button secondary type="info" circle size="small" title="滴答声" @click="resetWhiteNoise(SoundType.WORK_TICK)">
             <template #icon>
               <n-icon><ClockAlarm24Regular /></n-icon>
+            </template>
+          </n-button>
+          <n-button secondary type="info" circle size="small" title="鸟鸣海声" @click="resetWhiteNoise(SoundType.WHITE_NOISE_BIRD_SEA)">
+            <template #icon>
+              <n-icon><Icons20Regular /></n-icon>
             </template>
           </n-button>
         </div>
@@ -87,7 +93,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, computed } from "vue";
+import { ref, watch, onMounted, onUnmounted, computed } from "vue";
 import { NButton, NIcon, NInput, useDialog } from "naive-ui";
 import { useTimerStore } from "@/stores/useTimerStore";
 import { useSettingStore } from "@/stores/useSettingStore";
@@ -100,6 +106,7 @@ import {
   WeatherThunderstorm20Regular,
   ClockAlarm24Regular,
   MusicNote124Filled,
+  Icons20Regular,
 } from "@vicons/fluent";
 import { SoundType } from "@/core/sounds.ts";
 type PomodoroStep = {
@@ -174,6 +181,34 @@ function parseSequence(sequence: string): PomodoroStep[] {
   });
 }
 
+/** 冷启动或 store finalize 无 phase 回调时，由 sequencePhaseContinuation 推进序列 */
+function invokeSequencePhaseContinuation(): void {
+  if (!isRunning.value) return;
+  let steps: PomodoroStep[];
+  try {
+    steps = parseSequence(sequenceInput.value);
+  } catch {
+    stopPomodoro();
+    return;
+  }
+  if (timerStore.pomodoroState === "working") {
+    currentPomodoro.value++;
+  }
+  updateProgressStatus(currentStep.value);
+  currentStep.value++;
+  timerStore.sequenceStepIndex = currentStep.value;
+  updateProgressStatus(currentStep.value);
+  runStep(steps);
+}
+
+function bindSequenceContinuationToStore(): void {
+  if (!isRunning.value || !timerStore.isFromSequence) {
+    timerStore.registerSequenceContinuation(null);
+    return;
+  }
+  timerStore.registerSequenceContinuation(() => invokeSequencePhaseContinuation());
+}
+
 // 开始番茄钟循环
 function startPomodoroCircle(): void {
   try {
@@ -187,12 +222,15 @@ function startPomodoroCircle(): void {
 
     isRunning.value = true;
     currentStep.value = 0;
+    timerStore.sequenceInputSnapshot = sequenceInput.value;
+    timerStore.sequenceStepIndex = 0;
     totalPomodoros.value = steps.filter((step) => step.type === "work").length;
     currentPomodoro.value = 1;
     statusLabel.value = `🍅 ${currentPomodoro.value}/${totalPomodoros.value}`;
     // 初始化进度条
     initializeProgress(sequenceInput.value);
     updateProgressStatus(currentStep.value);
+    bindSequenceContinuationToStore();
     // 仅由 runStep 启动当前步，避免重复 startWorking/startBreak（双提示音与双 interval 边缘问题）
     runStep(steps);
   } catch (error) {
@@ -233,6 +271,7 @@ function runStep(steps: PomodoroStep[]): void {
 
 // 在 PomodoroSequence.vue 中修改 stopPomodoro 函数
 function stopPomodoro(): void {
+  timerStore.registerSequenceContinuation(null);
   // 先调用 store 的 resetTimer 方法
   timerStore.resetTimer();
   emit("pomo-seq-running", false);
@@ -277,10 +316,10 @@ function addPomodoro(): void {
 const progressContainer = ref<HTMLElement | null>(null);
 
 // 创建时间块函数（用 flex 比例适配手机窄屏，不写死 px 宽度）
-function createTimeBlock(duration: number, type: string): HTMLElement {
+function createTimeBlock(duration: number, type: string, sequenceStr: string): HTMLElement {
   const block = document.createElement("div");
   block.className = "time-block";
-  const totalDuration = parseSequence(sequenceInput.value).reduce((sum, step) => sum + step.duration, 0);
+  const totalDuration = parseSequence(sequenceStr).reduce((sum, step) => sum + step.duration, 0);
   const flexGrow = totalDuration > 0 ? duration / totalDuration : 0;
   block.style.flexGrow = String(flexGrow);
   block.style.flexShrink = String(flexGrow);
@@ -331,7 +370,7 @@ function initializeProgress(sequence: string): void {
   // console.log("Steps for progress:", steps);
 
   steps.forEach((step) => {
-    const block = createTimeBlock(step.duration, step.type);
+    const block = createTimeBlock(step.duration, step.type, sequence);
     block.classList.add(step.type);
     progressContainer.value?.appendChild(block);
   });
@@ -399,41 +438,48 @@ function handleBlurRestore(): void {
 onMounted(() => {
   // 如果番茄钟正在运行且来自序列，恢复 UI 状态
   if (timerStore.isActive && timerStore.isFromSequence) {
-    // console.log(
-    //   "[PomodoroSequence] Component mounted, restoring pomo sequence UI state"
-    // );
+    const snap = timerStore.sequenceInputSnapshot;
+    const settingSeq = settingStore.settings.pomoSequenceInput ?? "";
+    if (snap && snap !== settingSeq) {
+      timerStore.resetTimer();
+      return;
+    }
+    const seqToParse = snap || sequenceInput.value;
+    let steps: PomodoroStep[];
+    try {
+      steps = parseSequence(seqToParse);
+    } catch {
+      timerStore.resetTimer();
+      return;
+    }
+    if (steps.length === 0) {
+      timerStore.resetTimer();
+      return;
+    }
+
     isRunning.value = true;
     emit("pomo-seq-running", true);
 
-    // 恢复进度条
-    initializeProgress(sequenceInput.value);
+    initializeProgress(seqToParse);
 
-    // 估算当前步骤
-    const steps = parseSequence(sequenceInput.value);
-    const totalElapsed = timerStore.totalTime - timerStore.timeRemaining;
-    let elapsedInSequence = 0;
-    let estimatedStep = 0;
-
-    for (let i = 0; i < steps.length; i++) {
-      const stepDuration = steps[i].duration * 60; // 转换为秒
-      if (elapsedInSequence + stepDuration > totalElapsed) {
-        estimatedStep = i;
-        break;
-      }
-      elapsedInSequence += stepDuration;
-      estimatedStep = i + 1;
-    }
-
-    currentStep.value = Math.min(estimatedStep, steps.length - 1);
+    currentStep.value = Math.min(timerStore.sequenceStepIndex, steps.length - 1);
     totalPomodoros.value = steps.filter((step) => step.type === "work").length;
     currentPomodoro.value = steps.slice(0, currentStep.value).filter((step) => step.type === "work").length + 1;
 
     updateProgressStatus(currentStep.value);
 
+    bindSequenceContinuationToStore();
+    timerStore.flushPendingSequenceFinalize();
+    timerStore.reconcilePhaseFromWallClock();
+
     if (timerStore.isWorking && settingStore.settings.isWhiteNoiseEnabled) {
       startWhiteNoise();
     }
   }
+});
+
+onUnmounted(() => {
+  timerStore.registerSequenceContinuation(null);
 });
 
 function resetWhiteNoise(sound: SoundType) {
