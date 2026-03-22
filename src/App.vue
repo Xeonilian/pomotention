@@ -26,7 +26,7 @@ import PwaSplashScreen from "./components/PwaSplashScreen.vue";
 import { initSyncServices, syncAll, resetSyncServices } from "@/services/sync";
 import { initAppCloseHandler, cancelPendingSyncTasks } from "@/services/appCloseHandler";
 import { useTimerStore } from "@/stores/useTimerStore";
-import { resumeSharedAudioAfterForeground } from "@/core/sounds";
+import { resumeSharedAudioAfterForeground, prefetchSoundAssets } from "@/core/sounds";
 
 // ========== 状态与依赖 ==========
 const router = useRouter();
@@ -207,6 +207,7 @@ const initAuthStateListener = () => {
 // ========== 生命周期钩子 ==========
 onMounted(async () => {
   try {
+    prefetchSoundAssets();
     // 1. 初始化本地数据
     await dataStore.loadAllData();
 
