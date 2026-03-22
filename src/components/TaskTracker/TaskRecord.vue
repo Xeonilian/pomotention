@@ -2,7 +2,10 @@
 <template>
   <div class="task-record">
     <div v-if="!isEditing" class="markdown-content" @click="handleClick" :title="isEditing ? '单击启动编辑' : ''">
-      <div v-if="!hasContent" class="placeholder">🪄追踪执行意图...</div>
+      <div v-if="!hasContent" class="placeholder">
+        <n-icon><Wand20Regular /></n-icon>
+        <span>追踪执行意图...</span>
+      </div>
       <div v-else v-html="renderedMarkdown"></div>
     </div>
     <div v-else style="position: relative; width: 100%; height: 100%">
@@ -28,6 +31,7 @@ import { useDevice } from "@/composables/useDevice";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useSyncStore } from "@/stores/useSyncStore";
 import "highlight.js/styles/github.css";
+import { Wand20Regular } from "@vicons/fluent";
 
 const { showCaretFlash, caretFlashStyle, flashCaretFlash } = useCaretFlash();
 const { isMobile } = useDevice();
