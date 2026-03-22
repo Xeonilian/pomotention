@@ -111,7 +111,7 @@
 
       <div v-if="filteredActivities.length === 0" class="empty">{{ isMobile ? "" : "暂无结果" }}</div>
     </div>
-    <div class="resize-handle-horizontal" style="touch-action: none" @pointerdown="resizeSearch.startResize"></div>
+    <div v-if="!isMobile" class="resize-handle-horizontal" style="touch-action: none" @pointerdown="resizeSearch.startResize"></div>
     <!-- 右侧：Tabs -->
     <div class="right-pane" :style="{ width: `calc(100% - ${searchWidth}px - 20px)` }">
       <n-tabs
@@ -230,7 +230,7 @@ const searchWidth = computed({
 const resizeSearch = useResize(searchWidth, "horizontal", 10, 600, false);
 
 // 与 useResize 一致；右键收到最窄用 MIN，左键全宽用布局宽度算目标
-const SEARCH_PANE_MIN = 10;
+const SEARCH_PANE_MIN = 0;
 const RESIZE_MAX = 600;
 /** 与右侧 .right-pane 的 calc(100% - x - 20px) 中常数对齐 */
 const SEARCH_PANE_LAYOUT_FUDGE = 20;
@@ -395,6 +395,9 @@ const formatMMDD = (ts?: number) => (ts ? new Date(ts).toLocaleDateString(undefi
 .search-tool-chevron {
   margin-left: -2px;
 }
+.tab-container {
+  width: 100%;
+}
 
 /* 标签栏 prefix：与 card tab 同一行、贴最左 */
 .tab-container :deep(.n-tabs-nav__prefix) {
@@ -432,6 +435,7 @@ const formatMMDD = (ts?: number) => (ts ? new Date(ts).toLocaleDateString(undefi
   min-height: 0;
   margin-left: 10px;
   margin-bottom: 6px;
+  width: 100%;
 }
 
 .resize-handle-horizontal {
@@ -471,8 +475,9 @@ const formatMMDD = (ts?: number) => (ts ? new Date(ts).toLocaleDateString(undefi
 
 /* 手机分栏：勿用 90px 下限，否则 searchWidth=10 时实际仍 ~90，右键展开右栏几乎无感 */
 .left-pane--mobile-split {
-  min-width: 20px;
+  min-width: 0px;
   overflow-x: hidden;
+  padding: 6px 0px;
 }
 
 .search-tool {
@@ -614,7 +619,7 @@ const formatMMDD = (ts?: number) => (ts ? new Date(ts).toLocaleDateString(undefi
   flex-direction: column;
   min-height: 0;
   padding: 6px;
-  width: auto;
+  width: 100%;
 }
 
 :deep(.n-tabs-tab) {
@@ -648,7 +653,7 @@ const formatMMDD = (ts?: number) => (ts ? new Date(ts).toLocaleDateString(undefi
 
 @media (max-width: 430px) {
   .search-container {
-    margin-left: 6px;
+    width: 100%;
   }
 
   .title-item {
@@ -665,6 +670,10 @@ const formatMMDD = (ts?: number) => (ts ? new Date(ts).toLocaleDateString(undefi
   .search-tool :deep(.n-input .n-input__suffix) {
     margin-right: 1px;
     margin-left: 1px;
+  }
+
+  .right-pane {
+    padding: 6px 0px;
   }
 }
 </style>
