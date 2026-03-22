@@ -24,7 +24,7 @@
       <!-- 根据 Tab 类型显示不同的元信息 -->
       <template v-if="props.tab.type === 'todo'">
         <span class="meta-time">开始时间：{{ formatDate(dataStore.todoById.get(props.tab.id)?.startTime) }}</span>
-        <span class="meta-time">死线日期：{{ formatDateOnly(getDueDate()) }}</span>
+        <span v-if="!isMobile" class="meta-time">死线日期：{{ formatDateOnly(getDueDate()) }}</span>
       </template>
       <template v-else-if="props.tab.type === 'sch'">
         <span class="meta-time">
@@ -81,10 +81,13 @@ import { useActivityTagEditor } from "@/composables/useActivityTagEditor";
 import { useDataStore } from "@/stores/useDataStore";
 import { useSearchUiStore } from "@/stores/useSearchUiStore";
 import type { TabItem } from "@/stores/useSearchUiStore";
+import { useDevice } from "@/composables/useDevice";
 
 // 导入子组件
 import TagRenderer from "@/components/TagSystem/TagRenderer.vue";
 import TagManager from "@/components/TagSystem/TagManager.vue";
+
+const { isMobile } = useDevice();
 
 // 1. 定义 props
 const props = defineProps<{
@@ -221,6 +224,12 @@ const getDueDate = () => {
 :deep(.task-content h3) {
   margin-top: 0em;
   margin-bottom: 0.1em;
+}
+
+:deep(.task-content h1),
+:deep(.task-content h2),
+:deep(.task-content h3) {
+  font-size: 2em;
 }
 
 :deep(.task-content p) {
