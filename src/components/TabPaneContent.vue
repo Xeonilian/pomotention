@@ -2,54 +2,55 @@
   <div class="tab-pane-container">
     <!-- Meta 信息行 -->
     <div class="meta-row">
-      <!-- 切换任务加星按钮 -->
-      <span class="star-btn-placeholder">
-        <n-button
-          v-if="content.activity.value?.taskId"
-          text
-          type="warning"
-          @click="dataStore.toggleTaskStar(content.task.value!.id)"
-          title="切换加星"
-          class="star-btn"
-        >
+      <div class="meta-row-tags">
+        <!-- 切换任务加星按钮 -->
+        <span class="star-btn-placeholder">
+          <n-button
+            v-if="content.activity.value?.taskId"
+            text
+            type="warning"
+            @click="dataStore.toggleTaskStar(content.task.value!.id)"
+            title="切换加星"
+            class="star-btn"
+          >
+            <template #icon>
+              <n-icon>
+                <Star20Filled v-if="content.task.value?.starred" />
+                <Star20Regular v-else />
+              </n-icon>
+            </template>
+          </n-button>
+        </span>
+        <!-- 打开标签管理器的按钮：与星标相邻，再接 TagRenderer，换行时三者仍连续 -->
+        <n-button text class="tag-manager-btn" @click="openTagManager">
           <template #icon>
-            <n-icon>
-              <Star20Filled v-if="content.task.value?.starred" />
-              <Star20Regular v-else />
-            </n-icon>
+            <n-icon color="var(--color-blue)"><Tag16Regular /></n-icon>
           </template>
         </n-button>
-      </span>
-
-      <!-- 根据 Tab 类型显示不同的元信息 -->
-      <template v-if="props.tab.type === 'todo'">
-        <span class="meta-time">开始时间：{{ formatDate(dataStore.todoById.get(props.tab.id)?.startTime) }}</span>
-        <span v-if="!isMobile" class="meta-time">死线日期：{{ formatDateOnly(getDueDate()) }}</span>
-      </template>
-      <template v-else-if="props.tab.type === 'sch'">
-        <span class="meta-time">
-          预约时间：{{ formatDate(dataStore.scheduleById.get(props.tab.id)?.activityDueRange?.[0] ?? undefined) }}
-        </span>
-        <span style="margin-left: 12px">位置：{{ dataStore.scheduleById.get(props.tab.id)?.location || "无" }}</span>
-      </template>
-
-      <!-- 标签渲染器，现在使用来自 Composable 的数据和方法 -->
-      <TagRenderer
-        :tag-ids="content.tagIds.value"
-        :isCloseable="true"
-        @remove-tag="content.removeTag"
-        @tag-click="handleTagClick"
-        size="small"
-        title="点击标签筛选或清除筛选 | 点击❌删除标签"
-      />
-      <!-- 打开标签管理器的按钮 -->
-      <n-button text @click="openTagManager">
-        <template #icon>
-          <n-icon color="var(--color-blue)"><Tag16Regular /></n-icon>
+        <TagRenderer
+          class="tab-pane-tags"
+          :tag-ids="content.tagIds.value"
+          :isCloseable="true"
+          @remove-tag="content.removeTag"
+          @tag-click="handleTagClick"
+          size="small"
+          title="点击标签筛选或清除筛选 | 点击❌删除标签"
+        />
+      </div>
+      <div class="meta-row-content">
+        <!-- 根据 Tab 类型显示不同的元信息 -->
+        <template v-if="props.tab.type === 'todo'">
+          <span class="meta-time">开始时间：{{ formatDate(dataStore.todoById.get(props.tab.id)?.startTime) }}</span>
+          <span class="meta-time">死线日期：{{ formatDateOnly(getDueDate()) }}</span>
         </template>
-      </n-button>
+        <template v-else-if="props.tab.type === 'sch'">
+          <span class="meta-time">
+            预约时间：{{ formatDate(dataStore.scheduleById.get(props.tab.id)?.activityDueRange?.[0] ?? undefined) }}
+          </span>
+          <span class="meta-time">位置：{{ dataStore.scheduleById.get(props.tab.id)?.location || "无" }}</span>
+        </template>
+      </div>
     </div>
-
     <!-- 任务内容区 -->
     <div class="content">
       <template v-if="content.task.value">
@@ -81,13 +82,9 @@ import { useActivityTagEditor } from "@/composables/useActivityTagEditor";
 import { useDataStore } from "@/stores/useDataStore";
 import { useSearchUiStore } from "@/stores/useSearchUiStore";
 import type { TabItem } from "@/stores/useSearchUiStore";
-import { useDevice } from "@/composables/useDevice";
-
 // 导入子组件
 import TagRenderer from "@/components/TagSystem/TagRenderer.vue";
 import TagManager from "@/components/TagSystem/TagManager.vue";
-
-const { isMobile } = useDevice();
 
 // 1. 定义 props
 const props = defineProps<{
@@ -173,19 +170,50 @@ const getDueDate = () => {
 }
 
 .meta-row {
-  position: fixed;
   display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 6px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
   padding-top: 0px;
-  padding-bottom: 4px;
+  padding-bottom: 0px;
   background-color: var(--color-background);
   width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
+  overflow-y: visible;
+}
+
+.meta-row-tags {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+}
+
+/* 星标、标签管理按钮固定占位，不单独占满一行 */
+.meta-row-tags > .star-btn-placeholder,
+.meta-row-tags > .tag-manager-btn {
+  flex: 0 0 auto;
+}
+
+/* 根节点不设盒子：各 n-tag 与星标/按钮同属一层 flex，空间不够时只挤下多出来的 tag，不会整组换行 */
+.meta-row-tags :deep(.tab-pane-tags) {
+  display: contents;
+}
+
+.meta-row-content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
 }
 
 .meta-time {
   white-space: nowrap;
+  display: flex;
+  margin-top: 2px;
 }
 
 .content {
@@ -193,9 +221,8 @@ const getDueDate = () => {
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  padding-right: 8px;
+
   width: 100%;
-  margin-top: 4px;
 }
 
 .star-btn-placeholder {
@@ -211,25 +238,27 @@ const getDueDate = () => {
 }
 
 .task-content {
-  margin-top: 20px;
+  margin-top: 8px;
   overflow-y: auto;
 }
 
 :deep(.task-content) {
-  line-height: 1.6;
+  line-height: 1.5;
 }
 
 :deep(.task-content h1),
 :deep(.task-content h2),
-:deep(.task-content h3) {
-  margin-top: 0em;
-  margin-bottom: 0.1em;
+:deep(.task-content h3),
+:deep(.task-content h4),
+:deep(.task-content h5),
+:deep(.task-content h6) {
+  margin-top: 0.1em;
+  margin-bottom: 0.2em;
 }
 
-:deep(.task-content h1),
-:deep(.task-content h2),
-:deep(.task-content h3) {
+:deep(.task-content h1) {
   font-size: 2em;
+  line-height: 1;
 }
 
 :deep(.task-content p) {
