@@ -79,7 +79,7 @@ const defaultSettings: GlobalSettings = {
   showTask: true,
   showActivity: isMobile.value ? false : true,
   showAi: false,
-  leftWidth: 100, // 默认值你自己定
+  leftWidth: isMobile.value ? 80 : 200, // 默认值你自己定
   rightWidth: 300,
   topHeight: 300,
   searchWidth: 400, // 搜索页面title宽度
