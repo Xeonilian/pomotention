@@ -421,6 +421,7 @@ async function handleManualDownload() {
 .app-layout__content {
   position: relative;
   height: calc(100% - 35px);
+  width: 100%;
   overflow: hidden;
 }
 .app-layout__content--full-height {
@@ -429,6 +430,7 @@ async function handleManualDownload() {
   align-items: center;
   user-select: none;
   height: 100%;
+  width: 100%;
 }
 .pomodoro-mini-view-wrapper:deep(.n-layout .n-layout-scroll-container) {
   overflow-y: hidden !important;

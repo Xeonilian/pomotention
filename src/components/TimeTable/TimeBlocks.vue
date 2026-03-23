@@ -444,8 +444,8 @@ const getPriorityBadgeClasses = (seg: any) => [
 }
 
 .hour-label {
-  font-size: 11px;
-  line-height: 11px;
+  font-size: 9px;
+  line-height: 9px;
   width: 100%;
   text-align: right;
   flex-shrink: 0;
@@ -735,7 +735,7 @@ const getPriorityBadgeClasses = (seg: any) => [
     left: 21%;
   }
   .current-time-line::before {
-    right: -4px;
+    right: -3px;
     font-size: 14px;
   }
 }

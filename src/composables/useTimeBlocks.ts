@@ -2,7 +2,7 @@
 import { ref, computed, type ComputedRef, onMounted, onUnmounted, watch } from "vue";
 import type { CSSProperties } from "vue";
 import { getTimestampForTimeString } from "@/core/utils";
-import { CategoryColors, POMODORO_COLORS, POMODORO_COLORS_DARK } from "@/core/constants";
+import { CategoryColors, CategoryColorsDark, POMODORO_COLORS, POMODORO_COLORS_DARK } from "@/core/constants";
 import { SPECIAL_PRIORITIES, getEmojiForPriority } from "@/core/priorityCategories";
 import type { Block, PomodoroSegment, TodoSegment, ActualTimeRange } from "@/core/types/Block";
 import { generateActualTodoSegments, splitIndexPomoBlocksExSchedules } from "@/services/pomoSegService";
@@ -229,7 +229,7 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
       width: "100%",
       height: heightPx + "px",
       backgroundColor: CategoryColors[block.category] || "#ccc",
-      color: "var(--color-background-dark)",
+      color: CategoryColorsDark[block.category] || "#ccc",
       fontSize: "10px",
       fontWeight: "bold",
       textAlign: "center",
