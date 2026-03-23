@@ -5,6 +5,7 @@
         <PwaSplashScreen />
         <router-view />
         <UpdateManager />
+        <PwaUpdateNotifier />
         <PwaInstallBanner />
       </n-dialog-provider>
     </n-notification-provider>
@@ -23,6 +24,7 @@ import { STORAGE_KEYS } from "@/core/constants";
 import UpdateManager from "./components/UpdateManager.vue";
 import PwaInstallBanner from "./components/PwaInstallBanner.vue";
 import PwaSplashScreen from "./components/PwaSplashScreen.vue";
+import PwaUpdateNotifier from "./components/PwaUpdateNotifier.vue";
 import { initSyncServices, syncAll, resetSyncServices } from "@/services/sync";
 import { initAppCloseHandler, cancelPendingSyncTasks } from "@/services/appCloseHandler";
 import { useTimerStore } from "@/stores/useTimerStore";

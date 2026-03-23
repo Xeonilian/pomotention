@@ -40,23 +40,7 @@ app.use(pinia);
 useTimerStore().reconcilePhaseFromWallClock();
 app.use(router);
 app.mount("#app");
-
-// 最佳判断逻辑：
-// 1. 必须是生产环境 (PROD)
-// 2. 必须支持 ServiceWorker
-// 3. 必须不是 Tauri 环境 (!isTauri())
-if (import.meta.env.PROD && "serviceWorker" in navigator && !isTauri()) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js").then(
-      (registration) => {
-        console.log("✅ Service Worker registered:", registration.scope);
-      },
-      (error) => {
-        console.error("❌ Service Worker registration failed:", error);
-      }
-    );
-  });
-}
+// PWA Service Worker 注册与更新提示见 PwaUpdateNotifier.vue（避免重复注册）
 
 if (isTauri()) {
   document.documentElement.classList.add("platform-tauri");
