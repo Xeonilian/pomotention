@@ -437,13 +437,13 @@ export function startWhiteNoise(): void {
   stopWhiteNoise();
 
   const track = settingStore.settings.whiteNoiseSoundTrack;
-  let src = soundPaths[track];
-  let vol = track === SoundType.WORK_TICK ? 1 : 0.3;
-  // 持久化里可能残留已删除的枚举字符串，导致无 URL
+  const src = soundPaths[track];
+  const vol = track === SoundType.WORK_TICK ? 1 : 0.3;
+  // 持久化里可能残留已删除的枚举字符串：不写盘迁移，仅在此纠正并返回，用户再开一次白噪音即可
   if (!src) {
-    dbgAudio("[WN] whiteNoiseSoundTrack 无 soundPaths 映射，回退 work_tick", { track });
-    src = soundPaths[SoundType.WORK_TICK];
-    vol = 1;
+    dbgAudio("[WN] whiteNoiseSoundTrack 无映射，已改存 work_tick，请再切换/开始一次", { track });
+    settingStore.settings.whiteNoiseSoundTrack = SoundType.WORK_TICK;
+    return;
   }
 
   if (preferHtmlAudioWhiteNoiseOnThisDevice()) {
