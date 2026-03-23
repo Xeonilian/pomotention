@@ -1,8 +1,8 @@
-// Service Worker 版本号，用于缓存更新
-const CACHE_VERSION = "v1";
+// Service Worker 版本号：变更策略时请递增，以便激活时清掉旧缓存
+const CACHE_VERSION = "v2";
 const CACHE_NAME = `pomotention-cache-${CACHE_VERSION}`;
 
-// 需要缓存的静态资源
+// 需要缓存的静态资源（应用壳）
 const APP_SHELL = [
   "/",
   "/index.html",
@@ -13,7 +13,6 @@ const APP_SHELL = [
   "/favicon.ico",
 ];
 
-// 安装事件：缓存静态资源
 self.addEventListener("install", (event) => {
   console.log("[Service Worker] Installing...", CACHE_VERSION);
   event.waitUntil(
@@ -27,11 +26,16 @@ self.addEventListener("install", (event) => {
         console.error("[Service Worker] Cache failed:", error);
       })
   );
-  // 立即激活新的 Service Worker
-  self.skipWaiting();
+  // 不在此处 skipWaiting：有旧页面在跑时新 SW 进入 waiting，由前端发 SKIP_WAITING 后再激活，便于提示用户刷新
 });
 
-// 激活事件：清理旧缓存
+// 用户确认刷新后跳过等待，立即接管
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
+});
+
 self.addEventListener("activate", (event) => {
   console.log("[Service Worker] Activating...", CACHE_VERSION);
   event.waitUntil(
@@ -46,66 +50,100 @@ self.addEventListener("activate", (event) => {
       );
     })
   );
-  // 立即控制所有客户端
   return self.clients.claim();
 });
 
-// 拦截 fetch 请求：使用 Cache First 策略
+/**
+ * 仅缓存「完整」同源成功响应，避免把 206 等写入 cache 引发后续异常
+ */
+function putInCache(request, response) {
+  if (!response || response.status !== 200 || response.type !== "basic") {
+    return;
+  }
+  const clone = response.clone();
+  return caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+}
+
+/**
+ * 网络优先：适合带 hash 的 /assets/ 与音频，避免发版后仍命中旧缓存导致 CSS/JS 不匹配
+ */
+function networkFirst(request) {
+  return fetch(request)
+    .then((response) => {
+      if (response.ok) {
+        putInCache(request, response);
+      }
+      return response;
+    })
+    .catch(() =>
+      caches.match(request).then((cached) => {
+        if (cached) return cached;
+        return new Response("", { status: 503, statusText: "Offline" });
+      })
+    );
+}
+
 self.addEventListener("fetch", (event) => {
   const { request } = event;
-  const url = new URL(request.url);
 
-  // 只处理同源请求
-  if (url.origin !== location.origin) {
+  if (request.method !== "GET") {
     return;
   }
 
-  // 对于导航请求（页面跳转），使用网络优先策略
-  if (request.mode === "navigate") {
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin) {
+    return;
+  }
+
+  // 音频/视频常见 Range 请求，与 Cache 里存的完整响应容易不兼容，直接走网络并兜底错误
+  if (request.headers.has("range")) {
     event.respondWith(
-      fetch(request)
-        .then((response) => {
-          // 如果网络请求成功，更新缓存
-          if (response.ok) {
-            const responseClone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(request, responseClone);
-            });
-          }
-          return response;
-        })
-        .catch(() => {
-          // 网络失败时，尝试从缓存获取
-          return caches.match(request).then((cachedResponse) => {
-            if (cachedResponse) {
-              return cachedResponse;
-            }
-            // 如果缓存也没有，返回离线页面或 index.html
-            return caches.match("/index.html");
-          });
-        })
+      fetch(request).catch(() => new Response("", { status: 503, statusText: "Offline" }))
     );
     return;
   }
 
-  // 对于静态资源，使用 Cache First 策略
+  if (request.mode === "navigate") {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+          }
+          return response;
+        })
+        .catch(() =>
+          caches.match(request).then((cached) => cached || caches.match("/index.html"))
+        )
+    );
+    return;
+  }
+
+  const path = url.pathname;
+  if (path.startsWith("/assets/") || path.startsWith("/sounds/")) {
+    event.respondWith(networkFirst(request));
+    return;
+  }
+
+  // 其余同源静态资源：缓存优先，但 fetch 失败时必须 resolve，避免 respondWith 收到 rejected
   event.respondWith(
     caches.match(request).then((cachedResponse) => {
       if (cachedResponse) {
         return cachedResponse;
       }
-      // 缓存未命中，从网络获取
-      return fetch(request).then((response) => {
-        // 只缓存成功的响应
-        if (!response || response.status !== 200 || response.type !== "basic") {
+      return fetch(request)
+        .then((response) => {
+          if (response.ok) {
+            putInCache(request, response);
+          }
           return response;
-        }
-        const responseToCache = response.clone();
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(request, responseToCache);
-        });
-        return response;
-      });
+        })
+        .catch(() =>
+          caches.match(request).then(
+            (c) => c || new Response("", { status: 503, statusText: "Offline" })
+          )
+        );
     })
   );
 });
