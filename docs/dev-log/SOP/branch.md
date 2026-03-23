@@ -120,11 +120,19 @@ git merge feature/xxx                    # 保留提交历史
 git merge --squash feature/xxx            # 压成一次提交（类似 PR 的 squash）
 git commit -m "feat(xxx): 你的改动说明"   # squash 时需要再提交一次
 
+
 # 6. 删除本地 feature 分支
 git branch -d feature/xxx
 
 # 7. 推送 dev 到远程
 git push origin dev
+
+# 8. 如果继续在dev上开发
+git merge main                           # 需要把PR同步到dev如果继续开发
+
+# 8. 如果要删除dev
+git push origin --delete dev # 远程分支
+git branch -d dev # 本地分支
 ```
 
 ### 错误在main上开发
