@@ -20,8 +20,12 @@
               :key="day ? day.startTs : `empty-${rowIdx}-${colIdx}`"
               type="button"
               class="day-dot-wrap"
-              :class="{ 'day-dot--today': day && day.isCurrentMonth && day.isToday }"
-              :title="day && day.isCurrentMonth ? formatDayTitle(day.startTs) : ''"
+              :class="{
+                'day-dot--today': day && day.isCurrentMonth && day.isToday,
+                'day-dot--selected': day && day.isCurrentMonth && selectedDate === day.startTs,
+                'day-dot--other-month': day && !day.isCurrentMonth,
+              }"
+              :title="day ? formatDayTitle(day.startTs) : ''"
               @click="day && day.isCurrentMonth ? handleDayClick(day.startTs) : undefined"
               @dblclick.stop="day && day.isCurrentMonth ? handleDayDblClick(day.startTs) : undefined"
               @touchstart.stop="day && day.isCurrentMonth ? handleDayTouchStart($event, day.startTs) : undefined"
@@ -33,6 +37,10 @@
                   <span class="day-num" :style="getDayNumStyle(day.startTs)">{{ day.dayOfMonth }}</span>
                 </span>
               </template>
+              <!-- 邻月日期：可见弱化格；勿用 day-dot--empty，否则整格被 :has 规则隐藏 -->
+              <span v-else-if="day" class="day-dot day-dot--outside-month">
+                <span class="day-num">{{ day.dayOfMonth }}</span>
+              </span>
               <span v-else class="day-dot day-dot--empty" />
             </button>
           </div>
@@ -73,7 +81,7 @@ const monthNames = [
 ];
 
 const dataStore = useDataStore();
-const { selectedTaskId, firstTaggedTaskIdForAppDate } = storeToRefs(dataStore);
+const { selectedTaskId, firstTaggedTaskIdForAppDate, selectedDate } = storeToRefs(dataStore);
 const dateService = dataStore.dateService;
 const dayLongPressHandler = ref<ReturnType<typeof useLongPress> | null>(null);
 
@@ -256,6 +264,7 @@ function handleWeekClick(weekStartTs: number) {
 <style scoped>
 /* 仅最外层滚动，内部月份不被裁剪 */
 .year-planner {
+  container-type: inline-size;
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -351,18 +360,28 @@ function handleWeekClick(weekStartTs: number) {
   border: none;
   background: none;
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
   gap: 0;
-  min-height: 24px;
+  min-height: 20px;
 }
 
-.day-dot-wrap.day-dot--other-month .day-num,
-.day-dot-wrap.day-dot--other-month .day-dot {
-  display: none;
+/* 邻月：圆点与数字弱化（原先邻月走了 day-dot--empty，整格被隐藏，other-month 样式无效） */
+.day-dot-wrap.day-dot--other-month {
+  cursor: default;
+}
+
+.day-dot-wrap.day-dot--other-month .day-dot--outside-month {
+  background-color: var(--color-background);
+  opacity: 0.55;
+}
+
+.day-dot-wrap.day-dot--other-month .day-num {
+  color: var(--color-background);
 }
 
 /* 今日：整格底色与圆点填充均为蓝色 */
@@ -378,12 +397,18 @@ function handleWeekClick(weekStartTs: number) {
   color: #fff;
 }
 
-.day-num {
-  font-size: 12px;
-  line-height: 1.2;
-  color: var(--color-background);
-  font-weight: 600;
-  font-family: Consolas, "Courier New", Courier, monospace;
+/* 与月/周视图一致：当前选中日期（点击后由 store 驱动，触控也稳定） */
+.day-dot-wrap.day-dot--selected .day-dot {
+  box-shadow:
+    0 0 0 1px var(--color-blue),
+    0 2px 6px var(--color-blue-light);
+  z-index: 5;
+}
+
+.day-dot-wrap.day-dot--today.day-dot--selected .day-dot {
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.95),
+    0 2px 6px rgba(64, 158, 255, 0.35);
 }
 
 .day-dot {
@@ -397,6 +422,14 @@ function handleWeekClick(weekStartTs: number) {
   align-items: center;
   justify-content: center;
   background-color: var(--color-background-light);
+  transition: transform 0.12s ease-out;
+}
+
+.day-num {
+  font-size: 12px;
+  color: var(--color-background);
+  font-weight: bold;
+  font-family: Consolas, "Courier New", Courier, monospace;
 }
 
 .day-dot--empty {
@@ -410,12 +443,19 @@ function handleWeekClick(weekStartTs: number) {
   cursor: default;
 }
 
-/* hover 只作用在固定尺寸的圆点上，避免 button 宽度导致椭圆 */
-.day-dot-wrap:hover .day-dot {
-  cursor: pointer;
-  background-color: var(--color-blue-light);
-  color: var(--color-blue);
-  border-radius: 50%;
+/* 触控按下瞬间反馈（不依赖 hover）；邻月不可点，无缩放反馈 */
+.day-dot-wrap:not(.day-dot--other-month):active .day-dot {
+  transform: scale(1.1);
+}
+
+/* 仅真实可悬停设备使用 hover，避免手机伪 hover 不稳定 */
+@media (hover: hover) and (pointer: fine) {
+  .day-dot-wrap:not(.day-dot--other-month) .day-dot:hover {
+    cursor: pointer;
+    background-color: var(--color-blue);
+    border-radius: 50%;
+    transform: scale(1.1);
+  }
 }
 
 /* 小屏：宽度 < 1000px 时整体压缩为 4×3 月格，但保持圆点原始尺寸，避免被压扁 */
@@ -477,19 +517,30 @@ function handleWeekClick(weekStartTs: number) {
   .month-dots-row.month-dots-header {
     display: none;
   }
-
   .day-dot {
     width: 16px;
     height: 16px;
-    min-width: 16px;
-    min-height: 16px;
   }
+
   .day-num {
     font-size: 10px;
   }
 
   .month-dots-row {
     max-height: 16px;
+  }
+}
+
+/* 组件实际宽度 < 250px 时进一步缩小圆点（侧栏等窄容器） */
+@container (max-width: 249px) {
+  .day-dot {
+    width: 14px;
+    height: 14px;
+    min-width: 14px;
+    min-height: 14px;
+  }
+  .day-num {
+    font-size: 9px;
   }
 }
 </style>

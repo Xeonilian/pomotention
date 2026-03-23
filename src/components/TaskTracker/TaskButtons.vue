@@ -25,12 +25,12 @@
       </n-button>
       <n-button size="small" type="info" text @click="showRewardDialog = true" :disabled="!taskId" title="奖赏记录">
         <template #icon>
-          <n-icon><Emoji24Regular /></n-icon>
+          <n-icon><Trophy20Regular /></n-icon>
         </template>
       </n-button>
       <n-button size="small" type="info" text @click="showInterruptionDialog = true" :disabled="!taskId" title="打扰记录">
         <template #icon>
-          <n-icon><CalendarAssistant20Regular /></n-icon>
+          <n-icon><CommentLightning20Regular /></n-icon>
         </template>
       </n-button>
 
@@ -74,7 +74,7 @@
             title="奖赏记录"
           >
             <template #icon>
-              <n-icon><Emoji24Regular /></n-icon>
+              <n-icon><Trophy20Regular /></n-icon>
             </template>
           </n-button>
           <n-button
@@ -86,7 +86,7 @@
             title="打扰记录"
           >
             <template #icon>
-              <n-icon><CalendarAssistant20Regular /></n-icon>
+              <n-icon><CommentLightning20Regular /></n-icon>
             </template>
           </n-button>
           <n-button
@@ -168,8 +168,10 @@ import TemplateDialog from "@/components/TaskTracker/TemplateDialog.vue";
 import TagManager from "@/components/TagSystem/TagManager.vue";
 import {
   BatterySaver20Regular,
-  Emoji24Regular,
-  CalendarAssistant20Regular,
+  // Emoji24Regular,
+  Trophy20Regular,
+  CommentLightning20Regular,
+  // CalendarAssistant20Regular,
   CalligraphyPen20Regular,
   Star20Regular,
   Star20Filled,

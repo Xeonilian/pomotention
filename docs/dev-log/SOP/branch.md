@@ -126,3 +126,12 @@ git branch -d feature/xxx
 # 7. 推送 dev 到远程
 git push origin dev
 ```
+
+### 错误在main上开发
+
+```bash
+git checkout dev
+git merge main          # 把 main 上多出来的提交并进 dev，可能有冲突要解决
+git checkout main
+git reset --hard origin/main
+```

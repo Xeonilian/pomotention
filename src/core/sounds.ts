@@ -7,7 +7,8 @@ export enum SoundType {
   WORK_END = "work_end",
   BREAK_START = "break_start",
   BREAK_END = "break_end",
-  WHITE_NOISE = "white_noise",
+  WHITE_NOISE_RAIN = "white_noise_rain",
+  WHITE_NOISE_BIRD_SEA = "white_noise_bird_sea",
   PHASE_R1 = "phase_r1",
   PHASE_W1 = "phase_w1",
   PHASE_W2 = "phase_w2",
@@ -24,7 +25,8 @@ const soundPaths = {
   [SoundType.WORK_END]: "/sounds/work_end.wav",
   [SoundType.BREAK_START]: "/sounds/break_start.wav",
   [SoundType.BREAK_END]: "/sounds/break_end.wav",
-  [SoundType.WHITE_NOISE]: "/sounds/white_noise.wav",
+  [SoundType.WHITE_NOISE_RAIN]: "/sounds/white_noise_rain.wav",
+  [SoundType.WHITE_NOISE_BIRD_SEA]: "/sounds/white_noise_bird_sea.wav",
   [SoundType.PHASE_R1]: "/sounds/phase_r1.wav",
   [SoundType.PHASE_W1]: "/sounds/phase_w1.wav",
   [SoundType.PHASE_W2]: "/sounds/phase_w2.wav",
@@ -33,6 +35,37 @@ const soundPaths = {
   [SoundType.PHASE_BREAK]: "/sounds/break_middle.wav",
   [SoundType.WORK_TICK]: "/sounds/work_tick.wav",
 };
+
+/** soundPaths 内全部类型，供预取与遍历 */
+const ALL_SOUND_TYPES = Object.values(SoundType).filter((v): v is SoundType => typeof v === "string");
+
+/** 预取到的原始音频字节（不依赖 AudioContext）；与首次播放共用同一套 inflight，避免重复下载 */
+const cueBytesCache = new Map<SoundType, ArrayBuffer>();
+const cueBytesInflight = new Map<SoundType, Promise<ArrayBuffer | null>>();
+
+async function loadCueBytes(type: SoundType): Promise<ArrayBuffer | null> {
+  const hit = cueBytesCache.get(type);
+  if (hit) return hit;
+  let inflight = cueBytesInflight.get(type);
+  if (!inflight) {
+    inflight = (async () => {
+      try {
+        const url = soundPaths[type];
+        const res = await fetch(url);
+        if (!res.ok) return null;
+        const arr = await res.arrayBuffer();
+        cueBytesCache.set(type, arr);
+        return arr;
+      } catch {
+        return null;
+      } finally {
+        cueBytesInflight.delete(type);
+      }
+    })();
+    cueBytesInflight.set(type, inflight);
+  }
+  return inflight;
+}
 
 // 声音对象缓存
 const soundCache = new Map<SoundType, HTMLAudioElement>();
@@ -191,10 +224,16 @@ function startWhiteNoiseHtml(src: string, volume: number): void {
 
   dbgAudio("[WN] 白噪音 HTMLAudio 双轨 crossfade（锁屏尽量不裁）", { src, volume: masterVol });
 
-  const onMeta = () => {
-    if (htmlWnCross !== state) return;
+  // 大文件在部分 WebKit 上 loadedmetadata 时 duration 可能仍为 NaN/Infinity，需等 durationchange
+  let playbackStarted = false;
+  const tryArmPlayback = () => {
+    if (htmlWnCross !== state || playbackStarted) return;
     const d = a.duration;
     if (!d || !isFinite(d) || d <= 0.5) return;
+
+    playbackStarted = true;
+    a.removeEventListener("loadedmetadata", tryArmPlayback);
+    a.removeEventListener("durationchange", tryArmPlayback);
 
     state.duration = d;
     let cf = Math.min(HTML_WN_CROSSFADE.maxSec, Math.max(HTML_WN_CROSSFADE.minSec, d * HTML_WN_CROSSFADE.ratioOfDuration));
@@ -231,7 +270,8 @@ function startWhiteNoiseHtml(src: string, volume: number): void {
     state.tickId = setInterval(() => htmlWnCrossfadeTick(state), HTML_WN_CROSSFADE.tickIntervalMs);
   };
 
-  a.addEventListener("loadedmetadata", onMeta, { once: true });
+  a.addEventListener("loadedmetadata", tryArmPlayback);
+  a.addEventListener("durationchange", tryArmPlayback);
   a.load();
   b.load();
 }
@@ -285,9 +325,8 @@ async function getOrDecodeCueBuffer(type: SoundType): Promise<AudioBuffer | null
   if (!inflight) {
     inflight = (async () => {
       try {
-        const url = soundPaths[type];
-        const res = await fetch(url);
-        const arr = await res.arrayBuffer();
+        const arr = await loadCueBytes(type);
+        if (!arr) return null;
         const decoded = await decodeArrayBufferToAudioBuffer(ctx, arr);
         cueBufferCache.set(type, decoded);
         return decoded;
@@ -314,6 +353,16 @@ function getSound(type: SoundType): HTMLAudioElement {
     soundCache.set(type, audio);
   }
   return soundCache.get(type)!;
+}
+
+/**
+ * 应用启动后尽早调用：并行拉取全部 /sounds 字节，不等首次 playSound。
+ * 与 HTMLAudio 回退共用 HTTP 缓存；解码仍在首次需要 AudioContext 时做。
+ */
+export function prefetchSoundAssets(): void {
+  for (const type of ALL_SOUND_TYPES) {
+    void loadCueBytes(type);
+  }
 }
 
 async function playSoundAsync(type: SoundType): Promise<void> {
@@ -387,8 +436,15 @@ export function startWhiteNoise(): void {
   // 清理旧 Source（不影响持久 Gain）
   stopWhiteNoise();
 
-  const src = soundPaths[settingStore.settings.whiteNoiseSoundTrack];
-  const vol = settingStore.settings.whiteNoiseSoundTrack === SoundType.WORK_TICK ? 1 : 0.3;
+  const track = settingStore.settings.whiteNoiseSoundTrack;
+  const src = soundPaths[track];
+  const vol = track === SoundType.WORK_TICK ? 1 : 0.3;
+  // 持久化里可能残留已删除的枚举字符串：不写盘迁移，仅在此纠正并返回，用户再开一次白噪音即可
+  if (!src) {
+    dbgAudio("[WN] whiteNoiseSoundTrack 无映射，已改存 work_tick，请再切换/开始一次", { track });
+    settingStore.settings.whiteNoiseSoundTrack = SoundType.WORK_TICK;
+    return;
+  }
 
   if (preferHtmlAudioWhiteNoiseOnThisDevice()) {
     startWhiteNoiseHtml(src, vol);
@@ -428,7 +484,12 @@ export function startWhiteNoise(): void {
       });
 
     fetch(src)
-      .then((res) => res.arrayBuffer())
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error(`fetch ${src} HTTP ${res.status}`);
+        }
+        return res.arrayBuffer();
+      })
       .then((buf) => decodeArrayBufferToAudioBuffer(ctx, buf))
       .then((audioBuffer) => {
         const s = useSettingStore();
@@ -448,7 +509,8 @@ export function startWhiteNoise(): void {
         source.buffer = audioBuffer;
         source.loop = true;
         source.loopStart = 0;
-        source.loopEnd = audioBuffer.duration;
+        // loopEnd=0 表示播放到缓冲区末尾，避免与 duration 浮点边界导致循环异常
+        source.loopEnd = 0;
 
         source.connect(whiteNoiseGain);
 
@@ -488,6 +550,10 @@ export function startWhiteNoise(): void {
         dbgAudio("[WN] startWhiteNoise 流程错误", {
           message: e instanceof Error ? e.message : String(e),
         });
+        // Web Audio 拉取/解码失败时回退 HTMLAudio（桌面端亦可用）
+        if (!preferHtmlAudioWhiteNoiseOnThisDevice()) {
+          startWhiteNoiseHtml(src, vol);
+        }
       });
   } catch (e) {
     console.log("[WN] startWhiteNoise 外层错误:", e);

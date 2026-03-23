@@ -6,6 +6,9 @@ import { PomodoroDurations, TimerStyleDefaults, ViewType } from "../core/constan
 import { ActivitySectionConfig } from "@/core/types/Activity";
 import { SoundType } from "@/core/sounds";
 import { AiProfile } from "@/core/types/AiProfile";
+import { useDevice } from "@/composables/useDevice";
+
+const { isMobile } = useDevice();
 
 // 定义全局 settings 类型（可根据自己需要补充或修改）
 export interface GlobalSettings {
@@ -70,11 +73,11 @@ const defaultSettings: GlobalSettings = {
     { id: 5, filterKey: "schedule", search: "", show: false, showTags: false },
     { id: 6, filterKey: "cancelled", search: "", show: false, showTags: false },
   ],
-  showPomodoro: true,
-  showSchedule: true,
+  showPomodoro: isMobile.value ? false : true,
+  showSchedule: isMobile.value ? false : true,
   showPlanner: true,
   showTask: true,
-  showActivity: true,
+  showActivity: isMobile.value ? false : true,
   showAi: false,
   leftWidth: 100, // 默认值你自己定
   rightWidth: 300,

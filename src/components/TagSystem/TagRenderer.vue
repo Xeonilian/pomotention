@@ -142,10 +142,14 @@ function getTagTitle(tag: TagWithCount): string {
 }
 </script>
 <style scoped>
+/* 窄屏下标签自动换行；min-width:0 便于在父级 flex 内收缩以触发换行 */
 .tag-container {
   display: flex;
+  flex-wrap: wrap;
   overflow: visible;
   gap: 4px;
+  min-width: 0;
+  max-width: 100%;
 }
 .tag-item {
   transition: transform 0.2s;
