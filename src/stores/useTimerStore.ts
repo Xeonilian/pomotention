@@ -82,6 +82,17 @@ export const useTimerStore = defineStore(
 
     const isFromSequence = ref<boolean>(false);
 
+    /** 序列当前步索引（与 PomodoroSequence.currentStep 对齐，持久化供冷启动恢复） */
+    const sequenceStepIndex = ref<number>(0);
+    /** 启动序列时的输入快照，用于检测用户是否改序列导致与计时脱节 */
+    const sequenceInputSnapshot = ref<string>("");
+    /** 序列阶段结束回调（内存），冷启动后由 PomodoroSequence 重新 register */
+    const sequencePhaseContinuation = ref<(() => void) | null>(null);
+    /** 供设置页等展示：是否已挂接 continuation */
+    const sequenceContinuationRegistered = ref(false);
+    /** main 早于子组件 reconcile 时，阶段已结束但尚无 continuation，延后 finalize */
+    const pendingSequencePhaseFinalize = ref(false);
+
     const progressPercentage = computed(() => {
       if (totalTime.value === 0) return 0;
       return ((totalTime.value - timeRemaining.value) / totalTime.value) * 100;
@@ -218,7 +229,21 @@ export const useTimerStore = defineStore(
       isFromSequence.value = false;
       isGray.value = true;
       finalizedForPhase.value = false;
+      sequenceStepIndex.value = 0;
+      sequenceInputSnapshot.value = "";
+      pendingSequencePhaseFinalize.value = false;
+      sequencePhaseContinuation.value = null;
+      sequenceContinuationRegistered.value = false;
       stopWhiteNoise();
+    }
+
+    function shouldDeferSequenceFinalize(): boolean {
+      return (
+        isFromSequence.value &&
+        phaseFinishCallback.value == null &&
+        sequencePhaseContinuation.value == null &&
+        pomodoroState.value !== "idle"
+      );
     }
 
     function finalizeCurrentPhase(): void {
@@ -231,11 +256,19 @@ export const useTimerStore = defineStore(
       const cb = phaseFinishCallback.value;
       phaseFinishCallback.value = null;
 
+      const useCont =
+        !cb &&
+        isFromSequence.value &&
+        sequencePhaseContinuation.value != null;
+
       if (pomodoroState.value === "working") {
         playSound(SoundType.WORK_END);
         if (cb) {
           stopWhiteNoise();
           cb();
+        } else if (useCont) {
+          stopWhiteNoise();
+          sequencePhaseContinuation.value!();
         } else {
           resetTimer();
         }
@@ -243,6 +276,8 @@ export const useTimerStore = defineStore(
         playSound(SoundType.BREAK_END);
         if (cb) {
           cb();
+        } else if (useCont) {
+          sequencePhaseContinuation.value!();
         } else {
           resetTimer();
         }
@@ -253,6 +288,12 @@ export const useTimerStore = defineStore(
       if (pomodoroState.value === "idle" || !startTime.value) return;
       syncTimeRemainingFromWallClock();
       if (timeRemaining.value <= 0) {
+        if (shouldDeferSequenceFinalize()) {
+          pendingSequencePhaseFinalize.value = true;
+          timeRemaining.value = 0;
+          clearPhaseInterval();
+          return;
+        }
         finalizeCurrentPhase();
       }
     }
@@ -280,10 +321,28 @@ export const useTimerStore = defineStore(
       syncTimeRemainingFromWallClock();
 
       if (timeRemaining.value <= 0) {
+        if (shouldDeferSequenceFinalize()) {
+          pendingSequencePhaseFinalize.value = true;
+          timeRemaining.value = 0;
+          clearPhaseInterval();
+          return;
+        }
         finalizeCurrentPhase();
       } else {
         ensurePhaseTicker();
       }
+    }
+
+    function registerSequenceContinuation(handler: (() => void) | null): void {
+      sequencePhaseContinuation.value = handler;
+      sequenceContinuationRegistered.value = handler != null;
+    }
+
+    /** PomodoroSequence 挂载并 register continuation 后调用，消化 main 早于挂载时的延后 finalize */
+    function flushPendingSequenceFinalize(): void {
+      if (!pendingSequencePhaseFinalize.value) return;
+      pendingSequencePhaseFinalize.value = false;
+      finalizeCurrentPhase();
     }
 
     function startWorking(duration: number, onFinish?: () => void): void {
@@ -382,6 +441,11 @@ export const useTimerStore = defineStore(
       phaseEndsAt.value = null;
       phaseFinishCallback.value = null;
       finalizedForPhase.value = false;
+      sequenceStepIndex.value = 0;
+      sequenceInputSnapshot.value = "";
+      pendingSequencePhaseFinalize.value = false;
+      sequencePhaseContinuation.value = null;
+      sequenceContinuationRegistered.value = false;
 
       stopWhiteNoise();
     }
@@ -402,6 +466,10 @@ export const useTimerStore = defineStore(
       isWorking,
       isBreaking,
       isFromSequence,
+      sequenceStepIndex,
+      sequenceInputSnapshot,
+      pendingSequencePhaseFinalize,
+      sequenceContinuationRegistered,
       redBarOffsetPercentage,
       redBarPercentage,
       progressPercentage,
@@ -412,6 +480,8 @@ export const useTimerStore = defineStore(
       cancelTimer,
       resetTimer,
       reconcilePhaseFromWallClock,
+      registerSequenceContinuation,
+      flushPendingSequenceFinalize,
     };
   },
   {
@@ -427,6 +497,8 @@ export const useTimerStore = defineStore(
         "isFromSequence",
         "isGray",
         "breakReminderCount",
+        "sequenceStepIndex",
+        "sequenceInputSnapshot",
       ],
     },
   },
