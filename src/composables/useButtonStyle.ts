@@ -114,7 +114,7 @@ export function useButtonStyle() {
           settingStore.settings.showActivity = false;
         } else {
           // 其他面板打开时，只关闭 activity
-          settingStore.settings.showActivity = false;
+          // settingStore.settings.showActivity = false;
         }
       } else {
         // 关闭面板时的逻辑
