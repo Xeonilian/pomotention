@@ -424,7 +424,7 @@ function getCountdownClass(dueDate: number | undefined | null): string {
     height: 0px;
   }
   .kanban-columns {
-    height: calc(100%- env(safe-area-inset-bottom));
+    height: calc(100% - 5px - env(safe-area-inset-bottom));
   }
 }
 </style>
