@@ -112,6 +112,7 @@
         :initialContent="taskDescription"
         :isMarkdown="isMarkdown"
         @update:content="updateTaskDescriptionInStore"
+        @update:is-editing="onTaskRecordIsEditing"
       />
     </div>
   </div>
@@ -134,6 +135,14 @@ const settingStore = useSettingStore();
 const TaskButtons = defineAsyncComponent<Component>(() => import("@/components/TaskTracker/TaskButtons.vue"));
 const TaskRecord = defineAsyncComponent<Component>(() => import("@/components/TaskTracker/TaskRecord.vue"));
 const TagRenderer = defineAsyncComponent<Component>(() => import("@/components/TagSystem/TagRenderer.vue"));
+
+const emit = defineEmits<{
+  (e: "taskRecordEditing", value: boolean): void;
+}>();
+
+function onTaskRecordIsEditing(v: boolean) {
+  emit("taskRecordEditing", v);
+}
 
 // UI 状态
 const isMarkdown = ref(false);
