@@ -104,6 +104,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: "update:content", content: string): void;
   (e: "activetaskId", taskId: number | null): void;
+  (e: "update:isEditing", value: boolean): void;
 }>();
 
 const content = ref(props.initialContent);
@@ -138,6 +139,14 @@ watch(
   (newContent) => {
     content.value = newContent;
   },
+);
+
+watch(
+  isEditing,
+  (v) => {
+    emit("update:isEditing", v);
+  },
+  { immediate: true },
 );
 
 const startEditing = () => {
