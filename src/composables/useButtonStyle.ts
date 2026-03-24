@@ -21,7 +21,7 @@ import { useDevice } from "./useDevice";
 type ViewKey = "ontop" | "pomodoro" | "schedule" | "task" | "planner" | "activity"; //| "ai"
 
 export function useButtonStyle() {
-  const timerStore = useTimerStore();
+  // const timerStore = useTimerStore();
   const settingStore = useSettingStore();
   const { isMobile } = useDevice();
 
