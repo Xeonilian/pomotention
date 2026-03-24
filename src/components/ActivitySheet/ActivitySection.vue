@@ -81,12 +81,16 @@
               v-model:value="item.title"
               :ref="(el) => setRowInputRef(el as InputInst | null, item.id)"
               type="text"
+              :readonly="isMobile && !titleEditAllowed[item.id]"
               :placeholder="item.isUntaetigkeit ? '无所事事' : '任务描述'"
               style="flex: 1"
               @input="handleTitleInput(item, $event)"
               @keydown="handleInputKeydown($event, item)"
-              @focus="handleNoFocus(item.id)"
-              @blur="handleBlur"
+              @focus="handleTitleInputFocus(item)"
+              @blur="handleTitleBlur(item)"
+              @touchstart.stop="handleTitleTouchStart($event, item)"
+              @touchend.stop="handleTitleTouchEnd($event, item)"
+              @touchcancel.stop="handleTitleTouchCancel(item)"
               :class="{
                 'force-hover': dragHandler.hoveredRowId.value === item.id,
                 'child-activity': item.parentId,
@@ -248,8 +252,6 @@
               @blur="handleBlur"
               @mousedown.stop="(e: MouseEvent) => handlePomoInputMouseDown(e, item)"
               @touchstart.stop="(e: TouchEvent) => handlePomoInputTouchStart(e, item)"
-              @mouseup.stop="(e: MouseEvent) => handlePomoInputMouseUp(e, item)"
-              @mouseleave.stop="handlePomoInputMouseLeave(item)"
               @touchend.stop="(e: TouchEvent) => handlePomoInputTouchEnd(e, item)"
               @touchcancel.stop="handlePomoInputTouchCancel(item)"
               :class="{
@@ -354,7 +356,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, ref, onMounted } from "vue";
+import { computed, nextTick, ref, onMounted, reactive } from "vue";
 import { NInput, NDatePicker, NIcon, NDropdown, NPopover, NButton } from "naive-ui";
 import {
   VideoPersonCall24Regular,
@@ -371,7 +373,6 @@ import type { Activity } from "@/core/types/Activity";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useActivityTagEditor } from "@/composables/useActivityTagEditor";
 import { useActivityDrag } from "@/composables/useActivityDrag";
-import { useLongPress } from "@/composables/useLongPress";
 import { useDevice } from "@/composables/useDevice";
 import { togglePomoType } from "@/services/activityService";
 import TagManager from "../TagSystem/TagManager.vue";
@@ -466,34 +467,28 @@ const pomoInputMap = ref(new Map<number, InputInst>());
 const showTagManager = ref(false);
 const tagSelectorRef = ref<any>(null);
 
-// 番茄输入框的长按状态管理（每个输入框独立）
-const pomoLongPressMap = ref(
-  new Map<
-    number,
-    {
-      longPressTriggered: { value: boolean };
-      onLongPressStart: (e: TouchEvent | MouseEvent) => void;
-      onLongPressEnd: () => void;
-      onLongPressCancel: () => void;
-    }
-  >(),
-);
-
-// 双击检测状态（桌面端）
+// 双击检测（桌面 mousedown）
 const pomoDoubleClickTimers = ref(new Map<number, number>());
 const DOUBLE_CLICK_DELAY = 300; // 双击检测延迟（毫秒）
 
-// 标记是否应该聚焦（用于双击和长按）
+// 触摸：双击切换类型，单击延迟后聚焦改数量（与标题列节奏一致）
+const pomoTapTimers = ref(new Map<number, number>());
+const pomoLastTapInfo = ref<{ id: number; time: number } | null>(null);
+
+// 标记是否应该聚焦（用于双击后进入编辑）
 const pomoShouldFocus = ref(new Map<number, boolean>());
+
+// 移动端标题：双击后才允许编辑；单击仅 emit focus-row 同步选中
+const titleEditAllowed = reactive<Record<number, boolean>>({});
+const titleTapTimers = ref(new Map<number, number>());
+const titleLastTapInfo = ref<{ id: number; time: number } | null>(null);
 
 // 防抖：防止快速重复切换
 const pomoToggleTimers = ref(new Map<number, number>());
 const TOGGLE_DEBOUNCE = 100; // 防抖延迟（毫秒）
 
 // 番茄输入框标题提示
-const pomoInputTitle = computed(() => {
-  return isTouchSupported ? "单击修改数量 | 长按切换类型" : "单击编辑数量 | 双击切换类型";
-});
+const pomoInputTitle = computed(() => "单击修改数量 | 双击切换类型");
 
 // 点击/拖拽检测状态
 const clickDragState = ref<{
@@ -568,56 +563,133 @@ onMounted(() => {
 });
 
 // ======================== 输入框引用管理 ========================
+function clearTitleTapTimer(id: number) {
+  const t = titleTapTimers.value.get(id);
+  if (t) {
+    clearTimeout(t);
+    titleTapTimers.value.delete(id);
+  }
+}
+
 function setRowInputRef(el: InputInst | null, id: number) {
-  if (el) rowInputMap.value.set(id, el);
-  else rowInputMap.value.delete(id);
+  if (el) {
+    rowInputMap.value.set(id, el);
+  } else {
+    rowInputMap.value.delete(id);
+    clearTitleTapTimer(id);
+    delete titleEditAllowed[id];
+  }
+}
+
+function focusTitleInput(id: number) {
+  nextTick(() => {
+    const input = rowInputMap.value.get(id);
+    if (input) {
+      if (typeof input.focus === "function") {
+        input.focus();
+      } else {
+        input.inputElRef?.focus?.();
+      }
+    }
+  });
+}
+
+// 切换到其它活动行时结束其它行的标题编辑（v-model 已同步，blur 仅退出编辑态）
+function blurTitleEditsExcept(keepActivityId: number | null) {
+  const ids = Object.keys(titleEditAllowed)
+    .map(Number)
+    .filter((i) => titleEditAllowed[i]);
+  for (const aid of ids) {
+    if (keepActivityId !== null && aid === keepActivityId) continue;
+    delete titleEditAllowed[aid];
+    const inst = rowInputMap.value.get(aid);
+    if (inst) {
+      if (typeof inst.blur === "function") inst.blur();
+      else inst.inputElRef?.blur?.();
+    }
+  }
+}
+
+function handleTitleInputFocus(item: Activity) {
+  if (isMobile.value && !titleEditAllowed[item.id]) {
+    nextTick(() => {
+      rowInputMap.value.get(item.id)?.blur();
+    });
+    return;
+  }
+  handleNoFocus(item.id);
+}
+
+function handleTitleBlur(item: Activity) {
+  if (isMobile.value) {
+    delete titleEditAllowed[item.id];
+  }
+  handleBlur();
+}
+
+function handleTitleTouchStart(e: TouchEvent, item: Activity) {
+  if (!isMobile.value) return;
+  e.preventDefault();
+  clearTitleTapTimer(item.id);
+}
+
+function handleTitleTouchEnd(e: TouchEvent, item: Activity) {
+  if (!isMobile.value) return;
+  e.preventDefault();
+  const id = item.id;
+
+  const now = Date.now();
+  const last = titleLastTapInfo.value;
+  if (last && last.id === id && now - last.time < DOUBLE_CLICK_DELAY) {
+    clearTitleTapTimer(id);
+    titleLastTapInfo.value = null;
+    blurTitleEditsExcept(id);
+    titleEditAllowed[id] = true;
+    focusTitleInput(id);
+    return;
+  }
+
+  titleLastTapInfo.value = { id, time: now };
+  clearTitleTapTimer(id);
+  const t = window.setTimeout(() => {
+    titleLastTapInfo.value = null;
+    titleTapTimers.value.delete(id);
+    blurTitleEditsExcept(id);
+    emit("focus-row", id);
+  }, DOUBLE_CLICK_DELAY);
+  titleTapTimers.value.set(id, t);
+}
+
+function handleTitleTouchCancel(item: Activity) {
+  if (!isMobile.value) return;
+  clearTitleTapTimer(item.id);
+}
+
+function clearPomoTapTimer(id: number) {
+  const t = pomoTapTimers.value.get(id);
+  if (t) {
+    clearTimeout(t);
+    pomoTapTimers.value.delete(id);
+  }
 }
 
 function setPomoInputRef(el: InputInst | null, id: number) {
   if (el) {
     pomoInputMap.value.set(id, el);
-    // 为每个输入框初始化长按检测
-    if (!pomoLongPressMap.value.has(id)) {
-      const longPressHandler = useLongPress({
-        delay: 600,
-        onLongPress: () => {
-          // 长按触发：区分设备类型
-          // 触屏设备：长按切换番茄类型
-          // 桌面设备：长按进入编辑模式
-          if (isTouchSupported) {
-            const activity = activityById.value.get(id);
-            if (activity) {
-              handleTogglePomoType(activity);
-            }
-          } else {
-            focusPomoInput(id);
-          }
-        },
-      });
-      pomoLongPressMap.value.set(id, longPressHandler);
-    }
   } else {
     pomoInputMap.value.delete(id);
-    // 清理长按状态
-    const longPress = pomoLongPressMap.value.get(id);
-    if (longPress) {
-      longPress.onLongPressCancel();
-    }
-    pomoLongPressMap.value.delete(id);
+    clearPomoTapTimer(id);
     pomoDoubleClickTimers.value.delete(id);
   }
 }
 
 function handleNoFocus(id: number) {
+  blurTitleEditsExcept(id);
   noFocus.value = true;
-  if (isMobile.value) {
-    // 聚焦时压缩顶部区域高度
-    savedTopHeight.value = settingStore.settings.topHeight;
-    settingStore.settings.topHeight = 110;
-  }
   emit("focus-row", id);
 }
 
+// PC 上首行即 return，无实际效果；savedTopHeight 在本组件内从未赋值，移动端恢复分支亦不会执行
 function handleBlur() {
   if (!isMobile.value) return;
   if (savedTopHeight.value === null) return;
@@ -891,94 +963,63 @@ function handleTogglePomoType(item: Activity) {
   pomoToggleTimers.value.set(item.id, timer);
 }
 
-// 鼠标按下（桌面端长按检测和单击检测）
+// 鼠标按下（桌面端双击切换类型，单击延迟后聚焦改数量）
 function handlePomoInputMouseDown(e: MouseEvent, item: Activity) {
-  // 阻止默认聚焦行为（除非是双击或长按）
   e.preventDefault();
   e.stopPropagation();
 
-  const longPress = pomoLongPressMap.value.get(item.id);
-  if (longPress) {
-    longPress.onLongPressStart(e);
-  }
-
-  // 检查是否在双击延迟内（桌面端双击检测）
   const timer = pomoDoubleClickTimers.value.get(item.id);
   if (timer) {
-    // 清除双击定时器，说明是双击
     clearTimeout(timer);
     pomoDoubleClickTimers.value.delete(item.id);
-    // 双击：进入编辑模式
     pomoShouldFocus.value.set(item.id, true);
     handleTogglePomoType(item);
     return;
   }
 
-  // 设置双击检测定时器（桌面端）
   if (!isTouchSupported) {
     const newTimer = window.setTimeout(() => {
       pomoDoubleClickTimers.value.delete(item.id);
-      // 单击：切换类型
       focusPomoInput(item.id);
     }, DOUBLE_CLICK_DELAY);
     pomoDoubleClickTimers.value.set(item.id, newTimer);
   } else {
-    // 移动端：直接切换类型（长按已在长按处理中处理）
     focusPomoInput(item.id);
   }
 }
 
-// 触摸开始（移动端长按检测和单击检测）
 function handlePomoInputTouchStart(e: TouchEvent, item: Activity) {
-  // 阻止默认行为
   e.preventDefault();
   e.stopPropagation();
-
-  const longPress = pomoLongPressMap.value.get(item.id);
-  if (longPress) {
-    longPress.onLongPressStart(e);
-  }
+  clearPomoTapTimer(item.id);
 }
 
-// 鼠标抬起
-function handlePomoInputMouseUp(_e: MouseEvent, item: Activity) {
-  const longPress = pomoLongPressMap.value.get(item.id);
-  if (longPress) {
-    longPress.onLongPressEnd();
-  }
-}
-
-// 鼠标离开
-function handlePomoInputMouseLeave(item: Activity) {
-  const longPress = pomoLongPressMap.value.get(item.id);
-  if (longPress) {
-    longPress.onLongPressCancel();
-  }
-}
-
-// 触摸结束
 function handlePomoInputTouchEnd(e: TouchEvent, item: Activity) {
   e.preventDefault();
   e.stopPropagation();
-
-  const longPress = pomoLongPressMap.value.get(item.id);
-  if (longPress) {
-    longPress.onLongPressEnd();
-    // 如果未触发长按，执行单击编辑（聚焦输入框）
-    Promise.resolve().then(() => {
-      if (!(longPress.longPressTriggered as any).value) {
-        focusPomoInput(item.id);
-      }
-    });
+  const id = item.id;
+  const now = Date.now();
+  const last = pomoLastTapInfo.value;
+  if (last && last.id === id && now - last.time < DOUBLE_CLICK_DELAY) {
+    clearPomoTapTimer(id);
+    pomoLastTapInfo.value = null;
+    pomoShouldFocus.value.set(id, true);
+    handleTogglePomoType(item);
+    focusPomoInput(item.id);
+    return;
   }
+  pomoLastTapInfo.value = { id, time: now };
+  clearPomoTapTimer(id);
+  const t = window.setTimeout(() => {
+    pomoLastTapInfo.value = null;
+    pomoTapTimers.value.delete(id);
+    focusPomoInput(item.id);
+  }, DOUBLE_CLICK_DELAY);
+  pomoTapTimers.value.set(id, t);
 }
 
-// 触摸取消
 function handlePomoInputTouchCancel(item: Activity) {
-  const longPress = pomoLongPressMap.value.get(item.id);
-  if (longPress) {
-    longPress.onLongPressCancel();
-  }
+  clearPomoTapTimer(item.id);
 }
 </script>
 
@@ -1235,7 +1276,24 @@ function handlePomoInputTouchCancel(item: Activity) {
 }
 
 .highlight-line {
-  background-color: var(--color-yellow-light);
+  background-color: var(--color-yellow-light) !important;
+}
+
+/* 选中行：内部控件背景透明，行黄底能透出（与 .countdown-* 用透明底一致） */
+.highlight-line :deep(.n-input) {
+  background: transparent !important;
+  --n-box-shadow-focus: none !important;
+  --n-border-hover: 1px solid var(--color-blue) !important;
+}
+.highlight-line :deep(.n-input-wrapper) {
+  background: transparent !important;
+}
+.highlight-line :deep(.n-date-picker) {
+  background: transparent !important;
+  --n-box-shadow-focus: none !important;
+}
+.highlight-line :deep(.n-date-picker .n-input) {
+  background: transparent !important;
 }
 
 /* 一个给n-date-picker 一个给n-input */

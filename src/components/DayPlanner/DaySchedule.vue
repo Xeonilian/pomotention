@@ -206,7 +206,7 @@
               @touchstart.stop="handleTitleTouchStart($event, schedule)"
               @touchend.stop="handleTitleTouchEnd($event, schedule)"
               @touchcancel.stop="handleTitleTouchCancel(schedule)"
-              :title="editingRowId === schedule.id && editingField === 'title' ? '' : '单击编辑'"
+              :title="editingRowId === schedule.id && editingField === 'title' ? '' : isMobile ? '双击编辑' : '单击编辑'"
             >
               <input
                 class="title-input"
@@ -242,7 +242,7 @@
               @touchstart.stop="handleLocationTouchStart($event, schedule)"
               @touchend.stop="handleLocationTouchEnd($event, schedule)"
               @touchcancel.stop="handleLocationTouchCancel(schedule)"
-              :title="editingRowId === schedule.id && editingField === 'location' ? '' : '单击编辑'"
+              :title="editingRowId === schedule.id && editingField === 'location' ? '' : isMobile ? '双击编辑' : '单击编辑'"
             >
               <input
                 class="location-input"
@@ -339,7 +339,6 @@ import { storeToRefs } from "pinia";
 import { useActivityTagEditor } from "@/composables/useActivityTagEditor";
 import TagSelector from "../TagSystem/TagSelector.vue";
 import { useDevice } from "@/composables/useDevice";
-import { useLongPress } from "@/composables/useLongPress";
 
 const dataStore = useDataStore();
 const { isMobile } = useDevice();
@@ -358,28 +357,12 @@ const startInputRef = ref<HTMLInputElement | null>(null);
 const doneInputRef = ref<HTMLInputElement | null>(null);
 const durationInputRef = ref<HTMLInputElement | null>(null);
 const locationInputRef = ref<HTMLInputElement | null>(null);
-const titleLongPressMap = ref(
-  new Map<
-    number,
-    {
-      longPressTriggered: { value: boolean };
-      onLongPressStart: (e: TouchEvent | MouseEvent) => void;
-      onLongPressEnd: () => void;
-      onLongPressCancel: () => void;
-    }
-  >(),
-);
-const locationLongPressMap = ref(
-  new Map<
-    number,
-    {
-      longPressTriggered: { value: boolean };
-      onLongPressStart: (e: TouchEvent | MouseEvent) => void;
-      onLongPressEnd: () => void;
-      onLongPressCancel: () => void;
-    }
-  >(),
-);
+// 移动端意图/地点列：双击进入编辑，单击延迟后仅选中（与 ActivitySection 一致）
+const DOUBLE_CLICK_DELAY = 300;
+const titleTapTimers = ref(new Map<number, number>());
+const titleLastTapInfo = ref<{ id: number; time: number } | null>(null);
+const locationTapTimers = ref(new Map<number, number>());
+const locationLastTapInfo = ref<{ id: number; time: number } | null>(null);
 
 // 定义 Emit
 
@@ -441,6 +424,12 @@ function handleCheckboxChange(id: number, checked: boolean) {
 
 // 修改点击行处理函数
 function handleRowClick(schedule: Schedule) {
+  // 切换到其它行时先保存并退出当前编辑
+  if (editingRowId.value !== null && editingRowId.value !== schedule.id) {
+    const prev = schedulesForCurrentView.value.find((s) => s.id === editingRowId.value);
+    if (prev) saveEdit(prev);
+    else cancelEdit();
+  }
   // 取消激活活动
   // if (schedule.status !== "done" && schedule.status !== "cancelled") {
   //   activeId.value = schedule.activityId;
@@ -706,66 +695,88 @@ function handleInputKeydown(event: KeyboardEvent, schedule: Schedule) {
   }
 }
 
-function getTitleLongPress(scheduleId: number) {
-  let handler = titleLongPressMap.value.get(scheduleId);
-  if (!handler) {
-    handler = useLongPress({
-      delay: 500,
-      onLongPress: () => {
-        startEditing(scheduleId, "title");
-      },
-    });
-    titleLongPressMap.value.set(scheduleId, handler);
+function clearTitleTapTimer(id: number) {
+  const t = titleTapTimers.value.get(id);
+  if (t) {
+    clearTimeout(t);
+    titleTapTimers.value.delete(id);
   }
-  return handler;
+}
+
+function clearLocationTapTimer(id: number) {
+  const t = locationTapTimers.value.get(id);
+  if (t) {
+    clearTimeout(t);
+    locationTapTimers.value.delete(id);
+  }
 }
 
 function handleTitleTouchStart(e: TouchEvent, schedule: Schedule) {
-  const longPress = getTitleLongPress(schedule.id);
-  longPress.onLongPressStart(e);
+  if (!isMobile.value) return;
+  e.preventDefault();
+  clearTitleTapTimer(schedule.id);
 }
 
 function handleTitleTouchEnd(e: TouchEvent, schedule: Schedule) {
+  if (!isMobile.value) return;
+  e.preventDefault();
   e.stopPropagation();
-  const longPress = getTitleLongPress(schedule.id);
-  longPress.onLongPressEnd();
-  handleRowClick(schedule);
+  const id = schedule.id;
+  const now = Date.now();
+  const last = titleLastTapInfo.value;
+  if (last && last.id === id && now - last.time < DOUBLE_CLICK_DELAY) {
+    clearTitleTapTimer(id);
+    titleLastTapInfo.value = null;
+    startEditing(id, "title");
+    return;
+  }
+  titleLastTapInfo.value = { id, time: now };
+  clearTitleTapTimer(id);
+  const t = window.setTimeout(() => {
+    titleLastTapInfo.value = null;
+    titleTapTimers.value.delete(id);
+    handleRowClick(schedule);
+  }, DOUBLE_CLICK_DELAY);
+  titleTapTimers.value.set(id, t);
 }
 
 function handleTitleTouchCancel(schedule: Schedule) {
-  const longPress = getTitleLongPress(schedule.id);
-  longPress.onLongPressCancel();
-}
-
-function getLocationLongPress(scheduleId: number) {
-  let handler = locationLongPressMap.value.get(scheduleId);
-  if (!handler) {
-    handler = useLongPress({
-      delay: 600,
-      onLongPress: () => {
-        startEditing(scheduleId, "location");
-      },
-    });
-    locationLongPressMap.value.set(scheduleId, handler);
-  }
-  return handler;
+  if (!isMobile.value) return;
+  clearTitleTapTimer(schedule.id);
 }
 
 function handleLocationTouchStart(e: TouchEvent, schedule: Schedule) {
-  const longPress = getLocationLongPress(schedule.id);
-  longPress.onLongPressStart(e);
+  if (!isMobile.value) return;
+  e.preventDefault();
+  clearLocationTapTimer(schedule.id);
 }
 
 function handleLocationTouchEnd(e: TouchEvent, schedule: Schedule) {
+  if (!isMobile.value) return;
+  e.preventDefault();
   e.stopPropagation();
-  const longPress = getLocationLongPress(schedule.id);
-  longPress.onLongPressEnd();
-  handleRowClick(schedule);
+  const id = schedule.id;
+  const now = Date.now();
+  const last = locationLastTapInfo.value;
+  if (last && last.id === id && now - last.time < DOUBLE_CLICK_DELAY) {
+    clearLocationTapTimer(id);
+    locationLastTapInfo.value = null;
+    startEditing(id, "location");
+    return;
+  }
+  locationLastTapInfo.value = { id, time: now };
+  clearLocationTapTimer(id);
+  const t = window.setTimeout(() => {
+    locationLastTapInfo.value = null;
+    locationTapTimers.value.delete(id);
+    handleRowClick(schedule);
+  }, DOUBLE_CLICK_DELAY);
+  locationTapTimers.value.set(id, t);
 }
 
 function handleLocationTouchCancel(schedule: Schedule) {
-  const longPress = getLocationLongPress(schedule.id);
-  longPress.onLongPressCancel();
+  if (!isMobile.value) return;
+  clearLocationTapTimer(schedule.id);
 }
 
 function handleTagSelected(tagId: number) {

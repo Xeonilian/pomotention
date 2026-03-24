@@ -244,7 +244,7 @@
               @touchstart.stop="handleTitleTouchStart($event, todo)"
               @touchend.stop="handleTitleTouchEnd($event, todo)"
               @touchcancel.stop="handleTitleTouchCancel(todo)"
-              :title="editingRowId === todo.id && editingField === 'title' ? '' : '单击编辑'"
+              :title="editingRowId === todo.id && editingField === 'title' ? '' : isMobile ? '双击编辑' : '单击编辑'"
             >
               <input
                 class="title-input"
@@ -462,7 +462,6 @@ import { useActivityTagEditor } from "@/composables/useActivityTagEditor";
 import TagSelector from "../TagSystem/TagSelector.vue";
 import type { SelectOption } from "naive-ui";
 import { useDevice } from "@/composables/useDevice";
-import { useLongPress } from "@/composables/useLongPress";
 
 const dataStore = useDataStore();
 const { isMobile } = useDevice();
@@ -516,18 +515,10 @@ const selectingTagViaEnter = ref(false);
 const titleInputRef = ref<HTMLInputElement | null>(null);
 const startInputRef = ref<HTMLInputElement | null>(null);
 const doneInputRef = ref<HTMLInputElement | null>(null);
-// 标题列长按状态
-const titleLongPressMap = ref(
-  new Map<
-    number,
-    {
-      longPressTriggered: { value: boolean };
-      onLongPressStart: (e: TouchEvent | MouseEvent) => void;
-      onLongPressEnd: () => void;
-      onLongPressCancel: () => void;
-    }
-  >(),
-);
+// 移动端标题列：双击进入编辑，单击延迟后仅选中（与 ActivitySection 一致）
+const DOUBLE_CLICK_DELAY = 300;
+const titleTapTimers = ref(new Map<number, number>());
+const titleLastTapInfo = ref<{ id: number; time: number } | null>(null);
 
 // 排序列：emoji 弹窗与绑定设置
 const rankPopoverTodoId = ref<number | null>(null);
@@ -961,6 +952,13 @@ function handleDeleteEstimate(todo: Todo) {
 
 // 修改点击行处理函数
 function handleRowClick(todo: Todo) {
+  // 切换到其它行时先保存并退出当前编辑
+  if (editingRowId.value !== null && editingRowId.value !== todo.id) {
+    selectingTagViaEnter.value = false; // 避免 saveEdit 提前 return 导致仍停留在编辑态
+    const prev = todosForCurrentViewWithTaskRecords.value.find((t) => t.id === editingRowId.value);
+    if (prev) saveEdit(prev);
+    else cancelEdit();
+  }
   // 取消激活活动
   // if (todo.status !== "done" && todo.status !== "cancelled") {
   //   activeId.value = todo.activityId;
@@ -1264,35 +1262,46 @@ function handleInputKeydown(event: KeyboardEvent, todo: Todo) {
   }
 }
 
-function getTitleLongPress(todoId: number) {
-  let handler = titleLongPressMap.value.get(todoId);
-  if (!handler) {
-    handler = useLongPress({
-      delay: 500,
-      onLongPress: () => {
-        startEditing(todoId, "title");
-      },
-    });
-    titleLongPressMap.value.set(todoId, handler);
+function clearTitleTapTimer(id: number) {
+  const t = titleTapTimers.value.get(id);
+  if (t) {
+    clearTimeout(t);
+    titleTapTimers.value.delete(id);
   }
-  return handler;
 }
 
 function handleTitleTouchStart(e: TouchEvent, todo: Todo) {
-  const longPress = getTitleLongPress(todo.id);
-  longPress.onLongPressStart(e);
+  if (!isMobile.value) return;
+  e.preventDefault();
+  clearTitleTapTimer(todo.id);
 }
 
 function handleTitleTouchEnd(e: TouchEvent, todo: Todo) {
+  if (!isMobile.value) return;
+  e.preventDefault();
   e.stopPropagation();
-  const longPress = getTitleLongPress(todo.id);
-  longPress.onLongPressEnd();
-  handleRowClick(todo);
+  const id = todo.id;
+  const now = Date.now();
+  const last = titleLastTapInfo.value;
+  if (last && last.id === id && now - last.time < DOUBLE_CLICK_DELAY) {
+    clearTitleTapTimer(id);
+    titleLastTapInfo.value = null;
+    startEditing(id, "title");
+    return;
+  }
+  titleLastTapInfo.value = { id, time: now };
+  clearTitleTapTimer(id);
+  const t = window.setTimeout(() => {
+    titleLastTapInfo.value = null;
+    titleTapTimers.value.delete(id);
+    handleRowClick(todo);
+  }, DOUBLE_CLICK_DELAY);
+  titleTapTimers.value.set(id, t);
 }
 
 function handleTitleTouchCancel(todo: Todo) {
-  const longPress = getTitleLongPress(todo.id);
-  longPress.onLongPressCancel();
+  if (!isMobile.value) return;
+  clearTitleTapTimer(todo.id);
 }
 
 function handleTagSelected(tagId: number) {
