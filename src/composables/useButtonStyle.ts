@@ -36,7 +36,8 @@ export function useButtonStyle() {
   });
 
   const buttonStyle = (show: boolean, key: string) => {
-    const isDisabled = key === "pomodoro" && timerStore.isActive;
+    // const isDisabled = key === "pomodoro" && timerStore.isActive; 不再区别disabled
+    const isDisabled = false;
     const isOntop = key === "ontop";
 
     return {
