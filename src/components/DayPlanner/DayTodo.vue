@@ -24,7 +24,7 @@
       <thead>
         <tr>
           <th class="col-check">
-            <n-button text type="info" @click.stop="handleQuickAddTodo" title="快速新增待办" class="add-todo-button">
+            <n-button v-if="!isMobile" text type="info" @click.stop="handleQuickAddTodo" title="快速新增待办" class="add-todo-button">
               <template #icon>
                 <n-icon size="20">
                   <AddCircle24Regular />
@@ -80,7 +80,9 @@
             <!-- 表头操作：对选中行执行取消/退回，仅对进行中(ongoing)任务生效 -->
             <n-button
               class="cancel-button"
-              v-if="selectedTodo && selectedTodo.status !== 'done' && selectedTodo.status !== 'cancelled' && !selectedTodo.realPomo"
+              v-if="
+                selectedTodo && selectedTodo.status !== 'done' && selectedTodo.status !== 'cancelled' && !selectedTodo.realPomo && !isMobile
+              "
               text
               @click.stop="handleCancelSelectedTodo"
               title="取消选中任务，不退回活动清单"
@@ -98,7 +100,8 @@
                 selectedTodo.status !== 'done' &&
                 selectedTodo.status !== 'cancelled' &&
                 !selectedTodo.realPomo &&
-                !selectedTodo.startTime
+                !selectedTodo.startTime &&
+                !isMobile
               "
               text
               @click.stop="handleSuspendSelectedTodo"

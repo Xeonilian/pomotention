@@ -25,7 +25,14 @@
       <thead>
         <tr>
           <th class="col-check">
-            <n-button text type="info" @click.stop="handleQuickAddSchedule" title="快速新增日程" class="add-schedule-button">
+            <n-button
+              v-if="!isMobile"
+              text
+              type="info"
+              @click.stop="handleQuickAddSchedule"
+              title="快速新增日程"
+              class="add-schedule-button"
+            >
               <template #icon>
                 <n-icon size="20">
                   <CalendarAdd20Regular />
@@ -70,7 +77,7 @@
             <!-- 表头操作：对选中行执行取消，仅对未完成日程生效 -->
             <n-button
               class="cancel-button"
-              v-if="selectedSchedule && selectedSchedule.status !== 'done' && selectedSchedule.status !== 'cancelled'"
+              v-if="selectedSchedule && selectedSchedule.status !== 'done' && selectedSchedule.status !== 'cancelled' && !isMobile"
               text
               type="default"
               @click.stop="handleCancelSelectedSchedule"
