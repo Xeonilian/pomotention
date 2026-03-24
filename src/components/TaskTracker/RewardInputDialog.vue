@@ -15,7 +15,7 @@
         <n-text class="reward-value-text">当前愉悦值: {{ rewardValue }}</n-text>
         <n-button @click="showHelp = true">
           <template #icon>
-            <n-icon><Beach24Regular /></n-icon>
+            <n-icon><Trophy20Regular /></n-icon>
           </template>
         </n-button>
       </n-space>
@@ -36,7 +36,7 @@
 
 <script setup lang="ts">
 import { ref, computed, nextTick } from "vue";
-import { Beach24Regular } from "@vicons/fluent";
+import { Trophy20Regular } from "@vicons/fluent";
 import { NModal, NSlider, NSpace, NText, NButton, NIcon, NDataTable } from "naive-ui";
 import type { DataTableColumns } from "naive-ui";
 

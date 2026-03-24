@@ -18,26 +18,26 @@
           <n-icon color="var(--color-blue)"><Tag16Regular /></n-icon>
         </template>
       </n-button>
-      <n-button size="small" type="info" text @click="showEnergyDialog = true" :disabled="!taskId" title="能量记录">
+      <n-button size="small" type="info" secondary circle @click="showEnergyDialog = true" :disabled="!taskId" title="能量记录">
         <template #icon>
           <n-icon><BatterySaver20Regular /></n-icon>
         </template>
       </n-button>
-      <n-button size="small" type="info" text @click="showRewardDialog = true" :disabled="!taskId" title="奖赏记录">
+      <n-button size="small" type="info" secondary circle @click="showRewardDialog = true" :disabled="!taskId" title="奖赏记录">
         <template #icon>
           <n-icon><Trophy20Regular /></n-icon>
         </template>
       </n-button>
-      <n-button size="small" type="info" text @click="showInterruptionDialog = true" :disabled="!taskId" title="打扰记录">
+      <n-button size="small" type="info" secondary circle @click="showInterruptionDialog = true" :disabled="!taskId" title="打扰记录">
         <template #icon>
           <n-icon><CommentLightning20Regular /></n-icon>
         </template>
       </n-button>
 
       <!-- 模板管理按钮 -->
-      <n-button type="default" size="small" text :disabled="!taskId" @click="showTemplateDialog = true" title="模板管理">
+      <n-button type="default" size="small" secondary circle :disabled="!taskId" @click="showTemplateDialog = true" title="模板管理">
         <template #icon>
-          <n-icon><CalligraphyPen20Regular /></n-icon>
+          <n-icon><BookAdd20Regular /></n-icon>
         </template>
       </n-button>
     </template>
@@ -56,7 +56,8 @@
           <n-button
             size="small"
             type="info"
-            text
+            secondary
+            circle
             @click="handleCollapsedAction(() => (showEnergyDialog = true))"
             :disabled="!taskId"
             title="能量记录"
@@ -68,7 +69,8 @@
           <n-button
             size="small"
             type="info"
-            text
+            secondary
+            circle
             @click="handleCollapsedAction(() => (showRewardDialog = true))"
             :disabled="!taskId"
             title="奖赏记录"
@@ -80,7 +82,8 @@
           <n-button
             size="small"
             type="info"
-            text
+            secondary
+            circle
             @click="handleCollapsedAction(() => (showInterruptionDialog = true))"
             :disabled="!taskId"
             title="打扰记录"
@@ -92,13 +95,14 @@
           <n-button
             type="default"
             size="small"
-            text
+            secondary
+            circle
             :disabled="!taskId"
             @click="handleCollapsedAction(() => (showTemplateDialog = true))"
             title="模板管理"
           >
             <template #icon>
-              <n-icon><CalligraphyPen20Regular /></n-icon>
+              <n-icon><BookAdd20Regular /></n-icon>
             </template>
           </n-button>
         </div>
@@ -172,7 +176,8 @@ import {
   Trophy20Regular,
   CommentLightning20Regular,
   // CalendarAssistant20Regular,
-  CalligraphyPen20Regular,
+  // CalligraphyPen20Regular,
+  BookAdd20Regular,
   Star20Regular,
   Star20Filled,
   Tag16Regular,
@@ -331,7 +336,7 @@ function handleTagManagerClose() {
 <style scoped>
 .task-buttons {
   display: flex;
-  gap: 12px;
+  gap: 8px;
   justify-content: right;
   flex-shrink: 0;
   min-width: 0; /* 允许收缩 */

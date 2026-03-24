@@ -145,7 +145,7 @@ watch(
   () => timerStore.timeRemaining,
   () => {
     if (isRunning.value && progressContainer.value) {
-      updateProgressStatus(currentStep.value);
+      updateProgressStatus(resolveActiveStepIndex());
     }
   },
 );
@@ -194,10 +194,10 @@ function invokeSequencePhaseContinuation(): void {
   if (timerStore.pomodoroState === "working") {
     currentPomodoro.value++;
   }
-  updateProgressStatus(currentStep.value);
+  updateProgressStatus(resolveActiveStepIndex());
   currentStep.value++;
   timerStore.sequenceStepIndex = currentStep.value;
-  updateProgressStatus(currentStep.value);
+  updateProgressStatus(resolveActiveStepIndex());
   runStep(steps);
 }
 
@@ -229,7 +229,7 @@ function startPomodoroCircle(): void {
     statusLabel.value = `🍅 ${currentPomodoro.value}/${totalPomodoros.value}`;
     // 初始化进度条
     initializeProgress(sequenceInput.value);
-    updateProgressStatus(currentStep.value);
+    updateProgressStatus(resolveActiveStepIndex());
     bindSequenceContinuationToStore();
     // 仅由 runStep 启动当前步，避免重复 startWorking/startBreak（双提示音与双 interval 边缘问题）
     runStep(steps);
@@ -250,10 +250,11 @@ function runStep(steps: PomodoroStep[]): void {
   const onFinish = () => {
     if (!isRunning.value) return;
     // 更新当前步骤的进度条状态为已完成
-    updateProgressStatus(currentStep.value);
+    updateProgressStatus(resolveActiveStepIndex());
     currentStep.value++;
+    timerStore.sequenceStepIndex = currentStep.value;
     // 更新下一个步骤的进度条状态
-    updateProgressStatus(currentStep.value);
+    updateProgressStatus(resolveActiveStepIndex());
     runStep(steps);
   };
 
@@ -331,10 +332,69 @@ function createTimeBlock(duration: number, type: string, sequenceStr: string): H
   return block;
 }
 
+// 基于 store 状态解析当前正在执行的步骤索引（兼容不同 break 长度）
+function resolveActiveStepIndex(): number {
+  const sequenceSource = timerStore.sequenceInputSnapshot || sequenceInput.value;
+  let steps: PomodoroStep[] = [];
+  try {
+    steps = parseSequence(sequenceSource);
+  } catch {
+    return currentStep.value;
+  }
+  if (steps.length === 0) return currentStep.value;
+
+  const rawStoreIndex = Number.isFinite(timerStore.sequenceStepIndex) ? timerStore.sequenceStepIndex : currentStep.value;
+  const baseIndex = Math.min(Math.max(rawStoreIndex, 0), steps.length - 1);
+  const expectedType = timerStore.pomodoroState === "working" ? "work" : timerStore.pomodoroState === "breaking" ? "break" : null;
+  const expectedDurationSec = timerStore.totalTime;
+
+  // 优先用 sequenceStepIndex；若与当前阶段不一致，再按类型+时长兜底定位
+  if (
+    expectedType &&
+    steps[baseIndex] &&
+    steps[baseIndex].type === expectedType &&
+    steps[baseIndex].duration * 60 === expectedDurationSec
+  ) {
+    return baseIndex;
+  }
+
+  if (expectedType && expectedDurationSec > 0) {
+    for (let offset = 0; offset < steps.length; offset++) {
+      const left = baseIndex - offset;
+      const right = baseIndex + offset;
+      if (left >= 0 && steps[left].type === expectedType && steps[left].duration * 60 === expectedDurationSec) return left;
+      if (right < steps.length && steps[right].type === expectedType && steps[right].duration * 60 === expectedDurationSec) return right;
+    }
+  }
+
+  return Math.min(Math.max(currentStep.value, 0), steps.length - 1);
+}
+
+// 强制清除全部进度块动画（用于 phase 超时/序列结束兜底）
+function clearAllProgressAnimations(): void {
+  const blocks = progressContainer.value?.children;
+  if (!blocks) return;
+  Array.from(blocks).forEach((block) => {
+    const element = block as HTMLElement;
+    element.style.backgroundImage = "";
+    element.style.animation = "none";
+  });
+}
+
 // 更新进度状态函数
 function updateProgressStatus(currentStep: number): void {
   const blocks = progressContainer.value?.children;
   if (!blocks) return;
+  const totalBlocks = blocks.length;
+
+  // 只要当前 phase 已超时，先清空所有动画，避免出现残留斜纹
+  if (timerStore.timeRemaining <= 0) {
+    clearAllProgressAnimations();
+  }
+  // 索引越界视为序列结束：全部块都不应再有动画
+  if (currentStep >= totalBlocks) {
+    clearAllProgressAnimations();
+  }
 
   Array.from(blocks).forEach((block, index) => {
     const element = block as HTMLElement;
@@ -352,6 +412,8 @@ function updateProgressStatus(currentStep: number): void {
       element.style.backgroundColor = element.classList.contains("work") ? "var(--color-red)" : "var(--color-green)";
     } else {
       // 未开始的块
+      element.style.backgroundImage = "";
+      element.style.animation = "none";
       element.style.backgroundColor = element.classList.contains("work") ? "var(--color-red-light)" : "var(--color-green-light)";
     }
   });
@@ -466,7 +528,7 @@ onMounted(() => {
     totalPomodoros.value = steps.filter((step) => step.type === "work").length;
     currentPomodoro.value = steps.slice(0, currentStep.value).filter((step) => step.type === "work").length + 1;
 
-    updateProgressStatus(currentStep.value);
+    updateProgressStatus(resolveActiveStepIndex());
 
     bindSequenceContinuationToStore();
     timerStore.flushPendingSequenceFinalize();

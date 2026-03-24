@@ -17,8 +17,14 @@ export const TimerStyleDefaults = {
 
 export const CategoryColors = {
   living: "var(--color-background-light-transparent)",
-  sleeping: "var(--color-background-light)",
+  sleeping: "var(--color-background)",
   working: "var(--color-background)",
+} as const;
+
+export const CategoryColorsDark = {
+  living: "var(--color-background-light)",
+  sleeping: "var(--color-background)",
+  working: "var(--color-background-light)",
 } as const;
 
 export type CategoryColorKey = keyof typeof CategoryColors;
@@ -43,6 +49,16 @@ export const STORAGE_KEYS = {
 export const WORK_BLOCKS: Block[] = [
   {
     id: 1,
+    category: "sleeping",
+    start: "05:00",
+    end: "06:00",
+    type: "work",
+    synced: false,
+    deleted: false,
+    lastModified: Date.now(),
+  },
+  {
+    id: 2,
     category: "living",
     start: "06:00",
     end: "09:00",
@@ -52,7 +68,7 @@ export const WORK_BLOCKS: Block[] = [
     lastModified: Date.now(),
   },
   {
-    id: 2,
+    id: 3,
     category: "working",
     start: "09:00",
     end: "12:00",
@@ -62,7 +78,7 @@ export const WORK_BLOCKS: Block[] = [
     lastModified: Date.now(),
   },
   {
-    id: 3,
+    id: 4,
     category: "living",
     start: "12:00",
     end: "13:00",
@@ -72,7 +88,7 @@ export const WORK_BLOCKS: Block[] = [
     lastModified: Date.now(),
   },
   {
-    id: 4,
+    id: 5,
     category: "working",
     start: "13:00",
     end: "15:00",
@@ -82,7 +98,7 @@ export const WORK_BLOCKS: Block[] = [
     lastModified: Date.now(),
   },
   {
-    id: 5,
+    id: 6,
     category: "living",
     start: "15:00",
     end: "15:15",
@@ -92,7 +108,7 @@ export const WORK_BLOCKS: Block[] = [
     lastModified: Date.now(),
   },
   {
-    id: 6,
+    id: 7,
     category: "working",
     start: "15:15",
     end: "17:40",
@@ -102,7 +118,7 @@ export const WORK_BLOCKS: Block[] = [
     lastModified: Date.now(),
   },
   {
-    id: 7,
+    id: 8,
     category: "living",
     start: "17:40",
     end: "18:10",
@@ -112,7 +128,7 @@ export const WORK_BLOCKS: Block[] = [
     lastModified: Date.now(),
   },
   {
-    id: 8,
+    id: 9,
     category: "working",
     start: "18:10",
     end: "19:40",
@@ -122,7 +138,7 @@ export const WORK_BLOCKS: Block[] = [
     lastModified: Date.now(),
   },
   {
-    id: 9,
+    id: 10,
     category: "living",
     start: "19:40",
     end: "20:00",
@@ -132,7 +148,7 @@ export const WORK_BLOCKS: Block[] = [
     lastModified: Date.now(),
   },
   {
-    id: 10,
+    id: 11,
     category: "working",
     start: "20:00",
     end: "22:00",
@@ -142,7 +158,7 @@ export const WORK_BLOCKS: Block[] = [
     lastModified: Date.now(),
   },
   {
-    id: 11,
+    id: 12,
     category: "living",
     start: "22:00",
     end: "23:00",
@@ -153,7 +169,7 @@ export const WORK_BLOCKS: Block[] = [
   },
 
   {
-    id: 12,
+    id: 13,
     category: "sleeping",
     start: "23:00",
     end: "24:00",

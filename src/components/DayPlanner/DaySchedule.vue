@@ -866,7 +866,7 @@ thead th {
   overflow: hidden;
   height: 20px;
   font-weight: 400;
-  border-bottom: 2px solid var(--color-background-dark);
+  border-bottom: 1px solid var(--color-background-dark);
   color: var(--color-text-primary);
   background-color: var(--color-background) !important;
   line-height: 1.3;
@@ -949,7 +949,6 @@ tr.empty-row {
   text-align: center;
   color: var(--color-text-secondary);
   width: 100%;
-  border-bottom: 1px solid var(--color-background);
 }
 
 /* 表格内容样式 */
@@ -961,7 +960,6 @@ tbody td {
   height: 28px;
   line-height: 18px;
   padding: 2px 0px;
-  border-bottom: 1px solid var(--color-background-dark);
 }
 
 td.col-check {
@@ -978,6 +976,7 @@ td:nth-child(4) {
 td:nth-child(7) {
   min-height: 25px;
   height: 25px;
+  border-bottom: none;
 }
 
 th.status-col,
