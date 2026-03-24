@@ -143,3 +143,11 @@ git merge main          # 把 main 上多出来的提交并进 dev，可能有�
 git checkout main
 git reset --hard origin/main
 ```
+
+### 查看HEAD
+
+```bash
+git symbolic-ref HEAD
+git rev-parse --abbrev-ref HEAD
+git branch --show-current
+```
