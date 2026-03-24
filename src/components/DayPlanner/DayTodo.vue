@@ -666,6 +666,7 @@ const sortedTodos = computed(() => {
 });
 
 function openRankPopoverIfActive(todo: Todo) {
+  handleRowClick(todo);
   if (todo.status === "done" || todo.status === "cancelled") return;
   // 立刻打开弹窗
   rankPopoverTodoId.value = todo.id;
@@ -815,6 +816,8 @@ function relayoutPriority(todos: Todo[], current: Todo, desired: number) {
 // ===================================
 // 更新打钩状态
 function handleCheckboxChange(id: number, checked: boolean) {
+  const todo = todosForCurrentViewWithTaskRecords.value.find((t) => t.id === id);
+  if (todo) handleRowClick(todo);
   emit("update-todo-status", id, checked);
 }
 
@@ -930,6 +933,8 @@ function handleQuickAddTodo() {
 function startEditing(todoId: number, field: "title" | "start" | "done") {
   const todo = todosForCurrentViewWithTaskRecords.value.find((t) => t.id === todoId);
   if (!todo) return;
+  // 与点击行一致：开始/结束等子格 @click.stop 不冒泡到 tr，在此补选行
+  handleRowClick(todo);
   editingRowId.value = todoId;
   editingField.value = field;
 

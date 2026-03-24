@@ -427,6 +427,8 @@ const selectedSchedule = computed(() =>
 );
 
 function handleCheckboxChange(id: number, checked: boolean) {
+  const schedule = schedulesForCurrentView.value.find((s) => s.id === id);
+  if (schedule) handleRowClick(schedule);
   emit("update-schedule-status", id, checked);
 }
 
@@ -517,6 +519,8 @@ function handleFillCurrentTimeEnd() {
 function startEditing(scheduleId: number, field: "title" | "start" | "done" | "duration" | "location") {
   const schedule = schedulesForCurrentView.value.find((s) => s.id === scheduleId);
   if (!schedule) return;
+  // 与点击行一致：开始/结束/时长等子格 @click.stop 不冒泡到 tr，在此补选行
+  handleRowClick(schedule);
   editingRowId.value = scheduleId;
   editingField.value = field;
   editingValue.value =
