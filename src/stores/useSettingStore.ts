@@ -3,6 +3,7 @@ import { defineStore } from "pinia";
 import { ref, watch } from "vue";
 import { STORAGE_KEYS } from "../core/constants";
 import { PomodoroDurations, TimerStyleDefaults, ViewType } from "../core/constants";
+import { getDefaultPriorityCategoryShowInRank } from "@/core/priorityCategories";
 import { ActivitySectionConfig } from "@/core/types/Activity";
 import { SoundType } from "@/core/sounds";
 import { AiProfile } from "@/core/types/AiProfile";
@@ -54,6 +55,8 @@ export interface GlobalSettings {
   };
   /** 排序列 7 个槽位绑定的 tag：priority -> tagId，用户双击表头在绑定弹层里设置 */
   priorityCategoryTagIds: Record<number, number>;
+  /** 各排序槽位是否在「排序」emoji 弹层中显示 */
+  priorityCategoryShowInRank: Record<number, boolean>;
   // 以后新增全局设置项就在这里补充
 }
 
@@ -102,6 +105,7 @@ const defaultSettings: GlobalSettings = {
   keepLocalDataAfterSignOut: false, // 默认不清除本地数据
   isCompactMode: false, // 默认不是紧凑模式
   priorityCategoryTagIds: {},
+  priorityCategoryShowInRank: getDefaultPriorityCategoryShowInRank(),
   ai: {
     activeId: 1,
     systemPrompt:

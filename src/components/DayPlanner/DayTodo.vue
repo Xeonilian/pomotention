@@ -221,7 +221,7 @@
                     1️⃣
                   </button>
                   <button
-                    v-for="cat in PRIORITY_CATEGORIES"
+                    v-for="cat in priorityCategoriesForRankPopover"
                     :key="cat.priority"
                     type="button"
                     class="rank-emoji-btn"
@@ -403,12 +403,20 @@
   >
     <div class="priority-binding-list">
       <div v-for="cat in PRIORITY_CATEGORIES" :key="cat.priority" class="priority-binding-row">
+        <n-checkbox
+          class="priority-binding-show"
+          :checked="priorityShowInRankDraft[cat.priority]"
+          @update:checked="(v: boolean) => setPriorityShowInRankDraft(cat.priority, v)"
+          title="是否在排序弹层中显示该 emoji"
+        />
         <span class="priority-binding-emoji">{{ cat.emoji }}</span>
         <n-select
           v-model:value="priorityBindingDraft[cat.priority]"
           :options="tagOptionsForBinding"
           placeholder="选择标签"
           clearable
+          filterable
+          :filter="filterTagOptionsPrefix"
           size="small"
           style="flex: 1; min-width: 120px"
           :render-label="renderTagOptionLabel"
@@ -421,7 +429,12 @@
 <script setup lang="ts">
 import type { Todo, TodoWithTaskRecords } from "@/core/types/Todo";
 import { timestampToTimeString } from "@/core/utils";
-import { PRIORITY_CATEGORIES, SPECIAL_PRIORITIES, getEmojiForPriority } from "@/core/priorityCategories";
+import {
+  PRIORITY_CATEGORIES,
+  SPECIAL_PRIORITIES,
+  getDefaultPriorityCategoryShowInRank,
+  getEmojiForPriority,
+} from "@/core/priorityCategories";
 import {
   ChevronCircleRight48Regular,
   DismissCircle20Regular,
@@ -558,6 +571,7 @@ onBeforeUnmount(() => {
   if (rankPopoverOutsideCleanup) rankPopoverOutsideCleanup();
 });
 const priorityBindingDraft = reactive<Record<number, number | null>>({});
+const priorityShowInRankDraft = reactive<Record<number, boolean>>({});
 const rankHeaderTitle = computed(
   () => "Emoji：" + PRIORITY_CATEGORIES.map((c) => `${c.priority}=${c.emoji}`).join(" ") + "；单击打开绑定标签",
 );
@@ -569,6 +583,24 @@ const tagOptionsForBinding = computed<SelectOption[]>(() =>
 );
 function renderTagOptionLabel(option: SelectOption) {
   return option.label as string;
+}
+/** 标签下拉：不区分大小写，按名称前缀过滤 */
+function filterTagOptionsPrefix(pattern: string, option: SelectOption) {
+  const label = String(option.label ?? "");
+  if (!pattern.trim()) return true;
+  return label.toLowerCase().startsWith(pattern.toLowerCase());
+}
+/** 排序「排序」弹层里要展示的 emoji 槽位（受勾选设置） */
+const priorityCategoriesForRankPopover = computed(() => {
+  const defaults = getDefaultPriorityCategoryShowInRank();
+  const saved = settingStore.settings.priorityCategoryShowInRank;
+  return PRIORITY_CATEGORIES.filter((c) => {
+    const v = saved[c.priority];
+    return v !== undefined ? v : defaults[c.priority];
+  });
+});
+function setPriorityShowInRankDraft(priority: number, v: boolean) {
+  priorityShowInRankDraft[priority] = v;
 }
 
 // 根据设备类型格式化时间显示，移动端去掉冒号
@@ -586,6 +618,13 @@ function openPriorityBindingModal() {
   Object.keys(saved).forEach((k) => {
     priorityBindingDraft[Number(k)] = saved[Number(k)];
   });
+  Object.keys(priorityShowInRankDraft).forEach((k) => delete priorityShowInRankDraft[Number(k)]);
+  const defShow = getDefaultPriorityCategoryShowInRank();
+  const savedShow = settingStore.settings.priorityCategoryShowInRank;
+  for (const c of PRIORITY_CATEGORIES) {
+    const p = c.priority;
+    priorityShowInRankDraft[p] = savedShow[p] !== undefined ? savedShow[p]! : defShow[p]!;
+  }
   showPriorityBindingModal.value = true;
 }
 function clearPriorityBinding(priority: number) {
@@ -597,6 +636,13 @@ function savePriorityBinding() {
     if (typeof tagId === "number") ids[Number(p)] = tagId;
   });
   settingStore.settings.priorityCategoryTagIds = ids;
+  const show: Record<number, boolean> = {};
+  const defShow = getDefaultPriorityCategoryShowInRank();
+  for (const c of PRIORITY_CATEGORIES) {
+    const p = c.priority;
+    show[p] = priorityShowInRankDraft[p] !== undefined ? priorityShowInRankDraft[p]! : defShow[p]!;
+  }
+  settingStore.settings.priorityCategoryShowInRank = show;
 }
 
 // 定义 Emit
@@ -1789,6 +1835,9 @@ td.col-check {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+.priority-binding-show {
+  flex-shrink: 0;
 }
 .priority-binding-emoji {
   font-size: 20px;
