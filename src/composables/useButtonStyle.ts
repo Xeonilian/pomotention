@@ -1,5 +1,5 @@
 // composables/useButtonStyle.ts
-import { useTimerStore } from "@/stores/useTimerStore";
+// import { useTimerStore } from "@/stores/useTimerStore";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { ref, computed, watch } from "vue";
 import { isTauri } from "@tauri-apps/api/core";
