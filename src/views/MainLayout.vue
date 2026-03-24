@@ -139,8 +139,8 @@
                 </n-icon>
               </div>
               <div class="sync-status__info">
-                <span class="sync-status__message">{{ syncStore.syncMessage }}</span>
-                <span v-if="syncStore.lastSyncTimestamp" class="sync-status__time">{{ relativeTime }}</span>
+                <!-- <span class="sync-status__message">{{ syncStore.syncMessage }}</span>
+                <span v-if="syncStore.lastSyncTimestamp" class="sync-status__time">{{ relativeTime }}</span> -->
                 <n-tag
                   v-if="dataStore.hasUnsyncedData"
                   type="default"
@@ -260,7 +260,7 @@ if (!settingStore.settings.showPomodoro) {
   console.log("Refs error prevent:", PomotentionTimerContainerRef.value, draggableContainer.value);
 }
 const syncStore = useSyncStore();
-const { syncIcon, relativeTime, handleUpload, handleDownload } = useSyncWidget();
+const { syncIcon, handleUpload, handleDownload } = useSyncWidget(); //relativeTime,
 const { isLoggedIn } = storeToRefs(syncStore);
 const { isMobile } = useDevice();
 
