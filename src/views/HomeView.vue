@@ -282,7 +282,7 @@
       <!-- 任务视图 -->
       <div v-if="settingStore.settings.showTask" class="middle-bottom">
         <div class="task-container">
-          <TaskTracker />
+          <TaskTracker @task-record-editing="setTaskRecordEditing" />
         </div>
       </div>
     </div>
@@ -312,6 +312,12 @@
       <AIChatDialog />
     </div>
   </div>
+  <MobileHomeFab
+    v-if="isMobile"
+    :task-record-editing="taskRecordEditing"
+    :show-back-to-today="fabShowBackToToday"
+    :show-row-actions="fabShowRowActions"
+  />
   <!-- 错误提示弹窗 -->
   <n-popover v-model:show="showPopover" trigger="manual" placement="top-end" style="width: 200px">
     <template #trigger>
@@ -334,6 +340,7 @@ import { getTimestampForTimeString } from "@/core/utils";
 import { ViewType } from "@/core/constants";
 import { useResize } from "@/composables/useResize";
 import IcsExportModal from "@/components/IcsExportModal.vue";
+import MobileHomeFab from "@/components/MobileHomeFab/MobileHomeFab.vue";
 import {
   CalendarSettings20Regular,
   QrCode24Regular,
@@ -384,6 +391,8 @@ const homeTagFilterBtnRef = ref<HTMLElement | null>(null);
 const queryDate = ref<number | null>(null);
 const showPopover = ref(false);
 const popoverMessage = ref("");
+/** TaskRecord 编辑中：隐藏移动端 FAB */
+const taskRecordEditing = ref(false);
 
 // 使用 storeToRefs 获取状态和计算属性
 const {
@@ -419,6 +428,10 @@ const { currentDatePomoCount, globalRealPomo } = usePomodoroStats();
 
 // 计算当前日期 不赋值在UI计算class就会失效，但是UI输出的值是正确的
 const isViewDateToday = computed(() => dateService.isViewDateToday);
+
+/** 移动端 FAB：无选中且非今日 →「回到当下」；有选中行 → cancel/suspend/delete 占位 */
+const fabShowBackToToday = computed(() => selectedRowId.value === null && !isViewDateToday.value);
+const fabShowRowActions = computed(() => selectedRowId.value !== null);
 const isViewDateYesterday = computed(() => dateService.isViewDateYesterday);
 const isViewDateTomorrow = computed(() => dateService.isViewDateTomorrow);
 const appDateTimestamp = computed(() => dateService.appDateTimestamp);
@@ -512,6 +525,10 @@ window.addEventListener("beforeunload", () => {
     saveAllDebounced.flush();
   } catch {}
 });
+
+function setTaskRecordEditing(v: boolean) {
+  taskRecordEditing.value = v;
+}
 
 /**  显示错误提示弹窗 */
 function showErrorPopover(message: string) {
