@@ -697,11 +697,7 @@ const handleClick = (event: MouseEvent) => {
 
 @media (max-width: 430px) {
   .task-textarea {
-    border-radius: 6px;
-    padding: 4px 6px;
-  }
-  .markdown-content {
-    padding: 0px 6px;
+    width: calc(100% - 8px);
   }
 }
 </style>
