@@ -160,7 +160,7 @@ watch(
 
 // 解析序列
 function parseSequence(sequence: string): PomodoroStep[] {
-  const validBreakTimes = ["02", "05", "15", "30"];
+  const validBreakTimes = ["01", "02", "05", "10", "15", "30", "60"];
   const firstStepMatch = sequence.match(/🍅|\d+/);
   if (!firstStepMatch) return [];
 
@@ -307,9 +307,9 @@ watch(
 // 添加番茄钟序列
 function addPomodoro(): void {
   if (sequenceInput.value.trim() === "") {
-    sequenceInput.value = "🍅+05";
+    sequenceInput.value = "🍅" + settingStore.settings.durations.breakDuration.toString().padStart(2, "0");
   } else {
-    sequenceInput.value += "+🍅+05";
+    sequenceInput.value += "+🍅+" + settingStore.settings.durations.breakDuration.toString().padStart(2, "0");
   }
 }
 
