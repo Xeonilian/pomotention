@@ -670,7 +670,7 @@ function onQuickAddTodo() {
 }
 
 // 快速新增日程
-function onQuickAddSchedule() {
+function onQuickAddSchedule(isUntaetigkeit: boolean) {
   const newActivity: Activity = {
     id: Date.now(),
     class: "S",
@@ -680,6 +680,7 @@ function onQuickAddSchedule() {
     status: "",
     dueRange: [isViewDateToday.value ? Date.now() : dateService.combineDateAndTime(appDateTimestamp.value, Date.now()), "30"], // 使用当前视图日期
     parentId: null,
+    isUntaetigkeit: isUntaetigkeit,
     synced: false,
     deleted: false,
     lastModified: Date.now(),
@@ -697,9 +698,14 @@ function onQuickAddSchedule() {
 
   // 创建新的 schedule，使用 appDateTimestamp（选中的日期）
   if (newActivity.class === "S") {
-    handleAddActivity(scheduleList.value, newActivity, { activityById: activityById.value });
+    const newSchedule = handleAddActivity(scheduleList.value, newActivity, { activityById: activityById.value });
+    if (newSchedule) {
+      selectedRowId.value = newSchedule.id;
+    }
   }
 
+  selectedActivityId.value = newActivity.id;
+  activeId.value = newActivity.id;
   saveAllDebounced();
 }
 

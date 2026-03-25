@@ -21,12 +21,12 @@
               <n-icon :component="AddCircle24Regular" />
             </template>
           </n-button>
-          <n-button size="large" secondary circle type="info" @click="emit('quick-add-schedule')">
+          <n-button size="large" secondary circle type="info" @click="emit('quick-add-schedule', false)">
             <template #icon>
               <n-icon :component="CalendarAdd24Regular" />
             </template>
           </n-button>
-          <n-button size="large" secondary circle type="info" @click="emitAddUntaetigkeit">
+          <n-button size="large" secondary circle type="info" @click="emit('quick-add-schedule', true)">
             <template #icon>
               <n-icon :component="CloudAdd20Regular" />
             </template>
@@ -50,10 +50,11 @@
         </template>
         <div class="mobile-home-fab__up">
           <n-button v-if="showBackToToday" secondary circle type="info" size="large" @click="emit('reset-to-present')">
-            <template #icon><n-icon :component="AnimalTurtle24Regular" /></template>
+            <template #icon><n-icon size="22" :component="AnimalTurtle24Regular" /></template>
           </n-button>
           <template v-if="showRowActions">
             <n-button
+              v-if="!showActivityPanel"
               class="mobile-home-fab__cancel-button"
               size="large"
               secondary
@@ -68,12 +69,14 @@
               </template>
             </n-button>
             <n-button
+              v-if="!showActivityPanel"
               class="mobile-home-fab__suspend-button"
               size="large"
               secondary
               circle
               @click.stop="emit('suspend-planner-row')"
               title="撤销选中任务，退回活动清单"
+              :disabled="isSelectedRowDone"
             >
               <template #icon>
                 <n-icon size="20">
@@ -82,6 +85,7 @@
               </template>
             </n-button>
             <n-button
+              v-if="showActivityPanel"
               @click="handlePickActivity"
               :disabled="activeId === undefined || isDeleted || isSelectedRowDone"
               circle
@@ -96,7 +100,7 @@
             </n-button>
 
             <n-button
-              v-if="!hasParent && !selectedRowHasParent"
+              v-if="showActivityPanel && !selectedRowHasParent"
               secondary
               circle
               type="default"
@@ -110,7 +114,7 @@
               </template>
             </n-button>
             <n-button
-              v-else
+              v-if="showActivityPanel && !selectedRowHasParent"
               secondary
               type="success"
               circle
@@ -173,6 +177,7 @@ import {
 import type { Activity } from "@/core/types/Activity";
 import { timestampToDatetime } from "@/core/utils";
 import { useDataStore } from "@/stores/useDataStore";
+import { useSettingStore } from "@/stores/useSettingStore";
 
 const emit = defineEmits<{
   (e: "notify", message: string): void;
@@ -182,8 +187,7 @@ const emit = defineEmits<{
   (e: "create-child-activity", id: number | null | undefined): void;
   (e: "increase-child-activity", id: number | null | undefined): void;
   (e: "quick-add-todo"): void;
-  (e: "quick-add-schedule"): void;
-  (e: "add-activity", activity: Activity): void;
+  (e: "quick-add-schedule", isUntaetigkeit: boolean): void;
   (e: "reset-to-present"): void;
   (e: "cancel-planner-row"): void;
   (e: "suspend-planner-row"): void;
@@ -194,6 +198,7 @@ const props = defineProps<{
   taskRecordEditing: boolean;
 }>();
 const { taskRecordEditing } = toRefs(props);
+const settingStore = useSettingStore();
 
 const dataStore = useDataStore();
 const { activeId, selectedActivityId, selectedRowId, isSelectedRowDone, selectedRowHasParent, selectedActivity } = storeToRefs(dataStore);
@@ -201,28 +206,13 @@ const { activityById, todoByActivityId, scheduleByActivityId } = storeToRefs(dat
 const dateService = dataStore.dateService;
 
 const isDeleted = computed(() => selectedActivity.value?.deleted ?? false);
-const hasParent = computed(() => selectedActivity.value?.parentId ?? null);
 const isSelectedClassS = computed(() => selectedActivity.value?.class === "S");
 
 /** 与 ActivitySheet 一致：无选中且非今日 →「回到当下」 */
-const showBackToToday = computed(() => selectedRowId.value === null && !dateService.isViewDateToday);
-const showRowActions = computed(() => selectedRowId.value !== null);
+const showBackToToday = computed(() => !dateService.isViewDateToday);
+const showRowActions = computed(() => selectedRowId.value !== null || activeId.value !== null);
 const showUpPopover = computed(() => showBackToToday.value || showRowActions.value);
-
-function emitAddUntaetigkeit() {
-  emit("add-activity", {
-    id: Date.now(),
-    class: "S",
-    title: "",
-    dueRange: [Date.now(), "30"],
-    status: "",
-    isUntaetigkeit: true,
-    parentId: null,
-    synced: false,
-    deleted: false,
-    lastModified: Date.now(),
-  });
-}
+const showActivityPanel = computed(() => settingStore.settings.showActivity);
 
 /** 与 ActivitySheet.pickActivity 一致 */
 function handlePickActivity() {
