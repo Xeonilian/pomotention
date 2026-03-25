@@ -137,7 +137,7 @@
             <n-button
               title="重复活动"
               v-if="!isMobile"
-              @click="onRepeatActivity"
+              @click="onRepeatActivity(false)"
               text
               type="info"
               size="small"
@@ -814,7 +814,7 @@ function handleTogglePomoTypeTodoId(id: number | null | undefined) {
 }
 
 /** 重复当前的活动 */
-function onRepeatActivity() {
+function onRepeatActivity(noTodoRepeat: boolean) {
   if (selectedRowId.value == null && activeId.value == null) return;
   if (selectedRowId.value != null) {
     // 找到对应的 todo 或 schedule
@@ -856,7 +856,7 @@ function onRepeatActivity() {
     newActivity.lastModified = Date.now();
 
     // 创建新的 todo，使用 appDateTimestamp（选中的日期）
-    if (newActivity.class === "T") {
+    if (newActivity.class === "T" && !noTodoRepeat) {
       newActivity.status = "ongoing";
       newActivity.dueDate = appDateTimestamp.value;
       newActivity.synced = false;
@@ -864,6 +864,7 @@ function onRepeatActivity() {
       const { newTodo } = passPickedActivity(newActivity, appDateTimestamp.value, isViewDateToday.value);
       newTodo.taskId = task.id; // 关联 task
       todoList.value = [...todoList.value, newTodo];
+      selectedRowId.value = noTodoRepeat ? null : newTodo.id;
     } else {
       handleAddActivity(scheduleList.value, newActivity, { activityById: activityById.value });
     }
@@ -924,6 +925,7 @@ function onCreateChildActivity(id: number | null | undefined) {
     newActivity.synced = false;
     newActivity.lastModified = Date.now();
     activeId.value = newActivity.id;
+    selectedActivityId.value = newActivity.id;
   }
   saveAllDebounced();
 }

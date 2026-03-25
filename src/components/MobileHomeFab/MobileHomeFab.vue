@@ -88,7 +88,7 @@
                 type="default"
                 size="large"
                 title="生成子活动"
-                :disabled="activeId === null || isSelectedRowDone || isSelectedClassS || isDeleted"
+                :disabled="isSelectedRowDone || isSelectedClassS || isDeleted || noSelectedActivity"
                 @click="emit('create-child-activity', activeId ?? selectedActivityId ?? null)"
               >
                 <template #icon>
@@ -117,7 +117,7 @@
               secondary
               :type="isDeleted ? 'error' : 'default'"
               size="large"
-              :disabled="isSelectedRowDone"
+              :disabled="isSelectedRowDone || noSelectedActivity"
             >
               <template #icon>
                 <n-icon>
@@ -129,12 +129,12 @@
           </template>
           <n-button
             title="重复活动"
-            @click="emit('repeat-activity')"
+            @click="emit('repeat-activity', showActivityPanel)"
             circle
             secondary
             type="default"
             size="large"
-            :disabled="selectedRowId === null && activeId === null"
+            :disabled="noSelectedActivity"
           >
             <template #icon>
               <n-icon><ArrowRepeatAll24Regular /></n-icon>
@@ -189,7 +189,7 @@ const emit = defineEmits<{
   (e: "quick-add-schedule", isUntaetigkeit: boolean): void;
   (e: "reset-to-present"): void;
   (e: "suspend-planner-row"): void;
-  (e: "repeat-activity"): void;
+  (e: "repeat-activity", noTodoRepeat: boolean): void;
 }>();
 
 const props = defineProps<{
@@ -213,6 +213,7 @@ const showBackToToday = computed(() => !dateService.isViewDateToday);
 const showRowActions = computed(() => selectedRowId.value !== null || activeId.value !== null);
 const showUpPopover = computed(() => showBackToToday.value || showRowActions.value);
 const showActivityPanel = computed(() => settingStore.settings.showActivity);
+const noSelectedActivity = computed(() => selectedRowId.value == null && selectedActivityId.value == null);
 
 /** 与 ActivitySheet.pickActivity 一致 */
 function handlePickActivity() {
