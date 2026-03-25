@@ -137,7 +137,7 @@
             <n-button
               title="重复活动"
               v-if="!isMobile"
-              @click="onRepeatActivity"
+              @click="onRepeatActivity(false)"
               text
               type="info"
               size="small"
@@ -282,7 +282,7 @@
       <!-- 任务视图 -->
       <div v-if="settingStore.settings.showTask" class="middle-bottom">
         <div class="task-container">
-          <TaskTracker />
+          <TaskTracker @task-record-editing="setTaskRecordEditing" />
         </div>
       </div>
     </div>
@@ -312,6 +312,23 @@
       <AIChatDialog />
     </div>
   </div>
+  <MobileHomeFab
+    v-if="isMobile"
+    :task-record-editing="taskRecordEditing"
+    @notify="showErrorPopover"
+    @update-active-id="onUpdateActiveId"
+    @pick-activity="onPickActivity"
+    @delete-activity="onDeleteActivity"
+    @create-child-activity="onCreateChildActivity"
+    @increase-child-activity="onIncreaseChildActivity"
+    @quick-add-todo="onQuickAddTodo"
+    @quick-add-schedule="onQuickAddSchedule"
+    @add-activity="onAddActivity"
+    @reset-to-present="onMobileFabResetToPresent"
+    @cancel-planner-row="onMobileFabCancelPlannerRow"
+    @suspend-planner-row="onMobileFabSuspendPlannerRow"
+    @repeat-activity="onRepeatActivity"
+  />
   <!-- 错误提示弹窗 -->
   <n-popover v-model:show="showPopover" trigger="manual" placement="top-end" style="width: 200px">
     <template #trigger>
@@ -334,6 +351,7 @@ import { getTimestampForTimeString } from "@/core/utils";
 import { ViewType } from "@/core/constants";
 import { useResize } from "@/composables/useResize";
 import IcsExportModal from "@/components/IcsExportModal.vue";
+import MobileHomeFab from "@/components/MobileHomeFab/MobileHomeFab.vue";
 import {
   CalendarSettings20Regular,
   QrCode24Regular,
@@ -384,6 +402,11 @@ const homeTagFilterBtnRef = ref<HTMLElement | null>(null);
 const queryDate = ref<number | null>(null);
 const showPopover = ref(false);
 const popoverMessage = ref("");
+/** TaskRecord 编辑中：供移动端 FAB 隐藏等 */
+const taskRecordEditing = ref(false);
+function setTaskRecordEditing(v: boolean) {
+  taskRecordEditing.value = v;
+}
 
 // 使用 storeToRefs 获取状态和计算属性
 const {
@@ -419,6 +442,7 @@ const { currentDatePomoCount, globalRealPomo } = usePomodoroStats();
 
 // 计算当前日期 不赋值在UI计算class就会失效，但是UI输出的值是正确的
 const isViewDateToday = computed(() => dateService.isViewDateToday);
+
 const isViewDateYesterday = computed(() => dateService.isViewDateYesterday);
 const isViewDateTomorrow = computed(() => dateService.isViewDateTomorrow);
 const appDateTimestamp = computed(() => dateService.appDateTimestamp);
@@ -647,7 +671,7 @@ function onQuickAddTodo() {
 }
 
 // 快速新增日程
-function onQuickAddSchedule() {
+function onQuickAddSchedule(isUntaetigkeit: boolean) {
   const newActivity: Activity = {
     id: Date.now(),
     class: "S",
@@ -657,6 +681,7 @@ function onQuickAddSchedule() {
     status: "",
     dueRange: [isViewDateToday.value ? Date.now() : dateService.combineDateAndTime(appDateTimestamp.value, Date.now()), "30"], // 使用当前视图日期
     parentId: null,
+    isUntaetigkeit: isUntaetigkeit,
     synced: false,
     deleted: false,
     lastModified: Date.now(),
@@ -674,9 +699,15 @@ function onQuickAddSchedule() {
 
   // 创建新的 schedule，使用 appDateTimestamp（选中的日期）
   if (newActivity.class === "S") {
-    handleAddActivity(scheduleList.value, newActivity, { activityById: activityById.value });
+    const newSchedule = handleAddActivity(scheduleList.value, newActivity, { activityById: activityById.value });
+    if (newSchedule) {
+      selectedRowId.value = newSchedule.id;
+    }
   }
 
+  selectedActivityId.value = newActivity.id;
+  activeId.value = newActivity.id;
+  selectedTaskId.value = task.id;
   saveAllDebounced();
 }
 
@@ -725,6 +756,8 @@ function onDeleteActivity(id: number | null | undefined) {
 
     activeId.value = null;
     selectedTaskId.value = null;
+    selectedRowId.value = null;
+    selectedActivityId.value = null;
     saveAllDebounced();
   }
 }
@@ -735,6 +768,7 @@ function onPickActivity(activity: Activity) {
   const { newTodo } = passPickedActivity(activity, appDateTimestamp.value, isViewDateToday.value);
   todoList.value = [...todoList.value, newTodo];
   selectedActivityId.value = activity.id;
+  selectedRowId.value = newTodo.id;
   saveAllDebounced();
 }
 
@@ -742,12 +776,13 @@ function onPickActivity(activity: Activity) {
 function onUpdateActiveId(id: number | null | undefined) {
   activeId.value = id;
   selectedActivityId.value = null; // 避免多重高亮
-  selectedRowId.value = null; // 这个id是today里的
 
   const activity = id != null ? activityById.value.get(id) : undefined;
   const todo = id != null ? todoByActivityId.value.get(id) : undefined;
   const schedule = id != null ? scheduleByActivityId.value.get(id) : undefined;
 
+  // 与活动关联的 todo/schedule 行，与看板选中一致（无关联则为 null）
+  selectedRowId.value = todo?.id ?? schedule?.id ?? null;
   // 如果存在 taskId，就赋给 selectedTaskId，否则置空
   selectedTaskId.value = activity?.taskId || todo?.taskId || schedule?.taskId || null;
   // console.log("selectedTaskId.value", selectedTaskId.value);
@@ -779,7 +814,7 @@ function handleTogglePomoTypeTodoId(id: number | null | undefined) {
 }
 
 /** 重复当前的活动 */
-function onRepeatActivity() {
+function onRepeatActivity(noTodoRepeat: boolean) {
   if (selectedRowId.value == null && activeId.value == null) return;
   if (selectedRowId.value != null) {
     // 找到对应的 todo 或 schedule
@@ -821,7 +856,7 @@ function onRepeatActivity() {
     newActivity.lastModified = Date.now();
 
     // 创建新的 todo，使用 appDateTimestamp（选中的日期）
-    if (newActivity.class === "T") {
+    if (newActivity.class === "T" && !noTodoRepeat) {
       newActivity.status = "ongoing";
       newActivity.dueDate = appDateTimestamp.value;
       newActivity.synced = false;
@@ -829,6 +864,7 @@ function onRepeatActivity() {
       const { newTodo } = passPickedActivity(newActivity, appDateTimestamp.value, isViewDateToday.value);
       newTodo.taskId = task.id; // 关联 task
       todoList.value = [...todoList.value, newTodo];
+      selectedRowId.value = noTodoRepeat ? null : newTodo.id;
     } else {
       handleAddActivity(scheduleList.value, newActivity, { activityById: activityById.value });
     }
@@ -889,6 +925,7 @@ function onCreateChildActivity(id: number | null | undefined) {
     newActivity.synced = false;
     newActivity.lastModified = Date.now();
     activeId.value = newActivity.id;
+    selectedActivityId.value = newActivity.id;
   }
   saveAllDebounced();
 }
@@ -1118,6 +1155,35 @@ function onUncancelTodo(id: number) {
   }
 
   saveAllDebounced();
+}
+
+/** 移动端 FAB：回到当下（日期/日视图 + 清筛选；onDateSet('today') 已清选中） */
+function onMobileFabResetToPresent() {
+  dataStore.clearFilterTags();
+  settingStore.settings.viewSet = "day";
+  onDateSet("today");
+  settingStore.settings.topHeight = isMobile.value ? 305 : 300;
+  selectedTaskId.value = null;
+}
+
+/** 移动端 FAB：与 Day 表头 cancel 一致 */
+function onMobileFabCancelPlannerRow() {
+  const id = selectedRowId.value;
+  if (id == null) return;
+  if (todoById.value.has(id)) onCancelTodo(id);
+  else if (scheduleById.value.has(id)) onCancelSchedule(id);
+}
+
+/** 移动端 FAB：与 Day 表头 suspend 一致（仅 todo 行） */
+function onMobileFabSuspendPlannerRow() {
+  const id = selectedRowId.value;
+  if (id == null) return;
+  const todo = todoById.value.get(id);
+  if (todo) {
+    onSuspendTodo(todo.id);
+    activeId.value = todo?.activityId;
+    selectedActivityId.value = todo?.activityId;
+  }
 }
 
 /** Schedule 取消 */

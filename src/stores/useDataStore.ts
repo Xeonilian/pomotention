@@ -866,9 +866,18 @@ export const useDataStore = defineStore(
     let selectionSyncedFromDisplayStore = false;
     watch(
       () => displayStore.displayedTaskId,
-      (taskId: number | null) => {
-        if (taskId == null) return;
+      (taskId: number | null, prevTaskId: number | null | undefined) => {
         selectionSyncedFromDisplayStore = true;
+        if (taskId == null) {
+          // 仅从「当前有展示 task」离开到空位时同步 planner；避免持久化恢复时空位盖掉已有 selectedTaskId
+          if (prevTaskId != null && prevTaskId !== undefined) {
+            selectedTaskId.value = null;
+          }
+          nextTick(() => {
+            selectionSyncedFromDisplayStore = false;
+          });
+          return;
+        }
         selectedTaskId.value = taskId;
         const activityId = taskById.value.get(taskId)?.sourceId;
         if (activityId != null) {
@@ -889,8 +898,15 @@ export const useDataStore = defineStore(
     // 点击 Planner 行时把该 task 推入展示历史；immediate 保证初始/恢复持久化后 displayStore 也能接到当前选中
     watch(
       selectedTaskId,
-      (id) => {
-        if (selectionSyncedFromDisplayStore || id == null) return;
+      (id, prevId) => {
+        if (selectionSyncedFromDisplayStore) return;
+        if (id == null) {
+          // 首次 immediate 且 persist 里本就无 planner 选中时不强行改 Tracker 空位；有 task → 清空 时才落到空位
+          if (prevId != null && prevId !== undefined) {
+            displayStore.snapToEmptySlot();
+          }
+          return;
+        }
         displayStore.pushTaskId(id);
       },
       { immediate: true },

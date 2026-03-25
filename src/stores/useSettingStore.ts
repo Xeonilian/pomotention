@@ -3,6 +3,7 @@ import { defineStore } from "pinia";
 import { ref, watch } from "vue";
 import { STORAGE_KEYS } from "../core/constants";
 import { PomodoroDurations, TimerStyleDefaults, ViewType } from "../core/constants";
+import { getDefaultPriorityCategoryShowInRank } from "@/core/priorityCategories";
 import { ActivitySectionConfig } from "@/core/types/Activity";
 import { SoundType } from "@/core/sounds";
 import { AiProfile } from "@/core/types/AiProfile";
@@ -18,6 +19,8 @@ export interface GlobalSettings {
   miniModeRefactor: number;
   activityRank: Record<number, number>; // 活动排序：{activityId: rank}
   collapsedActivityIds: Record<number, boolean>; // 收起的活动父项 ID：{activityId: true}
+  /** 看板等活动行标签条：缺省显示，仅在为 false 时隐藏（按 activityId） */
+  activityRowTagStripVisible: Record<number, boolean>;
   kanbanSetting: ActivitySectionConfig[];
   showPomodoro: boolean;
   showSchedule: boolean;
@@ -54,6 +57,8 @@ export interface GlobalSettings {
   };
   /** 排序列 7 个槽位绑定的 tag：priority -> tagId，用户双击表头在绑定弹层里设置 */
   priorityCategoryTagIds: Record<number, number>;
+  /** 各排序槽位是否在「排序」emoji 弹层中显示 */
+  priorityCategoryShowInRank: Record<number, boolean>;
   // 以后新增全局设置项就在这里补充
 }
 
@@ -65,6 +70,7 @@ const defaultSettings: GlobalSettings = {
   miniModeRefactor: 1,
   activityRank: {}, // 默认空对象
   collapsedActivityIds: {}, // 默认全部展开
+  activityRowTagStripVisible: {}, // 默认每行标签条展开显示
   kanbanSetting: [
     { id: 1, filterKey: "all", search: "", show: true, showTags: true },
     { id: 2, filterKey: "today", search: "", show: false, showTags: false },
@@ -72,7 +78,7 @@ const defaultSettings: GlobalSettings = {
     { id: 4, filterKey: "todo", search: "", show: false, showTags: false },
     { id: 5, filterKey: "schedule", search: "", show: false, showTags: false },
     { id: 6, filterKey: "cancelled", search: "", show: false, showTags: false },
-  ],
+  ], // showTags 不再使用，仅在 ActivitySection.vue 中使用 rowTagStripVisible 替代
   showPomodoro: isMobile.value ? false : true,
   showSchedule: isMobile.value ? false : true,
   showPlanner: true,
@@ -102,6 +108,7 @@ const defaultSettings: GlobalSettings = {
   keepLocalDataAfterSignOut: false, // 默认不清除本地数据
   isCompactMode: false, // 默认不是紧凑模式
   priorityCategoryTagIds: {},
+  priorityCategoryShowInRank: getDefaultPriorityCategoryShowInRank(),
   ai: {
     activeId: 1,
     systemPrompt:

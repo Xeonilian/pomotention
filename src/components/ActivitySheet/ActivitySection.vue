@@ -6,6 +6,7 @@
     <!-- 筛选区 -->
     <div class="section-header">
       <n-input
+        ref="searchInputRef"
         :placeholder="currentFilterLabel"
         title="请输入筛选条件..."
         :value="props.search"
@@ -66,7 +67,8 @@
           class="activity-row"
           :data-row-id="item.id"
           :class="{
-            'highlight-line': item.id === activityId,
+            // Planner 用 selectedActivityId（activityId）；看板点击后 onUpdateActiveId 会清 activityId、只保留 activeId，需两者任一命中才能与选中态一致
+            'highlight-line': item.id === activityId || item.id === activeId,
             'is-dragging-row': dragHandler.draggedItem.value?.id === item.id,
           }"
         >
@@ -81,12 +83,16 @@
               v-model:value="item.title"
               :ref="(el) => setRowInputRef(el as InputInst | null, item.id)"
               type="text"
+              :readonly="isMobile && !titleEditAllowed[item.id]"
               :placeholder="item.isUntaetigkeit ? '无所事事' : '任务描述'"
               style="flex: 1"
               @input="handleTitleInput(item, $event)"
               @keydown="handleInputKeydown($event, item)"
-              @focus="handleNoFocus(item.id)"
-              @blur="handleBlur"
+              @focus="handleTitleInputFocus(item)"
+              @blur="handleTitleBlur(item)"
+              @touchstart.stop="handleTitleTouchStart($event, item)"
+              @touchend.stop="handleTitleTouchEnd($event, item)"
+              @touchcancel.stop="handleTitleTouchCancel(item)"
               :class="{
                 'force-hover': dragHandler.hoveredRowId.value === item.id,
                 'child-activity': item.parentId,
@@ -174,12 +180,14 @@
                 <n-icon
                   text
                   :color="item.tagIds ? 'var(--color-blue)' : 'var(--color-text-secondary)'"
-                  @click="handleTagIconClick()"
+                  class="icon-tag"
+                  title="显示/隐藏本行标签"
+                  @click.stop="handleTagIconClick(item)"
                   @pointerdown.stop
                   @mousedown.prevent.stop
                   @touchstart.stop
-                  class="icon-tag"
-                  title="显示/隐藏标签"
+                  @touchend.stop
+                  @touchcancel.stop
                 >
                   <Tag16Regular />
                 </n-icon>
@@ -219,7 +227,7 @@
               v-model:value="item.location"
               style="max-width: 50px"
               class="input-focus-none"
-              @focus="handleNoFocus(item.id)"
+              @focus="handleFocusRow(item.id)"
               @blur="handleBlur"
               placeholder="地点"
               :class="{ 'force-hover': dragHandler.hoveredRowId.value === item.id }"
@@ -248,8 +256,6 @@
               @blur="handleBlur"
               @mousedown.stop="(e: MouseEvent) => handlePomoInputMouseDown(e, item)"
               @touchstart.stop="(e: TouchEvent) => handlePomoInputTouchStart(e, item)"
-              @mouseup.stop="(e: MouseEvent) => handlePomoInputMouseUp(e, item)"
-              @mouseleave.stop="handlePomoInputMouseLeave(item)"
               @touchend.stop="(e: TouchEvent) => handlePomoInputTouchEnd(e, item)"
               @touchcancel.stop="handlePomoInputTouchCancel(item)"
               :class="{
@@ -271,7 +277,7 @@
                   item.lastModified = Date.now();
                 }
               "
-              @focus="handleNoFocus(item.id)"
+              @focus="handleFocusRow(item.id)"
               @blur="handleBlur"
               title="持续时间(分钟)"
               placeholder="min"
@@ -287,7 +293,7 @@
               clearable
               style="max-width: 63px"
               format="MM/dd"
-              @focus="handleNoFocus(item.id)"
+              @focus="handleFocusRow(item.id)"
               @blur="handleBlur"
               title="死线日期"
               :class="getCountdownClass(item.dueDate)"
@@ -314,7 +320,7 @@
               style="max-width: 63px"
               clearable
               format="HH:mm"
-              @focus="handleNoFocus(item.id)"
+              @focus="handleFocusRow(item.id)"
               @blur="handleBlur"
               title="约定时间"
               :class="getCountdownClass(item.dueRange && item.dueRange[0])"
@@ -325,7 +331,7 @@
 
           <!-- tag显示 -->
           <div
-            v-if="item.tagIds && item.tagIds.length > 0 && settingStore.settings.kanbanSetting[props.sectionId].showTags"
+            v-if="item.tagIds && item.tagIds.length > 0 && rowTagStripVisible[item.id] !== false"
             class="tag-content"
             :class="{ 'child-activity-tag': item.parentId }"
           >
@@ -354,7 +360,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, ref, onMounted } from "vue";
+import { computed, nextTick, ref, reactive } from "vue";
 import { NInput, NDatePicker, NIcon, NDropdown, NPopover, NButton } from "naive-ui";
 import {
   VideoPersonCall24Regular,
@@ -371,7 +377,6 @@ import type { Activity } from "@/core/types/Activity";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useActivityTagEditor } from "@/composables/useActivityTagEditor";
 import { useActivityDrag } from "@/composables/useActivityDrag";
-import { useLongPress } from "@/composables/useLongPress";
 import { useDevice } from "@/composables/useDevice";
 import { togglePomoType } from "@/services/activityService";
 import TagManager from "../TagSystem/TagManager.vue";
@@ -384,13 +389,15 @@ const props = defineProps<{
   displaySheet: Activity[];
   filterOptions: any[];
   getCountdownClass: (dueDate: number | undefined | null) => string;
+  /** Planner 等：selectedActivityId */
   activityId: number | null;
+  /** 看板当前选中活动的 id，与 activityId 择一或同时用于避免双重高亮时的展示 */
+  activeId?: number | null | undefined;
   currentFilter: string | null;
   isAddButton: boolean;
   isRemoveButton: boolean;
   sectionId: number;
   search: string;
-  activeId: number | null | undefined;
 }>();
 
 const emit = defineEmits<{
@@ -403,6 +410,16 @@ const emit = defineEmits<{
 }>();
 
 const isSearchFocused = ref(false);
+const searchInputRef = ref<InputInst | null>(null);
+
+// 失焦筛选框（移动端标题单击仅 emit focus-row 时 DOM 焦点常仍在筛选框，需单独处理）
+function blurSearchInput() {
+  isSearchFocused.value = false;
+  const inst = searchInputRef.value;
+  if (!inst) return;
+  if (typeof inst.blur === "function") inst.blur();
+  else inst.inputElRef?.blur?.();
+}
 
 // ======================== Composables ========================
 const { isTouchSupported } = useDevice();
@@ -410,6 +427,9 @@ const { isTouchSupported } = useDevice();
 // ======================== Stores ========================
 const settingStore = useSettingStore();
 const { isMobile } = useDevice();
+
+// 每行标签条是否显示：缺省为显示，仅在为 false 时隐藏；与 collapsedActivityIds 一样持久化到设置
+const rowTagStripVisible = computed(() => settingStore.settings.activityRowTagStripVisible);
 // 移动端进入编辑时暂存原 topHeight，退出时恢复
 const savedTopHeight = ref<number | null>(null);
 
@@ -460,40 +480,32 @@ const tagEditor = useActivityTagEditor();
 const dragHandler = useActivityDrag(() => sortedDisplaySheet.value);
 
 // ======================== 本地状态 ========================
-const noFocus = ref(false);
 const rowInputMap = ref(new Map<number, InputInst>());
 const pomoInputMap = ref(new Map<number, InputInst>());
 const showTagManager = ref(false);
 const tagSelectorRef = ref<any>(null);
 
-// 番茄输入框的长按状态管理（每个输入框独立）
-const pomoLongPressMap = ref(
-  new Map<
-    number,
-    {
-      longPressTriggered: { value: boolean };
-      onLongPressStart: (e: TouchEvent | MouseEvent) => void;
-      onLongPressEnd: () => void;
-      onLongPressCancel: () => void;
-    }
-  >(),
-);
-
-// 双击检测状态（桌面端）
+// 双击检测（桌面 mousedown）
 const pomoDoubleClickTimers = ref(new Map<number, number>());
 const DOUBLE_CLICK_DELAY = 300; // 双击检测延迟（毫秒）
 
-// 标记是否应该聚焦（用于双击和长按）
+// 触摸：双击切换类型，单击延迟后聚焦改数量（与标题列节奏一致）
+const pomoTapTimers = ref(new Map<number, number>());
+const pomoLastTapInfo = ref<{ id: number; time: number } | null>(null);
+
+// 标记是否应该聚焦（用于双击后进入编辑）
 const pomoShouldFocus = ref(new Map<number, boolean>());
+
+// 移动端标题：双击后才允许编辑；单击仅 emit focus-row 同步选中（双击仅用两次 touchend 间隔判定，不用延时器，避免 touchstart 取消定时器后状态卡死）
+const titleEditAllowed = reactive<Record<number, boolean>>({});
+const titleLastTapInfo = ref<{ id: number; time: number } | null>(null);
 
 // 防抖：防止快速重复切换
 const pomoToggleTimers = ref(new Map<number, number>());
 const TOGGLE_DEBOUNCE = 100; // 防抖延迟（毫秒）
 
 // 番茄输入框标题提示
-const pomoInputTitle = computed(() => {
-  return isTouchSupported ? "单击修改数量 | 长按切换类型" : "单击编辑数量 | 双击切换类型";
-});
+const pomoInputTitle = computed(() => "单击修改数量 | 双击切换类型");
 
 // 点击/拖拽检测状态
 const clickDragState = ref<{
@@ -562,62 +574,125 @@ function shouldShowItem(item: Activity): boolean {
   return true;
 }
 
-// ======================== 初始化 ========================
-onMounted(() => {
-  settingStore.settings.kanbanSetting[props.sectionId].showTags ??= true;
-});
-
 // ======================== 输入框引用管理 ========================
 function setRowInputRef(el: InputInst | null, id: number) {
-  if (el) rowInputMap.value.set(id, el);
-  else rowInputMap.value.delete(id);
+  if (el) {
+    rowInputMap.value.set(id, el);
+  } else {
+    rowInputMap.value.delete(id);
+    delete titleEditAllowed[id];
+  }
+}
+
+function focusTitleInput(id: number) {
+  nextTick(() => {
+    const input = rowInputMap.value.get(id);
+    if (input) {
+      if (typeof input.focus === "function") {
+        input.focus();
+      } else {
+        input.inputElRef?.focus?.();
+      }
+    }
+  });
+}
+
+// 切换到其它活动行时结束其它行的标题编辑（v-model 已同步，blur 仅退出编辑态）
+function blurTitleEditsExcept(keepActivityId: number | null) {
+  const ids = Object.keys(titleEditAllowed)
+    .map(Number)
+    .filter((i) => titleEditAllowed[i]);
+  for (const aid of ids) {
+    if (keepActivityId !== null && aid === keepActivityId) continue;
+    delete titleEditAllowed[aid];
+    const inst = rowInputMap.value.get(aid);
+    if (inst) {
+      if (typeof inst.blur === "function") inst.blur();
+      else inst.inputElRef?.blur?.();
+    }
+  }
+}
+
+function handleTitleInputFocus(item: Activity) {
+  if (isMobile.value && !titleEditAllowed[item.id]) {
+    nextTick(() => {
+      rowInputMap.value.get(item.id)?.blur();
+    });
+    return;
+  }
+  handleFocusRow(item.id);
+}
+
+function handleTitleBlur(item: Activity) {
+  if (isMobile.value) {
+    delete titleEditAllowed[item.id];
+  }
+  handleBlur();
+}
+
+function handleTitleTouchStart(e: TouchEvent, _item: Activity) {
+  if (!isMobile.value) return;
+  // 避免标题行的 preventDefault 抢走后缀区（标签按钮）的触控
+  const t = e.target;
+  if (t instanceof Element && t.closest(".icon-tag")) return;
+  e.preventDefault();
+}
+
+function handleTitleTouchEnd(e: TouchEvent, item: Activity) {
+  if (!isMobile.value) return;
+  const t = e.target;
+  if (t instanceof Element && t.closest(".icon-tag")) return;
+  e.preventDefault();
+  const id = item.id;
+
+  const now = Date.now();
+  const last = titleLastTapInfo.value;
+  if (last && last.id === id && now - last.time < DOUBLE_CLICK_DELAY) {
+    titleLastTapInfo.value = null;
+    blurTitleEditsExcept(id);
+    blurSearchInput();
+    titleEditAllowed[id] = true;
+    focusTitleInput(id);
+    return;
+  }
+
+  titleLastTapInfo.value = { id, time: now };
+  handleFocusRow(id);
+}
+
+function handleTitleTouchCancel(item: Activity) {
+  if (!isMobile.value) return;
+  // 取消下滑动等导致无 touchend 时，清掉该行上的“上一击”记录，避免下次点击被误判为双击
+  if (titleLastTapInfo.value?.id === item.id) {
+    titleLastTapInfo.value = null;
+  }
+}
+
+function clearPomoTapTimer(id: number) {
+  const t = pomoTapTimers.value.get(id);
+  if (t) {
+    clearTimeout(t);
+    pomoTapTimers.value.delete(id);
+  }
 }
 
 function setPomoInputRef(el: InputInst | null, id: number) {
   if (el) {
     pomoInputMap.value.set(id, el);
-    // 为每个输入框初始化长按检测
-    if (!pomoLongPressMap.value.has(id)) {
-      const longPressHandler = useLongPress({
-        delay: 600,
-        onLongPress: () => {
-          // 长按触发：区分设备类型
-          // 触屏设备：长按切换番茄类型
-          // 桌面设备：长按进入编辑模式
-          if (isTouchSupported) {
-            const activity = activityById.value.get(id);
-            if (activity) {
-              handleTogglePomoType(activity);
-            }
-          } else {
-            focusPomoInput(id);
-          }
-        },
-      });
-      pomoLongPressMap.value.set(id, longPressHandler);
-    }
   } else {
     pomoInputMap.value.delete(id);
-    // 清理长按状态
-    const longPress = pomoLongPressMap.value.get(id);
-    if (longPress) {
-      longPress.onLongPressCancel();
-    }
-    pomoLongPressMap.value.delete(id);
+    clearPomoTapTimer(id);
     pomoDoubleClickTimers.value.delete(id);
   }
 }
 
-function handleNoFocus(id: number) {
-  noFocus.value = true;
-  if (isMobile.value) {
-    // 聚焦时压缩顶部区域高度
-    savedTopHeight.value = settingStore.settings.topHeight;
-    settingStore.settings.topHeight = 110;
-  }
+function handleFocusRow(id: number) {
+  blurSearchInput();
+  blurTitleEditsExcept(id);
   emit("focus-row", id);
 }
 
+// PC 上首行即 return，无实际效果；savedTopHeight 在本组件内从未赋值，移动端恢复分支亦不会执行
 function handleBlur() {
   if (!isMobile.value) return;
   if (savedTopHeight.value === null) return;
@@ -758,9 +833,14 @@ function handleCollapseParent(parentId: number) {
 }
 
 // ======================== 标签操作 ========================
-function handleTagIconClick() {
-  const setting = settingStore.settings.kanbanSetting[props.sectionId];
-  setting.showTags = !setting.showTags;
+function handleTagIconClick(activity: Activity) {
+  const map = settingStore.settings.activityRowTagStripVisible;
+  const cur = map[activity.id] !== false;
+  if (cur) {
+    map[activity.id] = false;
+  } else {
+    delete map[activity.id];
+  }
 }
 
 function handleTagManagerClose() {
@@ -864,7 +944,7 @@ function focusPomoInput(id: number) {
 function handlePomoInputFocus(item: Activity) {
   if (pomoShouldFocus.value.get(item.id)) {
     // 允许聚焦：正常处理
-    handleNoFocus(item.id);
+    handleFocusRow(item.id);
   } else {
     // 不允许聚焦：立即失焦（可能是通过 Tab 键或其他方式聚焦的）
     const input = pomoInputMap.value.get(item.id);
@@ -891,94 +971,63 @@ function handleTogglePomoType(item: Activity) {
   pomoToggleTimers.value.set(item.id, timer);
 }
 
-// 鼠标按下（桌面端长按检测和单击检测）
+// 鼠标按下（桌面端双击切换类型，单击延迟后聚焦改数量）
 function handlePomoInputMouseDown(e: MouseEvent, item: Activity) {
-  // 阻止默认聚焦行为（除非是双击或长按）
   e.preventDefault();
   e.stopPropagation();
 
-  const longPress = pomoLongPressMap.value.get(item.id);
-  if (longPress) {
-    longPress.onLongPressStart(e);
-  }
-
-  // 检查是否在双击延迟内（桌面端双击检测）
   const timer = pomoDoubleClickTimers.value.get(item.id);
   if (timer) {
-    // 清除双击定时器，说明是双击
     clearTimeout(timer);
     pomoDoubleClickTimers.value.delete(item.id);
-    // 双击：进入编辑模式
     pomoShouldFocus.value.set(item.id, true);
     handleTogglePomoType(item);
     return;
   }
 
-  // 设置双击检测定时器（桌面端）
   if (!isTouchSupported) {
     const newTimer = window.setTimeout(() => {
       pomoDoubleClickTimers.value.delete(item.id);
-      // 单击：切换类型
       focusPomoInput(item.id);
     }, DOUBLE_CLICK_DELAY);
     pomoDoubleClickTimers.value.set(item.id, newTimer);
   } else {
-    // 移动端：直接切换类型（长按已在长按处理中处理）
     focusPomoInput(item.id);
   }
 }
 
-// 触摸开始（移动端长按检测和单击检测）
 function handlePomoInputTouchStart(e: TouchEvent, item: Activity) {
-  // 阻止默认行为
   e.preventDefault();
   e.stopPropagation();
-
-  const longPress = pomoLongPressMap.value.get(item.id);
-  if (longPress) {
-    longPress.onLongPressStart(e);
-  }
+  clearPomoTapTimer(item.id);
 }
 
-// 鼠标抬起
-function handlePomoInputMouseUp(_e: MouseEvent, item: Activity) {
-  const longPress = pomoLongPressMap.value.get(item.id);
-  if (longPress) {
-    longPress.onLongPressEnd();
-  }
-}
-
-// 鼠标离开
-function handlePomoInputMouseLeave(item: Activity) {
-  const longPress = pomoLongPressMap.value.get(item.id);
-  if (longPress) {
-    longPress.onLongPressCancel();
-  }
-}
-
-// 触摸结束
 function handlePomoInputTouchEnd(e: TouchEvent, item: Activity) {
   e.preventDefault();
   e.stopPropagation();
-
-  const longPress = pomoLongPressMap.value.get(item.id);
-  if (longPress) {
-    longPress.onLongPressEnd();
-    // 如果未触发长按，执行单击编辑（聚焦输入框）
-    Promise.resolve().then(() => {
-      if (!(longPress.longPressTriggered as any).value) {
-        focusPomoInput(item.id);
-      }
-    });
+  const id = item.id;
+  const now = Date.now();
+  const last = pomoLastTapInfo.value;
+  if (last && last.id === id && now - last.time < DOUBLE_CLICK_DELAY) {
+    clearPomoTapTimer(id);
+    pomoLastTapInfo.value = null;
+    pomoShouldFocus.value.set(id, true);
+    handleTogglePomoType(item);
+    focusPomoInput(item.id);
+    return;
   }
+  pomoLastTapInfo.value = { id, time: now };
+  clearPomoTapTimer(id);
+  const t = window.setTimeout(() => {
+    pomoLastTapInfo.value = null;
+    pomoTapTimers.value.delete(id);
+    focusPomoInput(item.id);
+  }, DOUBLE_CLICK_DELAY);
+  pomoTapTimers.value.set(id, t);
 }
 
-// 触摸取消
 function handlePomoInputTouchCancel(item: Activity) {
-  const longPress = pomoLongPressMap.value.get(item.id);
-  if (longPress) {
-    longPress.onLongPressCancel();
-  }
+  clearPomoTapTimer(item.id);
 }
 </script>
 
@@ -1235,7 +1284,24 @@ function handlePomoInputTouchCancel(item: Activity) {
 }
 
 .highlight-line {
-  background-color: var(--color-yellow-light);
+  background-color: var(--color-yellow-light) !important;
+}
+
+/* 选中行：内部控件背景透明，行黄底能透出（与 .countdown-* 用透明底一致） */
+.highlight-line :deep(.n-input) {
+  background: transparent !important;
+  --n-box-shadow-focus: none !important;
+  --n-border-hover: 1px solid var(--color-blue) !important;
+}
+.highlight-line :deep(.n-input-wrapper) {
+  background: transparent !important;
+}
+.highlight-line :deep(.n-date-picker) {
+  background: transparent !important;
+  --n-box-shadow-focus: none !important;
+}
+.highlight-line :deep(.n-date-picker .n-input) {
+  background: transparent !important;
 }
 
 /* 一个给n-date-picker 一个给n-input */

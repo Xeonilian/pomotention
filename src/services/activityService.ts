@@ -12,7 +12,7 @@ import { Task } from "@/core/types/Task";
 export function handleAddActivity(
   scheduleList: Schedule[],
   newActivity: Activity,
-  deps: { activityById: Map<number, Activity> } // 由调用方传入
+  deps: { activityById: Map<number, Activity> }, // 由调用方传入
 ) {
   // 如果是 Schedule 类型，立即创建 Schedule（即使 dueRange 为 null/undefined）
   if (newActivity.class === "S") {
@@ -39,6 +39,7 @@ export function handleAddActivity(
         }
       }
     }
+    return newSchedule;
   }
 }
 
@@ -56,7 +57,7 @@ export function handleDeleteActivity(
   deps: {
     activityById: Map<number, Activity>;
     childrenByParentId?: Map<number, Activity[]>;
-  }
+  },
 ): boolean {
   // 递归获取所有将要被删除的 activity 的 id（含自身）
   const idsToDelete = new Set<number>();
@@ -175,7 +176,7 @@ export function handleRestoreActivity(
   deps: {
     activityById: Map<number, Activity>;
     childrenByParentId?: Map<number, Activity[]>;
-  }
+  },
 ): boolean {
   // 递归获取所有需要恢复的 activity 的 id（含自身）
   const idsToRestore = new Set<number>();
@@ -286,7 +287,7 @@ export function passPickedActivity(activity: Activity, appDateTimestamp: number,
  */
 export function togglePomoType(
   id: number,
-  deps: { activityById: Map<number, Activity> } // 由调用方传入
+  deps: { activityById: Map<number, Activity> }, // 由调用方传入
 ) {
   const activity = deps.activityById.get(id);
   if (!activity) {
@@ -350,7 +351,7 @@ export function convertToTodo(activity: Activity): Todo {
  */
 export function convertToSchedule(activity: Activity): Schedule {
   // 允许 dueRange 为 null/undefined，统一转换为 null
-  const dueRangeStart = activity.dueRange && Array.isArray(activity.dueRange) ? activity.dueRange[0] ?? null : null;
+  const dueRangeStart = activity.dueRange && Array.isArray(activity.dueRange) ? (activity.dueRange[0] ?? null) : null;
   const dueRangeEnd = activity.dueRange && Array.isArray(activity.dueRange) ? activity.dueRange[1] || "" : "";
 
   return {

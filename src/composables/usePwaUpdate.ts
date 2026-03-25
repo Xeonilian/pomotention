@@ -29,9 +29,7 @@ function promptRefresh(reg: ServiceWorkerRegistration, notification: Notificatio
         h(
           "p",
           { style: "margin: 0 0 10px 0; line-height: 1.5;" },
-          version
-            ? `你正在使用 v${version}。新版本已下载，点下方按钮刷新即可生效。`
-            : "新版本已下载，点下方按钮刷新即可生效。"
+          version ? `你正在使用 v${version}。新版本已下载，点下方按钮刷新即可生效。` : "新版本已下载，点下方按钮刷新即可生效。",
         ),
         h(
           NButton,
@@ -42,7 +40,7 @@ function promptRefresh(reg: ServiceWorkerRegistration, notification: Notificatio
               reg.waiting?.postMessage({ type: "SKIP_WAITING" });
             },
           },
-          { default: () => "立即刷新" }
+          { default: () => "立即刷新" },
         ),
       ]),
     duration: 0,

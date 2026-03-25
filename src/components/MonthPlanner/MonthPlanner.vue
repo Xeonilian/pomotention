@@ -445,7 +445,7 @@ function getPomoBgColorHEX(ratio: number) {
   color: white !important;
   background-color: var(--color-blue) !important;
   font-weight: 600;
-  z-index: 1;
+  z-index: 100;
 }
 
 .date-badge:hover {
@@ -486,7 +486,15 @@ function getPomoBgColorHEX(ratio: number) {
   background-color: var(--color-hover, rgba(0, 0, 0, 0.05));
 }
 
+/* 仅标题参与压缩省略；避免与时间点并排时把 TagRenderer 根（.tag-container / min-width:0）挤扁 */
+.month-planner .item :deep(.tag-container) {
+  flex-shrink: 0;
+  min-width: auto;
+}
+
 .item .title {
+  flex: 1 1 auto;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -504,11 +512,19 @@ function getPomoBgColorHEX(ratio: number) {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
+  min-width: fit-content;
+  width: auto;
 }
 
 .tag :deep(.n-tag) {
+  flex-shrink: 0;
   height: 12px;
   width: 12px;
+  min-width: 12px;
+  min-height: 12px;
+  aspect-ratio: 1;
+  box-sizing: border-box;
 }
 
 .tag :deep(.n-tag__content) {
@@ -625,8 +641,11 @@ function getPomoBgColorHEX(ratio: number) {
   }
 
   .tag :deep(.n-tag) {
+    flex-shrink: 0;
     height: 10px;
     width: 10px;
+    min-width: 10px;
+    min-height: 10px;
   }
   .tag :deep(.n-tag__content) {
     font-size: 7px;
