@@ -391,7 +391,6 @@ const props = defineProps<{
   isRemoveButton: boolean;
   sectionId: number;
   search: string;
-  activeId: number | null | undefined;
 }>();
 
 const emit = defineEmits<{

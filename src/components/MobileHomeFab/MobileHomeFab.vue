@@ -10,6 +10,7 @@
         :show-arrow="false"
         content-class="mobile-home-fab-popover"
         :z-index="110"
+        style="background: var(--color-background); box-shadow: none; --n-padding: 0; border-radius: 20px"
       >
         <template #trigger>
           <span class="mobile-home-fab__ghost-trigger" aria-hidden="true" />
@@ -41,6 +42,7 @@
         placement="top-end"
         :show-arrow="false"
         content-class="mobile-home-fab-popover"
+        style="background: var(--color-background); box-shadow: none; --n-padding: 0; border-radius: 20px"
         :z-index="110"
       >
         <template #trigger>
@@ -94,23 +96,6 @@
             </n-button>
 
             <n-button
-              :title="isDeleted && activeId !== null && activeId !== undefined ? '恢复活动' : '删除活动'"
-              @click="emit('delete-activity', activeId ?? selectedActivityId ?? null)"
-              circle
-              secondary
-              :type="isDeleted ? 'error' : 'default'"
-              size="large"
-              :disabled="activeId === null || isSelectedRowDone"
-            >
-              <template #icon>
-                <n-icon>
-                  <DeleteDismiss24Regular v-if="isDeleted && activeId !== null" />
-                  <Delete24Regular v-else />
-                </n-icon>
-              </template>
-            </n-button>
-
-            <n-button
               v-if="!hasParent && !selectedRowHasParent"
               secondary
               circle
@@ -136,6 +121,22 @@
             >
               <template #icon>
                 <n-icon><TextGrammarArrowLeft24Regular /></n-icon>
+              </template>
+            </n-button>
+            <n-button
+              :title="isDeleted && activeId !== null && activeId !== undefined ? '恢复活动' : '删除活动'"
+              @click="emit('delete-activity', activeId ?? selectedActivityId ?? null)"
+              circle
+              secondary
+              :type="isDeleted ? 'error' : 'default'"
+              size="large"
+              :disabled="activeId === null || isSelectedRowDone"
+            >
+              <template #icon>
+                <n-icon>
+                  <DeleteDismiss24Regular v-if="isDeleted && activeId !== null" />
+                  <Delete24Regular v-else />
+                </n-icon>
               </template>
             </n-button>
           </template>
@@ -258,7 +259,7 @@ function handlePickActivity() {
 const panelShow = ref(false);
 let dismissTimer: ReturnType<typeof setTimeout> | null = null;
 
-const POPOVER_AUTO_DISMISS_MS = 5000_000;
+const POPOVER_AUTO_DISMISS_MS = 50_000;
 
 function clearDismissTimer() {
   if (dismissTimer !== null) {
@@ -302,7 +303,7 @@ onUnmounted(() => {
 <style scoped>
 .mobile-home-fab {
   position: fixed;
-  right: 30px;
+  right: 15px;
   bottom: max(30px, env(safe-area-inset-bottom));
   z-index: 90;
   pointer-events: auto;
@@ -341,14 +342,5 @@ onUnmounted(() => {
   align-items: center;
   justify-content: flex-end;
   gap: 10px;
-}
-</style>
-
-<!-- Popover 内容 Teleport 到 body，scoped + :deep 无法命中；content-class 在 n-popover__content 上，外层用 :has 关联 -->
-<style>
-.n-popover.n-popover-shared:has(.mobile-home-fab-popover) {
-  background: transparent !important;
-  box-shadow: none !important;
-  --n-padding: 0 !important;
 }
 </style>
