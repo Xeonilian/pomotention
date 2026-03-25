@@ -55,21 +55,6 @@
           <template v-if="showRowActions">
             <n-button
               v-if="!showActivityPanel"
-              class="mobile-home-fab__cancel-button"
-              size="large"
-              secondary
-              circle
-              @click.stop="emit('cancel-planner-row')"
-              title="取消选中任务，不退回活动清单"
-            >
-              <template #icon>
-                <n-icon size="20">
-                  <DismissCircle20Regular />
-                </n-icon>
-              </template>
-            </n-button>
-            <n-button
-              v-if="!showActivityPanel"
               class="mobile-home-fab__suspend-button"
               size="large"
               secondary
@@ -87,7 +72,7 @@
             <n-button
               v-if="showActivityPanel"
               @click="handlePickActivity"
-              :disabled="activeId === undefined || isDeleted || isSelectedRowDone"
+              :disabled="activeId == null || isDeleted || isSelectedRowDone"
               circle
               secondary
               type="default"
@@ -114,7 +99,7 @@
               </template>
             </n-button>
             <n-button
-              v-if="showActivityPanel && !selectedRowHasParent"
+              v-if="showActivityPanel && selectedRowHasParent"
               secondary
               type="success"
               circle
@@ -166,7 +151,6 @@ import {
   CalendarAdd24Regular,
   CloudAdd20Regular,
   AnimalTurtle24Regular,
-  DismissCircle20Regular,
   ChevronCircleRight48Regular,
   ChevronCircleLeft48Regular,
   DeleteDismiss24Regular,
@@ -189,7 +173,6 @@ const emit = defineEmits<{
   (e: "quick-add-todo"): void;
   (e: "quick-add-schedule", isUntaetigkeit: boolean): void;
   (e: "reset-to-present"): void;
-  (e: "cancel-planner-row"): void;
   (e: "suspend-planner-row"): void;
 }>();
 
