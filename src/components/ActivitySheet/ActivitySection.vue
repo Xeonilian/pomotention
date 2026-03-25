@@ -67,7 +67,8 @@
           class="activity-row"
           :data-row-id="item.id"
           :class="{
-            'highlight-line': item.id === activityId,
+            // Planner 用 selectedActivityId（activityId）；看板点击后 onUpdateActiveId 会清 activityId、只保留 activeId，需两者任一命中才能与选中态一致
+            'highlight-line': item.id === activityId || item.id === activeId,
             'is-dragging-row': dragHandler.draggedItem.value?.id === item.id,
           }"
         >
@@ -386,7 +387,10 @@ const props = defineProps<{
   displaySheet: Activity[];
   filterOptions: any[];
   getCountdownClass: (dueDate: number | undefined | null) => string;
+  /** Planner 等：selectedActivityId */
   activityId: number | null;
+  /** 看板当前选中活动的 id，与 activityId 择一或同时用于避免双重高亮时的展示 */
+  activeId?: number | null | undefined;
   currentFilter: string | null;
   isAddButton: boolean;
   isRemoveButton: boolean;
