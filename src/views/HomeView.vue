@@ -327,6 +327,7 @@
     @reset-to-present="onMobileFabResetToPresent"
     @cancel-planner-row="onMobileFabCancelPlannerRow"
     @suspend-planner-row="onMobileFabSuspendPlannerRow"
+    @repeat-activity="onRepeatActivity"
   />
   <!-- 错误提示弹窗 -->
   <n-popover v-model:show="showPopover" trigger="manual" placement="top-end" style="width: 200px">
@@ -706,6 +707,7 @@ function onQuickAddSchedule(isUntaetigkeit: boolean) {
 
   selectedActivityId.value = newActivity.id;
   activeId.value = newActivity.id;
+  selectedTaskId.value = task.id;
   saveAllDebounced();
 }
 
@@ -754,6 +756,8 @@ function onDeleteActivity(id: number | null | undefined) {
 
     activeId.value = null;
     selectedTaskId.value = null;
+    selectedRowId.value = null;
+    selectedActivityId.value = null;
     saveAllDebounced();
   }
 }

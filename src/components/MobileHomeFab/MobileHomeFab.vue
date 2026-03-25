@@ -117,7 +117,7 @@
               secondary
               :type="isDeleted ? 'error' : 'default'"
               size="large"
-              :disabled="activeId === null || isSelectedRowDone || selectedRowId === null"
+              :disabled="isSelectedRowDone"
             >
               <template #icon>
                 <n-icon>
@@ -127,6 +127,19 @@
               </template>
             </n-button>
           </template>
+          <n-button
+            title="重复活动"
+            @click="emit('repeat-activity')"
+            circle
+            secondary
+            type="default"
+            size="large"
+            :disabled="selectedRowId === null && activeId === null"
+          >
+            <template #icon>
+              <n-icon><ArrowRepeatAll24Regular /></n-icon>
+            </template>
+          </n-button>
         </div>
         <n-button v-if="showBackToToday" quaternary circle type="info" size="large" @click="emit('reset-to-present')">
           <template #icon><n-icon size="22" :component="AnimalTurtle24Regular" /></template>
@@ -158,6 +171,7 @@ import {
   Delete24Regular,
   TextGrammarArrowRight24Regular,
   TextGrammarArrowLeft24Regular,
+  ArrowRepeatAll24Regular,
 } from "@vicons/fluent";
 import type { Activity } from "@/core/types/Activity";
 import { timestampToDatetime } from "@/core/utils";
@@ -175,6 +189,7 @@ const emit = defineEmits<{
   (e: "quick-add-schedule", isUntaetigkeit: boolean): void;
   (e: "reset-to-present"): void;
   (e: "suspend-planner-row"): void;
+  (e: "repeat-activity"): void;
 }>();
 
 const props = defineProps<{
