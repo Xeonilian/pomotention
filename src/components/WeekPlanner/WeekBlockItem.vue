@@ -5,6 +5,7 @@
     :class="[
       { 'item--selected': selectedRowId === block.item.id },
       { 'activity--selected': activeId === block.item.activityId },
+      { 'item--stacked': weekBlockStackLayout },
       `time-block--${block.type}`,
     ]"
     :style="{
@@ -56,19 +57,29 @@ const props = defineProps<{
   getItemBlockStyle: (block: WeekBlockItemType, dayStartTs: number) => Record<string, string | number>;
 }>();
 
-// 手机端：根据时长动态决定标题显示长度（单位：分钟）
+// 块时长（分钟），与周视图行高同一套时间轴
+const blockDurationMinutes = computed(() => Math.max(0, Math.round((props.block.end - props.block.start) / 60000)));
+
+// 小屏周块：足够高时用纵向叠放+标题换行；短时块保持横向单行以免挤爆
+const weekBlockStackLayout = computed(() => blockDurationMinutes.value >= 45);
+
+// 手机端：短时块根据时长截断标题（单位：分钟）；与 blockDurationMinutes 阈值对齐
 const mobileDisplayTitle = computed(() => {
   const title = props.block.item.title ?? "";
   if (!title) return "";
 
-  const durationMinutes = Math.max(0, Math.round((props.block.end - props.block.start) / 60000));
+  const durationMinutes = blockDurationMinutes.value;
   const maxChars = durationMinutes < 45 ? 4 : durationMinutes < 75 ? 8 : 12;
 
   return title.slice(0, maxChars);
 });
 
 // 无标题时不渲染 .title，避免 flex 子项空白仍占位
-const displayTitleText = computed(() => (isMobile.value ? mobileDisplayTitle.value : (props.block.item.title ?? "")));
+const displayTitleText = computed(() => {
+  if (!isMobile.value) return props.block.item.title ?? "";
+  if (weekBlockStackLayout.value) return props.block.item.title ?? "";
+  return mobileDisplayTitle.value;
+});
 
 // 定义emit
 const emit = defineEmits<{
@@ -196,8 +207,28 @@ const handleClick = () => {
     flex: 1 1 auto;
     white-space: nowrap;
     overflow: hidden;
-    text-overflow: clip;
+    text-overflow: ellipsis;
     width: auto;
+  }
+
+  /* 时长较长的块恢复纵向布局，让标题多行占用高度 */
+  .item.item--stacked {
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    flex-wrap: nowrap;
+  }
+  .item.item--stacked .title {
+    flex: none;
+    width: 100%;
+    min-width: 0;
+    white-space: normal;
+    overflow: hidden;
+    text-overflow: clip;
+    word-break: break-word;
+  }
+  .item.item--stacked .schedule-time {
+    flex-shrink: 0;
   }
 
   .schedule-time {
