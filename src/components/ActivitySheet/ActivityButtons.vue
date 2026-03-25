@@ -6,7 +6,7 @@
   <div class="activity-view-button-container">
     <n-button
       @click="$emit('pick-activity')"
-      :disabled="activeId === undefined || props.isDeleted || isSelectedRowDone"
+      :disabled="activeId === undefined || props.isDeleted || isSelectedRowDone || noSelectedActivity"
       circle
       secondary
       type="default"
@@ -25,7 +25,7 @@
       secondary
       :type="props.isDeleted ? 'error' : 'default'"
       size="small"
-      :disabled="activeId === null || isSelectedRowDone"
+      :disabled="noSelectedActivity || isSelectedRowDone"
     >
       <template #icon>
         <n-icon>
@@ -42,7 +42,7 @@
       type="default"
       size="small"
       title="生成子活动"
-      :disabled="props.activeId === null || isSelectedRowDone || isSelectedClassS || props.isDeleted"
+      :disabled="props.activeId === null || isSelectedRowDone || isSelectedClassS || props.isDeleted || noSelectedActivity"
       @click="() => emit('create-child-activity')"
     >
       <template #icon>
@@ -97,6 +97,8 @@ import {
   Delete24Regular,
   DeleteDismiss24Regular,
 } from "@vicons/fluent";
+import { useDataStore } from "@/stores/useDataStore";
+import { storeToRefs } from "pinia";
 
 const props = defineProps<{
   activeId: number | null | undefined;
@@ -107,6 +109,10 @@ const props = defineProps<{
   isDeleted?: boolean; // 选中活动是否已删除
   isSelectedRowDone?: boolean;
 }>();
+
+const dataStore = useDataStore();
+const { selectedRowId, selectedActivityId } = storeToRefs(dataStore);
+const noSelectedActivity = computed(() => selectedRowId.value == null && selectedActivityId.value == null);
 
 const isSelectedClassS = computed(() => {
   return props.selectedClass === "S";
