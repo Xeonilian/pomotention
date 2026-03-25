@@ -223,7 +223,7 @@
               v-model:value="item.location"
               style="max-width: 50px"
               class="input-focus-none"
-              @focus="handleNoFocus(item.id)"
+              @focus="handleFocusRow(item.id)"
               @blur="handleBlur"
               placeholder="地点"
               :class="{ 'force-hover': dragHandler.hoveredRowId.value === item.id }"
@@ -273,7 +273,7 @@
                   item.lastModified = Date.now();
                 }
               "
-              @focus="handleNoFocus(item.id)"
+              @focus="handleFocusRow(item.id)"
               @blur="handleBlur"
               title="持续时间(分钟)"
               placeholder="min"
@@ -289,7 +289,7 @@
               clearable
               style="max-width: 63px"
               format="MM/dd"
-              @focus="handleNoFocus(item.id)"
+              @focus="handleFocusRow(item.id)"
               @blur="handleBlur"
               title="死线日期"
               :class="getCountdownClass(item.dueDate)"
@@ -316,7 +316,7 @@
               style="max-width: 63px"
               clearable
               format="HH:mm"
-              @focus="handleNoFocus(item.id)"
+              @focus="handleFocusRow(item.id)"
               @blur="handleBlur"
               title="约定时间"
               :class="getCountdownClass(item.dueRange && item.dueRange[0])"
@@ -461,7 +461,6 @@ const tagEditor = useActivityTagEditor();
 const dragHandler = useActivityDrag(() => sortedDisplaySheet.value);
 
 // ======================== 本地状态 ========================
-const noFocus = ref(false);
 const rowInputMap = ref(new Map<number, InputInst>());
 const pomoInputMap = ref(new Map<number, InputInst>());
 const showTagManager = ref(false);
@@ -617,7 +616,7 @@ function handleTitleInputFocus(item: Activity) {
     });
     return;
   }
-  handleNoFocus(item.id);
+  handleFocusRow(item.id);
 }
 
 function handleTitleBlur(item: Activity) {
@@ -683,9 +682,8 @@ function setPomoInputRef(el: InputInst | null, id: number) {
   }
 }
 
-function handleNoFocus(id: number) {
+function handleFocusRow(id: number) {
   blurTitleEditsExcept(id);
-  noFocus.value = true;
   emit("focus-row", id);
 }
 
@@ -936,7 +934,7 @@ function focusPomoInput(id: number) {
 function handlePomoInputFocus(item: Activity) {
   if (pomoShouldFocus.value.get(item.id)) {
     // 允许聚焦：正常处理
-    handleNoFocus(item.id);
+    handleFocusRow(item.id);
   } else {
     // 不允许聚焦：立即失焦（可能是通过 Tab 键或其他方式聚焦的）
     const input = pomoInputMap.value.get(item.id);
