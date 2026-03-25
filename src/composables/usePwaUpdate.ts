@@ -4,6 +4,16 @@ import { NButton } from "naive-ui";
 /** 避免同一标签页重复弹出多条「有更新」通知 */
 let updatePromptShown = false;
 
+/** controllerchange 在后台触发时挂起的 visibility 监听，dispose 时移除 */
+let pendingVisibilityReloadHandler: (() => void) | null = null;
+
+function removePendingVisibilityReload() {
+  if (pendingVisibilityReloadHandler) {
+    document.removeEventListener("visibilitychange", pendingVisibilityReloadHandler);
+    pendingVisibilityReloadHandler = null;
+  }
+}
+
 type NotificationApi = ReturnType<typeof import("naive-ui").useNotification>;
 
 function promptRefresh(reg: ServiceWorkerRegistration, notification: NotificationApi) {
@@ -19,9 +29,7 @@ function promptRefresh(reg: ServiceWorkerRegistration, notification: Notificatio
         h(
           "p",
           { style: "margin: 0 0 10px 0; line-height: 1.5;" },
-          version
-            ? `你正在使用 v${version}。新版本已下载，点下方按钮刷新即可生效。`
-            : "新版本已下载，点下方按钮刷新即可生效。"
+          version ? `你正在使用 v${version}。新版本已下载，点下方按钮刷新即可生效。` : "新版本已下载，点下方按钮刷新即可生效。",
         ),
         h(
           NButton,
@@ -32,7 +40,7 @@ function promptRefresh(reg: ServiceWorkerRegistration, notification: Notificatio
               reg.waiting?.postMessage({ type: "SKIP_WAITING" });
             },
           },
-          { default: () => "立即刷新" }
+          { default: () => "立即刷新" },
         ),
       ]),
     duration: 0,
@@ -65,8 +73,26 @@ export function usePwaUpdate(notification: NotificationApi) {
 
   const onControllerChange = () => {
     if (refreshing) return;
-    refreshing = true;
-    window.location.reload();
+
+    // 后台/隐藏时立刻 reload 常被节流或未完整执行，旧 JS 与新 SW 并存会导致缓存音效等仍用旧内存状态；回到前台再刷新
+    if (document.visibilityState === "visible") {
+      refreshing = true;
+      removePendingVisibilityReload();
+      window.location.reload();
+      return;
+    }
+
+    if (pendingVisibilityReloadHandler) return;
+
+    const handler = () => {
+      if (document.visibilityState !== "visible") return;
+      if (refreshing) return;
+      refreshing = true;
+      removePendingVisibilityReload();
+      window.location.reload();
+    };
+    pendingVisibilityReloadHandler = handler;
+    document.addEventListener("visibilitychange", handler);
   };
 
   const onFocus = () => {
@@ -94,6 +120,7 @@ export function usePwaUpdate(notification: NotificationApi) {
   const dispose = () => {
     navigator.serviceWorker.removeEventListener("controllerchange", onControllerChange);
     window.removeEventListener("focus", onFocus);
+    removePendingVisibilityReload();
   };
 
   return { init, dispose };

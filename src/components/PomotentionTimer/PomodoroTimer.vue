@@ -106,7 +106,7 @@
           size="small"
         >
           <n-button size="small" class="duration-display" tertiary round type="info">
-            {{ formatDuration(selectedDuration) }}
+            {{ formatDuration(breakDuration) }}
           </n-button>
         </n-dropdown>
       </div>
@@ -139,8 +139,6 @@ const redBarColor = computed(() => settingStore.settings.style.redBarColor);
 const blueBarColor = computed(() => settingStore.settings.style.blueBarColor);
 const workDuration = computed(() => settingStore.settings.durations.workDuration);
 const breakDuration = computed(() => settingStore.settings.durations.breakDuration);
-
-const selectedDuration = ref(breakDuration.value);
 
 // 编辑状态管理
 const isEditing = ref(false);
@@ -301,7 +299,7 @@ function handleBreakAction(): void {
     clickStore.recordClick("Stop");
   } else {
     // 开始休息，使用选中的时间
-    timerStore.startBreak(selectedDuration.value);
+    timerStore.startBreak(breakDuration.value);
     clickStore.recordClick("Break");
   }
 }
@@ -312,17 +310,18 @@ function formatDuration(minutes: number): string {
 }
 // 4-4 Break 持续时间选项  (默认见上方)
 const breakDurationOptions = ref([
+  { label: "01", key: 1 },
   { label: "02", key: 2 },
   { label: "05", key: 5 },
   { label: "10", key: 10 },
   { label: "15", key: 15 },
   { label: "30", key: 30 },
-  { label: "60", key: 60 },
+  // { label: "60", key: 60 },
 ]);
 
 // 4-5 处理休息时间选择（从下拉菜单选择）
 function handleDurationSelect(key: number): void {
-  selectedDuration.value = key;
+  settingStore.settings.durations.breakDuration = key;
 }
 </script>
 

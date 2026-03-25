@@ -31,23 +31,22 @@
               </n-button>
             </n-dropdown>
             <div class="app-layout__view-controls">
-              <template v-if="isHomeRoute">
-                <n-button
-                  v-for="(control, index) in filteredViewControls"
-                  :key="index"
-                  :size="isMobile ? 'large' : 'medium'"
-                  tertiary
-                  type="default"
-                  :style="buttonStyle(control.show, control.key)"
-                  :title="control.title"
-                  @click="handleMainLayoutViewToggle(control.key)"
-                  class="header-button"
-                >
-                  <template #icon>
-                    <n-icon :component="control.icon" />
-                  </template>
-                </n-button>
-              </template>
+              <!-- 非首页仅保留番茄钟按钮，其余视图切换仍在首页与同组显示 -->
+              <n-button
+                v-for="control in headerToolbarControls"
+                :key="control.key"
+                :size="isMobile ? 'large' : 'medium'"
+                tertiary
+                type="default"
+                :style="buttonStyle(control.show, control.key)"
+                :title="control.title"
+                @click="handleMainLayoutViewToggle(control.key)"
+                class="header-button"
+              >
+                <template #icon>
+                  <n-icon :component="control.icon" />
+                </template>
+              </n-button>
               <!-- 未登录时显示登录按钮 -->
               <n-button
                 v-if="!isLoggedIn"
@@ -139,8 +138,8 @@
                 </n-icon>
               </div>
               <div class="sync-status__info">
-                <span class="sync-status__message">{{ syncStore.syncMessage }}</span>
-                <span v-if="syncStore.lastSyncTimestamp" class="sync-status__time">{{ relativeTime }}</span>
+                <!-- <span class="sync-status__message">{{ syncStore.syncMessage }}</span>
+                <span v-if="syncStore.lastSyncTimestamp" class="sync-status__time">{{ relativeTime }}</span> -->
                 <n-tag
                   v-if="dataStore.hasUnsyncedData"
                   type="default"
@@ -260,7 +259,7 @@ if (!settingStore.settings.showPomodoro) {
   console.log("Refs error prevent:", PomotentionTimerContainerRef.value, draggableContainer.value);
 }
 const syncStore = useSyncStore();
-const { syncIcon, relativeTime, handleUpload, handleDownload } = useSyncWidget();
+const { syncIcon, handleUpload, handleDownload } = useSyncWidget(); //relativeTime,
 const { isLoggedIn } = storeToRefs(syncStore);
 const { isMobile } = useDevice();
 
@@ -302,9 +301,6 @@ watch(route, (newVal) => {
   currentRoutePath.value = newVal.path;
 });
 
-// 视图切换按钮仅在首页显示
-const isHomeRoute = computed(() => route.name === "Home");
-
 // 监听尺寸变化，只在超出边界时才重定位，否则保持当前位置
 watch([() => reportedPomodoroWidth.value, () => reportedPomodoroHeight.value], async () => {
   if (!isMiniMode.value && settingStore.settings.showPomodoro) {
@@ -330,6 +326,13 @@ const filteredViewControls = computed(() => {
     controls.push(pomodoroControl);
   }
   return controls;
+});
+
+// 首页：完整工具条；其它路由：只显示番茄钟，便于随时开关悬浮钟
+const headerToolbarControls = computed(() => {
+  const list = filteredViewControls.value;
+  if (route.name === "Home") return list;
+  return list.filter((c) => c.key === "pomodoro");
 });
 
 // === 3. 视图控制按钮 ===

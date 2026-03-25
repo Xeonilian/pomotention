@@ -7,6 +7,7 @@
     <!-- 顶部固定按钮区域 -->
     <div class="activity-button-container">
       <ActivityButtons
+        v-if="!isMobile"
         :activeId="activeId"
         :isSelectedRowDone="isSelectedRowDone"
         :selectedRowHasParent="selectedRowHasParent"
@@ -71,6 +72,7 @@ import { useSettingStore } from "@/stores/useSettingStore";
 import { useDataStore } from "@/stores/useDataStore";
 import { storeToRefs } from "pinia";
 import { timestampToDatetime } from "@/core/utils";
+import { useDevice } from "@/composables/useDevice";
 
 const dataStore = useDataStore();
 const {
@@ -87,6 +89,7 @@ const {
 } = storeToRefs(dataStore);
 const { activityList } = storeToRefs(dataStore);
 const dateService = dataStore.dateService;
+const { isMobile } = useDevice();
 
 // ========================
 // Emits 定义
@@ -414,5 +417,14 @@ function getCountdownClass(dueDate: number | undefined | null): string {
   height: 100%;
   display: flex;
   flex-direction: column;
+}
+
+@media (max-width: 600px) {
+  .activity-button-container {
+    height: 0px;
+  }
+  .kanban-columns {
+    height: calc(100% - 5px - env(safe-area-inset-bottom));
+  }
 }
 </style>

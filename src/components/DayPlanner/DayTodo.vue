@@ -24,7 +24,7 @@
       <thead>
         <tr>
           <th class="col-check">
-            <n-button text type="info" @click.stop="handleQuickAddTodo" title="快速新增待办" class="add-todo-button">
+            <n-button v-if="!isMobile" text type="info" @click.stop="handleQuickAddTodo" title="快速新增待办" class="add-todo-button">
               <template #icon>
                 <n-icon size="20">
                   <AddCircle24Regular />
@@ -80,7 +80,9 @@
             <!-- 表头操作：对选中行执行取消/退回，仅对进行中(ongoing)任务生效 -->
             <n-button
               class="cancel-button"
-              v-if="selectedTodo && selectedTodo.status !== 'done' && selectedTodo.status !== 'cancelled' && !selectedTodo.realPomo"
+              v-if="
+                selectedTodo && selectedTodo.status !== 'done' && selectedTodo.status !== 'cancelled' && !selectedTodo.realPomo && !isMobile
+              "
               text
               @click.stop="handleCancelSelectedTodo"
               title="取消选中任务，不退回活动清单"
@@ -98,7 +100,8 @@
                 selectedTodo.status !== 'done' &&
                 selectedTodo.status !== 'cancelled' &&
                 !selectedTodo.realPomo &&
-                !selectedTodo.startTime
+                !selectedTodo.startTime &&
+                !isMobile
               "
               text
               @click.stop="handleSuspendSelectedTodo"
@@ -221,7 +224,7 @@
                     1️⃣
                   </button>
                   <button
-                    v-for="cat in PRIORITY_CATEGORIES"
+                    v-for="cat in priorityCategoriesForRankPopover"
                     :key="cat.priority"
                     type="button"
                     class="rank-emoji-btn"
@@ -241,7 +244,7 @@
               @touchstart.stop="handleTitleTouchStart($event, todo)"
               @touchend.stop="handleTitleTouchEnd($event, todo)"
               @touchcancel.stop="handleTitleTouchCancel(todo)"
-              :title="editingRowId === todo.id && editingField === 'title' ? '' : '单击编辑'"
+              :title="editingRowId === todo.id && editingField === 'title' ? '' : isMobile ? '双击编辑' : '单击编辑'"
             >
               <input
                 class="title-input"
@@ -403,12 +406,20 @@
   >
     <div class="priority-binding-list">
       <div v-for="cat in PRIORITY_CATEGORIES" :key="cat.priority" class="priority-binding-row">
+        <n-checkbox
+          class="priority-binding-show"
+          :checked="priorityShowInRankDraft[cat.priority]"
+          @update:checked="(v: boolean) => setPriorityShowInRankDraft(cat.priority, v)"
+          title="是否在排序弹层中显示该 emoji"
+        />
         <span class="priority-binding-emoji">{{ cat.emoji }}</span>
         <n-select
           v-model:value="priorityBindingDraft[cat.priority]"
           :options="tagOptionsForBinding"
           placeholder="选择标签"
           clearable
+          filterable
+          :filter="filterTagOptionsPrefix"
           size="small"
           style="flex: 1; min-width: 120px"
           :render-label="renderTagOptionLabel"
@@ -421,7 +432,12 @@
 <script setup lang="ts">
 import type { Todo, TodoWithTaskRecords } from "@/core/types/Todo";
 import { timestampToTimeString } from "@/core/utils";
-import { PRIORITY_CATEGORIES, SPECIAL_PRIORITIES, getEmojiForPriority } from "@/core/priorityCategories";
+import {
+  PRIORITY_CATEGORIES,
+  SPECIAL_PRIORITIES,
+  getDefaultPriorityCategoryShowInRank,
+  getEmojiForPriority,
+} from "@/core/priorityCategories";
 import {
   ChevronCircleRight48Regular,
   DismissCircle20Regular,
@@ -446,7 +462,6 @@ import { useActivityTagEditor } from "@/composables/useActivityTagEditor";
 import TagSelector from "../TagSystem/TagSelector.vue";
 import type { SelectOption } from "naive-ui";
 import { useDevice } from "@/composables/useDevice";
-import { useLongPress } from "@/composables/useLongPress";
 
 const dataStore = useDataStore();
 const { isMobile } = useDevice();
@@ -500,18 +515,10 @@ const selectingTagViaEnter = ref(false);
 const titleInputRef = ref<HTMLInputElement | null>(null);
 const startInputRef = ref<HTMLInputElement | null>(null);
 const doneInputRef = ref<HTMLInputElement | null>(null);
-// 标题列长按状态
-const titleLongPressMap = ref(
-  new Map<
-    number,
-    {
-      longPressTriggered: { value: boolean };
-      onLongPressStart: (e: TouchEvent | MouseEvent) => void;
-      onLongPressEnd: () => void;
-      onLongPressCancel: () => void;
-    }
-  >(),
-);
+// 移动端标题列：双击进入编辑，单击延迟后仅选中（与 ActivitySection 一致）
+const DOUBLE_CLICK_DELAY = 300;
+const titleTapTimers = ref(new Map<number, number>());
+const titleLastTapInfo = ref<{ id: number; time: number } | null>(null);
 
 // 排序列：emoji 弹窗与绑定设置
 const rankPopoverTodoId = ref<number | null>(null);
@@ -558,6 +565,7 @@ onBeforeUnmount(() => {
   if (rankPopoverOutsideCleanup) rankPopoverOutsideCleanup();
 });
 const priorityBindingDraft = reactive<Record<number, number | null>>({});
+const priorityShowInRankDraft = reactive<Record<number, boolean>>({});
 const rankHeaderTitle = computed(
   () => "Emoji：" + PRIORITY_CATEGORIES.map((c) => `${c.priority}=${c.emoji}`).join(" ") + "；单击打开绑定标签",
 );
@@ -569,6 +577,24 @@ const tagOptionsForBinding = computed<SelectOption[]>(() =>
 );
 function renderTagOptionLabel(option: SelectOption) {
   return option.label as string;
+}
+/** 标签下拉：不区分大小写，按名称前缀过滤 */
+function filterTagOptionsPrefix(pattern: string, option: SelectOption) {
+  const label = String(option.label ?? "");
+  if (!pattern.trim()) return true;
+  return label.toLowerCase().startsWith(pattern.toLowerCase());
+}
+/** 排序「排序」弹层里要展示的 emoji 槽位（受勾选设置） */
+const priorityCategoriesForRankPopover = computed(() => {
+  const defaults = getDefaultPriorityCategoryShowInRank();
+  const saved = settingStore.settings.priorityCategoryShowInRank;
+  return PRIORITY_CATEGORIES.filter((c) => {
+    const v = saved[c.priority];
+    return v !== undefined ? v : defaults[c.priority];
+  });
+});
+function setPriorityShowInRankDraft(priority: number, v: boolean) {
+  priorityShowInRankDraft[priority] = v;
 }
 
 // 根据设备类型格式化时间显示，移动端去掉冒号
@@ -586,6 +612,13 @@ function openPriorityBindingModal() {
   Object.keys(saved).forEach((k) => {
     priorityBindingDraft[Number(k)] = saved[Number(k)];
   });
+  Object.keys(priorityShowInRankDraft).forEach((k) => delete priorityShowInRankDraft[Number(k)]);
+  const defShow = getDefaultPriorityCategoryShowInRank();
+  const savedShow = settingStore.settings.priorityCategoryShowInRank;
+  for (const c of PRIORITY_CATEGORIES) {
+    const p = c.priority;
+    priorityShowInRankDraft[p] = savedShow[p] !== undefined ? savedShow[p]! : defShow[p]!;
+  }
   showPriorityBindingModal.value = true;
 }
 function clearPriorityBinding(priority: number) {
@@ -597,6 +630,13 @@ function savePriorityBinding() {
     if (typeof tagId === "number") ids[Number(p)] = tagId;
   });
   settingStore.settings.priorityCategoryTagIds = ids;
+  const show: Record<number, boolean> = {};
+  const defShow = getDefaultPriorityCategoryShowInRank();
+  for (const c of PRIORITY_CATEGORIES) {
+    const p = c.priority;
+    show[p] = priorityShowInRankDraft[p] !== undefined ? priorityShowInRankDraft[p]! : defShow[p]!;
+  }
+  settingStore.settings.priorityCategoryShowInRank = show;
 }
 
 // 定义 Emit
@@ -666,6 +706,7 @@ const sortedTodos = computed(() => {
 });
 
 function openRankPopoverIfActive(todo: Todo) {
+  handleRowClick(todo);
   if (todo.status === "done" || todo.status === "cancelled") return;
   // 立刻打开弹窗
   rankPopoverTodoId.value = todo.id;
@@ -815,6 +856,8 @@ function relayoutPriority(todos: Todo[], current: Todo, desired: number) {
 // ===================================
 // 更新打钩状态
 function handleCheckboxChange(id: number, checked: boolean) {
+  const todo = todosForCurrentViewWithTaskRecords.value.find((t) => t.id === id);
+  if (todo) handleRowClick(todo);
   emit("update-todo-status", id, checked);
 }
 
@@ -909,6 +952,13 @@ function handleDeleteEstimate(todo: Todo) {
 
 // 修改点击行处理函数
 function handleRowClick(todo: Todo) {
+  // 切换到其它行时先保存并退出当前编辑
+  if (editingRowId.value !== null && editingRowId.value !== todo.id) {
+    selectingTagViaEnter.value = false; // 避免 saveEdit 提前 return 导致仍停留在编辑态
+    const prev = todosForCurrentViewWithTaskRecords.value.find((t) => t.id === editingRowId.value);
+    if (prev) saveEdit(prev);
+    else cancelEdit();
+  }
   // 取消激活活动
   // if (todo.status !== "done" && todo.status !== "cancelled") {
   //   activeId.value = todo.activityId;
@@ -930,6 +980,8 @@ function handleQuickAddTodo() {
 function startEditing(todoId: number, field: "title" | "start" | "done") {
   const todo = todosForCurrentViewWithTaskRecords.value.find((t) => t.id === todoId);
   if (!todo) return;
+  // 与点击行一致：开始/结束等子格 @click.stop 不冒泡到 tr，在此补选行
+  handleRowClick(todo);
   editingRowId.value = todoId;
   editingField.value = field;
 
@@ -1210,35 +1262,46 @@ function handleInputKeydown(event: KeyboardEvent, todo: Todo) {
   }
 }
 
-function getTitleLongPress(todoId: number) {
-  let handler = titleLongPressMap.value.get(todoId);
-  if (!handler) {
-    handler = useLongPress({
-      delay: 500,
-      onLongPress: () => {
-        startEditing(todoId, "title");
-      },
-    });
-    titleLongPressMap.value.set(todoId, handler);
+function clearTitleTapTimer(id: number) {
+  const t = titleTapTimers.value.get(id);
+  if (t) {
+    clearTimeout(t);
+    titleTapTimers.value.delete(id);
   }
-  return handler;
 }
 
 function handleTitleTouchStart(e: TouchEvent, todo: Todo) {
-  const longPress = getTitleLongPress(todo.id);
-  longPress.onLongPressStart(e);
+  if (!isMobile.value) return;
+  e.preventDefault();
+  clearTitleTapTimer(todo.id);
 }
 
 function handleTitleTouchEnd(e: TouchEvent, todo: Todo) {
+  if (!isMobile.value) return;
+  e.preventDefault();
   e.stopPropagation();
-  const longPress = getTitleLongPress(todo.id);
-  longPress.onLongPressEnd();
-  handleRowClick(todo);
+  const id = todo.id;
+  const now = Date.now();
+  const last = titleLastTapInfo.value;
+  if (last && last.id === id && now - last.time < DOUBLE_CLICK_DELAY) {
+    clearTitleTapTimer(id);
+    titleLastTapInfo.value = null;
+    startEditing(id, "title");
+    return;
+  }
+  titleLastTapInfo.value = { id, time: now };
+  clearTitleTapTimer(id);
+  const t = window.setTimeout(() => {
+    titleLastTapInfo.value = null;
+    titleTapTimers.value.delete(id);
+    handleRowClick(todo);
+  }, DOUBLE_CLICK_DELAY);
+  titleTapTimers.value.set(id, t);
 }
 
 function handleTitleTouchCancel(todo: Todo) {
-  const longPress = getTitleLongPress(todo.id);
-  longPress.onLongPressCancel();
+  if (!isMobile.value) return;
+  clearTitleTapTimer(todo.id);
 }
 
 function handleTagSelected(tagId: number) {
@@ -1784,6 +1847,9 @@ td.col-check {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+.priority-binding-show {
+  flex-shrink: 0;
 }
 .priority-binding-emoji {
   font-size: 20px;

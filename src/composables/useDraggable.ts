@@ -28,7 +28,7 @@ export function useDraggable(dragThreshold = 5) {
     const elementHeight = draggableContainer.value.offsetHeight || 140;
 
     let targetLeft, targetTop;
-    const defaultOffsetY = isMobile ? 20 : 0;
+    const defaultOffsetY = isMobile ? 60 : 0;
 
     // 如果有历史位置，优先使用
     if (lastPosition.value.x !== -1) {
@@ -36,7 +36,7 @@ export function useDraggable(dragThreshold = 5) {
       targetTop = lastPosition.value.y;
     } else {
       // 默认右下角
-      const margin = 20;
+      const margin = 50;
       targetLeft = Math.max(0, parentWidth - elementWidth - margin);
       targetTop = Math.max(0, parentHeight - elementHeight - margin - defaultOffsetY);
     }
@@ -238,7 +238,7 @@ export function useDraggable(dragThreshold = 5) {
     () => settingStore.settings.showPomodoro,
     async (newVal) => {
       await updateDraggableContainerVisibility(newVal);
-    }
+    },
   );
 
   return {

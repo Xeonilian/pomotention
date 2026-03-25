@@ -1,5 +1,5 @@
 // composables/useButtonStyle.ts
-import { useTimerStore } from "@/stores/useTimerStore";
+// import { useTimerStore } from "@/stores/useTimerStore";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { ref, computed, watch } from "vue";
 import { isTauri } from "@tauri-apps/api/core";
@@ -21,7 +21,7 @@ import { useDevice } from "./useDevice";
 type ViewKey = "ontop" | "pomodoro" | "schedule" | "task" | "planner" | "activity"; //| "ai"
 
 export function useButtonStyle() {
-  const timerStore = useTimerStore();
+  // const timerStore = useTimerStore();
   const settingStore = useSettingStore();
   const { isMobile } = useDevice();
 
@@ -36,7 +36,8 @@ export function useButtonStyle() {
   });
 
   const buttonStyle = (show: boolean, key: string) => {
-    const isDisabled = key === "pomodoro" && timerStore.isActive;
+    // const isDisabled = key === "pomodoro" && timerStore.isActive; 不再区别disabled
+    const isDisabled = false;
     const isOntop = key === "ontop";
 
     return {
@@ -113,7 +114,7 @@ export function useButtonStyle() {
           settingStore.settings.showActivity = false;
         } else {
           // 其他面板打开时，只关闭 activity
-          settingStore.settings.showActivity = false;
+          // settingStore.settings.showActivity = false;
         }
       } else {
         // 关闭面板时的逻辑
