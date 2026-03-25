@@ -83,35 +83,36 @@
                 <n-icon><ChevronCircleLeft48Regular /></n-icon>
               </template>
             </n-button>
-
-            <n-button
-              v-if="showActivityPanel && !selectedRowHasParent"
-              secondary
-              circle
-              type="default"
-              size="large"
-              title="生成子活动"
-              :disabled="activeId === null || isSelectedRowDone || isSelectedClassS || isDeleted"
-              @click="emit('create-child-activity', activeId ?? selectedActivityId ?? null)"
-            >
-              <template #icon>
-                <n-icon><TextGrammarArrowRight24Regular /></n-icon>
-              </template>
-            </n-button>
-            <n-button
-              v-if="showActivityPanel && selectedRowHasParent"
-              secondary
-              type="success"
-              circle
-              size="large"
-              title="升级为兄弟"
-              :disabled="activeId === null || isSelectedClassS"
-              @click="emit('increase-child-activity', activeId ?? selectedActivityId ?? null)"
-            >
-              <template #icon>
-                <n-icon><TextGrammarArrowLeft24Regular /></n-icon>
-              </template>
-            </n-button>
+            <template v-if="showActivityPanel">
+              <n-button
+                v-if="!hasParent"
+                secondary
+                circle
+                type="default"
+                size="large"
+                title="生成子活动"
+                :disabled="activeId === null || isSelectedRowDone || isSelectedClassS || isDeleted"
+                @click="emit('create-child-activity', activeId ?? selectedActivityId ?? null)"
+              >
+                <template #icon>
+                  <n-icon><TextGrammarArrowRight24Regular /></n-icon>
+                </template>
+              </n-button>
+              <n-button
+                v-else
+                secondary
+                type="success"
+                circle
+                size="large"
+                title="升级为兄弟"
+                :disabled="activeId === null || isSelectedClassS"
+                @click="emit('increase-child-activity', activeId ?? selectedActivityId ?? null)"
+              >
+                <template #icon>
+                  <n-icon><TextGrammarArrowLeft24Regular /></n-icon>
+                </template>
+              </n-button>
+            </template>
             <n-button
               :title="isDeleted && activeId !== null && activeId !== undefined ? '恢复活动' : '删除活动'"
               @click="emit('delete-activity', activeId ?? selectedActivityId ?? null)"
@@ -184,12 +185,13 @@ const { taskRecordEditing } = toRefs(props);
 const settingStore = useSettingStore();
 
 const dataStore = useDataStore();
-const { activeId, selectedActivityId, selectedRowId, isSelectedRowDone, selectedRowHasParent, selectedActivity } = storeToRefs(dataStore);
+const { activeId, selectedActivityId, selectedRowId, isSelectedRowDone, selectedActivity } = storeToRefs(dataStore);
 const { activityById, todoByActivityId, scheduleByActivityId } = storeToRefs(dataStore);
 const dateService = dataStore.dateService;
 
 const isDeleted = computed(() => selectedActivity.value?.deleted ?? false);
 const isSelectedClassS = computed(() => selectedActivity.value?.class === "S");
+const hasParent = computed(() => selectedActivity.value?.parentId ?? null);
 
 /** 与 ActivitySheet 一致：无选中且非今日 →「回到当下」 */
 const showBackToToday = computed(() => !dateService.isViewDateToday);
