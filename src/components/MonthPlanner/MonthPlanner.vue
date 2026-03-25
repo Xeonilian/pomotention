@@ -445,7 +445,7 @@ function getPomoBgColorHEX(ratio: number) {
   color: white !important;
   background-color: var(--color-blue) !important;
   font-weight: 600;
-  z-index: 1;
+  z-index: 100;
 }
 
 .date-badge:hover {
