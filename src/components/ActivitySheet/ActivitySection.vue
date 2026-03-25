@@ -6,6 +6,7 @@
     <!-- 筛选区 -->
     <div class="section-header">
       <n-input
+        ref="searchInputRef"
         :placeholder="currentFilterLabel"
         title="请输入筛选条件..."
         :value="props.search"
@@ -403,6 +404,16 @@ const emit = defineEmits<{
 }>();
 
 const isSearchFocused = ref(false);
+const searchInputRef = ref<InputInst | null>(null);
+
+// 失焦筛选框（移动端标题单击仅 emit focus-row 时 DOM 焦点常仍在筛选框，需单独处理）
+function blurSearchInput() {
+  isSearchFocused.value = false;
+  const inst = searchInputRef.value;
+  if (!inst) return;
+  if (typeof inst.blur === "function") inst.blur();
+  else inst.inputElRef?.blur?.();
+}
 
 // ======================== Composables ========================
 const { isTouchSupported } = useDevice();
@@ -569,6 +580,14 @@ function clearTitleTapTimer(id: number) {
   }
 }
 
+// 避免快速点不同行时，上一行的延时逻辑仍执行
+function clearAllTitleTapTimers() {
+  for (const t of titleTapTimers.value.values()) {
+    clearTimeout(t);
+  }
+  titleTapTimers.value.clear();
+}
+
 function setRowInputRef(el: InputInst | null, id: number) {
   if (el) {
     rowInputMap.value.set(id, el);
@@ -642,18 +661,19 @@ function handleTitleTouchEnd(e: TouchEvent, item: Activity) {
     clearTitleTapTimer(id);
     titleLastTapInfo.value = null;
     blurTitleEditsExcept(id);
+    blurSearchInput();
     titleEditAllowed[id] = true;
     focusTitleInput(id);
     return;
   }
 
+  clearAllTitleTapTimers();
   titleLastTapInfo.value = { id, time: now };
-  clearTitleTapTimer(id);
+  // 立刻同步选中与高亮；原延时仅用于区分双击，300ms 会导致黄底慢半拍
+  handleFocusRow(id);
   const t = window.setTimeout(() => {
     titleLastTapInfo.value = null;
     titleTapTimers.value.delete(id);
-    blurTitleEditsExcept(id);
-    emit("focus-row", id);
   }, DOUBLE_CLICK_DELAY);
   titleTapTimers.value.set(id, t);
 }
@@ -682,6 +702,7 @@ function setPomoInputRef(el: InputInst | null, id: number) {
 }
 
 function handleFocusRow(id: number) {
+  blurSearchInput();
   blurTitleEditsExcept(id);
   emit("focus-row", id);
 }
