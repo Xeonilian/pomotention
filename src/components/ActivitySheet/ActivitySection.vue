@@ -487,9 +487,8 @@ const pomoLastTapInfo = ref<{ id: number; time: number } | null>(null);
 // 标记是否应该聚焦（用于双击后进入编辑）
 const pomoShouldFocus = ref(new Map<number, boolean>());
 
-// 移动端标题：双击后才允许编辑；单击仅 emit focus-row 同步选中
+// 移动端标题：双击后才允许编辑；单击仅 emit focus-row 同步选中（双击仅用两次 touchend 间隔判定，不用延时器，避免 touchstart 取消定时器后状态卡死）
 const titleEditAllowed = reactive<Record<number, boolean>>({});
-const titleTapTimers = ref(new Map<number, number>());
 const titleLastTapInfo = ref<{ id: number; time: number } | null>(null);
 
 // 防抖：防止快速重复切换
@@ -572,28 +571,11 @@ onMounted(() => {
 });
 
 // ======================== 输入框引用管理 ========================
-function clearTitleTapTimer(id: number) {
-  const t = titleTapTimers.value.get(id);
-  if (t) {
-    clearTimeout(t);
-    titleTapTimers.value.delete(id);
-  }
-}
-
-// 避免快速点不同行时，上一行的延时逻辑仍执行
-function clearAllTitleTapTimers() {
-  for (const t of titleTapTimers.value.values()) {
-    clearTimeout(t);
-  }
-  titleTapTimers.value.clear();
-}
-
 function setRowInputRef(el: InputInst | null, id: number) {
   if (el) {
     rowInputMap.value.set(id, el);
   } else {
     rowInputMap.value.delete(id);
-    clearTitleTapTimer(id);
     delete titleEditAllowed[id];
   }
 }
@@ -644,10 +626,9 @@ function handleTitleBlur(item: Activity) {
   handleBlur();
 }
 
-function handleTitleTouchStart(e: TouchEvent, item: Activity) {
+function handleTitleTouchStart(e: TouchEvent, _item: Activity) {
   if (!isMobile.value) return;
   e.preventDefault();
-  clearTitleTapTimer(item.id);
 }
 
 function handleTitleTouchEnd(e: TouchEvent, item: Activity) {
@@ -658,7 +639,6 @@ function handleTitleTouchEnd(e: TouchEvent, item: Activity) {
   const now = Date.now();
   const last = titleLastTapInfo.value;
   if (last && last.id === id && now - last.time < DOUBLE_CLICK_DELAY) {
-    clearTitleTapTimer(id);
     titleLastTapInfo.value = null;
     blurTitleEditsExcept(id);
     blurSearchInput();
@@ -667,20 +647,16 @@ function handleTitleTouchEnd(e: TouchEvent, item: Activity) {
     return;
   }
 
-  clearAllTitleTapTimers();
   titleLastTapInfo.value = { id, time: now };
-  // 立刻同步选中与高亮；原延时仅用于区分双击，300ms 会导致黄底慢半拍
   handleFocusRow(id);
-  const t = window.setTimeout(() => {
-    titleLastTapInfo.value = null;
-    titleTapTimers.value.delete(id);
-  }, DOUBLE_CLICK_DELAY);
-  titleTapTimers.value.set(id, t);
 }
 
 function handleTitleTouchCancel(item: Activity) {
   if (!isMobile.value) return;
-  clearTitleTapTimer(item.id);
+  // 取消下滑动等导致无 touchend 时，清掉该行上的“上一击”记录，避免下次点击被误判为双击
+  if (titleLastTapInfo.value?.id === item.id) {
+    titleLastTapInfo.value = null;
+  }
 }
 
 function clearPomoTapTimer(id: number) {
