@@ -533,7 +533,15 @@ onUnmounted(() => {
 
   display: flex;
   align-items: center;
+  flex-wrap: nowrap;
   gap: 4px;
+}
+
+/* TagRenderer 根默认 flex-wrap: wrap，此处强制单行，宽度不够由上层 overflow: hidden 裁切 */
+.task-tag-render-container :deep(.tag-container) {
+  flex-wrap: nowrap;
+  overflow: hidden;
+  min-width: 0;
 }
 
 .combined-timeline-container {
