@@ -764,6 +764,7 @@ function onPickActivity(activity: Activity) {
   const { newTodo } = passPickedActivity(activity, appDateTimestamp.value, isViewDateToday.value);
   todoList.value = [...todoList.value, newTodo];
   selectedActivityId.value = activity.id;
+  selectedRowId.value = newTodo.id;
   saveAllDebounced();
 }
 
@@ -1171,7 +1172,11 @@ function onMobileFabSuspendPlannerRow() {
   const id = selectedRowId.value;
   if (id == null) return;
   const todo = todoById.value.get(id);
-  if (todo) onSuspendTodo(todo.id);
+  if (todo) {
+    onSuspendTodo(todo.id);
+    activeId.value = todo?.activityId;
+    selectedActivityId.value = todo?.activityId;
+  }
 }
 
 /** Schedule 取消 */

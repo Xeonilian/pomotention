@@ -180,12 +180,14 @@
                 <n-icon
                   text
                   :color="item.tagIds ? 'var(--color-blue)' : 'var(--color-text-secondary)'"
-                  @click="handleTagIconClick()"
+                  class="icon-tag"
+                  title="显示/隐藏本行标签"
+                  @click.stop="handleTagIconClick(item)"
                   @pointerdown.stop
                   @mousedown.prevent.stop
                   @touchstart.stop
-                  class="icon-tag"
-                  title="显示/隐藏标签"
+                  @touchend.stop
+                  @touchcancel.stop
                 >
                   <Tag16Regular />
                 </n-icon>
@@ -329,7 +331,7 @@
 
           <!-- tag显示 -->
           <div
-            v-if="item.tagIds && item.tagIds.length > 0 && settingStore.settings.kanbanSetting[props.sectionId].showTags"
+            v-if="item.tagIds && item.tagIds.length > 0 && rowTagStripVisible[item.id] !== false"
             class="tag-content"
             :class="{ 'child-activity-tag': item.parentId }"
           >
@@ -358,7 +360,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, ref, onMounted, reactive } from "vue";
+import { computed, nextTick, ref, reactive } from "vue";
 import { NInput, NDatePicker, NIcon, NDropdown, NPopover, NButton } from "naive-ui";
 import {
   VideoPersonCall24Regular,
@@ -425,6 +427,9 @@ const { isTouchSupported } = useDevice();
 // ======================== Stores ========================
 const settingStore = useSettingStore();
 const { isMobile } = useDevice();
+
+/** 每行标签条是否显示：缺省为显示，仅在为 false 时隐藏 */
+const rowTagStripVisible = reactive<Record<number, boolean>>({});
 // 移动端进入编辑时暂存原 topHeight，退出时恢复
 const savedTopHeight = ref<number | null>(null);
 
@@ -569,11 +574,6 @@ function shouldShowItem(item: Activity): boolean {
   return true;
 }
 
-// ======================== 初始化 ========================
-onMounted(() => {
-  settingStore.settings.kanbanSetting[props.sectionId].showTags ??= true;
-});
-
 // ======================== 输入框引用管理 ========================
 function setRowInputRef(el: InputInst | null, id: number) {
   if (el) {
@@ -632,11 +632,16 @@ function handleTitleBlur(item: Activity) {
 
 function handleTitleTouchStart(e: TouchEvent, _item: Activity) {
   if (!isMobile.value) return;
+  // 避免标题行的 preventDefault 抢走后缀区（标签按钮）的触控
+  const t = e.target;
+  if (t instanceof Element && t.closest(".icon-tag")) return;
   e.preventDefault();
 }
 
 function handleTitleTouchEnd(e: TouchEvent, item: Activity) {
   if (!isMobile.value) return;
+  const t = e.target;
+  if (t instanceof Element && t.closest(".icon-tag")) return;
   e.preventDefault();
   const id = item.id;
 
@@ -828,9 +833,9 @@ function handleCollapseParent(parentId: number) {
 }
 
 // ======================== 标签操作 ========================
-function handleTagIconClick() {
-  const setting = settingStore.settings.kanbanSetting[props.sectionId];
-  setting.showTags = !setting.showTags;
+function handleTagIconClick(activity: Activity) {
+  const cur = rowTagStripVisible[activity.id] !== false;
+  rowTagStripVisible[activity.id] = !cur;
 }
 
 function handleTagManagerClose() {

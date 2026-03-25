@@ -75,7 +75,7 @@ const defaultSettings: GlobalSettings = {
     { id: 4, filterKey: "todo", search: "", show: false, showTags: false },
     { id: 5, filterKey: "schedule", search: "", show: false, showTags: false },
     { id: 6, filterKey: "cancelled", search: "", show: false, showTags: false },
-  ],
+  ], // showTags 不再使用，仅在 ActivitySection.vue 中使用 rowTagStripVisible 替代
   showPomodoro: isMobile.value ? false : true,
   showSchedule: isMobile.value ? false : true,
   showPlanner: true,
