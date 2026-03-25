@@ -49,9 +49,6 @@
           <span class="mobile-home-fab__ghost-trigger" aria-hidden="true" />
         </template>
         <div class="mobile-home-fab__up">
-          <n-button v-if="showBackToToday" secondary circle type="info" size="large" @click="emit('reset-to-present')">
-            <template #icon><n-icon size="22" :component="AnimalTurtle24Regular" /></template>
-          </n-button>
           <template v-if="showRowActions">
             <n-button
               v-if="!showActivityPanel"
@@ -61,7 +58,7 @@
               circle
               @click.stop="emit('suspend-planner-row')"
               title="撤销选中任务，退回活动清单"
-              :disabled="isSelectedRowDone"
+              :disabled="isSelectedRowDone || selectedRowId === null || isSelectedClassS"
             >
               <template #icon>
                 <n-icon size="20">
@@ -120,7 +117,7 @@
               secondary
               :type="isDeleted ? 'error' : 'default'"
               size="large"
-              :disabled="activeId === null || isSelectedRowDone"
+              :disabled="activeId === null || isSelectedRowDone || selectedRowId === null"
             >
               <template #icon>
                 <n-icon>
@@ -131,6 +128,9 @@
             </n-button>
           </template>
         </div>
+        <n-button v-if="showBackToToday" quaternary circle type="info" size="large" @click="emit('reset-to-present')">
+          <template #icon><n-icon size="22" :component="AnimalTurtle24Regular" /></template>
+        </n-button>
       </n-popover>
 
       <n-button type="info" circle secondary size="large" class="mobile-home-fab__trigger" :focusable="false" @click="togglePanel">
