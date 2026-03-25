@@ -19,6 +19,8 @@ export interface GlobalSettings {
   miniModeRefactor: number;
   activityRank: Record<number, number>; // 活动排序：{activityId: rank}
   collapsedActivityIds: Record<number, boolean>; // 收起的活动父项 ID：{activityId: true}
+  /** 看板等活动行标签条：缺省显示，仅在为 false 时隐藏（按 activityId） */
+  activityRowTagStripVisible: Record<number, boolean>;
   kanbanSetting: ActivitySectionConfig[];
   showPomodoro: boolean;
   showSchedule: boolean;
@@ -68,6 +70,7 @@ const defaultSettings: GlobalSettings = {
   miniModeRefactor: 1,
   activityRank: {}, // 默认空对象
   collapsedActivityIds: {}, // 默认全部展开
+  activityRowTagStripVisible: {}, // 默认每行标签条展开显示
   kanbanSetting: [
     { id: 1, filterKey: "all", search: "", show: true, showTags: true },
     { id: 2, filterKey: "today", search: "", show: false, showTags: false },

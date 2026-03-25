@@ -428,8 +428,8 @@ const { isTouchSupported } = useDevice();
 const settingStore = useSettingStore();
 const { isMobile } = useDevice();
 
-/** 每行标签条是否显示：缺省为显示，仅在为 false 时隐藏 */
-const rowTagStripVisible = reactive<Record<number, boolean>>({});
+// 每行标签条是否显示：缺省为显示，仅在为 false 时隐藏；与 collapsedActivityIds 一样持久化到设置
+const rowTagStripVisible = computed(() => settingStore.settings.activityRowTagStripVisible);
 // 移动端进入编辑时暂存原 topHeight，退出时恢复
 const savedTopHeight = ref<number | null>(null);
 
@@ -834,8 +834,13 @@ function handleCollapseParent(parentId: number) {
 
 // ======================== 标签操作 ========================
 function handleTagIconClick(activity: Activity) {
-  const cur = rowTagStripVisible[activity.id] !== false;
-  rowTagStripVisible[activity.id] = !cur;
+  const map = settingStore.settings.activityRowTagStripVisible;
+  const cur = map[activity.id] !== false;
+  if (cur) {
+    map[activity.id] = false;
+  } else {
+    delete map[activity.id];
+  }
 }
 
 function handleTagManagerClose() {
