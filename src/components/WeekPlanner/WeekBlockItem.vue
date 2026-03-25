@@ -24,8 +24,13 @@
     <span v-if="block.item.activityDueRange?.[0]" class="schedule-time">
       {{ timestampToTimeString(block.item.activityDueRange?.[0]) }}
     </span>
-    <span class="title" :title="block.item.title" :class="[{ 'activity--selected': activeId === block.item.activityId }]">
-      {{ isMobile ? mobileDisplayTitle : block.item.title }}
+    <span
+      v-if="displayTitleText"
+      class="title"
+      :title="block.item.title"
+      :class="[{ 'activity--selected': activeId === block.item.activityId }]"
+    >
+      {{ displayTitleText }}
     </span>
   </div>
 </template>
@@ -61,6 +66,9 @@ const mobileDisplayTitle = computed(() => {
 
   return title.slice(0, maxChars);
 });
+
+// 无标题时不渲染 .title，避免 flex 子项空白仍占位
+const displayTitleText = computed(() => (isMobile.value ? mobileDisplayTitle.value : (props.block.item.title ?? "")));
 
 // 定义emit
 const emit = defineEmits<{
@@ -175,21 +183,25 @@ const handleClick = () => {
 
 @media (max-width: 430px) {
   .item {
-    /* 小屏下使用纵向布局，并在块内垂直居中，保证时间和标题都能完整显示 */
-    flex-direction: column;
-    align-items: flex-start;
-    justify-content: center;
+    /* 小屏与时间、标题同一行，避免 schedule-time 单独占第一行 */
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: flex-start;
     font-size: 9px;
     padding: 0px;
   }
   .item .title {
-    white-space: normal;
-    overflow: visible;
+    min-width: 0;
+    flex: 1 1 auto;
+    white-space: nowrap;
+    overflow: hidden;
     text-overflow: clip;
     width: auto;
   }
 
   .schedule-time {
+    flex-shrink: 0;
     font-size: 7px;
     box-shadow: none;
     margin-left: 0px;
