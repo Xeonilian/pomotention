@@ -886,6 +886,17 @@ function handleInputKeydown(event: KeyboardEvent, activity: Activity) {
     }
   }
 
+  // 移动端软键盘“前往/Enter”应结束标题编辑
+  if (isMobile.value && event.key === "Enter") {
+    event.preventDefault();
+    const input = rowInputMap.value.get(activity.id);
+    if (input) {
+      if (typeof input.blur === "function") input.blur();
+      else input.inputElRef?.blur?.();
+    }
+    return;
+  }
+
   // 特殊处理：# 键自动打开 popover
   if ((event.key === "#" || event.key === "@") && !tagEditor.popoverTargetId.value) {
     tagEditor.popoverTargetId.value = activity.id;
