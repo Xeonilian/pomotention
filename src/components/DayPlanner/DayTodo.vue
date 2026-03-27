@@ -253,7 +253,7 @@
                 v-if="editingRowId === todo.id && editingField === 'title'"
                 :ref="(el: any) => (titleInputRef = el)"
                 v-model="editingValue"
-                @blur="saveEdit(todo)"
+                @blur="handleTitleBlur(todo)"
                 @keyup.enter="saveEdit(todo)"
                 @keyup.esc="cancelEdit"
                 @input="handleTitleInput(todo)"
@@ -386,6 +386,9 @@
       :ref="(el) => (tagSelectorRef = el)"
       :search-term="tagEditor.tagSearchTerm.value"
       :allow-create="true"
+      @pointerdown.stop="isPickingTagFromSelector = true"
+      @mousedown.stop="isPickingTagFromSelector = true"
+      @touchstart.stop="isPickingTagFromSelector = true"
       @select-tag="(tagId: any) => handleTagSelected(tagId)"
       @create-tag="(tagName: any) => handleTagCreate(tagName)"
       @close-selector="tagEditor.popoverTargetId.value = null"
@@ -514,6 +517,8 @@ const tagEditor = useActivityTagEditor();
 const tagSelectorRef = ref<any>(null);
 // Enter 选中标签时置为 true，saveEdit 会跳过结束编辑以保持继续输入
 const selectingTagViaEnter = ref(false);
+// 点击/触摸标签选择器时置为 true，避免移动端 blur 抢先触发保存导致选不中
+const isPickingTagFromSelector = ref(false);
 const titleInputRef = ref<HTMLInputElement | null>(null);
 const startInputRef = ref<HTMLInputElement | null>(null);
 const doneInputRef = ref<HTMLInputElement | null>(null);
@@ -1104,7 +1109,7 @@ function saveEdit(todo: Todo) {
   }
 
   // 如果输入框中有 # 开头的文本，清理并关闭 popover
-  if (editingValue.value.includes("#") && tagEditor.popoverTargetId.value) {
+  if ((editingValue.value.includes("#") || editingValue.value.includes("@")) && tagEditor.popoverTargetId.value) {
     editingValue.value = tagEditor.clearTagTriggerText(editingValue.value);
     tagEditor.closePopover();
   }
@@ -1135,13 +1140,22 @@ function saveEdit(todo: Todo) {
 
 function cancelEdit() {
   // 如果输入框中有 # 开头的文本，清理并关闭 popover
-  if (editingValue.value.includes("#") && tagEditor.popoverTargetId.value) {
+  if ((editingValue.value.includes("#") || editingValue.value.includes("@")) && tagEditor.popoverTargetId.value) {
     editingValue.value = tagEditor.clearTagTriggerText(editingValue.value);
     tagEditor.closePopover();
   }
   editingRowId.value = null;
   editingField.value = null;
   editingValue.value = "";
+}
+
+function handleTitleBlur(todo: Todo) {
+  if (isPickingTagFromSelector.value) {
+    isPickingTagFromSelector.value = false;
+    nextTick(() => titleInputRef.value?.focus());
+    return;
+  }
+  saveEdit(todo);
 }
 
 // 规范化时间输入，支持多种格式并返回 HH:mm
@@ -1265,16 +1279,9 @@ function handleTagSelected(tagId: number) {
   const todo = todosForCurrentViewWithTaskRecords.value.find((t) => t.id === tagEditor.popoverTargetId.value);
   if (!todo) return;
 
-  const cleanedTitle = tagEditor.clearTagTriggerText(editingValue.value);
-  editingValue.value = cleanedTitle;
-
-  // 通过 activityId 给 Activity 添加标签
-  dataStore.addTagToActivity(todo.activityId, tagId);
-  tagEditor.closePopover();
-  // Enter 选中时把焦点拉回输入框以便继续编辑
-  if (selectingTagViaEnter.value) {
-    nextTick(() => titleInputRef.value?.focus());
-  }
+  editingValue.value = tagEditor.selectTagFromPopover(todo.activityId, tagId, editingValue.value);
+  isPickingTagFromSelector.value = false;
+  nextTick(() => titleInputRef.value?.focus());
 }
 
 function handleTagCreate(tagName: string) {
@@ -1282,12 +1289,9 @@ function handleTagCreate(tagName: string) {
   const todo = todosForCurrentViewWithTaskRecords.value.find((t) => t.id === tagEditor.popoverTargetId.value);
   if (!todo) return;
 
-  const cleanedTitle = tagEditor.clearTagTriggerText(editingValue.value);
-  editingValue.value = cleanedTitle;
-
-  // 通过 activityId 创建并添加标签到 Activity
-  dataStore.createAndAddTagToActivity(todo.activityId, tagName);
-  tagEditor.closePopover();
+  editingValue.value = tagEditor.createTagFromPopover(todo.activityId, tagName, editingValue.value);
+  isPickingTagFromSelector.value = false;
+  nextTick(() => titleInputRef.value?.focus());
 }
 
 function handleTogglePomoType() {
