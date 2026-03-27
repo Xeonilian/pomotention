@@ -1,7 +1,23 @@
 <!-- 移动端 Home 右下角快捷操作：状态来自 useDataStore，动作用 emit 交给 HomeView -->
 <template>
-  <div v-show="!taskRecordEditing" class="mobile-home-fab" aria-label="快捷操作">
-    <div class="mobile-home-fab__anchor">
+  <div class="mobile-home-fab" :aria-label="taskRecordEditing ? '完成编辑' : '快捷操作'">
+    <div v-if="taskRecordEditing" class="mobile-home-fab__anchor">
+      <n-button
+        type="success"
+        circle
+        secondary
+        size="large"
+        class="mobile-home-fab__trigger"
+        :focusable="false"
+        title="完成编辑"
+        @click="emit('finish-task-record-editing')"
+      >
+        <template #icon>
+          <n-icon :component="Checkmark20Filled" />
+        </template>
+      </n-button>
+    </div>
+    <div v-else class="mobile-home-fab__anchor">
       <!-- 往左：横向 add -->
       <n-popover
         v-model:show="panelShow"
@@ -161,6 +177,7 @@ import { storeToRefs } from "pinia";
 import { NButton, NIcon, NPopover } from "naive-ui";
 import {
   Add24Regular,
+  Checkmark20Filled,
   AddCircle24Regular,
   CalendarAdd24Regular,
   CloudAdd20Regular,
@@ -190,6 +207,8 @@ const emit = defineEmits<{
   (e: "reset-to-present"): void;
   (e: "suspend-planner-row"): void;
   (e: "repeat-activity", noTodoRepeat: boolean): void;
+  /** TaskRecord 编辑中：点击勾结束编辑 */
+  (e: "finish-task-record-editing"): void;
 }>();
 
 const props = defineProps<{
