@@ -6,6 +6,7 @@
       <n-space>
         <n-button v-if="isTauriRuntime" type="info" secondary :loading="isLoading" @click="handleExport">数据导出（文件夹）</n-button>
         <n-button type="success" secondary :loading="isLoading" @click="handlePreviewImport">{{ importButtonLabel }}</n-button>
+        <n-button v-if="canRestoreImportSnapshot" tertiary :loading="isLoading" @click="handleRestoreBeforeImport">恢复导入前状态</n-button>
       </n-space>
 
       <n-space align="center">
@@ -17,9 +18,11 @@
       </n-space>
 
       <n-alert v-if="message" :type="messageType" :show-icon="false">{{ message }}</n-alert>
+      <n-alert v-if="syncStore.isSyncGateActive" type="warning" :show-icon="false">
+        已开启同步闸门：导入后同步处于暂停状态。请核对数据，确认无误后点击登录继续同步。
+      </n-alert>
 
       <div v-if="previewReport" class="report-box">
-        <n-text strong>数据预览</n-text>
         <div class="report-summary">
           <n-text>状态：{{ previewReport.overallStatus }}</n-text>
           <n-text>将变更：{{ previewReport.shouldReload ? "是" : "否" }}</n-text>
@@ -62,6 +65,9 @@ import { join } from "@tauri-apps/api/path";
 import { isTauri } from "@tauri-apps/api/core";
 import { useDataExport } from "@/composables/useDataExport";
 import {
+  captureImportRollbackSnapshot,
+  hasImportRollbackSnapshot,
+  restoreFromImportRollbackSnapshot,
   handleFileImport,
   handleFileImportFromContents,
   previewFileImport,
@@ -71,6 +77,8 @@ import {
   type ImportFileMap,
   type ImportReport,
 } from "@/services/mergeService";
+import { useSyncStore } from "@/stores/useSyncStore";
+import { useSettingStore } from "@/stores/useSettingStore";
 
 /** 跳过类行用灰色（depth 3），其余正常色 */
 function isSkippedReportLine(row: FileProcessResult): boolean {
@@ -101,6 +109,31 @@ const shouldReloadOnClose = ref(false);
 const { exportData, message: exportMessage } = useDataExport();
 const isTauriRuntime = isTauri();
 const importButtonLabel = computed(() => (isTauriRuntime ? "预览导入（文件夹）" : "预览导入（文件夹）"));
+const syncStore = useSyncStore();
+const settingStore = useSettingStore();
+const canRestoreImportSnapshot = ref(hasImportRollbackSnapshot());
+
+function pauseImportSyncGateSafely(): void {
+  const store = syncStore as any;
+  if (typeof store.pauseSyncForImport === "function") {
+    store.pauseSyncForImport();
+    return;
+  }
+  // 兼容旧的热更新实例：直接写入闸门状态，避免方法缺失导致导入流程中断
+  store.syncGateReason = "import-review";
+  store.hasRecentImport = true;
+}
+
+function clearImportSyncGateSafely(): void {
+  const store = syncStore as any;
+  if (typeof store.clearImportSyncGate === "function") {
+    store.clearImportSyncGate();
+    return;
+  }
+  // 兼容旧的热更新实例：直接清闸门状态
+  store.syncGateReason = null;
+  store.hasRecentImport = false;
+}
 
 watch(
   () => visible.value,
@@ -117,6 +150,8 @@ watch(
       if (needReload) {
         window.location.reload();
       }
+    } else {
+      canRestoreImportSnapshot.value = hasImportRollbackSnapshot();
     }
   },
 );
@@ -192,6 +227,21 @@ async function handlePreviewImport() {
     isLoading.value = true;
     message.value = "";
     previewReport.value = null;
+
+    // 导入预览前必须先退出登录，避免带登录态做导入引发同步覆盖风险
+    if (syncStore.isLoggedIn) {
+      // 本次“为了导入预览而退出”必须保留本地数据，避免误清空
+      settingStore.settings.keepLocalDataOnNextSignOut = true;
+      await syncStore.handleLogout();
+      if (syncStore.isLoggedIn) {
+        message.value = "请先退出登录后再进行导入预览。";
+        messageType.value = "error";
+        return;
+      }
+      message.value = "已自动退出登录，请继续选择导入目录进行预览。";
+      messageType.value = "warning";
+    }
+
     pendingFileMap.value = isTauriRuntime ? await pickJsonFolder() : await pickJsonFolderForWeb();
     if (!pendingFileMap.value) return;
     pendingSourceType.value = isTauriRuntime ? "path" : "content";
@@ -219,11 +269,17 @@ async function handleConfirmImport() {
   if (!pendingFileMap.value || !pendingSourceType.value) return;
   try {
     isLoading.value = true;
+    // 导入前快照：用于一键恢复到导入前的本地状态
+    captureImportRollbackSnapshot();
     const report =
       pendingSourceType.value === "path"
         ? await handleFileImport(pendingFileMap.value, { idConflictPolicy: idPolicy.value })
         : await handleFileImportFromContents(pendingFileMap.value, { idConflictPolicy: idPolicy.value });
-    message.value = report.shouldReload ? "导入完成，关闭后刷新页面。" : "导入完成，无需刷新。";
+    pauseImportSyncGateSafely();
+    canRestoreImportSnapshot.value = hasImportRollbackSnapshot();
+    message.value = report.shouldReload
+      ? "导入完成，关闭后刷新页面。同步已暂停，可先核对数据；如有问题可“恢复导入前状态”。"
+      : "导入完成，无需刷新。同步已暂停，可先核对数据。";
     messageType.value = "success";
     shouldReloadOnClose.value = true;
     // 导入成功后收起数据预览，仅保留提示
@@ -232,6 +288,29 @@ async function handleConfirmImport() {
     pendingSourceType.value = null;
   } catch (error: any) {
     message.value = `导入失败：${error?.message || String(error)}`;
+    messageType.value = "error";
+  } finally {
+    isLoading.value = false;
+  }
+}
+
+async function handleRestoreBeforeImport() {
+  try {
+    isLoading.value = true;
+    const restored = restoreFromImportRollbackSnapshot();
+    if (!restored) {
+      message.value = "未找到可恢复的导入快照。";
+      messageType.value = "info";
+      canRestoreImportSnapshot.value = false;
+      return;
+    }
+    clearImportSyncGateSafely();
+    canRestoreImportSnapshot.value = false;
+    message.value = "已恢复为导入前状态，页面即将刷新。";
+    messageType.value = "success";
+    shouldReloadOnClose.value = true;
+  } catch (error: any) {
+    message.value = `恢复失败：${error?.message || String(error)}`;
     messageType.value = "error";
   } finally {
     isLoading.value = false;

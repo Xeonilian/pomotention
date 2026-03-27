@@ -4,13 +4,19 @@ import { debounce } from "@/core/utils/debounce";
 import { syncAll, uploadAll } from "@/services/sync/index";
 import { getCurrentUser } from "@/core/services/authService";
 import { useSettingStore } from "@/stores/useSettingStore";
+import { useSyncStore } from "@/stores/useSyncStore";
 
 /**
  * 防抖全量同步（上传+下载+清理），5s 内合并多次触发
  */
 export const autoSyncDebounced = debounce(async () => {
   const settingStore = useSettingStore();
+  const syncStore = useSyncStore();
   if (!settingStore.settings.autoSupabaseSync) return; // 检查开关
+  if (syncStore.isSyncGateActive) {
+    console.log("同步闸门开启，跳过自动同步");
+    return;
+  }
 
   // 检查用户是否登录
   const user = await getCurrentUser();
@@ -37,7 +43,12 @@ export const autoSyncDebounced = debounce(async () => {
  */
 export const uploadAllDebounced = debounce(async () => {
   const settingStore = useSettingStore();
+  const syncStore = useSyncStore();
   if (!settingStore.settings.autoSupabaseSync) return; // 检查开关
+  if (syncStore.isSyncGateActive) {
+    console.log("同步闸门开启，跳过自动上传");
+    return;
+  }
 
   // 检查用户是否登录
   const user = await getCurrentUser();

@@ -147,11 +147,7 @@ function computeGlobalIndexFallback(todo: Todo, getSegmentsByDay: (dayStart: num
   return 0;
 }
 
-function ensurePomoGlobalIndex(
-  todo: Todo,
-  candidate: number,
-  getSegmentsByDay: (dayStart: number) => PomodoroSegment[],
-): number {
+function ensurePomoGlobalIndex(todo: Todo, candidate: number, getSegmentsByDay: (dayStart: number) => PomodoroSegment[]): number {
   const anchorTs =
     (typeof todo.startTime === "number" && Number.isFinite(todo.startTime) && todo.startTime) ||
     (typeof todo.doneTime === "number" && Number.isFinite(todo.doneTime) && todo.doneTime) ||
@@ -253,9 +249,7 @@ export function normalizeImportedTodoData(options: NormalizeOptions = {}): Impor
   }
 
   if (stats.defaultPomoTypeCount > 0 || stats.clearedGlobalIndexCount > 0 || stats.rebuiltGlobalIndexCount > 0) {
-    warnings.push(
-      `[Import Normalize] Todo 已归一化 ${stats.normalizedCount} 项（补 pomoType ${stats.defaultPomoTypeCount}，清理无效 globalIndex ${stats.clearedGlobalIndexCount}，回填 globalIndex ${stats.rebuiltGlobalIndexCount}）`
-    );
+    warnings.push(`Todo 清理无效 globalIndex ${stats.clearedGlobalIndexCount}，回填 globalIndex ${stats.rebuiltGlobalIndexCount}`);
   }
 
   return { touched, todo: stats, warnings };

@@ -174,7 +174,8 @@ const handleSignedInSession = async (session: any) => {
 const handleSignedOut = async () => {
   console.log("👋 用户已登出，清理同步状态和认证会话");
   syncStore.isLoggedIn = false;
-  const keep = settingStore.settings.keepLocalDataAfterSignOut;
+  const keep = settingStore.settings.keepLocalDataAfterSignOut || settingStore.settings.keepLocalDataOnNextSignOut;
+  settingStore.settings.keepLocalDataOnNextSignOut = false;
   clearAllUserState(keep, true, !keep);
   if (!keep) {
     settingStore.resetSettings();

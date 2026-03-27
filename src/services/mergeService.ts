@@ -103,6 +103,55 @@ const FILE_TO_KEY_MAP: Record<string, string> = {
   "timeTableBlocks.json": STORAGE_KEYS.TIMETABLE_BLOCKS,
 };
 
+const IMPORT_ROLLBACK_SNAPSHOT_KEY = "importRollbackSnapshotV1";
+
+const IMPORT_ROLLBACK_TARGET_KEYS: string[] = Array.from(new Set(Object.values(FILE_TO_KEY_MAP)));
+
+interface ImportRollbackSnapshot {
+  createdAt: number;
+  data: Record<string, unknown | null>;
+}
+
+export function hasImportRollbackSnapshot(): boolean {
+  return !!localStorage.getItem(IMPORT_ROLLBACK_SNAPSHOT_KEY);
+}
+
+export function clearImportRollbackSnapshot(): void {
+  localStorage.removeItem(IMPORT_ROLLBACK_SNAPSHOT_KEY);
+}
+
+export function captureImportRollbackSnapshot(): void {
+  const snapshot: ImportRollbackSnapshot = {
+    createdAt: Date.now(),
+    data: {},
+  };
+
+  for (const key of IMPORT_ROLLBACK_TARGET_KEYS) {
+    snapshot.data[key] = loadData<unknown>(key);
+  }
+
+  saveData(IMPORT_ROLLBACK_SNAPSHOT_KEY, snapshot);
+}
+
+export function restoreFromImportRollbackSnapshot(): boolean {
+  const snapshot = loadData<ImportRollbackSnapshot | null>(IMPORT_ROLLBACK_SNAPSHOT_KEY, null);
+  if (!snapshot) {
+    return false;
+  }
+
+  for (const key of IMPORT_ROLLBACK_TARGET_KEYS) {
+    const value = snapshot.data[key];
+    if (value === null || value === undefined) {
+      localStorage.removeItem(key);
+      continue;
+    }
+    saveData(key, value);
+  }
+
+  clearImportRollbackSnapshot();
+  return true;
+}
+
 // 合并策略函数
 async function mergeSkip(storageKey: string, _importData: any): Promise<void> {
   console.log(`[${storageKey}]: 策略为跳过 (SKIP)，不进行任何操作。`);
@@ -421,7 +470,7 @@ async function processFileImport(
   }
 
   if (report.shouldReload) {
-    report.warnings.push("导入后会运行 task 修复，无法关联到 activity 的任务，可能被清理。");
+    report.warnings.push("Task 修复无法关联到 Activity 的任务");
   }
 
   // 导入后做一次 todo 归一化，兼容旧导出数据（preview 只统计，不落盘）
