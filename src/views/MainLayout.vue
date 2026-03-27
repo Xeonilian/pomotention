@@ -63,9 +63,24 @@
                   </n-icon>
                 </template>
               </n-button>
+              <n-button
+                v-if="!isMobile && isTauriDesktop"
+                :size="isMobile ? 'large' : 'medium'"
+                tertiary
+                type="warning"
+                title="数据库导入导出"
+                class="header-button"
+                @click="showDatabaseDialog = true"
+              >
+                <template #icon>
+                  <n-icon>
+                    <Database20Regular />
+                  </n-icon>
+                </template>
+              </n-button>
               <!-- 已登录时显示退出登录按钮 -->
               <n-popconfirm
-                v-else
+                v-if="isLoggedIn"
                 @positive-click="handleLogoutConfirm"
                 @negative-click="handleLogoutCancel"
                 negative-text="不保留"
@@ -194,6 +209,7 @@
           </div>
         </n-layout-footer>
       </n-layout>
+      <DatabaseTransferDialog v-model:show="showDatabaseDialog" />
     </n-config-provider>
   </div>
 </template>
@@ -222,10 +238,20 @@ import { useDraggable } from "@/composables/useDraggable";
 import { useAppWindow } from "@/composables/useAppWindow";
 import { useSyncWidget } from "@/composables/useSyncWidget";
 import { useDevice } from "@/composables/useDevice";
+import { isTauri } from "@tauri-apps/api/core";
 
 // Icons & Components
-import { Person20Filled, ArrowUp24Filled, ArrowDown24Filled, List24Filled, Person20Regular, CloudSync20Regular } from "@vicons/fluent";
+import {
+  Person20Filled,
+  ArrowUp24Filled,
+  ArrowDown24Filled,
+  List24Filled,
+  Person20Regular,
+  CloudSync20Regular,
+  Database20Regular,
+} from "@vicons/fluent";
 import PomotentionTimer from "@/components/PomotentionTimer/PomotentionTimer.vue";
+import DatabaseTransferDialog from "@/components/DatabaseTransferDialog.vue";
 
 hljs.registerLanguage("javascript", javascript);
 hljs.registerLanguage("typescript", typescript);
@@ -262,6 +288,8 @@ const syncStore = useSyncStore();
 const { syncIcon, handleUpload, handleDownload } = useSyncWidget(); //relativeTime,
 const { isLoggedIn } = storeToRefs(syncStore);
 const { isMobile } = useDevice();
+const showDatabaseDialog = ref(false);
+const isTauriDesktop = isTauri();
 
 // 处理退出登录确认（保留数据）
 async function handleLogoutConfirm() {
