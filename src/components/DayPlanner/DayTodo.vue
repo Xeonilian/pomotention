@@ -24,10 +24,16 @@
       <thead>
         <tr>
           <th class="col-check">
-            <n-button v-if="!isMobile" text type="info" @click.stop="handleQuickAddTodo" title="快速新增待办" class="add-todo-button">
+            <n-button
+              :type="isMobile ? 'default' : 'info'"
+              text
+              @click.stop="handleQuickAddTodo"
+              title="快速新增待办"
+              class="add-todo-button"
+            >
               <template #icon>
-                <n-icon size="20">
-                  <AddCircle24Regular />
+                <n-icon size="19">
+                  <Add20Regular />
                 </n-icon>
               </template>
             </n-button>
@@ -239,12 +245,8 @@
             <!-- 5 意图 -->
             <td
               class="col-intent"
-              @click.stop="handleRowClick(todo)"
-              @dblclick.stop="startEditing(todo.id, 'title')"
-              @touchstart.stop="handleTitleTouchStart($event, todo)"
-              @touchend.stop="handleTitleTouchEnd($event, todo)"
-              @touchcancel.stop="handleTitleTouchCancel(todo)"
-              :title="editingRowId === todo.id && editingField === 'title' ? '' : isMobile ? '双击编辑' : '单击编辑'"
+              @click.stop="startEditing(todo.id, 'title')"
+              :title="editingRowId === todo.id && editingField === 'title' ? '' : '单击编辑'"
             >
               <input
                 class="title-input"
@@ -444,7 +446,7 @@ import {
   DismissSquare20Filled,
   CaretLeft12Filled,
   CaretRight12Filled,
-  AddCircle24Regular,
+  Add20Regular,
   Important20Regular,
   Thinking20Regular,
   Play20Regular,
@@ -516,10 +518,6 @@ const titleInputRef = ref<HTMLInputElement | null>(null);
 const startInputRef = ref<HTMLInputElement | null>(null);
 const doneInputRef = ref<HTMLInputElement | null>(null);
 // 移动端标题列：双击进入编辑，单击延迟后仅选中（与 ActivitySection 一致）
-const DOUBLE_CLICK_DELAY = 300;
-const titleTapTimers = ref(new Map<number, number>());
-const titleLastTapInfo = ref<{ id: number; time: number } | null>(null);
-
 // 排序列：emoji 弹窗与绑定设置
 const rankPopoverTodoId = ref<number | null>(null);
 let rankPopoverTimer: number | null = null; // 自动关闭排序弹窗的定时器
@@ -1262,48 +1260,6 @@ function handleInputKeydown(event: KeyboardEvent, todo: Todo) {
   }
 }
 
-function clearTitleTapTimer(id: number) {
-  const t = titleTapTimers.value.get(id);
-  if (t) {
-    clearTimeout(t);
-    titleTapTimers.value.delete(id);
-  }
-}
-
-function handleTitleTouchStart(e: TouchEvent, todo: Todo) {
-  if (!isMobile.value) return;
-  e.preventDefault();
-  clearTitleTapTimer(todo.id);
-}
-
-function handleTitleTouchEnd(e: TouchEvent, todo: Todo) {
-  if (!isMobile.value) return;
-  e.preventDefault();
-  e.stopPropagation();
-  const id = todo.id;
-  const now = Date.now();
-  const last = titleLastTapInfo.value;
-  if (last && last.id === id && now - last.time < DOUBLE_CLICK_DELAY) {
-    clearTitleTapTimer(id);
-    titleLastTapInfo.value = null;
-    startEditing(id, "title");
-    return;
-  }
-  titleLastTapInfo.value = { id, time: now };
-  clearTitleTapTimer(id);
-  const t = window.setTimeout(() => {
-    titleLastTapInfo.value = null;
-    titleTapTimers.value.delete(id);
-    handleRowClick(todo);
-  }, DOUBLE_CLICK_DELAY);
-  titleTapTimers.value.set(id, t);
-}
-
-function handleTitleTouchCancel(todo: Todo) {
-  if (!isMobile.value) return;
-  clearTitleTapTimer(todo.id);
-}
-
 function handleTagSelected(tagId: number) {
   if (!tagEditor.popoverTargetId.value) return;
   const todo = todosForCurrentViewWithTaskRecords.value.find((t) => t.id === tagEditor.popoverTargetId.value);
@@ -1496,7 +1452,7 @@ th.col-end.disabled-toggle {
 
 .add-todo-button {
   cursor: pointer;
-  transform: translate(0px, 3px);
+  transform: translate(0px, 4px);
 }
 
 .header-icon {

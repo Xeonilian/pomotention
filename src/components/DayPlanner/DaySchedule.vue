@@ -26,16 +26,15 @@
         <tr>
           <th class="col-check">
             <n-button
-              v-if="!isMobile"
               text
-              type="info"
+              :type="isMobile ? 'default' : 'info'"
               @click.stop="handleQuickAddSchedule"
               title="快速新增日程"
               class="add-schedule-button"
             >
               <template #icon>
-                <n-icon size="20">
-                  <CalendarAdd20Regular />
+                <n-icon size="19">
+                  <Add20Regular />
                 </n-icon>
               </template>
             </n-button>
@@ -201,12 +200,8 @@
               :class="{
                 'cloud-background': schedule.isUntaetigkeit === true,
               }"
-              @click.stop="handleRowClick(schedule)"
-              @dblclick.stop="startEditing(schedule.id, 'title')"
-              @touchstart.stop="handleTitleTouchStart($event, schedule)"
-              @touchend.stop="handleTitleTouchEnd($event, schedule)"
-              @touchcancel.stop="handleTitleTouchCancel(schedule)"
-              :title="editingRowId === schedule.id && editingField === 'title' ? '' : isMobile ? '双击编辑' : '单击编辑'"
+              @click.stop="startEditing(schedule.id, 'title')"
+              :title="editingRowId === schedule.id && editingField === 'title' ? '' : '单击编辑'"
             >
               <input
                 class="title-input"
@@ -237,12 +232,8 @@
             <!-- 6 地点 -->
             <td
               class="col-location"
-              @click.stop="handleRowClick(schedule)"
-              @dblclick.stop="startEditing(schedule.id, 'location')"
-              @touchstart.stop="handleLocationTouchStart($event, schedule)"
-              @touchend.stop="handleLocationTouchEnd($event, schedule)"
-              @touchcancel.stop="handleLocationTouchCancel(schedule)"
-              :title="editingRowId === schedule.id && editingField === 'location' ? '' : isMobile ? '双击编辑' : '单击编辑'"
+              @click.stop="startEditing(schedule.id, 'location')"
+              :title="editingRowId === schedule.id && editingField === 'location' ? '' : '单击编辑'"
             >
               <input
                 class="location-input"
@@ -321,7 +312,7 @@ import type { Schedule } from "@/core/types/Schedule";
 import { timestampToTimeString } from "@/core/utils";
 import { NCheckbox, NButton, NIcon, NPopover } from "naive-ui";
 import {
-  CalendarAdd20Regular,
+  Add20Regular,
   DismissCircle20Regular,
   DismissSquare20Filled,
   Play20Regular,
@@ -357,12 +348,6 @@ const startInputRef = ref<HTMLInputElement | null>(null);
 const doneInputRef = ref<HTMLInputElement | null>(null);
 const durationInputRef = ref<HTMLInputElement | null>(null);
 const locationInputRef = ref<HTMLInputElement | null>(null);
-// 移动端意图/地点列：双击进入编辑，单击延迟后仅选中（与 ActivitySection 一致）
-const DOUBLE_CLICK_DELAY = 300;
-const titleTapTimers = ref(new Map<number, number>());
-const titleLastTapInfo = ref<{ id: number; time: number } | null>(null);
-const locationTapTimers = ref(new Map<number, number>());
-const locationLastTapInfo = ref<{ id: number; time: number } | null>(null);
 
 // 定义 Emit
 
@@ -695,90 +680,6 @@ function handleInputKeydown(event: KeyboardEvent, schedule: Schedule) {
   }
 }
 
-function clearTitleTapTimer(id: number) {
-  const t = titleTapTimers.value.get(id);
-  if (t) {
-    clearTimeout(t);
-    titleTapTimers.value.delete(id);
-  }
-}
-
-function clearLocationTapTimer(id: number) {
-  const t = locationTapTimers.value.get(id);
-  if (t) {
-    clearTimeout(t);
-    locationTapTimers.value.delete(id);
-  }
-}
-
-function handleTitleTouchStart(e: TouchEvent, schedule: Schedule) {
-  if (!isMobile.value) return;
-  e.preventDefault();
-  clearTitleTapTimer(schedule.id);
-}
-
-function handleTitleTouchEnd(e: TouchEvent, schedule: Schedule) {
-  if (!isMobile.value) return;
-  e.preventDefault();
-  e.stopPropagation();
-  const id = schedule.id;
-  const now = Date.now();
-  const last = titleLastTapInfo.value;
-  if (last && last.id === id && now - last.time < DOUBLE_CLICK_DELAY) {
-    clearTitleTapTimer(id);
-    titleLastTapInfo.value = null;
-    startEditing(id, "title");
-    return;
-  }
-  titleLastTapInfo.value = { id, time: now };
-  clearTitleTapTimer(id);
-  const t = window.setTimeout(() => {
-    titleLastTapInfo.value = null;
-    titleTapTimers.value.delete(id);
-    handleRowClick(schedule);
-  }, DOUBLE_CLICK_DELAY);
-  titleTapTimers.value.set(id, t);
-}
-
-function handleTitleTouchCancel(schedule: Schedule) {
-  if (!isMobile.value) return;
-  clearTitleTapTimer(schedule.id);
-}
-
-function handleLocationTouchStart(e: TouchEvent, schedule: Schedule) {
-  if (!isMobile.value) return;
-  e.preventDefault();
-  clearLocationTapTimer(schedule.id);
-}
-
-function handleLocationTouchEnd(e: TouchEvent, schedule: Schedule) {
-  if (!isMobile.value) return;
-  e.preventDefault();
-  e.stopPropagation();
-  const id = schedule.id;
-  const now = Date.now();
-  const last = locationLastTapInfo.value;
-  if (last && last.id === id && now - last.time < DOUBLE_CLICK_DELAY) {
-    clearLocationTapTimer(id);
-    locationLastTapInfo.value = null;
-    startEditing(id, "location");
-    return;
-  }
-  locationLastTapInfo.value = { id, time: now };
-  clearLocationTapTimer(id);
-  const t = window.setTimeout(() => {
-    locationLastTapInfo.value = null;
-    locationTapTimers.value.delete(id);
-    handleRowClick(schedule);
-  }, DOUBLE_CLICK_DELAY);
-  locationTapTimers.value.set(id, t);
-}
-
-function handleLocationTouchCancel(schedule: Schedule) {
-  if (!isMobile.value) return;
-  clearLocationTapTimer(schedule.id);
-}
-
 function handleTagSelected(tagId: number) {
   if (!tagEditor.popoverTargetId.value) return;
   const schedule = schedulesForCurrentView.value.find((s) => s.id === tagEditor.popoverTargetId.value);
@@ -967,7 +868,7 @@ tr.cancel-row {
 }
 
 tr.empty-row {
-  height: 80px;
+  height: 30px;
   text-align: center;
   color: var(--color-text-secondary);
   width: 100%;
@@ -1212,7 +1113,7 @@ td.status-col {
 
 .add-schedule-button {
   cursor: pointer;
-  transform: translate(0px, 3px);
+  transform: translate(0px, 4px);
 }
 
 .cancel-button.header-active {

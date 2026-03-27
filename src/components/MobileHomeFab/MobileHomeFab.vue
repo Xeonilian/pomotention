@@ -32,9 +32,9 @@
           <span class="mobile-home-fab__ghost-trigger" aria-hidden="true" />
         </template>
         <div class="mobile-home-fab__left">
-          <n-button size="large" secondary circle type="info" @click="emit('quick-add-todo')">
+          <n-button size="large" secondary circle type="info" @click="emit('quick-add-schedule', true)">
             <template #icon>
-              <n-icon :component="AddCircle24Regular" />
+              <n-icon :component="CloudAdd20Regular" />
             </template>
           </n-button>
           <n-button size="large" secondary circle type="info" @click="emit('quick-add-schedule', false)">
@@ -42,9 +42,10 @@
               <n-icon :component="CalendarAdd24Regular" />
             </template>
           </n-button>
-          <n-button size="large" secondary circle type="info" @click="emit('quick-add-schedule', true)">
+
+          <n-button size="large" secondary circle type="info" @click="emit('quick-add-todo')">
             <template #icon>
-              <n-icon :component="CloudAdd20Regular" />
+              <n-icon :component="AddCircle24Regular" />
             </template>
           </n-button>
         </div>
