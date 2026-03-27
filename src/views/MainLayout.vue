@@ -67,7 +67,7 @@
                 v-if="!isMobile"
                 :size="isMobile ? 'large' : 'medium'"
                 tertiary
-                type="error"
+                type="default"
                 title="数据库导入导出"
                 class="header-button"
                 @click="showDatabaseDialog = true"
