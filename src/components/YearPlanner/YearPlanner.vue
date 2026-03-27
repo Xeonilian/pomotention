@@ -26,11 +26,11 @@
                 'day-dot--other-month': day && !day.isCurrentMonth,
               }"
               :title="day ? formatDayTitle(day.startTs) : ''"
-              @click="day && day.isCurrentMonth ? handleDayClick(day.startTs) : undefined"
-              @dblclick.stop="day && day.isCurrentMonth ? handleDayDblClick(day.startTs) : undefined"
-              @touchstart.stop="day && day.isCurrentMonth ? handleDayTouchStart($event, day.startTs) : undefined"
-              @touchend.stop="day && day.isCurrentMonth ? handleDayTouchEnd($event, day.startTs) : undefined"
-              @touchcancel.stop="day && day.isCurrentMonth ? handleDayTouchCancel() : undefined"
+              @click="onYearDayClick(day)"
+              @dblclick.stop="onYearDayDblClick(day, $event)"
+              @touchstart.stop="onYearDayTouchStart(day, $event)"
+              @touchend.stop="onYearDayTouchEnd(day, $event)"
+              @touchcancel.stop="onYearDayTouchCancel()"
             >
               <template v-if="day && day.isCurrentMonth">
                 <span class="day-dot" :style="getDotBgStyle(day.startTs)">
@@ -51,10 +51,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed } from "vue";
 import { storeToRefs } from "pinia";
-import { useLongPress } from "@/composables/useLongPress";
+import { createTouchScheduledSingleAndDouble } from "@/composables/useTouchScheduledSingleAndDouble";
 import { useDataStore } from "@/stores/useDataStore";
+import { useDevice } from "@/composables/useDevice";
 
 const emit = defineEmits<{
   "date-select-day-view": [timestamp: number];
@@ -83,7 +84,10 @@ const monthNames = [
 const dataStore = useDataStore();
 const { selectedTaskId, firstTaggedTaskIdForAppDate, selectedDate } = storeToRefs(dataStore);
 const dateService = dataStore.dateService;
-const dayLongPressHandler = ref<ReturnType<typeof useLongPress> | null>(null);
+const { isMobile } = useDevice();
+
+type MonthDay = { startTs: number; dayOfMonth: number; isCurrentMonth: boolean; isToday: boolean } | null;
+type MonthRow = { weekNum: number; weekStartTs: number; days: MonthDay[] };
 
 function startOfDay(ts: number) {
   const d = new Date(ts);
@@ -163,9 +167,6 @@ function formatDayTitle(ts: number): string {
   return d.toLocaleDateString("zh-CN", { year: "numeric", month: "short", day: "numeric" });
 }
 
-type MonthDay = { startTs: number; dayOfMonth: number; isCurrentMonth: boolean; isToday: boolean } | null;
-type MonthRow = { weekNum: number; weekStartTs: number; days: MonthDay[] };
-
 const months = computed(() => {
   const start = yearStart.value;
   const y = new Date(start).getFullYear();
@@ -225,31 +226,72 @@ function handleDayDblClick(dayStartTs: number) {
   emit("date-select-day-view", dayStartTs);
 }
 
-function handleDayTouchStart(e: TouchEvent, dayStartTs: number) {
-  // 阻止长按触发系统复制/文本选择
+/** 年视图可滚动：位移超过阈值则取消本次选日/双触判定，避免划动误点 */
+const YEAR_SCROLL_CANCEL_PX = 22; // 阈值太低会误判为滚动，太高则用户难以精确点击
+
+const yearDayTouch = createTouchScheduledSingleAndDouble(handleDayClick, handleDayDblClick);
+let yearTouchPanCancelled = false;
+let yearTouchPanTeardown: (() => void) | null = null;
+
+function attachYearTouchPanGuard(e: TouchEvent) {
+  yearTouchPanTeardown?.();
+  yearTouchPanCancelled = false;
+  const t0 = e.touches[0];
+  if (!t0) return;
+  const sx = t0.clientX;
+  const sy = t0.clientY;
+  const onMove = (ev: TouchEvent) => {
+    const t = ev.touches[0];
+    if (!t) return;
+    if (Math.hypot(t.clientX - sx, t.clientY - sy) > YEAR_SCROLL_CANCEL_PX) {
+      yearTouchPanCancelled = true;
+      yearDayTouch.touchCancel();
+    }
+  };
+  const teardown = () => {
+    document.removeEventListener("touchmove", onMove);
+    document.removeEventListener("touchend", teardown);
+    document.removeEventListener("touchcancel", teardown);
+    yearTouchPanTeardown = null;
+  };
+  yearTouchPanTeardown = teardown;
+  document.addEventListener("touchmove", onMove, { passive: true });
+  document.addEventListener("touchend", teardown);
+  document.addEventListener("touchcancel", teardown);
+}
+
+function onYearDayClick(day: MonthDay | null) {
+  if (!day?.isCurrentMonth || isMobile.value) return;
+  handleDayClick(day.startTs);
+}
+
+function onYearDayDblClick(day: MonthDay | null, e: MouseEvent) {
+  if (!day?.isCurrentMonth || isMobile.value) return;
   e.preventDefault();
-  if (!dayLongPressHandler.value) {
-    dayLongPressHandler.value = useLongPress({
-      delay: 600,
-      onLongPress: () => {
-        emit("date-select-day-view", dayStartTs);
-      },
-    });
-  }
-  const handler = dayLongPressHandler.value;
-  if (handler) {
-    handler.onLongPressStart(e);
-  }
+  handleDayDblClick(day.startTs);
 }
 
-function handleDayTouchEnd(e: TouchEvent, dayStartTs: number) {
+function onYearDayTouchStart(day: MonthDay | null, e: TouchEvent) {
+  if (!day?.isCurrentMonth || !isMobile.value) return;
+  yearDayTouch.touchStart(e);
+  attachYearTouchPanGuard(e);
+}
+
+function onYearDayTouchEnd(day: MonthDay | null, e: TouchEvent) {
+  if (!day?.isCurrentMonth || !isMobile.value) return;
   e.stopPropagation();
-  dayLongPressHandler.value?.onLongPressEnd();
-  handleDayClick(dayStartTs);
+  yearTouchPanTeardown?.();
+  const skip = yearTouchPanCancelled;
+  yearTouchPanCancelled = false;
+  if (skip) return;
+  yearDayTouch.touchEnd(day.startTs);
 }
 
-function handleDayTouchCancel() {
-  dayLongPressHandler.value?.onLongPressCancel();
+function onYearDayTouchCancel() {
+  if (!isMobile.value) return;
+  yearTouchPanTeardown?.();
+  yearTouchPanCancelled = false;
+  yearDayTouch.touchCancel();
 }
 
 function handleMonthTitleClick(monthStartTs: number) {
@@ -274,6 +316,7 @@ function handleWeekClick(weekStartTs: number) {
   -webkit-user-select: none;
   -ms-user-select: none;
   -webkit-touch-callout: none;
+  touch-action: pan-x pan-y;
 }
 
 .year-grid.months-nxn {
