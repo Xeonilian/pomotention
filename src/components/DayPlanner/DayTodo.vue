@@ -1379,7 +1379,7 @@ col.col-status {
   }
 
   col.col-status {
-    width: 40px;
+    width: 33px;
   }
 
   td.col-intent {
@@ -1400,18 +1400,22 @@ col.col-status {
   }
 
   col.col-intent {
-    width: 62%;
+    width: 61%;
     min-width: 0px;
   }
 
   col.col-fruit {
-    width: 38%;
+    width: 39%;
     min-width: 0px;
   }
 
   .cancel-icon {
     width: 14px !important;
     height: 14px !important;
+  }
+
+  .records-stat {
+    gap: 1px !important;
   }
 }
 
