@@ -474,6 +474,13 @@ function getPomoBgColorHEX(ratio: number) {
   z-index: 100;
 }
 
+.date-badge:hover {
+  cursor: pointer;
+  background-color: var(--color-blue-light) !important;
+  color: var(--color-blue) !important;
+  z-index: 1000;
+}
+
 .day-card--other-month .date-badge {
   color: var(--color-background) !important;
   background-color: var(--color-background-light) !important;
@@ -594,7 +601,6 @@ function getPomoBgColorHEX(ratio: number) {
   padding-right: 6px;
 }
 
-/* #TODO  */
 @media (max-width: 430px) {
   .header-card,
   .day-card {
@@ -662,6 +668,7 @@ function getPomoBgColorHEX(ratio: number) {
     font-size: 12px;
     width: 16px;
     height: 16px;
+    z-index: 1000;
   }
 
   .date-badge.today {
