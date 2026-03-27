@@ -47,6 +47,21 @@
                   <n-icon :component="control.icon" />
                 </template>
               </n-button>
+              <n-button
+                v-if="!isMobile"
+                :size="isMobile ? 'large' : 'medium'"
+                tertiary
+                type="default"
+                title="数据库导入导出"
+                class="header-button"
+                @click="showDatabaseDialog = true"
+              >
+                <template #icon>
+                  <n-icon>
+                    <DatabasePerson20Regular />
+                  </n-icon>
+                </template>
+              </n-button>
               <!-- 未登录时显示登录按钮 -->
               <n-button
                 v-if="!isLoggedIn"
@@ -63,21 +78,7 @@
                   </n-icon>
                 </template>
               </n-button>
-              <n-button
-                v-if="!isMobile"
-                :size="isMobile ? 'large' : 'medium'"
-                tertiary
-                type="default"
-                title="数据库导入导出"
-                class="header-button"
-                @click="showDatabaseDialog = true"
-              >
-                <template #icon>
-                  <n-icon>
-                    <DatabasePerson20Regular />
-                  </n-icon>
-                </template>
-              </n-button>
+
               <!-- 已登录时显示退出登录按钮 -->
               <n-popconfirm
                 v-if="isLoggedIn"
