@@ -574,7 +574,8 @@ function resumeHtmlWhiteNoiseIfNeeded(): void {
         if (htmlWnCross !== stRef) return;
         if (!useSettingStore().settings.isWhiteNoiseEnabled) return;
         const ts = useTimerStore();
-        if (!ts.isActive || (!ts.isWorking && !ts.isFromSequence)) return;
+        // 仅工作中补播，序列休息段 isFromSequence 仍为 true 不得开启
+        if (!ts.isActive || !ts.isWorking) return;
         const [e0, e1] = stRef.els;
         if (!e0.paused || !e1.paused) return;
         const lead = stRef.els[stRef.leaderIdx];
@@ -607,7 +608,7 @@ export function resumeSharedAudioAfterForeground(): void {
         .then(({ useTimerStore }) => {
           if (!useSettingStore().settings.isWhiteNoiseEnabled) return;
           const ts = useTimerStore();
-          if (ts.isActive && (ts.isWorking || ts.isFromSequence)) {
+          if (ts.isActive && ts.isWorking) {
             startWhiteNoise();
             dbgAudio("[WN] 前台恢复后补拉白噪音", { reason: "无活跃 BufferSource" });
           }
@@ -685,8 +686,8 @@ export function toggleWhiteNoise(): void {
     .then(({ useTimerStore }) => {
       if (!useSettingStore().settings.isWhiteNoiseEnabled) return;
       const ts = useTimerStore();
-      // 专注中、或序列整场未结束（含休息）时允许恢复白噪音
-      if (ts.isActive && (ts.isWorking || ts.isFromSequence)) {
+      // 仅工作中开启；休息段不自动拉白噪音
+      if (ts.isActive && ts.isWorking) {
         startWhiteNoise();
       }
     })
