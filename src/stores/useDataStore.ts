@@ -380,10 +380,13 @@ export const useDataStore = defineStore(
       });
     });
 
-    // 按“优先级优先 + 时间最早 + tag 匹配”选出当日用于 Year 视图圆点的 activity 对应的 taskId
+    // 选出当日用于 Year 视图联动选中的 taskId：
+    // - 有 tag 筛选时：仅在匹配筛选标签的候选里，按时间最早优先
+    // - 无 tag 筛选时：按“优先级优先 + 时间最早”
     const firstTaggedTaskIdForAppDate = computed<number | null>(() => {
       const startOfDay = dateService.appDateTimestamp.value;
       const endOfDay = addDays(startOfDay, 1);
+      const hasTagFilter = !!(filterTagIds.value && filterTagIds.value.length > 0);
 
       const candidates: Array<{ ts: number; priority: number; activityTagIds: number[]; taskId: number | null }> = [];
 
@@ -393,6 +396,7 @@ export const useDataStore = defineStore(
         const activity = t.activityId != null ? activityById.value.get(t.activityId) : undefined;
         const activityTagIds = activity?.tagIds ?? [];
         if (!activityTagIds.length) continue;
+        if (hasTagFilter && !matchesTagFilter(activityTagIds)) continue;
         candidates.push({
           ts,
           priority: t.priority ?? 0,
@@ -407,6 +411,7 @@ export const useDataStore = defineStore(
         const activity = s.activityId != null ? activityById.value.get(s.activityId) : undefined;
         const activityTagIds = activity?.tagIds ?? [];
         if (!activityTagIds.length) continue;
+        if (hasTagFilter && !matchesTagFilter(activityTagIds)) continue;
         candidates.push({
           ts,
           priority: 0,
@@ -418,6 +423,9 @@ export const useDataStore = defineStore(
       if (candidates.length === 0) return null;
 
       candidates.sort((a, b) => {
+        if (hasTagFilter) {
+          return a.ts - b.ts;
+        }
         const pa = a.priority ?? 0;
         const pb = b.priority ?? 0;
         const hasPa = pa > 0;
