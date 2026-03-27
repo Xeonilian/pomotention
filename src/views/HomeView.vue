@@ -1292,6 +1292,7 @@ function onDateSet(direction: "prev" | "next" | "today" | "query") {
       queryDate.value = null;
       break;
   }
+  selectedTaskId.value = null;
 }
 
 // 切换视图

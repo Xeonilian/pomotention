@@ -2,8 +2,8 @@
 <template>
   <div class="task-record">
     <div v-if="!isEditing" class="markdown-content" @click="handleClick" :title="isEditing ? '单击启动编辑' : ''">
-      <div v-if="!hasContent" class="placeholder">
-        <n-icon><Wand20Regular /></n-icon>
+      <div v-if="!hasContent && selectedTaskId" class="placeholder">
+        <n-icon size="20" color="var(--color-orange)"><Wand20Filled /></n-icon>
         <span>追踪执行意图...</span>
       </div>
       <div v-else v-html="renderedMarkdown"></div>
@@ -31,13 +31,15 @@ import { useDevice } from "@/composables/useDevice";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useSyncStore } from "@/stores/useSyncStore";
 import "highlight.js/styles/github.css";
-import { Wand20Regular } from "@vicons/fluent";
-
+import { Wand20Filled } from "@vicons/fluent";
+import { useDataStore } from "@/stores/useDataStore";
+const dataStore = useDataStore();
 const { showCaretFlash, caretFlashStyle, flashCaretFlash } = useCaretFlash();
 const { isMobile } = useDevice();
 const settingStore = useSettingStore();
 const syncStore = useSyncStore();
 const savedTopHeight = ref(settingStore.settings.topHeight);
+const { selectedTaskId } = storeToRefs(dataStore);
 
 const markdownLoaded = ref(false);
 let markedInstance: (typeof import("marked"))["marked"] | null = null;
@@ -678,7 +680,7 @@ defineExpose({ stopEditing });
   align-items: center;
   justify-content: center;
   display: flex;
-  margin-top: 10px;
+  margin-top: 30px;
 }
 
 .caret-flash {
