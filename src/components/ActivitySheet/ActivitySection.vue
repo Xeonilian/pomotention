@@ -496,9 +496,8 @@ const pomoLastTapInfo = ref<{ id: number; time: number } | null>(null);
 // 标记是否应该聚焦（用于双击后进入编辑）
 const pomoShouldFocus = ref(new Map<number, boolean>());
 
-// 移动端标题：双击后才允许编辑；单击仅 emit focus-row 同步选中（双击仅用两次 touchend 间隔判定，不用延时器，避免 touchstart 取消定时器后状态卡死）
+// 移动端标题：单击进入编辑（拖动在拖拽柄列，不与标题争手势）
 const titleEditAllowed = reactive<Record<number, boolean>>({});
-const titleLastTapInfo = ref<{ id: number; time: number } | null>(null);
 
 // 防抖：防止快速重复切换
 const pomoToggleTimers = ref(new Map<number, number>());
@@ -644,28 +643,14 @@ function handleTitleTouchEnd(e: TouchEvent, item: Activity) {
   if (t instanceof Element && t.closest(".icon-tag")) return;
   e.preventDefault();
   const id = item.id;
-
-  const now = Date.now();
-  const last = titleLastTapInfo.value;
-  if (last && last.id === id && now - last.time < DOUBLE_CLICK_DELAY) {
-    titleLastTapInfo.value = null;
-    blurTitleEditsExcept(id);
-    blurSearchInput();
-    titleEditAllowed[id] = true;
-    focusTitleInput(id);
-    return;
-  }
-
-  titleLastTapInfo.value = { id, time: now };
-  handleFocusRow(id);
+  blurTitleEditsExcept(id);
+  blurSearchInput();
+  titleEditAllowed[id] = true;
+  focusTitleInput(id);
 }
 
-function handleTitleTouchCancel(item: Activity) {
+function handleTitleTouchCancel(_item: Activity) {
   if (!isMobile.value) return;
-  // 取消下滑动等导致无 touchend 时，清掉该行上的“上一击”记录，避免下次点击被误判为双击
-  if (titleLastTapInfo.value?.id === item.id) {
-    titleLastTapInfo.value = null;
-  }
 }
 
 function clearPomoTapTimer(id: number) {
