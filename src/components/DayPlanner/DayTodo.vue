@@ -24,10 +24,16 @@
       <thead>
         <tr>
           <th class="col-check">
-            <n-button v-if="!isMobile" text type="info" @click.stop="handleQuickAddTodo" title="快速新增待办" class="add-todo-button">
+            <n-button
+              :type="isMobile ? 'default' : 'info'"
+              text
+              @click.stop="handleQuickAddTodo"
+              title="快速新增待办"
+              class="add-todo-button"
+            >
               <template #icon>
-                <n-icon size="20">
-                  <AddCircle24Regular />
+                <n-icon size="19">
+                  <Add20Regular />
                 </n-icon>
               </template>
             </n-button>
@@ -239,19 +245,15 @@
             <!-- 5 意图 -->
             <td
               class="col-intent"
-              @click.stop="handleRowClick(todo)"
-              @dblclick.stop="startEditing(todo.id, 'title')"
-              @touchstart.stop="handleTitleTouchStart($event, todo)"
-              @touchend.stop="handleTitleTouchEnd($event, todo)"
-              @touchcancel.stop="handleTitleTouchCancel(todo)"
-              :title="editingRowId === todo.id && editingField === 'title' ? '' : isMobile ? '双击编辑' : '单击编辑'"
+              @click.stop="startEditing(todo.id, 'title')"
+              :title="editingRowId === todo.id && editingField === 'title' ? '' : '单击编辑'"
             >
               <input
                 class="title-input"
                 v-if="editingRowId === todo.id && editingField === 'title'"
                 :ref="(el: any) => (titleInputRef = el)"
                 v-model="editingValue"
-                @blur="saveEdit(todo)"
+                @blur="handleTitleBlur(todo)"
                 @keyup.enter="saveEdit(todo)"
                 @keyup.esc="cancelEdit"
                 @input="handleTitleInput(todo)"
@@ -384,6 +386,9 @@
       :ref="(el) => (tagSelectorRef = el)"
       :search-term="tagEditor.tagSearchTerm.value"
       :allow-create="true"
+      @pointerdown.stop="isPickingTagFromSelector = true"
+      @mousedown.stop="isPickingTagFromSelector = true"
+      @touchstart.stop="isPickingTagFromSelector = true"
       @select-tag="(tagId: any) => handleTagSelected(tagId)"
       @create-tag="(tagName: any) => handleTagCreate(tagName)"
       @close-selector="tagEditor.popoverTargetId.value = null"
@@ -444,7 +449,7 @@ import {
   DismissSquare20Filled,
   CaretLeft12Filled,
   CaretRight12Filled,
-  AddCircle24Regular,
+  Add20Regular,
   Important20Regular,
   Thinking20Regular,
   Play20Regular,
@@ -512,14 +517,12 @@ const tagEditor = useActivityTagEditor();
 const tagSelectorRef = ref<any>(null);
 // Enter 选中标签时置为 true，saveEdit 会跳过结束编辑以保持继续输入
 const selectingTagViaEnter = ref(false);
+// 点击/触摸标签选择器时置为 true，避免移动端 blur 抢先触发保存导致选不中
+const isPickingTagFromSelector = ref(false);
 const titleInputRef = ref<HTMLInputElement | null>(null);
 const startInputRef = ref<HTMLInputElement | null>(null);
 const doneInputRef = ref<HTMLInputElement | null>(null);
 // 移动端标题列：双击进入编辑，单击延迟后仅选中（与 ActivitySection 一致）
-const DOUBLE_CLICK_DELAY = 300;
-const titleTapTimers = ref(new Map<number, number>());
-const titleLastTapInfo = ref<{ id: number; time: number } | null>(null);
-
 // 排序列：emoji 弹窗与绑定设置
 const rankPopoverTodoId = ref<number | null>(null);
 let rankPopoverTimer: number | null = null; // 自动关闭排序弹窗的定时器
@@ -1106,7 +1109,7 @@ function saveEdit(todo: Todo) {
   }
 
   // 如果输入框中有 # 开头的文本，清理并关闭 popover
-  if (editingValue.value.includes("#") && tagEditor.popoverTargetId.value) {
+  if ((editingValue.value.includes("#") || editingValue.value.includes("@")) && tagEditor.popoverTargetId.value) {
     editingValue.value = tagEditor.clearTagTriggerText(editingValue.value);
     tagEditor.closePopover();
   }
@@ -1137,13 +1140,22 @@ function saveEdit(todo: Todo) {
 
 function cancelEdit() {
   // 如果输入框中有 # 开头的文本，清理并关闭 popover
-  if (editingValue.value.includes("#") && tagEditor.popoverTargetId.value) {
+  if ((editingValue.value.includes("#") || editingValue.value.includes("@")) && tagEditor.popoverTargetId.value) {
     editingValue.value = tagEditor.clearTagTriggerText(editingValue.value);
     tagEditor.closePopover();
   }
   editingRowId.value = null;
   editingField.value = null;
   editingValue.value = "";
+}
+
+function handleTitleBlur(todo: Todo) {
+  if (isPickingTagFromSelector.value) {
+    isPickingTagFromSelector.value = false;
+    nextTick(() => titleInputRef.value?.focus());
+    return;
+  }
+  saveEdit(todo);
 }
 
 // 规范化时间输入，支持多种格式并返回 HH:mm
@@ -1262,63 +1274,14 @@ function handleInputKeydown(event: KeyboardEvent, todo: Todo) {
   }
 }
 
-function clearTitleTapTimer(id: number) {
-  const t = titleTapTimers.value.get(id);
-  if (t) {
-    clearTimeout(t);
-    titleTapTimers.value.delete(id);
-  }
-}
-
-function handleTitleTouchStart(e: TouchEvent, todo: Todo) {
-  if (!isMobile.value) return;
-  e.preventDefault();
-  clearTitleTapTimer(todo.id);
-}
-
-function handleTitleTouchEnd(e: TouchEvent, todo: Todo) {
-  if (!isMobile.value) return;
-  e.preventDefault();
-  e.stopPropagation();
-  const id = todo.id;
-  const now = Date.now();
-  const last = titleLastTapInfo.value;
-  if (last && last.id === id && now - last.time < DOUBLE_CLICK_DELAY) {
-    clearTitleTapTimer(id);
-    titleLastTapInfo.value = null;
-    startEditing(id, "title");
-    return;
-  }
-  titleLastTapInfo.value = { id, time: now };
-  clearTitleTapTimer(id);
-  const t = window.setTimeout(() => {
-    titleLastTapInfo.value = null;
-    titleTapTimers.value.delete(id);
-    handleRowClick(todo);
-  }, DOUBLE_CLICK_DELAY);
-  titleTapTimers.value.set(id, t);
-}
-
-function handleTitleTouchCancel(todo: Todo) {
-  if (!isMobile.value) return;
-  clearTitleTapTimer(todo.id);
-}
-
 function handleTagSelected(tagId: number) {
   if (!tagEditor.popoverTargetId.value) return;
   const todo = todosForCurrentViewWithTaskRecords.value.find((t) => t.id === tagEditor.popoverTargetId.value);
   if (!todo) return;
 
-  const cleanedTitle = tagEditor.clearTagTriggerText(editingValue.value);
-  editingValue.value = cleanedTitle;
-
-  // 通过 activityId 给 Activity 添加标签
-  dataStore.addTagToActivity(todo.activityId, tagId);
-  tagEditor.closePopover();
-  // Enter 选中时把焦点拉回输入框以便继续编辑
-  if (selectingTagViaEnter.value) {
-    nextTick(() => titleInputRef.value?.focus());
-  }
+  editingValue.value = tagEditor.selectTagFromPopover(todo.activityId, tagId, editingValue.value);
+  isPickingTagFromSelector.value = false;
+  nextTick(() => titleInputRef.value?.focus());
 }
 
 function handleTagCreate(tagName: string) {
@@ -1326,12 +1289,9 @@ function handleTagCreate(tagName: string) {
   const todo = todosForCurrentViewWithTaskRecords.value.find((t) => t.id === tagEditor.popoverTargetId.value);
   if (!todo) return;
 
-  const cleanedTitle = tagEditor.clearTagTriggerText(editingValue.value);
-  editingValue.value = cleanedTitle;
-
-  // 通过 activityId 创建并添加标签到 Activity
-  dataStore.createAndAddTagToActivity(todo.activityId, tagName);
-  tagEditor.closePopover();
+  editingValue.value = tagEditor.createTagFromPopover(todo.activityId, tagName, editingValue.value);
+  isPickingTagFromSelector.value = false;
+  nextTick(() => titleInputRef.value?.focus());
 }
 
 function handleTogglePomoType() {
@@ -1496,7 +1456,7 @@ th.col-end.disabled-toggle {
 
 .add-todo-button {
   cursor: pointer;
-  transform: translate(0px, 3px);
+  transform: translate(0px, 4px);
 }
 
 .header-icon {

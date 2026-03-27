@@ -18,7 +18,11 @@
           <div
             class="date-badge"
             :class="{ today: day.isToday }"
-            @click="() => handleDateSelectDayView(day.startTs)"
+            @click.stop="() => handleDateSelect(day.startTs)"
+            @dblclick.stop="() => handleDateSelectDayView(day.startTs)"
+            @touchstart.stop="onMonthBadgeTouchStart"
+            @touchend.stop="() => onMonthBadgeTouchEnd(day.startTs)"
+            @touchcancel.stop="onMonthBadgeTouchCancel"
             :style="{
               color: getPomoColor(day.pomoRatio),
               backgroundColor: getPomoBgColorHEX(day.pomoRatio),
@@ -70,6 +74,7 @@ import { timestampToTimeString } from "@/core/utils";
 import { useDataStore } from "@/stores/useDataStore";
 import { storeToRefs } from "pinia";
 import { useDevice } from "@/composables/useDevice";
+import { createTouchScheduledSingleAndDouble } from "@/composables/useTouchScheduledSingleAndDouble";
 
 const { isMobile } = useDevice();
 
@@ -318,6 +323,26 @@ const handleDateSelectDayView = (day: number) => {
   emit("date-select-day-view", day);
 };
 
+const monthBadgeTouch = createTouchScheduledSingleAndDouble(
+  (ts) => handleDateSelect(ts),
+  (ts) => handleDateSelectDayView(ts),
+);
+
+function onMonthBadgeTouchStart(e: TouchEvent) {
+  if (!isMobile.value) return;
+  monthBadgeTouch.touchStart(e);
+}
+
+function onMonthBadgeTouchEnd(dayStartTs: number) {
+  if (!isMobile.value) return;
+  monthBadgeTouch.touchEnd(dayStartTs);
+}
+
+function onMonthBadgeTouchCancel() {
+  if (!isMobile.value) return;
+  monthBadgeTouch.touchCancel();
+}
+
 const handleItemSelect = (id: number, _ts: number, activityId?: number, taskId?: number) => {
   emit("item-change", id, activityId, taskId);
 };
@@ -439,6 +464,7 @@ function getPomoBgColorHEX(ratio: number) {
   border-radius: 50%;
   z-index: 1;
   padding: 1px;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .date-badge.today {
@@ -452,6 +478,7 @@ function getPomoBgColorHEX(ratio: number) {
   cursor: pointer;
   background-color: var(--color-blue-light) !important;
   color: var(--color-blue) !important;
+  z-index: 1000;
 }
 
 .day-card--other-month .date-badge {
@@ -480,10 +507,7 @@ function getPomoBgColorHEX(ratio: number) {
   cursor: pointer;
   padding: 0px 1px;
   border-radius: 2px;
-}
-
-.item:hover:not(.item--selected) {
-  background-color: var(--color-hover, rgba(0, 0, 0, 0.05));
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* 仅标题参与压缩省略；避免与时间点并排时把 TagRenderer 根（.tag-container / min-width:0）挤扁 */
@@ -505,6 +529,19 @@ function getPomoBgColorHEX(ratio: number) {
 }
 .activity--selected {
   background-color: var(--color-red-light) !important;
+}
+
+/* 仅在鼠标设备启用 hover，避免触摸端出现“变灰但未选中”的假反馈 */
+@media (hover: hover) and (pointer: fine) {
+  .date-badge:hover {
+    cursor: pointer;
+    background-color: var(--color-blue-light) !important;
+    color: var(--color-blue) !important;
+  }
+
+  .item:hover:not(.item--selected) {
+    background-color: var(--color-hover, rgba(0, 0, 0, 0.05));
+  }
 }
 
 /* 提示点的tag的位置 */
@@ -564,7 +601,6 @@ function getPomoBgColorHEX(ratio: number) {
   padding-right: 6px;
 }
 
-/* #TODO  */
 @media (max-width: 430px) {
   .header-card,
   .day-card {
@@ -632,11 +668,12 @@ function getPomoBgColorHEX(ratio: number) {
     font-size: 12px;
     width: 16px;
     height: 16px;
+    z-index: 1000;
   }
 
   .date-badge.today {
-    color: var(--color-blue) !important;
-    background-color: var(--color-blue-light) !important;
+    color: var(--color-background) !important;
+    background-color: var(--color-blue) !important;
     z-index: 1;
   }
 

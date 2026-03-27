@@ -108,6 +108,7 @@
 
     <div class="task-record-container">
       <TaskRecord
+        ref="taskRecordRef"
         :taskId="selectedTaskId"
         :initialContent="taskDescription"
         :isMarkdown="isMarkdown"
@@ -143,6 +144,15 @@ const emit = defineEmits<{
 function onTaskRecordIsEditing(v: boolean) {
   emit("taskRecordEditing", v);
 }
+
+const taskRecordRef = ref<{ stopEditing: () => void } | null>(null);
+
+/** 结束 TaskRecord 编辑（与 blur / Esc 同路径） */
+function endTaskRecordEditing() {
+  taskRecordRef.value?.stopEditing();
+}
+
+defineExpose({ endTaskRecordEditing });
 
 // UI 状态
 const isMarkdown = ref(false);

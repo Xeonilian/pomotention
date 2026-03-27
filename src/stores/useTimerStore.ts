@@ -2,12 +2,7 @@
 import { defineStore } from "pinia";
 import { ref, computed, watch } from "vue";
 import { useSettingStore } from "./useSettingStore.ts";
-import {
-  playSound,
-  SoundType,
-  startWhiteNoise,
-  stopWhiteNoise,
-} from "../core/sounds.ts";
+import { playSound, SoundType, startWhiteNoise, stopWhiteNoise } from "../core/sounds.ts";
 
 // 修改状态类型，更清晰地表达三种状态
 type PomodoroState = "idle" | "working" | "breaking";
@@ -106,15 +101,9 @@ export const useTimerStore = defineStore(
         return "r1";
       } else if (elapsedMinutes <= r1Duration.value + wDuration.value) {
         return "w1";
-      } else if (
-        elapsedMinutes <=
-        r1Duration.value + wDuration.value + wDuration.value
-      ) {
+      } else if (elapsedMinutes <= r1Duration.value + wDuration.value + wDuration.value) {
         return "w2";
-      } else if (
-        elapsedMinutes <=
-        r1Duration.value + wDuration.value + wDuration.value + r2Duration.value
-      ) {
+      } else if (elapsedMinutes <= r1Duration.value + wDuration.value + wDuration.value + r2Duration.value) {
         return "r2";
       } else {
         return "t";
@@ -146,11 +135,7 @@ export const useTimerStore = defineStore(
           phaseDuration = r2Duration.value;
           break;
         case "t":
-          phaseStart =
-            r1Duration.value +
-            wDuration.value +
-            wDuration.value +
-            r2Duration.value;
+          phaseStart = r1Duration.value + wDuration.value + wDuration.value + r2Duration.value;
           phaseDuration = tDuration.value;
           break;
       }
@@ -199,9 +184,7 @@ export const useTimerStore = defineStore(
 
     function syncTimeRemainingFromWallClock(): void {
       if (!startTime.value || pomodoroState.value === "idle") return;
-      const elapsedSeconds = Math.floor(
-        (Date.now() - startTime.value) / 1000,
-      );
+      const elapsedSeconds = Math.floor((Date.now() - startTime.value) / 1000);
       timeRemaining.value = Math.max(0, totalTime.value - elapsedSeconds);
     }
 
@@ -256,10 +239,7 @@ export const useTimerStore = defineStore(
       const cb = phaseFinishCallback.value;
       phaseFinishCallback.value = null;
 
-      const useCont =
-        !cb &&
-        isFromSequence.value &&
-        sequencePhaseContinuation.value != null;
+      const useCont = !cb && isFromSequence.value && sequencePhaseContinuation.value != null;
 
       if (pomodoroState.value === "working") {
         playSound(SoundType.WORK_END);
@@ -349,8 +329,7 @@ export const useTimerStore = defineStore(
       beginNewPhase(onFinish);
 
       pomodoroState.value = "working";
-      const dur =
-        duration ?? settingStore.settings.durations.workDuration;
+      const dur = duration ?? settingStore.settings.durations.workDuration;
       totalTime.value = dur * 60;
       timeRemaining.value = totalTime.value;
       startTime.value = Date.now();
@@ -382,9 +361,9 @@ export const useTimerStore = defineStore(
       isGray.value = false;
       isFromSequence.value = !!onFinish;
 
-      if (!isFromSequence.value) {
-        playSound(SoundType.BREAK_START);
-      }
+      // if (!isFromSequence.value) {
+      //   playSound(SoundType.BREAK_START);
+      // } // 打开提示音，免得无法确认是否开始休息
 
       timerInterval.value = window.setInterval(phaseTick, 1000);
     }

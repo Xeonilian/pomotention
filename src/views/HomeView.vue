@@ -282,7 +282,7 @@
       <!-- 任务视图 -->
       <div v-if="settingStore.settings.showTask" class="middle-bottom">
         <div class="task-container">
-          <TaskTracker @task-record-editing="setTaskRecordEditing" />
+          <TaskTracker ref="taskTrackerRef" @task-record-editing="setTaskRecordEditing" />
         </div>
       </div>
     </div>
@@ -328,6 +328,7 @@
     @cancel-planner-row="onMobileFabCancelPlannerRow"
     @suspend-planner-row="onMobileFabSuspendPlannerRow"
     @repeat-activity="onRepeatActivity"
+    @finish-task-record-editing="onFinishTaskRecordEditing"
   />
   <!-- 错误提示弹窗 -->
   <n-popover v-model:show="showPopover" trigger="manual" placement="top-end" style="width: 200px">
@@ -406,6 +407,12 @@ const popoverMessage = ref("");
 const taskRecordEditing = ref(false);
 function setTaskRecordEditing(v: boolean) {
   taskRecordEditing.value = v;
+}
+
+const taskTrackerRef = ref<{ endTaskRecordEditing: () => void } | null>(null);
+
+function onFinishTaskRecordEditing() {
+  taskTrackerRef.value?.endTaskRecordEditing();
 }
 
 // 使用 storeToRefs 获取状态和计算属性

@@ -112,30 +112,22 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
 
   const { dragState, handlePointerDown } = useTimeBlockDrag(todosForAppDate, props.dayStart, pomodoroSegments, occupiedIndices);
 
-  // ======= 优化：全局触摸事件拦截 (核心) =======
+  // ======= 优化：全局触摸事件拦截 =======
   let touchStartTime = 0;
-  const TOUCH_THRESHOLD = 50; // 50ms内判定为快速拖拽
+  const TOUCH_THRESHOLD = 50; // 50ms内识别为快速滑动
 
   // 全局触摸开始事件 - 比元素内事件更早响应
-  const handleGlobalTouchStart = (e: TouchEvent) => {
+  const handleGlobalTouchStart = () => {
     touchStartTime = Date.now();
-    // 只拦截Todo段的触摸
-    const target = e.target as HTMLElement;
-    if (target.closest(".todo-segment")) {
-      // 立即阻止默认行为，防止系统长按触发
-      e.preventDefault();
-      e.stopPropagation();
-    }
   };
 
   // 全局触摸移动事件 - 快速响应拖拽
   const handleGlobalTouchMove = (e: TouchEvent) => {
-    // 如果是快速触摸+移动，直接判定为拖拽
-    if (Date.now() - touchStartTime < TOUCH_THRESHOLD) {
+    // 仅在已进入拖拽态时阻止滚动，保留点击手势
+    if (dragState.value.isDragging || Date.now() - touchStartTime < TOUCH_THRESHOLD) {
       const target = e.target as HTMLElement;
       if (target.closest(".todo-segment")) {
         e.preventDefault();
-        e.stopPropagation();
       }
     }
   };
@@ -154,25 +146,8 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
 
   // ======= 优化：增强handlePointerDown事件 =======
   const enhancedHandlePointerDown = (e: PointerEvent, seg: TodoSegment) => {
-    // 1. 立即阻止所有默认行为
-    e.preventDefault();
-    e.stopImmediatePropagation();
-
-    // 2. 标记为拖拽开始，防止系统介入
-    dragState.value.isDragging = true;
-    dragState.value.draggedTodoId = seg.todoId;
-    dragState.value.draggedIndex = seg.todoIndex;
-
-    // 3. 调用原有处理逻辑
+    // 仅委托到拖拽 composable，让其根据时间/位移阈值决定是否激活拖拽
     handlePointerDown(e, seg);
-
-    // 4. 移动端额外处理
-    if (e.pointerType === "touch") {
-      // 重置触摸时间，确保快速响应
-      touchStartTime = 0;
-      // 禁止浏览器的触摸滚动
-      document.body.style.overflow = "hidden";
-    }
   };
   // ======= 小时刻度线相关 =======
   const hourStamps = computed(() => {

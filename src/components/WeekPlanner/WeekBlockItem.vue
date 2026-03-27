@@ -25,8 +25,33 @@
     <span v-if="block.item.activityDueRange?.[0]" class="schedule-time">
       {{ timestampToTimeString(block.item.activityDueRange?.[0]) }}
     </span>
+    <!-- 点击标题展示全文：与 TaskTracker 时间轴节点 popover 一致（受控 + 约 3s 收起） -->
+    <NPopover
+      v-if="trimmedBlockTitle"
+      trigger="click"
+      placement="top"
+      to="body"
+      :show-arrow="true"
+      :style="{ maxWidth: '240px' }"
+      :show="titlePopoverShow"
+      @update:show="handleTitlePopoverShow"
+    >
+      <template #trigger>
+        <span
+          v-if="displayTitleText"
+          class="title title--popover-trigger"
+          :title="block.item.title"
+          :class="[{ 'activity--selected': activeId === block.item.activityId }]"
+          role="button"
+          :aria-label="trimmedBlockTitle"
+        >
+          {{ displayTitleText }}
+        </span>
+      </template>
+      <p class="week-block-title-popover">{{ block.item.title }}</p>
+    </NPopover>
     <span
-      v-if="displayTitleText"
+      v-else-if="displayTitleText"
       class="title"
       :title="block.item.title"
       :class="[{ 'activity--selected': activeId === block.item.activityId }]"
@@ -42,7 +67,8 @@ import type { WeekBlockItem as WeekBlockItemType } from "@/core/types/Week";
 import { useDataStore } from "@/stores/useDataStore";
 import { useTagStore } from "@/stores/useTagStore";
 import { storeToRefs } from "pinia";
-import { computed } from "vue";
+import { computed, ref, onUnmounted } from "vue";
+import { NPopover } from "naive-ui";
 import { timestampToTimeString } from "@/core/utils";
 import { useDevice } from "@/composables/useDevice";
 
@@ -69,7 +95,7 @@ const mobileDisplayTitle = computed(() => {
   if (!title) return "";
 
   const durationMinutes = blockDurationMinutes.value;
-  const maxChars = durationMinutes < 45 ? 4 : durationMinutes < 75 ? 8 : 12;
+  const maxChars = durationMinutes < 45 ? 8 : durationMinutes < 75 ? 12 : 16;
 
   return title.slice(0, maxChars);
 });
@@ -79,6 +105,44 @@ const displayTitleText = computed(() => {
   if (!isMobile.value) return props.block.item.title ?? "";
   if (weekBlockStackLayout.value) return props.block.item.title ?? "";
   return mobileDisplayTitle.value;
+});
+
+// 用于判断是否启用点击 popover（与 display 用 trim 判断一致）
+const trimmedBlockTitle = computed(() => (props.block.item.title ?? "").trim());
+
+// 与 TaskTracker 时间轴：受控 show + 打开后约 3s 自动关闭
+const titlePopoverShow = ref(false);
+let titlePopoverTimer: number | null = null;
+
+const clearTitlePopoverTimer = () => {
+  if (titlePopoverTimer != null) {
+    window.clearTimeout(titlePopoverTimer);
+    titlePopoverTimer = null;
+  }
+};
+
+const openTitlePopoverFor3s = () => {
+  titlePopoverShow.value = true;
+  clearTitlePopoverTimer();
+  titlePopoverTimer = window.setTimeout(() => {
+    if (titlePopoverShow.value) {
+      titlePopoverShow.value = false;
+    }
+    titlePopoverTimer = null;
+  }, 3000);
+};
+
+const handleTitlePopoverShow = (nextShow: boolean) => {
+  if (nextShow) {
+    openTitlePopoverFor3s();
+    return;
+  }
+  titlePopoverShow.value = false;
+  clearTitlePopoverTimer();
+};
+
+onUnmounted(() => {
+  clearTitlePopoverTimer();
 });
 
 // 定义emit
@@ -169,6 +233,18 @@ const handleClick = () => {
   white-space: nowrap;
   width: 100%;
   line-height: 1.3;
+}
+
+.title--popover-trigger {
+  cursor: pointer;
+}
+
+/* 与 TaskTracker .timeline-popover-text 对齐 */
+.week-block-title-popover {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--color-text-primary, #333);
 }
 
 .schedule-time {
