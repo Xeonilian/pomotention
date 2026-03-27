@@ -119,7 +119,7 @@
                 >
                   <template #icon>
                     <n-icon>
-                      <TagOff20Regular v-if="dataStore.filterTagIds.length > 0" />
+                      <TagReset20Filled v-if="dataStore.filterTagIds.length > 0" />
                       <TagSearch20Regular v-else />
                     </n-icon>
                   </template>
@@ -360,7 +360,7 @@ import {
   ChevronLeft20Regular,
   ChevronRight20Regular,
 } from "@vicons/fluent";
-import { TagOff20Regular, TagSearch20Regular } from "@vicons/fluent";
+import { TagReset20Filled, TagSearch20Regular } from "@vicons/fluent";
 
 import {
   handleAddActivity,
