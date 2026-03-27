@@ -67,14 +67,14 @@
                 v-if="!isMobile && isTauriDesktop"
                 :size="isMobile ? 'large' : 'medium'"
                 tertiary
-                type="warning"
+                type="error"
                 title="数据库导入导出"
                 class="header-button"
                 @click="showDatabaseDialog = true"
               >
                 <template #icon>
                   <n-icon>
-                    <Database20Regular />
+                    <DatabasePerson20Regular />
                   </n-icon>
                 </template>
               </n-button>
@@ -248,7 +248,7 @@ import {
   List24Filled,
   Person20Regular,
   CloudSync20Regular,
-  Database20Regular,
+  DatabasePerson20Regular,
 } from "@vicons/fluent";
 import PomotentionTimer from "@/components/PomotentionTimer/PomotentionTimer.vue";
 import DatabaseTransferDialog from "@/components/DatabaseTransferDialog.vue";

@@ -92,6 +92,7 @@ const message = ref("");
 const messageType = ref<"info" | "success" | "warning" | "error">("info");
 const previewReport = ref<ImportReport | null>(null);
 const pendingFileMap = ref<Record<string, string> | null>(null);
+const shouldReloadOnClose = ref(false);
 const { exportData, message: exportMessage } = useDataExport();
 
 watch(
@@ -99,10 +100,15 @@ watch(
   (isOpen) => {
     // 每次关闭弹窗都重置预览与提示，避免复用旧状态
     if (!isOpen) {
+      const needReload = shouldReloadOnClose.value;
+      shouldReloadOnClose.value = false;
       previewReport.value = null;
       pendingFileMap.value = null;
       message.value = "";
       messageType.value = "info";
+      if (needReload) {
+        window.location.reload();
+      }
     }
   },
 );
@@ -165,9 +171,12 @@ async function handleConfirmImport() {
   try {
     isLoading.value = true;
     const report = await handleFileImport(pendingFileMap.value, { idConflictPolicy: idPolicy.value });
-    previewReport.value = report;
-    message.value = report.shouldReload ? "导入完成，建议刷新页面。" : "导入完成，无需刷新。";
+    message.value = report.shouldReload ? "导入完成，关闭后刷新页面。" : "导入完成，无需刷新。";
     messageType.value = "success";
+    shouldReloadOnClose.value = true;
+    // 导入成功后收起数据预览，仅保留提示
+    previewReport.value = null;
+    pendingFileMap.value = null;
   } catch (error: any) {
     message.value = `导入失败：${error?.message || String(error)}`;
     messageType.value = "error";

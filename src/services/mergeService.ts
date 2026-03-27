@@ -3,6 +3,7 @@ import { STORAGE_KEYS } from "@/core/constants";
 import { loadData, saveData } from "@/services/localStorageService";
 import { readTextFile } from "@tauri-apps/plugin-fs";
 import { deduplicateData, migrateTaskSource } from "@/services/migrationService";
+import { normalizeImportedTodoData } from "@/services/importNormalizationService";
 
 // 定义文件处理结果的详细类型
 export interface FileProcessResult {
@@ -415,6 +416,15 @@ async function processFileImport(fileMap: { [fileName: string]: string }, option
 
   if (report.shouldReload) {
     report.warnings.push("导入后会运行 task 修复，无法关联到 activity 的任务，可能被清理。");
+  }
+
+  // 导入后做一次 todo 归一化，兼容旧导出数据（preview 只统计，不落盘）
+  const normalizeReport = normalizeImportedTodoData({ dryRun: resolvedOptions.dryRun });
+  if (normalizeReport.touched) {
+    report.shouldReload = true;
+  }
+  if (normalizeReport.warnings.length > 0) {
+    report.warnings.push(...normalizeReport.warnings);
   }
 
   if (resolvedOptions.dryRun) {
