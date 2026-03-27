@@ -10,7 +10,15 @@
       <div class="dow">
         {{ isMobile ? dayNames[day.index][0] : dayNames[day.index] }}
       </div>
-      <div class="date" :class="{ today: day.isToday }" @click="() => handleDateSelectDayView(day.startTs)">
+      <div
+        class="date"
+        :class="{ today: day.isToday }"
+        @click.stop="() => handleDateSelect(day.startTs)"
+        @dblclick.stop="() => handleDateSelectDayView(day.startTs)"
+        @touchstart.stop="onWeekBadgeTouchStart"
+        @touchend.stop="() => onWeekBadgeTouchEnd(day.startTs)"
+        @touchcancel.stop="onWeekBadgeTouchCancel"
+      >
         {{ formatMonthDay(day.startTs) }}
       </div>
     </div>
@@ -75,6 +83,7 @@ import { formatMonthDay, getPomoColor, getFallbackWeekBlocks } from "@/core/util
 import { useDataStore } from "@/stores/useDataStore";
 import { storeToRefs } from "pinia";
 import { useDevice } from "@/composables/useDevice";
+import { createTouchScheduledSingleAndDouble } from "@/composables/useTouchScheduledSingleAndDouble";
 const { isMobile } = useDevice();
 const dataStore = useDataStore();
 const { selectedDate } = storeToRefs(dataStore);
@@ -119,6 +128,26 @@ const handleDateSelect = (ts: number) => {
 const handleDateSelectDayView = (ts: number) => {
   emit("date-select-day-view", ts);
 };
+
+const weekBadgeTouch = createTouchScheduledSingleAndDouble(
+  (ts) => handleDateSelect(ts),
+  (ts) => handleDateSelectDayView(ts),
+);
+
+function onWeekBadgeTouchStart(e: TouchEvent) {
+  if (!isMobile.value) return;
+  weekBadgeTouch.touchStart(e);
+}
+
+function onWeekBadgeTouchEnd(dayStartTs: number) {
+  if (!isMobile.value) return;
+  weekBadgeTouch.touchEnd(dayStartTs);
+}
+
+function onWeekBadgeTouchCancel() {
+  if (!isMobile.value) return;
+  weekBadgeTouch.touchCancel();
+}
 
 const handleItemChange = (id: number, _ts: number, activityId?: number, taskId?: number) => {
   // emit("date-select", ts);

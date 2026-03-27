@@ -18,7 +18,11 @@
           <div
             class="date-badge"
             :class="{ today: day.isToday }"
-            @click="() => handleDateSelectDayView(day.startTs)"
+            @click.stop="() => handleDateSelect(day.startTs)"
+            @dblclick.stop="() => handleDateSelectDayView(day.startTs)"
+            @touchstart.stop="onMonthBadgeTouchStart"
+            @touchend.stop="() => onMonthBadgeTouchEnd(day.startTs)"
+            @touchcancel.stop="onMonthBadgeTouchCancel"
             :style="{
               color: getPomoColor(day.pomoRatio),
               backgroundColor: getPomoBgColorHEX(day.pomoRatio),
@@ -70,6 +74,7 @@ import { timestampToTimeString } from "@/core/utils";
 import { useDataStore } from "@/stores/useDataStore";
 import { storeToRefs } from "pinia";
 import { useDevice } from "@/composables/useDevice";
+import { createTouchScheduledSingleAndDouble } from "@/composables/useTouchScheduledSingleAndDouble";
 
 const { isMobile } = useDevice();
 
@@ -317,6 +322,26 @@ const handleDateSelect = (day: number) => {
 const handleDateSelectDayView = (day: number) => {
   emit("date-select-day-view", day);
 };
+
+const monthBadgeTouch = createTouchScheduledSingleAndDouble(
+  (ts) => handleDateSelect(ts),
+  (ts) => handleDateSelectDayView(ts),
+);
+
+function onMonthBadgeTouchStart(e: TouchEvent) {
+  if (!isMobile.value) return;
+  monthBadgeTouch.touchStart(e);
+}
+
+function onMonthBadgeTouchEnd(dayStartTs: number) {
+  if (!isMobile.value) return;
+  monthBadgeTouch.touchEnd(dayStartTs);
+}
+
+function onMonthBadgeTouchCancel() {
+  if (!isMobile.value) return;
+  monthBadgeTouch.touchCancel();
+}
 
 const handleItemSelect = (id: number, _ts: number, activityId?: number, taskId?: number) => {
   emit("item-change", id, activityId, taskId);
@@ -635,8 +660,8 @@ function getPomoBgColorHEX(ratio: number) {
   }
 
   .date-badge.today {
-    color: var(--color-blue) !important;
-    background-color: var(--color-blue-light) !important;
+    color: var(--color-background) !important;
+    background-color: var(--color-blue) !important;
     z-index: 1;
   }
 
