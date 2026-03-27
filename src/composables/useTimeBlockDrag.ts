@@ -17,9 +17,11 @@ export function useTimeBlockDrag(
   todos: ComputedRef<Todo[]>, // 接收可以计算的ref
   dayStart: number,
   pomodoroSegments: ComputedRef<PomodoroSegment[]>,
-  occupiedIndices: ComputedRef<Map<number, TodoSegment>>
+  occupiedIndices: ComputedRef<Map<number, TodoSegment>>,
 ) {
   const segStore = useSegStore();
+  const DRAG_MOVE_THRESHOLD_PX = 6;
+  const TOUCH_LONG_PRESS_MS = 120;
 
   // UI 状态
   const dragState = ref({
@@ -31,49 +33,103 @@ export function useTimeBlockDrag(
 
   // 内部状态（不需要响应式）
   let draggedSeg: TodoSegment | null = null;
+  let pendingSeg: TodoSegment | null = null;
+  let pendingElement: HTMLElement | null = null;
+  let pendingPointerId: number | null = null;
+  let pendingPointerType: PointerEvent["pointerType"] | null = null;
+  let pendingStartX = 0;
+  let pendingStartY = 0;
+  let longPressTimer: number | null = null;
   let capturedElement: HTMLElement | null = null;
   let pointerId: number | null = null;
+  let activePointerType: PointerEvent["pointerType"] | null = null;
+
+  function clearLongPressTimer() {
+    if (longPressTimer !== null) {
+      window.clearTimeout(longPressTimer);
+      longPressTimer = null;
+    }
+  }
+
+  function cleanupPendingState() {
+    clearLongPressTimer();
+    pendingSeg = null;
+    pendingElement = null;
+    pendingPointerId = null;
+    pendingPointerType = null;
+    pendingStartX = 0;
+    pendingStartY = 0;
+  }
+
+  function activateDrag() {
+    if (!pendingSeg || !pendingElement || pendingPointerId === null || !pendingPointerType) return;
+
+    draggedSeg = pendingSeg;
+    capturedElement = pendingElement;
+    pointerId = pendingPointerId;
+    activePointerType = pendingPointerType;
+
+    capturedElement.setPointerCapture(pointerId);
+
+    dragState.value.isDragging = true;
+    dragState.value.draggedTodoId = draggedSeg.todoId;
+    dragState.value.draggedIndex = draggedSeg.todoIndex;
+
+    if (activePointerType === "touch") {
+      document.body.style.overflow = "hidden";
+    }
+
+    console.log("🟢 Drag started:", draggedSeg.todoId, draggedSeg.todoIndex);
+  }
 
   /**
    * 开始拖拽
    */
   function handlePointerDown(event: PointerEvent, seg: TodoSegment) {
-    // 1. 阻止默认行为
-    event.preventDefault();
-
-    // 2. 过滤非左键
+    // 1. 过滤非左键
     if (event.pointerType === "mouse" && event.button !== 0) return;
 
     const target = event.currentTarget as HTMLElement;
+    pendingSeg = seg;
+    pendingElement = target;
+    pendingPointerId = event.pointerId;
+    pendingPointerType = event.pointerType;
+    pendingStartX = event.clientX;
+    pendingStartY = event.clientY;
 
-    // 3. 🔥 锁定指针捕获（保证触摸事件稳定）
-    target.setPointerCapture(event.pointerId);
-    capturedElement = target;
-    pointerId = event.pointerId;
-
-    // 4. 初始化状态
-    draggedSeg = seg;
-    dragState.value.isDragging = true;
-    dragState.value.draggedTodoId = seg.todoId;
-    dragState.value.draggedIndex = seg.todoIndex;
-
-    // 5. 🔥 移动端优化：拖拽开始时禁止页面滚动
-    if (event.pointerType === 'touch') {
-      document.body.style.overflow = 'hidden';
-    }
-
-    // 6. 🔥 事件绑定到 document，而非 target
+    // 2. 事件绑定到 document，而非 target
     document.addEventListener("pointermove", handlePointerMove);
     document.addEventListener("pointerup", handlePointerUp);
     document.addEventListener("pointercancel", handlePointerUp);
 
-    console.log("🟢 Drag started:", seg.todoId, seg.todoIndex);
+    // 3. 触摸长按也可进入拖拽，避免必须移动才激活
+    clearLongPressTimer();
+    if (event.pointerType === "touch") {
+      longPressTimer = window.setTimeout(() => {
+        if (!dragState.value.isDragging && pendingPointerId === event.pointerId) {
+          activateDrag();
+        }
+      }, TOUCH_LONG_PRESS_MS);
+    }
   }
 
   /**
    * 拖拽移动
    */
   function handlePointerMove(event: PointerEvent) {
+    if (!dragState.value.isDragging) {
+      if (!pendingSeg || pendingPointerId !== event.pointerId) return;
+
+      const deltaX = event.clientX - pendingStartX;
+      const deltaY = event.clientY - pendingStartY;
+      const movedEnough = Math.hypot(deltaX, deltaY) >= DRAG_MOVE_THRESHOLD_PX;
+      if (!movedEnough) return;
+
+      activateDrag();
+      if (!dragState.value.isDragging) return;
+    }
+
+    event.preventDefault();
     if (!dragState.value.isDragging) return;
 
     // 获取指针下方的元素
@@ -113,7 +169,14 @@ export function useTimeBlockDrag(
    * 结束拖拽
    */
   function handlePointerUp(event: PointerEvent) {
-    if (!dragState.value.isDragging) return;
+    if (!dragState.value.isDragging) {
+      // 未激活拖拽则视为点击，清理监听即可
+      document.removeEventListener("pointermove", handlePointerMove);
+      document.removeEventListener("pointerup", handlePointerUp);
+      document.removeEventListener("pointercancel", handlePointerUp);
+      cleanupPendingState();
+      return;
+    }
 
     event.preventDefault(); // ✅ 关键 1️⃣
     const targetGlobalIndex = dragState.value.dropTargetGlobalIndex;
@@ -142,8 +205,10 @@ export function useTimeBlockDrag(
     (document.activeElement as HTMLElement | null)?.blur?.();
 
     // 清理指针捕获
-    if (capturedElement && pointerId !== null && capturedElement.hasPointerCapture(pointerId)) {
-      capturedElement.releasePointerCapture(pointerId);
+    if (capturedElement && pointerId !== null) {
+      if (capturedElement.hasPointerCapture(pointerId)) {
+        capturedElement.releasePointerCapture(pointerId);
+      }
     }
 
     // 🔥 移除 document 级事件
@@ -152,12 +217,8 @@ export function useTimeBlockDrag(
     document.removeEventListener("pointercancel", handlePointerUp);
 
     // 🔥 移动端优化：拖拽结束后恢复页面滚动
-    if (capturedElement && pointerId !== null) {
-      const wasTouch = capturedElement.hasPointerCapture(pointerId) &&
-                      document.pointerLockElement !== null; // 检查是否为触摸事件
-      if (wasTouch) {
-        document.body.style.overflow = '';
-      }
+    if (activePointerType === "touch") {
+      document.body.style.overflow = "";
     }
 
     // 重置状态
@@ -166,8 +227,10 @@ export function useTimeBlockDrag(
     dragState.value.draggedIndex = null;
     dragState.value.dropTargetGlobalIndex = null;
     draggedSeg = null;
+    cleanupPendingState();
     capturedElement = null;
     pointerId = null;
+    activePointerType = null;
 
     // ✅ 关键 3️⃣：强制结束 gesture 并 flush paint
     nextTick(() => {
