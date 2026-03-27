@@ -34,6 +34,8 @@ export interface ImportOptions {
   idConflictPolicy?: IdConflictPolicy;
 }
 
+export type ImportFileMap = Record<string, string>;
+
 // 合并策略枚举
 export const MERGE_STRATEGIES = {
   SKIP: "SKIP", // 跳过导入数据
@@ -284,7 +286,11 @@ async function mergeArrayDedupe(
   return { itemsToAdd, itemsToSkip, idConflictCount, replacedCount };
 }
 
-async function processFileImport(fileMap: { [fileName: string]: string }, options: ImportOptions = {}): Promise<ImportReport> {
+async function processFileImport(
+  fileMap: ImportFileMap,
+  readFileContent: (fileName: string, source: string) => Promise<string>,
+  options: ImportOptions = {},
+): Promise<ImportReport> {
   const resolvedOptions: Required<ImportOptions> = {
     dryRun: options.dryRun ?? false,
     idConflictPolicy: options.idConflictPolicy ?? "keep-local",
@@ -329,7 +335,7 @@ async function processFileImport(fileMap: { [fileName: string]: string }, option
 
       try {
         // 2. 读取文件内容
-        const fileContent = await readTextFile(filePath);
+        const fileContent = await readFileContent(fileName, filePath);
         if (!fileContent) {
           fileResult.status = "EMPTY";
           fileResult.message = `文件 "${fileName}" 内容为空。`;
@@ -454,10 +460,18 @@ async function processFileImport(fileMap: { [fileName: string]: string }, option
 
 // 主要的合并服务函数
 export async function handleFileImport(fileMap: { [fileName: string]: string }, options: ImportOptions = {}): Promise<ImportReport> {
-  return processFileImport(fileMap, { ...options, dryRun: false });
+  return processFileImport(fileMap, (_fileName, filePath) => readTextFile(filePath), { ...options, dryRun: false });
 }
 
 // 预览导入（不写入数据）
 export async function previewFileImport(fileMap: { [fileName: string]: string }, options: ImportOptions = {}): Promise<ImportReport> {
-  return processFileImport(fileMap, { ...options, dryRun: true });
+  return processFileImport(fileMap, (_fileName, filePath) => readTextFile(filePath), { ...options, dryRun: true });
+}
+
+export async function handleFileImportFromContents(fileMap: ImportFileMap, options: ImportOptions = {}): Promise<ImportReport> {
+  return processFileImport(fileMap, (_fileName, content) => Promise.resolve(content), { ...options, dryRun: false });
+}
+
+export async function previewFileImportFromContents(fileMap: ImportFileMap, options: ImportOptions = {}): Promise<ImportReport> {
+  return processFileImport(fileMap, (_fileName, content) => Promise.resolve(content), { ...options, dryRun: true });
 }

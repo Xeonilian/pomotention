@@ -64,7 +64,7 @@
                 </template>
               </n-button>
               <n-button
-                v-if="!isMobile && isTauriDesktop"
+                v-if="!isMobile"
                 :size="isMobile ? 'large' : 'medium'"
                 tertiary
                 type="error"
@@ -238,7 +238,6 @@ import { useDraggable } from "@/composables/useDraggable";
 import { useAppWindow } from "@/composables/useAppWindow";
 import { useSyncWidget } from "@/composables/useSyncWidget";
 import { useDevice } from "@/composables/useDevice";
-import { isTauri } from "@tauri-apps/api/core";
 
 // Icons & Components
 import {
@@ -289,7 +288,6 @@ const { syncIcon, handleUpload, handleDownload } = useSyncWidget(); //relativeTi
 const { isLoggedIn } = storeToRefs(syncStore);
 const { isMobile } = useDevice();
 const showDatabaseDialog = ref(false);
-const isTauriDesktop = isTauri();
 
 // 处理退出登录确认（保留数据）
 async function handleLogoutConfirm() {
