@@ -723,8 +723,8 @@ const getPriorityBadgeClasses = (seg: any) => [
   }
 
   .priority-badge {
-    width: 13px;
-    height: 13px;
+    width: 14px;
+    height: 14px;
     font-size: 10px;
     line-height: 12px;
   }
