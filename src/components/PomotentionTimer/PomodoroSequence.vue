@@ -248,7 +248,12 @@ function runStep(steps: PomodoroStep[]): void {
   const step = steps[currentStep.value];
 
   const onFinish = () => {
-    if (!isRunning.value) return;
+    // 与 isRunning 对齐：用户点停止时 cancelTimer 已把 store 置 idle，此处应直接返回；若仅本地 isRunning 失步而计时仍在，仍须推进到 runStep/stopPomodoro（以番茄收尾时自然结束与手动 Stop 一致）
+    if (timerStore.pomodoroState === "idle") return;
+    if (!isRunning.value) {
+      isRunning.value = true;
+      emit("pomo-seq-running", true);
+    }
     // 更新当前步骤的进度条状态为已完成
     updateProgressStatus(resolveActiveStepIndex());
     currentStep.value++;
