@@ -351,9 +351,12 @@ export const useTimerStore = defineStore(
 
     const breakReminderCount = ref<number>(5);
     const remindedSet = ref(new Set<number>());
+    /** 上一 tick 的已过秒数，用于「边界跨越」检测；息屏/后台时墙钟会跳秒，不能用 |elapsed-node|<=1 */
+    const breakReminderPrevElapsed = ref(-1);
 
     function startBreak(duration: number, onFinish?: () => void): void {
       breakReminderCount.value = duration;
+      breakReminderPrevElapsed.value = -1;
       beginNewPhase(onFinish);
 
       pomodoroState.value = "breaking";
@@ -375,8 +378,10 @@ export const useTimerStore = defineStore(
     watch(
       [pomodoroState, timeRemaining],
       ([state, timeLeft]) => {
+        // 仅 0/1 分钟休息无中间节点；2min→60s 处 1 次，3min→60s/120s 共 2 次（类推：N 分钟→N-1 次）
         if (state !== "breaking" || breakReminderCount.value < 2) {
           remindedSet.value.clear();
+          breakReminderPrevElapsed.value = -1;
           return;
         }
 
@@ -384,16 +389,23 @@ export const useTimerStore = defineStore(
         const segmentLen = totalTime.value / segments;
         const elapsed = totalTime.value - timeLeft;
 
-        for (let i = 1; i < segments; i++) {
-          const node = Math.round(segmentLen * i);
-          const timeDiff = Math.abs(elapsed - node);
-          const shouldTrigger = timeDiff <= 1 && !remindedSet.value.has(i);
+        let prev = breakReminderPrevElapsed.value;
+        if (prev < 0) {
+          prev = 0;
+        }
 
-          if (shouldTrigger) {
+        // 从高段往低找：同一 tick 跨过多个节点时只播一次（例如恢复前台/校准跳秒）
+        for (let i = segments - 1; i >= 1; i--) {
+          const node = Math.round(segmentLen * i);
+          const crossed = !remindedSet.value.has(i) && prev < node && elapsed >= node;
+          if (crossed) {
             playSound(SoundType.PHASE_BREAK);
             remindedSet.value.add(i);
+            break;
           }
         }
+
+        breakReminderPrevElapsed.value = elapsed;
       },
       { deep: true },
     );
