@@ -89,8 +89,8 @@ function attachAudioContextDebugListener(ctx: AudioContext) {
   });
 }
 
-/** iOS 锁屏会挂起 AudioContext；长循环白噪音改走 HTMLAudio 才较可能不断 */
-function preferHtmlAudioWhiteNoiseOnThisDevice(): boolean {
+/** iPhone / iPad WebKit：HTML 媒体与 AudioContext 解锁策略与桌面不同，白噪音与提示音在此统一判定 */
+function isAppleTouchWebKitDevice(): boolean {
   if (typeof navigator === "undefined") return false;
   const ua = navigator.userAgent.toLowerCase();
   const iosUa = /iphone|ipad|ipod/.test(ua);
@@ -99,11 +99,16 @@ function preferHtmlAudioWhiteNoiseOnThisDevice(): boolean {
   return iosUa || iPadDesktopMode;
 }
 
+/** iOS 锁屏会挂起 AudioContext；长循环白噪音改走 HTMLAudio 才较可能不断 */
+function preferHtmlAudioWhiteNoiseOnThisDevice(): boolean {
+  return isAppleTouchWebKitDevice();
+}
+
 /** iOS 白噪音：双轨交叉淡化，避免 HTML loop 接缝约每 file 时长卡一下 */
 /** 双轨重叠与其它参数：想试听感主要改 ratioOfDuration、minSec、maxSec */
 const HTML_WN_CROSSFADE = {
   /** 重叠时长（秒）≈ min(max(时长×ratio, minSec), maxSec)，再受 tooLongRatio/capRatio 约束 */
-  ratioOfDuration: 0.0291, // 听起来只是加重一下
+  ratioOfDuration: 0.03, // 听起来只是加重一下
   minSec: 0.2,
   maxSec: 0.3,
   /** 若重叠 > 时长×tooLongRatio，则改为 时长×capRatio */
@@ -123,6 +128,8 @@ type HtmlWnCrossState = {
   crossfadeSec: number;
   followerArmed: boolean;
   tickId: ReturnType<typeof setInterval> | null;
+  /** 注销 timeupdate/ended（息屏后 setInterval 不可靠，需媒体事件兜底） */
+  detachMediaListeners: (() => void) | null;
 };
 
 let htmlWnCross: HtmlWnCrossState | null = null;
@@ -182,6 +189,7 @@ function stopHtmlWhiteNoise() {
   if (st?.tickId != null) {
     clearInterval(st.tickId);
   }
+  st?.detachMediaListeners?.();
   if (st) {
     for (const el of st.els) {
       try {
@@ -219,8 +227,68 @@ function startWhiteNoiseHtml(src: string, volume: number): void {
     crossfadeSec: HTML_WN_CROSSFADE.minSec,
     followerArmed: false,
     tickId: null,
+    detachMediaListeners: null,
   };
   htmlWnCross = state;
+
+  // 息屏后主线程定时器被节流，crossfade 无法在尾声启动副轨；timeupdate 仍随解码推进，ended 负责收尾
+  const onMediaTimeUpdate = (ev: Event) => {
+    if (htmlWnCross !== state) return;
+    const el = ev.target as HTMLAudioElement;
+    if (el !== state.els[state.leaderIdx]) return;
+    htmlWnCrossfadeTick(state);
+  };
+
+  const onMediaEnded = (ev: Event) => {
+    if (htmlWnCross !== state) return;
+    if (!useSettingStore().settings.isWhiteNoiseEnabled) return;
+    const el = ev.target as HTMLAudioElement;
+    if (el !== state.els[state.leaderIdx]) return;
+
+    void import("@/stores/useTimerStore")
+      .then(({ useTimerStore }) => {
+        if (htmlWnCross !== state) return;
+        if (!useSettingStore().settings.isWhiteNoiseEnabled) return;
+        const ts = useTimerStore();
+        if (!ts.isActive || !ts.isWorking) return;
+
+        const { els, leaderIdx, masterVolume: mv } = state;
+        const leader = els[leaderIdx];
+        const follower = els[1 - leaderIdx];
+
+        if (state.followerArmed) {
+          leader.pause();
+          leader.currentTime = 0;
+          leader.volume = mv;
+          follower.volume = mv;
+          state.leaderIdx = (1 - leaderIdx) as 0 | 1;
+          state.followerArmed = false;
+          dbgAudio("[WN] HTML crossfade ended 补交接（息屏定时器节流）", {});
+          return;
+        }
+
+        leader.currentTime = 0;
+        leader.volume = mv;
+        void leader.play().catch((e: unknown) => {
+          dbgAudio("[WN] HTML crossfade ended 硬重启 play 拒绝", {
+            message: e instanceof Error ? e.message : String(e),
+          });
+        });
+        dbgAudio("[WN] HTML crossfade ended 硬重启 leader（无 follower）", {});
+      })
+      .catch(() => {});
+  };
+
+  for (const el of state.els) {
+    el.addEventListener("timeupdate", onMediaTimeUpdate);
+    el.addEventListener("ended", onMediaEnded);
+  }
+  state.detachMediaListeners = () => {
+    for (const el of state.els) {
+      el.removeEventListener("timeupdate", onMediaTimeUpdate);
+      el.removeEventListener("ended", onMediaEnded);
+    }
+  };
 
   dbgAudio("[WN] 白噪音 HTMLAudio 双轨 crossfade（锁屏尽量不裁）", { src, volume: masterVol });
 
@@ -312,7 +380,7 @@ function decodeArrayBufferToAudioBuffer(ctx: AudioContext, buf: ArrayBuffer): Pr
   });
 }
 
-/** 已解码的短音效（与白噪音共用 AudioContext，避免 iOS 上对非手势 HTMLAudio 的 NotAllowedError） */
+/** 已解码的短音效（桌面 Web Audio 主路径；Apple 触控上提示音优先 HTMLAudio，此项供定时器等无手势兜底） */
 const cueBufferCache = new Map<SoundType, AudioBuffer>();
 const cueBufferInflight = new Map<SoundType, Promise<AudioBuffer | null>>();
 
@@ -346,13 +414,57 @@ async function getOrDecodeCueBuffer(type: SoundType): Promise<AudioBuffer | null
   return inflight;
 }
 
-// 获取声音对象
+// 获取声音对象（与 iOS 白噪音一致：playsinline + preload，避免首次 play 被拒或延迟）
 function getSound(type: SoundType): HTMLAudioElement {
   if (!soundCache.has(type)) {
     const audio = new Audio(soundPaths[type]);
+    audio.preload = "auto";
+    applyHtmlAudioPlaysInline(audio);
     soundCache.set(type, audio);
   }
   return soundCache.get(type)!;
+}
+
+/** Apple 触控：提示音用 HTMLAudio，与白噪音同属「元素 play」解锁链，不依赖先开白噪音 */
+function playCueHtml(type: SoundType): Promise<void> {
+  const el = getSound(type);
+  el.volume = 1;
+  el.currentTime = 0;
+  return el.play();
+}
+
+/** Web Audio 播放单条提示音；成功返回 true（与 HTML 白噪音无图依赖，仅共用 destination 汇点） */
+async function tryPlayCueWebAudio(type: SoundType): Promise<boolean> {
+  getOrCreateAudioContext();
+  const ctx = audioCtx;
+  if (!ctx) return false;
+  const decodeP = getOrDecodeCueBuffer(type);
+  await ctx.resume().catch(() => {});
+  if ((ctx.state as AudioContextState | "interrupted") === "interrupted") {
+    await ctx.resume().catch(() => {});
+  }
+  if (ctx.state !== "running") {
+    dbgAudio("[WebAudio cue] skip ctx not running", { type, state: ctx.state });
+    return false;
+  }
+  try {
+    const buf = await decodeP;
+    if (!buf) return false;
+    const src = ctx.createBufferSource();
+    const g = ctx.createGain();
+    g.gain.value = 1;
+    src.buffer = buf;
+    src.connect(g).connect(ctx.destination);
+    src.start(0);
+    dbgAudio("[WebAudio cue] play OK", { type, sec: buf.duration });
+    return true;
+  } catch (e) {
+    dbgAudio("[WebAudio cue] play FAIL", {
+      type,
+      message: e instanceof Error ? e.message : String(e),
+    });
+    return false;
+  }
 }
 
 /**
@@ -366,57 +478,45 @@ export function prefetchSoundAssets(): void {
 }
 
 async function playSoundAsync(type: SoundType): Promise<void> {
-  getOrCreateAudioContext();
-  const ctx = audioCtx;
-  if (ctx) {
-    await ctx.resume().catch(() => {});
-    // WebKit 会给出 "interrupted"，DOM 类型定义里尚未包含
-    if ((ctx.state as AudioContextState | "interrupted") === "interrupted") {
-      await ctx.resume().catch(() => {});
-    }
-    if (ctx.state === "running") {
-      try {
-        const buf = await getOrDecodeCueBuffer(type);
-        if (buf) {
-          const src = ctx.createBufferSource();
-          const g = ctx.createGain();
-          g.gain.value = 1;
-          src.buffer = buf;
-          src.connect(g).connect(ctx.destination);
-          src.start(0);
-          dbgAudio("[WebAudio cue] play OK", { type, sec: buf.duration });
-          return;
-        }
-      } catch (e) {
-        dbgAudio("[WebAudio cue] play FAIL", {
-          type,
-          message: e instanceof Error ? e.message : String(e),
-        });
-      }
-    } else {
-      dbgAudio("[WebAudio cue] skip ctx not running", { type, state: ctx.state });
-    }
-  }
-
-  const sound = getSound(type);
-  sound.currentTime = 0;
-  void sound
-    .play()
-    .then(() => {
-      dbgAudio("[HTMLAudio] play OK", { type });
-    })
-    .catch((error) => {
-      console.error("Failed to play sound:", type, error);
-      dbgAudio("[HTMLAudio] play FAIL", {
+  if (isAppleTouchWebKitDevice()) {
+    try {
+      await playCueHtml(type);
+      dbgAudio("[HTML cue] play OK", { type });
+      return;
+    } catch (error) {
+      dbgAudio("[HTML cue] play FAIL → WebAudio", {
         type,
         name: error instanceof Error ? error.name : "unknown",
         message: error instanceof Error ? error.message : String(error),
       });
+      if (await tryPlayCueWebAudio(type)) return;
+    }
+  }
+
+  if (await tryPlayCueWebAudio(type)) return;
+
+  try {
+    await playCueHtml(type);
+    dbgAudio("[HTML cue] fallback OK", { type });
+  } catch (error) {
+    console.error("Failed to play sound:", type, error);
+    dbgAudio("[HTML cue] fallback FAIL", {
+      type,
+      name: error instanceof Error ? error.name : "unknown",
+      message: error instanceof Error ? error.message : String(error),
     });
+  }
 }
 
-// 播放声音（优先 Web Audio，与白噪音同源上下文，适配 iOS 定时触发的提示音）
+/**
+ * 定点提示音：Apple 触控上主走 HTMLAudio（与 loop 白噪音同一套媒体策略，互不依赖）；
+ * 桌面主走 Web Audio；无手势 tick 在 Apple 上靠 WebAudio 兜底（需在用户曾点开始时已 resume 过 context）。
+ */
 export function playSound(type: SoundType): void {
+  const ctx = getOrCreateAudioContext();
+  if (ctx?.state === "suspended") {
+    void ctx.resume().catch(() => {});
+  }
   void playSoundAsync(type);
 }
 
