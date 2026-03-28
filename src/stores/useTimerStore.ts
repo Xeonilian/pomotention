@@ -402,13 +402,8 @@ export const useTimerStore = defineStore(
       resetTimer();
     }
 
+    /** 仅清状态与停白噪音；阶段结束音由 finalizeCurrentPhase / cancelTimer / UI 在调用前自行 playSound */
     function resetTimer(): void {
-      if (isWorking.value) {
-        playSound(SoundType.WORK_END);
-      } else if (isBreaking.value) {
-        playSound(SoundType.BREAK_END);
-      }
-
       isGray.value = true;
       clearPhaseInterval();
 

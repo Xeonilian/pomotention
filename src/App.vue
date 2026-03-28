@@ -28,7 +28,7 @@ import PwaUpdateNotifier from "./components/PwaUpdateNotifier.vue";
 import { initSyncServices, syncAll, resetSyncServices } from "@/services/sync";
 import { initAppCloseHandler, cancelPendingSyncTasks } from "@/services/appCloseHandler";
 import { useTimerStore } from "@/stores/useTimerStore";
-import { resumeSharedAudioAfterForeground, prefetchSoundAssets } from "@/core/sounds";
+import { resumeSharedAudioAfterForegroundAsync, prefetchSoundAssets } from "@/core/sounds";
 
 // ========== 状态与依赖 ==========
 const router = useRouter();
@@ -265,17 +265,21 @@ onErrorCaptured((error) => {
   return false; // 不阻止错误向上传播
 });
 
-// 回到前台：墙钟校准（与 main 启动时同一 reconcile 入口）
+// 回到前台：先 await AudioContext.resume，再墙钟校准（避免休眠唤醒后 finalize 播提示音时 ctx 仍 suspended）
 const handleVisibilityReconcileTimer = () => {
   if (document.visibilityState === "visible") {
-    resumeSharedAudioAfterForeground();
-    timerStore.reconcilePhaseFromWallClock();
+    void (async () => {
+      await resumeSharedAudioAfterForegroundAsync();
+      timerStore.reconcilePhaseFromWallClock();
+    })();
   }
 };
 
 const handlePageShow = (e: PageTransitionEvent) => {
-  resumeSharedAudioAfterForeground();
-  if (e.persisted) timerStore.reconcilePhaseFromWallClock();
+  void (async () => {
+    await resumeSharedAudioAfterForegroundAsync();
+    if (e.persisted) timerStore.reconcilePhaseFromWallClock();
+  })();
 };
 
 onMounted(() => {
