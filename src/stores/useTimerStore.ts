@@ -254,13 +254,18 @@ export const useTimerStore = defineStore(
         }
       } else if (pomodoroState.value === "breaking") {
         playSound(SoundType.BREAK_END);
-        if (cb) {
-          cb();
-        } else if (useCont) {
-          sequencePhaseContinuation.value!();
-        } else {
-          resetTimer();
-        }
+        // 休息结束：先让 BREAK_END 的微任务起播，再 startWorking/startWhiteNoise。
+        // 否则 iOS/WebKit 上会在 break_end HTML 播放前同步创建双轨白噪音，多路 HTMLAudio 争用易导致 break→work 白噪音无声或需回到前台才补 play。
+        const runAfterBreakEndCue = () => {
+          if (cb) {
+            cb();
+          } else if (useCont) {
+            sequencePhaseContinuation.value!();
+          } else {
+            resetTimer();
+          }
+        };
+        queueMicrotask(runAfterBreakEndCue);
       }
     }
 
