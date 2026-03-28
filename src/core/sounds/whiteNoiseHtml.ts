@@ -19,11 +19,12 @@ type HtmlWnCrossState = {
   masterVolume: number;
   /** 与提示音同时播放时压低白噪音，避免盖过 Web Audio 提示音 */
   duckFactor: number;
-  duckTimer: ReturnType<typeof setTimeout> | null;
+  /** 浏览器定时器句柄为 number；勿用 ReturnType<typeof setTimeout>（含 Node 时会变成 NodeJS.Timeout） */
+  duckTimer: number | null;
   duration: number;
   crossfadeSec: number;
   followerArmed: boolean;
-  tickId: ReturnType<typeof setInterval> | null;
+  tickId: number | null;
   detachMediaListeners: (() => void) | null;
 };
 
@@ -242,7 +243,7 @@ export function startWhiteNoiseHtml(src: string, volume: number): void {
         });
       });
 
-    state.tickId = setInterval(() => htmlWnCrossfadeTick(state), HTML_WN_CROSSFADE.tickIntervalMs);
+    state.tickId = window.setInterval(() => htmlWnCrossfadeTick(state), HTML_WN_CROSSFADE.tickIntervalMs);
   };
 
   a.addEventListener("loadedmetadata", tryArmPlayback);
@@ -265,12 +266,15 @@ export function duckHtmlWhiteNoiseForCuePlayback(durationMs: number): void {
   /* 提示期间白噪音勿压过低，否则相对提示仍像「几比一」；过大则盖过 Web Audio */
   st.duckFactor = 0.55;
   htmlWnCrossfadeTick(st);
-  st.duckTimer = window.setTimeout(() => {
-    if (htmlWnCross !== st) return;
-    st.duckFactor = 1;
-    st.duckTimer = null;
-    htmlWnCrossfadeTick(st);
-  }, Math.max(120, durationMs));
+  st.duckTimer = window.setTimeout(
+    function () {
+      if (htmlWnCross !== st) return;
+      st.duckFactor = 1;
+      st.duckTimer = null;
+      htmlWnCrossfadeTick(st);
+    },
+    Math.max(120, durationMs),
+  );
 }
 
 export function resumeHtmlWhiteNoiseIfNeeded(): void {
