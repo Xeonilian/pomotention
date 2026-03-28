@@ -221,29 +221,79 @@ export function startWhiteNoiseHtml(src: string, volume: number): void {
     a.volume = eff;
     b.volume = 0;
 
+    /** 起播成功后再挂 tick，避免 play 被拒时空转 interval；并设 MediaSession */
+    const onLeaderPlaying = () => {
+      if (htmlWnCross !== state) return;
+      dbgAudio("[WN] HTMLAudio crossfade 已起播", { duration: d, crossfadeSec: cf });
+      if (state.tickId == null) {
+        state.tickId = window.setInterval(() => htmlWnCrossfadeTick(state), HTML_WN_CROSSFADE.tickIntervalMs);
+      }
+      if (!("mediaSession" in navigator)) return;
+      try {
+        navigator.mediaSession.playbackState = "playing";
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: "专注白噪音",
+          artist: "Pomotention",
+        });
+      } catch {
+        /* 忽略 */
+      }
+    };
+
+    /** iOS：loadedmetadata 后 play 常晚于用户手势；短时重试 + 可见/触摸补一次 */
+    const scheduleLeaderPlayRecovery = () => {
+      const retryDelaysMs = [0, 60, 150, 320, 700, 1400];
+      const retryTimers: number[] = [];
+      let cleaned = false;
+      const onVis = () => {
+        if (document.visibilityState !== "visible") return;
+        tryAgain();
+      };
+      const onPtr = () => {
+        tryAgain();
+      };
+      const cleanup = () => {
+        if (cleaned) return;
+        cleaned = true;
+        document.removeEventListener("visibilitychange", onVis);
+        window.removeEventListener("pointerdown", onPtr, true);
+        for (const t of retryTimers) clearTimeout(t);
+      };
+      const tryAgain = () => {
+        if (htmlWnCross !== state || cleaned) return;
+        if (!a.paused) {
+          cleanup();
+          onLeaderPlaying();
+          return;
+        }
+        void a
+          .play()
+          .then(() => {
+            if (htmlWnCross !== state) return;
+            cleanup();
+            onLeaderPlaying();
+          })
+          .catch(() => {});
+      };
+      document.addEventListener("visibilitychange", onVis);
+      window.addEventListener("pointerdown", onPtr, true);
+      for (const ms of retryDelaysMs) {
+        retryTimers.push(window.setTimeout(tryAgain, ms));
+      }
+    };
+
     void a
       .play()
       .then(() => {
         if (htmlWnCross !== state) return;
-        dbgAudio("[WN] HTMLAudio crossfade 已起播", { duration: d, crossfadeSec: cf });
-        if (!("mediaSession" in navigator)) return;
-        try {
-          navigator.mediaSession.playbackState = "playing";
-          navigator.mediaSession.metadata = new MediaMetadata({
-            title: "专注白噪音",
-            artist: "Pomotention",
-          });
-        } catch {
-          /* 忽略 */
-        }
+        onLeaderPlaying();
       })
       .catch((e: unknown) => {
-        dbgAudio("[WN] HTMLAudio crossfade play 拒绝", {
-          message: e instanceof Error ? e.message : String(e),
-        });
+        const msg = e instanceof Error ? e.message : String(e);
+        dbgAudio("[WN] HTMLAudio crossfade play 拒绝", { message: msg });
+        if (htmlWnCross !== state) return;
+        scheduleLeaderPlayRecovery();
       });
-
-    state.tickId = window.setInterval(() => htmlWnCrossfadeTick(state), HTML_WN_CROSSFADE.tickIntervalMs);
   };
 
   a.addEventListener("loadedmetadata", tryArmPlayback);
