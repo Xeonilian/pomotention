@@ -362,8 +362,7 @@ export const useTimerStore = defineStore(
       isFromSequence.value = !!onFinish;
 
       // if (!isFromSequence.value) {
-      //   playSound(SoundType.BREAK_START);
-      // } // 打开提示音，免得无法确认是否开始休息
+      playSound(SoundType.BREAK_START);
 
       timerInterval.value = window.setInterval(phaseTick, 1000);
     }
