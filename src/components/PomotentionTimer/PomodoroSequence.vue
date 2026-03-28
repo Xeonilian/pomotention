@@ -270,15 +270,13 @@ function runStep(steps: PomodoroStep[]): void {
   }
 }
 
-// 在 PomodoroSequence.vue 中修改 stopPomodoro 函数
 function stopPomodoro(): void {
   timerStore.registerSequenceContinuation(null);
-  // 先调用 store 的 resetTimer 方法
-  timerStore.resetTimer();
+  // 工作中/休息中需播 WORK_END / BREAK_END；cancelTimer 内部再 resetTimer + stopWhiteNoise
+  timerStore.cancelTimer();
   emit("pomo-seq-running", false);
   // 然后更新本地状态
   isRunning.value = false;
-  // resetTimer 内已 stopWhiteNoise()
   timeoutHandles.value.forEach((handle) => clearTimeout(handle));
   timeoutHandles.value = [];
   // console.log("Stopping pomodoro...");
