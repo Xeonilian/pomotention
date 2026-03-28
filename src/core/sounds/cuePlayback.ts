@@ -1,6 +1,6 @@
 import { getOrCreateAudioContext, getAudioContext } from "./audioContext";
 import { dbgAudio } from "./debug";
-import { preferHtmlAudioCueFirst } from "./platform";
+import { isAppleTouchWebKitDevice, preferHtmlAudioCueFirst } from "./platform";
 import type { SoundType } from "./types";
 import { soundPaths } from "./types";
 import { getOrDecodeCueBuffer } from "./cueBuffers";
@@ -34,8 +34,15 @@ export function playCueHtml(type: SoundType): Promise<void> {
   return el.play();
 }
 
+/** iOS：AudioContext 已 running 时定时 cue 先走 Web Audio，避免 HTML play() 反复 NotAllowed */
+function preferWebAudioCueFirstOnIos(): boolean {
+  const ctx = getAudioContext();
+  return isAppleTouchWebKitDevice() && ctx !== null && ctx.state === "running";
+}
+
 /** Web Audio 播放单条提示音；成功返回 true */
-export async function tryPlayCueWebAudio(type: SoundType): Promise<boolean> {
+export async function tryPlayCueWebAudio(type: SoundType, opts?: { silent?: boolean }): Promise<boolean> {
+  const silent = opts?.silent === true;
   getOrCreateAudioContext();
   const ctx = getAudioContext();
   if (!ctx) return false;
@@ -45,13 +52,14 @@ export async function tryPlayCueWebAudio(type: SoundType): Promise<boolean> {
     await ctx.resume().catch(() => {});
   }
   if (ctx.state !== "running") {
-    dbgAudio("[WebAudio cue] skip ctx not running", { type, state: ctx.state });
+    if (!silent) {
+      dbgAudio("[cue] WebAudio skip", { type, state: ctx.state });
+    }
     return false;
   }
   try {
     const buf = await decodeP;
     if (!buf) return false;
-    // 白噪音为 HTML 全音量时易盖过 Web Audio 提示音，按缓冲时长 duck
     duckHtmlWhiteNoiseForCuePlayback(buf.duration * 1000 + 180);
     const src = ctx.createBufferSource();
     const g = ctx.createGain();
@@ -59,52 +67,81 @@ export async function tryPlayCueWebAudio(type: SoundType): Promise<boolean> {
     src.buffer = buf;
     src.connect(g).connect(ctx.destination);
     src.start(0);
-    dbgAudio("[WebAudio cue] play OK", { type, sec: buf.duration });
+    if (!silent) {
+      dbgAudio("[cue] OK", { type, path: "web", sec: buf.duration });
+    }
     return true;
   } catch (e) {
-    dbgAudio("[WebAudio cue] play FAIL", {
-      type,
-      message: e instanceof Error ? e.message : String(e),
-    });
+    if (!silent) {
+      dbgAudio("[cue] WebAudio FAIL", {
+        type,
+        message: e instanceof Error ? e.message : String(e),
+      });
+    }
     return false;
   }
 }
 
+function dbgCueFail(type: SoundType, step: string, error: unknown) {
+  dbgAudio("[cue] FAIL", {
+    type,
+    step,
+    name: error instanceof Error ? error.name : "unknown",
+    message: error instanceof Error ? error.message : String(error),
+  });
+}
+
 async function playSoundAsync(type: SoundType): Promise<void> {
+  const webFirstIos = preferWebAudioCueFirstOnIos();
+
+  if (webFirstIos) {
+    if (await tryPlayCueWebAudio(type, { silent: true })) {
+      dbgAudio("[cue] OK", { type, path: "web" });
+      return;
+    }
+    try {
+      duckHtmlWhiteNoiseForCuePlayback(2800);
+      await playCueHtml(type);
+      dbgAudio("[cue] OK", { type, path: "html", note: "ios_after_web" });
+    } catch (error) {
+      dbgCueFail(type, "ios_html_after_web", error);
+    }
+    return;
+  }
+
   if (preferHtmlAudioCueFirst()) {
     try {
       duckHtmlWhiteNoiseForCuePlayback(2800);
       await playCueHtml(type);
-      dbgAudio("[HTML cue] play OK", { type });
+      dbgAudio("[cue] OK", { type, path: "html" });
       return;
     } catch (error) {
-      dbgAudio("[HTML cue] play FAIL → WebAudio", {
-        type,
-        name: error instanceof Error ? error.name : "unknown",
-        message: error instanceof Error ? error.message : String(error),
-      });
-      if (await tryPlayCueWebAudio(type)) return;
+      if (await tryPlayCueWebAudio(type, { silent: true })) {
+        dbgAudio("[cue] OK", { type, path: "web", note: "html_blocked" });
+        return;
+      }
+      dbgCueFail(type, "html_then_web", error);
     }
+    return;
   }
 
-  if (await tryPlayCueWebAudio(type)) return;
+  if (await tryPlayCueWebAudio(type, { silent: true })) {
+    dbgAudio("[cue] OK", { type, path: "web" });
+    return;
+  }
 
   try {
     duckHtmlWhiteNoiseForCuePlayback(2200);
     await playCueHtml(type);
-    dbgAudio("[HTML cue] fallback OK", { type });
+    dbgAudio("[cue] OK", { type, path: "html", note: "desktop_fallback" });
   } catch (error) {
     console.error("Failed to play sound:", type, error);
-    dbgAudio("[HTML cue] fallback FAIL", {
-      type,
-      name: error instanceof Error ? error.name : "unknown",
-      message: error instanceof Error ? error.message : String(error),
-    });
+    dbgCueFail(type, "desktop_html_fallback", error);
   }
 }
 
 /**
- * 定点提示音：iOS/Android 主走 HTMLAudio；其余桌面主走 Web Audio；失败再 HTML 兜底。
+ * 定点提示音：iOS（ctx 已解锁）先 Web Audio；Android/移动 HTML 优先；桌面 Web Audio 优先。
  */
 export function playSound(type: SoundType): void {
   const ctx = getOrCreateAudioContext();

@@ -1,5 +1,5 @@
 import { useSettingStore } from "@/stores/useSettingStore";
-import { dbgAudio } from "./debug";
+import { dbgAudio, dbgAudioThrottled } from "./debug";
 
 /** 全平台白噪音：双轨交叉淡化，避免 HTML loop 接缝约每 file 时长卡一下 */
 /** 双轨重叠与其它参数：想试听感主要改 ratioOfDuration、minSec、maxSec */
@@ -171,7 +171,7 @@ export function startWhiteNoiseHtml(src: string, volume: number): void {
           follower.volume = mv;
           state.leaderIdx = (1 - leaderIdx) as 0 | 1;
           state.followerArmed = false;
-          dbgAudio("[WN] HTML crossfade ended 补交接（息屏定时器节流）", {});
+          dbgAudioThrottled("wn_handoff_throttle", 30_000, "[WN] HTML crossfade ended 补交接（息屏定时器节流）", {});
           return;
         }
 
@@ -198,8 +198,6 @@ export function startWhiteNoiseHtml(src: string, volume: number): void {
     }
   };
 
-  dbgAudio("[WN] 白噪音 HTMLAudio 双轨 crossfade（锁屏尽量不裁）", { src, volume: masterVol });
-
   let playbackStarted = false;
   const tryArmPlayback = () => {
     if (htmlWnCross !== state || playbackStarted) return;
@@ -224,7 +222,7 @@ export function startWhiteNoiseHtml(src: string, volume: number): void {
     /** 起播成功后再挂 tick，避免 play 被拒时空转 interval；并设 MediaSession */
     const onLeaderPlaying = () => {
       if (htmlWnCross !== state) return;
-      dbgAudio("[WN] HTMLAudio crossfade 已起播", { duration: d, crossfadeSec: cf });
+      dbgAudio("[WN] crossfade 起播", { src, volume: masterVol, duration: d, crossfadeSec: cf });
       if (state.tickId == null) {
         state.tickId = window.setInterval(() => htmlWnCrossfadeTick(state), HTML_WN_CROSSFADE.tickIntervalMs);
       }
@@ -347,7 +345,6 @@ export function resumeHtmlWhiteNoiseIfNeeded(): void {
             message: e instanceof Error ? e.message : String(e),
           });
         });
-        dbgAudio("[WN] HTML crossfade 回到前台补 play", {});
       })
       .catch(() => {});
   } catch {

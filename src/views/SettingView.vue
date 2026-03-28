@@ -40,8 +40,9 @@
 
         <n-collapse-item title="音频诊断（iOS / PWA）" name="audio">
           <p class="audio-dbg-hint">
-            记录提示音与白噪音的关键事件（iOS 上两者多为 HTMLAudio；桌面白噪音多为 Web Audio）。仅内存，刷新清空。出现
-            <code>play FAIL</code>
+            记录提示音与白噪音的关键事件。白噪音为 HTML 双轨 crossfade；iOS 在 AudioContext 已 running
+            时定时提示音多走 Web Audio，否则仍以 HTML 为主。仅内存，刷新清空。出现
+            <code>[cue] FAIL</code>
             或
             <code>statechange suspended</code>
             时可对照现象。

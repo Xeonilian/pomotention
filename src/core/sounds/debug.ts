@@ -9,3 +9,16 @@ export function dbgAudio(message: string, extra?: Record<string, unknown>) {
     /* Pinia 未就绪等 */
   }
 }
+
+/** 同类高频事件节流，避免息屏长测刷屏 */
+export function dbgAudioThrottled(key: string, windowMs: number, message: string, extra?: Record<string, unknown>) {
+  type G = typeof globalThis & { __pomoAudioDbgThrottle?: Map<string, number> };
+  const g = globalThis as G;
+  if (!g.__pomoAudioDbgThrottle) g.__pomoAudioDbgThrottle = new Map();
+  const map = g.__pomoAudioDbgThrottle;
+  const now = Date.now();
+  const last = map.get(key) ?? 0;
+  if (now - last < windowMs) return;
+  map.set(key, now);
+  dbgAudio(message, extra);
+}

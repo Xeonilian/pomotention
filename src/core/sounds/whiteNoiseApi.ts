@@ -92,7 +92,6 @@ export async function resumeSharedAudioAfterForegroundAsync(): Promise<void> {
 
   try {
     await ctx.resume();
-    dbgAudio("[WN] resumeSharedAudio 兑现", { state: ctx.state });
   } catch (e: unknown) {
     dbgAudio("[WN] resumeSharedAudio 拒绝", {
       message: e instanceof Error ? e.message : String(e),
