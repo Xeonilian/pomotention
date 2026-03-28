@@ -1,10 +1,9 @@
 /**
  * 触控 Web 平台判定（提示音策略用；白噪音全平台 HTML 双轨，不依赖本模块分支）。
  *
- * **iOS（Safari / PWA）**：用户手势解锁后 AudioContext 可处于 running；但定时器触发的
- * `HTMLAudioElement.play()` 仍常报 NotAllowed。故在 `cuePlayback` 中：若检测到
- * `isAppleTouchWebKitDevice` 且 `AudioContext.state === 'running'`，提示音**优先 Web Audio**，
- * 失败再 HTML；首次或 ctx 未 running 时仍 HTML 优先以贴近手势链。
+ * **iOS（Safari / PWA）**：亮屏且用户手势解锁后 `AudioContext` 可 running，定时 `HTMLAudio.play()` 仍常
+ * NotAllowed，故亮屏下可 **Web Audio 优先**。锁屏/切后台时 `document.hidden`，Web Audio 常「start 成功但无声」
+ * 或随即 `interrupted`，故 **不再 Web-first**，并以短时检测否决假成功；提示音尽量走与白噪音相同的 HTML 管线。
  *
  * **Android**：息屏/后台时 Web Audio 易 suspend，定时提示音仍以 **HTMLAudio 优先**，
  * 不在此平台反转顺序（与 iOS 分支区分）。

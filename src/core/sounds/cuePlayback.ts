@@ -34,10 +34,21 @@ export function playCueHtml(type: SoundType): Promise<void> {
   return el.play();
 }
 
-/** iOS：AudioContext 已 running 时定时 cue 先走 Web Audio，避免 HTML play() 反复 NotAllowed */
+/** 锁屏/切后台时 document 多为 hidden；此时 Web Audio 常「start 成功但无声」或随即 interrupted */
+function isPageHiddenForAudio(): boolean {
+  if (typeof document === "undefined") return false;
+  return document.visibilityState !== "visible" || document.hidden;
+}
+
+/**
+ * iOS 亮屏：ctx running 时定时 cue 先 Web Audio，避免 HTML play() NotAllowed。
+ * 锁屏勿 Web-first：与白噪音同属 HTML 媒体管线时更易出声（失败则再试 Web，并由 post-check 否决假成功）。
+ */
 function preferWebAudioCueFirstOnIos(): boolean {
+  if (!isAppleTouchWebKitDevice()) return false;
+  if (isPageHiddenForAudio()) return false;
   const ctx = getAudioContext();
-  return isAppleTouchWebKitDevice() && ctx !== null && ctx.state === "running";
+  return ctx !== null && ctx.state === "running";
 }
 
 /** Web Audio 播放单条提示音；成功返回 true */
@@ -67,6 +78,17 @@ export async function tryPlayCueWebAudio(type: SoundType, opts?: { silent?: bool
     src.buffer = buf;
     src.connect(g).connect(ctx.destination);
     src.start(0);
+    // iOS 非前台：start 后上下文常立即 interrupted，日志勿报 OK
+    if (isAppleTouchWebKitDevice() && isPageHiddenForAudio()) {
+      await new Promise((r) => setTimeout(r, 50));
+      const st = ctx.state as AudioContextState | "interrupted";
+      if (st !== "running") {
+        if (!silent) {
+          dbgAudio("[cue] WebAudio iOS_hidden inaudible", { type, state: st });
+        }
+        return false;
+      }
+    }
     if (!silent) {
       dbgAudio("[cue] OK", { type, path: "web", sec: buf.duration });
     }
@@ -120,6 +142,19 @@ async function playSoundAsync(type: SoundType): Promise<void> {
         dbgAudio("[cue] OK", { type, path: "web", note: "html_blocked" });
         return;
       }
+      // iOS 锁屏：Web 易被 post-check 否掉；短延迟再试 HTML，与白噪音同属媒体元素管线
+      if (isAppleTouchWebKitDevice() && isPageHiddenForAudio()) {
+        await new Promise((r) => setTimeout(r, 160));
+        try {
+          duckHtmlWhiteNoiseForCuePlayback(2800);
+          await playCueHtml(type);
+          dbgAudio("[cue] OK", { type, path: "html", note: "ios_hidden_retry" });
+          return;
+        } catch (error2) {
+          dbgCueFail(type, "ios_hidden_all_fail", error2);
+          return;
+        }
+      }
       dbgCueFail(type, "html_then_web", error);
     }
     return;
@@ -141,7 +176,7 @@ async function playSoundAsync(type: SoundType): Promise<void> {
 }
 
 /**
- * 定点提示音：iOS（ctx 已解锁）先 Web Audio；Android/移动 HTML 优先；桌面 Web Audio 优先。
+ * 定点提示音：iOS 亮屏且 ctx running 先 Web Audio；锁屏回退 HTML→Web（Web 无声则再试 HTML）；桌面 Web Audio 优先。
  */
 export function playSound(type: SoundType): void {
   const ctx = getOrCreateAudioContext();
