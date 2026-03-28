@@ -1,6 +1,6 @@
 import { getOrCreateAudioContext, getAudioContext } from "./audioContext";
 import { dbgAudio } from "./debug";
-import { isAppleTouchWebKitDevice } from "./platform";
+import { preferHtmlAudioCueFirst } from "./platform";
 import type { SoundType } from "./types";
 import { soundPaths } from "./types";
 import { getOrDecodeCueBuffer } from "./cueBuffers";
@@ -26,7 +26,7 @@ function getSound(type: SoundType): HTMLAudioElement {
   return soundCache.get(type)!;
 }
 
-/** Apple 触控：提示音用 HTMLAudio，与白噪音同属「元素 play」解锁链，不依赖先开白噪音 */
+/** iOS/Android：提示音用 HTMLAudio，与白噪音同属「元素 play」链，避免仅 Web Audio 在后台挂起 */
 export function playCueHtml(type: SoundType): Promise<void> {
   const el = getSound(type);
   el.volume = 1;
@@ -71,7 +71,7 @@ export async function tryPlayCueWebAudio(type: SoundType): Promise<boolean> {
 }
 
 async function playSoundAsync(type: SoundType): Promise<void> {
-  if (isAppleTouchWebKitDevice()) {
+  if (preferHtmlAudioCueFirst()) {
     try {
       duckHtmlWhiteNoiseForCuePlayback(2800);
       await playCueHtml(type);
@@ -104,7 +104,7 @@ async function playSoundAsync(type: SoundType): Promise<void> {
 }
 
 /**
- * 定点提示音：Apple 触控上主走 HTMLAudio；桌面主走 Web Audio；失败再 HTML 兜底。
+ * 定点提示音：iOS/Android 主走 HTMLAudio；其余桌面主走 Web Audio；失败再 HTML 兜底。
  */
 export function playSound(type: SoundType): void {
   const ctx = getOrCreateAudioContext();
