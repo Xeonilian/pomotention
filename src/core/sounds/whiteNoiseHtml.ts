@@ -4,8 +4,8 @@ import { dbgAudio, dbgAudioThrottled } from "./debug";
 /** 全平台白噪音：双轨交叉淡化，避免 HTML loop 接缝约每 file 时长卡一下 */
 /** 双轨重叠与其它参数：想试听感主要改 ratioOfDuration、minSec、maxSec */
 const HTML_WN_CROSSFADE = {
-  ratioOfDuration: 0.03,
-  minSec: 0.2,
+  ratioOfDuration: 0.0,
+  minSec: 0.0,
   maxSec: 0.3,
   tooLongRatio: 0.42,
   capRatio: 0.35,
