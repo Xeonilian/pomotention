@@ -40,13 +40,14 @@
 
         <n-collapse-item title="音频诊断（iOS / PWA）" name="audio">
           <p class="audio-dbg-hint">
-            记录阶段提示音（HTMLAudio）与白噪音（Web Audio）的关键事件；仅保存在内存，刷新页面会清空。出现
+            记录提示音与白噪音的关键事件（iOS 上两者多为 HTMLAudio；桌面白噪音多为 Web Audio）。仅内存，刷新清空。出现
             <code>play FAIL</code>
             或
             <code>statechange suspended</code>
-            时可与现象对照。
+            时可对照现象。
           </p>
           <n-space style="margin-bottom: 8px">
+            <n-button size="small" :loading="audioDebugCopyLoading" @click="copyAudioDebugLogs">一键复制日志</n-button>
             <n-button size="small" @click="settingStore.clearAudioDebugLogs()">清空日志</n-button>
           </n-space>
           <div class="audio-dbg-log">
@@ -361,6 +362,38 @@ const audioDebugText = computed(() => {
   const lines = settingStore.audioDebugLogs;
   return lines.length ? lines.join("\n") : "暂无记录。请先开始番茄钟、切换阶段或开关白噪音。";
 });
+
+const audioDebugCopyLoading = ref(false);
+
+async function copyAudioDebugLogs() {
+  const text = audioDebugText.value;
+  if (!settingStore.audioDebugLogs.length) {
+    notification.warning({
+      title: "无内容",
+      content: "当前没有音频诊断记录，无需复制。",
+      duration: 2500,
+    });
+    return;
+  }
+  audioDebugCopyLoading.value = true;
+  try {
+    const block = [`=== Pomotention 音频诊断（仅日志）===`, `采集时间(ISO): ${new Date().toISOString()}`, "", text].join("\n");
+    await navigator.clipboard.writeText(block);
+    notification.success({
+      title: "已复制",
+      content: "音频诊断日志已写入剪贴板。",
+      duration: 2800,
+    });
+  } catch {
+    notification.error({
+      title: "复制失败",
+      content: "浏览器未允许剪贴板或环境不支持；请在下方日志区域手动全选复制。",
+      duration: 4500,
+    });
+  } finally {
+    audioDebugCopyLoading.value = false;
+  }
+}
 
 const device = useDevice();
 const { isIOS: pwaIsIOS } = usePwaInstall();
