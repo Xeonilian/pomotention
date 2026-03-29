@@ -243,15 +243,19 @@ export const useTimerStore = defineStore(
 
       if (pomodoroState.value === "working") {
         playSound(SoundType.WORK_END);
-        if (cb) {
-          stopWhiteNoise();
-          cb();
-        } else if (useCont) {
-          stopWhiteNoise();
-          sequencePhaseContinuation.value!();
-        } else {
-          resetTimer();
-        }
+        // 与 BREAK_END 同序：先让 work_end 进入播放链，再停白噪音/清状态。否则同步 resetTimer 会在 playSoundAsync 的首个 await 之前拆掉双轨 HTML，息屏上易 NotAllowed + AudioContext suspended，且听感上 end 无声。
+        const runAfterWorkEndCue = () => {
+          if (cb) {
+            stopWhiteNoise();
+            cb();
+          } else if (useCont) {
+            stopWhiteNoise();
+            sequencePhaseContinuation.value!();
+          } else {
+            resetTimer();
+          }
+        };
+        queueMicrotask(runAfterWorkEndCue);
       } else if (pomodoroState.value === "breaking") {
         playSound(SoundType.BREAK_END);
         // 休息结束：先让 BREAK_END 的微任务起播，再 startWorking/startWhiteNoise。
@@ -416,7 +420,7 @@ export const useTimerStore = defineStore(
       } else if (isBreaking.value) {
         playSound(SoundType.BREAK_END);
       }
-      resetTimer();
+      queueMicrotask(() => resetTimer());
     }
 
     /** 仅清状态与停白噪音；阶段结束音由 finalizeCurrentPhase / cancelTimer / UI 在调用前自行 playSound */

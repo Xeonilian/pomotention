@@ -1,9 +1,8 @@
 /**
  * 触控 Web 平台判定（提示音策略用；白噪音全平台 HTML 双轨，不依赖本模块分支）。
  *
- * **iOS（Safari / PWA）**：亮屏且用户手势解锁后 `AudioContext` 可 running，定时 `HTMLAudio.play()` 仍常
- * NotAllowed，故亮屏下可 **Web Audio 优先**。锁屏/切后台时 `document.hidden`，Web Audio 常「start 成功但无声」
- * 或随即 `interrupted`，故 **不再 Web-first**，并以短时检测否决假成功；提示音尽量走与白噪音相同的 HTML 管线。
+ * **iOS（Safari / PWA）**：亮屏且 `AudioContext` running 时可 Web-first；息屏时 `work_middle` / `work_end` 的 HTML
+ * `play()` 常 NotAllowed，二者 Web→HTML；`work_end` 与 `resetTimer/stopWhiteNoise` 的先后顺序见 timer store。
  *
  * **Android**：息屏/后台时 Web Audio 易 suspend，定时提示音仍以 **HTMLAudio 优先**，
  * 不在此平台反转顺序（与 iOS 分支区分）。

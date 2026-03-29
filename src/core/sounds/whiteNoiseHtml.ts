@@ -4,8 +4,8 @@ import { dbgAudio, dbgAudioThrottled } from "./debug";
 /** 全平台白噪音：双轨交叉淡化，避免 HTML loop 接缝约每 file 时长卡一下 */
 /** 双轨重叠与其它参数：想试听感主要改 ratioOfDuration、minSec、maxSec */
 const HTML_WN_CROSSFADE = {
-  ratioOfDuration: 0.0,
-  minSec: 0.0,
+  ratioOfDuration: 0.01,
+  minSec: 0.01,
   maxSec: 0.3,
   tooLongRatio: 0.42,
   capRatio: 0.35,
@@ -33,6 +33,21 @@ let htmlWnCross: HtmlWnCrossState | null = null;
 /** 供前台恢复：是否仍有 HTML 双轨白噪音实例 */
 export function isHtmlWhiteNoiseActive(): boolean {
   return htmlWnCross !== null;
+}
+
+/** 调试用：cue 时刻与白噪音 leader 状态对照（假设 H4） */
+export function getHtmlWhiteNoiseDebugSnapshot(): Record<string, unknown> | null {
+  const st = htmlWnCross;
+  if (!st) return null;
+  const L = st.els[st.leaderIdx];
+  const F = st.els[1 - st.leaderIdx];
+  return {
+    leaderPaused: L.paused,
+    followerPaused: F.paused,
+    leaderReadyState: L.readyState,
+    duckFactor: st.duckFactor,
+    leaderIdx: st.leaderIdx,
+  };
 }
 
 function clearMediaSessionPlaybackState() {
