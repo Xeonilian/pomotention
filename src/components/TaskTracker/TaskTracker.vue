@@ -29,7 +29,7 @@
         <!-- 有筛选时在区域后单独按钮，一键清除全部筛选 -->
         <!-- <n-button text v-if="dataStore.filterTagIds.length > 0" aria-label="清除全部标签筛选" @click="handleClearAllFilter">
           <template #icon>
-            <n-icon><TagOff20Regular /></n-icon>
+            <n-icon><TagReset20Filled /></n-icon>
           </template>
         </n-button> -->
       </div>
@@ -131,7 +131,7 @@ import { useDevice } from "@/composables/useDevice";
 import { ChevronUpDown20Regular } from "@vicons/fluent";
 import { useSettingStore } from "@/stores/useSettingStore";
 const settingStore = useSettingStore();
-// import { TagOff20Regular } from "@vicons/fluent";
+// import { TagReset20Filled } from "@vicons/fluent";
 
 const TaskButtons = defineAsyncComponent<Component>(() => import("@/components/TaskTracker/TaskButtons.vue"));
 const TaskRecord = defineAsyncComponent<Component>(() => import("@/components/TaskTracker/TaskRecord.vue"));
@@ -176,8 +176,7 @@ let prevBodyOverflow: string | null = null;
 const isIOSDevice = (() => {
   const ua = navigator.userAgent || "";
   const isIOSLike = /iPhone|iPad|iPod/i.test(ua);
-  const isIPadOS =
-    /macintosh/i.test(ua) && navigator.maxTouchPoints > 1;
+  const isIPadOS = /macintosh/i.test(ua) && navigator.maxTouchPoints > 1;
   return isIOSLike || isIPadOS;
 })();
 

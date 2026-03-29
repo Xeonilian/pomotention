@@ -294,8 +294,8 @@ function handleWorkAction(): void {
 // 4-2 处理休息按钮点击
 function handleBreakAction(): void {
   if (timerStore.pomodoroState === "breaking") {
-    // 已经在休息中，停止休息
-    timerStore.resetTimer();
+    // 已经在休息中，停止休息（与 squash 一致：先播 BREAK_END，再 resetTimer/stopWhiteNoise）
+    timerStore.cancelTimer();
     clickStore.recordClick("Stop");
   } else {
     // 开始休息，使用选中的时间

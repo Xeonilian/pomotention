@@ -258,6 +258,7 @@ async function runSyncTask(actionName: string, taskFn: () => Promise<{ success: 
   if (!ensureInitialized()) return { success: false, errors: ["未初始化"] };
 
   const syncStore = useSyncStore();
+  if (syncStore.isSyncGateActive) return { success: false, errors: ["导入后正在人工核对，已暂停同步"] };
   if (syncStore.isSyncing) return { success: false, errors: ["同步进行中"] };
 
   // 同步前先执行钩子（如 TaskRecord 正在编辑则先保存到本地再同步，避免被覆盖）
@@ -351,6 +352,10 @@ export async function uploadAll() {
     return { success: false, errors: ["未初始化"] };
   }
   const syncStore = useSyncStore();
+  if (syncStore.isSyncGateActive) {
+    console.log("⛔ uploadAll() 同步闸门开启，跳过");
+    return { success: false, errors: ["导入后正在人工核对，已暂停上传"] };
+  }
   if (syncStore.isSyncing) {
     console.log("❌ uploadAll() 同步进行中，跳过");
     return { success: false, errors: ["同步进行中"] };
@@ -410,6 +415,9 @@ export async function downloadAllWithDiagnostics(
     return { success: false, errors: ["未初始化"], downloaded: 0, details: [] };
   }
   const syncStore = useSyncStore();
+  if (syncStore.isSyncGateActive) {
+    return { success: false, errors: ["导入后正在人工核对，已暂停下载"], downloaded: 0, details: [] };
+  }
   if (syncStore.isSyncing) {
     return { success: false, errors: ["同步进行中"], downloaded: 0, details: [] };
   }

@@ -420,11 +420,14 @@ function handleWeekClick(weekStartTs: number) {
 
 .day-dot-wrap.day-dot--other-month .day-dot--outside-month {
   background-color: var(--color-background);
-  opacity: 0.55;
 }
 
 .day-dot-wrap.day-dot--other-month .day-num {
   color: var(--color-background);
+}
+
+.day-dot-wrap:hover .day-num {
+  color: var(--color-blue);
 }
 
 /* 今日：整格底色与圆点填充均为蓝色 */
@@ -495,7 +498,8 @@ function handleWeekClick(weekStartTs: number) {
 @media (hover: hover) and (pointer: fine) {
   .day-dot-wrap:not(.day-dot--other-month) .day-dot:hover {
     cursor: pointer;
-    background-color: var(--color-blue);
+    background-color: var(--color-blue-light);
+    color: var(--color-blue) !important;
     border-radius: 50%;
     transform: scale(1.1);
   }

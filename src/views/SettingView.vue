@@ -40,18 +40,31 @@
 
         <n-collapse-item title="音频诊断（iOS / PWA）" name="audio">
           <p class="audio-dbg-hint">
-            记录阶段提示音（HTMLAudio）与白噪音（Web Audio）的关键事件；仅保存在内存，刷新页面会清空。出现
-            <code>play FAIL</code>
+            记录提示音与白噪音的关键事件。白噪音为 HTML 双轨 crossfade；iOS 在 AudioContext 已 running
+            时定时提示音多走 Web Audio，否则仍以 HTML 为主。仅内存，刷新清空。出现
+            <code>[cue] FAIL</code>
             或
             <code>statechange suspended</code>
-            时可与现象对照。
+            时可对照现象。
           </p>
           <n-space style="margin-bottom: 8px">
+            <n-button size="small" :loading="audioDebugCopyLoading" @click="copyAudioDebugLogs">一键复制日志</n-button>
             <n-button size="small" @click="settingStore.clearAudioDebugLogs()">清空日志</n-button>
           </n-space>
-          <div class="audio-dbg-log">
-            {{ audioDebugText }}
-          </div>
+          <n-descriptions label-placement="left" :column="1" bordered size="small" style="margin-bottom: 12px">
+            <n-descriptions-item label="isAppleTouchWebKitDevice">{{ isAppleTouchWebKitDevice() }}</n-descriptions-item>
+            <n-descriptions-item label="isAndroidTouchDevice">{{ isAndroidTouchDevice() }}</n-descriptions-item>
+            <n-descriptions-item label="preferHtmlAudioCueFirst">{{ preferHtmlAudioCueFirst() }}</n-descriptions-item>
+          </n-descriptions>
+          <p class="audio-dbg-hint audio-dbg-hint--secondary">若一键复制失败，可长按下方文本框全选后复制；三项布尔与导出内容一致。</p>
+          <n-input
+            type="textarea"
+            readonly
+            :value="audioDebugText"
+            :autosize="{ minRows: 8, maxRows: 22 }"
+            class="audio-dbg-textarea"
+            placeholder="暂无记录"
+          />
         </n-collapse-item>
 
         <n-collapse-item v-if="supabaseEnabled && syncStore.isLoggedIn" title="同步诊断（Supabase）" name="sync">
@@ -214,6 +227,8 @@ import { downloadAllWithDiagnostics } from "@/services/sync";
 import { isSupabaseEnabled } from "@/core/services/supabase";
 import { useDevice } from "@/composables/useDevice";
 import { usePwaInstall } from "@/composables/usePwaInstall";
+import { copyTextToClipboard } from "@/utils/clipboard";
+import { isAndroidTouchDevice, isAppleTouchWebKitDevice, preferHtmlAudioCueFirst } from "@/core/sounds/platform";
 
 const settingStore = useSettingStore();
 const timerStore = useTimerStore();
@@ -260,6 +275,11 @@ function buildPomoSequenceDiagReport(): string {
     `采集时间(ISO): ${new Date().toISOString()}`,
     `User-Agent: ${ua}`,
     "",
+    "[sounds 平台（提示音 HTML 优先）]",
+    `isAppleTouchWebKitDevice: ${isAppleTouchWebKitDevice()}`,
+    `isAndroidTouchDevice: ${isAndroidTouchDevice()}`,
+    `preferHtmlAudioCueFirst: ${preferHtmlAudioCueFirst()}`,
+    "",
     "[计时器 store]",
     `pomodoroState: ${timerStore.pomodoroState}`,
     `isActive: ${timerStore.isActive}`,
@@ -286,18 +306,20 @@ async function copyPomoSequenceDiagReport() {
   pomoSequenceCopyLoading.value = true;
   const text = buildPomoSequenceDiagReport();
   try {
-    await navigator.clipboard.writeText(text);
-    notification.success({
-      title: "已复制",
-      content: "完整诊断包已写入剪贴板，可直接粘贴到 issue 或聊天。",
-      duration: 2800,
-    });
-  } catch {
-    notification.error({
-      title: "复制失败",
-      content: "浏览器未允许剪贴板或环境不支持；请展开下方输出区手动全选复制（若需可再告知加只读文本框）。",
-      duration: 4500,
-    });
+    const ok = await copyTextToClipboard(text);
+    if (ok) {
+      notification.success({
+        title: "已复制",
+        content: "完整诊断包已写入剪贴板，可直接粘贴到 issue 或聊天。",
+        duration: 2800,
+      });
+    } else {
+      notification.warning({
+        title: "复制未成功",
+        content: "请在本页番茄序列区展开输出后长按全选复制，或换 HTTPS/系统浏览器重试。",
+        duration: 5000,
+      });
+    }
   } finally {
     pomoSequenceCopyLoading.value = false;
   }
@@ -361,6 +383,46 @@ const audioDebugText = computed(() => {
   const lines = settingStore.audioDebugLogs;
   return lines.length ? lines.join("\n") : "暂无记录。请先开始番茄钟、切换阶段或开关白噪音。";
 });
+
+const audioDebugCopyLoading = ref(false);
+
+function buildAudioDebugExportBlock(): string {
+  const logPart = settingStore.audioDebugLogs.length ? settingStore.audioDebugLogs.join("\n") : audioDebugText.value;
+  return [
+    "=== Pomotention 音频诊断（仅日志）===",
+    `采集时间(ISO): ${new Date().toISOString()}`,
+    "",
+    "=== 平台（sounds / cuePlayback）===",
+    `isAppleTouchWebKitDevice: ${isAppleTouchWebKitDevice()}`,
+    `isAndroidTouchDevice: ${isAndroidTouchDevice()}`,
+    `preferHtmlAudioCueFirst: ${preferHtmlAudioCueFirst()}`,
+    "",
+    "=== 日志 ===",
+    logPart,
+  ].join("\n");
+}
+
+async function copyAudioDebugLogs() {
+  audioDebugCopyLoading.value = true;
+  try {
+    const ok = await copyTextToClipboard(buildAudioDebugExportBlock());
+    if (ok) {
+      notification.success({
+        title: "已复制",
+        content: "已包含平台判定与日志；可直接粘贴。",
+        duration: 2800,
+      });
+    } else {
+      notification.warning({
+        title: "复制未成功",
+        content: "请长按下方文本框全选后复制；本页已展示三项平台布尔，可与代码预期对照。",
+        duration: 5000,
+      });
+    }
+  } finally {
+    audioDebugCopyLoading.value = false;
+  }
+}
 
 const device = useDevice();
 const { isIOS: pwaIsIOS } = usePwaInstall();
@@ -542,18 +604,18 @@ function handleClearLocal() {
   border: 1px solid var(--n-border-color);
 }
 
-.audio-dbg-log {
+.audio-dbg-hint--secondary {
+  margin-top: 0;
+  font-size: 11px;
+}
+
+.audio-dbg-textarea {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 11px;
-  white-space: pre-wrap;
+}
+
+.audio-dbg-textarea :deep(textarea) {
   word-break: break-all;
-  max-height: 320px;
-  overflow: auto;
-  padding: 10px;
-  background: var(--n-color-target);
-  border-radius: 6px;
-  border: 1px solid var(--n-border-color);
-  color: var(--color-background);
 }
 
 .settings-diagnostics-header {

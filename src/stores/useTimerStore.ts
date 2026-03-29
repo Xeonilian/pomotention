@@ -2,7 +2,7 @@
 import { defineStore } from "pinia";
 import { ref, computed, watch } from "vue";
 import { useSettingStore } from "./useSettingStore.ts";
-import { playSound, SoundType, startWhiteNoise, stopWhiteNoise } from "../core/sounds.ts";
+import { playSound, SoundType, startSilentWhiteNoiseHold, startWhiteNoise, stopWhiteNoise } from "../core/sounds.ts";
 
 // 修改状态类型，更清晰地表达三种状态
 type PomodoroState = "idle" | "working" | "breaking";
@@ -157,8 +157,6 @@ export const useTimerStore = defineStore(
             playSound(SoundType.WORK_MIDDLE);
             break;
         }
-      } else {
-        console.log("Not playing sound - not in working state");
       }
     }
 
@@ -242,25 +240,35 @@ export const useTimerStore = defineStore(
       const useCont = !cb && isFromSequence.value && sequencePhaseContinuation.value != null;
 
       if (pomodoroState.value === "working") {
-        playSound(SoundType.WORK_END);
-        if (cb) {
-          stopWhiteNoise();
-          cb();
-        } else if (useCont) {
-          stopWhiteNoise();
-          sequencePhaseContinuation.value!();
-        } else {
-          resetTimer();
-        }
+        // 须等 playSound 的 Promise（decode+起播）完成后再停双轨；queueMicrotask 会在 await decode 之前跑，先于 tryPlayCueWebAudio 拆掉 HTML，息屏/Web 均可能无声或截断
+        // 白噪音开启且链式进入下一段时不在此 stop，由 startBreak/startWorking 内 tryRetarget 复用 HTMLAudio，避免 iOS 定时器边界上 play NotAllowed
+        const stripWnBeforeChain = !settingStore.settings.isWhiteNoiseEnabled;
+        const runAfterWorkEndCue = () => {
+          if (cb) {
+            if (stripWnBeforeChain) stopWhiteNoise();
+            cb();
+          } else if (useCont) {
+            if (stripWnBeforeChain) stopWhiteNoise();
+            sequencePhaseContinuation.value!();
+          } else {
+            resetTimer();
+          }
+        };
+        void playSound(SoundType.WORK_END).finally(() => runAfterWorkEndCue());
       } else if (pomodoroState.value === "breaking") {
-        playSound(SoundType.BREAK_END);
-        if (cb) {
-          cb();
-        } else if (useCont) {
-          sequencePhaseContinuation.value!();
-        } else {
-          resetTimer();
-        }
+        const stripWnBeforeChain = !settingStore.settings.isWhiteNoiseEnabled;
+        const runAfterBreakEndCue = () => {
+          if (cb) {
+            if (stripWnBeforeChain) stopWhiteNoise();
+            cb();
+          } else if (useCont) {
+            if (stripWnBeforeChain) stopWhiteNoise();
+            sequencePhaseContinuation.value!();
+          } else {
+            resetTimer();
+          }
+        };
+        void playSound(SoundType.BREAK_END).finally(() => runAfterBreakEndCue());
       }
     }
 
@@ -346,9 +354,12 @@ export const useTimerStore = defineStore(
 
     const breakReminderCount = ref<number>(5);
     const remindedSet = ref(new Set<number>());
+    /** 上一 tick 的已过秒数，用于「边界跨越」检测；息屏/后台时墙钟会跳秒，不能用 |elapsed-node|<=1 */
+    const breakReminderPrevElapsed = ref(-1);
 
     function startBreak(duration: number, onFinish?: () => void): void {
       breakReminderCount.value = duration;
+      breakReminderPrevElapsed.value = -1;
       beginNewPhase(onFinish);
 
       pomodoroState.value = "breaking";
@@ -361,9 +372,8 @@ export const useTimerStore = defineStore(
       isGray.value = false;
       isFromSequence.value = !!onFinish;
 
-      // if (!isFromSequence.value) {
-      //   playSound(SoundType.BREAK_START);
-      // } // 打开提示音，免得无法确认是否开始休息
+      startSilentWhiteNoiseHold();
+      playSound(SoundType.BREAK_START);
 
       timerInterval.value = window.setInterval(phaseTick, 1000);
     }
@@ -371,8 +381,10 @@ export const useTimerStore = defineStore(
     watch(
       [pomodoroState, timeRemaining],
       ([state, timeLeft]) => {
+        // 仅 0/1 分钟休息无中间节点；2min→60s 处 1 次，3min→60s/120s 共 2 次（类推：N 分钟→N-1 次）
         if (state !== "breaking" || breakReminderCount.value < 2) {
           remindedSet.value.clear();
+          breakReminderPrevElapsed.value = -1;
           return;
         }
 
@@ -380,36 +392,39 @@ export const useTimerStore = defineStore(
         const segmentLen = totalTime.value / segments;
         const elapsed = totalTime.value - timeLeft;
 
-        for (let i = 1; i < segments; i++) {
-          const node = Math.round(segmentLen * i);
-          const timeDiff = Math.abs(elapsed - node);
-          const shouldTrigger = timeDiff <= 1 && !remindedSet.value.has(i);
+        let prev = breakReminderPrevElapsed.value;
+        if (prev < 0) {
+          prev = 0;
+        }
 
-          if (shouldTrigger) {
+        // 从高段往低找：同一 tick 跨过多个节点时只播一次（例如恢复前台/校准跳秒）
+        for (let i = segments - 1; i >= 1; i--) {
+          const node = Math.round(segmentLen * i);
+          const crossed = !remindedSet.value.has(i) && prev < node && elapsed >= node;
+          if (crossed) {
             playSound(SoundType.PHASE_BREAK);
             remindedSet.value.add(i);
+            break;
           }
         }
+
+        breakReminderPrevElapsed.value = elapsed;
       },
       { deep: true },
     );
 
     function cancelTimer(): void {
       if (isWorking.value) {
-        playSound(SoundType.WORK_END);
+        void playSound(SoundType.WORK_END).finally(() => resetTimer());
       } else if (isBreaking.value) {
-        playSound(SoundType.BREAK_END);
+        void playSound(SoundType.BREAK_END).finally(() => resetTimer());
+      } else {
+        resetTimer();
       }
-      resetTimer();
     }
 
+    /** 仅清状态与停白噪音；阶段结束音由 finalizeCurrentPhase / cancelTimer / UI 在调用前自行 playSound */
     function resetTimer(): void {
-      if (isWorking.value) {
-        playSound(SoundType.WORK_END);
-      } else if (isBreaking.value) {
-        playSound(SoundType.BREAK_END);
-      }
-
       isGray.value = true;
       clearPhaseInterval();
 

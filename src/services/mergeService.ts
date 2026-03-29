@@ -3,6 +3,7 @@ import { STORAGE_KEYS } from "@/core/constants";
 import { loadData, saveData } from "@/services/localStorageService";
 import { readTextFile } from "@tauri-apps/plugin-fs";
 import { deduplicateData, migrateTaskSource } from "@/services/migrationService";
+import { normalizeImportedTodoData } from "@/services/importNormalizationService";
 
 // 定义文件处理结果的详细类型
 export interface FileProcessResult {
@@ -13,6 +14,7 @@ export interface FileProcessResult {
   addedCount: number; // 新增的项目数量
   skippedCount: number; // 因重复而跳过的项目数量
   idConflictCount: number; // 发生ID冲突并重新生成ID的数量
+  replacedCount: number; // 使用导入项覆盖本地项的数量
   message: string; // 一段总结信息
 }
 
@@ -21,7 +23,18 @@ export interface ImportReport {
   overallStatus: "COMPLETE" | "PARTIAL_ERROR" | "FATAL_ERROR"; // 总体状态
   results: FileProcessResult[]; // 每个文件的处理结果数组
   shouldReload: boolean; // 是否需要刷新UI
+  dryRun: boolean; // 是否为预览模式
+  warnings: string[]; // 风险提示
 }
+
+export type IdConflictPolicy = "keep-local" | "prefer-import";
+
+export interface ImportOptions {
+  dryRun?: boolean;
+  idConflictPolicy?: IdConflictPolicy;
+}
+
+export type ImportFileMap = Record<string, string>;
 
 // 合并策略枚举
 export const MERGE_STRATEGIES = {
@@ -90,6 +103,55 @@ const FILE_TO_KEY_MAP: Record<string, string> = {
   "timeTableBlocks.json": STORAGE_KEYS.TIMETABLE_BLOCKS,
 };
 
+const IMPORT_ROLLBACK_SNAPSHOT_KEY = "importRollbackSnapshotV1";
+
+const IMPORT_ROLLBACK_TARGET_KEYS: string[] = Array.from(new Set(Object.values(FILE_TO_KEY_MAP)));
+
+interface ImportRollbackSnapshot {
+  createdAt: number;
+  data: Record<string, unknown | null>;
+}
+
+export function hasImportRollbackSnapshot(): boolean {
+  return !!localStorage.getItem(IMPORT_ROLLBACK_SNAPSHOT_KEY);
+}
+
+export function clearImportRollbackSnapshot(): void {
+  localStorage.removeItem(IMPORT_ROLLBACK_SNAPSHOT_KEY);
+}
+
+export function captureImportRollbackSnapshot(): void {
+  const snapshot: ImportRollbackSnapshot = {
+    createdAt: Date.now(),
+    data: {},
+  };
+
+  for (const key of IMPORT_ROLLBACK_TARGET_KEYS) {
+    snapshot.data[key] = loadData<unknown>(key);
+  }
+
+  saveData(IMPORT_ROLLBACK_SNAPSHOT_KEY, snapshot);
+}
+
+export function restoreFromImportRollbackSnapshot(): boolean {
+  const snapshot = loadData<ImportRollbackSnapshot | null>(IMPORT_ROLLBACK_SNAPSHOT_KEY, null);
+  if (!snapshot) {
+    return false;
+  }
+
+  for (const key of IMPORT_ROLLBACK_TARGET_KEYS) {
+    const value = snapshot.data[key];
+    if (value === null || value === undefined) {
+      localStorage.removeItem(key);
+      continue;
+    }
+    saveData(key, value);
+  }
+
+  clearImportRollbackSnapshot();
+  return true;
+}
+
 // 合并策略函数
 async function mergeSkip(storageKey: string, _importData: any): Promise<void> {
   console.log(`[${storageKey}]: 策略为跳过 (SKIP)，不进行任何操作。`);
@@ -101,20 +163,40 @@ type DataItem = Record<string, any>;
 async function mergeArrayWithId(
   storageKey: string,
   importData: any[],
-  idField: string
-): Promise<{ itemsToAdd: DataItem[]; itemsToSkip: DataItem[] }> {
+  idField: string,
+  options: ImportOptions,
+): Promise<{ itemsToAdd: DataItem[]; itemsToSkip: DataItem[]; replacedCount: number }> {
   console.log(`[${storageKey}]: 策略为数组合并 (ARRAY_WITH_ID)，ID字段为 '${idField}'。`);
-  const localData: DataItem[] = loadData<DataItem[]>(storageKey) || [];
+  const localData: DataItem[] = [...(loadData<DataItem[]>(storageKey) || [])];
   const existingIds = new Set(localData.map((item) => item[idField]));
 
   const itemsToAdd: DataItem[] = [];
   const itemsToSkip: DataItem[] = [];
+  let replacedCount = 0;
   const now = Date.now();
 
   importData.forEach((importItem) => {
     const id = importItem[idField];
-    if (id === undefined || existingIds.has(id)) {
+    if (id === undefined) {
       itemsToSkip.push(importItem);
+      return;
+    }
+    if (existingIds.has(id)) {
+      if (options.idConflictPolicy === "prefer-import") {
+        const idx = localData.findIndex((item) => item[idField] === id);
+        if (idx !== -1) {
+          localData[idx] = {
+            ...localData[idx],
+            ...importItem,
+            synced: false,
+            deleted: importItem.deleted ?? false,
+            lastModified: importItem.lastModified ?? now,
+          };
+          replacedCount++;
+        }
+      } else {
+        itemsToSkip.push(importItem);
+      }
     } else {
       // 补充必要字段（防止旧数据缺少 synced/deleted/lastModified）
       itemsToAdd.push({
@@ -126,14 +208,14 @@ async function mergeArrayWithId(
     }
   });
 
-  if (itemsToAdd.length > 0) {
+  if (!options.dryRun && (itemsToAdd.length > 0 || replacedCount > 0)) {
     const mergedData = [...localData, ...itemsToAdd];
     saveData(storageKey, mergedData);
     console.log(`[${storageKey}]: 合并完成。新增 ${itemsToAdd.length} 项，总数变为 ${mergedData.length}。`);
   } else {
     console.log(`[${storageKey}]: 无新项目可合并。`);
   }
-  return { itemsToAdd, itemsToSkip };
+  return { itemsToAdd, itemsToSkip, replacedCount };
 }
 
 /**
@@ -146,15 +228,17 @@ async function mergeArrayDedupe(
   storageKey: string,
   importData: DataItem[],
   idField: string,
-  dedupeBy: string
+  dedupeBy: string,
+  options: ImportOptions,
 ): Promise<{
   itemsToAdd: DataItem[];
   itemsToSkip: DataItem[];
   idConflictCount: number;
+  replacedCount: number;
 }> {
   console.log(`[${storageKey}]: 执行数组去重合并策略，ID字段：'${idField}', 去重字段：'${dedupeBy}'。`);
 
-  const localData: DataItem[] = loadData(storageKey, []);
+  const localData: DataItem[] = [...loadData(storageKey, [])];
 
   const localNameMap = new Map<string, DataItem>();
   const localIdSet = new Set<string>();
@@ -172,6 +256,7 @@ async function mergeArrayDedupe(
   const itemsToSkip: DataItem[] = [];
   const now = Date.now();
   let idConflictCount = 0;
+  let replacedCount = 0;
 
   for (const importItem of importData) {
     const importName = importItem[dedupeBy];
@@ -190,6 +275,12 @@ async function mergeArrayDedupe(
       lastModified: importItem.lastModified ?? now,
     };
 
+    // 名称相同视作重复，优先保留本地
+    if (localNameMap.has(importName)) {
+      itemsToSkip.push(normalizedItem);
+      continue;
+    }
+
     // 情况一：ID 已存在 (ID Collision)
     if (localIdSet.has(importId)) {
       const localItemWithId = localData.find((item) => item[idField] === importId);
@@ -202,14 +293,27 @@ async function mergeArrayDedupe(
         }
         // ID相同，Name不同 → ID冲突
         else {
-          console.warn(
-            `[${storageKey}]: **ID冲突** ID "${importId}" 已被本地项目 "${localItemWithId[dedupeBy]}" 使用。` +
-              `将为导入项目 "${importName}" 分配一个新ID。`
-          );
           idConflictCount++;
-          normalizedItem[idField] = Date.now();
-          itemsToAdd.push(normalizedItem);
-          localIdSet.add(normalizedItem[idField]);
+          if (options.idConflictPolicy === "prefer-import") {
+            const idx = localData.findIndex((item) => item[idField] === importId);
+            if (idx !== -1) {
+              localData[idx] = {
+                ...localData[idx],
+                ...normalizedItem,
+              };
+              replacedCount++;
+              localNameMap.set(importName, localData[idx]);
+            }
+          } else {
+            console.warn(
+              `[${storageKey}]: **ID冲突** ID "${importId}" 已被本地项目 "${localItemWithId[dedupeBy]}" 使用。` +
+                `将为导入项目 "${importName}" 分配一个新ID。`,
+            );
+            normalizedItem[idField] = Date.now();
+            itemsToAdd.push(normalizedItem);
+            localIdSet.add(normalizedItem[idField]);
+            localNameMap.set(importName, normalizedItem);
+          }
         }
       }
     }
@@ -217,29 +321,38 @@ async function mergeArrayDedupe(
     else {
       itemsToAdd.push(normalizedItem);
       localIdSet.add(importId);
+      localNameMap.set(importName, normalizedItem);
     }
   }
 
-  if (itemsToAdd.length > 0) {
+  if (!options.dryRun && (itemsToAdd.length > 0 || replacedCount > 0)) {
     const mergedData = [...localData, ...itemsToAdd];
     saveData(storageKey, mergedData);
     console.log(`[${storageKey}]: 合并完成。新增 ${itemsToAdd.length} 项，总数变为 ${mergedData.length}。`);
   } else {
     console.log(`[${storageKey}]: 无新项目可合并或更新。`);
   }
-  return { itemsToAdd, itemsToSkip, idConflictCount };
+  return { itemsToAdd, itemsToSkip, idConflictCount, replacedCount };
 }
 
-// 主要的合并服务函数
-export async function handleFileImport(fileMap: { [fileName: string]: string }): Promise<ImportReport> {
+async function processFileImport(
+  fileMap: ImportFileMap,
+  readFileContent: (fileName: string, source: string) => Promise<string>,
+  options: ImportOptions = {},
+): Promise<ImportReport> {
+  const resolvedOptions: Required<ImportOptions> = {
+    dryRun: options.dryRun ?? false,
+    idConflictPolicy: options.idConflictPolicy ?? "keep-local",
+  };
+
   // 1. 初始化报告对象
   const report: ImportReport = {
     overallStatus: "COMPLETE",
     results: [],
     shouldReload: false,
+    dryRun: resolvedOptions.dryRun,
+    warnings: [],
   };
-
-  const allKeys = Object.keys(MERGE_KEYS);
 
   for (const fileName in fileMap) {
     if (Object.prototype.hasOwnProperty.call(fileMap, fileName)) {
@@ -255,23 +368,23 @@ export async function handleFileImport(fileMap: { [fileName: string]: string }):
         addedCount: 0,
         skippedCount: 0,
         idConflictCount: 0,
+        replacedCount: 0,
         message: `文件 "${fileName}" 不在预设的合并配置中，已被跳过。`,
       };
 
       // 1. 检查文件名是否在处理映射表中
-      if (!storageKey || !allKeys.includes(storageKey)) {
+      const config = storageKey ? MERGE_KEYS[storageKey as keyof typeof MERGE_KEYS] : undefined;
+      if (!storageKey || !config) {
         console.warn(`文件 "${fileName}" 不在预设的合并配置中，将被跳过。`);
         report.results.push(fileResult);
         continue;
       }
 
-      const config = MERGE_KEYS[storageKey as keyof typeof MERGE_KEYS];
-
       fileResult.strategy = config.strategy;
 
       try {
         // 2. 读取文件内容
-        const fileContent = await readTextFile(filePath);
+        const fileContent = await readFileContent(fileName, filePath);
         if (!fileContent) {
           fileResult.status = "EMPTY";
           fileResult.message = `文件 "${fileName}" 内容为空。`;
@@ -285,6 +398,8 @@ export async function handleFileImport(fileMap: { [fileName: string]: string }):
         let itemsToSkip: DataItem[] = [];
         let idConflicts = 0;
 
+        // 预设策略可处理的文件，默认标记为成功；仅在显式跳过或错误时改写
+        fileResult.status = "SUCCESS";
         switch (config.strategy) {
           case MERGE_STRATEGIES.SKIP:
             await mergeSkip(storageKey, importData);
@@ -300,9 +415,10 @@ export async function handleFileImport(fileMap: { [fileName: string]: string }):
               break;
             }
             // @ts-ignore
-            const resultWithId = await mergeArrayWithId(storageKey, importData, config.idField);
+            const resultWithId = await mergeArrayWithId(storageKey, importData, config.idField, resolvedOptions);
             itemsToAdd = resultWithId.itemsToAdd;
             itemsToSkip = resultWithId.itemsToSkip;
+            fileResult.replacedCount = resultWithId.replacedCount;
             break;
 
           case MERGE_STRATEGIES.ARRAY_MERGE_DEDUP:
@@ -313,10 +429,11 @@ export async function handleFileImport(fileMap: { [fileName: string]: string }):
               break;
             }
             // @ts-ignore
-            const resultDedupe = await mergeArrayDedupe(storageKey, importData, config.idField, config.dedupeBy);
+            const resultDedupe = await mergeArrayDedupe(storageKey, importData, config.idField, config.dedupeBy, resolvedOptions);
             itemsToAdd = resultDedupe.itemsToAdd;
             itemsToSkip = resultDedupe.itemsToSkip;
             idConflicts = resultDedupe.idConflictCount;
+            fileResult.replacedCount = resultDedupe.replacedCount;
             break;
 
           default:
@@ -331,10 +448,10 @@ export async function handleFileImport(fileMap: { [fileName: string]: string }):
           fileResult.addedCount = itemsToAdd.length;
           fileResult.skippedCount = itemsToSkip.length;
           fileResult.idConflictCount = idConflicts;
-          fileResult.message = `成功处理: 新增 ${itemsToAdd.length} 项, 跳过 ${itemsToSkip.length} 项, ID冲突 ${idConflicts} 项。`;
+          fileResult.message = `成功处理: 新增 ${itemsToAdd.length} 项, 跳过 ${itemsToSkip.length} 项, ID冲突 ${idConflicts} 项, 覆盖 ${fileResult.replacedCount} 项。`;
 
           // 如果有任何数据被添加或更新，则认为需要刷新
-          if (itemsToAdd.length > 0 || idConflicts > 0) {
+          if (itemsToAdd.length > 0 || idConflicts > 0 || fileResult.replacedCount > 0) {
             report.shouldReload = true;
           }
         }
@@ -350,6 +467,23 @@ export async function handleFileImport(fileMap: { [fileName: string]: string }):
 
   if (report.overallStatus === "PARTIAL_ERROR" && report.results.every((r) => r.status === "ERROR")) {
     report.overallStatus = "FATAL_ERROR";
+  }
+
+  if (report.shouldReload) {
+    report.warnings.push("Task 修复无法关联到 Activity 的任务");
+  }
+
+  // 导入后做一次 todo 归一化，兼容旧导出数据（preview 只统计，不落盘）
+  const normalizeReport = normalizeImportedTodoData({ dryRun: resolvedOptions.dryRun });
+  if (normalizeReport.touched) {
+    report.shouldReload = true;
+  }
+  if (normalizeReport.warnings.length > 0) {
+    report.warnings.push(...normalizeReport.warnings);
+  }
+
+  if (resolvedOptions.dryRun) {
+    return report;
   }
 
   // 所有文件处理完后，运行 task source migration
@@ -371,4 +505,22 @@ export async function handleFileImport(fileMap: { [fileName: string]: string }):
 
   console.log("所有文件处理完毕，生成报告:", report);
   return report;
+}
+
+// 主要的合并服务函数
+export async function handleFileImport(fileMap: { [fileName: string]: string }, options: ImportOptions = {}): Promise<ImportReport> {
+  return processFileImport(fileMap, (_fileName, filePath) => readTextFile(filePath), { ...options, dryRun: false });
+}
+
+// 预览导入（不写入数据）
+export async function previewFileImport(fileMap: { [fileName: string]: string }, options: ImportOptions = {}): Promise<ImportReport> {
+  return processFileImport(fileMap, (_fileName, filePath) => readTextFile(filePath), { ...options, dryRun: true });
+}
+
+export async function handleFileImportFromContents(fileMap: ImportFileMap, options: ImportOptions = {}): Promise<ImportReport> {
+  return processFileImport(fileMap, (_fileName, content) => Promise.resolve(content), { ...options, dryRun: false });
+}
+
+export async function previewFileImportFromContents(fileMap: ImportFileMap, options: ImportOptions = {}): Promise<ImportReport> {
+  return processFileImport(fileMap, (_fileName, content) => Promise.resolve(content), { ...options, dryRun: true });
 }

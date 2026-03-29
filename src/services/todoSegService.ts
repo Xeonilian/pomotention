@@ -98,7 +98,7 @@ export function generateEstimatedTodoSegments(appDateTimestamp: number, todos: T
   const todoSegments: TodoSegment[] = [];
 
   // 特殊优先级值不生成TodoSegment（只在 emoji 里展示）
-  const activeTodos = todos.filter((t) => t.status !== "cancelled" && !SPECIAL_PRIORITIES.includes(t.priority));
+  const activeTodos = todos.filter((t) => !t.deleted && t.status !== "cancelled" && !SPECIAL_PRIORITIES.includes(t.priority));
 
   // 排序：先手动（有globalIndex），再自动；内部按 globalIndex / priority / id
   const sortedTodos = [...activeTodos].sort((a, b) => {

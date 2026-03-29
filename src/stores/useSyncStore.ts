@@ -26,6 +26,9 @@ export const useSyncStore = defineStore("sync", () => {
   // 登录状态
   const isLoggedIn = ref(false);
   const loggingOut = ref(false);
+  const syncGateReason = ref<string | null>(null);
+  const hasRecentImport = ref(false);
+  const isSyncGateActive = computed(() => !!syncGateReason.value);
 
   // 时间戳
   const lastSyncTimestamp = computed({
@@ -115,6 +118,8 @@ export const useSyncStore = defineStore("sync", () => {
     currentSyncMessage.value = "就绪";
     syncStatus.value = "idle";
     syncInitialized.value = false;
+    syncGateReason.value = null;
+    hasRecentImport.value = false;
   }
 
   function resetSyncState() {
@@ -123,6 +128,16 @@ export const useSyncStore = defineStore("sync", () => {
     currentSyncMessage.value = "就绪";
     syncStatus.value = "idle";
     syncInitialized.value = false;
+  }
+
+  function pauseSyncForImport() {
+    syncGateReason.value = "import-review";
+    hasRecentImport.value = true;
+  }
+
+  function clearImportSyncGate() {
+    syncGateReason.value = null;
+    hasRecentImport.value = false;
   }
 
   // 同步前钩子：在真正执行上传/下载前执行，用于把未保存的编辑先落库（如 TaskRecord 正在编辑时先 commit）
@@ -151,6 +166,13 @@ export const useSyncStore = defineStore("sync", () => {
   }
 
   function handleLogin() {
+    if (isSyncGateActive.value && hasRecentImport.value) {
+      const confirmed = window.confirm(
+        "检测到你刚刚执行了导入。\n继续登录并同步时，本地导入后的数据将上传并可能覆盖云端旧数据。\n建议先确认数据无误，再继续。",
+      );
+      if (!confirmed) return;
+      clearImportSyncGate();
+    }
     console.log("🔐 点击登录按钮，跳转到登录页");
     router.push({ name: "Login" }).catch((err) => {
       console.error("❌ 跳转到登录页失败:", err);
@@ -201,6 +223,9 @@ export const useSyncStore = defineStore("sync", () => {
     lastSyncTimestamp,
     lastCleanupTimestamp,
     syncInitialized,
+    syncGateReason,
+    hasRecentImport,
+    isSyncGateActive,
 
     // 登录状态
     isLoggedIn,
@@ -218,6 +243,8 @@ export const useSyncStore = defineStore("sync", () => {
     resetSyncState,
     initSyncService,
     destroySyncService,
+    pauseSyncForImport,
+    clearImportSyncGate,
 
     registerBeforeSync,
     unregisterBeforeSync,

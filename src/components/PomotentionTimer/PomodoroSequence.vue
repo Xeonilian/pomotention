@@ -15,7 +15,7 @@
         </template>
       </n-button>
 
-      <n-button class="action-button" @click="stopPomodoro" tertiary circle>
+      <n-button class="action-button" @click="() => stopPomodoro()" tertiary circle>
         <template #icon>
           <n-icon size="14" :component="Stop20Filled" />
         </template>
@@ -241,14 +241,20 @@ function startPomodoroCircle(): void {
 // 执行单个步骤
 function runStep(steps: PomodoroStep[]): void {
   if (!isRunning.value || currentStep.value >= steps.length) {
-    stopPomodoro();
+    // 自然跑完序列：store 已在 finalize 播过结束音，此处只 reset，避免 cancelTimer 再播一次 BREAK_END/WORK_END
+    stopPomodoro(false);
     return;
   }
 
   const step = steps[currentStep.value];
 
   const onFinish = () => {
-    if (!isRunning.value) return;
+    // 与 isRunning 对齐：用户点停止时 cancelTimer 已把 store 置 idle，此处应直接返回；若仅本地 isRunning 失步而计时仍在，仍须推进到 runStep/stopPomodoro（以番茄收尾时自然结束与手动 Stop 一致）
+    if (timerStore.pomodoroState === "idle") return;
+    if (!isRunning.value) {
+      isRunning.value = true;
+      emit("pomo-seq-running", true);
+    }
     // 更新当前步骤的进度条状态为已完成
     updateProgressStatus(resolveActiveStepIndex());
     currentStep.value++;
@@ -270,15 +276,17 @@ function runStep(steps: PomodoroStep[]): void {
   }
 }
 
-// 在 PomodoroSequence.vue 中修改 stopPomodoro 函数
-function stopPomodoro(): void {
+/** @param playEndCue true：用户停止，走 cancelTimer 播结束音；false：序列自然结束且 store 已 finalize，仅 reset */
+function stopPomodoro(playEndCue = true): void {
   timerStore.registerSequenceContinuation(null);
-  // 先调用 store 的 resetTimer 方法
-  timerStore.resetTimer();
+  if (playEndCue) {
+    timerStore.cancelTimer();
+  } else {
+    timerStore.resetTimer();
+  }
   emit("pomo-seq-running", false);
   // 然后更新本地状态
   isRunning.value = false;
-  // resetTimer 内已 stopWhiteNoise()
   timeoutHandles.value.forEach((handle) => clearTimeout(handle));
   timeoutHandles.value = [];
   // console.log("Stopping pomodoro...");
