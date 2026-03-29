@@ -7,6 +7,10 @@ import { SoundType, soundPaths } from "./types";
 /** 雨声/鸟鸣等非滴答轨的基础音量（0–1）；与 Web Audio 提示音混音时不宜过低，否则听感像「提示远大于白噪音」 */
 const WHITE_NOISE_AMBIENT_VOLUME = 0.98;
 
+function whiteNoiseReferenceVolume(track: SoundType): number {
+  return track === SoundType.WORK_TICK ? 1 : WHITE_NOISE_AMBIENT_VOLUME;
+}
+
 /** 全平台白噪音：仅 HTML 双轨 crossfade（可调接缝，不依赖 Web Audio loop） */
 export function startWhiteNoise(): void {
   const settingStore = useSettingStore();
@@ -16,7 +20,7 @@ export function startWhiteNoise(): void {
 
   const track = settingStore.settings.whiteNoiseSoundTrack;
   const src = soundPaths[track];
-  const vol = track === SoundType.WORK_TICK ? 1 : WHITE_NOISE_AMBIENT_VOLUME;
+  const vol = whiteNoiseReferenceVolume(track);
   if (!src) {
     dbgAudio("[WN] whiteNoiseSoundTrack 无映射，已改存 work_tick，请再切换/开始一次", { track });
     settingStore.settings.whiteNoiseSoundTrack = SoundType.WORK_TICK;
@@ -26,36 +30,20 @@ export function startWhiteNoise(): void {
   startWhiteNoiseHtml(src, vol);
 }
 
-/**
- * 休息段：HTML 双轨极低音量占位。若与 work 共用 work_tick，压低音量仍会听到节拍——占位改用连续环境音（雨声等），不新增设置项。
- */
+/** 休息段：专用近静音循环素材 white_noise_break.wav，增益与环境白噪音一致（见 whiteNoiseHtml） */
 export function startSilentWhiteNoiseHold(): void {
   const settingStore = useSettingStore();
   if (!settingStore.settings.isWhiteNoiseEnabled) return;
 
   stopWhiteNoise();
 
-  const track = settingStore.settings.whiteNoiseSoundTrack;
-
-  let src: string | undefined;
-  let holdVol: number;
-
-  if (track === SoundType.WORK_TICK) {
-    // 滴答轨为离散脉冲，与 masterVolume 无关；休息占位改雨声/鸟鸣连续底噪，否则「怎么调都很像还在滴答」
-    src = soundPaths[SoundType.WHITE_NOISE_RAIN] ?? soundPaths[SoundType.WHITE_NOISE_BIRD_SEA];
-    holdVol = WHITE_NOISE_AMBIENT_VOLUME * 0.02;
-  } else {
-    src = soundPaths[track];
-    holdVol = Math.min(1, WHITE_NOISE_AMBIENT_VOLUME * 0.02);
-  }
-
+  const src = soundPaths[SoundType.WHITE_NOISE_BREAK];
   if (!src) {
-    dbgAudio("[WN] whiteNoiseSoundTrack 无映射，已改存 work_tick，请再切换/开始一次", { track });
-    settingStore.settings.whiteNoiseSoundTrack = SoundType.WORK_TICK;
+    dbgAudio("[WN] white_noise_break 无路径映射");
     return;
   }
 
-  startWhiteNoiseHtml(src, holdVol);
+  startWhiteNoiseHtml(src, WHITE_NOISE_AMBIENT_VOLUME);
 }
 
 export function stopWhiteNoise(): void {

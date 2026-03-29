@@ -7,6 +7,8 @@ export enum SoundType {
   BREAK_END = "break_end",
   WHITE_NOISE_RAIN = "white_noise_rain",
   WHITE_NOISE_BIRD_SEA = "white_noise_bird_sea",
+  /** 休息段 HTML 占位专用（近静音循环），不参与用户白噪音轨切换 */
+  WHITE_NOISE_BREAK = "white_noise_break",
   PHASE_R1 = "phase_r1",
   PHASE_W1 = "phase_w1",
   PHASE_W2 = "phase_w2",
@@ -25,6 +27,7 @@ export const soundPaths: Record<SoundType, string> = {
   [SoundType.BREAK_END]: "/sounds/break_end.wav",
   [SoundType.WHITE_NOISE_RAIN]: "/sounds/white_noise_rain.wav",
   [SoundType.WHITE_NOISE_BIRD_SEA]: "/sounds/white_noise_bird_sea.wav",
+  [SoundType.WHITE_NOISE_BREAK]: "/sounds/white_noise_break.wav",
   [SoundType.PHASE_R1]: "/sounds/phase_r1.wav",
   [SoundType.PHASE_W1]: "/sounds/phase_w1.wav",
   [SoundType.PHASE_W2]: "/sounds/phase_w2.wav",

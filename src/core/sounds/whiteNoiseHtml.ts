@@ -1,6 +1,15 @@
 import { useSettingStore } from "@/stores/useSettingStore";
 import { dbgAudio, dbgAudioThrottled } from "./debug";
 
+/**
+ * 白噪音播放链（须与「调音量」心智一致）：
+ * - 仅使用两个 HTMLAudioElement 解码/播放，不用 Web Audio GainNode 做环路增益。
+ * - 浏览器侧音量唯一入口：各元素的 HTMLMediaElement.volume（0–1，规范为线性振幅系数）。
+ * - startWhiteNoiseHtml(src, v) 将 v clamp 后存入 state.masterVolume；有效输出 = masterVolume × duckFactor，写入 leader/follower 的 .volume。
+ * - 系统/设备媒体音量不由网页控制；提示音 duck 靠 duckFactor，须与 tick 同步写到元素上（见 htmlWnCrossfadeTick）。
+ * - tick 内顺序：先写 !followerArmed 的 .volume（含 leader 仍 paused、duration 仍为 0 时），再做 crossfade；否则 duck 与 master 调整会「看起来完全没区别」。
+ */
+
 /** 全平台白噪音：双轨交叉淡化，避免 HTML loop 接缝约每 file 时长卡一下 */
 /** 双轨重叠与其它参数：想试听感主要改 ratioOfDuration、minSec、maxSec */
 const HTML_WN_CROSSFADE = {
@@ -16,6 +25,7 @@ const HTML_WN_CROSSFADE = {
 type HtmlWnCrossState = {
   els: [HTMLAudioElement, HTMLAudioElement];
   leaderIdx: 0 | 1;
+  /** clamp 后的入参，与 duckFactor 相乘后写入 HTMLAudioElement.volume */
   masterVolume: number;
   /** 与提示音同时播放时压低白噪音，避免盖过 Web Audio 提示音 */
   duckFactor: number;
@@ -49,16 +59,27 @@ function applyHtmlAudioPlaysInline(el: HTMLAudioElement) {
   (el as unknown as { playsInline?: boolean }).playsInline = true;
 }
 
+function effectiveHtmlMediaVolume(state: HtmlWnCrossState): number {
+  return Math.min(1, Math.max(0, state.masterVolume * state.duckFactor));
+}
+
 function htmlWnCrossfadeTick(state: HtmlWnCrossState) {
   if (htmlWnCross !== state) return;
   const { els, leaderIdx, duration: d, crossfadeSec: cf } = state;
-  const mv = state.masterVolume * state.duckFactor;
-  if (d <= 0 || cf <= 0) return;
+  const mv = effectiveHtmlMediaVolume(state);
 
   const leader = els[leaderIdx];
   const follower = els[1 - leaderIdx];
 
+  /* paused 时也要写 .volume，否则起播前 playSound 触发的 duck 只改了 duckFactor，起播后仍用旧增益 */
+  if (!state.followerArmed) {
+    leader.volume = mv;
+    if (follower.paused) follower.volume = 0;
+  }
+
   if (leader.paused) return;
+
+  if (d <= 0 || cf <= 0) return;
 
   if (!state.followerArmed && leader.currentTime >= d - cf) {
     state.followerArmed = true;
@@ -160,7 +181,7 @@ export function startWhiteNoiseHtml(src: string, volume: number): void {
         if (!ts.isActive || (!ts.isWorking && !ts.isBreaking)) return;
 
         const { els, leaderIdx } = state;
-        const mv = state.masterVolume * state.duckFactor;
+        const mv = effectiveHtmlMediaVolume(state);
         const leader = els[leaderIdx];
         const follower = els[1 - leaderIdx];
 
@@ -212,7 +233,7 @@ export function startWhiteNoiseHtml(src: string, volume: number): void {
     }
     state.crossfadeSec = cf;
 
-    const eff = masterVol * state.duckFactor;
+    const eff = effectiveHtmlMediaVolume(state);
     a.volume = eff;
     b.volume = 0;
 
@@ -337,6 +358,12 @@ export function resumeHtmlWhiteNoiseIfNeeded(): void {
         const [e0, e1] = stRef.els;
         if (!e0.paused || !e1.paused) return;
         const lead = stRef.els[stRef.leaderIdx];
+        const fol = stRef.els[1 - stRef.leaderIdx];
+        const mv = effectiveHtmlMediaVolume(stRef);
+        if (!stRef.followerArmed) {
+          lead.volume = mv;
+          if (fol.paused) fol.volume = 0;
+        }
         void lead.play().catch((e: unknown) => {
           dbgAudio("[WN] 前台补 play 拒绝", { message: e instanceof Error ? e.message : String(e) });
         });
