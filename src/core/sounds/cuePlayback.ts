@@ -159,10 +159,8 @@ async function playSoundAsync(type: SoundType): Promise<void> {
     webFirstIos,
     preferHtmlFirst: preferHtmlAudioCueFirst(),
     wn: getHtmlWhiteNoiseDebugSnapshot(),
-    iosHiddenMiddleWebFirst:
-      isAppleTouchWebKitDevice() && isPageHiddenForAudio() && type === SoundType.WORK_MIDDLE,
-    iosHiddenWorkEndWebFirst:
-      isAppleTouchWebKitDevice() && isPageHiddenForAudio() && type === SoundType.WORK_END,
+    iosHiddenMiddleWebFirst: isAppleTouchWebKitDevice() && isPageHiddenForAudio() && type === SoundType.WORK_MIDDLE,
+    iosHiddenWorkEndWebFirst: isAppleTouchWebKitDevice() && isPageHiddenForAudio() && type === SoundType.WORK_END,
   });
   // #endregion
 
@@ -236,10 +234,11 @@ async function playSoundAsync(type: SoundType): Promise<void> {
 /**
  * 定点提示音：iOS 亮屏 ctx running 先 Web；息屏且 work_middle 先 Web（证据：HTML 稳定 NotAllowed）；其它息屏类型仍 HTML→Web；桌面 Web 优先。
  */
-export function playSound(type: SoundType): void {
+/** 返回 Promise，供 timer 在 decode/起播完成后再 stopWhiteNoise；勿与 queueMicrotask 并行，否则易先于 await decode 拆掉 HTML 双轨 */
+export function playSound(type: SoundType): Promise<void> {
   const ctx = getOrCreateAudioContext();
   if (ctx?.state === "suspended") {
     void ctx.resume().catch(() => {});
   }
-  void playSoundAsync(type);
+  return playSoundAsync(type);
 }

@@ -242,8 +242,7 @@ export const useTimerStore = defineStore(
       const useCont = !cb && isFromSequence.value && sequencePhaseContinuation.value != null;
 
       if (pomodoroState.value === "working") {
-        playSound(SoundType.WORK_END);
-        // 与 BREAK_END 同序：先让 work_end 进入播放链，再停白噪音/清状态。否则同步 resetTimer 会在 playSoundAsync 的首个 await 之前拆掉双轨 HTML，息屏上易 NotAllowed + AudioContext suspended，且听感上 end 无声。
+        // 须等 playSound 的 Promise（decode+起播）完成后再停双轨；queueMicrotask 会在 await decode 之前跑，先于 tryPlayCueWebAudio 拆掉 HTML，息屏/Web 均可能无声或截断
         const runAfterWorkEndCue = () => {
           if (cb) {
             stopWhiteNoise();
@@ -255,11 +254,8 @@ export const useTimerStore = defineStore(
             resetTimer();
           }
         };
-        queueMicrotask(runAfterWorkEndCue);
+        void playSound(SoundType.WORK_END).finally(() => runAfterWorkEndCue());
       } else if (pomodoroState.value === "breaking") {
-        playSound(SoundType.BREAK_END);
-        // 休息结束：先让 BREAK_END 的微任务起播，再 startWorking/startWhiteNoise。
-        // 否则 iOS/WebKit 上会在 break_end HTML 播放前同步创建双轨白噪音，多路 HTMLAudio 争用易导致 break→work 白噪音无声或需回到前台才补 play。
         const runAfterBreakEndCue = () => {
           if (cb) {
             cb();
@@ -269,7 +265,7 @@ export const useTimerStore = defineStore(
             resetTimer();
           }
         };
-        queueMicrotask(runAfterBreakEndCue);
+        void playSound(SoundType.BREAK_END).finally(() => runAfterBreakEndCue());
       }
     }
 
@@ -416,11 +412,12 @@ export const useTimerStore = defineStore(
 
     function cancelTimer(): void {
       if (isWorking.value) {
-        playSound(SoundType.WORK_END);
+        void playSound(SoundType.WORK_END).finally(() => resetTimer());
       } else if (isBreaking.value) {
-        playSound(SoundType.BREAK_END);
+        void playSound(SoundType.BREAK_END).finally(() => resetTimer());
+      } else {
+        resetTimer();
       }
-      queueMicrotask(() => resetTimer());
     }
 
     /** 仅清状态与停白噪音；阶段结束音由 finalizeCurrentPhase / cancelTimer / UI 在调用前自行 playSound */
