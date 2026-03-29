@@ -241,12 +241,14 @@ export const useTimerStore = defineStore(
 
       if (pomodoroState.value === "working") {
         // 须等 playSound 的 Promise（decode+起播）完成后再停双轨；queueMicrotask 会在 await decode 之前跑，先于 tryPlayCueWebAudio 拆掉 HTML，息屏/Web 均可能无声或截断
+        // 白噪音开启且链式进入下一段时不在此 stop，由 startBreak/startWorking 内 tryRetarget 复用 HTMLAudio，避免 iOS 定时器边界上 play NotAllowed
+        const stripWnBeforeChain = !settingStore.settings.isWhiteNoiseEnabled;
         const runAfterWorkEndCue = () => {
           if (cb) {
-            stopWhiteNoise();
+            if (stripWnBeforeChain) stopWhiteNoise();
             cb();
           } else if (useCont) {
-            stopWhiteNoise();
+            if (stripWnBeforeChain) stopWhiteNoise();
             sequencePhaseContinuation.value!();
           } else {
             resetTimer();
@@ -254,12 +256,13 @@ export const useTimerStore = defineStore(
         };
         void playSound(SoundType.WORK_END).finally(() => runAfterWorkEndCue());
       } else if (pomodoroState.value === "breaking") {
+        const stripWnBeforeChain = !settingStore.settings.isWhiteNoiseEnabled;
         const runAfterBreakEndCue = () => {
           if (cb) {
-            stopWhiteNoise();
+            if (stripWnBeforeChain) stopWhiteNoise();
             cb();
           } else if (useCont) {
-            stopWhiteNoise();
+            if (stripWnBeforeChain) stopWhiteNoise();
             sequencePhaseContinuation.value!();
           } else {
             resetTimer();

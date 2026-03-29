@@ -1,7 +1,13 @@
 import { useSettingStore } from "@/stores/useSettingStore";
 import { dbgAudio } from "./debug";
 import { getAudioContext } from "./audioContext";
-import { isHtmlWhiteNoiseActive, resumeHtmlWhiteNoiseIfNeeded, startWhiteNoiseHtml, stopHtmlWhiteNoise } from "./whiteNoiseHtml";
+import {
+  isHtmlWhiteNoiseActive,
+  resumeHtmlWhiteNoiseIfNeeded,
+  startWhiteNoiseHtml,
+  stopHtmlWhiteNoise,
+  tryRetargetHtmlWhiteNoiseTrack,
+} from "./whiteNoiseHtml";
 import { SoundType, soundPaths } from "./types";
 
 /** 雨声/鸟鸣等非滴答轨的基础音量（0–1）；与 Web Audio 提示音混音时不宜过低，否则听感像「提示远大于白噪音」 */
@@ -16,8 +22,6 @@ export function startWhiteNoise(): void {
   const settingStore = useSettingStore();
   if (!settingStore.settings.isWhiteNoiseEnabled) return;
 
-  stopWhiteNoise();
-
   const track = settingStore.settings.whiteNoiseSoundTrack;
   const src = soundPaths[track];
   const vol = whiteNoiseReferenceVolume(track);
@@ -27,6 +31,9 @@ export function startWhiteNoise(): void {
     return;
   }
 
+  if (tryRetargetHtmlWhiteNoiseTrack(src, vol)) return;
+
+  stopWhiteNoise();
   startWhiteNoiseHtml(src, vol);
 }
 
@@ -35,14 +42,15 @@ export function startSilentWhiteNoiseHold(): void {
   const settingStore = useSettingStore();
   if (!settingStore.settings.isWhiteNoiseEnabled) return;
 
-  stopWhiteNoise();
-
   const src = soundPaths[SoundType.WHITE_NOISE_BREAK];
   if (!src) {
     dbgAudio("[WN] white_noise_break 无路径映射");
     return;
   }
 
+  if (tryRetargetHtmlWhiteNoiseTrack(src, WHITE_NOISE_AMBIENT_VOLUME)) return;
+
+  stopWhiteNoise();
   startWhiteNoiseHtml(src, WHITE_NOISE_AMBIENT_VOLUME);
 }
 

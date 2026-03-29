@@ -130,35 +130,11 @@ export function stopHtmlWhiteNoise() {
   clearMediaSessionPlaybackState();
 }
 
-/** 全平台白噪音唯一实现：HTML 双轨 + crossfade */
-export function startWhiteNoiseHtml(src: string, volume: number): void {
-  stopHtmlWhiteNoise();
-
-  const masterVol = Math.min(1, Math.max(0, volume));
-  const a = new Audio();
-  const b = new Audio();
-  a.preload = "auto";
-  b.preload = "auto";
-  a.loop = false;
-  b.loop = false;
-  a.src = src;
-  b.src = src;
-  applyHtmlAudioPlaysInline(a);
-  applyHtmlAudioPlaysInline(b);
-
-  const state: HtmlWnCrossState = {
-    els: [a, b],
-    leaderIdx: 0,
-    masterVolume: masterVol,
-    duckFactor: 1,
-    duckTimer: null,
-    duration: 0,
-    crossfadeSec: HTML_WN_CROSSFADE.minSec,
-    followerArmed: false,
-    tickId: null,
-    detachMediaListeners: null,
-  };
-  htmlWnCross = state;
+/**
+ * 绑定双轨事件与首段起播（新建与切轨共用，复用元素以保持 iOS 媒体解锁）。
+ */
+function connectHtmlWnCrossfadePlayback(state: HtmlWnCrossState, mode: "new" | "retarget"): void {
+  const [a, b] = state.els;
 
   const onMediaTimeUpdate = (ev: Event) => {
     if (htmlWnCross !== state) return;
@@ -237,10 +213,9 @@ export function startWhiteNoiseHtml(src: string, volume: number): void {
     a.volume = eff;
     b.volume = 0;
 
-    /** 起播成功后再挂 tick，避免 play 被拒时空转 interval；并设 MediaSession */
     const onLeaderPlaying = () => {
       if (htmlWnCross !== state) return;
-      dbgAudio("[WN] crossfade 起播", { durationSec: Math.round(d * 10) / 10 });
+      dbgAudio(mode === "retarget" ? "[WN] crossfade 切轨" : "[WN] crossfade 起播", { durationSec: Math.round(d * 10) / 10 });
       if (state.tickId == null) {
         state.tickId = window.setInterval(() => htmlWnCrossfadeTick(state), HTML_WN_CROSSFADE.tickIntervalMs);
       }
@@ -256,7 +231,6 @@ export function startWhiteNoiseHtml(src: string, volume: number): void {
       }
     };
 
-    /** iOS：loadedmetadata 后 play 常晚于用户手势；短时重试 + 可见/触摸补一次 */
     const scheduleLeaderPlayRecovery = () => {
       const retryDelaysMs = [0, 60, 150, 320, 700, 1400];
       const retryTimers: number[] = [];
@@ -316,6 +290,80 @@ export function startWhiteNoiseHtml(src: string, volume: number): void {
   a.addEventListener("durationchange", tryArmPlayback);
   a.load();
   b.load();
+}
+
+/** 全平台白噪音唯一实现：HTML 双轨 + crossfade */
+export function startWhiteNoiseHtml(src: string, volume: number): void {
+  stopHtmlWhiteNoise();
+
+  const masterVol = Math.min(1, Math.max(0, volume));
+  const a = new Audio();
+  const b = new Audio();
+  a.preload = "auto";
+  b.preload = "auto";
+  a.loop = false;
+  b.loop = false;
+  a.src = src;
+  b.src = src;
+  applyHtmlAudioPlaysInline(a);
+  applyHtmlAudioPlaysInline(b);
+
+  const state: HtmlWnCrossState = {
+    els: [a, b],
+    leaderIdx: 0,
+    masterVolume: masterVol,
+    duckFactor: 1,
+    duckTimer: null,
+    duration: 0,
+    crossfadeSec: HTML_WN_CROSSFADE.minSec,
+    followerArmed: false,
+    tickId: null,
+    detachMediaListeners: null,
+  };
+  htmlWnCross = state;
+  connectHtmlWnCrossfadePlayback(state, "new");
+}
+
+/**
+ * 序列自动 work↔break：在已有双轨实例上换 src，不销毁元素，减少定时器触发的 play() NotAllowed。
+ */
+export function tryRetargetHtmlWhiteNoiseTrack(src: string, volume: number): boolean {
+  const state = htmlWnCross;
+  if (!state) return false;
+
+  const masterVol = Math.min(1, Math.max(0, volume));
+  state.masterVolume = masterVol;
+  state.duckFactor = 1;
+  if (state.duckTimer != null) {
+    clearTimeout(state.duckTimer);
+    state.duckTimer = null;
+  }
+  if (state.tickId != null) {
+    clearInterval(state.tickId);
+    state.tickId = null;
+  }
+  state.detachMediaListeners?.();
+  state.detachMediaListeners = null;
+
+  state.followerArmed = false;
+  state.leaderIdx = 0;
+  state.duration = 0;
+  state.crossfadeSec = HTML_WN_CROSSFADE.minSec;
+
+  const [a, b] = state.els;
+  for (const el of state.els) {
+    try {
+      el.pause();
+      el.src = src;
+    } catch {
+      /* 忽略 */
+    }
+  }
+  applyHtmlAudioPlaysInline(a);
+  applyHtmlAudioPlaysInline(b);
+
+  connectHtmlWnCrossfadePlayback(state, "retarget");
+  return true;
 }
 
 /**

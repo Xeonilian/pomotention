@@ -15,7 +15,7 @@
         </template>
       </n-button>
 
-      <n-button class="action-button" @click="stopPomodoro" tertiary circle>
+      <n-button class="action-button" @click="() => stopPomodoro()" tertiary circle>
         <template #icon>
           <n-icon size="14" :component="Stop20Filled" />
         </template>
@@ -241,7 +241,8 @@ function startPomodoroCircle(): void {
 // 执行单个步骤
 function runStep(steps: PomodoroStep[]): void {
   if (!isRunning.value || currentStep.value >= steps.length) {
-    stopPomodoro();
+    // 自然跑完序列：store 已在 finalize 播过结束音，此处只 reset，避免 cancelTimer 再播一次 BREAK_END/WORK_END
+    stopPomodoro(false);
     return;
   }
 
@@ -275,10 +276,14 @@ function runStep(steps: PomodoroStep[]): void {
   }
 }
 
-function stopPomodoro(): void {
+/** @param playEndCue true：用户停止，走 cancelTimer 播结束音；false：序列自然结束且 store 已 finalize，仅 reset */
+function stopPomodoro(playEndCue = true): void {
   timerStore.registerSequenceContinuation(null);
-  // 工作中/休息中需播 WORK_END / BREAK_END；cancelTimer 内部再 resetTimer + stopWhiteNoise
-  timerStore.cancelTimer();
+  if (playEndCue) {
+    timerStore.cancelTimer();
+  } else {
+    timerStore.resetTimer();
+  }
   emit("pomo-seq-running", false);
   // 然后更新本地状态
   isRunning.value = false;
