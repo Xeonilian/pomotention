@@ -35,21 +35,6 @@ export function isHtmlWhiteNoiseActive(): boolean {
   return htmlWnCross !== null;
 }
 
-/** 调试用：cue 时刻与白噪音 leader 状态对照（假设 H4） */
-export function getHtmlWhiteNoiseDebugSnapshot(): Record<string, unknown> | null {
-  const st = htmlWnCross;
-  if (!st) return null;
-  const L = st.els[st.leaderIdx];
-  const F = st.els[1 - st.leaderIdx];
-  return {
-    leaderPaused: L.paused,
-    followerPaused: F.paused,
-    leaderReadyState: L.readyState,
-    duckFactor: st.duckFactor,
-    leaderIdx: st.leaderIdx,
-  };
-}
-
 function clearMediaSessionPlaybackState() {
   if (!("mediaSession" in navigator)) return;
   try {
@@ -186,18 +171,15 @@ export function startWhiteNoiseHtml(src: string, volume: number): void {
           follower.volume = mv;
           state.leaderIdx = (1 - leaderIdx) as 0 | 1;
           state.followerArmed = false;
-          dbgAudioThrottled("wn_handoff_throttle", 30_000, "[WN] HTML crossfade ended 补交接（息屏定时器节流）", {});
+          dbgAudioThrottled("wn_handoff_throttle", 30_000, "[WN] crossfade 息屏补交接", {});
           return;
         }
 
         leader.currentTime = 0;
         leader.volume = mv;
         void leader.play().catch((e: unknown) => {
-          dbgAudio("[WN] HTML crossfade ended 硬重启 play 拒绝", {
-            message: e instanceof Error ? e.message : String(e),
-          });
+          dbgAudio("[WN] crossfade ended play 拒绝", { message: e instanceof Error ? e.message : String(e) });
         });
-        dbgAudio("[WN] HTML crossfade ended 硬重启 leader（无 follower）", {});
       })
       .catch(() => {});
   };
@@ -237,7 +219,7 @@ export function startWhiteNoiseHtml(src: string, volume: number): void {
     /** 起播成功后再挂 tick，避免 play 被拒时空转 interval；并设 MediaSession */
     const onLeaderPlaying = () => {
       if (htmlWnCross !== state) return;
-      dbgAudio("[WN] crossfade 起播", { src, volume: masterVol, duration: d, crossfadeSec: cf });
+      dbgAudio("[WN] crossfade 起播", { durationSec: Math.round(d * 10) / 10 });
       if (state.tickId == null) {
         state.tickId = window.setInterval(() => htmlWnCrossfadeTick(state), HTML_WN_CROSSFADE.tickIntervalMs);
       }
@@ -303,7 +285,7 @@ export function startWhiteNoiseHtml(src: string, volume: number): void {
       })
       .catch((e: unknown) => {
         const msg = e instanceof Error ? e.message : String(e);
-        dbgAudio("[WN] HTMLAudio crossfade play 拒绝", { message: msg });
+        dbgAudio("[WN] crossfade play 拒绝", { message: msg });
         if (htmlWnCross !== state) return;
         scheduleLeaderPlayRecovery();
       });
@@ -356,9 +338,7 @@ export function resumeHtmlWhiteNoiseIfNeeded(): void {
         if (!e0.paused || !e1.paused) return;
         const lead = stRef.els[stRef.leaderIdx];
         void lead.play().catch((e: unknown) => {
-          dbgAudio("[WN] HTML crossfade 回到前台补 play 拒绝", {
-            message: e instanceof Error ? e.message : String(e),
-          });
+          dbgAudio("[WN] 前台补 play 拒绝", { message: e instanceof Error ? e.message : String(e) });
         });
       })
       .catch(() => {});

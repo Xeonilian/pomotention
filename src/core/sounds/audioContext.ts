@@ -1,4 +1,4 @@
-import { dbgAudio, dbgIosPlaybackProbe4748 } from "./debug";
+import { dbgAudio } from "./debug";
 
 let audioCtx: AudioContext | null = null;
 
@@ -13,14 +13,7 @@ function attachAudioContextDebugListener(ctx: AudioContext) {
   ctx.addEventListener("statechange", () => {
     // 仅记录易致无声的状态，避免 running 刷屏
     if (ctx.state === "suspended" || ctx.state === "interrupted") {
-      dbgAudio("[WN] AudioContext statechange", { state: ctx.state });
-      // #region agent log
-      dbgIosPlaybackProbe4748("H2", "audioContext:statechange", "ctx", {
-        state: ctx.state,
-        vis: typeof document !== "undefined" ? document.visibilityState : "n/a",
-        hidden: typeof document !== "undefined" ? document.hidden : false,
-      });
-      // #endregion
+      dbgAudio("[WN] AudioContext", { state: ctx.state });
     }
   });
 }

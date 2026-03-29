@@ -157,8 +157,6 @@ export const useTimerStore = defineStore(
             playSound(SoundType.WORK_MIDDLE);
             break;
         }
-      } else {
-        console.log("Not playing sound - not in working state");
       }
     }
 

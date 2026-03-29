@@ -29,9 +29,6 @@ export function startWhiteNoise(): void {
 export function stopWhiteNoise(): void {
   try {
     stopHtmlWhiteNoise();
-    dbgAudio("[WN] stopWhiteNoise", {
-      ctxState: getAudioContext()?.state ?? "no-ctx",
-    });
   } catch (e) {
     console.log("[WN] stopWhiteNoise 外层错误:", e);
   }
@@ -67,7 +64,7 @@ function tryRestartWhiteNoiseIfNeeded(): void {
         const ts = useTimerStore();
         if (ts.isActive && ts.isWorking) {
           startWhiteNoise();
-          dbgAudio("[WN] 前台恢复后补拉白噪音", { reason: "无 HTML 双轨实例" });
+          dbgAudio("[WN] 前台恢复补白噪音");
         }
       })
       .catch(() => {});
