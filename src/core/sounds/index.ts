@@ -6,6 +6,7 @@ export { prefetchSoundAssets } from "./prefetch";
 export { playSound } from "./cuePlayback";
 export {
   startWhiteNoise,
+  startSilentWhiteNoiseHold,
   stopWhiteNoise,
   toggleWhiteNoise,
   resumeSharedAudioAfterForeground,

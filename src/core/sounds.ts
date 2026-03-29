@@ -5,6 +5,7 @@ export {
   prefetchSoundAssets,
   playSound,
   startWhiteNoise,
+  startSilentWhiteNoiseHold,
   stopWhiteNoise,
   toggleWhiteNoise,
   resumeSharedAudioAfterForeground,

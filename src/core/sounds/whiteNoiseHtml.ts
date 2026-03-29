@@ -157,7 +157,7 @@ export function startWhiteNoiseHtml(src: string, volume: number): void {
         if (htmlWnCross !== state) return;
         if (!useSettingStore().settings.isWhiteNoiseEnabled) return;
         const ts = useTimerStore();
-        if (!ts.isActive || !ts.isWorking) return;
+        if (!ts.isActive || (!ts.isWorking && !ts.isBreaking)) return;
 
         const { els, leaderIdx } = state;
         const mv = state.masterVolume * state.duckFactor;
@@ -333,7 +333,7 @@ export function resumeHtmlWhiteNoiseIfNeeded(): void {
         if (htmlWnCross !== stRef) return;
         if (!useSettingStore().settings.isWhiteNoiseEnabled) return;
         const ts = useTimerStore();
-        if (!ts.isActive || !ts.isWorking) return;
+        if (!ts.isActive || (!ts.isWorking && !ts.isBreaking)) return;
         const [e0, e1] = stRef.els;
         if (!e0.paused || !e1.paused) return;
         const lead = stRef.els[stRef.leaderIdx];

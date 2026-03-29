@@ -2,7 +2,7 @@
 import { defineStore } from "pinia";
 import { ref, computed, watch } from "vue";
 import { useSettingStore } from "./useSettingStore.ts";
-import { playSound, SoundType, startWhiteNoise, stopWhiteNoise } from "../core/sounds.ts";
+import { playSound, SoundType, startSilentWhiteNoiseHold, startWhiteNoise, stopWhiteNoise } from "../core/sounds.ts";
 
 // 修改状态类型，更清晰地表达三种状态
 type PomodoroState = "idle" | "working" | "breaking";
@@ -256,8 +256,10 @@ export const useTimerStore = defineStore(
       } else if (pomodoroState.value === "breaking") {
         const runAfterBreakEndCue = () => {
           if (cb) {
+            stopWhiteNoise();
             cb();
           } else if (useCont) {
+            stopWhiteNoise();
             sequencePhaseContinuation.value!();
           } else {
             resetTimer();
@@ -367,7 +369,7 @@ export const useTimerStore = defineStore(
       isGray.value = false;
       isFromSequence.value = !!onFinish;
 
-      // if (!isFromSequence.value) {
+      startSilentWhiteNoiseHold();
       playSound(SoundType.BREAK_START);
 
       timerInterval.value = window.setInterval(phaseTick, 1000);
