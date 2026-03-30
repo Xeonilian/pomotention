@@ -15,43 +15,26 @@ export function dbgAudio(message: string, extra?: Record<string, unknown>) {
   }
 }
 
-/** 检查 SW 状态并记录到音频诊断 (v3 debug for iPhone cache issue) */
+/** 检查 SW 状态并记录到音频诊断 */
 export function dbgSwStatus() {
-  dbgAudio("[SW] 检查SW状态...");
-
   if (!("serviceWorker" in navigator)) {
-    dbgAudio("[SW] ❌ Service Worker 不支持");
-    console.warn("[SW] Service Worker not supported");
+    dbgAudio("[SW] ❌ Not supported");
     return;
   }
 
   navigator.serviceWorker.getRegistration().then(reg => {
     if (!reg) {
-      dbgAudio("[SW] ❌ No registration");
-      console.warn("[SW] No registration");
+      dbgAudio("[SW] No registration");
       return;
     }
 
-    const info = {
+    dbgAudio("[SW] Registration", {
       active: !!reg.active,
       waiting: !!reg.waiting,
-      installing: !!reg.installing,
       controller: !!navigator.serviceWorker.controller,
-      scope: reg.scope,
-      cacheVersion: "v3"
-    };
-
-    dbgAudio("[SW] Registration", info);
-    console.log("[SW] Status:", info);
-
-    // 额外检查当前 controller
-    if (navigator.serviceWorker.controller) {
-      dbgAudio("[SW] ✅ Controller active", { scriptURL: navigator.serviceWorker.controller.scriptURL });
-    }
-  }).catch(e => {
-    dbgAudio("[SW] ❌ getRegistration failed", { error: String(e) });
-    console.error("[SW] getRegistration error:", e);
-  });
+      version: "v3"
+    });
+  }).catch(() => {});
 }
 
 /** 同类高频事件节流，避免息屏长测刷屏 */

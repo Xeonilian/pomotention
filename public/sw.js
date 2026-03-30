@@ -90,17 +90,18 @@ function networkFirst(request) {
  * v3: 增加详细日志，帮助 debug iPhone 声音问题 (stale cache after deploy).
  */
 function soundStaleWhileRevalidate(request) {
-  const url = new URL(request.url);
-  console.log(`[SW] soundStaleWhileRevalidate called for ${url.pathname} (v3)`);
+    const url = new URL(request.url);
 
   return caches.match(request).then((cached) => {
-    console.log(`[SW] soundStaleWhileRevalidate ${url.pathname}: cached=${!!cached}, cacheVersion=${CACHE_VERSION}`);
+    const isCached = !!cached;
+    if (url.pathname.startsWith('/sounds/')) {
+      console.log(`[SW] ${url.pathname}: cached=${isCached}, v=${CACHE_VERSION}`);
+    }
 
     const fetchPromise = fetch(request)
       .then((response) => {
         if (response.ok) {
           putInCache(request, response);
-          console.log(`[SW] Updated cache for sound ${url.pathname}`);
         }
         return response;
       })
@@ -112,11 +113,9 @@ function soundStaleWhileRevalidate(request) {
     if (cached) {
       // 命中缓存时后台更新即可，不阻塞本次播放
       fetchPromise.catch(() => {});
-      console.log(`[SW] Serving cached sound ${url.pathname} (stale-while-revalidate)`);
       return cached;
     }
 
-    console.log(`[SW] No cache for ${url.pathname}, fetching from network`);
     return fetchPromise.then((response) => {
       if (response) return response;
       return new Response("", { status: 503, statusText: "Offline" });

@@ -48,9 +48,8 @@
             时可对照现象。
           </p>
           <p class="audio-dbg-hint audio-dbg-hint--secondary">
-            排查「白噪音完全没声」：先在同一页内复现（开始专注、确认白噪音已开），<strong>不要刷新</strong>，立刻展开本项看下方日志或点「一键复制」。现已包含 SW 缓存诊断（v3）。
-            重点关注 <code>[SW] Registration</code>、<code>[WN] crossfade 起播</code>、<code>[cue] work_xxx web</code>。
-            iPhone 用户可直接点击「检查SW」按钮查看缓存状态。
+            排查「白噪音完全没声」：先在同一页内复现（开始专注、确认白噪音已开），<strong>不要刷新</strong>，立刻展开本项看下方日志或点「一键复制」。重点关注 
+            <code>[WN] crossfade 起播</code>、<code>[cue] work_xxx web</code> 和 <code>[SW]</code> 相关日志。
           </p>
           <n-space style="margin-bottom: 8px">
             <n-button size="small" :loading="audioDebugCopyLoading" @click="copyAudioDebugLogs">一键复制日志</n-button>
@@ -60,9 +59,6 @@
             <n-descriptions-item label="isAppleTouchWebKitDevice">{{ isAppleTouchWebKitDevice() }}</n-descriptions-item>
             <n-descriptions-item label="isAndroidTouchDevice">{{ isAndroidTouchDevice() }}</n-descriptions-item>
             <n-descriptions-item label="preferHtmlAudioCueFirst">{{ preferHtmlAudioCueFirst() }}</n-descriptions-item>
-            <n-descriptions-item label="SW Status">
-              <n-button size="tiny" @click="dbgSwStatus">检查SW</n-button>
-            </n-descriptions-item>
           </n-descriptions>
           <p class="audio-dbg-hint audio-dbg-hint--secondary">若一键复制失败，可长按下方文本框全选后复制；三项布尔与导出内容一致。</p>
           <n-input
