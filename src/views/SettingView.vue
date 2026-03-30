@@ -66,6 +66,9 @@
             <n-descriptions-item label="isAppleTouchWebKitDevice">{{ isAppleTouchWebKitDevice() }}</n-descriptions-item>
             <n-descriptions-item label="isAndroidTouchDevice">{{ isAndroidTouchDevice() }}</n-descriptions-item>
             <n-descriptions-item label="preferHtmlAudioCueFirst">{{ preferHtmlAudioCueFirst() }}</n-descriptions-item>
+            <n-descriptions-item label="SW Status">
+              <n-button size="tiny" @click="dbgSwStatus">检查SW</n-button>
+            </n-descriptions-item>
           </n-descriptions>
           <p class="audio-dbg-hint audio-dbg-hint--secondary">若一键复制失败，可长按下方文本框全选后复制；三项布尔与导出内容一致。</p>
           <n-input
@@ -240,6 +243,7 @@ import { useDevice } from "@/composables/useDevice";
 import { usePwaInstall } from "@/composables/usePwaInstall";
 import { copyTextToClipboard } from "@/utils/clipboard";
 import { isAndroidTouchDevice, isAppleTouchWebKitDevice, preferHtmlAudioCueFirst } from "@/core/sounds/platform";
+import { dbgSwStatus } from "@/core/sounds/debug";
 
 const settingStore = useSettingStore();
 const timerStore = useTimerStore();
@@ -453,6 +457,11 @@ onMounted(() => {
     ipod: /ipod/.test(lower),
     anyIos: /iphone|ipad|ipod/.test(lower),
   };
+
+  // v3: 检查SW状态 for iPhone sound debug
+  setTimeout(() => {
+    dbgSwStatus();
+  }, 2000);
 });
 const dataStore = useDataStore();
 const syncStore = useSyncStore();

@@ -44,7 +44,7 @@ const routes: Array<RouteRecordRaw> = [
     children: [
       { path: "", name: "Home", component: HomeView },
       { path: "statistics", name: "Statistics", component: StatisticView },
-      { path: "settings", name: "Settings", component: SettingView, meta: { devOnly: false } },
+      { path: "settings", name: "Settings", component: SettingView },
       { path: "search", name: "Search", component: SearchView },
       { path: "chart", name: "Chart", component: ChartView },
       // 帮助页面（在 MainLayout 内显示，但不需要认证）
@@ -63,6 +63,7 @@ router.beforeEach(async (to, _from, next) => {
   // 动态导入 useSettingStore 以避免循环依赖
   const { useSettingStore } = await import("@/stores/useSettingStore");
   const settingStore = useSettingStore();
+  const isDev = !!import.meta.env.VITE_APP_DEV || import.meta.env.DEV;
 
   // 检查是否是本地模式
   if (settingStore.settings.localOnlyMode) {
@@ -88,7 +89,6 @@ router.beforeEach(async (to, _from, next) => {
   }
 
   // 仅 dev 可访问的路由（本地 pnpm dev 或 Preview 环境）
-  const isDev = !!import.meta.env.VITE_APP_DEV || import.meta.env.DEV;
   if (to.meta.devOnly && !isDev) {
     next({ path: "/" });
     return;
