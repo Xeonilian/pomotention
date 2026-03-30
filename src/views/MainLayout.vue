@@ -311,14 +311,14 @@ async function handleLogoutCancel() {
 
 // === 2. 菜单与路由逻辑 ===
 const currentRoutePath = ref(route.path);
-const isDev = !!import.meta.env.VITE_APP_DEV || import.meta.env.DEV;
+// const isDev = !!import.meta.env.VITE_APP_DEV || import.meta.env.DEV;
 
 const baseMenuItems = [
   { label: "首页", key: "/" },
   { label: "数据", key: "/search" },
   { label: "仪表盘", key: "/chart" },
   { label: "帮助", key: "/help" },
-  ...(isDev ? [{ label: "设置", key: "/settings" }] : []),
+  { label: "设置", key: "/settings" },
 ];
 const menuOptions = baseMenuItems;
 const dropdownMenuOptions = baseMenuItems;
