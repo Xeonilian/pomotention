@@ -74,7 +74,7 @@
         </div>
 
         <!-- 仅本地使用选项（仅APP环境显示） -->
-        <div v-if="!isResetMode" class="text-button">
+        <div v-if="!isResetMode" class="text-button-local-only">
           <n-button text type="default" @click="handleLocalOnlyMode">仅本地使用</n-button>
         </div>
       </div>
@@ -396,6 +396,11 @@ function handleLocalOnlyMode() {
 }
 
 .text-button {
+  margin-top: 8px;
+  text-align: center;
+}
+
+.text-button-local-only {
   margin: 0px;
   text-align: center;
 }
