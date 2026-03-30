@@ -57,7 +57,6 @@ export async function tryPlayCueWebAudio(type: SoundType): Promise<boolean> {
   getOrCreateAudioContext();
   const ctx = getAudioContext();
   if (!ctx) return false;
-  const decodeP = getOrDecodeCueBuffer(type);
   const running = await resumeAudioContextForPlayback();
   if (!running) return false;
   if ((ctx.state as AudioContextState | "interrupted") === "interrupted") {
@@ -68,7 +67,8 @@ export async function tryPlayCueWebAudio(type: SoundType): Promise<boolean> {
     return false;
   }
   try {
-    const buf = await decodeP;
+    /* 须在 resume 成功后再 decode，避免先起 decode 而 resume 挂起时 playSound 永远 await 不完 */
+    const buf = await getOrDecodeCueBuffer(type);
     if (!buf) return false;
     duckHtmlWhiteNoiseForCuePlayback(buf.duration * 1000 + 180);
     const src = ctx.createBufferSource();

@@ -10,9 +10,12 @@ export function getAudioContext(): AudioContext | null {
   return audioCtx;
 }
 
+const RESUME_TIMEOUT_MS = 2500;
+
 /**
  * 合并并发 resume，并在策略拦截后不再重复调用直至用户手势。
  * 与 tryPlayCueWebAudio 搭配；提示音仍可走 HTML 回退。
+ * resume() 在个别环境下可能长期不 settle，会导致 playSound 永不结束、cancelTimer 无法 resetTimer，故加超时。
  */
 export async function resumeAudioContextForPlayback(): Promise<boolean> {
   const ctx = getOrCreateAudioContext();
@@ -21,13 +24,19 @@ export async function resumeAudioContextForPlayback(): Promise<boolean> {
   if (resumeBlockedByAutoplayPolicy) return false;
 
   if (!resumeInFlight) {
-    resumeInFlight = ctx
-      .resume()
-      .then(() => {
-        if (ctx.state === "running") return true;
+    resumeInFlight = (async () => {
+      const race = await Promise.race([
+        ctx.resume().then(() => "ok" as const),
+        new Promise<"timeout">((resolve) => setTimeout(() => resolve("timeout"), RESUME_TIMEOUT_MS)),
+      ]);
+      if (race === "timeout") {
         resumeBlockedByAutoplayPolicy = true;
         return false;
-      })
+      }
+      if (ctx.state === "running") return true;
+      resumeBlockedByAutoplayPolicy = true;
+      return false;
+    })()
       .catch(() => {
         resumeBlockedByAutoplayPolicy = true;
         return false;
