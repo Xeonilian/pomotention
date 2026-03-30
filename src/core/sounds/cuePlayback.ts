@@ -1,4 +1,4 @@
-import { getOrCreateAudioContext, getAudioContext } from "./audioContext";
+import { getOrCreateAudioContext, getAudioContext, resumeAudioContextForPlayback } from "./audioContext";
 import { dbgAudio } from "./debug";
 import { isAppleTouchWebKitDevice, preferHtmlAudioCueFirst } from "./platform";
 import { SoundType, soundPaths } from "./types";
@@ -58,9 +58,11 @@ export async function tryPlayCueWebAudio(type: SoundType): Promise<boolean> {
   const ctx = getAudioContext();
   if (!ctx) return false;
   const decodeP = getOrDecodeCueBuffer(type);
-  await ctx.resume().catch(() => {});
+  const running = await resumeAudioContextForPlayback();
+  if (!running) return false;
   if ((ctx.state as AudioContextState | "interrupted") === "interrupted") {
-    await ctx.resume().catch(() => {});
+    const ok = await resumeAudioContextForPlayback();
+    if (!ok) return false;
   }
   if (ctx.state !== "running") {
     return false;
@@ -78,7 +80,7 @@ export async function tryPlayCueWebAudio(type: SoundType): Promise<boolean> {
     // iOS 息屏：勿用 setTimeout 做 gate——后台定时器常被节流到 ~1s，误判 interrupted
     if (isAppleTouchWebKitDevice() && isPageHiddenForAudio()) {
       await Promise.resolve();
-      await ctx.resume().catch(() => {});
+      await resumeAudioContextForPlayback();
       const st = ctx.state as AudioContextState | "interrupted";
       if (st !== "running") {
         return false;
@@ -175,9 +177,6 @@ async function playSoundAsync(type: SoundType): Promise<void> {
  */
 /** 返回 Promise，供 timer 在 decode/起播完成后再 stopWhiteNoise；勿与 queueMicrotask 并行，否则易先于 await decode 拆掉 HTML 双轨 */
 export function playSound(type: SoundType): Promise<void> {
-  const ctx = getOrCreateAudioContext();
-  if (ctx?.state === "suspended") {
-    void ctx.resume().catch(() => {});
-  }
+  /* 勿在此 create/resume：定时器与 currentPhase watch 会高频调用，无手势时反复 resume 会刷 Chrome 控制台 */
   return playSoundAsync(type);
 }
