@@ -11,6 +11,7 @@
     :style="{
       ...itemBlockStyle,
       borderLeftColor: firstTagBackgroundColor || getDefaultBorderColor(),
+      borderLeft: 'none !important',
     }"
     @click.stop="handleClick"
   >
@@ -233,6 +234,8 @@ const handleClick = () => {
   white-space: nowrap;
   width: 100%;
   line-height: 1.3;
+  font-size: 12px;
+  padding-left: 1px;
 }
 
 .title--popover-trigger {
@@ -248,7 +251,7 @@ const handleClick = () => {
 }
 
 .schedule-time {
-  font-size: 11px;
+  font-size: 10px;
   font-family: "consolas", monospace;
   color: var(--color-text);
   white-space: nowrap;
@@ -256,16 +259,42 @@ const handleClick = () => {
   border: 1px solid var(--color-blue-light);
   box-shadow: 1px 1px 0px var(--color-background-dark);
   margin-left: 2px;
-  line-height: 1.4;
+  line-height: 1.1;
   pointer-events: none;
 }
 
 /* 防止tag阻止点击事件 */
 .tag-renderer {
   pointer-events: none;
+  flex-shrink: 0;
   height: 100%;
+  display: flex;
   align-items: center;
+  gap: 1px;
+}
+
+.item :deep(.tag-container) {
+  flex-wrap: nowrap;
+  overflow: hidden;
+  min-width: 0;
   gap: 2px;
+}
+
+.item :deep(.n-tag) {
+  flex-shrink: 0;
+  height: 13px;
+  box-sizing: border-box;
+}
+
+.item :deep(.n-tag__content) {
+  font-size: 10px;
+  line-height: 1;
+}
+
+.item :deep(.n-tag.n-tag--round) {
+  padding: 0 2px;
+  align-items: center;
+  justify-content: center;
 }
 
 @media (max-width: 430px) {
