@@ -143,8 +143,8 @@
           />
         </n-layout-content>
 
-        <!-- Sync Footer -->
-        <n-layout-footer v-if="!isMiniMode && !isMobile" class="sync-footer" bordered>
+        <!-- Sync Footer：仅同步中或出错时显示 -->
+        <n-layout-footer v-if="showSyncFooter" class="sync-footer" bordered>
           <div class="footer-content">
             <!-- 左侧：同步状态信息 -->
             <div class="sync-status">
@@ -289,6 +289,9 @@ const { syncIcon, handleUpload, handleDownload } = useSyncWidget(); //relativeTi
 const { isLoggedIn } = storeToRefs(syncStore);
 const { isMobile } = useDevice();
 const showDatabaseDialog = ref(false);
+
+// 底部同步条：非 mini、非移动端，且正在同步或存在同步错误时显示
+const showSyncFooter = computed(() => !isMiniMode.value && !isMobile.value && Boolean(syncStore.syncError));
 
 // 处理退出登录确认（保留数据）
 async function handleLogoutConfirm() {
@@ -450,7 +453,7 @@ async function handleManualDownload() {
 }
 .app-layout__content {
   position: relative;
-  height: calc(100% - 35px);
+  height: calc(100% - 30px);
   width: 100%;
   overflow: hidden;
 }

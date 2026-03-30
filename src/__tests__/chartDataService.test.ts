@@ -96,6 +96,39 @@ describe("chartDataService", () => {
       expect(result[0].sourceId).toBe(1);
       expect(result[1].sourceId).toBe(4);
     });
+
+    it("应该排除已软删除的 Todo", () => {
+      const todos: Partial<Todo>[] = [
+        {
+          id: 1,
+          activityId: 100,
+          activityTitle: "已删",
+          priority: 1,
+          status: "done",
+          doneTime: 1717920000000,
+          realPomo: [5],
+          pomoType: "🍅",
+          deleted: true,
+        },
+        {
+          id: 2,
+          activityId: 100,
+          activityTitle: "保留",
+          priority: 1,
+          status: "done",
+          doneTime: 1717920000000,
+          realPomo: [2],
+          pomoType: "🍅",
+          deleted: false,
+        },
+      ];
+
+      const result = collectPomodoroData(todos as Todo[]);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].sourceId).toBe(2);
+      expect(result[0].value).toBe(2);
+    });
   });
 
   describe("collectTaskRecordData", () => {

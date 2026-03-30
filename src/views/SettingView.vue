@@ -47,6 +47,17 @@
             <code>statechange suspended</code>
             时可对照现象。
           </p>
+          <p class="audio-dbg-hint audio-dbg-hint--secondary">
+            排查「白噪音完全没声」：先在同一页内复现（开始专注、确认白噪音已开），<strong>不要刷新</strong>，立刻展开本项看下方日志或点「一键复制」。对照
+            <code>[WN] crossfade 素材加载失败</code>
+            （文件/网络）、
+            <code>[WN] crossfade play 拒绝</code>
+            （浏览器自动播放限制）、是否出现
+            <code>[WN] crossfade 起播</code>
+            （已成功起播）。电脑端可同时打开开发者工具 → Network 看
+            <code>/sounds/</code>
+            请求是否 200。
+          </p>
           <n-space style="margin-bottom: 8px">
             <n-button size="small" :loading="audioDebugCopyLoading" @click="copyAudioDebugLogs">一键复制日志</n-button>
             <n-button size="small" @click="settingStore.clearAudioDebugLogs()">清空日志</n-button>
@@ -381,7 +392,9 @@ function registerTestContinuationAndFlush() {
 
 const audioDebugText = computed(() => {
   const lines = settingStore.audioDebugLogs;
-  return lines.length ? lines.join("\n") : "暂无记录。请先开始番茄钟、切换阶段或开关白噪音。";
+  return lines.length
+    ? lines.join("\n")
+    : "暂无记录。请先在同一标签页内开始专注（或开关白噪音）以产生日志；勿先刷新页面。";
 });
 
 const audioDebugCopyLoading = ref(false);

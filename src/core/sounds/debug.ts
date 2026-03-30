@@ -6,7 +6,12 @@ export function dbgAudio(message: string, extra?: Record<string, unknown>) {
     const tail = extra !== undefined ? ` ${JSON.stringify(extra)}` : "";
     useSettingStore().pushAudioDebugLog(`${message}${tail}`);
   } catch {
-    /* Pinia 未就绪等 */
+    /* Pinia 未就绪等：生产环境可开控制台对照 */
+    try {
+      console.warn("[audio-dbg]", message, extra ?? "");
+    } catch {
+      /* 忽略 */
+    }
   }
 }
 

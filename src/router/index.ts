@@ -44,7 +44,7 @@ const routes: Array<RouteRecordRaw> = [
     children: [
       { path: "", name: "Home", component: HomeView },
       { path: "statistics", name: "Statistics", component: StatisticView },
-      { path: "settings", name: "Settings", component: SettingView, meta: { devOnly: true } },
+      { path: "settings", name: "Settings", component: SettingView, meta: { devOnly: false } },
       { path: "search", name: "Search", component: SearchView },
       { path: "chart", name: "Chart", component: ChartView },
       // 帮助页面（在 MainLayout 内显示，但不需要认证）

@@ -413,13 +413,23 @@ export const useTimerStore = defineStore(
       { deep: true },
     );
 
+    /** 结束音可能因 Web Audio 链路挂起而永不 settle；必须仍能 reset，否则 squash / 停止无效 */
+    const CANCEL_CUE_MAX_MS = 5000;
+
     function cancelTimer(): void {
+      const finish = () => resetTimer();
       if (isWorking.value) {
-        void playSound(SoundType.WORK_END).finally(() => resetTimer());
+        void Promise.race([
+          playSound(SoundType.WORK_END),
+          new Promise<void>((resolve) => setTimeout(resolve, CANCEL_CUE_MAX_MS)),
+        ]).finally(finish);
       } else if (isBreaking.value) {
-        void playSound(SoundType.BREAK_END).finally(() => resetTimer());
+        void Promise.race([
+          playSound(SoundType.BREAK_END),
+          new Promise<void>((resolve) => setTimeout(resolve, CANCEL_CUE_MAX_MS)),
+        ]).finally(finish);
       } else {
-        resetTimer();
+        finish();
       }
     }
 

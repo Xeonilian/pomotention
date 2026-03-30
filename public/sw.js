@@ -83,6 +83,34 @@ function networkFirst(request) {
     );
 }
 
+/**
+ * 音频优先读缓存：有缓存立即返回，避免每次上线后首播被网络阻塞；
+ * 同时后台轻量更新缓存，下一次播放可获得新版本。
+ */
+function soundStaleWhileRevalidate(request) {
+  return caches.match(request).then((cached) => {
+    const fetchPromise = fetch(request)
+      .then((response) => {
+        if (response.ok) {
+          putInCache(request, response);
+        }
+        return response;
+      })
+      .catch(() => null);
+
+    if (cached) {
+      // 命中缓存时后台更新即可，不阻塞本次播放
+      fetchPromise.catch(() => {});
+      return cached;
+    }
+
+    return fetchPromise.then((response) => {
+      if (response) return response;
+      return new Response("", { status: 503, statusText: "Offline" });
+    });
+  });
+}
+
 self.addEventListener("fetch", (event) => {
   const { request } = event;
 
@@ -121,8 +149,12 @@ self.addEventListener("fetch", (event) => {
   }
 
   const path = url.pathname;
-  if (path.startsWith("/assets/") || path.startsWith("/sounds/")) {
+  if (path.startsWith("/assets/")) {
     event.respondWith(networkFirst(request));
+    return;
+  }
+  if (path.startsWith("/sounds/")) {
+    event.respondWith(soundStaleWhileRevalidate(request));
     return;
   }
 
