@@ -10,11 +10,12 @@
       </n-alert>
 
       <div class="form-container">
-        <n-input v-model:value="email" type="text" placeholder="邮箱地址" size="large" />
+        <n-input v-model:value="email" type="text" placeholder="邮箱地址" size="large" class="form-input" />
 
         <n-input
           v-if="!isResetMode"
           v-model:value="password"
+          class="form-input"
           type="password"
           placeholder="密码 (至少6位)"
           size="large"
@@ -341,7 +342,9 @@ function handleLocalOnlyMode() {
   border-radius: 8px;
   background-color: var(--color-background);
 }
-
+.terms-checkbox :deep(.n-checkbox_label) {
+  padding: 0px !important;
+}
 @media (max-width: 430px) {
   .app-layout {
     overflow: hidden;
@@ -350,13 +353,27 @@ function handleLocalOnlyMode() {
   }
   .login-view {
     border: none;
-    padding: 15px 8px 15px 8px;
+    padding: 15px;
   }
-
+  .form-input {
+    padding: 0 8px;
+  }
   /* 减小底部文字链默认左右内边距，左侧更紧以便与表单对齐 */
   .text-button :deep(.n-button) {
     padding-left: 4px;
     padding-right: 4px;
+  }
+  .terms-checkbox :deep(.n-checkbox .n-checkbox__label) {
+    padding-right: 0px !important;
+  }
+
+  :deep(.n-checkbox) {
+    flex: 0 0 auto;
+    width: max-content;
+    max-width: 100%;
+  }
+  .terms-checkbox {
+    gap: 0px;
   }
 }
 
@@ -368,7 +385,7 @@ function handleLocalOnlyMode() {
 .form-container {
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 20px;
 }
 
 /* 用户协议checkbox */
@@ -380,17 +397,11 @@ function handleLocalOnlyMode() {
   flex-wrap: nowrap;
   gap: 6px;
   min-width: 0;
+  padding: 0px !important;
 }
 
 /* 避免 n-checkbox 在 flex 子项中拉伸占满宽度导致标签文字被挤换行 */
-.terms-checkbox :deep(.n-checkbox) {
-  flex: 0 0 auto;
-  width: max-content;
-  max-width: 100%;
-}
-.terms-checkbox {
-  gap: 0px;
-}
+
 .terms-checkbox :deep(.n-checkbox .n-checkbox__label) {
   white-space: nowrap;
 }
