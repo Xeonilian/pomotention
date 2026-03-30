@@ -291,7 +291,7 @@ const { isMobile } = useDevice();
 const showDatabaseDialog = ref(false);
 
 // 底部同步条：非 mini、非移动端，且正在同步或存在同步错误时显示
-const showSyncFooter = computed(() => !isMiniMode.value && !isMobile.value && (syncStore.isSyncing || Boolean(syncStore.syncError)));
+const showSyncFooter = computed(() => !isMiniMode.value && !isMobile.value && Boolean(syncStore.syncError));
 
 // 处理退出登录确认（保留数据）
 async function handleLogoutConfirm() {
