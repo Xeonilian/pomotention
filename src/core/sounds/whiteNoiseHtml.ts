@@ -1,5 +1,5 @@
 import { useSettingStore } from "@/stores/useSettingStore";
-import { dbgAudio, dbgAudioThrottled, postAudioRuntimeDebug } from "./debug";
+import { dbgAudio, dbgAudioThrottled } from "./debug";
 
 /**
  * 白噪音播放链（须与「调音量」心智一致）：
@@ -217,19 +217,12 @@ function connectHtmlWnCrossfadePlayback(state: HtmlWnCrossState, mode: "new" | "
     a.volume = eff;
     b.volume = 0;
 
-    const onLeaderPlaying = () => {
-      if (htmlWnCross !== state) return;
-      dbgAudio(mode === "retarget" ? "[WN] crossfade 切轨" : "[WN] crossfade 起播", { durationSec: Math.round(d * 10) / 10 });
-      // #region agent log
-      postAudioRuntimeDebug("run_ios_prod", "H4_media_ready_but_play_chain_breaks", "whiteNoiseHtml.ts:226", "leader playing", {
-        mode,
-        durationSec: Math.round(d * 10) / 10,
-        src: a.currentSrc || a.src,
-      });
-      // #endregion
-      if (state.tickId == null) {
-        state.tickId = window.setInterval(() => htmlWnCrossfadeTick(state), HTML_WN_CROSSFADE.tickIntervalMs);
-      }
+      const onLeaderPlaying = () => {
+        if (htmlWnCross !== state) return;
+        dbgAudio(mode === "retarget" ? "[WN] crossfade 切轨" : "[WN] crossfade 起播", { durationSec: Math.round(d * 10) / 10 });
+        if (state.tickId == null) {
+          state.tickId = window.setInterval(() => htmlWnCrossfadeTick(state), HTML_WN_CROSSFADE.tickIntervalMs);
+        }
       if (!("mediaSession" in navigator)) return;
       try {
         navigator.mediaSession.playbackState = "playing";
@@ -292,12 +285,6 @@ function connectHtmlWnCrossfadePlayback(state: HtmlWnCrossState, mode: "new" | "
       .catch((e: unknown) => {
         const msg = e instanceof Error ? e.message : String(e);
         dbgAudio("[WN] crossfade play 拒绝", { message: msg });
-        // #region agent log
-        postAudioRuntimeDebug("run_ios_prod", "H4_media_ready_but_play_chain_breaks", "whiteNoiseHtml.ts:295", "leader play rejected", {
-          message: msg,
-          src: a.currentSrc || a.src,
-        });
-        // #endregion
         if (htmlWnCross !== state) return;
         scheduleLeaderPlayRecovery();
       });
@@ -311,13 +298,6 @@ function connectHtmlWnCrossfadePlayback(state: HtmlWnCrossState, mode: "new" | "
       message: err?.message ?? "",
       src: a.currentSrc || a.src,
     });
-    // #region agent log
-    postAudioRuntimeDebug("run_ios_prod", "H5_asset_load_error_or_sw_cache_miss", "whiteNoiseHtml.ts:309", "leader media error", {
-      code: err?.code ?? null,
-      message: err?.message ?? "",
-      src: a.currentSrc || a.src,
-    });
-    // #endregion
     if (sourceReloadRetried) return;
     sourceReloadRetried = true;
     /* 资源短时抖动（部署切换/CDN 回源）时做一次轻量重试；失败也不抛错，后续可由下一次 start/toggle 再尝试 */

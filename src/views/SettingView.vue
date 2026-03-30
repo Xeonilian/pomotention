@@ -48,15 +48,8 @@
             时可对照现象。
           </p>
           <p class="audio-dbg-hint audio-dbg-hint--secondary">
-            排查「白噪音完全没声」：先在同一页内复现（开始专注、确认白噪音已开），<strong>不要刷新</strong>，立刻展开本项看下方日志或点「一键复制」。对照
-            <code>[WN] crossfade 素材加载失败</code>
-            （文件/网络）、
-            <code>[WN] crossfade play 拒绝</code>
-            （浏览器自动播放限制）、是否出现
-            <code>[WN] crossfade 起播</code>
-            （已成功起播）。电脑端可同时打开开发者工具 → Network 看
-            <code>/sounds/</code>
-            请求是否 200。
+            排查「白噪音完全没声」：先在同一页内复现（开始专注、确认白噪音已开），<strong>不要刷新</strong>，立刻展开本项看下方日志或点「一键复制」。重点关注 
+            <code>[WN] crossfade 起播</code>、<code>[cue] work_xxx web</code> 和 <code>[SW]</code> 相关日志。
           </p>
           <n-space style="margin-bottom: 8px">
             <n-button size="small" :loading="audioDebugCopyLoading" @click="copyAudioDebugLogs">一键复制日志</n-button>
@@ -66,9 +59,6 @@
             <n-descriptions-item label="isAppleTouchWebKitDevice">{{ isAppleTouchWebKitDevice() }}</n-descriptions-item>
             <n-descriptions-item label="isAndroidTouchDevice">{{ isAndroidTouchDevice() }}</n-descriptions-item>
             <n-descriptions-item label="preferHtmlAudioCueFirst">{{ preferHtmlAudioCueFirst() }}</n-descriptions-item>
-            <n-descriptions-item label="SW Status">
-              <n-button size="tiny" @click="dbgSwStatus">检查SW</n-button>
-            </n-descriptions-item>
           </n-descriptions>
           <p class="audio-dbg-hint audio-dbg-hint--secondary">若一键复制失败，可长按下方文本框全选后复制；三项布尔与导出内容一致。</p>
           <n-input
@@ -406,7 +396,7 @@ const audioDebugCopyLoading = ref(false);
 function buildAudioDebugExportBlock(): string {
   const logPart = settingStore.audioDebugLogs.length ? settingStore.audioDebugLogs.join("\n") : audioDebugText.value;
   return [
-    "=== Pomotention 音频诊断（仅日志）===",
+    "=== Pomotention 音频诊断（v3 SW 优化）===",
     `采集时间(ISO): ${new Date().toISOString()}`,
     "",
     "=== 平台（sounds / cuePlayback）===",
@@ -414,7 +404,7 @@ function buildAudioDebugExportBlock(): string {
     `isAndroidTouchDevice: ${isAndroidTouchDevice()}`,
     `preferHtmlAudioCueFirst: ${preferHtmlAudioCueFirst()}`,
     "",
-    "=== 日志 ===",
+    "=== SW & 日志 ===",
     logPart,
   ].join("\n");
 }
