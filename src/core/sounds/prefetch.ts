@@ -1,5 +1,6 @@
 import type { SoundType } from "./types";
 import { ALL_SOUND_TYPES, SoundType as SoundTypeEnum, soundPaths } from "./types";
+import { postAudioRuntimeDebug } from "./debug";
 
 /** 预取到的原始音频字节（不依赖 AudioContext）；与首次播放共用同一套 inflight，避免重复下载 */
 const cueBytesCache = new Map<SoundType, ArrayBuffer>();
@@ -31,12 +32,38 @@ export async function loadCueBytes(type: SoundType): Promise<ArrayBuffer | null>
     inflight = (async () => {
       try {
         const url = soundPaths[type];
+        // #region agent log
+        postAudioRuntimeDebug("run_prefetch", "H2_fetch_latency_or_fail", "prefetch.ts:35", "loadCueBytes fetch start", {
+          type,
+          url,
+        });
+        // #endregion
         const res = await fetchWithTimeout(url);
-        if (!res.ok) return null;
+        if (!res.ok) {
+          // #region agent log
+          postAudioRuntimeDebug("run_prefetch", "H2_fetch_latency_or_fail", "prefetch.ts:42", "loadCueBytes fetch non-ok", {
+            type,
+            status: res.status,
+          });
+          // #endregion
+          return null;
+        }
         const arr = await res.arrayBuffer();
         cueBytesCache.set(type, arr);
+        // #region agent log
+        postAudioRuntimeDebug("run_prefetch", "H2_fetch_latency_or_fail", "prefetch.ts:51", "loadCueBytes fetch success", {
+          type,
+          bytes: arr.byteLength,
+        });
+        // #endregion
         return arr;
-      } catch {
+      } catch (error) {
+        // #region agent log
+        postAudioRuntimeDebug("run_prefetch", "H2_fetch_latency_or_fail", "prefetch.ts:58", "loadCueBytes fetch failed", {
+          type,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        // #endregion
         return null;
       } finally {
         cueBytesInflight.delete(type);
@@ -99,6 +126,14 @@ export function prefetchDeferredSoundAssets(selectedTrack: SoundType): void {
  * 与 HTMLAudio 回退共用 HTTP 缓存；解码仍在首次需要 AudioContext 时做。
  */
 export function prefetchSoundAssets(selectedTrack: SoundType = SoundTypeEnum.WORK_TICK): void {
+  // #region agent log
+  postAudioRuntimeDebug("run_prefetch", "H1_prefetch_order_or_scope_wrong", "prefetch.ts:126", "prefetchSoundAssets schedule", {
+    selectedTrack,
+    critical: CRITICAL_CUE_TYPES,
+    selectedWhiteNoise: collectSelectedWhiteNoiseTypes(selectedTrack),
+    deferredCount: collectDeferredTypes(selectedTrack).length,
+  });
+  // #endregion
   prefetchCriticalCues();
   prefetchWhiteNoiseForSelection(selectedTrack);
   prefetchDeferredSoundAssets(selectedTrack);

@@ -1,5 +1,5 @@
 import { useSettingStore } from "@/stores/useSettingStore";
-import { dbgAudio } from "./debug";
+import { dbgAudio, postAudioRuntimeDebug } from "./debug";
 import { getAudioContext } from "./audioContext";
 import {
   isHtmlWhiteNoiseActive,
@@ -25,6 +25,14 @@ export function startWhiteNoise(): void {
   const track = settingStore.settings.whiteNoiseSoundTrack;
   const src = soundPaths[track];
   const vol = whiteNoiseReferenceVolume(track);
+  // #region agent log
+  postAudioRuntimeDebug("run_ios_prod", "H3_start_path_not_reached_or_wrong_track", "whiteNoiseApi.ts:29", "startWhiteNoise invoked", {
+    enabled: settingStore.settings.isWhiteNoiseEnabled,
+    track,
+    hasSrc: !!src,
+    vol,
+  });
+  // #endregion
   if (!src) {
     dbgAudio("[WN] whiteNoiseSoundTrack 无映射，已改存 work_tick，请再切换/开始一次", { track });
     settingStore.settings.whiteNoiseSoundTrack = SoundType.WORK_TICK;
@@ -43,6 +51,12 @@ export function startSilentWhiteNoiseHold(): void {
   if (!settingStore.settings.isWhiteNoiseEnabled) return;
 
   const src = soundPaths[SoundType.WHITE_NOISE_BREAK];
+  // #region agent log
+  postAudioRuntimeDebug("run_ios_prod", "H3_start_path_not_reached_or_wrong_track", "whiteNoiseApi.ts:55", "startSilentWhiteNoiseHold invoked", {
+    enabled: settingStore.settings.isWhiteNoiseEnabled,
+    hasSrc: !!src,
+  });
+  // #endregion
   if (!src) {
     dbgAudio("[WN] white_noise_break 无路径映射");
     return;
