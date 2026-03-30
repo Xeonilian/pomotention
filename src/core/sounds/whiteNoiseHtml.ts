@@ -193,14 +193,17 @@ function connectHtmlWnCrossfadePlayback(state: HtmlWnCrossState, mode: "new" | "
   };
 
   let playbackStarted = false;
+  /** 首段起播：须等有效时长；仅依赖 loadedmetadata 时，部分环境 duration 仍为 NaN/0，会永远不 play()（无拒绝日志、整块无声） */
   const tryArmPlayback = () => {
     if (htmlWnCross !== state || playbackStarted) return;
     const d = a.duration;
-    if (!d || !isFinite(d) || d <= 0.5) return;
+    if (!d || !isFinite(d) || d <= 0.05) return;
 
     playbackStarted = true;
     a.removeEventListener("loadedmetadata", tryArmPlayback);
     a.removeEventListener("durationchange", tryArmPlayback);
+    a.removeEventListener("loadeddata", tryArmPlayback);
+    a.removeEventListener("canplay", tryArmPlayback);
 
     state.duration = d;
     let cf = Math.min(HTML_WN_CROSSFADE.maxSec, Math.max(HTML_WN_CROSSFADE.minSec, d * HTML_WN_CROSSFADE.ratioOfDuration));
@@ -286,10 +289,29 @@ function connectHtmlWnCrossfadePlayback(state: HtmlWnCrossState, mode: "new" | "
       });
   };
 
+  const onLeaderError = () => {
+    if (htmlWnCross !== state) return;
+    const err = a.error;
+    dbgAudio("[WN] crossfade 素材加载失败（整块无声，非 play 拒绝）", {
+      code: err?.code,
+      message: err?.message ?? "",
+      src: a.currentSrc || a.src,
+    });
+  };
+  a.addEventListener("error", onLeaderError);
+
   a.addEventListener("loadedmetadata", tryArmPlayback);
   a.addEventListener("durationchange", tryArmPlayback);
+  a.addEventListener("loadeddata", tryArmPlayback);
+  a.addEventListener("canplay", tryArmPlayback);
   a.load();
   b.load();
+
+  const prevDetach = state.detachMediaListeners;
+  state.detachMediaListeners = () => {
+    prevDetach?.();
+    a.removeEventListener("error", onLeaderError);
+  };
 }
 
 /** 全平台白噪音唯一实现：HTML 双轨 + crossfade */
