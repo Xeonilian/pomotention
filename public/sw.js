@@ -1,5 +1,6 @@
 // Service Worker 版本号：变更策略时请递增，以便激活时清掉旧缓存
-const CACHE_VERSION = "v2";
+// v3: 为解决 iPhone 生产环境声音缓存问题 (stale white noise after PR)
+const CACHE_VERSION = "v3";
 const CACHE_NAME = `pomotention-cache-${CACHE_VERSION}`;
 
 // 需要缓存的静态资源（应用壳）
@@ -19,7 +20,7 @@ self.addEventListener("install", (event) => {
     caches
       .open(CACHE_NAME)
       .then((cache) => {
-        console.log("[Service Worker] Caching app shell");
+        console.log("[Service Worker] Caching app shell v3");
         return cache.addAll(APP_SHELL);
       })
       .catch((error) => {
@@ -37,7 +38,7 @@ self.addEventListener("message", (event) => {
 });
 
 self.addEventListener("activate", (event) => {
-  console.log("[Service Worker] Activating...", CACHE_VERSION);
+  console.log("[Service Worker] Activating v3...", CACHE_VERSION);
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
@@ -86,24 +87,36 @@ function networkFirst(request) {
 /**
  * 音频优先读缓存：有缓存立即返回，避免每次上线后首播被网络阻塞；
  * 同时后台轻量更新缓存，下一次播放可获得新版本。
+ * v3: 增加详细日志，帮助 debug iPhone 声音问题 (stale cache after deploy).
  */
 function soundStaleWhileRevalidate(request) {
+  const url = new URL(request.url);
+  console.log(`[SW] soundStaleWhileRevalidate called for ${url.pathname} (v3)`);
+
   return caches.match(request).then((cached) => {
+    console.log(`[SW] soundStaleWhileRevalidate ${url.pathname}: cached=${!!cached}, cacheVersion=${CACHE_VERSION}`);
+
     const fetchPromise = fetch(request)
       .then((response) => {
         if (response.ok) {
           putInCache(request, response);
+          console.log(`[SW] Updated cache for sound ${url.pathname}`);
         }
         return response;
       })
-      .catch(() => null);
+      .catch((err) => {
+        console.error(`[SW] Fetch failed for ${url.pathname}:`, err);
+        return null;
+      });
 
     if (cached) {
       // 命中缓存时后台更新即可，不阻塞本次播放
       fetchPromise.catch(() => {});
+      console.log(`[SW] Serving cached sound ${url.pathname} (stale-while-revalidate)`);
       return cached;
     }
 
+    console.log(`[SW] No cache for ${url.pathname}, fetching from network`);
     return fetchPromise.then((response) => {
       if (response) return response;
       return new Response("", { status: 503, statusText: "Offline" });

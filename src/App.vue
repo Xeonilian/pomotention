@@ -218,6 +218,8 @@ const initAuthStateListener = () => {
 // ========== 生命周期钩子 ==========
 onMounted(async () => {
   try {
+    // v3: 确保prefetch在PWA reload后完成，避免timer在sounds未就绪时启动 (iPhone sound fix)
+    console.log("[App] Starting prefetchSoundAssets for timer sounds");
     prefetchSoundAssets(settingStore.settings.whiteNoiseSoundTrack);
     // 1. 初始化本地数据
     await dataStore.loadAllData();

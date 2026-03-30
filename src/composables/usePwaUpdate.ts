@@ -75,9 +75,12 @@ export function usePwaUpdate(notification: NotificationApi) {
     if (refreshing) return;
 
     // 后台/隐藏时立刻 reload 常被节流或未完整执行，旧 JS 与新 SW 并存会导致缓存音效等仍用旧内存状态；回到前台再刷新
+    // v3 audio fix: log to help debug SW activation for iPhone sounds
+    console.log("[PWA] controllerchange triggered, visibility:", document.visibilityState);
     if (document.visibilityState === "visible") {
       refreshing = true;
       removePendingVisibilityReload();
+      console.log("[PWA] Reloading to activate new SW v3 (audio fix)");
       window.location.reload();
       return;
     }
@@ -96,6 +99,7 @@ export function usePwaUpdate(notification: NotificationApi) {
   };
 
   const onFocus = () => {
+    console.log("[PWA] onFocus: checking for SW updates (v3 audio fix)");
     void navigator.serviceWorker.getRegistration().then((r) => r?.update());
   };
 
