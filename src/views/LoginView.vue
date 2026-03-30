@@ -27,12 +27,8 @@
 
         <!-- 注册时显示用户协议 -->
         <div v-if="!isResetMode" class="terms-checkbox">
-          <n-checkbox v-model:checked="agreedToTerms">
-            我已阅读并同意
-            <n-button text type="primary" @click="showTerms = true" style="padding: 0 4px; color: var(--color-blue)">
-              《用户服务协议与隐私政策》
-            </n-button>
-          </n-checkbox>
+          <n-checkbox v-model:checked="agreedToTerms">我已阅读并同意</n-checkbox>
+          <n-button text type="info" @click="showTerms = true">《用户服务协议与隐私政策》</n-button>
         </div>
 
         <!-- 正常登录/注册模式 -->
@@ -338,12 +334,30 @@ function handleLocalOnlyMode() {
 .login-view {
   overflow: hidden;
   max-width: 400px;
-  margin: 20px auto;
+  margin: 40px auto 0 auto;
   padding: 40px;
   text-align: center;
   border: 1px solid #eee;
   border-radius: 8px;
   background-color: var(--color-background);
+}
+
+@media (max-width: 430px) {
+  .app-layout {
+    overflow: hidden;
+    height: 100vh;
+    background-color: var(--color-background);
+  }
+  .login-view {
+    border: none;
+    padding: 15px 8px 15px 8px;
+  }
+
+  /* 减小底部文字链默认左右内边距，左侧更紧以便与表单对齐 */
+  .text-button :deep(.n-button) {
+    padding-left: 4px;
+    padding-right: 4px;
+  }
 }
 
 .subtitle {
@@ -362,6 +376,23 @@ function handleLocalOnlyMode() {
   text-align: left;
   font-size: 10px;
   margin: 0;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 6px;
+  min-width: 0;
+}
+
+/* 避免 n-checkbox 在 flex 子项中拉伸占满宽度导致标签文字被挤换行 */
+.terms-checkbox :deep(.n-checkbox) {
+  flex: 0 0 auto;
+  width: max-content;
+  max-width: 100%;
+}
+.terms-checkbox {
+  gap: 0px;
+}
+.terms-checkbox :deep(.n-checkbox .n-checkbox__label) {
+  white-space: nowrap;
 }
 
 .text-button {
