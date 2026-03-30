@@ -12,6 +12,8 @@ import { METRICS } from "@/core/types/Metrics";
  */
 export function collectPomodoroData(todos: Todo[]): DataPoint[] {
   return todos
+    // 软删除的 Todo 仍留在列表中，统计与图表不应再计入其番茄
+    .filter((t) => !t.deleted)
     .filter((t) => t.realPomo && t.realPomo.length > 0 && t.pomoType === "🍅")
     .map((t) => ({
       metric: METRICS.POMODORO,
