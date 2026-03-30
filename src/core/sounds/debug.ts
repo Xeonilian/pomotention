@@ -17,23 +17,41 @@ export function dbgAudio(message: string, extra?: Record<string, unknown>) {
 
 /** 检查 SW 状态并记录到音频诊断 (v3 debug for iPhone cache issue) */
 export function dbgSwStatus() {
+  dbgAudio("[SW] 检查SW状态...");
+
   if (!("serviceWorker" in navigator)) {
-    dbgAudio("[SW] Not supported");
+    dbgAudio("[SW] ❌ Service Worker 不支持");
+    console.warn("[SW] Service Worker not supported");
     return;
   }
+
   navigator.serviceWorker.getRegistration().then(reg => {
     if (!reg) {
-      dbgAudio("[SW] No registration");
+      dbgAudio("[SW] ❌ No registration");
+      console.warn("[SW] No registration");
       return;
     }
-    dbgAudio("[SW] Registration", {
+
+    const info = {
       active: !!reg.active,
       waiting: !!reg.waiting,
       installing: !!reg.installing,
       controller: !!navigator.serviceWorker.controller,
-      scope: reg.scope
-    });
-  }).catch(e => dbgAudio("[SW] getRegistration failed", { error: String(e) }));
+      scope: reg.scope,
+      cacheVersion: "v3"
+    };
+
+    dbgAudio("[SW] Registration", info);
+    console.log("[SW] Status:", info);
+
+    // 额外检查当前 controller
+    if (navigator.serviceWorker.controller) {
+      dbgAudio("[SW] ✅ Controller active", { scriptURL: navigator.serviceWorker.controller.scriptURL });
+    }
+  }).catch(e => {
+    dbgAudio("[SW] ❌ getRegistration failed", { error: String(e) });
+    console.error("[SW] getRegistration error:", e);
+  });
 }
 
 /** 同类高频事件节流，避免息屏长测刷屏 */

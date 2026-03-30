@@ -48,15 +48,9 @@
             时可对照现象。
           </p>
           <p class="audio-dbg-hint audio-dbg-hint--secondary">
-            排查「白噪音完全没声」：先在同一页内复现（开始专注、确认白噪音已开），<strong>不要刷新</strong>，立刻展开本项看下方日志或点「一键复制」。对照
-            <code>[WN] crossfade 素材加载失败</code>
-            （文件/网络）、
-            <code>[WN] crossfade play 拒绝</code>
-            （浏览器自动播放限制）、是否出现
-            <code>[WN] crossfade 起播</code>
-            （已成功起播）。电脑端可同时打开开发者工具 → Network 看
-            <code>/sounds/</code>
-            请求是否 200。
+            排查「白噪音完全没声」：先在同一页内复现（开始专注、确认白噪音已开），<strong>不要刷新</strong>，立刻展开本项看下方日志或点「一键复制」。现已包含 SW 缓存诊断（v3）。
+            重点关注 <code>[SW] Registration</code>、<code>[WN] crossfade 起播</code>、<code>[cue] work_xxx web</code>。
+            iPhone 用户可直接点击「检查SW」按钮查看缓存状态。
           </p>
           <n-space style="margin-bottom: 8px">
             <n-button size="small" :loading="audioDebugCopyLoading" @click="copyAudioDebugLogs">一键复制日志</n-button>
@@ -406,7 +400,7 @@ const audioDebugCopyLoading = ref(false);
 function buildAudioDebugExportBlock(): string {
   const logPart = settingStore.audioDebugLogs.length ? settingStore.audioDebugLogs.join("\n") : audioDebugText.value;
   return [
-    "=== Pomotention 音频诊断（仅日志）===",
+    "=== Pomotention 音频诊断（v3 SW 优化）===",
     `采集时间(ISO): ${new Date().toISOString()}`,
     "",
     "=== 平台（sounds / cuePlayback）===",
@@ -414,7 +408,7 @@ function buildAudioDebugExportBlock(): string {
     `isAndroidTouchDevice: ${isAndroidTouchDevice()}`,
     `preferHtmlAudioCueFirst: ${preferHtmlAudioCueFirst()}`,
     "",
-    "=== 日志 ===",
+    "=== SW & 日志 ===",
     logPart,
   ].join("\n");
 }
