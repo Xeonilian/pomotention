@@ -13,7 +13,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, onErrorCaptured } from "vue";
+import { onMounted, onUnmounted, onErrorCaptured, watch } from "vue";
 import { useRouter } from "vue-router";
 import { supabase, isSupabaseEnabled } from "@/core/services/supabase";
 import { useDataStore } from "@/stores/useDataStore";
@@ -28,7 +28,7 @@ import PwaUpdateNotifier from "./components/PwaUpdateNotifier.vue";
 import { initSyncServices, syncAll, resetSyncServices } from "@/services/sync";
 import { initAppCloseHandler, cancelPendingSyncTasks } from "@/services/appCloseHandler";
 import { useTimerStore } from "@/stores/useTimerStore";
-import { resumeSharedAudioAfterForegroundAsync, prefetchSoundAssets } from "@/core/sounds";
+import { resumeSharedAudioAfterForegroundAsync, prefetchSoundAssets, prefetchWhiteNoiseForSelection } from "@/core/sounds";
 
 // ========== 状态与依赖 ==========
 const router = useRouter();
@@ -36,6 +36,14 @@ const settingStore = useSettingStore();
 const dataStore = useDataStore();
 const syncStore = useSyncStore();
 const timerStore = useTimerStore();
+
+watch(
+  () => settingStore.settings.whiteNoiseSoundTrack,
+  (track, prevTrack) => {
+    if (track === prevTrack) return;
+    prefetchWhiteNoiseForSelection(track);
+  },
+);
 
 // 清理函数存储
 let appCloseCleanup: (() => void) | null = null;
@@ -210,7 +218,7 @@ const initAuthStateListener = () => {
 // ========== 生命周期钩子 ==========
 onMounted(async () => {
   try {
-    prefetchSoundAssets();
+    prefetchSoundAssets(settingStore.settings.whiteNoiseSoundTrack);
     // 1. 初始化本地数据
     await dataStore.loadAllData();
 

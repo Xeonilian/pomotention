@@ -3,6 +3,7 @@ export {
   SoundType,
   soundPaths,
   prefetchSoundAssets,
+  prefetchWhiteNoiseForSelection,
   playSound,
   startWhiteNoise,
   startSilentWhiteNoiseHold,

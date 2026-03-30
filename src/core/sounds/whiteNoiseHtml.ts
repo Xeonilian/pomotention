@@ -193,6 +193,7 @@ function connectHtmlWnCrossfadePlayback(state: HtmlWnCrossState, mode: "new" | "
   };
 
   let playbackStarted = false;
+  let sourceReloadRetried = false;
   /** 首段起播：须等有效时长；仅依赖 loadedmetadata 时，部分环境 duration 仍为 NaN/0，会永远不 play()（无拒绝日志、整块无声） */
   const tryArmPlayback = () => {
     if (htmlWnCross !== state || playbackStarted) return;
@@ -297,6 +298,16 @@ function connectHtmlWnCrossfadePlayback(state: HtmlWnCrossState, mode: "new" | "
       message: err?.message ?? "",
       src: a.currentSrc || a.src,
     });
+    if (sourceReloadRetried) return;
+    sourceReloadRetried = true;
+    /* 资源短时抖动（部署切换/CDN 回源）时做一次轻量重试；失败也不抛错，后续可由下一次 start/toggle 再尝试 */
+    window.setTimeout(() => {
+      if (htmlWnCross !== state) return;
+      playbackStarted = false;
+      a.load();
+      b.load();
+      dbgAudio("[WN] crossfade 素材重试加载");
+    }, 1200);
   };
   a.addEventListener("error", onLeaderError);
 

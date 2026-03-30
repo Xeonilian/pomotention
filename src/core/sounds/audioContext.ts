@@ -68,8 +68,9 @@ function attachAudioContextDebugListener(ctx: AudioContext) {
   (ctx as unknown as Record<string, boolean>)[mark] = true;
   ctx.addEventListener("statechange", () => {
     // 仅记录易致无声的状态，避免 running 刷屏
-    if (ctx.state === "suspended" || ctx.state === "interrupted") {
-      dbgAudio("[WN] AudioContext", { state: ctx.state });
+    const st = ctx.state as AudioContextState | "interrupted";
+    if (st === "suspended" || st === "interrupted") {
+      dbgAudio("[WN] AudioContext", { state: st });
     }
   });
 }
