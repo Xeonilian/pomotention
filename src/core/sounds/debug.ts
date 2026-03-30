@@ -49,27 +49,3 @@ export function dbgAudioThrottled(key: string, windowMs: number, message: string
   map.set(key, now);
   dbgAudio(message, extra);
 }
-
-export function postAudioRuntimeDebug(
-  runId: string,
-  hypothesisId: string,
-  location: string,
-  message: string,
-  data: Record<string, unknown>,
-): void {
-  // #region agent log
-  fetch("http://127.0.0.1:7242/ingest/a855573f-7487-43d2-8f8d-5dee3311857f", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "9643b2" },
-    body: JSON.stringify({
-      sessionId: "9643b2",
-      runId,
-      hypothesisId,
-      location,
-      message,
-      data,
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-  // #endregion
-}
