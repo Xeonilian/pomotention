@@ -6,6 +6,8 @@
     align-center
     :style="modalStyle"
     :auto-focus="false"
+    :mask-closable="true"
+    :close-on-esc="true"
     :to="modalTo"
   >
     <div class="tag-manager-inner">
@@ -37,24 +39,22 @@
               }"
               @click="onClickTag(t)"
             >
-              <!-- 标签名显示，双击可进入编辑状态 -->
+              <!-- 标签名显示，点击进入编辑模式 -->
               <span v-if="editingId !== t.id" @click.stop="startEdit(t)">
                 {{ t.name }}
               </span>
 
-              <!-- 标签名编辑输入框（编辑态） -->
+              <!-- 标签名编辑输入框（编辑态） - 简化版 -->
               <n-input
                 v-else
                 v-model:value="editValue"
                 size="tiny"
+                placeholder="编辑标签名"
                 :style="{
-                  width: editInputWidth + 'px',
-                  minWidth: '30px',
-                  transition: 'width 0.2s',
                   fontSize: '11px',
+                  maxWidth: '80px',
                 }"
                 @blur="onEditFinish(t)"
-                @input="updateInputWidth"
                 @keydown="(e) => handleEditKeydown(e, t)"
                 @click.stop
               />
@@ -130,11 +130,6 @@
           </div>
         </div>
       </div>
-
-      <!-- 用于动态测量编辑输入框宽度的隐藏元素 -->
-      <span ref="sizerRef" class="input-sizer">
-        {{ editValue }}
-      </span>
     </div>
   </n-modal>
 </template>
@@ -186,8 +181,6 @@ const emit = defineEmits<{
 const inputText = ref("");
 const editingId = ref<number | null>(null);
 const editValue = ref("");
-const editInputWidth = ref(40);
-const sizerRef = ref<HTMLElement | null>(null);
 const { isMobile } = useDevice();
 
 // 排序与分页
@@ -353,8 +346,16 @@ function onAddTag(): void {
 function startEdit(tag: TagWithCount): void {
   editingId.value = tag.id;
   editValue.value = tag.name;
+
+  // 下一帧让输入框获得焦点
   nextTick(() => {
-    updateInputWidth();
+    // Naive UI 的 n-input 在 v-for 中需要通过 DOM 查询获取 input
+    const inputs = document.querySelectorAll(".custom-tag input");
+    if (inputs.length > 0) {
+      const lastInput = inputs[inputs.length - 1] as HTMLInputElement;
+      lastInput.focus();
+      lastInput.select();
+    }
   });
 }
 
@@ -375,18 +376,6 @@ function onEditFinish(tag: TagWithCount): void {
 function cancelEdit(): void {
   editingId.value = null;
   editValue.value = "";
-  editInputWidth.value = 40;
-}
-
-/**
- * 编辑输入变化时更新宽度
- */
-function updateInputWidth(): void {
-  nextTick(() => {
-    if (!sizerRef.value) return;
-    const width = Math.max(40, Math.min(240, sizerRef.value.offsetWidth + 20));
-    editInputWidth.value = width;
-  });
 }
 
 /**
