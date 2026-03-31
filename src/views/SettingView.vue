@@ -31,9 +31,13 @@
             </n-popconfirm>
             <n-popconfirm @positive-click="handleFactoryReset" positive-text="确认清空" negative-text="取消">
               <template #trigger>
-                <n-button size="small" type="error">恢复出厂（清本地）</n-button>
+                <n-button size="small" type="error">清空本地数据</n-button>
               </template>
-              将清空当前设备上的本地业务数据与登录会话，操作后会自动重启页面。云端数据不会被删除，重新登录后可能会同步回来。确认继续吗？
+              将清空当前设备上的本地业务数据与登录会话。
+              <br />
+              本地数据不会被删除，重新登录后能会同步回来。
+              <br />
+              确认继续吗？
             </n-popconfirm>
           </n-space>
         </n-card>
