@@ -313,6 +313,10 @@ const handleItemChange = (id: number, _ts: number, activityId?: number, taskId?:
     padding: 0px !important;
   }
 
+  .day-header {
+    margin: 3px 1px;
+  }
+
   .pom-sum {
     font-size: 10px;
     transform: translateY(1px);
@@ -330,7 +334,7 @@ const handleItemChange = (id: number, _ts: number, activityId?: number, taskId?:
     font-size: 12px;
     width: 18px;
     height: 18px;
-    margin-right: 2px;
+    margin-right: 4px;
   }
 }
 </style>
