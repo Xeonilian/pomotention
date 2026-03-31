@@ -130,7 +130,7 @@
             />
           </div>
 
-          <!-- 独立番茄钟 (Mini模式)，手机端传入 isMobile 以启用全屏居中布局 -->
+          <!-- 独立番茄钟 (Mini模式) -->
           <PomotentionTimer
             v-if="isMiniMode"
             :showPomoSeq="showPomoSeq"
@@ -466,7 +466,12 @@ async function handleManualDownload() {
   width: 100%;
 }
 .pomodoro-mini-view-wrapper:deep(.n-layout .n-layout-scroll-container) {
-  overflow-y: hidden !important;
+  overflow: hidden !important;
+  scrollbar-width: none;
+}
+.pomodoro-mini-view-wrapper:deep(.n-layout .n-layout-scroll-container::-webkit-scrollbar) {
+  width: 0;
+  height: 0;
 }
 
 .header-button {

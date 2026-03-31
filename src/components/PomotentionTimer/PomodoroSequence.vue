@@ -763,6 +763,8 @@ function resetWhiteNoise(sound: SoundType) {
   line-height: 1.35;
   font-size: 12px;
   box-sizing: border-box;
+  resize: none !important;
+  overflow: hidden;
 }
 
 @supports (-webkit-touch-callout: none) {
@@ -832,6 +834,8 @@ function resetWhiteNoise(sound: SoundType) {
   line-height: 1.35;
   font-size: 12px;
   box-sizing: border-box;
+  resize: none !important;
+  overflow: hidden;
 }
 
 @supports (-webkit-touch-callout: none) {
