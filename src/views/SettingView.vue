@@ -1,7 +1,7 @@
 <template>
   <n-space vertical size="large" class="settings-page">
     <n-tabs v-model:value="tab" type="line" animated size="small">
-      <n-tab-pane name="general" tab="General">
+      <n-tab-pane name="general" tab="通用设置">
         <n-card size="small" title="通用信息">
           <n-descriptions label-placement="left" :column="1" bordered size="small">
             <n-descriptions-item label="版本">{{ appVer }}</n-descriptions-item>
@@ -25,11 +25,15 @@
               negative-text="取消"
             >
               <template #trigger>
-                <n-button size="small" type="warning" :loading="syncStore.loggingOut">
-                  退出登录
-                </n-button>
+                <n-button size="small" type="warning" :loading="syncStore.loggingOut">退出登录</n-button>
               </template>
               确认退出当前账号吗？
+            </n-popconfirm>
+            <n-popconfirm @positive-click="handleFactoryReset" positive-text="确认清空" negative-text="取消">
+              <template #trigger>
+                <n-button size="small" type="error">恢复出厂（清本地）</n-button>
+              </template>
+              将清空当前设备上的本地业务数据与登录会话，操作后会自动重启页面。云端数据不会被删除，重新登录后可能会同步回来。确认继续吗？
             </n-popconfirm>
           </n-space>
         </n-card>
@@ -318,6 +322,7 @@ import {
   NCollapseItem,
   NTabs,
   NTabPane,
+  NPopconfirm,
   useNotification,
 } from "naive-ui";
 import { useSettingStore } from "../stores/useSettingStore";
@@ -334,7 +339,7 @@ import { copyTextToClipboard } from "@/utils/clipboard";
 import { isAndroidTouchDevice, isAppleTouchWebKitDevice, preferHtmlAudioCueFirst } from "@/core/sounds/platform";
 import { dbgSwStatus } from "@/core/sounds/debug";
 import { isTauri } from "@tauri-apps/api/core";
-import { getCurrentUser } from "@/core/services/authService";
+import { getCurrentUser, purgeSupabaseAuthStorage } from "@/core/services/authService";
 
 const settingStore = useSettingStore();
 const timerStore = useTimerStore();
@@ -815,6 +820,15 @@ function resetStyle() {
 
 function handleClearLocal() {
   clearAllAppStorage();
+  dataStore.clearData();
+  syncStore.resetSync();
+  window.location.reload();
+}
+
+function handleFactoryReset() {
+  // 清业务 localStorage + Supabase 会话键，避免重装后自动带回本地登录态
+  clearAllAppStorage();
+  purgeSupabaseAuthStorage();
   dataStore.clearData();
   syncStore.resetSync();
   window.location.reload();
