@@ -103,6 +103,41 @@ if (supabaseUrl && supabaseAnonKey) {
   const isTauriProd = import.meta.env.PROD && isTauri();
   const win = typeof window !== "undefined" ? (window as TauriWindowWithFetchCORS) : undefined;
   const hasFetchCORS = typeof win?.fetchCORS === "function";
+  // 默认仅输出关键日志，避免每个请求都刷屏；需要逐请求日志时可设为 1/true
+  const verboseFetchLog = ["1", "true"].includes(String(import.meta.env.VITE_SUPABASE_FETCH_LOG ?? "").trim().toLowerCase());
+  const transportOverride = String(import.meta.env.VITE_SUPABASE_TRANSPORT ?? "")
+    .trim()
+    .toLowerCase();
+
+  const selectedTransport: TransportMode =
+    transportOverride === "fetchcors" || transportOverride === "cors"
+      ? "fetchCORS"
+      : transportOverride === "fetch"
+        ? "fetch"
+        : transportOverride === "xhr"
+          ? "xhr"
+          : isTauriProd
+            ? "xhr"
+            : "fetch";
+
+  const effectiveTransport: TransportMode =
+    selectedTransport === "fetchCORS" && !(isTauriProd && hasFetchCORS) ? "fetch" : selectedTransport;
+
+  supabaseLog("transport selected", {
+    selectedTransport: effectiveTransport,
+    isTauriProd,
+    hasFetchCORS,
+    transportOverride: transportOverride || null,
+  });
+
+  if (selectedTransport === "fetchCORS" && effectiveTransport === "fetch") {
+    supabaseLog("transport fallback to fetch", {
+      reason: "fetchCORS unavailable",
+      isTauriProd,
+      hasFetchCORS,
+      transportOverride: transportOverride || null,
+    });
+  }
 
   const performFetchWithTimeout = async (
     input: RequestInfo | URL,
@@ -113,13 +148,15 @@ if (supabaseUrl && supabaseAnonKey) {
     const headerKeys = toHeaderKeys(init);
     const bodySummary = summarizeRequestBody(init?.body);
 
-    supabaseLog("fetch start", {
-      transport,
-      url,
-      method: init?.method ?? "GET",
-      headerKeys,
-      ...bodySummary,
-    });
+    if (verboseFetchLog) {
+      supabaseLog("fetch start", {
+        transport,
+        url,
+        method: init?.method ?? "GET",
+        headerKeys,
+        ...bodySummary,
+      });
+    }
 
     const doFetch =
       transport === "fetchCORS"
@@ -140,7 +177,9 @@ if (supabaseUrl && supabaseAnonKey) {
     try {
       const resp = (await Promise.race([doFetch, timeoutPromise])) as Response;
       if (timeoutId !== undefined) window.clearTimeout(timeoutId);
-      supabaseLog("fetch done", { transport, status: resp.status, ok: resp.ok });
+      if (verboseFetchLog) {
+        supabaseLog("fetch done", { transport, status: resp.status, ok: resp.ok });
+      }
       return resp;
     } catch (error) {
       if (timeoutId !== undefined) window.clearTimeout(timeoutId);
@@ -160,39 +199,7 @@ if (supabaseUrl && supabaseAnonKey) {
     },
     global: {
       fetch: async (input, init) => {
-        const transportOverride = String(import.meta.env.VITE_SUPABASE_TRANSPORT ?? "")
-          .trim()
-          .toLowerCase();
-
-        const selectedTransport: TransportMode =
-          transportOverride === "fetchcors" || transportOverride === "cors"
-            ? "fetchCORS"
-            : transportOverride === "fetch"
-              ? "fetch"
-              : transportOverride === "xhr"
-                ? "xhr"
-                : isTauriProd
-                  ? "xhr"
-                  : "fetch";
-
-        supabaseLog("transport selected", {
-          selectedTransport,
-          isTauriProd,
-          hasFetchCORS,
-          transportOverride: transportOverride || null,
-        });
-
-        if (selectedTransport === "fetchCORS" && !(isTauriProd && hasFetchCORS)) {
-          supabaseLog("transport fallback to fetch", {
-            reason: "fetchCORS unavailable",
-            isTauriProd,
-            hasFetchCORS,
-            transportOverride: transportOverride || null,
-          });
-          return performFetchWithTimeout(input, init, "fetch");
-        }
-
-        return performFetchWithTimeout(input, init, selectedTransport);
+        return performFetchWithTimeout(input, init, effectiveTransport);
       },
     },
   });
