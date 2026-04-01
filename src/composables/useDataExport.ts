@@ -37,13 +37,15 @@ export function useDataExport(): UseDataExportReturn {
       }
 
       // 分别保存每个数据类型
-      const savePromises = Object.entries(localdata).map(async ([key, value]) => {
-        const fileName = `${key}.json`;
-        const filePath = `${dirPath}/${fileName}`;
-        const jsonData = JSON.stringify(value, null, 2);
-        await writeTextFile(filePath, jsonData);
-        return fileName;
-      });
+      const savePromises = Object.entries(localdata)
+        .filter(([key]) => key !== "globalSettings")
+        .map(async ([key, value]) => {
+          const fileName = `${key}.json`;
+          const filePath = `${dirPath}/${fileName}`;
+          const jsonData = JSON.stringify(value, null, 2);
+          await writeTextFile(filePath, jsonData);
+          return fileName;
+        });
 
       await Promise.all(savePromises);
 
