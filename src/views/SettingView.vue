@@ -165,7 +165,7 @@
               />
             </n-collapse-item>
 
-            <n-collapse-item v-if="supabaseEnabled && syncStore.isLoggedIn" title="同步诊断（Supabase）" name="sync">
+            <n-collapse-item v-if="supabaseEnabled && syncStore.isLoggedIn && isDev" title="同步诊断（Supabase）" name="sync">
               <n-descriptions label-placement="left" :column="1" bordered size="small" style="margin-bottom: 12px">
                 <n-descriptions-item label="lastSyncTimestamp">
                   {{ syncStore.lastSyncTimestamp }} ({{ lastSyncDisplay }})
@@ -194,7 +194,7 @@
               </p>
             </n-collapse-item>
 
-            <n-collapse-item title="番茄序列 / 计时器（PWA 恢复评估）" name="pomo-sequence-timer">
+            <n-collapse-item v-if="isDev" title="番茄序列 / 计时器（PWA 恢复评估）" name="pomo-sequence-timer">
               <div class="pomo-seq-diag-guide">
                 <p class="pomo-seq-diag-guide-title">什么时候点</p>
                 <ol class="pomo-seq-diag-ol">
