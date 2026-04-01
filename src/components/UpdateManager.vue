@@ -5,6 +5,7 @@ import { isTauri } from "@tauri-apps/api/core";
 import { getVersion } from "@tauri-apps/api/app";
 import { NModal, NProgress, NText, useNotification, useDialog } from "naive-ui";
 import { useSettingStore } from "@/stores/useSettingStore"; // 引入设置存储
+import { appHttpFetch } from "@/utils/appHttpFetch";
 
 type DialogType = "warning" | "error" | "success" | "info";
 
@@ -148,8 +149,7 @@ async function getRemoteVersion(): Promise<string | null> {
   try {
     console.log("使用 Tauri 环境获取 GitHub 版本信息");
 
-    // 在 Tauri 环境中，全局的 fetch 已经被替换为支持跨域的版本
-    const resp = await fetch(
+    const resp = await appHttpFetch(
       "https://api.github.com/repos/Xeonilian/pomotention/releases/latest",
       {
         method: "GET",
@@ -157,7 +157,7 @@ async function getRemoteVersion(): Promise<string | null> {
           Accept: "application/vnd.github.v3+json",
           "User-Agent": "Pomotention-App",
         },
-      }
+      },
     );
 
     console.log("GitHub API 响应状态:", resp.status, resp.statusText);
