@@ -10,6 +10,9 @@ type PomodoroState = "idle" | "working" | "breaking";
 export const useTimerStore = defineStore(
   "timer",
   () => {
+    const INTENTIONAL_EXIT_MARK_KEY = "pomotention-intentional-exit";
+    let hasBoundExitMarker = false;
+
     // 状态
     const pomodoroState = ref<PomodoroState>("idle");
     const timeRemaining = ref<number>(0);
@@ -292,10 +295,40 @@ export const useTimerStore = defineStore(
       timerInterval.value = window.setInterval(phaseTick, 1000);
     }
 
+    function markIntentionalExit(): void {
+      if (typeof window === "undefined") return;
+      if (pomodoroState.value === "idle") return;
+      sessionStorage.setItem(INTENTIONAL_EXIT_MARK_KEY, "1");
+    }
+
+    function bindIntentionalExitMarker(): void {
+      if (typeof window === "undefined") return;
+      if (hasBoundExitMarker) return;
+      hasBoundExitMarker = true;
+
+      // 主动刷新/关闭/离开页面时打标；异常中断通常不会触发，可保留恢复能力
+      window.addEventListener("beforeunload", markIntentionalExit);
+      window.addEventListener("pagehide", markIntentionalExit);
+    }
+
+    function consumeIntentionalExitMark(): boolean {
+      if (typeof window === "undefined") return false;
+      const hasMark = sessionStorage.getItem(INTENTIONAL_EXIT_MARK_KEY) === "1";
+      if (hasMark) {
+        sessionStorage.removeItem(INTENTIONAL_EXIT_MARK_KEY);
+      }
+      return hasMark;
+    }
+
     /**
      * 墙钟校准 + 若已过则走与 tick 相同的完成分支；刷新后补挂 interval。
      */
     function reconcilePhaseFromWallClock(): void {
+      if (consumeIntentionalExitMark()) {
+        safeInvalidateTimer();
+        return;
+      }
+
       if (pomodoroState.value === "idle") {
         clearPhaseInterval();
         return;
@@ -412,6 +445,8 @@ export const useTimerStore = defineStore(
       },
       { deep: true },
     );
+
+    bindIntentionalExitMarker();
 
     /** 结束音可能因 Web Audio 链路挂起而永不 settle；必须仍能 reset，否则 squash / 停止无效 */
     const CANCEL_CUE_MAX_MS = 5000;
