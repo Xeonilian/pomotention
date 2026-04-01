@@ -93,7 +93,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { readDir } from "@tauri-apps/plugin-fs";
 import { join } from "@tauri-apps/api/path";
 import { handleFileImport, type ImportReport } from "@/services/mergeService";
-import { xhrFetch } from "@/utils/xhrFetch";
+import { appHttpFetch } from "@/utils/appHttpFetch";
 
 const localVersion = ref("");
 const checkVersion = isTauri();
@@ -153,8 +153,7 @@ const openRelease = () => {
 // 检查云端 release 及连通性
 async function checkRemoteRelease() {
   try {
-    const doRequest = import.meta.env.PROD && isTauri() ? xhrFetch : fetch;
-    const resp = await doRequest("https://api.github.com/repos/Xeonilian/pomotention/releases/latest", {
+    const resp = await appHttpFetch("https://api.github.com/repos/Xeonilian/pomotention/releases/latest", {
       headers: {
         Accept: "application/vnd.github.v3+json",
         "User-Agent": "Pomotention-App",

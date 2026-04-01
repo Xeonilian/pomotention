@@ -6,7 +6,9 @@
           <n-descriptions label-placement="left" :column="1" bordered size="small">
             <n-descriptions-item label="版本">{{ appVer }}</n-descriptions-item>
             <n-descriptions-item label="运行环境">{{ isTauri() ? "桌面应用(Tauri)" : "Web" }}</n-descriptions-item>
-            <n-descriptions-item label="打开方式">{{ isStandalone ? "PWA" : "浏览器标签页" }}</n-descriptions-item>
+            <n-descriptions-item label="打开方式">{{ openModeLabel }}</n-descriptions-item>
+            <n-descriptions-item label="系统">{{ generalSystemLine }}</n-descriptions-item>
+            <n-descriptions-item label="浏览器">{{ generalBrowserLine }}</n-descriptions-item>
             <n-descriptions-item label="登录状态">{{ syncStore.isLoggedIn ? "已登录" : "未登录" }}</n-descriptions-item>
             <n-descriptions-item label="当前用户">{{ userEmail }}</n-descriptions-item>
             <n-descriptions-item label="同步状态">{{ syncStore.syncMessage }}</n-descriptions-item>
@@ -337,6 +339,8 @@ import { clearAllAppStorage } from "../services/localStorageService";
 import { clearLocalData } from "@/services/downloadService";
 import { downloadAllWithDiagnostics } from "@/services/sync";
 import { isSupabaseEnabled } from "@/core/services/supabase";
+import { getAppHttpFetchSnapshot } from "@/utils/appHttpFetch";
+import { xhrFetch } from "@/utils/xhrFetch";
 import { useDevice } from "@/composables/useDevice";
 import { usePwaInstall } from "@/composables/usePwaInstall";
 import { copyTextToClipboard } from "@/utils/clipboard";
@@ -541,6 +545,16 @@ async function copyAudioDebugLogs() {
 const device = useDevice();
 const { isIOS: pwaIsIOS, isStandalone } = usePwaInstall();
 
+/** Tauri 非 PWA standalone，不能与「浏览器标签页」混为一谈 */
+const openModeLabel = computed(() => {
+  if (isTauri()) return "桌面窗口（Tauri 内嵌 WebView）";
+  if (isStandalone.value) return "PWA（独立窗口）";
+  return "浏览器标签页";
+});
+
+const generalSystemLine = ref("-");
+const generalBrowserLine = ref("-");
+
 const uaString = ref("");
 const raw = ref({ iphone: false, ipad: false, ipod: false, anyIos: false });
 const envText = ref("");
@@ -553,6 +567,90 @@ const NET_SUPA = "https://supabase.com/";
 const NET_BAIDU = "https://www.baidu.com/";
 const NET_GITHUB = "https://github.com/";
 const NET_GOOGLE = "https://www.google.com/";
+/** 与 appHttpFetch 一致：fetch，不成再 xhr（GitHub API） */
+const NET_GITHUB_RELEASE_API = "https://api.github.com/repos/Xeonilian/pomotention/releases/latest";
+
+/** 带 Abort 的超时探测 */
+async function pingWithAbort(
+  label: "fetch",
+  url: string,
+  init: RequestInit,
+  timeoutMs: number,
+  exec: (url: string, merged: RequestInit) => Promise<Response>,
+): Promise<{ line: string; ok: boolean }> {
+  const ctl = new AbortController();
+  const timer = window.setTimeout(() => ctl.abort(), timeoutMs);
+  const started = performance.now();
+  try {
+    const resp = await exec(url, { ...init, signal: ctl.signal });
+    window.clearTimeout(timer);
+    const ms = Math.round(performance.now() - started);
+    if (resp.ok) return { line: `${label}: ok http ${resp.status} (${ms}ms)`, ok: true };
+    return { line: `${label}: fail http ${resp.status} (${ms}ms)`, ok: false };
+  } catch (e: any) {
+    window.clearTimeout(timer);
+    const ms = Math.round(performance.now() - started);
+    const msg = e?.name === "AbortError" ? "timeout" : (e?.message ?? "failed");
+    return { line: `${label}: fail (${msg}) (${ms}ms)`, ok: false };
+  }
+}
+
+/** xhrFetch 无 signal，仅用 Promise.race 做超时 */
+async function pingXhrOnly(url: string, init: RequestInit, timeoutMs: number): Promise<{ line: string; ok: boolean }> {
+  const started = performance.now();
+  try {
+    const resp = (await Promise.race([
+      xhrFetch(url, init),
+      new Promise<never>((_, rej) => window.setTimeout(() => rej(new Error("timeout")), timeoutMs)),
+    ])) as Response;
+    const ms = Math.round(performance.now() - started);
+    if (resp.ok) return { line: `xhr: ok http ${resp.status} (${ms}ms)`, ok: true };
+    return { line: `xhr: fail http ${resp.status} (${ms}ms)`, ok: false };
+  } catch (e: any) {
+    const ms = Math.round(performance.now() - started);
+    const msg = e?.message === "timeout" ? "timeout" : (e?.message ?? "failed");
+    return { line: `xhr: fail (${msg}) (${ms}ms)`, ok: false };
+  }
+}
+
+/** 跨域：fetch → xhr，与 appHttpFetch 一致（无 fetchCORS 插件） */
+async function buildCrossOriginTransportCascadeLines(timeoutMs = 8000): Promise<string[]> {
+  const init: RequestInit = {
+    method: "GET",
+    headers: {
+      Accept: "application/vnd.github.v3+json",
+      "User-Agent": "Pomotention-EnvDiag",
+    },
+  };
+  const lines: string[] = [
+    `[cross_origin_cascade] ${NET_GITHUB_RELEASE_API}`,
+    "  顺序: fetch → xhr；fetch 已 2xx 则不再测 xhr。",
+  ];
+
+  const r1 = await pingWithAbort("fetch", NET_GITHUB_RELEASE_API, init, timeoutMs, (u, i) => fetch(u, i));
+  lines.push(`  ${r1.line}`);
+  if (r1.ok) {
+    lines.push("  chosen_for_cross_origin: fetch");
+    return lines;
+  }
+
+  const r2 = await pingXhrOnly(NET_GITHUB_RELEASE_API, init, timeoutMs);
+  lines.push(`  ${r2.line}`);
+  lines.push(r2.ok ? "  chosen_for_cross_origin: xhr" : "  chosen_for_cross_origin: (none)");
+
+  return lines;
+}
+
+function buildAppHttpFetchDiagLines(): string[] {
+  const s = getAppHttpFetchSnapshot();
+  return [
+    "[app_http_fetch]",
+    `  viteProd: ${s.viteProd}`,
+    `  isTauri: ${s.isTauri}`,
+    `  macDesktopUa: ${s.macDesktopUa}`,
+    `  transport: ${s.transport}`,
+  ];
+}
 
 function uaBrief(ua: string) {
   const s = ua.toLowerCase();
@@ -575,6 +673,112 @@ function uaBrief(ua: string) {
           ? "firefox"
           : "other";
   return { os, browser };
+}
+
+/** UA 中的系统族名 → 展示用中文 */
+function osDisplayNameKey(os: string): string {
+  const map: Record<string, string> = {
+    windows: "Windows",
+    mac: "macOS",
+    ios: "iOS",
+    android: "Android",
+    other: "其他",
+  };
+  return map[os] ?? os;
+}
+
+/** 从 UA 尽量解析系统版本号（无则空串） */
+function formatOsVersionFromUa(ua: string): string {
+  if (!ua) return "";
+  const win = /Windows NT ([\d.]+)/i.exec(ua);
+  if (win) {
+    const v = win[1];
+    return v === "10.0" ? "NT 10.0（Windows 10/11）" : `NT ${v}`;
+  }
+  const mac = /Mac OS X ([\d_]+)/i.exec(ua);
+  if (mac) return mac[1].replace(/_/g, ".");
+  const ios = /CPU (?:iPhone )?OS ([\d_]+)/i.exec(ua);
+  if (ios) return ios[1].replace(/_/g, ".");
+  const android = /Android ([\d.]+)/i.exec(ua);
+  if (android) return android[1];
+  if (/Linux x86_64/i.test(ua)) return "x86_64";
+  if (/Linux armv/i.test(ua)) return "ARM";
+  return "";
+}
+
+/** 从 UA 解析浏览器产品名与主版本（Tauri WebView 多为 Chromium / WebKit） */
+function formatBrowserProductFromUa(ua: string): string {
+  if (!ua) return "";
+  if (/Edg\//i.test(ua)) {
+    const m = /Edg\/([\d.]+)/i.exec(ua);
+    return m ? `Edge ${m[1].split(".")[0]}` : "Edge";
+  }
+  if (/OPR\//i.test(ua)) {
+    const m = /OPR\/([\d.]+)/.exec(ua);
+    return m ? `Opera ${m[1].split(".")[0]}` : "Opera";
+  }
+  if (/Firefox\//i.test(ua)) {
+    const m = /Firefox\/([\d.]+)/.exec(ua);
+    return m ? `Firefox ${m[1]}` : "Firefox";
+  }
+  if (/\bwv\b/i.test(ua)) return "系统 WebView";
+  if (/Chrome\//i.test(ua) && !/Edg/i.test(ua)) {
+    const m = /Chrome\/([\d.]+)/.exec(ua);
+    return m ? `Chromium ${m[1].split(".")[0]}` : "Chromium";
+  }
+  if (/Safari\//i.test(ua) && !/Chrome/i.test(ua)) {
+    const m = /Version\/([\d.]+)/.exec(ua);
+    return m ? `Safari ${m[1]}` : "Safari (WebKit)";
+  }
+  return "";
+}
+
+function buildSystemDisplayFromUa(ua: string): string {
+  const b = uaBrief(ua);
+  const ver = formatOsVersionFromUa(ua);
+  const name = osDisplayNameKey(b.os);
+  return ver ? `${name}（${ver}）` : name;
+}
+
+function buildBrowserDisplayFromUa(ua: string): string {
+  const detail = formatBrowserProductFromUa(ua);
+  if (detail) return detail;
+  const b = uaBrief(ua);
+  return b.browser;
+}
+
+/** 通用信息区：系统 / 浏览器；Chromium 系可再补 Client Hints */
+function refreshGeneralEnvDisplay() {
+  const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
+  generalSystemLine.value = ua ? buildSystemDisplayFromUa(ua) : "-";
+  generalBrowserLine.value = ua ? buildBrowserDisplayFromUa(ua) : "-";
+
+  const nav = navigator as Navigator & {
+    userAgentData?: {
+      brands?: { brand: string; version: string }[];
+      platform?: string;
+      getHighEntropyValues?: (keys: string[]) => Promise<Record<string, unknown>>;
+    };
+  };
+  const uad = nav.userAgentData;
+  if (!uad?.getHighEntropyValues) return;
+  void uad
+    .getHighEntropyValues(["fullVersionList", "platformVersion"])
+    .then((h) => {
+      const fvl = h.fullVersionList as { brand: string; version: string }[] | undefined;
+      if (fvl?.length) {
+        const main =
+          fvl.find((x) => /Chrome|Chromium|Microsoft Edge|Opera|Firefox|Safari/i.test(x.brand) && !/Not/i.test(x.brand)) ??
+          fvl[fvl.length - 1];
+        if (main) generalBrowserLine.value = `${main.brand} ${main.version}`;
+      }
+      const pv = h.platformVersion as string | undefined;
+      if (pv && uad.platform) {
+        const b = uaBrief(ua);
+        generalSystemLine.value = `${osDisplayNameKey(b.os)}（${uad.platform} ${pv}）`;
+      }
+    })
+    .catch(() => {});
 }
 
 function buildEnvMasked(src: string) {
@@ -619,9 +823,11 @@ async function runEnvDiag() {
     const lang = typeof navigator !== "undefined" ? navigator.language : "unknown";
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "unknown";
     const runtime = isTauri() ? "tauri" : "web";
-    const mode = isStandalone.value ? "pwa" : "tab";
+    const mode = isTauri() ? "tauri" : isStandalone.value ? "pwa" : "tab";
     const supa = supabaseEnabled ? "on" : "off";
     const localOnly = settingStore.settings.localOnlyMode ? "on" : "off";
+
+    const cascadeLines = await buildCrossOriginTransportCascadeLines(8000);
 
     const tests = await Promise.all([
       testUrl(`app (${NET_APP})`, NET_APP),
@@ -648,7 +854,14 @@ async function runEnvDiag() {
       `tz: ${tz}`,
       `sw: ${swSupported ? "yes" : "no"} / ctrl: ${swControlled ? "yes" : "no"}`,
       `supa: ${supa} / localOnly: ${localOnly}`,
+      `vite_PROD: ${import.meta.env.PROD}`,
+      `system_display: ${buildSystemDisplayFromUa(ua)}`,
+      `browser_display: ${buildBrowserDisplayFromUa(ua)}`,
       `ua: ${ua || "(empty)"}`,
+      "",
+      ...buildAppHttpFetchDiagLines(),
+      "",
+      ...cascadeLines,
       "",
       "[net]",
       ...tests,
@@ -710,6 +923,7 @@ onMounted(() => {
 });
 
 async function refreshGeneral() {
+  refreshGeneralEnvDisplay();
   await syncStore.checkLoginStatus();
   try {
     const user = await getCurrentUser();
@@ -895,7 +1109,7 @@ function handleFactoryReset() {
   font-size: 11px;
   padding: 1px 4px;
   border-radius: 4px;
-  background: var(--n-color-target);
+  background: var(--color-blue-light);
   border: 1px solid var(--n-border-color);
 }
 

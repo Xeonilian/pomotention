@@ -1,8 +1,8 @@
 // src/core/services/supabase.ts
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { isTauri } from "@tauri-apps/api/core";
 import { useSettingStore } from "@/stores/useSettingStore";
+import { appHttpFetch, shouldUseMacPackagedXhr } from "@/utils/appHttpFetch";
 
 // 从环境变量中获取 Supabase 的 URL 和 anon key
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -17,12 +17,6 @@ if (import.meta.env.MODE !== "production") {
 }
 
 let supabaseInstance: SupabaseClient | null = null;
-
-type TransportMode = "fetchCORS" | "fetch" | "xhr";
-
-type TauriWindowWithFetchCORS = Window & {
-  fetchCORS?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
-};
 
 function supabaseLog(message: string, payload?: Record<string, unknown>): void {
   console.log("[H14][supabase]", message, payload ?? {});
@@ -49,101 +43,14 @@ function toHeaderKeys(init?: RequestInit): string[] {
   }
 }
 
-async function xhrFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-  const requestUrl =
-    typeof input === "string" ? input : input instanceof URL ? input.toString() : (input as Request).url;
-  const method = init?.method ?? "GET";
-  const headers = new Headers(init?.headers);
-  const body = init?.body;
-
-  return new Promise<Response>((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    xhr.open(method, requestUrl, true);
-    xhr.responseType = "text";
-
-    headers.forEach((value, key) => xhr.setRequestHeader(key, value));
-
-    xhr.onerror = () => reject(new Error("XHR_NETWORK_ERROR"));
-    xhr.ontimeout = () => reject(new Error("XHR_TIMEOUT"));
-
-    xhr.onload = () => {
-      const rawHeaders = xhr.getAllResponseHeaders();
-      const responseHeaders = new Headers();
-
-      rawHeaders
-        .trim()
-        .split(/[\r\n]+/)
-        .forEach((line) => {
-          if (!line) return;
-          const index = line.indexOf(":");
-          if (index <= 0) return;
-          const key = line.slice(0, index).trim();
-          const value = line.slice(index + 1).trim();
-          responseHeaders.append(key, value);
-        });
-
-      resolve(
-        new Response(xhr.responseText ?? "", {
-          status: xhr.status,
-          statusText: xhr.statusText,
-          headers: responseHeaders,
-        }),
-      );
-    };
-
-    if (body == null) return xhr.send();
-    if (typeof body === "string" || body instanceof Blob || body instanceof ArrayBuffer || body instanceof FormData) {
-      return xhr.send(body);
-    }
-    xhr.send(String(body));
-  });
-}
-
 if (supabaseUrl && supabaseAnonKey) {
-  const isTauriProd = import.meta.env.PROD && isTauri();
-  const win = typeof window !== "undefined" ? (window as TauriWindowWithFetchCORS) : undefined;
-  const hasFetchCORS = typeof win?.fetchCORS === "function";
   // 默认仅输出关键日志，避免每个请求都刷屏；需要逐请求日志时可设为 1/true
   const verboseFetchLog = ["1", "true"].includes(String(import.meta.env.VITE_SUPABASE_FETCH_LOG ?? "").trim().toLowerCase());
-  const transportOverride = String(import.meta.env.VITE_SUPABASE_TRANSPORT ?? "")
-    .trim()
-    .toLowerCase();
 
-  const selectedTransport: TransportMode =
-    transportOverride === "fetchcors" || transportOverride === "cors"
-      ? "fetchCORS"
-      : transportOverride === "fetch"
-        ? "fetch"
-        : transportOverride === "xhr"
-          ? "xhr"
-          : isTauriProd
-            ? "xhr"
-            : "fetch";
+  supabaseLog("transport selected", { transport: shouldUseMacPackagedXhr() ? "xhr" : "fetch" });
 
-  const effectiveTransport: TransportMode =
-    selectedTransport === "fetchCORS" && !(isTauriProd && hasFetchCORS) ? "fetch" : selectedTransport;
-
-  supabaseLog("transport selected", {
-    selectedTransport: effectiveTransport,
-    isTauriProd,
-    hasFetchCORS,
-    transportOverride: transportOverride || null,
-  });
-
-  if (selectedTransport === "fetchCORS" && effectiveTransport === "fetch") {
-    supabaseLog("transport fallback to fetch", {
-      reason: "fetchCORS unavailable",
-      isTauriProd,
-      hasFetchCORS,
-      transportOverride: transportOverride || null,
-    });
-  }
-
-  const performFetchWithTimeout = async (
-    input: RequestInfo | URL,
-    init: RequestInit | undefined,
-    transport: TransportMode,
-  ): Promise<Response> => {
+  const performFetchWithTimeout = async (input: RequestInfo | URL, init: RequestInit | undefined): Promise<Response> => {
+    const transport = shouldUseMacPackagedXhr() ? "xhr" : "fetch";
     const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
     const headerKeys = toHeaderKeys(init);
     const bodySummary = summarizeRequestBody(init?.body);
@@ -158,12 +65,7 @@ if (supabaseUrl && supabaseAnonKey) {
       });
     }
 
-    const doFetch =
-      transport === "fetchCORS"
-        ? win!.fetchCORS!(input, init)
-        : transport === "xhr"
-          ? xhrFetch(input, init)
-          : fetch(input, init);
+    const doFetch = appHttpFetch(input, init);
 
     const timeoutMs = 10000;
     let timeoutId: number | undefined;
@@ -198,9 +100,7 @@ if (supabaseUrl && supabaseAnonKey) {
       detectSessionInUrl: true,
     },
     global: {
-      fetch: async (input, init) => {
-        return performFetchWithTimeout(input, init, effectiveTransport);
-      },
+      fetch: async (input, init) => performFetchWithTimeout(input, init),
     },
   });
 
