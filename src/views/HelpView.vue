@@ -28,13 +28,13 @@
           class="switch-button"
           :title="settingStore.settings.checkForUpdate ? '关闭更新' : '启动更新'"
         />
-        <n-button @click="handleImport" size="small" type="info" secondary title="导入数据">
+        <!-- <n-button @click="handleImport" size="small" type="info" secondary title="导入数据">
           <template #icon>
             <n-icon>
               <DocumentHeaderArrowDown20Regular />
             </n-icon>
           </template>
-        </n-button>
+        </n-button> -->
       </div>
 
       <div class="help-info">
@@ -93,6 +93,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { readDir } from "@tauri-apps/plugin-fs";
 import { join } from "@tauri-apps/api/path";
 import { handleFileImport, type ImportReport } from "@/services/mergeService";
+import { xhrFetch } from "@/utils/xhrFetch";
 
 const localVersion = ref("");
 const checkVersion = isTauri();
@@ -128,7 +129,7 @@ watch(
       checkRemoteRelease();
     } else {
     }
-  }
+  },
 );
 
 // 统一的打开网页方法
@@ -152,7 +153,8 @@ const openRelease = () => {
 // 检查云端 release 及连通性
 async function checkRemoteRelease() {
   try {
-    const resp = await fetch("https://api.github.com/repos/Xeonilian/pomotention/releases/latest", {
+    const doRequest = import.meta.env.PROD && isTauri() ? xhrFetch : fetch;
+    const resp = await doRequest("https://api.github.com/repos/Xeonilian/pomotention/releases/latest", {
       headers: {
         Accept: "application/vnd.github.v3+json",
         "User-Agent": "Pomotention-App",
