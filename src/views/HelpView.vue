@@ -28,13 +28,6 @@
           class="switch-button"
           :title="settingStore.settings.checkForUpdate ? '关闭更新' : '启动更新'"
         />
-        <!-- <n-button @click="handleImport" size="small" type="info" secondary title="导入数据">
-          <template #icon>
-            <n-icon>
-              <DocumentHeaderArrowDown20Regular />
-            </n-icon>
-          </template>
-        </n-button> -->
       </div>
 
       <div class="help-info">
@@ -85,14 +78,9 @@
 import { ref, onMounted } from "vue";
 import { getVersion } from "@tauri-apps/api/app";
 import { isTauri } from "@tauri-apps/api/core";
-import { NTag, NSwitch, NButton } from "naive-ui";
+import { NTag, NSwitch } from "naive-ui";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { watch } from "vue";
-import { DocumentHeaderArrowDown20Regular } from "@vicons/fluent";
-import { open } from "@tauri-apps/plugin-dialog";
-import { readDir } from "@tauri-apps/plugin-fs";
-import { join } from "@tauri-apps/api/path";
-import { handleFileImport, type ImportReport } from "@/services/mergeService";
 import { appHttpFetch } from "@/utils/appHttpFetch";
 
 const localVersion = ref("");
@@ -168,24 +156,6 @@ async function checkRemoteRelease() {
     remoteVersion.value = "(获取失败)";
     remoteOk.value = false;
   }
-}
-
-const importReport = ref<ImportReport | null>(null);
-async function handleImport() {
-  importReport.value = null;
-  const dirPath = await open({ directory: true, multiple: false });
-  if (!dirPath || typeof dirPath !== "string") return;
-
-  const entries = await readDir(dirPath);
-  const filePaths: { [key: string]: string } = {}; // key 是文件名，value 是完整路径
-
-  for (const entry of entries) {
-    if (entry.name && entry.name.toLowerCase().endsWith(".json")) {
-      const fullPath = await join(dirPath, entry.name);
-      filePaths[entry.name] = fullPath;
-    }
-  }
-  importReport.value = await handleFileImport(filePaths);
 }
 </script>
 
