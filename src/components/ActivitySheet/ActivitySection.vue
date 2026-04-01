@@ -1056,6 +1056,7 @@ function handlePomoInputTouchCancel(item: Activity) {
   scrollbar-gutter: stable;
   overflow-y: auto;
   overflow-x: hidden;
+  height: 100%;
 }
 
 .activity-row {
