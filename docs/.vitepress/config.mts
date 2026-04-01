@@ -20,6 +20,7 @@ export default defineConfig({
 
     nav: [
       { text: "首页", link: "/" },
+      { text: "5 分钟上手", link: "/5-minutes-quick-start" },
       { text: "快速开始", link: "/getting-started" },
       { text: "使用说明", link: "/guide/" },
       { text: "GitHub", link: "https://github.com/Xeonilian/pomotention" },
@@ -30,6 +31,7 @@ export default defineConfig({
         text: "简介",
         items: [
           { text: "什么是Pomotention？", link: "/what-is-pomotention" },
+          { text: "5 分钟快速上手", link: "/5-minutes-quick-start" },
           { text: "快速开始", link: "/getting-started" },
         ],
       },

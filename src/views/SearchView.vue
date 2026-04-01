@@ -76,7 +76,7 @@
           </template>
         </n-button>
       </div>
-      <div class="titles">
+      <div class="title-list">
         <div
           v-for="row in filteredActivities"
           :key="'act-' + row.activityId"
@@ -511,7 +511,7 @@ const formatMMDD = (ts?: number) => (ts ? new Date(ts).toLocaleDateString(undefi
   margin-right: 8px;
 }
 
-.titles {
+.title-list {
   overflow: auto;
   margin-top: 6px;
 }
@@ -519,9 +519,8 @@ const formatMMDD = (ts?: number) => (ts ? new Date(ts).toLocaleDateString(undefi
 .title-item {
   display: flex;
   align-items: center;
-  white-space: nowrap;
+  min-width: 0;
   overflow: hidden;
-  text-overflow: ellipsis;
   padding: 2px 4px;
   margin-right: 4px;
   cursor: pointer;
@@ -538,11 +537,17 @@ const formatMMDD = (ts?: number) => (ts ? new Date(ts).toLocaleDateString(undefi
   flex-shrink: 0;
 }
 
+/* 空间不足时：标题先省略 → 标签区再裁 → 日期最后才消失（避免整行 overflow 从右侧先裁掉日期） */
 .tag-renderer-container {
   display: flex;
   margin-left: 4px;
+  min-width: 0;
   overflow: hidden;
-  flex-shrink: 1;
+}
+
+.tag-renderer-container :deep(.tag-container) {
+  flex-wrap: nowrap;
+  overflow: hidden;
   min-width: 0;
 }
 
@@ -550,9 +555,10 @@ const formatMMDD = (ts?: number) => (ts ? new Date(ts).toLocaleDateString(undefi
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  flex-shrink: 1;
+  flex: 1 1 0%;
   min-width: 0;
   margin-left: 2px;
+  flex-shrink: 10;
 }
 
 .title-item .right-info {
@@ -561,7 +567,6 @@ const formatMMDD = (ts?: number) => (ts ? new Date(ts).toLocaleDateString(undefi
   margin-left: auto;
   flex: 0 1 auto;
   min-width: 0;
-  overflow: hidden;
 }
 
 .title-item .right-info-left {
@@ -569,7 +574,8 @@ const formatMMDD = (ts?: number) => (ts ? new Date(ts).toLocaleDateString(undefi
   align-items: center;
   min-width: 0;
   overflow: hidden;
-  flex: 1 1 auto;
+  flex: 1 1 0%;
+  flex-shrink: 1;
 }
 
 .title-item .right-info .n-icon {
@@ -582,6 +588,7 @@ const formatMMDD = (ts?: number) => (ts ? new Date(ts).toLocaleDateString(undefi
   font-variant-numeric: tabular-nums;
   flex-shrink: 0;
   white-space: nowrap;
+  font-size: 12px;
 }
 
 .title-item.active {
@@ -595,13 +602,6 @@ const formatMMDD = (ts?: number) => (ts ? new Date(ts).toLocaleDateString(undefi
 
 .title-item.todo {
   border-left: 4px solid var(--color-blue);
-}
-
-.title-item .date {
-  margin-left: 4px;
-  color: var(--color-text-secondary);
-  font-variant-numeric: tabular-nums;
-  flex-shrink: 0;
 }
 
 .star-on {
@@ -673,7 +673,7 @@ const formatMMDD = (ts?: number) => (ts ? new Date(ts).toLocaleDateString(undefi
   }
 
   .right-pane {
-    padding: 6px 0px;
+    padding: 6px 4px;
   }
 }
 </style>

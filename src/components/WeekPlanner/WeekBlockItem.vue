@@ -11,7 +11,6 @@
     :style="{
       ...itemBlockStyle,
       borderLeftColor: firstTagBackgroundColor || getDefaultBorderColor(),
-      borderLeft: 'none !important',
     }"
     @click.stop="handleClick"
   >
@@ -225,7 +224,8 @@ const handleClick = () => {
 /* 区分todo和schedule的样式 - border-left颜色现在通过动态样式设置 */
 .time-block--todo,
 .time-block--schedule {
-  border-left: 6px solid;
+  border-left: 5px solid;
+  padding-left: 2px;
 }
 
 .item .title {
@@ -351,6 +351,7 @@ const handleClick = () => {
   .time-block--todo,
   .time-block--schedule {
     border-left: 4px solid;
+    padding-left: 2px;
   }
   .tag-renderer {
     display: none;

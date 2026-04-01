@@ -1,325 +1,140 @@
-# 帮助文档部署流程
+# 帮助文档部署流程（收敛版）
 
-## 概述
+## 1. 目的与范围
 
-帮助文档使用 VitePress 构建，支持三路部署方案：
+本文档只描述当前已经生效、可复现的流程，并补充后续收敛目标。
 
-1. **GitHub Pages**：部署到 `gh-pages` 分支，base: `/pomotention/`
-2. **Cloudflare Pages**：部署到 `pomotention.pages.dev/help`，base: `/help`
-3. **本地 APP**：Tauri 应用内嵌文档，使用相对路径 base: `/`
+- 主站（Web/PWA）部署：Cloudflare Pages
+- 帮助文档（VitePress）部署：`docs:deploy:github` 发布到 GitHub Pages
+- 应用内 `HelpView`：站内页面，文档按钮外链到文档站点
 
-每次通过 Pull Request 合并到 `main` 分支时，GitHub Pages 和 Cloudflare Pages 会自动检测并部署更新。
+## 2. 当前生效流程（As-Is）
 
-**重要说明**：
+### 2.1 谁在部署什么
 
-- **网页版**：优先使用 Cloudflare Pages 在线文档（始终最新）
-- **桌面版（Tauri）**：优先使用本地打包的文档（离线可用），fallback 到在线版本
-- **版本信息**：直接写在页面上，不需要动态获取
+1. **Cloudflare Pages** 部署的是主站应用（`https://pomotention.pages.dev/`）。
+2. `/help` 当前是应用路由页面（`HelpView`），不是独立的 VitePress 文档站。
+3. **帮助文档更新** 通过手动命令发布到 GitHub Pages。
 
-## 文档结构
+### 2.2 文档发布命令（当前唯一可用口径）
 
-- **文档目录**：`docs/`
-- **配置文件**：`docs/.vitepress/config.mts`
-- **构建输出**：`docs/.vitepress/dist/`
-- **访问地址**：
-  - GitHub Pages: https://xeonilian.github.io/pomotention/
-  - Cloudflare Pages: https://pomotention.pages.dev/help/
-  - 本地 APP: `./docs/index.html` (相对路径)
-
-## 多环境配置
-
-### VitePress 配置
-
-文档通过环境变量 `VITEPRESS_BASE` 动态设置 base 路径：
-
-```typescript
-// docs/.vitepress/config.mts
-const base = process.env.VITEPRESS_BASE || "/pomotention/";
-```
-
-各环境的 base 配置：
-- **GitHub Pages**: `/pomotention/` (默认)
-- **Cloudflare Pages**: `/help`
-- **本地 APP**: `/` (相对路径)
-
-### 构建脚本
-
-`docs/package.json` 中提供了多个构建脚本：
+文档项目脚本位于 `docs/package.json`：
 
 ```json
 {
   "scripts": {
-    "docs:dev": "vitepress dev",
-    "docs:build": "vitepress build",                    // GitHub Pages (base: /pomotention/)
-    "docs:build:cloudflare": "vitepress build",         // Cloudflare Pages (base: /help)
-    "docs:build:local": "vitepress build",              // 本地 APP (base: /)
-    "docs:preview": "vitepress preview",
     "docs:deploy:github": "vitepress build && npx gh-pages -d .vitepress/dist"
   }
 }
 ```
 
-构建命令示例：
-
-```bash
-# GitHub Pages (默认)
-cd docs && pnpm docs:build
-
-# Cloudflare Pages
-cd docs && VITEPRESS_BASE=/help pnpm docs:build:cloudflare
-
-# 本地 APP
-cd docs && VITEPRESS_BASE=/ pnpm docs:build:local
-```
-
-## 本地开发
-
-### 安装依赖
+执行方式：
 
 ```bash
 cd docs
 pnpm install
+pnpm docs:deploy:github
 ```
 
-### 启动开发服务器
+发布成功后，文档站地址为：<https://xeonilian.github.io/pomotention/>
+
+## 3. 为什么会出现“主站更新但帮助不更新”
+
+因为当前是两条独立链路：
+
+- 链路 A：`main` 变更触发 Cloudflare 自动部署主站
+- 链路 B：手动执行 `docs:deploy:github` 才会更新文档站
+
+所以即使主站已更新，帮助文档也可能保持旧版本。
+
+## 4. 日常操作 SOP（初学者简版）
+
+### 4.1 更新帮助文档
+
+在 `docs/` 下修改 Markdown 或 VitePress 配置。
+
+### 4.2 本地预览（可选但推荐）
 
 ```bash
+cd docs
+pnpm install
 pnpm docs:dev
 ```
 
-开发服务器会在 `http://localhost:5173` 启动，支持热重载。
+本地访问：<http://localhost:5173>
 
-### 预览构建结果
-
-```bash
-# 预览 GitHub Pages 版本
-pnpm docs:build
-pnpm docs:preview
-
-# 预览 Cloudflare Pages 版本
-VITEPRESS_BASE=/help pnpm docs:build:cloudflare
-pnpm docs:preview
-
-# 预览本地 APP 版本
-VITEPRESS_BASE=/ pnpm docs:build:local
-pnpm docs:preview
-```
-
-## 部署流程
-
-### 1. GitHub Pages 部署
-
-**自动部署（推荐）**：
-
-- 当 Pull Request 合并到 `main` 分支且包含 `docs/` 目录变更时，GitHub Actions 会自动触发
-- 工作流文件：`.github/workflows/docs-deploy.yml`
-- 触发条件：PR 合并到 `main` 分支（符合分支保护规则，不允许直接 push）
-- 构建命令：`cd docs && pnpm install && pnpm docs:build` (base: `/pomotention/`)
-- 自动推送到 `gh-pages` 分支
-- 访问地址：https://xeonilian.github.io/pomotention/
-
-**手动部署**：
+### 4.3 发布到线上文档站
 
 ```bash
 cd docs
 pnpm docs:deploy:github
 ```
 
-### 2. Cloudflare Pages 部署
+### 4.4 发布后验证
 
-**自动部署（推荐）**：
+1. 打开 <https://xeonilian.github.io/pomotention/>，确认修改已出现。
+2. 打开主站 `https://pomotention.pages.dev/` 的帮助入口，确认跳转到文档站正常。
+3. 如未更新，先强制刷新（`Ctrl + F5`）再检查一次。
 
-- 当 Pull Request 合并到 `main` 分支时，Cloudflare Pages 会自动检测并部署
-- 在 Cloudflare Dashboard 中配置：
-  - **构建命令**：`cd docs && pnpm install && VITEPRESS_BASE=/help pnpm docs:build:cloudflare`
-  - **构建输出目录**：`docs/.vitepress/dist`
-  - **根目录**：`/` (项目根目录)
-  - **Node 版本**：20
-  - **环境变量**：`VITEPRESS_BASE=/help`
-  - **自动部署触发**：Pull Request 合并到 `main` 分支
-- 访问地址：https://pomotention.pages.dev/help/
+## 5. 故障排查（按当前流程）
 
-**手动部署**：
+### 5.1 `docs:deploy:github` 执行失败
+
+- 检查 Node.js 与 pnpm 是否可用
+- 在 `docs/` 目录重新安装依赖：
 
 ```bash
 cd docs
-VITEPRESS_BASE=/help pnpm docs:build:cloudflare
-# 然后通过 Cloudflare Dashboard 或 wrangler 手动上传
+pnpm install
 ```
 
-### 3. 本地 APP 内嵌文档
+- 确认网络可访问 npm 与 GitHub
 
-**构建流程**：
+### 5.2 命令成功但线上文档没变化
 
-1. 在 Tauri 构建前，先构建文档（base: `/`）
-2. 将构建产物复制到 `public/docs/` 或 `dist/docs/`
-3. 应用中的 `useDocsUrl.ts` 会自动使用本地文档路径
+- 检查本次变更是否已保存并参与构建
+- 等待 1-3 分钟后再刷新
+- 强制刷新浏览器缓存
+- 直接访问文档 URL 验证，不通过应用内缓存页面判断
 
-**构建命令**：
+### 5.3 主站帮助入口与文档地址不一致
 
-```bash
-# 构建本地文档
-cd docs
-VITEPRESS_BASE=/ pnpm docs:build:local
+当前 `HelpView` 中文档地址为常量配置，若后续修改文档域名，需要同步更新：
 
-# 复制到应用目录（示例）
-cp -r docs/.vitepress/dist/* public/docs/
-```
+- `src/views/HelpView.vue`
+- （如有）`src/views/SettingView.vue` 中的文档链接常量
 
-**注意事项**：
+## 6. 当前不再作为默认事实的内容
 
-- 本地 APP 使用相对路径，确保离线可用
-- 文档路径：`./docs/index.html`
-- 需要在 Tauri 构建流程中集成文档构建步骤
+以下内容历史上可能尝试过，但**不作为当前默认流程**：
 
-## 在应用中的使用
+- “PR 合并后 GitHub Actions 自动部署 docs”
+- “Cloudflare 自动部署 `/help` 下的 VitePress 文档”
+- “主站与帮助文档始终同一时刻自动更新”
 
-### 文档 URL 获取策略
+只有当对应自动化配置在平台侧确认启用并验证通过后，才应写回本 SOP 的 As-Is 部分。
 
-应用通过 `src/composables/useDocsUrl.ts` 智能获取文档 URL：
+## 7. 后续收敛目标（To-Be）
 
-**优先级顺序**：
-1. 开发模式：本地 VitePress 开发服务器 (`http://localhost:5173`)
-2. 生产模式（Tauri）：本地打包的文档 (`./docs/index.html`)
-3. 生产模式（Web）：在线版本（优先 Cloudflare Pages，fallback 到 GitHub Pages）
+目标：将帮助文档并入 Cloudflare 的单链路发布，减少手动步骤。
 
-### 网页版
+### 7.1 目标状态
 
-- 使用 iframe 直接嵌入 Cloudflare Pages 文档
-- 用户无需离开应用即可查看帮助
-- 显示的是最新版本的文档
+- 对外统一入口：Cloudflare（主域名）
+- 主站和帮助文档由同一套发布策略管理
+- `gh-pages` 仅作为备份或历史镜像，不再作为主要发布依赖
 
-### 桌面版（Tauri）
+### 7.2 迁移前提
 
-- **优先使用本地打包的文档**（离线可用）
-- 如果本地文档不可用，fallback 到在线版本
-- 顶部显示当前应用版本号（从 `package.json` 读取）
-- 提供"下载更新"下拉菜单，支持多个下载源：
-  - GitHub Releases（默认）
-  - 码云 Gitee（备用，适合无法访问 GitHub 的用户）
-  - 可继续添加其他下载源
-- 提供"查看源码"按钮链接到 GitHub 仓库
+1. 明确文档最终路径（例如 `/help/` 或独立 docs 子域名）
+2. 在 Cloudflare Pages 中确认构建命令、输出目录、分支触发规则
+3. 应用内帮助入口改为 Cloudflare 文档地址
+4. 全链路验证通过后，再将本节提升为 As-Is
 
-## 注意事项
+## 8. 相关文件
 
-1. **路径一致性**：确保各环境的 base 配置正确，避免资源加载失败
-   - GitHub Pages: `/pomotention/`
-   - Cloudflare Pages: `/help`
-   - 本地 APP: `/` (相对路径)
-
-2. **构建顺序**：本地 APP 构建时，先构建文档再构建应用
-
-3. **缓存问题**：Cloudflare Pages 可能需要配置缓存规则
-
-4. **相对路径**：本地 APP 使用相对路径，确保离线可用
-
-5. **环境变量**：构建时通过 `VITEPRESS_BASE` 环境变量设置 base 路径
-
-6. **版本信息**：
-   - 不再动态获取版本号，直接从 `package.json` 读取
-   - 桌面版会在帮助页面顶部显示当前应用版本
-   - 版本号同步位置：`package.json`、`src-tauri/tauri.conf.json`、`src-tauri/Cargo.toml`
-
-7. **下载源管理**：
-   - 在 `src/views/HelpView.vue` 中的 `downloadOptions` 配置下载源
-   - 目前支持：GitHub Releases、码云 Gitee
-   - 添加新下载源只需在配置数组中添加新项
-
-8. **CI 检查**：GitHub Actions 会检查文档质量
-   - Markdown 语法检查
-   - 死链接检测
-   - 配置文件：`.github/workflows/docs-ci.yml`
-
-## 故障排查
-
-### 部署失败
-
-1. **GitHub Pages**：
-   - 检查 `.github/workflows/docs-deploy.yml` 工作流状态
-   - 确认仓库设置中已启用 GitHub Pages
-   - 检查构建日志中的错误信息
-
-2. **Cloudflare Pages**：
-   - 检查 Cloudflare Dashboard 中的构建日志
-   - 确认构建命令和输出目录配置正确
-   - 检查环境变量 `VITEPRESS_BASE` 是否设置正确
-   - 检查 `docs/package.json` 中的依赖是否完整
-
-### 本地构建失败
-
-1. 确认 Node.js 版本为 20
-2. 清理并重新安装依赖：
-   ```bash
-   cd docs
-   rm -rf node_modules
-   pnpm install
-   ```
-
-### 文档未更新
-
-1. 确认 Pull Request 已合并到 `main` 分支
-2. 检查 GitHub Actions 和 Cloudflare Dashboard 中的部署状态
-3. 清除浏览器缓存后刷新页面
-4. 检查 base 路径配置是否正确
-
-### 资源加载失败
-
-1. 检查 `docs/.vitepress/config.mts` 中的 base 配置
-2. 确认各环境的 base 路径与部署路径一致
-3. 检查静态资源路径是否正确（logo、favicon 等）
-
-## 发布流程总结
-
-### 1. 更新文档内容
-
-编辑 `docs/` 目录下的 Markdown 文件。
-
-### 2. 提交并推送
-
-```bash
-git add docs/
-git commit -m "docs: 更新帮助文档内容"
-git push origin main
-```
-
-### 3. 自动部署
-
-- **GitHub Pages**：GitHub Actions 会自动检测并部署，通常 2-3 分钟内完成
-- **Cloudflare Pages**：Cloudflare 会自动检测并部署，通常 1-2 分钟内完成
-
-### 4. 本地 APP 文档更新（如需要）
-
-如果同时发布新版本的应用：
-
-1. 构建本地文档：
-   ```bash
-   cd docs
-   VITEPRESS_BASE=/ pnpm docs:build:local
-   ```
-
-2. 复制文档到应用目录：
-   ```bash
-   cp -r docs/.vitepress/dist/* public/docs/
-   ```
-
-3. 更新应用版本号：
-   - `package.json`
-   - `src-tauri/tauri.conf.json`
-   - `src-tauri/Cargo.toml`
-
-4. 构建并发布应用：
-   - 参考 `docs/dev-log/SOP/release.md`
-
-5. 上传到多个平台：
-   - GitHub Releases（必需）
-   - 码云 Gitee（可选，适合国内用户）
-
-## 相关文件
-
-- `docs/package.json` - 文档项目的依赖和脚本
-- `docs/.vitepress/config.mts` - VitePress 配置文件（支持环境变量）
-- `.github/workflows/docs-deploy.yml` - GitHub Pages 部署工作流
-- `src/composables/useDocsUrl.ts` - 文档 URL 获取逻辑（支持三路部署）
-- `src/views/HelpView.vue` - 应用中的帮助页面组件
-- `.github/workflows/docs-ci.yml` - 文档 CI 检查工作流
-- `docs/dev-log/SOP/release.md` - 应用发布流程
+- `docs/package.json`：文档脚本（含 `docs:deploy:github`）
+- `docs/.vitepress/config.mts`：VitePress 配置
+- `src/views/HelpView.vue`：应用内帮助页与文档外链入口
+- `src/views/SettingView.vue`：设置页中的文档相关链接（如存在）
+- `docs/dev-log/SOP/release.md`：桌面端应用发布流程

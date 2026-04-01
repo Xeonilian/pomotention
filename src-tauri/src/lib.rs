@@ -119,8 +119,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())         
         .plugin(tauri_plugin_shell::init())     
-        .plugin(tauri_plugin_fs::init())       
-        .plugin(tauri_plugin_cors_fetch::init())    
+        .plugin(tauri_plugin_fs::init())
         .invoke_handler(tauri::generate_handler![chat_completion])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
