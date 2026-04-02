@@ -106,44 +106,65 @@ const emit = defineEmits<{
   (e: "enter-mini"): void;
 }>();
 
-// Android 上 calc(100vw/…) 放进 scale() 常不生效，用 visualViewport / innerWidth 写 --phone-scale 更稳
+// Android 上 calc(100vw/…) 放进 scale() 常不生效，用 visualViewport 写 --phone-scale 更稳；横屏需同时约束高度
 function readPhoneViewportWidthPx(): number {
   if (typeof window === "undefined") return 0;
   return window.visualViewport?.width ?? window.innerWidth;
 }
 
-const phoneViewportWidthPx = ref(0);
-
-function syncPhoneViewportWidth() {
-  if (!isPhoneMode.value) return;
-  phoneViewportWidthPx.value = readPhoneViewportWidthPx();
+function readPhoneViewportHeightPx(): number {
+  if (typeof window === "undefined") return 0;
+  return window.visualViewport?.height ?? window.innerHeight;
 }
 
-const phoneDesignWidthPx = computed(() => (settingStore.settings.isCompactMode ? 140 : 220));
+const phoneViewportWidthPx = ref(0);
+const phoneViewportHeightPx = ref(0);
+
+function syncPhoneVisualViewport() {
+  if (!isPhoneMode.value) return;
+  phoneViewportWidthPx.value = readPhoneViewportWidthPx();
+  phoneViewportHeightPx.value = readPhoneViewportHeightPx();
+}
+
+/** 与 reportSize 一致的设计尺寸，供 scale 按高宽双轴取 min */
+function getPhoneDesignSizePx(): { w: number; h: number } {
+  if (settingStore.settings.isCompactMode) return { w: 140, h: 70 };
+  if (props.showPomoSeq) {
+    return { w: 221, h: !isPomoSeqRunning.value ? 240 : 170 };
+  }
+  return { w: 221, h: 140 };
+}
 
 const phoneModeWrapperStyle = computed(() => {
   if (!isPhoneMode.value) return undefined;
   const w = phoneViewportWidthPx.value > 0 ? phoneViewportWidthPx.value : readPhoneViewportWidthPx();
-  const base = phoneDesignWidthPx.value;
-  const scale = base > 0 && w > 0 ? Math.max(w / base, 0.01) : 1;
-  return { "--phone-scale": String(scale) } as Record<string, string>;
+  const h = phoneViewportHeightPx.value > 0 ? phoneViewportHeightPx.value : readPhoneViewportHeightPx();
+  const { w: dw, h: dh } = getPhoneDesignSizePx();
+  const margin = 20;
+  const availW = Math.max(1, w - margin * 2);
+  const availH = Math.max(1, h - margin * 2);
+  const scaleW = dw > 0 ? availW / dw : 1;
+  const scaleH = dh > 0 ? availH / dh : 1;
+  const scale = Math.min(scaleW, scaleH, 80);
+  return { "--phone-scale": String(Math.max(scale, 0.01)) } as Record<string, string>;
 });
 
 watch(
   isPhoneMode,
   (phone) => {
     if (typeof window !== "undefined") {
-      window.removeEventListener("resize", syncPhoneViewportWidth);
-      window.visualViewport?.removeEventListener("resize", syncPhoneViewportWidth);
+      window.removeEventListener("resize", syncPhoneVisualViewport);
+      window.visualViewport?.removeEventListener("resize", syncPhoneVisualViewport);
     }
     if (!phone) {
       phoneViewportWidthPx.value = 0;
+      phoneViewportHeightPx.value = 0;
       return;
     }
-    syncPhoneViewportWidth();
+    syncPhoneVisualViewport();
     if (typeof window === "undefined") return;
-    window.addEventListener("resize", syncPhoneViewportWidth);
-    window.visualViewport?.addEventListener("resize", syncPhoneViewportWidth);
+    window.addEventListener("resize", syncPhoneVisualViewport);
+    window.visualViewport?.addEventListener("resize", syncPhoneVisualViewport);
   },
   { immediate: true },
 );
@@ -169,8 +190,7 @@ function reportSize() {
 
 // 挂载组件时报告尺寸
 onMounted(() => {
-  if (isPhoneMode.value) syncPhoneViewportWidth();
-  if (isPhoneMode.value) syncPhoneViewportWidth();
+  if (isPhoneMode.value) syncPhoneVisualViewport();
   reportSize();
 
   // 如果番茄钟正在运行且来自序列，恢复 pomoSeq 运行状态
@@ -182,14 +202,8 @@ onMounted(() => {
 
 onUnmounted(() => {
   if (typeof window === "undefined") return;
-  window.removeEventListener("resize", syncPhoneViewportWidth);
-  window.visualViewport?.removeEventListener("resize", syncPhoneViewportWidth);
-});
-
-onUnmounted(() => {
-  if (typeof window === "undefined") return;
-  window.removeEventListener("resize", syncPhoneViewportWidth);
-  window.visualViewport?.removeEventListener("resize", syncPhoneViewportWidth);
+  window.removeEventListener("resize", syncPhoneVisualViewport);
+  window.visualViewport?.removeEventListener("resize", syncPhoneVisualViewport);
 });
 
 // 监听所有影响尺寸的因素变化
@@ -379,6 +393,7 @@ function handlePomoSeqRunning(status: boolean) {
 .pomodoro-view-wrapper.is-phone-mode {
   width: 100vw;
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -390,9 +405,7 @@ function handlePomoSeqRunning(status: boolean) {
 }
 .pomodoro-view-wrapper.is-phone-mode .pomodoro-content-area {
   width: var(--phone-design-width);
-  /* --phone-scale 由脚本根据 visualViewport / innerWidth 写入，避免 Android 上纯 CSS calc+scale 不生效 */
-  transform: scale(var(--phone-scale, 1));
-  /* --phone-scale 由脚本根据 visualViewport / innerWidth 写入，避免 Android 上纯 CSS calc+scale 不生效 */
+  /* --phone-scale 由脚本按 visualViewport 宽高双轴写入 */
   transform: scale(var(--phone-scale, 1));
   transform-origin: center center;
   padding-bottom: calc(env(safe-area-inset-bottom));

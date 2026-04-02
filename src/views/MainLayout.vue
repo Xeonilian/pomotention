@@ -2,7 +2,7 @@
   <!-- 绑定 Ref 到 composable 返回的变量 -->
   <div class="pomodoro-mini-view-wrapper" ref="PomotentionTimerContainerRef">
     <n-config-provider :hljs="hljs">
-      <n-layout class="app-layout">
+      <n-layout class="app-layout" :class="{ 'app-layout--use-vv-height': isMobile }">
         <!-- Header -->
         <n-layout-header class="app-layout__header" :class="{ 'app-layout__header--hidden': isMiniMode }">
           <div class="app-layout__header-content">
@@ -216,7 +216,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick, onMounted } from "vue";
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { NMenu, NButton, NIcon, NLayoutFooter, NTag, NPopconfirm, NDropdown, NConfigProvider } from "naive-ui";
 import { storeToRefs } from "pinia";
@@ -289,6 +289,40 @@ const { syncIcon, handleUpload, handleDownload } = useSyncWidget(); //relativeTi
 const { isLoggedIn } = storeToRefs(syncStore);
 const { isMobile } = useDevice();
 const showDatabaseDialog = ref(false);
+
+// 移动端用 visualViewport 高度驱动外壳，减轻横竖屏与 Safari 工具栏导致的 100vh 误差
+function syncAppVisualViewportHeight() {
+  if (typeof window === "undefined" || !isMobile.value) return;
+  const h = window.visualViewport?.height ?? window.innerHeight;
+  if (h > 0) document.documentElement.style.setProperty("--app-vvh", `${h}px`);
+}
+
+function clearAppVisualViewportHeight() {
+  if (typeof document === "undefined") return;
+  document.documentElement.style.removeProperty("--app-vvh");
+}
+
+function onAppVisualViewportChange() {
+  syncAppVisualViewportHeight();
+}
+
+watch(
+  isMobile,
+  (m) => {
+    if (m) syncAppVisualViewportHeight();
+    else clearAppVisualViewportHeight();
+  },
+  { immediate: true },
+);
+
+onUnmounted(() => {
+  if (typeof window !== "undefined") {
+    window.removeEventListener("resize", onAppVisualViewportChange);
+    window.visualViewport?.removeEventListener("resize", onAppVisualViewportChange);
+    window.visualViewport?.removeEventListener("scroll", onAppVisualViewportChange);
+  }
+  clearAppVisualViewportHeight();
+});
 
 // 底部同步条：非 mini、非移动端，且正在同步或存在同步错误时显示
 const showSyncFooter = computed(() => !isMiniMode.value && !isMobile.value && Boolean(syncStore.syncError));
@@ -378,6 +412,12 @@ function handleMainLayoutViewToggle(key: string) {
 
 // === 4. 初始化 ===
 onMounted(async () => {
+  if (typeof window !== "undefined") {
+    window.addEventListener("resize", onAppVisualViewportChange);
+    window.visualViewport?.addEventListener("resize", onAppVisualViewportChange);
+    window.visualViewport?.addEventListener("scroll", onAppVisualViewportChange);
+    syncAppVisualViewportHeight();
+  }
   // 如果初始设置是开启的，需要手动触发一次显示逻辑，把 visibility 改为 visible
   if (settingStore.settings.showPomodoro) {
     // 必须等待 nextTick，确保 v-if 已经把 DOM 渲染出来了
@@ -402,7 +442,11 @@ async function handleManualDownload() {
 .app-layout {
   overflow: hidden;
   height: 100vh;
+  height: 100dvh;
   user-select: none;
+}
+.app-layout.app-layout--use-vv-height {
+  height: var(--app-vvh, 100dvh);
 }
 .app-layout__header {
   flex-shrink: 0;
@@ -417,6 +461,8 @@ async function handleManualDownload() {
   transition: all 0.3s ease-in-out;
   overflow: hidden;
   box-sizing: border-box;
+  position: relative;
+  z-index: 150;
 }
 .app-layout__header--hidden {
   height: 0px !important;

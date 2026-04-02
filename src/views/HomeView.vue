@@ -24,13 +24,14 @@
       class="middle"
       :class="{
         'middle-alone': !settingStore.settings.showSchedule && !settingStore.settings.showActivity && !settingStore.settings.showAi,
+        'middle--landscape-fallback': isMobile && isLandscapeViewport,
       }"
     >
       <!-- 今日视图 -->
       <div
         v-if="settingStore.settings.showPlanner"
         class="middle-top"
-        :style="settingStore.settings.showTask ? { height: topHeight + 'px' } : { height: '100%' }"
+        :style="settingStore.settings.showTask ? { height: effectiveMiddleTopHeightPx + 'px' } : { height: '100%' }"
       >
         <!-- 任务计划的头部和控件 -->
         <div class="planner-header" @click.stop="cleanSelection">
@@ -1519,16 +1520,35 @@ function handleEditScheduleLocation(id: number, newLocation: string) {
   saveAllDebounced();
 }
 
+// visualViewport 尺寸需在 onMounted 前定义，供生命周期里注册监听
+const viewportInnerH = ref(typeof window !== "undefined" ? window.innerHeight : 600);
+const viewportInnerW = ref(typeof window !== "undefined" ? window.innerWidth : 400);
+
+function syncHomeViewportDims() {
+  if (typeof window === "undefined") return;
+  viewportInnerH.value = window.visualViewport?.height ?? window.innerHeight;
+  viewportInnerW.value = window.visualViewport?.width ?? window.innerWidth;
+}
+
 // ======================== 8. 生命周期 Hook ========================
 onMounted(() => {
   // console.log("HomeView mounted");
   dateService.setupSystemDateWatcher();
   dateService.navigateByView("today");
+  if (typeof window !== "undefined") {
+    syncHomeViewportDims();
+    window.addEventListener("resize", syncHomeViewportDims);
+    window.visualViewport?.addEventListener("resize", syncHomeViewportDims);
+  }
 });
 
 onUnmounted(() => {
   dateService.cleanupSystemDateWatcher();
   autoSyncDebounced.flush(); //立即执行
+  if (typeof window !== "undefined") {
+    window.removeEventListener("resize", syncHomeViewportDims);
+    window.visualViewport?.removeEventListener("resize", syncHomeViewportDims);
+  }
 });
 
 function handleHomeTagSelectorPointerDownCapture(e: PointerEvent) {
@@ -1580,6 +1600,22 @@ const rightWidth = computed({
 const topHeight = computed({
   get: () => settingStore.settings.topHeight,
   set: (v) => (settingStore.settings.topHeight = v),
+});
+
+const isLandscapeViewport = computed(() => viewportInnerW.value > viewportInnerH.value);
+
+/** 移动端横屏或总高度不足时限制 middle-top，避免任务区被挤没；桌面端仅在极端矮窗时收缩 */
+const effectiveMiddleTopHeightPx = computed(() => {
+  if (!settingStore.settings.showPlanner || !settingStore.settings.showTask) return topHeight.value;
+  const avail = Math.max(180, viewportInnerH.value - 36);
+  const minTask = 140;
+  const maxTop = Math.max(120, avail - minTask);
+  if (!isMobile.value) {
+    return topHeight.value + minTask > avail ? Math.min(topHeight.value, maxTop) : topHeight.value;
+  }
+  const needCap = isLandscapeViewport.value || topHeight.value + minTask > avail;
+  if (!needCap) return topHeight.value;
+  return Math.min(topHeight.value, maxTop);
 });
 
 const { startResize: startVerticalResize } = useResize(topHeight, "vertical", 0, 670);
@@ -1639,6 +1675,12 @@ const { startResize: startRightResize } = useResize(
   overflow: hidden;
   min-width: 0px;
   margin: 0;
+}
+
+/* 移动端横屏兜底：中间栏可滚，避免 planner+task 仍偶发裁切时无法到达任务区 */
+.middle.middle--landscape-fallback {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .middle-alone {

@@ -35,7 +35,7 @@
   }
 }
 
-/* 移动端触摸优化 + 全屏高度 */
+/* 移动端触摸优化 + 全屏高度（dvh 缓解 iOS 地址栏与 100vh 偏差） */
 html,
 body {
   /* 防止移动端双击缩放 */
@@ -44,6 +44,7 @@ body {
   -webkit-overflow-scrolling: touch;
   height: 100%;
   min-height: 100vh;
+  min-height: 100dvh;
   margin: 0;
   padding: 0;
 }
@@ -53,9 +54,11 @@ body {
   box-sizing: border-box;
   height: 100%;
   min-height: 100vh;
+  min-height: 100dvh;
   padding: env(safe-area-inset-top) env(safe-area-inset-right) 0px env(safe-area-inset-left);
   overflow: hidden;
 }
+/* 主内容滚动由各视图内层（如 Home 的 task/planner 容器）承担，避免与悬浮层冲突 */
 #app > * {
   height: 100%;
   min-height: 0;
