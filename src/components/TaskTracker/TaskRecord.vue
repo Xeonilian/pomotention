@@ -99,6 +99,8 @@ async function ensureMarkdownEngine() {
 
 const props = defineProps<{
   taskId: number | null;
+  /** 与活动标题同步，用于描述仅为 # 时自动补第一行 */
+  activityTitle?: string;
   initialContent: string;
   isMarkdown: boolean;
 }>();
@@ -126,6 +128,24 @@ function flushDescriptionIfDirty() {
   if (!contentIsDirty()) return;
   emit("update:content", content.value);
   editSessionBaseline.value = content.value;
+}
+
+/** 无序/任务列表行：回车后下一行接续相同前缀（含缩进空格）；与 --- 分隔线区分 */
+function getMarkdownListContinuationSuffix(lineText: string): string | null {
+  if (/^\s*---/.test(lineText)) return null;
+  const task = lineText.match(/^(\s*)-\s*\[\s*([xX ])\s*\]\s*/);
+  if (task) {
+    return `${task[1]}- [ ] `;
+  }
+  const bullet = lineText.match(/^(\s*-\s+)/);
+  if (bullet) {
+    return bullet[1];
+  }
+  const bareDash = lineText.match(/^(\s*)-\s*$/);
+  if (bareDash) {
+    return `${bareDash[1]}- `;
+  }
+  return null;
 }
 
 const renderedMarkdown = computed(() => {
@@ -166,6 +186,10 @@ const startEditing = () => {
     setTimeout(() => {
       const ta = textarea.value;
       if (ta && ta instanceof HTMLTextAreaElement && document.body.contains(ta)) {
+        const t = (props.activityTitle ?? "").trim();
+        if (t && content.value.trim() === "#") {
+          content.value = `# ${t}\n`;
+        }
         // 确保键盘弹出：重新设置选区到末尾并执行 focus
         const len = ta.value.length;
         try {
@@ -222,6 +246,36 @@ const handleKeydown = (event: KeyboardEvent) => {
   if (event.key === "Escape") {
     stopEditing();
     return;
+  }
+
+  // 回车：无序/任务列表自动续行（保留空格缩进；- [ ] 下一行同为 - [ ]）
+  if (
+    event.key === "Enter" &&
+    !event.shiftKey &&
+    !event.ctrlKey &&
+    !event.metaKey &&
+    !event.altKey &&
+    start === end
+  ) {
+    const lineStart = originalContent.lastIndexOf("\n", start - 1) + 1;
+    let lineEnd = originalContent.indexOf("\n", start);
+    if (lineEnd === -1) {
+      lineEnd = originalContent.length;
+    }
+    const lineText = originalContent.substring(lineStart, lineEnd);
+    const suffix = getMarkdownListContinuationSuffix(lineText);
+    if (suffix !== null) {
+      event.preventDefault();
+      const insert = "\n" + suffix;
+      content.value = originalContent.substring(0, start) + insert + originalContent.substring(end);
+      nextTick(() => {
+        const pos = start + insert.length;
+        textArea.selectionStart = pos;
+        textArea.selectionEnd = pos;
+        textArea.focus();
+      });
+      return;
+    }
   }
 
   // 2. Alt+Shift+ArrowDown (Option+Shift+↓ on Mac): 重复当前行
