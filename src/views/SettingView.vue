@@ -110,6 +110,69 @@
               </n-descriptions>
             </n-collapse-item>
 
+            <n-collapse-item title="视口与 safe-area（布局调试）" name="viewport">
+              <p class="audio-dbg-hint">
+                采集 window / visualViewport / documentElement / #app / .app-layout 等数据，用于排查
+                <strong>iOS 横竖屏</strong>
+                下白边、顶栏点击偏移、safe-area 与 --app-vvh 是否一致。旋转设备或缩放页面后会自动更新（短时防抖）。
+              </p>
+              <p class="audio-dbg-hint audio-dbg-hint--secondary">
+                「env 解析值」通过与页面相同的
+                <code>env(safe-area-inset-*)</code>
+                离屏节点读取，可与
+                <code>global.css</code>
+                中 #app 的 padding 对照。
+              </p>
+              <n-space style="margin-bottom: 8px">
+                <n-button size="small" @click="refreshViewportSnapshot">立即刷新</n-button>
+                <n-button size="small" :loading="viewportDbgCopyLoading" @click="copyViewportDbgReport">复制完整报告</n-button>
+              </n-space>
+              <n-descriptions v-if="viewportSnapshot" label-placement="left" :column="1" bordered size="small" style="margin-bottom: 12px">
+                <n-descriptions-item label="inner (window)">
+                  {{ viewportSnapshot.inner.w }} × {{ viewportSnapshot.inner.h }}
+                </n-descriptions-item>
+                <n-descriptions-item label="visualViewport">
+                  <template v-if="viewportSnapshot.visualViewport">
+                    {{ viewportSnapshot.visualViewport.width }} × {{ viewportSnapshot.visualViewport.height }} · scale
+                    {{ viewportSnapshot.visualViewport.scale }} · offset
+                    {{ viewportSnapshot.visualViewport.offsetTop }}/{{ viewportSnapshot.visualViewport.offsetLeft }}
+                  </template>
+                  <template v-else>（无）</template>
+                </n-descriptions-item>
+                <n-descriptions-item label="docEl client">
+                  {{ viewportSnapshot.docEl.clientW }} × {{ viewportSnapshot.docEl.clientH }}
+                </n-descriptions-item>
+                <n-descriptions-item label="orientation (matchMedia)">
+                  {{ viewportSnapshot.orientation.landscapeMm ? "landscape" : "portrait" }} · type
+                  {{ viewportSnapshot.orientation.type ?? "-" }} · angle {{ viewportSnapshot.orientation.angle ?? "-" }}
+                </n-descriptions-item>
+                <n-descriptions-item label="safe-area（解析）">
+                  t {{ viewportSnapshot.safeArea.top }} · r {{ viewportSnapshot.safeArea.right }} · b
+                  {{ viewportSnapshot.safeArea.bottom }} · l {{ viewportSnapshot.safeArea.left }}
+                </n-descriptions-item>
+                <n-descriptions-item label="--app-vvh">
+                  {{ viewportSnapshot.cssVars.appVvh || "（未设置）" }}
+                </n-descriptions-item>
+                <n-descriptions-item label="#app rect">
+                  {{ viewportDbgSnapshotAppLine }}
+                </n-descriptions-item>
+                <n-descriptions-item label=".app-layout rect">
+                  {{ viewportDbgSnapshotLayoutLine }}
+                </n-descriptions-item>
+                <n-descriptions-item label=".app-layout__header rect">
+                  {{ viewportDbgSnapshotHeaderLine }}
+                </n-descriptions-item>
+              </n-descriptions>
+              <n-input
+                type="textarea"
+                readonly
+                :value="viewportDbgTextarea"
+                :autosize="{ minRows: 10, maxRows: 24 }"
+                class="audio-dbg-textarea"
+                placeholder="暂无快照"
+              />
+            </n-collapse-item>
+
             <n-collapse-item title="环境诊断" name="env">
               <p class="audio-dbg-hint">查看当前运行环境（平台 / 浏览器 / PWA / SW / 同步开关）并执行网络连通测试，便于用户反馈问题。</p>
               <n-space style="margin-bottom: 8px">
@@ -310,7 +373,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted } from "vue";
+import { computed, ref, onMounted, nextTick } from "vue";
 import {
   NSpace,
   NCard,
@@ -342,6 +405,7 @@ import { isSupabaseEnabled } from "@/core/services/supabase";
 import { getAppHttpFetchSnapshot } from "@/utils/appHttpFetch";
 import { xhrFetch } from "@/utils/xhrFetch";
 import { useDevice } from "@/composables/useDevice";
+import { useViewportDebugSnapshot } from "@/composables/useViewportDebugSnapshot";
 import { usePwaInstall } from "@/composables/usePwaInstall";
 import { copyTextToClipboard } from "@/utils/clipboard";
 import { isAndroidTouchDevice, isAppleTouchWebKitDevice, preferHtmlAudioCueFirst } from "@/core/sounds/platform";
@@ -544,6 +608,35 @@ async function copyAudioDebugLogs() {
 
 const device = useDevice();
 const { isIOS: pwaIsIOS, isStandalone } = usePwaInstall();
+
+const { snapshot: viewportSnapshot, refresh: refreshViewportSnapshot, buildReport: buildViewportDebugReportText } = useViewportDebugSnapshot();
+const viewportDbgCopyLoading = ref(false);
+
+function formatViewportDomRectBrief(r: { w: number; h: number; top: number; left: number } | null | undefined): string {
+  if (!r) return "（未找到）";
+  return `${r.w}×${r.h} @ (${r.left}, ${r.top})`;
+}
+
+const viewportDbgSnapshotAppLine = computed(() => formatViewportDomRectBrief(viewportSnapshot.value?.dom.app));
+const viewportDbgSnapshotLayoutLine = computed(() => formatViewportDomRectBrief(viewportSnapshot.value?.dom.appLayout));
+const viewportDbgSnapshotHeaderLine = computed(() => formatViewportDomRectBrief(viewportSnapshot.value?.dom.header));
+const viewportDbgTextarea = computed(() => buildViewportDebugReportText());
+
+async function copyViewportDbgReport() {
+  viewportDbgCopyLoading.value = true;
+  try {
+    refreshViewportSnapshot();
+    await nextTick();
+    const ok = await copyTextToClipboard(buildViewportDebugReportText());
+    if (ok) {
+      notification.success({ title: "已复制", content: "视口调试报告已复制，可发给开发者或附在 issue。", duration: 2800 });
+    } else {
+      notification.warning({ title: "复制失败", content: "请手动全选下方文本框复制。", duration: 4000 });
+    }
+  } finally {
+    viewportDbgCopyLoading.value = false;
+  }
+}
 
 /** Tauri 非 PWA standalone，不能与「浏览器标签页」混为一谈 */
 const openModeLabel = computed(() => {
