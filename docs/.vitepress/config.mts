@@ -1,4 +1,15 @@
+import { createRequire } from "node:module";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitepress";
+import { withMermaid } from "vitepress-plugin-mermaid";
+
+const vitepressDir = dirname(fileURLToPath(import.meta.url));
+const _require = createRequire(import.meta.url);
+const braintreeSanitizeEntry = resolve(
+  dirname(_require.resolve("@braintree/sanitize-url/package.json")),
+  "dist/index.js",
+);
 
 // 支持多环境部署：通过环境变量动态设置 base 路径
 // GitHub Pages: /pomotention/
@@ -6,22 +17,43 @@ import { defineConfig } from "vitepress";
 // 本地 APP: / (相对路径)
 const base = process.env.VITEPRESS_BASE || "/pomotention/";
 
-export default defineConfig({
-  base,
-  title: "Pomotention",
-  description: "🍅 基于番茄工作法与执行意图的自我照顾系统",
+// Markdown 内 ```mermaid 代码块由 vitepress-plugin-mermaid 转成图表
+export default withMermaid(
+  defineConfig({
+    base,
+    title: "Pomotention",
+    description: "🍅 基于番茄工作法与执行意图的自我照顾系统",
 
-  head: [
-    ["link", { rel: "icon", href: `${base}favicon.ico`, sizes: "any" }],
-    ["link", { rel: "icon", type: "image/png", href: `${base}logo.png` }],
-  ],
-  themeConfig: {
+    vite: {
+      resolve: {
+        // 只替换裸导入，避免 shim 内引用 .../dist/index.js 时再指回 shim
+        alias: [
+          {
+            find: /^@braintree\/sanitize-url$/,
+            replacement: resolve(vitepressDir, "shims/braintree-sanitize-url.mjs"),
+          },
+          {
+            find: /^@braintree\/sanitize-url-cjs$/,
+            replacement: braintreeSanitizeEntry,
+          },
+        ],
+      },
+      optimizeDeps: {
+        include: ["@braintree/sanitize-url", "mermaid"],
+      },
+    },
+
+    head: [
+      ["link", { rel: "icon", href: `${base}favicon.ico`, sizes: "any" }],
+      ["link", { rel: "icon", type: "image/png", href: `${base}logo.png` }],
+    ],
+    themeConfig: {
     logo: `${base}logo.png`,
 
     nav: [
       { text: "首页", link: "/" },
-      { text: "5 分钟上手 · PWA", link: "/5-minutes-quick-start" },
-      { text: "安装包 · 桌面", link: "/getting-started" },
+      { text: "快速安装", link: "/getting-started" },
+
       { text: "使用说明", link: "/guide/" },
       { text: "GitHub", link: "https://github.com/Xeonilian/pomotention" },
     ],
@@ -31,8 +63,9 @@ export default defineConfig({
         text: "简介",
         items: [
           { text: "什么是Pomotention？", link: "/what-is-pomotention" },
-          { text: "5 分钟上手（网页 / PWA）", link: "/5-minutes-quick-start" },
-          { text: "快速开始（桌面安装包）", link: "/getting-started" },
+          { text: "快速安装", link: "/getting-started" },
+          { text: "快速使用", link: "/get-things-done" },
+          { text: "更新日志", link: "/dev-log/CHANGELOG" },
         ],
       },
       {
@@ -91,5 +124,6 @@ export default defineConfig({
         timeStyle: "medium",
       },
     },
-  },
-});
+    },
+  }),
+);
