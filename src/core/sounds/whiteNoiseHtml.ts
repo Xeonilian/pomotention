@@ -400,28 +400,12 @@ export function tryRetargetHtmlWhiteNoiseTrack(src: string, volume: number): boo
 }
 
 /**
- * 提示音播放期间压低白噪音，避免 HTML 与 Web Audio 同时输出时只听得到白噪音。
- * @param durationMs 与提示音时长对齐（略加长），结束自动恢复 duckFactor。
+ * 曾为：提示音期间将 duckFactor 压到 0.55，避免与 Web Audio 叠放时只听得到白噪音。
+ * 现：不 duck，提示音与白噪音同时满 master×1 输出（避免听感上白噪音「消失」）。
+ * @param _durationMs 保留参数，与 cue 路径调用兼容
  */
-export function duckHtmlWhiteNoiseForCuePlayback(durationMs: number): void {
-  const st = htmlWnCross;
-  if (!st) return;
-  if (st.duckTimer != null) {
-    clearTimeout(st.duckTimer);
-    st.duckTimer = null;
-  }
-  /* 提示期间白噪音勿压过低，否则相对提示仍像「几比一」；过大则盖过 Web Audio */
-  st.duckFactor = 0.55;
-  htmlWnCrossfadeTick(st);
-  st.duckTimer = window.setTimeout(
-    function () {
-      if (htmlWnCross !== st) return;
-      st.duckFactor = 1;
-      st.duckTimer = null;
-      htmlWnCrossfadeTick(st);
-    },
-    Math.max(120, durationMs),
-  );
+export function duckHtmlWhiteNoiseForCuePlayback(_durationMs: number): void {
+  void _durationMs;
 }
 
 export function resumeHtmlWhiteNoiseIfNeeded(): void {
