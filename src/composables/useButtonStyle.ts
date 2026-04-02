@@ -23,7 +23,7 @@ type ViewKey = "ontop" | "pomodoro" | "schedule" | "task" | "planner" | "activit
 export function useButtonStyle() {
   // const timerStore = useTimerStore();
   const settingStore = useSettingStore();
-  const { isMobile } = useDevice();
+  const { isMobile, isLandscape } = useDevice();
 
   const buttonStates = ref<Record<ViewKey, boolean>>({
     ontop: false,
@@ -78,7 +78,9 @@ export function useButtonStyle() {
     const toKey = (p: string) => ("show" + p.charAt(0).toUpperCase() + p.slice(1)) as keyof typeof settingStore.settings;
     const key = toKey(panel);
 
-    if (!isMobile.value) {
+    // 横屏手机与桌面一致：点哪个开关哪个，不强制 activity 与其它互斥
+    const desktopLikePanels = !isMobile.value || isLandscape.value;
+    if (desktopLikePanels) {
       const next = !settingStore.settings[key];
       // @ts-ignore
       settingStore.settings[key] = next;
@@ -88,7 +90,7 @@ export function useButtonStyle() {
       //   else if (panel === "ai") settingStore.settings.showActivity = false;
       // }
     } else {
-      // 移动端交互规则：
+      // 移动端竖屏交互规则：
       // - 点击 activity：只显示 activity；再次点击恢复进入前的显示状态
       // - 点击 schedule：仅在不显示 activity 时才允许切换 schedule
       const next = !settingStore.settings[key];

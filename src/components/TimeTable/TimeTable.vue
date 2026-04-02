@@ -121,7 +121,7 @@ const effectivePxPerMinute = computed(() => {
   touch-action: manipulation;
 }
 
-/* 进入编辑的 icon：下边缘靠上 10px */
+/* 进入编辑的 icon：下边缘留白；横屏高度紧，为竖屏留白的一半 */
 .timetable-enter-editor-icon {
   position: absolute;
   bottom: 10px;
@@ -129,6 +129,12 @@ const effectivePxPerMinute = computed(() => {
   padding: 0;
   cursor: pointer;
   z-index: 100;
+}
+
+@media (orientation: landscape) {
+  .timetable-enter-editor-icon {
+    bottom: 0px;
+  }
 }
 
 /* 深度禁用：timetable 内所有子元素都不能被选中或长按复制 */
