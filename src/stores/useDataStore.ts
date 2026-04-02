@@ -887,6 +887,8 @@ export const useDataStore = defineStore(
           return;
         }
         selectedTaskId.value = taskId;
+        // 切换展示 task 时先清看板 activeId，否则旧行仍靠 activeId 高亮、新行靠 selectedActivityId，会双行选中
+        activeId.value = null;
         const activityId = taskById.value.get(taskId)?.sourceId;
         if (activityId != null) {
           selectedActivityId.value = activityId;
@@ -896,7 +898,11 @@ export const useDataStore = defineStore(
           } else {
             const scheduleId = scheduleByActivityId.value.get(activityId)?.id;
             if (scheduleId != null) selectedRowId.value = scheduleId;
+            else selectedRowId.value = null;
           }
+        } else {
+          selectedActivityId.value = null;
+          selectedRowId.value = null;
         }
         nextTick(() => {
           selectionSyncedFromDisplayStore = false;
