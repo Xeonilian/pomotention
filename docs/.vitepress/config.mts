@@ -64,7 +64,8 @@ export default withMermaid(
       ["link", { rel: "icon", type: "image/png", href: `${base}logo.png` }],
     ],
     themeConfig: {
-      logo: `${base}logo.png`,
+      // 必须用站点根路径：导航栏由 VPImage 渲染，会再套一层 withBase；若此处已含 base 会变成 /pomotention/pomotention/logo.png
+      logo: "/logo.png",
 
       nav: [
         { text: "首页", link: "/" },
