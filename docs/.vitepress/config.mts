@@ -13,6 +13,8 @@ const braintreeSanitizeEntry = resolve(dirname(_require.resolve("@braintree/sani
 // Cloudflare Pages: /help
 // 本地 APP: / (相对路径)
 const base = process.env.VITEPRESS_BASE || "/pomotention/";
+// 与根目录 vite.config.ts 一致：未设置时监听 0.0.0.0，便于局域网访问
+const devHost = process.env.TAURI_DEV_HOST;
 
 // Markdown 内 ```mermaid 代码块由 vitepress-plugin-mermaid 转成图表
 export default withMermaid(
@@ -24,6 +26,17 @@ export default withMermaid(
     description: "🍅 基于番茄工作法与执行意图的自我照顾系统",
 
     vite: {
+      server: {
+        host: devHost || "0.0.0.0",
+        ...(devHost
+          ? {
+              hmr: {
+                protocol: "ws",
+                host: devHost,
+              },
+            }
+          : {}),
+      },
       // pnpm + SSR 若把 mermaid 当 external，线上生产包图表不渲染、本地 dev 仍正常
       ssr: {
         noExternal: ["mermaid", "vitepress-plugin-mermaid"],
@@ -65,7 +78,14 @@ export default withMermaid(
           text: "简介",
           items: [
             { text: "什么是Pomotention？", link: "/what-is-pomotention" },
-            { text: "快速开始", link: "/getting-started" },
+            {
+              text: "快速开始",
+              link: "/getting-started",
+              items: [
+                { text: "桌面客户端", link: "/pc-getting-started" },
+                { text: "PWA网页应用", link: "/pwa-getting-started" },
+              ],
+            },
             { text: "快速使用", link: "/get-things-done" },
             { text: "更新日志", link: "/dev-log/CHANGELOG" },
           ],
