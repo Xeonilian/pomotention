@@ -312,8 +312,10 @@ const handleClick = () => {
     flex: 1 1 auto;
     white-space: nowrap;
     overflow: hidden;
-    text-overflow: ellipsis;
+    text-overflow: clip;
     width: auto;
+    font-size: 9px;
+    line-height: 1.2;
   }
 
   /* 时长较长的块恢复纵向布局，让标题多行占用高度 */

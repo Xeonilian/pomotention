@@ -1,7 +1,7 @@
 {
   "name": "Pomotention",
   "private": true,
-  "version": "0.6.4",
+  "version": "0.6.5",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -22,7 +22,12 @@
   },
   "pnpm": {
     "public-hoist-pattern": [
-      "*@postgrestools*"
+      "*@postgrestools*",
+      "dayjs",
+      "debug",
+      "cytoscape",
+      "cytoscape-cose-bilkent",
+      "@braintree/sanitize-url"
     ]
   },
   "dependencies": {

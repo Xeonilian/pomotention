@@ -13,7 +13,7 @@
     <div class="tag-manager-inner">
       <!-- 顶部搜索和新建区域 -->
       <div class="tag-search">
-        <n-input primary v-model:value="inputText" placeholder="搜索或新建标签" @keydown.enter="onAddTag" size="medium" clearable>
+        <n-input primary v-model:value="inputText" placeholder="搜索或新建标签" @keydown.enter="onSearchEnter" size="medium" clearable>
           <template #prefix>
             <n-icon color="var(--color-text)">
               <TagSearch20Filled />
@@ -315,6 +315,26 @@ function onClickTag(tag: TagWithCount): void {
   if (inputText.value.trim()) {
     inputText.value = "";
   }
+}
+
+/**
+ * 搜索框回车：有匹配时选中排序后的第一个标签并清空输入；无匹配时才新建标签
+ */
+function onSearchEnter(e: KeyboardEvent): void {
+  e.preventDefault();
+  const raw = inputText.value.trim().replace(/^#+/, "");
+  if (!raw) return;
+
+  if (sortedTags.value.length > 0) {
+    const first = sortedTags.value[0];
+    if (!props.modelValue.includes(first.id)) {
+      emit("update:modelValue", [...props.modelValue, first.id]);
+    }
+    inputText.value = "";
+    return;
+  }
+
+  onAddTag();
 }
 
 /**

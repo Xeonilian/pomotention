@@ -61,7 +61,7 @@ pnpm install
 pnpm docs:dev
 ```
 
-本地访问：<http://localhost:5173>
+本地访问：`http://localhost:5173`
 
 ### 4.3 发布到线上文档站
 

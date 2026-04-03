@@ -110,6 +110,7 @@
       <TaskRecord
         ref="taskRecordRef"
         :taskId="selectedTaskId"
+        :activity-title="selectedTask?.activityTitle ?? ''"
         :initialContent="taskDescription"
         :isMarkdown="isMarkdown"
         @update:content="updateTaskDescriptionInStore"

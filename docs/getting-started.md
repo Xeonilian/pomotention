@@ -1,83 +1,67 @@
 ---
-description: 下载最新版本的应用程序
+title: 快速安装
+description: 选对使用方式（桌面 / PWA / 网页），并厘清注册同步与本地数据。
 ---
 
 # 快速开始
 
-获取最新版本，体验完整功能，
-**关于 AI**： [网页版](https://pomotention.pages.dev)即将接入。
+::: tip
 
-## 当前版本
+- 看流程图选方式，从表格找入口。
+- 不登录时 PWA 与网页数据不互通；多设备一致需登录同步。
+- 桌面端支持置顶。
+  :::
 
-::: info 最新发布
-**版本 v0.5.0** - 2025 年 11 月 25 日发布
+## 怎么选
 
-- **网页版正式上线**
-  - 注册
-  - 支持多段数据同步（包括手机，布局和体验优化中）
+```mermaid
+flowchart TD
+  classDef brLineHeight line-height:1.65
+  A[你在哪用？] -->|电脑 Windows macOS| B{功能齐全 vs <br>更新便捷}
+  B -->|置顶、数据导出| D[桌面客户端]
+  B -->|刷新即更新| C
+  A -->|手机平板| C{ 浏览器<br>支持添加桌面?}
+  C -->|是| E[PWA]
+  C -->|否| F[网页]
+  class B,C brLineHeight
+```
 
-:::
+## 入口
 
-- [更新日志](dev-log/CHANGELOG.md)
+| 方式       | 适合                                        | 链接                                  |
+| ---------- | ------------------------------------------- | ------------------------------------- |
+| 桌面客户端 | 独立应用、置顶计时、数据导入导出            | [安装说明](/pc-getting-started.md)    |
+| PWA        | 类App、更新及时，支持数据导入，需浏览器支持 | [安装说明](/pwa-getting-started.md)   |
+| 网页       | 浏览器打开，不安装、直接使用                | [链接](https://pomotention.pages.dev) |
 
-## 系统要求
+## 数据与同步
 
-### Windows
+```mermaid
+flowchart LR
+  subgraph L[本地]
+    P[PWA]
+    W[网页/浏览器]
+    C[桌面端]
+  end
+  subgraph Cloud[登录后]
+    S[账号同步]
+  end
+  P --> S
+  W --> S
+  C --> S
+```
 
-- Windows 10 或更高版本
-- 64 位系统
+::: warning
 
-### macOS
-
-- macOS 13.0 (Ventura) 或更高版本
-- webkit 支持不完全导致 macOS 12.0 可安装，部分渲染失败
-- Intel 或 Apple Silicon 处理器
-
-## 下载链接
-
-- Windows
-
-  - [v0.5.0 .msi 安装包](https://github.com/Xeonilian/pomotention/releases/download/v0.5.0/pomotention_0.5.0_x64_en-US.msi)
-
-- macOS
-  - [v0.5.0 .dmg 安装包](https://github.com/Xeonilian/pomotention/releases/download/v0.5.0/pomotention_0.5.0_x64.dmg)
-
-## 安装指南
-
-### Windows 安装
-
-1. 下载 `.msi` 安装包
-2. 双击运行安装程序
-3. 按照向导完成安装
-4. 从开始菜单启动应用
-
-### macOS 安装
-
-1. 下载 `.dmg` 文件
-2. 双击打开磁盘映像
-3. 将应用拖拽到 Applications 文件夹
-4. 从 Launchpad 或 Applications 启动
-
-::: warning 安全设置
-
-- macOS 首次运行时，需要在"系统偏好设置 > 安全性与隐私"中允许应用运行
-- Windows 安装时，可能会出现安全警告，请选择“运行”或“更多信息”->“仍然运行”
+- 不登录：数据只在本地，不自动同步；PWA 与网页数据分开。
+- 多设备：各端登录同一账号。
+- 数据导出：本地使用仅桌面端支持数据导出。
 
 :::
 
-## 自动更新
+## 名词
 
-- 软件提供自动更新检测，由于网络原因可能下载失败
-- 软件帮助页面：
-  - 比较本地和云端版本
-  - 打开和关闭自动更新
-  - 点击下载最新版本，进入最新版本页面
-    ![更新页](public/update-page.png)
-
-## 遇到问题
-
-如果下载或安装过程中遇到问题：
-
-1. **下载失败**：请检查网络连接，或尝试使用下载工具
-2. **安装报错**：确认系统版本符合要求，windows7 暂不支持
-3. **安装中断**：从`任务管理器`关闭进程后重试安装
+- **PWA**：安装到系统的类 App 用法（主屏/独立窗口/常可离线缓存）。
+- **网页**：浏览器直接打开，不安装。
+- **桌面客户端**：本机安装程序（Windows/macOS）。
+- **同步**：登录后云端与多端一致。

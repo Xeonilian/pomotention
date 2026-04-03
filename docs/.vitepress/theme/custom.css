@@ -100,6 +100,22 @@
   line-height: 1.5; /* 默认 1.7 */
 }
 
+/* PWA 白屏排查流程图：固定宽度（窄屏仍可压缩），避免 Mermaid 默认撑满栏宽 */
+.vp-doc .doc-mermaid-wrap--pwa-blank-flow {
+  width: 420px;
+  max-width: 100%;
+  margin-inline: auto;
+  box-sizing: border-box;
+}
+.vp-doc .doc-mermaid-wrap--pwa-blank-flow .mermaid {
+  display: flex;
+  justify-content: center;
+}
+.vp-doc .doc-mermaid-wrap--pwa-blank-flow .mermaid svg {
+  max-width: 100%;
+  height: auto;
+}
+
 /* 首页特殊调整 */
 .vp-home .vp-doc h1 {
   margin-bottom: 0.2rem;

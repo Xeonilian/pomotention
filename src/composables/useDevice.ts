@@ -4,10 +4,12 @@ import { isTauri } from "@tauri-apps/api/core";
 
 // 提取为全局单例，避免多组件重复监听 resize
 const width = ref(typeof window !== "undefined" ? window.innerWidth : 1024);
+const height = ref(typeof window !== "undefined" ? window.innerHeight : 768);
 const userAgent = typeof navigator !== "undefined" ? navigator.userAgent.toLowerCase() : "";
 
 const updateDimensions = () => {
   width.value = window.innerWidth;
+  height.value = window.innerHeight;
 };
 
 // 确保只在客户端环境执行监听
@@ -44,6 +46,9 @@ export function useDevice() {
     return !isMobile.value && !isTablet.value;
   });
 
+  /** 横屏：与移动端竖屏「单栏互斥」布局区分，横屏按桌面多面板逻辑 */
+  const isLandscape = computed(() => width.value > height.value);
+
   const isIOSDevice = computed(() => /iPad/.test(navigator.userAgent));
   // iPhone/iPad/iPod：用于 safe-area 等仅需在 iOS 上生效的样式（避免 Android 被误减）
   const isIOS = /iphone/.test(userAgent);
@@ -56,6 +61,8 @@ export function useDevice() {
     isDesktop,
     isTouchSupported, // 组件应该用这个来决定是否开启触摸增强，而不是关闭鼠标
     width,
+    height,
+    isLandscape,
     isIOSDevice,
     isIOS,
   };

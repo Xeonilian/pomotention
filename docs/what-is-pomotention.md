@@ -2,9 +2,9 @@
 
 `Pomotention` = `Pomodoro` + `Intention`
 
-- 番茄工作法（Pomodoro Technique）利用计时器划分工作休息周期
-- 执行意图（Intention）大脑规划和执行任务的核心能能力
-- 番茄意图（Pomotention）让每个番茄周期都有明确目标，也为无所事事寻找一片空间
+- **番茄工作法**（Pomodoro Technique）利用计时器划分工作休息周期
+- **执行意图**（Implementation Intention）大脑规划和执行任务的核心能能力
+- **番茄意图**（Pomotention）让每个番茄周期都有明确目标，也为无所事事寻找一片空间
 
 ## 🎯 核心目标：基于番茄工作法重构人与时间的关系
 
@@ -33,9 +33,8 @@
 
 ## 使用说明
 
-- **最新版本**：`0.4.2`
-- **快速开始**：[链接](getting-started.md)
-- **更新日志**：[链接](dev-log/CHANGELOG.md)
+- **快速安装**：[安装适合你的版本](getting-started.md)
+- **快速使用**：[关于一个任务的生命周期](get-things-done.md)
 
 ## 🎓 开发参考
 

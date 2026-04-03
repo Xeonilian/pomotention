@@ -462,7 +462,7 @@ function getPomoBgColorHEX(ratio: number) {
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  z-index: 1;
+  z-index: 10;
   padding: 1px;
   -webkit-tap-highlight-color: transparent;
 }
@@ -472,13 +472,6 @@ function getPomoBgColorHEX(ratio: number) {
   background-color: var(--color-blue) !important;
   font-weight: 600;
   z-index: 100;
-}
-
-.date-badge:hover {
-  cursor: pointer;
-  background-color: var(--color-blue-light) !important;
-  color: var(--color-blue) !important;
-  z-index: 1000;
 }
 
 .day-card--other-month .date-badge {
@@ -661,20 +654,22 @@ function getPomoBgColorHEX(ratio: number) {
     gap: 0px !important;
   }
 
+  /* 窄屏仅覆盖尺寸，其余继承基础 .date-badge */
   .date-badge {
-    position: absolute;
-    top: 2px;
-    right: 2px;
     font-size: 12px;
     width: 16px;
     height: 16px;
-    z-index: 1000;
   }
 
   .date-badge.today {
     color: var(--color-background) !important;
-    background-color: var(--color-blue) !important;
-    z-index: 1;
+    z-index: 10;
+  }
+
+  /* 触摸端无 hover：整格选中时日期徽章与桌面 .date-badge:hover 一致 */
+  .day-card--selected .date-badge {
+    background-color: var(--color-blue-light) !important;
+    color: var(--color-blue) !important;
   }
 
   .tag :deep(.n-tag) {

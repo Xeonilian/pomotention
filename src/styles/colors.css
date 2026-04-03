@@ -8,7 +8,7 @@
   --color-primary-dark-transparent: rgba(32, 128, 240, 0.3);
 
   /* 红色系 */
-  --color-red: #d64864;
+  --color-red: rgb(214, 72, 100);
   --color-red-light: #f5d2d9;
   --color-red-dark: #de576d;
   --color-red-transparent: rgba(214, 72, 100, 0.3);
