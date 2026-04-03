@@ -60,7 +60,7 @@ export default withMermaid(
           items: [
             { text: "什么是Pomotention？", link: "/what-is-pomotention" },
             { text: "快速开始", link: "/getting-started" },
-            { text: "快速使用", link: "/guide/get-things-done" },
+            { text: "快速使用", link: "/get-things-done" },
             { text: "更新日志", link: "/dev-log/CHANGELOG" },
           ],
         },

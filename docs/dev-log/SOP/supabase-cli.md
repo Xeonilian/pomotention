@@ -146,7 +146,7 @@ supabase stop --no-backup  # 停止且不备份
 
 ## 6. 数据库编辑与验证：优先使用 Supabase Studio
 
-- 打开 Supabase Studio（本地）：http://localhost:54323
+- 打开 Supabase Studio（本地）：`http://localhost:54323`
 - 使用场景：
   - Schema 设计（表、索引、视图、触发器、RLS 策略）
   - SQL Editor 验证与运行（例如 pgsodium 加/解密实验）
