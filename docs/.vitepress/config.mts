@@ -6,10 +6,7 @@ import { withMermaid } from "vitepress-plugin-mermaid";
 
 const vitepressDir = dirname(fileURLToPath(import.meta.url));
 const _require = createRequire(import.meta.url);
-const braintreeSanitizeEntry = resolve(
-  dirname(_require.resolve("@braintree/sanitize-url/package.json")),
-  "dist/index.js",
-);
+const braintreeSanitizeEntry = resolve(dirname(_require.resolve("@braintree/sanitize-url/package.json")), "dist/index.js");
 
 // 支持多环境部署：通过环境变量动态设置 base 路径
 // GitHub Pages: /pomotention/
@@ -48,82 +45,82 @@ export default withMermaid(
       ["link", { rel: "icon", type: "image/png", href: `${base}logo.png` }],
     ],
     themeConfig: {
-    logo: `${base}logo.png`,
+      logo: `${base}logo.png`,
 
-    nav: [
-      { text: "首页", link: "/" },
-      { text: "快速安装", link: "/getting-started" },
+      nav: [
+        { text: "首页", link: "/" },
+        { text: "快速开始", link: "/getting-started" },
+        { text: "使用说明", link: "/guide/" },
+        { text: "GitHub", link: "https://github.com/Xeonilian/pomotention" },
+      ],
 
-      { text: "使用说明", link: "/guide/" },
-      { text: "GitHub", link: "https://github.com/Xeonilian/pomotention" },
-    ],
+      sidebar: [
+        {
+          text: "简介",
+          items: [
+            { text: "什么是Pomotention？", link: "/what-is-pomotention" },
+            { text: "快速开始", link: "/getting-started" },
+            { text: "快速使用", link: "/guide/get-things-done" },
+            { text: "更新日志", link: "/dev-log/CHANGELOG" },
+          ],
+        },
+        {
+          text: "使用说明",
+          items: [
+            { text: "快速使用", link: "/get-things-done" },
+            { text: "软件界面", link: "/guide/interface" },
+            { text: "活动清单", link: "/guide/activity" },
+            {
+              text: "任务计划",
+              items: [
+                { text: "信息导航", link: "/guide/ics" },
+                { text: "任务规划", link: "/guide/planner" },
+              ],
+            },
+            { text: "日程构建", link: "/guide/timetable" },
+            { text: "任务追踪", link: "/guide/task" },
+            { text: "番茄时钟", link: "/guide/timer" },
+            { text: "标签系统", link: "/guide/tag" },
+            { text: "数据查看", link: "/guide/search" },
+            { text: "数据同步", link: "/guide/synchronize" },
+            { text: "数据趋势", link: "/guide/chart" },
+          ],
+        },
+        {
+          text: "其他",
+          items: [
+            { text: "关于项目", link: "/about" },
+            { text: "开发地图", link: "/roadmap" },
+          ],
+        },
+      ],
 
-    sidebar: [
-      {
-        text: "简介",
-        items: [
-          { text: "什么是Pomotention？", link: "/what-is-pomotention" },
-          { text: "快速安装", link: "/getting-started" },
-          { text: "快速使用", link: "/get-things-done" },
-          { text: "更新日志", link: "/dev-log/CHANGELOG" },
-        ],
+      socialLinks: [{ icon: "github", link: "https://github.com/Xeonilian/pomotention" }],
+
+      footer: {
+        message: "Released under the GPL-3.0 License.",
+        copyright: "Copyright © 2025 Pomotention",
       },
-      {
-        text: "使用说明",
-        items: [
-          { text: "软件界面", link: "/guide/interface" },
-          { text: "活动清单", link: "/guide/activity" },
-          {
-            text: "任务计划",
-            items: [
-              { text: "信息导航", link: "/guide/ics" },
-              { text: "任务规划", link: "/guide/planner" },
-            ],
-          },
-          { text: "日程构建", link: "/guide/timetable" },
-          { text: "任务追踪", link: "/guide/task" },
-          { text: "番茄时钟", link: "/guide/timer" },
-          { text: "标签系统", link: "/guide/tag" },
-          { text: "数据查看", link: "/guide/search" },
-          { text: "数据同步", link: "/guide/synchronize" },
-          { text: "数据趋势", link: "/guide/chart" },
-        ],
+
+      // 搜索功能
+      search: {
+        provider: "local",
       },
-      {
-        text: "其他",
-        items: [
-          { text: "关于项目", link: "/about" },
-          { text: "开发地图", link: "/roadmap" },
-        ],
+
+      // 编辑链接
+      editLink: {
+        pattern: "https://github.com/Xeonilian/pomotention/edit/main/docs/:path",
+        text: "在 GitHub 上编辑此页",
       },
-    ],
 
-    socialLinks: [{ icon: "github", link: "https://github.com/Xeonilian/pomotention" }],
-
-    footer: {
-      message: "Released under the GPL-3.0 License.",
-      copyright: "Copyright © 2025 Pomotention",
-    },
-
-    // 搜索功能
-    search: {
-      provider: "local",
-    },
-
-    // 编辑链接
-    editLink: {
-      pattern: "https://github.com/Xeonilian/pomotention/edit/main/docs/:path",
-      text: "在 GitHub 上编辑此页",
-    },
-
-    // 最后更新时间
-    lastUpdated: {
-      text: "最后更新于",
-      formatOptions: {
-        dateStyle: "short",
-        timeStyle: "medium",
+      // 最后更新时间
+      lastUpdated: {
+        text: "最后更新于",
+        formatOptions: {
+          dateStyle: "short",
+          timeStyle: "medium",
+        },
       },
-    },
     },
   }),
 );
