@@ -22,7 +22,12 @@
   },
   "pnpm": {
     "public-hoist-pattern": [
-      "*@postgrestools*"
+      "*@postgrestools*",
+      "dayjs",
+      "debug",
+      "cytoscape",
+      "cytoscape-cose-bilkent",
+      "@braintree/sanitize-url"
     ]
   },
   "dependencies": {

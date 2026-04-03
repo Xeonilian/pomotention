@@ -123,6 +123,21 @@ importers:
 
   docs:
     devDependencies:
+      '@braintree/sanitize-url':
+        specifier: ^7.0.2
+        version: 7.1.2
+      cytoscape:
+        specifier: ^3.29.2
+        version: 3.33.1
+      cytoscape-cose-bilkent:
+        specifier: ^4.1.0
+        version: 4.1.0(cytoscape@3.33.1)
+      dayjs:
+        specifier: ^1.11.13
+        version: 1.11.18
+      debug:
+        specifier: ^4.3.4
+        version: 4.4.3
       gh-pages:
         specifier: ^6.3.0
         version: 6.3.0
@@ -675,12 +690,14 @@ packages:
     engines: {node: '>=20'}
     cpu: [arm64]
     os: [linux]
+    libc: gnu
 
   '@postgrestools/cli-aarch64-windows-msvc@0.17.2':
     resolution: {integrity: sha512-94AJ+XkatavSh/t1qBKmSrxdXf3ktvTdnyG14CYInpxZs60s2nSppaNMNALBDi7EqJNKDA8118osCVZM9ZX4Gw==}
     engines: {node: '>=20'}
     cpu: [arm64]
     os: [win32]
+    libc: msvc
 
   '@postgrestools/cli-x86_64-apple-darwin@0.17.2':
     resolution: {integrity: sha512-IgzAKoOlXiuhal2k10HRPYs8DE78eGjzbQVysgt7gTOsAowH4AMrBIXv77JahbW/aL7StXcfrFHn55i1a+eUMg==}
@@ -693,18 +710,21 @@ packages:
     engines: {node: '>=20'}
     cpu: [x64]
     os: [linux]
+    libc: gnu
 
   '@postgrestools/cli-x86_64-linux-musl@0.17.2':
     resolution: {integrity: sha512-LxOs2XyMpMowO9sjt3KAVX2J/R2ZLvrX8ys1JAmYjAGBGDufjFPIavzORnpTyppAtmtfkrwuxXVQ09djASG7Zw==}
     engines: {node: '>=20'}
     cpu: [x64]
     os: [linux]
+    libc: musl
 
   '@postgrestools/cli-x86_64-windows-msvc@0.17.2':
     resolution: {integrity: sha512-N/WUDYcBwCPtgm4uRCdV2VySlCsHrahdQLmI4ZCoimcOtJ+wn49VOo1irHKO7sf/sCXt2MWlgc75fZkMJleO4A==}
     engines: {node: '>=20'}
     cpu: [x64]
     os: [win32]
+    libc: msvc
 
   '@postgrestools/postgrestools@0.17.2':
     resolution: {integrity: sha512-pGJ5QFvKsCqvDtWgHPIJBP7q8DVUnUk+UGikpohi1khvzQ20myTcZdtfVaeitVb8v9udwAbGQBI8V3/P1uXLXg==}
@@ -900,30 +920,35 @@ packages:
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [linux]
+    libc: [glibc]
 
   '@tauri-apps/cli-linux-arm64-musl@2.5.0':
     resolution: {integrity: sha512-rQO1HhRUQqyEaal5dUVOQruTRda/TD36s9kv1hTxZiFuSq3558lsTjAcUEnMAtBcBkps20sbyTJNMT0AwYIk8Q==}
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [linux]
+    libc: [musl]
 
   '@tauri-apps/cli-linux-riscv64-gnu@2.5.0':
     resolution: {integrity: sha512-7oS18FN46yDxyw1zX/AxhLAd7T3GrLj3Ai6s8hZKd9qFVzrAn36ESL7d3G05s8wEtsJf26qjXnVF4qleS3dYsA==}
     engines: {node: '>= 10'}
     cpu: [riscv64]
     os: [linux]
+    libc: [glibc]
 
   '@tauri-apps/cli-linux-x64-gnu@2.5.0':
     resolution: {integrity: sha512-SG5sFNL7VMmDBdIg3nO3EzNRT306HsiEQ0N90ILe3ZABYAVoPDO/ttpCO37ApLInTzrq/DLN+gOlC/mgZvLw1w==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [linux]
+    libc: [glibc]
 
   '@tauri-apps/cli-linux-x64-musl@2.5.0':
     resolution: {integrity: sha512-QXDM8zp/6v05PNWju5ELsVwF0VH1n6b5pk2E6W/jFbbiwz80Vs1lACl9pv5kEHkrxBj+aWU/03JzGuIj2g3SkQ==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [linux]
+    libc: [musl]
 
   '@tauri-apps/cli-win32-arm64-msvc@2.5.0':
     resolution: {integrity: sha512-pFSHFK6b+o9y4Un8w0gGLwVyFTZaC3P0kQ7umRt/BLDkzD5RnQ4vBM7CF8BCU5nkwmEBUCZd7Wt3TWZxe41o6Q==}

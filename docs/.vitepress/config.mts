@@ -18,10 +18,16 @@ const base = process.env.VITEPRESS_BASE || "/pomotention/";
 export default withMermaid(
   defineConfig({
     base,
+    // 草稿/实验目录不进静态站，避免内部链接被判死链导致 build 失败
+    srcExclude: ["**/scratchpad/**"],
     title: "Pomotention",
     description: "🍅 基于番茄工作法与执行意图的自我照顾系统",
 
     vite: {
+      // pnpm + SSR 若把 mermaid 当 external，线上生产包图表不渲染、本地 dev 仍正常
+      ssr: {
+        noExternal: ["mermaid", "vitepress-plugin-mermaid"],
+      },
       resolve: {
         // 只替换裸导入，避免 shim 内引用 .../dist/index.js 时再指回 shim
         alias: [

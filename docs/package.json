@@ -1,4 +1,6 @@
 {
+  "name": "pomotention-docs",
+  "private": true,
   "scripts": {
     "docs:dev": "vitepress dev",
     "docs:build": "vitepress build",
@@ -8,6 +10,11 @@
     "docs:deploy:github": "vitepress build && npx gh-pages -d .vitepress/dist"
   },
   "devDependencies": {
+    "@braintree/sanitize-url": "^7.0.2",
+    "cytoscape": "^3.29.2",
+    "cytoscape-cose-bilkent": "^4.1.0",
+    "dayjs": "^1.11.13",
+    "debug": "^4.3.4",
     "gh-pages": "^6.3.0",
     "mermaid": "^11.14.0",
     "vitepress": "^1.6.4",
