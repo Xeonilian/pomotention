@@ -22,8 +22,13 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   const ENABLE_ANALYZE = env.ANALYZE === "true";
   const GENERATE_DTS = env.GENERATE_DTS === "true";
+  /** 与 GitHub Pages 等子路径部署一致时可设 VITE_APP_BASE=/pomotention（注意无尾斜杠也可） */
+  const base = (env.VITE_APP_BASE ? String(env.VITE_APP_BASE) : "/").replace(/\/?$/, "/");
+  const baseNoTrailing = base.replace(/\/$/, "");
+  const docsAppProxyPrefix = baseNoTrailing ? `${baseNoTrailing}/docs-app` : "/docs-app";
 
   return {
+    base,
     define: {
       "import.meta.env.VITE_APP_VERSION": JSON.stringify(pkg.version),
     },
@@ -85,6 +90,19 @@ export default defineConfig(({ mode }) => {
         : undefined,
       watch: {
         ignored: ["**/src-tauri/**"],
+      },
+      // 帮助页 iframe：主应用带 base 时为 /pomotention/docs-app → 重写为 VitePress 的 /docs-app
+      proxy: {
+        [docsAppProxyPrefix]: {
+          target: "http://127.0.0.1:5173",
+          changeOrigin: true,
+          rewrite: (path) => {
+            if (!baseNoTrailing) return path;
+            if (!path.startsWith(docsAppProxyPrefix)) return path;
+            const rest = path.slice(docsAppProxyPrefix.length);
+            return `/docs-app${rest === "" ? "/" : rest}`;
+          },
+        },
       },
     },
 

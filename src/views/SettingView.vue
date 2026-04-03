@@ -4,7 +4,34 @@
       <n-tab-pane name="general" tab="通用设置">
         <n-card size="small" title="通用信息">
           <n-descriptions label-placement="left" :column="1" bordered size="small">
-            <n-descriptions-item label="版本">{{ appVer }}</n-descriptions-item>
+            <n-descriptions-item label="当前版本">{{ generalVersionDisplay }}</n-descriptions-item>
+            <n-descriptions-item v-if="isTauri()" label="线上最新">
+              <template v-if="remoteReleaseOk">
+                <n-tag type="default" size="small" round>{{ remoteReleaseVersion }}</n-tag>
+              </template>
+              <n-tag v-else type="warning" size="small" round>
+                获取失败
+                <span v-if="remoteReleaseError">（{{ remoteReleaseError }}）</span>
+              </n-tag>
+            </n-descriptions-item>
+            <n-descriptions-item v-if="isTauri()" label="是否最新">
+              <n-tag v-if="!remoteReleaseOk" type="default" size="small" round>未知</n-tag>
+              <n-tag v-else-if="!versionCompareLabel" type="default" size="small" round>计算中…</n-tag>
+              <n-tag v-else-if="versionCompareLabel === '已是最新'" type="success" size="small" round>
+                已是最新
+              </n-tag>
+              <n-tag v-else-if="versionCompareLabel === '有新版本'" type="warning" size="small" round>
+                有新版本
+              </n-tag>
+              <n-tag v-else type="info" size="small" round>{{ versionCompareLabel }}</n-tag>
+            </n-descriptions-item>
+            <n-descriptions-item v-if="isTauri()" label="自动检查更新">
+              <n-switch
+                v-model:value="settingStore.settings.checkForUpdate"
+                size="small"
+                :title="settingStore.settings.checkForUpdate ? '关闭后将不在启动时检查更新' : '开启后将在启动时检查更新'"
+              />
+            </n-descriptions-item>
             <n-descriptions-item label="运行环境">{{ isTauri() ? "桌面应用(Tauri)" : "Web" }}</n-descriptions-item>
             <n-descriptions-item label="打开方式">{{ openModeLabel }}</n-descriptions-item>
             <n-descriptions-item label="系统">{{ generalSystemLine }}</n-descriptions-item>
@@ -373,7 +400,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted, nextTick } from "vue";
+import { computed, ref, watch, onMounted, nextTick } from "vue";
 import {
   NSpace,
   NCard,
@@ -392,6 +419,8 @@ import {
   NTabs,
   NTabPane,
   NPopconfirm,
+  NTag,
+  NSwitch,
   useNotification,
 } from "naive-ui";
 import { useSettingStore } from "../stores/useSettingStore";
@@ -411,14 +440,92 @@ import { copyTextToClipboard } from "@/utils/clipboard";
 import { isAndroidTouchDevice, isAppleTouchWebKitDevice, preferHtmlAudioCueFirst } from "@/core/sounds/platform";
 import { dbgSwStatus } from "@/core/sounds/debug";
 import { isTauri } from "@tauri-apps/api/core";
+import { getVersion } from "@tauri-apps/api/app";
 import { getCurrentUser, purgeSupabaseAuthStorage } from "@/core/services/authService";
+import { appHttpFetch } from "@/utils/appHttpFetch";
 
 const settingStore = useSettingStore();
 const timerStore = useTimerStore();
 const notification = useNotification();
 const tab = ref("general");
 const userEmail = ref("-");
-const appVer = computed(() => import.meta.env.VITE_APP_VERSION || "v0.6.3");
+const viteVersionRaw = import.meta.env.VITE_APP_VERSION || "";
+/** Tauri getVersion() 返回值，不含 v 前缀 */
+const tauriRuntimeVersion = ref("");
+
+const generalVersionDisplay = computed(() => {
+  if (isTauri()) {
+    return tauriRuntimeVersion.value ? `v${tauriRuntimeVersion.value}` : "加载中…";
+  }
+  return viteVersionRaw ? `v${viteVersionRaw}` : "未知";
+});
+
+/** 桌面端：GitHub latest release */
+const remoteReleaseVersion = ref("…");
+const remoteReleaseOk = ref(false);
+const remoteReleaseError = ref("");
+
+function normalizeVersionTag(v: string): string {
+  return v.replace(/^v/i, "").trim();
+}
+
+/** 与线上 tag 比较：本地新返回 1，相等 0，本地旧 -1 */
+function compareSemverLocalToRemote(localRaw: string, remoteRaw: string): number {
+  const a = normalizeVersionTag(localRaw)
+    .split(".")
+    .map((x) => parseInt(x, 10) || 0);
+  const b = normalizeVersionTag(remoteRaw)
+    .split(".")
+    .map((x) => parseInt(x, 10) || 0);
+  for (let i = 0; i < 3; i++) {
+    const da = a[i] ?? 0;
+    const db = b[i] ?? 0;
+    if (da < db) return -1;
+    if (da > db) return 1;
+  }
+  return 0;
+}
+
+const versionCompareLabel = computed(() => {
+  const rv = remoteReleaseVersion.value;
+  if (!isTauri() || !remoteReleaseOk.value || !tauriRuntimeVersion.value || !rv || rv === "…" || rv.startsWith("(")) {
+    return "";
+  }
+  const cmp = compareSemverLocalToRemote(tauriRuntimeVersion.value, rv);
+  if (cmp === 0) return "已是最新";
+  if (cmp < 0) return "有新版本";
+  return "本地较新";
+});
+
+async function fetchGitHubLatestRelease() {
+  if (!isTauri()) return;
+  remoteReleaseError.value = "";
+  try {
+    const resp = await appHttpFetch("https://api.github.com/repos/Xeonilian/pomotention/releases/latest", {
+      headers: {
+        Accept: "application/vnd.github.v3+json",
+        "User-Agent": "Pomotention-App",
+      },
+    });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
+    const data = await resp.json();
+    remoteReleaseVersion.value = data.tag_name ?? data.name ?? "(未知)";
+    remoteReleaseOk.value = true;
+  } catch (e: any) {
+    remoteReleaseError.value = e.message || String(e);
+    remoteReleaseVersion.value = "(获取失败)";
+    remoteReleaseOk.value = false;
+  }
+}
+
+watch(
+  () => settingStore.settings.checkForUpdate,
+  (on) => {
+    if (on && isTauri()) {
+      void fetchGitHubLatestRelease();
+    }
+  },
+);
 
 const sequenceSnapshotPreview = computed(() => {
   const s = timerStore.sequenceInputSnapshot || "";
@@ -1023,6 +1130,14 @@ async function refreshGeneral() {
     userEmail.value = user?.email ?? "-";
   } catch {
     userEmail.value = "-";
+  }
+  if (isTauri()) {
+    try {
+      tauriRuntimeVersion.value = await getVersion();
+    } catch {
+      tauriRuntimeVersion.value = "";
+    }
+    await fetchGitHubLatestRelease();
   }
 }
 const dataStore = useDataStore();
