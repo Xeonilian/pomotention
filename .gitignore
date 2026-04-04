@@ -45,8 +45,9 @@ src-tauri/tauri.conf.json
 config
 docs/scratchpad/
 
-# 内嵌帮助（VitePress for-app 构建产物，由 pnpm build:with-docs 生成）
+# 文档站静态文件（pnpm docs:build:for-app + sync；根路径或子路径如 public/pomotention/docs-app）
 public/docs-app
+public/**/docs-app
 target/rust-analyzer
 
 # supabase

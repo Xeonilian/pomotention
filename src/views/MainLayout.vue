@@ -239,6 +239,7 @@ import { useDraggable } from "@/composables/useDraggable";
 import { useAppWindow } from "@/composables/useAppWindow";
 import { useSyncWidget } from "@/composables/useSyncWidget";
 import { useDevice } from "@/composables/useDevice";
+import { navigateToBuiltDocs } from "@/composables/useDocsUrl";
 
 // Icons & Components
 import {
@@ -358,6 +359,10 @@ const menuOptions = baseMenuItems;
 const dropdownMenuOptions = baseMenuItems;
 
 function handleMenuSelect(key: string) {
+  if (key === "/help") {
+    navigateToBuiltDocs();
+    return;
+  }
   if (key !== route.path) router.push(key);
 }
 

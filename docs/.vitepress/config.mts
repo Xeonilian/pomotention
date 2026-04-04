@@ -11,7 +11,7 @@ const braintreeSanitizeEntry = resolve(dirname(_require.resolve("@braintree/sani
 // 支持多环境部署：通过环境变量动态设置 base 路径
 // GitHub Pages: /pomotention/
 // Cloudflare Pages: /help
-// 桌面/Web 主应用内嵌帮助（iframe）: /docs-app/ → pnpm docs:build:for-app + sync
+// 桌面/Web 主应用内文档站: VITEPRESS_BASE 由 scripts/run-docs-for-app.mjs 设为 /docs-app/ 或 /pomotention/docs-app/ 等
 // 仅独立本地静态站: VITEPRESS_BASE=/
 const base = process.env.VITEPRESS_BASE || "/pomotention/";
 // 与根目录 vite.config.ts 一致：未设置时监听 0.0.0.0，便于局域网访问

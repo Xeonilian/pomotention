@@ -1,14 +1,17 @@
 // src/router/index.ts
 
+import { defineComponent } from "vue";
 import { createRouter, createWebHistory, RouteRecordRaw } from "vue-router";
 import { getSession } from "@/core/services/authService"; // 导入获取会话的方法
 import { isSupabaseEnabled } from "@/core/services/supabase";
+import { navigateToBuiltDocs } from "@/composables/useDocsUrl";
 
 // --- 视图组件 ---
 const MainLayout = () => import("@/views/MainLayout.vue");
 const HomeView = () => import("@/views/HomeView.vue");
 const StatisticView = () => import("@/views/StatisticView.vue"); // 注意：这里更新为 StatisticView.vue
-const HelpView = () => import("@/views/HelpView.vue");
+/** 仅占位；实际在 beforeEnter 中整页跳到 VitePress 静态站 */
+const helpDocsRouteShell = defineComponent({ name: "HelpDocsRouteShell", setup: () => () => null });
 const SearchView = () => import("@/views/SearchView.vue");
 const ChartView = () => import("@/views/ChartView.vue");
 
@@ -47,8 +50,16 @@ const routes: Array<RouteRecordRaw> = [
       { path: "settings", name: "Settings", component: SettingView },
       { path: "search", name: "Search", component: SearchView },
       { path: "chart", name: "Chart", component: ChartView },
-      // 帮助页面（在 MainLayout 内显示，但不需要认证）
-      { path: "help", name: "Help", component: HelpView, meta: { requiresAuth: false } },
+      {
+        path: "help",
+        name: "Help",
+        beforeEnter: () => {
+          navigateToBuiltDocs();
+          return false;
+        },
+        component: helpDocsRouteShell,
+        meta: { requiresAuth: false },
+      },
     ],
   },
 ];
