@@ -219,11 +219,14 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targe
       // console.log(`Todo ${item.id}: durationHours=${durationHours}, height=${height}`);
     }
 
+    // schedule 仍参与重叠计算，但自身始终占满整行
+    const forceFullWidthForSchedule = item.type === "schedule";
+
     return {
       position: "absolute",
       top: `${top}px`,
-      left: item.left || "0%",
-      width: item.width || "100%",
+      left: forceFullWidthForSchedule ? "0%" : (item.left || "0%"),
+      width: forceFullWidthForSchedule ? "100%" : (item.width || "100%"),
       height: `${height}px`,
       zIndex: 2,
     };

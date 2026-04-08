@@ -15,7 +15,8 @@
     @click.stop="handleClick"
   >
     <TagRenderer
-      :tag-ids="block.item.tagIds ?? []"
+      v-if="blockTagIds.length > 0"
+      :tag-ids="blockTagIds"
       :isCloseable="false"
       size="tiny"
       :displayLength="isMobile ? Number(1) : Number(3)"
@@ -88,6 +89,9 @@ const blockDurationMinutes = computed(() => Math.max(0, Math.round((props.block.
 
 // 小屏周块：足够高时用纵向叠放+标题换行；短时块保持横向单行以免挤爆
 const weekBlockStackLayout = computed(() => blockDurationMinutes.value >= 45);
+
+// 统一处理 tag 列表，避免空 tag 渲染占位
+const blockTagIds = computed(() => props.block.item.tagIds ?? []);
 
 // 手机端：短时块根据时长截断标题（单位：分钟）；与 blockDurationMinutes 阈值对齐
 const mobileDisplayTitle = computed(() => {
