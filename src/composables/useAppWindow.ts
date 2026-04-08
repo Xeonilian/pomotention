@@ -19,9 +19,25 @@ export function useAppWindow() {
 
   // 序列运行时 UI 必须停留在 🍕 模式；刷新后 ref 会丢，但 timer 从持久化恢复时 isFromSequence 仍为 true
   watch(
-    () => timerStore.isActive && timerStore.isFromSequence,
-    (seqRunning) => {
-      if (seqRunning) showPomoSeq.value = true;
+    () => [timerStore.isActive, timerStore.isFromSequence],
+    ([isActive, isFromSequence]) => {
+      if (isActive && isFromSequence) {
+        showPomoSeq.value = true;
+        return;
+      }
+      // 非序列计时运行中时，强制回到单个番茄 UI（修复 pizza mode 下单番茄不切回的问题）
+      if (isActive && !isFromSequence) {
+        showPomoSeq.value = false;
+      }
+    },
+    { immediate: true },
+  );
+
+  // 外部触发：即时启动等需要强制切到序列 UI
+  watch(
+    () => timerStore.forceShowPomoSeq,
+    (force) => {
+      if (force) showPomoSeq.value = true;
     },
     { immediate: true },
   );

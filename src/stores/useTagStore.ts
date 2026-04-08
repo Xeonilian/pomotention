@@ -3,6 +3,7 @@ import { defineStore } from "pinia";
 import { loadTags, saveTags } from "@/services/localStorageService";
 import { scheduleDebouncedCloudUpload } from "@/core/utils";
 import { useDataStore } from "./useDataStore"; // 依赖 activity 数据
+import { useSearchUiStore } from "./useSearchUiStore";
 import type { Tag } from "@/core/types/Tag";
 
 export type TagWithCount = Tag & { count: number };
@@ -148,6 +149,8 @@ export const useTagStore = defineStore("tagStore", () => {
    */
   function removeTag(id: number) {
     updateTagById(id, { deleted: true });
+    // 搜索页 filterTagIds 仍可能保留已删 id；getTag 已查不到标签导致筛选栏消失但列表仍被筛选
+    useSearchUiStore().removeFilterTagId(id);
   }
 
   /**

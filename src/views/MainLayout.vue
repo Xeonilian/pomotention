@@ -82,6 +82,8 @@
               <!-- 已登录时显示退出登录按钮 -->
               <n-popconfirm
                 v-if="isLoggedIn"
+                v-model:show="logoutConfirmVisible"
+                trigger="manual"
                 @positive-click="handleLogoutConfirm"
                 @negative-click="handleLogoutCancel"
                 negative-text="不保留"
@@ -95,6 +97,8 @@
                     :loading="syncStore.loggingOut"
                     title="退出登录"
                     class="header-button"
+                    @click="handleLogoutButtonClick"
+                    @dblclick.prevent="handleLogoutButtonDoubleClick"
                   >
                     <template #icon>
                       <n-icon>
@@ -239,6 +243,8 @@ import { useDraggable } from "@/composables/useDraggable";
 import { useAppWindow } from "@/composables/useAppWindow";
 import { useSyncWidget } from "@/composables/useSyncWidget";
 import { useDevice } from "@/composables/useDevice";
+import { navigateToBuiltDocs } from "@/composables/useDocsUrl";
+import { syncAll } from "@/services/sync";
 
 // Icons & Components
 import {
@@ -280,15 +286,17 @@ const {
   handlePomotentionTimerSizeReport,
 } = useAppWindow();
 
-// 为了不报错增加的使用 PomotentionTimerContainerRef
-if (!settingStore.settings.showPomodoro) {
-  console.log("Refs error prevent:", PomotentionTimerContainerRef.value, draggableContainer.value);
-}
+// 通过模板绑定使用，避免脚本层未读取触发告警
+void PomotentionTimerContainerRef;
+void draggableContainer;
+
 const syncStore = useSyncStore();
 const { syncIcon, handleUpload, handleDownload } = useSyncWidget(); //relativeTime,
 const { isLoggedIn } = storeToRefs(syncStore);
 const { isMobile } = useDevice();
 const showDatabaseDialog = ref(false);
+const logoutConfirmVisible = ref(false);
+let logoutClickTimer: ReturnType<typeof setTimeout> | null = null;
 
 // 移动端用 visualViewport 高度驱动外壳，减轻横竖屏与 Safari 工具栏导致的 100vh 误差
 function syncAppVisualViewportHeight() {
@@ -331,6 +339,14 @@ const showSyncFooter = computed(() => !isMiniMode.value && !isMobile.value && Bo
 async function handleLogoutConfirm() {
   // 用户点击"保留"，设置为保留本地数据
   settingStore.settings.keepLocalDataAfterSignOut = true;
+  // 已登录时，退出前总是先执行一次完整同步；同步失败不阻断登出流程
+  if (syncStore.isLoggedIn) {
+    try {
+      await syncAll();
+    } catch (error) {
+      console.warn("[MainLayout] syncAll before logout failed:", error);
+    }
+  }
   // 执行退出登录
   await syncStore.handleLogout();
 }
@@ -339,8 +355,44 @@ async function handleLogoutConfirm() {
 async function handleLogoutCancel() {
   // 用户点击"不保留"，设置为不保留本地数据
   settingStore.settings.keepLocalDataAfterSignOut = false;
+  // 已登录时，退出前总是先执行一次完整同步；同步失败不阻断登出流程
+  if (syncStore.isLoggedIn) {
+    try {
+      await syncAll();
+    } catch (error) {
+      console.warn("[MainLayout] syncAll before logout failed:", error);
+    }
+  }
   // 执行退出登录
   await syncStore.handleLogout();
+}
+
+// 双击退出按钮时，执行一次完整同步
+function handleLogoutButtonClick() {
+  if (logoutClickTimer) {
+    clearTimeout(logoutClickTimer);
+    logoutClickTimer = null;
+  }
+  // 通过短延迟区分单击与双击：若随后触发 dblclick，则该单击不会生效
+  logoutClickTimer = setTimeout(() => {
+    logoutConfirmVisible.value = true;
+    logoutClickTimer = null;
+  }, 220);
+}
+
+// 双击退出按钮时，执行一次完整同步（不触发单击弹窗）
+async function handleLogoutButtonDoubleClick() {
+  if (logoutClickTimer) {
+    clearTimeout(logoutClickTimer);
+    logoutClickTimer = null;
+  }
+  logoutConfirmVisible.value = false;
+  if (!syncStore.isLoggedIn) return;
+  try {
+    await syncAll();
+  } catch (error) {
+    console.warn("[MainLayout] syncAll on logout button double click failed:", error);
+  }
 }
 
 // === 2. 菜单与路由逻辑 ===
@@ -358,6 +410,10 @@ const menuOptions = baseMenuItems;
 const dropdownMenuOptions = baseMenuItems;
 
 function handleMenuSelect(key: string) {
+  if (key === "/help") {
+    navigateToBuiltDocs();
+    return;
+  }
   if (key !== route.path) router.push(key);
 }
 

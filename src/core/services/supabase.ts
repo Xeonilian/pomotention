@@ -7,18 +7,12 @@ import { appHttpFetch, shouldUseMacPackagedXhr } from "@/utils/appHttpFetch";
 // 从环境变量中获取 Supabase 的 URL 和 anon key
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-if (import.meta.env.MODE !== "production") {
-  console.log("[Supabase 调试] 环境变量读取结果：", {
-    url: !!supabaseUrl, // 只显示是否存在，不泄露具体值
-    key: !!supabaseAnonKey,
-    envMode: import.meta.env.MODE,
-  });
-}
+const verboseSupabaseLog = ["1", "true"].includes(String(import.meta.env.VITE_SUPABASE_DEBUG_LOG ?? "").trim().toLowerCase());
 
 let supabaseInstance: SupabaseClient | null = null;
 
 function supabaseLog(message: string, payload?: Record<string, unknown>): void {
+  if (!verboseSupabaseLog) return;
   console.log("[H14][supabase]", message, payload ?? {});
 }
 
@@ -44,8 +38,8 @@ function toHeaderKeys(init?: RequestInit): string[] {
 }
 
 if (supabaseUrl && supabaseAnonKey) {
-  // 默认仅输出关键日志，避免每个请求都刷屏；需要逐请求日志时可设为 1/true
-  const verboseFetchLog = ["1", "true"].includes(String(import.meta.env.VITE_SUPABASE_FETCH_LOG ?? "").trim().toLowerCase());
+  // 默认静默；需要逐请求日志时可设为 1/true
+  const verboseFetchLog = verboseSupabaseLog || ["1", "true"].includes(String(import.meta.env.VITE_SUPABASE_FETCH_LOG ?? "").trim().toLowerCase());
 
   supabaseLog("transport selected", { transport: shouldUseMacPackagedXhr() ? "xhr" : "fetch" });
 
@@ -105,11 +99,11 @@ if (supabaseUrl && supabaseAnonKey) {
   });
 
   supabaseInstance.auth.onAuthStateChange((event) => {
-    console.log("Supabase auth event:", event);
-    // 令牌自动刷新事件
     if (event === "TOKEN_REFRESHED") {
-      console.log("身份凭证已自动刷新!");
+      supabaseLog("auth token refreshed");
+      return;
     }
+    supabaseLog("auth state changed", { event });
   });
 } else {
   console.warn("[Supabase] 未检测到 VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY，自动进入离线模式。云同步与登录相关功能将被跳过。");

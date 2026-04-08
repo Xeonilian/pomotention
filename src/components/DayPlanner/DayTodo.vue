@@ -367,33 +367,26 @@
     <n-input-number v-model:value="newEstimate" :min="1" :max="5" placeholder="请输入估计的番茄数" style="width: 100%" />
   </n-modal>
   <!-- Tag Selector Popover -->
-  <n-popover
+  <TagPickerPopover
+    ref="tagPickerRef"
     :show="
       tagEditor.popoverTargetId.value !== null && todosForCurrentViewWithTaskRecords.some((t) => t.id === tagEditor.popoverTargetId.value)
     "
-    @update:show="(show) => !show && (tagEditor.popoverTargetId.value = null)"
+    @update:show="(open: boolean) => { if (!open) tagEditor.closePopover(); }"
+    v-model:search-term="tagSearchTermModel"
+    input-mode="external"
     placement="bottom-start"
-    :trap-focus="false"
-    trigger="manual"
-    :show-arrow="false"
-    style="padding: 0; border-radius: 6px; margin-top: -30px; margin-left: 130px; z-index: 10000"
     :z-index="10000"
+    :popover-style="{ marginTop: '-30px', marginLeft: '130px' }"
+    :panel-pointer-guard="onTodoTagPanelPointerGuard"
+    :on-enter-before-select="onTodoTagEnterBeforeSelect"
+    @select-tag="(tagId: any) => handleTagSelected(tagId)"
+    @create-tag="(tagName: any) => handleTagCreate(tagName)"
   >
     <template #trigger>
       <span style="position: absolute; pointer-events: none"></span>
     </template>
-    <TagSelector
-      :ref="(el) => (tagSelectorRef = el)"
-      :search-term="tagEditor.tagSearchTerm.value"
-      :allow-create="true"
-      @pointerdown.stop="isPickingTagFromSelector = true"
-      @mousedown.stop="isPickingTagFromSelector = true"
-      @touchstart.stop="isPickingTagFromSelector = true"
-      @select-tag="(tagId: any) => handleTagSelected(tagId)"
-      @create-tag="(tagName: any) => handleTagCreate(tagName)"
-      @close-selector="tagEditor.popoverTargetId.value = null"
-    />
-  </n-popover>
+  </TagPickerPopover>
 
   <!-- 排序槽位绑定 tag：单击表头「排序」打开，失去焦点自动保存 -->
   <n-modal
@@ -462,9 +455,10 @@ import { ref, computed, nextTick, reactive, watch, onBeforeUnmount } from "vue";
 import { useDataStore } from "@/stores/useDataStore";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useTagStore } from "@/stores/useTagStore";
+import { useTimerStore } from "@/stores/useTimerStore";
 import { storeToRefs } from "pinia";
 import { useActivityTagEditor } from "@/composables/useActivityTagEditor";
-import TagSelector from "../TagSystem/TagSelector.vue";
+import TagPickerPopover from "../TagSystem/TagPickerPopover.vue";
 import type { SelectOption } from "naive-ui";
 import { useDevice } from "@/composables/useDevice";
 
@@ -472,6 +466,7 @@ const dataStore = useDataStore();
 const { isMobile } = useDevice();
 
 const settingStore = useSettingStore();
+const timerStore = useTimerStore();
 const tagStore = useTagStore();
 const { activeId, selectedRowId, selectedActivityId, selectedTaskId, selectedTask, todosForCurrentViewWithTaskRecords } =
   storeToRefs(dataStore);
@@ -514,11 +509,23 @@ const newEstimate = ref<number>(1);
 
 // Tag Editor
 const tagEditor = useActivityTagEditor();
-const tagSelectorRef = ref<any>(null);
+const tagSearchTermModel = computed({
+  get: () => tagEditor.tagSearchTerm.value,
+  set: (v: string) => {
+    tagEditor.tagSearchTerm.value = v;
+  },
+});
+const tagPickerRef = ref<InstanceType<typeof TagPickerPopover> | null>(null);
 // Enter 选中标签时置为 true，saveEdit 会跳过结束编辑以保持继续输入
 const selectingTagViaEnter = ref(false);
 // 点击/触摸标签选择器时置为 true，避免移动端 blur 抢先触发保存导致选不中
 const isPickingTagFromSelector = ref(false);
+function onTodoTagPanelPointerGuard() {
+  isPickingTagFromSelector.value = true;
+}
+function onTodoTagEnterBeforeSelect() {
+  selectingTagViaEnter.value = true;
+}
 const titleInputRef = ref<HTMLInputElement | null>(null);
 const startInputRef = ref<HTMLInputElement | null>(null);
 const doneInputRef = ref<HTMLInputElement | null>(null);
@@ -1019,9 +1026,12 @@ function handleFillCurrentTimeStart() {
   const ts = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
   emit("edit-todo-start", selectedRowId.value, ts);
 
-  // 将当前选中待办的意图同步到任务备注
   const todo = todosForCurrentViewWithTaskRecords.value.find((t) => t.id === selectedRowId.value);
   if (!todo) return;
+
+  tryInstantStartPomodoro(todo);
+
+  // 将当前选中待办的意图同步到任务备注
   const taskId = selectedTaskId.value;
   if (taskId == null) return;
   const titleForHeader = (todo.activityTitle ?? "").trim();
@@ -1040,6 +1050,125 @@ function handleFillCurrentTimeStart() {
   dataStore.updateTaskById(taskId, {
     description: newDescription,
   });
+}
+
+type InstantPomoStep = {
+  type: "work" | "break";
+  duration: number;
+};
+
+function isInstantStartWindow(todo: Todo): boolean {
+  const todoTimestamp = Number(todo.id);
+  if (!Number.isFinite(todoTimestamp)) return false;
+  return Math.abs(Date.now() - todoTimestamp) < 60_000;
+}
+
+function getInstantWorkCount(todo: Todo): number {
+  // 樱桃：固定 15/15/15/15（2 work + 2 break），不依赖 estPomo
+  if (todo.pomoType === "🍒") return 2;
+  if (!Array.isArray(todo.estPomo) || todo.estPomo.length === 0) return 0;
+  const firstGroup = Number(todo.estPomo[0]);
+  if (!Number.isFinite(firstGroup)) return 0;
+  return Math.max(0, Math.floor(firstGroup));
+}
+
+function pickBreakDurationForSequence(baseMinutes: number): number {
+  const valid = [1, 2, 5, 10, 15, 30, 60];
+  let closest = valid[0];
+  for (const candidate of valid) {
+    if (Math.abs(candidate - baseMinutes) < Math.abs(closest - baseMinutes)) {
+      closest = candidate;
+    }
+  }
+  return closest;
+}
+
+function buildInstantSteps(todo: Todo, workCount: number): InstantPomoStep[] {
+  const isCherry = todo.pomoType === "🍒";
+  const workDuration = isCherry ? 15 : settingStore.settings.durations.workDuration;
+  const breakDuration = isCherry ? 15 : pickBreakDurationForSequence(settingStore.settings.durations.breakDuration);
+
+  const steps: InstantPomoStep[] = [];
+  for (let i = 0; i < workCount; i++) {
+    steps.push({ type: "work", duration: workDuration });
+    // 樱桃模式：每个 work 后都接一个 break；普通模式：最后一个 work 后不接 break
+    if (isCherry || i < workCount - 1) {
+      steps.push({ type: "break", duration: breakDuration });
+    }
+  }
+  return steps;
+}
+
+function buildSequenceSnapshot(steps: InstantPomoStep[]): string {
+  const body = steps
+    .map((step) => (step.type === "work" ? `w${step.duration}` : step.duration.toString().padStart(2, "0")))
+    .join("+");
+  return `>>>>${body}`;
+}
+
+function startInstantSequence(steps: InstantPomoStep[], sequenceInput: string) {
+  if (steps.length === 0) return;
+  settingStore.settings.showPomodoro = true;
+  settingStore.settings.isCompactMode = false;
+  timerStore.forceShowPomoSeq = true;
+  settingStore.settings.pomoSequenceInput = sequenceInput;
+  timerStore.sequenceInputSnapshot = sequenceInput;
+  timerStore.sequenceStepIndex = 0;
+
+  const runStep = (stepIndex: number) => {
+    if (stepIndex >= steps.length) {
+      timerStore.registerSequenceContinuation(null);
+      return;
+    }
+
+    timerStore.sequenceStepIndex = stepIndex;
+    const step = steps[stepIndex];
+    const onFinish = () => {
+      if (timerStore.pomodoroState === "idle") return;
+      runStep(stepIndex + 1);
+    };
+
+    if (step.type === "work") {
+      timerStore.startWorking(step.duration, onFinish);
+    } else {
+      timerStore.startBreak(step.duration, onFinish);
+    }
+  };
+
+  timerStore.registerSequenceContinuation(() => {
+    const next = Math.min(timerStore.sequenceStepIndex + 1, steps.length);
+    runStep(next);
+  });
+  runStep(0);
+}
+
+function tryInstantStartPomodoro(todo: Todo) {
+  if (!isInstantStartWindow(todo)) return;
+  const workCount = getInstantWorkCount(todo);
+  if (workCount <= 0) return;
+
+  const steps = buildInstantSteps(todo, workCount);
+  if (steps.length === 0) return;
+
+  settingStore.settings.showPomodoro = true;
+  if (workCount > 1) {
+    settingStore.settings.isCompactMode = false;
+    timerStore.forceShowPomoSeq = true;
+  }
+  if (timerStore.isActive) {
+    timerStore.resetTimer();
+  }
+
+  if (workCount === 1) {
+    timerStore.registerSequenceContinuation(null);
+    timerStore.sequenceInputSnapshot = "";
+    timerStore.sequenceStepIndex = 0;
+    timerStore.startWorking(steps[0].duration);
+    return;
+  }
+
+  const sequenceInput = buildSequenceSnapshot(steps);
+  startInstantSequence(steps, sequenceInput);
 }
 
 // 表头点击「结束」：给选中行填入当前时间（HH:mm）
@@ -1246,26 +1375,8 @@ function handleTitleInput(todo: Todo) {
 }
 
 function handleInputKeydown(event: KeyboardEvent, todo: Todo) {
-  if (tagEditor.popoverTargetId.value === todo.id && tagSelectorRef.value) {
-    switch (event.key) {
-      case "ArrowDown":
-        tagSelectorRef.value.navigateDown();
-        event.preventDefault();
-        break;
-      case "ArrowUp":
-        tagSelectorRef.value.navigateUp();
-        event.preventDefault();
-        break;
-      case "Enter":
-        selectingTagViaEnter.value = true;
-        tagSelectorRef.value.selectHighlighted();
-        event.preventDefault();
-        break;
-      case "Escape":
-        tagEditor.closePopover();
-        event.preventDefault();
-        break;
-    }
+  if (tagEditor.popoverTargetId.value === todo.id && tagPickerRef.value) {
+    tagPickerRef.value.handleHostKeydown(event);
   }
 
   // 特殊处理：# 键自动打开 popover

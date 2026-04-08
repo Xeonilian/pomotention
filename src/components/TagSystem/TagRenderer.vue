@@ -150,16 +150,23 @@ function getTagTitle(tag: TagWithCount): string {
   gap: 4px;
   min-width: 0;
   max-width: 100%;
+  /* scale(1.05) 会画出布局框外一圈，留边减轻裁切（父级勿设 overflow:hidden） */
+  padding: 4px;
+  box-sizing: border-box;
 }
 .tag-item {
   transition: transform 0.2s;
   font-size: 12px;
   font-family: "Consolas", Consolas, monospace;
+  position: relative;
+  z-index: 0;
 }
 .tag-item:hover {
   transform: scale(1.05);
+  z-index: 1;
 }
 :deep(.n-tag) {
   --n-border: 1px solid transparent !important;
+  overflow: visible;
 }
 </style>

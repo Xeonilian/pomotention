@@ -477,7 +477,8 @@ function goNextPage(): void {
   display: flex;
   flex-direction: column;
   position: relative;
-  min-height: 300px;
+  min-height: 360px;
+  height: 360px;
   overflow-x: hidden;
   padding: 10px 12px;
   border-radius: 6px;
@@ -489,8 +490,8 @@ function goNextPage(): void {
   display: flex;
   flex-direction: column;
   position: relative;
-  min-height: 300px;
-  height: 360px;
+  min-height: 380px;
+  height: 380px;
   box-sizing: border-box;
   overflow-x: hidden;
 }

@@ -7,6 +7,12 @@ import { signOut, getCurrentUser } from "@/core/services/authService";
 import { isSupabaseEnabled, supabase } from "@/core/services/supabase";
 import { destroyAppCloseHandler } from "@/services/appCloseHandler";
 
+const shouldLogSyncDebug = ["1", "true"].includes(String(import.meta.env.VITE_SYNC_DEBUG_LOG ?? "").trim().toLowerCase());
+function syncDebugLog(...args: unknown[]) {
+  if (!shouldLogSyncDebug) return;
+  console.log(...args);
+}
+
 export const useSyncStore = defineStore("sync", () => {
   const settingStore = useSettingStore();
   const router = useRouter();
@@ -101,13 +107,13 @@ export const useSyncStore = defineStore("sync", () => {
   // 初始化同步服务（在 App.vue 的 onMounted 中调用）
   function initSyncService() {
     syncInitialized.value = true;
-    console.log("✅ 同步服务已初始化");
+    syncDebugLog("✅ 同步服务已初始化");
   }
 
   // 销毁同步服务（登出时调用）
   function destroySyncService() {
     syncInitialized.value = false;
-    console.log("❌ 同步服务已销毁");
+    syncDebugLog("❌ 同步服务已销毁");
   }
 
   function resetSync() {

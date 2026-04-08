@@ -79,6 +79,8 @@ export const useTimerStore = defineStore(
     });
 
     const isFromSequence = ref<boolean>(false);
+    /** UI 强制切到序列视图（不持久化，用于外部触发 showPomoSeq） */
+    const forceShowPomoSeq = ref<boolean>(false);
 
     /** 序列当前步索引（与 PomodoroSequence.currentStep 对齐，持久化供冷启动恢复） */
     const sequenceStepIndex = ref<number>(0);
@@ -211,6 +213,7 @@ export const useTimerStore = defineStore(
       phaseEndsAt.value = null;
       phaseFinishCallback.value = null;
       isFromSequence.value = false;
+      forceShowPomoSeq.value = false;
       isGray.value = true;
       finalizedForPhase.value = false;
       sequenceStepIndex.value = 0;
@@ -476,6 +479,7 @@ export const useTimerStore = defineStore(
       pomodoroState.value = "idle";
       timeRemaining.value = 0;
       isFromSequence.value = false;
+      forceShowPomoSeq.value = false;
       startTime.value = null;
       phaseEndsAt.value = null;
       phaseFinishCallback.value = null;
@@ -505,6 +509,7 @@ export const useTimerStore = defineStore(
       isWorking,
       isBreaking,
       isFromSequence,
+      forceShowPomoSeq,
       sequenceStepIndex,
       sequenceInputSnapshot,
       pendingSequencePhaseFinalize,

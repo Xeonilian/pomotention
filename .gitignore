@@ -44,6 +44,10 @@ src-tauri/tauri.conf.json
 .env.development
 config
 docs/scratchpad/
+
+# 文档站静态文件（pnpm docs:build:for-app + sync；根路径或子路径如 public/pomotention/docs-app）
+public/docs-app
+public/**/docs-app
 target/rust-analyzer
 
 # supabase

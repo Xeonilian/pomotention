@@ -10,6 +10,7 @@
     "docs:deploy:github": "vitepress build && npx gh-pages -d .vitepress/dist"
   },
   "devDependencies": {
+    "@tauri-apps/api": "^2.5.0",
     "@braintree/sanitize-url": "^7.0.2",
     "cytoscape": "^3.29.2",
     "cytoscape-cose-bilkent": "^4.1.0",

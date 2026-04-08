@@ -161,7 +161,7 @@ watch(
 // 解析序列
 function parseSequence(sequence: string): PomodoroStep[] {
   const validBreakTimes = ["01", "02", "05", "10", "15", "30", "60"];
-  const firstStepMatch = sequence.match(/🍅|\d+/);
+  const firstStepMatch = sequence.match(/🍅|w\d+|\d+/i);
   if (!firstStepMatch) return [];
 
   const firstStepIndex = firstStepMatch.index || 0;
@@ -171,6 +171,12 @@ function parseSequence(sequence: string): PomodoroStep[] {
   return steps.map((step) => {
     if (step.includes("🍅")) {
       return { type: "work", duration: parseInt(defaultPomoDuration.value) };
+    } else if (/^w\d+$/i.test(step)) {
+      const explicitWorkDuration = parseInt(step.slice(1), 10);
+      if (!Number.isFinite(explicitWorkDuration) || explicitWorkDuration < 1 || explicitWorkDuration > 60) {
+        throw new Error(`Invalid work time: ${step}. Allowed range: 1-60.`);
+      }
+      return { type: "work", duration: explicitWorkDuration };
     } else {
       const breakTime = step.padStart(2, "0");
       if (!validBreakTimes.includes(breakTime)) {
@@ -504,48 +510,73 @@ function handleBlurRestore(): void {
   }
 }
 
+// 统一从 store 恢复序列运行中的 UI，支持组件挂载后和运行时外部触发两种路径
+function restoreRunningUIFromStore(): void {
+  if (!(timerStore.isActive && timerStore.isFromSequence)) {
+    if (isRunning.value) {
+      isRunning.value = false;
+      emit("pomo-seq-running", false);
+      currentStep.value = 0;
+      currentPomodoro.value = 1;
+      totalPomodoros.value = 0;
+      statusLabel.value = "Let's 🍅!";
+      if (progressContainer.value) {
+        progressContainer.value.innerHTML = "";
+      }
+    }
+    return;
+  }
+
+  const snap = timerStore.sequenceInputSnapshot;
+  const settingSeq = settingStore.settings.pomoSequenceInput ?? "";
+  if (snap && snap !== settingSeq) {
+    // 外部即时启动可能先写 snapshot，再由 settings watch 落盘；此处以 snapshot 为准做一次对齐，避免被误判为异常
+    settingStore.settings.pomoSequenceInput = snap;
+    sequenceInput.value = snap;
+  }
+
+  const seqToParse = timerStore.sequenceInputSnapshot || sequenceInput.value;
+  let steps: PomodoroStep[];
+  try {
+    steps = parseSequence(seqToParse);
+  } catch {
+    timerStore.resetTimer();
+    return;
+  }
+  if (steps.length === 0) {
+    timerStore.resetTimer();
+    return;
+  }
+
+  isRunning.value = true;
+  emit("pomo-seq-running", true);
+
+  initializeProgress(seqToParse);
+  currentStep.value = Math.min(timerStore.sequenceStepIndex, steps.length - 1);
+  totalPomodoros.value = steps.filter((step) => step.type === "work").length;
+  currentPomodoro.value = steps.slice(0, currentStep.value).filter((step) => step.type === "work").length + 1;
+  updateProgressStatus(resolveActiveStepIndex());
+
+  bindSequenceContinuationToStore();
+  timerStore.flushPendingSequenceFinalize();
+  timerStore.reconcilePhaseFromWallClock();
+
+  if (timerStore.isWorking && settingStore.settings.isWhiteNoiseEnabled) {
+    startWhiteNoise();
+  }
+}
+
+watch(
+  () => [timerStore.isActive, timerStore.isFromSequence, timerStore.sequenceInputSnapshot, timerStore.sequenceStepIndex],
+  () => {
+    restoreRunningUIFromStore();
+  },
+  { immediate: true },
+);
+
 // 组件挂载时检查并恢复状态
 onMounted(() => {
-  // 如果番茄钟正在运行且来自序列，恢复 UI 状态
-  if (timerStore.isActive && timerStore.isFromSequence) {
-    const snap = timerStore.sequenceInputSnapshot;
-    const settingSeq = settingStore.settings.pomoSequenceInput ?? "";
-    if (snap && snap !== settingSeq) {
-      timerStore.resetTimer();
-      return;
-    }
-    const seqToParse = snap || sequenceInput.value;
-    let steps: PomodoroStep[];
-    try {
-      steps = parseSequence(seqToParse);
-    } catch {
-      timerStore.resetTimer();
-      return;
-    }
-    if (steps.length === 0) {
-      timerStore.resetTimer();
-      return;
-    }
-
-    isRunning.value = true;
-    emit("pomo-seq-running", true);
-
-    initializeProgress(seqToParse);
-
-    currentStep.value = Math.min(timerStore.sequenceStepIndex, steps.length - 1);
-    totalPomodoros.value = steps.filter((step) => step.type === "work").length;
-    currentPomodoro.value = steps.slice(0, currentStep.value).filter((step) => step.type === "work").length + 1;
-
-    updateProgressStatus(resolveActiveStepIndex());
-
-    bindSequenceContinuationToStore();
-    timerStore.flushPendingSequenceFinalize();
-    timerStore.reconcilePhaseFromWallClock();
-
-    if (timerStore.isWorking && settingStore.settings.isWhiteNoiseEnabled) {
-      startWhiteNoise();
-    }
-  }
+  restoreRunningUIFromStore();
 });
 
 onUnmounted(() => {

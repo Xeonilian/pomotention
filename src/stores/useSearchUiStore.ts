@@ -120,7 +120,17 @@ export const useSearchUiStore = defineStore("searchUi", {
      */
     clearFilterTags() {
       this.filterTagIds = []; 
-    }, 
+    },
+
+    /**
+     * 从筛选列表中移除指定标签（例如标签被删除后同步 UI 筛选状态）
+     */
+    removeFilterTagId(tagId: number) {
+      const index = this.filterTagIds.indexOf(tagId);
+      if (index > -1) {
+        this.filterTagIds.splice(index, 1);
+      }
+    },
   },
 
   // 4. (可选) 启用持久化

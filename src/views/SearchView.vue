@@ -3,39 +3,40 @@
     <!-- 左侧：Activity 主列表 -->
     <div class="left-pane" :class="{ 'left-pane--mobile-split': isMobile }" :style="{ width: searchWidth + 'px' }">
       <div class="search-tool">
-        <n-input
-          ref="searchInputRef"
-          :value="searchQuery"
-          placeholder="文字/#标签..."
-          clearable
-          style="flex: 1"
-          @update:value="handleSearchInput"
-          @keydown="handleSearchKeydown"
-        >
-          <template #prefix>
-            <n-icon><Search20Regular /></n-icon>
-          </template>
-        </n-input>
-        <n-popover
-          :show="tagEditor.popoverTargetId.value === POPOVER_ID"
-          @update:show="(show) => !show && (tagEditor.popoverTargetId.value = null)"
-          placement="bottom-start"
-          :trap-focus="false"
-          trigger="manual"
-          :show-arrow="false"
-          style="padding: 0; border-radius: 6px; z-index: 1000; margin-left: 30px; margin-top: 0px; top: -10px"
-        >
-          <template #trigger>
-            <span style="position: absolute; pointer-events: none"></span>
-          </template>
-          <TagSelector
-            :search-term="tagEditor.tagSearchTerm.value"
-            :allow-create="true"
+        <div class="search-input-wrap">
+          <n-input
+            ref="searchInputRef"
+            :value="searchQuery"
+            placeholder="文字/#标签..."
+            clearable
+            class="search-input-el"
+            @update:value="handleSearchInput"
+            @keydown="(e: KeyboardEvent) => tagPickerRef?.handleHostKeydown(e)"
+          >
+            <template #prefix>
+              <n-icon><Search20Regular /></n-icon>
+            </template>
+          </n-input>
+          <TagPickerPopover
+            ref="tagPickerRef"
+            class="search-tag-picker-popover"
+            :show="tagEditor.popoverTargetId.value === POPOVER_ID"
+            @update:show="
+              (open: boolean) => {
+                if (!open) tagEditor.closePopover();
+              }
+            "
+            v-model:search-term="tagSearchTermModel"
+            input-mode="external"
+            placement="bottom-end"
+            :z-index="1000"
             @select-tag="handleTagSelectForFilter"
-            @close-selector="tagEditor.popoverTargetId.value = null"
-            ref="tagSelectorRef"
-          />
-        </n-popover>
+          >
+            <template #trigger>
+              <span class="search-tag-picker-anchor" aria-hidden="true" />
+            </template>
+          </TagPickerPopover>
+        </div>
         <n-button
           text
           type="warning"
@@ -150,7 +151,7 @@
 <script lang="ts" setup>
 import { computed, ref, nextTick, onMounted, onUnmounted } from "vue";
 import { storeToRefs } from "pinia";
-import { NInput, NButton, NIcon, NTabs, NTabPane, NPopover } from "naive-ui";
+import { NInput, NButton, NIcon, NTabs, NTabPane } from "naive-ui";
 import type { Tag } from "@/core/types/Tag";
 
 import {
@@ -161,7 +162,7 @@ import {
   ChevronLeft20Regular,
   ChevronRight20Regular,
 } from "@vicons/fluent";
-import TagSelector from "@/components/TagSystem/TagSelector.vue";
+import TagPickerPopover from "@/components/TagSystem/TagPickerPopover.vue";
 import TagRenderer from "@/components/TagSystem/TagRenderer.vue";
 
 // 引入 stores 和类型
@@ -189,11 +190,17 @@ const { searchQuery, filterStarredOnly, openedTabs, activeTabKey, filterTagIds }
 const { toggleFilterStarred, closeTab, openRow, toggleFilterTagId, clearFilterTags } = searchUiStore;
 const closeAllTabs = searchUiStore.closeAllTabs.bind(searchUiStore);
 
-// 使用 TagSelector 相关
+// 标签筛选浮层（#/@）
 const tagEditor = useActivityTagEditor();
+const tagSearchTermModel = computed({
+  get: () => tagEditor.tagSearchTerm.value,
+  set: (v: string) => {
+    tagEditor.tagSearchTerm.value = v;
+  },
+});
 const POPOVER_ID = "search-input";
 const searchInputRef = ref<InstanceType<typeof NInput> | null>(null);
-const tagSelectorRef = ref<InstanceType<typeof TagSelector> | null>(null);
+const tagPickerRef = ref<InstanceType<typeof TagPickerPopover> | null>(null);
 const searchContainerRef = ref<HTMLElement | null>(null);
 /** 搜索区分栏容器宽度，用于左栏「全宽」像素目标 */
 const searchLayoutWidth = ref(0);
@@ -334,39 +341,11 @@ function handleTagSelectForFilter(tagId: number) {
   searchUiStore.setSearchQuery(newQuery);
   searchQuery.value = newQuery;
 
-  tagEditor.popoverTargetId.value = null;
+  tagEditor.closePopover();
 
   nextTick(() => {
     searchInputRef.value?.focus();
   });
-}
-
-function handleSearchKeydown(event: KeyboardEvent) {
-  // 判断条件：Popover 是否为我们的搜索框打开
-  if (tagEditor.popoverTargetId.value === POPOVER_ID && tagSelectorRef.value) {
-    // 逻辑完全复刻你原来的代码，只是把 activity.id 换成了 POPOVER_ID
-    switch (event.key) {
-      case "ArrowDown":
-        // 把指令转发给 TagSelector
-        tagSelectorRef.value.navigateDown();
-        // 阻止默认行为（例如，光标移动到行首/行尾）
-        event.preventDefault();
-        break;
-      case "ArrowUp":
-        tagSelectorRef.value.navigateUp();
-        event.preventDefault();
-        break;
-      case "Enter":
-        // 阻止默认行为（例如，表单提交）
-        event.preventDefault();
-        tagSelectorRef.value.selectHighlighted();
-        break;
-      case "Escape":
-        tagEditor.closePopover();
-        event.preventDefault();
-        break;
-    }
-  }
 }
 
 // 当前筛选的标签
@@ -486,6 +465,29 @@ const formatMMDD = (ts?: number) => (ts ? new Date(ts).toLocaleDateString(undefi
   flex-direction: row;
   align-items: center;
   gap: 6px;
+}
+
+/* 标签浮层锚在搜索框矩形上，避免空 trigger 与 margin 偏移导致漂到右栏 */
+.search-input-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.search-input-el {
+  width: 100%;
+}
+
+.search-tag-picker-popover {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.search-tag-picker-anchor {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 :deep(.n-input-wrapper) {

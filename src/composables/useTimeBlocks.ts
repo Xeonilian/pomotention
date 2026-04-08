@@ -134,8 +134,9 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
 
   // 挂载/卸载全局事件
   onMounted(() => {
-    // 使用passive: false确保能preventDefault
-    document.addEventListener("touchstart", handleGlobalTouchStart, { passive: false });
+    // touchstart 仅记录时间戳，不阻止默认行为，使用 passive 提升滚动响应
+    document.addEventListener("touchstart", handleGlobalTouchStart, { passive: true });
+    // touchmove 需要按条件 preventDefault，因此必须保持 passive: false
     document.addEventListener("touchmove", handleGlobalTouchMove, { passive: false });
   });
 

@@ -193,33 +193,30 @@
                 </n-icon>
               </template>
             </n-input>
-            <n-popover
+            <TagPickerPopover
+              :ref="
+                (el) => {
+                  if (tagEditor.popoverTargetId.value === item.id) tagPickerRef = el as InstanceType<typeof TagPickerPopover> | null;
+                }
+              "
               :show="tagEditor.popoverTargetId.value === item.id"
-              @update:show="(show) => !show && (tagEditor.popoverTargetId.value = null)"
-              placement="bottom-start"
-              :trap-focus="false"
-              trigger="manual"
-              :show-arrow="false"
-              style="padding: 0; border-radius: 6px"
-              :style="{ '--n-space': '30px' }"
-              :to="false"
+              @update:show="
+                (open: boolean) => {
+                  if (!open) tagEditor.closePopover();
+                }
+              "
+              v-model:search-term="tagSearchTermModel"
+              input-mode="external"
+              placement="bottom-end"
+              :teleport-disabled="true"
+              :popover-style="{ '--n-space': '0px' }"
+              @select-tag="(tagId: any) => handleTagSelected(item, tagId)"
+              @create-tag="(tagName: any) => handleTagCreate(item, tagName)"
             >
               <template #trigger>
                 <span style="position: absolute; pointer-events: none"></span>
               </template>
-              <TagSelector
-                :ref="
-                  (el) => {
-                    if (tagEditor.popoverTargetId.value === item.id) tagSelectorRef = el;
-                  }
-                "
-                :search-term="tagEditor.tagSearchTerm.value"
-                :allow-create="true"
-                @select-tag="(tagId: any) => handleTagSelected(item, tagId)"
-                @create-tag="(tagName: any) => handleTagCreate(item, tagName)"
-                @close-selector="tagEditor.popoverTargetId.value = null"
-              />
-            </n-popover>
+            </TagPickerPopover>
 
             <!-- 地点 -->
             <n-input
@@ -361,7 +358,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, ref, reactive } from "vue";
-import { NInput, NDatePicker, NIcon, NDropdown, NPopover, NButton } from "naive-ui";
+import { NInput, NDatePicker, NIcon, NDropdown, NButton } from "naive-ui";
 import {
   VideoPersonCall24Regular,
   ApprovalsApp24Regular,
@@ -381,7 +378,7 @@ import { useDevice } from "@/composables/useDevice";
 import { togglePomoType } from "@/services/activityService";
 import TagManager from "../TagSystem/TagManager.vue";
 import TagRenderer from "../TagSystem/TagRenderer.vue";
-import TagSelector from "../TagSystem/TagSelector.vue";
+import TagPickerPopover from "../TagSystem/TagPickerPopover.vue";
 import type { InputInst } from "naive-ui";
 
 // ======================== Props & Emits ========================
@@ -477,13 +474,19 @@ const sortedDisplaySheet = computed(() => {
 
 // ======================== Composables ========================
 const tagEditor = useActivityTagEditor();
+const tagSearchTermModel = computed({
+  get: () => tagEditor.tagSearchTerm.value,
+  set: (v: string) => {
+    tagEditor.tagSearchTerm.value = v;
+  },
+});
 const dragHandler = useActivityDrag(() => sortedDisplaySheet.value);
 
 // ======================== 本地状态 ========================
 const rowInputMap = ref(new Map<number, InputInst>());
 const pomoInputMap = ref(new Map<number, InputInst>());
 const showTagManager = ref(false);
-const tagSelectorRef = ref<any>(null);
+const tagPickerRef = ref<InstanceType<typeof TagPickerPopover> | null>(null);
 
 // 双击检测（桌面 mousedown）
 const pomoDoubleClickTimers = ref(new Map<number, number>());
@@ -865,25 +868,8 @@ function handleTagCreate(activity: Activity, tagName: string) {
 }
 
 function handleInputKeydown(event: KeyboardEvent, activity: Activity) {
-  if (tagEditor.shouldShowPopoverFor(activity.id) && tagSelectorRef.value) {
-    switch (event.key) {
-      case "ArrowDown":
-        tagSelectorRef.value.navigateDown();
-        event.preventDefault();
-        break;
-      case "ArrowUp":
-        tagSelectorRef.value.navigateUp();
-        event.preventDefault();
-        break;
-      case "Enter":
-        tagSelectorRef.value.selectHighlighted();
-        event.preventDefault();
-        break;
-      case "Escape":
-        tagEditor.closePopover();
-        event.preventDefault();
-        break;
-    }
+  if (tagEditor.shouldShowPopoverFor(activity.id) && tagPickerRef.value) {
+    tagPickerRef.value.handleHostKeydown(event);
   }
 
   // 移动端软键盘“前往/Enter”应结束标题编辑
