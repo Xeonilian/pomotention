@@ -455,6 +455,7 @@ import { ref, computed, nextTick, reactive, watch, onBeforeUnmount } from "vue";
 import { useDataStore } from "@/stores/useDataStore";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useTagStore } from "@/stores/useTagStore";
+import { useTimerStore } from "@/stores/useTimerStore";
 import { storeToRefs } from "pinia";
 import { useActivityTagEditor } from "@/composables/useActivityTagEditor";
 import TagPickerPopover from "../TagSystem/TagPickerPopover.vue";
@@ -465,6 +466,7 @@ const dataStore = useDataStore();
 const { isMobile } = useDevice();
 
 const settingStore = useSettingStore();
+const timerStore = useTimerStore();
 const tagStore = useTagStore();
 const { activeId, selectedRowId, selectedActivityId, selectedTaskId, selectedTask, todosForCurrentViewWithTaskRecords } =
   storeToRefs(dataStore);
@@ -1024,9 +1026,12 @@ function handleFillCurrentTimeStart() {
   const ts = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
   emit("edit-todo-start", selectedRowId.value, ts);
 
-  // 将当前选中待办的意图同步到任务备注
   const todo = todosForCurrentViewWithTaskRecords.value.find((t) => t.id === selectedRowId.value);
   if (!todo) return;
+
+  tryInstantStartPomodoro(todo);
+
+  // 将当前选中待办的意图同步到任务备注
   const taskId = selectedTaskId.value;
   if (taskId == null) return;
   const titleForHeader = (todo.activityTitle ?? "").trim();
@@ -1045,6 +1050,125 @@ function handleFillCurrentTimeStart() {
   dataStore.updateTaskById(taskId, {
     description: newDescription,
   });
+}
+
+type InstantPomoStep = {
+  type: "work" | "break";
+  duration: number;
+};
+
+function isInstantStartWindow(todo: Todo): boolean {
+  const todoTimestamp = Number(todo.id);
+  if (!Number.isFinite(todoTimestamp)) return false;
+  return Math.abs(Date.now() - todoTimestamp) < 60_000;
+}
+
+function getInstantWorkCount(todo: Todo): number {
+  // 樱桃：固定 15/15/15/15（2 work + 2 break），不依赖 estPomo
+  if (todo.pomoType === "🍒") return 2;
+  if (!Array.isArray(todo.estPomo) || todo.estPomo.length === 0) return 0;
+  const firstGroup = Number(todo.estPomo[0]);
+  if (!Number.isFinite(firstGroup)) return 0;
+  return Math.max(0, Math.floor(firstGroup));
+}
+
+function pickBreakDurationForSequence(baseMinutes: number): number {
+  const valid = [1, 2, 5, 10, 15, 30, 60];
+  let closest = valid[0];
+  for (const candidate of valid) {
+    if (Math.abs(candidate - baseMinutes) < Math.abs(closest - baseMinutes)) {
+      closest = candidate;
+    }
+  }
+  return closest;
+}
+
+function buildInstantSteps(todo: Todo, workCount: number): InstantPomoStep[] {
+  const isCherry = todo.pomoType === "🍒";
+  const workDuration = isCherry ? 15 : settingStore.settings.durations.workDuration;
+  const breakDuration = isCherry ? 15 : pickBreakDurationForSequence(settingStore.settings.durations.breakDuration);
+
+  const steps: InstantPomoStep[] = [];
+  for (let i = 0; i < workCount; i++) {
+    steps.push({ type: "work", duration: workDuration });
+    // 樱桃模式：每个 work 后都接一个 break；普通模式：最后一个 work 后不接 break
+    if (isCherry || i < workCount - 1) {
+      steps.push({ type: "break", duration: breakDuration });
+    }
+  }
+  return steps;
+}
+
+function buildSequenceSnapshot(steps: InstantPomoStep[]): string {
+  const body = steps
+    .map((step) => (step.type === "work" ? `w${step.duration}` : step.duration.toString().padStart(2, "0")))
+    .join("+");
+  return `>>>>${body}`;
+}
+
+function startInstantSequence(steps: InstantPomoStep[], sequenceInput: string) {
+  if (steps.length === 0) return;
+  settingStore.settings.showPomodoro = true;
+  settingStore.settings.isCompactMode = false;
+  timerStore.forceShowPomoSeq = true;
+  settingStore.settings.pomoSequenceInput = sequenceInput;
+  timerStore.sequenceInputSnapshot = sequenceInput;
+  timerStore.sequenceStepIndex = 0;
+
+  const runStep = (stepIndex: number) => {
+    if (stepIndex >= steps.length) {
+      timerStore.registerSequenceContinuation(null);
+      return;
+    }
+
+    timerStore.sequenceStepIndex = stepIndex;
+    const step = steps[stepIndex];
+    const onFinish = () => {
+      if (timerStore.pomodoroState === "idle") return;
+      runStep(stepIndex + 1);
+    };
+
+    if (step.type === "work") {
+      timerStore.startWorking(step.duration, onFinish);
+    } else {
+      timerStore.startBreak(step.duration, onFinish);
+    }
+  };
+
+  timerStore.registerSequenceContinuation(() => {
+    const next = Math.min(timerStore.sequenceStepIndex + 1, steps.length);
+    runStep(next);
+  });
+  runStep(0);
+}
+
+function tryInstantStartPomodoro(todo: Todo) {
+  if (!isInstantStartWindow(todo)) return;
+  const workCount = getInstantWorkCount(todo);
+  if (workCount <= 0) return;
+
+  const steps = buildInstantSteps(todo, workCount);
+  if (steps.length === 0) return;
+
+  settingStore.settings.showPomodoro = true;
+  if (workCount > 1) {
+    settingStore.settings.isCompactMode = false;
+    timerStore.forceShowPomoSeq = true;
+  }
+  if (timerStore.isActive) {
+    timerStore.resetTimer();
+  }
+
+  if (workCount === 1) {
+    timerStore.registerSequenceContinuation(null);
+    timerStore.sequenceInputSnapshot = "";
+    timerStore.sequenceStepIndex = 0;
+    timerStore.startWorking(steps[0].duration);
+    return;
+  }
+
+  const sequenceInput = buildSequenceSnapshot(steps);
+  startInstantSequence(steps, sequenceInput);
 }
 
 // 表头点击「结束」：给选中行填入当前时间（HH:mm）
