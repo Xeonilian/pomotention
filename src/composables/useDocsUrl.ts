@@ -1,16 +1,30 @@
+import { isTauri } from "@tauri-apps/api/core";
+
 /**
  * 主应用内嵌的 VitePress 产物路径（与 vite base 一致）
- * 全页打开：build:with-docs 或 public 下已有 docs-app 后出现
- * 若在 Cursor/VSCode 内嵌浏览器看到 chrome-error +「Unsafe attempt to load…frame」，
- * 多为预览 iframe 限制或 /docs-app 与 VITE_APP_BASE 不一致导致首屏失败，请用系统浏览器或确认已 pnpm dev（含文档）。
+ * 仅 Tauri（或本地打包产物）优先使用此路径。
  */
 export function getDocsStaticPath(): string {
   const base = import.meta.env.BASE_URL;
   return `${base}docs-app/`;
 }
 
-/** 离开 SPA，进入静态文档站（站内链接由 VitePress 按 base 生成） */
+/**
+ * Web/PWA 的线上文档入口。
+ * 可通过 VITE_HELP_DOCS_URL 覆盖；默认走 Cloudflare docs 站点。
+ */
+export function getWebDocsUrl(): string {
+  const raw = (import.meta.env.VITE_HELP_DOCS_URL as string | undefined)?.trim();
+  const url = raw && raw.length > 0 ? raw : "https://pomotention-docs.pages.dev/";
+  return url.endsWith("/") ? url : `${url}/`;
+}
+
+/** 离开 SPA，进入帮助文档站 */
 export function navigateToBuiltDocs(): void {
-  const path = getDocsStaticPath();
-  window.location.assign(new URL(path, window.location.origin).href);
+  if (isTauri()) {
+    const path = getDocsStaticPath();
+    window.location.assign(new URL(path, window.location.origin).href);
+    return;
+  }
+  window.location.assign(getWebDocsUrl());
 }
