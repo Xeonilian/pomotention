@@ -815,15 +815,17 @@ function onRepeatActivity(noTodoRepeat: boolean) {
       const { newTodo } = passPickedActivity(newActivity, appDateTimestamp.value, isViewDateToday.value);
       newTodo.taskId = task.id; // 关联 task
       todoList.value = [...todoList.value, newTodo];
-      selectedRowId.value = noTodoRepeat ? null : newTodo.id;
+      selectedRowId.value = newTodo.id;
     } else {
-      handleAddActivity(scheduleList.value, newActivity, { activityById: activityById.value });
+      const newSchedule = handleAddActivity(scheduleList.value, newActivity, { activityById: activityById.value });
+      if (newSchedule) {
+        selectedRowId.value = newSchedule.id;
+      }
     }
-
-    // 同步 UI 选中
     activeId.value = newActivity.id;
     selectedActivityId.value = newActivity.id;
     selectedTaskId.value = task.id;
+    // 同步 UI 选中
   } else if (activeId.value != null) {
     const activity = activityById.value.get(activeId.value);
     if (!activity) return;
