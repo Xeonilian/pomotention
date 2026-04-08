@@ -16,6 +16,8 @@ const braintreeSanitizeEntry = resolve(dirname(_require.resolve("@braintree/sani
 const base = process.env.VITEPRESS_BASE || "/pomotention/";
 // 与根目录 vite.config.ts 一致：未设置时监听 0.0.0.0，便于局域网访问
 const devHost = process.env.TAURI_DEV_HOST;
+// 非 Tauri、非本地 host 时，导航栏 Logo 回主应用的跳转目标（可由环境变量覆盖）
+const docsExitHref = (process.env.VITE_DOCS_EXIT_HREF ?? "https://pomotention.pages.dev").replace(/\/?$/, "/");
 
 // Markdown 内 ```mermaid 代码块由 vitepress-plugin-mermaid 转成图表
 export default withMermaid(
@@ -27,6 +29,9 @@ export default withMermaid(
     description: "🍅 基于番茄工作法与执行意图的自我照顾系统",
 
     vite: {
+      define: {
+        "import.meta.env.VITE_DOCS_EXIT_HREF": JSON.stringify(docsExitHref),
+      },
       server: {
         host: devHost || "0.0.0.0",
         ...(devHost
@@ -40,7 +45,7 @@ export default withMermaid(
       },
       // pnpm + SSR 若把 mermaid 当 external，线上生产包图表不渲染、本地 dev 仍正常
       ssr: {
-        noExternal: ["mermaid", "vitepress-plugin-mermaid"],
+        noExternal: ["mermaid", "vitepress-plugin-mermaid", "@tauri-apps/api"],
       },
       resolve: {
         // 只替换裸导入，避免 shim 内引用 .../dist/index.js 时再指回 shim
@@ -56,7 +61,7 @@ export default withMermaid(
         ],
       },
       optimizeDeps: {
-        include: ["@braintree/sanitize-url", "mermaid"],
+        include: ["@braintree/sanitize-url", "mermaid", "@tauri-apps/api"],
       },
     },
 

@@ -126,6 +126,9 @@ importers:
       '@braintree/sanitize-url':
         specifier: ^7.0.2
         version: 7.1.2
+      '@tauri-apps/api':
+        specifier: ^2.5.0
+        version: 2.7.0
       cytoscape:
         specifier: ^3.29.2
         version: 3.33.1
@@ -3661,11 +3664,11 @@ snapshots:
 
   '@tauri-apps/plugin-opener@2.2.6':
     dependencies:
-      '@tauri-apps/api': 2.5.0
+      '@tauri-apps/api': 2.7.0
 
   '@tauri-apps/plugin-updater@2.7.1':
     dependencies:
-      '@tauri-apps/api': 2.5.0
+      '@tauri-apps/api': 2.7.0
 
   '@types/chai@5.2.2':
     dependencies:
