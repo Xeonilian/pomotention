@@ -367,33 +367,26 @@
     <n-input-number v-model:value="newEstimate" :min="1" :max="5" placeholder="请输入估计的番茄数" style="width: 100%" />
   </n-modal>
   <!-- Tag Selector Popover -->
-  <n-popover
+  <TagPickerPopover
+    ref="tagPickerRef"
     :show="
       tagEditor.popoverTargetId.value !== null && todosForCurrentViewWithTaskRecords.some((t) => t.id === tagEditor.popoverTargetId.value)
     "
-    @update:show="(show) => !show && (tagEditor.popoverTargetId.value = null)"
+    @update:show="(open: boolean) => { if (!open) tagEditor.closePopover(); }"
+    v-model:search-term="tagSearchTermModel"
+    input-mode="external"
     placement="bottom-start"
-    :trap-focus="false"
-    trigger="manual"
-    :show-arrow="false"
-    style="padding: 0; border-radius: 6px; margin-top: -30px; margin-left: 130px; z-index: 10000"
     :z-index="10000"
+    :popover-style="{ marginTop: '-30px', marginLeft: '130px' }"
+    :panel-pointer-guard="onTodoTagPanelPointerGuard"
+    :on-enter-before-select="onTodoTagEnterBeforeSelect"
+    @select-tag="(tagId: any) => handleTagSelected(tagId)"
+    @create-tag="(tagName: any) => handleTagCreate(tagName)"
   >
     <template #trigger>
       <span style="position: absolute; pointer-events: none"></span>
     </template>
-    <TagSelector
-      :ref="(el) => (tagSelectorRef = el)"
-      :search-term="tagEditor.tagSearchTerm.value"
-      :allow-create="true"
-      @pointerdown.stop="isPickingTagFromSelector = true"
-      @mousedown.stop="isPickingTagFromSelector = true"
-      @touchstart.stop="isPickingTagFromSelector = true"
-      @select-tag="(tagId: any) => handleTagSelected(tagId)"
-      @create-tag="(tagName: any) => handleTagCreate(tagName)"
-      @close-selector="tagEditor.popoverTargetId.value = null"
-    />
-  </n-popover>
+  </TagPickerPopover>
 
   <!-- 排序槽位绑定 tag：单击表头「排序」打开，失去焦点自动保存 -->
   <n-modal
@@ -464,7 +457,7 @@ import { useSettingStore } from "@/stores/useSettingStore";
 import { useTagStore } from "@/stores/useTagStore";
 import { storeToRefs } from "pinia";
 import { useActivityTagEditor } from "@/composables/useActivityTagEditor";
-import TagSelector from "../TagSystem/TagSelector.vue";
+import TagPickerPopover from "../TagSystem/TagPickerPopover.vue";
 import type { SelectOption } from "naive-ui";
 import { useDevice } from "@/composables/useDevice";
 
@@ -514,11 +507,23 @@ const newEstimate = ref<number>(1);
 
 // Tag Editor
 const tagEditor = useActivityTagEditor();
-const tagSelectorRef = ref<any>(null);
+const tagSearchTermModel = computed({
+  get: () => tagEditor.tagSearchTerm.value,
+  set: (v: string) => {
+    tagEditor.tagSearchTerm.value = v;
+  },
+});
+const tagPickerRef = ref<InstanceType<typeof TagPickerPopover> | null>(null);
 // Enter 选中标签时置为 true，saveEdit 会跳过结束编辑以保持继续输入
 const selectingTagViaEnter = ref(false);
 // 点击/触摸标签选择器时置为 true，避免移动端 blur 抢先触发保存导致选不中
 const isPickingTagFromSelector = ref(false);
+function onTodoTagPanelPointerGuard() {
+  isPickingTagFromSelector.value = true;
+}
+function onTodoTagEnterBeforeSelect() {
+  selectingTagViaEnter.value = true;
+}
 const titleInputRef = ref<HTMLInputElement | null>(null);
 const startInputRef = ref<HTMLInputElement | null>(null);
 const doneInputRef = ref<HTMLInputElement | null>(null);
@@ -1246,26 +1251,8 @@ function handleTitleInput(todo: Todo) {
 }
 
 function handleInputKeydown(event: KeyboardEvent, todo: Todo) {
-  if (tagEditor.popoverTargetId.value === todo.id && tagSelectorRef.value) {
-    switch (event.key) {
-      case "ArrowDown":
-        tagSelectorRef.value.navigateDown();
-        event.preventDefault();
-        break;
-      case "ArrowUp":
-        tagSelectorRef.value.navigateUp();
-        event.preventDefault();
-        break;
-      case "Enter":
-        selectingTagViaEnter.value = true;
-        tagSelectorRef.value.selectHighlighted();
-        event.preventDefault();
-        break;
-      case "Escape":
-        tagEditor.closePopover();
-        event.preventDefault();
-        break;
-    }
+  if (tagEditor.popoverTargetId.value === todo.id && tagPickerRef.value) {
+    tagPickerRef.value.handleHostKeydown(event);
   }
 
   // 特殊处理：# 键自动打开 popover

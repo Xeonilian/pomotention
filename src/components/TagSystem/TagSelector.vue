@@ -1,5 +1,5 @@
 <template>
-  <div class="tag-selector" ref="selectorRef">
+  <div class="tag-selector" :class="{ 'tag-selector--embed': embedInScrollParent }" ref="selectorRef">
     <!-- 标签列表 -->
     <div
       v-for="(tag, index) in filteredTags"
@@ -34,16 +34,21 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, withDefaults } from "vue";
 import { useTagStore, type TagWithCount } from "@/stores/useTagStore";
 import { NIcon } from "naive-ui";
 import { Add20Filled } from "@vicons/fluent";
 
 // --- Props & Emits ---
-const props = defineProps<{
-  searchTerm: string;
-  allowCreate: boolean;
-}>();
+const props = withDefaults(
+  defineProps<{
+    searchTerm: string;
+    allowCreate: boolean;
+    /** 由父级包一层 overflow（如 Home 内置搜索），避免滚动条与顶部 input 宽度不一致 */
+    embedInScrollParent?: boolean;
+  }>(),
+  { embedInScrollParent: false },
+);
 
 const emit = defineEmits<{
   "select-tag": [id: number];
@@ -160,6 +165,13 @@ defineExpose({
   pointer-events: auto;
   max-height: 240px;
   overflow-y: auto;
+}
+
+.tag-selector--embed {
+  width: 100%;
+  max-height: none;
+  overflow-x: hidden;
+  overflow-y: visible;
 }
 
 .tag-option {

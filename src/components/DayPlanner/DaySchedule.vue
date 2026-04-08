@@ -282,29 +282,22 @@
     </template>
     {{ popoverMessage }}
   </n-popover>
-  <!-- Tag Selector Popover -->
-  <n-popover
+  <TagPickerPopover
+    ref="tagPickerRef"
     :show="tagEditor.popoverTargetId.value !== null && schedulesForCurrentView.some((s) => s.id === tagEditor.popoverTargetId.value)"
-    @update:show="(show) => !show && (tagEditor.popoverTargetId.value = null)"
+    @update:show="(open: boolean) => { if (!open) tagEditor.closePopover(); }"
+    v-model:search-term="tagSearchTermModel"
+    input-mode="external"
     placement="bottom-start"
-    :trap-focus="false"
-    trigger="manual"
-    :show-arrow="false"
-    style="padding: 0; border-radius: 6px; margin-top: -30px; margin-left: 130px; z-index: 10000"
     :z-index="10000"
+    :popover-style="{ marginTop: '-30px', marginLeft: '130px' }"
+    @select-tag="(tagId: any) => handleTagSelected(tagId)"
+    @create-tag="(tagName: any) => handleTagCreate(tagName)"
   >
     <template #trigger>
       <span style="position: absolute; pointer-events: none"></span>
     </template>
-    <TagSelector
-      :ref="(el) => (tagSelectorRef = el)"
-      :search-term="tagEditor.tagSearchTerm.value"
-      :allow-create="true"
-      @select-tag="(tagId: any) => handleTagSelected(tagId)"
-      @create-tag="(tagName: any) => handleTagCreate(tagName)"
-      @close-selector="tagEditor.popoverTargetId.value = null"
-    />
-  </n-popover>
+  </TagPickerPopover>
 </template>
 
 <script setup lang="ts">
@@ -328,7 +321,7 @@ import { Task } from "@/core/types/Task";
 import { useDataStore } from "@/stores/useDataStore";
 import { storeToRefs } from "pinia";
 import { useActivityTagEditor } from "@/composables/useActivityTagEditor";
-import TagSelector from "../TagSystem/TagSelector.vue";
+import TagPickerPopover from "../TagSystem/TagPickerPopover.vue";
 import { useDevice } from "@/composables/useDevice";
 
 const dataStore = useDataStore();
@@ -376,7 +369,13 @@ const popoverMessage = ref("");
 
 // Tag Editor
 const tagEditor = useActivityTagEditor();
-const tagSelectorRef = ref<any>(null);
+const tagSearchTermModel = computed({
+  get: () => tagEditor.tagSearchTerm.value,
+  set: (v: string) => {
+    tagEditor.tagSearchTerm.value = v;
+  },
+});
+const tagPickerRef = ref<InstanceType<typeof TagPickerPopover> | null>(null);
 
 // 根据设备类型格式化时间显示，移动端去掉冒号
 function formatTimeForDisplay(timestamp?: number | null) {
@@ -653,25 +652,8 @@ function handleTitleInput(schedule: Schedule) {
 }
 
 function handleInputKeydown(event: KeyboardEvent, schedule: Schedule) {
-  if (tagEditor.popoverTargetId.value === schedule.id && tagSelectorRef.value) {
-    switch (event.key) {
-      case "ArrowDown":
-        tagSelectorRef.value.navigateDown();
-        event.preventDefault();
-        break;
-      case "ArrowUp":
-        tagSelectorRef.value.navigateUp();
-        event.preventDefault();
-        break;
-      case "Enter":
-        tagSelectorRef.value.selectHighlighted();
-        event.preventDefault();
-        break;
-      case "Escape":
-        tagEditor.closePopover();
-        event.preventDefault();
-        break;
-    }
+  if (tagEditor.popoverTargetId.value === schedule.id && tagPickerRef.value) {
+    tagPickerRef.value.handleHostKeydown(event);
   }
 
   // 特殊处理：# 键自动打开 popover
