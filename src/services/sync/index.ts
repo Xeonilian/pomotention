@@ -14,6 +14,12 @@ import { useDataStore } from "@/stores/useDataStore";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { isSupabaseEnabled } from "@/core/services/supabase";
 
+const shouldLogSyncDebug = ["1", "true"].includes(String(import.meta.env.VITE_SYNC_DEBUG_LOG ?? "").trim().toLowerCase());
+function syncDebugLog(...args: unknown[]) {
+  if (!shouldLogSyncDebug) return;
+  console.log(...args);
+}
+
 // 私有变量：存储所有 sync 服务实例
 let syncServices: Array<{ name: string; service: any }> = [];
 let isInitialized = false;
@@ -111,7 +117,7 @@ export function resetSyncServices() {
   // 如果你有 cleanup 逻辑，也可以在这里调用
   // 例如：syncServices.forEach(s => s.service.cleanup && s.service.cleanup())
 
-  console.log("♻️ [Sync] 同步服务实例已销毁，等待重新初始化");
+  syncDebugLog("♻️ [Sync] 同步服务实例已销毁，等待重新初始化");
 }
 // ===================================================================================
 // 2. 核心原子逻辑 (Internal Logic) - 不操作 Store 状态，只返回结果
@@ -237,7 +243,7 @@ async function _internalCleanup(): Promise<boolean> {
     return true; // 跳过，视为成功
   }
 
-  console.log("🗑️ 执行过期数据清理...");
+  syncDebugLog("🗑️ 执行过期数据清理...");
   const results = await Promise.allSettled(syncServices.map(({ service }) => service.cleanupDeleted()));
   const allSuccess = results.every((r) => r.status === "fulfilled" && r.value?.success);
 
@@ -300,7 +306,7 @@ async function runSyncTask(actionName: string, taskFn: () => Promise<{ success: 
  * 完整同步：上传 -> 下载 -> 清理 -> 保存 -> 更新时间
  */
 export async function syncAll() {
-  console.log("🚀 syncAll() 被调用，执行同步...");
+  syncDebugLog("🚀 syncAll() 被调用，执行同步...");
   return runSyncTask("同步", async () => {
     const syncStore = useSyncStore();
     const dataStore = useDataStore();
@@ -320,7 +326,7 @@ export async function syncAll() {
     const lastSync = syncStore.lastSyncTimestamp;
     const isFirstSync = lastSync === 0;
 
-    if (isFirstSync) console.log("🔄 首次同步，执行全量下载");
+    if (isFirstSync) syncDebugLog("🔄 首次同步，执行全量下载");
 
     const downRes = await _internalDownload(lastSync);
     errors.push(...downRes.errors);
@@ -334,7 +340,7 @@ export async function syncAll() {
       syncStore.updateLastSyncTimestamp();
       // ✅ 统一落库保存
       dataStore.saveAllAfterSync();
-      console.log("💾 [Sync] 同步成功，数据已保存");
+      syncDebugLog("💾 [Sync] 同步成功，数据已保存");
       return { success: true, errors: [], details: { uploaded: upRes.count, downloaded: downRes.count } };
     } else {
       return { success: false, errors, details: { uploaded: upRes.count, downloaded: downRes.count } };

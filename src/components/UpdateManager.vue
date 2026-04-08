@@ -19,6 +19,11 @@ const updateState = reactive({
 const notification = useNotification();
 const dialog = useDialog();
 const settingStore = useSettingStore();
+const shouldLogUpdateDebug = ["1", "true"].includes(String(import.meta.env.VITE_UPDATE_DEBUG_LOG ?? "").trim().toLowerCase());
+function updateDebugLog(...args: unknown[]) {
+  if (!shouldLogUpdateDebug) return;
+  console.log(...args);
+}
 
 // 对话框实例管理
 let currentDialogInstance: any = null;
@@ -42,7 +47,7 @@ function clearDialogTimeout() {
   if (dialogTimeoutRef) {
     clearTimeout(dialogTimeoutRef);
     dialogTimeoutRef = null;
-    console.log("对话框计时器已清除");
+    updateDebugLog("对话框计时器已清除");
   }
 }
 
@@ -50,7 +55,7 @@ function clearDialogTimeout() {
 function startDialogTimeout(onTimeout: () => void) {
   clearDialogTimeout();
   dialogTimeoutRef = setTimeout(() => {
-    console.log("对话框超时(30s)，自动执行取消操作");
+    updateDebugLog("对话框超时(30s)，自动执行取消操作");
     onTimeout();
   }, 20000); // 20秒超时
 }
@@ -124,11 +129,11 @@ onMounted(() => {
   if (isTauri()) {
     // console.log(settingStore.settings.checkForUpdate);
     if (settingStore.settings.checkForUpdate) {
-      console.log("Initializing update checking");
+      updateDebugLog("Initializing update checking");
       handleUpdateCheck();
     }
   } else {
-    console.log("Not in Tauri, skip update");
+    updateDebugLog("Not in Tauri, skip update");
   }
 });
 
@@ -137,7 +142,7 @@ watch(
   () => settingStore.settings.checkForUpdate,
   (newValue) => {
     if (isTauri() && newValue) {
-      console.log("用户启用自动更新，进行更新检查", newValue);
+      updateDebugLog("用户启用自动更新，进行更新检查", newValue);
       handleUpdateCheck(); // 切换打开开关时检查更新
     }
   }
@@ -147,7 +152,7 @@ watch(
 // UpdateManager.vue 中的 getRemoteVersion 函数
 async function getRemoteVersion(): Promise<string | null> {
   try {
-    console.log("使用 Tauri 环境获取 GitHub 版本信息");
+    updateDebugLog("使用 Tauri 环境获取 GitHub 版本信息");
 
     const resp = await appHttpFetch(
       "https://api.github.com/repos/Xeonilian/pomotention/releases/latest",
@@ -160,7 +165,7 @@ async function getRemoteVersion(): Promise<string | null> {
       },
     );
 
-    console.log("GitHub API 响应状态:", resp.status, resp.statusText);
+    updateDebugLog("GitHub API 响应状态:", resp.status, resp.statusText);
 
     if (!resp.ok) {
       // 获取更详细的错误信息
@@ -184,7 +189,7 @@ async function getRemoteVersion(): Promise<string | null> {
     }
 
     const data = await resp.json();
-    console.log("成功获取版本信息:", data.tag_name);
+    updateDebugLog("成功获取版本信息:", data.tag_name);
 
     return (data.tag_name ?? data.name ?? null) as string | null;
   } catch (e: any) {
@@ -227,9 +232,9 @@ function compareVersions(
 async function handleUpdateCheck() {
   try {
     const localVersion = await getVersion();
-    console.log("Local App Version:", localVersion);
+    updateDebugLog("Local App Version:", localVersion);
     const remoteVersion = await getRemoteVersion();
-    console.log("远端最新版本:", remoteVersion);
+    updateDebugLog("远端最新版本:", remoteVersion);
 
     // 步骤2：本地与远端一致则直接短路
     if (
@@ -259,7 +264,7 @@ async function handleUpdateCheck() {
     const update = await check();
 
     if (update) {
-      console.log("update内容", update);
+      updateDebugLog("update内容", update);
 
       // 使用超时对话框替代直接调用
       showDialogWithTimeout(
@@ -292,7 +297,7 @@ async function handleUpdateCheck() {
         }
       );
     } else {
-      console.log("当前已是最新版本");
+      updateDebugLog("当前已是最新版本");
       notification.success({
         title: "版本检查",
         content: "当前已是最新版本",
@@ -317,7 +322,7 @@ async function downloadAndInstall(update: any) {
       duration: 3000,
     });
 
-    console.log("Starting download and install...");
+    updateDebugLog("Starting download and install...");
 
     await update.downloadAndInstall();
 
@@ -332,7 +337,7 @@ async function downloadAndInstall(update: any) {
       });
     }, 1000);
 
-    console.log("Update completed successfully");
+    updateDebugLog("Update completed successfully");
   } catch (error) {
     console.error("Download and install failed:", error);
     updateState.showProgress = false;
@@ -341,7 +346,7 @@ async function downloadAndInstall(update: any) {
 }
 
 function handleUpdateCheckError(error: any) {
-  console.log(
+  updateDebugLog(
     "Update check failed (raw):",
     error,
     typeof error,
@@ -364,7 +369,7 @@ function handleUpdateCheckError(error: any) {
       originalMessage = String(error);
     }
 
-    console.log("Original error message:", originalMessage);
+    updateDebugLog("Original error message:", originalMessage);
 
     // 检测平台不匹配错误
     if (
@@ -469,7 +474,7 @@ function handleUpdateCheckError(error: any) {
         positiveText: "重试",
         negativeText: "稍后再试",
         onPositiveClick: () => {
-          console.log("User chose to retry update check");
+          updateDebugLog("User chose to retry update check");
           notification.info({
             title: "重新检查更新",
             content: "正在重新连接 GitHub 服务器...",
@@ -507,7 +512,7 @@ function handleUpdateCheckError(error: any) {
 }
 
 function handleDownloadError(error: any) {
-  console.log(
+  updateDebugLog(
     "Download failed (raw):",
     error,
     typeof error,
@@ -529,7 +534,7 @@ function handleDownloadError(error: any) {
       originalMessage = String(error);
     }
 
-    console.log("Download error message:", originalMessage);
+    updateDebugLog("Download error message:", originalMessage);
 
     if (
       originalMessage.includes("error sending request") ||
@@ -570,7 +575,7 @@ function handleDownloadError(error: any) {
         positiveText: "重新下载",
         negativeText: "稍后重试",
         onPositiveClick: () => {
-          console.log("User chose to retry download");
+          updateDebugLog("User chose to retry download");
           notification.info({
             title: "重新开始",
             content: "正在重新检查更新并下载...",

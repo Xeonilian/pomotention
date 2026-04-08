@@ -281,10 +281,10 @@ const {
   handlePomotentionTimerSizeReport,
 } = useAppWindow();
 
-// 为了不报错增加的使用 PomotentionTimerContainerRef
-if (!settingStore.settings.showPomodoro) {
-  console.log("Refs error prevent:", PomotentionTimerContainerRef.value, draggableContainer.value);
-}
+// 通过模板绑定使用，避免脚本层未读取触发告警
+void PomotentionTimerContainerRef;
+void draggableContainer;
+
 const syncStore = useSyncStore();
 const { syncIcon, handleUpload, handleDownload } = useSyncWidget(); //relativeTime,
 const { isLoggedIn } = storeToRefs(syncStore);

@@ -29,6 +29,12 @@ import { useTimerStore } from "@/stores/useTimerStore";
 import { resumeSharedAudioAfterForegroundAsync, prefetchSoundAssets, prefetchWhiteNoiseForSelection } from "@/core/sounds";
 import { bootMark } from "@/bootTiming";
 
+const shouldLogAppDebug = ["1", "true"].includes(String(import.meta.env.VITE_APP_DEBUG_LOG ?? "").trim().toLowerCase());
+function appDebugLog(...args: unknown[]) {
+  if (!shouldLogAppDebug) return;
+  console.log(...args);
+}
+
 // ========== 状态与依赖 ==========
 const router = useRouter();
 const settingStore = useSettingStore();
@@ -118,7 +124,7 @@ const initSyncLifecycle = async () => {
   }
 
   if (syncStore.syncInitialized) {
-    console.log("⏭️ 同步已初始化，跳过");
+    appDebugLog("⏭️ 同步已初始化，跳过");
     return;
   }
 
@@ -127,7 +133,7 @@ const initSyncLifecycle = async () => {
     await syncAll();
     appCloseCleanup = await initAppCloseHandler();
     syncStore.initSyncService();
-    console.log("✅ 同步生命周期初始化完成");
+    appDebugLog("✅ 同步生命周期初始化完成");
   } catch (error) {
     console.error("❌ 同步初始化失败:", error);
     syncStore.syncError = error as string;
@@ -155,15 +161,15 @@ const handleSignedInSession = async (session: any) => {
 
   if (userSwitched) {
     // 用户切换：清理数据并重新初始化
-    console.log("⚠️ 检测到用户切换，执行本地清理");
+    appDebugLog("⚠️ 检测到用户切换，执行本地清理");
     clearAllUserState(false, false, true);
     await initSyncLifecycle();
   } else if (isSameUser && syncStore.syncInitialized) {
     // 同一用户且已初始化：不需要重新初始化，只确保状态正确
-    console.log("✅ 同一用户已登录且同步已初始化，跳过重复初始化");
+    appDebugLog("✅ 同一用户已登录且同步已初始化，跳过重复初始化");
   } else if (syncStore.syncInitialized || appCloseCleanup) {
     // 同步已初始化但用户ID不匹配（可能是首次设置）：重置并重新初始化
-    console.log("🔄 重置同步状态并重新初始化");
+    appDebugLog("🔄 重置同步状态并重新初始化");
     cleanupSyncLifecycle();
     syncStore.resetSyncState();
     await initSyncLifecycle();
@@ -179,7 +185,7 @@ const handleSignedInSession = async (session: any) => {
  * keepLocalDataAfterSignOut=true → 保留本地业务数据与上次用户 id；false → 清空业务存储并恢复默认设置（下次等同全新安装）
  */
 const handleSignedOut = async () => {
-  console.log("👋 用户已登出，清理同步状态和认证会话");
+  appDebugLog("👋 用户已登出，清理同步状态和认证会话");
   syncStore.isLoggedIn = false;
   const keep = settingStore.settings.keepLocalDataAfterSignOut || settingStore.settings.keepLocalDataOnNextSignOut;
   settingStore.settings.keepLocalDataOnNextSignOut = false;
@@ -199,7 +205,7 @@ const initAuthStateListener = () => {
   const {
     data: { subscription },
   } = supabase.auth.onAuthStateChange(async (event, session) => {
-    console.log(`🔔 Auth 事件: ${event}, syncInitialized=${syncStore.syncInitialized}`);
+    appDebugLog(`🔔 Auth 事件: ${event}, syncInitialized=${syncStore.syncInitialized}`);
 
     if (event === "SIGNED_IN") {
       await handleSignedInSession(session);
@@ -207,7 +213,7 @@ const initAuthStateListener = () => {
       await handleSignedOut();
     } else if (event === "INITIAL_SESSION") {
       // INITIAL_SESSION 事件在应用启动时触发，已在 onMounted 中处理，这里跳过避免重复初始化
-      console.log("⏭️ INITIAL_SESSION 事件，已在 onMounted 中处理，跳过");
+      appDebugLog("⏭️ INITIAL_SESSION 事件，已在 onMounted 中处理，跳过");
     }
   });
 
@@ -224,7 +230,7 @@ onMounted(async () => {
     bootMark("app-after-paint");
 
     // v3: 确保prefetch在PWA reload后完成，避免timer在sounds未就绪时启动 (iPhone sound fix)
-    console.log("[App] Starting prefetchSoundAssets for timer sounds");
+    appDebugLog("[App] Starting prefetchSoundAssets for timer sounds");
     prefetchSoundAssets(settingStore.settings.whiteNoiseSoundTrack);
     // 1. 初始化本地数据
     await dataStore.loadAllData();
@@ -232,7 +238,7 @@ onMounted(async () => {
 
     // 3. 本地模式直接跳转（仍保留 Auth 监听以便后续切换登录）
     if (settingStore.settings.localOnlyMode) {
-      console.log("✅ 本地模式，跳过登录检查，直接进入Home");
+      appDebugLog("✅ 本地模式，跳过登录检查，直接进入Home");
       router.push({ name: "Home" });
       initAuthStateListener();
       return;
@@ -250,14 +256,14 @@ onMounted(async () => {
         if (session) {
           await handleSignedInSession(session);
         } else {
-          console.log("ℹ️ 用户未登录，继续使用本地功能");
+          appDebugLog("ℹ️ 用户未登录，继续使用本地功能");
           syncStore.isLoggedIn = false;
         }
       } catch (error) {
         console.error("获取Session失败:", error);
       }
     } else {
-      console.log("ℹ️ Supabase未启用，使用本地模式");
+      appDebugLog("ℹ️ Supabase未启用，使用本地模式");
     }
 
     // 5. 清理URL并跳转Home
