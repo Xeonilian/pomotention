@@ -21,7 +21,7 @@
       <div v-if="selectedTagIds && selectedTagIds.length > 0 && selectedTaskId" class="task-tag-render-container">
         <TagRenderer
           :tag-ids="selectedTagIds"
-          :closeableTagIds="dataStore.filterTagIds"
+          is-closeable
           :displayLength="tagDisplayLength"
           @tag-click="handleTagClick"
           @remove-tag="handleRemoveTag"
@@ -379,9 +379,11 @@ const formatRecordValue = (record: CombinedRecord) => {
   return record.value === 10 ? "X" : String(record.value);
 };
 
-// 移除标签
+// 从当前任务对应 Activity 的 tagIds 中移除（不是改首页筛选）
 const handleRemoveTag = (tagId: number) => {
-  dataStore.removeFilterTagId(tagId);
+  const activityId = selectedTask.value?.sourceId;
+  if (activityId == null) return;
+  dataStore.removeTagFromActivity(activityId, tagId);
 };
 
 const handleTagClick = (tagId: number) => {
@@ -501,7 +503,8 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  overflow: hidden;
+  /* visible：避免 TagRenderer hover scale 被裁切；横向过长由子级 tag 区域处理 */
+  overflow: visible;
 }
 
 .task-view-container.is-pseudo-fullscreen.is-ios-device {
@@ -529,7 +532,12 @@ onUnmounted(() => {
 }
 
 /* 标签和时间轴可以收缩 */
-.task-tag-render-container,
+.task-tag-render-container {
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: visible;
+}
+
 .combined-timeline-container {
   flex-shrink: 1;
   min-width: 0;
@@ -547,10 +555,10 @@ onUnmounted(() => {
   gap: 4px;
 }
 
-/* TagRenderer 根默认 flex-wrap: wrap，此处强制单行，宽度不够由上层 overflow: hidden 裁切 */
+/* 单行；整体 overflow visible，避免 hover scale 被裁（横向极长时可能与右侧按钮重叠，属取舍） */
 .task-tag-render-container :deep(.tag-container) {
   flex-wrap: nowrap;
-  overflow: hidden;
+  overflow: visible;
   min-width: 0;
 }
 
