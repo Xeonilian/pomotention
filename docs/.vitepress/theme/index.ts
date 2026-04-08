@@ -31,11 +31,16 @@ function resolveExitHref(): string {
   if (typeof window === "undefined") return "/";
   if (isTauri() || isLocalHost()) return appRootFromLocation();
   const raw = import.meta.env.VITE_DOCS_EXIT_HREF;
-  if (typeof raw === "string" && raw.trim() !== "" && /^https?:\/\//.test(raw.trim())) {
-    const u = raw.trim().replace(/\/?$/, "/");
-    return u;
+  if (typeof raw === "string" && raw.trim() !== "") {
+    const normalized = raw.trim();
+    if (/^https?:\/\//.test(normalized)) {
+      return normalized.replace(/\/?$/, "/");
+    }
+    if (normalized.startsWith("/")) {
+      return new URL(normalized.replace(/\/?$/, "/"), window.location.origin).href;
+    }
   }
-  return "https://pomotention.pages.dev/";
+  return `${window.location.origin}/`;
 }
 
 /** 纠正 Logo 链：须带 vp-raw，否则 VitePress 会把同源出站也当成站内 router.go()（快捷键后退不受影响） */

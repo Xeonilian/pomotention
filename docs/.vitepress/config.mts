@@ -17,7 +17,8 @@ const base = process.env.VITEPRESS_BASE || "/pomotention/";
 // 与根目录 vite.config.ts 一致：未设置时监听 0.0.0.0，便于局域网访问
 const devHost = process.env.TAURI_DEV_HOST;
 // 非 Tauri、非本地 host 时，导航栏 Logo 回主应用的跳转目标（可由环境变量覆盖）
-const docsExitHref = (process.env.VITE_DOCS_EXIT_HREF ?? "https://pomotention.pages.dev").replace(/\/?$/, "/");
+// 默认使用同源根路径，避免部署到其他域名时被固定跳回 pages.dev
+const docsExitHref = (process.env.VITE_DOCS_EXIT_HREF ?? "/").replace(/\/?$/, "/");
 
 // Markdown 内 ```mermaid 代码块由 vitepress-plugin-mermaid 转成图表
 export default withMermaid(
