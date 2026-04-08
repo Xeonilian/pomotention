@@ -237,7 +237,10 @@ const resetForm = () => {
 }
 
 .n-list {
-  height: calc(100% - 2px);
+  max-height: 304px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
   background-color: var(--color-background-light);
   border: 1px solid var(--color-background-light);
 }
