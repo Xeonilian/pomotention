@@ -1,15 +1,13 @@
 <template>
-  <n-config-provider>
-    <n-notification-provider>
-      <n-dialog-provider>
-        <PwaSplashScreen />
-        <router-view />
-        <UpdateManager />
-        <PwaUpdateNotifier />
-        <PwaInstallBanner />
-      </n-dialog-provider>
-    </n-notification-provider>
-  </n-config-provider>
+  <n-notification-provider>
+    <n-dialog-provider>
+      <PwaSplashScreen />
+      <router-view />
+      <UpdateManager />
+      <PwaUpdateNotifier />
+      <PwaInstallBanner />
+    </n-dialog-provider>
+  </n-notification-provider>
 </template>
 
 <script setup lang="ts">
@@ -29,6 +27,7 @@ import { initSyncServices, syncAll, resetSyncServices } from "@/services/sync";
 import { initAppCloseHandler, cancelPendingSyncTasks } from "@/services/appCloseHandler";
 import { useTimerStore } from "@/stores/useTimerStore";
 import { resumeSharedAudioAfterForegroundAsync, prefetchSoundAssets, prefetchWhiteNoiseForSelection } from "@/core/sounds";
+import { bootMark } from "@/bootTiming";
 
 // ========== 状态与依赖 ==========
 const router = useRouter();
@@ -218,11 +217,18 @@ const initAuthStateListener = () => {
 // ========== 生命周期钩子 ==========
 onMounted(async () => {
   try {
+    // 先让浏览器完成首帧绘制，再同步读取大量 localStorage，减轻白屏/长任务
+    await new Promise<void>((resolve) => {
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+    });
+    bootMark("app-after-paint");
+
     // v3: 确保prefetch在PWA reload后完成，避免timer在sounds未就绪时启动 (iPhone sound fix)
     console.log("[App] Starting prefetchSoundAssets for timer sounds");
     prefetchSoundAssets(settingStore.settings.whiteNoiseSoundTrack);
     // 1. 初始化本地数据
     await dataStore.loadAllData();
+    bootMark("app-data-loaded");
 
     // 3. 本地模式直接跳转（仍保留 Auth 监听以便后续切换登录）
     if (settingStore.settings.localOnlyMode) {

@@ -2,7 +2,6 @@
 
 import { defineComponent } from "vue";
 import { createRouter, createWebHistory, RouteRecordRaw } from "vue-router";
-import { getSession } from "@/core/services/authService"; // 导入获取会话的方法
 import { isSupabaseEnabled } from "@/core/services/supabase";
 import { navigateToBuiltDocs } from "@/composables/useDocsUrl";
 
@@ -89,8 +88,7 @@ router.beforeEach(async (to, _from, next) => {
     return;
   }
 
-  // getSession() 返回 Session | null
-  await getSession();
+  // 会话由 App.vue onMounted 统一拉取并驱动同步；此处不再 await getSession，避免阻塞首屏路由与 MainLayout 懒加载 chunk
 
   // 登录页始终放行，便于用户主动切换账号或重新登录
   if (to.name === "Login") {
