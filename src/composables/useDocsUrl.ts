@@ -11,12 +11,14 @@ export function getDocsStaticPath(): string {
 
 /**
  * Web/PWA 的线上文档入口。
- * 可通过 VITE_HELP_DOCS_URL 覆盖；默认走 Cloudflare docs 站点。
+ * 优先走同源 docs-app（保持在 PWA scope 内）；若显式配置 VITE_HELP_DOCS_URL 则使用外链。
  */
 export function getWebDocsUrl(): string {
   const raw = (import.meta.env.VITE_HELP_DOCS_URL as string | undefined)?.trim();
-  const url = raw && raw.length > 0 ? raw : "https://pomotention-docs.pages.dev/";
-  return url.endsWith("/") ? url : `${url}/`;
+  if (raw && raw.length > 0) {
+    return raw.endsWith("/") ? raw : `${raw}/`;
+  }
+  return new URL(getDocsStaticPath(), window.location.origin).href;
 }
 
 /** 离开 SPA，进入帮助文档站 */
