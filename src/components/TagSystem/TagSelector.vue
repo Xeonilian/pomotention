@@ -34,7 +34,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, withDefaults } from "vue";
+import { ref, computed, watch } from "vue";
 import { useTagStore, type TagWithCount } from "@/stores/useTagStore";
 import { NIcon } from "naive-ui";
 import { Add20Filled } from "@vicons/fluent";
