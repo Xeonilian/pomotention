@@ -32,13 +32,13 @@
         class="tag-picker-panel__search tag-picker-panel__search--quiet"
         @keydown="handleHostKeydown"
       />
-      <!-- internal：滚动在外层 + scrollbar-gutter，避免滚动条把列表挤窄而 input 仍占满宽 -->
-      <div :class="inputMode === 'internal' ? 'tag-picker-panel__list-shell' : 'tag-picker-panel__list-shell--pass-through'">
+      <!-- 列表滚动统一在外层 + scrollbar-gutter，避免 internal/external 下滚动条与行宽错位 -->
+      <div class="tag-picker-panel__list-shell">
         <TagSelector
           ref="tagSelectorRef"
           :search-term="searchTerm"
           :allow-create="allowCreate"
-          :embed-in-scroll-parent="inputMode === 'internal'"
+          embed-in-scroll-parent
           @select-tag="(id: number) => emit('select-tag', id)"
           @create-tag="(name: string) => emit('create-tag', name)"
           @close-selector="onCloseSelector"
@@ -225,7 +225,4 @@ onUnmounted(() => {
   box-sizing: border-box;
 }
 
-.tag-picker-panel__list-shell--pass-through {
-  display: contents;
-}
 </style>

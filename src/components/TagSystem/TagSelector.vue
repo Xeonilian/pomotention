@@ -155,6 +155,7 @@ defineExpose({
 <style scoped>
 .tag-selector {
   width: 160px;
+  box-sizing: border-box;
   border-radius: 6px;
   box-shadow: var(--n-box-shadow-focus);
   padding: 4px;
