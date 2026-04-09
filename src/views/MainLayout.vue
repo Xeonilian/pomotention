@@ -540,17 +540,16 @@ async function handleManualDownload() {
 </script>
 
 <style scoped>
-/* 保持你原来的 Style 不变 */
-/* 重点检查 .draggable-container 是否有 touch-action: none   height: 100dvh;*/
+/*    height: 100dvh;*/
 .app-layout {
   overflow: hidden;
   height: 100vh;
-
+  height: 100dvh;
   user-select: none;
 }
-/* .app-layout.app-layout--use-vv-height {
+.app-layout.app-layout--use-vv-height {
   height: var(--app-vvh, 100dvh);
-} */
+}
 .app-layout__header {
   flex-shrink: 0;
   height: 30px;
