@@ -84,6 +84,7 @@
                 v-if="isLoggedIn"
                 v-model:show="logoutConfirmVisible"
                 trigger="manual"
+                :on-clickoutside="handleLogoutPopconfirmClickOutside"
                 @positive-click="handleLogoutConfirm"
                 @negative-click="handleLogoutCancel"
                 negative-text="不保留"
@@ -99,6 +100,9 @@
                     class="header-button"
                     @click="handleLogoutButtonClick"
                     @dblclick.prevent="handleLogoutButtonDoubleClick"
+                    @touchstart.stop="onLogoutButtonTouchStart"
+                    @touchend.stop="onLogoutButtonTouchEnd"
+                    @touchcancel.stop="onLogoutButtonTouchCancel"
                   >
                     <template #icon>
                       <n-icon>
@@ -245,6 +249,7 @@ import { useSyncWidget } from "@/composables/useSyncWidget";
 import { useDevice } from "@/composables/useDevice";
 import { navigateToBuiltDocs } from "@/composables/useDocsUrl";
 import { syncAll } from "@/services/sync";
+import { createTouchScheduledSingleAndDouble } from "@/composables/useTouchScheduledSingleAndDouble";
 
 // Icons & Components
 import {
@@ -297,6 +302,43 @@ const { isMobile } = useDevice();
 const showDatabaseDialog = ref(false);
 const logoutConfirmVisible = ref(false);
 let logoutClickTimer: ReturnType<typeof setTimeout> | null = null;
+
+/** 与 YearPlanner 一致：移动端无 dblclick，用双触窗口识别 */
+const LOGOUT_TOUCH_KEY = 0;
+const logoutButtonTouch = createTouchScheduledSingleAndDouble(
+  () => {
+    logoutConfirmVisible.value = true;
+  },
+  () => {
+    void syncOnLogoutDoubleClick();
+  },
+);
+
+function onLogoutButtonTouchStart(e: TouchEvent) {
+  if (!isMobile.value) return;
+  logoutButtonTouch.touchStart(e);
+}
+
+function onLogoutButtonTouchEnd(e: TouchEvent) {
+  if (!isMobile.value) return;
+  e.stopPropagation();
+  logoutButtonTouch.touchEnd(LOGOUT_TOUCH_KEY);
+}
+
+function onLogoutButtonTouchCancel() {
+  if (!isMobile.value) return;
+  logoutButtonTouch.touchCancel();
+}
+
+/** manual 触发时 Naive 不会自动关层，需 onClickoutside 里关 v-model:show */
+function handleLogoutPopconfirmClickOutside() {
+  if (logoutClickTimer) {
+    clearTimeout(logoutClickTimer);
+    logoutClickTimer = null;
+  }
+  logoutButtonTouch.touchCancel();
+  logoutConfirmVisible.value = false;
+}
 
 // 移动端用 visualViewport 高度驱动外壳，减轻横竖屏与 Safari 工具栏导致的 100vh 误差
 function syncAppVisualViewportHeight() {
@@ -367,8 +409,9 @@ async function handleLogoutCancel() {
   await syncStore.handleLogout();
 }
 
-// 双击退出按钮时，执行一次完整同步
+// 桌面：短延迟区分单击 / 双击；移动端单击由 touch composable 延迟触发，此处忽略 click 避免与合成 click 重复
 function handleLogoutButtonClick() {
+  if (isMobile.value) return;
   if (logoutClickTimer) {
     clearTimeout(logoutClickTimer);
     logoutClickTimer = null;
@@ -380,8 +423,8 @@ function handleLogoutButtonClick() {
   }, 220);
 }
 
-// 双击退出按钮时，执行一次完整同步（不触发单击弹窗）
-async function handleLogoutButtonDoubleClick() {
+// 双击退出按钮时，执行一次完整同步（不触发单击弹窗）；移动端对应 composable 双触
+async function syncOnLogoutDoubleClick() {
   if (logoutClickTimer) {
     clearTimeout(logoutClickTimer);
     logoutClickTimer = null;
@@ -393,6 +436,10 @@ async function handleLogoutButtonDoubleClick() {
   } catch (error) {
     console.warn("[MainLayout] syncAll on logout button double click failed:", error);
   }
+}
+
+function handleLogoutButtonDoubleClick() {
+  void syncOnLogoutDoubleClick();
 }
 
 // === 2. 菜单与路由逻辑 ===
@@ -494,16 +541,16 @@ async function handleManualDownload() {
 
 <style scoped>
 /* 保持你原来的 Style 不变 */
-/* 重点检查 .draggable-container 是否有 touch-action: none */
+/* 重点检查 .draggable-container 是否有 touch-action: none   height: 100dvh;*/
 .app-layout {
   overflow: hidden;
   height: 100vh;
-  height: 100dvh;
+
   user-select: none;
 }
-.app-layout.app-layout--use-vv-height {
+/* .app-layout.app-layout--use-vv-height {
   height: var(--app-vvh, 100dvh);
-}
+} */
 .app-layout__header {
   flex-shrink: 0;
   height: 30px;
