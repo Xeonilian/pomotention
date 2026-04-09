@@ -17,12 +17,8 @@
             <n-descriptions-item v-if="isTauri()" label="是否最新">
               <n-tag v-if="!remoteReleaseOk" type="default" size="small" round>未知</n-tag>
               <n-tag v-else-if="!versionCompareLabel" type="default" size="small" round>计算中…</n-tag>
-              <n-tag v-else-if="versionCompareLabel === '已是最新'" type="success" size="small" round>
-                已是最新
-              </n-tag>
-              <n-tag v-else-if="versionCompareLabel === '有新版本'" type="warning" size="small" round>
-                有新版本
-              </n-tag>
+              <n-tag v-else-if="versionCompareLabel === '已是最新'" type="success" size="small" round>已是最新</n-tag>
+              <n-tag v-else-if="versionCompareLabel === '有新版本'" type="warning" size="small" round>有新版本</n-tag>
               <n-tag v-else type="info" size="small" round>{{ versionCompareLabel }}</n-tag>
             </n-descriptions-item>
             <n-descriptions-item v-if="isTauri()" label="自动检查更新">
@@ -40,10 +36,10 @@
             <n-descriptions-item label="当前用户">{{ userEmail }}</n-descriptions-item>
             <n-descriptions-item label="同步状态">{{ syncStore.syncMessage }}</n-descriptions-item>
             <n-descriptions-item label="最近同步">{{ lastSyncDisplay }}</n-descriptions-item>
-            <n-descriptions-item label="仅本地模式">{{ settingStore.settings.localOnlyMode ? "开启" : "关闭" }}</n-descriptions-item>
+            <n-descriptions-item label="本地模式">{{ settingStore.settings.localOnlyMode ? "开启" : "关闭" }}</n-descriptions-item>
           </n-descriptions>
           <n-space class="general-actions">
-            <n-button size="small" @click="refreshGeneral">刷新状态</n-button>
+            <!-- <n-button size="small" @click="refreshGeneral">刷新状态</n-button> -->
             <n-button v-if="supabaseEnabled && !syncStore.isLoggedIn" size="small" type="primary" @click="syncStore.handleLogin">
               去登录
             </n-button>
@@ -81,11 +77,10 @@
                 @update:value="(val) => console.log('workDuration 更新为:', val)"
                 :min="1"
                 :max="60"
-                style="width: 250px"
               />
             </n-form-item>
             <n-form-item label="休息时长（分钟）">
-              <n-select v-model:value="settingStore.settings.durations.breakDuration" :options="breakOptions" style="width: 250px" />
+              <n-select v-model:value="settingStore.settings.durations.breakDuration" :options="breakOptions" />
             </n-form-item>
 
             <n-form-item label="工作内层进度条颜色">
@@ -161,8 +156,9 @@
                 <n-descriptions-item label="visualViewport">
                   <template v-if="viewportSnapshot.visualViewport">
                     {{ viewportSnapshot.visualViewport.width }} × {{ viewportSnapshot.visualViewport.height }} · scale
-                    {{ viewportSnapshot.visualViewport.scale }} · offset
-                    {{ viewportSnapshot.visualViewport.offsetTop }}/{{ viewportSnapshot.visualViewport.offsetLeft }}
+                    {{ viewportSnapshot.visualViewport.scale }} · offset {{ viewportSnapshot.visualViewport.offsetTop }}/{{
+                      viewportSnapshot.visualViewport.offsetLeft
+                    }}
                   </template>
                   <template v-else>（无）</template>
                 </n-descriptions-item>
@@ -716,7 +712,11 @@ async function copyAudioDebugLogs() {
 const device = useDevice();
 const { isIOS: pwaIsIOS, isStandalone } = usePwaInstall();
 
-const { snapshot: viewportSnapshot, refresh: refreshViewportSnapshot, buildReport: buildViewportDebugReportText } = useViewportDebugSnapshot();
+const {
+  snapshot: viewportSnapshot,
+  refresh: refreshViewportSnapshot,
+  buildReport: buildViewportDebugReportText,
+} = useViewportDebugSnapshot();
 const viewportDbgCopyLoading = ref(false);
 
 function formatViewportDomRectBrief(r: { w: number; h: number; top: number; left: number } | null | undefined): string {
@@ -822,10 +822,7 @@ async function buildCrossOriginTransportCascadeLines(timeoutMs = 8000): Promise<
       "User-Agent": "Pomotention-EnvDiag",
     },
   };
-  const lines: string[] = [
-    `[cross_origin_cascade] ${NET_GITHUB_RELEASE_API}`,
-    "  顺序: fetch → xhr；fetch 已 2xx 则不再测 xhr。",
-  ];
+  const lines: string[] = [`[cross_origin_cascade] ${NET_GITHUB_RELEASE_API}`, "  顺序: fetch → xhr；fetch 已 2xx 则不再测 xhr。"];
 
   const r1 = await pingWithAbort("fetch", NET_GITHUB_RELEASE_API, init, timeoutMs, (u, i) => fetch(u, i));
   lines.push(`  ${r1.line}`);
