@@ -216,6 +216,27 @@
                 @click.stop
                 :data-schedule-id="schedule.id"
               />
+              <TagPickerPopover
+                v-if="editingRowId === schedule.id && editingField === 'title'"
+                ref="tagPickerRef"
+                :show="tagEditor.popoverTargetId.value === schedule.id"
+                @update:show="
+                  (open: boolean) => {
+                    if (!open) tagEditor.closePopover();
+                  }
+                "
+                v-model:search-term="tagSearchTermModel"
+                input-mode="external"
+                placement="bottom-end"
+                :z-index="10000"
+                :popover-style="{ marginRight: '90px' }"
+                @select-tag="(tagId: any) => handleTagSelected(tagId)"
+                @create-tag="(tagName: any) => handleTagCreate(tagName)"
+              >
+                <template #trigger>
+                  <span style="display: inline-block; width: 1px; height: 1px; pointer-events: none"></span>
+                </template>
+              </TagPickerPopover>
               <span class="ellipsis" v-else>{{ schedule.activityTitle ?? "-" }}</span>
 
               <!-- 云朵背景元素 - 只有当 isUntaetigkeit 为 true 时才显示 -->
@@ -282,22 +303,6 @@
     </template>
     {{ popoverMessage }}
   </n-popover>
-  <TagPickerPopover
-    ref="tagPickerRef"
-    :show="tagEditor.popoverTargetId.value !== null && schedulesForCurrentView.some((s) => s.id === tagEditor.popoverTargetId.value)"
-    @update:show="(open: boolean) => { if (!open) tagEditor.closePopover(); }"
-    v-model:search-term="tagSearchTermModel"
-    input-mode="external"
-    placement="bottom-start"
-    :z-index="10000"
-    :popover-style="{ marginTop: '-30px', marginLeft: '130px' }"
-    @select-tag="(tagId: any) => handleTagSelected(tagId)"
-    @create-tag="(tagName: any) => handleTagCreate(tagName)"
-  >
-    <template #trigger>
-      <span style="position: absolute; pointer-events: none"></span>
-    </template>
-  </TagPickerPopover>
 </template>
 
 <script setup lang="ts">
