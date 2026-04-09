@@ -26,21 +26,14 @@ function appRootFromLocation(): string {
   return `${origin}${withSlash}`;
 }
 
-/** Logo/站点标题链到主应用或线上入口 */
+/** Logo/站点标题跳转：
+ * - Tauri/本地开发：回主应用根路径
+ * - 线上文档站：跳固定主页
+ */
 function resolveExitHref(): string {
   if (typeof window === "undefined") return "/";
   if (isTauri() || isLocalHost()) return appRootFromLocation();
-  const raw = import.meta.env.VITE_DOCS_EXIT_HREF;
-  if (typeof raw === "string" && raw.trim() !== "") {
-    const normalized = raw.trim();
-    if (/^https?:\/\//.test(normalized)) {
-      return normalized.replace(/\/?$/, "/");
-    }
-    if (normalized.startsWith("/")) {
-      return new URL(normalized.replace(/\/?$/, "/"), window.location.origin).href;
-    }
-  }
-  return `${window.location.origin}/`;
+  return "https://pomotention.pages.dev/";
 }
 
 /** 纠正 Logo 链：须带 vp-raw，否则 VitePress 会把同源出站也当成站内 router.go()（快捷键后退不受影响） */
