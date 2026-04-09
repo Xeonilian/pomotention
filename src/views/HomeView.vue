@@ -31,7 +31,11 @@
       <div
         v-if="settingStore.settings.showPlanner"
         class="middle-top"
-        :style="settingStore.settings.showTask ? { height: effectiveMiddleTopHeightPx + 'px' } : { height: '100%' }"
+        :style="
+          settingStore.settings.showTask
+            ? { height: effectiveMiddleTopHeightPx + 'px' }
+            : { height: 'calc(100% - env(safe-area-inset-bottom)*1.35)' }
+        "
       >
         <!-- 任务计划的头部和控件 -->
         <div class="planner-header" @click.stop="cleanSelection">
@@ -1526,7 +1530,7 @@ const isLandscapeViewport = computed(() => viewportInnerW.value > viewportInnerH
 /** 移动端横屏或总高度不足时限制 middle-top，避免任务区被挤没；桌面端仅在极端矮窗时收缩 */
 const effectiveMiddleTopHeightPx = computed(() => {
   if (!settingStore.settings.showPlanner || !settingStore.settings.showTask) return topHeight.value;
-  const avail = Math.max(180, viewportInnerH.value - 36);
+  const avail = Math.max(180, viewportInnerH.value - 24);
   const minTask = 140;
   const maxTop = Math.max(120, avail - minTask);
   if (!isMobile.value) {
@@ -1841,6 +1845,13 @@ const { startResize: startRightResize } = useResize(
     width: 100% !important;
   }
 
+  .resize-handle-horizontal,
+  .resize-handle {
+    display: none;
+  }
+}
+
+@media (max-height: 500px) {
   .resize-handle-horizontal,
   .resize-handle {
     display: none;

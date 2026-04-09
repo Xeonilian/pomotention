@@ -54,13 +54,40 @@ function patchNavBarTitleExitLink(): void {
 }
 
 let navTitleObserver: MutationObserver | null = null;
+let navTitleClickBound = false;
+
+/** 为标题区增加点击兜底：无论内部 router 如何接管，始终整页跳回主应用 */
+function bindNavBarTitleExitClick(): void {
+  if (typeof document === "undefined" || navTitleClickBound) return;
+  const wrap = document.querySelector<HTMLElement>(".VPNavBarTitle");
+  if (!wrap) {
+    requestAnimationFrame(bindNavBarTitleExitClick);
+    return;
+  }
+  wrap.addEventListener(
+    "click",
+    (event) => {
+      const target = event.target as Element | null;
+      if (!target) return;
+      const hit = target.closest(".title");
+      if (!hit) return;
+      event.preventDefault();
+      event.stopPropagation();
+      window.location.assign(resolveExitHref());
+    },
+    true,
+  );
+  navTitleClickBound = true;
+}
 
 /** 路由切换或首屏后修正导航栏标题链接（Vue 重绘会覆盖 href/class，需兜底） */
 function setupExitToApp(ctx: EnhanceAppContext): void {
   if (typeof window === "undefined") return;
   const schedule = () => {
     patchNavBarTitleExitLink();
+    bindNavBarTitleExitClick();
     requestAnimationFrame(patchNavBarTitleExitLink);
+    requestAnimationFrame(bindNavBarTitleExitClick);
   };
   const prev = ctx.router.onAfterRouteChange;
   ctx.router.onAfterRouteChange = async (to) => {

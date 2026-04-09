@@ -75,7 +75,10 @@ import { useDataStore } from "@/stores/useDataStore";
 import { storeToRefs } from "pinia";
 import { useDevice } from "@/composables/useDevice";
 import { createTouchScheduledSingleAndDouble } from "@/composables/useTouchScheduledSingleAndDouble";
+import { useSettingStore } from "@/stores/useSettingStore";
 
+const settingStore = useSettingStore();
+const isTaskVisible = computed(() => settingStore.settings.showTask);
 const { isMobile } = useDevice();
 
 const emit = defineEmits<{
@@ -121,7 +124,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 // 每日显示项目数
 const maxItemsPerDay = computed(() => {
-  return isMobile.value ? 5 : 6; // 至少显示1个项目
+  return isMobile.value ? (isTaskVisible.value ? 6 : 9) : isTaskVisible.value ? 6 : 9; // 至少显示1个项目
 });
 
 const days = computed(() => {
@@ -498,7 +501,7 @@ function getPomoBgColorHEX(ratio: number) {
   line-height: 1;
   color: var(--color-text-primary);
   cursor: pointer;
-  padding: 0px 1px;
+  padding: 0.5px 0px;
   border-radius: 2px;
   -webkit-tap-highlight-color: transparent;
 }
@@ -507,6 +510,7 @@ function getPomoBgColorHEX(ratio: number) {
 .month-planner .item :deep(.tag-container) {
   flex-shrink: 0;
   min-width: auto;
+  padding: 0px;
 }
 
 .item .title {
@@ -549,12 +553,13 @@ function getPomoBgColorHEX(ratio: number) {
 
 .tag :deep(.n-tag) {
   flex-shrink: 0;
-  height: 12px;
-  width: 12px;
-  min-width: 12px;
-  min-height: 12px;
+  height: 11px;
+  width: 11px;
+  min-width: 11px;
+  min-height: 11px;
   aspect-ratio: 1;
   box-sizing: border-box;
+  transform: translateY(1px);
 }
 
 .tag :deep(.n-tag__content) {
@@ -628,7 +633,17 @@ function getPomoBgColorHEX(ratio: number) {
     border: none !important;
     border-radius: 0px !important;
   }
-
+  .tag :deep(.n-tag) {
+    flex-shrink: 0;
+    height: 10px;
+    width: 10px;
+    min-width: 10px;
+    min-height: 10px;
+    aspect-ratio: 1;
+    box-sizing: border-box;
+    transform: translateY(0px);
+    font-size: 9px;
+  }
   :deep(.title) {
     text-overflow: unset !important;
   }

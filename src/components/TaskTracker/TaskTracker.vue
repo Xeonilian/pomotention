@@ -21,7 +21,7 @@
       <div v-if="selectedTagIds && selectedTagIds.length > 0 && selectedTaskId" class="task-tag-render-container">
         <TagRenderer
           :tag-ids="selectedTagIds"
-          is-closeable
+          :is-closeable="!isMobile"
           :displayLength="tagDisplayLength"
           @tag-click="handleTagClick"
           @remove-tag="handleRemoveTag"

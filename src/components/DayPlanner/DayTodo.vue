@@ -38,25 +38,43 @@
               </template>
             </n-button>
           </th>
-          <th
-            class="col-start"
-            :class="{ 'disabled-toggle': !selectedRowId }"
-            @click.stop="selectedRowId && handleFillCurrentTimeStart()"
-            :title="selectedRowId ? '点击填入当前时间' : '请先选中一行'"
-          >
-            <n-icon size="20" class="header-icon">
-              <Play20Regular />
-            </n-icon>
+          <th class="col-start" :class="{ 'disabled-toggle': !selectedRowId }" :title="selectedRowId ? '点击填入当前时间' : '请先选中一行'">
+            <span v-if="selectedRowId && selectedTodoHasStartTime" class="header-time-pop-wrap" @click.stop>
+              <n-popconfirm positive-text="确定" negative-text="取消" @positive-click="handleFillCurrentTimeStart">
+                <template #trigger>
+                  <span class="header-time-trigger">
+                    <n-icon size="20" class="header-icon">
+                      <Play20Regular />
+                    </n-icon>
+                  </span>
+                </template>
+                确定用当前时间覆盖开始时间吗？
+              </n-popconfirm>
+            </span>
+            <span v-else class="header-time-trigger" @click.stop="selectedRowId && handleFillCurrentTimeStart()">
+              <n-icon size="20" class="header-icon">
+                <Play20Regular />
+              </n-icon>
+            </span>
           </th>
-          <th
-            class="col-end"
-            :class="{ 'disabled-toggle': !selectedRowId }"
-            @click.stop="selectedRowId && handleFillCurrentTimeEnd()"
-            :title="selectedRowId ? '点击填入当前时间' : '请先选中一行'"
-          >
-            <n-icon size="20" class="header-icon">
-              <RecordStop20Regular />
-            </n-icon>
+          <th class="col-end" :class="{ 'disabled-toggle': !selectedRowId }" :title="selectedRowId ? '点击填入当前时间' : '请先选中一行'">
+            <span v-if="selectedRowId && selectedTodoHasDoneTime" class="header-time-pop-wrap" @click.stop>
+              <n-popconfirm positive-text="确定" negative-text="取消" @positive-click="handleFillCurrentTimeEnd">
+                <template #trigger>
+                  <span class="header-time-trigger">
+                    <n-icon size="20" class="header-icon">
+                      <RecordStop20Regular />
+                    </n-icon>
+                  </span>
+                </template>
+                确定用当前时间覆盖结束时间吗？
+              </n-popconfirm>
+            </span>
+            <span v-else class="header-time-trigger" @click.stop="selectedRowId && handleFillCurrentTimeEnd()">
+              <n-icon size="20" class="header-icon">
+                <RecordStop20Regular />
+              </n-icon>
+            </span>
           </th>
           <th class="col-rank" :title="rankHeaderTitle" @click.stop="openPriorityBindingModal">
             <n-icon size="20" class="header-icon"><Important20Regular /></n-icon>
@@ -372,7 +390,11 @@
     :show="
       tagEditor.popoverTargetId.value !== null && todosForCurrentViewWithTaskRecords.some((t) => t.id === tagEditor.popoverTargetId.value)
     "
-    @update:show="(open: boolean) => { if (!open) tagEditor.closePopover(); }"
+    @update:show="
+      (open: boolean) => {
+        if (!open) tagEditor.closePopover();
+      }
+    "
     v-model:search-term="tagSearchTermModel"
     input-mode="external"
     placement="bottom-start"
@@ -449,7 +471,7 @@ import {
   RecordStop20Regular,
   FoodPizza20Regular,
 } from "@vicons/fluent";
-import { NCheckbox, NInputNumber, NPopover, NButton, NIcon, NModal, NSelect } from "naive-ui";
+import { NCheckbox, NInputNumber, NPopover, NPopconfirm, NButton, NIcon, NModal, NSelect } from "naive-ui";
 import { ref, computed, nextTick, reactive, watch, onBeforeUnmount } from "vue";
 
 import { useDataStore } from "@/stores/useDataStore";
@@ -480,6 +502,20 @@ const isViewDateToday = computed(() => dateService.isViewDateToday);
 const selectedTodo = computed(() => {
   if (!selectedRowId.value) return null;
   return todosForCurrentViewWithTaskRecords.value.find((t) => t.id === selectedRowId.value) || null;
+});
+
+// 选中行是否已有开始/结束时间（表头一键填入需二次确认以免误触覆盖）
+const selectedTodoHasStartTime = computed(() => {
+  const t = selectedTodo.value;
+  if (!t) return false;
+  return !!t.startTime;
+});
+
+// 选中行是否已有开始/结束时间（表头一键填入需二次确认以免误触覆盖）
+const selectedTodoHasDoneTime = computed(() => {
+  const t = selectedTodo.value;
+  if (!t) return false;
+  return !!t.doneTime;
 });
 
 // 判断果果是否可以切换（todo 不是 done 和 cancelled 状态）
@@ -1100,9 +1136,7 @@ function buildInstantSteps(todo: Todo, workCount: number): InstantPomoStep[] {
 }
 
 function buildSequenceSnapshot(steps: InstantPomoStep[]): string {
-  const body = steps
-    .map((step) => (step.type === "work" ? `w${step.duration}` : step.duration.toString().padStart(2, "0")))
-    .join("+");
+  const body = steps.map((step) => (step.type === "work" ? `w${step.duration}` : step.duration.toString().padStart(2, "0"))).join("+");
   return `>>>>${body}`;
 }
 
@@ -1560,6 +1594,15 @@ th.col-status {
 th.col-start,
 th.col-end {
   cursor: pointer;
+}
+
+th.col-start .header-time-pop-wrap,
+th.col-end .header-time-pop-wrap,
+th.col-start .header-time-trigger,
+th.col-end .header-time-trigger {
+  display: inline-flex;
+  align-items: center;
+  cursor: inherit;
 }
 
 /* 果果列及开始/结束列禁用状态 */

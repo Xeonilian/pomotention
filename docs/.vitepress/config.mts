@@ -28,6 +28,12 @@ export default withMermaid(
     srcExclude: ["**/scratchpad/**"],
     title: "Pomotention",
     description: "🍅 基于番茄工作法与执行意图的自我照顾系统",
+    // 将开发日志从本地搜索索引中排除，避免干扰用户指南检索
+    transformPageData(pageData) {
+      if (pageData.relativePath.startsWith("dev-log/")) {
+        pageData.frontmatter.search = false;
+      }
+    },
 
     vite: {
       define: {
