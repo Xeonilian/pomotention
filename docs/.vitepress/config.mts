@@ -16,9 +16,6 @@ const braintreeSanitizeEntry = resolve(dirname(_require.resolve("@braintree/sani
 const base = process.env.VITEPRESS_BASE || "/pomotention/";
 // 与根目录 vite.config.ts 一致：未设置时监听 0.0.0.0，便于局域网访问
 const devHost = process.env.TAURI_DEV_HOST;
-// 非 Tauri、非本地 host 时，导航栏 Logo 回主应用的跳转目标（可由环境变量覆盖）
-// 默认使用同源根路径，避免部署到其他域名时被固定跳回 pages.dev
-const docsExitHref = (process.env.VITE_DOCS_EXIT_HREF ?? "/").replace(/\/?$/, "/");
 
 // Markdown 内 ```mermaid 代码块由 vitepress-plugin-mermaid 转成图表
 export default withMermaid(
@@ -28,7 +25,7 @@ export default withMermaid(
     srcExclude: ["**/scratchpad/**"],
     title: "Pomotention",
     description: "🍅 基于番茄工作法与执行意图的自我照顾系统",
-    // 将开发日志从本地搜索索引中排除，避免干扰用户指南检索
+    // dev-log 整树不参与默认主题 Local Search（与下方 _render 双保险）
     transformPageData(pageData) {
       if (pageData.relativePath.startsWith("dev-log/")) {
         pageData.frontmatter.search = false;
@@ -36,9 +33,6 @@ export default withMermaid(
     },
 
     vite: {
-      define: {
-        "import.meta.env.VITE_DOCS_EXIT_HREF": JSON.stringify(docsExitHref),
-      },
       server: {
         host: devHost || "0.0.0.0",
         ...(devHost
@@ -82,7 +76,7 @@ export default withMermaid(
 
       nav: [
         { text: "首页", link: "/" },
-        { text: "快速开始", link: "/getting-started" },
+        { text: "快速开始", link: "/guide/getting-started" },
         { text: "使用说明", link: "/guide/" },
         { text: "GitHub", link: "https://github.com/Xeonilian/pomotention" },
       ],
@@ -91,23 +85,23 @@ export default withMermaid(
         {
           text: "简介",
           items: [
-            { text: "什么是Pomotention？", link: "/what-is-pomotention" },
+            { text: "什么是Pomotention？", link: "/guide/what-is-pomotention" },
             {
               text: "快速开始",
-              link: "/getting-started",
+              link: "/guide/getting-started",
               items: [
-                { text: "桌面客户端", link: "/pc-getting-started" },
-                { text: "PWA网页应用", link: "/pwa-getting-started" },
+                { text: "桌面客户端", link: "/guide/pc-getting-started" },
+                { text: "PWA网页应用", link: "/guide/pwa-getting-started" },
               ],
             },
-            { text: "快速使用", link: "/get-things-done" },
+            { text: "快速使用", link: "/guide/get-things-done" },
             { text: "更新日志", link: "/dev-log/CHANGELOG" },
           ],
         },
         {
           text: "使用说明",
           items: [
-            { text: "快速使用", link: "/get-things-done" },
+            { text: "快速使用", link: "/guide/get-things-done" },
             { text: "软件界面", link: "/guide/interface" },
             { text: "活动清单", link: "/guide/activity" },
             {
@@ -129,8 +123,8 @@ export default withMermaid(
         {
           text: "其他",
           items: [
-            { text: "关于项目", link: "/about" },
-            { text: "开发地图", link: "/roadmap" },
+            { text: "关于项目", link: "/guide/about" },
+            { text: "开发地图", link: "/guide/roadmap" },
           ],
         },
       ],
@@ -142,9 +136,18 @@ export default withMermaid(
         copyright: "Copyright © 2025 Pomotention",
       },
 
-      // 搜索功能
+      // 搜索功能：dev-log 在索引阶段丢弃正文，避免 Ctrl+K 命中内部 SOP/日志
       search: {
         provider: "local",
+        options: {
+          // 与 VP 1.6 内置 local-search 一致：使用 md.render（非 renderAsync）
+          _render(src, env, md) {
+            const html = md.render(src, env);
+            if (env.frontmatter?.search === false) return "";
+            if (env.relativePath.startsWith("dev-log/")) return "";
+            return html;
+          },
+        },
       },
 
       // 编辑链接

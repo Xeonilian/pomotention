@@ -1,5 +1,7 @@
 # 帮助文档部署与本地开发（当前口径）
 
+**Cloudflare / 外链帮助跳转**（逐步操作）见同目录 [help-docs-cloudflare.md](./help-docs-cloudflare.md)。
+
 ## 1. 目的与范围
 
 说明三件事，避免和旧版「站内 HelpView + 外链」混淆：
@@ -155,6 +157,7 @@ pnpm docs:deploy:github
 
 ## 11. 相关文件
 
+- **`docs/dev-log/SOP/help-docs-cloudflare.md`**：帮助跳转与 Cloudflare（`VITE_HELP_DOCS_URL` 等）SOP。
 - 根目录 **`package.json`**：`dev`、`dev:app`、`build:with-docs`、`docs:*` 脚本。
 - **`scripts/run-docs-for-app.mjs`**、**`scripts/sync-docs-app.mjs`**：嵌入应用的 base 与同步。
 - **`vite.config.ts`**：`docs-app` 代理、子路径下误访问 `/docs-app` 的跳转、文档 dev 子进程逻辑。
