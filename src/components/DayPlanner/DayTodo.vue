@@ -279,7 +279,30 @@
                 @click.stop
                 :data-todo-id="todo.id"
               />
-              <span class="ellipsis" v-else>{{ todo.activityTitle ?? "-" }}</span>
+              <TagPickerPopover
+                v-if="editingRowId === todo.id && editingField === 'title'"
+                ref="tagPickerRef"
+                :show="tagEditor.popoverTargetId.value === todo.id"
+                @update:show="
+                  (open: boolean) => {
+                    if (!open) tagEditor.closePopover();
+                  }
+                "
+                v-model:search-term="tagSearchTermModel"
+                input-mode="external"
+                placement="bottom-end"
+                :popover-style="{ marginRight: '90px' }"
+                :z-index="10000"
+                :panel-pointer-guard="onTodoTagPanelPointerGuard"
+                :on-enter-before-select="onTodoTagEnterBeforeSelect"
+                @select-tag="(tagId: any) => handleTagSelected(tagId)"
+                @create-tag="(tagName: any) => handleTagCreate(tagName)"
+              >
+                <template #trigger>
+                  <span style="display: inline-block; width: 1px; height: 1px; pointer-events: none"></span>
+                </template>
+              </TagPickerPopover>
+              <span class="ellipsis" v-if="!(editingRowId === todo.id && editingField === 'title')">{{ todo.activityTitle ?? "-" }}</span>
             </td>
 
             <!-- 6 果果 -->
@@ -384,32 +407,6 @@
   >
     <n-input-number v-model:value="newEstimate" :min="1" :max="5" placeholder="请输入估计的番茄数" style="width: 100%" />
   </n-modal>
-  <!-- Tag Selector Popover -->
-  <TagPickerPopover
-    ref="tagPickerRef"
-    :show="
-      tagEditor.popoverTargetId.value !== null && todosForCurrentViewWithTaskRecords.some((t) => t.id === tagEditor.popoverTargetId.value)
-    "
-    @update:show="
-      (open: boolean) => {
-        if (!open) tagEditor.closePopover();
-      }
-    "
-    v-model:search-term="tagSearchTermModel"
-    input-mode="external"
-    placement="bottom-start"
-    :z-index="10000"
-    :popover-style="{ marginTop: '-30px', marginLeft: '130px' }"
-    :panel-pointer-guard="onTodoTagPanelPointerGuard"
-    :on-enter-before-select="onTodoTagEnterBeforeSelect"
-    @select-tag="(tagId: any) => handleTagSelected(tagId)"
-    @create-tag="(tagName: any) => handleTagCreate(tagName)"
-  >
-    <template #trigger>
-      <span style="position: absolute; pointer-events: none"></span>
-    </template>
-  </TagPickerPopover>
-
   <!-- 排序槽位绑定 tag：单击表头「排序」打开，失去焦点自动保存 -->
   <n-modal
     v-model:show="showPriorityBindingModal"
