@@ -36,8 +36,7 @@ function readSafeAreaInsetsResolved(): { top: string; right: string; bottom: str
   }
   const el = document.createElement("div");
   el.setAttribute("data-viewport-debug-probe", "1");
-  el.style.cssText =
-    "position:fixed;left:-10000px;top:0;width:1px;height:1px;visibility:hidden;pointer-events:none;box-sizing:border-box;";
+  el.style.cssText = "position:fixed;left:-10000px;top:0;width:1px;height:1px;visibility:hidden;pointer-events:none;box-sizing:border-box;";
   el.style.paddingTop = "env(safe-area-inset-top, 0px)";
   el.style.paddingRight = "env(safe-area-inset-right, 0px)";
   el.style.paddingBottom = "env(safe-area-inset-bottom, 0px)";
@@ -59,7 +58,12 @@ function readRect(selector: string): ViewportDebugSnapshot["dom"]["app"] {
   const el = document.querySelector(selector);
   if (!el) return null;
   const r = el.getBoundingClientRect();
-  return { w: Math.round(r.width * 100) / 100, h: Math.round(r.height * 100) / 100, top: Math.round(r.top * 100) / 100, left: Math.round(r.left * 100) / 100 };
+  return {
+    w: Math.round(r.width * 100) / 100,
+    h: Math.round(r.height * 100) / 100,
+    top: Math.round(r.top * 100) / 100,
+    left: Math.round(r.left * 100) / 100,
+  };
 }
 
 export function captureViewportDebugSnapshot(): ViewportDebugSnapshot {
@@ -87,10 +91,7 @@ export function captureViewportDebugSnapshot(): ViewportDebugSnapshot {
   return {
     capturedAt: new Date().toISOString(),
     inner: { w: window.innerWidth, h: window.innerHeight },
-    outer:
-      window.outerWidth && window.outerHeight
-        ? { w: window.outerWidth, h: window.outerHeight }
-        : null,
+    outer: window.outerWidth && window.outerHeight ? { w: window.outerWidth, h: window.outerHeight } : null,
     screen: {
       w: window.screen?.width ?? 0,
       h: window.screen?.height ?? 0,
@@ -191,7 +192,8 @@ export function formatViewportDebugReport(s: ViewportDebugSnapshot): string {
 export function useViewportDebugSnapshot() {
   const snapshot = ref<ViewportDebugSnapshot | null>(null);
 
-  let debounceTimer: ReturnType<typeof window.setTimeout> | undefined;
+  // 浏览器定时器 ID 为 number；避免与 NodeJS.Timeout 在交叉类型下的不兼容
+  let debounceTimer: number | undefined;
 
   function refresh() {
     snapshot.value = captureViewportDebugSnapshot();
