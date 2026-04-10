@@ -225,8 +225,10 @@ export const useDataStore = defineStore(
 
     // ======================== 5. 派生UI状态 (Computed) ========================
     const selectedActivity = computed(() => {
-      const id = activeId.value;
-      if (id == null) return null;
+      // Tracker 同步会把看板 activeId 清掉只留 selectedActivityId，两者应都能解析当前选中活动
+      const a = activeId.value;
+      const id = a != null && a !== undefined ? a : selectedActivityId.value;
+      if (id == null || id === undefined) return null;
       return activityById.value.get(id) ?? null;
     });
 

@@ -21,7 +21,11 @@
         class="input-focus-none search-input"
       >
         <template #prefix>
-          <n-dropdown :options="filterOptions" @select="(key) => $emit('filter', key)">
+          <n-dropdown
+            :options="filterOptions"
+            @select="(key) => $emit('filter', key)"
+            @update:show="(show: boolean) => show && $emit('focus-search')"
+          >
             <n-button text type="default" title="筛选活动" @pointerdown.stop @mousedown.prevent.stop @touchstart.stop>
               <template #icon>
                 <n-icon><DocumentTableSearch24Regular /></n-icon>
@@ -371,6 +375,8 @@ import {
   Tag16Regular,
 } from "@vicons/fluent";
 import type { Activity } from "@/core/types/Activity";
+import { storeToRefs } from "pinia";
+import { useDataStore } from "@/stores/useDataStore";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useActivityTagEditor } from "@/composables/useActivityTagEditor";
 import { useActivityDrag } from "@/composables/useActivityDrag";
@@ -424,6 +430,26 @@ const { isTouchSupported } = useDevice();
 // ======================== Stores ========================
 const settingStore = useSettingStore();
 const { isMobile } = useDevice();
+
+// 手测用：每种交互最多打一条，避免 title-focus + before + after 重复刷屏（稳定后可删本段与调用）
+const {
+  activeId: storeActiveId,
+  selectedActivityId: storeSelectedActivityId,
+  selectedRowId: storeSelectedRowId,
+  selectedRowHasParent: storeSelectedRowHasParent,
+} = storeToRefs(useDataStore());
+
+function debugLogRowSelection(phase: string, rowId: number) {
+  const row = props.displaySheet.find((a) => a.id === rowId);
+  const hl = rowId === props.activityId || rowId === props.activeId;
+  const miss = !row;
+  console.log(
+    `[ActivitySection] ${phase} | sec=${props.sectionId} row=${rowId} | ` +
+      `del=${miss ? "?" : row!.deleted} par=${miss ? "?" : row!.parentId} st=${miss ? "?" : row!.status || "∅"} | ` +
+      `hl=${hl} props(act=${props.activityId},active=${props.activeId ?? "null"}) | ` +
+      `store(act=${storeActiveId.value},selAct=${storeSelectedActivityId.value},rowId=${storeSelectedRowId.value},hasPar=${storeSelectedRowHasParent.value})`,
+  );
+}
 
 // 每行标签条是否显示：缺省为显示，仅在为 false 时隐藏；与 collapsedActivityIds 一样持久化到设置
 const rowTagStripVisible = computed(() => settingStore.settings.activityRowTagStripVisible);
@@ -617,6 +643,7 @@ function blurTitleEditsExcept(keepActivityId: number | null) {
 
 function handleTitleInputFocus(item: Activity) {
   if (isMobile.value && !titleEditAllowed[item.id]) {
+    debugLogRowSelection("mobile-title-1st-tap(refocus-no-select-yet)", item.id);
     nextTick(() => {
       rowInputMap.value.get(item.id)?.blur();
     });
@@ -650,6 +677,9 @@ function handleTitleTouchEnd(e: TouchEvent, item: Activity) {
   blurSearchInput();
   titleEditAllowed[id] = true;
   focusTitleInput(id);
+  nextTick(() => {
+    debugLogRowSelection("mobile-title-edit-open(no-emit-focus-row)", id);
+  });
 }
 
 function handleTitleTouchCancel(_item: Activity) {
@@ -678,6 +708,9 @@ function handleFocusRow(id: number) {
   blurSearchInput();
   blurTitleEditsExcept(id);
   emit("focus-row", id);
+  nextTick(() => {
+    debugLogRowSelection("row-focus(synced)", id);
+  });
 }
 
 // PC 上首行即 return，无实际效果；savedTopHeight 在本组件内从未赋值，移动端恢复分支亦不会执行

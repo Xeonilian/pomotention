@@ -91,6 +91,13 @@ const { activityList } = storeToRefs(dataStore);
 const dateService = dataStore.dateService;
 const { isMobile } = useDevice();
 
+/** activeId 与 selectedActivityId 经 Tracker 同步后可能只存其一，业务上需统一解析 */
+const sheetPrimaryActivityId = computed(() => {
+  const a = activeId.value;
+  if (a != null && a !== undefined) return a;
+  return selectedActivityId.value;
+});
+
 // ========================
 // Emits 定义
 // ========================
@@ -225,7 +232,7 @@ function filteredBySection(section: ActivitySectionConfig) {
 
 // 活动筛选，由 section 单独管理
 function handleSectionFilter(idx: number, filterKey: string) {
-  activeId.value = null;
+  emit("update-active-id", null);
   const option = filterOptions.find((opt) => opt.key === filterKey);
   if (option) {
     sections.value[idx].filterKey = filterKey;
@@ -263,26 +270,27 @@ function showErrorPopover(message: string) {
 
 // 选择活动处理函数，提示
 function pickActivity() {
+  const id = sheetPrimaryActivityId.value;
   // 1. 检查是否有选中的活动
-  if (activeId.value == null) {
+  if (id == null || id === undefined) {
     showErrorPopover("请选择一个活动！");
     return;
   }
 
   // 2. 查找todo中是否有对应的活动
-  const relatedTodo = todoByActivityId.value.get(activeId.value);
+  const relatedTodo = todoByActivityId.value.get(id);
   if (relatedTodo && !relatedTodo.deleted) {
     showErrorPopover("【" + timestampToDatetime(relatedTodo.id) + "】启动待办");
     dateService.navigateTo(new Date(relatedTodo.id));
-    emit("update-active-id", activeId.value);
+    emit("update-active-id", id);
     return;
   }
 
-  const relatedSchedule = scheduleByActivityId.value.get(activeId.value);
+  const relatedSchedule = scheduleByActivityId.value.get(id);
   if (relatedSchedule) {
     if (relatedSchedule.activityDueRange[0]) {
       dateService.navigateTo(new Date(relatedSchedule.activityDueRange[0]));
-      emit("update-active-id", activeId.value);
+      emit("update-active-id", id);
     } else {
       showErrorPopover("预约尚未设置时间！");
     }
@@ -290,7 +298,7 @@ function pickActivity() {
     return;
   }
 
-  const picked = activityById.value.get(activeId.value);
+  const picked = activityById.value.get(id);
   if (!picked) return;
 
   // 4. 触发事件并重置选中状态
@@ -361,8 +369,9 @@ function handleFocusSearch() {
 
 // 切换番茄钟类型
 function togglePomoType() {
-  if (activeId.value !== null) {
-    emit("toggle-pomo-type", activeId.value);
+  const id = sheetPrimaryActivityId.value;
+  if (id != null && id !== undefined) {
+    emit("toggle-pomo-type", id);
   }
 }
 
