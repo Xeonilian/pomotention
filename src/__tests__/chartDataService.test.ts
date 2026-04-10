@@ -15,7 +15,7 @@ describe("chartDataService", () => {
           priority: 1,
           status: "done",
           doneTime: 1717920000000,
-          realPomo: [1, 2, 3], // 总计6个番茄
+          realPomo: [1, 1, 1, 1, 1, 1], // 扁平6个完成（新格式）
           pomoType: "🍅",
         },
         {
@@ -25,7 +25,7 @@ describe("chartDataService", () => {
           priority: 1,
           status: "done",
           doneTime: 1717920000000,
-          realPomo: [2, 2], // 总计4个番茄
+          realPomo: [1, 1, 1, 1], // 扁平4个完成（新格式）
           pomoType: "🍅",
         },
       ];
@@ -55,7 +55,7 @@ describe("chartDataService", () => {
           activityTitle: "测试",
           priority: 1,
           status: "", // 未完成  ✅ 有效
-          realPomo: [1, 2],
+          realPomo: [1, 1, 1], // 扁平格式
           pomoType: "🍅",
         },
         {
@@ -75,7 +75,7 @@ describe("chartDataService", () => {
           priority: 1,
           status: "done",
           doneTime: 1717920000000,
-          realPomo: [0], // 0个番茄
+          realPomo: [0, 0], // 0个完成（新格式）
           pomoType: "🍅",
         },
         {
@@ -85,7 +85,7 @@ describe("chartDataService", () => {
           priority: 1,
           status: "done",
           doneTime: 1717920000000,
-          realPomo: [1], // ✅ 有效
+          realPomo: [1, 0], // ✅ 有效（新格式）
           pomoType: "🍅",
         },
       ];
@@ -106,7 +106,7 @@ describe("chartDataService", () => {
           priority: 1,
           status: "done",
           doneTime: 1717920000000,
-          realPomo: [5],
+          realPomo: [1, 1, 1, 1, 1],
           pomoType: "🍅",
           deleted: true,
         },
@@ -117,7 +117,7 @@ describe("chartDataService", () => {
           priority: 1,
           status: "done",
           doneTime: 1717920000000,
-          realPomo: [2],
+          realPomo: [1, 1],
           pomoType: "🍅",
           deleted: false,
         },

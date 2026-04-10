@@ -1,6 +1,7 @@
 import type { TodoSegment, PomodoroSegment } from "@/core/types/Block";
 import type { Todo } from "@/core/types/Todo";
 import { SPECIAL_PRIORITIES } from "@/core/priorityCategories";
+import { countCompletedPomos } from "./realPomoState";
 
 // ========== Todo 估计分配相关工具函数（第二列） ==========
 
@@ -18,14 +19,10 @@ function _getTodoEstPomoCount(todo: Todo): number {
 
 /**
  * 统计 todo 实际完成番茄数
+ * 现在统一使用 realPomoState.countCompletedPomos（支持扁平三态，樱桃兼容）
  */
 function _getTodoRealPomoCount(todo: Todo): number {
-  if (!todo.realPomo) return 0;
-  const rawCount = todo.realPomo.reduce((sum, cur) => sum + (typeof cur === "number" ? cur : 0), 0);
-  if (todo.pomoType === "🍒") {
-    return rawCount / 2;
-  }
-  return rawCount;
+  return countCompletedPomos(todo);
 }
 
 /**

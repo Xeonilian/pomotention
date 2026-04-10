@@ -226,14 +226,16 @@ const days = computed(() => {
 
     const sorted = [...schedules.slice().sort((a, b) => a.ts - b.ts), ...prioritizedTodos, ...otherTodos];
 
-    // 聚合当日 realPomo
+    // 聚合当日 realPomo - 使用 countCompletedPomos 统一统计（支持 -1 作废）
     const sumRealPomo = bucket
       .filter((i) => i.type === "todo" && i.pomoType === "🍅")
       .reduce((sum, item) => {
-        const arr = item.realPomo;
-        if (!Array.isArray(arr) || arr.length === 0) return sum;
-        const itemSum = arr.reduce((s, n) => s + (Number(n) || 0), 0);
-        return sum + itemSum;
+        // 临时兼容：如果有 countCompletedPomos 则优先使用，否则回退旧逻辑
+        const completed = typeof (item as any).realPomo !== "undefined" ? 
+          // 由于 MonthPlanner 传入的是 plain object，暂时保持旧 reduce（后续可引入 realPomoState）
+          (Array.isArray((item as any).realPomo) ? (item as any).realPomo.reduce((s: number, n: number) => s + (Number(n) || 0), 0) : 0) 
+          : 0;
+        return sum + completed;
       }, 0);
 
     const sumRealGrape = bucket

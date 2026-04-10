@@ -4,6 +4,7 @@ import type { Todo } from "@/core/types/Todo";
 import type { Block, PomodoroSegment } from "@/core/types/Block";
 import { splitIndexPomoBlocksExSchedules } from "@/services/pomoSegService";
 import type { Schedule } from "@/core/types/Schedule";
+import { countCompletedPomos } from "./realPomoState";
 
 export interface TodoNormalizationStats {
   normalizedCount: number;
@@ -38,9 +39,9 @@ function createEmptyStats(): TodoNormalizationStats {
 }
 
 function getRealPomoTotal(todo: Todo): number {
-  if (!Array.isArray(todo.realPomo) || todo.realPomo.length === 0) return 1;
-  const sum = todo.realPomo.reduce((acc, cur) => acc + (typeof cur === "number" && Number.isFinite(cur) ? cur : 0), 0);
-  return Math.max(1, Math.floor(sum));
+  // 使用新统计口径（完成数），用于 globalIndex 回填等逻辑
+  const completed = countCompletedPomos(todo);
+  return Math.max(1, completed);
 }
 
 function getDayStart(ts: number): number {

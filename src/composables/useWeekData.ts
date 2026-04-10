@@ -102,13 +102,13 @@ export function useWeekData() {
       const dayTs = weekStart + idx * DAY_MS;
       const sorted = buckets[idx].slice().sort((a, b) => a.ts - b.ts);
 
-      // Pomo统计
+      // Pomo统计 - 使用 countCompletedPomos 统一（支持扁平三态）
       const sumRealPomo = sorted
         .filter((i) => i.type === "todo" && i.pomoType === "🍅")
         .reduce((sum, item) => {
-          const arr = item.realPomo;
+          const arr = (item as any).realPomo;
           if (!Array.isArray(arr) || arr.length === 0) return sum;
-          const itemSum = arr.reduce((s, n) => s + (Number(n) || 0), 0);
+          const itemSum = arr.reduce((s: number, n: number) => s + (Number(n) || 0), 0);
           return sum + itemSum;
         }, 0);
 

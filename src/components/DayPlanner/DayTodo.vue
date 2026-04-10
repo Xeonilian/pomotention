@@ -105,7 +105,11 @@
             <n-button
               class="cancel-button"
               v-if="
-                selectedTodo && selectedTodo.status !== 'done' && selectedTodo.status !== 'cancelled' && !selectedTodo.realPomo && !isMobile
+                selectedTodo &&
+                selectedTodo.status !== 'done' &&
+                selectedTodo.status !== 'cancelled' &&
+                !hasAnyProgress(selectedTodo) &&
+                !isMobile
               "
               text
               @click.stop="handleCancelSelectedTodo"
@@ -123,7 +127,7 @@
                 selectedTodo &&
                 selectedTodo.status !== 'done' &&
                 selectedTodo.status !== 'cancelled' &&
-                !selectedTodo.realPomo &&
+                !hasAnyProgress(selectedTodo) &&
                 !selectedTodo.startTime &&
                 !isMobile
               "
@@ -323,12 +327,14 @@
                           :checked="isPomoCompleted(todo, index, i)"
                           :disabled="todo.status === 'cancelled'"
                           @update:checked="(checked: any) => handlePomoCheck(todo, index, i, checked)"
+                          @dblclick.stop="(_e: any) => handlePomoDoubleClick(todo, index, i)"
                         />
                       </template>
                       <span class="pomo-separator" v-if="todo.estPomo && index < todo.estPomo.length - 1">|</span>
                     </div>
                   </template>
                 </div>
+                <!-- 作废状态视觉提示：使用 scoped slot 或 CSS :after 显示 🥫 ，此处最小改动暂不加伪元素，保持 checkbox 原外观 -->
                 <div v-if="todo.status !== 'done' && todo.status !== 'cancelled'" class="est-buttons">
                   <!-- 删除估计按钮  -->
                   <n-button
@@ -480,6 +486,7 @@ import { useActivityTagEditor } from "@/composables/useActivityTagEditor";
 import TagPickerPopover from "../TagSystem/TagPickerPopover.vue";
 import type { SelectOption } from "naive-ui";
 import { useDevice } from "@/composables/useDevice";
+import { ensureFlatRealPomo, getRealPomoState, setPomoState, hasAnyProgress, getSlotIndexForEst } from "@/services/realPomoState";
 
 const dataStore = useDataStore();
 const { isMobile } = useDevice();
@@ -905,32 +912,37 @@ function handleCheckboxChange(id: number, checked: boolean) {
 }
 
 // 番茄估计=============================
-// 检查番茄钟是否完成
+// 检查番茄钟是否完成（新扁平版：使用 slotIndex 查 getRealPomoState === 1）
 function isPomoCompleted(todo: Todo, estIndex: number, pomoIndex: number): boolean {
-  if (!todo.realPomo || todo.realPomo.length <= estIndex) return false;
-  return todo.realPomo[estIndex] >= pomoIndex;
+  const slotIndex = getSlotIndexForEst(todo, estIndex, pomoIndex);
+  return getRealPomoState(todo, slotIndex) === 1;
 }
 
-// 处理番茄钟勾选
+// 处理番茄钟勾选（最小改动版：支持单击 0<->1 ，双击 0/1 -> -1 作废）
 function handlePomoCheck(todo: Todo, estIndex: number, pomoIndex: number, checked: boolean) {
-  // 确保 realPomo 数组存在且长度与 estPomo 一致
-  if (!todo.realPomo) todo.realPomo = [];
-  if (!todo.estPomo) todo.estPomo = [];
-  while (todo.realPomo.length < todo.estPomo.length) {
-    todo.realPomo.push(0);
-  }
+  // 最小改动：保留原有 checked 逻辑作为单击处理， 双击在 template @dblclick 单独处理
+  const slotIndex = getSlotIndexForEst(todo, estIndex, pomoIndex);
+  let newRealPomo: number[];
 
   if (checked) {
-    todo.realPomo[estIndex] = Math.max(todo.realPomo[estIndex], pomoIndex);
+    newRealPomo = setPomoState(todo, slotIndex, 1);
   } else {
-    todo.realPomo[estIndex] = Math.min(todo.realPomo[estIndex], pomoIndex - 1);
+    newRealPomo = setPomoState(todo, slotIndex, 0);
   }
 
-  // 通知父组件更新
-  emit("update-todo-pomo", todo.id, todo.realPomo);
+  emit("update-todo-pomo", todo.id, newRealPomo);
 }
 
-// 处理新增估计
+// 双击处理作废状态（-1 罐头 🥫）
+function handlePomoDoubleClick(todo: Todo, estIndex: number, pomoIndex: number) {
+  const slotIndex = getSlotIndexForEst(todo, estIndex, pomoIndex);
+  const currentState = getRealPomoState(todo, slotIndex);
+  const targetState = currentState === -1 ? 0 : -1; // -1 <-> 0
+  const newRealPomo = setPomoState(todo, slotIndex, targetState as 0 | 1 | -1);
+  emit("update-todo-pomo", todo.id, newRealPomo);
+}
+
+// 处理新增估计（最小改动：新增段时 realPomo 末尾补0）
 function handleAddEstimate(todo: Todo) {
   currentTodoId.value = todo.id;
   newEstimate.value = 1;
@@ -950,8 +962,16 @@ function confirmAddEstimate() {
   // 添加新的估计值
   todo.estPomo.push(newEstimate.value);
 
-  // 通知父组件更新
+  // 新增段：在 realPomo 末尾补对应数量的 0（最小改动）
+  const currentFlat = ensureFlatRealPomo(todo);
+  const addedSlots = newEstimate.value;
+  for (let k = 0; k < addedSlots; k++) {
+    currentFlat.push(0);
+  }
+
+  // 通知父组件更新（est 和 real 同时更新以保持一致）
   emit("update-todo-est", todo.id, todo.estPomo);
+  emit("update-todo-pomo", todo.id, currentFlat);
 
   // 重置状态并关闭对话框
   showEstimateInput.value = false;
@@ -966,31 +986,34 @@ function cancelAddEstimate() {
   newEstimate.value = 1; // 重置为默认值
 }
 
-// 删除估计
+// 删除估计（最小改动：使用 ensureFlatRealPomo 检查最后一段是否有非0状态）
 function handleDeleteEstimate(todo: Todo) {
-  if (todo.estPomo && todo.estPomo.length > 0) {
-    // 要删除的下标是最后一项
-    const delIdx = todo.estPomo.length - 1;
-    if (todo.realPomo && delIdx < todo.realPomo.length && todo.realPomo[delIdx] !== undefined && todo.realPomo[delIdx] !== 0) {
-      // realPomo此位置已被填写，提示不能删
-      popoverMessage.value = "已经有实际完成，不可删除~";
-      showPopover.value = true;
-      setTimeout(() => {
-        showPopover.value = false;
-      }, 2000);
-      return;
-    }
-    // 可以删
-    todo.estPomo.pop();
-    emit("update-todo-est", todo.id, todo.estPomo);
-  } else {
+  if (!todo.estPomo || todo.estPomo.length === 0) {
     popoverMessage.value = "没啦，别删了~";
     showPopover.value = true;
-    setTimeout(() => {
-      showPopover.value = false;
-    }, 2000);
+    setTimeout(() => (showPopover.value = false), 2000);
     return;
   }
+
+  const delIdx = todo.estPomo.length - 1;
+  const flat = ensureFlatRealPomo(todo);
+  const startSlot = getSlotIndexForEst(todo, delIdx, 1); // 该段起始 slot
+  const segLength = typeof todo.estPomo[delIdx] === "number" ? todo.estPomo[delIdx]! : 0;
+  const segSlice = flat.slice(startSlot, startSlot + segLength);
+  const hasProgressInSeg = segSlice.some((v) => v !== 0); // 1 or -1 都算有进度
+
+  if (hasProgressInSeg) {
+    popoverMessage.value = "该段已有完成或作废，不可删除~";
+    showPopover.value = true;
+    setTimeout(() => (showPopover.value = false), 2000);
+    return;
+  }
+
+  // 可以删：弹出 estPomo 最后一段，realPomo 尾部对应槽位也截断（写路径确保扁平）
+  todo.estPomo.pop();
+  const newReal = flat.slice(0, startSlot);
+  emit("update-todo-est", todo.id, todo.estPomo);
+  emit("update-todo-pomo", todo.id, newReal); // 同时更新 realPomo 长度
 }
 
 // 修改点击行处理函数
@@ -1241,7 +1264,7 @@ function handleSuspendSelectedTodo() {
     !selectedTodo.value ||
     selectedTodo.value.status === "done" ||
     selectedTodo.value.status === "cancelled" ||
-    selectedTodo.value.realPomo
+    hasAnyProgress(selectedTodo.value) // 新逻辑：有任意进度（1或-1）视为已开始，不能 suspend
   )
     return;
   emit("suspend-todo", selectedTodo.value.id);
@@ -1253,7 +1276,7 @@ function handleCancelSelectedTodo() {
     !selectedTodo.value ||
     selectedTodo.value.status === "done" ||
     selectedTodo.value.status === "cancelled" ||
-    selectedTodo.value.realPomo
+    hasAnyProgress(selectedTodo.value) // 新逻辑：有任意进度视为已开始，不能 cancel
   )
     return;
   emit("cancel-todo", selectedTodo.value.id);

@@ -1,26 +1,31 @@
-// src/services/chatDataService.ts
+// src/services/chartDataService.ts
 import type { Todo } from "@/core/types/Todo";
 import type { Task } from "@/core/types/Task";
 import type { DataPoint, TimeGranularity, AggregationType, DateString } from "@/core/types/Chart";
 import { METRICS } from "@/core/types/Metrics";
+import { countCompletedPomos } from "./realPomoState";
 
 // ============ 数据收集 ============
 
 /**
  * 从Todo收集番茄数据
- * realPomo: [1,3,4] → 总和8个番茄
+ * 现在使用 countCompletedPomos（仅统计 realPomo 中 ===1 的个数，-1 作废不计入）
+ * 樱桃 🍒 内部已处理 /2 兼容旧行为
  */
 export function collectPomodoroData(todos: Todo[]): DataPoint[] {
   return todos
     // 软删除的 Todo 仍留在列表中，统计与图表不应再计入其番茄
     .filter((t) => !t.deleted)
-    .filter((t) => t.realPomo && t.realPomo.length > 0 && t.pomoType === "🍅")
-    .map((t) => ({
-      metric: METRICS.POMODORO,
-      timestamp: t.doneTime || t.id,
-      value: t.realPomo!.reduce((sum, pomo) => sum + pomo, 0),
-      sourceId: t.id,
-    }))
+    .filter((t) => t.pomoType === "🍅")
+    .map((t) => {
+      const completed = countCompletedPomos(t);
+      return {
+        metric: METRICS.POMODORO,
+        timestamp: t.doneTime || t.id,
+        value: completed,
+        sourceId: t.id,
+      };
+    })
     .filter((point) => point.value > 0);
 }
 
@@ -151,7 +156,8 @@ function applyAggregation(points: DataPoint[], method: AggregationType): number 
 
   switch (method) {
     case "sum":
-      return values.reduce((a, b) => a + b, 0);
+      // 防御：排除可能的负值（-1 作废），防止其他 metric 误传
+      return values.reduce((a, b) => a + Math.max(0, b), 0);
 
     case "avg":
       return values.reduce((a, b) => a + b, 0) / values.length;

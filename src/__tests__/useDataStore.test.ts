@@ -35,7 +35,7 @@ describe("useDataStore - 图表数据功能", () => {
         priority: 1,
         status: "done",
         doneTime: 1749447475938,
-        realPomo: [1, 4], // 5个番茄
+        realPomo: [1, 1, 1, 1, 1], // 5个完成（新扁平格式）
         pomoType: "🍅",
       },
       {
@@ -45,7 +45,7 @@ describe("useDataStore - 图表数据功能", () => {
         priority: 1,
         status: "done",
         doneTime: 1749526421608,
-        realPomo: [1], // 1个番茄
+        realPomo: [1, 0, 0], // 1个完成
         pomoType: "🍅",
       },
     ];
@@ -105,7 +105,7 @@ describe("useDataStore - 图表数据功能", () => {
         priority: 1,
         status: "done",
         doneTime: 1717920000000, // 2024-06-09
-        realPomo: [3],
+        realPomo: [1, 1, 1],
         pomoType: "🍅",
       },
       {
@@ -115,7 +115,7 @@ describe("useDataStore - 图表数据功能", () => {
         priority: 1,
         status: "done",
         doneTime: 1717923600000, // 2024-06-09（1小时后）
-        realPomo: [5],
+        realPomo: [1, 1, 1, 1, 1],
         pomoType: "🍅",
       },
       {
@@ -125,7 +125,7 @@ describe("useDataStore - 图表数据功能", () => {
         priority: 1,
         status: "done",
         doneTime: 1718006400000, // 2024-06-10
-        realPomo: [2],
+        realPomo: [1, 1],
         pomoType: "🍅",
       },
     ];
@@ -149,7 +149,7 @@ describe("useDataStore - 图表数据功能", () => {
         priority: 1,
         status: "done",
         doneTime: 1717920000000,
-        realPomo: [3],
+        realPomo: [1, 1, 1],
         pomoType: "🍅",
       },
       {
@@ -159,7 +159,7 @@ describe("useDataStore - 图表数据功能", () => {
         priority: 1,
         status: "done",
         doneTime: 1718006400000,
-        realPomo: [2],
+        realPomo: [1, 1],
         pomoType: "🍅",
       },
     ];
