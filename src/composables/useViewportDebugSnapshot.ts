@@ -191,7 +191,7 @@ export function formatViewportDebugReport(s: ViewportDebugSnapshot): string {
 export function useViewportDebugSnapshot() {
   const snapshot = ref<ViewportDebugSnapshot | null>(null);
 
-  let debounceTimer: ReturnType<typeof setTimeout> | undefined;
+  let debounceTimer: ReturnType<typeof window.setTimeout> | undefined;
 
   function refresh() {
     snapshot.value = captureViewportDebugSnapshot();

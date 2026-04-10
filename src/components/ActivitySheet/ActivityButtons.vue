@@ -6,7 +6,7 @@
   <div class="activity-view-button-container">
     <n-button
       @click="$emit('pick-activity')"
-      :disabled="activeId === undefined || props.isDeleted || isSelectedRowDone || noSelectedActivity"
+      :disabled="props.isDeleted || isSelectedRowDone || noSelectedActivity"
       circle
       secondary
       type="default"
@@ -19,7 +19,7 @@
     </n-button>
 
     <n-button
-      :title="props.isDeleted && activeId !== null && activeId !== undefined ? '恢复活动' : '删除活动'"
+      :title="props.isDeleted && effectiveActivityId != null ? '恢复活动' : '删除活动'"
       @click="$emit('delete-active')"
       circle
       secondary
@@ -29,7 +29,7 @@
     >
       <template #icon>
         <n-icon>
-          <DeleteDismiss24Regular v-if="props.isDeleted && activeId !== null" />
+          <DeleteDismiss24Regular v-if="props.isDeleted && effectiveActivityId != null" />
           <Delete24Regular v-else />
         </n-icon>
       </template>
@@ -42,7 +42,7 @@
       type="default"
       size="small"
       title="生成子活动"
-      :disabled="props.activeId === null || isSelectedRowDone || isSelectedClassS || props.isDeleted || noSelectedActivity"
+      :disabled="isSelectedRowDone || isSelectedClassS || props.isDeleted || noSelectedActivity"
       @click="() => emit('create-child-activity')"
     >
       <template #icon>
@@ -56,7 +56,7 @@
       circle
       size="small"
       title="升级为兄弟"
-      :disabled="props.activeId === null || isSelectedClassS"
+      :disabled="effectiveActivityId == null || isSelectedClassS"
       @click="() => emit('increase-child-activity')"
     >
       <template #icon>
@@ -112,7 +112,13 @@ const props = defineProps<{
 
 const dataStore = useDataStore();
 const { selectedRowId, selectedActivityId } = storeToRefs(dataStore);
-const noSelectedActivity = computed(() => selectedRowId.value == null && selectedActivityId.value == null);
+/** 看板 props.activeId 与仅 selectedActivityId 时有其一即视为选中活动 */
+const effectiveActivityId = computed(() => {
+  const a = props.activeId;
+  if (a != null && a !== undefined) return a;
+  return selectedActivityId.value;
+});
+const noSelectedActivity = computed(() => selectedRowId.value == null && selectedActivityId.value == null && props.activeId == null);
 
 const isSelectedClassS = computed(() => {
   return props.selectedClass === "S";

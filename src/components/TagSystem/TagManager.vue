@@ -188,7 +188,7 @@ const sortKey = ref<"count" | "name">("count");
 const sortDirection = ref<"asc" | "desc">("desc");
 const currentPage = ref(1);
 
-const pageSize = computed(() => (isMobile.value ? 16 : 34));
+const pageSize = computed(() => (isMobile.value ? 18 : 34));
 // 弹窗显示：未传 show 时由外层 modal 控制，内层始终显示；传了 show 则跟随父组件
 const showModal = computed({
   get: () => (props.show === undefined ? true : !!props.show),
