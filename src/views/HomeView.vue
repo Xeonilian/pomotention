@@ -433,7 +433,7 @@ const onDayJump = () => {
 // 年视图中点击月份标题 → 进入月视图并定位到该月
 const onYearNavigateToMonth = (monthStartTs: number) => {
   settingStore.settings.viewSet = "month";
-  settingStore.settings.topHeight = isMobile.value ? 525 : 610;
+  settingStore.settings.topHeight = isMobile.value ? 525 : 615;
   dateService.navigateTo(monthStartTs);
 };
 
@@ -447,7 +447,7 @@ const onYearNavigateToWeek = (weekStartTs: number) => {
 // weekplanner month 引起变化日期
 const onMonthJump = () => {
   settingStore.settings.viewSet = "month";
-  settingStore.settings.topHeight = isMobile.value ? 525 : 610;
+  settingStore.settings.topHeight = isMobile.value ? 580 : 610;
 };
 
 const onWeekJump = () => {
@@ -1253,11 +1253,11 @@ function onViewSet() {
   const next = order[(idx + 1) % order.length];
   settingStore.settings.viewSet = next;
   if (cur === "week") {
-    settingStore.settings.topHeight = 610;
+    settingStore.settings.topHeight = 615;
   } else if (cur === "day") {
-    settingStore.settings.topHeight = 610;
+    settingStore.settings.topHeight = 600;
   } else if (cur === "month") {
-    settingStore.settings.topHeight = 480;
+    settingStore.settings.topHeight = 450;
   } else if (cur === "year") {
     settingStore.settings.topHeight = 300;
   }
@@ -1531,7 +1531,7 @@ const isLandscapeViewport = computed(() => viewportInnerW.value > viewportInnerH
 const effectiveMiddleTopHeightPx = computed(() => {
   if (!settingStore.settings.showPlanner || !settingStore.settings.showTask) return topHeight.value;
   const avail = Math.max(180, viewportInnerH.value - 24);
-  const minTask = 140;
+  const minTask = 100;
   const maxTop = Math.max(120, avail - minTask);
   if (!isMobile.value) {
     return topHeight.value + minTask > avail ? Math.min(topHeight.value, maxTop) : topHeight.value;
