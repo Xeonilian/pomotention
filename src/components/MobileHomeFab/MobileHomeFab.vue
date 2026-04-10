@@ -86,7 +86,7 @@
             <n-button
               v-if="showActivityPanel"
               @click="handlePickActivity"
-              :disabled="activeId == null || isDeleted || isSelectedRowDone"
+              :disabled="effectiveActivityId == null || isDeleted || isSelectedRowDone"
               circle
               secondary
               type="default"
@@ -119,7 +119,7 @@
                 circle
                 size="large"
                 title="升级为兄弟"
-                :disabled="activeId === null || isSelectedClassS"
+                :disabled="effectiveActivityId == null || isSelectedClassS"
                 @click="emit('increase-child-activity', activeId ?? selectedActivityId ?? null)"
               >
                 <template #icon>
@@ -128,7 +128,7 @@
               </n-button>
             </template>
             <n-button
-              :title="isDeleted && activeId !== null && activeId !== undefined ? '恢复活动' : '删除活动'"
+              :title="isDeleted && effectiveActivityId != null ? '恢复活动' : '删除活动'"
               @click="emit('delete-activity', activeId ?? selectedActivityId ?? null)"
               circle
               secondary
@@ -138,7 +138,7 @@
             >
               <template #icon>
                 <n-icon>
-                  <DeleteDismiss24Regular v-if="isDeleted && activeId !== null" />
+                  <DeleteDismiss24Regular v-if="isDeleted && effectiveActivityId != null" />
                   <Delete24Regular v-else />
                 </n-icon>
               </template>
@@ -228,17 +228,29 @@ const isDeleted = computed(() => selectedActivity.value?.deleted ?? false);
 const isSelectedClassS = computed(() => selectedActivity.value?.class === "S");
 const hasParent = computed(() => selectedActivity.value?.parentId ?? null);
 
+/** 看板 activeId 与 Tracker 同步后的 selectedActivityId 择一有效（与 ActivityButtons 一致） */
+const effectiveActivityId = computed(() => {
+  const a = activeId.value;
+  if (a != null && a !== undefined) return a;
+  return selectedActivityId.value;
+});
+
 /** 与 ActivitySheet 一致：无选中且非今日 →「回到当下」 */
 const showBackToToday = computed(() => !dateService.isViewDateToday);
-const showRowActions = computed(() => selectedRowId.value !== null || activeId.value !== null);
+const showRowActions = computed(
+  () =>
+    selectedRowId.value != null || (activeId.value != null && activeId.value !== undefined) || selectedActivityId.value != null,
+);
 const showUpPopover = computed(() => showBackToToday.value || showRowActions.value);
 const showActivityPanel = computed(() => settingStore.settings.showActivity);
-const noSelectedActivity = computed(() => selectedRowId.value == null && selectedActivityId.value == null);
+const noSelectedActivity = computed(
+  () => selectedRowId.value == null && selectedActivityId.value == null && activeId.value == null,
+);
 
 /** 与 ActivitySheet.pickActivity 一致 */
 function handlePickActivity() {
-  const aid = activeId.value;
-  if (aid == null) {
+  const aid = effectiveActivityId.value;
+  if (aid == null || aid === undefined) {
     emit("notify", "请选择一个活动！");
     return;
   }
