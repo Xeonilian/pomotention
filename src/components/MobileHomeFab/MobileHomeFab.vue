@@ -99,14 +99,14 @@
             </n-button>
             <template v-if="showActivityPanel">
               <n-button
-                v-if="!hasParent"
+                v-if="!hasParent && !selectedRowHasParent"
                 secondary
                 circle
                 type="default"
                 size="large"
                 title="生成子活动"
                 :disabled="isSelectedRowDone || isSelectedClassS || isDeleted || noSelectedActivity"
-                @click="emit('create-child-activity', activeId ?? selectedActivityId ?? null)"
+                @click="emit('create-child-activity', effectiveActivityId ?? null)"
               >
                 <template #icon>
                   <n-icon><TextGrammarArrowRight24Regular /></n-icon>
@@ -120,7 +120,7 @@
                 size="large"
                 title="升级为兄弟"
                 :disabled="effectiveActivityId == null || isSelectedClassS"
-                @click="emit('increase-child-activity', activeId ?? selectedActivityId ?? null)"
+                @click="emit('increase-child-activity', effectiveActivityId ?? null)"
               >
                 <template #icon>
                   <n-icon><TextGrammarArrowLeft24Regular /></n-icon>
@@ -129,7 +129,7 @@
             </template>
             <n-button
               :title="isDeleted && effectiveActivityId != null ? '恢复活动' : '删除活动'"
-              @click="emit('delete-activity', activeId ?? selectedActivityId ?? null)"
+              @click="emit('delete-activity', effectiveActivityId ?? null)"
               circle
               secondary
               :type="isDeleted ? 'error' : 'default'"
@@ -220,8 +220,17 @@ const { taskRecordEditing } = toRefs(props);
 const settingStore = useSettingStore();
 
 const dataStore = useDataStore();
-const { activeId, selectedActivityId, selectedRowId, isSelectedRowDone, selectedActivity } = storeToRefs(dataStore);
-const { activityById, todoByActivityId, scheduleByActivityId } = storeToRefs(dataStore);
+const {
+  activeId,
+  selectedActivityId,
+  selectedRowId,
+  isSelectedRowDone,
+  selectedActivity,
+  selectedRowHasParent,
+  activityById,
+  todoByActivityId,
+  scheduleByActivityId,
+} = storeToRefs(dataStore);
 const dateService = dataStore.dateService;
 
 const isDeleted = computed(() => selectedActivity.value?.deleted ?? false);
@@ -238,8 +247,7 @@ const effectiveActivityId = computed(() => {
 /** 与 ActivitySheet 一致：无选中且非今日 →「回到当下」 */
 const showBackToToday = computed(() => !dateService.isViewDateToday);
 const showRowActions = computed(
-  () =>
-    selectedRowId.value != null || (activeId.value != null && activeId.value !== undefined) || selectedActivityId.value != null,
+  () => selectedRowId.value != null || activeId.value != null || selectedActivityId.value != null,
 );
 const showUpPopover = computed(() => showBackToToday.value || showRowActions.value);
 const showActivityPanel = computed(() => settingStore.settings.showActivity);
