@@ -102,6 +102,7 @@ export default withMermaid(
           text: "使用说明",
           items: [
             { text: "快速使用", link: "/guide/get-things-done" },
+            { text: "工作流程", link: "/guide/workflow" },
             { text: "软件界面", link: "/guide/interface" },
             { text: "活动清单", link: "/guide/activity" },
             {
