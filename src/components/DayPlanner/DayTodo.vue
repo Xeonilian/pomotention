@@ -317,24 +317,31 @@
                   <template v-for="(est, index) in todo.estPomo" :key="index">
                     <div class="pomo-group">
                       <template v-for="i in est" :key="i">
-                        <n-checkbox
-                          :size="isMobile ? 'small' : 'medium'"
-                          :class="{
-                            'pomo-cherry': todo.pomoType === '🍒',
-                            'pomo-grape': todo.pomoType === '🍇',
-                            'pomo-tomato': todo.pomoType === '🍅',
-                          }"
-                          :checked="isPomoCompleted(todo, index, i)"
-                          :disabled="todo.status === 'cancelled'"
-                          @update:checked="(checked: any) => handlePomoCheck(todo, index, i, checked)"
+                        <span
+                          class="pomo-slot-dblwrap"
+                          :class="{ 'pomo-slot-void': isPomoVoid(todo, index, i) }"
+                          v-on="pomoVoidFinger.listeners(todo, index, i)"
+                          @mousedown.capture="handlePomoSlotMouseDown(todo, index, i)"
                           @dblclick.stop="(_e: any) => handlePomoDoubleClick(todo, index, i)"
-                        />
+                        >
+                          <n-checkbox
+                            :size="isMobile ? 'small' : 'medium'"
+                            :class="{
+                              'pomo-cherry': todo.pomoType === '🍒',
+                              'pomo-grape': todo.pomoType === '🍇',
+                              'pomo-tomato': todo.pomoType === '🍅',
+                            }"
+                            :checked="isPomoCompleted(todo, index, i)"
+                            :disabled="todo.status === 'cancelled'"
+                            @update:checked="(checked: any) => handlePomoCheck(todo, index, i, checked)"
+                          />
+                        </span>
                       </template>
                       <span class="pomo-separator" v-if="todo.estPomo && index < todo.estPomo.length - 1">|</span>
                     </div>
                   </template>
                 </div>
-                <!-- 作废状态视觉提示：使用 scoped slot 或 CSS :after 显示 🥫 ，此处最小改动暂不加伪元素，保持 checkbox 原外观 -->
+                <!-- 作废态 -1：.pomo-slot-void 背景修改 -->
                 <div v-if="todo.status !== 'done' && todo.status !== 'cancelled'" class="est-buttons">
                   <!-- 删除估计按钮  -->
                   <n-button
@@ -486,7 +493,15 @@ import { useActivityTagEditor } from "@/composables/useActivityTagEditor";
 import TagPickerPopover from "../TagSystem/TagPickerPopover.vue";
 import type { SelectOption } from "naive-ui";
 import { useDevice } from "@/composables/useDevice";
-import { ensureFlatRealPomo, getRealPomoState, setPomoState, hasAnyProgress, getSlotIndexForEst } from "@/services/realPomoState";
+import { usePomoSlotVoidFingerDouble, pomoFingerVoidPathEnabled } from "@/composables/usePomoSlotVoidFingerDouble";
+import {
+  ensureFlatRealPomo,
+  getRealPomoState,
+  setPomoState,
+  hasAnyProgress,
+  getSlotIndexForEst,
+  totalSlots,
+} from "@/services/realPomoState";
 
 const dataStore = useDataStore();
 const { isMobile } = useDevice();
@@ -546,6 +561,20 @@ const popoverMessage = ref("");
 const showEstimateInput = ref(false);
 const currentTodoId = ref<number | null>(null);
 const newEstimate = ref<number>(1);
+
+/** 番茄槽位单击去抖：双击会先触发两次 update:checked，取消待处理单击后再写作废态 */
+type PomoPendingCheck = {
+  timer: number;
+  checked: boolean;
+  todoId: number;
+  estIndex: number;
+  pomoIndex: number;
+};
+const pomoPendingCheckByKey = new Map<string, PomoPendingCheck>();
+const POMO_CHECK_DEBOUNCE_MS = 220;
+// 双触/双击作废后，checkbox 仍会晚到一次 update:checked，需在窗口内忽略以免把 -1 盖回打钩
+const POMO_AFTER_DBL_SUPPRESS_CHECK_MS = POMO_CHECK_DEBOUNCE_MS + 200;
+const pomoSuppressCheckAfterDblUntil = new Map<string, number>();
 
 // Tag Editor
 const tagEditor = useActivityTagEditor();
@@ -613,6 +642,8 @@ watch(
 );
 onBeforeUnmount(() => {
   if (rankPopoverOutsideCleanup) rankPopoverOutsideCleanup();
+  for (const [, p] of pomoPendingCheckByKey) clearTimeout(p.timer);
+  pomoPendingCheckByKey.clear();
 });
 const priorityBindingDraft = reactive<Record<number, number | null>>({});
 const priorityShowInRankDraft = reactive<Record<number, boolean>>({});
@@ -912,35 +943,106 @@ function handleCheckboxChange(id: number, checked: boolean) {
 }
 
 // 番茄估计=============================
+// 双击前在 mousedown(capture) 记下槽位状态：两次 update:checked 会篡改 -1，不能仅靠 dblclick 时再读
+const pomoDblclickStartByKey = new Map<string, number>();
+
+function pomoSlotInteractionKey(todoId: number, estIndex: number, pomoIndex: number) {
+  return `${todoId}|${estIndex}|${pomoIndex}`;
+}
+
+function handlePomoSlotMouseDown(todo: Todo, estIndex: number, pomoIndex: number) {
+  if (todo.status === "cancelled") return;
+  const slotIndex = getSlotIndexForEst(todo, estIndex, pomoIndex);
+  const st = getRealPomoState(todo, slotIndex);
+  pomoDblclickStartByKey.set(pomoSlotInteractionKey(todo.id, estIndex, pomoIndex), st);
+}
+
 // 检查番茄钟是否完成（新扁平版：使用 slotIndex 查 getRealPomoState === 1）
 function isPomoCompleted(todo: Todo, estIndex: number, pomoIndex: number): boolean {
   const slotIndex = getSlotIndexForEst(todo, estIndex, pomoIndex);
   return getRealPomoState(todo, slotIndex) === 1;
 }
 
-// 处理番茄钟勾选（最小改动版：支持单击 0<->1 ，双击 0/1 -> -1 作废）
-function handlePomoCheck(todo: Todo, estIndex: number, pomoIndex: number, checked: boolean) {
-  // 最小改动：保留原有 checked 逻辑作为单击处理， 双击在 template @dblclick 单独处理
+function isPomoVoid(todo: Todo, estIndex: number, pomoIndex: number): boolean {
   const slotIndex = getSlotIndexForEst(todo, estIndex, pomoIndex);
-  let newRealPomo: number[];
+  return getRealPomoState(todo, slotIndex) === -1;
+}
 
-  if (checked) {
-    newRealPomo = setPomoState(todo, slotIndex, 1);
-  } else {
-    newRealPomo = setPomoState(todo, slotIndex, 0);
+function clearPomoPendingCheckForKey(key: string) {
+  const p = pomoPendingCheckByKey.get(key);
+  if (p) {
+    clearTimeout(p.timer);
+    pomoPendingCheckByKey.delete(key);
+  }
+}
+
+// 处理番茄钟勾选：延迟提交，双击时由 handlePomoDoubleClick 清掉待处理，避免误触数据层
+function handlePomoCheck(todo: Todo, estIndex: number, pomoIndex: number, checked: boolean) {
+  const key = pomoSlotInteractionKey(todo.id, estIndex, pomoIndex);
+  const suppressUntil = pomoSuppressCheckAfterDblUntil.get(key);
+  if (suppressUntil != null) {
+    if (Date.now() < suppressUntil) return;
+    pomoSuppressCheckAfterDblUntil.delete(key);
   }
 
-  emit("update-todo-pomo", todo.id, newRealPomo);
+  clearPomoPendingCheckForKey(key);
+
+  const timer = window.setTimeout(() => {
+    pomoPendingCheckByKey.delete(key);
+    const fresh = todosForCurrentViewWithTaskRecords.value.find((t) => t.id === todo.id);
+    if (!fresh) return;
+    const slotIndex = getSlotIndexForEst(fresh, estIndex, pomoIndex);
+    const newRealPomo = setPomoState(fresh, slotIndex, checked ? 1 : 0);
+
+    emit("update-todo-pomo", todo.id, newRealPomo);
+  }, POMO_CHECK_DEBOUNCE_MS);
+
+  pomoPendingCheckByKey.set(key, { timer, checked, todoId: todo.id, estIndex, pomoIndex });
 }
 
-// 双击处理作废状态（-1 罐头 🥫）
+// 双击处理作废状态（-1 罐头）；目标态由 mousedown 时状态决定，避免两次 click 把 -1 洗成 0 后误判为「从 0 双击」
 function handlePomoDoubleClick(todo: Todo, estIndex: number, pomoIndex: number) {
-  const slotIndex = getSlotIndexForEst(todo, estIndex, pomoIndex);
-  const currentState = getRealPomoState(todo, slotIndex);
-  const targetState = currentState === -1 ? 0 : -1; // -1 <-> 0
-  const newRealPomo = setPomoState(todo, slotIndex, targetState as 0 | 1 | -1);
-  emit("update-todo-pomo", todo.id, newRealPomo);
+  const todoId = todo.id;
+  const key = pomoSlotInteractionKey(todoId, estIndex, pomoIndex);
+  clearPomoPendingCheckForKey(key);
+  pomoSuppressCheckAfterDblUntil.set(key, Date.now() + POMO_AFTER_DBL_SUPPRESS_CHECK_MS);
+
+  const gestureStart = pomoDblclickStartByKey.has(key)
+    ? pomoDblclickStartByKey.get(key)!
+    : getRealPomoState(todo, getSlotIndexForEst(todo, estIndex, pomoIndex));
+  pomoDblclickStartByKey.delete(key);
+
+  const targetState: 0 | 1 | -1 = gestureStart === -1 ? 0 : -1;
+
+  nextTick(() => {
+    const fresh = todosForCurrentViewWithTaskRecords.value.find((t) => t.id === todoId);
+    if (!fresh) return;
+    const slotIndex = getSlotIndexForEst(fresh, estIndex, pomoIndex);
+    const newRealPomo = setPomoState(fresh, slotIndex, targetState);
+
+    emit("update-todo-pomo", todoId, newRealPomo);
+  });
 }
+
+// 手指双触作废：逻辑集中在 usePomoSlotVoidFingerDouble（Touch+Pointer 去重、capture、coarse 指针）
+const pomoVoidFinger = usePomoSlotVoidFingerDouble({
+  isEnabled: () => pomoFingerVoidPathEnabled(isMobile.value),
+  makeKey: pomoSlotInteractionKey,
+  onRecordGestureStart(todoId, estIndex, pomoIndex) {
+    const t = todosForCurrentViewWithTaskRecords.value.find((x) => x.id === todoId);
+    if (t) handlePomoSlotMouseDown(t, estIndex, pomoIndex);
+  },
+  onDoubleByKey(key: string) {
+    const parts = key.split("|");
+    if (parts.length !== 3) return;
+    const todoId = Number(parts[0]);
+    const estIndex = Number(parts[1]);
+    const pomoIndex = Number(parts[2]);
+    if (!Number.isFinite(todoId) || !Number.isFinite(estIndex) || !Number.isFinite(pomoIndex)) return;
+    const t = todosForCurrentViewWithTaskRecords.value.find((x) => x.id === todoId);
+    if (t) handlePomoDoubleClick(t, estIndex, pomoIndex);
+  },
+});
 
 // 处理新增估计（最小改动：新增段时 realPomo 末尾补0）
 function handleAddEstimate(todo: Todo) {
@@ -959,14 +1061,16 @@ function confirmAddEstimate() {
   // 确保 estPomo 数组存在
   if (!todo.estPomo) todo.estPomo = [];
 
-  // 添加新的估计值
+  // 必须先展平再 push：push 后会出现 realLen===estLen<totalSlots，ensureFlatRealPomo 会误判为 legacy，把扁平 [1,1] 当成两段完成数展开，勾选被洗乱
+  const flatBefore = ensureFlatRealPomo(todo);
   todo.estPomo.push(newEstimate.value);
 
-  // 新增段：在 realPomo 末尾补对应数量的 0（最小改动）
-  const currentFlat = ensureFlatRealPomo(todo);
-  const addedSlots = newEstimate.value;
-  for (let k = 0; k < addedSlots; k++) {
-    currentFlat.push(0);
+  const slots = totalSlots(todo);
+  const currentFlat = [...flatBefore];
+  if (currentFlat.length > slots) {
+    currentFlat.length = slots;
+  } else {
+    while (currentFlat.length < slots) currentFlat.push(0);
   }
 
   // 通知父组件更新（est 和 real 同时更新以保持一致）
@@ -1840,6 +1944,9 @@ td.col-intent .ellipsis {
 }
 
 .pomo-groups {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
   padding-right: 1px;
   z-index: 10;
 }
@@ -1849,6 +1956,22 @@ td.col-intent .ellipsis {
   align-items: center;
   flex-shrink: 0;
   gap: 0.5px;
+}
+
+.pomo-slot-dblwrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  line-height: 0;
+}
+
+.pomo-slot-void :deep(.n-checkbox-box) {
+  background-color: var(--color-background-dark);
+}
+
+.pomo-slot-void :deep(.n-checkbox-box__border) {
+  border-color: var(--color-text-secondary);
 }
 
 .pomo-separator {
@@ -1885,6 +2008,8 @@ td.col-intent .ellipsis {
 
 .est-buttons {
   display: flex;
+  align-items: center;
+  flex-shrink: 0;
 }
 
 .button-left {
