@@ -208,8 +208,8 @@
                 v-if="editingRowId === schedule.id && editingField === 'title'"
                 :ref="(el: any) => (titleInputRef = el)"
                 v-model="editingValue"
-                @blur="saveEdit(schedule)"
-                @keyup.enter="saveEdit(schedule)"
+                @blur="handleTitleBlur(schedule)"
+                @keyup.enter="handleTitleEnter(schedule, $event)"
                 @keyup.esc="cancelEdit"
                 @input="handleTitleInput(schedule)"
                 @keydown="handleInputKeydown($event, schedule)"
@@ -218,7 +218,7 @@
               />
               <TagPickerPopover
                 v-if="editingRowId === schedule.id && editingField === 'title'"
-                ref="tagPickerRef"
+                :ref="(el: any) => setTagPickerRef(el, schedule.id)"
                 :show="tagEditor.popoverTargetId.value === schedule.id"
                 @update:show="
                   (open: boolean) => {
@@ -229,7 +229,9 @@
                 input-mode="external"
                 placement="bottom-end"
                 :z-index="10000"
-                :popover-style="{ marginRight: '90px' }"
+                :popover-style="{ marginRight: '0px' }"
+                :panel-pointer-guard="onScheduleTagPanelPointerGuard"
+                :on-enter-before-select="onScheduleTagEnterBeforeSelect"
                 @select-tag="(tagId: any) => handleTagSelected(tagId)"
                 @create-tag="(tagName: any) => handleTagCreate(tagName)"
               >
@@ -381,6 +383,21 @@ const tagSearchTermModel = computed({
   },
 });
 const tagPickerRef = ref<InstanceType<typeof TagPickerPopover> | null>(null);
+// Enter 选中标签时置为 true，saveEdit 会跳过结束编辑以保持继续输入
+const selectingTagViaEnter = ref(false);
+// 点击/触摸标签选择器时置为 true，避免 blur 抢先触发保存导致选不中
+const isPickingTagFromSelector = ref(false);
+function onScheduleTagPanelPointerGuard() {
+  isPickingTagFromSelector.value = true;
+}
+function onScheduleTagEnterBeforeSelect() {
+  selectingTagViaEnter.value = true;
+}
+function setTagPickerRef(el: any, scheduleId: number) {
+  if (tagEditor.popoverTargetId.value === scheduleId) {
+    tagPickerRef.value = el as InstanceType<typeof TagPickerPopover> | null;
+  }
+}
 
 // 根据设备类型格式化时间显示，移动端去掉冒号
 function formatTimeForDisplay(timestamp?: number | null) {
@@ -537,9 +554,14 @@ function startEditing(scheduleId: number, field: "title" | "start" | "done" | "d
 
 function saveEdit(schedule: Schedule) {
   if (!editingRowId.value) return;
+  // Enter 选中标签后 keyup.enter 仍会触发 saveEdit，此时不结束编辑以便继续输入
+  if (selectingTagViaEnter.value) {
+    selectingTagViaEnter.value = false;
+    return;
+  }
 
   // 如果输入框中有 # 开头的文本，清理并关闭 popover
-  if (editingValue.value.includes("#") && tagEditor.popoverTargetId.value) {
+  if ((editingValue.value.includes("#") || editingValue.value.includes("@")) && tagEditor.popoverTargetId.value) {
     editingValue.value = tagEditor.clearTagTriggerText(editingValue.value);
     tagEditor.closePopover();
   }
@@ -587,7 +609,7 @@ function saveEdit(schedule: Schedule) {
 
 function cancelEdit() {
   // 如果输入框中有 # 开头的文本，清理并关闭 popover
-  if (editingValue.value.includes("#") && tagEditor.popoverTargetId.value) {
+  if ((editingValue.value.includes("#") || editingValue.value.includes("@")) && tagEditor.popoverTargetId.value) {
     editingValue.value = tagEditor.clearTagTriggerText(editingValue.value);
     tagEditor.closePopover();
   }
@@ -656,9 +678,48 @@ function handleTitleInput(schedule: Schedule) {
   tagEditor.handleContentInput(schedule.id, editingValue.value);
 }
 
-function handleInputKeydown(event: KeyboardEvent, schedule: Schedule) {
-  if (tagEditor.popoverTargetId.value === schedule.id && tagPickerRef.value) {
+function isTagPickerKeyboardActive(schedule: Schedule): boolean {
+  const popoverOpened = tagEditor.popoverTargetId.value !== null;
+  const popoverMatchCurrentRow = tagEditor.popoverTargetId.value === schedule.id;
+  const hasTriggerAtTail = /[#@][\p{L}\p{N}_]*$/u.test(editingValue.value);
+  return popoverOpened || popoverMatchCurrentRow || hasTriggerAtTail;
+}
+
+function handleTitleEnter(schedule: Schedule, event: KeyboardEvent) {
+  if (isTagPickerKeyboardActive(schedule) && tagPickerRef.value) {
+    // popover 打开时，Enter 优先选中高亮项（默认第一项），不结束编辑
+    selectingTagViaEnter.value = true;
     tagPickerRef.value.handleHostKeydown(event);
+    return;
+  }
+  saveEdit(schedule);
+}
+
+function handleTitleBlur(schedule: Schedule) {
+  if (isPickingTagFromSelector.value) {
+    isPickingTagFromSelector.value = false;
+    nextTick(() => titleInputRef.value?.focus());
+    return;
+  }
+  saveEdit(schedule);
+}
+
+function handleInputKeydown(event: KeyboardEvent, schedule: Schedule) {
+  const isTagKey = event.key === "ArrowDown" || event.key === "ArrowUp" || event.key === "Enter" || event.key === "Escape";
+  const hasTriggerAtTail = /[#@][\p{L}\p{N}_]*$/u.test(editingValue.value);
+
+  // 处于 tag 输入态时，确保 popover 目标绑定到当前 schedule
+  if (hasTriggerAtTail && tagEditor.popoverTargetId.value !== schedule.id) {
+    tagEditor.popoverTargetId.value = schedule.id;
+  }
+
+  if (isTagKey && isTagPickerKeyboardActive(schedule) && tagPickerRef.value) {
+    if (event.key === "Enter") selectingTagViaEnter.value = true;
+    // 交给选择器处理，避免输入框原生行为（光标移动/提交）抢占
+    event.preventDefault();
+    event.stopPropagation();
+    tagPickerRef.value.handleHostKeydown(event);
+    return;
   }
 
   // 特殊处理：# 键自动打开 popover
