@@ -19,7 +19,7 @@
       class="tag-picker-panel"
       @pointerdown="onPanelPointerInteraction"
       @mousedown="onPanelPointerInteraction"
-      @touchstart="onPanelPointerInteraction"
+      @touchstart.passive="onPanelPointerInteraction"
     >
       <!-- 内置搜索：Home 筛选等；#/@ 场景用 external，搜索由宿主输入同步 -->
       <n-input

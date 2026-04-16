@@ -8,7 +8,7 @@ export interface Todo {
   projectName?: string;
   taskId?: number; // 只需1个task
   estPomo?: number[]; // 最多3次估计
-  realPomo?: number[]; // 最多3次实际
+  realPomo?: number[]; // 扁平 per-slot 状态数组：0=未做 / 1=完成 / -1=作废；长度=sum(estPomo)；兼容旧版（每段一个前缀计数）
   status?: "" | "delayed" | "ongoing" | "cancelled" | "done" | "suspended";
   priority: number;
   pomoType?: "🍅" | "🍇" | "🍒";

@@ -6,9 +6,12 @@
 const GAP_MS = 360;
 const SINGLE_DELAY_MS = 340;
 
-export function createTouchScheduledSingleAndDouble(onSingle: (key: number) => void, onDouble: (key: number) => void) {
+export function createTouchScheduledSingleAndDouble<Key extends string | number = number>(
+  onSingle: (key: Key) => void,
+  onDouble: (key: Key) => void,
+) {
   let lastEnd = 0;
-  let lastKey: number | null = null;
+  let lastKey: Key | null = null;
   let timer: number | null = null;
 
   function flushTimer() {
@@ -19,7 +22,7 @@ export function createTouchScheduledSingleAndDouble(onSingle: (key: number) => v
   /** 不在此调用 preventDefault，以免妨碍外层（如年视图）垂直滚动；防误触由位移阈值在业务侧处理 */
   function touchStart(_e: TouchEvent) {}
 
-  function touchEnd(key: number) {
+  function touchEnd(key: Key) {
     const now = Date.now();
     if (timer != null) flushTimer();
     if (lastKey === key && now - lastEnd < GAP_MS) {

@@ -105,7 +105,11 @@
             <n-button
               class="cancel-button"
               v-if="
-                selectedTodo && selectedTodo.status !== 'done' && selectedTodo.status !== 'cancelled' && !selectedTodo.realPomo && !isMobile
+                selectedTodo &&
+                selectedTodo.status !== 'done' &&
+                selectedTodo.status !== 'cancelled' &&
+                !hasAnyProgress(selectedTodo) &&
+                !isMobile
               "
               text
               @click.stop="handleCancelSelectedTodo"
@@ -123,7 +127,7 @@
                 selectedTodo &&
                 selectedTodo.status !== 'done' &&
                 selectedTodo.status !== 'cancelled' &&
-                !selectedTodo.realPomo &&
+                !hasAnyProgress(selectedTodo) &&
                 !selectedTodo.startTime &&
                 !isMobile
               "
@@ -272,14 +276,37 @@
                 :ref="(el: any) => (titleInputRef = el)"
                 v-model="editingValue"
                 @blur="handleTitleBlur(todo)"
-                @keyup.enter="saveEdit(todo)"
+                @keyup.enter="handleTitleEnter(todo, $event)"
                 @keyup.esc="cancelEdit"
                 @input="handleTitleInput(todo)"
                 @keydown="handleInputKeydown($event, todo)"
                 @click.stop
                 :data-todo-id="todo.id"
               />
-              <span class="ellipsis" v-else>{{ todo.activityTitle ?? "-" }}</span>
+              <TagPickerPopover
+                v-if="editingRowId === todo.id && editingField === 'title'"
+                :ref="(el: any) => setTagPickerRef(el, todo.id)"
+                :show="tagEditor.popoverTargetId.value === todo.id"
+                @update:show="
+                  (open: boolean) => {
+                    if (!open) tagEditor.closePopover();
+                  }
+                "
+                v-model:search-term="tagSearchTermModel"
+                input-mode="external"
+                placement="bottom-end"
+                :popover-style="{ marginRight: '0px' }"
+                :z-index="10000"
+                :panel-pointer-guard="onTodoTagPanelPointerGuard"
+                :on-enter-before-select="onTodoTagEnterBeforeSelect"
+                @select-tag="(tagId: any) => handleTagSelected(tagId)"
+                @create-tag="(tagName: any) => handleTagCreate(tagName)"
+              >
+                <template #trigger>
+                  <span style="display: inline-block; width: 1px; height: 1px; pointer-events: none"></span>
+                </template>
+              </TagPickerPopover>
+              <span class="ellipsis" v-if="!(editingRowId === todo.id && editingField === 'title')">{{ todo.activityTitle ?? "-" }}</span>
             </td>
 
             <!-- 6 果果 -->
@@ -290,22 +317,31 @@
                   <template v-for="(est, index) in todo.estPomo" :key="index">
                     <div class="pomo-group">
                       <template v-for="i in est" :key="i">
-                        <n-checkbox
-                          :size="isMobile ? 'small' : 'medium'"
-                          :class="{
-                            'pomo-cherry': todo.pomoType === '🍒',
-                            'pomo-grape': todo.pomoType === '🍇',
-                            'pomo-tomato': todo.pomoType === '🍅',
-                          }"
-                          :checked="isPomoCompleted(todo, index, i)"
-                          :disabled="todo.status === 'cancelled'"
-                          @update:checked="(checked: any) => handlePomoCheck(todo, index, i, checked)"
-                        />
+                        <span
+                          class="pomo-slot-dblwrap"
+                          :class="{ 'pomo-slot-void': isPomoVoid(todo, index, i) }"
+                          v-on="pomoVoidFinger.listeners(todo, index, i)"
+                          @mousedown.capture="handlePomoSlotMouseDown(todo, index, i)"
+                          @dblclick.stop="(_e: any) => handlePomoDoubleClick(todo, index, i)"
+                        >
+                          <n-checkbox
+                            :size="isMobile ? 'small' : 'medium'"
+                            :class="{
+                              'pomo-cherry': todo.pomoType === '🍒',
+                              'pomo-grape': todo.pomoType === '🍇',
+                              'pomo-tomato': todo.pomoType === '🍅',
+                            }"
+                            :checked="isPomoCompleted(todo, index, i)"
+                            :disabled="todo.status === 'cancelled'"
+                            @update:checked="(checked: any) => handlePomoCheck(todo, index, i, checked)"
+                          />
+                        </span>
                       </template>
                       <span class="pomo-separator" v-if="todo.estPomo && index < todo.estPomo.length - 1">|</span>
                     </div>
                   </template>
                 </div>
+                <!-- 作废态 -1：.pomo-slot-void 背景修改 -->
                 <div v-if="todo.status !== 'done' && todo.status !== 'cancelled'" class="est-buttons">
                   <!-- 删除估计按钮  -->
                   <n-button
@@ -359,7 +395,7 @@
           </tr>
         </template>
         <tr v-else class="empty-row">
-          <td colspan="7" style="text-align: center; padding: 10px">{{ isMobile ? "" : "暂无待办" }}</td>
+          <td colspan="7">{{ isMobile ? "" : "暂无待办" }}</td>
         </tr>
       </tbody>
     </table>
@@ -384,32 +420,6 @@
   >
     <n-input-number v-model:value="newEstimate" :min="1" :max="5" placeholder="请输入估计的番茄数" style="width: 100%" />
   </n-modal>
-  <!-- Tag Selector Popover -->
-  <TagPickerPopover
-    ref="tagPickerRef"
-    :show="
-      tagEditor.popoverTargetId.value !== null && todosForCurrentViewWithTaskRecords.some((t) => t.id === tagEditor.popoverTargetId.value)
-    "
-    @update:show="
-      (open: boolean) => {
-        if (!open) tagEditor.closePopover();
-      }
-    "
-    v-model:search-term="tagSearchTermModel"
-    input-mode="external"
-    placement="bottom-start"
-    :z-index="10000"
-    :popover-style="{ marginTop: '-30px', marginLeft: '130px' }"
-    :panel-pointer-guard="onTodoTagPanelPointerGuard"
-    :on-enter-before-select="onTodoTagEnterBeforeSelect"
-    @select-tag="(tagId: any) => handleTagSelected(tagId)"
-    @create-tag="(tagName: any) => handleTagCreate(tagName)"
-  >
-    <template #trigger>
-      <span style="position: absolute; pointer-events: none"></span>
-    </template>
-  </TagPickerPopover>
-
   <!-- 排序槽位绑定 tag：单击表头「排序」打开，失去焦点自动保存 -->
   <n-modal
     v-model:show="showPriorityBindingModal"
@@ -483,6 +493,15 @@ import { useActivityTagEditor } from "@/composables/useActivityTagEditor";
 import TagPickerPopover from "../TagSystem/TagPickerPopover.vue";
 import type { SelectOption } from "naive-ui";
 import { useDevice } from "@/composables/useDevice";
+import { usePomoSlotVoidFingerDouble, pomoFingerVoidPathEnabled } from "@/composables/usePomoSlotVoidFingerDouble";
+import {
+  ensureFlatRealPomo,
+  getRealPomoState,
+  setPomoState,
+  hasAnyProgress,
+  getSlotIndexForEst,
+  totalSlots,
+} from "@/services/realPomoState";
 
 const dataStore = useDataStore();
 const { isMobile } = useDevice();
@@ -543,6 +562,20 @@ const showEstimateInput = ref(false);
 const currentTodoId = ref<number | null>(null);
 const newEstimate = ref<number>(1);
 
+/** 番茄槽位单击去抖：双击会先触发两次 update:checked，取消待处理单击后再写作废态 */
+type PomoPendingCheck = {
+  timer: number;
+  checked: boolean;
+  todoId: number;
+  estIndex: number;
+  pomoIndex: number;
+};
+const pomoPendingCheckByKey = new Map<string, PomoPendingCheck>();
+const POMO_CHECK_DEBOUNCE_MS = 220;
+// 双触/双击作废后，checkbox 仍会晚到一次 update:checked，需在窗口内忽略以免把 -1 盖回打钩
+const POMO_AFTER_DBL_SUPPRESS_CHECK_MS = POMO_CHECK_DEBOUNCE_MS + 200;
+const pomoSuppressCheckAfterDblUntil = new Map<string, number>();
+
 // Tag Editor
 const tagEditor = useActivityTagEditor();
 const tagSearchTermModel = computed({
@@ -552,6 +585,11 @@ const tagSearchTermModel = computed({
   },
 });
 const tagPickerRef = ref<InstanceType<typeof TagPickerPopover> | null>(null);
+function setTagPickerRef(el: any, todoId: number) {
+  if (tagEditor.popoverTargetId.value === todoId) {
+    tagPickerRef.value = el as InstanceType<typeof TagPickerPopover> | null;
+  }
+}
 // Enter 选中标签时置为 true，saveEdit 会跳过结束编辑以保持继续输入
 const selectingTagViaEnter = ref(false);
 // 点击/触摸标签选择器时置为 true，避免移动端 blur 抢先触发保存导致选不中
@@ -609,6 +647,8 @@ watch(
 );
 onBeforeUnmount(() => {
   if (rankPopoverOutsideCleanup) rankPopoverOutsideCleanup();
+  for (const [, p] of pomoPendingCheckByKey) clearTimeout(p.timer);
+  pomoPendingCheckByKey.clear();
 });
 const priorityBindingDraft = reactive<Record<number, number | null>>({});
 const priorityShowInRankDraft = reactive<Record<number, boolean>>({});
@@ -908,32 +948,108 @@ function handleCheckboxChange(id: number, checked: boolean) {
 }
 
 // 番茄估计=============================
-// 检查番茄钟是否完成
+// 双击前在 mousedown(capture) 记下槽位状态：两次 update:checked 会篡改 -1，不能仅靠 dblclick 时再读
+const pomoDblclickStartByKey = new Map<string, number>();
+
+function pomoSlotInteractionKey(todoId: number, estIndex: number, pomoIndex: number) {
+  return `${todoId}|${estIndex}|${pomoIndex}`;
+}
+
+function handlePomoSlotMouseDown(todo: Todo, estIndex: number, pomoIndex: number) {
+  if (todo.status === "cancelled") return;
+  const slotIndex = getSlotIndexForEst(todo, estIndex, pomoIndex);
+  const st = getRealPomoState(todo, slotIndex);
+  pomoDblclickStartByKey.set(pomoSlotInteractionKey(todo.id, estIndex, pomoIndex), st);
+}
+
+// 检查番茄钟是否完成（新扁平版：使用 slotIndex 查 getRealPomoState === 1）
 function isPomoCompleted(todo: Todo, estIndex: number, pomoIndex: number): boolean {
-  if (!todo.realPomo || todo.realPomo.length <= estIndex) return false;
-  return todo.realPomo[estIndex] >= pomoIndex;
+  const slotIndex = getSlotIndexForEst(todo, estIndex, pomoIndex);
+  return getRealPomoState(todo, slotIndex) === 1;
 }
 
-// 处理番茄钟勾选
+function isPomoVoid(todo: Todo, estIndex: number, pomoIndex: number): boolean {
+  const slotIndex = getSlotIndexForEst(todo, estIndex, pomoIndex);
+  return getRealPomoState(todo, slotIndex) === -1;
+}
+
+function clearPomoPendingCheckForKey(key: string) {
+  const p = pomoPendingCheckByKey.get(key);
+  if (p) {
+    clearTimeout(p.timer);
+    pomoPendingCheckByKey.delete(key);
+  }
+}
+
+// 处理番茄钟勾选：延迟提交，双击时由 handlePomoDoubleClick 清掉待处理，避免误触数据层
 function handlePomoCheck(todo: Todo, estIndex: number, pomoIndex: number, checked: boolean) {
-  // 确保 realPomo 数组存在且长度与 estPomo 一致
-  if (!todo.realPomo) todo.realPomo = [];
-  if (!todo.estPomo) todo.estPomo = [];
-  while (todo.realPomo.length < todo.estPomo.length) {
-    todo.realPomo.push(0);
+  const key = pomoSlotInteractionKey(todo.id, estIndex, pomoIndex);
+  const suppressUntil = pomoSuppressCheckAfterDblUntil.get(key);
+  if (suppressUntil != null) {
+    if (Date.now() < suppressUntil) return;
+    pomoSuppressCheckAfterDblUntil.delete(key);
   }
 
-  if (checked) {
-    todo.realPomo[estIndex] = Math.max(todo.realPomo[estIndex], pomoIndex);
-  } else {
-    todo.realPomo[estIndex] = Math.min(todo.realPomo[estIndex], pomoIndex - 1);
-  }
+  clearPomoPendingCheckForKey(key);
 
-  // 通知父组件更新
-  emit("update-todo-pomo", todo.id, todo.realPomo);
+  const timer = window.setTimeout(() => {
+    pomoPendingCheckByKey.delete(key);
+    const fresh = todosForCurrentViewWithTaskRecords.value.find((t) => t.id === todo.id);
+    if (!fresh) return;
+    const slotIndex = getSlotIndexForEst(fresh, estIndex, pomoIndex);
+    const newRealPomo = setPomoState(fresh, slotIndex, checked ? 1 : 0);
+
+    emit("update-todo-pomo", todo.id, newRealPomo);
+  }, POMO_CHECK_DEBOUNCE_MS);
+
+  pomoPendingCheckByKey.set(key, { timer, checked, todoId: todo.id, estIndex, pomoIndex });
 }
 
-// 处理新增估计
+// 双击处理作废状态（-1 罐头）；目标态由 mousedown 时状态决定，避免两次 click 把 -1 洗成 0 后误判为「从 0 双击」
+function handlePomoDoubleClick(todo: Todo, estIndex: number, pomoIndex: number) {
+  const todoId = todo.id;
+  const key = pomoSlotInteractionKey(todoId, estIndex, pomoIndex);
+  clearPomoPendingCheckForKey(key);
+  pomoSuppressCheckAfterDblUntil.set(key, Date.now() + POMO_AFTER_DBL_SUPPRESS_CHECK_MS);
+
+  const gestureStart = pomoDblclickStartByKey.has(key)
+    ? pomoDblclickStartByKey.get(key)!
+    : getRealPomoState(todo, getSlotIndexForEst(todo, estIndex, pomoIndex));
+  pomoDblclickStartByKey.delete(key);
+
+  const targetState: 0 | 1 | -1 = gestureStart === -1 ? 0 : -1;
+
+  nextTick(() => {
+    const fresh = todosForCurrentViewWithTaskRecords.value.find((t) => t.id === todoId);
+    if (!fresh) return;
+    const slotIndex = getSlotIndexForEst(fresh, estIndex, pomoIndex);
+    const newRealPomo = setPomoState(fresh, slotIndex, targetState);
+
+    emit("update-todo-pomo", todoId, newRealPomo);
+  });
+}
+
+// 手指双触作废：逻辑集中在 usePomoSlotVoidFingerDouble（Touch+Pointer 去重、capture、coarse 指针）
+const pomoVoidFinger = usePomoSlotVoidFingerDouble({
+  isEnabled: () => pomoFingerVoidPathEnabled(isMobile.value),
+  makeKey: pomoSlotInteractionKey,
+  onRecordGestureStart(todoId, estIndex, pomoIndex) {
+    const t = todosForCurrentViewWithTaskRecords.value.find((x) => x.id === todoId);
+    if (t) handlePomoSlotMouseDown(t, estIndex, pomoIndex);
+  },
+  onDoubleByKey(key: string) {
+    const parts = key.split("|");
+    if (parts.length !== 3) return;
+    const todoId = Number(parts[0]);
+    const estIndex = Number(parts[1]);
+    const pomoIndex = Number(parts[2]);
+    if (!Number.isFinite(todoId) || !Number.isFinite(estIndex) || !Number.isFinite(pomoIndex)) return;
+    const t = todosForCurrentViewWithTaskRecords.value.find((x) => x.id === todoId);
+    if (t) handlePomoDoubleClick(t, estIndex, pomoIndex);
+  },
+});
+
+// 处理新增估计（最小改动：新增段时 realPomo 末尾补0）
 function handleAddEstimate(todo: Todo) {
   currentTodoId.value = todo.id;
   newEstimate.value = 1;
@@ -950,11 +1066,21 @@ function confirmAddEstimate() {
   // 确保 estPomo 数组存在
   if (!todo.estPomo) todo.estPomo = [];
 
-  // 添加新的估计值
+  // 必须先展平再 push：push 后会出现 realLen===estLen<totalSlots，ensureFlatRealPomo 会误判为 legacy，把扁平 [1,1] 当成两段完成数展开，勾选被洗乱
+  const flatBefore = ensureFlatRealPomo(todo);
   todo.estPomo.push(newEstimate.value);
 
-  // 通知父组件更新
+  const slots = totalSlots(todo);
+  const currentFlat = [...flatBefore];
+  if (currentFlat.length > slots) {
+    currentFlat.length = slots;
+  } else {
+    while (currentFlat.length < slots) currentFlat.push(0);
+  }
+
+  // 通知父组件更新（est 和 real 同时更新以保持一致）
   emit("update-todo-est", todo.id, todo.estPomo);
+  emit("update-todo-pomo", todo.id, currentFlat);
 
   // 重置状态并关闭对话框
   showEstimateInput.value = false;
@@ -969,31 +1095,34 @@ function cancelAddEstimate() {
   newEstimate.value = 1; // 重置为默认值
 }
 
-// 删除估计
+// 删除估计（最小改动：使用 ensureFlatRealPomo 检查最后一段是否有非0状态）
 function handleDeleteEstimate(todo: Todo) {
-  if (todo.estPomo && todo.estPomo.length > 0) {
-    // 要删除的下标是最后一项
-    const delIdx = todo.estPomo.length - 1;
-    if (todo.realPomo && delIdx < todo.realPomo.length && todo.realPomo[delIdx] !== undefined && todo.realPomo[delIdx] !== 0) {
-      // realPomo此位置已被填写，提示不能删
-      popoverMessage.value = "已经有实际完成，不可删除~";
-      showPopover.value = true;
-      setTimeout(() => {
-        showPopover.value = false;
-      }, 2000);
-      return;
-    }
-    // 可以删
-    todo.estPomo.pop();
-    emit("update-todo-est", todo.id, todo.estPomo);
-  } else {
+  if (!todo.estPomo || todo.estPomo.length === 0) {
     popoverMessage.value = "没啦，别删了~";
     showPopover.value = true;
-    setTimeout(() => {
-      showPopover.value = false;
-    }, 2000);
+    setTimeout(() => (showPopover.value = false), 2000);
     return;
   }
+
+  const delIdx = todo.estPomo.length - 1;
+  const flat = ensureFlatRealPomo(todo);
+  const startSlot = getSlotIndexForEst(todo, delIdx, 1); // 该段起始 slot
+  const segLength = typeof todo.estPomo[delIdx] === "number" ? todo.estPomo[delIdx]! : 0;
+  const segSlice = flat.slice(startSlot, startSlot + segLength);
+  const hasProgressInSeg = segSlice.some((v) => v !== 0); // 1 or -1 都算有进度
+
+  if (hasProgressInSeg) {
+    popoverMessage.value = "该段已有完成或作废，不可删除~";
+    showPopover.value = true;
+    setTimeout(() => (showPopover.value = false), 2000);
+    return;
+  }
+
+  // 可以删：弹出 estPomo 最后一段，realPomo 尾部对应槽位也截断（写路径确保扁平）
+  todo.estPomo.pop();
+  const newReal = flat.slice(0, startSlot);
+  emit("update-todo-est", todo.id, todo.estPomo);
+  emit("update-todo-pomo", todo.id, newReal); // 同时更新 realPomo 长度
 }
 
 // 修改点击行处理函数
@@ -1244,7 +1373,7 @@ function handleSuspendSelectedTodo() {
     !selectedTodo.value ||
     selectedTodo.value.status === "done" ||
     selectedTodo.value.status === "cancelled" ||
-    selectedTodo.value.realPomo
+    hasAnyProgress(selectedTodo.value) // 新逻辑：有任意进度（1或-1）视为已开始，不能 suspend
   )
     return;
   emit("suspend-todo", selectedTodo.value.id);
@@ -1256,7 +1385,7 @@ function handleCancelSelectedTodo() {
     !selectedTodo.value ||
     selectedTodo.value.status === "done" ||
     selectedTodo.value.status === "cancelled" ||
-    selectedTodo.value.realPomo
+    hasAnyProgress(selectedTodo.value) // 新逻辑：有任意进度视为已开始，不能 cancel
   )
     return;
   emit("cancel-todo", selectedTodo.value.id);
@@ -1408,9 +1537,39 @@ function handleTitleInput(todo: Todo) {
   tagEditor.handleContentInput(todo.id, editingValue.value);
 }
 
-function handleInputKeydown(event: KeyboardEvent, todo: Todo) {
-  if (tagEditor.popoverTargetId.value === todo.id && tagPickerRef.value) {
+function isTagPickerKeyboardActive(todo: Todo): boolean {
+  const popoverOpened = tagEditor.popoverTargetId.value !== null;
+  const popoverMatchCurrentTodo = tagEditor.popoverTargetId.value === todo.id;
+  const hasTriggerAtTail = /[#@][\p{L}\p{N}_]*$/u.test(editingValue.value);
+  return popoverOpened || popoverMatchCurrentTodo || hasTriggerAtTail;
+}
+
+function handleTitleEnter(todo: Todo, event: KeyboardEvent) {
+  if (isTagPickerKeyboardActive(todo) && tagPickerRef.value) {
+    // popover 打开时，Enter 优先选中高亮项（默认第一项），不结束编辑
+    selectingTagViaEnter.value = true;
     tagPickerRef.value.handleHostKeydown(event);
+    return;
+  }
+  saveEdit(todo);
+}
+
+function handleInputKeydown(event: KeyboardEvent, todo: Todo) {
+  const isTagKey = event.key === "ArrowDown" || event.key === "ArrowUp" || event.key === "Enter" || event.key === "Escape";
+  const hasTriggerAtTail = /[#@][\p{L}\p{N}_]*$/u.test(editingValue.value);
+
+  // 处于 tag 输入态时，确保 popover 目标绑定到当前 todo
+  if (hasTriggerAtTail && tagEditor.popoverTargetId.value !== todo.id) {
+    tagEditor.popoverTargetId.value = todo.id;
+  }
+
+  if (isTagKey && isTagPickerKeyboardActive(todo) && tagPickerRef.value) {
+    if (event.key === "Enter") selectingTagViaEnter.value = true;
+    // 交给选择器处理，避免输入框原生行为（光标移动/提交）抢占
+    event.preventDefault();
+    event.stopPropagation();
+    tagPickerRef.value.handleHostKeydown(event);
+    return;
   }
 
   // 特殊处理：# 键自动打开 popover
@@ -1820,6 +1979,9 @@ td.col-intent .ellipsis {
 }
 
 .pomo-groups {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
   padding-right: 1px;
   z-index: 10;
 }
@@ -1829,6 +1991,22 @@ td.col-intent .ellipsis {
   align-items: center;
   flex-shrink: 0;
   gap: 0.5px;
+}
+
+.pomo-slot-dblwrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  line-height: 0;
+}
+
+.pomo-slot-void :deep(.n-checkbox-box) {
+  background-color: var(--color-background-dark);
+}
+
+.pomo-slot-void :deep(.n-checkbox-box__border) {
+  border-color: var(--color-text-secondary);
 }
 
 .pomo-separator {
@@ -1865,6 +2043,8 @@ td.col-intent .ellipsis {
 
 .est-buttons {
   display: flex;
+  align-items: center;
+  flex-shrink: 0;
 }
 
 .button-left {

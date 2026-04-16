@@ -76,6 +76,7 @@ import { storeToRefs } from "pinia";
 import { useDevice } from "@/composables/useDevice";
 import { createTouchScheduledSingleAndDouble } from "@/composables/useTouchScheduledSingleAndDouble";
 import { useSettingStore } from "@/stores/useSettingStore";
+import { countCompletedPomos } from "@/services/realPomoState";
 
 const settingStore = useSettingStore();
 const isTaskVisible = computed(() => settingStore.settings.showTask);
@@ -226,14 +227,11 @@ const days = computed(() => {
 
     const sorted = [...schedules.slice().sort((a, b) => a.ts - b.ts), ...prioritizedTodos, ...otherTodos];
 
-    // 聚合当日 realPomo
+    // 聚合当日 realPomo - 使用 countCompletedPomos 统一统计（支持 -1 作废）
     const sumRealPomo = bucket
       .filter((i) => i.type === "todo" && i.pomoType === "🍅")
       .reduce((sum, item) => {
-        const arr = item.realPomo;
-        if (!Array.isArray(arr) || arr.length === 0) return sum;
-        const itemSum = arr.reduce((s, n) => s + (Number(n) || 0), 0);
-        return sum + itemSum;
+        return sum + countCompletedPomos(item as Todo);
       }, 0);
 
     const sumRealGrape = bucket

@@ -6,6 +6,7 @@ import type { Todo } from "@/core/types/Todo";
 import type { Schedule } from "@/core/types/Schedule";
 import type { UnifiedItem } from "@/core/types/Week";
 import { startOfDay } from "@/core/utils/weekDays";
+import { countCompletedPomos } from "@/services/realPomoState";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const STANDARD_POMO = 16;
@@ -102,14 +103,11 @@ export function useWeekData() {
       const dayTs = weekStart + idx * DAY_MS;
       const sorted = buckets[idx].slice().sort((a, b) => a.ts - b.ts);
 
-      // Pomo统计
+      // Pomo统计 - 使用 countCompletedPomos 统一（支持扁平三态）
       const sumRealPomo = sorted
         .filter((i) => i.type === "todo" && i.pomoType === "🍅")
         .reduce((sum, item) => {
-          const arr = item.realPomo;
-          if (!Array.isArray(arr) || arr.length === 0) return sum;
-          const itemSum = arr.reduce((s, n) => s + (Number(n) || 0), 0);
-          return sum + itemSum;
+          return sum + countCompletedPomos(item as unknown as Todo);
         }, 0);
 
       const sumRealGrape = sorted

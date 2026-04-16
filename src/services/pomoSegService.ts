@@ -2,6 +2,7 @@
 import type { Block, TodoSegment, PomodoroSegment } from "@/core/types/Block";
 import type { Todo } from "@/core/types/Todo";
 import { getTimestampForTimeString } from "@/core/utils";
+import { countCompletedPomos } from "./realPomoState";
 
 // ========== 辅助工具函数 ==========
 
@@ -43,14 +44,10 @@ function _getTodoEstPomoCount(todo: Todo): number {
 
 /**
  * 统计 todo 实际完成番茄数
+ * 现在统一使用 realPomoState.countCompletedPomos（支持扁平 0/1/-1，樱桃兼容 /2）
  */
 function _getTodoRealPomoCount(todo: Todo): number {
-  if (!todo.realPomo) return 0;
-  const rawCount = todo.realPomo.reduce((sum, cur) => sum + (typeof cur === "number" ? cur : 0), 0);
-  if (todo.pomoType === "🍒") {
-    return rawCount / 2;
-  }
-  return rawCount;
+  return countCompletedPomos(todo);
 }
 
 // ========== 番茄时间段生成（第一列） ==========
