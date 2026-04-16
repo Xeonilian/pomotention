@@ -678,6 +678,11 @@ function resetWhiteNoise(sound: SoundType) {
   height: 100%;
 }
 
+:deep(.n-input.n-input--textarea.n-input--resizable .n-input-wrapper) {
+  resize: none !important;
+  min-height: 25px !important;
+}
+
 .hint-text {
   font-size: 12px;
   color: gray;
