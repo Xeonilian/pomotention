@@ -433,7 +433,10 @@ function getCountdownClass(dueDate: number | undefined | null): string {
     height: 0px;
   }
   .kanban-columns {
-    height: calc(100% - 5px - env(safe-area-inset-bottom));
+    /* --vv-obscured-bottom：键盘打开时避免再扣一遍 safe-area 造成 iOS 底部灰条 */
+    height: calc(
+      100% - 5px - max(0px, env(safe-area-inset-bottom) - min(env(safe-area-inset-bottom), var(--vv-obscured-bottom, 0px)))
+    );
   }
 }
 </style>

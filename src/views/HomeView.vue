@@ -5,7 +5,8 @@
 -->
 
 <template>
-  <div class="home-content">
+  <div class="home-root" :style="rootCssVars">
+    <div class="home-content">
     <!-- 左侧面板 (日程表) -->
     <div v-if="settingStore.settings.showSchedule" class="left" :style="{ width: leftWidth + 'px' }">
       <TimeTable @timetable-edit="onTimetableEdit" />
@@ -284,33 +285,34 @@
       <!-- AI 对话对话框 -->
       <AIChatDialog />
     </div>
+    </div>
+    <MobileHomeFab
+      v-if="isMobile"
+      :task-record-editing="taskRecordEditing"
+      @notify="showErrorPopover"
+      @update-active-id="onUpdateActiveId"
+      @pick-activity="onPickActivity"
+      @delete-activity="onDeleteActivity"
+      @create-child-activity="onCreateChildActivity"
+      @increase-child-activity="onIncreaseChildActivity"
+      @quick-add-todo="onQuickAddTodo"
+      @quick-add-schedule="onQuickAddSchedule"
+      @add-activity="onAddActivity"
+      @reset-to-present="onMobileFabResetToPresent"
+      @cancel-planner-row="onMobileFabCancelPlannerRow"
+      @suspend-planner-row="onMobileFabSuspendPlannerRow"
+      @repeat-activity="onRepeatActivity"
+      @finish-task-record-editing="onFinishTaskRecordEditing"
+    />
+    <!-- 错误提示弹窗 -->
+    <n-popover v-model:show="showPopover" trigger="manual" placement="top-end" style="width: 200px">
+      <template #trigger>
+        <div style="position: fixed; bottom: 20px; right: 20px; width: 1px; height: 1px"></div>
+      </template>
+      {{ popoverMessage }}
+    </n-popover>
+    <IcsExportModal v-if="icsModalVisible" :visible="icsModalVisible" :qrText="icsQRText" @close="icsModalVisible = false" />
   </div>
-  <MobileHomeFab
-    v-if="isMobile"
-    :task-record-editing="taskRecordEditing"
-    @notify="showErrorPopover"
-    @update-active-id="onUpdateActiveId"
-    @pick-activity="onPickActivity"
-    @delete-activity="onDeleteActivity"
-    @create-child-activity="onCreateChildActivity"
-    @increase-child-activity="onIncreaseChildActivity"
-    @quick-add-todo="onQuickAddTodo"
-    @quick-add-schedule="onQuickAddSchedule"
-    @add-activity="onAddActivity"
-    @reset-to-present="onMobileFabResetToPresent"
-    @cancel-planner-row="onMobileFabCancelPlannerRow"
-    @suspend-planner-row="onMobileFabSuspendPlannerRow"
-    @repeat-activity="onRepeatActivity"
-    @finish-task-record-editing="onFinishTaskRecordEditing"
-  />
-  <!-- 错误提示弹窗 -->
-  <n-popover v-model:show="showPopover" trigger="manual" placement="top-end" style="width: 200px">
-    <template #trigger>
-      <div style="position: fixed; bottom: 20px; right: 20px; width: 1px; height: 1px"></div>
-    </template>
-    {{ popoverMessage }}
-  </n-popover>
-  <IcsExportModal v-if="icsModalVisible" :visible="icsModalVisible" :qrText="icsQRText" @close="icsModalVisible = false" />
 </template>
 
 <script setup lang="ts">
@@ -323,6 +325,7 @@ import type { Activity } from "@/core/types/Activity";
 import { getTimestampForTimeString } from "@/core/utils";
 import { ViewType } from "@/core/constants";
 import { useResize } from "@/composables/useResize";
+import { useVisualViewportKeyboard } from "@/composables/useVisualViewportKeyboard";
 import IcsExportModal from "@/components/IcsExportModal.vue";
 import HomeTagFilterPopover from "@/components/TagSystem/HomeTagFilterPopover.vue";
 import MobileHomeFab from "@/components/MobileHomeFab/MobileHomeFab.vue";
@@ -353,6 +356,13 @@ import { useDevice } from "@/composables/useDevice";
 // ======================== 响应式状态与初始化 ========================
 // 不直接import Naive和以下组建加速启动
 const { isMobile } = useDevice();
+const {
+  viewportInnerH,
+  viewportInnerW,
+  rootCssVars,
+  attachListeners: attachVisualViewportListeners,
+  detachListeners: detachVisualViewportListeners,
+} = useVisualViewportKeyboard();
 const TimeTable = defineAsyncComponent(() => import("@/components/TimeTable/TimeTable.vue"));
 const DayPlanner = defineAsyncComponent(() => import("@/components/DayPlanner/DayPlanner.vue"));
 const WeekPlanner = defineAsyncComponent(() => import("@/components/WeekPlanner/WeekPlanner.vue"));
@@ -1469,35 +1479,18 @@ function handleEditScheduleLocation(id: number, newLocation: string) {
   saveAllDebounced();
 }
 
-// visualViewport 尺寸需在 onMounted 前定义，供生命周期里注册监听
-const viewportInnerH = ref(typeof window !== "undefined" ? window.innerHeight : 600);
-const viewportInnerW = ref(typeof window !== "undefined" ? window.innerWidth : 400);
-
-function syncHomeViewportDims() {
-  if (typeof window === "undefined") return;
-  viewportInnerH.value = window.visualViewport?.height ?? window.innerHeight;
-  viewportInnerW.value = window.visualViewport?.width ?? window.innerWidth;
-}
-
 // ======================== 8. 生命周期 Hook ========================
 onMounted(() => {
   // console.log("HomeView mounted");
   dateService.setupSystemDateWatcher();
   dateService.navigateByView("today");
-  if (typeof window !== "undefined") {
-    syncHomeViewportDims();
-    window.addEventListener("resize", syncHomeViewportDims);
-    window.visualViewport?.addEventListener("resize", syncHomeViewportDims);
-  }
+  attachVisualViewportListeners();
 });
 
 onUnmounted(() => {
   dateService.cleanupSystemDateWatcher();
   autoSyncDebounced.flush(); //立即执行
-  if (typeof window !== "undefined") {
-    window.removeEventListener("resize", syncHomeViewportDims);
-    window.visualViewport?.removeEventListener("resize", syncHomeViewportDims);
-  }
+  detachVisualViewportListeners();
 });
 
 //  路由切换前保存（Vue Router）
@@ -1559,13 +1552,22 @@ const { startResize: startRightResize } = useResize(
 </script>
 
 <style scoped>
+.home-root {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
 .home-content {
   display: flex;
+  flex: 1 1 auto;
+  flex-direction: row;
+  min-height: 0;
+  overflow: hidden;
   background: var(--color-background-light-light);
   justify-content: center;
-  overflow: hidden;
-  height: 100%;
-  flex-direction: row;
 }
 
 .left {

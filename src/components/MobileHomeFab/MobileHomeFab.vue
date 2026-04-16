@@ -335,7 +335,8 @@ onUnmounted(() => {
 .mobile-home-fab {
   position: fixed;
   right: 15px;
-  bottom: max(30px, env(safe-area-inset-bottom));
+  /* --vv-fab-lift：Home 根节点根据 visualViewport 注入，软键盘抬起时上移 */
+  bottom: calc(max(30px, env(safe-area-inset-bottom)) + var(--vv-fab-lift, 0px));
   z-index: 90;
   pointer-events: auto;
 }
