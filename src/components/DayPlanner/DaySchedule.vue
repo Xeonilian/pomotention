@@ -294,7 +294,7 @@
           </tr>
         </template>
         <tr v-else class="empty-row">
-          <td colspan="7" style="text-align: center; padding: 10px">{{ isMobile ? "" : "暂无日程" }}</td>
+          <td colspan="7">{{ isMobile ? "" : "暂无日程" }}</td>
         </tr>
       </tbody>
     </table>
@@ -916,7 +916,7 @@ tr.cancel-row {
 }
 
 tr.empty-row {
-  height: 30px;
+  height: 90px;
   text-align: center;
   color: var(--color-text-secondary);
   width: 100%;

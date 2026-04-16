@@ -395,7 +395,7 @@
           </tr>
         </template>
         <tr v-else class="empty-row">
-          <td colspan="7" style="text-align: center; padding: 10px">{{ isMobile ? "" : "暂无待办" }}</td>
+          <td colspan="7">{{ isMobile ? "" : "暂无待办" }}</td>
         </tr>
       </tbody>
     </table>

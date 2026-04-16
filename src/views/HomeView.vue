@@ -419,10 +419,10 @@ const isViewDateYesterday = computed(() => dateService.isViewDateYesterday);
 const isViewDateTomorrow = computed(() => dateService.isViewDateTomorrow);
 const appDateTimestamp = computed(() => dateService.appDateTimestamp);
 
-// 进入年视图（点击头部年份）
+// 进入年视图（点击头部年份） #HACK
 const onYearJump = () => {
   settingStore.settings.viewSet = "year";
-  settingStore.settings.topHeight = 490;
+  settingStore.settings.topHeight = isMobile.value ? 440 : 450;
 };
 
 const onDayJump = () => {
@@ -433,26 +433,26 @@ const onDayJump = () => {
 // 年视图中点击月份标题 → 进入月视图并定位到该月
 const onYearNavigateToMonth = (monthStartTs: number) => {
   settingStore.settings.viewSet = "month";
-  settingStore.settings.topHeight = isMobile.value ? 525 : 615;
+  settingStore.settings.topHeight = isMobile.value ? 435 : 610;
   dateService.navigateTo(monthStartTs);
 };
 
 // 年视图中点击周编号 → 进入周视图并定位到该周
 const onYearNavigateToWeek = (weekStartTs: number) => {
   settingStore.settings.viewSet = "week";
-  settingStore.settings.topHeight = isMobile.value ? 490 : 510;
+  settingStore.settings.topHeight = isMobile.value ? 435 : 610;
   dateService.navigateTo(weekStartTs);
 };
 
 // weekplanner month 引起变化日期
 const onMonthJump = () => {
   settingStore.settings.viewSet = "month";
-  settingStore.settings.topHeight = isMobile.value ? 580 : 610;
+  settingStore.settings.topHeight = isMobile.value ? 435 : 610;
 };
 
 const onWeekJump = () => {
   settingStore.settings.viewSet = "week";
-  settingStore.settings.topHeight = isMobile.value ? 490 : 510;
+  settingStore.settings.topHeight = isMobile.value ? 435 : 610;
 };
 
 // 选择进入日视图的具体日期
@@ -1253,9 +1253,9 @@ function onViewSet() {
   const next = order[(idx + 1) % order.length];
   settingStore.settings.viewSet = next;
   if (cur === "week") {
-    settingStore.settings.topHeight = 615;
+    settingStore.settings.topHeight = 610;
   } else if (cur === "day") {
-    settingStore.settings.topHeight = 600;
+    settingStore.settings.topHeight = 610;
   } else if (cur === "month") {
     settingStore.settings.topHeight = 450;
   } else if (cur === "year") {
