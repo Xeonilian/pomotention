@@ -76,6 +76,7 @@ import { storeToRefs } from "pinia";
 import { useDevice } from "@/composables/useDevice";
 import { createTouchScheduledSingleAndDouble } from "@/composables/useTouchScheduledSingleAndDouble";
 import { useSettingStore } from "@/stores/useSettingStore";
+import { countCompletedPomos } from "@/services/realPomoState";
 
 const settingStore = useSettingStore();
 const isTaskVisible = computed(() => settingStore.settings.showTask);
@@ -230,12 +231,7 @@ const days = computed(() => {
     const sumRealPomo = bucket
       .filter((i) => i.type === "todo" && i.pomoType === "🍅")
       .reduce((sum, item) => {
-        // 临时兼容：如果有 countCompletedPomos 则优先使用，否则回退旧逻辑
-        const completed = typeof (item as any).realPomo !== "undefined" ? 
-          // 由于 MonthPlanner 传入的是 plain object，暂时保持旧 reduce（后续可引入 realPomoState）
-          (Array.isArray((item as any).realPomo) ? (item as any).realPomo.reduce((s: number, n: number) => s + (Number(n) || 0), 0) : 0) 
-          : 0;
-        return sum + completed;
+        return sum + countCompletedPomos(item as Todo);
       }, 0);
 
     const sumRealGrape = bucket
