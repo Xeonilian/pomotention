@@ -2,49 +2,31 @@
 
 `Pomotention` = `Pomodoro` + `Intention`
 
-- **番茄工作法**（Pomodoro Technique）利用计时器划分工作休息周期
-- **执行意图**（Implementation Intention）大脑规划和执行任务的核心能能力
-- **番茄意图**（Pomotention）让每个番茄周期都有明确目标，也为无所事事寻找一片空间
+- **番茄工作法**（Pomodoro Technique）：用计时器划分工作 / 休息周期。
+- **执行意图**（Implementation Intention）：把「打算做什么」写成可执行的条件句，降低启动阻力。
+- **番茄意图**：让每个番茄周期有清晰目标；也为「无所事事」类留白活动保留位置。
 
-## 🎯 核心目标：基于番茄工作法重构人与时间的关系
+## 它帮你做什么
 
-- **精准测量** - 利用番茄钟准确了解任务真实耗时
-- **专注管理** - 识别并有效处理内外打扰事件
-- **预估优化** - 通过对比实际执行提升时间预估准确性
-- **效率提升** - 目标与进展回忆，将多个番茄组织成有机整体
-- **时间规划** - 将一天规划为多组番茄时间块
-- 智能分析 - 利用数据记录和 AI 工具优化任务执行 【开发中】
+- **测得准**：用番茄记录逼近真实耗时。
+- **守得住**：区分内外打断并留痕，减少无声流失的时间。
+- **估得好**：预估与实际对照，迭代你的判断。
+- **排得开**：活动、任务计划与时间表联动，把一天放进可执行的块里。
 
-## 🚀 主要功能
+主要功能模块（操作细节见 [使用导航](../index.md) 各篇 reference）：活动与标签、任务计划、番茄时钟、任务追踪、时间表、数据查看与同步等。
 
-- **日程管理** - 创建工作/娱乐模板，智能计算可用番茄时间
-- **活动管理** - 创建与筛选任务、待办、无所事事等多类型活动
-- **番茄时钟** - 完整计时控制，自动记录，自定义专注/休息循环
-- **执行追踪** - 预估 vs 实际误差分析，打扰事件记录，精力值管理
-- **反思记录** - 任务关联的深度思考和总结
-- **任务计划** - 自动提取当日计划，任务流转
-- **数据可视化** - 时间轴分布、番茄统计、历史数据分析
+## 下一步读哪里
 
-## 🛠️ 技术架构
+- **选端安装**：[快速开始](./getting-started.md)
+- **五步跑通**：[最小上手（五步）](./get-things-done.md)
+- **按阶段跟练**：[番茄工作法实操总览](../pomodoro-technique/README.md)
+- **查界面与按钮**：[使用导航](../index.md) · [附录：按钮一览](../appendix/buttons.md)
 
-- **前端**: Vue.js + TypeScript + Naive UI
-- **后端**: Tauri (Rust)
-- **平台**: Windows / macOS
+## 延伸阅读
 
-## 使用说明
+- [番茄工作法官网](https://www.pomodorotechnique.com/)
+- [沉思的生活，或无所事事](https://book.douban.com/subject/36425441/)（Vita contemplativa）
 
-- **快速安装**：[安装适合你的版本](getting-started.md)
-- **快速使用**：[关于一个任务的生命周期](get-things-done.md)
-- **番茄工作法实操**：[按阶段使用 Pomotention](../pomodoro-technique/README.md)
-- **全部模块与附录**：[使用说明导航](../index.md)（含 [附录：按钮一览](../appendix/buttons.md)）
+## 技术栈与项目叙事
 
-## 🎓 开发参考
-
-- [番茄列车](https://ebp.gesedna.com/pa-group-info-pomo/?rd=%2FEBPTsundoku%2F%3Frd%3D%2F) - 社群化专注实践
-- [拖延深度改善课程](https://ebp.gesedna.com/product/delay_multi/?rd=%2F) - 系统性解决拖延问题
-- [番茄工作法官网](https://www.pomodorotechnique.com/) - 番茄工作法理念和方法论
-- [沉思的生活，或无所事事](https://book.douban.com/subject/36425441/) - Vita contemplativa oder von der Untätigkeit 为了自由
-
----
-
-_让每个番茄都是一次关于如何生活的选择 -ฅ(\*ΦωΦ)ฅ---- cognata ad sidera tendit..._
+实现选型与项目缘起见 [关于项目](./about.md)。
