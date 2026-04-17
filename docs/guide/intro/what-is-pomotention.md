@@ -35,6 +35,8 @@
 
 - **快速安装**：[安装适合你的版本](getting-started.md)
 - **快速使用**：[关于一个任务的生命周期](get-things-done.md)
+- **番茄工作法实操**：[按阶段使用 Pomotention](../pomodoro-technique/README.md)
+- **全部模块与附录**：[使用说明导航](../index.md)（含 [附录：按钮一览](../appendix/buttons.md)）
 
 ## 🎓 开发参考
 

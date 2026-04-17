@@ -10,10 +10,10 @@ hero:
   actions:
     - theme: brand
       text: 什么是Pomotention？
-      link: /guide/what-is-pomotention
+      link: /guide/intro/what-is-pomotention
     - theme: alt
       text: 快速开始
-      link: /guide/getting-started
+      link: /guide/intro/getting-started
     - theme: alt
       text: GitHub
       link: https://github.com/Xeonilian/pomotention
