@@ -76,35 +76,34 @@ export default withMermaid(
 
       nav: [
         { text: "首页", link: "/" },
-        { text: "快速开始", link: "/guide/intro/getting-started" },
+        { text: "开始使用", link: "/guide/intro/getting-started" },
         { text: "使用说明", link: "/guide/" },
         { text: "GitHub", link: "https://github.com/Xeonilian/pomotention" },
       ],
 
-      // 侧栏：总览 → 方法论一条线 → 功能按主题分组 → 附录与项目；避免重复入口与过长平铺
+      // 侧栏：开始使用（先导航→再认知→再安装）→ 方法论 → 功能参考 → 附录；上层结论、下层支撑
       sidebar: [
         {
-          text: "开始",
+          text: "开始使用",
           items: [
-            { text: "内容导航", link: "/guide/" },
+            { text: "使用导航", link: "/guide/" },
             { text: "什么是 Pomotention？", link: "/guide/intro/what-is-pomotention" },
             {
-              text: "安装与上手",
+              text: "应用安装",
               collapsed: false,
               items: [
                 { text: "快速开始（选方式）", link: "/guide/intro/getting-started" },
                 { text: "桌面客户端", link: "/guide/intro/pc-getting-started" },
                 { text: "PWA 网页应用", link: "/guide/intro/pwa-getting-started" },
-                { text: "快速使用（一条路径）", link: "/guide/intro/get-things-done" },
               ],
             },
+            { text: "最小上手（五步）", link: "/guide/intro/get-things-done" },
           ],
         },
         {
           text: "番茄工作法实操",
           collapsed: true,
           items: [
-            { text: "总览", link: "/guide/pomodoro-technique/" },
             { text: "从这里开始", link: "/guide/pomodoro-technique/00-start-here" },
             { text: "第一阶段：记录时间", link: "/guide/pomodoro-technique/01-track-time" },
             { text: "第二阶段：应对打断", link: "/guide/pomodoro-technique/02-handle-interruptions" },
