@@ -1,7 +1,3 @@
-<!-- 
-  Component: ActivitySheet.vue
--->
-
 <template>
   <div class="activity-container">
     <!-- 顶部固定按钮区域 -->
@@ -403,44 +399,48 @@ function getCountdownClass(dueDate: number | undefined | null): string {
 </script>
 
 <style scoped>
+/*
+ * 纵向 flex 分配高度：与 MainLayout --app-vvh 单一来源，不在此用 calc 扣键盘。
+ * 横向仅 kanban-columns；纵向仅 ActivitySection 内列表。
+ */
 .activity-container {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
   height: 100%;
-  /* 参与父级 flex 收缩，否则子树 min-height:auto 会把高度锁死在内容上 */
   min-height: 0;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
-/* 顶部固定按钮容器样式 */
+
 .activity-button-container {
+  flex: 0 0 auto;
   height: 40px;
+  overflow: hidden;
 }
 
 .kanban-columns {
+  flex: 1 1 0;
+  min-height: 0;
   display: flex;
   flex-direction: row;
   gap: 8px;
   align-items: stretch;
-  height: calc(100% - 40px - env(safe-area-inset-bottom));
   overflow-x: auto;
+  overflow-y: hidden;
 }
 
 .kanban-column {
   flex: 1 0 0;
   min-width: 240px;
-  height: 100%;
-  /* 列内 ActivitySection 为纵向 flex；不设 0 则子项不能低于内容高度，列表无法内部滚动 */
   min-height: 0;
   display: flex;
   flex-direction: column;
 }
 
-@media (max-width: 600px) {
+@media (max-width: 650px) {
   .activity-button-container {
-    height: 0px;
-  }
-  .kanban-columns {
-    /* --vv-obscured-bottom：键盘打开时避免再扣一遍 safe-area 造成 iOS 底部灰条 */
-    height: calc(
-      100% - 5px - max(0px, env(safe-area-inset-bottom) - min(env(safe-area-inset-bottom), var(--vv-obscured-bottom, 0px)))
-    );
+    height: 0;
+    min-height: 0;
   }
 }
 </style>

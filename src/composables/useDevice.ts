@@ -50,7 +50,6 @@ export function useDevice() {
   const isLandscape = computed(() => width.value > height.value);
 
   const isIOSDevice = computed(() => /iPad/.test(navigator.userAgent));
-  // iPhone：与系统键盘「完成」等行为对齐的窄判定（避免 Android 被误减）
   const isIOS = /iphone/.test(userAgent);
 
   return {

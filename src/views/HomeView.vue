@@ -5,7 +5,7 @@
 -->
 
 <template>
-  <div class="home-root" :style="rootCssVars">
+  <div class="home-root" :class="{ 'home-root--activity-only-mobile': activityOnlyMobile }" :style="rootCssVars">
     <div class="home-content">
     <!-- 左侧面板 (日程表) -->
     <div v-if="settingStore.settings.showSchedule" class="left" :style="{ width: leftWidth + 'px' }">
@@ -376,10 +376,18 @@ const AIChatDialog = defineAsyncComponent(() => import("@/components/AiChat/AiCh
 const settingStore = useSettingStore();
 const dataStore = useDataStore();
 
+/** 窄屏仅活动：隐藏空 middle，避免与右栏双纵向滚、iOS 焦点滚冲突 */
+const activityOnlyMobile = computed(
+  () =>
+    isMobile.value &&
+    settingStore.settings.showActivity &&
+    !settingStore.settings.showPlanner &&
+    !settingStore.settings.showAi,
+);
+
 const queryDate = ref<number | null>(null);
 const showPopover = ref(false);
 const popoverMessage = ref("");
-/** TaskRecord 编辑中：供移动端 FAB 隐藏等 */
 const taskRecordEditing = ref(false);
 function setTaskRecordEditing(v: boolean) {
   taskRecordEditing.value = v;
@@ -1590,6 +1598,18 @@ const { startResize: startRightResize } = useResize(
   margin-left: 0;
   background: var(--color-background);
   min-width: 90px;
+  min-height: 0;
+}
+
+/* 仅活动：隐藏 middle、右栏单滚动链 */
+.home-root--activity-only-mobile .middle {
+  display: none !important;
+}
+.home-root--activity-only-mobile .right {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .middle {
@@ -1843,9 +1863,16 @@ const { startResize: startRightResize } = useResize(
   .left {
     padding: 5px 2px 0px 8px !important;
   }
+
   .right {
     padding: 5px 6px 0px 6px !important;
     width: 100% !important;
+    /* 窄屏禁 .right 纵滚，减轻 iOS 整块上移与灰带 */
+    overflow-y: hidden;
+  }
+
+  .home-root--activity-only-mobile .right {
+    width: auto !important;
   }
 
   .resize-handle-horizontal,
