@@ -63,8 +63,7 @@
       </n-button>
     </div>
 
-    <!-- 内容区 -->
-    <div class="section-content-container">
+    <div ref="sectionScrollEl" class="section-content-container">
       <div v-for="item in sortedDisplaySheet" :key="item.id">
         <div
           v-if="item.status !== 'done' && shouldShowItem(item)"
@@ -375,8 +374,6 @@ import {
   Tag16Regular,
 } from "@vicons/fluent";
 import type { Activity } from "@/core/types/Activity";
-import { storeToRefs } from "pinia";
-import { useDataStore } from "@/stores/useDataStore";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useActivityTagEditor } from "@/composables/useActivityTagEditor";
 import { useActivityDrag } from "@/composables/useActivityDrag";
@@ -414,6 +411,7 @@ const emit = defineEmits<{
 
 const isSearchFocused = ref(false);
 const searchInputRef = ref<InputInst | null>(null);
+const sectionScrollEl = ref<HTMLElement | null>(null);
 
 // 失焦筛选框（移动端标题单击仅 emit focus-row 时 DOM 焦点常仍在筛选框，需单独处理）
 function blurSearchInput() {
@@ -425,30 +423,29 @@ function blurSearchInput() {
 }
 
 // ======================== Composables ========================
-const { isTouchSupported } = useDevice();
+const { isTouchSupported, isMobile } = useDevice();
 
 // ======================== Stores ========================
 const settingStore = useSettingStore();
-const { isMobile } = useDevice();
 
-// 手测用：每种交互最多打一条，避免 title-focus + before + after 重复刷屏（稳定后可删本段与调用）
-const {
-  activeId: storeActiveId,
-  selectedActivityId: storeSelectedActivityId,
-  selectedRowId: storeSelectedRowId,
-  selectedRowHasParent: storeSelectedRowHasParent,
-} = storeToRefs(useDataStore());
+// 移动端标题聚焦：只滚列表容器，避免 WebKit 去滚外层出现大块空区
+function alignRowInListScroller(rowId: number) {
+  const root = sectionScrollEl.value;
+  if (!root) return;
+  const row = root.querySelector(`[data-row-id="${rowId}"]`);
+  if (!(row instanceof HTMLElement)) return;
+  const pad = 10;
+  const cr = row.getBoundingClientRect();
+  const sr = root.getBoundingClientRect();
+  if (cr.top < sr.top + pad) root.scrollTop += cr.top - sr.top - pad;
+  else if (cr.bottom > sr.bottom - pad) root.scrollTop += cr.bottom - sr.bottom + pad;
+}
 
-function debugLogRowSelection(phase: string, rowId: number) {
-  const row = props.displaySheet.find((a) => a.id === rowId);
-  const hl = rowId === props.activityId || rowId === props.activeId;
-  const miss = !row;
-  console.log(
-    `[ActivitySection] ${phase} | sec=${props.sectionId} row=${rowId} | ` +
-      `del=${miss ? "?" : row!.deleted} par=${miss ? "?" : row!.parentId} st=${miss ? "?" : row!.status || "∅"} | ` +
-      `hl=${hl} props(act=${props.activityId},active=${props.activeId ?? "null"}) | ` +
-      `store(act=${storeActiveId.value},selAct=${storeSelectedActivityId.value},rowId=${storeSelectedRowId.value},hasPar=${storeSelectedRowHasParent.value})`,
-  );
+function afterTitleFocusScroll(rowId: number) {
+  if (!isMobile.value) return;
+  nextTick(() => {
+    requestAnimationFrame(() => alignRowInListScroller(rowId));
+  });
 }
 
 // 每行标签条是否显示：缺省为显示，仅在为 false 时隐藏；与 collapsedActivityIds 一样持久化到设置
@@ -614,14 +611,23 @@ function setRowInputRef(el: InputInst | null, id: number) {
 
 function focusTitleInput(id: number) {
   nextTick(() => {
-    const input = rowInputMap.value.get(id);
-    if (input) {
-      if (typeof input.focus === "function") {
-        input.focus();
-      } else {
-        input.inputElRef?.focus?.();
+    const inst = rowInputMap.value.get(id);
+    if (!inst) return;
+    const el = (inst as { inputElRef?: HTMLInputElement | null }).inputElRef;
+    if (el?.focus) {
+      try {
+        el.focus({ preventScroll: true });
+      } catch {
+        el.focus();
+      }
+    } else if (typeof inst.focus === "function") {
+      try {
+        (inst.focus as (o?: FocusOptions) => void)({ preventScroll: true });
+      } catch {
+        inst.focus();
       }
     }
+    afterTitleFocusScroll(id);
   });
 }
 
@@ -643,13 +649,15 @@ function blurTitleEditsExcept(keepActivityId: number | null) {
 
 function handleTitleInputFocus(item: Activity) {
   if (isMobile.value && !titleEditAllowed[item.id]) {
-    debugLogRowSelection("mobile-title-1st-tap(refocus-no-select-yet)", item.id);
     nextTick(() => {
       rowInputMap.value.get(item.id)?.blur();
     });
     return;
   }
   handleFocusRow(item.id);
+  if (isMobile.value && titleEditAllowed[item.id]) {
+    afterTitleFocusScroll(item.id);
+  }
 }
 
 function handleTitleBlur(item: Activity) {
@@ -677,9 +685,6 @@ function handleTitleTouchEnd(e: TouchEvent, item: Activity) {
   blurSearchInput();
   titleEditAllowed[id] = true;
   focusTitleInput(id);
-  nextTick(() => {
-    debugLogRowSelection("mobile-title-edit-open(no-emit-focus-row)", id);
-  });
 }
 
 function handleTitleTouchCancel(_item: Activity) {
@@ -708,9 +713,6 @@ function handleFocusRow(id: number) {
   blurSearchInput();
   blurTitleEditsExcept(id);
   emit("focus-row", id);
-  nextTick(() => {
-    debugLogRowSelection("row-focus(synced)", id);
-  });
 }
 
 // PC 上首行即 return，无实际效果；savedTopHeight 在本组件内从未赋值，移动端恢复分支亦不会执行
@@ -1073,13 +1075,12 @@ function handlePomoInputTouchCancel(item: Activity) {
 }
 
 .section-content-container {
-  /* 预留纵向滚动条槽位，避免 overflow 时出现滚动条导致行内 flex 宽度被挤变窄 */
   scrollbar-gutter: stable;
   overflow-y: auto;
   overflow-x: hidden;
-  /* 冲突点：在纵向 flex 里仅用 height:100% 时 min-height 默认为 auto，会被内容撑满→此处 scroll 失效，外层/iOS 抢滚 */
   flex: 1 1 auto;
   min-height: 0;
+  overscroll-behavior-y: contain;
 }
 
 .activity-row {
@@ -1091,14 +1092,8 @@ function handlePomoInputTouchCancel(item: Activity) {
 }
 
 .is-dragging-row {
-  /* 确保它在视觉上浮起（可选） */
   z-index: 999;
   position: relative;
-}
-
-/* 确保普通行在手机上不会拦截滚动，除了 handle 区域 */
-.activity-row {
-  touch-action: pan-y;
 }
 
 .activity-content {

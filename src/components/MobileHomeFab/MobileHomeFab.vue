@@ -1,4 +1,3 @@
-<!-- 移动端 Home 右下角快捷操作：状态来自 useDataStore，动作用 emit 交给 HomeView -->
 <template>
   <div
     v-if="!(taskRecordEditing && suppressFinishEditFab)"
@@ -212,14 +211,12 @@ const emit = defineEmits<{
   (e: "reset-to-present"): void;
   (e: "suspend-planner-row"): void;
   (e: "repeat-activity", noTodoRepeat: boolean): void;
-  /** TaskRecord 编辑中：点击勾结束编辑 */
   (e: "finish-task-record-editing"): void;
 }>();
 
 const props = defineProps<{
-  /** TaskRecord 编辑时隐藏 FAB（由 HomeView 传入） */
   taskRecordEditing: boolean;
-  /** iPhone 且已开任务区：系统键盘自带完成，不再显示勾按钮 */
+  /** 为 true 时不渲染整块 FAB（如 iPhone 任务编辑 + 系统完成条） */
   suppressFinishEditFab?: boolean;
 }>();
 const { taskRecordEditing, suppressFinishEditFab } = toRefs(props);
@@ -341,7 +338,6 @@ onUnmounted(() => {
 .mobile-home-fab {
   position: fixed;
   right: 15px;
-  /* --vv-fab-top：Home 根用 visualViewport 底缘算 top，避免 iOS 滚动聚焦时 bottom+lift 误判 */
   top: var(--vv-fab-top, calc(100dvh - 88px - max(30px, env(safe-area-inset-bottom, 0px))));
   bottom: auto;
   z-index: 90;
