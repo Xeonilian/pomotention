@@ -289,6 +289,7 @@
     <MobileHomeFab
       v-if="isMobile"
       :task-record-editing="taskRecordEditing"
+      :suppress-finish-edit-fab="settingStore.settings.showTask && isIOS"
       @notify="showErrorPopover"
       @update-active-id="onUpdateActiveId"
       @pick-activity="onPickActivity"
@@ -355,7 +356,7 @@ import { useDevice } from "@/composables/useDevice";
 
 // ======================== 响应式状态与初始化 ========================
 // 不直接import Naive和以下组建加速启动
-const { isMobile } = useDevice();
+const { isMobile, isIOS } = useDevice();
 const {
   viewportInnerH,
   viewportInnerW,
