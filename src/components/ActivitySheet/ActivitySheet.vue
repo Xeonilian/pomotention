@@ -405,6 +405,8 @@ function getCountdownClass(dueDate: number | undefined | null): string {
 <style scoped>
 .activity-container {
   height: 100%;
+  /* 参与父级 flex 收缩，否则子树 min-height:auto 会把高度锁死在内容上 */
+  min-height: 0;
 }
 /* 顶部固定按钮容器样式 */
 .activity-button-container {
@@ -424,6 +426,8 @@ function getCountdownClass(dueDate: number | undefined | null): string {
   flex: 1 0 0;
   min-width: 240px;
   height: 100%;
+  /* 列内 ActivitySection 为纵向 flex；不设 0 则子项不能低于内容高度，列表无法内部滚动 */
+  min-height: 0;
   display: flex;
   flex-direction: column;
 }

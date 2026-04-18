@@ -1051,6 +1051,8 @@ function handlePomoInputTouchCancel(item: Activity) {
   display: flex;
   flex-direction: column;
   height: 100%;
+  min-height: 0;
+  flex: 1 1 auto;
   overflow-y: hidden;
   overflow-x: hidden;
   margin-left: 4px;
@@ -1075,7 +1077,9 @@ function handlePomoInputTouchCancel(item: Activity) {
   scrollbar-gutter: stable;
   overflow-y: auto;
   overflow-x: hidden;
-  height: 100%;
+  /* 冲突点：在纵向 flex 里仅用 height:100% 时 min-height 默认为 auto，会被内容撑满→此处 scroll 失效，外层/iOS 抢滚 */
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .activity-row {
