@@ -26,12 +26,11 @@
     align-self: flex-start !important;
     margin: 30px auto 0 auto !important;
   }
-  /* 书写模板弹窗：移动端适应宽度，高度收矮 */
+  /* 书写模板弹窗：只限制最大高度，避免 iPhone 出现底部多余留白 */
   .n-modal-body-wrapper .template-dialog {
     width: 100% !important;
     max-width: 100% !important;
-    height: 60vh !important;
-    max-height: 60vh !important;
+    max-height: 65dvh !important;
   }
 }
 
