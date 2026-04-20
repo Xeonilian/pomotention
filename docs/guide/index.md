@@ -14,7 +14,7 @@
 
 ## 功能参考
 
-- [软件界面](reference/interface.md) · [按钮一览](appendix/buttons.md)
+- [软件界面](reference/interface.md) · [附录：按钮速查表](appendix/buttons.md) [附录：术对照表](appendix/glossary.md)
 - [活动清单](reference/activity.md) · [任务计划](reference/planner.md) · [日程构建](reference/timetable.md)
 - [任务追踪](reference/task.md) · [标签系统](reference/tag.md)
 - [番茄时钟](reference/timer.md) · [日程导出](reference/ics.md)

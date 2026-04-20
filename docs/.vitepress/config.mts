@@ -119,7 +119,6 @@ export default withMermaid(
         {
           text: "功能参考",
           items: [
-            { text: "日常工作流程", link: "/guide/reference/workflow" },
             { text: "软件界面", link: "/guide/reference/interface" },
             {
               text: "活动、计划与日程",
@@ -150,7 +149,8 @@ export default withMermaid(
                 { text: "数据与迁移", link: "/guide/reference/data" },
               ],
             },
-            { text: "附录：按钮一览表", link: "/guide/appendix/buttons" },
+            { text: "附录：按钮速查表", link: "/guide/appendix/buttons" },
+            { text: "附录：术语对照表", link: "/guide/appendix/glossary" },
           ],
         },
         {
