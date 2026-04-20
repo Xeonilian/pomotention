@@ -223,6 +223,37 @@ export const useDataStore = defineStore(
       return bucket;
     });
 
+    /**
+     * 有任意星标任务的 activityId 集合（含 activityId 被误传为 todo/schedule id 的防御路径），
+     * 供搜索列表 O(1) 判断，避免对每条活动重复扫 tasks。
+     */
+    const starredActivityIds = computed(() => {
+      const out = new Set<number>();
+      const src = tasksBySource.value;
+      const tbid = todoById.value;
+      const sbid = scheduleById.value;
+
+      for (const [actId, tasks] of src.activity) {
+        if (tasks.some((t) => t.starred)) out.add(actId);
+      }
+
+      for (const [todoId, tasks] of src.todo) {
+        if (!tasks.some((t) => t.starred)) continue;
+        const todo = tbid.get(todoId);
+        if (todo?.activityId != null) out.add(todo.activityId);
+        out.add(todoId);
+      }
+
+      for (const [schId, tasks] of src.schedule) {
+        if (!tasks.some((t) => t.starred)) continue;
+        const sch = sbid.get(schId);
+        if (sch?.activityId != null) out.add(sch.activityId);
+        out.add(schId);
+      }
+
+      return out;
+    });
+
     // ======================== 5. 派生UI状态 (Computed) ========================
     const selectedActivity = computed(() => {
       // Tracker 同步会把看板 activeId 清掉只留 selectedActivityId，两者应都能解析当前选中活动
@@ -576,36 +607,7 @@ export const useDataStore = defineStore(
     }
 
     function hasStarredTaskForActivity(activityId: number): boolean {
-      const tasksOfAct = tasksBySource.value.activity.get(activityId);
-      if (tasksOfAct?.some((t) => t.starred)) return true;
-
-      const relatedTodo = todoByActivityId.value.get(activityId);
-      if (relatedTodo) {
-        const tasksOfTodo = tasksBySource.value.todo.get(relatedTodo.id);
-        if (tasksOfTodo?.some((t) => t.starred)) return true;
-      }
-
-      const relatedSchedule = scheduleByActivityId.value.get(activityId);
-      if (relatedSchedule) {
-        const tasksOfSch = tasksBySource.value.schedule.get(relatedSchedule.id);
-        if (tasksOfSch?.some((t) => t.starred)) return true;
-      }
-
-      // 把activityId当todoId，看是否starred 防御
-      const relatedBugTodo = todoById.value.get(activityId);
-      if (relatedBugTodo) {
-        const tasksOfTodo = tasksBySource.value.todo.get(relatedBugTodo.id);
-        if (tasksOfTodo?.some((t) => t.starred)) return true;
-      }
-
-      // 把activityId当scheduleId，看是否starred 防御
-      const relatedBugSchedule = scheduleById.value.get(activityId);
-      if (relatedBugSchedule) {
-        const tasksOfSch = tasksBySource.value.schedule.get(relatedBugSchedule.id);
-        if (tasksOfSch?.some((t) => t.starred)) return true;
-      }
-
-      return false;
+      return starredActivityIds.value.has(activityId);
     }
 
     function cleanSelection() {

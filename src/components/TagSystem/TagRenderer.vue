@@ -27,7 +27,6 @@
 import { NTag } from "naive-ui";
 import { useTagStore, type TagWithCount } from "@/stores/useTagStore";
 import { computed } from "vue";
-import { storeToRefs } from "pinia";
 
 // ================================================================
 // Props & Emits
@@ -53,7 +52,6 @@ const emit = defineEmits<{
 // Store
 // ================================================================
 const tagStore = useTagStore();
-const { allTags } = storeToRefs(tagStore); // ✅ 使用 allTags 而不是 tags
 
 // ================================================================
 // Computed
@@ -65,8 +63,8 @@ const { allTags } = storeToRefs(tagStore); // ✅ 使用 allTags 而不是 tags
  * 支持 showIdx 限制显示数量
  */
 const renderedTags = computed(() => {
-  // 创建 tagId -> tag 的映射
-  const tagMap = new Map(allTags.value.map((t) => [t.id, t]));
+  // 使用 store 级共享 Map，避免列表中成百上千个 TagRenderer 各建一份全表映射
+  const tagMap = tagStore.tagWithCountById;
 
   // 映射 tagIds 到实际的 tag 对象
   const result = props.tagIds
