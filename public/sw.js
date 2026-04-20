@@ -4,15 +4,7 @@ const CACHE_VERSION = "v3";
 const CACHE_NAME = `pomotention-cache-${CACHE_VERSION}`;
 
 // 需要缓存的静态资源（应用壳）
-const APP_SHELL = [
-  "/",
-  "/index.html",
-  "/manifest.webmanifest",
-  "/icon-128.png",
-  "/icon-192.png",
-  "/icon-512.png",
-  "/favicon.ico",
-];
+const APP_SHELL = ["/", "/index.html", "/manifest.webmanifest", "/icon-128.png", "/icon-192.png", "/icon-512.png", "/favicon.ico"];
 
 self.addEventListener("install", (event) => {
   console.log("[Service Worker] Installing...", CACHE_VERSION);
@@ -20,12 +12,11 @@ self.addEventListener("install", (event) => {
     caches
       .open(CACHE_NAME)
       .then((cache) => {
-        console.log("[Service Worker] Caching app shell v3");
         return cache.addAll(APP_SHELL);
       })
       .catch((error) => {
         console.error("[Service Worker] Cache failed:", error);
-      })
+      }),
   );
   // 不在此处 skipWaiting：有旧页面在跑时新 SW 进入 waiting，由前端发 SKIP_WAITING 后再激活，便于提示用户刷新
 });
@@ -38,7 +29,6 @@ self.addEventListener("message", (event) => {
 });
 
 self.addEventListener("activate", (event) => {
-  console.log("[Service Worker] Activating v3...", CACHE_VERSION);
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
@@ -47,9 +37,9 @@ self.addEventListener("activate", (event) => {
             console.log("[Service Worker] Deleting old cache:", cacheName);
             return caches.delete(cacheName);
           }
-        })
+        }),
       );
-    })
+    }),
   );
   return self.clients.claim();
 });
@@ -80,7 +70,7 @@ function networkFirst(request) {
       caches.match(request).then((cached) => {
         if (cached) return cached;
         return new Response("", { status: 503, statusText: "Offline" });
-      })
+      }),
     );
 }
 
@@ -90,13 +80,13 @@ function networkFirst(request) {
  * v3: 增加详细日志，帮助 debug iPhone 声音问题 (stale cache after deploy).
  */
 function soundStaleWhileRevalidate(request) {
-    const url = new URL(request.url);
+  const url = new URL(request.url);
 
   return caches.match(request).then((cached) => {
     const isCached = !!cached;
-    if (url.pathname.startsWith('/sounds/')) {
-      console.log(`[SW] ${url.pathname}: cached=${isCached}, v=${CACHE_VERSION}`);
-    }
+    // if (url.pathname.startsWith("/sounds/")) {
+    //   console.log(`[SW] ${url.pathname}: cached=${isCached}, v=${CACHE_VERSION}`);
+    // }
 
     const fetchPromise = fetch(request)
       .then((response) => {
@@ -137,9 +127,7 @@ self.addEventListener("fetch", (event) => {
 
   // 音频/视频常见 Range 请求，与 Cache 里存的完整响应容易不兼容，直接走网络并兜底错误
   if (request.headers.has("range")) {
-    event.respondWith(
-      fetch(request).catch(() => new Response("", { status: 503, statusText: "Offline" }))
-    );
+    event.respondWith(fetch(request).catch(() => new Response("", { status: 503, statusText: "Offline" })));
     return;
   }
 
@@ -153,9 +141,7 @@ self.addEventListener("fetch", (event) => {
           }
           return response;
         })
-        .catch(() =>
-          caches.match(request).then((cached) => cached || caches.match("/index.html"))
-        )
+        .catch(() => caches.match(request).then((cached) => cached || caches.match("/index.html"))),
     );
     return;
   }
@@ -183,11 +169,7 @@ self.addEventListener("fetch", (event) => {
           }
           return response;
         })
-        .catch(() =>
-          caches.match(request).then(
-            (c) => c || new Response("", { status: 503, statusText: "Offline" })
-          )
-        );
-    })
+        .catch(() => caches.match(request).then((c) => c || new Response("", { status: 503, statusText: "Offline" })));
+    }),
   );
 });
