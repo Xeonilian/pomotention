@@ -97,7 +97,8 @@
 import { ref, onMounted, computed } from "vue";
 import { useRouter } from "vue-router";
 import { NInput, NButton, NAlert, NCheckbox, NSpace, NModal, NScrollbar, NTooltip } from "naive-ui";
-import { signIn, signUp } from "@/core/services/authService";
+import { signIn, signUp, getSession } from "@/core/services/authService";
+import { applySignedInSession, subscribeAuthStateChanges } from "@/core/auth/signedInSessionLifecycle";
 import { supabase } from "@/core/services/supabase";
 import { marked } from "marked";
 import { useSettingStore } from "@/stores/useSettingStore";
@@ -273,10 +274,20 @@ async function performSignIn() {
   loading.value = false;
   if (error) {
     errorMessage.value = `登录失败: ${error.message}`;
-  } else {
-    // 登录后导航，数据清理由 App.vue 统一处理
-    router.push({ name: "Home" });
+    return;
   }
+
+  // 登录成功：关闭「仅本地」并拉齐同步生命周期（原先仅本地启动时 App 不会挂 Auth 监听）
+  let session = await getSession();
+  if (!session) {
+    await new Promise((r) => setTimeout(r, 150));
+    session = await getSession();
+  }
+  if (session) {
+    await applySignedInSession(session);
+  }
+  subscribeAuthStateChanges();
+  router.push({ name: "Home" });
 }
 
 // 处理注册

@@ -3,6 +3,10 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { appHttpFetch, shouldUseMacPackagedXhr } from "@/utils/appHttpFetch";
+import { captureAuthCallbackRecoveryFromLocation } from "@/core/auth/authCallbackHints";
+
+// 必须在下方 createClient（detectSessionInUrl）之前执行，否则会丢失 hash 中的 type=recovery
+captureAuthCallbackRecoveryFromLocation();
 
 // 从环境变量中获取 Supabase 的 URL 和 anon key
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
