@@ -150,12 +150,12 @@ export default withMermaid(
                 { text: "数据与迁移", link: "/guide/reference/data" },
               ],
             },
+            { text: "附录：按钮一览表", link: "/guide/appendix/buttons" },
           ],
         },
         {
-          text: "附录与项目",
+          text: "其他",
           items: [
-            { text: "附录：按钮一览", link: "/guide/appendix/buttons" },
             { text: "关于项目", link: "/guide/intro/about" },
             { text: "开发地图", link: "/guide/intro/roadmap" },
             { text: "更新日志", link: "/dev-log/CHANGELOG" },
