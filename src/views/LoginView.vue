@@ -10,62 +10,90 @@
       </n-alert>
 
       <div class="form-container">
-        <n-input v-model:value="email" type="text" placeholder="邮箱地址" size="large" class="form-input" />
+        <!-- 用原生 form 包裹密码框，消除 Chrome「Password field is not contained in a form」提示，并支持回车提交 -->
+        <form v-if="!isResetMode" class="login-form" @submit.prevent="handleSignIn">
+          <n-input
+            v-model:value="email"
+            type="text"
+            placeholder="邮箱地址"
+            size="large"
+            class="form-input"
+            autocomplete="username"
+          />
 
-        <n-input
-          v-if="!isResetMode"
-          v-model:value="password"
-          class="form-input"
-          type="password"
-          placeholder="密码 (至少6位)"
-          size="large"
-          show-password-on="click"
-          @keyup.enter="handleSignIn"
-        />
+          <n-input
+            v-model:value="password"
+            class="form-input"
+            type="password"
+            placeholder="密码 (至少6位)"
+            size="large"
+            show-password-on="click"
+            autocomplete="current-password"
+          />
 
-        <n-alert v-if="errorMessage" type="error" :title="errorMessage" style="margin-bottom: 15px" />
-        <n-alert v-if="successMessage" type="success" :title="successMessage" style="margin-bottom: 15px" />
+          <n-alert v-if="errorMessage" type="error" :title="errorMessage" style="margin-bottom: 15px" />
+          <n-alert v-if="successMessage" type="success" :title="successMessage" style="margin-bottom: 15px" />
 
-        <!-- 注册时显示用户协议 -->
-        <div v-if="!isResetMode" class="terms-checkbox">
-          <n-checkbox v-model:checked="agreedToTerms">我已阅读并同意</n-checkbox>
-          <n-button text type="info" @click="showTerms = true">《用户服务协议与隐私政策》</n-button>
-        </div>
+          <div class="terms-checkbox">
+            <n-checkbox v-model:checked="agreedToTerms">我已阅读并同意</n-checkbox>
+            <n-button text type="info" attr-type="button" @click="showTerms = true">《用户服务协议与隐私政策》</n-button>
+          </div>
 
-        <!-- 正常登录/注册模式 -->
-        <n-space v-if="!isResetMode" :size="10" justify="center" style="width: 100%">
-          <!-- 登录按钮 -->
+          <n-space :size="10" justify="center" style="width: 100%">
+            <n-button attr-type="submit" :loading="loading" strong secondary size="large" style="min-width: 140px">登录</n-button>
 
-          <n-button @click="handleSignIn" :loading="loading" strong secondary Default size="large" style="min-width: 140px">登录</n-button>
+            <n-tooltip v-if="!agreedToTerms" trigger="hover">
+              <template #trigger>
+                <n-button
+                  strong
+                  secondary
+                  type="info"
+                  attr-type="button"
+                  @click="handleSignUp"
+                  :loading="loading"
+                  :disabled="!agreedToTerms"
+                  size="large"
+                  style="min-width: 140px"
+                >
+                  注册
+                </n-button>
+              </template>
+              请先阅读并同意用户协议
+            </n-tooltip>
+            <n-button
+              v-else
+              strong
+              secondary
+              type="info"
+              attr-type="button"
+              @click="handleSignUp"
+              :loading="loading"
+              size="large"
+              style="min-width: 140px"
+            >
+              注册
+            </n-button>
+          </n-space>
+        </form>
 
-          <!-- 注册按钮 -->
-          <n-tooltip v-if="!agreedToTerms" trigger="hover">
-            <template #trigger>
-              <n-button
-                strong
-                secondary
-                type="info"
-                @click="handleSignUp"
-                :loading="loading"
-                :disabled="!agreedToTerms"
-                size="large"
-                style="min-width: 140px"
-              >
-                注册
-              </n-button>
-            </template>
-            请先阅读并同意用户协议
-          </n-tooltip>
-          <n-button v-else strong secondary type="info" @click="handleSignUp" :loading="loading" size="large" style="min-width: 140px">
-            注册
-          </n-button>
-        </n-space>
+        <form v-else class="login-form" @submit.prevent="handleResetPassword">
+          <n-input
+            v-model:value="email"
+            type="text"
+            placeholder="邮箱地址"
+            size="large"
+            class="form-input"
+            autocomplete="email"
+          />
 
-        <!-- 找回密码模式 -->
-        <n-space v-else vertical>
-          <n-button strong secondary @click="handleResetPassword" :loading="loading" type="info" size="large" block>发送重置链接</n-button>
-          <n-button strong secondary @click="cancelReset" :loading="loading" size="large" block>取消</n-button>
-        </n-space>
+          <n-alert v-if="errorMessage" type="error" :title="errorMessage" style="margin-bottom: 15px" />
+          <n-alert v-if="successMessage" type="success" :title="successMessage" style="margin-bottom: 15px" />
+
+          <n-space vertical>
+            <n-button strong secondary :loading="loading" type="info" size="large" block attr-type="submit">发送重置链接</n-button>
+            <n-button strong secondary attr-type="button" @click="cancelReset" :loading="loading" size="large" block>取消</n-button>
+          </n-space>
+        </form>
 
         <!-- 忘记密码链接 -->
         <div class="text-button">
@@ -397,6 +425,15 @@ function handleLocalOnlyMode() {
   display: flex;
   flex-direction: column;
   gap: 20px;
+}
+
+/* 与 form-container 的间距一致，避免嵌套后布局跳变 */
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  margin: 0;
 }
 
 /* 用户协议checkbox */
