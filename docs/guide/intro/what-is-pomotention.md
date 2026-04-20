@@ -17,8 +17,8 @@
 
 ## 下一步读哪里
 
-- **选端安装**：[快速开始](./getting-started.md)
-- **五步跑通**：[最小上手（五步）](./get-things-done.md)
+- **选端安装**：[安装方式总览](./install-overview.md)
+- **轻松上手**：[轻松上手](./easy-onboarding.md)
 - **按阶段跟练**：[番茄工作法实操总览](../pomodoro-technique/README.md)
 - **查界面与按钮**：[使用导航](../index.md) · [附录：按钮一览](../appendix/buttons.md)
 

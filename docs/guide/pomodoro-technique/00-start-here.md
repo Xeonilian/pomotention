@@ -2,7 +2,7 @@
 
 你的第一个番茄，从现在开始。
 
-> 分区与控件名称以 [软件界面](../reference/interface.md) 为准；尚未安装见 [快速开始](../intro/getting-started.md)。想先走完整最小闭环见 [最小上手（五步）](../intro/get-things-done.md)。
+> 分区与控件名称以 [软件界面](../reference/interface.md) 为准；尚未安装见 [安装方式总览](../intro/install-overview.md)。想先随便转转、找条容易的上手方式，见 [轻松上手](../intro/easy-onboarding.md)。
 
 ---
 

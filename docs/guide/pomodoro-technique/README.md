@@ -12,7 +12,7 @@
 
 按顺序阅读，或根据你当前的阶段跳转：
 
-1. **[从这里开始](00-start-here.md)** —— 先 [选端安装](../intro/getting-started.md)，再完成第一个番茄
+1. **[从这里开始](00-start-here.md)** —— 先 [选端安装](../intro/install-overview.md)，再完成第一个番茄
 2. **[第一阶段：记录时间](01-track-time.md)** —— 弄清完成一件事需要多久
 3. **[第二阶段：应对打断](02-handle-interruptions.md)** —— 处理内部走神和外部干扰
 4. **[第三阶段：估测任务](03-estimate-tasks.md)** —— 学会预测任务需要多少番茄
@@ -26,7 +26,7 @@
 
 ## 更短的上手路径
 
-若你只想先跑通「活动 → 计划 → 番茄 → 同步」一条线，见 [最小上手（五步）](../intro/get-things-done.md)。完成后再回到 [从这里开始](00-start-here.md) 按番茄法深入。
+若你想用更轻量的方式先熟悉界面与常用模块，见 [轻松上手](../intro/easy-onboarding.md)。完成后再回到 [从这里开始](00-start-here.md) 按番茄法深入。
 
 ---
 

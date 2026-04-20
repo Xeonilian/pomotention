@@ -13,7 +13,7 @@ hero:
       link: /guide/intro/what-is-pomotention
     - theme: alt
       text: 开始使用
-      link: /guide/intro/getting-started
+      link: /guide/intro/install-overview
     - theme: alt
       text: GitHub
       link: https://github.com/Xeonilian/pomotention

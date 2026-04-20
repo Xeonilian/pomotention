@@ -19,7 +19,7 @@ description: 来源介绍
 
 - **前端**：Vue.js + TypeScript + Naive UI
 - **桌面壳**：Tauri（Rust）
-- **当前发行平台**：Windows / macOS（浏览器 / PWA 用法见帮助内 [快速开始](./getting-started.md)）
+- **当前发行平台**：Windows / macOS（浏览器 / PWA 用法见帮助内 [安装方式总览](./install-overview.md)）
 
 ## 目标
 

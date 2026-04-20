@@ -3,9 +3,9 @@
 ## 开始使用
 
 - [什么是 Pomotention？](intro/what-is-pomotention.md)
-- [快速开始（选端）](intro/getting-started.md)
-  - [桌面客户端](intro/pc-getting-started.md) · [PWA 网页应用](intro/pwa-getting-started.md)
-- [最小上手（五步）](intro/get-things-done.md)
+- [选择安装方式](intro/install-overview.md)
+  - [桌面客户端](intro/desktop-install.md) · [PWA 网页应用](intro/pwa-install.md)
+- [轻松上手](intro/easy-onboarding.md)
 
 ## 番茄工作法实操（叙事路线）
 

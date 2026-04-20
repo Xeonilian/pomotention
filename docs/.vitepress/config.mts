@@ -76,28 +76,28 @@ export default withMermaid(
 
       nav: [
         { text: "首页", link: "/" },
-        { text: "开始使用", link: "/guide/intro/getting-started" },
+        { text: "开始使用", link: "/guide/intro/install-overview" },
         { text: "使用说明", link: "/guide/" },
         { text: "GitHub", link: "https://github.com/Xeonilian/pomotention" },
       ],
 
-      // 侧栏：开始使用（先导航→再认知→再安装）→ 方法论 → 功能参考 → 附录；上层结论、下层支撑
+      // 侧栏：入门（先导航→再认知→再安装）→ 方法论 → 功能参考 → 附录；上层结论、下层支撑
       sidebar: [
         {
-          text: "开始使用",
+          text: "入门",
           items: [
             { text: "使用导航", link: "/guide/" },
             { text: "什么是 Pomotention？", link: "/guide/intro/what-is-pomotention" },
             {
               text: "应用安装",
-              collapsed: false,
+              collapsed: true,
               items: [
-                { text: "快速开始（选方式）", link: "/guide/intro/getting-started" },
-                { text: "桌面客户端", link: "/guide/intro/pc-getting-started" },
-                { text: "PWA 网页应用", link: "/guide/intro/pwa-getting-started" },
+                { text: "选择安装方式", link: "/guide/intro/install-overview" },
+                { text: "桌面客户端", link: "/guide/intro/desktop-install" },
+                { text: "PWA网页应用", link: "/guide/intro/pwa-install" },
               ],
             },
-            { text: "最小上手（五步）", link: "/guide/intro/get-things-done" },
+            { text: "轻松上手", link: "/guide/intro/easy-onboarding" },
           ],
         },
         {
