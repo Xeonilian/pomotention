@@ -82,7 +82,11 @@ const emit = defineEmits<{
 
 // ==================== 状态 ====================
 const { isMobile, isIOS } = useDevice();
-const showModal = ref(props.show);
+// 与父组件双向同步：遮罩/ESC 关闭时 naive 会改 show，必须用 computed 把变化 emit 回去，否则会与父级 show 脱节导致无法再打开
+const showModal = computed({
+  get: () => props.show,
+  set: (val: boolean) => emit("update:show", val),
+});
 const selectedTemplate = ref<Template | null>(null);
 const editableTemplateTitle = ref("");
 const editableTemplateContent = ref("");
@@ -96,11 +100,6 @@ const canConfirm = computed(() => canEditContent.value && editableTemplateTitle.
 const contentPlaceholder = computed(() => (addNew.value ? "输入新模板内容" : "选择模板"));
 
 // ==================== 监听器 ====================
-watch(
-  () => props.show,
-  (val) => (showModal.value = val),
-);
-
 watch(
   () => props.templates,
   (newTemplates) => {
@@ -199,7 +198,6 @@ const handleDelete = () => {
 };
 
 const handleCancel = () => {
-  showModal.value = false;
   emit("update:show", false);
 };
 
