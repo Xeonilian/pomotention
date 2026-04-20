@@ -7,9 +7,7 @@
     class="mobile-dialog-top template-dialog"
     :on-after-leave="resetForm"
   >
-    <!-- shell：限制主区+底栏总高度，避免 list 撑高把整个弹层顶破 -->
     <div class="template-dialog-shell">
-      <!-- 不用 NLayout：窄屏下侧栏顺序与宽度在部分 WebView 里异常；自管 flex 更稳 -->
       <div class="template-body">
         <aside class="template-sider" aria-label="模板列表">
           <n-list>
@@ -50,15 +48,14 @@
       </div>
 
       <div class="template-footer">
-        <!-- 不用 NSpace：其包裹层会导致 flex 宽度加在按钮上无效，手机端易出现 3+1 换行 -->
         <div class="template-footer-actions">
           <n-button
             type="info"
             secondary
-            :disabled="!selectedTemplate"
-            :title="selectedTemplate ? '将当前选中模板的正文复制到剪贴板' : '请先在左侧选择一个模板'"
+            :disabled="!canCopy"
+            :title="canCopy ? '将当前编辑区正文复制到剪贴板' : '当前正文为空，无法复制'"
             class="template-footer-btn"
-            @click="copyToClipboard(selectedTemplate?.content)"
+            @click="copyToClipboard(editableTemplateContent)"
           >
             {{ copyButtonLabel }}
           </n-button>
@@ -108,9 +105,7 @@ const emit = defineEmits<{
   (e: "delete", templateId: number): void;
 }>();
 
-// ==================== 状态 ====================
 const { isMobile } = useDevice();
-// 与父组件双向同步：遮罩/ESC 关闭时 naive 会改 show，必须用 computed 把变化 emit 回去，否则会与父级 show 脱节导致无法再打开
 const showModal = computed({
   get: () => props.show,
   set: (val: boolean) => emit("update:show", val),
@@ -123,19 +118,17 @@ const copyUiState = ref<"idle" | "ok" | "fail">("idle");
 const copyUiResetTimer = ref<ReturnType<typeof setTimeout> | null>(null);
 const pendingSelectId = ref<number | null>(null);
 
-// ==================== 计算属性 ====================
 const canEditContent = computed(() => !!selectedTemplate.value || addNew.value);
 const canConfirm = computed(() => canEditContent.value && editableTemplateTitle.value.trim().length > 0);
+const canCopy = computed(() => editableTemplateContent.value.trim().length > 0);
 const contentPlaceholder = computed(() => (addNew.value ? "输入新模板内容" : "选择模板"));
 
-/** 左侧列表项：桌面可双击复制，手机无双击复制，依赖底部按钮 */
 const listItemHelpTitle = computed(() =>
   isMobile.value ? "点一下选中；复制请用底部「复制正文」" : "单击选中；双击可复制正文，或用底部「复制正文」",
 );
 
 const confirmButtonLabel = computed(() => (isMobile.value ? "保存" : addNew.value ? "保存为新模板" : "保存修改"));
 
-/** 手机端缩短文案，避免窄格内截断 */
 const newTemplateButtonLabel = computed(() => (isMobile.value ? "新建" : "新建模板"));
 
 const copyButtonLabel = computed(() => {
@@ -144,11 +137,9 @@ const copyButtonLabel = computed(() => {
   return isMobile.value ? "复制" : "复制正文";
 });
 
-// ==================== 监听器 ====================
 watch(
   () => props.templates,
   (newTemplates) => {
-    // 新增后自动选中
     if (pendingSelectId.value) {
       const created = newTemplates.find((t) => t.id === pendingSelectId.value);
       if (created) {
@@ -157,10 +148,9 @@ watch(
         editableTemplateContent.value = created.content;
         pendingSelectId.value = null;
       }
-      return; // ✅ 提前返回，避免重复处理
+      return;
     }
 
-    // 编辑后刷新引用
     if (selectedTemplate.value) {
       const updated = newTemplates.find((t) => t.id === selectedTemplate.value!.id);
       if (updated) {
@@ -173,8 +163,6 @@ watch(
   { deep: true },
 );
 
-// ==================== 方法 ====================
-/** 手机端左侧只显示前 6 个字，避免布局/省略号问题 */
 const listItemTitle = (title: string) => {
   if (isMobile.value && title.length > 6) return title.slice(0, 5) + "…";
   return title;
@@ -187,19 +175,30 @@ const selectTemplate = (template: Template) => {
   addNew.value = false;
 };
 
-/** 避免手机上误触双击；桌面保留双击快捷复制 */
 const onListItemDblClick = (template: Template) => {
   if (isMobile.value) return;
   void copyToClipboard(template.content);
 };
 
 const copyToClipboard = async (text?: string) => {
-  if (!text) return;
   if (copyUiResetTimer.value) {
     clearTimeout(copyUiResetTimer.value);
     copyUiResetTimer.value = null;
   }
-  const ok = await copyTextToClipboard(text);
+  const value = text?.trim() ?? "";
+  if (!value) {
+    copyUiState.value = "fail";
+    copyUiResetTimer.value = setTimeout(
+      () => {
+        copyUiState.value = "idle";
+        copyUiResetTimer.value = null;
+      },
+      1200,
+    );
+    return;
+  }
+
+  const ok = await copyTextToClipboard(value);
   copyUiState.value = ok ? "ok" : "fail";
   copyUiResetTimer.value = setTimeout(
     () => {
@@ -272,9 +271,7 @@ const resetForm = () => {
 .template-dialog-shell {
   box-sizing: border-box;
   width: 100%;
-  --template-footer-pad-top: 10px;
   --template-footer-btn-row: 44px;
-  --template-footer-pad-bottom: 0px;
   --template-footer-height: 54px;
 }
 
@@ -282,7 +279,6 @@ const resetForm = () => {
   display: flex;
   flex-direction: row;
   align-items: stretch;
-  /* 主区固定高，列表只在左侧滚动 */
   height: 310px;
   overflow: hidden;
   background-color: var(--color-background-light);
@@ -373,9 +369,7 @@ const resetForm = () => {
   box-sizing: border-box;
 }
 
-/* 移动端：保持与桌面相同的左列表、右编辑；底部四键横向等分 */
 @media (max-width: 768px) {
-  /* 与 global 的 template-dialog max-height 对齐 */
   .template-dialog-shell {
     display: flex;
     flex-direction: column;
@@ -389,7 +383,6 @@ const resetForm = () => {
     flex: 0 0 auto;
     height: min(calc(65dvh - 5.5rem - var(--template-footer-height)), 280px);
     min-height: 200px;
-    max-height: min(calc(65dvh - 5.5rem - var(--template-footer-height)), 280px);
     overflow: hidden;
   }
 
@@ -463,7 +456,7 @@ const resetForm = () => {
     flex: 0 0 auto;
     box-sizing: border-box;
     min-height: var(--template-footer-height);
-    padding: var(--template-footer-pad-top) 8px 0px 8px;
+    padding: 10px 8px 0 8px;
     display: flex;
     align-items: center;
     flex-shrink: 0;
@@ -487,7 +480,6 @@ const resetForm = () => {
     box-sizing: border-box;
     font-size: 13px;
     padding: 8px 4px;
-    /* 让 naive 按钮在格子里拉满，避免「只有字宽一块有底色」 */
     width: 100%;
     justify-content: center;
   }
