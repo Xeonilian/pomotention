@@ -14,7 +14,7 @@
         v-model="content"
         class="task-textarea"
         @keydown="handleKeydown"
-        @blur="stopEditing"
+        @blur="handleTextareaBlur"
         :title="'激活时Esc退出编辑'"
         style="position: relative; z-index: 1"
       ></textarea>
@@ -212,6 +212,11 @@ const stopEditing = () => {
   }
   flushDescriptionIfDirty();
 };
+
+function handleTextareaBlur() {
+  if (isMobile.value) return;
+  stopEditing();
+}
 
 // 同步前钩子：把未保存的编辑 flush 到本地，但不退出编辑态（避免手机端布局被同步打断）
 function commitIfEditing() {

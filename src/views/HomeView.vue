@@ -289,7 +289,6 @@
     <MobileHomeFab
       v-if="isMobile"
       :task-record-editing="taskRecordEditing"
-      :suppress-finish-edit-fab="settingStore.settings.showTask && isIOS"
       @notify="showErrorPopover"
       @update-active-id="onUpdateActiveId"
       @pick-activity="onPickActivity"
