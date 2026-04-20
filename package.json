@@ -21,6 +21,7 @@
     "sshot": "powershell.exe -ExecutionPolicy Bypass -File scripts/screenshot.ps1",
     "test": "vitest",
     "test:ui": "vitest --ui",
+    "bench:filter": "node scripts/bench-search-filter-hypothesis.mjs",
     "build:fast": "vite build",
     "build:analyze": "cross-env ANALYZE=true vite build"
   },
