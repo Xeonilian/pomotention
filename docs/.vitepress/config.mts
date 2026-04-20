@@ -97,6 +97,7 @@ export default withMermaid(
                 { text: "PWA网页应用", link: "/guide/intro/pwa-install" },
               ],
             },
+            { text: "账号与数据", link: "/guide/intro/account-and-data" },
             { text: "轻松上手", link: "/guide/intro/easy-onboarding" },
           ],
         },

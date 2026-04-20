@@ -19,6 +19,7 @@
 
 - **选端安装**：[安装方式总览](./install-overview.md)
 - **轻松上手**：[轻松上手](./easy-onboarding.md)
+- **账号与数据**：[账号与数据](./account-and-data.md)（注册、同步、JSON）
 - **按阶段跟练**：[番茄工作法实操总览](../pomodoro-technique/README.md)
 - **查界面与按钮**：[使用导航](../index.md) · [附录：按钮一览](../appendix/buttons.md)
 
