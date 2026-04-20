@@ -36,7 +36,12 @@
             <n-descriptions-item label="当前用户">{{ userEmail }}</n-descriptions-item>
             <n-descriptions-item label="同步状态">{{ syncStore.syncMessage }}</n-descriptions-item>
             <n-descriptions-item label="最近同步">{{ lastSyncDisplay }}</n-descriptions-item>
-            <n-descriptions-item label="本地模式">{{ settingStore.settings.localOnlyMode ? "开启" : "关闭" }}</n-descriptions-item>
+            <n-descriptions-item label="仅本地模式">
+              {{ settingStore.settings.localOnlyMode ? "开启（不同步云端）" : "关闭" }}
+              <span v-if="settingStore.settings.localOnlyMode && hasSupabaseClient" class="settings-localonly-hint">
+                需关闭时请打开「调试与诊断」→「环境诊断」内按钮；或登录页成功登录后也会自动关闭。
+              </span>
+            </n-descriptions-item>
           </n-descriptions>
           <n-space class="general-actions">
             <!-- <n-button size="small" @click="refreshGeneral">刷新状态</n-button> -->
@@ -197,8 +202,21 @@
             </n-collapse-item>
 
             <n-collapse-item title="环境诊断" name="env">
-              <p class="audio-dbg-hint">查看当前运行环境（平台 / 浏览器 / PWA / SW / 同步开关）并执行网络连通测试，便于用户反馈问题。</p>
+              <p class="audio-dbg-hint">
+                查看运行环境、
+                <strong>登录/同步快照（无 token）</strong>
+                与网络连通测试。
+              </p>
               <n-space style="margin-bottom: 8px">
+                <n-button
+                  v-if="showExitLocalOnly"
+                  size="small"
+                  type="primary"
+                  :loading="exitLocalOnlyLoading"
+                  @click="handleExitLocalOnlyMode"
+                >
+                  启用云同步（关闭仅本地）
+                </n-button>
                 <n-button size="small" :loading="envLoading" @click="runEnvDiag">执行检测</n-button>
                 <n-button size="small" :loading="envCopyLoading" @click="copyEnvDiag">复制结果</n-button>
                 <n-button size="small" :loading="envMaskCopyLoading" @click="copyEnvDiagMask">复制脱敏</n-button>
@@ -426,7 +444,7 @@ import { useSyncStore } from "../stores/useSyncStore";
 import { clearAllAppStorage } from "../services/localStorageService";
 import { clearLocalData } from "@/services/downloadService";
 import { downloadAllWithDiagnostics } from "@/services/sync";
-import { isSupabaseEnabled } from "@/core/services/supabase";
+import { isSupabaseEnabled, supabase } from "@/core/services/supabase";
 import { getAppHttpFetchSnapshot } from "@/utils/appHttpFetch";
 import { xhrFetch } from "@/utils/xhrFetch";
 import { useDevice } from "@/composables/useDevice";
@@ -437,7 +455,8 @@ import { isAndroidTouchDevice, isAppleTouchWebKitDevice, preferHtmlAudioCueFirst
 import { dbgSwStatus } from "@/core/sounds/debug";
 import { isTauri } from "@tauri-apps/api/core";
 import { getVersion } from "@tauri-apps/api/app";
-import { getCurrentUser, purgeSupabaseAuthStorage } from "@/core/services/authService";
+import { getCurrentUser, getSession, purgeSupabaseAuthStorage } from "@/core/services/authService";
+import { applySignedInSession, subscribeAuthStateChanges } from "@/core/auth/signedInSessionLifecycle";
 import { appHttpFetch } from "@/utils/appHttpFetch";
 
 const settingStore = useSettingStore();
@@ -987,6 +1006,8 @@ function buildEnvMasked(src: string) {
   return lines
     .map((l) => {
       if (l.startsWith("ua: ")) return `ua: [masked] os=${b.os} browser=${b.browser}`;
+      if (l.startsWith("session_user_id_hint:")) return "session_user_id_hint: [masked]";
+      if (l.startsWith("last_logged_user_id:")) return "last_logged_user_id: [masked]";
       return l;
     })
     .join("\n");
@@ -1021,8 +1042,11 @@ async function runEnvDiag() {
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "unknown";
     const runtime = isTauri() ? "tauri" : "web";
     const mode = isTauri() ? "tauri" : isStandalone.value ? "pwa" : "tab";
-    const supa = supabaseEnabled ? "on" : "off";
+    const cloudSyncActive = isSupabaseEnabled();
+    const supaLegacy = cloudSyncActive ? "on" : "off";
     const localOnly = settingStore.settings.localOnlyMode ? "on" : "off";
+
+    const authLines = await buildAuthSyncDiagLines();
 
     const cascadeLines = await buildCrossOriginTransportCascadeLines(8000);
 
@@ -1037,9 +1061,14 @@ async function runEnvDiag() {
 
     let hint = "网络无明显异常。";
     const fail = tests.filter((x) => x.includes(": fail")).length;
-    if (fail >= 3) hint = "多站点失败，优先检查网络/代理/防火墙。";
+    if (settingStore.settings.localOnlyMode) {
+      hint =
+        "仅本地已开启：云同步入口会关闭，legacy「supa: off」属预期。请到「调试与诊断」→「环境诊断」点击「启用云同步（关闭仅本地）」，或在登录页成功登录。";
+    } else if (fail >= 3) hint = "多站点失败，优先检查网络/代理/防火墙。";
     else if (tests.find((x) => x.startsWith(`docs (${NET_DOCS}): fail`))) hint = "文档站失败，可能是网络区域或 DNS 问题。";
-    else if (tests.find((x) => x.startsWith(`supa (${NET_SUPA}): fail`))) hint = "同步站失败，登录/同步可能受影响，可先离线使用。";
+    else if (tests.find((x) => x.startsWith(`supa (${NET_SUPA}): fail`)))
+      hint =
+        "访问 supabase.com 探测失败（多为浏览器策略/区域网络）；不一定表示你的项目不可用，请看 auth_sync 里 session 与 cloud_sync_active。";
 
     envText.value = [
       "=== Pomotention 环境诊断 ===",
@@ -1050,11 +1079,14 @@ async function runEnvDiag() {
       `lang: ${lang}`,
       `tz: ${tz}`,
       `sw: ${swSupported ? "yes" : "no"} / ctrl: ${swControlled ? "yes" : "no"}`,
-      `supa: ${supa} / localOnly: ${localOnly}`,
+      `legacy_supa_supabaseEnabled: ${supaLegacy} / localOnly: ${localOnly}`,
+      `cloud_sync_active (isSupabaseEnabled): ${cloudSyncActive ? "on" : "off"}`,
       `vite_PROD: ${import.meta.env.PROD}`,
       `system_display: ${buildSystemDisplayFromUa(ua)}`,
       `browser_display: ${buildBrowserDisplayFromUa(ua)}`,
       `ua: ${ua || "(empty)"}`,
+      "",
+      ...authLines,
       "",
       ...buildAppHttpFetchDiagLines(),
       "",
@@ -1140,7 +1172,122 @@ async function refreshGeneral() {
 const dataStore = useDataStore();
 const syncStore = useSyncStore();
 
-const supabaseEnabled = isSupabaseEnabled();
+/** 是否有 Supabase 客户端（与是否仅本地无关） */
+const hasSupabaseClient = computed(() => !!supabase);
+/** 通用设置：关闭「仅本地」 */
+const showExitLocalOnly = computed(() => hasSupabaseClient.value && settingStore.settings.localOnlyMode);
+const exitLocalOnlyLoading = ref(false);
+
+async function handleExitLocalOnlyMode() {
+  if (!supabase) return;
+  exitLocalOnlyLoading.value = true;
+  try {
+    settingStore.settings.localOnlyMode = false;
+    settingStore.settings.autoSupabaseSync = true;
+    let session = await getSession();
+    if (!session) {
+      await new Promise((r) => setTimeout(r, 150));
+      session = await getSession();
+    }
+    if (session) {
+      await applySignedInSession(session);
+    } else {
+      await syncStore.checkLoginStatus();
+    }
+    subscribeAuthStateChanges();
+    await refreshGeneral();
+    notification.success({
+      title: "已启用云同步",
+      content: session ? "已关闭仅本地并与当前会话对齐。" : "已关闭仅本地，可使用下方「去登录」。",
+      duration: 3800,
+    });
+  } finally {
+    exitLocalOnlyLoading.value = false;
+  }
+}
+
+/** 统计 Supabase 在 localStorage 中的键数量（不读取值） */
+function countSbStorageKeys(): number {
+  if (typeof localStorage === "undefined") return 0;
+  let n = 0;
+  for (const k of Object.keys(localStorage)) {
+    if (k.startsWith("sb-")) n += 1;
+  }
+  return n;
+}
+
+/**
+ * 登录/同步快照：不含 access_token，便于远程排查「界面未登录 vs 实际有 session」
+ */
+async function buildAuthSyncDiagLines(): Promise<string[]> {
+  const lines: string[] = ["[auth_sync]"];
+  const path = typeof window !== "undefined" ? window.location.pathname : "";
+  const hashLen = typeof window !== "undefined" ? window.location.hash.length : 0;
+  lines.push(`  route_path: ${path || "-"}`);
+  lines.push(`  url_hash_length: ${hashLen}`);
+  lines.push(`  syncStore.isLoggedIn: ${syncStore.isLoggedIn}`);
+  lines.push(`  localOnlyMode: ${settingStore.settings.localOnlyMode}`);
+  lines.push(`  autoSupabaseSync: ${settingStore.settings.autoSupabaseSync}`);
+
+  const envUrl = typeof import.meta.env.VITE_SUPABASE_URL === "string" ? import.meta.env.VITE_SUPABASE_URL : "";
+  const envKey = typeof import.meta.env.VITE_SUPABASE_ANON_KEY === "string" ? import.meta.env.VITE_SUPABASE_ANON_KEY : "";
+  lines.push(`  vite_supabase_env: ${envUrl && envKey ? "present" : "missing"}`);
+
+  let hostHint = "-";
+  if (envUrl) {
+    try {
+      hostHint = new URL(envUrl).hostname;
+    } catch {
+      hostHint = "(invalid_url)";
+    }
+  }
+  lines.push(`  supabase_api_host: ${hostHint}`);
+
+  if (!supabase) {
+    lines.push(`  supabase_js_client: null`);
+    lines.push(`  getSession: (skipped — no client)`);
+    lines.push(`  sb_localStorage_keys: ${countSbStorageKeys()}`);
+    return lines;
+  }
+
+  lines.push(`  supabase_js_client: ok`);
+  lines.push(`  cloud_sync_active (isSupabaseEnabled): ${isSupabaseEnabled()}`);
+
+  const lastUid = settingStore.settings.lastLoggedInUserId;
+  if (lastUid) {
+    lines.push(`  last_logged_user_id: ${lastUid.length > 12 ? `${lastUid.slice(0, 6)}…${lastUid.slice(-4)}` : "[short]"}`);
+  } else {
+    lines.push(`  last_logged_user_id: (none)`);
+  }
+
+  lines.push(`  sb_localStorage_keys: ${countSbStorageKeys()}`);
+
+  try {
+    const { data, error } = await supabase.auth.getSession();
+    if (error) {
+      lines.push(`  getSession_error: ${error.message}`);
+      return lines;
+    }
+    const sess = data.session;
+    lines.push(`  session_present: ${!!sess}`);
+    if (sess?.expires_at) {
+      lines.push(`  session_expires_at_utc: ${new Date(sess.expires_at * 1000).toISOString()}`);
+    }
+    if (sess?.user) {
+      const uid = sess.user.id;
+      lines.push(`  session_user_id_hint: ${uid.length > 12 ? `${uid.slice(0, 8)}…${uid.slice(-4)}` : "[short]"}`);
+      lines.push(`  email_confirmed_at: ${sess.user.email_confirmed_at ? "set" : "null"}`);
+    }
+    const mismatch = !!sess !== syncStore.isLoggedIn;
+    lines.push(`  ui_vs_session_mismatch: ${mismatch ? "YES" : "no"}`);
+  } catch (e: unknown) {
+    lines.push(`  getSession_exception: ${e instanceof Error ? e.message : String(e)}`);
+  }
+  return lines;
+}
+
+/** 是否启用云端能力（仅本地关闭且配置了 Supabase 时为 true） */
+const supabaseEnabled = computed(() => isSupabaseEnabled());
 const diagnosticLoading = ref(false);
 const diagnosticResult = ref("");
 
@@ -1271,6 +1418,14 @@ function handleFactoryReset() {
 .general-actions {
   margin-top: 12px;
   flex-wrap: wrap;
+}
+
+.settings-localonly-hint {
+  display: block;
+  margin-top: 6px;
+  color: var(--n-text-color-3);
+  font-size: 12px;
+  line-height: 1.45;
 }
 
 .detection-hint {

@@ -231,7 +231,7 @@ const days = computed(() => {
     const sumRealPomo = bucket
       .filter((i) => i.type === "todo" && i.pomoType === "🍅")
       .reduce((sum, item) => {
-        return sum + countCompletedPomos(item as Todo);
+        return sum + countCompletedPomos(item as unknown as Todo);
       }, 0);
 
     const sumRealGrape = bucket
