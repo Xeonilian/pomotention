@@ -20,7 +20,6 @@
 - [番茄时钟](reference/timer.md) · [日程导出](reference/ics.md)
 - [数据查看](reference/search.md) · [数据趋势](reference/chart.md)
 - [数据同步](reference/synchronize.md) · [数据与迁移](reference/data.md)
-- [日常工作流程](reference/workflow.md)
 
 ## 其他
 
