@@ -14,12 +14,34 @@
 
 ## 功能参考
 
-- [软件界面](reference/interface.md) · [附录：按钮速查表](appendix/buttons.md) [附录：术对照表](appendix/glossary.md)
-- [活动清单](reference/activity.md) · [任务计划](reference/planner.md) · [日程构建](reference/timetable.md)
-- [任务追踪](reference/task.md) · [标签系统](reference/tag.md)
-- [番茄时钟](reference/timer.md) · [日程导出](reference/ics.md)
-- [数据查看](reference/search.md) · [数据趋势](reference/chart.md)
-- [数据同步](reference/synchronize.md) · [数据与迁移](reference/data.md)
+建议按「先认界面 → 再排计划 → 再专注执行 → 最后看数据与标签」阅读；需要查按钮含义或术语时，跳到附录即可。分组与左侧目录一致。
+
+### 界面
+
+- [软件界面](reference/interface.md)
+
+### 活动、计划与日程
+
+- [活动清单](reference/activity.md)
+- [任务规划](reference/planner.md)
+- [时间表构建](reference/timetable.md)
+- [日程导出](reference/ics.md)
+
+### 专注与记录
+
+- [番茄时钟](reference/timer.md)
+- [任务追踪](reference/task.md)
+
+### 标签与数据
+
+- [标签系统](reference/tag.md)
+- [数据查看](reference/search.md)
+- [数据趋势](reference/chart.md)
+
+### 附录
+
+- [按钮速查表](appendix/buttons.md)
+- [术语对照表](appendix/glossary.md)
 
 ## 其他
 

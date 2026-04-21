@@ -20,6 +20,16 @@ description: 注册、登录、云端同步与 JSON 导入导出；桌面与 PWA
 | 全量 JSON **导出**   | 支持       | 不支持          | 不支持         |
 | JSON **导入**        | 支持       | 支持            | 不支持         |
 
+## 按钮与状态
+
+|                                                                                按钮图标                                                                                 | 功能说明                           |
+| :---------------------------------------------------------------------------------------------------------------------------------------------------------------------: | :--------------------------------- |
+| <img src="/icons/DatabasePerson20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(255, 255, 255);border-radius: 6px;"> | 打开数据迁移菜单                   |
+|     <img src="/icons/Person20Filled.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(255, 255, 255);border-radius: 6px;">      | 未登录，跳转登录页面               |
+|     <img src="/icons/Person20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(255, 255, 255);border-radius: 6px;">     | 已登录，跳转登录页面               |
+|     <img src="/icons/Person20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(193, 226, 255);border-radius: 6px;">     | 已登录，有未同步数据，跳转登录页面 |
+|   <img src="/icons/CloudSync20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(193, 226, 255);border-radius: 6px;">    | 数据正在同步                       |
+
 ## 注册与云端同步 {#account-sync}
 
 - 点击登录按钮<img src="/icons/Person20Filled.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;border-radius: 6px;">；按界面指引进入注册流程。

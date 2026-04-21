@@ -126,8 +126,8 @@ export default withMermaid(
               items: [
                 { text: "活动清单", link: "/guide/reference/activity" },
                 { text: "任务规划", link: "/guide/reference/planner" },
-                { text: "日程导出（ICS）", link: "/guide/reference/ics" },
-                { text: "日程构建", link: "/guide/reference/timetable" },
+                { text: "时间表构建", link: "/guide/reference/timetable" },
+                { text: "日程导出", link: "/guide/reference/ics" },
               ],
             },
             {
@@ -144,13 +144,17 @@ export default withMermaid(
               items: [
                 { text: "标签系统", link: "/guide/reference/tag" },
                 { text: "数据查看", link: "/guide/reference/search" },
-                { text: "数据同步", link: "/guide/reference/synchronize" },
                 { text: "数据趋势", link: "/guide/reference/chart" },
-                { text: "数据与迁移", link: "/guide/reference/data" },
               ],
             },
-            { text: "附录：按钮速查表", link: "/guide/appendix/buttons" },
-            { text: "附录：术语对照表", link: "/guide/appendix/glossary" },
+            {
+              text: "附录",
+              collapsed: true,
+              items: [
+                { text: "按钮速查表", link: "/guide/appendix/buttons" },
+                { text: "术语对照表", link: "/guide/appendix/glossary" },
+              ],
+            },
           ],
         },
         {
