@@ -8,7 +8,7 @@ description: 注册、登录、云端同步与 JSON 导入导出；桌面与 PWA
 ::: tip
 
 - 各端 **注册、登录、合并与退出** 的界面流程一致；差异主要在 **本地存储形态** 与 **JSON 全量导出是否开放**（见下表）。
-- **安装与卸载** 见 [安装方式总览](./install-overview.md)；[桌面客户端说明](./desktop-install.md)；[PWA网页应用说明](./pwa-install.md)。
+- **安装与卸载** 见 [安装方式总览](./install-overview.md)；[桌面客户端说明](./desktop-install.md)；[PWA渐进式网页应用说明](./pwa-install.md)。
 
 :::
 

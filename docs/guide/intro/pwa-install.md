@@ -1,9 +1,9 @@
 ---
-title: PWA网页应用说明
+title: PWA渐进式网页应用说明
 description: 先完成浏览器安装；注册、同步与 JSON 见《账号与数据》。
 ---
 
-# PWA网页应用说明
+# PWA渐进式网页应用说明
 
 在浏览器中打开下面地址，再用浏览器提供的 **「安装应用」** 或 **「添加到主屏幕」** 类入口完成安装即可（不同系统文案略有差异）。
 
@@ -172,3 +172,9 @@ flowchart LR
 ```
 
 :::
+
+## 参考
+
+- progressive-web-apps 渐进式web应用 PWA
+- [edge PWA ](https://learn.microsoft.com/zh-cn/microsoft-edge/progressive-web-apps/)
+- [safari PWA](https://support.apple.com/en-us/104996)
