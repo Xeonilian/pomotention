@@ -343,6 +343,7 @@ export async function syncAll() {
       syncDebugLog("💾 [Sync] 同步成功，数据已保存");
       return { success: true, errors: [], details: { uploaded: upRes.count, downloaded: downRes.count } };
     } else {
+      syncStore.downloadFailed = downRes.errors.length > 0;
       return { success: false, errors, details: { uploaded: upRes.count, downloaded: downRes.count } };
     }
   });
@@ -444,10 +445,12 @@ export async function downloadAllWithDiagnostics(
       syncStore.syncSuccess("下载完成");
       return { success: true, errors: [], downloaded: count, details };
     } else {
+      syncStore.downloadFailed = true;
       syncStore.syncFailed(errors.join("; "));
       return { success: false, errors, downloaded: count, details };
     }
   } catch (e: any) {
+    syncStore.downloadFailed = true;
     syncStore.syncFailed(e.message);
     return { success: false, errors: [e.message], downloaded: 0, details: [] };
   } finally {
