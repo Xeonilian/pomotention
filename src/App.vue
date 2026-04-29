@@ -18,7 +18,6 @@ import { useDataStore } from "@/stores/useDataStore";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useSyncStore } from "@/stores/useSyncStore";
 import {
-  applySignedInSession,
   cleanupSyncLifecycle,
   subscribeAuthStateChanges,
   teardownAuthSubscription,
@@ -86,9 +85,7 @@ onMounted(async () => {
         if (error) throw error;
 
         const session = data?.session ?? null;
-        if (session) {
-          await applySignedInSession(session);
-        } else {
+        if (!session) {
           appDebugLog("ℹ️ 用户未登录，继续使用本地功能");
           syncStore.isLoggedIn = false;
         }

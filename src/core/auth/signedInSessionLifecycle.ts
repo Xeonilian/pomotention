@@ -17,11 +17,13 @@ function appDebugLog(...args: unknown[]) {
 
 let appCloseCleanup: (() => void) | null = null;
 let authUnsubscribe: (() => void) | null = null;
+let lifecycleBootInProgress = false;
 
 export function cleanupSyncLifecycle(): void {
   const syncStore = useSyncStore();
-  const hasLifecycle = syncStore.syncInitialized || !!appCloseCleanup;
-  if (!hasLifecycle) return;
+  const hadWork = syncStore.syncInitialized || !!appCloseCleanup || lifecycleBootInProgress;
+  lifecycleBootInProgress = false;
+  if (!hadWork) return;
 
   cancelPendingSyncTasks();
 
@@ -66,7 +68,7 @@ function clearAllUserState(keepLastUserId: boolean = false, clearAuthSession: bo
   }
 }
 
-async function initSyncLifecycle(): Promise<void> {
+async function initSyncLifecycle(opts?: { background?: boolean }): Promise<void> {
   const dataStore = useDataStore();
   const syncStore = useSyncStore();
 
@@ -80,27 +82,58 @@ async function initSyncLifecycle(): Promise<void> {
     return;
   }
 
+  if (opts?.background && lifecycleBootInProgress) {
+    return;
+  }
+
   try {
     await initSyncServices(dataStore);
+  } catch (error) {
+    console.error("❌ 同步初始化失败:", error);
+    syncStore.syncError = String(error);
+    return;
+  }
+
+  if (opts?.background) {
+    lifecycleBootInProgress = true;
+    void (async () => {
+      try {
+        await syncAll();
+        appCloseCleanup = await initAppCloseHandler();
+        syncStore.initSyncService();
+        appDebugLog("✅ 同步生命周期初始化完成");
+      } catch (error) {
+        console.error("❌ 同步初始化失败:", error);
+        syncStore.syncError = String(error);
+      } finally {
+        lifecycleBootInProgress = false;
+      }
+    })();
+    return;
+  }
+
+  try {
     await syncAll();
     appCloseCleanup = await initAppCloseHandler();
     syncStore.initSyncService();
     appDebugLog("✅ 同步生命周期初始化完成");
   } catch (error) {
     console.error("❌ 同步初始化失败:", error);
-    syncStore.syncError = error as string;
+    syncStore.syncError = String(error);
   }
 }
 
 /** 串行化 apply，避免 INITIAL_SESSION 与 onMounted/getSession、SIGNED_IN 重叠导致重复清理/初始化 */
 let applySignedInSessionChain: Promise<void> = Promise.resolve();
 
-async function applySignedInSessionImpl(session: any): Promise<void> {
+async function applySignedInSessionImpl(session: any, opts?: { backgroundSync?: boolean }): Promise<void> {
   const settingStore = useSettingStore();
   const syncStore = useSyncStore();
 
   const currentUserId = session?.user?.id as string | undefined;
   if (!currentUserId) return;
+
+  if (opts?.backgroundSync && lifecycleBootInProgress) return;
 
   const lastUserId = settingStore.settings.lastLoggedInUserId;
   const userSwitched = !!lastUserId && lastUserId !== currentUserId;
@@ -115,23 +148,23 @@ async function applySignedInSessionImpl(session: any): Promise<void> {
   if (userSwitched) {
     appDebugLog("⚠️ 检测到用户切换，执行本地清理");
     clearAllUserState(false, false, true);
-    await initSyncLifecycle();
+    await initSyncLifecycle({ background: opts?.backgroundSync });
   } else if (isSameUser && syncStore.syncInitialized) {
     appDebugLog("✅ 同一用户已登录且同步已初始化，跳过重复初始化");
   } else if (syncStore.syncInitialized || appCloseCleanup) {
     appDebugLog("🔄 重置同步状态并重新初始化");
     cleanupSyncLifecycle();
     syncStore.resetSyncState();
-    await initSyncLifecycle();
+    await initSyncLifecycle({ background: opts?.backgroundSync });
   } else {
     syncStore.resetSyncState();
-    await initSyncLifecycle();
+    await initSyncLifecycle({ background: opts?.backgroundSync });
   }
 }
 
 /** 登录成功：关闭仅本地、更新 store、按需初始化同步 */
-export async function applySignedInSession(session: any): Promise<void> {
-  const next = applySignedInSessionChain.then(() => applySignedInSessionImpl(session));
+export async function applySignedInSession(session: any, opts?: { backgroundSync?: boolean }): Promise<void> {
+  const next = applySignedInSessionChain.then(() => applySignedInSessionImpl(session, opts));
   applySignedInSessionChain = next.catch(() => {});
   return next;
 }
@@ -170,7 +203,7 @@ export function subscribeAuthStateChanges(): void {
       await applySignedOut();
     } else if (event === "INITIAL_SESSION") {
       if (session) {
-        await applySignedInSession(session);
+        await applySignedInSession(session, { backgroundSync: true });
       } else {
         appDebugLog("⏭️ INITIAL_SESSION 无 session，跳过");
       }
