@@ -93,10 +93,10 @@
                 <template #trigger>
                   <n-button
                     :size="isMobile ? 'large' : 'medium'"
-                    :type="dataStore.hasUnsyncedData || syncStore.isSyncing ? 'info' : 'default'"
+                    :type="accountLogoutBtnType"
                     tertiary
                     :loading="syncStore.loggingOut"
-                    title="退出登录"
+                    :title="accountLogoutBtnTitle"
                     class="header-button"
                     @click="handleLogoutButtonClick"
                     @dblclick.prevent="handleLogoutButtonDoubleClick"
@@ -226,7 +226,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
-import { NMenu, NButton, NIcon, NLayoutFooter, NTag, NPopconfirm, NDropdown, NConfigProvider } from "naive-ui";
+import { NMenu, NButton, NIcon, NLayoutFooter, NTag, NPopconfirm, NDropdown, NConfigProvider, useNotification } from "naive-ui";
 import { storeToRefs } from "pinia";
 import hljs from "highlight.js/lib/core";
 import javascript from "highlight.js/lib/languages/javascript";
@@ -299,6 +299,35 @@ const syncStore = useSyncStore();
 const { syncIcon, handleUpload, handleDownload } = useSyncWidget(); //relativeTime,
 const { isLoggedIn } = storeToRefs(syncStore);
 const { isMobile } = useDevice();
+const notification = useNotification();
+
+const accountLogoutBtnType = computed(() => {
+  if (syncStore.isSyncing) return "info" as const;
+  if (syncStore.downloadFailed) return "warning" as const;
+  if (dataStore.hasUnsyncedData) return "info" as const;
+  return "default" as const;
+});
+
+const accountLogoutBtnTitle = computed(() => {
+  if (syncStore.isSyncing) return "正在同步";
+  if (syncStore.downloadFailed) return "云端下载未成功";
+  if (dataStore.hasUnsyncedData) return "本地有未上传数据";
+  return "退出登录";
+});
+
+watch(
+  () => syncStore.downloadFailed,
+  (failed, wasFailed) => {
+    if (failed && wasFailed === false && syncStore.syncError) {
+      notification.warning({
+        title: "云端下载未成功",
+        content: syncStore.syncError,
+        duration: 6000,
+      });
+    }
+  },
+);
+
 const showDatabaseDialog = ref(false);
 const logoutConfirmVisible = ref(false);
 let logoutClickTimer: ReturnType<typeof setTimeout> | null = null;
