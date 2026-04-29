@@ -1,6 +1,6 @@
 // Service Worker 版本号：变更策略时请递增，以便激活时清掉旧缓存
-// v3: 为解决 iPhone 生产环境声音缓存问题 (stale white noise after PR)
-const CACHE_VERSION = "v3";
+// v4: /assets/ stale-while-revalidate 弱网先出缓存
+const CACHE_VERSION = "v4";
 const CACHE_NAME = `pomotention-cache-${CACHE_VERSION}`;
 
 // 需要缓存的静态资源（应用壳）
@@ -55,30 +55,24 @@ function putInCache(request, response) {
   return caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
 }
 
-/**
- * 网络优先：适合带 hash 的 /assets/ 与音频，避免发版后仍命中旧缓存导致 CSS/JS 不匹配
- */
-function networkFirst(request) {
-  return fetch(request)
-    .then((response) => {
-      if (response.ok) {
-        putInCache(request, response);
-      }
-      return response;
-    })
-    .catch(() =>
-      caches.match(request).then((cached) => {
-        if (cached) return cached;
-        return new Response("", { status: 503, statusText: "Offline" });
-      }),
-    );
+/** /assets/：先缓存后后台更新 */
+function assetsStaleWhileRevalidate(request) {
+  return caches.match(request).then((cached) => {
+    const fetchPromise = fetch(request)
+      .then((response) => {
+        if (response.ok) putInCache(request, response);
+        return response;
+      })
+      .catch(() => null);
+
+    if (cached) {
+      fetchPromise.catch(() => {});
+      return cached;
+    }
+    return fetchPromise.then((response) => response || new Response("", { status: 503, statusText: "Offline" }));
+  });
 }
 
-/**
- * 音频优先读缓存：有缓存立即返回，避免每次上线后首播被网络阻塞；
- * 同时后台轻量更新缓存，下一次播放可获得新版本。
- * v3: 增加详细日志，帮助 debug iPhone 声音问题 (stale cache after deploy).
- */
 function soundStaleWhileRevalidate(request) {
   const url = new URL(request.url);
 
@@ -148,7 +142,7 @@ self.addEventListener("fetch", (event) => {
 
   const path = url.pathname;
   if (path.startsWith("/assets/")) {
-    event.respondWith(networkFirst(request));
+    event.respondWith(assetsStaleWhileRevalidate(request));
     return;
   }
   if (path.startsWith("/sounds/")) {
