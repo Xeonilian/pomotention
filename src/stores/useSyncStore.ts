@@ -36,6 +36,8 @@ export const useSyncStore = defineStore("sync", () => {
   const hasRecentImport = ref(false);
   const isSyncGateActive = computed(() => !!syncGateReason.value);
 
+  const downloadFailed = ref(false);
+
   // 时间戳
   const lastSyncTimestamp = computed({
     get: () => {
@@ -57,6 +59,7 @@ export const useSyncStore = defineStore("sync", () => {
 
   // 开始同步
   function startSync(message: string = "正在同步...") {
+    downloadFailed.value = false;
     isSyncing.value = true;
     syncStatus.value = "syncing";
     currentSyncMessage.value = message;
@@ -65,6 +68,7 @@ export const useSyncStore = defineStore("sync", () => {
 
   // ✅ 开始上传
   function startUpload() {
+    downloadFailed.value = false;
     isSyncing.value = true;
     syncStatus.value = "uploading";
     currentSyncMessage.value = "正在上传...";
@@ -73,6 +77,7 @@ export const useSyncStore = defineStore("sync", () => {
 
   // 开始下载
   function startDownload() {
+    downloadFailed.value = false;
     isSyncing.value = true;
     syncStatus.value = "downloading";
     currentSyncMessage.value = "正在下载...";
@@ -81,6 +86,7 @@ export const useSyncStore = defineStore("sync", () => {
 
   // 同步成功
   function syncSuccess(message: string = "同步完成") {
+    downloadFailed.value = false;
     isSyncing.value = false;
     syncStatus.value = "idle";
     currentSyncMessage.value = message;
@@ -119,6 +125,7 @@ export const useSyncStore = defineStore("sync", () => {
   function resetSync() {
     lastSyncTimestamp.value = 0;
     lastCleanupTimestamp.value = 0;
+    downloadFailed.value = false;
     isSyncing.value = false;
     syncError.value = null;
     currentSyncMessage.value = "就绪";
@@ -129,6 +136,7 @@ export const useSyncStore = defineStore("sync", () => {
   }
 
   function resetSyncState() {
+    downloadFailed.value = false;
     isSyncing.value = false;
     syncError.value = null;
     currentSyncMessage.value = "就绪";
@@ -232,6 +240,7 @@ export const useSyncStore = defineStore("sync", () => {
     syncGateReason,
     hasRecentImport,
     isSyncGateActive,
+    downloadFailed,
 
     // 登录状态
     isLoggedIn,
