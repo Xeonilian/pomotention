@@ -10,6 +10,29 @@ function isEmptyMarkdownListLine(lineText: string): boolean {
   return false;
 }
 
+/** 仅 ## / ### … 无正文：再次回车删除该行（与空列表项同理） */
+function isEmptyMarkdownHeadingLine(lineText: string): boolean {
+  const line = lineText.replace(/\r$/, "");
+  return /^\s*#{2,}\s*$/.test(line);
+}
+
+/**
+ * # 标题 → 回车续 ## ；##…# 标题 → 回车续无序列表 - ；其它返回 null
+ */
+function getMarkdownHeadingEnterSuffix(lineText: string): string | null {
+  const line = lineText.replace(/\r$/, "");
+  if (/^\s*---/.test(line)) return null;
+  const one = line.match(/^(\s*)#\s+(.+)$/);
+  if (one) {
+    return `${one[1]}## `;
+  }
+  const many = line.match(/^(\s*)(#{2,})\s+(.+)$/);
+  if (many) {
+    return `${many[1]}- `;
+  }
+  return null;
+}
+
 /** 无序/任务列表行：回车后下一行接续相同前缀（含缩进空格）；与 --- 分隔线区分；空列表行不续写 */
 function getMarkdownListContinuationSuffix(lineText: string): string | null {
   const line = lineText.replace(/\r$/, "");
@@ -64,7 +87,7 @@ export function useTaskRecordShortcuts({
       return;
     }
 
-    // 回车：空列表项（仅 - / - [ ] 等）删除标记并换行；有正文时续写列表前缀
+    // 回车：空列表/空 ## 标题行删除续写；标题续 ## 或 -；有正文时续列表前缀
     const isEnter =
       (event.key === "Enter" || event.code === "Enter" || event.code === "NumpadEnter") &&
       !event.shiftKey &&
@@ -90,6 +113,37 @@ export function useTaskRecordShortcuts({
         nextTick(() => {
           if (textarea.value) {
             textarea.value.selectionStart = textarea.value.selectionEnd = newPos;
+            textarea.value.focus();
+          }
+        });
+        return;
+      }
+
+      if (isEmptyMarkdownHeadingLine(lineText)) {
+        event.preventDefault();
+        const prefix = originalContent.substring(0, lineStart);
+        const tail = originalContent.substring(lineEnd);
+        content.value = prefix + tail;
+        const newPos = tail.length > 0 ? lineStart : prefix.length;
+        nextTick(() => {
+          if (textarea.value) {
+            textarea.value.selectionStart = textarea.value.selectionEnd = newPos;
+            textarea.value.focus();
+          }
+        });
+        return;
+      }
+
+      const headingSuffix = getMarkdownHeadingEnterSuffix(lineText);
+      if (headingSuffix !== null) {
+        event.preventDefault();
+        const insert = "\n" + headingSuffix;
+        content.value = originalContent.substring(0, start) + insert + originalContent.substring(end);
+        nextTick(() => {
+          const pos = start + insert.length;
+          if (textarea.value) {
+            textarea.value.selectionStart = pos;
+            textarea.value.selectionEnd = pos;
             textarea.value.focus();
           }
         });
