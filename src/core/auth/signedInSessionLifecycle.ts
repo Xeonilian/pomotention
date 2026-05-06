@@ -18,10 +18,13 @@ function appDebugLog(...args: unknown[]) {
 let appCloseCleanup: (() => void) | null = null;
 let authUnsubscribe: (() => void) | null = null;
 let lifecycleBootInProgress = false;
+/** 递增以使进行中的后台 initSyncLifecycle 在 await 间隙失效（登出/切账号与后台同步并发） */
+let backgroundSyncLifecycleToken = 0;
 
 export function cleanupSyncLifecycle(): void {
   const syncStore = useSyncStore();
   const hadWork = syncStore.syncInitialized || !!appCloseCleanup || lifecycleBootInProgress;
+  backgroundSyncLifecycleToken++;
   lifecycleBootInProgress = false;
   if (!hadWork) return;
 
@@ -96,17 +99,27 @@ async function initSyncLifecycle(opts?: { background?: boolean }): Promise<void>
 
   if (opts?.background) {
     lifecycleBootInProgress = true;
+    const bootGen = ++backgroundSyncLifecycleToken;
     void (async () => {
       try {
         await syncAll();
-        appCloseCleanup = await initAppCloseHandler();
+        if (bootGen !== backgroundSyncLifecycleToken) return;
+        const closeCleanup = await initAppCloseHandler();
+        if (bootGen !== backgroundSyncLifecycleToken) {
+          closeCleanup();
+          return;
+        }
+        appCloseCleanup = closeCleanup;
         syncStore.initSyncService();
         appDebugLog("✅ 同步生命周期初始化完成");
       } catch (error) {
+        if (bootGen !== backgroundSyncLifecycleToken) return;
         console.error("❌ 同步初始化失败:", error);
         syncStore.syncError = String(error);
       } finally {
-        lifecycleBootInProgress = false;
+        if (bootGen === backgroundSyncLifecycleToken) {
+          lifecycleBootInProgress = false;
+        }
       }
     })();
     return;
