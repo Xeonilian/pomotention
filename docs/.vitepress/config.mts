@@ -76,55 +76,93 @@ export default withMermaid(
 
       nav: [
         { text: "首页", link: "/" },
-        { text: "快速开始", link: "/guide/getting-started" },
+        { text: "开始使用", link: "/guide/intro/install-overview" },
         { text: "使用说明", link: "/guide/" },
         { text: "GitHub", link: "https://github.com/Xeonilian/pomotention" },
       ],
 
+      // 侧栏：入门（先导航→再认知→再安装）→ 方法论 → 功能参考 → 附录；上层结论、下层支撑
       sidebar: [
         {
-          text: "简介",
+          text: "入门",
           items: [
-            { text: "什么是Pomotention？", link: "/guide/what-is-pomotention" },
+            { text: "使用导航", link: "/guide/" },
+            { text: "什么是 Pomotention？", link: "/guide/intro/what-is-pomotention" },
             {
-              text: "快速开始",
-              link: "/guide/getting-started",
+              text: "应用安装",
+              collapsed: true,
               items: [
-                { text: "桌面客户端", link: "/guide/pc-getting-started" },
-                { text: "PWA网页应用", link: "/guide/pwa-getting-started" },
+                { text: "选择安装方式", link: "/guide/intro/install-overview" },
+                { text: "桌面客户端", link: "/guide/intro/desktop-install" },
+                { text: "PWA网页应用", link: "/guide/intro/pwa-install" },
               ],
             },
-            { text: "快速使用", link: "/guide/get-things-done" },
-            { text: "更新日志", link: "/dev-log/CHANGELOG" },
+            { text: "账号与数据", link: "/guide/intro/account-and-data" },
+            { text: "轻松上手", link: "/guide/intro/easy-onboarding" },
           ],
         },
         {
-          text: "使用说明",
+          text: "番茄工作法实操",
+          collapsed: true,
           items: [
-            { text: "快速使用", link: "/guide/get-things-done" },
-            { text: "软件界面", link: "/guide/interface" },
-            { text: "活动清单", link: "/guide/activity" },
+            { text: "从这里开始", link: "/guide/pomodoro-technique/00-start-here" },
+            { text: "阶段1：记录时间", link: "/guide/pomodoro-technique/01-track-time" },
+            { text: "阶段2：应对打断", link: "/guide/pomodoro-technique/02-handle-interruptions" },
+            { text: "阶段3：估测任务", link: "/guide/pomodoro-technique/03-estimate-tasks" },
+            { text: "阶段4：优化流程", link: "/guide/pomodoro-technique/04-optimize-flow" },
+            { text: "阶段5：建立作息", link: "/guide/pomodoro-technique/05-build-schedule" },
+            { text: "三张清单", link: "/guide/pomodoro-technique/06-three-lists" },
+            { text: "卡住了怎么办", link: "/guide/pomodoro-technique/07-when-stuck" },
+            { text: "为什么有效", link: "/guide/pomodoro-technique/08-why-it-works" },
+          ],
+        },
+        {
+          text: "功能参考",
+          items: [
+            { text: "软件界面", link: "/guide/reference/interface" },
             {
-              text: "任务计划",
+              text: "活动、计划与日程",
+              collapsed: true,
               items: [
-                { text: "信息导航", link: "/guide/ics" },
-                { text: "任务规划", link: "/guide/planner" },
+                { text: "活动清单", link: "/guide/reference/activity" },
+                { text: "任务规划", link: "/guide/reference/planner" },
+                { text: "时间表构建", link: "/guide/reference/timetable" },
+                { text: "日程导出", link: "/guide/reference/ics" },
               ],
             },
-            { text: "日程构建", link: "/guide/timetable" },
-            { text: "任务追踪", link: "/guide/task" },
-            { text: "番茄时钟", link: "/guide/timer" },
-            { text: "标签系统", link: "/guide/tag" },
-            { text: "数据查看", link: "/guide/search" },
-            { text: "数据同步", link: "/guide/synchronize" },
-            { text: "数据趋势", link: "/guide/chart" },
+            {
+              text: "专注与记录",
+              collapsed: true,
+              items: [
+                { text: "番茄时钟", link: "/guide/reference/timer" },
+                { text: "任务追踪", link: "/guide/reference/task" },
+              ],
+            },
+            {
+              text: "标签与数据",
+              collapsed: true,
+              items: [
+                { text: "标签系统", link: "/guide/reference/tag" },
+                { text: "数据查看", link: "/guide/reference/search" },
+                { text: "数据趋势", link: "/guide/reference/chart" },
+              ],
+            },
+            {
+              text: "附录",
+              collapsed: true,
+              items: [
+                { text: "按钮速查表", link: "/guide/appendix/buttons" },
+                { text: "术语对照表", link: "/guide/appendix/glossary" },
+              ],
+            },
           ],
         },
         {
           text: "其他",
           items: [
-            { text: "关于项目", link: "/guide/about" },
-            { text: "开发地图", link: "/guide/roadmap" },
+            { text: "关于项目", link: "/guide/intro/about" },
+            { text: "开发地图", link: "/guide/intro/roadmap" },
+            { text: "更新日志", link: "/dev-log/CHANGELOG" },
           ],
         },
       ],

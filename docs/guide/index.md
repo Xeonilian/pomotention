@@ -1,14 +1,50 @@
-# 内容导航
+# 使用导航
 
-- [快速使用](get-things-done.md)：如何快速完成一个任务？
-- [软件界面](interface.md)：软件功能分区介绍。
-- [活动清单](activity.md)：如何设置活动清单选择待办任务？
-- [任务计划](planner.md)：如何转换和追踪活动与待办？
-- [日程构建](timetable.md)：如何形成自己的日程表？
-- [任务追踪](task.md)：如何追踪精力、奖励和打扰，利用书写模板追踪任务？
-- [番茄时钟](timer.md)：如何设置和使用番茄时钟？
-- [标签系统](tag.md)：如何使用标签系统？
-- [数据查看](search.md)：如何信息搜索？
-- [数据同步](synchronize.md)：如何同步数据？
-- [日程导出](ics.md)：如何同步数据？
-- [查看趋势](chart.md)：如何查看数据变化趋势？
+## 开始使用
+
+- [什么是 Pomotention？](intro/what-is-pomotention.md)
+- [选择安装方式](intro/install-overview.md)
+  - [桌面客户端](intro/desktop-install.md) · [PWA 网页应用](intro/pwa-install.md)
+- [账号与数据](intro/account-and-data.md)（注册、登录、同步与数据备份合并）
+- [轻松上手](intro/easy-onboarding.md)
+
+## 番茄工作法实操
+
+- [《番茄工作法》实操总览](pomodoro-technique/README.md)
+
+## 功能参考
+
+建议按「先认界面 → 再排计划 → 再专注执行 → 最后看数据与标签」阅读；需要查按钮含义或术语时，跳到附录即可。分组与左侧目录一致。
+
+### 界面
+
+- [软件界面](reference/interface.md)
+
+### 活动、计划与日程
+
+- [活动清单](reference/activity.md)
+- [任务规划](reference/planner.md)
+- [时间表构建](reference/timetable.md)
+- [日程导出](reference/ics.md)
+
+### 专注与记录
+
+- [番茄时钟](reference/timer.md)
+- [任务追踪](reference/task.md)
+
+### 标签与数据
+
+- [标签系统](reference/tag.md)
+- [数据查看](reference/search.md)
+- [数据趋势](reference/chart.md)
+
+### 附录
+
+- [按钮速查表](appendix/buttons.md)
+- [术语对照表](appendix/glossary.md)
+
+## 其他
+
+- [关于项目](intro/about.md)
+- [开发地图](intro/roadmap.md)
+- [更新日志](../dev-log/CHANGELOG.md)

@@ -122,15 +122,43 @@ const emit = defineEmits<{
   (e: "pomo-seq-running", status: boolean): void;
 }>();
 
+function getDefaultWorkDurationMinutes(): number {
+  const parsed = Number.parseInt(defaultPomoDuration.value, 10);
+  if (Number.isFinite(parsed) && parsed >= 1 && parsed <= 60) return parsed;
+  return settingStore.settings.durations.workDuration;
+}
+
+function normalizeSequenceForDisplay(sequence: string): string {
+  const defaultWorkDuration = getDefaultWorkDurationMinutes();
+  return sequence.replace(/w(\d+)/gi, (_, rawDuration: string) => {
+    const explicitWorkDuration = Number.parseInt(rawDuration, 10);
+    if (!Number.isFinite(explicitWorkDuration) || explicitWorkDuration < 1 || explicitWorkDuration > 60) {
+      return "🍅";
+    }
+    if (explicitWorkDuration === defaultWorkDuration) {
+      return "🍅";
+    }
+    return `🍅${explicitWorkDuration}`;
+  });
+}
+
+function parseExplicitWorkDuration(token: string): number {
+  const explicitWorkDuration = Number.parseInt(token, 10);
+  if (!Number.isFinite(explicitWorkDuration) || explicitWorkDuration < 1 || explicitWorkDuration > 60) {
+    throw new Error(`Invalid work time: ${token}. Allowed range: 1-60.`);
+  }
+  return explicitWorkDuration;
+}
+
 // 数据
-const sequenceInput = ref<string>(settingStore.settings.pomoSequenceInput ?? ">>>>🍅+05+🍅+05+🍅+05+🍅+15");
+const defaultPomoDuration = ref<string>(settingStore.settings.durations.workDuration.toString());
+const sequenceInput = ref<string>(normalizeSequenceForDisplay(settingStore.settings.pomoSequenceInput ?? ">>>>🍅+05+🍅+05+🍅+05+🍅+15"));
 const isRunning = ref<boolean>(false);
 const timeoutHandles = ref<NodeJS.Timeout[]>([]);
 const currentStep = ref<number>(0);
 const totalPomodoros = ref<number>(0);
 const currentPomodoro = ref<number>(1);
 const statusLabel = ref<string>("Let's 🍅!");
-const defaultPomoDuration = ref<string>(settingStore.settings.durations.workDuration.toString());
 
 // 白噪音状态
 const isWhiteNoiseEnabled = computed({
@@ -161,7 +189,7 @@ watch(
 // 解析序列
 function parseSequence(sequence: string): PomodoroStep[] {
   const validBreakTimes = ["01", "02", "05", "10", "15", "30", "60"];
-  const firstStepMatch = sequence.match(/🍅|w\d+|\d+/i);
+  const firstStepMatch = sequence.match(/🍅\d*|w\d+|\d+/i);
   if (!firstStepMatch) return [];
 
   const firstStepIndex = firstStepMatch.index || 0;
@@ -169,14 +197,12 @@ function parseSequence(sequence: string): PomodoroStep[] {
 
   const steps = sequence.split("+").map((step) => step.trim());
   return steps.map((step) => {
-    if (step.includes("🍅")) {
-      return { type: "work", duration: parseInt(defaultPomoDuration.value) };
+    if (/^🍅\d+$/u.test(step)) {
+      return { type: "work", duration: parseExplicitWorkDuration(step.slice(2)) };
     } else if (/^w\d+$/i.test(step)) {
-      const explicitWorkDuration = parseInt(step.slice(1), 10);
-      if (!Number.isFinite(explicitWorkDuration) || explicitWorkDuration < 1 || explicitWorkDuration > 60) {
-        throw new Error(`Invalid work time: ${step}. Allowed range: 1-60.`);
-      }
-      return { type: "work", duration: explicitWorkDuration };
+      return { type: "work", duration: parseExplicitWorkDuration(step.slice(1)) };
+    } else if (step.includes("🍅")) {
+      return { type: "work", duration: getDefaultWorkDurationMinutes() };
     } else {
       const breakTime = step.padStart(2, "0");
       if (!validBreakTimes.includes(breakTime)) {
@@ -313,7 +339,7 @@ function stopPomodoro(playEndCue = true): void {
 watch(
   sequenceInput,
   (val) => {
-    settingStore.settings.pomoSequenceInput = val;
+    settingStore.settings.pomoSequenceInput = normalizeSequenceForDisplay(val);
   },
   { immediate: true },
 );
@@ -531,8 +557,9 @@ function restoreRunningUIFromStore(): void {
   const settingSeq = settingStore.settings.pomoSequenceInput ?? "";
   if (snap && snap !== settingSeq) {
     // 外部即时启动可能先写 snapshot，再由 settings watch 落盘；此处以 snapshot 为准做一次对齐，避免被误判为异常
-    settingStore.settings.pomoSequenceInput = snap;
-    sequenceInput.value = snap;
+    const normalizedSnap = normalizeSequenceForDisplay(snap);
+    settingStore.settings.pomoSequenceInput = normalizedSnap;
+    sequenceInput.value = normalizedSnap;
   }
 
   const seqToParse = timerStore.sequenceInputSnapshot || sequenceInput.value;

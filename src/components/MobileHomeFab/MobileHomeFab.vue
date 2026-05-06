@@ -1,6 +1,9 @@
-<!-- 移动端 Home 右下角快捷操作：状态来自 useDataStore，动作用 emit 交给 HomeView -->
 <template>
-  <div class="mobile-home-fab" :aria-label="taskRecordEditing ? '完成编辑' : '快捷操作'">
+  <div
+    v-if="!(taskRecordEditing && suppressFinishEditFab)"
+    class="mobile-home-fab"
+    :aria-label="taskRecordEditing ? '完成编辑' : '快捷操作'"
+  >
     <div v-if="taskRecordEditing" class="mobile-home-fab__anchor">
       <n-button
         type="success"
@@ -208,15 +211,15 @@ const emit = defineEmits<{
   (e: "reset-to-present"): void;
   (e: "suspend-planner-row"): void;
   (e: "repeat-activity", noTodoRepeat: boolean): void;
-  /** TaskRecord 编辑中：点击勾结束编辑 */
   (e: "finish-task-record-editing"): void;
 }>();
 
 const props = defineProps<{
-  /** TaskRecord 编辑时隐藏 FAB（由 HomeView 传入） */
   taskRecordEditing: boolean;
+  /** 为 true 时不渲染整块 FAB（如 iPhone 任务编辑 + 系统完成条） */
+  suppressFinishEditFab?: boolean;
 }>();
-const { taskRecordEditing } = toRefs(props);
+const { taskRecordEditing, suppressFinishEditFab } = toRefs(props);
 const settingStore = useSettingStore();
 
 const dataStore = useDataStore();
@@ -335,8 +338,8 @@ onUnmounted(() => {
 .mobile-home-fab {
   position: fixed;
   right: 15px;
-  /* --vv-fab-lift：Home 根节点根据 visualViewport 注入，软键盘抬起时上移 */
-  bottom: calc(max(30px, env(safe-area-inset-bottom)) + var(--vv-fab-lift, 0px));
+  top: var(--vv-fab-top, calc(100dvh - 88px - max(30px, env(safe-area-inset-bottom, 0px))));
+  bottom: auto;
   z-index: 90;
   pointer-events: auto;
 }

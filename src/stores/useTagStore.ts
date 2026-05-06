@@ -68,6 +68,15 @@ export const useTagStore = defineStore("tagStore", () => {
       }));
   });
 
+  /** 带 count 的标签 Map，全应用共用一份缓存，避免每个 TagRenderer 各自 new Map(allTags) */
+  const tagWithCountById = computed(() => {
+    const m = new Map<number, TagWithCount>();
+    for (const t of allTags.value) {
+      m.set(t.id, t);
+    }
+    return m;
+  });
+
   /**
    * ✅ 为同步服务提供的 Getter，用于获取所有本地未同步的变更。
    */
@@ -244,6 +253,7 @@ export const useTagStore = defineStore("tagStore", () => {
     // State
     rawTags, // 内部状态管理
     allTags, // UI 使用
+    tagWithCountById,
     unsyncedTags, // 同步服务使用
 
     tagById: computed(() => new Map(rawTags.value.map((t) => [t.id, t]))),

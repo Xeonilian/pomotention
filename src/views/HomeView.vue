@@ -5,286 +5,288 @@
 -->
 
 <template>
-  <div class="home-root" :style="rootCssVars">
+  <div class="home-root" :class="{ 'home-root--activity-only-mobile': activityOnlyMobile }" :style="rootCssVars">
     <div class="home-content">
-    <!-- 左侧面板 (日程表) -->
-    <div v-if="settingStore.settings.showSchedule" class="left" :style="{ width: leftWidth + 'px' }">
-      <TimeTable @timetable-edit="onTimetableEdit" />
-    </div>
+      <!-- 左侧面板 (日程表) -->
+      <div v-if="settingStore.settings.showSchedule" class="left" :style="{ width: leftWidth + 'px' }">
+        <TimeTable @timetable-edit="onTimetableEdit" />
+      </div>
 
-    <!-- 左侧面板调整大小手柄 -->
-    <div
-      v-if="settingStore.settings.showSchedule"
-      class="resize-handle-horizontal"
-      style="touch-action: none"
-      @pointerdown="startLeftResize"
-    ></div>
-
-    <!-- 中间内容区域 -->
-    <div
-      class="middle"
-      :class="{
-        'middle-alone': !settingStore.settings.showSchedule && !settingStore.settings.showActivity && !settingStore.settings.showAi,
-        'middle--landscape-fallback': isMobile && isLandscapeViewport,
-      }"
-    >
-      <!-- 今日视图 -->
+      <!-- 左侧面板调整大小手柄 -->
       <div
-        v-if="settingStore.settings.showPlanner"
-        class="middle-top"
-        :style="
-          settingStore.settings.showTask
-            ? { height: effectiveMiddleTopHeightPx + 'px' }
-            : { height: 'calc(100% - env(safe-area-inset-bottom)*1.35)' }
-        "
+        v-if="settingStore.settings.showSchedule"
+        class="resize-handle-horizontal"
+        style="touch-action: none"
+        @pointerdown="startLeftResize"
+      ></div>
+
+      <!-- 中间内容区域 -->
+      <div
+        class="middle"
+        :class="{
+          'middle-alone': !settingStore.settings.showSchedule && !settingStore.settings.showActivity && !settingStore.settings.showAi,
+          'middle--landscape-fallback': isMobile && isLandscapeViewport,
+        }"
       >
-        <!-- 任务计划的头部和控件 -->
-        <div class="planner-header" @click.stop="cleanSelection">
-          <div class="planner-header-left">
-            <!-- 年入口：仅显示年份，点击进入年视图；在年视图时也只显示年份 -->
-            <div class="day-info">
-              <template v-if="settingStore.settings.viewSet !== 'year'">
-                <span @click="onYearJump" class="day-status" title="进入年视图">
-                  {{ settingStore.settings.showSchedule && isMobile ? dateService.displayYearInfo.slice(2) : dateService.displayYearInfo }}
-                </span>
-              </template>
-              <template v-else>
-                <span @click="onDayJump" class="day-status" title="进入日视图">
-                  {{ dateService.displayYearInfo }}
-                </span>
+        <!-- 今日视图 -->
+        <div
+          v-if="settingStore.settings.showPlanner"
+          class="middle-top"
+          :style="
+            settingStore.settings.showTask
+              ? { height: effectiveMiddleTopHeightPx + 'px' }
+              : { height: 'calc(100% - env(safe-area-inset-bottom)*1.35)' }
+          "
+        >
+          <!-- 任务计划的头部和控件 -->
+          <div class="planner-header" @click.stop="cleanSelection">
+            <div class="planner-header-left">
+              <!-- 年入口：仅显示年份，点击进入年视图；在年视图时也只显示年份 -->
+              <div class="day-info">
+                <template v-if="settingStore.settings.viewSet !== 'year'">
+                  <span @click="onYearJump" class="day-status" title="进入年视图">
+                    {{
+                      settingStore.settings.showSchedule && isMobile ? dateService.displayYearInfo.slice(2) : dateService.displayYearInfo
+                    }}
+                  </span>
+                </template>
+                <template v-else>
+                  <span @click="onDayJump" class="day-status" title="进入日视图">
+                    {{ dateService.displayYearInfo }}
+                  </span>
+                  <span @click="onDateSet('today')" class="global-pomo">
+                    <span class="today-pomo">🍅{{ currentDatePomoCount }}</span>
+                    <span class="total-pomo">/{{ globalRealPomo }}</span>
+                  </span>
+                </template>
+              </div>
+              <div
+                v-if="settingStore.settings.viewSet === 'day'"
+                class="day-info"
+                :class="{
+                  yesterday: isViewDateYesterday,
+                  tomorrow: isViewDateTomorrow,
+                }"
+              >
+                <span @click="onWeekJump" class="day-status">{{ dateService.displayDateInfo }}</span>
                 <span @click="onDateSet('today')" class="global-pomo">
                   <span class="today-pomo">🍅{{ currentDatePomoCount }}</span>
                   <span class="total-pomo">/{{ globalRealPomo }}</span>
                 </span>
-              </template>
+              </div>
+              <div v-if="settingStore.settings.viewSet === 'week'" class="day-info">
+                <span @click="onMonthJump" class="day-status">&nbsp;{{ dateService.displayWeekInfo }}</span>
+                <span @click="onDateSet('today')" class="global-pomo">
+                  <span class="total-pomo">🍅{{ globalRealPomo }}</span>
+                </span>
+              </div>
+              <div v-if="settingStore.settings.viewSet === 'month'" class="day-info">
+                <span @click="onWeekJump" class="day-status">&nbsp;{{ dateService.displayMonthInfo }}</span>
+                <span @click="onDateSet('today')" class="global-pomo">
+                  <span class="total-pomo">🍅{{ globalRealPomo }}</span>
+                </span>
+              </div>
             </div>
             <div
-              v-if="settingStore.settings.viewSet === 'day'"
-              class="day-info"
-              :class="{
-                yesterday: isViewDateYesterday,
-                tomorrow: isViewDateTomorrow,
-              }"
+              class="marquee"
+              :class="{ 'marquee-empty': settingStore.settings.marquee === '' }"
+              v-if="!isEditing"
+              @click="startEdit"
+              title="点击编辑跑马灯"
             >
-              <span @click="onWeekJump" class="day-status">{{ dateService.displayDateInfo }}</span>
-              <span @click="onDateSet('today')" class="global-pomo">
-                <span class="today-pomo">🍅{{ currentDatePomoCount }}</span>
-                <span class="total-pomo">/{{ globalRealPomo }}</span>
-              </span>
+              <n-marquee v-if="settingStore.settings.marquee !== ''" class="marquee__inner">
+                {{ settingStore.settings.marquee }}&nbsp;
+              </n-marquee>
             </div>
-            <div v-if="settingStore.settings.viewSet === 'week'" class="day-info">
-              <span @click="onMonthJump" class="day-status">&nbsp;{{ dateService.displayWeekInfo }}</span>
-              <span @click="onDateSet('today')" class="global-pomo">
-                <span class="total-pomo">🍅{{ globalRealPomo }}</span>
-              </span>
-            </div>
-            <div v-if="settingStore.settings.viewSet === 'month'" class="day-info">
-              <span @click="onWeekJump" class="day-status">&nbsp;{{ dateService.displayMonthInfo }}</span>
-              <span @click="onDateSet('today')" class="global-pomo">
-                <span class="total-pomo">🍅{{ globalRealPomo }}</span>
-              </span>
+            <input
+              v-else
+              v-model="editValue"
+              class="marquee marquee-input"
+              @keydown.enter="saveEdit"
+              @keydown.esc="cancelEdit"
+              @blur="cancelEdit"
+              ref="inputRef"
+            />
+            <div class="button-group">
+              <HomeTagFilterPopover />
+
+              <n-button
+                title="重复活动"
+                v-if="!isMobile"
+                @click="onRepeatActivity(false)"
+                text
+                type="info"
+                size="small"
+                :disabled="selectedRowId === null && activeId === null"
+              >
+                <template #icon>
+                  <n-icon><ArrowRepeatAll24Regular /></n-icon>
+                </template>
+              </n-button>
+              <n-button
+                v-if="!isMobile"
+                :type="selectedRowId === null ? 'default' : 'info'"
+                size="small"
+                text
+                @click="onIcsExport"
+                title="导出 ICS / 二维码"
+                :disabled="selectedRowId === null"
+              >
+                <template #icon>
+                  <n-icon>
+                    <QrCode24Regular />
+                  </n-icon>
+                </template>
+              </n-button>
+              <n-date-picker
+                v-if="!isMobile"
+                v-model:value="queryDate"
+                type="date"
+                placeholder="日期选择"
+                @update:value="onDateSet('query')"
+                class="search-date"
+                placement="bottom"
+                @click="onDateSet('today')"
+                title="输入示例：2026-01-01"
+              >
+                <template #date-icon></template>
+              </n-date-picker>
+              <n-button v-if="!isMobile" size="small" text @click.stop="onViewSet()" title="切换视图">
+                <template #icon>
+                  <n-icon color="var(--color-text-primary)">
+                    <CalendarSettings20Regular />
+                  </n-icon>
+                </template>
+              </n-button>
+              <n-button
+                size="small"
+                text
+                @click="onDateSet('prev')"
+                :title="
+                  settingStore.settings.viewSet === 'day'
+                    ? '上一天'
+                    : settingStore.settings.viewSet === 'week'
+                      ? '上一周'
+                      : settingStore.settings.viewSet === 'year'
+                        ? '上一年'
+                        : '上一月'
+                "
+              >
+                <template #icon>
+                  <n-icon>
+                    <ChevronLeft20Regular />
+                  </n-icon>
+                </template>
+              </n-button>
+
+              <n-button
+                size="small"
+                text
+                @click="onDateSet('next')"
+                :title="
+                  settingStore.settings.viewSet === 'day'
+                    ? '下一天'
+                    : settingStore.settings.viewSet === 'week'
+                      ? '下一周'
+                      : settingStore.settings.viewSet === 'year'
+                        ? '下一年'
+                        : '下一月'
+                "
+              >
+                <template #icon>
+                  <n-icon>
+                    <ChevronRight20Regular />
+                  </n-icon>
+                </template>
+              </n-button>
             </div>
           </div>
-          <div
-            class="marquee"
-            :class="{ 'marquee-empty': settingStore.settings.marquee === '' }"
-            v-if="!isEditing"
-            @click="startEdit"
-            title="点击编辑跑马灯"
-          >
-            <n-marquee v-if="settingStore.settings.marquee !== ''" class="marquee__inner">
-              {{ settingStore.settings.marquee }}&nbsp;
-            </n-marquee>
-          </div>
-          <input
-            v-else
-            v-model="editValue"
-            class="marquee marquee-input"
-            @keydown.enter="saveEdit"
-            @keydown.esc="cancelEdit"
-            @blur="cancelEdit"
-            ref="inputRef"
-          />
-          <div class="button-group">
-            <HomeTagFilterPopover />
-
-            <n-button
-              title="重复活动"
-              v-if="!isMobile"
-              @click="onRepeatActivity(false)"
-              text
-              type="info"
-              size="small"
-              :disabled="selectedRowId === null && activeId === null"
-            >
-              <template #icon>
-                <n-icon><ArrowRepeatAll24Regular /></n-icon>
-              </template>
-            </n-button>
-            <n-button
-              v-if="!isMobile"
-              :type="selectedRowId === null ? 'default' : 'info'"
-              size="small"
-              text
-              @click="onIcsExport"
-              title="导出 ICS / 二维码"
-              :disabled="selectedRowId === null"
-            >
-              <template #icon>
-                <n-icon>
-                  <QrCode24Regular />
-                </n-icon>
-              </template>
-            </n-button>
-            <n-date-picker
-              v-if="!isMobile"
-              v-model:value="queryDate"
-              type="date"
-              placeholder="日期选择"
-              @update:value="onDateSet('query')"
-              class="search-date"
-              placement="bottom"
-              @click="onDateSet('today')"
-              title="输入示例：2026-01-01"
-            >
-              <template #date-icon></template>
-            </n-date-picker>
-            <n-button v-if="!isMobile" size="small" text @click.stop="onViewSet()" title="切换视图">
-              <template #icon>
-                <n-icon color="var(--color-text-primary)">
-                  <CalendarSettings20Regular />
-                </n-icon>
-              </template>
-            </n-button>
-            <n-button
-              size="small"
-              text
-              @click="onDateSet('prev')"
-              :title="
-                settingStore.settings.viewSet === 'day'
-                  ? '上一天'
-                  : settingStore.settings.viewSet === 'week'
-                    ? '上一周'
-                    : settingStore.settings.viewSet === 'year'
-                      ? '上一年'
-                      : '上一月'
-              "
-            >
-              <template #icon>
-                <n-icon>
-                  <ChevronLeft20Regular />
-                </n-icon>
-              </template>
-            </n-button>
-
-            <n-button
-              size="small"
-              text
-              @click="onDateSet('next')"
-              :title="
-                settingStore.settings.viewSet === 'day'
-                  ? '下一天'
-                  : settingStore.settings.viewSet === 'week'
-                    ? '下一周'
-                    : settingStore.settings.viewSet === 'year'
-                      ? '下一年'
-                      : '下一月'
-              "
-            >
-              <template #icon>
-                <n-icon>
-                  <ChevronRight20Regular />
-                </n-icon>
-              </template>
-            </n-button>
+          <!-- 今日视图容器 -->
+          <div class="planner-view-container">
+            <DayPlanner
+              v-if="settingStore.settings.showPlanner && settingStore.settings.viewSet === 'day'"
+              @update-schedule-status="onUpdateScheduleStatus"
+              @cancel-schedule="onCancelSchedule"
+              @uncancel-schedule="onUncancelSchedule"
+              @edit-schedule-done="handleEditScheduleDone"
+              @edit-schedule-title="handleEditScheduleTitle"
+              @edit-schedule-start="handleEditScheduleStart"
+              @edit-schedule-duration="handleEditScheduleDuration"
+              @edit-schedule-location="handleEditScheduleLocation"
+              @update-todo-status="onUpdateTodoStatus"
+              @suspend-todo="onSuspendTodo"
+              @cancel-todo="onCancelTodo"
+              @uncancel-todo="onUncancelTodo"
+              @update-todo-est="onUpdateTodoEst"
+              @update-todo-pomo="onUpdateTodoPomo"
+              @batch-update-priorities="onUpdateTodoPriority"
+              @edit-todo-title="handleEditTodoTitle"
+              @edit-todo-start="handleEditTodoStart"
+              @edit-todo-done="handleEditTodoDone"
+              @quick-add-todo="onQuickAddTodo"
+              @quick-add-schedule="onQuickAddSchedule"
+              @toggle-pomo-type="handleTogglePomoTypeTodoId"
+            />
+            <WeekPlanner
+              v-if="settingStore.settings.showPlanner && settingStore.settings.viewSet === 'week'"
+              @item-change="onItemChange"
+              @date-select="onDateSelect"
+              @date-select-day-view="onDateSelectDayView"
+            />
+            <MonthPlanner
+              v-if="settingStore.settings.showPlanner && settingStore.settings.viewSet === 'month'"
+              @item-change="onItemChange"
+              @date-select="onDateSelect"
+              @date-select-day-view="onDateSelectDayView"
+            />
+            <YearPlanner
+              v-if="settingStore.settings.showPlanner && settingStore.settings.viewSet === 'year'"
+              :key="dateService.displayYearInfo"
+              @date-select-day-view="onDateSelectDayView"
+              @navigate-to-month="onYearNavigateToMonth"
+              @navigate-to-week="onYearNavigateToWeek"
+            />
           </div>
         </div>
-        <!-- 今日视图容器 -->
-        <div class="planner-view-container">
-          <DayPlanner
-            v-if="settingStore.settings.showPlanner && settingStore.settings.viewSet === 'day'"
-            @update-schedule-status="onUpdateScheduleStatus"
-            @cancel-schedule="onCancelSchedule"
-            @uncancel-schedule="onUncancelSchedule"
-            @edit-schedule-done="handleEditScheduleDone"
-            @edit-schedule-title="handleEditScheduleTitle"
-            @edit-schedule-start="handleEditScheduleStart"
-            @edit-schedule-duration="handleEditScheduleDuration"
-            @edit-schedule-location="handleEditScheduleLocation"
-            @update-todo-status="onUpdateTodoStatus"
-            @suspend-todo="onSuspendTodo"
-            @cancel-todo="onCancelTodo"
-            @uncancel-todo="onUncancelTodo"
-            @update-todo-est="onUpdateTodoEst"
-            @update-todo-pomo="onUpdateTodoPomo"
-            @batch-update-priorities="onUpdateTodoPriority"
-            @edit-todo-title="handleEditTodoTitle"
-            @edit-todo-start="handleEditTodoStart"
-            @edit-todo-done="handleEditTodoDone"
-            @quick-add-todo="onQuickAddTodo"
-            @quick-add-schedule="onQuickAddSchedule"
-            @toggle-pomo-type="handleTogglePomoTypeTodoId"
-          />
-          <WeekPlanner
-            v-if="settingStore.settings.showPlanner && settingStore.settings.viewSet === 'week'"
-            @item-change="onItemChange"
-            @date-select="onDateSelect"
-            @date-select-day-view="onDateSelectDayView"
-          />
-          <MonthPlanner
-            v-if="settingStore.settings.showPlanner && settingStore.settings.viewSet === 'month'"
-            @item-change="onItemChange"
-            @date-select="onDateSelect"
-            @date-select-day-view="onDateSelectDayView"
-          />
-          <YearPlanner
-            v-if="settingStore.settings.showPlanner && settingStore.settings.viewSet === 'year'"
-            :key="dateService.displayYearInfo"
-            @date-select-day-view="onDateSelectDayView"
-            @navigate-to-month="onYearNavigateToMonth"
-            @navigate-to-week="onYearNavigateToWeek"
-          />
+        <!-- 任务视图调整大小手柄 -->
+        <div
+          v-if="settingStore.settings.showTask && settingStore.settings.showPlanner"
+          class="resize-handle"
+          style="touch-action: none"
+          @pointerdown="startVerticalResize"
+        ></div>
+        <!-- 任务视图 -->
+        <div v-if="settingStore.settings.showTask" class="middle-bottom">
+          <div class="task-container">
+            <TaskTracker ref="taskTrackerRef" @task-record-editing="setTaskRecordEditing" />
+          </div>
         </div>
       </div>
-      <!-- 任务视图调整大小手柄 -->
+
+      <!-- 右侧面板调整大小手柄 -->
       <div
-        v-if="settingStore.settings.showTask && settingStore.settings.showPlanner"
-        class="resize-handle"
+        v-if="settingStore.settings.showActivity || settingStore.settings.showAi"
+        class="resize-handle-horizontal"
         style="touch-action: none"
-        @pointerdown="startVerticalResize"
+        @pointerdown="startRightResize"
       ></div>
-      <!-- 任务视图 -->
-      <div v-if="settingStore.settings.showTask" class="middle-bottom">
-        <div class="task-container">
-          <TaskTracker ref="taskTrackerRef" @task-record-editing="setTaskRecordEditing" />
-        </div>
+
+      <!-- 右侧面板 (活动清单) -->
+      <div v-if="settingStore.settings.showActivity" class="right" :style="{ width: rightWidth + 'px' }">
+        <ActivitySheet
+          @pick-activity="onPickActivity"
+          @add-activity="onAddActivity"
+          @delete-activity="onDeleteActivity"
+          @update-active-id="onUpdateActiveId"
+          @toggle-pomo-type="onTogglePomoType"
+          @create-child-activity="onCreateChildActivity"
+          @increase-child-activity="onIncreaseChildActivity"
+        />
       </div>
-    </div>
-
-    <!-- 右侧面板调整大小手柄 -->
-    <div
-      v-if="settingStore.settings.showActivity || settingStore.settings.showAi"
-      class="resize-handle-horizontal"
-      style="touch-action: none"
-      @pointerdown="startRightResize"
-    ></div>
-
-    <!-- 右侧面板 (活动清单) -->
-    <div v-if="settingStore.settings.showActivity" class="right" :style="{ width: rightWidth + 'px' }">
-      <ActivitySheet
-        @pick-activity="onPickActivity"
-        @add-activity="onAddActivity"
-        @delete-activity="onDeleteActivity"
-        @update-active-id="onUpdateActiveId"
-        @toggle-pomo-type="onTogglePomoType"
-        @create-child-activity="onCreateChildActivity"
-        @increase-child-activity="onIncreaseChildActivity"
-      />
-    </div>
-    <div v-if="settingStore.settings.showAi" class="right" :style="{ width: rightWidth + 'px' }">
-      <!-- AI 对话对话框 -->
-      <AIChatDialog />
-    </div>
+      <div v-if="settingStore.settings.showAi" class="right" :style="{ width: rightWidth + 'px' }">
+        <!-- AI 对话对话框 -->
+        <AIChatDialog />
+      </div>
     </div>
     <MobileHomeFab
       v-if="isMobile"
@@ -375,10 +377,14 @@ const AIChatDialog = defineAsyncComponent(() => import("@/components/AiChat/AiCh
 const settingStore = useSettingStore();
 const dataStore = useDataStore();
 
+/** 窄屏仅活动：隐藏空 middle，避免与右栏双纵向滚、iOS 焦点滚冲突 */
+const activityOnlyMobile = computed(
+  () => isMobile.value && settingStore.settings.showActivity && !settingStore.settings.showPlanner && !settingStore.settings.showAi,
+);
+
 const queryDate = ref<number | null>(null);
 const showPopover = ref(false);
 const popoverMessage = ref("");
-/** TaskRecord 编辑中：供移动端 FAB 隐藏等 */
 const taskRecordEditing = ref(false);
 function setTaskRecordEditing(v: boolean) {
   taskRecordEditing.value = v;
@@ -429,7 +435,7 @@ const isViewDateYesterday = computed(() => dateService.isViewDateYesterday);
 const isViewDateTomorrow = computed(() => dateService.isViewDateTomorrow);
 const appDateTimestamp = computed(() => dateService.appDateTimestamp);
 
-// 进入年视图（点击头部年份） #HACK
+// 进入年视图（点击头部年份）
 const onYearJump = () => {
   settingStore.settings.viewSet = "year";
   settingStore.settings.topHeight = isMobile.value ? 440 : 450;
@@ -1589,6 +1595,18 @@ const { startResize: startRightResize } = useResize(
   margin-left: 0;
   background: var(--color-background);
   min-width: 90px;
+  min-height: 0;
+}
+
+/* 仅活动：隐藏 middle、右栏单滚动链 */
+.home-root--activity-only-mobile .middle {
+  display: none !important;
+}
+.home-root--activity-only-mobile .right {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .middle {
@@ -1842,9 +1860,16 @@ const { startResize: startRightResize } = useResize(
   .left {
     padding: 5px 2px 0px 8px !important;
   }
+
   .right {
     padding: 5px 6px 0px 6px !important;
     width: 100% !important;
+    /* 窄屏禁 .right 纵滚，减轻 iOS 整块上移与灰带 */
+    overflow-y: hidden;
+  }
+
+  .home-root--activity-only-mobile .right {
+    width: auto !important;
   }
 
   .resize-handle-horizontal,

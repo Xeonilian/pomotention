@@ -1,7 +1,7 @@
 {
   "name": "Pomotention",
   "private": true,
-  "version": "0.6.6",
+  "version": "0.6.7",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -21,6 +21,7 @@
     "sshot": "powershell.exe -ExecutionPolicy Bypass -File scripts/screenshot.ps1",
     "test": "vitest",
     "test:ui": "vitest --ui",
+    "bench:filter": "node scripts/bench-search-filter-hypothesis.mjs",
     "build:fast": "vite build",
     "build:analyze": "cross-env ANALYZE=true vite build"
   },

@@ -1,6 +1,3 @@
-/**
- * 写入系统剪贴板：优先 Async Clipboard，失败时用隐藏 textarea + execCommand（部分 iOS/Android WebView 仅后者可用）
- */
 export async function copyTextToClipboard(text: string): Promise<boolean> {
   if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
     try {
@@ -11,6 +8,10 @@ export async function copyTextToClipboard(text: string): Promise<boolean> {
     }
   }
   try {
+    const active = document.activeElement as HTMLElement | null;
+    const scrollX = window.scrollX;
+    const scrollY = window.scrollY;
+
     const ta = document.createElement("textarea");
     ta.value = text;
     ta.setAttribute("readonly", "");
@@ -25,8 +26,33 @@ export async function copyTextToClipboard(text: string): Promise<boolean> {
     ta.focus();
     ta.select();
     ta.setSelectionRange(0, text.length);
-    const ok = document.execCommand("copy");
+    let ok = document.execCommand("copy");
     document.body.removeChild(ta);
+
+    if (!ok) {
+      const div = document.createElement("div");
+      div.textContent = text;
+      div.setAttribute("contenteditable", "true");
+      div.style.position = "fixed";
+      div.style.left = "0";
+      div.style.top = "0";
+      div.style.opacity = "0";
+      div.style.pointerEvents = "none";
+      div.style.whiteSpace = "pre-wrap";
+      document.body.appendChild(div);
+
+      const selection = window.getSelection();
+      const range = document.createRange();
+      range.selectNodeContents(div);
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+      ok = document.execCommand("copy");
+      selection?.removeAllRanges();
+      document.body.removeChild(div);
+    }
+
+    if (active?.focus) active.focus();
+    window.scrollTo(scrollX, scrollY);
     return ok;
   } catch {
     return false;

@@ -1,9 +1,9 @@
 import { ref, computed } from "vue";
 
-/** 低于该值视为 UI 抖动（地址栏等），不当作软键盘 */
-const OBSCURED_BOTTOM_THRESHOLD_PX = 36;
-/** FAB 与键盘顶缘的留白 */
-const FAB_CLEARANCE_ABOVE_KEYBOARD_PX = 10;
+const FAB_CLEARANCE_ABOVE_KEYBOARD_PX = 8;
+const FAB_ANCHOR_HEIGHT_PX = 50;
+const FAB_KEYBOARD_RAW_OBSCURED_MIN_PX = 72;
+const FAB_KEYBOARD_EXTRA_DOWN_PX = 26;
 
 function readInnerSize() {
   if (typeof window === "undefined") return { h: 600, w: 400 };
@@ -14,22 +14,21 @@ function readInnerSize() {
   };
 }
 
-function readObscuredBottomPx(): number {
+function readObscuredBottomRawPx(): number {
   if (typeof window === "undefined") return 0;
   const vv = window.visualViewport;
   if (!vv) return 0;
   return Math.max(0, Math.round(window.innerHeight - vv.offsetTop - vv.height));
 }
 
-/**
- * 基于 visualViewport 同步「可用视口」尺寸与底部被遮挡高度（软键盘 / iOS 输入条）。
- * rootCssVars 供页面根节点绑定，子组件通过继承使用 CSS 变量。
- */
+/** 注入 --vv-fab-top；不设 --vv-obscured-bottom，避免与 MainLayout --app-vvh 重复补偿键盘 */
 export function useVisualViewportKeyboard() {
   const { h: ih, w: iw } = readInnerSize();
   const viewportInnerH = ref(ih);
   const viewportInnerW = ref(iw);
-  const obscuredBottomRawPx = ref(typeof window !== "undefined" ? readObscuredBottomPx() : 0);
+  const vvOffsetTop = ref(0);
+  const vvHeight = ref(ih);
+  const obscuredBottomRawPx = ref(typeof window !== "undefined" ? readObscuredBottomRawPx() : 0);
 
   function syncFromVisualViewport() {
     if (typeof window === "undefined") return;
@@ -37,26 +36,33 @@ export function useVisualViewportKeyboard() {
     if (vv) {
       viewportInnerH.value = vv.height;
       viewportInnerW.value = vv.width;
-      obscuredBottomRawPx.value = readObscuredBottomPx();
+      vvOffsetTop.value = vv.offsetTop;
+      vvHeight.value = vv.height;
+      obscuredBottomRawPx.value = readObscuredBottomRawPx();
     } else {
       viewportInnerH.value = window.innerHeight;
       viewportInnerW.value = window.innerWidth;
+      vvOffsetTop.value = 0;
+      vvHeight.value = window.innerHeight;
       obscuredBottomRawPx.value = 0;
     }
   }
 
-  const obscuredBottomEffectivePx = computed(() => {
-    const r = obscuredBottomRawPx.value;
-    return r >= OBSCURED_BOTTOM_THRESHOLD_PX ? r : 0;
-  });
-
-  /** 绑定到 Home 根节点，MobileHomeFab / ActivitySheet 继承 */
   const rootCssVars = computed(() => {
-    const obscured = obscuredBottomEffectivePx.value;
-    const fabLift = obscured > 0 ? obscured + FAB_CLEARANCE_ABOVE_KEYBOARD_PX : 0;
+    const rawObscured = obscuredBottomRawPx.value;
+    const keyboardOpen = rawObscured >= FAB_KEYBOARD_RAW_OBSCURED_MIN_PX;
+    const fabTop = Math.max(
+      6,
+      Math.round(
+        vvOffsetTop.value +
+          vvHeight.value -
+          FAB_ANCHOR_HEIGHT_PX -
+          FAB_CLEARANCE_ABOVE_KEYBOARD_PX +
+          (keyboardOpen ? FAB_KEYBOARD_EXTRA_DOWN_PX : 0),
+      ),
+    );
     return {
-      "--vv-obscured-bottom": `${obscured}px`,
-      "--vv-fab-lift": `${fabLift}px`,
+      "--vv-fab-top": `${fabTop}px`,
     } as Record<string, string>;
   });
 

@@ -14,7 +14,7 @@
         v-model="content"
         class="task-textarea"
         @keydown="handleKeydown"
-        @blur="stopEditing"
+        @blur="handleTextareaBlur"
         :title="'激活时Esc退出编辑'"
         style="position: relative; z-index: 1"
       ></textarea>
@@ -28,6 +28,7 @@ import { ref, computed, watch, nextTick, onMounted, onUnmounted } from "vue";
 import { getClickContextFragments, findFragmentSequenceInSource } from "@/services/taskRecordService";
 import { useCaretFlash } from "@/composables/useCaretFlash";
 import { useDevice } from "@/composables/useDevice";
+import { useTaskRecordShortcuts } from "@/composables/useTaskRecordShortcuts";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useSyncStore } from "@/stores/useSyncStore";
 import "highlight.js/styles/github.css";
@@ -130,24 +131,6 @@ function flushDescriptionIfDirty() {
   editSessionBaseline.value = content.value;
 }
 
-/** 无序/任务列表行：回车后下一行接续相同前缀（含缩进空格）；与 --- 分隔线区分 */
-function getMarkdownListContinuationSuffix(lineText: string): string | null {
-  if (/^\s*---/.test(lineText)) return null;
-  const task = lineText.match(/^(\s*)-\s*\[\s*([xX ])\s*\]\s*/);
-  if (task) {
-    return `${task[1]}- [ ] `;
-  }
-  const bullet = lineText.match(/^(\s*-\s+)/);
-  if (bullet) {
-    return bullet[1];
-  }
-  const bareDash = lineText.match(/^(\s*)-\s*$/);
-  if (bareDash) {
-    return `${bareDash[1]}- `;
-  }
-  return null;
-}
-
 const renderedMarkdown = computed(() => {
   const text = content.value;
   if (markdownLoaded.value && markedInstance) {
@@ -213,6 +196,11 @@ const stopEditing = () => {
   flushDescriptionIfDirty();
 };
 
+function handleTextareaBlur() {
+  if (isMobile.value) return;
+  stopEditing();
+}
+
 // 同步前钩子：把未保存的编辑 flush 到本地，但不退出编辑态（避免手机端布局被同步打断）
 function commitIfEditing() {
   if (isEditing.value) {
@@ -229,240 +217,11 @@ onUnmounted(() => {
   syncStore.unregisterBeforeSync(commitIfEditing);
 });
 
-const handleKeydown = (event: KeyboardEvent) => {
-  // 阻止默认行为的通用检查
-  if (event.key === "Tab" || (event.altKey && event.shiftKey && event.key === "ArrowDown")) {
-    event.preventDefault();
-  }
-
-  const textArea = event.target as HTMLTextAreaElement;
-  if (!textArea) return;
-
-  const start = textArea.selectionStart;
-  const end = textArea.selectionEnd;
-  const originalContent = content.value;
-
-  // 1. Escape 键: 退出编辑
-  if (event.key === "Escape") {
-    stopEditing();
-    return;
-  }
-
-  // 回车：无序/任务列表自动续行（保留空格缩进；- [ ] 下一行同为 - [ ]）
-  if (
-    event.key === "Enter" &&
-    !event.shiftKey &&
-    !event.ctrlKey &&
-    !event.metaKey &&
-    !event.altKey &&
-    start === end
-  ) {
-    const lineStart = originalContent.lastIndexOf("\n", start - 1) + 1;
-    let lineEnd = originalContent.indexOf("\n", start);
-    if (lineEnd === -1) {
-      lineEnd = originalContent.length;
-    }
-    const lineText = originalContent.substring(lineStart, lineEnd);
-    const suffix = getMarkdownListContinuationSuffix(lineText);
-    if (suffix !== null) {
-      event.preventDefault();
-      const insert = "\n" + suffix;
-      content.value = originalContent.substring(0, start) + insert + originalContent.substring(end);
-      nextTick(() => {
-        const pos = start + insert.length;
-        textArea.selectionStart = pos;
-        textArea.selectionEnd = pos;
-        textArea.focus();
-      });
-      return;
-    }
-  }
-
-  // 2. Alt+Shift+ArrowDown (Option+Shift+↓ on Mac): 重复当前行
-  if (event.altKey && event.shiftKey && event.key === "ArrowDown") {
-    // 找到当前行的起始和结束位置
-    const lineStart = originalContent.lastIndexOf("\n", start - 1) + 1;
-    let lineEnd = originalContent.indexOf("\n", end);
-    // 如果是最后一行，则行尾就是字符串的结尾
-    if (lineEnd === -1) {
-      lineEnd = originalContent.length;
-    }
-
-    const currentLineContent = originalContent.substring(lineStart, lineEnd);
-    const contentToInsert = "\n" + currentLineContent;
-
-    // 将复制的内容插入到当前行之后
-    content.value = originalContent.substring(0, lineEnd) + contentToInsert + originalContent.substring(lineEnd);
-
-    // 更新光标位置到新行的相同位置
-    nextTick(() => {
-      const newCursorPos = start + contentToInsert.length;
-      textArea.selectionStart = newCursorPos;
-      textArea.selectionEnd = newCursorPos;
-      textArea.focus();
-    });
-    return; // 功能完成，提前返回
-  }
-  // --- 移动当前行：Alt + ArrowDown ---
-  if (event.altKey && !event.shiftKey && event.key === "ArrowDown") {
-    event.preventDefault(); // 阻止默认行为（如滚动页面）
-
-    // 1. 定位当前行
-    const lineStart = originalContent.lastIndexOf("\n", start - 1) + 1;
-    let lineEnd = originalContent.indexOf("\n", start);
-    if (lineEnd === -1) {
-      lineEnd = originalContent.length;
-    }
-
-    // 如果当前行已经是最后一行，则无需移动
-    if (lineEnd === originalContent.length) {
-      return;
-    }
-
-    // 2. 提取当前行内容（包括换行符）
-    const lineWithNewline = originalContent.substring(lineStart, lineEnd + 1);
-
-    // 3. 定位下一行
-    let nextLineEnd = originalContent.indexOf("\n", lineEnd + 1);
-    if (nextLineEnd === -1) {
-      nextLineEnd = originalContent.length;
-    }
-
-    // 4. 重组内容
-    const partBefore = originalContent.substring(0, lineStart);
-    const nextLineContent = originalContent.substring(lineEnd + 1, nextLineEnd + 1);
-    const partAfter = originalContent.substring(nextLineEnd + 1);
-
-    content.value = partBefore + nextLineContent + lineWithNewline + partAfter;
-
-    // 5. 更新光标位置
-    nextTick(() => {
-      const newCursorPos = start + nextLineContent.length;
-      textArea.selectionStart = newCursorPos;
-      textArea.selectionEnd = newCursorPos;
-    });
-
-    return;
-  }
-
-  // --- 移动当前行：Alt + ArrowUp ---
-  if (event.altKey && !event.shiftKey && event.key === "ArrowUp") {
-    event.preventDefault();
-
-    // 1. 定位当前行
-    const lineStart = originalContent.lastIndexOf("\n", start - 1) + 1;
-    let lineEnd = originalContent.indexOf("\n", start);
-    if (lineEnd === -1) {
-      lineEnd = originalContent.length;
-    }
-
-    // 如果当前行已经是第一行，则无需移动
-    if (lineStart === 0) {
-      return;
-    }
-
-    // 2. 提取当前行内容
-    const currentLineContent = originalContent.substring(lineStart, lineEnd + 1);
-
-    // 3. 定位上一行
-    const prevLineStart = originalContent.lastIndexOf("\n", lineStart - 2) + 1;
-
-    // 4. 重组内容
-    const partBefore = originalContent.substring(0, prevLineStart);
-    const prevLineContent = originalContent.substring(prevLineStart, lineStart);
-    const partAfter = originalContent.substring(lineEnd + 1);
-
-    content.value = partBefore + currentLineContent + prevLineContent + partAfter;
-
-    // 5. 更新光标位置
-    nextTick(() => {
-      const newCursorPos = start - prevLineContent.length;
-      textArea.selectionStart = newCursorPos;
-      textArea.selectionEnd = newCursorPos;
-    });
-
-    return;
-  }
-
-  // 3. Tab 或 Shift+Tab: 缩进/取消缩进
-  if (event.key === "Tab") {
-    // 情况一：处理多行选择 (start 和 end 不在同一位置)
-    if (start !== end) {
-      let lineStart = originalContent.lastIndexOf("\n", start - 1) + 1;
-      const selectedText = originalContent.substring(lineStart, end);
-      let newSelectedText = "";
-      let changeInLength = 0;
-
-      if (event.shiftKey) {
-        // Shift+Tab: 减少缩进
-        newSelectedText = selectedText
-          .split("\n")
-          .map((line) => {
-            if (line.startsWith("    ")) {
-              changeInLength -= 4;
-              return line.substring(4);
-            } else if (line.startsWith("\t")) {
-              changeInLength -= 1;
-              return line.substring(1);
-            }
-            return line;
-          })
-          .join("\n");
-      } else {
-        // Tab: 增加缩进
-        newSelectedText = selectedText
-          .split("\n")
-          .map((line) => {
-            // 只为非空行增加缩进
-            if (line.length > 0) {
-              changeInLength += 4;
-              return "    " + line;
-            }
-            return line;
-          })
-          .join("\n");
-      }
-
-      content.value = originalContent.substring(0, lineStart) + newSelectedText + originalContent.substring(end);
-
-      nextTick(() => {
-        textArea.selectionStart = lineStart;
-        textArea.selectionEnd = end + changeInLength;
-        textArea.focus();
-      });
-    } else {
-      // 情况二：处理单行（光标在一点）
-      if (event.shiftKey) {
-        // Shift+Tab: 减少缩进
-        const lineStart = originalContent.lastIndexOf("\n", start - 1) + 1;
-        const lineContentBeforeCursor = originalContent.substring(lineStart, start);
-
-        if (lineContentBeforeCursor.startsWith("    ")) {
-          content.value = originalContent.substring(0, lineStart) + originalContent.substring(lineStart + 4);
-          nextTick(() => {
-            textArea.selectionStart = textArea.selectionEnd = Math.max(start - 4, lineStart);
-            textArea.focus();
-          });
-        } else if (lineContentBeforeCursor.startsWith("\t")) {
-          content.value = originalContent.substring(0, lineStart) + originalContent.substring(lineStart + 1);
-          nextTick(() => {
-            textArea.selectionStart = textArea.selectionEnd = Math.max(start - 1, lineStart);
-            textArea.focus();
-          });
-        }
-      } else {
-        // Tab: 增加缩进
-        const indent = "    ";
-        content.value = originalContent.substring(0, start) + indent + originalContent.substring(end);
-
-        nextTick(() => {
-          textArea.selectionStart = textArea.selectionEnd = start + indent.length;
-          textArea.focus();
-        });
-      }
-    }
-  }
-};
+const { handleKeydown } = useTaskRecordShortcuts({
+  content,
+  textarea,
+  stopEditing,
+});
 
 const handleClick = (event: MouseEvent) => {
   const target = event.target as HTMLElement;
