@@ -1,7 +1,8 @@
 /**
  * 公共假期：仅从仓库静态资源读取 `public/holidays/{region}/{year}.json`（构建后为同源路径）。
  * 无对应文件则该年无数据；不在线请求任何外网 API。
- * 内存 + sessionStorage 仅缓存成功解析后的 JSON。
+ * 仅用内存按 region+year 缓存；不写 sessionStorage（避免改 JSON 后刷新仍显示旧数据）。
+ * 开发环境下每次请求重新 fetch（no-store），便于编辑 public 后立即看到变化。
  */
 import { getDateKey } from "@/core/utils";
 
@@ -53,25 +54,6 @@ interface HolidayCalendarPayload {
 }
 
 const MEMORY = new Map<string, HolidayCalendarPayload>();
-const SS_PREFIX = "pomo-ph-local-";
-
-function sessionGetJson<T>(key: string): T | null {
-  try {
-    const raw = sessionStorage.getItem(key);
-    if (!raw) return null;
-    return JSON.parse(raw) as T;
-  } catch {
-    return null;
-  }
-}
-
-function sessionSetJson(key: string, value: unknown) {
-  try {
-    sessionStorage.setItem(key, JSON.stringify(value));
-  } catch {
-    /* 配额满或禁用存储时忽略 */
-  }
-}
 
 /** 本地日历日零点时间戳，与 getDateKey 一致 */
 export function dateKeyToStartTs(dateKey: string): number {
@@ -92,24 +74,23 @@ function yearsTouchingRange(start: number, end: number): number[] {
 
 async function fetchLocalHolidayYear(region: string, year: number): Promise<HolidayCalendarPayload | null> {
   const memKey = `${region}-${year}`;
-  const cached = MEMORY.get(memKey);
-  if (cached != null) return cached;
-
-  const ssKey = `${SS_PREFIX}${memKey}`;
-  const fromSs = sessionGetJson<HolidayCalendarPayload>(ssKey);
-  if (fromSs?.dates?.length) {
-    MEMORY.set(memKey, fromSs);
-    return fromSs;
+  /* 生产环境：同一会话内复用内存，避免同年重复请求 */
+  if (!import.meta.env.DEV) {
+    const cached = MEMORY.get(memKey);
+    if (cached != null) return cached;
   }
 
   const url = localHolidayJsonUrl(region, year);
   try {
-    const res = await fetch(url, { cache: "default" });
+    const res = await fetch(url, {
+      cache: import.meta.env.DEV ? "no-store" : "default",
+    });
     if (!res.ok) return null;
     const data = (await res.json()) as HolidayCalendarPayload;
     if (!data?.dates?.length) return null;
-    MEMORY.set(memKey, data);
-    sessionSetJson(ssKey, data);
+    if (!import.meta.env.DEV) {
+      MEMORY.set(memKey, data);
+    }
     return data;
   } catch {
     return null;
