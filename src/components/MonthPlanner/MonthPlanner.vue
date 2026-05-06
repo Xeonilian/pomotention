@@ -15,13 +15,13 @@
           @click="() => handleDateSelect(day.startTs)"
         >
           <!-- 节名在左上角；日期徽章保持右上 -->
-          <div class="month-day-top" :class="{ 'month-day-top--badge-only': !holidayForTs(day.startTs) }">
+          <div class="month-day-top" :class="{ 'month-day-top--badge-only': !day.holiday }">
             <div
-              v-if="holidayForTs(day.startTs)"
+              v-if="day.holiday"
               class="month-holiday-left"
-              :class="'month-holiday-left--' + holidayForTs(day.startTs)!.kind"
+              :class="'month-holiday-left--' + day.holiday.kind"
             >
-              {{ holidayForTs(day.startTs)!.label }}
+              {{ day.holiday.label }}
             </div>
             <div
               class="date-badge"
@@ -273,6 +273,7 @@ const days = computed(() => {
       sumRealGrape,
       pomoRatio: ratio,
       maxItems: maxItemsPerDay.value,
+      holiday: holidayForTs(dayTs),
     };
   });
   return result;
