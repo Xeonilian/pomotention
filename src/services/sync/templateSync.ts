@@ -18,7 +18,7 @@ export class TemplateSyncService extends BaseSyncService<Template, CloudTemplate
       timestamp_id: local.id,
       title: local.title,
       content: local.content,
-      deleted: local.deleted,
+      deleted: local.deleted ?? false,
     };
   }
 

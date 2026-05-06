@@ -20,7 +20,7 @@ export class TagSyncService extends BaseSyncService<Tag, CloudTagInsert> {
       name: local.name,
       color: local.color,
       background_color: local.backgroundColor,
-      deleted: local.deleted,
+      deleted: local.deleted ?? false,
     };
   }
 

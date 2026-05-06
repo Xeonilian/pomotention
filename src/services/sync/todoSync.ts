@@ -51,7 +51,8 @@ export class TodoSyncService extends BaseSyncService<Todo, CloudTodoInsert> {
       done_time: local.doneTime ?? null,
       start_time: local.startTime ?? null,
       global_index: local.globalIndex ?? null,
-      deleted: local.deleted,
+      // 旧本地数据可能缺 deleted，避免 upsert 写入 NULL 违反 DB NOT NULL
+      deleted: local.deleted ?? false,
     };
   }
 

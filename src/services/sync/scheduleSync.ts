@@ -42,7 +42,7 @@ export class ScheduleSyncService extends BaseSyncService<Schedule, CloudSchedule
       activity_id: local.activityId,
       status: local.status ?? null,
       done_time: local.doneTime ?? null,
-      deleted: local.deleted,
+      deleted: local.deleted ?? false,
     };
   }
 
