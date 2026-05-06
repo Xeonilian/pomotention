@@ -1,6 +1,7 @@
 // useTimerStore.ts
 import { defineStore } from "pinia";
 import { ref, computed, watch } from "vue";
+import { SESSION_MARKER_FULL_NAV_TO_HELP } from "@/composables/useDocsUrl";
 import { useSettingStore } from "./useSettingStore.ts";
 import { playSound, SoundType, startSilentWhiteNoiseHold, startWhiteNoise, stopWhiteNoise } from "../core/sounds.ts";
 
@@ -301,6 +302,15 @@ export const useTimerStore = defineStore(
     function markIntentionalExit(): void {
       if (typeof window === "undefined") return;
       if (pomodoroState.value === "idle") return;
+      // 整页跳进帮助文档不算放弃计时，避免返回首页后被 reconcile 清空
+      try {
+        if (sessionStorage.getItem(SESSION_MARKER_FULL_NAV_TO_HELP) === "1") {
+          sessionStorage.removeItem(SESSION_MARKER_FULL_NAV_TO_HELP);
+          return;
+        }
+      } catch {
+        /* 私密模式等 */
+      }
       sessionStorage.setItem(INTENTIONAL_EXIT_MARK_KEY, "1");
     }
 
