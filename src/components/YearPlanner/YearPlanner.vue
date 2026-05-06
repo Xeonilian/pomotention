@@ -487,20 +487,12 @@ function handleWeekClick(weekStartTs: number) {
   transition: transform 0.12s ease-out;
 }
 
-.day-dot.day-dot--holiday-public {
-  background-color: var(--color-red-light-transparent) !important;
-}
-
 .day-dot.day-dot--holiday-public .day-num {
   color: var(--color-red) !important;
 }
 
-.day-dot.day-dot--holiday-transfer {
-  background-color: rgba(100, 100, 110, 0.34) !important;
-}
-
 .day-dot.day-dot--holiday-transfer .day-num {
-  color: var(--color-text-secondary) !important;
+  color: var(--color-purple) !important;
 }
 
 .day-dot.day-dot--holiday-solar {

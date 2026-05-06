@@ -11,12 +11,7 @@
         {{ isMobile ? dayNames[day.index][0] : dayNames[day.index] }}
       </div>
       <div class="week-day-holiday-mid">
-        <span
-          v-if="holidayForDay"
-          class="week-day-holiday"
-          :class="'week-day-holiday--' + holidayForDay.kind"
-          :title="holidayForDay.label"
-        >
+        <span v-if="holidayForDay" class="week-day-holiday" :class="'week-day-holiday--' + holidayForDay.kind" :title="holidayForDay.label">
           {{ holidayForDay.label }}
         </span>
       </div>
@@ -223,7 +218,7 @@ const handleItemChange = (id: number, _ts: number, activityId?: number, taskId?:
 }
 
 .week-day-holiday--transfer_workday {
-  color: var(--color-text-secondary);
+  color: var(--color-red);
 }
 
 /* 左侧星期 */
