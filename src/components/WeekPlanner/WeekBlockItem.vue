@@ -99,7 +99,7 @@ const mobileDisplayTitle = computed(() => {
   if (!title) return "";
 
   const durationMinutes = blockDurationMinutes.value;
-  const maxChars = durationMinutes < 45 ? 8 : durationMinutes < 75 ? 12 : 16;
+  const maxChars = durationMinutes < 45 ? 6 : durationMinutes < 75 ? 8 : 12;
 
   return title.slice(0, maxChars);
 });

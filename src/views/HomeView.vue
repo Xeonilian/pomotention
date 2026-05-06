@@ -46,7 +46,11 @@
                 <template v-if="settingStore.settings.viewSet !== 'year'">
                   <span @click="onYearJump" class="day-status" title="进入年视图">
                     {{
-                      settingStore.settings.showSchedule && isMobile ? dateService.displayYearInfo.slice(2) : dateService.displayYearInfo
+                      settingStore.settings.showSchedule && isMobile
+                        ? ""
+                        : settingStore.settings.viewSet === "month" || settingStore.settings.viewSet === "week"
+                          ? dateService.displayYearInfo.slice(2)
+                          : dateService.displayYearInfo.slice(2) + "-"
                     }}
                   </span>
                 </template>
