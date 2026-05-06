@@ -31,7 +31,7 @@ export class ActivitySyncService extends BaseSyncService<Activity, CloudActivity
       task_id: local.taskId ?? null,
       tag_ids: local.tagIds ?? null,
       parent_id: local.parentId,
-      deleted: local.deleted || false,
+      deleted: local.deleted ?? false,
     };
   }
 

@@ -102,6 +102,15 @@ export const useSyncStore = defineStore("sync", () => {
     syncError.value = error;
   }
 
+  /** 用户关闭底部同步错误条，不清时间戳、不重试 */
+  function dismissSyncError() {
+    syncError.value = null;
+    if (syncStatus.value === "error") {
+      syncStatus.value = "idle";
+      currentSyncMessage.value = "就绪";
+    }
+  }
+
   function updateLastSyncTimestamp(timestamp?: number) {
     lastSyncTimestamp.value = timestamp ?? Date.now();
   }
@@ -252,6 +261,7 @@ export const useSyncStore = defineStore("sync", () => {
     startDownload,
     syncSuccess,
     syncFailed,
+    dismissSyncError,
     updateLastSyncTimestamp,
     updateLastCleanupTimestamp,
     resetSync,

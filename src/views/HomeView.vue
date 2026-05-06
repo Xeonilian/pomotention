@@ -46,7 +46,11 @@
                 <template v-if="settingStore.settings.viewSet !== 'year'">
                   <span @click="onYearJump" class="day-status" title="进入年视图">
                     {{
-                      settingStore.settings.showSchedule && isMobile ? dateService.displayYearInfo.slice(2) : dateService.displayYearInfo
+                      settingStore.settings.showSchedule && isMobile
+                        ? ""
+                        : settingStore.settings.viewSet === "month" || settingStore.settings.viewSet === "week"
+                          ? dateService.displayYearInfo
+                          : dateService.displayYearInfo.slice(2) + "-"
                     }}
                   </span>
                 </template>
@@ -66,9 +70,11 @@
                 :class="{
                   yesterday: isViewDateYesterday,
                   tomorrow: isViewDateTomorrow,
+                  'day-info--public-holiday': !!dayHolidayLabel,
                 }"
               >
                 <span @click="onWeekJump" class="day-status">{{ dateService.displayDateInfo }}</span>
+                <span v-if="dayHolidayLabel" class="planner-day-holiday-name">{{ dayHolidayLabel }}</span>
                 <span @click="onDateSet('today')" class="global-pomo">
                   <span class="today-pomo">🍅{{ currentDatePomoCount }}</span>
                   <span class="total-pomo">/{{ globalRealPomo }}</span>
@@ -319,12 +325,12 @@
 
 <script setup lang="ts">
 // ------------------------ 导入依赖 ------------------------
-import { ref, onMounted, onUnmounted, computed, nextTick, defineAsyncComponent } from "vue";
+import { ref, onMounted, onUnmounted, computed, nextTick, defineAsyncComponent, provide, toValue } from "vue";
 import { storeToRefs } from "pinia";
 import { onBeforeRouteLeave } from "vue-router";
 
 import type { Activity } from "@/core/types/Activity";
-import { getTimestampForTimeString } from "@/core/utils";
+import { getTimestampForTimeString, getDateKey } from "@/core/utils";
 import { ViewType } from "@/core/constants";
 import { useResize } from "@/composables/useResize";
 import { useVisualViewportKeyboard } from "@/composables/useVisualViewportKeyboard";
@@ -354,6 +360,7 @@ import { useSettingStore } from "@/stores/useSettingStore";
 import { useDataStore } from "@/stores/useDataStore";
 import { autoSyncDebounced, uploadAllDebounced } from "@/core/utils/autoSync";
 import { useDevice } from "@/composables/useDevice";
+import { usePublicHolidays, plannerHolidayMapKey } from "@/composables/usePublicHolidays";
 
 // ======================== 响应式状态与初始化 ========================
 // 不直接import Naive和以下组建加速启动
@@ -420,6 +427,9 @@ const {
 
 const dateService = dataStore.dateService;
 
+const { holidayByDateKey } = usePublicHolidays();
+provide(plannerHolidayMapKey, holidayByDateKey);
+
 const { saveAllDebounced, cleanSelection } = dataStore;
 // ======================== 0. UI 更新相关 ========================
 
@@ -434,6 +444,15 @@ const isViewDateToday = computed(() => dateService.isViewDateToday);
 const isViewDateYesterday = computed(() => dateService.isViewDateYesterday);
 const isViewDateTomorrow = computed(() => dateService.isViewDateTomorrow);
 const appDateTimestamp = computed(() => dateService.appDateTimestamp);
+
+/** 日视图头部节假日文案（本地 JSON）；Pinia 内 ref 可能已解包，用 toValue */
+const dayHolidayLabel = computed(() => {
+  if (!settingStore.settings.showPublicHolidays) return "";
+  const raw = toValue(dateService.appDateTimestamp as Parameters<typeof toValue>[0]);
+  const ts = typeof raw === "number" && !Number.isNaN(raw) ? raw : undefined;
+  if (ts == null) return "";
+  return holidayByDateKey.value[getDateKey(ts)]?.label ?? "";
+});
 
 // 进入年视图（点击头部年份）
 const onYearJump = () => {
@@ -1712,6 +1731,23 @@ const { startResize: startRightResize } = useResize(
   z-index: 2;
   font-weight: 600;
   background-color: var(--color-background);
+}
+
+/* 节假日当日：日视图日期整行（含番茄统计）用红色强调 */
+
+.day-info.day-info--public-holiday .planner-day-holiday-name {
+  color: var(--color-red);
+}
+
+.planner-day-holiday-name {
+  margin-left: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  flex-shrink: 0;
+  max-width: 44vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .day-status {

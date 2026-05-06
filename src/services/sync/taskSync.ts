@@ -43,8 +43,8 @@ export class TaskSyncService extends BaseSyncService<Task, CloudTaskInsert> {
       energy_records: local.energyRecords as any, // jsonb
       reward_records: local.rewardRecords as any, // jsonb
       interruption_records: local.interruptionRecords as any, // jsonb
-      starred: local.starred,
-      deleted: local.deleted,
+      starred: local.starred ?? false,
+      deleted: local.deleted ?? false,
     };
   }
 

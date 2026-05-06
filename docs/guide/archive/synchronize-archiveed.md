@@ -11,7 +11,6 @@
    - 坚果云账号
    - 应用密码
    - 保存路径：`/PomodoroBackup`
-     <img src="/sync-1.png" alt="Sync Setting" width="300">
 4. 点击`测试`按钮:
    - 如果显示`✔️ 账户测试通过！`，点击确认保存；
    - 如果没有通过测试，无法保存设置，请重新配置。
@@ -33,14 +32,12 @@
 
 ### 2.1 首次同步
 
-1. 完成设置后，再次点击 <img src="/icons/ArrowSync24Regular.svg" width="20" style="display: inline-block; vertical-align: middle; margin:0;background:rgb(193, 226, 255);border-radius: 6px;"> 按钮，弹出 `同步对话框`：
-   <img src="/sync-2.1.png" alt="Sync First" width="300">
+1. 完成设置后，再次点击 <img src="/icons/ArrowSync24Regular.svg" width="20" style="display: inline-block; vertical-align: middle; margin:0;background:rgb(193, 226, 255);border-radius: 6px;"> 按钮，弹出 `同步对话框`。
 2. 点击 `首次同步（上传本地数据）`。
 
 ### 2.2 日常同步
 
-1. 如果软件检测到指定文件存有同步数据，点击 <img src="/icons/ArrowSync24Regular.svg" width="20" style="display: inline-block; vertical-align: middle; margin:0;background:rgb(193, 226, 255);border-radius: 6px;"> 按钮，弹出 `同步对话框`：
-   <img src="/sync-2.2.png" alt="Sync Regular" width="300">
+1. 如果软件检测到指定文件存有同步数据，点击 <img src="/icons/ArrowSync24Regular.svg" width="20" style="display: inline-block; vertical-align: middle; margin:0;background:rgb(193, 226, 255);border-radius: 6px;"> 按钮，弹出 `同步对话框`。
 2. `数据上传`，会把当前数据，全部上传至云端，并替换云端的文件。
 3. `数据下载`，会把云端数据，全部下载至本地，导入软件，并刷新。
 4. `全量数据导出`，会把当前数据导出到本机指定文件夹。

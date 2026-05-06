@@ -21,7 +21,7 @@ export class TimetableSyncService extends BaseSyncService<Block, CloudBlockInser
       category: local.category,
       start_time: local.start,
       end_time: local.end,
-      deleted: local.deleted,
+      deleted: local.deleted ?? false,
     };
   }
 

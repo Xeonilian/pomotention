@@ -14,21 +14,30 @@
           :class="[{ 'day-card--selected': selectedDate === day.startTs }, { 'day-card--other-month': !day.isCurrentMonth }]"
           @click="() => handleDateSelect(day.startTs)"
         >
-          <!-- 日期数字放在右上角 -->
-          <div
-            class="date-badge"
-            :class="{ today: day.isToday }"
-            @click.stop="() => handleDateSelect(day.startTs)"
-            @dblclick.stop="() => handleDateSelectDayView(day.startTs)"
-            @touchstart.stop="onMonthBadgeTouchStart"
-            @touchend.stop="() => onMonthBadgeTouchEnd(day.startTs)"
-            @touchcancel.stop="onMonthBadgeTouchCancel"
-            :style="{
-              color: getPomoColor(day.pomoRatio),
-              backgroundColor: getPomoBgColorHEX(day.pomoRatio),
-            }"
-          >
-            {{ formatDay(day.startTs) }}
+          <!-- 节名在左上角；日期徽章保持右上 -->
+          <div class="month-day-top" :class="{ 'month-day-top--badge-only': !day.holiday }">
+            <div
+              v-if="day.holiday"
+              class="month-holiday-left"
+              :class="'month-holiday-left--' + day.holiday.kind"
+            >
+              {{ day.holiday.label }}
+            </div>
+            <div
+              class="date-badge"
+              :class="{ today: day.isToday }"
+              @click.stop="() => handleDateSelect(day.startTs)"
+              @dblclick.stop="() => handleDateSelectDayView(day.startTs)"
+              @touchstart.stop="onMonthBadgeTouchStart"
+              @touchend.stop="() => onMonthBadgeTouchEnd(day.startTs)"
+              @touchcancel.stop="onMonthBadgeTouchCancel"
+              :style="{
+                color: getPomoColor(day.pomoRatio),
+                backgroundColor: getPomoBgColorHEX(day.pomoRatio),
+              }"
+            >
+              {{ formatDay(day.startTs) }}
+            </div>
           </div>
           <div class="items">
             <template v-if="day.items.length">
@@ -65,7 +74,7 @@
   </div>
 </template>
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, inject, ref } from "vue";
 import { NCard } from "naive-ui";
 import type { Todo } from "@/core/types/Todo";
 import type { Schedule } from "@/core/types/Schedule";
@@ -77,6 +86,9 @@ import { useDevice } from "@/composables/useDevice";
 import { createTouchScheduledSingleAndDouble } from "@/composables/useTouchScheduledSingleAndDouble";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { countCompletedPomos } from "@/services/realPomoState";
+import { getDateKey } from "@/core/utils";
+import type { HolidayDisplay } from "@/services/publicHolidays";
+import { plannerHolidayMapKey } from "@/composables/usePublicHolidays";
 
 const settingStore = useSettingStore();
 const isTaskVisible = computed(() => settingStore.settings.showTask);
@@ -120,6 +132,11 @@ type UnifiedItem = {
 const dataStore = useDataStore();
 const { activeId, selectedRowId, todosForCurrentViewWithTags, schedulesForCurrentViewWithTags, selectedDate } = storeToRefs(dataStore);
 const dateService = dataStore.dateService;
+
+const holidayMap = inject(plannerHolidayMapKey, ref<Record<string, HolidayDisplay>>({}));
+function holidayForTs(ts: number): HolidayDisplay | null {
+  return holidayMap.value[getDateKey(ts)] ?? null;
+}
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -256,6 +273,7 @@ const days = computed(() => {
       sumRealGrape,
       pomoRatio: ratio,
       maxItems: maxItemsPerDay.value,
+      holiday: holidayForTs(dayTs),
     };
   });
   return result;
@@ -450,11 +468,12 @@ function getPomoBgColorHEX(ratio: number) {
   box-shadow: 0 2px 8px rgba(64, 158, 255, 0.3);
 }
 
-/* 日期徽章 - 右上角绝对定位 */
+/* 日期徽章：与左上角节名同一行，靠右 */
 .date-badge {
-  position: absolute;
-  top: 2px;
-  right: 2px;
+  position: relative;
+  top: auto;
+  right: auto;
+  flex-shrink: 0;
   font-size: 14px;
   width: 20px;
   height: 20px;
@@ -478,6 +497,37 @@ function getPomoBgColorHEX(ratio: number) {
 .day-card--other-month .date-badge {
   color: var(--color-background) !important;
   background-color: var(--color-background-light) !important;
+}
+
+.month-day-top {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 4px;
+  min-height: 22px;
+  padding: 2px 0 0 2px;
+  position: relative;
+}
+
+.month-holiday-left {
+  flex: 1 1 0;
+  min-width: 0;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 2px 0 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-red);
+}
+
+.month-holiday-left--solar_term {
+  color: var(--color-green);
+}
+
+.month-day-top--badge-only {
+  justify-content: flex-end;
 }
 
 .items {
