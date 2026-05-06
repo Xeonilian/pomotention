@@ -115,7 +115,7 @@ flowchart LR
 ### 历史记录
 
 - [数据查看](../reference/search.md)：检索历史任务与记录
-- [数据与迁移](../reference/data.md) 等：备份、导出与数据相关说明
+- [数据与迁移](../archive/data.md) 等：备份、导出与数据相关说明
 - [数据趋势](../reference/chart.md)：在「仪表盘」等入口查看趋势（见 [软件界面](../reference/interface.md)）
 
 ## 第一阶段的常见问题
