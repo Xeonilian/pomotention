@@ -60,6 +60,10 @@ export interface GlobalSettings {
   priorityCategoryTagIds: Record<number, number>;
   /** 各排序槽位是否在「排序」emoji 弹层中显示 */
   priorityCategoryShowInRank: Record<number, boolean>;
+  /** 是否在 Planner 展示节假日/节气（本地 JSON） */
+  showPublicHolidays: boolean;
+  /** 节假日数据区域码，如 CN */
+  publicHolidayCountryCode: string;
   // 以后新增全局设置项就在这里补充
 }
 
@@ -111,6 +115,8 @@ const defaultSettings: GlobalSettings = {
   isCompactMode: false, // 默认不是紧凑模式
   priorityCategoryTagIds: {},
   priorityCategoryShowInRank: getDefaultPriorityCategoryShowInRank(),
+  showPublicHolidays: true,
+  publicHolidayCountryCode: "CN",
   ai: {
     activeId: 1,
     systemPrompt:

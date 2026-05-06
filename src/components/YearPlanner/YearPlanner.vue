@@ -33,7 +33,7 @@
               @touchcancel.stop="onYearDayTouchCancel()"
             >
               <template v-if="day && day.isCurrentMonth">
-                <span class="day-dot" :style="getDotBgStyle(day.startTs)">
+                <span class="day-dot" :class="yearHolidayDotClass(day.startTs)" :style="getDotBgStyle(day.startTs)">
                   <span class="day-num" :style="getDayNumStyle(day.startTs)">{{ day.dayOfMonth }}</span>
                 </span>
               </template>
@@ -51,11 +51,16 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, inject, ref } from "vue";
 import { storeToRefs } from "pinia";
 import { createTouchScheduledSingleAndDouble } from "@/composables/useTouchScheduledSingleAndDouble";
 import { useDataStore } from "@/stores/useDataStore";
 import { useDevice } from "@/composables/useDevice";
+import { getDateKey } from "@/core/utils";
+import type { HolidayDisplay } from "@/services/publicHolidays";
+import { plannerHolidayMapKey } from "@/composables/usePublicHolidays";
+
+const holidayMap = inject(plannerHolidayMapKey, ref<Record<string, HolidayDisplay>>({}));
 
 const emit = defineEmits<{
   "date-select-day-view": [timestamp: number];
@@ -164,7 +169,18 @@ function getDayNumStyle(dayStartTs: number): { color?: string } {
 
 function formatDayTitle(ts: number): string {
   const d = new Date(ts);
-  return d.toLocaleDateString("zh-CN", { year: "numeric", month: "short", day: "numeric" });
+  const base = d.toLocaleDateString("zh-CN", { year: "numeric", month: "short", day: "numeric" });
+  const h = holidayMap.value[getDateKey(ts)];
+  return h ? `${base} · ${h.label}` : base;
+}
+
+/** 年视图格子：法定节假日浅红底，调休补班灰底，节气浅绿底 */
+function yearHolidayDotClass(ts: number): string {
+  const h = holidayMap.value[getDateKey(ts)];
+  if (!h) return "";
+  if (h.kind === "transfer_workday") return "day-dot--holiday-transfer";
+  if (h.kind === "solar_term") return "day-dot--holiday-solar";
+  return "day-dot--holiday-public";
 }
 
 const months = computed(() => {
@@ -469,6 +485,30 @@ function handleWeekClick(weekStartTs: number) {
   justify-content: center;
   background-color: var(--color-background-light);
   transition: transform 0.12s ease-out;
+}
+
+.day-dot.day-dot--holiday-public {
+  background-color: var(--color-red-light-transparent) !important;
+}
+
+.day-dot.day-dot--holiday-public .day-num {
+  color: var(--color-red) !important;
+}
+
+.day-dot.day-dot--holiday-transfer {
+  background-color: rgba(100, 100, 110, 0.34) !important;
+}
+
+.day-dot.day-dot--holiday-transfer .day-num {
+  color: var(--color-text-secondary) !important;
+}
+
+.day-dot.day-dot--holiday-solar {
+  background-color: var(--color-green-light-transparent) !important;
+}
+
+.day-dot.day-dot--holiday-solar .day-num {
+  color: var(--color-green) !important;
 }
 
 .day-num {

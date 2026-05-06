@@ -1,0 +1,817 @@
+{
+  "year": 2027,
+  "region": "CN",
+  "dates": [
+    {
+      "date": "2027-01-01",
+      "name": "元旦",
+      "name_cn": "🎉 元旦",
+      "type": "public_holiday"
+    },
+    {
+      "date": "2027-01-05",
+      "name": "小寒",
+      "name_cn": "❄️ 小寒",
+      "type": "solar_term"
+    },
+    {
+      "date": "2027-01-09",
+      "name": "三九",
+      "name_cn": "🎉 三九",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-01-10",
+      "name": "中国人民警察节",
+      "name_cn": "🎉 中国人民警察节",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-01-15",
+      "name": "腊八节",
+      "name_cn": "🥣 腊八节",
+      "type": "public_holiday"
+    },
+    {
+      "date": "2027-01-18",
+      "name": "四九",
+      "name_cn": "🎉 四九",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-01-20",
+      "name": "大寒",
+      "name_cn": "🥶 大寒",
+      "type": "solar_term"
+    },
+    {
+      "date": "2027-01-26",
+      "name": "国际海关日",
+      "name_cn": "🎉 国际海关日",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-01-27",
+      "name": "五九",
+      "name_cn": "🎉 五九",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-01-30",
+      "name": "北小年",
+      "name_cn": "🎉 北小年",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-01-31",
+      "name": "南小年",
+      "name_cn": "🎉 南小年",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-02-02",
+      "name": "世界湿地日",
+      "name_cn": "🎉 世界湿地日",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-02-04",
+      "name": "立春",
+      "name_cn": "🌱 立春",
+      "type": "solar_term"
+    },
+    {
+      "date": "2027-02-05",
+      "name": "除夕",
+      "name_cn": "🎉 除夕",
+      "type": "public_holiday"
+    },
+    {
+      "date": "2027-02-06",
+      "name": "春节",
+      "name_cn": "🧧 春节",
+      "type": "public_holiday"
+    },
+    {
+      "date": "2027-02-10",
+      "name": "国际气象节",
+      "name_cn": "🎉 国际气象节",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-02-14",
+      "name": "情人节",
+      "name_cn": "💝 情人节",
+      "type": "public_holiday"
+    },
+    {
+      "date": "2027-02-19",
+      "name": "雨水",
+      "name_cn": "☔ 雨水",
+      "type": "solar_term"
+    },
+    {
+      "date": "2027-02-20",
+      "name": "元宵节",
+      "name_cn": "🏮 元宵节",
+      "type": "public_holiday"
+    },
+    {
+      "date": "2027-02-23",
+      "name": "八九",
+      "name_cn": "🎉 八九",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-03-01",
+      "name": "国际海豹日",
+      "name_cn": "🎉 国际海豹日",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-03-03",
+      "name": "全国爱耳日",
+      "name_cn": "🎉 全国爱耳日",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-03-04",
+      "name": "九九",
+      "name_cn": "🎉 九九",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-03-05",
+      "name": "雷锋纪念日",
+      "name_cn": "🎉 雷锋纪念日",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-03-06",
+      "name": "惊蛰",
+      "name_cn": "⚡ 惊蛰",
+      "type": "solar_term"
+    },
+    {
+      "date": "2027-03-08",
+      "name": "妇女节",
+      "name_cn": "👩 妇女节",
+      "type": "public_holiday"
+    },
+    {
+      "date": "2027-03-09",
+      "name": "龙头节",
+      "name_cn": "🎉 龙头节 · 🎉 保护母亲河日",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-03-12",
+      "name": "植树节",
+      "name_cn": "🌱 植树节",
+      "type": "public_holiday"
+    },
+    {
+      "date": "2027-03-15",
+      "name": "消费者权益日",
+      "name_cn": "🎉 消费者权益日",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-03-17",
+      "name": "国际航海日",
+      "name_cn": "🎉 国际航海日",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-03-18",
+      "name": "全国爱肝日",
+      "name_cn": "🎉 全国爱肝日",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-03-21",
+      "name": "春分",
+      "name_cn": "🌺 春分",
+      "type": "solar_term"
+    },
+    {
+      "date": "2027-03-22",
+      "name": "世界水日",
+      "name_cn": "🎉 世界水日",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-03-23",
+      "name": "世界气象日",
+      "name_cn": "🎉 世界气象日",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-03-24",
+      "name": "防治结核病日",
+      "name_cn": "🎉 防治结核病日",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-03-27",
+      "name": "学生安全教育日",
+      "name_cn": "🎉 学生安全教育日",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-03-28",
+      "name": "复活节",
+      "name_cn": "🎉 复活节",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-04-01",
+      "name": "愚人节",
+      "name_cn": "🃏 愚人节",
+      "type": "public_holiday"
+    },
+    {
+      "date": "2027-04-04",
+      "name": "寒食节",
+      "name_cn": "🎉 寒食节",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-04-05",
+      "name": "清明",
+      "name_cn": "🌿 清明",
+      "type": "solar_term"
+    },
+    {
+      "date": "2027-04-07",
+      "name": "世界卫生日",
+      "name_cn": "🎉 世界卫生日",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-04-09",
+      "name": "上巳节",
+      "name_cn": "🎉 上巳节",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-04-13",
+      "name": "泼水节",
+      "name_cn": "🎉 泼水节",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-04-15",
+      "name": "国家安全教育日",
+      "name_cn": "🎉 国家安全教育日",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-04-20",
+      "name": "谷雨",
+      "name_cn": "🌧️ 谷雨",
+      "type": "solar_term"
+    },
+    {
+      "date": "2027-04-22",
+      "name": "世界地球日",
+      "name_cn": "🎉 世界地球日",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-04-23",
+      "name": "世界读书日",
+      "name_cn": "🎉 世界读书日",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-04-24",
+      "name": "中国航天日",
+      "name_cn": "🎉 中国航天日",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-04-26",
+      "name": "知识产权日",
+      "name_cn": "🎉 知识产权日",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-04-29",
+      "name": "妈祖圣诞",
+      "name_cn": "🎉 妈祖圣诞",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-05-01",
+      "name": "劳动节",
+      "name_cn": "🎉 劳动节",
+      "type": "public_holiday"
+    },
+    {
+      "date": "2027-05-02",
+      "name": "世界防治哮喘日",
+      "name_cn": "🎉 世界防治哮喘日",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-05-04",
+      "name": "青年节",
+      "name_cn": "👥 青年节",
+      "type": "public_holiday"
+    },
+    {
+      "date": "2027-05-06",
+      "name": "立夏",
+      "name_cn": "☀️ 立夏",
+      "type": "solar_term"
+    },
+    {
+      "date": "2027-05-08",
+      "name": "世界微笑日",
+      "name_cn": "🎉 世界微笑日 · 🎉 世界红十字日",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-05-09",
+      "name": "母亲节",
+      "name_cn": "🎉 母亲节",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-05-12",
+      "name": "国际护士节",
+      "name_cn": "🎉 国际护士节 · 🎉 防灾减灾日",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-05-15",
+      "name": "国际家庭日",
+      "name_cn": "🎉 国际家庭日",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-05-18",
+      "name": "国际博物馆日",
+      "name_cn": "🎉 国际博物馆日",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-05-19",
+      "name": "中国旅游日",
+      "name_cn": "🎉 中国旅游日",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-05-20",
+      "name": "学生营养日",
+      "name_cn": "🎉 学生营养日",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-05-21",
+      "name": "小满",
+      "name_cn": "🌾 小满",
+      "type": "solar_term"
+    },
+    {
+      "date": "2027-05-22",
+      "name": "国际生物多样性日",
+      "name_cn": "🎉 国际生物多样性日",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-05-31",
+      "name": "世界无烟日",
+      "name_cn": "🎉 世界无烟日",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-06-01",
+      "name": "儿童节",
+      "name_cn": "👶 儿童节",
+      "type": "public_holiday"
+    },
+    {
+      "date": "2027-06-06",
+      "name": "芒种",
+      "name_cn": "🌱 芒种",
+      "type": "solar_term"
+    },
+    {
+      "date": "2027-06-09",
+      "name": "端午节",
+      "name_cn": "🚣 端午节",
+      "type": "public_holiday"
+    },
+    {
+      "date": "2027-06-11",
+      "name": "中国人口日",
+      "name_cn": "🎉 中国人口日",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-06-14",
+      "name": "世界献血者日",
+      "name_cn": "🎉 世界献血者日",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-06-20",
+      "name": "父亲节",
+      "name_cn": "🎉 父亲节",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-06-21",
+      "name": "夏至",
+      "name_cn": "☀️ 夏至",
+      "type": "solar_term"
+    },
+    {
+      "date": "2027-06-23",
+      "name": "国际奥林匹克日",
+      "name_cn": "🎉 国际奥林匹克日",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-06-25",
+      "name": "全国土地日",
+      "name_cn": "🎉 全国土地日",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-06-26",
+      "name": "国际禁毒日",
+      "name_cn": "🎉 国际禁毒日",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-07-01",
+      "name": "建党节",
+      "name_cn": "🎉 建党节 · 🎉 香港回归纪念日",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-07-02",
+      "name": "国际体育记者日",
+      "name_cn": "🎉 国际体育记者日",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-07-07",
+      "name": "小暑",
+      "name_cn": "🌡️ 小暑",
+      "type": "solar_term"
+    },
+    {
+      "date": "2027-07-11",
+      "name": "世界人口日",
+      "name_cn": "🎉 世界人口日",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-07-20",
+      "name": "初伏",
+      "name_cn": "🎉 初伏",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-07-23",
+      "name": "大暑",
+      "name_cn": "🔥 大暑",
+      "type": "solar_term"
+    },
+    {
+      "date": "2027-07-27",
+      "name": "火把节",
+      "name_cn": "🎉 火把节",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-07-30",
+      "name": "中伏",
+      "name_cn": "🎉 中伏",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-08-01",
+      "name": "建军节",
+      "name_cn": "🎉 建军节",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-08-08",
+      "name": "立秋",
+      "name_cn": "🍂 立秋 · 🎋 七夕节",
+      "type": "public_holiday"
+    },
+    {
+      "date": "2027-08-09",
+      "name": "末伏",
+      "name_cn": "🎉 末伏",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-08-12",
+      "name": "国际青年日",
+      "name_cn": "🎉 国际青年日",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-08-16",
+      "name": "中元节",
+      "name_cn": "🎉 中元节",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-08-19",
+      "name": "出伏",
+      "name_cn": "🎉 出伏 · 🎉 中国医师节",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-08-23",
+      "name": "处暑",
+      "name_cn": "📉 处暑",
+      "type": "solar_term"
+    },
+    {
+      "date": "2027-08-26",
+      "name": "全国律师咨询日",
+      "name_cn": "🎉 全国律师咨询日",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-09-03",
+      "name": "抗战胜利纪念日",
+      "name_cn": "🎉 抗战胜利纪念日",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-09-08",
+      "name": "白露",
+      "name_cn": "💧 白露",
+      "type": "solar_term"
+    },
+    {
+      "date": "2027-09-10",
+      "name": "教师节",
+      "name_cn": "🎉 教师节",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-09-15",
+      "name": "中秋节",
+      "name_cn": "🌕 中秋节",
+      "type": "public_holiday"
+    },
+    {
+      "date": "2027-09-16",
+      "name": "中国脑健康日",
+      "name_cn": "🎉 中国脑健康日 · 🎉 国际臭氧层保护日",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-09-18",
+      "name": "九一八事变纪念日",
+      "name_cn": "🎉 九一八事变纪念日",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-09-19",
+      "name": "世界清洁地球日",
+      "name_cn": "🎉 世界清洁地球日",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-09-20",
+      "name": "全国爱牙日",
+      "name_cn": "🎉 全国爱牙日",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-09-21",
+      "name": "国际和平日",
+      "name_cn": "🎉 国际和平日",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-09-23",
+      "name": "秋分",
+      "name_cn": "🍁 秋分",
+      "type": "solar_term"
+    },
+    {
+      "date": "2027-09-27",
+      "name": "世界旅游日",
+      "name_cn": "🎉 世界旅游日",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-09-28",
+      "name": "孔子诞辰纪念日",
+      "name_cn": "🎉 孔子诞辰纪念日",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-09-30",
+      "name": "烈士纪念日",
+      "name_cn": "🎉 烈士纪念日",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-10-01",
+      "name": "国庆节",
+      "name_cn": "🎉 国庆节",
+      "type": "public_holiday"
+    },
+    {
+      "date": "2027-10-04",
+      "name": "世界动物日",
+      "name_cn": "🎉 世界动物日",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-10-05",
+      "name": "世界教师日",
+      "name_cn": "🎉 世界教师日",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-10-08",
+      "name": "寒露",
+      "name_cn": "❄️ 寒露 · 🍊 重阳节",
+      "type": "public_holiday"
+    },
+    {
+      "date": "2027-10-09",
+      "name": "世界邮政日",
+      "name_cn": "🎉 世界邮政日",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-10-13",
+      "name": "世界保健日",
+      "name_cn": "🎉 世界保健日",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-10-14",
+      "name": "世界标准日",
+      "name_cn": "🎉 世界标准日",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-10-15",
+      "name": "国际盲人节",
+      "name_cn": "🎉 国际盲人节",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-10-16",
+      "name": "世界粮食日",
+      "name_cn": "🎉 世界粮食日",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-10-23",
+      "name": "霜降",
+      "name_cn": "❄️ 霜降",
+      "type": "solar_term"
+    },
+    {
+      "date": "2027-10-24",
+      "name": "联合国日",
+      "name_cn": "🎉 联合国日",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-10-29",
+      "name": "寒衣节",
+      "name_cn": "🎉 寒衣节",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-11-01",
+      "name": "万圣节",
+      "name_cn": "🎉 万圣节",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-11-07",
+      "name": "立冬",
+      "name_cn": "🥶 立冬",
+      "type": "solar_term"
+    },
+    {
+      "date": "2027-11-08",
+      "name": "记者节",
+      "name_cn": "🎉 记者节",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-11-09",
+      "name": "消防宣传日",
+      "name_cn": "🎉 消防宣传日",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-11-12",
+      "name": "下元节",
+      "name_cn": "🎉 下元节",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-11-14",
+      "name": "世界防治糖尿病日",
+      "name_cn": "🎉 世界防治糖尿病日",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-11-17",
+      "name": "国际大学生节",
+      "name_cn": "🎉 国际大学生节",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-11-22",
+      "name": "小雪",
+      "name_cn": "🌨️ 小雪",
+      "type": "solar_term"
+    },
+    {
+      "date": "2027-11-25",
+      "name": "感恩节",
+      "name_cn": "🎉 感恩节",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-12-01",
+      "name": "世界艾滋病日",
+      "name_cn": "🎉 世界艾滋病日",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-12-03",
+      "name": "国际残疾人日",
+      "name_cn": "🎉 国际残疾人日",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-12-04",
+      "name": "国家宪法日",
+      "name_cn": "🎉 国家宪法日",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-12-07",
+      "name": "大雪",
+      "name_cn": "⛄ 大雪",
+      "type": "solar_term"
+    },
+    {
+      "date": "2027-12-09",
+      "name": "世界足球日",
+      "name_cn": "🎉 世界足球日",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-12-10",
+      "name": "世界人权日",
+      "name_cn": "🎉 世界人权日",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-12-11",
+      "name": "国际山岳日",
+      "name_cn": "🎉 国际山岳日",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-12-13",
+      "name": "国家公祭日",
+      "name_cn": "🎉 国家公祭日",
+      "type": "holiday"
+    },
+    {
+      "date": "2027-12-15",
+      "name": "强化免疫日",
+      "name_cn": "🎉 强化免疫日",
+      "type": "holiday"
+    },
+
+    {
+      "date": "2027-12-22",
+      "name": "冬至",
+      "name_cn": "☃️ 冬至",
+      "type": "solar_term"
+    },
+    {
+      "date": "2027-12-25",
+      "name": "圣诞节",
+      "name_cn": "🎄 圣诞节",
+      "type": "public_holiday"
+    }
+  ]
+}

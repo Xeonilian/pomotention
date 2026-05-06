@@ -10,6 +10,16 @@
       <div class="dow">
         {{ isMobile ? dayNames[day.index][0] : dayNames[day.index] }}
       </div>
+      <div class="week-day-holiday-mid">
+        <span
+          v-if="holidayForDay"
+          class="week-day-holiday"
+          :class="'week-day-holiday--' + holidayForDay.kind"
+          :title="holidayForDay.label"
+        >
+          {{ holidayForDay.label }}
+        </span>
+      </div>
       <div
         class="date"
         :class="{ today: day.isToday }"
@@ -75,11 +85,15 @@
 </template>
 
 <script setup lang="ts">
+import { computed, inject, ref } from "vue";
 import { NCard } from "naive-ui";
 import type { DayItem } from "@/core/types/Week";
 import type { WeekBlockItem as WeekBlockItemType } from "@/core/types/Week";
 import WeekBlockItem from "./WeekBlockItem.vue";
 import { formatMonthDay, getPomoColor, getFallbackWeekBlocks } from "@/core/utils/weekDays";
+import { getDateKey } from "@/core/utils";
+import type { HolidayDisplay } from "@/services/publicHolidays";
+import { plannerHolidayMapKey } from "@/composables/usePublicHolidays";
 import { useDataStore } from "@/stores/useDataStore";
 import { storeToRefs } from "pinia";
 import { useDevice } from "@/composables/useDevice";
@@ -87,6 +101,8 @@ import { createTouchScheduledSingleAndDouble } from "@/composables/useTouchSched
 const { isMobile } = useDevice();
 const dataStore = useDataStore();
 const { selectedDate } = storeToRefs(dataStore);
+
+const holidayMap = inject(plannerHolidayMapKey, ref<Record<string, HolidayDisplay>>({}));
 
 // 定义两种返回类型的联合类型
 type WeekBlockStyle =
@@ -101,8 +117,7 @@ type WeekBlockStyle =
       zIndex: number;
     };
 
-// 定义props
-defineProps<{
+const props = defineProps<{
   day: DayItem;
   dayNames: string[];
   timeGridHeight: number;
@@ -112,6 +127,8 @@ defineProps<{
   getHourTickTop: (hour: number) => number;
   getItemBlockStyle: (block: WeekBlockItemType, dayStartTs: number) => WeekBlockStyle;
 }>();
+
+const holidayForDay = computed(() => holidayMap.value[getDateKey(props.day.startTs)] ?? null);
 
 // 定义emit
 const emit = defineEmits<{
@@ -174,24 +191,49 @@ const handleItemChange = (id: number, _ts: number, activityId?: number, taskId?:
 }
 
 .day-header {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px;
   margin-bottom: 6px;
-  white-space: nowrap;
   width: 100%;
-  flex-wrap: nowrap;
-  overflow: hidden;
+  min-width: 0;
 }
 
-/* 调整 .dow 占满可用空间，挤压 .date 到边缘 */
+.week-day-holiday-mid {
+  min-width: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.week-day-holiday {
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.15;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+  color: var(--color-red);
+}
+
+.week-day-holiday--solar_term {
+  color: var(--color-green);
+}
+
+.week-day-holiday--transfer_workday {
+  color: var(--color-text-secondary);
+}
+
+/* 左侧星期 */
 .dow {
   font-weight: 600;
   white-space: nowrap;
-  flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   padding-left: 2px;
+  justify-self: start;
 }
 
 /* 核心修改 .date：空间不足时自动隐藏 */
@@ -314,7 +356,7 @@ const handleItemChange = (id: number, _ts: number, activityId?: number, taskId?:
   }
 
   .day-header {
-    margin: 3px 1px;
+    margin: 3px 1px 6px;
   }
 
   .pom-sum {
