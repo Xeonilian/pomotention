@@ -214,6 +214,7 @@
                 </template>
                 下载
               </n-button>
+              <n-button text size="small" style="opacity: 0.6; font-size: 11px" @click="() => syncStore.dismissSyncError()">关闭</n-button>
             </div>
           </div>
         </n-layout-footer>
