@@ -1265,7 +1265,16 @@ function buildInstantSteps(todo: Todo, workCount: number): InstantPomoStep[] {
 }
 
 function buildSequenceSnapshot(steps: InstantPomoStep[]): string {
-  const body = steps.map((step) => (step.type === "work" ? `w${step.duration}` : step.duration.toString().padStart(2, "0"))).join("+");
+  const defaultWork = settingStore.settings.durations.workDuration;
+  // 与番茄序列输入框一致：用 🍅 / 🍅N，避免写入 wN 再被规范化成满屏数字
+  const body = steps
+    .map((step) => {
+      if (step.type === "work") {
+        return step.duration === defaultWork ? "🍅" : `🍅${step.duration}`;
+      }
+      return step.duration.toString().padStart(2, "0");
+    })
+    .join("+");
   return `>>>>${body}`;
 }
 
