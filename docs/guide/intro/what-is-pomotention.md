@@ -13,14 +13,14 @@
 - **估得好**：预估与实际对照，迭代你的判断。
 - **排得开**：活动、任务计划与时间表联动，把一天放进可执行的块里。
 
-主要功能模块（操作细节见 [使用导航](../index.md) 各篇 reference；首页各面板如何协作见 [首页区域联动](../reference/workflow.md)）：活动与标签、任务计划、番茄时钟、任务追踪、时间表、数据查看与同步等。
+主要功能模块（操作细节见 [使用导航](../index.md) 各篇 reference；首页各面板如何协作见 [模块联动](../reference/workflow.md)）：活动与标签、任务计划、番茄时钟、任务追踪、时间表、数据查看与同步等。
 
 ## 下一步读哪里
 
 - **选端安装**：[安装方式总览](./install-overview.md)
 - **轻松上手**：[轻松上手](./easy-onboarding.md)
 - **账号与数据**：[账号与数据](./account-and-data.md)（注册、同步、JSON）
-- **按阶段跟练**：[番茄工作法实操总览](../pomodoro-technique/README.md)
+- **按阶段跟练**：[番茄工作法实操总览](../pomodoro-technique/about-tech.md)
 - **查界面与按钮**：[使用导航](../index.md) · [附录：按钮一览](../appendix/buttons.md)
 
 ## 延伸阅读

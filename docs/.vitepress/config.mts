@@ -76,7 +76,7 @@ export default withMermaid(
 
       nav: [
         { text: "首页", link: "/" },
-        { text: "开始使用", link: "/guide/intro/install-overview" },
+        { text: "软件安装", link: "/guide/intro/install-overview" },
         { text: "使用说明", link: "/guide/" },
         { text: "GitHub", link: "https://github.com/Xeonilian/pomotention" },
       ],
@@ -120,7 +120,7 @@ export default withMermaid(
           text: "功能参考",
           items: [
             { text: "软件界面", link: "/guide/reference/interface" },
-
+            { text: "模块联动", link: "/guide/reference/workflow" },
             {
               text: "活动、计划与日程",
               collapsed: true,
@@ -139,7 +139,7 @@ export default withMermaid(
                 { text: "任务追踪", link: "/guide/reference/task" },
               ],
             },
-            { text: "首页区域联动", link: "/guide/reference/workflow" },
+
             {
               text: "标签与数据",
               collapsed: true,

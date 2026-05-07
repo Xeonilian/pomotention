@@ -1,6 +1,6 @@
 # 活动清单使用说明
 
-与其他首页区域的协作关系见 [首页区域联动](./workflow.md)。
+与其他区域的协作关系见 [模块联动](./workflow.md)。
 
 ## 1 `活动清单视图`说明
 
@@ -94,7 +94,7 @@
   - 内外打扰 `interrupt`
   - 待办活动 `todo`
   - 预约活动 `schedule`
-  - 取消活动 `cancelled`
+  - 已删活动 `deleted`
 - **调整顺序**：鼠标悬浮在活动的图标上，当指针变为手型，可上下拖动顺序
 - **看板增加**：点击 <img src="/icons/Add16Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(224, 224, 224);border-radius: 6px;"> 增加一列活动订单，最多支持 6 列，排序在各列联动，筛选保持独立
 - **看板删除**：点击 <img src="/icons/Subtract16Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(224, 224, 224);border-radius: 6px;"> 删除当前列活动清单，第一列无法删除
