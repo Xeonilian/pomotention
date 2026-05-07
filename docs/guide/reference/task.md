@@ -1,104 +1,97 @@
 # 任务追踪操作说明
 
+::: tip
 与其他区域的协作关系见 [模块联动](./workflow.md)。
+:::
 
-## 1 `任务追踪视图`说明
+## 快速导航
 
-### 1.1 术语及图标
+- 我想先理解记录项：见 [记录模型](#记录模型)
+- 我想快速录入状态：见 [状态记录](#状态记录)
+- 我想写执行过程：见 [书写与模板](#书写与模板)
+- 我想看时间轴展示：见 [时间轴显示](#时间轴显示)
 
-- **任务 `Task`**：指从活动清单中选择执行的具体工作项目，包含以下要素：
-  - **任务描述**：详细的任务内容和执行记录；
-  - **书写模板**：结构化书写的提示；
-  - **能量记录**：⚡ 记录执行任务时的精力水平（1-10 分）；
-  - **愉悦记录**：🏵️ 记录执行任务时的愉悦程度（1-10 分）；
-  - **打扰记录**：记录执行过程中的内部和外部干扰：
-    - **内部打扰** 💭 ：来自个人情绪、想法和感受等；
-    - **外部打扰** 🗣️ ：来自他人信息、电话等。
+## 记录模型
 
-### 1.2 按钮一览表
+- **任务 `Task`**：从 `Activity` / `Todo` / `Schedule` 进入执行后形成的追踪对象。
+- 每条任务可包含：
+  - 任务描述（Markdown）
+  - 书写模板
+  - 能量记录（⚡，1-10）
+  - 愉悦记录（🏵️，1-10）
+  - 打扰记录（内部 💭 / 外部 🗣️）
 
-|                                                                                  按钮图标                                                                                  | 功能说明                                    |
-| :------------------------------------------------------------------------------------------------------------------------------------------------------------------------: | :------------------------------------------ |
-|                                <img src="/icons/Star20Filled.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0; ">                                | 添加星标：标记重要的任务追踪                |
-|   <img src="/icons/BatterySaver20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(193, 226, 255);border-radius: 6px;">    | 记录能量：记录当前任务的精力水平（1-10 分） |
-|       <img src="/icons/Emoji24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(193, 226, 255);border-radius: 6px;">       | 记录愉悦：记录当前任务的愉悦程度（1-10 分） |
-| <img src="/icons/CalendarAssistant20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(193, 226, 255);border-radius: 6px;"> | 记录打扰：记录内部和外部打扰                |
-|  <img src="/icons/CalligraphyPen20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(224, 224, 224);border-radius: 6px;">   | 书写模板：保存调用书写模板                  |
+## 常用按钮
 
-### 1.3 时间轴显示
+| 按钮图标 | 功能说明 |
+| :---: | :--- |
+| <img src="/icons/Star20Filled.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0; "> | 添加/取消星标 |
+| <img src="/icons/BatterySaver20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(193, 226, 255);border-radius: 6px;"> | 记录能量（1-10） |
+| <img src="/icons/Emoji24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(193, 226, 255);border-radius: 6px;"> | 记录愉悦（1-10） |
+| <img src="/icons/CalendarAssistant20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(193, 226, 255);border-radius: 6px;"> | 记录打扰（内部/外部） |
+| <img src="/icons/CalligraphyPen20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(224, 224, 224);border-radius: 6px;"> | 打开书写模板 |
 
-- **能量记录**：显示为 ⚡ 图标，数字，颜色根据分数变化，记录时间；
-- **愉悦记录**：显示为 🏵️ 图标，数字，颜色根据分数变化，记录时间；
-- **内部打扰**：显示为 💭 图标，I，记录时间；
-- **外部打扰**：显示为 🗣️ 图标，E，记录时间；
-- **记录内容**：鼠标悬浮显示具体的感受记录。
+## 状态记录
 
-## 2 任务追踪功能
+- **选择任务**：选择 `Activity` / `Todo` / `Schedule` 后，已开启任务会自动选中并激活录入按钮。
 
-- 记录任务执行过程中的能量变化
-- 记录任务执行过程中的愉悦感受
-- 记录内部和外部打扰情况
-- 支持 Markdown 格式的任务描述
-- 时间轴显示所有记录的时间点
-- 任务书写模板快速创建
-- 重要记录添加星标
+### 能量记录
 
-### 2.1 状态记录
+- 点击 <img src="/icons/BatterySaver20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(193, 226, 255);border-radius: 6px;"> 按钮：
+  - 快速录入：`←→` 选择能量值，回车确认。
+  - 详细录入：选择能量值，输入描述后确认。
+  - 点击内部 <img src="/icons/BatterySaver20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;border-radius: 6px;"> 可查看能量定义。
+  <img src="/task-energy.png" alt="Energy Record" width="450">
 
-- **选择任务**：选择 `Activity` 或 `Todo` 或 `Schedule`，如果已经开启任务，会自动选中任务并激活录入按钮
+### 愉悦记录
 
-#### 2.1.1 能量记录
+- 点击 <img src="/icons/Emoji24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(193, 226, 255);border-radius: 6px;"> 按钮：
+  - 快速录入：`←→` 选择愉悦值，回车确认。
+  - 详细录入：选择愉悦值，输入描述后确认。
+  - 点击内部 <img src="/icons/Beach24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;border-radius: 6px;"> 可查看愉悦定义。
+  <img src="/task-happy.png" alt="Happy Record" width="450">
 
-- **记录能量**：点击 <img src="/icons/BatterySaver20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(193, 226, 255);border-radius: 6px;"> 按钮，
-  - 快速录入：`←→键`选择精力值，回车；
-  - 详细录入：选择精力值，输入描述，点击确认；
-  - 点击内部 <img src="/icons/BatterySaver20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;border-radius: 6px;"> 按钮，可查看能量值定义参考。
-    <img src="/task-energy.png" alt="Energy Record" width="450">
+### 打扰记录
 
-#### 2.1.2 愉悦记录
+- 点击 <img src="/icons/CalendarAssistant20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(193, 226, 255);border-radius: 6px;"> 按钮，记录内部或外部打扰并可生成 `Activity`。
+- 快速录入：`Tab` 切换内部/外部打扰，回车确认。
+  <img src="/record.png" alt="Interruption Record" width="450">
 
-- **记录愉悦**：点击 <img src="/icons/Emoji24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(193, 226, 255);border-radius: 6px;"> 按钮，
-  - 快速录入：`←→键`选择愉悦值，回车；
-  - 详细录入：选择愉悦值，输入描述，点击确认；
-  - 点击内部 <img src="/icons/Beach24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;border-radius: 6px;"> 按钮，可查看愉悦值定义参考。
-    <img src="/task-happy.png" alt="Happy Record" width="450">
+## 书写与模板
 
-#### 2.1.3 打扰记录
+- **星标**：点击 <img src="/icons/Star20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0; "> / <img src="/icons/Star20Filled.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0; "> 切换星标，用于数据页快速筛选重点任务。
 
-- **记录打扰**：点击 <img src="/icons/CalendarAssistant20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(193, 226, 255);border-radius: 6px;"> 按钮，描述内部干扰内容，并可选择生成 `Activity`
-  - 快速录入：`Tab` 选择内部打扰或外部打扰，回车。
-    <img src="/record.png" alt="Interruption Record" width="450">
+### 书写记录
 
-### 2.2 记录与书写模板功能
-
-#### 2.2.1 添加星标
-
-- 点击星号切换选中的任务的星标状态，<img src="/icons/Star20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0; ">/<img src="/icons/Star20Filled.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0; ">
-- 星标用户搜索页面快速筛选重要任务书写
-
-### 2.2.2 书写记录
-
-- **追踪执行意图**：在文本区域点击切换到编辑模式，鼠标在激活位置闪烁，仅能模糊定位。
-- **markdown 识别**：编辑器识别通用 `markdown` 语法，以及：
-  - `-[ ]` 显示模式下可直接勾选
+- 点击文本区进入编辑模式，支持常见 `markdown` 语法。
+- 特殊语法：
+  - `-[ ]` 在显示模式可直接勾选
   - `== ==` 黄色高亮
-    <img src="/task-edting-area.png" alt="Editing Aera" width="450">
-- **快捷键**：
-  - `Tab`：缩进，支持多行选中；
-  - `Shift + Tab`：取消缩进，支持多行选中；
+  <img src="/task-edting-area.png" alt="Editing Aera" width="450">
+- 常用快捷键：
+  - `Tab`：缩进（支持多行）
+  - `Shift + Tab`：取消缩进（支持多行）
   - `Shift + Alt + ↓`：复制当前行
-  - `Alt + ↓/↑`：当前行上下移动，最后一行可能因为没有换行符引起合并。
+  - `Alt + ↓/↑`：上下移动当前行
 
-### 2.2.3 书写模板
+### 书写模板
 
-- **打开模板**：点击 <img src="/icons/CalligraphyPen20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(224, 224, 224);border-radius: 6px;"> 按钮
-- **创建模板**：点击`新建`，然后输入标题与内容，然后点击`确认`。
-- **应用模板**：双击`左侧模板标题`或点击`复制`，快速复制模版到剪贴板。
-- **编辑模版**：选择`左侧模板标题`，然后编辑左侧标题与内容，再点击`确认`。
-- **删除模版**：选择`左侧模板标题`，再点击`删除`。
+- **打开模板**：点击 <img src="/icons/CalligraphyPen20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(224, 224, 224);border-radius: 6px;">。
+- **创建模板**：点击 `新建`，输入标题与内容后确认。
+- **应用模板**：双击左侧模板标题或点击 `复制`。
+- **编辑模板**：选中模板后修改标题/内容并确认。
+- **删除模板**：选中模板后点击 `删除`。
   <img src="/task-writing-template.png" alt="Writing Template" width="450">
 
-## 3 重要说明
+## 时间轴显示
 
-- 任务追踪数据与活动清单数据同步
-- 标签仅显示，无法从 `任务追踪视图` 修改，标签使用说明见 [标签系统](tag.md)
+- 能量显示：⚡ + 分数 + 时间
+- 愉悦显示：🏵️ + 分数 + 时间
+- 内部打扰显示：💭 / `I`
+- 外部打扰显示：🗣️ / `E`
+- 鼠标悬浮可查看具体记录内容
+
+## 限制与说明
+
+- 任务追踪数据与活动清单数据同步。
+- 标签仅显示，无法在 `任务追踪视图` 直接修改，详见 [标签系统](tag.md)。

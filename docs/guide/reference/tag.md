@@ -1,55 +1,55 @@
 # 标签系统使用方法
 
-## 1 添加与删除操作
+## 快速导航
 
-### 1.1 从活动标题输入
+- 我想在标题里快速打标签：见 [从标题输入标签](#从标题输入标签)
+- 我想从面板选择标签：见 [从标签管理面板操作](#从标签管理面板操作)
+- 我想改颜色或改名称：见 [标签管理](#标签管理)
+- 我想在数据页筛选：见 [标签搜索与筛选](#标签搜索与筛选)
 
-- **添加：**
-  1. 在活动标题文本的末尾输入 `#`，触发标签联想弹窗，显示已有标签列表；
-  2. 输入文本可筛选标签；
-  3. 方向键上下选择标签，选中后按回车 `Enter`，即可关联该标签。
-- **新建**：若输入内容未命中已有标签，选择最后一行`+ 标签`，回车将新建并关联该标签。
+## 从标题输入标签
 
+- 在活动标题末尾输入 `#`，触发标签联想列表。
+- 输入文本可筛选已有标签，方向键选择后回车关联。
+- 未命中时可选择最后一行 `+ 标签`，回车新建并关联。  
   <img src="/tag-input.png" alt="Tag Input" width="300">
-
-- **切换标签显示状态**：按住 `ALT`/`OPT` + 点击 <img src="/icons/Tag16Regular.svg" width="20" style="display: inline-block; vertical-align: middle; margin:0;"> 可切换全部标签显示状态，每列活动清单的可视化状态保持独立。
+- 按住 `ALT/OPT` + 点击 <img src="/icons/Tag16Regular.svg" width="20" style="display: inline-block; vertical-align: middle; margin:0;"> 可切换标签显示状态（每列活动清单独立）。
+- 标签显示状态下，点击 <img src="/icons/CancelOutlined.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;"> 删除该标签关联。
   <img src="/tag-toggle.png" alt="Tag Toggle" width="400">
-- **删除**：在标签显示状态，点击标签上的 <img src="/icons/CancelOutlined.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;"> 符号删除。
 
-### 1.2 从`标签管理面板`选择
+## 从标签管理面板操作
 
-- 每行活动的 任务描述 输入区右侧均有**标签按钮**：
-  - **无标签时**：<img src="/icons/Tag16Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;">
-  - **已有标签时**：<img src="/icons/Tag16RegularBlue.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;">
-- **添加/删除**：点击**标签按钮**，弹出`标签管理面板`，搜索目标标签，每次点击可切换选中/删除状态。
-  - 支持每个活动打多个标签，单活动建议不超过 10 个标签以确保界面清晰。
-  - 标签的阴影状态显示，该标签是选中。
-- **新建**：若输入内容未命中已有标签，点击 <img src="/icons/Add16Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(193, 226, 255);border-radius: 6px;"> 按钮添加。
+- 每行活动描述输入区右侧有标签按钮：
+  - 无标签：<img src="/icons/Tag16Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;">
+  - 已有标签：<img src="/icons/Tag16RegularBlue.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;">
+- 点击按钮打开 `标签管理面板`，可搜索并切换选中/取消。
+- 单活动支持多个标签，建议不超过 10 个以保持界面清晰。
+- 未命中可点击 <img src="/icons/Add16Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(193, 226, 255);border-radius: 6px;"> 新建标签。  
   <img src="/tag-manager.png" alt="Tag Manger" width="300">
+- 在 `数据页` 打开任意 Todo/Schedule/Activity，也可在信息区使用标签按钮编辑。
 
-- 另外从 `数据页` 打开一行 Todo/Schedule/Activity，在每个 Tab 的最上部信息区域，有**标签按钮**
+## 标签管理
 
-## 2 标签管理
+### 颜色编辑
 
-### 2.1 标签色彩编辑
-
-- 点击 <img src="/icons/Heart16Filled.svg" width="20" style="display: inline-block; vertical-align: middle; margin:0;"> 修改文字颜色；
+- 点击 <img src="/icons/Heart16Filled.svg" width="20" style="display: inline-block; vertical-align: middle; margin:0;"> 修改文字颜色。
 - 点击 <img src="/icons/HeartCircle16Regular.svg" width="20" style="display: inline-block; vertical-align: middle; margin:0;"> 修改背景颜色。
 
-### 2.2 全局编辑
+### 全局编辑
 
-- 双击名字，修改已有标签名字；
-  - 通过 `#` 激活标签新建时，无法新建带有 `-`标签，可到`标签管理面板`修改实现。
-- 点击 <img src="/icons/TagDismiss16Regular.svg" width="20" style="display: inline-block; vertical-align: middle; margin:0;"> 删除所有关联的标签，无法恢复。
+- 双击标签名可重命名。
+- 通过 `#` 新建时不支持直接带 `-` 的名称，可在管理面板修改。
+- 点击 <img src="/icons/TagDismiss16Regular.svg" width="20" style="display: inline-block; vertical-align: middle; margin:0;"> 删除标签及其全部关联（不可恢复）。
 
-## 3 标签搜索
+## 标签搜索与筛选
 
-- 进入`数据页`，点击任意可视的标签，会对左侧面板显示的 `Activity` 进行筛选，多个标签进行 AND 逻辑 筛选；
-- 第二次点击取消筛选；
-- 左侧面板提供一键清除筛选；
-- 在搜索区域输入 `#` 激活标签快速输入，选择标签后进行筛选;
-- 参考[数据查看](/guide/reference/search)
+- 在 `数据页` 点击可视标签可筛选左侧 `Activity` 列表。
+- 多标签筛选采用 **AND 逻辑**。
+- 再次点击已选标签可取消该筛选。
+- 搜索区域输入 `#` 可快速选择标签进行筛选。
+- 可使用一键清除筛选恢复全部数据。
+- 详见 [数据查看](/guide/reference/search)。
 
-## 4 重要说明
+## 限制与说明
 
-- 标签选择完成，计入全局标签统计；
+- 标签操作会计入全局标签统计。
