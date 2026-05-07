@@ -2,7 +2,7 @@
 
 **目标**：制定适合你的每日时间表。
 
-> 时间表区交互以 [日程构建](../reference/timetable.md)、[软件界面](../reference/interface.md) 为准。
+> 时间表区交互以 [日程构建](../reference/timetable.md)、[软件界面](../reference/interface.md) 为准；时间表与任务计划如何衔接见 [首页区域联动](../reference/workflow.md)。
 
 ---
 

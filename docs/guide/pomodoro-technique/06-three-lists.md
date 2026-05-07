@@ -2,7 +2,7 @@
 
 番茄工作法的三张清单（活动清单、今日待办、当日记录）在 Pomotention 中以数字方式有机融合。
 
-> 界面分区与字段名以 [软件界面](../reference/interface.md)、[活动清单](../reference/activity.md)、[任务计划](../reference/planner.md)、[任务追踪](../reference/task.md) 为准。
+> 界面分区与字段名以 [软件界面](../reference/interface.md)、[活动清单](../reference/activity.md)、[任务计划](../reference/planner.md)、[任务追踪](../reference/task.md) 为准；清单与计划、追踪、时间表之间如何流动见 [首页区域联动](../reference/workflow.md)。
 
 ---
 
