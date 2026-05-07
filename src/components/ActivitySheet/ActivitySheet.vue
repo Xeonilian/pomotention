@@ -117,7 +117,7 @@ const filterOptions = [
   { label: "内外打扰", key: "interrupt" },
   { label: "待办活动", key: "todo" },
   { label: "预约活动", key: "schedule" },
-  { label: "已删活动", key: "cancelled" },
+  { label: "已删活动", key: "deleted" },
 ];
 
 // Kanban多个section参数管理
@@ -182,9 +182,11 @@ function filteredBySection(section: ActivitySectionConfig) {
       case "all":
         // 全部活动中不显示已取消的活动
         return activeActivities.value.filter((item) => item.status !== "cancelled");
-      case "cancelled":
-        // 筛选已删除的活动（保持 filterKey 为 "cancelled" 以向后兼容）
+      case "deleted":
+        // 筛选已删除的活动（保持 filterKey 为 "deleted" 以向后兼容）
         // 需要使用完整的 activityList，因为 activeActivities 已过滤掉 deleted 的活动
+        // 注意：cancelled 的活动被删除后仍会显示在这里，这是有意的设计：
+        // cancelled 是完成状态的一种，被删除的 cancelled 活动需要在"已删活动"视图中可找回
         return activityList.value.filter((item) => item.deleted === true);
       case "today":
         return activeActivities.value.filter((item) => {
