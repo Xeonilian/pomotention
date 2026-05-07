@@ -12,8 +12,8 @@
 |   <img src="/icons/Beach24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(193, 226, 255);border-radius: 6px;">    | 切换时间表类型：在娱乐时间表和工作时间表之间切换   |
 |  <img src="/icons/Settings24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(224, 224, 224);border-radius: 6px;">  | 编辑时间表：进入时间表编辑模式                     |
 | <img src="/icons/ArrowReset48Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(224, 224, 224);border-radius: 6px;"> | 重置时间表：恢复预设时间表                         |
-| <img src="/icons/AddCircle24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(217, 252, 204);border-radius: 10px;"> | 增加时间块：末尾增加 2h 时间区块（最大值 `24:00`） |
-|  <img src="/icons/Delete24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(248, 179, 167);border-radius: 10px;">   | 删除时间块：删除末尾时间块                         |
+|      <img src="/icons/AddCircle24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:#d9fccc;border-radius: 10px;">       | 增加时间块：末尾增加 2h 时间区块（最大值 `24:00`） |
+|        <img src="/icons/Delete24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:#f8b3a7;border-radius: 10px;">        | 删除时间块：删除末尾时间块                         |
 
 ### 1.2 显示说明
 
