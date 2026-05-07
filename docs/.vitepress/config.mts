@@ -120,6 +120,7 @@ export default withMermaid(
           text: "功能参考",
           items: [
             { text: "软件界面", link: "/guide/reference/interface" },
+
             {
               text: "活动、计划与日程",
               collapsed: true,
@@ -138,6 +139,7 @@ export default withMermaid(
                 { text: "任务追踪", link: "/guide/reference/task" },
               ],
             },
+            { text: "首页区域联动", link: "/guide/reference/workflow" },
             {
               text: "标签与数据",
               collapsed: true,

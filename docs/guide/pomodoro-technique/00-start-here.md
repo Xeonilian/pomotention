@@ -4,7 +4,7 @@
 
 :::tip
 
-- 分区与控件名称以 [软件界面](../reference/interface.md) 为准；
+- 分区与控件名称以 [软件界面](../reference/interface.md) 为准；各面板如何联动见 [首页区域联动](../reference/workflow.md)。
 - 尚未安装见 [安装方式总览](../intro/install-overview.md)。
 - 想先随便转转、找条容易的上手方式，见 [轻松上手](../intro/easy-onboarding.md)。
 

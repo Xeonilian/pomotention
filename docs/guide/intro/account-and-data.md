@@ -31,6 +31,17 @@ description: 注册、登录、云端同步与 JSON 导入导出；桌面与 PWA
 |     <img src="/icons/Person20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(248, 179, 167);border-radius: 6px;">     | 已登录，云端数据未同步，跳转登录页面 |
 |   <img src="/icons/CloudSync20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(193, 226, 255);border-radius: 6px;">    | 数据正在同步                         |
 
+### 顶栏「退出」旁的语义 {#sync-status-menu}
+
+首页 Menu 已登录时，「退出」触发器上会在 **`CloudSync20Regular`** 与 **`Person20Regular`** 之间切换显示，含义如下（与上表对照）：
+
+- **云同步图标**：正在与云端同步（上传/下载进行中）。
+- **人物图标 + 蓝色（info）**：当前无同步进行中，但本地有尚未上传的变更。
+- **人物图标 + 琥珀色（warning）**：最近一次同步里**云端下载未成功**；可能仍显示具体错误文案；可稍后重试同步或使用底栏/设置中的上传下载。
+- **人物图标 + 默认色**：无上述状态。
+
+同步失败时可能弹出简短通知（尤其移动端无底栏错误区时）。
+
 ## 注册与云端同步 {#account-sync}
 
 - 点击登录按钮<img src="/icons/Person20Filled.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;border-radius: 6px;">；按界面指引进入注册流程。
