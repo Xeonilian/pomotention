@@ -50,7 +50,9 @@
                         ? ""
                         : settingStore.settings.viewSet === "month" || settingStore.settings.viewSet === "week"
                           ? dateService.displayYearInfo
-                          : dateService.displayYearInfo.slice(2) + "-"
+                          : isMobile
+                            ? dateService.displayYearInfo.slice(2) + "-"
+                            : dateService.displayYearInfo + "-"
                     }}
                   </span>
                 </template>
