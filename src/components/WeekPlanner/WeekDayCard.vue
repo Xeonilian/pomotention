@@ -12,7 +12,7 @@
       </div>
       <div class="week-day-holiday-mid">
         <span v-if="holidayForDay" class="week-day-holiday" :class="'week-day-holiday--' + holidayForDay.kind" :title="holidayForDay.label">
-          {{ holidayForDay.label }}
+          {{ isMobile ? holidayForDay.label.slice(0, 1) : holidayForDay.label }}
         </span>
       </div>
       <div
