@@ -26,7 +26,10 @@
 <script setup lang="ts">
 import { NTag } from "naive-ui";
 import { useTagStore, type TagWithCount } from "@/stores/useTagStore";
+import { TAG_IDS_HIDDEN_IN_TAG_RENDERER } from "@/core/constants";
 import { computed } from "vue";
+
+const hiddenTagIdSet = new Set(TAG_IDS_HIDDEN_IN_TAG_RENDERER);
 
 // ================================================================
 // Props & Emits
@@ -68,6 +71,7 @@ const renderedTags = computed(() => {
 
   // 映射 tagIds 到实际的 tag 对象
   const result = props.tagIds
+    .filter((id) => id === 0 || !hiddenTagIdSet.has(id))
     .map((id) => {
       // 特殊处理 ID 0：显示空标签
       if (id === 0) {

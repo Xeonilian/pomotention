@@ -115,7 +115,7 @@
         <template #suffix>
           <n-icon
             text
-            :color="item.tagIds ? 'var(--color-blue)' : 'var(--color-text-secondary)'"
+            :color="tagSuffixIconHighlight ? 'var(--color-blue)' : 'var(--color-text-secondary)'"
             class="icon-tag"
             title="显示/隐藏本行标签"
             @click.stop="handleTagIconClick"
@@ -317,6 +317,7 @@ import { togglePomoType } from "@/services/activityService";
 import TagRenderer from "../TagSystem/TagRenderer.vue";
 import TagPickerPopover from "../TagSystem/TagPickerPopover.vue";
 import type { InputInst } from "naive-ui";
+import { TAG_IDS_HIDDEN_IN_TAG_RENDERER } from "@/core/constants";
 
 const props = defineProps<{
   item: Activity;
@@ -360,6 +361,14 @@ const tagSearchTermWritable = computed({
 });
 
 const tagPopoverOpen = computed(() => tagEditor.popoverTargetId.value === props.item.id);
+
+/** 后缀标签图标：仅统计「可见」标签，不含四象限语义 85/126 */
+const tagSuffixIconHighlight = computed(() => {
+  const ids = props.item.tagIds;
+  if (!ids?.length) return false;
+  const hidden = new Set(TAG_IDS_HIDDEN_IN_TAG_RENDERER);
+  return ids.some((id) => !hidden.has(id));
+});
 
 const pomoInputTitleText = "单击修改数量 | 双击切换类型";
 

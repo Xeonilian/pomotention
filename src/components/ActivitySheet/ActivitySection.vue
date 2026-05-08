@@ -2,9 +2,9 @@
   Component: ActivitySection.vue 
 -->
 <template>
-  <div class="section-container" :class="{ 'section-container--quadrant-dense': hideSectionHeader }">
-    <!-- 筛选区 -->
-    <div v-if="!hideSectionHeader" class="section-header">
+  <div class="section-container" :class="{ 'section-container--quadrant-dense': listOnly }">
+    <!-- 筛选区（listOnly 时整块不渲染） -->
+    <div v-if="!listOnly" class="section-header">
       <n-input
         ref="searchInputRef"
         :placeholder="currentFilterLabel"
@@ -44,13 +44,17 @@
       </n-input>
 
       <n-button
-        v-if="props.sectionId === 1 && !settingStore.settings.kanbanQuadrantMode"
+        v-if="
+          props.sectionId === 1 &&
+          ((!settingStore.settings.kanbanQuadrantMode && !headerOnly) ||
+            (settingStore.settings.kanbanQuadrantMode && headerOnly))
+        "
         large
         type="default"
-        title="四象限（紧急/重要）"
+        :title="settingStore.settings.kanbanQuadrantMode && headerOnly ? '退出四象限' : '四象限（紧急/重要）'"
         quaternary
         class="section-button"
-        @click="settingStore.enterKanbanQuadrantMode()"
+        @click="settingStore.toggleKanbanQuadrantMode()"
       >
         <template #icon>
           <n-icon><Grid24Regular /></n-icon>
@@ -84,7 +88,7 @@
       </n-button>
     </div>
 
-    <div ref="sectionScrollEl" class="section-content-container">
+    <div v-if="!headerOnly" ref="sectionScrollEl" class="section-content-container">
       <div v-for="item in sortedDisplaySheet" :key="item.id">
         <ActivityRow
           v-if="item.status !== 'done' && shouldShowItem(item)"
@@ -108,6 +112,7 @@
 
 <script setup lang="ts">
 import { computed, inject, nextTick, provide, ref, h } from "vue";
+import type { Ref } from "vue";
 import { NInput, NIcon, NDropdown, NButton } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
 import {
@@ -126,7 +131,11 @@ import { useSettingStore } from "@/stores/useSettingStore";
 import { useTagStore } from "@/stores/useTagStore";
 import { useActivityTagEditor } from "@/composables/useActivityTagEditor";
 import { useActivityDrag } from "@/composables/useActivityDrag";
-import { ACTIVITY_QUADRANT_DRAG_END_KEY } from "@/core/activityQuadrant";
+import {
+  ACTIVITY_QUADRANT_DRAG_END_KEY,
+  ACTIVITY_QUADRANT_SORT_KEY,
+  type ActivitySectionSortKey,
+} from "@/core/activityQuadrant";
 import { useDevice } from "@/composables/useDevice";
 import ActivityRow, { activitySectionRowInjectKey } from "./ActivityRow.vue";
 import type { InputInst } from "naive-ui";
@@ -145,8 +154,10 @@ const props = defineProps<{
   isRemoveButton: boolean;
   sectionId: number;
   search: string;
-  /** 四象限内嵌：隐藏列头筛选/排序条 */
-  hideSectionHeader?: boolean;
+  /** 仅渲染列表区（象限格子内） */
+  listOnly?: boolean;
+  /** 仅渲染列头（象限模式唯一筛选条） */
+  headerOnly?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -177,12 +188,28 @@ function blurSearchInput() {
   else inst.inputElRef?.blur?.();
 }
 
-/** 列表排序：手动顺序 | 到期 | 类型 | 首标签（仅视图，不写 settings） */
-type SectionSortKey = "rank" | "due" | "type" | "tag";
-const sectionSortKey = ref<SectionSortKey>("rank");
+/** 列表排序：手动顺序 | 到期 | 类型 | 首标签（仅视图，不写 settings）；象限模式与 inject 共享 */
+const quadrantSharedSort = inject<Ref<ActivitySectionSortKey> | null>(ACTIVITY_QUADRANT_SORT_KEY, null);
+const localSortKey = ref<ActivitySectionSortKey>("rank");
+
+function sortKeyForCompare(): ActivitySectionSortKey {
+  if (
+    (props.listOnly || props.headerOnly) &&
+    settingStore.settings.kanbanQuadrantMode &&
+    quadrantSharedSort
+  ) {
+    return quadrantSharedSort.value;
+  }
+  return localSortKey.value;
+}
 
 function onSortSelect(key: string) {
-  sectionSortKey.value = key as SectionSortKey;
+  const k = key as ActivitySectionSortKey;
+  if ((props.listOnly || props.headerOnly) && settingStore.settings.kanbanQuadrantMode && quadrantSharedSort) {
+    quadrantSharedSort.value = k;
+  } else {
+    localSortKey.value = k;
+  }
 }
 
 const sortOptions = computed<DropdownOption[]>(() => [
@@ -291,7 +318,7 @@ const sortedDisplaySheet = computed(() => {
   }
 
   function compareActivities(a: Activity, b: Activity): number {
-    const mode = sectionSortKey.value;
+    const mode = sortKeyForCompare();
     if (mode === "rank") {
       return tieBreak(a, b);
     }
@@ -612,6 +639,11 @@ function handleCollapseParent(parentId: number) {
   flex: 1 1 auto;
   min-height: 0;
   overscroll-behavior-y: contain;
+}
+
+/* 象限格内列表：避免 stable 预留滚动条槽导致整行相对标题偏左 */
+.section-container--quadrant-dense .section-content-container {
+  scrollbar-gutter: auto;
 }
 
 :deep(.n-button.section-button) {

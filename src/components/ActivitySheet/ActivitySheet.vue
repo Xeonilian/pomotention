@@ -49,13 +49,31 @@
     </template>
 
     <template v-else>
-      <div class="quadrant-toolbar">
-        <n-button text type="primary" size="small" @click="settingStore.exitKanbanQuadrantMode()">退出四象限</n-button>
+      <div class="activity-quadrant-head-wrap">
+        <ActivitySection
+          header-only
+          :filter-options="filterOptions"
+          :display-sheet="[]"
+          :get-countdown-class="getCountdownClass"
+          :activity-id="selectedActivityId"
+          :current-filter="firstKanbanSection?.filterKey ?? 'all'"
+          :is-add-button="false"
+          :is-remove-button="false"
+          :section-id="1"
+          :search="firstKanbanSection?.search ?? ''"
+          :active-id="activeId"
+          @add-section="addSection"
+          @remove-section="removeSection"
+          @focus-row="handleFocusRow"
+          @filter="(filterKey) => handleSectionFilter(firstSectionIdx, filterKey)"
+          @update:search="(val) => handleSectionSearch(1, val)"
+          @focus-search="handleFocusSearch"
+        />
       </div>
       <div class="activity-quadrant-grid">
-        <ActivityQuadrant title="重要" quadrant-key="importantOnly" grid-area="imp">
+        <ActivityQuadrant quadrant-key="importantOnly" grid-area="imp">
           <ActivitySection
-            hide-section-header
+            list-only
             :filter-options="filterOptions"
             :display-sheet="quadrantImportantOnly"
             :get-countdown-class="getCountdownClass"
@@ -74,9 +92,9 @@
             @focus-search="handleFocusSearch"
           />
         </ActivityQuadrant>
-        <ActivityQuadrant title="紧急重要" quadrant-key="urgentImportant" grid-area="both">
+        <ActivityQuadrant quadrant-key="urgentImportant" grid-area="both">
           <ActivitySection
-            hide-section-header
+            list-only
             :filter-options="filterOptions"
             :display-sheet="quadrantUrgentImportant"
             :get-countdown-class="getCountdownClass"
@@ -95,9 +113,9 @@
             @focus-search="handleFocusSearch"
           />
         </ActivityQuadrant>
-        <ActivityQuadrant title="紧急" quadrant-key="urgentOnly" grid-area="urg">
+        <ActivityQuadrant quadrant-key="urgentOnly" grid-area="urg">
           <ActivitySection
-            hide-section-header
+            list-only
             :filter-options="filterOptions"
             :display-sheet="quadrantUrgentOnly"
             :get-countdown-class="getCountdownClass"
@@ -116,9 +134,9 @@
             @focus-search="handleFocusSearch"
           />
         </ActivityQuadrant>
-        <ActivityQuadrant title="不紧急不重要" quadrant-key="neither" grid-area="nor">
+        <ActivityQuadrant quadrant-key="neither" grid-area="nor">
           <ActivitySection
-            hide-section-header
+            list-only
             :filter-options="filterOptions"
             :display-sheet="quadrantNeither"
             :get-countdown-class="getCountdownClass"
@@ -160,12 +178,14 @@ import ActivityQuadrant from "@/components/ActivitySheet/ActivityQuadrant.vue";
 import type { Activity, ActivitySectionConfig } from "@/core/types/Activity";
 import {
   ACTIVITY_QUADRANT_DRAG_END_KEY,
+  ACTIVITY_QUADRANT_SORT_KEY,
   applyQuadrantToActivity,
   findQuadrantKeyFromPoint,
   filterActivitiesForQuadrantKey,
+  type ActivitySectionSortKey,
   type QuadrantDragEndPayload,
 } from "@/core/activityQuadrant";
-import { NPopover, NButton } from "naive-ui";
+import { NPopover } from "naive-ui";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useDataStore } from "@/stores/useDataStore";
 import { storeToRefs } from "pinia";
@@ -225,6 +245,10 @@ const filterOptions = [
 // Kanban多个section参数管理
 const settingStore = useSettingStore();
 
+/** 象限模式下列头 + 四列表格共用排序 */
+const quadrantSharedSortKey = ref<ActivitySectionSortKey>("rank");
+provide(ACTIVITY_QUADRANT_SORT_KEY, quadrantSharedSortKey);
+
 function handleQuadrantDragEnd(payload: QuadrantDragEndPayload) {
   if (!settingStore.settings.kanbanQuadrantMode) return;
   const key = findQuadrantKeyFromPoint(payload.clientX, payload.clientY);
@@ -254,12 +278,16 @@ const firstSectionIdx = computed(() => {
   return idx >= 0 ? idx : 0;
 });
 
-const quadrantBasePool = computed(() => activeActivities.value.filter((item) => item.status !== "cancelled"));
+const quadrantPreFiltered = computed(() => {
+  const sec = firstKanbanSection.value;
+  if (!sec) return [];
+  return filteredBySection(sec);
+});
 
-const quadrantImportantOnly = computed(() => filterActivitiesForQuadrantKey(quadrantBasePool.value, "importantOnly"));
-const quadrantUrgentImportant = computed(() => filterActivitiesForQuadrantKey(quadrantBasePool.value, "urgentImportant"));
-const quadrantUrgentOnly = computed(() => filterActivitiesForQuadrantKey(quadrantBasePool.value, "urgentOnly"));
-const quadrantNeither = computed(() => filterActivitiesForQuadrantKey(quadrantBasePool.value, "neither"));
+const quadrantImportantOnly = computed(() => filterActivitiesForQuadrantKey(quadrantPreFiltered.value, "importantOnly"));
+const quadrantUrgentImportant = computed(() => filterActivitiesForQuadrantKey(quadrantPreFiltered.value, "urgentImportant"));
+const quadrantUrgentOnly = computed(() => filterActivitiesForQuadrantKey(quadrantPreFiltered.value, "urgentOnly"));
+const quadrantNeither = computed(() => filterActivitiesForQuadrantKey(quadrantPreFiltered.value, "neither"));
 
 // 错误提示弹窗相关
 const showPopover = ref(false);
@@ -372,7 +400,7 @@ function handleSectionFilter(idx: number, filterKey: string) {
 
 // 搜索
 function handleSectionSearch(id: number, val: string) {
-  const section = sections.value.find((s) => s.id === id);
+  const section = settingStore.settings.kanbanSetting.find((s) => s.id === id);
   if (section) {
     section.search = val;
     console.log(val);
@@ -578,9 +606,10 @@ function getCountdownClass(dueDate: number | undefined | null): string {
   }
 }
 
-.quadrant-toolbar {
+.activity-quadrant-head-wrap {
   flex-shrink: 0;
-  padding: 4px 0 8px;
+  width: 100%;
+  min-width: 0;
 }
 
 .activity-quadrant-grid {
@@ -588,6 +617,8 @@ function getCountdownClass(dueDate: number | undefined | null): string {
   min-height: 0;
   display: grid;
   gap: 8px;
+  margin-bottom: 8px;
+  margin-top: 4px;
 }
 
 @media (min-width: 651px) {

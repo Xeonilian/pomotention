@@ -1,12 +1,27 @@
 /**
- * 活动四象限：仅用 Urgent(1)、Important(2) 两枚标签划分。
+ * 活动四象限：仅用 Urgent(85)、Important(126) 两枚标签划分。
  */
-import type { InjectionKey } from "vue";
+import type { InjectionKey, Ref } from "vue";
 import type { Activity } from "@/core/types/Activity";
 import type { useDataStore } from "@/stores/useDataStore";
 import { TAG_ID_IMPORTANT, TAG_ID_URGENT } from "@/core/constants";
 
 export type ActivityQuadrantKey = "urgentImportant" | "importantOnly" | "urgentOnly" | "neither";
+
+/** 与 ActivitySection 排序下拉一致，象限模式四格共享同一排序态 */
+export type ActivitySectionSortKey = "rank" | "due" | "type" | "tag";
+
+export type KanbanQuadrantUiLabels = Record<ActivityQuadrantKey, string>;
+
+export const DEFAULT_KANBAN_QUADRANT_UI_LABELS: KanbanQuadrantUiLabels = {
+  importantOnly: "Important, not Urgent",
+  urgentImportant: "Urgent & Important",
+  urgentOnly: "Urgent, not Important",
+  neither: "Later",
+};
+
+/** ActivitySheet provide → 象限下列头-only / list-only 的 ActivitySection 共用排序 */
+export const ACTIVITY_QUADRANT_SORT_KEY: InjectionKey<Ref<ActivitySectionSortKey>> = Symbol("activityQuadrantSort");
 
 const QUADRANT_KEYS: ActivityQuadrantKey[] = ["urgentImportant", "importantOnly", "urgentOnly", "neither"];
 
@@ -22,8 +37,7 @@ export type QuadrantDragEndPayload = {
 };
 
 /** ActivitySheet provide → ActivitySection inject，松手时尝试写入象限标签 */
-export const ACTIVITY_QUADRANT_DRAG_END_KEY: InjectionKey<(payload: QuadrantDragEndPayload) => void> =
-  Symbol("activityQuadrantDragEnd");
+export const ACTIVITY_QUADRANT_DRAG_END_KEY: InjectionKey<(payload: QuadrantDragEndPayload) => void> = Symbol("activityQuadrantDragEnd");
 
 export function getActivityQuadrantKey(activity: Activity): ActivityQuadrantKey {
   const ids = activity.tagIds ?? [];

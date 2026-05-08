@@ -6,6 +6,8 @@ import { PomodoroDurations, TimerStyleDefaults, ViewType } from "../core/constan
 import { getDefaultPriorityCategoryShowInRank } from "@/core/priorityCategories";
 import { ActivitySectionConfig } from "@/core/types/Activity";
 import { ACTIVITY_QUADRANT_PANEL_WIDTH_PX } from "@/core/constants";
+import type { KanbanQuadrantUiLabels } from "@/core/activityQuadrant";
+import { DEFAULT_KANBAN_QUADRANT_UI_LABELS } from "@/core/activityQuadrant";
 import { SoundType } from "@/core/sounds";
 import { AiProfile } from "@/core/types/AiProfile";
 import { useDevice } from "@/composables/useDevice";
@@ -27,6 +29,8 @@ export interface GlobalSettings {
   kanbanQuadrantMode: boolean;
   /** 进入象限前的布局快照，退出时还原 */
   kanbanQuadrantSnapshot: { rightWidth: number; kanbanSetting: ActivitySectionConfig[] } | null;
+  /** 四象限格子标题（可编辑） */
+  kanbanQuadrantUi: KanbanQuadrantUiLabels;
   showPomodoro: boolean;
   showSchedule: boolean;
   showPlanner: boolean;
@@ -91,6 +95,7 @@ const defaultSettings: GlobalSettings = {
   ], // showTags 不再使用，仅在 ActivitySection.vue 中使用 rowTagStripVisible 替代
   kanbanQuadrantMode: false,
   kanbanQuadrantSnapshot: null,
+  kanbanQuadrantUi: { ...DEFAULT_KANBAN_QUADRANT_UI_LABELS },
   showPomodoro: isMobile.value ? false : true,
   showSchedule: isMobile.value ? false : true,
   showPlanner: true,
