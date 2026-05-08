@@ -64,7 +64,6 @@ function onTitleUpdate(val: string) {
 }
 
 .activity-quadrant__title-input :deep(.n-input__input-el) {
-  font-size: 12px;
   font-weight: 500;
   text-align: left;
   --n-text-color: var(--color-text-secondary);
