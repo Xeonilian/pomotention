@@ -2,13 +2,25 @@
 <template>
   <div class="activity-quadrant" :data-quadrant="quadrantKey" :style="{ gridArea }">
     <div class="activity-quadrant__title">
+      <div
+        v-if="!titleEditing"
+        class="activity-quadrant__title-readonly"
+        :class="{ 'activity-quadrant__title-readonly--muted': !customTitle }"
+        @dblclick="openTitleEdit"
+      >
+        {{ titleShow }}
+      </div>
       <n-input
+        v-else
+        ref="titleInputRef"
         size="small"
         :bordered="false"
         :value="settingStore.settings.kanbanQuadrantUi[quadrantKey]"
         :placeholder="DEFAULT_KANBAN_QUADRANT_UI_LABELS[quadrantKey]"
         class="activity-quadrant__title-input"
         @update:value="onTitleUpdate"
+        @blur="titleEditing = false"
+        @keydown.enter.prevent="onTitleEnter"
       />
     </div>
     <div class="activity-quadrant__body">
@@ -18,7 +30,9 @@
 </template>
 
 <script setup lang="ts">
+import { computed, nextTick, ref } from "vue";
 import { NInput } from "naive-ui";
+import type { InputInst } from "naive-ui";
 import type { ActivityQuadrantKey } from "@/core/activityQuadrant";
 import { DEFAULT_KANBAN_QUADRANT_UI_LABELS } from "@/core/activityQuadrant";
 import { useSettingStore } from "@/stores/useSettingStore";
@@ -29,9 +43,23 @@ const props = defineProps<{
 }>();
 
 const settingStore = useSettingStore();
+const titleEditing = ref(false);
+const titleInputRef = ref<InputInst | null>(null);
+
+const customTitle = computed(() => settingStore.settings.kanbanQuadrantUi[props.quadrantKey]?.trim() ?? "");
+const titleShow = computed(() => customTitle.value || DEFAULT_KANBAN_QUADRANT_UI_LABELS[props.quadrantKey]);
 
 function onTitleUpdate(val: string) {
   settingStore.settings.kanbanQuadrantUi[props.quadrantKey] = val;
+}
+
+function openTitleEdit() {
+  titleEditing.value = true;
+  nextTick(() => titleInputRef.value?.focus());
+}
+
+function onTitleEnter() {
+  titleInputRef.value?.blur();
 }
 </script>
 
@@ -55,6 +83,22 @@ function onTitleUpdate(val: string) {
   align-items: center;
   padding: 2px 0px;
   width: 100%;
+}
+
+.activity-quadrant__title-readonly {
+  width: 100%;
+  min-height: 24px;
+  line-height: 24px;
+  font-weight: 500;
+  font-size: 12px;
+  text-align: left;
+  padding-left: 10px;
+  color: var(--color-text-secondary);
+  user-select: none;
+}
+
+.activity-quadrant__title-readonly--muted {
+  opacity: 0.85;
 }
 
 .activity-quadrant__title-input {

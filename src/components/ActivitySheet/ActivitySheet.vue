@@ -70,8 +70,14 @@
           @focus-search="handleFocusSearch"
         />
       </div>
-      <div class="activity-quadrant-grid">
-        <ActivityQuadrant quadrant-key="importantOnly" grid-area="imp">
+      <div
+        ref="quadrantGridRef"
+        class="activity-quadrant-grid"
+        :style="quadrantGridSoloStyle"
+        @focusin.capture="onQuadrantGridFocusIn"
+        @focusout.capture="onQuadrantGridFocusOut"
+      >
+        <ActivityQuadrant v-show="quadrantVisible('importantOnly')" quadrant-key="importantOnly" grid-area="imp">
           <ActivitySection
             list-only
             :filter-options="filterOptions"
@@ -92,7 +98,7 @@
             @focus-search="handleFocusSearch"
           />
         </ActivityQuadrant>
-        <ActivityQuadrant quadrant-key="urgentImportant" grid-area="both">
+        <ActivityQuadrant v-show="quadrantVisible('urgentImportant')" quadrant-key="urgentImportant" grid-area="both">
           <ActivitySection
             list-only
             :filter-options="filterOptions"
@@ -113,7 +119,7 @@
             @focus-search="handleFocusSearch"
           />
         </ActivityQuadrant>
-        <ActivityQuadrant quadrant-key="urgentOnly" grid-area="urg">
+        <ActivityQuadrant v-show="quadrantVisible('urgentOnly')" quadrant-key="urgentOnly" grid-area="urg">
           <ActivitySection
             list-only
             :filter-options="filterOptions"
@@ -134,7 +140,7 @@
             @focus-search="handleFocusSearch"
           />
         </ActivityQuadrant>
-        <ActivityQuadrant quadrant-key="neither" grid-area="nor">
+        <ActivityQuadrant v-show="quadrantVisible('neither')" quadrant-key="neither" grid-area="nor">
           <ActivitySection
             list-only
             :filter-options="filterOptions"
@@ -171,7 +177,7 @@
 // ========================
 // 依赖导入
 // ========================
-import { ref, computed, onMounted, provide } from "vue";
+import { ref, computed, onMounted, onUnmounted, provide, watch } from "vue";
 import ActivityButtons from "@/components/ActivitySheet/ActivityButtons.vue";
 import ActivitySection from "@/components/ActivitySheet/ActivitySection.vue";
 import ActivityQuadrant from "@/components/ActivitySheet/ActivityQuadrant.vue";
@@ -182,6 +188,8 @@ import {
   applyQuadrantToActivity,
   findQuadrantKeyFromPoint,
   filterActivitiesForQuadrantKey,
+  isActivityQuadrantKey,
+  type ActivityQuadrantKey,
   type ActivitySectionSortKey,
   type QuadrantDragEndPayload,
 } from "@/core/activityQuadrant";
@@ -207,7 +215,127 @@ const {
 } = storeToRefs(dataStore);
 const { activityList } = storeToRefs(dataStore);
 const dateService = dataStore.dateService;
-const { isMobile } = useDevice();
+const { isMobile, width } = useDevice();
+
+/** 窄屏象限内输入聚焦时仅保留该格，腾出键盘可用高度；与样式断点 max-width:650px 一致 */
+const quadrantGridRef = ref<HTMLElement | null>(null);
+const soloQuadrantKey = ref<ActivityQuadrantKey | null>(null);
+let soloFocusSyncTimer: ReturnType<typeof setTimeout> | null = null;
+
+const SOLO_FOCUS_SYNC_MS = 160;
+
+function isEditableFocusTarget(el: HTMLElement): boolean {
+  if (el.closest("[data-quadrant-solo-ignore]")) return false;
+  if (el.isContentEditable) return true;
+  const tag = el.tagName;
+  if (tag === "TEXTAREA" || tag === "SELECT") return true;
+  if (tag !== "INPUT") return false;
+  const type = (el as HTMLInputElement).type?.toLowerCase() ?? "text";
+  const skip = new Set(["button", "checkbox", "radio", "submit", "reset", "image", "file", "hidden", "range", "color"]);
+  return !skip.has(type);
+}
+
+function scheduleSoloQuadrantSync() {
+  if (soloFocusSyncTimer) clearTimeout(soloFocusSyncTimer);
+  soloFocusSyncTimer = setTimeout(() => {
+    soloFocusSyncTimer = null;
+    syncSoloQuadrantFromActiveElement();
+  }, SOLO_FOCUS_SYNC_MS);
+}
+
+function cancelSoloQuadrantSync() {
+  if (soloFocusSyncTimer) {
+    clearTimeout(soloFocusSyncTimer);
+    soloFocusSyncTimer = null;
+  }
+}
+
+function syncSoloQuadrantFromActiveElement() {
+  if (width.value > 650 || !settingStore.settings.kanbanQuadrantMode) {
+    soloQuadrantKey.value = null;
+    return;
+  }
+  const root = quadrantGridRef.value;
+  if (!root) {
+    soloQuadrantKey.value = null;
+    return;
+  }
+  const active = document.activeElement;
+  if (!active || active === document.body || !(active instanceof HTMLElement)) {
+    soloQuadrantKey.value = null;
+    return;
+  }
+  if (!isEditableFocusTarget(active)) {
+    soloQuadrantKey.value = null;
+    return;
+  }
+  if (!root.contains(active)) {
+    soloQuadrantKey.value = null;
+    return;
+  }
+  const quad = active.closest(".activity-quadrant");
+  if (!quad || !root.contains(quad)) {
+    soloQuadrantKey.value = null;
+    return;
+  }
+  const attr = quad.getAttribute("data-quadrant");
+  if (attr && isActivityQuadrantKey(attr)) {
+    soloQuadrantKey.value = attr;
+  } else {
+    soloQuadrantKey.value = null;
+  }
+}
+
+function onQuadrantGridFocusIn(e: FocusEvent) {
+  if (width.value > 650 || !settingStore.settings.kanbanQuadrantMode) return;
+  cancelSoloQuadrantSync();
+  const t = e.target;
+  if (!(t instanceof HTMLElement)) return;
+  if (!isEditableFocusTarget(t)) return;
+  const quad = t.closest(".activity-quadrant");
+  if (!quad || !quadrantGridRef.value?.contains(quad)) return;
+  const attr = quad.getAttribute("data-quadrant");
+  if (attr && isActivityQuadrantKey(attr)) {
+    soloQuadrantKey.value = attr;
+  }
+}
+
+function onQuadrantGridFocusOut() {
+  scheduleSoloQuadrantSync();
+}
+
+function quadrantVisible(key: ActivityQuadrantKey): boolean {
+  if (width.value > 650) return true;
+  if (!soloQuadrantKey.value) return true;
+  return soloQuadrantKey.value === key;
+}
+
+const quadrantGridSoloStyle = computed(() => {
+  if (!soloQuadrantKey.value || width.value > 650) return {};
+  const areaMap: Record<ActivityQuadrantKey, string> = {
+    importantOnly: "imp",
+    urgentImportant: "both",
+    urgentOnly: "urg",
+    neither: "nor",
+  };
+  const a = areaMap[soloQuadrantKey.value];
+  return {
+    gridTemplateColumns: "1fr",
+    gridTemplateRows: "minmax(0, 1fr)",
+    gridTemplateAreas: `"${a}"`,
+  };
+});
+
+watch(
+  () => settingStore.settings.kanbanQuadrantMode,
+  (on) => {
+    if (!on) soloQuadrantKey.value = null;
+  },
+);
+
+watch(width, (w) => {
+  if (w > 650) soloQuadrantKey.value = null;
+});
 
 /** activeId 与 selectedActivityId 经 Tracker 同步后可能只存其一，业务上需统一解析 */
 const sheetPrimaryActivityId = computed(() => {
@@ -266,6 +394,10 @@ onMounted(() => {
   if (settingStore.settings.kanbanQuadrantMode && !settingStore.settings.kanbanQuadrantSnapshot) {
     settingStore.settings.kanbanQuadrantMode = false;
   }
+});
+
+onUnmounted(() => {
+  cancelSoloQuadrantSync();
 });
 // 响应式可直接用
 const sections = computed(() => settingStore.settings.kanbanSetting.filter((s) => s.show));
@@ -619,12 +751,14 @@ function getCountdownClass(dueDate: number | undefined | null): string {
   gap: 6px;
   margin-bottom: 8px;
   margin-top: 2px;
+  /* 勿在此层做 overflow-y: auto：窄屏 .right 已 overflow-y:hidden（见 HomeView），再嵌套纵滚会触发 iOS 异常 scrollExtent、无限条与灰带；靠 minmax(0,1fr) 压缩行 + 象限内 .section-content-container 滚动 */
+  overflow: hidden;
 }
 
 @media (min-width: 651px) {
   .activity-quadrant-grid {
     grid-template-columns: 1fr 1fr;
-    grid-template-rows: 1fr 1fr;
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
     grid-template-areas:
       "imp both"
       "urg nor";
@@ -634,7 +768,7 @@ function getCountdownClass(dueDate: number | undefined | null): string {
 @media (max-width: 650px) {
   .activity-quadrant-grid {
     grid-template-columns: 1fr;
-    grid-template-rows: repeat(4, minmax(120px, 1fr));
+    grid-template-rows: repeat(4, minmax(0, 1fr));
     grid-template-areas:
       "both"
       "imp"
