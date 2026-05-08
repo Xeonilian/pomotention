@@ -90,6 +90,7 @@ const quadrantDueDayPrev = new Map<number, DueDayBucket>();
  * 四象限模式：按主到期日与 ActivitySheet.getCountdownClass 同源口径同步象限标签。
  * 凡改动 tagIds 均经 dataStore.setActivityTags / applyQuadrantToActivity，与 store 内 lastModified、synced、持久化、防抖上传一致。
  * - 到期日从非今天变为今天：追加 TAG_ID_URGENT（85）；用户当日手动去掉 urgent 后不会反复补回。
+ * - 到期日从当天改为未来或清空主到期：去掉 TAG_ID_URGENT（保留 126）；与「当天→过期」整组进 Later 分支区分。
  * - 主到期已过期（diff&lt;0，即 countdown-boom）：若有 urgent/important，则写入 Later（去掉 85、126）；手动改日期同样会触发。
  */
 export function syncQuadrantTagsFromPrimaryDue(store: DataStore, activities: readonly Activity[]): void {
@@ -107,6 +108,13 @@ export function syncQuadrantTagsFromPrimaryDue(store: DataStore, activities: rea
       const ids = a.tagIds ?? [];
       if (ids.includes(TAG_ID_URGENT) || ids.includes(TAG_ID_IMPORTANT)) {
         applyQuadrantToActivity(store, a.id, "neither");
+      }
+    } else if (before === "today" && (bucket === "future" || bucket === "none")) {
+      // 主到期离开「当天」落到未来或无日期：撤销 urgent（日程 S 改约时常用）
+      const ids = a.tagIds ?? [];
+      if (ids.includes(TAG_ID_URGENT)) {
+        const next = ids.filter((id) => id !== TAG_ID_URGENT);
+        store.setActivityTags(a.id, next.length ? next : []);
       }
     } else if (bucket === "today" && before !== "today" && !(a.tagIds?.includes(TAG_ID_URGENT))) {
       const next = [...(a.tagIds ?? []), TAG_ID_URGENT];
