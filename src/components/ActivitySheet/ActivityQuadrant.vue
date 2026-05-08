@@ -83,6 +83,8 @@ function onTitleEnter() {
   align-items: center;
   padding: 2px 0px;
   width: 100%;
+  /* 与下列表区 scrollbar-gutter 对齐，避免标题与行文本左右参差 */
+  scrollbar-gutter: stable;
 }
 
 .activity-quadrant__title-readonly {
@@ -126,8 +128,13 @@ function onTitleEnter() {
   display: flex;
   flex-direction: column;
   /* 与标题区左右 padding 对齐，避免列表行视觉窄一截 */
-  padding: 0 6px;
+  padding: 0 2px 0 6px;
   box-sizing: border-box;
   min-width: 0;
+}
+
+/* slot 内 ActivitySection 列表滚轴占位，避免滚动条显隐时整格宽度抖动 */
+.activity-quadrant__body :deep(.section-content-container) {
+  scrollbar-gutter: stable;
 }
 </style>

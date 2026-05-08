@@ -259,11 +259,7 @@
     </div>
 
     <!-- tag显示 -->
-    <div
-      v-if="item.tagIds && item.tagIds.length > 0 && showTagStrip"
-      class="tag-content"
-      :class="{ 'child-activity-tag': item.parentId }"
-    >
+    <div v-if="item.tagIds && item.tagIds.length > 0 && showTagStrip" class="tag-content" :class="{ 'child-activity-tag': item.parentId }">
       <TagRenderer
         :tag-ids="item.tagIds"
         :isCloseable="true"
@@ -293,9 +289,7 @@ export type ActivitySectionRowInject = {
   onSectionFieldBlur: () => void;
 };
 
-export const activitySectionRowInjectKey: InjectionKey<ActivitySectionRowInject> = Symbol(
-  "activitySectionRowInject",
-);
+export const activitySectionRowInjectKey: InjectionKey<ActivitySectionRowInject> = Symbol("activitySectionRowInject");
 </script>
 
 <script setup lang="ts">
@@ -494,6 +488,7 @@ function handleInputKeydown(event: KeyboardEvent) {
 }
 
 function handleTagIconClick() {
+  if (!tagSuffixIconHighlight.value) return;
   const map = settingStore.settings.activityRowTagStripVisible;
   const cur = map[props.item.id] !== false;
   if (cur) map[props.item.id] = false;

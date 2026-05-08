@@ -632,11 +632,6 @@ function handleCollapseParent(parentId: number) {
   overscroll-behavior-y: contain;
 }
 
-/* 象限格内列表：避免 stable 预留滚动条槽导致整行相对标题偏左 */
-.section-container--quadrant-dense .section-content-container {
-  scrollbar-gutter: auto;
-}
-
 :deep(.n-button.section-button) {
   --n-border: none !important;
   --n-icon-size: 20px !important;
