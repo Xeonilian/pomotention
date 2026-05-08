@@ -238,6 +238,13 @@ export const POMODORO_COLORS_DARK: Record<string, string> = {
  * (包括 Naive UI 的 Button 和原生 div) 中都能被正确解析，
  * 避免因组件内部的 JavaScript 颜色计算逻辑而引发的兼容性问题。
  */
+/** Eisenhower / 四象限：与 DEFAULT_TAGS 中 id 对应，勿随意改动 */
+export const TAG_ID_URGENT = 1;
+export const TAG_ID_IMPORTANT = 2;
+
+/** 进入四象限时右侧栏宽度（约双列 250px + gap） */
+export const ACTIVITY_QUADRANT_PANEL_WIDTH_PX = 508;
+
 export const DEFAULT_TAGS: Tag[] = [
   // --- 1. By Priority ---
   {

@@ -2,9 +2,9 @@
   Component: ActivitySection.vue 
 -->
 <template>
-  <div class="section-container">
+  <div class="section-container" :class="{ 'section-container--quadrant-dense': hideSectionHeader }">
     <!-- 筛选区 -->
-    <div class="section-header">
+    <div v-if="!hideSectionHeader" class="section-header">
       <n-input
         ref="searchInputRef"
         :placeholder="currentFilterLabel"
@@ -43,6 +43,19 @@
         </template>
       </n-input>
 
+      <n-button
+        v-if="props.sectionId === 1 && !settingStore.settings.kanbanQuadrantMode"
+        large
+        type="default"
+        title="四象限（紧急/重要）"
+        quaternary
+        class="section-button"
+        @click="settingStore.enterKanbanQuadrantMode()"
+      >
+        <template #icon>
+          <n-icon><Grid24Regular /></n-icon>
+        </template>
+      </n-button>
       <n-button
         v-if="isAddButton"
         large
@@ -94,13 +107,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, provide, ref, h } from "vue";
+import { computed, inject, nextTick, provide, ref, h } from "vue";
 import { NInput, NIcon, NDropdown, NButton } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
 import {
   ArrowSortUp24Filled,
   DocumentTableSearch24Regular,
   ColumnArrowRight20Regular,
+  Grid24Regular,
   TableDeleteColumn20Regular,
   List24Filled,
   CalendarClock24Regular,
@@ -112,6 +126,7 @@ import { useSettingStore } from "@/stores/useSettingStore";
 import { useTagStore } from "@/stores/useTagStore";
 import { useActivityTagEditor } from "@/composables/useActivityTagEditor";
 import { useActivityDrag } from "@/composables/useActivityDrag";
+import { ACTIVITY_QUADRANT_DRAG_END_KEY } from "@/core/activityQuadrant";
 import { useDevice } from "@/composables/useDevice";
 import ActivityRow, { activitySectionRowInjectKey } from "./ActivityRow.vue";
 import type { InputInst } from "naive-ui";
@@ -130,6 +145,8 @@ const props = defineProps<{
   isRemoveButton: boolean;
   sectionId: number;
   search: string;
+  /** 四象限内嵌：隐藏列头筛选/排序条 */
+  hideSectionHeader?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -320,7 +337,19 @@ const sortedDisplaySheet = computed(() => {
   return result;
 });
 
-const dragHandler = useActivityDrag(() => sortedDisplaySheet.value);
+const onQuadrantDragEndFromParent = inject(ACTIVITY_QUADRANT_DRAG_END_KEY, undefined);
+
+const dragHandler = useActivityDrag(() => sortedDisplaySheet.value, {
+  onDragEndBeforeClear: onQuadrantDragEndFromParent
+    ? (p) =>
+        onQuadrantDragEndFromParent({
+          event: p.event,
+          activity: p.activity,
+          clientX: p.clientX,
+          clientY: p.clientY,
+        })
+    : undefined,
+});
 
 // ======================== 列表：父子折叠态、按 id 查找（番茄切换类型等） ========================
 const collapsedParentIds = computed(() => settingStore.settings.collapsedActivityIds);
@@ -556,6 +585,11 @@ function handleCollapseParent(parentId: number) {
   overflow-x: hidden;
   margin-left: 4px;
   margin-right: 2px;
+}
+
+.section-container--quadrant-dense {
+  margin-left: 0;
+  margin-right: 0;
 }
 
 .section-header {

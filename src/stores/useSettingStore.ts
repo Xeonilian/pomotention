@@ -5,6 +5,7 @@ import { STORAGE_KEYS } from "../core/constants";
 import { PomodoroDurations, TimerStyleDefaults, ViewType } from "../core/constants";
 import { getDefaultPriorityCategoryShowInRank } from "@/core/priorityCategories";
 import { ActivitySectionConfig } from "@/core/types/Activity";
+import { ACTIVITY_QUADRANT_PANEL_WIDTH_PX } from "@/core/constants";
 import { SoundType } from "@/core/sounds";
 import { AiProfile } from "@/core/types/AiProfile";
 import { useDevice } from "@/composables/useDevice";
@@ -22,6 +23,10 @@ export interface GlobalSettings {
   /** 看板等活动行标签条：缺省显示，仅在为 false 时隐藏（按 activityId） */
   activityRowTagStripVisible: Record<number, boolean>;
   kanbanSetting: ActivitySectionConfig[];
+  /** 第一列专属：四象限视图（紧急/重要 标签 Eisenhower） */
+  kanbanQuadrantMode: boolean;
+  /** 进入象限前的布局快照，退出时还原 */
+  kanbanQuadrantSnapshot: { rightWidth: number; kanbanSetting: ActivitySectionConfig[] } | null;
   showPomodoro: boolean;
   showSchedule: boolean;
   showPlanner: boolean;
@@ -84,6 +89,8 @@ const defaultSettings: GlobalSettings = {
     { id: 5, filterKey: "schedule", search: "", show: false, showTags: false },
     { id: 6, filterKey: "cancelled", search: "", show: false, showTags: false },
   ], // showTags 不再使用，仅在 ActivitySection.vue 中使用 rowTagStripVisible 替代
+  kanbanQuadrantMode: false,
+  kanbanQuadrantSnapshot: null,
   showPomodoro: isMobile.value ? false : true,
   showSchedule: isMobile.value ? false : true,
   showPlanner: true,
@@ -279,6 +286,46 @@ export const useSettingStore = defineStore("setting", () => {
    * 删除指定 ID 的 AI 配置。
    * - 如果删除的是当前激活配置，则把 activeId 切到“第一个可用 ID”，若没有则置为 -1（未选择）。
    */
+  /**
+   * 进入四象限：快照当前看板 → 隐藏第 2–6 列 → 加宽右栏。
+   */
+  function enterKanbanQuadrantMode() {
+    const s = settings.value;
+    if (s.kanbanQuadrantMode) return;
+
+    s.kanbanQuadrantSnapshot = {
+      rightWidth: s.rightWidth,
+      kanbanSetting: JSON.parse(JSON.stringify(s.kanbanSetting)) as ActivitySectionConfig[],
+    };
+
+    for (const sec of s.kanbanSetting) {
+      if (sec.id !== 1) sec.show = false;
+    }
+
+    s.kanbanQuadrantMode = true;
+    s.rightWidth = ACTIVITY_QUADRANT_PANEL_WIDTH_PX;
+  }
+
+  /** 退出四象限：还原快照 */
+  function exitKanbanQuadrantMode() {
+    const s = settings.value;
+    if (!s.kanbanQuadrantMode) return;
+
+    const snap = s.kanbanQuadrantSnapshot;
+    if (snap) {
+      s.rightWidth = snap.rightWidth;
+      s.kanbanSetting = JSON.parse(JSON.stringify(snap.kanbanSetting)) as ActivitySectionConfig[];
+    }
+
+    s.kanbanQuadrantSnapshot = null;
+    s.kanbanQuadrantMode = false;
+  }
+
+  function toggleKanbanQuadrantMode() {
+    if (settings.value.kanbanQuadrantMode) exitKanbanQuadrantMode();
+    else enterKanbanQuadrantMode();
+  }
+
   function removeAiProfile(id: number) {
     const ai = settings.value.ai;
     if (!ai?.profiles || !(id in ai.profiles)) return;
@@ -304,5 +351,8 @@ export const useSettingStore = defineStore("setting", () => {
     setActiveAiProfile,
     upsertAiProfile,
     removeAiProfile,
+    enterKanbanQuadrantMode,
+    exitKanbanQuadrantMode,
+    toggleKanbanQuadrantMode,
   };
 });
