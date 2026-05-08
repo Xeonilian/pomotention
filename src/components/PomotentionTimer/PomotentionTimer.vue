@@ -408,6 +408,6 @@ function handlePomoSeqRunning(status: boolean) {
   /* --phone-scale 由脚本按 visualViewport 宽高双轴写入 */
   transform: scale(var(--phone-scale, 1));
   transform-origin: center center;
-  padding-bottom: calc(env(safe-area-inset-bottom));
+  padding-bottom: env(safe-area-inset-bottom);
 }
 </style>

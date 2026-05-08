@@ -184,11 +184,13 @@ import ActivityQuadrant from "@/components/ActivitySheet/ActivityQuadrant.vue";
 import type { Activity, ActivitySectionConfig } from "@/core/types/Activity";
 import {
   ACTIVITY_QUADRANT_DRAG_END_KEY,
+  ACTIVITY_QUADRANT_SOLO_KEY,
   ACTIVITY_QUADRANT_SORT_KEY,
   applyQuadrantToActivity,
   findQuadrantKeyFromPoint,
   filterActivitiesForQuadrantKey,
   isActivityQuadrantKey,
+  syncQuadrantTagsFromPrimaryDue,
   type ActivityQuadrantKey,
   type ActivitySectionSortKey,
   type QuadrantDragEndPayload,
@@ -216,6 +218,7 @@ const {
 const { activityList } = storeToRefs(dataStore);
 const dateService = dataStore.dateService;
 const { isMobile, width } = useDevice();
+const settingStore = useSettingStore();
 
 /** 窄屏象限内输入聚焦时仅保留该格，腾出键盘可用高度；与样式断点 max-width:650px 一致 */
 const quadrantGridRef = ref<HTMLElement | null>(null);
@@ -248,6 +251,12 @@ function cancelSoloQuadrantSync() {
     clearTimeout(soloFocusSyncTimer);
     soloFocusSyncTimer = null;
   }
+}
+
+/** 窄屏象限：手动退出独奏（恢复四格同屏） */
+function exitQuadrantSolo() {
+  cancelSoloQuadrantSync();
+  soloQuadrantKey.value = null;
 }
 
 function syncSoloQuadrantFromActiveElement() {
@@ -370,9 +379,6 @@ const filterOptions = [
   { label: "已删活动", key: "deleted" },
 ];
 
-// Kanban多个section参数管理
-const settingStore = useSettingStore();
-
 /** 象限模式下列头 + 四列表格共用排序 */
 const quadrantSharedSortKey = ref<ActivitySectionSortKey>("rank");
 provide(ACTIVITY_QUADRANT_SORT_KEY, quadrantSharedSortKey);
@@ -385,6 +391,36 @@ function handleQuadrantDragEnd(payload: QuadrantDragEndPayload) {
 }
 
 provide(ACTIVITY_QUADRANT_DRAG_END_KEY, handleQuadrantDragEnd);
+provide(ACTIVITY_QUADRANT_SOLO_KEY, { soloQuadrantKey, exitSolo: exitQuadrantSolo });
+
+let quadrantDueUrgentInterval: ReturnType<typeof setInterval> | null = null;
+
+/** 四象限：按主到期日同步 urgent / Later（过期进 neither），口径与 ActivityRow + getCountdownClass 一致 */
+function runQuadrantDueUrgentSync() {
+  if (!settingStore.settings.kanbanQuadrantMode) return;
+  syncQuadrantTagsFromPrimaryDue(dataStore, activeActivities.value);
+}
+
+watch(
+  [activeActivities, () => settingStore.settings.kanbanQuadrantMode],
+  () => runQuadrantDueUrgentSync(),
+  { deep: true },
+);
+
+watch(
+  () => settingStore.settings.kanbanQuadrantMode,
+  (quad) => {
+    if (quadrantDueUrgentInterval) {
+      clearInterval(quadrantDueUrgentInterval);
+      quadrantDueUrgentInterval = null;
+    }
+    if (quad) {
+      runQuadrantDueUrgentSync();
+      quadrantDueUrgentInterval = setInterval(runQuadrantDueUrgentSync, 60_000);
+    }
+  },
+  { immediate: true },
+);
 
 onMounted(() => {
   if (settingStore.settings.kanbanSetting.length !== 6) {
@@ -398,6 +434,10 @@ onMounted(() => {
 
 onUnmounted(() => {
   cancelSoloQuadrantSync();
+  if (quadrantDueUrgentInterval) {
+    clearInterval(quadrantDueUrgentInterval);
+    quadrantDueUrgentInterval = null;
+  }
 });
 // 响应式可直接用
 const sections = computed(() => settingStore.settings.kanbanSetting.filter((s) => s.show));
@@ -749,7 +789,7 @@ function getCountdownClass(dueDate: number | undefined | null): string {
   min-height: 0;
   display: grid;
   gap: 6px;
-  margin-bottom: 8px;
+  margin-bottom: calc(env(safe-area-inset-bottom, 12px) - 4px);
   margin-top: 2px;
   /* 勿在此层做 overflow-y: auto：窄屏 .right 已 overflow-y:hidden（见 HomeView），再嵌套纵滚会触发 iOS 异常 scrollExtent、无限条与灰带；靠 minmax(0,1fr) 压缩行 + 象限内 .section-content-container 滚动 */
   overflow: hidden;

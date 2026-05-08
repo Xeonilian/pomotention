@@ -259,7 +259,11 @@
     </div>
 
     <!-- tag显示 -->
-    <div v-if="item.tagIds && item.tagIds.length > 0 && showTagStrip" class="tag-content" :class="{ 'child-activity-tag': item.parentId }">
+    <div
+      v-if="item.tagIds && item.tagIds.length > 0 && tagSuffixIconHighlight && showTagStrip"
+      class="tag-content"
+      :class="{ 'child-activity-tag': item.parentId }"
+    >
       <TagRenderer
         :tag-ids="item.tagIds"
         :isCloseable="true"
