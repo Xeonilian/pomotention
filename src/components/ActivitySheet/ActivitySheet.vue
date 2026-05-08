@@ -218,6 +218,7 @@ const {
 const { activityList } = storeToRefs(dataStore);
 const dateService = dataStore.dateService;
 const { isMobile, width } = useDevice();
+const settingStore = useSettingStore();
 
 /** 窄屏象限内输入聚焦时仅保留该格，腾出键盘可用高度；与样式断点 max-width:650px 一致 */
 const quadrantGridRef = ref<HTMLElement | null>(null);
@@ -377,9 +378,6 @@ const filterOptions = [
   { label: "预约活动", key: "schedule" },
   { label: "已删活动", key: "deleted" },
 ];
-
-// Kanban多个section参数管理
-const settingStore = useSettingStore();
 
 /** 象限模式下列头 + 四列表格共用排序 */
 const quadrantSharedSortKey = ref<ActivitySectionSortKey>("rank");
