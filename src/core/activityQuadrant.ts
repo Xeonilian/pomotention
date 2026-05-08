@@ -39,6 +39,12 @@ export type QuadrantDragEndPayload = {
 /** ActivitySheet provide → ActivitySection inject，松手时尝试写入象限标签 */
 export const ACTIVITY_QUADRANT_DRAG_END_KEY: InjectionKey<(payload: QuadrantDragEndPayload) => void> = Symbol("activityQuadrantDragEnd");
 
+/** ActivitySheet provide → 列头退出窄屏「独奏」仅显示一格 */
+export const ACTIVITY_QUADRANT_SOLO_KEY: InjectionKey<{
+  soloQuadrantKey: Ref<ActivityQuadrantKey | null>;
+  exitSolo: () => void;
+}> = Symbol("activityQuadrantSolo");
+
 export function getActivityQuadrantKey(activity: Activity): ActivityQuadrantKey {
   const ids = activity.tagIds ?? [];
   const hasU = ids.includes(TAG_ID_URGENT);

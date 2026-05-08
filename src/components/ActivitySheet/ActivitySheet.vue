@@ -184,6 +184,7 @@ import ActivityQuadrant from "@/components/ActivitySheet/ActivityQuadrant.vue";
 import type { Activity, ActivitySectionConfig } from "@/core/types/Activity";
 import {
   ACTIVITY_QUADRANT_DRAG_END_KEY,
+  ACTIVITY_QUADRANT_SOLO_KEY,
   ACTIVITY_QUADRANT_SORT_KEY,
   applyQuadrantToActivity,
   findQuadrantKeyFromPoint,
@@ -248,6 +249,12 @@ function cancelSoloQuadrantSync() {
     clearTimeout(soloFocusSyncTimer);
     soloFocusSyncTimer = null;
   }
+}
+
+/** 窄屏象限：手动退出独奏（恢复四格同屏） */
+function exitQuadrantSolo() {
+  cancelSoloQuadrantSync();
+  soloQuadrantKey.value = null;
 }
 
 function syncSoloQuadrantFromActiveElement() {
@@ -385,6 +392,7 @@ function handleQuadrantDragEnd(payload: QuadrantDragEndPayload) {
 }
 
 provide(ACTIVITY_QUADRANT_DRAG_END_KEY, handleQuadrantDragEnd);
+provide(ACTIVITY_QUADRANT_SOLO_KEY, { soloQuadrantKey, exitSolo: exitQuadrantSolo });
 
 onMounted(() => {
   if (settingStore.settings.kanbanSetting.length !== 6) {
@@ -749,7 +757,7 @@ function getCountdownClass(dueDate: number | undefined | null): string {
   min-height: 0;
   display: grid;
   gap: 6px;
-  margin-bottom: 8px;
+  margin-bottom: calc(env(safe-area-inset-bottom, 12px) - 4px);
   margin-top: 2px;
   /* 勿在此层做 overflow-y: auto：窄屏 .right 已 overflow-y:hidden（见 HomeView），再嵌套纵滚会触发 iOS 异常 scrollExtent、无限条与灰带；靠 minmax(0,1fr) 压缩行 + 象限内 .section-content-container 滚动 */
   overflow: hidden;

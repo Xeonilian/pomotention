@@ -85,6 +85,20 @@
           <n-icon><TableDeleteColumn20Regular /></n-icon>
         </template>
       </n-button>
+      <!-- 移动端窄屏象限独奏：一键恢复四格 -->
+      <n-button
+        v-if="showExitQuadrantSoloButton"
+        large
+        type="default"
+        quaternary
+        class="section-button"
+        title="退出独奏"
+        @click="onExitQuadrantSoloClick"
+      >
+        <template #icon>
+          <n-icon><ChevronUpDown24Regular /></n-icon>
+        </template>
+      </n-button>
     </div>
 
     <div v-if="!headerOnly" ref="sectionScrollEl" class="section-content-container">
@@ -119,6 +133,7 @@ import {
   DocumentTableSearch24Regular,
   ColumnArrowRight20Regular,
   Grid24Regular,
+  ChevronUpDown24Regular,
   TableDeleteColumn20Regular,
   List24Filled,
   CalendarClock24Regular,
@@ -130,7 +145,12 @@ import { useSettingStore } from "@/stores/useSettingStore";
 import { useTagStore } from "@/stores/useTagStore";
 import { useActivityTagEditor } from "@/composables/useActivityTagEditor";
 import { useActivityDrag } from "@/composables/useActivityDrag";
-import { ACTIVITY_QUADRANT_DRAG_END_KEY, ACTIVITY_QUADRANT_SORT_KEY, type ActivitySectionSortKey } from "@/core/activityQuadrant";
+import {
+  ACTIVITY_QUADRANT_DRAG_END_KEY,
+  ACTIVITY_QUADRANT_SORT_KEY,
+  ACTIVITY_QUADRANT_SOLO_KEY,
+  type ActivitySectionSortKey,
+} from "@/core/activityQuadrant";
 import { useDevice } from "@/composables/useDevice";
 import ActivityRow, { activitySectionRowInjectKey } from "./ActivityRow.vue";
 import type { InputInst } from "naive-ui";
@@ -169,8 +189,21 @@ const searchInputRef = ref<InputInst | null>(null);
 const sectionScrollEl = ref<HTMLElement | null>(null);
 
 // ======================== Composables & Stores ========================
-const { isTouchSupported, isMobile } = useDevice();
+const { isTouchSupported, isMobile, width } = useDevice();
 const settingStore = useSettingStore();
+
+const quadrantSolo = inject(ACTIVITY_QUADRANT_SOLO_KEY, null);
+
+const showExitQuadrantSoloButton = computed(() => {
+  if (!props.headerOnly || !settingStore.settings.kanbanQuadrantMode) return false;
+  if (!isMobile.value || width.value > 650) return false;
+  if (!quadrantSolo) return false;
+  return quadrantSolo.soloQuadrantKey.value != null;
+});
+
+function onExitQuadrantSoloClick() {
+  quadrantSolo?.exitSolo();
+}
 const tagStore = useTagStore();
 const tagEditor = useActivityTagEditor();
 

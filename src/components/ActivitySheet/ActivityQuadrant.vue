@@ -7,6 +7,9 @@
         class="activity-quadrant__title-readonly"
         :class="{ 'activity-quadrant__title-readonly--muted': !customTitle }"
         @dblclick="openTitleEdit"
+        @touchstart.passive="onTitleReadonlyTouchStart"
+        @touchend="onTitleReadonlyTouchEnd"
+        @touchcancel="onTitleReadonlyTouchCancel"
       >
         {{ titleShow }}
       </div>
@@ -35,6 +38,8 @@ import { NInput } from "naive-ui";
 import type { InputInst } from "naive-ui";
 import type { ActivityQuadrantKey } from "@/core/activityQuadrant";
 import { DEFAULT_KANBAN_QUADRANT_UI_LABELS } from "@/core/activityQuadrant";
+import { createTouchScheduledSingleAndDouble } from "@/composables/useTouchScheduledSingleAndDouble";
+import { useDevice } from "@/composables/useDevice";
 import { useSettingStore } from "@/stores/useSettingStore";
 
 const props = defineProps<{
@@ -43,8 +48,28 @@ const props = defineProps<{
 }>();
 
 const settingStore = useSettingStore();
+const { isMobile } = useDevice();
 const titleEditing = ref(false);
 const titleInputRef = ref<InputInst | null>(null);
+
+/** 移动端无 dblclick：双触窗口与 WeekPlanner / YearPlanner 一致 */
+const quadrantTitleTouch = createTouchScheduledSingleAndDouble<number>(() => {}, () => openTitleEdit());
+
+function onTitleReadonlyTouchStart(e: TouchEvent) {
+  if (!isMobile.value) return;
+  quadrantTitleTouch.touchStart(e);
+}
+
+function onTitleReadonlyTouchEnd(e: TouchEvent) {
+  if (!isMobile.value) return;
+  e.stopPropagation();
+  quadrantTitleTouch.touchEnd(0);
+}
+
+function onTitleReadonlyTouchCancel() {
+  if (!isMobile.value) return;
+  quadrantTitleTouch.touchCancel();
+}
 
 const customTitle = computed(() => settingStore.settings.kanbanQuadrantUi[props.quadrantKey]?.trim() ?? "");
 const titleShow = computed(() => customTitle.value || DEFAULT_KANBAN_QUADRANT_UI_LABELS[props.quadrantKey]);
@@ -89,8 +114,8 @@ function onTitleEnter() {
 
 .activity-quadrant__title-readonly {
   width: 100%;
-  min-height: 24px;
-  line-height: 24px;
+  min-height: 20px;
+  line-height: 20px;
   font-weight: 500;
   font-size: 12px;
   text-align: left;
@@ -106,7 +131,7 @@ function onTitleEnter() {
 .activity-quadrant__title-input {
   width: 100%;
   max-width: 100%;
-  height: 24px;
+  height: 22px;
 }
 
 .activity-quadrant__title-input :deep(.n-input__input-el) {
