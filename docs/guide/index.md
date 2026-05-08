@@ -10,29 +10,25 @@
 
 ## 番茄工作法实操
 
-- [《番茄工作法》实操总览](pomodoro-technique/README.md)
+- [《番茄工作法》实操总览](pomodoro-technique/about-tech.md)
 
 ## 功能参考
-
-建议按「先认界面 → 再排计划 → 再专注执行 → 最后看数据与标签」阅读；需要查按钮含义或术语时，跳到附录即可。分组与左侧目录一致。
 
 ### 界面
 
 - [软件界面](reference/interface.md)
+- [模块联动](reference/workflow.md)
 
 ### 活动、计划与日程
 
 - [活动清单](reference/activity.md)
-- [任务规划](reference/planner.md)
+- [任务计划](reference/planner.md)
 - [时间表构建](reference/timetable.md)
+- [任务追踪](reference/task.md)
+- [番茄时钟](reference/timer.md)
 - [日程导出](reference/ics.md)
 
-### 专注与记录
-
-- [番茄时钟](reference/timer.md)
-- [任务追踪](reference/task.md)
-
-### 标签与数据
+### 数据管理
 
 - [标签系统](reference/tag.md)
 - [数据查看](reference/search.md)

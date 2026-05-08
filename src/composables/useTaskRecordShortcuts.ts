@@ -17,18 +17,15 @@ function isEmptyMarkdownHeadingLine(lineText: string): boolean {
 }
 
 /**
- * # 标题 → 回车续 ## ；##…# 标题 → 回车续无序列表 - ；其它返回 null
+ * # 标题 → 回车续 - ；其它返回 null
  */
 function getMarkdownHeadingEnterSuffix(lineText: string): string | null {
   const line = lineText.replace(/\r$/, "");
   if (/^\s*---/.test(line)) return null;
-  const one = line.match(/^(\s*)#\s+(.+)$/);
-  if (one) {
-    return `${one[1]}## `;
-  }
-  const many = line.match(/^(\s*)(#{2,})\s+(.+)$/);
-  if (many) {
-    return `${many[1]}- `;
+
+  const heading = line.match(/^(\s*)(#{1,})\s+(.+)$/);
+  if (heading) {
+    return `${heading[1]}- `;
   }
   return null;
 }
@@ -63,11 +60,7 @@ interface TaskRecordShortcutsOptions {
  * 任务记录编辑器的快捷键处理逻辑
  * 集中管理所有键盘快捷键，便于后续扩展维护
  */
-export function useTaskRecordShortcuts({
-  content,
-  textarea,
-  stopEditing,
-}: TaskRecordShortcutsOptions) {
+export function useTaskRecordShortcuts({ content, textarea, stopEditing }: TaskRecordShortcutsOptions) {
   const handleKeydown = (event: KeyboardEvent) => {
     // 阻止默认行为的通用检查
     if (event.key === "Tab" || (event.altKey && event.shiftKey && event.key === "ArrowDown")) {

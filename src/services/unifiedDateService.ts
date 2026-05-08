@@ -110,9 +110,9 @@ export function unifiedDateService({ activityList, scheduleList, todoList }: Uni
     const mm = String(date.getMonth() + 1).padStart(2, "0");
     const dd = String(date.getDate()).padStart(2, "0");
     const weekDay = date.toLocaleDateString("en-US", { weekday: "short" });
-    const weekDayShort = weekDay.slice(0, 1);
+    // const weekDayShort = weekDay.slice(0, 1);
 
-    return isMobile.value ? `${mm}-${dd} ${weekDayShort}` : `${mm}-${dd} ${weekDay}`;
+    return isMobile.value ? `${mm}-${dd}` : `${mm}-${dd} ${weekDay}`;
   });
 
   const weekStartTs = computed(() => getStartOfWeek(dateState.app));

@@ -1,6 +1,6 @@
 ---
 title: 账号与数据
-description: 注册、登录、云端同步与 JSON 导入导出；桌面与 PWA 的差异主要是能力是否开放。
+description: 注册、登录、云端同步与 数据导入导出；桌面与 PWA 的差异主要是能力是否开放。
 ---
 
 # 账号与数据
@@ -31,6 +31,17 @@ description: 注册、登录、云端同步与 JSON 导入导出；桌面与 PWA
 |     <img src="/icons/Person20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(248, 179, 167);border-radius: 6px;">     | 已登录，云端数据未同步，跳转登录页面 |
 |   <img src="/icons/CloudSync20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(193, 226, 255);border-radius: 6px;">    | 数据正在同步                         |
 
+### 顶栏「退出」旁的语义 {#sync-status-menu}
+
+首页 Menu 已登录时，「退出」触发器上会在 **`CloudSync20Regular`** 与 **`Person20Regular`** 之间切换显示，含义如下（与上表对照）：
+
+- **云同步图标**：正在与云端同步（上传/下载进行中）。
+- **人物图标 + 蓝色（info）**：当前无同步进行中，但本地有尚未上传的变更。
+- **人物图标 + 琥珀色（warning）**：最近一次同步里**云端下载未成功**；可能仍显示具体错误文案；可稍后重试同步或使用底栏/设置中的上传下载。
+- **人物图标 + 默认色**：无上述状态。
+
+同步失败时可能弹出简短通知（尤其移动端无底栏错误区时）。
+
 ## 注册与云端同步 {#account-sync}
 
 - 点击登录按钮<img src="/icons/Person20Filled.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;border-radius: 6px;">；按界面指引进入注册流程。
@@ -60,11 +71,11 @@ description: 注册、登录、云端同步与 JSON 导入导出；桌面与 PWA
 
 - 在同一浏览器、**同一打开方式**（仅标签页 **或** 已安装的 PWA）下，刷新或站点更新后通常沿用**当前存储分区**里的本地数据。
 - **换了一种打开方式**（例如从标签页改成用 PWA 打开），会得到**另一份本地库**；云端只同步**工作数据**；不同步设置。
-- 从桌面迁 JSON 到 PWA：见 [JSON 导入](#json-import)。
+- 从桌面迁 JSON 到 PWA：见 [数据导入](#json-import)。
 
 :::
 
-## JSON 全量导出（仅桌面）{#json-export-desktop}
+## 数据全量导出（仅桌面）{#json-export-desktop}
 
 ### 当前版本（v0.6.4 及以上）
 
@@ -76,7 +87,7 @@ description: 注册、登录、云端同步与 JSON 导入导出；桌面与 PWA
 - 在 **v0.4.4** 中打开 **帮助页**；通过 **数据同步** 执行**全量数据导出**。
 - 导出的 JSON 可用于迁移至当前版本客户端。
 
-## JSON 导入 {#json-import}
+## 数据导入 {#json-import}
 
 ::: tip
 
@@ -92,7 +103,7 @@ description: 注册、登录、云端同步与 JSON 导入导出；桌面与 PWA
 ::: warning 导入前请知悉
 
 - 导入会按对话框中的**预览结果**与**覆盖策略**写入本地库；确认前请看清将要合并或替换的范围，误操作可能导致本地数据被覆盖且难以恢复。
-- 导入前建议在桌面端先做 **[JSON 全量导出](#json-export-desktop)**，或确认重要内容已随当前账号**同步至云端**。
+- 导入前建议在桌面端先做 **[数据全量导出](#json-export-desktop)**，或确认重要内容已随当前账号**同步至云端**。
 - 请选择**同一次导出所生成**、且目录结构与官方导出一致的文件夹；勿随意指定无关目录、勿把多份备份混在一个导入流程里胡乱合并，否则可能预览失败、导入失败或出现数据错乱。
 
 :::

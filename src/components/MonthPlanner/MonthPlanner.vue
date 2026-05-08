@@ -16,12 +16,8 @@
         >
           <!-- 节名在左上角；日期徽章保持右上 -->
           <div class="month-day-top" :class="{ 'month-day-top--badge-only': !day.holiday }">
-            <div
-              v-if="day.holiday"
-              class="month-holiday-left"
-              :class="'month-holiday-left--' + day.holiday.kind"
-            >
-              {{ day.holiday.label }}
+            <div v-if="day.holiday" class="month-holiday-left" :class="'month-holiday-left--' + day.holiday.kind">
+              {{ isMobile ? day.holiday.label.slice(0, 2) : day.holiday.label }}
             </div>
             <div
               class="date-badge"
@@ -669,7 +665,7 @@ function getPomoBgColorHEX(ratio: number) {
     flex-direction: column !important;
     gap: 2px !important;
     padding: 0px !important; /* 给右上角日期留出一点空间 */
-    margin-top: 20px !important;
+    margin-top: 0px !important;
     z-index: 0 !important;
     border: none !important;
   }

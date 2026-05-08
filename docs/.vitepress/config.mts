@@ -76,7 +76,7 @@ export default withMermaid(
 
       nav: [
         { text: "首页", link: "/" },
-        { text: "开始使用", link: "/guide/intro/install-overview" },
+        { text: "软件安装", link: "/guide/intro/install-overview" },
         { text: "使用说明", link: "/guide/" },
         { text: "GitHub", link: "https://github.com/Xeonilian/pomotention" },
       ],
@@ -89,7 +89,7 @@ export default withMermaid(
             { text: "使用导航", link: "/guide/" },
             { text: "什么是 Pomotention？", link: "/guide/intro/what-is-pomotention" },
             {
-              text: "应用安装",
+              text: "软件安装",
               collapsed: true,
               items: [
                 { text: "选择安装方式", link: "/guide/intro/install-overview" },
@@ -120,26 +120,21 @@ export default withMermaid(
           text: "功能参考",
           items: [
             { text: "软件界面", link: "/guide/reference/interface" },
+            { text: "模块联动", link: "/guide/reference/workflow" },
             {
               text: "活动、计划与日程",
               collapsed: true,
               items: [
                 { text: "活动清单", link: "/guide/reference/activity" },
-                { text: "任务规划", link: "/guide/reference/planner" },
+                { text: "任务计划", link: "/guide/reference/planner" },
                 { text: "时间表构建", link: "/guide/reference/timetable" },
+                { text: "任务追踪", link: "/guide/reference/task" },
+                { text: "番茄时钟", link: "/guide/reference/timer" },
                 { text: "日程导出", link: "/guide/reference/ics" },
               ],
             },
             {
-              text: "专注与记录",
-              collapsed: true,
-              items: [
-                { text: "番茄时钟", link: "/guide/reference/timer" },
-                { text: "任务追踪", link: "/guide/reference/task" },
-              ],
-            },
-            {
-              text: "标签与数据",
+              text: "数据管理",
               collapsed: true,
               items: [
                 { text: "标签系统", link: "/guide/reference/tag" },
