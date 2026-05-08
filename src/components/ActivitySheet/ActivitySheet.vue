@@ -190,6 +190,7 @@ import {
   findQuadrantKeyFromPoint,
   filterActivitiesForQuadrantKey,
   isActivityQuadrantKey,
+  syncQuadrantTagsFromPrimaryDue,
   type ActivityQuadrantKey,
   type ActivitySectionSortKey,
   type QuadrantDragEndPayload,
@@ -394,6 +395,35 @@ function handleQuadrantDragEnd(payload: QuadrantDragEndPayload) {
 provide(ACTIVITY_QUADRANT_DRAG_END_KEY, handleQuadrantDragEnd);
 provide(ACTIVITY_QUADRANT_SOLO_KEY, { soloQuadrantKey, exitSolo: exitQuadrantSolo });
 
+let quadrantDueUrgentInterval: ReturnType<typeof setInterval> | null = null;
+
+/** 四象限：按主到期日同步 urgent / Later（过期进 neither），口径与 ActivityRow + getCountdownClass 一致 */
+function runQuadrantDueUrgentSync() {
+  if (!settingStore.settings.kanbanQuadrantMode) return;
+  syncQuadrantTagsFromPrimaryDue(dataStore, activeActivities.value);
+}
+
+watch(
+  [activeActivities, () => settingStore.settings.kanbanQuadrantMode],
+  () => runQuadrantDueUrgentSync(),
+  { deep: true },
+);
+
+watch(
+  () => settingStore.settings.kanbanQuadrantMode,
+  (quad) => {
+    if (quadrantDueUrgentInterval) {
+      clearInterval(quadrantDueUrgentInterval);
+      quadrantDueUrgentInterval = null;
+    }
+    if (quad) {
+      runQuadrantDueUrgentSync();
+      quadrantDueUrgentInterval = setInterval(runQuadrantDueUrgentSync, 60_000);
+    }
+  },
+  { immediate: true },
+);
+
 onMounted(() => {
   if (settingStore.settings.kanbanSetting.length !== 6) {
     // 版本切换校正一次
@@ -406,6 +436,10 @@ onMounted(() => {
 
 onUnmounted(() => {
   cancelSoloQuadrantSync();
+  if (quadrantDueUrgentInterval) {
+    clearInterval(quadrantDueUrgentInterval);
+    quadrantDueUrgentInterval = null;
+  }
 });
 // 响应式可直接用
 const sections = computed(() => settingStore.settings.kanbanSetting.filter((s) => s.show));

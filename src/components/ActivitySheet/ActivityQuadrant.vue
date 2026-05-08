@@ -1,4 +1,4 @@
-<!-- 四象限壳：可编辑标题 + data-quadrant + 列表 slot -->
+<!-- 四象限壳：可编辑标题 + data-quadrant + 列表 slot；到期同步象限标签见 activityQuadrant.syncQuadrantTagsFromPrimaryDue -->
 <template>
   <div class="activity-quadrant" :data-quadrant="quadrantKey" :style="{ gridArea }">
     <div class="activity-quadrant__title">
