@@ -88,6 +88,7 @@ const quadrantDueDayPrev = new Map<number, DueDayBucket>();
 
 /**
  * 四象限模式：按主到期日与 ActivitySheet.getCountdownClass 同源口径同步象限标签。
+ * 凡改动 tagIds 均经 dataStore.setActivityTags / applyQuadrantToActivity，与 store 内 lastModified、synced、持久化、防抖上传一致。
  * - 到期日从非今天变为今天：追加 TAG_ID_URGENT（85）；用户当日手动去掉 urgent 后不会反复补回。
  * - 主到期已过期（diff&lt;0，即 countdown-boom）：若有 urgent/important，则写入 Later（去掉 85、126）；手动改日期同样会触发。
  */
@@ -120,6 +121,7 @@ export function syncQuadrantTagsFromPrimaryDue(store: DataStore, activities: rea
   }
 }
 
+/** 松手投放象限：仅通过 store.setActivityTags 写标签，保证云端待同步元数据与拖动路径一致 */
 export function applyQuadrantToActivity(store: DataStore, activityId: number, targetKey: ActivityQuadrantKey): void {
   const activity = store.activityById.get(activityId);
   if (!activity || activity.deleted) return;

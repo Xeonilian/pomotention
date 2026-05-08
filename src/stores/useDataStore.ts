@@ -768,16 +768,34 @@ export const useDataStore = defineStore(
       );
     }
 
+    function applyActivityCloudDirty(activity: Activity): void {
+      activity.lastModified = Date.now();
+      activity.synced = false;
+    }
+
+    function persistActivityListForCloud(): void {
+      saveActivities(activityList.value);
+      scheduleDebouncedCloudUpload();
+    }
+
+    /**
+     * 标记整条 Activity 待云端同步（含 tagIds 与其它字段）。象限拖动 / 日期推导改 tag 最终均经 setActivityTags，与此同源。
+     */
+    function touchActivityCloudSync(activityId: number): boolean {
+      const activity = activityById.value.get(activityId);
+      if (!activity) return false;
+      applyActivityCloudDirty(activity);
+      persistActivityListForCloud();
+      return true;
+    }
+
     function setActivityTags(activityId: number, newTagIds: number[]) {
       const activity = activityById.value.get(activityId);
       if (!activity) return false;
 
       activity.tagIds = newTagIds.length > 0 ? newTagIds : undefined;
-      activity.lastModified = Date.now();
-      activity.synced = false;
-
-      saveActivities(activityList.value);
-      scheduleDebouncedCloudUpload();
+      applyActivityCloudDirty(activity);
+      persistActivityListForCloud();
 
       // 标签被实际应用到 Activity 时，更新本地 tag 的 lastUsed（不单独 saveTags；activity 已标记 unsynced 并由上方防抖上传覆盖）
       tagStore.touchTagsLastUsed(newTagIds);
@@ -1071,6 +1089,7 @@ export const useDataStore = defineStore(
       addTagToActivity,
       removeTagFromActivity,
       setActivityTags,
+      touchActivityCloudSync,
       toggleActivityTag,
       createAndAddTagToActivity,
       getActivityTags,
