@@ -3,8 +3,9 @@ name: dev-branch
 description: >-
   Recreates `dev` from latest `main` after merge-delete: verify with
   `git fetch origin --prune`, confirm `origin/dev` gone or merged into main,
-  checkout main, pull --prune, delete local dev, fetch --prune again, new dev,
-  push -u. No force-push. Use for dev-branch / 重建 dev.
+  checkout main, pull --prune, force-move local `dev` to `main` (`branch -f`),
+  fetch --prune, checkout dev, verify main===dev, push -u. No force-push.
+  Use for dev-branch / 重建 dev.
 ---
 
 # 重建并发布 `dev` 分支
@@ -15,6 +16,12 @@ description: >-
 - 本地只是在 `main` 最新基础上 **新建同名 `dev` 并首次推送**，**不需要、也不使用强推**。
 
 若远端仍残留 **独立提交** 的 `dev`（未进 `main`），应先 **合并 PR** 或在托管端处理后再继续；**勿**对 `dev` 做 `--force`。
+
+## 为何不用「删分支再 `checkout -b`」（重要）
+
+旧版流程里若 **`git branch -d dev` 失败**（Git 认为旧 `dev` 未合并进当前 `HEAD`），后续 **`git checkout -b dev` 也会失败**（本地 `dev` 仍存在），但若脚本**继续执行** `git push -u origin dev`，会把**仍指向合并前提交**的本地 `dev` 推上去，等于把「已合进 main 的旧历史」又发布到远端。
+
+**正确做法**：在 `main` 更新到最新后，用 **`git branch -f dev main`（或不存在时 `git branch dev main`）** 把本地 `dev` **强制指向与 `main` 相同的提交**，再 `checkout` 与 `push`。这样不依赖「删除分支是否成功」，也不会误推旧指针。
 
 ## 执行前核对（Agent / 人类先做）
 
@@ -41,33 +48,39 @@ description: >-
 ```bash
 git checkout main
 git pull --prune
-git branch -d dev
 git fetch origin --prune
-git checkout -b dev
+git branch -f dev main || git branch dev main
+git checkout dev
+# 推送前校验：main 与 dev 必须为同一提交，否则禁止 push
+test "$(git rev-parse main)" = "$(git rev-parse dev)"
 git push -u origin dev
 ```
 
 说明：
 
-- **`git pull --prune`**：在 `main` 上快进更新；`--prune` 有助于同步远端已删除分支的跟踪引用，**不能**替代下面单独一次的 **`fetch --prune`**（删本地 `dev` 后清理 stale `origin/dev` 的场景）。
-- **`git branch -d dev`**：上一支已合并进 `main` 时通常可删；若 Git 提示未合并、但你确认无保留价值，再改用 `git branch -D dev`。
-- **`git fetch origin --prune`**（在删除本地 `dev` 之后）：若托管已删远端 `dev`，此处会移除本地的 `remotes/origin/dev`，避免后续误判。
-- **`git push -u origin dev`**：远端无同名分支时即创建并设置上游。
+- **`git pull --prune`**：在 `main` 上快进更新；`--prune` 有助于同步远端已删除分支的跟踪引用。
+- **`git fetch origin --prune`**：清掉托管已删分支对应的 `origin/*`，避免误判远端是否还有 `dev`。
+- **`git branch -f dev main || git branch dev main`**：已有本地 `dev` 时用 `-f` 把它移到 `main` 当前提交；若本地尚无 `dev`，`-f` 会失败，用第二条命令创建与 `main` 同提交的 `dev`。**不要用 `git branch -d dev` 作为唯一手段**，以免删失败后误推旧指针。
+- **`test "$(git rev-parse main)" = "$(git rev-parse dev)"`**：Agent 或脚本在 push 前必须满足；失败则**停止**，检查是否未切到 `dev`、或 `branch -f` 未执行成功。**Windows CMD** 无 `test`，可改用 PowerShell：`if ((git rev-parse main) -ne (git rev-parse dev)) { exit 1 }`。
+- **`git push -u origin dev`**：远端无同名分支时即创建并设置上游；此时本地 `dev` 已与 `main` 同提交，推送的是**最新 main 线**，不是旧的合并前 `dev`。
+
+## 可选：仍希望删掉旧本地 `dev` 再重建
+
+在已确认 **`git merge-base --is-ancestor dev main`**（旧 `dev` 已在 `main` 历史内）或确认无独有提交后，可在 **`git branch -f dev main` 之前**执行 `git branch -D dev`，再 `git branch dev main`。这是锦上添花；**核心安全绳仍是 `-f`/`branch dev main` + rev-parse 校验**。
 
 ## 常见异常
 
 - **`git pull` 报错**：`Your configuration specifies to merge with the ref 'refs/heads/dev' from the remote, but no such ref was fetched.`  
   **原因**：当前在 **`dev`** 上，且上游仍指向托管端**已删除**的 `dev`。  
-  **处理**：**先 `git checkout main`**，更新 `main`，再删本地 `dev`；不要停在 `dev` 上反复 `pull`。
+  **处理**：**先 `git checkout main`**，更新 `main`，再按标准命令把 `dev` 指到 `main`；不要停在 `dev` 上反复 `pull`。
 
-- **`git branch -d dev` 警告**：deleting branch merged to `refs/remotes/origin/dev`, but not yet merged to **HEAD**。  
-  **原因**：已切到 `main` 时，`main` 的 HEAD 未必包含旧跟踪分支视角下的「合并」表述；若你已确认 PR 已合入 `main`，通常可继续；执意删除可用 `-D`（确认无独有提交后再用）。
-
-- **当前在 `dev` 上**：先 `git checkout main`，再删 `dev`。
+- **当前在 `dev` 上**：先 `git checkout main`，再执行标准命令。
 - **`main` 名不同**：`checkout` / `pull` 改为实际默认分支名。
 - **remote 非 `origin`**：凡写 `origin` 处替换为实际 remote。
+- **PowerShell 串联命令**：旧版 PowerShell 可能不支持 `&&`；可分行执行，或用 `;` 分隔（注意失败时仍会继续执行后续命令，关键步骤建议单独跑并看退出码）。
 
 ## 反例
 
 - 在「合并后删除」未生效、远端 `dev` 仍有未进 `main` 的提交时，强行用「从 `main` 新建的 dev」去覆盖远端。
-- 工作区有未保存修改就删分支、切分支。
+- 工作区有未保存修改就切分支、改分支指针。
+- **`git branch -d dev` / `checkout -b dev` 任一步失败后仍执行 `git push -u origin dev`**（未先把 `dev` 对齐到 `main`）。
