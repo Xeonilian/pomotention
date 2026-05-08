@@ -669,6 +669,9 @@ function handleCollapseParent(parentId: number) {
   --n-border: none !important;
   --n-icon-size: 20px !important;
   --n-padding: 4px !important;
+  --n-color-focus: none !important;
+  --n-color-hover: none !important;
+  --n-color-active: none !important;
 }
 
 .search-input :deep(.n-input) {
