@@ -238,6 +238,16 @@ export const POMODORO_COLORS_DARK: Record<string, string> = {
  * (包括 Naive UI 的 Button 和原生 div) 中都能被正确解析，
  * 避免因组件内部的 JavaScript 颜色计算逻辑而引发的兼容性问题。
  */
+/** Eisenhower / 四象限：字母序编号 urgent=85、important=126，与 DEFAULT_TAGS 中对应项一致 */
+export const TAG_ID_URGENT = 85;
+export const TAG_ID_IMPORTANT = 126;
+
+/** 仅语义用途：列表不在 TagRenderer 展示（避免显示成数字） */
+export const TAG_IDS_HIDDEN_IN_TAG_RENDERER: readonly number[] = [TAG_ID_URGENT, TAG_ID_IMPORTANT];
+
+/** 进入四象限时右侧栏宽度（约双列 250px + gap） */
+export const ACTIVITY_QUADRANT_PANEL_WIDTH_PX = 600;
+
 export const DEFAULT_TAGS: Tag[] = [
   // --- 1. By Priority ---
   {

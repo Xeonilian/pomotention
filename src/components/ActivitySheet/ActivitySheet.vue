@@ -21,30 +21,148 @@
         @increase-child-activity="increaseChildActivity"
       />
     </div>
-    <!-- 看板列容器 -->
-    <div class="kanban-columns">
-      <div v-for="(section, idx) in sections" :key="section.id" class="kanban-column">
-        <!-- 活动列表展示区域 -->
+
+    <template v-if="!settingStore.settings.kanbanQuadrantMode">
+      <!-- 看板列容器 -->
+      <div class="kanban-columns">
+        <div v-for="(section, idx) in sections" :key="section.id" class="kanban-column">
+          <ActivitySection
+            :filterOptions="filterOptions"
+            :displaySheet="filteredBySection(section)"
+            :getCountdownClass="getCountdownClass"
+            :activityId="selectedActivityId"
+            :currentFilter="section.filterKey"
+            :isAddButton="section.id === 1 && sections.length < 6"
+            :isRemoveButton="section.id !== 1"
+            :sectionId="section.id"
+            :search="section.search"
+            :activeId="activeId"
+            @add-section="addSection"
+            @remove-section="removeSection"
+            @focus-row="handleFocusRow"
+            @filter="(filterKey) => handleSectionFilter(idx, filterKey)"
+            @update:search="(val) => handleSectionSearch(section.id, val)"
+            @focus-search="handleFocusSearch"
+          />
+        </div>
+      </div>
+    </template>
+
+    <template v-else>
+      <div class="activity-quadrant-head-wrap">
         <ActivitySection
-          :filterOptions="filterOptions"
-          :displaySheet="filteredBySection(section)"
-          :getCountdownClass="getCountdownClass"
-          :activityId="selectedActivityId"
-          :currentFilter="section.filterKey"
-          :isAddButton="section.id === 1 && sections.length < 6"
-          :isRemoveButton="section.id !== 1"
-          :sectionId="section.id"
-          :search="section.search"
-          :activeId="activeId"
+          header-only
+          :filter-options="filterOptions"
+          :display-sheet="[]"
+          :get-countdown-class="getCountdownClass"
+          :activity-id="selectedActivityId"
+          :current-filter="firstKanbanSection?.filterKey ?? 'all'"
+          :is-add-button="false"
+          :is-remove-button="false"
+          :section-id="1"
+          :search="firstKanbanSection?.search ?? ''"
+          :active-id="activeId"
           @add-section="addSection"
           @remove-section="removeSection"
           @focus-row="handleFocusRow"
-          @filter="(filterKey) => handleSectionFilter(idx, filterKey)"
-          @update:search="(val) => handleSectionSearch(section.id, val)"
+          @filter="(filterKey) => handleSectionFilter(firstSectionIdx, filterKey)"
+          @update:search="(val) => handleSectionSearch(1, val)"
           @focus-search="handleFocusSearch"
         />
       </div>
-    </div>
+      <div
+        ref="quadrantGridRef"
+        class="activity-quadrant-grid"
+        :style="quadrantGridSoloStyle"
+        @focusin.capture="onQuadrantGridFocusIn"
+        @focusout.capture="onQuadrantGridFocusOut"
+      >
+        <ActivityQuadrant v-show="quadrantVisible('importantOnly')" quadrant-key="importantOnly" grid-area="imp">
+          <ActivitySection
+            list-only
+            :filter-options="filterOptions"
+            :display-sheet="quadrantImportantOnly"
+            :get-countdown-class="getCountdownClass"
+            :activity-id="selectedActivityId"
+            :current-filter="firstKanbanSection?.filterKey ?? 'all'"
+            :is-add-button="false"
+            :is-remove-button="false"
+            :section-id="11"
+            :search="firstKanbanSection?.search ?? ''"
+            :active-id="activeId"
+            @add-section="addSection"
+            @remove-section="removeSection"
+            @focus-row="handleFocusRow"
+            @filter="(filterKey) => handleSectionFilter(firstSectionIdx, filterKey)"
+            @update:search="(val) => handleSectionSearch(1, val)"
+            @focus-search="handleFocusSearch"
+          />
+        </ActivityQuadrant>
+        <ActivityQuadrant v-show="quadrantVisible('urgentImportant')" quadrant-key="urgentImportant" grid-area="both">
+          <ActivitySection
+            list-only
+            :filter-options="filterOptions"
+            :display-sheet="quadrantUrgentImportant"
+            :get-countdown-class="getCountdownClass"
+            :activity-id="selectedActivityId"
+            :current-filter="firstKanbanSection?.filterKey ?? 'all'"
+            :is-add-button="false"
+            :is-remove-button="false"
+            :section-id="12"
+            :search="firstKanbanSection?.search ?? ''"
+            :active-id="activeId"
+            @add-section="addSection"
+            @remove-section="removeSection"
+            @focus-row="handleFocusRow"
+            @filter="(filterKey) => handleSectionFilter(firstSectionIdx, filterKey)"
+            @update:search="(val) => handleSectionSearch(1, val)"
+            @focus-search="handleFocusSearch"
+          />
+        </ActivityQuadrant>
+        <ActivityQuadrant v-show="quadrantVisible('urgentOnly')" quadrant-key="urgentOnly" grid-area="urg">
+          <ActivitySection
+            list-only
+            :filter-options="filterOptions"
+            :display-sheet="quadrantUrgentOnly"
+            :get-countdown-class="getCountdownClass"
+            :activity-id="selectedActivityId"
+            :current-filter="firstKanbanSection?.filterKey ?? 'all'"
+            :is-add-button="false"
+            :is-remove-button="false"
+            :section-id="13"
+            :search="firstKanbanSection?.search ?? ''"
+            :active-id="activeId"
+            @add-section="addSection"
+            @remove-section="removeSection"
+            @focus-row="handleFocusRow"
+            @filter="(filterKey) => handleSectionFilter(firstSectionIdx, filterKey)"
+            @update:search="(val) => handleSectionSearch(1, val)"
+            @focus-search="handleFocusSearch"
+          />
+        </ActivityQuadrant>
+        <ActivityQuadrant v-show="quadrantVisible('neither')" quadrant-key="neither" grid-area="nor">
+          <ActivitySection
+            list-only
+            :filter-options="filterOptions"
+            :display-sheet="quadrantNeither"
+            :get-countdown-class="getCountdownClass"
+            :activity-id="selectedActivityId"
+            :current-filter="firstKanbanSection?.filterKey ?? 'all'"
+            :is-add-button="false"
+            :is-remove-button="false"
+            :section-id="14"
+            :search="firstKanbanSection?.search ?? ''"
+            :active-id="activeId"
+            @add-section="addSection"
+            @remove-section="removeSection"
+            @focus-row="handleFocusRow"
+            @filter="(filterKey) => handleSectionFilter(firstSectionIdx, filterKey)"
+            @update:search="(val) => handleSectionSearch(1, val)"
+            @focus-search="handleFocusSearch"
+          />
+        </ActivityQuadrant>
+      </div>
+    </template>
   </div>
   <!-- 错误提示弹窗 -->
   <n-popover v-model:show="showPopover" trigger="manual" placement="top-end" style="width: 200px">
@@ -59,10 +177,22 @@
 // ========================
 // 依赖导入
 // ========================
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, onUnmounted, provide, watch } from "vue";
 import ActivityButtons from "@/components/ActivitySheet/ActivityButtons.vue";
 import ActivitySection from "@/components/ActivitySheet/ActivitySection.vue";
+import ActivityQuadrant from "@/components/ActivitySheet/ActivityQuadrant.vue";
 import type { Activity, ActivitySectionConfig } from "@/core/types/Activity";
+import {
+  ACTIVITY_QUADRANT_DRAG_END_KEY,
+  ACTIVITY_QUADRANT_SORT_KEY,
+  applyQuadrantToActivity,
+  findQuadrantKeyFromPoint,
+  filterActivitiesForQuadrantKey,
+  isActivityQuadrantKey,
+  type ActivityQuadrantKey,
+  type ActivitySectionSortKey,
+  type QuadrantDragEndPayload,
+} from "@/core/activityQuadrant";
 import { NPopover } from "naive-ui";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useDataStore } from "@/stores/useDataStore";
@@ -85,7 +215,127 @@ const {
 } = storeToRefs(dataStore);
 const { activityList } = storeToRefs(dataStore);
 const dateService = dataStore.dateService;
-const { isMobile } = useDevice();
+const { isMobile, width } = useDevice();
+
+/** 窄屏象限内输入聚焦时仅保留该格，腾出键盘可用高度；与样式断点 max-width:650px 一致 */
+const quadrantGridRef = ref<HTMLElement | null>(null);
+const soloQuadrantKey = ref<ActivityQuadrantKey | null>(null);
+let soloFocusSyncTimer: ReturnType<typeof setTimeout> | null = null;
+
+const SOLO_FOCUS_SYNC_MS = 160;
+
+function isEditableFocusTarget(el: HTMLElement): boolean {
+  if (el.closest("[data-quadrant-solo-ignore]")) return false;
+  if (el.isContentEditable) return true;
+  const tag = el.tagName;
+  if (tag === "TEXTAREA" || tag === "SELECT") return true;
+  if (tag !== "INPUT") return false;
+  const type = (el as HTMLInputElement).type?.toLowerCase() ?? "text";
+  const skip = new Set(["button", "checkbox", "radio", "submit", "reset", "image", "file", "hidden", "range", "color"]);
+  return !skip.has(type);
+}
+
+function scheduleSoloQuadrantSync() {
+  if (soloFocusSyncTimer) clearTimeout(soloFocusSyncTimer);
+  soloFocusSyncTimer = setTimeout(() => {
+    soloFocusSyncTimer = null;
+    syncSoloQuadrantFromActiveElement();
+  }, SOLO_FOCUS_SYNC_MS);
+}
+
+function cancelSoloQuadrantSync() {
+  if (soloFocusSyncTimer) {
+    clearTimeout(soloFocusSyncTimer);
+    soloFocusSyncTimer = null;
+  }
+}
+
+function syncSoloQuadrantFromActiveElement() {
+  if (width.value > 650 || !settingStore.settings.kanbanQuadrantMode) {
+    soloQuadrantKey.value = null;
+    return;
+  }
+  const root = quadrantGridRef.value;
+  if (!root) {
+    soloQuadrantKey.value = null;
+    return;
+  }
+  const active = document.activeElement;
+  if (!active || active === document.body || !(active instanceof HTMLElement)) {
+    soloQuadrantKey.value = null;
+    return;
+  }
+  if (!isEditableFocusTarget(active)) {
+    soloQuadrantKey.value = null;
+    return;
+  }
+  if (!root.contains(active)) {
+    soloQuadrantKey.value = null;
+    return;
+  }
+  const quad = active.closest(".activity-quadrant");
+  if (!quad || !root.contains(quad)) {
+    soloQuadrantKey.value = null;
+    return;
+  }
+  const attr = quad.getAttribute("data-quadrant");
+  if (attr && isActivityQuadrantKey(attr)) {
+    soloQuadrantKey.value = attr;
+  } else {
+    soloQuadrantKey.value = null;
+  }
+}
+
+function onQuadrantGridFocusIn(e: FocusEvent) {
+  if (width.value > 650 || !settingStore.settings.kanbanQuadrantMode) return;
+  cancelSoloQuadrantSync();
+  const t = e.target;
+  if (!(t instanceof HTMLElement)) return;
+  if (!isEditableFocusTarget(t)) return;
+  const quad = t.closest(".activity-quadrant");
+  if (!quad || !quadrantGridRef.value?.contains(quad)) return;
+  const attr = quad.getAttribute("data-quadrant");
+  if (attr && isActivityQuadrantKey(attr)) {
+    soloQuadrantKey.value = attr;
+  }
+}
+
+function onQuadrantGridFocusOut() {
+  scheduleSoloQuadrantSync();
+}
+
+function quadrantVisible(key: ActivityQuadrantKey): boolean {
+  if (width.value > 650) return true;
+  if (!soloQuadrantKey.value) return true;
+  return soloQuadrantKey.value === key;
+}
+
+const quadrantGridSoloStyle = computed(() => {
+  if (!soloQuadrantKey.value || width.value > 650) return {};
+  const areaMap: Record<ActivityQuadrantKey, string> = {
+    importantOnly: "imp",
+    urgentImportant: "both",
+    urgentOnly: "urg",
+    neither: "nor",
+  };
+  const a = areaMap[soloQuadrantKey.value];
+  return {
+    gridTemplateColumns: "1fr",
+    gridTemplateRows: "minmax(0, 1fr)",
+    gridTemplateAreas: `"${a}"`,
+  };
+});
+
+watch(
+  () => settingStore.settings.kanbanQuadrantMode,
+  (on) => {
+    if (!on) soloQuadrantKey.value = null;
+  },
+);
+
+watch(width, (w) => {
+  if (w > 650) soloQuadrantKey.value = null;
+});
 
 /** activeId 与 selectedActivityId 经 Tracker 同步后可能只存其一，业务上需统一解析 */
 const sheetPrimaryActivityId = computed(() => {
@@ -123,20 +373,61 @@ const filterOptions = [
 // Kanban多个section参数管理
 const settingStore = useSettingStore();
 
+/** 象限模式下列头 + 四列表格共用排序 */
+const quadrantSharedSortKey = ref<ActivitySectionSortKey>("rank");
+provide(ACTIVITY_QUADRANT_SORT_KEY, quadrantSharedSortKey);
+
+function handleQuadrantDragEnd(payload: QuadrantDragEndPayload) {
+  if (!settingStore.settings.kanbanQuadrantMode) return;
+  const key = findQuadrantKeyFromPoint(payload.clientX, payload.clientY);
+  if (!key) return;
+  applyQuadrantToActivity(dataStore, payload.activity.id, key);
+}
+
+provide(ACTIVITY_QUADRANT_DRAG_END_KEY, handleQuadrantDragEnd);
+
 onMounted(() => {
   if (settingStore.settings.kanbanSetting.length !== 6) {
     // 版本切换校正一次
     settingStore.resetSettings(["kanbanSetting"]);
   }
+  if (settingStore.settings.kanbanQuadrantMode && !settingStore.settings.kanbanQuadrantSnapshot) {
+    settingStore.settings.kanbanQuadrantMode = false;
+  }
+});
+
+onUnmounted(() => {
+  cancelSoloQuadrantSync();
 });
 // 响应式可直接用
 const sections = computed(() => settingStore.settings.kanbanSetting.filter((s) => s.show));
+
+const firstKanbanSection = computed(() => settingStore.settings.kanbanSetting.find((s) => s.id === 1));
+
+const firstSectionIdx = computed(() => {
+  const list = settingStore.settings.kanbanSetting.filter((s) => s.show);
+  const idx = list.findIndex((s) => s.id === 1);
+  return idx >= 0 ? idx : 0;
+});
+
+const quadrantPreFiltered = computed(() => {
+  const sec = firstKanbanSection.value;
+  if (!sec) return [];
+  return filteredBySection(sec);
+});
+
+const quadrantImportantOnly = computed(() => filterActivitiesForQuadrantKey(quadrantPreFiltered.value, "importantOnly"));
+const quadrantUrgentImportant = computed(() => filterActivitiesForQuadrantKey(quadrantPreFiltered.value, "urgentImportant"));
+const quadrantUrgentOnly = computed(() => filterActivitiesForQuadrantKey(quadrantPreFiltered.value, "urgentOnly"));
+const quadrantNeither = computed(() => filterActivitiesForQuadrantKey(quadrantPreFiltered.value, "neither"));
 
 // 错误提示弹窗相关
 const showPopover = ref(false);
 const popoverMessage = ref("");
 
 function addSection() {
+  if (settingStore.settings.kanbanQuadrantMode) return;
+
   const visibleCount = settingStore.settings.kanbanSetting.filter((s) => s.show).length;
   if (visibleCount >= 6) return;
 
@@ -152,6 +443,7 @@ function addSection() {
 }
 
 function removeSection(id: number) {
+  if (settingStore.settings.kanbanQuadrantMode) return;
   if (id === 1) return; // id=1不能隐藏
 
   const section = settingStore.settings.kanbanSetting.find((s) => s.id === id);
@@ -240,7 +532,7 @@ function handleSectionFilter(idx: number, filterKey: string) {
 
 // 搜索
 function handleSectionSearch(id: number, val: string) {
-  const section = sections.value.find((s) => s.id === id);
+  const section = settingStore.settings.kanbanSetting.find((s) => s.id === id);
   if (section) {
     section.search = val;
     console.log(val);
@@ -443,6 +735,45 @@ function getCountdownClass(dueDate: number | undefined | null): string {
   .activity-button-container {
     height: 0;
     min-height: 0;
+  }
+}
+
+.activity-quadrant-head-wrap {
+  flex-shrink: 0;
+  width: 100%;
+  min-width: 0;
+}
+
+.activity-quadrant-grid {
+  flex: 1 1 0;
+  min-height: 0;
+  display: grid;
+  gap: 6px;
+  margin-bottom: 8px;
+  margin-top: 2px;
+  /* 勿在此层做 overflow-y: auto：窄屏 .right 已 overflow-y:hidden（见 HomeView），再嵌套纵滚会触发 iOS 异常 scrollExtent、无限条与灰带；靠 minmax(0,1fr) 压缩行 + 象限内 .section-content-container 滚动 */
+  overflow: hidden;
+}
+
+@media (min-width: 651px) {
+  .activity-quadrant-grid {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      "imp both"
+      "urg nor";
+  }
+}
+
+@media (max-width: 650px) {
+  .activity-quadrant-grid {
+    grid-template-columns: 1fr;
+    grid-template-rows: repeat(4, minmax(0, 1fr));
+    grid-template-areas:
+      "both"
+      "imp"
+      "urg"
+      "nor";
   }
 }
 </style>

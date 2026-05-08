@@ -96,7 +96,7 @@ describe("ActivitySyncService", () => {
         pomoType: "🍅",
         isUntaetigkeit: true,
         taskId: 789,
-        tagIds: [1, 2, 3],
+        tagIds: [85, 126, 3],
       });
 
       const cloud = service["mapLocalToCloud"](activity, "user-123");
@@ -112,7 +112,7 @@ describe("ActivitySyncService", () => {
       expect(cloud.pomo_type).toBe("🍅");
       expect(cloud.is_untaetigkeit).toBe(true);
       expect(cloud.task_id).toBe(789);
-      expect(cloud.tag_ids).toEqual([1, 2, 3]);
+      expect(cloud.tag_ids).toEqual([85, 126, 3]);
     });
 
     it("应该将 undefined 转换为 null", () => {

@@ -2,9 +2,9 @@
   Component: ActivitySection.vue 
 -->
 <template>
-  <div class="section-container">
-    <!-- 筛选区 -->
-    <div class="section-header">
+  <div class="section-container" :class="{ 'section-container--quadrant-dense': listOnly }">
+    <!-- 筛选区（listOnly 时整块不渲染） -->
+    <div v-if="!listOnly" class="section-header">
       <n-input
         ref="searchInputRef"
         :placeholder="currentFilterLabel"
@@ -36,13 +36,29 @@
           >
             <n-button text type="default" title="排序方式" @pointerdown.stop @mousedown.prevent.stop @touchstart.stop>
               <template #icon>
-                <n-icon><ArrowSortUp24Filled /></n-icon>
+                <n-icon><ArrowSortDownLines24Regular /></n-icon>
               </template>
             </n-button>
           </n-dropdown>
         </template>
       </n-input>
 
+      <n-button
+        v-if="
+          props.sectionId === 1 &&
+          ((!settingStore.settings.kanbanQuadrantMode && !headerOnly) || (settingStore.settings.kanbanQuadrantMode && headerOnly))
+        "
+        large
+        type="default"
+        :title="settingStore.settings.kanbanQuadrantMode && headerOnly ? '退出四象限' : '四象限（紧急/重要）'"
+        quaternary
+        class="section-button"
+        @click="settingStore.toggleKanbanQuadrantMode()"
+      >
+        <template #icon>
+          <n-icon><Grid24Regular /></n-icon>
+        </template>
+      </n-button>
       <n-button
         v-if="isAddButton"
         large
@@ -71,7 +87,7 @@
       </n-button>
     </div>
 
-    <div ref="sectionScrollEl" class="section-content-container">
+    <div v-if="!headerOnly" ref="sectionScrollEl" class="section-content-container">
       <div v-for="item in sortedDisplaySheet" :key="item.id">
         <ActivityRow
           v-if="item.status !== 'done' && shouldShowItem(item)"
@@ -94,13 +110,15 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, provide, ref, h } from "vue";
+import { computed, inject, nextTick, provide, ref, h } from "vue";
+import type { Ref } from "vue";
 import { NInput, NIcon, NDropdown, NButton } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
 import {
-  ArrowSortUp24Filled,
+  ArrowSortDownLines24Regular,
   DocumentTableSearch24Regular,
   ColumnArrowRight20Regular,
+  Grid24Regular,
   TableDeleteColumn20Regular,
   List24Filled,
   CalendarClock24Regular,
@@ -112,6 +130,7 @@ import { useSettingStore } from "@/stores/useSettingStore";
 import { useTagStore } from "@/stores/useTagStore";
 import { useActivityTagEditor } from "@/composables/useActivityTagEditor";
 import { useActivityDrag } from "@/composables/useActivityDrag";
+import { ACTIVITY_QUADRANT_DRAG_END_KEY, ACTIVITY_QUADRANT_SORT_KEY, type ActivitySectionSortKey } from "@/core/activityQuadrant";
 import { useDevice } from "@/composables/useDevice";
 import ActivityRow, { activitySectionRowInjectKey } from "./ActivityRow.vue";
 import type { InputInst } from "naive-ui";
@@ -130,6 +149,10 @@ const props = defineProps<{
   isRemoveButton: boolean;
   sectionId: number;
   search: string;
+  /** 仅渲染列表区（象限格子内） */
+  listOnly?: boolean;
+  /** 仅渲染列头（象限模式唯一筛选条） */
+  headerOnly?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -160,12 +183,24 @@ function blurSearchInput() {
   else inst.inputElRef?.blur?.();
 }
 
-/** 列表排序：手动顺序 | 到期 | 类型 | 首标签（仅视图，不写 settings） */
-type SectionSortKey = "rank" | "due" | "type" | "tag";
-const sectionSortKey = ref<SectionSortKey>("rank");
+/** 列表排序：手动顺序 | 到期 | 类型 | 首标签（仅视图，不写 settings）；象限模式与 inject 共享 */
+const quadrantSharedSort = inject<Ref<ActivitySectionSortKey> | null>(ACTIVITY_QUADRANT_SORT_KEY, null);
+const localSortKey = ref<ActivitySectionSortKey>("rank");
+
+function sortKeyForCompare(): ActivitySectionSortKey {
+  if ((props.listOnly || props.headerOnly) && settingStore.settings.kanbanQuadrantMode && quadrantSharedSort) {
+    return quadrantSharedSort.value;
+  }
+  return localSortKey.value;
+}
 
 function onSortSelect(key: string) {
-  sectionSortKey.value = key as SectionSortKey;
+  const k = key as ActivitySectionSortKey;
+  if ((props.listOnly || props.headerOnly) && settingStore.settings.kanbanQuadrantMode && quadrantSharedSort) {
+    quadrantSharedSort.value = k;
+  } else {
+    localSortKey.value = k;
+  }
 }
 
 const sortOptions = computed<DropdownOption[]>(() => [
@@ -274,7 +309,7 @@ const sortedDisplaySheet = computed(() => {
   }
 
   function compareActivities(a: Activity, b: Activity): number {
-    const mode = sectionSortKey.value;
+    const mode = sortKeyForCompare();
     if (mode === "rank") {
       return tieBreak(a, b);
     }
@@ -320,7 +355,19 @@ const sortedDisplaySheet = computed(() => {
   return result;
 });
 
-const dragHandler = useActivityDrag(() => sortedDisplaySheet.value);
+const onQuadrantDragEndFromParent = inject(ACTIVITY_QUADRANT_DRAG_END_KEY, undefined);
+
+const dragHandler = useActivityDrag(() => sortedDisplaySheet.value, {
+  onDragEndBeforeClear: onQuadrantDragEndFromParent
+    ? (p) =>
+        onQuadrantDragEndFromParent({
+          event: p.event,
+          activity: p.activity,
+          clientX: p.clientX,
+          clientY: p.clientY,
+        })
+    : undefined,
+});
 
 // ======================== 列表：父子折叠态、按 id 查找（番茄切换类型等） ========================
 const collapsedParentIds = computed(() => settingStore.settings.collapsedActivityIds);
@@ -556,6 +603,11 @@ function handleCollapseParent(parentId: number) {
   overflow-x: hidden;
   margin-left: 4px;
   margin-right: 2px;
+}
+
+.section-container--quadrant-dense {
+  margin-left: 0;
+  margin-right: 0;
 }
 
 .section-header {

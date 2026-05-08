@@ -3,7 +3,19 @@ import { ref } from "vue";
 import { useSettingStore } from "@/stores/useSettingStore";
 import type { Activity } from "@/core/types/Activity";
 
-export function useActivityDrag(getSortedList: () => Activity[]) {
+export type ActivityDragEndBeforeClearPayload = {
+  event: PointerEvent;
+  activity: Activity;
+  clientX: number;
+  clientY: number;
+};
+
+export function useActivityDrag(
+  getSortedList: () => Activity[],
+  options?: {
+    onDragEndBeforeClear?: (payload: ActivityDragEndBeforeClearPayload) => void;
+  },
+) {
   const settingStore = useSettingStore();
 
   const isDragging = ref(false);
@@ -159,6 +171,16 @@ export function useActivityDrag(getSortedList: () => Activity[]) {
   }
 
   function handleDragEnd(event: PointerEvent) {
+    const last = draggedItem.value;
+    if (last && options?.onDragEndBeforeClear) {
+      options.onDragEndBeforeClear({
+        event,
+        activity: last,
+        clientX: event.clientX,
+        clientY: event.clientY,
+      });
+    }
+
     isDragging.value = false;
     draggedItem.value = null;
     hoveredRowId.value = null;
