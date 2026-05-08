@@ -401,11 +401,7 @@ function runQuadrantDueUrgentSync() {
   syncQuadrantTagsFromPrimaryDue(dataStore, activeActivities.value);
 }
 
-watch(
-  [activeActivities, () => settingStore.settings.kanbanQuadrantMode],
-  () => runQuadrantDueUrgentSync(),
-  { deep: true },
-);
+watch([activeActivities, () => settingStore.settings.kanbanQuadrantMode], () => runQuadrantDueUrgentSync(), { deep: true });
 
 watch(
   () => settingStore.settings.kanbanQuadrantMode,
@@ -789,7 +785,7 @@ function getCountdownClass(dueDate: number | undefined | null): string {
   min-height: 0;
   display: grid;
   gap: 6px;
-  margin-bottom: calc(env(safe-area-inset-bottom, 12px) - 4px);
+  margin-bottom: 6px;
   margin-top: 2px;
   /* 勿在此层做 overflow-y: auto：窄屏 .right 已 overflow-y:hidden（见 HomeView），再嵌套纵滚会触发 iOS 异常 scrollExtent、无限条与灰带；靠 minmax(0,1fr) 压缩行 + 象限内 .section-content-container 滚动 */
   overflow: hidden;
@@ -814,6 +810,7 @@ function getCountdownClass(dueDate: number | undefined | null): string {
       "imp"
       "urg"
       "nor";
+    margin-bottom: calc(env(safe-area-inset-bottom) + 2px);
   }
 }
 </style>
