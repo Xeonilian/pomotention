@@ -616,9 +616,9 @@ function getCountdownClass(dueDate: number | undefined | null): string {
   flex: 1 1 0;
   min-height: 0;
   display: grid;
-  gap: 8px;
+  gap: 6px;
   margin-bottom: 8px;
-  margin-top: 4px;
+  margin-top: 2px;
 }
 
 @media (min-width: 651px) {

@@ -60,12 +60,15 @@ function onTitleUpdate(val: string) {
 .activity-quadrant__title-input {
   width: 100%;
   max-width: 100%;
+  height: 24px;
 }
 
 .activity-quadrant__title-input :deep(.n-input__input-el) {
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 500;
   text-align: left;
+  --n-text-color: var(--color-text-secondary);
+  --n-font-size: 12px;
 }
 
 .activity-quadrant__title-input :deep(.n-input-wrapper) {

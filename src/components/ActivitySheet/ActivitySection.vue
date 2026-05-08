@@ -36,7 +36,7 @@
           >
             <n-button text type="default" title="排序方式" @pointerdown.stop @mousedown.prevent.stop @touchstart.stop>
               <template #icon>
-                <n-icon><ArrowSortUp24Filled /></n-icon>
+                <n-icon><ArrowSortDownLines24Regular /></n-icon>
               </template>
             </n-button>
           </n-dropdown>
@@ -46,8 +46,7 @@
       <n-button
         v-if="
           props.sectionId === 1 &&
-          ((!settingStore.settings.kanbanQuadrantMode && !headerOnly) ||
-            (settingStore.settings.kanbanQuadrantMode && headerOnly))
+          ((!settingStore.settings.kanbanQuadrantMode && !headerOnly) || (settingStore.settings.kanbanQuadrantMode && headerOnly))
         "
         large
         type="default"
@@ -116,7 +115,7 @@ import type { Ref } from "vue";
 import { NInput, NIcon, NDropdown, NButton } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
 import {
-  ArrowSortUp24Filled,
+  ArrowSortDownLines24Regular,
   DocumentTableSearch24Regular,
   ColumnArrowRight20Regular,
   Grid24Regular,
@@ -131,11 +130,7 @@ import { useSettingStore } from "@/stores/useSettingStore";
 import { useTagStore } from "@/stores/useTagStore";
 import { useActivityTagEditor } from "@/composables/useActivityTagEditor";
 import { useActivityDrag } from "@/composables/useActivityDrag";
-import {
-  ACTIVITY_QUADRANT_DRAG_END_KEY,
-  ACTIVITY_QUADRANT_SORT_KEY,
-  type ActivitySectionSortKey,
-} from "@/core/activityQuadrant";
+import { ACTIVITY_QUADRANT_DRAG_END_KEY, ACTIVITY_QUADRANT_SORT_KEY, type ActivitySectionSortKey } from "@/core/activityQuadrant";
 import { useDevice } from "@/composables/useDevice";
 import ActivityRow, { activitySectionRowInjectKey } from "./ActivityRow.vue";
 import type { InputInst } from "naive-ui";
@@ -193,11 +188,7 @@ const quadrantSharedSort = inject<Ref<ActivitySectionSortKey> | null>(ACTIVITY_Q
 const localSortKey = ref<ActivitySectionSortKey>("rank");
 
 function sortKeyForCompare(): ActivitySectionSortKey {
-  if (
-    (props.listOnly || props.headerOnly) &&
-    settingStore.settings.kanbanQuadrantMode &&
-    quadrantSharedSort
-  ) {
+  if ((props.listOnly || props.headerOnly) && settingStore.settings.kanbanQuadrantMode && quadrantSharedSort) {
     return quadrantSharedSort.value;
   }
   return localSortKey.value;
