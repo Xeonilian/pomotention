@@ -778,17 +778,6 @@ export const useDataStore = defineStore(
       scheduleDebouncedCloudUpload();
     }
 
-    /**
-     * 标记整条 Activity 待云端同步（含 tagIds 与其它字段）。象限拖动 / 日期推导改 tag 最终均经 setActivityTags，与此同源。
-     */
-    function touchActivityCloudSync(activityId: number): boolean {
-      const activity = activityById.value.get(activityId);
-      if (!activity) return false;
-      applyActivityCloudDirty(activity);
-      persistActivityListForCloud();
-      return true;
-    }
-
     function setActivityTags(activityId: number, newTagIds: number[]) {
       const activity = activityById.value.get(activityId);
       if (!activity) return false;
@@ -1089,7 +1078,6 @@ export const useDataStore = defineStore(
       addTagToActivity,
       removeTagFromActivity,
       setActivityTags,
-      touchActivityCloudSync,
       toggleActivityTag,
       createAndAddTagToActivity,
       getActivityTags,
