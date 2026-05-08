@@ -452,7 +452,7 @@ function getPomoBgColorHEX(ratio: number) {
   overflow: hidden;
 }
 .day-card :deep(.n-card__content) {
-  padding: 6px;
+  padding: 3px;
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -501,8 +501,7 @@ function getPomoBgColorHEX(ratio: number) {
   align-items: flex-start;
   justify-content: space-between;
   gap: 4px;
-  min-height: 22px;
-  padding: 2px 0 0 2px;
+  padding: 2px 2px 0px 2px;
   position: relative;
 }
 
@@ -534,7 +533,6 @@ function getPomoBgColorHEX(ratio: number) {
   flex: 1;
   overflow: visible;
   padding: 1px 2px; /* 给右上角日期留出一点空间 */
-  margin-top: 6px;
   z-index: 2;
 }
 .item {
@@ -665,7 +663,6 @@ function getPomoBgColorHEX(ratio: number) {
     flex-direction: column !important;
     gap: 2px !important;
     padding: 0px !important; /* 给右上角日期留出一点空间 */
-    margin-top: 0px !important;
     z-index: 0 !important;
     border: none !important;
   }
