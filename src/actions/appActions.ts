@@ -3,6 +3,15 @@ export type AppActionSource = "keyboard" | "click" | "cli" | "mcp";
 export type AppActionId =
   | "view.toggle.activity"
   | "activity.rowPicker.enter"
+  | "activity.pick"
+  | "activity.deleteOrRecover"
+  | "activity.adjustChildRelation"
+  | "activity.addTodo"
+  | "activity.addSchedule"
+  | "activity.addUntaetigkeit"
+  | "activity.toggleQuadrant"
+  | "activity.addKanbanSection"
+  | "activity.removeLastKanbanSection"
   | "view.toggle.task"
   | "view.toggle.planner"
   | "view.toggle.schedule"
@@ -35,6 +44,18 @@ export interface AppActionContext {
   canStartTimerWork: () => boolean;
   startTimerWork: () => boolean;
   enterActivityRowPicker: () => boolean;
+  runActivityCommand: (
+    command:
+      | "pickActivity"
+      | "deleteOrRecoverActivity"
+      | "adjustChildRelation"
+      | "addTodo"
+      | "addSchedule"
+      | "addUntaetigkeit"
+      | "toggleQuadrant"
+      | "addKanbanSection"
+      | "removeLastKanbanSection",
+  ) => boolean;
 }
 
 export function createAppActionRegistry(context: AppActionContext): AppActionRegistry {
@@ -48,6 +69,51 @@ export function createAppActionRegistry(context: AppActionContext): AppActionReg
     "activity.rowPicker.enter": {
       run: () => {
         context.enterActivityRowPicker();
+      },
+    },
+    "activity.pick": {
+      run: () => {
+        context.runActivityCommand("pickActivity");
+      },
+    },
+    "activity.deleteOrRecover": {
+      run: () => {
+        context.runActivityCommand("deleteOrRecoverActivity");
+      },
+    },
+    "activity.adjustChildRelation": {
+      run: () => {
+        context.runActivityCommand("adjustChildRelation");
+      },
+    },
+    "activity.addTodo": {
+      run: () => {
+        context.runActivityCommand("addTodo");
+      },
+    },
+    "activity.addSchedule": {
+      run: () => {
+        context.runActivityCommand("addSchedule");
+      },
+    },
+    "activity.addUntaetigkeit": {
+      run: () => {
+        context.runActivityCommand("addUntaetigkeit");
+      },
+    },
+    "activity.toggleQuadrant": {
+      run: () => {
+        context.runActivityCommand("toggleQuadrant");
+      },
+    },
+    "activity.addKanbanSection": {
+      run: () => {
+        context.runActivityCommand("addKanbanSection");
+      },
+    },
+    "activity.removeLastKanbanSection": {
+      run: () => {
+        context.runActivityCommand("removeLastKanbanSection");
       },
     },
     "view.toggle.planner": {

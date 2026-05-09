@@ -202,11 +202,13 @@ import { storeToRefs } from "pinia";
 import { timestampToDatetime } from "@/core/utils";
 import { useDevice } from "@/composables/useDevice";
 import { registerActivityRowPickerApi } from "@/composables/useActivityKeyboardNavigator";
+import { registerActivityKeyboardCommandApi } from "@/composables/useActivityKeyboardCommands";
 import { activityRowPickerInjectKey } from "@/components/ActivitySheet/activityRowPickerInject";
 
 const dataStore = useDataStore();
 const {
   activeId,
+  selectedRowId,
   selectedTaskId,
   selectedActivityId,
   selectedActivity,
@@ -397,6 +399,7 @@ provide(ACTIVITY_QUADRANT_SOLO_KEY, { soloQuadrantKey, exitSolo: exitQuadrantSol
 
 let quadrantDueUrgentInterval: ReturnType<typeof setInterval> | null = null;
 let unregisterRowPickerApi: (() => void) | null = null;
+let unregisterActivityCommandApi: (() => void) | null = null;
 
 /** 四象限：按主到期日同步 urgent / Later（过期进 neither），口径与 ActivityRow + getCountdownClass 一致 */
 function runQuadrantDueUrgentSync() {
@@ -436,12 +439,27 @@ onMounted(() => {
     exit: exitRowPickerMode,
     isActive: () => rowPickerActive.value,
   });
+  unregisterActivityCommandApi = registerActivityKeyboardCommandApi({
+    pickActivity: keyboardPickActivity,
+    deleteOrRecoverActivity: keyboardDeleteOrRecoverActivity,
+    adjustChildRelation: keyboardAdjustChildRelation,
+    addTodo: keyboardAddTodo,
+    addSchedule: keyboardAddSchedule,
+    addUntaetigkeit: keyboardAddUntaetigkeit,
+    toggleQuadrant: keyboardToggleQuadrant,
+    addKanbanSection: keyboardAddKanbanSection,
+    removeLastKanbanSection: keyboardRemoveLastKanbanSection,
+  });
 });
 
 onUnmounted(() => {
   if (unregisterRowPickerApi) {
     unregisterRowPickerApi();
     unregisterRowPickerApi = null;
+  }
+  if (unregisterActivityCommandApi) {
+    unregisterActivityCommandApi();
+    unregisterActivityCommandApi = null;
   }
   cancelSoloQuadrantSync();
   if (quadrantDueUrgentInterval) {
@@ -558,6 +576,72 @@ function pickRowPickerDigit(digit: number): boolean {
 
 function exitRowPickerMode() {
   rowPickerActive.value = false;
+}
+
+const noSelectedActivity = computed(() => selectedRowId.value == null && selectedActivityId.value == null && activeId.value == null);
+const isSelectedClassS = computed(() => selectedActivity.value?.class === "S");
+const isDeletedSelectedActivity = computed(() => Boolean(selectedActivity.value?.deleted));
+const hasParentSelectedActivity = computed(() => selectedActivity.value?.parentId != null);
+
+function keyboardPickActivity(): boolean {
+  if (isDeletedSelectedActivity.value || isSelectedRowDone.value || noSelectedActivity.value) return false;
+  pickActivity();
+  return true;
+}
+
+function keyboardDeleteOrRecoverActivity(): boolean {
+  if (noSelectedActivity.value || isSelectedRowDone.value) return false;
+  deleteActiveRow();
+  return true;
+}
+
+function keyboardAdjustChildRelation(): boolean {
+  // 与 ActivityButtons 的 v-if/v-else 分支保持一致
+  if (!hasParentSelectedActivity.value && !selectedRowHasParent.value) {
+    if (isSelectedRowDone.value || isSelectedClassS.value || isDeletedSelectedActivity.value || noSelectedActivity.value) return false;
+    createChildActivity();
+    return true;
+  }
+  if (sheetPrimaryActivityId.value == null || isSelectedClassS.value) return false;
+  increaseChildActivity();
+  return true;
+}
+
+function keyboardAddTodo(): boolean {
+  addTodoRow();
+  return true;
+}
+
+function keyboardAddSchedule(): boolean {
+  addScheduleRow();
+  return true;
+}
+
+function keyboardAddUntaetigkeit(): boolean {
+  addUntaetigkeitRow();
+  return true;
+}
+
+function keyboardToggleQuadrant(): boolean {
+  settingStore.toggleKanbanQuadrantMode();
+  return true;
+}
+
+function keyboardAddKanbanSection(): boolean {
+  const before = settingStore.settings.kanbanSetting.filter((s) => s.show).length;
+  addSection();
+  const after = settingStore.settings.kanbanSetting.filter((s) => s.show).length;
+  return after > before;
+}
+
+function keyboardRemoveLastKanbanSection(): boolean {
+  if (settingStore.settings.kanbanQuadrantMode) return false;
+  const visible = sections.value.filter((s) => s.show);
+  if (visible.length <= 1) return false;
+  const last = visible[visible.length - 1];
+  if (!last || last.id === 1) return false;
+  removeSection(last.id);
+  return true;
 }
 
 watch(keyboardRowCandidates, (list) => {

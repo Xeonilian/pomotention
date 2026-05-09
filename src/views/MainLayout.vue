@@ -262,6 +262,7 @@ import {
   moveActivityRowPicker,
   pickActivityRowByDigit,
 } from "@/composables/useActivityKeyboardNavigator";
+import { runActivityKeyboardCommand } from "@/composables/useActivityKeyboardCommands";
 
 // Icons & Components
 import {
@@ -520,6 +521,7 @@ const actionRegistry = createAppActionRegistry({
   canStartTimerWork: () => pomotentionTimerRef.value?.canStartWorkShortcut() ?? false,
   startTimerWork: () => pomotentionTimerRef.value?.triggerWorkStartShortcut() ?? false,
   enterActivityRowPicker: () => enterActivityRowPicker(),
+  runActivityCommand: (command) => runActivityKeyboardCommand(command),
 });
 
 function dispatchKeyboardAction(actionId: AppActionId, sequence: string): boolean {

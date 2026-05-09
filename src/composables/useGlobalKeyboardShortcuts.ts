@@ -25,6 +25,15 @@ const sequenceMap: Record<string, AppActionId> = {
   vs: "route.go.search",
   vd: "route.go.chart",
   ve: "route.go.settings",
+  app: "activity.pick",
+  add: "activity.deleteOrRecover",
+  ach: "activity.adjustChildRelation",
+  ato: "activity.addTodo",
+  asc: "activity.addSchedule",
+  aun: "activity.addUntaetigkeit",
+  aqu: "activity.toggleQuadrant",
+  aka: "activity.addKanbanSection",
+  akd: "activity.removeLastKanbanSection",
   rwu: "timer.startWork",
 };
 
@@ -59,7 +68,7 @@ function isTypingTarget(target: EventTarget | null): boolean {
 }
 
 export function useGlobalKeyboardShortcuts(options: UseGlobalKeyboardShortcutsOptions) {
-  const timeoutMs = options.sequenceTimeoutMs ?? 520;
+  const timeoutMs = options.sequenceTimeoutMs ?? 1000;
   let buffer = "";
   let timerId: number | null = null;
   let installed = false;
