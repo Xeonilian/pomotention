@@ -201,6 +201,8 @@ import { useDataStore } from "@/stores/useDataStore";
 import { storeToRefs } from "pinia";
 import { timestampToDatetime } from "@/core/utils";
 import { useDevice } from "@/composables/useDevice";
+import { registerActivityRowPickerApi } from "@/composables/useActivityKeyboardNavigator";
+import { activityRowPickerInjectKey } from "@/components/ActivitySheet/activityRowPickerInject";
 
 const dataStore = useDataStore();
 const {
@@ -394,6 +396,7 @@ provide(ACTIVITY_QUADRANT_DRAG_END_KEY, handleQuadrantDragEnd);
 provide(ACTIVITY_QUADRANT_SOLO_KEY, { soloQuadrantKey, exitSolo: exitQuadrantSolo });
 
 let quadrantDueUrgentInterval: ReturnType<typeof setInterval> | null = null;
+let unregisterRowPickerApi: (() => void) | null = null;
 
 /** 四象限：按主到期日同步 urgent / Later（过期进 neither），口径与 ActivityRow + getCountdownClass 一致 */
 function runQuadrantDueUrgentSync() {
@@ -426,9 +429,20 @@ onMounted(() => {
   if (settingStore.settings.kanbanQuadrantMode && !settingStore.settings.kanbanQuadrantSnapshot) {
     settingStore.settings.kanbanQuadrantMode = false;
   }
+  unregisterRowPickerApi = registerActivityRowPickerApi({
+    enter: enterRowPickerMode,
+    move: moveRowPicker,
+    pickByDigit: pickRowPickerDigit,
+    exit: exitRowPickerMode,
+    isActive: () => rowPickerActive.value,
+  });
 });
 
 onUnmounted(() => {
+  if (unregisterRowPickerApi) {
+    unregisterRowPickerApi();
+    unregisterRowPickerApi = null;
+  }
   cancelSoloQuadrantSync();
   if (quadrantDueUrgentInterval) {
     clearInterval(quadrantDueUrgentInterval);
@@ -456,6 +470,112 @@ const quadrantImportantOnly = computed(() => filterActivitiesForQuadrantKey(quad
 const quadrantUrgentImportant = computed(() => filterActivitiesForQuadrantKey(quadrantPreFiltered.value, "urgentImportant"));
 const quadrantUrgentOnly = computed(() => filterActivitiesForQuadrantKey(quadrantPreFiltered.value, "urgentOnly"));
 const quadrantNeither = computed(() => filterActivitiesForQuadrantKey(quadrantPreFiltered.value, "neither"));
+
+const rowPickerActive = ref(false);
+const rowPickerCursor = ref(0);
+
+const keyboardRowCandidates = computed(() => {
+  const list: Activity[] = [];
+  const seen = new Set<number>();
+
+  const appendItems = (items: Activity[]) => {
+    for (const item of items) {
+      if (item.status === "done") continue;
+      if (seen.has(item.id)) continue;
+      seen.add(item.id);
+      list.push(item);
+    }
+  };
+
+  if (settingStore.settings.kanbanQuadrantMode) {
+    appendItems(quadrantPreFiltered.value);
+    return list;
+  }
+
+  for (const section of sections.value) {
+    appendItems(filteredBySection(section));
+  }
+  return list;
+});
+
+const rowPickerNumberById = computed<Record<number, number>>(() => {
+  const out: Record<number, number> = {};
+  const list = keyboardRowCandidates.value;
+  const length = Math.min(9, list.length);
+  for (let i = 0; i < length; i += 1) {
+    const item = list[i];
+    if (!item) continue;
+    out[item.id] = i + 1;
+  }
+  return out;
+});
+
+const rowPickerCurrentRowId = computed<number | null>(() => {
+  const list = keyboardRowCandidates.value;
+  const item = list[rowPickerCursor.value];
+  return item?.id ?? null;
+});
+
+function focusRowPickerIndex(nextIndex: number): boolean {
+  const list = keyboardRowCandidates.value;
+  if (!list.length) return false;
+  const last = list.length - 1;
+  const clamped = Math.max(0, Math.min(last, nextIndex));
+  rowPickerCursor.value = clamped;
+  const target = list[clamped];
+  if (!target) return false;
+  handleFocusRow(target.id);
+  return true;
+}
+
+function enterRowPickerMode(): boolean {
+  const list = keyboardRowCandidates.value;
+  if (!list.length) return false;
+  rowPickerActive.value = true;
+  const selectedId = sheetPrimaryActivityId.value;
+  const initial = selectedId != null ? list.findIndex((item) => item.id === selectedId) : -1;
+  return focusRowPickerIndex(initial >= 0 ? initial : 0);
+}
+
+function moveRowPicker(delta: 1 | -1): boolean {
+  if (!rowPickerActive.value) return false;
+  const list = keyboardRowCandidates.value;
+  if (!list.length) return false;
+  const last = list.length - 1;
+  let next = rowPickerCursor.value + delta;
+  if (next < 0) next = last;
+  if (next > last) next = 0;
+  return focusRowPickerIndex(next);
+}
+
+function pickRowPickerDigit(digit: number): boolean {
+  if (!rowPickerActive.value) return false;
+  const idx = digit - 1;
+  const ok = focusRowPickerIndex(idx);
+  if (ok) rowPickerActive.value = false;
+  return ok;
+}
+
+function exitRowPickerMode() {
+  rowPickerActive.value = false;
+}
+
+watch(keyboardRowCandidates, (list) => {
+  if (!rowPickerActive.value) return;
+  if (!list.length) {
+    rowPickerActive.value = false;
+    return;
+  }
+  if (rowPickerCursor.value > list.length - 1) {
+    rowPickerCursor.value = list.length - 1;
+  }
+});
+
+provide(activityRowPickerInjectKey, {
+  isActive: computed(() => rowPickerActive.value),
+  numberById: rowPickerNumberById,
+  currentRowId: rowPickerCurrentRowId,
+});
 
 // 错误提示弹窗相关
 const showPopover = ref(false);
@@ -813,4 +933,5 @@ function getCountdownClass(dueDate: number | undefined | null): string {
     margin-bottom: calc(env(safe-area-inset-bottom) + 2px);
   }
 }
+
 </style>

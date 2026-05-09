@@ -2,6 +2,7 @@ export type AppActionSource = "keyboard" | "click" | "cli" | "mcp";
 
 export type AppActionId =
   | "view.toggle.activity"
+  | "activity.rowPicker.enter"
   | "view.toggle.task"
   | "view.toggle.planner"
   | "view.toggle.schedule"
@@ -33,6 +34,7 @@ export interface AppActionContext {
   openHelp: () => void;
   canStartTimerWork: () => boolean;
   startTimerWork: () => boolean;
+  enterActivityRowPicker: () => boolean;
 }
 
 export function createAppActionRegistry(context: AppActionContext): AppActionRegistry {
@@ -42,6 +44,11 @@ export function createAppActionRegistry(context: AppActionContext): AppActionReg
     },
     "view.toggle.task": {
       run: () => context.togglePanel("task"),
+    },
+    "activity.rowPicker.enter": {
+      run: () => {
+        context.enterActivityRowPicker();
+      },
     },
     "view.toggle.planner": {
       run: () => context.togglePanel("planner"),

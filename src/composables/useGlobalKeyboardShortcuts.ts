@@ -6,11 +6,14 @@ interface UseGlobalKeyboardShortcutsOptions {
   dispatchAction: (actionId: AppActionId, sequence: string) => boolean;
   isEnabled?: () => boolean;
   sequenceTimeoutMs?: number;
+  onModeKey?: (key: string, event: KeyboardEvent) => boolean;
+  isModeActive?: () => boolean;
 }
 
 const singleKeyMap: Record<string, AppActionId> = {
   aa: "view.toggle.activity",
-  at: "view.toggle.task",
+  ar: "activity.rowPicker.enter",
+  tt: "view.toggle.task",
   pp: "view.toggle.planner",
   mm: "view.toggle.schedule",
   rr: "view.toggle.pomodoro",
@@ -37,7 +40,8 @@ const sequencePrefixSet = (() => {
   return set;
 })();
 
-const registeredHotkeys = Array.from(new Set(allSequences.join("").split(""))).join(",");
+const registeredHotkeys =
+  Array.from(new Set(allSequences.join("").split(""))).join(",") + ",up,down,esc,enter,return,num_enter,1,2,3,4,5,6,7,8,9";
 
 function normalizeKey(value: string | undefined): string {
   if (!value) return "";
@@ -135,6 +139,11 @@ export function useGlobalKeyboardShortcuts(options: UseGlobalKeyboardShortcutsOp
   const keyHandler = (event: KeyboardEvent, handler: { key: string }) => {
     if (!options.isEnabled?.() && options.isEnabled !== undefined) return;
     if (event.isComposing || event.repeat) return;
+    const modeKey = normalizeKey(handler.key ?? event.key);
+    if (options.isModeActive?.() && options.onModeKey && options.onModeKey(modeKey, event)) {
+      event.preventDefault();
+      return;
+    }
     if (event.ctrlKey || event.metaKey || event.altKey) return;
     const key = normalizeKey(handler.key ?? event.key);
     if (!/^[a-z]$/.test(key)) return;

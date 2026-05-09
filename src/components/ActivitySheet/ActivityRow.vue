@@ -9,6 +9,9 @@
     }"
   >
     <div class="activity-content">
+      <span v-if="showRowPickerNumber" class="row-picker-index" :class="{ 'is-active': isRowPickerCurrent }">
+        {{ rowPickerNumber }}
+      </span>
       <span
         v-if="item.parentId"
         class="child-activity-dot"
@@ -316,6 +319,7 @@ import TagRenderer from "../TagSystem/TagRenderer.vue";
 import TagPickerPopover from "../TagSystem/TagPickerPopover.vue";
 import type { InputInst } from "naive-ui";
 import { TAG_IDS_HIDDEN_IN_TAG_RENDERER } from "@/core/constants";
+import { activityRowPickerInjectKey } from "@/components/ActivitySheet/activityRowPickerInject";
 
 const props = defineProps<{
   item: Activity;
@@ -336,6 +340,7 @@ defineEmits<{
 }>();
 
 const ctx = inject(activitySectionRowInjectKey)!;
+const rowPickerCtx = inject(activityRowPickerInjectKey, null);
 const tagEditor = ctx.tagEditor;
 const isMobile = ctx.isMobile;
 const notifyRowFocused = (rowId: number) => ctx.notifyRowFocused(rowId);
@@ -518,6 +523,9 @@ function handleRemoveTag(tagId: number) {
 }
 
 const isHighlighted = computed(() => props.item.id === props.activityId || props.item.id === props.activeId);
+const rowPickerNumber = computed(() => rowPickerCtx?.numberById.value[props.item.id] ?? null);
+const showRowPickerNumber = computed(() => Boolean(rowPickerCtx?.isActive.value) && rowPickerNumber.value != null);
+const isRowPickerCurrent = computed(() => rowPickerCtx?.currentRowId.value === props.item.id);
 
 const pomoDisplayValue = computed(() => {
   const item = props.item;
@@ -646,10 +654,30 @@ function handlePomoInputTouchCancel() {
   position: relative;
   display: flex;
   flex-direction: row;
+  align-items: center;
 }
 
 .activity-content .child-activity {
   margin-left: 20px;
+}
+
+.row-picker-index {
+  width: 18px;
+  min-width: 18px;
+  height: 18px;
+  line-height: 18px;
+  text-align: center;
+  border-radius: 50%;
+  margin-right: 4px;
+  font-size: 11px;
+  font-family: "consolas", monospace;
+  color: var(--color-blue);
+  background: var(--color-background-light);
+}
+
+.row-picker-index.is-active {
+  color: var(--color-background);
+  background: var(--color-blue);
 }
 
 .child-activity-dot {

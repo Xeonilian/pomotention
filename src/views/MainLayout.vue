@@ -255,6 +255,13 @@ import { navigateToBuiltDocs } from "@/composables/useDocsUrl";
 import { syncAll } from "@/services/sync";
 import { createTouchScheduledSingleAndDouble } from "@/composables/useTouchScheduledSingleAndDouble";
 import { createAppActionRegistry, dispatchAppAction, type AppActionId } from "@/actions/appActions";
+import {
+  enterActivityRowPicker,
+  exitActivityRowPicker,
+  isActivityRowPickerActive,
+  moveActivityRowPicker,
+  pickActivityRowByDigit,
+} from "@/composables/useActivityKeyboardNavigator";
 
 // Icons & Components
 import {
@@ -512,6 +519,7 @@ const actionRegistry = createAppActionRegistry({
   openHelp: () => navigateToBuiltDocs(),
   canStartTimerWork: () => pomotentionTimerRef.value?.canStartWorkShortcut() ?? false,
   startTimerWork: () => pomotentionTimerRef.value?.triggerWorkStartShortcut() ?? false,
+  enterActivityRowPicker: () => enterActivityRowPicker(),
 });
 
 function dispatchKeyboardAction(actionId: AppActionId, sequence: string): boolean {
@@ -521,6 +529,21 @@ function dispatchKeyboardAction(actionId: AppActionId, sequence: string): boolea
 const shortcuts = useGlobalKeyboardShortcuts({
   dispatchAction: dispatchKeyboardAction,
   isEnabled: () => !isMiniMode.value,
+  isModeActive: () => isActivityRowPickerActive(),
+  onModeKey: (key) => {
+    if (key === "up") return moveActivityRowPicker(-1);
+    if (key === "down") return moveActivityRowPicker(1);
+    if (key === "enter" || key === "return") {
+      exitActivityRowPicker();
+      return true;
+    }
+    if (key === "esc" || key === "escape") {
+      exitActivityRowPicker();
+      return true;
+    }
+    if (/^[1-9]$/.test(key)) return pickActivityRowByDigit(Number(key));
+    return false;
+  },
 });
 
 watch(route, (newVal) => {
