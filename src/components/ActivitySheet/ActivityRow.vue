@@ -574,12 +574,8 @@ function focusPomoInput() {
 }
 
 function handlePomoInputFocus() {
-  if (pomoShouldFocus.value) {
-    notifyRowFocused(props.item.id);
-  } else {
-    const input = pomoInputRef.value;
-    if (input) input.blur();
-  }
+  // 允许 Tab/快捷键聚焦后直接输入，避免获得焦点却无法输入
+  notifyRowFocused(props.item.id);
 }
 
 function handleTogglePomoType() {

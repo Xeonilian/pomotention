@@ -188,6 +188,17 @@ export function useGlobalKeyboardShortcuts(options: UseGlobalKeyboardShortcutsOp
     if (handled) event.preventDefault();
   };
 
+  const editableEscapeHandler = (event: KeyboardEvent) => {
+    if (event.key !== "Escape" && event.key !== "Esc") return;
+    if (!isTypingTarget(event.target)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const target = event.target;
+    if (target instanceof HTMLElement) {
+      target.blur();
+    }
+  };
+
   const install = () => {
     if (installed || typeof window === "undefined") return;
     installed = true;
@@ -197,6 +208,7 @@ export function useGlobalKeyboardShortcuts(options: UseGlobalKeyboardShortcutsOp
       if (originalFilter) return originalFilter(event);
       return true;
     };
+    window.addEventListener("keydown", editableEscapeHandler, true);
     hotkeys(registeredHotkeys, { capture: true, keyup: false, keydown: true }, keyHandler);
   };
 
@@ -207,6 +219,7 @@ export function useGlobalKeyboardShortcuts(options: UseGlobalKeyboardShortcutsOp
       hotkeys.filter = originalFilter;
       originalFilter = null;
     }
+    window.removeEventListener("keydown", editableEscapeHandler, true);
     clearBuffer();
     installed = false;
   };
