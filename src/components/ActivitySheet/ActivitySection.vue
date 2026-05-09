@@ -143,15 +143,15 @@ import {
 import type { Activity } from "@/core/types/Activity";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useTagStore } from "@/stores/useTagStore";
-import { useActivityTagEditor } from "@/composables/useActivityTagEditor";
-import { useActivityDrag } from "@/composables/useActivityDrag";
+import { useActivityTagEditor } from "@/composables/activity/useActivityTagEditor";
+import { useActivityDrag } from "@/composables/activity/useActivityDrag";
 import {
   ACTIVITY_QUADRANT_DRAG_END_KEY,
   ACTIVITY_QUADRANT_SORT_KEY,
   ACTIVITY_QUADRANT_SOLO_KEY,
   type ActivitySectionSortKey,
 } from "@/core/activityQuadrant";
-import { useDevice } from "@/composables/useDevice";
+import { useDevice } from "@/composables/platform/useDevice";
 import ActivityRow, { activitySectionRowInjectKey } from "./ActivityRow.vue";
 import type { InputInst } from "naive-ui";
 

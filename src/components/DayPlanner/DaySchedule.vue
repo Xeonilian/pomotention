@@ -327,9 +327,9 @@ import { Task } from "@/core/types/Task";
 
 import { useDataStore } from "@/stores/useDataStore";
 import { storeToRefs } from "pinia";
-import { useActivityTagEditor } from "@/composables/useActivityTagEditor";
+import { useActivityTagEditor } from "@/composables/activity/useActivityTagEditor";
 import TagPickerPopover from "../TagSystem/TagPickerPopover.vue";
-import { useDevice } from "@/composables/useDevice";
+import { useDevice } from "@/composables/platform/useDevice";
 
 const dataStore = useDataStore();
 const { isMobile } = useDevice();

@@ -13,7 +13,7 @@
 </template>
 
 <script setup lang="ts">
-import { useDataExport } from "@/composables/useDataExport";
+import { useDataExport } from "@/composables/sync/useDataExport";
 
 // 定义接收的属性
 defineProps<{

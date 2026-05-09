@@ -1,7 +1,7 @@
 // src/composables/useDraggable.ts
 import { ref, nextTick, watch } from "vue";
 import { useSettingStore } from "@/stores/useSettingStore";
-import { useDevice } from "./useDevice";
+import { useDevice } from "@/composables/platform/useDevice";
 
 export function useDraggable(dragThreshold = 5) {
   const draggableContainer = ref<HTMLElement | null>(null);

@@ -63,7 +63,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { readDir } from "@tauri-apps/plugin-fs";
 import { join } from "@tauri-apps/api/path";
 import { isTauri } from "@tauri-apps/api/core";
-import { useDataExport } from "@/composables/useDataExport";
+import { useDataExport } from "@/composables/sync/useDataExport";
 import {
   captureImportRollbackSnapshot,
   hasImportRollbackSnapshot,

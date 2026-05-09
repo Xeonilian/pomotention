@@ -166,15 +166,15 @@ import TagPickerPopover from "@/components/TagSystem/TagPickerPopover.vue";
 import TagRenderer from "@/components/TagSystem/TagRenderer.vue";
 
 // 引入 stores 和类型
-import { useActivityTagEditor } from "@/composables/useActivityTagEditor";
+import { useActivityTagEditor } from "@/composables/activity/useActivityTagEditor";
 import { useSearchUiStore } from "@/stores/useSearchUiStore";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useTagStore } from "@/stores/useTagStore";
 
 // 引入业务类型和组合式函数
-import { useResize } from "@/composables/useResize";
-import { useSearchFilter } from "@/composables/useSearchFilter";
-import { useDevice } from "@/composables/useDevice";
+import { useResize } from "@/composables/layout/useResize";
+import { useSearchFilter } from "@/composables/search/useSearchFilter";
+import { useDevice } from "@/composables/platform/useDevice";
 
 // 实例化所有需要的 stores
 const searchUiStore = useSearchUiStore();

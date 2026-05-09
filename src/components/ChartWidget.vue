@@ -32,7 +32,7 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
-import { useChart } from "@/composables/useChart";
+import { useChart } from "@/composables/chart/useChart";
 import type { ChartConfig, DateRange } from "@/core/types/ChartConfig";
 import { getDateRangeBounds } from "@/core/types/ChartConfig";
 import { ArrowLeft24Filled, ArrowRight24Filled } from "@vicons/fluent";

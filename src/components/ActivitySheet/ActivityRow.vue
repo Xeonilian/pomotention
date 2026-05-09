@@ -281,7 +281,7 @@
 
 <script lang="ts">
 import type { InjectionKey, Ref } from "vue";
-import { useActivityTagEditor } from "@/composables/useActivityTagEditor";
+import { useActivityTagEditor } from "@/composables/activity/useActivityTagEditor";
 
 /** ActivitySection provide → ActivityRow inject */
 export type ActivitySectionRowInject = {

@@ -188,11 +188,11 @@ import {
 
 import { useTemplateStore } from "@/stores/useTemplateStore";
 import type { Template } from "@/core/types/Template";
-import { useActivityTagEditor } from "@/composables/useActivityTagEditor";
+import { useActivityTagEditor } from "@/composables/activity/useActivityTagEditor";
 import { useDataStore } from "@/stores/useDataStore";
 import { useDisplayedTaskStore } from "@/stores/useDisplayedTaskStore";
-import { useDevice } from "@/composables/useDevice";
-import { registerTaskKeyboardCommandApi } from "@/composables/useTaskKeyboardCommands";
+import { useDevice } from "@/composables/platform/useDevice";
+import { registerTaskKeyboardCommandApi } from "@/composables/keyboard/task/useTaskKeyboardCommands";
 
 const tagEditor = useActivityTagEditor();
 const dataStore = useDataStore();

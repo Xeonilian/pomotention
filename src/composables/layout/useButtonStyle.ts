@@ -16,7 +16,7 @@ import {
   Pin24Regular,
   //BrainCircuit24Regular,
 } from "@vicons/fluent";
-import { useDevice } from "./useDevice";
+import { useDevice } from "@/composables/platform/useDevice";
 
 type ViewKey = "ontop" | "pomodoro" | "schedule" | "task" | "planner" | "activity"; //| "ai"
 

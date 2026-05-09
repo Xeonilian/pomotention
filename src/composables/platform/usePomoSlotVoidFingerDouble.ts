@@ -1,7 +1,7 @@
 /**
  * 番茄槽位：手指双触 ≈ 桌面 dblclick 作废。合并 Touch + Pointer、去重同一次抬指的重复事件；启用条件含 coarse 指针以覆盖 Android 上 isMobile 为 false 的情况。
  */
-import { createTouchScheduledSingleAndDouble } from "@/composables/useTouchScheduledSingleAndDouble";
+import { createTouchScheduledSingleAndDouble } from "@/composables/platform/useTouchScheduledSingleAndDouble";
 
 // 同一次抬指在部分浏览器会先后触发 touchend 与 pointerup，只计一次
 const DEDUPE_MS = 70;

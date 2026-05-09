@@ -5,7 +5,7 @@ import { isTauri } from "@tauri-apps/api/core";
 import { getCurrentWindow, PhysicalPosition, LogicalSize } from "@tauri-apps/api/window";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useTimerStore } from "@/stores/useTimerStore";
-import { useAlwaysOnTop } from "@/composables/useAlwaysOnTop";
+import { useAlwaysOnTop } from "@/composables/layout/useAlwaysOnTop";
 
 export function useAppWindow() {
   const settingStore = useSettingStore();

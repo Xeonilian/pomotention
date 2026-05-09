@@ -77,8 +77,8 @@ import { marked } from "marked";
 import { Star20Filled, Star20Regular, Tag16Regular } from "@vicons/fluent";
 
 // 导入核心工具
-import { useSearchTab } from "@/composables/useSearchTab";
-import { useActivityTagEditor } from "@/composables/useActivityTagEditor";
+import { useSearchTab } from "@/composables/search/useSearchTab";
+import { useActivityTagEditor } from "@/composables/activity/useActivityTagEditor";
 import { useDataStore } from "@/stores/useDataStore";
 import { useSearchUiStore } from "@/stores/useSearchUiStore";
 import type { TabItem } from "@/stores/useSearchUiStore";

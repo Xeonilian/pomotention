@@ -60,7 +60,7 @@ type ECOption = echarts.ComposeOption<HeatmapSeriesOption | TooltipComponentOpti
 import { NButton, NIcon } from "naive-ui";
 import { ArrowUp24Filled, ArrowDown24Filled, ArrowLeft24Filled, ArrowRight24Filled } from "@vicons/fluent";
 import { useDataStore } from "@/stores/useDataStore";
-import { useDevice } from "@/composables/useDevice";
+import { useDevice } from "@/composables/platform/useDevice";
 
 interface Props {
   config: {

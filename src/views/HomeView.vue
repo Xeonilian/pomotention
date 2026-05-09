@@ -334,8 +334,8 @@ import { onBeforeRouteLeave } from "vue-router";
 import type { Activity } from "@/core/types/Activity";
 import { getDateKey } from "@/core/utils";
 import { ViewType } from "@/core/constants";
-import { useResize } from "@/composables/useResize";
-import { useVisualViewportKeyboard } from "@/composables/useVisualViewportKeyboard";
+import { useResize } from "@/composables/layout/useResize";
+import { useVisualViewportKeyboard } from "@/composables/layout/useVisualViewportKeyboard";
 import IcsExportModal from "@/components/IcsExportModal.vue";
 import HomeTagFilterPopover from "@/components/TagSystem/HomeTagFilterPopover.vue";
 import MobileHomeFab from "@/components/MobileHomeFab/MobileHomeFab.vue";
@@ -361,9 +361,9 @@ import { taskService } from "@/services/taskService";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useDataStore } from "@/stores/useDataStore";
 import { autoSyncDebounced, uploadAllDebounced } from "@/core/utils/autoSync";
-import { useDevice } from "@/composables/useDevice";
-import { usePublicHolidays, plannerHolidayMapKey } from "@/composables/usePublicHolidays";
-import { registerPlannerKeyboardCommandApi } from "@/composables/usePlannerKeyboardCommands";
+import { useDevice } from "@/composables/platform/useDevice";
+import { usePublicHolidays, plannerHolidayMapKey } from "@/composables/planner/usePublicHolidays";
+import { registerPlannerKeyboardCommandApi } from "@/composables/keyboard/planner/usePlannerKeyboardCommands";
 import { useHomePlannerKeyboard } from "@/composables/home/useHomePlannerKeyboard";
 import { useHomePlannerRowEdits } from "@/composables/home/useHomePlannerRowEdits";
 
@@ -439,7 +439,7 @@ provide(plannerHolidayMapKey, holidayByDateKey);
 const { saveAllDebounced, cleanSelection } = dataStore;
 // ======================== 0. UI 更新相关 ========================
 
-import { usePomodoroStats } from "@/composables/usePomodoroStats";
+import { usePomodoroStats } from "@/composables/planner/usePomodoroStats";
 
 // 新系统（测试用）
 const { currentDatePomoCount, globalRealPomo } = usePomodoroStats();

@@ -26,9 +26,9 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from "vue";
 import { getClickContextFragments, findFragmentSequenceInSource } from "@/services/taskRecordService";
-import { useCaretFlash } from "@/composables/useCaretFlash";
-import { useDevice } from "@/composables/useDevice";
-import { useTaskRecordShortcuts } from "@/composables/useTaskRecordShortcuts";
+import { useCaretFlash } from "@/composables/task/useCaretFlash";
+import { useDevice } from "@/composables/platform/useDevice";
+import { useTaskRecordShortcuts } from "@/composables/task/useTaskRecordShortcuts";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useSyncStore } from "@/stores/useSyncStore";
 import "highlight.js/styles/github.css";

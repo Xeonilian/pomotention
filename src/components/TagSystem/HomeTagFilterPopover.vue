@@ -44,7 +44,7 @@ import { computed, ref } from "vue";
 import { storeToRefs } from "pinia";
 import { TagReset20Filled, TagSearch20Regular } from "@vicons/fluent";
 import { useDataStore } from "@/stores/useDataStore";
-import { useDevice } from "@/composables/useDevice";
+import { useDevice } from "@/composables/platform/useDevice";
 import TagPickerPopover from "@/components/TagSystem/TagPickerPopover.vue";
 import TagRenderer from "@/components/TagSystem/TagRenderer.vue";
 

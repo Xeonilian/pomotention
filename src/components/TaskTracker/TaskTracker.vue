@@ -128,7 +128,7 @@ import { NPopover } from "naive-ui";
 import type { EnergyRecord, RewardRecord, InterruptionRecord } from "@/core/types/Task";
 import { useTaskTrackerStore } from "@/stores/useTaskTrackerStore";
 import { useDataStore } from "@/stores/useDataStore";
-import { useDevice } from "@/composables/useDevice";
+import { useDevice } from "@/composables/platform/useDevice";
 import { ChevronUpDown20Regular } from "@vicons/fluent";
 import { useSettingStore } from "@/stores/useSettingStore";
 const settingStore = useSettingStore();

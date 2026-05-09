@@ -9,7 +9,7 @@ import type { Schedule } from "@/core/types/Schedule";
 import type { Todo } from "@/core/types/Todo";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useDataStore } from "@/stores/useDataStore";
-import { useDevice } from "@/composables/useDevice";
+import { useDevice } from "@/composables/platform/useDevice";
 
 const { isMobile } = useDevice();
 

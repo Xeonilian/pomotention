@@ -12,7 +12,7 @@
 </template>
 
 <script setup lang="ts">
-import { usePwaInstall } from "@/composables/usePwaInstall";
+import { usePwaInstall } from "@/composables/platform/usePwaInstall";
 
 const { showIosInstallBanner, dismiss } = usePwaInstall();
 </script>

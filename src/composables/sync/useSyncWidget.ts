@@ -2,7 +2,7 @@
 import { computed, onMounted } from "vue";
 import { useSyncStore } from "@/stores/useSyncStore";
 import { uploadAll, downloadAll } from "@/services/sync";
-import { useRelativeTime } from "@/composables/useRelativeTime";
+import { useRelativeTime } from "@/composables/sync/useRelativeTime";
 import { LockClosed20Regular, ArrowSync20Regular, DismissCircle20Regular, CheckmarkCircle20Regular } from "@vicons/fluent";
 
 export function useSyncWidget() {

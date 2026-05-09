@@ -40,7 +40,7 @@ import { BatterySaver20Regular } from "@vicons/fluent";
 import { NModal, NSlider, NSpace, NText, NButton, NIcon, NDatePicker } from "naive-ui";
 import type { DataTableColumns } from "naive-ui";
 import { flushPickerValueToVue, pickRecordedAtMs, isEventFromDateTimePickerDeep } from "@/utils/recordedAtPick";
-import { useDevice } from "@/composables/useDevice";
+import { useDevice } from "@/composables/platform/useDevice";
 const { isMobile } = useDevice();
 
 const props = defineProps<{

@@ -10,7 +10,7 @@ import type { KanbanQuadrantUiLabels } from "@/core/activityQuadrant";
 import { DEFAULT_KANBAN_QUADRANT_UI_LABELS } from "@/core/activityQuadrant";
 import { SoundType } from "@/core/sounds";
 import { AiProfile } from "@/core/types/AiProfile";
-import { useDevice } from "@/composables/useDevice";
+import { useDevice } from "@/composables/platform/useDevice";
 
 const { isMobile } = useDevice();
 

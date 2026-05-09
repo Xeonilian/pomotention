@@ -1,7 +1,7 @@
 // @/stores/useSearchUiStore.ts
 
 import { defineStore } from "pinia";
-import { ActivityRow } from "@/composables/useSearchFilter";
+import { ActivityRow } from "@/composables/search/useSearchFilter";
 // 定义 Tab 类型，它属于 UI 的一部分，放在这里很合适
 export type TabType = "todo" | "sch" | "activity";
 export type TabItem = { key: string; type: TabType; id: number; title: string };

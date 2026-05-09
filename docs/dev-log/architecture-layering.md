@@ -36,3 +36,29 @@
 - 先将 `HomeView` 的 planner 键盘与行编辑逻辑迁移到 `composables/home/`。
 - 保留旧路径兼容导出，逐步迁移引用。
 - 每次功能迭代同步执行“拆分 + 接线”而非继续堆积。
+
+## Composables 目录分组（阶段一）
+
+- `composables/keyboard/*`
+  - 全局快捷键与各区域命令注册。
+- `composables/home/*`
+  - Home 页面域内复用行为（如 planner 键盘、行编辑）。
+  - 提供 `home/index.ts` 作为统一导出入口。
+- `composables/platform/index.ts`
+  - 设备、PWA、跨平台触控与外部文档入口能力导出。
+- `composables/layout/index.ts`
+  - 视口、窗口、拖拽、尺寸相关能力导出。
+- `composables/search/index.ts`
+  - 搜索页相关能力导出。
+- `composables/chart/index.ts`
+  - 图表相关能力导出。
+- `composables/planner/index.ts`
+  - 计划视图数据与统计能力导出。
+- `composables/activity/index.ts`
+  - 活动域交互能力导出。
+- `composables/task/index.ts`
+  - 任务域交互与光标反馈能力导出。
+- `composables/sync/index.ts`
+  - 同步、相对时间与迁移能力导出。
+- `composables/ai/index.ts`
+  - AI 对话能力导出。

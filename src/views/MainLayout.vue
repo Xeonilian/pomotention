@@ -245,15 +245,15 @@ import { useDataStore } from "@/stores/useDataStore";
 import { useSyncStore } from "@/stores/useSyncStore";
 
 // Composables
-import { useButtonStyle } from "@/composables/useButtonStyle";
-import { useDraggable } from "@/composables/useDraggable";
-import { useAppWindow } from "@/composables/useAppWindow";
-import { useSyncWidget } from "@/composables/useSyncWidget";
-import { useDevice } from "@/composables/useDevice";
-import { useGlobalKeyboardShortcuts } from "@/composables/useGlobalKeyboardShortcuts";
-import { navigateToBuiltDocs } from "@/composables/useDocsUrl";
+import { useButtonStyle } from "@/composables/layout/useButtonStyle";
+import { useDraggable } from "@/composables/layout/useDraggable";
+import { useAppWindow } from "@/composables/layout/useAppWindow";
+import { useSyncWidget } from "@/composables/sync/useSyncWidget";
+import { useDevice } from "@/composables/platform/useDevice";
+import { useGlobalKeyboardShortcuts } from "@/composables/keyboard/useGlobalKeyboardShortcuts";
+import { navigateToBuiltDocs } from "@/composables/platform/useDocsUrl";
 import { syncAll } from "@/services/sync";
-import { createTouchScheduledSingleAndDouble } from "@/composables/useTouchScheduledSingleAndDouble";
+import { createTouchScheduledSingleAndDouble } from "@/composables/platform/useTouchScheduledSingleAndDouble";
 import { createAppActionRegistry, dispatchAppAction, type AppActionId } from "@/actions/appActions";
 import {
   enterActivityRowPicker,
@@ -261,12 +261,12 @@ import {
   isActivityRowPickerActive,
   moveActivityRowPicker,
   pickActivityRowByDigit,
-} from "@/composables/useActivityKeyboardNavigator";
-import { runActivityKeyboardCommand } from "@/composables/useActivityKeyboardCommands";
-import { runActivityEditFieldCommand } from "@/composables/useActivityKeyboardCommands";
-import { runTaskKeyboardCommand } from "@/composables/useTaskKeyboardCommands";
-import { runPlannerKeyboardCommand } from "@/composables/usePlannerKeyboardCommands";
-import { runTimetableKeyboardCommand } from "@/composables/useTimetableKeyboardCommands";
+} from "@/composables/keyboard/activity/useActivityKeyboardNavigator";
+import { runActivityKeyboardCommand } from "@/composables/keyboard/activity/useActivityKeyboardCommands";
+import { runActivityEditFieldCommand } from "@/composables/keyboard/activity/useActivityKeyboardCommands";
+import { runTaskKeyboardCommand } from "@/composables/keyboard/task/useTaskKeyboardCommands";
+import { runPlannerKeyboardCommand } from "@/composables/keyboard/planner/usePlannerKeyboardCommands";
+import { runTimetableKeyboardCommand } from "@/composables/keyboard/timetable/useTimetableKeyboardCommands";
 
 // Icons & Components
 import {

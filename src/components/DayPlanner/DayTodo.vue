@@ -489,11 +489,11 @@ import { useSettingStore } from "@/stores/useSettingStore";
 import { useTagStore } from "@/stores/useTagStore";
 import { useTimerStore } from "@/stores/useTimerStore";
 import { storeToRefs } from "pinia";
-import { useActivityTagEditor } from "@/composables/useActivityTagEditor";
+import { useActivityTagEditor } from "@/composables/activity/useActivityTagEditor";
 import TagPickerPopover from "../TagSystem/TagPickerPopover.vue";
 import type { SelectOption } from "naive-ui";
-import { useDevice } from "@/composables/useDevice";
-import { usePomoSlotVoidFingerDouble, pomoFingerVoidPathEnabled } from "@/composables/usePomoSlotVoidFingerDouble";
+import { useDevice } from "@/composables/platform/useDevice";
+import { usePomoSlotVoidFingerDouble, pomoFingerVoidPathEnabled } from "@/composables/platform/usePomoSlotVoidFingerDouble";
 import {
   ensureFlatRealPomo,
   getRealPomoState,

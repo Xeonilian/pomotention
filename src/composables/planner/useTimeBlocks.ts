@@ -10,7 +10,7 @@ import { useSegStore } from "@/stores/useSegStore";
 import { useTimeBlockDrag } from "./useTimeBlockDrag";
 import { storeToRefs } from "pinia";
 import { useDataStore } from "@/stores/useDataStore";
-import { useDevice } from "./useDevice";
+import { useDevice } from "@/composables/platform/useDevice";
 
 const { isMobile } = useDevice();
 const borderWidth = isMobile.value ? 0.5 : 1;

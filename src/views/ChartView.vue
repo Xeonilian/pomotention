@@ -46,7 +46,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watchEffect, defineAsyncComponent } from "vue";
-import { useChartStats } from "@/composables/useChartStats";
+import { useChartStats } from "@/composables/chart/useChartStats";
 import { getPresetConfig } from "@/services/chartConfigService";
 import type { ChartConfig } from "@/core/types/ChartConfig";
 import { useDataStore } from "@/stores/useDataStore";

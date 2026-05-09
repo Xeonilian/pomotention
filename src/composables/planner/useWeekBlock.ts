@@ -1,7 +1,7 @@
 // src/composables/useWeekBlock.ts
 import { computed, unref, type MaybeRef } from "vue";
 import type { WeekBlockItem } from "@/core/types/Week";
-import { useWeekData } from "@/composables/useWeekData";
+import { useWeekData } from "@/composables/planner/useWeekData";
 import { getItemWeekRange, isWeekBlockOverlapping, getHour, startOfDay } from "@/core/utils/weekDays";
 
 // 保留原有常量，新增动态计算逻辑

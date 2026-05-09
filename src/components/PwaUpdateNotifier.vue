@@ -2,7 +2,7 @@
 import { onMounted, onUnmounted } from "vue";
 import { useNotification } from "naive-ui";
 import { isTauri } from "@tauri-apps/api/core";
-import { usePwaUpdate } from "@/composables/usePwaUpdate";
+import { usePwaUpdate } from "@/composables/platform/usePwaUpdate";
 
 const notification = useNotification();
 const { init, dispose } = usePwaUpdate(notification);

@@ -200,9 +200,9 @@ import { useSettingStore } from "@/stores/useSettingStore";
 import { useDataStore } from "@/stores/useDataStore";
 import { storeToRefs } from "pinia";
 import { timestampToDatetime } from "@/core/utils";
-import { useDevice } from "@/composables/useDevice";
-import { registerActivityRowPickerApi } from "@/composables/useActivityKeyboardNavigator";
-import { registerActivityKeyboardCommandApi } from "@/composables/useActivityKeyboardCommands";
+import { useDevice } from "@/composables/platform/useDevice";
+import { registerActivityRowPickerApi } from "@/composables/keyboard/activity/useActivityKeyboardNavigator";
+import { registerActivityKeyboardCommandApi } from "@/composables/keyboard/activity/useActivityKeyboardCommands";
 import { activityRowPickerInjectKey } from "@/components/ActivitySheet/activityRowPickerInject";
 
 const dataStore = useDataStore();
