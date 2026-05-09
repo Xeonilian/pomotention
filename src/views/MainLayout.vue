@@ -130,6 +130,7 @@
             @pointerdown="handleDragStart"
           >
             <PomotentionTimer
+              ref="pomotentionTimerRef"
               :showPomoSeq="showPomoSeq"
               :isMiniMode="isMiniMode"
               @toggle-pomo-seq="showPomoSeq = !showPomoSeq"
@@ -140,6 +141,7 @@
 
           <!-- 独立番茄钟 (Mini模式) -->
           <PomotentionTimer
+            ref="pomotentionTimerRef"
             v-if="isMiniMode"
             :showPomoSeq="showPomoSeq"
             :isMiniMode="isMiniMode"
@@ -248,9 +250,11 @@ import { useDraggable } from "@/composables/useDraggable";
 import { useAppWindow } from "@/composables/useAppWindow";
 import { useSyncWidget } from "@/composables/useSyncWidget";
 import { useDevice } from "@/composables/useDevice";
+import { useGlobalKeyboardShortcuts } from "@/composables/useGlobalKeyboardShortcuts";
 import { navigateToBuiltDocs } from "@/composables/useDocsUrl";
 import { syncAll } from "@/services/sync";
 import { createTouchScheduledSingleAndDouble } from "@/composables/useTouchScheduledSingleAndDouble";
+import { createAppActionRegistry, dispatchAppAction, type AppActionId } from "@/actions/appActions";
 
 // Icons & Components
 import {
@@ -301,6 +305,11 @@ const { syncIcon, handleUpload, handleDownload } = useSyncWidget(); //relativeTi
 const { isLoggedIn } = storeToRefs(syncStore);
 const { isMobile } = useDevice();
 const notification = useNotification();
+const pomotentionTimerRef = ref<{
+  canStartWorkShortcut: () => boolean;
+  triggerWorkStartShortcut: () => boolean;
+} | null>(null);
+void pomotentionTimerRef;
 
 const accountLogoutBtnType = computed(() => {
   if (syncStore.isSyncing) return "info" as const;
@@ -396,6 +405,7 @@ watch(
 );
 
 onUnmounted(() => {
+  shortcuts.uninstall();
   if (typeof window !== "undefined") {
     window.removeEventListener("resize", onAppVisualViewportChange);
     window.visualViewport?.removeEventListener("resize", onAppVisualViewportChange);
@@ -494,6 +504,25 @@ function handleMenuSelect(key: string) {
   if (key !== route.path) router.push(key);
 }
 
+const actionRegistry = createAppActionRegistry({
+  togglePanel: (panel) => toggleSettingPanel(panel),
+  navigate: (path) => {
+    if (path !== route.path) router.push(path);
+  },
+  openHelp: () => navigateToBuiltDocs(),
+  canStartTimerWork: () => pomotentionTimerRef.value?.canStartWorkShortcut() ?? false,
+  startTimerWork: () => pomotentionTimerRef.value?.triggerWorkStartShortcut() ?? false,
+});
+
+function dispatchKeyboardAction(actionId: AppActionId, sequence: string): boolean {
+  return dispatchAppAction(actionRegistry, actionId, { source: "keyboard", sequence });
+}
+
+const shortcuts = useGlobalKeyboardShortcuts({
+  dispatchAction: dispatchKeyboardAction,
+  isEnabled: () => !isMiniMode.value,
+});
+
 watch(route, (newVal) => {
   currentRoutePath.value = newVal.path;
 });
@@ -545,6 +574,7 @@ function handleMainLayoutViewToggle(key: string) {
 
 // === 4. 初始化 ===
 onMounted(async () => {
+  shortcuts.install();
   if (typeof window !== "undefined") {
     window.addEventListener("resize", onAppVisualViewportChange);
     window.visualViewport?.addEventListener("resize", onAppVisualViewportChange);
