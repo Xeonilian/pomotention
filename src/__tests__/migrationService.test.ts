@@ -2,7 +2,7 @@
 
 import { describe, it, expect, beforeEach } from "vitest";
 import { STORAGE_KEYS } from "@/core/constants";
-import { migrateTaskSource } from "@/services/migrationService";
+import { migrateTaskSource } from "@/services/data/migrationService";
 import type { Task } from "@/core/types/Task";
 import type { Activity } from "@/core/types/Activity";
 import type { Todo } from "@/core/types/Todo";

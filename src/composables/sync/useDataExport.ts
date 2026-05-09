@@ -1,7 +1,7 @@
 import { ref, Ref } from "vue";
 import { open } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
-import { collectLocalData } from "@/services/localStorageService";
+import { collectLocalData } from "@/services/data/localStorageService";
 
 interface UseDataExportReturn {
   message: Ref<string>;

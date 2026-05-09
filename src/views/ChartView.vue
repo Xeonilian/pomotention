@@ -47,7 +47,7 @@
 <script setup lang="ts">
 import { ref, computed, watchEffect, defineAsyncComponent } from "vue";
 import { useChartStats } from "@/composables/chart/useChartStats";
-import { getPresetConfig } from "@/services/chartConfigService";
+import { getPresetConfig } from "@/services/chart/chartConfigService";
 import type { ChartConfig } from "@/core/types/ChartConfig";
 import { useDataStore } from "@/stores/useDataStore";
 import { useSyncStore } from "@/stores/useSyncStore";
@@ -76,7 +76,7 @@ const isDataReady = computed(() => {
     return dataStore.isDataLoaded;
   }
   // 在线模式：数据已加载且（同步完成或未启用同步）
-  return dataStore.isDataLoaded && (!syncStore.isSyncing && !syncStore.syncError);
+  return dataStore.isDataLoaded && !syncStore.isSyncing && !syncStore.syncError;
 });
 
 /**

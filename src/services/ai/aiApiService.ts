@@ -1,7 +1,7 @@
 // src/services/aiApiService.ts
 import { invoke } from "@tauri-apps/api/core";
 import type { AiMessage } from "@/core/types/Ai";
-import { useAiConfig } from "@/services/aiConfigService";
+import { useAiConfig } from "@/services/ai/aiConfigService";
 
 interface RustChatOutput {
   content: string;

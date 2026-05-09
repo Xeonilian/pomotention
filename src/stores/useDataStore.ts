@@ -7,6 +7,7 @@ import type { Todo, TodoWithTags, TodoWithTaskRecords } from "@/core/types/Todo"
 import type { Schedule, ScheduleWithTaskRecords } from "@/core/types/Schedule";
 import type { Task } from "@/core/types/Task";
 import type { Tag } from "@/core/types/Tag";
+import type { Template } from "@/core/types/Template";
 import type { DataPoint, MetricName, AggregationType, TimeGranularity } from "@/core/types/Chart";
 
 import { addDays, debounce, scheduleDebouncedCloudUpload } from "@/core/utils";
@@ -20,10 +21,10 @@ import {
   saveTodos,
   saveSchedules,
   saveTasks,
-} from "@/services/localStorageService";
+} from "@/services/data/localStorageService";
 
-import { unifiedDateService } from "@/services/unifiedDateService";
-import { collectPomodoroData, collectTaskRecordData, aggregateByTime } from "@/services/chartDataService";
+import { unifiedDateService } from "@/services/data/unifiedDateService";
+import { collectPomodoroData, collectTaskRecordData, aggregateByTime } from "@/services/chart/chartDataService";
 import { useTagStore } from "./useTagStore";
 import { useTemplateStore } from "./useTemplateStore";
 import { useDisplayedTaskStore } from "./useDisplayedTaskStore";
@@ -99,8 +100,8 @@ export const useDataStore = defineStore(
         todoList.value.some((item) => !item.synced) ||
         scheduleList.value.some((item) => !item.synced) ||
         taskList.value.some((item) => !item.synced) ||
-        tagStore.rawTags?.some((item) => !item.synced) ||
-        templateStore.rawTemplates?.some((item) => !item.synced)
+        tagStore.rawTags?.some((item: Tag) => !item.synced) ||
+        templateStore.rawTemplates?.some((item: Template) => !item.synced)
       );
     });
 
@@ -110,8 +111,8 @@ export const useDataStore = defineStore(
         todos: todoList.value.filter((item) => !item.synced).length,
         schedules: scheduleList.value.filter((item) => !item.synced).length,
         tasks: taskList.value.filter((item) => !item.synced).length,
-        tags: tagStore.rawTags?.filter((item) => !item.synced).length ?? 0,
-        templates: templateStore.rawTemplates?.filter((item) => !item.synced).length ?? 0,
+        tags: tagStore.rawTags?.filter((item: Tag) => !item.synced).length ?? 0,
+        templates: templateStore.rawTemplates?.filter((item: Template) => !item.synced).length ?? 0,
       };
     });
 
@@ -513,7 +514,7 @@ export const useDataStore = defineStore(
           }
 
           if (candidates.length === 0) {
-            out.push({ dayStartTs, tagColor: null, textColor: null, });
+            out.push({ dayStartTs, tagColor: null, textColor: null });
             continue;
           }
 

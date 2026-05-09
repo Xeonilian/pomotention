@@ -63,12 +63,11 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, onUnmounted } from "vue";
 import { NButton, NSpin, NText, NSpace, NCollapse, NCollapseItem } from "naive-ui";
-import { getCurrentDeviceId } from "@/services/localStorageService";
-import { performSync, getRemoteSyncMetadata, isFirstTimeSync, uploadToCloud, downloadFromCloud } from "@/services/syncService";
+import { getCurrentDeviceId, collectLocalData } from "@/services/data/localStorageService";
+import { performSync, getRemoteSyncMetadata, isFirstTimeSync, uploadToCloud, downloadFromCloud } from "@/services/sync/syncService";
 import type { SyncResult } from "@/core/types/Sync";
 import { SyncStatus } from "@/core/types/Sync";
-import { collectLocalData } from "@/services/localStorageService";
-import { handleFileImport, type ImportReport } from "@/services/mergeService";
+import { handleFileImport, type ImportReport } from "@/services/data/mergeService";
 import { open } from "@tauri-apps/plugin-dialog";
 import { writeTextFile, readDir } from "@tauri-apps/plugin-fs";
 import { join } from "@tauri-apps/api/path";
@@ -138,7 +137,7 @@ async function handleImport() {
   debugInfo.value = JSON.stringify(
     importReport.value, // 直接传入报告对象
     null, // replacer 函数，我们不需要，所以是 null
-    2 // space 参数，2个空格缩进，使其美观
+    2, // space 参数，2个空格缩进，使其美观
   );
 }
 
@@ -243,7 +242,7 @@ function handleSyncResult(result: SyncResult) {
         timestamp: result.timestamp ? new Date(result.timestamp).toLocaleString() : new Date().toLocaleString(),
       },
       null,
-      2
+      2,
     );
   } else {
     syncStatus.value = `操作失败: ${result.message || "未知错误"}`;
@@ -256,7 +255,7 @@ function handleSyncResult(result: SyncResult) {
         timestamp: result.timestamp ? new Date(result.timestamp).toLocaleString() : new Date().toLocaleString(),
       },
       null,
-      2
+      2,
     );
   }
 }
@@ -273,7 +272,7 @@ function handleSyncError(error: any) {
       timestamp: new Date().toLocaleString(),
     },
     null,
-    2
+    2,
   );
 }
 

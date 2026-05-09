@@ -1,7 +1,7 @@
 // src/services/downloadService.ts
 
 import { STORAGE_KEYS } from "@/core/constants";
-import { saveData, removeData } from "@/services/localStorageService";
+import { saveData, removeData } from "@/services/data/localStorageService";
 
 // 需要下载替换的数据键
 export const DOWNLOAD_KEYS = [
@@ -41,7 +41,7 @@ export async function replaceLocalData(
     treatNullAsEmpty?: boolean; // 默认 true -> null 当作空内容，跳过
     stringifyBeforeSave?: boolean; // saveData 是否需要字符串
     verbose?: boolean;
-  }
+  },
 ): Promise<DownloadResult> {
   const { treatNullAsEmpty = true, stringifyBeforeSave = false, verbose = false } = opts || {};
 
@@ -79,8 +79,8 @@ export async function replaceLocalData(
         if (verbose)
           console.log(
             `[DL][skip-empty] ${key} type=${cloudValue === null ? "null" : Array.isArray(cloudValue) ? "array" : "object"} size=${sizeOf(
-              cloudValue
-            )}`
+              cloudValue,
+            )}`,
           );
         skippedKeys.push(key);
         continue;

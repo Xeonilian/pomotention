@@ -7,7 +7,7 @@ import { CanvasRenderer } from "echarts/renderers";
 import type { ECharts } from "echarts/core";
 import { useDataStore } from "@/stores/useDataStore";
 import { METRIC_DEFINITIONS } from "@/core/types/Metrics";
-import { generateEChartsOption } from "@/services/chartWidgetService";
+import { generateEChartsOption } from "@/services/chart/chartWidgetService";
 import type { ChartConfig } from "@/core/types/ChartConfig";
 import type { MetricName, DateString } from "@/core/types/Chart";
 
@@ -140,7 +140,7 @@ export function useChart(config: MaybeRefOrGetter<ChartConfig>) {
     () => {
       updateChart();
     },
-    { deep: true }
+    { deep: true },
   );
 
   /**
@@ -151,7 +151,7 @@ export function useChart(config: MaybeRefOrGetter<ChartConfig>) {
     () => {
       updateChart();
     },
-    { deep: true }
+    { deep: true },
   );
 
   return {

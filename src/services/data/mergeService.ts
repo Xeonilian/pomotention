@@ -1,9 +1,9 @@
 // services/mergeService.ts 导入并合并数据
 import { STORAGE_KEYS } from "@/core/constants";
-import { loadData, saveData } from "@/services/localStorageService";
+import { loadData, saveData } from "@/services/data/localStorageService";
 import { readTextFile } from "@tauri-apps/plugin-fs";
-import { deduplicateData, migrateTaskSource } from "@/services/migrationService";
-import { normalizeImportedTodoData } from "@/services/importNormalizationService";
+import { deduplicateData, migrateTaskSource } from "@/services/data/migrationService";
+import { normalizeImportedTodoData } from "@/services/data/importNormalizationService";
 
 // 定义文件处理结果的详细类型
 export interface FileProcessResult {

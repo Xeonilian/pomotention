@@ -353,10 +353,10 @@ import {
   handleRestoreActivity,
   passPickedActivity,
   togglePomoType,
-} from "@/services/activityService";
-import { updateScheduleStatus, updateTodoStatus, handleSuspendTodo } from "@/services/plannerService";
-import { handleExportOrQR, type DataRow } from "@/services/icsService";
-import { taskService } from "@/services/taskService";
+} from "@/services/activity/activityService";
+import { updateScheduleStatus, updateTodoStatus, handleSuspendTodo } from "@/services/planner/plannerService";
+import { handleExportOrQR, type DataRow } from "@/services/planner/icsService";
+import { taskService } from "@/services/task/taskService";
 
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useDataStore } from "@/stores/useDataStore";
@@ -744,7 +744,7 @@ function onDeleteActivity(id: number | null | undefined) {
     delete settingStore.settings.activityRank[id];
 
     // 找到被删除的 activity，标记为未同步
-    const deletedActivity = activityList.value.find((a) => a.id === id);
+    const deletedActivity = activityList.value.find((a: Activity) => a.id === id);
     if (deletedActivity) {
       deletedActivity.synced = false;
       deletedActivity.lastModified = Date.now();
@@ -951,33 +951,33 @@ const viewSet = computed(() => settingStore.settings.viewSet as "day" | "week" |
 const datasetsForCurrentView = computed<DataRow[]>(() => {
   if (viewSet.value === "day") {
     return [
-      ...(schedulesForCurrentView.value ?? []).map((s) => ({
+      ...(schedulesForCurrentView.value ?? []).map((s: any) => ({
         type: "S" as const,
         item: s,
       })),
-      ...(todosForCurrentViewWithTaskRecords.value ?? []).map((t) => ({
+      ...(todosForCurrentViewWithTaskRecords.value ?? []).map((t: any) => ({
         type: "T" as const,
         item: t,
       })),
     ];
   } else if (viewSet.value === "week") {
     return [
-      ...(schedulesForCurrentView.value ?? []).map((s) => ({
+      ...(schedulesForCurrentView.value ?? []).map((s: any) => ({
         type: "S" as const,
         item: s,
       })),
-      ...(todosForCurrentViewWithTags.value ?? []).map((t) => ({
+      ...(todosForCurrentViewWithTags.value ?? []).map((t: any) => ({
         type: "T" as const,
         item: t,
       })),
     ];
   } else {
     return [
-      ...(schedulesForCurrentView.value ?? []).map((s) => ({
+      ...(schedulesForCurrentView.value ?? []).map((s: any) => ({
         type: "S" as const,
         item: s,
       })),
-      ...(todosForCurrentViewWithTags.value ?? []).map((t) => ({
+      ...(todosForCurrentViewWithTags.value ?? []).map((t: any) => ({
         type: "T" as const,
         item: t,
       })),

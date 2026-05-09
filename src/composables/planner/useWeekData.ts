@@ -6,7 +6,7 @@ import type { Todo } from "@/core/types/Todo";
 import type { Schedule } from "@/core/types/Schedule";
 import type { UnifiedItem } from "@/core/types/Week";
 import { startOfDay } from "@/core/utils/weekDays";
-import { countCompletedPomos } from "@/services/realPomoState";
+import { countCompletedPomos } from "@/services/timer/realPomoState";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const STANDARD_POMO = 16;

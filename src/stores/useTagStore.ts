@@ -1,6 +1,6 @@
 import { ref, computed, watch } from "vue";
 import { defineStore } from "pinia";
-import { loadTags, saveTags } from "@/services/localStorageService";
+import { loadTags, saveTags } from "@/services/data/localStorageService";
 import { scheduleDebouncedCloudUpload } from "@/core/utils";
 import { useDataStore } from "./useDataStore"; // 依赖 activity 数据
 import { useSearchUiStore } from "./useSearchUiStore";
@@ -24,7 +24,7 @@ export const useTagStore = defineStore("tagStore", () => {
         _tagById.set(t.id, t);
       }
     },
-    { deep: true, immediate: true }
+    { deep: true, immediate: true },
   );
 
   // 每当原始数据变化时，自动保存到 localStorage

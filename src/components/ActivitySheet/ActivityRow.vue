@@ -314,7 +314,7 @@ import type { Activity } from "@/core/types/Activity";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useDataStore } from "@/stores/useDataStore";
 import { storeToRefs } from "pinia";
-import { togglePomoType } from "@/services/activityService";
+import { togglePomoType } from "@/services/activity/activityService";
 import TagRenderer from "../TagSystem/TagRenderer.vue";
 import TagPickerPopover from "../TagSystem/TagPickerPopover.vue";
 import type { InputInst } from "naive-ui";

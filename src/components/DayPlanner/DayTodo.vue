@@ -501,7 +501,7 @@ import {
   hasAnyProgress,
   getSlotIndexForEst,
   totalSlots,
-} from "@/services/realPomoState";
+} from "@/services/timer/realPomoState";
 
 const dataStore = useDataStore();
 const { isMobile } = useDevice();

@@ -1,9 +1,15 @@
 // composables/useAiChat.ts
 import { ref } from "vue";
 import type { AiMessage } from "@/core/types/Ai";
-import { aiApiService } from "@/services/aiApiService";
-import { useAiConfig } from "@/services/aiConfigService";
-import { shouldStartTaskPlanning, getNextQuestion, buildTaskPromptV2, guideQuestions, getFallbackReply } from "@/services/aiDialogService";
+import { aiApiService } from "@/services/ai/aiApiService";
+import { useAiConfig } from "@/services/ai/aiConfigService";
+import {
+  shouldStartTaskPlanning,
+  getNextQuestion,
+  buildTaskPromptV2,
+  guideQuestions,
+  getFallbackReply,
+} from "@/services/ai/aiDialogService";
 import { DialogState, type TaskPlanningContext } from "@/core/types/Dialog";
 
 interface Message {

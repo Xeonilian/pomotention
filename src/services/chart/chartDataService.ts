@@ -3,7 +3,7 @@ import type { Todo } from "@/core/types/Todo";
 import type { Task } from "@/core/types/Task";
 import type { DataPoint, TimeGranularity, AggregationType, DateString } from "@/core/types/Chart";
 import { METRICS } from "@/core/types/Metrics";
-import { countCompletedPomos } from "./realPomoState";
+import { countCompletedPomos } from "@/services/timer/realPomoState";
 
 // ============ 数据收集 ============
 
@@ -13,20 +13,22 @@ import { countCompletedPomos } from "./realPomoState";
  * 樱桃 🍒 内部已处理 /2 兼容旧行为
  */
 export function collectPomodoroData(todos: Todo[]): DataPoint[] {
-  return todos
-    // 软删除的 Todo 仍留在列表中，统计与图表不应再计入其番茄
-    .filter((t) => !t.deleted)
-    .filter((t) => t.pomoType === "🍅")
-    .map((t) => {
-      const completed = countCompletedPomos(t);
-      return {
-        metric: METRICS.POMODORO,
-        timestamp: t.doneTime || t.id,
-        value: completed,
-        sourceId: t.id,
-      };
-    })
-    .filter((point) => point.value > 0);
+  return (
+    todos
+      // 软删除的 Todo 仍留在列表中，统计与图表不应再计入其番茄
+      .filter((t) => !t.deleted)
+      .filter((t) => t.pomoType === "🍅")
+      .map((t) => {
+        const completed = countCompletedPomos(t);
+        return {
+          metric: METRICS.POMODORO,
+          timestamp: t.doneTime || t.id,
+          value: completed,
+          sourceId: t.id,
+        };
+      })
+      .filter((point) => point.value > 0)
+  );
 }
 
 /**
@@ -91,7 +93,7 @@ export function collectTaskRecordData(tasks: Task[]): DataPoint[] {
 export function aggregateByTime(
   dataPoints: DataPoint[],
   timeGranularity: TimeGranularity,
-  aggregationMethod: AggregationType
+  aggregationMethod: AggregationType,
 ): Map<DateString, number> {
   // 1. 按时间分组
   const groups = new Map<DateString, DataPoint[]>();

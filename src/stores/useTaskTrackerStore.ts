@@ -3,8 +3,8 @@
 import { defineStore } from "pinia";
 import { computed } from "vue";
 import { useDataStore } from "./useDataStore";
-import { taskService } from "@/services/taskService";
-import { convertToSchedule } from "@/services/activityService";
+import { taskService } from "@/services/task/taskService";
+import { convertToSchedule } from "@/services/activity/activityService";
 
 export const useTaskTrackerStore = defineStore("taskTracker", () => {
   const dataStore = useDataStore();
@@ -61,7 +61,7 @@ export const useTaskTrackerStore = defineStore("taskTracker", () => {
         data.interruptionType,
         data.description,
         data.activityType,
-        data.recordedAt
+        data.recordedAt,
       );
       if (data.asActivity && record && data.activityType) {
         const newActivity = taskService.createActivityFromInterruption(selectedTaskId.value, record?.id, data.activityType, data.dueDate);

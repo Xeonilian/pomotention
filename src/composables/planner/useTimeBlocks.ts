@@ -5,7 +5,7 @@ import { getTimestampForTimeString } from "@/core/utils";
 import { CategoryColors, CategoryColorsDark, POMODORO_COLORS, POMODORO_COLORS_DARK } from "@/core/constants";
 import { SPECIAL_PRIORITIES, getEmojiForPriority } from "@/core/priorityCategories";
 import type { Block, PomodoroSegment, TodoSegment, ActualTimeRange } from "@/core/types/Block";
-import { generateActualTodoSegments, splitIndexPomoBlocksExSchedules } from "@/services/pomoSegService";
+import { generateActualTodoSegments, splitIndexPomoBlocksExSchedules } from "@/services/timer/pomoSegService";
 import { useSegStore } from "@/stores/useSegStore";
 import { useTimeBlockDrag } from "./useTimeBlockDrag";
 import { storeToRefs } from "pinia";

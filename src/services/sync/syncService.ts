@@ -3,10 +3,10 @@
 import type { SyncResult, SyncMetadata, SyncData, LocalSyncStatus } from "@/core/types/Sync";
 import { SYNC_VERSION, SyncStatus } from "@/core/types/Sync";
 
-import { getCurrentDeviceId, loadSyncStatus, saveSyncStatus, updateSyncStatus } from "@/services/localStorageService";
-import { WebDAVStorageAdapter } from "@/services/storageAdapter";
-import { collectLocalData } from "@/services/localStorageService";
-import { replaceLocalData } from "@/services/downloadService";
+import { getCurrentDeviceId, loadSyncStatus, saveSyncStatus, updateSyncStatus } from "@/services/data/localStorageService";
+import { WebDAVStorageAdapter } from "@/services/data/storageAdapter";
+import { collectLocalData } from "@/services/data/localStorageService";
+import { replaceLocalData } from "@/services/data/downloadService";
 
 /** 获取云端同步元信息 */
 export async function getRemoteSyncMetadata(): Promise<SyncMetadata | null> {

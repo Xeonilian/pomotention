@@ -25,7 +25,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from "vue";
-import { getClickContextFragments, findFragmentSequenceInSource } from "@/services/taskRecordService";
+import { getClickContextFragments, findFragmentSequenceInSource } from "@/services/task/taskRecordService";
 import { useCaretFlash } from "@/composables/task/useCaretFlash";
 import { useDevice } from "@/composables/platform/useDevice";
 import { useTaskRecordShortcuts } from "@/composables/task/useTaskRecordShortcuts";

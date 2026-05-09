@@ -1,7 +1,7 @@
 import { computed } from "vue";
 import { useDataStore } from "@/stores/useDataStore";
 import { METRICS } from "@/core/types/Metrics";
-import { collectPomodoroData } from "@/services/chartDataService";
+import { collectPomodoroData } from "@/services/chart/chartDataService";
 
 /**
  * 番茄钟统计 Composable（基于实时计算）

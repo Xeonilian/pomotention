@@ -87,7 +87,7 @@ import type { WeekBlockItem as WeekBlockItemType } from "@/core/types/Week";
 import WeekBlockItem from "./WeekBlockItem.vue";
 import { formatMonthDay, getPomoColor, getFallbackWeekBlocks } from "@/core/utils/weekDays";
 import { getDateKey } from "@/core/utils";
-import type { HolidayDisplay } from "@/services/publicHolidays";
+import type { HolidayDisplay } from "@/services/planner/publicHolidays";
 import { plannerHolidayMapKey } from "@/composables/planner/usePublicHolidays";
 import { useDataStore } from "@/stores/useDataStore";
 import { storeToRefs } from "pinia";

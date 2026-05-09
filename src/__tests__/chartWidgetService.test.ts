@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { convertToChartData, filterByDateRange, generateHeatmapData } from "@/services/chartWidgetService";
+import { convertToChartData, filterByDateRange, generateHeatmapData } from "@/services/chart/chartWidgetService";
 import { METRICS } from "@/core/types/Metrics";
 import { createChartConfig, DateRangePresets } from "@/core/types/ChartConfig";
 

@@ -76,7 +76,7 @@ import {
   type IdConflictPolicy,
   type ImportFileMap,
   type ImportReport,
-} from "@/services/mergeService";
+} from "@/services/data/mergeService";
 import { useSyncStore } from "@/stores/useSyncStore";
 import { useSettingStore } from "@/stores/useSettingStore";
 

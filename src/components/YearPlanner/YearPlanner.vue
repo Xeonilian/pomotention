@@ -57,7 +57,7 @@ import { createTouchScheduledSingleAndDouble } from "@/composables/platform/useT
 import { useDataStore } from "@/stores/useDataStore";
 import { useDevice } from "@/composables/platform/useDevice";
 import { getDateKey } from "@/core/utils";
-import type { HolidayDisplay } from "@/services/publicHolidays";
+import type { HolidayDisplay } from "@/services/planner/publicHolidays";
 import { plannerHolidayMapKey } from "@/composables/planner/usePublicHolidays";
 
 const holidayMap = inject(plannerHolidayMapKey, ref<Record<string, HolidayDisplay>>({}));

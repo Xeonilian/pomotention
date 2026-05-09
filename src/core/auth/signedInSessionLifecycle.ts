@@ -7,9 +7,13 @@ import { useSettingStore } from "@/stores/useSettingStore";
 import { useSyncStore } from "@/stores/useSyncStore";
 import { STORAGE_KEYS } from "@/core/constants";
 import { initSyncServices, syncAll, resetSyncServices } from "@/services/sync";
-import { initAppCloseHandler, cancelPendingSyncTasks } from "@/services/appCloseHandler";
+import { initAppCloseHandler, cancelPendingSyncTasks } from "@/services/platform/appCloseHandler";
 
-const shouldLogAppDebug = ["1", "true"].includes(String(import.meta.env.VITE_APP_DEBUG_LOG ?? "").trim().toLowerCase());
+const shouldLogAppDebug = ["1", "true"].includes(
+  String(import.meta.env.VITE_APP_DEBUG_LOG ?? "")
+    .trim()
+    .toLowerCase(),
+);
 function appDebugLog(...args: unknown[]) {
   if (!shouldLogAppDebug) return;
   console.log(...args);

@@ -2,7 +2,7 @@ import { ref, watch, onMounted, onUnmounted, type InjectionKey, type Ref } from 
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useDataStore } from "@/stores/useDataStore";
 import { addDays, getDayStartTimestamp } from "@/core/utils";
-import { loadVisiblePublicHolidays, type HolidayDisplay } from "@/services/publicHolidays";
+import { loadVisiblePublicHolidays, type HolidayDisplay } from "@/services/planner/publicHolidays";
 
 export const plannerHolidayMapKey: InjectionKey<Ref<Record<string, HolidayDisplay>>> = Symbol("plannerHolidayMap");
 

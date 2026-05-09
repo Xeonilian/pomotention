@@ -2,7 +2,7 @@
 
 import { ref, computed, watch } from "vue";
 import { defineStore } from "pinia";
-import { loadTemplates, saveTemplates } from "@/services/localStorageService";
+import { loadTemplates, saveTemplates } from "@/services/data/localStorageService";
 import { scheduleDebouncedCloudUpload } from "@/core/utils";
 import type { Template } from "@/core/types/Template";
 
@@ -30,7 +30,7 @@ export const useTemplateStore = defineStore("template", () => {
         _templateById.set(t.id, t);
       }
     },
-    { deep: true, immediate: true }
+    { deep: true, immediate: true },
   );
   const templateById = computed(() => new Map(rawTemplates.value.map((t) => [t.id, t])));
 

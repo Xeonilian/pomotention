@@ -1,4 +1,4 @@
-import { writeData, readData, testLogin, readFolder, createFolder } from "./webdavService";
+import { writeData, readData, testLogin, readFolder, createFolder } from "../sync/webdavService";
 import type { SyncData, SyncMetadata } from "@/core/types/Sync";
 
 /**

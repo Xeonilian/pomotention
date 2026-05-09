@@ -2,7 +2,7 @@
 import type { Block, TodoSegment, PomodoroSegment } from "@/core/types/Block";
 import type { Todo } from "@/core/types/Todo";
 import { getTimestampForTimeString } from "@/core/utils";
-import { countCompletedPomos } from "./realPomoState";
+import { countCompletedPomos } from "../timer/realPomoState";
 
 // ========== 辅助工具函数 ==========
 
@@ -61,14 +61,14 @@ export function splitIndexPomoBlocksExSchedules(
     activityDueRange: [number | null, string];
     isUntaetigkeit?: boolean;
     status?: string;
-  }[]
+  }[],
 ): PomodoroSegment[] {
   // ==================================================================
   // 阶段一：生成所有 Segment，此时不考虑 globalIndex
   // ==================================================================
 
   const activeSchedules = schedules.filter(
-    (s) => s.activityDueRange?.[0] != null && Number(s.activityDueRange[1]) > 0 && s.status !== "cancelled"
+    (s) => s.activityDueRange?.[0] != null && Number(s.activityDueRange[1]) > 0 && s.status !== "cancelled",
   );
   // 1. 处理 Schedule 和 Untaetigkeit 块
   const scheduleInfo: Array<{

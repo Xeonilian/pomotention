@@ -744,15 +744,15 @@ function filteredBySection(section: ActivitySectionConfig) {
     switch (section.filterKey) {
       case "all":
         // 全部活动中不显示已取消的活动
-        return activeActivities.value.filter((item) => item.status !== "cancelled");
+        return activeActivities.value.filter((item: Activity) => item.status !== "cancelled");
       case "deleted":
         // 筛选已删除的活动（保持 filterKey 为 "deleted" 以向后兼容）
         // 需要使用完整的 activityList，因为 activeActivities 已过滤掉 deleted 的活动
         // 注意：cancelled 的活动被删除后仍会显示在这里，这是有意的设计：
         // cancelled 是完成状态的一种，被删除的 cancelled 活动需要在"已删活动"视图中可找回
-        return activityList.value.filter((item) => item.deleted === true);
+        return activityList.value.filter((item: Activity) => item.deleted === true);
       case "today":
-        return activeActivities.value.filter((item) => {
+        return activeActivities.value.filter((item: Activity) => {
           // 过滤掉已取消的活动
           if (item.status === "cancelled") return false;
           if (item.class === "T") {
@@ -770,11 +770,11 @@ function filteredBySection(section: ActivitySectionConfig) {
           return false;
         });
       case "interrupt":
-        return activeActivities.value.filter((item) => item.status !== "cancelled" && !!item.interruption);
+        return activeActivities.value.filter((item: Activity) => item.status !== "cancelled" && !!item.interruption);
       case "todo":
-        return activeActivities.value.filter((item) => item.status !== "cancelled" && item.class === "T");
+        return activeActivities.value.filter((item: Activity) => item.status !== "cancelled" && item.class === "T");
       case "schedule":
-        return activeActivities.value.filter((item) => item.status !== "cancelled" && item.class === "S");
+        return activeActivities.value.filter((item: Activity) => item.status !== "cancelled" && item.class === "S");
       default:
         break;
     }
@@ -784,7 +784,9 @@ function filteredBySection(section: ActivitySectionConfig) {
   if (section.search) {
     const keyword = section.search.trim().toLowerCase();
     // 搜索中也不显示已取消的活动
-    return activeActivities.value.filter((item) => item.status !== "cancelled" && item.title && item.title.toLowerCase().includes(keyword));
+    return activeActivities.value.filter(
+      (item: Activity) => item.status !== "cancelled" && item.title && item.title.toLowerCase().includes(keyword),
+    );
   }
 
   // 什么条件都没有，返回空
@@ -1048,5 +1050,4 @@ function getCountdownClass(dueDate: number | undefined | null): string {
     margin-bottom: calc(env(safe-area-inset-bottom) + 2px);
   }
 }
-
 </style>

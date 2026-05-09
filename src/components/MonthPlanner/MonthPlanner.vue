@@ -81,9 +81,9 @@ import { storeToRefs } from "pinia";
 import { useDevice } from "@/composables/platform/useDevice";
 import { createTouchScheduledSingleAndDouble } from "@/composables/platform/useTouchScheduledSingleAndDouble";
 import { useSettingStore } from "@/stores/useSettingStore";
-import { countCompletedPomos } from "@/services/realPomoState";
+import { countCompletedPomos } from "@/services/timer/realPomoState";
 import { getDateKey } from "@/core/utils";
-import type { HolidayDisplay } from "@/services/publicHolidays";
+import type { HolidayDisplay } from "@/services/planner/publicHolidays";
 import { plannerHolidayMapKey } from "@/composables/planner/usePublicHolidays";
 
 const settingStore = useSettingStore();

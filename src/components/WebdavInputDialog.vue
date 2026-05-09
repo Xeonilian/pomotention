@@ -25,8 +25,8 @@
 import { ref, watch, computed } from "vue";
 import { NModal, NInput, NSpace, NButton } from "naive-ui";
 import { useSettingStore } from "@/stores/useSettingStore";
-import { WebDAVStorageAdapter } from "@/services/storageAdapter";
-import { handleFileImport, type ImportReport } from "@/services/mergeService";
+import { WebDAVStorageAdapter } from "@/services/data/storageAdapter";
+import { handleFileImport, type ImportReport } from "@/services/data/mergeService";
 import { open } from "@tauri-apps/plugin-dialog";
 import { readDir } from "@tauri-apps/plugin-fs";
 import { join } from "@tauri-apps/api/path";
@@ -93,7 +93,7 @@ watch(
       passTest.value = false;
       passMessage.value = "📢请输入配置并测试。";
     }
-  }
+  },
 );
 
 watch(webdavWebsite, (val) => {

@@ -1,7 +1,7 @@
 import type { TodoSegment, PomodoroSegment } from "@/core/types/Block";
 import type { Todo } from "@/core/types/Todo";
 import { SPECIAL_PRIORITIES } from "@/core/priorityCategories";
-import { countCompletedPomos } from "./realPomoState";
+import { countCompletedPomos } from "../timer/realPomoState";
 
 // ========== Todo 估计分配相关工具函数（第二列） ==========
 

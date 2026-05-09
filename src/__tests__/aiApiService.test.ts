@@ -45,9 +45,9 @@ vi.mock("@/services/aiConfigService", () => {
   };
 });
 
-import { aiApiService } from "@/services/aiApiService";
+import { aiApiService } from "@/services/ai/aiApiService";
 import { invoke } from "@tauri-apps/api/core";
-import { useAiConfig } from "@/services/aiConfigService";
+import { useAiConfig } from "@/services/ai/aiConfigService";
 
 describe("aiApiService.sendMessage (Vitest)", () => {
   const messages = [{ role: "user" as const, content: "Hello" }];

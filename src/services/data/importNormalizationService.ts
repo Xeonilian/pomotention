@@ -1,10 +1,10 @@
 import { STORAGE_KEYS } from "@/core/constants";
-import { loadData, saveData } from "@/services/localStorageService";
+import { loadData, saveData } from "@/services/data/localStorageService";
 import type { Todo } from "@/core/types/Todo";
 import type { Block, PomodoroSegment } from "@/core/types/Block";
-import { splitIndexPomoBlocksExSchedules } from "@/services/pomoSegService";
+import { splitIndexPomoBlocksExSchedules } from "@/services/timer/pomoSegService";
 import type { Schedule } from "@/core/types/Schedule";
-import { countCompletedPomos } from "./realPomoState";
+import { countCompletedPomos } from "../timer/realPomoState";
 
 export interface TodoNormalizationStats {
   normalizedCount: number;

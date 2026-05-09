@@ -1,4 +1,4 @@
-import { runMigrations } from "@/services/migrationService";
+import { runMigrations } from "@/services/data/migrationService";
 
 export async function initialMigrate() {
   const report = await runMigrations(); // 等待迁移完成
