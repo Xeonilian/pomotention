@@ -449,6 +449,7 @@ onMounted(() => {
     toggleQuadrant: keyboardToggleQuadrant,
     addKanbanSection: keyboardAddKanbanSection,
     removeLastKanbanSection: keyboardRemoveLastKanbanSection,
+    editField: keyboardEditField,
   });
 });
 
@@ -642,6 +643,36 @@ function keyboardRemoveLastKanbanSection(): boolean {
   if (!last || last.id === 1) return false;
   removeSection(last.id);
   return true;
+}
+
+function focusRowFieldInput(rowActivityId: number, selector: string): boolean {
+  const rowEl = document.querySelector(`[data-row-id="${rowActivityId}"]`);
+  if (!(rowEl instanceof HTMLElement)) return false;
+  const input = rowEl.querySelector(selector) as HTMLElement | null;
+  if (!input) return false;
+  handleFocusRow(rowActivityId);
+  requestAnimationFrame(() => {
+    (input as HTMLInputElement).focus?.();
+    if ("select" in input && typeof (input as HTMLInputElement).select === "function") {
+      (input as HTMLInputElement).select();
+    }
+  });
+  return true;
+}
+
+function keyboardEditField(field: "title" | "dueDate" | "place" | "duration" | "scheduleTime" | "pomoEstimate"): boolean {
+  const rowActivityId = sheetPrimaryActivityId.value;
+  if (rowActivityId == null) return false;
+  const activity = activityById.value.get(rowActivityId);
+  if (!activity) return false;
+
+  if (field === "title") return focusRowFieldInput(rowActivityId, ".activity-field-title input");
+  if (field === "dueDate") return activity.class === "T" && focusRowFieldInput(rowActivityId, ".activity-field-due-date input");
+  if (field === "place") return activity.class === "S" && focusRowFieldInput(rowActivityId, ".activity-field-place input");
+  if (field === "duration") return activity.class === "S" && focusRowFieldInput(rowActivityId, ".activity-field-duration input");
+  if (field === "scheduleTime") return activity.class === "S" && focusRowFieldInput(rowActivityId, ".activity-field-schedule-time input");
+  if (field === "pomoEstimate") return activity.class === "T" && focusRowFieldInput(rowActivityId, ".activity-field-pomo input");
+  return false;
 }
 
 watch(keyboardRowCandidates, (list) => {

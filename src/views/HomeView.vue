@@ -363,6 +363,7 @@ import { useDataStore } from "@/stores/useDataStore";
 import { autoSyncDebounced, uploadAllDebounced } from "@/core/utils/autoSync";
 import { useDevice } from "@/composables/useDevice";
 import { usePublicHolidays, plannerHolidayMapKey } from "@/composables/usePublicHolidays";
+import { registerPlannerKeyboardCommandApi } from "@/composables/usePlannerKeyboardCommands";
 
 // ======================== 响应式状态与初始化 ========================
 // 不直接import Naive和以下组建加速启动
@@ -395,6 +396,7 @@ const queryDate = ref<number | null>(null);
 const showPopover = ref(false);
 const popoverMessage = ref("");
 const taskRecordEditing = ref(false);
+let unregisterPlannerCommandApi: (() => void) | null = null;
 function setTaskRecordEditing(v: boolean) {
   taskRecordEditing.value = v;
 }
@@ -1300,6 +1302,64 @@ function onViewSet() {
   }
 }
 
+function plannerGotoPrev(): boolean {
+  onDateSet("prev");
+  return true;
+}
+
+function plannerGotoNext(): boolean {
+  onDateSet("next");
+  return true;
+}
+
+function plannerGotoCurrent(): boolean {
+  onDateSet("today");
+  return true;
+}
+
+function plannerGotoTodayDay(): boolean {
+  settingStore.settings.viewSet = "day";
+  settingStore.settings.topHeight = 610;
+  onDateSet("today");
+  return true;
+}
+
+function plannerGotoDay(): boolean {
+  settingStore.settings.viewSet = "day";
+  settingStore.settings.topHeight = 300;
+  return true;
+}
+
+function plannerGotoWeek(): boolean {
+  settingStore.settings.viewSet = "week";
+  settingStore.settings.topHeight = 610;
+  return true;
+}
+
+function plannerGotoMonth(): boolean {
+  settingStore.settings.viewSet = "month";
+  settingStore.settings.topHeight = 610;
+  return true;
+}
+
+function plannerGotoYear(): boolean {
+  settingStore.settings.viewSet = "year";
+  settingStore.settings.topHeight = 450;
+  return true;
+}
+
+function plannerRepeatActivity(): boolean {
+  if (selectedRowId.value == null && activeId.value == null) return false;
+  onRepeatActivity(false);
+  return true;
+}
+
+function plannerExportIcs(): boolean {
+  if (selectedRowId.value == null) return false;
+  void onIcsExport();
+  return true;
+}
+
 // 编辑title，Schedule.id，同步Activity
 function handleEditScheduleTitle(id: number, newTitle: string) {
   const schedule = scheduleById.value.get(id);
@@ -1512,9 +1572,25 @@ onMounted(() => {
   dateService.setupSystemDateWatcher();
   dateService.navigateByView("today");
   attachVisualViewportListeners();
+  unregisterPlannerCommandApi = registerPlannerKeyboardCommandApi({
+    gotoPrev: plannerGotoPrev,
+    gotoNext: plannerGotoNext,
+    gotoCurrent: plannerGotoCurrent,
+    gotoTodayDay: plannerGotoTodayDay,
+    gotoDay: plannerGotoDay,
+    gotoWeek: plannerGotoWeek,
+    gotoMonth: plannerGotoMonth,
+    gotoYear: plannerGotoYear,
+    repeatActivity: plannerRepeatActivity,
+    exportIcs: plannerExportIcs,
+  });
 });
 
 onUnmounted(() => {
+  if (unregisterPlannerCommandApi) {
+    unregisterPlannerCommandApi();
+    unregisterPlannerCommandApi = null;
+  }
   dateService.cleanupSystemDateWatcher();
   autoSyncDebounced.flush(); //立即执行
   detachVisualViewportListeners();

@@ -263,6 +263,10 @@ import {
   pickActivityRowByDigit,
 } from "@/composables/useActivityKeyboardNavigator";
 import { runActivityKeyboardCommand } from "@/composables/useActivityKeyboardCommands";
+import { runActivityEditFieldCommand } from "@/composables/useActivityKeyboardCommands";
+import { runTaskKeyboardCommand } from "@/composables/useTaskKeyboardCommands";
+import { runPlannerKeyboardCommand } from "@/composables/usePlannerKeyboardCommands";
+import { runTimetableKeyboardCommand } from "@/composables/useTimetableKeyboardCommands";
 
 // Icons & Components
 import {
@@ -522,6 +526,10 @@ const actionRegistry = createAppActionRegistry({
   startTimerWork: () => pomotentionTimerRef.value?.triggerWorkStartShortcut() ?? false,
   enterActivityRowPicker: () => enterActivityRowPicker(),
   runActivityCommand: (command) => runActivityKeyboardCommand(command),
+  runActivityEditField: (field) => runActivityEditFieldCommand(field),
+  runTaskCommand: (command) => runTaskKeyboardCommand(command),
+  runPlannerCommand: (command) => runPlannerKeyboardCommand(command),
+  runTimetableCommand: (command) => runTimetableKeyboardCommand(command),
 });
 
 function dispatchKeyboardAction(actionId: AppActionId, sequence: string): boolean {

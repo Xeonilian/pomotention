@@ -36,7 +36,7 @@
           'force-hover': isHoveredRow,
           'child-activity': item.parentId,
         }"
-        class="input-focus-none"
+        class="input-focus-none activity-field-title"
       >
         <template #prefix>
           <div
@@ -158,7 +158,7 @@
         v-if="item.class === 'S'"
         v-model:value="item.location"
         style="max-width: 50px"
-        class="input-focus-none"
+        class="input-focus-none activity-field-place"
         @focus="notifyRowFocused(item.id)"
         @blur="onSectionFieldBlur"
         placeholder="地点"
@@ -181,7 +181,7 @@
         :placeholder="item.pomoType"
         :title="pomoInputTitleText"
         style="max-width: 32px"
-        class="pomo-input input-focus-none"
+        class="pomo-input input-focus-none activity-field-pomo"
         :readonly="item.pomoType === '🍒'"
         @update:value="onInputUpdate"
         @focus="handlePomoInputFocus"
@@ -213,7 +213,7 @@
         @blur="onSectionFieldBlur"
         title="持续时间(分钟)"
         placeholder="min"
-        class="input-center input-min input-focus-none"
+        class="input-center input-min input-focus-none activity-field-duration"
         :class="{ 'force-hover': isHoveredRow }"
       />
 
@@ -236,7 +236,7 @@
             item.lastModified = Date.now();
           }
         "
-        class="input-focus-none"
+        class="input-focus-none activity-field-due-date"
       />
       <n-date-picker
         v-else
@@ -257,7 +257,7 @@
         title="约定时间"
         :class="getCountdownClass(item.dueRange && item.dueRange[0])"
         placeholder="时间"
-        class="input-focus-none"
+        class="input-focus-none activity-field-schedule-time"
       />
     </div>
 
@@ -479,6 +479,15 @@ function handleTitleTouchCancel() {
 function handleInputKeydown(event: KeyboardEvent) {
   if (tagEditor.shouldShowPopoverFor(props.item.id) && tagPickerRef.value) {
     tagPickerRef.value.handleHostKeydown(event);
+  }
+
+  if (event.key === "Escape" || event.key === "Esc") {
+    // 退出当前输入编辑态，但保留已选中行
+    event.preventDefault();
+    event.stopPropagation();
+    const target = event.target as HTMLInputElement | HTMLTextAreaElement | null;
+    target?.blur();
+    return;
   }
 
   if (isMobile.value && event.key === "Enter") {

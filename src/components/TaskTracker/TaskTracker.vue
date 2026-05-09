@@ -146,14 +146,20 @@ function onTaskRecordIsEditing(v: boolean) {
   emit("taskRecordEditing", v);
 }
 
-const taskRecordRef = ref<{ stopEditing: () => void } | null>(null);
+const taskRecordRef = ref<{ stopEditing: () => void; startEditing: () => void } | null>(null);
 
 /** 结束 TaskRecord 编辑（与 blur / Esc 同路径） */
 function endTaskRecordEditing() {
   taskRecordRef.value?.stopEditing();
 }
 
-defineExpose({ endTaskRecordEditing });
+function startTaskRecordEditing() {
+  if (!selectedTaskId.value) return false;
+  taskRecordRef.value?.startEditing();
+  return true;
+}
+
+defineExpose({ endTaskRecordEditing, startTaskRecordEditing });
 
 // UI 状态
 const isMarkdown = ref(false);
@@ -183,6 +189,7 @@ const isIOSDevice = (() => {
 
 provide("taskTrackerFullscreenContainerRef", taskViewContainerRef);
 provide("isTaskTrackerFullscreen", isTaskContainerFullscreen);
+provide("taskTrackerStartRecordEditing", startTaskRecordEditing);
 
 const timelinePopoverTo = computed(() => {
   // 全屏时不要挂到 body：可能会被 fullscreen 顶层规则遮挡

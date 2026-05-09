@@ -300,7 +300,10 @@ const handleClick = (event: MouseEvent) => {
 };
 
 // 供父级（如移动端 FAB）程序化结束编辑：走与 blur 相同的保存与布局恢复
-defineExpose({ stopEditing });
+defineExpose({
+  stopEditing,
+  startEditing,
+});
 </script>
 
 <style scoped>

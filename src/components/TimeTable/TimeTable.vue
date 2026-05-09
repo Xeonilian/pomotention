@@ -31,6 +31,7 @@ import TimeBlocks from "@/components/TimeTable/TimeBlocks.vue";
 import { getTimestampForTimeString } from "@/core/utils";
 import { useDataStore } from "@/stores/useDataStore";
 import { useTimetableStore } from "@/stores/useTimetableStore";
+import { registerTimetableKeyboardCommandApi } from "@/composables/useTimetableKeyboardCommands";
 // import { useDevice } from "@/composables/useDevice";
 
 const dataStore = useDataStore();
@@ -42,6 +43,7 @@ const emit = defineEmits<{ (e: "timetable-edit", editing: boolean): void }>();
 
 const showEditor = ref(false);
 const currentType = ref<"work" | "entertainment">("work");
+let unregisterTimetableCommandApi: (() => void) | null = null;
 
 const viewBlocks = computed(() => timetableStore.getBlocksByType(currentType.value));
 
@@ -59,6 +61,27 @@ function toggleType() {
   currentType.value = currentType.value === "work" ? "entertainment" : "work";
 }
 
+function toggleEditorByShortcut(): boolean {
+  if (showEditor.value) {
+    onExitEditor();
+    return true;
+  }
+  toggleDisplay();
+  return true;
+}
+
+function exitEditorByShortcut(): boolean {
+  if (!showEditor.value) return false;
+  onExitEditor();
+  return true;
+}
+
+function toggleTypeByShortcut(): boolean {
+  if (!showEditor.value) return false;
+  toggleType();
+  return true;
+}
+
 // 容器高度
 const container = ref<HTMLElement | null>(null);
 const containerHeight = ref(400);
@@ -72,9 +95,18 @@ const updateHeight = () => {
 onMounted(() => {
   updateHeight();
   window.addEventListener("resize", updateHeight);
+  unregisterTimetableCommandApi = registerTimetableKeyboardCommandApi({
+    toggleEditor: toggleEditorByShortcut,
+    exitEditor: exitEditorByShortcut,
+    toggleType: toggleTypeByShortcut,
+  });
 });
 
 onUnmounted(() => {
+  if (unregisterTimetableCommandApi) {
+    unregisterTimetableCommandApi();
+    unregisterTimetableCommandApi = null;
+  }
   window.removeEventListener("resize", updateHeight);
 });
 

@@ -8,6 +8,7 @@ type ActivityCommandApi = {
   toggleQuadrant: () => boolean;
   addKanbanSection: () => boolean;
   removeLastKanbanSection: () => boolean;
+  editField: (field: "title" | "dueDate" | "place" | "duration" | "scheduleTime" | "pomoEstimate") => boolean;
 };
 
 let activityCommandApi: ActivityCommandApi | null = null;
@@ -20,9 +21,14 @@ export function registerActivityKeyboardCommandApi(api: ActivityCommandApi) {
 }
 
 export function runActivityKeyboardCommand(command: keyof ActivityCommandApi): boolean {
+  if (command === "editField") return false;
   const api = activityCommandApi;
   if (!api) return false;
-  const fn = api[command];
+  const fn = api[command] as (() => boolean) | undefined;
   if (typeof fn !== "function") return false;
   return fn();
+}
+
+export function runActivityEditFieldCommand(field: "title" | "dueDate" | "place" | "duration" | "scheduleTime" | "pomoEstimate"): boolean {
+  return activityCommandApi?.editField(field) ?? false;
 }

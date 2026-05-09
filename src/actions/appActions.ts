@@ -12,6 +12,34 @@ export type AppActionId =
   | "activity.toggleQuadrant"
   | "activity.addKanbanSection"
   | "activity.removeLastKanbanSection"
+  | "activity.editTitle"
+  | "activity.editDueDate"
+  | "activity.editPlace"
+  | "activity.editDuration"
+  | "activity.editScheduleTime"
+  | "activity.editPomoEstimate"
+  | "task.openEditor"
+  | "task.toggleStar"
+  | "task.openTagManager"
+  | "task.openEnergyDialog"
+  | "task.openRewardDialog"
+  | "task.openInterruptionDialog"
+  | "task.openTemplateDialog"
+  | "task.goPrev"
+  | "task.goNext"
+  | "planner.gotoPrev"
+  | "planner.gotoNext"
+  | "planner.gotoCurrent"
+  | "planner.gotoTodayDay"
+  | "planner.gotoDay"
+  | "planner.gotoWeek"
+  | "planner.gotoMonth"
+  | "planner.gotoYear"
+  | "planner.repeatActivity"
+  | "planner.exportIcs"
+  | "timetable.toggleEditor"
+  | "timetable.exitEditor"
+  | "timetable.toggleType"
   | "view.toggle.task"
   | "view.toggle.planner"
   | "view.toggle.schedule"
@@ -56,6 +84,33 @@ export interface AppActionContext {
       | "addKanbanSection"
       | "removeLastKanbanSection",
   ) => boolean;
+  runActivityEditField: (field: "title" | "dueDate" | "place" | "duration" | "scheduleTime" | "pomoEstimate") => boolean;
+  runTaskCommand: (
+    command:
+      | "openEditor"
+      | "toggleStar"
+      | "openTagManager"
+      | "openEnergyDialog"
+      | "openRewardDialog"
+      | "openInterruptionDialog"
+      | "openTemplateDialog"
+      | "goPrevTask"
+      | "goNextTask",
+  ) => boolean;
+  runPlannerCommand: (
+    command:
+      | "gotoPrev"
+      | "gotoNext"
+      | "gotoCurrent"
+      | "gotoTodayDay"
+      | "gotoDay"
+      | "gotoWeek"
+      | "gotoMonth"
+      | "gotoYear"
+      | "repeatActivity"
+      | "exportIcs",
+  ) => boolean;
+  runTimetableCommand: (command: "toggleEditor" | "exitEditor" | "toggleType") => boolean;
 }
 
 export function createAppActionRegistry(context: AppActionContext): AppActionRegistry {
@@ -114,6 +169,146 @@ export function createAppActionRegistry(context: AppActionContext): AppActionReg
     "activity.removeLastKanbanSection": {
       run: () => {
         context.runActivityCommand("removeLastKanbanSection");
+      },
+    },
+    "activity.editTitle": {
+      run: () => {
+        context.runActivityEditField("title");
+      },
+    },
+    "activity.editDueDate": {
+      run: () => {
+        context.runActivityEditField("dueDate");
+      },
+    },
+    "activity.editPlace": {
+      run: () => {
+        context.runActivityEditField("place");
+      },
+    },
+    "activity.editDuration": {
+      run: () => {
+        context.runActivityEditField("duration");
+      },
+    },
+    "activity.editScheduleTime": {
+      run: () => {
+        context.runActivityEditField("scheduleTime");
+      },
+    },
+    "activity.editPomoEstimate": {
+      run: () => {
+        context.runActivityEditField("pomoEstimate");
+      },
+    },
+    "task.toggleStar": {
+      run: () => {
+        context.runTaskCommand("toggleStar");
+      },
+    },
+    "task.openEditor": {
+      run: () => {
+        context.runTaskCommand("openEditor");
+      },
+    },
+    "task.openTagManager": {
+      run: () => {
+        context.runTaskCommand("openTagManager");
+      },
+    },
+    "task.openEnergyDialog": {
+      run: () => {
+        context.runTaskCommand("openEnergyDialog");
+      },
+    },
+    "task.openRewardDialog": {
+      run: () => {
+        context.runTaskCommand("openRewardDialog");
+      },
+    },
+    "task.openInterruptionDialog": {
+      run: () => {
+        context.runTaskCommand("openInterruptionDialog");
+      },
+    },
+    "task.openTemplateDialog": {
+      run: () => {
+        context.runTaskCommand("openTemplateDialog");
+      },
+    },
+    "task.goPrev": {
+      run: () => {
+        context.runTaskCommand("goPrevTask");
+      },
+    },
+    "task.goNext": {
+      run: () => {
+        context.runTaskCommand("goNextTask");
+      },
+    },
+    "planner.gotoPrev": {
+      run: () => {
+        context.runPlannerCommand("gotoPrev");
+      },
+    },
+    "planner.gotoNext": {
+      run: () => {
+        context.runPlannerCommand("gotoNext");
+      },
+    },
+    "planner.gotoCurrent": {
+      run: () => {
+        context.runPlannerCommand("gotoCurrent");
+      },
+    },
+    "planner.gotoTodayDay": {
+      run: () => {
+        context.runPlannerCommand("gotoTodayDay");
+      },
+    },
+    "planner.gotoDay": {
+      run: () => {
+        context.runPlannerCommand("gotoDay");
+      },
+    },
+    "planner.gotoWeek": {
+      run: () => {
+        context.runPlannerCommand("gotoWeek");
+      },
+    },
+    "planner.gotoMonth": {
+      run: () => {
+        context.runPlannerCommand("gotoMonth");
+      },
+    },
+    "planner.gotoYear": {
+      run: () => {
+        context.runPlannerCommand("gotoYear");
+      },
+    },
+    "planner.repeatActivity": {
+      run: () => {
+        context.runPlannerCommand("repeatActivity");
+      },
+    },
+    "planner.exportIcs": {
+      run: () => {
+        context.runPlannerCommand("exportIcs");
+      },
+    },
+    "timetable.toggleEditor": {
+      run: () => {
+        context.runTimetableCommand("toggleEditor");
+      },
+    },
+    "timetable.exitEditor": {
+      run: () => {
+        context.runTimetableCommand("exitEditor");
+      },
+    },
+    "timetable.toggleType": {
+      run: () => {
+        context.runTimetableCommand("toggleType");
       },
     },
     "view.toggle.planner": {

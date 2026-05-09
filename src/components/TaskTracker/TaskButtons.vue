@@ -163,7 +163,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, inject } from "vue";
+import { ref, computed, inject, onMounted, onUnmounted } from "vue";
 import { NButton, NPopover, NIcon } from "naive-ui";
 import EnergyInputDialog from "@/components/TaskTracker/EnergyInputDialog.vue";
 import RewardInputDialog from "@/components/TaskTracker/RewardInputDialog.vue";
@@ -192,6 +192,7 @@ import { useActivityTagEditor } from "@/composables/useActivityTagEditor";
 import { useDataStore } from "@/stores/useDataStore";
 import { useDisplayedTaskStore } from "@/stores/useDisplayedTaskStore";
 import { useDevice } from "@/composables/useDevice";
+import { registerTaskKeyboardCommandApi } from "@/composables/useTaskKeyboardCommands";
 
 const tagEditor = useActivityTagEditor();
 const dataStore = useDataStore();
@@ -200,6 +201,7 @@ const { isMobile } = useDevice();
 
 const fullscreenContainerRef = inject<{ value: HTMLElement | null }>("taskTrackerFullscreenContainerRef", { value: null });
 const isTaskTrackerFullscreen = inject<{ value: boolean }>("isTaskTrackerFullscreen", { value: false });
+const startTaskRecordEditing = inject<() => boolean>("taskTrackerStartRecordEditing", () => false);
 // Props
 const props = defineProps<{
   taskId: number | null;
@@ -219,6 +221,7 @@ const templates = computed(() => templateStore.allTemplates);
 
 // 响应式折叠状态
 const showCollapsedPopover = ref(false);
+let unregisterTaskCommandApi: (() => void) | null = null;
 
 // 处理折叠状态下的按钮点击（点击后关闭 popover）
 const handleCollapsedAction = (action: () => void) => {
@@ -333,6 +336,83 @@ function handleTagManagerClose() {
   tagEditor.saveAndCloseTagManager();
   showTagManager.value = false;
 }
+
+function keyboardToggleStar(): boolean {
+  if (!props.taskId) return false;
+  starTrack();
+  return true;
+}
+
+function keyboardOpenEditor(): boolean {
+  return startTaskRecordEditing();
+}
+
+function keyboardOpenTagManager(): boolean {
+  if (!props.taskId) return false;
+  openTagManager();
+  return true;
+}
+
+function keyboardOpenEnergyDialog(): boolean {
+  if (!props.taskId) return false;
+  showEnergyDialog.value = true;
+  showCollapsedPopover.value = false;
+  return true;
+}
+
+function keyboardOpenRewardDialog(): boolean {
+  if (!props.taskId) return false;
+  showRewardDialog.value = true;
+  showCollapsedPopover.value = false;
+  return true;
+}
+
+function keyboardOpenInterruptionDialog(): boolean {
+  if (!props.taskId) return false;
+  showInterruptionDialog.value = true;
+  showCollapsedPopover.value = false;
+  return true;
+}
+
+function keyboardOpenTemplateDialog(): boolean {
+  if (!props.taskId) return false;
+  showTemplateDialog.value = true;
+  showCollapsedPopover.value = false;
+  return true;
+}
+
+function keyboardGoPrevTask(): boolean {
+  if (!displayStore.hasPrev) return false;
+  displayStore.goPrev();
+  return true;
+}
+
+function keyboardGoNextTask(): boolean {
+  if (!displayStore.hasNext) return false;
+  displayStore.goNext();
+  return true;
+}
+
+onMounted(() => {
+  unregisterTaskCommandApi = registerTaskKeyboardCommandApi({
+    openEditor: keyboardOpenEditor,
+    toggleStar: keyboardToggleStar,
+    openTagManager: keyboardOpenTagManager,
+    openEnergyDialog: keyboardOpenEnergyDialog,
+    openRewardDialog: keyboardOpenRewardDialog,
+    openInterruptionDialog: keyboardOpenInterruptionDialog,
+    openTemplateDialog: keyboardOpenTemplateDialog,
+    goPrevTask: keyboardGoPrevTask,
+    goNextTask: keyboardGoNextTask,
+  });
+});
+
+onUnmounted(() => {
+  if (unregisterTaskCommandApi) {
+    unregisterTaskCommandApi();
+    unregisterTaskCommandApi = null;
+  }
+});
 </script>
 
 <style scoped>
