@@ -4,6 +4,11 @@ import type { Task, EnergyRecord, RewardRecord, InterruptionRecord } from "@/cor
 import type { Activity } from "@/core/types/Activity";
 import { useDataStore } from "@/stores/useDataStore";
 
+function coalesceRecordTime(id: number, recordedAt?: number): number {
+  if (recordedAt != null && Number.isFinite(recordedAt)) return recordedAt;
+  return id;
+}
+
 export const taskService = {
   // 推荐：在每个需要它的方法内部调用 useDataStore()
   // 这样可以确保 Pinia 实例在调用时总是可用的
@@ -18,19 +23,21 @@ export const taskService = {
     dataStore.updateTaskById(taskId, updates); // 调用数据存储中的更新方法
   },
 
-  addEnergyRecord(taskId: number, value: number, description?: string): EnergyRecord | undefined {
+  addEnergyRecord(taskId: number, value: number, description?: string, recordedAt?: number): EnergyRecord | undefined {
     const task = this.getTask(taskId);
     if (!task) return;
-    const record: EnergyRecord = { id: Date.now(), value, description };
+    const id = Date.now();
+    const record: EnergyRecord = { id, value, description, recordedAt: coalesceRecordTime(id, recordedAt) };
     const newEnergyRecords = [...(task.energyRecords || []), record];
     this.updateTask(taskId, { energyRecords: newEnergyRecords, synced: false, lastModified: Date.now() });
     return record;
   },
 
-  addRewardRecord(taskId: number, value: number, description?: string): RewardRecord | undefined {
+  addRewardRecord(taskId: number, value: number, description?: string, recordedAt?: number): RewardRecord | undefined {
     const task = this.getTask(taskId);
     if (!task) return;
-    const record: RewardRecord = { id: Date.now(), value, description };
+    const id = Date.now();
+    const record: RewardRecord = { id, value, description, recordedAt: coalesceRecordTime(id, recordedAt) };
     const newRewardRecords = [...(task.rewardRecords || []), record];
     this.updateTask(taskId, { rewardRecords: newRewardRecords, synced: false, lastModified: Date.now() });
     return record;
@@ -40,18 +47,20 @@ export const taskService = {
     taskId: number,
     interruptionType: "E" | "I",
     description: string,
-    activityType?: "T" | "S" | null
+    activityType?: "T" | "S" | null,
+    recordedAt?: number
   ): InterruptionRecord | undefined {
     const task = this.getTask(taskId);
     if (!task) return;
+    const id = Date.now();
     const record: InterruptionRecord = {
-      id: Date.now(),
+      id,
       interruptionType,
       description,
       activityType: activityType ?? null,
+      recordedAt: coalesceRecordTime(id, recordedAt),
     };
     const newInterruptionRecords = [...(task.interruptionRecords || []), record];
-    console.log(newInterruptionRecords);
     this.updateTask(taskId, { interruptionRecords: newInterruptionRecords, synced: false, lastModified: Date.now() });
     return record;
   },

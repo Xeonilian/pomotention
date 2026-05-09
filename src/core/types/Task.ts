@@ -20,12 +20,16 @@ export interface EnergyRecord {
   id: number; // 记录时间戳
   value: number; // 1-10的精力值
   description?: string;
+  /** 用户指定的记录时刻；缺省时展示与排序回退 id */
+  recordedAt?: number;
 }
 
 export interface RewardRecord {
   id: number; // 记录时间戳
   value: number; // 1-10的愉悦值
   description?: string;
+  /** 用户指定的记录时刻；缺省时展示与排序回退 id */
+  recordedAt?: number;
 }
 
 export interface InterruptionRecord {
@@ -33,4 +37,6 @@ export interface InterruptionRecord {
   interruptionType: "E" | "I";
   description: string;
   activityType: "T" | "S" | null;
+  /** 用户指定的记录时刻；缺省时展示与排序回退 id */
+  recordedAt?: number;
 }

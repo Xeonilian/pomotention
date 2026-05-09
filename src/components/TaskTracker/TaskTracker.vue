@@ -66,7 +66,7 @@
                 >
                   {{ formatRecordValue(record) }}
                 </span>
-                <div class="point-time">{{ formatTime(record.id) }}</div>
+                <div class="point-time">{{ formatTime(recordEventTime(record)) }}</div>
               </div>
             </template>
             <p class="timeline-popover-text">{{ record.description }}</p>
@@ -90,7 +90,7 @@
             >
               {{ formatRecordValue(record) }}
             </span>
-            <div class="point-time">{{ formatTime(record.id) }}</div>
+            <div class="point-time">{{ formatTime(recordEventTime(record)) }}</div>
           </div>
         </template>
       </div>
@@ -306,6 +306,13 @@ type CombinedRecord =
   | (RewardRecord & { type: "reward" })
   | (InterruptionRecord & { type: "interruption" });
 
+/** 时间轴展示与排序：有合法 recordedAt 用其，否则回退 id（旧数据） */
+function recordEventTime(record: CombinedRecord): number {
+  const t = record.recordedAt;
+  if (typeof t === "number" && Number.isFinite(t)) return t;
+  return record.id;
+}
+
 // 合并并按时间排序
 const combinedRecords = computed<CombinedRecord[]>(() => {
   // 关键修改：访问 ref 的值需要 .value
@@ -335,15 +342,23 @@ const combinedRecords = computed<CombinedRecord[]>(() => {
       }
     }) || [];
 
-  return [...energy, ...reward, ...interruption].sort((a, b) => a.id - b.id);
+  return [...energy, ...reward, ...interruption].sort((a, b) => recordEventTime(a) - recordEventTime(b));
 });
 
-// 格式化时间戳
+// 时间轴标签：非当天则带月日，便于辨认补记记录
 const formatTime = (timestamp: number) => {
-  if (!timestamp) return "--:--";
+  if (!timestamp || !Number.isFinite(timestamp)) return "--:--";
   const date = new Date(timestamp);
   if (isNaN(date.getTime())) return "--:--";
+  const now = new Date();
+  const sameDay =
+    date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth() && date.getDate() === now.getDate();
+  if (sameDay) {
+    return date.toLocaleString("zh-CN", { hour: "2-digit", minute: "2-digit" });
+  }
   return date.toLocaleString("zh-CN", {
+    month: "2-digit",
+    day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
   });

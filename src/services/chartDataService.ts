@@ -41,7 +41,7 @@ export function collectTaskRecordData(tasks: Task[]): DataPoint[] {
     task.energyRecords?.forEach((record) => {
       dataPoints.push({
         metric: METRICS.ENERGY,
-        timestamp: record.id,
+        timestamp: typeof record.recordedAt === "number" && Number.isFinite(record.recordedAt) ? record.recordedAt : record.id,
         value: record.value,
         sourceId: task.id,
       });
@@ -51,7 +51,7 @@ export function collectTaskRecordData(tasks: Task[]): DataPoint[] {
     task.rewardRecords?.forEach((record) => {
       dataPoints.push({
         metric: METRICS.REWARD,
-        timestamp: record.id,
+        timestamp: typeof record.recordedAt === "number" && Number.isFinite(record.recordedAt) ? record.recordedAt : record.id,
         value: record.value,
         sourceId: task.id,
       });
@@ -63,7 +63,7 @@ export function collectTaskRecordData(tasks: Task[]): DataPoint[] {
 
       dataPoints.push({
         metric,
-        timestamp: record.id,
+        timestamp: typeof record.recordedAt === "number" && Number.isFinite(record.recordedAt) ? record.recordedAt : record.id,
         value: 1, // 每条记录计为1次
         sourceId: task.id,
         metadata: {

@@ -228,8 +228,8 @@ const handleCollapsedAction = (action: () => void) => {
 
 // Methods
 const emit = defineEmits<{
-  (e: "energy-record", value: { value: number; description?: string }): void;
-  (e: "reward-record", value: { value: number; description?: string }): void;
+  (e: "energy-record", value: { value: number; description?: string; recordedAt: number }): void;
+  (e: "reward-record", value: { value: number; description?: string; recordedAt: number }): void;
   (
     e: "interruption-record",
     data: {
@@ -238,20 +238,21 @@ const emit = defineEmits<{
       asActivity: boolean;
       activityType?: "T" | "S";
       dueDate?: number | null;
+      recordedAt: number;
     },
   ): void;
   (e: "star"): void;
 }>();
 
 // 能量弹窗点击确认
-function handleEnergyConfirm(val: { value: number; description?: string }) {
+function handleEnergyConfirm(val: { value: number; description?: string; recordedAt: number }) {
   if (props.taskId) {
     emit("energy-record", val);
   }
 }
 
 // 奖励弹窗点击确认
-function handleRewardConfirm(val: { value: number; description?: string }) {
+function handleRewardConfirm(val: { value: number; description?: string; recordedAt: number }) {
   if (props.taskId) {
     emit("reward-record", val);
   }
@@ -264,6 +265,7 @@ function handleInterruptionConfirm(val: {
   asActivity: boolean;
   activityType?: "T" | "S";
   dueDate?: number | null;
+  recordedAt: number;
 }) {
   if (props.taskId) {
     emit("interruption-record", val);

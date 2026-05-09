@@ -35,15 +35,15 @@ export const useTaskTrackerStore = defineStore("taskTracker", () => {
     }
   }
 
-  function handleEnergyRecord(val: { value: number; description?: string }) {
+  function handleEnergyRecord(val: { value: number; description?: string; recordedAt: number }) {
     if (selectedTaskId.value) {
-      taskService.addEnergyRecord(selectedTaskId.value, val.value, val.description);
+      taskService.addEnergyRecord(selectedTaskId.value, val.value, val.description, val.recordedAt);
     }
   }
 
-  function handleRewardRecord(payload: { value: number; description?: string }) {
+  function handleRewardRecord(payload: { value: number; description?: string; recordedAt: number }) {
     if (selectedTaskId.value) {
-      taskService.addRewardRecord(selectedTaskId.value, payload.value, payload.description);
+      taskService.addRewardRecord(selectedTaskId.value, payload.value, payload.description, payload.recordedAt);
     }
   }
 
@@ -53,10 +53,16 @@ export const useTaskTrackerStore = defineStore("taskTracker", () => {
     asActivity: boolean;
     activityType?: "T" | "S";
     dueDate?: number | null;
+    recordedAt: number;
   }) {
     if (selectedTaskId.value) {
-      const record = taskService.addInterruptionRecord(selectedTaskId.value, data.interruptionType, data.description, data.activityType);
-      console.log(record);
+      const record = taskService.addInterruptionRecord(
+        selectedTaskId.value,
+        data.interruptionType,
+        data.description,
+        data.activityType,
+        data.recordedAt
+      );
       if (data.asActivity && record && data.activityType) {
         const newActivity = taskService.createActivityFromInterruption(selectedTaskId.value, record?.id, data.activityType, data.dueDate);
         if (newActivity) {
