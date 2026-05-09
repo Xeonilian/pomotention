@@ -332,7 +332,7 @@ import { storeToRefs } from "pinia";
 import { onBeforeRouteLeave } from "vue-router";
 
 import type { Activity } from "@/core/types/Activity";
-import { getTimestampForTimeString, getDateKey } from "@/core/utils";
+import { getDateKey } from "@/core/utils";
 import { ViewType } from "@/core/constants";
 import { useResize } from "@/composables/useResize";
 import { useVisualViewportKeyboard } from "@/composables/useVisualViewportKeyboard";
@@ -364,6 +364,8 @@ import { autoSyncDebounced, uploadAllDebounced } from "@/core/utils/autoSync";
 import { useDevice } from "@/composables/useDevice";
 import { usePublicHolidays, plannerHolidayMapKey } from "@/composables/usePublicHolidays";
 import { registerPlannerKeyboardCommandApi } from "@/composables/usePlannerKeyboardCommands";
+import { useHomePlannerKeyboard } from "@/composables/home/useHomePlannerKeyboard";
+import { useHomePlannerRowEdits } from "@/composables/home/useHomePlannerRowEdits";
 
 // ======================== 响应式状态与初始化 ========================
 // 不直接import Naive和以下组建加速启动
@@ -1302,269 +1304,46 @@ function onViewSet() {
   }
 }
 
-function plannerGotoPrev(): boolean {
-  onDateSet("prev");
-  return true;
-}
+const plannerKeyboard = useHomePlannerKeyboard({
+  onDateSet,
+  onQuickAddTodo,
+  onQuickAddSchedule,
+  onRepeatActivity,
+  onIcsExport,
+  settingStore,
+  dateService,
+  appDateTimestamp,
+  activeId,
+  selectedRowId,
+  selectedActivityId,
+  selectedTaskId,
+  activityList,
+  taskList,
+  activityById,
+  todoById,
+  scheduleById,
+  saveAllDebounced,
+  createTaskFromActivity: taskService.createTaskFromActivity,
+});
 
-function plannerGotoNext(): boolean {
-  onDateSet("next");
-  return true;
-}
-
-function plannerGotoCurrent(): boolean {
-  onDateSet("today");
-  return true;
-}
-
-function plannerGotoTodayDay(): boolean {
-  settingStore.settings.viewSet = "day";
-  settingStore.settings.topHeight = 610;
-  onDateSet("today");
-  return true;
-}
-
-function plannerGotoDay(): boolean {
-  settingStore.settings.viewSet = "day";
-  settingStore.settings.topHeight = 300;
-  return true;
-}
-
-function plannerGotoWeek(): boolean {
-  settingStore.settings.viewSet = "week";
-  settingStore.settings.topHeight = 610;
-  return true;
-}
-
-function plannerGotoMonth(): boolean {
-  settingStore.settings.viewSet = "month";
-  settingStore.settings.topHeight = 610;
-  return true;
-}
-
-function plannerGotoYear(): boolean {
-  settingStore.settings.viewSet = "year";
-  settingStore.settings.topHeight = 450;
-  return true;
-}
-
-function plannerRepeatActivity(): boolean {
-  if (selectedRowId.value == null && activeId.value == null) return false;
-  onRepeatActivity(false);
-  return true;
-}
-
-function plannerExportIcs(): boolean {
-  if (selectedRowId.value == null) return false;
-  void onIcsExport();
-  return true;
-}
-
-// 编辑title，Schedule.id，同步Activity
-function handleEditScheduleTitle(id: number, newTitle: string) {
-  const schedule = scheduleById.value.get(id);
-  if (!schedule) {
-    console.warn(`未找到 id 为 ${id} 的 schedule`);
-    return;
-  }
-  schedule.activityTitle = newTitle;
-
-  const activity = activityById.value.get(schedule.activityId);
-  if (!activity) {
-    console.warn(`未找到 activityId 为 ${schedule.activityId} 的 activity`);
-    return;
-  }
-  activity.title = newTitle;
-  activity.synced = false;
-  activity.lastModified = Date.now();
-
-  // 找到task 并重新赋值
-  const relatedTask = taskByActivityId.value.get(schedule.activityId);
-  if (relatedTask) {
-    relatedTask.activityTitle = newTitle;
-  }
-  saveAllDebounced();
-}
-
-// 编辑title，todo.id，同步Activity
-function handleEditTodoTitle(id: number, newTitle: string) {
-  // 找到todo
-  const todo = todoById.value.get(id);
-  if (!todo) {
-    console.warn(`未找到 id 为 ${id} 的 todo`);
-    return;
-  }
-  todo.activityTitle = newTitle;
-
-  // 找到activity
-  const activity = activityById.value.get(todo.activityId);
-  if (!activity) {
-    return;
-  }
-  activity.title = newTitle;
-  activity.synced = false;
-  activity.lastModified = Date.now();
-
-  // 找到task 并重新赋值
-  const relatedTask = taskByActivityId.value.get(todo.activityId);
-  if (relatedTask) {
-    relatedTask.activityTitle = newTitle;
-  }
-  saveAllDebounced();
-}
-
-// 编辑开始时间：只更新时:分，不改变日期（基于原 activityDueRange[0] 的日期）
-function handleEditScheduleStart(id: number, newTm: string) {
-  const schedule = scheduleById.value.get(id);
-  if (!schedule) {
-    console.warn(`未找到 id 为 ${id} 的 schedule`);
-    return;
-  }
-
-  const activity = activityById.value.get(schedule.activityId);
-
-  if (newTm === "") {
-    // 清空开始时间
-    schedule.activityDueRange[0] = null;
-    schedule.synced = false;
-    schedule.lastModified = Date.now();
-    if (activity?.dueRange) {
-      activity.dueRange[0] = null;
-      activity.synced = false;
-      activity.lastModified = Date.now();
-    }
-    saveAllDebounced();
-    return;
-  }
-
-  // 基准日期：优先用原 startTs，否则用当前视图日期（只作为日期基准）
-  const baseTs = schedule.activityDueRange?.[0] ?? dateService.appDateTimestamp.value;
-  const [hh, mm] = newTm.split(":").map((n) => Number(n));
-  const base = new Date(Number(baseTs));
-  base.setHours(hh, mm, 0, 0);
-  const nextTs = base.getTime();
-
-  // 更新 schedule
-  if (!schedule.activityDueRange) schedule.activityDueRange = [null, "0"];
-  schedule.activityDueRange[0] = nextTs;
-  schedule.synced = false;
-  schedule.lastModified = Date.now();
-
-  // 同步 activity.dueRange[0]
-  if (activity) {
-    if (!activity.dueRange) activity.dueRange = [nextTs, schedule.activityDueRange[1] ?? "0"];
-    else activity.dueRange[0] = nextTs;
-    activity.synced = false;
-    activity.lastModified = Date.now();
-  }
-
-  saveAllDebounced();
-}
-
-// 编辑时间
-function handleEditTodoStart(id: number, newTm: string) {
-  // 获取当前查看日期的时间戳
-
-  const todo = todoById.value.get(id);
-  if (!todo) {
-    console.warn(`未找到 id 为 ${id} 的 todo`);
-    return;
-  }
-  todo.startTime = getTimestampForTimeString(newTm, appDateTimestamp.value);
-  todo.synced = false;
-  todo.lastModified = Date.now();
-
-  const task = taskByActivityId.value.get(todo.activityId);
-  if (task) {
-    if (task.description?.trim() === "#") {
-      task.description = `# ${todo.activityTitle}`;
-      task.synced = false;
-      task.lastModified = Date.now();
-    }
-  }
-
-  saveAllDebounced();
-}
-
-function handleEditTodoDone(id: number, newTm: string) {
-  // 获取当前查看日期的时间戳
-  const todo = todoById.value.get(id);
-  if (!todo) {
-    console.warn(`未找到 id 为 ${id} 的 todo`);
-    return;
-  }
-  if (newTm === "") {
-    todo.doneTime = undefined;
-  } else {
-    todo.doneTime = getTimestampForTimeString(newTm, appDateTimestamp.value);
-  }
-  todo.synced = false;
-  todo.lastModified = Date.now();
-  saveAllDebounced();
-}
-
-function handleEditScheduleDone(id: number, newTm: string) {
-  // 获取当前查看日期的时间戳
-  const schedule = scheduleById.value.get(id);
-  if (!schedule) {
-    console.warn(`未找到 id 为 ${id} 的 schedule`);
-    return;
-  }
-  if (newTm === "") {
-    schedule.doneTime = undefined;
-  } else {
-    schedule.doneTime = getTimestampForTimeString(newTm, appDateTimestamp.value);
-  }
-  saveAllDebounced();
-}
-
-// 编辑时长：Schedule.activityDueRange[1]（同时同步 Activity.dueRange[1]）
-function handleEditScheduleDuration(id: number, newDurationMin: string) {
-  const schedule = scheduleById.value.get(id);
-  if (!schedule) {
-    console.warn(`未找到 id 为 ${id} 的 schedule`);
-    return;
-  }
-
-  // 更新 schedule
-  if (!schedule.activityDueRange) schedule.activityDueRange = [null, "0"];
-  schedule.activityDueRange[1] = newDurationMin;
-  schedule.synced = false;
-  schedule.lastModified = Date.now();
-
-  // 同步到 activity（watcher 也会回写到 schedule，这里直接写保证联动一致）
-  const activity = activityById.value.get(schedule.activityId);
-  if (activity) {
-    if (!activity.dueRange) activity.dueRange = [schedule.activityDueRange[0] ?? null, newDurationMin];
-    else activity.dueRange[1] = newDurationMin;
-    activity.synced = false;
-    activity.lastModified = Date.now();
-  }
-
-  saveAllDebounced();
-}
-
-// 编辑地点：Schedule.location（同时同步 Activity.location）
-function handleEditScheduleLocation(id: number, newLocation: string) {
-  const schedule = scheduleById.value.get(id);
-  if (!schedule) {
-    console.warn(`未找到 id 为 ${id} 的 schedule`);
-    return;
-  }
-
-  schedule.location = newLocation;
-  schedule.synced = false;
-  schedule.lastModified = Date.now();
-
-  const activity = activityById.value.get(schedule.activityId);
-  if (activity) {
-    activity.location = newLocation;
-    activity.synced = false;
-    activity.lastModified = Date.now();
-  }
-
-  saveAllDebounced();
-}
+const {
+  handleEditScheduleTitle,
+  handleEditTodoTitle,
+  handleEditScheduleStart,
+  handleEditTodoStart,
+  handleEditTodoDone,
+  handleEditScheduleDone,
+  handleEditScheduleDuration,
+  handleEditScheduleLocation,
+} = useHomePlannerRowEdits({
+  todoById,
+  scheduleById,
+  activityById,
+  taskByActivityId,
+  appDateTimestamp,
+  dateService,
+  saveAllDebounced,
+});
 
 // ======================== 8. 生命周期 Hook ========================
 onMounted(() => {
@@ -1572,18 +1351,7 @@ onMounted(() => {
   dateService.setupSystemDateWatcher();
   dateService.navigateByView("today");
   attachVisualViewportListeners();
-  unregisterPlannerCommandApi = registerPlannerKeyboardCommandApi({
-    gotoPrev: plannerGotoPrev,
-    gotoNext: plannerGotoNext,
-    gotoCurrent: plannerGotoCurrent,
-    gotoTodayDay: plannerGotoTodayDay,
-    gotoDay: plannerGotoDay,
-    gotoWeek: plannerGotoWeek,
-    gotoMonth: plannerGotoMonth,
-    gotoYear: plannerGotoYear,
-    repeatActivity: plannerRepeatActivity,
-    exportIcs: plannerExportIcs,
-  });
+  unregisterPlannerCommandApi = registerPlannerKeyboardCommandApi(plannerKeyboard.plannerCommandApi);
 });
 
 onUnmounted(() => {

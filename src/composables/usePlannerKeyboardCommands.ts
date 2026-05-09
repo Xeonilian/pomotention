@@ -7,6 +7,9 @@ type PlannerCommandApi = {
   gotoWeek: () => boolean;
   gotoMonth: () => boolean;
   gotoYear: () => boolean;
+  addTodo: () => boolean;
+  addSchedule: () => boolean;
+  repeatActivityOnly: () => boolean;
   repeatActivity: () => boolean;
   exportIcs: () => boolean;
 };

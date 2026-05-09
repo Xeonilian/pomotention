@@ -102,6 +102,31 @@
         </n-card>
       </n-tab-pane>
 
+      <n-tab-pane name="shortcuts" tab="快捷键">
+        <n-card size="small" title="键盘快捷键映射">
+          <div class="shortcut-table-wrap">
+            <table class="shortcut-table">
+              <thead>
+                <tr>
+                  <th>组合</th>
+                  <th>动作</th>
+                  <th>说明</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="row in shortcutRows" :key="row.key">
+                  <td>
+                    <code>{{ row.key }}</code>
+                  </td>
+                  <td>{{ row.action }}</td>
+                  <td>{{ row.note }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </n-card>
+      </n-tab-pane>
+
       <n-tab-pane name="debug" tab="调试与诊断">
         <!-- 调试 / 诊断：默认折叠 -->
         <n-card size="small" class="settings-diagnostics-card" :bordered="true">
@@ -465,6 +490,28 @@ const notification = useNotification();
 const tab = ref("general");
 const userEmail = ref("-");
 const viteVersionRaw = import.meta.env.VITE_APP_VERSION || "";
+type ShortcutRow = { key: string; action: string; note: string };
+const shortcutRows: ShortcutRow[] = [
+  { key: "aa / tt / pp / mm / rr", action: "切换区域显示", note: "Activity / Task / Planner / Timetable / Timer" },
+  { key: "vh / vp / vs / vd / ve", action: "页面跳转", note: "Home / Help / Search / Data / Setting" },
+  { key: "rwu", action: "开始番茄工作", note: "遵循原有可执行条件" },
+  { key: "ar", action: "进入 Activity 行选择模式", note: "随后可用 ↑/↓ 移动，数字选中，Enter/Esc 退出" },
+  { key: "app / add / ach", action: "Activity 常用操作", note: "选中/删改状态/子级关系" },
+  { key: "ato / asc / aun", action: "Activity 快速加入", note: "加入 Todo / Schedule / Untaetigkeit" },
+  { key: "aqu / aka / akd", action: "Activity 结构操作", note: "切象限/增看板/删最后看板" },
+  { key: "aet / aed / aew / ael / aes / aep", action: "Activity 编辑字段", note: "标题、日期、地点、时长、起始、番茄估算" },
+  { key: "arp", action: "仅重复 Activity", note: "复制活动并保持在 Activity 侧编辑" },
+  { key: "tee / tst / ttg / ten / trw / tin / ttm", action: "Task 操作", note: "编辑区、星标、标签、能量、奖励、打断、模板" },
+  { key: "tpr / tnx", action: "Task 切换", note: "上一个 / 下一个任务" },
+  { key: "pgp / pgn", action: "Planner 日期翻页", note: "上一周期 / 下一周期" },
+  { key: "ptn / ptd", action: "Planner 定位当前", note: "当前周期 / 今日并切 day 视图" },
+  { key: "pdd / pww / pmm / pyy", action: "Planner 视图切换", note: "day / week / month / year" },
+  { key: "pto / psc", action: "Planner 快速新增", note: "新增 Todo / Schedule（Untaetigkeit 归入 Schedule）" },
+  { key: "prp", action: "Planner 重复活动（含关联项）", note: "会连同 Todo 或 Schedule 关系一起重复" },
+  { key: "pic", action: "Planner 导出 ICS", note: "需要当前行可导出" },
+  { key: "med / mex / mtt", action: "Timetable 操作", note: "编辑开关、退出编辑、类型切换" },
+  { key: "Esc（输入框内）", action: "退出输入编辑", note: "保留当前选中状态，不清空选择" },
+];
 /** Tauri getVersion() 返回值，不含 v 前缀 */
 const tauriRuntimeVersion = ref("");
 
@@ -1551,5 +1598,32 @@ function handleFactoryReset() {
   padding-top: 8px !important;
   padding-bottom: 8px !important;
   line-height: 1.35;
+}
+
+.shortcut-table-wrap {
+  overflow-x: auto;
+}
+
+.shortcut-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.shortcut-table th,
+.shortcut-table td {
+  border: 1px solid var(--n-border-color);
+  padding: 8px 10px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.shortcut-table th {
+  background: var(--n-color-target);
+  font-weight: 600;
+}
+
+.shortcut-table code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 </style>

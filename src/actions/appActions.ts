@@ -18,6 +18,7 @@ export type AppActionId =
   | "activity.editDuration"
   | "activity.editScheduleTime"
   | "activity.editPomoEstimate"
+  | "activity.repeatActivity"
   | "task.openEditor"
   | "task.toggleStar"
   | "task.openTagManager"
@@ -35,6 +36,8 @@ export type AppActionId =
   | "planner.gotoWeek"
   | "planner.gotoMonth"
   | "planner.gotoYear"
+  | "planner.addTodo"
+  | "planner.addSchedule"
   | "planner.repeatActivity"
   | "planner.exportIcs"
   | "timetable.toggleEditor"
@@ -107,6 +110,9 @@ export interface AppActionContext {
       | "gotoWeek"
       | "gotoMonth"
       | "gotoYear"
+      | "addTodo"
+      | "addSchedule"
+      | "repeatActivityOnly"
       | "repeatActivity"
       | "exportIcs",
   ) => boolean;
@@ -201,6 +207,11 @@ export function createAppActionRegistry(context: AppActionContext): AppActionReg
         context.runActivityEditField("pomoEstimate");
       },
     },
+    "activity.repeatActivity": {
+      run: () => {
+        context.runPlannerCommand("repeatActivityOnly");
+      },
+    },
     "task.toggleStar": {
       run: () => {
         context.runTaskCommand("toggleStar");
@@ -284,6 +295,16 @@ export function createAppActionRegistry(context: AppActionContext): AppActionReg
     "planner.gotoYear": {
       run: () => {
         context.runPlannerCommand("gotoYear");
+      },
+    },
+    "planner.addTodo": {
+      run: () => {
+        context.runPlannerCommand("addTodo");
+      },
+    },
+    "planner.addSchedule": {
+      run: () => {
+        context.runPlannerCommand("addSchedule");
       },
     },
     "planner.repeatActivity": {
