@@ -9,11 +9,11 @@ interface UseGlobalKeyboardShortcutsOptions {
 }
 
 const singleKeyMap: Record<string, AppActionId> = {
-  a: "view.toggle.activity",
-  t: "view.toggle.task",
-  p: "view.toggle.planner",
-  m: "view.toggle.schedule",
-  r: "view.toggle.pomodoro",
+  aa: "view.toggle.activity",
+  at: "view.toggle.task",
+  pp: "view.toggle.planner",
+  mm: "view.toggle.schedule",
+  rr: "view.toggle.pomodoro",
 };
 
 const sequenceMap: Record<string, AppActionId> = {
@@ -22,10 +22,10 @@ const sequenceMap: Record<string, AppActionId> = {
   vs: "route.go.search",
   vd: "route.go.chart",
   ve: "route.go.settings",
-  wu: "timer.startWork",
+  rwu: "timer.startWork",
 };
 
-const allSequences = [...Object.keys(singleKeyMap), ...Object.keys(sequenceMap), "rr"];
+const allSequences = [...Object.keys(singleKeyMap), ...Object.keys(sequenceMap)];
 
 const sequencePrefixSet = (() => {
   const set = new Set<string>();
@@ -58,7 +58,6 @@ export function useGlobalKeyboardShortcuts(options: UseGlobalKeyboardShortcutsOp
   const timeoutMs = options.sequenceTimeoutMs ?? 520;
   let buffer = "";
   let timerId: number | null = null;
-  let timerArmed = false;
   let installed = false;
   let originalFilter: typeof hotkeys.filter | null = null;
 
@@ -75,15 +74,9 @@ export function useGlobalKeyboardShortcuts(options: UseGlobalKeyboardShortcutsOp
   };
 
   const triggerBySequence = (sequence: string) => {
-    if (sequence === "rr") {
-      timerArmed = true;
-      return true;
-    }
     const actionId = sequenceMap[sequence] ?? singleKeyMap[sequence];
     if (!actionId) return false;
-    if (actionId === "timer.startWork" && !timerArmed) return false;
     const ok = options.dispatchAction(actionId, sequence);
-    if (actionId === "timer.startWork") timerArmed = false;
     return ok;
   };
 
@@ -145,8 +138,8 @@ export function useGlobalKeyboardShortcuts(options: UseGlobalKeyboardShortcutsOp
     if (event.ctrlKey || event.metaKey || event.altKey) return;
     const key = normalizeKey(handler.key ?? event.key);
     if (!/^[a-z]$/.test(key)) return;
-    event.preventDefault();
-    processKey(key);
+    const handled = processKey(key);
+    if (handled) event.preventDefault();
   };
 
   const install = () => {
@@ -169,7 +162,6 @@ export function useGlobalKeyboardShortcuts(options: UseGlobalKeyboardShortcutsOp
       originalFilter = null;
     }
     clearBuffer();
-    timerArmed = false;
     installed = false;
   };
 

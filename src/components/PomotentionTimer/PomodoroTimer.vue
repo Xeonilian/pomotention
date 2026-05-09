@@ -323,6 +323,21 @@ const breakDurationOptions = ref([
 function handleDurationSelect(key: number): void {
   settingStore.settings.durations.breakDuration = key;
 }
+
+function canStartWorkShortcut(): boolean {
+  return !isCompactMode.value && !Boolean(props.showPomoSeq) && timerStore.pomodoroState === "idle";
+}
+
+function triggerWorkStartShortcut(): boolean {
+  if (!canStartWorkShortcut()) return false;
+  handleWorkAction();
+  return true;
+}
+
+defineExpose({
+  canStartWorkShortcut,
+  triggerWorkStartShortcut,
+});
 </script>
 
 <style scoped>
