@@ -192,7 +192,7 @@ import { useActivityTagEditor } from "@/composables/activity/useActivityTagEdito
 import { useDataStore } from "@/stores/useDataStore";
 import { useDisplayedTaskStore } from "@/stores/useDisplayedTaskStore";
 import { useDevice } from "@/composables/platform/useDevice";
-import { registerTaskKeyboardCommandApi } from "@/composables/keyboard/task/useTaskKeyboardCommands";
+import { registerTaskKeyboardCommandApi } from "@/composables/keyboard/useTaskKeyboardCommands";
 
 const tagEditor = useActivityTagEditor();
 const dataStore = useDataStore();

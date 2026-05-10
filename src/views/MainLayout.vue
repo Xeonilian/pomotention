@@ -261,19 +261,19 @@ import {
   isActivityRowPickerActive,
   moveActivityRowPicker,
   pickActivityRowByDigit,
-} from "@/composables/keyboard/activity/useActivityKeyboardNavigator";
-import { runActivityKeyboardCommand } from "@/composables/keyboard/activity/useActivityKeyboardCommands";
-import { runActivityEditFieldCommand } from "@/composables/keyboard/activity/useActivityKeyboardCommands";
-import { runTaskKeyboardCommand } from "@/composables/keyboard/task/useTaskKeyboardCommands";
-import { runPlannerEditFieldCommand, runPlannerKeyboardCommand } from "@/composables/keyboard/planner/usePlannerKeyboardCommands";
-import { runTimetableKeyboardCommand } from "@/composables/keyboard/timetable/useTimetableKeyboardCommands";
+} from "@/composables/keyboard/useActivityKeyboardNavigator";
+import { runActivityKeyboardCommand } from "@/composables/keyboard/useActivityKeyboardCommands";
+import { runActivityEditFieldCommand } from "@/composables/keyboard/useActivityKeyboardCommands";
+import { runTaskKeyboardCommand } from "@/composables/keyboard/useTaskKeyboardCommands";
+import { runPlannerEditFieldCommand, runPlannerKeyboardCommand } from "@/composables/keyboard/usePlannerKeyboardCommands";
+import { runTimetableKeyboardCommand } from "@/composables/keyboard/useTimetableKeyboardCommands";
 import {
   enterPlannerRowPicker,
   exitPlannerRowPicker,
   isPlannerRowPickerActive,
   movePlannerRowPicker,
   pickPlannerRowByDigit,
-} from "@/composables/keyboard/planner/usePlannerKeyboardNavigator";
+} from "@/composables/keyboard/usePlannerKeyboardNavigator";
 
 // Icons & Components
 import {

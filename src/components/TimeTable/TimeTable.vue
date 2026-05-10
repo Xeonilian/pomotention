@@ -31,7 +31,7 @@ import TimeBlocks from "@/components/TimeTable/TimeBlocks.vue";
 import { getTimestampForTimeString } from "@/core/utils";
 import { useDataStore } from "@/stores/useDataStore";
 import { useTimetableStore } from "@/stores/useTimetableStore";
-import { registerTimetableKeyboardCommandApi } from "@/composables/keyboard/timetable/useTimetableKeyboardCommands";
+import { registerTimetableKeyboardCommandApi } from "@/composables/keyboard/useTimetableKeyboardCommands";
 // import { useDevice } from "@/composables/platform/useDevice";
 
 const dataStore = useDataStore();

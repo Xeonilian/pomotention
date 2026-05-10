@@ -201,8 +201,8 @@ import { useDataStore } from "@/stores/useDataStore";
 import { storeToRefs } from "pinia";
 import { timestampToDatetime } from "@/core/utils";
 import { useDevice } from "@/composables/platform/useDevice";
-import { registerActivityRowPickerApi } from "@/composables/keyboard/activity/useActivityKeyboardNavigator";
-import { registerActivityKeyboardCommandApi } from "@/composables/keyboard/activity/useActivityKeyboardCommands";
+import { registerActivityRowPickerApi } from "@/composables/keyboard/useActivityKeyboardNavigator";
+import { registerActivityKeyboardCommandApi } from "@/composables/keyboard/useActivityKeyboardCommands";
 import { activityRowPickerInjectKey } from "@/components/ActivitySheet/activityRowPickerInject";
 
 const dataStore = useDataStore();
