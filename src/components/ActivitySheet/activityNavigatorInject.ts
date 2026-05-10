@@ -1,9 +1,9 @@
 import type { ComputedRef, InjectionKey } from "vue";
 
-export interface ActivityRowPickerInject {
+export interface ActivityNavigatorInject {
   isActive: ComputedRef<boolean>;
   numberById: ComputedRef<Record<number, number>>;
   currentRowId: ComputedRef<number | null>;
 }
 
-export const activityRowPickerInjectKey: InjectionKey<ActivityRowPickerInject> = Symbol("activityRowPickerInject");
+export const activityNavigatorInjectKey: InjectionKey<ActivityNavigatorInject> = Symbol("activityNavigatorInject");

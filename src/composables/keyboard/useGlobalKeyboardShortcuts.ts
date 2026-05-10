@@ -12,10 +12,10 @@ interface UseGlobalKeyboardShortcutsOptions {
 
 const singleKeyMap: Record<string, AppActionId> = {
   aa: "view.toggle.activity",
-  ar: "activity.rowPicker.enter",
+  an: "activity.navigator.enter",
   tt: "view.toggle.task",
   pp: "view.toggle.planner",
-  pr: "planner.rowPicker.enter",
+  pn: "planner.navigator.enter",
   mm: "view.toggle.schedule",
   rr: "view.toggle.pomodoro",
 };
@@ -71,7 +71,9 @@ const sequenceMap: Record<string, AppActionId> = {
   med: "timetable.toggleEditor",
   mex: "timetable.exitEditor",
   mtt: "timetable.toggleType",
-  rwu: "timer.startWork",
+  uwu: "timer.startWork",
+  ubr: "timer.startBreak",
+  ust: "timer.stop",
 };
 
 const allSequences = [...Object.keys(singleKeyMap), ...Object.keys(sequenceMap)];

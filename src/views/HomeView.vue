@@ -214,7 +214,7 @@
             <DayPlanner
               v-if="settingStore.settings.showPlanner && settingStore.settings.viewSet === 'day'"
               ref="dayPlannerRef"
-              :style="plannerRowPickerActive ? { '--planner-selected-row-bg': 'var(--color-purple-light-transparent)' } : undefined"
+              :style="plannerNavigatorActive ? { '--planner-selected-row-bg': 'var(--color-purple-light-transparent)' } : undefined"
               @update-schedule-status="onUpdateScheduleStatus"
               @cancel-schedule="onCancelSchedule"
               @uncancel-schedule="onUncancelSchedule"
@@ -366,7 +366,7 @@ import { autoSyncDebounced, uploadAllDebounced } from "@/core/utils/autoSync";
 import { useDevice } from "@/composables/platform/useDevice";
 import { usePublicHolidays, plannerHolidayMapKey } from "@/composables/planner/usePublicHolidays";
 import { registerPlannerKeyboardCommandApi } from "@/composables/keyboard/usePlannerKeyboardCommands";
-import { registerPlannerRowPickerApi } from "@/composables/keyboard/usePlannerKeyboardNavigator";
+import { registerPlannerNavigatorApi } from "@/composables/keyboard/usePlannerKeyboardNavigator";
 import { useHomePlannerKeyboard } from "@/composables/home/useHomePlannerKeyboard";
 import { useHomePlannerRowEdits } from "@/composables/home/useHomePlannerRowEdits";
 
@@ -402,7 +402,7 @@ const showPopover = ref(false);
 const popoverMessage = ref("");
 const taskRecordEditing = ref(false);
 let unregisterPlannerCommandApi: (() => void) | null = null;
-let unregisterPlannerRowPickerApi: (() => void) | null = null;
+let unregisterPlannerNavigatorApi: (() => void) | null = null;
 function setTaskRecordEditing(v: boolean) {
   taskRecordEditing.value = v;
 }
@@ -1354,7 +1354,7 @@ const {
   saveAllDebounced,
 });
 
-const plannerRowPickerActive = ref(false);
+const plannerNavigatorActive = ref(false);
 
 type PlannerKeyboardRow = {
   rowId: number;
@@ -1391,10 +1391,10 @@ function selectPlannerKeyboardRowById(rowId: number): boolean {
   return false;
 }
 
-function enterPlannerRowPickerMode(): boolean {
+function enterPlannerNavigatorMode(): boolean {
   const rows = getPlannerKeyboardRows();
   if (rows.length === 0) return false;
-  plannerRowPickerActive.value = true;
+  plannerNavigatorActive.value = true;
   const current = selectedRowId.value;
   const exists = current != null && rows.some((row) => row.rowId === current);
   if (!exists) {
@@ -1403,7 +1403,7 @@ function enterPlannerRowPickerMode(): boolean {
   return true;
 }
 
-function movePlannerRowPickerMode(delta: 1 | -1): boolean {
+function movePlannerNavigatorMode(delta: 1 | -1): boolean {
   const rows = getPlannerKeyboardRows();
   if (rows.length === 0) return false;
   const currentIndex = rows.findIndex((row) => row.rowId === selectedRowId.value);
@@ -1420,8 +1420,8 @@ function pickPlannerRowByDigitMode(digit: number): boolean {
   return selectPlannerKeyboardRowById(target.rowId);
 }
 
-function exitPlannerRowPickerMode() {
-  plannerRowPickerActive.value = false;
+function exitPlannerNavigatorMode() {
+  plannerNavigatorActive.value = false;
 }
 
 function plannerKeyboardEditField(field: "title" | "start" | "done" | "duration" | "location"): boolean {
@@ -1451,12 +1451,12 @@ onMounted(() => {
   dateService.navigateByView("today");
   attachVisualViewportListeners();
   unregisterPlannerCommandApi = registerPlannerKeyboardCommandApi(plannerKeyboard.plannerCommandApi);
-  unregisterPlannerRowPickerApi = registerPlannerRowPickerApi({
-    enter: enterPlannerRowPickerMode,
-    move: movePlannerRowPickerMode,
+  unregisterPlannerNavigatorApi = registerPlannerNavigatorApi({
+    enter: enterPlannerNavigatorMode,
+    move: movePlannerNavigatorMode,
     pickByDigit: pickPlannerRowByDigitMode,
-    exit: exitPlannerRowPickerMode,
-    isActive: () => plannerRowPickerActive.value,
+    exit: exitPlannerNavigatorMode,
+    isActive: () => plannerNavigatorActive.value,
   });
 });
 
@@ -1465,9 +1465,9 @@ onUnmounted(() => {
     unregisterPlannerCommandApi();
     unregisterPlannerCommandApi = null;
   }
-  if (unregisterPlannerRowPickerApi) {
-    unregisterPlannerRowPickerApi();
-    unregisterPlannerRowPickerApi = null;
+  if (unregisterPlannerNavigatorApi) {
+    unregisterPlannerNavigatorApi();
+    unregisterPlannerNavigatorApi = null;
   }
   dateService.cleanupSystemDateWatcher();
   autoSyncDebounced.flush(); //立即执行

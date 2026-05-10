@@ -2,7 +2,7 @@ export type AppActionSource = "keyboard" | "click" | "cli" | "mcp";
 
 export type AppActionId =
   | "view.toggle.activity"
-  | "activity.rowPicker.enter"
+  | "activity.navigator.enter"
   | "activity.pick"
   | "activity.deleteOrRecover"
   | "activity.adjustChildRelation"
@@ -29,7 +29,7 @@ export type AppActionId =
   | "task.goPrev"
   | "task.goNext"
   | "planner.gotoPrev"
-  | "planner.rowPicker.enter"
+  | "planner.navigator.enter"
   | "planner.gotoNext"
   | "planner.gotoCurrent"
   | "planner.gotoTodayDay"
@@ -58,7 +58,9 @@ export type AppActionId =
   | "route.go.search"
   | "route.go.chart"
   | "route.go.settings"
-  | "timer.startWork";
+  | "timer.startWork"
+  | "timer.startBreak"
+  | "timer.stop";
 
 export interface AppActionPayload {
   source: AppActionSource;
@@ -80,7 +82,11 @@ export interface AppActionContext {
   openHelp: () => void;
   canStartTimerWork: () => boolean;
   startTimerWork: () => boolean;
-  enterActivityRowPicker: () => boolean;
+  canStartTimerBreak: () => boolean;
+  startTimerBreak: () => boolean;
+  canStopTimer: () => boolean;
+  stopTimer: () => boolean;
+  enterActivityNavigator: () => boolean;
   runActivityCommand: (
     command:
       | "pickActivity"
@@ -122,7 +128,7 @@ export interface AppActionContext {
       | "repeatActivity"
       | "exportIcs",
   ) => boolean;
-  enterPlannerRowPicker: () => boolean;
+  enterPlannerNavigator: () => boolean;
   runPlannerEditField: (field: "title" | "start" | "done" | "duration" | "location") => boolean;
   runTimetableCommand: (command: "toggleEditor" | "exitEditor" | "toggleType") => boolean;
 }
@@ -135,9 +141,9 @@ export function createAppActionRegistry(context: AppActionContext): AppActionReg
     "view.toggle.task": {
       run: () => context.togglePanel("task"),
     },
-    "activity.rowPicker.enter": {
+    "activity.navigator.enter": {
       run: () => {
-        context.enterActivityRowPicker();
+        context.enterActivityNavigator();
       },
     },
     "activity.pick": {
@@ -270,9 +276,9 @@ export function createAppActionRegistry(context: AppActionContext): AppActionReg
         context.runPlannerCommand("gotoPrev");
       },
     },
-    "planner.rowPicker.enter": {
+    "planner.navigator.enter": {
       run: () => {
-        context.enterPlannerRowPicker();
+        context.enterPlannerNavigator();
       },
     },
     "planner.gotoNext": {
@@ -398,6 +404,18 @@ export function createAppActionRegistry(context: AppActionContext): AppActionReg
       canRun: () => context.canStartTimerWork(),
       run: () => {
         context.startTimerWork();
+      },
+    },
+    "timer.startBreak": {
+      canRun: () => context.canStartTimerBreak(),
+      run: () => {
+        context.startTimerBreak();
+      },
+    },
+    "timer.stop": {
+      canRun: () => context.canStopTimer(),
+      run: () => {
+        context.stopTimer();
       },
     },
   };

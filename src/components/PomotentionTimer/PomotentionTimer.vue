@@ -114,6 +114,10 @@ const emit = defineEmits<{
 const pomodoroTimerRef = ref<{
   canStartWorkShortcut: () => boolean;
   triggerWorkStartShortcut: () => boolean;
+  canStartBreakShortcut: () => boolean;
+  triggerBreakStartShortcut: () => boolean;
+  canStopShortcut: () => boolean;
+  triggerStopShortcut: () => boolean;
 } | null>(null);
 
 // Android 上 calc(100vw/…) 放进 scale() 常不生效，用 visualViewport 写 --phone-scale 更稳；横屏需同时约束高度
@@ -263,9 +267,29 @@ function triggerWorkStartShortcut(): boolean {
   return pomodoroTimerRef.value?.triggerWorkStartShortcut() ?? false;
 }
 
+function canStartBreakShortcut(): boolean {
+  return pomodoroTimerRef.value?.canStartBreakShortcut() ?? false;
+}
+
+function triggerBreakStartShortcut(): boolean {
+  return pomodoroTimerRef.value?.triggerBreakStartShortcut() ?? false;
+}
+
+function canStopShortcut(): boolean {
+  return pomodoroTimerRef.value?.canStopShortcut() ?? false;
+}
+
+function triggerStopShortcut(): boolean {
+  return pomodoroTimerRef.value?.triggerStopShortcut() ?? false;
+}
+
 defineExpose({
   canStartWorkShortcut,
   triggerWorkStartShortcut,
+  canStartBreakShortcut,
+  triggerBreakStartShortcut,
+  canStopShortcut,
+  triggerStopShortcut,
 });
 </script>
 

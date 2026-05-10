@@ -1,4 +1,4 @@
-type PlannerRowPickerApi = {
+type PlannerNavigatorApi = {
   enter: () => boolean;
   move: (delta: 1 | -1) => boolean;
   pickByDigit: (digit: number) => boolean;
@@ -6,31 +6,31 @@ type PlannerRowPickerApi = {
   isActive: () => boolean;
 };
 
-let plannerRowPickerApi: PlannerRowPickerApi | null = null;
+let plannerNavigatorApi: PlannerNavigatorApi | null = null;
 
-export function registerPlannerRowPickerApi(api: PlannerRowPickerApi) {
-  plannerRowPickerApi = api;
+export function registerPlannerNavigatorApi(api: PlannerNavigatorApi) {
+  plannerNavigatorApi = api;
   return () => {
-    if (plannerRowPickerApi === api) plannerRowPickerApi = null;
+    if (plannerNavigatorApi === api) plannerNavigatorApi = null;
   };
 }
 
-export function enterPlannerRowPicker(): boolean {
-  return plannerRowPickerApi?.enter() ?? false;
+export function enterPlannerNavigator(): boolean {
+  return plannerNavigatorApi?.enter() ?? false;
 }
 
-export function movePlannerRowPicker(delta: 1 | -1): boolean {
-  return plannerRowPickerApi?.move(delta) ?? false;
+export function movePlannerNavigator(delta: 1 | -1): boolean {
+  return plannerNavigatorApi?.move(delta) ?? false;
 }
 
 export function pickPlannerRowByDigit(digit: number): boolean {
-  return plannerRowPickerApi?.pickByDigit(digit) ?? false;
+  return plannerNavigatorApi?.pickByDigit(digit) ?? false;
 }
 
-export function exitPlannerRowPicker() {
-  plannerRowPickerApi?.exit();
+export function exitPlannerNavigator() {
+  plannerNavigatorApi?.exit();
 }
 
-export function isPlannerRowPickerActive(): boolean {
-  return plannerRowPickerApi?.isActive() ?? false;
+export function isPlannerNavigatorActive(): boolean {
+  return plannerNavigatorApi?.isActive() ?? false;
 }

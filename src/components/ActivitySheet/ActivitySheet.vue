@@ -201,9 +201,9 @@ import { useDataStore } from "@/stores/useDataStore";
 import { storeToRefs } from "pinia";
 import { timestampToDatetime } from "@/core/utils";
 import { useDevice } from "@/composables/platform/useDevice";
-import { registerActivityRowPickerApi } from "@/composables/keyboard/useActivityKeyboardNavigator";
+import { registerActivityNavigatorApi } from "@/composables/keyboard/useActivityKeyboardNavigator";
 import { registerActivityKeyboardCommandApi } from "@/composables/keyboard/useActivityKeyboardCommands";
-import { activityRowPickerInjectKey } from "@/components/ActivitySheet/activityRowPickerInject";
+import { activityNavigatorInjectKey } from "@/components/ActivitySheet/activityNavigatorInject";
 
 const dataStore = useDataStore();
 const {
@@ -398,7 +398,7 @@ provide(ACTIVITY_QUADRANT_DRAG_END_KEY, handleQuadrantDragEnd);
 provide(ACTIVITY_QUADRANT_SOLO_KEY, { soloQuadrantKey, exitSolo: exitQuadrantSolo });
 
 let quadrantDueUrgentInterval: ReturnType<typeof setInterval> | null = null;
-let unregisterRowPickerApi: (() => void) | null = null;
+let unregisterNavigatorApi: (() => void) | null = null;
 let unregisterActivityCommandApi: (() => void) | null = null;
 
 /** 四象限：按主到期日同步 urgent / Later（过期进 neither），口径与 ActivityRow + getCountdownClass 一致 */
@@ -432,12 +432,12 @@ onMounted(() => {
   if (settingStore.settings.kanbanQuadrantMode && !settingStore.settings.kanbanQuadrantSnapshot) {
     settingStore.settings.kanbanQuadrantMode = false;
   }
-  unregisterRowPickerApi = registerActivityRowPickerApi({
-    enter: enterRowPickerMode,
-    move: moveRowPicker,
-    pickByDigit: pickRowPickerDigit,
-    exit: exitRowPickerMode,
-    isActive: () => rowPickerActive.value,
+  unregisterNavigatorApi = registerActivityNavigatorApi({
+    enter: enterNavigatorMode,
+    move: moveNavigator,
+    pickByDigit: pickNavigatorDigit,
+    exit: exitNavigatorMode,
+    isActive: () => navigatorActive.value,
   });
   unregisterActivityCommandApi = registerActivityKeyboardCommandApi({
     pickActivity: keyboardPickActivity,
@@ -454,9 +454,9 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-  if (unregisterRowPickerApi) {
-    unregisterRowPickerApi();
-    unregisterRowPickerApi = null;
+  if (unregisterNavigatorApi) {
+    unregisterNavigatorApi();
+    unregisterNavigatorApi = null;
   }
   if (unregisterActivityCommandApi) {
     unregisterActivityCommandApi();
@@ -490,8 +490,8 @@ const quadrantUrgentImportant = computed(() => filterActivitiesForQuadrantKey(qu
 const quadrantUrgentOnly = computed(() => filterActivitiesForQuadrantKey(quadrantPreFiltered.value, "urgentOnly"));
 const quadrantNeither = computed(() => filterActivitiesForQuadrantKey(quadrantPreFiltered.value, "neither"));
 
-const rowPickerActive = ref(false);
-const rowPickerCursor = ref(0);
+const navigatorActive = ref(false);
+const navigatorCursor = ref(0);
 
 const keyboardRowCandidates = computed(() => {
   const list: Activity[] = [];
@@ -517,7 +517,7 @@ const keyboardRowCandidates = computed(() => {
   return list;
 });
 
-const rowPickerNumberById = computed<Record<number, number>>(() => {
+const navigatorNumberById = computed<Record<number, number>>(() => {
   const out: Record<number, number> = {};
   const list = keyboardRowCandidates.value;
   const length = Math.min(9, list.length);
@@ -529,54 +529,54 @@ const rowPickerNumberById = computed<Record<number, number>>(() => {
   return out;
 });
 
-const rowPickerCurrentRowId = computed<number | null>(() => {
+const navigatorCurrentRowId = computed<number | null>(() => {
   const list = keyboardRowCandidates.value;
-  const item = list[rowPickerCursor.value];
+  const item = list[navigatorCursor.value];
   return item?.id ?? null;
 });
 
-function focusRowPickerIndex(nextIndex: number): boolean {
+function focusNavigatorIndex(nextIndex: number): boolean {
   const list = keyboardRowCandidates.value;
   if (!list.length) return false;
   const last = list.length - 1;
   const clamped = Math.max(0, Math.min(last, nextIndex));
-  rowPickerCursor.value = clamped;
+  navigatorCursor.value = clamped;
   const target = list[clamped];
   if (!target) return false;
   handleFocusRow(target.id);
   return true;
 }
 
-function enterRowPickerMode(): boolean {
+function enterNavigatorMode(): boolean {
   const list = keyboardRowCandidates.value;
   if (!list.length) return false;
-  rowPickerActive.value = true;
+  navigatorActive.value = true;
   const selectedId = sheetPrimaryActivityId.value;
   const initial = selectedId != null ? list.findIndex((item) => item.id === selectedId) : -1;
-  return focusRowPickerIndex(initial >= 0 ? initial : 0);
+  return focusNavigatorIndex(initial >= 0 ? initial : 0);
 }
 
-function moveRowPicker(delta: 1 | -1): boolean {
-  if (!rowPickerActive.value) return false;
+function moveNavigator(delta: 1 | -1): boolean {
+  if (!navigatorActive.value) return false;
   const list = keyboardRowCandidates.value;
   if (!list.length) return false;
   const last = list.length - 1;
-  let next = rowPickerCursor.value + delta;
+  let next = navigatorCursor.value + delta;
   if (next < 0) next = last;
   if (next > last) next = 0;
-  return focusRowPickerIndex(next);
+  return focusNavigatorIndex(next);
 }
 
-function pickRowPickerDigit(digit: number): boolean {
-  if (!rowPickerActive.value) return false;
+function pickNavigatorDigit(digit: number): boolean {
+  if (!navigatorActive.value) return false;
   const idx = digit - 1;
-  const ok = focusRowPickerIndex(idx);
-  if (ok) rowPickerActive.value = false;
+  const ok = focusNavigatorIndex(idx);
+  if (ok) navigatorActive.value = false;
   return ok;
 }
 
-function exitRowPickerMode() {
-  rowPickerActive.value = false;
+function exitNavigatorMode() {
+  navigatorActive.value = false;
 }
 
 const noSelectedActivity = computed(() => selectedRowId.value == null && selectedActivityId.value == null && activeId.value == null);
@@ -676,20 +676,20 @@ function keyboardEditField(field: "title" | "dueDate" | "place" | "duration" | "
 }
 
 watch(keyboardRowCandidates, (list) => {
-  if (!rowPickerActive.value) return;
+  if (!navigatorActive.value) return;
   if (!list.length) {
-    rowPickerActive.value = false;
+    navigatorActive.value = false;
     return;
   }
-  if (rowPickerCursor.value > list.length - 1) {
-    rowPickerCursor.value = list.length - 1;
+  if (navigatorCursor.value > list.length - 1) {
+    navigatorCursor.value = list.length - 1;
   }
 });
 
-provide(activityRowPickerInjectKey, {
-  isActive: computed(() => rowPickerActive.value),
-  numberById: rowPickerNumberById,
-  currentRowId: rowPickerCurrentRowId,
+provide(activityNavigatorInjectKey, {
+  isActive: computed(() => navigatorActive.value),
+  numberById: navigatorNumberById,
+  currentRowId: navigatorCurrentRowId,
 });
 
 // 错误提示弹窗相关

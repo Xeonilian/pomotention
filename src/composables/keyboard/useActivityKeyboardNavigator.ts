@@ -1,4 +1,4 @@
-type RowPickerApi = {
+type NavigatorApi = {
   enter: () => boolean;
   move: (delta: 1 | -1) => boolean;
   pickByDigit: (digit: number) => boolean;
@@ -6,31 +6,31 @@ type RowPickerApi = {
   isActive: () => boolean;
 };
 
-let rowPickerApi: RowPickerApi | null = null;
+let navigatorApi: NavigatorApi | null = null;
 
-export function registerActivityRowPickerApi(api: RowPickerApi) {
-  rowPickerApi = api;
+export function registerActivityNavigatorApi(api: NavigatorApi) {
+  navigatorApi = api;
   return () => {
-    if (rowPickerApi === api) rowPickerApi = null;
+    if (navigatorApi === api) navigatorApi = null;
   };
 }
 
-export function enterActivityRowPicker(): boolean {
-  return rowPickerApi?.enter() ?? false;
+export function enterActivityNavigator(): boolean {
+  return navigatorApi?.enter() ?? false;
 }
 
-export function moveActivityRowPicker(delta: 1 | -1): boolean {
-  return rowPickerApi?.move(delta) ?? false;
+export function moveActivityNavigator(delta: 1 | -1): boolean {
+  return navigatorApi?.move(delta) ?? false;
 }
 
 export function pickActivityRowByDigit(digit: number): boolean {
-  return rowPickerApi?.pickByDigit(digit) ?? false;
+  return navigatorApi?.pickByDigit(digit) ?? false;
 }
 
-export function exitActivityRowPicker() {
-  rowPickerApi?.exit();
+export function exitActivityNavigator() {
+  navigatorApi?.exit();
 }
 
-export function isActivityRowPickerActive(): boolean {
-  return rowPickerApi?.isActive() ?? false;
+export function isActivityNavigatorActive(): boolean {
+  return navigatorApi?.isActive() ?? false;
 }

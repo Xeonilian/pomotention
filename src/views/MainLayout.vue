@@ -256,10 +256,10 @@ import { syncAll } from "@/services/sync";
 import { createTouchScheduledSingleAndDouble } from "@/composables/platform/useTouchScheduledSingleAndDouble";
 import { createAppActionRegistry, dispatchAppAction, type AppActionId } from "@/actions/appActions";
 import {
-  enterActivityRowPicker,
-  exitActivityRowPicker,
-  isActivityRowPickerActive,
-  moveActivityRowPicker,
+  enterActivityNavigator,
+  exitActivityNavigator,
+  isActivityNavigatorActive,
+  moveActivityNavigator,
   pickActivityRowByDigit,
 } from "@/composables/keyboard/useActivityKeyboardNavigator";
 import { runActivityKeyboardCommand } from "@/composables/keyboard/useActivityKeyboardCommands";
@@ -268,10 +268,10 @@ import { runTaskKeyboardCommand } from "@/composables/keyboard/useTaskKeyboardCo
 import { runPlannerEditFieldCommand, runPlannerKeyboardCommand } from "@/composables/keyboard/usePlannerKeyboardCommands";
 import { runTimetableKeyboardCommand } from "@/composables/keyboard/useTimetableKeyboardCommands";
 import {
-  enterPlannerRowPicker,
-  exitPlannerRowPicker,
-  isPlannerRowPickerActive,
-  movePlannerRowPicker,
+  enterPlannerNavigator,
+  exitPlannerNavigator,
+  isPlannerNavigatorActive,
+  movePlannerNavigator,
   pickPlannerRowByDigit,
 } from "@/composables/keyboard/usePlannerKeyboardNavigator";
 
@@ -327,6 +327,10 @@ const notification = useNotification();
 const pomotentionTimerRef = ref<{
   canStartWorkShortcut: () => boolean;
   triggerWorkStartShortcut: () => boolean;
+  canStartBreakShortcut: () => boolean;
+  triggerBreakStartShortcut: () => boolean;
+  canStopShortcut: () => boolean;
+  triggerStopShortcut: () => boolean;
 } | null>(null);
 void pomotentionTimerRef;
 
@@ -531,12 +535,16 @@ const actionRegistry = createAppActionRegistry({
   openHelp: () => navigateToBuiltDocs(),
   canStartTimerWork: () => pomotentionTimerRef.value?.canStartWorkShortcut() ?? false,
   startTimerWork: () => pomotentionTimerRef.value?.triggerWorkStartShortcut() ?? false,
-  enterActivityRowPicker: () => enterActivityRowPicker(),
+  canStartTimerBreak: () => pomotentionTimerRef.value?.canStartBreakShortcut() ?? false,
+  startTimerBreak: () => pomotentionTimerRef.value?.triggerBreakStartShortcut() ?? false,
+  canStopTimer: () => pomotentionTimerRef.value?.canStopShortcut() ?? false,
+  stopTimer: () => pomotentionTimerRef.value?.triggerStopShortcut() ?? false,
+  enterActivityNavigator: () => enterActivityNavigator(),
   runActivityCommand: (command) => runActivityKeyboardCommand(command),
   runActivityEditField: (field) => runActivityEditFieldCommand(field),
   runTaskCommand: (command) => runTaskKeyboardCommand(command),
   runPlannerCommand: (command) => runPlannerKeyboardCommand(command),
-  enterPlannerRowPicker: () => enterPlannerRowPicker(),
+  enterPlannerNavigator: () => enterPlannerNavigator(),
   runPlannerEditField: (field) => runPlannerEditFieldCommand(field),
   runTimetableCommand: (command) => runTimetableKeyboardCommand(command),
 });
@@ -548,31 +556,31 @@ function dispatchKeyboardAction(actionId: AppActionId, sequence: string): boolea
 const shortcuts = useGlobalKeyboardShortcuts({
   dispatchAction: dispatchKeyboardAction,
   isEnabled: () => !isMiniMode.value,
-  isModeActive: () => isActivityRowPickerActive() || isPlannerRowPickerActive(),
+  isModeActive: () => isActivityNavigatorActive() || isPlannerNavigatorActive(),
   onModeKey: (key) => {
-    if (isActivityRowPickerActive()) {
-      if (key === "up") return moveActivityRowPicker(-1);
-      if (key === "down") return moveActivityRowPicker(1);
+    if (isActivityNavigatorActive()) {
+      if (key === "up") return moveActivityNavigator(-1);
+      if (key === "down") return moveActivityNavigator(1);
       if (key === "enter" || key === "return") {
-        exitActivityRowPicker();
+        exitActivityNavigator();
         return true;
       }
       if (key === "esc" || key === "escape") {
-        exitActivityRowPicker();
+        exitActivityNavigator();
         return true;
       }
       if (/^[1-9]$/.test(key)) return pickActivityRowByDigit(Number(key));
       return false;
     }
-    if (isPlannerRowPickerActive()) {
-      if (key === "up") return movePlannerRowPicker(-1);
-      if (key === "down") return movePlannerRowPicker(1);
+    if (isPlannerNavigatorActive()) {
+      if (key === "up") return movePlannerNavigator(-1);
+      if (key === "down") return movePlannerNavigator(1);
       if (key === "enter" || key === "return") {
-        exitPlannerRowPicker();
+        exitPlannerNavigator();
         return true;
       }
       if (key === "esc" || key === "escape") {
-        exitPlannerRowPicker();
+        exitPlannerNavigator();
         return true;
       }
       if (/^[1-9]$/.test(key)) return pickPlannerRowByDigit(Number(key));

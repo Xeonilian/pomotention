@@ -6,11 +6,11 @@
     :class="{
       'highlight-line': isHighlighted,
       'is-dragging-row': isDraggingRow,
-      'row-picker-mode': isRowPickerModeActive,
+      'row-picker-mode': isNavigatorModeActive,
     }"
   >
     <div class="activity-content">
-      <span v-if="showRowPickerNumber" class="row-picker-index" :class="{ 'is-active': isRowPickerCurrent }">{{ rowPickerNumber }}.</span>
+      <span v-if="showNavigatorNumber" class="row-picker-index" :class="{ 'is-active': isNavigatorCurrent }">{{ navigatorNumber }}.</span>
       <span
         v-if="item.parentId"
         class="child-activity-dot"
@@ -318,7 +318,7 @@ import TagRenderer from "../TagSystem/TagRenderer.vue";
 import TagPickerPopover from "../TagSystem/TagPickerPopover.vue";
 import type { InputInst } from "naive-ui";
 import { TAG_IDS_HIDDEN_IN_TAG_RENDERER } from "@/core/constants";
-import { activityRowPickerInjectKey } from "@/components/ActivitySheet/activityRowPickerInject";
+import { activityNavigatorInjectKey } from "@/components/ActivitySheet/activityNavigatorInject";
 
 const props = defineProps<{
   item: Activity;
@@ -339,7 +339,7 @@ defineEmits<{
 }>();
 
 const ctx = inject(activitySectionRowInjectKey)!;
-const rowPickerCtx = inject(activityRowPickerInjectKey, null);
+const navigatorCtx = inject(activityNavigatorInjectKey, null);
 const tagEditor = ctx.tagEditor;
 const isMobile = ctx.isMobile;
 const notifyRowFocused = (rowId: number) => ctx.notifyRowFocused(rowId);
@@ -531,10 +531,10 @@ function handleRemoveTag(tagId: number) {
 }
 
 const isHighlighted = computed(() => props.item.id === props.activityId || props.item.id === props.activeId);
-const rowPickerNumber = computed(() => rowPickerCtx?.numberById.value[props.item.id] ?? null);
-const showRowPickerNumber = computed(() => Boolean(rowPickerCtx?.isActive.value) && rowPickerNumber.value != null);
-const isRowPickerCurrent = computed(() => rowPickerCtx?.currentRowId.value === props.item.id);
-const isRowPickerModeActive = computed(() => Boolean(rowPickerCtx?.isActive.value));
+const navigatorNumber = computed(() => navigatorCtx?.numberById.value[props.item.id] ?? null);
+const showNavigatorNumber = computed(() => Boolean(navigatorCtx?.isActive.value) && navigatorNumber.value != null);
+const isNavigatorCurrent = computed(() => navigatorCtx?.currentRowId.value === props.item.id);
+const isNavigatorModeActive = computed(() => Boolean(navigatorCtx?.isActive.value));
 
 const pomoDisplayValue = computed(() => {
   const item = props.item;

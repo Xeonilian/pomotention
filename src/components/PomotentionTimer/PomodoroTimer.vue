@@ -334,9 +334,40 @@ function triggerWorkStartShortcut(): boolean {
   return true;
 }
 
+function canStartBreakShortcut(): boolean {
+  return !isCompactMode.value && !Boolean(props.showPomoSeq) && timerStore.pomodoroState !== "breaking";
+}
+
+function triggerBreakStartShortcut(): boolean {
+  if (!canStartBreakShortcut()) return false;
+  handleBreakAction();
+  return true;
+}
+
+function canStopShortcut(): boolean {
+  return !isCompactMode.value && !Boolean(props.showPomoSeq) && timerStore.pomodoroState !== "idle";
+}
+
+function triggerStopShortcut(): boolean {
+  if (!canStopShortcut()) return false;
+  if (timerStore.pomodoroState === "working") {
+    handleWorkAction();
+    return true;
+  }
+  if (timerStore.pomodoroState === "breaking") {
+    handleBreakAction();
+    return true;
+  }
+  return false;
+}
+
 defineExpose({
   canStartWorkShortcut,
   triggerWorkStartShortcut,
+  canStartBreakShortcut,
+  triggerBreakStartShortcut,
+  canStopShortcut,
+  triggerStopShortcut,
 });
 </script>
 
