@@ -329,7 +329,7 @@
 
 <script setup lang="ts">
 // ------------------------ 导入依赖 ------------------------
-import { ref, onMounted, onUnmounted, computed, nextTick, defineAsyncComponent, provide, toValue } from "vue";
+import { ref, onMounted, onUnmounted, computed, nextTick, defineAsyncComponent, provide, toValue, watch } from "vue";
 import { storeToRefs } from "pinia";
 import { onBeforeRouteLeave } from "vue-router";
 
@@ -365,8 +365,8 @@ import { useDataStore } from "@/stores/useDataStore";
 import { autoSyncDebounced, uploadAllDebounced } from "@/core/utils/autoSync";
 import { useDevice } from "@/composables/platform/useDevice";
 import { usePublicHolidays, plannerHolidayMapKey } from "@/composables/planner/usePublicHolidays";
-import { registerPlannerKeyboardCommandApi } from "@/composables/keyboard/planner/usePlannerKeyboardCommands";
-import { registerPlannerRowPickerApi } from "@/composables/keyboard/planner/usePlannerKeyboardNavigator";
+import { registerPlannerKeyboardCommandApi } from "@/composables/keyboard/usePlannerKeyboardCommands";
+import { registerPlannerRowPickerApi } from "@/composables/keyboard/usePlannerKeyboardNavigator";
 import { useHomePlannerKeyboard } from "@/composables/home/useHomePlannerKeyboard";
 import { useHomePlannerRowEdits } from "@/composables/home/useHomePlannerRowEdits";
 
@@ -1486,10 +1486,40 @@ const leftWidth = computed({
   set: (v) => (settingStore.settings.leftWidth = v),
 });
 
+const TIMETABLE_LEFT_MIN_WIDTH_DESKTOP = 120;
+const TIMETABLE_LEFT_NORMAL_WIDTH_DESKTOP = 160;
+const TIMETABLE_LEFT_EDIT_WIDTH_DESKTOP = 265;
+const timetableLeftWidthBeforeEdit = ref<number | null>(null);
+
 // 日程表进入/退出编辑时左栏目标宽度（与 TimeTable 约定）
 function onTimetableEdit(editing: boolean) {
-  leftWidth.value = editing ? 200 : 80;
+  if (isMobile.value) return;
+  if (editing) {
+    timetableLeftWidthBeforeEdit.value = leftWidth.value;
+    if (leftWidth.value < TIMETABLE_LEFT_EDIT_WIDTH_DESKTOP) {
+      leftWidth.value = TIMETABLE_LEFT_EDIT_WIDTH_DESKTOP;
+    }
+    return;
+  }
+
+  const previousWidth = timetableLeftWidthBeforeEdit.value;
+  timetableLeftWidthBeforeEdit.value = null;
+  if (typeof previousWidth === "number" && Number.isFinite(previousWidth)) {
+    leftWidth.value = Math.max(TIMETABLE_LEFT_MIN_WIDTH_DESKTOP, Math.min(320, previousWidth));
+    return;
+  }
+  leftWidth.value = TIMETABLE_LEFT_NORMAL_WIDTH_DESKTOP;
 }
+
+// 桌面端：通过按钮/快捷键关闭日程栏时，重置到常规宽度，避免下次打开仍保持编辑态宽度
+watch(
+  () => settingStore.settings.showSchedule,
+  (showSchedule) => {
+    if (isMobile.value || showSchedule) return;
+    timetableLeftWidthBeforeEdit.value = null;
+    leftWidth.value = TIMETABLE_LEFT_NORMAL_WIDTH_DESKTOP;
+  },
+);
 const rightWidth = computed({
   get: () => settingStore.settings.rightWidth,
   set: (v) => (settingStore.settings.rightWidth = v),
@@ -1519,9 +1549,9 @@ const { startResize: startVerticalResize } = useResize(topHeight, "vertical", 0,
 const { startResize: startLeftResize } = useResize(
   leftWidth,
   "horizontal",
-  75,
+  isMobile.value ? 75 : TIMETABLE_LEFT_MIN_WIDTH_DESKTOP,
   320,
-  false, // 左侧面板（max 需 ≥ 日程表编辑宽度 TIMETABLE_LEFT_EDIT）
+  false, // 左侧面板（桌面端 max 需 ≥ 日程表编辑宽度）
 );
 const { startResize: startRightResize } = useResize(
   rightWidth,
