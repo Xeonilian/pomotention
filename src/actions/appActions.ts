@@ -29,6 +29,7 @@ export type AppActionId =
   | "task.goPrev"
   | "task.goNext"
   | "planner.gotoPrev"
+  | "planner.rowPicker.enter"
   | "planner.gotoNext"
   | "planner.gotoCurrent"
   | "planner.gotoTodayDay"
@@ -38,6 +39,11 @@ export type AppActionId =
   | "planner.gotoYear"
   | "planner.addTodo"
   | "planner.addSchedule"
+  | "planner.editTitle"
+  | "planner.editStart"
+  | "planner.editDone"
+  | "planner.editDuration"
+  | "planner.editLocation"
   | "planner.repeatActivity"
   | "planner.exportIcs"
   | "timetable.toggleEditor"
@@ -116,6 +122,8 @@ export interface AppActionContext {
       | "repeatActivity"
       | "exportIcs",
   ) => boolean;
+  enterPlannerRowPicker: () => boolean;
+  runPlannerEditField: (field: "title" | "start" | "done" | "duration" | "location") => boolean;
   runTimetableCommand: (command: "toggleEditor" | "exitEditor" | "toggleType") => boolean;
 }
 
@@ -262,6 +270,11 @@ export function createAppActionRegistry(context: AppActionContext): AppActionReg
         context.runPlannerCommand("gotoPrev");
       },
     },
+    "planner.rowPicker.enter": {
+      run: () => {
+        context.enterPlannerRowPicker();
+      },
+    },
     "planner.gotoNext": {
       run: () => {
         context.runPlannerCommand("gotoNext");
@@ -305,6 +318,31 @@ export function createAppActionRegistry(context: AppActionContext): AppActionReg
     "planner.addSchedule": {
       run: () => {
         context.runPlannerCommand("addSchedule");
+      },
+    },
+    "planner.editTitle": {
+      run: () => {
+        context.runPlannerEditField("title");
+      },
+    },
+    "planner.editStart": {
+      run: () => {
+        context.runPlannerEditField("start");
+      },
+    },
+    "planner.editDone": {
+      run: () => {
+        context.runPlannerEditField("done");
+      },
+    },
+    "planner.editDuration": {
+      run: () => {
+        context.runPlannerEditField("duration");
+      },
+    },
+    "planner.editLocation": {
+      run: () => {
+        context.runPlannerEditField("location");
       },
     },
     "planner.repeatActivity": {

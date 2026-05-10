@@ -265,8 +265,15 @@ import {
 import { runActivityKeyboardCommand } from "@/composables/keyboard/activity/useActivityKeyboardCommands";
 import { runActivityEditFieldCommand } from "@/composables/keyboard/activity/useActivityKeyboardCommands";
 import { runTaskKeyboardCommand } from "@/composables/keyboard/task/useTaskKeyboardCommands";
-import { runPlannerKeyboardCommand } from "@/composables/keyboard/planner/usePlannerKeyboardCommands";
+import { runPlannerEditFieldCommand, runPlannerKeyboardCommand } from "@/composables/keyboard/planner/usePlannerKeyboardCommands";
 import { runTimetableKeyboardCommand } from "@/composables/keyboard/timetable/useTimetableKeyboardCommands";
+import {
+  enterPlannerRowPicker,
+  exitPlannerRowPicker,
+  isPlannerRowPickerActive,
+  movePlannerRowPicker,
+  pickPlannerRowByDigit,
+} from "@/composables/keyboard/planner/usePlannerKeyboardNavigator";
 
 // Icons & Components
 import {
@@ -529,6 +536,8 @@ const actionRegistry = createAppActionRegistry({
   runActivityEditField: (field) => runActivityEditFieldCommand(field),
   runTaskCommand: (command) => runTaskKeyboardCommand(command),
   runPlannerCommand: (command) => runPlannerKeyboardCommand(command),
+  enterPlannerRowPicker: () => enterPlannerRowPicker(),
+  runPlannerEditField: (field) => runPlannerEditFieldCommand(field),
   runTimetableCommand: (command) => runTimetableKeyboardCommand(command),
 });
 
@@ -539,19 +548,39 @@ function dispatchKeyboardAction(actionId: AppActionId, sequence: string): boolea
 const shortcuts = useGlobalKeyboardShortcuts({
   dispatchAction: dispatchKeyboardAction,
   isEnabled: () => !isMiniMode.value,
-  isModeActive: () => isActivityRowPickerActive(),
+  isModeActive: () => isActivityRowPickerActive() || isPlannerRowPickerActive(),
   onModeKey: (key) => {
-    if (key === "up") return moveActivityRowPicker(-1);
-    if (key === "down") return moveActivityRowPicker(1);
+    if (isActivityRowPickerActive()) {
+      if (key === "up") return moveActivityRowPicker(-1);
+      if (key === "down") return moveActivityRowPicker(1);
+      if (key === "enter" || key === "return") {
+        exitActivityRowPicker();
+        return true;
+      }
+      if (key === "esc" || key === "escape") {
+        exitActivityRowPicker();
+        return true;
+      }
+      if (/^[1-9]$/.test(key)) return pickActivityRowByDigit(Number(key));
+      return false;
+    }
+    if (isPlannerRowPickerActive()) {
+      if (key === "up") return movePlannerRowPicker(-1);
+      if (key === "down") return movePlannerRowPicker(1);
+      if (key === "enter" || key === "return") {
+        exitPlannerRowPicker();
+        return true;
+      }
+      if (key === "esc" || key === "escape") {
+        exitPlannerRowPicker();
+        return true;
+      }
+      if (/^[1-9]$/.test(key)) return pickPlannerRowByDigit(Number(key));
+      return false;
+    }
     if (key === "enter" || key === "return") {
-      exitActivityRowPicker();
-      return true;
+      return false;
     }
-    if (key === "esc" || key === "escape") {
-      exitActivityRowPicker();
-      return true;
-    }
-    if (/^[1-9]$/.test(key)) return pickActivityRowByDigit(Number(key));
     return false;
   },
 });

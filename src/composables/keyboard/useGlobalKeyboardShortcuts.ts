@@ -15,6 +15,7 @@ const singleKeyMap: Record<string, AppActionId> = {
   ar: "activity.rowPicker.enter",
   tt: "view.toggle.task",
   pp: "view.toggle.planner",
+  pr: "planner.rowPicker.enter",
   mm: "view.toggle.schedule",
   rr: "view.toggle.pomodoro",
 };
@@ -57,6 +58,11 @@ const sequenceMap: Record<string, AppActionId> = {
   pyy: "planner.gotoYear",
   pto: "planner.addTodo",
   psc: "planner.addSchedule",
+  pet: "planner.editTitle",
+  pes: "planner.editStart",
+  ped: "planner.editDone",
+  peu: "planner.editDuration",
+  pel: "planner.editLocation",
   arp: "activity.repeatActivity",
   prp: "planner.repeatActivity",
   pic: "planner.exportIcs",
@@ -69,6 +75,7 @@ const sequenceMap: Record<string, AppActionId> = {
 };
 
 const allSequences = [...Object.keys(singleKeyMap), ...Object.keys(sequenceMap)];
+const immediateModeSequences = new Set<string>(["ar", "pr"]);
 
 const sequencePrefixSet = (() => {
   const set = new Set<string>();
@@ -159,6 +166,12 @@ export function useGlobalKeyboardShortcuts(options: UseGlobalKeyboardShortcutsOp
     const candidate = `${buffer}${key}`;
     const hasExactAction = Boolean(singleKeyMap[candidate] || sequenceMap[candidate] || candidate === "rr");
     const hasSequencePrefix = sequencePrefixSet.has(candidate);
+
+    if (hasExactAction && immediateModeSequences.has(candidate)) {
+      const handled = triggerBySequence(candidate);
+      clearBuffer();
+      return handled;
+    }
 
     if (hasExactAction && !hasSequencePrefix) {
       const handled = triggerBySequence(candidate);

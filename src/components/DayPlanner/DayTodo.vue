@@ -1612,6 +1612,17 @@ function handleTogglePomoType() {
     emit("toggle-pomo-type", selectedRowId.value);
   }
 }
+
+function startKeyboardEdit(field: "title" | "start" | "done"): boolean {
+  const todo = selectedTodo.value;
+  if (!todo) return false;
+  startEditing(todo.id, field);
+  return true;
+}
+
+defineExpose({
+  startKeyboardEdit,
+});
 </script>
 
 <style scoped>
@@ -1808,12 +1819,12 @@ tr.active-row {
 
 /* 选中行样式（覆盖一切） */
 tr.selected-row {
-  background-color: var(--color-yellow-transparent) !important;
+  background-color: var(--planner-selected-row-bg, var(--color-yellow-transparent)) !important;
 }
 
 /* 当同时 active + selected 时，明确以 selected 的颜色为准（可留可删） */
 tr.active-row.selected-row {
-  background-color: var(--color-yellow-transparent) !important;
+  background-color: var(--planner-selected-row-bg, var(--color-yellow-transparent)) !important;
 }
 
 /* 统一过渡效果 */

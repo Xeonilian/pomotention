@@ -6,6 +6,7 @@
   <div class="today-container">
     <div class="todo-container">
       <DayTodo
+        ref="dayTodoRef"
         @update-todo-status="updateTodoStatus"
         @suspend-todo="handleSuspendTodo"
         @cancel-todo="handleCancelTodo"
@@ -22,6 +23,7 @@
     </div>
     <div class="schedule-container">
       <DaySchedule
+        ref="dayScheduleRef"
         @update-schedule-status="updateScheduleStatus"
         @cancel-schedule="handleCancelSchedule"
         @uncancel-schedule="handleUncancelSchedule"
@@ -39,9 +41,21 @@
 <!-- @repeat-todo="handleRepeatTodo" -->
 
 <script setup lang="ts">
+import { ref } from "vue";
 import DayTodo from "@/components/DayPlanner/DayTodo.vue";
 import DaySchedule from "@/components/DayPlanner/DaySchedule.vue";
 import type { Task } from "@/core/types/Task";
+
+type DayTodoExpose = {
+  startKeyboardEdit: (field: "title" | "start" | "done") => boolean;
+};
+
+type DayScheduleExpose = {
+  startKeyboardEdit: (field: "title" | "start" | "done" | "duration" | "location") => boolean;
+};
+
+const dayTodoRef = ref<DayTodoExpose | null>(null);
+const dayScheduleRef = ref<DayScheduleExpose | null>(null);
 
 const emit = defineEmits<{
   (e: "update-schedule-status", id: number, checked: boolean): void;
@@ -152,6 +166,19 @@ function handleQuickAddSchedule() {
 function handleTogglePomoType(id: number) {
   emit("toggle-pomo-type", id);
 }
+
+function startTodoKeyboardEdit(field: "title" | "start" | "done"): boolean {
+  return dayTodoRef.value?.startKeyboardEdit(field) ?? false;
+}
+
+function startScheduleKeyboardEdit(field: "title" | "start" | "done" | "duration" | "location"): boolean {
+  return dayScheduleRef.value?.startKeyboardEdit(field) ?? false;
+}
+
+defineExpose({
+  startTodoKeyboardEdit,
+  startScheduleKeyboardEdit,
+});
 </script>
 <style scoped>
 .today-container {

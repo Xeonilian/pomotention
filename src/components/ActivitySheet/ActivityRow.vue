@@ -6,12 +6,11 @@
     :class="{
       'highlight-line': isHighlighted,
       'is-dragging-row': isDraggingRow,
+      'row-picker-mode': isRowPickerModeActive,
     }"
   >
     <div class="activity-content">
-      <span v-if="showRowPickerNumber" class="row-picker-index" :class="{ 'is-active': isRowPickerCurrent }">
-        {{ rowPickerNumber }}
-      </span>
+      <span v-if="showRowPickerNumber" class="row-picker-index" :class="{ 'is-active': isRowPickerCurrent }">{{ rowPickerNumber }}.</span>
       <span
         v-if="item.parentId"
         class="child-activity-dot"
@@ -535,6 +534,7 @@ const isHighlighted = computed(() => props.item.id === props.activityId || props
 const rowPickerNumber = computed(() => rowPickerCtx?.numberById.value[props.item.id] ?? null);
 const showRowPickerNumber = computed(() => Boolean(rowPickerCtx?.isActive.value) && rowPickerNumber.value != null);
 const isRowPickerCurrent = computed(() => rowPickerCtx?.currentRowId.value === props.item.id);
+const isRowPickerModeActive = computed(() => Boolean(rowPickerCtx?.isActive.value));
 
 const pomoDisplayValue = computed(() => {
   const item = props.item;
@@ -644,10 +644,11 @@ function handlePomoInputTouchCancel() {
 <style scoped>
 .activity-row {
   align-items: center;
-  padding: 1px 0;
+  margin: 1px 0;
   gap: 0px;
   width: 100%;
   touch-action: pan-y;
+  border-radius: 4px;
 }
 
 .is-dragging-row {
@@ -667,22 +668,23 @@ function handlePomoInputTouchCancel() {
 }
 
 .row-picker-index {
-  width: 18px;
-  min-width: 18px;
-  height: 18px;
-  line-height: 18px;
+  width: 12px;
+  min-width: 12px;
+  height: 12px;
+  line-height: 12px;
   text-align: center;
   border-radius: 50%;
-  margin-right: 4px;
-  font-size: 11px;
+  margin-right: 2px;
+  margin-left: 3px;
+  font-size: 10px;
+  font-weight: bold;
   font-family: "consolas", monospace;
-  color: var(--color-blue);
-  background: var(--color-background-light);
+  color: var(--color-text-secondary);
 }
 
 .row-picker-index.is-active {
-  color: var(--color-background);
-  background: var(--color-blue);
+  color: var(--color-text-primary);
+  background: var(--color-background-light-transparent);
 }
 
 .child-activity-dot {
@@ -870,6 +872,10 @@ function handlePomoInputTouchCancel() {
 
 .highlight-line {
   background-color: var(--color-yellow-light) !important;
+}
+
+.activity-row.row-picker-mode.highlight-line {
+  background-color: var(--color-purple-light-transparent) !important;
 }
 
 .highlight-line :deep(.n-input) {

@@ -21,6 +21,7 @@ interface UseHomePlannerKeyboardOptions {
   onQuickAddSchedule: (isUntaetigkeit: boolean) => void;
   onRepeatActivity: (noTodoRepeat: boolean) => void;
   onIcsExport: () => Promise<void>;
+  onEditField: (field: "title" | "start" | "done" | "duration" | "location") => boolean;
   settingStore: {
     settings: {
       viewSet: PlannerViewType;
@@ -162,6 +163,10 @@ export function useHomePlannerKeyboard(options: UseHomePlannerKeyboardOptions) {
     return true;
   };
 
+  const plannerEditField = (field: "title" | "start" | "done" | "duration" | "location"): boolean => {
+    return options.onEditField(field);
+  };
+
   return {
     plannerCommandApi: {
       gotoPrev: plannerGotoPrev,
@@ -177,6 +182,7 @@ export function useHomePlannerKeyboard(options: UseHomePlannerKeyboardOptions) {
       repeatActivityOnly: plannerRepeatActivityOnly,
       repeatActivity: plannerRepeatActivity,
       exportIcs: plannerExportIcs,
+      editField: plannerEditField,
     },
   };
 }

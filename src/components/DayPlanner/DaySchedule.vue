@@ -777,6 +777,17 @@ function countInterruptions(records: { interruptionType: "E" | "I" }[] | null | 
   for (const r of records) if (r?.interruptionType === type) count++;
   return count === 0 ? "-" : count > 10 ? "X" : count;
 }
+
+function startKeyboardEdit(field: "title" | "start" | "done" | "duration" | "location"): boolean {
+  const schedule = selectedSchedule.value;
+  if (!schedule) return false;
+  startEditing(schedule.id, field);
+  return true;
+}
+
+defineExpose({
+  startKeyboardEdit,
+});
 </script>
 
 <style scoped>
@@ -890,12 +901,12 @@ tr.active-row {
 
 /* 选中行样式（覆盖一切） */
 tr.selected-row {
-  background-color: var(--color-yellow-transparent) !important;
+  background-color: var(--planner-selected-row-bg, var(--color-yellow-transparent)) !important;
 }
 
 /* 当同时 active + selected 时，明确以 selected 的颜色为准（可留可删） */
 tr.active-row.selected-row {
-  background-color: var(--color-yellow-transparent) !important;
+  background-color: var(--planner-selected-row-bg, var(--color-yellow-transparent)) !important;
 }
 
 /* 统一过渡效果 */

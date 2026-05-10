@@ -213,6 +213,8 @@
           <div class="planner-view-container">
             <DayPlanner
               v-if="settingStore.settings.showPlanner && settingStore.settings.viewSet === 'day'"
+              ref="dayPlannerRef"
+              :style="plannerRowPickerActive ? { '--planner-selected-row-bg': 'var(--color-purple-light-transparent)' } : undefined"
               @update-schedule-status="onUpdateScheduleStatus"
               @cancel-schedule="onCancelSchedule"
               @uncancel-schedule="onUncancelSchedule"
@@ -364,6 +366,7 @@ import { autoSyncDebounced, uploadAllDebounced } from "@/core/utils/autoSync";
 import { useDevice } from "@/composables/platform/useDevice";
 import { usePublicHolidays, plannerHolidayMapKey } from "@/composables/planner/usePublicHolidays";
 import { registerPlannerKeyboardCommandApi } from "@/composables/keyboard/planner/usePlannerKeyboardCommands";
+import { registerPlannerRowPickerApi } from "@/composables/keyboard/planner/usePlannerKeyboardNavigator";
 import { useHomePlannerKeyboard } from "@/composables/home/useHomePlannerKeyboard";
 import { useHomePlannerRowEdits } from "@/composables/home/useHomePlannerRowEdits";
 
@@ -399,11 +402,16 @@ const showPopover = ref(false);
 const popoverMessage = ref("");
 const taskRecordEditing = ref(false);
 let unregisterPlannerCommandApi: (() => void) | null = null;
+let unregisterPlannerRowPickerApi: (() => void) | null = null;
 function setTaskRecordEditing(v: boolean) {
   taskRecordEditing.value = v;
 }
 
 const taskTrackerRef = ref<{ endTaskRecordEditing: () => void } | null>(null);
+const dayPlannerRef = ref<{
+  startTodoKeyboardEdit: (field: "title" | "start" | "done") => boolean;
+  startScheduleKeyboardEdit: (field: "title" | "start" | "done" | "duration" | "location") => boolean;
+} | null>(null);
 
 function onFinishTaskRecordEditing() {
   taskTrackerRef.value?.endTaskRecordEditing();
@@ -1310,6 +1318,7 @@ const plannerKeyboard = useHomePlannerKeyboard({
   onQuickAddSchedule,
   onRepeatActivity,
   onIcsExport,
+  onEditField: plannerKeyboardEditField,
   settingStore,
   dateService,
   appDateTimestamp,
@@ -1345,6 +1354,96 @@ const {
   saveAllDebounced,
 });
 
+const plannerRowPickerActive = ref(false);
+
+type PlannerKeyboardRow = {
+  rowId: number;
+};
+
+function getPlannerKeyboardRows(): PlannerKeyboardRow[] {
+  const rows: PlannerKeyboardRow[] = [];
+  for (const todo of todosForCurrentViewWithTaskRecords.value ?? []) {
+    rows.push({ rowId: todo.id });
+  }
+  for (const schedule of schedulesForCurrentView.value ?? []) {
+    rows.push({ rowId: schedule.id });
+  }
+  return rows;
+}
+
+function selectPlannerKeyboardRowById(rowId: number): boolean {
+  const todo = todoById.value.get(rowId);
+  if (todo) {
+    selectedRowId.value = todo.id;
+    selectedActivityId.value = todo.activityId;
+    selectedTaskId.value = todo.taskId ?? null;
+    activeId.value = undefined;
+    return true;
+  }
+  const schedule = scheduleById.value.get(rowId);
+  if (schedule) {
+    selectedRowId.value = schedule.id;
+    selectedActivityId.value = schedule.activityId;
+    selectedTaskId.value = schedule.taskId ?? null;
+    activeId.value = undefined;
+    return true;
+  }
+  return false;
+}
+
+function enterPlannerRowPickerMode(): boolean {
+  const rows = getPlannerKeyboardRows();
+  if (rows.length === 0) return false;
+  plannerRowPickerActive.value = true;
+  const current = selectedRowId.value;
+  const exists = current != null && rows.some((row) => row.rowId === current);
+  if (!exists) {
+    return selectPlannerKeyboardRowById(rows[0].rowId);
+  }
+  return true;
+}
+
+function movePlannerRowPickerMode(delta: 1 | -1): boolean {
+  const rows = getPlannerKeyboardRows();
+  if (rows.length === 0) return false;
+  const currentIndex = rows.findIndex((row) => row.rowId === selectedRowId.value);
+  const baseIndex = currentIndex === -1 ? (delta > 0 ? -1 : 0) : currentIndex;
+  const nextIndex = Math.max(0, Math.min(rows.length - 1, baseIndex + delta));
+  return selectPlannerKeyboardRowById(rows[nextIndex].rowId);
+}
+
+function pickPlannerRowByDigitMode(digit: number): boolean {
+  if (digit < 1 || digit > 9) return false;
+  const rows = getPlannerKeyboardRows();
+  const target = rows[digit - 1];
+  if (!target) return false;
+  return selectPlannerKeyboardRowById(target.rowId);
+}
+
+function exitPlannerRowPickerMode() {
+  plannerRowPickerActive.value = false;
+}
+
+function plannerKeyboardEditField(field: "title" | "start" | "done" | "duration" | "location"): boolean {
+  const rowId = selectedRowId.value;
+  if (rowId == null) return false;
+
+  const todo = todoById.value.get(rowId);
+  if (todo) {
+    if (field === "duration" || field === "location") return false;
+    if (settingStore.settings.viewSet !== "day") return false;
+    return dayPlannerRef.value?.startTodoKeyboardEdit(field) ?? false;
+  }
+
+  const schedule = scheduleById.value.get(rowId);
+  if (schedule) {
+    if (settingStore.settings.viewSet !== "day") return false;
+    return dayPlannerRef.value?.startScheduleKeyboardEdit(field) ?? false;
+  }
+
+  return false;
+}
+
 // ======================== 8. 生命周期 Hook ========================
 onMounted(() => {
   // console.log("HomeView mounted");
@@ -1352,12 +1451,23 @@ onMounted(() => {
   dateService.navigateByView("today");
   attachVisualViewportListeners();
   unregisterPlannerCommandApi = registerPlannerKeyboardCommandApi(plannerKeyboard.plannerCommandApi);
+  unregisterPlannerRowPickerApi = registerPlannerRowPickerApi({
+    enter: enterPlannerRowPickerMode,
+    move: movePlannerRowPickerMode,
+    pickByDigit: pickPlannerRowByDigitMode,
+    exit: exitPlannerRowPickerMode,
+    isActive: () => plannerRowPickerActive.value,
+  });
 });
 
 onUnmounted(() => {
   if (unregisterPlannerCommandApi) {
     unregisterPlannerCommandApi();
     unregisterPlannerCommandApi = null;
+  }
+  if (unregisterPlannerRowPickerApi) {
+    unregisterPlannerRowPickerApi();
+    unregisterPlannerRowPickerApi = null;
   }
   dateService.cleanupSystemDateWatcher();
   autoSyncDebounced.flush(); //立即执行
