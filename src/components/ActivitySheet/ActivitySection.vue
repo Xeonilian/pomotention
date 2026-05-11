@@ -113,7 +113,6 @@
           :has-children-flag="hasChildren(item.id)"
           :is-collapsed="!!collapsedParentIds[item.id]"
           :show-tag-strip="rowTagStripVisible[item.id] !== false"
-          :get-countdown-class="getCountdownClass"
           :drag-area-title="getDragAreaTitle(item)"
           @collapse-parent="handleCollapseParent"
           @drag-start="onDragStart($event, item)"
@@ -159,7 +158,6 @@ import type { InputInst } from "naive-ui";
 const props = defineProps<{
   displaySheet: Activity[];
   filterOptions: any[];
-  getCountdownClass: (dueDate: number | undefined | null) => string;
   /** Planner 等：selectedActivityId */
   activityId: number | null;
   /** 看板当前选中活动的 id，与 activityId 择一或同时用于避免双重高亮时的展示 */

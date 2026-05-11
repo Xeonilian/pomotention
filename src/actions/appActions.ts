@@ -51,7 +51,7 @@ export type AppActionId =
   | "timetable.toggleType"
   | "view.toggle.task"
   | "view.toggle.planner"
-  | "view.toggle.schedule"
+  | "view.toggle.timetable"
   | "view.toggle.pomodoro"
   | "route.go.home"
   | "route.go.help"
@@ -379,7 +379,7 @@ export function createAppActionRegistry(context: AppActionContext): AppActionReg
     "view.toggle.planner": {
       run: () => context.togglePanel("planner"),
     },
-    "view.toggle.schedule": {
+    "view.toggle.timetable": {
       run: () => context.togglePanel("schedule"),
     },
     "view.toggle.pomodoro": {
