@@ -1,6 +1,7 @@
 import { onUnmounted } from "vue";
 import hotkeys from "hotkeys-js";
 import type { AppActionId } from "@/actions/appActions";
+import { buildShortcutActionMap } from "@/composables/keyboard/shortcutCatalog";
 
 interface UseGlobalKeyboardShortcutsOptions {
   dispatchAction: (actionId: AppActionId, sequence: string) => boolean;
@@ -10,71 +11,8 @@ interface UseGlobalKeyboardShortcutsOptions {
   isModeActive?: () => boolean;
 }
 
-const singleKeyMap: Record<string, AppActionId> = {
-  aa: "view.toggle.activity",
-  an: "activity.navigator.enter",
-  tt: "view.toggle.task",
-  pp: "view.toggle.planner",
-  pn: "planner.navigator.enter",
-  mm: "view.toggle.timetable",
-  uu: "view.toggle.pomodoro",
-};
-
-const sequenceMap: Record<string, AppActionId> = {
-  vh: "route.go.home",
-  vp: "route.go.help",
-  vs: "route.go.search",
-  vd: "route.go.chart",
-  ve: "route.go.settings",
-  app: "activity.pick",
-  add: "activity.deleteOrRecover",
-  ach: "activity.adjustChildRelation",
-  ato: "activity.addTodo",
-  asc: "activity.addSchedule",
-  aun: "activity.addUntaetigkeit",
-  aqu: "activity.toggleQuadrant",
-  aka: "activity.addKanbanSection",
-  akd: "activity.removeLastKanbanSection",
-  aet: "activity.editTitle",
-  aed: "activity.editDueDate",
-  aew: "activity.editPlace",
-  ael: "activity.editDuration",
-  aes: "activity.editScheduleTime",
-  aep: "activity.editPomoEstimate",
-  tee: "task.openEditor",
-  tst: "task.toggleStar",
-  ttg: "task.openTagManager",
-  ten: "task.openEnergyDialog",
-  trw: "task.openRewardDialog",
-  tin: "task.openInterruptionDialog",
-  ttm: "task.openTemplateDialog",
-  tpr: "task.goPrev",
-  tnx: "task.goNext",
-  pgp: "planner.gotoPrev",
-  pgn: "planner.gotoNext",
-  pdd: "planner.gotoDay",
-  pww: "planner.gotoWeek",
-  pmm: "planner.gotoMonth",
-  pyy: "planner.gotoYear",
-  pto: "planner.addTodo",
-  psc: "planner.addSchedule",
-  pet: "planner.editTitle",
-  pes: "planner.editStart",
-  ped: "planner.editDone",
-  peu: "planner.editDuration",
-  pel: "planner.editLocation",
-  are: "activity.repeatActivity",
-  pre: "planner.repeatActivity",
-  pic: "planner.exportIcs",
-  ptn: "planner.gotoCurrent",
-  ptd: "planner.gotoTodayDay",
-  med: "timetable.toggleEditor",
-  mex: "timetable.exitEditor",
-  mtt: "timetable.toggleType",
-  uwu: "timer.startWork",
-  ubr: "timer.startBreak",
-  ust: "timer.stop",
-};
+const singleKeyMap: Record<string, AppActionId> = buildShortcutActionMap("single");
+const sequenceMap: Record<string, AppActionId> = buildShortcutActionMap("sequence");
 
 const allSequences = [...Object.keys(singleKeyMap), ...Object.keys(sequenceMap)];
 const immediateModeSequences = new Set<string>(["an", "pn"]);
