@@ -3,7 +3,6 @@
 -->
 <template>
   <div class="table-container">
-    <span v-if="props.navigatorActive && !isMobile" class="kbd-nav-badge">NAV</span>
     <table class="full-width-table">
       <colgroup>
         <!-- 勾选 -->
@@ -634,6 +633,7 @@ const doneInputRef = ref<HTMLInputElement | null>(null);
 const rankPopoverTodoId = ref<number | null>(null);
 let rankPopoverTimer: number | null = null; // 自动关闭排序弹窗的定时器
 const rankKeyboardOptionIndex = ref(0);
+const RANK_POPOVER_AUTO_CLOSE_MS = 3000;
 const showPriorityBindingModal = ref(false);
 const keyboardCellOrder = ["check", "start", "done", "rank", "title", "fruit"] as const;
 const keyboardCellIndex = ref<number>(keyboardCellOrder.indexOf("title"));
@@ -825,15 +825,17 @@ function openRankPopoverIfActive(todo: Todo) {
   if (todo.status === "done" || todo.status === "cancelled") return;
   // 立刻打开弹窗
   rankPopoverTodoId.value = todo.id;
-  rankKeyboardOptionIndex.value = 0;
-  // 设置 3000ms 后自动关闭
-  rankPopoverTimer = window.setTimeout(() => {
-    // 只在当前仍然是这个 todo 时才关闭，防止误关其他项
-    if (rankPopoverTodoId.value === todo.id) {
-      rankPopoverTodoId.value = null;
-    }
-    rankPopoverTimer = null;
-  }, 3000);
+  rankKeyboardOptionIndex.value = 1;
+  // navigator 模式下不自动关闭；鼠标点选保留原自动关闭时长
+  if (!props.navigatorActive) {
+    rankPopoverTimer = window.setTimeout(() => {
+      // 只在当前仍然是这个 todo 时才关闭，防止误关其他项
+      if (rankPopoverTodoId.value === todo.id) {
+        rankPopoverTodoId.value = null;
+      }
+      rankPopoverTimer = null;
+    }, RANK_POPOVER_AUTO_CLOSE_MS);
+  }
 }
 
 /** 从 1 起第一个可用的优先级（1–21），考虑已完成锁定和其余进行中任务占用 */
@@ -895,15 +897,16 @@ function applyRankKeyboardOption(todo: Todo): boolean {
   return true;
 }
 
-function moveRankKeyboardOption(delta: 1 | -1): boolean {
+function moveRankKeyboardOption(delta: number): boolean {
   const todo = selectedTodo.value;
   if (!todo) return false;
   if (rankPopoverTodoId.value !== todo.id) return false;
   const options = rankKeyboardOptions.value;
   if (options.length === 0) return false;
-  let next = rankKeyboardOptionIndex.value + delta;
-  if (next < 0) next = options.length - 1;
-  if (next >= options.length) next = 0;
+  const step = Number.isFinite(delta) ? Math.trunc(delta) : 0;
+  if (step === 0) return false;
+  let next = (rankKeyboardOptionIndex.value + step) % options.length;
+  if (next < 0) next += options.length;
   rankKeyboardOptionIndex.value = next;
   return true;
 }
@@ -1759,19 +1762,6 @@ defineExpose({
   width: 100%;
   overflow-x: auto;
   position: relative;
-}
-
-.kbd-nav-badge {
-  position: absolute;
-  top: 4px;
-  right: 6px;
-  font-size: 10px;
-  color: var(--color-text-secondary);
-  background: var(--color-background-light-transparent);
-  border-radius: 8px;
-  padding: 0 6px;
-  line-height: 16px;
-  z-index: 2;
 }
 
 .kbd-cell-active {

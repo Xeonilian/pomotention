@@ -5,7 +5,7 @@ type PlannerNavigatorApi = {
   moveField: (delta: 1 | -1) => boolean;
   activateField: () => boolean;
   confirmField: () => boolean;
-  navigateSubSelection: (delta: 1 | -1) => boolean;
+  navigateSubSelection: (delta: number) => boolean;
   exit: () => void;
   isActive: () => boolean;
 };
@@ -43,7 +43,7 @@ export function confirmPlannerNavigatorField(): boolean {
   return plannerNavigatorApi?.confirmField() ?? false;
 }
 
-export function navigatePlannerNavigatorSubSelection(delta: 1 | -1): boolean {
+export function navigatePlannerNavigatorSubSelection(delta: number): boolean {
   return plannerNavigatorApi?.navigateSubSelection(delta) ?? false;
 }
 

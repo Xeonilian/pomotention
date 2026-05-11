@@ -3,7 +3,6 @@
 -->
 <template>
   <div class="table-container">
-    <span v-if="props.navigatorActive && !isMobile" class="kbd-nav-badge">NAV</span>
     <table class="full-width-table">
       <!-- 表头部分，可单独调整样式 -->
       <colgroup>
@@ -858,19 +857,6 @@ defineExpose({
   width: 100%;
   overflow-x: auto;
   position: relative;
-}
-
-.kbd-nav-badge {
-  position: absolute;
-  top: 4px;
-  right: 6px;
-  font-size: 10px;
-  color: var(--color-text-secondary);
-  background: var(--color-background-light-transparent);
-  border-radius: 8px;
-  padding: 0 6px;
-  line-height: 16px;
-  z-index: 2;
 }
 
 .kbd-cell-active {

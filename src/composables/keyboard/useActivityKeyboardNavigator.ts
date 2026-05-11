@@ -5,7 +5,7 @@ type NavigatorApi = {
   moveField: (delta: 1 | -1) => boolean;
   activateField: () => boolean;
   confirmField: () => boolean;
-  navigateSubSelection: (delta: 1 | -1) => boolean;
+  navigateSubSelection: (delta: number) => boolean;
   exit: () => void;
   isActive: () => boolean;
 };
@@ -43,7 +43,7 @@ export function confirmActivityNavigatorField(): boolean {
   return navigatorApi?.confirmField() ?? false;
 }
 
-export function navigateActivityNavigatorSubSelection(delta: 1 | -1): boolean {
+export function navigateActivityNavigatorSubSelection(delta: number): boolean {
   return navigatorApi?.navigateSubSelection(delta) ?? false;
 }
 

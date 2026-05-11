@@ -567,12 +567,14 @@ const shortcuts = useGlobalKeyboardShortcuts({
   isModeActive: () => isActivityNavigatorActive() || isPlannerNavigatorActive(),
   onModeKey: (key) => {
     if (isActivityNavigatorActive()) {
+      if (key === "left" && navigateActivityNavigatorSubSelection(-1)) return true;
+      if (key === "right" && navigateActivityNavigatorSubSelection(1)) return true;
+      if (key === "up" && navigateActivityNavigatorSubSelection(-5)) return true;
+      if (key === "down" && navigateActivityNavigatorSubSelection(5)) return true;
       if (key === "left") return moveActivityNavigatorField(-1);
       if (key === "right") return moveActivityNavigatorField(1);
-      if (key === "up" && navigateActivityNavigatorSubSelection(-1)) return true;
-      if (key === "down" && navigateActivityNavigatorSubSelection(1)) return true;
-      if (key === "up") return moveActivityNavigator(-1);
-      if (key === "down") return moveActivityNavigator(1);
+      if (key === "up") return moveActivityNavigator(1);
+      if (key === "down") return moveActivityNavigator(-1);
       if (key === "space") return activateActivityNavigatorField();
       if (key === "enter" || key === "return") {
         return confirmActivityNavigatorField();
@@ -585,12 +587,14 @@ const shortcuts = useGlobalKeyboardShortcuts({
       return false;
     }
     if (isPlannerNavigatorActive()) {
+      if (key === "left" && navigatePlannerNavigatorSubSelection(-1)) return true;
+      if (key === "right" && navigatePlannerNavigatorSubSelection(1)) return true;
+      if (key === "up" && navigatePlannerNavigatorSubSelection(-5)) return true;
+      if (key === "down" && navigatePlannerNavigatorSubSelection(5)) return true;
       if (key === "left") return movePlannerNavigatorField(-1);
       if (key === "right") return movePlannerNavigatorField(1);
-      if (key === "up" && navigatePlannerNavigatorSubSelection(-1)) return true;
-      if (key === "down" && navigatePlannerNavigatorSubSelection(1)) return true;
-      if (key === "up") return movePlannerNavigator(-1);
-      if (key === "down") return movePlannerNavigator(1);
+      if (key === "up") return movePlannerNavigator(1);
+      if (key === "down") return movePlannerNavigator(-1);
       if (key === "space") return activatePlannerNavigatorField();
       if (key === "enter" || key === "return") {
         return confirmPlannerNavigatorField();

@@ -57,7 +57,7 @@ type DayTodoExpose = {
   moveKeyboardCell: (delta: 1 | -1) => boolean;
   activateKeyboardCell: () => boolean;
   confirmKeyboardAction: () => boolean;
-  moveRankKeyboardOption: (delta: 1 | -1) => boolean;
+  moveRankKeyboardOption: (delta: number) => boolean;
 };
 
 type DayScheduleExpose = {
@@ -200,7 +200,7 @@ function confirmPlannerKeyboardCellAction(): boolean {
   return dayTodoRef.value?.confirmKeyboardAction() || dayScheduleRef.value?.confirmKeyboardAction() || false;
 }
 
-function navigatePlannerKeyboardSubSelection(delta: 1 | -1): boolean {
+function navigatePlannerKeyboardSubSelection(delta: number): boolean {
   return dayTodoRef.value?.moveRankKeyboardOption(delta) ?? false;
 }
 

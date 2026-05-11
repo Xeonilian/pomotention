@@ -415,7 +415,7 @@ const dayPlannerRef = ref<{
   movePlannerKeyboardCell: (delta: 1 | -1) => boolean;
   activatePlannerKeyboardCell: () => boolean;
   confirmPlannerKeyboardCellAction: () => boolean;
-  navigatePlannerKeyboardSubSelection: (delta: 1 | -1) => boolean;
+  navigatePlannerKeyboardSubSelection: (delta: number) => boolean;
 } | null>(null);
 
 function onFinishTaskRecordEditing() {
@@ -1447,7 +1447,7 @@ function confirmPlannerNavigatorFieldMode(): boolean {
   return dayPlannerRef.value?.confirmPlannerKeyboardCellAction() ?? false;
 }
 
-function navigatePlannerNavigatorSubSelectionMode(delta: 1 | -1): boolean {
+function navigatePlannerNavigatorSubSelectionMode(delta: number): boolean {
   if (!plannerNavigatorActive.value) return false;
   if (settingStore.settings.viewSet !== "day") return false;
   return dayPlannerRef.value?.navigatePlannerKeyboardSubSelection(delta) ?? false;
