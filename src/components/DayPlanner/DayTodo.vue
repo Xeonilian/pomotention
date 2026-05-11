@@ -162,7 +162,12 @@
           >
             <!-- 单元格 -->
             <!-- 1 完成状态 -->
-            <td :class="{ 'kbd-cell-active': props.navigatorActive && todo.id === selectedRowId && keyboardCellOrder[keyboardCellIndex] === 'check' }" class="col-check">
+            <td
+              :class="{
+                'kbd-cell-active': props.navigatorActive && todo.id === selectedRowId && keyboardCellOrder[keyboardCellIndex] === 'check',
+              }"
+              class="col-check"
+            >
               <n-checkbox
                 v-if="todo.status !== 'cancelled'"
                 :checked="todo.status === 'done'"
@@ -184,7 +189,9 @@
             <!-- 2 开始时间 -->
             <td
               class="col-start"
-              :class="{ 'kbd-cell-active': props.navigatorActive && todo.id === selectedRowId && keyboardCellOrder[keyboardCellIndex] === 'start' }"
+              :class="{
+                'kbd-cell-active': props.navigatorActive && todo.id === selectedRowId && keyboardCellOrder[keyboardCellIndex] === 'start',
+              }"
               @click.stop="startEditing(todo.id, 'start')"
               :title="editingRowId === todo.id && editingField === 'start' ? '' : '单击编辑'"
             >
@@ -206,7 +213,9 @@
             <!-- 3 结束时间 -->
             <td
               class="col-end"
-              :class="{ 'kbd-cell-active': props.navigatorActive && todo.id === selectedRowId && keyboardCellOrder[keyboardCellIndex] === 'done' }"
+              :class="{
+                'kbd-cell-active': props.navigatorActive && todo.id === selectedRowId && keyboardCellOrder[keyboardCellIndex] === 'done',
+              }"
               @click.stop="startEditing(todo.id, 'done')"
               :title="editingRowId === todo.id && editingField === 'done' ? '' : '单击编辑'"
             >
@@ -282,7 +291,9 @@
             <!-- 5 意图 -->
             <td
               class="col-intent"
-              :class="{ 'kbd-cell-active': props.navigatorActive && todo.id === selectedRowId && keyboardCellOrder[keyboardCellIndex] === 'title' }"
+              :class="{
+                'kbd-cell-active': props.navigatorActive && todo.id === selectedRowId && keyboardCellOrder[keyboardCellIndex] === 'title',
+              }"
               @click.stop="startEditing(todo.id, 'title')"
               :title="editingRowId === todo.id && editingField === 'title' ? '' : '单击编辑'"
             >
@@ -326,7 +337,12 @@
             </td>
 
             <!-- 6 果果 -->
-            <td :class="{ 'kbd-cell-active': props.navigatorActive && todo.id === selectedRowId && keyboardCellOrder[keyboardCellIndex] === 'fruit' }" class="col-fruit">
+            <td
+              :class="{
+                'kbd-cell-active': props.navigatorActive && todo.id === selectedRowId && keyboardCellOrder[keyboardCellIndex] === 'fruit',
+              }"
+              class="col-fruit"
+            >
               <div class="pomo-container">
                 <!-- 将所有番茄钟内容包装在一个容器中 -->
                 <div class="pomo-groups">
@@ -335,7 +351,10 @@
                       <template v-for="i in est" :key="i">
                         <span
                           class="pomo-slot-dblwrap"
-                          :class="{ 'pomo-slot-void': isPomoVoid(todo, index, i) }"
+                          :class="{
+                            'pomo-slot-void': isPomoVoid(todo, index, i),
+                            'pomo-slot-kbd-active': isPomoKeyboardSlotActive(todo, index, i),
+                          }"
                           v-on="pomoVoidFinger.listeners(todo, index, i)"
                           @mousedown.capture="handlePomoSlotMouseDown(todo, index, i)"
                           @dblclick.stop="(_e: any) => handlePomoDoubleClick(todo, index, i)"
@@ -362,6 +381,7 @@
                   <!-- 删除估计按钮  -->
                   <n-button
                     class="button-left"
+                    :class="{ 'button-est-kbd-active': isPomoKeyboardEstButtonActive(todo, 'delete-est') }"
                     v-if="todo.pomoType != '🍒' && todo.estPomo && todo.estPomo.length < 4 && todo.estPomo.length > 0"
                     text
                     @click="handleDeleteEstimate(todo)"
@@ -379,6 +399,7 @@
                     class="button-right"
                     :class="{
                       'one-mode': !todo.estPomo,
+                      'button-est-kbd-active': isPomoKeyboardEstButtonActive(todo, 'add-est'),
                     }"
                     v-if="(todo.estPomo && todo.pomoType != '🍒' && todo.estPomo.length < 3) || (!todo.estPomo && todo.pomoType != '🍒')"
                     text
@@ -634,9 +655,15 @@ const rankPopoverTodoId = ref<number | null>(null);
 let rankPopoverTimer: number | null = null; // 自动关闭排序弹窗的定时器
 const rankKeyboardOptionIndex = ref(0);
 const RANK_POPOVER_AUTO_CLOSE_MS = 3000;
+const POMO_SPACE_DOUBLE_MS = 280;
 const showPriorityBindingModal = ref(false);
 const keyboardCellOrder = ["check", "start", "done", "rank", "title", "fruit"] as const;
 const keyboardCellIndex = ref<number>(keyboardCellOrder.indexOf("title"));
+const pomoKeyboardModeTodoId = ref<number | null>(null);
+const pomoKeyboardTargetIndex = ref(0);
+const lastPomoSpaceAt = ref(0);
+
+type PomoKeyboardTarget = { kind: "slot"; slotIndex: number } | { kind: "delete-est" } | { kind: "add-est" };
 
 // 点击 popover 外视为放弃，关闭排序选择
 function handleRankPopoverClickOutside(e: MouseEvent | TouchEvent) {
@@ -823,6 +850,11 @@ const sortedTodos = computed(() => {
 function openRankPopoverIfActive(todo: Todo) {
   handleRowClick(todo);
   if (todo.status === "done" || todo.status === "cancelled") return;
+  exitPomoKeyboardMode();
+  if (rankPopoverTimer !== null) {
+    clearTimeout(rankPopoverTimer);
+    rankPopoverTimer = null;
+  }
   // 立刻打开弹窗
   rankPopoverTodoId.value = todo.id;
   rankKeyboardOptionIndex.value = 1;
@@ -868,10 +900,7 @@ function applyFirstAvailablePriority(todo: Todo) {
   applyPriorityAndTag(todo, desired);
 }
 
-type RankKeyboardOption =
-  | { kind: "clear" }
-  | { kind: "firstAvailable" }
-  | { kind: "priority"; priority: number };
+type RankKeyboardOption = { kind: "clear" } | { kind: "firstAvailable" } | { kind: "priority"; priority: number };
 
 const rankKeyboardOptions = computed<RankKeyboardOption[]>(() => [
   { kind: "clear" },
@@ -900,7 +929,20 @@ function applyRankKeyboardOption(todo: Todo): boolean {
 function moveRankKeyboardOption(delta: number): boolean {
   const todo = selectedTodo.value;
   if (!todo) return false;
-  if (rankPopoverTodoId.value !== todo.id) return false;
+  if (delta === 0) {
+    if (rankPopoverTodoId.value === todo.id) {
+      rankPopoverTodoId.value = null;
+      return true;
+    }
+    if (isPomoKeyboardModeActive(todo)) {
+      exitPomoKeyboardMode();
+      return true;
+    }
+    return false;
+  }
+  if (rankPopoverTodoId.value !== todo.id) {
+    return movePomoKeyboardTarget(delta);
+  }
   const options = rankKeyboardOptions.value;
   if (options.length === 0) return false;
   const step = Number.isFinite(delta) ? Math.trunc(delta) : 0;
@@ -909,6 +951,122 @@ function moveRankKeyboardOption(delta: number): boolean {
   if (next < 0) next += options.length;
   rankKeyboardOptionIndex.value = next;
   return true;
+}
+
+function isPomoKeyboardModeActive(todo: Todo | null | undefined): boolean {
+  if (!todo) return false;
+  return pomoKeyboardModeTodoId.value === todo.id;
+}
+
+function exitPomoKeyboardMode() {
+  pomoKeyboardModeTodoId.value = null;
+  pomoKeyboardTargetIndex.value = 0;
+}
+
+function canShowDeleteEstimateButton(todo: Todo): boolean {
+  return todo.pomoType !== "🍒" && Array.isArray(todo.estPomo) && todo.estPomo.length < 4 && todo.estPomo.length > 0;
+}
+
+function canShowAddEstimateButton(todo: Todo): boolean {
+  return (Array.isArray(todo.estPomo) && todo.pomoType !== "🍒" && todo.estPomo.length < 3) || (!todo.estPomo && todo.pomoType !== "🍒");
+}
+
+function getPomoKeyboardTargets(todo: Todo): PomoKeyboardTarget[] {
+  const targets: PomoKeyboardTarget[] = [];
+  const slots = totalSlots(todo);
+  for (let i = 0; i < slots; i += 1) {
+    targets.push({ kind: "slot", slotIndex: i });
+  }
+  if (canShowDeleteEstimateButton(todo)) targets.push({ kind: "delete-est" });
+  if (canShowAddEstimateButton(todo)) targets.push({ kind: "add-est" });
+  return targets;
+}
+
+function enterPomoKeyboardMode(todo: Todo): boolean {
+  const targets = getPomoKeyboardTargets(todo);
+  if (targets.length === 0) return false;
+  rankPopoverTodoId.value = null;
+  pomoKeyboardModeTodoId.value = todo.id;
+  pomoKeyboardTargetIndex.value = 0;
+  return true;
+}
+
+function movePomoKeyboardTarget(delta: number): boolean {
+  const todo = selectedTodo.value;
+  if (!todo) return false;
+  if (!isPomoKeyboardModeActive(todo)) return false;
+  const targets = getPomoKeyboardTargets(todo);
+  if (targets.length === 0) return false;
+  const step = Number.isFinite(delta) ? Math.trunc(delta) : 0;
+  if (step === 0) return false;
+  let next = (pomoKeyboardTargetIndex.value + step) % targets.length;
+  if (next < 0) next += targets.length;
+  pomoKeyboardTargetIndex.value = next;
+  return true;
+}
+
+function getPomoSlotPosition(todo: Todo, slotIndex: number): { estIndex: number; pomoIndex: number } | null {
+  if (!Array.isArray(todo.estPomo) || todo.estPomo.length === 0) return null;
+  let cursor = 0;
+  for (let estIndex = 0; estIndex < todo.estPomo.length; estIndex += 1) {
+    const size = Number(todo.estPomo[estIndex]) || 0;
+    for (let i = 1; i <= size; i += 1) {
+      if (cursor === slotIndex) {
+        return { estIndex, pomoIndex: i };
+      }
+      cursor += 1;
+    }
+  }
+  return null;
+}
+
+function executePomoKeyboardTarget(todo: Todo): boolean {
+  if (!isPomoKeyboardModeActive(todo)) return false;
+  if (showEstimateInput.value) {
+    confirmAddEstimate();
+    return true;
+  }
+  const targets = getPomoKeyboardTargets(todo);
+  if (targets.length === 0) return false;
+  const target = targets[Math.max(0, Math.min(targets.length - 1, pomoKeyboardTargetIndex.value))];
+  if (!target) return false;
+  if (target.kind === "slot") {
+    const pos = getPomoSlotPosition(todo, target.slotIndex);
+    if (!pos) return false;
+    const slot = getSlotIndexForEst(todo, pos.estIndex, pos.pomoIndex);
+    const current = getRealPomoState(todo, slot);
+    handlePomoCheck(todo, pos.estIndex, pos.pomoIndex, current !== 1);
+    return true;
+  }
+  if (target.kind === "delete-est") {
+    handleDeleteEstimate(todo);
+    return true;
+  }
+  if (target.kind === "add-est") {
+    handleAddEstimate(todo);
+    return true;
+  }
+  return false;
+}
+
+function isPomoKeyboardSlotActive(todo: Todo, estIndex: number, pomoIndex: number): boolean {
+  if (!props.navigatorActive) return false;
+  if (todo.id !== selectedRowId.value) return false;
+  if (!isPomoKeyboardModeActive(todo)) return false;
+  const targets = getPomoKeyboardTargets(todo);
+  const target = targets[Math.max(0, Math.min(targets.length - 1, pomoKeyboardTargetIndex.value))];
+  if (!target || target.kind !== "slot") return false;
+  const slot = getSlotIndexForEst(todo, estIndex, pomoIndex);
+  return slot === target.slotIndex;
+}
+
+function isPomoKeyboardEstButtonActive(todo: Todo, kind: "delete-est" | "add-est"): boolean {
+  if (!props.navigatorActive) return false;
+  if (todo.id !== selectedRowId.value) return false;
+  if (!isPomoKeyboardModeActive(todo)) return false;
+  const targets = getPomoKeyboardTargets(todo);
+  const target = targets[Math.max(0, Math.min(targets.length - 1, pomoKeyboardTargetIndex.value))];
+  return target?.kind === kind;
 }
 
 // 排序列：选择 emoji 后写入 priority 并打上绑定的 tag
@@ -1198,10 +1356,21 @@ function handleDeleteEstimate(todo: Todo) {
   const newReal = flat.slice(0, startSlot);
   emit("update-todo-est", todo.id, todo.estPomo);
   emit("update-todo-pomo", todo.id, newReal); // 同时更新 realPomo 长度
+  if (isPomoKeyboardModeActive(todo)) {
+    const targets = getPomoKeyboardTargets(todo);
+    if (targets.length === 0) {
+      exitPomoKeyboardMode();
+    } else if (pomoKeyboardTargetIndex.value > targets.length - 1) {
+      pomoKeyboardTargetIndex.value = targets.length - 1;
+    }
+  }
 }
 
 // 修改点击行处理函数
 function handleRowClick(todo: Todo) {
+  if (pomoKeyboardModeTodoId.value !== null && pomoKeyboardModeTodoId.value !== todo.id) {
+    exitPomoKeyboardMode();
+  }
   // 切换到其它行时先保存并退出当前编辑
   if (editingRowId.value !== null && editingRowId.value !== todo.id) {
     selectingTagViaEnter.value = false; // 避免 saveEdit 提前 return 导致仍停留在编辑态
@@ -1690,6 +1859,9 @@ function handleTogglePomoType() {
 
 function moveKeyboardCell(delta: 1 | -1): boolean {
   if (!selectedTodo.value) return false;
+  if (pomoKeyboardModeTodoId.value !== null) {
+    exitPomoKeyboardMode();
+  }
   let next = keyboardCellIndex.value + delta;
   if (next < 0) next = keyboardCellOrder.length - 1;
   if (next >= keyboardCellOrder.length) next = 0;
@@ -1715,13 +1887,24 @@ function activateKeyboardCell(): boolean {
     return true;
   }
   if (cell === "rank") {
+    exitPomoKeyboardMode();
     openRankPopoverIfActive(todo);
     return true;
   }
   if (cell === "fruit") {
     if (!canTogglePomoType.value) return false;
-    handleTogglePomoType();
-    return true;
+    const now = Date.now();
+    const isDoubleSpace = now - lastPomoSpaceAt.value <= POMO_SPACE_DOUBLE_MS;
+    lastPomoSpaceAt.value = now;
+    if (isDoubleSpace) {
+      exitPomoKeyboardMode();
+      handleTogglePomoType();
+      return true;
+    }
+    if (!isPomoKeyboardModeActive(todo)) {
+      return enterPomoKeyboardMode(todo);
+    }
+    return executePomoKeyboardTarget(todo);
   }
   return false;
 }
@@ -1729,6 +1912,13 @@ function activateKeyboardCell(): boolean {
 function confirmKeyboardAction(): boolean {
   const todo = selectedTodo.value;
   if (!todo) return false;
+  if (showEstimateInput.value) {
+    confirmAddEstimate();
+    return true;
+  }
+  if (isPomoKeyboardModeActive(todo)) {
+    return executePomoKeyboardTarget(todo);
+  }
   if (editingRowId.value === todo.id && editingField.value) {
     saveEdit(todo);
     return true;
@@ -1753,6 +1943,10 @@ defineExpose({
   activateKeyboardCell,
   confirmKeyboardAction,
   moveRankKeyboardOption,
+  exitPomoKeyboardMode,
+  isPomoKeyboardModeActive,
+  isPomoKeyboardSlotActive,
+  isPomoKeyboardEstButtonActive,
 });
 </script>
 
@@ -1765,7 +1959,7 @@ defineExpose({
 }
 
 .kbd-cell-active {
-  box-shadow: inset 0 0 0 1px var(--color-blue-light);
+  box-shadow: inset 0 0 0 1px var(--color-background-dark);
   background-color: var(--color-blue-light-transparent);
 }
 
@@ -2038,6 +2232,10 @@ td.col-intent .ellipsis {
   font-size: inherit;
 }
 
+td.col-fruit,
+td.col-intent {
+  padding-left: 2px;
+}
 .priority-badge {
   display: inline-flex;
   align-items: center !important;
@@ -2158,6 +2356,11 @@ td.col-intent .ellipsis {
   line-height: 0;
 }
 
+.pomo-slot-kbd-active {
+  background-color: var(--color-red-transparent);
+  border-radius: 4px;
+}
+
 .pomo-slot-void :deep(.n-checkbox-box) {
   background-color: var(--color-background-dark);
 }
@@ -2217,6 +2420,10 @@ td.col-intent .ellipsis {
 .button-right.one-mode {
   margin-left: -4px;
   z-index: 2;
+}
+
+.button-est-kbd-active :deep(.n-icon) {
+  color: var(--color-red) !important;
 }
 
 /* 状态信息 */

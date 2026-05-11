@@ -597,8 +597,9 @@ function exitNavigatorMode() {
 }
 
 function getNavigatorFieldsForActivity(activity: Activity): Array<"title" | "dueDate" | "place" | "duration" | "scheduleTime" | "pomoEstimate"> {
-  if (activity.class === "T") return ["title", "dueDate", "pomoEstimate"];
-  if (activity.class === "S") return ["title", "scheduleTime", "duration", "place"];
+  // 按 ActivityRow 实际从左到右的可编辑列顺序导航
+  if (activity.class === "T") return ["title", "pomoEstimate", "dueDate"];
+  if (activity.class === "S") return ["title", "place", "duration", "scheduleTime"];
   return ["title"];
 }
 

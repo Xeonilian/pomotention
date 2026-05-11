@@ -573,13 +573,14 @@ const shortcuts = useGlobalKeyboardShortcuts({
       if (key === "down" && navigateActivityNavigatorSubSelection(5)) return true;
       if (key === "left") return moveActivityNavigatorField(-1);
       if (key === "right") return moveActivityNavigatorField(1);
-      if (key === "up") return moveActivityNavigator(1);
-      if (key === "down") return moveActivityNavigator(-1);
+      if (key === "up") return moveActivityNavigator(-1);
+      if (key === "down") return moveActivityNavigator(1);
       if (key === "space") return activateActivityNavigatorField();
       if (key === "enter" || key === "return") {
         return confirmActivityNavigatorField();
       }
       if (key === "esc" || key === "escape") {
+        if (navigateActivityNavigatorSubSelection(0)) return true;
         exitActivityNavigator();
         return true;
       }
@@ -600,6 +601,7 @@ const shortcuts = useGlobalKeyboardShortcuts({
         return confirmPlannerNavigatorField();
       }
       if (key === "esc" || key === "escape") {
+        if (navigatePlannerNavigatorSubSelection(0)) return true;
         exitPlannerNavigator();
         return true;
       }

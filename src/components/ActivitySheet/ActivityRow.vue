@@ -6,11 +6,11 @@
     :class="{
       'highlight-line': isHighlighted,
       'is-dragging-row': isDraggingRow,
-      'row-picker-mode': isNavigatorModeActive,
+      'navigator-mode': isNavigatorModeActive,
     }"
   >
     <div class="activity-content">
-      <span v-if="showNavigatorNumber" class="row-picker-index" :class="{ 'is-active': isNavigatorCurrent }">{{ navigatorNumber }}.</span>
+      <span v-if="showNavigatorNumber" class="navigator-index" :class="{ 'is-active': isNavigatorCurrent }">{{ navigatorNumber }}.</span>
       <span
         v-if="item.parentId"
         class="child-activity-dot"
@@ -256,7 +256,10 @@
         @focus="notifyRowFocused(item.id)"
         @blur="onSectionFieldBlur"
         title="约定时间"
-        :class="[getCountdownClass(item.dueRange && item.dueRange[0]), { 'navigator-cell-active': isNavigatorCurrent && navigatorCurrentField === 'scheduleTime' }]"
+        :class="[
+          getCountdownClass(item.dueRange && item.dueRange[0]),
+          { 'navigator-cell-active': isNavigatorCurrent && navigatorCurrentField === 'scheduleTime' },
+        ]"
         placeholder="时间"
         class="input-focus-none activity-field-schedule-time"
       />
@@ -535,8 +538,8 @@ function handleRemoveTag(tagId: number) {
 const isHighlighted = computed(() => props.item.id === props.activityId || props.item.id === props.activeId);
 const navigatorNumber = computed(() => navigatorCtx?.numberById.value[props.item.id] ?? null);
 const showNavigatorNumber = computed(() => Boolean(navigatorCtx?.isActive.value) && navigatorNumber.value != null);
-const isNavigatorCurrent = computed(() => navigatorCtx?.currentRowId.value === props.item.id);
 const isNavigatorModeActive = computed(() => Boolean(navigatorCtx?.isActive.value));
+const isNavigatorCurrent = computed(() => isNavigatorModeActive.value && navigatorCtx?.currentRowId.value === props.item.id);
 const navigatorCurrentField = computed(() => navigatorCtx?.currentFieldKey.value ?? null);
 
 const pomoDisplayValue = computed(() => {
@@ -670,7 +673,7 @@ function handlePomoInputTouchCancel() {
   margin-left: 20px;
 }
 
-.row-picker-index {
+.navigator-index {
   width: 12px;
   min-width: 12px;
   height: 12px;
@@ -685,7 +688,7 @@ function handlePomoInputTouchCancel() {
   color: var(--color-text-secondary);
 }
 
-.row-picker-index.is-active {
+.navigator-index.is-active {
   color: var(--color-text-primary);
   background: var(--color-background-light-transparent);
 }
@@ -877,7 +880,7 @@ function handlePomoInputTouchCancel() {
   background-color: var(--color-yellow-light) !important;
 }
 
-.activity-row.row-picker-mode.highlight-line {
+.activity-row.navigator-mode.highlight-line {
   background-color: var(--color-purple-light-transparent) !important;
 }
 
@@ -897,10 +900,8 @@ function handlePomoInputTouchCancel() {
   background: transparent !important;
 }
 
-:deep(.navigator-cell-active .n-input-wrapper),
-:deep(.navigator-cell-active.n-date-picker .n-input-wrapper) {
-  box-shadow: inset 0 0 0 1px var(--color-blue-light);
-  background-color: var(--color-blue-light-transparent);
+:deep(.navigator-cell-active .n-input-wrapper) {
+  background-color: var(--color-blue-light-transparent) !important;
 }
 
 .input-focus-none :deep(.n-input) {
