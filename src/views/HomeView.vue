@@ -214,6 +214,7 @@
             <DayPlanner
               v-if="settingStore.settings.showPlanner && settingStore.settings.viewSet === 'day'"
               ref="dayPlannerRef"
+              :navigator-active="plannerNavigatorActive"
               :style="plannerNavigatorActive ? { '--planner-selected-row-bg': 'var(--color-purple-light-transparent)' } : undefined"
               @update-schedule-status="onUpdateScheduleStatus"
               @cancel-schedule="onCancelSchedule"
@@ -411,6 +412,10 @@ const taskTrackerRef = ref<{ endTaskRecordEditing: () => void } | null>(null);
 const dayPlannerRef = ref<{
   startTodoKeyboardEdit: (field: "title" | "start" | "done") => boolean;
   startScheduleKeyboardEdit: (field: "title" | "start" | "done" | "duration" | "location") => boolean;
+  movePlannerKeyboardCell: (delta: 1 | -1) => boolean;
+  activatePlannerKeyboardCell: () => boolean;
+  confirmPlannerKeyboardCellAction: () => boolean;
+  navigatePlannerKeyboardSubSelection: (delta: 1 | -1) => boolean;
 } | null>(null);
 
 function onFinishTaskRecordEditing() {
@@ -1424,6 +1429,30 @@ function exitPlannerNavigatorMode() {
   plannerNavigatorActive.value = false;
 }
 
+function movePlannerNavigatorFieldMode(delta: 1 | -1): boolean {
+  if (!plannerNavigatorActive.value) return false;
+  if (settingStore.settings.viewSet !== "day") return false;
+  return dayPlannerRef.value?.movePlannerKeyboardCell(delta) ?? false;
+}
+
+function activatePlannerNavigatorFieldMode(): boolean {
+  if (!plannerNavigatorActive.value) return false;
+  if (settingStore.settings.viewSet !== "day") return false;
+  return dayPlannerRef.value?.activatePlannerKeyboardCell() ?? false;
+}
+
+function confirmPlannerNavigatorFieldMode(): boolean {
+  if (!plannerNavigatorActive.value) return false;
+  if (settingStore.settings.viewSet !== "day") return false;
+  return dayPlannerRef.value?.confirmPlannerKeyboardCellAction() ?? false;
+}
+
+function navigatePlannerNavigatorSubSelectionMode(delta: 1 | -1): boolean {
+  if (!plannerNavigatorActive.value) return false;
+  if (settingStore.settings.viewSet !== "day") return false;
+  return dayPlannerRef.value?.navigatePlannerKeyboardSubSelection(delta) ?? false;
+}
+
 function plannerKeyboardEditField(field: "title" | "start" | "done" | "duration" | "location"): boolean {
   const rowId = selectedRowId.value;
   if (rowId == null) return false;
@@ -1455,6 +1484,10 @@ onMounted(() => {
     enter: enterPlannerNavigatorMode,
     move: movePlannerNavigatorMode,
     pickByDigit: pickPlannerRowByDigitMode,
+    moveField: movePlannerNavigatorFieldMode,
+    activateField: activatePlannerNavigatorFieldMode,
+    confirmField: confirmPlannerNavigatorFieldMode,
+    navigateSubSelection: navigatePlannerNavigatorSubSelectionMode,
     exit: exitPlannerNavigatorMode,
     isActive: () => plannerNavigatorActive.value,
   });

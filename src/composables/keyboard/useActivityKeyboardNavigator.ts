@@ -2,6 +2,10 @@ type NavigatorApi = {
   enter: () => boolean;
   move: (delta: 1 | -1) => boolean;
   pickByDigit: (digit: number) => boolean;
+  moveField: (delta: 1 | -1) => boolean;
+  activateField: () => boolean;
+  confirmField: () => boolean;
+  navigateSubSelection: (delta: 1 | -1) => boolean;
   exit: () => void;
   isActive: () => boolean;
 };
@@ -25,6 +29,22 @@ export function moveActivityNavigator(delta: 1 | -1): boolean {
 
 export function pickActivityRowByDigit(digit: number): boolean {
   return navigatorApi?.pickByDigit(digit) ?? false;
+}
+
+export function moveActivityNavigatorField(delta: 1 | -1): boolean {
+  return navigatorApi?.moveField(delta) ?? false;
+}
+
+export function activateActivityNavigatorField(): boolean {
+  return navigatorApi?.activateField() ?? false;
+}
+
+export function confirmActivityNavigatorField(): boolean {
+  return navigatorApi?.confirmField() ?? false;
+}
+
+export function navigateActivityNavigatorSubSelection(delta: 1 | -1): boolean {
+  return navigatorApi?.navigateSubSelection(delta) ?? false;
 }
 
 export function exitActivityNavigator() {

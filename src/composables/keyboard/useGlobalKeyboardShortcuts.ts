@@ -77,7 +77,7 @@ const sequenceMap: Record<string, AppActionId> = {
 };
 
 const allSequences = [...Object.keys(singleKeyMap), ...Object.keys(sequenceMap)];
-const immediateModeSequences = new Set<string>(["ar", "pr"]);
+const immediateModeSequences = new Set<string>(["an", "pn"]);
 
 const sequencePrefixSet = (() => {
   const set = new Set<string>();
@@ -90,7 +90,8 @@ const sequencePrefixSet = (() => {
 })();
 
 const registeredHotkeys =
-  Array.from(new Set(allSequences.join("").split(""))).join(",") + ",up,down,esc,enter,return,num_enter,1,2,3,4,5,6,7,8,9";
+  Array.from(new Set(allSequences.join("").split(""))).join(",") +
+  ",up,down,left,right,space,esc,enter,return,num_enter,1,2,3,4,5,6,7,8,9";
 
 function normalizeKey(value: string | undefined): string {
   if (!value) return "";

@@ -3,6 +3,7 @@
 -->
 <template>
   <div class="table-container">
+    <span v-if="props.navigatorActive && !isMobile" class="kbd-nav-badge">NAV</span>
     <table class="full-width-table">
       <!-- 表头部分，可单独调整样式 -->
       <colgroup>
@@ -111,7 +112,7 @@
           >
             <!-- 单元格 -->
             <!-- 1 完成状态 -->
-            <td class="col-check">
+            <td :class="{ 'kbd-cell-active': props.navigatorActive && schedule.id === selectedRowId && keyboardCellOrder[keyboardCellIndex] === 'check' }" class="col-check">
               <n-checkbox
                 v-if="schedule.status !== 'cancelled'"
                 :size="isMobile ? 'small' : 'medium'"
@@ -133,6 +134,7 @@
             <!-- 2 开始时间 -->
             <td
               class="col-start"
+              :class="{ 'kbd-cell-active': props.navigatorActive && schedule.id === selectedRowId && keyboardCellOrder[keyboardCellIndex] === 'start' }"
               @click.stop="startEditing(schedule.id, 'start')"
               :title="editingRowId === schedule.id && editingField === 'start' ? '' : '单击编辑'"
             >
@@ -154,6 +156,7 @@
             <!-- 3 结束时间 -->
             <td
               class="col-end"
+              :class="{ 'kbd-cell-active': props.navigatorActive && schedule.id === selectedRowId && keyboardCellOrder[keyboardCellIndex] === 'done' }"
               @click.stop="startEditing(schedule.id, 'done')"
               :title="editingRowId === schedule.id && editingField === 'done' ? '' : '单击编辑'"
             >
@@ -175,7 +178,10 @@
             <!-- 4 时长 -->
             <td
               class="col-duration"
-              :class="{ 'is-empty-min': schedule.activityDueRange?.[1] === '' }"
+              :class="{
+                'is-empty-min': schedule.activityDueRange?.[1] === '',
+                'kbd-cell-active': props.navigatorActive && schedule.id === selectedRowId && keyboardCellOrder[keyboardCellIndex] === 'duration',
+              }"
               @click.stop="startEditing(schedule.id, 'duration')"
               :title="editingRowId === schedule.id && editingField === 'duration' ? '' : '单击编辑'"
             >
@@ -199,6 +205,7 @@
               class="col-intent"
               :class="{
                 'cloud-background': schedule.isUntaetigkeit === true,
+                'kbd-cell-active': props.navigatorActive && schedule.id === selectedRowId && keyboardCellOrder[keyboardCellIndex] === 'title',
               }"
               @click.stop="startEditing(schedule.id, 'title')"
               :title="editingRowId === schedule.id && editingField === 'title' ? '' : '单击编辑'"
@@ -255,6 +262,7 @@
             <!-- 6 地点 -->
             <td
               class="col-location"
+              :class="{ 'kbd-cell-active': props.navigatorActive && schedule.id === selectedRowId && keyboardCellOrder[keyboardCellIndex] === 'location' }"
               @click.stop="startEditing(schedule.id, 'location')"
               :title="editingRowId === schedule.id && editingField === 'location' ? '' : '单击编辑'"
             >
@@ -331,6 +339,15 @@ import { useActivityTagEditor } from "@/composables/activity/useActivityTagEdito
 import TagPickerPopover from "../TagSystem/TagPickerPopover.vue";
 import { useDevice } from "@/composables/platform/useDevice";
 
+const props = withDefaults(
+  defineProps<{
+    navigatorActive?: boolean;
+  }>(),
+  {
+    navigatorActive: false,
+  },
+);
+
 const dataStore = useDataStore();
 const { isMobile } = useDevice();
 const { activeId, selectedRowId, selectedActivityId, selectedTaskId, selectedTask, schedulesForCurrentView } = storeToRefs(dataStore);
@@ -343,6 +360,8 @@ const isViewDateToday = computed(() => dateService.isViewDateToday);
 const editingRowId = ref<number | null>(null);
 const editingField = ref<null | "title" | "start" | "done" | "duration" | "location">(null);
 const editingValue = ref("");
+const keyboardCellOrder = ["check", "start", "done", "duration", "title", "location"] as const;
+const keyboardCellIndex = ref<number>(keyboardCellOrder.indexOf("title"));
 const titleInputRef = ref<HTMLInputElement | null>(null);
 const startInputRef = ref<HTMLInputElement | null>(null);
 const doneInputRef = ref<HTMLInputElement | null>(null);
@@ -782,11 +801,54 @@ function startKeyboardEdit(field: "title" | "start" | "done" | "duration" | "loc
   const schedule = selectedSchedule.value;
   if (!schedule) return false;
   startEditing(schedule.id, field);
+  keyboardCellIndex.value = keyboardCellOrder.indexOf(field);
   return true;
+}
+
+function moveKeyboardCell(delta: 1 | -1): boolean {
+  if (!selectedSchedule.value) return false;
+  let next = keyboardCellIndex.value + delta;
+  if (next < 0) next = keyboardCellOrder.length - 1;
+  if (next >= keyboardCellOrder.length) next = 0;
+  keyboardCellIndex.value = next;
+  return true;
+}
+
+function activateKeyboardCell(): boolean {
+  const schedule = selectedSchedule.value;
+  if (!schedule) return false;
+  const cell = keyboardCellOrder[keyboardCellIndex.value];
+  if (!cell) return false;
+  if (cell === "check") {
+    if (schedule.status === "cancelled") {
+      handleUncancelSchedule(schedule.id);
+      return true;
+    }
+    handleCheckboxChange(schedule.id, schedule.status !== "done");
+    return true;
+  }
+  if (cell === "title" || cell === "start" || cell === "done" || cell === "duration" || cell === "location") {
+    startEditing(schedule.id, cell);
+    return true;
+  }
+  return false;
+}
+
+function confirmKeyboardAction(): boolean {
+  const schedule = selectedSchedule.value;
+  if (!schedule) return false;
+  if (editingRowId.value === schedule.id && editingField.value) {
+    saveEdit(schedule);
+    return true;
+  }
+  return false;
 }
 
 defineExpose({
   startKeyboardEdit,
+  moveKeyboardCell,
+  activateKeyboardCell,
+  confirmKeyboardAction,
 });
 </script>
 
@@ -795,6 +857,25 @@ defineExpose({
 .table-container {
   width: 100%;
   overflow-x: auto;
+  position: relative;
+}
+
+.kbd-nav-badge {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  font-size: 10px;
+  color: var(--color-text-secondary);
+  background: var(--color-background-light-transparent);
+  border-radius: 8px;
+  padding: 0 6px;
+  line-height: 16px;
+  z-index: 2;
+}
+
+.kbd-cell-active {
+  box-shadow: inset 0 0 0 1px var(--color-blue-light);
+  background-color: var(--color-blue-light-transparent);
 }
 
 /* 表格占满宽度 */

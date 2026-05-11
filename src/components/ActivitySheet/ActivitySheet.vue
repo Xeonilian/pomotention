@@ -436,6 +436,10 @@ onMounted(() => {
     enter: enterNavigatorMode,
     move: moveNavigator,
     pickByDigit: pickNavigatorDigit,
+    moveField: moveNavigatorField,
+    activateField: activateNavigatorField,
+    confirmField: confirmNavigatorField,
+    navigateSubSelection: () => false,
     exit: exitNavigatorMode,
     isActive: () => navigatorActive.value,
   });
@@ -492,6 +496,7 @@ const quadrantNeither = computed(() => filterActivitiesForQuadrantKey(quadrantPr
 
 const navigatorActive = ref(false);
 const navigatorCursor = ref(0);
+const navigatorFieldIndex = ref(0);
 
 const keyboardRowCandidates = computed(() => {
   const list: Activity[] = [];
@@ -535,6 +540,17 @@ const navigatorCurrentRowId = computed<number | null>(() => {
   return item?.id ?? null;
 });
 
+const navigatorCurrentFieldKey = computed<"title" | "dueDate" | "place" | "duration" | "scheduleTime" | "pomoEstimate" | null>(() => {
+  const rowActivityId = navigatorCurrentRowId.value;
+  if (rowActivityId == null) return null;
+  const activity = activityById.value.get(rowActivityId);
+  if (!activity) return null;
+  const fields = getNavigatorFieldsForActivity(activity);
+  if (!fields.length) return null;
+  const clamped = Math.max(0, Math.min(fields.length - 1, navigatorFieldIndex.value));
+  return fields[clamped] ?? null;
+});
+
 function focusNavigatorIndex(nextIndex: number): boolean {
   const list = keyboardRowCandidates.value;
   if (!list.length) return false;
@@ -551,6 +567,7 @@ function enterNavigatorMode(): boolean {
   const list = keyboardRowCandidates.value;
   if (!list.length) return false;
   navigatorActive.value = true;
+  navigatorFieldIndex.value = 0;
   const selectedId = sheetPrimaryActivityId.value;
   const initial = selectedId != null ? list.findIndex((item) => item.id === selectedId) : -1;
   return focusNavigatorIndex(initial >= 0 ? initial : 0);
@@ -577,6 +594,53 @@ function pickNavigatorDigit(digit: number): boolean {
 
 function exitNavigatorMode() {
   navigatorActive.value = false;
+}
+
+function getNavigatorFieldsForActivity(activity: Activity): Array<"title" | "dueDate" | "place" | "duration" | "scheduleTime" | "pomoEstimate"> {
+  if (activity.class === "T") return ["title", "dueDate", "pomoEstimate"];
+  if (activity.class === "S") return ["title", "scheduleTime", "duration", "place"];
+  return ["title"];
+}
+
+function moveNavigatorField(delta: 1 | -1): boolean {
+  if (!navigatorActive.value) return false;
+  const rowActivityId = sheetPrimaryActivityId.value;
+  if (rowActivityId == null) return false;
+  const activity = activityById.value.get(rowActivityId);
+  if (!activity) return false;
+  const fields = getNavigatorFieldsForActivity(activity);
+  if (!fields.length) return false;
+  let next = navigatorFieldIndex.value + delta;
+  if (next < 0) next = fields.length - 1;
+  if (next >= fields.length) next = 0;
+  navigatorFieldIndex.value = next;
+  return true;
+}
+
+function activateNavigatorField(): boolean {
+  if (!navigatorActive.value) return false;
+  const rowActivityId = sheetPrimaryActivityId.value;
+  if (rowActivityId == null) return false;
+  const activity = activityById.value.get(rowActivityId);
+  if (!activity) return false;
+  const fields = getNavigatorFieldsForActivity(activity);
+  if (!fields.length) return false;
+  const field = fields[Math.max(0, Math.min(fields.length - 1, navigatorFieldIndex.value))];
+  if (!field) return false;
+  return keyboardEditField(field);
+}
+
+function confirmNavigatorField(): boolean {
+  if (!navigatorActive.value) return false;
+  const activeEl = document.activeElement;
+  if (activeEl instanceof HTMLElement) {
+    const isInputLike = activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA" || activeEl.tagName === "SELECT";
+    if (isInputLike || activeEl.isContentEditable) {
+      activeEl.blur();
+      return true;
+    }
+  }
+  return false;
 }
 
 const noSelectedActivity = computed(() => selectedRowId.value == null && selectedActivityId.value == null && activeId.value == null);
@@ -690,6 +754,7 @@ provide(activityNavigatorInjectKey, {
   isActive: computed(() => navigatorActive.value),
   numberById: navigatorNumberById,
   currentRowId: navigatorCurrentRowId,
+  currentFieldKey: navigatorCurrentFieldKey,
 });
 
 // 错误提示弹窗相关

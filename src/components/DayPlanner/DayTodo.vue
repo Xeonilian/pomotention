@@ -3,6 +3,7 @@
 -->
 <template>
   <div class="table-container">
+    <span v-if="props.navigatorActive && !isMobile" class="kbd-nav-badge">NAV</span>
     <table class="full-width-table">
       <colgroup>
         <!-- 勾选 -->
@@ -162,7 +163,7 @@
           >
             <!-- 单元格 -->
             <!-- 1 完成状态 -->
-            <td class="col-check">
+            <td :class="{ 'kbd-cell-active': props.navigatorActive && todo.id === selectedRowId && keyboardCellOrder[keyboardCellIndex] === 'check' }" class="col-check">
               <n-checkbox
                 v-if="todo.status !== 'cancelled'"
                 :checked="todo.status === 'done'"
@@ -184,6 +185,7 @@
             <!-- 2 开始时间 -->
             <td
               class="col-start"
+              :class="{ 'kbd-cell-active': props.navigatorActive && todo.id === selectedRowId && keyboardCellOrder[keyboardCellIndex] === 'start' }"
               @click.stop="startEditing(todo.id, 'start')"
               :title="editingRowId === todo.id && editingField === 'start' ? '' : '单击编辑'"
             >
@@ -205,6 +207,7 @@
             <!-- 3 结束时间 -->
             <td
               class="col-end"
+              :class="{ 'kbd-cell-active': props.navigatorActive && todo.id === selectedRowId && keyboardCellOrder[keyboardCellIndex] === 'done' }"
               @click.stop="startEditing(todo.id, 'done')"
               :title="editingRowId === todo.id && editingField === 'done' ? '' : '单击编辑'"
             >
@@ -226,7 +229,10 @@
             <!-- 4 排序：点击弹出 emoji 选择，选后写 priority 并打上绑定的 tag -->
             <td
               class="col-rank"
-              :class="{ 'col-rank-disabled': todo.status === 'done' || todo.status === 'cancelled' }"
+              :class="{
+                'col-rank-disabled': todo.status === 'done' || todo.status === 'cancelled',
+                'kbd-cell-active': props.navigatorActive && todo.id === selectedRowId && keyboardCellOrder[keyboardCellIndex] === 'rank',
+              }"
               :title="todo.status === 'done' || todo.status === 'cancelled' ? '不能切换' : '单击选择分类'"
             >
               <n-popover
@@ -242,20 +248,30 @@
                   </span>
                 </template>
                 <div class="rank-emoji-options">
-                  <button type="button" class="rank-emoji-btn" title="清除当前优先级" @click.stop="applyPriorityAndTag(todo, 0)">⚪</button>
                   <button
                     type="button"
                     class="rank-emoji-btn"
+                    :class="{ 'rank-emoji-btn--active': rankKeyboardOptionIndex === 0 }"
+                    title="清除当前优先级"
+                    @click.stop="applyPriorityAndTag(todo, 0)"
+                  >
+                    ⚪
+                  </button>
+                  <button
+                    type="button"
+                    class="rank-emoji-btn"
+                    :class="{ 'rank-emoji-btn--active': rankKeyboardOptionIndex === 1 }"
                     title="从 1 起第一个可用数字"
                     @click.stop="applyFirstAvailablePriority(todo)"
                   >
                     1️⃣
                   </button>
                   <button
-                    v-for="cat in priorityCategoriesForRankPopover"
+                    v-for="(cat, idx) in priorityCategoriesForRankPopover"
                     :key="cat.priority"
                     type="button"
                     class="rank-emoji-btn"
+                    :class="{ 'rank-emoji-btn--active': rankKeyboardOptionIndex === idx + 2 }"
                     @click.stop="applyPriorityAndTag(todo, cat.priority)"
                   >
                     {{ cat.emoji }}
@@ -267,6 +283,7 @@
             <!-- 5 意图 -->
             <td
               class="col-intent"
+              :class="{ 'kbd-cell-active': props.navigatorActive && todo.id === selectedRowId && keyboardCellOrder[keyboardCellIndex] === 'title' }"
               @click.stop="startEditing(todo.id, 'title')"
               :title="editingRowId === todo.id && editingField === 'title' ? '' : '单击编辑'"
             >
@@ -310,7 +327,7 @@
             </td>
 
             <!-- 6 果果 -->
-            <td class="col-fruit">
+            <td :class="{ 'kbd-cell-active': props.navigatorActive && todo.id === selectedRowId && keyboardCellOrder[keyboardCellIndex] === 'fruit' }" class="col-fruit">
               <div class="pomo-container">
                 <!-- 将所有番茄钟内容包装在一个容器中 -->
                 <div class="pomo-groups">
@@ -503,6 +520,15 @@ import {
   totalSlots,
 } from "@/services/timer/realPomoState";
 
+const props = withDefaults(
+  defineProps<{
+    navigatorActive?: boolean;
+  }>(),
+  {
+    navigatorActive: false,
+  },
+);
+
 const dataStore = useDataStore();
 const { isMobile } = useDevice();
 
@@ -607,7 +633,10 @@ const doneInputRef = ref<HTMLInputElement | null>(null);
 // 排序列：emoji 弹窗与绑定设置
 const rankPopoverTodoId = ref<number | null>(null);
 let rankPopoverTimer: number | null = null; // 自动关闭排序弹窗的定时器
+const rankKeyboardOptionIndex = ref(0);
 const showPriorityBindingModal = ref(false);
+const keyboardCellOrder = ["check", "start", "done", "rank", "title", "fruit"] as const;
+const keyboardCellIndex = ref<number>(keyboardCellOrder.indexOf("title"));
 
 // 点击 popover 外视为放弃，关闭排序选择
 function handleRankPopoverClickOutside(e: MouseEvent | TouchEvent) {
@@ -796,6 +825,7 @@ function openRankPopoverIfActive(todo: Todo) {
   if (todo.status === "done" || todo.status === "cancelled") return;
   // 立刻打开弹窗
   rankPopoverTodoId.value = todo.id;
+  rankKeyboardOptionIndex.value = 0;
   // 设置 3000ms 后自动关闭
   rankPopoverTimer = window.setTimeout(() => {
     // 只在当前仍然是这个 todo 时才关闭，防止误关其他项
@@ -834,6 +864,48 @@ function getFirstAvailablePriority(todos: Todo[], current: Todo): number {
 function applyFirstAvailablePriority(todo: Todo) {
   const desired = getFirstAvailablePriority(todosForCurrentViewWithTaskRecords.value, todo);
   applyPriorityAndTag(todo, desired);
+}
+
+type RankKeyboardOption =
+  | { kind: "clear" }
+  | { kind: "firstAvailable" }
+  | { kind: "priority"; priority: number };
+
+const rankKeyboardOptions = computed<RankKeyboardOption[]>(() => [
+  { kind: "clear" },
+  { kind: "firstAvailable" },
+  ...priorityCategoriesForRankPopover.value.map((cat) => ({ kind: "priority" as const, priority: cat.priority as number })),
+]);
+
+function applyRankKeyboardOption(todo: Todo): boolean {
+  const options = rankKeyboardOptions.value;
+  if (options.length === 0) return false;
+  const index = Math.max(0, Math.min(options.length - 1, rankKeyboardOptionIndex.value));
+  const option = options[index];
+  if (!option) return false;
+  if (option.kind === "clear") {
+    applyPriorityAndTag(todo, 0);
+    return true;
+  }
+  if (option.kind === "firstAvailable") {
+    applyFirstAvailablePriority(todo);
+    return true;
+  }
+  applyPriorityAndTag(todo, option.priority);
+  return true;
+}
+
+function moveRankKeyboardOption(delta: 1 | -1): boolean {
+  const todo = selectedTodo.value;
+  if (!todo) return false;
+  if (rankPopoverTodoId.value !== todo.id) return false;
+  const options = rankKeyboardOptions.value;
+  if (options.length === 0) return false;
+  let next = rankKeyboardOptionIndex.value + delta;
+  if (next < 0) next = options.length - 1;
+  if (next >= options.length) next = 0;
+  rankKeyboardOptionIndex.value = next;
+  return true;
 }
 
 // 排序列：选择 emoji 后写入 priority 并打上绑定的 tag
@@ -1613,15 +1685,71 @@ function handleTogglePomoType() {
   }
 }
 
+function moveKeyboardCell(delta: 1 | -1): boolean {
+  if (!selectedTodo.value) return false;
+  let next = keyboardCellIndex.value + delta;
+  if (next < 0) next = keyboardCellOrder.length - 1;
+  if (next >= keyboardCellOrder.length) next = 0;
+  keyboardCellIndex.value = next;
+  return true;
+}
+
+function activateKeyboardCell(): boolean {
+  const todo = selectedTodo.value;
+  if (!todo) return false;
+  const cell = keyboardCellOrder[keyboardCellIndex.value];
+  if (!cell) return false;
+  if (cell === "check") {
+    if (todo.status === "cancelled") {
+      handleUncancelTodo(todo.id);
+      return true;
+    }
+    handleCheckboxChange(todo.id, todo.status !== "done");
+    return true;
+  }
+  if (cell === "start" || cell === "done" || cell === "title") {
+    startEditing(todo.id, cell);
+    return true;
+  }
+  if (cell === "rank") {
+    openRankPopoverIfActive(todo);
+    return true;
+  }
+  if (cell === "fruit") {
+    if (!canTogglePomoType.value) return false;
+    handleTogglePomoType();
+    return true;
+  }
+  return false;
+}
+
+function confirmKeyboardAction(): boolean {
+  const todo = selectedTodo.value;
+  if (!todo) return false;
+  if (editingRowId.value === todo.id && editingField.value) {
+    saveEdit(todo);
+    return true;
+  }
+  if (rankPopoverTodoId.value === todo.id) {
+    return applyRankKeyboardOption(todo);
+  }
+  return false;
+}
+
 function startKeyboardEdit(field: "title" | "start" | "done"): boolean {
   const todo = selectedTodo.value;
   if (!todo) return false;
   startEditing(todo.id, field);
+  keyboardCellIndex.value = keyboardCellOrder.indexOf(field);
   return true;
 }
 
 defineExpose({
   startKeyboardEdit,
+  moveKeyboardCell,
+  activateKeyboardCell,
+  confirmKeyboardAction,
+  moveRankKeyboardOption,
 });
 </script>
 
@@ -1630,6 +1758,25 @@ defineExpose({
 .table-container {
   width: 100%;
   overflow-x: auto;
+  position: relative;
+}
+
+.kbd-nav-badge {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  font-size: 10px;
+  color: var(--color-text-secondary);
+  background: var(--color-background-light-transparent);
+  border-radius: 8px;
+  padding: 0 6px;
+  line-height: 16px;
+  z-index: 2;
+}
+
+.kbd-cell-active {
+  box-shadow: inset 0 0 0 1px var(--color-blue-light);
+  background-color: var(--color-blue-light-transparent);
 }
 
 /* 表格占满宽度 */
@@ -2153,6 +2300,11 @@ td.col-check {
 }
 .rank-emoji-btn:hover {
   background: var(--n-color-hover);
+}
+
+.rank-emoji-btn--active {
+  border-color: var(--color-blue);
+  box-shadow: 0 0 0 1px var(--color-blue) inset;
 }
 
 /* 排序绑定标签弹层 */

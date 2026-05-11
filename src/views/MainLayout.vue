@@ -256,10 +256,14 @@ import { syncAll } from "@/services/sync";
 import { createTouchScheduledSingleAndDouble } from "@/composables/platform/useTouchScheduledSingleAndDouble";
 import { createAppActionRegistry, dispatchAppAction, type AppActionId } from "@/actions/appActions";
 import {
+  activateActivityNavigatorField,
+  confirmActivityNavigatorField,
   enterActivityNavigator,
   exitActivityNavigator,
   isActivityNavigatorActive,
   moveActivityNavigator,
+  moveActivityNavigatorField,
+  navigateActivityNavigatorSubSelection,
   pickActivityRowByDigit,
 } from "@/composables/keyboard/useActivityKeyboardNavigator";
 import { runActivityKeyboardCommand } from "@/composables/keyboard/useActivityKeyboardCommands";
@@ -268,10 +272,14 @@ import { runTaskKeyboardCommand } from "@/composables/keyboard/useTaskKeyboardCo
 import { runPlannerEditFieldCommand, runPlannerKeyboardCommand } from "@/composables/keyboard/usePlannerKeyboardCommands";
 import { runTimetableKeyboardCommand } from "@/composables/keyboard/useTimetableKeyboardCommands";
 import {
+  activatePlannerNavigatorField,
+  confirmPlannerNavigatorField,
   enterPlannerNavigator,
   exitPlannerNavigator,
   isPlannerNavigatorActive,
   movePlannerNavigator,
+  movePlannerNavigatorField,
+  navigatePlannerNavigatorSubSelection,
   pickPlannerRowByDigit,
 } from "@/composables/keyboard/usePlannerKeyboardNavigator";
 
@@ -559,11 +567,15 @@ const shortcuts = useGlobalKeyboardShortcuts({
   isModeActive: () => isActivityNavigatorActive() || isPlannerNavigatorActive(),
   onModeKey: (key) => {
     if (isActivityNavigatorActive()) {
+      if (key === "left") return moveActivityNavigatorField(-1);
+      if (key === "right") return moveActivityNavigatorField(1);
+      if (key === "up" && navigateActivityNavigatorSubSelection(-1)) return true;
+      if (key === "down" && navigateActivityNavigatorSubSelection(1)) return true;
       if (key === "up") return moveActivityNavigator(-1);
       if (key === "down") return moveActivityNavigator(1);
+      if (key === "space") return activateActivityNavigatorField();
       if (key === "enter" || key === "return") {
-        exitActivityNavigator();
-        return true;
+        return confirmActivityNavigatorField();
       }
       if (key === "esc" || key === "escape") {
         exitActivityNavigator();
@@ -573,11 +585,15 @@ const shortcuts = useGlobalKeyboardShortcuts({
       return false;
     }
     if (isPlannerNavigatorActive()) {
+      if (key === "left") return movePlannerNavigatorField(-1);
+      if (key === "right") return movePlannerNavigatorField(1);
+      if (key === "up" && navigatePlannerNavigatorSubSelection(-1)) return true;
+      if (key === "down" && navigatePlannerNavigatorSubSelection(1)) return true;
       if (key === "up") return movePlannerNavigator(-1);
       if (key === "down") return movePlannerNavigator(1);
+      if (key === "space") return activatePlannerNavigatorField();
       if (key === "enter" || key === "return") {
-        exitPlannerNavigator();
-        return true;
+        return confirmPlannerNavigatorField();
       }
       if (key === "esc" || key === "escape") {
         exitPlannerNavigator();

@@ -34,6 +34,7 @@
         :class="{
           'force-hover': isHoveredRow,
           'child-activity': item.parentId,
+          'navigator-cell-active': isNavigatorCurrent && navigatorCurrentField === 'title',
         }"
         class="input-focus-none activity-field-title"
       >
@@ -161,7 +162,7 @@
         @focus="notifyRowFocused(item.id)"
         @blur="onSectionFieldBlur"
         placeholder="地点"
-        :class="{ 'force-hover': isHoveredRow }"
+        :class="{ 'force-hover': isHoveredRow, 'navigator-cell-active': isNavigatorCurrent && navigatorCurrentField === 'place' }"
         @update:value="
           () => {
             item.synced = false;
@@ -195,6 +196,7 @@
           'pomo-green': item.pomoType === '🍒',
           'input-center': true,
           'force-hover': isHoveredRow,
+          'navigator-cell-active': isNavigatorCurrent && navigatorCurrentField === 'pomoEstimate',
         }"
       />
       <n-input
@@ -213,7 +215,7 @@
         title="持续时间(分钟)"
         placeholder="min"
         class="input-center input-min input-focus-none activity-field-duration"
-        :class="{ 'force-hover': isHoveredRow }"
+        :class="{ 'force-hover': isHoveredRow, 'navigator-cell-active': isNavigatorCurrent && navigatorCurrentField === 'duration' }"
       />
 
       <!-- 日期选择 -->
@@ -227,7 +229,7 @@
         @focus="notifyRowFocused(item.id)"
         @blur="onSectionFieldBlur"
         title="死线日期"
-        :class="getCountdownClass(item.dueDate)"
+        :class="[getCountdownClass(item.dueDate), { 'navigator-cell-active': isNavigatorCurrent && navigatorCurrentField === 'dueDate' }]"
         placeholder="日期"
         @update:value="
           () => {
@@ -254,7 +256,7 @@
         @focus="notifyRowFocused(item.id)"
         @blur="onSectionFieldBlur"
         title="约定时间"
-        :class="getCountdownClass(item.dueRange && item.dueRange[0])"
+        :class="[getCountdownClass(item.dueRange && item.dueRange[0]), { 'navigator-cell-active': isNavigatorCurrent && navigatorCurrentField === 'scheduleTime' }]"
         placeholder="时间"
         class="input-focus-none activity-field-schedule-time"
       />
@@ -535,6 +537,7 @@ const navigatorNumber = computed(() => navigatorCtx?.numberById.value[props.item
 const showNavigatorNumber = computed(() => Boolean(navigatorCtx?.isActive.value) && navigatorNumber.value != null);
 const isNavigatorCurrent = computed(() => navigatorCtx?.currentRowId.value === props.item.id);
 const isNavigatorModeActive = computed(() => Boolean(navigatorCtx?.isActive.value));
+const navigatorCurrentField = computed(() => navigatorCtx?.currentFieldKey.value ?? null);
 
 const pomoDisplayValue = computed(() => {
   const item = props.item;
@@ -892,6 +895,12 @@ function handlePomoInputTouchCancel() {
 }
 .highlight-line :deep(.n-date-picker .n-input) {
   background: transparent !important;
+}
+
+:deep(.navigator-cell-active .n-input-wrapper),
+:deep(.navigator-cell-active.n-date-picker .n-input-wrapper) {
+  box-shadow: inset 0 0 0 1px var(--color-blue-light);
+  background-color: var(--color-blue-light-transparent);
 }
 
 .input-focus-none :deep(.n-input) {
