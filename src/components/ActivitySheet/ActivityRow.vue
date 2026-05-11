@@ -229,7 +229,7 @@
         @focus="notifyRowFocused(item.id)"
         @blur="onSectionFieldBlur"
         title="死线日期"
-        :class="[getCountdownClass(item.dueDate), { 'navigator-cell-active': isNavigatorCurrent && navigatorCurrentField === 'dueDate' }]"
+        :class="[{ 'navigator-cell-active': isNavigatorCurrent && navigatorCurrentField === 'dueDate' }]"
         placeholder="日期"
         @update:value="
           () => {
@@ -256,10 +256,7 @@
         @focus="notifyRowFocused(item.id)"
         @blur="onSectionFieldBlur"
         title="约定时间"
-        :class="[
-          getCountdownClass(item.dueRange && item.dueRange[0]),
-          { 'navigator-cell-active': isNavigatorCurrent && navigatorCurrentField === 'scheduleTime' },
-        ]"
+        :class="[{ 'navigator-cell-active': isNavigatorCurrent && navigatorCurrentField === 'scheduleTime' }]"
         placeholder="时间"
         class="input-focus-none activity-field-schedule-time"
       />
@@ -334,7 +331,6 @@ const props = defineProps<{
   hasChildrenFlag: boolean;
   isCollapsed: boolean;
   showTagStrip: boolean;
-  getCountdownClass: (dueDate: number | undefined | null) => string;
   dragAreaTitle: string;
 }>();
 
@@ -834,28 +830,6 @@ function handlePomoInputTouchCancel() {
   font-size: 12px;
 }
 
-.countdown-0 :deep(.n-input) {
-  background: var(--color-red-light-transparent);
-  --n-box-shadow-focus: none !important;
-  --n-border-hover: 1px solid var(--color-blue) !important;
-}
-
-.countdown-1 :deep(.n-input) {
-  background: var(--color-background-light-transparent);
-  --n-box-shadow-focus: none !important;
-  --n-border-hover: 1px solid var(--color-blue) !important;
-}
-.countdown-2 :deep(.n-input) {
-  background: var(--color-background-transparent);
-  --n-box-shadow-focus: none !important;
-  --n-border-hover: 1px solid var(--color-blue) !important;
-}
-
-.countdown-boom :deep(.n-input) {
-  background: var(--color-blue-light-transparent);
-  --n-box-shadow-focus: none !important;
-  --n-border-hover: 1px solid var(--color-blue) !important;
-}
 .pomo-input :deep(.n-input__placeholder) {
   opacity: 0.45;
   font-size: 10px;

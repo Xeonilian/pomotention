@@ -29,7 +29,6 @@
           <ActivitySection
             :filterOptions="filterOptions"
             :displaySheet="filteredBySection(section)"
-            :getCountdownClass="getCountdownClass"
             :activityId="selectedActivityId"
             :currentFilter="section.filterKey"
             :isAddButton="section.id === 1 && sections.length < 6"
@@ -54,7 +53,6 @@
           header-only
           :filter-options="filterOptions"
           :display-sheet="[]"
-          :get-countdown-class="getCountdownClass"
           :activity-id="selectedActivityId"
           :current-filter="firstKanbanSection?.filterKey ?? 'all'"
           :is-add-button="false"
@@ -82,7 +80,6 @@
             list-only
             :filter-options="filterOptions"
             :display-sheet="quadrantImportantOnly"
-            :get-countdown-class="getCountdownClass"
             :activity-id="selectedActivityId"
             :current-filter="firstKanbanSection?.filterKey ?? 'all'"
             :is-add-button="false"
@@ -103,7 +100,6 @@
             list-only
             :filter-options="filterOptions"
             :display-sheet="quadrantUrgentImportant"
-            :get-countdown-class="getCountdownClass"
             :activity-id="selectedActivityId"
             :current-filter="firstKanbanSection?.filterKey ?? 'all'"
             :is-add-button="false"
@@ -124,7 +120,6 @@
             list-only
             :filter-options="filterOptions"
             :display-sheet="quadrantUrgentOnly"
-            :get-countdown-class="getCountdownClass"
             :activity-id="selectedActivityId"
             :current-filter="firstKanbanSection?.filterKey ?? 'all'"
             :is-add-button="false"
@@ -145,7 +140,6 @@
             list-only
             :filter-options="filterOptions"
             :display-sheet="quadrantNeither"
-            :get-countdown-class="getCountdownClass"
             :activity-id="selectedActivityId"
             :current-filter="firstKanbanSection?.filterKey ?? 'all'"
             :is-add-button="false"
@@ -401,7 +395,7 @@ let quadrantDueUrgentInterval: ReturnType<typeof setInterval> | null = null;
 let unregisterNavigatorApi: (() => void) | null = null;
 let unregisterActivityCommandApi: (() => void) | null = null;
 
-/** 四象限：按主到期日同步 urgent / Later（过期进 neither），口径与 ActivityRow + getCountdownClass 一致 */
+/** 四象限：按主到期日同步 urgent / Later（过期进 neither）*/
 function runQuadrantDueUrgentSync() {
   if (!settingStore.settings.kanbanQuadrantMode) return;
   syncQuadrantTagsFromPrimaryDue(dataStore, activeActivities.value);
@@ -596,7 +590,9 @@ function exitNavigatorMode() {
   navigatorActive.value = false;
 }
 
-function getNavigatorFieldsForActivity(activity: Activity): Array<"title" | "dueDate" | "place" | "duration" | "scheduleTime" | "pomoEstimate"> {
+function getNavigatorFieldsForActivity(
+  activity: Activity,
+): Array<"title" | "dueDate" | "place" | "duration" | "scheduleTime" | "pomoEstimate"> {
   // 按 ActivityRow 实际从左到右的可编辑列顺序导航
   if (activity.class === "T") return ["title", "pomoEstimate", "dueDate"];
   if (activity.class === "S") return ["title", "place", "duration", "scheduleTime"];
@@ -1012,22 +1008,6 @@ function createChildActivity() {
 // 恢复选中活动的子活动
 function increaseChildActivity() {
   emit("increase-child-activity", activeId.value || selectedActivityId.value || null);
-}
-
-// 根据截止日期计算倒计时样式类名
-function getCountdownClass(dueDate: number | undefined | null): string {
-  if (!dueDate) return "";
-
-  const now = new Date();
-  const due = new Date(dueDate);
-  due.setHours(0, 0, 0, 0);
-  const diff = Math.ceil((due.getTime() - now.setHours(0, 0, 0, 0)) / 86400000);
-
-  if (diff === 0) return "countdown-0"; // 今日到期
-  if (diff === 1) return "countdown-1"; // 明日到期
-  if (diff === 2) return "countdown-2"; // 后天到期
-  if (diff < 0) return "countdown-boom"; // 已过期
-  return "";
 }
 </script>
 
