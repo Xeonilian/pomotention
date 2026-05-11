@@ -18,7 +18,7 @@ import {
 } from "@vicons/fluent";
 import { useDevice } from "@/composables/platform/useDevice";
 
-type ViewKey = "ontop" | "pomodoro" | "schedule" | "task" | "planner" | "activity"; //| "ai"
+type ViewKey = "ontop" | "pomodoro" | "timetable" | "task" | "planner" | "activity"; //| "ai"
 
 export function useButtonStyle() {
   // const timerStore = useTimerStore();
@@ -28,7 +28,7 @@ export function useButtonStyle() {
   const buttonStates = ref<Record<ViewKey, boolean>>({
     ontop: false,
     pomodoro: false,
-    schedule: false,
+    timetable: false,
     planner: false,
     task: false,
     activity: false,
@@ -54,7 +54,7 @@ export function useButtonStyle() {
 
   const updateButtonStates = () => {
     buttonStates.value.pomodoro = settingStore.settings.showPomodoro;
-    buttonStates.value.schedule = settingStore.settings.showSchedule;
+    buttonStates.value.timetable = settingStore.settings.showTimetable;
     buttonStates.value.planner = settingStore.settings.showPlanner;
     buttonStates.value.task = settingStore.settings.showTask;
     buttonStates.value.activity = settingStore.settings.showActivity;
@@ -65,7 +65,7 @@ export function useButtonStyle() {
   const viewControls = computed(() => [
     { key: "ontop", icon: Pin24Regular, title: "番茄时钟置顶", show: isTauri() },
     { key: "pomodoro", icon: Timer24Regular, title: "切换番茄钟视图", show: settingStore.settings.showPomodoro },
-    { key: "schedule", icon: Timeline20Regular, title: "切换日程视图", show: settingStore.settings.showSchedule },
+    { key: "timetable", icon: Timeline20Regular, title: "切换日程视图", show: settingStore.settings.showTimetable },
     { key: "planner", icon: TasksApp20Regular, title: "切换计划视图", show: settingStore.settings.showPlanner },
     { key: "task", icon: CalligraphyPen20Regular, title: "切换执行视图", show: settingStore.settings.showTask },
     { key: "activity", icon: BookLetter20Regular, title: "切换活动视图", show: settingStore.settings.showActivity },
@@ -73,7 +73,7 @@ export function useButtonStyle() {
   ]);
 
   // 切换设置面板显示状态
-  function toggleSettingPanel(panel: "schedule" | "activity" | "task" | "today" | "pomodoro" | "planner") {
+  function toggleSettingPanel(panel: "timetable" | "activity" | "task" | "today" | "pomodoro" | "planner") {
     //| "ai"
     const toKey = (p: string) => ("show" + p.charAt(0).toUpperCase() + p.slice(1)) as keyof typeof settingStore.settings;
     const key = toKey(panel);
@@ -92,7 +92,7 @@ export function useButtonStyle() {
     } else {
       // 移动端竖屏交互规则：
       // - 点击 activity：只显示 activity；再次点击恢复进入前的显示状态
-      // - 点击 schedule：仅在不显示 activity 时才允许切换 schedule
+      // - 点击 timetable：仅在不显示 activity 时才允许切换 timetable
       const next = !settingStore.settings[key];
       // @ts-ignore
       settingStore.settings[key] = next;
@@ -101,18 +101,18 @@ export function useButtonStyle() {
         // 打开面板时的逻辑
         if (panel === "activity") {
           // Activity 打开时，其他全部关闭
-          settingStore.settings.showSchedule = false;
+          settingStore.settings.showTimetable = false;
           settingStore.settings.showPlanner = false;
           settingStore.settings.showTask = false;
-        } else if (panel === "schedule") {
+        } else if (panel === "timetable") {
           settingStore.settings.showPlanner = true;
           settingStore.settings.showActivity = false;
         } else if (panel === "planner") {
-          settingStore.settings.showSchedule = false;
+          settingStore.settings.showTimetable = false;
           settingStore.settings.showTask = true;
           settingStore.settings.showActivity = false;
         } else if (panel === "task") {
-          settingStore.settings.showSchedule = false;
+          settingStore.settings.showTimetable = false;
           settingStore.settings.showActivity = false;
         } else {
           // 其他面板打开时，只关闭 activity
@@ -120,10 +120,10 @@ export function useButtonStyle() {
         }
       } else {
         // 关闭面板时的逻辑
-        const { showActivity, showPlanner, showTask, showSchedule } = settingStore.settings;
+        const { showActivity, showPlanner, showTask, showTimetable } = settingStore.settings;
 
         // 检查是否所有面板都关闭了
-        const allClosed = !showActivity && !showPlanner && !showTask && !showSchedule;
+        const allClosed = !showActivity && !showPlanner && !showTask && !showTimetable;
 
         if (allClosed) {
           // 如果全关了，默认打开 planner
@@ -142,7 +142,7 @@ export function useButtonStyle() {
   // 监听配置变化更新按钮样式
   watch(
     () => [
-      settingStore.settings.showSchedule,
+      settingStore.settings.showTimetable,
       settingStore.settings.showPlanner,
       settingStore.settings.showTask,
       settingStore.settings.showActivity,

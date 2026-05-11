@@ -218,7 +218,7 @@ const restoreBodyScroll = () => {
 };
 
 const enablePseudoFullscreen = () => {
-  settingStore.settings.showSchedule = false;
+  settingStore.settings.showTimetable = false;
   if (isPseudoFullscreen.value) return;
   isPseudoFullscreen.value = true;
   isTaskContainerFullscreen.value = true;
@@ -358,8 +358,7 @@ const formatTime = (timestamp: number) => {
   const date = new Date(timestamp);
   if (isNaN(date.getTime())) return "--:--";
   const now = new Date();
-  const sameDay =
-    date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth() && date.getDate() === now.getDate();
+  const sameDay = date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth() && date.getDate() === now.getDate();
   if (sameDay) {
     return date.toLocaleString("zh-CN", { hour: "2-digit", minute: "2-digit" });
   }
@@ -423,7 +422,7 @@ const checkWidth = () => {
   const containerWidth = headerContainerRef.value.clientWidth;
 
   // 当宽度小于第一个值时，标签 displayLength 变为 2
-  tagDisplayLength.value = isMobile.value && settingStore.settings.showSchedule ? 1 : containerWidth < TAG_COLLAPSE_BREAKPOINT ? 2 : null;
+  tagDisplayLength.value = isMobile.value && settingStore.settings.showTimetable ? 1 : containerWidth < TAG_COLLAPSE_BREAKPOINT ? 2 : null;
 };
 
 const activeTimelinePopoverRecordId = ref<number | null>(null);

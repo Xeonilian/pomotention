@@ -32,7 +32,7 @@ export interface GlobalSettings {
   /** 四象限格子标题（可编辑） */
   kanbanQuadrantUi: KanbanQuadrantUiLabels;
   showPomodoro: boolean;
-  showSchedule: boolean;
+  showTimetable: boolean;
   showPlanner: boolean;
   showTask: boolean;
   showActivity: boolean;
@@ -97,7 +97,7 @@ const defaultSettings: GlobalSettings = {
   kanbanQuadrantSnapshot: null,
   kanbanQuadrantUi: { ...DEFAULT_KANBAN_QUADRANT_UI_LABELS },
   showPomodoro: isMobile.value ? false : true,
-  showSchedule: isMobile.value ? false : true,
+  showTimetable: isMobile.value ? false : true,
   showPlanner: true,
   showTask: true,
   showActivity: isMobile.value ? false : true,

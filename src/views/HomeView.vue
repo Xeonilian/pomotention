@@ -8,13 +8,13 @@
   <div class="home-root" :class="{ 'home-root--activity-only-mobile': activityOnlyMobile }" :style="rootCssVars">
     <div class="home-content">
       <!-- 左侧面板 (日程表) -->
-      <div v-if="settingStore.settings.showSchedule" class="left" :style="{ width: leftWidth + 'px' }">
+      <div v-if="settingStore.settings.showTimetable" class="left" :style="{ width: leftWidth + 'px' }">
         <TimeTable @timetable-edit="onTimetableEdit" />
       </div>
 
       <!-- 左侧面板调整大小手柄 -->
       <div
-        v-if="settingStore.settings.showSchedule"
+        v-if="settingStore.settings.showTimetable"
         class="resize-handle-horizontal"
         style="touch-action: none"
         @pointerdown="startLeftResize"
@@ -24,7 +24,7 @@
       <div
         class="middle"
         :class="{
-          'middle-alone': !settingStore.settings.showSchedule && !settingStore.settings.showActivity && !settingStore.settings.showAi,
+          'middle-alone': !settingStore.settings.showTimetable && !settingStore.settings.showActivity && !settingStore.settings.showAi,
           'middle--landscape-fallback': isMobile && isLandscapeViewport,
         }"
       >
@@ -46,7 +46,7 @@
                 <template v-if="settingStore.settings.viewSet !== 'year'">
                   <span @click="onYearJump" class="day-status" title="进入年视图">
                     {{
-                      settingStore.settings.showSchedule && isMobile
+                      settingStore.settings.showTimetable && isMobile
                         ? ""
                         : settingStore.settings.viewSet === "month" || settingStore.settings.viewSet === "week"
                           ? dateService.displayYearInfo
@@ -1546,9 +1546,9 @@ function onTimetableEdit(editing: boolean) {
 
 // 桌面端：通过按钮/快捷键关闭日程栏时，重置到常规宽度，避免下次打开仍保持编辑态宽度
 watch(
-  () => settingStore.settings.showSchedule,
-  (showSchedule) => {
-    if (isMobile.value || showSchedule) return;
+  () => settingStore.settings.showTimetable,
+  (showTimetable) => {
+    if (isMobile.value || showTimetable) return;
     timetableLeftWidthBeforeEdit.value = null;
     leftWidth.value = TIMETABLE_LEFT_NORMAL_WIDTH_DESKTOP;
   },

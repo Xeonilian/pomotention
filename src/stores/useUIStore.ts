@@ -8,7 +8,7 @@ type PanelKey = "schedule" | "activity" | "task" | "today" | "pomodoro";
 
 export const useUIStore = defineStore("uiStore", () => {
   // 定义各种面板的显示状态，初始值可以根据你的需求设定
-  const showSchedulePanel = ref(true); // 对应 HomeView 的左侧面板
+  const showTimetablePanel = ref(true); // 对应 HomeView 的左侧面板
   const showActivityPanel = ref(true); // 对应 HomeView 的右侧面板
   const showTaskPanel = ref(true); // 对应 HomeView 的任务面板 (假设在中间底部)
   const showPlannerPanel = ref(true); // 对应 HomeView 的今日视图 (假设在中间顶部)
@@ -21,7 +21,7 @@ export const useUIStore = defineStore("uiStore", () => {
   function togglePanel(panelKey: PanelKey) {
     switch (panelKey) {
       case "schedule":
-        showSchedulePanel.value = !showSchedulePanel.value;
+        showTimetablePanel.value = !showTimetablePanel.value;
         break;
       case "activity":
         showActivityPanel.value = !showActivityPanel.value;
@@ -38,15 +38,13 @@ export const useUIStore = defineStore("uiStore", () => {
 
       default:
         // 如果传入了未知的键，发出警告
-        console.warn(
-          `Unknown panel key received by useUIStore.togglePanel: ${panelKey}`
-        );
+        console.warn(`Unknown panel key received by useUIStore.togglePanel: ${panelKey}`);
     }
   }
 
   return {
     // 暴露状态
-    showSchedulePanel,
+    showTimetablePanel,
     showActivityPanel,
     showTaskPanel,
     showPlannerPanel,
