@@ -17,21 +17,21 @@ import { supabase, isSupabaseEnabled } from "@/core/services/supabase";
 import { useDataStore } from "@/stores/useDataStore";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useSyncStore } from "@/stores/useSyncStore";
-import {
-  cleanupSyncLifecycle,
-  subscribeAuthStateChanges,
-  teardownAuthSubscription,
-} from "@/core/auth/signedInSessionLifecycle";
+import { cleanupSyncLifecycle, subscribeAuthStateChanges, teardownAuthSubscription } from "@/core/auth/signedInSessionLifecycle";
 
-import UpdateManager from "./components/UpdateManager.vue";
-import PwaInstallBanner from "./components/PwaInstallBanner.vue";
-import PwaSplashScreen from "./components/PwaSplashScreen.vue";
-import PwaUpdateNotifier from "./components/PwaUpdateNotifier.vue";
+import UpdateManager from "./components/platform/UpdateManager.vue";
+import PwaInstallBanner from "./components/platform/PwaInstallBanner.vue";
+import PwaSplashScreen from "./components/platform/PwaSplashScreen.vue";
+import PwaUpdateNotifier from "./components/platform/PwaUpdateNotifier.vue";
 import { useTimerStore } from "@/stores/useTimerStore";
 import { resumeSharedAudioAfterForegroundAsync, prefetchSoundAssets, prefetchWhiteNoiseForSelection } from "@/core/sounds";
 import { bootMark } from "@/bootTiming";
 
-const shouldLogAppDebug = ["1", "true"].includes(String(import.meta.env.VITE_APP_DEBUG_LOG ?? "").trim().toLowerCase());
+const shouldLogAppDebug = ["1", "true"].includes(
+  String(import.meta.env.VITE_APP_DEBUG_LOG ?? "")
+    .trim()
+    .toLowerCase(),
+);
 function appDebugLog(...args: unknown[]) {
   if (!shouldLogAppDebug) return;
   console.log(...args);

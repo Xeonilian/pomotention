@@ -294,7 +294,7 @@ import {
   DatabasePerson20Regular,
 } from "@vicons/fluent";
 import PomotentionTimer from "@/components/PomotentionTimer/PomotentionTimer.vue";
-import DatabaseTransferDialog from "@/components/DatabaseTransferDialog.vue";
+import DatabaseTransferDialog from "@/components/data/DatabaseTransferDialog.vue";
 
 hljs.registerLanguage("javascript", javascript);
 hljs.registerLanguage("typescript", typescript);
@@ -536,7 +536,7 @@ function handleMenuSelect(key: string) {
 }
 
 const actionRegistry = createAppActionRegistry({
-  togglePanel: (panel) => toggleSettingPanel(panel),
+  togglePanel: (panel) => toggleSettingPanel(panel as any),
   navigate: (path) => {
     if (path !== route.path) router.push(path);
   },

@@ -151,9 +151,9 @@
 <script lang="ts" setup>
 import { computed, ref, nextTick, onMounted, onUnmounted } from "vue";
 import { storeToRefs } from "pinia";
-import { NInput, NButton, NIcon, NTabs, NTabPane } from "naive-ui";
+import { NInput } from "naive-ui";
 import type { Tag } from "@/core/types/Tag";
-
+import TabPaneContent from "@/components/search/TabPaneContent.vue";
 import {
   Star20Filled,
   Star20Regular,

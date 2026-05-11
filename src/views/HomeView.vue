@@ -339,9 +339,9 @@ import { getDateKey } from "@/core/utils";
 import { ViewType } from "@/core/constants";
 import { useResize } from "@/composables/layout/useResize";
 import { useVisualViewportKeyboard } from "@/composables/layout/useVisualViewportKeyboard";
-import IcsExportModal from "@/components/IcsExportModal.vue";
+import IcsExportModal from "@/components/DayPlanner/IcsExportModal.vue";
 import HomeTagFilterPopover from "@/components/TagSystem/HomeTagFilterPopover.vue";
-import MobileHomeFab from "@/components/MobileHomeFab/MobileHomeFab.vue";
+import MobileHomeFab from "@/components/platform/MobileHomeFab.vue";
 import {
   CalendarSettings20Regular,
   QrCode24Regular,

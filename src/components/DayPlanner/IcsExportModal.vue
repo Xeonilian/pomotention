@@ -1,4 +1,4 @@
-<!-- src/components/IcsExportModal.vue -->
+<!-- src/components/DayPlanner/IcsExportModal.vue -->
 <template>
   <teleport to="body">
     <div class="ics-modal-mask" @click.self="emit('close')">
