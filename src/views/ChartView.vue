@@ -54,7 +54,7 @@ import { useSyncStore } from "@/stores/useSyncStore";
 import { useSettingStore } from "@/stores/useSettingStore";
 
 const ChartWidget = defineAsyncComponent(() => import("@/components/chart/ChartWidget.vue"));
-const HeatmapChart = defineAsyncComponent(() => import("@/components/HeatmapChart.vue"));
+const HeatmapChart = defineAsyncComponent(() => import("@/components/chart/HeatmapChart.vue"));
 
 const dataStore = useDataStore();
 const syncStore = useSyncStore();
