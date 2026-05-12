@@ -597,8 +597,8 @@ const shortcuts = useGlobalKeyboardShortcuts({
       if (key === "down" && navigatePlannerNavigatorSubSelection(5)) return true;
       if (key === "left") return movePlannerNavigatorField(-1);
       if (key === "right") return movePlannerNavigatorField(1);
-      if (key === "up") return movePlannerNavigator(1);
-      if (key === "down") return movePlannerNavigator(-1);
+      if (key === "up") return movePlannerNavigator(-1);
+      if (key === "down") return movePlannerNavigator(1);
       if (key === "space") return activatePlannerNavigatorField();
       if (key === "enter" || key === "return") {
         return confirmPlannerNavigatorField();

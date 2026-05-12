@@ -1412,8 +1412,10 @@ function movePlannerNavigatorMode(delta: 1 | -1): boolean {
   const rows = getPlannerKeyboardRows();
   if (rows.length === 0) return false;
   const currentIndex = rows.findIndex((row) => row.rowId === selectedRowId.value);
-  const baseIndex = currentIndex === -1 ? (delta > 0 ? -1 : 0) : currentIndex;
-  const nextIndex = Math.max(0, Math.min(rows.length - 1, baseIndex + delta));
+  const lastIndex = rows.length - 1;
+  let nextIndex = currentIndex === -1 ? (delta > 0 ? 0 : lastIndex) : currentIndex + delta;
+  if (nextIndex < 0) nextIndex = lastIndex;
+  if (nextIndex > lastIndex) nextIndex = 0;
   return selectPlannerKeyboardRowById(rows[nextIndex].rowId);
 }
 
