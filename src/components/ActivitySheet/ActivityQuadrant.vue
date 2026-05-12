@@ -53,7 +53,10 @@ const titleEditing = ref(false);
 const titleInputRef = ref<InputInst | null>(null);
 
 /** 移动端无 dblclick：双触窗口与 WeekPlanner / YearPlanner 一致 */
-const quadrantTitleTouch = createTouchScheduledSingleAndDouble<number>(() => {}, () => openTitleEdit());
+const quadrantTitleTouch = createTouchScheduledSingleAndDouble<number>(
+  () => {},
+  () => openTitleEdit(),
+);
 
 function onTitleReadonlyTouchStart(e: TouchEvent) {
   if (!isMobile.value) return;
@@ -95,9 +98,7 @@ function onTitleEnter() {
   min-height: 0;
   min-width: 0;
   overflow: hidden;
-  background: var(--color-background);
   border-radius: 8px;
-  border: 1px solid var(--color-background-dark);
   box-shadow: none;
 }
 
@@ -106,26 +107,29 @@ function onTitleEnter() {
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 2px 0px;
-  width: 100%;
+  padding: 1px 0px;
+  width: 45%;
+  margin-top: 4px;
+  margin-left: 7px;
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
   /* 与下列表区 scrollbar-gutter 对齐，避免标题与行文本左右参差 */
   scrollbar-gutter: stable;
+  transform: translateY(1px);
+  border: 1px solid var(--color-background-dark);
+  white-space: nowrap;
 }
 
 .activity-quadrant__title-readonly {
   width: 100%;
   min-height: 20px;
   line-height: 20px;
-  font-weight: 500;
+  font-weight: 600;
   font-size: 12px;
   text-align: left;
   padding-left: 10px;
   color: var(--color-text-secondary);
   user-select: none;
-}
-
-.activity-quadrant__title-readonly--muted {
-  opacity: 0.85;
 }
 
 .activity-quadrant__title-input {
@@ -137,8 +141,9 @@ function onTitleEnter() {
 .activity-quadrant__title-input :deep(.n-input__input-el) {
   font-weight: 500;
   text-align: left;
-  --n-text-color: var(--color-text-secondary);
+  --n-text-color: var(--color-blue);
   --n-font-size: 12px;
+  --n-placeholder-color: var(--color-text-secondary);
 }
 
 .activity-quadrant__title-input :deep(.n-input-wrapper) {

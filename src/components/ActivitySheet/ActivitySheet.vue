@@ -1095,9 +1095,7 @@ function increaseChildActivity() {
   flex: 1 1 0;
   min-height: 0;
   display: grid;
-  gap: 6px;
-  margin-bottom: 6px;
-  margin-top: 2px;
+  gap: 2px;
   /* 勿在此层做 overflow-y: auto：窄屏 .right 已 overflow-y:hidden（见 HomeView），再嵌套纵滚会触发 iOS 异常 scrollExtent、无限条与灰带；靠 minmax(0,1fr) 压缩行 + 象限内 .section-content-container 滚动 */
   overflow: hidden;
 }
@@ -1115,13 +1113,14 @@ function increaseChildActivity() {
 @media (max-width: 650px) {
   .activity-quadrant-grid {
     grid-template-columns: 1fr;
-    grid-template-rows: repeat(4, minmax(0, 1fr));
+    /* 移动端：前三个象限固定高度（约显示两行），剩余空间全给 nor */
+    grid-template-rows: minmax(72px, auto) minmax(72px, auto) minmax(72px, auto) minmax(72px, 1fr);
     grid-template-areas:
       "both"
       "imp"
       "urg"
       "nor";
-    margin-bottom: calc(env(safe-area-inset-bottom) + 2px);
+    margin-bottom: calc(env(safe-area-inset-bottom) + 4px);
   }
 }
 </style>

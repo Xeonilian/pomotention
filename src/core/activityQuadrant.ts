@@ -16,9 +16,9 @@ export type ActivitySectionSortKey = "rank" | "due" | "type" | "tag";
 export type KanbanQuadrantUiLabels = Record<ActivityQuadrantKey, string>;
 
 export const DEFAULT_KANBAN_QUADRANT_UI_LABELS: KanbanQuadrantUiLabels = {
-  importantOnly: "Important, not Urgent",
+  importantOnly: "Important not Urgent",
   urgentImportant: "Urgent & Important",
-  urgentOnly: "Urgent, not Important",
+  urgentOnly: "Urgent not Important",
   neither: "Later",
 };
 

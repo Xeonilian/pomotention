@@ -633,7 +633,7 @@ function handleCollapseParent(parentId: number) {
   overflow-y: hidden;
   overflow-x: hidden;
   margin-left: 4px;
-  margin-right: 2px;
+  margin-right: 4px;
 }
 
 .section-container--quadrant-dense {
@@ -655,7 +655,6 @@ function handleCollapseParent(parentId: number) {
 }
 
 .section-content-container {
-  scrollbar-gutter: stable;
   overflow-y: auto;
   overflow-x: hidden;
   flex: 1 1 auto;
@@ -711,6 +710,11 @@ function handleCollapseParent(parentId: number) {
     line-height: 1.2 !important;
     text-size-adjust: 100%;
     -webkit-text-size-adjust: 100%;
+  }
+}
+@media (max-width: 430px) {
+  .section-content-container {
+    scrollbar-gutter: stable;
   }
 }
 </style>

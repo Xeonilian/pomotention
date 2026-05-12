@@ -29,6 +29,7 @@
         @focus="handleTitleInputFocus"
         @blur="handleTitleBlur"
         @touchstart.stop="handleTitleTouchStart"
+        @touchmove.stop="handleTitleTouchMove"
         @touchend.stop="handleTitleTouchEnd"
         @touchcancel.stop="handleTitleTouchCancel"
         :class="{
@@ -356,6 +357,14 @@ const tagPickerRef = ref<InstanceType<typeof TagPickerPopover> | null>(null);
 
 const titleEditAllowed = ref(false);
 
+// 触摸移动检测状态（防止拖拽时误触激活输入框）
+const titleTouchState = ref<{
+  startX: number;
+  startY: number;
+  startTime: number;
+  moved: boolean;
+} | null>(null);
+
 const tagSearchTermWritable = computed({
   get: () => tagEditor.tagSearchTerm.value,
   set: (v: string) => {
@@ -377,6 +386,7 @@ const pomoInputTitleText = "单击修改数量 | 双击切换类型";
 
 const DOUBLE_CLICK_DELAY = 300;
 const TOGGLE_DEBOUNCE = 100;
+const DRAG_THRESHOLD = 8; // 拖拽阈值（像素），超过此距离认为是拖拽而非点击
 
 const pomoDoubleClickTimer = ref<ReturnType<typeof setTimeout> | null>(null);
 const pomoTapTimer = ref<ReturnType<typeof setTimeout> | null>(null);
@@ -458,14 +468,55 @@ function handleTitleTouchStart(e: TouchEvent) {
   if (!isMobile.value) return;
   const t = e.target;
   if (t instanceof Element && t.closest(".icon-tag")) return;
+  if (t instanceof Element && t.closest(".icon-drag-area")) return; // 拖拽区域由父组件处理
+
+  // 记录触摸起始位置和状态
+  const touch = e.touches[0];
+  if (touch) {
+    titleTouchState.value = {
+      startX: touch.clientX,
+      startY: touch.clientY,
+      startTime: Date.now(),
+      moved: false,
+    };
+  }
   e.preventDefault();
+}
+
+function handleTitleTouchMove(e: TouchEvent) {
+  if (!isMobile.value || !titleTouchState.value) return;
+
+  const touch = e.touches[0];
+  if (!touch) return;
+
+  // 检测移动距离
+  const dx = Math.abs(touch.clientX - titleTouchState.value.startX);
+  const dy = Math.abs(touch.clientY - titleTouchState.value.startY);
+  const distance = Math.hypot(dx, dy);
+
+  // 超过阈值标记为已移动
+  if (distance > DRAG_THRESHOLD) {
+    titleTouchState.value.moved = true;
+  }
 }
 
 function handleTitleTouchEnd(e: TouchEvent) {
   if (!isMobile.value) return;
   const t = e.target;
   if (t instanceof Element && t.closest(".icon-tag")) return;
+  if (t instanceof Element && t.closest(".icon-drag-area")) return; // 拖拽区域由父组件处理
+
   e.preventDefault();
+
+  // 如果检测到移动（可能是拖拽），不激活输入框
+  if (titleTouchState.value?.moved) {
+    titleTouchState.value = null;
+    return;
+  }
+
+  // 清理状态
+  titleTouchState.value = null;
+
   ctx.blurOtherTitleEditingRows(props.item.id);
   ctx.blurSearchInput();
   titleEditAllowed.value = true;
@@ -474,6 +525,7 @@ function handleTitleTouchEnd(e: TouchEvent) {
 
 function handleTitleTouchCancel() {
   if (!isMobile.value) return;
+  titleTouchState.value = null;
 }
 
 function handleInputKeydown(event: KeyboardEvent) {
@@ -729,7 +781,8 @@ function handlePomoInputTouchCancel() {
   align-items: center;
   justify-content: center;
   cursor: grab;
-  padding: 2px;
+  padding: 6px 4px; /* 增大触摸面积 */
+  margin: -4px -2px; /* 负margin保持视觉大小不变，但扩大点击区域 */
   border-radius: 4px;
   margin-right: 1px;
   transition: background-color 0.2s;
