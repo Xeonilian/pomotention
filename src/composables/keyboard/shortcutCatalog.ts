@@ -30,7 +30,7 @@ export const SHORTCUT_DEFINITIONS: ShortcutDefinition[] = [
     mode: "single",
     category: "edit",
     action: "激活字段",
-    note: "在行选择模式中激活当前字段或子选择",
+    note: "在行选择模式中激活当前字段或子选择；首页 Planner day 已选行且未进 pn 时直接切换该行勾选",
     displayOnly: true,
   },
   {

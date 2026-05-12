@@ -58,6 +58,7 @@ type DayTodoExpose = {
   activateKeyboardCell: () => boolean;
   confirmKeyboardAction: () => boolean;
   moveRankKeyboardOption: (delta: number) => boolean;
+  toggleCheckForSelectedRow: () => boolean;
 };
 
 type DayScheduleExpose = {
@@ -65,6 +66,7 @@ type DayScheduleExpose = {
   moveKeyboardCell: (delta: 1 | -1) => boolean;
   activateKeyboardCell: () => boolean;
   confirmKeyboardAction: () => boolean;
+  toggleCheckForSelectedRow: () => boolean;
 };
 
 const dayTodoRef = ref<DayTodoExpose | null>(null);
@@ -196,6 +198,11 @@ function activatePlannerKeyboardCell(): boolean {
   return dayTodoRef.value?.activateKeyboardCell() || dayScheduleRef.value?.activateKeyboardCell() || false;
 }
 
+function toggleSelectedRowCheckKeyboard(): boolean {
+  if (dayTodoRef.value?.toggleCheckForSelectedRow()) return true;
+  return dayScheduleRef.value?.toggleCheckForSelectedRow() ?? false;
+}
+
 function confirmPlannerKeyboardCellAction(): boolean {
   return dayTodoRef.value?.confirmKeyboardAction() || dayScheduleRef.value?.confirmKeyboardAction() || false;
 }
@@ -209,6 +216,7 @@ defineExpose({
   startScheduleKeyboardEdit,
   movePlannerKeyboardCell,
   activatePlannerKeyboardCell,
+  toggleSelectedRowCheckKeyboard,
   confirmPlannerKeyboardCellAction,
   navigatePlannerKeyboardSubSelection,
 });

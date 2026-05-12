@@ -282,6 +282,7 @@ import {
   movePlannerNavigatorField,
   navigatePlannerNavigatorSubSelection,
   pickPlannerRowByDigit,
+  tryPlannerDaySpaceToggleCheck,
 } from "@/composables/keyboard/usePlannerKeyboardNavigator";
 
 // Icons & Components
@@ -678,6 +679,8 @@ const shortcuts = useGlobalKeyboardShortcuts({
       if (/^[1-9]$/.test(key)) return pickPlannerRowByDigit(Number(key));
       return false;
     }
+    // day 视图已选 Planner 行且未进入 pn：Space 直接切换完成勾选
+    if (key === "space" && tryPlannerDaySpaceToggleCheck()) return true;
     if (key === "left") return dispatchKeyboardAction("planner.gotoPrev", "left");
     if (key === "right") return dispatchKeyboardAction("planner.gotoNext", "right");
     if (key === "up" || key === "down") {

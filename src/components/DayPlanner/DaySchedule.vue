@@ -833,6 +833,18 @@ function activateKeyboardCell(): boolean {
   return false;
 }
 
+/** 全局 Space：未进 navigator 时仅切换当前选中行的勾选状态 */
+function toggleCheckForSelectedRow(): boolean {
+  const schedule = selectedSchedule.value;
+  if (!schedule) return false;
+  if (schedule.status === "cancelled") {
+    handleUncancelSchedule(schedule.id);
+    return true;
+  }
+  handleCheckboxChange(schedule.id, schedule.status !== "done");
+  return true;
+}
+
 function confirmKeyboardAction(): boolean {
   const schedule = selectedSchedule.value;
   if (!schedule) return false;
@@ -848,6 +860,7 @@ defineExpose({
   moveKeyboardCell,
   activateKeyboardCell,
   confirmKeyboardAction,
+  toggleCheckForSelectedRow,
 });
 </script>
 

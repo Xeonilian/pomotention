@@ -332,7 +332,7 @@
 // ------------------------ 导入依赖 ------------------------
 import { ref, onMounted, onUnmounted, computed, nextTick, defineAsyncComponent, provide, toValue, watch } from "vue";
 import { storeToRefs } from "pinia";
-import { onBeforeRouteLeave } from "vue-router";
+import { onBeforeRouteLeave, useRoute } from "vue-router";
 
 import type { Activity } from "@/core/types/Activity";
 import { getDateKey } from "@/core/utils";
@@ -367,7 +367,7 @@ import { autoSyncDebounced, uploadAllDebounced } from "@/core/utils/autoSync";
 import { useDevice } from "@/composables/platform/useDevice";
 import { usePublicHolidays, plannerHolidayMapKey } from "@/composables/planner/usePublicHolidays";
 import { registerPlannerKeyboardCommandApi } from "@/composables/keyboard/usePlannerKeyboardCommands";
-import { registerPlannerNavigatorApi } from "@/composables/keyboard/usePlannerKeyboardNavigator";
+import { registerPlannerDaySpaceToggleCheck, registerPlannerNavigatorApi } from "@/composables/keyboard/usePlannerKeyboardNavigator";
 import { useHomePlannerKeyboard } from "@/composables/home/useHomePlannerKeyboard";
 import { useHomePlannerRowEdits } from "@/composables/home/useHomePlannerRowEdits";
 
@@ -404,9 +404,12 @@ const popoverMessage = ref("");
 const taskRecordEditing = ref(false);
 let unregisterPlannerCommandApi: (() => void) | null = null;
 let unregisterPlannerNavigatorApi: (() => void) | null = null;
+let unregisterPlannerDaySpaceToggleCheck: (() => void) | null = null;
 function setTaskRecordEditing(v: boolean) {
   taskRecordEditing.value = v;
 }
+
+const route = useRoute();
 
 const taskTrackerRef = ref<{ endTaskRecordEditing: () => void } | null>(null);
 const dayPlannerRef = ref<{
@@ -414,6 +417,7 @@ const dayPlannerRef = ref<{
   startScheduleKeyboardEdit: (field: "title" | "start" | "done" | "duration" | "location") => boolean;
   movePlannerKeyboardCell: (delta: 1 | -1) => boolean;
   activatePlannerKeyboardCell: () => boolean;
+  toggleSelectedRowCheckKeyboard: () => boolean;
   confirmPlannerKeyboardCellAction: () => boolean;
   navigatePlannerKeyboardSubSelection: (delta: number) => boolean;
 } | null>(null);
@@ -1493,6 +1497,13 @@ onMounted(() => {
     exit: exitPlannerNavigatorMode,
     isActive: () => plannerNavigatorActive.value,
   });
+  unregisterPlannerDaySpaceToggleCheck = registerPlannerDaySpaceToggleCheck(() => {
+    if (route.name !== "Home") return false;
+    if (settingStore.settings.viewSet !== "day") return false;
+    if (!settingStore.settings.showPlanner) return false;
+    if (selectedRowId.value == null) return false;
+    return dayPlannerRef.value?.toggleSelectedRowCheckKeyboard() ?? false;
+  });
 });
 
 onUnmounted(() => {
@@ -1503,6 +1514,10 @@ onUnmounted(() => {
   if (unregisterPlannerNavigatorApi) {
     unregisterPlannerNavigatorApi();
     unregisterPlannerNavigatorApi = null;
+  }
+  if (unregisterPlannerDaySpaceToggleCheck) {
+    unregisterPlannerDaySpaceToggleCheck();
+    unregisterPlannerDaySpaceToggleCheck = null;
   }
   dateService.cleanupSystemDateWatcher();
   autoSyncDebounced.flush(); //立即执行
