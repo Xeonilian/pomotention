@@ -1,27 +1,34 @@
 <template>
-  <div class="setting-subpage">
-    <n-card size="small">
+  <div class="setting-tab-page">
+    <n-card size="small" class="setting-tab-card">
       <div class="shortcut-toolbar">
-        <n-input v-model:value="keyword" clearable placeholder="搜索组合 / 动作 / 说明，例如 ptd、番茄、Planner" />
+        <n-input v-model:value="keyword" clearable placeholder="搜索组合 / 功能 / 说明，例如 app、activity.pick、选择活动" />
         <n-tag size="small" round class="shortcut-count" type="info">{{ filteredCount }} / {{ allCount }}</n-tag>
       </div>
       <div class="shortcut-table-wrap">
         <n-collapse :default-expanded-names="defaultExpandedNames">
           <n-collapse-item v-for="group in filteredGroups" :key="group.key" :name="group.key" :title="group.title">
-            <table class="shortcut-table">
+            <table class="setting-table shortcut-table">
+              <colgroup>
+                <col class="shortcut-col-sequence" />
+                <col class="shortcut-col-feature" />
+                <col class="shortcut-col-note" />
+              </colgroup>
               <thead>
                 <tr>
-                  <th>组合</th>
-                  <th>动作</th>
+                  <th>快捷键</th>
+                  <th>功能</th>
                   <th>说明</th>
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="row in group.rows" :key="row.sequence">
+                <tr v-for="row in group.rows" :key="`${row.sequence}-${row.feature}`">
                   <td>
                     <code>{{ row.sequence }}</code>
                   </td>
-                  <td>{{ row.action }}</td>
+                  <td class="shortcut-feature-cell">
+                    <code>{{ row.feature }}</code>
+                  </td>
                   <td>{{ row.note }}</td>
                 </tr>
               </tbody>
@@ -35,10 +42,15 @@
 
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import type { ShortcutCategory, ShortcutDefinition } from "@/composables/keyboard/shortcutCatalog";
+import type { ShortcutCategory } from "@/composables/keyboard/shortcutCatalog";
 import { SHORTCUT_DEFINITIONS } from "@/composables/keyboard/shortcutCatalog";
 
-type ShortcutDisplayRow = Omit<ShortcutDefinition, "actionId">;
+type ShortcutDisplayRow = {
+  sequence: string;
+  category: ShortcutCategory;
+  feature: string;
+  note: string;
+};
 type ShortcutGroup = {
   key: ShortcutCategory;
   title: string;
@@ -49,7 +61,7 @@ const keyword = ref("");
 
 const categoryMeta: Record<ShortcutCategory, string> = {
   navigation: "导航与面板",
-  activity: "Activity",
+  activity: "活动（Activity）",
   task: "Task",
   planner: "Planner",
   timetable: "Timetable",
@@ -57,13 +69,28 @@ const categoryMeta: Record<ShortcutCategory, string> = {
 };
 
 const allRows = computed<ShortcutDisplayRow[]>(() => {
-  const base = SHORTCUT_DEFINITIONS.map(({ actionId: _actionId, ...rest }) => rest);
+  const base = SHORTCUT_DEFINITIONS.map<ShortcutDisplayRow>((item) => {
+    if (item.category === "activity" && item.sequence === "app") {
+      return {
+        sequence: "app",
+        category: item.category,
+        feature: "activity.picker.select",
+        note: "选择活动",
+      };
+    }
+    const detail = item.action ? `${item.action}：${item.note}` : item.note;
+    return {
+      sequence: item.sequence,
+      category: item.category,
+      feature: String(item.actionId),
+      note: detail,
+    };
+  });
   base.push({
-    sequence: "Esc（输入框内）",
-    mode: "sequence",
+    sequence: "Esc",
     category: "navigation",
-    action: "退出输入编辑",
-    note: "保留当前选中状态，不清空选择",
+    feature: "app.input.escape",
+    note: "输入框内：退出输入编辑；保留当前选中状态，不清空选择",
   });
   return base;
 });
@@ -88,8 +115,8 @@ const filteredGroups = computed<ShortcutGroup[]>(() => {
       rows: group.rows.filter(
         (row) =>
           row.sequence.toLowerCase().includes(q) ||
-          row.action.toLowerCase().includes(q) ||
           row.note.toLowerCase().includes(q) ||
+          row.feature.toLowerCase().includes(q) ||
           row.category.toLowerCase().includes(q),
       ),
     }))
@@ -102,15 +129,10 @@ const defaultExpandedNames = computed(() => groupedRows.value.map((group) => gro
 </script>
 
 <style scoped>
-.setting-subpage {
-  padding-right: 2px;
-}
-
 .shortcut-toolbar {
   display: flex;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
   gap: 8px;
-  margin-right: 6px;
 }
 
 .shortcut-count {
@@ -118,32 +140,35 @@ const defaultExpandedNames = computed(() => groupedRows.value.map((group) => gro
 }
 
 .shortcut-table-wrap {
-  max-height: calc(100vh - 180px);
+  max-height: var(--setting-shortcut-wrap-max-height);
   overflow-x: auto;
   overflow-y: auto;
   padding-bottom: 2px;
 }
 
-.shortcut-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-}
-
-.shortcut-table th,
-.shortcut-table td {
-  border: 1px solid var(--n-border-color);
-  padding: 8px 10px;
-  text-align: left;
-  vertical-align: top;
-}
-
-.shortcut-table th {
-  background: var(--n-color-target);
-  font-weight: 600;
-}
-
-.shortcut-table code {
+.setting-table code {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
+
+.shortcut-table {
+  table-layout: fixed;
+}
+
+.shortcut-col-sequence {
+  width: 65px;
+}
+
+.shortcut-col-feature {
+  width: 220px;
+}
+
+.shortcut-col-note {
+  width: auto;
+}
+
+.shortcut-feature-cell {
+  word-break: break-all;
+}
 </style>
+
+<style scoped src="./settingShared.css"></style>

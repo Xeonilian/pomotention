@@ -1,0 +1,74 @@
+.setting-tab-page {
+  --setting-scroll-max-height: calc(100vh - 170px);
+  --setting-shortcut-wrap-max-height: calc(100vh - 235px);
+  padding-right: 2px;
+}
+
+.setting-tab-page--scroll {
+  max-height: var(--setting-scroll-max-height);
+  overflow-y: auto;
+}
+
+.setting-tab-card :deep(.n-card-header) {
+  padding-top: 14px;
+  padding-bottom: 10px;
+}
+
+.setting-tab-card :deep(.n-card__content) {
+  display: grid;
+  gap: 12px;
+  padding-top: 10px;
+}
+
+.setting-field-list {
+  display: grid;
+  gap: 12px;
+}
+
+.setting-field-item {
+  display: grid;
+  gap: 8px;
+}
+
+.setting-field-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--n-text-color-1);
+}
+
+.setting-tab-actions {
+  margin-top: 4px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.setting-help-text {
+  font-size: 12px;
+  color: var(--n-text-color-3);
+  line-height: 1.5;
+}
+
+.setting-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.setting-table th,
+.setting-table td {
+  border: 1px solid var(--n-border-color);
+  padding: 10px 12px;
+  text-align: left;
+  vertical-align: top;
+  line-height: 1.55;
+}
+
+.setting-table th {
+  top: 0;
+  z-index: 1;
+  background: var(--color-background-dark);
+  color: var(--n-text-color-1);
+  font-size: 13px;
+  font-weight: 700;
+}

@@ -1,6 +1,6 @@
 <template>
-  <div class="setting-subpage">
-    <n-card size="small" title="通用信息">
+  <div class="setting-tab-page setting-tab-page--scroll">
+    <n-card size="small" class="setting-tab-card">
       <n-descriptions label-placement="left" :column="1" bordered size="small">
         <n-descriptions-item label="当前版本">{{ generalVersionDisplay }}</n-descriptions-item>
         <n-descriptions-item v-if="isTauri()" label="线上最新">
@@ -41,7 +41,7 @@
           </span>
         </n-descriptions-item>
       </n-descriptions>
-      <n-space class="general-actions">
+      <n-space class="setting-tab-actions">
         <n-button v-if="supabaseEnabled && !syncStore.isLoggedIn" size="small" type="primary" @click="syncStore.handleLogin">
           去登录
         </n-button>
@@ -346,22 +346,13 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.setting-subpage {
-  max-height: calc(100vh - 170px);
-  overflow-y: auto;
-  padding-right: 2px;
-}
-
-.general-actions {
-  margin-top: 12px;
-  flex-wrap: wrap;
-}
-
 .settings-localonly-hint {
   display: block;
   margin-top: 6px;
-  color: var(--n-text-color-3);
   font-size: 12px;
-  line-height: 1.45;
+  color: var(--n-text-color-3);
+  line-height: 1.5;
 }
 </style>
+
+<style scoped src="./settingShared.css"></style>

@@ -5,13 +5,13 @@ export type AppActionId =
   | "activity.navigator.enter"
   | "activity.pick"
   | "activity.deleteOrRecover"
-  | "activity.adjustChildRelation"
+  | "activity.toggleChild"
   | "activity.addTodo"
   | "activity.addSchedule"
   | "activity.addUntaetigkeit"
   | "activity.toggleQuadrant"
   | "activity.addKanbanSection"
-  | "activity.removeLastKanbanSection"
+  | "activity.removeKanbanSection"
   | "activity.editTitle"
   | "activity.editDueDate"
   | "activity.editPlace"
@@ -91,13 +91,13 @@ export interface AppActionContext {
     command:
       | "pickActivity"
       | "deleteOrRecoverActivity"
-      | "adjustChildRelation"
+      | "toggleChild"
       | "addTodo"
       | "addSchedule"
       | "addUntaetigkeit"
       | "toggleQuadrant"
       | "addKanbanSection"
-      | "removeLastKanbanSection",
+      | "removeKanbanSection",
   ) => boolean;
   runActivityEditField: (field: "title" | "dueDate" | "place" | "duration" | "scheduleTime" | "pomoEstimate") => boolean;
   runTaskCommand: (
@@ -156,9 +156,9 @@ export function createAppActionRegistry(context: AppActionContext): AppActionReg
         context.runActivityCommand("deleteOrRecoverActivity");
       },
     },
-    "activity.adjustChildRelation": {
+    "activity.toggleChild": {
       run: () => {
-        context.runActivityCommand("adjustChildRelation");
+        context.runActivityCommand("toggleChild");
       },
     },
     "activity.addTodo": {
@@ -186,9 +186,9 @@ export function createAppActionRegistry(context: AppActionContext): AppActionReg
         context.runActivityCommand("addKanbanSection");
       },
     },
-    "activity.removeLastKanbanSection": {
+    "activity.removeKanbanSection": {
       run: () => {
-        context.runActivityCommand("removeLastKanbanSection");
+        context.runActivityCommand("removeKanbanSection");
       },
     },
     "activity.editTitle": {

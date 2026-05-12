@@ -440,13 +440,13 @@ onMounted(() => {
   unregisterActivityCommandApi = registerActivityKeyboardCommandApi({
     pickActivity: keyboardPickActivity,
     deleteOrRecoverActivity: keyboardDeleteOrRecoverActivity,
-    adjustChildRelation: keyboardAdjustChildRelation,
+    toggleChild: keyboardtoggleChild,
     addTodo: keyboardAddTodo,
     addSchedule: keyboardAddSchedule,
     addUntaetigkeit: keyboardAddUntaetigkeit,
     toggleQuadrant: keyboardToggleQuadrant,
     addKanbanSection: keyboardAddKanbanSection,
-    removeLastKanbanSection: keyboardRemoveLastKanbanSection,
+    removeKanbanSection: keyboardremoveKanbanSection,
     editField: keyboardEditField,
   });
 });
@@ -657,7 +657,7 @@ function keyboardDeleteOrRecoverActivity(): boolean {
   return true;
 }
 
-function keyboardAdjustChildRelation(): boolean {
+function keyboardtoggleChild(): boolean {
   // 与 ActivityButtons 的 v-if/v-else 分支保持一致
   if (!hasParentSelectedActivity.value && !selectedRowHasParent.value) {
     if (isSelectedRowDone.value || isSelectedClassS.value || isDeletedSelectedActivity.value || noSelectedActivity.value) return false;
@@ -696,7 +696,7 @@ function keyboardAddKanbanSection(): boolean {
   return after > before;
 }
 
-function keyboardRemoveLastKanbanSection(): boolean {
+function keyboardremoveKanbanSection(): boolean {
   if (settingStore.settings.kanbanQuadrantMode) return false;
   const visible = sections.value.filter((s) => s.show);
   if (visible.length <= 1) return false;

@@ -1,9 +1,9 @@
 <template>
-  <div class="setting-subpage">
-    <n-card size="small" class="settings-diagnostics-card" :bordered="true">
+  <div class="setting-tab-page setting-tab-page--scroll">
+    <n-card size="small" class="setting-tab-card settings-diagnostics-card" :bordered="true">
       <n-collapse :default-expanded-names="[]" display-directive="show">
         <n-collapse-item title="设备检测测试" name="device">
-          <n-code :code="uaString" language="text" word-wrap style="font-size: 12px; max-height: 80px; overflow: auto" />
+          <n-code :code="uaString" language="text" word-wrap style="font-size: 12px; max-height: 60px; overflow: auto" />
           <n-descriptions label-placement="left" :column="1" bordered style="margin-top: 12px">
             <n-descriptions-item label="useDevice.isMobile">{{ device.isMobile }}</n-descriptions-item>
             <n-descriptions-item label="useDevice.isTablet">{{ device.isTablet }}</n-descriptions-item>
@@ -1086,12 +1086,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.setting-subpage {
-  max-height: calc(100vh - 170px);
-  overflow-y: auto;
-  padding-right: 2px;
-}
-
 .detection-hint {
   margin-left: 8px;
   color: var(--n-text-color-3);
@@ -1150,8 +1144,7 @@ onMounted(() => {
 }
 
 .settings-diagnostics-card :deep(.n-collapse-item__header) {
-  padding-top: 10px;
-  padding-bottom: 10px;
+  padding-top: 14px;
 }
 
 .settings-diagnostics-card :deep(.n-collapse-item__content-wrapper) {
@@ -1202,3 +1195,5 @@ onMounted(() => {
   line-height: 1.35;
 }
 </style>
+
+<style scoped src="./settingShared.css"></style>

@@ -1,13 +1,13 @@
 type ActivityCommandApi = {
   pickActivity: () => boolean;
   deleteOrRecoverActivity: () => boolean;
-  adjustChildRelation: () => boolean;
+  toggleChild: () => boolean;
   addTodo: () => boolean;
   addSchedule: () => boolean;
   addUntaetigkeit: () => boolean;
   toggleQuadrant: () => boolean;
   addKanbanSection: () => boolean;
-  removeLastKanbanSection: () => boolean;
+  removeKanbanSection: () => boolean;
   editField: (field: "title" | "dueDate" | "place" | "duration" | "scheduleTime" | "pomoEstimate") => boolean;
 };
 
