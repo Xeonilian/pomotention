@@ -2,7 +2,7 @@
 
 import { ref, computed } from "vue";
 import { defineStore } from "pinia";
-import { loadTimetableBlocks, saveTimetableBlocks } from "@/services/localStorageService";
+import { loadTimetableBlocks, saveTimetableBlocks } from "@/services/data/localStorageService";
 import { WORK_BLOCKS, ENTERTAINMENT_BLOCKS } from "@/core/constants";
 import type { Block } from "@/core/types/Block";
 

@@ -53,12 +53,12 @@
 <script setup lang="ts">
 import { computed, inject, ref } from "vue";
 import { storeToRefs } from "pinia";
-import { createTouchScheduledSingleAndDouble } from "@/composables/useTouchScheduledSingleAndDouble";
+import { createTouchScheduledSingleAndDouble } from "@/composables/platform/useTouchScheduledSingleAndDouble";
 import { useDataStore } from "@/stores/useDataStore";
-import { useDevice } from "@/composables/useDevice";
+import { useDevice } from "@/composables/platform/useDevice";
 import { getDateKey } from "@/core/utils";
-import type { HolidayDisplay } from "@/services/publicHolidays";
-import { plannerHolidayMapKey } from "@/composables/usePublicHolidays";
+import type { HolidayDisplay } from "@/services/planner/publicHolidays";
+import { plannerHolidayMapKey } from "@/composables/planner/usePublicHolidays";
 
 const holidayMap = inject(plannerHolidayMapKey, ref<Record<string, HolidayDisplay>>({}));
 

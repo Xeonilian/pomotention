@@ -10,7 +10,7 @@ import type { KanbanQuadrantUiLabels } from "@/core/activityQuadrant";
 import { DEFAULT_KANBAN_QUADRANT_UI_LABELS } from "@/core/activityQuadrant";
 import { SoundType } from "@/core/sounds";
 import { AiProfile } from "@/core/types/AiProfile";
-import { useDevice } from "@/composables/useDevice";
+import { useDevice } from "@/composables/platform/useDevice";
 
 const { isMobile } = useDevice();
 
@@ -32,7 +32,7 @@ export interface GlobalSettings {
   /** 四象限格子标题（可编辑） */
   kanbanQuadrantUi: KanbanQuadrantUiLabels;
   showPomodoro: boolean;
-  showSchedule: boolean;
+  showTimetable: boolean;
   showPlanner: boolean;
   showTask: boolean;
   showActivity: boolean;
@@ -97,12 +97,12 @@ const defaultSettings: GlobalSettings = {
   kanbanQuadrantSnapshot: null,
   kanbanQuadrantUi: { ...DEFAULT_KANBAN_QUADRANT_UI_LABELS },
   showPomodoro: isMobile.value ? false : true,
-  showSchedule: isMobile.value ? false : true,
+  showTimetable: isMobile.value ? false : true,
   showPlanner: true,
   showTask: true,
   showActivity: isMobile.value ? false : true,
   showAi: false,
-  leftWidth: isMobile.value ? 80 : 200, // 默认值你自己定
+  leftWidth: isMobile.value ? 80 : 160, // 左栏默认宽度：手机保持 80，桌面端提高默认值
   rightWidth: 300,
   topHeight: 300,
   searchWidth: 400, // 搜索页面title宽度

@@ -163,7 +163,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, inject } from "vue";
+import { ref, computed, inject, onMounted, onUnmounted } from "vue";
 import { NButton, NPopover, NIcon } from "naive-ui";
 import EnergyInputDialog from "@/components/TaskTracker/EnergyInputDialog.vue";
 import RewardInputDialog from "@/components/TaskTracker/RewardInputDialog.vue";
@@ -188,10 +188,11 @@ import {
 
 import { useTemplateStore } from "@/stores/useTemplateStore";
 import type { Template } from "@/core/types/Template";
-import { useActivityTagEditor } from "@/composables/useActivityTagEditor";
+import { useActivityTagEditor } from "@/composables/activity/useActivityTagEditor";
 import { useDataStore } from "@/stores/useDataStore";
 import { useDisplayedTaskStore } from "@/stores/useDisplayedTaskStore";
-import { useDevice } from "@/composables/useDevice";
+import { useDevice } from "@/composables/platform/useDevice";
+import { registerTaskKeyboardCommandApi } from "@/composables/keyboard/useTaskKeyboardCommands";
 
 const tagEditor = useActivityTagEditor();
 const dataStore = useDataStore();
@@ -200,6 +201,7 @@ const { isMobile } = useDevice();
 
 const fullscreenContainerRef = inject<{ value: HTMLElement | null }>("taskTrackerFullscreenContainerRef", { value: null });
 const isTaskTrackerFullscreen = inject<{ value: boolean }>("isTaskTrackerFullscreen", { value: false });
+const startTaskRecordEditing = inject<() => boolean>("taskTrackerStartRecordEditing", () => false);
 // Props
 const props = defineProps<{
   taskId: number | null;
@@ -219,6 +221,7 @@ const templates = computed(() => templateStore.allTemplates);
 
 // 响应式折叠状态
 const showCollapsedPopover = ref(false);
+let unregisterTaskCommandApi: (() => void) | null = null;
 
 // 处理折叠状态下的按钮点击（点击后关闭 popover）
 const handleCollapsedAction = (action: () => void) => {
@@ -228,8 +231,8 @@ const handleCollapsedAction = (action: () => void) => {
 
 // Methods
 const emit = defineEmits<{
-  (e: "energy-record", value: { value: number; description?: string }): void;
-  (e: "reward-record", value: { value: number; description?: string }): void;
+  (e: "energy-record", value: { value: number; description?: string; recordedAt: number }): void;
+  (e: "reward-record", value: { value: number; description?: string; recordedAt: number }): void;
   (
     e: "interruption-record",
     data: {
@@ -238,20 +241,21 @@ const emit = defineEmits<{
       asActivity: boolean;
       activityType?: "T" | "S";
       dueDate?: number | null;
+      recordedAt: number;
     },
   ): void;
   (e: "star"): void;
 }>();
 
 // 能量弹窗点击确认
-function handleEnergyConfirm(val: { value: number; description?: string }) {
+function handleEnergyConfirm(val: { value: number; description?: string; recordedAt: number }) {
   if (props.taskId) {
     emit("energy-record", val);
   }
 }
 
 // 奖励弹窗点击确认
-function handleRewardConfirm(val: { value: number; description?: string }) {
+function handleRewardConfirm(val: { value: number; description?: string; recordedAt: number }) {
   if (props.taskId) {
     emit("reward-record", val);
   }
@@ -264,6 +268,7 @@ function handleInterruptionConfirm(val: {
   asActivity: boolean;
   activityType?: "T" | "S";
   dueDate?: number | null;
+  recordedAt: number;
 }) {
   if (props.taskId) {
     emit("interruption-record", val);
@@ -331,6 +336,83 @@ function handleTagManagerClose() {
   tagEditor.saveAndCloseTagManager();
   showTagManager.value = false;
 }
+
+function keyboardToggleStar(): boolean {
+  if (!props.taskId) return false;
+  starTrack();
+  return true;
+}
+
+function keyboardOpenEditor(): boolean {
+  return startTaskRecordEditing();
+}
+
+function keyboardOpenTagManager(): boolean {
+  if (!props.taskId) return false;
+  openTagManager();
+  return true;
+}
+
+function keyboardOpenEnergyDialog(): boolean {
+  if (!props.taskId) return false;
+  showEnergyDialog.value = true;
+  showCollapsedPopover.value = false;
+  return true;
+}
+
+function keyboardOpenRewardDialog(): boolean {
+  if (!props.taskId) return false;
+  showRewardDialog.value = true;
+  showCollapsedPopover.value = false;
+  return true;
+}
+
+function keyboardOpenInterruptionDialog(): boolean {
+  if (!props.taskId) return false;
+  showInterruptionDialog.value = true;
+  showCollapsedPopover.value = false;
+  return true;
+}
+
+function keyboardOpenTemplateDialog(): boolean {
+  if (!props.taskId) return false;
+  showTemplateDialog.value = true;
+  showCollapsedPopover.value = false;
+  return true;
+}
+
+function keyboardGoPrevTask(): boolean {
+  if (!displayStore.hasPrev) return false;
+  displayStore.goPrev();
+  return true;
+}
+
+function keyboardGoNextTask(): boolean {
+  if (!displayStore.hasNext) return false;
+  displayStore.goNext();
+  return true;
+}
+
+onMounted(() => {
+  unregisterTaskCommandApi = registerTaskKeyboardCommandApi({
+    openEditor: keyboardOpenEditor,
+    toggleStar: keyboardToggleStar,
+    openTagManager: keyboardOpenTagManager,
+    openEnergyDialog: keyboardOpenEnergyDialog,
+    openRewardDialog: keyboardOpenRewardDialog,
+    openInterruptionDialog: keyboardOpenInterruptionDialog,
+    openTemplateDialog: keyboardOpenTemplateDialog,
+    goPrevTask: keyboardGoPrevTask,
+    goNextTask: keyboardGoNextTask,
+  });
+});
+
+onUnmounted(() => {
+  if (unregisterTaskCommandApi) {
+    unregisterTaskCommandApi();
+    unregisterTaskCommandApi = null;
+  }
+});
 </script>
 
 <style scoped>

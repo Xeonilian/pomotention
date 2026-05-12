@@ -71,7 +71,7 @@ import { storeToRefs } from "pinia";
 import { computed, ref, onUnmounted } from "vue";
 import { NPopover } from "naive-ui";
 import { timestampToTimeString } from "@/core/utils";
-import { useDevice } from "@/composables/useDevice";
+import { useDevice } from "@/composables/platform/useDevice";
 
 const dataStore = useDataStore();
 const tagStore = useTagStore();

@@ -38,8 +38,8 @@ import { NInput } from "naive-ui";
 import type { InputInst } from "naive-ui";
 import type { ActivityQuadrantKey } from "@/core/activityQuadrant";
 import { DEFAULT_KANBAN_QUADRANT_UI_LABELS } from "@/core/activityQuadrant";
-import { createTouchScheduledSingleAndDouble } from "@/composables/useTouchScheduledSingleAndDouble";
-import { useDevice } from "@/composables/useDevice";
+import { createTouchScheduledSingleAndDouble } from "@/composables/platform/useTouchScheduledSingleAndDouble";
+import { useDevice } from "@/composables/platform/useDevice";
 import { useSettingStore } from "@/stores/useSettingStore";
 
 const props = defineProps<{

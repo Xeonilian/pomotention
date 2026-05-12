@@ -8,13 +8,13 @@
   <div class="home-root" :class="{ 'home-root--activity-only-mobile': activityOnlyMobile }" :style="rootCssVars">
     <div class="home-content">
       <!-- 左侧面板 (日程表) -->
-      <div v-if="settingStore.settings.showSchedule" class="left" :style="{ width: leftWidth + 'px' }">
+      <div v-if="settingStore.settings.showTimetable" class="left" :style="{ width: leftWidth + 'px' }">
         <TimeTable @timetable-edit="onTimetableEdit" />
       </div>
 
       <!-- 左侧面板调整大小手柄 -->
       <div
-        v-if="settingStore.settings.showSchedule"
+        v-if="settingStore.settings.showTimetable"
         class="resize-handle-horizontal"
         style="touch-action: none"
         @pointerdown="startLeftResize"
@@ -24,7 +24,7 @@
       <div
         class="middle"
         :class="{
-          'middle-alone': !settingStore.settings.showSchedule && !settingStore.settings.showActivity && !settingStore.settings.showAi,
+          'middle-alone': !settingStore.settings.showTimetable && !settingStore.settings.showActivity && !settingStore.settings.showAi,
           'middle--landscape-fallback': isMobile && isLandscapeViewport,
         }"
       >
@@ -46,7 +46,7 @@
                 <template v-if="settingStore.settings.viewSet !== 'year'">
                   <span @click="onYearJump" class="day-status" title="进入年视图">
                     {{
-                      settingStore.settings.showSchedule && isMobile
+                      settingStore.settings.showTimetable && isMobile
                         ? ""
                         : settingStore.settings.viewSet === "month" || settingStore.settings.viewSet === "week"
                           ? dateService.displayYearInfo
@@ -213,6 +213,9 @@
           <div class="planner-view-container">
             <DayPlanner
               v-if="settingStore.settings.showPlanner && settingStore.settings.viewSet === 'day'"
+              ref="dayPlannerRef"
+              :navigator-active="plannerNavigatorActive"
+              :style="plannerNavigatorActive ? { '--planner-selected-row-bg': 'var(--color-purple-light-transparent)' } : undefined"
               @update-schedule-status="onUpdateScheduleStatus"
               @cancel-schedule="onCancelSchedule"
               @uncancel-schedule="onUncancelSchedule"
@@ -327,18 +330,18 @@
 
 <script setup lang="ts">
 // ------------------------ 导入依赖 ------------------------
-import { ref, onMounted, onUnmounted, computed, nextTick, defineAsyncComponent, provide, toValue } from "vue";
+import { ref, onMounted, onUnmounted, computed, nextTick, defineAsyncComponent, provide, toValue, watch } from "vue";
 import { storeToRefs } from "pinia";
 import { onBeforeRouteLeave } from "vue-router";
 
 import type { Activity } from "@/core/types/Activity";
-import { getTimestampForTimeString, getDateKey } from "@/core/utils";
+import { getDateKey } from "@/core/utils";
 import { ViewType } from "@/core/constants";
-import { useResize } from "@/composables/useResize";
-import { useVisualViewportKeyboard } from "@/composables/useVisualViewportKeyboard";
-import IcsExportModal from "@/components/IcsExportModal.vue";
+import { useResize } from "@/composables/layout/useResize";
+import { useVisualViewportKeyboard } from "@/composables/layout/useVisualViewportKeyboard";
+import IcsExportModal from "@/components/DayPlanner/IcsExportModal.vue";
 import HomeTagFilterPopover from "@/components/TagSystem/HomeTagFilterPopover.vue";
-import MobileHomeFab from "@/components/MobileHomeFab/MobileHomeFab.vue";
+import MobileHomeFab from "@/components/platform/MobileHomeFab.vue";
 import {
   CalendarSettings20Regular,
   QrCode24Regular,
@@ -353,16 +356,20 @@ import {
   handleRestoreActivity,
   passPickedActivity,
   togglePomoType,
-} from "@/services/activityService";
-import { updateScheduleStatus, updateTodoStatus, handleSuspendTodo } from "@/services/plannerService";
-import { handleExportOrQR, type DataRow } from "@/services/icsService";
-import { taskService } from "@/services/taskService";
+} from "@/services/activity/activityService";
+import { updateScheduleStatus, updateTodoStatus, handleSuspendTodo } from "@/services/planner/plannerService";
+import { handleExportOrQR, type DataRow } from "@/services/planner/icsService";
+import { taskService } from "@/services/task/taskService";
 
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useDataStore } from "@/stores/useDataStore";
 import { autoSyncDebounced, uploadAllDebounced } from "@/core/utils/autoSync";
-import { useDevice } from "@/composables/useDevice";
-import { usePublicHolidays, plannerHolidayMapKey } from "@/composables/usePublicHolidays";
+import { useDevice } from "@/composables/platform/useDevice";
+import { usePublicHolidays, plannerHolidayMapKey } from "@/composables/planner/usePublicHolidays";
+import { registerPlannerKeyboardCommandApi } from "@/composables/keyboard/usePlannerKeyboardCommands";
+import { registerPlannerNavigatorApi } from "@/composables/keyboard/usePlannerKeyboardNavigator";
+import { useHomePlannerKeyboard } from "@/composables/home/useHomePlannerKeyboard";
+import { useHomePlannerRowEdits } from "@/composables/home/useHomePlannerRowEdits";
 
 // ======================== 响应式状态与初始化 ========================
 // 不直接import Naive和以下组建加速启动
@@ -395,11 +402,21 @@ const queryDate = ref<number | null>(null);
 const showPopover = ref(false);
 const popoverMessage = ref("");
 const taskRecordEditing = ref(false);
+let unregisterPlannerCommandApi: (() => void) | null = null;
+let unregisterPlannerNavigatorApi: (() => void) | null = null;
 function setTaskRecordEditing(v: boolean) {
   taskRecordEditing.value = v;
 }
 
 const taskTrackerRef = ref<{ endTaskRecordEditing: () => void } | null>(null);
+const dayPlannerRef = ref<{
+  startTodoKeyboardEdit: (field: "title" | "start" | "done") => boolean;
+  startScheduleKeyboardEdit: (field: "title" | "start" | "done" | "duration" | "location") => boolean;
+  movePlannerKeyboardCell: (delta: 1 | -1) => boolean;
+  activatePlannerKeyboardCell: () => boolean;
+  confirmPlannerKeyboardCellAction: () => boolean;
+  navigatePlannerKeyboardSubSelection: (delta: number) => boolean;
+} | null>(null);
 
 function onFinishTaskRecordEditing() {
   taskTrackerRef.value?.endTaskRecordEditing();
@@ -435,7 +452,7 @@ provide(plannerHolidayMapKey, holidayByDateKey);
 const { saveAllDebounced, cleanSelection } = dataStore;
 // ======================== 0. UI 更新相关 ========================
 
-import { usePomodoroStats } from "@/composables/usePomodoroStats";
+import { usePomodoroStats } from "@/composables/planner/usePomodoroStats";
 
 // 新系统（测试用）
 const { currentDatePomoCount, globalRealPomo } = usePomodoroStats();
@@ -740,7 +757,7 @@ function onDeleteActivity(id: number | null | undefined) {
     delete settingStore.settings.activityRank[id];
 
     // 找到被删除的 activity，标记为未同步
-    const deletedActivity = activityList.value.find((a) => a.id === id);
+    const deletedActivity = activityList.value.find((a: Activity) => a.id === id);
     if (deletedActivity) {
       deletedActivity.synced = false;
       deletedActivity.lastModified = Date.now();
@@ -947,33 +964,33 @@ const viewSet = computed(() => settingStore.settings.viewSet as "day" | "week" |
 const datasetsForCurrentView = computed<DataRow[]>(() => {
   if (viewSet.value === "day") {
     return [
-      ...(schedulesForCurrentView.value ?? []).map((s) => ({
+      ...(schedulesForCurrentView.value ?? []).map((s: any) => ({
         type: "S" as const,
         item: s,
       })),
-      ...(todosForCurrentViewWithTaskRecords.value ?? []).map((t) => ({
+      ...(todosForCurrentViewWithTaskRecords.value ?? []).map((t: any) => ({
         type: "T" as const,
         item: t,
       })),
     ];
   } else if (viewSet.value === "week") {
     return [
-      ...(schedulesForCurrentView.value ?? []).map((s) => ({
+      ...(schedulesForCurrentView.value ?? []).map((s: any) => ({
         type: "S" as const,
         item: s,
       })),
-      ...(todosForCurrentViewWithTags.value ?? []).map((t) => ({
+      ...(todosForCurrentViewWithTags.value ?? []).map((t: any) => ({
         type: "T" as const,
         item: t,
       })),
     ];
   } else {
     return [
-      ...(schedulesForCurrentView.value ?? []).map((s) => ({
+      ...(schedulesForCurrentView.value ?? []).map((s: any) => ({
         type: "S" as const,
         item: s,
       })),
-      ...(todosForCurrentViewWithTags.value ?? []).map((t) => ({
+      ...(todosForCurrentViewWithTags.value ?? []).map((t: any) => ({
         type: "T" as const,
         item: t,
       })),
@@ -1300,210 +1317,160 @@ function onViewSet() {
   }
 }
 
-// 编辑title，Schedule.id，同步Activity
-function handleEditScheduleTitle(id: number, newTitle: string) {
-  const schedule = scheduleById.value.get(id);
-  if (!schedule) {
-    console.warn(`未找到 id 为 ${id} 的 schedule`);
-    return;
-  }
-  schedule.activityTitle = newTitle;
+const plannerKeyboard = useHomePlannerKeyboard({
+  onDateSet,
+  onQuickAddTodo,
+  onQuickAddSchedule,
+  onRepeatActivity,
+  onIcsExport,
+  onEditField: plannerKeyboardEditField,
+  settingStore,
+  dateService,
+  appDateTimestamp,
+  activeId,
+  selectedRowId,
+  selectedActivityId,
+  selectedTaskId,
+  activityList,
+  taskList,
+  activityById,
+  todoById,
+  scheduleById,
+  saveAllDebounced,
+  createTaskFromActivity: taskService.createTaskFromActivity,
+});
 
-  const activity = activityById.value.get(schedule.activityId);
-  if (!activity) {
-    console.warn(`未找到 activityId 为 ${schedule.activityId} 的 activity`);
-    return;
-  }
-  activity.title = newTitle;
-  activity.synced = false;
-  activity.lastModified = Date.now();
+const {
+  handleEditScheduleTitle,
+  handleEditTodoTitle,
+  handleEditScheduleStart,
+  handleEditTodoStart,
+  handleEditTodoDone,
+  handleEditScheduleDone,
+  handleEditScheduleDuration,
+  handleEditScheduleLocation,
+} = useHomePlannerRowEdits({
+  todoById,
+  scheduleById,
+  activityById,
+  taskByActivityId,
+  appDateTimestamp,
+  dateService,
+  saveAllDebounced,
+});
 
-  // 找到task 并重新赋值
-  const relatedTask = taskByActivityId.value.get(schedule.activityId);
-  if (relatedTask) {
-    relatedTask.activityTitle = newTitle;
+const plannerNavigatorActive = ref(false);
+
+type PlannerKeyboardRow = {
+  rowId: number;
+};
+
+function getPlannerKeyboardRows(): PlannerKeyboardRow[] {
+  const rows: PlannerKeyboardRow[] = [];
+  for (const todo of todosForCurrentViewWithTaskRecords.value ?? []) {
+    rows.push({ rowId: todo.id });
   }
-  saveAllDebounced();
+  for (const schedule of schedulesForCurrentView.value ?? []) {
+    rows.push({ rowId: schedule.id });
+  }
+  return rows;
 }
 
-// 编辑title，todo.id，同步Activity
-function handleEditTodoTitle(id: number, newTitle: string) {
-  // 找到todo
-  const todo = todoById.value.get(id);
-  if (!todo) {
-    console.warn(`未找到 id 为 ${id} 的 todo`);
-    return;
+function selectPlannerKeyboardRowById(rowId: number): boolean {
+  const todo = todoById.value.get(rowId);
+  if (todo) {
+    selectedRowId.value = todo.id;
+    selectedActivityId.value = todo.activityId;
+    selectedTaskId.value = todo.taskId ?? null;
+    activeId.value = undefined;
+    return true;
   }
-  todo.activityTitle = newTitle;
-
-  // 找到activity
-  const activity = activityById.value.get(todo.activityId);
-  if (!activity) {
-    return;
+  const schedule = scheduleById.value.get(rowId);
+  if (schedule) {
+    selectedRowId.value = schedule.id;
+    selectedActivityId.value = schedule.activityId;
+    selectedTaskId.value = schedule.taskId ?? null;
+    activeId.value = undefined;
+    return true;
   }
-  activity.title = newTitle;
-  activity.synced = false;
-  activity.lastModified = Date.now();
-
-  // 找到task 并重新赋值
-  const relatedTask = taskByActivityId.value.get(todo.activityId);
-  if (relatedTask) {
-    relatedTask.activityTitle = newTitle;
-  }
-  saveAllDebounced();
+  return false;
 }
 
-// 编辑开始时间：只更新时:分，不改变日期（基于原 activityDueRange[0] 的日期）
-function handleEditScheduleStart(id: number, newTm: string) {
-  const schedule = scheduleById.value.get(id);
-  if (!schedule) {
-    console.warn(`未找到 id 为 ${id} 的 schedule`);
-    return;
+function enterPlannerNavigatorMode(): boolean {
+  const rows = getPlannerKeyboardRows();
+  if (rows.length === 0) return false;
+  plannerNavigatorActive.value = true;
+  const current = selectedRowId.value;
+  const exists = current != null && rows.some((row) => row.rowId === current);
+  if (!exists) {
+    return selectPlannerKeyboardRowById(rows[0].rowId);
   }
-
-  const activity = activityById.value.get(schedule.activityId);
-
-  if (newTm === "") {
-    // 清空开始时间
-    schedule.activityDueRange[0] = null;
-    schedule.synced = false;
-    schedule.lastModified = Date.now();
-    if (activity?.dueRange) {
-      activity.dueRange[0] = null;
-      activity.synced = false;
-      activity.lastModified = Date.now();
-    }
-    saveAllDebounced();
-    return;
-  }
-
-  // 基准日期：优先用原 startTs，否则用当前视图日期（只作为日期基准）
-  const baseTs = schedule.activityDueRange?.[0] ?? dateService.appDateTimestamp.value;
-  const [hh, mm] = newTm.split(":").map((n) => Number(n));
-  const base = new Date(Number(baseTs));
-  base.setHours(hh, mm, 0, 0);
-  const nextTs = base.getTime();
-
-  // 更新 schedule
-  if (!schedule.activityDueRange) schedule.activityDueRange = [null, "0"];
-  schedule.activityDueRange[0] = nextTs;
-  schedule.synced = false;
-  schedule.lastModified = Date.now();
-
-  // 同步 activity.dueRange[0]
-  if (activity) {
-    if (!activity.dueRange) activity.dueRange = [nextTs, schedule.activityDueRange[1] ?? "0"];
-    else activity.dueRange[0] = nextTs;
-    activity.synced = false;
-    activity.lastModified = Date.now();
-  }
-
-  saveAllDebounced();
+  return true;
 }
 
-// 编辑时间
-function handleEditTodoStart(id: number, newTm: string) {
-  // 获取当前查看日期的时间戳
-
-  const todo = todoById.value.get(id);
-  if (!todo) {
-    console.warn(`未找到 id 为 ${id} 的 todo`);
-    return;
-  }
-  todo.startTime = getTimestampForTimeString(newTm, appDateTimestamp.value);
-  todo.synced = false;
-  todo.lastModified = Date.now();
-
-  const task = taskByActivityId.value.get(todo.activityId);
-  if (task) {
-    if (task.description?.trim() === "#") {
-      task.description = `# ${todo.activityTitle}`;
-      task.synced = false;
-      task.lastModified = Date.now();
-    }
-  }
-
-  saveAllDebounced();
+function movePlannerNavigatorMode(delta: 1 | -1): boolean {
+  const rows = getPlannerKeyboardRows();
+  if (rows.length === 0) return false;
+  const currentIndex = rows.findIndex((row) => row.rowId === selectedRowId.value);
+  const baseIndex = currentIndex === -1 ? (delta > 0 ? -1 : 0) : currentIndex;
+  const nextIndex = Math.max(0, Math.min(rows.length - 1, baseIndex + delta));
+  return selectPlannerKeyboardRowById(rows[nextIndex].rowId);
 }
 
-function handleEditTodoDone(id: number, newTm: string) {
-  // 获取当前查看日期的时间戳
-  const todo = todoById.value.get(id);
-  if (!todo) {
-    console.warn(`未找到 id 为 ${id} 的 todo`);
-    return;
-  }
-  if (newTm === "") {
-    todo.doneTime = undefined;
-  } else {
-    todo.doneTime = getTimestampForTimeString(newTm, appDateTimestamp.value);
-  }
-  todo.synced = false;
-  todo.lastModified = Date.now();
-  saveAllDebounced();
+function pickPlannerRowByDigitMode(digit: number): boolean {
+  if (digit < 1 || digit > 9) return false;
+  const rows = getPlannerKeyboardRows();
+  const target = rows[digit - 1];
+  if (!target) return false;
+  return selectPlannerKeyboardRowById(target.rowId);
 }
 
-function handleEditScheduleDone(id: number, newTm: string) {
-  // 获取当前查看日期的时间戳
-  const schedule = scheduleById.value.get(id);
-  if (!schedule) {
-    console.warn(`未找到 id 为 ${id} 的 schedule`);
-    return;
-  }
-  if (newTm === "") {
-    schedule.doneTime = undefined;
-  } else {
-    schedule.doneTime = getTimestampForTimeString(newTm, appDateTimestamp.value);
-  }
-  saveAllDebounced();
+function exitPlannerNavigatorMode() {
+  plannerNavigatorActive.value = false;
 }
 
-// 编辑时长：Schedule.activityDueRange[1]（同时同步 Activity.dueRange[1]）
-function handleEditScheduleDuration(id: number, newDurationMin: string) {
-  const schedule = scheduleById.value.get(id);
-  if (!schedule) {
-    console.warn(`未找到 id 为 ${id} 的 schedule`);
-    return;
-  }
-
-  // 更新 schedule
-  if (!schedule.activityDueRange) schedule.activityDueRange = [null, "0"];
-  schedule.activityDueRange[1] = newDurationMin;
-  schedule.synced = false;
-  schedule.lastModified = Date.now();
-
-  // 同步到 activity（watcher 也会回写到 schedule，这里直接写保证联动一致）
-  const activity = activityById.value.get(schedule.activityId);
-  if (activity) {
-    if (!activity.dueRange) activity.dueRange = [schedule.activityDueRange[0] ?? null, newDurationMin];
-    else activity.dueRange[1] = newDurationMin;
-    activity.synced = false;
-    activity.lastModified = Date.now();
-  }
-
-  saveAllDebounced();
+function movePlannerNavigatorFieldMode(delta: 1 | -1): boolean {
+  if (!plannerNavigatorActive.value) return false;
+  if (settingStore.settings.viewSet !== "day") return false;
+  return dayPlannerRef.value?.movePlannerKeyboardCell(delta) ?? false;
 }
 
-// 编辑地点：Schedule.location（同时同步 Activity.location）
-function handleEditScheduleLocation(id: number, newLocation: string) {
-  const schedule = scheduleById.value.get(id);
-  if (!schedule) {
-    console.warn(`未找到 id 为 ${id} 的 schedule`);
-    return;
+function activatePlannerNavigatorFieldMode(): boolean {
+  if (!plannerNavigatorActive.value) return false;
+  if (settingStore.settings.viewSet !== "day") return false;
+  return dayPlannerRef.value?.activatePlannerKeyboardCell() ?? false;
+}
+
+function confirmPlannerNavigatorFieldMode(): boolean {
+  if (!plannerNavigatorActive.value) return false;
+  if (settingStore.settings.viewSet !== "day") return false;
+  return dayPlannerRef.value?.confirmPlannerKeyboardCellAction() ?? false;
+}
+
+function navigatePlannerNavigatorSubSelectionMode(delta: number): boolean {
+  if (!plannerNavigatorActive.value) return false;
+  if (settingStore.settings.viewSet !== "day") return false;
+  return dayPlannerRef.value?.navigatePlannerKeyboardSubSelection(delta) ?? false;
+}
+
+function plannerKeyboardEditField(field: "title" | "start" | "done" | "duration" | "location"): boolean {
+  const rowId = selectedRowId.value;
+  if (rowId == null) return false;
+
+  const todo = todoById.value.get(rowId);
+  if (todo) {
+    if (field === "duration" || field === "location") return false;
+    if (settingStore.settings.viewSet !== "day") return false;
+    return dayPlannerRef.value?.startTodoKeyboardEdit(field) ?? false;
   }
 
-  schedule.location = newLocation;
-  schedule.synced = false;
-  schedule.lastModified = Date.now();
-
-  const activity = activityById.value.get(schedule.activityId);
-  if (activity) {
-    activity.location = newLocation;
-    activity.synced = false;
-    activity.lastModified = Date.now();
+  const schedule = scheduleById.value.get(rowId);
+  if (schedule) {
+    if (settingStore.settings.viewSet !== "day") return false;
+    return dayPlannerRef.value?.startScheduleKeyboardEdit(field) ?? false;
   }
 
-  saveAllDebounced();
+  return false;
 }
 
 // ======================== 8. 生命周期 Hook ========================
@@ -1512,9 +1479,29 @@ onMounted(() => {
   dateService.setupSystemDateWatcher();
   dateService.navigateByView("today");
   attachVisualViewportListeners();
+  unregisterPlannerCommandApi = registerPlannerKeyboardCommandApi(plannerKeyboard.plannerCommandApi);
+  unregisterPlannerNavigatorApi = registerPlannerNavigatorApi({
+    enter: enterPlannerNavigatorMode,
+    move: movePlannerNavigatorMode,
+    pickByDigit: pickPlannerRowByDigitMode,
+    moveField: movePlannerNavigatorFieldMode,
+    activateField: activatePlannerNavigatorFieldMode,
+    confirmField: confirmPlannerNavigatorFieldMode,
+    navigateSubSelection: navigatePlannerNavigatorSubSelectionMode,
+    exit: exitPlannerNavigatorMode,
+    isActive: () => plannerNavigatorActive.value,
+  });
 });
 
 onUnmounted(() => {
+  if (unregisterPlannerCommandApi) {
+    unregisterPlannerCommandApi();
+    unregisterPlannerCommandApi = null;
+  }
+  if (unregisterPlannerNavigatorApi) {
+    unregisterPlannerNavigatorApi();
+    unregisterPlannerNavigatorApi = null;
+  }
   dateService.cleanupSystemDateWatcher();
   autoSyncDebounced.flush(); //立即执行
   detachVisualViewportListeners();
@@ -1532,10 +1519,40 @@ const leftWidth = computed({
   set: (v) => (settingStore.settings.leftWidth = v),
 });
 
+const TIMETABLE_LEFT_MIN_WIDTH_DESKTOP = 120;
+const TIMETABLE_LEFT_NORMAL_WIDTH_DESKTOP = 160;
+const TIMETABLE_LEFT_EDIT_WIDTH_DESKTOP = 265;
+const timetableLeftWidthBeforeEdit = ref<number | null>(null);
+
 // 日程表进入/退出编辑时左栏目标宽度（与 TimeTable 约定）
 function onTimetableEdit(editing: boolean) {
-  leftWidth.value = editing ? 200 : 80;
+  if (isMobile.value) return;
+  if (editing) {
+    timetableLeftWidthBeforeEdit.value = leftWidth.value;
+    if (leftWidth.value < TIMETABLE_LEFT_EDIT_WIDTH_DESKTOP) {
+      leftWidth.value = TIMETABLE_LEFT_EDIT_WIDTH_DESKTOP;
+    }
+    return;
+  }
+
+  const previousWidth = timetableLeftWidthBeforeEdit.value;
+  timetableLeftWidthBeforeEdit.value = null;
+  if (typeof previousWidth === "number" && Number.isFinite(previousWidth)) {
+    leftWidth.value = Math.max(TIMETABLE_LEFT_MIN_WIDTH_DESKTOP, Math.min(320, previousWidth));
+    return;
+  }
+  leftWidth.value = TIMETABLE_LEFT_NORMAL_WIDTH_DESKTOP;
 }
+
+// 桌面端：通过按钮/快捷键关闭日程栏时，重置到常规宽度，避免下次打开仍保持编辑态宽度
+watch(
+  () => settingStore.settings.showTimetable,
+  (showTimetable) => {
+    if (isMobile.value || showTimetable) return;
+    timetableLeftWidthBeforeEdit.value = null;
+    leftWidth.value = TIMETABLE_LEFT_NORMAL_WIDTH_DESKTOP;
+  },
+);
 const rightWidth = computed({
   get: () => settingStore.settings.rightWidth,
   set: (v) => (settingStore.settings.rightWidth = v),
@@ -1565,9 +1582,9 @@ const { startResize: startVerticalResize } = useResize(topHeight, "vertical", 0,
 const { startResize: startLeftResize } = useResize(
   leftWidth,
   "horizontal",
-  75,
+  isMobile.value ? 75 : TIMETABLE_LEFT_MIN_WIDTH_DESKTOP,
   320,
-  false, // 左侧面板（max 需 ≥ 日程表编辑宽度 TIMETABLE_LEFT_EDIT）
+  false, // 左侧面板（桌面端 max 需 ≥ 日程表编辑宽度）
 );
 const { startResize: startRightResize } = useResize(
   rightWidth,

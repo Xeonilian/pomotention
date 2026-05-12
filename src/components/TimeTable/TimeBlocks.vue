@@ -174,8 +174,8 @@
 import { onUnmounted, ref } from "vue";
 import { timestampToTimeString } from "@/core/utils";
 import type { Block } from "@/core/types/Block";
-import { useTimeBlocks } from "@/composables/useTimeBlocks";
-import { useDevice } from "@/composables/useDevice";
+import { useTimeBlocks } from "@/composables/planner/useTimeBlocks";
+import { useDevice } from "@/composables/platform/useDevice";
 import { NPopover } from "naive-ui";
 
 // ======= Props =======

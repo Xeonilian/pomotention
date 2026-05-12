@@ -45,7 +45,12 @@
         {{ showPomoSeq ? "🍕" : "🍅" }}
       </n-button>
 
-      <PomodoroTimer class="time" :show-pomo-seq="showPomoSeq" :is-compact-mode="settingStore.settings.isCompactMode" />
+      <PomodoroTimer
+        ref="pomodoroTimerRef"
+        class="time"
+        :show-pomo-seq="showPomoSeq"
+        :is-compact-mode="settingStore.settings.isCompactMode"
+      />
       <PomodoroSequence
         v-show="showPomoSeq && !settingStore.settings.isCompactMode"
         class="sequence"
@@ -105,6 +110,15 @@ const emit = defineEmits<{
   (e: "exit-mini-mode-web"): void;
   (e: "enter-mini"): void;
 }>();
+
+const pomodoroTimerRef = ref<{
+  canStartWorkShortcut: () => boolean;
+  triggerWorkStartShortcut: () => boolean;
+  canStartBreakShortcut: () => boolean;
+  triggerBreakStartShortcut: () => boolean;
+  canStopShortcut: () => boolean;
+  triggerStopShortcut: () => boolean;
+} | null>(null);
 
 // Android 上 calc(100vw/…) 放进 scale() 常不生效，用 visualViewport 写 --phone-scale 更稳；横屏需同时约束高度
 function readPhoneViewportWidthPx(): number {
@@ -244,6 +258,39 @@ function handleTogglePomoSeq() {
 function handlePomoSeqRunning(status: boolean) {
   isPomoSeqRunning.value = status;
 }
+
+function canStartWorkShortcut(): boolean {
+  return pomodoroTimerRef.value?.canStartWorkShortcut() ?? false;
+}
+
+function triggerWorkStartShortcut(): boolean {
+  return pomodoroTimerRef.value?.triggerWorkStartShortcut() ?? false;
+}
+
+function canStartBreakShortcut(): boolean {
+  return pomodoroTimerRef.value?.canStartBreakShortcut() ?? false;
+}
+
+function triggerBreakStartShortcut(): boolean {
+  return pomodoroTimerRef.value?.triggerBreakStartShortcut() ?? false;
+}
+
+function canStopShortcut(): boolean {
+  return pomodoroTimerRef.value?.canStopShortcut() ?? false;
+}
+
+function triggerStopShortcut(): boolean {
+  return pomodoroTimerRef.value?.triggerStopShortcut() ?? false;
+}
+
+defineExpose({
+  canStartWorkShortcut,
+  triggerWorkStartShortcut,
+  canStartBreakShortcut,
+  triggerBreakStartShortcut,
+  canStopShortcut,
+  triggerStopShortcut,
+});
 </script>
 
 <style scoped>

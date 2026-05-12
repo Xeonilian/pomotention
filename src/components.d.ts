@@ -40,7 +40,7 @@ declare module 'vue' {
     RewardInputDialog: typeof import('./components/TaskTracker/RewardInputDialog.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
-    SyncPanel: typeof import('./components/SyncPanel.vue')['default']
+    SyncPanel: typeof import('./components/sync/SyncPanel.vue')['default']
     TagManager: typeof import('./components/TagSystem/TagManager.vue')['default']
     TagRenderer: typeof import('./components/TagSystem/TagRenderer.vue')['default']
     TagSelector: typeof import('./components/TagSystem/TagSelector.vue')['default']
@@ -52,7 +52,7 @@ declare module 'vue' {
     TimeTable: typeof import('./components/TimeTable/TimeTable.vue')['default']
     TimeTableEditor: typeof import('./components/TimeTable/TimeTableEditor.vue')['default']
     UpdateManager: typeof import('./components/UpdateManager.vue')['default']
-    WebdavInputDialog: typeof import('./components/WebdavInputDialog.vue')['default']
+    WebdavInputDialog: typeof import('./components/sync/WebdavInputDialog.vue')['default']
     WeekPlanner: typeof import('./components/WeekPlanner/WeekPlanner.vue')['default']
   }
 }

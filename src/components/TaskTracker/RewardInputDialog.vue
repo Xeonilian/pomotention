@@ -6,19 +6,20 @@
     title="记录愉悦值"
     class="mobile-dialog-top"
     :on-after-leave="handleCancel"
-    @keyup.enter="handleConfirm"
+    @keyup.enter="handleModalEnterKeyup"
     @after-enter="focusSlider"
   >
     <n-space vertical>
       <n-slider v-model:value="rewardValue" :min="1" :max="10" :step="1" :marks="marks" ref="sliderRef" />
-      <n-space justify="space-between" class="reward-value-row">
-        <n-text class="reward-value-text">当前愉悦值: {{ rewardValue }}</n-text>
-        <n-button @click="showHelp = true">
+      <div class="reward-value-datetime-row">
+        <n-text v-if="!isMobile" class="reward-value-datetime-row__label">当前愉悦值: {{ rewardValue }}</n-text>
+        <n-date-picker v-model:value="recordedAt" type="datetime" size="small" class="reward-value-datetime-row__picker" />
+        <n-button size="small" class="reward-value-datetime-row__help" @click="showHelp = true">
           <template #icon>
             <n-icon><Trophy20Regular /></n-icon>
           </template>
         </n-button>
-      </n-space>
+      </div>
       <n-input v-model:value="description" placeholder="请输入内容" maxlength="40" show-count />
     </n-space>
     <template #action>
@@ -35,10 +36,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick } from "vue";
+import { ref, computed, nextTick, watch } from "vue";
 import { Trophy20Regular } from "@vicons/fluent";
-import { NModal, NSlider, NSpace, NText, NButton, NIcon, NDataTable } from "naive-ui";
+import { NModal, NSlider, NSpace, NText, NButton, NIcon, NDataTable, NDatePicker } from "naive-ui";
 import type { DataTableColumns } from "naive-ui";
+import { flushPickerValueToVue, pickRecordedAtMs, isEventFromDateTimePickerDeep } from "@/utils/recordedAtPick";
+import { useDevice } from "@/composables/platform/useDevice";
+const { isMobile } = useDevice();
 
 const props = defineProps<{
   show: boolean;
@@ -46,10 +50,18 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: "update:show", value: boolean): void;
-  (e: "confirm", value: { value: number; description?: string }): void;
+  (e: "confirm", value: { value: number; description?: string; recordedAt: number }): void;
 }>();
 
 const rewardValue = ref(5);
+const recordedAt = ref<number | null>(Date.now());
+
+watch(
+  () => props.show,
+  (open) => {
+    if (open) recordedAt.value = Date.now();
+  },
+);
 const showHelp = ref(false);
 const description = ref("");
 
@@ -107,10 +119,17 @@ const marks = {
   10: "10",
 };
 
-const handleConfirm = () => {
+function handleModalEnterKeyup(e: KeyboardEvent) {
+  if (isEventFromDateTimePickerDeep(e.target)) return;
+  void handleConfirm();
+}
+
+const handleConfirm = async () => {
+  await flushPickerValueToVue();
   emit("confirm", {
     value: rewardValue.value,
     description: description.value.trim(),
+    recordedAt: pickRecordedAtMs(recordedAt.value),
   });
   description.value = "";
   emit("update:show", false);
@@ -123,11 +142,27 @@ const handleCancel = () => {
 </script>
 
 <style scoped>
-.reward-value-row {
+.reward-value-datetime-row {
+  display: flex;
   flex-wrap: nowrap;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
 }
-.reward-value-text {
+.reward-value-datetime-row__label {
+  flex-shrink: 0;
   white-space: nowrap;
+}
+.reward-value-datetime-row__picker {
+  flex: 1;
+  min-width: 0;
+}
+.reward-value-datetime-row__picker :deep(.n-input-wrapper),
+.reward-value-datetime-row__picker :deep(.n-base-selection) {
+  min-width: 0;
+}
+.reward-value-datetime-row__help {
   flex-shrink: 0;
 }
 </style>

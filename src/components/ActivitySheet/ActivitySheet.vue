@@ -29,7 +29,6 @@
           <ActivitySection
             :filterOptions="filterOptions"
             :displaySheet="filteredBySection(section)"
-            :getCountdownClass="getCountdownClass"
             :activityId="selectedActivityId"
             :currentFilter="section.filterKey"
             :isAddButton="section.id === 1 && sections.length < 6"
@@ -54,7 +53,6 @@
           header-only
           :filter-options="filterOptions"
           :display-sheet="[]"
-          :get-countdown-class="getCountdownClass"
           :activity-id="selectedActivityId"
           :current-filter="firstKanbanSection?.filterKey ?? 'all'"
           :is-add-button="false"
@@ -82,7 +80,6 @@
             list-only
             :filter-options="filterOptions"
             :display-sheet="quadrantImportantOnly"
-            :get-countdown-class="getCountdownClass"
             :activity-id="selectedActivityId"
             :current-filter="firstKanbanSection?.filterKey ?? 'all'"
             :is-add-button="false"
@@ -103,7 +100,6 @@
             list-only
             :filter-options="filterOptions"
             :display-sheet="quadrantUrgentImportant"
-            :get-countdown-class="getCountdownClass"
             :activity-id="selectedActivityId"
             :current-filter="firstKanbanSection?.filterKey ?? 'all'"
             :is-add-button="false"
@@ -124,7 +120,6 @@
             list-only
             :filter-options="filterOptions"
             :display-sheet="quadrantUrgentOnly"
-            :get-countdown-class="getCountdownClass"
             :activity-id="selectedActivityId"
             :current-filter="firstKanbanSection?.filterKey ?? 'all'"
             :is-add-button="false"
@@ -145,7 +140,6 @@
             list-only
             :filter-options="filterOptions"
             :display-sheet="quadrantNeither"
-            :get-countdown-class="getCountdownClass"
             :activity-id="selectedActivityId"
             :current-filter="firstKanbanSection?.filterKey ?? 'all'"
             :is-add-button="false"
@@ -200,11 +194,15 @@ import { useSettingStore } from "@/stores/useSettingStore";
 import { useDataStore } from "@/stores/useDataStore";
 import { storeToRefs } from "pinia";
 import { timestampToDatetime } from "@/core/utils";
-import { useDevice } from "@/composables/useDevice";
+import { useDevice } from "@/composables/platform/useDevice";
+import { registerActivityNavigatorApi } from "@/composables/keyboard/useActivityKeyboardNavigator";
+import { registerActivityKeyboardCommandApi } from "@/composables/keyboard/useActivityKeyboardCommands";
+import { activityNavigatorInjectKey } from "@/components/ActivitySheet/activityNavigatorInject";
 
 const dataStore = useDataStore();
 const {
   activeId,
+  selectedRowId,
   selectedTaskId,
   selectedActivityId,
   selectedActivity,
@@ -394,18 +392,16 @@ provide(ACTIVITY_QUADRANT_DRAG_END_KEY, handleQuadrantDragEnd);
 provide(ACTIVITY_QUADRANT_SOLO_KEY, { soloQuadrantKey, exitSolo: exitQuadrantSolo });
 
 let quadrantDueUrgentInterval: ReturnType<typeof setInterval> | null = null;
+let unregisterNavigatorApi: (() => void) | null = null;
+let unregisterActivityCommandApi: (() => void) | null = null;
 
-/** 四象限：按主到期日同步 urgent / Later（过期进 neither），口径与 ActivityRow + getCountdownClass 一致 */
+/** 四象限：按主到期日同步 urgent / Later（过期进 neither）*/
 function runQuadrantDueUrgentSync() {
   if (!settingStore.settings.kanbanQuadrantMode) return;
   syncQuadrantTagsFromPrimaryDue(dataStore, activeActivities.value);
 }
 
-watch(
-  [activeActivities, () => settingStore.settings.kanbanQuadrantMode],
-  () => runQuadrantDueUrgentSync(),
-  { deep: true },
-);
+watch([activeActivities, () => settingStore.settings.kanbanQuadrantMode], () => runQuadrantDueUrgentSync(), { deep: true });
 
 watch(
   () => settingStore.settings.kanbanQuadrantMode,
@@ -430,9 +426,40 @@ onMounted(() => {
   if (settingStore.settings.kanbanQuadrantMode && !settingStore.settings.kanbanQuadrantSnapshot) {
     settingStore.settings.kanbanQuadrantMode = false;
   }
+  unregisterNavigatorApi = registerActivityNavigatorApi({
+    enter: enterNavigatorMode,
+    move: moveNavigator,
+    pickByDigit: pickNavigatorDigit,
+    moveField: moveNavigatorField,
+    activateField: activateNavigatorField,
+    confirmField: confirmNavigatorField,
+    navigateSubSelection: () => false,
+    exit: exitNavigatorMode,
+    isActive: () => navigatorActive.value,
+  });
+  unregisterActivityCommandApi = registerActivityKeyboardCommandApi({
+    pickActivity: keyboardPickActivity,
+    deleteOrRecoverActivity: keyboardDeleteOrRecoverActivity,
+    toggleChild: keyboardtoggleChild,
+    addTodo: keyboardAddTodo,
+    addSchedule: keyboardAddSchedule,
+    addUntaetigkeit: keyboardAddUntaetigkeit,
+    toggleQuadrant: keyboardToggleQuadrant,
+    addKanbanSection: keyboardAddKanbanSection,
+    removeKanbanSection: keyboardremoveKanbanSection,
+    editField: keyboardEditField,
+  });
 });
 
 onUnmounted(() => {
+  if (unregisterNavigatorApi) {
+    unregisterNavigatorApi();
+    unregisterNavigatorApi = null;
+  }
+  if (unregisterActivityCommandApi) {
+    unregisterActivityCommandApi();
+    unregisterActivityCommandApi = null;
+  }
   cancelSoloQuadrantSync();
   if (quadrantDueUrgentInterval) {
     clearInterval(quadrantDueUrgentInterval);
@@ -460,6 +487,272 @@ const quadrantImportantOnly = computed(() => filterActivitiesForQuadrantKey(quad
 const quadrantUrgentImportant = computed(() => filterActivitiesForQuadrantKey(quadrantPreFiltered.value, "urgentImportant"));
 const quadrantUrgentOnly = computed(() => filterActivitiesForQuadrantKey(quadrantPreFiltered.value, "urgentOnly"));
 const quadrantNeither = computed(() => filterActivitiesForQuadrantKey(quadrantPreFiltered.value, "neither"));
+
+const navigatorActive = ref(false);
+const navigatorCursor = ref(0);
+const navigatorFieldIndex = ref(0);
+
+const keyboardRowCandidates = computed(() => {
+  const list: Activity[] = [];
+  const seen = new Set<number>();
+
+  const appendItems = (items: Activity[]) => {
+    for (const item of items) {
+      if (item.status === "done") continue;
+      if (seen.has(item.id)) continue;
+      seen.add(item.id);
+      list.push(item);
+    }
+  };
+
+  if (settingStore.settings.kanbanQuadrantMode) {
+    appendItems(quadrantPreFiltered.value);
+    return list;
+  }
+
+  for (const section of sections.value) {
+    appendItems(filteredBySection(section));
+  }
+  return list;
+});
+
+const navigatorNumberById = computed<Record<number, number>>(() => {
+  const out: Record<number, number> = {};
+  const list = keyboardRowCandidates.value;
+  const length = Math.min(9, list.length);
+  for (let i = 0; i < length; i += 1) {
+    const item = list[i];
+    if (!item) continue;
+    out[item.id] = i + 1;
+  }
+  return out;
+});
+
+const navigatorCurrentRowId = computed<number | null>(() => {
+  const list = keyboardRowCandidates.value;
+  const item = list[navigatorCursor.value];
+  return item?.id ?? null;
+});
+
+const navigatorCurrentFieldKey = computed<"title" | "dueDate" | "place" | "duration" | "scheduleTime" | "pomoEstimate" | null>(() => {
+  const rowActivityId = navigatorCurrentRowId.value;
+  if (rowActivityId == null) return null;
+  const activity = activityById.value.get(rowActivityId);
+  if (!activity) return null;
+  const fields = getNavigatorFieldsForActivity(activity);
+  if (!fields.length) return null;
+  const clamped = Math.max(0, Math.min(fields.length - 1, navigatorFieldIndex.value));
+  return fields[clamped] ?? null;
+});
+
+function focusNavigatorIndex(nextIndex: number): boolean {
+  const list = keyboardRowCandidates.value;
+  if (!list.length) return false;
+  const last = list.length - 1;
+  const clamped = Math.max(0, Math.min(last, nextIndex));
+  navigatorCursor.value = clamped;
+  const target = list[clamped];
+  if (!target) return false;
+  handleFocusRow(target.id);
+  return true;
+}
+
+function enterNavigatorMode(): boolean {
+  const list = keyboardRowCandidates.value;
+  if (!list.length) return false;
+  navigatorActive.value = true;
+  navigatorFieldIndex.value = 0;
+  const selectedId = sheetPrimaryActivityId.value;
+  const initial = selectedId != null ? list.findIndex((item) => item.id === selectedId) : -1;
+  return focusNavigatorIndex(initial >= 0 ? initial : 0);
+}
+
+function moveNavigator(delta: 1 | -1): boolean {
+  if (!navigatorActive.value) return false;
+  const list = keyboardRowCandidates.value;
+  if (!list.length) return false;
+  const last = list.length - 1;
+  let next = navigatorCursor.value + delta;
+  if (next < 0) next = last;
+  if (next > last) next = 0;
+  return focusNavigatorIndex(next);
+}
+
+function pickNavigatorDigit(digit: number): boolean {
+  if (!navigatorActive.value) return false;
+  const idx = digit - 1;
+  const ok = focusNavigatorIndex(idx);
+  if (ok) navigatorActive.value = false;
+  return ok;
+}
+
+function exitNavigatorMode() {
+  navigatorActive.value = false;
+}
+
+function getNavigatorFieldsForActivity(
+  activity: Activity,
+): Array<"title" | "dueDate" | "place" | "duration" | "scheduleTime" | "pomoEstimate"> {
+  // 按 ActivityRow 实际从左到右的可编辑列顺序导航
+  if (activity.class === "T") return ["title", "pomoEstimate", "dueDate"];
+  if (activity.class === "S") return ["title", "place", "duration", "scheduleTime"];
+  return ["title"];
+}
+
+function moveNavigatorField(delta: 1 | -1): boolean {
+  if (!navigatorActive.value) return false;
+  const rowActivityId = sheetPrimaryActivityId.value;
+  if (rowActivityId == null) return false;
+  const activity = activityById.value.get(rowActivityId);
+  if (!activity) return false;
+  const fields = getNavigatorFieldsForActivity(activity);
+  if (!fields.length) return false;
+  let next = navigatorFieldIndex.value + delta;
+  if (next < 0) next = fields.length - 1;
+  if (next >= fields.length) next = 0;
+  navigatorFieldIndex.value = next;
+  return true;
+}
+
+function activateNavigatorField(): boolean {
+  if (!navigatorActive.value) return false;
+  const rowActivityId = sheetPrimaryActivityId.value;
+  if (rowActivityId == null) return false;
+  const activity = activityById.value.get(rowActivityId);
+  if (!activity) return false;
+  const fields = getNavigatorFieldsForActivity(activity);
+  if (!fields.length) return false;
+  const field = fields[Math.max(0, Math.min(fields.length - 1, navigatorFieldIndex.value))];
+  if (!field) return false;
+  return keyboardEditField(field);
+}
+
+function confirmNavigatorField(): boolean {
+  if (!navigatorActive.value) return false;
+  const activeEl = document.activeElement;
+  if (activeEl instanceof HTMLElement) {
+    const isInputLike = activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA" || activeEl.tagName === "SELECT";
+    if (isInputLike || activeEl.isContentEditable) {
+      activeEl.blur();
+      return true;
+    }
+  }
+  return false;
+}
+
+const noSelectedActivity = computed(() => selectedRowId.value == null && selectedActivityId.value == null && activeId.value == null);
+const isSelectedClassS = computed(() => selectedActivity.value?.class === "S");
+const isDeletedSelectedActivity = computed(() => Boolean(selectedActivity.value?.deleted));
+const hasParentSelectedActivity = computed(() => selectedActivity.value?.parentId != null);
+
+function keyboardPickActivity(): boolean {
+  if (isDeletedSelectedActivity.value || isSelectedRowDone.value || noSelectedActivity.value) return false;
+  pickActivity();
+  return true;
+}
+
+function keyboardDeleteOrRecoverActivity(): boolean {
+  if (noSelectedActivity.value || isSelectedRowDone.value) return false;
+  deleteActiveRow();
+  return true;
+}
+
+function keyboardtoggleChild(): boolean {
+  // 与 ActivityButtons 的 v-if/v-else 分支保持一致
+  if (!hasParentSelectedActivity.value && !selectedRowHasParent.value) {
+    if (isSelectedRowDone.value || isSelectedClassS.value || isDeletedSelectedActivity.value || noSelectedActivity.value) return false;
+    createChildActivity();
+    return true;
+  }
+  if (sheetPrimaryActivityId.value == null || isSelectedClassS.value) return false;
+  increaseChildActivity();
+  return true;
+}
+
+function keyboardAddTodo(): boolean {
+  addTodoRow();
+  return true;
+}
+
+function keyboardAddSchedule(): boolean {
+  addScheduleRow();
+  return true;
+}
+
+function keyboardAddUntaetigkeit(): boolean {
+  addUntaetigkeitRow();
+  return true;
+}
+
+function keyboardToggleQuadrant(): boolean {
+  settingStore.toggleKanbanQuadrantMode();
+  return true;
+}
+
+function keyboardAddKanbanSection(): boolean {
+  const before = settingStore.settings.kanbanSetting.filter((s) => s.show).length;
+  addSection();
+  const after = settingStore.settings.kanbanSetting.filter((s) => s.show).length;
+  return after > before;
+}
+
+function keyboardremoveKanbanSection(): boolean {
+  if (settingStore.settings.kanbanQuadrantMode) return false;
+  const visible = sections.value.filter((s) => s.show);
+  if (visible.length <= 1) return false;
+  const last = visible[visible.length - 1];
+  if (!last || last.id === 1) return false;
+  removeSection(last.id);
+  return true;
+}
+
+function focusRowFieldInput(rowActivityId: number, selector: string): boolean {
+  const rowEl = document.querySelector(`[data-row-id="${rowActivityId}"]`);
+  if (!(rowEl instanceof HTMLElement)) return false;
+  const input = rowEl.querySelector(selector) as HTMLElement | null;
+  if (!input) return false;
+  handleFocusRow(rowActivityId);
+  requestAnimationFrame(() => {
+    (input as HTMLInputElement).focus?.();
+    if ("select" in input && typeof (input as HTMLInputElement).select === "function") {
+      (input as HTMLInputElement).select();
+    }
+  });
+  return true;
+}
+
+function keyboardEditField(field: "title" | "dueDate" | "place" | "duration" | "scheduleTime" | "pomoEstimate"): boolean {
+  const rowActivityId = sheetPrimaryActivityId.value;
+  if (rowActivityId == null) return false;
+  const activity = activityById.value.get(rowActivityId);
+  if (!activity) return false;
+
+  if (field === "title") return focusRowFieldInput(rowActivityId, ".activity-field-title input");
+  if (field === "dueDate") return activity.class === "T" && focusRowFieldInput(rowActivityId, ".activity-field-due-date input");
+  if (field === "place") return activity.class === "S" && focusRowFieldInput(rowActivityId, ".activity-field-place input");
+  if (field === "duration") return activity.class === "S" && focusRowFieldInput(rowActivityId, ".activity-field-duration input");
+  if (field === "scheduleTime") return activity.class === "S" && focusRowFieldInput(rowActivityId, ".activity-field-schedule-time input");
+  if (field === "pomoEstimate") return activity.class === "T" && focusRowFieldInput(rowActivityId, ".activity-field-pomo input");
+  return false;
+}
+
+watch(keyboardRowCandidates, (list) => {
+  if (!navigatorActive.value) return;
+  if (!list.length) {
+    navigatorActive.value = false;
+    return;
+  }
+  if (navigatorCursor.value > list.length - 1) {
+    navigatorCursor.value = list.length - 1;
+  }
+});
+
+provide(activityNavigatorInjectKey, {
+  isActive: computed(() => navigatorActive.value),
+  numberById: navigatorNumberById,
+  currentRowId: navigatorCurrentRowId,
+  currentFieldKey: navigatorCurrentFieldKey,
+});
 
 // 错误提示弹窗相关
 const showPopover = ref(false);
@@ -513,15 +806,15 @@ function filteredBySection(section: ActivitySectionConfig) {
     switch (section.filterKey) {
       case "all":
         // 全部活动中不显示已取消的活动
-        return activeActivities.value.filter((item) => item.status !== "cancelled");
+        return activeActivities.value.filter((item: Activity) => item.status !== "cancelled");
       case "deleted":
         // 筛选已删除的活动（保持 filterKey 为 "deleted" 以向后兼容）
         // 需要使用完整的 activityList，因为 activeActivities 已过滤掉 deleted 的活动
         // 注意：cancelled 的活动被删除后仍会显示在这里，这是有意的设计：
         // cancelled 是完成状态的一种，被删除的 cancelled 活动需要在"已删活动"视图中可找回
-        return activityList.value.filter((item) => item.deleted === true);
+        return activityList.value.filter((item: Activity) => item.deleted === true);
       case "today":
-        return activeActivities.value.filter((item) => {
+        return activeActivities.value.filter((item: Activity) => {
           // 过滤掉已取消的活动
           if (item.status === "cancelled") return false;
           if (item.class === "T") {
@@ -539,11 +832,11 @@ function filteredBySection(section: ActivitySectionConfig) {
           return false;
         });
       case "interrupt":
-        return activeActivities.value.filter((item) => item.status !== "cancelled" && !!item.interruption);
+        return activeActivities.value.filter((item: Activity) => item.status !== "cancelled" && !!item.interruption);
       case "todo":
-        return activeActivities.value.filter((item) => item.status !== "cancelled" && item.class === "T");
+        return activeActivities.value.filter((item: Activity) => item.status !== "cancelled" && item.class === "T");
       case "schedule":
-        return activeActivities.value.filter((item) => item.status !== "cancelled" && item.class === "S");
+        return activeActivities.value.filter((item: Activity) => item.status !== "cancelled" && item.class === "S");
       default:
         break;
     }
@@ -553,7 +846,9 @@ function filteredBySection(section: ActivitySectionConfig) {
   if (section.search) {
     const keyword = section.search.trim().toLowerCase();
     // 搜索中也不显示已取消的活动
-    return activeActivities.value.filter((item) => item.status !== "cancelled" && item.title && item.title.toLowerCase().includes(keyword));
+    return activeActivities.value.filter(
+      (item: Activity) => item.status !== "cancelled" && item.title && item.title.toLowerCase().includes(keyword),
+    );
   }
 
   // 什么条件都没有，返回空
@@ -714,22 +1009,6 @@ function createChildActivity() {
 function increaseChildActivity() {
   emit("increase-child-activity", activeId.value || selectedActivityId.value || null);
 }
-
-// 根据截止日期计算倒计时样式类名
-function getCountdownClass(dueDate: number | undefined | null): string {
-  if (!dueDate) return "";
-
-  const now = new Date();
-  const due = new Date(dueDate);
-  due.setHours(0, 0, 0, 0);
-  const diff = Math.ceil((due.getTime() - now.setHours(0, 0, 0, 0)) / 86400000);
-
-  if (diff === 0) return "countdown-0"; // 今日到期
-  if (diff === 1) return "countdown-1"; // 明日到期
-  if (diff === 2) return "countdown-2"; // 后天到期
-  if (diff < 0) return "countdown-boom"; // 已过期
-  return "";
-}
 </script>
 
 <style scoped>
@@ -789,7 +1068,7 @@ function getCountdownClass(dueDate: number | undefined | null): string {
   min-height: 0;
   display: grid;
   gap: 6px;
-  margin-bottom: calc(env(safe-area-inset-bottom, 12px) - 4px);
+  margin-bottom: 6px;
   margin-top: 2px;
   /* 勿在此层做 overflow-y: auto：窄屏 .right 已 overflow-y:hidden（见 HomeView），再嵌套纵滚会触发 iOS 异常 scrollExtent、无限条与灰带；靠 minmax(0,1fr) 压缩行 + 象限内 .section-content-container 滚动 */
   overflow: hidden;
@@ -814,6 +1093,7 @@ function getCountdownClass(dueDate: number | undefined | null): string {
       "imp"
       "urg"
       "nor";
+    margin-bottom: calc(env(safe-area-inset-bottom) + 2px);
   }
 }
 </style>

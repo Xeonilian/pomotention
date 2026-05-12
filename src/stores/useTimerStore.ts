@@ -1,7 +1,7 @@
 // useTimerStore.ts
 import { defineStore } from "pinia";
 import { ref, computed, watch } from "vue";
-import { SESSION_MARKER_FULL_NAV_TO_HELP } from "@/composables/useDocsUrl";
+import { SESSION_MARKER_FULL_NAV_TO_HELP } from "@/composables/platform/useDocsUrl";
 import { useSettingStore } from "./useSettingStore.ts";
 import { playSound, SoundType, startSilentWhiteNoiseHold, startWhiteNoise, stopWhiteNoise } from "../core/sounds.ts";
 

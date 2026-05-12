@@ -24,8 +24,8 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, nextTick } from "vue";
 import WeekDayCard from "./WeekDayCard.vue";
-import { useWeekData } from "@/composables/useWeekData";
-import { useWeekBlock } from "@/composables/useWeekBlock";
+import { useWeekData } from "@/composables/planner/useWeekData";
+import { useWeekBlock } from "@/composables/planner/useWeekBlock";
 
 // 1. 获取grid容器ref，用于计算实际高度
 const gridRef = ref<HTMLDivElement | null>(null);

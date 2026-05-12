@@ -55,7 +55,7 @@
 <script setup lang="ts">
 import { ref, nextTick, onMounted } from "vue";
 import { NInput } from "naive-ui";
-import { useAiChat } from "@/composables/useAiChat";
+import { useAiChat } from "@/composables/ai/useAiChat";
 import { formatMessage } from "@/core/utils/formatMessage";
 import { Question20Filled } from "@vicons/fluent";
 import { marked } from "marked";

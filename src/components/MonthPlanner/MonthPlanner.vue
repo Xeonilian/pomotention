@@ -78,13 +78,13 @@ import TagRenderer from "../TagSystem/TagRenderer.vue";
 import { timestampToTimeString } from "@/core/utils";
 import { useDataStore } from "@/stores/useDataStore";
 import { storeToRefs } from "pinia";
-import { useDevice } from "@/composables/useDevice";
-import { createTouchScheduledSingleAndDouble } from "@/composables/useTouchScheduledSingleAndDouble";
+import { useDevice } from "@/composables/platform/useDevice";
+import { createTouchScheduledSingleAndDouble } from "@/composables/platform/useTouchScheduledSingleAndDouble";
 import { useSettingStore } from "@/stores/useSettingStore";
-import { countCompletedPomos } from "@/services/realPomoState";
+import { countCompletedPomos } from "@/services/timer/realPomoState";
 import { getDateKey } from "@/core/utils";
-import type { HolidayDisplay } from "@/services/publicHolidays";
-import { plannerHolidayMapKey } from "@/composables/usePublicHolidays";
+import type { HolidayDisplay } from "@/services/planner/publicHolidays";
+import { plannerHolidayMapKey } from "@/composables/planner/usePublicHolidays";
 
 const settingStore = useSettingStore();
 const isTaskVisible = computed(() => settingStore.settings.showTask);

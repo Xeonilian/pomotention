@@ -3,7 +3,7 @@
 import { defineComponent } from "vue";
 import { createRouter, createWebHistory, RouteRecordRaw } from "vue-router";
 import { isSupabaseEnabled } from "@/core/services/supabase";
-import { navigateToBuiltDocs } from "@/composables/useDocsUrl";
+import { navigateToBuiltDocs } from "@/composables/platform/useDocsUrl";
 
 // --- 视图组件 ---
 const MainLayout = () => import("@/views/MainLayout.vue");

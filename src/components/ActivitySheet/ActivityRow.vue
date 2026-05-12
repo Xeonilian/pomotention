@@ -6,9 +6,11 @@
     :class="{
       'highlight-line': isHighlighted,
       'is-dragging-row': isDraggingRow,
+      'navigator-mode': isNavigatorModeActive,
     }"
   >
     <div class="activity-content">
+      <span v-if="showNavigatorNumber" class="navigator-index" :class="{ 'is-active': isNavigatorCurrent }">{{ navigatorNumber }}.</span>
       <span
         v-if="item.parentId"
         class="child-activity-dot"
@@ -32,8 +34,9 @@
         :class="{
           'force-hover': isHoveredRow,
           'child-activity': item.parentId,
+          'navigator-cell-active': isNavigatorCurrent && navigatorCurrentField === 'title',
         }"
-        class="input-focus-none"
+        class="input-focus-none activity-field-title"
       >
         <template #prefix>
           <div
@@ -155,11 +158,11 @@
         v-if="item.class === 'S'"
         v-model:value="item.location"
         style="max-width: 50px"
-        class="input-focus-none"
+        class="input-focus-none activity-field-place"
         @focus="notifyRowFocused(item.id)"
         @blur="onSectionFieldBlur"
         placeholder="地点"
-        :class="{ 'force-hover': isHoveredRow }"
+        :class="{ 'force-hover': isHoveredRow, 'navigator-cell-active': isNavigatorCurrent && navigatorCurrentField === 'place' }"
         @update:value="
           () => {
             item.synced = false;
@@ -178,7 +181,7 @@
         :placeholder="item.pomoType"
         :title="pomoInputTitleText"
         style="max-width: 32px"
-        class="pomo-input input-focus-none"
+        class="pomo-input input-focus-none activity-field-pomo"
         :readonly="item.pomoType === '🍒'"
         @update:value="onInputUpdate"
         @focus="handlePomoInputFocus"
@@ -193,6 +196,7 @@
           'pomo-green': item.pomoType === '🍒',
           'input-center': true,
           'force-hover': isHoveredRow,
+          'navigator-cell-active': isNavigatorCurrent && navigatorCurrentField === 'pomoEstimate',
         }"
       />
       <n-input
@@ -210,8 +214,8 @@
         @blur="onSectionFieldBlur"
         title="持续时间(分钟)"
         placeholder="min"
-        class="input-center input-min input-focus-none"
-        :class="{ 'force-hover': isHoveredRow }"
+        class="input-center input-min input-focus-none activity-field-duration"
+        :class="{ 'force-hover': isHoveredRow, 'navigator-cell-active': isNavigatorCurrent && navigatorCurrentField === 'duration' }"
       />
 
       <!-- 日期选择 -->
@@ -225,7 +229,7 @@
         @focus="notifyRowFocused(item.id)"
         @blur="onSectionFieldBlur"
         title="死线日期"
-        :class="getCountdownClass(item.dueDate)"
+        :class="[{ 'navigator-cell-active': isNavigatorCurrent && navigatorCurrentField === 'dueDate' }]"
         placeholder="日期"
         @update:value="
           () => {
@@ -233,7 +237,7 @@
             item.lastModified = Date.now();
           }
         "
-        class="input-focus-none"
+        class="input-focus-none activity-field-due-date"
       />
       <n-date-picker
         v-else
@@ -252,9 +256,9 @@
         @focus="notifyRowFocused(item.id)"
         @blur="onSectionFieldBlur"
         title="约定时间"
-        :class="getCountdownClass(item.dueRange && item.dueRange[0])"
+        :class="[{ 'navigator-cell-active': isNavigatorCurrent && navigatorCurrentField === 'scheduleTime' }]"
         placeholder="时间"
-        class="input-focus-none"
+        class="input-focus-none activity-field-schedule-time"
       />
     </div>
 
@@ -278,7 +282,7 @@
 
 <script lang="ts">
 import type { InjectionKey, Ref } from "vue";
-import { useActivityTagEditor } from "@/composables/useActivityTagEditor";
+import { useActivityTagEditor } from "@/composables/activity/useActivityTagEditor";
 
 /** ActivitySection provide → ActivityRow inject */
 export type ActivitySectionRowInject = {
@@ -311,11 +315,12 @@ import type { Activity } from "@/core/types/Activity";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useDataStore } from "@/stores/useDataStore";
 import { storeToRefs } from "pinia";
-import { togglePomoType } from "@/services/activityService";
+import { togglePomoType } from "@/services/activity/activityService";
 import TagRenderer from "../TagSystem/TagRenderer.vue";
 import TagPickerPopover from "../TagSystem/TagPickerPopover.vue";
 import type { InputInst } from "naive-ui";
 import { TAG_IDS_HIDDEN_IN_TAG_RENDERER } from "@/core/constants";
+import { activityNavigatorInjectKey } from "@/components/ActivitySheet/activityNavigatorInject";
 
 const props = defineProps<{
   item: Activity;
@@ -326,7 +331,6 @@ const props = defineProps<{
   hasChildrenFlag: boolean;
   isCollapsed: boolean;
   showTagStrip: boolean;
-  getCountdownClass: (dueDate: number | undefined | null) => string;
   dragAreaTitle: string;
 }>();
 
@@ -336,6 +340,7 @@ defineEmits<{
 }>();
 
 const ctx = inject(activitySectionRowInjectKey)!;
+const navigatorCtx = inject(activityNavigatorInjectKey, null);
 const tagEditor = ctx.tagEditor;
 const isMobile = ctx.isMobile;
 const notifyRowFocused = (rowId: number) => ctx.notifyRowFocused(rowId);
@@ -476,6 +481,15 @@ function handleInputKeydown(event: KeyboardEvent) {
     tagPickerRef.value.handleHostKeydown(event);
   }
 
+  if (event.key === "Escape" || event.key === "Esc") {
+    // 退出当前输入编辑态，但保留已选中行
+    event.preventDefault();
+    event.stopPropagation();
+    const target = event.target as HTMLInputElement | HTMLTextAreaElement | null;
+    target?.blur();
+    return;
+  }
+
   if (isMobile.value && event.key === "Enter") {
     event.preventDefault();
     const input = titleInputRef.value;
@@ -518,6 +532,11 @@ function handleRemoveTag(tagId: number) {
 }
 
 const isHighlighted = computed(() => props.item.id === props.activityId || props.item.id === props.activeId);
+const navigatorNumber = computed(() => navigatorCtx?.numberById.value[props.item.id] ?? null);
+const showNavigatorNumber = computed(() => Boolean(navigatorCtx?.isActive.value) && navigatorNumber.value != null);
+const isNavigatorModeActive = computed(() => Boolean(navigatorCtx?.isActive.value));
+const isNavigatorCurrent = computed(() => isNavigatorModeActive.value && navigatorCtx?.currentRowId.value === props.item.id);
+const navigatorCurrentField = computed(() => navigatorCtx?.currentFieldKey.value ?? null);
 
 const pomoDisplayValue = computed(() => {
   const item = props.item;
@@ -557,12 +576,8 @@ function focusPomoInput() {
 }
 
 function handlePomoInputFocus() {
-  if (pomoShouldFocus.value) {
-    notifyRowFocused(props.item.id);
-  } else {
-    const input = pomoInputRef.value;
-    if (input) input.blur();
-  }
+  // 允许 Tab/快捷键聚焦后直接输入，避免获得焦点却无法输入
+  notifyRowFocused(props.item.id);
 }
 
 function handleTogglePomoType() {
@@ -631,10 +646,11 @@ function handlePomoInputTouchCancel() {
 <style scoped>
 .activity-row {
   align-items: center;
-  padding: 1px 0;
+  margin: 1px 0;
   gap: 0px;
   width: 100%;
   touch-action: pan-y;
+  border-radius: 4px;
 }
 
 .is-dragging-row {
@@ -646,10 +662,31 @@ function handlePomoInputTouchCancel() {
   position: relative;
   display: flex;
   flex-direction: row;
+  align-items: center;
 }
 
 .activity-content .child-activity {
   margin-left: 20px;
+}
+
+.navigator-index {
+  width: 12px;
+  min-width: 12px;
+  height: 12px;
+  line-height: 12px;
+  text-align: center;
+  border-radius: 50%;
+  margin-right: 2px;
+  margin-left: 3px;
+  font-size: 10px;
+  font-weight: bold;
+  font-family: "consolas", monospace;
+  color: var(--color-text-secondary);
+}
+
+.navigator-index.is-active {
+  color: var(--color-text-primary);
+  background: var(--color-background-light-transparent);
 }
 
 .child-activity-dot {
@@ -793,28 +830,6 @@ function handlePomoInputTouchCancel() {
   font-size: 12px;
 }
 
-.countdown-0 :deep(.n-input) {
-  background: var(--color-red-light-transparent);
-  --n-box-shadow-focus: none !important;
-  --n-border-hover: 1px solid var(--color-blue) !important;
-}
-
-.countdown-1 :deep(.n-input) {
-  background: var(--color-background-light-transparent);
-  --n-box-shadow-focus: none !important;
-  --n-border-hover: 1px solid var(--color-blue) !important;
-}
-.countdown-2 :deep(.n-input) {
-  background: var(--color-background-transparent);
-  --n-box-shadow-focus: none !important;
-  --n-border-hover: 1px solid var(--color-blue) !important;
-}
-
-.countdown-boom :deep(.n-input) {
-  background: var(--color-blue-light-transparent);
-  --n-box-shadow-focus: none !important;
-  --n-border-hover: 1px solid var(--color-blue) !important;
-}
 .pomo-input :deep(.n-input__placeholder) {
   opacity: 0.45;
   font-size: 10px;
@@ -839,6 +854,10 @@ function handlePomoInputTouchCancel() {
   background-color: var(--color-yellow-light) !important;
 }
 
+.activity-row.navigator-mode.highlight-line {
+  background-color: var(--color-purple-light-transparent) !important;
+}
+
 .highlight-line :deep(.n-input) {
   background: transparent !important;
   --n-box-shadow-focus: none !important;
@@ -853,6 +872,10 @@ function handlePomoInputTouchCancel() {
 }
 .highlight-line :deep(.n-date-picker .n-input) {
   background: transparent !important;
+}
+
+:deep(.navigator-cell-active .n-input-wrapper) {
+  background-color: var(--color-blue-light-transparent) !important;
 }
 
 .input-focus-none :deep(.n-input) {

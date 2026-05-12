@@ -152,7 +152,7 @@ import {
   ArrowSortUp24Filled,
 } from "@vicons/fluent";
 import { NInput, NButton, NPopover, NColorPicker, NIcon } from "naive-ui";
-import { useDevice } from "@/composables/useDevice";
+import { useDevice } from "@/composables/platform/useDevice";
 
 // ================================================================
 // 初始化

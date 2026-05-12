@@ -5,9 +5,13 @@ import { useSettingStore } from "./useSettingStore";
 import { useRouter } from "vue-router";
 import { signOut, getCurrentUser } from "@/core/services/authService";
 import { isSupabaseEnabled, supabase } from "@/core/services/supabase";
-import { destroyAppCloseHandler } from "@/services/appCloseHandler";
+import { destroyAppCloseHandler } from "@/services/platform/appCloseHandler";
 
-const shouldLogSyncDebug = ["1", "true"].includes(String(import.meta.env.VITE_SYNC_DEBUG_LOG ?? "").trim().toLowerCase());
+const shouldLogSyncDebug = ["1", "true"].includes(
+  String(import.meta.env.VITE_SYNC_DEBUG_LOG ?? "")
+    .trim()
+    .toLowerCase(),
+);
 function syncDebugLog(...args: unknown[]) {
   if (!shouldLogSyncDebug) return;
   console.log(...args);

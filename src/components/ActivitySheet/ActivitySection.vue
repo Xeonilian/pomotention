@@ -113,7 +113,6 @@
           :has-children-flag="hasChildren(item.id)"
           :is-collapsed="!!collapsedParentIds[item.id]"
           :show-tag-strip="rowTagStripVisible[item.id] !== false"
-          :get-countdown-class="getCountdownClass"
           :drag-area-title="getDragAreaTitle(item)"
           @collapse-parent="handleCollapseParent"
           @drag-start="onDragStart($event, item)"
@@ -143,15 +142,15 @@ import {
 import type { Activity } from "@/core/types/Activity";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useTagStore } from "@/stores/useTagStore";
-import { useActivityTagEditor } from "@/composables/useActivityTagEditor";
-import { useActivityDrag } from "@/composables/useActivityDrag";
+import { useActivityTagEditor } from "@/composables/activity/useActivityTagEditor";
+import { useActivityDrag } from "@/composables/activity/useActivityDrag";
 import {
   ACTIVITY_QUADRANT_DRAG_END_KEY,
   ACTIVITY_QUADRANT_SORT_KEY,
   ACTIVITY_QUADRANT_SOLO_KEY,
   type ActivitySectionSortKey,
 } from "@/core/activityQuadrant";
-import { useDevice } from "@/composables/useDevice";
+import { useDevice } from "@/composables/platform/useDevice";
 import ActivityRow, { activitySectionRowInjectKey } from "./ActivityRow.vue";
 import type { InputInst } from "naive-ui";
 
@@ -159,7 +158,6 @@ import type { InputInst } from "naive-ui";
 const props = defineProps<{
   displaySheet: Activity[];
   filterOptions: any[];
-  getCountdownClass: (dueDate: number | undefined | null) => string;
   /** Planner 等：selectedActivityId */
   activityId: number | null;
   /** 看板当前选中活动的 id，与 activityId 择一或同时用于避免双重高亮时的展示 */
@@ -669,6 +667,9 @@ function handleCollapseParent(parentId: number) {
   --n-border: none !important;
   --n-icon-size: 20px !important;
   --n-padding: 4px !important;
+  --n-color-focus: none !important;
+  --n-color-hover: none !important;
+  --n-color-active: none !important;
 }
 
 .search-input :deep(.n-input) {

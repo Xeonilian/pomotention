@@ -130,6 +130,7 @@
             @pointerdown="handleDragStart"
           >
             <PomotentionTimer
+              ref="pomotentionTimerRef"
               :showPomoSeq="showPomoSeq"
               :isMiniMode="isMiniMode"
               @toggle-pomo-seq="showPomoSeq = !showPomoSeq"
@@ -140,6 +141,7 @@
 
           <!-- 独立番茄钟 (Mini模式) -->
           <PomotentionTimer
+            ref="pomotentionTimerRef"
             v-if="isMiniMode"
             :showPomoSeq="showPomoSeq"
             :isMiniMode="isMiniMode"
@@ -243,14 +245,43 @@ import { useDataStore } from "@/stores/useDataStore";
 import { useSyncStore } from "@/stores/useSyncStore";
 
 // Composables
-import { useButtonStyle } from "@/composables/useButtonStyle";
-import { useDraggable } from "@/composables/useDraggable";
-import { useAppWindow } from "@/composables/useAppWindow";
-import { useSyncWidget } from "@/composables/useSyncWidget";
-import { useDevice } from "@/composables/useDevice";
-import { navigateToBuiltDocs } from "@/composables/useDocsUrl";
+import { useButtonStyle } from "@/composables/layout/useButtonStyle";
+import { useDraggable } from "@/composables/layout/useDraggable";
+import { useAppWindow } from "@/composables/layout/useAppWindow";
+import { useSyncWidget } from "@/composables/sync/useSyncWidget";
+import { useDevice } from "@/composables/platform/useDevice";
+import { useGlobalKeyboardShortcuts } from "@/composables/keyboard/useGlobalKeyboardShortcuts";
+import { navigateToBuiltDocs } from "@/composables/platform/useDocsUrl";
 import { syncAll } from "@/services/sync";
-import { createTouchScheduledSingleAndDouble } from "@/composables/useTouchScheduledSingleAndDouble";
+import { createTouchScheduledSingleAndDouble } from "@/composables/platform/useTouchScheduledSingleAndDouble";
+import { createAppActionRegistry, dispatchAppAction, type AppActionId } from "@/actions/appActions";
+import {
+  activateActivityNavigatorField,
+  confirmActivityNavigatorField,
+  enterActivityNavigator,
+  exitActivityNavigator,
+  isActivityNavigatorActive,
+  moveActivityNavigator,
+  moveActivityNavigatorField,
+  navigateActivityNavigatorSubSelection,
+  pickActivityRowByDigit,
+} from "@/composables/keyboard/useActivityKeyboardNavigator";
+import { runActivityKeyboardCommand } from "@/composables/keyboard/useActivityKeyboardCommands";
+import { runActivityEditFieldCommand } from "@/composables/keyboard/useActivityKeyboardCommands";
+import { runTaskKeyboardCommand } from "@/composables/keyboard/useTaskKeyboardCommands";
+import { runPlannerEditFieldCommand, runPlannerKeyboardCommand } from "@/composables/keyboard/usePlannerKeyboardCommands";
+import { runTimetableKeyboardCommand } from "@/composables/keyboard/useTimetableKeyboardCommands";
+import {
+  activatePlannerNavigatorField,
+  confirmPlannerNavigatorField,
+  enterPlannerNavigator,
+  exitPlannerNavigator,
+  isPlannerNavigatorActive,
+  movePlannerNavigator,
+  movePlannerNavigatorField,
+  navigatePlannerNavigatorSubSelection,
+  pickPlannerRowByDigit,
+} from "@/composables/keyboard/usePlannerKeyboardNavigator";
 
 // Icons & Components
 import {
@@ -263,7 +294,7 @@ import {
   DatabasePerson20Regular,
 } from "@vicons/fluent";
 import PomotentionTimer from "@/components/PomotentionTimer/PomotentionTimer.vue";
-import DatabaseTransferDialog from "@/components/DatabaseTransferDialog.vue";
+import DatabaseTransferDialog from "@/components/data/DatabaseTransferDialog.vue";
 
 hljs.registerLanguage("javascript", javascript);
 hljs.registerLanguage("typescript", typescript);
@@ -301,6 +332,15 @@ const { syncIcon, handleUpload, handleDownload } = useSyncWidget(); //relativeTi
 const { isLoggedIn } = storeToRefs(syncStore);
 const { isMobile } = useDevice();
 const notification = useNotification();
+const pomotentionTimerRef = ref<{
+  canStartWorkShortcut: () => boolean;
+  triggerWorkStartShortcut: () => boolean;
+  canStartBreakShortcut: () => boolean;
+  triggerBreakStartShortcut: () => boolean;
+  canStopShortcut: () => boolean;
+  triggerStopShortcut: () => boolean;
+} | null>(null);
+void pomotentionTimerRef;
 
 const accountLogoutBtnType = computed(() => {
   if (syncStore.isSyncing) return "info" as const;
@@ -396,6 +436,7 @@ watch(
 );
 
 onUnmounted(() => {
+  shortcuts.uninstall();
   if (typeof window !== "undefined") {
     window.removeEventListener("resize", onAppVisualViewportChange);
     window.visualViewport?.removeEventListener("resize", onAppVisualViewportChange);
@@ -494,6 +535,89 @@ function handleMenuSelect(key: string) {
   if (key !== route.path) router.push(key);
 }
 
+const actionRegistry = createAppActionRegistry({
+  toggleOntopMode: () => {
+    void handleToggleOntopMode(reportedPomodoroWidth.value, reportedPomodoroHeight.value);
+  },
+  togglePanel: (panel) => toggleSettingPanel(panel as any),
+  navigate: (path) => {
+    if (path !== route.path) router.push(path);
+  },
+  openHelp: () => navigateToBuiltDocs(),
+  canStartTimerWork: () => pomotentionTimerRef.value?.canStartWorkShortcut() ?? false,
+  startTimerWork: () => pomotentionTimerRef.value?.triggerWorkStartShortcut() ?? false,
+  canStartTimerBreak: () => pomotentionTimerRef.value?.canStartBreakShortcut() ?? false,
+  startTimerBreak: () => pomotentionTimerRef.value?.triggerBreakStartShortcut() ?? false,
+  canStopTimer: () => pomotentionTimerRef.value?.canStopShortcut() ?? false,
+  stopTimer: () => pomotentionTimerRef.value?.triggerStopShortcut() ?? false,
+  enterActivityNavigator: () => enterActivityNavigator(),
+  runActivityCommand: (command) => runActivityKeyboardCommand(command),
+  runActivityEditField: (field) => runActivityEditFieldCommand(field),
+  runTaskCommand: (command) => runTaskKeyboardCommand(command),
+  runPlannerCommand: (command) => runPlannerKeyboardCommand(command),
+  enterPlannerNavigator: () => enterPlannerNavigator(),
+  runPlannerEditField: (field) => runPlannerEditFieldCommand(field),
+  runTimetableCommand: (command) => runTimetableKeyboardCommand(command),
+});
+
+function dispatchKeyboardAction(actionId: AppActionId, sequence: string): boolean {
+  return dispatchAppAction(actionRegistry, actionId, { source: "keyboard", sequence });
+}
+
+const shortcuts = useGlobalKeyboardShortcuts({
+  dispatchAction: dispatchKeyboardAction,
+  isEnabled: () => !isMiniMode.value,
+  isModeActive: () => isActivityNavigatorActive() || isPlannerNavigatorActive(),
+  onModeKey: (key) => {
+    if (isActivityNavigatorActive()) {
+      if (key === "left" && navigateActivityNavigatorSubSelection(-1)) return true;
+      if (key === "right" && navigateActivityNavigatorSubSelection(1)) return true;
+      if (key === "up" && navigateActivityNavigatorSubSelection(-5)) return true;
+      if (key === "down" && navigateActivityNavigatorSubSelection(5)) return true;
+      if (key === "left") return moveActivityNavigatorField(-1);
+      if (key === "right") return moveActivityNavigatorField(1);
+      if (key === "up") return moveActivityNavigator(-1);
+      if (key === "down") return moveActivityNavigator(1);
+      if (key === "space") return activateActivityNavigatorField();
+      if (key === "enter" || key === "return") {
+        return confirmActivityNavigatorField();
+      }
+      if (key === "esc" || key === "escape") {
+        if (navigateActivityNavigatorSubSelection(0)) return true;
+        exitActivityNavigator();
+        return true;
+      }
+      if (/^[1-9]$/.test(key)) return pickActivityRowByDigit(Number(key));
+      return false;
+    }
+    if (isPlannerNavigatorActive()) {
+      if (key === "left" && navigatePlannerNavigatorSubSelection(-1)) return true;
+      if (key === "right" && navigatePlannerNavigatorSubSelection(1)) return true;
+      if (key === "up" && navigatePlannerNavigatorSubSelection(-5)) return true;
+      if (key === "down" && navigatePlannerNavigatorSubSelection(5)) return true;
+      if (key === "left") return movePlannerNavigatorField(-1);
+      if (key === "right") return movePlannerNavigatorField(1);
+      if (key === "up") return movePlannerNavigator(1);
+      if (key === "down") return movePlannerNavigator(-1);
+      if (key === "space") return activatePlannerNavigatorField();
+      if (key === "enter" || key === "return") {
+        return confirmPlannerNavigatorField();
+      }
+      if (key === "esc" || key === "escape") {
+        if (navigatePlannerNavigatorSubSelection(0)) return true;
+        exitPlannerNavigator();
+        return true;
+      }
+      if (/^[1-9]$/.test(key)) return pickPlannerRowByDigit(Number(key));
+      return false;
+    }
+    if (key === "enter" || key === "return") {
+      return false;
+    }
+    return false;
+  },
+});
+
 watch(route, (newVal) => {
   currentRoutePath.value = newVal.path;
 });
@@ -545,6 +669,7 @@ function handleMainLayoutViewToggle(key: string) {
 
 // === 4. 初始化 ===
 onMounted(async () => {
+  shortcuts.install();
   if (typeof window !== "undefined") {
     window.addEventListener("resize", onAppVisualViewportChange);
     window.visualViewport?.addEventListener("resize", onAppVisualViewportChange);

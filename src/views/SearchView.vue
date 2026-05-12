@@ -151,9 +151,9 @@
 <script lang="ts" setup>
 import { computed, ref, nextTick, onMounted, onUnmounted } from "vue";
 import { storeToRefs } from "pinia";
-import { NInput, NButton, NIcon, NTabs, NTabPane } from "naive-ui";
+import { NInput } from "naive-ui";
 import type { Tag } from "@/core/types/Tag";
-
+import TabPaneContent from "@/components/search/TabPaneContent.vue";
 import {
   Star20Filled,
   Star20Regular,
@@ -166,15 +166,15 @@ import TagPickerPopover from "@/components/TagSystem/TagPickerPopover.vue";
 import TagRenderer from "@/components/TagSystem/TagRenderer.vue";
 
 // 引入 stores 和类型
-import { useActivityTagEditor } from "@/composables/useActivityTagEditor";
+import { useActivityTagEditor } from "@/composables/activity/useActivityTagEditor";
 import { useSearchUiStore } from "@/stores/useSearchUiStore";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useTagStore } from "@/stores/useTagStore";
 
 // 引入业务类型和组合式函数
-import { useResize } from "@/composables/useResize";
-import { useSearchFilter } from "@/composables/useSearchFilter";
-import { useDevice } from "@/composables/useDevice";
+import { useResize } from "@/composables/layout/useResize";
+import { useSearchFilter } from "@/composables/search/useSearchFilter";
+import { useDevice } from "@/composables/platform/useDevice";
 
 // 实例化所有需要的 stores
 const searchUiStore = useSearchUiStore();

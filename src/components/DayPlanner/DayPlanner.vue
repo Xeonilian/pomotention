@@ -6,6 +6,8 @@
   <div class="today-container">
     <div class="todo-container">
       <DayTodo
+        ref="dayTodoRef"
+        :navigator-active="navigatorActive"
         @update-todo-status="updateTodoStatus"
         @suspend-todo="handleSuspendTodo"
         @cancel-todo="handleCancelTodo"
@@ -22,6 +24,8 @@
     </div>
     <div class="schedule-container">
       <DaySchedule
+        ref="dayScheduleRef"
+        :navigator-active="navigatorActive"
         @update-schedule-status="updateScheduleStatus"
         @cancel-schedule="handleCancelSchedule"
         @uncancel-schedule="handleUncancelSchedule"
@@ -39,9 +43,32 @@
 <!-- @repeat-todo="handleRepeatTodo" -->
 
 <script setup lang="ts">
+import { ref } from "vue";
 import DayTodo from "@/components/DayPlanner/DayTodo.vue";
 import DaySchedule from "@/components/DayPlanner/DaySchedule.vue";
 import type { Task } from "@/core/types/Task";
+
+defineProps<{
+  navigatorActive?: boolean;
+}>();
+
+type DayTodoExpose = {
+  startKeyboardEdit: (field: "title" | "start" | "done") => boolean;
+  moveKeyboardCell: (delta: 1 | -1) => boolean;
+  activateKeyboardCell: () => boolean;
+  confirmKeyboardAction: () => boolean;
+  moveRankKeyboardOption: (delta: number) => boolean;
+};
+
+type DayScheduleExpose = {
+  startKeyboardEdit: (field: "title" | "start" | "done" | "duration" | "location") => boolean;
+  moveKeyboardCell: (delta: 1 | -1) => boolean;
+  activateKeyboardCell: () => boolean;
+  confirmKeyboardAction: () => boolean;
+};
+
+const dayTodoRef = ref<DayTodoExpose | null>(null);
+const dayScheduleRef = ref<DayScheduleExpose | null>(null);
 
 const emit = defineEmits<{
   (e: "update-schedule-status", id: number, checked: boolean): void;
@@ -152,6 +179,39 @@ function handleQuickAddSchedule() {
 function handleTogglePomoType(id: number) {
   emit("toggle-pomo-type", id);
 }
+
+function startTodoKeyboardEdit(field: "title" | "start" | "done"): boolean {
+  return dayTodoRef.value?.startKeyboardEdit(field) ?? false;
+}
+
+function startScheduleKeyboardEdit(field: "title" | "start" | "done" | "duration" | "location"): boolean {
+  return dayScheduleRef.value?.startKeyboardEdit(field) ?? false;
+}
+
+function movePlannerKeyboardCell(delta: 1 | -1): boolean {
+  return dayTodoRef.value?.moveKeyboardCell(delta) || dayScheduleRef.value?.moveKeyboardCell(delta) || false;
+}
+
+function activatePlannerKeyboardCell(): boolean {
+  return dayTodoRef.value?.activateKeyboardCell() || dayScheduleRef.value?.activateKeyboardCell() || false;
+}
+
+function confirmPlannerKeyboardCellAction(): boolean {
+  return dayTodoRef.value?.confirmKeyboardAction() || dayScheduleRef.value?.confirmKeyboardAction() || false;
+}
+
+function navigatePlannerKeyboardSubSelection(delta: number): boolean {
+  return dayTodoRef.value?.moveRankKeyboardOption(delta) ?? false;
+}
+
+defineExpose({
+  startTodoKeyboardEdit,
+  startScheduleKeyboardEdit,
+  movePlannerKeyboardCell,
+  activatePlannerKeyboardCell,
+  confirmPlannerKeyboardCellAction,
+  navigatePlannerKeyboardSubSelection,
+});
 </script>
 <style scoped>
 .today-container {

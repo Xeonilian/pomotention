@@ -66,7 +66,7 @@
                 >
                   {{ formatRecordValue(record) }}
                 </span>
-                <div class="point-time">{{ formatTime(record.id) }}</div>
+                <div class="point-time">{{ formatTime(recordEventTime(record)) }}</div>
               </div>
             </template>
             <p class="timeline-popover-text">{{ record.description }}</p>
@@ -90,7 +90,7 @@
             >
               {{ formatRecordValue(record) }}
             </span>
-            <div class="point-time">{{ formatTime(record.id) }}</div>
+            <div class="point-time">{{ formatTime(recordEventTime(record)) }}</div>
           </div>
         </template>
       </div>
@@ -128,7 +128,7 @@ import { NPopover } from "naive-ui";
 import type { EnergyRecord, RewardRecord, InterruptionRecord } from "@/core/types/Task";
 import { useTaskTrackerStore } from "@/stores/useTaskTrackerStore";
 import { useDataStore } from "@/stores/useDataStore";
-import { useDevice } from "@/composables/useDevice";
+import { useDevice } from "@/composables/platform/useDevice";
 import { ChevronUpDown20Regular } from "@vicons/fluent";
 import { useSettingStore } from "@/stores/useSettingStore";
 const settingStore = useSettingStore();
@@ -146,14 +146,20 @@ function onTaskRecordIsEditing(v: boolean) {
   emit("taskRecordEditing", v);
 }
 
-const taskRecordRef = ref<{ stopEditing: () => void } | null>(null);
+const taskRecordRef = ref<{ stopEditing: () => void; startEditing: () => void } | null>(null);
 
 /** 结束 TaskRecord 编辑（与 blur / Esc 同路径） */
 function endTaskRecordEditing() {
   taskRecordRef.value?.stopEditing();
 }
 
-defineExpose({ endTaskRecordEditing });
+function startTaskRecordEditing() {
+  if (!selectedTaskId.value) return false;
+  taskRecordRef.value?.startEditing();
+  return true;
+}
+
+defineExpose({ endTaskRecordEditing, startTaskRecordEditing });
 
 // UI 状态
 const isMarkdown = ref(false);
@@ -183,6 +189,7 @@ const isIOSDevice = (() => {
 
 provide("taskTrackerFullscreenContainerRef", taskViewContainerRef);
 provide("isTaskTrackerFullscreen", isTaskContainerFullscreen);
+provide("taskTrackerStartRecordEditing", startTaskRecordEditing);
 
 const timelinePopoverTo = computed(() => {
   // 全屏时不要挂到 body：可能会被 fullscreen 顶层规则遮挡
@@ -211,7 +218,7 @@ const restoreBodyScroll = () => {
 };
 
 const enablePseudoFullscreen = () => {
-  settingStore.settings.showSchedule = false;
+  settingStore.settings.showTimetable = false;
   if (isPseudoFullscreen.value) return;
   isPseudoFullscreen.value = true;
   isTaskContainerFullscreen.value = true;
@@ -306,6 +313,13 @@ type CombinedRecord =
   | (RewardRecord & { type: "reward" })
   | (InterruptionRecord & { type: "interruption" });
 
+/** 时间轴展示与排序：有合法 recordedAt 用其，否则回退 id（旧数据） */
+function recordEventTime(record: CombinedRecord): number {
+  const t = record.recordedAt;
+  if (typeof t === "number" && Number.isFinite(t)) return t;
+  return record.id;
+}
+
 // 合并并按时间排序
 const combinedRecords = computed<CombinedRecord[]>(() => {
   // 关键修改：访问 ref 的值需要 .value
@@ -335,15 +349,22 @@ const combinedRecords = computed<CombinedRecord[]>(() => {
       }
     }) || [];
 
-  return [...energy, ...reward, ...interruption].sort((a, b) => a.id - b.id);
+  return [...energy, ...reward, ...interruption].sort((a, b) => recordEventTime(a) - recordEventTime(b));
 });
 
-// 格式化时间戳
+// 时间轴标签：非当天则带月日，便于辨认补记记录
 const formatTime = (timestamp: number) => {
-  if (!timestamp) return "--:--";
+  if (!timestamp || !Number.isFinite(timestamp)) return "--:--";
   const date = new Date(timestamp);
   if (isNaN(date.getTime())) return "--:--";
+  const now = new Date();
+  const sameDay = date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth() && date.getDate() === now.getDate();
+  if (sameDay) {
+    return date.toLocaleString("zh-CN", { hour: "2-digit", minute: "2-digit" });
+  }
   return date.toLocaleString("zh-CN", {
+    month: "2-digit",
+    day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
   });
@@ -401,7 +422,7 @@ const checkWidth = () => {
   const containerWidth = headerContainerRef.value.clientWidth;
 
   // 当宽度小于第一个值时，标签 displayLength 变为 2
-  tagDisplayLength.value = isMobile.value && settingStore.settings.showSchedule ? 1 : containerWidth < TAG_COLLAPSE_BREAKPOINT ? 2 : null;
+  tagDisplayLength.value = isMobile.value && settingStore.settings.showTimetable ? 1 : containerWidth < TAG_COLLAPSE_BREAKPOINT ? 2 : null;
 };
 
 const activeTimelinePopoverRecordId = ref<number | null>(null);

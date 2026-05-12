@@ -91,7 +91,7 @@
 import { ref, computed, watch } from "vue";
 import { NModal, NInput, NButton, NList, NListItem } from "naive-ui";
 import { Template } from "@/core/types/Template";
-import { useDevice } from "@/composables/useDevice";
+import { useDevice } from "@/composables/platform/useDevice";
 import { copyTextToClipboard } from "@/utils/clipboard";
 
 const props = defineProps<{

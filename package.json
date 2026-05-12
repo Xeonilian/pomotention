@@ -46,6 +46,7 @@
     "dayjs": "^1.11.18",
     "echarts": "^6.0.0",
     "highlight.js": "^11.11.1",
+    "hotkeys-js": "^4.0.4",
     "marked": "^15.0.12",
     "naive-ui": "^2.41.0",
     "pinia": "^3.0.2",

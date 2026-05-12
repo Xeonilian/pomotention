@@ -2,7 +2,7 @@
 import { defineStore } from "pinia";
 import type { PomodoroSegment, TodoSegment } from "@/core/types/Block";
 import type { Todo } from "@/core/types/Todo";
-import { generateEstimatedTodoSegments } from "@/services/todoSegService";
+import { generateEstimatedTodoSegments } from "@/services/planner/todoSegService";
 
 export const useSegStore = defineStore("seg", {
   state: () => ({
@@ -23,10 +23,7 @@ export const useSegStore = defineStore("seg", {
 
     // 私有工具：从当前/传入的 segments，把 globalIndex 回填到 todos（仅在 todo.globalIndex 为 undefined 时）
     // 注意：这是一段副作用逻辑，会修改传入的 todos 引用
-    _syncTodoGlobalIndexFromSegments(
-      todos: Todo[],
-      todoSegments: TodoSegment[]
-    ) {
+    _syncTodoGlobalIndexFromSegments(todos: Todo[], todoSegments: TodoSegment[]) {
       if (!Array.isArray(todos) || todos.length === 0) return;
       if (!Array.isArray(todoSegments) || todoSegments.length === 0) return;
 
@@ -55,11 +52,7 @@ export const useSegStore = defineStore("seg", {
       }
 
       // 2) 纯计算：估算分配（保持 generateEstimatedTodoSegments 为纯函数）
-      const allAllocatedSegments = generateEstimatedTodoSegments(
-        appDateTimestamp,
-        todos,
-        this.pomodoroSegments
-      );
+      const allAllocatedSegments = generateEstimatedTodoSegments(appDateTimestamp, todos, this.pomodoroSegments);
 
       // 3) 原子地更新 store 中的 todoSegments
       this.setTodoSegments(allAllocatedSegments);
