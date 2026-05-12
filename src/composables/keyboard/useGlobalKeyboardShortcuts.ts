@@ -29,6 +29,7 @@ const sequencePrefixSet = (() => {
 
 const registeredHotkeys =
   Array.from(new Set(allSequences.join("").split(""))).join(",") + ",up,down,left,right,space,esc,enter,return,num_enter,1,2,3,4,5,6,7,8,9";
+const alwaysRouteToModeHandlerKeys = new Set(["up", "down", "left", "right"]);
 
 function normalizeKey(value: string | undefined): string {
   if (!value) return "";
@@ -133,7 +134,9 @@ export function useGlobalKeyboardShortcuts(options: UseGlobalKeyboardShortcutsOp
     if (!options.isEnabled?.() && options.isEnabled !== undefined) return;
     if (event.isComposing || event.repeat) return;
     const modeKey = normalizeKey(handler.key ?? event.key);
-    if (options.isModeActive?.() && options.onModeKey && options.onModeKey(modeKey, event)) {
+    const shouldRouteToModeHandler = Boolean(options.isModeActive?.()) || alwaysRouteToModeHandlerKeys.has(modeKey);
+    const handledByMode = Boolean(shouldRouteToModeHandler && options.onModeKey && options.onModeKey(modeKey, event));
+    if (handledByMode) {
       event.preventDefault();
       return;
     }

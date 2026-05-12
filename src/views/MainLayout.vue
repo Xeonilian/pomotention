@@ -262,6 +262,7 @@ import {
   exitActivityNavigator,
   isActivityNavigatorActive,
   moveActivityNavigator,
+  moveActivityVisibleSelection,
   moveActivityNavigatorField,
   navigateActivityNavigatorSubSelection,
   pickActivityRowByDigit,
@@ -372,6 +373,57 @@ watch(
 const showDatabaseDialog = ref(false);
 const logoutConfirmVisible = ref(false);
 let logoutClickTimer: ReturnType<typeof setTimeout> | null = null;
+const activityArrowPrefixHeld = ref(false);
+const taskArrowPrefixHeld = ref(false);
+
+function isEditableTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  if (target.isContentEditable) return true;
+  const tagName = target.tagName.toLowerCase();
+  if (tagName === "input" || tagName === "textarea" || tagName === "select") return true;
+  if (target.closest("[contenteditable='true']")) return true;
+  if (target.closest("[role='textbox']")) return true;
+  return false;
+}
+
+function resetArrowPrefixes() {
+  activityArrowPrefixHeld.value = false;
+  taskArrowPrefixHeld.value = false;
+}
+
+function handleArrowPrefixKeydown(event: KeyboardEvent) {
+  if (event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return;
+  if (isEditableTarget(event.target)) return;
+  const key = event.key.toLowerCase();
+  if (key === "a") activityArrowPrefixHeld.value = true;
+  if (key === "t") taskArrowPrefixHeld.value = true;
+  if ((key === "arrowup" || key === "arrowdown") && activityArrowPrefixHeld.value && settingStore.settings.showActivity) {
+    const delta = key === "arrowup" ? -1 : 1;
+    const movedVisible = moveActivityVisibleSelection(delta);
+    const handled = movedVisible;
+    if (handled) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+  }
+  if ((key === "arrowleft" || key === "arrowright") && taskArrowPrefixHeld.value) {
+    const handled = key === "arrowleft"
+      ? dispatchKeyboardAction("task.goPrev", "t+left.raw")
+      : dispatchKeyboardAction("task.goNext", "t+right.raw");
+    if (handled) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+  }
+}
+
+function handleArrowPrefixKeyup(event: KeyboardEvent) {
+  const key = event.key.toLowerCase();
+  if (key === "a") activityArrowPrefixHeld.value = false;
+  if (key === "t") taskArrowPrefixHeld.value = false;
+}
 
 /** 与 YearPlanner 一致：移动端无 dblclick，用双触窗口识别 */
 const LOGOUT_TOUCH_KEY = 0;
@@ -438,10 +490,14 @@ watch(
 onUnmounted(() => {
   shortcuts.uninstall();
   if (typeof window !== "undefined") {
+    window.removeEventListener("keydown", handleArrowPrefixKeydown, true);
+    window.removeEventListener("keyup", handleArrowPrefixKeyup, true);
+    window.removeEventListener("blur", resetArrowPrefixes);
     window.removeEventListener("resize", onAppVisualViewportChange);
     window.visualViewport?.removeEventListener("resize", onAppVisualViewportChange);
     window.visualViewport?.removeEventListener("scroll", onAppVisualViewportChange);
   }
+  resetArrowPrefixes();
   clearAppVisualViewportHeight();
 });
 
@@ -569,6 +625,17 @@ const shortcuts = useGlobalKeyboardShortcuts({
   isEnabled: () => !isMiniMode.value,
   isModeActive: () => isActivityNavigatorActive() || isPlannerNavigatorActive(),
   onModeKey: (key) => {
+    if ((key === "up" || key === "down") && activityArrowPrefixHeld.value && settingStore.settings.showActivity) {
+      const delta = key === "up" ? -1 : 1;
+      const movedVisible = moveActivityVisibleSelection(delta);
+      return movedVisible;
+    }
+    if ((key === "left" || key === "right") && taskArrowPrefixHeld.value) {
+      const handled = key === "left"
+        ? dispatchKeyboardAction("task.goPrev", "t+left")
+        : dispatchKeyboardAction("task.goNext", "t+right");
+      return handled;
+    }
     if (isActivityNavigatorActive()) {
       if (key === "left" && navigateActivityNavigatorSubSelection(-1)) return true;
       if (key === "right" && navigateActivityNavigatorSubSelection(1)) return true;
@@ -610,6 +677,19 @@ const shortcuts = useGlobalKeyboardShortcuts({
       }
       if (/^[1-9]$/.test(key)) return pickPlannerRowByDigit(Number(key));
       return false;
+    }
+    if (key === "left") return dispatchKeyboardAction("planner.gotoPrev", "left");
+    if (key === "right") return dispatchKeyboardAction("planner.gotoNext", "right");
+    if (key === "up" || key === "down") {
+      const delta = key === "up" ? -1 : 1;
+      if (settingStore.settings.showPlanner) {
+        if (movePlannerNavigator(delta)) return true;
+        return enterPlannerNavigator();
+      }
+      if (settingStore.settings.showActivity) {
+        if (isActivityNavigatorActive()) return moveActivityNavigator(delta);
+        return enterActivityNavigator();
+      }
     }
     if (key === "enter" || key === "return") {
       return false;
@@ -671,6 +751,9 @@ function handleMainLayoutViewToggle(key: string) {
 onMounted(async () => {
   shortcuts.install();
   if (typeof window !== "undefined") {
+    window.addEventListener("keydown", handleArrowPrefixKeydown, true);
+    window.addEventListener("keyup", handleArrowPrefixKeyup, true);
+    window.addEventListener("blur", resetArrowPrefixes);
     window.addEventListener("resize", onAppVisualViewportChange);
     window.visualViewport?.addEventListener("resize", onAppVisualViewportChange);
     window.visualViewport?.addEventListener("scroll", onAppVisualViewportChange);

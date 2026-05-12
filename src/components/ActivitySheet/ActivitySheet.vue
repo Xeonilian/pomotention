@@ -429,6 +429,7 @@ onMounted(() => {
   unregisterNavigatorApi = registerActivityNavigatorApi({
     enter: enterNavigatorMode,
     move: moveNavigator,
+    moveVisible: moveVisibleRowSelection,
     pickByDigit: pickNavigatorDigit,
     moveField: moveNavigatorField,
     activateField: activateNavigatorField,
@@ -554,6 +555,33 @@ function focusNavigatorIndex(nextIndex: number): boolean {
   const target = list[clamped];
   if (!target) return false;
   handleFocusRow(target.id);
+  return true;
+}
+
+function moveVisibleRowSelection(delta: 1 | -1): boolean {
+  const rowEls = Array.from(document.querySelectorAll<HTMLElement>(".activity-row[data-row-id]"));
+  if (!rowEls.length) return false;
+  const ids: number[] = [];
+  const seen = new Set<number>();
+  for (const el of rowEls) {
+    const raw = el.dataset.rowId;
+    if (!raw) continue;
+    const id = Number(raw);
+    if (!Number.isFinite(id) || seen.has(id)) continue;
+    seen.add(id);
+    ids.push(id);
+  }
+  if (!ids.length) return false;
+  const currentId = sheetPrimaryActivityId.value;
+  const currentIndex = currentId == null ? -1 : ids.indexOf(currentId);
+  let nextIndex = currentIndex === -1 ? (delta > 0 ? 0 : ids.length - 1) : currentIndex + delta;
+  if (nextIndex < 0) nextIndex = ids.length - 1;
+  if (nextIndex >= ids.length) nextIndex = 0;
+  const targetId = ids[nextIndex];
+  if (targetId == null) return false;
+  navigatorActive.value = false;
+  navigatorFieldIndex.value = 0;
+  handleFocusRow(targetId);
   return true;
 }
 
