@@ -1,9 +1,10 @@
 export type AppActionSource = "keyboard" | "click" | "cli" | "mcp";
 
 export type AppActionId =
+  | "view.toggle.ontop"
   | "view.toggle.activity"
   | "activity.navigator.enter"
-  | "activity.pick"
+  | "activity.pickOrJump"
   | "activity.deleteOrRecover"
   | "activity.toggleChild"
   | "activity.addTodo"
@@ -52,11 +53,11 @@ export type AppActionId =
   | "view.toggle.task"
   | "view.toggle.planner"
   | "view.toggle.timetable"
-  | "view.toggle.pomodoro"
+  | "view.toggle.timer"
   | "route.go.home"
   | "route.go.help"
   | "route.go.search"
-  | "route.go.chart"
+  | "route.go.dashboard"
   | "route.go.settings"
   | "timer.startWork"
   | "timer.startBreak"
@@ -77,6 +78,7 @@ interface AppActionDefinition {
 export type AppActionRegistry = Record<AppActionId, AppActionDefinition>;
 
 export interface AppActionContext {
+  toggleOntopMode: () => void;
   togglePanel: (panel: TogglePanelKey) => void;
   navigate: (path: "/" | "/search" | "/chart" | "/settings") => void;
   openHelp: () => void;
@@ -135,6 +137,9 @@ export interface AppActionContext {
 
 export function createAppActionRegistry(context: AppActionContext): AppActionRegistry {
   return {
+    "view.toggle.ontop": {
+      run: () => context.toggleOntopMode(),
+    },
     "view.toggle.activity": {
       run: () => context.togglePanel("activity"),
     },
@@ -146,7 +151,7 @@ export function createAppActionRegistry(context: AppActionContext): AppActionReg
         context.enterActivityNavigator();
       },
     },
-    "activity.pick": {
+    "activity.pickOrJump": {
       run: () => {
         context.runActivityCommand("pickActivity");
       },
@@ -382,7 +387,7 @@ export function createAppActionRegistry(context: AppActionContext): AppActionReg
     "view.toggle.timetable": {
       run: () => context.togglePanel("schedule"),
     },
-    "view.toggle.pomodoro": {
+    "view.toggle.timer": {
       run: () => context.togglePanel("pomodoro"),
     },
     "route.go.home": {
@@ -394,7 +399,7 @@ export function createAppActionRegistry(context: AppActionContext): AppActionReg
     "route.go.search": {
       run: () => context.navigate("/search"),
     },
-    "route.go.chart": {
+    "route.go.dashboard": {
       run: () => context.navigate("/chart"),
     },
     "route.go.settings": {

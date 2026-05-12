@@ -536,6 +536,9 @@ function handleMenuSelect(key: string) {
 }
 
 const actionRegistry = createAppActionRegistry({
+  toggleOntopMode: () => {
+    void handleToggleOntopMode(reportedPomodoroWidth.value, reportedPomodoroHeight.value);
+  },
   togglePanel: (panel) => toggleSettingPanel(panel as any),
   navigate: (path) => {
     if (path !== route.path) router.push(path);

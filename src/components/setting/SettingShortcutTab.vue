@@ -2,7 +2,7 @@
   <div class="setting-tab-page">
     <n-card size="small" class="setting-tab-card">
       <div class="shortcut-toolbar">
-        <n-input v-model:value="keyword" clearable placeholder="搜索组合 / 功能 / 说明，例如 app、activity.pick、选择活动" />
+        <n-input v-model:value="keyword" clearable placeholder="搜索组合 / 功能 / 说明，例如 oo、view.toggle.ontop、置顶模式" />
         <n-tag size="small" round class="shortcut-count" type="info">{{ filteredCount }} / {{ allCount }}</n-tag>
       </div>
       <div class="shortcut-table-wrap">
@@ -47,56 +47,43 @@ import { SHORTCUT_DEFINITIONS } from "@/composables/keyboard/shortcutCatalog";
 
 type ShortcutDisplayRow = {
   sequence: string;
-  category: ShortcutCategory;
+  category: ShortcutCategory | "edit";
   feature: string;
   note: string;
 };
 type ShortcutGroup = {
-  key: ShortcutCategory;
+  key: ShortcutCategory | "edit";
   title: string;
   rows: ShortcutDisplayRow[];
 };
 
 const keyword = ref("");
 
-const categoryMeta: Record<ShortcutCategory, string> = {
+const categoryMeta: Record<ShortcutCategory | "edit", string> = {
   navigation: "导航与面板",
+  edit: "编辑",
+  timer: "番茄时钟（Timer）",
   activity: "活动（Activity）",
-  task: "Task",
-  planner: "Planner",
-  timetable: "Timetable",
-  timer: "Timer",
+  planner: "任务计划（Planner）",
+  task: "任务追踪（Task）",
+  timetable: "时间表（Timetable）",
 };
 
 const allRows = computed<ShortcutDisplayRow[]>(() => {
   const base = SHORTCUT_DEFINITIONS.map<ShortcutDisplayRow>((item) => {
-    if (item.category === "activity" && item.sequence === "app") {
-      return {
-        sequence: "app",
-        category: item.category,
-        feature: "activity.picker.select",
-        note: "选择活动",
-      };
-    }
     const detail = item.action ? `${item.action}：${item.note}` : item.note;
     return {
       sequence: item.sequence,
       category: item.category,
-      feature: String(item.actionId),
+      feature: item.displayOnly ? item.feature : String(item.actionId),
       note: detail,
     };
-  });
-  base.push({
-    sequence: "Esc",
-    category: "navigation",
-    feature: "app.input.escape",
-    note: "输入框内：退出输入编辑；保留当前选中状态，不清空选择",
   });
   return base;
 });
 
 const groupedRows = computed<ShortcutGroup[]>(() => {
-  const order: ShortcutCategory[] = ["navigation", "activity", "task", "planner", "timetable", "timer"];
+  const order: (ShortcutCategory | "edit")[] = ["navigation", "edit", "timer", "activity", "planner", "task", "timetable"];
   return order
     .map((key) => ({
       key,
@@ -159,7 +146,7 @@ const defaultExpandedNames = computed(() => groupedRows.value.map((group) => gro
 }
 
 .shortcut-col-feature {
-  width: 220px;
+  width: 230px;
 }
 
 .shortcut-col-note {

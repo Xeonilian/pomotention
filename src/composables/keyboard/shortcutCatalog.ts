@@ -1,28 +1,135 @@
 import type { AppActionId } from "@/actions/appActions";
 
-export type ShortcutCategory = "navigation" | "activity" | "task" | "planner" | "timetable" | "timer";
+export type ShortcutCategory = "navigation" | "edit" | "activity" | "task" | "planner" | "timetable" | "timer";
 export type ShortcutMode = "single" | "sequence";
 
-export interface ShortcutDefinition {
+interface ShortcutDefinitionBase {
   sequence: string;
-  actionId: AppActionId;
   mode: ShortcutMode;
   category: ShortcutCategory;
   action: string;
   note: string;
 }
 
+export interface ShortcutActionDefinition extends ShortcutDefinitionBase {
+  actionId: AppActionId;
+  displayOnly?: false;
+}
+
+export interface ShortcutDisplayDefinition extends ShortcutDefinitionBase {
+  feature: string;
+  displayOnly: true;
+}
+
+export type ShortcutDefinition = ShortcutActionDefinition | ShortcutDisplayDefinition;
+
 export const SHORTCUT_DEFINITIONS: ShortcutDefinition[] = [
-  { sequence: "aa", actionId: "view.toggle.activity", mode: "single", category: "navigation", action: "切换区域显示", note: "Activity" },
-  { sequence: "tt", actionId: "view.toggle.task", mode: "single", category: "navigation", action: "切换区域显示", note: "Task" },
-  { sequence: "pp", actionId: "view.toggle.planner", mode: "single", category: "navigation", action: "切换区域显示", note: "Planner" },
-  { sequence: "mm", actionId: "view.toggle.timetable", mode: "single", category: "navigation", action: "切换区域显示", note: "Timetable" },
-  { sequence: "uu", actionId: "view.toggle.pomodoro", mode: "single", category: "navigation", action: "切换区域显示", note: "Timer" },
-  { sequence: "vh", actionId: "route.go.home", mode: "sequence", category: "navigation", action: "页面跳转", note: "Home" },
-  { sequence: "vp", actionId: "route.go.help", mode: "sequence", category: "navigation", action: "页面跳转", note: "Help" },
-  { sequence: "vs", actionId: "route.go.search", mode: "sequence", category: "navigation", action: "页面跳转", note: "Search" },
-  { sequence: "vd", actionId: "route.go.chart", mode: "sequence", category: "navigation", action: "页面跳转", note: "Data" },
-  { sequence: "ve", actionId: "route.go.settings", mode: "sequence", category: "navigation", action: "页面跳转", note: "Setting" },
+  {
+    sequence: "Space",
+    feature: "navigator.field.activate",
+    mode: "single",
+    category: "edit",
+    action: "激活字段",
+    note: "在行选择模式中激活当前字段或子选择",
+    displayOnly: true,
+  },
+  {
+    sequence: "Enter",
+    feature: "navigator.field.confirm",
+    mode: "single",
+    category: "edit",
+    action: "确认当前字段",
+    note: "确认当前字段动作；常用于提交当前编辑项",
+    displayOnly: true,
+  },
+  {
+    sequence: "Esc",
+    feature: "navigator.mode.exit",
+    mode: "single",
+    category: "edit",
+    action: "退出当前状态",
+    note: "退出当前编辑/选择状态；输入框内会先退出输入焦点",
+    displayOnly: true,
+  },
+  {
+    sequence: "↑ / ↓",
+    feature: "navigator.row.move",
+    mode: "single",
+    category: "edit",
+    action: "行间移动",
+    note: "在当前列表中移动行选择；激活子选择时按网格步进移动",
+    displayOnly: true,
+  },
+  {
+    sequence: "← / →",
+    feature: "navigator.field.move",
+    mode: "single",
+    category: "edit",
+    action: "字段切换",
+    note: "在可编辑字段间切换；激活子选择时左右切换选项",
+    displayOnly: true,
+  },
+  {
+    sequence: "oo",
+    actionId: "view.toggle.ontop",
+    mode: "single",
+    category: "navigation",
+    action: "切换置顶模式",
+    note: "时钟窗口置顶，仅桌面应用有效",
+  },
+  {
+    sequence: "uu",
+    actionId: "view.toggle.timer",
+    mode: "single",
+    category: "navigation",
+    action: "切换区域显示",
+    note: "番茄时钟（Timer）",
+  },
+  {
+    sequence: "aa",
+    actionId: "view.toggle.activity",
+    mode: "single",
+    category: "navigation",
+    action: "切换区域显示",
+    note: "活动清单（Activity）",
+  },
+  {
+    sequence: "pp",
+    actionId: "view.toggle.planner",
+    mode: "single",
+    category: "navigation",
+    action: "切换区域显示",
+    note: "任务计划（Planner）",
+  },
+  {
+    sequence: "tt",
+    actionId: "view.toggle.task",
+    mode: "single",
+    category: "navigation",
+    action: "切换区域显示",
+    note: "任务追踪（Task）",
+  },
+  {
+    sequence: "mm",
+    actionId: "view.toggle.timetable",
+    mode: "single",
+    category: "navigation",
+    action: "切换区域显示",
+    note: "时间表（Timetable）",
+  },
+
+  { sequence: "vh", actionId: "route.go.home", mode: "sequence", category: "navigation", action: "页面跳转", note: "首页（Home）" },
+  { sequence: "vp", actionId: "route.go.help", mode: "sequence", category: "navigation", action: "页面跳转", note: "帮助（Help）" },
+  { sequence: "vs", actionId: "route.go.search", mode: "sequence", category: "navigation", action: "页面跳转", note: "搜索（Search）" },
+  {
+    sequence: "vd",
+    actionId: "route.go.dashboard",
+    mode: "sequence",
+    category: "navigation",
+    action: "页面跳转",
+    note: "仪表盘（Dashboard）",
+  },
+  { sequence: "ve", actionId: "route.go.settings", mode: "sequence", category: "navigation", action: "页面跳转", note: "设置（Setting）" },
   {
     sequence: "an",
     actionId: "activity.navigator.enter",
@@ -31,7 +138,7 @@ export const SHORTCUT_DEFINITIONS: ShortcutDefinition[] = [
     action: "进入行选择模式",
     note: "在活动列表中可用 ↑/↓ 移动，数字选中，Enter/Esc 退出",
   },
-  { sequence: "app", actionId: "activity.pick", mode: "sequence", category: "activity", action: "选择活动", note: "选中当前活动" },
+  { sequence: "app", actionId: "activity.pickOrJump", mode: "sequence", category: "activity", action: "选择活动", note: "选中当前活动" },
   {
     sequence: "add",
     actionId: "activity.deleteOrRecover",
@@ -48,7 +155,14 @@ export const SHORTCUT_DEFINITIONS: ShortcutDefinition[] = [
     action: "切换子级关系",
     note: "将当前活动设为或取消子级",
   },
-  { sequence: "ato", actionId: "activity.addTodo", mode: "sequence", category: "activity", action: "加入 Todo", note: "从当前活动创建并关联 Todo" },
+  {
+    sequence: "ato",
+    actionId: "activity.addTodo",
+    mode: "sequence",
+    category: "activity",
+    action: "加入 Todo",
+    note: "从当前活动创建并关联 Todo",
+  },
   {
     sequence: "asc",
     actionId: "activity.addSchedule",
@@ -119,11 +233,32 @@ export const SHORTCUT_DEFINITIONS: ShortcutDefinition[] = [
   },
   { sequence: "tee", actionId: "task.openEditor", mode: "sequence", category: "task", action: "打开编辑区", note: "编辑当前任务" },
   { sequence: "tst", actionId: "task.toggleStar", mode: "sequence", category: "task", action: "切换星标", note: "标记或取消星标" },
-  { sequence: "ttg", actionId: "task.openTagManager", mode: "sequence", category: "task", action: "打开标签管理", note: "编辑当前任务标签" },
+  {
+    sequence: "ttg",
+    actionId: "task.openTagManager",
+    mode: "sequence",
+    category: "task",
+    action: "打开标签管理",
+    note: "编辑当前任务标签",
+  },
   { sequence: "ten", actionId: "task.openEnergyDialog", mode: "sequence", category: "task", action: "打开能量面板", note: "编辑能量信息" },
   { sequence: "trw", actionId: "task.openRewardDialog", mode: "sequence", category: "task", action: "打开奖励面板", note: "编辑奖励信息" },
-  { sequence: "tin", actionId: "task.openInterruptionDialog", mode: "sequence", category: "task", action: "打开打断面板", note: "编辑打断信息" },
-  { sequence: "ttm", actionId: "task.openTemplateDialog", mode: "sequence", category: "task", action: "打开模板面板", note: "选择或应用模板" },
+  {
+    sequence: "tin",
+    actionId: "task.openInterruptionDialog",
+    mode: "sequence",
+    category: "task",
+    action: "打开打断面板",
+    note: "编辑打断信息",
+  },
+  {
+    sequence: "ttm",
+    actionId: "task.openTemplateDialog",
+    mode: "sequence",
+    category: "task",
+    action: "打开模板面板",
+    note: "选择或应用模板",
+  },
   { sequence: "tpr", actionId: "task.goPrev", mode: "sequence", category: "task", action: "切换到上一个任务", note: "定位上一个任务" },
   { sequence: "tnx", actionId: "task.goNext", mode: "sequence", category: "task", action: "切换到下一个任务", note: "定位下一个任务" },
   {
@@ -159,8 +294,22 @@ export const SHORTCUT_DEFINITIONS: ShortcutDefinition[] = [
     note: "在当前日期新增 Schedule（Untaetigkeit 归入 Schedule）",
   },
   { sequence: "pet", actionId: "planner.editTitle", mode: "sequence", category: "planner", action: "编辑标题", note: "打开标题编辑" },
-  { sequence: "pes", actionId: "planner.editStart", mode: "sequence", category: "planner", action: "编辑开始时间", note: "打开开始时间编辑" },
-  { sequence: "ped", actionId: "planner.editDone", mode: "sequence", category: "planner", action: "编辑完成状态", note: "打开完成状态编辑" },
+  {
+    sequence: "pes",
+    actionId: "planner.editStart",
+    mode: "sequence",
+    category: "planner",
+    action: "编辑开始时间",
+    note: "打开开始时间编辑",
+  },
+  {
+    sequence: "ped",
+    actionId: "planner.editDone",
+    mode: "sequence",
+    category: "planner",
+    action: "编辑完成状态",
+    note: "打开完成状态编辑",
+  },
   { sequence: "peu", actionId: "planner.editDuration", mode: "sequence", category: "planner", action: "编辑时长", note: "打开时长编辑" },
   { sequence: "pel", actionId: "planner.editLocation", mode: "sequence", category: "planner", action: "编辑地点", note: "打开地点编辑" },
   {
@@ -230,6 +379,8 @@ export const SHORTCUT_DEFINITIONS: ShortcutDefinition[] = [
 ];
 
 export function buildShortcutActionMap(mode: ShortcutMode): Record<string, AppActionId> {
-  const entries = SHORTCUT_DEFINITIONS.filter((item) => item.mode === mode).map((item) => [item.sequence, item.actionId] as const);
+  const entries = SHORTCUT_DEFINITIONS.filter((item): item is ShortcutActionDefinition => item.mode === mode && !item.displayOnly).map(
+    (item) => [item.sequence, item.actionId] as const,
+  );
   return Object.fromEntries(entries);
 }
