@@ -171,7 +171,7 @@
 // ========================
 // 依赖导入
 // ========================
-import { ref, computed, onMounted, onUnmounted, provide, watch } from "vue";
+import { ref, computed, onMounted, onUnmounted, provide, watch, nextTick } from "vue";
 import ActivityButtons from "@/components/ActivitySheet/ActivityButtons.vue";
 import ActivitySection from "@/components/ActivitySheet/ActivitySection.vue";
 import ActivityQuadrant from "@/components/ActivitySheet/ActivityQuadrant.vue";
@@ -697,18 +697,31 @@ function keyboardtoggleChild(): boolean {
   return true;
 }
 
+/** 快捷键新增行后：等父级同步选中与列表，再进入 navigator 并激活标题（等同 an 后 Space） */
+function scheduleNavigatorEnterAndActivateTitle() {
+  void nextTick(() => {
+    if (!enterNavigatorMode()) return;
+    void nextTick(() => {
+      activateNavigatorField();
+    });
+  });
+}
+
 function keyboardAddTodo(): boolean {
   addTodoRow();
+  scheduleNavigatorEnterAndActivateTitle();
   return true;
 }
 
 function keyboardAddSchedule(): boolean {
   addScheduleRow();
+  scheduleNavigatorEnterAndActivateTitle();
   return true;
 }
 
 function keyboardAddUntaetigkeit(): boolean {
   addUntaetigkeitRow();
+  scheduleNavigatorEnterAndActivateTitle();
   return true;
 }
 

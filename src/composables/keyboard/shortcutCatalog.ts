@@ -161,7 +161,7 @@ export const SHORTCUT_DEFINITIONS: ShortcutDefinition[] = [
     mode: "sequence",
     category: "activity",
     action: "加入 Todo",
-    note: "从当前活动创建并关联 Todo",
+    note: "从当前活动创建并关联 Todo；随后自动进入行导航并激活标题编辑",
   },
   {
     sequence: "asc",
@@ -169,7 +169,7 @@ export const SHORTCUT_DEFINITIONS: ShortcutDefinition[] = [
     mode: "sequence",
     category: "activity",
     action: "加入 Schedule",
-    note: "从当前活动创建并关联 Schedule",
+    note: "从当前活动创建并关联 Schedule；随后自动进入行导航并激活标题编辑",
   },
   {
     sequence: "aun",
@@ -177,7 +177,7 @@ export const SHORTCUT_DEFINITIONS: ShortcutDefinition[] = [
     mode: "sequence",
     category: "activity",
     action: "加入 Untaetigkeit",
-    note: "从当前活动创建并关联 Untaetigkeit",
+    note: "从当前活动创建并关联 Untaetigkeit；随后自动进入行导航并激活标题编辑",
   },
   {
     sequence: "aqu",
@@ -284,14 +284,21 @@ export const SHORTCUT_DEFINITIONS: ShortcutDefinition[] = [
   { sequence: "pww", actionId: "planner.gotoWeek", mode: "sequence", category: "planner", action: "切换视图", note: "week" },
   { sequence: "pmm", actionId: "planner.gotoMonth", mode: "sequence", category: "planner", action: "切换视图", note: "month" },
   { sequence: "pyy", actionId: "planner.gotoYear", mode: "sequence", category: "planner", action: "切换视图", note: "year" },
-  { sequence: "pto", actionId: "planner.addTodo", mode: "sequence", category: "planner", action: "新增 Todo", note: "在当前日期新增 Todo" },
+  {
+    sequence: "pto",
+    actionId: "planner.addTodo",
+    mode: "sequence",
+    category: "planner",
+    action: "新增 Todo",
+    note: "在当前日期新增 Todo；随后自动进入 Planner 行导航并激活单元格编辑（day 视图）",
+  },
   {
     sequence: "psc",
     actionId: "planner.addSchedule",
     mode: "sequence",
     category: "planner",
     action: "新增 Schedule",
-    note: "在当前日期新增 Schedule（Untaetigkeit 归入 Schedule）",
+    note: "在当前日期新增 Schedule（Untaetigkeit 归入 Schedule）；随后自动进入 Planner 行导航并激活单元格编辑（day 视图）",
   },
   { sequence: "pet", actionId: "planner.editTitle", mode: "sequence", category: "planner", action: "编辑标题", note: "打开标题编辑" },
   {
