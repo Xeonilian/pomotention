@@ -131,7 +131,7 @@ export const SHORTCUT_DEFINITIONS: ShortcutDefinition[] = [
   },
   { sequence: "ve", actionId: "route.go.settings", mode: "sequence", category: "navigation", action: "页面跳转", note: "设置（Setting）" },
   {
-    sequence: "an",
+    sequence: "ae",
     actionId: "activity.navigator.enter",
     mode: "sequence",
     category: "activity",
@@ -262,7 +262,7 @@ export const SHORTCUT_DEFINITIONS: ShortcutDefinition[] = [
   { sequence: "tpr", actionId: "task.goPrev", mode: "sequence", category: "task", action: "切换到上一个任务", note: "定位上一个任务" },
   { sequence: "tnx", actionId: "task.goNext", mode: "sequence", category: "task", action: "切换到下一个任务", note: "定位下一个任务" },
   {
-    sequence: "pn",
+    sequence: "pe",
     actionId: "planner.navigator.enter",
     mode: "sequence",
     category: "planner",

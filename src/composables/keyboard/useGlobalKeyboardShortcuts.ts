@@ -46,6 +46,11 @@ function isTypingTarget(target: EventTarget | null): boolean {
   return false;
 }
 
+/** 小键盘 Enter 与主键盘 Enter */
+function isPlainEnterKey(event: KeyboardEvent): boolean {
+  return event.key === "Enter" || event.code === "NumpadEnter";
+}
+
 export function useGlobalKeyboardShortcuts(options: UseGlobalKeyboardShortcutsOptions) {
   const timeoutMs = options.sequenceTimeoutMs ?? 1000;
   let buffer = "";
@@ -163,9 +168,16 @@ export function useGlobalKeyboardShortcuts(options: UseGlobalKeyboardShortcutsOp
     installed = true;
     originalFilter = hotkeys.filter;
     hotkeys.filter = (event) => {
-      if (isTypingTarget(event.target)) return false;
-      if (originalFilter) return originalFilter(event);
-      return true;
+      if (!isTypingTarget(event.target)) {
+        if (originalFilter) return originalFilter(event);
+        return true;
+      }
+      // 行导航 + 输入焦点：Enter 需交给 onModeKey（先 blur/保存，再次 Enter 退出导航）
+      if (options.isModeActive?.() && isPlainEnterKey(event)) {
+        if (originalFilter) return originalFilter(event);
+        return true;
+      }
+      return false;
     };
     window.addEventListener("keydown", editableEscapeHandler, true);
     hotkeys(registeredHotkeys, { capture: true, keyup: false, keydown: true }, keyHandler);

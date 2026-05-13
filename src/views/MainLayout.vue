@@ -647,7 +647,7 @@ const shortcuts = useGlobalKeyboardShortcuts({
       if (key === "up") return moveActivityNavigator(-1);
       if (key === "down") return moveActivityNavigator(1);
       if (key === "space") return activateActivityNavigatorField();
-      if (key === "enter" || key === "return") {
+      if (key === "enter" || key === "return" || key === "num_enter") {
         return confirmActivityNavigatorField();
       }
       if (key === "esc" || key === "escape") {
@@ -668,7 +668,7 @@ const shortcuts = useGlobalKeyboardShortcuts({
       if (key === "up") return movePlannerNavigator(-1);
       if (key === "down") return movePlannerNavigator(1);
       if (key === "space") return activatePlannerNavigatorField();
-      if (key === "enter" || key === "return") {
+      if (key === "enter" || key === "return" || key === "num_enter") {
         return confirmPlannerNavigatorField();
       }
       if (key === "esc" || key === "escape") {

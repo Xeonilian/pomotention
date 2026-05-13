@@ -665,7 +665,8 @@ function confirmNavigatorField(): boolean {
       return true;
     }
   }
-  return false;
+  exitNavigatorMode();
+  return true;
 }
 
 const noSelectedActivity = computed(() => selectedRowId.value == null && selectedActivityId.value == null && activeId.value == null);

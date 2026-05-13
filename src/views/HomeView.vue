@@ -1450,7 +1450,10 @@ function activatePlannerNavigatorFieldMode(): boolean {
 function confirmPlannerNavigatorFieldMode(): boolean {
   if (!plannerNavigatorActive.value) return false;
   if (settingStore.settings.viewSet !== "day") return false;
-  return dayPlannerRef.value?.confirmPlannerKeyboardCellAction() ?? false;
+  const handled = dayPlannerRef.value?.confirmPlannerKeyboardCellAction() ?? false;
+  if (handled) return true;
+  exitPlannerNavigatorMode();
+  return true;
 }
 
 function navigatePlannerNavigatorSubSelectionMode(delta: number): boolean {
