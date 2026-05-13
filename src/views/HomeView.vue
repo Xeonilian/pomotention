@@ -367,7 +367,8 @@ import { autoSyncDebounced, uploadAllDebounced } from "@/core/utils/autoSync";
 import { useDevice } from "@/composables/platform/useDevice";
 import { usePublicHolidays, plannerHolidayMapKey } from "@/composables/planner/usePublicHolidays";
 import { registerPlannerKeyboardCommandApi } from "@/composables/keyboard/usePlannerKeyboardCommands";
-import { registerPlannerDaySpaceToggleCheck, registerPlannerNavigatorApi } from "@/composables/keyboard/usePlannerKeyboardNavigator";
+import { registerPlannerDaySpaceToggleCheck } from "@/composables/keyboard/usePlannerKeyboardNavigator";
+import { useHomePlannerNavigator, type HomeDayPlannerKeyboardExpose, type UseHomePlannerNavigatorOptions } from "@/composables/home/useHomePlannerNavigator";
 import { useHomePlannerKeyboard } from "@/composables/home/useHomePlannerKeyboard";
 import { useHomePlannerRowEdits } from "@/composables/home/useHomePlannerRowEdits";
 
@@ -403,7 +404,6 @@ const showPopover = ref(false);
 const popoverMessage = ref("");
 const taskRecordEditing = ref(false);
 let unregisterPlannerCommandApi: (() => void) | null = null;
-let unregisterPlannerNavigatorApi: (() => void) | null = null;
 let unregisterPlannerDaySpaceToggleCheck: (() => void) | null = null;
 function setTaskRecordEditing(v: boolean) {
   taskRecordEditing.value = v;
@@ -412,15 +412,7 @@ function setTaskRecordEditing(v: boolean) {
 const route = useRoute();
 
 const taskTrackerRef = ref<{ endTaskRecordEditing: () => void } | null>(null);
-const dayPlannerRef = ref<{
-  startTodoKeyboardEdit: (field: "title" | "start" | "done") => boolean;
-  startScheduleKeyboardEdit: (field: "title" | "start" | "done" | "duration" | "location") => boolean;
-  movePlannerKeyboardCell: (delta: 1 | -1) => boolean;
-  activatePlannerKeyboardCell: () => boolean;
-  toggleSelectedRowCheckKeyboard: () => boolean;
-  confirmPlannerKeyboardCellAction: () => boolean;
-  navigatePlannerKeyboardSubSelection: (delta: number) => boolean;
-} | null>(null);
+const dayPlannerRef = ref<HomeDayPlannerKeyboardExpose | null>(null);
 
 function onFinishTaskRecordEditing() {
   taskTrackerRef.value?.endTaskRecordEditing();
@@ -447,6 +439,19 @@ const {
   schedulesForCurrentView,
   todosForCurrentViewWithTaskRecords,
 } = storeToRefs(dataStore);
+
+const { plannerNavigatorActive } = useHomePlannerNavigator({
+  settingStore,
+  dayPlannerRef,
+  todosForCurrentViewWithTaskRecords,
+  schedulesForCurrentView,
+  todoById,
+  scheduleById,
+  selectedRowId,
+  selectedActivityId,
+  selectedTaskId,
+  activeId,
+} as UseHomePlannerNavigatorOptions);
 
 const dateService = dataStore.dateService;
 
@@ -1363,105 +1368,6 @@ const {
   saveAllDebounced,
 });
 
-const plannerNavigatorActive = ref(false);
-
-type PlannerKeyboardRow = {
-  rowId: number;
-};
-
-function getPlannerKeyboardRows(): PlannerKeyboardRow[] {
-  const rows: PlannerKeyboardRow[] = [];
-  for (const todo of todosForCurrentViewWithTaskRecords.value ?? []) {
-    rows.push({ rowId: todo.id });
-  }
-  for (const schedule of schedulesForCurrentView.value ?? []) {
-    rows.push({ rowId: schedule.id });
-  }
-  return rows;
-}
-
-function selectPlannerKeyboardRowById(rowId: number): boolean {
-  const todo = todoById.value.get(rowId);
-  if (todo) {
-    selectedRowId.value = todo.id;
-    selectedActivityId.value = todo.activityId;
-    selectedTaskId.value = todo.taskId ?? null;
-    activeId.value = undefined;
-    return true;
-  }
-  const schedule = scheduleById.value.get(rowId);
-  if (schedule) {
-    selectedRowId.value = schedule.id;
-    selectedActivityId.value = schedule.activityId;
-    selectedTaskId.value = schedule.taskId ?? null;
-    activeId.value = undefined;
-    return true;
-  }
-  return false;
-}
-
-function enterPlannerNavigatorMode(): boolean {
-  const rows = getPlannerKeyboardRows();
-  if (rows.length === 0) return false;
-  plannerNavigatorActive.value = true;
-  const current = selectedRowId.value;
-  const exists = current != null && rows.some((row) => row.rowId === current);
-  if (!exists) {
-    return selectPlannerKeyboardRowById(rows[0].rowId);
-  }
-  return true;
-}
-
-function movePlannerNavigatorMode(delta: 1 | -1): boolean {
-  const rows = getPlannerKeyboardRows();
-  if (rows.length === 0) return false;
-  const currentIndex = rows.findIndex((row) => row.rowId === selectedRowId.value);
-  const lastIndex = rows.length - 1;
-  let nextIndex = currentIndex === -1 ? (delta > 0 ? 0 : lastIndex) : currentIndex + delta;
-  if (nextIndex < 0) nextIndex = lastIndex;
-  if (nextIndex > lastIndex) nextIndex = 0;
-  return selectPlannerKeyboardRowById(rows[nextIndex].rowId);
-}
-
-function pickPlannerRowByDigitMode(digit: number): boolean {
-  if (digit < 1 || digit > 9) return false;
-  const rows = getPlannerKeyboardRows();
-  const target = rows[digit - 1];
-  if (!target) return false;
-  return selectPlannerKeyboardRowById(target.rowId);
-}
-
-function exitPlannerNavigatorMode() {
-  plannerNavigatorActive.value = false;
-}
-
-function movePlannerNavigatorFieldMode(delta: 1 | -1): boolean {
-  if (!plannerNavigatorActive.value) return false;
-  if (settingStore.settings.viewSet !== "day") return false;
-  return dayPlannerRef.value?.movePlannerKeyboardCell(delta) ?? false;
-}
-
-function activatePlannerNavigatorFieldMode(): boolean {
-  if (!plannerNavigatorActive.value) return false;
-  if (settingStore.settings.viewSet !== "day") return false;
-  return dayPlannerRef.value?.activatePlannerKeyboardCell() ?? false;
-}
-
-function confirmPlannerNavigatorFieldMode(): boolean {
-  if (!plannerNavigatorActive.value) return false;
-  if (settingStore.settings.viewSet !== "day") return false;
-  const handled = dayPlannerRef.value?.confirmPlannerKeyboardCellAction() ?? false;
-  if (handled) return true;
-  exitPlannerNavigatorMode();
-  return true;
-}
-
-function navigatePlannerNavigatorSubSelectionMode(delta: number): boolean {
-  if (!plannerNavigatorActive.value) return false;
-  if (settingStore.settings.viewSet !== "day") return false;
-  return dayPlannerRef.value?.navigatePlannerKeyboardSubSelection(delta) ?? false;
-}
-
 function plannerKeyboardEditField(field: "title" | "start" | "done" | "duration" | "location"): boolean {
   const rowId = selectedRowId.value;
   if (rowId == null) return false;
@@ -1489,17 +1395,6 @@ onMounted(() => {
   dateService.navigateByView("today");
   attachVisualViewportListeners();
   unregisterPlannerCommandApi = registerPlannerKeyboardCommandApi(plannerKeyboard.plannerCommandApi);
-  unregisterPlannerNavigatorApi = registerPlannerNavigatorApi({
-    enter: enterPlannerNavigatorMode,
-    move: movePlannerNavigatorMode,
-    pickByDigit: pickPlannerRowByDigitMode,
-    moveField: movePlannerNavigatorFieldMode,
-    activateField: activatePlannerNavigatorFieldMode,
-    confirmField: confirmPlannerNavigatorFieldMode,
-    navigateSubSelection: navigatePlannerNavigatorSubSelectionMode,
-    exit: exitPlannerNavigatorMode,
-    isActive: () => plannerNavigatorActive.value,
-  });
   unregisterPlannerDaySpaceToggleCheck = registerPlannerDaySpaceToggleCheck(() => {
     if (route.name !== "Home") return false;
     if (settingStore.settings.viewSet !== "day") return false;
@@ -1513,10 +1408,6 @@ onUnmounted(() => {
   if (unregisterPlannerCommandApi) {
     unregisterPlannerCommandApi();
     unregisterPlannerCommandApi = null;
-  }
-  if (unregisterPlannerNavigatorApi) {
-    unregisterPlannerNavigatorApi();
-    unregisterPlannerNavigatorApi = null;
   }
   if (unregisterPlannerDaySpaceToggleCheck) {
     unregisterPlannerDaySpaceToggleCheck();

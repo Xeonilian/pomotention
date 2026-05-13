@@ -251,39 +251,18 @@ import { useAppWindow } from "@/composables/layout/useAppWindow";
 import { useSyncWidget } from "@/composables/sync/useSyncWidget";
 import { useDevice } from "@/composables/platform/useDevice";
 import { useGlobalKeyboardShortcuts } from "@/composables/keyboard/useGlobalKeyboardShortcuts";
+import { useMainLayoutShortcutMode } from "@/composables/keyboard/useMainLayoutShortcutMode";
 import { navigateToBuiltDocs } from "@/composables/platform/useDocsUrl";
 import { syncAll } from "@/services/sync";
 import { createTouchScheduledSingleAndDouble } from "@/composables/platform/useTouchScheduledSingleAndDouble";
 import { createAppActionRegistry, dispatchAppAction, type AppActionId } from "@/actions/appActions";
-import {
-  activateActivityNavigatorField,
-  confirmActivityNavigatorField,
-  enterActivityNavigator,
-  exitActivityNavigator,
-  isActivityNavigatorActive,
-  moveActivityNavigator,
-  moveActivityVisibleSelection,
-  moveActivityNavigatorField,
-  navigateActivityNavigatorSubSelection,
-  pickActivityRowByDigit,
-} from "@/composables/keyboard/useActivityKeyboardNavigator";
+import { enterActivityNavigator, isActivityNavigatorActive } from "@/composables/keyboard/useActivityKeyboardNavigator";
 import { runActivityKeyboardCommand } from "@/composables/keyboard/useActivityKeyboardCommands";
 import { runActivityEditFieldCommand } from "@/composables/keyboard/useActivityKeyboardCommands";
 import { runTaskKeyboardCommand } from "@/composables/keyboard/useTaskKeyboardCommands";
 import { runPlannerEditFieldCommand, runPlannerKeyboardCommand } from "@/composables/keyboard/usePlannerKeyboardCommands";
+import { enterPlannerNavigator, isPlannerNavigatorActive } from "@/composables/keyboard/usePlannerKeyboardNavigator";
 import { runTimetableKeyboardCommand } from "@/composables/keyboard/useTimetableKeyboardCommands";
-import {
-  activatePlannerNavigatorField,
-  confirmPlannerNavigatorField,
-  enterPlannerNavigator,
-  exitPlannerNavigator,
-  isPlannerNavigatorActive,
-  movePlannerNavigator,
-  movePlannerNavigatorField,
-  navigatePlannerNavigatorSubSelection,
-  pickPlannerRowByDigit,
-  tryPlannerDaySpaceToggleCheck,
-} from "@/composables/keyboard/usePlannerKeyboardNavigator";
 
 // Icons & Components
 import {
@@ -374,57 +353,6 @@ watch(
 const showDatabaseDialog = ref(false);
 const logoutConfirmVisible = ref(false);
 let logoutClickTimer: ReturnType<typeof setTimeout> | null = null;
-const activityArrowPrefixHeld = ref(false);
-const taskArrowPrefixHeld = ref(false);
-
-function isEditableTarget(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) return false;
-  if (target.isContentEditable) return true;
-  const tagName = target.tagName.toLowerCase();
-  if (tagName === "input" || tagName === "textarea" || tagName === "select") return true;
-  if (target.closest("[contenteditable='true']")) return true;
-  if (target.closest("[role='textbox']")) return true;
-  return false;
-}
-
-function resetArrowPrefixes() {
-  activityArrowPrefixHeld.value = false;
-  taskArrowPrefixHeld.value = false;
-}
-
-function handleArrowPrefixKeydown(event: KeyboardEvent) {
-  if (event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return;
-  if (isEditableTarget(event.target)) return;
-  const key = event.key.toLowerCase();
-  if (key === "a") activityArrowPrefixHeld.value = true;
-  if (key === "t") taskArrowPrefixHeld.value = true;
-  if ((key === "arrowup" || key === "arrowdown") && activityArrowPrefixHeld.value && settingStore.settings.showActivity) {
-    const delta = key === "arrowup" ? -1 : 1;
-    const movedVisible = moveActivityVisibleSelection(delta);
-    const handled = movedVisible;
-    if (handled) {
-      event.preventDefault();
-      event.stopPropagation();
-      return;
-    }
-  }
-  if ((key === "arrowleft" || key === "arrowright") && taskArrowPrefixHeld.value) {
-    const handled = key === "arrowleft"
-      ? dispatchKeyboardAction("task.goPrev", "t+left.raw")
-      : dispatchKeyboardAction("task.goNext", "t+right.raw");
-    if (handled) {
-      event.preventDefault();
-      event.stopPropagation();
-      return;
-    }
-  }
-}
-
-function handleArrowPrefixKeyup(event: KeyboardEvent) {
-  const key = event.key.toLowerCase();
-  if (key === "a") activityArrowPrefixHeld.value = false;
-  if (key === "t") taskArrowPrefixHeld.value = false;
-}
 
 /** 与 YearPlanner 一致：移动端无 dblclick，用双触窗口识别 */
 const LOGOUT_TOUCH_KEY = 0;
@@ -621,84 +549,16 @@ function dispatchKeyboardAction(actionId: AppActionId, sequence: string): boolea
   return dispatchAppAction(actionRegistry, actionId, { source: "keyboard", sequence });
 }
 
+const { onModeKey, handleArrowPrefixKeydown, handleArrowPrefixKeyup, resetArrowPrefixes } = useMainLayoutShortcutMode({
+  settingStore,
+  dispatchKeyboardAction,
+});
+
 const shortcuts = useGlobalKeyboardShortcuts({
   dispatchAction: dispatchKeyboardAction,
   isEnabled: () => !isMiniMode.value,
   isModeActive: () => isActivityNavigatorActive() || isPlannerNavigatorActive(),
-  onModeKey: (key) => {
-    if ((key === "up" || key === "down") && activityArrowPrefixHeld.value && settingStore.settings.showActivity) {
-      const delta = key === "up" ? -1 : 1;
-      const movedVisible = moveActivityVisibleSelection(delta);
-      return movedVisible;
-    }
-    if ((key === "left" || key === "right") && taskArrowPrefixHeld.value) {
-      const handled = key === "left"
-        ? dispatchKeyboardAction("task.goPrev", "t+left")
-        : dispatchKeyboardAction("task.goNext", "t+right");
-      return handled;
-    }
-    if (isActivityNavigatorActive()) {
-      if (key === "left" && navigateActivityNavigatorSubSelection(-1)) return true;
-      if (key === "right" && navigateActivityNavigatorSubSelection(1)) return true;
-      if (key === "up" && navigateActivityNavigatorSubSelection(-5)) return true;
-      if (key === "down" && navigateActivityNavigatorSubSelection(5)) return true;
-      if (key === "left") return moveActivityNavigatorField(-1);
-      if (key === "right") return moveActivityNavigatorField(1);
-      if (key === "up") return moveActivityNavigator(-1);
-      if (key === "down") return moveActivityNavigator(1);
-      if (key === "space") return activateActivityNavigatorField();
-      if (key === "enter" || key === "return" || key === "num_enter") {
-        return confirmActivityNavigatorField();
-      }
-      if (key === "esc" || key === "escape") {
-        if (navigateActivityNavigatorSubSelection(0)) return true;
-        exitActivityNavigator();
-        return true;
-      }
-      if (/^[1-9]$/.test(key)) return pickActivityRowByDigit(Number(key));
-      return false;
-    }
-    if (isPlannerNavigatorActive()) {
-      if (key === "left" && navigatePlannerNavigatorSubSelection(-1)) return true;
-      if (key === "right" && navigatePlannerNavigatorSubSelection(1)) return true;
-      if (key === "up" && navigatePlannerNavigatorSubSelection(-5)) return true;
-      if (key === "down" && navigatePlannerNavigatorSubSelection(5)) return true;
-      if (key === "left") return movePlannerNavigatorField(-1);
-      if (key === "right") return movePlannerNavigatorField(1);
-      if (key === "up") return movePlannerNavigator(-1);
-      if (key === "down") return movePlannerNavigator(1);
-      if (key === "space") return activatePlannerNavigatorField();
-      if (key === "enter" || key === "return" || key === "num_enter") {
-        return confirmPlannerNavigatorField();
-      }
-      if (key === "esc" || key === "escape") {
-        if (navigatePlannerNavigatorSubSelection(0)) return true;
-        exitPlannerNavigator();
-        return true;
-      }
-      if (/^[1-9]$/.test(key)) return pickPlannerRowByDigit(Number(key));
-      return false;
-    }
-    // day 视图已选 Planner 行且未进入 pn：Space 直接切换完成勾选
-    if (key === "space" && tryPlannerDaySpaceToggleCheck()) return true;
-    if (key === "left") return dispatchKeyboardAction("planner.gotoPrev", "left");
-    if (key === "right") return dispatchKeyboardAction("planner.gotoNext", "right");
-    if (key === "up" || key === "down") {
-      const delta = key === "up" ? -1 : 1;
-      if (settingStore.settings.showPlanner) {
-        if (movePlannerNavigator(delta)) return true;
-        return enterPlannerNavigator();
-      }
-      if (settingStore.settings.showActivity) {
-        if (isActivityNavigatorActive()) return moveActivityNavigator(delta);
-        return enterActivityNavigator();
-      }
-    }
-    if (key === "enter" || key === "return") {
-      return false;
-    }
-    return false;
-  },
+  onModeKey,
 });
 
 watch(route, (newVal) => {
