@@ -231,7 +231,7 @@ export const SHORTCUT_DEFINITIONS: ShortcutDefinition[] = [
     action: "重复活动",
     note: "复制当前活动并保留在当前侧编辑",
   },
-  { sequence: "tee", actionId: "task.openEditor", mode: "sequence", category: "task", action: "打开编辑区", note: "编辑当前任务" },
+  { sequence: "te", actionId: "task.openEditor", mode: "sequence", category: "task", action: "打开编辑区", note: "编辑当前任务" },
   { sequence: "tst", actionId: "task.toggleStar", mode: "sequence", category: "task", action: "切换星标", note: "标记或取消星标" },
   {
     sequence: "ttg",
