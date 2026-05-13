@@ -781,7 +781,7 @@ function handlePomoInputTouchCancel() {
   align-items: center;
   justify-content: center;
   cursor: grab;
-  padding: 6px 4px; /* 增大触摸面积 */
+  padding: 4px 4px; /* 增大触摸面积 */
   margin: -4px -2px; /* 负margin保持视觉大小不变，但扩大点击区域 */
   border-radius: 4px;
   margin-right: 1px;

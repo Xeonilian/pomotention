@@ -91,7 +91,7 @@ const quadrantDueDayPrev = new Map<number, DueDayBucket>();
  * 凡改动 tagIds 均经 dataStore.setActivityTags / applyQuadrantToActivity，与 store 内 lastModified、synced、持久化、防抖上传一致。
  * - 到期日从非今天变为今天：追加 TAG_ID_URGENT（85）；用户当日手动去掉 urgent 后不会反复补回。
  * - 到期日从当天改为未来或清空主到期：去掉 TAG_ID_URGENT（保留 126）；与「当天→过期」整组进 Later 分支区分。
- * - 主到期已过期（diff&lt;0，即 countdown-boom）：若有 urgent/important，则写入 Later（去掉 85、126）；手动改日期同样会触发。
+ * - 主到期已过期（diff&lt;0）：仅在「从非 past 首次进入 past」时若有 urgent/important 则写入 Later；避免常驻 past 时每次 deep watch 把用户拖出的象限打回。
  */
 export function syncQuadrantTagsFromPrimaryDue(store: DataStore, activities: readonly Activity[]): void {
   const seen = new Set<number>();
@@ -104,7 +104,8 @@ export function syncQuadrantTagsFromPrimaryDue(store: DataStore, activities: rea
     const bucket = dueDayBucket(dueMs);
     const before = quadrantDueDayPrev.get(a.id);
 
-    if (bucket === "past") {
+    // 仅在进入过期日时收进 Later；已处于 past 时不再反复清空 urgent/important（否则拖放改象限会立刻被 watch 打回）
+    if (bucket === "past" && before !== "past") {
       const ids = a.tagIds ?? [];
       if (ids.includes(TAG_ID_URGENT) || ids.includes(TAG_ID_IMPORTANT)) {
         applyQuadrantToActivity(store, a.id, "neither");
