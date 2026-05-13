@@ -20,6 +20,7 @@ type MinimalTask = {
 interface UseHomePlannerKeyboardOptions {
   onDateSet: (mode: "prev" | "next" | "today") => void;
   onQuickAddTodo: () => void;
+  onStateLogConfirm: () => void;
   onQuickAddSchedule: (isUntaetigkeit: boolean) => void;
   onRepeatActivity: (noTodoRepeat: boolean) => void;
   onIcsExport: () => Promise<void>;
@@ -110,6 +111,11 @@ export function useHomePlannerKeyboard(options: UseHomePlannerKeyboardOptions) {
     return true;
   };
 
+  const plannerStateLog = (): boolean => {
+    options.onStateLogConfirm();
+    return true;
+  };
+
   const plannerAddSchedule = (): boolean => {
     options.onQuickAddSchedule(false);
     schedulePlannerNavigatorEnterAndActivate();
@@ -192,6 +198,7 @@ export function useHomePlannerKeyboard(options: UseHomePlannerKeyboardOptions) {
       gotoMonth: plannerGotoMonth,
       gotoYear: plannerGotoYear,
       addTodo: plannerAddTodo,
+      stateLog: plannerStateLog,
       addSchedule: plannerAddSchedule,
       repeatActivityOnly: plannerRepeatActivityOnly,
       repeatActivity: plannerRepeatActivity,

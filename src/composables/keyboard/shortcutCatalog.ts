@@ -259,6 +259,14 @@ export const SHORTCUT_DEFINITIONS: ShortcutDefinition[] = [
     action: "打开模板面板",
     note: "选择或应用模板",
   },
+  {
+    sequence: "tsl",
+    actionId: "task.stateLog",
+    mode: "sequence",
+    category: "task",
+    action: "状态快记",
+    note: "打开状态快记弹窗并快速记录精力与愉悦",
+  },
   { sequence: "tpr", actionId: "task.goPrev", mode: "sequence", category: "task", action: "切换到上一个任务", note: "定位上一个任务" },
   { sequence: "tnx", actionId: "task.goNext", mode: "sequence", category: "task", action: "切换到下一个任务", note: "定位下一个任务" },
   {

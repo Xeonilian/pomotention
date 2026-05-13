@@ -45,10 +45,14 @@
               <n-icon :component="CalendarAdd24Regular" />
             </template>
           </n-button>
-
           <n-button size="large" secondary circle type="info" @click="emit('quick-add-todo')">
             <template #icon>
               <n-icon :component="AddCircle24Regular" />
+            </template>
+          </n-button>
+          <n-button size="large" secondary circle type="info" @click="handleOpenStateLog">
+            <template #icon>
+              <n-icon :component="EmojiSmileSlight24Regular" />
             </template>
           </n-button>
         </div>
@@ -185,6 +189,7 @@ import {
   AddCircle24Regular,
   CalendarAdd24Regular,
   CloudAdd20Regular,
+  EmojiSmileSlight24Regular,
   AnimalTurtle24Regular,
   ChevronCircleRight48Regular,
   ChevronCircleLeft48Regular,
@@ -207,6 +212,7 @@ const emit = defineEmits<{
   (e: "create-child-activity", id: number | null | undefined): void;
   (e: "increase-child-activity", id: number | null | undefined): void;
   (e: "quick-add-todo"): void;
+  (e: "open-state-log"): void;
   (e: "quick-add-schedule", isUntaetigkeit: boolean): void;
   (e: "reset-to-present"): void;
   (e: "suspend-planner-row"): void;
@@ -249,14 +255,10 @@ const effectiveActivityId = computed(() => {
 
 /** 与 ActivitySheet 一致：无选中且非今日 →「回到当下」 */
 const showBackToToday = computed(() => !dateService.isViewDateToday);
-const showRowActions = computed(
-  () => selectedRowId.value != null || activeId.value != null || selectedActivityId.value != null,
-);
+const showRowActions = computed(() => selectedRowId.value != null || activeId.value != null || selectedActivityId.value != null);
 const showUpPopover = computed(() => showBackToToday.value || showRowActions.value);
 const showActivityPanel = computed(() => settingStore.settings.showActivity);
-const noSelectedActivity = computed(
-  () => selectedRowId.value == null && selectedActivityId.value == null && activeId.value == null,
-);
+const noSelectedActivity = computed(() => selectedRowId.value == null && selectedActivityId.value == null && activeId.value == null);
 
 /** 与 ActivitySheet.pickActivity 一致 */
 function handlePickActivity() {
@@ -312,6 +314,11 @@ function scheduleDismiss() {
 
 function togglePanel() {
   panelShow.value = !panelShow.value;
+}
+
+function handleOpenStateLog() {
+  panelShow.value = false;
+  emit("open-state-log");
 }
 
 watch(taskRecordEditing, (editing) => {

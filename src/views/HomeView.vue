@@ -315,6 +315,7 @@
       @cancel-planner-row="onMobileFabCancelPlannerRow"
       @suspend-planner-row="onMobileFabSuspendPlannerRow"
       @repeat-activity="onRepeatActivity"
+      @open-state-log="showStateLogModal = true"
       @finish-task-record-editing="onFinishTaskRecordEditing"
     />
     <!-- 错误提示弹窗 -->
@@ -325,6 +326,7 @@
       {{ popoverMessage }}
     </n-popover>
     <IcsExportModal v-if="icsModalVisible" :visible="icsModalVisible" :qrText="icsQRText" @close="icsModalVisible = false" />
+    <StateLogModal v-model:show="showStateLogModal" @confirm="onStateLogConfirm" />
   </div>
 </template>
 
@@ -342,6 +344,7 @@ import { useVisualViewportKeyboard } from "@/composables/layout/useVisualViewpor
 import IcsExportModal from "@/components/DayPlanner/IcsExportModal.vue";
 import HomeTagFilterPopover from "@/components/TagSystem/HomeTagFilterPopover.vue";
 import MobileHomeFab from "@/components/platform/MobileHomeFab.vue";
+import { useTagStore } from "@/stores/useTagStore";
 import {
   CalendarSettings20Regular,
   QrCode24Regular,
@@ -368,7 +371,11 @@ import { useDevice } from "@/composables/platform/useDevice";
 import { usePublicHolidays, plannerHolidayMapKey } from "@/composables/planner/usePublicHolidays";
 import { registerPlannerKeyboardCommandApi } from "@/composables/keyboard/usePlannerKeyboardCommands";
 import { registerPlannerDaySpaceToggleCheck } from "@/composables/keyboard/usePlannerKeyboardNavigator";
-import { useHomePlannerNavigator, type HomeDayPlannerKeyboardExpose, type UseHomePlannerNavigatorOptions } from "@/composables/home/useHomePlannerNavigator";
+import {
+  useHomePlannerNavigator,
+  type HomeDayPlannerKeyboardExpose,
+  type UseHomePlannerNavigatorOptions,
+} from "@/composables/home/useHomePlannerNavigator";
 import { useHomePlannerKeyboard } from "@/composables/home/useHomePlannerKeyboard";
 import { useHomePlannerRowEdits } from "@/composables/home/useHomePlannerRowEdits";
 
@@ -390,9 +397,11 @@ const YearPlanner = defineAsyncComponent(() => import("@/components/YearPlanner/
 const TaskTracker = defineAsyncComponent(() => import("@/components/TaskTracker/TaskTracker.vue"));
 const ActivitySheet = defineAsyncComponent(() => import("@/components/ActivitySheet/ActivitySheet.vue"));
 const AIChatDialog = defineAsyncComponent(() => import("@/components/AiChat/AiChatDialog.vue"));
+const StateLogModal = defineAsyncComponent(() => import("@/components/TaskTracker/StateLogModal.vue"));
 // -- 基础UI状态
 const settingStore = useSettingStore();
 const dataStore = useDataStore();
+const tagStore = useTagStore();
 
 /** 窄屏仅活动：隐藏空 middle，避免与右栏双纵向滚、iOS 焦点滚冲突 */
 const activityOnlyMobile = computed(
@@ -403,6 +412,7 @@ const queryDate = ref<number | null>(null);
 const showPopover = ref(false);
 const popoverMessage = ref("");
 const taskRecordEditing = ref(false);
+const showStateLogModal = ref(false);
 let unregisterPlannerCommandApi: (() => void) | null = null;
 let unregisterPlannerDaySpaceToggleCheck: (() => void) | null = null;
 function setTaskRecordEditing(v: boolean) {
@@ -685,6 +695,73 @@ function onQuickAddTodo() {
   selectedTaskId.value = task.id;
   selectedRowId.value = newTodo.id;
 
+  saveAllDebounced();
+}
+
+type StateLogConfirmPayload = {
+  energyValue: number;
+  rewardValue: number;
+  title?: string;
+  recordedAt: number;
+};
+
+function onStateLogConfirm(payload: StateLogConfirmPayload) {
+  const titleSuffix = payload.title?.trim();
+  const fullTitle = titleSuffix
+    ? `E${payload.energyValue} R${payload.rewardValue}: ${titleSuffix}`
+    : `E${payload.energyValue} R${payload.rewardValue}`;
+
+  const newActivity: Activity = {
+    id: Date.now(),
+    class: "T",
+    title: fullTitle,
+    estPomoI: "",
+    pomoType: "🍅",
+    status: "done",
+    dueDate: appDateTimestamp.value,
+    parentId: null,
+    synced: false,
+    deleted: false,
+    lastModified: Date.now(),
+  };
+
+  const dedupTagIds: number[] = [];
+  for (const [index, slotTagId] of (dataStore.stateLogTagSlotIds ?? []).entries()) {
+    const slotKey = index + 1;
+    if (dataStore.stateLogTagSlotChecks?.[slotKey] !== true) continue;
+    if (typeof slotTagId !== "number") continue;
+    if (dedupTagIds.includes(slotTagId)) continue;
+    dedupTagIds.push(slotTagId);
+  }
+  if (dedupTagIds.length > 0) {
+    newActivity.tagIds = dedupTagIds;
+    tagStore.touchTagsLastUsed(dedupTagIds);
+  }
+
+  activityList.value.push(newActivity);
+
+  const task = taskService.createTaskFromActivity(newActivity.id, newActivity.title);
+  taskList.value = [...taskList.value, task];
+  newActivity.taskId = task.id;
+  newActivity.synced = false;
+  newActivity.lastModified = Date.now();
+
+  const { newTodo } = passPickedActivity(newActivity, appDateTimestamp.value, isViewDateToday.value);
+  newTodo.taskId = task.id;
+  newTodo.status = "done";
+  newTodo.doneTime = payload.recordedAt;
+  newTodo.synced = false;
+  newTodo.lastModified = Date.now();
+  todoList.value = [...todoList.value, newTodo];
+
+  const recordDescription = titleSuffix || undefined;
+  taskService.addRewardRecord(task.id, payload.rewardValue, recordDescription, payload.recordedAt);
+  taskService.addEnergyRecord(task.id, payload.energyValue, recordDescription, payload.recordedAt);
+
+  activeId.value = newActivity.id;
+  selectedActivityId.value = newActivity.id;
+  selectedTaskId.value = task.id;
+  selectedRowId.value = newTodo.id;
   saveAllDebounced();
 }
 
@@ -1329,6 +1406,9 @@ function onViewSet() {
 const plannerKeyboard = useHomePlannerKeyboard({
   onDateSet,
   onQuickAddTodo,
+  onStateLogConfirm: () => {
+    showStateLogModal.value = true;
+  },
   onQuickAddSchedule,
   onRepeatActivity,
   onIcsExport,
