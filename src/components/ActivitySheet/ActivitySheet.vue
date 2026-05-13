@@ -1120,6 +1120,7 @@ function increaseChildActivity() {
     grid-template-areas:
       "imp both"
       "urg nor";
+    margin-bottom: 4px;
   }
 }
 

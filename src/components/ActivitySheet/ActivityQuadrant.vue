@@ -99,7 +99,9 @@ function onTitleEnter() {
   min-width: 0;
   overflow: hidden;
   border-radius: 8px;
+  border: 1px solid var(--color-background-dark);
   box-shadow: none;
+  margin: 2px;
 }
 
 .activity-quadrant__title {
@@ -108,15 +110,9 @@ function onTitleEnter() {
   justify-content: center;
   align-items: center;
   padding: 1px 0px;
-  width: 45%;
-  margin-top: 4px;
-  margin-left: 7px;
-  border-top-left-radius: 8px;
-  border-top-right-radius: 8px;
+
   /* 与下列表区 scrollbar-gutter 对齐，避免标题与行文本左右参差 */
   scrollbar-gutter: stable;
-  transform: translateY(1px);
-  border: 1px solid var(--color-background-dark);
   white-space: nowrap;
 }
 
@@ -166,5 +162,21 @@ function onTitleEnter() {
 /* slot 内 ActivitySection 列表滚轴占位，避免滚动条显隐时整格宽度抖动 */
 .activity-quadrant__body :deep(.section-content-container) {
   scrollbar-gutter: stable;
+}
+
+@media (max-width: 430px) {
+  .activity-quadrant__title {
+    padding: 1px 0px;
+    margin-top: 4px;
+    margin-left: 7px;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    transform: translateY(1px);
+    border: 1px solid var(--color-background-dark);
+    width: 160px;
+  }
+  .activity-quadrant {
+    border: none;
+  }
 }
 </style>
