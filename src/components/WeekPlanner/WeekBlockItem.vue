@@ -26,38 +26,36 @@
     <span v-if="block.item.activityDueRange?.[0]" class="schedule-time">
       {{ timestampToTimeString(block.item.activityDueRange?.[0]) }}
     </span>
-    <!-- 点击标题展示全文：与 TaskTracker 时间轴节点 popover 一致（受控 + 约 3s 收起） -->
-    <NPopover
-      v-if="trimmedBlockTitle"
-      trigger="click"
-      placement="top"
-      to="body"
-      :show-arrow="true"
-      :style="{ maxWidth: '240px' }"
-      :show="titlePopoverShow"
-      @update:show="handleTitlePopoverShow"
-    >
-      <template #trigger>
-        <span
-          v-if="displayTitleText"
-          class="title title--popover-trigger"
-          :title="block.item.title"
-          :class="[{ 'activity--selected': activeId === block.item.activityId }]"
-          role="button"
-          :aria-label="trimmedBlockTitle"
-        >
-          {{ displayTitleText }}
-        </span>
-      </template>
-      <p class="week-block-title-popover">{{ block.item.title }}</p>
-    </NPopover>
-    <span
-      v-else-if="displayTitleText"
-      class="title"
-      :title="block.item.title"
-      :class="[{ 'activity--selected': activeId === block.item.activityId }]"
-    >
-      {{ displayTitleText }}
+    <!-- 标题区外包一层：flex 子项 min-width:auto 时会被长文案撑破格宽 -->
+    <span v-if="trimmedBlockTitle" class="title-slot">
+      <NPopover
+        trigger="click"
+        placement="top"
+        to="body"
+        :show-arrow="true"
+        :style="{ maxWidth: '240px' }"
+        :show="titlePopoverShow"
+        @update:show="handleTitlePopoverShow"
+      >
+        <template #trigger>
+          <span
+            v-if="displayTitleText"
+            class="title title--popover-trigger"
+            :title="block.item.title"
+            :class="[{ 'activity--selected': activeId === block.item.activityId }]"
+            role="button"
+            :aria-label="trimmedBlockTitle"
+          >
+            {{ displayTitleText }}
+          </span>
+        </template>
+        <p class="week-block-title-popover">{{ block.item.title }}</p>
+      </NPopover>
+    </span>
+    <span v-else-if="displayTitleText" class="title-slot">
+      <span class="title" :title="block.item.title" :class="[{ 'activity--selected': activeId === block.item.activityId }]">
+        {{ displayTitleText }}
+      </span>
     </span>
   </div>
 </template>
@@ -95,22 +93,20 @@ const weekBlockStackLayout = computed(() => blockDurationMinutes.value >= 45);
 const blockTagIds = computed(() => props.block.item.tagIds ?? []);
 const hiddenTagIdSet = new Set(TAG_IDS_HIDDEN_IN_TAG_RENDERER);
 
-// 手机端：短时块根据时长截断标题（单位：分钟）；与 blockDurationMinutes 阈值对齐
-const mobileDisplayTitle = computed(() => {
-  const title = props.block.item.title ?? "";
-  if (!title) return "";
-
-  const durationMinutes = blockDurationMinutes.value;
-  const maxChars = durationMinutes < 45 ? 6 : durationMinutes < 75 ? 8 : 12;
-
-  return title.slice(0, maxChars);
+// 单行周块：小屏按块时长限制格内可见字数；高块纵向堆叠时显示全文由样式换行+裁剪
+const singleLineCellTitle = computed(() => {
+  const raw = props.block.item.title ?? "";
+  if (!raw) return "";
+  const d = blockDurationMinutes.value;
+  const maxChars = d < 35 ? 4 : d < 75 ? 8 : 12;
+  return raw.slice(0, maxChars);
 });
 
-// 无标题时不渲染 .title，避免 flex 子项空白仍占位
 const displayTitleText = computed(() => {
-  if (!isMobile.value) return props.block.item.title ?? "";
-  if (weekBlockStackLayout.value) return props.block.item.title ?? "";
-  return mobileDisplayTitle.value;
+  const raw = props.block.item.title ?? "";
+  if (weekBlockStackLayout.value) return raw;
+  if (isMobile.value) return singleLineCellTitle.value;
+  return raw;
 });
 
 // 用于判断是否启用点击 popover（与 display 用 trim 判断一致）
@@ -208,8 +204,28 @@ const handleClick = () => {
   padding: 2px 4px;
   box-sizing: border-box;
   overflow: hidden;
+  min-width: 0;
   cursor: pointer;
   position: relative; /* 新增：确保z-index生效 */
+}
+
+/* flex 剩余空间给标题，且可收缩；内部接 naive Popover 根节点 */
+.title-slot {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  align-items: center;
+}
+
+/* Popover 根类名随版本可能不同：直接约束单根子节点，保证触发区域可收缩 */
+.title-slot > :deep(*) {
+  min-width: 0;
+  flex: 1 1 auto;
+  max-width: 100%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
 }
 
 /* 悬停样式 - 保持不变 */
@@ -252,6 +268,7 @@ const handleClick = () => {
   text-overflow: ellipsis;
   white-space: nowrap;
   width: 100%;
+  min-width: 0;
   line-height: 1.3;
   font-size: 12px;
   padding-left: 1px;
@@ -340,12 +357,23 @@ const handleClick = () => {
   /* 时长较长的块恢复纵向布局，让标题多行占用高度 */
   .item.item--stacked {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: stretch;
     justify-content: center;
     flex-wrap: nowrap;
   }
+  .item.item--stacked .title-slot {
+    flex: 1 1 auto;
+    min-height: 0;
+    align-self: stretch;
+    align-items: flex-start;
+  }
+  .item.item--stacked .title-slot > :deep(*) {
+    align-items: flex-start;
+    align-self: stretch;
+  }
   .item.item--stacked .title {
-    flex: none;
+    flex: 1 1 auto;
+    min-height: 0;
     width: 100%;
     min-width: 0;
     white-space: normal;

@@ -273,6 +273,7 @@ const handleItemChange = (id: number, _ts: number, activityId?: number, taskId?:
 .time-grid-container {
   position: relative;
   width: 100%;
+  overflow: hidden;
 }
 
 /* 小时刻度线 */
