@@ -764,14 +764,14 @@ function handlePomoInputTouchCancel() {
   flex-wrap: wrap;
   width: 100%;
   justify-content: left;
-  padding: 2px;
+  padding: 0px 2px;
 }
 .child-activity-tag {
   margin-left: 20px;
 }
 
 .tagRenderer-container {
-  margin-top: 2px;
+  margin-top: 0px;
   display: flex;
   flex-wrap: wrap;
 }
