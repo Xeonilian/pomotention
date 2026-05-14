@@ -27,6 +27,7 @@ export type AppActionId =
   | "task.openRewardDialog"
   | "task.openInterruptionDialog"
   | "task.openTemplateDialog"
+  | "task.stateLog"
   | "task.goPrev"
   | "task.goNext"
   | "planner.gotoPrev"
@@ -125,6 +126,7 @@ export interface AppActionContext {
       | "gotoMonth"
       | "gotoYear"
       | "addTodo"
+      | "stateLog"
       | "addSchedule"
       | "repeatActivityOnly"
       | "repeatActivity"
@@ -264,6 +266,11 @@ export function createAppActionRegistry(context: AppActionContext): AppActionReg
     "task.openTemplateDialog": {
       run: () => {
         context.runTaskCommand("openTemplateDialog");
+      },
+    },
+    "task.stateLog": {
+      run: () => {
+        context.runPlannerCommand("stateLog");
       },
     },
     "task.goPrev": {

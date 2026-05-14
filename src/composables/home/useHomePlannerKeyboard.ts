@@ -1,4 +1,6 @@
 import type { Ref } from "vue";
+import { nextTick } from "vue";
+import { activatePlannerNavigatorField, enterPlannerNavigator } from "@/composables/keyboard/usePlannerKeyboardNavigator";
 import type { Activity } from "@/core/types/Activity";
 
 type PlannerViewType = "day" | "week" | "month" | "year";
@@ -18,6 +20,7 @@ type MinimalTask = {
 interface UseHomePlannerKeyboardOptions {
   onDateSet: (mode: "prev" | "next" | "today") => void;
   onQuickAddTodo: () => void;
+  onStateLogConfirm: () => void;
   onQuickAddSchedule: (isUntaetigkeit: boolean) => void;
   onRepeatActivity: (noTodoRepeat: boolean) => void;
   onIcsExport: () => Promise<void>;
@@ -92,13 +95,30 @@ export function useHomePlannerKeyboard(options: UseHomePlannerKeyboardOptions) {
     return true;
   };
 
+  /** 快速新增后进入 Planner navigator 并激活当前格编辑（day 视图下等同 pn 后 Space） */
+  const schedulePlannerNavigatorEnterAndActivate = () => {
+    void nextTick(() => {
+      if (!enterPlannerNavigator()) return;
+      void nextTick(() => {
+        activatePlannerNavigatorField();
+      });
+    });
+  };
+
   const plannerAddTodo = (): boolean => {
     options.onQuickAddTodo();
+    schedulePlannerNavigatorEnterAndActivate();
+    return true;
+  };
+
+  const plannerStateLog = (): boolean => {
+    options.onStateLogConfirm();
     return true;
   };
 
   const plannerAddSchedule = (): boolean => {
     options.onQuickAddSchedule(false);
+    schedulePlannerNavigatorEnterAndActivate();
     return true;
   };
 
@@ -178,6 +198,7 @@ export function useHomePlannerKeyboard(options: UseHomePlannerKeyboardOptions) {
       gotoMonth: plannerGotoMonth,
       gotoYear: plannerGotoYear,
       addTodo: plannerAddTodo,
+      stateLog: plannerStateLog,
       addSchedule: plannerAddSchedule,
       repeatActivityOnly: plannerRepeatActivityOnly,
       repeatActivity: plannerRepeatActivity,

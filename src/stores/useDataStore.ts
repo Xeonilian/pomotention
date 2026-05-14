@@ -59,6 +59,8 @@ export const useDataStore = defineStore(
     const selectedRowId = ref<number | null>(null); // todo.id 或 schedule.id
     const selectedDate = ref<number | null>(null); // todo.id 或 schedule.id
     const filterTagIds = ref<number[]>([]); // day/week/month tag filter (AND)
+    const stateLogTagSlotIds = ref<Array<number | null>>([]); // 状态快记的标签槽位（最多两个）
+    const stateLogTagSlotChecks = ref<Record<number, boolean>>({}); // 状态快记标签槽位勾选：1/2 -> true/false
 
     // ======================== 3. 初始化/加载逻辑 (Actions) ========================
     const isDataLoaded = ref(false);
@@ -1042,6 +1044,8 @@ export const useDataStore = defineStore(
       selectedRowHasParent,
       selectedDate,
       filterTagIds,
+      stateLogTagSlotIds,
+      stateLogTagSlotChecks,
 
       // 派生UI状态
       selectedActivity,
@@ -1106,7 +1110,16 @@ export const useDataStore = defineStore(
     // ======================== 9. 精细化持久化配置（v3 语法） ========================
     persist: {
       key: "data-store-ui-state",
-      pick: ["activeId", "selectedTaskId", "selectedActivityId", "selectedRowId", "selectedDate", "filterTagIds"],
+      pick: [
+        "activeId",
+        "selectedTaskId",
+        "selectedActivityId",
+        "selectedRowId",
+        "selectedDate",
+        "filterTagIds",
+        "stateLogTagSlotIds",
+        "stateLogTagSlotChecks",
+      ],
     },
   },
 );

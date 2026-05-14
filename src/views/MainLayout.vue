@@ -251,37 +251,18 @@ import { useAppWindow } from "@/composables/layout/useAppWindow";
 import { useSyncWidget } from "@/composables/sync/useSyncWidget";
 import { useDevice } from "@/composables/platform/useDevice";
 import { useGlobalKeyboardShortcuts } from "@/composables/keyboard/useGlobalKeyboardShortcuts";
+import { useMainLayoutShortcutMode } from "@/composables/keyboard/useMainLayoutShortcutMode";
 import { navigateToBuiltDocs } from "@/composables/platform/useDocsUrl";
 import { syncAll } from "@/services/sync";
 import { createTouchScheduledSingleAndDouble } from "@/composables/platform/useTouchScheduledSingleAndDouble";
 import { createAppActionRegistry, dispatchAppAction, type AppActionId } from "@/actions/appActions";
-import {
-  activateActivityNavigatorField,
-  confirmActivityNavigatorField,
-  enterActivityNavigator,
-  exitActivityNavigator,
-  isActivityNavigatorActive,
-  moveActivityNavigator,
-  moveActivityNavigatorField,
-  navigateActivityNavigatorSubSelection,
-  pickActivityRowByDigit,
-} from "@/composables/keyboard/useActivityKeyboardNavigator";
+import { enterActivityNavigator, isActivityNavigatorActive } from "@/composables/keyboard/useActivityKeyboardNavigator";
 import { runActivityKeyboardCommand } from "@/composables/keyboard/useActivityKeyboardCommands";
 import { runActivityEditFieldCommand } from "@/composables/keyboard/useActivityKeyboardCommands";
 import { runTaskKeyboardCommand } from "@/composables/keyboard/useTaskKeyboardCommands";
 import { runPlannerEditFieldCommand, runPlannerKeyboardCommand } from "@/composables/keyboard/usePlannerKeyboardCommands";
+import { enterPlannerNavigator, isPlannerNavigatorActive } from "@/composables/keyboard/usePlannerKeyboardNavigator";
 import { runTimetableKeyboardCommand } from "@/composables/keyboard/useTimetableKeyboardCommands";
-import {
-  activatePlannerNavigatorField,
-  confirmPlannerNavigatorField,
-  enterPlannerNavigator,
-  exitPlannerNavigator,
-  isPlannerNavigatorActive,
-  movePlannerNavigator,
-  movePlannerNavigatorField,
-  navigatePlannerNavigatorSubSelection,
-  pickPlannerRowByDigit,
-} from "@/composables/keyboard/usePlannerKeyboardNavigator";
 
 // Icons & Components
 import {
@@ -438,10 +419,14 @@ watch(
 onUnmounted(() => {
   shortcuts.uninstall();
   if (typeof window !== "undefined") {
+    window.removeEventListener("keydown", handleArrowPrefixKeydown, true);
+    window.removeEventListener("keyup", handleArrowPrefixKeyup, true);
+    window.removeEventListener("blur", resetArrowPrefixes);
     window.removeEventListener("resize", onAppVisualViewportChange);
     window.visualViewport?.removeEventListener("resize", onAppVisualViewportChange);
     window.visualViewport?.removeEventListener("scroll", onAppVisualViewportChange);
   }
+  resetArrowPrefixes();
   clearAppVisualViewportHeight();
 });
 
@@ -564,58 +549,16 @@ function dispatchKeyboardAction(actionId: AppActionId, sequence: string): boolea
   return dispatchAppAction(actionRegistry, actionId, { source: "keyboard", sequence });
 }
 
+const { onModeKey, handleArrowPrefixKeydown, handleArrowPrefixKeyup, resetArrowPrefixes } = useMainLayoutShortcutMode({
+  settingStore,
+  dispatchKeyboardAction,
+});
+
 const shortcuts = useGlobalKeyboardShortcuts({
   dispatchAction: dispatchKeyboardAction,
   isEnabled: () => !isMiniMode.value,
   isModeActive: () => isActivityNavigatorActive() || isPlannerNavigatorActive(),
-  onModeKey: (key) => {
-    if (isActivityNavigatorActive()) {
-      if (key === "left" && navigateActivityNavigatorSubSelection(-1)) return true;
-      if (key === "right" && navigateActivityNavigatorSubSelection(1)) return true;
-      if (key === "up" && navigateActivityNavigatorSubSelection(-5)) return true;
-      if (key === "down" && navigateActivityNavigatorSubSelection(5)) return true;
-      if (key === "left") return moveActivityNavigatorField(-1);
-      if (key === "right") return moveActivityNavigatorField(1);
-      if (key === "up") return moveActivityNavigator(-1);
-      if (key === "down") return moveActivityNavigator(1);
-      if (key === "space") return activateActivityNavigatorField();
-      if (key === "enter" || key === "return") {
-        return confirmActivityNavigatorField();
-      }
-      if (key === "esc" || key === "escape") {
-        if (navigateActivityNavigatorSubSelection(0)) return true;
-        exitActivityNavigator();
-        return true;
-      }
-      if (/^[1-9]$/.test(key)) return pickActivityRowByDigit(Number(key));
-      return false;
-    }
-    if (isPlannerNavigatorActive()) {
-      if (key === "left" && navigatePlannerNavigatorSubSelection(-1)) return true;
-      if (key === "right" && navigatePlannerNavigatorSubSelection(1)) return true;
-      if (key === "up" && navigatePlannerNavigatorSubSelection(-5)) return true;
-      if (key === "down" && navigatePlannerNavigatorSubSelection(5)) return true;
-      if (key === "left") return movePlannerNavigatorField(-1);
-      if (key === "right") return movePlannerNavigatorField(1);
-      if (key === "up") return movePlannerNavigator(1);
-      if (key === "down") return movePlannerNavigator(-1);
-      if (key === "space") return activatePlannerNavigatorField();
-      if (key === "enter" || key === "return") {
-        return confirmPlannerNavigatorField();
-      }
-      if (key === "esc" || key === "escape") {
-        if (navigatePlannerNavigatorSubSelection(0)) return true;
-        exitPlannerNavigator();
-        return true;
-      }
-      if (/^[1-9]$/.test(key)) return pickPlannerRowByDigit(Number(key));
-      return false;
-    }
-    if (key === "enter" || key === "return") {
-      return false;
-    }
-    return false;
-  },
+  onModeKey,
 });
 
 watch(route, (newVal) => {
@@ -671,6 +614,9 @@ function handleMainLayoutViewToggle(key: string) {
 onMounted(async () => {
   shortcuts.install();
   if (typeof window !== "undefined") {
+    window.addEventListener("keydown", handleArrowPrefixKeydown, true);
+    window.addEventListener("keyup", handleArrowPrefixKeyup, true);
+    window.addEventListener("blur", resetArrowPrefixes);
     window.addEventListener("resize", onAppVisualViewportChange);
     window.visualViewport?.addEventListener("resize", onAppVisualViewportChange);
     window.visualViewport?.addEventListener("scroll", onAppVisualViewportChange);

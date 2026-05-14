@@ -1909,6 +1909,18 @@ function activateKeyboardCell(): boolean {
   return false;
 }
 
+/** 全局 Space：未进 navigator 时仅切换当前选中行的勾选状态 */
+function toggleCheckForSelectedRow(): boolean {
+  const todo = selectedTodo.value;
+  if (!todo) return false;
+  if (todo.status === "cancelled") {
+    handleUncancelTodo(todo.id);
+    return true;
+  }
+  handleCheckboxChange(todo.id, todo.status !== "done");
+  return true;
+}
+
 function confirmKeyboardAction(): boolean {
   const todo = selectedTodo.value;
   if (!todo) return false;
@@ -1943,6 +1955,7 @@ defineExpose({
   activateKeyboardCell,
   confirmKeyboardAction,
   moveRankKeyboardOption,
+  toggleCheckForSelectedRow,
   exitPomoKeyboardMode,
   isPomoKeyboardModeActive,
   isPomoKeyboardSlotActive,
@@ -2326,6 +2339,9 @@ td.col-intent {
   align-items: center;
   white-space: nowrap;
   flex-shrink: 0;
+  /* 给勾选描边预留空间，避免打钩后顶部被裁切 */
+  padding-block: 1px;
+  margin-block: -1px;
   overflow-x: auto;
   overflow-y: hidden;
   z-index: 10;

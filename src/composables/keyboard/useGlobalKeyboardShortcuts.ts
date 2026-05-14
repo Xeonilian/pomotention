@@ -15,7 +15,9 @@ const singleKeyMap: Record<string, AppActionId> = buildShortcutActionMap("single
 const sequenceMap: Record<string, AppActionId> = buildShortcutActionMap("sequence");
 
 const allSequences = [...Object.keys(singleKeyMap), ...Object.keys(sequenceMap)];
-const immediateModeSequences = new Set<string>(["an", "pn"]);
+
+/** ae/pe 与 aet、pet 等共享前缀：过长超时会让进入导航很慢；过短则挤压三连击 */
+const AMBIGUOUS_NAV_BUFFER_FLUSH_MS = 280;
 
 const sequencePrefixSet = (() => {
   const set = new Set<string>();
@@ -29,6 +31,7 @@ const sequencePrefixSet = (() => {
 
 const registeredHotkeys =
   Array.from(new Set(allSequences.join("").split(""))).join(",") + ",up,down,left,right,space,esc,enter,return,num_enter,1,2,3,4,5,6,7,8,9";
+const alwaysRouteToModeHandlerKeys = new Set(["up", "down", "left", "right", "space"]);
 
 function normalizeKey(value: string | undefined): string {
   if (!value) return "";
@@ -43,6 +46,11 @@ function isTypingTarget(target: EventTarget | null): boolean {
   if (target.closest("[contenteditable='true']")) return true;
   if (target.closest("[role='textbox']")) return true;
   return false;
+}
+
+/** 小键盘 Enter 与主键盘 Enter */
+function isPlainEnterKey(event: KeyboardEvent): boolean {
+  return event.key === "Enter" || event.code === "NumpadEnter";
 }
 
 export function useGlobalKeyboardShortcuts(options: UseGlobalKeyboardShortcutsOptions) {
@@ -79,9 +87,13 @@ export function useGlobalKeyboardShortcuts(options: UseGlobalKeyboardShortcutsOp
 
   const scheduleBufferFlush = () => {
     clearBufferTimer();
+    const delay =
+      buffer === "ae" || buffer === "pe"
+        ? Math.min(timeoutMs, AMBIGUOUS_NAV_BUFFER_FLUSH_MS)
+        : timeoutMs;
     timerId = window.setTimeout(() => {
       flushBufferAsAction();
-    }, timeoutMs);
+    }, delay);
   };
 
   const processFreshKey = (key: string): boolean => {
@@ -107,12 +119,6 @@ export function useGlobalKeyboardShortcuts(options: UseGlobalKeyboardShortcutsOp
     const hasExactAction = Boolean(singleKeyMap[candidate] || sequenceMap[candidate] || candidate === "rr");
     const hasSequencePrefix = sequencePrefixSet.has(candidate);
 
-    if (hasExactAction && immediateModeSequences.has(candidate)) {
-      const handled = triggerBySequence(candidate);
-      clearBuffer();
-      return handled;
-    }
-
     if (hasExactAction && !hasSequencePrefix) {
       const handled = triggerBySequence(candidate);
       clearBuffer();
@@ -133,7 +139,9 @@ export function useGlobalKeyboardShortcuts(options: UseGlobalKeyboardShortcutsOp
     if (!options.isEnabled?.() && options.isEnabled !== undefined) return;
     if (event.isComposing || event.repeat) return;
     const modeKey = normalizeKey(handler.key ?? event.key);
-    if (options.isModeActive?.() && options.onModeKey && options.onModeKey(modeKey, event)) {
+    const shouldRouteToModeHandler = Boolean(options.isModeActive?.()) || alwaysRouteToModeHandlerKeys.has(modeKey);
+    const handledByMode = Boolean(shouldRouteToModeHandler && options.onModeKey && options.onModeKey(modeKey, event));
+    if (handledByMode) {
       event.preventDefault();
       return;
     }
@@ -160,9 +168,16 @@ export function useGlobalKeyboardShortcuts(options: UseGlobalKeyboardShortcutsOp
     installed = true;
     originalFilter = hotkeys.filter;
     hotkeys.filter = (event) => {
-      if (isTypingTarget(event.target)) return false;
-      if (originalFilter) return originalFilter(event);
-      return true;
+      if (!isTypingTarget(event.target)) {
+        if (originalFilter) return originalFilter(event);
+        return true;
+      }
+      // 行导航 + 输入焦点：Enter 需交给 onModeKey（先 blur/保存，再次 Enter 退出导航）
+      if (options.isModeActive?.() && isPlainEnterKey(event)) {
+        if (originalFilter) return originalFilter(event);
+        return true;
+      }
+      return false;
     };
     window.addEventListener("keydown", editableEscapeHandler, true);
     hotkeys(registeredHotkeys, { capture: true, keyup: false, keydown: true }, keyHandler);

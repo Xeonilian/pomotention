@@ -54,3 +54,18 @@ export function exitPlannerNavigator() {
 export function isPlannerNavigatorActive(): boolean {
   return plannerNavigatorApi?.isActive() ?? false;
 }
+
+/** 非 pn 模式：day 视图已选行时由 Space 触发勾选（由 HomeView 注册实现） */
+type PlannerDaySpaceToggleCheckFn = () => boolean;
+let plannerDaySpaceToggleCheck: PlannerDaySpaceToggleCheckFn | null = null;
+
+export function registerPlannerDaySpaceToggleCheck(fn: PlannerDaySpaceToggleCheckFn) {
+  plannerDaySpaceToggleCheck = fn;
+  return () => {
+    if (plannerDaySpaceToggleCheck === fn) plannerDaySpaceToggleCheck = null;
+  };
+}
+
+export function tryPlannerDaySpaceToggleCheck(): boolean {
+  return plannerDaySpaceToggleCheck?.() ?? false;
+}

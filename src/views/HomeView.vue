@@ -315,6 +315,7 @@
       @cancel-planner-row="onMobileFabCancelPlannerRow"
       @suspend-planner-row="onMobileFabSuspendPlannerRow"
       @repeat-activity="onRepeatActivity"
+      @open-state-log="showStateLogModal = true"
       @finish-task-record-editing="onFinishTaskRecordEditing"
     />
     <!-- 错误提示弹窗 -->
@@ -325,6 +326,7 @@
       {{ popoverMessage }}
     </n-popover>
     <IcsExportModal v-if="icsModalVisible" :visible="icsModalVisible" :qrText="icsQRText" @close="icsModalVisible = false" />
+    <StateLogModal v-model:show="showStateLogModal" @confirm="onStateLogConfirm" />
   </div>
 </template>
 
@@ -332,7 +334,7 @@
 // ------------------------ 导入依赖 ------------------------
 import { ref, onMounted, onUnmounted, computed, nextTick, defineAsyncComponent, provide, toValue, watch } from "vue";
 import { storeToRefs } from "pinia";
-import { onBeforeRouteLeave } from "vue-router";
+import { onBeforeRouteLeave, useRoute } from "vue-router";
 
 import type { Activity } from "@/core/types/Activity";
 import { getDateKey } from "@/core/utils";
@@ -342,6 +344,7 @@ import { useVisualViewportKeyboard } from "@/composables/layout/useVisualViewpor
 import IcsExportModal from "@/components/DayPlanner/IcsExportModal.vue";
 import HomeTagFilterPopover from "@/components/TagSystem/HomeTagFilterPopover.vue";
 import MobileHomeFab from "@/components/platform/MobileHomeFab.vue";
+import { useTagStore } from "@/stores/useTagStore";
 import {
   CalendarSettings20Regular,
   QrCode24Regular,
@@ -367,7 +370,12 @@ import { autoSyncDebounced, uploadAllDebounced } from "@/core/utils/autoSync";
 import { useDevice } from "@/composables/platform/useDevice";
 import { usePublicHolidays, plannerHolidayMapKey } from "@/composables/planner/usePublicHolidays";
 import { registerPlannerKeyboardCommandApi } from "@/composables/keyboard/usePlannerKeyboardCommands";
-import { registerPlannerNavigatorApi } from "@/composables/keyboard/usePlannerKeyboardNavigator";
+import { registerPlannerDaySpaceToggleCheck } from "@/composables/keyboard/usePlannerKeyboardNavigator";
+import {
+  useHomePlannerNavigator,
+  type HomeDayPlannerKeyboardExpose,
+  type UseHomePlannerNavigatorOptions,
+} from "@/composables/home/useHomePlannerNavigator";
 import { useHomePlannerKeyboard } from "@/composables/home/useHomePlannerKeyboard";
 import { useHomePlannerRowEdits } from "@/composables/home/useHomePlannerRowEdits";
 
@@ -389,9 +397,11 @@ const YearPlanner = defineAsyncComponent(() => import("@/components/YearPlanner/
 const TaskTracker = defineAsyncComponent(() => import("@/components/TaskTracker/TaskTracker.vue"));
 const ActivitySheet = defineAsyncComponent(() => import("@/components/ActivitySheet/ActivitySheet.vue"));
 const AIChatDialog = defineAsyncComponent(() => import("@/components/AiChat/AiChatDialog.vue"));
+const StateLogModal = defineAsyncComponent(() => import("@/components/TaskTracker/StateLogModal.vue"));
 // -- 基础UI状态
 const settingStore = useSettingStore();
 const dataStore = useDataStore();
+const tagStore = useTagStore();
 
 /** 窄屏仅活动：隐藏空 middle，避免与右栏双纵向滚、iOS 焦点滚冲突 */
 const activityOnlyMobile = computed(
@@ -402,21 +412,17 @@ const queryDate = ref<number | null>(null);
 const showPopover = ref(false);
 const popoverMessage = ref("");
 const taskRecordEditing = ref(false);
+const showStateLogModal = ref(false);
 let unregisterPlannerCommandApi: (() => void) | null = null;
-let unregisterPlannerNavigatorApi: (() => void) | null = null;
+let unregisterPlannerDaySpaceToggleCheck: (() => void) | null = null;
 function setTaskRecordEditing(v: boolean) {
   taskRecordEditing.value = v;
 }
 
+const route = useRoute();
+
 const taskTrackerRef = ref<{ endTaskRecordEditing: () => void } | null>(null);
-const dayPlannerRef = ref<{
-  startTodoKeyboardEdit: (field: "title" | "start" | "done") => boolean;
-  startScheduleKeyboardEdit: (field: "title" | "start" | "done" | "duration" | "location") => boolean;
-  movePlannerKeyboardCell: (delta: 1 | -1) => boolean;
-  activatePlannerKeyboardCell: () => boolean;
-  confirmPlannerKeyboardCellAction: () => boolean;
-  navigatePlannerKeyboardSubSelection: (delta: number) => boolean;
-} | null>(null);
+const dayPlannerRef = ref<HomeDayPlannerKeyboardExpose | null>(null);
 
 function onFinishTaskRecordEditing() {
   taskTrackerRef.value?.endTaskRecordEditing();
@@ -443,6 +449,19 @@ const {
   schedulesForCurrentView,
   todosForCurrentViewWithTaskRecords,
 } = storeToRefs(dataStore);
+
+const { plannerNavigatorActive } = useHomePlannerNavigator({
+  settingStore,
+  dayPlannerRef,
+  todosForCurrentViewWithTaskRecords,
+  schedulesForCurrentView,
+  todoById,
+  scheduleById,
+  selectedRowId,
+  selectedActivityId,
+  selectedTaskId,
+  activeId,
+} as UseHomePlannerNavigatorOptions);
 
 const dateService = dataStore.dateService;
 
@@ -676,6 +695,73 @@ function onQuickAddTodo() {
   selectedTaskId.value = task.id;
   selectedRowId.value = newTodo.id;
 
+  saveAllDebounced();
+}
+
+type StateLogConfirmPayload = {
+  energyValue: number;
+  rewardValue: number;
+  title?: string;
+  recordedAt: number;
+};
+
+function onStateLogConfirm(payload: StateLogConfirmPayload) {
+  const titleSuffix = payload.title?.trim();
+  const fullTitle = titleSuffix
+    ? `E${payload.energyValue} R${payload.rewardValue}: ${titleSuffix}`
+    : `E${payload.energyValue} R${payload.rewardValue}`;
+
+  const newActivity: Activity = {
+    id: Date.now(),
+    class: "T",
+    title: fullTitle,
+    estPomoI: "",
+    pomoType: "🍅",
+    status: "done",
+    dueDate: appDateTimestamp.value,
+    parentId: null,
+    synced: false,
+    deleted: false,
+    lastModified: Date.now(),
+  };
+
+  const dedupTagIds: number[] = [];
+  for (const [index, slotTagId] of (dataStore.stateLogTagSlotIds ?? []).entries()) {
+    const slotKey = index + 1;
+    if (dataStore.stateLogTagSlotChecks?.[slotKey] !== true) continue;
+    if (typeof slotTagId !== "number") continue;
+    if (dedupTagIds.includes(slotTagId)) continue;
+    dedupTagIds.push(slotTagId);
+  }
+  if (dedupTagIds.length > 0) {
+    newActivity.tagIds = dedupTagIds;
+    tagStore.touchTagsLastUsed(dedupTagIds);
+  }
+
+  activityList.value.push(newActivity);
+
+  const task = taskService.createTaskFromActivity(newActivity.id, newActivity.title);
+  taskList.value = [...taskList.value, task];
+  newActivity.taskId = task.id;
+  newActivity.synced = false;
+  newActivity.lastModified = Date.now();
+
+  const { newTodo } = passPickedActivity(newActivity, appDateTimestamp.value, isViewDateToday.value);
+  newTodo.taskId = task.id;
+  newTodo.status = "done";
+  newTodo.doneTime = payload.recordedAt;
+  newTodo.synced = false;
+  newTodo.lastModified = Date.now();
+  todoList.value = [...todoList.value, newTodo];
+
+  const recordDescription = titleSuffix || undefined;
+  taskService.addRewardRecord(task.id, payload.rewardValue, recordDescription, payload.recordedAt);
+  taskService.addEnergyRecord(task.id, payload.energyValue, recordDescription, payload.recordedAt);
+
+  activeId.value = newActivity.id;
+  selectedActivityId.value = newActivity.id;
+  selectedTaskId.value = task.id;
+  selectedRowId.value = newTodo.id;
   saveAllDebounced();
 }
 
@@ -1320,6 +1406,9 @@ function onViewSet() {
 const plannerKeyboard = useHomePlannerKeyboard({
   onDateSet,
   onQuickAddTodo,
+  onStateLogConfirm: () => {
+    showStateLogModal.value = true;
+  },
   onQuickAddSchedule,
   onRepeatActivity,
   onIcsExport,
@@ -1359,100 +1448,6 @@ const {
   saveAllDebounced,
 });
 
-const plannerNavigatorActive = ref(false);
-
-type PlannerKeyboardRow = {
-  rowId: number;
-};
-
-function getPlannerKeyboardRows(): PlannerKeyboardRow[] {
-  const rows: PlannerKeyboardRow[] = [];
-  for (const todo of todosForCurrentViewWithTaskRecords.value ?? []) {
-    rows.push({ rowId: todo.id });
-  }
-  for (const schedule of schedulesForCurrentView.value ?? []) {
-    rows.push({ rowId: schedule.id });
-  }
-  return rows;
-}
-
-function selectPlannerKeyboardRowById(rowId: number): boolean {
-  const todo = todoById.value.get(rowId);
-  if (todo) {
-    selectedRowId.value = todo.id;
-    selectedActivityId.value = todo.activityId;
-    selectedTaskId.value = todo.taskId ?? null;
-    activeId.value = undefined;
-    return true;
-  }
-  const schedule = scheduleById.value.get(rowId);
-  if (schedule) {
-    selectedRowId.value = schedule.id;
-    selectedActivityId.value = schedule.activityId;
-    selectedTaskId.value = schedule.taskId ?? null;
-    activeId.value = undefined;
-    return true;
-  }
-  return false;
-}
-
-function enterPlannerNavigatorMode(): boolean {
-  const rows = getPlannerKeyboardRows();
-  if (rows.length === 0) return false;
-  plannerNavigatorActive.value = true;
-  const current = selectedRowId.value;
-  const exists = current != null && rows.some((row) => row.rowId === current);
-  if (!exists) {
-    return selectPlannerKeyboardRowById(rows[0].rowId);
-  }
-  return true;
-}
-
-function movePlannerNavigatorMode(delta: 1 | -1): boolean {
-  const rows = getPlannerKeyboardRows();
-  if (rows.length === 0) return false;
-  const currentIndex = rows.findIndex((row) => row.rowId === selectedRowId.value);
-  const baseIndex = currentIndex === -1 ? (delta > 0 ? -1 : 0) : currentIndex;
-  const nextIndex = Math.max(0, Math.min(rows.length - 1, baseIndex + delta));
-  return selectPlannerKeyboardRowById(rows[nextIndex].rowId);
-}
-
-function pickPlannerRowByDigitMode(digit: number): boolean {
-  if (digit < 1 || digit > 9) return false;
-  const rows = getPlannerKeyboardRows();
-  const target = rows[digit - 1];
-  if (!target) return false;
-  return selectPlannerKeyboardRowById(target.rowId);
-}
-
-function exitPlannerNavigatorMode() {
-  plannerNavigatorActive.value = false;
-}
-
-function movePlannerNavigatorFieldMode(delta: 1 | -1): boolean {
-  if (!plannerNavigatorActive.value) return false;
-  if (settingStore.settings.viewSet !== "day") return false;
-  return dayPlannerRef.value?.movePlannerKeyboardCell(delta) ?? false;
-}
-
-function activatePlannerNavigatorFieldMode(): boolean {
-  if (!plannerNavigatorActive.value) return false;
-  if (settingStore.settings.viewSet !== "day") return false;
-  return dayPlannerRef.value?.activatePlannerKeyboardCell() ?? false;
-}
-
-function confirmPlannerNavigatorFieldMode(): boolean {
-  if (!plannerNavigatorActive.value) return false;
-  if (settingStore.settings.viewSet !== "day") return false;
-  return dayPlannerRef.value?.confirmPlannerKeyboardCellAction() ?? false;
-}
-
-function navigatePlannerNavigatorSubSelectionMode(delta: number): boolean {
-  if (!plannerNavigatorActive.value) return false;
-  if (settingStore.settings.viewSet !== "day") return false;
-  return dayPlannerRef.value?.navigatePlannerKeyboardSubSelection(delta) ?? false;
-}
-
 function plannerKeyboardEditField(field: "title" | "start" | "done" | "duration" | "location"): boolean {
   const rowId = selectedRowId.value;
   if (rowId == null) return false;
@@ -1480,16 +1475,12 @@ onMounted(() => {
   dateService.navigateByView("today");
   attachVisualViewportListeners();
   unregisterPlannerCommandApi = registerPlannerKeyboardCommandApi(plannerKeyboard.plannerCommandApi);
-  unregisterPlannerNavigatorApi = registerPlannerNavigatorApi({
-    enter: enterPlannerNavigatorMode,
-    move: movePlannerNavigatorMode,
-    pickByDigit: pickPlannerRowByDigitMode,
-    moveField: movePlannerNavigatorFieldMode,
-    activateField: activatePlannerNavigatorFieldMode,
-    confirmField: confirmPlannerNavigatorFieldMode,
-    navigateSubSelection: navigatePlannerNavigatorSubSelectionMode,
-    exit: exitPlannerNavigatorMode,
-    isActive: () => plannerNavigatorActive.value,
+  unregisterPlannerDaySpaceToggleCheck = registerPlannerDaySpaceToggleCheck(() => {
+    if (route.name !== "Home") return false;
+    if (settingStore.settings.viewSet !== "day") return false;
+    if (!settingStore.settings.showPlanner) return false;
+    if (selectedRowId.value == null) return false;
+    return dayPlannerRef.value?.toggleSelectedRowCheckKeyboard() ?? false;
   });
 });
 
@@ -1498,9 +1489,9 @@ onUnmounted(() => {
     unregisterPlannerCommandApi();
     unregisterPlannerCommandApi = null;
   }
-  if (unregisterPlannerNavigatorApi) {
-    unregisterPlannerNavigatorApi();
-    unregisterPlannerNavigatorApi = null;
+  if (unregisterPlannerDaySpaceToggleCheck) {
+    unregisterPlannerDaySpaceToggleCheck();
+    unregisterPlannerDaySpaceToggleCheck = null;
   }
   dateService.cleanupSystemDateWatcher();
   autoSyncDebounced.flush(); //立即执行
