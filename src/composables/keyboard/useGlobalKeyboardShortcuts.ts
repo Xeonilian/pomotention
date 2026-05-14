@@ -15,7 +15,9 @@ const singleKeyMap: Record<string, AppActionId> = buildShortcutActionMap("single
 const sequenceMap: Record<string, AppActionId> = buildShortcutActionMap("sequence");
 
 const allSequences = [...Object.keys(singleKeyMap), ...Object.keys(sequenceMap)];
-const immediateModeSequences = new Set<string>(["an", "pn"]);
+
+/** ae/pe 与 aet、pet 等共享前缀：过长超时会让进入导航很慢；过短则挤压三连击 */
+const AMBIGUOUS_NAV_BUFFER_FLUSH_MS = 280;
 
 const sequencePrefixSet = (() => {
   const set = new Set<string>();
@@ -85,9 +87,13 @@ export function useGlobalKeyboardShortcuts(options: UseGlobalKeyboardShortcutsOp
 
   const scheduleBufferFlush = () => {
     clearBufferTimer();
+    const delay =
+      buffer === "ae" || buffer === "pe"
+        ? Math.min(timeoutMs, AMBIGUOUS_NAV_BUFFER_FLUSH_MS)
+        : timeoutMs;
     timerId = window.setTimeout(() => {
       flushBufferAsAction();
-    }, timeoutMs);
+    }, delay);
   };
 
   const processFreshKey = (key: string): boolean => {
@@ -112,12 +118,6 @@ export function useGlobalKeyboardShortcuts(options: UseGlobalKeyboardShortcutsOp
     const candidate = `${buffer}${key}`;
     const hasExactAction = Boolean(singleKeyMap[candidate] || sequenceMap[candidate] || candidate === "rr");
     const hasSequencePrefix = sequencePrefixSet.has(candidate);
-
-    if (hasExactAction && immediateModeSequences.has(candidate)) {
-      const handled = triggerBySequence(candidate);
-      clearBuffer();
-      return handled;
-    }
 
     if (hasExactAction && !hasSequencePrefix) {
       const handled = triggerBySequence(candidate);
