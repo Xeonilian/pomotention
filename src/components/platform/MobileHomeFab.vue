@@ -50,17 +50,11 @@
               <n-icon :component="AddCircle24Regular" />
             </template>
           </n-button>
-          <n-button size="large" secondary circle type="info" @click="handleOpenStateLog">
-            <template #icon>
-              <n-icon :component="EmojiSmileSlight24Regular" />
-            </template>
-          </n-button>
         </div>
       </n-popover>
 
       <!-- 往上：纵向（与 ActivityButtons 对齐的交互） -->
       <n-popover
-        v-if="showUpPopover"
         v-model:show="panelShow"
         trigger="manual"
         placement="top-end"
@@ -152,13 +146,13 @@
             </n-button>
           </template>
           <n-button
+            v-if="showRowActions"
             title="重复活动"
             @click="emit('repeat-activity', showActivityPanel)"
             circle
             secondary
             type="default"
             size="large"
-            :disabled="noSelectedActivity"
           >
             <template #icon>
               <n-icon><ArrowRepeatAll24Regular /></n-icon>
@@ -166,7 +160,12 @@
           </n-button>
         </div>
         <n-button v-if="showBackToToday" quaternary circle type="info" size="large" @click="emit('reset-to-present')">
-          <template #icon><n-icon size="22" :component="AnimalTurtle24Regular" /></template>
+          <template #icon><n-icon size="24" :component="AnimalTurtle24Regular" /></template>
+        </n-button>
+        <n-button v-else quaternary circle type="warning" size="large" @click="handleOpenStateLog">
+          <template #icon>
+            <n-icon size="24" :component="EmojiSmileSlight24Regular" />
+          </template>
         </n-button>
       </n-popover>
 
@@ -256,7 +255,6 @@ const effectiveActivityId = computed(() => {
 /** 与 ActivitySheet 一致：无选中且非今日 →「回到当下」 */
 const showBackToToday = computed(() => !dateService.isViewDateToday);
 const showRowActions = computed(() => selectedRowId.value != null || activeId.value != null || selectedActivityId.value != null);
-const showUpPopover = computed(() => showBackToToday.value || showRowActions.value);
 const showActivityPanel = computed(() => settingStore.settings.showActivity);
 const noSelectedActivity = computed(() => selectedRowId.value == null && selectedActivityId.value == null && activeId.value == null);
 
