@@ -16,9 +16,9 @@
               </colgroup>
               <thead>
                 <tr>
-                  <th>快捷键</th>
+                  <th>组合</th>
                   <th>功能</th>
-                  <th>说明</th>
+                  <th>中文解释</th>
                 </tr>
               </thead>
               <tbody>
@@ -155,6 +155,32 @@ const defaultExpandedNames = computed(() => groupedRows.value.map((group) => gro
 
 .shortcut-feature-cell {
   word-break: break-all;
+}
+
+@media (max-width: 768px) {
+  .setting-table.shortcut-table th,
+  .setting-table.shortcut-table td {
+    padding: 8px 6px;
+  }
+
+  .shortcut-col-sequence {
+    width: 56px;
+  }
+
+  .shortcut-col-feature {
+    width: 120px;
+  }
+
+  .shortcut-table td:last-child {
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+
+  .shortcut-feature-cell code {
+    white-space: normal;
+    word-break: break-all;
+    overflow-wrap: anywhere;
+  }
 }
 </style>
 
