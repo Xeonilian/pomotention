@@ -2339,6 +2339,9 @@ td.col-intent {
   align-items: center;
   white-space: nowrap;
   flex-shrink: 0;
+  /* 给勾选描边预留空间，避免打钩后顶部被裁切 */
+  padding-block: 1px;
+  margin-block: -1px;
   overflow-x: auto;
   overflow-y: hidden;
   z-index: 10;
