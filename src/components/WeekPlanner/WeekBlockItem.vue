@@ -67,6 +67,7 @@ import TagRenderer from "../TagSystem/TagRenderer.vue";
 import type { WeekBlockItem as WeekBlockItemType } from "@/core/types/Week";
 import { useDataStore } from "@/stores/useDataStore";
 import { useTagStore } from "@/stores/useTagStore";
+import { TAG_IDS_HIDDEN_IN_TAG_RENDERER } from "@/core/constants";
 import { storeToRefs } from "pinia";
 import { computed, ref, onUnmounted } from "vue";
 import { NPopover } from "naive-ui";
@@ -92,6 +93,7 @@ const weekBlockStackLayout = computed(() => blockDurationMinutes.value >= 45);
 
 // 统一处理 tag 列表，避免空 tag 渲染占位
 const blockTagIds = computed(() => props.block.item.tagIds ?? []);
+const hiddenTagIdSet = new Set(TAG_IDS_HIDDEN_IN_TAG_RENDERER);
 
 // 手机端：短时块根据时长截断标题（单位：分钟）；与 blockDurationMinutes 阈值对齐
 const mobileDisplayTitle = computed(() => {
@@ -161,12 +163,25 @@ const itemBlockStyle = computed(() => {
 
 // 获取第一个 tag 的背景颜色
 const firstTagBackgroundColor = computed(() => {
-  const tagIds = props.block.item.tagIds;
+  const tagIds = blockTagIds.value;
   if (!tagIds || tagIds.length === 0) {
     return null;
   }
-  const firstTag = tagStore.getTag(tagIds[0]);
-  return firstTag?.backgroundColor || null;
+
+  // 与 TagRenderer 完全同源：直接读取 tagWithCountById
+  const tagMap = tagStore.tagWithCountById;
+
+  // 与 TagRenderer 保持一致：跳过隐藏 tag 和特殊 id，取第一个可见 tag
+  for (const rawId of tagIds) {
+    const id = typeof rawId === "number" ? rawId : Number(rawId);
+    if (!Number.isFinite(id)) continue;
+    if (id === 0 || hiddenTagIdSet.has(id)) continue;
+    const tag = tagMap.get(id);
+    if (!tag) continue;
+    return tag.backgroundColor || tag.color || null;
+  }
+
+  return null;
 });
 
 // 获取默认边框颜色（当没有 tag 时使用）
