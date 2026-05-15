@@ -39,10 +39,10 @@
 - **选择执行日期**
   - `Todo`：点击 <img src="/icons/ChevronCircleLeft48Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(224, 224, 224);border-radius: 6px;">，活动会加入到 `计划表` 显示的日期中
   - `Schedule`：修改活动时间，自动添加到设置日期的 `计划表`
-  - `Untaetigkeit`：修改日期，自动添加到设置日期的 `计划表`
+  - `Untaetigkeit`：修改活动时间，自动添加到设置日期的 `计划表`
 - **跳转到执行日期**：选中活动，点击 <img src="/icons/ChevronCircleLeft48Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(224, 224, 224);border-radius: 6px;">，`计划表` 跳转到执行日期
-
 - **输入区编辑**：支持编辑活动描述、地点、持续时间、预约时间、预估番茄数、标签
+- **标签显示**：点击 <img src="/icons/Tag16Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(193, 226, 255);border-radius: 6px;">显示或隐藏标签，若当前无标签<img src="/icons/Tag16Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;border-radius: 6px;">
 
 ## 待办 todo 专属操作
 
@@ -63,6 +63,7 @@
 - **调整顺序**：鼠标悬浮在活动图标上，当指针变为手型，可上下拖动顺序
 - **看板增加**：点击 <img src="/icons/ColumnArrowRight20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(224, 224, 224);border-radius: 6px;"> 增加一列活动清单，最多支持 6 列，排序在各列联动，筛选保持独立
 - **看板删除**：点击 <img src="/icons/TableDeleteColumn20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(224, 224, 224);border-radius: 6px;"> 删除当前列活动清单，第一列无法删除
+- **四象限切换**：点击<img src="/icons/Grid20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(224, 224, 224);border-radius: 6px;"> 切换显示布局为紧急重要四象限，象限内可拖动，并会随着活动日期到达进入，移动到紧急或紧急重要象限
 
 ## 视觉规则
 
@@ -92,8 +93,6 @@
 | `活动清单` | <span style="display:inline-block; background:#e55151; color:#fff; padding:0 8px; border-radius:4px; font-size:90%;">红色</span> 背景高亮 |
 | `计划表`   | <span style="display:inline-block; background:#ffe066; color:#222; padding:0 8px; border-radius:4px; font-size:90%;">黄色</span> 背景高亮 |
 
-## 限制与说明
+## 说明
 
-- `todo` 仅支持一级子活动
-- 看板最多支持 6 列
 - 标签使用说明见 [标签系统](tag.md)
