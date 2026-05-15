@@ -22,7 +22,7 @@
 ### 活动、计划与日程
 
 - [活动清单](reference/activity.md)
-- [任务计划](reference/planner.md)
+- [计划表](reference/planner.md)
 - [时间表构建](reference/timetable.md)
 - [任务追踪](reference/task.md)
 - [番茄时钟](reference/timer.md)

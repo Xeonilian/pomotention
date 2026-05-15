@@ -126,7 +126,7 @@ export default withMermaid(
               collapsed: true,
               items: [
                 { text: "活动清单", link: "/guide/reference/activity" },
-                { text: "任务计划", link: "/guide/reference/planner" },
+                { text: "计划表", link: "/guide/reference/planner" },
                 { text: "时间表构建", link: "/guide/reference/timetable" },
                 { text: "任务追踪", link: "/guide/reference/task" },
                 { text: "番茄时钟", link: "/guide/reference/timer" },

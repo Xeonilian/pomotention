@@ -99,7 +99,7 @@ export const SHORTCUT_DEFINITIONS: ShortcutDefinition[] = [
     mode: "single",
     category: "navigation",
     action: "切换区域显示",
-    note: "任务计划（Planner）",
+    note: "计划表（Planner）",
   },
   {
     sequence: "tt",

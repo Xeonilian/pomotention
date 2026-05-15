@@ -38,7 +38,7 @@
               : { height: 'calc(100% - env(safe-area-inset-bottom)*1.35)' }
           "
         >
-          <!-- 任务计划的头部和控件 -->
+          <!-- 计划表的头部和控件 -->
           <div class="planner-header" @click.stop="cleanSelection">
             <div class="planner-header-left">
               <!-- 年入口：仅显示年份，点击进入年视图；在年视图时也只显示年份 -->

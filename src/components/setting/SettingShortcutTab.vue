@@ -64,7 +64,7 @@ const categoryMeta: Record<ShortcutCategory | "edit", string> = {
   edit: "编辑",
   timer: "番茄时钟（Timer）",
   activity: "活动（Activity）",
-  planner: "任务计划（Planner）",
+  planner: "计划表（Planner）",
   task: "任务追踪（Task）",
   timetable: "时间表（Timetable）",
 };

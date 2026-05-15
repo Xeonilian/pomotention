@@ -26,7 +26,7 @@
 
 - 垂直时间轴展示 24 小时刻度。
 - 时间分类包括：生活 `live`、工作 `work`、睡眠 `sleep`、预约 `S`、无所事事 `U`。
-- 当 `任务计划` 日期为今天时，显示当前时间指示：<span style="display:inline-block; color:yellow;background:lightgrey;border-radius:4px;">——🍅——</span>。
+- 当 `计划表` 日期为今天时，显示当前时间指示：<span style="display:inline-block; color:yellow;background:lightgrey;border-radius:4px;">——🍅——</span>。
 - 任务占位支持拖拽，冲突位置不可拖动。  
   <img src="/timetable-example.png" alt="Timetable" width="200">
 

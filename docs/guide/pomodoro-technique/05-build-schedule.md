@@ -2,7 +2,7 @@
 
 **目标**：制定适合你的每日时间表。
 
-> 时间表区交互以 [日程构建](../reference/timetable.md)、[软件界面](../reference/interface.md) 为准；时间表与任务计划如何衔接见 [模块联动](../reference/workflow.md)。
+> 时间表区交互以 [日程构建](../reference/timetable.md)、[软件界面](../reference/interface.md) 为准；时间表与计划表如何衔接见 [模块联动](../reference/workflow.md)。
 
 ---
 
@@ -122,12 +122,12 @@ flowchart TD
 
 ---
 
-## 从任务计划到时间表
+## 从计划表到时间表
 
 ### 日常流程
 
 1. **前一天晚上**
-   - 在任务计划选择次日任务
+   - 在计划表选择次日任务
    - 预估番茄数
    - 在时间表中规划时段
 
