@@ -223,7 +223,7 @@ defineExpose({
 </script>
 <style scoped>
 .today-container {
-  margin: 5px;
+  margin: 0px 0px 0px 5px;
 }
 .schedule-container {
   margin-top: 3px;

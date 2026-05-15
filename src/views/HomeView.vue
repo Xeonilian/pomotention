@@ -1819,6 +1819,8 @@ const { startResize: startRightResize } = useResize(
 .planner-view-container {
   flex: 1;
   overflow: auto;
+  /* 纵向滚动条稳定占位：避免内容与表头在日视图下随 scrollbar 出现/消失横向缩放 */
+  scrollbar-gutter: stable;
   min-height: 0; /* 重要：允许 flex 子项收缩 */
   display: flex;
   flex-direction: column;
