@@ -63,6 +63,19 @@
         <n-icon><TextGrammarArrowLeft24Regular /></n-icon>
       </template>
     </n-button>
+    <n-button
+      title="重复活动"
+      @click="emit('repeat-activity', false)"
+      circle
+      secondary
+      type="default"
+      size="small"
+      :disabled="noSelectedActivity || isSelectedRowDone"
+    >
+      <template #icon>
+        <n-icon><ArrowRepeatAll24Regular /></n-icon>
+      </template>
+    </n-button>
 
     <n-button title="添加任务" @click="$emit('add-todo')" circle secondary type="info" size="small">
       <template #icon>
@@ -96,6 +109,7 @@ import {
   TextGrammarArrowLeft24Regular,
   Delete24Regular,
   DeleteDismiss24Regular,
+  ArrowRepeatAll24Regular,
 } from "@vicons/fluent";
 import { useDataStore } from "@/stores/useDataStore";
 import { storeToRefs } from "pinia";
@@ -132,6 +146,7 @@ const emit = defineEmits([
   "delete-active",
   "create-child-activity",
   "increase-child-activity",
+  "repeat-activity",
 ]);
 </script>
 

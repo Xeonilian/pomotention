@@ -123,17 +123,17 @@
                 v-if="!isMobile"
                 @click="onRepeatActivity(false)"
                 text
-                type="info"
+                type="default"
                 size="small"
-                :disabled="selectedRowId === null && activeId === null"
+                :disabled="selectedRowId === null"
               >
                 <template #icon>
-                  <n-icon><ArrowRepeatAll24Regular /></n-icon>
+                  <n-icon><ArrowRepeatAll20Regular /></n-icon>
                 </template>
               </n-button>
               <n-button
                 v-if="!isMobile"
-                :type="selectedRowId === null ? 'default' : 'info'"
+                type="default"
                 size="small"
                 text
                 @click="onIcsExport"
@@ -142,7 +142,7 @@
               >
                 <template #icon>
                   <n-icon>
-                    <QrCode24Regular />
+                    <QrCode20Regular />
                   </n-icon>
                 </template>
               </n-button>
@@ -292,6 +292,7 @@
           @toggle-pomo-type="onTogglePomoType"
           @create-child-activity="onCreateChildActivity"
           @increase-child-activity="onIncreaseChildActivity"
+          @repeat-activity="onRepeatActivity"
         />
       </div>
       <div v-if="settingStore.settings.showAi" class="right" :style="{ width: rightWidth + 'px' }">
@@ -347,8 +348,8 @@ import MobileHomeFab from "@/components/platform/MobileHomeFab.vue";
 import { useTagStore } from "@/stores/useTagStore";
 import {
   CalendarSettings20Regular,
-  QrCode24Regular,
-  ArrowRepeatAll24Regular,
+  QrCode20Regular,
+  ArrowRepeatAll20Regular,
   ChevronLeft20Regular,
   ChevronRight20Regular,
 } from "@vicons/fluent";
@@ -1717,7 +1718,7 @@ const { startResize: startRightResize } = useResize(
 .button-group {
   display: flex;
   flex-shrink: 0;
-  gap: 8px;
+  gap: 6px;
   align-items: center;
   background-color: var(--color-background);
   z-index: 5;
