@@ -261,7 +261,7 @@ export const useTimerStore = defineStore(
             resetTimer();
           }
         };
-        void playSound(SoundType.WORK_END).finally(() => runAfterWorkEndCue());
+        void playPhaseEndCue(SoundType.WORK_END).finally(() => runAfterWorkEndCue());
       } else if (pomodoroState.value === "breaking") {
         const stripWnBeforeChain = !settingStore.settings.isWhiteNoiseEnabled;
         const runAfterBreakEndCue = () => {
@@ -275,7 +275,7 @@ export const useTimerStore = defineStore(
             resetTimer();
           }
         };
-        void playSound(SoundType.BREAK_END).finally(() => runAfterBreakEndCue());
+        void playPhaseEndCue(SoundType.BREAK_END).finally(() => runAfterBreakEndCue());
       }
     }
 
@@ -461,21 +461,22 @@ export const useTimerStore = defineStore(
 
     bindIntentionalExitMarker();
 
-    /** 结束音可能因 Web Audio 链路挂起而永不 settle；必须仍能 reset，否则 squash / 停止无效 */
-    const CANCEL_CUE_MAX_MS = 5000;
+    /** 结束音可能因 Web Audio 链路挂起而永不 settle；必须仍能 reset / 续跑，否则 squash / 序列推进无效 */
+    const PHASE_END_CUE_MAX_MS = 5000;
+
+    function playPhaseEndCue(type: SoundType.WORK_END | SoundType.BREAK_END): Promise<void> {
+      return Promise.race([
+        playSound(type),
+        new Promise<void>((resolve) => setTimeout(resolve, PHASE_END_CUE_MAX_MS)),
+      ]);
+    }
 
     function cancelTimer(): void {
       const finish = () => resetTimer();
       if (isWorking.value) {
-        void Promise.race([
-          playSound(SoundType.WORK_END),
-          new Promise<void>((resolve) => setTimeout(resolve, CANCEL_CUE_MAX_MS)),
-        ]).finally(finish);
+        void playPhaseEndCue(SoundType.WORK_END).finally(finish);
       } else if (isBreaking.value) {
-        void Promise.race([
-          playSound(SoundType.BREAK_END),
-          new Promise<void>((resolve) => setTimeout(resolve, CANCEL_CUE_MAX_MS)),
-        ]).finally(finish);
+        void playPhaseEndCue(SoundType.BREAK_END).finally(finish);
       } else {
         finish();
       }

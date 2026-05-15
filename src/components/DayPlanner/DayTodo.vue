@@ -1534,6 +1534,8 @@ function startInstantSequence(steps: InstantPomoStep[], sequenceInput: string) {
   const runStep = (stepIndex: number) => {
     if (stepIndex >= steps.length) {
       timerStore.registerSequenceContinuation(null);
+      // 与 PomodoroSequence.stopPomodoro(false) 一致：序列自然结束须 reset，否则会卡在 00:00
+      timerStore.resetTimer();
       return;
     }
 
