@@ -28,6 +28,7 @@
           'middle-alone': !settingStore.settings.showTimetable && !settingStore.settings.showActivity && !settingStore.settings.showAi,
           'middle--landscape-fallback': isMobile && isLandscapeViewport,
           'middle--mobile-planner-height-anim': isMobile && settingStore.settings.showPlanner,
+          'middle--suppress-planner-motion': suppressMobilePlannerMotion,
         }"
       >
         <!-- 今日视图 -->
@@ -388,6 +389,7 @@ const { isMobile } = useDevice();
 const {
   viewportInnerH,
   viewportInnerW,
+  isKeyboardOverlapApprox,
   rootCssVars,
   attachListeners: attachVisualViewportListeners,
   detachListeners: detachVisualViewportListeners,
@@ -417,6 +419,10 @@ const popoverMessage = ref("");
 const taskRecordEditing = ref(false);
 /** 日待办行内编辑（移动）：临时收起下方 Task 区，不改变 showTask 设置 */
 const mobileDayTodoInlineEditing = ref(false);
+/** 系统键盘与 vv 连续变化时关掉 height/max-height 过渡，避免目标高度每帧变化导致跳动 */
+const suppressMobilePlannerMotion = computed(
+  () => isMobile.value && (mobileDayTodoInlineEditing.value || isKeyboardOverlapApprox.value),
+);
 const showStateLogModal = ref(false);
 let unregisterPlannerCommandApi: (() => void) | null = null;
 let unregisterPlannerDaySpaceToggleCheck: (() => void) | null = null;
@@ -1563,8 +1569,15 @@ const topHeight = computed({
 const middleColumnEl = ref<HTMLElement | null>(null);
 const middleColumnHeightPx = ref(0);
 let middleResizeObserver: ResizeObserver | null = null;
+let middleColumnHeightRaf = 0;
+let pendingMiddleColumnHPx: number | null = null;
 
 function disconnectMiddleResizeObserver() {
+  if (middleColumnHeightRaf) {
+    cancelAnimationFrame(middleColumnHeightRaf);
+    middleColumnHeightRaf = 0;
+  }
+  pendingMiddleColumnHPx = null;
   middleResizeObserver?.disconnect();
   middleResizeObserver = null;
 }
@@ -1578,7 +1591,22 @@ watch(
       const entry = entries[0];
       if (!entry) return;
       const h = entry.contentRect.height;
-      if (h > 0) middleColumnHeightPx.value = Math.round(h);
+      if (h <= 0) return;
+      const rounded = Math.round(h);
+      if (!isMobile.value) {
+        middleColumnHeightPx.value = rounded;
+        return;
+      }
+      // 移动端键盘动画时 RO 可能在同一帧内多次触发，合并到下一帧只应用最后一次，减轻 middle-top 高度来回拉扯
+      pendingMiddleColumnHPx = rounded;
+      if (middleColumnHeightRaf) return;
+      middleColumnHeightRaf = requestAnimationFrame(() => {
+        middleColumnHeightRaf = 0;
+        if (pendingMiddleColumnHPx != null) {
+          middleColumnHeightPx.value = pendingMiddleColumnHPx;
+          pendingMiddleColumnHPx = null;
+        }
+      });
     });
     middleResizeObserver.observe(el);
   },
@@ -1595,14 +1623,11 @@ const plannerMiddleAvailPx = computed(() => {
 const isLandscapeViewport = computed(() => viewportInnerW.value > viewportInnerH.value);
 
 /** 任务区是否与计划表分栏显示（尊重设置；移动端待办编辑时临时不占位） */
-const taskPanelLayoutVisible = computed(
-  () => settingStore.settings.showTask && !mobileDayTodoInlineEditing.value,
-);
+const taskPanelLayoutVisible = computed(() => settingStore.settings.showTask && !mobileDayTodoInlineEditing.value);
 
 /** 移动端横屏或总高度不足时限制 middle-top，避免任务区被挤没；桌面端仅在极端矮窗时收缩 */
 const effectiveMiddleTopHeightPx = computed(() => {
-  if (!settingStore.settings.showPlanner || !settingStore.settings.showTask || mobileDayTodoInlineEditing.value)
-    return topHeight.value;
+  if (!settingStore.settings.showPlanner || !settingStore.settings.showTask || mobileDayTodoInlineEditing.value) return topHeight.value;
   const avail = plannerMiddleAvailPx.value;
   const minTask = 100;
   const maxTop = Math.max(120, avail - minTask);
@@ -1728,6 +1753,14 @@ const { startResize: startRightResize } = useResize(
 @media (max-width: 768px) {
   .middle.middle--mobile-planner-height-anim .middle-top {
     transition: height 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+}
+
+@media (max-width: 768px) {
+  /* 系统键盘与行内编辑联动时高度目标连续变化，关掉过渡避免「追着跑」 */
+  .middle.middle--suppress-planner-motion.middle--mobile-planner-height-anim .middle-top,
+  .middle.middle--suppress-planner-motion .middle-bottom.middle-bottom--motion {
+    transition: none !important;
   }
 }
 
