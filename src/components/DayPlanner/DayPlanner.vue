@@ -20,6 +20,7 @@
         @edit-todo-done="handleEditTodoDone"
         @quick-add-todo="handleQuickAddTodo"
         @toggle-pomo-type="handleTogglePomoType"
+        @mobile-inline-edit-active="emit('mobile-inline-edit-active', $event)"
       />
     </div>
     <div class="schedule-container">
@@ -35,6 +36,7 @@
         @edit-schedule-duration="handleEditScheduleDuration"
         @edit-schedule-location="handleEditScheduleLocation"
         @quick-add-schedule="handleQuickAddSchedule"
+        @mobile-inline-edit-active="emit('mobile-inline-edit-active', $event)"
       />
     </div>
   </div>
@@ -97,6 +99,7 @@ const emit = defineEmits<{
   (e: "convert-todo-to-task", payload: { task: Task; activityId: number }): void;
   (e: "convert-schedule-to-task", payload: { task: Task; activityId: number }): void;
   (e: "toggle-pomo-type", id: number): void;
+  (e: "mobile-inline-edit-active", active: boolean): void;
 }>();
 
 function updateScheduleStatus(id: number, checked: boolean) {

@@ -22,22 +22,16 @@
 
       <!-- 中间内容区域 -->
       <div
+        ref="middleColumnEl"
         class="middle"
         :class="{
           'middle-alone': !settingStore.settings.showTimetable && !settingStore.settings.showActivity && !settingStore.settings.showAi,
           'middle--landscape-fallback': isMobile && isLandscapeViewport,
+          'middle--mobile-planner-height-anim': isMobile && settingStore.settings.showPlanner,
         }"
       >
         <!-- 今日视图 -->
-        <div
-          v-if="settingStore.settings.showPlanner"
-          class="middle-top"
-          :style="
-            settingStore.settings.showTask
-              ? { height: effectiveMiddleTopHeightPx + 'px' }
-              : { height: 'calc(100% - env(safe-area-inset-bottom)*1.35)' }
-          "
-        >
+        <div v-if="settingStore.settings.showPlanner" class="middle-top" :style="middleTopPlannerStyle">
           <!-- 计划表的头部和控件 -->
           <div class="planner-header" @click.stop="cleanSelection">
             <div class="planner-header-left">
@@ -237,6 +231,7 @@
               @quick-add-todo="onQuickAddTodo"
               @quick-add-schedule="onQuickAddSchedule"
               @toggle-pomo-type="handleTogglePomoTypeTodoId"
+              @mobile-inline-edit-active="mobileDayTodoInlineEditing = $event"
             />
             <WeekPlanner
               v-if="settingStore.settings.showPlanner && settingStore.settings.viewSet === 'week'"
@@ -261,13 +256,20 @@
         </div>
         <!-- 任务视图调整大小手柄 -->
         <div
-          v-if="settingStore.settings.showTask && settingStore.settings.showPlanner"
+          v-if="taskPanelLayoutVisible && settingStore.settings.showPlanner"
           class="resize-handle"
           style="touch-action: none"
           @pointerdown="startVerticalResize"
         ></div>
-        <!-- 任务视图 -->
-        <div v-if="settingStore.settings.showTask" class="middle-bottom">
+        <!-- 任务视图：showTask 时常驻 DOM，移动端待办编辑时折叠过渡，避免 v-if 瞬时插入导致布局抖 -->
+        <div
+          v-if="settingStore.settings.showTask"
+          class="middle-bottom"
+          :class="{
+            'middle-bottom--collapsed': isMobile && mobileDayTodoInlineEditing,
+            'middle-bottom--motion': isMobile,
+          }"
+        >
           <div class="task-container">
             <TaskTracker ref="taskTrackerRef" @task-record-editing="setTaskRecordEditing" />
           </div>
@@ -413,6 +415,8 @@ const queryDate = ref<number | null>(null);
 const showPopover = ref(false);
 const popoverMessage = ref("");
 const taskRecordEditing = ref(false);
+/** 日待办行内编辑（移动）：临时收起下方 Task 区，不改变 showTask 设置 */
+const mobileDayTodoInlineEditing = ref(false);
 const showStateLogModal = ref(false);
 let unregisterPlannerCommandApi: (() => void) | null = null;
 let unregisterPlannerDaySpaceToggleCheck: (() => void) | null = null;
@@ -1486,6 +1490,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  disconnectMiddleResizeObserver();
   if (unregisterPlannerCommandApi) {
     unregisterPlannerCommandApi();
     unregisterPlannerCommandApi = null;
@@ -1554,12 +1559,51 @@ const topHeight = computed({
   set: (v) => (settingStore.settings.topHeight = v),
 });
 
+/** 中间栏 DOM，用于 ResizeObserver 得到与 flex 布局一致的真实可用高度 */
+const middleColumnEl = ref<HTMLElement | null>(null);
+const middleColumnHeightPx = ref(0);
+let middleResizeObserver: ResizeObserver | null = null;
+
+function disconnectMiddleResizeObserver() {
+  middleResizeObserver?.disconnect();
+  middleResizeObserver = null;
+}
+
+watch(
+  middleColumnEl,
+  (el) => {
+    disconnectMiddleResizeObserver();
+    if (!el || typeof ResizeObserver === "undefined") return;
+    middleResizeObserver = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+      const h = entry.contentRect.height;
+      if (h > 0) middleColumnHeightPx.value = Math.round(h);
+    });
+    middleResizeObserver.observe(el);
+  },
+  { flush: "post", immediate: true },
+);
+
+/** 计划表+任务分屏时用于换算的「中间栏总高」：实测优先，避免视口启发式与列真实高度不一致导致过渡末尾闪一下 */
+const plannerMiddleAvailPx = computed(() => {
+  const m = middleColumnHeightPx.value;
+  if (m > 0) return Math.max(180, m);
+  return Math.max(180, viewportInnerH.value - 24);
+});
+
 const isLandscapeViewport = computed(() => viewportInnerW.value > viewportInnerH.value);
+
+/** 任务区是否与计划表分栏显示（尊重设置；移动端待办编辑时临时不占位） */
+const taskPanelLayoutVisible = computed(
+  () => settingStore.settings.showTask && !mobileDayTodoInlineEditing.value,
+);
 
 /** 移动端横屏或总高度不足时限制 middle-top，避免任务区被挤没；桌面端仅在极端矮窗时收缩 */
 const effectiveMiddleTopHeightPx = computed(() => {
-  if (!settingStore.settings.showPlanner || !settingStore.settings.showTask) return topHeight.value;
-  const avail = Math.max(180, viewportInnerH.value - 24);
+  if (!settingStore.settings.showPlanner || !settingStore.settings.showTask || mobileDayTodoInlineEditing.value)
+    return topHeight.value;
+  const avail = plannerMiddleAvailPx.value;
   const minTask = 100;
   const maxTop = Math.max(120, avail - minTask);
   if (!isMobile.value) {
@@ -1568,6 +1612,18 @@ const effectiveMiddleTopHeightPx = computed(() => {
   const needCap = isLandscapeViewport.value || topHeight.value + minTask > avail;
   if (!needCap) return topHeight.value;
   return Math.min(topHeight.value, maxTop);
+});
+
+/** 计划表顶区行内样式：分屏与「收起任务」两端尽量共用 plannerMiddleAvailPx，便于 height transition 对齐 */
+const middleTopPlannerStyle = computed(() => {
+  if (!settingStore.settings.showPlanner) return {};
+  if (taskPanelLayoutVisible.value) {
+    return { height: `${effectiveMiddleTopHeightPx.value}px` };
+  }
+  if (isMobile.value && settingStore.settings.showTask && mobileDayTodoInlineEditing.value) {
+    return { height: `${plannerMiddleAvailPx.value}px` };
+  }
+  return { height: "calc(100% - env(safe-area-inset-bottom) * 1.35)" };
 });
 
 const { startResize: startVerticalResize } = useResize(topHeight, "vertical", 0, 670);
@@ -1667,6 +1723,19 @@ const { startResize: startRightResize } = useResize(
   flex-direction: column;
   display: flex;
   flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  .middle.middle--mobile-planner-height-anim .middle-top {
+    transition: height 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .middle.middle--mobile-planner-height-anim .middle-top,
+  .middle-bottom--motion {
+    transition: none !important;
+  }
 }
 
 .planner-header {
@@ -1805,6 +1874,32 @@ const { startResize: startRightResize } = useResize(
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
+}
+
+@media (max-width: 768px) {
+  .middle-bottom.middle-bottom--motion {
+    transition:
+      max-height 0.32s cubic-bezier(0.32, 0.72, 0, 1),
+      opacity 0.24s ease,
+      padding-block 0.22s ease;
+    max-height: min(120vh, 4000px);
+  }
+}
+@media (min-width: 769px) {
+  .middle-bottom.middle-bottom--motion {
+    max-height: none;
+  }
+}
+
+.middle-bottom--collapsed {
+  max-height: 0 !important;
+  opacity: 0;
+  flex: 0 0 0 !important;
+  min-height: 0 !important;
+  padding-top: 0;
+  padding-bottom: 0;
+  overflow: hidden;
+  pointer-events: none;
 }
 
 .task-container {

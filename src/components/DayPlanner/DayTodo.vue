@@ -705,6 +705,7 @@ onBeforeUnmount(() => {
   if (rankPopoverOutsideCleanup) rankPopoverOutsideCleanup();
   for (const [, p] of pomoPendingCheckByKey) clearTimeout(p.timer);
   pomoPendingCheckByKey.clear();
+  emit("mobile-inline-edit-active", false);
 });
 const priorityBindingDraft = reactive<Record<number, number | null>>({});
 const priorityShowInRankDraft = reactive<Record<number, boolean>>({});
@@ -796,7 +797,15 @@ const emit = defineEmits<{
   (e: "edit-todo-done", id: number, newTs: string): void;
   (e: "quick-add-todo"): void;
   (e: "toggle-pomo-type", id: number): void;
+  /** 移动端行内编辑：供首页临时腾出任务区高度 */
+  (e: "mobile-inline-edit-active", active: boolean): void;
 }>();
+
+// 移动端待办格子编辑态同步到首页，用于临时隐藏下方 Task 区
+watch([editingRowId, editingField, isMobile], () => {
+  const active = isMobile.value && editingRowId.value != null && editingField.value === "title";
+  emit("mobile-inline-edit-active", active);
+});
 
 // 对待办事项按优先级降序排序（高优先级在前）
 // 增加规则：一旦done，特殊值（33/44/55/66/77/88/99）按 startTime 排序
