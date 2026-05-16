@@ -188,7 +188,7 @@ const sortKey = ref<"count" | "name">("count");
 const sortDirection = ref<"asc" | "desc">("desc");
 const currentPage = ref(1);
 
-const pageSize = computed(() => (isMobile.value ? 18 : 34));
+const pageSize = computed(() => (isMobile.value ? 12 : 34));
 // 弹窗显示：未传 show 时由外层 modal 控制，内层始终显示；传了 show 则跟随父组件
 const showModal = computed({
   get: () => (props.show === undefined ? true : !!props.show),
@@ -661,10 +661,11 @@ function goNextPage(): void {
     width: 100%;
     max-width: 100%;
     border-radius: 0;
-    max-height: 80vh;
     /* 上下居中 */
     align-self: center !important;
     margin: auto !important;
+    min-height: 280px;
+    max-height: 280px;
   }
 
   .tag-manager-inner {
