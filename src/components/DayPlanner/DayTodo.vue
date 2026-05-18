@@ -1570,6 +1570,7 @@ function startInstantSequence(steps: InstantPomoStep[], sequenceInput: string) {
 }
 
 function tryInstantStartPomodoro(todo: Todo) {
+  if (timerStore.isActive) return;
   if (!isInstantStartWindow(todo)) return;
   const workCount = getInstantWorkCount(todo);
   if (workCount <= 0) return;
