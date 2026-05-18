@@ -638,6 +638,8 @@ function setTagPickerRef(el: any, todoId: number) {
 }
 // Enter 选中标签时置为 true，saveEdit 会跳过结束编辑以保持继续输入
 const selectingTagViaEnter = ref(false);
+// Enter 确认 rank 浮层时置为 true，避免 apply 关浮层后二次 Enter 退出 pe / 结束编辑
+const selectingRankViaEnter = ref(false);
 // 点击/触摸标签选择器时置为 true，避免移动端 blur 抢先触发保存导致选不中
 const isPickingTagFromSelector = ref(false);
 function onTodoTagPanelPointerGuard() {
@@ -1659,6 +1661,12 @@ function handleCancelSelectedTodo() {
 // 注意这里是 timestring 不是timestamp，是在Home用currentViewdate进行的转化
 function saveEdit(todo: Todo) {
   if (!editingRowId.value) return;
+  // rank 浮层 Enter 确认后 popover 已关，keyup 不应结束编辑
+  if (selectingRankViaEnter.value) {
+    selectingRankViaEnter.value = false;
+    return;
+  }
+  if (rankPopoverTodoId.value === todo.id) return;
   // Enter 选中标签后 keyup.enter 仍会触发 saveEdit，此时不结束编辑以便继续输入
   if (selectingTagViaEnter.value) {
     selectingTagViaEnter.value = false;
@@ -1936,6 +1944,8 @@ function toggleCheckForSelectedRow(): boolean {
 function confirmKeyboardAction(): boolean {
   const todo = selectedTodo.value;
   if (!todo) return false;
+  // hotkeys 可能对同一 Enter 触发两次；第二次 popover 已关，仍视为已处理
+  if (selectingRankViaEnter.value) return true;
   if (showEstimateInput.value) {
     confirmAddEstimate();
     return true;
@@ -1943,12 +1953,17 @@ function confirmKeyboardAction(): boolean {
   if (isPomoKeyboardModeActive(todo)) {
     return executePomoKeyboardTarget(todo);
   }
+  if (rankPopoverTodoId.value === todo.id) {
+    selectingRankViaEnter.value = true;
+    applyRankKeyboardOption(todo);
+    void nextTick(() => {
+      selectingRankViaEnter.value = false;
+    });
+    return true;
+  }
   if (editingRowId.value === todo.id && editingField.value) {
     saveEdit(todo);
     return true;
-  }
-  if (rankPopoverTodoId.value === todo.id) {
-    return applyRankKeyboardOption(todo);
   }
   return false;
 }
