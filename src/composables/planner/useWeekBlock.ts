@@ -4,7 +4,7 @@ import type { WeekBlockItem } from "@/core/types/Week";
 import { useWeekData } from "@/composables/planner/useWeekData";
 import { getItemWeekRange, isWeekBlockOverlapping, getHour, startOfDay } from "@/core/utils/weekDays";
 
-const END_MARKER_SIZE_PX = 18;
+const END_MARKER_SIZE_PX = 20;
 const BASE_PX_PER_HOUR = 40;
 const MIN_OVERLAP_MS = 5 * 60 * 1000;
 
@@ -163,15 +163,20 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targe
       if (startOfDay(item.end) !== dayStartTs) return { display: "none" };
       const endDate = new Date(item.end);
       const endHour = endDate.getHours() + endDate.getMinutes() / 60;
-      const centerTop = (endHour - range.startHour) * pxPerHour.value;
-      const top = Math.max(centerTop - END_MARKER_SIZE_PX / 2, 0);
+      const timeTop = (endHour - range.startHour) * pxPerHour.value;
+      const gridH = timeGridHeight.value;
+      // 灯泡整体在时刻线之上，并限制在网格高度内（避免 23:59 等贴底被 overflow 裁切）
+      const top = Math.max(0, Math.min(timeTop - END_MARKER_SIZE_PX, gridH - END_MARKER_SIZE_PX));
+      const col = item.column ?? 0;
+      const rightPx = 2 + col * (END_MARKER_SIZE_PX + 2);
       return {
         position: "absolute",
         top: `${top}px`,
-        left: item.left || "0%",
-        width: item.width || "100%",
+        right: `${rightPx}px`,
+        left: "auto",
+        width: "auto",
         height: `${END_MARKER_SIZE_PX}px`,
-        zIndex: 4,
+        zIndex: 10,
       };
     }
 
