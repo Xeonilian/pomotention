@@ -53,27 +53,38 @@
 
         <!-- 时间块（仅在有数据时显示） -->
         <template v-if="day.items.length > 0">
-          <WeekBlockItem
+          <template
             v-for="block in layoutedWeekBlocks.get(day.index) || getFallbackWeekBlocks(day.items, day.index)"
             :key="block.id"
-            :block="block"
-            :day-start-ts="day.startTs"
-            :get-item-block-style="getItemBlockStyle"
-            @item-change="handleItemChange"
-          />
+          >
+            <WeekEndMarkerItem
+              v-if="block.endOnly"
+              :block="block"
+              :day-start-ts="day.startTs"
+              :get-item-block-style="getItemBlockStyle"
+              @item-change="handleItemChange"
+            />
+            <WeekBlockItem
+              v-else
+              :block="block"
+              :day-start-ts="day.startTs"
+              :get-item-block-style="getItemBlockStyle"
+              @item-change="handleItemChange"
+            />
+          </template>
         </template>
+      </div>
 
-        <!-- 统计信息-->
-        <div class="card-statistic">
-          <span class="pom-sum">
-            <template v-if="isMobile">🍅 {{ day.sumRealPomo }}</template>
-            <template v-else>
-              [
-              <span :style="{ color: getPomoColor(day.pomoRatio) }">🍅</span>
-              = {{ day.sumRealPomo }} 🍇 = {{ day.sumRealGrape }}]
-            </template>
-          </span>
-        </div>
+      <!-- 统计信息（置于时间网格外，避免被 overflow:hidden 裁切） -->
+      <div class="card-statistic">
+        <span class="pom-sum">
+          <template v-if="isMobile">🍅 {{ day.sumRealPomo }}</template>
+          <template v-else>
+            [
+            <span :style="{ color: getPomoColor(day.pomoRatio) }">🍅</span>
+            = {{ day.sumRealPomo }} 🍇 = {{ day.sumRealGrape }}]
+          </template>
+        </span>
       </div>
     </div>
   </n-card>
@@ -85,6 +96,7 @@ import { NCard } from "naive-ui";
 import type { DayItem } from "@/core/types/Week";
 import type { WeekBlockItem as WeekBlockItemType } from "@/core/types/Week";
 import WeekBlockItem from "./WeekBlockItem.vue";
+import WeekEndMarkerItem from "./WeekEndMarkerItem.vue";
 import { formatMonthDay, getPomoColor, getFallbackWeekBlocks } from "@/core/utils/weekDays";
 import { getDateKey } from "@/core/utils";
 import type { HolidayDisplay } from "@/services/planner/publicHolidays";
@@ -267,12 +279,15 @@ const handleItemChange = (id: number, _ts: number, activityId?: number, taskId?:
   min-width: 0;
   flex: 1;
   min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 /* 时间轴网格容器 */
 .time-grid-container {
   position: relative;
   width: 100%;
+
   overflow: hidden;
 }
 
@@ -322,8 +337,7 @@ const handleItemChange = (id: number, _ts: number, activityId?: number, taskId?:
 }
 
 .card-statistic {
-  position: absolute;
-  bottom: -20px;
+  flex-shrink: 0;
   width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -373,6 +387,10 @@ const handleItemChange = (id: number, _ts: number, activityId?: number, taskId?:
     width: 18px;
     height: 18px;
     margin-right: 4px;
+  }
+
+  :deep(.card-statistic) {
+    transform: translateY(4px);
   }
 }
 </style>

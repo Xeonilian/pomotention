@@ -25,23 +25,25 @@ export function getHour(ts: number): number {
   return new Date(ts).getHours();
 }
 
-/**
- * 提取item的时间范围（兼容缺失字段）
- */
-export function getItemWeekRange(item: UnifiedItem): { start: number; end: number } | null {
+/** 周视图时间范围；仅有 doneTime 时 endOnly=true */
+export function getItemWeekRange(item: UnifiedItem): { start: number; end: number; endOnly?: boolean } | null {
   if (!item.ts) return null;
 
   if (item.type === "todo") {
-    // 优先使用 startTime 和 doneTime（与渲染逻辑一致）
-    const start = (item as any).startTime || item.startWeek || item.ts;
-    const end = (item as any).doneTime || item.doneWeek || start + 30 * 60 * 1000; // 默认30分钟（减半）
-    return { start, end };
-  } else {
-    const start = item.activityDueRange?.[0] || item.ts;
-    const durationMin = Number(item.activityDueRange?.[1]) || 30;
-    const end = (item as any).doneTime || item.doneWeek || start + durationMin * 60 * 1000;
-    return { start, end };
+    if (item.doneTime != null && item.startTime == null) {
+      return { start: item.doneTime, end: item.doneTime, endOnly: true };
+    }
+    const start = item.startTime ?? item.ts;
+    return { start, end: item.doneTime ?? start + 30 * 60 * 1000 };
   }
+
+  const rangeStart = item.activityDueRange?.[0];
+  if (item.doneTime != null && rangeStart == null) {
+    return { start: item.doneTime, end: item.doneTime, endOnly: true };
+  }
+  const start = rangeStart ?? item.ts;
+  const durationMin = Number(item.activityDueRange?.[1]) || 30;
+  return { start, end: item.doneTime ?? start + durationMin * 60 * 1000 };
 }
 
 /**
@@ -72,22 +74,24 @@ export function getPomoColor(ratio: number): string {
   return `#${hex(R)}${hex(G)}${hex(B)}`;
 }
 
-/**
- * 生成兜底时间块（布局计算失败时使用）
- */
+/** 布局未就绪时的兜底块 */
 export function getFallbackWeekBlocks(items: UnifiedItem[], dayIndex: number): WeekBlockItem[] {
-  return items.map((item) => {
+  return items.flatMap((item) => {
     const range = getItemWeekRange(item);
-    return {
-      id: item.key,
-      type: item.type,
-      start: range?.start || item.ts,
-      end: range?.end || item.ts + 1800000,
-      dayIndex,
-      item,
-      column: 0,
-      width: "100%",
-      left: "0%",
-    };
+    if (!range) return [];
+    return [
+      {
+        id: item.key,
+        type: item.type,
+        start: range.start,
+        end: range.end,
+        endOnly: range.endOnly,
+        dayIndex,
+        item,
+        column: 0,
+        width: "100%",
+        left: "0%",
+      },
+    ];
   });
 }

@@ -4,11 +4,11 @@ import type { WeekBlockItem } from "@/core/types/Week";
 import { useWeekData } from "@/composables/planner/useWeekData";
 import { getItemWeekRange, isWeekBlockOverlapping, getHour, startOfDay } from "@/core/utils/weekDays";
 
-// 保留原有常量，新增动态计算逻辑
+const END_MARKER_SIZE_PX = 18;
 const BASE_PX_PER_HOUR = 40;
+const MIN_OVERLAP_MS = 5 * 60 * 1000;
 
 export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targetHeight?: MaybeRef<number>) {
-  // 1. 计算全周统一时间范围（完全保留原有代码）
   const unifiedTimeRange = computed(() => {
     let minHour = 24;
     let maxHour = 0;
@@ -16,23 +16,23 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targe
     for (const day of days.value) {
       for (const item of day.items) {
         const range = getItemWeekRange(item);
-        if (range) {
-          const itemStartDay = startOfDay(range.start);
-          const itemEndDay = startOfDay(range.end);
+        if (!range) continue;
 
-          if (itemStartDay === itemEndDay) {
-            const startHour = getHour(range.start);
-            const endHour = getHour(range.end);
-            const endMinute = new Date(range.end).getMinutes();
-            const actualEndHour = endMinute > 0 ? endHour + 1 : endHour;
+        const itemStartDay = startOfDay(range.start);
+        const itemEndDay = startOfDay(range.end);
 
-            if (startHour < minHour) minHour = startHour;
-            if (actualEndHour > maxHour) maxHour = actualEndHour;
-          } else {
-            const startHour = getHour(range.start);
-            if (startHour < minHour) minHour = startHour;
-            if (maxHour < 24) maxHour = 24;
-          }
+        if (itemStartDay === itemEndDay) {
+          const startHour = getHour(range.start);
+          const endHour = getHour(range.end);
+          const endMinute = new Date(range.end).getMinutes();
+          const actualEndHour = endMinute > 0 ? endHour + 1 : endHour;
+
+          if (startHour < minHour) minHour = startHour;
+          if (actualEndHour > maxHour) maxHour = actualEndHour;
+        } else {
+          const startHour = getHour(range.start);
+          if (startHour < minHour) minHour = startHour;
+          if (maxHour < 24) maxHour = 24;
         }
       }
     }
@@ -45,27 +45,23 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targe
     minHour = Math.floor(minHour);
     maxHour = Math.min(Math.ceil(maxHour), 24);
 
-    // 基础范围是6-22，如果block超出范围则动态扩展
     return {
       startHour: minHour < 6 ? minHour : 6,
       endHour: maxHour > 22 ? maxHour : 22,
     };
   });
 
-  // 动态计算pxPerHour（响应式计算，随容器高度变化）
   const pxPerHour = computed(() => {
     const range = unifiedTimeRange.value;
     const totalHours = range.endHour - range.startHour;
-    const height = unref(targetHeight); // 使用 unref 来获取响应式值或普通值
+    const height = unref(targetHeight);
 
-    // 如果传入了目标高度，就按高度/小时数计算，否则用默认值
     if (height && totalHours > 0) {
       return height / totalHours;
     }
     return BASE_PX_PER_HOUR;
   });
 
-  // 2. 生成时间块数据（完全保留）
   const weekBlockItems = computed(() => {
     const items: WeekBlockItem[] = [];
 
@@ -73,23 +69,22 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targe
       const day = days.value[dayIdx];
       for (const item of day.items) {
         const range = getItemWeekRange(item);
-        if (range) {
-          items.push({
-            id: item.key,
-            type: item.type,
-            start: range.start,
-            end: range.end,
-            dayIndex: dayIdx,
-            item,
-          });
-        }
+        if (!range) continue;
+        items.push({
+          id: item.key,
+          type: item.type,
+          start: range.start,
+          end: range.end,
+          endOnly: range.endOnly,
+          dayIndex: dayIdx,
+          item,
+        });
       }
     }
 
     return items;
   });
 
-  // 计算两个时间块的重叠时长（毫秒）
   const getOverlapDuration = (a: { start: number; end: number }, b: { start: number; end: number }): number => {
     if (!isWeekBlockOverlapping(a, b)) return 0;
     const overlapStart = Math.max(a.start, b.start);
@@ -97,30 +92,29 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targe
     return Math.max(0, overlapEnd - overlapStart);
   };
 
-  // 3. 计算时间块布局（完全保留）
+  const blocksOverlap = (a: WeekBlockItem, b: WeekBlockItem): boolean => {
+    if (a.endOnly && b.endOnly) return Math.abs(a.end - b.end) <= MIN_OVERLAP_MS;
+    return getOverlapDuration(a, b) > MIN_OVERLAP_MS;
+  };
+
   const calculateWeekBlockLayout = (items: WeekBlockItem[], dayIndex: number): WeekBlockItem[] => {
     const dayItems = items.filter((item) => item.dayIndex === dayIndex);
     if (dayItems.length === 0) return [];
 
-    dayItems.sort((a, b) => a.start - b.start);
+    dayItems.sort((a, b) => (a.endOnly ? a.end : a.start) - (b.endOnly ? b.end : b.start));
     const processedItems: WeekBlockItem[] = [];
-
-    // 5分钟阈值（毫秒）
-    const MIN_OVERLAP_DURATION = 5 * 60 * 1000;
 
     for (const item of dayItems) {
       const overlappingItems: WeekBlockItem[] = [item];
 
       for (const otherItem of dayItems) {
         if (otherItem.id === item.id) continue;
-        // 只有当重叠时长超过5分钟时，才视为重叠
-        const overlapDuration = getOverlapDuration(item, otherItem);
-        if (overlapDuration > MIN_OVERLAP_DURATION) {
+        if (blocksOverlap(item, otherItem)) {
           overlappingItems.push(otherItem);
         }
       }
 
-      overlappingItems.sort((a, b) => a.start - b.start);
+      overlappingItems.sort((a, b) => (a.endOnly ? a.end : a.start) - (b.endOnly ? b.end : b.start));
       const overlapIndex = overlappingItems.findIndex((i) => i.id === item.id);
       const overlapCount = Math.min(overlappingItems.length, 3);
       const validOverlapIndex = overlapIndex < 3 ? overlapIndex : 2;
@@ -139,17 +133,14 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targe
     return processedItems;
   };
 
-  // 4. 按天分组的布局时间块
   const layoutedWeekBlocks = computed(() => {
     const result: Map<number, WeekBlockItem[]> = new Map();
     for (let dayIdx = 0; dayIdx < 7; dayIdx++) {
-      const layouted = calculateWeekBlockLayout(weekBlockItems.value, dayIdx);
-      result.set(dayIdx, layouted);
+      result.set(dayIdx, calculateWeekBlockLayout(weekBlockItems.value, dayIdx));
     }
     return result;
   });
 
-  // 5. 小时刻度数组（完全保留）
   const hourStamps = computed(() => {
     const range = unifiedTimeRange.value;
     const stamps: number[] = [];
@@ -159,16 +150,31 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targe
     return stamps;
   });
 
-  // 6. 时间轴高度
   const timeGridHeight = computed(() => {
     const range = unifiedTimeRange.value;
     const hours = range.endHour - range.startHour;
-    return hours * pxPerHour.value; // 仅改这里，用动态值
+    return hours * pxPerHour.value;
   });
 
-  // 7. 时间块样式计算
   const getItemBlockStyle = (item: WeekBlockItem, dayStartTs: number) => {
     const range = unifiedTimeRange.value;
+
+    if (item.endOnly) {
+      if (startOfDay(item.end) !== dayStartTs) return { display: "none" };
+      const endDate = new Date(item.end);
+      const endHour = endDate.getHours() + endDate.getMinutes() / 60;
+      const centerTop = (endHour - range.startHour) * pxPerHour.value;
+      const top = Math.max(centerTop - END_MARKER_SIZE_PX / 2, 0);
+      return {
+        position: "absolute",
+        top: `${top}px`,
+        left: item.left || "0%",
+        width: item.width || "100%",
+        height: `${END_MARKER_SIZE_PX}px`,
+        zIndex: 4,
+      };
+    }
+
     const itemDayStart = startOfDay(item.start);
     const itemDayEnd = startOfDay(item.end);
 
@@ -177,17 +183,15 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targe
 
     if (itemDayStart === dayStartTs && itemDayEnd === dayStartTs) {
       if (item.type === "todo") {
-        // 对于todo类型，使用实际的startTime和doneTime计算持续时间
-        const startTime = (item.item as any).startTime || item.start;
-        const doneTime = (item.item as any).doneTime || item.end;
+        const startTime = item.item.startTime || item.start;
+        const doneTime = item.item.doneTime || item.end;
         const startDate = new Date(startTime);
         const endDate = new Date(doneTime);
 
         startHour = startDate.getHours() + startDate.getMinutes() / 60;
         const endHour = endDate.getHours() + endDate.getMinutes() / 60;
-        durationHours = Math.max(endHour - startHour, 0.5); // 最小30分钟
+        durationHours = Math.max(endHour - startHour, 0.5);
       } else {
-        // 对于schedule类型，使用实际的开始和结束时间
         const startDate = new Date(item.start);
         const endDate = new Date(item.end);
 
@@ -212,14 +216,8 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targe
 
     const relativeStartHour = startHour - range.startHour;
     const top = relativeStartHour * pxPerHour.value;
-    const height = Math.max(durationHours * pxPerHour.value, 10); // 确保最小高度10px
+    const height = Math.max(durationHours * pxPerHour.value, 10);
 
-    // 调试信息 - 只输出todo类型的高度计算
-    if (item.type === "todo") {
-      // console.log(`Todo ${item.id}: durationHours=${durationHours}, height=${height}`);
-    }
-
-    // schedule 仍参与重叠计算，但自身始终占满整行
     const forceFullWidthForSchedule = item.type === "schedule";
 
     return {
@@ -232,21 +230,19 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targe
     };
   };
 
-  // 8. 小时刻度位置计算
   const getHourTickTop = (hour: number) => {
     const range = unifiedTimeRange.value;
     const relativeHour = hour - range.startHour;
-    return relativeHour * pxPerHour.value; // 改这里
+    return relativeHour * pxPerHour.value;
   };
 
-  // 9. 暴露接口（新增pxPerHour，其他保留）
   return {
     unifiedTimeRange,
     weekBlockItems,
     layoutedWeekBlocks,
     hourStamps,
     timeGridHeight,
-    pxPerHour, // 新增暴露
+    pxPerHour,
     calculateWeekBlockLayout,
     getItemBlockStyle,
     getHourTickTop,

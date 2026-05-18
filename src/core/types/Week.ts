@@ -32,6 +32,8 @@ export interface UnifiedItem {
   pomoType?: "🍅" | "🍇" | "🍒"; // 番茄类型
   dueDate?: number; // 截止时间戳
   startWeek?: number; // 开始时间戳
+  startTime?: number; // 实际开始时间戳
+  doneTime?: number; // 实际结束时间戳
 
   // Schedule 专属字段
   activityDueRange?: [number | null, string]; // [开始时间戳, 持续分钟(字符串)]
@@ -68,6 +70,8 @@ export interface WeekBlockItem {
   column?: number; // 布局列（0-2，最多3列）
   width?: string; // CSS宽度（如 '33.33%'）
   left?: string; // CSS左侧偏移（如 '0%'）
+  /** 仅有结束时间：周视图用灯泡标记，不用时间条 */
+  endOnly?: boolean;
 }
 
 // ======================== 组件Props类型 ========================

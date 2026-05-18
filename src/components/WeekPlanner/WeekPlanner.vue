@@ -107,6 +107,7 @@ const handleItemSelect = (id: number, activityId?: number, taskId?: number) => {
   flex-direction: column;
   gap: 8px;
   height: 100%;
+  overflow: hidden;
 }
 
 .grid {
@@ -116,8 +117,7 @@ const handleItemSelect = (id: number, activityId?: number, taskId?: number) => {
   grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 4px;
   grid-auto-rows: minmax(100px, 1fr);
-  overflow-y: auto;
-  overflow-x: hidden;
+
   scrollbar-width: thin;
 }
 
