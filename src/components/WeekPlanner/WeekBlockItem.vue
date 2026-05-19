@@ -309,6 +309,10 @@ const handleClick = () => {
   gap: 1px;
 }
 
+.tag-container {
+  padding: 0px;
+}
+
 .item :deep(.tag-container) {
   flex-wrap: nowrap;
   overflow: hidden;

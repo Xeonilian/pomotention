@@ -3,10 +3,17 @@ import { computed, unref, type MaybeRef } from "vue";
 import type { WeekBlockItem } from "@/core/types/Week";
 import { useWeekData } from "@/composables/planner/useWeekData";
 import { getItemWeekRange, isWeekBlockOverlapping, getHour, startOfDay } from "@/core/utils/weekDays";
+import { useDevice } from "@/composables/platform/useDevice";
 
+const { isMobile } = useDevice();
 const END_MARKER_SIZE_PX = 20;
 const BASE_PX_PER_HOUR = 40;
 const MIN_OVERLAP_MS = 5 * 60 * 1000;
+/** 右侧叠放区：left 1/3 起，占宽 2/3 */
+const OVERLAY_LEFT_PCT = 100 / 5;
+const OVERLAY_WIDTH_PCT = isMobile.value ? 120 : 70;
+/** 时长比 ≥ 此值视为「差不多长」，仍均分列 */
+const SIMILAR_DURATION_RATIO = 0.6;
 
 export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targetHeight?: MaybeRef<number>) {
   const unifiedTimeRange = computed(() => {
@@ -97,40 +104,130 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targe
     return getOverlapDuration(a, b) > MIN_OVERLAP_MS;
   };
 
+  const blockDurationMs = (b: WeekBlockItem) => Math.max(0, b.end - b.start);
+
+  const layoutEqualColumns = (group: WeekBlockItem[]): WeekBlockItem[] => {
+    const sorted = [...group].sort((a, b) => a.start - b.start);
+    const count = Math.min(sorted.length, 3);
+    return sorted.map((item, i) => {
+      const col = i < 3 ? i : 2;
+      const width = 100 / count;
+      return {
+        ...item,
+        column: col,
+        width: `${width}%`,
+        left: `${col * width}%`,
+      };
+    });
+  };
+
+  const clusterOverlayBlocks = (overlays: WeekBlockItem[], seed: WeekBlockItem): WeekBlockItem[] => {
+    const cluster: WeekBlockItem[] = [seed];
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const o of overlays) {
+        if (cluster.some((c) => c.id === o.id)) continue;
+        if (cluster.some((c) => blocksOverlap(c, o))) {
+          cluster.push(o);
+          changed = true;
+        }
+      }
+    }
+    return cluster;
+  };
+
+  /** 重叠组内：最长块全宽，短块从 1/3 起叠在右侧 2/3 */
+  const layoutSpanOverlayGroup = (group: WeekBlockItem[]): WeekBlockItem[] => {
+    if (group.length === 1) {
+      return [{ ...group[0], left: "0%", width: "100%", column: 0 }];
+    }
+
+    const durations = group.map((b) => blockDurationMs(b));
+    const maxD = Math.max(...durations);
+    const minD = Math.min(...durations);
+    if (maxD > 0 && minD / maxD >= SIMILAR_DURATION_RATIO) {
+      return layoutEqualColumns(group);
+    }
+
+    const sorted = [...group].sort((a, b) => blockDurationMs(b) - blockDurationMs(a) || a.start - b.start);
+    const background = sorted[0];
+    const overlays = sorted.slice(1);
+    const result: WeekBlockItem[] = [{ ...background, left: "0%", width: "100%", column: 0 }];
+
+    const laidOut = new Set<string>();
+    for (const seed of overlays) {
+      if (laidOut.has(seed.id)) continue;
+      const cluster = clusterOverlayBlocks(overlays, seed).filter((o) => !laidOut.has(o.id));
+      const count = Math.min(cluster.length, 3);
+      cluster.sort((a, b) => a.start - b.start);
+      cluster.forEach((o, i) => {
+        const col = i < 3 ? i : 2;
+        const w = OVERLAY_WIDTH_PCT / count;
+        const l = OVERLAY_LEFT_PCT + col * w;
+        result.push({ ...o, left: `${l}%`, width: `${w}%`, column: col + 1 });
+        laidOut.add(o.id);
+      });
+    }
+    return result;
+  };
+
+  const buildOverlapGroups = (timeBlocks: WeekBlockItem[]): WeekBlockItem[][] => {
+    const groups: WeekBlockItem[][] = [];
+    const visited = new Set<string>();
+
+    for (const item of timeBlocks) {
+      if (visited.has(item.id)) continue;
+      const group: WeekBlockItem[] = [];
+      const stack = [item];
+      visited.add(item.id);
+      while (stack.length) {
+        const cur = stack.pop()!;
+        group.push(cur);
+        for (const other of timeBlocks) {
+          if (visited.has(other.id)) continue;
+          if (blocksOverlap(cur, other)) {
+            visited.add(other.id);
+            stack.push(other);
+          }
+        }
+      }
+      groups.push(group);
+    }
+    return groups;
+  };
+
+  const layoutEndMarkerColumns = (markers: WeekBlockItem[]): WeekBlockItem[] => {
+    if (markers.length === 0) return [];
+    const sorted = [...markers].sort((a, b) => a.end - b.end);
+    return sorted.map((item) => {
+      const overlapping = sorted.filter((o) => blocksOverlap(item, o));
+      const overlapIndex = overlapping.findIndex((i) => i.id === item.id);
+      const count = Math.min(overlapping.length, 3);
+      const col = overlapIndex < 3 ? overlapIndex : 2;
+      const width = 100 / count;
+      return {
+        ...item,
+        column: col,
+        width: `${width}%`,
+        left: `${col * width}%`,
+      };
+    });
+  };
+
   const calculateWeekBlockLayout = (items: WeekBlockItem[], dayIndex: number): WeekBlockItem[] => {
     const dayItems = items.filter((item) => item.dayIndex === dayIndex);
     if (dayItems.length === 0) return [];
 
-    dayItems.sort((a, b) => (a.endOnly ? a.end : a.start) - (b.endOnly ? b.end : b.start));
-    const processedItems: WeekBlockItem[] = [];
+    const timeBlocks = dayItems.filter((i) => !i.endOnly);
+    const endMarkers = dayItems.filter((i) => i.endOnly);
 
-    for (const item of dayItems) {
-      const overlappingItems: WeekBlockItem[] = [item];
-
-      for (const otherItem of dayItems) {
-        if (otherItem.id === item.id) continue;
-        if (blocksOverlap(item, otherItem)) {
-          overlappingItems.push(otherItem);
-        }
-      }
-
-      overlappingItems.sort((a, b) => (a.endOnly ? a.end : a.start) - (b.endOnly ? b.end : b.start));
-      const overlapIndex = overlappingItems.findIndex((i) => i.id === item.id);
-      const overlapCount = Math.min(overlappingItems.length, 3);
-      const validOverlapIndex = overlapIndex < 3 ? overlapIndex : 2;
-
-      const width = `${100 / overlapCount}%`;
-      const left = `${validOverlapIndex * (100 / overlapCount)}%`;
-
-      processedItems.push({
-        ...item,
-        column: validOverlapIndex,
-        width,
-        left,
-      });
+    const laidOut: WeekBlockItem[] = [];
+    for (const group of buildOverlapGroups(timeBlocks)) {
+      laidOut.push(...layoutSpanOverlayGroup(group));
     }
-
-    return processedItems;
+    laidOut.push(...layoutEndMarkerColumns(endMarkers));
+    return laidOut;
   };
 
   const layoutedWeekBlocks = computed(() => {
@@ -223,15 +320,17 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targe
     const top = relativeStartHour * pxPerHour.value;
     const height = Math.max(durationHours * pxPerHour.value, 10);
 
-    const forceFullWidthForSchedule = item.type === "schedule";
+    const isBackground = (item.column ?? 0) === 0;
+    const forceFullWidthForSchedule = item.type === "schedule" && isBackground;
+    const zIndex = isBackground ? 2 : 3 + (item.column ?? 0);
 
     return {
       position: "absolute",
       top: `${top}px`,
-      left: forceFullWidthForSchedule ? "0%" : (item.left || "0%"),
-      width: forceFullWidthForSchedule ? "100%" : (item.width || "100%"),
+      left: forceFullWidthForSchedule ? "0%" : item.left || "0%",
+      width: forceFullWidthForSchedule ? "100%" : item.width || "100%",
       height: `${height}px`,
-      zIndex: 2,
+      zIndex,
     };
   };
 

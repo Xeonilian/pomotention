@@ -34,8 +34,8 @@ import { useDevice } from "@/composables/platform/useDevice";
 const tagStore = useTagStore();
 const { isMobile } = useDevice();
 
-const MARKER_SIZE = { mobile: 14, desktop: 18 } as const;
-const RIGHT_BASE = { mobile: 2, desktop: 20 } as const;
+const MARKER_SIZE = { mobile: 12, desktop: 14 } as const;
+const RIGHT_BASE = { mobile: 2, desktop: 6 } as const;
 
 const props = defineProps<{
   block: WeekBlockItemType;
