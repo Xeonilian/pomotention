@@ -14,8 +14,8 @@
 
 ## 导航与视图切换
 
-- <img src="/icons/ChevronLeft20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(233, 233, 233);border-radius: 10px;"> / <img src="/icons/ChevronRight20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(233, 233, 233);border-radius: 10px;">：跳转到前后一天/周/月。
-- <img src="/icons/CalendarSettings20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(233, 233, 233);border-radius: 6px;">：在日、周、月视图中切换。
+- <img src="/icons/ChevronLeft20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;border-radius: 10px;"> / <img src="/icons/ChevronRight20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;border-radius: 10px;">：跳转到前后一天/周/月。
+- <img src="/icons/CalendarSettings20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;border-radius: 6px;">：在日、周、月视图中切换。
 - <img src="/icons/Search24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;">：跳转到今天或指定日期。
 - 点击日期标题可快速跳转到月视图。
 
@@ -27,6 +27,8 @@
   <img src="/planner-week.png" alt="周视图" width="600">
 - 月视图：展示日期与累计番茄分布。  
   <img src="/planner-month.png" alt="月视图" width="600">
+- 年视图：
+  <img src="/planner-year.png" alt="年视图" width="600">
 
 ## 通用操作
 
