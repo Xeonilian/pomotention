@@ -16,14 +16,18 @@
         >
           <!-- 节名在左上角；日期徽章保持右上 -->
           <div class="month-day-top" :class="{ 'month-day-top--badge-only': !day.holiday }">
-            <div v-if="day.holiday" class="month-holiday-left" :class="'month-holiday-left--' + day.holiday.kind">
+            <div
+              v-if="day.holiday"
+              class="month-holiday-left"
+              :class="'month-holiday-left--' + day.holiday.kind"
+              @click.stop="() => handleDateSelect(day.startTs)"
+            >
               {{ isMobile ? day.holiday.label.slice(0, 2) : day.holiday.label }}
             </div>
             <div
               class="date-badge"
               :class="{ today: day.isToday }"
-              @click.stop="() => handleDateSelect(day.startTs)"
-              @dblclick.stop="() => handleDateSelectDayView(day.startTs)"
+              @click.stop="() => handleDateSelectDayView(day.startTs)"
               @touchstart.stop="onMonthBadgeTouchStart"
               @touchend.stop="() => onMonthBadgeTouchEnd(day.startTs)"
               @touchcancel.stop="onMonthBadgeTouchCancel"
