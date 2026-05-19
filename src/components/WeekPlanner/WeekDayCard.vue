@@ -7,7 +7,7 @@
     @click="() => handleDateSelect(day.startTs)"
   >
     <div class="day-header">
-      <div class="dow">
+      <div class="dow" @click.stop="() => handleDateSelect(day.startTs)">
         {{ isMobile ? dayNames[day.index][0] : dayNames[day.index] }}
       </div>
       <div class="week-day-holiday-mid">
@@ -18,8 +18,7 @@
       <div
         class="date"
         :class="{ today: day.isToday }"
-        @click.stop="() => handleDateSelect(day.startTs)"
-        @dblclick.stop="() => handleDateSelectDayView(day.startTs)"
+        @click.stop="() => handleDateSelectDayView(day.startTs)"
         @touchstart.stop="onWeekBadgeTouchStart"
         @touchend.stop="() => onWeekBadgeTouchEnd(day.startTs)"
         @touchcancel.stop="onWeekBadgeTouchCancel"
@@ -53,10 +52,7 @@
 
         <!-- 时间块（仅在有数据时显示） -->
         <template v-if="day.items.length > 0">
-          <template
-            v-for="block in layoutedWeekBlocks.get(day.index) || getFallbackWeekBlocks(day.items, day.index)"
-            :key="block.id"
-          >
+          <template v-for="block in layoutedWeekBlocks.get(day.index) || getFallbackWeekBlocks(day.items, day.index)" :key="block.id">
             <WeekEndMarkerItem
               v-if="block.endOnly"
               :block="block"
