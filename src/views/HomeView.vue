@@ -420,9 +420,7 @@ const taskRecordEditing = ref(false);
 /** 日待办行内编辑（移动）：临时收起下方 Task 区，不改变 showTask 设置 */
 const mobileDayTodoInlineEditing = ref(false);
 /** 系统键盘与 vv 连续变化时关掉 height/max-height 过渡，避免目标高度每帧变化导致跳动 */
-const suppressMobilePlannerMotion = computed(
-  () => isMobile.value && (mobileDayTodoInlineEditing.value || isKeyboardOverlapApprox.value),
-);
+const suppressMobilePlannerMotion = computed(() => isMobile.value && (mobileDayTodoInlineEditing.value || isKeyboardOverlapApprox.value));
 const showStateLogModal = ref(false);
 let unregisterPlannerCommandApi: (() => void) | null = null;
 let unregisterPlannerDaySpaceToggleCheck: (() => void) | null = null;
@@ -1948,8 +1946,6 @@ const { startResize: startRightResize } = useResize(
 .planner-view-container {
   flex: 1;
   overflow: auto;
-  /* 纵向滚动条稳定占位：避免内容与表头在日视图下随 scrollbar 出现/消失横向缩放 */
-  scrollbar-gutter: stable;
   min-height: 0; /* 重要：允许 flex 子项收缩 */
   display: flex;
   flex-direction: column;
@@ -2052,6 +2048,9 @@ const { startResize: startRightResize } = useResize(
   .resize-handle-horizontal,
   .resize-handle {
     display: none;
+  }
+  .planner-view-container {
+    scrollbar-gutter: stable;
   }
 }
 

@@ -226,7 +226,7 @@ defineExpose({
 </script>
 <style scoped>
 .today-container {
-  margin: 0px 0px 0px 5px;
+  margin: 0px 8px 0px 5px;
 }
 .schedule-container {
   margin-top: 3px;
@@ -234,5 +234,11 @@ defineExpose({
 
 .todo-container {
   margin-bottom: 2px;
+}
+
+@media (max-width: 430px) {
+  .today-container {
+    margin: 0px 0px 0px 5px;
+  }
 }
 </style>
