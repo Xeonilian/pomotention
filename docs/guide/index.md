@@ -26,7 +26,6 @@
 - [时间表构建](reference/timetable.md)
 - [任务追踪](reference/task.md)
 - [番茄时钟](reference/timer.md)
-- [日程导出](reference/ics.md)
 
 ### 数据管理
 

@@ -65,8 +65,6 @@
                 v-if="settingStore.settings.viewSet === 'day'"
                 class="day-info"
                 :class="{
-                  yesterday: isViewDateYesterday,
-                  tomorrow: isViewDateTomorrow,
                   'day-info--public-holiday': !!dayHolidayLabel,
                 }"
               >
@@ -488,8 +486,6 @@ const { currentDatePomoCount, globalRealPomo } = usePomodoroStats();
 // 计算当前日期 不赋值在UI计算class就会失效，但是UI输出的值是正确的
 const isViewDateToday = computed(() => dateService.isViewDateToday);
 
-const isViewDateYesterday = computed(() => dateService.isViewDateYesterday);
-const isViewDateTomorrow = computed(() => dateService.isViewDateTomorrow);
 const appDateTimestamp = computed(() => dateService.appDateTimestamp);
 
 /** 日视图头部节假日文案（本地 JSON）；Pinia 内 ref 可能已解包，用 toValue */
@@ -1869,14 +1865,6 @@ const { startResize: startRightResize } = useResize(
   cursor: pointer;
   background-color: var(--color-background);
 }
-
-/* .day-info.tomorrow .day-status {
-  box-shadow: 0px -1px 1px 1px var(--color-red-light) inset;
-}
-
-.day-info.yesterday .day-status {
-  box-shadow: 0px -1px 1px 1px var(--color-blue-light) inset;
-} */
 
 .global-pomo {
   display: inline-flex;
