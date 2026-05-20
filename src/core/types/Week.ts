@@ -70,8 +70,6 @@ export interface WeekBlockItem {
   column?: number; // 布局列（0-2，最多3列）
   width?: string; // CSS宽度（如 '33.33%'）
   left?: string; // CSS左侧偏移（如 '0%'）
-  /** 仅有结束时间：周视图用灯泡标记，不用时间条 */
-  endOnly?: boolean;
 }
 
 // ======================== 组件Props类型 ========================

@@ -1,19 +1,35 @@
-// src/composables/useWeekBlock.ts
+// src/composables/planner/useWeekBlock.ts
+/**
+ * 周视图时间条布局
+ *
+ * 数据流：UnifiedItem → getItemWeekRange（weekDays）→ WeekBlockItem → 本文件叠放 → getItemBlockStyle
+ *
+ * 叠放规则（同一天内）：
+ * 1. 连通重叠组：两段时间交叠 > MIN_OVERLAP_MS（5min）则同组
+ * 2. 组内仅 1 条 → 全宽
+ * 3. 时长差不多（短/长 ≥ SIMILAR_DURATION_RATIO）且交叠占短块比例 ≥ MIN_OVERLAP_RATIO_FOR_COLUMNS
+ *    → 均分并排，最多 3 列（第 4 条起与第 3 列同列）
+ * 4. 否则（包含关系 / 轻微交叠）→ 最长条全宽作底；其余按开始时间排在右侧 1/3 区域叠放，叠放簇内最多 3 列
+ * 5. schedule 且为底条（column 0）→ 渲染强制全宽
+ */
 import { computed, unref, type MaybeRef } from "vue";
 import type { WeekBlockItem } from "@/core/types/Week";
 import { useWeekData } from "@/composables/planner/useWeekData";
-import { getItemWeekRange, isWeekBlockOverlapping, getHour, startOfDay } from "@/core/utils/weekDays";
+import { getItemWeekRange, getHour, startOfDay } from "@/core/utils/weekDays";
 import { useDevice } from "@/composables/platform/useDevice";
 
 const { isMobile } = useDevice();
-const END_MARKER_SIZE_PX = 20;
 const BASE_PX_PER_HOUR = 40;
+/** 低于此交叠时长不计为重叠 */
 const MIN_OVERLAP_MS = 5 * 60 * 1000;
-/** 右侧叠放区：left 1/3 起，占宽 2/3 */
+/** 叠放区起点：容器宽度的 1/3 */
 const OVERLAY_LEFT_PCT = 100 / 3;
+/** 叠放区总宽（相对列宽百分比，移动端略宽） */
 const OVERLAY_WIDTH_PCT = isMobile.value ? 120 : 70;
-/** 时长比 ≥ 此值视为「差不多长」，仍均分列 */
+/** 短时长/长时长 ≥ 此值视为「差不多长」 */
 const SIMILAR_DURATION_RATIO = 0.6;
+/** 交叠/短块时长 ≥ 此值才允许均分并排（避免轻微交叠仍并排） */
+const MIN_OVERLAP_RATIO_FOR_COLUMNS = 0.2;
 
 export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targetHeight?: MaybeRef<number>) {
   const unifiedTimeRange = computed(() => {
@@ -82,7 +98,6 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targe
           type: item.type,
           start: range.start,
           end: range.end,
-          endOnly: range.endOnly,
           dayIndex: dayIdx,
           item,
         });
@@ -93,18 +108,38 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targe
   });
 
   const getOverlapDuration = (a: { start: number; end: number }, b: { start: number; end: number }): number => {
-    if (!isWeekBlockOverlapping(a, b)) return 0;
-    const overlapStart = Math.max(a.start, b.start);
-    const overlapEnd = Math.min(a.end, b.end);
-    return Math.max(0, overlapEnd - overlapStart);
+    if (a.end <= b.start || b.end <= a.start) return 0;
+    return Math.max(0, Math.min(a.end, b.end) - Math.max(a.start, b.start));
   };
 
-  const blocksOverlap = (a: WeekBlockItem, b: WeekBlockItem): boolean => {
-    if (a.endOnly && b.endOnly) return Math.abs(a.end - b.end) <= MIN_OVERLAP_MS;
-    return getOverlapDuration(a, b) > MIN_OVERLAP_MS;
-  };
+  const blocksOverlap = (a: WeekBlockItem, b: WeekBlockItem): boolean => getOverlapDuration(a, b) > MIN_OVERLAP_MS;
 
   const blockDurationMs = (b: WeekBlockItem) => Math.max(0, b.end - b.start);
+
+  const overlapRatioOfPair = (a: WeekBlockItem, b: WeekBlockItem): number => {
+    const overlap = getOverlapDuration(a, b);
+    const shorter = Math.min(blockDurationMs(a), blockDurationMs(b));
+    return shorter > 0 ? overlap / shorter : 0;
+  };
+
+  const maxOverlapRatioInGroup = (group: WeekBlockItem[]): number => {
+    let max = 0;
+    for (let i = 0; i < group.length; i++) {
+      for (let j = i + 1; j < group.length; j++) {
+        max = Math.max(max, overlapRatioOfPair(group[i], group[j]));
+      }
+    }
+    return max;
+  };
+
+  const shouldUseEqualColumns = (group: WeekBlockItem[]): boolean => {
+    const durations = group.map(blockDurationMs);
+    const maxD = Math.max(...durations);
+    const minD = Math.min(...durations);
+    const similarDuration = maxD > 0 && minD / maxD >= SIMILAR_DURATION_RATIO;
+    const substantialOverlap = maxOverlapRatioInGroup(group) >= MIN_OVERLAP_RATIO_FOR_COLUMNS;
+    return similarDuration && substantialOverlap;
+  };
 
   const layoutEqualColumns = (group: WeekBlockItem[]): WeekBlockItem[] => {
     const sorted = [...group].sort((a, b) => a.start - b.start);
@@ -137,16 +172,13 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targe
     return cluster;
   };
 
-  /** 重叠组内：最长块全宽，短块从 1/3 起叠在右侧 2/3 */
+  /** 包含/轻交叠：最长全宽，短块叠在右侧 1/3 区域 */
   const layoutSpanOverlayGroup = (group: WeekBlockItem[]): WeekBlockItem[] => {
     if (group.length === 1) {
       return [{ ...group[0], left: "0%", width: "100%", column: 0 }];
     }
 
-    const durations = group.map((b) => blockDurationMs(b));
-    const maxD = Math.max(...durations);
-    const minD = Math.min(...durations);
-    if (maxD > 0 && minD / maxD >= SIMILAR_DURATION_RATIO) {
+    if (shouldUseEqualColumns(group)) {
       return layoutEqualColumns(group);
     }
 
@@ -197,36 +229,14 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targe
     return groups;
   };
 
-  const layoutEndMarkerColumns = (markers: WeekBlockItem[]): WeekBlockItem[] => {
-    if (markers.length === 0) return [];
-    const sorted = [...markers].sort((a, b) => a.end - b.end);
-    return sorted.map((item) => {
-      const overlapping = sorted.filter((o) => blocksOverlap(item, o));
-      const overlapIndex = overlapping.findIndex((i) => i.id === item.id);
-      const count = Math.min(overlapping.length, 3);
-      const col = overlapIndex < 3 ? overlapIndex : 2;
-      const width = 100 / count;
-      return {
-        ...item,
-        column: col,
-        width: `${width}%`,
-        left: `${col * width}%`,
-      };
-    });
-  };
-
   const calculateWeekBlockLayout = (items: WeekBlockItem[], dayIndex: number): WeekBlockItem[] => {
     const dayItems = items.filter((item) => item.dayIndex === dayIndex);
     if (dayItems.length === 0) return [];
 
-    const timeBlocks = dayItems.filter((i) => !i.endOnly);
-    const endMarkers = dayItems.filter((i) => i.endOnly);
-
     const laidOut: WeekBlockItem[] = [];
-    for (const group of buildOverlapGroups(timeBlocks)) {
+    for (const group of buildOverlapGroups(dayItems)) {
       laidOut.push(...layoutSpanOverlayGroup(group));
     }
-    laidOut.push(...layoutEndMarkerColumns(endMarkers));
     return laidOut;
   };
 
@@ -255,28 +265,6 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targe
 
   const getItemBlockStyle = (item: WeekBlockItem, dayStartTs: number) => {
     const range = unifiedTimeRange.value;
-
-    if (item.endOnly) {
-      if (startOfDay(item.end) !== dayStartTs) return { display: "none" };
-      const endDate = new Date(item.end);
-      const endHour = endDate.getHours() + endDate.getMinutes() / 60;
-      const timeTop = (endHour - range.startHour) * pxPerHour.value;
-      const gridH = timeGridHeight.value;
-      // 灯泡整体在时刻线之上，并限制在网格高度内（避免 23:59 等贴底被 overflow 裁切）
-      const top = Math.max(0, Math.min(timeTop - END_MARKER_SIZE_PX, gridH - END_MARKER_SIZE_PX));
-      const col = item.column ?? 0;
-      const rightPx = 2 + col * (END_MARKER_SIZE_PX + 2);
-      return {
-        position: "absolute",
-        top: `${top}px`,
-        right: `${rightPx}px`,
-        left: "auto",
-        width: "auto",
-        height: `${END_MARKER_SIZE_PX}px`,
-        zIndex: 10,
-      };
-    }
-
     const itemDayStart = startOfDay(item.start);
     const itemDayEnd = startOfDay(item.end);
 
@@ -341,13 +329,9 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targe
   };
 
   return {
-    unifiedTimeRange,
-    weekBlockItems,
     layoutedWeekBlocks,
     hourStamps,
     timeGridHeight,
-    pxPerHour,
-    calculateWeekBlockLayout,
     getItemBlockStyle,
     getHourTickTop,
   };
