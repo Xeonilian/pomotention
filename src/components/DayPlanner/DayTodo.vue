@@ -2023,7 +2023,7 @@ col.col-end {
 }
 
 col.col-rank {
-  width: 24px;
+  width: 30px;
 }
 
 td.col-rank-disabled {
@@ -2070,7 +2070,7 @@ col.col-status {
   }
 
   col.col-rank {
-    width: 24px;
+    width: 26px;
   }
 
   col.col-status {

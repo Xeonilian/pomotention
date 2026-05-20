@@ -142,7 +142,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 // 每日显示项目数
 const maxItemsPerDay = computed(() => {
-  return isMobile.value ? (isTaskVisible.value ? 6 : 9) : isTaskVisible.value ? 6 : 9; // 至少显示1个项目
+  return isMobile.value ? (isTaskVisible.value ? 5 : 7) : isTaskVisible.value ? 5 : 7; // 至少显示1个项目
 });
 
 const days = computed(() => {
@@ -635,7 +635,6 @@ function getPomoBgColorHEX(ratio: number) {
 .more {
   position: absolute;
   bottom: -2px;
-  left: 0;
   right: 0;
   text-align: right;
   color: var(--color-text-secondary);
@@ -643,6 +642,7 @@ function getPomoBgColorHEX(ratio: number) {
   font-family: "Segoe UI Symbol", "Noto Emoji", "Twemoji Mozilla", "Apple Symbols", sans-serif;
   white-space: nowrap;
   padding-right: 6px;
+  width: 30px;
 }
 
 @media (max-width: 430px) {

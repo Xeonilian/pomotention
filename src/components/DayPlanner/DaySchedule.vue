@@ -923,7 +923,7 @@ col.col-end {
 }
 
 col.col-duration {
-  width: 24px;
+  width: 30px;
 }
 col.col-intent {
   width: 55%;
@@ -1232,7 +1232,7 @@ td.status-col {
   }
 
   col.col-duration {
-    width: 24px;
+    width: 26px;
   }
 
   col.col-status {
