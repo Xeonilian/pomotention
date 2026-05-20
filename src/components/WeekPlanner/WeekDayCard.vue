@@ -52,22 +52,14 @@
 
         <!-- 时间块（仅在有数据时显示） -->
         <template v-if="day.items.length > 0">
-          <template v-for="block in layoutedWeekBlocks.get(day.index) || getFallbackWeekBlocks(day.items, day.index)" :key="block.id">
-            <WeekEndMarkerItem
-              v-if="block.endOnly"
-              :block="block"
-              :day-start-ts="day.startTs"
-              :get-item-block-style="getItemBlockStyle"
-              @item-change="handleItemChange"
-            />
-            <WeekBlockItem
-              v-else
-              :block="block"
-              :day-start-ts="day.startTs"
-              :get-item-block-style="getItemBlockStyle"
-              @item-change="handleItemChange"
-            />
-          </template>
+          <WeekBlockItem
+            v-for="block in layoutedWeekBlocks.get(day.index) || getFallbackWeekBlocks(day.items, day.index)"
+            :key="block.id"
+            :block="block"
+            :day-start-ts="day.startTs"
+            :get-item-block-style="getItemBlockStyle"
+            @item-change="handleItemChange"
+          />
         </template>
       </div>
 
@@ -92,7 +84,6 @@ import { NCard } from "naive-ui";
 import type { DayItem } from "@/core/types/Week";
 import type { WeekBlockItem as WeekBlockItemType } from "@/core/types/Week";
 import WeekBlockItem from "./WeekBlockItem.vue";
-import WeekEndMarkerItem from "./WeekEndMarkerItem.vue";
 import { formatMonthDay, getPomoColor, getFallbackWeekBlocks } from "@/core/utils/weekDays";
 import { getDateKey } from "@/core/utils";
 import type { HolidayDisplay } from "@/services/planner/publicHolidays";

@@ -39,22 +39,21 @@
       >
         <template #trigger>
           <span
-            v-if="displayTitleText"
             class="title title--popover-trigger"
             :title="block.item.title"
             :class="[{ 'activity--selected': activeId === block.item.activityId }]"
             role="button"
             :aria-label="trimmedBlockTitle"
           >
-            {{ displayTitleText }}
+            {{ trimmedBlockTitle }}
           </span>
         </template>
         <p class="week-block-title-popover">{{ block.item.title }}</p>
       </NPopover>
     </span>
-    <span v-else-if="displayTitleText" class="title-slot">
+    <span v-else-if="trimmedBlockTitle" class="title-slot">
       <span class="title" :title="block.item.title" :class="[{ 'activity--selected': activeId === block.item.activityId }]">
-        {{ displayTitleText }}
+        {{ trimmedBlockTitle }}
       </span>
     </span>
   </div>
@@ -92,22 +91,6 @@ const weekBlockStackLayout = computed(() => blockDurationMinutes.value >= 45);
 // 统一处理 tag 列表，避免空 tag 渲染占位
 const blockTagIds = computed(() => props.block.item.tagIds ?? []);
 const hiddenTagIdSet = new Set(TAG_IDS_HIDDEN_IN_TAG_RENDERER);
-
-// 单行周块：小屏按块时长限制格内可见字数；高块纵向堆叠时显示全文由样式换行+裁剪
-const singleLineCellTitle = computed(() => {
-  const raw = props.block.item.title ?? "";
-  if (!raw) return "";
-  const d = blockDurationMinutes.value;
-  const maxChars = d < 35 ? 4 : d < 75 ? 8 : 12;
-  return raw.slice(0, maxChars);
-});
-
-const displayTitleText = computed(() => {
-  const raw = props.block.item.title ?? "";
-  if (weekBlockStackLayout.value) return raw;
-  if (isMobile.value) return singleLineCellTitle.value;
-  return raw;
-});
 
 // 用于判断是否启用点击 popover（与 display 用 trim 判断一致）
 const trimmedBlockTitle = computed(() => (props.block.item.title ?? "").trim());
@@ -193,7 +176,6 @@ const handleClick = () => {
 </script>
 
 <style scoped>
-/* 基础item样式 - 保持不变 */
 .item {
   display: flex;
   align-items: center;
@@ -206,10 +188,10 @@ const handleClick = () => {
   overflow: hidden;
   min-width: 0;
   cursor: pointer;
-  position: relative; /* 新增：确保z-index生效 */
+  position: relative;
 }
 
-/* flex 剩余空间给标题，且可收缩；内部接 naive Popover 根节点 */
+/* flex 剩余空间给标题；内部 naive Popover 根节点需可收缩 */
 .title-slot {
   display: flex;
   min-width: 0;
@@ -218,7 +200,6 @@ const handleClick = () => {
   align-items: center;
 }
 
-/* Popover 根类名随版本可能不同：直接约束单根子节点，保证触发区域可收缩 */
 .title-slot > :deep(*) {
   min-width: 0;
   flex: 1 1 auto;
@@ -228,14 +209,10 @@ const handleClick = () => {
   align-items: center;
 }
 
-/* 悬停样式 - 保持不变 */
 .item:hover:not(.item--selected) {
   background-color: var(--color-blue-light-transparent);
 }
 
-/* 关键修复：提升选中样式优先级 */
-/* 1. 组合选择器提升权重，覆盖time-block的背景色 */
-/* 2. 增加!important确保优先级（仅在必要时使用） */
 .item.time-block.item--selected {
   background-color: var(--color-yellow-light) !important;
   z-index: 10;
@@ -246,17 +223,16 @@ const handleClick = () => {
   z-index: 10;
 }
 
-/* 时间块基础样式 - 保持原有逻辑 */
 .time-block {
   position: absolute;
   padding: 2px;
-  margin: 0px;
+  margin: 0;
   min-height: 10px;
   border: none;
   background-color: var(--color-background-light-transparent);
 }
 
-/* 区分todo和schedule的样式 - border-left颜色现在通过动态样式设置 */
+/* border-left 颜色由 :style 动态设置 */
 .time-block--todo,
 .time-block--schedule {
   border-left: 5px solid;
@@ -278,7 +254,6 @@ const handleClick = () => {
   cursor: pointer;
 }
 
-/* 与 TaskTracker .timeline-popover-text 对齐 */
 .week-block-title-popover {
   margin: 0;
   white-space: pre-wrap;
@@ -293,13 +268,12 @@ const handleClick = () => {
   white-space: nowrap;
   border-radius: 2px;
   border: 1px solid var(--color-blue-light);
-  box-shadow: 1px 1px 0px var(--color-background-dark);
+  box-shadow: 1px 1px 0 var(--color-background-dark);
   margin-left: 2px;
   line-height: 1.1;
   pointer-events: none;
 }
 
-/* 防止tag阻止点击事件 */
 .tag-renderer {
   pointer-events: none;
   flex-shrink: 0;
@@ -309,15 +283,12 @@ const handleClick = () => {
   gap: 1px;
 }
 
-.tag-container {
-  padding: 0px;
-}
-
 .item :deep(.tag-container) {
   flex-wrap: nowrap;
   overflow: hidden;
   min-width: 0;
   gap: 2px;
+  padding: 0;
 }
 
 .item :deep(.n-tag) {
@@ -339,73 +310,64 @@ const handleClick = () => {
 
 @media (max-width: 430px) {
   .item {
-    /* 小屏与时间、标题同一行，避免 schedule-time 单独占第一行 */
-    flex-direction: row;
     flex-wrap: nowrap;
-    align-items: center;
-    justify-content: flex-start;
     font-size: 9px;
-    padding: 0px;
+    padding: 0;
   }
+
   .item .title {
-    min-width: 0;
     flex: 1 1 auto;
-    white-space: nowrap;
-    overflow: hidden;
     text-overflow: clip;
     width: auto;
     font-size: 9px;
     line-height: 1.2;
   }
 
-  /* 时长较长的块恢复纵向布局，让标题多行占用高度 */
+  /* 时长 ≥45min：纵向叠放，标题多行换行 */
   .item.item--stacked {
     flex-direction: column;
     align-items: stretch;
     justify-content: center;
-    flex-wrap: nowrap;
   }
+
   .item.item--stacked .title-slot {
     flex: 1 1 auto;
     min-height: 0;
     align-self: stretch;
     align-items: flex-start;
   }
+
   .item.item--stacked .title-slot > :deep(*) {
     align-items: flex-start;
     align-self: stretch;
   }
+
   .item.item--stacked .title {
     flex: 1 1 auto;
     min-height: 0;
     width: 100%;
-    min-width: 0;
     white-space: normal;
-    overflow: hidden;
     text-overflow: clip;
     word-break: break-word;
-  }
-  .item.item--stacked .schedule-time {
-    flex-shrink: 0;
   }
 
   .schedule-time {
     flex-shrink: 0;
     font-size: 7px;
     box-shadow: none;
-    margin-left: 0px;
-    padding: 0px 2px;
-    /* 小屏下让时间文字在小标签内部垂直居中，避免视觉上“贴到底部” */
+    margin-left: 0;
+    padding: 0 2px;
     display: flex;
     align-items: center;
     justify-content: center;
     line-height: 1;
   }
+
   .time-block--todo,
   .time-block--schedule {
-    border-left: 4px solid;
-    padding-left: 2px;
+    border-left-width: 4px;
   }
+
   .tag-renderer {
     display: none;
   }
