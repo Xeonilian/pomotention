@@ -10,7 +10,7 @@ const END_MARKER_SIZE_PX = 20;
 const BASE_PX_PER_HOUR = 40;
 const MIN_OVERLAP_MS = 5 * 60 * 1000;
 /** 右侧叠放区：left 1/3 起，占宽 2/3 */
-const OVERLAY_LEFT_PCT = 100 / 5;
+const OVERLAY_LEFT_PCT = 100 / 3;
 const OVERLAY_WIDTH_PCT = isMobile.value ? 120 : 70;
 /** 时长比 ≥ 此值视为「差不多长」，仍均分列 */
 const SIMILAR_DURATION_RATIO = 0.6;
