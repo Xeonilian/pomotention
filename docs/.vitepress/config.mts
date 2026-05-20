@@ -130,7 +130,6 @@ export default withMermaid(
                 { text: "时间表构建", link: "/guide/reference/timetable" },
                 { text: "任务追踪", link: "/guide/reference/task" },
                 { text: "番茄时钟", link: "/guide/reference/timer" },
-                { text: "日程导出", link: "/guide/reference/ics" },
               ],
             },
             {
