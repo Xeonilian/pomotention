@@ -28,7 +28,7 @@
     </span>
     <span v-if="trimmedBlockTitle" class="title-slot">
       <NPopover
-        trigger="click"
+        :trigger="isMobile ? 'manual' : 'click'"
         placement="top"
         to="body"
         :show-arrow="true"
@@ -169,6 +169,9 @@ const getDefaultBorderColor = () => {
 };
 
 const handleClick = () => {
+  if (isMobile.value && trimmedBlockTitle.value) {
+    openTitlePopoverFor3s();
+  }
   const { item } = props.block;
   emit("item-change", item.id, item.ts, item.activityId, item.taskId);
 };
@@ -324,16 +327,16 @@ const handleClick = () => {
 .item.item--bar-only.time-block--schedule {
   border-left-width: 6px;
   padding-left: 0;
-  border-radius: 0 3px 3px 0;
 }
 
 .item.item--bar-only .title-slot {
   position: absolute;
   inset: 0;
-  left: 6px;
+  left: 2px;
   flex: none;
   min-width: 0;
   min-height: 0;
+  background-color: transparent;
 }
 
 .item.item--bar-only .title-slot > :deep(*) {

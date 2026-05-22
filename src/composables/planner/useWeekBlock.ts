@@ -23,9 +23,10 @@ const BASE_PX_PER_HOUR = 40;
 /** 低于此交叠时长不计为重叠 */
 const MIN_OVERLAP_MS = 5 * 60 * 1000;
 /** 叠放区起点：容器宽度的 1/3 */
-const OVERLAY_LEFT_PCT = 100 / 3;
-/** 叠放区总宽（相对列宽百分比，移动端略宽） */
-const OVERLAY_WIDTH_PCT = isMobile.value ? 120 : 70;
+const OVERLAY_LEFT_PCT = 100 / 4;
+/** 叠放区总宽（占容器百分比；移动端用右侧可用区，避免条带超出叠放区互相遮挡） */
+const OVERLAY_ZONE_PCT = 100 - OVERLAY_LEFT_PCT;
+const OVERLAY_WIDTH_PCT = isMobile.value ? OVERLAY_ZONE_PCT : 70;
 /** 短时长/长时长 ≥ 此值视为「差不多长」 */
 const SIMILAR_DURATION_RATIO = 0.6;
 /** 交叠/短块时长 ≥ 此值才允许均分并排（避免轻微交叠仍并排） */
@@ -308,9 +309,10 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targe
     const top = relativeStartHour * pxPerHour.value;
     const height = Math.max(durationHours * pxPerHour.value, 10);
 
-    const isBackground = (item.column ?? 0) === 0;
-    const forceFullWidthForSchedule = item.type === "schedule" && isBackground;
-    const zIndex = isBackground ? 2 : 3 + (item.column ?? 0);
+    const widthStr = item.width || "100%";
+    const isSpanBackground = (item.column ?? 0) === 0 && widthStr === "100%";
+    const forceFullWidthForSchedule = item.type === "schedule" && isSpanBackground;
+    const zIndex = isSpanBackground ? 2 : 3 + (item.column ?? 0);
 
     return {
       position: "absolute",
