@@ -11,12 +11,12 @@
     <n-space vertical>
       <div class="state-log-slider-grid">
         <div>
-          <div class="state-log-slider-label">精力值：{{ energyValue }}</div>
-          <n-slider ref="energySliderRef" v-model:value="energyValue" :min="1" :max="10" :step="1" :marks="marks" />
+          <div class="state-log-slider-label">⚡精力值：{{ energyValue }}</div>
+          <n-slider ref="energySliderRef" v-model:value="energyValue" :min="1" :max="10" :step="1" />
         </div>
         <div>
-          <div class="state-log-slider-label">愉悦值：{{ rewardValue }}</div>
-          <n-slider v-model:value="rewardValue" :min="1" :max="10" :step="1" :marks="marks" />
+          <div class="state-log-slider-label">🏵️愉悦值：{{ rewardValue }}</div>
+          <n-slider v-model:value="rewardValue" :min="1" :max="10" :step="1" />
         </div>
       </div>
 
@@ -46,14 +46,7 @@
       </div>
 
       <n-date-picker v-model:value="recordedAt" type="datetime" size="large" class="state-log-input" />
-      <n-input
-        v-model:value="title"
-        placeholder="状态描述（例如：午休后恢复）"
-        maxlength="60"
-        show-count
-        size="large"
-        class="state-log-input"
-      />
+      <n-input v-model:value="title" placeholder="状态描述" maxlength="60" show-count size="large" class="state-log-input" />
     </n-space>
     <template #action>
       <n-button type="primary" @click="handleConfirm">确认</n-button>
@@ -114,12 +107,6 @@ watch(
     slotSearchTerms.value = ["", ""];
   },
 );
-
-const marks = {
-  1: "1",
-  5: "5",
-  10: "10",
-};
 
 async function focusEnergySlider() {
   await nextTick();
@@ -204,7 +191,7 @@ const handleCancel = () => {
 
 .state-log-slider-label {
   font-size: 16px;
-  margin-bottom: 2px;
+  margin-top: 8px;
 }
 
 .state-log-tag-slots {
@@ -221,6 +208,7 @@ const handleCancel = () => {
   align-items: center;
   flex: 1 1 0;
   min-width: 0;
+  margin: 8px 0px;
 }
 
 .state-log-tag-slot-button {
@@ -240,6 +228,6 @@ const handleCancel = () => {
 }
 
 .state-log-input {
-  margin: 8px 0px;
+  margin: 0px 0px 4px 0px;
 }
 </style>

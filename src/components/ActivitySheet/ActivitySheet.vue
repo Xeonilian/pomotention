@@ -19,6 +19,7 @@
         @toggle-pomo-type="togglePomoType"
         @create-child-activity="createChildActivity"
         @increase-child-activity="increaseChildActivity"
+        @repeat-activity="repeatActivity"
       />
     </div>
 
@@ -362,6 +363,7 @@ const emit = defineEmits<{
   (e: "toggle-pomo-type", id: number | null | undefined): void; // 切换番茄钟类型
   (e: "create-child-activity", id: number | null | undefined): void; // 构建选中活动的子活动
   (e: "increase-child-activity", id: number | null | undefined): void; // 取消子项（名称含义建议确认）
+  (e: "repeat-activity", noTodoRepeat: boolean): void; // 重复当前活动
 }>();
 
 // ========================
@@ -1050,6 +1052,11 @@ function createChildActivity() {
 // 恢复选中活动的子活动
 function increaseChildActivity() {
   emit("increase-child-activity", activeId.value || selectedActivityId.value || null);
+}
+
+// 重复当前活动
+function repeatActivity(noTodoRepeat = false) {
+  emit("repeat-activity", noTodoRepeat);
 }
 </script>
 

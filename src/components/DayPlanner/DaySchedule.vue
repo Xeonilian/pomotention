@@ -111,7 +111,13 @@
           >
             <!-- 单元格 -->
             <!-- 1 完成状态 -->
-            <td :class="{ 'kbd-cell-active': props.navigatorActive && schedule.id === selectedRowId && keyboardCellOrder[keyboardCellIndex] === 'check' }" class="col-check">
+            <td
+              :class="{
+                'kbd-cell-active':
+                  props.navigatorActive && schedule.id === selectedRowId && keyboardCellOrder[keyboardCellIndex] === 'check',
+              }"
+              class="col-check"
+            >
               <n-checkbox
                 v-if="schedule.status !== 'cancelled'"
                 :size="isMobile ? 'small' : 'medium'"
@@ -133,7 +139,10 @@
             <!-- 2 开始时间 -->
             <td
               class="col-start"
-              :class="{ 'kbd-cell-active': props.navigatorActive && schedule.id === selectedRowId && keyboardCellOrder[keyboardCellIndex] === 'start' }"
+              :class="{
+                'kbd-cell-active':
+                  props.navigatorActive && schedule.id === selectedRowId && keyboardCellOrder[keyboardCellIndex] === 'start',
+              }"
               @click.stop="startEditing(schedule.id, 'start')"
               :title="editingRowId === schedule.id && editingField === 'start' ? '' : '单击编辑'"
             >
@@ -155,7 +164,10 @@
             <!-- 3 结束时间 -->
             <td
               class="col-end"
-              :class="{ 'kbd-cell-active': props.navigatorActive && schedule.id === selectedRowId && keyboardCellOrder[keyboardCellIndex] === 'done' }"
+              :class="{
+                'kbd-cell-active':
+                  props.navigatorActive && schedule.id === selectedRowId && keyboardCellOrder[keyboardCellIndex] === 'done',
+              }"
               @click.stop="startEditing(schedule.id, 'done')"
               :title="editingRowId === schedule.id && editingField === 'done' ? '' : '单击编辑'"
             >
@@ -179,7 +191,8 @@
               class="col-duration"
               :class="{
                 'is-empty-min': schedule.activityDueRange?.[1] === '',
-                'kbd-cell-active': props.navigatorActive && schedule.id === selectedRowId && keyboardCellOrder[keyboardCellIndex] === 'duration',
+                'kbd-cell-active':
+                  props.navigatorActive && schedule.id === selectedRowId && keyboardCellOrder[keyboardCellIndex] === 'duration',
               }"
               @click.stop="startEditing(schedule.id, 'duration')"
               :title="editingRowId === schedule.id && editingField === 'duration' ? '' : '单击编辑'"
@@ -204,7 +217,8 @@
               class="col-intent"
               :class="{
                 'cloud-background': schedule.isUntaetigkeit === true,
-                'kbd-cell-active': props.navigatorActive && schedule.id === selectedRowId && keyboardCellOrder[keyboardCellIndex] === 'title',
+                'kbd-cell-active':
+                  props.navigatorActive && schedule.id === selectedRowId && keyboardCellOrder[keyboardCellIndex] === 'title',
               }"
               @click.stop="startEditing(schedule.id, 'title')"
               :title="editingRowId === schedule.id && editingField === 'title' ? '' : '单击编辑'"
@@ -261,7 +275,10 @@
             <!-- 6 地点 -->
             <td
               class="col-location"
-              :class="{ 'kbd-cell-active': props.navigatorActive && schedule.id === selectedRowId && keyboardCellOrder[keyboardCellIndex] === 'location' }"
+              :class="{
+                'kbd-cell-active':
+                  props.navigatorActive && schedule.id === selectedRowId && keyboardCellOrder[keyboardCellIndex] === 'location',
+              }"
               @click.stop="startEditing(schedule.id, 'location')"
               :title="editingRowId === schedule.id && editingField === 'location' ? '' : '单击编辑'"
             >
@@ -386,8 +403,14 @@ const emit = defineEmits<{
     },
   ): void;
   (e: "quick-add-schedule"): void;
+  (e: "mobile-inline-edit-active", active: boolean): void;
 }>();
 
+// 移动端待办格子编辑态同步到首页，用于临时隐藏下方 Task 区
+watch([editingRowId, editingField, isMobile], () => {
+  const active = isMobile.value && editingRowId.value != null && editingField.value != null;
+  emit("mobile-inline-edit-active", active);
+});
 // 添加状态来控制提示信息
 const showPopover = ref(false);
 const popoverMessage = ref("");
@@ -862,6 +885,10 @@ defineExpose({
   confirmKeyboardAction,
   toggleCheckForSelectedRow,
 });
+
+onBeforeUnmount(() => {
+  emit("mobile-inline-edit-active", false);
+});
 </script>
 
 <style scoped>
@@ -896,7 +923,7 @@ col.col-end {
 }
 
 col.col-duration {
-  width: 24px;
+  width: 30px;
 }
 col.col-intent {
   width: 55%;
@@ -1205,7 +1232,7 @@ td.status-col {
   }
 
   col.col-duration {
-    width: 24px;
+    width: 26px;
   }
 
   col.col-status {

@@ -215,7 +215,7 @@ function parseSequence(sequence: string): PomodoroStep[] {
 
 /** 冷启动或 store finalize 无 phase 回调时，由 sequencePhaseContinuation 推进序列 */
 function invokeSequencePhaseContinuation(): void {
-  if (!isRunning.value) return;
+  if (!timerStore.isActive || !timerStore.isFromSequence) return;
   let steps: PomodoroStep[];
   try {
     steps = parseSequence(sequenceInput.value);

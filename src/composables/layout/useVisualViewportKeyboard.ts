@@ -2,7 +2,9 @@ import { ref, computed } from "vue";
 
 const FAB_CLEARANCE_ABOVE_KEYBOARD_PX = 8;
 const FAB_ANCHOR_HEIGHT_PX = 50;
-const FAB_KEYBOARD_RAW_OBSCURED_MIN_PX = 72;
+/** 与 FAB 侧判定同源：外层可用来关掉「追着变色视口跑」的 layout transition */
+export const VISUAL_KEYBOARD_OVERLAP_MIN_PX = 72;
+const FAB_KEYBOARD_RAW_OBSCURED_MIN_PX = VISUAL_KEYBOARD_OVERLAP_MIN_PX;
 const FAB_KEYBOARD_EXTRA_DOWN_PX = 26;
 
 function readInnerSize() {
@@ -48,6 +50,9 @@ export function useVisualViewportKeyboard() {
     }
   }
 
+  /** 视口底部被遮挡超过阈值时近似视为系统键盘展开（Android/iOS 通用启发式） */
+  const isKeyboardOverlapApprox = computed(() => obscuredBottomRawPx.value >= FAB_KEYBOARD_RAW_OBSCURED_MIN_PX);
+
   const rootCssVars = computed(() => {
     const rawObscured = obscuredBottomRawPx.value;
     const keyboardOpen = rawObscured >= FAB_KEYBOARD_RAW_OBSCURED_MIN_PX;
@@ -84,6 +89,7 @@ export function useVisualViewportKeyboard() {
   return {
     viewportInnerH,
     viewportInnerW,
+    isKeyboardOverlapApprox,
     rootCssVars,
     syncFromVisualViewport,
     attachListeners,

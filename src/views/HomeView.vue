@@ -22,23 +22,18 @@
 
       <!-- 中间内容区域 -->
       <div
+        ref="middleColumnEl"
         class="middle"
         :class="{
           'middle-alone': !settingStore.settings.showTimetable && !settingStore.settings.showActivity && !settingStore.settings.showAi,
           'middle--landscape-fallback': isMobile && isLandscapeViewport,
+          'middle--mobile-planner-height-anim': isMobile && settingStore.settings.showPlanner,
+          'middle--suppress-planner-motion': suppressMobilePlannerMotion,
         }"
       >
         <!-- 今日视图 -->
-        <div
-          v-if="settingStore.settings.showPlanner"
-          class="middle-top"
-          :style="
-            settingStore.settings.showTask
-              ? { height: effectiveMiddleTopHeightPx + 'px' }
-              : { height: 'calc(100% - env(safe-area-inset-bottom)*1.35)' }
-          "
-        >
-          <!-- 任务计划的头部和控件 -->
+        <div v-if="settingStore.settings.showPlanner" class="middle-top" :style="middleTopPlannerStyle">
+          <!-- 计划表的头部和控件 -->
           <div class="planner-header" @click.stop="cleanSelection">
             <div class="planner-header-left">
               <!-- 年入口：仅显示年份，点击进入年视图；在年视图时也只显示年份 -->
@@ -70,8 +65,6 @@
                 v-if="settingStore.settings.viewSet === 'day'"
                 class="day-info"
                 :class="{
-                  yesterday: isViewDateYesterday,
-                  tomorrow: isViewDateTomorrow,
                   'day-info--public-holiday': !!dayHolidayLabel,
                 }"
               >
@@ -123,17 +116,17 @@
                 v-if="!isMobile"
                 @click="onRepeatActivity(false)"
                 text
-                type="info"
+                type="default"
                 size="small"
-                :disabled="selectedRowId === null && activeId === null"
+                :disabled="selectedRowId === null"
               >
                 <template #icon>
-                  <n-icon><ArrowRepeatAll24Regular /></n-icon>
+                  <n-icon><ArrowRepeatAll20Regular /></n-icon>
                 </template>
               </n-button>
               <n-button
                 v-if="!isMobile"
-                :type="selectedRowId === null ? 'default' : 'info'"
+                type="default"
                 size="small"
                 text
                 @click="onIcsExport"
@@ -142,7 +135,7 @@
               >
                 <template #icon>
                   <n-icon>
-                    <QrCode24Regular />
+                    <QrCode20Regular />
                   </n-icon>
                 </template>
               </n-button>
@@ -237,6 +230,7 @@
               @quick-add-todo="onQuickAddTodo"
               @quick-add-schedule="onQuickAddSchedule"
               @toggle-pomo-type="handleTogglePomoTypeTodoId"
+              @mobile-inline-edit-active="mobileDayTodoInlineEditing = $event"
             />
             <WeekPlanner
               v-if="settingStore.settings.showPlanner && settingStore.settings.viewSet === 'week'"
@@ -261,13 +255,20 @@
         </div>
         <!-- 任务视图调整大小手柄 -->
         <div
-          v-if="settingStore.settings.showTask && settingStore.settings.showPlanner"
+          v-if="taskPanelLayoutVisible && settingStore.settings.showPlanner"
           class="resize-handle"
           style="touch-action: none"
           @pointerdown="startVerticalResize"
         ></div>
-        <!-- 任务视图 -->
-        <div v-if="settingStore.settings.showTask" class="middle-bottom">
+        <!-- 任务视图：showTask 时常驻 DOM，移动端待办编辑时折叠过渡，避免 v-if 瞬时插入导致布局抖 -->
+        <div
+          v-if="settingStore.settings.showTask"
+          class="middle-bottom"
+          :class="{
+            'middle-bottom--collapsed': isMobile && mobileDayTodoInlineEditing,
+            'middle-bottom--motion': isMobile,
+          }"
+        >
           <div class="task-container">
             <TaskTracker ref="taskTrackerRef" @task-record-editing="setTaskRecordEditing" />
           </div>
@@ -292,6 +293,7 @@
           @toggle-pomo-type="onTogglePomoType"
           @create-child-activity="onCreateChildActivity"
           @increase-child-activity="onIncreaseChildActivity"
+          @repeat-activity="onRepeatActivity"
         />
       </div>
       <div v-if="settingStore.settings.showAi" class="right" :style="{ width: rightWidth + 'px' }">
@@ -347,8 +349,8 @@ import MobileHomeFab from "@/components/platform/MobileHomeFab.vue";
 import { useTagStore } from "@/stores/useTagStore";
 import {
   CalendarSettings20Regular,
-  QrCode24Regular,
-  ArrowRepeatAll24Regular,
+  QrCode20Regular,
+  ArrowRepeatAll20Regular,
   ChevronLeft20Regular,
   ChevronRight20Regular,
 } from "@vicons/fluent";
@@ -385,6 +387,7 @@ const { isMobile } = useDevice();
 const {
   viewportInnerH,
   viewportInnerW,
+  isKeyboardOverlapApprox,
   rootCssVars,
   attachListeners: attachVisualViewportListeners,
   detachListeners: detachVisualViewportListeners,
@@ -412,6 +415,10 @@ const queryDate = ref<number | null>(null);
 const showPopover = ref(false);
 const popoverMessage = ref("");
 const taskRecordEditing = ref(false);
+/** 日待办行内编辑（移动）：临时收起下方 Task 区，不改变 showTask 设置 */
+const mobileDayTodoInlineEditing = ref(false);
+/** 系统键盘与 vv 连续变化时关掉 height/max-height 过渡，避免目标高度每帧变化导致跳动 */
+const suppressMobilePlannerMotion = computed(() => isMobile.value && (mobileDayTodoInlineEditing.value || isKeyboardOverlapApprox.value));
 const showStateLogModal = ref(false);
 let unregisterPlannerCommandApi: (() => void) | null = null;
 let unregisterPlannerDaySpaceToggleCheck: (() => void) | null = null;
@@ -479,8 +486,6 @@ const { currentDatePomoCount, globalRealPomo } = usePomodoroStats();
 // 计算当前日期 不赋值在UI计算class就会失效，但是UI输出的值是正确的
 const isViewDateToday = computed(() => dateService.isViewDateToday);
 
-const isViewDateYesterday = computed(() => dateService.isViewDateYesterday);
-const isViewDateTomorrow = computed(() => dateService.isViewDateTomorrow);
 const appDateTimestamp = computed(() => dateService.appDateTimestamp);
 
 /** 日视图头部节假日文案（本地 JSON）；Pinia 内 ref 可能已解包，用 toValue */
@@ -1485,6 +1490,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  disconnectMiddleResizeObserver();
   if (unregisterPlannerCommandApi) {
     unregisterPlannerCommandApi();
     unregisterPlannerCommandApi = null;
@@ -1553,12 +1559,70 @@ const topHeight = computed({
   set: (v) => (settingStore.settings.topHeight = v),
 });
 
+/** 中间栏 DOM，用于 ResizeObserver 得到与 flex 布局一致的真实可用高度 */
+const middleColumnEl = ref<HTMLElement | null>(null);
+const middleColumnHeightPx = ref(0);
+let middleResizeObserver: ResizeObserver | null = null;
+let middleColumnHeightRaf = 0;
+let pendingMiddleColumnHPx: number | null = null;
+
+function disconnectMiddleResizeObserver() {
+  if (middleColumnHeightRaf) {
+    cancelAnimationFrame(middleColumnHeightRaf);
+    middleColumnHeightRaf = 0;
+  }
+  pendingMiddleColumnHPx = null;
+  middleResizeObserver?.disconnect();
+  middleResizeObserver = null;
+}
+
+watch(
+  middleColumnEl,
+  (el) => {
+    disconnectMiddleResizeObserver();
+    if (!el || typeof ResizeObserver === "undefined") return;
+    middleResizeObserver = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+      const h = entry.contentRect.height;
+      if (h <= 0) return;
+      const rounded = Math.round(h);
+      if (!isMobile.value) {
+        middleColumnHeightPx.value = rounded;
+        return;
+      }
+      // 移动端键盘动画时 RO 可能在同一帧内多次触发，合并到下一帧只应用最后一次，减轻 middle-top 高度来回拉扯
+      pendingMiddleColumnHPx = rounded;
+      if (middleColumnHeightRaf) return;
+      middleColumnHeightRaf = requestAnimationFrame(() => {
+        middleColumnHeightRaf = 0;
+        if (pendingMiddleColumnHPx != null) {
+          middleColumnHeightPx.value = pendingMiddleColumnHPx;
+          pendingMiddleColumnHPx = null;
+        }
+      });
+    });
+    middleResizeObserver.observe(el);
+  },
+  { flush: "post", immediate: true },
+);
+
+/** 计划表+任务分屏时用于换算的「中间栏总高」：实测优先，避免视口启发式与列真实高度不一致导致过渡末尾闪一下 */
+const plannerMiddleAvailPx = computed(() => {
+  const m = middleColumnHeightPx.value;
+  if (m > 0) return Math.max(180, m);
+  return Math.max(180, viewportInnerH.value - 24);
+});
+
 const isLandscapeViewport = computed(() => viewportInnerW.value > viewportInnerH.value);
+
+/** 任务区是否与计划表分栏显示（尊重设置；移动端待办编辑时临时不占位） */
+const taskPanelLayoutVisible = computed(() => settingStore.settings.showTask && !mobileDayTodoInlineEditing.value);
 
 /** 移动端横屏或总高度不足时限制 middle-top，避免任务区被挤没；桌面端仅在极端矮窗时收缩 */
 const effectiveMiddleTopHeightPx = computed(() => {
-  if (!settingStore.settings.showPlanner || !settingStore.settings.showTask) return topHeight.value;
-  const avail = Math.max(180, viewportInnerH.value - 24);
+  if (!settingStore.settings.showPlanner || !settingStore.settings.showTask || mobileDayTodoInlineEditing.value) return topHeight.value;
+  const avail = plannerMiddleAvailPx.value;
   const minTask = 100;
   const maxTop = Math.max(120, avail - minTask);
   if (!isMobile.value) {
@@ -1567,6 +1631,18 @@ const effectiveMiddleTopHeightPx = computed(() => {
   const needCap = isLandscapeViewport.value || topHeight.value + minTask > avail;
   if (!needCap) return topHeight.value;
   return Math.min(topHeight.value, maxTop);
+});
+
+/** 计划表顶区行内样式：分屏与「收起任务」两端尽量共用 plannerMiddleAvailPx，便于 height transition 对齐 */
+const middleTopPlannerStyle = computed(() => {
+  if (!settingStore.settings.showPlanner) return {};
+  if (taskPanelLayoutVisible.value) {
+    return { height: `${effectiveMiddleTopHeightPx.value}px` };
+  }
+  if (isMobile.value && settingStore.settings.showTask && mobileDayTodoInlineEditing.value) {
+    return { height: `${plannerMiddleAvailPx.value}px` };
+  }
+  return { height: "calc(100% - env(safe-area-inset-bottom) * 1.35)" };
 });
 
 const { startResize: startVerticalResize } = useResize(topHeight, "vertical", 0, 670);
@@ -1668,6 +1744,27 @@ const { startResize: startRightResize } = useResize(
   flex-shrink: 0;
 }
 
+@media (max-width: 768px) {
+  .middle.middle--mobile-planner-height-anim .middle-top {
+    transition: height 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+}
+
+@media (max-width: 768px) {
+  /* 系统键盘与行内编辑联动时高度目标连续变化，关掉过渡避免「追着跑」 */
+  .middle.middle--suppress-planner-motion.middle--mobile-planner-height-anim .middle-top,
+  .middle.middle--suppress-planner-motion .middle-bottom.middle-bottom--motion {
+    transition: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .middle.middle--mobile-planner-height-anim .middle-top,
+  .middle-bottom--motion {
+    transition: none !important;
+  }
+}
+
 .planner-header {
   display: flex;
   justify-content: space-between;
@@ -1717,7 +1814,7 @@ const { startResize: startRightResize } = useResize(
 .button-group {
   display: flex;
   flex-shrink: 0;
-  gap: 8px;
+  gap: 6px;
   align-items: center;
   background-color: var(--color-background);
   z-index: 5;
@@ -1769,14 +1866,6 @@ const { startResize: startRightResize } = useResize(
   background-color: var(--color-background);
 }
 
-/* .day-info.tomorrow .day-status {
-  box-shadow: 0px -1px 1px 1px var(--color-red-light) inset;
-}
-
-.day-info.yesterday .day-status {
-  box-shadow: 0px -1px 1px 1px var(--color-blue-light) inset;
-} */
-
 .global-pomo {
   display: inline-flex;
   align-items: center;
@@ -1804,6 +1893,32 @@ const { startResize: startRightResize } = useResize(
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
+}
+
+@media (max-width: 768px) {
+  .middle-bottom.middle-bottom--motion {
+    transition:
+      max-height 0.32s cubic-bezier(0.32, 0.72, 0, 1),
+      opacity 0.24s ease,
+      padding-block 0.22s ease;
+    max-height: min(120vh, 4000px);
+  }
+}
+@media (min-width: 769px) {
+  .middle-bottom.middle-bottom--motion {
+    max-height: none;
+  }
+}
+
+.middle-bottom--collapsed {
+  max-height: 0 !important;
+  opacity: 0;
+  flex: 0 0 0 !important;
+  min-height: 0 !important;
+  padding-top: 0;
+  padding-bottom: 0;
+  overflow: hidden;
+  pointer-events: none;
 }
 
 .task-container {
@@ -1921,6 +2036,9 @@ const { startResize: startRightResize } = useResize(
   .resize-handle-horizontal,
   .resize-handle {
     display: none;
+  }
+  .planner-view-container {
+    scrollbar-gutter: stable;
   }
 }
 

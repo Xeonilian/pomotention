@@ -56,7 +56,7 @@
         @click="settingStore.toggleKanbanQuadrantMode()"
       >
         <template #icon>
-          <n-icon><Grid24Regular /></n-icon>
+          <n-icon><Grid20Regular /></n-icon>
         </template>
       </n-button>
       <n-button
@@ -131,7 +131,7 @@ import {
   ArrowSortDownLines24Regular,
   DocumentTableSearch24Regular,
   ColumnArrowRight20Regular,
-  Grid24Regular,
+  Grid20Regular,
   ChevronUpDown24Regular,
   TableDeleteColumn20Regular,
   List24Filled,

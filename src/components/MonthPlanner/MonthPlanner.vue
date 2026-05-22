@@ -16,14 +16,18 @@
         >
           <!-- 节名在左上角；日期徽章保持右上 -->
           <div class="month-day-top" :class="{ 'month-day-top--badge-only': !day.holiday }">
-            <div v-if="day.holiday" class="month-holiday-left" :class="'month-holiday-left--' + day.holiday.kind">
+            <div
+              v-if="day.holiday"
+              class="month-holiday-left"
+              :class="'month-holiday-left--' + day.holiday.kind"
+              @click.stop="() => handleDateSelect(day.startTs)"
+            >
               {{ isMobile ? day.holiday.label.slice(0, 2) : day.holiday.label }}
             </div>
             <div
               class="date-badge"
               :class="{ today: day.isToday }"
-              @click.stop="() => handleDateSelect(day.startTs)"
-              @dblclick.stop="() => handleDateSelectDayView(day.startTs)"
+              @click.stop="() => handleDateSelectDayView(day.startTs)"
               @touchstart.stop="onMonthBadgeTouchStart"
               @touchend.stop="() => onMonthBadgeTouchEnd(day.startTs)"
               @touchcancel.stop="onMonthBadgeTouchCancel"
@@ -138,7 +142,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 // 每日显示项目数
 const maxItemsPerDay = computed(() => {
-  return isMobile.value ? (isTaskVisible.value ? 6 : 9) : isTaskVisible.value ? 6 : 9; // 至少显示1个项目
+  return isMobile.value ? (isTaskVisible.value ? 5 : 7) : isTaskVisible.value ? 5 : 7; // 至少显示1个项目
 });
 
 const days = computed(() => {
@@ -631,7 +635,6 @@ function getPomoBgColorHEX(ratio: number) {
 .more {
   position: absolute;
   bottom: -2px;
-  left: 0;
   right: 0;
   text-align: right;
   color: var(--color-text-secondary);
@@ -639,6 +642,7 @@ function getPomoBgColorHEX(ratio: number) {
   font-family: "Segoe UI Symbol", "Noto Emoji", "Twemoji Mozilla", "Apple Symbols", sans-serif;
   white-space: nowrap;
   padding-right: 6px;
+  width: 30px;
 }
 
 @media (max-width: 430px) {

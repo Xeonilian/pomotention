@@ -101,36 +101,21 @@ export default withMermaid(
             { text: "轻松上手", link: "/guide/intro/easy-onboarding" },
           ],
         },
-        {
-          text: "番茄工作法实操",
-          collapsed: true,
-          items: [
-            { text: "从这里开始", link: "/guide/pomodoro-technique/00-start-here" },
-            { text: "阶段1：记录时间", link: "/guide/pomodoro-technique/01-track-time" },
-            { text: "阶段2：应对打断", link: "/guide/pomodoro-technique/02-handle-interruptions" },
-            { text: "阶段3：估测任务", link: "/guide/pomodoro-technique/03-estimate-tasks" },
-            { text: "阶段4：优化流程", link: "/guide/pomodoro-technique/04-optimize-flow" },
-            { text: "阶段5：建立作息", link: "/guide/pomodoro-technique/05-build-schedule" },
-            { text: "三张清单", link: "/guide/pomodoro-technique/06-three-lists" },
-            { text: "卡住了怎么办", link: "/guide/pomodoro-technique/07-when-stuck" },
-            { text: "为什么有效", link: "/guide/pomodoro-technique/08-why-it-works" },
-          ],
-        },
+
         {
           text: "功能参考",
           items: [
             { text: "软件界面", link: "/guide/reference/interface" },
             { text: "模块联动", link: "/guide/reference/workflow" },
             {
-              text: "活动、计划与日程",
+              text: "模块功能",
               collapsed: true,
               items: [
-                { text: "活动清单", link: "/guide/reference/activity" },
-                { text: "任务计划", link: "/guide/reference/planner" },
+                { text: "活动清单记录", link: "/guide/reference/activity" },
+                { text: "计划表制定", link: "/guide/reference/planner" },
                 { text: "时间表构建", link: "/guide/reference/timetable" },
                 { text: "任务追踪", link: "/guide/reference/task" },
-                { text: "番茄时钟", link: "/guide/reference/timer" },
-                { text: "日程导出", link: "/guide/reference/ics" },
+                { text: "番茄时钟计时", link: "/guide/reference/timer" },
               ],
             },
             {

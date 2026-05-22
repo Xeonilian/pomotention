@@ -8,10 +8,6 @@
 - [账号与数据](intro/account-and-data.md)（注册、登录、同步与数据备份合并）
 - [轻松上手](intro/easy-onboarding.md)
 
-## 番茄工作法实操
-
-- [《番茄工作法》实操总览](pomodoro-technique/about-tech.md)
-
 ## 功能参考
 
 ### 界面
@@ -19,14 +15,13 @@
 - [软件界面](reference/interface.md)
 - [模块联动](reference/workflow.md)
 
-### 活动、计划与日程
+### 模块功能
 
-- [活动清单](reference/activity.md)
-- [任务计划](reference/planner.md)
+- [活动清单记录](reference/activity.md)
+- [计划表制定](reference/planner.md)
 - [时间表构建](reference/timetable.md)
 - [任务追踪](reference/task.md)
-- [番茄时钟](reference/timer.md)
-- [日程导出](reference/ics.md)
+- [番茄时钟计时](reference/timer.md)
 
 ### 数据管理
 

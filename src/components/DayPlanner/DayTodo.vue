@@ -638,6 +638,8 @@ function setTagPickerRef(el: any, todoId: number) {
 }
 // Enter 选中标签时置为 true，saveEdit 会跳过结束编辑以保持继续输入
 const selectingTagViaEnter = ref(false);
+// Enter 确认 rank 浮层时置为 true，避免 apply 关浮层后二次 Enter 退出 pe / 结束编辑
+const selectingRankViaEnter = ref(false);
 // 点击/触摸标签选择器时置为 true，避免移动端 blur 抢先触发保存导致选不中
 const isPickingTagFromSelector = ref(false);
 function onTodoTagPanelPointerGuard() {
@@ -705,6 +707,7 @@ onBeforeUnmount(() => {
   if (rankPopoverOutsideCleanup) rankPopoverOutsideCleanup();
   for (const [, p] of pomoPendingCheckByKey) clearTimeout(p.timer);
   pomoPendingCheckByKey.clear();
+  emit("mobile-inline-edit-active", false);
 });
 const priorityBindingDraft = reactive<Record<number, number | null>>({});
 const priorityShowInRankDraft = reactive<Record<number, boolean>>({});
@@ -796,7 +799,15 @@ const emit = defineEmits<{
   (e: "edit-todo-done", id: number, newTs: string): void;
   (e: "quick-add-todo"): void;
   (e: "toggle-pomo-type", id: number): void;
+  /** 移动端行内编辑：供首页临时腾出任务区高度 */
+  (e: "mobile-inline-edit-active", active: boolean): void;
 }>();
+
+// 移动端待办格子编辑态同步到首页，用于临时隐藏下方 Task 区
+watch([editingRowId, editingField, isMobile], () => {
+  const active = isMobile.value && editingRowId.value != null && editingField.value === "title";
+  emit("mobile-inline-edit-active", active);
+});
 
 // 对待办事项按优先级降序排序（高优先级在前）
 // 增加规则：一旦done，特殊值（33/44/55/66/77/88/99）按 startTime 排序
@@ -1534,6 +1545,8 @@ function startInstantSequence(steps: InstantPomoStep[], sequenceInput: string) {
   const runStep = (stepIndex: number) => {
     if (stepIndex >= steps.length) {
       timerStore.registerSequenceContinuation(null);
+      // 与 PomodoroSequence.stopPomodoro(false) 一致：序列自然结束须 reset，否则会卡在 00:00
+      timerStore.resetTimer();
       return;
     }
 
@@ -1559,6 +1572,7 @@ function startInstantSequence(steps: InstantPomoStep[], sequenceInput: string) {
 }
 
 function tryInstantStartPomodoro(todo: Todo) {
+  if (timerStore.isActive) return;
   if (!isInstantStartWindow(todo)) return;
   const workCount = getInstantWorkCount(todo);
   if (workCount <= 0) return;
@@ -1647,6 +1661,12 @@ function handleCancelSelectedTodo() {
 // 注意这里是 timestring 不是timestamp，是在Home用currentViewdate进行的转化
 function saveEdit(todo: Todo) {
   if (!editingRowId.value) return;
+  // rank 浮层 Enter 确认后 popover 已关，keyup 不应结束编辑
+  if (selectingRankViaEnter.value) {
+    selectingRankViaEnter.value = false;
+    return;
+  }
+  if (rankPopoverTodoId.value === todo.id) return;
   // Enter 选中标签后 keyup.enter 仍会触发 saveEdit，此时不结束编辑以便继续输入
   if (selectingTagViaEnter.value) {
     selectingTagViaEnter.value = false;
@@ -1924,6 +1944,8 @@ function toggleCheckForSelectedRow(): boolean {
 function confirmKeyboardAction(): boolean {
   const todo = selectedTodo.value;
   if (!todo) return false;
+  // hotkeys 可能对同一 Enter 触发两次；第二次 popover 已关，仍视为已处理
+  if (selectingRankViaEnter.value) return true;
   if (showEstimateInput.value) {
     confirmAddEstimate();
     return true;
@@ -1931,12 +1953,17 @@ function confirmKeyboardAction(): boolean {
   if (isPomoKeyboardModeActive(todo)) {
     return executePomoKeyboardTarget(todo);
   }
+  if (rankPopoverTodoId.value === todo.id) {
+    selectingRankViaEnter.value = true;
+    applyRankKeyboardOption(todo);
+    void nextTick(() => {
+      selectingRankViaEnter.value = false;
+    });
+    return true;
+  }
   if (editingRowId.value === todo.id && editingField.value) {
     saveEdit(todo);
     return true;
-  }
-  if (rankPopoverTodoId.value === todo.id) {
-    return applyRankKeyboardOption(todo);
   }
   return false;
 }
@@ -1996,7 +2023,7 @@ col.col-end {
 }
 
 col.col-rank {
-  width: 24px;
+  width: 30px;
 }
 
 td.col-rank-disabled {
@@ -2043,7 +2070,7 @@ col.col-status {
   }
 
   col.col-rank {
-    width: 24px;
+    width: 26px;
   }
 
   col.col-status {

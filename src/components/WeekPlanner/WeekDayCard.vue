@@ -7,7 +7,7 @@
     @click="() => handleDateSelect(day.startTs)"
   >
     <div class="day-header">
-      <div class="dow">
+      <div class="dow" @click.stop="() => handleDateSelect(day.startTs)">
         {{ isMobile ? dayNames[day.index][0] : dayNames[day.index] }}
       </div>
       <div class="week-day-holiday-mid">
@@ -18,8 +18,7 @@
       <div
         class="date"
         :class="{ today: day.isToday }"
-        @click.stop="() => handleDateSelect(day.startTs)"
-        @dblclick.stop="() => handleDateSelectDayView(day.startTs)"
+        @click.stop="() => handleDateSelectDayView(day.startTs)"
         @touchstart.stop="onWeekBadgeTouchStart"
         @touchend.stop="() => onWeekBadgeTouchEnd(day.startTs)"
         @touchcancel.stop="onWeekBadgeTouchCancel"
@@ -62,18 +61,18 @@
             @item-change="handleItemChange"
           />
         </template>
+      </div>
 
-        <!-- 统计信息-->
-        <div class="card-statistic">
-          <span class="pom-sum">
-            <template v-if="isMobile">🍅 {{ day.sumRealPomo }}</template>
-            <template v-else>
-              [
-              <span :style="{ color: getPomoColor(day.pomoRatio) }">🍅</span>
-              = {{ day.sumRealPomo }} 🍇 = {{ day.sumRealGrape }}]
-            </template>
-          </span>
-        </div>
+      <!-- 统计信息（置于时间网格外，避免被 overflow:hidden 裁切） -->
+      <div class="card-statistic">
+        <span class="pom-sum">
+          <template v-if="isMobile">🍅 {{ day.sumRealPomo }}</template>
+          <template v-else>
+            [
+            <span :style="{ color: getPomoColor(day.pomoRatio) }">🍅</span>
+            = {{ day.sumRealPomo }} 🍇 = {{ day.sumRealGrape }}]
+          </template>
+        </span>
       </div>
     </div>
   </n-card>
@@ -267,12 +266,15 @@ const handleItemChange = (id: number, _ts: number, activityId?: number, taskId?:
   min-width: 0;
   flex: 1;
   min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 /* 时间轴网格容器 */
 .time-grid-container {
   position: relative;
   width: 100%;
+
   overflow: hidden;
 }
 
@@ -322,8 +324,7 @@ const handleItemChange = (id: number, _ts: number, activityId?: number, taskId?:
 }
 
 .card-statistic {
-  position: absolute;
-  bottom: -20px;
+  flex-shrink: 0;
   width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -373,6 +374,10 @@ const handleItemChange = (id: number, _ts: number, activityId?: number, taskId?:
     width: 18px;
     height: 18px;
     margin-right: 4px;
+  }
+
+  :deep(.card-statistic) {
+    transform: translateY(4px);
   }
 }
 </style>

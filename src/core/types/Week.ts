@@ -32,6 +32,8 @@ export interface UnifiedItem {
   pomoType?: "🍅" | "🍇" | "🍒"; // 番茄类型
   dueDate?: number; // 截止时间戳
   startWeek?: number; // 开始时间戳
+  startTime?: number; // 实际开始时间戳
+  doneTime?: number; // 实际结束时间戳
 
   // Schedule 专属字段
   activityDueRange?: [number | null, string]; // [开始时间戳, 持续分钟(字符串)]

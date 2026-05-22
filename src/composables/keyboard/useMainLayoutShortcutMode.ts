@@ -25,6 +25,7 @@ import {
   pickPlannerRowByDigit,
   tryPlannerDaySpaceToggleCheck,
 } from "@/composables/keyboard/usePlannerKeyboardNavigator";
+import { isOverlayDirectionKeyTarget } from "@/composables/keyboard/keyboardOverlayTarget";
 
 export interface UseMainLayoutShortcutModeOptions {
   settingStore: ReturnType<typeof useSettingStore>;
@@ -58,6 +59,7 @@ export function useMainLayoutShortcutMode(options: UseMainLayoutShortcutModeOpti
   function handleArrowPrefixKeydown(event: KeyboardEvent) {
     if (event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return;
     if (isEditableTarget(event.target)) return;
+    if (isOverlayDirectionKeyTarget(event.target)) return;
     const key = event.key.toLowerCase();
     if (key === "a") activityArrowPrefixHeld.value = true;
     if (key === "t") taskArrowPrefixHeld.value = true;

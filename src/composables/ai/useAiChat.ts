@@ -103,7 +103,7 @@ export function useAiChat() {
         currentStep: 0,
       };
 
-      return `计划信息：\n\n${taskPrompt}\n我将基于这份说明生成详细的任务计划。开始吗？`;
+      return `计划信息：\n\n${taskPrompt}\n我将基于这份说明生成详细的计划表。开始吗？`;
     } catch (err) {
       taskPlanningContext.value = {
         state: DialogState.NORMAL_CHAT,

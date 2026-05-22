@@ -2,6 +2,7 @@ import { onUnmounted } from "vue";
 import hotkeys from "hotkeys-js";
 import type { AppActionId } from "@/actions/appActions";
 import { buildShortcutActionMap } from "@/composables/keyboard/shortcutCatalog";
+import { isOverlayDirectionKeyTarget } from "@/composables/keyboard/keyboardOverlayTarget";
 
 interface UseGlobalKeyboardShortcutsOptions {
   dispatchAction: (actionId: AppActionId, sequence: string) => boolean;
@@ -139,6 +140,9 @@ export function useGlobalKeyboardShortcuts(options: UseGlobalKeyboardShortcutsOp
     if (!options.isEnabled?.() && options.isEnabled !== undefined) return;
     if (event.isComposing || event.repeat) return;
     const modeKey = normalizeKey(handler.key ?? event.key);
+    if (alwaysRouteToModeHandlerKeys.has(modeKey) && isOverlayDirectionKeyTarget(event.target)) {
+      return;
+    }
     const shouldRouteToModeHandler = Boolean(options.isModeActive?.()) || alwaysRouteToModeHandlerKeys.has(modeKey);
     const handledByMode = Boolean(shouldRouteToModeHandler && options.onModeKey && options.onModeKey(modeKey, event));
     if (handledByMode) {
