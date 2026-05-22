@@ -108,14 +108,14 @@ export default withMermaid(
             { text: "软件界面", link: "/guide/reference/interface" },
             { text: "模块联动", link: "/guide/reference/workflow" },
             {
-              text: "活动、计划与日程",
+              text: "模块功能",
               collapsed: true,
               items: [
-                { text: "活动清单", link: "/guide/reference/activity" },
-                { text: "计划表", link: "/guide/reference/planner" },
+                { text: "活动清单记录", link: "/guide/reference/activity" },
+                { text: "计划表制定", link: "/guide/reference/planner" },
                 { text: "时间表构建", link: "/guide/reference/timetable" },
                 { text: "任务追踪", link: "/guide/reference/task" },
-                { text: "番茄时钟", link: "/guide/reference/timer" },
+                { text: "番茄时钟计时", link: "/guide/reference/timer" },
               ],
             },
             {
