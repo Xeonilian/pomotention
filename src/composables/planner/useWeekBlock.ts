@@ -18,7 +18,6 @@ import { useWeekData } from "@/composables/planner/useWeekData";
 import { getItemWeekRange, getHour, startOfDay } from "@/core/utils/weekDays";
 import { useDevice } from "@/composables/platform/useDevice";
 
-const { isMobile } = useDevice();
 const BASE_PX_PER_HOUR = 40;
 /** 低于此交叠时长不计为重叠 */
 const MIN_OVERLAP_MS = 5 * 60 * 1000;
@@ -26,13 +25,16 @@ const MIN_OVERLAP_MS = 5 * 60 * 1000;
 const OVERLAY_LEFT_PCT = 100 / 4;
 /** 叠放区总宽（占容器百分比；移动端用右侧可用区，避免条带超出叠放区互相遮挡） */
 const OVERLAY_ZONE_PCT = 100 - OVERLAY_LEFT_PCT;
-const OVERLAY_WIDTH_PCT = isMobile.value ? OVERLAY_ZONE_PCT : 70;
 /** 短时长/长时长 ≥ 此值视为「差不多长」 */
 const SIMILAR_DURATION_RATIO = 0.6;
 /** 交叠/短块时长 ≥ 此值才允许均分并排（避免轻微交叠仍并排） */
 const MIN_OVERLAP_RATIO_FOR_COLUMNS = 0.2;
 
 export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targetHeight?: MaybeRef<number>) {
+  const { isMobile } = useDevice();
+  /** 叠放区总宽：随 viewport / 设备形态更新，避免模块加载时定死 */
+  const overlayWidthPct = computed(() => (isMobile.value ? OVERLAY_ZONE_PCT : 70));
+
   const unifiedTimeRange = computed(() => {
     let minHour = 24;
     let maxHour = 0;
@@ -196,7 +198,7 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targe
       cluster.sort((a, b) => a.start - b.start);
       cluster.forEach((o, i) => {
         const col = i < 3 ? i : 2;
-        const w = OVERLAY_WIDTH_PCT / count;
+        const w = overlayWidthPct.value / count;
         const l = OVERLAY_LEFT_PCT + col * w;
         result.push({ ...o, left: `${l}%`, width: `${w}%`, column: col + 1 });
         laidOut.add(o.id);
