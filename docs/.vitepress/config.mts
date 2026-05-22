@@ -101,21 +101,7 @@ export default withMermaid(
             { text: "轻松上手", link: "/guide/intro/easy-onboarding" },
           ],
         },
-        {
-          text: "番茄工作法实操",
-          collapsed: true,
-          items: [
-            { text: "从这里开始", link: "/guide/pomodoro-technique/00-start-here" },
-            { text: "阶段1：记录时间", link: "/guide/pomodoro-technique/01-track-time" },
-            { text: "阶段2：应对打断", link: "/guide/pomodoro-technique/02-handle-interruptions" },
-            { text: "阶段3：估测任务", link: "/guide/pomodoro-technique/03-estimate-tasks" },
-            { text: "阶段4：优化流程", link: "/guide/pomodoro-technique/04-optimize-flow" },
-            { text: "阶段5：建立作息", link: "/guide/pomodoro-technique/05-build-schedule" },
-            { text: "三张清单", link: "/guide/pomodoro-technique/06-three-lists" },
-            { text: "卡住了怎么办", link: "/guide/pomodoro-technique/07-when-stuck" },
-            { text: "为什么有效", link: "/guide/pomodoro-technique/08-why-it-works" },
-          ],
-        },
+
         {
           text: "功能参考",
           items: [
