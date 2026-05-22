@@ -11,17 +11,6 @@
 - 我想把任务排进当天：见 [任务占位与拖拽](#任务占位与拖拽)
 - 我想恢复默认配置：见 [重置时间表](#重置时间表)
 
-## 常用按钮
-
-|                                                                              按钮图标                                                                               | 功能说明                           |
-| :-----------------------------------------------------------------------------------------------------------------------------------------------------------------: | :--------------------------------- |
-|  <img src="/icons/Backpack24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(193, 226, 255);border-radius: 6px;">  | 切换到工作时间表                   |
-|   <img src="/icons/Beach24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(193, 226, 255);border-radius: 6px;">    | 切换到娱乐时间表                   |
-|  <img src="/icons/Settings24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(224, 224, 224);border-radius: 6px;">  | 进入/退出编辑模式                  |
-| <img src="/icons/ArrowReset48Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(224, 224, 224);border-radius: 6px;"> | 重置为默认时间表                   |
-|      <img src="/icons/AddCircle24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:#d9fccc;border-radius: 10px;">       | 末尾增加 2h 时间块（上限 `24:00`） |
-|        <img src="/icons/Delete24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:#f8b3a7;border-radius: 10px;">        | 删除末尾时间块                     |
-
 ## 视图显示
 
 - 垂直时间轴展示 24 小时刻度。

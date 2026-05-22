@@ -18,7 +18,7 @@
 ### 模块功能
 
 - [活动清单记录](reference/activity.md)
-- [计划表指定](reference/planner.md)
+- [计划表制定](reference/planner.md)
 - [时间表构建](reference/timetable.md)
 - [任务追踪](reference/task.md)
 - [番茄时钟计时](reference/timer.md)
