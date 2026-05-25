@@ -27,12 +27,11 @@ export const useTagStore = defineStore("tagStore", () => {
     { deep: true, immediate: true },
   );
 
-  // 每当原始数据变化时，自动保存到 localStorage
+  // 数据变更时落盘；云上传仅在用户编辑类 action 中显式调度（与 useDataStore 一致）
   watch(
     rawTags,
     (tags) => {
       saveTags(tags);
-      scheduleDebouncedCloudUpload();
     },
     { deep: true },
   );
@@ -111,6 +110,7 @@ export const useTagStore = defineStore("tagStore", () => {
     };
 
     rawTags.value.push(newTag);
+    scheduleDebouncedCloudUpload();
     return newTag;
   }
 
@@ -127,6 +127,7 @@ export const useTagStore = defineStore("tagStore", () => {
         lastModified: Date.now(),
         synced: false,
       };
+      scheduleDebouncedCloudUpload();
     }
   }
 
@@ -172,6 +173,7 @@ export const useTagStore = defineStore("tagStore", () => {
         lastModified: Date.now(),
         synced: false,
       }));
+      scheduleDebouncedCloudUpload();
     }
   }
 

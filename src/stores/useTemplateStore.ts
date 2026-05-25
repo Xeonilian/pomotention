@@ -11,12 +11,11 @@ export const useTemplateStore = defineStore("template", () => {
   // 状态
   // ================================================================
   const rawTemplates = ref<Template[]>(loadTemplates());
-  // 每当原始数据变化时，自动保存到 localStorage
+  // 数据变更时落盘；云上传仅在用户编辑类 action 中显式调度（与 useDataStore 一致）
   watch(
     rawTemplates,
     (templates) => {
       saveTemplates(templates);
-      scheduleDebouncedCloudUpload();
     },
     { deep: true },
   );
@@ -66,6 +65,7 @@ export const useTemplateStore = defineStore("template", () => {
       lastModified: Date.now(),
     };
     rawTemplates.value.push(template);
+    scheduleDebouncedCloudUpload();
     return template;
   }
 
@@ -76,6 +76,7 @@ export const useTemplateStore = defineStore("template", () => {
       Object.assign(template, updates);
       template.synced = false;
       template.lastModified = Date.now();
+      scheduleDebouncedCloudUpload();
     }
   }
 
@@ -92,6 +93,7 @@ export const useTemplateStore = defineStore("template", () => {
         lastModified: Date.now(),
         synced: false,
       };
+      scheduleDebouncedCloudUpload();
     }
   }
 
