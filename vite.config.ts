@@ -108,6 +108,24 @@ export default defineConfig(({ mode, command }) => {
     },
     plugins: [
       ...(command === "serve" && mode === "development" && !isTimerMode ? [spawnDocsDevAfterListen()] : []),
+      // dev:timer / tauri:timer:dev 访问 / 时 Vite 默认仍读 index.html（完整版），改写到 timer.html
+      {
+        name: "timer-dev-root",
+        configureServer(server) {
+          if (command !== "serve" || !isTimerMode) return;
+          server.middlewares.use((req, _res, next) => {
+            const raw = req.url ?? "";
+            const q = raw.indexOf("?");
+            const pathOnly = (q >= 0 ? raw.slice(0, q) : raw) || "/";
+            const query = q >= 0 ? raw.slice(q) : "";
+            const normalized = pathOnly.replace(/\/$/, "") || "/";
+            if (normalized === "/" || normalized === "/index.html") {
+              req.url = `/timer.html${query}`;
+            }
+            next();
+          });
+        },
+      },
       vue(),
 
       // 主站带子路径时，误访问 /docs-app/ 会失败并出现 chrome-error；统一跳到 /{base}/docs-app/
