@@ -9,6 +9,11 @@
                 <n-icon :component="Pin24Regular" />
               </template>
             </n-button>
+            <n-button text type="default" title="统计数据" class="header-button" @click="openStats">
+              <template #icon>
+                <n-icon :component="DataArea24Regular" />
+              </template>
+            </n-button>
             <n-button text type="default" title="帮助" class="header-button" @click="openHelp">
               <template #icon>
                 <n-icon :component="QuestionCircle24Regular" />
@@ -57,7 +62,7 @@ import { ref } from "vue";
 import { useRouter } from "vue-router";
 import { NLayout, NLayoutHeader, NLayoutContent, NButton, NIcon } from "naive-ui";
 import { isTauri } from "@tauri-apps/api/core";
-import { Pin24Regular, QuestionCircle24Regular, Settings24Regular } from "@vicons/fluent";
+import { DataArea24Regular, Pin24Regular, QuestionCircle24Regular, Settings24Regular } from "@vicons/fluent";
 import PomotentionTimer from "@/components/PomotentionTimer/PomotentionTimer.vue";
 import { useAppWindow } from "@/composables/layout/useAppWindow";
 import { useDevice } from "@/composables/platform/useDevice";
@@ -92,6 +97,10 @@ function openSettings() {
 
 function openHelp() {
   void router.push({ name: "TimerHelp" });
+}
+
+function openStats() {
+  void router.push({ name: "TimerStats" });
 }
 
 function onExitMiniMode() {

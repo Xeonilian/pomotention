@@ -4,6 +4,7 @@ import { ref, computed, watch } from "vue";
 import { SESSION_MARKER_FULL_NAV_TO_HELP } from "@/composables/platform/useDocsUrl";
 import { useSettingStore } from "./useSettingStore.ts";
 import { playSound, SoundType, startSilentWhiteNoiseHold, startWhiteNoise, stopWhiteNoise } from "../core/sounds.ts";
+import { timerSessionBegin, timerSessionDiscardActive, timerSessionEnd } from "@/services/timer/timerSessionRecorder";
 
 // 修改状态类型，更清晰地表达三种状态
 type PomodoroState = "idle" | "working" | "breaking";
@@ -207,6 +208,7 @@ export const useTimerStore = defineStore(
 
     /** 损坏或无法推导的快照：静默 idle，不播提示音 */
     function safeInvalidateTimer(): void {
+      timerSessionDiscardActive();
       clearPhaseInterval();
       pomodoroState.value = "idle";
       timeRemaining.value = 0;
@@ -248,6 +250,7 @@ export const useTimerStore = defineStore(
       const useCont = !cb && isFromSequence.value && sequencePhaseContinuation.value != null;
 
       if (pomodoroState.value === "working") {
+        timerSessionEnd("completed");
         // 须等 playSound 的 Promise（decode+起播）完成后再停双轨；queueMicrotask 会在 await decode 之前跑，先于 tryPlayCueWebAudio 拆掉 HTML，息屏/Web 均可能无声或截断
         // 白噪音开启且链式进入下一段时不在此 stop，由 startBreak/startWorking 内 tryRetarget 复用 HTMLAudio，避免 iOS 定时器边界上 play NotAllowed
         const stripWnBeforeChain = !settingStore.settings.isWhiteNoiseEnabled;
@@ -264,6 +267,7 @@ export const useTimerStore = defineStore(
         };
         void playPhaseEndCue(SoundType.WORK_END).finally(() => runAfterWorkEndCue());
       } else if (pomodoroState.value === "breaking") {
+        timerSessionEnd("completed");
         const stripWnBeforeChain = !settingStore.settings.isWhiteNoiseEnabled;
         const runAfterBreakEndCue = () => {
           if (cb) {
@@ -393,6 +397,8 @@ export const useTimerStore = defineStore(
       isGray.value = false;
       isFromSequence.value = !!onFinish;
 
+      timerSessionBegin("work", dur);
+
       startWhiteNoise();
       playSound(SoundType.WORK_START);
 
@@ -418,6 +424,8 @@ export const useTimerStore = defineStore(
 
       isGray.value = false;
       isFromSequence.value = !!onFinish;
+
+      timerSessionBegin("break", dur);
 
       startSilentWhiteNoiseHold();
       playSound(SoundType.BREAK_START);
@@ -475,8 +483,10 @@ export const useTimerStore = defineStore(
     function cancelTimer(): void {
       const finish = () => resetTimer();
       if (isWorking.value) {
+        timerSessionEnd("squash", "Squash");
         void playPhaseEndCue(SoundType.WORK_END).finally(finish);
       } else if (isBreaking.value) {
+        timerSessionEnd("stop", "Stop");
         void playPhaseEndCue(SoundType.BREAK_END).finally(finish);
       } else {
         finish();
@@ -485,6 +495,7 @@ export const useTimerStore = defineStore(
 
     /** 仅清状态与停白噪音；阶段结束音由 finalizeCurrentPhase / cancelTimer / UI 在调用前自行 playSound */
     function resetTimer(): void {
+      timerSessionDiscardActive();
       isGray.value = true;
       clearPhaseInterval();
 
