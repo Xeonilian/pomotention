@@ -4,6 +4,7 @@ import { spawn, type ChildProcess } from "node:child_process";
 import { createConnection } from "node:net";
 import http from "node:http";
 import { readFileSync } from "node:fs";
+import path from "node:path";
 import { fileURLToPath, URL } from "node:url";
 
 const pkg = JSON.parse(
@@ -97,6 +98,8 @@ export default defineConfig(({ mode, command }) => {
   const base = (env.VITE_APP_BASE ? String(env.VITE_APP_BASE) : "/").replace(/\/?$/, "/");
   const baseNoTrailing = base.replace(/\/$/, "");
   const docsAppProxyPrefix = baseNoTrailing ? `${baseNoTrailing}/docs-app` : "/docs-app";
+  const isTimerMode = mode === "timer" || env.VITE_APP_VARIANT === "timer";
+  const rootDir = fileURLToPath(new URL(".", import.meta.url));
 
   return {
     base,
@@ -104,7 +107,7 @@ export default defineConfig(({ mode, command }) => {
       "import.meta.env.VITE_APP_VERSION": JSON.stringify(pkg.version),
     },
     plugins: [
-      ...(command === "serve" && mode === "development" ? [spawnDocsDevAfterListen()] : []),
+      ...(command === "serve" && mode === "development" && !isTimerMode ? [spawnDocsDevAfterListen()] : []),
       vue(),
 
       // 主站带子路径时，误访问 /docs-app/ 会失败并出现 chrome-error；统一跳到 /{base}/docs-app/
@@ -165,6 +168,15 @@ export default defineConfig(({ mode, command }) => {
     // 仅在分析时开启 sourcemap，平时更快更小
     build: {
       sourcemap: ENABLE_ANALYZE,
+      outDir: isTimerMode ? "dist-timer" : "dist",
+      rollupOptions: {
+        input: isTimerMode
+          ? { index: path.resolve(rootDir, "timer.html") }
+          : {
+              main: path.resolve(rootDir, "index.html"),
+              timer: path.resolve(rootDir, "timer.html"),
+            },
+      },
     },
 
     // Tauri 开发相关

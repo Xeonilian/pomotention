@@ -1,0 +1,61 @@
+{
+  "$schema": "https://schema.tauri.app/config/v2.json",
+  "productName": "Pomotention Timer",
+  "version": "0.6.8",
+  "identifier": "com.pomotention.timer",
+  "build": {
+    "beforeDevCommand": "pnpm dev:timer",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "pnpm build:timer",
+    "frontendDist": "../dist-timer"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "macOSPrivateApi": true,
+    "windows": [
+      {
+        "title": "Pomotention Timer",
+        "width": 480,
+        "height": 520,
+        "minWidth": 220,
+        "minHeight": 140,
+        "center": true,
+        "transparent": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "windows": {
+      "nsis": {}
+    },
+    "macOS": {
+      "minimumSystemVersion": "10.13",
+      "frameworks": [],
+      "entitlements": "./Entitlements.plist",
+      "hardenedRuntime": false,
+      "signingIdentity": "-"
+    },
+    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.icns", "icons/icon.ico"],
+    "licenseFile": "../LICENSE",
+    "createUpdaterArtifacts": false
+  },
+  "plugins": {
+    "shell": {
+      "open": true
+    },
+    "updater": {
+      "active": false,
+      "dialog": false,
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDk2MDRCNTkyMEM0NEJFRDYKUldUV3ZrUU1rclVFbHVUTms3aW1oa2FFdmptdmNxTzJoVzF2QUhLekFoMmZFcGNiOGpNU0xjV3AK",
+      "endpoints": ["https://github.com/Xeonilian/pomotention/releases/latest/download/latest.json"],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  }
+}
