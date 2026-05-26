@@ -191,11 +191,14 @@ function reportSize() {
   if (settingStore.settings.isCompactMode) {
     width = 140;
     height = 70;
-  } else if (props.isMiniMode && pomodoroContainerRef.value) {
-    // 置顶窗：按实际 DOM 上报，避免切换 🍕 时硬编码比内容高约数 px
-    const el = pomodoroContainerRef.value;
-    width = Math.max(el.offsetWidth, 150);
-    height = Math.max(el.offsetHeight, 50);
+  } else if (props.isMiniMode) {
+    width = 221;
+    if (props.showPomoSeq) {
+      // 置顶 + 🍕：比常规模型略减 3px，贴合实际内容高度
+      height = !isPomoSeqRunning.value ? 237 : 167;
+    } else {
+      height = 140;
+    }
   } else if (props.showPomoSeq) {
     width = 221;
     height = !isPomoSeqRunning.value ? 240 : 170;

@@ -169,9 +169,6 @@ export function useAppWindow() {
     }
   }
 
-  watch(() => showPomoSeq.value, updateWindowSize);
-  watch(() => timerStore.isActive, updateWindowSize);
-
   // 🔴 修正：使用 setTimeout 延迟执行回调，给 Vue 渲染 DOM 的时间
   function handleWebToggle(callback?: () => void) {
     isMiniMode.value = false;
@@ -197,6 +194,10 @@ export function useAppWindow() {
     }
     reportedPomodoroWidth.value = width;
     reportedPomodoroHeight.value = height;
+    // 须在 report-size 之后缩放：若 watch showPomoSeq 先跑会用上一态尺寸，切换 🍅/🍕 会反
+    if (isMiniMode.value) {
+      void updateWindowSize();
+    }
   }
 
   return {
