@@ -15,6 +15,11 @@
           <div class="setting-field-label">休息时长（分钟）</div>
           <n-select v-model:value="settingStore.settings.durations.breakDuration" :options="breakOptions" />
         </div>
+        <div class="setting-field-item setting-field-item--row">
+          <div class="setting-field-label">分段提示音</div>
+          <n-switch v-model:value="settingStore.settings.isSegmentCueEnabled" />
+        </div>
+
         <div class="setting-field-item">
           <div class="setting-field-label">工作内层进度条颜色</div>
           <n-color-picker v-model:value="settingStore.settings.style.redBarColor" show-alpha />
@@ -33,7 +38,7 @@
 </template>
 
 <script setup lang="ts">
-import { NCard, NInputNumber, NButton, NColorPicker, NSelect, NSpace } from "naive-ui";
+import { NCard, NInputNumber, NButton, NColorPicker, NSelect, NSpace, NSwitch } from "naive-ui";
 import { useSettingStore } from "@/stores/useSettingStore";
 
 const settingStore = useSettingStore();

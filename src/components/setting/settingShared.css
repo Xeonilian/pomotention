@@ -30,6 +30,16 @@
   gap: 8px;
 }
 
+.setting-field-item--row {
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.setting-field-item--row .setting-field-label {
+  margin: 0;
+}
+
 .setting-field-label {
   font-size: 14px;
   font-weight: 600;

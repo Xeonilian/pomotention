@@ -151,6 +151,7 @@ export const useTimerStore = defineStore(
     });
 
     function handlePhaseChange(phase: "r1" | "w1" | "w2" | "r2" | "t"): void {
+      if (!settingStore.settings.isSegmentCueEnabled) return;
       if (pomodoroState.value === "working") {
         switch (phase) {
           case "w1":
@@ -428,7 +429,7 @@ export const useTimerStore = defineStore(
       [pomodoroState, timeRemaining],
       ([state, timeLeft]) => {
         // 仅 0/1 分钟休息无中间节点；2min→60s 处 1 次，3min→60s/120s 共 2 次（类推：N 分钟→N-1 次）
-        if (state !== "breaking" || breakReminderCount.value < 2) {
+        if (!settingStore.settings.isSegmentCueEnabled || state !== "breaking" || breakReminderCount.value < 2) {
           remindedSet.value.clear();
           breakReminderPrevElapsed.value = -1;
           return;

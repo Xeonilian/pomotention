@@ -66,15 +66,16 @@
         <section>
           <h3 class="timer-help-heading">设置</h3>
           <ul>
-            <li>工作 / 休息默认时长、深色模式、白噪音开关与音轨（滴答 / 雨声 / 鸟鸣海声）。</li>
+            <li>工作 / 休息默认时长、深色模式、分段提示音、白噪音开关与音轨（滴答 / 雨声 / 鸟鸣海声）。</li>
           </ul>
         </section>
 
         <section>
           <h3 class="timer-help-heading">提示音</h3>
           <ul>
-            <li>工作周期内会在阶段切换时播放提示音（Review / Work / Track 等）。</li>
-            <li>休息过程中按进度播放分段提示，结束时提醒。</li>
+            <li>开始 / 结束工作、开始 / 结束休息时的提示始终保留。</li>
+            <li>「分段提示音」关闭后，不再播放工作阶段切换与休息进度中间的提示。</li>
+            <li>开启时：工作内在 Review / Work / Track 等切换时提示；休息中按进度分段提示。</li>
           </ul>
         </section>
 

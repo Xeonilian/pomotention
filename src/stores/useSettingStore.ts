@@ -43,6 +43,8 @@ export interface GlobalSettings {
   searchWidth: number;
   isWhiteNoiseEnabled: boolean;
   whiteNoiseSoundTrack: SoundType;
+  /** 工作阶段切换、休息进度节点等中间提示音（开始/结束音不受影响） */
+  isSegmentCueEnabled: boolean;
   webdavId: string;
   webdavKey: string;
   webdavWebsite: string;
@@ -110,6 +112,7 @@ const defaultSettings: GlobalSettings = {
   searchWidth: 400, // 搜索页面title宽度
   isWhiteNoiseEnabled: true,
   whiteNoiseSoundTrack: SoundType.WORK_TICK,
+  isSegmentCueEnabled: true,
   webdavId: "",
   webdavKey: "",
   webdavWebsite: "https://dav.jianguoyun.com/dav/",

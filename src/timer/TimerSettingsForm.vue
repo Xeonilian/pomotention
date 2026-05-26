@@ -18,6 +18,11 @@
         <n-switch v-model:value="settingStore.settings.darkMode" />
       </div>
       <div class="timer-settings-field timer-settings-field--row">
+        <label class="timer-settings-label">分段提示音</label>
+        <n-switch v-model:value="settingStore.settings.isSegmentCueEnabled" />
+      </div>
+      <p class="timer-settings-hint">关闭后仍保留开始/结束提示；中间阶段切换与休息进度提示不再播放。</p>
+      <div class="timer-settings-field timer-settings-field--row">
         <label class="timer-settings-label">工作时播放白噪音</label>
         <n-switch v-model:value="settingStore.settings.isWhiteNoiseEnabled" />
       </div>
@@ -111,5 +116,12 @@ function onWhiteNoiseTrackChange(track: SoundType) {
 .timer-settings-control :deep(.n-input-number),
 .timer-settings-control :deep(.n-base-selection) {
   width: 100%;
+}
+
+.timer-settings-hint {
+  margin: -4px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--color-text-secondary, var(--n-text-color-3));
 }
 </style>
