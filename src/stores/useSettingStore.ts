@@ -60,6 +60,8 @@ export interface GlobalSettings {
   keepLocalDataAfterSignOut: boolean; // 默认不清除本地数据
   keepLocalDataOnNextSignOut: boolean; // 一次性开关：下一次退出登录强制保留本地数据
   isCompactMode: boolean; // 紧凑模式：只显示状态文字和时钟
+  /** Timer 独立壳：深色模式（完整版主界面暂不读取） */
+  darkMode: boolean;
   ai?: {
     activeId: number; // 当前启用的配置
     profiles: Record<string, AiProfile>; // 所有配置集合（字典，键为 id）
@@ -125,6 +127,7 @@ const defaultSettings: GlobalSettings = {
   keepLocalDataAfterSignOut: false, // 默认不清除本地数据
   keepLocalDataOnNextSignOut: false, // 默认关闭一次性保留开关
   isCompactMode: false, // 默认不是紧凑模式
+  darkMode: false,
   priorityCategoryTagIds: {},
   priorityCategoryShowInRank: getDefaultPriorityCategoryShowInRank(),
   showPublicHolidays: true,

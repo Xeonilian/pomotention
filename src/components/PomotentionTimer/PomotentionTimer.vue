@@ -195,13 +195,13 @@ function reportSize() {
     width = 221;
     if (props.showPomoSeq) {
       // 置顶 + 🍕：比常规模型略减 3px，贴合实际内容高度
-      height = !isPomoSeqRunning.value ? 237 : 167;
+      height = !isPomoSeqRunning.value ? 230 : 160;
     } else {
       height = 140;
     }
   } else if (props.showPomoSeq) {
     width = 221;
-    height = !isPomoSeqRunning.value ? 240 : 170;
+    height = !isPomoSeqRunning.value ? 230 : 160;
   } else {
     width = 221;
     height = 140;
@@ -426,7 +426,7 @@ defineExpose({
   box-shadow: 0px 4px 6px rgba(0, 0, 0, 0);
 }
 .pomodoro-content-area.sequence-mode.is-minimode {
-  background-color: white;
+  background-color: var(--color-background);
 }
 .pomodoro-content-area.sequence-mode.is-minimode :deep(.pomodoro-sequence) {
   border: 0 solid white !important;
@@ -437,7 +437,7 @@ defineExpose({
   box-shadow: 0px 4px 6px rgba(0, 0, 0, 0);
 }
 .pomodoro-content-area.is-minimode {
-  background-color: white;
+  background-color: var(--color-background);
 }
 .pomodoro-content-area.is-minimode :deep(.pomodoro-sequence) {
   border: 0 solid white !important;

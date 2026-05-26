@@ -1,0 +1,11 @@
+/* Timer 深色：覆盖 :root 语义色，与 Naive darkTheme 配合 */
+html.timer-dark {
+  --color-text-primary: #e8eaed;
+  --color-text-secondary: #9aa0a6;
+  --color-background: #1e1e1e;
+  --color-background-dark: #3c3c3c;
+  --color-background-dark-dark: #2a2a2a;
+  --color-background-light: #2d2d2d;
+  --color-background-light-light: #252525;
+  --color-background-light-transparent: rgba(80, 80, 80, 0.35);
+}

@@ -14,6 +14,10 @@
 
     <section class="timer-settings-section">
       <div class="timer-settings-field timer-settings-field--row">
+        <label class="timer-settings-label">深色模式</label>
+        <n-switch v-model:value="settingStore.settings.darkMode" />
+      </div>
+      <div class="timer-settings-field timer-settings-field--row">
         <label class="timer-settings-label">工作时播放白噪音</label>
         <n-switch v-model:value="settingStore.settings.isWhiteNoiseEnabled" />
       </div>
