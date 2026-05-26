@@ -28,6 +28,22 @@ const docsDevProxyAgent = new http.Agent({
   maxFreeSockets: 64,
 });
 
+/** timer dev：子路径 F5 须回 timer.html，勿落到主站 index.html */
+function shouldServeTimerHtmlForDevPath(pathOnly: string, acceptHeader: string | undefined): boolean {
+  if (pathOnly === "/timer.html") return false;
+  if (pathOnly.startsWith("/@") || pathOnly.startsWith("/src/") || pathOnly.startsWith("/node_modules/")) {
+    return false;
+  }
+  const lastSeg = pathOnly.split("/").pop() ?? "";
+  if (lastSeg.includes(".")) return false;
+
+  const accept = acceptHeader ?? "";
+  if (accept && !accept.includes("text/html") && !accept.includes("*/*")) {
+    return false;
+  }
+  return true;
+}
+
 function canConnectTcp(port: number, hostAddr = "127.0.0.1"): Promise<boolean> {
   return new Promise((resolve) => {
     const socket = createConnection({ port, host: hostAddr });
@@ -108,9 +124,9 @@ export default defineConfig(({ mode, command }) => {
     },
     plugins: [
       ...(command === "serve" && mode === "development" && !isTimerMode ? [spawnDocsDevAfterListen()] : []),
-      // dev:timer / tauri:timer:dev 访问 / 时 Vite 默认仍读 index.html（完整版），改写到 timer.html
+      // dev:timer：所有前端路由刷新须落到 timer.html，否则会回退到 index.html（完整版 MainLayout）
       {
-        name: "timer-dev-root",
+        name: "timer-dev-spa-fallback",
         configureServer(server) {
           if (command !== "serve" || !isTimerMode) return;
           server.middlewares.use((req, _res, next) => {
@@ -119,9 +135,12 @@ export default defineConfig(({ mode, command }) => {
             const pathOnly = (q >= 0 ? raw.slice(0, q) : raw) || "/";
             const query = q >= 0 ? raw.slice(q) : "";
             const normalized = pathOnly.replace(/\/$/, "") || "/";
-            if (normalized === "/" || normalized === "/index.html") {
-              req.url = `/timer.html${query}`;
+
+            if (!shouldServeTimerHtmlForDevPath(normalized, req.headers.accept)) {
+              next();
+              return;
             }
+            req.url = `/timer.html${query}`;
             next();
           });
         },
