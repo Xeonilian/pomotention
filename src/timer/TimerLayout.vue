@@ -2,8 +2,7 @@
   <div class="pomodoro-mini-view-wrapper" ref="PomotentionTimerContainerRef">
     <n-layout class="app-layout" :class="{ 'app-layout--use-vv-height': isMobile }">
       <n-layout-header class="app-layout__header" :class="{ 'app-layout__header--hidden': isMiniMode }">
-        <div class="app-layout__header-content">
-          <span class="timer-app-title">Pomotention Timer</span>
+        <div class="app-layout__header-content app-layout__header-content--timer">
           <div class="app-layout__view-controls">
             <n-button
               v-if="isTauriDesktop"
@@ -126,16 +125,11 @@ function onExitMiniMode() {
   opacity: 0;
   pointer-events: none;
 }
-.app-layout__header-content {
+.app-layout__header-content--timer {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
   width: 100%;
-  gap: 8px;
-}
-.timer-app-title {
-  font-weight: 600;
-  font-size: 13px;
 }
 .app-layout__view-controls {
   display: flex;

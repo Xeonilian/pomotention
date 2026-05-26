@@ -15,8 +15,8 @@
     "windows": [
       {
         "title": "Pomotention Timer",
-        "width": 480,
-        "height": 520,
+        "width": 280,
+        "height": 320,
         "minWidth": 220,
         "minHeight": 140,
         "center": true,

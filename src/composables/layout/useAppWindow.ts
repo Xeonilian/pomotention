@@ -7,6 +7,11 @@ import { useSettingStore } from "@/stores/useSettingStore";
 import { useTimerStore } from "@/stores/useTimerStore";
 import { useAlwaysOnTop } from "@/composables/layout/useAlwaysOnTop";
 
+const isTimerApp = import.meta.env.VITE_APP_VARIANT === "timer";
+
+/** Timer 独立壳正常窗尺寸（与 tauri.conf.timer.json 默认宽高一致） */
+const TIMER_NORMAL_WINDOW = { width: 280, height: 320 };
+
 export function useAppWindow() {
   const settingStore = useSettingStore();
   const timerStore = useTimerStore();
@@ -130,7 +135,13 @@ export function useAppWindow() {
         await appWindow.setDecorations(true);
         // 这里的 factor 也要保护
         let factor = settingStore.settings.miniModeRefactor || 1;
-        await appWindow.setSize(new LogicalSize(Math.max(950 * factor, 800), Math.max(600 * factor, 500)));
+        const restoreW = isTimerApp
+          ? Math.max(TIMER_NORMAL_WINDOW.width * factor, 220)
+          : Math.max(950 * factor, 800);
+        const restoreH = isTimerApp
+          ? Math.max(TIMER_NORMAL_WINDOW.height * factor, 140)
+          : Math.max(600 * factor, 500);
+        await appWindow.setSize(new LogicalSize(restoreW, restoreH));
         await appWindow.center();
 
         if (route.path !== "/") await router.push("/");
