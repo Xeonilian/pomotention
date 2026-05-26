@@ -20,6 +20,9 @@ export interface GlobalSettings {
   durations: typeof PomodoroDurations;
   style: typeof TimerStyleDefaults;
   miniModeRefactor: number;
+  /** 桌面置顶停靠：相对屏幕工作区居中的偏移；0,0 表示置顶时不改位置 */
+  miniModeDockOffsetX: number;
+  miniModeDockOffsetY: number;
   activityRank: Record<number, number>; // 活动排序：{activityId: rank}
   collapsedActivityIds: Record<number, boolean>; // 收起的活动父项 ID：{activityId: true}
   /** 看板等活动行标签条：缺省显示，仅在为 false 时隐藏（按 activityId） */
@@ -86,6 +89,8 @@ const defaultSettings: GlobalSettings = {
   durations: PomodoroDurations,
   style: TimerStyleDefaults,
   miniModeRefactor: 1,
+  miniModeDockOffsetX: 0,
+  miniModeDockOffsetY: 0,
   activityRank: {}, // 默认空对象
   collapsedActivityIds: {}, // 默认全部展开
   activityRowTagStripVisible: {}, // 默认每行标签条展开显示

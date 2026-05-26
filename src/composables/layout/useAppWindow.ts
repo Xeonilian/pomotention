@@ -2,10 +2,11 @@
 import { ref, nextTick, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { isTauri } from "@tauri-apps/api/core";
-import { getCurrentWindow, PhysicalPosition, LogicalSize } from "@tauri-apps/api/window";
+import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useTimerStore } from "@/stores/useTimerStore";
 import { useAlwaysOnTop } from "@/composables/layout/useAlwaysOnTop";
+import { applyMiniDockOffset, captureNormalWindowPosition, restoreNormalWindowPosition } from "@/composables/layout/miniWindowPosition";
 
 const isTimerApp = import.meta.env.VITE_APP_VARIANT === "timer";
 
@@ -88,6 +89,8 @@ export function useAppWindow() {
       console.log(`[mini] Target Size: ${finalWidth}x${finalHeight} (Base: ${safeWidth}x${safeHeight}, Factor: ${factor})`);
 
       try {
+        await captureNormalWindowPosition();
+
         isMiniMode.value = true;
         settingStore.settings.isCompactMode = false; // 迷你窗保持展开形态，非紧凑
         await appWindow.setDecorations(false);
@@ -117,7 +120,9 @@ export function useAppWindow() {
           }
         }
 
-        await appWindow.setPosition(new PhysicalPosition(400, 400));
+        const dockX = settingStore.settings.miniModeDockOffsetX ?? 0;
+        const dockY = settingStore.settings.miniModeDockOffsetY ?? 0;
+        await applyMiniDockOffset(dockX, dockY);
       } catch (error) {
         console.error("[mini] Error entering mini mode:", error);
         // 如果出错，尝试紧急恢复
@@ -142,7 +147,7 @@ export function useAppWindow() {
           ? Math.max(TIMER_NORMAL_WINDOW.height * factor, 140)
           : Math.max(600 * factor, 500);
         await appWindow.setSize(new LogicalSize(restoreW, restoreH));
-        await appWindow.center();
+        await restoreNormalWindowPosition();
 
         if (route.path !== "/") await router.push("/");
         if (onExitCallback) onExitCallback();
