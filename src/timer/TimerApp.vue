@@ -1,7 +1,9 @@
 <template>
   <n-notification-provider>
     <n-dialog-provider>
-      <router-view />
+      <div class="timer-app-shell">
+        <router-view />
+      </div>
     </n-dialog-provider>
   </n-notification-provider>
 </template>
@@ -27,3 +29,20 @@ onMounted(() => {
   prefetchWhiteNoiseForSelection(settingStore.settings.whiteNoiseSoundTrack);
 });
 </script>
+
+<style>
+/* Timer 壳：Tauri 透明窗下须给 #app 实底，scoped 无法作用到 body */
+html.platform-tauri,
+html.platform-tauri body,
+html.platform-tauri #app {
+  background-color: var(--color-background, #ffffff);
+}
+
+.timer-app-shell {
+  height: 100%;
+  min-height: 0;
+  width: 100%;
+  background-color: var(--color-background, #ffffff);
+  overflow: hidden;
+}
+</style>

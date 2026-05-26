@@ -4,20 +4,12 @@
       <n-layout-header class="app-layout__header" :class="{ 'app-layout__header--hidden': isMiniMode }">
         <div class="app-layout__header-content app-layout__header-content--timer">
           <div class="app-layout__view-controls">
-            <n-button
-              v-if="isTauriDesktop"
-              size="medium"
-              tertiary
-              type="default"
-              title="番茄时钟置顶"
-              class="header-button"
-              @click="handlePinClick"
-            >
+            <n-button v-if="isTauriDesktop" text type="default" title="番茄时钟置顶" class="header-button" @click="handlePinClick">
               <template #icon>
                 <n-icon :component="Pin24Regular" />
               </template>
             </n-button>
-            <n-button size="medium" tertiary type="default" title="设置" class="header-button" @click="openSettings">
+            <n-button text type="default" title="设置" class="header-button" @click="openSettings">
               <template #icon>
                 <n-icon :component="Settings24Regular" />
               </template>
@@ -103,6 +95,7 @@ function onExitMiniMode() {
   height: 100vh;
   height: 100dvh;
   user-select: none;
+  background-color: var(--color-background, #ffffff);
 }
 .app-layout__header {
   flex-shrink: 0;
@@ -111,8 +104,6 @@ function onExitMiniMode() {
   display: flex;
   align-items: center;
   padding: 0 16px;
-  background: var(--color-background);
-  border-bottom: 1px solid var(--color-background-light);
   transition: all 0.3s ease-in-out;
   box-sizing: border-box;
   z-index: 150;
@@ -166,5 +157,6 @@ function onExitMiniMode() {
 }
 .pomodoro-mini-view-wrapper:deep(.n-layout .n-layout-scroll-container) {
   overflow: hidden !important;
+  background-color: var(--color-background);
 }
 </style>
