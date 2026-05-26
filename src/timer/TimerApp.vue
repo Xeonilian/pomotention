@@ -22,6 +22,44 @@ const settingStore = useSettingStore();
 
 const naiveTheme = computed(() => (settingStore.settings.darkMode ? darkTheme : null));
 
+/** 深色下保持与浅色相同的饱和按钮色 + 白字，边框不随状态变色 */
+const timerDarkButtonOverrides = {
+  common: {
+    errorColor: "rgb(214, 72, 100)",
+    errorColorHover: "#de576d",
+    errorColorPressed: "#de576d",
+    infoColor: "#4098fc",
+    infoColorHover: "#2080f0",
+    infoColorPressed: "#2080f0",
+  },
+  Button: {
+    colorError: "rgb(214, 72, 100)",
+    colorHoverError: "#de576d",
+    colorPressedError: "#de576d",
+    colorFocusError: "rgb(214, 72, 100)",
+    textColorError: "#ffffff",
+    textColorHoverError: "#ffffff",
+    textColorPressedError: "#ffffff",
+    textColorFocusError: "#ffffff",
+    borderError: "none",
+    borderHoverError: "none",
+    borderPressedError: "none",
+    borderFocusError: "none",
+    colorInfo: "#4098fc",
+    colorHoverInfo: "#2080f0",
+    colorPressedInfo: "#2080f0",
+    colorFocusInfo: "#4098fc",
+    textColorInfo: "#ffffff",
+    textColorHoverInfo: "#ffffff",
+    textColorPressedInfo: "#ffffff",
+    textColorFocusInfo: "#ffffff",
+    borderInfo: "none",
+    borderHoverInfo: "none",
+    borderPressedInfo: "none",
+    borderFocusInfo: "none",
+  },
+} as const;
+
 const themeOverrides = computed(() =>
   settingStore.settings.darkMode
     ? {
@@ -31,7 +69,9 @@ const themeOverrides = computed(() =>
           primaryColorPressed: "tomato",
           textColorBase: "#e8eaed",
           bodyColor: "#1e1e1e",
+          ...timerDarkButtonOverrides.common,
         },
+        Button: timerDarkButtonOverrides.Button,
       }
     : {
         common: {

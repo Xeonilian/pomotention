@@ -9,3 +9,24 @@ html.timer-dark {
   --color-background-light-light: #252525;
   --color-background-light-transparent: rgba(80, 80, 80, 0.35);
 }
+
+/* 进度条阶段标签：深色下勿用 --color-background 作字色 */
+html.timer-dark .pomodoro-timer .phase-labels {
+  color: rgba(182, 180, 180, 0.9);
+}
+
+html.timer-dark .pomodoro-timer .divider {
+  background-color: rgba(182, 180, 180, 0.85);
+}
+
+/* 计时器操作钮：深色下仅底色变化，不出现描边变色 */
+html.timer-dark .pomodoro-timer .work-button.n-button,
+html.timer-dark .pomodoro-timer .break-button.n-button,
+html.timer-dark .pomodoro-timer .duration-display.n-button {
+  border: none !important;
+  --n-border: none !important;
+  --n-border-hover: none !important;
+  --n-border-pressed: none !important;
+  --n-border-focus: none !important;
+  --n-border-disabled: none !important;
+}

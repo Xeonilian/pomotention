@@ -9,6 +9,11 @@
                 <n-icon :component="Pin24Regular" />
               </template>
             </n-button>
+            <n-button text type="default" title="帮助" class="header-button" @click="openHelp">
+              <template #icon>
+                <n-icon :component="QuestionCircle24Regular" />
+              </template>
+            </n-button>
             <n-button text type="default" title="设置" class="header-button" @click="openSettings">
               <template #icon>
                 <n-icon :component="Settings24Regular" />
@@ -43,6 +48,7 @@
         />
       </n-layout-content>
     </n-layout>
+
   </div>
 </template>
 
@@ -51,7 +57,7 @@ import { ref } from "vue";
 import { useRouter } from "vue-router";
 import { NLayout, NLayoutHeader, NLayoutContent, NButton, NIcon } from "naive-ui";
 import { isTauri } from "@tauri-apps/api/core";
-import { Pin24Regular, Settings24Regular } from "@vicons/fluent";
+import { Pin24Regular, QuestionCircle24Regular, Settings24Regular } from "@vicons/fluent";
 import PomotentionTimer from "@/components/PomotentionTimer/PomotentionTimer.vue";
 import { useAppWindow } from "@/composables/layout/useAppWindow";
 import { useDevice } from "@/composables/platform/useDevice";
@@ -84,6 +90,10 @@ function openSettings() {
   void router.push({ name: "TimerSettings" });
 }
 
+function openHelp() {
+  void router.push({ name: "TimerHelp" });
+}
+
 function onExitMiniMode() {
   /* 退出置顶后保持首页布局 */
 }
@@ -107,6 +117,7 @@ function onExitMiniMode() {
   transition: all 0.3s ease-in-out;
   box-sizing: border-box;
   z-index: 150;
+  background-color: var(--color-background-light);
 }
 .app-layout__header--hidden {
   height: 0 !important;
@@ -140,12 +151,14 @@ function onExitMiniMode() {
   height: 100%;
   width: 100%;
 }
+/* 抵消顶部 header，避免垂直居中后整体显得偏下 */
 .timer-timer-center {
   display: flex;
   justify-content: center;
   align-items: center;
   height: 100%;
   width: 100%;
+  transform: translateY(-15px);
 }
 .header-button {
   width: 30px;
@@ -157,6 +170,6 @@ function onExitMiniMode() {
 }
 .pomodoro-mini-view-wrapper:deep(.n-layout .n-layout-scroll-container) {
   overflow: hidden !important;
-  background-color: var(--color-background);
+  background-color: var(--color-background-light);
 }
 </style>
