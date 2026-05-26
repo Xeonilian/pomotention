@@ -1,5 +1,5 @@
 <template>
-  <div class="pomodoro-timer">
+  <div class="pomodoro-timer" :class="{ 'pomodoro-timer--dark': settingStore.settings.darkMode }">
     <!-- 1 状态信息：紧凑模式仅保留时钟，不展示可编辑文案 -->
     <div v-if="!isCompactMode" class="state-text" @click.stop="startEditing" @pointerdown.stop title="可编辑，回车保存，删除内容恢复默认">
       <n-input
@@ -70,7 +70,7 @@
       <!-- 5-1 工作按钮：只在非休息状态显示 -->
       <n-button
         v-if="timerStore.pomodoroState !== 'breaking' && !showPomoSeq"
-        strong
+        :strong="!settingStore.settings.darkMode"
         round
         type="error"
         class="work-button"
@@ -82,7 +82,7 @@
       <!-- 5-2 休息按钮：只在非工作状态显示 -->
       <n-button
         v-if="timerStore.pomodoroState !== 'working' && !showPomoSeq"
-        strong
+        :strong="!settingStore.settings.darkMode"
         round
         type="info"
         class="break-button"
@@ -381,9 +381,6 @@ defineExpose({
   padding: 10px;
   height: 125px; /* 确保高度由内容决定 */
   min-height: 0; /* 防止 flex 项目被撑开 */
-  border: 0px solid var(--color-text-secondary);
-  border-radius: 8px;
-  box-shadow: 1px 2px 6px var(--color-background-light-transparent);
 }
 
 /* 添加序列模式下的样式 */
@@ -630,5 +627,51 @@ defineExpose({
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+
+/* 深色：Naive round+strong 在 WebView2 上易出现描边锯齿，改为纯色块按钮 */
+.pomodoro-timer--dark :deep(.work-button.n-button),
+.pomodoro-timer--dark :deep(.break-button.n-button),
+.pomodoro-timer--dark :deep(.duration-display.n-button) {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  border: none !important;
+  box-shadow: none !important;
+  --n-border: none !important;
+  --n-border-hover: none !important;
+  --n-border-pressed: none !important;
+  --n-border-focus: none !important;
+  --n-box-shadow-focus: none !important;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+  font-weight: 600;
+}
+
+.pomodoro-timer--dark :deep(.work-button.n-button) {
+  background-color: var(--color-red) !important;
+  color: #fff !important;
+}
+
+.pomodoro-timer--dark :deep(.work-button.n-button:hover) {
+  background-color: var(--color-red-dark) !important;
+}
+
+.pomodoro-timer--dark :deep(.break-button.n-button),
+.pomodoro-timer--dark :deep(.duration-display.n-button) {
+  background-color: var(--color-blue) !important;
+  color: #fff !important;
+}
+
+.pomodoro-timer--dark :deep(.break-button.n-button:hover),
+.pomodoro-timer--dark :deep(.duration-display.n-button:hover) {
+  background-color: var(--color-blue-dark) !important;
+}
+
+.pomodoro-timer--dark .phase-labels {
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.pomodoro-timer--dark .divider {
+  background-color: rgba(255, 255, 255, 0.85);
 }
 </style>
