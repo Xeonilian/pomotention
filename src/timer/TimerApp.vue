@@ -1,12 +1,14 @@
 <template>
   <n-notification-provider>
-    <router-view />
+    <n-dialog-provider>
+      <router-view />
+    </n-dialog-provider>
   </n-notification-provider>
 </template>
 
 <script setup lang="ts">
 import { onMounted } from "vue";
-import { NNotificationProvider } from "naive-ui";
+import { NDialogProvider, NNotificationProvider } from "naive-ui";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { prefetchSoundAssets, prefetchWhiteNoiseForSelection } from "@/core/sounds";
 
