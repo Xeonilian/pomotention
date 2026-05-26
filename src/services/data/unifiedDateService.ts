@@ -188,25 +188,41 @@ export function unifiedDateService({ activityList, scheduleList, todoList }: Uni
 
   // --- 4. 跨天业务逻辑 ---
   const processTodoForNewDay = () => {
+    const now = Date.now();
     todoList.value.forEach((todo) => {
       if (todo.status === "ongoing") {
         todo.status = "delayed";
+        todo.synced = false;
+        todo.lastModified = now;
         const activity = activityList.value.find((a) => a.id === todo.activityId);
-        if (activity) activity.status = "delayed";
+        if (activity) {
+          activity.status = "delayed";
+          activity.synced = false;
+          activity.lastModified = now;
+        }
       }
     });
   };
 
   const processActivityForNewDay = () => {
     const todayKey = getDateKey(dateState.system);
+    const now = Date.now();
     activityList.value.forEach((activity) => {
       if (activity.class === "S" && activity.dueRange && activity.dueRange[0]) {
         const activityKey = getDateKey(activity.dueRange[0]);
         if (activityKey === todayKey && !scheduleList.value.some((s) => s.activityId === activity.id)) {
           activity.status = "ongoing";
+          activity.synced = false;
+          activity.lastModified = now;
         }
       }
     });
+  };
+
+  /** 跨天：持久化本地变更并触发全量同步（动态 import 避免与 sync 链循环依赖） */
+  const persistAndSyncAfterCrossDay = () => {
+    dataStore.saveAllDebounced();
+    void import("@/core/utils/autoSync").then((m) => m.autoSyncDebounced());
   };
 
   // --- 5. 导航（仅视图感知版本） ---
@@ -214,6 +230,7 @@ export function unifiedDateService({ activityList, scheduleList, todoList }: Uni
     const curView = settingStore.settings.viewSet;
 
     if (type === "today") {
+      systemDateSync();
       const base = dateState.system;
       dateState.app =
         curView === "day"
@@ -278,13 +295,15 @@ export function unifiedDateService({ activityList, scheduleList, todoList }: Uni
   };
 
   // --- 6. 系统日期监听 ---
-  const systemDateSync = () => {
+  const systemDateSync = (): boolean => {
     const newSystemTimestamp = getDayStartTimestamp();
-    if (dateState.system !== newSystemTimestamp) {
-      dateState.system = newSystemTimestamp;
-      processTodoForNewDay();
-      processActivityForNewDay();
-    }
+    if (dateState.system === newSystemTimestamp) return false;
+
+    dateState.system = newSystemTimestamp;
+    processTodoForNewDay();
+    processActivityForNewDay();
+    persistAndSyncAfterCrossDay();
+    return true;
   };
 
   const setupSystemDateWatcher = () => {
