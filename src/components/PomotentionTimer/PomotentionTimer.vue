@@ -4,6 +4,7 @@
     :class="{
       'is-compact': settingStore.settings.isCompactMode,
       'is-phone-mode': isPhoneMode,
+      'is-minimode': isMiniMode,
     }"
     :style="phoneModeWrapperStyle"
     ref="pomodoroContainerRef"
@@ -62,7 +63,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, watch, ref, computed } from "vue";
+import { onMounted, onUnmounted, watch, ref, computed, nextTick } from "vue";
 import PomodoroTimer from "@/components/PomotentionTimer/PomodoroTimer.vue";
 import PomodoroSequence from "@/components/PomotentionTimer/PomodoroSequence.vue";
 import { useTimerStore } from "@/stores/useTimerStore";
@@ -184,28 +185,36 @@ watch(
 );
 
 function reportSize() {
-  let width; // 固定宽度
-  let height; // 根据状态动态调整高度
+  let width: number;
+  let height: number;
 
-  // 紧凑模式下只显示状态文字和时钟，高度约为 70px
   if (settingStore.settings.isCompactMode) {
     width = 140;
     height = 70;
+  } else if (props.isMiniMode && pomodoroContainerRef.value) {
+    // 置顶窗：按实际 DOM 上报，避免切换 🍕 时硬编码比内容高约数 px
+    const el = pomodoroContainerRef.value;
+    width = Math.max(el.offsetWidth, 150);
+    height = Math.max(el.offsetHeight, 50);
   } else if (props.showPomoSeq) {
-    height = !isPomoSeqRunning.value ? 240 : 170; // 序列模式
     width = 221;
+    height = !isPomoSeqRunning.value ? 240 : 170;
   } else {
     width = 221;
-    height = 140; // 非运行和非序列模式
+    height = 140;
   }
-  // console.log("[PomotentionTimer]", width, height);
   emit("report-size", { width, height });
+}
+
+async function reportSizeAfterLayout() {
+  if (props.isMiniMode) await nextTick();
+  reportSize();
 }
 
 // 挂载组件时报告尺寸
 onMounted(() => {
   if (isPhoneMode.value) syncPhoneVisualViewport();
-  reportSize();
+  void reportSizeAfterLayout();
 
   // 如果番茄钟正在运行且来自序列，恢复 pomoSeq 运行状态
   if (timerStore.isActive && timerStore.isFromSequence) {
@@ -222,7 +231,7 @@ onUnmounted(() => {
 
 // 监听所有影响尺寸的因素变化
 watch([() => props.showPomoSeq, () => props.isMiniMode, () => isPomoSeqRunning.value, () => settingStore.settings.isCompactMode], () => {
-  reportSize();
+  void reportSizeAfterLayout();
 });
 
 function exitMiniMode() {
@@ -300,11 +309,18 @@ defineExpose({
   box-sizing: border-box;
   padding: 0;
   background-color: transparent;
+  border-radius: 8px;
+  box-shadow: 2px 2px 6px var(--color-background-light-transparent);
 }
 
 /* 紧凑模式下的宽度调整 */
 .pomodoro-view-wrapper.is-compact {
   width: 140px;
+}
+
+.pomodoro-view-wrapper.is-minimode {
+  border-radius: 0;
+  box-shadow: none;
 }
 
 .pomodoro-content-area {
@@ -331,7 +347,6 @@ defineExpose({
   align-items: center;
   justify-content: center;
   border: none;
-  border-radius: 4px;
   width: 20px;
   height: 18px;
   padding: 0px;
@@ -347,7 +362,7 @@ defineExpose({
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 0px solid var(--color-background-dark);
+  border: none;
   width: 20px;
   height: 18px;
   padding: 0px;
