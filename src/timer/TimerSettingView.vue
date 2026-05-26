@@ -57,23 +57,42 @@ function goBack() {
 .timer-settings-body {
   flex: 1;
   min-height: 0;
-  overflow: auto;
-  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
   box-sizing: border-box;
 }
 
-/* 完整版设置 tab 的 max-height 是为大窗设计的，Timer 小窗改为铺满可滚动区 */
+/* 取消完整版 settingShared 的内层滚动条，由 Timer 页单一容器铺满 */
 .timer-settings-body :deep(.setting-tab-page) {
-  max-height: none;
-  height: 100%;
-  padding-right: 0;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-height: none !important;
+  padding: 0;
+  overflow: visible !important;
 }
 
 .timer-settings-body :deep(.setting-tab-page--scroll) {
-  overflow-y: auto;
+  max-height: none !important;
+  overflow: visible !important;
 }
 
 .timer-settings-body :deep(.setting-tab-card) {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
   background-color: var(--color-background, #ffffff);
+}
+
+.timer-settings-body :deep(.setting-tab-card .n-card__content) {
+  flex: 1;
+  padding: 12px 12px 16px;
 }
 </style>
