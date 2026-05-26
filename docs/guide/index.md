@@ -14,6 +14,7 @@
 
 - [软件界面](reference/interface.md)
 - [模块联动](reference/workflow.md)
+- [长期事项与待办库存](practices/long-horizon-inventory.md)（周期长、目标可能变时的轻量 backlog）
 
 ### 模块功能
 

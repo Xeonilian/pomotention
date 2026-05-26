@@ -107,6 +107,7 @@ export default withMermaid(
           items: [
             { text: "软件界面", link: "/guide/reference/interface" },
             { text: "模块联动", link: "/guide/reference/workflow" },
+            { text: "长期事项与待办库存", link: "/guide/practices/long-horizon-inventory" },
             {
               text: "模块功能",
               collapsed: true,

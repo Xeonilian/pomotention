@@ -1,7 +1,7 @@
 # 活动清单说明
 
 ::: tip
-与其他模块的协作关系见 [模块联动](./workflow.md)。
+与其他模块的协作关系见 [模块联动](./workflow.md)。周期长、未排期的事项可用 [长期事项与待办库存](../practices/long-horizon-inventory.md) 中的「无日期活动 + Task 清单」做法。
 :::
 
 ## 快速导航
