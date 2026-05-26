@@ -135,12 +135,14 @@ const handlePageShow = (e: PageTransitionEvent) => {
 };
 
 onMounted(() => {
+  dataStore.dateService.setupSystemDateWatcher();
   document.addEventListener("visibilitychange", handleVisibilityReconcileTimer);
   window.addEventListener("pageshow", handlePageShow);
 });
 
 // 组件卸载清理
 onUnmounted(() => {
+  dataStore.dateService.cleanupSystemDateWatcher();
   document.removeEventListener("visibilitychange", handleVisibilityReconcileTimer);
   window.removeEventListener("pageshow", handlePageShow);
   cleanupSyncLifecycle();

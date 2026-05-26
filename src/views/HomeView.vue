@@ -1476,7 +1476,6 @@ function plannerKeyboardEditField(field: "title" | "start" | "done" | "duration"
 // ======================== 8. 生命周期 Hook ========================
 onMounted(() => {
   // console.log("HomeView mounted");
-  dateService.setupSystemDateWatcher();
   dateService.navigateByView("today");
   attachVisualViewportListeners();
   unregisterPlannerCommandApi = registerPlannerKeyboardCommandApi(plannerKeyboard.plannerCommandApi);
@@ -1499,7 +1498,6 @@ onUnmounted(() => {
     unregisterPlannerDaySpaceToggleCheck();
     unregisterPlannerDaySpaceToggleCheck = null;
   }
-  dateService.cleanupSystemDateWatcher();
   autoSyncDebounced.flush(); //立即执行
   detachVisualViewportListeners();
 });

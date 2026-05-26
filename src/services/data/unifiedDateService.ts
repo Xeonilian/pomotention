@@ -306,14 +306,35 @@ export function unifiedDateService({ activityList, scheduleList, todoList }: Uni
     return true;
   };
 
+  let dateWatcherAttached = false;
+
+  /** 页签重新可见时校准（hidden→visible） */
+  const onVisibilityForDate = () => {
+    if (document.visibilityState === "visible") systemDateSync();
+  };
+
+  /**
+   * 全局跨天检测：窗口重新获得焦点、页签回到前台、BFCache 恢复、以及页面内任意点击。
+   * 休眠唤醒后若窗口一直视为已聚焦，仅 window focus 不会触发，pointerdown 可兜底。
+   */
   const setupSystemDateWatcher = () => {
-    document.addEventListener("visibilitychange", systemDateSync);
+    if (dateWatcherAttached) return;
+    dateWatcherAttached = true;
+
+    document.addEventListener("visibilitychange", onVisibilityForDate);
     window.addEventListener("focus", systemDateSync);
+    window.addEventListener("pageshow", systemDateSync);
+    window.addEventListener("pointerdown", systemDateSync, { capture: true, passive: true });
   };
 
   const cleanupSystemDateWatcher = () => {
-    document.removeEventListener("visibilitychange", systemDateSync);
+    if (!dateWatcherAttached) return;
+    dateWatcherAttached = false;
+
+    document.removeEventListener("visibilitychange", onVisibilityForDate);
     window.removeEventListener("focus", systemDateSync);
+    window.removeEventListener("pageshow", systemDateSync);
+    window.removeEventListener("pointerdown", systemDateSync, { capture: true });
   };
 
   const setAppDate = (timestamp: number) => {
@@ -363,6 +384,7 @@ export function unifiedDateService({ activityList, scheduleList, todoList }: Uni
     isViewDateToday,
     isViewDateTomorrow,
     isViewDateYesterday,
+    systemDateSync,
     setupSystemDateWatcher,
     cleanupSystemDateWatcher,
     // 导航
