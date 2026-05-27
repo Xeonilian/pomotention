@@ -293,12 +293,11 @@ function sessionTitle(s: TimerSessionRecord): string | undefined {
 }
 
 .timer-stats-emojis {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0 2px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 1.4em);
+  gap: 0;
   min-height: 20px;
-  line-height: 20px;
+  line-height: 1;
 }
 
 .timer-stats-emoji {
@@ -309,8 +308,12 @@ function sessionTitle(s: TimerSessionRecord): string | undefined {
   margin: 0;
   font: inherit;
   font-size: 15px;
-  line-height: 20px;
+  line-height: 1;
+  width: 100%;
   height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
 }
 
