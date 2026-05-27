@@ -1,63 +1,42 @@
-import { computed, type ComputedRef } from "vue";
+import { computed, type ComputedRef, type Ref } from "vue";
 import type { TimerSessionRecord } from "@/core/types/TimerSession";
 import { useTimerSessionStore } from "@/stores/useTimerSessionStore";
+import {
+  buildWeekDayRows,
+  computeDayTotals,
+  getISOWeekYearAndNumber,
+  getMondayOfWeekContaining,
+  sessionsInWeek,
+  type TimerDayTotals,
+  type TimerWeekDayRow,
+} from "@/services/timer/timerWeekUtils";
 
-export type TimerWeekDayRow = {
-  key: string;
-  label: string;
-  dateNum: number;
-  isToday: boolean;
-  sessions: TimerSessionRecord[];
-};
-
-const DOW_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
-
-function startOfLocalDay(ts: number): number {
-  const d = new Date(ts);
-  d.setHours(0, 0, 0, 0);
-  return d.getTime();
-}
-
-function isSameLocalDay(a: number, b: number): boolean {
-  return startOfLocalDay(a) === startOfLocalDay(b);
-}
-
-/** 本周一至周日（本地时区） */
-function getCurrentWeekDayStarts(reference = new Date()): number[] {
-  const ref = new Date(reference);
-  ref.setHours(0, 0, 0, 0);
-  const day = ref.getDay();
-  const mondayOffset = day === 0 ? -6 : 1 - day;
-  const monday = new Date(ref);
-  monday.setDate(ref.getDate() + mondayOffset);
-
-  return Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
-    return d.getTime();
-  });
-}
-
-export function useTimerWeekStats(): { weekDays: ComputedRef<TimerWeekDayRow[]> } {
+export function useTimerWeekStats(weekMonday: Ref<Date>): {
+  weekDays: ComputedRef<TimerWeekDayRow[]>;
+  weekYear: ComputedRef<number>;
+  weekNumber: ComputedRef<number>;
+  weekTotals: ComputedRef<TimerDayTotals>;
+  weekSessions: ComputedRef<TimerSessionRecord[]>;
+  isCurrentWeek: ComputedRef<boolean>;
+} {
   const store = useTimerSessionStore();
-  const todayStart = startOfLocalDay(Date.now());
 
-  const weekDays = computed<TimerWeekDayRow[]>(() => {
-    const starts = getCurrentWeekDayStarts();
-    return starts.map((dayStart, index) => {
-      const daySessions = store.sessions
-        .filter((s) => isSameLocalDay(s.startedAt, dayStart))
-        .sort((a, b) => a.startedAt - b.startedAt);
+  const weekSessions = computed(() => sessionsInWeek(store.sessions, weekMonday.value));
 
-      return {
-        key: String(dayStart),
-        label: DOW_LABELS[index],
-        dateNum: new Date(dayStart).getDate(),
-        isToday: dayStart === todayStart,
-        sessions: daySessions,
-      };
-    });
+  const weekDays = computed(() =>
+    buildWeekDayRows(weekMonday.value, store.sessions, store.rules, store.rules.statsShowDateLabel),
+  );
+
+  const weekMeta = computed(() => getISOWeekYearAndNumber(weekMonday.value));
+
+  const weekYear = computed(() => weekMeta.value.year);
+  const weekNumber = computed(() => weekMeta.value.week);
+
+  const weekTotals = computed(() => computeDayTotals(weekSessions.value, store.rules));
+
+  const isCurrentWeek = computed(() => {
+    return getMondayOfWeekContaining(new Date()).getTime() === getMondayOfWeekContaining(weekMonday.value).getTime();
   });
 
-  return { weekDays };
+  return { weekDays, weekYear, weekNumber, weekTotals, weekSessions, isCurrentWeek };
 }
