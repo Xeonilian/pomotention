@@ -21,10 +21,9 @@ let active: {
   kind: ActiveKind;
   startedAt: number;
   plannedDurationMin: number;
-  stateMessage: string;
 } | null = null;
 
-function resolveStateMessage(kind: ActiveKind): string {
+function resolveSessionStateMessage(kind: ActiveKind): string {
   if (kind === "break") {
     return "Take a break";
   }
@@ -47,7 +46,6 @@ export function timerSessionBegin(kind: ActiveKind, plannedDurationMin: number):
     kind,
     startedAt: Date.now(),
     plannedDurationMin,
-    stateMessage: resolveStateMessage(kind),
   };
 }
 
@@ -60,8 +58,9 @@ export function timerSessionEnd(
 ): void {
   if (!active) return;
 
-  const { kind, startedAt, plannedDurationMin, stateMessage } = active;
+  const { kind, startedAt, plannedDurationMin } = active;
   active = null;
+  const stateMessage = resolveSessionStateMessage(kind);
 
   useTimerSessionStore().addSession({
     kind,
@@ -95,7 +94,7 @@ export function timerSessionRecordWorkVoid(buttonLabel: string): void {
     startedAt: now,
     endedAt: now,
     plannedDurationMin: 0,
-    stateMessage: resolveStateMessage("work"),
+    stateMessage: resolveSessionStateMessage("work"),
     endReason: "squash",
     buttonLabel,
   });
