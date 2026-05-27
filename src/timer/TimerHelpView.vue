@@ -65,6 +65,16 @@
         </section>
 
         <section>
+          <h3 class="timer-help-heading">统计</h3>
+          <ul>
+            <li>顶部双轴图：左轴为各档 emoji 次数折线（工作红系、休息蓝系）；右轴为工作+休息分钟堆叠柱。</li>
+            <li>每日先显示 emoji 行，再显示累计时长与各档次数；点击 emoji 查看详情。</li>
+            <li>可切换上一周 / 下一周，标题显示 ISO 年周。</li>
+            <li>桌面版可导出当周 CSV（action、timestamp、title）。</li>
+          </ul>
+        </section>
+
+        <section>
           <h3 class="timer-help-heading">设置</h3>
           <ul>
             <li>工作 / 休息默认时长、深色模式、分段提示音、置顶停靠偏移、白噪音开关与音轨。</li>
