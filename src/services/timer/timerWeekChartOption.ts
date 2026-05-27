@@ -15,12 +15,12 @@ const WORK_LINE_COLORS = {
 } as const;
 
 const BREAK_LINE_COLORS = {
-  breakShort: "#d0ebff",
+  breakShort: "#228be6",
   breakLong: "#1864ab",
 } as const;
 
-const WORK_MINUTES_FILL = "rgba(255, 182, 193, 0.52)";
-const BREAK_MINUTES_FILL = "rgba(173, 216, 230, 0.48)";
+const WORK_MINUTES_FILL = "rgba(255, 145, 160, 0.58)";
+const BREAK_MINUTES_FILL = "rgba(116, 192, 252, 0.42)";
 
 const COUNT_AXIS_MIN = 8;
 const TOOLTIP_WIDTH_PX = 108;
@@ -138,12 +138,17 @@ export function buildTimerWeekChartOption(
     name: tier.emoji,
     type: "line",
     yAxisIndex: 0,
+    z: 3,
     data: tier.counts,
     showSymbol: true,
     symbol: "circle",
-    symbolSize: 6,
+    symbolSize: 7,
     lineStyle: { width: 1.5, color: tier.color },
-    itemStyle: { color: tier.color, borderColor: tier.color, borderWidth: 0 },
+    itemStyle: {
+      color: tier.color,
+      borderColor: "#fff",
+      borderWidth: 1.5,
+    },
     emphasis: { focus: "series" },
   }));
 
@@ -152,6 +157,7 @@ export function buildTimerWeekChartOption(
       name: "__break_pct__",
       type: "bar",
       yAxisIndex: 0,
+      z: 1,
       stack: "pct",
       data: breakPct.map(pctToAxis),
       barMaxWidth: 14,
@@ -163,6 +169,7 @@ export function buildTimerWeekChartOption(
       name: "__work_pct__",
       type: "bar",
       yAxisIndex: 0,
+      z: 1,
       stack: "pct",
       data: workPct.map(pctToAxis),
       barMaxWidth: 14,
@@ -213,6 +220,6 @@ export function buildTimerWeekChartOption(
       minInterval: 1,
       ...HIDDEN_AXIS,
     },
-    series: [...lineSeries, ...barSeries],
+    series: [...barSeries, ...lineSeries],
   };
 }
