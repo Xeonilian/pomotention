@@ -34,11 +34,16 @@
         <TimerWeekChart :week-days="weekDays" :emojis="emojis" :stats-include="statsInclude" />
 
         <div v-for="day in weekDays" :key="day.key" class="timer-stats-day" :class="{ 'timer-stats-day--today': day.isToday }">
-          <div class="timer-stats-day-label timer-stats-mono">
-            <span class="timer-stats-dow">{{ day.label }}</span>
-            <span class="timer-stats-dom">{{ day.dateLabel }}</span>
+          <div class="timer-stats-day-content">
+            <div class="timer-stats-day-label timer-stats-mono">
+              <span class="timer-stats-dow">{{ day.label }}</span>
+              <span class="timer-stats-dom">{{ day.dateLabel }}</span>
+            </div>
+            <div class="timer-stats-day-totals">
+              <span>Work {{ (day.totals.workMinutes / 60).toFixed(1) }} h</span>
+              <span>Break {{ (day.totals.breakMinutes / 60).toFixed(1) }} h</span>
+            </div>
           </div>
-
           <div class="timer-stats-emojis">
             <button
               v-for="session in day.sessions"
@@ -48,21 +53,9 @@
               :title="sessionTitle(session)"
               @click.stop="openSessionDetail(session)"
             >
-              {{ session.emoji }}
+              {{ sessionEmoji(session) }}
             </button>
-            <span v-if="!day.sessions.length" class="timer-stats-empty">—</span>
-          </div>
-
-          <div class="timer-stats-day-totals">
-            <span>工 {{ day.totals.workMinutes }}分</span>
-            <span>休 {{ day.totals.breakMinutes }}分</span>
-            <template v-for="item in workCountItems(day.totals)" :key="item.key">
-              <span v-if="item.count">{{ item.emoji }}{{ item.count }}</span>
-            </template>
-            <template v-for="item in breakCountItems(day.totals)" :key="item.key">
-              <span v-if="item.count">{{ item.emoji }}{{ item.count }}</span>
-            </template>
-            <span v-if="day.totals.voidCount">{{ voidEmoji }}{{ day.totals.voidCount }}</span>
+            <span v-if="!day.sessions.length" class="timer-stats-empty"></span>
           </div>
         </div>
       </div>
@@ -77,7 +70,7 @@
           </header>
           <dl class="timer-detail-dl">
             <dt>类型</dt>
-            <dd>{{ categoryLabel(selectedSession.category) }} {{ selectedSession.emoji }}</dd>
+            <dd>{{ categoryLabel(selectedSession.category) }} {{ sessionEmoji(selectedSession) }}</dd>
             <dt>时长</dt>
             <dd>{{ formatDurationMs(selectedSession.durationMs) }}</dd>
             <dt>开始</dt>
@@ -109,8 +102,7 @@ import { useTimerWeekStats } from "@/composables/timer/useTimerWeekStats";
 import { useTimerSessionStore } from "@/stores/useTimerSessionStore";
 import { useDevice } from "@/composables/platform/useDevice";
 import type { TimerSessionRecord, TimerSessionCategory } from "@/core/types/TimerSession";
-import type { TimerDayTotals } from "@/services/timer/timerWeekUtils";
-import { formatDurationMs } from "@/services/timer/timerSessionClassifier";
+import { formatDurationMs, resolveSessionDisplayEmoji } from "@/services/timer/timerSessionClassifier";
 import { downloadTimerSessionsCsv } from "@/services/timer/timerSessionExport";
 import { getISOWeekYearAndNumber, getMondayOfWeekContaining, shiftWeekMonday } from "@/services/timer/timerWeekUtils";
 import TimerSessionRulesDialog from "./TimerSessionRulesDialog.vue";
@@ -128,11 +120,18 @@ const showDetail = ref(false);
 const selectedSession = ref<TimerSessionRecord | null>(null);
 
 const canExport = computed(() => isTauri() && !isMobile.value);
-const voidEmoji = computed(() => sessionStore.rules.emojis.workVoid);
 const emojis = computed(() => sessionStore.rules.emojis);
 const statsInclude = computed(() => sessionStore.rules.statsInclude);
 
-const detailTitle = computed(() => (selectedSession.value ? `${selectedSession.value.emoji} 详情` : "详情"));
+const detailTitle = computed(() => {
+  const s = selectedSession.value;
+  if (!s) return "详情";
+  return `${sessionEmoji(s)} 详情`;
+});
+
+function sessionEmoji(session: TimerSessionRecord): string {
+  return resolveSessionDisplayEmoji(session, sessionStore.rules);
+}
 
 function onEscapeKey(e: KeyboardEvent) {
   if (e.key === "Escape" && showDetail.value) closeDetail();
@@ -155,25 +154,6 @@ function openSessionDetail(session: TimerSessionRecord) {
 function closeDetail() {
   showDetail.value = false;
   selectedSession.value = null;
-}
-
-type CountItem = { key: string; emoji: string; count: number };
-
-function workCountItems(totals: TimerDayTotals): CountItem[] {
-  const e = emojis.value;
-  return [
-    { key: "w3", emoji: e.workTier3, count: totals.workTier3 },
-    { key: "w2", emoji: e.workTier2, count: totals.workTier2 },
-    { key: "w1", emoji: e.workTier1, count: totals.workTier1 },
-  ];
-}
-
-function breakCountItems(totals: TimerDayTotals): CountItem[] {
-  const e = emojis.value;
-  return [
-    { key: "bl", emoji: e.breakLong, count: totals.breakLong },
-    { key: "bs", emoji: e.breakShort, count: totals.breakShort },
-  ];
 }
 
 function prevWeek() {
@@ -211,8 +191,9 @@ function endReasonLabel(r: string): string {
   return "自然结束";
 }
 
-function sessionTitle(s: TimerSessionRecord): string {
-  return `${s.emoji} ${formatDurationMs(s.durationMs)}`;
+function sessionTitle(s: TimerSessionRecord): string | undefined {
+  const message = s.stateMessage.trim();
+  return message || undefined;
 }
 </script>
 
@@ -279,8 +260,7 @@ function sessionTitle(s: TimerSessionRecord): string {
 }
 
 .timer-stats-day {
-  padding: 10px 0;
-  border-bottom: 1px solid var(--color-background-light, #f0f0f0);
+  padding: 0 8px 4px 8px;
 }
 
 .timer-stats-day--today .timer-stats-dom {
@@ -288,12 +268,19 @@ function sessionTitle(s: TimerSessionRecord): string {
   font-weight: 700;
 }
 
+.timer-stats-day-content {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
 .timer-stats-day-label {
   display: flex;
   align-items: baseline;
   gap: 8px;
   font-size: 13px;
-  margin-bottom: 4px;
 }
 
 .timer-stats-dow {
@@ -340,8 +327,8 @@ function sessionTitle(s: TimerSessionRecord): string {
 .timer-stats-day-totals {
   display: flex;
   flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 8px;
-  margin-top: 4px;
   font-size: 12px;
   color: var(--color-text-secondary, var(--n-text-color-3));
   font-variant-numeric: tabular-nums;

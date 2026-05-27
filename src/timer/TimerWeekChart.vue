@@ -23,5 +23,6 @@ useTimerWeekChart(chartRef, toRef(props, "weekDays"), toRef(props, "emojis"), to
   width: 100%;
   height: 168px;
   margin-bottom: 12px;
+  margin-top: 20px;
 }
 </style>

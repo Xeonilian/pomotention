@@ -1,9 +1,15 @@
-import type { TimerSessionCategory, TimerSessionEndReason, TimerSessionRules } from "@/core/types/TimerSession";
+import type { TimerSessionCategory, TimerSessionEndReason, TimerSessionRecord, TimerSessionRules } from "@/core/types/TimerSession";
 
 export function clampEmojiText(value: string, maxChars = 2): string {
   const trimmed = (value ?? "").trim();
-  if (!trimmed) return "·";
+  if (!trimmed) return "";
   return [...trimmed].slice(0, maxChars).join("");
+}
+
+/** 按当前规则重算展示符号（与图表一致，不读 session 落库时的 emoji） */
+export function resolveSessionDisplayEmoji(session: TimerSessionRecord, rules: TimerSessionRules): string {
+  const kind: "work" | "break" = session.category === "break" ? "break" : "work";
+  return classifyTimerSession(kind, durationMinutesOf(session), session.endReason, rules).emoji;
 }
 
 export function classifyTimerSession(

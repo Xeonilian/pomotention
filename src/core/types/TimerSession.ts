@@ -50,7 +50,7 @@ export const DEFAULT_TIMER_SESSION_EMOJIS: TimerSessionEmojis = {
   workTier2: "🍅",
   workTier3: "🍉",
   breakShort: "☕",
-  breakLong: "☁",
+  breakLong: "🍰",
 };
 
 export const DEFAULT_TIMER_SESSION_STATS_INCLUDE: TimerSessionStatsInclude = {

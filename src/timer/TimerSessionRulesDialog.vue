@@ -25,8 +25,8 @@
           <n-input
             class="timer-rules-tier-emoji"
             :value="draft.emojis[row.emojiKey]"
-            maxlength="2"
-            placeholder="·"
+            maxlength="4"
+            :placeholder="DEFAULT_TIMER_SESSION_EMOJIS[row.emojiKey]"
             @update:value="(v) => setEmoji(row.emojiKey, String(v ?? ''))"
             size="small"
           />
@@ -52,7 +52,12 @@
 import { reactive } from "vue";
 import { NButton, NCheckbox, NInput, NInputNumber, NModal } from "naive-ui";
 import type { TimerSessionEmojis, TimerSessionRules, TimerSessionStatsInclude } from "@/core/types/TimerSession";
-import { DEFAULT_TIMER_SESSION_RULES, DEFAULT_TIMER_SESSION_STATS_INCLUDE, TIMER_SESSION_RULE_LIMITS } from "@/core/types/TimerSession";
+import {
+  DEFAULT_TIMER_SESSION_EMOJIS,
+  DEFAULT_TIMER_SESSION_RULES,
+  DEFAULT_TIMER_SESSION_STATS_INCLUDE,
+  TIMER_SESSION_RULE_LIMITS,
+} from "@/core/types/TimerSession";
 import { clampEmojiText } from "@/services/timer/timerSessionClassifier";
 import { coerceTimerSessionThresholds, normalizeTimerSessionRules } from "@/services/timer/timerSessionRulesNormalize";
 import { useTimerSessionStore } from "@/stores/useTimerSessionStore";
@@ -131,6 +136,14 @@ function coerceMonotonicThresholds(r: TimerSessionRules): void {
   Object.assign(r, coerceTimerSessionThresholds(r));
 }
 
+function coerceEmojiDefaults(emojis: TimerSessionEmojis): TimerSessionEmojis {
+  const out = { ...emojis };
+  for (const key of Object.keys(DEFAULT_TIMER_SESSION_EMOJIS) as (keyof TimerSessionEmojis)[]) {
+    if (!out[key]?.trim()) out[key] = DEFAULT_TIMER_SESSION_EMOJIS[key];
+  }
+  return out;
+}
+
 function applyRulesToDraft(rules: TimerSessionRules): void {
   ensureDraftShape();
   Object.assign(draft.emojis, rules.emojis);
@@ -148,6 +161,7 @@ function syncDraftFromStore() {
 
 function persistDraft(): void {
   ensureDraftShape();
+  Object.assign(draft.emojis, coerceEmojiDefaults(draft.emojis));
   coerceMonotonicThresholds(draft);
   sessionStore.updateRules(toRawRules(draft));
 }
@@ -166,6 +180,7 @@ function toRawRules(r: TimerSessionRules): TimerSessionRules {
 
 function setEmoji(key: keyof TimerSessionEmojis, value: string) {
   draft.emojis[key] = clampEmojiText(value);
+  sessionStore.updateRules({ emojis: { ...draft.emojis } });
 }
 
 function setStatsInclude(key: keyof TimerSessionStatsInclude, checked: boolean) {
@@ -216,6 +231,18 @@ function onReset() {
 
 .timer-rules-tier-emoji :deep(.n-input__input-el) {
   text-align: center;
+}
+
+.timer-rules-tier-emoji :deep(.n-input__placeholder) {
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+  text-align: center;
+  opacity: 0.4;
+  pointer-events: none;
 }
 
 .timer-rules-tier-num-placeholder {

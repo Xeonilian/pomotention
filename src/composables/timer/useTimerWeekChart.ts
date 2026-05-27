@@ -1,4 +1,4 @@
-import { shallowRef, watch, onMounted, onUnmounted, type Ref, type ComputedRef, unref } from "vue";
+import { shallowRef, watch, onMounted, onUnmounted, nextTick, type Ref, type ComputedRef, unref } from "vue";
 import * as echarts from "echarts/core";
 import { LineChart, BarChart } from "echarts/charts";
 import { TooltipComponent, GridComponent } from "echarts/components";
@@ -33,16 +33,23 @@ export function useTimerWeekChart(
     chartInstance.value.setOption(buildTimerWeekChartOption(days, emojiRules, include), { notMerge: true });
   }
 
+  function resize() {
+    chartInstance.value?.resize();
+  }
+
   function init() {
     if (!chartRef.value) return;
     chartInstance.value?.dispose();
     chartInstance.value = echarts.init(chartRef.value);
     render();
+    void nextTick(resize);
+    if (!resizeObserver) {
+      resizeObserver = new ResizeObserver(() => resize());
+      resizeObserver.observe(chartRef.value);
+    }
   }
 
-  function resize() {
-    chartInstance.value?.resize();
-  }
+  let resizeObserver: ResizeObserver | undefined;
 
   onMounted(() => {
     init();
@@ -51,6 +58,8 @@ export function useTimerWeekChart(
 
   onUnmounted(() => {
     window.removeEventListener("resize", resize);
+    resizeObserver?.disconnect();
+    resizeObserver = undefined;
     chartInstance.value?.dispose();
     chartInstance.value = undefined;
   });

@@ -23,6 +23,53 @@ const WORK_MINUTES_FILL = "rgba(255, 182, 193, 0.52)";
 const BREAK_MINUTES_FILL = "rgba(173, 216, 230, 0.48)";
 
 const COUNT_AXIS_MIN = 8;
+const TOOLTIP_WIDTH_PX = 108;
+const TOOLTIP_GRID_STYLE =
+  "display:grid;grid-template-columns:1fr 1fr;column-gap:8px;row-gap:2px;align-items:center;font-variant-numeric:tabular-nums;";
+const TOOLTIP_EMOJI_STYLE = "font-size:14px;line-height:1;";
+
+function formatHours(minutes: number): string {
+  return (minutes / 60).toFixed(1);
+}
+
+function formatTooltipEmojiCell(emoji: string, count: number): string {
+  return `<span style="display:inline-flex;align-items:center;gap:3px;white-space:nowrap;"><span style="${TOOLTIP_EMOJI_STYLE}">${emoji}</span><span>${count}</span></span>`;
+}
+
+type TooltipEmojiEntry = { emoji: string; count: number };
+
+function formatTooltipContent(
+  dayLabel: string,
+  workMinutes: number,
+  breakMinutes: number,
+  emojiEntries: TooltipEmojiEntry[],
+): string {
+  const hourCells = [
+    `<span>Work</span><span style="white-space:nowrap;">${formatHours(workMinutes)} h</span>`,
+    `<span>Break</span><span style="white-space:nowrap;">${formatHours(breakMinutes)} h</span>`,
+  ];
+
+  const emojiCells: string[] = [];
+  for (let i = 0; i < emojiEntries.length; i += 2) {
+    emojiCells.push(formatTooltipEmojiCell(emojiEntries[i].emoji, emojiEntries[i].count));
+    emojiCells.push(
+      emojiEntries[i + 1] ? formatTooltipEmojiCell(emojiEntries[i + 1].emoji, emojiEntries[i + 1].count) : "<span></span>",
+    );
+  }
+
+  const hoursBlock = `<div style="${TOOLTIP_GRID_STYLE}">${hourCells.join("")}</div>`;
+  const emojiBlock = emojiCells.length
+    ? `<div style="${TOOLTIP_GRID_STYLE}margin-top:6px;">${emojiCells.join("")}</div>`
+    : "";
+
+  return (
+    `<div style="display:flex;flex-direction:column;gap:4px;line-height:1.3;margin:0;">` +
+    `<strong>${dayLabel}</strong>` +
+    hoursBlock +
+    emojiBlock +
+    `</div>`
+  );
+}
 
 type TierLineDef = {
   key: keyof typeof WORK_LINE_COLORS | keyof typeof BREAK_LINE_COLORS;
@@ -69,12 +116,9 @@ function dayWorkBreakPercent(workMinutes: number, breakMinutes: number): { work:
   };
 }
 
+// 双 Y 轴仅作刻度映射，不参与布局以免左右留白
 const HIDDEN_AXIS = {
-  axisLabel: { show: false },
-  axisTick: { show: false },
-  axisLine: { show: false },
-  splitLine: { show: false },
-  name: "",
+  show: false,
 } as const;
 
 export function buildTimerWeekChartOption(
@@ -88,8 +132,7 @@ export function buildTimerWeekChartOption(
 
   const breakPct = weekDays.map((d) => dayWorkBreakPercent(d.totals.workMinutes, d.totals.breakMinutes).break);
   const workPct = weekDays.map((d) => dayWorkBreakPercent(d.totals.workMinutes, d.totals.breakMinutes).work);
-
-  const tierByEmoji = new Map(tierLines.map((t) => [t.emoji, t]));
+  const pctToAxis = (pct: number) => (pct / 100) * countAxisMax;
 
   const lineSeries: LineSeriesOption[] = tierLines.map((tier) => ({
     name: tier.emoji,
@@ -108,9 +151,9 @@ export function buildTimerWeekChartOption(
     {
       name: "__break_pct__",
       type: "bar",
-      yAxisIndex: 1,
+      yAxisIndex: 0,
       stack: "pct",
-      data: breakPct,
+      data: breakPct.map(pctToAxis),
       barMaxWidth: 14,
       itemStyle: { color: BREAK_MINUTES_FILL, borderRadius: [0, 0, 2, 2] },
       silent: true,
@@ -119,9 +162,9 @@ export function buildTimerWeekChartOption(
     {
       name: "__work_pct__",
       type: "bar",
-      yAxisIndex: 1,
+      yAxisIndex: 0,
       stack: "pct",
-      data: workPct,
+      data: workPct.map(pctToAxis),
       barMaxWidth: 14,
       itemStyle: { color: WORK_MINUTES_FILL, borderRadius: [2, 2, 0, 0] },
       silent: true,
@@ -131,65 +174,45 @@ export function buildTimerWeekChartOption(
 
   return {
     animation: false,
-    grid: { left: 8, right: 8, top: 8, bottom: 28 },
+    grid: { left: 0, right: 0, top: 8, bottom: 28, containLabel: false },
     tooltip: {
       trigger: "axis",
       confine: true,
-      textStyle: { fontSize: 11 },
+      renderMode: "html",
+      extraCssText: `width:${TOOLTIP_WIDTH_PX}px;min-width:${TOOLTIP_WIDTH_PX}px;max-width:${TOOLTIP_WIDTH_PX}px;white-space:normal;box-sizing:border-box;font-family:ui-monospace,"Cascadia Code",Consolas,monospace;`,
+      textStyle: { fontSize: 11, fontFamily: 'ui-monospace, "Cascadia Code", Consolas, monospace' },
       formatter(params: unknown) {
-        const items = (Array.isArray(params) ? params : [params]) as Array<{
-          seriesType?: string;
-          seriesName?: string;
-          dataIndex?: number;
-          value?: number | string;
-        }>;
+        const items = (Array.isArray(params) ? params : [params]) as Array<{ dataIndex?: number }>;
         const idx = items[0]?.dataIndex;
         if (idx == null || typeof idx !== "number") return "";
         const day = weekDays[idx];
         if (!day) return "";
 
-        const { work, break: brk } = dayWorkBreakPercent(day.totals.workMinutes, day.totals.breakMinutes);
-        const lines: string[] = [`<strong>${day.label}</strong>`];
-        if (work + brk > 0) {
-          lines.push(`工 ${work}% · 休 ${brk}%`);
-        }
-
-        for (const p of items) {
-          if (p.seriesType !== "line") continue;
-          const count = typeof p.value === "number" ? p.value : Number(p.value);
+        const emojiEntries: TooltipEmojiEntry[] = [];
+        for (const tier of tierLines) {
+          const count = tier.counts[idx];
           if (!count) continue;
-          const tier = tierByEmoji.get(String(p.seriesName ?? ""));
-          if (!tier) continue;
-          lines.push(`${tier.emoji} ${count}`);
+          emojiEntries.push({ emoji: tier.emoji, count });
         }
 
-        return lines.join("<br/>");
+        return formatTooltipContent(day.label, day.totals.workMinutes, day.totals.breakMinutes, emojiEntries);
       },
     },
     xAxis: {
       type: "category",
       data: xLabels,
+      boundaryGap: false,
       axisLabel: { fontSize: 10 },
       axisTick: { alignWithLabel: true, show: true },
       axisLine: { show: false },
     },
-    yAxis: [
-      {
-        type: "value",
-        position: "left",
-        min: 0,
-        max: countAxisMax,
-        minInterval: 1,
-        ...HIDDEN_AXIS,
-      },
-      {
-        type: "value",
-        position: "right",
-        min: 0,
-        max: 100,
-        ...HIDDEN_AXIS,
-      },
-    ],
+    yAxis: {
+      type: "value",
+      min: 0,
+      max: countAxisMax,
+      minInterval: 1,
+      ...HIDDEN_AXIS,
+    },
     series: [...lineSeries, ...barSeries],
   };
 }
