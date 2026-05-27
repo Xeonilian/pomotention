@@ -3,6 +3,7 @@ import { ref, computed } from "vue";
 import type { TimerSessionRecord, TimerSessionRules } from "@/core/types/TimerSession";
 import { DEFAULT_TIMER_SESSION_RULES } from "@/core/types/TimerSession";
 import { classifyTimerSession } from "@/services/timer/timerSessionClassifier";
+import { normalizeTimerSessionRules } from "@/services/timer/timerSessionRulesNormalize";
 
 let sessionIdSeq = 0;
 
@@ -45,11 +46,15 @@ export const useTimerSessionStore = defineStore(
     }
 
     function updateRules(patch: Partial<TimerSessionRules>): void {
-      rules.value = { ...rules.value, ...patch };
+      rules.value = normalizeTimerSessionRules({ ...rules.value, ...patch });
     }
 
     function resetRules(): void {
-      rules.value = { ...DEFAULT_TIMER_SESSION_RULES };
+      rules.value = normalizeTimerSessionRules(DEFAULT_TIMER_SESSION_RULES);
+    }
+
+    function normalizeStoredRules(): void {
+      rules.value = normalizeTimerSessionRules(rules.value);
     }
 
     const sessionsNewestFirst = computed(() => [...sessions.value].sort((a, b) => b.startedAt - a.startedAt));
@@ -61,6 +66,7 @@ export const useTimerSessionStore = defineStore(
       addSession,
       updateRules,
       resetRules,
+      normalizeStoredRules,
     };
   },
   {

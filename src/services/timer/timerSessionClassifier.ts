@@ -1,28 +1,42 @@
 import type { TimerSessionCategory, TimerSessionEndReason, TimerSessionRules } from "@/core/types/TimerSession";
 
+export function clampEmojiText(value: string, maxChars = 2): string {
+  const trimmed = (value ?? "").trim();
+  if (!trimmed) return "·";
+  return [...trimmed].slice(0, maxChars).join("");
+}
+
 export function classifyTimerSession(
   kind: "work" | "break",
   durationMinutes: number,
   endReason: TimerSessionEndReason,
   rules: TimerSessionRules,
 ): { category: TimerSessionCategory; emoji: string } {
+  const e = rules.emojis;
+
   if (kind === "work") {
     if (endReason === "squash" || endReason === "stop") {
-      return { category: "work_void", emoji: "🥫" };
+      return { category: "work_void", emoji: clampEmojiText(e.workVoid) };
     }
-    if (durationMinutes >= rules.tomatoMinMinutes) {
-      return { category: "work", emoji: "🍅" };
+    if (durationMinutes >= rules.workTier3Min) {
+      return { category: "work", emoji: clampEmojiText(e.workTier3) };
     }
-    if (durationMinutes >= rules.cherryMinMinutes) {
-      return { category: "work", emoji: "🍒" };
+    if (durationMinutes >= rules.workTier2Min) {
+      return { category: "work", emoji: clampEmojiText(e.workTier2) };
     }
-    return { category: "work", emoji: "🫧" };
+    if (durationMinutes >= rules.workTier1Min) {
+      return { category: "work", emoji: clampEmojiText(e.workTier1) };
+    }
+    return { category: "work", emoji: clampEmojiText(e.workBelow) };
   }
 
-  if (durationMinutes >= rules.cloudBreakMinMinutes) {
-    return { category: "break", emoji: "☁" };
+  if (durationMinutes >= rules.breakTier2Min) {
+    return { category: "break", emoji: clampEmojiText(e.breakTier2) };
   }
-  return { category: "break", emoji: "☕" };
+  if (durationMinutes >= rules.breakTier1Min) {
+    return { category: "break", emoji: clampEmojiText(e.breakTier1) };
+  }
+  return { category: "break", emoji: clampEmojiText(e.breakShort) };
 }
 
 export function formatDurationMs(ms: number): string {
@@ -33,4 +47,16 @@ export function formatDurationMs(ms: number): string {
   if (h > 0) return `${h}小时${m}分${s}秒`;
   if (m > 0) return `${m}分${s}秒`;
   return `${s}秒`;
+}
+
+export function durationMinutesOf(session: { durationMs: number }): number {
+  return session.durationMs / 60_000;
+}
+
+/** 统计用：≥ 第二档工作时长计为番茄数 */
+export function isTomatoWorkSession(
+  session: { category: TimerSessionCategory; durationMs: number },
+  rules: TimerSessionRules,
+): boolean {
+  return session.category === "work" && durationMinutesOf(session) >= rules.workTier2Min;
 }

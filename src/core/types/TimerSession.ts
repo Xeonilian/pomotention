@@ -3,19 +3,48 @@ export type TimerSessionCategory = "work" | "work_void" | "break";
 
 export type TimerSessionEndReason = "completed" | "squash" | "stop";
 
-export interface TimerSessionRules {
-  /** ≥ 此分钟数且正常结束 → 🍅 */
-  tomatoMinMinutes: number;
-  /** ≥ 此分钟数且正常结束、未达番茄 → 🍒 */
-  cherryMinMinutes: number;
-  /** 休息 ≥ 此分钟数 → ☁ */
-  cloudBreakMinMinutes: number;
+/** 展示用符号，每项最多 2 个字符（含 emoji） */
+export interface TimerSessionEmojis {
+  workVoid: string;
+  workBelow: string;
+  workTier1: string;
+  workTier2: string;
+  workTier3: string;
+  breakShort: string;
+  breakTier1: string;
+  breakTier2: string;
 }
 
+export interface TimerSessionRules {
+  workTier1Min: number;
+  workTier2Min: number;
+  workTier3Min: number;
+  breakTier1Min: number;
+  breakTier2Min: number;
+  emojis: TimerSessionEmojis;
+  /** 统计页是否显示日期与星期（等宽字体） */
+  statsShowDateLabel: boolean;
+}
+
+export const DEFAULT_TIMER_SESSION_EMOJIS: TimerSessionEmojis = {
+  workVoid: "🥫",
+  workBelow: "🫧",
+  workTier1: "🍒",
+  workTier2: "🍅",
+  workTier3: "🍊",
+  breakShort: "☕",
+  breakTier1: "🍵",
+  breakTier2: "☁",
+};
+
 export const DEFAULT_TIMER_SESSION_RULES: TimerSessionRules = {
-  tomatoMinMinutes: 25,
-  cherryMinMinutes: 15,
-  cloudBreakMinMinutes: 15,
+  workTier1Min: 15,
+  workTier2Min: 25,
+  workTier3Min: 45,
+  breakTier1Min: 5,
+  breakTier2Min: 15,
+  emojis: { ...DEFAULT_TIMER_SESSION_EMOJIS },
+  statsShowDateLabel: true,
 };
 
 export interface TimerSessionRecord {
@@ -26,9 +55,7 @@ export interface TimerSessionRecord {
   endedAt: number;
   durationMs: number;
   plannedDurationMin: number;
-  /** 开始时的状态文案（设置自定义或默认） */
   stateMessage: string;
   endReason: TimerSessionEndReason;
-  /** 对应按钮点击标签（Work / Squash / Break / Stop） */
   buttonLabel?: string;
 }
