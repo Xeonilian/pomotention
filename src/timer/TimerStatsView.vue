@@ -40,8 +40,8 @@
               <span class="timer-stats-dom">{{ day.label }}</span>
             </div>
             <div class="timer-stats-day-totals">
-              <span>Work {{ (day.totals.workMinutes / 60).toFixed(1) }} h</span>
-              <span>Break {{ (day.totals.breakMinutes / 60).toFixed(1) }} h</span>
+              <span>W {{ (day.totals.workMinutes / 60).toFixed(1) }} h</span>
+              <span>B {{ (day.totals.breakMinutes / 60).toFixed(1) }} h</span>
             </div>
           </div>
           <div class="timer-stats-emojis">
