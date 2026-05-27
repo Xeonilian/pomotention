@@ -1,5 +1,6 @@
 import type { TimerSessionRecord, TimerSessionRules } from "@/core/types/TimerSession";
 import { isTomatoWorkSession, statsDurationMinutesOf } from "@/services/timer/timerSessionClassifier";
+import { resolveBreakTierForStats, resolveWorkTierForStats } from "@/services/timer/timerSessionTierResolve";
 
 const DOW_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
 
@@ -65,15 +66,11 @@ export type TimerDayTotals = {
 };
 
 function countWorkTier(mins: number, rules: TimerSessionRules): "tier1" | "tier2" | "tier3" {
-  if (mins >= rules.workTier3Min) return "tier3";
-  if (mins >= rules.workTier2Min) return "tier2";
-  return "tier1";
+  return resolveWorkTierForStats(mins, rules);
 }
 
-function countBreakTier(mins: number, rules: TimerSessionRules): "short" | "long" | null {
-  if (mins >= rules.breakLongMin) return "long";
-  if (mins >= rules.breakShortMin) return "short";
-  return null;
+function countBreakTier(mins: number, rules: TimerSessionRules): "short" | "long" {
+  return resolveBreakTierForStats(mins, rules);
 }
 
 export function computeDayTotals(sessions: TimerSessionRecord[], rules: TimerSessionRules): TimerDayTotals {
@@ -94,7 +91,7 @@ export function computeDayTotals(sessions: TimerSessionRecord[], rules: TimerSes
       workMinutes += mins;
       const tier = countWorkTier(mins, rules);
       if (tier === "tier1" && inc.workTier1) workTier1 += 1;
-      else if (tier === "tier2" && inc.workTier2) workTier2 += 1;
+      else if (tier === "tier2") workTier2 += 1;
       else if (tier === "tier3" && inc.workTier3) workTier3 += 1;
       if (isTomatoWorkSession(s, rules)) tomatoCount += 1;
     } else if (s.category === "work_void") {
@@ -102,8 +99,8 @@ export function computeDayTotals(sessions: TimerSessionRecord[], rules: TimerSes
     } else if (s.category === "break") {
       breakMinutes += mins;
       const tier = countBreakTier(mins, rules);
-      if (tier === "short" && inc.breakShort) breakShort += 1;
-      else if (tier === "long" && inc.breakLong) breakLong += 1;
+      if (tier === "long" && inc.breakLong) breakLong += 1;
+      else breakShort += 1;
     }
   }
 

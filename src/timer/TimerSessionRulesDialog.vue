@@ -20,6 +20,7 @@
           <n-checkbox
             class="timer-rules-tier-check"
             :checked="draft.statsInclude[row.includeKey]"
+            :disabled="isIncludeLocked(row.includeKey)"
             @update:checked="(v) => setStatsInclude(row.includeKey, v)"
           />
           <n-input
@@ -60,6 +61,7 @@ import {
 } from "@/core/types/TimerSession";
 import { clampEmojiText } from "@/services/timer/timerSessionClassifier";
 import { coerceTimerSessionThresholds, normalizeTimerSessionRules } from "@/services/timer/timerSessionRulesNormalize";
+import { enforceLockedStatsInclude, isLockedStatsIncludeKey } from "@/services/timer/timerSessionTierResolve";
 import { useTimerSessionStore } from "@/stores/useTimerSessionStore";
 
 type TierRowDef = {
@@ -108,7 +110,7 @@ const tierRows: TierRowDef[] = [
     minKey: "breakShortMin",
     min: TIMER_SESSION_RULE_LIMITS.breakShortMin.min,
     max: TIMER_SESSION_RULE_LIMITS.breakShortMin.max,
-    label: "Short Break",
+    label: "Break",
   },
   {
     key: "breakLong",
@@ -129,6 +131,11 @@ const draft = reactive<TimerSessionRules>(structuredClone(DEFAULT_TIMER_SESSION_
 function ensureDraftShape(): void {
   if (!draft.emojis) draft.emojis = structuredClone(DEFAULT_TIMER_SESSION_RULES.emojis);
   if (!draft.statsInclude) draft.statsInclude = { ...DEFAULT_TIMER_SESSION_STATS_INCLUDE };
+  draft.statsInclude = enforceLockedStatsInclude(draft.statsInclude);
+}
+
+function isIncludeLocked(key: keyof TimerSessionStatsInclude): boolean {
+  return isLockedStatsIncludeKey(key);
 }
 
 /** 保存前把分档分钟数压回合法区间 */
@@ -184,6 +191,7 @@ function setEmoji(key: keyof TimerSessionEmojis, value: string) {
 }
 
 function setStatsInclude(key: keyof TimerSessionStatsInclude, checked: boolean) {
+  if (isIncludeLocked(key)) return;
   draft.statsInclude[key] = checked;
 }
 

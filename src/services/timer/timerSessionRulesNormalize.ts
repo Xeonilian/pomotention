@@ -6,6 +6,7 @@ import {
   TIMER_SESSION_RULE_LIMITS,
 } from "@/core/types/TimerSession";
 import { clampEmojiText } from "@/services/timer/timerSessionClassifier";
+import { enforceLockedStatsInclude } from "@/services/timer/timerSessionTierResolve";
 
 function clampTierMin(value: unknown, key: keyof typeof TIMER_SESSION_RULE_LIMITS, fallback: number): number {
   const { min, max } = TIMER_SESSION_RULE_LIMITS[key];
@@ -41,14 +42,14 @@ function coerceThresholds(r: TimerSessionRules): Pick<
 function parseStatsInclude(r: Record<string, unknown>): TimerSessionStatsInclude {
   const raw = r.statsInclude && typeof r.statsInclude === "object" ? (r.statsInclude as Record<string, unknown>) : {};
   const base = DEFAULT_TIMER_SESSION_STATS_INCLUDE;
-  return {
+  return enforceLockedStatsInclude({
     workVoid: typeof raw.workVoid === "boolean" ? raw.workVoid : base.workVoid,
     workTier1: typeof raw.workTier1 === "boolean" ? raw.workTier1 : base.workTier1,
     workTier2: typeof raw.workTier2 === "boolean" ? raw.workTier2 : base.workTier2,
     workTier3: typeof raw.workTier3 === "boolean" ? raw.workTier3 : base.workTier3,
     breakShort: typeof raw.breakShort === "boolean" ? raw.breakShort : base.breakShort,
     breakLong: typeof raw.breakLong === "boolean" ? raw.breakLong : base.breakLong,
-  };
+  });
 }
 
 /** 合并旧版 tomatoMinMinutes / cherryMinMinutes / 三档休息 配置 */

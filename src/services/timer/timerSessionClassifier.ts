@@ -1,4 +1,10 @@
 import type { TimerSessionCategory, TimerSessionEndReason, TimerSessionRecord, TimerSessionRules } from "@/core/types/TimerSession";
+import {
+  emojiForBreakTier,
+  emojiForWorkTier,
+  resolveBreakTierForStats,
+  resolveWorkTierForStats,
+} from "@/services/timer/timerSessionTierResolve";
 
 export function clampEmojiText(value: string, maxChars = 2): string {
   const trimmed = (value ?? "").trim();
@@ -29,23 +35,12 @@ export function classifyTimerSession(
     if (endReason === "squash") {
       return { category: "work_void", emoji: clampEmojiText(e.workVoid) };
     }
-    if (durationMinutes >= rules.workTier3Min) {
-      return { category: "work", emoji: clampEmojiText(e.workTier3) };
-    }
-    if (durationMinutes >= rules.workTier2Min) {
-      return { category: "work", emoji: clampEmojiText(e.workTier2) };
-    }
-    if (durationMinutes >= rules.workTier1Min) {
-      return { category: "work", emoji: clampEmojiText(e.workTier1) };
-    }
-    // 未满档 1 的完成工作：与档 1 同符号，不设单独「不足」档
-    return { category: "work", emoji: clampEmojiText(e.workTier1) };
+    const tier = resolveWorkTierForStats(durationMinutes, rules);
+    return { category: "work", emoji: clampEmojiText(emojiForWorkTier(tier, e)) };
   }
 
-  if (durationMinutes >= rules.breakLongMin) {
-    return { category: "break", emoji: clampEmojiText(e.breakLong) };
-  }
-  return { category: "break", emoji: clampEmojiText(e.breakShort) };
+  const tier = resolveBreakTierForStats(durationMinutes, rules);
+  return { category: "break", emoji: clampEmojiText(emojiForBreakTier(tier, e)) };
 }
 
 export function formatDurationMs(ms: number): string {
@@ -60,6 +55,21 @@ export function formatDurationMs(ms: number): string {
 
 export function durationMinutesOf(session: { durationMs: number }): number {
   return session.durationMs / 60_000;
+}
+
+/** 正计时结束后 Stop：实际时长超过计划 */
+export function isOvertimeEndSession(session: Pick<TimerSessionRecord, "endReason" | "durationMs" | "plannedDurationMin">): boolean {
+  if (session.endReason === "overtime") return true;
+  if (session.endReason !== "stop") return false;
+  return session.durationMs > session.plannedDurationMin * 60_000;
+}
+
+export function formatTimerSessionEndReason(session: Pick<TimerSessionRecord, "endReason" | "durationMs" | "plannedDurationMin">): string {
+  if (session.endReason === "completed") return "自然结束";
+  if (session.endReason === "squash") return "提前结束（Squash）";
+  if (isOvertimeEndSession(session)) return "正计时结束（Stop）";
+  if (session.endReason === "stop") return "提前结束（Stop）";
+  return "自然结束";
 }
 
 /** 统计用：≥ 第二档工作时长计为番茄数 */
