@@ -26,10 +26,11 @@ export const useTimerSessionStore = defineStore(
       stateMessage: string;
       endReason: "completed" | "squash" | "stop";
       buttonLabel?: string;
+      statsDurationMin?: number;
     }): void {
       const durationMs = Math.max(0, input.endedAt - input.startedAt);
-      const durationMinutes = durationMs / 60_000;
-      const { category, emoji } = classifyTimerSession(input.kind, durationMinutes, input.endReason, rules.value);
+      const statsMinutes = input.statsDurationMin ?? durationMs / 60_000;
+      const { category, emoji } = classifyTimerSession(input.kind, statsMinutes, input.endReason, rules.value);
 
       sessions.value.push({
         id: nextSessionId(),
@@ -38,11 +39,18 @@ export const useTimerSessionStore = defineStore(
         startedAt: input.startedAt,
         endedAt: input.endedAt,
         durationMs,
+        statsDurationMin: input.statsDurationMin,
         plannedDurationMin: input.plannedDurationMin,
         stateMessage: input.stateMessage,
         endReason: input.endReason,
         buttonLabel: input.buttonLabel,
       });
+    }
+
+    function removeSessions(ids: string[]): void {
+      if (!ids.length) return;
+      const drop = new Set(ids);
+      sessions.value = sessions.value.filter((s) => !drop.has(s.id));
     }
 
     function updateRules(patch: Partial<TimerSessionRules>): void {
@@ -64,6 +72,7 @@ export const useTimerSessionStore = defineStore(
       rules,
       sessionsNewestFirst,
       addSession,
+      removeSessions,
       updateRules,
       resetRules,
       normalizeStoredRules,

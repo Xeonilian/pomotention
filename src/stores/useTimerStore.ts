@@ -4,7 +4,10 @@ import { ref, computed, watch } from "vue";
 import { SESSION_MARKER_FULL_NAV_TO_HELP } from "@/composables/platform/useDocsUrl";
 import { useSettingStore } from "./useSettingStore.ts";
 import { playSound, SoundType, startSilentWhiteNoiseHold, startWhiteNoise, stopWhiteNoise } from "../core/sounds.ts";
-import { timerSessionBegin, timerSessionDiscardActive, timerSessionEnd } from "@/services/timer/timerSessionRecorder";
+import { timerSessionBegin, timerSessionDiscardActive, timerSessionEnd, timerSessionEndWithDecision, timerSessionGetActive } from "@/services/timer/timerSessionRecorder";
+import type { TimerSessionEndDecision } from "@/services/timer/timerSessionEndPolicy";
+import { resolveTimerSessionEnd } from "@/services/timer/timerSessionEndPolicy";
+import { shouldOfferOvertimeAfterPlan, syncOvertimeElapsedSec } from "@/services/timer/timerOvertimePhase";
 
 // 修改状态类型，更清晰地表达三种状态
 type PomodoroState = "idle" | "working" | "breaking";
@@ -95,6 +98,11 @@ export const useTimerStore = defineStore(
     /** main 早于子组件 reconcile 时，阶段已结束但尚无 continuation，延后 finalize */
     const pendingSequencePhaseFinalize = ref(false);
 
+    /** 单番茄：计划时长结束后继续正计时 */
+    const isOvertime = ref(false);
+    const overtimeStartedAt = ref<number | null>(null);
+    const overtimeElapsedSec = ref(0);
+
     const progressPercentage = computed(() => {
       if (totalTime.value === 0) return 0;
       return ((totalTime.value - timeRemaining.value) / totalTime.value) * 100;
@@ -181,9 +189,11 @@ export const useTimerStore = defineStore(
       }
     }
 
-    /** 新的一段计时开始：清理 interval、允许再次触发完成逻辑 */
     function beginNewPhase(onFinish?: () => void): void {
       finalizedForPhase.value = false;
+      isOvertime.value = false;
+      overtimeStartedAt.value = null;
+      overtimeElapsedSec.value = 0;
       phaseFinishCallback.value = onFinish ?? null;
       clearPhaseInterval();
     }
@@ -225,6 +235,9 @@ export const useTimerStore = defineStore(
       pendingSequencePhaseFinalize.value = false;
       sequencePhaseContinuation.value = null;
       sequenceContinuationRegistered.value = false;
+      isOvertime.value = false;
+      overtimeStartedAt.value = null;
+      overtimeElapsedSec.value = 0;
       stopWhiteNoise();
     }
 
@@ -284,8 +297,47 @@ export const useTimerStore = defineStore(
       }
     }
 
+    function enterOvertimeAfterPlanComplete(): void {
+      if (pomodoroState.value === "idle" || finalizedForPhase.value || isOvertime.value) return;
+      finalizedForPhase.value = true;
+      clearPhaseInterval();
+      isOvertime.value = true;
+      overtimeStartedAt.value = Date.now();
+      overtimeElapsedSec.value = 0;
+      timeRemaining.value = 0;
+
+      const cue = pomodoroState.value === "working" ? SoundType.WORK_END : SoundType.BREAK_END;
+      void playPhaseEndCue(cue);
+      timerInterval.value = window.setInterval(overtimeTick, 1000);
+    }
+
+    function overtimeTick(): void {
+      if (pomodoroState.value === "idle" || !isOvertime.value) return;
+      overtimeElapsedSec.value = syncOvertimeElapsedSec(overtimeStartedAt.value);
+    }
+
+    function tryEnterOvertimeOrFinalize(): void {
+      if (isOvertime.value) {
+        overtimeTick();
+        return;
+      }
+      if (
+        shouldOfferOvertimeAfterPlan(settingStore.settings.continueTimingAfterComplete, isFromSequence.value) &&
+        !finalizedForPhase.value
+      ) {
+        enterOvertimeAfterPlanComplete();
+        return;
+      }
+      finalizeCurrentPhase();
+    }
+
     function phaseTick(): void {
-      if (pomodoroState.value === "idle" || !startTime.value) return;
+      if (pomodoroState.value === "idle") return;
+      if (isOvertime.value) {
+        overtimeTick();
+        return;
+      }
+      if (!startTime.value) return;
       syncTimeRemainingFromWallClock();
       if (timeRemaining.value <= 0) {
         if (shouldDeferSequenceFinalize()) {
@@ -294,7 +346,7 @@ export const useTimerStore = defineStore(
           clearPhaseInterval();
           return;
         }
-        finalizeCurrentPhase();
+        tryEnterOvertimeOrFinalize();
       }
     }
 
@@ -359,6 +411,13 @@ export const useTimerStore = defineStore(
 
       syncTimeRemainingFromWallClock();
 
+      if (isOvertime.value) {
+        finalizedForPhase.value = true;
+        overtimeTick();
+        ensurePhaseTicker();
+        return;
+      }
+
       if (timeRemaining.value <= 0) {
         if (shouldDeferSequenceFinalize()) {
           pendingSequencePhaseFinalize.value = true;
@@ -366,7 +425,7 @@ export const useTimerStore = defineStore(
           clearPhaseInterval();
           return;
         }
-        finalizeCurrentPhase();
+        tryEnterOvertimeOrFinalize();
       } else {
         ensurePhaseTicker();
       }
@@ -480,17 +539,33 @@ export const useTimerStore = defineStore(
       ]);
     }
 
-    function cancelTimer(): void {
+    function cancelTimerWithDecision(decision: TimerSessionEndDecision): void {
       const finish = () => resetTimer();
       if (isWorking.value) {
-        timerSessionEnd("squash", "Squash");
+        timerSessionEndWithDecision(decision);
         void playPhaseEndCue(SoundType.WORK_END).finally(finish);
       } else if (isBreaking.value) {
-        timerSessionEnd("stop", "Stop");
+        timerSessionEndWithDecision(decision);
         void playPhaseEndCue(SoundType.BREAK_END).finally(finish);
       } else {
         finish();
       }
+    }
+
+    function resetTimerWithEndCue(phase: "work" | "break"): void {
+      const finish = () => resetTimer();
+      const cue = phase === "work" ? SoundType.WORK_END : SoundType.BREAK_END;
+      void playPhaseEndCue(cue).finally(finish);
+    }
+
+    function cancelTimer(): void {
+      const active = timerSessionGetActive();
+      const decision = resolveTimerSessionEnd({
+        kind: active?.kind ?? (isWorking.value ? "work" : "break"),
+        plannedDurationMin: active?.plannedDurationMin ?? totalTime.value / 60,
+        isOvertime: isOvertime.value,
+      });
+      cancelTimerWithDecision(decision);
     }
 
     /** 仅清状态与停白噪音；阶段结束音由 finalizeCurrentPhase / cancelTimer / UI 在调用前自行 playSound */
@@ -512,9 +587,17 @@ export const useTimerStore = defineStore(
       pendingSequencePhaseFinalize.value = false;
       sequencePhaseContinuation.value = null;
       sequenceContinuationRegistered.value = false;
+      isOvertime.value = false;
+      overtimeStartedAt.value = null;
+      overtimeElapsedSec.value = 0;
 
       stopWhiteNoise();
     }
+
+    const displaySeconds = computed(() => {
+      if (isOvertime.value) return overtimeElapsedSec.value;
+      return timeRemaining.value;
+    });
 
     return {
       pomodoroState,
@@ -537,6 +620,9 @@ export const useTimerStore = defineStore(
       sequenceInputSnapshot,
       pendingSequencePhaseFinalize,
       sequenceContinuationRegistered,
+      isOvertime,
+      overtimeElapsedSec,
+      displaySeconds,
       redBarOffsetPercentage,
       redBarPercentage,
       progressPercentage,
@@ -545,6 +631,8 @@ export const useTimerStore = defineStore(
       startWorking,
       startBreak,
       cancelTimer,
+      cancelTimerWithDecision,
+      resetTimerWithEndCue,
       resetTimer,
       reconcilePhaseFromWallClock,
       registerSequenceContinuation,
@@ -566,6 +654,8 @@ export const useTimerStore = defineStore(
         "breakReminderCount",
         "sequenceStepIndex",
         "sequenceInputSnapshot",
+        "isOvertime",
+        "overtimeStartedAt",
       ],
     },
   },

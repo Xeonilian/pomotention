@@ -109,6 +109,9 @@ import {
   Icons20Regular,
 } from "@vicons/fluent";
 import { SoundType } from "@/core/sounds.ts";
+import { timerSequenceRunBegin, timerSequenceRunClear } from "@/services/timer/timerSessionRecorder";
+import { useTimerSequenceStop } from "@/composables/timer/useTimerSequenceStop";
+import { clickStatsStore } from "@/stores/useClickStatsStore";
 type PomodoroStep = {
   type: "work" | "break";
   duration: number;
@@ -117,6 +120,8 @@ type PomodoroStep = {
 const timerStore = useTimerStore();
 const settingStore = useSettingStore();
 const dialog = useDialog();
+const clickStore = clickStatsStore();
+const { requestSequenceStop } = useTimerSequenceStop();
 
 const emit = defineEmits<{
   (e: "pomo-seq-running", status: boolean): void;
@@ -258,6 +263,8 @@ function startPomodoroCircle(): void {
     timerStore.sequenceStepIndex = 0;
     totalPomodoros.value = steps.filter((step) => step.type === "work").length;
     currentPomodoro.value = 1;
+    timerSequenceRunBegin();
+    clickStore.recordClick("Work");
     statusLabel.value = `🍅 ${currentPomodoro.value}/${totalPomodoros.value}`;
     // 初始化进度条
     initializeProgress(sequenceInput.value);
@@ -311,28 +318,31 @@ function runStep(steps: PomodoroStep[]): void {
 /** @param playEndCue true：用户停止，走 cancelTimer 播结束音；false：序列自然结束且 store 已 finalize，仅 reset */
 function stopPomodoro(playEndCue = true): void {
   timerStore.registerSequenceContinuation(null);
-  if (playEndCue) {
-    timerStore.cancelTimer();
-  } else {
+
+  const finishLocalStop = () => {
+    emit("pomo-seq-running", false);
+    isRunning.value = false;
+    timeoutHandles.value.forEach((handle) => clearTimeout(handle));
+    timeoutHandles.value = [];
+    currentStep.value = 0;
+    currentPomodoro.value = 1;
+    totalPomodoros.value = 0;
+    statusLabel.value = "Let's 🍅!";
+    if (progressContainer.value) {
+      progressContainer.value.innerHTML = "";
+    }
+  };
+
+  if (playEndCue && timerStore.isActive) {
+    requestSequenceStop(finishLocalStop);
+    return;
+  }
+
+  if (!playEndCue) {
     timerStore.resetTimer();
   }
-  emit("pomo-seq-running", false);
-  // 然后更新本地状态
-  isRunning.value = false;
-  timeoutHandles.value.forEach((handle) => clearTimeout(handle));
-  timeoutHandles.value = [];
-  // console.log("Stopping pomodoro...");
-
-  // 重置状态
-  currentStep.value = 0;
-  currentPomodoro.value = 1;
-  totalPomodoros.value = 0;
-  statusLabel.value = "Let's 🍅!";
-
-  // 清空进度条
-  if (progressContainer.value) {
-    progressContainer.value.innerHTML = "";
-  }
+  timerSequenceRunClear();
+  finishLocalStop();
 }
 
 // 持久化序列输入到全局设置

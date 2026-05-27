@@ -79,6 +79,8 @@ export interface TimerSessionRecord {
   startedAt: number;
   endedAt: number;
   durationMs: number;
+  /** 统计分档用时长（分钟）；缺省取 durationMs。序列提前停止且计入时用 plannedDurationMin */
+  statsDurationMin?: number;
   plannedDurationMin: number;
   stateMessage: string;
   endReason: TimerSessionEndReason;

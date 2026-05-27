@@ -18,6 +18,11 @@
         <n-switch v-model:value="settingStore.settings.darkMode" />
       </div>
       <div class="timer-settings-field timer-settings-field--row">
+        <label class="timer-settings-label">结束后继续正计时</label>
+        <n-switch v-model:value="settingStore.settings.continueTimingAfterComplete" />
+      </div>
+      <p class="timer-settings-hint">开启后倒计时到 0 会继续正计时；超时后工作按钮变为 Stop，按实际总时长计入统计。</p>
+      <div class="timer-settings-field timer-settings-field--row">
         <label class="timer-settings-label">分段提示音</label>
         <n-switch v-model:value="settingStore.settings.isSegmentCueEnabled" />
       </div>

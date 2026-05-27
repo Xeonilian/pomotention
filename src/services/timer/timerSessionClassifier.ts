@@ -7,9 +7,14 @@ export function clampEmojiText(value: string, maxChars = 2): string {
 }
 
 /** 按当前规则重算展示符号（与图表一致，不读 session 落库时的 emoji） */
+export function statsDurationMinutesOf(session: { durationMs: number; statsDurationMin?: number }): number {
+  if (session.statsDurationMin != null) return session.statsDurationMin;
+  return durationMinutesOf(session);
+}
+
 export function resolveSessionDisplayEmoji(session: TimerSessionRecord, rules: TimerSessionRules): string {
   const kind: "work" | "break" = session.category === "break" ? "break" : "work";
-  return classifyTimerSession(kind, durationMinutesOf(session), session.endReason, rules).emoji;
+  return classifyTimerSession(kind, statsDurationMinutesOf(session), session.endReason, rules).emoji;
 }
 
 export function classifyTimerSession(
@@ -21,7 +26,7 @@ export function classifyTimerSession(
   const e = rules.emojis;
 
   if (kind === "work") {
-    if (endReason === "squash" || endReason === "stop") {
+    if (endReason === "squash") {
       return { category: "work_void", emoji: clampEmojiText(e.workVoid) };
     }
     if (durationMinutes >= rules.workTier3Min) {
@@ -59,8 +64,8 @@ export function durationMinutesOf(session: { durationMs: number }): number {
 
 /** 统计用：≥ 第二档工作时长计为番茄数 */
 export function isTomatoWorkSession(
-  session: { category: TimerSessionCategory; durationMs: number },
+  session: { category: TimerSessionCategory; durationMs: number; statsDurationMin?: number },
   rules: TimerSessionRules,
 ): boolean {
-  return session.category === "work" && durationMinutesOf(session) >= rules.workTier2Min;
+  return session.category === "work" && statsDurationMinutesOf(session) >= rules.workTier2Min;
 }

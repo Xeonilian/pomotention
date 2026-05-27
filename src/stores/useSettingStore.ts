@@ -48,6 +48,8 @@ export interface GlobalSettings {
   whiteNoiseSoundTrack: SoundType;
   /** 工作阶段切换、休息进度节点等中间提示音（开始/结束音不受影响） */
   isSegmentCueEnabled: boolean;
+  /** 单番茄：计划结束后继续正计时，Stop 按实际总时长计 */
+  continueTimingAfterComplete: boolean;
   webdavId: string;
   webdavKey: string;
   webdavWebsite: string;
@@ -118,6 +120,7 @@ const defaultSettings: GlobalSettings = {
   isWhiteNoiseEnabled: true,
   whiteNoiseSoundTrack: SoundType.WORK_TICK,
   isSegmentCueEnabled: true,
+  continueTimingAfterComplete: false,
   webdavId: "",
   webdavKey: "",
   webdavWebsite: "https://dav.jianguoyun.com/dav/",

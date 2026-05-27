@@ -1,5 +1,19 @@
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useTimerSessionStore } from "@/stores/useTimerSessionStore";
+import type { TimerSessionEndDecision } from "@/services/timer/timerSessionEndPolicy";
+import {
+  timerSequenceRunBegin,
+  timerSequenceRunClear,
+  timerSequenceRunDiscardCompleted,
+  timerSequenceRunHasCompletedSessions,
+} from "@/services/timer/timerSequenceRunTracker";
+
+export {
+  timerSequenceRunBegin,
+  timerSequenceRunClear,
+  timerSequenceRunDiscardCompleted,
+  timerSequenceRunHasCompletedSessions,
+};
 
 type ActiveKind = "work" | "break";
 
@@ -14,6 +28,14 @@ function resolveStateMessage(): string {
   const custom = useSettingStore().settings.pomodoroStateMessage?.trim();
   if (custom) return custom;
   return "Ready to pomodoro!";
+}
+
+export function timerSessionGetActive(): {
+  kind: ActiveKind;
+  plannedDurationMin: number;
+} | null {
+  if (!active) return null;
+  return { kind: active.kind, plannedDurationMin: active.plannedDurationMin };
 }
 
 /** 开始一段工作/休息（在 startWorking / startBreak 时调用） */
@@ -31,6 +53,7 @@ export function timerSessionEnd(
   endReason: "completed" | "squash" | "stop",
   buttonLabel?: string,
   endedAt: number = Date.now(),
+  opts?: { statsDurationMin?: number },
 ): void {
   if (!active) return;
 
@@ -45,10 +68,32 @@ export function timerSessionEnd(
     stateMessage,
     endReason,
     buttonLabel,
+    statsDurationMin: opts?.statsDurationMin,
+  });
+}
+
+/** 按策略结束当前段（cancelTimer 等调用） */
+export function timerSessionEndWithDecision(decision: TimerSessionEndDecision, endedAt: number = Date.now()): void {
+  timerSessionEnd(decision.endReason, decision.buttonLabel, endedAt, {
+    statsDurationMin: decision.statsDurationMin,
   });
 }
 
 /** 异常复位时丢弃未闭合段，避免污染下一段 */
 export function timerSessionDiscardActive(): void {
   active = null;
+}
+
+/** Pizza「不计入」时在休息段停止：记一条工作作废 */
+export function timerSessionRecordWorkVoid(buttonLabel: string): void {
+  const now = Date.now();
+  useTimerSessionStore().addSession({
+    kind: "work",
+    startedAt: now,
+    endedAt: now,
+    plannedDurationMin: 0,
+    stateMessage: resolveStateMessage(),
+    endReason: "squash",
+    buttonLabel,
+  });
 }

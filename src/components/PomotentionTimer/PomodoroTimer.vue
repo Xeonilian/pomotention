@@ -76,7 +76,7 @@
         class="work-button"
         @click="handleWorkAction"
       >
-        {{ timerStore.pomodoroState === "working" ? "Squash" : "Wind up" }}
+        {{ timerStore.pomodoroState === "working" ? (timerStore.isOvertime ? "Stop" : "Squash") : "Wind up" }}
       </n-button>
 
       <!-- 5-2 休息按钮：只在非工作状态显示 -->
@@ -239,7 +239,7 @@ function cancelEditing(): void {
 
 // 2 计时器
 const formattedTime = computed((): string => {
-  const totalSeconds = timerStore.timeRemaining;
+  const totalSeconds = timerStore.displaySeconds;
   const minutes = Math.floor(totalSeconds / 60)
     .toString()
     .padStart(2, "0");

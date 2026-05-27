@@ -1,5 +1,5 @@
 import type { TimerSessionRecord, TimerSessionRules } from "@/core/types/TimerSession";
-import { durationMinutesOf, isTomatoWorkSession } from "@/services/timer/timerSessionClassifier";
+import { isTomatoWorkSession, statsDurationMinutesOf } from "@/services/timer/timerSessionClassifier";
 
 const DOW_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
 
@@ -89,7 +89,7 @@ export function computeDayTotals(sessions: TimerSessionRecord[], rules: TimerSes
   const inc = rules.statsInclude;
 
   for (const s of sessions) {
-    const mins = durationMinutesOf(s);
+    const mins = statsDurationMinutesOf(s);
     if (s.category === "work") {
       workMinutes += mins;
       const tier = countWorkTier(mins, rules);
