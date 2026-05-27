@@ -23,9 +23,7 @@ export function useTimerWeekStats(weekMonday: Ref<Date>): {
 
   const weekSessions = computed(() => sessionsInWeek(store.sessions, weekMonday.value));
 
-  const weekDays = computed(() =>
-    buildWeekDayRows(weekMonday.value, store.sessions, store.rules, store.rules.statsShowDateLabel),
-  );
+  const weekDays = computed(() => buildWeekDayRows(weekMonday.value, store.sessions, store.rules));
 
   const weekMeta = computed(() => getISOWeekYearAndNumber(weekMonday.value));
 

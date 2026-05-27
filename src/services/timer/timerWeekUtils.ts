@@ -57,29 +57,23 @@ export type TimerDayTotals = {
   breakMinutes: number;
   voidCount: number;
   tomatoCount: number;
-  workBelow: number;
   workTier1: number;
   workTier2: number;
   workTier3: number;
   breakShort: number;
-  breakTier1: number;
-  breakTier2: number;
+  breakLong: number;
 };
 
-function countWorkTier(
-  mins: number,
-  rules: TimerSessionRules,
-): "below" | "tier1" | "tier2" | "tier3" {
+function countWorkTier(mins: number, rules: TimerSessionRules): "tier1" | "tier2" | "tier3" {
   if (mins >= rules.workTier3Min) return "tier3";
   if (mins >= rules.workTier2Min) return "tier2";
-  if (mins >= rules.workTier1Min) return "tier1";
-  return "below";
+  return "tier1";
 }
 
-function countBreakTier(mins: number, rules: TimerSessionRules): "short" | "tier1" | "tier2" {
-  if (mins >= rules.breakTier2Min) return "tier2";
-  if (mins >= rules.breakTier1Min) return "tier1";
-  return "short";
+function countBreakTier(mins: number, rules: TimerSessionRules): "short" | "long" | null {
+  if (mins >= rules.breakLongMin) return "long";
+  if (mins >= rules.breakShortMin) return "short";
+  return null;
 }
 
 export function computeDayTotals(sessions: TimerSessionRecord[], rules: TimerSessionRules): TimerDayTotals {
@@ -87,32 +81,29 @@ export function computeDayTotals(sessions: TimerSessionRecord[], rules: TimerSes
   let breakMinutes = 0;
   let voidCount = 0;
   let tomatoCount = 0;
-  let workBelow = 0;
   let workTier1 = 0;
   let workTier2 = 0;
   let workTier3 = 0;
   let breakShort = 0;
-  let breakTier1 = 0;
-  let breakTier2 = 0;
+  let breakLong = 0;
+  const inc = rules.statsInclude;
 
   for (const s of sessions) {
     const mins = durationMinutesOf(s);
     if (s.category === "work") {
       workMinutes += mins;
       const tier = countWorkTier(mins, rules);
-      if (tier === "below") workBelow += 1;
-      else if (tier === "tier1") workTier1 += 1;
-      else if (tier === "tier2") workTier2 += 1;
-      else workTier3 += 1;
+      if (tier === "tier1" && inc.workTier1) workTier1 += 1;
+      else if (tier === "tier2" && inc.workTier2) workTier2 += 1;
+      else if (tier === "tier3" && inc.workTier3) workTier3 += 1;
       if (isTomatoWorkSession(s, rules)) tomatoCount += 1;
     } else if (s.category === "work_void") {
-      voidCount += 1;
+      if (inc.workVoid) voidCount += 1;
     } else if (s.category === "break") {
       breakMinutes += mins;
       const tier = countBreakTier(mins, rules);
-      if (tier === "short") breakShort += 1;
-      else if (tier === "tier1") breakTier1 += 1;
-      else breakTier2 += 1;
+      if (tier === "short" && inc.breakShort) breakShort += 1;
+      else if (tier === "long" && inc.breakLong) breakLong += 1;
     }
   }
 
@@ -121,13 +112,11 @@ export function computeDayTotals(sessions: TimerSessionRecord[], rules: TimerSes
     breakMinutes: Math.round(breakMinutes),
     voidCount,
     tomatoCount,
-    workBelow,
     workTier1,
     workTier2,
     workTier3,
     breakShort,
-    breakTier1,
-    breakTier2,
+    breakLong,
   };
 }
 
@@ -143,12 +132,7 @@ export type TimerWeekDayRow = {
   workMinutes: number;
 };
 
-export function buildWeekDayRows(
-  monday: Date,
-  sessions: TimerSessionRecord[],
-  rules: TimerSessionRules,
-  showDateLabel: boolean,
-): TimerWeekDayRow[] {
+export function buildWeekDayRows(monday: Date, sessions: TimerSessionRecord[], rules: TimerSessionRules): TimerWeekDayRow[] {
   const todayStart = startOfLocalDay(Date.now());
   const starts = getWeekDayStarts(monday);
 
@@ -164,7 +148,7 @@ export function buildWeekDayRows(
       label: DOW_LABELS[index],
       dateNum: d.getDate(),
       monthNum: d.getMonth() + 1,
-      dateLabel: showDateLabel ? `${mm}-${dd}` : String(d.getDate()),
+      dateLabel: `${mm}-${dd}`,
       isToday: dayStart === todayStart,
       sessions: daySessions,
       totals,

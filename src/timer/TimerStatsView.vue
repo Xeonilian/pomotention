@@ -22,15 +22,19 @@
     <main class="timer-stats-body">
       <div class="timer-stats-inner">
         <div class="timer-stats-week-nav">
-          <n-button text size="small" @click="prevWeek">上一周</n-button>
-          <span class="timer-stats-week-label">{{ weekYear }} 年第 {{ weekNumber }} 周</span>
-          <n-button text size="small" :disabled="isCurrentWeek" @click="nextWeek">下一周</n-button>
+          <n-button text size="small" @click="prevWeek">
+            <template #icon><n-icon :component="ChevronLeft24Filled" /></template>
+          </n-button>
+          <span class="timer-stats-week-label">{{ weekYear }} Week {{ weekNumber }}</span>
+          <n-button text size="small" :disabled="isCurrentWeek" @click="nextWeek">
+            <template #icon><n-icon :component="ChevronRight24Filled" /></template>
+          </n-button>
         </div>
 
-        <TimerWeekChart :week-days="weekDays" :emojis="emojis" />
+        <TimerWeekChart :week-days="weekDays" :emojis="emojis" :stats-include="statsInclude" />
 
         <div v-for="day in weekDays" :key="day.key" class="timer-stats-day" :class="{ 'timer-stats-day--today': day.isToday }">
-          <div class="timer-stats-day-label" :class="{ 'timer-stats-mono': showDateLabel }">
+          <div class="timer-stats-day-label timer-stats-mono">
             <span class="timer-stats-dow">{{ day.label }}</span>
             <span class="timer-stats-dom">{{ day.dateLabel }}</span>
           </div>
@@ -64,13 +68,8 @@
       </div>
     </main>
 
-    <Teleport to="body">
-      <div
-        v-if="showDetail && selectedSession"
-        class="timer-detail-overlay"
-        role="presentation"
-        @click.self="closeDetail"
-      >
+    <Teleport to="#timer-portal">
+      <div v-if="showDetail && selectedSession" class="timer-detail-overlay" role="presentation" @click.self="closeDetail">
         <div class="timer-detail-panel" role="dialog" aria-modal="true" :aria-label="detailTitle">
           <header class="timer-detail-panel__head">
             <span class="timer-detail-panel__title">{{ detailTitle }}</span>
@@ -105,7 +104,7 @@ import { computed, onMounted, onUnmounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import { isTauri } from "@tauri-apps/api/core";
 import { NButton, NIcon } from "naive-ui";
-import { ArrowDownload24Regular, ArrowLeft24Regular, Settings24Regular } from "@vicons/fluent";
+import { ArrowDownload24Regular, ArrowLeft24Regular, ChevronLeft24Filled, ChevronRight24Filled, Settings24Regular } from "@vicons/fluent";
 import { useTimerWeekStats } from "@/composables/timer/useTimerWeekStats";
 import { useTimerSessionStore } from "@/stores/useTimerSessionStore";
 import { useDevice } from "@/composables/platform/useDevice";
@@ -129,9 +128,9 @@ const showDetail = ref(false);
 const selectedSession = ref<TimerSessionRecord | null>(null);
 
 const canExport = computed(() => isTauri() && !isMobile.value);
-const showDateLabel = computed(() => sessionStore.rules.statsShowDateLabel);
 const voidEmoji = computed(() => sessionStore.rules.emojis.workVoid);
 const emojis = computed(() => sessionStore.rules.emojis);
+const statsInclude = computed(() => sessionStore.rules.statsInclude);
 
 const detailTitle = computed(() => (selectedSession.value ? `${selectedSession.value.emoji} 详情` : "详情"));
 
@@ -166,15 +165,13 @@ function workCountItems(totals: TimerDayTotals): CountItem[] {
     { key: "w3", emoji: e.workTier3, count: totals.workTier3 },
     { key: "w2", emoji: e.workTier2, count: totals.workTier2 },
     { key: "w1", emoji: e.workTier1, count: totals.workTier1 },
-    { key: "wb", emoji: e.workBelow, count: totals.workBelow },
   ];
 }
 
 function breakCountItems(totals: TimerDayTotals): CountItem[] {
   const e = emojis.value;
   return [
-    { key: "b2", emoji: e.breakTier2, count: totals.breakTier2 },
-    { key: "b1", emoji: e.breakTier1, count: totals.breakTier1 },
+    { key: "bl", emoji: e.breakLong, count: totals.breakLong },
     { key: "bs", emoji: e.breakShort, count: totals.breakShort },
   ];
 }
@@ -369,7 +366,7 @@ function sessionTitle(s: TimerSessionRecord): string {
 </style>
 
 <style>
-.timer-detail-overlay {
+#timer-portal .timer-detail-overlay {
   position: fixed;
   inset: 0;
   z-index: 3000;
@@ -381,7 +378,7 @@ function sessionTitle(s: TimerSessionRecord): string {
   background: rgba(0, 0, 0, 0.45);
 }
 
-.timer-detail-panel {
+#timer-portal .timer-detail-panel {
   width: min(300px, calc(100vw - 24px));
   max-height: min(420px, calc(100vh - 24px));
   overflow-y: auto;
@@ -392,7 +389,7 @@ function sessionTitle(s: TimerSessionRecord): string {
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.2);
 }
 
-.timer-detail-panel__head {
+#timer-portal .timer-detail-panel__head {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -400,12 +397,12 @@ function sessionTitle(s: TimerSessionRecord): string {
   margin-bottom: 10px;
 }
 
-.timer-detail-panel__title {
+#timer-portal .timer-detail-panel__title {
   font-weight: 600;
   font-size: 14px;
 }
 
-.timer-detail-panel__close {
+#timer-portal .timer-detail-panel__close {
   border: none;
   background: transparent;
   font-size: 20px;

@@ -4,17 +4,18 @@
 
 <script setup lang="ts">
 import { ref, toRef } from "vue";
-import type { TimerSessionEmojis } from "@/core/types/TimerSession";
+import type { TimerSessionEmojis, TimerSessionStatsInclude } from "@/core/types/TimerSession";
 import type { TimerWeekDayRow } from "@/services/timer/timerWeekUtils";
 import { useTimerWeekChart } from "@/composables/timer/useTimerWeekChart";
 
 const props = defineProps<{
   weekDays: TimerWeekDayRow[];
   emojis: TimerSessionEmojis;
+  statsInclude: TimerSessionStatsInclude;
 }>();
 
 const chartRef = ref<HTMLElement>();
-useTimerWeekChart(chartRef, toRef(props, "weekDays"), toRef(props, "emojis"));
+useTimerWeekChart(chartRef, toRef(props, "weekDays"), toRef(props, "emojis"), toRef(props, "statsInclude"));
 </script>
 
 <style scoped>

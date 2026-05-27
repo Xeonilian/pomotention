@@ -4,6 +4,8 @@
       <n-dialog-provider>
         <div class="timer-app-shell">
           <router-view />
+          <!-- 统计弹层挂载点：须在 ConfigProvider 内，避免 Teleport 到 body 丢失主题上下文 -->
+          <div id="timer-portal" />
         </div>
       </n-dialog-provider>
     </n-notification-provider>
@@ -121,5 +123,10 @@ html.platform-tauri #app {
   background-color: var(--color-background, #ffffff);
   overflow: hidden;
   color: var(--color-text-primary);
+}
+
+#timer-portal {
+  position: relative;
+  z-index: 3000;
 }
 </style>

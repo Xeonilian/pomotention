@@ -27,14 +27,12 @@ export function classifyTimerSession(
     if (durationMinutes >= rules.workTier1Min) {
       return { category: "work", emoji: clampEmojiText(e.workTier1) };
     }
-    return { category: "work", emoji: clampEmojiText(e.workBelow) };
+    // 未满档 1 的完成工作：与档 1 同符号，不设单独「不足」档
+    return { category: "work", emoji: clampEmojiText(e.workTier1) };
   }
 
-  if (durationMinutes >= rules.breakTier2Min) {
-    return { category: "break", emoji: clampEmojiText(e.breakTier2) };
-  }
-  if (durationMinutes >= rules.breakTier1Min) {
-    return { category: "break", emoji: clampEmojiText(e.breakTier1) };
+  if (durationMinutes >= rules.breakLongMin) {
+    return { category: "break", emoji: clampEmojiText(e.breakLong) };
   }
   return { category: "break", emoji: clampEmojiText(e.breakShort) };
 }
