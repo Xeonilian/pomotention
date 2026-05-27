@@ -6,8 +6,13 @@
           <n-icon :component="ArrowLeft24Regular" />
         </template>
       </n-button>
-      <span class="timer-stats-title">本周统计</span>
-      <n-button text title="分类规则" class="timer-stats-rules-btn" @click="showRules = true">
+      <span class="timer-stats-title">统计</span>
+      <n-button v-if="canExport" text title="导出 CSV" class="timer-stats-header-btn" @click="exportCsv">
+        <template #icon>
+          <n-icon :component="ArrowDownload24Regular" />
+        </template>
+      </n-button>
+      <n-button text title="规则" class="timer-stats-header-btn" @click="showRules = true">
         <template #icon>
           <n-icon :component="Settings24Regular" />
         </template>
@@ -16,100 +21,176 @@
 
     <main class="timer-stats-body">
       <div class="timer-stats-inner">
-        <p class="timer-stats-summary">共 {{ totalSessions }} 段 · 番茄 {{ tomatoCount }} · 作废 {{ voidCount }}</p>
-
-        <div v-for="day in weekDays" :key="day.key" class="timer-stats-day" :class="{ 'timer-stats-day--today': day.isToday }">
-          <div class="timer-stats-day-label">
-            <span class="timer-stats-dow">{{ day.label }}</span>
-            <span class="timer-stats-dom">{{ day.dateNum }}</span>
-          </div>
-          <div class="timer-stats-emojis">
-            <template v-if="day.sessions.length">
-              <button
-                v-for="session in day.sessions"
-                :key="session.id"
-                type="button"
-                class="timer-stats-emoji"
-                :title="sessionTitle(session)"
-                @click="selectedSession = session"
-              >
-                {{ session.emoji }}
-              </button>
-            </template>
-            <span v-else class="timer-stats-empty">—</span>
-          </div>
+        <div class="timer-stats-week-nav">
+          <n-button text size="small" @click="prevWeek">上一周</n-button>
+          <span class="timer-stats-week-label">{{ weekYear }} 年第 {{ weekNumber }} 周</span>
+          <n-button text size="small" :disabled="isCurrentWeek" @click="nextWeek">下一周</n-button>
         </div>
 
-        <section v-if="recentClicks.length" class="timer-stats-clicks">
-          <h3 class="timer-stats-clicks-heading">最近按钮记录</h3>
-          <ul>
-            <li v-for="click in recentClicks" :key="click.id">
-              {{ click.label }} · {{ formatTs(click.timestamp) }}
-            </li>
-          </ul>
-        </section>
+        <TimerWeekChart :week-days="weekDays" :emojis="emojis" />
+
+        <div v-for="day in weekDays" :key="day.key" class="timer-stats-day" :class="{ 'timer-stats-day--today': day.isToday }">
+          <div class="timer-stats-day-label" :class="{ 'timer-stats-mono': showDateLabel }">
+            <span class="timer-stats-dow">{{ day.label }}</span>
+            <span class="timer-stats-dom">{{ day.dateLabel }}</span>
+          </div>
+
+          <div class="timer-stats-emojis">
+            <button
+              v-for="session in day.sessions"
+              :key="session.id"
+              type="button"
+              class="timer-stats-emoji"
+              :title="sessionTitle(session)"
+              @click.stop="openSessionDetail(session)"
+            >
+              {{ session.emoji }}
+            </button>
+            <span v-if="!day.sessions.length" class="timer-stats-empty">—</span>
+          </div>
+
+          <div class="timer-stats-day-totals">
+            <span>工 {{ day.totals.workMinutes }}分</span>
+            <span>休 {{ day.totals.breakMinutes }}分</span>
+            <template v-for="item in workCountItems(day.totals)" :key="item.key">
+              <span v-if="item.count">{{ item.emoji }}{{ item.count }}</span>
+            </template>
+            <template v-for="item in breakCountItems(day.totals)" :key="item.key">
+              <span v-if="item.count">{{ item.emoji }}{{ item.count }}</span>
+            </template>
+            <span v-if="day.totals.voidCount">{{ voidEmoji }}{{ day.totals.voidCount }}</span>
+          </div>
+        </div>
       </div>
     </main>
 
-    <n-modal v-model:show="detailVisible" preset="card" :title="detailTitle" class="timer-detail-modal" size="small">
-      <dl v-if="selectedSession" class="timer-detail-dl">
-        <dt>类型</dt>
-        <dd>{{ categoryLabel(selectedSession.category) }} {{ selectedSession.emoji }}</dd>
-        <dt>时长</dt>
-        <dd>{{ formatDurationMs(selectedSession.durationMs) }}</dd>
-        <dt>开始</dt>
-        <dd>{{ formatTs(selectedSession.startedAt) }}</dd>
-        <dt>结束</dt>
-        <dd>{{ formatTs(selectedSession.endedAt) }}</dd>
-        <dt>状态文案</dt>
-        <dd>{{ selectedSession.stateMessage || "—" }}</dd>
-        <dt>计划时长</dt>
-        <dd>{{ selectedSession.plannedDurationMin }} 分钟</dd>
-        <dt>结束方式</dt>
-        <dd>{{ endReasonLabel(selectedSession.endReason) }}</dd>
-        <dt v-if="selectedSession.buttonLabel">按钮</dt>
-        <dd v-if="selectedSession.buttonLabel">{{ selectedSession.buttonLabel }}</dd>
-      </dl>
-    </n-modal>
+    <Teleport to="body">
+      <div
+        v-if="showDetail && selectedSession"
+        class="timer-detail-overlay"
+        role="presentation"
+        @click.self="closeDetail"
+      >
+        <div class="timer-detail-panel" role="dialog" aria-modal="true" :aria-label="detailTitle">
+          <header class="timer-detail-panel__head">
+            <span class="timer-detail-panel__title">{{ detailTitle }}</span>
+            <button type="button" class="timer-detail-panel__close" aria-label="关闭" @click="closeDetail">×</button>
+          </header>
+          <dl class="timer-detail-dl">
+            <dt>类型</dt>
+            <dd>{{ categoryLabel(selectedSession.category) }} {{ selectedSession.emoji }}</dd>
+            <dt>时长</dt>
+            <dd>{{ formatDurationMs(selectedSession.durationMs) }}</dd>
+            <dt>开始</dt>
+            <dd>{{ formatTs(selectedSession.startedAt) }}</dd>
+            <dt>结束</dt>
+            <dd>{{ formatTs(selectedSession.endedAt) }}</dd>
+            <dt>状态文案</dt>
+            <dd>{{ selectedSession.stateMessage || "—" }}</dd>
+            <dt>计划时长</dt>
+            <dd>{{ selectedSession.plannedDurationMin }} 分钟</dd>
+            <dt>结束方式</dt>
+            <dd>{{ endReasonLabel(selectedSession.endReason) }}</dd>
+          </dl>
+        </div>
+      </div>
+    </Teleport>
 
     <TimerSessionRulesDialog v-model:show="showRules" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 import { useRouter } from "vue-router";
-import { NButton, NIcon, NModal } from "naive-ui";
-import { ArrowLeft24Regular, Settings24Regular } from "@vicons/fluent";
+import { isTauri } from "@tauri-apps/api/core";
+import { NButton, NIcon } from "naive-ui";
+import { ArrowDownload24Regular, ArrowLeft24Regular, Settings24Regular } from "@vicons/fluent";
 import { useTimerWeekStats } from "@/composables/timer/useTimerWeekStats";
 import { useTimerSessionStore } from "@/stores/useTimerSessionStore";
-import { clickStatsStore } from "@/stores/useClickStatsStore";
+import { useDevice } from "@/composables/platform/useDevice";
 import type { TimerSessionRecord, TimerSessionCategory } from "@/core/types/TimerSession";
+import type { TimerDayTotals } from "@/services/timer/timerWeekUtils";
 import { formatDurationMs } from "@/services/timer/timerSessionClassifier";
+import { downloadTimerSessionsCsv } from "@/services/timer/timerSessionExport";
+import { getISOWeekYearAndNumber, getMondayOfWeekContaining, shiftWeekMonday } from "@/services/timer/timerWeekUtils";
 import TimerSessionRulesDialog from "./TimerSessionRulesDialog.vue";
+import TimerWeekChart from "./TimerWeekChart.vue";
 
 const router = useRouter();
 const sessionStore = useTimerSessionStore();
-const clickStore = clickStatsStore();
-const { weekDays } = useTimerWeekStats();
+const { isMobile } = useDevice();
+
+const weekMonday = ref(getMondayOfWeekContaining(new Date()));
+const { weekDays, weekYear, weekNumber, weekSessions, isCurrentWeek } = useTimerWeekStats(weekMonday);
 
 const showRules = ref(false);
+const showDetail = ref(false);
 const selectedSession = ref<TimerSessionRecord | null>(null);
 
-const detailVisible = computed({
-  get: () => selectedSession.value != null,
-  set: (v) => {
-    if (!v) selectedSession.value = null;
-  },
-});
-
-const totalSessions = computed(() => sessionStore.sessions.length);
-const tomatoCount = computed(() => sessionStore.sessions.filter((s) => s.emoji === "🍅").length);
-const voidCount = computed(() => sessionStore.sessions.filter((s) => s.category === "work_void").length);
-
-const recentClicks = computed(() => [...clickStore.clicks].slice(-8).reverse());
+const canExport = computed(() => isTauri() && !isMobile.value);
+const showDateLabel = computed(() => sessionStore.rules.statsShowDateLabel);
+const voidEmoji = computed(() => sessionStore.rules.emojis.workVoid);
+const emojis = computed(() => sessionStore.rules.emojis);
 
 const detailTitle = computed(() => (selectedSession.value ? `${selectedSession.value.emoji} 详情` : "详情"));
+
+function onEscapeKey(e: KeyboardEvent) {
+  if (e.key === "Escape" && showDetail.value) closeDetail();
+}
+
+onMounted(() => {
+  sessionStore.normalizeStoredRules();
+  window.addEventListener("keydown", onEscapeKey);
+});
+
+onUnmounted(() => {
+  window.removeEventListener("keydown", onEscapeKey);
+});
+
+function openSessionDetail(session: TimerSessionRecord) {
+  selectedSession.value = session;
+  showDetail.value = true;
+}
+
+function closeDetail() {
+  showDetail.value = false;
+  selectedSession.value = null;
+}
+
+type CountItem = { key: string; emoji: string; count: number };
+
+function workCountItems(totals: TimerDayTotals): CountItem[] {
+  const e = emojis.value;
+  return [
+    { key: "w3", emoji: e.workTier3, count: totals.workTier3 },
+    { key: "w2", emoji: e.workTier2, count: totals.workTier2 },
+    { key: "w1", emoji: e.workTier1, count: totals.workTier1 },
+    { key: "wb", emoji: e.workBelow, count: totals.workBelow },
+  ];
+}
+
+function breakCountItems(totals: TimerDayTotals): CountItem[] {
+  const e = emojis.value;
+  return [
+    { key: "b2", emoji: e.breakTier2, count: totals.breakTier2 },
+    { key: "b1", emoji: e.breakTier1, count: totals.breakTier1 },
+    { key: "bs", emoji: e.breakShort, count: totals.breakShort },
+  ];
+}
+
+function prevWeek() {
+  weekMonday.value = shiftWeekMonday(weekMonday.value, -1);
+}
+
+function nextWeek() {
+  weekMonday.value = shiftWeekMonday(weekMonday.value, 1);
+}
+
+function exportCsv() {
+  const { year, week } = getISOWeekYearAndNumber(weekMonday.value);
+  downloadTimerSessionsCsv(weekSessions.value, `pomotention-timer-${year}-W${String(week).padStart(2, "0")}.csv`);
+}
 
 function goBack() {
   if (router.currentRoute.value.path !== "/") {
@@ -152,8 +233,8 @@ function sessionTitle(s: TimerSessionRecord): string {
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
+  gap: 4px;
+  padding: 8px 8px 8px 4px;
   border-bottom: 1px solid var(--color-background-light, #efefef);
 }
 
@@ -161,10 +242,11 @@ function sessionTitle(s: TimerSessionRecord): string {
   flex: 1;
   font-weight: 600;
   font-size: 14px;
+  padding-left: 4px;
 }
 
-.timer-stats-rules-btn {
-  margin-left: auto;
+.timer-stats-header-btn {
+  flex-shrink: 0;
 }
 
 .timer-stats-body {
@@ -176,35 +258,45 @@ function sessionTitle(s: TimerSessionRecord): string {
 
 .timer-stats-inner {
   width: 100%;
-  max-width: min(420px, 100%);
+  max-width: min(480px, 100%);
   margin: 0 auto;
 }
 
-.timer-stats-summary {
-  margin: 0 0 12px;
-  font-size: 12px;
-  color: var(--color-text-secondary, var(--n-text-color-3));
+.timer-stats-week-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+.timer-stats-week-label {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.timer-stats-mono {
+  font-family: ui-monospace, "Cascadia Code", "Consolas", monospace;
+  font-variant-numeric: tabular-nums;
 }
 
 .timer-stats-day {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 0;
+  padding: 10px 0;
   border-bottom: 1px solid var(--color-background-light, #f0f0f0);
 }
 
 .timer-stats-day--today .timer-stats-dom {
-  font-weight: 700;
   color: var(--color-blue, #4098fc);
+  font-weight: 700;
 }
 
 .timer-stats-day-label {
-  flex: 0 0 52px;
   display: flex;
   align-items: baseline;
-  gap: 6px;
+  gap: 8px;
   font-size: 13px;
+  margin-bottom: 4px;
 }
 
 .timer-stats-dow {
@@ -217,48 +309,45 @@ function sessionTitle(s: TimerSessionRecord): string {
 }
 
 .timer-stats-emojis {
-  flex: 1;
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
   align-items: center;
-  min-height: 28px;
+  gap: 0 2px;
+  min-height: 20px;
+  line-height: 20px;
 }
 
 .timer-stats-emoji {
+  appearance: none;
   border: none;
-  background: var(--color-background-light, #f5f5f5);
-  border-radius: 6px;
-  font-size: 18px;
-  line-height: 1;
-  padding: 4px 6px;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  font-size: 15px;
+  line-height: 20px;
+  height: 20px;
   cursor: pointer;
 }
 
 .timer-stats-emoji:hover {
-  background: var(--color-background-light-transparent, #eee);
+  opacity: 0.65;
 }
 
 .timer-stats-empty {
+  font-size: 13px;
+  line-height: 20px;
   color: var(--n-text-color-3);
-  font-size: 13px;
 }
 
-.timer-stats-clicks {
-  margin-top: 20px;
+.timer-stats-day-totals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
   font-size: 12px;
-}
-
-.timer-stats-clicks-heading {
-  margin: 0 0 8px;
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.timer-stats-clicks ul {
-  margin: 0;
-  padding-left: 1.1em;
   color: var(--color-text-secondary, var(--n-text-color-3));
+  font-variant-numeric: tabular-nums;
 }
 
 .timer-detail-dl {
@@ -280,7 +369,49 @@ function sessionTitle(s: TimerSessionRecord): string {
 </style>
 
 <style>
-.timer-detail-modal.n-modal {
+.timer-detail-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  box-sizing: border-box;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.timer-detail-panel {
   width: min(300px, calc(100vw - 24px));
+  max-height: min(420px, calc(100vh - 24px));
+  overflow-y: auto;
+  padding: 12px 14px 14px;
+  border-radius: 8px;
+  background: var(--color-background, #fff);
+  color: var(--color-text-primary);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.2);
+}
+
+.timer-detail-panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.timer-detail-panel__title {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.timer-detail-panel__close {
+  border: none;
+  background: transparent;
+  font-size: 20px;
+  line-height: 1;
+  padding: 0 4px;
+  cursor: pointer;
+  color: var(--color-text-secondary, #888);
 }
 </style>
