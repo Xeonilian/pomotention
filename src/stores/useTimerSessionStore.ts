@@ -24,7 +24,7 @@ export const useTimerSessionStore = defineStore(
       endedAt: number;
       plannedDurationMin: number;
       stateMessage: string;
-      endReason: "completed" | "squash" | "stop";
+      endReason: "completed" | "squash" | "stop" | "overtime";
       buttonLabel?: string;
       statsDurationMin?: number;
     }): void {

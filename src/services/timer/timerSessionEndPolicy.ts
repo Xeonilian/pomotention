@@ -31,7 +31,11 @@ export function resolveTimerSessionEnd(ctx: TimerSessionEndContext): TimerSessio
     };
   }
 
-  if (ctx.isOvertime || ctx.kind === "break") {
+  if (ctx.isOvertime) {
+    return { endReason: "overtime", buttonLabel: "Stop" };
+  }
+
+  if (ctx.kind === "break") {
     return { endReason: "stop", buttonLabel: "Stop" };
   }
 

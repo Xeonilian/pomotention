@@ -1,7 +1,7 @@
 /** 会话大类：作废工作 / 正常工作 / 休息 */
 export type TimerSessionCategory = "work" | "work_void" | "break";
 
-export type TimerSessionEndReason = "completed" | "squash" | "stop";
+export type TimerSessionEndReason = "completed" | "squash" | "stop" | "overtime";
 
 /** 展示用符号，每项最多 2 个字符（含 emoji） */
 export interface TimerSessionEmojis {

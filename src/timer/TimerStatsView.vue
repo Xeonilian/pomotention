@@ -36,8 +36,8 @@
         <div v-for="day in weekDays" :key="day.key" class="timer-stats-day" :class="{ 'timer-stats-day--today': day.isToday }">
           <div class="timer-stats-day-content">
             <div class="timer-stats-day-label timer-stats-mono">
-              <span class="timer-stats-dow">{{ day.label }}</span>
-              <span class="timer-stats-dom">{{ day.dateLabel }}</span>
+              <span class="timer-stats-dow">{{ day.dateLabel }}</span>
+              <span class="timer-stats-dom">{{ day.label }}</span>
             </div>
             <div class="timer-stats-day-totals">
               <span>Work {{ (day.totals.workMinutes / 60).toFixed(1) }} h</span>
@@ -82,7 +82,7 @@
             <dt>计划时长</dt>
             <dd>{{ selectedSession.plannedDurationMin }} 分钟</dd>
             <dt>结束方式</dt>
-            <dd>{{ endReasonLabel(selectedSession.endReason) }}</dd>
+            <dd>{{ formatTimerSessionEndReason(selectedSession) }}</dd>
           </dl>
         </div>
       </div>
@@ -102,7 +102,7 @@ import { useTimerWeekStats } from "@/composables/timer/useTimerWeekStats";
 import { useTimerSessionStore } from "@/stores/useTimerSessionStore";
 import { useDevice } from "@/composables/platform/useDevice";
 import type { TimerSessionRecord, TimerSessionCategory } from "@/core/types/TimerSession";
-import { formatDurationMs, resolveSessionDisplayEmoji } from "@/services/timer/timerSessionClassifier";
+import { formatDurationMs, formatTimerSessionEndReason, resolveSessionDisplayEmoji } from "@/services/timer/timerSessionClassifier";
 import { downloadTimerSessionsCsv } from "@/services/timer/timerSessionExport";
 import { getISOWeekYearAndNumber, getMondayOfWeekContaining, shiftWeekMonday } from "@/services/timer/timerWeekUtils";
 import TimerSessionRulesDialog from "./TimerSessionRulesDialog.vue";
@@ -183,12 +183,6 @@ function categoryLabel(c: TimerSessionCategory): string {
   if (c === "work_void") return "作废工作";
   if (c === "work") return "工作";
   return "休息";
-}
-
-function endReasonLabel(r: string): string {
-  if (r === "squash") return "提前结束（Squash）";
-  if (r === "stop") return "提前结束（Stop）";
-  return "自然结束";
 }
 
 function sessionTitle(s: TimerSessionRecord): string | undefined {
@@ -285,7 +279,7 @@ function sessionTitle(s: TimerSessionRecord): string | undefined {
 
 .timer-stats-dow {
   font-weight: 600;
-  width: 28px;
+  width: 40px;
 }
 
 .timer-stats-dom {

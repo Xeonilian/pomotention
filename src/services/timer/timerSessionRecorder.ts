@@ -24,7 +24,10 @@ let active: {
   stateMessage: string;
 } | null = null;
 
-function resolveStateMessage(): string {
+function resolveStateMessage(kind: ActiveKind): string {
+  if (kind === "break") {
+    return "Take a break";
+  }
   const custom = useSettingStore().settings.pomodoroStateMessage?.trim();
   if (custom) return custom;
   return "Ready to pomodoro!";
@@ -44,13 +47,13 @@ export function timerSessionBegin(kind: ActiveKind, plannedDurationMin: number):
     kind,
     startedAt: Date.now(),
     plannedDurationMin,
-    stateMessage: resolveStateMessage(),
+    stateMessage: resolveStateMessage(kind),
   };
 }
 
 /** 结束当前段并写入持久化记录 */
 export function timerSessionEnd(
-  endReason: "completed" | "squash" | "stop",
+  endReason: "completed" | "squash" | "stop" | "overtime",
   buttonLabel?: string,
   endedAt: number = Date.now(),
   opts?: { statsDurationMin?: number },
@@ -92,7 +95,7 @@ export function timerSessionRecordWorkVoid(buttonLabel: string): void {
     startedAt: now,
     endedAt: now,
     plannedDurationMin: 0,
-    stateMessage: resolveStateMessage(),
+    stateMessage: resolveStateMessage("work"),
     endReason: "squash",
     buttonLabel,
   });

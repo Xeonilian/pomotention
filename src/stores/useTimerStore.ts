@@ -541,12 +541,16 @@ export const useTimerStore = defineStore(
 
     function cancelTimerWithDecision(decision: TimerSessionEndDecision): void {
       const finish = () => resetTimer();
+      // 进入正计时时已播过结束音，Stop 不再重复
+      const skipEndCue = isOvertime.value;
       if (isWorking.value) {
         timerSessionEndWithDecision(decision);
-        void playPhaseEndCue(SoundType.WORK_END).finally(finish);
+        if (skipEndCue) finish();
+        else void playPhaseEndCue(SoundType.WORK_END).finally(finish);
       } else if (isBreaking.value) {
         timerSessionEndWithDecision(decision);
-        void playPhaseEndCue(SoundType.BREAK_END).finally(finish);
+        if (skipEndCue) finish();
+        else void playPhaseEndCue(SoundType.BREAK_END).finally(finish);
       } else {
         finish();
       }

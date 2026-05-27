@@ -18,7 +18,10 @@
 
     <!-- 2 时钟 -->
     <div class="timer-container" :class="{ 'is-compact': isCompactMode }">
-      <n-text class="timer">{{ formattedTime }}</n-text>
+      <div class="timer-display">
+        <span class="timer-prefix" :class="{ 'is-active': timerStore.isOvertime }">+</span>
+        <n-text class="timer">{{ formattedTime }}</n-text>
+      </div>
     </div>
 
     <!-- 3 工作进度条 -->
@@ -204,13 +207,17 @@ const defaultStateMessage = computed((): string => {
   }
 });
 
-// 1-2 显示的消息（优先显示自定义消息，没有则显示默认消息）
+// 1-2 显示的消息：休息段始终用休息标语；工作/待机恢复用户工作标语
 const displayMessage = computed((): string => {
+  if (timerStore.pomodoroState === "breaking") {
+    return defaultStateMessage.value;
+  }
   return settingStore.settings.pomodoroStateMessage || defaultStateMessage.value;
 });
 
-// 1-3 开始编辑
+// 1-3 开始编辑（休息中不编辑工作标语）
 function startEditing(): void {
+  if (timerStore.pomodoroState === "breaking") return;
   isEditing.value = true;
   editingMessage.value = settingStore.settings.pomodoroStateMessage || "";
   nextTick(() => {
@@ -287,7 +294,7 @@ function handleWorkAction(): void {
     clickStore.recordClick("Work");
   } else if (timerStore.pomodoroState === "working") {
     timerStore.cancelTimer();
-    clickStore.recordClick("Squash");
+    clickStore.recordClick(timerStore.isOvertime ? "Stop" : "Squash");
   }
 }
 
@@ -451,6 +458,25 @@ defineExpose({
   margin-bottom: 0px;
 }
 
+.timer-display {
+  display: inline-flex;
+  align-items: baseline;
+  font-size: 3em;
+  line-height: 0.9em;
+}
+
+/* 正计时 + 占位同宽，避免 MM:SS 位置跳动 */
+.timer-prefix {
+  width: 0.55em;
+  flex-shrink: 0;
+  text-align: center;
+  visibility: hidden;
+}
+
+.timer-prefix.is-active {
+  visibility: visible;
+}
+
 /* 紧凑：容器占满父级竖向空间并居中时钟 */
 .timer-container.is-compact {
   flex: 1;
@@ -463,17 +489,16 @@ defineExpose({
 
 /* 2-2 计时器 */
 .timer {
-  font-size: 3em;
   display: block;
-  line-height: 0.9em;
 }
 
 /* 紧凑模式：时钟略大于普通模式，竖向由容器 flex 居中 */
-.timer-container.is-compact .timer {
-  font-size: 3em;
-  line-height: 0.9em;
-  text-align: center;
+.timer-container.is-compact .timer-display {
   padding: 8px;
+}
+
+.timer-container.is-compact .timer {
+  text-align: center;
 }
 
 /* 紧凑模式下的整体：flex 列 + 子项 flex:1 实现上下居中 */
