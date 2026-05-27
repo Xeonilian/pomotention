@@ -453,24 +453,34 @@ defineExpose({
 }
 
 /* 2-计时器 */
-/* 2-1 计时器容器 */
+/* 2-1 计时器容器：只居中 MM:SS，+ 不参与布局 */
 .timer-container {
   margin-bottom: 0px;
+  display: flex;
+  justify-content: center;
 }
 
 .timer-display {
-  display: inline-flex;
-  align-items: baseline;
+  position: relative;
+  display: inline-block;
   font-size: 3em;
   line-height: 0.9em;
 }
 
-/* 正计时 + 占位同宽，避免 MM:SS 位置跳动 */
+/* + 绝对定位在左侧，不影响冒号居中 */
 .timer-prefix {
-  width: 0.55em;
-  flex-shrink: 0;
-  text-align: center;
+  position: absolute;
+  right: 100%;
+  top: 2px;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  padding-right: 0.06em;
   visibility: hidden;
+  color: var(--color-red);
+  font-weight: 300;
+  font-size: 0.85em;
+  line-height: 1;
 }
 
 .timer-prefix.is-active {
@@ -490,6 +500,8 @@ defineExpose({
 /* 2-2 计时器 */
 .timer {
   display: block;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
 }
 
 /* 紧凑模式：时钟略大于普通模式，竖向由容器 flex 居中 */
