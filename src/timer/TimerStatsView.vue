@@ -13,9 +13,9 @@
             <n-icon :component="ArrowDownload24Regular" />
           </template>
         </n-button>
-        <n-button text type="default" title="规则" class="header-button" @click="showRules = true">
+        <n-button text type="default" title="Emoji 规则" class="header-button" @click="showRules = true">
           <template #icon>
-            <n-icon :component="Settings24Regular" />
+            <n-icon :component="Emoji24Regular" />
           </template>
         </n-button>
       </div>
@@ -100,7 +100,7 @@
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import { NButton, NIcon } from "naive-ui";
-import { ArrowDownload24Regular, ArrowLeft24Regular, ChevronLeft24Filled, ChevronRight24Filled, Settings24Regular } from "@vicons/fluent";
+import { ArrowDownload24Regular, ArrowLeft24Regular, ChevronLeft24Filled, ChevronRight24Filled, Emoji24Regular } from "@vicons/fluent";
 import { useTimerWeekStats } from "@/composables/timer/useTimerWeekStats";
 import { useTimerSessionStore } from "@/stores/useTimerSessionStore";
 import type { TimerSessionRecord, TimerSessionCategory } from "@/core/types/TimerSession";

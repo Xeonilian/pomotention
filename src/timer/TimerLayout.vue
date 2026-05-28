@@ -53,7 +53,6 @@
         />
       </n-layout-content>
     </n-layout>
-
   </div>
 </template>
 
@@ -118,7 +117,7 @@ function onExitMiniMode() {
 }
 .app-layout__header {
   flex-shrink: 0;
-  height: 30px;
+  height: 40px;
   min-height: 30px;
   display: flex;
   align-items: center;
