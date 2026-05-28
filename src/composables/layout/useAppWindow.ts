@@ -11,7 +11,7 @@ import { applyMiniDockOffset, captureNormalWindowPosition, restoreNormalWindowPo
 const isTimerApp = import.meta.env.VITE_APP_VARIANT === "timer";
 
 /** Timer 独立壳正常窗尺寸（与 tauri.conf.timer.json 默认宽高一致） */
-const TIMER_NORMAL_WINDOW = { width: 280, height: 320 };
+const TIMER_NORMAL_WINDOW = { width: 600, height: 500 };
 
 export function useAppWindow() {
   const settingStore = useSettingStore();
