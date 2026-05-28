@@ -7,7 +7,7 @@
         </template>
       </n-button>
       <span class="timer-stats-title">统计</span>
-      <n-button v-if="canExport" text title="导出 CSV" class="timer-stats-header-btn" @click="exportCsv">
+      <n-button text title="导出 CSV" class="timer-stats-header-btn" @click="exportCsv">
         <template #icon>
           <n-icon :component="ArrowDownload24Regular" />
         </template>
@@ -70,17 +70,19 @@
           </header>
           <dl class="timer-detail-dl">
             <dt>类型</dt>
-            <dd>{{ categoryLabel(selectedSession.category) }} {{ sessionEmoji(selectedSession) }}</dd>
-            <dt>时长</dt>
-            <dd>{{ formatDurationMs(selectedSession.durationMs) }}</dd>
+            <dd>
+              {{ categoryLabel(selectedSession.category) }} {{ selectedSession.plannedDurationMin }} 分钟
+              {{ sessionEmoji(selectedSession) }}
+            </dd>
+            <dt>执行意图</dt>
+            <dd>{{ selectedSession.stateMessage || "—" }}</dd>
+
             <dt>开始</dt>
             <dd>{{ formatTs(selectedSession.startedAt) }}</dd>
             <dt>结束</dt>
             <dd>{{ formatTs(selectedSession.endedAt) }}</dd>
-            <dt>状态文案</dt>
-            <dd>{{ selectedSession.stateMessage || "—" }}</dd>
-            <dt>计划时长</dt>
-            <dd>{{ selectedSession.plannedDurationMin }} 分钟</dd>
+            <dt>时长</dt>
+            <dd>{{ formatDurationMs(selectedSession.durationMs) }}</dd>
             <dt>结束方式</dt>
             <dd>{{ formatTimerSessionEndReason(selectedSession) }}</dd>
           </dl>
@@ -95,22 +97,19 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import { useRouter } from "vue-router";
-import { isTauri } from "@tauri-apps/api/core";
 import { NButton, NIcon } from "naive-ui";
 import { ArrowDownload24Regular, ArrowLeft24Regular, ChevronLeft24Filled, ChevronRight24Filled, Settings24Regular } from "@vicons/fluent";
 import { useTimerWeekStats } from "@/composables/timer/useTimerWeekStats";
 import { useTimerSessionStore } from "@/stores/useTimerSessionStore";
-import { useDevice } from "@/composables/platform/useDevice";
 import type { TimerSessionRecord, TimerSessionCategory } from "@/core/types/TimerSession";
 import { formatDurationMs, formatTimerSessionEndReason, resolveSessionDisplayEmoji } from "@/services/timer/timerSessionClassifier";
-import { downloadTimerSessionsCsv } from "@/services/timer/timerSessionExport";
 import { getISOWeekYearAndNumber, getMondayOfWeekContaining, shiftWeekMonday } from "@/services/timer/timerWeekUtils";
 import TimerSessionRulesDialog from "./TimerSessionRulesDialog.vue";
 import TimerWeekChart from "./TimerWeekChart.vue";
+import { exportTimerSessionsCsv } from "@/services/timer/timerSessionExport";
 
 const router = useRouter();
 const sessionStore = useTimerSessionStore();
-const { isMobile } = useDevice();
 
 const weekMonday = ref(getMondayOfWeekContaining(new Date()));
 const { weekDays, weekYear, weekNumber, weekSessions, isCurrentWeek } = useTimerWeekStats(weekMonday);
@@ -119,7 +118,6 @@ const showRules = ref(false);
 const showDetail = ref(false);
 const selectedSession = ref<TimerSessionRecord | null>(null);
 
-const canExport = computed(() => isTauri() && !isMobile.value);
 const emojis = computed(() => sessionStore.rules.emojis);
 const statsInclude = computed(() => sessionStore.rules.statsInclude);
 
@@ -164,9 +162,9 @@ function nextWeek() {
   weekMonday.value = shiftWeekMonday(weekMonday.value, 1);
 }
 
-function exportCsv() {
+async function exportCsv() {
   const { year, week } = getISOWeekYearAndNumber(weekMonday.value);
-  downloadTimerSessionsCsv(weekSessions.value, `pomotention-timer-${year}-W${String(week).padStart(2, "0")}.csv`);
+  await exportTimerSessionsCsv(weekSessions.value, `pomotention-timer-${year}-W${String(week).padStart(2, "0")}.csv`, sessionStore.rules);
 }
 
 function goBack() {
