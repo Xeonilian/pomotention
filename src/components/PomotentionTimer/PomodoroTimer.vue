@@ -1,7 +1,7 @@
 <template>
-  <div class="pomodoro-timer">
-    <!-- 1 状态信息：紧凑模式仅保留时钟，不展示可编辑文案 -->
-    <div v-if="!isCompactMode" class="state-text" @click.stop="startEditing" @pointerdown.stop title="可编辑，回车保存，删除内容恢复默认">
+  <div class="pomodoro-timer" :class="{ 'is-mini-minimal': isMiniMinimal }">
+    <!-- 1 状态信息：Web 紧凑隐藏；置顶 minimal 显示意图 -->
+    <div v-if="showStateText" class="state-text" @click.stop="startEditing" @pointerdown.stop title="可编辑，回车保存，删除内容恢复默认">
       <n-input
         v-if="isEditing"
         v-model:value="editingMessage"
@@ -17,16 +17,20 @@
     </div>
 
     <!-- 2 时钟 -->
-    <div class="timer-container" :class="{ 'is-compact': isCompactMode }">
+    <div
+      class="timer-container"
+      :class="{ 'is-compact': isCompactMode, 'is-mini-mode': props.isMiniMode, 'is-mini-minimal': isMiniMinimal }"
+      @dblclick.stop="onTimerDblClick"
+    >
       <div class="timer-display">
         <span class="timer-prefix" :class="{ 'is-active': timerStore.isOvertime }">+</span>
-        <n-text class="timer">{{ formattedTime }}</n-text>
+        <span class="timer">{{ formattedTime }}</span>
       </div>
     </div>
 
     <!-- 3 工作进度条 -->
     <!-- 3-1 进度条容器 -->
-    <div v-if="!timerStore.isBreaking && !isCompactMode" class="progress-container" :style="timerStyleVars">
+    <div v-if="!timerStore.isBreaking && showTimerChrome" class="progress-container" :style="timerStyleVars">
       <!-- 3-2 蓝色进度条 -->
       <n-progress
         :percentage="progressPercentage"
@@ -63,13 +67,13 @@
     </div>
 
     <!-- 4 休息进度条 -->
-    <div v-if="timerStore.isBreaking && !isCompactMode" class="progress-container-break">
+    <div v-if="timerStore.isBreaking && showTimerChrome" class="progress-container-break">
       <n-progress :percentage="progressPercentage" :color="'var(--color-green)'" :show-indicator="false" :height="20" :border-radius="2" />
       <!-- 休息模式无需显示分隔线和标签 -->
     </div>
 
     <!-- 5 按钮 -->
-    <div v-if="!isCompactMode" class="button-container">
+    <div v-if="showTimerChrome" class="button-container">
       <!-- 5-1 工作按钮：只在非休息状态显示 -->
       <n-button
         v-if="timerStore.pomodoroState !== 'breaking' && !showPomoSeq"
@@ -129,13 +133,29 @@ const timerStore = useTimerStore();
 const isGray = computed(() => timerStore.isGray); // 进度条设置
 const settingStore = useSettingStore();
 
-// 添加 showPomoSeq 和 isCompactMode prop
 const props = defineProps<{
   showPomoSeq?: boolean;
   isCompactMode?: boolean;
+  isMiniMode?: boolean;
+  isMiniMinimal?: boolean;
+}>();
+
+const emit = defineEmits<{
+  (e: "exit-mini"): void;
 }>();
 
 const isCompactMode = computed(() => props.isCompactMode ?? false);
+const isMiniMinimal = computed(() => props.isMiniMinimal ?? false);
+
+/** Web 紧凑隐藏意图；置顶 minimal 显示意图 */
+const showStateText = computed(() => !isCompactMode.value || isMiniMinimal.value);
+/** 进度条与按钮：紧凑或置顶 minimal 时隐藏 */
+const showTimerChrome = computed(() => !isCompactMode.value && !isMiniMinimal.value);
+
+function onTimerDblClick(): void {
+  if (!props.isMiniMode) return;
+  emit("exit-mini");
+}
 
 const barLength = computed(() => settingStore.settings.style.barLength);
 const redBarColor = computed(() => settingStore.settings.style.redBarColor);
@@ -523,6 +543,72 @@ defineExpose({
   box-sizing: border-box;
 }
 
+/* 置顶 minimal：140×70，意图 + 时钟整体居中（覆盖 state-text 的 translateX） */
+.pomodoro-timer.is-mini-minimal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 100%;
+  height: 100%;
+  padding: 4px 6px;
+  box-sizing: border-box;
+  box-shadow: none;
+}
+
+.pomodoro-timer.is-mini-minimal .state-text {
+  transform: none;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  min-height: 0;
+  margin: 0;
+  flex-shrink: 0;
+  justify-content: center;
+  text-align: center;
+}
+
+.pomodoro-timer.is-mini-minimal .state-text-clickable {
+  display: block;
+  width: 100%;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pomodoro-timer.is-mini-minimal .state-input {
+  width: 100%;
+  max-width: 128px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.pomodoro-timer.is-mini-minimal .timer-container.is-mini-minimal {
+  flex: 0 0 auto;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 0;
+}
+
+.pomodoro-timer.is-mini-minimal .timer-display,
+.pomodoro-timer.is-mini-minimal .timer {
+  text-align: center;
+}
+
+.timer-container.is-mini-mode,
+.timer-container.is-mini-mode .timer-display {
+  -webkit-app-region: no-drag;
+}
+
+.pomodoro-timer.is-mini-minimal .timer-display {
+  font-size: 2.4em;
+  line-height: 1.15;
+  text-align: center;
+}
 /* 3 进度条 */
 /* 3-1 进度条容器 */
 .progress-container {

@@ -18,7 +18,7 @@ export function useAppWindow() {
   const timerStore = useTimerStore();
   const router = useRouter();
   const route = useRoute();
-  const { isAlwaysOnTop, toggleAlwaysOnTop } = useAlwaysOnTop();
+  const { isAlwaysOnTop, toggleAlwaysOnTop, setAlwaysOnTop } = useAlwaysOnTop();
 
   const isMiniMode = ref(false);
   const showPomoSeq = ref(false);
@@ -112,7 +112,7 @@ export function useAppWindow() {
             // 限制校准范围，防止算出离谱的数值 (例如 0.0001 或 100)
             if (factorReal > 0.5 && factorReal < 3 && factorReal !== 1) {
               factorReal = Math.ceil(factorReal * 100) / 100;
-              settingStore.settings.miniModeRefactor = factorReal; // 建议：先注释掉自动更新 factor，这往往是罪魁祸首
+              settingStore.settings.miniModeRefactor = factorReal;
               console.log(`[mini] Calculated real factor: ${factorReal} (Container: ${containerW})`);
             }
           } else {
@@ -174,10 +174,48 @@ export function useAppWindow() {
     }
   }
 
+  /** 退出置顶：不经过 toggle，避免 isAlwaysOnTop 状态不同步时误进入 mini */
+  async function exitOntopMiniMode(onExitCallback?: () => void) {
+    if (!isTauri()) {
+      handleWebToggle(onExitCallback);
+      return;
+    }
+    if (!isMiniMode.value) return;
+
+    const appWindow = getCurrentWindow();
+    console.log("[mini] Exiting mini mode (explicit)...");
+
+    try {
+      if (isAlwaysOnTop.value) {
+        await setAlwaysOnTop(false);
+      }
+      isMiniMode.value = false;
+      settingStore.settings.isCompactMode = false;
+      settingStore.settings.timerMiniUiLevel = "full";
+
+      await appWindow.setDecorations(true);
+      const factor = settingStore.settings.miniModeRefactor || 1;
+      const restoreW = isTimerApp
+        ? Math.max(TIMER_NORMAL_WINDOW.width * factor, 220)
+        : Math.max(950 * factor, 800);
+      const restoreH = isTimerApp
+        ? Math.max(TIMER_NORMAL_WINDOW.height * factor, 140)
+        : Math.max(600 * factor, 500);
+      await appWindow.setSize(new LogicalSize(restoreW, restoreH));
+      await restoreNormalWindowPosition();
+
+      if (route.path !== "/") await router.push("/");
+      if (onExitCallback) onExitCallback();
+    } catch (error) {
+      console.error("[mini] Error exiting mini mode:", error);
+    }
+  }
+
   // 🔴 修正：使用 setTimeout 延迟执行回调，给 Vue 渲染 DOM 的时间
   function handleWebToggle(callback?: () => void) {
     isMiniMode.value = false;
     settingStore.settings.isCompactMode = false;
+    settingStore.settings.timerMiniUiLevel = "full";
 
     if (callback) {
       // nextTick 有时候在复杂组件切换中不够用，setTimeout(..., 50) 是最稳妥的
@@ -212,6 +250,7 @@ export function useAppWindow() {
     reportedPomodoroWidth,
     reportedPomodoroHeight,
     handleToggleOntopMode,
+    exitOntopMiniMode,
     handleWebToggle,
     handlePomotentionTimerSizeReport,
   };

@@ -48,7 +48,7 @@
           :isMobile="isMobile"
           @toggle-pomo-seq="showPomoSeq = !showPomoSeq"
           @report-size="handlePomotentionTimerSizeReport"
-          @exit-mini-mode="handleToggleOntopMode(reportedPomodoroWidth, reportedPomodoroHeight, onExitMiniMode)"
+          @exit-mini-mode="() => exitOntopMiniMode(onExitMiniMode)"
           @exit-mini-mode-web="handleWebToggle(onExitMiniMode)"
         />
       </n-layout-content>
@@ -77,6 +77,7 @@ const {
   reportedPomodoroWidth,
   reportedPomodoroHeight,
   handleToggleOntopMode,
+  exitOntopMiniMode,
   handleWebToggle,
   handlePomotentionTimerSizeReport,
 } = useAppWindow();

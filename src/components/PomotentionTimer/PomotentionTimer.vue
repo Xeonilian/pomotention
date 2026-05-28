@@ -5,23 +5,33 @@
       'is-compact': settingStore.settings.isCompactMode,
       'is-phone-mode': isPhoneMode,
       'is-minimode': isMiniMode,
+      'is-mini-minimal': isMiniMinimal,
     }"
-    :style="phoneModeWrapperStyle"
+    :style="[phoneModeWrapperStyle, miniMinimalWrapperStyle]"
     ref="pomodoroContainerRef"
   >
     <div v-if="isMiniMode" class="mini-mode-drag-region" data-tauri-drag-region></div>
+    <button
+      v-if="isMiniMode"
+      type="button"
+      class="mini-layout-toggle-hit"
+      aria-label="切换迷你窗布局"
+      @click.stop="toggleTimerMiniUiLevel"
+    />
     <div
       class="pomodoro-content-area"
       :class="{
         'is-running': timerStore.isActive,
         'sequence-mode': showPomoSeq,
         'is-minimode': isMiniMode,
+        'is-mini-minimal': isMiniMinimal,
         'is-compact': settingStore.settings.isCompactMode,
       }"
+      :style="isMiniMinimal ? { height: `${TIMER_MINI_MINIMAL_SIZE.height}px` } : undefined"
     >
       <!-- Web: 紧凑/全屏循环；Tauri: 仅迷你窗内显示，只负责退出 -->
       <n-button
-        v-if="showCompactCycleButton"
+        v-if="showCompactCycleButton && !isMiniMinimal"
         size="tiny"
         text
         :title="compactCycleButtonTitle"
@@ -35,7 +45,7 @@
 
       <!-- Pizza 按钮：切换 pizza/序列模式，在 compact 模式下禁用 -->
       <n-button
-        v-if="!settingStore.settings.isCompactMode"
+        v-if="!settingStore.settings.isCompactMode && !isMiniMinimal"
         size="tiny"
         text
         :title="showPomoSeq ? '变为番茄' : '变为序列|打开设置'"
@@ -51,9 +61,12 @@
         class="time"
         :show-pomo-seq="showPomoSeq"
         :is-compact-mode="settingStore.settings.isCompactMode"
+        :is-mini-mode="isMiniMode"
+        :is-mini-minimal="isMiniMinimal"
+        @exit-mini="exitMiniMode"
       />
       <PomodoroSequence
-        v-show="showPomoSeq && !settingStore.settings.isCompactMode"
+        v-show="showPomoSeq && !settingStore.settings.isCompactMode && !isMiniMinimal"
         class="sequence"
         @pomo-seq-running="handlePomoSeqRunning"
         :is-pomo-seq-running="isPomoSeqRunning"
@@ -71,6 +84,7 @@ import { useSettingStore } from "@/stores/useSettingStore";
 import { NButton, NIcon } from "naive-ui";
 import { ArrowExpand24Regular } from "@vicons/fluent";
 import { isTauri } from "@tauri-apps/api/core";
+import { TIMER_MINI_MINIMAL_SIZE } from "@/core/timerMiniLayout";
 
 const timerStore = useTimerStore();
 const settingStore = useSettingStore();
@@ -78,6 +92,10 @@ let isPomoSeqRunning = ref(false); // 基于运行状态，返回不同的高度
 
 // 手机模式：置顶(mini) + 移动端时，timer 全屏宽、布局放大、上下居中
 const isPhoneMode = computed(() => props.isMiniMode && props.isMobile);
+
+const isMiniMinimal = computed(
+  () => props.isMiniMode && settingStore.settings.timerMiniUiLevel === "minimal",
+);
 
 // Tauri 下不展示紧凑，仅 ontop 进入迷你；toggle 只在迷你窗内显示且只负责退出
 const showCompactCycleButton = computed(() => !isTauri() || props.isMiniMode);
@@ -144,11 +162,21 @@ function syncPhoneVisualViewport() {
 /** 与 reportSize 一致的设计尺寸，供 scale 按高宽双轴取 min */
 function getPhoneDesignSizePx(): { w: number; h: number } {
   if (settingStore.settings.isCompactMode) return { w: 140, h: 70 };
+  if (isMiniMinimal.value) {
+    return { w: TIMER_MINI_MINIMAL_SIZE.width, h: TIMER_MINI_MINIMAL_SIZE.height };
+  }
   if (props.showPomoSeq) {
     return { w: 221, h: !isPomoSeqRunning.value ? 240 : 170 };
   }
   return { w: 221, h: 140 };
 }
+
+const miniMinimalWrapperStyle = computed(() => {
+  if (!isMiniMinimal.value) return undefined;
+  return {
+    width: `${TIMER_MINI_MINIMAL_SIZE.width}px`,
+  } as Record<string, string>;
+});
 
 const phoneModeWrapperStyle = computed(() => {
   if (!isPhoneMode.value) return undefined;
@@ -191,6 +219,9 @@ function reportSize() {
   if (settingStore.settings.isCompactMode) {
     width = 140;
     height = 70;
+  } else if (props.isMiniMode && isMiniMinimal.value) {
+    width = TIMER_MINI_MINIMAL_SIZE.width;
+    height = TIMER_MINI_MINIMAL_SIZE.height;
   } else if (props.isMiniMode) {
     width = 221;
     if (props.showPomoSeq) {
@@ -210,7 +241,10 @@ function reportSize() {
 }
 
 async function reportSizeAfterLayout() {
-  if (props.isMiniMode) await nextTick();
+  if (props.isMiniMode) {
+    await nextTick();
+    await nextTick();
+  }
   reportSize();
 }
 
@@ -233,9 +267,24 @@ onUnmounted(() => {
 });
 
 // 监听所有影响尺寸的因素变化
-watch([() => props.showPomoSeq, () => props.isMiniMode, () => isPomoSeqRunning.value, () => settingStore.settings.isCompactMode], () => {
-  void reportSizeAfterLayout();
-});
+watch(
+  [
+    () => props.showPomoSeq,
+    () => props.isMiniMode,
+    () => isPomoSeqRunning.value,
+    () => settingStore.settings.isCompactMode,
+    () => settingStore.settings.timerMiniUiLevel,
+  ],
+  () => {
+    void reportSizeAfterLayout();
+  },
+);
+
+async function toggleTimerMiniUiLevel(): Promise<void> {
+  settingStore.settings.timerMiniUiLevel =
+    settingStore.settings.timerMiniUiLevel === "full" ? "minimal" : "full";
+  await reportSizeAfterLayout();
+}
 
 function exitMiniMode() {
   if (isTauri()) {
@@ -324,6 +373,30 @@ defineExpose({
 .pomodoro-view-wrapper.is-minimode {
   border-radius: 0;
   box-shadow: none;
+}
+
+.pomodoro-view-wrapper.is-mini-minimal {
+  box-sizing: border-box;
+}
+
+.pomodoro-content-area.is-mini-minimal {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.mini-layout-toggle-hit {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  width: 24px;
+  height: 24px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  opacity: 0;
+  cursor: default;
 }
 
 .pomodoro-content-area {
@@ -441,6 +514,13 @@ defineExpose({
 }
 .pomodoro-content-area.is-minimode :deep(.pomodoro-sequence) {
   border: 0 solid white !important;
+}
+
+.pomodoro-content-area.is-mini-minimal :deep(.pomodoro-timer) {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0;
+  box-shadow: none;
 }
 
 /* 紧凑模式样式 */
