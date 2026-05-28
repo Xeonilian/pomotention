@@ -22,6 +22,29 @@
     </header>
     <main class="timer-help-body">
       <div class="timer-help-inner">
+        <aside class="timer-help-feedback" aria-label="测试反馈">
+          <p class="timer-help-feedback-title">关于Beta版</p>
+          <ul class="timer-help-feedback-list">
+            <li>
+              <span class="timer-help-feedback-label">完整应用</span>
+              <a :href="feedbackLinks.fullAppUrl" target="_blank" rel="noopener noreferrer">{{ feedbackLinks.fullAppUrl }}</a>
+              <span class="timer-help-feedback-note"></span>
+            </li>
+            <li>
+              <span class="timer-help-feedback-label">测试反馈</span>
+              <a v-if="feedbackLinks.feishuTestUrl" :href="feedbackLinks.feishuTestUrl" target="_blank" rel="noopener noreferrer">
+                打开测试反馈页
+              </a>
+              <span v-else class="timer-help-feedback-placeholder">链接待补充（需飞书账号）</span>
+            </li>
+            <li>
+              <span class="timer-help-feedback-label">联系方式</span>
+              <a v-if="feedbackLinks.contactEmail" :href="`mailto:${feedbackLinks.contactEmail}`">{{ feedbackLinks.contactEmail }}</a>
+              <span v-else class="timer-help-feedback-placeholder">pomotention@163.com</span>
+            </li>
+          </ul>
+        </aside>
+
         <section v-for="section in helpSections" :key="section.id" class="timer-help-section">
           <div class="timer-help-section-head">
             <h3 class="timer-help-heading">
@@ -129,6 +152,7 @@
             <ul v-else-if="section.id === 'notes'">
               <li>计时运行中不能在单次与连续模式间切换。</li>
               <li>若迷你窗尺寸异常，退出后重新进入置顶通常会恢复。</li>
+              <li>pomotention-timer是pomotention(番茄意图)的计时器模块，目前处于Beta测试阶段，欢迎反馈问题与建议。</li>
             </ul>
           </div>
         </section>
@@ -156,6 +180,13 @@ const helpSections: { id: HelpSectionId; emoji: string; title: string }[] = [
 ];
 
 const router = useRouter();
+
+/** 测试反馈入口；飞书链接与邮箱确定后替换占位 */
+const feedbackLinks = {
+  fullAppUrl: "https://pomotention.pages.dev",
+  feishuTestUrl: "",
+  contactEmail: "pomotention@163.com",
+} as const;
 
 const expandedSections = reactive<Record<HelpSectionId, boolean>>({
   single: true,
@@ -253,6 +284,65 @@ function goBack() {
   line-height: 1.55;
   color: var(--color-text-primary);
   margin-top: 5px;
+}
+
+.timer-help-feedback {
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-background-light-light, #e8e8e8);
+  border-radius: 8px;
+  background: var(--color-background-light-light, #fafafa);
+}
+
+.timer-help-feedback-title {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.timer-help-feedback-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.timer-help-feedback-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.timer-help-feedback-list li:last-child {
+  margin-bottom: 0;
+}
+
+.timer-help-feedback-label {
+  flex-shrink: 0;
+  min-width: 4.5em;
+  font-weight: 600;
+  color: var(--color-text-, #666);
+}
+
+.timer-help-feedback-note {
+  font-size: 12px;
+  color: var(--color-text-secondary, #888);
+}
+
+.timer-help-feedback-placeholder {
+  color: var(--color-text-secondary, #999);
+  font-style: italic;
+}
+
+.timer-help-feedback a {
+  color: var(--color-blue, #4098fc);
+  text-decoration: none;
+  word-break: break-all;
+}
+
+.timer-help-feedback a:hover {
+  text-decoration: underline;
 }
 
 .timer-help-section + .timer-help-section {
