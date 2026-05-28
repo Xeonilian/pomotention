@@ -7,16 +7,18 @@
         </template>
       </n-button>
       <span class="timer-stats-title">统计</span>
-      <n-button text title="导出 CSV" class="timer-stats-header-btn" @click="exportCsv">
-        <template #icon>
-          <n-icon :component="ArrowDownload24Regular" />
-        </template>
-      </n-button>
-      <n-button text title="规则" class="timer-stats-header-btn" @click="showRules = true">
-        <template #icon>
-          <n-icon :component="Settings24Regular" />
-        </template>
-      </n-button>
+      <div class="timer-stats-header-actions">
+        <n-button text type="default" title="导出 CSV" class="header-button" @click="exportCsv">
+          <template #icon>
+            <n-icon :component="ArrowDownload24Regular" />
+          </template>
+        </n-button>
+        <n-button text type="default" title="规则" class="header-button" @click="showRules = true">
+          <template #icon>
+            <n-icon :component="Settings24Regular" />
+          </template>
+        </n-button>
+      </div>
     </header>
 
     <main class="timer-stats-body">
@@ -203,8 +205,8 @@ function sessionTitle(s: TimerSessionRecord): string | undefined {
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 8px 8px 8px 4px;
+  gap: 8px;
+  padding: 8px 12px;
   border-bottom: 1px solid var(--color-background-light, #efefef);
 }
 
@@ -212,11 +214,22 @@ function sessionTitle(s: TimerSessionRecord): string | undefined {
   flex: 1;
   font-weight: 600;
   font-size: 14px;
-  padding-left: 4px;
 }
 
-.timer-stats-header-btn {
+.timer-stats-header-actions {
+  display: flex;
+  gap: 2px;
+  align-items: center;
   flex-shrink: 0;
+}
+
+.header-button {
+  width: 30px;
+  height: 25px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
 }
 
 .timer-stats-body {
