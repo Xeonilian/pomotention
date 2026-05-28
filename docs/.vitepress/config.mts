@@ -116,6 +116,7 @@ export default withMermaid(
                 { text: "时间表构建", link: "/guide/reference/timetable" },
                 { text: "任务追踪", link: "/guide/reference/task" },
                 { text: "番茄时钟计时", link: "/guide/reference/timer" },
+                { text: "番茄时钟 · 手动测试", link: "/guide/reference/timer-manual-test" },
               ],
             },
             {
