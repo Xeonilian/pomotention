@@ -31,6 +31,7 @@
           <n-button text size="small" :disabled="isCurrentWeek" @click="nextWeek">
             <template #icon><n-icon :component="ChevronRight24Filled" /></template>
           </n-button>
+          <TimerTagFilterPopover />
         </div>
 
         <TimerWeekChart :week-days="weekDays" :emojis="emojis" :stats-include="statsInclude" />
@@ -78,6 +79,10 @@
             </dd>
             <dt>执行意图</dt>
             <dd>{{ selectedSession.stateMessage || "—" }}</dd>
+            <template v-if="detailTagNames">
+              <dt>标签</dt>
+              <dd>{{ detailTagNames }}</dd>
+            </template>
 
             <dt>开始</dt>
             <dd>{{ formatTs(selectedSession.startedAt) }}</dd>
@@ -108,10 +113,13 @@ import { formatDurationMs, formatTimerSessionEndReason, resolveSessionDisplayEmo
 import { getISOWeekYearAndNumber, getMondayOfWeekContaining, shiftWeekMonday } from "@/services/timer/timerWeekUtils";
 import TimerSessionRulesDialog from "./TimerSessionRulesDialog.vue";
 import TimerWeekChart from "./TimerWeekChart.vue";
+import TimerTagFilterPopover from "./TimerTagFilterPopover.vue";
 import { exportTimerSessionsCsv } from "@/services/timer/timerSessionExport";
+import { useTagStore } from "@/stores/useTagStore";
 
 const router = useRouter();
 const sessionStore = useTimerSessionStore();
+const tagStore = useTagStore();
 
 const weekMonday = ref(getMondayOfWeekContaining(new Date()));
 const { weekDays, weekYear, weekNumber, weekSessions, isCurrentWeek } = useTimerWeekStats(weekMonday);
@@ -127,6 +135,12 @@ const detailTitle = computed(() => {
   const s = selectedSession.value;
   if (!s) return "详情";
   return `${sessionEmoji(s)} 详情`;
+});
+
+const detailTagNames = computed(() => {
+  const s = selectedSession.value;
+  if (!s?.tagIds?.length) return "";
+  return tagStore.getTagNamesByIds(s.tagIds);
 });
 
 function sessionEmoji(session: TimerSessionRecord): string {
@@ -166,7 +180,12 @@ function nextWeek() {
 
 async function exportCsv() {
   const { year, week } = getISOWeekYearAndNumber(weekMonday.value);
-  await exportTimerSessionsCsv(weekSessions.value, `pomotention-timer-${year}-W${String(week).padStart(2, "0")}.csv`, sessionStore.rules);
+  await exportTimerSessionsCsv(
+    weekSessions.value,
+    `pomotention-timer-${year}-W${String(week).padStart(2, "0")}.csv`,
+    sessionStore.rules,
+    (ids) => tagStore.getTagNamesByIds(ids),
+  );
 }
 
 function goBack() {
@@ -186,8 +205,10 @@ function categoryLabel(c: TimerSessionCategory): string {
 }
 
 function sessionTitle(s: TimerSessionRecord): string | undefined {
+  const names = tagStore.getTagNamesByIds(s.tagIds ?? []);
   const message = s.stateMessage.trim();
-  return message || undefined;
+  if (names && message) return `${names} · ${message}`;
+  return names || message || undefined;
 }
 </script>
 
@@ -252,6 +273,11 @@ function sessionTitle(s: TimerSessionRecord): string | undefined {
   gap: 8px;
   margin-bottom: 8px;
   font-size: 13px;
+  flex-wrap: wrap;
+}
+
+.timer-stats-week-nav .timer-tag-filter__trigger {
+  margin-left: auto;
 }
 
 .timer-stats-week-label {
