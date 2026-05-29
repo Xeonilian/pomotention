@@ -1,8 +1,10 @@
 import type { ComposeOption } from "echarts/core";
 import type { BarSeriesOption, LineSeriesOption } from "echarts/charts";
 import type { GridComponentOption, TooltipComponentOption } from "echarts/components";
+import type { Tag } from "@/core/types/Tag";
 import type { TimerSessionEmojis, TimerSessionStatsInclude } from "@/core/types/TimerSession";
 import type { TimerWeekDayRow } from "@/services/timer/timerWeekUtils";
+import { buildTimerWeekTagStacks, type TimerWeekTagStackSeries } from "@/services/timer/timerWeekTagStats";
 
 type ChartOption = ComposeOption<LineSeriesOption | BarSeriesOption | TooltipComponentOption | GridComponentOption>;
 
@@ -18,9 +20,6 @@ const BREAK_LINE_COLORS = {
   breakShort: "#228be6",
   breakLong: "#1864ab",
 } as const;
-
-const WORK_MINUTES_FILL = "rgba(255, 145, 160, 0.58)";
-const BREAK_MINUTES_FILL = "rgba(116, 192, 252, 0.42)";
 
 const COUNT_AXIS_MIN = 8;
 const TOOLTIP_WIDTH_PX = 108;
@@ -43,6 +42,7 @@ function formatTooltipContent(
   workMinutes: number,
   breakMinutes: number,
   emojiEntries: TooltipEmojiEntry[],
+  tagEntries: Array<{ name: string; minutes: number }>,
 ): string {
   const hourCells = [
     `<span>Work</span><span style="white-space:nowrap;">${formatHours(workMinutes)} h</span>`,
@@ -62,11 +62,22 @@ function formatTooltipContent(
     ? `<div style="${TOOLTIP_GRID_STYLE}margin-top:6px;">${emojiCells.join("")}</div>`
     : "";
 
+  const tagCells = tagEntries
+    .filter((t) => t.minutes > 0)
+    .map(
+      (t) =>
+        `<span>${t.name}</span><span style="white-space:nowrap;">${formatHours(t.minutes)} h</span>`,
+    );
+  const tagBlock = tagCells.length
+    ? `<div style="${TOOLTIP_GRID_STYLE}margin-top:6px;">${tagCells.join("")}</div>`
+    : "";
+
   return (
     `<div style="display:flex;flex-direction:column;gap:4px;line-height:1.3;margin:0;">` +
     `<strong>${dayLabel}</strong>` +
     hoursBlock +
     emojiBlock +
+    tagBlock +
     `</div>`
   );
 }
@@ -107,13 +118,22 @@ function weekMaxTierCount(tierLines: TierLineDef[]): number {
   return max;
 }
 
-function dayWorkBreakPercent(workMinutes: number, breakMinutes: number): { work: number; break: number } {
-  const total = workMinutes + breakMinutes;
-  if (total <= 0) return { work: 0, break: 0 };
-  return {
-    work: Math.round((workMinutes / total) * 100),
-    break: Math.round((breakMinutes / total) * 100),
-  };
+function buildTagBarSeries(tagStacks: TimerWeekTagStackSeries[]): BarSeriesOption[] {
+  return tagStacks.map((stack, index) => ({
+    name: stack.name,
+    type: "bar",
+    yAxisIndex: 0,
+    z: 1,
+    stack: "tag_pct",
+    data: stack.scaledValues,
+    barMaxWidth: 14,
+    itemStyle: {
+      color: stack.color,
+      borderRadius: index === tagStacks.length - 1 ? [2, 2, 0, 0] : 0,
+    },
+    silent: true,
+    tooltip: { show: false },
+  }));
 }
 
 // 双 Y 轴仅作刻度映射，不参与布局以免左右留白
@@ -125,14 +145,12 @@ export function buildTimerWeekChartOption(
   weekDays: TimerWeekDayRow[],
   emojis: TimerSessionEmojis,
   statsInclude: TimerSessionStatsInclude,
+  getTag: (id: number) => Tag | undefined,
 ): ChartOption {
   const xLabels = weekDays.map((d) => d.label);
   const tierLines = buildTierLines(weekDays, emojis, statsInclude);
   const countAxisMax = Math.max(COUNT_AXIS_MIN, weekMaxTierCount(tierLines));
-
-  const breakPct = weekDays.map((d) => dayWorkBreakPercent(d.totals.workMinutes, d.totals.breakMinutes).break);
-  const workPct = weekDays.map((d) => dayWorkBreakPercent(d.totals.workMinutes, d.totals.breakMinutes).work);
-  const pctToAxis = (pct: number) => (pct / 100) * countAxisMax;
+  const tagStacks = buildTimerWeekTagStacks(weekDays, getTag, countAxisMax);
 
   const lineSeries: LineSeriesOption[] = tierLines.map((tier) => ({
     name: tier.emoji,
@@ -152,32 +170,7 @@ export function buildTimerWeekChartOption(
     emphasis: { focus: "series" },
   }));
 
-  const barSeries: BarSeriesOption[] = [
-    {
-      name: "__break_pct__",
-      type: "bar",
-      yAxisIndex: 0,
-      z: 1,
-      stack: "pct",
-      data: breakPct.map(pctToAxis),
-      barMaxWidth: 14,
-      itemStyle: { color: BREAK_MINUTES_FILL, borderRadius: [0, 0, 2, 2] },
-      silent: true,
-      tooltip: { show: false },
-    },
-    {
-      name: "__work_pct__",
-      type: "bar",
-      yAxisIndex: 0,
-      z: 1,
-      stack: "pct",
-      data: workPct.map(pctToAxis),
-      barMaxWidth: 14,
-      itemStyle: { color: WORK_MINUTES_FILL, borderRadius: [2, 2, 0, 0] },
-      silent: true,
-      tooltip: { show: false },
-    },
-  ];
+  const barSeries = buildTagBarSeries(tagStacks);
 
   return {
     animation: false,
@@ -202,7 +195,12 @@ export function buildTimerWeekChartOption(
           emojiEntries.push({ emoji: tier.emoji, count });
         }
 
-        return formatTooltipContent(day.label, day.totals.workMinutes, day.totals.breakMinutes, emojiEntries);
+        const tagEntries = tagStacks.map((s) => ({
+          name: s.name,
+          minutes: s.minutesPerDay[idx] ?? 0,
+        }));
+
+        return formatTooltipContent(day.label, day.totals.workMinutes, day.totals.breakMinutes, emojiEntries, tagEntries);
       },
     },
     xAxis: {

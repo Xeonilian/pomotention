@@ -21,9 +21,12 @@ export function useTimerWeekStats(weekMonday: Ref<Date>): {
 } {
   const store = useTimerSessionStore();
 
-  const weekSessions = computed(() => sessionsInWeek(store.sessions, weekMonday.value));
+  const weekSessions = computed(() => {
+    const inWeek = sessionsInWeek(store.sessions, weekMonday.value);
+    return store.filterSessionsForStats(inWeek);
+  });
 
-  const weekDays = computed(() => buildWeekDayRows(weekMonday.value, store.sessions, store.rules));
+  const weekDays = computed(() => buildWeekDayRows(weekMonday.value, weekSessions.value, store.rules));
 
   const weekMeta = computed(() => getISOWeekYearAndNumber(weekMonday.value));
 

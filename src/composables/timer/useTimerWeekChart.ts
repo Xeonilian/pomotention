@@ -7,6 +7,7 @@ import type { ECharts } from "echarts/core";
 import type { TimerSessionEmojis, TimerSessionStatsInclude } from "@/core/types/TimerSession";
 import type { TimerWeekDayRow } from "@/services/timer/timerWeekUtils";
 import { buildTimerWeekChartOption } from "@/services/timer/timerWeekChartOption";
+import { useTagStore } from "@/stores/useTagStore";
 
 echarts.use([LineChart, BarChart, TooltipComponent, GridComponent, CanvasRenderer]);
 
@@ -24,13 +25,17 @@ export function useTimerWeekChart(
   statsInclude: StatsIncludeSource,
 ) {
   const chartInstance = shallowRef<ECharts>();
+  const tagStore = useTagStore();
 
   function render() {
     if (!chartInstance.value) return;
     const days = unref(weekDays);
     const emojiRules = unref(emojis);
     const include = unref(statsInclude);
-    chartInstance.value.setOption(buildTimerWeekChartOption(days, emojiRules, include), { notMerge: true });
+    chartInstance.value.setOption(
+      buildTimerWeekChartOption(days, emojiRules, include, (id) => tagStore.getTag(id)),
+      { notMerge: true },
+    );
   }
 
   function resize() {
