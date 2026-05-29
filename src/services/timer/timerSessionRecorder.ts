@@ -61,6 +61,11 @@ export function timerSessionEnd(
   const { kind, startedAt, plannedDurationMin } = active;
   active = null;
   const stateMessage = resolveSessionStateMessage(kind);
+  const settingStore = useSettingStore();
+  const tagIds =
+    kind === "work" && settingStore.settings.pomodoroTagIds?.length
+      ? [...settingStore.settings.pomodoroTagIds]
+      : undefined;
 
   useTimerSessionStore().addSession({
     kind,
@@ -68,6 +73,7 @@ export function timerSessionEnd(
     endedAt,
     plannedDurationMin,
     stateMessage,
+    tagIds,
     endReason,
     buttonLabel,
     statsDurationMin: opts?.statsDurationMin,
@@ -89,12 +95,16 @@ export function timerSessionDiscardActive(): void {
 /** Pizza「不计入」时在休息段停止：记一条工作作废 */
 export function timerSessionRecordWorkVoid(buttonLabel: string): void {
   const now = Date.now();
+  const settingStore = useSettingStore();
+  const tagIds = settingStore.settings.pomodoroTagIds?.length ? [...settingStore.settings.pomodoroTagIds] : undefined;
+
   useTimerSessionStore().addSession({
     kind: "work",
     startedAt: now,
     endedAt: now,
     plannedDurationMin: 0,
     stateMessage: resolveSessionStateMessage("work"),
+    tagIds,
     endReason: "squash",
     buttonLabel,
   });

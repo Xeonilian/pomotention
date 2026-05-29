@@ -83,6 +83,7 @@ export interface TimerSessionRecord {
   statsDurationMin?: number;
   plannedDurationMin: number;
   stateMessage: string;
+  tagIds?: number[];
   endReason: TimerSessionEndReason;
   buttonLabel?: string;
 }
