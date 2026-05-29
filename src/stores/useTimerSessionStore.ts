@@ -4,6 +4,7 @@ import type { TimerSessionRecord, TimerSessionRules } from "@/core/types/TimerSe
 import { DEFAULT_TIMER_SESSION_RULES } from "@/core/types/TimerSession";
 import { classifyTimerSession } from "@/services/timer/timerSessionClassifier";
 import { normalizeTimerSessionRules } from "@/services/timer/timerSessionRulesNormalize";
+import { filterSessionsByTags } from "@/services/timer/timerSessionTagFilter";
 
 let sessionIdSeq = 0;
 
@@ -17,6 +18,7 @@ export const useTimerSessionStore = defineStore(
   () => {
     const sessions = ref<TimerSessionRecord[]>([]);
     const rules = ref<TimerSessionRules>({ ...DEFAULT_TIMER_SESSION_RULES });
+    const statsFilterTagIds = ref<number[]>([]);
 
     function addSession(input: {
       kind: "work" | "break";
@@ -24,6 +26,7 @@ export const useTimerSessionStore = defineStore(
       endedAt: number;
       plannedDurationMin: number;
       stateMessage: string;
+      tagIds?: number[];
       endReason: "completed" | "squash" | "stop" | "overtime";
       buttonLabel?: string;
       statsDurationMin?: number;
@@ -42,9 +45,24 @@ export const useTimerSessionStore = defineStore(
         statsDurationMin: input.statsDurationMin,
         plannedDurationMin: input.plannedDurationMin,
         stateMessage: input.stateMessage,
+        tagIds: input.tagIds?.length ? [...input.tagIds] : undefined,
         endReason: input.endReason,
         buttonLabel: input.buttonLabel,
       });
+    }
+
+    function toggleStatsFilterTagId(tagId: number): void {
+      const ids = statsFilterTagIds.value;
+      const i = ids.indexOf(tagId);
+      statsFilterTagIds.value = i >= 0 ? ids.filter((id) => id !== tagId) : [...ids, tagId];
+    }
+
+    function clearStatsFilterTags(): void {
+      statsFilterTagIds.value = [];
+    }
+
+    function filterSessionsForStats(list: TimerSessionRecord[]): TimerSessionRecord[] {
+      return filterSessionsByTags(list, statsFilterTagIds.value);
     }
 
     function removeSessions(ids: string[]): void {
@@ -70,18 +88,22 @@ export const useTimerSessionStore = defineStore(
     return {
       sessions,
       rules,
+      statsFilterTagIds,
       sessionsNewestFirst,
       addSession,
       removeSessions,
       updateRules,
       resetRules,
       normalizeStoredRules,
+      toggleStatsFilterTagId,
+      clearStatsFilterTags,
+      filterSessionsForStats,
     };
   },
   {
     persist: {
       key: "pomotention-timer-sessions",
-      pick: ["sessions", "rules"],
+      pick: ["sessions", "rules", "statsFilterTagIds"],
     },
   },
 );
