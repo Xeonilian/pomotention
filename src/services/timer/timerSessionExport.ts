@@ -23,10 +23,11 @@ const CSV_HEADER = [
   "duration_sec",
   "planned_duration_min",
   "state_message",
+  "tag_names",
   "end_reason",
 ] as const;
 
-function sessionToCsvRow(session: TimerSessionRecord): string {
+function sessionToCsvRow(session: TimerSessionRecord, tagNames: string): string {
   const durationSec = Math.max(0, Math.round(session.durationMs / 1000));
   return csvRow([
     session.category,
@@ -35,14 +36,22 @@ function sessionToCsvRow(session: TimerSessionRecord): string {
     String(durationSec),
     String(session.plannedDurationMin),
     session.stateMessage || "",
+    tagNames,
     session.endReason,
   ]);
 }
 
 /** 生成 UTF-8 CSV 正文（不含 BOM） */
-export function buildTimerSessionsCsv(rows: TimerSessionRecord[], _rules?: TimerSessionRules): string {
+export function buildTimerSessionsCsv(
+  rows: TimerSessionRecord[],
+  _rules?: TimerSessionRules,
+  resolveTagNames: (tagIds: number[]) => string = () => "",
+): string {
   const sorted = [...rows].sort((a, b) => a.startedAt - b.startedAt);
-  const lines = [CSV_HEADER.join(","), ...sorted.map((row) => sessionToCsvRow(row))];
+  const lines = [
+    CSV_HEADER.join(","),
+    ...sorted.map((row) => sessionToCsvRow(row, resolveTagNames(row.tagIds ?? []))),
+  ];
   return `${lines.join("\n")}\n`;
 }
 
@@ -61,12 +70,13 @@ export async function exportTimerSessionsCsv(
   rows: TimerSessionRecord[],
   defaultFilename: string,
   rules: TimerSessionRules,
+  resolveTagNames?: (tagIds: number[]) => string,
 ): Promise<TimerSessionExportResult> {
   if (!rows.length) {
     return { ok: false, reason: "empty", detail: "当前周无记录" };
   }
 
-  const csv = buildTimerSessionsCsv(rows, rules);
+  const csv = buildTimerSessionsCsv(rows, rules, resolveTagNames);
 
   if (isTauri()) {
     try {

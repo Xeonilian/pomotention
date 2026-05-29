@@ -20,12 +20,20 @@ describe("buildTimerSessionsCsv", () => {
     const csv = buildTimerSessionsCsv([sample], DEFAULT_TIMER_SESSION_RULES);
     const lines = csv.trim().split("\n");
     expect(lines[0]).toBe(
-      "category,started_at,ended_at,duration_sec,planned_duration_min,state_message,end_reason",
+      "category,started_at,ended_at,duration_sec,planned_duration_min,state_message,tag_names,end_reason",
     );
     expect(lines[1]).toContain("work");
     expect(lines[1]).toContain("Focus task");
     expect(lines[1]).toContain("completed");
     expect(lines[1]).not.toContain("自然结束");
+  });
+
+  it("includes tag_names from resolver", () => {
+    const withTags = { ...sample, tagIds: [1, 2] };
+    const csv = buildTimerSessionsCsv([withTags], DEFAULT_TIMER_SESSION_RULES, (ids) =>
+      ids.length ? "focus,deep" : "",
+    );
+    expect(csv).toContain("focus,deep");
   });
 
   it("sorts by started_at ascending", () => {
