@@ -1,19 +1,67 @@
 <template>
-  <div class="pomodoro-timer" :class="{ 'is-mini-minimal': isMiniMinimal }">
+  <div class="pomodoro-timer" :class="{ 'is-mini-minimal': isMiniMinimal, 'is-compact': isCompactMode }">
     <!-- 1 状态信息：Web 紧凑隐藏；置顶 minimal 显示意图 -->
-    <div v-if="showStateText" class="state-text" @click.stop="startEditing" @pointerdown.stop title="可编辑，回车保存，删除内容恢复默认">
-      <n-input
-        v-if="isEditing"
-        v-model:value="editingMessage"
-        @keydown.enter="saveMessage"
-        @keydown.esc="cancelEditing"
-        @blur="saveMessage"
-        size="small"
-        class="state-input"
-        ref="inputRef"
-        placeholder=""
-      />
-      <n-text v-else class="state-text-clickable">{{ displayMessage }}</n-text>
+    <div
+      v-if="showStateText"
+      class="state-text"
+      @click.stop="startEditing"
+      @pointerdown.stop
+      title="可编辑，输入 # 添加标签；双击标签删除，回车保存"
+    >
+      <div v-if="isEditing" class="state-display-row state-edit-row" @click.stop @pointerdown.stop>
+        <TagRenderer
+          v-if="showIntentTags"
+          class="state-tags"
+          :tag-ids="pomodoroTagIds"
+          :display-length="intentTagDisplayLength"
+          size="tiny"
+          @tag-dblclick="onRemoveIntentTag"
+          @click.stop
+          @pointerdown.stop
+        />
+        <div class="state-edit-inline">
+          <n-input
+            :value="editingMessage"
+            @update:value="onEditingMessageUpdate"
+            @keydown="handleIntentKeydown"
+            @blur="handleIntentBlur"
+            size="small"
+            class="state-input"
+            ref="inputRef"
+            :placeholder="intentInputPlaceholder"
+          />
+          <TagPickerPopover
+            ref="intentTagPickerRef"
+            v-model:show="showIntentTagPicker"
+            v-model:search-term="intentTagSearchTerm"
+            input-mode="external"
+            placement="bottom-start"
+            :z-index="10000"
+            :panel-pointer-guard="onIntentTagPanelPointerGuard"
+            :on-enter-before-select="onIntentTagEnterBeforeSelect"
+            @select-tag="onIntentTagSelect"
+            @create-tag="onIntentTagCreate"
+          >
+            <template #trigger>
+              <span class="state-tag-trigger" />
+            </template>
+          </TagPickerPopover>
+        </div>
+      </div>
+      <div v-else class="state-display-row" :title="stateDisplayTitle">
+        <TagRenderer
+          v-if="showIntentTags"
+          class="state-tags"
+          :tag-ids="pomodoroTagIds"
+          :display-length="intentTagDisplayLength"
+          size="tiny"
+          @tag-dblclick="onRemoveIntentTag"
+          @remove-tag="onRemoveIntentTag"
+          @click.stop
+          @pointerdown.stop
+        />
+        <span class="state-title">{{ displayMessage }}</span>
+      </div>
     </div>
 
     <!-- 2 时钟 -->
@@ -124,14 +172,20 @@
 <script setup lang="ts">
 import { ref, computed, nextTick } from "vue";
 import { useTimerStore } from "@/stores/useTimerStore.ts";
-import { NText, NProgress, NButton, NDropdown, NInput } from "naive-ui";
+import { NProgress, NButton, NDropdown, NInput } from "naive-ui";
 import { clickStatsStore } from "@/stores/useClickStatsStore";
 import { useSettingStore } from "@/stores/useSettingStore";
+import { useTagStore } from "@/stores/useTagStore";
+import TagRenderer from "@/components/TagSystem/TagRenderer.vue";
+import TagPickerPopover from "@/components/TagSystem/TagPickerPopover.vue";
+import { TIMER_INTENT_POPOVER_ID, useTimerIntentTags } from "@/composables/timer/useTimerIntentTags";
 
 const clickStore = clickStatsStore();
 const timerStore = useTimerStore();
 const isGray = computed(() => timerStore.isGray); // 进度条设置
 const settingStore = useSettingStore();
+const tagStore = useTagStore();
+const intentTags = useTimerIntentTags();
 
 const props = defineProps<{
   showPomoSeq?: boolean;
@@ -167,6 +221,114 @@ const breakDuration = computed(() => settingStore.settings.durations.breakDurati
 const isEditing = ref(false);
 const editingMessage = ref("");
 const inputRef = ref<InstanceType<typeof NInput> | null>(null);
+const intentTagPickerRef = ref<InstanceType<typeof TagPickerPopover> | null>(null);
+const isPickingIntentTag = ref(false);
+const selectingIntentTagViaEnter = ref(false);
+
+const pomodoroTagIds = computed(() => settingStore.settings.pomodoroTagIds ?? []);
+const showIntentTags = computed(() => timerStore.pomodoroState !== "breaking" && pomodoroTagIds.value.length > 0);
+
+const showIntentTagPicker = computed({
+  get: () => intentTags.popoverTargetId.value === TIMER_INTENT_POPOVER_ID,
+  set: (open: boolean) => {
+    if (!open) intentTags.closePopover();
+  },
+});
+
+const intentTagSearchTerm = computed({
+  get: () => intentTags.tagSearchTerm.value,
+  set: (v: string) => {
+    intentTags.tagSearchTerm.value = v;
+  },
+});
+
+const intentTagDisplayLength = computed((): number | undefined => {
+  const n = pomodoroTagIds.value.length;
+  if (n === 0) return undefined;
+  if (n === 1) return 3;
+  if (n === 2) return 1;
+  return 0;
+});
+
+const intentInputPlaceholder = computed(() => {
+  if (timerStore.pomodoroState === "breaking") return "";
+  return "Enter确认";
+});
+
+function onEditingMessageUpdate(value: string) {
+  editingMessage.value = value;
+  intentTags.handleContentInput(TIMER_INTENT_POPOVER_ID, value);
+}
+
+function isIntentTagPickerActive(): boolean {
+  const popoverOpened = intentTags.popoverTargetId.value === TIMER_INTENT_POPOVER_ID;
+  const hasTriggerAtTail = /[#@][\p{L}\p{N}_]*$/u.test(editingMessage.value);
+  return popoverOpened || hasTriggerAtTail;
+}
+
+function handleIntentKeydown(event: KeyboardEvent) {
+  const isTagKey = event.key === "ArrowDown" || event.key === "ArrowUp" || event.key === "Enter" || event.key === "Escape";
+  const hasTriggerAtTail = /[#@][\p{L}\p{N}_]*$/u.test(editingMessage.value);
+
+  if (hasTriggerAtTail && intentTags.popoverTargetId.value !== TIMER_INTENT_POPOVER_ID) {
+    intentTags.popoverTargetId.value = TIMER_INTENT_POPOVER_ID;
+  }
+
+  if (isTagKey && isIntentTagPickerActive() && intentTagPickerRef.value) {
+    if (event.key === "Enter") selectingIntentTagViaEnter.value = true;
+    event.preventDefault();
+    event.stopPropagation();
+    intentTagPickerRef.value.handleHostKeydown(event);
+    return;
+  }
+
+  if ((event.key === "#" || event.key === "@") && intentTags.popoverTargetId.value !== TIMER_INTENT_POPOVER_ID) {
+    intentTags.popoverTargetId.value = TIMER_INTENT_POPOVER_ID;
+  }
+
+  if (event.key === "Enter") {
+    saveMessage();
+  } else if (event.key === "Escape") {
+    cancelEditing();
+  }
+}
+
+function handleIntentBlur() {
+  if (isPickingIntentTag.value) {
+    isPickingIntentTag.value = false;
+    nextTick(() => inputRef.value?.focus());
+    return;
+  }
+  if (selectingIntentTagViaEnter.value) {
+    selectingIntentTagViaEnter.value = false;
+    return;
+  }
+  saveMessage();
+}
+
+function onIntentTagPanelPointerGuard() {
+  isPickingIntentTag.value = true;
+}
+
+function onIntentTagEnterBeforeSelect() {
+  selectingIntentTagViaEnter.value = true;
+}
+
+function onIntentTagSelect(tagId: number) {
+  editingMessage.value = intentTags.selectTag(tagId, editingMessage.value);
+  isPickingIntentTag.value = false;
+  nextTick(() => inputRef.value?.focus());
+}
+
+function onIntentTagCreate(name: string) {
+  editingMessage.value = intentTags.createTag(name, editingMessage.value);
+  isPickingIntentTag.value = false;
+  nextTick(() => inputRef.value?.focus());
+}
+
+function onRemoveIntentTag(tagId: number) {
+  intentTags.removeTagId(tagId);
+}
 
 /** 与 store.effectiveWorkMinutes 一致：>=5 显示红条与阶段标签 */
 const showPhaseDetail = computed(() => timerStore.effectiveWorkMinutes >= 5);
@@ -235,6 +397,13 @@ const displayMessage = computed((): string => {
   return settingStore.settings.pomodoroStateMessage || defaultStateMessage.value;
 });
 
+const stateDisplayTitle = computed((): string => {
+  const names = tagStore.getTagNamesByIds(pomodoroTagIds.value);
+  const msg = displayMessage.value;
+  if (names && msg) return `${names} · ${msg}`;
+  return names || msg;
+});
+
 // 1-3 开始编辑（休息中不编辑工作标语）
 function startEditing(): void {
   if (timerStore.pomodoroState === "breaking") return;
@@ -247,7 +416,8 @@ function startEditing(): void {
 
 // 1-4 保存消息
 function saveMessage(): void {
-  const trimmedValue = editingMessage.value.trim();
+  intentTags.closePopover();
+  const trimmedValue = intentTags.clearTagTriggerText(editingMessage.value).trim();
   if (trimmedValue === "") {
     // 如果为空，清除自定义消息
     settingStore.settings.pomodoroStateMessage = undefined;
@@ -260,6 +430,7 @@ function saveMessage(): void {
 
 // 1-5 取消编辑
 function cancelEditing(): void {
+  intentTags.closePopover();
   isEditing.value = false;
   editingMessage.value = "";
 }
@@ -401,6 +572,9 @@ defineExpose({
 <style scoped>
 /* 0-整体 */
 .pomodoro-timer {
+  --intent-chip-height: 14px;
+  --state-side-left: 26px;
+  --state-side-right: 26px;
   text-align: center;
   width: 200px;
   margin: 5px auto;
@@ -412,64 +586,130 @@ defineExpose({
   box-shadow: 2px 2px 6px var(--color-background-dark);
 }
 
+.pomodoro-timer.is-mini-minimal {
+  --state-side-left: 0px;
+  --state-side-right: 0px;
+}
+
+.pomodoro-timer.is-compact:not(.is-mini-minimal) {
+  --state-side-left: 22px;
+  --state-side-right: 4px;
+}
+
 /* 添加序列模式下的样式 */
 .pomodoro-timer:has(.button-container:empty) {
   height: 80px;
 }
 
-/* 1-状态信息 */
+/* 1-状态信息：左右为角按钮留空，中间 tag + title 聚合 */
 .state-text {
   margin-bottom: 5px;
   font: 10px Arial;
   cursor: pointer;
-  height: 16px; /* 固定高度，避免布局变化 */
+  height: var(--intent-chip-height);
   display: flex;
   align-items: center;
   justify-content: center;
-  position: relative; /* 为绝对定位的输入框提供定位上下文 */
-  width: 140px;
-  transform: translateX(20%);
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding-left: var(--state-side-left);
+  padding-right: var(--state-side-right);
+}
+
+.state-display-row {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.state-edit-row {
+  display: flex;
+  width: 100%;
+  cursor: text;
+}
+
+.state-tags {
+  flex-shrink: 0;
+}
+
+.state-tags :deep(.n-tag) {
+  height: var(--intent-chip-height) !important;
+  min-height: var(--intent-chip-height) !important;
+  line-height: var(--intent-chip-height);
+  padding: 0 4px !important;
+  transform: translateY(-1px);
+}
+
+.state-tags :deep(.tag-item) {
+  font-size: 9px;
+  line-height: 1;
+}
+
+.state-title {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  user-select: none;
+  line-height: var(--intent-chip-height);
+}
+
+.state-display-row:hover .state-title {
+  opacity: 0.7;
+}
+
+.state-edit-inline {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: var(--intent-chip-height);
+}
+
+.state-tag-trigger {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+  opacity: 0;
 }
 
 :deep(.n-input.state-input) {
   --n-box-shadow-focus: none !important;
-}
-
-.state-text-clickable {
-  user-select: none;
-  width: 100%;
-  text-align: center;
-}
-
-.state-text-clickable:hover {
-  opacity: 0.7;
+  --n-height: var(--intent-chip-height) !important;
+  --n-font-size: 9px !important;
 }
 
 .state-input {
-  position: absolute;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 180px;
-  font-size: 10px;
-  height: 12px;
-  line-height: 10px;
+  width: 100%;
+  height: var(--intent-chip-height);
+  font-size: 9px;
+  line-height: var(--intent-chip-height);
   margin: 0;
   padding: 0;
 }
 
-/* 调整输入框内部文字垂直居中 */
 .state-input :deep(.n-input__input-el) {
-  height: 12px;
-  line-height: 12px;
-  padding: 0;
+  height: var(--intent-chip-height);
+  line-height: var(--intent-chip-height);
+  padding: 0 4px;
   font-size: 9px;
   font-family: Arial;
+  text-align: center;
 }
 
 .state-input :deep(.n-input-wrapper) {
-  height: 12px;
-  min-height: 12px;
+  height: var(--intent-chip-height);
+  min-height: var(--intent-chip-height);
+  padding: 0;
+  border-radius: calc(var(--intent-chip-height) / 2);
 }
 
 /* 2-计时器 */
@@ -558,31 +798,22 @@ defineExpose({
 }
 
 .pomodoro-timer.is-mini-minimal .state-text {
-  transform: none;
   width: 100%;
   max-width: 100%;
   height: auto;
-  min-height: 0;
+  min-height: var(--intent-chip-height);
   margin: 0;
   flex-shrink: 0;
   justify-content: center;
   text-align: center;
 }
 
-.pomodoro-timer.is-mini-minimal .state-text-clickable {
-  display: block;
-  width: 100%;
-  text-align: center;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.pomodoro-timer.is-mini-minimal .state-display-row {
+  max-width: 100%;
 }
 
-.pomodoro-timer.is-mini-minimal .state-input {
-  width: 100%;
-  max-width: 128px;
-  left: 50%;
-  transform: translateX(-50%);
+.pomodoro-timer.is-mini-minimal .state-title {
+  text-align: center;
 }
 
 .pomodoro-timer.is-mini-minimal .timer-container.is-mini-minimal {

@@ -9,6 +9,7 @@
       :title="getTagTitle(tag)"
       @close="removeTag(tag.id)"
       @click.stop="handleTagClick(tag.id)"
+      @dblclick.stop="handleTagDblClick(tag.id)"
       class="tag-item"
       :style="{
         color: tag.color,
@@ -49,6 +50,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   "remove-tag": [tagId: number];
   "tag-click": [tagId: number];
+  "tag-dblclick": [tagId: number];
 }>();
 
 // ================================================================
@@ -131,6 +133,10 @@ function truncatedName(tagName: string): string {
  */
 function handleTagClick(tagId: number): void {
   emit("tag-click", tagId);
+}
+
+function handleTagDblClick(tagId: number): void {
+  emit("tag-dblclick", tagId);
 }
 
 /**
