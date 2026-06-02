@@ -8,6 +8,7 @@
     "dev:app": "cross-env SKIP_DOCS_DEV=1 vite",
     "dev:timer": "cross-env SKIP_DOCS_DEV=1 VITE_APP_VARIANT=timer vite --mode timer --open /",
     "build:timer": "cross-env VITE_APP_VARIANT=timer vite build --mode timer && node scripts/copy-timer-index.mjs",
+    "pages:build": "node scripts/pages-build.mjs",
     "tauri:timer:dev": "tauri dev --config src-tauri/tauri.conf.timer.json",
     "tauri:timer:build": "tauri build --config src-tauri/tauri.conf.timer.json",
     "dev:with-docs": "pnpm dev",

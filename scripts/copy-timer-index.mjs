@@ -1,4 +1,4 @@
-import { copyFileSync, existsSync } from "node:fs";
+import { copyFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -24,6 +24,15 @@ if (!existsSync(src)) {
 }
 
 copyFileSync(src, dest);
+
+/** 线上曾部署主站图标时，用 query 避免浏览器沿用旧 favicon */
+const CACHE_BUST = "?v=timer";
+let indexHtml = readFileSync(dest, "utf8");
+indexHtml = indexHtml.replace(
+  /href="\/(favicon\.ico|manifest\.webmanifest|icon-(?:128|192|512)\.png)"/g,
+  `href="/$1${CACHE_BUST}"`,
+);
+writeFileSync(dest, indexHtml);
 
 for (const name of TIMER_PUBLIC_OVERLAY) {
   const from = path.join(timerPublicDir, name);

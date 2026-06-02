@@ -11,6 +11,10 @@ import { fileURLToPath, URL } from "node:url";
 const pkg = JSON.parse(
   readFileSync(fileURLToPath(new URL("./package.json", import.meta.url)), "utf-8")
 ) as { version: string };
+
+const timerTauriConf = JSON.parse(
+  readFileSync(fileURLToPath(new URL("./src-tauri/tauri.conf.timer.json", import.meta.url)), "utf-8")
+) as { version: string };
 import AutoImport from "unplugin-auto-import/vite";
 import Components from "unplugin-vue-components/vite";
 import { NaiveUiResolver } from "unplugin-vue-components/resolvers";
@@ -174,7 +178,10 @@ export default defineConfig(({ mode, command }) => {
   return {
     base,
     define: {
-      "import.meta.env.VITE_APP_VERSION": JSON.stringify(pkg.version),
+      // Timer 独立版版本以 tauri.conf.timer.json 为准，勿用根 package.json（完整版 0.6.x）
+      "import.meta.env.VITE_APP_VERSION": JSON.stringify(
+        isTimerMode ? timerTauriConf.version : pkg.version
+      ),
     },
     plugins: [
       ...(command === "serve" && mode === "development" && !isTimerMode ? [spawnDocsDevAfterListen()] : []),
