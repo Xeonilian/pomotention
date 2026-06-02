@@ -4,6 +4,17 @@ import { fileURLToPath } from "node:url";
 
 const root = path.resolve(fileURLToPath(new URL("..", import.meta.url)));
 const distDir = path.join(root, "dist-timer");
+const timerPublicDir = path.join(root, "public-timer");
+
+/** Timer 独立图标/manifest，build 后覆盖 dist-timer 中来自 public/ 的同名文件 */
+const TIMER_PUBLIC_OVERLAY = [
+  "favicon.ico",
+  "icon-128.png",
+  "icon-192.png",
+  "icon-512.png",
+  "manifest.webmanifest",
+];
+
 const src = path.join(distDir, "timer.html");
 const dest = path.join(distDir, "index.html");
 
@@ -13,4 +24,15 @@ if (!existsSync(src)) {
 }
 
 copyFileSync(src, dest);
+
+for (const name of TIMER_PUBLIC_OVERLAY) {
+  const from = path.join(timerPublicDir, name);
+  if (!existsSync(from)) {
+    console.warn("[copy-timer-index] skip missing overlay:", from);
+    continue;
+  }
+  copyFileSync(from, path.join(distDir, name));
+}
+
 console.log("[copy-timer-index] dist-timer/index.html ready");
+console.log("[copy-timer-index] timer public overlay applied");

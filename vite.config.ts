@@ -1,9 +1,10 @@
 import { defineConfig, loadEnv, type Plugin } from "vite";
+import type { Connect } from "vite";
 import vue from "@vitejs/plugin-vue";
 import { spawn, type ChildProcess } from "node:child_process";
 import { createConnection } from "node:net";
 import http from "node:http";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath, URL } from "node:url";
 
@@ -42,6 +43,59 @@ function shouldServeTimerHtmlForDevPath(pathOnly: string, acceptHeader: string |
     return false;
   }
   return true;
+}
+
+/** dev:timer 下用 public-timer 覆盖 public 同名图标，音效等仍走 public/ */
+const TIMER_PUBLIC_OVERLAY = new Set([
+  "favicon.ico",
+  "icon-128.png",
+  "icon-192.png",
+  "icon-512.png",
+  "manifest.webmanifest",
+]);
+
+const TIMER_PUBLIC_MIME: Record<string, string> = {
+  "favicon.ico": "image/x-icon",
+  "icon-128.png": "image/png",
+  "icon-192.png": "image/png",
+  "icon-512.png": "image/png",
+  "manifest.webmanifest": "application/manifest+json",
+};
+
+function timerPublicOverlayDev(): Plugin {
+  const timerPublicDir = path.join(projectRoot, "public-timer");
+  const handler: Connect.NextHandleFunction = (req, res, next) => {
+    const raw = req.url ?? "";
+    const pathname = (raw.split("?")[0] ?? "").replace(/^\//, "");
+    if (!TIMER_PUBLIC_OVERLAY.has(pathname)) {
+      next();
+      return;
+    }
+    const file = path.join(timerPublicDir, pathname);
+    if (!existsSync(file)) {
+      next();
+      return;
+    }
+    res.statusCode = 200;
+    res.setHeader("Content-Type", TIMER_PUBLIC_MIME[pathname] ?? "application/octet-stream");
+    res.setHeader("Cache-Control", "no-store, must-revalidate");
+    res.end(readFileSync(file));
+  };
+
+  return {
+    name: "timer-public-overlay-dev",
+    enforce: "pre",
+    apply: "serve",
+    configureServer(server) {
+      server.middlewares.use(handler);
+      // 优先于 Vite public/ 静态资源，避免 dev 仍读到主站旧图标
+      const stack = (server.middlewares as Connect.Server & { stack: Array<{ route: { handle: Connect.NextHandleFunction } }> })
+        .stack;
+      if (stack.length > 1) {
+        stack.unshift(stack.pop()!);
+      }
+    },
+  };
 }
 
 function canConnectTcp(port: number, hostAddr = "127.0.0.1"): Promise<boolean> {
@@ -124,6 +178,7 @@ export default defineConfig(({ mode, command }) => {
     },
     plugins: [
       ...(command === "serve" && mode === "development" && !isTimerMode ? [spawnDocsDevAfterListen()] : []),
+      ...(command === "serve" && isTimerMode ? [timerPublicOverlayDev()] : []),
       // dev:timer：所有前端路由刷新须落到 timer.html，否则会回退到 index.html（完整版 MainLayout）
       {
         name: "timer-dev-spa-fallback",

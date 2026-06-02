@@ -1,0 +1,17 @@
+{
+  "id": "./",
+  "name": "Pomotention Timer",
+  "short_name": "Timer",
+  "description": "专注计时器",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "categories": ["productivity", "utilities"],
+  "icons": [
+    { "src": "./icon-128.png", "sizes": "128x128", "type": "image/png", "purpose": "any" },
+    { "src": "./icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "./icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
