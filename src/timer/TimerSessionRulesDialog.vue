@@ -221,7 +221,7 @@ function onReset() {
   display: grid;
   grid-template-columns: 28px 52px 88px minmax(0, 1fr);
   align-items: center;
-  gap: 4px 10px;
+  gap: 4px 6px;
   font-size: 13px;
 }
 
@@ -234,7 +234,7 @@ function onReset() {
 }
 
 .timer-rules-tier-emoji {
-  width: 52px;
+  width: 48px;
 }
 
 .timer-rules-tier-emoji :deep(.n-input__input-el) {
@@ -257,7 +257,7 @@ function onReset() {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 88px;
+  width: 80px;
   height: 28px;
   color: var(--color-text-secondary, var(--n-text-color-3));
   font-size: 14px;
@@ -265,7 +265,7 @@ function onReset() {
 }
 
 .timer-rules-num {
-  width: 88px;
+  width: 80px;
 }
 
 .timer-rules-tier-bin-label {

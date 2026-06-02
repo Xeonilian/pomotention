@@ -1,6 +1,17 @@
 <template>
   <div class="pomodoro-mini-view-wrapper" ref="PomotentionTimerContainerRef">
-    <n-layout class="app-layout" :class="{ 'app-layout--use-vv-height': isMobile }">
+    <n-layout
+      class="app-layout"
+      :class="{ 'app-layout--use-vv-height': isMobile, 'app-layout--has-bg': hasActiveBackground }"
+    >
+      <div
+        v-if="!isMiniMode"
+        class="timer-bg-layer"
+        :class="layerClass"
+        aria-hidden="true"
+      >
+        <component :is="activeComponent" v-if="activeComponent" :palette="ballPalette" />
+      </div>
       <n-layout-header class="app-layout__header" :class="{ 'app-layout__header--hidden': isMiniMode }">
         <div class="app-layout__header-content app-layout__header-content--timer">
           <div class="app-layout__view-controls">
@@ -33,7 +44,14 @@
         </div>
       </n-layout-header>
 
-      <n-layout-content class="app-layout__content" :class="{ 'app-layout__content--full-height': isMiniMode }">
+      <n-layout-content
+        class="app-layout__content"
+        :class="{ 'app-layout__content--full-height': isMiniMode }"
+        @click="onContentClick"
+        @dblclick="onContentDoubleClick"
+        @touchend="onVoidTouchEnd"
+        @touchcancel="onVoidTouchCancel"
+      >
         <div v-if="!isMiniMode" class="timer-timer-center">
           <PomotentionTimer
             ref="pomotentionTimerRef"
@@ -66,7 +84,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import { useRouter } from "vue-router";
 import { NLayout, NLayoutHeader, NLayoutContent, NButton, NIcon } from "naive-ui";
 import { isTauri } from "@tauri-apps/api/core";
@@ -75,6 +93,8 @@ import PomotentionTimer from "@/components/PomotentionTimer/PomotentionTimer.vue
 import TagManager from "@/components/TagSystem/TagManager.vue";
 import { useAppWindow } from "@/composables/layout/useAppWindow";
 import { useDevice } from "@/composables/platform/useDevice";
+import { useTimerBackgroundAnimation } from "@/composables/timer/useTimerBackgroundAnimation";
+import "@/core/timerBackgroundAnimation";
 
 const router = useRouter();
 const { isMobile } = useDevice();
@@ -100,6 +120,34 @@ void pomotentionTimerRef;
 const showTagManager = ref(false);
 const tagManagerScratchIds = ref<number[]>([]);
 
+const {
+  currentId,
+  layerClass,
+  activeComponent,
+  ballPalette,
+  onVoidClick,
+  onVoidDoubleClick,
+  onVoidTouchEnd,
+  onVoidTouchCancel,
+} = useTimerBackgroundAnimation();
+
+const hasActiveBackground = computed(() => currentId.value !== "none");
+
+function isVoidBackgroundTarget(event: Event) {
+  const target = event.target as HTMLElement | null;
+  return !target?.closest(".pomodoro-view-wrapper");
+}
+
+function onContentClick(event: MouseEvent) {
+  if (!isVoidBackgroundTarget(event)) return;
+  onVoidClick();
+}
+
+function onContentDoubleClick(event: MouseEvent) {
+  if (!isVoidBackgroundTarget(event)) return;
+  onVoidDoubleClick();
+}
+
 function handlePinClick() {
   void handleToggleOntopMode(reportedPomodoroWidth.value, reportedPomodoroHeight.value);
 }
@@ -123,13 +171,22 @@ function onExitMiniMode() {
 
 <style scoped>
 .app-layout {
+  position: relative;
   overflow: hidden;
   height: 100vh;
   height: 100dvh;
   user-select: none;
   background-color: var(--color-background, #ffffff);
 }
+.app-layout--has-bg {
+  background-color: transparent;
+}
+.app-layout--has-bg .app-layout__content,
+.app-layout--has-bg .app-layout__content:deep(.n-layout-scroll-container) {
+  background-color: transparent !important;
+}
 .app-layout__header {
+  position: relative;
   flex-shrink: 0;
   height: 40px;
   min-height: 30px;
@@ -162,9 +219,29 @@ function onExitMiniMode() {
 }
 .app-layout__content {
   position: relative;
+  z-index: 1;
   height: calc(100% - 30px);
   width: 100%;
   overflow: hidden;
+}
+.app-layout__content:deep(.n-layout-scroll-container) {
+  position: relative;
+  height: 100%;
+  min-height: 100%;
+}
+.timer-timer-center {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  width: 100%;
+  transform: translateY(-15px);
+  pointer-events: none;
+}
+.timer-timer-center :deep(> *) {
+  pointer-events: auto;
 }
 .app-layout__content--full-height {
   display: flex;
@@ -172,15 +249,6 @@ function onExitMiniMode() {
   align-items: center;
   height: 100%;
   width: 100%;
-}
-/* 抵消顶部 header，避免垂直居中后整体显得偏下 */
-.timer-timer-center {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100%;
-  width: 100%;
-  transform: translateY(-15px);
 }
 .header-button {
   width: 30px;
@@ -192,6 +260,5 @@ function onExitMiniMode() {
 }
 .pomodoro-mini-view-wrapper:deep(.n-layout .n-layout-scroll-container) {
   overflow: hidden !important;
-  background-color: var(--color-background-light);
 }
 </style>

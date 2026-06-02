@@ -2,8 +2,8 @@
   <Transition name="pwa-splash">
     <div v-if="visible" class="pwa-splash" aria-hidden="true">
       <div class="pwa-splash__inner">
-        <img src="/icon-192.png" alt="" class="pwa-splash__icon" width="96" height="96" />
-        <span class="pwa-splash__name">Pomotention</span>
+        <img :src="iconSrc" alt="" class="pwa-splash__icon" width="96" height="96" />
+        <span class="pwa-splash__name">{{ appName }}</span>
       </div>
     </div>
   </Transition>
@@ -11,6 +11,17 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
+
+withDefaults(
+  defineProps<{
+    appName?: string;
+    iconSrc?: string;
+  }>(),
+  {
+    appName: "Pomotention",
+    iconSrc: "/icon-192.png",
+  },
+);
 
 // 与 manifest 一致：仅在以 PWA 方式打开（主屏幕图标进入）时显示启动屏
 function isStandalone(): boolean {

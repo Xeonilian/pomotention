@@ -1,0 +1,4 @@
+/* 无动画：透明占位，沿用 app-layout 底色 */
+.timer-bg-layer--none {
+  background: transparent;
+}

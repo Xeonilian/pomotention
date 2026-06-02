@@ -1,0 +1,8 @@
+/* 背景动画层：铺满 app-layout，置于 header/content 之下 */
+.timer-bg-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}

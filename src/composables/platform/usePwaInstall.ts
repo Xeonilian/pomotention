@@ -1,7 +1,8 @@
 // PWA 安装状态：iOS 无系统弹窗，需应用内引导；Android 由系统/浏览器弹窗
 import { ref, computed, onMounted } from "vue";
 
-const PWA_IOS_DISMISSED_KEY = "pwa-ios-install-dismissed";
+const PWA_IOS_DISMISSED_KEY =
+  import.meta.env.VITE_APP_VARIANT === "timer" ? "pwa-ios-install-dismissed-timer" : "pwa-ios-install-dismissed";
 
 function getIsIOS(): boolean {
   if (typeof navigator === "undefined") return false;

@@ -3,7 +3,10 @@
     <n-notification-provider>
       <n-dialog-provider>
         <div class="timer-app-shell">
+          <PwaSplashScreen app-name="Pomotention Timer" icon-src="/icon-192.png?v=timer" />
           <router-view />
+          <PwaUpdateNotifier />
+          <PwaInstallBanner />
           <!-- 统计弹层挂载点：须在 ConfigProvider 内，避免 Teleport 到 body 丢失主题上下文 -->
           <div id="timer-portal" />
         </div>
@@ -17,6 +20,9 @@ import { computed, onMounted, watch } from "vue";
 import { NConfigProvider, NDialogProvider, NNotificationProvider, darkTheme, zhCN, dateZhCN } from "naive-ui";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { prefetchSoundAssets, prefetchWhiteNoiseForSelection } from "@/core/sounds";
+import PwaInstallBanner from "@/components/platform/PwaInstallBanner.vue";
+import PwaSplashScreen from "@/components/platform/PwaSplashScreen.vue";
+import PwaUpdateNotifier from "@/components/platform/PwaUpdateNotifier.vue";
 
 import "@/styles/timer-theme.css";
 

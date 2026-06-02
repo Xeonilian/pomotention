@@ -29,7 +29,7 @@
       }"
       :style="isMiniMinimal ? { height: `${TIMER_MINI_MINIMAL_SIZE.height}px` } : undefined"
     >
-      <!-- Web: 紧凑/全屏循环；Tauri: 仅迷你窗内显示，只负责退出 -->
+      <!-- Web: 初始态→紧凑，其余→全屏；Tauri: 仅迷你窗内显示，只负责退出 -->
       <n-button
         v-if="showCompactCycleButton && !isMiniMinimal"
         size="tiny"
@@ -99,11 +99,21 @@ const isMiniMinimal = computed(
 
 // Tauri 下不展示紧凑，仅 ontop 进入迷你；toggle 只在迷你窗内显示且只负责退出
 const showCompactCycleButton = computed(() => !isTauri() || props.isMiniMode);
+
+/** Web：待机 + 非紧凑 + 非全屏 = 唯一可进紧凑的初始布局 */
+const isWebInitialLayoutState = computed(
+  () =>
+    !isTauri() &&
+    !props.isMiniMode &&
+    !settingStore.settings.isCompactMode &&
+    timerStore.pomodoroState === "idle",
+);
+
 // 紧凑/迷你/全屏 循环按钮的 title（Tauri 下仅迷你时显示，故只可能是「退出迷你模式」）
 const compactCycleButtonTitle = computed(() => {
   if (props.isMiniMode) return isTauri() ? "退出迷你模式" : "退出全屏";
-  if (settingStore.settings.isCompactMode) return "全屏";
-  return "紧凑模式";
+  if (isWebInitialLayoutState.value) return "紧凑模式";
+  return "全屏";
 });
 const pomodoroContainerRef = ref<HTMLElement | null>(null); // 自动识别正确高度
 
@@ -294,6 +304,11 @@ function exitMiniMode() {
   }
 }
 
+function enterWebFullscreen() {
+  settingStore.settings.isCompactMode = false;
+  emit("enter-mini");
+}
+
 function handleToggleCompactMode() {
   // 迷你/全屏：点击仅退出（Tauri 仅 header ontop 进入迷你，此处不触发进入）
   if (props.isMiniMode) {
@@ -301,13 +316,23 @@ function handleToggleCompactMode() {
     return;
   }
   if (isTauri()) return; // Tauri 下无紧凑，进入迷你仅靠 header ontop，此处不处理
-  // Web：紧凑 → 全屏；展开 → 紧凑
-  if (settingStore.settings.isCompactMode) {
-    emit("enter-mini");
+  // Web：仅待机初始布局进紧凑；计时中/紧凑/序列运行等一律全屏
+  if (isWebInitialLayoutState.value) {
+    settingStore.settings.isCompactMode = true;
     return;
   }
-  settingStore.settings.isCompactMode = true;
+  enterWebFullscreen();
 }
+
+// Web：离开待机初始态后自动全屏，避免计时中仍停留在带 header 的常规布局
+watch(
+  () => timerStore.isActive,
+  (active) => {
+    if (isTauri() || props.isMiniMode || !active) return;
+    enterWebFullscreen();
+  },
+  { immediate: true },
+);
 
 function handleTogglePomoSeq() {
   if (timerStore.isActive) {

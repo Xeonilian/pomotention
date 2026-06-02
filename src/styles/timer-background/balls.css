@@ -1,0 +1,20 @@
+.timer-bg-layer--balls {
+  background-color: var(--color-background, #ffffff);
+}
+
+.timer-bg-balls__stage {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.timer-bg-ball {
+  position: absolute;
+  border-radius: 100%;
+  opacity: 0.7;
+}
+
+html.timer-dark .timer-bg-layer--balls {
+  background-color: var(--color-background, #1e1e1e);
+}
