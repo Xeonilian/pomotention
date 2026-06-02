@@ -18,6 +18,22 @@
             <n-icon :component="Emoji24Regular" />
           </template>
         </n-button>
+        <n-popconfirm positive-text="确定" negative-text="取消" @positive-click="clearAllData">
+          <template #trigger>
+            <n-button
+              text
+              type="error"
+              title="删除全部数据"
+              class="header-button"
+              :disabled="!sessionStore.sessions.length && !tagStore.allTags.length"
+            >
+              <template #icon>
+                <n-icon :component="Delete24Regular" />
+              </template>
+            </n-button>
+          </template>
+          确定删除全部计时记录与标签吗？此操作不可恢复。
+        </n-popconfirm>
       </div>
     </header>
 
@@ -104,8 +120,15 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import { useRouter } from "vue-router";
-import { NButton, NIcon } from "naive-ui";
-import { ArrowDownload24Regular, ArrowLeft24Regular, ChevronLeft24Filled, ChevronRight24Filled, Emoji24Regular } from "@vicons/fluent";
+import { NButton, NIcon, NPopconfirm } from "naive-ui";
+import {
+  ArrowDownload24Regular,
+  ArrowLeft24Regular,
+  ChevronLeft24Filled,
+  ChevronRight24Filled,
+  Delete24Regular,
+  Emoji24Regular,
+} from "@vicons/fluent";
 import { useTimerWeekStats } from "@/composables/timer/useTimerWeekStats";
 import { useTimerSessionStore } from "@/stores/useTimerSessionStore";
 import type { TimerSessionRecord, TimerSessionCategory } from "@/core/types/TimerSession";
@@ -116,10 +139,12 @@ import TimerWeekChart from "./TimerWeekChart.vue";
 import TimerTagFilterPopover from "./TimerTagFilterPopover.vue";
 import { exportTimerSessionsCsv } from "@/services/timer/timerSessionExport";
 import { useTagStore } from "@/stores/useTagStore";
+import { useSettingStore } from "@/stores/useSettingStore";
 
 const router = useRouter();
 const sessionStore = useTimerSessionStore();
 const tagStore = useTagStore();
+const settingStore = useSettingStore();
 
 const weekMonday = ref(getMondayOfWeekContaining(new Date()));
 const { weekDays, weekYear, weekNumber, weekSessions, isCurrentWeek } = useTimerWeekStats(weekMonday);
@@ -186,6 +211,14 @@ async function exportCsv() {
     sessionStore.rules,
     (ids) => tagStore.getTagNamesByIds(ids),
   );
+}
+
+function clearAllData() {
+  sessionStore.clearAllSessions();
+  sessionStore.clearStatsFilterTags();
+  tagStore.clearData();
+  settingStore.settings.pomodoroTagIds = [];
+  closeDetail();
 }
 
 function goBack() {

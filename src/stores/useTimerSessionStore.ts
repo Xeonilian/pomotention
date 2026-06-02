@@ -71,6 +71,10 @@ export const useTimerSessionStore = defineStore(
       sessions.value = sessions.value.filter((s) => !drop.has(s.id));
     }
 
+    function clearAllSessions(): void {
+      sessions.value = [];
+    }
+
     function updateRules(patch: Partial<TimerSessionRules>): void {
       rules.value = normalizeTimerSessionRules({ ...rules.value, ...patch });
     }
@@ -92,6 +96,7 @@ export const useTimerSessionStore = defineStore(
       sessionsNewestFirst,
       addSession,
       removeSessions,
+      clearAllSessions,
       updateRules,
       resetRules,
       normalizeStoredRules,
