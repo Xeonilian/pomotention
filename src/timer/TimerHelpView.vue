@@ -6,7 +6,7 @@
           <n-icon :component="ArrowLeft24Regular" />
         </template>
       </n-button>
-      <span class="timer-help-title">番茄时钟帮助</span>
+      <span class="timer-help-title">帮助</span>
       <div class="timer-help-header-actions">
         <n-button text type="default" title="全部展开" class="header-button" @click="expandAll">
           <template #icon>
@@ -23,7 +23,15 @@
     <main class="timer-help-body">
       <div class="timer-help-inner">
         <aside class="timer-help-feedback" aria-label="测试反馈">
-          <p class="timer-help-feedback-title">关于Beta版</p>
+          <div class="timer-help-logos">
+            <img :src="timerLogoSrc" alt="Pomotention Timer" class="timer-help-logo" width="80" height="80" />
+            <img :src="pomotentionLogoSrc" alt="Pomotention" class="timer-help-logo" width="80" height="80" />
+          </div>
+          <p class="timer-help-feedback-title">
+            Pomotention Timer
+            <br />
+            是番茄意图的计时器模块，目前处于Beta测试阶段，欢迎反馈问题与建议。
+          </p>
           <ul class="timer-help-feedback-list">
             <li>
               <span class="timer-help-feedback-label">完整应用</span>
@@ -91,7 +99,7 @@
             </ul>
 
             <ul v-else-if="section.id === 'pizza'">
-              <li>点击 🍅🍕 在单次与连续模式间切换；计时运行中不可切换。</li>
+              <li>点击 🍅🍕 在单次与连续模式间切换。</li>
               <li>在序列输入框填写指令，例如：</li>
               <li class="timer-help-indent">
                 <code>🍅+05</code>
@@ -107,26 +115,38 @@
                 ；默认工作时长（15–59 分钟）。
               </li>
               <li>连续界面可开关白噪音，并切换音轨。</li>
+              <li>计时运行中不能在单次与连续模式间切换。</li>
             </ul>
 
             <ul v-else-if="section.id === 'mini'">
               <li>点击顶部 📌 进入无边框置顶小窗；退出后窗口回到置顶前的位置。</li>
               <li>在迷你界面点击展开图标退出置顶。</li>
               <li>桌面可在设置中配置置顶停靠偏移（0,0 为不改变位置）。</li>
+              <li>若迷你窗尺寸异常，退出后重新进入置顶通常会恢复。</li>
             </ul>
 
             <ul v-else-if="section.id === 'stats'">
               <li>可切换上一周 / 下一周，标题显示年周。</li>
               <li>顶部双轴图</li>
               <li class="timer-help-indent">左轴为各档 emoji 次数折线（工作红系、休息蓝系）；</li>
-              <li class="timer-help-indent">右轴为工作/休息分百分比柱；</li>
+              <li class="timer-help-indent">右轴为标签百分比柱；</li>
+
               <li class="timer-help-indent">悬停显示数值。</li>
               <li>每日点击 emoji 查看详情。</li>
               <li>桌面版可导出当周 CSV。</li>
             </ul>
-
+            <ul v-else-if="section.id === 'tags'">
+              <li>
+                在计时器顶部文字区可输入
+                <code># / @</code>
+                添加标签，双击标签可删除。
+              </li>
+              <li>首页点击🏷可编辑当前所有标签包括：删除、修改颜色、修改名称。</li>
+              <li>首个标签用于统计。</li>
+            </ul>
             <ul v-else-if="section.id === 'settings'">
-              <li>工作 / 休息默认时长、深色模式、正计时、分段提示音、白噪音开关与音轨置、顶停靠偏移。</li>
+              <li>工作 / 休息默认时长、深色模式、正计时、分段提示音、白噪音开关与音轨、置顶停靠偏移。</li>
+              <li>双击关闭背景动画，单击改变颜色。</li>
             </ul>
 
             <ul v-else-if="section.id === 'sound'">
@@ -149,10 +169,30 @@
               </li>
             </ul>
 
-            <ul v-else-if="section.id === 'notes'">
-              <li>计时运行中不能在单次与连续模式间切换。</li>
-              <li>若迷你窗尺寸异常，退出后重新进入置顶通常会恢复。</li>
-              <li>pomotention-timer是pomotention(番茄意图)的计时器模块，目前处于Beta测试阶段，欢迎反馈问题与建议。</li>
+            <ul v-else-if="section.id === 'data'">
+              <li>
+                <strong>全部保存在本设备</strong>
+                ：计时设置、会话统计、标签、界面偏好等仅写入本地存储（浏览器或桌面应用），
+                <strong>默认不上传服务器</strong>
+                ，本 Beta 版无账号登录与云同步。
+              </li>
+              <li>统计页可将当周记录导出为 CSV 到本机，由你自行保管。</li>
+              <li>清除浏览器「本站数据」、卸载应用或重置系统存储后，本地记录会被删除且通常无法恢复，请先导出备份。</li>
+              <li>反馈邮件或外链仅在您主动点击时才会离开本应用；日常使用不采集个人身份信息。</li>
+              <li>完整版 Pomotention 的注册、云端同步与隐私说明见主应用文档，与本计时器独立发行。</li>
+            </ul>
+
+            <ul v-else-if="section.id === 'license'">
+              <li>
+                本软件以
+                <strong>GNU General Public License v3.0（GPL-3.0）</strong>
+                发布，你可自由使用、研究、修改与再分发（须遵守 GPL 义务，例如衍生作品同样开源）。
+              </li>
+
+              <li>
+                <a :href="legalLinks.gplSummaryUrl" target="_blank" rel="noopener noreferrer">GPL-3.0 许可证说明（gnu.org）</a>
+              </li>
+              <li>当前版本：v0.0.1</li>
             </ul>
           </div>
         </section>
@@ -166,17 +206,21 @@ import { reactive } from "vue";
 import { useRouter } from "vue-router";
 import { NButton, NIcon } from "naive-ui";
 import { ArrowLeft24Regular, ChevronDown24Regular, ChevronUp24Regular } from "@vicons/fluent";
+import pomotentionLogoSrc from "../../docs/public/logo.png";
+import timerLogoSrc from "../../public-timer/icon-timer.png";
 
-type HelpSectionId = "single" | "pizza" | "mini" | "stats" | "settings" | "sound" | "notes";
+type HelpSectionId = "single" | "pizza" | "mini" | "stats" | "tags" | "settings" | "sound" | "data" | "license";
 
 const helpSections: { id: HelpSectionId; emoji: string; title: string }[] = [
   { id: "single", emoji: "🍅", title: "单次计时 " },
   { id: "pizza", emoji: "🍕", title: "连续计时 " },
   { id: "mini", emoji: "📌", title: "迷你置顶" },
   { id: "stats", emoji: "📈", title: "统计" },
+  { id: "tags", emoji: "🏷", title: "标签" },
   { id: "settings", emoji: "⚙️", title: "设置" },
   { id: "sound", emoji: "🔈", title: "提示音" },
-  { id: "notes", emoji: "💡", title: "说明" },
+  { id: "data", emoji: "🔒", title: "数据与隐私" },
+  { id: "license", emoji: "📄", title: "开源许可" },
 ];
 
 const router = useRouter();
@@ -188,14 +232,21 @@ const feedbackLinks = {
   contactEmail: "pomotention@163.com",
 } as const;
 
+const legalLinks = {
+  gplSummaryUrl: "https://www.gnu.org/licenses/gpl-3.0.html",
+  licenseFileUrl: "https://github.com/Xeonilian/pomotention/blob/main/LICENSE",
+} as const;
+
 const expandedSections = reactive<Record<HelpSectionId, boolean>>({
   single: true,
   pizza: true,
   mini: true,
   stats: true,
+  tags: true,
   settings: true,
   sound: true,
-  notes: true,
+  data: true,
+  license: true,
 });
 
 function isSectionExpanded(id: HelpSectionId): boolean {
@@ -294,6 +345,21 @@ function goBack() {
   background: var(--color-background-light-light, #fafafa);
 }
 
+.timer-help-logos {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  margin-bottom: 12px;
+}
+
+.timer-help-logo {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
 .timer-help-feedback-title {
   margin: 0 0 8px;
   font-size: 13px;
@@ -384,6 +450,15 @@ function goBack() {
 
 .timer-help-section-body {
   margin-top: 6px;
+}
+
+.timer-help-section-body a {
+  color: var(--color-primary, #2080f0);
+  text-decoration: none;
+}
+
+.timer-help-section-body a:hover {
+  text-decoration: underline;
 }
 
 .timer-help-inner ul {
