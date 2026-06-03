@@ -1,7 +1,12 @@
-import { getCurrentWindow, PhysicalPosition } from "@tauri-apps/api/window";
+import { getCurrentWindow, LogicalPosition, PhysicalPosition } from "@tauri-apps/api/window";
 
 /** 进入迷你置顶前保存，退出时恢复（避免 center() 跑到屏幕正中） */
 let savedNormalWindowPosition: PhysicalPosition | null = null;
+
+function normalizeDockOffset(value: unknown): number {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
+}
 
 export async function captureNormalWindowPosition(): Promise<void> {
   try {
@@ -25,22 +30,36 @@ export async function restoreNormalWindowPosition(): Promise<void> {
 
 /**
  * 相对当前显示器工作区居中，再按偏移停靠（仅 offset 非 0 时调用）。
- * offsetX：向右；offsetY：向上（屏幕 Y 减小）。
+ * offsetX / offsetY 为逻辑像素，与设置项一致；offsetX 向右，offsetY 向上（屏幕 Y 减小）。
+ * 须在迷你窗最终 setSize 完成后再调用，避免 outerSize 仍为旧尺寸导致定位异常。
  */
 export async function applyMiniDockOffset(offsetX: number, offsetY: number): Promise<void> {
-  if (offsetX === 0 && offsetY === 0) return;
+  const ox = normalizeDockOffset(offsetX);
+  const oy = normalizeDockOffset(offsetY);
+  if (ox === 0 && oy === 0) return;
 
   const appWindow = getCurrentWindow();
   const monitor = await appWindow.currentMonitor();
   if (!monitor) return;
 
-  const outerSize = await appWindow.outerSize();
+  const scaleFactor = await appWindow.scaleFactor();
+  const innerSize = await appWindow.innerSize();
   const area = monitor.workArea ?? monitor;
 
-  const centerX = area.position.x + (area.size.width - outerSize.width) / 2;
-  const centerY = area.position.y + (area.size.height - outerSize.height) / 2;
+  const areaX = area.position.x / scaleFactor;
+  const areaY = area.position.y / scaleFactor;
+  const areaW = area.size.width / scaleFactor;
+  const areaH = area.size.height / scaleFactor;
 
-  await appWindow.setPosition(
-    new PhysicalPosition(Math.round(centerX + offsetX), Math.round(centerY - offsetY)),
-  );
+  const centerX = areaX + (areaW - innerSize.width) / 2;
+  const centerY = areaY + (areaH - innerSize.height) / 2;
+  const x = Math.round(centerX + ox);
+  const y = Math.round(centerY - oy);
+
+  if (!Number.isFinite(x) || !Number.isFinite(y)) {
+    console.warn("[mini] Invalid dock position, skipping:", { x, y, ox, oy });
+    return;
+  }
+
+  await appWindow.setPosition(new LogicalPosition(x, y));
 }

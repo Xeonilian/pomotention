@@ -309,6 +309,11 @@ export default defineConfig(({ mode, command }) => {
     resolve: {
       alias: {
         "@": fileURLToPath(new URL("./src", import.meta.url)),
+        ...(isTimerMode
+          ? {
+              "@/stores/tagStoreCounts": fileURLToPath(new URL("./src/stores/tagStoreCounts.timer.ts", import.meta.url)),
+            }
+          : {}),
       },
     },
   };

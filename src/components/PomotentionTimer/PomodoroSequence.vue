@@ -635,7 +635,7 @@ function resetWhiteNoise(sound: SoundType) {
   width: 200px;
   max-width: 100%;
   margin: 0 auto;
-  background-color: var(--color-background) !important;
+  background-color: var(--timer-surface-bg, var(--color-background)) !important;
   padding: 2px 10px 0px 10px;
   height: 125px;
   min-height: 120px;

@@ -387,7 +387,7 @@ defineExpose({
   padding: 0;
   background-color: transparent;
   border-radius: 8px;
-  box-shadow: 2px 2px 6px var(--color-background-light-transparent);
+  box-shadow: var(--timer-surface-glow, 2px 2px 6px var(--color-background-light-transparent));
 }
 
 /* 紧凑模式下的宽度调整 */

@@ -1,12 +1,12 @@
 import { ref, computed, watch } from "vue";
 import { defineStore } from "pinia";
+import { isTimerApp } from "@/core/appVariant";
 import { loadTags, saveTags } from "@/services/data/localStorageService";
 import { scheduleDebouncedCloudUpload } from "@/core/utils";
-import { useDataStore } from "./useDataStore"; // 依赖 activity 数据
-import { useSearchUiStore } from "./useSearchUiStore";
+import { useTagsWithActivityCounts, type TagWithCount } from "@/stores/tagStoreCounts";
 import type { Tag } from "@/core/types/Tag";
 
-export type TagWithCount = Tag & { count: number };
+export type { TagWithCount };
 
 export const useTagStore = defineStore("tagStore", () => {
   // ----------------------------------------------------------------
@@ -41,32 +41,8 @@ export const useTagStore = defineStore("tagStore", () => {
   // GETTERS (COMPUTED)
   // ----------------------------------------------------------------
 
-  const dataStore = useDataStore();
-
-  /**
-   * ✅ 主要的响应式 Getter，供所有 UI 使用。
-   * 它会自动关联 aсtivity 数据，计算出每个 tag 的 `count`。
-   * 当 aсtivities 或 tags 变化时，它会自动更新。
-   */
-  const allTags = computed(() => {
-    const countMap = new Map<number, number>();
-
-    // 1. 响应式地计算所有 tag 的引用计数
-    for (const activity of dataStore.activeActivities) {
-      if (activity.deleted || !activity.tagIds) continue;
-      for (const tagId of activity.tagIds) {
-        countMap.set(tagId, (countMap.get(tagId) || 0) + 1);
-      }
-    }
-
-    // 2. 将计算出的 count 合并到 tag 对象上，并过滤掉已删除的 tag
-    return rawTags.value
-      .filter((tag) => !tag.deleted)
-      .map((tag) => ({
-        ...tag,
-        count: countMap.get(tag.id) || 0,
-      }));
-  });
+  /** 主应用按 activity 计数；Timer 构建走 tagStoreCounts.timer，不拉 useDataStore */
+  const allTags = useTagsWithActivityCounts(rawTags);
 
   /** 带 count 的标签 Map，全应用共用一份缓存，避免每个 TagRenderer 各自 new Map(allTags) */
   const tagWithCountById = computed(() => {
@@ -158,8 +134,11 @@ export const useTagStore = defineStore("tagStore", () => {
    */
   function removeTag(id: number) {
     updateTagById(id, { deleted: true });
+    if (isTimerApp) return;
     // 搜索页 filterTagIds 仍可能保留已删 id；getTag 已查不到标签导致筛选栏消失但列表仍被筛选
-    useSearchUiStore().removeFilterTagId(id);
+    void import("./useSearchUiStore").then(({ useSearchUiStore }) => {
+      useSearchUiStore().removeFilterTagId(id);
+    });
   }
 
   /**

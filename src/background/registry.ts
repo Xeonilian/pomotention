@@ -1,14 +1,6 @@
 import type { Component } from "vue";
 import "@/background/layer.css";
 import "@/background/none.css";
-import "@/background/balls/balls.css";
-import "@/background/flake/flake.css";
-import "@/background/star/star.css";
-import "@/background/rainbow/rainbow.css";
-import TimerBgBalls from "@/background/balls/TimerBgBalls.vue";
-import TimerBgFlake from "@/background/flake/TimerBgFlake.vue";
-import TimerBgStar from "@/background/star/TimerBgStar.vue";
-import TimerBgRainbow from "@/background/rainbow/TimerBgRainbow.vue";
 
 /** 背景动画 id，与 CSS 类名后缀一致：timer-bg-layer--{id} */
 export type TimerBackgroundAnimationId = "none" | "balls" | "flake" | "star" | "rainbow";
@@ -17,19 +9,40 @@ export type TimerBackgroundAnimationId = "none" | "balls" | "flake" | "star" | "
 export interface TimerBackgroundAnimation {
   id: TimerBackgroundAnimationId;
   label: string;
-  component?: Component;
 }
 
 /** 注册表：新增动画时在对应子目录实现，并在此追加 */
 export const TIMER_BACKGROUND_ANIMATIONS: readonly TimerBackgroundAnimation[] = [
   { id: "none", label: "无" },
-  { id: "balls", label: "彩球", component: TimerBgBalls },
-  { id: "flake", label: "雪花", component: TimerBgFlake },
-  { id: "star", label: "流星", component: TimerBgStar },
-  { id: "rainbow", label: "彩虹", component: TimerBgRainbow },
+  { id: "balls", label: "彩球" },
+  { id: "flake", label: "雪花" },
+  { id: "star", label: "流星" },
+  { id: "rainbow", label: "彩虹" },
 ] as const;
 
 export const TIMER_BACKGROUND_ANIMATION_STORAGE_KEY = "timerBackgroundAnimation";
+
+const BACKGROUND_LOADERS: Record<
+  Exclude<TimerBackgroundAnimationId, "none">,
+  () => Promise<Component>
+> = {
+  balls: async () => {
+    await import("@/background/balls/balls.css");
+    return (await import("@/background/balls/TimerBgBalls.vue")).default;
+  },
+  flake: async () => {
+    await import("@/background/flake/flake.css");
+    return (await import("@/background/flake/TimerBgFlake.vue")).default;
+  },
+  star: async () => {
+    await import("@/background/star/star.css");
+    return (await import("@/background/star/TimerBgStar.vue")).default;
+  },
+  rainbow: async () => {
+    await import("@/background/rainbow/rainbow.css");
+    return (await import("@/background/rainbow/TimerBgRainbow.vue")).default;
+  },
+};
 
 export function isTimerBackgroundAnimationId(value: string): value is TimerBackgroundAnimationId {
   return TIMER_BACKGROUND_ANIMATIONS.some((item) => item.id === value);
@@ -49,6 +62,8 @@ export function timerBackgroundLayerClass(id: TimerBackgroundAnimationId): strin
   return `timer-bg-layer--${id}`;
 }
 
-export function getTimerBackgroundComponent(id: TimerBackgroundAnimationId): Component | undefined {
-  return getTimerBackgroundAnimation(id).component;
+/** 按需加载背景组件与样式，避免首屏拉齐四套动画 */
+export async function loadTimerBackgroundComponent(id: TimerBackgroundAnimationId): Promise<Component | undefined> {
+  if (id === "none") return undefined;
+  return BACKGROUND_LOADERS[id]();
 }

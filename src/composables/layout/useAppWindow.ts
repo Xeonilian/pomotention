@@ -13,6 +13,16 @@ const isTimerApp = import.meta.env.VITE_APP_VARIANT === "timer";
 /** Timer 独立壳正常窗尺寸（与 tauri.conf.timer.json 默认宽高一致） */
 const TIMER_NORMAL_WINDOW = { width: 600, height: 500 };
 
+/** 进入迷你窗后待最终 resize 完成再应用停靠偏移 */
+let pendingMiniDockApply = false;
+
+function getNormalWindowSize(factor: number) {
+  return {
+    width: isTimerApp ? Math.max(TIMER_NORMAL_WINDOW.width * factor, 220) : Math.max(950 * factor, 800),
+    height: isTimerApp ? Math.max(TIMER_NORMAL_WINDOW.height * factor, 140) : Math.max(600 * factor, 500),
+  };
+}
+
 export function useAppWindow() {
   const settingStore = useSettingStore();
   const timerStore = useTimerStore();
@@ -88,6 +98,10 @@ export function useAppWindow() {
 
       console.log(`[mini] Target Size: ${finalWidth}x${finalHeight} (Base: ${safeWidth}x${safeHeight}, Factor: ${factor})`);
 
+      const dockX = settingStore.settings.miniModeDockOffsetX ?? 0;
+      const dockY = settingStore.settings.miniModeDockOffsetY ?? 0;
+      pendingMiniDockApply = dockX !== 0 || dockY !== 0;
+
       try {
         await captureNormalWindowPosition();
 
@@ -120,14 +134,24 @@ export function useAppWindow() {
           }
         }
 
-        const dockX = settingStore.settings.miniModeDockOffsetX ?? 0;
-        const dockY = settingStore.settings.miniModeDockOffsetY ?? 0;
-        await applyMiniDockOffset(dockX, dockY);
+        // report-size 可能已触发 updateWindowSize；若仍待停靠则在此补一次
+        if (pendingMiniDockApply) {
+          await updateWindowSize();
+        }
       } catch (error) {
         console.error("[mini] Error entering mini mode:", error);
+        pendingMiniDockApply = false;
         // 如果出错，尝试紧急恢复
         isMiniMode.value = false;
-        await appWindow.setDecorations(true);
+        try {
+          await appWindow.setDecorations(true);
+          const factor = settingStore.settings.miniModeRefactor || 1;
+          const { width, height } = getNormalWindowSize(factor);
+          await appWindow.setSize(new LogicalSize(width, height));
+          await restoreNormalWindowPosition();
+        } catch (restoreError) {
+          console.error("[mini] Error restoring window after failed mini entry:", restoreError);
+        }
       }
     } else {
       // === 退出 Mini 模式 ===
@@ -140,12 +164,7 @@ export function useAppWindow() {
         await appWindow.setDecorations(true);
         // 这里的 factor 也要保护
         let factor = settingStore.settings.miniModeRefactor || 1;
-        const restoreW = isTimerApp
-          ? Math.max(TIMER_NORMAL_WINDOW.width * factor, 220)
-          : Math.max(950 * factor, 800);
-        const restoreH = isTimerApp
-          ? Math.max(TIMER_NORMAL_WINDOW.height * factor, 140)
-          : Math.max(600 * factor, 500);
+        const { width: restoreW, height: restoreH } = getNormalWindowSize(factor);
         await appWindow.setSize(new LogicalSize(restoreW, restoreH));
         await restoreNormalWindowPosition();
 
@@ -169,6 +188,13 @@ export function useAppWindow() {
 
     try {
       await appWindow.setSize(new LogicalSize(finalWidth, finalHeight));
+
+      if (pendingMiniDockApply) {
+        pendingMiniDockApply = false;
+        const dockX = settingStore.settings.miniModeDockOffsetX ?? 0;
+        const dockY = settingStore.settings.miniModeDockOffsetY ?? 0;
+        await applyMiniDockOffset(dockX, dockY);
+      }
     } catch (e) {
       console.error("[mini] Resize error:", e);
     }
@@ -195,12 +221,7 @@ export function useAppWindow() {
 
       await appWindow.setDecorations(true);
       const factor = settingStore.settings.miniModeRefactor || 1;
-      const restoreW = isTimerApp
-        ? Math.max(TIMER_NORMAL_WINDOW.width * factor, 220)
-        : Math.max(950 * factor, 800);
-      const restoreH = isTimerApp
-        ? Math.max(TIMER_NORMAL_WINDOW.height * factor, 140)
-        : Math.max(600 * factor, 500);
+      const { width: restoreW, height: restoreH } = getNormalWindowSize(factor);
       await appWindow.setSize(new LogicalSize(restoreW, restoreH));
       await restoreNormalWindowPosition();
 

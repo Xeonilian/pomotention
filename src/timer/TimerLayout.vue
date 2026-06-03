@@ -1,6 +1,6 @@
 <template>
   <div class="pomodoro-mini-view-wrapper" ref="PomotentionTimerContainerRef">
-    <n-layout class="app-layout" :class="{ 'app-layout--use-vv-height': isMobile, 'app-layout--has-bg': hasActiveBackground }">
+    <n-layout class="app-layout" :class="{ 'app-layout--use-vv-height': isMobile, 'app-layout--has-bg': hasActiveBackground, 'app-layout--mini-mode': isMiniMode }">
       <div v-if="!isMiniMode" class="timer-bg-layer" :class="layerClass" aria-hidden="true">
         <component :is="activeComponent" v-if="activeComponent" v-bind="activeComponentProps" />
       </div>
@@ -76,7 +76,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, ref, watch, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 import { NLayout, NLayoutHeader, NLayoutContent, NButton, NIcon } from "naive-ui";
 import { isTauri } from "@tauri-apps/api/core";
@@ -115,6 +115,18 @@ const { currentId, layerClass, activeComponent, activeComponentProps, onVoidClic
 
 const hasActiveBackground = computed(() => currentId.value !== "none");
 
+watch(
+  hasActiveBackground,
+  (active) => {
+    document.documentElement.classList.toggle("timer-has-active-bg", active);
+  },
+  { immediate: true },
+);
+
+onUnmounted(() => {
+  document.documentElement.classList.remove("timer-has-active-bg");
+});
+
 function isVoidBackgroundTarget(event: Event) {
   const target = event.target as HTMLElement | null;
   return !target?.closest(".pomodoro-view-wrapper");
@@ -152,6 +164,11 @@ function onExitMiniMode() {
 </script>
 
 <style scoped>
+.pomodoro-mini-view-wrapper {
+  height: 100%;
+  overflow: hidden;
+}
+
 .app-layout {
   position: relative;
   overflow: hidden;
@@ -162,6 +179,9 @@ function onExitMiniMode() {
 }
 .app-layout--has-bg {
   background-color: transparent;
+}
+.app-layout--mini-mode {
+  height: 100%;
 }
 .app-layout--has-bg .app-layout__content,
 .app-layout--has-bg .app-layout__content:deep(.n-layout-scroll-container) {
