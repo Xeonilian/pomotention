@@ -1,11 +1,17 @@
 import type { Component } from "vue";
-import "@/styles/timer-background/layer.css";
-import "@/styles/timer-background/none.css";
-import "@/styles/timer-background/balls.css";
-import TimerBgBalls from "@/components/TimerBackground/TimerBgBalls.vue";
+import "@/background/layer.css";
+import "@/background/none.css";
+import "@/background/balls/balls.css";
+import "@/background/flake/flake.css";
+import "@/background/star/star.css";
+import "@/background/rainbow/rainbow.css";
+import TimerBgBalls from "@/background/balls/TimerBgBalls.vue";
+import TimerBgFlake from "@/background/flake/TimerBgFlake.vue";
+import TimerBgStar from "@/background/star/TimerBgStar.vue";
+import TimerBgRainbow from "@/background/rainbow/TimerBgRainbow.vue";
 
 /** 背景动画 id，与 CSS 类名后缀一致：timer-bg-layer--{id} */
-export type TimerBackgroundAnimationId = "none" | "balls";
+export type TimerBackgroundAnimationId = "none" | "balls" | "flake" | "star" | "rainbow";
 
 /** 单个背景动画定义 */
 export interface TimerBackgroundAnimation {
@@ -14,9 +20,13 @@ export interface TimerBackgroundAnimation {
   component?: Component;
 }
 
+/** 注册表：新增动画时在对应子目录实现，并在此追加 */
 export const TIMER_BACKGROUND_ANIMATIONS: readonly TimerBackgroundAnimation[] = [
   { id: "none", label: "无" },
   { id: "balls", label: "彩球", component: TimerBgBalls },
+  { id: "flake", label: "雪花", component: TimerBgFlake },
+  { id: "star", label: "流星", component: TimerBgStar },
+  { id: "rainbow", label: "彩虹", component: TimerBgRainbow },
 ] as const;
 
 export const TIMER_BACKGROUND_ANIMATION_STORAGE_KEY = "timerBackgroundAnimation";

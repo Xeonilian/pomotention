@@ -1,6 +1,9 @@
 import { computed, ref, watch } from "vue";
 import { createTouchScheduledSingleAndDouble } from "@/composables/platform/useTouchScheduledSingleAndDouble";
-import { TIMER_BALL_DEFAULT_COLORS, randomizeBallPalette } from "@/core/timerBackgroundBalls";
+import { TIMER_BALL_DEFAULT_COLORS, randomizeBallPalette } from "@/background/balls/config";
+import { nextFlakeHueSeed } from "@/background/flake/config";
+import { nextStarColorSeed } from "@/background/star/config";
+import { nextRainbowSeed } from "@/background/rainbow/config";
 import {
   TIMER_BACKGROUND_ANIMATION_STORAGE_KEY,
   getNextTimerBackgroundAnimation,
@@ -9,7 +12,7 @@ import {
   isTimerBackgroundAnimationId,
   timerBackgroundLayerClass,
   type TimerBackgroundAnimationId,
-} from "@/core/timerBackgroundAnimation";
+} from "@/background/registry";
 
 const CYCLE_DEBOUNCE_MS = 420;
 const CLICK_DELAY_MS = 280;
@@ -25,16 +28,34 @@ function loadStoredAnimationId(): TimerBackgroundAnimationId {
   return "balls";
 }
 
-/** Timer 主界面背景：空白处单击换色、双击/双触切换开/关 */
+/** Timer 主界面背景：空白处单击换色、双击/双触切换动画 */
 export function useTimerBackgroundAnimation() {
   const currentId = ref<TimerBackgroundAnimationId>(loadStoredAnimationId());
   const ballPalette = ref<string[]>([...TIMER_BALL_DEFAULT_COLORS]);
+  const flakeHueSeed = ref(0);
+  const starColorSeed = ref(0);
+  const rainbowSeed = ref(0);
   let lastCycleAt = 0;
   let pendingClickTimer: number | null = null;
 
   const currentAnimation = computed(() => getTimerBackgroundAnimation(currentId.value));
   const layerClass = computed(() => timerBackgroundLayerClass(currentId.value));
   const activeComponent = computed(() => getTimerBackgroundComponent(currentId.value));
+
+  const activeComponentProps = computed(() => {
+    switch (currentId.value) {
+      case "balls":
+        return { palette: ballPalette.value };
+      case "flake":
+        return { hueSeed: flakeHueSeed.value };
+      case "star":
+        return { colorSeed: starColorSeed.value };
+      case "rainbow":
+        return { seed: rainbowSeed.value };
+      default:
+        return {};
+    }
+  });
 
   watch(currentId, (id) => {
     try {
@@ -44,9 +65,21 @@ export function useTimerBackgroundAnimation() {
     }
   });
 
-  function randomizeBallColors() {
-    if (currentId.value !== "balls") return;
-    ballPalette.value = randomizeBallPalette();
+  function triggerBackgroundInteract() {
+    switch (currentId.value) {
+      case "balls":
+        ballPalette.value = randomizeBallPalette();
+        break;
+      case "flake":
+        flakeHueSeed.value = nextFlakeHueSeed(flakeHueSeed.value);
+        break;
+      case "star":
+        starColorSeed.value = nextStarColorSeed(starColorSeed.value);
+        break;
+      case "rainbow":
+        rainbowSeed.value = nextRainbowSeed(rainbowSeed.value);
+        break;
+    }
   }
 
   function cycleNext() {
@@ -67,7 +100,7 @@ export function useTimerBackgroundAnimation() {
     clearPendingClick();
     pendingClickTimer = window.setTimeout(() => {
       pendingClickTimer = null;
-      randomizeBallColors();
+      triggerBackgroundInteract();
     }, CLICK_DELAY_MS);
   }
 
@@ -77,7 +110,7 @@ export function useTimerBackgroundAnimation() {
   }
 
   const voidTouch = createTouchScheduledSingleAndDouble<"void">(
-    () => randomizeBallColors(),
+    () => triggerBackgroundInteract(),
     () => cycleNext(),
   );
 
@@ -94,8 +127,12 @@ export function useTimerBackgroundAnimation() {
     currentAnimation,
     layerClass,
     activeComponent,
+    activeComponentProps,
     ballPalette,
-    randomizeBallColors,
+    flakeHueSeed,
+    starColorSeed,
+    rainbowSeed,
+    triggerBackgroundInteract,
     cycleNext,
     onVoidClick,
     onVoidDoubleClick,

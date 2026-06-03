@@ -1,16 +1,8 @@
 <template>
   <div class="pomodoro-mini-view-wrapper" ref="PomotentionTimerContainerRef">
-    <n-layout
-      class="app-layout"
-      :class="{ 'app-layout--use-vv-height': isMobile, 'app-layout--has-bg': hasActiveBackground }"
-    >
-      <div
-        v-if="!isMiniMode"
-        class="timer-bg-layer"
-        :class="layerClass"
-        aria-hidden="true"
-      >
-        <component :is="activeComponent" v-if="activeComponent" :palette="ballPalette" />
+    <n-layout class="app-layout" :class="{ 'app-layout--use-vv-height': isMobile, 'app-layout--has-bg': hasActiveBackground }">
+      <div v-if="!isMiniMode" class="timer-bg-layer" :class="layerClass" aria-hidden="true">
+        <component :is="activeComponent" v-if="activeComponent" v-bind="activeComponentProps" />
       </div>
       <n-layout-header class="app-layout__header" :class="{ 'app-layout__header--hidden': isMiniMode }">
         <div class="app-layout__header-content app-layout__header-content--timer">
@@ -93,8 +85,7 @@ import PomotentionTimer from "@/components/PomotentionTimer/PomotentionTimer.vue
 import TagManager from "@/components/TagSystem/TagManager.vue";
 import { useAppWindow } from "@/composables/layout/useAppWindow";
 import { useDevice } from "@/composables/platform/useDevice";
-import { useTimerBackgroundAnimation } from "@/composables/timer/useTimerBackgroundAnimation";
-import "@/core/timerBackgroundAnimation";
+import { useTimerBackgroundAnimation } from "@/background";
 
 const router = useRouter();
 const { isMobile } = useDevice();
@@ -120,16 +111,8 @@ void pomotentionTimerRef;
 const showTagManager = ref(false);
 const tagManagerScratchIds = ref<number[]>([]);
 
-const {
-  currentId,
-  layerClass,
-  activeComponent,
-  ballPalette,
-  onVoidClick,
-  onVoidDoubleClick,
-  onVoidTouchEnd,
-  onVoidTouchCancel,
-} = useTimerBackgroundAnimation();
+const { currentId, layerClass, activeComponent, activeComponentProps, onVoidClick, onVoidDoubleClick, onVoidTouchEnd, onVoidTouchCancel } =
+  useTimerBackgroundAnimation();
 
 const hasActiveBackground = computed(() => currentId.value !== "none");
 
@@ -196,7 +179,7 @@ function onExitMiniMode() {
   transition: all 0.3s ease-in-out;
   box-sizing: border-box;
   z-index: 150;
-  background-color: var(--color-background-light);
+  background-color: transparent;
 }
 .app-layout__header--hidden {
   height: 0 !important;

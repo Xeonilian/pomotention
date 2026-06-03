@@ -1,0 +1,64 @@
+.timer-bg-layer--rainbow {
+  background-color: #0c0d13;
+}
+
+.timer-bg-rainbow__stage {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.timer-bg-rainbow__strip {
+  --rainbow-c1: rgb(232 121 249);
+  --rainbow-c2: rgb(96 165 250);
+  --rainbow-c3: rgb(94 234 212);
+  --rainbow-duration: 45s;
+  --rainbow-delay: 0s;
+
+  position: absolute;
+  top: -30%;
+  height: 190%;
+  width: 0;
+  transform: rotate(10deg);
+  transform-origin: top right;
+  box-shadow:
+    -130px 40px 110px 56px white,
+    -50px 40px 85px 42px var(--rainbow-c1),
+    0 40px 85px 42px var(--rainbow-c2),
+    50px 40px 85px 42px var(--rainbow-c3),
+    130px 40px 110px 56px white;
+  animation: timer-bg-rainbow-slide var(--rainbow-duration) linear infinite;
+  animation-delay: calc(-1 * var(--rainbow-delay));
+}
+
+.timer-bg-rainbow__h {
+  position: absolute;
+  bottom: -14vh;
+  left: 0;
+  width: 100%;
+  height: 0;
+  box-shadow: 0 0 34vh 24vh white;
+}
+
+.timer-bg-rainbow__v {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  height: 100%;
+  box-shadow: 0 0 28vw 18vw white;
+}
+
+@keyframes timer-bg-rainbow-slide {
+  from {
+    right: -25vw;
+  }
+  to {
+    right: 125vw;
+  }
+}
+
+html.timer-dark .timer-bg-layer--rainbow {
+  background-color: #06070c;
+}

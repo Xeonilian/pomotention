@@ -1,0 +1,381 @@
+/* 符号字形：仅 flake 需要，不含页面正文字体 */
+@import url("https://fonts.googleapis.com/css2?family=Noto+Sans+Symbols+2&display=swap");
+
+.timer-bg-layer--flake {
+  background-color: white;
+  background-image: url("https://images.unsplash.com/photo-1615800098779-1be32e60cca3?crop=entropy&cs=srgb&fm=jpg&ixid=M3wzMjM4NDZ8MHwxfHJhbmRvbXx8fHx8fHx8fDE2OTUyNDAwMTN8&ixlib=rb-4.0.3&q=85");
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+.timer-bg-flake__stage {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  --hue-shift: 0deg;
+}
+
+.timer-bg-flake__item {
+  --size: 5vw;
+  --symbol: "✽";
+  --pos_x: 0vw;
+  --duration_move: 7s;
+  --delay_move: 0s;
+  --duration_rotate: 1.5s;
+  --delay_rotate: 0s;
+  --duration_clip: 10s;
+  --delay_clip: 0s;
+  --hue: 0deg;
+
+  position: absolute;
+  top: 0;
+  left: 0;
+  font-size: clamp(15px, var(--size), 80px);
+  font-family: "Noto Sans Symbols 2", sans-serif;
+  line-height: 1;
+  transform-origin: center top;
+  animation: timer-bg-flake-move var(--duration_move) var(--delay_move) linear infinite normal both;
+}
+
+.timer-bg-flake__item span {
+  display: block;
+  position: relative;
+  transform-origin: center;
+  transform: rotate(0deg);
+  animation: timer-bg-flake-rotate var(--duration_rotate) var(--delay_rotate) ease-in-out infinite alternate both;
+}
+
+.timer-bg-flake__item span::after {
+  content: var(--symbol);
+  -webkit-text-stroke: 0.5px rgba(0, 0, 0, 0.2);
+  line-height: 1.2;
+  position: relative;
+  display: block;
+  color: transparent;
+  background-clip: text;
+  -webkit-background-clip: text;
+  filter: brightness(1.2) hue-rotate(calc(var(--hue) + var(--hue-shift, 0deg)));
+  background-image: url("https://images.unsplash.com/photo-1580822115965-0b2532068eff?&ixid=M3wzMjM4NDZ8MHwxfHJhbmRvbXx8fHx8fHx8fDE2OTUxNDUzNzJ8&ixlib=rb-4.0.3&q=100&w=200&dpr=2");
+  background-position: center;
+  background-size: 200px auto;
+  background-repeat: repeat;
+  transform: translateZ(0);
+  animation: timer-bg-flake-bg1 var(--duration_clip) var(--delay_clip) linear infinite alternate both;
+}
+
+.timer-bg-flake__item:nth-child(even) span::after {
+  animation-name: timer-bg-flake-bg2;
+}
+
+@keyframes timer-bg-flake-bg1 {
+  0% {
+    background-position: 0% 0%;
+  }
+  100% {
+    background-position: 100% 100%;
+  }
+}
+
+@keyframes timer-bg-flake-bg2 {
+  0% {
+    background-position: 100% 0%;
+  }
+  100% {
+    background-position: 0% 100%;
+  }
+}
+
+@keyframes timer-bg-flake-rotate {
+  0% {
+    transform: rotate(115deg);
+  }
+  100% {
+    transform: rotate(245deg);
+  }
+}
+
+@keyframes timer-bg-flake-move {
+  0% {
+    transform: translate3d(var(--pos_x), calc(0vh - var(--size)), 0);
+  }
+  100% {
+    transform: translate3d(var(--pos_x), 100vh, 0);
+  }
+}
+
+/* 符号 */
+.timer-bg-flake__item:nth-child(23n + 1) {
+  --symbol: "🟄";
+}
+.timer-bg-flake__item:nth-child(23n + 2) {
+  --symbol: "❉";
+}
+.timer-bg-flake__item:nth-child(23n + 3) {
+  --symbol: "🟉";
+}
+.timer-bg-flake__item:nth-child(23n + 4) {
+  --symbol: "❈";
+}
+.timer-bg-flake__item:nth-child(23n + 5) {
+  --symbol: "✣";
+}
+.timer-bg-flake__item:nth-child(23n + 6) {
+  --symbol: "🞯";
+}
+.timer-bg-flake__item:nth-child(23n + 7) {
+  --symbol: "🟎";
+}
+.timer-bg-flake__item:nth-child(23n + 8) {
+  --symbol: "♦";
+}
+.timer-bg-flake__item:nth-child(23n + 9) {
+  --symbol: "✢";
+}
+.timer-bg-flake__item:nth-child(23n + 10) {
+  --symbol: "🞵";
+}
+.timer-bg-flake__item:nth-child(23n + 11) {
+  --symbol: "✤";
+}
+.timer-bg-flake__item:nth-child(23n + 12) {
+  --symbol: "✦";
+}
+.timer-bg-flake__item:nth-child(23n + 13) {
+  --symbol: "❇";
+}
+.timer-bg-flake__item:nth-child(23n + 14) {
+  --symbol: "🞻";
+}
+.timer-bg-flake__item:nth-child(23n + 15) {
+  --symbol: "✶";
+}
+.timer-bg-flake__item:nth-child(23n + 16) {
+  --symbol: "✳";
+}
+.timer-bg-flake__item:nth-child(23n + 17) {
+  --symbol: "❊";
+}
+.timer-bg-flake__item:nth-child(23n + 18) {
+  --symbol: "🟄";
+}
+.timer-bg-flake__item:nth-child(23n + 19) {
+  --symbol: "✻";
+}
+.timer-bg-flake__item:nth-child(23n + 20) {
+  --symbol: "❋";
+}
+.timer-bg-flake__item:nth-child(23n + 21) {
+  --symbol: "✷";
+}
+.timer-bg-flake__item:nth-child(23n + 22) {
+  --symbol: "✴";
+}
+
+/* 水平位置 */
+.timer-bg-flake__item:nth-child(21n + 1) {
+  --pos_x: 5vw;
+}
+.timer-bg-flake__item:nth-child(21n + 2) {
+  --pos_x: 10vw;
+}
+.timer-bg-flake__item:nth-child(21n + 3) {
+  --pos_x: 15vw;
+}
+.timer-bg-flake__item:nth-child(21n + 4) {
+  --pos_x: 20vw;
+}
+.timer-bg-flake__item:nth-child(21n + 5) {
+  --pos_x: 25vw;
+}
+.timer-bg-flake__item:nth-child(21n + 6) {
+  --pos_x: 30vw;
+}
+.timer-bg-flake__item:nth-child(21n + 7) {
+  --pos_x: 35vw;
+}
+.timer-bg-flake__item:nth-child(21n + 8) {
+  --pos_x: 40vw;
+}
+.timer-bg-flake__item:nth-child(21n + 9) {
+  --pos_x: 45vw;
+}
+.timer-bg-flake__item:nth-child(21n + 10) {
+  --pos_x: 50vw;
+}
+.timer-bg-flake__item:nth-child(21n + 11) {
+  --pos_x: 55vw;
+}
+.timer-bg-flake__item:nth-child(21n + 12) {
+  --pos_x: 60vw;
+}
+.timer-bg-flake__item:nth-child(21n + 13) {
+  --pos_x: 65vw;
+}
+.timer-bg-flake__item:nth-child(21n + 14) {
+  --pos_x: 70vw;
+}
+.timer-bg-flake__item:nth-child(21n + 15) {
+  --pos_x: 75vw;
+}
+.timer-bg-flake__item:nth-child(21n + 16) {
+  --pos_x: 80vw;
+}
+.timer-bg-flake__item:nth-child(21n + 17) {
+  --pos_x: 85vw;
+}
+.timer-bg-flake__item:nth-child(21n + 18) {
+  --pos_x: 90vw;
+}
+.timer-bg-flake__item:nth-child(21n + 19) {
+  --pos_x: 95vw;
+}
+.timer-bg-flake__item:nth-child(21n + 20) {
+  --pos_x: 100vw;
+}
+
+/* 色相 */
+.timer-bg-flake__item:nth-child(12n + 1) {
+  --hue: 30deg;
+}
+.timer-bg-flake__item:nth-child(12n + 2) {
+  --hue: 270deg;
+}
+.timer-bg-flake__item:nth-child(12n + 3) {
+  --hue: 90deg;
+}
+.timer-bg-flake__item:nth-child(12n + 4) {
+  --hue: 150deg;
+}
+.timer-bg-flake__item:nth-child(12n + 5) {
+  --hue: 330deg;
+}
+.timer-bg-flake__item:nth-child(12n + 6) {
+  --hue: 180deg;
+}
+.timer-bg-flake__item:nth-child(12n + 7) {
+  --hue: 60deg;
+}
+.timer-bg-flake__item:nth-child(12n + 8) {
+  --hue: 210deg;
+}
+.timer-bg-flake__item:nth-child(12n + 9) {
+  --hue: 120deg;
+}
+.timer-bg-flake__item:nth-child(12n + 10) {
+  --hue: 240deg;
+}
+.timer-bg-flake__item:nth-child(12n + 11) {
+  --hue: 300deg;
+}
+
+/* 下落延迟 */
+.timer-bg-flake__item:nth-child(8n + 1) {
+  --delay_move: -4s;
+}
+.timer-bg-flake__item:nth-child(8n + 2) {
+  --delay_move: -5s;
+}
+.timer-bg-flake__item:nth-child(8n + 3) {
+  --delay_move: -6s;
+}
+.timer-bg-flake__item:nth-child(8n + 4) {
+  --delay_move: -1s;
+}
+.timer-bg-flake__item:nth-child(8n + 5) {
+  --delay_move: -2s;
+}
+.timer-bg-flake__item:nth-child(8n + 6) {
+  --delay_move: -3s;
+}
+.timer-bg-flake__item:nth-child(8n + 7) {
+  --delay_move: -7s;
+}
+
+/* 下落时长 */
+.timer-bg-flake__item:nth-child(9n + 1) {
+  --duration_move: 7.5s;
+}
+.timer-bg-flake__item:nth-child(9n + 2) {
+  --duration_move: 8s;
+}
+.timer-bg-flake__item:nth-child(9n + 3) {
+  --duration_move: 8.5s;
+}
+.timer-bg-flake__item:nth-child(9n + 4) {
+  --duration_move: 9s;
+}
+.timer-bg-flake__item:nth-child(9n + 5) {
+  --duration_move: 5.5s;
+}
+.timer-bg-flake__item:nth-child(9n + 6) {
+  --duration_move: 6s;
+}
+.timer-bg-flake__item:nth-child(9n + 7) {
+  --duration_move: 6.5s;
+}
+.timer-bg-flake__item:nth-child(9n + 8) {
+  --duration_move: 7.8s;
+}
+
+/* 旋转延迟 */
+.timer-bg-flake__item:nth-child(7n + 1) {
+  --delay_rotate: 0.3s;
+}
+.timer-bg-flake__item:nth-child(7n + 2) {
+  --delay_rotate: 0.6s;
+}
+.timer-bg-flake__item:nth-child(7n + 3) {
+  --delay_rotate: 0.9s;
+}
+.timer-bg-flake__item:nth-child(7n + 4) {
+  --delay_rotate: -0.3s;
+}
+.timer-bg-flake__item:nth-child(7n + 5) {
+  --delay_rotate: -0.6s;
+}
+.timer-bg-flake__item:nth-child(7n + 6) {
+  --delay_rotate: -0.9s;
+}
+
+/* 旋转时长 */
+.timer-bg-flake__item:nth-child(6n + 1) {
+  --duration_rotate: 1s;
+}
+.timer-bg-flake__item:nth-child(6n + 2) {
+  --duration_rotate: 1.6s;
+}
+.timer-bg-flake__item:nth-child(6n + 3) {
+  --duration_rotate: 1.1s;
+}
+.timer-bg-flake__item:nth-child(6n + 4) {
+  --duration_rotate: 1.2s;
+}
+.timer-bg-flake__item:nth-child(6n + 5) {
+  --duration_rotate: 1.3s;
+}
+
+/* 尺寸 */
+.timer-bg-flake__item:nth-child(5n + 1) {
+  --size: 3vw;
+}
+.timer-bg-flake__item:nth-child(5n + 2) {
+  --size: 4vw;
+}
+.timer-bg-flake__item:nth-child(5n + 3) {
+  --size: 6vw;
+}
+.timer-bg-flake__item:nth-child(5n + 4) {
+  --size: 7vw;
+}
+
+html.timer-dark .timer-bg-layer--flake {
+  background-color: #1a1a1e;
+  filter: brightness(0.55) saturate(0.85);
+}
+
+html.timer-dark .timer-bg-flake__item span::after {
+  -webkit-text-stroke: 0.5px rgba(255, 255, 255, 0.15);
+  filter: brightness(1.1) hue-rotate(calc(var(--hue) + var(--hue-shift, 0deg)));
+}

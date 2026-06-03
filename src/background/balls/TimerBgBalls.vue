@@ -4,7 +4,7 @@
 
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, watch } from "vue";
-import { TIMER_BALL_COUNT, pickRandomBallColor, type TimerBallPalette } from "@/core/timerBackgroundBalls";
+import { TIMER_BALL_COUNT, pickRandomBallColor, type TimerBallPalette } from "@/background/balls/config";
 
 const props = defineProps<{
   palette: TimerBallPalette;

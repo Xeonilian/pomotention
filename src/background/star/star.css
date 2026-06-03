@@ -1,0 +1,155 @@
+.timer-bg-layer--star {
+  background: radial-gradient(ellipse at bottom, #0d1d31 0%, #0c0d13 100%);
+}
+
+.timer-bg-star__field {
+  position: absolute;
+  top: -15%;
+  left: -35%;
+  width: 170%;
+  height: 155%;
+  transform: rotate(-45deg);
+  transform-origin: top center;
+  pointer-events: none;
+  overflow: visible;
+  --star-color: #ffffff;
+}
+
+.timer-bg-star__item {
+  --star-tail-length: 6em;
+  --star-tail-height: 2px;
+  --star-width: calc(var(--star-tail-length) / 6);
+  --fall-duration: 9s;
+  --tail-fade-duration: var(--fall-duration);
+  --fall-start: 100vw;
+  --fall-end: -40vw;
+
+  position: absolute;
+  top: var(--top-offset);
+  left: 0;
+  width: var(--star-tail-length);
+  height: var(--star-tail-height);
+  font-size: clamp(10px, 2.4vw, 16px);
+  color: var(--star-color);
+  background: linear-gradient(45deg, currentColor, transparent);
+  border-radius: 50%;
+  filter: drop-shadow(0 0 6px currentColor);
+  transform: translate3d(var(--fall-start), 0, 0);
+  animation:
+    timer-bg-star-fall var(--fall-duration) var(--fall-delay) linear infinite,
+    timer-bg-star-tail-fade var(--tail-fade-duration) var(--fall-delay) ease-out infinite;
+}
+
+.timer-bg-star__item::before,
+.timer-bg-star__item::after {
+  position: absolute;
+  content: "";
+  top: 0;
+  left: calc(var(--star-width) / -2);
+  width: var(--star-width);
+  height: 100%;
+  background: linear-gradient(45deg, transparent, currentColor, transparent);
+  border-radius: inherit;
+  animation: timer-bg-star-blink 2s linear infinite;
+}
+
+.timer-bg-star__item::before {
+  transform: rotate(45deg);
+}
+
+.timer-bg-star__item::after {
+  transform: rotate(-45deg);
+}
+
+/* 番茄：远景更小更慢更淡，近景稍大 */
+.timer-bg-star__item--tomato {
+  width: auto;
+  height: auto;
+  background: none;
+  border-radius: 0;
+  font-size: var(--tomato-font-size, 26px);
+  line-height: 1;
+  opacity: var(--tomato-opacity, 0.62);
+  filter: drop-shadow(0 0 8px rgba(255, 72, 48, calc(0.55 * var(--tomato-opacity, 0.62))));
+  animation: timer-bg-star-fall var(--fall-duration) var(--fall-delay) linear infinite;
+}
+
+.timer-bg-star__item--tomato-far {
+  z-index: 0;
+}
+
+.timer-bg-star__item--tomato-mid {
+  z-index: 1;
+}
+
+.timer-bg-star__item--tomato-near {
+  z-index: 2;
+}
+
+.timer-bg-star__item--tomato::before,
+.timer-bg-star__item--tomato::after {
+  display: none;
+}
+
+@keyframes timer-bg-star-fall {
+  to {
+    transform: translate3d(var(--fall-end), 0, 0);
+  }
+}
+
+@keyframes timer-bg-star-tail-fade {
+  0%,
+  50% {
+    width: var(--star-tail-length);
+    opacity: 1;
+  }
+  70%,
+  80% {
+    width: 0;
+    opacity: 0.4;
+  }
+  100% {
+    width: 0;
+    opacity: 0;
+  }
+}
+
+@keyframes timer-bg-star-blink {
+  50% {
+    opacity: 0.6;
+  }
+}
+
+@media screen and (max-width: 750px) {
+  .timer-bg-star__field {
+    top: -20%;
+    left: -60%;
+    width: 220%;
+    height: 180%;
+  }
+
+  .timer-bg-star__item {
+    --fall-start: 120vw;
+    --fall-end: -55vw;
+    font-size: clamp(9px, 2.8vw, 14px);
+    filter: none;
+    contain: layout style;
+  }
+
+  .timer-bg-star__item::before,
+  .timer-bg-star__item::after {
+    display: none;
+  }
+
+  .timer-bg-star__item:not(.timer-bg-star__item--tomato) {
+    animation: timer-bg-star-fall var(--fall-duration) var(--fall-delay) linear infinite;
+  }
+
+  .timer-bg-star__item--tomato {
+    filter: none;
+  }
+}
+
+html.timer-dark .timer-bg-layer--star {
+  background: radial-gradient(ellipse at bottom, #0a1525 0%, #06070c 100%);
+}
