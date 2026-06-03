@@ -61,7 +61,6 @@
 
     <!-- 标签管理器 Modal -->
     <TagManager
-      v-model="tagIdsProxy"
       :show="showTagManager"
       @update:show="showTagManager = $event"
       @after-leave="handleTagManagerClose"
@@ -78,7 +77,6 @@ import { Star20Filled, Star20Regular, Tag16Regular } from "@vicons/fluent";
 
 // 导入核心工具
 import { useSearchTab } from "@/composables/search/useSearchTab";
-import { useActivityTagEditor } from "@/composables/activity/useActivityTagEditor";
 import { useDataStore } from "@/stores/useDataStore";
 import { useSearchUiStore } from "@/stores/useSearchUiStore";
 import type { TabItem } from "@/stores/useSearchUiStore";
@@ -94,7 +92,6 @@ const props = defineProps<{
 // 2. 实例化需要的 stores 和 composables
 const dataStore = useDataStore();
 const searchUiStore = useSearchUiStore();
-const tagEditor = useActivityTagEditor();
 
 const { toggleFilterTagId } = searchUiStore;
 
@@ -105,21 +102,12 @@ const content = useSearchTab(tabRef);
 
 // 4. 标签管理器相关逻辑 (从 Search.vue 迁移过来)
 const showTagManager = ref(false);
-const tagIdsProxy = computed({
-  get: () => tagEditor.tempTagIds.value,
-  set: (v) => (tagEditor.tempTagIds.value = v),
-});
 
 function openTagManager() {
-  // 使用来自 composable 的 activityId
-  if (content.activityId.value) {
-    tagEditor.openTagManager(content.activityId.value);
-    showTagManager.value = true;
-  }
+  showTagManager.value = true;
 }
 
 function handleTagManagerClose() {
-  tagEditor.saveAndCloseTagManager();
   showTagManager.value = false;
 }
 

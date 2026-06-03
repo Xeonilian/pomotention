@@ -11,7 +11,7 @@
     >
       <div class="tag-color-dot" :style="{ backgroundColor: tag.backgroundColor }"></div>
       <span class="tag-name">{{ tag.name }}</span>
-      <span class="tag-count">[{{ tag.count }}]</span>
+      <span v-if="tag.count > 0" class="tag-count">[{{ tag.count }}]</span>
     </div>
 
     <!-- 创建新标签的选项 -->

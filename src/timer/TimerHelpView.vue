@@ -30,7 +30,7 @@
           <p class="timer-help-feedback-title">
             Pomotention Timer
             <br />
-            是番茄意图的计时器模块，目前处于Beta测试阶段，欢迎反馈问题与建议。
+            是『番茄意图』的计时器模块 目前处于Beta测试阶段，欢迎反馈问题与建议。
           </p>
           <ul class="timer-help-feedback-list">
             <li>
@@ -41,7 +41,7 @@
             <li>
               <span class="timer-help-feedback-label">测试反馈</span>
               <a v-if="feedbackLinks.feishuTestUrl" :href="feedbackLinks.feishuTestUrl" target="_blank" rel="noopener noreferrer">
-                打开测试反馈页
+                打开飞书测试反馈页
               </a>
               <span v-else class="timer-help-feedback-placeholder">链接待补充（需飞书账号）</span>
             </li>
@@ -228,7 +228,7 @@ const router = useRouter();
 /** 测试反馈入口；飞书链接与邮箱确定后替换占位 */
 const feedbackLinks = {
   fullAppUrl: "https://pomotention.pages.dev",
-  feishuTestUrl: "",
+  feishuTestUrl: "https://qmpjqw3i0b.feishu.cn/share/base/form/shrcnvbQBlzupehvp0cQNh0qwge",
   contactEmail: "pomotention@163.com",
 } as const;
 

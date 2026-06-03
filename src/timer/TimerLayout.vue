@@ -70,7 +70,7 @@
     </n-layout>
 
     <Teleport to="#timer-portal">
-      <TagManager v-model="tagManagerScratchIds" v-model:show="showTagManager" modal-to="#timer-portal" />
+      <TagManager v-model:show="showTagManager" modal-to="#timer-portal" />
     </Teleport>
   </div>
 </template>
@@ -109,7 +109,6 @@ const pomotentionTimerRef = ref<InstanceType<typeof PomotentionTimer> | null>(nu
 void pomotentionTimerRef;
 
 const showTagManager = ref(false);
-const tagManagerScratchIds = ref<number[]>([]);
 
 const { currentId, layerClass, activeComponent, activeComponentProps, onVoidClick, onVoidDoubleClick, onVoidTouchEnd, onVoidTouchCancel } =
   useTimerBackgroundAnimation();

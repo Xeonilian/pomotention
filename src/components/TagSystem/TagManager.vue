@@ -32,12 +32,10 @@
           <template v-for="t in filteredTags" :key="t.id">
             <div
               class="custom-tag"
-              :class="{ selected: isTagSelected(t.id) }"
               :style="{
                 color: t.color,
                 backgroundColor: t.backgroundColor,
               }"
-              @click="onClickTag(t)"
             >
               <!-- 标签名显示，点击进入编辑模式 -->
               <span v-if="editingId !== t.id" @click.stop="startEdit(t)">
@@ -87,9 +85,6 @@
               <n-button text @click.stop="confirmRemoveTag(t)">
                 <n-icon><TagDismiss16Regular /></n-icon>
               </n-button>
-
-              <!-- 标签引用计数 -->
-              <span class="tag-count">[{{ t.count }}]</span>
             </div>
           </template>
         </div>
@@ -97,20 +92,10 @@
         <!-- 底部排序和翻页工具条 -->
         <div class="tag-footer">
           <div class="tag-sort">
-            <n-button
-              text
-              :type="sortKey === 'count' && sortDirection === 'desc' ? 'primary' : 'default'"
-              @click="setSort('count', 'desc')"
-            >
-              <n-icon><ArrowSortUp24Filled /></n-icon>
-            </n-button>
-            <n-button text :type="sortKey === 'count' && sortDirection === 'asc' ? 'primary' : 'default'" @click="setSort('count', 'asc')">
-              <n-icon><ArrowSortDown24Filled /></n-icon>
-            </n-button>
-            <n-button text :type="sortKey === 'name' && sortDirection === 'asc' ? 'primary' : 'default'" @click="setSort('name', 'asc')">
+            <n-button text :type="sortDirection === 'asc' ? 'primary' : 'default'" @click="setSort('asc')">
               <n-icon><TextSortAscending16Regular /></n-icon>
             </n-button>
-            <n-button text :type="sortKey === 'name' && sortDirection === 'desc' ? 'primary' : 'default'" @click="setSort('name', 'desc')">
+            <n-button text :type="sortDirection === 'desc' ? 'primary' : 'default'" @click="setSort('desc')">
               <n-icon><TextSortDescending20Regular /></n-icon>
             </n-button>
           </div>
@@ -136,7 +121,7 @@
 
 <script setup lang="ts">
 import { ref, computed, nextTick, watch } from "vue";
-import { useTagStore, type TagWithCount } from "@/stores/useTagStore";
+import { useTagStore } from "@/stores/useTagStore";
 import { useDialog } from "naive-ui";
 import {
   TagSearch20Filled,
@@ -148,11 +133,10 @@ import {
   CaretRight12Filled,
   TextSortAscending16Regular,
   TextSortDescending20Regular,
-  ArrowSortDown24Filled,
-  ArrowSortUp24Filled,
 } from "@vicons/fluent";
 import { NInput, NButton, NPopover, NColorPicker, NIcon } from "naive-ui";
 import { useDevice } from "@/composables/platform/useDevice";
+import type { Tag } from "@/core/types/Tag";
 
 // ================================================================
 // 初始化
@@ -164,13 +148,11 @@ const dialog = useDialog();
 // Props & Emits
 // ================================================================
 const props = defineProps<{
-  modelValue: number[];
   show?: boolean;
   modalTo?: string | HTMLElement;
 }>();
 
 const emit = defineEmits<{
-  "update:modelValue": [value: number[]];
   "update:show": [value: boolean];
   "after-leave": [];
 }>();
@@ -184,8 +166,7 @@ const editValue = ref("");
 const { isMobile } = useDevice();
 
 // 排序与分页
-const sortKey = ref<"count" | "name">("count");
-const sortDirection = ref<"asc" | "desc">("desc");
+const sortDirection = ref<"asc" | "desc">("asc");
 const currentPage = ref(1);
 
 const pageSize = computed(() => (isMobile.value ? 12 : 34));
@@ -227,44 +208,22 @@ watch(
 // ================================================================
 
 /**
- * 当前已选中的标签 ID 集合，用于在排序时优先展示
+ * 根据输入关键词 + 排序配置得到完整标签列表（未分页）
  */
-const selectedIdSet = computed<Set<number>>(() => new Set(props.modelValue));
-
-/**
- * 根据输入关键词 + 排序配置得到完整标签列表（未分页），并优先显示已选中的标签
- */
-const sortedTags = computed<TagWithCount[]>(() => {
+const sortedTags = computed<Tag[]>(() => {
   const keyword = inputText.value.trim();
   const baseList = keyword ? tagStore.findByName(keyword) : [...tagStore.allTags];
 
   return baseList.sort((a, b) => {
-    const aSelected = selectedIdSet.value.has(a.id) ? 1 : 0;
-    const bSelected = selectedIdSet.value.has(b.id) ? 1 : 0;
-
-    // 已选中的标签优先显示
-    if (aSelected !== bSelected) {
-      return bSelected - aSelected;
-    }
-
-    if (sortKey.value === "count") {
-      const diff = sortDirection.value === "desc" ? b.count - a.count : a.count - b.count;
-      if (diff !== 0) return diff;
-      return a.name.localeCompare(b.name);
-    } else {
-      const nameCompare = a.name.localeCompare(b.name);
-      if (nameCompare !== 0) {
-        return sortDirection.value === "desc" ? -nameCompare : nameCompare;
-      }
-      return b.count - a.count;
-    }
+    const nameCompare = a.name.localeCompare(b.name);
+    return sortDirection.value === "desc" ? -nameCompare : nameCompare;
   });
 });
 
 /**
  * 当前页的标签列表（分页后）
  */
-const filteredTags = computed<TagWithCount[]>(() => {
+const filteredTags = computed<Tag[]>(() => {
   const start = (currentPage.value - 1) * pageSize.value;
   const end = start + pageSize.value;
   return sortedTags.value.slice(start, end);
@@ -279,7 +238,7 @@ const totalPages = computed(() => {
 });
 
 // 当输入、排序或设备类型变化时，重置到第 1 页
-watch([inputText, sortKey, sortDirection, isMobile], () => {
+watch([inputText, sortDirection, isMobile], () => {
   currentPage.value = 1;
 });
 
@@ -288,37 +247,7 @@ watch([inputText, sortKey, sortDirection, isMobile], () => {
 // ================================================================
 
 /**
- * 检查标签是否已被选中
- */
-function isTagSelected(tagId: number): boolean {
-  return props.modelValue.includes(tagId);
-}
-
-/**
- * 点击标签切换选中状态
- */
-function onClickTag(tag: TagWithCount): void {
-  if (editingId.value === tag.id) return;
-
-  const current = [...props.modelValue];
-  const idx = current.indexOf(tag.id);
-
-  if (idx === -1) {
-    current.push(tag.id);
-  } else {
-    current.splice(idx, 1);
-  }
-
-  emit("update:modelValue", current);
-
-  // 点击选中/取消选中时，若有搜索内容则清空
-  if (inputText.value.trim()) {
-    inputText.value = "";
-  }
-}
-
-/**
- * 搜索框回车：有匹配时选中排序后的第一个标签并清空输入；无匹配时才新建标签
+ * 搜索框回车：无匹配时新建标签
  */
 function onSearchEnter(e: KeyboardEvent): void {
   e.preventDefault();
@@ -326,11 +255,6 @@ function onSearchEnter(e: KeyboardEvent): void {
   if (!raw) return;
 
   if (sortedTags.value.length > 0) {
-    const first = sortedTags.value[0];
-    if (!props.modelValue.includes(first.id)) {
-      emit("update:modelValue", [...props.modelValue, first.id]);
-    }
-    inputText.value = "";
     return;
   }
 
@@ -338,7 +262,7 @@ function onSearchEnter(e: KeyboardEvent): void {
 }
 
 /**
- * 新建或选择标签
+ * 新建标签
  */
 function onAddTag(): void {
   const input = inputText.value.trim().replace(/^#+/, "");
@@ -346,15 +270,8 @@ function onAddTag(): void {
 
   const exist = tagStore.findByName(input).find((t) => t.name.toLowerCase() === input.toLowerCase());
 
-  if (exist) {
-    // 已存在 -> 选中（去重）
-    emit("update:modelValue", Array.from(new Set([...props.modelValue, exist.id])));
-  } else {
-    // 新建标签并选中
-    const tag = tagStore.addTag(input, "#333", "#eee");
-    if (tag) {
-      emit("update:modelValue", Array.from(new Set([...props.modelValue, tag.id])));
-    }
+  if (!exist) {
+    tagStore.addTag(input, "#333", "#eee");
   }
 
   inputText.value = "";
@@ -363,7 +280,7 @@ function onAddTag(): void {
 /**
  * 进入编辑态
  */
-function startEdit(tag: TagWithCount): void {
+function startEdit(tag: Tag): void {
   editingId.value = tag.id;
   editValue.value = tag.name;
 
@@ -382,7 +299,7 @@ function startEdit(tag: TagWithCount): void {
 /**
  * 完成编辑（失焦或回车）
  */
-function onEditFinish(tag: TagWithCount): void {
+function onEditFinish(tag: Tag): void {
   const newVal = editValue.value.trim().replace(/^#+/, "");
   if (newVal && newVal !== tag.name) {
     tagStore.updateTagById(tag.id, { name: newVal });
@@ -412,30 +329,19 @@ function onColorUpdate(tagId: number, target: "fg" | "bg", color: string): void 
 /**
  * 删除标签确认
  */
-function confirmRemoveTag(tag: TagWithCount): void {
-  const content =
-    tag.count > 0
-      ? `此标签正被 ${tag.count} 个条目使用。确定要删除标签 "${tag.name}" 吗？删除后引用将丢失。`
-      : `确定要删除标签 "${tag.name}" 吗？`;
-
+function confirmRemoveTag(tag: Tag): void {
   dialog.warning({
     title: "确认删除",
-    content,
+    content: `确定要删除标签 "${tag.name}" 吗？`,
     positiveText: "确认删除",
     negativeText: "取消",
     onPositiveClick: () => {
       tagStore.removeTag(tag.id);
-
-      // 如果当前被选中，从选中列表移除
-      const next = props.modelValue.filter((id) => id !== tag.id);
-      if (next.length !== props.modelValue.length) {
-        emit("update:modelValue", next);
-      }
     },
   });
 }
 
-function handleEditKeydown(e: KeyboardEvent, tag: TagWithCount): void {
+function handleEditKeydown(e: KeyboardEvent, tag: Tag): void {
   if (e.key === "Enter") {
     e.preventDefault();
     onEditFinish(tag);
@@ -447,8 +353,7 @@ function handleEditKeydown(e: KeyboardEvent, tag: TagWithCount): void {
 /**
  * 设置排序方式
  */
-function setSort(key: "count" | "name", direction: "asc" | "desc"): void {
-  sortKey.value = key;
+function setSort(direction: "asc" | "desc"): void {
   sortDirection.value = direction;
 }
 
@@ -542,66 +447,17 @@ function goNextPage(): void {
   max-width: calc(45%);
   box-sizing: border-box;
   min-width: 0;
-  cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  transition:
-    transform 0.12s ease-out,
-    box-shadow 0.2s ease;
 }
 
-/* 仅对标签名做省略，不作用到 .tag-count */
-.custom-tag > span:not(.tag-count) {
+.custom-tag > span {
   user-select: none;
   max-width: 160px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   min-width: 0;
-}
-
-.tag-count {
-  font-size: 12px;
-  align-items: center;
-  font-family: "Courier New", Courier, monospace;
-  font-weight: bold;
-  padding-left: 2px;
-  flex-shrink: 0;
-  white-space: nowrap;
-}
-
-/* 未选中：轻微浮起，与已选主色环区分 */
-.custom-tag:not(.selected) {
-  transform: translateY(-2px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-}
-
-/* 已选中：与月/年视图一致的描边 + 光晕，排序靠前之外也能一眼认出 */
-.custom-tag.selected {
-  transform: translateY(-2px);
-  z-index: 1;
-  box-shadow:
-    0 0 0 1px var(--color-blue),
-    0 2px 6px var(--color-yellow-light);
-}
-
-/* 按下瞬间反馈（触控不依赖 hover） */
-.custom-tag:active {
-  transform: translateY(0) scale(0.98);
-}
-
-/* 仅键鼠悬停：避免手机伪 hover；已选也可悬停以略增强描边 */
-@media (hover: hover) and (pointer: fine) {
-  .custom-tag:not(.selected):hover {
-    transform: translateY(-3px) scale(1.02);
-    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.22);
-  }
-
-  .custom-tag.selected:hover {
-    transform: translateY(-2px);
-    box-shadow:
-      0 0 0 2px var(--primary-color, #409eff),
-      0 6px 16px rgba(64, 158, 255, 0.38);
-  }
+  cursor: text;
 }
 
 .input-sizer {

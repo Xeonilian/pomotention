@@ -152,7 +152,6 @@
 
     <!-- 标签管理器弹窗 -->
     <TagManager
-      v-model="tagIdsProxy"
       :show="showTagManager"
       @update:show="showTagManager = $event"
       @after-leave="handleTagManagerClose"
@@ -188,14 +187,10 @@ import {
 
 import { useTemplateStore } from "@/stores/useTemplateStore";
 import type { Template } from "@/core/types/Template";
-import { useActivityTagEditor } from "@/composables/activity/useActivityTagEditor";
-import { useDataStore } from "@/stores/useDataStore";
 import { useDisplayedTaskStore } from "@/stores/useDisplayedTaskStore";
 import { useDevice } from "@/composables/platform/useDevice";
 import { registerTaskKeyboardCommandApi } from "@/composables/keyboard/useTaskKeyboardCommands";
 
-const tagEditor = useActivityTagEditor();
-const dataStore = useDataStore();
 const displayStore = useDisplayedTaskStore();
 const { isMobile } = useDevice();
 
@@ -309,31 +304,12 @@ const tagManagerModalTo = computed<string | HTMLElement>(() => {
   return fullscreenContainerRef.value ?? "body";
 });
 
-// 标签管理器的 tagIds 代理
-const tagIdsProxy = computed({
-  get: () => tagEditor.tempTagIds.value,
-  set: (v) => (tagEditor.tempTagIds.value = v),
-});
-
 function openTagManager() {
-  // 使用来自 composable 的 activityId
-  // 通过 taskId 在 dataStore 里查找对应的 activityId
-  let activityId = null;
-  if (props.taskId) {
-    const task = dataStore.taskById.get(props.taskId);
-    if (task && task.sourceId) {
-      activityId = task.sourceId;
-    }
-  }
-  if (activityId) {
-    tagEditor.openTagManager(activityId);
-    showTagManager.value = true;
-  }
+  if (!props.taskId) return;
+  showTagManager.value = true;
 }
 
-// 标签管理器关闭处理
 function handleTagManagerClose() {
-  tagEditor.saveAndCloseTagManager();
   showTagManager.value = false;
 }
 
