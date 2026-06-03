@@ -76,7 +76,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch, onUnmounted } from "vue";
+import { computed, ref } from "vue";
 import { useRouter } from "vue-router";
 import { NLayout, NLayoutHeader, NLayoutContent, NButton, NIcon } from "naive-ui";
 import { isTauri } from "@tauri-apps/api/core";
@@ -114,18 +114,6 @@ const { currentId, layerClass, activeComponent, activeComponentProps, onVoidClic
   useTimerBackgroundAnimation();
 
 const hasActiveBackground = computed(() => currentId.value !== "none");
-
-watch(
-  hasActiveBackground,
-  (active) => {
-    document.documentElement.classList.toggle("timer-has-active-bg", active);
-  },
-  { immediate: true },
-);
-
-onUnmounted(() => {
-  document.documentElement.classList.remove("timer-has-active-bg");
-});
 
 function isVoidBackgroundTarget(event: Event) {
   const target = event.target as HTMLElement | null;

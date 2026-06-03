@@ -6,15 +6,12 @@ import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useTimerStore } from "@/stores/useTimerStore";
 import { useAlwaysOnTop } from "@/composables/layout/useAlwaysOnTop";
-import { applyMiniDockOffset, captureNormalWindowPosition, restoreNormalWindowPosition } from "@/composables/layout/miniWindowPosition";
+import { captureNormalWindowPosition, restoreNormalWindowPosition } from "@/composables/layout/miniWindowPosition";
 
 const isTimerApp = import.meta.env.VITE_APP_VARIANT === "timer";
 
 /** Timer 独立壳正常窗尺寸（与 tauri.conf.timer.json 默认宽高一致） */
 const TIMER_NORMAL_WINDOW = { width: 600, height: 500 };
-
-/** 进入迷你窗后待最终 resize 完成再应用停靠偏移 */
-let pendingMiniDockApply = false;
 
 function getNormalWindowSize(factor: number) {
   return {
@@ -98,10 +95,6 @@ export function useAppWindow() {
 
       console.log(`[mini] Target Size: ${finalWidth}x${finalHeight} (Base: ${safeWidth}x${safeHeight}, Factor: ${factor})`);
 
-      const dockX = settingStore.settings.miniModeDockOffsetX ?? 0;
-      const dockY = settingStore.settings.miniModeDockOffsetY ?? 0;
-      pendingMiniDockApply = dockX !== 0 || dockY !== 0;
-
       try {
         await captureNormalWindowPosition();
 
@@ -134,13 +127,8 @@ export function useAppWindow() {
           }
         }
 
-        // report-size 可能已触发 updateWindowSize；若仍待停靠则在此补一次
-        if (pendingMiniDockApply) {
-          await updateWindowSize();
-        }
       } catch (error) {
         console.error("[mini] Error entering mini mode:", error);
-        pendingMiniDockApply = false;
         // 如果出错，尝试紧急恢复
         isMiniMode.value = false;
         try {
@@ -188,13 +176,6 @@ export function useAppWindow() {
 
     try {
       await appWindow.setSize(new LogicalSize(finalWidth, finalHeight));
-
-      if (pendingMiniDockApply) {
-        pendingMiniDockApply = false;
-        const dockX = settingStore.settings.miniModeDockOffsetX ?? 0;
-        const dockY = settingStore.settings.miniModeDockOffsetY ?? 0;
-        await applyMiniDockOffset(dockX, dockY);
-      }
     } catch (e) {
       console.error("[mini] Resize error:", e);
     }

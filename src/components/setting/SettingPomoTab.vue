@@ -19,17 +19,6 @@
           <div class="setting-field-label">分段提示音</div>
           <n-switch v-model:value="settingStore.settings.isSegmentCueEnabled" />
         </div>
-        <template v-if="showMiniDockSettings">
-          <div class="setting-field-item">
-            <div class="setting-field-label">置顶停靠偏移 X（向右）</div>
-            <n-input-number v-model:value="settingStore.settings.miniModeDockOffsetX" :min="-2000" :max="2000" />
-          </div>
-          <div class="setting-field-item">
-            <div class="setting-field-label">置顶停靠偏移 Y（向上）</div>
-            <n-input-number v-model:value="settingStore.settings.miniModeDockOffsetY" :min="-2000" :max="2000" />
-          </div>
-          <p class="setting-help-text">均为 0 时置顶不改变位置；非 0 时相对屏幕居中再偏移。</p>
-        </template>
 
         <div class="setting-field-item">
           <div class="setting-field-label">工作内层进度条颜色</div>
@@ -49,15 +38,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
-import { isTauri } from "@tauri-apps/api/core";
 import { NCard, NInputNumber, NButton, NColorPicker, NSelect, NSpace, NSwitch } from "naive-ui";
 import { useSettingStore } from "@/stores/useSettingStore";
-import { useDevice } from "@/composables/platform/useDevice";
 
 const settingStore = useSettingStore();
-const { isMobile } = useDevice();
-const showMiniDockSettings = computed(() => isTauri() && !isMobile.value);
 
 const breakOptions = [
   { label: "2", value: 2 },

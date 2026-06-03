@@ -42,46 +42,17 @@
         />
       </div>
     </section>
-
-    <section v-if="showMiniDockSettings" class="timer-settings-section">
-      <div class="timer-settings-field">
-        <label class="timer-settings-label">置顶停靠偏移 X（向右）</label>
-        <n-input-number
-          v-model:value="settingStore.settings.miniModeDockOffsetX"
-          :min="-2000"
-          :max="2000"
-          class="timer-settings-control"
-        />
-      </div>
-      <div class="timer-settings-field">
-        <label class="timer-settings-label">置顶停靠偏移 Y（向上）</label>
-        <n-input-number
-          v-model:value="settingStore.settings.miniModeDockOffsetY"
-          :min="-2000"
-          :max="2000"
-          class="timer-settings-control"
-        />
-      </div>
-      <p class="timer-settings-hint">均为 0 时置顶不改变窗口位置；非 0 时相对屏幕居中再偏移（如 30、30 表示向右 30、向上 30）。</p>
-    </section>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
-import { isTauri } from "@tauri-apps/api/core";
 import { NButton, NInputNumber, NSelect, NSwitch } from "naive-ui";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useTimerStore } from "@/stores/useTimerStore";
-import { useDevice } from "@/composables/platform/useDevice";
 import { SoundType, prefetchWhiteNoiseForSelection, startWhiteNoise, stopWhiteNoise } from "@/core/sounds";
 
 const settingStore = useSettingStore();
 const timerStore = useTimerStore();
-const { isMobile } = useDevice();
-
-/** 仅桌面 Tauri；手机与 PWA 不展示 */
-const showMiniDockSettings = computed(() => isTauri() && !isMobile.value);
 
 const breakOptions = [
   { label: "2 分钟", value: 2 },

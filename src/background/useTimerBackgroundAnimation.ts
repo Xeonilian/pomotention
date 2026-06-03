@@ -1,4 +1,4 @@
-import { computed, ref, shallowRef, watch, type Component } from "vue";
+import { computed, ref, watch } from "vue";
 import { createTouchScheduledSingleAndDouble } from "@/composables/platform/useTouchScheduledSingleAndDouble";
 import { TIMER_BALL_DEFAULT_COLORS, randomizeBallPalette } from "@/background/balls/config";
 import { nextFlakeHueSeed } from "@/background/flake/config";
@@ -8,8 +8,8 @@ import {
   TIMER_BACKGROUND_ANIMATION_STORAGE_KEY,
   getNextTimerBackgroundAnimation,
   getTimerBackgroundAnimation,
+  getTimerBackgroundComponent,
   isTimerBackgroundAnimationId,
-  loadTimerBackgroundComponent,
   timerBackgroundLayerClass,
   type TimerBackgroundAnimationId,
 } from "@/background/registry";
@@ -37,12 +37,10 @@ export function useTimerBackgroundAnimation() {
   const rainbowSeed = ref(0);
   let lastCycleAt = 0;
   let pendingClickTimer: number | null = null;
-  let loadSeq = 0;
-
-  const activeComponent = shallowRef<Component | undefined>();
 
   const currentAnimation = computed(() => getTimerBackgroundAnimation(currentId.value));
   const layerClass = computed(() => timerBackgroundLayerClass(currentId.value));
+  const activeComponent = computed(() => getTimerBackgroundComponent(currentId.value));
 
   const activeComponentProps = computed(() => {
     switch (currentId.value) {
@@ -59,20 +57,13 @@ export function useTimerBackgroundAnimation() {
     }
   });
 
-  async function syncActiveComponent(id: TimerBackgroundAnimationId) {
-    const seq = ++loadSeq;
-    activeComponent.value = await loadTimerBackgroundComponent(id);
-    if (seq !== loadSeq) return;
-  }
-
   watch(currentId, (id) => {
     try {
       localStorage.setItem(TIMER_BACKGROUND_ANIMATION_STORAGE_KEY, id);
     } catch {
       /* 忽略存储不可用 */
     }
-    void syncActiveComponent(id);
-  }, { immediate: true });
+  });
 
   function triggerBackgroundInteract() {
     switch (currentId.value) {

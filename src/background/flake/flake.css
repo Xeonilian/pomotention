@@ -371,11 +371,14 @@
 }
 
 html.timer-dark .timer-bg-layer--flake {
-  background-color: #1a1a1e;
-  filter: brightness(0.55) saturate(0.85);
+  background-color: var(--color-background, #1e1e1e);
+  background-image:
+    linear-gradient(rgba(12, 12, 16, 0.88), rgba(8, 8, 12, 0.94)),
+    url("https://images.unsplash.com/photo-1615800098779-1be32e60cca3?crop=entropy&cs=srgb&fm=jpg&ixid=M3wzMjM4NDZ8MHwxfHJhbmRvbXx8fHx8fHx8fDE2OTUyNDAwMTN8&ixlib=rb-4.0.3&q=85");
+  filter: none;
 }
 
 html.timer-dark .timer-bg-flake__item span::after {
   -webkit-text-stroke: 0.5px rgba(255, 255, 255, 0.15);
-  filter: brightness(1.1) hue-rotate(calc(var(--hue) + var(--hue-shift, 0deg)));
+  filter: brightness(1.25) hue-rotate(calc(var(--hue) + var(--hue-shift, 0deg)));
 }
