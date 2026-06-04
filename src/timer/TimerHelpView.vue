@@ -127,6 +127,7 @@
             </ul>
 
             <ul v-else-if="section.id === 'stats'">
+              <li>顶部🏷可管理标签（删除、改色、改名）。</li>
               <li>可切换上一周 / 下一周，标题显示年周。</li>
               <li>顶部双轴图</li>
               <li class="timer-help-indent">左轴为各档 emoji 次数折线（工作红系、休息蓝系）；</li>
@@ -142,7 +143,7 @@
                 <code># / @</code>
                 添加标签，双击标签可删除。
               </li>
-              <li>首页点击🏷可编辑当前所有标签包括：删除、修改颜色、修改名称。</li>
+              <li>统计页点击🏷可编辑当前所有标签包括：删除、修改颜色、修改名称。</li>
               <li>首个标签用于统计。</li>
             </ul>
             <ul v-else-if="section.id === 'settings'">

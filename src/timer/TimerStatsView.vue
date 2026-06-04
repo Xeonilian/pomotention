@@ -8,14 +8,19 @@
       </n-button>
       <span class="timer-stats-title">统计</span>
       <div class="timer-stats-header-actions">
-        <n-button text type="default" title="导出 CSV" class="header-button" @click="exportCsv">
-          <template #icon>
-            <n-icon :component="ArrowDownload24Regular" />
-          </template>
-        </n-button>
         <n-button text type="default" title="Emoji 规则" class="header-button" @click="showRules = true">
           <template #icon>
             <n-icon :component="Emoji24Regular" />
+          </template>
+        </n-button>
+        <n-button text type="default" title="标签管理" class="header-button" @click="showTagManager = true">
+          <template #icon>
+            <n-icon :component="Tag16Regular" />
+          </template>
+        </n-button>
+        <n-button text type="default" title="导出 CSV" class="header-button" @click="exportCsv">
+          <template #icon>
+            <n-icon :component="ArrowDownload24Regular" />
           </template>
         </n-button>
         <n-popconfirm positive-text="确定" negative-text="取消" @positive-click="clearAllData">
@@ -114,6 +119,10 @@
     </Teleport>
 
     <TimerSessionRulesDialog v-model:show="showRules" />
+
+    <Teleport to="#timer-portal">
+      <TagManager v-model:show="showTagManager" modal-to="#timer-portal" />
+    </Teleport>
   </div>
 </template>
 
@@ -128,7 +137,9 @@ import {
   ChevronRight24Filled,
   Delete24Regular,
   Emoji24Regular,
+  Tag16Regular,
 } from "@vicons/fluent";
+import TagManager from "@/components/TagSystem/TagManager.vue";
 import { useTimerWeekStats } from "@/composables/timer/useTimerWeekStats";
 import { useTimerSessionStore } from "@/stores/useTimerSessionStore";
 import type { TimerSessionRecord, TimerSessionCategory } from "@/core/types/TimerSession";
@@ -145,6 +156,8 @@ const router = useRouter();
 const sessionStore = useTimerSessionStore();
 const tagStore = useTagStore();
 const settingStore = useSettingStore();
+
+const showTagManager = ref(false);
 
 const weekMonday = ref(getMondayOfWeekContaining(new Date()));
 const { weekDays, weekYear, weekNumber, weekSessions, isCurrentWeek } = useTimerWeekStats(weekMonday);

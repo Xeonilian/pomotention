@@ -27,11 +27,6 @@
                 <n-icon :component="Settings24Regular" />
               </template>
             </n-button>
-            <n-button text type="default" title="标签管理" class="header-button" @click="showTagManager = true">
-              <template #icon>
-                <n-icon :component="Tag16Regular" />
-              </template>
-            </n-button>
           </div>
         </div>
       </n-layout-header>
@@ -68,10 +63,6 @@
         />
       </n-layout-content>
     </n-layout>
-
-    <Teleport to="#timer-portal">
-      <TagManager v-model:show="showTagManager" modal-to="#timer-portal" />
-    </Teleport>
   </div>
 </template>
 
@@ -80,9 +71,8 @@ import { computed, ref } from "vue";
 import { useRouter } from "vue-router";
 import { NLayout, NLayoutHeader, NLayoutContent, NButton, NIcon } from "naive-ui";
 import { isTauri } from "@tauri-apps/api/core";
-import { DataArea24Regular, Pin24Regular, QuestionCircle24Regular, Settings24Regular, Tag16Regular } from "@vicons/fluent";
+import { DataArea24Regular, Pin24Regular, QuestionCircle24Regular, Settings24Regular } from "@vicons/fluent";
 import PomotentionTimer from "@/components/PomotentionTimer/PomotentionTimer.vue";
-import TagManager from "@/components/TagSystem/TagManager.vue";
 import { useAppWindow } from "@/composables/layout/useAppWindow";
 import { useDevice } from "@/composables/platform/useDevice";
 import { useTimerBackgroundAnimation } from "@/background";
@@ -107,8 +97,6 @@ void PomotentionTimerContainerRef;
 
 const pomotentionTimerRef = ref<InstanceType<typeof PomotentionTimer> | null>(null);
 void pomotentionTimerRef;
-
-const showTagManager = ref(false);
 
 const { currentId, layerClass, activeComponent, activeComponentProps, onVoidClick, onVoidDoubleClick, onVoidTouchEnd, onVoidTouchCancel } =
   useTimerBackgroundAnimation();
