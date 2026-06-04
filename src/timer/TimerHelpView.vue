@@ -59,7 +59,10 @@
               <a v-if="feedbackLinks.feishuTestUrl" :href="feedbackLinks.feishuTestUrl" target="_blank" rel="noopener noreferrer">
                 打开飞书测试反馈页
               </a>
-              <span v-else class="timer-help-feedback-placeholder">链接待补充（需飞书账号）</span>
+            </li>
+            <li>
+              <span class="timer-help-feedback-label">网页版安装</span>
+              <a :href="feedbackLinks.aboutPwaUrl" target="_blank" rel="noopener noreferrer">多端通用应用（PWA）</a>
             </li>
             <li>
               <span class="timer-help-feedback-label">联系方式</span>
@@ -252,6 +255,7 @@ const feedbackLinks = {
   timerAppUrl: "https://pomotention-timer.pages.dev",
   fullAppUrl: "https://pomotention.pages.dev",
   repoUrl: "https://github.com/Xeonilian/pomotention",
+  aboutPwaUrl: "https://pomotention-docs.pages.dev/guide/intro/pwa-install.html",
   feishuTestUrl: "https://qmpjqw3i0b.feishu.cn/share/base/form/shrcnvbQBlzupehvp0cQNh0qwge",
   contactEmail: "pomotention@163.com",
 } as const;
