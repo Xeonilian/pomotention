@@ -292,7 +292,6 @@ function runStep(steps: PomodoroStep[]): void {
     if (timerStore.pomodoroState === "idle") return;
     if (!isRunning.value) {
       isRunning.value = true;
-      emit("pomo-seq-running", true);
     }
     // 更新当前步骤的进度条状态为已完成
     updateProgressStatus(resolveActiveStepIndex());
@@ -585,8 +584,11 @@ function restoreRunningUIFromStore(): void {
     return;
   }
 
+  const wasRunning = isRunning.value;
   isRunning.value = true;
-  emit("pomo-seq-running", true);
+  if (!wasRunning) {
+    emit("pomo-seq-running", true);
+  }
 
   initializeProgress(seqToParse);
   currentStep.value = Math.min(timerStore.sequenceStepIndex, steps.length - 1);
@@ -635,13 +637,13 @@ function resetWhiteNoise(sound: SoundType) {
   width: 200px;
   max-width: 100%;
   margin: 0 auto;
-  background-color: var(--color-background) !important;
+  background-color: var(--color-background-transparent) !important;
   padding: 2px 10px 0px 10px;
   height: 125px;
   min-height: 120px;
   border: 0px solid var(--color-text-secondary);
   border-radius: 8px;
-  /* box-shadow: 1px 2px 6px var(--color-background-light-transparent); */
+  box-shadow: 2px 2px 8px var(--color-background-dark-transparent);
 }
 
 .pomodoro-sequence.running {
@@ -713,11 +715,17 @@ function resetWhiteNoise(sound: SoundType) {
 :deep(.n-input-wrapper) {
   width: 90%;
   height: 100%;
+  --n-color: var(--color-background-transparent) !important;
+}
+
+:deep(.n-input) {
+  --n-color: var(--color-background-transparent) !important;
 }
 
 :deep(.n-input.n-input--textarea.n-input--resizable .n-input-wrapper) {
   resize: none !important;
   min-height: 25px !important;
+  --n-color: var(--color-background-transparent) !important;
 }
 
 .hint-text {

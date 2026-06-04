@@ -265,7 +265,6 @@ onMounted(() => {
 
   // 如果番茄钟正在运行且来自序列，恢复 pomoSeq 运行状态
   if (timerStore.isActive && timerStore.isFromSequence) {
-    console.log("[PomotentionTimer] Component mounted, restoring pomoSeq running state", pomodoroContainerRef.value?.clientHeight);
     isPomoSeqRunning.value = true;
   }
 });
@@ -323,16 +322,6 @@ function handleToggleCompactMode() {
   }
   enterWebFullscreen();
 }
-
-// Web：离开待机初始态后自动全屏，避免计时中仍停留在带 header 的常规布局
-watch(
-  () => timerStore.isActive,
-  (active) => {
-    if (isTauri() || props.isMiniMode || !active) return;
-    enterWebFullscreen();
-  },
-  { immediate: true },
-);
 
 function handleTogglePomoSeq() {
   if (timerStore.isActive) {

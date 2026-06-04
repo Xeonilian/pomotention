@@ -578,12 +578,12 @@ defineExpose({
   text-align: center;
   width: 200px;
   margin: 5px auto;
-  background-color: var(--color-background);
+  background-color: var(--color-background-transparent);
   padding: 10px;
   height: 125px; /* 确保高度由内容决定 */
   min-height: 0; /* 防止 flex 项目被撑开 */
   border-radius: 8px;
-  box-shadow: 2px 2px 6px var(--color-background-dark);
+  box-shadow: 2px 2px 8px var(--color-background-dark-transparent);
 }
 
 .pomodoro-timer.is-mini-minimal {
@@ -846,6 +846,7 @@ defineExpose({
   position: relative;
   width: var(--bar-length);
   margin: 5px 0;
+  background-color: var(--color-background-transparent);
 }
 
 /* 3-2 红色进度条 */

@@ -3,6 +3,7 @@ html.timer-dark {
   --color-text-primary: #e8eaed;
   --color-text-secondary: #9aa0a6;
   --color-background: #1e1e1e;
+  --color-background-transparent: rgba(30, 30, 30, 0.6);
   --color-background-dark: #3c3c3c;
   --color-background-dark-dark: #2a2a2a;
   --color-background-light: #2d2d2d;
