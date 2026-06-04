@@ -5,7 +5,7 @@ import { statsDurationMinutesOf } from "@/services/timer/timerSessionClassifier"
 /** 无首标签的会话归入该桶 */
 export const TIMER_UNTAGGED_TAG_ID = 0;
 
-const UNTAGGED_LABEL = "未标签";
+const UNTAGGED_LABEL = "-";
 const UNTAGGED_COLOR = "#adb5bd";
 
 export type TimerWeekTagStackSeries = {
@@ -45,6 +45,7 @@ export function buildTimerWeekTagStacks(
     const dayTotals = new Map<number, number>();
 
     for (const session of day.sessions) {
+      if (session.category !== "work") continue;
       const mins = statsDurationMinutesOf(session);
       if (mins <= 0) continue;
       const tagId = firstTagId(session.tagIds);
@@ -70,6 +71,7 @@ export function buildTimerWeekTagStacks(
       let dayTotal = 0;
       const dayMap = new Map<number, number>();
       for (const s of daySessions) {
+        if (s.category !== "work") continue;
         const m = statsDurationMinutesOf(s);
         if (m <= 0) continue;
         const id = firstTagId(s.tagIds);

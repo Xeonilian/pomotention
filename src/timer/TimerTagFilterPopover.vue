@@ -4,6 +4,7 @@
       <TagRenderer
         class="timer-tag-filter__chips"
         :tag-ids="filterTagIds"
+        :display-length="3"
         size="tiny"
         @remove-tag="sessionStore.toggleStatsFilterTagId"
       />
@@ -70,17 +71,30 @@ function onSelectTag(tagId: number) {
 
 <style scoped>
 .timer-tag-filter__trigger {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  flex-shrink: 0;
+  height: 28px;
   max-width: 100%;
   min-width: 0;
 }
 
 .timer-tag-filter__chips-wrap {
+  position: absolute;
+  right: calc(100% + 6px);
+  top: 50%;
+  transform: translateY(-50%);
   min-width: 0;
-  max-width: min(200px, 50vw);
-  overflow: visible;
+  max-width: min(200px, calc(50vw - 96px));
+  overflow: hidden;
+  pointer-events: auto;
+}
+
+.timer-tag-filter__chips :deep(.tag-container) {
+  flex-wrap: nowrap;
+  padding: 0;
+  gap: 2px;
 }
 
 .timer-tag-filter__chips {

@@ -173,11 +173,15 @@ defineExpose({
   max-height: none;
   overflow-x: hidden;
   overflow-y: visible;
+  box-shadow: none;
+  padding: 4px;
 }
 
 .tag-option {
   display: flex;
   align-items: center;
+  box-sizing: border-box;
+  width: 100%;
   padding: 4px 4px;
   border-radius: 4px;
   cursor: pointer;

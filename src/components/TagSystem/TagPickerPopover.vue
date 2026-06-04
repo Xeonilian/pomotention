@@ -32,7 +32,6 @@
         class="tag-picker-panel__search tag-picker-panel__search--quiet"
         @keydown="handleHostKeydown"
       />
-      <!-- 列表滚动统一在外层 + scrollbar-gutter，避免 internal/external 下滚动条与行宽错位 -->
       <div class="tag-picker-panel__list-shell">
         <TagSelector
           ref="tagSelectorRef"
@@ -199,8 +198,6 @@ onUnmounted(() => {
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
-  /* 与 __list-shell 同预留右侧槽位，否则 input 会对齐到滚动条外缘 */
-  scrollbar-gutter: stable;
 }
 
 .tag-picker-panel__search :deep(.n-input-wrapper) {
@@ -219,7 +216,6 @@ onUnmounted(() => {
   max-height: 240px;
   overflow-y: auto;
   overflow-x: hidden;
-  scrollbar-gutter: stable;
   width: 100%;
   min-width: 0;
   box-sizing: border-box;

@@ -25,57 +25,36 @@ const COUNT_AXIS_MIN = 8;
 const TOOLTIP_WIDTH_PX = 108;
 const TOOLTIP_GRID_STYLE =
   "display:grid;grid-template-columns:1fr 1fr;column-gap:8px;row-gap:2px;align-items:center;font-variant-numeric:tabular-nums;";
-const TOOLTIP_EMOJI_STYLE = "font-size:14px;line-height:1;";
+const TOOLTIP_EMOJI_GRID_STYLE =
+  "display:grid;grid-template-columns:1.4em auto;column-gap:6px;row-gap:6px;align-items:center;font-variant-numeric:tabular-nums;";
+const TOOLTIP_EMOJI_STYLE = "display:flex;justify-content:center;align-items:center;width:1.4em;font-size:14px;line-height:1;";
 
 function formatHours(minutes: number): string {
   return (minutes / 60).toFixed(1);
 }
 
 function formatTooltipEmojiCell(emoji: string, count: number): string {
-  return `<span style="display:inline-flex;align-items:center;gap:3px;white-space:nowrap;"><span style="${TOOLTIP_EMOJI_STYLE}">${emoji}</span><span>${count}</span></span>`;
+  return `<span style="${TOOLTIP_EMOJI_STYLE}">${emoji}</span><span>${count}</span>`;
 }
 
 type TooltipEmojiEntry = { emoji: string; count: number };
 
 function formatTooltipContent(
   dayLabel: string,
-  workMinutes: number,
-  breakMinutes: number,
   emojiEntries: TooltipEmojiEntry[],
   tagEntries: Array<{ name: string; minutes: number }>,
 ): string {
-  const hourCells = [
-    `<span>Work</span><span style="white-space:nowrap;">${formatHours(workMinutes)} h</span>`,
-    `<span>Break</span><span style="white-space:nowrap;">${formatHours(breakMinutes)} h</span>`,
-  ];
-
-  const emojiCells: string[] = [];
-  for (let i = 0; i < emojiEntries.length; i += 2) {
-    emojiCells.push(formatTooltipEmojiCell(emojiEntries[i].emoji, emojiEntries[i].count));
-    emojiCells.push(
-      emojiEntries[i + 1] ? formatTooltipEmojiCell(emojiEntries[i + 1].emoji, emojiEntries[i + 1].count) : "<span></span>",
-    );
-  }
-
-  const hoursBlock = `<div style="${TOOLTIP_GRID_STYLE}">${hourCells.join("")}</div>`;
-  const emojiBlock = emojiCells.length
-    ? `<div style="${TOOLTIP_GRID_STYLE}margin-top:6px;">${emojiCells.join("")}</div>`
-    : "";
+  const emojiCells = emojiEntries.map((entry) => formatTooltipEmojiCell(entry.emoji, entry.count));
+  const emojiBlock = emojiCells.length ? `<div style="${TOOLTIP_EMOJI_GRID_STYLE}margin-top:4px;">${emojiCells.join("")}</div>` : "";
 
   const tagCells = tagEntries
     .filter((t) => t.minutes > 0)
-    .map(
-      (t) =>
-        `<span>${t.name}</span><span style="white-space:nowrap;">${formatHours(t.minutes)} h</span>`,
-    );
-  const tagBlock = tagCells.length
-    ? `<div style="${TOOLTIP_GRID_STYLE}margin-top:6px;">${tagCells.join("")}</div>`
-    : "";
+    .map((t) => `<span>${t.name}</span><span style="white-space:nowrap;">${formatHours(t.minutes)} h</span>`);
+  const tagBlock = tagCells.length ? `<div style="${TOOLTIP_GRID_STYLE}margin-top:6px;">${tagCells.join("")}</div>` : "";
 
   return (
     `<div style="display:flex;flex-direction:column;gap:4px;line-height:1.3;margin:0;">` +
     `<strong>${dayLabel}</strong>` +
-    hoursBlock +
     emojiBlock +
     tagBlock +
     `</div>`
@@ -89,11 +68,7 @@ type TierLineDef = {
   counts: number[];
 };
 
-function buildTierLines(
-  weekDays: TimerWeekDayRow[],
-  emojis: TimerSessionEmojis,
-  statsInclude: TimerSessionStatsInclude,
-): TierLineDef[] {
+function buildTierLines(weekDays: TimerWeekDayRow[], emojis: TimerSessionEmojis, statsInclude: TimerSessionStatsInclude): TierLineDef[] {
   const pick = (fn: (t: TimerWeekDayRow["totals"]) => number) => weekDays.map((d) => fn(d.totals));
 
   const defs: TierLineDef[] = [
@@ -200,7 +175,7 @@ export function buildTimerWeekChartOption(
           minutes: s.minutesPerDay[idx] ?? 0,
         }));
 
-        return formatTooltipContent(day.label, day.totals.workMinutes, day.totals.breakMinutes, emojiEntries, tagEntries);
+        return formatTooltipContent(day.label, emojiEntries, tagEntries);
       },
     },
     xAxis: {

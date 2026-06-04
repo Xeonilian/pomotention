@@ -45,13 +45,15 @@
     <main class="timer-stats-body">
       <div class="timer-stats-inner">
         <div class="timer-stats-week-nav">
-          <n-button text size="small" @click="prevWeek">
-            <template #icon><n-icon :component="ChevronLeft24Filled" /></template>
-          </n-button>
-          <span class="timer-stats-week-label">{{ weekYear }} Week {{ weekNumber }}</span>
-          <n-button text size="small" :disabled="isCurrentWeek" @click="nextWeek">
-            <template #icon><n-icon :component="ChevronRight24Filled" /></template>
-          </n-button>
+          <div class="timer-stats-week-nav__center">
+            <n-button text size="small" @click="prevWeek">
+              <template #icon><n-icon :component="ChevronLeft24Filled" /></template>
+            </n-button>
+            <span class="timer-stats-week-label">{{ weekYear }} Week {{ weekNumber }}</span>
+            <n-button text size="small" :disabled="isCurrentWeek" @click="nextWeek">
+              <template #icon><n-icon :component="ChevronRight24Filled" /></template>
+            </n-button>
+          </div>
           <TimerTagFilterPopover />
         </div>
 
@@ -94,10 +96,7 @@
           </header>
           <dl class="timer-detail-dl">
             <dt>类型</dt>
-            <dd>
-              {{ categoryLabel(selectedSession.category) }} {{ selectedSession.plannedDurationMin }} 分钟
-              {{ sessionEmoji(selectedSession) }}
-            </dd>
+            <dd>{{ categoryLabel(selectedSession.category) }} - {{ selectedSession.plannedDurationMin }} 分钟</dd>
             <dt>执行意图</dt>
             <dd>{{ selectedSession.stateMessage || "—" }}</dd>
             <template v-if="detailTagNames">
@@ -313,17 +312,24 @@ function sessionTitle(s: TimerSessionRecord): string | undefined {
 }
 
 .timer-stats-week-nav {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  min-height: 24px;
+  margin-bottom: 0px;
+  font-size: 13px;
+}
+
+.timer-stats-week-nav__center {
+  grid-column: 2;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 8px;
-  font-size: 13px;
-  flex-wrap: wrap;
+  gap: 12px;
 }
 
 .timer-stats-week-nav .timer-tag-filter__trigger {
-  margin-left: auto;
+  grid-column: 3;
+  justify-self: end;
 }
 
 .timer-stats-week-label {
