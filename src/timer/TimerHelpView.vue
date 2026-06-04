@@ -148,26 +148,30 @@
             </ul>
             <ul v-else-if="section.id === 'settings'">
               <li>工作 / 休息默认时长、深色模式、正计时、分段提示音、白噪音开关与音轨。</li>
-              <li>双击关闭背景动画，单击改变颜色。</li>
+              <li>双击切换背景动画（无→点→雪花→星星→彩虹），单击改变动画颜色。</li>
             </ul>
 
             <ul v-else-if="section.id === 'sound'">
               <li>开始 / 结束工作、开始 / 结束休息时的提示始终保留。</li>
               <li>「分段提示音」关闭后，不再播放工作阶段切换与休息进度中间的提示。</li>
-              <li>开启时：</li>
+              <li>工作时提示时机：</li>
               <li class="timer-help-indent">
-                工作时在开始后
+                开始后
                 <code>2 min review</code>
-                ，结束前
-                <code>2 min review</code>
-                ，结束前
-                <code>1 min track</code>
-                ，以及剩余时长的中间节点提示。
               </li>
               <li class="timer-help-indent">
-                休息中按进度分段
+                结束前
+                <code>2 min review</code>
+              </li>
+              <li class="timer-help-indent">
+                结束前
+                <code>1 min track</code>
+              </li>
+              <li class="timer-help-indent">剩余时长的中间点</li>
+              <li>
+                休息提示时机：每间隔
                 <code>1 min</code>
-                间隔提示。
+                提示。
               </li>
             </ul>
 
@@ -485,7 +489,8 @@ function goBack() {
   font-size: 12px;
   padding: 2px 4px;
   border-radius: 3px;
-  background: var(--color-blue-light, #f0f0f0);
+  background: var(--color-background-dark);
+  color: var(--color-text-primary);
   font-family: "Consolas", "Monaco", "Courier New", monospace;
 }
 </style>

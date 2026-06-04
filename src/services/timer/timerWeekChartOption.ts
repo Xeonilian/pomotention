@@ -26,7 +26,7 @@ const TOOLTIP_WIDTH_PX = 108;
 const TOOLTIP_GRID_STYLE =
   "display:grid;grid-template-columns:1fr 1fr;column-gap:8px;row-gap:2px;align-items:center;font-variant-numeric:tabular-nums;";
 const TOOLTIP_EMOJI_GRID_STYLE =
-  "display:grid;grid-template-columns:1.4em auto;column-gap:6px;row-gap:6px;align-items:center;font-variant-numeric:tabular-nums;";
+  "display:grid;grid-template-columns:1.4em auto;column-gap:40px;row-gap:6px;align-items:center;font-variant-numeric:tabular-nums;";
 const TOOLTIP_EMOJI_STYLE = "display:flex;justify-content:center;align-items:center;width:1.4em;font-size:14px;line-height:1;";
 
 function formatHours(minutes: number): string {

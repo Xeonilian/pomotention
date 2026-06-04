@@ -6,7 +6,7 @@ import { statsDurationMinutesOf } from "@/services/timer/timerSessionClassifier"
 export const TIMER_UNTAGGED_TAG_ID = 0;
 
 const UNTAGGED_LABEL = "-";
-const UNTAGGED_COLOR = "#adb5bd";
+const UNTAGGED_COLOR = "#8e969c";
 
 export type TimerWeekTagStackSeries = {
   tagId: number;
