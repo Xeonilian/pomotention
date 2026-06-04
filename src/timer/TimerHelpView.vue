@@ -24,8 +24,24 @@
       <div class="timer-help-inner">
         <aside class="timer-help-feedback" aria-label="测试反馈">
           <div class="timer-help-logos">
-            <img :src="timerLogoSrc" alt="Pomotention Timer" class="timer-help-logo" width="80" height="80" />
-            <img :src="pomotentionLogoSrc" alt="Pomotention" class="timer-help-logo" width="80" height="80" />
+            <a
+              :href="feedbackLinks.timerAppUrl"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="timer-help-logo-link"
+              title="Pomotention Timer 网页应用"
+            >
+              <img :src="timerLogoSrc" alt="Pomotention Timer" class="timer-help-logo" width="80" height="80" />
+            </a>
+            <a
+              :href="feedbackLinks.fullAppUrl"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="timer-help-logo-link"
+              title="Pomotention 完整网页应用"
+            >
+              <img :src="pomotentionLogoSrc" alt="Pomotention" class="timer-help-logo" width="80" height="80" />
+            </a>
           </div>
           <p class="timer-help-feedback-title">
             Pomotention Timer
@@ -34,8 +50,8 @@
           </p>
           <ul class="timer-help-feedback-list">
             <li>
-              <span class="timer-help-feedback-label">完整应用</span>
-              <a :href="feedbackLinks.fullAppUrl" target="_blank" rel="noopener noreferrer">{{ feedbackLinks.fullAppUrl }}</a>
+              <span class="timer-help-feedback-label">开发主页</span>
+              <a :href="feedbackLinks.repoUrl" target="_blank" rel="noopener noreferrer">{{ feedbackLinks.repoUrl }}</a>
               <span class="timer-help-feedback-note"></span>
             </li>
             <li>
@@ -233,7 +249,9 @@ const router = useRouter();
 
 /** 测试反馈入口；飞书链接与邮箱确定后替换占位 */
 const feedbackLinks = {
+  timerAppUrl: "https://pomotention-timer.pages.dev",
   fullAppUrl: "https://pomotention.pages.dev",
+  repoUrl: "https://github.com/Xeonilian/pomotention",
   feishuTestUrl: "https://qmpjqw3i0b.feishu.cn/share/base/form/shrcnvbQBlzupehvp0cQNh0qwge",
   contactEmail: "pomotention@163.com",
 } as const;
@@ -357,6 +375,16 @@ function goBack() {
   justify-content: center;
   gap: 20px;
   margin-bottom: 12px;
+}
+
+.timer-help-logo-link {
+  display: inline-flex;
+  border-radius: 8px;
+  transition: opacity 0.15s ease;
+}
+
+.timer-help-logo-link:hover {
+  opacity: 0.85;
 }
 
 .timer-help-logo {
