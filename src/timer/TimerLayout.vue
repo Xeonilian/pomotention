@@ -7,6 +7,17 @@
       <n-layout-header class="app-layout__header" :class="{ 'app-layout__header--hidden': isMiniMode }">
         <div class="app-layout__header-content app-layout__header-content--timer">
           <div class="app-layout__view-controls">
+            <n-button
+              text
+              type="default"
+              :title="settingStore.settings.darkMode ? '切换浅色模式' : '切换深色模式'"
+              class="header-button"
+              @click="toggleDarkMode"
+            >
+              <template #icon>
+                <n-icon :component="settingStore.settings.darkMode ? WeatherSunny24Filled : WeatherSunny24Regular" />
+              </template>
+            </n-button>
             <n-button v-if="isTauriDesktop" text type="default" title="番茄时钟置顶" class="header-button" @click="handlePinClick">
               <template #icon>
                 <n-icon :component="Pin24Regular" />
@@ -71,13 +82,22 @@ import { computed, ref } from "vue";
 import { useRouter } from "vue-router";
 import { NLayout, NLayoutHeader, NLayoutContent, NButton, NIcon } from "naive-ui";
 import { isTauri } from "@tauri-apps/api/core";
-import { DataArea24Regular, Pin24Regular, QuestionCircle24Regular, Settings24Regular } from "@vicons/fluent";
+import {
+  DataArea24Regular,
+  Pin24Regular,
+  QuestionCircle24Regular,
+  Settings24Regular,
+  WeatherSunny24Filled,
+  WeatherSunny24Regular,
+} from "@vicons/fluent";
 import PomotentionTimer from "@/components/PomotentionTimer/PomotentionTimer.vue";
+import { useSettingStore } from "@/stores/useSettingStore";
 import { useAppWindow } from "@/composables/layout/useAppWindow";
 import { useDevice } from "@/composables/platform/useDevice";
 import { useTimerBackgroundAnimation } from "@/background";
 
 const router = useRouter();
+const settingStore = useSettingStore();
 const { isMobile } = useDevice();
 const isTauriDesktop = isTauri();
 
@@ -120,6 +140,10 @@ function onContentDoubleClick(event: MouseEvent) {
 
 function handlePinClick() {
   void handleToggleOntopMode(reportedPomodoroWidth.value, reportedPomodoroHeight.value);
+}
+
+function toggleDarkMode() {
+  settingStore.settings.darkMode = !settingStore.settings.darkMode;
 }
 
 function openSettings() {
