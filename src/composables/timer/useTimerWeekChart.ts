@@ -23,6 +23,7 @@ export function useTimerWeekChart(
   weekDays: WeekDaysSource,
   emojis: EmojisSource,
   statsInclude: StatsIncludeSource,
+  untaggedColor: Ref<string> | ComputedRef<string> | (() => string),
 ) {
   const chartInstance = shallowRef<ECharts>();
   const tagStore = useTagStore();
@@ -32,8 +33,9 @@ export function useTimerWeekChart(
     const days = unref(weekDays);
     const emojiRules = unref(emojis);
     const include = unref(statsInclude);
+    const untagged = typeof untaggedColor === "function" ? untaggedColor() : unref(untaggedColor);
     chartInstance.value.setOption(
-      buildTimerWeekChartOption(days, emojiRules, include, (id) => tagStore.getTag(id)),
+      buildTimerWeekChartOption(days, emojiRules, include, (id) => tagStore.getTag(id), untagged),
       { notMerge: true },
     );
   }
@@ -69,7 +71,16 @@ export function useTimerWeekChart(
     chartInstance.value = undefined;
   });
 
-  watch([() => unref(weekDays), () => unref(emojis), () => unref(statsInclude)], render, { deep: true });
+  watch(
+    [
+      () => unref(weekDays),
+      () => unref(emojis),
+      () => unref(statsInclude),
+      () => (typeof untaggedColor === "function" ? untaggedColor() : unref(untaggedColor)),
+    ],
+    render,
+    { deep: true },
+  );
 
   watch(chartRef, (el) => {
     if (el) init();

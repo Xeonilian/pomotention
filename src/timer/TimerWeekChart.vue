@@ -12,10 +12,11 @@ const props = defineProps<{
   weekDays: TimerWeekDayRow[];
   emojis: TimerSessionEmojis;
   statsInclude: TimerSessionStatsInclude;
+  untaggedColor: string;
 }>();
 
 const chartRef = ref<HTMLElement>();
-useTimerWeekChart(chartRef, toRef(props, "weekDays"), toRef(props, "emojis"), toRef(props, "statsInclude"));
+useTimerWeekChart(chartRef, toRef(props, "weekDays"), toRef(props, "emojis"), toRef(props, "statsInclude"), toRef(props, "untaggedColor"));
 </script>
 
 <style scoped>

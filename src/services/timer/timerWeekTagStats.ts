@@ -23,8 +23,8 @@ function firstTagId(tagIds: number[] | undefined): number {
   return ids.length > 0 ? ids[0]! : TIMER_UNTAGGED_TAG_ID;
 }
 
-function resolveTagColor(tag: Tag | undefined): string {
-  if (!tag) return UNTAGGED_COLOR;
+function resolveTagColor(tag: Tag | undefined, untaggedColor: string): string {
+  if (!tag) return untaggedColor;
   return tag.backgroundColor || tag.color || UNTAGGED_COLOR;
 }
 
@@ -37,6 +37,7 @@ export function buildTimerWeekTagStacks(
   weekDays: TimerWeekDayRow[],
   getTag: (id: number) => Tag | undefined,
   countAxisMax: number,
+  untaggedColor: string,
 ): TimerWeekTagStackSeries[] {
   const dayCount = weekDays.length;
   const minutesByTag = new Map<number, number[]>();
@@ -85,7 +86,7 @@ export function buildTimerWeekTagStacks(
     series.push({
       tagId,
       name: resolveTagName(tagId, getTag),
-      color: resolveTagColor(tagId === TIMER_UNTAGGED_TAG_ID ? undefined : getTag(tagId)),
+      color: resolveTagColor(tagId === TIMER_UNTAGGED_TAG_ID ? undefined : getTag(tagId), untaggedColor),
       scaledValues,
       minutesPerDay,
     });

@@ -121,11 +121,12 @@ export function buildTimerWeekChartOption(
   emojis: TimerSessionEmojis,
   statsInclude: TimerSessionStatsInclude,
   getTag: (id: number) => Tag | undefined,
+  untaggedColor: string,
 ): ChartOption {
   const xLabels = weekDays.map((d) => d.label);
   const tierLines = buildTierLines(weekDays, emojis, statsInclude);
   const countAxisMax = Math.max(COUNT_AXIS_MIN, weekMaxTierCount(tierLines));
-  const tagStacks = buildTimerWeekTagStacks(weekDays, getTag, countAxisMax);
+  const tagStacks = buildTimerWeekTagStacks(weekDays, getTag, countAxisMax, untaggedColor);
 
   const lineSeries: LineSeriesOption[] = tierLines.map((tier) => ({
     name: tier.emoji,

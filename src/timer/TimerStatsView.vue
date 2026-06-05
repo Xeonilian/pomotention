@@ -57,7 +57,12 @@
           <TimerTagFilterPopover />
         </div>
 
-        <TimerWeekChart :week-days="weekDays" :emojis="emojis" :stats-include="statsInclude" />
+        <TimerWeekChart
+          :week-days="weekDays"
+          :emojis="emojis"
+          :stats-include="statsInclude"
+          :untagged-color="untaggedChartColor"
+        />
 
         <div v-for="day in weekDays" :key="day.key" class="timer-stats-day" :class="{ 'timer-stats-day--today': day.isToday }">
           <div class="timer-stats-day-content">
@@ -167,6 +172,13 @@ const selectedSession = ref<TimerSessionRecord | null>(null);
 
 const emojis = computed(() => sessionStore.rules.emojis);
 const statsInclude = computed(() => sessionStore.rules.statsInclude);
+
+const untaggedChartColor = computed(() => {
+  void settingStore.settings.darkMode;
+  return (
+    getComputedStyle(document.documentElement).getPropertyValue("--color-background-light-light").trim() || "#f5f5f5"
+  );
+});
 
 const detailTitle = computed(() => {
   const s = selectedSession.value;
