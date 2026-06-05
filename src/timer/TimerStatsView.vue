@@ -45,6 +45,9 @@
     <main class="timer-stats-body">
       <div class="timer-stats-inner">
         <div class="timer-stats-week-nav">
+          <span class="timer-stats-tomato-summary timer-stats-mono" :title="`本周 ${weekTomatoCount} / 总计 ${totalTomatoCount}`">
+            🍅 {{ weekTomatoCount }} / {{ totalTomatoCount }}
+          </span>
           <div class="timer-stats-week-nav__center">
             <n-button text size="small" @click="prevWeek">
               <template #icon><n-icon :component="ChevronLeft24Filled" /></template>
@@ -60,20 +63,27 @@
         <TimerWeekChart
           :week-days="weekDays"
           :emojis="emojis"
-          :stats-include="statsInclude"
+          :daily-tomato-counts="dailyTomatoCounts"
           :untagged-color="untaggedChartColor"
         />
 
         <div v-for="day in weekDays" :key="day.key" class="timer-stats-day" :class="{ 'timer-stats-day--today': day.isToday }">
           <div class="timer-stats-day-content">
-            <div class="timer-stats-day-label timer-stats-mono">
-              <span class="timer-stats-dow">{{ day.dateLabel }}</span>
-              <span class="timer-stats-dom">{{ day.label }}</span>
-            </div>
-            <div class="timer-stats-day-totals">
-              <span>W {{ (day.totals.workMinutes / 60).toFixed(1) }} h</span>
-              <span>B {{ (day.totals.breakMinutes / 60).toFixed(1) }} h</span>
-            </div>
+            <n-tooltip trigger="hover" placement="top" raw :disabled="!dayTierEntries(day).length">
+              <template #trigger>
+                <div class="timer-stats-day-label timer-stats-mono">
+                  <span class="timer-stats-dow">{{ day.dateLabel }}</span>
+                  <span class="timer-stats-dom">{{ day.label }}</span>
+                </div>
+              </template>
+              <div class="timer-stats-tip-panel timer-day-tier-tooltip timer-stats-mono">
+                <template v-for="entry in dayTierEntries(day)" :key="entry.emoji">
+                  <span class="timer-day-tier-tooltip__emoji">{{ entry.emoji }}</span>
+                  <span class="timer-day-tier-tooltip__count">{{ entry.count }}</span>
+                </template>
+              </div>
+            </n-tooltip>
+            <TimerDayWorkBreakBar :work-minutes="day.totals.workMinutes" :break-minutes="day.totals.breakMinutes" />
           </div>
           <div class="timer-stats-emojis">
             <button
@@ -133,7 +143,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import { useRouter } from "vue-router";
-import { NButton, NIcon, NPopconfirm } from "naive-ui";
+import { NButton, NIcon, NPopconfirm, NTooltip } from "naive-ui";
 import {
   ArrowDownload24Regular,
   ArrowLeft24Regular,
@@ -148,9 +158,11 @@ import { useTimerWeekStats } from "@/composables/timer/useTimerWeekStats";
 import { useTimerSessionStore } from "@/stores/useTimerSessionStore";
 import type { TimerSessionRecord, TimerSessionCategory } from "@/core/types/TimerSession";
 import { formatDurationMs, formatTimerSessionEndReason, resolveSessionDisplayEmoji } from "@/services/timer/timerSessionClassifier";
-import { getISOWeekYearAndNumber, getMondayOfWeekContaining, shiftWeekMonday } from "@/services/timer/timerWeekUtils";
+import { buildDayTierTooltipEntries } from "@/services/timer/timerDayTierTooltip";
+import { getISOWeekYearAndNumber, getMondayOfWeekContaining, shiftWeekMonday, type TimerWeekDayRow } from "@/services/timer/timerWeekUtils";
 import TimerSessionRulesDialog from "./TimerSessionRulesDialog.vue";
 import TimerWeekChart from "./TimerWeekChart.vue";
+import TimerDayWorkBreakBar from "./TimerDayWorkBreakBar.vue";
 import TimerTagFilterPopover from "./TimerTagFilterPopover.vue";
 import { exportTimerSessionsCsv } from "@/services/timer/timerSessionExport";
 import { useTagStore } from "@/stores/useTagStore";
@@ -164,7 +176,8 @@ const settingStore = useSettingStore();
 const showTagManager = ref(false);
 
 const weekMonday = ref(getMondayOfWeekContaining(new Date()));
-const { weekDays, weekYear, weekNumber, weekSessions, isCurrentWeek } = useTimerWeekStats(weekMonday);
+const { weekDays, weekYear, weekNumber, weekSessions, isCurrentWeek, dailyTomatoCounts, weekTomatoCount, totalTomatoCount } =
+  useTimerWeekStats(weekMonday);
 
 const showRules = ref(false);
 const showDetail = ref(false);
@@ -172,6 +185,10 @@ const selectedSession = ref<TimerSessionRecord | null>(null);
 
 const emojis = computed(() => sessionStore.rules.emojis);
 const statsInclude = computed(() => sessionStore.rules.statsInclude);
+
+function dayTierEntries(day: TimerWeekDayRow) {
+  return buildDayTierTooltipEntries(day.totals, emojis.value, statsInclude.value);
+}
 
 const untaggedChartColor = computed(() => {
   void settingStore.settings.darkMode;
@@ -344,6 +361,14 @@ function sessionTitle(s: TimerSessionRecord): string | undefined {
   justify-self: end;
 }
 
+.timer-stats-tomato-summary {
+  grid-column: 1;
+  justify-self: start;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 .timer-stats-week-label {
   font-weight: 600;
   font-variant-numeric: tabular-nums;
@@ -365,7 +390,7 @@ function sessionTitle(s: TimerSessionRecord): string | undefined {
 
 .timer-stats-day-content {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 8px;
   margin-bottom: 4px;
@@ -376,6 +401,28 @@ function sessionTitle(s: TimerSessionRecord): string | undefined {
   align-items: baseline;
   gap: 8px;
   font-size: 13px;
+  cursor: default;
+}
+
+.timer-day-tier-tooltip {
+  display: grid;
+  grid-template-columns: 1.4em auto;
+  column-gap: 12px;
+  row-gap: 2px;
+  font-size: 11px;
+  line-height: 1.35;
+  font-variant-numeric: tabular-nums;
+}
+
+.timer-day-tier-tooltip__emoji {
+  display: flex;
+  justify-content: center;
+  font-size: 13px;
+  line-height: 1;
+}
+
+.timer-day-tier-tooltip__count {
+  text-align: right;
 }
 
 .timer-stats-dow {
@@ -420,16 +467,6 @@ function sessionTitle(s: TimerSessionRecord): string | undefined {
   font-size: 13px;
   line-height: 20px;
   color: var(--n-text-color-3);
-}
-
-.timer-stats-day-totals {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 8px;
-  font-size: 12px;
-  color: var(--color-text-secondary, var(--n-text-color-3));
-  font-variant-numeric: tabular-nums;
 }
 
 .timer-detail-dl {
@@ -495,5 +532,14 @@ function sessionTitle(s: TimerSessionRecord): string | undefined {
   padding: 0 4px;
   cursor: pointer;
   color: var(--color-text-secondary, #888);
+}
+
+/* 统计 hover：统一白底深字（深浅模式一致） */
+.timer-stats-tip-panel {
+  background: #ffffff;
+  color: #333639;
+  padding: 6px 8px;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
 }
 </style>

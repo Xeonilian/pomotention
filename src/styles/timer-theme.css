@@ -31,3 +31,12 @@ html.timer-dark .pomodoro-timer .duration-display.n-button {
   --n-border-focus: none !important;
   --n-border-disabled: none !important;
 }
+
+/* 统计 work/break 条：深色下用饱和色 */
+html.timer-dark .timer-wb-bar__work {
+  background: var(--color-red);
+}
+
+html.timer-dark .timer-wb-bar__break {
+  background: var(--color-blue);
+}

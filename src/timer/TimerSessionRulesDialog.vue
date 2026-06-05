@@ -44,6 +44,8 @@
         </li>
       </ul>
 
+      <p class="timer-rules-hint">取消勾选某档不会作废记录，会合并到下一档 emoji 展示。每条 ≥ 短工作下限的有效工作均计 1 个番茄。</p>
+
       <n-button class="timer-rules-reset" size="small" @click="onReset">恢复默认</n-button>
     </div>
   </n-modal>
@@ -278,9 +280,16 @@ function onReset() {
   font-weight: 600;
 }
 
+.timer-rules-hint {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--color-text-secondary, var(--n-text-color-3));
+}
+
 .timer-rules-reset {
   align-self: flex;
-  margin-top: 2px;
+  margin-top: 8px;
 }
 </style>
 

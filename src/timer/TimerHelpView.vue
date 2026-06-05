@@ -450,7 +450,7 @@ function goBack() {
 }
 
 .timer-help-section + .timer-help-section {
-  margin-top: 14px;
+  margin-top: 10px;
 }
 
 .timer-help-section-head {

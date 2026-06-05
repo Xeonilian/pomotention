@@ -72,10 +72,21 @@ export function formatTimerSessionEndReason(session: Pick<TimerSessionRecord, "e
   return "自然结束";
 }
 
-/** 统计用：≥ 第二档工作时长计为番茄数 */
+/** 统计用：有效工作段计 1 个番茄（≥ 短工作下限，不含 Squash / void） */
 export function isTomatoWorkSession(
   session: { category: TimerSessionCategory; durationMs: number; statsDurationMin?: number },
   rules: TimerSessionRules,
 ): boolean {
-  return session.category === "work" && statsDurationMinutesOf(session) >= rules.workTier2Min;
+  return session.category === "work" && statsDurationMinutesOf(session) >= rules.workTier1Min;
+}
+
+export function countEffectiveTomatoes(
+  sessions: ReadonlyArray<{ category: TimerSessionCategory; durationMs: number; statsDurationMin?: number }>,
+  rules: TimerSessionRules,
+): number {
+  let count = 0;
+  for (const session of sessions) {
+    if (isTomatoWorkSession(session, rules)) count += 1;
+  }
+  return count;
 }

@@ -1,5 +1,6 @@
 import { computed, type ComputedRef, type Ref } from "vue";
 import type { TimerSessionRecord } from "@/core/types/TimerSession";
+import { countEffectiveTomatoes } from "@/services/timer/timerSessionClassifier";
 import { useTimerSessionStore } from "@/stores/useTimerSessionStore";
 import {
   buildWeekDayRows,
@@ -18,26 +19,46 @@ export function useTimerWeekStats(weekMonday: Ref<Date>): {
   weekTotals: ComputedRef<TimerDayTotals>;
   weekSessions: ComputedRef<TimerSessionRecord[]>;
   isCurrentWeek: ComputedRef<boolean>;
+  dailyTomatoCounts: ComputedRef<number[]>;
+  weekTomatoCount: ComputedRef<number>;
+  totalTomatoCount: ComputedRef<number>;
 } {
   const store = useTimerSessionStore();
 
-  const weekSessions = computed(() => {
-    const inWeek = sessionsInWeek(store.sessions, weekMonday.value);
-    return store.filterSessionsForStats(inWeek);
-  });
+  const weekSessionsAll = computed(() => sessionsInWeek(store.sessions, weekMonday.value));
+
+  const weekSessions = computed(() => store.filterSessionsForStats(weekSessionsAll.value));
 
   const weekDays = computed(() => buildWeekDayRows(weekMonday.value, weekSessions.value, store.rules));
+
+  const weekDaysAll = computed(() => buildWeekDayRows(weekMonday.value, weekSessionsAll.value, store.rules));
+
+  const dailyTomatoCounts = computed(() => weekDaysAll.value.map((day) => day.totals.tomatoCount));
+
+  const weekTomatoCount = computed(() => dailyTomatoCounts.value.reduce((sum, count) => sum + count, 0));
+
+  const totalTomatoCount = computed(() => countEffectiveTomatoes(store.sessions, store.rules));
 
   const weekMeta = computed(() => getISOWeekYearAndNumber(weekMonday.value));
 
   const weekYear = computed(() => weekMeta.value.year);
   const weekNumber = computed(() => weekMeta.value.week);
 
-  const weekTotals = computed(() => computeDayTotals(weekSessions.value, store.rules));
+  const weekTotals = computed(() => computeDayTotals(weekSessionsAll.value, store.rules));
 
   const isCurrentWeek = computed(() => {
     return getMondayOfWeekContaining(new Date()).getTime() === getMondayOfWeekContaining(weekMonday.value).getTime();
   });
 
-  return { weekDays, weekYear, weekNumber, weekTotals, weekSessions, isCurrentWeek };
+  return {
+    weekDays,
+    weekYear,
+    weekNumber,
+    weekTotals,
+    weekSessions,
+    isCurrentWeek,
+    dailyTomatoCounts,
+    weekTomatoCount,
+    totalTomatoCount,
+  };
 }

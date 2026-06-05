@@ -4,7 +4,7 @@ import { LineChart, BarChart } from "echarts/charts";
 import { TooltipComponent, GridComponent } from "echarts/components";
 import { CanvasRenderer } from "echarts/renderers";
 import type { ECharts } from "echarts/core";
-import type { TimerSessionEmojis, TimerSessionStatsInclude } from "@/core/types/TimerSession";
+import type { TimerSessionEmojis } from "@/core/types/TimerSession";
 import type { TimerWeekDayRow } from "@/services/timer/timerWeekUtils";
 import { buildTimerWeekChartOption } from "@/services/timer/timerWeekChartOption";
 import { useTagStore } from "@/stores/useTagStore";
@@ -13,16 +13,13 @@ echarts.use([LineChart, BarChart, TooltipComponent, GridComponent, CanvasRendere
 
 type WeekDaysSource = TimerWeekDayRow[] | Ref<TimerWeekDayRow[]> | ComputedRef<TimerWeekDayRow[]>;
 type EmojisSource = TimerSessionEmojis | Ref<TimerSessionEmojis> | ComputedRef<TimerSessionEmojis>;
-type StatsIncludeSource =
-  | TimerSessionStatsInclude
-  | Ref<TimerSessionStatsInclude>
-  | ComputedRef<TimerSessionStatsInclude>;
+type DailyTomatoSource = number[] | Ref<number[]> | ComputedRef<number[]>;
 
 export function useTimerWeekChart(
   chartRef: Ref<HTMLElement | undefined>,
   weekDays: WeekDaysSource,
   emojis: EmojisSource,
-  statsInclude: StatsIncludeSource,
+  dailyTomatoCounts: DailyTomatoSource,
   untaggedColor: Ref<string> | ComputedRef<string> | (() => string),
 ) {
   const chartInstance = shallowRef<ECharts>();
@@ -32,10 +29,10 @@ export function useTimerWeekChart(
     if (!chartInstance.value) return;
     const days = unref(weekDays);
     const emojiRules = unref(emojis);
-    const include = unref(statsInclude);
+    const tomatoCounts = unref(dailyTomatoCounts);
     const untagged = typeof untaggedColor === "function" ? untaggedColor() : unref(untaggedColor);
     chartInstance.value.setOption(
-      buildTimerWeekChartOption(days, emojiRules, include, (id) => tagStore.getTag(id), untagged),
+      buildTimerWeekChartOption(days, emojiRules, tomatoCounts, (id) => tagStore.getTag(id), untagged),
       { notMerge: true },
     );
   }
@@ -75,7 +72,7 @@ export function useTimerWeekChart(
     [
       () => unref(weekDays),
       () => unref(emojis),
-      () => unref(statsInclude),
+      () => unref(dailyTomatoCounts),
       () => (typeof untaggedColor === "function" ? untaggedColor() : unref(untaggedColor)),
     ],
     render,
