@@ -51,7 +51,7 @@
           <ul class="timer-help-feedback-list">
             <li>
               <span class="timer-help-feedback-label">开发主页</span>
-              <a :href="feedbackLinks.repoUrl" target="_blank" rel="noopener noreferrer">{{ feedbackLinks.repoUrl }}</a>
+              <a :href="feedbackLinks.repoUrl" target="_blank" rel="noopener noreferrer">Xeonilian@github</a>
               <span class="timer-help-feedback-note"></span>
             </li>
             <li>
