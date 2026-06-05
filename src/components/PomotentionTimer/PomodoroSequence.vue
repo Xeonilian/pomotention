@@ -32,6 +32,7 @@
         </template>
       </n-button>
       <n-popover
+        v-model:show="showWhiteNoisePopover"
         trigger="click"
         placement="top"
         :show-arrow="false"
@@ -54,17 +55,38 @@
 
         <!-- Popover 的内容：垂直排列的按钮 -->
         <div class="popover-actions">
-          <n-button secondary circle type="info" size="small" title="雨声" @click="resetWhiteNoise(SoundType.WHITE_NOISE_RAIN)">
+          <n-button
+            secondary
+            circle
+            :type="soundType === SoundType.WHITE_NOISE_RAIN ? 'info' : 'default'"
+            size="small"
+            title="雨声"
+            @click="resetWhiteNoise(SoundType.WHITE_NOISE_RAIN)"
+          >
             <template #icon>
               <n-icon><WeatherThunderstorm20Regular /></n-icon>
             </template>
           </n-button>
-          <n-button secondary type="info" circle size="small" title="滴答声" @click="resetWhiteNoise(SoundType.WORK_TICK)">
+          <n-button
+            secondary
+            circle
+            :type="soundType === SoundType.WORK_TICK ? 'info' : 'default'"
+            size="small"
+            title="滴答声"
+            @click="resetWhiteNoise(SoundType.WORK_TICK)"
+          >
             <template #icon>
-              <n-icon><ClockAlarm24Regular /></n-icon>
+              <n-icon><ClockAlarm20Regular /></n-icon>
             </template>
           </n-button>
-          <n-button secondary type="info" circle size="small" title="鸟鸣海声" @click="resetWhiteNoise(SoundType.WHITE_NOISE_BIRD_SEA)">
+          <n-button
+            secondary
+            circle
+            :type="soundType === SoundType.WHITE_NOISE_BIRD_SEA ? 'info' : 'default'"
+            size="small"
+            title="鸟鸣海声"
+            @click="resetWhiteNoise(SoundType.WHITE_NOISE_BIRD_SEA)"
+          >
             <template #icon>
               <n-icon><Icons20Regular /></n-icon>
             </template>
@@ -104,7 +126,7 @@ import {
   Play24Regular,
   Stop20Filled,
   WeatherThunderstorm20Regular,
-  ClockAlarm24Regular,
+  ClockAlarm20Regular,
   MusicNote124Filled,
   Icons20Regular,
 } from "@vicons/fluent";
@@ -167,6 +189,9 @@ const isWhiteNoiseEnabled = computed({
     settingStore.settings.isWhiteNoiseEnabled = val;
   },
 });
+const soundType = computed(() => settingStore.settings.whiteNoiseSoundTrack);
+const showWhiteNoisePopover = ref(false);
+let whiteNoisePopoverCloseTimer: ReturnType<typeof setTimeout> | null = null;
 
 // 添加进度监听
 watch(
@@ -608,7 +633,21 @@ onMounted(() => {
 
 onUnmounted(() => {
   timerStore.registerSequenceContinuation(null);
+  if (whiteNoisePopoverCloseTimer != null) {
+    clearTimeout(whiteNoisePopoverCloseTimer);
+    whiteNoisePopoverCloseTimer = null;
+  }
 });
+
+function scheduleWhiteNoisePopoverClose(): void {
+  if (whiteNoisePopoverCloseTimer != null) {
+    clearTimeout(whiteNoisePopoverCloseTimer);
+  }
+  whiteNoisePopoverCloseTimer = setTimeout(() => {
+    showWhiteNoisePopover.value = false;
+    whiteNoisePopoverCloseTimer = null;
+  }, 3000);
+}
 
 function resetWhiteNoise(sound: SoundType) {
   settingStore.settings.whiteNoiseSoundTrack = sound;
@@ -616,6 +655,7 @@ function resetWhiteNoise(sound: SoundType) {
     stopWhiteNoise();
     startWhiteNoise();
   }
+  scheduleWhiteNoisePopoverClose();
 }
 </script>
 
