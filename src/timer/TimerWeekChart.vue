@@ -28,8 +28,8 @@ useTimerWeekChart(
 <style scoped>
 .timer-week-chart {
   width: 100%;
-  height: 161px;
-  margin-bottom: 6px;
-  margin-top: 8px;
+  height: 180px;
+  margin-bottom: 4px;
+  margin-top: 4px;
 }
 </style>

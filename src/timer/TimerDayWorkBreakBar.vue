@@ -75,13 +75,13 @@ function formatWorkBreakRatio(workMinutes: number, breakMinutes: number): string
 .timer-wb-bar__work {
   flex-shrink: 0;
   min-width: 0;
-  background: var(--color-red);
+  background: var(--color-red-light);
 }
 
 .timer-wb-bar__break {
   flex-shrink: 0;
   min-width: 0;
-  background: var(--color-blue);
+  background: var(--color-blue-light);
 }
 
 .timer-wb-bar__tooltip {

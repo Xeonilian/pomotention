@@ -46,7 +46,7 @@
       <div class="timer-stats-inner">
         <div class="timer-stats-week-nav">
           <span class="timer-stats-tomato-summary timer-stats-mono" :title="`本周 ${weekTomatoCount} / 总计 ${totalTomatoCount}`">
-            🍅 {{ weekTomatoCount }} / {{ totalTomatoCount }}
+            🍅 {{ weekTomatoCount }}/{{ totalTomatoCount }}
           </span>
           <div class="timer-stats-week-nav__center">
             <n-button text size="small" @click="prevWeek">
@@ -192,9 +192,7 @@ function dayTierEntries(day: TimerWeekDayRow) {
 
 const untaggedChartColor = computed(() => {
   void settingStore.settings.darkMode;
-  return (
-    getComputedStyle(document.documentElement).getPropertyValue("--color-background-light-light").trim() || "#f5f5f5"
-  );
+  return getComputedStyle(document.documentElement).getPropertyValue("--color-background-light-light").trim() || "#f5f5f5";
 });
 
 const detailTitle = computed(() => {
@@ -338,6 +336,7 @@ function sessionTitle(s: TimerSessionRecord): string | undefined {
   width: 100%;
   max-width: min(480px, 100%);
   margin: 0 auto;
+  height: 100%;
 }
 
 .timer-stats-week-nav {

@@ -125,7 +125,7 @@ export function buildTimerWeekChartOption(
       extraCssText:
         `width:${TOOLTIP_WIDTH_PX}px;min-width:${TOOLTIP_WIDTH_PX}px;max-width:${TOOLTIP_WIDTH_PX}px;` +
         "white-space:normal;box-sizing:border-box;" +
-        "font-family:ui-monospace,\"Cascadia Code\",Consolas,monospace;" +
+        'font-family:ui-monospace,"Cascadia Code",Consolas,monospace;' +
         "background:#ffffff!important;color:#333639!important;box-shadow:0 2px 8px rgba(0,0,0,0.12);",
       textStyle: { fontSize: 11, color: "#333639", fontFamily: 'ui-monospace, "Cascadia Code", Consolas, monospace' },
       formatter(params: unknown) {
