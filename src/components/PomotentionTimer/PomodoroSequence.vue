@@ -32,6 +32,7 @@
         </template>
       </n-button>
       <n-popover
+        v-model:show="showWhiteNoisePopover"
         trigger="click"
         placement="top"
         :show-arrow="false"
@@ -54,17 +55,38 @@
 
         <!-- Popover 的内容：垂直排列的按钮 -->
         <div class="popover-actions">
-          <n-button secondary circle type="info" size="small" title="雨声" @click="resetWhiteNoise(SoundType.WHITE_NOISE_RAIN)">
+          <n-button
+            circle
+            size="small"
+            title="雨声"
+            tertiary
+            :type="settingStore.settings.whiteNoiseSoundTrack === SoundType.WHITE_NOISE_RAIN ? 'info' : 'primary'"
+            @click="resetWhiteNoise(SoundType.WHITE_NOISE_RAIN)"
+          >
             <template #icon>
               <n-icon><WeatherThunderstorm20Regular /></n-icon>
             </template>
           </n-button>
-          <n-button secondary type="info" circle size="small" title="滴答声" @click="resetWhiteNoise(SoundType.WORK_TICK)">
+          <n-button
+            circle
+            size="small"
+            title="滴答声"
+            :type="settingStore.settings.whiteNoiseSoundTrack === SoundType.WORK_TICK ? 'info' : 'primary'"
+            tertiary
+            @click="resetWhiteNoise(SoundType.WORK_TICK)"
+          >
             <template #icon>
-              <n-icon><ClockAlarm24Regular /></n-icon>
+              <n-icon><ClockAlarm20Regular /></n-icon>
             </template>
           </n-button>
-          <n-button secondary type="info" circle size="small" title="鸟鸣海声" @click="resetWhiteNoise(SoundType.WHITE_NOISE_BIRD_SEA)">
+          <n-button
+            circle
+            size="small"
+            title="鸟鸣海声"
+            :type="settingStore.settings.whiteNoiseSoundTrack === SoundType.WHITE_NOISE_BIRD_SEA ? 'info' : 'primary'"
+            tertiary
+            @click="resetWhiteNoise(SoundType.WHITE_NOISE_BIRD_SEA)"
+          >
             <template #icon>
               <n-icon><Icons20Regular /></n-icon>
             </template>
@@ -103,9 +125,9 @@ import {
   SpeakerMute24Regular,
   Play24Regular,
   Stop20Filled,
-  WeatherThunderstorm20Regular,
-  ClockAlarm24Regular,
   MusicNote124Filled,
+  WeatherThunderstorm20Regular,
+  ClockAlarm20Regular,
   Icons20Regular,
 } from "@vicons/fluent";
 import { SoundType } from "@/core/sounds.ts";
@@ -166,6 +188,8 @@ const currentPomodoro = ref<number>(1);
 const statusLabel = ref<string>("Let's 🍅!");
 
 // 白噪音状态
+const showWhiteNoisePopover = ref(false);
+let whiteNoisePopoverCloseTimer: ReturnType<typeof setTimeout> | null = null;
 const isWhiteNoiseEnabled = computed({
   get: () => settingStore.settings.isWhiteNoiseEnabled,
   set: (val) => {
@@ -619,11 +643,21 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  if (whiteNoisePopoverCloseTimer !== null) {
+    clearTimeout(whiteNoisePopoverCloseTimer);
+  }
   timerStore.registerSequenceContinuation(null);
 });
 
 function resetWhiteNoise(sound: SoundType) {
   settingStore.settings.whiteNoiseSoundTrack = sound;
+  if (whiteNoisePopoverCloseTimer !== null) {
+    clearTimeout(whiteNoisePopoverCloseTimer);
+  }
+  whiteNoisePopoverCloseTimer = setTimeout(() => {
+    showWhiteNoisePopover.value = false;
+    whiteNoisePopoverCloseTimer = null;
+  }, 3000);
   if (isRunning.value) {
     stopWhiteNoise();
     startWhiteNoise();
