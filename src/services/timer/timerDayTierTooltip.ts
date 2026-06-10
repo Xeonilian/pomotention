@@ -1,4 +1,5 @@
 import type { TimerSessionEmojis, TimerSessionStatsInclude } from "@/core/types/TimerSession";
+import { HIIT_SESSION_EMOJI } from "@/core/types/TimerSession";
 import type { TimerDayTotals } from "@/services/timer/timerWeekUtils";
 
 type DayTierTooltipDef = {
@@ -24,7 +25,13 @@ export function buildDayTierTooltipEntries(
   emojis: TimerSessionEmojis,
   statsInclude: TimerSessionStatsInclude,
 ): DayTierTooltipEntry[] {
-  return DAY_TIER_TOOLTIP_DEFS.filter((def) => statsInclude[def.includeKey])
+  const entries = DAY_TIER_TOOLTIP_DEFS.filter((def) => statsInclude[def.includeKey])
     .map((def) => ({ emoji: def.emojiOf(emojis), count: def.countOf(totals) }))
     .filter((entry) => entry.count > 0);
+
+  if (totals.hiitCount > 0) {
+    entries.unshift({ emoji: HIIT_SESSION_EMOJI, count: totals.hiitCount });
+  }
+
+  return entries;
 }

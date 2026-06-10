@@ -4,10 +4,15 @@ import { ref, computed, watch } from "vue";
 import { SESSION_MARKER_FULL_NAV_TO_HELP } from "@/composables/platform/useDocsUrl";
 import { useSettingStore } from "./useSettingStore.ts";
 import { playSound, SoundType, startSilentWhiteNoiseHold, startWhiteNoise, stopWhiteNoise } from "../core/sounds.ts";
-import { timerSessionBegin, timerSessionDiscardActive, timerSessionEnd, timerSessionEndWithDecision, timerSessionGetActive } from "@/services/timer/timerSessionRecorder";
+import { timerSessionBegin, timerSessionDiscardActive, timerSessionEnd, timerSessionEndWithDecision, timerSessionGetActive, timerSessionRecordAggregateWork, timerSessionRecordWorkVoid } from "@/services/timer/timerSessionRecorder";
 import type { TimerSessionEndDecision } from "@/services/timer/timerSessionEndPolicy";
 import { resolveTimerSessionEnd } from "@/services/timer/timerSessionEndPolicy";
 import { shouldOfferOvertimeAfterPlan, syncOvertimeElapsedSec } from "@/services/timer/timerOvertimePhase";
+import { registerTimerStoreAggregateWorkSecReader } from "@/services/timer/timerSequenceAggregate";
+
+type SequenceSessionMode = "step" | "aggregate";
+type PhaseStartOptions = { durationSec?: number; skipStartCue?: boolean };
+type PhaseEndCue = SoundType.WORK_END | SoundType.BREAK_END | SoundType.PHASE_BREAK | SoundType.WORK_MIDDLE;
 
 // 修改状态类型，更清晰地表达三种状态
 type PomodoroState = "idle" | "working" | "breaking";
@@ -108,6 +113,17 @@ export const useTimerStore = defineStore(
     const sequenceContinuationRegistered = ref(false);
     /** main 早于子组件 reconcile 时，阶段已结束但尚无 continuation，延后 finalize */
     const pendingSequencePhaseFinalize = ref(false);
+
+    /** 序列最后一步 break 结束时写入聚合工作记录 */
+    const flushAggregateOnBreakEnd = ref(false);
+    const sequenceSessionMode = ref<SequenceSessionMode>("step");
+    const aggregateWorkSecCompleted = ref(0);
+    const aggregatePlannedWorkSec = ref(0);
+    const aggregateHiitExpression = ref("");
+    const aggregateSessionStartedAt = ref<number | null>(null);
+    const phaseEndCueOverride = ref<PhaseEndCue | null>(null);
+
+    registerTimerStoreAggregateWorkSecReader(() => aggregateWorkSecCompleted.value);
 
     /** 单番茄：计划时长结束后继续正计时 */
     const isOvertime = ref(false);
@@ -250,6 +266,13 @@ export const useTimerStore = defineStore(
       overtimeStartedAt.value = null;
       overtimeElapsedSec.value = 0;
       stopWhiteNoise();
+      sequenceSessionMode.value = "step";
+      aggregateWorkSecCompleted.value = 0;
+      aggregatePlannedWorkSec.value = 0;
+      aggregateHiitExpression.value = "";
+      aggregateSessionStartedAt.value = null;
+      phaseEndCueOverride.value = null;
+      flushAggregateOnBreakEnd.value = false;
     }
 
     function shouldDeferSequenceFinalize(): boolean {
@@ -259,6 +282,31 @@ export const useTimerStore = defineStore(
         sequencePhaseContinuation.value == null &&
         pomodoroState.value !== "idle"
       );
+    }
+
+    function completePhaseSessionAccounting(): void {
+      if (sequenceSessionMode.value === "aggregate") {
+        if (pomodoroState.value === "working") {
+          aggregateWorkSecCompleted.value += totalTime.value;
+        } else if (pomodoroState.value === "breaking" && flushAggregateOnBreakEnd.value) {
+          timerSessionRecordAggregateWork(aggregateWorkSecCompleted.value, "completed", undefined, {
+            plannedWorkSec: aggregatePlannedWorkSec.value || aggregateWorkSecCompleted.value,
+            hiitExpression: aggregateHiitExpression.value,
+            ...aggregateSessionTimestamps(),
+          });
+          aggregateWorkSecCompleted.value = 0;
+          aggregateSessionStartedAt.value = null;
+          flushAggregateOnBreakEnd.value = false;
+        }
+        return;
+      }
+      timerSessionEnd("completed");
+    }
+
+    function resolvePhaseEndCue(defaultCue: PhaseEndCue): PhaseEndCue {
+      const override = phaseEndCueOverride.value;
+      phaseEndCueOverride.value = null;
+      return override ?? defaultCue;
     }
 
     function finalizeCurrentPhase(): void {
@@ -274,9 +322,7 @@ export const useTimerStore = defineStore(
       const useCont = !cb && isFromSequence.value && sequencePhaseContinuation.value != null;
 
       if (pomodoroState.value === "working") {
-        timerSessionEnd("completed");
-        // 须等 playSound 的 Promise（decode+起播）完成后再停双轨；queueMicrotask 会在 await decode 之前跑，先于 tryPlayCueWebAudio 拆掉 HTML，息屏/Web 均可能无声或截断
-        // 白噪音开启且链式进入下一段时不在此 stop，由 startBreak/startWorking 内 tryRetarget 复用 HTMLAudio，避免 iOS 定时器边界上 play NotAllowed
+        completePhaseSessionAccounting();
         const stripWnBeforeChain = !settingStore.settings.isWhiteNoiseEnabled;
         const runAfterWorkEndCue = () => {
           if (cb) {
@@ -289,9 +335,9 @@ export const useTimerStore = defineStore(
             resetTimer();
           }
         };
-        void playPhaseEndCue(SoundType.WORK_END).finally(() => runAfterWorkEndCue());
+        void playPhaseEndSound(resolvePhaseEndCue(SoundType.WORK_END)).finally(() => runAfterWorkEndCue());
       } else if (pomodoroState.value === "breaking") {
-        timerSessionEnd("completed");
+        completePhaseSessionAccounting();
         const stripWnBeforeChain = !settingStore.settings.isWhiteNoiseEnabled;
         const runAfterBreakEndCue = () => {
           if (cb) {
@@ -304,7 +350,7 @@ export const useTimerStore = defineStore(
             resetTimer();
           }
         };
-        void playPhaseEndCue(SoundType.BREAK_END).finally(() => runAfterBreakEndCue());
+        void playPhaseEndSound(resolvePhaseEndCue(SoundType.BREAK_END)).finally(() => runAfterBreakEndCue());
       }
     }
 
@@ -453,12 +499,13 @@ export const useTimerStore = defineStore(
       finalizeCurrentPhase();
     }
 
-    function startWorking(duration: number, onFinish?: () => void): void {
+    function startWorking(duration: number, onFinish?: () => void, opts?: PhaseStartOptions): void {
       beginNewPhase(onFinish);
 
       pomodoroState.value = "working";
-      const dur = duration ?? settingStore.settings.durations.workDuration;
-      totalTime.value = dur * 60;
+      const durMin = duration ?? settingStore.settings.durations.workDuration;
+      const sec = opts?.durationSec ?? durMin * 60;
+      totalTime.value = sec;
       timeRemaining.value = totalTime.value;
       startTime.value = Date.now();
       phaseEndsAt.value = startTime.value + totalTime.value * 1000;
@@ -466,10 +513,16 @@ export const useTimerStore = defineStore(
       isGray.value = false;
       isFromSequence.value = !!onFinish;
 
-      timerSessionBegin("work", dur);
+      if (sequenceSessionMode.value !== "aggregate") {
+        timerSessionBegin("work", sec / 60);
+      } else if (aggregateSessionStartedAt.value == null) {
+        aggregateSessionStartedAt.value = Date.now();
+      }
 
       startWhiteNoise();
-      playSound(SoundType.WORK_START);
+      if (!opts?.skipStartCue) {
+        playSound(SoundType.WORK_START);
+      }
 
       timerInterval.value = window.setInterval(phaseTick, 1000);
     }
@@ -479,14 +532,15 @@ export const useTimerStore = defineStore(
     /** 上一 tick 的已过秒数，用于「边界跨越」检测；息屏/后台时墙钟会跳秒，不能用 |elapsed-node|<=1 */
     const breakReminderPrevElapsed = ref(-1);
 
-    function startBreak(duration: number, onFinish?: () => void): void {
-      breakReminderCount.value = duration;
+    function startBreak(duration: number, onFinish?: () => void, opts?: PhaseStartOptions): void {
+      const durMin = duration ?? breakDuration.value;
+      const sec = opts?.durationSec ?? durMin * 60;
+      breakReminderCount.value = Math.floor(sec / 60);
       breakReminderPrevElapsed.value = -1;
       beginNewPhase(onFinish);
 
       pomodoroState.value = "breaking";
-      const dur = duration ?? breakDuration.value;
-      totalTime.value = dur * 60;
+      totalTime.value = sec;
       timeRemaining.value = totalTime.value;
       startTime.value = Date.now();
       phaseEndsAt.value = startTime.value + totalTime.value * 1000;
@@ -494,10 +548,14 @@ export const useTimerStore = defineStore(
       isGray.value = false;
       isFromSequence.value = !!onFinish;
 
-      timerSessionBegin("break", dur);
+      if (sequenceSessionMode.value !== "aggregate") {
+        timerSessionBegin("break", sec / 60);
+      }
 
       startSilentWhiteNoiseHold();
-      playSound(SoundType.BREAK_START);
+      if (!opts?.skipStartCue) {
+        playSound(SoundType.BREAK_START);
+      }
 
       timerInterval.value = window.setInterval(phaseTick, 1000);
     }
@@ -542,15 +600,91 @@ export const useTimerStore = defineStore(
     /** 结束音可能因 Web Audio 链路挂起而永不 settle；必须仍能 reset / 续跑，否则 squash / 序列推进无效 */
     const PHASE_END_CUE_MAX_MS = 5000;
 
-    function playPhaseEndCue(type: SoundType.WORK_END | SoundType.BREAK_END): Promise<void> {
+    function playPhaseEndSound(type: PhaseEndCue): Promise<void> {
       return Promise.race([
         playSound(type),
         new Promise<void>((resolve) => setTimeout(resolve, PHASE_END_CUE_MAX_MS)),
       ]);
     }
 
+    function playPhaseEndCue(type: SoundType.WORK_END | SoundType.BREAK_END): Promise<void> {
+      return playPhaseEndSound(type);
+    }
+
+    function collectAggregateWorkSec(includeCurrentPhase = true): number {
+      let sec = aggregateWorkSecCompleted.value;
+      if (includeCurrentPhase && isWorking.value && startTime.value) {
+        sec += Math.min(totalTime.value, Math.floor((Date.now() - startTime.value) / 1000));
+      }
+      return sec;
+    }
+
+    function aggregateSessionTimestamps(): { startedAt: number; endedAt: number } {
+      const endedAt = Date.now();
+      const startedAt = aggregateSessionStartedAt.value ?? endedAt;
+      return { startedAt, endedAt };
+    }
+
+    function configureSequenceRun(
+      mode: SequenceSessionMode,
+      opts?: { resetProgress?: boolean; plannedWorkSec?: number; hiitExpression?: string },
+    ): void {
+      sequenceSessionMode.value = mode;
+      if (opts?.plannedWorkSec != null) {
+        aggregatePlannedWorkSec.value = opts.plannedWorkSec;
+      } else if (mode === "step") {
+        aggregatePlannedWorkSec.value = 0;
+      }
+      if (opts?.hiitExpression != null) {
+        aggregateHiitExpression.value = opts.hiitExpression;
+      } else if (mode === "step") {
+        aggregateHiitExpression.value = "";
+      }
+      if (opts?.resetProgress === false) return;
+      aggregateWorkSecCompleted.value = 0;
+      aggregateSessionStartedAt.value = null;
+      flushAggregateOnBreakEnd.value = false;
+      phaseEndCueOverride.value = null;
+    }
+
+    function recordAggregateWorkSession(endReason: "completed" | "stop", buttonLabel?: string): void {
+      const workSec = collectAggregateWorkSec(isWorking.value);
+      if (workSec <= 0) return;
+      timerSessionRecordAggregateWork(workSec, endReason, buttonLabel, {
+        plannedWorkSec: aggregatePlannedWorkSec.value || workSec,
+        hiitExpression: aggregateHiitExpression.value,
+        ...aggregateSessionTimestamps(),
+      });
+      aggregateWorkSecCompleted.value = 0;
+      aggregateSessionStartedAt.value = null;
+    }
+
+    function prepareSequenceStep(opts: { endCue?: PhaseEndCue | null; flushAggregateOnBreakEnd?: boolean }): void {
+      phaseEndCueOverride.value = opts.endCue ?? null;
+      if (opts.flushAggregateOnBreakEnd != null) {
+        flushAggregateOnBreakEnd.value = opts.flushAggregateOnBreakEnd;
+      }
+    }
+
     function cancelTimerWithDecision(decision: TimerSessionEndDecision): void {
       const finish = () => resetTimer();
+
+      if (sequenceSessionMode.value === "aggregate") {
+        timerSessionDiscardActive();
+        if (decision.endReason === "squash") {
+          aggregateWorkSecCompleted.value = 0;
+          aggregateSessionStartedAt.value = null;
+          timerSessionRecordWorkVoid(decision.buttonLabel ?? "Squash");
+          const cue = isWorking.value ? SoundType.WORK_END : SoundType.BREAK_END;
+          void playPhaseEndSound(cue).finally(finish);
+          return;
+        }
+
+        recordAggregateWorkSession("stop", decision.buttonLabel);
+        void playPhaseEndSound(SoundType.WORK_END).finally(finish);
+        return;
+      }
+
       if (isWorking.value) {
         timerSessionEndWithDecision(decision);
         void playPhaseEndCue(SoundType.WORK_END).finally(finish);
@@ -569,6 +703,15 @@ export const useTimerStore = defineStore(
     }
 
     function cancelTimer(): void {
+      if (sequenceSessionMode.value === "aggregate") {
+        const workSec = collectAggregateWorkSec(isWorking.value);
+        cancelTimerWithDecision({
+          endReason: workSec > 0 ? "stop" : "squash",
+          buttonLabel: isWorking.value ? "Squash" : "Stop",
+        });
+        return;
+      }
+
       const active = timerSessionGetActive();
       const decision = resolveTimerSessionEnd({
         kind: active?.kind ?? (isWorking.value ? "work" : "break"),
@@ -600,6 +743,13 @@ export const useTimerStore = defineStore(
       isOvertime.value = false;
       overtimeStartedAt.value = null;
       overtimeElapsedSec.value = 0;
+      sequenceSessionMode.value = "step";
+      aggregateWorkSecCompleted.value = 0;
+      aggregatePlannedWorkSec.value = 0;
+      aggregateHiitExpression.value = "";
+      aggregateSessionStartedAt.value = null;
+      phaseEndCueOverride.value = null;
+      flushAggregateOnBreakEnd.value = false;
 
       stopWhiteNoise();
     }
@@ -628,6 +778,8 @@ export const useTimerStore = defineStore(
       forceShowPomoSeq,
       sequenceStepIndex,
       sequenceInputSnapshot,
+      sequenceSessionMode,
+      aggregateWorkSecCompleted,
       pendingSequencePhaseFinalize,
       sequenceContinuationRegistered,
       isOvertime,
@@ -647,6 +799,9 @@ export const useTimerStore = defineStore(
       reconcilePhaseFromWallClock,
       registerSequenceContinuation,
       flushPendingSequenceFinalize,
+      configureSequenceRun,
+      prepareSequenceStep,
+      collectAggregateWorkSec,
     };
   },
   {
@@ -666,6 +821,11 @@ export const useTimerStore = defineStore(
         "breakReminderCount",
         "sequenceStepIndex",
         "sequenceInputSnapshot",
+        "sequenceSessionMode",
+        "aggregateWorkSecCompleted",
+        "aggregatePlannedWorkSec",
+        "aggregateHiitExpression",
+        "aggregateSessionStartedAt",
         "isOvertime",
         "overtimeStartedAt",
       ],

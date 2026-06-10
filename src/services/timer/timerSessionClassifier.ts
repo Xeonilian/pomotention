@@ -1,4 +1,5 @@
 import type { TimerSessionCategory, TimerSessionEndReason, TimerSessionRecord, TimerSessionRules } from "@/core/types/TimerSession";
+import { HIIT_SESSION_EMOJI } from "@/core/types/TimerSession";
 import {
   emojiForBreakTier,
   emojiForWorkTier,
@@ -19,6 +20,7 @@ export function statsDurationMinutesOf(session: { durationMs: number; statsDurat
 }
 
 export function resolveSessionDisplayEmoji(session: TimerSessionRecord, rules: TimerSessionRules): string {
+  if (session.category === "work_hiit") return clampEmojiText(session.emoji || HIIT_SESSION_EMOJI);
   const kind: "work" | "break" = session.category === "break" ? "break" : "work";
   return classifyTimerSession(kind, statsDurationMinutesOf(session), session.endReason, rules).emoji;
 }
@@ -64,7 +66,14 @@ export function isOvertimeEndSession(session: Pick<TimerSessionRecord, "endReaso
   return session.durationMs > session.plannedDurationMin * 60_000;
 }
 
-export function formatTimerSessionEndReason(session: Pick<TimerSessionRecord, "endReason" | "durationMs" | "plannedDurationMin">): string {
+export function formatTimerSessionEndReason(
+  session: Pick<TimerSessionRecord, "category" | "endReason" | "durationMs" | "plannedDurationMin" | "statsDurationMin">,
+): string {
+  if (session.category === "work_hiit" && session.endReason === "stop") {
+    const workMs =
+      session.statsDurationMin != null ? session.statsDurationMin * 60_000 : session.durationMs;
+    return `提前结束 · 实际工作 ${formatDurationMs(workMs)}`;
+  }
   if (session.endReason === "completed") return "自然结束";
   if (session.endReason === "squash") return "提前结束（Squash）";
   if (isOvertimeEndSession(session)) return "正计时结束（Stop）";

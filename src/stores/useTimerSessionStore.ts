@@ -2,7 +2,7 @@ import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import type { TimerSessionRecord, TimerSessionRules } from "@/core/types/TimerSession";
 import { DEFAULT_TIMER_SESSION_RULES } from "@/core/types/TimerSession";
-import { classifyTimerSession } from "@/services/timer/timerSessionClassifier";
+import { classifyTimerSession, clampEmojiText } from "@/services/timer/timerSessionClassifier";
 import { normalizeTimerSessionRules } from "@/services/timer/timerSessionRulesNormalize";
 import { filterSessionsByTags } from "@/services/timer/timerSessionTagFilter";
 
@@ -30,10 +30,15 @@ export const useTimerSessionStore = defineStore(
       endReason: "completed" | "squash" | "stop" | "overtime";
       buttonLabel?: string;
       statsDurationMin?: number;
+      category?: TimerSessionCategory;
+      emoji?: string;
     }): void {
       const durationMs = Math.max(0, input.endedAt - input.startedAt);
       const statsMinutes = input.statsDurationMin ?? durationMs / 60_000;
-      const { category, emoji } = classifyTimerSession(input.kind, statsMinutes, input.endReason, rules.value);
+      const { category, emoji } =
+        input.category && input.emoji
+          ? { category: input.category, emoji: clampEmojiText(input.emoji) }
+          : classifyTimerSession(input.kind, statsMinutes, input.endReason, rules.value);
 
       sessions.value.push({
         id: nextSessionId(),

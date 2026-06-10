@@ -46,7 +46,7 @@ export function buildTimerWeekTagStacks(
     const dayTotals = new Map<number, number>();
 
     for (const session of day.sessions) {
-      if (session.category !== "work") continue;
+      if (session.category !== "work" && session.category !== "work_hiit") continue;
       const mins = statsDurationMinutesOf(session);
       if (mins <= 0) continue;
       const tagId = firstTagId(session.tagIds);
@@ -72,7 +72,7 @@ export function buildTimerWeekTagStacks(
       let dayTotal = 0;
       const dayMap = new Map<number, number>();
       for (const s of daySessions) {
-        if (s.category !== "work") continue;
+        if (s.category !== "work" && s.category !== "work_hiit") continue;
         const m = statsDurationMinutesOf(s);
         if (m <= 0) continue;
         const id = firstTagId(s.tagIds);

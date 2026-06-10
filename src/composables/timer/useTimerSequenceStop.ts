@@ -26,6 +26,7 @@ export function useTimerSequenceStop() {
 
     if (choice === "void") {
       timerSequenceRunDiscardCompleted();
+      timerStore.configureSequenceRun("step");
       if (timerStore.isBreaking) {
         timerSessionDiscardActive();
         timerSessionRecordWorkVoid("Squash");
@@ -56,7 +57,7 @@ export function useTimerSequenceStop() {
       return;
     }
 
-    if (!timerSequenceRunHasCompletedSessions()) {
+    if (!timerSequenceRunHasCompletedSessions() && timerStore.collectAggregateWorkSec(timerStore.isWorking) <= 0) {
       recordStopClick();
       timerStore.cancelTimer();
       timerSequenceRunClear();

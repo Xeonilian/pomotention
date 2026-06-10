@@ -1,5 +1,6 @@
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useTimerSessionStore } from "@/stores/useTimerSessionStore";
+import { HIIT_SESSION_EMOJI } from "@/core/types/TimerSession";
 import type { TimerSessionEndDecision } from "@/services/timer/timerSessionEndPolicy";
 import {
   timerSequenceRunBegin,
@@ -90,6 +91,38 @@ export function timerSessionEndWithDecision(decision: TimerSessionEndDecision, e
 /** 异常复位时丢弃未闭合段，避免污染下一段 */
 export function timerSessionDiscardActive(): void {
   active = null;
+}
+
+/** HIIT 等聚合模式：按总工作秒数记一条 💪 session */
+export function timerSessionRecordAggregateWork(
+  workSec: number,
+  endReason: "completed" | "squash" | "stop" | "overtime",
+  buttonLabel?: string,
+  opts?: { plannedWorkSec?: number; hiitExpression?: string; startedAt?: number; endedAt?: number },
+): void {
+  if (workSec <= 0) return;
+
+  const plannedWorkSec = opts?.plannedWorkSec ?? workSec;
+  const endedAt = opts?.endedAt ?? Date.now();
+  const startedAt = opts?.startedAt ?? endedAt - workSec * 1000;
+  const statsDurationMin = workSec / 60;
+  const settingStore = useSettingStore();
+  const tagIds = settingStore.settings.pomodoroTagIds?.length ? [...settingStore.settings.pomodoroTagIds] : undefined;
+  const stateMessage = opts?.hiitExpression?.trim() || resolveSessionStateMessage("work");
+
+  useTimerSessionStore().addSession({
+    kind: "work",
+    category: "work_hiit",
+    emoji: HIIT_SESSION_EMOJI,
+    startedAt,
+    endedAt,
+    plannedDurationMin: plannedWorkSec / 60,
+    stateMessage,
+    tagIds,
+    endReason,
+    buttonLabel,
+    statsDurationMin,
+  });
 }
 
 /** Pizza「不计入」时在休息段停止：记一条工作作废 */

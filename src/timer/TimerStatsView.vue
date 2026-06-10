@@ -111,7 +111,8 @@
           </header>
           <dl class="timer-detail-dl">
             <dt>类型</dt>
-            <dd>{{ categoryLabel(selectedSession.category) }} - {{ selectedSession.plannedDurationMin }} 分钟</dd>
+            <dd v-if="selectedSession.category === 'work_hiit'">{{ formatHiitTypeLabel(selectedSession.plannedDurationMin) }}</dd>
+            <dd v-else>{{ categoryLabel(selectedSession.category) }} - {{ selectedSession.plannedDurationMin }} 分钟</dd>
             <dt>执行意图</dt>
             <dd>{{ selectedSession.stateMessage || "—" }}</dd>
             <template v-if="detailTagNames">
@@ -272,8 +273,15 @@ function formatTs(ts: number): string {
 
 function categoryLabel(c: TimerSessionCategory): string {
   if (c === "work_void") return "作废工作";
+  if (c === "work_hiit") return "HIIT";
   if (c === "work") return "工作";
   return "休息";
+}
+
+function formatHiitTypeLabel(plannedDurationMin: number): string {
+  const plannedSec = Math.round(plannedDurationMin * 60);
+  if (plannedSec < 60) return `HIIT ${plannedSec}s`;
+  return `HIIT ${Math.round(plannedDurationMin)}min`;
 }
 
 function sessionTitle(s: TimerSessionRecord): string | undefined {
@@ -399,6 +407,7 @@ function sessionTitle(s: TimerSessionRecord): string | undefined {
   display: flex;
   align-items: baseline;
   gap: 8px;
+  flex-shrink: 0;
   font-size: 13px;
   cursor: default;
 }
@@ -426,11 +435,15 @@ function sessionTitle(s: TimerSessionRecord): string | undefined {
 
 .timer-stats-dow {
   font-weight: 600;
-  width: 40px;
+  flex-shrink: 0;
+  white-space: nowrap;
+  min-width: 5ch;
 }
 
 .timer-stats-dom {
+  flex-shrink: 0;
   color: var(--color-text-secondary, var(--n-text-color-3));
+  white-space: nowrap;
 }
 
 .timer-stats-emojis {

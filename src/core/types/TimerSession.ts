@@ -1,5 +1,5 @@
-/** 会话大类：作废工作 / 正常工作 / 休息 */
-export type TimerSessionCategory = "work" | "work_void" | "break";
+/** 会话大类：作废工作 / 正常工作 / HIIT / 休息 */
+export type TimerSessionCategory = "work" | "work_void" | "work_hiit" | "break";
 
 export type TimerSessionEndReason = "completed" | "squash" | "stop" | "overtime";
 
@@ -71,6 +71,9 @@ export const DEFAULT_TIMER_SESSION_RULES: TimerSessionRules = {
   emojis: { ...DEFAULT_TIMER_SESSION_EMOJIS },
   statsInclude: { ...DEFAULT_TIMER_SESSION_STATS_INCLUDE },
 };
+
+/** HIIT 聚合完成记 1 次，固定展示符号（不进番茄分档） */
+export const HIIT_SESSION_EMOJI = "💪";
 
 export interface TimerSessionRecord {
   id: string;

@@ -1,4 +1,5 @@
 import { useTimerSessionStore } from "@/stores/useTimerSessionStore";
+import { timerStoreAggregateWorkSec } from "@/services/timer/timerSequenceAggregate";
 
 let baselineCount = -1;
 
@@ -17,6 +18,7 @@ function runSessions() {
 }
 
 export function timerSequenceRunHasCompletedSessions(): boolean {
+  if (timerStoreAggregateWorkSec() > 0) return true;
   return runSessions().some((s) => s.endReason === "completed");
 }
 
