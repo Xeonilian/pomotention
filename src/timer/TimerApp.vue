@@ -121,6 +121,13 @@ html.platform-tauri #app {
   color: var(--color-text-primary);
 }
 
+html:fullscreen .timer-app-shell,
+html:-webkit-full-screen .timer-app-shell {
+  overflow: visible;
+  width: 100%;
+  height: 100%;
+}
+
 #timer-portal {
   position: relative;
   z-index: 3000;

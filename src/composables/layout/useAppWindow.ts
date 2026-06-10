@@ -7,6 +7,7 @@ import { useSettingStore } from "@/stores/useSettingStore";
 import { useTimerStore } from "@/stores/useTimerStore";
 import { useAlwaysOnTop } from "@/composables/layout/useAlwaysOnTop";
 import { captureNormalWindowPosition, restoreNormalWindowPosition } from "@/composables/layout/miniWindowPosition";
+import { useTimerWebFullscreen } from "@/composables/layout/useTimerWebFullscreen";
 
 const isTimerApp = import.meta.env.VITE_APP_VARIANT === "timer";
 
@@ -55,8 +56,17 @@ export function useAppWindow() {
     { immediate: true },
   );
 
-  // 容器 Ref，用于计算缩放比例
+  // 容器 Ref，用于计算缩放比例 / Web 全屏根节点
   const PomotentionTimerContainerRef = ref<HTMLElement | null>(null);
+
+  const webFullscreen = useTimerWebFullscreen();
+  webFullscreen.setOnDismiss(() => {
+    if (!isMiniMode.value) return;
+    isMiniMode.value = false;
+    settingStore.settings.isCompactMode = false;
+    settingStore.settings.timerMiniUiLevel = "full";
+  });
+  webFullscreen.bindListener();
 
   // 记录番茄钟组件上报的大小
   const reportedPomodoroWidth = ref<number>(221);
@@ -67,6 +77,8 @@ export function useAppWindow() {
     if (!isTauri()) {
       isMiniMode.value = true;
       settingStore.settings.isCompactMode = false; // 全屏时保持展开形态，非紧凑
+      await nextTick();
+      await webFullscreen.enter(PomotentionTimerContainerRef.value);
       return;
     }
 
@@ -215,16 +227,17 @@ export function useAppWindow() {
 
   // 🔴 修正：使用 setTimeout 延迟执行回调，给 Vue 渲染 DOM 的时间
   function handleWebToggle(callback?: () => void) {
-    isMiniMode.value = false;
-    settingStore.settings.isCompactMode = false;
-    settingStore.settings.timerMiniUiLevel = "full";
+    void webFullscreen.exit(PomotentionTimerContainerRef.value).then(() => {
+      isMiniMode.value = false;
+      settingStore.settings.isCompactMode = false;
+      settingStore.settings.timerMiniUiLevel = "full";
 
-    if (callback) {
-      // nextTick 有时候在复杂组件切换中不够用，setTimeout(..., 50) 是最稳妥的
-      setTimeout(() => {
-        callback();
-      }, 50);
-    }
+      if (callback) {
+        setTimeout(() => {
+          callback();
+        }, 50);
+      }
+    });
   }
 
   // 接收组件上报的尺寸
@@ -251,6 +264,7 @@ export function useAppWindow() {
     PomotentionTimerContainerRef,
     reportedPomodoroWidth,
     reportedPomodoroHeight,
+    isWebPseudoFullscreen: webFullscreen.isPseudoFullscreen,
     handleToggleOntopMode,
     exitOntopMiniMode,
     handleWebToggle,

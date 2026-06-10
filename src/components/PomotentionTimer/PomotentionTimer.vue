@@ -513,7 +513,7 @@ defineExpose({
   box-shadow: 0px 4px 6px rgba(0, 0, 0, 0);
 }
 .pomodoro-content-area.sequence-mode.is-minimode {
-  background-color: var(--color-background);
+  background-color: transparent;
 }
 .pomodoro-content-area.sequence-mode.is-minimode :deep(.pomodoro-sequence) {
   border: 0 solid white !important;
@@ -524,7 +524,7 @@ defineExpose({
   box-shadow: 0px 4px 6px rgba(0, 0, 0, 0);
 }
 .pomodoro-content-area.is-minimode {
-  background-color: var(--color-background);
+  background-color: transparent;
 }
 .pomodoro-content-area.is-minimode :deep(.pomodoro-sequence) {
   border: 0 solid white !important;

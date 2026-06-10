@@ -1,7 +1,14 @@
 <template>
-  <div class="pomodoro-mini-view-wrapper" ref="PomotentionTimerContainerRef">
+  <div
+    class="pomodoro-mini-view-wrapper"
+    :class="{
+      'is-web-pseudo-fullscreen': isWebPseudoFullscreen,
+      'is-timer-immersive': isMiniMode,
+    }"
+    ref="PomotentionTimerContainerRef"
+  >
     <n-layout class="app-layout" :class="{ 'app-layout--use-vv-height': isMobile, 'app-layout--has-bg': hasActiveBackground, 'app-layout--mini-mode': isMiniMode }">
-      <div v-if="!isMiniMode" class="timer-bg-layer" :class="layerClass" aria-hidden="true">
+      <div v-if="hasActiveBackground" class="timer-bg-layer" :class="layerClass" aria-hidden="true">
         <component :is="activeComponent" v-if="activeComponent" v-bind="activeComponentProps" />
       </div>
       <n-layout-header class="app-layout__header" :class="{ 'app-layout__header--hidden': isMiniMode }">
@@ -111,6 +118,7 @@ const {
   exitOntopMiniMode,
   handleWebToggle,
   handlePomotentionTimerSizeReport,
+  isWebPseudoFullscreen,
 } = useAppWindow();
 
 void PomotentionTimerContainerRef;
@@ -169,6 +177,26 @@ function onExitMiniMode() {
   overflow: hidden;
 }
 
+.pomodoro-mini-view-wrapper.is-web-pseudo-fullscreen,
+.pomodoro-mini-view-wrapper.is-timer-immersive,
+.pomodoro-mini-view-wrapper:fullscreen,
+.pomodoro-mini-view-wrapper:-webkit-full-screen {
+  width: 100%;
+  max-width: none;
+  overflow: visible;
+}
+
+.pomodoro-mini-view-wrapper.is-web-pseudo-fullscreen,
+.pomodoro-mini-view-wrapper:fullscreen,
+.pomodoro-mini-view-wrapper:-webkit-full-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  height: 100%;
+  height: 100dvh;
+  background-color: transparent;
+}
+
 .app-layout {
   position: relative;
   overflow: hidden;
@@ -181,7 +209,15 @@ function onExitMiniMode() {
   background-color: transparent;
 }
 .app-layout--mini-mode {
+  width: 100%;
   height: 100%;
+  overflow: visible;
+}
+.app-layout--mini-mode.app-layout--has-bg {
+  background-color: transparent;
+}
+.app-layout--mini-mode.app-layout--has-bg .timer-bg-layer {
+  overflow: visible;
 }
 .app-layout--has-bg .app-layout__content,
 .app-layout--has-bg .app-layout__content:deep(.n-layout-scroll-container) {
@@ -239,7 +275,7 @@ function onExitMiniMode() {
   align-items: center;
   height: 100%;
   width: 100%;
-  transform: translateY(-15px);
+  transform: translateY(-35px);
   pointer-events: none;
 }
 .timer-timer-center :deep(> *) {
@@ -251,6 +287,8 @@ function onExitMiniMode() {
   align-items: center;
   height: 100%;
   width: 100%;
+  overflow: visible;
+  background-color: transparent;
 }
 .header-button {
   width: 30px;
@@ -262,5 +300,8 @@ function onExitMiniMode() {
 }
 .pomodoro-mini-view-wrapper:deep(.n-layout .n-layout-scroll-container) {
   overflow: hidden !important;
+}
+.pomodoro-mini-view-wrapper.is-timer-immersive:deep(.n-layout .n-layout-scroll-container) {
+  overflow: visible !important;
 }
 </style>

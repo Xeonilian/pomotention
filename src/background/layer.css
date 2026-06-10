@@ -6,3 +6,8 @@
   overflow: hidden;
   pointer-events: none;
 }
+
+/* 沉浸/全屏：允许光晕等横向溢出，避免左右被裁切 */
+.app-layout--mini-mode .timer-bg-layer {
+  overflow: visible;
+}
