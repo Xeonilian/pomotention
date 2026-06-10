@@ -1,9 +1,7 @@
-/* 符号字形：仅 flake 需要，不含页面正文字体 */
-@import url("https://fonts.googleapis.com/css2?family=Noto+Sans+Symbols+2&display=swap");
-
+/* 符号字形：用系统符号字体，不拉 Google Fonts */
 .timer-bg-layer--flake {
   background-color: white;
-  background-image: url("https://images.unsplash.com/photo-1615800098779-1be32e60cca3?crop=entropy&cs=srgb&fm=jpg&ixid=M3wzMjM4NDZ8MHwxfHJhbmRvbXx8fHx8fHx8fDE2OTUyNDAwMTN8&ixlib=rb-4.0.3&q=85");
+  background-image: url("./paper.jfif");
   background-size: cover;
   background-repeat: no-repeat;
   background-position: center;
@@ -33,7 +31,7 @@
   top: 0;
   left: 0;
   font-size: clamp(15px, var(--size), 80px);
-  font-family: "Noto Sans Symbols 2", sans-serif;
+  font-family: "Segoe UI Symbol", "Apple Symbols", "Noto Emoji", sans-serif;
   line-height: 1;
   transform-origin: center top;
   animation: timer-bg-flake-move var(--duration_move) var(--delay_move) linear infinite normal both;
@@ -57,7 +55,7 @@
   background-clip: text;
   -webkit-background-clip: text;
   filter: brightness(1.2) hue-rotate(calc(var(--hue) + var(--hue-shift, 0deg)));
-  background-image: url("https://images.unsplash.com/photo-1580822115965-0b2532068eff?&ixid=M3wzMjM4NDZ8MHwxfHJhbmRvbXx8fHx8fHx8fDE2OTUxNDUzNzJ8&ixlib=rb-4.0.3&q=100&w=200&dpr=2");
+  background-image: url("./metal.jfif");
   background-position: center;
   background-size: 200px auto;
   background-repeat: repeat;
@@ -107,13 +105,13 @@
 
 /* 符号 */
 .timer-bg-flake__item:nth-child(23n + 1) {
-  --symbol: "🟄";
+  --symbol: "✢";
 }
 .timer-bg-flake__item:nth-child(23n + 2) {
   --symbol: "❉";
 }
 .timer-bg-flake__item:nth-child(23n + 3) {
-  --symbol: "🟉";
+  --symbol: "🞯";
 }
 .timer-bg-flake__item:nth-child(23n + 4) {
   --symbol: "❈";
@@ -157,9 +155,7 @@
 .timer-bg-flake__item:nth-child(23n + 17) {
   --symbol: "❊";
 }
-.timer-bg-flake__item:nth-child(23n + 18) {
-  --symbol: "🟄";
-}
+
 .timer-bg-flake__item:nth-child(23n + 19) {
   --symbol: "✻";
 }
@@ -372,9 +368,7 @@
 
 html.timer-dark .timer-bg-layer--flake {
   background-color: var(--color-background, #1e1e1e);
-  background-image:
-    linear-gradient(rgba(12, 12, 16, 0.88), rgba(8, 8, 12, 0.94)),
-    url("https://images.unsplash.com/photo-1615800098779-1be32e60cca3?crop=entropy&cs=srgb&fm=jpg&ixid=M3wzMjM4NDZ8MHwxfHJhbmRvbXx8fHx8fHx8fDE2OTUyNDAwMTN8&ixlib=rb-4.0.3&q=85");
+  background-image: linear-gradient(rgba(12, 12, 16, 0.88), rgba(8, 8, 12, 0.94)), url("./paper.jfif");
   filter: none;
 }
 
