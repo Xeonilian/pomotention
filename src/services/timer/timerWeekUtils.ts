@@ -58,6 +58,7 @@ export type TimerDayTotals = {
   breakMinutes: number;
   voidCount: number;
   tomatoCount: number;
+  hiitCount: number;
   workTier1: number;
   workTier2: number;
   workTier3: number;
@@ -78,6 +79,7 @@ export function computeDayTotals(sessions: TimerSessionRecord[], rules: TimerSes
   let breakMinutes = 0;
   let voidCount = 0;
   let tomatoCount = 0;
+  let hiitCount = 0;
   let workTier1 = 0;
   let workTier2 = 0;
   let workTier3 = 0;
@@ -90,17 +92,20 @@ export function computeDayTotals(sessions: TimerSessionRecord[], rules: TimerSes
     if (s.category === "work") {
       workMinutes += mins;
       const tier = countWorkTier(mins, rules);
-      if (tier === "tier1" && inc.workTier1) workTier1 += 1;
-      else if (tier === "tier2") workTier2 += 1;
-      else if (tier === "tier3" && inc.workTier3) workTier3 += 1;
+      if (tier === "tier1" && inc.workTier1 && mins >= rules.workTier1Min) workTier1 += 1;
+      else if (tier === "tier2" && mins >= rules.workTier2Min) workTier2 += 1;
+      else if (tier === "tier3" && inc.workTier3 && mins >= rules.workTier3Min) workTier3 += 1;
       if (isTomatoWorkSession(s, rules)) tomatoCount += 1;
+    } else if (s.category === "work_hiit") {
+      workMinutes += mins;
+      hiitCount += 1;
     } else if (s.category === "work_void") {
       if (inc.workVoid) voidCount += 1;
     } else if (s.category === "break") {
       breakMinutes += mins;
       const tier = countBreakTier(mins, rules);
-      if (tier === "long" && inc.breakLong) breakLong += 1;
-      else breakShort += 1;
+      if (tier === "long" && inc.breakLong && mins >= rules.breakLongMin) breakLong += 1;
+      else if (mins >= rules.breakShortMin) breakShort += 1;
     }
   }
 
@@ -109,6 +114,7 @@ export function computeDayTotals(sessions: TimerSessionRecord[], rules: TimerSes
     breakMinutes: Math.round(breakMinutes),
     voidCount,
     tomatoCount,
+    hiitCount,
     workTier1,
     workTier2,
     workTier3,
