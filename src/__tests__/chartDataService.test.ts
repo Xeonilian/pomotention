@@ -159,7 +159,7 @@ describe("chartDataService", () => {
       });
     });
 
-    it("应该收集愉悦值记录", () => {
+    it("应该收集奖赏值记录", () => {
       const tasks: Partial<Task>[] = [
         {
           id: 101,

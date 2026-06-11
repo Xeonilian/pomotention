@@ -10,9 +10,12 @@
     @after-enter="focusSlider"
   >
     <n-space vertical>
-      <n-slider v-model:value="energyValue" :min="1" :max="10" :step="1" :marks="marks" ref="sliderRef" />
+      <n-slider v-model:value="energyValue" :min="1" :max="10" :step="1" ref="sliderRef" />
+      <n-text class="score-meaning">{{ energyScoreMeaning }}</n-text>
       <div class="energy-value-datetime-row">
-        <n-text v-if="!isMobile" class="energy-value-datetime-row__label">当前精力值: {{ energyValue }}</n-text>
+        <n-text class="energy-value-datetime-row__label">
+          {{ energyScoreEmoji }}
+        </n-text>
         <n-date-picker v-model:value="recordedAt" type="datetime" size="small" class="energy-value-datetime-row__picker" />
         <n-button size="small" class="energy-value-datetime-row__help" @click="showHelp = true">
           <template #icon>
@@ -40,8 +43,7 @@ import { BatterySaver20Regular } from "@vicons/fluent";
 import { NModal, NSlider, NSpace, NText, NButton, NIcon, NDatePicker } from "naive-ui";
 import type { DataTableColumns } from "naive-ui";
 import { flushPickerValueToVue, pickRecordedAtMs, isEventFromDateTimePickerDeep } from "@/utils/recordedAtPick";
-import { useDevice } from "@/composables/platform/useDevice";
-const { isMobile } = useDevice();
+import { getEnergyScoreEmoji } from "@/core/scoreEmojis";
 
 const props = defineProps<{
   show: boolean;
@@ -68,7 +70,6 @@ type RowData = {
   score: string;
   physical: string;
   mental: string;
-  overall: string;
 };
 
 const sliderRef = ref<any>(null);
@@ -99,10 +100,6 @@ const createColumns = (): DataTableColumns<RowData> => {
       title: "心理/思维状态",
       key: "mental",
     },
-    {
-      title: "整体\n描述",
-      key: "overall",
-    },
   ];
 };
 
@@ -111,62 +108,52 @@ const data: RowData[] = [
   {
     score: "1分",
     physical: "极度疲惫，难以行动",
-    mental: "思维断片，无法处理信息",
-    overall: "崩溃\n状态",
+    mental: "思维断片，信息处理迟滞",
   },
   {
     score: "2分",
-    physical: "沉重，基本动作困难",
-    mental: "思维涣散，极度困倦",
-    overall: "极度\n状态",
+    physical: "身体沉重，动作困难",
+    mental: "情绪低落，极度困倦",
   },
   {
     score: "3分",
-    physical: "乏力，动作迟缓",
-    mental: "注意力涣散，需要休息",
-    overall: "明显\n疲惫",
+    physical: "乏力明显，动作迟缓",
+    mental: "注意力涣散，易犯困",
   },
   {
     score: "4分",
-    physical: "略显沉重，勉强活动",
-    mental: "思维迟缓，易出错",
-    overall: "低效\n状态",
+    physical: "略显沉重，勉强维持",
+    mental: "思维迟缓，错误率高",
   },
   {
     score: "5分",
-    physical: "轻微疲惫，维持活动",
-    mental: "注意力一般，需要调动",
-    overall: "及格\n状态",
+    physical: "轻微疲惫，完成基础任务",
+    mental: "注意力一般，需要外部驱动力",
   },
   {
     score: "6分",
     physical: "基本正常，偶有疲意",
     mental: "思维清晰，专注一般",
-    overall: "正常\n水平",
   },
   {
     score: "7分",
-    physical: "状态良好，行动自如",
-    mental: "思维清醒，易于专注",
-    overall: "良好\n状态",
+    physical: "精力充沛，行动协调",
+    mental: "思维活跃，高度专注",
   },
   {
     score: "8分",
-    physical: "充沛，动作协调",
-    mental: "思维活跃，高度专注",
-    overall: "充满\n动力",
+    physical: "轻快有力，协调自如",
+    mental: "头脑敏捷，创意涌现",
   },
   {
     score: "9分",
-    physical: "轻快，行动自如",
-    mental: "头脑敏捷，创意丰富",
-    overall: "极佳\n状态",
+    physical: "活力满满，反应敏捷",
+    mental: "思维清晰，洞察力强",
   },
   {
     score: "10分",
-    physical: "精力充沛，活力满满",
+    physical: "高峰状态，能量爆棚",
     mental: "清晰敏锐，专注兴奋",
-    overall: "巅峰\n状态",
   },
 ];
 // 修复 v-model 问题
@@ -175,11 +162,11 @@ const showModal = computed({
   set: (value: boolean) => emit("update:show", value),
 });
 
-const marks = {
-  1: "1",
-  5: "5",
-  10: "10",
-};
+const energyScoreEmoji = computed(() => getEnergyScoreEmoji(energyValue.value));
+const energyScoreMeaning = computed(() => {
+  const row = data[energyValue.value - 1];
+  return `${row.physical}；${row.mental}`;
+});
 
 /** 弹窗级回车提交：不在日期时间输入里时才提交，避免与选择器内回车冲突 */
 function handleModalEnterKeyup(e: KeyboardEvent) {
@@ -224,9 +211,16 @@ const handleCancel = () => {
   width: 100%;
   min-width: 0;
 }
+.score-meaning {
+  display: block;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--color-text-secondary);
+}
 .energy-value-datetime-row__label {
   flex-shrink: 0;
   white-space: nowrap;
+  font-size: 22px;
 }
 .energy-value-datetime-row__picker {
   flex: 1;

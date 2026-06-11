@@ -33,7 +33,7 @@ export function collectPomodoroData(todos: Todo[]): DataPoint[] {
 
 /**
  * 从Task收集所有记录数据
- * 包括：精力值、愉悦值、外部打扰、内部打扰
+ * 包括：精力值、奖赏值、外部打扰、内部打扰
  */
 export function collectTaskRecordData(tasks: Task[]): DataPoint[] {
   const dataPoints: DataPoint[] = [];
@@ -49,7 +49,7 @@ export function collectTaskRecordData(tasks: Task[]): DataPoint[] {
       });
     });
 
-    // 2. 愉悦值记录（可能多条）
+    // 2. 奖赏值记录（可能多条）
     task.rewardRecords?.forEach((record) => {
       dataPoints.push({
         metric: METRICS.REWARD,

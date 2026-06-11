@@ -11,11 +11,11 @@
     <n-space vertical>
       <div class="state-log-slider-grid">
         <div>
-          <div class="state-log-slider-label">⚡精力值：{{ energyValue }}</div>
+          <div class="state-log-slider-label">⚡精力值：{{ energyScoreEmoji }}</div>
           <n-slider ref="energySliderRef" v-model:value="energyValue" :min="1" :max="10" :step="1" />
         </div>
         <div>
-          <div class="state-log-slider-label">🏵️愉悦值：{{ rewardValue }}</div>
+          <div class="state-log-slider-label">🏵️奖赏值：{{ rewardScoreEmoji }}</div>
           <n-slider v-model:value="rewardValue" :min="1" :max="10" :step="1" />
         </div>
       </div>
@@ -63,6 +63,7 @@ import TagPickerPopover from "@/components/TagSystem/TagPickerPopover.vue";
 import { useDataStore } from "@/stores/useDataStore";
 import { useTagStore } from "@/stores/useTagStore";
 import { Dismiss24Regular } from "@vicons/fluent";
+import { getEnergyScoreEmoji, getRewardScoreEmoji } from "@/core/scoreEmojis";
 
 const props = defineProps<{
   show: boolean;
@@ -83,6 +84,9 @@ const recordedAt = ref<number | null>(Date.now());
 const slotPickerVisible = ref<boolean[]>([false, false]);
 const slotSearchTerms = ref<string[]>(["", ""]);
 const energySliderRef = ref<any>(null);
+
+const energyScoreEmoji = computed(() => getEnergyScoreEmoji(energyValue.value));
+const rewardScoreEmoji = computed(() => getRewardScoreEmoji(rewardValue.value));
 
 const showModal = computed({
   get: () => props.show,

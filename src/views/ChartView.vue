@@ -26,7 +26,7 @@
           <div class="stat-icon">😀</div>
           <div class="stat-content">
             <div class="stat-value">{{ stats.avgReward }}</div>
-            <div class="stat-label">平均愉悦值</div>
+            <div class="stat-label">平均奖赏值</div>
           </div>
         </div>
       </div>

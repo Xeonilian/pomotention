@@ -370,7 +370,7 @@ const formatTime = (timestamp: number) => {
   });
 };
 
-// 根据愉悦值获取颜色
+// 根据奖赏值获取颜色
 const getRewardColor = (value: number) => {
   const clampedValue = Math.max(1, Math.min(10, value));
   const normalizedValue = (clampedValue - 1) / 9;
