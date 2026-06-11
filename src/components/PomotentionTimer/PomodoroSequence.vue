@@ -102,7 +102,7 @@
 
       <n-button class="action-button" @click="handleInsertButtonClick" :title="insertButtonTitle" :disabled="isRunning" tertiary circle>
         <template v-if="insertMode === 'hiit'">
-          <n-icon :component="Timer1024Regular" />
+          <n-icon :component="Timer1024Regular" size="18" />
         </template>
         <template v-else>🍅</template>
       </n-button>
@@ -954,7 +954,7 @@ function resetWhiteNoise(sound: SoundType) {
 }
 .hiit-insert-hint {
   font-size: 11px;
-  color: var(--color-text-primary);
+  color: var(--color-text-secondary);
   letter-spacing: -0.3px;
 }
 .pomo-duration-input {
