@@ -51,6 +51,12 @@ export interface GlobalSettings {
   marquee: string;
   pomodoroStateMessage?: string; // 自定义番茄钟状态消息
   pomoSequenceInput?: string; // 序列模式默认输入
+  /** 序列插入模式：番茄 / HIIT */
+  pomoSeqInsertMode?: "pomo" | "hiit";
+  /** 上次 HIIT 插入预设，如 (40+20)x12 */
+  pomoSeqHiitPreset?: string;
+  /** HIIT 模式序列输入 */
+  pomoSeqHiitInput?: string;
   supabaseSync: number[];
   firstSync: boolean;
   autoSupabaseSync: boolean;
@@ -115,7 +121,10 @@ const defaultSettings: GlobalSettings = {
   viewSet: "day",
   marquee: "", // 保持觉察 🍅 = ⏰ + 🎯 + 👁‍🗨
   pomodoroStateMessage: undefined, // 自定义番茄钟状态消息，未设置时使用默认逻辑
-  pomoSequenceInput: ">>>>🍅+05+🍅+05+🍅+05+🍅+15", // 序列模式默认输入
+  pomoSequenceInput: "<<<<🍅+05+🍅+05+🍅+05+🍅+15", // 序列模式默认输入
+  pomoSeqInsertMode: "pomo",
+  pomoSeqHiitPreset: "(40+20)x12",
+  pomoSeqHiitInput: "HIITs=(40+20)x12",
   supabaseSync: [0, 0],
   firstSync: true,
   autoSupabaseSync: true,
