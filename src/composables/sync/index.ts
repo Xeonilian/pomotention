@@ -2,4 +2,4 @@
 export { useSyncWidget } from "@/composables/sync/useSyncWidget";
 export { useRelativeTime } from "@/composables/sync/useRelativeTime";
 export { useDataExport } from "@/composables/sync/useDataExport";
-export { useMigrate } from "@/composables/sync/useMigrate";
+export { initialMigrate } from "@/composables/sync/useMigrate";

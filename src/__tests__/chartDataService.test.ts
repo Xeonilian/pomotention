@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { collectPomodoroData, collectTaskRecordData, aggregateByTime } from "@/services/chartDataService";
+import { collectPomodoroData, collectTaskRecordData, aggregateByTime } from "@/services/chart/chartDataService";
 import { METRICS } from "@/core/types/Metrics";
+import type { DataPoint } from "@/core/types/Chart";
 import type { Todo } from "@/core/types/Todo";
 import type { Task } from "@/core/types/Task";
 
@@ -206,8 +207,8 @@ describe("chartDataService", () => {
 
       const result = collectTaskRecordData(tasks as Task[]);
 
-      const externalInterruptions = result.filter((p) => p.metric === METRICS.INTERRUPTION_EXTERNAL);
-      const internalInterruptions = result.filter((p) => p.metric === METRICS.INTERRUPTION_INTERNAL);
+      const externalInterruptions = result.filter((p: DataPoint) => p.metric === METRICS.INTERRUPTION_EXTERNAL);
+      const internalInterruptions = result.filter((p: DataPoint) => p.metric === METRICS.INTERRUPTION_INTERNAL);
 
       // 验证分类
       expect(externalInterruptions).toHaveLength(2);
