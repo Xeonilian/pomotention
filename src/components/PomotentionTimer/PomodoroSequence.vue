@@ -100,7 +100,14 @@
         </div>
       </n-popover>
 
-      <n-button class="action-button" @click="handleInsertButtonClick" :title="insertButtonTitle" :disabled="isRunning" tertiary circle>
+      <n-button
+        class="action-button"
+        @click.stop="handleInsertButtonClick"
+        :title="insertButtonTitle"
+        :disabled="isRunning"
+        tertiary
+        circle
+      >
         <template v-if="insertMode === 'hiit'">
           <n-icon :component="Timer1024Regular" size="18" />
         </template>

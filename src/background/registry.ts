@@ -25,8 +25,8 @@ export const TIMER_BACKGROUND_ANIMATIONS: readonly TimerBackgroundAnimation[] = 
   { id: "none", label: "无" },
   { id: "balls", label: "彩球", component: TimerBgBalls },
   { id: "flake", label: "雪花", component: TimerBgFlake },
-  { id: "star", label: "流星", component: TimerBgStar },
   { id: "rainbow", label: "彩虹", component: TimerBgRainbow },
+  { id: "star", label: "流星", component: TimerBgStar },
 ] as const;
 
 export const TIMER_BACKGROUND_ANIMATION_STORAGE_KEY = "timerBackgroundAnimation";
