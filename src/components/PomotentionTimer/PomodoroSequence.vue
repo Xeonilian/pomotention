@@ -102,7 +102,7 @@
 
       <n-button class="action-button" @click="handleInsertButtonClick" :title="insertButtonTitle" :disabled="isRunning" tertiary circle>
         <template v-if="insertMode === 'hiit'">
-          <n-icon :component="Timer1024Regular" />
+          <n-icon :component="Timer1024Regular" size="18" />
         </template>
         <template v-else>🍅</template>
       </n-button>
@@ -149,11 +149,7 @@ import { SoundType } from "@/core/sounds.ts";
 import { timerSequenceRunBegin, timerSequenceRunClear } from "@/services/timer/timerSessionRecorder";
 import { useTimerSequenceStop } from "@/composables/timer/useTimerSequenceStop";
 import { clickStatsStore } from "@/stores/useClickStatsStore";
-import {
-  parsePomoSequenceInput,
-  stepDurationSec,
-  type PomodoroStep,
-} from "@/services/timer/parsePomoSequence";
+import { parsePomoSequenceInput, stepDurationSec, type PomodoroStep } from "@/services/timer/parsePomoSequence";
 
 const timerStore = useTimerStore();
 const settingStore = useSettingStore();
@@ -589,8 +585,7 @@ function resolveActiveStepIndex(): number {
       const left = baseIndex - offset;
       const right = baseIndex + offset;
       if (left >= 0 && steps[left].type === expectedType && stepDurationSec(steps[left]) === expectedDurationSec) return left;
-      if (right < steps.length && steps[right].type === expectedType && stepDurationSec(steps[right]) === expectedDurationSec)
-        return right;
+      if (right < steps.length && steps[right].type === expectedType && stepDurationSec(steps[right]) === expectedDurationSec) return right;
     }
   }
 
@@ -978,7 +973,7 @@ function resetWhiteNoise(sound: SoundType) {
 }
 .hiit-insert-hint {
   font-size: 11px;
-  color: var(--color-text-primary);
+  color: var(--color-text-secondary);
   letter-spacing: -0.3px;
 }
 .pomo-duration-input {
