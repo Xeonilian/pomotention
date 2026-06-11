@@ -38,6 +38,8 @@ export const useTimerStore = defineStore(
     const finalizedForPhase = ref(false);
     /** 阶段结束回调（无法持久化，刷新后丢失） */
     const phaseFinishCallback = ref<(() => void) | null>(null);
+    /** 当前 phase 自然结束时是否跳过 WORK_END / BREAK_END（HIIT 中间交替） */
+    const suppressPhaseEndCueForPhase = ref(false);
 
     const settingStore = useSettingStore();
     const breakDuration = ref(settingStore.settings.durations.breakDuration);
@@ -272,7 +274,11 @@ export const useTimerStore = defineStore(
             resetTimer();
           }
         };
-        void playPhaseEndCue(SoundType.WORK_END).finally(() => runAfterWorkEndCue());
+        if (suppressPhaseEndCueForPhase.value) {
+          runAfterWorkEndCue();
+        } else {
+          void playPhaseEndCue(SoundType.WORK_END).finally(() => runAfterWorkEndCue());
+        }
       } else if (pomodoroState.value === "breaking") {
         const stripWnBeforeChain = !settingStore.settings.isWhiteNoiseEnabled;
         const runAfterBreakEndCue = () => {
@@ -286,7 +292,11 @@ export const useTimerStore = defineStore(
             resetTimer();
           }
         };
-        void playPhaseEndCue(SoundType.BREAK_END).finally(() => runAfterBreakEndCue());
+        if (suppressPhaseEndCueForPhase.value) {
+          runAfterBreakEndCue();
+        } else {
+          void playPhaseEndCue(SoundType.BREAK_END).finally(() => runAfterBreakEndCue());
+        }
       }
     }
 
@@ -389,12 +399,13 @@ export const useTimerStore = defineStore(
       finalizeCurrentPhase();
     }
 
-    function startWorking(duration: number, onFinish?: () => void): void {
+    function startWorking(duration: number, onFinish?: () => void, unit: "min" | "sec" = "min", suppressPhaseEndCue = false): void {
+      suppressPhaseEndCueForPhase.value = suppressPhaseEndCue;
       beginNewPhase(onFinish);
 
       pomodoroState.value = "working";
       const dur = duration ?? settingStore.settings.durations.workDuration;
-      totalTime.value = dur * 60;
+      totalTime.value = unit === "sec" ? dur : dur * 60;
       timeRemaining.value = totalTime.value;
       startTime.value = Date.now();
       phaseEndsAt.value = startTime.value + totalTime.value * 1000;
@@ -413,14 +424,15 @@ export const useTimerStore = defineStore(
     /** 上一 tick 的已过秒数，用于「边界跨越」检测；息屏/后台时墙钟会跳秒，不能用 |elapsed-node|<=1 */
     const breakReminderPrevElapsed = ref(-1);
 
-    function startBreak(duration: number, onFinish?: () => void): void {
-      breakReminderCount.value = duration;
+    function startBreak(duration: number, onFinish?: () => void, unit: "min" | "sec" = "min", suppressPhaseEndCue = false): void {
+      suppressPhaseEndCueForPhase.value = suppressPhaseEndCue;
+      breakReminderCount.value = unit === "sec" ? 1 : duration;
       breakReminderPrevElapsed.value = -1;
       beginNewPhase(onFinish);
 
       pomodoroState.value = "breaking";
       const dur = duration ?? breakDuration.value;
-      totalTime.value = dur * 60;
+      totalTime.value = unit === "sec" ? dur : dur * 60;
       timeRemaining.value = totalTime.value;
       startTime.value = Date.now();
       phaseEndsAt.value = startTime.value + totalTime.value * 1000;
