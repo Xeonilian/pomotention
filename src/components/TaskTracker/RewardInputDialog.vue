@@ -3,16 +3,19 @@
   <n-modal
     v-model:show="showModal"
     preset="dialog"
-    title="记录愉悦值"
+    title="记录奖赏值"
     class="mobile-dialog-top"
     :on-after-leave="handleCancel"
     @keyup.enter="handleModalEnterKeyup"
     @after-enter="focusSlider"
   >
     <n-space vertical>
-      <n-slider v-model:value="rewardValue" :min="1" :max="10" :step="1" :marks="marks" ref="sliderRef" />
+      <n-slider v-model:value="rewardValue" :min="1" :max="10" :step="1" ref="sliderRef" />
+      <n-text class="score-meaning">{{ rewardScoreMeaning }}</n-text>
       <div class="reward-value-datetime-row">
-        <n-text v-if="!isMobile" class="reward-value-datetime-row__label">当前愉悦值: {{ rewardValue }}</n-text>
+        <n-text class="reward-value-datetime-row__label">
+          {{ rewardScoreEmoji }}
+        </n-text>
         <n-date-picker v-model:value="recordedAt" type="datetime" size="small" class="reward-value-datetime-row__picker" />
         <n-button size="small" class="reward-value-datetime-row__help" @click="showHelp = true">
           <template #icon>
@@ -28,7 +31,7 @@
     </template>
   </n-modal>
 
-  <n-modal v-model:show="showHelp" preset="dialog" title="愉悦值说明">
+  <n-modal v-model:show="showHelp" preset="dialog" title="奖赏值说明">
     <div class="table-wrap">
       <n-data-table :columns="columns" :data="helpData" :bordered="false" :single-line="true" class="table" />
     </div>
@@ -41,8 +44,7 @@ import { Trophy20Regular } from "@vicons/fluent";
 import { NModal, NSlider, NSpace, NText, NButton, NIcon, NDataTable, NDatePicker } from "naive-ui";
 import type { DataTableColumns } from "naive-ui";
 import { flushPickerValueToVue, pickRecordedAtMs, isEventFromDateTimePickerDeep } from "@/utils/recordedAtPick";
-import { useDevice } from "@/composables/platform/useDevice";
-const { isMobile } = useDevice();
+import { getRewardScoreEmoji } from "@/core/scoreEmojis";
 
 const props = defineProps<{
   show: boolean;
@@ -69,7 +71,6 @@ type RowData = {
   score: string;
   emotion: string;
   satisfaction: string;
-  overall: string;
 };
 
 const createColumns = (): DataTableColumns<RowData> => {
@@ -77,22 +78,21 @@ const createColumns = (): DataTableColumns<RowData> => {
     { title: "", key: "score", align: "center", width: 40 },
     { title: "情绪体验", key: "emotion" },
     { title: "成就感/满足感", key: "satisfaction" },
-    { title: "整体\n描述", key: "overall" },
   ];
 };
 
 const columns = createColumns();
 const helpData: RowData[] = [
-  { score: "1分", emotion: "情绪崩溃，痛苦烦躁", satisfaction: "自我厌恶，认为毫无价值", overall: "崩溃\n状态" },
-  { score: "2分", emotion: "情绪低落，压抑沮丧", satisfaction: "自我否定，做得很差", overall: "否定\n状态" },
-  { score: "3分", emotion: "情绪不佳，烦闷不安", satisfaction: "明显不满意，漏洞百出", overall: "不满\n状态" },
-  { score: "4分", emotion: "情绪一般，略有波动", satisfaction: "方向迷茫，试错中摸索", overall: "迷茫\n状态" },
-  { score: "5分", emotion: "情绪稳定，稍感轻松", satisfaction: "方向踟蹰，但日拱一卒", overall: "执行\n状态" },
-  { score: "6分", emotion: "情绪向好，轻松舒适", satisfaction: "方向确定，认可努力", overall: "良好\n状态" },
-  { score: "7分", emotion: "情绪积极，心情愉悦", satisfaction: "感到满意，推进顺利", overall: "满意\n状态" },
-  { score: "8分", emotion: "情绪高涨，兴奋满足", satisfaction: "明显自豪，发现亮点", overall: "自豪\n状态" },
-  { score: "9分", emotion: "情绪极佳，充满喜悦", satisfaction: "非常自豪，感到价值意义", overall: "喜悦\n状态" },
-  { score: "10分", emotion: "情绪巅峰，幸福充盈", satisfaction: "极度自豪，自我实现感", overall: "巅峰\n状态" },
+  { score: "1分", emotion: "情绪崩溃，痛苦烦躁", satisfaction: "自我厌恶，认为毫无价值" },
+  { score: "2分", emotion: "情绪低落，压抑沮丧", satisfaction: "自我否定，做得很差" },
+  { score: "3分", emotion: "情绪不佳，烦闷不安", satisfaction: "明显不满意，漏洞百出" },
+  { score: "4分", emotion: "情绪一般，略有波动", satisfaction: "方向迷茫，试错中摸索" },
+  { score: "5分", emotion: "情绪稳定，稍感轻松", satisfaction: "方向踟蹰，但日拱一卒" },
+  { score: "6分", emotion: "情绪向好，轻松舒适", satisfaction: "方向确定，认可努力" },
+  { score: "7分", emotion: "情绪积极，心情愉悦", satisfaction: "感到满意，推进顺利" },
+  { score: "8分", emotion: "情绪高涨，兴奋满足", satisfaction: "明显自豪，发现亮点" },
+  { score: "9分", emotion: "情绪极佳，充满喜悦", satisfaction: "非常自豪，感到价值意义" },
+  { score: "10分", emotion: "情绪巅峰，幸福充盈", satisfaction: "极度自豪，自我实现感" },
 ];
 
 const sliderRef = ref<any>(null);
@@ -113,11 +113,11 @@ const showModal = computed({
   set: (value: boolean) => emit("update:show", value),
 });
 
-const marks = {
-  1: "1",
-  5: "5",
-  10: "10",
-};
+const rewardScoreEmoji = computed(() => getRewardScoreEmoji(rewardValue.value));
+const rewardScoreMeaning = computed(() => {
+  const row = helpData[rewardValue.value - 1];
+  return `${row.emotion}；${row.satisfaction}`;
+});
 
 function handleModalEnterKeyup(e: KeyboardEvent) {
   if (isEventFromDateTimePickerDeep(e.target)) return;
@@ -150,7 +150,14 @@ const handleCancel = () => {
   width: 100%;
   min-width: 0;
 }
+.score-meaning {
+  display: block;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--color-text-secondary);
+}
 .reward-value-datetime-row__label {
+  font-size: 22px;
   flex-shrink: 0;
   white-space: nowrap;
 }

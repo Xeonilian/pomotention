@@ -18,18 +18,18 @@
   - 任务描述（Markdown）
   - 书写模板
   - 能量记录（⚡，1-10）
-  - 愉悦记录（🏵️，1-10）
+  - 奖赏记录（🏵️，1-10）
   - 打扰记录（内部 💭 / 外部 🗣️）
 
 ## 常用按钮
 
-| 按钮图标 | 功能说明 |
-| :---: | :--- |
-| <img src="/icons/Star20Filled.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0; "> | 添加/取消星标 |
-| <img src="/icons/BatterySaver20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(193, 226, 255);border-radius: 6px;"> | 记录能量（1-10） |
-| <img src="/icons/Emoji24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(193, 226, 255);border-radius: 6px;"> | 记录愉悦（1-10） |
+|                                                                                  按钮图标                                                                                  | 功能说明              |
+| :------------------------------------------------------------------------------------------------------------------------------------------------------------------------: | :-------------------- |
+|                                <img src="/icons/Star20Filled.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0; ">                                | 添加/取消星标         |
+|   <img src="/icons/BatterySaver20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(193, 226, 255);border-radius: 6px;">    | 记录能量（1-10）      |
+|       <img src="/icons/Emoji24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(193, 226, 255);border-radius: 6px;">       | 记录愉悦（1-10）      |
 | <img src="/icons/CalendarAssistant20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(193, 226, 255);border-radius: 6px;"> | 记录打扰（内部/外部） |
-| <img src="/icons/CalligraphyPen20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(224, 224, 224);border-radius: 6px;"> | 打开书写模板 |
+|  <img src="/icons/CalligraphyPen20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(224, 224, 224);border-radius: 6px;">   | 打开书写模板          |
 
 ## 状态记录
 
@@ -41,15 +41,15 @@
   - 快速录入：`←→` 选择能量值，回车确认。
   - 详细录入：选择能量值，输入描述后确认。
   - 点击内部 <img src="/icons/BatterySaver20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;border-radius: 6px;"> 可查看能量定义。
-  <img src="/task-energy.png" alt="Energy Record" width="450">
+    <img src="/task-energy.png" alt="Energy Record" width="450">
 
-### 愉悦记录
+### 奖赏记录
 
 - 点击 <img src="/icons/Emoji24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(193, 226, 255);border-radius: 6px;"> 按钮：
-  - 快速录入：`←→` 选择愉悦值，回车确认。
-  - 详细录入：选择愉悦值，输入描述后确认。
+  - 快速录入：`←→` 选择奖赏值，回车确认。
+  - 详细录入：选择奖赏值，输入描述后确认。
   - 点击内部 <img src="/icons/Beach24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;border-radius: 6px;"> 可查看愉悦定义。
-  <img src="/task-happy.png" alt="Happy Record" width="450">
+    <img src="/task-happy.png" alt="Happy Record" width="450">
 
 ### 打扰记录
 
@@ -67,7 +67,7 @@
 - 特殊语法：
   - `-[ ]` 在显示模式可直接勾选
   - `== ==` 黄色高亮
-  <img src="/task-edting-area.png" alt="Editing Aera" width="450">
+    <img src="/task-edting-area.png" alt="Editing Aera" width="450">
 - 常用快捷键：
   - `Tab`：缩进（支持多行）
   - `Shift + Tab`：取消缩进（支持多行）

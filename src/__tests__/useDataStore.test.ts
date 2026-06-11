@@ -87,7 +87,7 @@ describe("useDataStore - 图表数据功能", () => {
     // 验证精力值
     expect(dataStore.dataByMetric.get(METRICS.ENERGY)).toHaveLength(2);
 
-    // 验证愉悦值
+    // 验证奖赏值
     expect(dataStore.dataByMetric.get(METRICS.REWARD)).toHaveLength(1);
 
     // 验证外部打扰

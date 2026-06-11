@@ -18,7 +18,7 @@ export const PRESET_CONFIGS = {
   }),
 
   /**
-   * 精力值 & 愉悦值对比（7天）
+   * 精力值 & 奖赏值对比（7天）
    */
   energy_reward_compare: createChartConfig(
     [
@@ -27,9 +27,9 @@ export const PRESET_CONFIGS = {
     ],
     {
       type: "line",
-      title: "精力值 & 愉悦值",
+      title: "精力值 & 奖赏值",
       dateRange: DateRangePresets.thisMonth(),
-    }
+    },
   ),
 
   /**

@@ -37,20 +37,7 @@
             </template>
           </TagPickerPopover>
         </div>
-        <n-button
-          text
-          type="warning"
-          @click="toggleFilterStarred"
-          class="star-btn"
-          :title="filterStarredOnly ? '仅看加星任务：开' : '仅看加星任务：关'"
-        >
-          <template #icon>
-            <n-icon>
-              <Star20Filled v-if="filterStarredOnly" />
-              <Star20Regular v-else />
-            </n-icon>
-          </template>
-        </n-button>
+        <StarFilterToggle :active="filterStarredOnly" @toggle="toggleFilterStarred" />
         <n-button
           v-if="isMobile"
           text
@@ -156,7 +143,6 @@ import type { Tag } from "@/core/types/Tag";
 import TabPaneContent from "@/components/search/TabPaneContent.vue";
 import {
   Star20Filled,
-  Star20Regular,
   Dismiss12Regular,
   Search20Regular,
   ChevronLeft20Regular,
@@ -164,6 +150,7 @@ import {
 } from "@vicons/fluent";
 import TagPickerPopover from "@/components/TagSystem/TagPickerPopover.vue";
 import TagRenderer from "@/components/TagSystem/TagRenderer.vue";
+import StarFilterToggle from "@/components/TagSystem/StarFilterToggle.vue";
 
 // 引入 stores 和类型
 import { useActivityTagEditor } from "@/composables/activity/useActivityTagEditor";

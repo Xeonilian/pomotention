@@ -550,6 +550,8 @@ function getPomoBgColorHEX(ratio: number) {
   padding: 0.5px 0px;
   border-radius: 2px;
   -webkit-tap-highlight-color: transparent;
+  overflow: visible;
+  transform: translateY(-2px);
 }
 
 /* 仅标题参与压缩省略；避免与时间点并排时把 TagRenderer 根（.tag-container / min-width:0）挤扁 */
@@ -562,7 +564,7 @@ function getPomoBgColorHEX(ratio: number) {
 .item .title {
   flex: 1 1 auto;
   min-width: 0;
-  overflow: hidden;
+  overflow: visible;
   text-overflow: ellipsis;
   white-space: nowrap;
 }

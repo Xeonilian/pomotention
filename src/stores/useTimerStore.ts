@@ -12,7 +12,18 @@ export const useTimerStore = defineStore(
   "timer",
   () => {
     const INTENTIONAL_EXIT_MARK_KEY = "pomotention-intentional-exit";
+    /** v0.6.9 前写入 localStorage，升级后清掉避免冷启动误恢复 */
+    const LEGACY_TIMER_PERSIST_KEY = "pomotention-timer";
     let hasBoundExitMarker = false;
+
+    function purgeLegacyTimerPersist(): void {
+      try {
+        localStorage.removeItem(LEGACY_TIMER_PERSIST_KEY);
+      } catch {
+        /* 私密模式等 */
+      }
+    }
+    purgeLegacyTimerPersist();
 
     // 状态
     const pomodoroState = ref<PomodoroState>("idle");
@@ -319,9 +330,8 @@ export const useTimerStore = defineStore(
       if (hasBoundExitMarker) return;
       hasBoundExitMarker = true;
 
-      // 主动刷新/关闭/离开页面时打标；异常中断通常不会触发，可保留恢复能力
+      // 仅 beforeunload：刷新/关页时打标并在 reconcile 清空。不用 pagehide——iOS 切后台也会触发且 persisted 常为 false
       window.addEventListener("beforeunload", markIntentionalExit);
-      window.addEventListener("pagehide", markIntentionalExit);
     }
 
     function consumeIntentionalExitMark(): boolean {
@@ -542,6 +552,8 @@ export const useTimerStore = defineStore(
   {
     persist: {
       key: "pomotention-timer",
+      // 仅当前浏览会话：关标签/关浏览器后不再恢复；同会话内后台仍靠墙钟 reconcile
+      storage: sessionStorage,
       // remindedSet / 回调 / interval 不持久化
       pick: [
         "pomodoroState",

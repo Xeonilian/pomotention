@@ -70,6 +70,22 @@
           <template v-if="showRowActions">
             <n-button
               v-if="!showActivityPanel"
+              class="mobile-home-fab__cancel-button"
+              size="large"
+              secondary
+              circle
+              @click.stop="emit('cancel-planner-row')"
+              :title="cancelPlannerRowTitle"
+              :disabled="!canCancelPlannerRow"
+            >
+              <template #icon>
+                <n-icon size="20">
+                  <DismissCircle20Regular />
+                </n-icon>
+              </template>
+            </n-button>
+            <n-button
+              v-if="!showActivityPanel"
               class="mobile-home-fab__suspend-button"
               size="large"
               secondary
@@ -197,9 +213,11 @@ import {
   TextGrammarArrowRight24Regular,
   TextGrammarArrowLeft24Regular,
   ArrowRepeatAll24Regular,
+  DismissCircle20Regular,
 } from "@vicons/fluent";
 import type { Activity } from "@/core/types/Activity";
 import { timestampToDatetime } from "@/core/utils";
+import { hasAnyProgress } from "@/services/timer/realPomoState";
 import { useDataStore } from "@/stores/useDataStore";
 import { useSettingStore } from "@/stores/useSettingStore";
 
@@ -215,6 +233,7 @@ const emit = defineEmits<{
   (e: "quick-add-schedule", isUntaetigkeit: boolean): void;
   (e: "reset-to-present"): void;
   (e: "suspend-planner-row"): void;
+  (e: "cancel-planner-row"): void;
   (e: "repeat-activity", noTodoRepeat: boolean): void;
   (e: "finish-task-record-editing"): void;
 }>();
@@ -238,6 +257,8 @@ const {
   activityById,
   todoByActivityId,
   scheduleByActivityId,
+  todoById,
+  scheduleById,
 } = storeToRefs(dataStore);
 const dateService = dataStore.dateService;
 
@@ -257,6 +278,32 @@ const showBackToToday = computed(() => !dateService.isViewDateToday);
 const showRowActions = computed(() => selectedRowId.value != null || activeId.value != null || selectedActivityId.value != null);
 const showActivityPanel = computed(() => settingStore.settings.showActivity);
 const noSelectedActivity = computed(() => selectedRowId.value == null && selectedActivityId.value == null && activeId.value == null);
+
+/** 与 DayTodo / DaySchedule 表头 cancel 一致 */
+const canCancelPlannerRow = computed(() => {
+  const id = selectedRowId.value;
+  if (id == null) return false;
+
+  const todo = todoById.value.get(id);
+  if (todo) {
+    return todo.status !== "done" && todo.status !== "cancelled" && !hasAnyProgress(todo);
+  }
+
+  const schedule = scheduleById.value.get(id);
+  if (schedule) {
+    return schedule.status !== "done" && schedule.status !== "cancelled";
+  }
+
+  return false;
+});
+
+const cancelPlannerRowTitle = computed(() => {
+  const id = selectedRowId.value;
+  if (id == null) return "取消";
+  if (todoById.value.has(id)) return "取消选中任务，不退回活动清单";
+  if (scheduleById.value.has(id)) return "取消选中日程";
+  return "取消";
+});
 
 /** 与 ActivitySheet.pickActivity 一致 */
 function handlePickActivity() {

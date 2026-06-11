@@ -39,7 +39,7 @@ export const METRIC_DEFINITIONS: Record<MetricName, MetricDefinition> = {
   },
 
   [METRICS.REWARD]: {
-    label: "愉悦值",
+    label: "奖赏值",
     unit: "分",
     aggregationType: "avg",
     defaultColor: "#67c23a",

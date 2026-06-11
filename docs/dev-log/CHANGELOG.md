@@ -1,5 +1,41 @@
 # 更新日志
 
+## `v0.6.9` · 2026-06-11
+
+- **新增**
+  - **activity**：四象限看板（`Urgent` / `Important` 标签划分）；拖拽调整象限、到期日触发 Urgent、移动端适配与窄屏单列模式。
+
+  - **task**：状态快记（`StateLogModal`）— 精力/奖赏滑条与标签槽，支持非当前时间记录；打断等记录对话框支持自定义 `recordedAt`。
+
+  - **ui**：全局快捷键体系（`appActions` + `useGlobalKeyboardShortcuts`）；设置页新增快捷键查阅 Tab。
+
+  - **planner**：周/月视图单击进入日视图；Repeat 按钮扩展至 Activity 区域；加星筛选可与标签叠加，Planner 与 Search 共用筛选组件。
+
+- **优化**
+  - **planner**：计划表 UI 调整 — 周视图块分布、已结束项展示方式、布局稳定与移动端编辑可视区；FAB 增加 cancel；字截断改为 `visible`。
+
+  - **timetable**：进行中 todo 第四列显示开放渐变时间条。
+
+  - **timer**：HIIT 序列与插入按钮交互（番茄/HIIT 双击切换）；按钮点击反馈。
+
+  - **task**：快速记录布局与记录文本交互；`ActivityRow` 从 `ActivitySection` 拆分。
+
+  - **ui**：设置页拆分为 General / Pomo / Shortcut / Debug 等 Tab；Android 键盘抖动缓解；Tag 弹层移动端收敛。
+
+  - **data**：`composables` / `services` / 组件按域重组；引入 `actions/` 统一命令层与分层约定文档。
+
+- **修复**
+  - **sync**：tag / template 登出再登录时同步竞争；待机跨天未回到正确今日。
+
+  - **timer**：退出 timer 视图不停止计时；快速启动计时无法正确停止；点击 start planner 不再清空进行中计时。
+
+  - **activity**：筛选已取消（`cancelled`）活动的歧义。
+
+  - **ui**：modal 打开时首页左右键误触；rank Popover Enter 确认后直接退出编辑。
+
+- **其他**
+  - **docs**：计划表术语与参考页全面更新（`planner` → 计划表）；模块联动、workflow、backlog 搭建等指南；周/月/年视图截图更新。
+
 ## `v0.6.8` · 2026-05-07
 
 - **新增**

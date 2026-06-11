@@ -57,4 +57,6 @@ export interface ActualTimeRange {
   end: number;
   category: string;
   emoji?: string; // 特殊priority的todo显示的emoji
+  /** 有 startTime、无 doneTime 且未完成：第四列开放渐变条 */
+  ongoing?: boolean;
 }

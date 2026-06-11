@@ -6,7 +6,13 @@
 
     <div class="progress-container" ref="progressContainer" v-show="isRunning"></div>
 
-    <n-input v-if="!isRunning" v-model:value="sequenceInput" placeholder="输入序列，例如：🍅+05" class="sequence-input" type="textarea" />
+    <n-input
+      v-if="!isRunning"
+      v-model:value="sequenceInput"
+      :placeholder="insertMode === 'hiit' ? 'HIITs=(40+20)x12' : '输入序列，例如：🍅+05'"
+      class="sequence-input"
+      type="textarea"
+    />
 
     <div class="button-row">
       <n-button class="action-button" @click="startPomodoroCircle" :disabled="isRunning" tertiary circle>
@@ -32,6 +38,7 @@
         </template>
       </n-button>
       <n-popover
+        v-model:show="showWhiteNoisePopover"
         trigger="click"
         placement="top"
         :show-arrow="false"
@@ -54,17 +61,38 @@
 
         <!-- Popover 的内容：垂直排列的按钮 -->
         <div class="popover-actions">
-          <n-button secondary circle type="info" size="small" title="雨声" @click="resetWhiteNoise(SoundType.WHITE_NOISE_RAIN)">
+          <n-button
+            secondary
+            circle
+            :type="soundType === SoundType.WHITE_NOISE_RAIN ? 'info' : 'default'"
+            size="small"
+            title="雨声"
+            @click="resetWhiteNoise(SoundType.WHITE_NOISE_RAIN)"
+          >
             <template #icon>
               <n-icon><WeatherThunderstorm20Regular /></n-icon>
             </template>
           </n-button>
-          <n-button secondary type="info" circle size="small" title="滴答声" @click="resetWhiteNoise(SoundType.WORK_TICK)">
+          <n-button
+            secondary
+            circle
+            :type="soundType === SoundType.WORK_TICK ? 'info' : 'default'"
+            size="small"
+            title="滴答声"
+            @click="resetWhiteNoise(SoundType.WORK_TICK)"
+          >
             <template #icon>
-              <n-icon><ClockAlarm24Regular /></n-icon>
+              <n-icon><ClockAlarm20Regular /></n-icon>
             </template>
           </n-button>
-          <n-button secondary type="info" circle size="small" title="鸟鸣海声" @click="resetWhiteNoise(SoundType.WHITE_NOISE_BIRD_SEA)">
+          <n-button
+            secondary
+            circle
+            :type="soundType === SoundType.WHITE_NOISE_BIRD_SEA ? 'info' : 'default'"
+            size="small"
+            title="鸟鸣海声"
+            @click="resetWhiteNoise(SoundType.WHITE_NOISE_BIRD_SEA)"
+          >
             <template #icon>
               <n-icon><Icons20Regular /></n-icon>
             </template>
@@ -72,21 +100,29 @@
         </div>
       </n-popover>
 
-      <n-button class="action-button" @click="addPomodoro" title="insert 🍅+05" :disabled="isRunning" tertiary circle>🍅</n-button>
-      <div class="pomo-duration-input-container">
-        =
-        <n-input
-          ref="pomoDurationInput"
-          v-model:value="defaultPomoDuration"
-          placeholder=""
-          class="pomo-duration-input"
-          size="small"
-          @blur="handleBlurRestore"
-          @keydown="handleKeydown"
-          title="设置番茄时长/回车确认"
-          :disabled="isRunning"
-        />
-        <span>&nbsp;min</span>
+      <n-button class="action-button" @click="handleInsertButtonClick" :title="insertButtonTitle" :disabled="isRunning" tertiary circle>
+        <template v-if="insertMode === 'hiit'">
+          <n-icon :component="Timer1024Regular" size="18" />
+        </template>
+        <template v-else>🍅</template>
+      </n-button>
+      <div class="pomo-duration-input-container" :class="{ 'hiit-hint-mode': insertMode === 'hiit' }">
+        <template v-if="insertMode === 'pomo'">
+          =
+          <n-input
+            ref="pomoDurationInput"
+            v-model:value="defaultPomoDuration"
+            placeholder=""
+            class="pomo-duration-input"
+            size="small"
+            @blur="handleBlurRestore"
+            @keydown="handleKeydown"
+            title="设置番茄时长/回车确认"
+            :disabled="isRunning"
+          />
+          <span>&nbsp;min</span>
+        </template>
+        <span v-else class="hiit-insert-hint" title="HIIT (work + break) x repeat, unit: second">(w+b) x rep</span>
       </div>
     </div>
   </div>
@@ -104,9 +140,10 @@ import {
   Play24Regular,
   Stop20Filled,
   WeatherThunderstorm20Regular,
-  ClockAlarm24Regular,
+  ClockAlarm20Regular,
   MusicNote124Filled,
   Icons20Regular,
+  Timer1024Regular,
 } from "@vicons/fluent";
 import { SoundType } from "@/core/sounds.ts";
 type PomodoroStep = {
@@ -129,6 +166,9 @@ function getDefaultWorkDurationMinutes(): number {
 }
 
 function normalizeSequenceForDisplay(sequence: string): string {
+  const trimmed = sequence.trim();
+  if (/^HIITs?\s*=/i.test(trimmed)) return trimmed;
+
   const defaultWorkDuration = getDefaultWorkDurationMinutes();
   return sequence.replace(/w(\d+)/gi, (_, rawDuration: string) => {
     const explicitWorkDuration = Number.parseInt(rawDuration, 10);
@@ -152,7 +192,127 @@ function parseExplicitWorkDuration(token: string): number {
 
 // 数据
 const defaultPomoDuration = ref<string>(settingStore.settings.durations.workDuration.toString());
-const sequenceInput = ref<string>(normalizeSequenceForDisplay(settingStore.settings.pomoSequenceInput ?? ">>>>🍅+05+🍅+05+🍅+05+🍅+15"));
+const insertMode = ref<"pomo" | "hiit">(settingStore.settings.pomoSeqInsertMode ?? "pomo");
+const hiitPreset = ref<string>(settingStore.settings.pomoSeqHiitPreset ?? "(40+20)x12");
+const breakDurationPad = computed(() => settingStore.settings.durations.breakDuration.toString().padStart(2, "0"));
+
+function defaultPomoSequenceTemplate(): string {
+  const bd = breakDurationPad.value;
+  return `<<<<🍅+${bd}`;
+}
+
+function defaultHiitSequenceTemplate(): string {
+  const preset = settingStore.settings.pomoSeqHiitPreset ?? "(40+20)x12";
+  return `HIITs=${preset}`;
+}
+
+function isValidHiitSequence(val: string): boolean {
+  return /^HIITs?\s*=/i.test(val.trim());
+}
+
+function isValidPomoSequence(val: string): boolean {
+  return val.trim().startsWith("<<<<");
+}
+
+function loadSequenceForMode(mode: "pomo" | "hiit"): string {
+  if (mode === "hiit") {
+    const saved = settingStore.settings.pomoSeqHiitInput;
+    if (saved && isValidHiitSequence(saved)) return saved;
+    return defaultHiitSequenceTemplate();
+  }
+  const saved = settingStore.settings.pomoSequenceInput;
+  if (saved && isValidPomoSequence(saved)) {
+    return normalizeSequenceForDisplay(saved);
+  }
+  return defaultPomoSequenceTemplate();
+}
+
+function persistSequenceInputForMode(mode: "pomo" | "hiit", val: string): void {
+  if (mode === "hiit") {
+    if (!isValidHiitSequence(val)) return;
+    settingStore.settings.pomoSeqHiitInput = val;
+    saveHiitPresetFromSequence(val);
+    return;
+  }
+  if (!isValidPomoSequence(val)) return;
+  settingStore.settings.pomoSequenceInput = normalizeSequenceForDisplay(val);
+}
+
+const sequenceInput = ref<string>(loadSequenceForMode(insertMode.value));
+
+const HIIT_BLOCK_IN_SEQ_RE = /\(\s*(\d+)\s*\+\s*(\d+)\s*\)\s*[x×*]\s*(\d+)/gi;
+
+function extractLastHiitBlockFromSequence(seq: string): string | null {
+  const match = seq.trim().match(/HIITs?\s*=\s*(.+)$/i);
+  if (!match) return null;
+  HIIT_BLOCK_IN_SEQ_RE.lastIndex = 0;
+  let last: string | null = null;
+  let m: RegExpExecArray | null;
+  while ((m = HIIT_BLOCK_IN_SEQ_RE.exec(match[1])) !== null) {
+    last = `(${m[1]}+${m[2]})x${m[3]}`;
+  }
+  return last;
+}
+
+function saveHiitPresetFromSequence(seq: string): void {
+  const block = extractLastHiitBlockFromSequence(seq);
+  if (block) {
+    hiitPreset.value = block;
+    settingStore.settings.pomoSeqHiitPreset = block;
+  }
+}
+
+let insertButtonClickCount = 0;
+let insertButtonClickTimer: ReturnType<typeof setTimeout> | null = null;
+
+function handleInsertButtonClick(): void {
+  insertButtonClickCount++;
+  if (insertButtonClickTimer != null) clearTimeout(insertButtonClickTimer);
+  insertButtonClickTimer = setTimeout(() => {
+    if (insertButtonClickCount >= 2) {
+      toggleInsertMode();
+    } else {
+      handleInsertClick();
+    }
+    insertButtonClickCount = 0;
+    insertButtonClickTimer = null;
+  }, 250);
+}
+
+function toggleInsertMode(): void {
+  persistSequenceInputForMode(insertMode.value, sequenceInput.value);
+  insertMode.value = insertMode.value === "pomo" ? "hiit" : "pomo";
+  settingStore.settings.pomoSeqInsertMode = insertMode.value;
+  sequenceInput.value = loadSequenceForMode(insertMode.value);
+  if (insertMode.value === "hiit") {
+    hiitPreset.value = settingStore.settings.pomoSeqHiitPreset ?? "(40+20)x12";
+  }
+}
+
+function handleInsertClick(): void {
+  if (insertMode.value === "hiit") {
+    addHiitBlock();
+  } else {
+    addPomodoro();
+  }
+}
+
+function previewInsertSnippet(): string {
+  if (insertMode.value === "pomo") {
+    const bd = breakDurationPad.value;
+    return sequenceInput.value.trim() === "" ? `🍅+${bd}` : `+🍅+${bd}`;
+  }
+  const block = hiitPreset.value;
+  const trimmed = sequenceInput.value.trim();
+  if (trimmed === "") return `HIITs=${block}`;
+  if (/^HIITs?\s*=/i.test(trimmed)) return `+${block}`;
+  return `HIITs=${block}`;
+}
+
+const insertButtonTitle = computed(() => {
+  const switchTarget = insertMode.value === "pomo" ? "HIIT" : "🍅";
+  return `双击切换 ${switchTarget} 模式，单击插入 ${previewInsertSnippet()}`;
+});
 const isRunning = ref<boolean>(false);
 const timeoutHandles = ref<NodeJS.Timeout[]>([]);
 const currentStep = ref<number>(0);
@@ -167,6 +327,9 @@ const isWhiteNoiseEnabled = computed({
     settingStore.settings.isWhiteNoiseEnabled = val;
   },
 });
+const soundType = computed(() => settingStore.settings.whiteNoiseSoundTrack);
+const showWhiteNoisePopover = ref(false);
+let whiteNoisePopoverCloseTimer: ReturnType<typeof setTimeout> | null = null;
 
 // 添加进度监听
 watch(
@@ -339,12 +502,24 @@ function stopPomodoro(playEndCue = true): void {
 watch(
   sequenceInput,
   (val) => {
-    settingStore.settings.pomoSequenceInput = normalizeSequenceForDisplay(val);
+    persistSequenceInputForMode(insertMode.value, val);
   },
   { immediate: true },
 );
 
 // 添加番茄钟序列
+function addHiitBlock(): void {
+  const block = hiitPreset.value;
+  const trimmed = sequenceInput.value.trim();
+  if (trimmed === "") {
+    sequenceInput.value = `HIITs=${block}`;
+  } else if (/^HIITs?\s*=/i.test(trimmed)) {
+    sequenceInput.value = `${trimmed}+${block}`;
+  } else {
+    sequenceInput.value = `HIITs=${block}`;
+  }
+}
+
 function addPomodoro(): void {
   if (sequenceInput.value.trim() === "") {
     sequenceInput.value = "🍅" + settingStore.settings.durations.breakDuration.toString().padStart(2, "0");
@@ -488,9 +663,8 @@ function handleToggleWhiteNoise(): void {
 // 处理键盘事件
 function handleKeydown(event: KeyboardEvent): void {
   if (event.key === "Enter") {
-    event.preventDefault(); // 阻止默认行为
+    event.preventDefault();
     handleDurationConfirm();
-    // 让输入框失去焦点
     (event.target as HTMLElement)?.blur();
   }
 }
@@ -509,12 +683,10 @@ function handleDurationConfirm(): void {
         console.log("Pomodoro duration confirmed:", num);
       },
       onNegativeClick: () => {
-        // 取消时恢复原值
         defaultPomoDuration.value = settingStore.settings.durations.workDuration.toString();
       },
     });
   } else {
-    // 立即恢复原值
     defaultPomoDuration.value = settingStore.settings.durations.workDuration.toString();
 
     dialog.error({
@@ -554,11 +726,17 @@ function restoreRunningUIFromStore(): void {
   }
 
   const snap = timerStore.sequenceInputSnapshot;
-  const settingSeq = settingStore.settings.pomoSequenceInput ?? "";
+  const isHiitSnap = snap ? /^HIITs?\s*=/i.test(snap.trim()) : false;
+  const settingSeq = isHiitSnap ? (settingStore.settings.pomoSeqHiitInput ?? "") : (settingStore.settings.pomoSequenceInput ?? "");
   if (snap && snap !== settingSeq) {
     // 外部即时启动可能先写 snapshot，再由 settings watch 落盘；此处以 snapshot 为准做一次对齐，避免被误判为异常
     const normalizedSnap = normalizeSequenceForDisplay(snap);
-    settingStore.settings.pomoSequenceInput = normalizedSnap;
+    if (isValidHiitSequence(normalizedSnap)) {
+      persistSequenceInputForMode("hiit", normalizedSnap);
+      insertMode.value = "hiit";
+    } else if (isValidPomoSequence(normalizedSnap)) {
+      persistSequenceInputForMode("pomo", normalizedSnap);
+    }
     sequenceInput.value = normalizedSnap;
   }
 
@@ -608,7 +786,25 @@ onMounted(() => {
 
 onUnmounted(() => {
   timerStore.registerSequenceContinuation(null);
+  if (insertButtonClickTimer != null) {
+    clearTimeout(insertButtonClickTimer);
+    insertButtonClickTimer = null;
+  }
+  if (whiteNoisePopoverCloseTimer != null) {
+    clearTimeout(whiteNoisePopoverCloseTimer);
+    whiteNoisePopoverCloseTimer = null;
+  }
 });
+
+function scheduleWhiteNoisePopoverClose(): void {
+  if (whiteNoisePopoverCloseTimer != null) {
+    clearTimeout(whiteNoisePopoverCloseTimer);
+  }
+  whiteNoisePopoverCloseTimer = setTimeout(() => {
+    showWhiteNoisePopover.value = false;
+    whiteNoisePopoverCloseTimer = null;
+  }, 3000);
+}
 
 function resetWhiteNoise(sound: SoundType) {
   settingStore.settings.whiteNoiseSoundTrack = sound;
@@ -616,6 +812,7 @@ function resetWhiteNoise(sound: SoundType) {
     stopWhiteNoise();
     startWhiteNoise();
   }
+  scheduleWhiteNoisePopoverClose();
 }
 </script>
 
@@ -749,8 +946,16 @@ function resetWhiteNoise(sound: SoundType) {
 .pomo-duration-input-container {
   font-size: 10px;
 }
-.pomo-duration-input-container {
-  font-size: 10px;
+.pomo-duration-input-container.hiit-hint-mode {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  white-space: nowrap;
+}
+.hiit-insert-hint {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  letter-spacing: -0.3px;
 }
 .pomo-duration-input {
   width: 24px;

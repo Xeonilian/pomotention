@@ -32,7 +32,7 @@ export function useChartStats() {
   });
 
   /**
-   * 平均愉悦值
+   * 平均奖赏值
    */
   const avgReward = computed(() => {
     const data = dataStore.getAggregatedData(METRICS.REWARD, "day", "avg");

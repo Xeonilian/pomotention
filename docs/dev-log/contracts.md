@@ -204,17 +204,14 @@
 ### Then
 
 - 1. 显示规则 (UI 展示)：
-
   - `TagRenderer` 遍历 `activity.tagIds`，根据每个 `tagId: number` 从全局数据源获取信息，渲染出带颜色和名称的标签。
   - 若 `activity.tagIds` 为空，则不显示任何标签。
 
 - 2. 编辑规则 (调用既有能力)：
-
   - 点击 `×` 时，调用更新 `Activity` 的 action，将对应的 `tagId` 从 `activity.tagIds` 数组中移除。
   - `TagManager` 本身不直接改变左侧列表的筛选状态。
 
 - 3. 筛选与联动规则 (更新全局 State)：
-
   - 单标签筛选：调用 action，将该 `tagId` 添加到 `searchUi.filterTagIds` 数组中。左侧列表根据订阅自动刷新，仅显示同时包含所有 `filterTagIds` 中标签的 `Activity`。
   - 取消筛选：调用 action，将该 `tagId` 从 `searchUi.filterTagIds` 数组中移除。左侧列表自动刷新。
   - 叠加筛选：行为与“单标签筛选”一致，即将新的 `tagId` 追加到 `searchUi.filterTagIds` 数组中，实现“与”逻辑的叠加筛选。
@@ -243,7 +240,7 @@
 
 - 看到全局热图，更改年度
 - 看到 3 个静态数据，全部番茄，平均精力，平均预约
-- 看到月番茄、精力愉悦愉悦值变化、打扰变化，改变月度
+- 看到月番茄、精力奖赏值变化、打扰变化，改变月度
 
 ---
 
