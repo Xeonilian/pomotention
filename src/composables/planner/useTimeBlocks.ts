@@ -312,42 +312,53 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
     };
   }
 
+  function getTodoRangeColors(category: string): { borderColor: string; backgroundColor: string } {
+    if (category === "grape") {
+      return { borderColor: "var(--color-purple)", backgroundColor: "var(--color-purple-transparent)" };
+    }
+    if (category === "tomato") {
+      return { borderColor: "var(--color-red)", backgroundColor: "var(--color-red-transparent)" };
+    }
+    if (category === "cherry") {
+      return { borderColor: "var(--color-green)", backgroundColor: "var(--color-green-transparent)" };
+    }
+    return { borderColor: "var(--color-green)", backgroundColor: "var(--color-green-transparent)" };
+  }
+
   function getActualTodoTimeRangeStyle(range: ActualTimeRange): CSSProperties {
     const startMinute = (range.start - props.timeRange.start) / 60000;
     const endMinute = (range.end - props.timeRange.start) / 60000;
     const topPx = startMinute * props.effectivePxPerMinute;
-    const heightPx = (endMinute - startMinute) * props.effectivePxPerMinute;
+    const heightPx = Math.max(0, (endMinute - startMinute) * props.effectivePxPerMinute);
+    const { borderColor, backgroundColor } = getTodoRangeColors(range.category);
 
-    // 根据category确定颜色
-    let borderColor: string;
-    let backgroundColor: string;
-
-    if (range.category === "grape") {
-      borderColor = "var(--color-purple)";
-      backgroundColor = "var(--color-purple-transparent)";
-    } else if (range.category === "tomato") {
-      borderColor = "var(--color-red)";
-      backgroundColor = "var(--color-red-transparent)";
-    } else if (range.category === "cherry") {
-      borderColor = "var(--color-green)";
-      backgroundColor = "var(--color-green-transparent)";
-    } else {
-      // 默认绿色
-      borderColor = "var(--color-green)";
-      backgroundColor = "var(--color-green-transparent)";
-    }
-
-    return {
+    const baseStyle: CSSProperties = {
       position: "absolute",
       left: isMobile.value ? "67px" : "61px",
       width: isMobile.value ? "3px" : "8px",
       top: `${topPx}px`,
       height: `${heightPx}px`,
+      zIndex: range.ongoing ? 11 : 10,
+    };
+
+    if (range.ongoing) {
+      return {
+        ...baseStyle,
+        border: `${borderWidth}px solid ${borderColor}`,
+        borderBottom: "none",
+        backgroundColor: "transparent",
+        backgroundImage: `linear-gradient(to bottom, ${backgroundColor}, transparent)`,
+        borderRadius: "6px 6px 0 0",
+        opacity: 0.85,
+      } as CSSProperties;
+    }
+
+    return {
+      ...baseStyle,
       border: `${borderWidth}px solid`,
       borderColor,
       backgroundColor,
       borderRadius: "6px",
-      zIndex: 10,
       opacity: 0.7,
     };
   }
@@ -496,7 +507,10 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
   }
 
   const actualTodoTimeRanges = computed((): ActualTimeRange[] => {
+    void now.value;
     const ranges: ActualTimeRange[] = [];
+    const todoCategory = (todo: (typeof todosForAppDate.value)[number]) =>
+      todo.pomoType === "🍇" ? "grape" : todo.pomoType === "🍒" ? "cherry" : "tomato";
 
     // 处理普通done状态的todo
     const normalTodos = todosForAppDate.value.filter(
@@ -508,7 +522,7 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
         title: todo.activityTitle,
         start: todo.startTime!,
         end: todo.doneTime!,
-        category: todo.pomoType === "🍇" ? "grape" : todo.pomoType === "🍒" ? "cherry" : "tomato",
+        category: todoCategory(todo),
       })),
     );
 
@@ -522,9 +536,26 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
         title: todo.activityTitle,
         start: todo.startTime!,
         end: todo.doneTime!,
-        category: todo.pomoType === "🍇" ? "grape" : todo.pomoType === "🍒" ? "cherry" : "tomato",
+        category: todoCategory(todo),
       })),
     );
+
+    // 有 startTime、未完成、无 doneTime：开放渐变条（start → 当前时间）
+    const ongoingTodos = todosForAppDate.value.filter(
+      (todo) => todo.startTime && !todo.doneTime && todo.status !== "done" && todo.status !== "cancelled",
+    );
+    for (const todo of ongoingTodos) {
+      const end = now.value;
+      if (end <= todo.startTime!) continue;
+      ranges.push({
+        id: todo.id,
+        title: todo.activityTitle,
+        start: todo.startTime!,
+        end,
+        category: todoCategory(todo),
+        ongoing: true,
+      });
+    }
 
     return ranges;
   });

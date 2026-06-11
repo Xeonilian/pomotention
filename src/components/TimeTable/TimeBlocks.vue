@@ -155,10 +155,11 @@
   <!-- ========== 第四列：实际执行时间范围 ========== -->
   <div
     v-for="range in actualTodoTimeRanges"
-    :key="`actual-range-${range.id}`"
+    :key="`actual-range-${range.id}${range.ongoing ? '-ongoing' : ''}`"
     class="actual-time-range"
+    :class="{ ongoing: range.ongoing }"
     :style="getActualTodoTimeRangeStyle(range)"
-    :title="`${range.title} - 实际番茄执行时间`"
+    :title="range.ongoing ? `${range.title} - 进行中` : `${range.title} - 实际番茄执行时间`"
   ></div>
 
   <div
