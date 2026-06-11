@@ -1261,7 +1261,7 @@ function onUncancelTodo(id: number) {
 
 /** 移动端 FAB：回到当下（日期/日视图 + 清筛选；onDateSet('today') 已清选中） */
 function onMobileFabResetToPresent() {
-  dataStore.clearFilterTags();
+  dataStore.clearActivityFilters();
   settingStore.settings.viewSet = "day";
   onDateSet("today");
   settingStore.settings.topHeight = isMobile.value ? 305 : 300;

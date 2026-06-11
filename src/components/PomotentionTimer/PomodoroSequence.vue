@@ -149,7 +149,12 @@ import { SoundType } from "@/core/sounds.ts";
 type PomodoroStep = {
   type: "work" | "break";
   duration: number;
+  unit?: "min" | "sec";
 };
+
+function stepDurationSec(step: PomodoroStep): number {
+  return step.unit === "sec" ? step.duration : step.duration * 60;
+}
 
 const timerStore = useTimerStore();
 const settingStore = useSettingStore();
@@ -169,8 +174,9 @@ function normalizeSequenceForDisplay(sequence: string): string {
   const trimmed = sequence.trim();
   if (/^HIITs?\s*=/i.test(trimmed)) return trimmed;
 
+  let body = trimmed.replace(/^>{4}/, "").replace(/^<{4}/, "").trim();
   const defaultWorkDuration = getDefaultWorkDurationMinutes();
-  return sequence.replace(/w(\d+)/gi, (_, rawDuration: string) => {
+  body = body.replace(/w(\d+)/gi, (_, rawDuration: string) => {
     const explicitWorkDuration = Number.parseInt(rawDuration, 10);
     if (!Number.isFinite(explicitWorkDuration) || explicitWorkDuration < 1 || explicitWorkDuration > 60) {
       return "🍅";
@@ -180,6 +186,8 @@ function normalizeSequenceForDisplay(sequence: string): string {
     }
     return `🍅${explicitWorkDuration}`;
   });
+  if (!body) return defaultPomoSequenceTemplate();
+  return `>>>>${body}`;
 }
 
 function parseExplicitWorkDuration(token: string): number {
@@ -198,7 +206,7 @@ const breakDurationPad = computed(() => settingStore.settings.durations.breakDur
 
 function defaultPomoSequenceTemplate(): string {
   const bd = breakDurationPad.value;
-  return `<<<<🍅+${bd}`;
+  return `>>>>🍅+${bd}`;
 }
 
 function defaultHiitSequenceTemplate(): string {
@@ -211,7 +219,8 @@ function isValidHiitSequence(val: string): boolean {
 }
 
 function isValidPomoSequence(val: string): boolean {
-  return val.trim().startsWith("<<<<");
+  const trimmed = val.trim();
+  return trimmed.startsWith(">>>>") || trimmed.startsWith("<<<<");
 }
 
 function loadSequenceForMode(mode: "pomo" | "hiit"): string {
@@ -349,16 +358,17 @@ watch(
   },
 );
 
-// 解析序列
-function parseSequence(sequence: string): PomodoroStep[] {
+// 解析番茄序列（分钟）
+function parsePomoSequence(sequence: string): PomodoroStep[] {
   const validBreakTimes = ["01", "02", "05", "10", "15", "30", "60"];
-  const firstStepMatch = sequence.match(/🍅\d*|w\d+|\d+/i);
+  let seq = sequence.trim().replace(/^>{4}/, "").replace(/^<{4}/, "").trim();
+  const firstStepMatch = seq.match(/🍅\d*|w\d+|\d+/i);
   if (!firstStepMatch) return [];
 
   const firstStepIndex = firstStepMatch.index || 0;
-  sequence = sequence.substring(firstStepIndex);
+  seq = seq.substring(firstStepIndex);
 
-  const steps = sequence.split("+").map((step) => step.trim());
+  const steps = seq.split("+").map((step) => step.trim());
   return steps.map((step) => {
     if (/^🍅\d+$/u.test(step)) {
       return { type: "work", duration: parseExplicitWorkDuration(step.slice(2)) };
@@ -374,6 +384,47 @@ function parseSequence(sequence: string): PomodoroStep[] {
       return { type: "break", duration: parseInt(breakTime) };
     }
   });
+}
+
+function parseHiitSequence(sequence: string): PomodoroStep[] {
+  const match = sequence.trim().match(/^HIITs?\s*=\s*(.+)$/i);
+  if (!match) return [];
+
+  const steps: PomodoroStep[] = [];
+  HIIT_BLOCK_IN_SEQ_RE.lastIndex = 0;
+  let m: RegExpExecArray | null;
+  while ((m = HIIT_BLOCK_IN_SEQ_RE.exec(match[1])) !== null) {
+    const workSec = Number.parseInt(m[1], 10);
+    const breakSec = Number.parseInt(m[2], 10);
+    const reps = Number.parseInt(m[3], 10);
+    if (
+      !Number.isFinite(workSec) ||
+      workSec < 1 ||
+      !Number.isFinite(breakSec) ||
+      breakSec < 1 ||
+      !Number.isFinite(reps) ||
+      reps < 1
+    ) {
+      throw new Error(`Invalid HIIT block: (${m[1]}+${m[2]})x${m[3]}`);
+    }
+    for (let i = 0; i < reps; i++) {
+      steps.push({ type: "work", duration: workSec, unit: "sec" });
+      steps.push({ type: "break", duration: breakSec, unit: "sec" });
+    }
+  }
+  if (steps.length === 0) {
+    throw new Error(`Invalid HIIT sequence. Expected format: HIITs=(work+break)xrepeat`);
+  }
+  return steps;
+}
+
+// 解析序列（番茄或 HIIT）
+function parseSequence(sequence: string): PomodoroStep[] {
+  const trimmed = sequence.trim();
+  if (/^HIITs?\s*=/i.test(trimmed)) {
+    return parseHiitSequence(trimmed);
+  }
+  return parsePomoSequence(trimmed);
 }
 
 /** 冷启动或 store finalize 无 phase 回调时，由 sequencePhaseContinuation 推进序列 */
@@ -442,6 +493,7 @@ function runStep(steps: PomodoroStep[]): void {
   }
 
   const step = steps[currentStep.value];
+  const suppressEndCue = step.unit === "sec" && currentStep.value < steps.length - 1;
 
   const onFinish = () => {
     // 与 isRunning 对齐：用户点停止时 cancelTimer 已把 store 置 idle，此处应直接返回；若仅本地 isRunning 失步而计时仍在，仍须推进到 runStep/stopPomodoro（以番茄收尾时自然结束与手动 Stop 一致）
@@ -461,13 +513,20 @@ function runStep(steps: PomodoroStep[]): void {
 
   if (step.type === "work") {
     statusLabel.value = `🍅 ${currentPomodoro.value}/${totalPomodoros.value}`;
-    timerStore.startWorking(step.duration, () => {
-      currentPomodoro.value++;
-      onFinish();
-    });
+    const unit = step.unit ?? "min";
+    timerStore.startWorking(
+      step.duration,
+      () => {
+        currentPomodoro.value++;
+        onFinish();
+      },
+      unit,
+      suppressEndCue,
+    );
   } else {
-    statusLabel.value = `Break ${step.duration}min`;
-    timerStore.startBreak(step.duration, onFinish);
+    const unit = step.unit ?? "min";
+    statusLabel.value = unit === "sec" ? `Break ${step.duration}s` : `Break ${step.duration}min`;
+    timerStore.startBreak(step.duration, onFinish, unit, suppressEndCue);
   }
 }
 
@@ -520,11 +579,19 @@ function addHiitBlock(): void {
   }
 }
 
+function ensurePomoSequencePrefix(val: string): string {
+  const trimmed = val.trim();
+  if (/^HIITs?\s*=/i.test(trimmed)) return trimmed;
+  if (isValidPomoSequence(trimmed)) return normalizeSequenceForDisplay(trimmed);
+  return `>>>>${trimmed}`;
+}
+
 function addPomodoro(): void {
+  const bd = breakDurationPad.value;
   if (sequenceInput.value.trim() === "") {
-    sequenceInput.value = "🍅" + settingStore.settings.durations.breakDuration.toString().padStart(2, "0");
+    sequenceInput.value = `>>>>🍅+${bd}`;
   } else {
-    sequenceInput.value += "+🍅+" + settingStore.settings.durations.breakDuration.toString().padStart(2, "0");
+    sequenceInput.value = `${ensurePomoSequencePrefix(sequenceInput.value)}+🍅+${bd}`;
   }
 }
 
@@ -532,18 +599,18 @@ function addPomodoro(): void {
 const progressContainer = ref<HTMLElement | null>(null);
 
 // 创建时间块函数（用 flex 比例适配手机窄屏，不写死 px 宽度）
-function createTimeBlock(duration: number, type: string, sequenceStr: string): HTMLElement {
+function createTimeBlock(step: PomodoroStep, sequenceStr: string): HTMLElement {
   const block = document.createElement("div");
   block.className = "time-block";
-  const totalDuration = parseSequence(sequenceStr).reduce((sum, step) => sum + step.duration, 0);
-  const flexGrow = totalDuration > 0 ? duration / totalDuration : 0;
+  const totalDuration = parseSequence(sequenceStr).reduce((sum, s) => sum + stepDurationSec(s), 0);
+  const flexGrow = totalDuration > 0 ? stepDurationSec(step) / totalDuration : 0;
   block.style.flexGrow = String(flexGrow);
   block.style.flexShrink = String(flexGrow);
   block.style.flexBasis = "0";
   block.style.height = "20px";
   block.style.margin = "0.5px";
   block.style.borderRadius = "2px";
-  block.classList.add(type);
+  block.classList.add(step.type);
   return block;
 }
 
@@ -568,7 +635,7 @@ function resolveActiveStepIndex(): number {
     expectedType &&
     steps[baseIndex] &&
     steps[baseIndex].type === expectedType &&
-    steps[baseIndex].duration * 60 === expectedDurationSec
+    stepDurationSec(steps[baseIndex]) === expectedDurationSec
   ) {
     return baseIndex;
   }
@@ -577,8 +644,9 @@ function resolveActiveStepIndex(): number {
     for (let offset = 0; offset < steps.length; offset++) {
       const left = baseIndex - offset;
       const right = baseIndex + offset;
-      if (left >= 0 && steps[left].type === expectedType && steps[left].duration * 60 === expectedDurationSec) return left;
-      if (right < steps.length && steps[right].type === expectedType && steps[right].duration * 60 === expectedDurationSec) return right;
+      if (left >= 0 && steps[left].type === expectedType && stepDurationSec(steps[left]) === expectedDurationSec) return left;
+      if (right < steps.length && steps[right].type === expectedType && stepDurationSec(steps[right]) === expectedDurationSec)
+        return right;
     }
   }
 
@@ -647,7 +715,7 @@ function initializeProgress(sequence: string): void {
   // console.log("Steps for progress:", steps);
 
   steps.forEach((step) => {
-    const block = createTimeBlock(step.duration, step.type, sequence);
+    const block = createTimeBlock(step, sequence);
     block.classList.add(step.type);
     progressContainer.value?.appendChild(block);
   });
