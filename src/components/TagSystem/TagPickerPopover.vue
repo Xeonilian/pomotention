@@ -22,16 +22,18 @@
       @touchstart.passive="onPanelPointerInteraction"
     >
       <!-- 内置搜索：Home 筛选等；#/@ 场景用 external，搜索由宿主输入同步 -->
-      <n-input
-        v-if="inputMode === 'internal'"
-        ref="filterInputRef"
-        v-model:value="searchTerm"
-        size="small"
-        clearable
-        :placeholder="internalInputPlaceholder"
-        class="tag-picker-panel__search tag-picker-panel__search--quiet"
-        @keydown="handleHostKeydown"
-      />
+      <div v-if="inputMode === 'internal'" class="tag-picker-panel__search-row">
+        <n-input
+          ref="filterInputRef"
+          v-model:value="searchTerm"
+          size="small"
+          clearable
+          :placeholder="internalInputPlaceholder"
+          class="tag-picker-panel__search tag-picker-panel__search--quiet"
+          @keydown="handleHostKeydown"
+        />
+        <slot name="search-suffix" />
+      </div>
       <!-- 列表滚动统一在外层 + scrollbar-gutter，避免 internal/external 下滚动条与行宽错位 -->
       <div class="tag-picker-panel__list-shell">
         <TagSelector
@@ -194,13 +196,24 @@ onUnmounted(() => {
   box-sizing: border-box;
 }
 
-.tag-picker-panel__search {
+.tag-picker-panel__search-row {
+  display: flex;
+  align-items: center;
+  gap: 0;
   padding: 4px 4px 0;
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
-  /* 与 __list-shell 同预留右侧槽位，否则 input 会对齐到滚动条外缘 */
   scrollbar-gutter: stable;
+}
+
+.tag-picker-panel__search {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .tag-picker-panel__search :deep(.n-input-wrapper) {

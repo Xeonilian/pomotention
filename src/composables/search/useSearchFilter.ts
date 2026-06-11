@@ -5,6 +5,7 @@ import { storeToRefs } from "pinia";
 import { useDataStore } from "@/stores/useDataStore";
 import { useSearchUiStore } from "@/stores/useSearchUiStore";
 import type { TabType } from "@/stores/useSearchUiStore";
+import { matchesActivityFilter } from "@/composables/filter/useActivityFilter";
 
 // 定义这个 composable 返回的行类型，这与 Search.vue 中的类型一致
 export type ActivityRow = {
@@ -51,20 +52,17 @@ export function useSearchFilter() {
       }
       if (!passedQuery) continue;
 
-      // --- 筛选条件 2: 星标过滤 (保持你原来的动态计算逻辑) ---
+      // --- 筛选条件 2 & 3: 加星 + 标签 (AND，可单独或叠加) ---
       const hasStarred = dataStore.hasStarredTaskForActivity(act.id);
-      if (filterStarredOnly.value && !hasStarred) {
+      const passedActivityFilter = matchesActivityFilter({
+        filterTagIds: filterTagIds.value,
+        filterStarredOnly: filterStarredOnly.value,
+        activityId: act.id,
+        activityTagIds: act.tagIds,
+        hasStarredTaskForActivity: dataStore.hasStarredTaskForActivity,
+      });
+      if (!passedActivityFilter) {
         continue;
-      }
-
-      // --- 【核心修改】 ---
-      // --- 筛选条件 3: 标签过滤 (AND 逻辑) ---
-      if (filterTagIds.value.length > 0) {
-        // 使用 .every() 来确保活动包含了 *所有* 被选中的筛选标签
-        const passedTagFilter = filterTagIds.value.every((filterId) => act.tagIds?.includes(filterId));
-        if (!passedTagFilter) {
-          continue; // 如果不满足所有标签条件，则跳过
-        }
       }
 
       // --- 行数据构造和排序  ---

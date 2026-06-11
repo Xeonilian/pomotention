@@ -11,6 +11,7 @@ import type { Template } from "@/core/types/Template";
 import type { DataPoint, MetricName, AggregationType, TimeGranularity } from "@/core/types/Chart";
 
 import { addDays, debounce, scheduleDebouncedCloudUpload } from "@/core/utils";
+import { matchesActivityFilter } from "@/composables/filter/useActivityFilter";
 
 import {
   loadActivities,
@@ -59,6 +60,7 @@ export const useDataStore = defineStore(
     const selectedRowId = ref<number | null>(null); // todo.id 或 schedule.id
     const selectedDate = ref<number | null>(null); // todo.id 或 schedule.id
     const filterTagIds = ref<number[]>([]); // day/week/month tag filter (AND)
+    const filterStarredOnly = ref(false); // day/week/month 加星筛选（可与 tag 叠加）
     const stateLogTagSlotIds = ref<Array<number | null>>([]); // 状态快记的标签槽位（最多两个）
     const stateLogTagSlotChecks = ref<Record<number, boolean>>({}); // 状态快记标签槽位勾选：1/2 -> true/false
 
@@ -316,10 +318,14 @@ export const useDataStore = defineStore(
       return null;
     });
 
-    const matchesTagFilter = (activityTagIds?: number[] | null): boolean => {
-      if (!filterTagIds.value || filterTagIds.value.length === 0) return true;
-      const tags = activityTagIds ?? [];
-      return filterTagIds.value.every((filterId) => tags.includes(filterId));
+    const matchesPlannerFilter = (activityId?: number | null, activityTagIds?: number[] | null): boolean => {
+      return matchesActivityFilter({
+        filterTagIds: filterTagIds.value,
+        filterStarredOnly: filterStarredOnly.value,
+        activityId,
+        activityTagIds,
+        hasStarredTaskForActivity: (id) => starredActivityIds.value.has(id),
+      });
     };
 
     const todosForCurrentViewWithTaskRecords = computed<TodoWithTaskRecords[]>(() => {
@@ -330,7 +336,7 @@ export const useDataStore = defineStore(
         if (todo.deleted) continue;
         if (todo.id < start || todo.id >= end) continue;
         const activity = todo.activityId != null ? activityById.value.get(todo.activityId) : undefined;
-        if (!matchesTagFilter(activity?.tagIds)) continue;
+        if (!matchesPlannerFilter(todo.activityId, activity?.tagIds)) continue;
         const relatedTask = todo.taskId != null ? taskById.value.get(todo.taskId) : undefined;
         out.push({
           ...todo,
@@ -350,7 +356,7 @@ export const useDataStore = defineStore(
         if (todo.deleted) continue;
         if (todo.id < start || todo.id >= end) continue;
         const activity = todo.activityId != null ? activityById.value.get(todo.activityId) : undefined;
-        if (!matchesTagFilter(activity?.tagIds)) continue;
+        if (!matchesPlannerFilter(todo.activityId, activity?.tagIds)) continue;
         out.push({
           ...todo,
           tagIds: activity?.tagIds ?? [],
@@ -367,6 +373,8 @@ export const useDataStore = defineStore(
         const date = schedule.activityDueRange?.[0];
         if (date == null) continue;
         if (date < start || date >= end) continue;
+        const activity = schedule.activityId != null ? activityById.value.get(schedule.activityId) : undefined;
+        if (!matchesPlannerFilter(schedule.activityId, activity?.tagIds)) continue;
         const relatedTask = schedule.taskId != null ? taskById.value.get(schedule.taskId) : undefined;
         out.push({
           ...schedule,
@@ -387,7 +395,7 @@ export const useDataStore = defineStore(
           const date = schedule.activityDueRange?.[0];
           if (date == null || date < start || date >= end) return false;
           const activity = schedule.activityId != null ? activityById.value.get(schedule.activityId) : undefined;
-          return matchesTagFilter(activity?.tagIds);
+          return matchesPlannerFilter(schedule.activityId, activity?.tagIds);
         })
         .map((schedule) => {
           const activity = schedule.activityId != null ? activityById.value.get(schedule.activityId) : undefined;
@@ -422,7 +430,7 @@ export const useDataStore = defineStore(
     const firstTaggedTaskIdForAppDate = computed<number | null>(() => {
       const startOfDay = dateService.appDateTimestamp.value;
       const endOfDay = addDays(startOfDay, 1);
-      const hasTagFilter = !!(filterTagIds.value && filterTagIds.value.length > 0);
+      const hasPlannerFilter = !!(filterTagIds.value && filterTagIds.value.length > 0) || filterStarredOnly.value;
 
       const candidates: Array<{ ts: number; priority: number; activityTagIds: number[]; taskId: number | null }> = [];
 
@@ -431,8 +439,8 @@ export const useDataStore = defineStore(
         if (ts == null || ts < startOfDay || ts >= endOfDay) continue;
         const activity = t.activityId != null ? activityById.value.get(t.activityId) : undefined;
         const activityTagIds = activity?.tagIds ?? [];
-        if (!activityTagIds.length) continue;
-        if (hasTagFilter && !matchesTagFilter(activityTagIds)) continue;
+        if (!hasPlannerFilter && !activityTagIds.length) continue;
+        if (hasPlannerFilter && !matchesPlannerFilter(t.activityId, activityTagIds)) continue;
         candidates.push({
           ts,
           priority: t.priority ?? 0,
@@ -446,8 +454,8 @@ export const useDataStore = defineStore(
         if (ts == null || ts < startOfDay || ts >= endOfDay) continue;
         const activity = s.activityId != null ? activityById.value.get(s.activityId) : undefined;
         const activityTagIds = activity?.tagIds ?? [];
-        if (!activityTagIds.length) continue;
-        if (hasTagFilter && !matchesTagFilter(activityTagIds)) continue;
+        if (!hasPlannerFilter && !activityTagIds.length) continue;
+        if (hasPlannerFilter && !matchesPlannerFilter(s.activityId, activityTagIds)) continue;
         candidates.push({
           ts,
           priority: 0,
@@ -459,7 +467,7 @@ export const useDataStore = defineStore(
       if (candidates.length === 0) return null;
 
       candidates.sort((a, b) => {
-        if (hasTagFilter) {
+        if (hasPlannerFilter) {
           return a.ts - b.ts;
         }
         const pa = a.priority ?? 0;
@@ -493,8 +501,8 @@ export const useDataStore = defineStore(
       for (let i = 0; i < numDays; i++) {
         const dayStartTs = start + i * DAY_MS;
         const dayEnd = dayStartTs + DAY_MS;
-        // 有标签筛选时：把匹配到的日期 dot 统一渲染为筛选标签色
-        if (filterTagIds.value && filterTagIds.value.length > 0) {
+        // 有标签/加星筛选时：把匹配到的日期 dot 统一渲染为筛选标签色
+        if ((filterTagIds.value && filterTagIds.value.length > 0) || filterStarredOnly.value) {
           // 找到“这一天里，真正包含筛选标签”的任意一个 activity（todo/schedule 都算）
           // 取第一个命中的 tag 来着色（同一天多个命中时按时间最早者优先）
           const candidates: Array<{ ts: number; activityTagIds: number[] }> = [];
@@ -503,7 +511,7 @@ export const useDataStore = defineStore(
             const ts = pickTodoTsForDay(t);
             if (ts == null || ts < dayStartTs || ts >= dayEnd) continue;
             const activity = t.activityId != null ? activityById.value.get(t.activityId) : undefined;
-            if (!matchesTagFilter(activity?.tagIds)) continue;
+            if (!matchesPlannerFilter(t.activityId, activity?.tagIds)) continue;
             candidates.push({ ts, activityTagIds: activity?.tagIds ?? [] });
           }
 
@@ -511,7 +519,7 @@ export const useDataStore = defineStore(
             const ts = pickScheduleTsForDay(s);
             if (ts == null || ts < dayStartTs || ts >= dayEnd) continue;
             const activity = s.activityId != null ? activityById.value.get(s.activityId) : undefined;
-            if (!matchesTagFilter(activity?.tagIds)) continue;
+            if (!matchesPlannerFilter(s.activityId, activity?.tagIds)) continue;
             candidates.push({ ts, activityTagIds: activity?.tagIds ?? [] });
           }
 
@@ -522,7 +530,10 @@ export const useDataStore = defineStore(
 
           candidates.sort((a, b) => a.ts - b.ts);
           const activityTagIds = candidates[0].activityTagIds ?? [];
-          const displayTagId = activityTagIds.find((id) => filterTagIds.value.includes(id)) ?? filterTagIds.value[0];
+          const displayTagId =
+            filterTagIds.value.length > 0
+              ? (activityTagIds.find((id) => filterTagIds.value.includes(id)) ?? filterTagIds.value[0])
+              : activityTagIds[0];
           const tag = displayTagId != null ? tagStore.getTag(displayTagId) : undefined;
 
           out.push({ dayStartTs, tagColor: tag?.backgroundColor ?? tag?.color ?? null, textColor: tag?.color ?? null });
@@ -607,6 +618,15 @@ export const useDataStore = defineStore(
 
     function clearFilterTags() {
       filterTagIds.value = [];
+    }
+
+    function toggleFilterStarred() {
+      filterStarredOnly.value = !filterStarredOnly.value;
+    }
+
+    function clearActivityFilters() {
+      filterTagIds.value = [];
+      filterStarredOnly.value = false;
     }
 
     function hasStarredTaskForActivity(activityId: number): boolean {
@@ -1044,6 +1064,7 @@ export const useDataStore = defineStore(
       selectedRowHasParent,
       selectedDate,
       filterTagIds,
+      filterStarredOnly,
       stateLogTagSlotIds,
       stateLogTagSlotChecks,
 
@@ -1091,6 +1112,8 @@ export const useDataStore = defineStore(
       toggleFilterTagId,
       removeFilterTagId,
       clearFilterTags,
+      toggleFilterStarred,
+      clearActivityFilters,
 
       // Chart 相关
       allDataPoints,
@@ -1117,6 +1140,7 @@ export const useDataStore = defineStore(
         "selectedRowId",
         "selectedDate",
         "filterTagIds",
+        "filterStarredOnly",
         "stateLogTagSlotIds",
         "stateLogTagSlotChecks",
       ],
