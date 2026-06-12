@@ -79,6 +79,8 @@ export interface GlobalSettings {
   showPublicHolidays: boolean;
   /** 节假日数据区域码，如 CN */
   publicHolidayCountryCode: string;
+  /** 记账默认币种（ISO 4217）；title 未写 USD 等时使用 */
+  defaultCurrency: string;
   // 以后新增全局设置项就在这里补充
 }
 
@@ -138,6 +140,7 @@ const defaultSettings: GlobalSettings = {
   priorityCategoryShowInRank: getDefaultPriorityCategoryShowInRank(),
   showPublicHolidays: true,
   publicHolidayCountryCode: "CN",
+  defaultCurrency: "CNY",
   ai: {
     activeId: 1,
     systemPrompt:
