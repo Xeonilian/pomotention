@@ -1,13 +1,20 @@
 <template>
   <!-- 标签筛选：选中项用 TagRenderer；无筛选时点图标打开 TagPickerPopover -->
   <span class="home-tag-filter__trigger">
-    <span v-if="filterStarredOnly || filterTagIds.length > 0" class="home-tag-filter__chips-wrap" @click.stop @pointerdown.stop>
+    <span v-if="filterStarredOnly || filterLedgerOnly || filterTagIds.length > 0" class="home-tag-filter__chips-wrap" @click.stop @pointerdown.stop>
       <StarFilterToggle
         v-if="filterStarredOnly"
         active
         class="home-tag-filter__star-chip"
         title="取消加星筛选"
         @toggle="dataStore.toggleFilterStarred"
+      />
+      <LedgerFilterToggle
+        v-if="filterLedgerOnly"
+        active
+        class="home-tag-filter__star-chip"
+        title="取消收支筛选"
+        @toggle="dataStore.toggleFilterLedger"
       />
       <TagRenderer
         v-if="filterTagIds.length > 0"
@@ -29,6 +36,7 @@
     >
       <template #search-suffix>
         <StarFilterToggle :active="filterStarredOnly" @toggle="dataStore.toggleFilterStarred" />
+        <LedgerFilterToggle :active="filterLedgerOnly" @toggle="dataStore.toggleFilterLedger" />
       </template>
       <template #trigger>
         <n-button
@@ -60,15 +68,18 @@ import { hasActiveActivityFilter } from "@/composables/filter/useActivityFilter"
 import TagPickerPopover from "@/components/TagSystem/TagPickerPopover.vue";
 import TagRenderer from "@/components/TagSystem/TagRenderer.vue";
 import StarFilterToggle from "@/components/TagSystem/StarFilterToggle.vue";
+import LedgerFilterToggle from "@/components/Ledger/LedgerFilterToggle.vue";
 
 const dataStore = useDataStore();
-const { filterTagIds, filterStarredOnly } = storeToRefs(dataStore);
+const { filterTagIds, filterStarredOnly, filterLedgerOnly } = storeToRefs(dataStore);
 const { isMobile } = useDevice();
 
 /** 手机：标签名最多 3 字；电脑：不截断 */
 const tagNameDisplayLength = computed(() => (isMobile.value ? 3 : null));
 
-const hasActiveFilter = computed(() => hasActiveActivityFilter(filterTagIds.value, filterStarredOnly.value));
+const hasActiveFilter = computed(() =>
+  hasActiveActivityFilter(filterTagIds.value, filterStarredOnly.value, filterLedgerOnly.value),
+);
 
 const showPopover = ref(false);
 const searchTerm = ref("");

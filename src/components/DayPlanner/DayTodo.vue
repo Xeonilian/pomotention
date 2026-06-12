@@ -297,43 +297,49 @@
               @click.stop="startEditing(todo.id, 'title')"
               :title="editingRowId === todo.id && editingField === 'title' ? '' : '单击编辑'"
             >
-              <input
-                class="title-input"
-                v-if="editingRowId === todo.id && editingField === 'title'"
-                :ref="(el: any) => (titleInputRef = el)"
-                v-model="editingValue"
-                @blur="handleTitleBlur(todo)"
-                @keyup.enter="handleTitleEnter(todo, $event)"
-                @keyup.esc="cancelEdit"
-                @input="handleTitleInput(todo)"
-                @keydown="handleInputKeydown($event, todo)"
-                @click.stop
-                :data-todo-id="todo.id"
-              />
-              <TagPickerPopover
-                v-if="editingRowId === todo.id && editingField === 'title'"
-                :ref="(el: any) => setTagPickerRef(el, todo.id)"
-                :show="tagEditor.popoverTargetId.value === todo.id"
-                @update:show="
-                  (open: boolean) => {
-                    if (!open) tagEditor.closePopover();
-                  }
-                "
-                v-model:search-term="tagSearchTermModel"
-                input-mode="external"
-                placement="bottom-end"
-                :popover-style="{ marginRight: '0px' }"
-                :z-index="10000"
-                :panel-pointer-guard="onTodoTagPanelPointerGuard"
-                :on-enter-before-select="onTodoTagEnterBeforeSelect"
-                @select-tag="(tagId: any) => handleTagSelected(tagId)"
-                @create-tag="(tagName: any) => handleTagCreate(tagName)"
-              >
-                <template #trigger>
-                  <span style="display: inline-block; width: 1px; height: 1px; pointer-events: none"></span>
-                </template>
-              </TagPickerPopover>
-              <span class="ellipsis" v-if="!(editingRowId === todo.id && editingField === 'title')">{{ todo.activityTitle ?? "-" }}</span>
+              <div class="title-cell-inner">
+                <input
+                  class="title-input"
+                  v-if="editingRowId === todo.id && editingField === 'title'"
+                  :ref="(el: any) => (titleInputRef = el)"
+                  v-model="editingValue"
+                  @blur="handleTitleBlur(todo)"
+                  @keyup.enter="handleTitleEnter(todo, $event)"
+                  @keyup.esc="cancelEdit"
+                  @input="handleTitleInput(todo)"
+                  @keydown="handleInputKeydown($event, todo)"
+                  @click.stop
+                  :data-todo-id="todo.id"
+                />
+                <TagPickerPopover
+                  v-if="editingRowId === todo.id && editingField === 'title'"
+                  :ref="(el: any) => setTagPickerRef(el, todo.id)"
+                  :show="tagEditor.popoverTargetId.value === todo.id"
+                  @update:show="
+                    (open: boolean) => {
+                      if (!open) tagEditor.closePopover();
+                    }
+                  "
+                  v-model:search-term="tagSearchTermModel"
+                  input-mode="external"
+                  placement="bottom-end"
+                  :popover-style="{ marginRight: '0px' }"
+                  :z-index="10000"
+                  :panel-pointer-guard="onTodoTagPanelPointerGuard"
+                  :on-enter-before-select="onTodoTagEnterBeforeSelect"
+                  @select-tag="(tagId: any) => handleTagSelected(tagId)"
+                  @create-tag="(tagName: any) => handleTagCreate(tagName)"
+                >
+                  <template #trigger>
+                    <span style="display: inline-block; width: 1px; height: 1px; pointer-events: none"></span>
+                  </template>
+                </TagPickerPopover>
+                <span class="ellipsis" v-if="!(editingRowId === todo.id && editingField === 'title')">{{ todo.activityTitle ?? "-" }}</span>
+                <LedgerEntryPopover
+                  v-if="ledgerEntriesForTodo(todo.id).length > 0"
+                  :entries="ledgerEntriesForTodo(todo.id)"
+                />
+              </div>
             </td>
 
             <!-- 6 果果 -->
@@ -528,6 +534,8 @@ import { useTimerStore } from "@/stores/useTimerStore";
 import { storeToRefs } from "pinia";
 import { useActivityTagEditor } from "@/composables/activity/useActivityTagEditor";
 import TagPickerPopover from "../TagSystem/TagPickerPopover.vue";
+import LedgerEntryPopover from "@/components/Ledger/LedgerEntryPopover.vue";
+import type { LedgerEntry } from "@/core/types/LedgerEntry";
 import type { SelectOption } from "naive-ui";
 import { useDevice } from "@/composables/platform/useDevice";
 import { usePomoSlotVoidFingerDouble, pomoFingerVoidPathEnabled } from "@/composables/platform/usePomoSlotVoidFingerDouble";
@@ -555,13 +563,31 @@ const { isMobile } = useDevice();
 const settingStore = useSettingStore();
 const timerStore = useTimerStore();
 const tagStore = useTagStore();
-const { activeId, selectedRowId, selectedActivityId, selectedTaskId, selectedTask, todosForCurrentViewWithTaskRecords } =
+const { activeId, selectedRowId, selectedActivityId, selectedTaskId, selectedTask, todosForCurrentViewWithTaskRecords, ledgerList } =
   storeToRefs(dataStore);
 const { allTags: allTagsFromStore } = storeToRefs(tagStore);
 
 // 当前视图是否为今天（仅今天时已完成行才变灰）
 const dateService = dataStore.dateService;
 const isViewDateToday = computed(() => dateService.isViewDateToday);
+
+const ledgerEntriesByTodoId = computed(() => {
+  const map = new Map<number, LedgerEntry[]>();
+  for (const entry of ledgerList.value) {
+    if (entry.deleted || entry.sourceTodoId == null) continue;
+    const list = map.get(entry.sourceTodoId) ?? [];
+    list.push(entry);
+    map.set(entry.sourceTodoId, list);
+  }
+  for (const list of map.values()) {
+    list.sort((a, b) => a.segmentIndex - b.segmentIndex);
+  }
+  return map;
+});
+
+function ledgerEntriesForTodo(todoId: number): LedgerEntry[] {
+  return ledgerEntriesByTodoId.value.get(todoId) ?? [];
+}
 
 // 根据 selectedRowId 找到对应的 todo
 const selectedTodo = computed(() => {
@@ -2589,8 +2615,17 @@ td.col-check {
   transform: translateY(-1px);
 }
 
+.title-cell-inner {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  width: 100%;
+}
+
 .title-input {
-  width: calc(100% - 4px);
+  flex: 1 1 0;
+  min-width: 0;
+  width: auto;
   padding: 0px 0px;
   border: 1px solid #40a9ff;
   border-radius: 4px;

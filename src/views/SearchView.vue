@@ -38,6 +38,7 @@
           </TagPickerPopover>
         </div>
         <StarFilterToggle :active="filterStarredOnly" @toggle="toggleFilterStarred" />
+        <LedgerFilterToggle :active="filterLedgerOnly" @toggle="toggleFilterLedger" />
         <n-button
           v-if="isMobile"
           text
@@ -151,6 +152,7 @@ import {
 import TagPickerPopover from "@/components/TagSystem/TagPickerPopover.vue";
 import TagRenderer from "@/components/TagSystem/TagRenderer.vue";
 import StarFilterToggle from "@/components/TagSystem/StarFilterToggle.vue";
+import LedgerFilterToggle from "@/components/Ledger/LedgerFilterToggle.vue";
 
 // 引入 stores 和类型
 import { useActivityTagEditor } from "@/composables/activity/useActivityTagEditor";
@@ -171,10 +173,10 @@ const tagStore = useTagStore();
 const { filteredActivities } = useSearchFilter();
 
 // 从 UI store 中解构出 UI 状态（使用 storeToRefs 保持响应性）
-const { searchQuery, filterStarredOnly, openedTabs, activeTabKey, filterTagIds } = storeToRefs(searchUiStore);
+const { searchQuery, filterStarredOnly, filterLedgerOnly, openedTabs, activeTabKey, filterTagIds } = storeToRefs(searchUiStore);
 
 // 从 UI store 中解构出 actions，以便在 script 中调用
-const { toggleFilterStarred, closeTab, openRow, toggleFilterTagId, clearFilterTags } = searchUiStore;
+const { toggleFilterStarred, toggleFilterLedger, closeTab, openRow, toggleFilterTagId, clearFilterTags } = searchUiStore;
 const closeAllTabs = searchUiStore.closeAllTabs.bind(searchUiStore);
 
 // 标签筛选浮层（#/@）
