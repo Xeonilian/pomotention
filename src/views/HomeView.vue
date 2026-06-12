@@ -380,6 +380,7 @@ import {
 } from "@/composables/home/useHomePlannerNavigator";
 import { useHomePlannerKeyboard } from "@/composables/home/useHomePlannerKeyboard";
 import { useHomePlannerRowEdits } from "@/composables/home/useHomePlannerRowEdits";
+import { syncLedgerFromTodoTitle } from "@/services/ledger/ledgerService";
 
 // ======================== 响应式状态与初始化 ========================
 // 不直接import Naive和以下组建加速启动
@@ -441,6 +442,7 @@ const {
   todoList,
   scheduleList,
   taskList,
+  ledgerList,
   activeId,
   selectedTaskId,
   selectedActivityId,
@@ -824,7 +826,7 @@ function onDeleteActivity(id: number | null | undefined) {
     const result = handleRestoreActivity(activityList.value, todoList.value, scheduleList.value, taskList.value, id, {
       activityById: activityById.value,
       childrenByParentId: childrenOfActivity.value,
-    });
+    }, ledgerList.value);
 
     if (result) {
       activeId.value = null;
@@ -836,7 +838,7 @@ function onDeleteActivity(id: number | null | undefined) {
     const result = handleDeleteActivity(activityList.value, todoList.value, scheduleList.value, taskList.value, id, {
       activityById: activityById.value,
       childrenByParentId: childrenOfActivity.value,
-    });
+    }, ledgerList.value);
     if (!result) {
       showErrorPopover("请先清空子项目再删除！");
       return;
@@ -1450,6 +1452,35 @@ const {
   appDateTimestamp,
   dateService,
   saveAllDebounced,
+  onTodoTitleSaved(todoId, rawTitle) {
+    const todo = todoById.value.get(todoId);
+    if (!todo) return rawTitle;
+    const activity = activityById.value.get(todo.activityId);
+    if (!activity) return rawTitle;
+    const task = taskByActivityId.value.get(todo.activityId);
+    const { normalizedTitle } = syncLedgerFromTodoTitle(
+      ledgerList.value,
+      {
+        todoId,
+        activityId: todo.activityId,
+        taskId: task?.id ?? todo.taskId,
+        rawTitle,
+        recordedAt: todo.startTime ?? todo.id,
+        defaultCurrency: settingStore.settings.defaultCurrency,
+      },
+      activity,
+      {
+        resolveOrCreateTagByName: (name) => tagStore.addTag(name, "#2080f0", "rgba(206, 227, 252, 0.5)").id,
+        getActivityTagIds: (activityId) => activityById.value.get(activityId)?.tagIds ?? [],
+        setActivityTagIds: (activityId, tagIds) => dataStore.setActivityTags(activityId, tagIds),
+        markActivityDirty: (act) => {
+          act.synced = false;
+          act.lastModified = Date.now();
+        },
+      },
+    );
+    return normalizedTitle;
+  },
 });
 
 function plannerKeyboardEditField(field: "title" | "start" | "done" | "duration" | "location"): boolean {

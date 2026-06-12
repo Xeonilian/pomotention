@@ -8,6 +8,7 @@ import type { Schedule, ScheduleWithTaskRecords } from "@/core/types/Schedule";
 import type { Task } from "@/core/types/Task";
 import type { Tag } from "@/core/types/Tag";
 import type { Template } from "@/core/types/Template";
+import type { LedgerEntry } from "@/core/types/LedgerEntry";
 import type { DataPoint, MetricName, AggregationType, TimeGranularity } from "@/core/types/Chart";
 
 import { addDays, debounce, scheduleDebouncedCloudUpload } from "@/core/utils";
@@ -18,10 +19,12 @@ import {
   loadTodos,
   loadSchedules,
   loadTasks,
+  loadLedgerEntries,
   saveActivities,
   saveTodos,
   saveSchedules,
   saveTasks,
+  saveLedgerEntries,
 } from "@/services/data/localStorageService";
 
 import { unifiedDateService } from "@/services/data/unifiedDateService";
@@ -41,6 +44,7 @@ export const useDataStore = defineStore(
     const todoList = ref<Todo[]>([]);
     const scheduleList = ref<Schedule[]>([]);
     const taskList = ref<Task[]>([]);
+    const ledgerList = ref<LedgerEntry[]>([]);
 
     // ======================== 2. UI 状态 (State) ========================
 
@@ -61,6 +65,7 @@ export const useDataStore = defineStore(
     const selectedDate = ref<number | null>(null); // todo.id 或 schedule.id
     const filterTagIds = ref<number[]>([]); // day/week/month tag filter (AND)
     const filterStarredOnly = ref(false); // day/week/month 加星筛选（可与 tag 叠加）
+    const filterLedgerOnly = ref(false); // day/week/month 含收支筛选
     const stateLogTagSlotIds = ref<Array<number | null>>([]); // 状态快记的标签槽位（最多两个）
     const stateLogTagSlotChecks = ref<Record<number, boolean>>({}); // 状态快记标签槽位勾选：1/2 -> true/false
 
@@ -72,6 +77,7 @@ export const useDataStore = defineStore(
       todoList.value.length = 0;
       scheduleList.value.length = 0;
       taskList.value.length = 0;
+      ledgerList.value.length = 0;
 
       tagStore.clearData();
       templateStore.clearData();
@@ -89,6 +95,7 @@ export const useDataStore = defineStore(
       todoList.value = loadTodos();
       scheduleList.value = loadSchedules();
       taskList.value = loadTasks();
+      ledgerList.value = loadLedgerEntries();
 
       isDataLoaded.value = true;
     }
@@ -104,6 +111,7 @@ export const useDataStore = defineStore(
         todoList.value.some((item) => !item.synced) ||
         scheduleList.value.some((item) => !item.synced) ||
         taskList.value.some((item) => !item.synced) ||
+        ledgerList.value.some((item) => !item.synced) ||
         tagStore.rawTags?.some((item: Tag) => !item.synced) ||
         templateStore.rawTemplates?.some((item: Template) => !item.synced)
       );
@@ -115,6 +123,7 @@ export const useDataStore = defineStore(
         todos: todoList.value.filter((item) => !item.synced).length,
         schedules: scheduleList.value.filter((item) => !item.synced).length,
         tasks: taskList.value.filter((item) => !item.synced).length,
+        ledger: ledgerList.value.filter((item) => !item.synced).length,
         tags: tagStore.rawTags?.filter((item: Tag) => !item.synced).length ?? 0,
         templates: templateStore.rawTemplates?.filter((item: Template) => !item.synced).length ?? 0,
       };
@@ -259,6 +268,15 @@ export const useDataStore = defineStore(
       return out;
     });
 
+    /** 含有效 ledger 行的 activityId 集合 */
+    const ledgerActivityIds = computed(() => {
+      const out = new Set<number>();
+      for (const entry of ledgerList.value) {
+        if (!entry.deleted) out.add(entry.sourceActivityId);
+      }
+      return out;
+    });
+
     // ======================== 5. 派生UI状态 (Computed) ========================
     const selectedActivity = computed(() => {
       // Tracker 同步会把看板 activeId 清掉只留 selectedActivityId，两者应都能解析当前选中活动
@@ -322,9 +340,11 @@ export const useDataStore = defineStore(
       return matchesActivityFilter({
         filterTagIds: filterTagIds.value,
         filterStarredOnly: filterStarredOnly.value,
+        filterLedgerOnly: filterLedgerOnly.value,
         activityId,
         activityTagIds,
         hasStarredTaskForActivity: (id) => starredActivityIds.value.has(id),
+        hasLedgerForActivity: (id) => ledgerActivityIds.value.has(id),
       });
     };
 
@@ -430,7 +450,8 @@ export const useDataStore = defineStore(
     const firstTaggedTaskIdForAppDate = computed<number | null>(() => {
       const startOfDay = dateService.appDateTimestamp.value;
       const endOfDay = addDays(startOfDay, 1);
-      const hasPlannerFilter = !!(filterTagIds.value && filterTagIds.value.length > 0) || filterStarredOnly.value;
+      const hasPlannerFilter =
+        !!(filterTagIds.value && filterTagIds.value.length > 0) || filterStarredOnly.value || filterLedgerOnly.value;
 
       const candidates: Array<{ ts: number; priority: number; activityTagIds: number[]; taskId: number | null }> = [];
 
@@ -502,7 +523,7 @@ export const useDataStore = defineStore(
         const dayStartTs = start + i * DAY_MS;
         const dayEnd = dayStartTs + DAY_MS;
         // 有标签/加星筛选时：把匹配到的日期 dot 统一渲染为筛选标签色
-        if ((filterTagIds.value && filterTagIds.value.length > 0) || filterStarredOnly.value) {
+        if ((filterTagIds.value && filterTagIds.value.length > 0) || filterStarredOnly.value || filterLedgerOnly.value) {
           // 找到“这一天里，真正包含筛选标签”的任意一个 activity（todo/schedule 都算）
           // 取第一个命中的 tag 来着色（同一天多个命中时按时间最早者优先）
           const candidates: Array<{ ts: number; activityTagIds: number[] }> = [];
@@ -624,13 +645,22 @@ export const useDataStore = defineStore(
       filterStarredOnly.value = !filterStarredOnly.value;
     }
 
+    function toggleFilterLedger() {
+      filterLedgerOnly.value = !filterLedgerOnly.value;
+    }
+
     function clearActivityFilters() {
       filterTagIds.value = [];
       filterStarredOnly.value = false;
+      filterLedgerOnly.value = false;
     }
 
     function hasStarredTaskForActivity(activityId: number): boolean {
       return starredActivityIds.value.has(activityId);
+    }
+
+    function hasLedgerForActivity(activityId: number): boolean {
+      return ledgerActivityIds.value.has(activityId);
     }
 
     function cleanSelection() {
@@ -644,6 +674,7 @@ export const useDataStore = defineStore(
         saveTodos(todoList.value);
         saveSchedules(scheduleList.value);
         saveTasks(taskList.value);
+        saveLedgerEntries(ledgerList.value);
         scheduleDebouncedCloudUpload();
       } catch (e) {
         console.error("save failed", e);
@@ -658,6 +689,7 @@ export const useDataStore = defineStore(
         saveTodos(todoList.value);
         saveSchedules(scheduleList.value);
         saveTasks(taskList.value);
+        saveLedgerEntries(ledgerList.value);
         tagStore.saveTags(tagStore.rawTags);
         templateStore.saveTemplates(templateStore.rawTemplates);
 
@@ -1027,6 +1059,7 @@ export const useDataStore = defineStore(
       todoList,
       scheduleList,
       taskList,
+      ledgerList,
       activeActivities,
       activeTodos,
       activeSchedules,
@@ -1065,6 +1098,7 @@ export const useDataStore = defineStore(
       selectedDate,
       filterTagIds,
       filterStarredOnly,
+      filterLedgerOnly,
       stateLogTagSlotIds,
       stateLogTagSlotChecks,
 
@@ -1114,6 +1148,8 @@ export const useDataStore = defineStore(
       clearFilterTags,
       toggleFilterStarred,
       clearActivityFilters,
+      toggleFilterLedger,
+      hasLedgerForActivity,
 
       // Chart 相关
       allDataPoints,
@@ -1141,6 +1177,7 @@ export const useDataStore = defineStore(
         "selectedDate",
         "filterTagIds",
         "filterStarredOnly",
+        "filterLedgerOnly",
         "stateLogTagSlotIds",
         "stateLogTagSlotChecks",
       ],

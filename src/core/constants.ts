@@ -43,6 +43,7 @@ export const STORAGE_KEYS = {
   TAG: "tag",
   SYNC_STATUS: "syncStatus",
   TIMETABLE_BLOCKS: "timeTableBlocks",
+  LEDGER: "ledgerEntries",
 } as const;
 
 // 预设的工作时间块
@@ -241,9 +242,11 @@ export const POMODORO_COLORS_DARK: Record<string, string> = {
 /** Eisenhower / 四象限：字母序编号 urgent=85、important=126，与 DEFAULT_TAGS 中对应项一致 */
 export const TAG_ID_URGENT = 85;
 export const TAG_ID_IMPORTANT = 126;
+/** 含已录入收支的 Activity 系统标记（隐藏，同四象限 tag） */
+export const TAG_ID_LEDGER = 127;
 
 /** 仅语义用途：列表不在 TagRenderer 展示（避免显示成数字） */
-export const TAG_IDS_HIDDEN_IN_TAG_RENDERER: readonly number[] = [TAG_ID_URGENT, TAG_ID_IMPORTANT];
+export const TAG_IDS_HIDDEN_IN_TAG_RENDERER: readonly number[] = [TAG_ID_URGENT, TAG_ID_IMPORTANT, TAG_ID_LEDGER];
 
 /** 进入四象限时右侧栏宽度（约双列 250px + gap） */
 export const ACTIVITY_QUADRANT_PANEL_WIDTH_PX = 600;
