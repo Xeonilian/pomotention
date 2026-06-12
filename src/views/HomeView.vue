@@ -722,7 +722,7 @@ function onStateLogConfirm(payload: StateLogConfirmPayload) {
     title: fullTitle,
     estPomoI: "",
     pomoType: "🍅",
-    status: "done",
+    status: "ongoing",
     dueDate: appDateTimestamp.value,
     parentId: null,
     synced: false,
@@ -753,8 +753,7 @@ function onStateLogConfirm(payload: StateLogConfirmPayload) {
 
   const { newTodo } = passPickedActivity(newActivity, appDateTimestamp.value, isViewDateToday.value);
   newTodo.taskId = task.id;
-  newTodo.status = "done";
-  newTodo.doneTime = payload.recordedAt;
+  newTodo.startTime = payload.recordedAt;
   newTodo.synced = false;
   newTodo.lastModified = Date.now();
   todoList.value = [...todoList.value, newTodo];
