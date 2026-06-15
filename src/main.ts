@@ -12,6 +12,29 @@ import { zhCN, dateZhCN } from "naive-ui";
 
 bootMark("main-entry");
 
+// 部署后旧主包仍引用已删 chunk 时自动刷新一次（等同用户手动 F5）
+if (import.meta.env.PROD) {
+  const CHUNK_RELOAD_FLAG = "chunk-reload";
+  const reloadOnceForStaleChunks = () => {
+    try {
+      if (sessionStorage.getItem(CHUNK_RELOAD_FLAG)) return;
+      sessionStorage.setItem(CHUNK_RELOAD_FLAG, "1");
+    } catch {
+      /* 隐私模式等 */
+    }
+    window.location.reload();
+  };
+  window.addEventListener("vite:preloadError", (event) => {
+    event.preventDefault();
+    reloadOnceForStaleChunks();
+  });
+  try {
+    sessionStorage.removeItem(CHUNK_RELOAD_FLAG);
+  } catch {
+    /* 隐私模式等 */
+  }
+}
+
 // 创建Pinia实例
 const pinia = createPinia();
 pinia.use(piniaPluginPersistedstate);
