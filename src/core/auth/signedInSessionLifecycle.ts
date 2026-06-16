@@ -186,6 +186,24 @@ export async function applySignedInSession(session: any, opts?: { backgroundSync
   return next;
 }
 
+/** 登出 reset 时保留的本地偏好（与账号无关） */
+function snapshotPlannerPriorityPrefs(settingStore: ReturnType<typeof useSettingStore>) {
+  return {
+    priorityCategoryTagIds: { ...settingStore.settings.priorityCategoryTagIds },
+    priorityCategoryShowInRank: { ...settingStore.settings.priorityCategoryShowInRank },
+  };
+}
+
+function restorePlannerPriorityPrefs(settingStore: ReturnType<typeof useSettingStore>, snap: ReturnType<typeof snapshotPlannerPriorityPrefs>) {
+  settingStore.settings.priorityCategoryTagIds = snap.priorityCategoryTagIds;
+  settingStore.settings.priorityCategoryShowInRank = snap.priorityCategoryShowInRank;
+}
+
+function hasSupabaseAuthStorage(): boolean {
+  if (typeof localStorage === "undefined") return false;
+  return Object.keys(localStorage).some((key) => key.startsWith("sb-"));
+}
+
 /** 登出清理（与 App 原逻辑一致） */
 export async function applySignedOut(): Promise<void> {
   const settingStore = useSettingStore();
@@ -196,11 +214,27 @@ export async function applySignedOut(): Promise<void> {
   syncStore.isLoggedIn = false;
   const keep = settingStore.settings.keepLocalDataAfterSignOut || settingStore.settings.keepLocalDataOnNextSignOut;
   settingStore.settings.keepLocalDataOnNextSignOut = false;
+  const priorityPrefs = snapshotPlannerPriorityPrefs(settingStore);
   clearAllUserState(keep, true, !keep);
   if (!keep) {
     settingStore.resetSettings();
+    restorePlannerPriorityPrefs(settingStore, priorityPrefs);
   }
   await dataStore.loadAllData();
+}
+
+async function recoverSessionFromStorage(event: string): Promise<import("@supabase/supabase-js").Session | null> {
+  if (!supabase) return null;
+
+  const { data, error } = await supabase.auth.getSession();
+  if (error) {
+    appDebugLog(`⚠️ [${event}] getSession 失败`, error.message);
+    return null;
+  }
+
+  const session = data.session ?? null;
+  appDebugLog(`🔍 [${event}] session=${session ? "有" : "无"}, sb-keys=${hasSupabaseAuthStorage()}`);
+  return session;
 }
 
 /** 挂载 Auth 监听；若启动时为仅本地则此处未订阅，登录成功后可再次调用以补挂 */
@@ -217,10 +251,17 @@ export function subscribeAuthStateChanges(): void {
     if (event === "SIGNED_IN") {
       await applySignedInSession(session);
     } else if (event === "SIGNED_OUT") {
+      const recovered = await recoverSessionFromStorage(event);
+      if (recovered) {
+        appDebugLog("♻️ SIGNED_OUT 后 session 仍可恢复，跳过登出清理");
+        await applySignedInSession(recovered, { backgroundSync: true });
+        return;
+      }
       await applySignedOut();
     } else if (event === "INITIAL_SESSION") {
-      if (session) {
-        await applySignedInSession(session, { backgroundSync: true });
+      const activeSession = session ?? (await recoverSessionFromStorage(event));
+      if (activeSession) {
+        await applySignedInSession(activeSession, { backgroundSync: true });
       } else {
         appDebugLog("⏭️ INITIAL_SESSION 无 session，跳过");
       }
