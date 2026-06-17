@@ -657,7 +657,7 @@ function onAddActivity(newActivity: Activity) {
   saveAllDebounced();
 }
 
-// 快速新增待办
+// 快速新增待办（activity + task 走 onAddActivity，与 Activity 表新增一致）
 function onQuickAddTodo() {
   const newActivity: Activity = {
     id: Date.now(),
@@ -666,42 +666,21 @@ function onQuickAddTodo() {
     estPomoI: "",
     pomoType: "🍅",
     status: "ongoing",
-    dueDate: appDateTimestamp.value, // 使用当前视图日期
+    dueDate: appDateTimestamp.value,
     parentId: null,
     synced: false,
     deleted: false,
     lastModified: Date.now(),
   };
 
-  activityList.value.push(newActivity);
+  onAddActivity(newActivity);
 
-  // 创建关联的 task
-  const task = taskService.createTaskFromActivity(newActivity.id, newActivity.title);
-  taskList.value = [...taskList.value, task];
-
-  // 回写 activity.taskId
-  newActivity.taskId = task.id;
-  newActivity.synced = false;
-  newActivity.lastModified = Date.now();
-
-  // 创建 todo
   const { newTodo } = passPickedActivity(newActivity, appDateTimestamp.value, isViewDateToday.value);
-
-  // 确保 newTodo.id 是有效数字（防御性检查）
-  if (typeof newTodo.id !== "number" || isNaN(newTodo.id)) {
-    console.error("Invalid todo.id generated, using Date.now() as fallback. Original id:", newTodo.id);
-    newTodo.id = Date.now();
+  if (newActivity.taskId != null) {
+    newTodo.taskId = newActivity.taskId;
   }
-
-  newTodo.taskId = task.id; // 关联 task
   todoList.value = [...todoList.value, newTodo];
-
-  // 同步 UI 选中
-  activeId.value = newActivity.id;
-  selectedActivityId.value = newActivity.id;
-  selectedTaskId.value = task.id;
   selectedRowId.value = newTodo.id;
-
   saveAllDebounced();
 }
 
