@@ -11,6 +11,8 @@ import { DEFAULT_KANBAN_QUADRANT_UI_LABELS } from "@/core/activityQuadrant";
 import { SoundType } from "@/core/sounds";
 import { AiProfile } from "@/core/types/AiProfile";
 import { useDevice } from "@/composables/platform/useDevice";
+import type { TaskToolbarActionId } from "@/core/taskToolbarActions";
+import { DEFAULT_TASK_TOOLBAR_MOBILE_PINNED } from "@/core/taskToolbarActions";
 
 const { isMobile } = useDevice();
 
@@ -79,6 +81,10 @@ export interface GlobalSettings {
   showPublicHolidays: boolean;
   /** 节假日数据区域码，如 CN */
   publicHolidayCountryCode: string;
+  /** 记账默认币种（ISO 4217）；title 未写 USD 等时使用 */
+  defaultCurrency: string;
+  /** 手机 Task 工具栏固定槽（最多 2 个动作 id） */
+  taskToolbarMobilePinned?: TaskToolbarActionId[];
   // 以后新增全局设置项就在这里补充
 }
 
@@ -138,6 +144,8 @@ const defaultSettings: GlobalSettings = {
   priorityCategoryShowInRank: getDefaultPriorityCategoryShowInRank(),
   showPublicHolidays: true,
   publicHolidayCountryCode: "CN",
+  defaultCurrency: "CNY",
+  taskToolbarMobilePinned: [...DEFAULT_TASK_TOOLBAR_MOBILE_PINNED],
   ai: {
     activeId: 1,
     systemPrompt:

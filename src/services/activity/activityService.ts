@@ -2,9 +2,11 @@
 import type { Activity } from "@/core/types/Activity";
 import type { Todo } from "@/core/types/Todo";
 import type { Schedule } from "@/core/types/Schedule";
+import type { LedgerEntry } from "@/core/types/LedgerEntry";
 import { POMO_TYPES } from "@/core/constants";
 import { timestampToDatetime, getLocalDateString } from "@/core/utils";
 import { Task } from "@/core/types/Task";
+import { cascadeLedgerForActivityTree } from "@/services/ledger/ledgerService";
 
 /**
  * 添加新活动并处理相关联动
@@ -58,6 +60,7 @@ export function handleDeleteActivity(
     activityById: Map<number, Activity>;
     childrenByParentId?: Map<number, Activity[]>;
   },
+  ledgerList?: LedgerEntry[],
 ): boolean {
   // 递归获取所有将要被删除的 activity 的 id（含自身）
   const idsToDelete = new Set<number>();
@@ -159,6 +162,10 @@ export function handleDeleteActivity(
     }
   }
 
+  if (ledgerList) {
+    cascadeLedgerForActivityTree(ledgerList, idsToDelete, todoIdsToDelete, true);
+  }
+
   return true;
 }
 
@@ -177,6 +184,7 @@ export function handleRestoreActivity(
     activityById: Map<number, Activity>;
     childrenByParentId?: Map<number, Activity[]>;
   },
+  ledgerList?: LedgerEntry[],
 ): boolean {
   // 递归获取所有需要恢复的 activity 的 id（含自身）
   const idsToRestore = new Set<number>();
@@ -260,6 +268,10 @@ export function handleRestoreActivity(
       task.synced = false;
       task.lastModified = Date.now();
     }
+  }
+
+  if (ledgerList) {
+    cascadeLedgerForActivityTree(ledgerList, idsToRestore, todoIdsToRestore, false);
   }
 
   return true;

@@ -8,6 +8,7 @@ import type { Schedule, ScheduleWithTaskRecords } from "@/core/types/Schedule";
 import type { Task } from "@/core/types/Task";
 import type { Tag } from "@/core/types/Tag";
 import type { Template } from "@/core/types/Template";
+import type { LedgerEntry } from "@/core/types/LedgerEntry";
 import type { DataPoint, MetricName, AggregationType, TimeGranularity } from "@/core/types/Chart";
 
 import { addDays, debounce, scheduleDebouncedCloudUpload } from "@/core/utils";
@@ -18,10 +19,12 @@ import {
   loadTodos,
   loadSchedules,
   loadTasks,
+  loadLedgerEntries,
   saveActivities,
   saveTodos,
   saveSchedules,
   saveTasks,
+  saveLedgerEntries,
 } from "@/services/data/localStorageService";
 
 import { unifiedDateService } from "@/services/data/unifiedDateService";
@@ -41,6 +44,7 @@ export const useDataStore = defineStore(
     const todoList = ref<Todo[]>([]);
     const scheduleList = ref<Schedule[]>([]);
     const taskList = ref<Task[]>([]);
+    const ledgerList = ref<LedgerEntry[]>([]);
 
     // ======================== 2. UI 状态 (State) ========================
 
@@ -72,6 +76,7 @@ export const useDataStore = defineStore(
       todoList.value.length = 0;
       scheduleList.value.length = 0;
       taskList.value.length = 0;
+      ledgerList.value.length = 0;
 
       tagStore.clearData();
       templateStore.clearData();
@@ -89,6 +94,7 @@ export const useDataStore = defineStore(
       todoList.value = loadTodos();
       scheduleList.value = loadSchedules();
       taskList.value = loadTasks();
+      ledgerList.value = loadLedgerEntries();
 
       isDataLoaded.value = true;
     }
@@ -104,6 +110,7 @@ export const useDataStore = defineStore(
         todoList.value.some((item) => !item.synced) ||
         scheduleList.value.some((item) => !item.synced) ||
         taskList.value.some((item) => !item.synced) ||
+        ledgerList.value.some((item) => !item.synced) ||
         tagStore.rawTags?.some((item: Tag) => !item.synced) ||
         templateStore.rawTemplates?.some((item: Template) => !item.synced)
       );
@@ -115,6 +122,7 @@ export const useDataStore = defineStore(
         todos: todoList.value.filter((item) => !item.synced).length,
         schedules: scheduleList.value.filter((item) => !item.synced).length,
         tasks: taskList.value.filter((item) => !item.synced).length,
+        ledger: ledgerList.value.filter((item) => !item.synced).length,
         tags: tagStore.rawTags?.filter((item: Tag) => !item.synced).length ?? 0,
         templates: templateStore.rawTemplates?.filter((item: Template) => !item.synced).length ?? 0,
       };
@@ -430,7 +438,8 @@ export const useDataStore = defineStore(
     const firstTaggedTaskIdForAppDate = computed<number | null>(() => {
       const startOfDay = dateService.appDateTimestamp.value;
       const endOfDay = addDays(startOfDay, 1);
-      const hasPlannerFilter = !!(filterTagIds.value && filterTagIds.value.length > 0) || filterStarredOnly.value;
+      const hasPlannerFilter =
+        !!(filterTagIds.value && filterTagIds.value.length > 0) || filterStarredOnly.value;
 
       const candidates: Array<{ ts: number; priority: number; activityTagIds: number[]; taskId: number | null }> = [];
 
@@ -644,6 +653,7 @@ export const useDataStore = defineStore(
         saveTodos(todoList.value);
         saveSchedules(scheduleList.value);
         saveTasks(taskList.value);
+        saveLedgerEntries(ledgerList.value);
         scheduleDebouncedCloudUpload();
       } catch (e) {
         console.error("save failed", e);
@@ -658,6 +668,7 @@ export const useDataStore = defineStore(
         saveTodos(todoList.value);
         saveSchedules(scheduleList.value);
         saveTasks(taskList.value);
+        saveLedgerEntries(ledgerList.value);
         tagStore.saveTags(tagStore.rawTags);
         templateStore.saveTemplates(templateStore.rawTemplates);
 
@@ -1027,6 +1038,7 @@ export const useDataStore = defineStore(
       todoList,
       scheduleList,
       taskList,
+      ledgerList,
       activeActivities,
       activeTodos,
       activeSchedules,

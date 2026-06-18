@@ -11,11 +11,17 @@
     <n-space vertical>
       <div class="state-log-slider-grid">
         <div>
-          <div class="state-log-slider-label">⚡精力值：{{ energyScoreEmoji }}</div>
+          <div class="state-log-slider-label">
+            精力值：
+            <span class="state-log-slider-emoji">{{ energyScoreEmoji }}</span>
+          </div>
           <n-slider ref="energySliderRef" v-model:value="energyValue" :min="1" :max="10" :step="1" />
         </div>
         <div>
-          <div class="state-log-slider-label">🏵️奖赏值：{{ rewardScoreEmoji }}</div>
+          <div class="state-log-slider-label">
+            奖赏值：
+            <span class="state-log-slider-emoji">{{ rewardScoreEmoji }}</span>
+          </div>
           <n-slider v-model:value="rewardValue" :min="1" :max="10" :step="1" />
         </div>
       </div>
@@ -23,7 +29,16 @@
       <div class="state-log-tag-slots">
         <div v-for="slot in [0, 1]" :key="slot" class="state-log-tag-slot-row">
           <n-checkbox :checked="isSlotChecked(slot)" @update:checked="(v) => setSlotChecked(slot, v)" />
+          <TagRenderer
+            v-if="stateLogTagSlotIds[slot] != null"
+            class="state-log-tag-slot-tag"
+            :tag-ids="[stateLogTagSlotIds[slot]!]"
+            :is-closeable="true"
+            size="small"
+            @remove-tag="() => clearSlotTag(slot)"
+          />
           <TagPickerPopover
+            v-else
             v-model:show="slotPickerVisible[slot]"
             v-model:searchTerm="slotSearchTerms[slot]"
             input-mode="internal"
@@ -37,11 +52,6 @@
               </n-button>
             </template>
           </TagPickerPopover>
-          <n-button size="small" text :disabled="stateLogTagSlotIds[slot] == null" @click="clearSlotTag(slot)">
-            <template #icon>
-              <n-icon><Dismiss24Regular /></n-icon>
-            </template>
-          </n-button>
         </div>
       </div>
 
@@ -60,9 +70,9 @@ import { computed, nextTick, ref, watch } from "vue";
 import { NButton, NCheckbox, NDatePicker, NInput, NModal, NSlider, NSpace } from "naive-ui";
 import { flushPickerValueToVue, pickRecordedAtMs, isEventFromDateTimePickerDeep } from "@/utils/recordedAtPick";
 import TagPickerPopover from "@/components/TagSystem/TagPickerPopover.vue";
+import TagRenderer from "@/components/TagSystem/TagRenderer.vue";
 import { useDataStore } from "@/stores/useDataStore";
 import { useTagStore } from "@/stores/useTagStore";
-import { Dismiss24Regular } from "@vicons/fluent";
 import { getEnergyScoreEmoji, getRewardScoreEmoji } from "@/core/scoreEmojis";
 
 const props = defineProps<{
@@ -124,8 +134,8 @@ async function focusEnergySlider() {
 
 function getSlotLabel(slot: number): string {
   const tagId = stateLogTagSlotIds.value[slot];
-  if (tagId == null) return `标签 ${slot + 1}`;
-  return tagStore.getTag(tagId)?.name ?? `标签#${tagId}`;
+  if (tagId == null) return `tag ${slot + 1}`;
+  return tagStore.getTag(tagId)?.name ?? `tag#${tagId}`;
 }
 
 function handleSelectSlotTag(slot: number, tagId: number) {
@@ -197,6 +207,10 @@ const handleCancel = () => {
   font-size: 16px;
   margin-top: 8px;
 }
+.state-log-slider-emoji {
+  font-size: 24px;
+  overflow: visible;
+}
 
 .state-log-tag-slots {
   display: flex;
@@ -204,6 +218,7 @@ const handleCancel = () => {
   gap: 8px;
   align-items: center;
   min-width: 0;
+  overflow: visible;
 }
 
 .state-log-tag-slot-row {
@@ -213,6 +228,13 @@ const handleCancel = () => {
   flex: 1 1 0;
   min-width: 0;
   margin: 8px 0px;
+  overflow: visible;
+}
+
+.state-log-tag-slot-tag {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: visible;
 }
 
 .state-log-tag-slot-button {
@@ -225,7 +247,7 @@ const handleCancel = () => {
   display: inline-block;
   width: 100%;
   min-width: 0;
-  overflow: hidden;
+  overflow: visible;
   text-overflow: ellipsis;
   white-space: nowrap;
   text-align: left;

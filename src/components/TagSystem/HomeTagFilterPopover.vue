@@ -68,7 +68,9 @@ const { isMobile } = useDevice();
 /** 手机：标签名最多 3 字；电脑：不截断 */
 const tagNameDisplayLength = computed(() => (isMobile.value ? 3 : null));
 
-const hasActiveFilter = computed(() => hasActiveActivityFilter(filterTagIds.value, filterStarredOnly.value));
+const hasActiveFilter = computed(() =>
+  hasActiveActivityFilter(filterTagIds.value, filterStarredOnly.value),
+);
 
 const showPopover = ref(false);
 const searchTerm = ref("");

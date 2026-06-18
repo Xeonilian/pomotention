@@ -380,6 +380,7 @@ import {
 } from "@/composables/home/useHomePlannerNavigator";
 import { useHomePlannerKeyboard } from "@/composables/home/useHomePlannerKeyboard";
 import { useHomePlannerRowEdits } from "@/composables/home/useHomePlannerRowEdits";
+import { syncLedgerFromTodoTitle } from "@/services/ledger/ledgerService";
 
 // ======================== 响应式状态与初始化 ========================
 // 不直接import Naive和以下组建加速启动
@@ -441,6 +442,7 @@ const {
   todoList,
   scheduleList,
   taskList,
+  ledgerList,
   activeId,
   selectedTaskId,
   selectedActivityId,
@@ -655,7 +657,7 @@ function onAddActivity(newActivity: Activity) {
   saveAllDebounced();
 }
 
-// 快速新增待办
+// 快速新增待办（activity + task 走 onAddActivity，与 Activity 表新增一致）
 function onQuickAddTodo() {
   const newActivity: Activity = {
     id: Date.now(),
@@ -664,42 +666,21 @@ function onQuickAddTodo() {
     estPomoI: "",
     pomoType: "🍅",
     status: "ongoing",
-    dueDate: appDateTimestamp.value, // 使用当前视图日期
+    dueDate: appDateTimestamp.value,
     parentId: null,
     synced: false,
     deleted: false,
     lastModified: Date.now(),
   };
 
-  activityList.value.push(newActivity);
+  onAddActivity(newActivity);
 
-  // 创建关联的 task
-  const task = taskService.createTaskFromActivity(newActivity.id, newActivity.title);
-  taskList.value = [...taskList.value, task];
-
-  // 回写 activity.taskId
-  newActivity.taskId = task.id;
-  newActivity.synced = false;
-  newActivity.lastModified = Date.now();
-
-  // 创建 todo
   const { newTodo } = passPickedActivity(newActivity, appDateTimestamp.value, isViewDateToday.value);
-
-  // 确保 newTodo.id 是有效数字（防御性检查）
-  if (typeof newTodo.id !== "number" || isNaN(newTodo.id)) {
-    console.error("Invalid todo.id generated, using Date.now() as fallback. Original id:", newTodo.id);
-    newTodo.id = Date.now();
+  if (newActivity.taskId != null) {
+    newTodo.taskId = newActivity.taskId;
   }
-
-  newTodo.taskId = task.id; // 关联 task
   todoList.value = [...todoList.value, newTodo];
-
-  // 同步 UI 选中
-  activeId.value = newActivity.id;
-  selectedActivityId.value = newActivity.id;
-  selectedTaskId.value = task.id;
   selectedRowId.value = newTodo.id;
-
   saveAllDebounced();
 }
 
@@ -722,7 +703,7 @@ function onStateLogConfirm(payload: StateLogConfirmPayload) {
     title: fullTitle,
     estPomoI: "",
     pomoType: "🍅",
-    status: "done",
+    status: "ongoing",
     dueDate: appDateTimestamp.value,
     parentId: null,
     synced: false,
@@ -753,8 +734,7 @@ function onStateLogConfirm(payload: StateLogConfirmPayload) {
 
   const { newTodo } = passPickedActivity(newActivity, appDateTimestamp.value, isViewDateToday.value);
   newTodo.taskId = task.id;
-  newTodo.status = "done";
-  newTodo.doneTime = payload.recordedAt;
+  newTodo.startTime = payload.recordedAt;
   newTodo.synced = false;
   newTodo.lastModified = Date.now();
   todoList.value = [...todoList.value, newTodo];
@@ -825,7 +805,7 @@ function onDeleteActivity(id: number | null | undefined) {
     const result = handleRestoreActivity(activityList.value, todoList.value, scheduleList.value, taskList.value, id, {
       activityById: activityById.value,
       childrenByParentId: childrenOfActivity.value,
-    });
+    }, ledgerList.value);
 
     if (result) {
       activeId.value = null;
@@ -837,7 +817,7 @@ function onDeleteActivity(id: number | null | undefined) {
     const result = handleDeleteActivity(activityList.value, todoList.value, scheduleList.value, taskList.value, id, {
       activityById: activityById.value,
       childrenByParentId: childrenOfActivity.value,
-    });
+    }, ledgerList.value);
     if (!result) {
       showErrorPopover("请先清空子项目再删除！");
       return;
@@ -1451,6 +1431,28 @@ const {
   appDateTimestamp,
   dateService,
   saveAllDebounced,
+  onTodoTitleSaved(todoId, rawTitle) {
+    const todo = todoById.value.get(todoId);
+    if (!todo) return rawTitle;
+    const activity = activityById.value.get(todo.activityId);
+    if (!activity) return rawTitle;
+    const task = taskByActivityId.value.get(todo.activityId);
+    const { normalizedTitle } = syncLedgerFromTodoTitle(
+      ledgerList.value,
+      {
+        todoId,
+        activityId: todo.activityId,
+        taskId: task?.id ?? todo.taskId,
+        rawTitle,
+        recordedAt: todo.startTime ?? todo.id,
+        defaultCurrency: settingStore.settings.defaultCurrency,
+      },
+      {
+        resolveOrCreateTagByName: (name) => tagStore.addTag(name, "#2080f0", "rgba(206, 227, 252, 0.5)").id,
+      },
+    );
+    return normalizedTitle;
+  },
 });
 
 function plannerKeyboardEditField(field: "title" | "start" | "done" | "duration" | "location"): boolean {

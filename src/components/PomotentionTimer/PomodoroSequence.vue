@@ -9,7 +9,7 @@
     <n-input
       v-if="!isRunning"
       v-model:value="sequenceInput"
-      :placeholder="insertMode === 'hiit' ? 'HIITs=(40+20)x12' : '输入序列，例如：🍅+05'"
+      :placeholder="insertMode === 'hiit' ? 'HIITs=🍅/(40+20) 或 (40+20)x12' : '输入序列，例如：🍅+05'"
       class="sequence-input"
       type="textarea"
     />
@@ -122,7 +122,11 @@
           />
           <span>&nbsp;min</span>
         </template>
-        <span v-else class="hiit-insert-hint" title="HIIT (work + break) x repeat, unit: second">(w+b) x rep</span>
+        <span v-else class="hiit-insert-hint" title="T/(w+b) 总时长向上取整；🍅=工作时长；(w+b) 后接 x、X 或 * 表重复">
+          T/(w+b)
+          <br />
+          (w+b)*rep
+        </span>
       </div>
     </div>
   </div>
@@ -249,18 +253,56 @@ function persistSequenceInputForMode(mode: "pomo" | "hiit", val: string): void {
 
 const sequenceInput = ref<string>(loadSequenceForMode(insertMode.value));
 
-const HIIT_BLOCK_IN_SEQ_RE = /\(\s*(\d+)\s*\+\s*(\d+)\s*\)\s*[x×*]\s*(\d+)/gi;
+const HIIT_PAIR_IN_BODY_RE = /\(\s*(\d+)\s*\+\s*(\d+)\s*\)/g;
+const HIIT_PAIR_CAPTURE = "\\(\\s*(\\d+)\\s*\\+\\s*(\\d+)\\s*\\)";
+const HIIT_TOMATO_BUDGET_RE = new RegExp(`^🍅\\s*/\\s*${HIIT_PAIR_CAPTURE}`, "u");
+const HIIT_TOMATO_BUDGET_LEGACY_RE = new RegExp(`^🍅\\s*${HIIT_PAIR_CAPTURE}`, "u");
+const HIIT_MIN_BUDGET_RE = new RegExp(`^(\\d+)\\s*/\\s*${HIIT_PAIR_CAPTURE}`);
+const HIIT_MIN_BUDGET_LEGACY_RE = new RegExp(`^(\\d+)\\s*${HIIT_PAIR_CAPTURE}`);
+/** 显式重复：(w+b) 后接 x / X / * / × */
+const HIIT_EXPLICIT_REP_RE = /^\(\s*(\d+)\s*\+\s*(\d+)\s*\)\s*[xX×*]\s*(\d+)/;
+
+function parseHiitWorkBreakPair(workRaw: string, breakRaw: string): { workSec: number; breakSec: number } {
+  const workSec = Number.parseInt(workRaw, 10);
+  const breakSec = Number.parseInt(breakRaw, 10);
+  if (!Number.isFinite(workSec) || workSec < 1 || !Number.isFinite(breakSec) || breakSec < 1) {
+    throw new Error(`Invalid HIIT pair: (${workRaw}+${breakRaw})`);
+  }
+  return { workSec, breakSec };
+}
+
+function parseHiitBudgetMinutes(raw: string): number {
+  const budgetMin = Number.parseInt(raw, 10);
+  if (!Number.isFinite(budgetMin) || budgetMin < 1) {
+    throw new Error(`Invalid HIIT budget minutes: ${raw}`);
+  }
+  return budgetMin;
+}
+
+/** 预算分钟 → 轮数：向上取整；不足一轮时也跑一轮 */
+function hiitRepsFromBudgetMinutes(budgetMin: number, workSec: number, breakSec: number): number {
+  const cycleSec = workSec + breakSec;
+  return Math.max(1, Math.ceil((budgetMin * 60) / cycleSec));
+}
+
+function appendHiitReps(steps: PomodoroStep[], workSec: number, breakSec: number, reps: number): void {
+  for (let i = 0; i < reps; i++) {
+    steps.push({ type: "work", duration: workSec, unit: "sec" });
+    steps.push({ type: "break", duration: breakSec, unit: "sec" });
+  }
+}
 
 function extractLastHiitBlockFromSequence(seq: string): string | null {
   const match = seq.trim().match(/HIITs?\s*=\s*(.+)$/i);
   if (!match) return null;
-  HIIT_BLOCK_IN_SEQ_RE.lastIndex = 0;
-  let last: string | null = null;
+  HIIT_PAIR_IN_BODY_RE.lastIndex = 0;
+  let last: RegExpExecArray | null = null;
   let m: RegExpExecArray | null;
-  while ((m = HIIT_BLOCK_IN_SEQ_RE.exec(match[1])) !== null) {
-    last = `(${m[1]}+${m[2]})x${m[3]}`;
+  while ((m = HIIT_PAIR_IN_BODY_RE.exec(match[1])) !== null) {
+    last = m;
   }
-  return last;
+  if (!last) return null;
+  return `(${last[1]}+${last[2]})x12`;
 }
 
 function saveHiitPresetFromSequence(seq: string): void {
@@ -391,29 +433,51 @@ function parseHiitSequence(sequence: string): PomodoroStep[] {
   if (!match) return [];
 
   const steps: PomodoroStep[] = [];
-  HIIT_BLOCK_IN_SEQ_RE.lastIndex = 0;
-  let m: RegExpExecArray | null;
-  while ((m = HIIT_BLOCK_IN_SEQ_RE.exec(match[1])) !== null) {
-    const workSec = Number.parseInt(m[1], 10);
-    const breakSec = Number.parseInt(m[2], 10);
-    const reps = Number.parseInt(m[3], 10);
-    if (
-      !Number.isFinite(workSec) ||
-      workSec < 1 ||
-      !Number.isFinite(breakSec) ||
-      breakSec < 1 ||
-      !Number.isFinite(reps) ||
-      reps < 1
-    ) {
-      throw new Error(`Invalid HIIT block: (${m[1]}+${m[2]})x${m[3]}`);
+  let body = match[1].trim();
+
+  while (body.length > 0) {
+    body = body.trim();
+    if (body.startsWith("+")) {
+      body = body.slice(1).trim();
+      continue;
     }
-    for (let i = 0; i < reps; i++) {
-      steps.push({ type: "work", duration: workSec, unit: "sec" });
-      steps.push({ type: "break", duration: breakSec, unit: "sec" });
+
+    let tokenMatch: RegExpMatchArray | null;
+    if ((tokenMatch = body.match(HIIT_TOMATO_BUDGET_RE))) {
+      const { workSec, breakSec } = parseHiitWorkBreakPair(tokenMatch[1], tokenMatch[2]);
+      const budgetMin = getDefaultWorkDurationMinutes();
+      appendHiitReps(steps, workSec, breakSec, hiitRepsFromBudgetMinutes(budgetMin, workSec, breakSec));
+      body = body.slice(tokenMatch[0].length);
+    } else if ((tokenMatch = body.match(HIIT_MIN_BUDGET_RE))) {
+      const budgetMin = parseHiitBudgetMinutes(tokenMatch[1]);
+      const { workSec, breakSec } = parseHiitWorkBreakPair(tokenMatch[2], tokenMatch[3]);
+      appendHiitReps(steps, workSec, breakSec, hiitRepsFromBudgetMinutes(budgetMin, workSec, breakSec));
+      body = body.slice(tokenMatch[0].length);
+    } else if ((tokenMatch = body.match(HIIT_TOMATO_BUDGET_LEGACY_RE))) {
+      const { workSec, breakSec } = parseHiitWorkBreakPair(tokenMatch[1], tokenMatch[2]);
+      const budgetMin = getDefaultWorkDurationMinutes();
+      appendHiitReps(steps, workSec, breakSec, hiitRepsFromBudgetMinutes(budgetMin, workSec, breakSec));
+      body = body.slice(tokenMatch[0].length);
+    } else if ((tokenMatch = body.match(HIIT_MIN_BUDGET_LEGACY_RE))) {
+      const budgetMin = parseHiitBudgetMinutes(tokenMatch[1]);
+      const { workSec, breakSec } = parseHiitWorkBreakPair(tokenMatch[2], tokenMatch[3]);
+      appendHiitReps(steps, workSec, breakSec, hiitRepsFromBudgetMinutes(budgetMin, workSec, breakSec));
+      body = body.slice(tokenMatch[0].length);
+    } else if ((tokenMatch = body.match(HIIT_EXPLICIT_REP_RE))) {
+      const { workSec, breakSec } = parseHiitWorkBreakPair(tokenMatch[1], tokenMatch[2]);
+      const reps = Number.parseInt(tokenMatch[3], 10);
+      if (!Number.isFinite(reps) || reps < 1) {
+        throw new Error(`Invalid HIIT repeat count: ${tokenMatch[3]}`);
+      }
+      appendHiitReps(steps, workSec, breakSec, reps);
+      body = body.slice(tokenMatch[0].length);
+    } else {
+      throw new Error(`Invalid HIIT sequence near: ${body.slice(0, 24)}`);
     }
   }
+
   if (steps.length === 0) {
-    throw new Error(`Invalid HIIT sequence. Expected format: HIITs=(work+break)xrepeat`);
+    throw new Error(`Invalid HIIT sequence. Expected: T/(w+b), 🍅/(w+b), or (w+b)[xX*]rep`);
   }
   return steps;
 }
@@ -645,8 +709,7 @@ function resolveActiveStepIndex(): number {
       const left = baseIndex - offset;
       const right = baseIndex + offset;
       if (left >= 0 && steps[left].type === expectedType && stepDurationSec(steps[left]) === expectedDurationSec) return left;
-      if (right < steps.length && steps[right].type === expectedType && stepDurationSec(steps[right]) === expectedDurationSec)
-        return right;
+      if (right < steps.length && steps[right].type === expectedType && stepDurationSec(steps[right]) === expectedDurationSec) return right;
     }
   }
 
@@ -1021,9 +1084,11 @@ function resetWhiteNoise(sound: SoundType) {
   white-space: nowrap;
 }
 .hiit-insert-hint {
-  font-size: 11px;
+  font-size: 10px;
   color: var(--color-text-secondary);
   letter-spacing: -0.3px;
+  line-height: 1;
+  margin-left: 2px;
 }
 .pomo-duration-input {
   width: 24px;

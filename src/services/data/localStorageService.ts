@@ -9,6 +9,7 @@ import type { Task } from "@/core/types/Task";
 import type { Template } from "@/core/types/Template";
 import type { Tag } from "@/core/types/Tag";
 import type { SyncDataV2, LocalSyncStatus } from "@/core/types/Sync";
+import type { LedgerEntry } from "@/core/types/LedgerEntry";
 
 // =================== 活动相关 ===================
 
@@ -74,6 +75,20 @@ export function saveTasks(tasks: Task[]): void {
 
 export function removeTasksStorage(): void {
   localStorage.removeItem(STORAGE_KEYS.TASK);
+}
+
+// =================== 账本相关 ===================
+
+export function loadLedgerEntries(): LedgerEntry[] {
+  return loadData<LedgerEntry[]>(STORAGE_KEYS.LEDGER, []);
+}
+
+export function saveLedgerEntries(entries: LedgerEntry[]): void {
+  saveData(STORAGE_KEYS.LEDGER, entries);
+}
+
+export function removeLedgerEntriesStorage(): void {
+  localStorage.removeItem(STORAGE_KEYS.LEDGER);
 }
 
 // =================== 模板相关 ===================

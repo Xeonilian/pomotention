@@ -1,8 +1,8 @@
 /** 1–10 分奖赏值对应的情绪 emoji */
-export const REWARD_SCORE_EMOJIS = ["😫", "😢", "😞", "😕", "🙂", "😊", "😄", "😁", "🤩", "🥳"] as const;
+export const REWARD_SCORE_EMOJIS = ["😭", "😫", "😟", "😐", "🤔", "😀", "😄", "😁", "🤩", "🥳"] as const;
 
 /** 1–10 分精力值：由阴郁天气渐转晴朗（低分→高分，10 分为彩虹） */
-export const ENERGY_SCORE_EMOJIS = ["⛈️", "🌧️", "🌫️", "☁️", "🌥️", "⛅", "🌤️", "☀️", "🌞", "🌈"] as const;
+export const ENERGY_SCORE_EMOJIS = ["🌫️", "⛈️", "🌧️", "🌦️", "☁️", "🌥️", "⛅", "🌤️", "☀️", "🌈"] as const;
 
 function clampScore(value: number): number {
   return Math.min(10, Math.max(1, Math.round(value)));
