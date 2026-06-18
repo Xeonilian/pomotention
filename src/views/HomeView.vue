@@ -1447,15 +1447,8 @@ const {
         recordedAt: todo.startTime ?? todo.id,
         defaultCurrency: settingStore.settings.defaultCurrency,
       },
-      activity,
       {
         resolveOrCreateTagByName: (name) => tagStore.addTag(name, "#2080f0", "rgba(206, 227, 252, 0.5)").id,
-        getActivityTagIds: (activityId) => activityById.value.get(activityId)?.tagIds ?? [],
-        setActivityTagIds: (activityId, tagIds) => dataStore.setActivityTags(activityId, tagIds),
-        markActivityDirty: (act) => {
-          act.synced = false;
-          act.lastModified = Date.now();
-        },
       },
     );
     return normalizedTitle;
