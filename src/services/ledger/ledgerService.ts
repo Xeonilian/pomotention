@@ -1,8 +1,6 @@
-import type { Activity } from "@/core/types/Activity";
 import type { LedgerEntry } from "@/core/types/LedgerEntry";
 import type { ParseLedgerWarning } from "@/core/types/LedgerEntry";
-import { parseLedgerSegments, normalizeTitleAfterParse } from "@/core/ledger/parseLedgerSegments";
-import { TAG_ID_LEDGER } from "@/core/constants";
+import { parseLedgerFromTitle } from "@/core/ledger/parseLedgerSegments";
 
 export interface SyncLedgerFromTitleParams {
   todoId: number;
@@ -16,164 +14,84 @@ export interface SyncLedgerFromTitleParams {
 export interface SyncLedgerFromTitleResult {
   normalizedTitle: string;
   entryCount: number;
+  appendedCount: number;
   warnings: ParseLedgerWarning[];
 }
 
 export interface LedgerTagActions {
   resolveOrCreateTagByName: (name: string) => number;
-  getActivityTagIds: (activityId: number) => number[];
-  setActivityTagIds: (activityId: number, tagIds: number[]) => void;
-  markActivityDirty: (activity: Activity) => void;
 }
 
 function activeEntriesForTodo(ledgerList: LedgerEntry[], todoId: number): LedgerEntry[] {
   return ledgerList.filter((e) => !e.deleted && e.sourceTodoId === todoId);
 }
 
-function activeEntriesForActivity(ledgerList: LedgerEntry[], activityId: number): LedgerEntry[] {
-  return ledgerList.filter((e) => !e.deleted && e.sourceActivityId === activityId);
+function nextLedgerEntryId(ledgerList: LedgerEntry[]): number {
+  let max = 0;
+  for (const e of ledgerList) {
+    if (e.id > max) max = e.id;
+  }
+  return max + 1;
 }
 
-function categoryTagIdsFromEntries(entries: LedgerEntry[]): number[] {
-  const ids: number[] = [];
-  for (const e of entries) {
-    if (e.categoryTagId != null && !ids.includes(e.categoryTagId)) {
-      ids.push(e.categoryTagId);
-    }
-  }
-  return ids;
+function nextSegmentIndexForTodo(ledgerList: LedgerEntry[], todoId: number): number {
+  const active = activeEntriesForTodo(ledgerList, todoId);
+  if (active.length === 0) return 0;
+  return Math.max(...active.map((e) => e.segmentIndex)) + 1;
 }
 
-/** 片段 # 双写：追加新分类 tag，移除本 Todo 不再引用的分类 tag */
-function syncActivityCategoryTags(
-  ledgerList: LedgerEntry[],
-  activityId: number,
-  todoId: number,
-  previousCategoryTagIds: number[],
-  newCategoryTagIds: number[],
-  tagActions: LedgerTagActions,
-): void {
-  const activityTagIds = tagActions.getActivityTagIds(activityId);
-  let nextTagIds = [...activityTagIds];
-
-  for (const tagId of previousCategoryTagIds) {
-    if (newCategoryTagIds.includes(tagId)) continue;
-    const usedElsewhere = ledgerList.some(
-      (e) =>
-        !e.deleted &&
-        e.sourceActivityId === activityId &&
-        e.sourceTodoId !== todoId &&
-        e.categoryTagId === tagId,
-    );
-    if (!usedElsewhere && nextTagIds.includes(tagId)) {
-      nextTagIds = nextTagIds.filter((id) => id !== tagId);
-    }
-  }
-
-  for (const tagId of newCategoryTagIds) {
-    if (!nextTagIds.includes(tagId)) {
-      nextTagIds.push(tagId);
-    }
-  }
-
-  const unchanged =
-    nextTagIds.length === activityTagIds.length && nextTagIds.every((id, i) => id === activityTagIds[i]);
-  if (!unchanged) {
-    tagActions.setActivityTagIds(activityId, nextTagIds);
-  }
-}
-
-/** 有有效 ledger 行时打上隐藏 TAG_ID_LEDGER */
-export function syncLedgerHiddenTag(
-  ledgerList: LedgerEntry[],
-  activity: Activity,
-  markDirty: (activity: Activity) => void,
-): void {
-  const hasEntries = activeEntriesForActivity(ledgerList, activity.id).length > 0;
-  const tagIds = activity.tagIds ?? [];
-  const hasLedgerTag = tagIds.includes(TAG_ID_LEDGER);
-
-  if (hasEntries && !hasLedgerTag) {
-    activity.tagIds = [...tagIds, TAG_ID_LEDGER];
-    markDirty(activity);
-  } else if (!hasEntries && hasLedgerTag) {
-    const next = tagIds.filter((id) => id !== TAG_ID_LEDGER);
-    activity.tagIds = next.length > 0 ? next : undefined;
-    markDirty(activity);
-  }
-}
-
-/** title 保存后：按 sourceTodoId 全量重解析并替换 ledger 行 */
+/** title 保存：解析 ￥…￥ 块并追加 ledger；无新块时不删已有行 */
 export function syncLedgerFromTodoTitle(
   ledgerList: LedgerEntry[],
   params: SyncLedgerFromTitleParams,
-  activity: Activity,
   tagActions: LedgerTagActions,
 ): SyncLedgerFromTitleResult {
-  const parsed = parseLedgerSegments(params.rawTitle, params.defaultCurrency);
-  const normalizedTitle = normalizeTitleAfterParse(params.rawTitle, parsed.ok);
-  const now = Date.now();
+  const parsed = parseLedgerFromTitle(params.rawTitle, params.defaultCurrency);
+  const appendedCount = parsed.ok.length;
 
-  const existingForTodo = activeEntriesForTodo(ledgerList, params.todoId);
-  const previousCategoryTagIds = categoryTagIdsFromEntries(existingForTodo);
+  if (appendedCount > 0) {
+    const now = Date.now();
+    let nextId = nextLedgerEntryId(ledgerList);
+    let nextSegIdx = nextSegmentIndexForTodo(ledgerList, params.todoId);
 
-  for (const entry of ledgerList) {
-    if (entry.sourceTodoId === params.todoId && !entry.deleted) {
-      entry.deleted = true;
-      entry.synced = false;
-      entry.lastModified = now;
-    }
-  }
-
-  const newCategoryTagIds: number[] = [];
-
-  for (const seg of parsed.ok) {
-    let categoryTagId: number | undefined;
-    if (seg.categoryTagName) {
-      categoryTagId = tagActions.resolveOrCreateTagByName(seg.categoryTagName);
-      if (!newCategoryTagIds.includes(categoryTagId)) {
-        newCategoryTagIds.push(categoryTagId);
+    for (const seg of parsed.ok) {
+      let categoryTagId: number | undefined;
+      if (seg.categoryTagName) {
+        categoryTagId = tagActions.resolveOrCreateTagByName(seg.categoryTagName);
       }
-    }
 
-    ledgerList.push({
-      id: now + seg.segmentIndex,
-      amount: seg.amount,
-      direction: seg.direction,
-      currency: seg.currency,
-      memo: seg.memo,
-      categoryTagId,
-      recordedAt: params.recordedAt,
-      rawSegment: seg.rawSegment,
-      segmentIndex: seg.segmentIndex,
-      sourceActivityId: params.activityId,
-      sourceTodoId: params.todoId,
-      sourceTaskId: params.taskId,
-      deleted: false,
-      synced: false,
-      lastModified: now,
-    });
+      ledgerList.push({
+        id: nextId++,
+        amount: seg.amount,
+        direction: seg.direction,
+        currency: seg.currency,
+        memo: seg.memo,
+        categoryTagId,
+        recordedAt: params.recordedAt,
+        rawSegment: seg.rawSegment,
+        segmentIndex: nextSegIdx++,
+        sourceActivityId: params.activityId,
+        sourceTodoId: params.todoId,
+        sourceTaskId: params.taskId,
+        deleted: false,
+        synced: false,
+        lastModified: now,
+      });
+    }
   }
 
-  syncActivityCategoryTags(
-    ledgerList,
-    params.activityId,
-    params.todoId,
-    previousCategoryTagIds,
-    newCategoryTagIds,
-    tagActions,
-  );
-  syncLedgerHiddenTag(ledgerList, activity, tagActions.markActivityDirty);
+  const allActive = activeEntriesForTodo(ledgerList, params.todoId);
 
   return {
-    normalizedTitle,
-    entryCount: parsed.ok.length,
+    normalizedTitle: parsed.diaryText,
+    entryCount: allActive.length,
+    appendedCount,
     warnings: parsed.warnings,
   };
 }
 
 export function getActiveLedgerEntriesForTodo(ledgerList: LedgerEntry[], todoId: number): LedgerEntry[] {
-  return activeEntriesForTodo(ledgerList, todoId);
+  return activeEntriesForTodo(ledgerList, todoId).sort((a, b) => a.segmentIndex - b.segmentIndex);
 }
 
 /** 删除/恢复 Activity 时级联软删或恢复 ledger 行 */

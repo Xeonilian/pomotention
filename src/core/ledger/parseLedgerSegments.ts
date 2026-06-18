@@ -1,60 +1,36 @@
 import type { LedgerDirection, ParseLedgerResult, ParsedLedgerSegment, ParseLedgerWarning } from "@/core/types/LedgerEntry";
 import { DEFAULT_LEDGER_CURRENCY } from "@/core/types/LedgerEntry";
 
-const SEGMENT_DELIM_RE = /^[,，、]\s*/;
 const AMOUNT_RE = /^(\d+(?:\.\d{1,2})?)/;
-const TAG_NAME_RE = /^#([\p{L}\p{N}_]+)/u;
-const ISO_CURRENCY_RE = /^([A-Z]{3})(?=\s|#|$|,|，|、)/;
+const CATEGORY_TAG_RE = /^#([\p{L}\p{N}_]+)/u;
 
-/** ￥/$ 仅作识别提示符，不映射币种 */
-const TRIGGER_SCAN_RE = /[￥$]|买(?=\d)|支出(?=\d)|收入(?=\d)/;
+/** 兼容旧版自动摘要，解析前剥掉 */
+const LEGACY_SUMMARY_SUFFIX_RE = /（账：[^）]*）\s*$/u;
 
-type TriggerInfo = {
-  length: number;
-  defaultDirection: LedgerDirection;
+export interface ParseLedgerFromTitleResult extends ParseLedgerResult {
+  /** 剥块、转义后的日记正文 */
+  diaryText: string;
+}
+
+type BlockExtractResult = {
+  diaryParts: string[];
+  blockBodies: string[];
+  warnings: ParseLedgerWarning[];
 };
 
-function findNextTriggerIndex(text: string, from: number): number {
-  const slice = text.slice(from);
-  const m = slice.search(TRIGGER_SCAN_RE);
-  return m < 0 ? -1 : from + m;
-}
-
-function readTrigger(text: string, at: number): TriggerInfo | null {
-  const ch = text[at];
-  if (ch === "￥" || ch === "$") {
-    return { length: 1, defaultDirection: "expense" };
-  }
-  if (text.startsWith("收入", at) && /收入(?=\d)/.test(text.slice(at))) {
-    return { length: 2, defaultDirection: "income" };
-  }
-  if (text.startsWith("支出", at) && /支出(?=\d)/.test(text.slice(at))) {
-    return { length: 2, defaultDirection: "expense" };
-  }
-  if (ch === "买" && /买(?=\d)/.test(text.slice(at))) {
-    return { length: 1, defaultDirection: "expense" };
-  }
-  return null;
-}
-
-function isSegmentStop(text: string, index: number): boolean {
-  const ch = text[index];
-  if (ch === "," || ch === "，" || ch === "、" || ch === "#") return true;
-  return findNextTriggerIndex(text, index) === index;
-}
-
 type SegmentParseOutcome =
-  | { ok: true; segment: Omit<ParsedLedgerSegment, "segmentIndex">; endIndex: number }
-  | { ok: false; startIndex: number; rawSnippet: string; message: string };
+  | { ok: true; segment: Omit<ParsedLedgerSegment, "segmentIndex"> }
+  | { ok: false; rawSnippet: string; message: string };
 
-function tryParseSegment(text: string, start: number, defaultCurrency: string): SegmentParseOutcome {
-  const trigger = readTrigger(text, start);
-  if (!trigger) {
-    return { ok: false, startIndex: start, rawSnippet: text.slice(start, start + 8), message: "无效触发符" };
+/** 块内单笔：[-/+]金额 [memo] [#tag] */
+function parseBlockBody(body: string, defaultCurrency: string): SegmentParseOutcome {
+  let text = body.trim();
+  if (text.startsWith("￥")) {
+    text = text.slice(1).trim();
   }
 
-  let i = start + trigger.length;
-  let direction = trigger.defaultDirection;
+  let direction: LedgerDirection = "expense";
+  let i = 0;
 
   if (text[i] === "+" || text[i] === "-") {
     direction = text[i] === "+" ? "income" : "expense";
@@ -65,108 +41,152 @@ function tryParseSegment(text: string, start: number, defaultCurrency: string): 
 
   const amountMatch = text.slice(i).match(AMOUNT_RE);
   if (!amountMatch) {
-    const end = Math.min(text.length, i + 12);
-    return {
-      ok: false,
-      startIndex: start,
-      rawSnippet: text.slice(start, end),
-      message: "缺少金额",
-    };
+    return { ok: false, rawSnippet: text.slice(0, 12), message: "缺少金额" };
   }
 
   const amount = Number.parseFloat(amountMatch[1]);
   if (!Number.isFinite(amount) || amount <= 0) {
-    return { ok: false, startIndex: start, rawSnippet: text.slice(start, i + amountMatch[0].length), message: "无效金额" };
+    return { ok: false, rawSnippet: text.slice(i, i + amountMatch[0].length), message: "无效金额" };
   }
   i += amountMatch[0].length;
 
-  let currency = defaultCurrency;
   while (text[i] === " ") i++;
-  const isoMatch = text.slice(i).match(ISO_CURRENCY_RE);
-  if (isoMatch) {
-    currency = isoMatch[1];
-    i += isoMatch[1].length;
-  }
-
-  // memo 止于 # / 分笔符 / 下一触发符；片段后继续写自由文时用 ，、, 隔开
-  const memoStart = i;
-  while (i < text.length && !isSegmentStop(text, i)) {
-    i++;
-  }
-
-  const memoRaw = text.slice(memoStart, i).trim();
-  const memo = memoRaw.length > 0 ? memoRaw : undefined;
 
   let categoryTagName: string | undefined;
-  if (text[i] === "#") {
-    const tagMatch = text.slice(i).match(TAG_NAME_RE);
+  const hashIdx = text.indexOf("#", i);
+  const memoRaw = (hashIdx >= 0 ? text.slice(i, hashIdx) : text.slice(i)).trim();
+  const memo = memoRaw.length > 0 ? memoRaw : undefined;
+
+  if (hashIdx >= 0) {
+    const tagMatch = text.slice(hashIdx).match(CATEGORY_TAG_RE);
     if (tagMatch) {
       categoryTagName = tagMatch[1];
-      i += tagMatch[0].length;
     }
   }
 
-  const rawSegment = text.slice(start, i);
   return {
     ok: true,
-    segment: { rawSegment, amount, direction, currency, memo, categoryTagName },
-    endIndex: i,
+    segment: {
+      rawSegment: body.trim(),
+      amount,
+      direction,
+      currency: defaultCurrency,
+      memo,
+      categoryTagName,
+    },
   };
 }
 
-/** 从 Todo title 提取收支片段 */
-export function parseLedgerSegments(title: string, defaultCurrency: string = DEFAULT_LEDGER_CURRENCY): ParseLedgerResult {
-  const ok: ParsedLedgerSegment[] = [];
+/** 扫描 title：成对 ￥ 定界；块外 ￥￥ / $$ 转义 */
+function extractLedgerBlocks(rawTitle: string): BlockExtractResult {
+  const diaryParts: string[] = [];
+  const blockBodies: string[] = [];
   const warnings: ParseLedgerWarning[] = [];
-  let pos = 0;
-  let segmentIndex = 0;
 
-  while (pos < title.length) {
-    const start = findNextTriggerIndex(title, pos);
-    if (start < 0) break;
+  let diaryBuf = "";
+  let i = 0;
 
-    const outcome = tryParseSegment(title, start, defaultCurrency);
-    if (outcome.ok) {
-      ok.push({ ...outcome.segment, segmentIndex });
-      segmentIndex++;
-      pos = outcome.endIndex;
-      const delim = title.slice(pos).match(SEGMENT_DELIM_RE);
-      if (delim) pos += delim[0].length;
+  const flushDiary = () => {
+    if (diaryBuf.length > 0) {
+      diaryParts.push(diaryBuf);
+      diaryBuf = "";
+    }
+  };
+
+  while (i < rawTitle.length) {
+    const ch = rawTitle[i]!;
+
+    if (ch === "￥") {
+      if (rawTitle[i + 1] === "￥") {
+        diaryBuf += "￥";
+        i += 2;
+        continue;
+      }
+
+      flushDiary();
+      i++;
+      let body = "";
+      let closed = false;
+
+      while (i < rawTitle.length) {
+        const inner = rawTitle[i]!;
+        if (inner === "￥") {
+          if (rawTitle[i + 1] === "￥") {
+            body += "￥";
+            i += 2;
+            continue;
+          }
+          closed = true;
+          i++;
+          break;
+        }
+        if (inner === "$" && rawTitle[i + 1] === "$") {
+          body += "$";
+          i += 2;
+          continue;
+        }
+        body += inner;
+        i++;
+      }
+
+      if (closed) {
+        blockBodies.push(body);
+      } else {
+        warnings.push({
+          startIndex: i,
+          rawSnippet: `￥${body.slice(0, 12)}`,
+          message: "未闭合的记账块",
+        });
+        diaryBuf += `￥${body}`;
+      }
       continue;
     }
 
-    warnings.push({
-      startIndex: outcome.startIndex,
-      rawSnippet: outcome.rawSnippet,
-      message: outcome.message,
-    });
-    pos = start + 1;
-  }
-
-  return { ok, warnings };
-}
-
-/** 识别成功后剥掉各片段内的 #分类（与 Activity 末尾 # 行为一致） */
-export function normalizeTitleAfterParse(title: string, segments: ParsedLedgerSegment[]): string {
-  if (segments.length === 0) return title;
-
-  let result = title;
-  const sorted = [...segments].sort((a, b) => b.rawSegment.length - a.rawSegment.length);
-
-  for (const seg of sorted) {
-    const idx = result.indexOf(seg.rawSegment);
-    if (idx < 0) continue;
-
-    let replacement = seg.rawSegment;
-    if (seg.categoryTagName) {
-      replacement = replacement.replace(new RegExp(`#${escapeRegExp(seg.categoryTagName)}$`, "u"), "").trimEnd();
+    if (ch === "$" && rawTitle[i + 1] === "$") {
+      diaryBuf += "$";
+      i += 2;
+      continue;
     }
-    result = result.slice(0, idx) + replacement + result.slice(idx + seg.rawSegment.length);
+
+    diaryBuf += ch;
+    i++;
   }
 
-  return result;
+  flushDiary();
+  return { diaryParts, blockBodies, warnings };
 }
 
-function escapeRegExp(s: string): string {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+function joinDiaryParts(parts: string[]): string {
+  return parts.join("").replace(/\s+/g, " ").trim();
+}
+
+/**
+ * MVP：仅从 ￥…￥ 块解析；一块一笔；块外不触发。
+ * 多笔请写多个块，或分次保存追加。
+ */
+export function parseLedgerFromTitle(title: string, defaultCurrency: string = DEFAULT_LEDGER_CURRENCY): ParseLedgerFromTitleResult {
+  const withoutLegacySummary = title.replace(LEGACY_SUMMARY_SUFFIX_RE, "").trimEnd();
+  const { diaryParts, blockBodies, warnings: blockWarnings } = extractLedgerBlocks(withoutLegacySummary);
+
+  const ok: ParsedLedgerSegment[] = [];
+  const warnings: ParseLedgerWarning[] = [...blockWarnings];
+
+  blockBodies.forEach((body, segmentIndex) => {
+    const outcome = parseBlockBody(body, defaultCurrency);
+    if (outcome.ok) {
+      ok.push({ ...outcome.segment, segmentIndex });
+    } else {
+      warnings.push({
+        startIndex: 0,
+        rawSnippet: outcome.rawSnippet,
+        message: outcome.message,
+      });
+    }
+  });
+
+  return {
+    ok,
+    warnings,
+    diaryText: joinDiaryParts(diaryParts),
+  };
 }
