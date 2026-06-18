@@ -15,7 +15,6 @@ export const useSearchUiStore = defineStore("searchUi", {
   state: () => ({
     searchQuery: "",
     filterStarredOnly: false,
-    filterLedgerOnly: false,
     filterTagIds: [] as number[], // 当前过滤的 tag ids
     openedTabs: [] as TabItem[],
     activeTabKey: undefined as string | undefined,
@@ -40,10 +39,6 @@ export const useSearchUiStore = defineStore("searchUi", {
 
     toggleFilterStarred() {
       this.filterStarredOnly = !this.filterStarredOnly;
-    },
-
-    toggleFilterLedger() {
-      this.filterLedgerOnly = !this.filterLedgerOnly;
     },
 
     /**

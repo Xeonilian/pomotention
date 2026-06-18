@@ -16,45 +16,20 @@ export function matchesStarFilter(
   return hasStarredTaskForActivity(activityId);
 }
 
-export function matchesLedgerFilter(
-  filterLedgerOnly: boolean,
-  activityId: number | null | undefined,
-  hasLedgerForActivity: (activityId: number) => boolean,
-): boolean {
-  if (!filterLedgerOnly) return true;
-  if (activityId == null) return false;
-  return hasLedgerForActivity(activityId);
-}
-
 export function matchesActivityFilter(options: {
   filterTagIds: readonly number[];
   filterStarredOnly: boolean;
-  filterLedgerOnly?: boolean;
   activityId?: number | null;
   activityTagIds?: number[] | null;
   hasStarredTaskForActivity: (activityId: number) => boolean;
-  hasLedgerForActivity?: (activityId: number) => boolean;
 }): boolean {
-  const {
-    filterTagIds,
-    filterStarredOnly,
-    filterLedgerOnly = false,
-    activityId,
-    activityTagIds,
-    hasStarredTaskForActivity,
-    hasLedgerForActivity = () => false,
-  } = options;
+  const { filterTagIds, filterStarredOnly, activityId, activityTagIds, hasStarredTaskForActivity } = options;
   return (
     matchesTagFilter(filterTagIds, activityTagIds) &&
-    matchesStarFilter(filterStarredOnly, activityId, hasStarredTaskForActivity) &&
-    matchesLedgerFilter(filterLedgerOnly, activityId, hasLedgerForActivity)
+    matchesStarFilter(filterStarredOnly, activityId, hasStarredTaskForActivity)
   );
 }
 
-export function hasActiveActivityFilter(
-  filterTagIds: readonly number[],
-  filterStarredOnly: boolean,
-  filterLedgerOnly = false,
-): boolean {
-  return filterTagIds.length > 0 || filterStarredOnly || filterLedgerOnly;
+export function hasActiveActivityFilter(filterTagIds: readonly number[], filterStarredOnly: boolean): boolean {
+  return filterTagIds.length > 0 || filterStarredOnly;
 }

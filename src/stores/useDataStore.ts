@@ -65,7 +65,6 @@ export const useDataStore = defineStore(
     const selectedDate = ref<number | null>(null); // todo.id 或 schedule.id
     const filterTagIds = ref<number[]>([]); // day/week/month tag filter (AND)
     const filterStarredOnly = ref(false); // day/week/month 加星筛选（可与 tag 叠加）
-    const filterLedgerOnly = ref(false); // day/week/month 含收支筛选
     const stateLogTagSlotIds = ref<Array<number | null>>([]); // 状态快记的标签槽位（最多两个）
     const stateLogTagSlotChecks = ref<Record<number, boolean>>({}); // 状态快记标签槽位勾选：1/2 -> true/false
 
@@ -268,15 +267,6 @@ export const useDataStore = defineStore(
       return out;
     });
 
-    /** 含有效 ledger 行的 activityId 集合 */
-    const ledgerActivityIds = computed(() => {
-      const out = new Set<number>();
-      for (const entry of ledgerList.value) {
-        if (!entry.deleted) out.add(entry.sourceActivityId);
-      }
-      return out;
-    });
-
     // ======================== 5. 派生UI状态 (Computed) ========================
     const selectedActivity = computed(() => {
       // Tracker 同步会把看板 activeId 清掉只留 selectedActivityId，两者应都能解析当前选中活动
@@ -340,11 +330,9 @@ export const useDataStore = defineStore(
       return matchesActivityFilter({
         filterTagIds: filterTagIds.value,
         filterStarredOnly: filterStarredOnly.value,
-        filterLedgerOnly: filterLedgerOnly.value,
         activityId,
         activityTagIds,
         hasStarredTaskForActivity: (id) => starredActivityIds.value.has(id),
-        hasLedgerForActivity: (id) => ledgerActivityIds.value.has(id),
       });
     };
 
@@ -451,7 +439,7 @@ export const useDataStore = defineStore(
       const startOfDay = dateService.appDateTimestamp.value;
       const endOfDay = addDays(startOfDay, 1);
       const hasPlannerFilter =
-        !!(filterTagIds.value && filterTagIds.value.length > 0) || filterStarredOnly.value || filterLedgerOnly.value;
+        !!(filterTagIds.value && filterTagIds.value.length > 0) || filterStarredOnly.value;
 
       const candidates: Array<{ ts: number; priority: number; activityTagIds: number[]; taskId: number | null }> = [];
 
@@ -523,7 +511,7 @@ export const useDataStore = defineStore(
         const dayStartTs = start + i * DAY_MS;
         const dayEnd = dayStartTs + DAY_MS;
         // 有标签/加星筛选时：把匹配到的日期 dot 统一渲染为筛选标签色
-        if ((filterTagIds.value && filterTagIds.value.length > 0) || filterStarredOnly.value || filterLedgerOnly.value) {
+        if ((filterTagIds.value && filterTagIds.value.length > 0) || filterStarredOnly.value) {
           // 找到“这一天里，真正包含筛选标签”的任意一个 activity（todo/schedule 都算）
           // 取第一个命中的 tag 来着色（同一天多个命中时按时间最早者优先）
           const candidates: Array<{ ts: number; activityTagIds: number[] }> = [];
@@ -645,22 +633,13 @@ export const useDataStore = defineStore(
       filterStarredOnly.value = !filterStarredOnly.value;
     }
 
-    function toggleFilterLedger() {
-      filterLedgerOnly.value = !filterLedgerOnly.value;
-    }
-
     function clearActivityFilters() {
       filterTagIds.value = [];
       filterStarredOnly.value = false;
-      filterLedgerOnly.value = false;
     }
 
     function hasStarredTaskForActivity(activityId: number): boolean {
       return starredActivityIds.value.has(activityId);
-    }
-
-    function hasLedgerForActivity(activityId: number): boolean {
-      return ledgerActivityIds.value.has(activityId);
     }
 
     function cleanSelection() {
@@ -1098,7 +1077,6 @@ export const useDataStore = defineStore(
       selectedDate,
       filterTagIds,
       filterStarredOnly,
-      filterLedgerOnly,
       stateLogTagSlotIds,
       stateLogTagSlotChecks,
 
@@ -1148,8 +1126,6 @@ export const useDataStore = defineStore(
       clearFilterTags,
       toggleFilterStarred,
       clearActivityFilters,
-      toggleFilterLedger,
-      hasLedgerForActivity,
 
       // Chart 相关
       allDataPoints,
@@ -1177,7 +1153,6 @@ export const useDataStore = defineStore(
         "selectedDate",
         "filterTagIds",
         "filterStarredOnly",
-        "filterLedgerOnly",
         "stateLogTagSlotIds",
         "stateLogTagSlotChecks",
       ],

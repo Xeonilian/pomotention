@@ -26,7 +26,7 @@ export function useSearchFilter() {
 
   // 2. 解构，保持不变
   const { activeActivities, todoByActivityId, scheduleByActivityId, taskByActivityId } = storeToRefs(dataStore);
-  const { searchQuery, filterStarredOnly, filterLedgerOnly, filterTagIds } = storeToRefs(searchUiStore);
+  const { searchQuery, filterStarredOnly, filterTagIds } = storeToRefs(searchUiStore);
 
   const norm = (s?: string) => (s ?? "").toLowerCase();
 
@@ -57,11 +57,9 @@ export function useSearchFilter() {
       const passedActivityFilter = matchesActivityFilter({
         filterTagIds: filterTagIds.value,
         filterStarredOnly: filterStarredOnly.value,
-        filterLedgerOnly: filterLedgerOnly.value,
         activityId: act.id,
         activityTagIds: act.tagIds,
         hasStarredTaskForActivity: dataStore.hasStarredTaskForActivity,
-        hasLedgerForActivity: dataStore.hasLedgerForActivity,
       });
       if (!passedActivityFilter) {
         continue;
