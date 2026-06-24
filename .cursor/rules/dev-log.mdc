@@ -1,0 +1,13 @@
+---
+description: Read current.md before coding — Pomotention dev-log
+alwaysApply: true
+---
+
+# dev-log
+
+1. **`docs/dev-log/current.md`** — always first  
+2. Coding → `docs/dev-log/blueprint/architecture-layering.md`  
+3. Lost → `docs/dev-log/README.md`  
+4. **`roadmap.md`** — only for next level or queue/direction questions  
+
+Stay within `current.md` scope. Remind user to update 停在哪 when done.

@@ -1,0 +1,16 @@
+---
+description: Align first, minimal diff, staged discussion — Pomotention default
+alwaysApply: true
+---
+
+# Collaboration
+
+User phrase: **先对齐，再动手；最小 diff；分层讨论，未确认不写细节。**
+
+1. **Goal** — align with `current.md` or this turn’s ask  
+2. **Outline** — what changes / what not → **wait for user OK**  
+3. **Implement** — only after user says go or plan is confirmed  
+
+Before OK: no code, no new files, no long specs. Prefer few options + one recommendation.
+
+**Minimal diff:** fewest files; task-only edits; short output; no drive-by refactors or extra layers.
