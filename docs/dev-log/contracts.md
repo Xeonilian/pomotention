@@ -1,5 +1,9 @@
 # Contracts
 
+> **行为回归档案**（Given / When / Then）。仅 **UV1** 或改动已有契约流程时追加/更新；当前关进度见 [`current.md`](./current.md)。Agent 撰写见 [skill-contract](../../.cursor/skills/skill-contract/SKILL.md)。
+
+---
+
 ## Contract #1: 单条任务生成 QR 码（通用约束）
 
 ### Given

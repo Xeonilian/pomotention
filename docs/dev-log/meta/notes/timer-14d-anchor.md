@@ -1,6 +1,8 @@
 # Pomotention Timer · 14 天锚定单
 
-落地前问卷结论（2026-05-25）。执行 Timer 独立 Win 包冲刺时以此为准；与 [RELEASE-dev](./SOP/RELEASE-dev.md) 主站发布流程并行、互不替代。
+> **个人备忘（历史）**，2026-05-25 落地前问卷整理。**不是** 活跃冲刺文档；**当前在做的关** 只看 [`current.md`](../../current.md)。
+
+与 [RELEASE-dev](../../SOP/RELEASE-dev.md) 主站发布流程并行、互不替代——当时写给自己看的 scope 笔记，保留作参考。
 
 ---
 
