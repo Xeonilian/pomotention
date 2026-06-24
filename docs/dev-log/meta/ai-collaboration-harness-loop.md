@@ -63,7 +63,7 @@ Loop 里常见的完成条件，例如 **「test 全绿 + lint 零错」**，就
 
 - **方式：** 聊天 + **每次任务写清 3 条验收标准**
 - **补 Harness：**
-  - roadmap / current.md（已有）  
+  - roadmap / current.md（已有）
   - Cursor rules（项目惯例）
   - 重复流程进 SOP（release、supabase、docs deploy）
 

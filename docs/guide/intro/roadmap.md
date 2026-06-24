@@ -10,26 +10,26 @@ description: Pomotention 方向与开发队列（短）；细节见 current、CH
 
 ## 最近在推进
 
-- **ledger 第一版** — Task 文本识别 ledger 行 + 复制导出（[这一关](../../dev-log/current.md)）
-- 完整交付记录见 [更新日志](../../dev-log/CHANGELOG.md)（如 v0.6.9 四象限看板、全局快捷键、分层重构等）
+- **ledger 第一版** — Todo 文本识别 ledger 行 + 复制导出（[这一关](../../dev-log/current.md)）
+- 完整交付记录见 [更新日志](../../dev-log/CHANGELOG.md)
 
 ## 长期方向
 
-| 方向 | 一句话 |
-|------|--------|
-| **专注与计划** | 番茄、计划表、任务与活动清单 |
+| 方向           | 一句话                                               |
+| -------------- | ---------------------------------------------------- |
+| **专注与计划** | 番茄、计划表、任务与活动清单                         |
 | **记录与导出** | 结构化书写、ledger 兼容、给 Kimi/Claude 等的上下文包 |
-| **同步与多端** | 云同步、PWA/桌面；数据层 eventual IndexedDB |
+| **同步与多端** | 云同步、PWA/桌面；数据层 eventual IndexedDB          |
 
-更长的产品构想（A→C→B、chart schema、同在做感等）写在 [`dev-log/meta/notes/vision.md`](../../dev-log/meta/notes/vision.md)，随想法变，**以 current 与 CHANGELOG 为准**。
+更长的产品构想见 [`dev-log/meta/notes/vision.md`](../../dev-log/meta/notes/vision.md)
 
 ---
 
 ## 执行顺序
 
-> **今天下午这一关**（进度、验收、停在哪）：[`docs/dev-log/current.md`](../../dev-log/current.md)
+> **当前这一关**（进度、验收、停在哪）：[`docs/dev-log/current.md`](../../dev-log/current.md)
 
-1. **ledger 第一版**（1～2 天，做完即放下）
+1. **ledger 第一版**（做完即放下）
 2. **收费 + 推广底座**
 3. **结构化指标 schema** → chart 改版、A 上下文出口
 4. **IndexedDB 迁移**（大项，与 3 设计并行，不挡 2）
