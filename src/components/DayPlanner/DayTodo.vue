@@ -336,8 +336,9 @@
                 </TagPickerPopover>
                 <span class="ellipsis" v-if="!(editingRowId === todo.id && editingField === 'title')">{{ todo.activityTitle ?? "-" }}</span>
                 <LedgerEntryPopover
-                  v-if="ledgerEntriesForTodo(todo.id).length > 0"
-                  :entries="ledgerEntriesForTodo(todo.id)"
+                  v-if="ledgerEntriesForTodo(todo).length > 0"
+                  :entries="ledgerEntriesForTodo(todo)"
+                  @delete="(id) => handleLedgerDelete(todo, id)"
                 />
               </div>
             </td>
@@ -536,6 +537,8 @@ import { useActivityTagEditor } from "@/composables/activity/useActivityTagEdito
 import TagPickerPopover from "../TagSystem/TagPickerPopover.vue";
 import LedgerEntryPopover from "@/components/Ledger/LedgerEntryPopover.vue";
 import type { LedgerEntry } from "@/core/types/LedgerEntry";
+import { getTitleTagPickerMode, replaceTagTriggerWithCategory } from "@/core/ledger/parseLedgerSegments";
+import { softDeleteLedgerEntryWithTitle } from "@/services/ledger/ledgerService";
 import type { SelectOption } from "naive-ui";
 import { useDevice } from "@/composables/platform/useDevice";
 import { usePomoSlotVoidFingerDouble, pomoFingerVoidPathEnabled } from "@/composables/platform/usePomoSlotVoidFingerDouble";
@@ -571,13 +574,13 @@ const { allTags: allTagsFromStore } = storeToRefs(tagStore);
 const dateService = dataStore.dateService;
 const isViewDateToday = computed(() => dateService.isViewDateToday);
 
-const ledgerEntriesByTodoId = computed(() => {
+const ledgerEntriesByActivityId = computed(() => {
   const map = new Map<number, LedgerEntry[]>();
   for (const entry of ledgerList.value) {
-    if (entry.deleted || entry.sourceTodoId == null) continue;
-    const list = map.get(entry.sourceTodoId) ?? [];
+    if (entry.deleted) continue;
+    const list = map.get(entry.sourceActivityId) ?? [];
     list.push(entry);
-    map.set(entry.sourceTodoId, list);
+    map.set(entry.sourceActivityId, list);
   }
   for (const list of map.values()) {
     list.sort((a, b) => a.segmentIndex - b.segmentIndex);
@@ -585,8 +588,14 @@ const ledgerEntriesByTodoId = computed(() => {
   return map;
 });
 
-function ledgerEntriesForTodo(todoId: number): LedgerEntry[] {
-  return ledgerEntriesByTodoId.value.get(todoId) ?? [];
+function ledgerEntriesForTodo(todo: Todo): LedgerEntry[] {
+  return ledgerEntriesByActivityId.value.get(todo.activityId) ?? [];
+}
+
+function handleLedgerDelete(todo: Todo, entryId: number) {
+  const currentTitle = todo.activityTitle ?? "";
+  const { title } = softDeleteLedgerEntryWithTitle(ledgerList.value, entryId, currentTitle);
+  emit("edit-todo-title", todo.id, title);
 }
 
 // 根据 selectedRowId 找到对应的 todo
@@ -1882,7 +1891,13 @@ function handleTagSelected(tagId: number) {
   const todo = todosForCurrentViewWithTaskRecords.value.find((t) => t.id === tagEditor.popoverTargetId.value);
   if (!todo) return;
 
-  editingValue.value = tagEditor.selectTagFromPopover(todo.activityId, tagId, editingValue.value);
+  if (getTitleTagPickerMode(editingValue.value) === "ledgerText") {
+    const name = tagStore.getTag(tagId)?.name ?? String(tagId);
+    editingValue.value = replaceTagTriggerWithCategory(editingValue.value, name);
+    tagEditor.closePopover();
+  } else {
+    editingValue.value = tagEditor.selectTagFromPopover(todo.activityId, tagId, editingValue.value);
+  }
   isPickingTagFromSelector.value = false;
   nextTick(() => titleInputRef.value?.focus());
 }
@@ -1892,7 +1907,12 @@ function handleTagCreate(tagName: string) {
   const todo = todosForCurrentViewWithTaskRecords.value.find((t) => t.id === tagEditor.popoverTargetId.value);
   if (!todo) return;
 
-  editingValue.value = tagEditor.createTagFromPopover(todo.activityId, tagName, editingValue.value);
+  if (getTitleTagPickerMode(editingValue.value) === "ledgerText") {
+    editingValue.value = replaceTagTriggerWithCategory(editingValue.value, tagName);
+    tagEditor.closePopover();
+  } else {
+    editingValue.value = tagEditor.createTagFromPopover(todo.activityId, tagName, editingValue.value);
+  }
   isPickingTagFromSelector.value = false;
   nextTick(() => titleInputRef.value?.focus());
 }

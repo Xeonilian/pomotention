@@ -1436,15 +1436,11 @@ const {
     if (!todo) return rawTitle;
     const activity = activityById.value.get(todo.activityId);
     if (!activity) return rawTitle;
-    const task = taskByActivityId.value.get(todo.activityId);
     const { normalizedTitle } = syncLedgerFromTodoTitle(
       ledgerList.value,
       {
-        todoId,
         activityId: todo.activityId,
-        taskId: task?.id ?? todo.taskId,
         rawTitle,
-        recordedAt: todo.startTime ?? todo.id,
         defaultCurrency: settingStore.settings.defaultCurrency,
       },
       {

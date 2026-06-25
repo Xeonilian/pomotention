@@ -7,17 +7,14 @@ export interface LedgerEntry {
   direction: LedgerDirection;
   currency: string;
   memo?: string;
-  categoryTagId?: number;
-  recordedAt: number;
+  categoryTagIds?: number[];
   rawSegment: string;
   segmentIndex: number;
   sourceActivityId: number;
-  sourceTodoId?: number;
-  sourceTaskId?: number;
-  deleted: boolean;
+  lastModified: number; // 最后修改时间戳
+  cloudModified?: number; // 云端修改时间戳
   synced: boolean;
-  lastModified: number;
-  cloudModified?: number;
+  deleted: boolean;
 }
 
 /** 解析器输出的单笔片段（尚未写入 store） */
@@ -28,7 +25,7 @@ export interface ParsedLedgerSegment {
   direction: LedgerDirection;
   currency: string;
   memo?: string;
-  categoryTagName?: string;
+  categoryTagNames?: string[];
 }
 
 export interface ParseLedgerWarning {

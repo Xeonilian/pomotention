@@ -1,73 +1,111 @@
 import { describe, it, expect } from "vitest";
-import { parseLedgerFromTitle } from "@/core/ledger/parseLedgerSegments";
+import {
+  parseLedgerFromTitle,
+  stripLedgerSummarySuffix,
+  formatLedgerSummaryBracket,
+  composeLedgerTitle,
+  getTitleTagPickerMode,
+  replaceTagTriggerWithCategory,
+  isInLedgerInputZone,
+} from "@/core/ledger/parseLedgerSegments";
 
-describe("parseLedgerFromTitle MVP", () => {
-  it("块外无 ￥…￥ 时不解析", () => {
+describe("parseLedgerFromTitle v1", () => {
+  it("无触发符时不解析", () => {
     const r = parseLedgerFromTitle("开会写周报");
     expect(r.ok).toHaveLength(0);
     expect(r.diaryText).toBe("开会写周报");
   });
 
-  it("块外裸 ￥ 不触发", () => {
-    const r = parseLedgerFromTitle("开会 ￥-30买菜");
+  it("有触发但无结尾符时不解析", () => {
+    const r = parseLedgerFromTitle("今天 -3度出门");
     expect(r.ok).toHaveLength(0);
-    expect(r.diaryText).toBe("开会 ￥-30买菜");
+    expect(r.diaryText).toBe("今天 -3度出门");
   });
 
-  it("￥…￥ 支出：金额、memo、分类", () => {
-    const r = parseLedgerFromTitle("开会 ￥-30.00买菜#grocery￥ 回工位");
+  it("单笔记账：日记 + 汇总", () => {
+    const r = parseLedgerFromTitle("买菜 -30 西瓜 -25#grocery 喝的￥");
     expect(r.warnings).toHaveLength(0);
-    expect(r.ok).toHaveLength(1);
-    expect(r.ok[0]).toMatchObject({
-      amount: 30,
-      direction: "expense",
-      currency: "CNY",
-      memo: "买菜",
-      categoryTagName: "grocery",
-    });
-    expect(r.diaryText).toBe("开会 回工位");
-  });
-
-  it("块内 + 为收入", () => {
-    const r = parseLedgerFromTitle("￥+5000奖金#salary￥");
-    expect(r.ok[0]).toMatchObject({ amount: 5000, direction: "income", memo: "奖金", categoryTagName: "salary" });
-    expect(r.diaryText).toBe("");
-  });
-
-  it("多个块各一笔", () => {
-    const r = parseLedgerFromTitle("日记 ￥-30买菜#grocery￥ ￥-15地铁#transport￥");
     expect(r.ok).toHaveLength(2);
-    expect(r.ok[1]).toMatchObject({ amount: 15, memo: "地铁", categoryTagName: "transport" });
-    expect(r.diaryText).toBe("日记");
+    expect(r.ok[0]).toMatchObject({ amount: 30, direction: "expense", memo: "西瓜" });
+    expect(r.ok[1]).toMatchObject({ amount: 25, direction: "expense", categoryTagNames: ["grocery"], memo: "喝的" });
+    expect(r.diaryText).toBe("买菜 西瓜 喝的");
   });
 
-  it("未闭合块产生 warning 且保留原文", () => {
-    const r = parseLedgerFromTitle("日记 ￥-30买菜");
-    expect(r.ok).toHaveLength(0);
-    expect(r.warnings.some((w) => w.message === "未闭合的记账块")).toBe(true);
-    expect(r.diaryText).toContain("￥-30买菜");
+  it("收入与支出 + 分号分段", () => {
+    const r = parseLedgerFromTitle("奖金 +5000; 午饭 -30￥");
+    expect(r.ok).toHaveLength(2);
+    expect(r.ok[0]).toMatchObject({ amount: 5000, direction: "income", memo: "午饭" });
+    expect(r.ok[1]).toMatchObject({ amount: 30, direction: "expense" });
+    expect(r.diaryText).toBe("奖金 午饭");
   });
 
-  it("块外 ￥￥ 转义为字面量 ￥", () => {
-    const r = parseLedgerFromTitle("定价约 ￥￥ 非记账");
-    expect(r.ok).toHaveLength(0);
-    expect(r.diaryText).toBe("定价约 ￥ 非记账");
-  });
-
-  it("块外 $$ 转义为字面量 $", () => {
-    const r = parseLedgerFromTitle("美元$$符号");
-    expect(r.diaryText).toBe("美元$符号");
-  });
-
-  it("无金额时 warning", () => {
-    const r = parseLedgerFromTitle("￥-买菜￥");
-    expect(r.ok).toHaveLength(0);
-    expect(r.warnings.some((w) => w.message === "缺少金额")).toBe(true);
-  });
-
-  it("保存前剥掉旧版自动摘要", () => {
-    const r = parseLedgerFromTitle("日记 ￥-5咖啡￥ （账：支5）");
+  it("$ 结尾符", () => {
+    const r = parseLedgerFromTitle("咖啡 -15$");
     expect(r.ok).toHaveLength(1);
-    expect(r.diaryText).toBe("日记");
+    expect(r.ok[0].amount).toBe(15);
+  });
+
+  it("仅记账段在开头", () => {
+    const r = parseLedgerFromTitle(" -10 早餐￥");
+    expect(r.ok).toHaveLength(1);
+    expect(r.ok[0].amount).toBe(10);
+  });
+
+  it("保存前剥旧汇总括号", () => {
+    const r = parseLedgerFromTitle("买菜（-55） -10 零食￥");
+    expect(r.ok).toHaveLength(1);
+    expect(r.ok[0].amount).toBe(10);
+    expect(r.diaryText).toBe("买菜 零食");
+  });
+});
+
+describe("formatLedgerSummaryBracket", () => {
+  it("仅非零项", () => {
+    expect(formatLedgerSummaryBracket([{ direction: "expense", amount: 30 }, { direction: "expense", amount: 25 }])).toBe(
+      "（-55）",
+    );
+    expect(formatLedgerSummaryBracket([{ direction: "income", amount: 5000 }])).toBe("（+5000）");
+    expect(
+      formatLedgerSummaryBracket([
+        { direction: "expense", amount: 30 },
+        { direction: "income", amount: 5000 },
+      ]),
+    ).toBe("（-30 +5000）");
+  });
+});
+
+describe("composeLedgerTitle", () => {
+  it("组合日记与括号", () => {
+    expect(composeLedgerTitle("买菜 西瓜", "（-55）")).toBe("买菜 西瓜（-55）");
+    expect(composeLedgerTitle("", "（-30）")).toBe("（-30）");
+  });
+});
+
+describe("getTitleTagPickerMode", () => {
+  it("记账段内为 ledgerText", () => {
+    expect(getTitleTagPickerMode("买菜 -30#gro")).toBe("ledgerText");
+    expect(getTitleTagPickerMode("买菜 -30￥", 6)).toBe("ledgerText");
+    expect(getTitleTagPickerMode("买菜 -30￥")).toBe("activity");
+  });
+
+  it("￥ 之后为 activity", () => {
+    expect(getTitleTagPickerMode("买菜 -30￥ #urg")).toBe("activity");
+  });
+
+  it("段外为 activity", () => {
+    expect(getTitleTagPickerMode("开会 #urgent")).toBe("activity");
+    expect(getTitleTagPickerMode("今天 -3度")).toBe("activity");
+  });
+});
+
+describe("replaceTagTriggerWithCategory", () => {
+  it("替换末尾 #query", () => {
+    expect(replaceTagTriggerWithCategory("买菜 -30#gro", "grocery")).toBe("买菜 -30#grocery ");
+  });
+});
+
+describe("stripLedgerSummarySuffix", () => {
+  it("剥 v1 括号", () => {
+    expect(stripLedgerSummarySuffix("买菜（-55）")).toBe("买菜");
   });
 });

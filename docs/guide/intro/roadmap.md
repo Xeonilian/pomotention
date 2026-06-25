@@ -10,7 +10,7 @@ description: Pomotention 方向与开发队列（短）；细节见 current、CH
 
 ## 最近在推进
 
-- **ledger 第一版** — Todo 文本识别 ledger 行 + 复制导出（[这一关](../../dev-log/current.md)）
+- **ledger v1** — Todo 顺手记账：语法/tag 闭环、本地 CRUD、最小展示（[这一关](../../dev-log/current.md) · [蓝图](../../dev-log/blueprint/ledger.md)）
 - 完整交付记录见 [更新日志](../../dev-log/CHANGELOG.md)
 
 ## 长期方向

@@ -1,13 +1,15 @@
 import type { LedgerEntry } from "@/core/types/LedgerEntry";
 import type { ParseLedgerWarning } from "@/core/types/LedgerEntry";
-import { parseLedgerFromTitle } from "@/core/ledger/parseLedgerSegments";
+import {
+  composeLedgerTitle,
+  formatLedgerSummaryBracket,
+  parseLedgerFromTitle,
+  stripLedgerSummarySuffix,
+} from "@/core/ledger/parseLedgerSegments";
 
 export interface SyncLedgerFromTitleParams {
-  todoId: number;
   activityId: number;
-  taskId?: number;
   rawTitle: string;
-  recordedAt: number;
   defaultCurrency: string;
 }
 
@@ -22,8 +24,8 @@ export interface LedgerTagActions {
   resolveOrCreateTagByName: (name: string) => number;
 }
 
-function activeEntriesForTodo(ledgerList: LedgerEntry[], todoId: number): LedgerEntry[] {
-  return ledgerList.filter((e) => !e.deleted && e.sourceTodoId === todoId);
+function activeEntriesForActivity(ledgerList: LedgerEntry[], activityId: number): LedgerEntry[] {
+  return ledgerList.filter((e) => !e.deleted && e.sourceActivityId === activityId);
 }
 
 function nextLedgerEntryId(ledgerList: LedgerEntry[]): number {
@@ -34,13 +36,24 @@ function nextLedgerEntryId(ledgerList: LedgerEntry[]): number {
   return max + 1;
 }
 
-function nextSegmentIndexForTodo(ledgerList: LedgerEntry[], todoId: number): number {
-  const active = activeEntriesForTodo(ledgerList, todoId);
+function nextSegmentIndexForActivity(ledgerList: LedgerEntry[], activityId: number): number {
+  const active = activeEntriesForActivity(ledgerList, activityId);
   if (active.length === 0) return 0;
   return Math.max(...active.map((e) => e.segmentIndex)) + 1;
 }
 
-/** title 保存：解析 ￥…￥ 块并追加 ledger；无新块时不删已有行 */
+function resolveCategoryTagIds(names: string[] | undefined, tagActions: LedgerTagActions): number[] | undefined {
+  if (!names || names.length === 0) return undefined;
+  return names.map((n) => tagActions.resolveOrCreateTagByName(n));
+}
+
+function buildNormalizedTitle(diaryText: string, ledgerList: LedgerEntry[], activityId: number): string {
+  const active = activeEntriesForActivity(ledgerList, activityId);
+  const bracket = formatLedgerSummaryBracket(active);
+  return composeLedgerTitle(diaryText, bracket);
+}
+
+/** title 保存：解析记账段并追加；重写汇总括号 */
 export function syncLedgerFromTodoTitle(
   ledgerList: LedgerEntry[],
   params: SyncLedgerFromTitleParams,
@@ -52,27 +65,19 @@ export function syncLedgerFromTodoTitle(
   if (appendedCount > 0) {
     const now = Date.now();
     let nextId = nextLedgerEntryId(ledgerList);
-    let nextSegIdx = nextSegmentIndexForTodo(ledgerList, params.todoId);
+    let nextSegIdx = nextSegmentIndexForActivity(ledgerList, params.activityId);
 
     for (const seg of parsed.ok) {
-      let categoryTagId: number | undefined;
-      if (seg.categoryTagName) {
-        categoryTagId = tagActions.resolveOrCreateTagByName(seg.categoryTagName);
-      }
-
       ledgerList.push({
         id: nextId++,
         amount: seg.amount,
         direction: seg.direction,
         currency: seg.currency,
         memo: seg.memo,
-        categoryTagId,
-        recordedAt: params.recordedAt,
+        categoryTagIds: resolveCategoryTagIds(seg.categoryTagNames, tagActions),
         rawSegment: seg.rawSegment,
         segmentIndex: nextSegIdx++,
         sourceActivityId: params.activityId,
-        sourceTodoId: params.todoId,
-        sourceTaskId: params.taskId,
         deleted: false,
         synced: false,
         lastModified: now,
@@ -80,32 +85,91 @@ export function syncLedgerFromTodoTitle(
     }
   }
 
-  const allActive = activeEntriesForTodo(ledgerList, params.todoId);
+  const diaryBase =
+    appendedCount > 0
+      ? parsed.diaryText
+      : stripLedgerSummarySuffix(params.rawTitle).trim();
+
+  const normalizedTitle = buildNormalizedTitle(diaryBase, ledgerList, params.activityId);
+  const allActive = activeEntriesForActivity(ledgerList, params.activityId);
 
   return {
-    normalizedTitle: parsed.diaryText,
+    normalizedTitle,
     entryCount: allActive.length,
     appendedCount,
     warnings: parsed.warnings,
   };
 }
 
-export function getActiveLedgerEntriesForTodo(ledgerList: LedgerEntry[], todoId: number): LedgerEntry[] {
-  return activeEntriesForTodo(ledgerList, todoId).sort((a, b) => a.segmentIndex - b.segmentIndex);
+export function getActiveLedgerEntriesForActivity(ledgerList: LedgerEntry[], activityId: number): LedgerEntry[] {
+  return activeEntriesForActivity(ledgerList, activityId).sort((a, b) => a.segmentIndex - b.segmentIndex);
+}
+
+/** @deprecated 按 todo 展示时用 activityId */
+export function getActiveLedgerEntriesForTodo(ledgerList: LedgerEntry[], _todoId: number, activityId: number): LedgerEntry[] {
+  return getActiveLedgerEntriesForActivity(ledgerList, activityId);
+}
+
+/** 从 title 删除 rawSegment 并收拢空白 */
+export function removeRawSegmentFromTitle(title: string, rawSegment: string): string {
+  if (!rawSegment) return title;
+  const idx = title.indexOf(rawSegment);
+  if (idx < 0) return title;
+  return title
+    .slice(0, idx)
+    .concat(title.slice(idx + rawSegment.length))
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** 从日记正文去掉一笔的 memo（保存后 title 无 rawSegment 时用） */
+export function removeMemoFromDiaryText(diary: string, memo?: string): string {
+  if (!memo?.trim()) return diary.trim();
+  const escaped = memo.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return diary
+    .replace(new RegExp(`(^|\\s)${escaped}(?=\\s|$)`, "u"), " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** 软删一笔并尝试反写 title；对不上原文则静默 */
+export function softDeleteLedgerEntryWithTitle(
+  ledgerList: LedgerEntry[],
+  entryId: number,
+  currentTitle: string,
+  tagActions?: LedgerTagActions,
+): { title: string; deleted: boolean } {
+  const entry = ledgerList.find((e) => e.id === entryId);
+  if (!entry || entry.deleted) return { title: currentTitle, deleted: false };
+
+  const now = Date.now();
+  entry.deleted = true;
+  entry.synced = false;
+  entry.lastModified = now;
+
+  const diaryOnly = stripLedgerSummarySuffix(currentTitle);
+  let title = removeRawSegmentFromTitle(diaryOnly, entry.rawSegment);
+  if (title === diaryOnly) {
+    title = removeMemoFromDiaryText(diaryOnly, entry.memo);
+  }
+  const active = activeEntriesForActivity(ledgerList, entry.sourceActivityId);
+  const bracket = formatLedgerSummaryBracket(active);
+  title = composeLedgerTitle(title, bracket);
+
+  void tagActions;
+  return { title, deleted: true };
 }
 
 /** 删除/恢复 Activity 时级联软删或恢复 ledger 行 */
 export function cascadeLedgerForActivityTree(
   ledgerList: LedgerEntry[],
   activityIds: Set<number>,
-  todoIds: Set<number>,
+  _todoIds: Set<number>,
   deleted: boolean,
 ): void {
   const now = Date.now();
   for (const entry of ledgerList) {
-    const matchesActivity = activityIds.has(entry.sourceActivityId);
-    const matchesTodo = entry.sourceTodoId != null && todoIds.has(entry.sourceTodoId);
-    if (!matchesActivity && !matchesTodo) continue;
+    if (!activityIds.has(entry.sourceActivityId)) continue;
     if (entry.deleted === deleted) continue;
     entry.deleted = deleted;
     entry.synced = false;

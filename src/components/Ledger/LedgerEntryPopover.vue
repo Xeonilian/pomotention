@@ -18,6 +18,7 @@
             <th>金额</th>
             <th>备注</th>
             <th>分类</th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
@@ -27,10 +28,14 @@
             </td>
             <td>{{ formatAmount(entry) }}</td>
             <td>{{ entry.memo || "—" }}</td>
-            <td>{{ categoryName(entry.categoryTagId) }}</td>
+            <td>{{ categoryNames(entry.categoryTagIds) }}</td>
+            <td>
+              <n-button text type="error" size="tiny" title="删除" @click.stop="emit('delete', entry.id)">删</n-button>
+            </td>
           </tr>
         </tbody>
       </table>
+      <div v-if="summaryLine" class="ledger-entry-panel__summary">{{ summaryLine }}</div>
     </div>
   </n-popover>
 </template>
@@ -40,15 +45,25 @@ import { computed } from "vue";
 import { NButton, NIcon, NPopover } from "naive-ui";
 import { Gift20Regular } from "@vicons/fluent";
 import type { LedgerEntry } from "@/core/types/LedgerEntry";
+import { formatLedgerSummaryBracket } from "@/core/ledger/parseLedgerSegments";
 import { useTagStore } from "@/stores/useTagStore";
 
 const props = defineProps<{
   entries: LedgerEntry[];
 }>();
 
+const emit = defineEmits<{
+  delete: [entryId: number];
+}>();
+
 const tagStore = useTagStore();
 
 const triggerTitle = computed(() => `已录入 ${props.entries.length} 笔收支，点击查看`);
+
+const summaryLine = computed(() => {
+  const bracket = formatLedgerSummaryBracket(props.entries);
+  return bracket ? `合计 ${bracket}` : "";
+});
 
 function formatAmount(entry: LedgerEntry): string {
   const sign = entry.direction === "income" ? "+" : "-";
@@ -56,9 +71,9 @@ function formatAmount(entry: LedgerEntry): string {
   return `${sign}${entry.amount}${cur}`;
 }
 
-function categoryName(tagId?: number): string {
-  if (tagId == null) return "—";
-  return tagStore.getTag(tagId)?.name ?? `#${tagId}`;
+function categoryNames(tagIds?: number[]): string {
+  if (!tagIds || tagIds.length === 0) return "—";
+  return tagIds.map((id) => tagStore.getTag(id)?.name ?? `#${id}`).join(", ");
 }
 </script>
 
@@ -77,10 +92,16 @@ function categoryName(tagId?: number): string {
   color: var(--color-text-secondary);
 }
 
+.ledger-entry-panel__summary {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
 .ledger-entry-table {
   border-collapse: collapse;
   font-size: 12px;
-  min-width: 220px;
+  min-width: 260px;
 }
 
 .ledger-entry-table th,
