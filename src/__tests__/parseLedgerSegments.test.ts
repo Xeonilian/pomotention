@@ -45,8 +45,15 @@ describe("parseLedgerFromTitle v1", () => {
     expect(r.ok[0].amount).toBe(15);
   });
 
+  it("行首无空格也可触发", () => {
+    const r = parseLedgerFromTitle("-10 早餐￥");
+    expect(r.ok).toHaveLength(1);
+    expect(r.ok[0].amount).toBe(10);
+    expect(r.diaryText).toBe("早餐");
+  });
+
   it("仅记账段在开头", () => {
-    const r = parseLedgerFromTitle(" -10 早餐￥");
+    const r = parseLedgerFromTitle("-10 早餐￥");
     expect(r.ok).toHaveLength(1);
     expect(r.ok[0].amount).toBe(10);
   });

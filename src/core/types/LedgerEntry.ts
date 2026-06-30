@@ -2,6 +2,7 @@
 export type LedgerDirection = "income" | "expense";
 
 export interface LedgerEntry {
+  /** 记账时刻时间戳（毫秒），与 todo/activity 同惯例；云端映射 timestamp_id */
   id: number;
   amount: number;
   direction: LedgerDirection;

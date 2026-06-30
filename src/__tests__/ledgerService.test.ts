@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import type { LedgerEntry } from "@/core/types/LedgerEntry";
 import {
   syncLedgerFromTodoTitle,
@@ -49,7 +49,7 @@ describe("syncLedgerFromTodoTitle v1", () => {
   it("再次保存无新记账段时保留条目并重写括号", () => {
     syncLedgerFromTodoTitle(
       ledgerList,
-      { activityId: 100, rawTitle: " -10 早餐￥", defaultCurrency: "CNY" },
+      { activityId: 100, rawTitle: "-10 早餐￥", defaultCurrency: "CNY" },
       tagActions,
     );
     const result = syncLedgerFromTodoTitle(
@@ -71,6 +71,30 @@ describe("syncLedgerFromTodoTitle v1", () => {
     expect(result.appendedCount).toBe(0);
     expect(ledgerList).toHaveLength(0);
     expect(result.normalizedTitle).toBe("开会 -30买菜");
+  });
+
+  it("新行 id 为时间戳", () => {
+    const before = Date.now();
+    syncLedgerFromTodoTitle(
+      ledgerList,
+      { activityId: 100, rawTitle: "-10 早餐￥", defaultCurrency: "CNY" },
+      tagActions,
+    );
+    expect(ledgerList[0].id).toBeGreaterThanOrEqual(before);
+    expect(ledgerList[0].id).toBeLessThanOrEqual(Date.now());
+  });
+
+  it("同毫秒多笔 id 递增", () => {
+    const fixed = 1_700_000_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(fixed);
+    syncLedgerFromTodoTitle(
+      ledgerList,
+      { activityId: 100, rawTitle: "-30 西瓜 -25 喝的￥", defaultCurrency: "CNY" },
+      tagActions,
+    );
+    const ids = ledgerList.map((e) => e.id).sort((a, b) => a - b);
+    expect(ids).toEqual([fixed, fixed + 1]);
+    vi.restoreAllMocks();
   });
 });
 

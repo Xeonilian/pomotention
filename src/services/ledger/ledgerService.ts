@@ -28,12 +28,22 @@ function activeEntriesForActivity(ledgerList: LedgerEntry[], activityId: number)
   return ledgerList.filter((e) => !e.deleted && e.sourceActivityId === activityId);
 }
 
-function nextLedgerEntryId(ledgerList: LedgerEntry[]): number {
-  let max = 0;
-  for (const e of ledgerList) {
-    if (e.id > max) max = e.id;
+function collectUsedLedgerIds(ledgerList: LedgerEntry[]): Set<number> {
+  return new Set(ledgerList.map((e) => e.id));
+}
+
+/** 分配新 id：以当前时间为基准，避开已有 id（同毫秒多笔递增） */
+function allocateLedgerEntryIds(ledgerList: LedgerEntry[], count: number): number[] {
+  const used = collectUsedLedgerIds(ledgerList);
+  let candidate = Date.now();
+  const ids: number[] = [];
+  for (let i = 0; i < count; i++) {
+    while (used.has(candidate)) candidate++;
+    ids.push(candidate);
+    used.add(candidate);
+    candidate++;
   }
-  return max + 1;
+  return ids;
 }
 
 function nextSegmentIndexForActivity(ledgerList: LedgerEntry[], activityId: number): number {
@@ -64,12 +74,12 @@ export function syncLedgerFromTodoTitle(
 
   if (appendedCount > 0) {
     const now = Date.now();
-    let nextId = nextLedgerEntryId(ledgerList);
+    const newIds = allocateLedgerEntryIds(ledgerList, appendedCount);
     let nextSegIdx = nextSegmentIndexForActivity(ledgerList, params.activityId);
 
-    for (const seg of parsed.ok) {
+    parsed.ok.forEach((seg, i) => {
       ledgerList.push({
-        id: nextId++,
+        id: newIds[i]!,
         amount: seg.amount,
         direction: seg.direction,
         currency: seg.currency,
@@ -82,7 +92,7 @@ export function syncLedgerFromTodoTitle(
         synced: false,
         lastModified: now,
       });
-    }
+    });
   }
 
   const diaryBase =

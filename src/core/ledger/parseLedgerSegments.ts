@@ -8,7 +8,7 @@ const LEGACY_SUMMARY_SUFFIX_RE = /（账：[^）]*）\s*$/u;
 /** v1 汇总括号，如 （-55 +1000） */
 export const LEDGER_SUMMARY_SUFFIX_RE = /（(?:[-+]\d+(?:\s+[-+]\d+)*)）\s*$/u;
 
-const LEDGER_AMOUNT_TRIGGER_RE = / [+-](\d+(?:\.\d{1,2})?)(?=\s|#|;|；|￥|\$|$)/;
+const LEDGER_AMOUNT_TRIGGER_RE = /(?:^| )[+-](\d+(?:\.\d{1,2})?)(?=\s|#|;|；|￥|\$|$)/;
 
 export interface ParseLedgerFromTitleResult extends ParseLedgerResult {
   /** 日记正文（不含汇总括号） */
@@ -224,7 +224,7 @@ function buildDiaryText(prefix: string, segments: ParsedLedgerSegment[], tail: s
 }
 
 /**
- * v1：空格 + -/+ 数字触发；￥ 或 $ 结束记账段；无结尾符不解析。
+ * v1：行首或空格后 -/+ 数字触发；￥ 或 $ 结束记账段；无结尾符不解析。
  */
 export function parseLedgerFromTitle(title: string, defaultCurrency: string = DEFAULT_LEDGER_CURRENCY): ParseLedgerFromTitleResult {
   const stripped = stripLedgerSummarySuffix(title);
