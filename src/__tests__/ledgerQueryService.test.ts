@@ -139,7 +139,6 @@ describe("buildLedgerTrend", () => {
     const center = dayStart + 12 * 3_600_000;
     const buckets = buildLedgerTrend([], center, center + 86_400_000, "day", () => undefined);
     expect(buckets).toHaveLength(7);
-    expect(buckets[3]?.isToday).toBe(true);
     expect(buckets[3]?.label).not.toContain("今");
     expect(buckets[3]?.start).toBe(getDayStartTimestamp(center));
   });

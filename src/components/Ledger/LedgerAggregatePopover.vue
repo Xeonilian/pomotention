@@ -76,10 +76,7 @@
                 <td>{{ formatRowDate(row.recordedAt) }}</td>
                 <td class="ledger-aggregate-table__tags">{{ row.categoryLabels.join(" ") || "—" }}</td>
                 <td class="ledger-aggregate-table__memo">{{ row.memo || "—" }}</td>
-                <td
-                  class="ledger-aggregate-table__col-amount"
-                  :class="row.direction === 'income' ? 'ledger-income' : 'ledger-expense'"
-                >
+                <td class="ledger-aggregate-table__col-amount" :class="row.direction === 'income' ? 'ledger-income' : 'ledger-expense'">
                   {{ row.direction === "income" ? "+" : "-" }}{{ formatLedgerMoneyFixed(row.amount) }}
                 </td>
               </tr>
@@ -282,7 +279,7 @@ watch(
 }
 
 .ledger-aggregate-table th,
-.ledger-aggregate-table td {
+.ledger-aggregate-table td:not(.ledger-aggregate-table__empty) {
   width: 25%;
   padding: 5px 8px;
   text-align: left;
@@ -320,7 +317,8 @@ watch(
 .ledger-aggregate-table__empty {
   text-align: center;
   color: var(--color-text-secondary);
-  padding: 24px 8px !important;
+  padding: 24px 8px;
+  border-bottom: 1px solid var(--n-border-color);
 }
 
 .ledger-income {

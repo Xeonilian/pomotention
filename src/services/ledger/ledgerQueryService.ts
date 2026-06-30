@@ -39,8 +39,6 @@ export interface LedgerTrendBucket {
   start: number;
   expense: number;
   income: number;
-  /** 日视图：当天桶，图表 x 轴标蓝 */
-  isToday?: boolean;
 }
 
 export interface LedgerTableRow {
@@ -242,7 +240,6 @@ function buildTrendBuckets(rangeStart: number, rangeEnd: number, viewScale: Ledg
         start,
         expense: 0,
         income: 0,
-        isToday: offset === 0,
       });
     }
     return buckets;
