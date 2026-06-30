@@ -27,6 +27,7 @@ describe("syncLedgerFromTodoTitle v1", () => {
       ledgerList,
       {
         activityId: 100,
+        todoId: 1000,
         rawTitle: "买菜 -30 西瓜 -25#grocery 喝的￥",
         defaultCurrency: "CNY",
       },
@@ -42,6 +43,7 @@ describe("syncLedgerFromTodoTitle v1", () => {
       direction: "expense",
       memo: "西瓜",
       categoryTagIds: undefined,
+      sourceTodoId: 1000,
     });
     expect(active[1].categoryTagIds).toEqual([501]);
   });
@@ -49,12 +51,12 @@ describe("syncLedgerFromTodoTitle v1", () => {
   it("再次保存无新记账段时保留条目并重写括号", () => {
     syncLedgerFromTodoTitle(
       ledgerList,
-      { activityId: 100, rawTitle: "-10 早餐￥", defaultCurrency: "CNY" },
+      { activityId: 100, todoId: 1000, rawTitle: "-10 早餐￥", defaultCurrency: "CNY" },
       tagActions,
     );
     const result = syncLedgerFromTodoTitle(
       ledgerList,
-      { activityId: 100, rawTitle: "普通日记", defaultCurrency: "CNY" },
+      { activityId: 100, todoId: 1000, rawTitle: "普通日记", defaultCurrency: "CNY" },
       tagActions,
     );
 
@@ -65,7 +67,7 @@ describe("syncLedgerFromTodoTitle v1", () => {
   it("无结尾符不入账", () => {
     const result = syncLedgerFromTodoTitle(
       ledgerList,
-      { activityId: 100, rawTitle: "开会 -30买菜", defaultCurrency: "CNY" },
+      { activityId: 100, todoId: 1000, rawTitle: "开会 -30买菜", defaultCurrency: "CNY" },
       tagActions,
     );
     expect(result.appendedCount).toBe(0);
@@ -77,7 +79,7 @@ describe("syncLedgerFromTodoTitle v1", () => {
     const before = Date.now();
     syncLedgerFromTodoTitle(
       ledgerList,
-      { activityId: 100, rawTitle: "-10 早餐￥", defaultCurrency: "CNY" },
+      { activityId: 100, todoId: 1000, rawTitle: "-10 早餐￥", defaultCurrency: "CNY" },
       tagActions,
     );
     expect(ledgerList[0].id).toBeGreaterThanOrEqual(before);
@@ -89,7 +91,7 @@ describe("syncLedgerFromTodoTitle v1", () => {
     vi.spyOn(Date, "now").mockReturnValue(fixed);
     syncLedgerFromTodoTitle(
       ledgerList,
-      { activityId: 100, rawTitle: "-30 西瓜 -25 喝的￥", defaultCurrency: "CNY" },
+      { activityId: 100, todoId: 1000, rawTitle: "-30 西瓜 -25 喝的￥", defaultCurrency: "CNY" },
       tagActions,
     );
     const ids = ledgerList.map((e) => e.id).sort((a, b) => a - b);
@@ -110,6 +112,7 @@ describe("softDeleteLedgerEntryWithTitle", () => {
         rawSegment: "-30 西瓜",
         segmentIndex: 0,
         sourceActivityId: 100,
+        sourceTodoId: 1000,
         deleted: false,
         synced: false,
         lastModified: 0,
@@ -135,6 +138,7 @@ describe("softDeleteLedgerEntryWithTitle", () => {
         rawSegment: "-30 西瓜",
         segmentIndex: 0,
         sourceActivityId: 100,
+        sourceTodoId: 1000,
         deleted: false,
         synced: false,
         lastModified: 0,
@@ -169,6 +173,7 @@ describe("softDeleteLedgerEntryWithTitle memo", () => {
         rawSegment: "-30 西瓜",
         segmentIndex: 0,
         sourceActivityId: 100,
+        sourceTodoId: 1000,
         deleted: false,
         synced: false,
         lastModified: 0,
@@ -182,6 +187,7 @@ describe("softDeleteLedgerEntryWithTitle memo", () => {
         rawSegment: "-25#grocery 喝的",
         segmentIndex: 1,
         sourceActivityId: 100,
+        sourceTodoId: 1000,
         deleted: false,
         synced: false,
         lastModified: 0,

@@ -122,13 +122,14 @@ Pomotention **不做**专业记账 App。目标：把日常消费等行为从 To
 
 | 字段 | 含义 |
 |------|------|
-| `id` | **记账时刻**时间戳（`Date.now()`）；按 id 筛月份/范围 |
+| `id` | 行唯一标识（`Date.now()`）；**不**用于聚合日期 |
 | `amount` / `direction` / `currency` | 金额与方向 |
 | `memo` | 备注 |
 | `categoryTagIds` | 分类 tag id 数组 |
 | `rawSegment` | 解析时该笔原文（删条时尝试从 title 反查） |
 | `segmentIndex` | 同 `sourceActivityId` 下序号 |
-| `sourceActivityId` | 溯源 activity（**无** `sourceTodoId`） |
+| `sourceActivityId` | 溯源 activity |
+| `sourceTodoId` | 溯源 todo；聚合日期取 **`todo.id`**（与 `todosForCurrentView` 一致） |
 | `deleted` / `synced` / `lastModified` / `cloudModified` | 软删；v2 同步预留 |
 
 UI 按 **`todo.activityId`** 取 [`getActiveLedgerEntriesForActivity`](../../../src/services/ledger/ledgerService.ts)。
@@ -178,11 +179,13 @@ UI 按 **`todo.activityId`** 取 [`getActiveLedgerEntriesForActivity`](../../../
 | 类型 | [`src/core/types/LedgerEntry.ts`](../../../src/core/types/LedgerEntry.ts) |
 | 解析 | [`src/core/ledger/parseLedgerSegments.ts`](../../../src/core/ledger/parseLedgerSegments.ts) |
 | 业务 | [`src/services/ledger/ledgerService.ts`](../../../src/services/ledger/ledgerService.ts) |
+| 聚合 | [`src/services/ledger/ledgerQueryService.ts`](../../../src/services/ledger/ledgerQueryService.ts) |
 | 持久化 | [`localStorageService.ts`](../../../src/services/data/localStorageService.ts) · `ledgerEntries` |
 | Store | [`useDataStore.ts`](../../../src/stores/useDataStore.ts) |
 | 接入 | [`HomeView.vue`](../../../src/views/HomeView.vue) · `onTodoTitleSaved` |
 | Tag 互斥 | [`DayTodo.vue`](../../../src/components/DayPlanner/DayTodo.vue) + [`useActivityTagEditor`](../../../src/composables/activity/useActivityTagEditor.ts) |
-| UI | [`LedgerEntryPopover.vue`](../../../src/components/Ledger/LedgerEntryPopover.vue) |
+| UI | [`LedgerEntryPopover.vue`](../../../src/components/Ledger/LedgerEntryPopover.vue) · todo 行 Gift |
+| 聚合 UI | [`LedgerAggregatePopover.vue`](../../../src/components/Ledger/LedgerAggregatePopover.vue) · 头部 Gift |
 | 测试 | [`parseLedgerSegments.test.ts`](../../../src/__tests__/parseLedgerSegments.test.ts)、[`ledgerService.test.ts`](../../../src/__tests__/ledgerService.test.ts) |
 
 ---
@@ -191,7 +194,7 @@ UI 按 **`todo.activityId`** 取 [`getActiveLedgerEntriesForActivity`](../../../
 
 | 关 | 内容 |
 |----|------|
-| **v1** | 语法/回写/tag/删条 · localStorage — **进行中**（缺：改条、最小展示） |
+| **v1** | 语法/回写/tag/删条/聚合展示 · localStorage — **进行中**（缺：改条、证据） |
 | **v2** | Supabase `ledger_entries` + LedgerSyncService |
 | **data** | IndexedDB 大迁移 |
 | **可选** | beancount/hledger 导出 |

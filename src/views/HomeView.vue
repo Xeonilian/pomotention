@@ -110,6 +110,7 @@
             />
             <div class="button-group">
               <HomeTagFilterPopover />
+              <LedgerAggregatePopover />
 
               <n-button
                 title="重复活动"
@@ -345,6 +346,7 @@ import { useResize } from "@/composables/layout/useResize";
 import { useVisualViewportKeyboard } from "@/composables/layout/useVisualViewportKeyboard";
 import IcsExportModal from "@/components/DayPlanner/IcsExportModal.vue";
 import HomeTagFilterPopover from "@/components/TagSystem/HomeTagFilterPopover.vue";
+import LedgerAggregatePopover from "@/components/Ledger/LedgerAggregatePopover.vue";
 import MobileHomeFab from "@/components/platform/MobileHomeFab.vue";
 import { useTagStore } from "@/stores/useTagStore";
 import {
@@ -1440,6 +1442,7 @@ const {
       ledgerList.value,
       {
         activityId: todo.activityId,
+        todoId: todo.id,
         rawTitle,
         defaultCurrency: settingStore.settings.defaultCurrency,
       },

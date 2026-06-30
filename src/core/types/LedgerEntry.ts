@@ -2,7 +2,7 @@
 export type LedgerDirection = "income" | "expense";
 
 export interface LedgerEntry {
-  /** 记账时刻时间戳（毫秒），与 todo/activity 同惯例；云端映射 timestamp_id */
+  /** 行唯一标识（写入时刻 `Date.now()`）；云端映射 timestamp_id */
   id: number;
   amount: number;
   direction: LedgerDirection;
@@ -12,6 +12,8 @@ export interface LedgerEntry {
   rawSegment: string;
   segmentIndex: number;
   sourceActivityId: number;
+  /** 记账所在 todo；聚合日期用对应 todo.id（与 Planner 列表一致） */
+  sourceTodoId: number;
   lastModified: number; // 最后修改时间戳
   cloudModified?: number; // 云端修改时间戳
   synced: boolean;

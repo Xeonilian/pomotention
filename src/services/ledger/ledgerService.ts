@@ -9,6 +9,7 @@ import {
 
 export interface SyncLedgerFromTitleParams {
   activityId: number;
+  todoId: number;
   rawTitle: string;
   defaultCurrency: string;
 }
@@ -88,6 +89,7 @@ export function syncLedgerFromTodoTitle(
         rawSegment: seg.rawSegment,
         segmentIndex: nextSegIdx++,
         sourceActivityId: params.activityId,
+        sourceTodoId: params.todoId,
         deleted: false,
         synced: false,
         lastModified: now,
