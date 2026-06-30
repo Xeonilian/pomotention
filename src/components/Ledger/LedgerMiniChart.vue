@@ -25,7 +25,7 @@ const props = withDefaults(
   {
     pieSlices: () => [],
     trendBuckets: () => [],
-    emptyLabel: "暂无记账",
+    emptyLabel: "暂无数据",
     height: 200,
     fill: false,
   },
@@ -36,12 +36,9 @@ const chartStyle = computed(() => (props.fill ? { height: "100%", minHeight: "16
 const chartRef = ref<HTMLElement>();
 const chartInstance = shallowRef<echarts.ECharts>();
 
-// 空状态颜色：改下面变量名 → 跟主题走；改 colors.css 里对应值 → 全局生效
-// fallback 仅在变量未定义时才会用到，平时改 fallback 看不到变化
-const EMPTY_RING_COLOR_VAR = "--color-background-light";
-const EMPTY_TEXT_COLOR_VAR = "--color-text-secondary";
-const EMPTY_RING_FALLBACK = "#e8e8e8";
-const EMPTY_TEXT_FALLBACK = "#999";
+const EMPTY_RING_FALLBACK = "var(--color-background-light, #e8e8e8)";
+const EMPTY_TEXT_FALLBACK = "var(--color-text-primary, #999)";
+const DEFAULT_AXIS_COLOR = "var(--color-text-secondary, #999)";
 
 function resolveChartColor(cssVar: string, fallback: string): string {
   const el = chartRef.value;
@@ -53,8 +50,8 @@ function resolveChartColor(cssVar: string, fallback: string): string {
 function buildPieOption(): EChartsOption {
   const hasData = props.pieSlices.length > 0;
   if (!hasData) {
-    const ringColor = resolveChartColor(EMPTY_RING_COLOR_VAR, EMPTY_RING_FALLBACK);
-    const textColor = resolveChartColor(EMPTY_TEXT_COLOR_VAR, EMPTY_TEXT_FALLBACK);
+    const ringColor = resolveChartColor("--color-background-light", EMPTY_RING_FALLBACK);
+    const textColor = resolveChartColor("--color-background-light", EMPTY_TEXT_FALLBACK);
     return {
       tooltip: { show: false },
       series: [
@@ -73,13 +70,7 @@ function buildPieOption(): EChartsOption {
           type: "text",
           left: "center",
           top: "middle",
-          style: {
-            text: props.emptyLabel,
-            fill: textColor,
-            fontSize: 12,
-            textAlign: "center",
-            textVerticalAlign: "middle",
-          },
+          style: { text: props.emptyLabel, fill: textColor, fontSize: 12 },
         },
       ],
     };
@@ -113,6 +104,9 @@ function buildTrendOption(): EChartsOption {
         fontSize: 10,
         interval: 0,
         rotate: buckets.length > 8 ? 35 : 0,
+        color: (_value?: string | number) => {
+          return DEFAULT_AXIS_COLOR;
+        },
       },
     },
     yAxis: {
@@ -145,10 +139,8 @@ function buildTrendOption(): EChartsOption {
             top: "middle",
             style: {
               text: props.emptyLabel,
-              fill: resolveChartColor(EMPTY_TEXT_COLOR_VAR, EMPTY_TEXT_FALLBACK),
+              fill: resolveChartColor("--color-background-light", EMPTY_TEXT_FALLBACK),
               fontSize: 12,
-              textAlign: "center",
-              textVerticalAlign: "middle",
             },
           },
         ],
