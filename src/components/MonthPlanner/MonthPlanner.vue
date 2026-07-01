@@ -46,8 +46,7 @@
                 <span>{{ formatWorkHoursCompact(day.sumWorkMs) }}</span>
               </div>
               <div v-else class="day-stat day-stat--full">
-                <span>🍅 x {{ day.sumRealPomo }}</span>
-                <span>work {{ formatWorkHours(day.sumWorkMs) }}</span>
+                <span>🍅 x {{ day.sumRealPomo }} | {{ formatWorkHours(day.sumWorkMs) }}</span>
               </div>
             </template>
             <template v-else>
@@ -670,14 +669,14 @@ function getPomoBgColorHEX(ratio: number) {
 .day-stat--full {
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: center;
   flex: 1;
   gap: 2px;
   font-size: 13px;
   line-height: 1.2;
-  color: var(--color-text-secondary);
-  font-family: Consolas, "Courier New", Courier, monospace;
+  color: var(--color-text-primary);
+  font-weight: 600;
   padding: 2px 4px 4px;
 }
 
@@ -690,8 +689,7 @@ function getPomoBgColorHEX(ratio: number) {
   gap: 2px;
   font-size: 12px;
   line-height: 1.2;
-  color: var(--color-text-secondary);
-  font-family: Consolas, "Courier New", Courier, monospace;
+  color: var(--color-text-primary);
   padding: 2px 4px;
   white-space: nowrap;
   text-align: center;
