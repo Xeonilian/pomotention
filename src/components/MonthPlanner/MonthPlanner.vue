@@ -40,32 +40,44 @@
             </div>
           </div>
           <div class="items">
-            <template v-if="day.items.length">
-              <div
-                v-for="item in day.items.slice(0, day.maxItems)"
-                :key="item.key"
-                class="item"
-                :class="[{ 'item--selected': selectedRowId === item.id }]"
-                @click.stop="() => handleItemSelect(item.id, item.ts, item.activityId, item.taskId)"
-              >
-                <TagRenderer
-                  :tag-ids="normalizeTagIds(item.tagIds)"
-                  :isCloseable="false"
-                  size="tiny"
-                  :displayLength="Number(1)"
-                  :showIdx="Number(1)"
-                  class="tag"
-                />
-                <span v-if="item.activityDueRange?.[0]" class="schedule-time">
-                  {{ timestampToTimeString(item.activityDueRange?.[0]) }}
-                </span>
-                <span class="title" :title="item.title" :class="[{ 'activity--selected': activeId === item.activityId }]">
-                  {{ item.title }}
-                </span>
+            <template v-if="showStatsOnly">
+              <div v-if="isMobile" class="day-stat day-stat--compact">
+                <span>🍅x{{ day.sumRealPomo }}</span>
+                <span>{{ formatWorkHoursCompact(day.sumWorkMs) }}</span>
               </div>
-              <div class="more">
-                <span v-if="day.items.length > day.maxItems">+{{ day.items.length - day.maxItems }}</span>
+              <div v-else class="day-stat day-stat--full">
+                <span>🍅 x {{ day.sumRealPomo }}</span>
+                <span>work {{ formatWorkHours(day.sumWorkMs) }}</span>
               </div>
+            </template>
+            <template v-else>
+              <template v-if="day.items.length">
+                <div
+                  v-for="item in day.items.slice(0, day.maxItems)"
+                  :key="item.key"
+                  class="item"
+                  :class="[{ 'item--selected': selectedRowId === item.id }]"
+                  @click.stop="() => handleItemSelect(item.id, item.ts, item.activityId, item.taskId)"
+                >
+                  <TagRenderer
+                    :tag-ids="normalizeTagIds(item.tagIds)"
+                    :isCloseable="false"
+                    size="tiny"
+                    :displayLength="Number(1)"
+                    :showIdx="Number(1)"
+                    class="tag"
+                  />
+                  <span v-if="item.activityDueRange?.[0]" class="schedule-time">
+                    {{ timestampToTimeString(item.activityDueRange?.[0]) }}
+                  </span>
+                  <span class="title" :title="item.title" :class="[{ 'activity--selected': activeId === item.activityId }]">
+                    {{ item.title }}
+                  </span>
+                </div>
+                <div class="more">
+                  <span v-if="day.items.length > day.maxItems">+{{ day.items.length - day.maxItems }}</span>
+                </div>
+              </template>
             </template>
           </div>
         </n-card>
@@ -86,6 +98,7 @@ import { useDevice } from "@/composables/platform/useDevice";
 import { createTouchScheduledSingleAndDouble } from "@/composables/platform/useTouchScheduledSingleAndDouble";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { countCompletedPomos } from "@/services/timer/realPomoState";
+import { calcTodoWorkMs, formatWorkHours, formatWorkHoursCompact } from "@/services/planner/pomoWorkStats";
 import { getDateKey } from "@/core/utils";
 import type { HolidayDisplay } from "@/services/planner/publicHolidays";
 import { plannerHolidayMapKey } from "@/composables/planner/usePublicHolidays";
@@ -98,6 +111,10 @@ const emit = defineEmits<{
   "date-select": [timestamp: number];
   "date-select-day-view": [timestamp: number];
   "item-change": [id: number, activityId?: number, taskId?: number];
+}>();
+
+defineProps<{
+  showStatsOnly?: boolean;
 }>();
 
 const dayNames = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
@@ -260,6 +277,8 @@ const days = computed(() => {
         return sum + itemSum;
       }, 0);
 
+    const sumWorkMs = bucket.filter((i) => i.type === "todo").reduce((sum, item) => sum + calcTodoWorkMs(item as unknown as Todo), 0);
+
     const ratio = Math.min(sumRealPomo / STANDARD_POMO, 1);
 
     return {
@@ -271,6 +290,7 @@ const days = computed(() => {
       isToday: dayTs === today,
       sumRealPomo,
       sumRealGrape,
+      sumWorkMs,
       pomoRatio: ratio,
       maxItems: maxItemsPerDay.value,
       holiday: holidayForTs(dayTs),
@@ -645,6 +665,36 @@ function getPomoBgColorHEX(ratio: number) {
   white-space: nowrap;
   padding-right: 6px;
   width: 30px;
+}
+
+.day-stat--full {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: flex-end;
+  flex: 1;
+  gap: 2px;
+  font-size: 13px;
+  line-height: 1.2;
+  color: var(--color-text-secondary);
+  font-family: Consolas, "Courier New", Courier, monospace;
+  padding: 2px 4px 4px;
+}
+
+.day-stat--compact {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: flex-end;
+  flex: 1;
+  gap: 2px;
+  font-size: 12px;
+  line-height: 1.2;
+  color: var(--color-text-secondary);
+  font-family: Consolas, "Courier New", Courier, monospace;
+  padding: 2px 4px;
+  white-space: nowrap;
+  text-align: center;
 }
 
 @media (max-width: 430px) {
