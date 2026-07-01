@@ -64,6 +64,14 @@ describe("parseLedgerFromTitle v1", () => {
     expect(r.ok[0].amount).toBe(10);
     expect(r.diaryText).toBe("买菜 零食");
   });
+
+  it("已有汇总括号后紧挨追加记账段", () => {
+    const r = parseLedgerFromTitle("礼物（+300）-200 #fee 菜￥");
+    expect(r.warnings).toHaveLength(0);
+    expect(r.ok).toHaveLength(1);
+    expect(r.ok[0]).toMatchObject({ amount: 200, direction: "expense", categoryTagNames: ["fee"], memo: "菜" });
+    expect(r.diaryText).toBe("礼物 菜");
+  });
 });
 
 describe("formatLedgerSummaryBracket", () => {
@@ -114,5 +122,9 @@ describe("replaceTagTriggerWithCategory", () => {
 describe("stripLedgerSummarySuffix", () => {
   it("剥 v1 括号", () => {
     expect(stripLedgerSummarySuffix("买菜（-55）")).toBe("买菜");
+  });
+
+  it("剥括号后为紧挨触发补空格", () => {
+    expect(stripLedgerSummarySuffix("礼物（+300）-200 #fee 菜￥")).toBe("礼物 -200 #fee 菜￥");
   });
 });

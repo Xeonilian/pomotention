@@ -145,7 +145,7 @@ describe("buildLedgerTrend", () => {
 });
 
 describe("buildLedgerTableRows", () => {
-  it("支出在上、收入在下；组内按时序", () => {
+  it("收入在上、支出在下；组内按时序", () => {
     const rows = buildLedgerTableRows(
       [
         entry({ id: 1, sourceTodoId: 100, sourceActivityId: 1, amount: 5, direction: "income" }),
@@ -157,8 +157,8 @@ describe("buildLedgerTableRows", () => {
       todoMap({ id: 100 }, { id: 101 }, { id: 102 }),
       "time",
     );
-    expect(rows.map((r) => r.direction)).toEqual(["expense", "expense", "income"]);
-    expect(rows[0]!.amount).toBe(20);
+    expect(rows.map((r) => r.direction)).toEqual(["income", "expense", "expense"]);
+    expect(rows[0]!.amount).toBe(5);
   });
 });
 

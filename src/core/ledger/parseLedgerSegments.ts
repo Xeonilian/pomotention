@@ -25,13 +25,19 @@ type SegmentParseOutcome =
   | { ok: true; segment: Omit<ParsedLedgerSegment, "segmentIndex"> }
   | { ok: false; rawSnippet: string; message: string };
 
-/** 剥掉旧版与 v1 汇总括号（全文任意位置）；保留首尾空格语义，仅收拢内部空白 */
+/** 剥括号后紧挨的 -/+金额前补空格，避免「礼物（+300）-200￥」剥括号后无法触发 */
+function normalizeLedgerTriggerSpacing(text: string): string {
+  return text.replace(/([^\s])([+-])(\d+(?:\.\d{1,2})?)(?=\s|#|;|；|￥|\$|$)/g, "$1 $2$3");
+}
+
 export function stripLedgerSummarySuffix(title: string): string {
-  return title
-    .replace(/（(?:[-+]\d+(?:\s+[-+]\d+)*)）/gu, "")
-    .replace(LEGACY_SUMMARY_SUFFIX_RE, "")
-    .replace(/[ \t]+/g, " ")
-    .trimEnd();
+  return normalizeLedgerTriggerSpacing(
+    title
+      .replace(/（(?:[-+]\d+(?:\s+[-+]\d+)*)）/gu, "")
+      .replace(LEGACY_SUMMARY_SUFFIX_RE, "")
+      .replace(/[ \t]+/g, " ")
+      .trimEnd(),
+  );
 }
 
 /** 按 activity 下未删条目生成汇总括号（整数、仅非零项） */

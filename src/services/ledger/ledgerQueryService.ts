@@ -314,7 +314,7 @@ function sortTableRows(rows: LedgerTableRow[], sort: LedgerTableSort): LedgerTab
     }
     return copy;
   };
-  return [...sortGroup(rows.filter((r) => r.direction === "expense")), ...sortGroup(rows.filter((r) => r.direction === "income"))];
+  return [...sortGroup(rows.filter((r) => r.direction === "income")), ...sortGroup(rows.filter((r) => r.direction === "expense"))];
 }
 
 function resolveTrendQueryRange(rangeStart: number, rangeEnd: number, viewScale: LedgerViewScale): { start: number; end: number } {
