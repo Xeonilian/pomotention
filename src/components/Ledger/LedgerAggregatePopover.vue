@@ -38,13 +38,9 @@
       </section>
 
       <div class="ledger-aggregate__charts">
-        <section v-if="aggregateData.pie.show" class="ledger-aggregate__chart">
+        <section class="ledger-aggregate__chart">
           <div class="ledger-aggregate__chart-title">支出分类</div>
           <LedgerMiniChart kind="pie" :pie-slices="aggregateData.pie.slices" :height="chartHeight" :fill="!isMobile" />
-        </section>
-        <section v-else-if="hasFilter" class="ledger-aggregate__chart ledger-aggregate__chart--skip">
-          <div class="ledger-aggregate__chart-title">支出分类</div>
-          <div class="ledger-aggregate__skip-hint">已筛选标签，无第二级分类</div>
         </section>
 
         <section class="ledger-aggregate__chart">
@@ -107,7 +103,7 @@ const tableSort = ref<LedgerTableSort>("time");
 const tableScrollRef = ref<HTMLElement>();
 const visibleLimit = ref(40);
 
-const { aggregateData, scaleLabel, hasFilter, formatLedgerMoney } = useLedgerAggregatePanel(computed(() => tableSort.value));
+const { aggregateData, scaleLabel, formatLedgerMoney } = useLedgerAggregatePanel(computed(() => tableSort.value));
 
 const chartHeight = computed(() => (isMobile.value ? 160 : 220));
 
@@ -197,19 +193,6 @@ watch(
   margin-bottom: 4px;
   color: var(--color-text-secondary);
   flex-shrink: 0;
-}
-
-.ledger-aggregate__skip-hint {
-  min-height: 120px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-  color: var(--color-text-secondary);
-  border: 1px dashed var(--n-border-color);
-  border-radius: 8px;
-  padding: 8px;
-  text-align: center;
 }
 
 .ledger-aggregate__stats {
@@ -358,16 +341,6 @@ watch(
   flex: 1;
   display: flex;
   flex-direction: column;
-  min-height: 0;
-}
-
-.ledger-aggregate--desktop .ledger-aggregate__chart--skip {
-  display: flex;
-  flex-direction: column;
-}
-
-.ledger-aggregate--desktop .ledger-aggregate__skip-hint {
-  flex: 1;
   min-height: 0;
 }
 

@@ -126,12 +126,8 @@ export function filterLedgerEntries(params: LedgerQueryParams): LedgerEntry[] {
   });
 }
 
-function resolvePieTagId(entry: LedgerEntry, filterTagIds: readonly number[]): number | undefined {
-  const ids = entry.categoryTagIds ?? [];
-  if (filterTagIds.length > 0) {
-    return ids[1];
-  }
-  return ids[0];
+function primaryCategoryTagId(entry: LedgerEntry): number | undefined {
+  return entry.categoryTagIds?.[0];
 }
 
 function categoryLabels(entry: LedgerEntry, getTagName: (id: number) => string | undefined): string[] {
@@ -140,8 +136,8 @@ function categoryLabels(entry: LedgerEntry, getTagName: (id: number) => string |
   return ids.map((id) => getTagName(id) ?? `#${id}`);
 }
 
-function sortTagLabel(entry: LedgerEntry, filterTagIds: readonly number[], getTagName: (id: number) => string | undefined): string {
-  const tagId = resolvePieTagId(entry, filterTagIds);
+function sortTagLabel(entry: LedgerEntry, getTagName: (id: number) => string | undefined): string {
+  const tagId = primaryCategoryTagId(entry);
   if (tagId == null) return UNCATEGORIZED;
   return getTagName(tagId) ?? `#${tagId}`;
 }
@@ -161,21 +157,15 @@ export function buildLedgerStats(entries: readonly LedgerEntry[]): LedgerSummary
   };
 }
 
-/** 支出饼图：按 category 第 1 / 筛选后第 2 个 tag；<1% 并入 Others */
+/** 支出饼图：按 categoryTagIds[0]；<1% 并入 Others */
 export function buildLedgerPie(
   entries: readonly LedgerEntry[],
-  filterTagIds: readonly number[],
   getTagName: (tagId: number) => string | undefined,
 ): { show: boolean; slices: LedgerPieSlice[] } {
-  if (filterTagIds.length > 0) {
-    const hasSecondTag = entries.some((e) => (e.categoryTagIds?.length ?? 0) > 1);
-    if (!hasSecondTag) return { show: false, slices: [] };
-  }
-
   const bucket = new Map<string, { value: number; tagId?: number }>();
   for (const entry of entries) {
     if (entry.direction !== "expense") continue;
-    const tagId = resolvePieTagId(entry, filterTagIds);
+    const tagId = primaryCategoryTagId(entry);
     const name = tagId != null ? (getTagName(tagId) ?? `#${tagId}`) : UNCATEGORIZED;
     const prev = bucket.get(name) ?? { value: 0, tagId };
     prev.value += entry.amount;
@@ -344,7 +334,6 @@ export function buildLedgerTrend(
 
 export function buildLedgerTableRows(
   entries: readonly LedgerEntry[],
-  filterTagIds: readonly number[],
   getTagName: (id: number) => string | undefined,
   getTodoById: (todoId: number) => LedgerTodoRef | undefined,
   sort: LedgerTableSort,
@@ -360,7 +349,7 @@ export function buildLedgerTableRows(
       amount: entry.amount,
       memo: entry.memo,
       categoryLabels: categoryLabels(entry, getTagName),
-      sortTagLabel: sortTagLabel(entry, filterTagIds, getTagName),
+      sortTagLabel: sortTagLabel(entry, getTagName),
     });
   }
 
@@ -376,9 +365,9 @@ export function aggregateLedger(params: LedgerQueryParams, tableSort: LedgerTabl
       : filtered;
   return {
     stats: buildLedgerStats(filtered),
-    pie: buildLedgerPie(filtered, params.filterTagIds, params.getTagName),
+    pie: buildLedgerPie(filtered, params.getTagName),
     trend: buildLedgerTrend(trendEntries, params.rangeStart, params.rangeEnd, params.viewScale, params.getTodoById),
-    tableRows: buildLedgerTableRows(filtered, params.filterTagIds, params.getTagName, params.getTodoById, tableSort),
+    tableRows: buildLedgerTableRows(filtered, params.getTagName, params.getTodoById, tableSort),
   };
 }
 

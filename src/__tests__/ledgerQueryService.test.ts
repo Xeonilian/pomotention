@@ -97,16 +97,19 @@ describe("buildLedgerPie", () => {
       entry({ id: 1, sourceTodoId: 100, sourceActivityId: 1, amount: 90, categoryTagIds: [1] }),
       entry({ id: 2, sourceTodoId: 101, sourceActivityId: 1, amount: 10, categoryTagIds: [2] }),
     ];
-    const { show, slices } = buildLedgerPie(entries, [], tagName);
+    const { show, slices } = buildLedgerPie(entries, tagName);
     expect(show).toBe(true);
     expect(slices.find((s) => s.name === "生存")?.value).toBe(90);
     expect(slices.find((s) => s.name === "看病")?.value).toBe(10);
   });
 
-  it("已筛选且无第二分类时不显示饼图", () => {
-    const entries = [entry({ id: 1, sourceTodoId: 100, sourceActivityId: 1, categoryTagIds: [1] })];
-    const pie = buildLedgerPie(entries, [99], tagName);
-    expect(pie.show).toBe(false);
+  it("有筛选传入的条目仍按第一个分类 tag 分桶", () => {
+    const entries = [entry({ id: 1, sourceTodoId: 100, sourceActivityId: 1, amount: 30, categoryTagIds: [1, 2] })];
+    const pie = buildLedgerPie(entries, tagName);
+    expect(pie.show).toBe(true);
+    expect(pie.slices).toHaveLength(1);
+    expect(pie.slices[0]?.name).toBe("生存");
+    expect(pie.slices[0]?.value).toBe(30);
   });
 
   it("小于 1% 并入 Others", () => {
@@ -114,7 +117,7 @@ describe("buildLedgerPie", () => {
       entry({ id: 1, sourceTodoId: 100, sourceActivityId: 1, amount: 995, categoryTagIds: [1] }),
       entry({ id: 2, sourceTodoId: 101, sourceActivityId: 1, amount: 5, categoryTagIds: [2] }),
     ];
-    const { slices } = buildLedgerPie(entries, [], tagName);
+    const { slices } = buildLedgerPie(entries, tagName);
     expect(slices.some((s) => s.name === "Others")).toBe(true);
     expect(slices.some((s) => s.name === "看病")).toBe(false);
   });
@@ -152,7 +155,6 @@ describe("buildLedgerTableRows", () => {
         entry({ id: 2, sourceTodoId: 101, sourceActivityId: 1, amount: 10, direction: "expense" }),
         entry({ id: 3, sourceTodoId: 102, sourceActivityId: 1, amount: 20, direction: "expense" }),
       ],
-      [],
       tagName,
       todoMap({ id: 100 }, { id: 101 }, { id: 102 }),
       "time",

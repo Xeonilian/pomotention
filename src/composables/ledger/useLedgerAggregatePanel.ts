@@ -65,13 +65,10 @@ export function useLedgerAggregatePanel(tableSort: ComputedRef<LedgerTableSort>)
     );
   });
 
-  const hasFilter = computed(() => filterTagIds.value.length > 0 || filterStarredOnly.value);
-
   return {
     aggregateData: computed(() => aggregate.value ?? EMPTY_AGGREGATE),
     viewScale,
     scaleLabel,
-    hasFilter,
     formatLedgerMoney,
   };
 }
