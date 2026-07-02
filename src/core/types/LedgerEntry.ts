@@ -2,22 +2,22 @@
 export type LedgerDirection = "income" | "expense";
 
 export interface LedgerEntry {
+  /** 行唯一标识（写入时刻 `Date.now()`）；云端映射 timestamp_id */
   id: number;
   amount: number;
   direction: LedgerDirection;
   currency: string;
   memo?: string;
-  categoryTagId?: number;
-  recordedAt: number;
+  categoryTagIds?: number[];
   rawSegment: string;
   segmentIndex: number;
   sourceActivityId: number;
-  sourceTodoId?: number;
-  sourceTaskId?: number;
-  deleted: boolean;
+  /** 记账所在 todo；聚合日期用对应 todo.id（与 Planner 列表一致） */
+  sourceTodoId: number;
+  lastModified: number; // 最后修改时间戳
+  cloudModified?: number; // 云端修改时间戳
   synced: boolean;
-  lastModified: number;
-  cloudModified?: number;
+  deleted: boolean;
 }
 
 /** 解析器输出的单笔片段（尚未写入 store） */
@@ -28,7 +28,7 @@ export interface ParsedLedgerSegment {
   direction: LedgerDirection;
   currency: string;
   memo?: string;
-  categoryTagName?: string;
+  categoryTagNames?: string[];
 }
 
 export interface ParseLedgerWarning {

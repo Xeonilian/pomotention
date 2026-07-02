@@ -2,180 +2,253 @@ import type { LedgerDirection, ParseLedgerResult, ParsedLedgerSegment, ParseLedg
 import { DEFAULT_LEDGER_CURRENCY } from "@/core/types/LedgerEntry";
 
 const AMOUNT_RE = /^(\d+(?:\.\d{1,2})?)/;
-const CATEGORY_TAG_RE = /^#([\p{L}\p{N}_]+)/u;
-
-/** 兼容旧版自动摘要，解析前剥掉 */
+const CATEGORY_TAG_RE = /#([\p{L}\p{N}_]+)/gu;
 const LEGACY_SUMMARY_SUFFIX_RE = /（账：[^）]*）\s*$/u;
 
+/** v1 汇总括号，如 （-55 +1000） */
+export const LEDGER_SUMMARY_SUFFIX_RE = /（(?:[-+]\d+(?:\s+[-+]\d+)*)）\s*$/u;
+
+const LEDGER_AMOUNT_TRIGGER_RE = /(?:^| )[+-](\d+(?:\.\d{1,2})?)(?=\s|#|;|；|￥|\$|$)/;
+
 export interface ParseLedgerFromTitleResult extends ParseLedgerResult {
-  /** 剥块、转义后的日记正文 */
+  /** 日记正文（不含汇总括号） */
   diaryText: string;
 }
 
-type BlockExtractResult = {
-  diaryParts: string[];
-  blockBodies: string[];
-  warnings: ParseLedgerWarning[];
+type LedgerRegion = {
+  prefix: string;
+  body: string;
+  tail: string;
 };
 
 type SegmentParseOutcome =
   | { ok: true; segment: Omit<ParsedLedgerSegment, "segmentIndex"> }
   | { ok: false; rawSnippet: string; message: string };
 
-/** 块内单笔：[-/+]金额 [memo] [#tag] */
-function parseBlockBody(body: string, defaultCurrency: string): SegmentParseOutcome {
-  let text = body.trim();
-  if (text.startsWith("￥")) {
-    text = text.slice(1).trim();
+/** 剥括号后紧挨的 -/+金额前补空格，避免「礼物（+300）-200￥」剥括号后无法触发 */
+function normalizeLedgerTriggerSpacing(text: string): string {
+  return text.replace(/([^\s])([+-])(\d+(?:\.\d{1,2})?)(?=\s|#|;|；|￥|\$|$)/g, "$1 $2$3");
+}
+
+export function stripLedgerSummarySuffix(title: string): string {
+  return normalizeLedgerTriggerSpacing(
+    title
+      .replace(/（(?:[-+]\d+(?:\s+[-+]\d+)*)）/gu, "")
+      .replace(LEGACY_SUMMARY_SUFFIX_RE, "")
+      .replace(/[ \t]+/g, " ")
+      .trimEnd(),
+  );
+}
+
+/** 按 activity 下未删条目生成汇总括号（整数、仅非零项） */
+export function formatLedgerSummaryBracket(
+  entries: ReadonlyArray<{ direction: LedgerDirection; amount: number; deleted?: boolean }>,
+): string {
+  let expense = 0;
+  let income = 0;
+  for (const e of entries) {
+    if (e.deleted) continue;
+    if (e.direction === "expense") expense += e.amount;
+    else income += e.amount;
+  }
+  const parts: string[] = [];
+  const expInt = Math.round(expense);
+  const incInt = Math.round(income);
+  if (expInt > 0) parts.push(`-${expInt}`);
+  if (incInt > 0) parts.push(`+${incInt}`);
+  if (parts.length === 0) return "";
+  return `（${parts.join(" ")}）`;
+}
+
+/** 日记正文 + 汇总括号 */
+export function composeLedgerTitle(diaryText: string, bracket: string): string {
+  const diary = diaryText.trim();
+  const b = bracket.trim();
+  if (!diary) return b;
+  if (!b) return diary;
+  return `${diary}${b}`;
+}
+
+export type TitleTagPickerMode = "activity" | "ledgerText";
+
+/**
+ * `#` 选 tag 时的模式：
+ * - ledgerText：在记账段内（触发符～结尾符 ￥/$ 之间）→ 选中后以 `#name` 插入 title，不入 activity
+ * - activity：段外或 ￥/$ 之后 → Activity TagPicker
+ */
+export function getTitleTagPickerMode(text: string, cursorIndex: number = text.length): TitleTagPickerMode {
+  const stripped = stripLedgerSummarySuffix(text);
+  const triggerMatch = stripped.match(LEDGER_AMOUNT_TRIGGER_RE);
+  if (!triggerMatch || triggerMatch.index === undefined) return "activity";
+
+  const regionStart = triggerMatch.index;
+  const tail = stripped.slice(regionStart);
+  let markerOffset = -1;
+  for (let i = 0; i < tail.length; i++) {
+    const ch = tail[i]!;
+    if (ch === "￥" || ch === "$") {
+      markerOffset = i;
+      break;
+    }
+  }
+
+  if (markerOffset < 0) {
+    return cursorIndex >= regionStart ? "ledgerText" : "activity";
+  }
+
+  const markerIndex = regionStart + markerOffset;
+  if (cursorIndex > markerIndex) return "activity";
+  if (cursorIndex >= regionStart) return "ledgerText";
+  return "activity";
+}
+
+/** @deprecated 用 getTitleTagPickerMode */
+export function isInLedgerInputZone(text: string, cursorIndex: number = text.length): boolean {
+  return getTitleTagPickerMode(text, cursorIndex) === "ledgerText";
+}
+
+/** 记账段内：把末尾 #query 换成 #tagName 文字，后接空格避免再次触发 tag */
+export function replaceTagTriggerWithCategory(text: string, tagName: string): string {
+  return text.replace(/[#@][\p{L}\p{N}_]*$/u, `#${tagName} `);
+}
+
+function findLedgerRegion(strippedTitle: string): LedgerRegion | null {
+  const triggerMatch = strippedTitle.match(LEDGER_AMOUNT_TRIGGER_RE);
+  if (!triggerMatch || triggerMatch.index === undefined) return null;
+
+  const regionStart = triggerMatch.index;
+  const prefix = strippedTitle.slice(0, regionStart).trim();
+  const fromTrigger = strippedTitle.slice(regionStart);
+
+  let endInFrom = -1;
+  for (let i = 0; i < fromTrigger.length; i++) {
+    const ch = fromTrigger[i]!;
+    if (ch === "￥" || ch === "$") {
+      endInFrom = i;
+      break;
+    }
+  }
+  if (endInFrom < 0) return null;
+
+  const body = fromTrigger.slice(0, endInFrom).trim();
+  const tail = fromTrigger.slice(endInFrom + 1).trim();
+  return { prefix, body, tail };
+}
+
+function extractSegmentStrings(body: string): string[] {
+  const normalized = body.replace(/；/g, ";").replace(/;/g, " ");
+  const parts: string[] = [];
+  let i = 0;
+
+  while (i < normalized.length) {
+    while (i < normalized.length && normalized[i] !== "+" && normalized[i] !== "-") {
+      i++;
+    }
+    if (i >= normalized.length) break;
+    if (i > 0 && normalized[i - 1] !== " ") {
+      i++;
+      continue;
+    }
+
+    let j = i + 1;
+    while (j < normalized.length) {
+      const ch = normalized[j]!;
+      if ((ch === "+" || ch === "-") && normalized[j - 1] === " ") break;
+      j++;
+    }
+    const piece = normalized.slice(i, j).trim();
+    if (piece) parts.push(piece);
+    i = j;
+  }
+  return parts;
+}
+
+function splitSegmentPieces(body: string): string[] {
+  return extractSegmentStrings(body);
+}
+
+function parseSegmentPiece(piece: string, defaultCurrency: string): SegmentParseOutcome {
+  let text = piece.trim();
+  if (!text) {
+    return { ok: false, rawSnippet: "", message: "空段" };
   }
 
   let direction: LedgerDirection = "expense";
-  let i = 0;
-
-  if (text[i] === "+" || text[i] === "-") {
-    direction = text[i] === "+" ? "income" : "expense";
-    i++;
+  if (text[0] === "+" || text[0] === "-") {
+    direction = text[0] === "+" ? "income" : "expense";
+    text = text.slice(1).trim();
+  } else {
+    return { ok: false, rawSnippet: piece.slice(0, 12), message: "缺少正负号" };
   }
 
-  while (text[i] === " ") i++;
-
-  const amountMatch = text.slice(i).match(AMOUNT_RE);
+  const amountMatch = text.match(AMOUNT_RE);
   if (!amountMatch) {
     return { ok: false, rawSnippet: text.slice(0, 12), message: "缺少金额" };
   }
 
   const amount = Number.parseFloat(amountMatch[1]);
   if (!Number.isFinite(amount) || amount <= 0) {
-    return { ok: false, rawSnippet: text.slice(i, i + amountMatch[0].length), message: "无效金额" };
+    return { ok: false, rawSnippet: amountMatch[0], message: "无效金额" };
   }
-  i += amountMatch[0].length;
 
-  while (text[i] === " ") i++;
+  const afterAmount = text.slice(amountMatch[0].length);
+  const categoryTagNames: string[] = [];
+  let memo = afterAmount.trim();
 
-  let categoryTagName: string | undefined;
-  const hashIdx = text.indexOf("#", i);
-  const memoRaw = (hashIdx >= 0 ? text.slice(i, hashIdx) : text.slice(i)).trim();
-  const memo = memoRaw.length > 0 ? memoRaw : undefined;
+  const hashParts: string[] = [];
+  let lastIdx = 0;
+  CATEGORY_TAG_RE.lastIndex = 0;
+  let tagMatch: RegExpExecArray | null;
+  while ((tagMatch = CATEGORY_TAG_RE.exec(afterAmount)) !== null) {
+    hashParts.push(afterAmount.slice(lastIdx, tagMatch.index).trim());
+    categoryTagNames.push(tagMatch[1]!);
+    lastIdx = tagMatch.index + tagMatch[0].length;
+  }
+  hashParts.push(afterAmount.slice(lastIdx).trim());
 
-  if (hashIdx >= 0) {
-    const tagMatch = text.slice(hashIdx).match(CATEGORY_TAG_RE);
-    if (tagMatch) {
-      categoryTagName = tagMatch[1];
-    }
+  if (categoryTagNames.length > 0) {
+    memo = hashParts.join(" ").trim();
   }
 
   return {
     ok: true,
     segment: {
-      rawSegment: body.trim(),
+      rawSegment: piece.trim(),
       amount,
       direction,
       currency: defaultCurrency,
-      memo,
-      categoryTagName,
+      memo: memo.length > 0 ? memo : undefined,
+      categoryTagNames: categoryTagNames.length > 0 ? categoryTagNames : undefined,
     },
   };
 }
 
-/** 扫描 title：成对 ￥ 定界；块外 ￥￥ / $$ 转义 */
-function extractLedgerBlocks(rawTitle: string): BlockExtractResult {
-  const diaryParts: string[] = [];
-  const blockBodies: string[] = [];
-  const warnings: ParseLedgerWarning[] = [];
-
-  let diaryBuf = "";
-  let i = 0;
-
-  const flushDiary = () => {
-    if (diaryBuf.length > 0) {
-      diaryParts.push(diaryBuf);
-      diaryBuf = "";
-    }
-  };
-
-  while (i < rawTitle.length) {
-    const ch = rawTitle[i]!;
-
-    if (ch === "￥") {
-      if (rawTitle[i + 1] === "￥") {
-        diaryBuf += "￥";
-        i += 2;
-        continue;
-      }
-
-      flushDiary();
-      i++;
-      let body = "";
-      let closed = false;
-
-      while (i < rawTitle.length) {
-        const inner = rawTitle[i]!;
-        if (inner === "￥") {
-          if (rawTitle[i + 1] === "￥") {
-            body += "￥";
-            i += 2;
-            continue;
-          }
-          closed = true;
-          i++;
-          break;
-        }
-        if (inner === "$" && rawTitle[i + 1] === "$") {
-          body += "$";
-          i += 2;
-          continue;
-        }
-        body += inner;
-        i++;
-      }
-
-      if (closed) {
-        blockBodies.push(body);
-      } else {
-        warnings.push({
-          startIndex: i,
-          rawSnippet: `￥${body.slice(0, 12)}`,
-          message: "未闭合的记账块",
-        });
-        diaryBuf += `￥${body}`;
-      }
-      continue;
-    }
-
-    if (ch === "$" && rawTitle[i + 1] === "$") {
-      diaryBuf += "$";
-      i += 2;
-      continue;
-    }
-
-    diaryBuf += ch;
-    i++;
-  }
-
-  flushDiary();
-  return { diaryParts, blockBodies, warnings };
-}
-
-function joinDiaryParts(parts: string[]): string {
-  return parts.join("").replace(/\s+/g, " ").trim();
+function buildDiaryText(prefix: string, segments: ParsedLedgerSegment[], tail: string): string {
+  const memos = segments.map((s) => s.memo).filter((m): m is string => !!m && m.length > 0);
+  const parts = [prefix, ...memos, tail].map((p) => p.trim()).filter(Boolean);
+  return parts.join(" ").replace(/\s+/g, " ").trim();
 }
 
 /**
- * MVP：仅从 ￥…￥ 块解析；一块一笔；块外不触发。
- * 多笔请写多个块，或分次保存追加。
+ * v1：行首或空格后 -/+ 数字触发；￥ 或 $ 结束记账段；无结尾符不解析。
  */
 export function parseLedgerFromTitle(title: string, defaultCurrency: string = DEFAULT_LEDGER_CURRENCY): ParseLedgerFromTitleResult {
-  const withoutLegacySummary = title.replace(LEGACY_SUMMARY_SUFFIX_RE, "").trimEnd();
-  const { diaryParts, blockBodies, warnings: blockWarnings } = extractLedgerBlocks(withoutLegacySummary);
+  const stripped = stripLedgerSummarySuffix(title);
+  const region = findLedgerRegion(stripped);
 
+  if (!region) {
+    return { ok: [], warnings: [], diaryText: stripped.trim() };
+  }
+
+  const pieces = splitSegmentPieces(region.body);
   const ok: ParsedLedgerSegment[] = [];
-  const warnings: ParseLedgerWarning[] = [...blockWarnings];
+  const warnings: ParseLedgerWarning[] = [];
 
-  blockBodies.forEach((body, segmentIndex) => {
-    const outcome = parseBlockBody(body, defaultCurrency);
+  pieces.forEach((piece, segmentIndex) => {
+    const outcome = parseSegmentPiece(piece, defaultCurrency);
     if (outcome.ok) {
       ok.push({ ...outcome.segment, segmentIndex });
-    } else {
+    } else if (outcome.message !== "空段") {
       warnings.push({
         startIndex: 0,
         rawSnippet: outcome.rawSnippet,
@@ -184,9 +257,7 @@ export function parseLedgerFromTitle(title: string, defaultCurrency: string = DE
     }
   });
 
-  return {
-    ok,
-    warnings,
-    diaryText: joinDiaryParts(diaryParts),
-  };
+  const diaryText = buildDiaryText(region.prefix, ok, region.tail);
+
+  return { ok, warnings, diaryText };
 }

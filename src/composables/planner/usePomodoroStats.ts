@@ -2,6 +2,9 @@ import { computed } from "vue";
 import { useDataStore } from "@/stores/useDataStore";
 import { METRICS } from "@/core/types/Metrics";
 import { collectPomodoroData } from "@/services/chart/chartDataService";
+import { getDateKey } from "@/core/utils";
+
+const DAY_MS = 86_400_000;
 
 /**
  * 番茄钟统计 Composable（基于实时计算）
@@ -17,6 +20,24 @@ export function usePomodoroStats() {
     const dateString = dateService.appDateKey; // 响应式读取
     const data = dataStore.getAggregatedData(METRICS.POMODORO, "day", "sum");
     return data.get(dateString) || 0;
+  });
+
+  /**
+   * 当前视图范围番茄数（日/周/月/年）
+   */
+  const periodPomoCount = computed(() => {
+    const range = dateService.visibleRange;
+    const start = range?.start;
+    const end = range?.end;
+    if (typeof start !== "number" || typeof end !== "number") {
+      return 0;
+    }
+    const daily = dataStore.getAggregatedData(METRICS.POMODORO, "day", "sum");
+    let sum = 0;
+    for (let ts = start; ts < end; ts += DAY_MS) {
+      sum += daily.get(getDateKey(ts)) || 0;
+    }
+    return sum;
   });
 
   /**
@@ -38,7 +59,8 @@ export function usePomodoroStats() {
   });
 
   return {
-    currentDatePomoCount, // 新增：直接可用的当天番茄数
+    currentDatePomoCount,
+    periodPomoCount,
     getPomoCountByDate,
     globalRealPomo,
   };

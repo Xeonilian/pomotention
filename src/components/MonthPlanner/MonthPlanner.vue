@@ -11,7 +11,12 @@
         <n-card
           size="small"
           class="day-card"
-          :class="[{ 'day-card--selected': selectedDate === day.startTs }, { 'day-card--other-month': !day.isCurrentMonth }]"
+          :class="[
+            { 'day-card--selected': selectedDate === day.startTs },
+            { 'day-card--other-month': !day.isCurrentMonth },
+            { 'day-card--stats': props.showStatsOnly },
+          ]"
+          :style="getDayCardStyle(day.pomoRatio, day.isCurrentMonth)"
           @click="() => handleDateSelect(day.startTs)"
         >
           <!-- 节名在左上角；日期徽章保持右上 -->
@@ -26,46 +31,57 @@
             </div>
             <div
               class="date-badge"
-              :class="{ today: day.isToday }"
+              :class="{
+                today: day.isToday && !props.showStatsOnly,
+                'date-badge--stats': props.showStatsOnly && day.isCurrentMonth,
+              }"
               @click.stop="() => handleDateSelectDayView(day.startTs)"
               @touchstart.stop="onMonthBadgeTouchStart"
               @touchend.stop="() => onMonthBadgeTouchEnd(day.startTs)"
               @touchcancel.stop="onMonthBadgeTouchCancel"
-              :style="{
-                color: getPomoColor(day.pomoRatio),
-                backgroundColor: getPomoBgColorHEX(day.pomoRatio),
-              }"
+              :style="getBadgeStyle(day.pomoRatio, day.isCurrentMonth)"
             >
               {{ formatDay(day.startTs) }}
             </div>
           </div>
           <div class="items">
-            <template v-if="day.items.length">
-              <div
-                v-for="item in day.items.slice(0, day.maxItems)"
-                :key="item.key"
-                class="item"
-                :class="[{ 'item--selected': selectedRowId === item.id }]"
-                @click.stop="() => handleItemSelect(item.id, item.ts, item.activityId, item.taskId)"
-              >
-                <TagRenderer
-                  :tag-ids="normalizeTagIds(item.tagIds)"
-                  :isCloseable="false"
-                  size="tiny"
-                  :displayLength="Number(1)"
-                  :showIdx="Number(1)"
-                  class="tag"
-                />
-                <span v-if="item.activityDueRange?.[0]" class="schedule-time">
-                  {{ timestampToTimeString(item.activityDueRange?.[0]) }}
-                </span>
-                <span class="title" :title="item.title" :class="[{ 'activity--selected': activeId === item.activityId }]">
-                  {{ item.title }}
-                </span>
+            <template v-if="props.showStatsOnly">
+              <div v-if="isMobile" class="day-stat day-stat--compact">
+                <span>🍅x{{ day.sumRealPomo }}</span>
+                <span>{{ formatWorkHoursCompact(day.sumWorkMs) }}</span>
               </div>
-              <div class="more">
-                <span v-if="day.items.length > day.maxItems">+{{ day.items.length - day.maxItems }}</span>
+              <div v-else class="day-stat day-stat--full">
+                <span>🍅 x {{ day.sumRealPomo }} | {{ formatWorkHours(day.sumWorkMs) }}</span>
               </div>
+            </template>
+            <template v-else>
+              <template v-if="day.items.length">
+                <div
+                  v-for="item in day.items.slice(0, day.maxItems)"
+                  :key="item.key"
+                  class="item"
+                  :class="[{ 'item--selected': selectedRowId === item.id }]"
+                  @click.stop="() => handleItemSelect(item.id, item.ts, item.activityId, item.taskId)"
+                >
+                  <TagRenderer
+                    :tag-ids="normalizeTagIds(item.tagIds)"
+                    :isCloseable="false"
+                    size="tiny"
+                    :displayLength="Number(1)"
+                    :showIdx="Number(1)"
+                    class="tag"
+                  />
+                  <span v-if="item.activityDueRange?.[0]" class="schedule-time">
+                    {{ timestampToTimeString(item.activityDueRange?.[0]) }}
+                  </span>
+                  <span class="title" :title="item.title" :class="[{ 'activity--selected': activeId === item.activityId }]">
+                    {{ item.title }}
+                  </span>
+                </div>
+                <div class="more">
+                  <span v-if="day.items.length > day.maxItems">+{{ day.items.length - day.maxItems }}</span>
+                </div>
+              </template>
             </template>
           </div>
         </n-card>
@@ -86,6 +102,7 @@ import { useDevice } from "@/composables/platform/useDevice";
 import { createTouchScheduledSingleAndDouble } from "@/composables/platform/useTouchScheduledSingleAndDouble";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { countCompletedPomos } from "@/services/timer/realPomoState";
+import { calcTodoWorkMs, formatWorkHours, formatWorkHoursCompact } from "@/services/planner/pomoWorkStats";
 import { getDateKey } from "@/core/utils";
 import type { HolidayDisplay } from "@/services/planner/publicHolidays";
 import { plannerHolidayMapKey } from "@/composables/planner/usePublicHolidays";
@@ -100,8 +117,15 @@ const emit = defineEmits<{
   "item-change": [id: number, activityId?: number, taskId?: number];
 }>();
 
+const props = withDefaults(
+  defineProps<{
+    showStatsOnly?: boolean;
+  }>(),
+  { showStatsOnly: false },
+);
+
 const dayNames = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
-const STANDARD_POMO = 16;
+const STANDARD_POMO = 20;
 
 type UnifiedItem = {
   key: string;
@@ -260,6 +284,8 @@ const days = computed(() => {
         return sum + itemSum;
       }, 0);
 
+    const sumWorkMs = bucket.filter((i) => i.type === "todo").reduce((sum, item) => sum + calcTodoWorkMs(item as unknown as Todo), 0);
+
     const ratio = Math.min(sumRealPomo / STANDARD_POMO, 1);
 
     return {
@@ -271,6 +297,7 @@ const days = computed(() => {
       isToday: dayTs === today,
       sumRealPomo,
       sumRealGrape,
+      sumWorkMs,
       pomoRatio: ratio,
       maxItems: maxItemsPerDay.value,
       holiday: holidayForTs(dayTs),
@@ -367,6 +394,34 @@ const handleItemSelect = (id: number, _ts: number, activityId?: number, taskId?:
 };
 
 // 颜色可视化番茄量
+function getDayCardStyle(ratio: number, isCurrentMonth: boolean): { backgroundColor: string } | undefined {
+  if (!props.showStatsOnly || !isCurrentMonth) return undefined;
+  return { backgroundColor: getStatsPomoBgColorHEX(ratio) };
+}
+
+function getBadgeStyle(ratio: number, isCurrentMonth: boolean): Record<string, string> {
+  if (props.showStatsOnly) {
+    if (!isCurrentMonth) return {};
+    return { "--badge-pomo-color": getPomoColor(ratio) };
+  }
+  return { color: getPomoColor(ratio), backgroundColor: getPomoBgColorHEX(ratio) };
+}
+
+/** 统计模式整格底色：0 番茄为透明白，随 ratio 渐变为玫红 */
+function getStatsPomoBgColorHEX(ratio: number) {
+  const clamp = (v: number, min = 0, max = 1) => Math.min(max, Math.max(min, v));
+  const r = clamp(ratio);
+  const from = { r: 0xff, g: 0xff, b: 0xff, a: 0 };
+  const to = { r: 0xd6, g: 0x48, b: 0x64, a: 0.3 };
+  const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+  const R = Math.round(lerp(from.r, to.r, r));
+  const G = Math.round(lerp(from.g, to.g, r));
+  const B = Math.round(lerp(from.b, to.b, r));
+  const A = Math.round(lerp(from.a, to.a, r) * 255);
+  const hex = (n: number) => n.toString(16).padStart(2, "0");
+  return `#${hex(R)}${hex(G)}${hex(B)}${hex(A)}`;
+}
+
 function getPomoColor(ratio: number) {
   const clamp = (v: number, min = 0, max = 1) => Math.min(max, Math.max(min, v));
   const r = clamp(ratio);
@@ -492,6 +547,12 @@ function getPomoBgColorHEX(ratio: number) {
   background-color: var(--color-blue) !important;
   font-weight: 600;
   z-index: 100;
+}
+
+/* 统计模式：番茄底色移到整格（仅本月），badge 灰底 + 渐变字色 */
+.day-card--stats .date-badge.date-badge--stats {
+  background-color: var(--color-background-light) !important;
+  color: var(--badge-pomo-color, var(--color-text-secondary)) !important;
 }
 
 .day-card--other-month .date-badge {
@@ -647,6 +708,35 @@ function getPomoBgColorHEX(ratio: number) {
   width: 30px;
 }
 
+.day-stat--full {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  gap: 2px;
+  font-size: 13px;
+  line-height: 1.2;
+  color: var(--color-text-primary);
+  font-weight: 600;
+  padding: 2px 4px 4px;
+}
+
+.day-stat--compact {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: flex-end;
+  flex: 1;
+  gap: 2px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--color-text-primary);
+  padding: 6px;
+  white-space: nowrap;
+  text-align: center;
+}
+
 @media (max-width: 430px) {
   .header-card,
   .day-card {
@@ -729,7 +819,7 @@ function getPomoBgColorHEX(ratio: number) {
   }
 
   /* 触摸端无 hover：整格选中时日期徽章与桌面 .date-badge:hover 一致 */
-  .day-card--selected .date-badge {
+  .day-card--selected .date-badge:not(.date-badge--stats) {
     background-color: var(--color-blue-light) !important;
     color: var(--color-blue) !important;
   }

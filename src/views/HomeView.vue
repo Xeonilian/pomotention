@@ -56,7 +56,7 @@
                     {{ dateService.displayYearInfo }}
                   </span>
                   <span @click="onDateSet('today')" class="global-pomo">
-                    <span class="today-pomo">🍅{{ currentDatePomoCount }}</span>
+                    <span class="today-pomo">🍅{{ periodPomoCount }}</span>
                     <span class="total-pomo">/{{ globalRealPomo }}</span>
                   </span>
                 </template>
@@ -78,13 +78,27 @@
               <div v-if="settingStore.settings.viewSet === 'week'" class="day-info">
                 <span @click="onMonthJump" class="day-status">&nbsp;{{ dateService.displayWeekInfo }}</span>
                 <span @click="onDateSet('today')" class="global-pomo">
-                  <span class="total-pomo">🍅{{ globalRealPomo }}</span>
+                  <span class="today-pomo">🍅{{ periodPomoCount }}</span>
+                  <span class="total-pomo">/{{ globalRealPomo }}</span>
                 </span>
               </div>
               <div v-if="settingStore.settings.viewSet === 'month'" class="day-info">
                 <span @click="onWeekJump" class="day-status">&nbsp;{{ dateService.displayMonthInfo }}</span>
-                <span @click="onDateSet('today')" class="global-pomo">
-                  <span class="total-pomo">🍅{{ globalRealPomo }}</span>
+                <span
+                  class="global-pomo"
+                  title="单击回到今天；双击或长按切换统计/日程"
+                  @click="onMonthGlobalPomoClick"
+                  @dblclick.stop="onMonthGlobalPomoDblClick"
+                  @pointerdown="onMonthGlobalPomoPointerDown"
+                  @pointerup="onMonthGlobalPomoPointerUp"
+                  @pointerleave="onMonthGlobalPomoPointerUp"
+                  @pointercancel="onMonthGlobalPomoPointerUp"
+                  @touchstart.stop="onMonthGlobalPomoTouchStart"
+                  @touchend.stop="onMonthGlobalPomoTouchEnd"
+                  @touchcancel.stop="onMonthGlobalPomoTouchCancel"
+                >
+                  <span class="today-pomo">🍅{{ periodPomoCount }}</span>
+                  <span class="total-pomo">/{{ globalRealPomo }}</span>
                 </span>
               </div>
             </div>
@@ -110,6 +124,7 @@
             />
             <div class="button-group">
               <HomeTagFilterPopover />
+              <LedgerAggregatePopover />
 
               <n-button
                 title="重复活动"
@@ -240,6 +255,7 @@
             />
             <MonthPlanner
               v-if="settingStore.settings.showPlanner && settingStore.settings.viewSet === 'month'"
+              :show-stats-only="monthShowStatsOnly"
               @item-change="onItemChange"
               @date-select="onDateSelect"
               @date-select-day-view="onDateSelectDayView"
@@ -345,6 +361,7 @@ import { useResize } from "@/composables/layout/useResize";
 import { useVisualViewportKeyboard } from "@/composables/layout/useVisualViewportKeyboard";
 import IcsExportModal from "@/components/DayPlanner/IcsExportModal.vue";
 import HomeTagFilterPopover from "@/components/TagSystem/HomeTagFilterPopover.vue";
+import LedgerAggregatePopover from "@/components/Ledger/LedgerAggregatePopover.vue";
 import MobileHomeFab from "@/components/platform/MobileHomeFab.vue";
 import { useTagStore } from "@/stores/useTagStore";
 import {
@@ -370,6 +387,7 @@ import { useSettingStore } from "@/stores/useSettingStore";
 import { useDataStore } from "@/stores/useDataStore";
 import { autoSyncDebounced, uploadAllDebounced } from "@/core/utils/autoSync";
 import { useDevice } from "@/composables/platform/useDevice";
+import { createTouchScheduledSingleAndDouble } from "@/composables/platform/useTouchScheduledSingleAndDouble";
 import { usePublicHolidays, plannerHolidayMapKey } from "@/composables/planner/usePublicHolidays";
 import { registerPlannerKeyboardCommandApi } from "@/composables/keyboard/usePlannerKeyboardCommands";
 import { registerPlannerDaySpaceToggleCheck } from "@/composables/keyboard/usePlannerKeyboardNavigator";
@@ -483,7 +501,90 @@ const { saveAllDebounced, cleanSelection } = dataStore;
 import { usePomodoroStats } from "@/composables/planner/usePomodoroStats";
 
 // 新系统（测试用）
-const { currentDatePomoCount, globalRealPomo } = usePomodoroStats();
+const { currentDatePomoCount, periodPomoCount, globalRealPomo } = usePomodoroStats();
+
+/** 月视图：header 🍅 区域双击/长按切换统计模式（会话级） */
+const monthShowStatsOnly = ref(false);
+const GLOBAL_POMO_LONG_PRESS_MS = 500;
+let globalPomoLongPressTimer: ReturnType<typeof setTimeout> | null = null;
+let globalPomoSuppressClick = false;
+let globalPomoDesktopClickTimer: ReturnType<typeof setTimeout> | null = null;
+
+function toggleMonthShowStatsOnly() {
+  monthShowStatsOnly.value = !monthShowStatsOnly.value;
+}
+
+const monthGlobalPomoTouch = createTouchScheduledSingleAndDouble(
+  () => onDateSet("today"),
+  () => toggleMonthShowStatsOnly(),
+);
+
+function clearGlobalPomoLongPress() {
+  if (globalPomoLongPressTimer != null) {
+    clearTimeout(globalPomoLongPressTimer);
+    globalPomoLongPressTimer = null;
+  }
+}
+
+function clearGlobalPomoDesktopClickTimer() {
+  if (globalPomoDesktopClickTimer != null) {
+    clearTimeout(globalPomoDesktopClickTimer);
+    globalPomoDesktopClickTimer = null;
+  }
+}
+
+function onMonthGlobalPomoPointerDown() {
+  clearGlobalPomoLongPress();
+  globalPomoSuppressClick = false;
+  globalPomoLongPressTimer = setTimeout(() => {
+    globalPomoLongPressTimer = null;
+    toggleMonthShowStatsOnly();
+    globalPomoSuppressClick = true;
+    clearGlobalPomoDesktopClickTimer();
+    monthGlobalPomoTouch.touchCancel();
+  }, GLOBAL_POMO_LONG_PRESS_MS);
+}
+
+function onMonthGlobalPomoPointerUp() {
+  clearGlobalPomoLongPress();
+}
+
+function onMonthGlobalPomoClick() {
+  if (globalPomoSuppressClick) {
+    globalPomoSuppressClick = false;
+    return;
+  }
+  if (isMobile.value) return;
+  clearGlobalPomoDesktopClickTimer();
+  globalPomoDesktopClickTimer = setTimeout(() => {
+    globalPomoDesktopClickTimer = null;
+    onDateSet("today");
+  }, 340);
+}
+
+function onMonthGlobalPomoDblClick(e: MouseEvent) {
+  e.preventDefault();
+  clearGlobalPomoDesktopClickTimer();
+  toggleMonthShowStatsOnly();
+}
+
+function onMonthGlobalPomoTouchStart(_e: TouchEvent) {
+  if (!isMobile.value) return;
+  onMonthGlobalPomoPointerDown();
+  monthGlobalPomoTouch.touchStart(_e);
+}
+
+function onMonthGlobalPomoTouchEnd() {
+  if (!isMobile.value) return;
+  onMonthGlobalPomoPointerUp();
+  monthGlobalPomoTouch.touchEnd(0);
+}
+
+function onMonthGlobalPomoTouchCancel() {
+  if (!isMobile.value) return;
+  clearGlobalPomoLongPress();
+  monthGlobalPomoTouch.touchCancel();
+}
 
 // 计算当前日期 不赋值在UI计算class就会失效，但是UI输出的值是正确的
 const isViewDateToday = computed(() => dateService.isViewDateToday);
@@ -1436,15 +1537,12 @@ const {
     if (!todo) return rawTitle;
     const activity = activityById.value.get(todo.activityId);
     if (!activity) return rawTitle;
-    const task = taskByActivityId.value.get(todo.activityId);
     const { normalizedTitle } = syncLedgerFromTodoTitle(
       ledgerList.value,
       {
-        todoId,
         activityId: todo.activityId,
-        taskId: task?.id ?? todo.taskId,
+        todoId: todo.id,
         rawTitle,
-        recordedAt: todo.startTime ?? todo.id,
         defaultCurrency: settingStore.settings.defaultCurrency,
       },
       {

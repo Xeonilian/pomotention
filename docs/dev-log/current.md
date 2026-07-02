@@ -9,60 +9,71 @@
 
 | 项         | 内容                                                                 |
 | ---------- | -------------------------------------------------------------------- |
-| **主题**   | ledger v1（功能「记账兼容」的一小片，不是整功能）                    |
+| **主题**   | ledger v1 · 本地结构化收支（语法 + tag + 回写 + 聚合展示）           |
 | **来自**   | [roadmap · 执行顺序 #1](../../guide/intro/roadmap.md)                |
-| **规模**   | ≤2 个下午；到点验收不过就砍 scope，不拖关（本周 2～3 关节奏）       |
-| **格式**   | **beancount**（v1 只这一种；hledger 放下一关）                       |
-| **分支**   | _（步 1：`feat ledger-v1`，尚未开）_                                 |
-| **更新**   | 2026-06-24                                                           |
-| **停在哪** | 步 0 已填；dev-log harness 在 `docs/dev-log-harness` 待合 main；ledger 未开分支 |
+| **蓝图**   | [`blueprint/ledger.md`](./blueprint/ledger.md)（§4～§6 已定稿）      |
+| **存储**   | v1 **localStorage**；Supabase 属 v2                                  |
+| **分支**   | `feat ledger-v1` / `dev`                                             |
+| **更新**   | 2026-06-25                                                           |
+| **停在哪** | 聚合面板已实现（Gift 入口 + 随日/周/月/年视图 + tag 筛选）；待手动验收；改条未做 |
 
 ---
 
 ## 这一关要干嘛（一句话）
 
-从 Task 书写区样例文本解析 **beancount** ledger 行，提供 **一键复制** 到剪贴板；不做预览 UI、第二种格式、账套。
+按 [`blueprint/ledger.md`](./blueprint/ledger.md) 实现记账语法、title 回写、tag 分区、删条，以及 **随 Planner 视图尺度的收支聚合展示**（统计 / 饼图 / 趋势 / 明细表）。
 
 ---
 
-## 验收标准（3 条，可验证）
+## 已定稿要点（详见 blueprint）
 
-1. 内置 **≥3 组** Task 样例文本，解析结果均为合法 beancount 行（开做前样例写在测试里）
-2. 用户触发复制后，粘贴到外部编辑器内容与预期 **逐字一致**
-3. `pnpm build:fast` 通过
+- 触发：` -3` / ` +3` 或行首 `-3` / `+3`；结束：`￥` 或 `$`（**无结尾符 = 不入账**）
+- 解析：**退出 title 编辑**时扫描整段
+- `#`：记账段内 → ledger 多分类；段外 → activity
+- 保存后：剥 grammar，保留日记字 + **重写**汇总括号（仅非零整数项）
+- 删条目：尽量删 `rawSegment` 对应文字并重写括号；对不上则静默
+- **聚合**：`sourceTodoId` → `todo.id` 筛 `visibleRange` 与分桶；`id` 仅行标识
+
+---
+
+## 验收标准（3 条）
+
+1. ≥3 组样例保存后 title、ledger 行、activity tag **符合 blueprint §4～§5**
+2. Gift（todo 行）可删条；**头部 Gift** 打开聚合：笔数/收支/饼图/趋势/表；tag 筛选后统计范围同步
+3. `pnpm build:fast`；`parseLedgerSegments` / `ledgerService` / `ledgerQueryService` 测试绿
 
 ---
 
 ## 风险评估
 
-- **[S2 C1 UV0]**
-- **最小证据**（按矩阵，做完打勾）：
-  - [ ] 测试：`__tests__/ledger` 或同级 — 覆盖 ≥3 种样例解析 + 复制输出
-  - [x] `contracts.md`：不需要（UV0）
-  - [x] `ui-checks.md`：不需要（UV0；若加可见按钮再议）
+- **[S2 C1 UV1]**
+- **最小证据**：
+  - [x] 测试：parser + service + query
+  - [ ] `contracts.md`：title 保存 / 汇总括号 / tag 分区 / 聚合范围
+  - [ ] `ui-checks.md`：聚合面板截图
 
 ---
 
-## 进度（按顺序，不要跳步）
+## 进度
 
-- [x] **0.** 本文件已填：一句话 + 3 条验收 + S/C/UV
-- [ ] **1.** `pnpm new:branch feat ledger-v1`（从合入 harness 后的 `main`/`dev` 开）
-- [ ] **2.** 实现核心逻辑（解析 + 复制；可跨多个下午，进度写「停在哪」）
-- [ ] **3.** 证据固定（测试 / contract / ui-checks，按上节矩阵）
-- [ ] **4.** `pnpm new:pr` → 合并
-- [ ] **5.** 清理本地分支；[roadmap 队列](../../guide/intro/roadmap.md) 删掉本关或移下一关
-- [ ] **6.** 若发版：`skill-changelog` 更新 CHANGELOG；**本文件重置**开下一关
+- [x] **0.** 文档关：blueprint + current
+- [x] **0b.** 语法 review + `LedgerEntry` 类型（`id` 时间戳、`categoryTagIds[]`）
+- [x] **2.** parser + title 回写 + TagPicker 分区 + Gift 删条
+- [x] **3.** service 追加/汇总括号/删条反写
+- [x] **4.** 聚合 query + 头部 Gift 面板（统计/饼/趋势/表）
+- [ ] **5.** 证据（contract + ui-check + 手动验收）
+- [ ] **6.** PR 合并 → roadmap / CHANGELOG
 
 ---
 
 ## 备注
 
-- **ledger 整功能** 还多关（hledger、预览等）；本关只做 beancount + 复制。
-- 更长的构想见 [`meta/notes/vision.md`](./meta/notes/vision.md)；**timer 线不进 current**。
-- 与 AI 开聊前：「先读 `docs/dev-log/current.md`，告诉我下一步该做哪一步。」
+- 实现以 **blueprint §4～§6** 为准。
+- v1 **未做**：改条、Supabase、IndexedDB。
+- 与 AI 开聊：「先读 `current.md` + `blueprint/ledger.md`。」
 
 ---
 
 ## 归档
 
-做完后把「快照 + 验收 + 结果」复制到 CHANGELOG 或 PR，然后 **删掉上方填写的快照内容**，只保留本模板说明；或整段移到 `current-archive/YYYY-MM-topic.md`（可选，不强制）。
+做完后归档快照与验收，再重置本模板或移入 `current-archive/`。
