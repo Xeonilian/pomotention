@@ -18,7 +18,7 @@ export function formatWorkHours(ms: number): string {
 /** 毫秒 → "10.5h" / "12h"（紧凑，无空格） */
 export function formatWorkHoursCompact(ms: number): string {
   const h = ms / 3_600_000;
-  if (h <= 0) return "0h";
+  if (h <= 0) return "0.0h";
   if (h >= 10) return `${Math.round(h)}h`;
   return `${h.toFixed(1)}h`;
 }
