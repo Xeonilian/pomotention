@@ -136,7 +136,38 @@ function findLedgerRegion(strippedTitle: string): LedgerRegion | null {
 }
 
 function extractSegmentStrings(body: string): string[] {
-  const normalized = body.replace(/；/g, ";").replace(/;/g, " ");
+  const parts: string[] = [];
+  for (const chunk of body.split(/[;；]/)) {
+    const trimmed = chunk.trim();
+    if (!trimmed) continue;
+
+    if (!/^[+-]/.test(trimmed)) {
+      const leadingMatch = trimmed.match(/^(.+?)\s+([-+].*)$/);
+      if (leadingMatch) {
+        const memo = leadingMatch[1]!.trim();
+        const restParts = extractSegmentStringsFromChunk(leadingMatch[2]!.trim());
+        if (restParts.length > 0) {
+          parts.push(attachLeadingMemo(restParts[0]!, memo));
+          parts.push(...restParts.slice(1));
+          continue;
+        }
+      }
+    }
+
+    parts.push(...extractSegmentStringsFromChunk(trimmed));
+  }
+  return parts;
+}
+
+/** 分号分段后段首文字（如「午饭 -30」）并入首段 memo */
+function attachLeadingMemo(piece: string, memo: string): string {
+  const m = piece.match(/^([+-])(\d+(?:\.\d{1,2})?)(.*)$/);
+  if (!m) return piece;
+  const tail = m[3]?.trim();
+  return tail ? `${m[1]}${m[2]} ${memo} ${tail}` : `${m[1]}${m[2]} ${memo}`;
+}
+
+function extractSegmentStringsFromChunk(normalized: string): string[] {
   const parts: string[] = [];
   let i = 0;
 

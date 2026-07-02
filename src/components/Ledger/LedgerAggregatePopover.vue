@@ -76,9 +76,6 @@
                   {{ row.direction === "income" ? "+" : "-" }}{{ formatLedgerMoneyFixed(row.amount) }}
                 </td>
               </tr>
-              <tr v-if="aggregateData.tableRows.length === 0">
-                <td colspan="4" class="ledger-aggregate-table__empty">暂无记账</td>
-              </tr>
             </tbody>
           </table>
         </div>
@@ -262,7 +259,7 @@ watch(
 }
 
 .ledger-aggregate-table th,
-.ledger-aggregate-table td:not(.ledger-aggregate-table__empty) {
+.ledger-aggregate-table td {
   width: 25%;
   padding: 5px 8px;
   text-align: left;
@@ -295,13 +292,6 @@ watch(
   background: var(--n-color-modal);
   color: var(--color-text-secondary);
   font-weight: 500;
-}
-
-.ledger-aggregate-table__empty {
-  text-align: center;
-  color: var(--color-text-secondary);
-  padding: 24px 8px;
-  border-bottom: 1px solid var(--n-border-color);
 }
 
 .ledger-income {

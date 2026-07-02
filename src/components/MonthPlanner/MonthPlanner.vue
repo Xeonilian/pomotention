@@ -32,7 +32,7 @@
             <div
               class="date-badge"
               :class="{
-                today: day.isToday && !props.showStatsOnly,
+                today: day.isToday,
                 'date-badge--stats': props.showStatsOnly && day.isCurrentMonth,
               }"
               @click.stop="() => handleDateSelectDayView(day.startTs)"
@@ -126,6 +126,25 @@ const props = withDefaults(
 
 const dayNames = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 const STANDARD_POMO = 20;
+/** 统计模式整格底色终点 alpha（20 番茄时） */
+const STATS_POMO_BG_MAX_ALPHA = 0.45;
+
+/** 低段抬升：2 番茄 ≈ 旧算法 6 番茄，20 番茄仍拉满 ratio */
+function mapPomoCountToColorRatio(count: number): number {
+  if (count <= 0) return 0;
+  const n = Math.min(count, STANDARD_POMO);
+  if (n === 1) return 0.25;
+  if (n === 2) return 0.3;
+  return 0.3 + ((n - 2) / (STANDARD_POMO - 2)) * 0.7;
+}
+
+/** 低段 alpha 与旧算法一致（2 番茄对齐旧 6），高段拉向 STATS_POMO_BG_MAX_ALPHA */
+function mapStatsPomoAlphaRatio(colorRatio: number): number {
+  const r = Math.min(1, Math.max(0, colorRatio));
+  if (r <= 0) return 0;
+  if (r <= 0.3) return (r / 0.3) * 0.2;
+  return 0.2 + ((r - 0.3) / 0.7) * 0.8;
+}
 
 type UnifiedItem = {
   key: string;
@@ -286,7 +305,7 @@ const days = computed(() => {
 
     const sumWorkMs = bucket.filter((i) => i.type === "todo").reduce((sum, item) => sum + calcTodoWorkMs(item as unknown as Todo), 0);
 
-    const ratio = Math.min(sumRealPomo / STANDARD_POMO, 1);
+    const ratio = mapPomoCountToColorRatio(sumRealPomo);
 
     return {
       index: idx,
@@ -402,9 +421,23 @@ function getDayCardStyle(ratio: number, isCurrentMonth: boolean): { backgroundCo
 function getBadgeStyle(ratio: number, isCurrentMonth: boolean): Record<string, string> {
   if (props.showStatsOnly) {
     if (!isCurrentMonth) return {};
-    return { "--badge-pomo-color": getPomoColor(ratio) };
+    return {
+      "--badge-pomo-color": getPomoColor(ratio),
+      "--badge-bg-color": getStatsBadgeBgColor(ratio),
+    };
   }
   return { color: getPomoColor(ratio), backgroundColor: getPomoBgColorHEX(ratio) };
+}
+
+/** 统计模式 badge 底：低番茄灰底，高番茄过渡到白 */
+function getStatsBadgeBgColor(ratio: number): string {
+  const clamp = (v: number, min = 0, max = 1) => Math.min(max, Math.max(min, v));
+  const r = clamp(ratio);
+  const from = { r: 0xef, g: 0xef, b: 0xef };
+  const to = { r: 0xff, g: 0xff, b: 0xff };
+  const lerp = (a: number, b: number, t: number) => Math.round(a + (b - a) * t);
+  const hex = (n: number) => n.toString(16).padStart(2, "0");
+  return `#${hex(lerp(from.r, to.r, r))}${hex(lerp(from.g, to.g, r))}${hex(lerp(from.b, to.b, r))}`;
 }
 
 /** 统计模式整格底色：0 番茄为透明白，随 ratio 渐变为玫红 */
@@ -412,12 +445,12 @@ function getStatsPomoBgColorHEX(ratio: number) {
   const clamp = (v: number, min = 0, max = 1) => Math.min(max, Math.max(min, v));
   const r = clamp(ratio);
   const from = { r: 0xff, g: 0xff, b: 0xff, a: 0 };
-  const to = { r: 0xd6, g: 0x48, b: 0x64, a: 0.3 };
+  const to = { r: 0xd6, g: 0x48, b: 0x64, a: STATS_POMO_BG_MAX_ALPHA };
   const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
   const R = Math.round(lerp(from.r, to.r, r));
   const G = Math.round(lerp(from.g, to.g, r));
   const B = Math.round(lerp(from.b, to.b, r));
-  const A = Math.round(lerp(from.a, to.a, r) * 255);
+  const A = Math.round(lerp(from.a, to.a, mapStatsPomoAlphaRatio(r)) * 255);
   const hex = (n: number) => n.toString(16).padStart(2, "0");
   return `#${hex(R)}${hex(G)}${hex(B)}${hex(A)}`;
 }
@@ -549,10 +582,15 @@ function getPomoBgColorHEX(ratio: number) {
   z-index: 100;
 }
 
-/* 统计模式：番茄底色移到整格（仅本月），badge 灰底 + 渐变字色 */
+/* 统计模式：番茄底色移到整格（仅本月），badge 灰→白底 + 渐变字色 */
 .day-card--stats .date-badge.date-badge--stats {
-  background-color: var(--color-background-light) !important;
+  background-color: var(--badge-bg-color, var(--color-background-light)) !important;
   color: var(--badge-pomo-color, var(--color-text-secondary)) !important;
+}
+
+.day-card--stats .date-badge.date-badge--stats.today {
+  color: white !important;
+  background-color: var(--color-blue) !important;
 }
 
 .day-card--other-month .date-badge {
@@ -645,6 +683,12 @@ function getPomoBgColorHEX(ratio: number) {
     color: var(--color-blue) !important;
   }
 
+  .day-card--stats .date-badge.date-badge--stats:hover {
+    cursor: pointer;
+    background-color: var(--color-blue-light) !important;
+    color: var(--color-blue) !important;
+  }
+
   .item:hover:not(.item--selected) {
     background-color: var(--color-hover, rgba(0, 0, 0, 0.05));
   }
@@ -719,7 +763,7 @@ function getPomoBgColorHEX(ratio: number) {
   line-height: 1.2;
   color: var(--color-text-primary);
   font-weight: 600;
-  padding: 2px 4px 4px;
+  padding-bottom: 12px;
 }
 
 .day-stat--compact {
@@ -818,8 +862,13 @@ function getPomoBgColorHEX(ratio: number) {
     z-index: 10;
   }
 
+  .day-card--stats .date-badge.date-badge--stats.today {
+    color: var(--color-background) !important;
+    background-color: var(--color-blue) !important;
+  }
+
   /* 触摸端无 hover：整格选中时日期徽章与桌面 .date-badge:hover 一致 */
-  .day-card--selected .date-badge:not(.date-badge--stats) {
+  .day-card--selected .date-badge {
     background-color: var(--color-blue-light) !important;
     color: var(--color-blue) !important;
   }
