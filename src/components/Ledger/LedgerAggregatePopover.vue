@@ -2,7 +2,7 @@
   <n-button size="small" text :type="showModal ? 'info' : 'default'" title="收支统计" @click.stop="openPanel">
     <template #icon>
       <n-icon>
-        <Gift20Regular />
+        <Wallet20Regular />
       </n-icon>
     </template>
   </n-button>
@@ -90,7 +90,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
 import { NButton, NButtonGroup, NIcon, NModal } from "naive-ui";
-import { Gift20Regular } from "@vicons/fluent";
+import { Wallet20Regular } from "@vicons/fluent";
 import { useDevice } from "@/composables/platform/useDevice";
 import { useLedgerAggregatePanel } from "@/composables/ledger/useLedgerAggregatePanel";
 import type { LedgerTableSort } from "@/services/ledger/ledgerQueryService";

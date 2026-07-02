@@ -4,7 +4,7 @@
       <n-button text class="ledger-entry-suffix" :title="triggerTitle" @click.stop>
         <template #icon>
           <n-icon size="16">
-            <Gift20Regular />
+            <Wallet20Regular />
           </n-icon>
         </template>
       </n-button>
@@ -43,7 +43,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { NButton, NIcon, NPopover } from "naive-ui";
-import { Gift20Regular } from "@vicons/fluent";
+import { Wallet20Regular } from "@vicons/fluent";
 import type { LedgerEntry } from "@/core/types/LedgerEntry";
 import { formatLedgerSummaryBracket } from "@/core/ledger/parseLedgerSegments";
 import { useTagStore } from "@/stores/useTagStore";
