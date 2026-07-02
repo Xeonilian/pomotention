@@ -47,11 +47,15 @@ function resolveChartColor(cssVar: string, fallback: string): string {
   return raw || fallback;
 }
 
+function resolveEmptyLabelColor(): string {
+  return resolveChartColor("--color-text-secondary", EMPTY_TEXT_FALLBACK);
+}
+
 function buildPieOption(): EChartsOption {
   const hasData = props.pieSlices.length > 0;
   if (!hasData) {
     const ringColor = resolveChartColor("--color-background-light", EMPTY_RING_FALLBACK);
-    const textColor = resolveChartColor("--color-background-light", EMPTY_TEXT_FALLBACK);
+    const textColor = resolveEmptyLabelColor();
     return {
       tooltip: { show: false },
       series: [
@@ -96,7 +100,7 @@ function buildTrendOption(): EChartsOption {
   return {
     tooltip: { trigger: "axis" },
     legend: { top: 0, right: 0, itemWidth: 10, itemHeight: 10, textStyle: { fontSize: 11 } },
-    grid: { left: 40, right: 12, top: 28, bottom: 12 },
+    grid: { left: 24, right: 12, top: 28, bottom: 12 },
     xAxis: {
       type: "category",
       data: buckets.map((b) => b.label),
@@ -130,20 +134,6 @@ function buildTrendOption(): EChartsOption {
         itemStyle: { color: "#18a058" },
       },
     ],
-    graphic: hasData
-      ? undefined
-      : [
-          {
-            type: "text",
-            left: "center",
-            top: "middle",
-            style: {
-              text: props.emptyLabel,
-              fill: resolveChartColor("--color-background-light", EMPTY_TEXT_FALLBACK),
-              fontSize: 12,
-            },
-          },
-        ],
   };
 }
 
