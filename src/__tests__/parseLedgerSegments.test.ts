@@ -34,8 +34,9 @@ describe("parseLedgerFromTitle v1", () => {
   it("收入与支出 + 分号分段", () => {
     const r = parseLedgerFromTitle("奖金 +5000; 午饭 -30￥");
     expect(r.ok).toHaveLength(2);
-    expect(r.ok[0]).toMatchObject({ amount: 5000, direction: "income", memo: "午饭" });
-    expect(r.ok[1]).toMatchObject({ amount: 30, direction: "expense" });
+    expect(r.ok[0]).toMatchObject({ amount: 5000, direction: "income" });
+    expect(r.ok[0].memo).toBeUndefined();
+    expect(r.ok[1]).toMatchObject({ amount: 30, direction: "expense", memo: "午饭" });
     expect(r.diaryText).toBe("奖金 午饭");
   });
 
