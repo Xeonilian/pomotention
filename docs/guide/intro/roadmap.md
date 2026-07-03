@@ -10,7 +10,7 @@ description: Pomotention 方向与开发队列（短）；细节见 current、CH
 
 ## 最近在推进
 
-- **ledger v1** — Todo 顺手记账：语法/tag 闭环、本地 CRUD、最小展示（[这一关](../../dev-log/current.md) · [蓝图](../../dev-log/blueprint/ledger.md)）
+- **ledger v2** — Supabase `ledger_entries` + LedgerSyncService（[这一关](../../dev-log/current.md) · [蓝图 §10](../../dev-log/blueprint/ledger.md)）
 - 完整交付记录见 [更新日志](../../dev-log/CHANGELOG.md)
 
 ## 长期方向
@@ -29,7 +29,7 @@ description: Pomotention 方向与开发队列（短）；细节见 current、CH
 
 > **当前这一关**（进度、验收、停在哪）：[`docs/dev-log/current.md`](../../dev-log/current.md)
 
-1. **ledger 第一版**（做完即放下）
+1. **ledger v2 云同步**（v1 本地已落地，见 blueprint §2）
 2. **收费 + 推广底座**
 3. **结构化指标 schema** → chart 改版、A 上下文出口
 4. **IndexedDB 迁移**（大项，与 3 设计并行，不挡 2）

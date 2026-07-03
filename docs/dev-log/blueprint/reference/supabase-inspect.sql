@@ -17,7 +17,10 @@ SELECT 'tags',     COUNT(*), COUNT(*) FILTER (WHERE NOT deleted), COUNT(*) FILTE
 FROM tags     WHERE user_id = '<your_user_id>'
 UNION ALL
 SELECT 'templates', COUNT(*), COUNT(*) FILTER (WHERE NOT deleted), COUNT(*) FILTER (WHERE deleted)
-FROM templates WHERE user_id = '<your_user_id>';
+FROM templates WHERE user_id = '<your_user_id>'
+UNION ALL
+SELECT 'ledger_entries', COUNT(*), COUNT(*) FILTER (WHERE NOT deleted), COUNT(*) FILTER (WHERE deleted)
+FROM ledger_entries WHERE user_id = '<your_user_id>';
 
 -- 2. activities 最近 20 条（含 deleted、last_modified）
 -- SELECT timestamp_id, title, deleted, last_modified FROM activities WHERE user_id = '<your_user_id>' ORDER BY last_modified DESC NULLS LAST LIMIT 20;
@@ -36,3 +39,6 @@ FROM templates WHERE user_id = '<your_user_id>';
 
 -- 7. templates 全部
 -- SELECT timestamp_id, title, deleted, last_modified FROM templates WHERE user_id = '<your_user_id>' ORDER BY last_modified DESC NULLS LAST;
+
+-- 8. ledger_entries 最近 20 条
+-- SELECT timestamp_id, activity_id, amount, direction, deleted, last_modified FROM ledger_entries WHERE user_id = '<your_user_id>' ORDER BY last_modified DESC NULLS LAST LIMIT 20;

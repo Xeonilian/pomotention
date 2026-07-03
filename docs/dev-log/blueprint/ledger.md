@@ -34,9 +34,9 @@ Pomotention **不做**专业记账 App。目标：把日常消费等行为从 To
 | `LedgerEntry` 类型（`categoryTagIds[]`、`sourceActivityId`） | **已实现** |
 | localStorage `ledgerEntries` | **已实现** |
 | Gift 只读 + **删** 条目 | **已实现** |
-| **改** 条目 | 未做 |
-| 最小汇总/列表展示（独立视图） | 未做 |
-| Supabase 同步 | v2 |
+| 聚合展示（LedgerAggregatePopover） | **已实现** |
+| **改** 条目 | **不做**（删 + title 重录） |
+| Supabase 同步 | **v2 进行中** — 见 §10 |
 
 ---
 
@@ -164,7 +164,7 @@ UI 按 **`todo.activityId`** 取 [`getActiveLedgerEntriesForActivity`](../../../
 3. 重写汇总括号
 4. 对不上（用户改过 title、memo 也找不到）→ **静默**，只更新括号
 
-**改** 条目：v1 未实现。
+**改** 条目：**不做** — 录错则 Gift 删 + title 重录。
 
 ### 6.3 Activity 级联
 
@@ -187,6 +187,8 @@ UI 按 **`todo.activityId`** 取 [`getActiveLedgerEntriesForActivity`](../../../
 | UI | [`LedgerEntryPopover.vue`](../../../src/components/Ledger/LedgerEntryPopover.vue) · todo 行 Gift |
 | 聚合 UI | [`LedgerAggregatePopover.vue`](../../../src/components/Ledger/LedgerAggregatePopover.vue) · 头部 Gift |
 | 测试 | [`parseLedgerSegments.test.ts`](../../../src/__tests__/parseLedgerSegments.test.ts)、[`ledgerService.test.ts`](../../../src/__tests__/ledgerService.test.ts) |
+| 云同步 | [`ledgerSync.ts`](../../../src/services/sync/ledgerSync.ts) · v2 |
+| 云表 | Supabase `ledger_entries` · v2 |
 
 ---
 
@@ -194,10 +196,57 @@ UI 按 **`todo.activityId`** 取 [`getActiveLedgerEntriesForActivity`](../../../
 
 | 关 | 内容 |
 |----|------|
-| **v1** | 语法/回写/tag/删条/聚合展示 · localStorage — **进行中**（缺：改条、证据） |
-| **v2** | Supabase `ledger_entries` + LedgerSyncService |
+| **v1** | 语法/回写/tag/删条/聚合展示 · localStorage — **已完成（本地）** |
+| **v2** | Supabase `ledger_entries` + LedgerSyncService — **进行中** |
 | **data** | IndexedDB 大迁移 |
 | **可选** | beancount/hledger 导出 |
+
+---
+
+## 10. v2 云同步（Supabase）
+
+### 10.1 目标
+
+- 多端 / 备份：本地 `ledgerList` 仍是主存；云表 `ledger_entries` 与 tags/tasks **同冗余策略**
+- **不改** §4 title 解析、§6 写入删条逻辑、§7 UI
+
+**云表不存冗余（与 tasks 一致）：**
+
+| 层 | 规则 | tasks 例 | ledger |
+|----|------|----------|--------|
+| **表** | 只存 FK + 本实体字段 | 存 `activity_id`，**不**存 `activityTitle` | 存 `source_activity_id` 等，**不**存 activity title / tag 名 |
+| **下载** | 需要 JOIN 展示字段 → RPC | `get_full_tasks` JOIN activities | **不需要** JOIN → `BaseSyncService` 直查表（同 tags） |
+
+### 10.2 表 `ledger_entries`
+
+| 列 | 对应本地 |
+|----|----------|
+| `timestamp_id` | `LedgerEntry.id` |
+| `amount` / `direction` / `currency` | 同义 |
+| `memo` | `memo` |
+| `category_tag_ids` (jsonb) | `categoryTagIds` |
+| `raw_segment` / `segment_index` | `rawSegment` / `segmentIndex` |
+| `activity_id` FK → activities | `sourceActivityId`（与 tasks/todos 同列名） |
+| `deleted` / `last_modified` | 同步字段 |
+
+**不存 `todo_id`：** Activity ↔ Todo 在 Planner 内 1:1（`todoByActivityId`）；聚合日期经 `activity_id` 反查 todo。
+
+约束：对齐 tasks — `UNIQUE(user_id, timestamp_id)`、触发器、RLS、索引。
+
+### 10.3 同步路径
+
+| 方向 | 方式 |
+|------|------|
+| 上传 | upsert `ledger_entries`（`synced === false`；仅非 JOIN 冗余字段） |
+| 下载 | `BaseSyncService` 直查表，`last_modified > lastSync`，含 deleted；**无 RPC** |
+
+`LedgerSyncService` 仿 `TagSyncService`；上传顺序 Activities 先于 ledger（FK）。
+
+### 10.4 验收
+
+1. migration + RLS 可用
+2. append 入账 → 同步 → 另一端可见；软删 → 增量含 deleted
+3. `ledgerSync` 单测 + `build:fast`
 
 ---
 
@@ -215,3 +264,4 @@ UI 按 **`todo.activityId`** 取 [`getActiveLedgerEntriesForActivity`](../../../
 |------|------|
 | 2026-06-25 | 初稿 |
 | 2026-06-25 | 对齐实现：` -/+` 语法、汇总括号、`categoryTagIds[]`、`sourceActivityId`、方案 A |
+| 2026-07-03 | §2/§8 状态更新；改条标不做；新增 §10 v2 云同步 |
