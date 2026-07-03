@@ -7,6 +7,7 @@ import {
   buildLedgerTrend,
   buildLedgerTableRows,
   filterLedgerEntries,
+  resolveLedgerPlannerTs,
 } from "@/services/ledger/ledgerQueryService";
 import { getDayStartTimestamp } from "@/core/utils";
 
@@ -183,5 +184,17 @@ describe("aggregateLedger", () => {
     });
     expect(result.stats.entryCount).toBe(2);
     expect(result.stats.net).toBe(70);
+  });
+});
+
+describe("resolveLedgerPlannerTs", () => {
+  it("云下载无 sourceTodoId 时经 activity_id 反查 todo", () => {
+    const todoTs = dayStart + 3600_000;
+    const ts = resolveLedgerPlannerTs(
+      entry({ id: 1, sourceTodoId: 0, sourceActivityId: 42 }),
+      () => undefined,
+      () => ({ id: todoTs }),
+    );
+    expect(ts).toBe(todoTs);
   });
 });
