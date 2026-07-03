@@ -20,8 +20,8 @@ const EMPTY_AGGREGATE: LedgerAggregateResult = {
 };
 
 function resolveVisibleRange(dataStore: ReturnType<typeof useDataStore>): { start: number; end: number } {
-  const raw = toValue(dataStore.dateService.visibleRange as { value?: { start: number; end: number } });
-  if (raw && typeof raw.start === "number" && typeof raw.end === "number") {
+  const raw = dataStore.dateService.visibleRange.value;
+  if (typeof raw?.start === "number" && typeof raw?.end === "number") {
     return raw;
   }
   const start = getDayStartTimestamp();
@@ -39,7 +39,7 @@ export function useLedgerAggregatePanel(tableSort: ComputedRef<LedgerTableSort>)
   const dataStore = useDataStore();
   const settingStore = useSettingStore();
   const tagStore = useTagStore();
-  const { ledgerList, filterTagIds, filterStarredOnly, todoById } = storeToRefs(dataStore);
+  const { ledgerList, filterTagIds, filterStarredOnly, todoById, todoByActivityId } = storeToRefs(dataStore);
 
   const viewScale = computed(() => settingStore.settings.viewSet as LedgerViewScale);
   const scaleLabel = computed(() => SCALE_LABEL[viewScale.value] ?? "日");
@@ -57,6 +57,7 @@ export function useLedgerAggregatePanel(tableSort: ComputedRef<LedgerTableSort>)
         filterTagIds: filterTagIds.value,
         filterStarredOnly: filterStarredOnly.value,
         getTodoById: (todoId) => todoMap.get(todoId),
+        getTodoByActivityId: (activityId) => todoByActivityId.value.get(activityId),
         getActivityTagIds: (activityId) => activityMap.get(activityId)?.tagIds,
         hasStarredTaskForActivity: (id) => dataStore.hasStarredTaskForActivity(id),
         getTagName: (id) => tagStore.getTag(id)?.name,

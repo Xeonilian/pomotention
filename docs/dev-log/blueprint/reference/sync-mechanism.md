@@ -31,6 +31,7 @@
 | todos      | RPC `get_full_todos`   | 同上（RPC 内用 `p_last_modified`） |
 | schedules  | RPC `get_full_schedules`| 同上 |
 | tasks      | RPC `get_full_tasks`   | 同上 |
+| ledger_entries | BaseSyncService    | `last_modified > lastSyncTimestamp` |
 | tags       | BaseSyncService    | 同上 |
 | templates  | BaseSyncService    | 同上 |
 

@@ -7,6 +7,7 @@ let ScheduleSyncService: any;
 let TaskSyncService: any;
 let TagSyncService: any;
 let TemplateSyncService: any;
+let LedgerSyncService: any;
 // let TimetableSyncService: any;
 
 import { useSyncStore, runBeforeSyncHook } from "@/stores/useSyncStore";
@@ -46,6 +47,7 @@ export async function initSyncServices(dataStore: ReturnType<typeof useDataStore
     TaskSyncService = (await import("./taskSync")).TaskSyncService;
     TagSyncService = (await import("./tagSync")).TagSyncService;
     TemplateSyncService = (await import("./templateSync")).TemplateSyncService;
+    LedgerSyncService = (await import("./ledgerSync")).LedgerSyncService;
   } catch (error) {
     console.error("[Sync] 动态载入服务失败:", error);
     return;
@@ -82,6 +84,11 @@ export async function initSyncServices(dataStore: ReturnType<typeof useDataStore
     () => dataStore._templateById,
   );
 
+  const ledgerSync = new LedgerSyncService(
+    () => dataStore.ledgerList,
+    () => dataStore._ledgerById,
+  );
+
   syncServices = [
     { name: "Activities", service: activitySync },
     { name: "Todos", service: todoSync },
@@ -89,6 +96,7 @@ export async function initSyncServices(dataStore: ReturnType<typeof useDataStore
     { name: "Tasks", service: taskSync },
     { name: "Tags", service: tagSync },
     { name: "Templates", service: templateSync },
+    { name: "Ledger", service: ledgerSync },
   ];
 
   isInitialized = true;

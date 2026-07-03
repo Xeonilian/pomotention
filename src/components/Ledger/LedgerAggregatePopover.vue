@@ -68,7 +68,43 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="row in visibleRows" :key="row.id">
+              <tr v-if="isTableEmpty">
+                <td colspan="4" class="ledger-aggregate-table__guide">
+                  <div class="ledger-guide">
+                    <div>
+                      <strong>① 在哪写</strong>
+                      <span class="ledger-guide__body">在日视图 → 点 Todo 标题进入编辑</span>
+                    </div>
+                    <div>
+                      <strong>② 怎么写</strong>
+                      <ul class="ledger-guide__body">
+                        <span>-金额 / +金额 开始一笔，￥ 或 $ 结束</span>
+                        <br />
+                        <span>支持#标签 作分类</span>
+                        <br />
+                        <span>同段可多笔，分隔符为 ;</span>
+                        <br />
+                        <span>结束编辑后入账</span>
+                      </ul>
+                    </div>
+                    <div>
+                      <strong>③ 示例</strong>
+                      <span class="ledger-guide__body">+5000 奖金 #salary; -25 午饭 #lunch￥</span>
+                    </div>
+                    <div>
+                      <strong>④ 保存后</strong>
+                      <span class="ledger-guide__body">
+                        标题旁出现
+                        <n-icon size="14"><Wallet20Regular /></n-icon>
+                        → 点开逐笔删除
+                        <br />
+                        再编辑标题可追加新笔
+                      </span>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+              <tr v-for="row in visibleRows" v-else :key="row.id">
                 <td>{{ formatRowDate(row.recordedAt) }}</td>
                 <td class="ledger-aggregate-table__tags">{{ row.categoryLabels.join(" ") || "—" }}</td>
                 <td class="ledger-aggregate-table__memo">{{ row.memo || "—" }}</td>
@@ -122,6 +158,8 @@ const netClass = computed(() => {
   if (n < 0) return "ledger-stat--expense";
   return "";
 });
+
+const isTableEmpty = computed(() => aggregateData.value.tableRows.length === 0);
 
 const visibleRows = computed(() => aggregateData.value.tableRows.slice(0, visibleLimit.value));
 
@@ -300,6 +338,29 @@ watch(
 
 .ledger-expense {
   color: var(--color-red);
+}
+
+.ledger-aggregate-table__guide {
+  border-bottom: none;
+  padding: 12px 14px;
+  font-size: 12px;
+  color: var(--color-text-primary);
+  line-height: 1.55;
+}
+
+.ledger-guide > div + div {
+  margin-top: 10px;
+}
+
+.ledger-guide__body {
+  display: block;
+  padding-left: 1em;
+  margin-top: 2px;
+}
+
+ul.ledger-guide__body {
+  margin: 0;
+  padding-left: 1.2em;
 }
 
 /* 桌面：左两图顶天，右统计 + 明细 */

@@ -70,25 +70,65 @@ export function isWeekBlockOverlapping(a: { start: number; end: number }, b: { s
   return !(a.end <= b.start || b.end <= a.start);
 }
 
-/**
- * 生成pomo颜色（进度比例转渐变色）
- */
-export function getPomoColor(ratio: number): string {
-  const clamp = (v: number, min = 0, max = 1) => Math.min(max, Math.max(min, v));
-  const r = clamp(ratio);
+/** 番茄数 → 颜色 ratio（20 拉满；低段抬升） */
+export const POMO_STANDARD_COUNT = 20;
+export const POMO_STATS_BG_MAX_ALPHA = 0.45;
+const POMO_RGB_FROM = { r: 0x99, g: 0x99, b: 0x99 };
+const POMO_RGB_TO = { r: 0xdc, g: 0x1a, b: 0x1a }; // rgb(220 26 26)
+const POMO_BG_FROM = { r: 0xef, g: 0xed, b: 0xed };
+/** badge 不透明底 ≈ 白底上叠 rgb(220 26 26 / 45%) */
+const POMO_BG_TO = {
+  r: Math.round(255 * (1 - POMO_STATS_BG_MAX_ALPHA) + POMO_RGB_TO.r * POMO_STATS_BG_MAX_ALPHA),
+  g: Math.round(255 * (1 - POMO_STATS_BG_MAX_ALPHA) + POMO_RGB_TO.g * POMO_STATS_BG_MAX_ALPHA),
+  b: Math.round(255 * (1 - POMO_STATS_BG_MAX_ALPHA) + POMO_RGB_TO.b * POMO_STATS_BG_MAX_ALPHA),
+};
 
-  const from = { r: 0x99, g: 0x99, b: 0x99 };
-  const to = { r: 0xd6, g: 0x48, b: 0x64 };
+function clamp01(v: number): number {
+  return Math.min(1, Math.max(0, v));
+}
 
-  const lerp = (a: number, b: number, t: number) => Math.round(a + (b - a) * t);
+function lerpChannel(a: number, b: number, t: number): number {
+  return Math.round(a + (b - a) * t);
+}
 
-  const R = lerp(from.r, to.r, r);
-  const G = lerp(from.g, to.g, r);
-  const B = lerp(from.b, to.b, r);
-
+function rgbHex(r: number, g: number, b: number): string {
   const hex = (n: number) => n.toString(16).padStart(2, "0");
+  return `#${hex(r)}${hex(g)}${hex(b)}`;
+}
 
-  return `#${hex(R)}${hex(G)}${hex(B)}`;
+function lerpRgb(
+  from: { r: number; g: number; b: number },
+  to: { r: number; g: number; b: number },
+  t: number,
+): string {
+  return rgbHex(lerpChannel(from.r, to.r, t), lerpChannel(from.g, to.g, t), lerpChannel(from.b, to.b, t));
+}
+
+export function mapPomoCountToColorRatio(count: number): number {
+  if (count <= 0) return 0;
+  const n = Math.min(count, POMO_STANDARD_COUNT);
+  if (n === 1) return 0.25;
+  if (n === 2) return 0.3;
+  const t = (n - 2) / (POMO_STANDARD_COUNT - 2);
+  return 0.3 + Math.pow(t, 0.6) * 0.7;
+}
+
+/** 字色：#999 → rgb(220 26 26) */
+export function getPomoColor(ratio: number): string {
+  return lerpRgb(POMO_RGB_FROM, POMO_RGB_TO, clamp01(ratio));
+}
+
+/** 日程模式 badge 底：浅灰 → 白底叠 45% 红的实色等价 */
+export function getPomoBadgeBgColor(ratio: number): string {
+  return lerpRgb(POMO_BG_FROM, POMO_BG_TO, clamp01(ratio));
+}
+
+/** 统计模式整格底：透明白 → rgb(220 26 26 / ratio×45%) */
+export function getStatsPomoBgColorHEX(ratio: number): string {
+  const t = clamp01(ratio);
+  const hex = (n: number) => n.toString(16).padStart(2, "0");
+  const a = Math.round(t * POMO_STATS_BG_MAX_ALPHA * 255);
+  return `#${hex(lerpChannel(0xff, POMO_RGB_TO.r, t))}${hex(lerpChannel(0xff, POMO_RGB_TO.g, t))}${hex(lerpChannel(0xff, POMO_RGB_TO.b, t))}${hex(a)}`;
 }
 
 /** 布局未就绪时的兜底块 */

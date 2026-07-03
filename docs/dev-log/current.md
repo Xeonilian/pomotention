@@ -7,73 +7,87 @@
 
 ## 快照
 
-| 项         | 内容                                                                 |
-| ---------- | -------------------------------------------------------------------- |
-| **主题**   | ledger v1 · 本地结构化收支（语法 + tag + 回写 + 聚合展示）           |
-| **来自**   | [roadmap · 执行顺序 #1](../../guide/intro/roadmap.md)                |
-| **蓝图**   | [`blueprint/ledger.md`](./blueprint/ledger.md)（§4～§6 已定稿）      |
-| **存储**   | v1 **localStorage**；Supabase 属 v2                                  |
-| **分支**   | `feat ledger-v1` / `dev`                                             |
-| **更新**   | 2026-06-25                                                           |
-| **停在哪** | 聚合面板已实现（Gift 入口 + 随日/周/月/年视图 + tag 筛选）；待手动验收；改条未做 |
+| 项 | 内容 |
+|---|---|
+| **主题** | ledger v2 · Supabase `ledger_entries` + LedgerSyncService |
+| **来自** | [blueprint/ledger.md §10](./blueprint/ledger.md) · [roadmap #1](../../guide/intro/roadmap.md) |
+| **蓝图** | [`blueprint/ledger.md`](./blueprint/ledger.md) |
+| **规模** | migration + 前端同步接入 |
+| **存储** | **仍 localStorage 主存**；云为增量备份 / 多端 |
+| **分支** | `dev`（feat ledger-v2-supabase） |
+| **更新** | 2026-07-03 |
+| **停在哪** | 步 1：Supabase 跑 migration → regen `Database.ts` → 冒烟同步 |
 
 ---
 
 ## 这一关要干嘛（一句话）
 
-按 [`blueprint/ledger.md`](./blueprint/ledger.md) 实现记账语法、title 回写、tag 分区、删条，以及 **随 Planner 视图尺度的收支聚合展示**（统计 / 饼图 / 趋势 / 明细表）。
+把已有 **本地 `LedgerEntry`** 接到 Supabase（表 + LedgerSyncService），**云表不存 JOIN 冗余**；下载直查表（同 tags）。
 
 ---
 
-## 已定稿要点（详见 blueprint）
+## 分步（按顺序）
 
-- 触发：` -3` / ` +3` 或行首 `-3` / `+3`；结束：`￥` 或 `$`（**无结尾符 = 不入账**）
-- 解析：**退出 title 编辑**时扫描整段
-- `#`：记账段内 → ledger 多分类；段外 → activity
-- 保存后：剥 grammar，保留日记字 + **重写**汇总括号（仅非零整数项）
-- 删条目：尽量删 `rawSegment` 对应文字并重写括号；对不上则静默
-- **聚合**：`sourceTodoId` → `todo.id` 筛 `visibleRange` 与分桶；`id` 仅行标识
+| 步 | 内容 | 产出 |
+|---|---|---|
+| **0** | blueprint §10 + 本文件 | 已对齐 |
+| **1** | Supabase 跑 migration | `ledger_entries` 表（无 RPC） |
+| **2** | regen 类型 | `Database.ts` |
+| **3** | 同步服务 | `ledgerSync.ts` + `initSyncServices` + `_ledgerById` |
+| **4** | 冒烟 | 登录 → 入账 → 同步 → 另一端可见；软删增量 |
+| **5** | 测试 + 文档 | `ledgerSync.test.ts`；`sync-mechanism.md` |
+| **6** | PR 合并 | — |
+| **7** | 收关 | roadmap/blueprint 状态；归档本文件 |
 
 ---
 
 ## 验收标准（3 条）
 
-1. ≥3 组样例保存后 title、ledger 行、activity tag **符合 blueprint §4～§5**
-2. Gift（todo 行）可删条；**头部 Gift** 打开聚合：笔数/收支/饼图/趋势/表；tag 筛选后统计范围同步
-3. `pnpm build:fast`；`parseLedgerSegments` / `ledgerService` / `ledgerQueryService` 测试绿
+1. migration 远程可应用；RLS 仅本人可读写 `ledger_entries`
+2. 登录后：本地新建/软删 ledger 行能 upsert；直查表增量下载含 `deleted=true`；行为与 tags 一致
+3. `pnpm build:fast` 通过；`ledgerSync` 单测覆盖 map 往返
 
 ---
 
 ## 风险评估
 
-- **[S2 C1 UV1]**
-- **最小证据**：
-  - [x] 测试：parser + service + query
-  - [ ] `contracts.md`：title 保存 / 汇总括号 / tag 分区 / 聚合范围
-  - [ ] `ui-checks.md`：聚合面板截图
+- **[S1]** — 仅数据层 + 同步；UI 不变
+- **FK：** ledger 依赖 activity 已上传（Activities 先上传，与 tasks 同）
+- **最小证据：**
+  - [ ] 测试：`ledgerSync.test.ts`
+  - [ ] `sync-mechanism.md` 补 ledger 一行
+  - [ ] contract / ui-checks：**本关不需要**
+
+---
+
+## 不做
+
+- 改 title 解析规则（§4）、TagPicker、Gift / Aggregate UI
+- IndexedDB 迁移
+- 入账行 **改**（产品设计：删 + 重录）
 
 ---
 
 ## 进度
 
-- [x] **0.** 文档关：blueprint + current
-- [x] **0b.** 语法 review + `LedgerEntry` 类型（`id` 时间戳、`categoryTagIds[]`）
-- [x] **2.** parser + title 回写 + TagPicker 分区 + Gift 删条
-- [x] **3.** service 追加/汇总括号/删条反写
-- [x] **4.** 聚合 query + 头部 Gift 面板（统计/饼/趋势/表）
-- [ ] **5.** 证据（contract + ui-check + 手动验收）
-- [ ] **6.** PR 合并 → roadmap / CHANGELOG
+- [x] **0.** blueprint §10 + current 对齐
+- [x] **1.** migration SQL 入仓
+- [ ] **2.** Supabase 跑 SQL + regen `Database.ts`
+- [x] **3.** LedgerSyncService 接入
+- [x] **5.** ledgerSync 单测 + sync-mechanism（冒烟待步 4）
+- [ ] **6.** PR 合并
+- [ ] **7.** 收关归档
 
 ---
 
 ## 备注
 
-- 实现以 **blueprint §4～§6** 为准。
-- v1 **未做**：改条、Supabase、IndexedDB。
-- 与 AI 开聊：「先读 `current.md` + `blueprint/ledger.md`。」
+- v1 归档：[`current-archive/2026-06-ledger-v1.md`](./current-archive/2026-06-ledger-v1.md)
+- SQL 文件：[`supabase/migrations/20250703120000_ledger_entries.sql`](../../supabase/migrations/20250703120000_ledger_entries.sql)
+- 与 AI 开聊：「先读 `current.md` 和 `blueprint/ledger.md` §10，告诉我下一步。」
 
 ---
 
 ## 归档
 
-做完后归档快照与验收，再重置本模板或移入 `current-archive/`。
+做完后把「快照 + 验收 + 结果」复制到 CHANGELOG 或 PR，然后 **删掉上方填写的快照内容**，只保留本模板说明；或整段移到 `current-archive/YYYY-MM-topic.md`（可选，不强制）。

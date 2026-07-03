@@ -16,6 +16,7 @@ export interface LedgerQueryParams {
   filterTagIds: readonly number[];
   filterStarredOnly: boolean;
   getTodoById: (todoId: number) => LedgerTodoRef | undefined;
+  getTodoByActivityId?: (activityId: number) => LedgerTodoRef | undefined;
   getActivityTagIds: (activityId: number) => number[] | undefined;
   hasStarredTaskForActivity: (activityId: number) => boolean;
   getTagName: (tagId: number) => string | undefined;
@@ -88,12 +89,15 @@ function incomeAmount(entry: LedgerEntry): number {
   return entry.direction === "income" ? entry.amount : 0;
 }
 
-/** sourceTodoId → todo.id（Planner 归日字段）；todo 不存在或已删则 undefined */
+/** activity 与 todo 1:1（todoByActivityId）；优先 sourceTodoId，否则按 sourceActivityId 查 todo */
 export function resolveLedgerPlannerTs(
   entry: LedgerEntry,
   getTodoById: (todoId: number) => LedgerTodoRef | undefined,
+  getTodoByActivityId?: (activityId: number) => LedgerTodoRef | undefined,
 ): number | undefined {
-  const todo = getTodoById(entry.sourceTodoId);
+  const byTodoId = entry.sourceTodoId ? getTodoById(entry.sourceTodoId) : undefined;
+  const todo =
+    byTodoId && !byTodoId.deleted ? byTodoId : getTodoByActivityId?.(entry.sourceActivityId);
   if (!todo || todo.deleted) return undefined;
   return todo.id;
 }
@@ -107,13 +111,14 @@ export function filterLedgerEntries(params: LedgerQueryParams): LedgerEntry[] {
     filterTagIds,
     filterStarredOnly,
     getTodoById,
+    getTodoByActivityId,
     getActivityTagIds,
     hasStarredTaskForActivity,
   } = params;
 
   return entries.filter((entry) => {
     if (entry.deleted) return false;
-    const plannerTs = resolveLedgerPlannerTs(entry, getTodoById);
+    const plannerTs = resolveLedgerPlannerTs(entry, getTodoById, getTodoByActivityId);
     if (plannerTs == null || plannerTs < rangeStart || plannerTs >= rangeEnd) return false;
     const activityId = entry.sourceActivityId;
     return matchesActivityFilter({
@@ -319,10 +324,11 @@ export function buildLedgerTrend(
   rangeEnd: number,
   viewScale: LedgerViewScale,
   getTodoById: (todoId: number) => LedgerTodoRef | undefined,
+  getTodoByActivityId?: (activityId: number) => LedgerTodoRef | undefined,
 ): LedgerTrendBucket[] {
   const buckets = buildTrendBuckets(rangeStart, rangeEnd, viewScale);
   for (const entry of entries) {
-    const plannerTs = resolveLedgerPlannerTs(entry, getTodoById);
+    const plannerTs = resolveLedgerPlannerTs(entry, getTodoById, getTodoByActivityId);
     if (plannerTs == null) continue;
     const idx = findTrendBucketIndex(buckets, plannerTs, viewScale);
     if (idx < 0) continue;
@@ -337,10 +343,11 @@ export function buildLedgerTableRows(
   getTagName: (id: number) => string | undefined,
   getTodoById: (todoId: number) => LedgerTodoRef | undefined,
   sort: LedgerTableSort,
+  getTodoByActivityId?: (activityId: number) => LedgerTodoRef | undefined,
 ): LedgerTableRow[] {
   const rows: LedgerTableRow[] = [];
   for (const entry of entries) {
-    const plannerTs = resolveLedgerPlannerTs(entry, getTodoById);
+    const plannerTs = resolveLedgerPlannerTs(entry, getTodoById, getTodoByActivityId);
     if (plannerTs == null) continue;
     rows.push({
       id: entry.id,
@@ -366,8 +373,21 @@ export function aggregateLedger(params: LedgerQueryParams, tableSort: LedgerTabl
   return {
     stats: buildLedgerStats(filtered),
     pie: buildLedgerPie(filtered, params.getTagName),
-    trend: buildLedgerTrend(trendEntries, params.rangeStart, params.rangeEnd, params.viewScale, params.getTodoById),
-    tableRows: buildLedgerTableRows(filtered, params.getTagName, params.getTodoById, tableSort),
+    trend: buildLedgerTrend(
+      trendEntries,
+      params.rangeStart,
+      params.rangeEnd,
+      params.viewScale,
+      params.getTodoById,
+      params.getTodoByActivityId,
+    ),
+    tableRows: buildLedgerTableRows(
+      filtered,
+      params.getTagName,
+      params.getTodoById,
+      tableSort,
+      params.getTodoByActivityId,
+    ),
   };
 }
 
