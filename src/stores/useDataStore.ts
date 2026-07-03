@@ -133,6 +133,7 @@ export const useDataStore = defineStore(
     const _todoById = new Map<number, Todo>();
     const _scheduleById = new Map<number, Schedule>();
     const _taskById = new Map<number, Task>();
+    const _ledgerById = new Map<number, LedgerEntry>();
 
     watch(
       activityList,
@@ -173,6 +174,17 @@ export const useDataStore = defineStore(
         _taskById.clear();
         for (const t of list) {
           _taskById.set(t.id, t);
+        }
+      },
+      { deep: true },
+    );
+
+    watch(
+      ledgerList,
+      (list) => {
+        _ledgerById.clear();
+        for (const e of list) {
+          _ledgerById.set(e.id, e);
         }
       },
       { deep: true },
@@ -1053,6 +1065,7 @@ export const useDataStore = defineStore(
       _todoById,
       _scheduleById,
       _taskById,
+      _ledgerById,
       todoByActivityId,
       scheduleByActivityId,
       taskByActivityId, // 字段是sourceId 但是以后都只有 activityId
