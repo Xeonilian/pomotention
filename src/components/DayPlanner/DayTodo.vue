@@ -2124,7 +2124,12 @@ col.col-status {
   }
 
   td.col-intent {
-    text-overflow: ellipsis !important;
+    text-overflow: clip !important;
+  }
+
+  td.col-intent .title-cell-inner .ellipsis {
+    font-size: 12px;
+    line-height: 1.3;
   }
 
   td.col-start,
@@ -2640,6 +2645,15 @@ td.col-check {
   align-items: center;
   min-width: 0;
   width: 100%;
+}
+
+td.col-intent .title-cell-inner .ellipsis {
+  flex: 1 1 auto;
+  width: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .title-input {

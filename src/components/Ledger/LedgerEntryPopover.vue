@@ -1,13 +1,16 @@
 <template>
-  <n-popover trigger="click" placement="bottom-end" :z-index="10001" @click.stop>
+  <n-popover trigger="click" placement="bottom-end" class="ledger-entry-popover" :z-index="10001" @click.stop>
     <template #trigger>
-      <n-button text class="ledger-entry-suffix" :title="triggerTitle" @click.stop>
+      <n-button v-if="!isMobile" text class="ledger-entry-suffix" :title="triggerTitle" @click.stop>
         <template #icon>
-          <n-icon size="16">
+          <n-icon :size="16">
             <Wallet20Regular />
           </n-icon>
         </template>
       </n-button>
+      <n-icon v-else :size="12" class="ledger-entry-suffix ledger-entry-suffix--mobile" :title="triggerTitle" @click.stop>
+        <Wallet20Regular />
+      </n-icon>
     </template>
     <div class="ledger-entry-panel">
       <div class="ledger-entry-panel__title">收支 {{ entries.length }} 笔</div>
@@ -44,6 +47,7 @@
 import { computed } from "vue";
 import { NButton, NIcon, NPopover } from "naive-ui";
 import { Wallet20Regular } from "@vicons/fluent";
+import { useDevice } from "@/composables/platform/useDevice";
 import type { LedgerEntry } from "@/core/types/LedgerEntry";
 import { formatLedgerSummaryBracket } from "@/core/ledger/parseLedgerSegments";
 import { useTagStore } from "@/stores/useTagStore";
@@ -57,6 +61,7 @@ const emit = defineEmits<{
 }>();
 
 const tagStore = useTagStore();
+const { isMobile } = useDevice();
 
 const triggerTitle = computed(() => `已录入 ${props.entries.length} 笔收支，点击查看`);
 
@@ -78,11 +83,24 @@ function categoryNames(tagIds?: number[]): string {
 </script>
 
 <style scoped>
+.ledger-entry-popover {
+  flex-shrink: 0;
+  display: inline-flex;
+  vertical-align: middle;
+  line-height: 0;
+}
+
 .ledger-entry-suffix {
   flex-shrink: 0;
   padding: 0 2px;
   margin-left: 2px;
   vertical-align: middle;
+}
+
+.ledger-entry-suffix--mobile {
+  margin: 0;
+  padding: 0;
+  cursor: pointer;
 }
 
 .ledger-entry-panel__title {

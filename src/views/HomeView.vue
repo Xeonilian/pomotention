@@ -89,11 +89,13 @@
                   title="单击回到今天；双击或长按切换统计/日程"
                   @click="onMonthGlobalPomoClick"
                   @dblclick.stop="onMonthGlobalPomoDblClick"
+                  @contextmenu.prevent
+                  @selectstart.prevent
                   @pointerdown="onMonthGlobalPomoPointerDown"
                   @pointerup="onMonthGlobalPomoPointerUp"
                   @pointerleave="onMonthGlobalPomoPointerUp"
                   @pointercancel="onMonthGlobalPomoPointerUp"
-                  @touchstart.stop="onMonthGlobalPomoTouchStart"
+                  @touchstart.stop.prevent="onMonthGlobalPomoTouchStart"
                   @touchend.stop="onMonthGlobalPomoTouchEnd"
                   @touchcancel.stop="onMonthGlobalPomoTouchCancel"
                 >
@@ -533,7 +535,10 @@ function clearGlobalPomoDesktopClickTimer() {
   }
 }
 
-function onMonthGlobalPomoPointerDown() {
+function onMonthGlobalPomoPointerDown(e?: PointerEvent) {
+  if (e && isMobile.value && e.pointerType === "touch") {
+    e.preventDefault();
+  }
   clearGlobalPomoLongPress();
   globalPomoSuppressClick = false;
   globalPomoLongPressTimer = setTimeout(() => {
@@ -1975,6 +1980,15 @@ const { startResize: startRightResize } = useResize(
   font-family: Consolas, "Courier New", Courier, monospace;
   font-weight: 500;
   margin-left: 16px;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
+}
+
+.global-pomo * {
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .today-pomo {
