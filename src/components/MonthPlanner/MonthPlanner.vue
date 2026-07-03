@@ -106,6 +106,12 @@ import { calcTodoWorkMs, formatWorkHours, formatWorkHoursCompact } from "@/servi
 import { getDateKey } from "@/core/utils";
 import type { HolidayDisplay } from "@/services/planner/publicHolidays";
 import { plannerHolidayMapKey } from "@/composables/planner/usePublicHolidays";
+import {
+  getPomoBadgeBgColor,
+  getPomoColor,
+  getStatsPomoBgColorHEX,
+  mapPomoCountToColorRatio,
+} from "@/core/utils/weekDays";
 
 const settingStore = useSettingStore();
 const isTaskVisible = computed(() => settingStore.settings.showTask);
@@ -125,26 +131,6 @@ const props = withDefaults(
 );
 
 const dayNames = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
-const STANDARD_POMO = 20;
-/** 统计模式整格底色终点 alpha（20 番茄时） */
-const STATS_POMO_BG_MAX_ALPHA = 0.45;
-
-/** 低段抬升：2 番茄 ≈ 旧算法 6 番茄，20 番茄仍拉满 ratio */
-function mapPomoCountToColorRatio(count: number): number {
-  if (count <= 0) return 0;
-  const n = Math.min(count, STANDARD_POMO);
-  if (n === 1) return 0.25;
-  if (n === 2) return 0.3;
-  return 0.3 + ((n - 2) / (STANDARD_POMO - 2)) * 0.7;
-}
-
-/** 低段 alpha 与旧算法一致（2 番茄对齐旧 6），高段拉向 STATS_POMO_BG_MAX_ALPHA */
-function mapStatsPomoAlphaRatio(colorRatio: number): number {
-  const r = Math.min(1, Math.max(0, colorRatio));
-  if (r <= 0) return 0;
-  if (r <= 0.3) return (r / 0.3) * 0.2;
-  return 0.2 + ((r - 0.3) / 0.7) * 0.8;
-}
 
 type UnifiedItem = {
   key: string;
@@ -426,7 +412,7 @@ function getBadgeStyle(ratio: number, isCurrentMonth: boolean): Record<string, s
       "--badge-bg-color": getStatsBadgeBgColor(ratio),
     };
   }
-  return { color: getPomoColor(ratio), backgroundColor: getPomoBgColorHEX(ratio) };
+  return { color: getPomoColor(ratio), backgroundColor: getPomoBadgeBgColor(ratio) };
 }
 
 /** 统计模式 badge 底：低番茄灰底，高番茄过渡到白 */
@@ -438,63 +424,6 @@ function getStatsBadgeBgColor(ratio: number): string {
   const lerp = (a: number, b: number, t: number) => Math.round(a + (b - a) * t);
   const hex = (n: number) => n.toString(16).padStart(2, "0");
   return `#${hex(lerp(from.r, to.r, r))}${hex(lerp(from.g, to.g, r))}${hex(lerp(from.b, to.b, r))}`;
-}
-
-/** 统计模式整格底色：0 番茄为透明白，随 ratio 渐变为玫红 */
-function getStatsPomoBgColorHEX(ratio: number) {
-  const clamp = (v: number, min = 0, max = 1) => Math.min(max, Math.max(min, v));
-  const r = clamp(ratio);
-  const from = { r: 0xff, g: 0xff, b: 0xff, a: 0 };
-  const to = { r: 0xd6, g: 0x48, b: 0x64, a: STATS_POMO_BG_MAX_ALPHA };
-  const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
-  const R = Math.round(lerp(from.r, to.r, r));
-  const G = Math.round(lerp(from.g, to.g, r));
-  const B = Math.round(lerp(from.b, to.b, r));
-  const A = Math.round(lerp(from.a, to.a, mapStatsPomoAlphaRatio(r)) * 255);
-  const hex = (n: number) => n.toString(16).padStart(2, "0");
-  return `#${hex(R)}${hex(G)}${hex(B)}${hex(A)}`;
-}
-
-function getPomoColor(ratio: number) {
-  const clamp = (v: number, min = 0, max = 1) => Math.min(max, Math.max(min, v));
-  const r = clamp(ratio);
-
-  // 起点与终点（#999 简写等于 #999999）
-  const from = { r: 0x99, g: 0x99, b: 0x99 };
-  const to = { r: 0xd6, g: 0x48, b: 0x64 };
-
-  const lerp = (a: number, b: number, t: number) => Math.round(a + (b - a) * t);
-
-  const R = lerp(from.r, to.r, r);
-  const G = lerp(from.g, to.g, r);
-  const B = lerp(from.b, to.b, r);
-
-  const hex = (n: number) => n.toString(16).padStart(2, "0");
-
-  return `#${hex(R)}${hex(G)}${hex(B)}`;
-}
-
-function getPomoBgColorHEX(ratio: number) {
-  const clamp = (v: number, min = 0, max = 1) => Math.min(max, Math.max(min, v));
-  const r = clamp(ratio);
-
-  // 起点：#efeded4b => R=0xef, G=0xed, B=0xed, A=0x4b
-  const from = { r: 0xef, g: 0xed, b: 0xed, a: 0x4b / 255 };
-  // 终点：自行设定一个更聚焦的底色（示例：稍微更饱和/更深一点，透明度也可上调）
-  // 你可以按需调整 to 的 RGBA，或保持同色调仅调整透明度
-  const to = { r: 0xd6, g: 0x48, b: 0x64, a: 0.3 }; // 例：转向玫红系，30% 透明度
-
-  const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
-
-  const R = Math.round(lerp(from.r, to.r, r));
-  const G = Math.round(lerp(from.g, to.g, r));
-  const B = Math.round(lerp(from.b, to.b, r));
-  const A = Math.round(lerp(from.a, to.a, r) * 255);
-
-  const hex = (n: number) => n.toString(16).padStart(2, "0");
-
-  // 输出 #RRGGBBAA
-  return `#${hex(R)}${hex(G)}${hex(B)}${hex(A)}`;
 }
 </script>
 <style scoped>
