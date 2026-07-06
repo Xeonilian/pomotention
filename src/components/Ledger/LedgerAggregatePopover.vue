@@ -10,6 +10,7 @@
   <n-modal
     v-model:show="showModal"
     preset="card"
+    class="ledger-aggregate-modal"
     :title="modalTitle"
     :style="modalStyle"
     :content-style="modalContentStyle"
@@ -142,9 +143,32 @@ const chartHeight = computed(() => (isMobile.value ? 160 : 220));
 
 const modalTitle = computed(() => `收支统计 · ${scaleLabel.value}视图`);
 
-const modalStyle = computed(() => (isMobile.value ? { width: "100vw", maxWidth: "100vw", margin: "0" } : { width: "min(1100px, 98vw)" }));
+const modalStyle = computed(() =>
+  isMobile.value
+    ? {
+        width: "100vw",
+        maxWidth: "100vw",
+        margin: "0",
+        height: "calc(100dvh - env(safe-area-inset-top, 0px))",
+        maxHeight: "calc(100dvh - env(safe-area-inset-top, 0px))",
+        display: "flex",
+        flexDirection: "column",
+      }
+    : { width: "min(1100px, 98vw)" },
+);
 
-const modalContentStyle = computed(() => (isMobile.value ? undefined : { maxHeight: "min(90vh, 840px)", overflow: "hidden" }));
+const modalContentStyle = computed(() =>
+  isMobile.value
+    ? {
+        flex: "1",
+        minHeight: "0",
+        overflow: "auto",
+        overscrollBehavior: "contain",
+        backgroundColor: "var(--n-color-modal)",
+        paddingBottom: "12px",
+      }
+    : { maxHeight: "min(90vh, 840px)", overflow: "hidden" },
+);
 
 const netText = computed(() => {
   const n = aggregateData.value.stats.net;
@@ -409,5 +433,58 @@ ul.ledger-guide__body {
 .ledger-aggregate--desktop .ledger-aggregate-table__tags {
   white-space: normal;
   word-break: break-word;
+}
+</style>
+
+<style>
+@media (max-width: 768px) {
+  .n-modal-body-wrapper .ledger-aggregate-modal {
+    align-self: flex-start !important;
+    margin-top: env(safe-area-inset-top, 0px) !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    width: 100vw !important;
+    max-width: 100vw !important;
+    height: calc(100dvh - env(safe-area-inset-top, 0px)) !important;
+    max-height: calc(100dvh - env(safe-area-inset-top, 0px)) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    background-color: var(--n-color-modal) !important;
+    border-radius: 0 !important;
+  }
+
+  .ledger-aggregate-modal .n-card-header {
+    flex-shrink: 0;
+    background-color: var(--n-color-modal) !important;
+  }
+
+  .ledger-aggregate-modal .n-card__content {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    background-color: var(--n-color-modal) !important;
+  }
+
+  .ledger-aggregate-modal .ledger-aggregate {
+    min-height: 100%;
+    background-color: var(--n-color-modal);
+  }
+
+  .ledger-aggregate-modal .ledger-aggregate__table-scroll {
+    max-height: none;
+    flex: 1;
+    min-height: 160px;
+    background-color: var(--n-color-modal);
+  }
+}
+
+.ledger-aggregate-modal .n-base-close::before {
+  background-color: transparent !important;
+}
+
+.ledger-aggregate-modal .n-base-close:not(.n-base-close--disabled):hover::before {
+  background-color: transparent !important;
 }
 </style>
