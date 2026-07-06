@@ -264,6 +264,21 @@ function buildTrendBuckets(rangeStart: number, rangeEnd: number, viewScale: Ledg
     return buckets;
   }
 
+  if (viewScale === "year") {
+    const year = new Date(rangeStart).getFullYear();
+    for (let m = 0; m < 12; m++) {
+      const start = new Date(year, m, 1).getTime();
+      buckets.push({
+        key: `m-${start}`,
+        label: formatYearMonthLabel(start),
+        start,
+        expense: 0,
+        income: 0,
+      });
+    }
+    return buckets;
+  }
+
   let cursor = getStartOfMonth(rangeStart);
   while (cursor < rangeEnd) {
     buckets.push({

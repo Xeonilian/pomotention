@@ -146,6 +146,44 @@ describe("buildLedgerTrend", () => {
     expect(buckets[3]?.label).not.toContain("今");
     expect(buckets[3]?.start).toBe(getDayStartTimestamp(center));
   });
+
+  it("年视图无数据时固定 12 个月桶", () => {
+    const yearStart = getDayStartTimestamp(new Date(2026, 0, 1).getTime());
+    const yearEnd = getDayStartTimestamp(new Date(2027, 0, 1).getTime());
+    const buckets = buildLedgerTrend([], yearStart, yearEnd, "year", () => undefined);
+    expect(buckets).toHaveLength(12);
+    expect(buckets.map((b) => b.label)).toEqual([
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ]);
+    expect(buckets.every((b) => b.expense === 0 && b.income === 0)).toBe(true);
+  });
+
+  it("年视图按 todo.id 归入对应月份", () => {
+    const julyTodoTs = getDayStartTimestamp(new Date(2026, 6, 15).getTime()) + 3600_000;
+    const yearStart = getDayStartTimestamp(new Date(2026, 0, 1).getTime());
+    const yearEnd = getDayStartTimestamp(new Date(2027, 0, 1).getTime());
+    const buckets = buildLedgerTrend(
+      [entry({ id: 999_999, sourceTodoId: julyTodoTs, sourceActivityId: 1, amount: 42 })],
+      yearStart,
+      yearEnd,
+      "year",
+      todoMap({ id: julyTodoTs }),
+    );
+    expect(buckets).toHaveLength(12);
+    expect(buckets.filter((b) => b.expense > 0)).toHaveLength(1);
+    expect(buckets.find((b) => b.label === "Jul")?.expense).toBe(42);
+  });
 });
 
 describe("buildLedgerTableRows", () => {
@@ -184,6 +222,28 @@ describe("aggregateLedger", () => {
     });
     expect(result.stats.entryCount).toBe(2);
     expect(result.stats.net).toBe(70);
+  });
+
+  it("年视图汇总全年条目并分月趋势", () => {
+    const julyTodoTs = getDayStartTimestamp(new Date(2026, 6, 10).getTime()) + 5000;
+    const yearStart = getDayStartTimestamp(new Date(2026, 0, 1).getTime());
+    const yearEnd = getDayStartTimestamp(new Date(2027, 0, 1).getTime());
+    const result = aggregateLedger({
+      entries: [entry({ id: 10, sourceTodoId: julyTodoTs, sourceActivityId: 1, amount: 30, direction: "expense" })],
+      rangeStart: yearStart,
+      rangeEnd: yearEnd,
+      viewScale: "year",
+      filterTagIds: [],
+      filterStarredOnly: false,
+      getTodoById: todoMap({ id: julyTodoTs }),
+      getActivityTagIds: () => [],
+      hasStarredTaskForActivity: () => false,
+      getTagName: tagName,
+    });
+    expect(result.stats.entryCount).toBe(1);
+    expect(result.stats.totalExpense).toBe(30);
+    expect(result.trend).toHaveLength(12);
+    expect(result.trend.find((b) => b.label === "Jul")?.expense).toBe(30);
   });
 });
 

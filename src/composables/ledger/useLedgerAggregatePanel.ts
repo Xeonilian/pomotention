@@ -3,7 +3,7 @@ import { storeToRefs } from "pinia";
 import { useDataStore } from "@/stores/useDataStore";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useTagStore } from "@/stores/useTagStore";
-import { getDayStartTimestamp } from "@/core/utils";
+import { addDays, getDayStartTimestamp } from "@/core/utils";
 import {
   aggregateLedger,
   formatLedgerMoney,
@@ -19,13 +19,24 @@ const EMPTY_AGGREGATE: LedgerAggregateResult = {
   tableRows: [],
 };
 
-function resolveVisibleRange(dataStore: ReturnType<typeof useDataStore>): { start: number; end: number } {
-  const raw = dataStore.dateService.visibleRange.value;
-  if (typeof raw?.start === "number" && typeof raw?.end === "number") {
-    return raw;
+/** 兼容 ComputedRef 与 Pinia 外链路偶尔已 unwrap 的情况 */
+function unwrapRefLike<T>(x: { value?: T } | T | undefined): T | undefined {
+  if (x === undefined || x === null) return undefined;
+  if (typeof x === "object" && x !== null && "value" in x && (x as { value: T }).value !== undefined) {
+    return (x as { value: T }).value;
   }
-  const start = getDayStartTimestamp();
-  return { start, end: start + 86_400_000 };
+  return x as T;
+}
+
+function resolveVisibleRange(dataStore: ReturnType<typeof useDataStore>): { start: number; end: number } {
+  const ds = dataStore.dateService;
+  const vr = unwrapRefLike<{ start: number; end: number }>(ds?.visibleRange);
+  if (vr && typeof vr.start === "number" && typeof vr.end === "number" && vr.end > vr.start) {
+    return vr;
+  }
+  const appTs = unwrapRefLike<number>(ds?.appDateTimestamp);
+  const dayStart = typeof appTs === "number" && !Number.isNaN(appTs) ? getDayStartTimestamp(appTs) : getDayStartTimestamp();
+  return { start: dayStart, end: addDays(dayStart, 1) };
 }
 
 const SCALE_LABEL: Record<LedgerViewScale, string> = {
