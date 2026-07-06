@@ -188,59 +188,45 @@ export async function applySignedInSession(session: any, opts?: { backgroundSync
   return next;
 }
 
-/** 登出 reset 时保留的本地偏好（与账号无关） */
-function snapshotPlannerPriorityPrefs(settingStore: ReturnType<typeof useSettingStore>) {
-  return {
-    priorityCategoryTagIds: { ...settingStore.settings.priorityCategoryTagIds },
-    priorityCategoryShowInRank: { ...settingStore.settings.priorityCategoryShowInRank },
-  };
-}
-
-function restorePlannerPriorityPrefs(settingStore: ReturnType<typeof useSettingStore>, snap: ReturnType<typeof snapshotPlannerPriorityPrefs>) {
-  settingStore.settings.priorityCategoryTagIds = snap.priorityCategoryTagIds;
-  settingStore.settings.priorityCategoryShowInRank = snap.priorityCategoryShowInRank;
-}
-
 function hasSupabaseAuthStorage(): boolean {
   if (typeof localStorage === "undefined") return false;
   return Object.keys(localStorage).some((key) => key.startsWith("sb-"));
 }
 
-/**
- * 用户点击退出登录：先 signOut，再清本地；清除数据时 reload（与设置页「清空本地数据」一致）
- */
+/** 用户点击退出登录：先 signOut，再断会话；本机业务数据与同步游标保留 */
 export async function performIntentionalSignOut(signOutFn: () => Promise<void>): Promise<void> {
-  const settingStore = useSettingStore();
-  const keep = settingStore.settings.keepLocalDataAfterSignOut || settingStore.settings.keepLocalDataOnNextSignOut;
-
   intentionalSignOutInProgress = true;
   try {
     await signOutFn();
     await applySignedOut();
-    if (!keep) {
-      window.location.reload();
-    }
   } finally {
     intentionalSignOutInProgress = false;
   }
 }
 
-/** 登出清理（与 App 原逻辑一致） */
+/** 登出：断 Auth 会话与同步生命周期；保留 localStorage 业务数据、lastSync、lastLoggedInUserId */
 export async function applySignedOut(): Promise<void> {
   const settingStore = useSettingStore();
   const dataStore = useDataStore();
   const syncStore = useSyncStore();
 
-  appDebugLog("👋 用户已登出，清理同步状态和认证会话");
+  appDebugLog("👋 用户已登出，保留本机数据");
   syncStore.isLoggedIn = false;
-  const keep = settingStore.settings.keepLocalDataAfterSignOut || settingStore.settings.keepLocalDataOnNextSignOut;
-  settingStore.settings.keepLocalDataOnNextSignOut = false;
-  const priorityPrefs = snapshotPlannerPriorityPrefs(settingStore);
-  clearAllUserState(keep, true, !keep);
-  if (!keep) {
-    settingStore.resetSettings();
-    restorePlannerPriorityPrefs(settingStore, priorityPrefs);
+
+  cleanupSyncLifecycle();
+
+  dataStore.clearData();
+  if (typeof localStorage !== "undefined") {
+    for (const key of Object.keys(localStorage)) {
+      if (key.startsWith("sb-")) {
+        localStorage.removeItem(key);
+      }
+    }
   }
+
+  syncStore.resetSyncState();
+  settingStore.settings.wasLocalModeBeforeLogin = false;
+
   await dataStore.loadAllData();
 }
 

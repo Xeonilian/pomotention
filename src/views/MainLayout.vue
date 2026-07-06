@@ -86,9 +86,8 @@
                 trigger="manual"
                 :on-clickoutside="handleLogoutPopconfirmClickOutside"
                 @positive-click="handleLogoutConfirm"
-                @negative-click="handleLogoutCancel"
-                negative-text="不保留"
-                positive-text="保留"
+                negative-text="取消"
+                positive-text="登出"
               >
                 <template #trigger>
                   <n-button
@@ -111,7 +110,7 @@
                     </template>
                   </n-button>
                 </template>
-                <span>退出登录时是否保留本地数据？</span>
+                <span>登出后本机数据仍保留；若要清空请前往设置 → 清空本地数据。确定登出？</span>
               </n-popconfirm>
             </div>
           </div>
@@ -433,10 +432,8 @@ onUnmounted(() => {
 // 底部同步条：非 mini、非移动端，且正在同步或存在同步错误时显示
 const showSyncFooter = computed(() => !isMiniMode.value && !isMobile.value && Boolean(syncStore.syncError));
 
-// 处理退出登录确认（保留数据）
+// 处理退出登录确认
 async function handleLogoutConfirm() {
-  // 用户点击"保留"，设置为保留本地数据
-  settingStore.settings.keepLocalDataAfterSignOut = true;
   // 已登录时，退出前总是先执行一次完整同步；同步失败不阻断登出流程
   if (syncStore.isLoggedIn) {
     try {
@@ -445,24 +442,6 @@ async function handleLogoutConfirm() {
       console.warn("[MainLayout] syncAll before logout failed:", error);
     }
   }
-  // 执行退出登录
-  await syncStore.handleLogout();
-}
-
-// 处理退出登录取消（不保留数据）
-async function handleLogoutCancel() {
-  // 用户点击"不保留"，设置为不保留本地数据
-  settingStore.settings.keepLocalDataAfterSignOut = false;
-  settingStore.settings.keepLocalDataOnNextSignOut = false;
-  // 已登录时，退出前总是先执行一次完整同步；同步失败不阻断登出流程
-  if (syncStore.isLoggedIn) {
-    try {
-      await syncAll();
-    } catch (error) {
-      console.warn("[MainLayout] syncAll before logout failed:", error);
-    }
-  }
-  // 执行退出登录
   await syncStore.handleLogout();
 }
 

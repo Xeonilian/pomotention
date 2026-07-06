@@ -230,8 +230,6 @@ async function handlePreviewImport() {
 
     // 导入预览前必须先退出登录，避免带登录态做导入引发同步覆盖风险
     if (syncStore.isLoggedIn) {
-      // 本次“为了导入预览而退出”必须保留本地数据，避免误清空
-      settingStore.settings.keepLocalDataOnNextSignOut = true;
       await syncStore.handleLogout();
       if (syncStore.isLoggedIn) {
         message.value = "请先退出登录后再进行导入预览。";
