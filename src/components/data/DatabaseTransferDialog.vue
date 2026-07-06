@@ -78,7 +78,6 @@ import {
   type ImportReport,
 } from "@/services/data/mergeService";
 import { useSyncStore } from "@/stores/useSyncStore";
-import { useSettingStore } from "@/stores/useSettingStore";
 
 /** 跳过类行用灰色（depth 3），其余正常色 */
 function isSkippedReportLine(row: FileProcessResult): boolean {
@@ -110,7 +109,7 @@ const { exportData, message: exportMessage } = useDataExport();
 const isTauriRuntime = isTauri();
 const importButtonLabel = computed(() => (isTauriRuntime ? "预览导入（文件夹）" : "预览导入（文件夹）"));
 const syncStore = useSyncStore();
-const settingStore = useSettingStore();
+
 const canRestoreImportSnapshot = ref(hasImportRollbackSnapshot());
 
 function pauseImportSyncGateSafely(): void {

@@ -838,6 +838,41 @@ export const useDataStore = defineStore(
       return true;
     }
 
+    /** 软删 tag 时：从所有 activity / ledger 引用中移除该 id */
+    function stripTagIdFromReferences(tagId: number): void {
+      const now = Date.now();
+      let activitiesChanged = false;
+      let ledgerChanged = false;
+
+      for (const activity of activityList.value) {
+        if (!activity.tagIds?.includes(tagId)) continue;
+        const next = activity.tagIds.filter((id) => id !== tagId);
+        activity.tagIds = next.length > 0 ? next : undefined;
+        activity.lastModified = now;
+        activity.synced = false;
+        activitiesChanged = true;
+      }
+
+      for (const entry of ledgerList.value) {
+        if (!entry.categoryTagIds?.includes(tagId)) continue;
+        const next = entry.categoryTagIds.filter((id) => id !== tagId);
+        entry.categoryTagIds = next.length > 0 ? next : undefined;
+        entry.lastModified = now;
+        entry.synced = false;
+        ledgerChanged = true;
+      }
+
+      if (activitiesChanged) {
+        saveActivities(activityList.value);
+      }
+      if (ledgerChanged) {
+        saveLedgerEntries(ledgerList.value);
+      }
+      if (activitiesChanged || ledgerChanged) {
+        scheduleDebouncedCloudUpload();
+      }
+    }
+
     /**
      * 切换 Activity 的标签
      */
@@ -1132,6 +1167,7 @@ export const useDataStore = defineStore(
       toggleActivityTag,
       createAndAddTagToActivity,
       getActivityTags,
+      stripTagIdFromReferences,
 
       // Tag filter (day/week/month)
       toggleFilterTagId,

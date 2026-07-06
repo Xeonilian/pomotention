@@ -10,6 +10,7 @@
   <n-modal
     v-model:show="showModal"
     preset="card"
+    class="ledger-aggregate-modal"
     :title="modalTitle"
     :style="modalStyle"
     :content-style="modalContentStyle"
@@ -409,5 +410,26 @@ ul.ledger-guide__body {
 .ledger-aggregate--desktop .ledger-aggregate-table__tags {
   white-space: normal;
   word-break: break-word;
+}
+</style>
+
+<!-- modal teleport 到 body：iPhone 顶栏安全区 + 关闭 × 无灰底 -->
+<style>
+@media (max-width: 768px) {
+  .n-modal-body-wrapper .ledger-aggregate-modal {
+    align-self: flex-start !important;
+    margin-top: env(safe-area-inset-top, 0px) !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    max-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) !important;
+  }
+}
+
+.ledger-aggregate-modal .n-base-close::before {
+  background-color: transparent !important;
+}
+
+.ledger-aggregate-modal .n-base-close:not(.n-base-close--disabled):hover::before {
+  background-color: transparent !important;
 }
 </style>

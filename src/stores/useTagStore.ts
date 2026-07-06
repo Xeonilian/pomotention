@@ -44,8 +44,8 @@ export const useTagStore = defineStore("tagStore", () => {
 
   /**
    * ✅ 主要的响应式 Getter，供所有 UI 使用。
-   * 它会自动关联 aсtivity 数据，计算出每个 tag 的 `count`。
-   * 当 aсtivities 或 tags 变化时，它会自动更新。
+   * 它会自动关联 activity 数据，计算出每个 tag 的 `count`。
+   * 当 activities 或 tags 变化时，它会自动更新。
    */
   const allTags = computed(() => {
     const countMap = new Map<number, number>();
@@ -89,6 +89,14 @@ export const useTagStore = defineStore("tagStore", () => {
     return rawTags.value.findIndex((t) => t.id === id);
   }
 
+  /** 分配新 id：以当前时间为基准，避开已有 id（同毫秒多标签递增） */
+  function allocateNextTagId(): number {
+    const used = new Set(rawTags.value.map((t) => t.id));
+    let candidate = Date.now();
+    while (used.has(candidate)) candidate++;
+    return candidate;
+  }
+
   /**
    * 添加一个新 tag。
    */
@@ -99,14 +107,15 @@ export const useTagStore = defineStore("tagStore", () => {
       return allTags.value.find((t) => t.id === existing.id)!;
     }
 
+    const id = allocateNextTagId();
     const newTag: Tag = {
-      id: Date.now(),
+      id,
       name: trimmedName,
       color,
       backgroundColor,
       deleted: false,
       synced: false, // 标记为需要同步
-      lastModified: Date.now(),
+      lastModified: id,
     };
 
     rawTags.value.push(newTag);
@@ -159,6 +168,7 @@ export const useTagStore = defineStore("tagStore", () => {
    */
   function removeTag(id: number) {
     updateTagById(id, { deleted: true });
+    dataStore.stripTagIdFromReferences(id);
     // 搜索页 filterTagIds 仍可能保留已删 id；getTag 已查不到标签导致筛选栏消失但列表仍被筛选
     useSearchUiStore().removeFilterTagId(id);
   }
