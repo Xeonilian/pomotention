@@ -143,9 +143,32 @@ const chartHeight = computed(() => (isMobile.value ? 160 : 220));
 
 const modalTitle = computed(() => `收支统计 · ${scaleLabel.value}视图`);
 
-const modalStyle = computed(() => (isMobile.value ? { width: "100vw", maxWidth: "100vw", margin: "0" } : { width: "min(1100px, 98vw)" }));
+const modalStyle = computed(() =>
+  isMobile.value
+    ? {
+        width: "100vw",
+        maxWidth: "100vw",
+        margin: "0",
+        height: "calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))",
+        maxHeight: "calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))",
+        display: "flex",
+        flexDirection: "column",
+      }
+    : { width: "min(1100px, 98vw)" },
+);
 
-const modalContentStyle = computed(() => (isMobile.value ? undefined : { maxHeight: "min(90vh, 840px)", overflow: "hidden" }));
+const modalContentStyle = computed(() =>
+  isMobile.value
+    ? {
+        flex: "1",
+        minHeight: "0",
+        overflow: "auto",
+        overscrollBehavior: "contain",
+        backgroundColor: "var(--n-color-modal)",
+        paddingBottom: "max(12px, env(safe-area-inset-bottom, 0px))",
+      }
+    : { maxHeight: "min(90vh, 840px)", overflow: "hidden" },
+);
 
 const netText = computed(() => {
   const n = aggregateData.value.stats.net;
@@ -413,7 +436,6 @@ ul.ledger-guide__body {
 }
 </style>
 
-<!-- modal teleport 到 body：iPhone 顶栏安全区 + 关闭 × 无灰底 -->
 <style>
 @media (max-width: 768px) {
   .n-modal-body-wrapper .ledger-aggregate-modal {
@@ -421,7 +443,40 @@ ul.ledger-guide__body {
     margin-top: env(safe-area-inset-top, 0px) !important;
     margin-left: 0 !important;
     margin-right: 0 !important;
+    width: 100vw !important;
+    max-width: 100vw !important;
+    height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) !important;
     max-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    background-color: var(--n-color-modal) !important;
+    border-radius: 0 !important;
+  }
+
+  .ledger-aggregate-modal .n-card-header {
+    flex-shrink: 0;
+    background-color: var(--n-color-modal) !important;
+  }
+
+  .ledger-aggregate-modal .n-card__content {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    background-color: var(--n-color-modal) !important;
+  }
+
+  .ledger-aggregate-modal .ledger-aggregate {
+    min-height: 100%;
+    background-color: var(--n-color-modal);
+  }
+
+  .ledger-aggregate-modal .ledger-aggregate__table-scroll {
+    max-height: none;
+    flex: 1;
+    min-height: 160px;
+    background-color: var(--n-color-modal);
   }
 }
 
