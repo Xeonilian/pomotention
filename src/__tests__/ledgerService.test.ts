@@ -22,6 +22,27 @@ describe("syncLedgerFromTodoTitle v1", () => {
     },
   };
 
+  it("schedule title 写入 sourceScheduleId", () => {
+    const result = syncLedgerFromTodoTitle(
+      ledgerList,
+      {
+        activityId: 200,
+        scheduleId: 55_002,
+        rawTitle: "-15 咖啡￥",
+        defaultCurrency: "CNY",
+      },
+      tagActions,
+    );
+    expect(result.appendedCount).toBe(1);
+    expect(ledgerList[0]).toMatchObject({
+      sourceActivityId: 200,
+      sourceTodoId: 0,
+      sourceScheduleId: 55_002,
+      amount: 15,
+    });
+    expect(result.normalizedTitle).toBe("咖啡（-15）");
+  });
+
   it("解析记账段、回写日记与汇总括号", () => {
     const result = syncLedgerFromTodoTitle(
       ledgerList,

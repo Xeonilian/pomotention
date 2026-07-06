@@ -6,6 +6,7 @@ import { useRouter } from "vue-router";
 import { signOut, getCurrentUser } from "@/core/services/authService";
 import { isSupabaseEnabled, supabase } from "@/core/services/supabase";
 import { destroyAppCloseHandler } from "@/services/platform/appCloseHandler";
+import { performIntentionalSignOut } from "@/core/auth/signedInSessionLifecycle";
 
 const shouldLogSyncDebug = ["1", "true"].includes(
   String(import.meta.env.VITE_SYNC_DEBUG_LOG ?? "")
@@ -220,18 +221,19 @@ export const useSyncStore = defineStore("sync", () => {
     loggingOut.value = true;
 
     try {
-      // 登出时先销毁同步服务
-      destroySyncService();
+      await performIntentionalSignOut(async () => {
+        destroySyncService();
 
-      // 必须用 supabase 实例判断：isSupabaseEnabled() 在 localOnlyMode 时为 false，会跳过 signOut，导致会话仍留在 localStorage，刷新又自动登录
-      if (!supabase) {
-        console.log("👋 无 Supabase 客户端，跳过远端 signOut");
-      } else {
-        console.log("👋 退出登录，切断同步连接");
-        await signOut();
-      }
+        // 必须用 supabase 实例判断：isSupabaseEnabled() 在 localOnlyMode 时为 false，会跳过 signOut，导致会话仍留在 localStorage，刷新又自动登录
+        if (!supabase) {
+          console.log("👋 无 Supabase 客户端，跳过远端 signOut");
+        } else {
+          console.log("👋 退出登录，切断同步连接");
+          await signOut();
+        }
 
-      destroyAppCloseHandler();
+        destroyAppCloseHandler();
+      });
       isLoggedIn.value = false;
     } catch (error) {
       console.error("退出登录时出错:", error);

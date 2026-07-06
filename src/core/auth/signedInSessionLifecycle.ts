@@ -24,6 +24,8 @@ let authUnsubscribe: (() => void) | null = null;
 let lifecycleBootInProgress = false;
 /** 递增以使进行中的后台 initSyncLifecycle 在 await 间隙失效（登出/切账号与后台同步并发） */
 let backgroundSyncLifecycleToken = 0;
+/** 用户主动登出：SIGNED_OUT 回调跳过，待 signOut 完成后再 applySignedOut，避免清 storage 与 signOut 并发卡死 */
+let intentionalSignOutInProgress = false;
 
 export function cleanupSyncLifecycle(): void {
   const syncStore = useSyncStore();
@@ -204,6 +206,25 @@ function hasSupabaseAuthStorage(): boolean {
   return Object.keys(localStorage).some((key) => key.startsWith("sb-"));
 }
 
+/**
+ * 用户点击退出登录：先 signOut，再清本地；清除数据时 reload（与设置页「清空本地数据」一致）
+ */
+export async function performIntentionalSignOut(signOutFn: () => Promise<void>): Promise<void> {
+  const settingStore = useSettingStore();
+  const keep = settingStore.settings.keepLocalDataAfterSignOut || settingStore.settings.keepLocalDataOnNextSignOut;
+
+  intentionalSignOutInProgress = true;
+  try {
+    await signOutFn();
+    await applySignedOut();
+    if (!keep) {
+      window.location.reload();
+    }
+  } finally {
+    intentionalSignOutInProgress = false;
+  }
+}
+
 /** 登出清理（与 App 原逻辑一致） */
 export async function applySignedOut(): Promise<void> {
   const settingStore = useSettingStore();
@@ -251,6 +272,10 @@ export function subscribeAuthStateChanges(): void {
     if (event === "SIGNED_IN") {
       await applySignedInSession(session);
     } else if (event === "SIGNED_OUT") {
+      if (intentionalSignOutInProgress) {
+        appDebugLog("⏭️ 主动登出中，清理由 performIntentionalSignOut 串行执行");
+        return;
+      }
       const recovered = await recoverSessionFromStorage(event);
       if (recovered) {
         appDebugLog("♻️ SIGNED_OUT 后 session 仍可恢复，跳过登出清理");

@@ -50,6 +50,8 @@ interface UseHomePlannerRowEditsOptions {
   saveAllDebounced: () => void;
   /** Todo title 保存后同步 ledger，返回规范化 title */
   onTodoTitleSaved?: (todoId: number, rawTitle: string) => string;
+  /** Schedule title 保存后同步 ledger，返回规范化 title */
+  onScheduleTitleSaved?: (scheduleId: number, rawTitle: string) => string;
 }
 
 export function useHomePlannerRowEdits(options: UseHomePlannerRowEditsOptions) {
@@ -57,16 +59,17 @@ export function useHomePlannerRowEdits(options: UseHomePlannerRowEditsOptions) {
     const schedule = options.scheduleById.value.get(id);
     if (!schedule) return;
 
-    schedule.activityTitle = newTitle;
+    const normalizedTitle = options.onScheduleTitleSaved?.(id, newTitle) ?? newTitle;
+    schedule.activityTitle = normalizedTitle;
     const activity = options.activityById.value.get(schedule.activityId);
     if (!activity) return;
-    activity.title = newTitle;
+    activity.title = normalizedTitle;
     activity.synced = false;
     activity.lastModified = Date.now();
 
     const relatedTask = options.taskByActivityId.value.get(schedule.activityId);
     if (relatedTask) {
-      relatedTask.activityTitle = newTitle;
+      relatedTask.activityTitle = normalizedTitle;
     }
     options.saveAllDebounced();
   };

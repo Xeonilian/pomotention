@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import type { LedgerEntry } from "@/core/types/LedgerEntry";
-import type { LedgerTodoRef } from "@/services/ledger/ledgerQueryService";
+import type { LedgerTodoRef, LedgerScheduleRef } from "@/services/ledger/ledgerQueryService";
 import {
   aggregateLedger,
   buildLedgerPie,
@@ -23,6 +23,7 @@ function entry(
     lastModified: partial.id,
     synced: false,
     deleted: false,
+    sourceScheduleId: 0,
     ...partial,
   };
 }
@@ -30,9 +31,21 @@ function entry(
 const dayStart = getDayStartTimestamp(new Date(2026, 5, 15).getTime());
 const tagName = (id: number) => ({ 1: "生存", 2: "看病", 3: "学习" })[id];
 
-function todoMap(...items: LedgerTodoRef[]): (id: number) => LedgerTodoRef | undefined {
+function todoLookup(...items: LedgerTodoRef[]) {
   const map = new Map(items.map((t) => [t.id, t]));
-  return (id) => map.get(id);
+  return { getTodoById: (id: number) => map.get(id) };
+}
+
+function scheduleLookup(
+  byId: LedgerScheduleRef[],
+  byActivity?: Map<number, LedgerScheduleRef>,
+) {
+  const idMap = new Map(byId.map((s) => [s.id, s]));
+  return {
+    getTodoById: () => undefined,
+    getScheduleById: (id: number) => idMap.get(id),
+    getScheduleByActivityId: (activityId: number) => byActivity?.get(activityId),
+  };
 }
 
 describe("filterLedgerEntries", () => {
@@ -49,7 +62,7 @@ describe("filterLedgerEntries", () => {
       viewScale: "day",
       filterTagIds: [99],
       filterStarredOnly: false,
-      getTodoById: todoMap({ id: todoTs }, { id: dayStart + 7200_000 }),
+      getTodoById: todoLookup({ id: todoTs }, { id: dayStart + 7200_000 }).getTodoById,
       getActivityTagIds: (id) => (id === 10 ? [99] : [88]),
       hasStarredTaskForActivity: () => false,
       getTagName: tagName,
@@ -70,7 +83,7 @@ describe("filterLedgerEntries", () => {
       viewScale: "day",
       filterTagIds: [],
       filterStarredOnly: false,
-      getTodoById: todoMap({ id: todoTs }),
+      getTodoById: todoLookup({ id: todoTs }).getTodoById,
       getActivityTagIds: () => [],
       hasStarredTaskForActivity: () => false,
       getTagName: tagName,
@@ -82,7 +95,7 @@ describe("filterLedgerEntries", () => {
       viewScale: "day",
       filterTagIds: [],
       filterStarredOnly: false,
-      getTodoById: todoMap({ id: todoTs }),
+      getTodoById: todoLookup({ id: todoTs }).getTodoById,
       getActivityTagIds: () => [],
       hasStarredTaskForActivity: () => false,
       getTagName: tagName,
@@ -133,7 +146,7 @@ describe("buildLedgerTrend", () => {
       weekStart,
       weekStart + 7 * 86_400_000,
       "week",
-      todoMap({ id: todoTs }),
+      todoLookup({ id: todoTs }),
     );
     expect(buckets).toHaveLength(7);
     expect(buckets[0].expense).toBe(5);
@@ -141,10 +154,48 @@ describe("buildLedgerTrend", () => {
 
   it("日视图前后各 3 天共 7 桶", () => {
     const center = dayStart + 12 * 3_600_000;
-    const buckets = buildLedgerTrend([], center, center + 86_400_000, "day", () => undefined);
+    const buckets = buildLedgerTrend([], center, center + 86_400_000, "day", { getTodoById: () => undefined });
     expect(buckets).toHaveLength(7);
     expect(buckets[3]?.label).not.toContain("今");
     expect(buckets[3]?.start).toBe(getDayStartTimestamp(center));
+  });
+
+  it("年视图无数据时固定 12 个月桶", () => {
+    const yearStart = getDayStartTimestamp(new Date(2026, 0, 1).getTime());
+    const yearEnd = getDayStartTimestamp(new Date(2027, 0, 1).getTime());
+    const buckets = buildLedgerTrend([], yearStart, yearEnd, "year", { getTodoById: () => undefined });
+    expect(buckets).toHaveLength(12);
+    expect(buckets.map((b) => b.label)).toEqual([
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ]);
+    expect(buckets.every((b) => b.expense === 0 && b.income === 0)).toBe(true);
+  });
+
+  it("年视图按 todo.id 归入对应月份", () => {
+    const julyTodoTs = getDayStartTimestamp(new Date(2026, 6, 15).getTime()) + 3600_000;
+    const yearStart = getDayStartTimestamp(new Date(2026, 0, 1).getTime());
+    const yearEnd = getDayStartTimestamp(new Date(2027, 0, 1).getTime());
+    const buckets = buildLedgerTrend(
+      [entry({ id: 999_999, sourceTodoId: julyTodoTs, sourceActivityId: 1, amount: 42 })],
+      yearStart,
+      yearEnd,
+      "year",
+      todoLookup({ id: julyTodoTs }),
+    );
+    expect(buckets).toHaveLength(12);
+    expect(buckets.filter((b) => b.expense > 0)).toHaveLength(1);
+    expect(buckets.find((b) => b.label === "Jul")?.expense).toBe(42);
   });
 });
 
@@ -157,7 +208,7 @@ describe("buildLedgerTableRows", () => {
         entry({ id: 3, sourceTodoId: 102, sourceActivityId: 1, amount: 20, direction: "expense" }),
       ],
       tagName,
-      todoMap({ id: 100 }, { id: 101 }, { id: 102 }),
+      todoLookup({ id: 100 }, { id: 101 }, { id: 102 }),
       "time",
     );
     expect(rows.map((r) => r.direction)).toEqual(["income", "expense", "expense"]);
@@ -177,7 +228,7 @@ describe("aggregateLedger", () => {
       viewScale: "day",
       filterTagIds: [],
       filterStarredOnly: false,
-      getTodoById: todoMap({ id: dayStart }, { id: dayStart + 1000 }),
+      getTodoById: todoLookup({ id: dayStart }, { id: dayStart + 1000 }).getTodoById,
       getActivityTagIds: () => [],
       hasStarredTaskForActivity: () => false,
       getTagName: tagName,
@@ -185,16 +236,77 @@ describe("aggregateLedger", () => {
     expect(result.stats.entryCount).toBe(2);
     expect(result.stats.net).toBe(70);
   });
+
+  it("年视图汇总全年条目并分月趋势", () => {
+    const julyTodoTs = getDayStartTimestamp(new Date(2026, 6, 10).getTime()) + 5000;
+    const yearStart = getDayStartTimestamp(new Date(2026, 0, 1).getTime());
+    const yearEnd = getDayStartTimestamp(new Date(2027, 0, 1).getTime());
+    const result = aggregateLedger({
+      entries: [entry({ id: 10, sourceTodoId: julyTodoTs, sourceActivityId: 1, amount: 30, direction: "expense" })],
+      rangeStart: yearStart,
+      rangeEnd: yearEnd,
+      viewScale: "year",
+      filterTagIds: [],
+      filterStarredOnly: false,
+      getTodoById: todoLookup({ id: julyTodoTs }).getTodoById,
+      getActivityTagIds: () => [],
+      hasStarredTaskForActivity: () => false,
+      getTagName: tagName,
+    });
+    expect(result.stats.entryCount).toBe(1);
+    expect(result.stats.totalExpense).toBe(30);
+    expect(result.trend).toHaveLength(12);
+    expect(result.trend.find((b) => b.label === "Jul")?.expense).toBe(30);
+  });
 });
 
 describe("resolveLedgerPlannerTs", () => {
   it("云下载无 sourceTodoId 时经 activity_id 反查 todo", () => {
     const todoTs = dayStart + 3600_000;
-    const ts = resolveLedgerPlannerTs(
-      entry({ id: 1, sourceTodoId: 0, sourceActivityId: 42 }),
-      () => undefined,
-      () => ({ id: todoTs }),
-    );
+    const ts = resolveLedgerPlannerTs(entry({ id: 1, sourceTodoId: 0, sourceActivityId: 42 }), {
+      getTodoById: () => undefined,
+      getTodoByActivityId: () => ({ id: todoTs }),
+    });
     expect(ts).toBe(todoTs);
+  });
+
+  it("schedule 行按 activityDueRange[0] 归日", () => {
+    const dueTs = dayStart + 5 * 3_600_000;
+    const scheduleId = 88_001;
+    const ts = resolveLedgerPlannerTs(
+      entry({ id: 1, sourceTodoId: 0, sourceScheduleId: scheduleId, sourceActivityId: 50 }),
+      scheduleLookup([{ id: scheduleId, activityDueRange: [dueTs, "60"] }]),
+    );
+    expect(ts).toBe(dueTs);
+  });
+
+  it("云下载无 sourceScheduleId 时经 activity_id 反查 schedule", () => {
+    const dueTs = dayStart + 2 * 3_600_000;
+    const ts = resolveLedgerPlannerTs(entry({ id: 1, sourceTodoId: 0, sourceActivityId: 77 }), {
+      getTodoById: () => undefined,
+      getScheduleByActivityId: () => ({ id: 1, activityDueRange: [dueTs, "30"] }),
+    });
+    expect(ts).toBe(dueTs);
+  });
+});
+
+describe("filterLedgerEntries schedule", () => {
+  it("按 schedule activityDueRange 筛选", () => {
+    const dueTs = dayStart + 4 * 3_600_000;
+    const scheduleId = 55_001;
+    const filtered = filterLedgerEntries({
+      entries: [entry({ id: 1, sourceTodoId: 0, sourceScheduleId: scheduleId, sourceActivityId: 9 })],
+      rangeStart: dayStart,
+      rangeEnd: dayStart + 86_400_000,
+      viewScale: "day",
+      filterTagIds: [],
+      filterStarredOnly: false,
+      getTodoById: () => undefined,
+      getScheduleById: (id) => (id === scheduleId ? { id: scheduleId, activityDueRange: [dueTs, "0"] } : undefined),
+      getActivityTagIds: () => [],
+      hasStarredTaskForActivity: () => false,
+      getTagName: tagName,
+    });
+    expect(filtered).toHaveLength(1);
   });
 });

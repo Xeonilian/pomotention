@@ -8,6 +8,16 @@ export type LedgerTableSort = "time" | "tag";
 /** 与 todosForCurrentView 一致：todo.id 决定所属日 */
 export type LedgerTodoRef = { id: number; deleted?: boolean };
 
+/** 与 schedulesForCurrentView 一致：activityDueRange[0] 决定所属范围 */
+export type LedgerScheduleRef = { id: number; activityDueRange?: [number | null, string]; deleted?: boolean };
+
+export interface LedgerPlannerLookup {
+  getTodoById: (todoId: number) => LedgerTodoRef | undefined;
+  getTodoByActivityId?: (activityId: number) => LedgerTodoRef | undefined;
+  getScheduleById?: (scheduleId: number) => LedgerScheduleRef | undefined;
+  getScheduleByActivityId?: (activityId: number) => LedgerScheduleRef | undefined;
+}
+
 export interface LedgerQueryParams {
   entries: readonly LedgerEntry[];
   rangeStart: number;
@@ -17,6 +27,8 @@ export interface LedgerQueryParams {
   filterStarredOnly: boolean;
   getTodoById: (todoId: number) => LedgerTodoRef | undefined;
   getTodoByActivityId?: (activityId: number) => LedgerTodoRef | undefined;
+  getScheduleById?: (scheduleId: number) => LedgerScheduleRef | undefined;
+  getScheduleByActivityId?: (activityId: number) => LedgerScheduleRef | undefined;
   getActivityTagIds: (activityId: number) => number[] | undefined;
   hasStarredTaskForActivity: (activityId: number) => boolean;
   getTagName: (tagId: number) => string | undefined;
@@ -89,20 +101,47 @@ function incomeAmount(entry: LedgerEntry): number {
   return entry.direction === "income" ? entry.amount : 0;
 }
 
-/** activity 与 todo 1:1（todoByActivityId）；优先 sourceTodoId，否则按 sourceActivityId 查 todo */
-export function resolveLedgerPlannerTs(
-  entry: LedgerEntry,
-  getTodoById: (todoId: number) => LedgerTodoRef | undefined,
-  getTodoByActivityId?: (activityId: number) => LedgerTodoRef | undefined,
-): number | undefined {
-  const byTodoId = entry.sourceTodoId ? getTodoById(entry.sourceTodoId) : undefined;
-  const todo =
-    byTodoId && !byTodoId.deleted ? byTodoId : getTodoByActivityId?.(entry.sourceActivityId);
-  if (!todo || todo.deleted) return undefined;
-  return todo.id;
+function plannerLookup(params: LedgerQueryParams): LedgerPlannerLookup {
+  return {
+    getTodoById: params.getTodoById,
+    getTodoByActivityId: params.getTodoByActivityId,
+    getScheduleById: params.getScheduleById,
+    getScheduleByActivityId: params.getScheduleByActivityId,
+  };
 }
 
-/** 与 Planner 相同的 tag / 加星筛选；范围按 todo.id */
+function schedulePlannerTs(schedule: LedgerScheduleRef): number | undefined {
+  const due = schedule.activityDueRange?.[0];
+  return due != null ? due : undefined;
+}
+
+/** 优先 sourceTodoId / sourceScheduleId；云下载仅有 activity_id 时先 todo 后 schedule */
+export function resolveLedgerPlannerTs(entry: LedgerEntry, lookup: LedgerPlannerLookup): number | undefined {
+  if (entry.sourceScheduleId) {
+    const byId = lookup.getScheduleById?.(entry.sourceScheduleId);
+    const schedule = byId && !byId.deleted ? byId : lookup.getScheduleByActivityId?.(entry.sourceActivityId);
+    if (schedule && !schedule.deleted) {
+      const ts = schedulePlannerTs(schedule);
+      if (ts != null) return ts;
+    }
+  }
+
+  if (entry.sourceTodoId) {
+    const byTodoId = lookup.getTodoById(entry.sourceTodoId);
+    const todo = byTodoId && !byTodoId.deleted ? byTodoId : lookup.getTodoByActivityId?.(entry.sourceActivityId);
+    if (todo && !todo.deleted) return todo.id;
+  }
+
+  const todo = lookup.getTodoByActivityId?.(entry.sourceActivityId);
+  if (todo && !todo.deleted) return todo.id;
+
+  const schedule = lookup.getScheduleByActivityId?.(entry.sourceActivityId);
+  if (schedule && !schedule.deleted) return schedulePlannerTs(schedule);
+
+  return undefined;
+}
+
+/** 与 Planner 相同的 tag / 加星筛选；范围按 planner 时间戳 */
 export function filterLedgerEntries(params: LedgerQueryParams): LedgerEntry[] {
   const {
     entries,
@@ -110,15 +149,14 @@ export function filterLedgerEntries(params: LedgerQueryParams): LedgerEntry[] {
     rangeEnd,
     filterTagIds,
     filterStarredOnly,
-    getTodoById,
-    getTodoByActivityId,
     getActivityTagIds,
     hasStarredTaskForActivity,
   } = params;
+  const lookup = plannerLookup(params);
 
   return entries.filter((entry) => {
     if (entry.deleted) return false;
-    const plannerTs = resolveLedgerPlannerTs(entry, getTodoById, getTodoByActivityId);
+    const plannerTs = resolveLedgerPlannerTs(entry, lookup);
     if (plannerTs == null || plannerTs < rangeStart || plannerTs >= rangeEnd) return false;
     const activityId = entry.sourceActivityId;
     return matchesActivityFilter({
@@ -264,6 +302,21 @@ function buildTrendBuckets(rangeStart: number, rangeEnd: number, viewScale: Ledg
     return buckets;
   }
 
+  if (viewScale === "year") {
+    const year = new Date(rangeStart).getFullYear();
+    for (let m = 0; m < 12; m++) {
+      const start = new Date(year, m, 1).getTime();
+      buckets.push({
+        key: `m-${start}`,
+        label: formatYearMonthLabel(start),
+        start,
+        expense: 0,
+        income: 0,
+      });
+    }
+    return buckets;
+  }
+
   let cursor = getStartOfMonth(rangeStart);
   while (cursor < rangeEnd) {
     buckets.push({
@@ -323,12 +376,11 @@ export function buildLedgerTrend(
   rangeStart: number,
   rangeEnd: number,
   viewScale: LedgerViewScale,
-  getTodoById: (todoId: number) => LedgerTodoRef | undefined,
-  getTodoByActivityId?: (activityId: number) => LedgerTodoRef | undefined,
+  lookup: LedgerPlannerLookup,
 ): LedgerTrendBucket[] {
   const buckets = buildTrendBuckets(rangeStart, rangeEnd, viewScale);
   for (const entry of entries) {
-    const plannerTs = resolveLedgerPlannerTs(entry, getTodoById, getTodoByActivityId);
+    const plannerTs = resolveLedgerPlannerTs(entry, lookup);
     if (plannerTs == null) continue;
     const idx = findTrendBucketIndex(buckets, plannerTs, viewScale);
     if (idx < 0) continue;
@@ -341,13 +393,12 @@ export function buildLedgerTrend(
 export function buildLedgerTableRows(
   entries: readonly LedgerEntry[],
   getTagName: (id: number) => string | undefined,
-  getTodoById: (todoId: number) => LedgerTodoRef | undefined,
+  lookup: LedgerPlannerLookup,
   sort: LedgerTableSort,
-  getTodoByActivityId?: (activityId: number) => LedgerTodoRef | undefined,
 ): LedgerTableRow[] {
   const rows: LedgerTableRow[] = [];
   for (const entry of entries) {
-    const plannerTs = resolveLedgerPlannerTs(entry, getTodoById, getTodoByActivityId);
+    const plannerTs = resolveLedgerPlannerTs(entry, lookup);
     if (plannerTs == null) continue;
     rows.push({
       id: entry.id,
@@ -365,6 +416,7 @@ export function buildLedgerTableRows(
 
 export function aggregateLedger(params: LedgerQueryParams, tableSort: LedgerTableSort = "time"): LedgerAggregateResult {
   const filtered = filterLedgerEntries(params);
+  const lookup = plannerLookup(params);
   const trendRange = resolveTrendQueryRange(params.rangeStart, params.rangeEnd, params.viewScale);
   const trendEntries =
     params.viewScale === "day"
@@ -373,21 +425,8 @@ export function aggregateLedger(params: LedgerQueryParams, tableSort: LedgerTabl
   return {
     stats: buildLedgerStats(filtered),
     pie: buildLedgerPie(filtered, params.getTagName),
-    trend: buildLedgerTrend(
-      trendEntries,
-      params.rangeStart,
-      params.rangeEnd,
-      params.viewScale,
-      params.getTodoById,
-      params.getTodoByActivityId,
-    ),
-    tableRows: buildLedgerTableRows(
-      filtered,
-      params.getTagName,
-      params.getTodoById,
-      tableSort,
-      params.getTodoByActivityId,
-    ),
+    trend: buildLedgerTrend(trendEntries, params.rangeStart, params.rangeEnd, params.viewScale, lookup),
+    tableRows: buildLedgerTableRows(filtered, params.getTagName, lookup, tableSort),
   };
 }
 

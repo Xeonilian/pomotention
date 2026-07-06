@@ -453,6 +453,7 @@ async function handleLogoutConfirm() {
 async function handleLogoutCancel() {
   // 用户点击"不保留"，设置为不保留本地数据
   settingStore.settings.keepLocalDataAfterSignOut = false;
+  settingStore.settings.keepLocalDataOnNextSignOut = false;
   // 已登录时，退出前总是先执行一次完整同步；同步失败不阻断登出流程
   if (syncStore.isLoggedIn) {
     try {

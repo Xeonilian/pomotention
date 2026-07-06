@@ -90,6 +90,7 @@ describe("LedgerSyncService", () => {
       expect(local.categoryTagIds).toEqual([1]);
       expect(local.sourceActivityId).toBe(100);
       expect(local.sourceTodoId).toBe(0);
+      expect(local.sourceScheduleId).toBe(0);
       expect(local.synced).toBe(true);
       expect(local.deleted).toBe(false);
       expect(local.cloudModified).toBe(new Date("2026-07-01T00:00:00.000Z").getTime());

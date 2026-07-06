@@ -223,6 +223,7 @@
               @click.stop="startEditing(schedule.id, 'title')"
               :title="editingRowId === schedule.id && editingField === 'title' ? '' : '单击编辑'"
             >
+              <div class="title-cell-inner">
               <input
                 class="title-input"
                 v-if="editingRowId === schedule.id && editingField === 'title'"
@@ -259,7 +260,12 @@
                   <span style="display: inline-block; width: 1px; height: 1px; pointer-events: none"></span>
                 </template>
               </TagPickerPopover>
-              <span class="ellipsis" v-else>{{ schedule.activityTitle ?? "-" }}</span>
+              <span class="ellipsis" v-if="!(editingRowId === schedule.id && editingField === 'title')">{{ schedule.activityTitle ?? "-" }}</span>
+              <LedgerEntryPopover
+                v-if="ledgerEntriesForSchedule(schedule).length > 0"
+                :entries="ledgerEntriesForSchedule(schedule)"
+                @delete="(id) => handleLedgerDelete(schedule, id)"
+              />
 
               <!-- 云朵背景元素 - 只有当 isUntaetigkeit 为 true 时才显示 -->
               <template v-if="schedule.isUntaetigkeit === true">
@@ -270,6 +276,7 @@
                 <div class="cloud cloud-5"></div>
                 <div class="cloud cloud-6"></div>
               </template>
+              </div>
             </td>
 
             <!-- 6 地点 -->
@@ -354,6 +361,11 @@ import { storeToRefs } from "pinia";
 import { useActivityTagEditor } from "@/composables/activity/useActivityTagEditor";
 import TagPickerPopover from "../TagSystem/TagPickerPopover.vue";
 import { useDevice } from "@/composables/platform/useDevice";
+import LedgerEntryPopover from "@/components/Ledger/LedgerEntryPopover.vue";
+import type { LedgerEntry } from "@/core/types/LedgerEntry";
+import { getTitleTagPickerMode, replaceTagTriggerWithCategory } from "@/core/ledger/parseLedgerSegments";
+import { softDeleteLedgerEntryWithTitle } from "@/services/ledger/ledgerService";
+import { useTagStore } from "@/stores/useTagStore";
 
 const props = withDefaults(
   defineProps<{
@@ -365,8 +377,33 @@ const props = withDefaults(
 );
 
 const dataStore = useDataStore();
+const tagStore = useTagStore();
 const { isMobile } = useDevice();
-const { activeId, selectedRowId, selectedActivityId, selectedTaskId, selectedTask, schedulesForCurrentView } = storeToRefs(dataStore);
+const { activeId, selectedRowId, selectedActivityId, selectedTaskId, selectedTask, schedulesForCurrentView, ledgerList } = storeToRefs(dataStore);
+
+const ledgerEntriesByActivityId = computed(() => {
+  const map = new Map<number, LedgerEntry[]>();
+  for (const entry of ledgerList.value) {
+    if (entry.deleted) continue;
+    const list = map.get(entry.sourceActivityId) ?? [];
+    list.push(entry);
+    map.set(entry.sourceActivityId, list);
+  }
+  for (const list of map.values()) {
+    list.sort((a, b) => a.segmentIndex - b.segmentIndex);
+  }
+  return map;
+});
+
+function ledgerEntriesForSchedule(schedule: Schedule): LedgerEntry[] {
+  return ledgerEntriesByActivityId.value.get(schedule.activityId) ?? [];
+}
+
+function handleLedgerDelete(schedule: Schedule, entryId: number) {
+  const currentTitle = schedule.activityTitle ?? "";
+  const { title } = softDeleteLedgerEntryWithTitle(ledgerList.value, entryId, currentTitle);
+  emit("edit-schedule-title", schedule.id, title);
+}
 
 // 当前视图是否为今天（仅今天时已完成行才变灰）
 const dateService = dataStore.dateService;
@@ -774,12 +811,18 @@ function handleTagSelected(tagId: number) {
   const schedule = schedulesForCurrentView.value.find((s) => s.id === tagEditor.popoverTargetId.value);
   if (!schedule) return;
 
-  const cleanedTitle = tagEditor.clearTagTriggerText(editingValue.value);
-  editingValue.value = cleanedTitle;
-
-  // 通过 activityId 给 Activity 添加标签
-  dataStore.addTagToActivity(schedule.activityId, tagId);
-  tagEditor.closePopover();
+  if (getTitleTagPickerMode(editingValue.value) === "ledgerText") {
+    const name = tagStore.getTag(tagId)?.name ?? String(tagId);
+    editingValue.value = replaceTagTriggerWithCategory(editingValue.value, name);
+    tagEditor.closePopover();
+  } else {
+    const cleanedTitle = tagEditor.clearTagTriggerText(editingValue.value);
+    editingValue.value = cleanedTitle;
+    dataStore.addTagToActivity(schedule.activityId, tagId);
+    tagEditor.closePopover();
+  }
+  isPickingTagFromSelector.value = false;
+  nextTick(() => titleInputRef.value?.focus());
 }
 
 function handleTagCreate(tagName: string) {
@@ -787,12 +830,17 @@ function handleTagCreate(tagName: string) {
   const schedule = schedulesForCurrentView.value.find((s) => s.id === tagEditor.popoverTargetId.value);
   if (!schedule) return;
 
-  const cleanedTitle = tagEditor.clearTagTriggerText(editingValue.value);
-  editingValue.value = cleanedTitle;
-
-  // 通过 activityId 创建并添加标签到 Activity
-  dataStore.createAndAddTagToActivity(schedule.activityId, tagName);
-  tagEditor.closePopover();
+  if (getTitleTagPickerMode(editingValue.value) === "ledgerText") {
+    editingValue.value = replaceTagTriggerWithCategory(editingValue.value, tagName);
+    tagEditor.closePopover();
+  } else {
+    const cleanedTitle = tagEditor.clearTagTriggerText(editingValue.value);
+    editingValue.value = cleanedTitle;
+    dataStore.createAndAddTagToActivity(schedule.activityId, tagName);
+    tagEditor.closePopover();
+  }
+  isPickingTagFromSelector.value = false;
+  nextTick(() => titleInputRef.value?.focus());
 }
 
 function averageValue<T extends { value: number }>(records: T[] | null | undefined): number | string {
@@ -1076,6 +1124,22 @@ td.status-col {
 }
 
 /* 补充：让省略容器具备可计算宽度并允许收缩 */
+.title-cell-inner {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  width: 100%;
+}
+
+td.col-intent .title-cell-inner .ellipsis {
+  flex: 1 1 auto;
+  width: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .col-location .ellipsis,
 .col-intent .ellipsis {
   display: block; /* 或 inline-block */
