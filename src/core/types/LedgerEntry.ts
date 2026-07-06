@@ -12,8 +12,10 @@ export interface LedgerEntry {
   rawSegment: string;
   segmentIndex: number;
   sourceActivityId: number;
-  /** 记账所在 todo；聚合日期用对应 todo.id（与 Planner 列表一致） */
+  /** 记账所在 todo；聚合日期用对应 todo.id（与 Planner 列表一致）；无则 0 */
   sourceTodoId: number;
+  /** 记账所在 schedule；聚合日期用 activityDueRange[0]；无则 0；云表不存，下载后靠 activity 反查 */
+  sourceScheduleId?: number;
   lastModified: number; // 最后修改时间戳
   cloudModified?: number; // 云端修改时间戳
   synced: boolean;

@@ -42,8 +42,9 @@ export class LedgerSyncService extends BaseSyncService<LedgerEntry, CloudLedgerI
       rawSegment: cloud.raw_segment,
       segmentIndex: cloud.segment_index,
       sourceActivityId: cloud.activity_id,
-      // 云表不存 todo_id；与 activity 1:1，聚合时经 todoByActivityId 解析
+      // 云表不存 todo_id / schedule_id；与 activity 1:1，聚合时经 todoByActivityId / scheduleByActivityId 解析
       sourceTodoId: 0,
+      sourceScheduleId: 0,
       lastModified: Date.now(),
       cloudModified: cloudTimestamp,
       synced: true,

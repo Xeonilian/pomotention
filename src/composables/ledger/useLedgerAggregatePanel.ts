@@ -50,7 +50,7 @@ export function useLedgerAggregatePanel(tableSort: ComputedRef<LedgerTableSort>)
   const dataStore = useDataStore();
   const settingStore = useSettingStore();
   const tagStore = useTagStore();
-  const { ledgerList, filterTagIds, filterStarredOnly, todoById, todoByActivityId } = storeToRefs(dataStore);
+  const { ledgerList, filterTagIds, filterStarredOnly, todoById, todoByActivityId, scheduleById, scheduleByActivityId } = storeToRefs(dataStore);
 
   const viewScale = computed(() => settingStore.settings.viewSet as LedgerViewScale);
   const scaleLabel = computed(() => SCALE_LABEL[viewScale.value] ?? "日");
@@ -59,6 +59,7 @@ export function useLedgerAggregatePanel(tableSort: ComputedRef<LedgerTableSort>)
     const range = resolveVisibleRange(dataStore);
     const activityMap = toValue(dataStore.activityById);
     const todoMap = toValue(todoById);
+    const scheduleMap = toValue(scheduleById);
     return aggregateLedger(
       {
         entries: ledgerList.value ?? [],
@@ -69,6 +70,8 @@ export function useLedgerAggregatePanel(tableSort: ComputedRef<LedgerTableSort>)
         filterStarredOnly: filterStarredOnly.value,
         getTodoById: (todoId) => todoMap.get(todoId),
         getTodoByActivityId: (activityId) => todoByActivityId.value.get(activityId),
+        getScheduleById: (scheduleId) => scheduleMap.get(scheduleId),
+        getScheduleByActivityId: (activityId) => scheduleByActivityId.value.get(activityId),
         getActivityTagIds: (activityId) => activityMap.get(activityId)?.tagIds,
         hasStarredTaskForActivity: (id) => dataStore.hasStarredTaskForActivity(id),
         getTagName: (id) => tagStore.getTag(id)?.name,

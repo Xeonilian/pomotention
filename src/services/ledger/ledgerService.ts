@@ -9,9 +9,12 @@ import {
 
 export interface SyncLedgerFromTitleParams {
   activityId: number;
-  todoId: number;
   rawTitle: string;
   defaultCurrency: string;
+  /** todo 行保存时传入 */
+  todoId?: number;
+  /** schedule 行保存时传入 */
+  scheduleId?: number;
 }
 
 export interface SyncLedgerFromTitleResult {
@@ -89,7 +92,8 @@ export function syncLedgerFromTodoTitle(
         rawSegment: seg.rawSegment,
         segmentIndex: nextSegIdx++,
         sourceActivityId: params.activityId,
-        sourceTodoId: params.todoId,
+        sourceTodoId: params.todoId ?? 0,
+        sourceScheduleId: params.scheduleId ?? 0,
         deleted: false,
         synced: false,
         lastModified: now,

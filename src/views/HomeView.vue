@@ -1556,6 +1556,25 @@ const {
     );
     return normalizedTitle;
   },
+  onScheduleTitleSaved(scheduleId, rawTitle) {
+    const schedule = scheduleById.value.get(scheduleId);
+    if (!schedule) return rawTitle;
+    const activity = activityById.value.get(schedule.activityId);
+    if (!activity) return rawTitle;
+    const { normalizedTitle } = syncLedgerFromTodoTitle(
+      ledgerList.value,
+      {
+        activityId: schedule.activityId,
+        scheduleId: schedule.id,
+        rawTitle,
+        defaultCurrency: settingStore.settings.defaultCurrency,
+      },
+      {
+        resolveOrCreateTagByName: (name) => tagStore.addTag(name, "#2080f0", "rgba(206, 227, 252, 0.5)").id,
+      },
+    );
+    return normalizedTitle;
+  },
 });
 
 function plannerKeyboardEditField(field: "title" | "start" | "done" | "duration" | "location"): boolean {
