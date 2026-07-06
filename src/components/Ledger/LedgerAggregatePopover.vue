@@ -149,8 +149,8 @@ const modalStyle = computed(() =>
         width: "100vw",
         maxWidth: "100vw",
         margin: "0",
-        height: "calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))",
-        maxHeight: "calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))",
+        height: "calc(100dvh - env(safe-area-inset-top, 0px))",
+        maxHeight: "calc(100dvh - env(safe-area-inset-top, 0px))",
         display: "flex",
         flexDirection: "column",
       }
@@ -165,7 +165,7 @@ const modalContentStyle = computed(() =>
         overflow: "auto",
         overscrollBehavior: "contain",
         backgroundColor: "var(--n-color-modal)",
-        paddingBottom: "max(12px, env(safe-area-inset-bottom, 0px))",
+        paddingBottom: "12px",
       }
     : { maxHeight: "min(90vh, 840px)", overflow: "hidden" },
 );
@@ -445,8 +445,8 @@ ul.ledger-guide__body {
     margin-right: 0 !important;
     width: 100vw !important;
     max-width: 100vw !important;
-    height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) !important;
-    max-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) !important;
+    height: calc(100dvh - env(safe-area-inset-top, 0px)) !important;
+    max-height: calc(100dvh - env(safe-area-inset-top, 0px)) !important;
     display: flex !important;
     flex-direction: column !important;
     background-color: var(--n-color-modal) !important;
