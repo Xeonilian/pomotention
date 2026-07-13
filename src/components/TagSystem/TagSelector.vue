@@ -46,6 +46,8 @@ const props = withDefaults(
     allowCreate: boolean;
     /** 由父级包一层 overflow（如 Home 内置搜索），避免滚动条与顶部 input 宽度不一致 */
     embedInScrollParent?: boolean;
+    /** 可选：覆盖默认 activity 频次排序（如 ledger 分类） */
+    rankTags?: (tags: TagWithCount[]) => TagWithCount[];
   }>(),
   { embedInScrollParent: false },
 );
@@ -84,11 +86,13 @@ const filteredTags = computed<TagWithCount[]>(() => {
 
   if (!searchTerm || searchTerm === "#" || searchTerm === "@") {
     const all = [...tagStore.allTags];
-    return all.sort((a, b) => sortByUsageAndCount(a, b, false));
+    const sorted = all.sort((a, b) => sortByUsageAndCount(a, b, false));
+    return props.rankTags ? props.rankTags(sorted) : sorted;
   }
 
   const found = [...tagStore.findByName(props.searchTerm)];
-  return found.sort((a, b) => sortByUsageAndCount(a, b, true));
+  const sorted = found.sort((a, b) => sortByUsageAndCount(a, b, true));
+  return props.rankTags ? props.rankTags(sorted) : sorted;
 });
 
 const tagExists = computed(() => {

@@ -65,6 +65,11 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
     return "timestamp_id"; // 子类可以重写
   }
 
+  /** 子类可重写：是否参与上传（如 ledger 独立行暂不同步） */
+  protected isUploadable(_item: TLocal): boolean {
+    return true;
+  }
+
   /**
    * 安排一次延迟上传（用于本地编辑后的轻量自动同步）
    * 会在一段时间内合并多次修改，最终只触发一次 upload
@@ -115,7 +120,7 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
       const list = this.getListArray();
       if (!list.length) return { success: true, uploaded: 0 }; // 防御性编程（空数组也直接返回）
       // 获取未同步的数据
-      const unsyncedItems = list.filter((item) => !item.synced);
+      const unsyncedItems = list.filter((item) => !item.synced && this.isUploadable(item));
 
       // console.log(`📤 [${this.tableName}] 准备上传 ${unsyncedItems.length} 条`);
 

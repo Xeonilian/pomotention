@@ -46,6 +46,22 @@ describe("parseLedgerFromTitle v1", () => {
     expect(r.ok[0].amount).toBe(15);
   });
 
+  it("% 结尾符（手机键盘友好）", () => {
+    const r = parseLedgerFromTitle("午饭 -25#lunch%");
+    expect(r.ok).toHaveLength(1);
+    expect(r.ok[0]).toMatchObject({ amount: 25, direction: "expense", categoryTagNames: ["lunch"] });
+  });
+
+  it("半角 ¥ 与全角 ￥ 均可结束", () => {
+    expect(parseLedgerFromTitle("咖啡 -15¥").ok[0]?.amount).toBe(15);
+    expect(parseLedgerFromTitle("咖啡 -15￥").ok[0]?.amount).toBe(15);
+  });
+
+  it("全角 ＄ ％ 结尾符", () => {
+    expect(parseLedgerFromTitle("咖啡 -15＄").ok[0]?.amount).toBe(15);
+    expect(parseLedgerFromTitle("咖啡 -15％").ok[0]?.amount).toBe(15);
+  });
+
   it("行首无空格也可触发", () => {
     const r = parseLedgerFromTitle("-10 早餐￥");
     expect(r.ok).toHaveLength(1);
@@ -106,6 +122,7 @@ describe("getTitleTagPickerMode", () => {
 
   it("￥ 之后为 activity", () => {
     expect(getTitleTagPickerMode("买菜 -30￥ #urg")).toBe("activity");
+    expect(getTitleTagPickerMode("买菜 -30% #urg")).toBe("activity");
   });
 
   it("段外为 activity", () => {

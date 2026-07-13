@@ -35,7 +35,7 @@ Pomotention **不做**专业记账 App。目标：把日常消费等行为从 To
 | localStorage `ledgerEntries` | **已实现** |
 | Gift 只读 + **删** 条目 | **已实现** |
 | 聚合展示（LedgerAggregatePopover） | **已实现** |
-| **改** 条目 | **不做**（删 + title 重录） |
+| **改** 条目 | **v3** — 统计明细 CRUD；见 §11 |
 | Supabase 同步 | **v2 进行中** — 见 §10 |
 
 ---
@@ -164,7 +164,7 @@ UI 按 **`todo.activityId`** 取 [`getActiveLedgerEntriesForActivity`](../../../
 3. 重写汇总括号
 4. 对不上（用户改过 title、memo 也找不到）→ **静默**，只更新括号
 
-**改** 条目：**不做** — 录错则 Gift 删 + title 重录。
+**改** 条目：**v3 做** — 统计明细 CRUD + 最小 title 括号同步；见 §11。
 
 ### 6.3 Activity 级联
 
@@ -198,6 +198,7 @@ UI 按 **`todo.activityId`** 取 [`getActiveLedgerEntriesForActivity`](../../../
 |----|------|
 | **v1** | 语法/回写/tag/删条/聚合展示 · localStorage — **已完成（本地）** |
 | **v2** | Supabase `ledger_entries` + LedgerSyncService — **进行中** |
+| **v3** | 统计明细 CRUD（Aggregate 编辑） — **进行中** — 见 §11 |
 | **data** | IndexedDB 大迁移 |
 | **可选** | beancount/hledger 导出 |
 
@@ -250,6 +251,32 @@ UI 按 **`todo.activityId`** 取 [`getActiveLedgerEntriesForActivity`](../../../
 
 ---
 
+## 11. v3 统计明细编辑
+
+### 11.1 目标
+
+用户反馈 title 内 `#` 分类太麻烦 → 在 [`LedgerAggregatePopover`](../../../src/components/Ledger/LedgerAggregatePopover.vue) 明细表 **改 / 删 / 追加**；分类点格子弹 TagSelector。
+
+### 11.2 写入
+
+| 来源 | 识别 | 日期 |
+|------|------|------|
+| title 入账 | 真实 `sourceActivityId` | `resolveLedgerPlannerTs` |
+| 统计追加 | `ledger-stub:<日初>` Activity（`id=日初`，`status=done`，无 Todo） | `activityId` 即日初 |
+
+改/删 title 来源行：**最小 title 同步** — 重写汇总括号；删复用 `softDeleteLedgerEntryWithTitle`。
+
+统计追加：`rawSegment=ledger-stub`（占位，非 title 片段）；删至最后一笔软删 stub Activity。legacy `sourceActivityId=0` 仍本地识别，不上传。
+
+### 11.3 UI
+
+- 明细表常开编辑：行首删；末行 `appDate | +`；分类 TagPickerPopover；金额/备注 inline
+- 表头排序（日期/分类/金额）；`?` 帮助行
+- 趋势图日/周视图点击切 appDate
+- TagSelector 可选 `rankTags`：按 ledger `categoryTagIds` 频次
+
+---
+
 ## 9. 历史
 
 - **PR #119**：`￥…￥` 成对块语法 — **已由 §4 替代**
@@ -265,3 +292,4 @@ UI 按 **`todo.activityId`** 取 [`getActiveLedgerEntriesForActivity`](../../../
 | 2026-06-25 | 初稿 |
 | 2026-06-25 | 对齐实现：` -/+` 语法、汇总括号、`categoryTagIds[]`、`sourceActivityId`、方案 A |
 | 2026-07-03 | §2/§8 状态更新；改条标不做；新增 §10 v2 云同步 |
+| 2026-07-13 | §11 v3 统计明细 CRUD + ledger-stub 日桶云同步 |

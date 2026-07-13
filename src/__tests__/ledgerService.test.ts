@@ -1,11 +1,16 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import type { Activity } from "@/core/types/Activity";
 import type { LedgerEntry } from "@/core/types/LedgerEntry";
+import { buildLedgerStubTitle } from "@/core/ledger/ledgerDayStub";
 import {
   syncLedgerFromTodoTitle,
   getActiveLedgerEntriesForActivity,
   softDeleteLedgerEntryWithTitle,
   removeRawSegmentFromTitle,
   removeMemoFromDiaryText,
+  createStandaloneLedgerEntry,
+  updateLedgerEntry,
+  deleteLedgerEntryFromAggregate,
 } from "@/services/ledger/ledgerService";
 
 describe("syncLedgerFromTodoTitle v1", () => {
@@ -167,6 +172,115 @@ describe("softDeleteLedgerEntryWithTitle", () => {
     ];
     const { title } = softDeleteLedgerEntryWithTitle(ledgerList, 1, "用户改过的标题");
     expect(title).toBe("用户改过的标题");
+  });
+});
+
+describe("ledger v3 aggregate CRUD", () => {
+  let ledgerList: LedgerEntry[];
+  let activityList: Activity[];
+
+  beforeEach(() => {
+    ledgerList = [];
+    activityList = [];
+  });
+
+  it("createStandaloneLedgerEntry 创建日桶 stub 并挂账", () => {
+    const dayStart = new Date(2026, 6, 13, 0, 0, 0, 0).getTime();
+    const entry = createStandaloneLedgerEntry(ledgerList, activityList, {
+      appDateTimestamp: dayStart + 3600_000,
+      defaultCurrency: "CNY",
+      amount: 20,
+      memo: "咖啡",
+    });
+    expect(entry.sourceActivityId).toBe(dayStart);
+    expect(entry.sourceTodoId).toBe(dayStart);
+    expect(entry.rawSegment).toBe("ledger-stub");
+    expect(ledgerList).toHaveLength(1);
+    expect(activityList).toHaveLength(1);
+    expect(activityList[0]).toMatchObject({
+      id: dayStart,
+      title: buildLedgerStubTitle(dayStart),
+      class: "T",
+      status: "done",
+      deleted: false,
+    });
+  });
+
+  it("同日多笔共用同一 stub activityId", () => {
+    const dayStart = new Date(2026, 6, 13, 0, 0, 0, 0).getTime();
+    createStandaloneLedgerEntry(ledgerList, activityList, {
+      appDateTimestamp: dayStart,
+      defaultCurrency: "CNY",
+      amount: 10,
+    });
+    createStandaloneLedgerEntry(ledgerList, activityList, {
+      appDateTimestamp: dayStart,
+      defaultCurrency: "CNY",
+      amount: 20,
+    });
+    expect(activityList).toHaveLength(1);
+    expect(ledgerList.map((e) => e.sourceActivityId)).toEqual([dayStart, dayStart]);
+    expect(ledgerList.map((e) => e.segmentIndex)).toEqual([0, 1]);
+  });
+
+  it("updateLedgerEntry 重写 title 括号", () => {
+    ledgerList.push({
+      id: 1,
+      amount: 30,
+      direction: "expense",
+      currency: "CNY",
+      memo: "西瓜",
+      rawSegment: "-30 西瓜",
+      segmentIndex: 0,
+      sourceActivityId: 100,
+      sourceTodoId: 1000,
+      deleted: false,
+      synced: false,
+      lastModified: 0,
+    });
+    const result = updateLedgerEntry(ledgerList, 1, { amount: 40 }, "买菜 西瓜（-30）");
+    expect(result.updated).toBe(true);
+    expect(result.title).toBe("买菜 西瓜（-40）");
+    expect(ledgerList[0].amount).toBe(40);
+  });
+
+  it("deleteLedgerEntryFromAggregate 独立行删最后一笔时收 stub", () => {
+    const dayStart = new Date(2026, 6, 13, 0, 0, 0, 0).getTime();
+    createStandaloneLedgerEntry(ledgerList, activityList, {
+      appDateTimestamp: dayStart,
+      defaultCurrency: "CNY",
+      amount: 10,
+    });
+    const entryId = ledgerList[0]!.id;
+    const getActivity = (id: number) => activityList.find((a) => a.id === id);
+    const result = deleteLedgerEntryFromAggregate(ledgerList, entryId, undefined, {
+      activityList,
+      getActivity,
+    });
+    expect(result.updated).toBe(true);
+    expect(result.title).toBeUndefined();
+    expect(ledgerList[0].deleted).toBe(true);
+    expect(activityList[0].deleted).toBe(true);
+  });
+
+  it("deleteLedgerEntryFromAggregate legacy sourceActivityId=0 仍仅软删", () => {
+    ledgerList.push({
+      id: 9,
+      amount: 10,
+      direction: "expense",
+      currency: "CNY",
+      rawSegment: "-10￥",
+      segmentIndex: 0,
+      sourceActivityId: 0,
+      sourceTodoId: 1_700_000_000_000,
+      deleted: false,
+      synced: false,
+      lastModified: 0,
+    });
+    const result = deleteLedgerEntryFromAggregate(ledgerList, 9);
+    expect(result.updated).toBe(true);
+    expect(result.title).toBeUndefined();
+    expect(ledgerList[0].deleted).toBe(true);
   });
 });
 

@@ -72,6 +72,7 @@ export function useLedgerAggregatePanel(tableSort: ComputedRef<LedgerTableSort>)
         getTodoByActivityId: (activityId) => todoByActivityId.value.get(activityId),
         getScheduleById: (scheduleId) => scheduleMap.get(scheduleId),
         getScheduleByActivityId: (activityId) => scheduleByActivityId.value.get(activityId),
+        getActivity: (activityId) => activityMap.get(activityId),
         getActivityTagIds: (activityId) => activityMap.get(activityId)?.tagIds,
         hasStarredTaskForActivity: (id) => dataStore.hasStarredTaskForActivity(id),
         getTagName: (id) => tagStore.getTag(id)?.name,

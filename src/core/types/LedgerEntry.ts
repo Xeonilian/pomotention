@@ -9,7 +9,8 @@ export interface LedgerEntry {
   currency: string;
   memo?: string;
   categoryTagIds?: number[];
-  rawSegment: string;
+  /** title 解析片段；统计追加为 `ledger-stub` 占位 */
+  rawSegment?: string;
   segmentIndex: number;
   sourceActivityId: number;
   /** 记账所在 todo；聚合日期用对应 todo.id（与 Planner 列表一致）；无则 0 */
@@ -45,3 +46,6 @@ export interface ParseLedgerResult {
 }
 
 export const DEFAULT_LEDGER_CURRENCY = "CNY";
+
+/** @deprecated legacy 本地独立行；新数据用 ledger-stub 日桶 Activity id */
+export const STANDALONE_LEDGER_ACTIVITY_ID = 0;

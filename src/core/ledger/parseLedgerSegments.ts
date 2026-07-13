@@ -5,10 +5,19 @@ const AMOUNT_RE = /^(\d+(?:\.\d{1,2})?)/;
 const CATEGORY_TAG_RE = /#([\p{L}\p{N}_]+)/gu;
 const LEGACY_SUMMARY_SUFFIX_RE = /（账：[^）]*）\s*$/u;
 
+/** 记账段结尾符：半角/全角 ￥¥ $ ＄ % ％（% 便于手机键盘） */
+const LEDGER_END_MARKER_RE = /[￥¥$＄%％]/u;
+const LEDGER_END_MARKER_CLASS = "[￥¥$＄%％]";
+
+function isLedgerEndMarker(ch: string): boolean {
+  return LEDGER_END_MARKER_RE.test(ch);
+}
+
 /** v1 汇总括号，如 （-55 +1000） */
 export const LEDGER_SUMMARY_SUFFIX_RE = /（(?:[-+]\d+(?:\s+[-+]\d+)*)）\s*$/u;
 
-const LEDGER_AMOUNT_TRIGGER_RE = /(?:^| )[+-](\d+(?:\.\d{1,2})?)(?=\s|#|;|；|￥|\$|$)/;
+const LEDGER_AMOUNT_BOUNDARY = `(?=\\s|#|;|；|${LEDGER_END_MARKER_CLASS}|$)`;
+const LEDGER_AMOUNT_TRIGGER_RE = new RegExp(String.raw`(?:^| )[+-](\d+(?:\.\d{1,2})?)${LEDGER_AMOUNT_BOUNDARY}`, "u");
 
 export interface ParseLedgerFromTitleResult extends ParseLedgerResult {
   /** 日记正文（不含汇总括号） */
@@ -27,12 +36,16 @@ type SegmentParseOutcome =
 
 /** 剥括号后紧挨的 -/+金额前补空格，避免「礼物（+300）-200￥」剥括号后无法触发 */
 function normalizeLedgerTriggerSpacing(text: string): string {
-  return text.replace(/([^\s])([+-])(\d+(?:\.\d{1,2})?)(?=\s|#|;|；|￥|\$|$)/g, "$1 $2$3");
+  return text.replace(
+    new RegExp(String.raw`([^\s])([+-])(\d+(?:\.\d{1,2})?)${LEDGER_AMOUNT_BOUNDARY}`, "gu"),
+    "$1 $2$3",
+  );
 }
 
 export function stripLedgerSummarySuffix(title: string): string {
   return normalizeLedgerTriggerSpacing(
     title
+      .normalize("NFC")
       .replace(/（(?:[-+]\d+(?:\s+[-+]\d+)*)）/gu, "")
       .replace(LEGACY_SUMMARY_SUFFIX_RE, "")
       .replace(/[ \t]+/g, " ")
@@ -73,8 +86,8 @@ export type TitleTagPickerMode = "activity" | "ledgerText";
 
 /**
  * `#` 选 tag 时的模式：
- * - ledgerText：在记账段内（触发符～结尾符 ￥/$ 之间）→ 选中后以 `#name` 插入 title，不入 activity
- * - activity：段外或 ￥/$ 之后 → Activity TagPicker
+ * - ledgerText：在记账段内（触发符～结尾符 ￥/¥/$/% 等之间）→ 选中后以 `#name` 插入 title，不入 activity
+ * - activity：段外或结尾符之后 → Activity TagPicker
  */
 export function getTitleTagPickerMode(text: string, cursorIndex: number = text.length): TitleTagPickerMode {
   const stripped = stripLedgerSummarySuffix(text);
@@ -86,7 +99,7 @@ export function getTitleTagPickerMode(text: string, cursorIndex: number = text.l
   let markerOffset = -1;
   for (let i = 0; i < tail.length; i++) {
     const ch = tail[i]!;
-    if (ch === "￥" || ch === "$") {
+    if (isLedgerEndMarker(ch)) {
       markerOffset = i;
       break;
     }
@@ -123,7 +136,7 @@ function findLedgerRegion(strippedTitle: string): LedgerRegion | null {
   let endInFrom = -1;
   for (let i = 0; i < fromTrigger.length; i++) {
     const ch = fromTrigger[i]!;
-    if (ch === "￥" || ch === "$") {
+    if (isLedgerEndMarker(ch)) {
       endInFrom = i;
       break;
     }
@@ -261,7 +274,7 @@ function buildDiaryText(prefix: string, segments: ParsedLedgerSegment[], tail: s
 }
 
 /**
- * v1：行首或空格后 -/+ 数字触发；￥ 或 $ 结束记账段；无结尾符不解析。
+ * v1：行首或空格后 -/+ 数字触发；￥/¥/$/% 等结尾符结束记账段；无结尾符不解析。
  */
 export function parseLedgerFromTitle(title: string, defaultCurrency: string = DEFAULT_LEDGER_CURRENCY): ParseLedgerFromTitleResult {
   const stripped = stripLedgerSummarySuffix(title);
