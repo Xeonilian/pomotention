@@ -638,10 +638,10 @@ watch(
 
 .ledger-aggregate-table__tag-btn {
   display: block;
-  width: calc(100% + 16px);
+  width: calc(100% + 12px);
   min-height: 1.5em;
-  margin: -5px -8px;
-  padding: 5px 8px;
+  margin: -5px -6px;
+  padding: 5px 6px;
   box-sizing: border-box;
   border: none;
   background: transparent;
@@ -694,7 +694,7 @@ watch(
 
 .ledger-aggregate-table th,
 .ledger-aggregate-table td {
-  padding: 5px 8px;
+  padding: 5px 6px;
   text-align: left;
   border-bottom: 1px solid var(--n-border-color);
   vertical-align: middle;
@@ -894,6 +894,15 @@ watch(
     flex: 1;
     min-height: 160px;
     background-color: var(--n-color-modal);
+  }
+
+  /* 明细表：压缩金额列，分类限宽，备注吃剩余 */
+  .ledger-aggregate-modal .ledger-aggregate-table col.ledger-aggregate-table__col-amount {
+    width: 4rem;
+  }
+
+  .ledger-aggregate-modal .ledger-aggregate-table col:nth-child(3) {
+    width: 24%;
   }
 }
 
