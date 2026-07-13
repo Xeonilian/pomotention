@@ -1,5 +1,13 @@
 <template>
-  <div ref="chartRef" class="ledger-mini-chart" :class="{ 'ledger-mini-chart--fill': fill }" :style="chartStyle"></div>
+  <div
+    ref="chartRef"
+    class="ledger-mini-chart"
+    :class="{
+      'ledger-mini-chart--fill': fill,
+      'ledger-mini-chart--trend-clickable': kind === 'trend' && trendDayClickable,
+    }"
+    :style="chartStyle"
+  ></div>
 </template>
 
 <script setup lang="ts">
@@ -18,6 +26,7 @@ const props = withDefaults(
     kind: "pie" | "trend";
     pieSlices?: LedgerPieSlice[];
     trendBuckets?: LedgerTrendBucket[];
+    trendDayClickable?: boolean;
     emptyLabel?: string;
     height?: number;
     fill?: boolean;
@@ -25,11 +34,16 @@ const props = withDefaults(
   {
     pieSlices: () => [],
     trendBuckets: () => [],
+    trendDayClickable: false,
     emptyLabel: "暂无数据",
     height: 200,
     fill: false,
   },
 );
+
+const emit = defineEmits<{
+  trendDayClick: [dayStart: number];
+}>();
 
 const chartStyle = computed(() => (props.fill ? { height: "100%", minHeight: "160px" } : { height: `${props.height}px` }));
 
@@ -104,6 +118,7 @@ function buildTrendOption(): EChartsOption {
     xAxis: {
       type: "category",
       data: buckets.map((b) => b.label),
+      triggerEvent: props.trendDayClickable,
       axisLabel: {
         fontSize: 10,
         interval: 0,
@@ -137,10 +152,26 @@ function buildTrendOption(): EChartsOption {
   };
 }
 
+function bindTrendClick() {
+  const chart = chartInstance.value;
+  if (!chart) return;
+  chart.off("click");
+  if (props.kind !== "trend" || !props.trendDayClickable) return;
+  chart.on("click", (params: unknown) => {
+    const p = params as { componentType?: string; dataIndex?: number };
+    if (p.componentType !== "series" && p.componentType !== "xAxis") return;
+    if (typeof p.dataIndex !== "number") return;
+    const bucket = props.trendBuckets[p.dataIndex];
+    if (!bucket) return;
+    emit("trendDayClick", bucket.start);
+  });
+}
+
 function render() {
   if (!chartInstance.value) return;
   const option = props.kind === "pie" ? buildPieOption() : buildTrendOption();
   chartInstance.value.setOption(option, true);
+  bindTrendClick();
 }
 
 function resize() {
@@ -157,16 +188,27 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener("resize", resize);
+  chartInstance.value?.off("click");
   chartInstance.value?.dispose();
 });
 
+function pieSlicesKey(slices: LedgerPieSlice[]): string {
+  return slices.map((s) => `${s.name}\0${s.value}`).join("\n");
+}
+
+function trendBucketsKey(buckets: LedgerTrendBucket[]): string {
+  return buckets.map((b) => `${b.key}\0${b.expense}\0${b.income}`).join("\n");
+}
+
 watch(
-  () => [props.kind, props.pieSlices, props.trendBuckets, props.emptyLabel, props.fill, props.height],
+  () =>
+    props.kind === "pie"
+      ? [props.kind, pieSlicesKey(props.pieSlices), props.emptyLabel, props.fill, props.height]
+      : [props.kind, trendBucketsKey(props.trendBuckets), props.trendDayClickable, props.fill, props.height],
   () => {
     render();
     resize();
   },
-  { deep: true },
 );
 </script>
 
@@ -179,5 +221,9 @@ watch(
 .ledger-mini-chart--fill {
   flex: 1;
   min-height: 0;
+}
+
+.ledger-mini-chart--trend-clickable {
+  cursor: pointer;
 }
 </style>
