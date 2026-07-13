@@ -280,13 +280,14 @@ describe("resolveLedgerPlannerTs", () => {
     expect(ts).toBe(dueTs);
   });
 
-  it("云下载无 sourceScheduleId 时经 activity_id 反查 schedule", () => {
-    const dueTs = dayStart + 2 * 3_600_000;
-    const ts = resolveLedgerPlannerTs(entry({ id: 1, sourceTodoId: 0, sourceActivityId: 77 }), {
+  it("ledger-stub 日桶无 todo 时用 activityId 日初", () => {
+    const dayStart = new Date(2026, 6, 13, 0, 0, 0, 0).getTime();
+    const ts = resolveLedgerPlannerTs(entry({ id: 1, sourceTodoId: dayStart, sourceActivityId: dayStart }), {
       getTodoById: () => undefined,
-      getScheduleByActivityId: () => ({ id: 1, activityDueRange: [dueTs, "30"] }),
+      getTodoByActivityId: () => undefined,
+      getActivity: () => ({ id: dayStart, title: `ledger-stub:${dayStart}` }),
     });
-    expect(ts).toBe(dueTs);
+    expect(ts).toBe(dayStart);
   });
 });
 

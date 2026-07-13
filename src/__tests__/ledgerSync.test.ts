@@ -66,6 +66,12 @@ describe("LedgerSyncService", () => {
       expect(cloud.activity_id).toBe(100);
       expect(cloud.deleted).toBe(false);
     });
+
+    it("无 rawSegment 时上传空串", () => {
+      const entry = createMockLedgerEntry({ rawSegment: undefined });
+      const cloud = service["mapLocalToCloud"](entry, "user-abc");
+      expect(cloud.raw_segment).toBe("");
+    });
   });
 
   describe("mapCloudToLocal", () => {
