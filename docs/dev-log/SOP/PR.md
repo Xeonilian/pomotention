@@ -165,12 +165,13 @@ pnpm new:pr
 ## 5. 合并 PR
 
 1.  **审查与自检:** 在 GitHub PR 页面进行 Code Review。
-2.  **合并命令:**
+2.  **合并命令（必须 squash）:**
     ```bash
-    # 格式: gh pr merge <PR_number> --squash --delete-branch
-    # 示例:
-    gh pr merge 123 --squash --delete-branch
+    gh pr merge <PR_number> --squash --delete-branch
     ```
+    **禁止** 默认 `--merge`（多 commit 进 main），除非当次明确约定保留历史。
+3.  **收工结尾（必须）:** 合并后重建 **本地 + 远端** `dev`（与 `main` 同提交）。Agent 见 [`.cursor/rules/pr-merge.mdc`](../../.cursor/rules/pr-merge.mdc) 与 skill `dev-branch`；人类可照抄该规则里的命令块。
+4.  **文档:** 更新 `current.md`「停在哪」或收关模板。
 
 ---
 
