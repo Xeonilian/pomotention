@@ -1,9 +1,11 @@
 import type { LedgerDirection, LedgerEntry } from "@/core/types/LedgerEntry";
+import { STANDALONE_LEDGER_ACTIVITY_ID } from "@/core/types/LedgerEntry";
+import { isLedgerDayStubActivity, isStandaloneLedgerEntry } from "@/core/ledger/ledgerDayStub";
 import { matchesActivityFilter } from "@/composables/filter/useActivityFilter";
 import { addDays, getDayStartTimestamp } from "@/core/utils";
 
 export type LedgerViewScale = "day" | "week" | "month" | "year";
-export type LedgerTableSort = "time" | "tag";
+export type LedgerTableSort = "time" | "tag" | "amount";
 
 /** 与 todosForCurrentView 一致：todo.id 决定所属日 */
 export type LedgerTodoRef = { id: number; deleted?: boolean };
@@ -16,6 +18,7 @@ export interface LedgerPlannerLookup {
   getTodoByActivityId?: (activityId: number) => LedgerTodoRef | undefined;
   getScheduleById?: (scheduleId: number) => LedgerScheduleRef | undefined;
   getScheduleByActivityId?: (activityId: number) => LedgerScheduleRef | undefined;
+  getActivity?: (activityId: number) => { id: number; title: string } | undefined;
 }
 
 export interface LedgerQueryParams {
@@ -29,6 +32,7 @@ export interface LedgerQueryParams {
   getTodoByActivityId?: (activityId: number) => LedgerTodoRef | undefined;
   getScheduleById?: (scheduleId: number) => LedgerScheduleRef | undefined;
   getScheduleByActivityId?: (activityId: number) => LedgerScheduleRef | undefined;
+  getActivity?: (activityId: number) => { id: number; title: string } | undefined;
   getActivityTagIds: (activityId: number) => number[] | undefined;
   hasStarredTaskForActivity: (activityId: number) => boolean;
   getTagName: (tagId: number) => string | undefined;
@@ -61,7 +65,9 @@ export interface LedgerTableRow {
   amount: number;
   memo?: string;
   categoryLabels: string[];
+  categoryTagIds?: number[];
   sortTagLabel: string;
+  sourceActivityId: number;
 }
 
 export interface LedgerAggregateResult {
@@ -107,6 +113,7 @@ function plannerLookup(params: LedgerQueryParams): LedgerPlannerLookup {
     getTodoByActivityId: params.getTodoByActivityId,
     getScheduleById: params.getScheduleById,
     getScheduleByActivityId: params.getScheduleByActivityId,
+    getActivity: params.getActivity,
   };
 }
 
@@ -115,8 +122,12 @@ function schedulePlannerTs(schedule: LedgerScheduleRef): number | undefined {
   return due != null ? due : undefined;
 }
 
-/** 优先 sourceTodoId / sourceScheduleId；云下载仅有 activity_id 时先 todo 后 schedule */
+/** 优先 sourceTodoId / sourceScheduleId；独立行 legacy=0 或 ledger-stub 日桶 */
 export function resolveLedgerPlannerTs(entry: LedgerEntry, lookup: LedgerPlannerLookup): number | undefined {
+  if (entry.sourceActivityId === STANDALONE_LEDGER_ACTIVITY_ID && entry.sourceTodoId > 0) {
+    return getDayStartTimestamp(entry.sourceTodoId);
+  }
+
   if (entry.sourceScheduleId) {
     const byId = lookup.getScheduleById?.(entry.sourceScheduleId);
     const schedule = byId && !byId.deleted ? byId : lookup.getScheduleByActivityId?.(entry.sourceActivityId);
@@ -138,7 +149,35 @@ export function resolveLedgerPlannerTs(entry: LedgerEntry, lookup: LedgerPlanner
   const schedule = lookup.getScheduleByActivityId?.(entry.sourceActivityId);
   if (schedule && !schedule.deleted) return schedulePlannerTs(schedule);
 
+  const activity = lookup.getActivity?.(entry.sourceActivityId);
+  if (activity && isLedgerDayStubActivity(activity)) {
+    return getDayStartTimestamp(entry.sourceActivityId);
+  }
+
   return undefined;
+}
+
+function matchesLedgerEntryFilter(
+  entry: LedgerEntry,
+  filterTagIds: readonly number[],
+  filterStarredOnly: boolean,
+  getActivityTagIds: (activityId: number) => number[] | undefined,
+  hasStarredTaskForActivity: (activityId: number) => boolean,
+  getActivity?: (activityId: number) => { id: number; title: string } | undefined,
+): boolean {
+  if (isStandaloneLedgerEntry(entry, getActivity)) {
+    if (filterStarredOnly) return false;
+    if (!filterTagIds.length) return true;
+    const catIds = entry.categoryTagIds ?? [];
+    return filterTagIds.every((id) => catIds.includes(id));
+  }
+  return matchesActivityFilter({
+    filterTagIds,
+    filterStarredOnly,
+    activityId: entry.sourceActivityId,
+    activityTagIds: getActivityTagIds(entry.sourceActivityId),
+    hasStarredTaskForActivity,
+  });
 }
 
 /** 与 Planner 相同的 tag / 加星筛选；范围按 planner 时间戳 */
@@ -158,14 +197,14 @@ export function filterLedgerEntries(params: LedgerQueryParams): LedgerEntry[] {
     if (entry.deleted) return false;
     const plannerTs = resolveLedgerPlannerTs(entry, lookup);
     if (plannerTs == null || plannerTs < rangeStart || plannerTs >= rangeEnd) return false;
-    const activityId = entry.sourceActivityId;
-    return matchesActivityFilter({
+    return matchesLedgerEntryFilter(
+      entry,
       filterTagIds,
       filterStarredOnly,
-      activityId,
-      activityTagIds: getActivityTagIds(activityId),
+      getActivityTagIds,
       hasStarredTaskForActivity,
-    });
+      params.getActivity,
+    );
   });
 }
 
@@ -353,6 +392,12 @@ function sortTableRows(rows: LedgerTableRow[], sort: LedgerTableSort): LedgerTab
     const copy = [...group];
     if (sort === "time") {
       copy.sort((a, b) => b.recordedAt - a.recordedAt);
+    } else if (sort === "amount") {
+      copy.sort((a, b) => {
+        const diff = b.amount - a.amount;
+        if (diff !== 0) return diff;
+        return b.recordedAt - a.recordedAt;
+      });
     } else {
       copy.sort((a, b) => {
         const tagCmp = a.sortTagLabel.localeCompare(b.sortTagLabel, "zh-CN");
@@ -407,7 +452,9 @@ export function buildLedgerTableRows(
       amount: entry.amount,
       memo: entry.memo,
       categoryLabels: categoryLabels(entry, getTagName),
+      categoryTagIds: entry.categoryTagIds ? [...entry.categoryTagIds] : undefined,
       sortTagLabel: sortTagLabel(entry, getTagName),
+      sourceActivityId: entry.sourceActivityId,
     });
   }
 
