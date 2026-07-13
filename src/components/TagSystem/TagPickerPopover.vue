@@ -40,6 +40,7 @@
           ref="tagSelectorRef"
           :search-term="searchTerm"
           :allow-create="allowCreate"
+          :rank-tags="props.rankTags"
           embed-in-scroll-parent
           @select-tag="(id: number) => emit('select-tag', id)"
           @create-tag="(name: string) => emit('create-tag', name)"
@@ -76,6 +77,8 @@ const props = withDefaults(
     panelPointerGuard?: () => void;
     /** DayTodo：Enter 选中前标记，避免 keyup 触发 saveEdit */
     onEnterBeforeSelect?: () => void;
+    /** 覆盖 TagSelector 默认排序 */
+    rankTags?: (tags: import("@/stores/useTagStore").TagWithCount[]) => import("@/stores/useTagStore").TagWithCount[];
   }>(),
   {
     inputMode: "external",
