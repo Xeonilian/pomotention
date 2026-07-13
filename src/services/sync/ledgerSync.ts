@@ -1,5 +1,5 @@
 import { BaseSyncService } from "./baseSyncService";
-import type { LedgerEntry, LedgerDirection } from "@/core/types/LedgerEntry";
+import { STANDALONE_LEDGER_ACTIVITY_ID, type LedgerEntry, type LedgerDirection } from "@/core/types/LedgerEntry";
 import type { Database } from "@/core/types/Database";
 import { convertISOToTimestamp } from "@/core/utils/convertTimestampToISO";
 
@@ -9,6 +9,11 @@ type CloudLedgerRow = Database["public"]["Tables"]["ledger_entries"]["Row"];
 export class LedgerSyncService extends BaseSyncService<LedgerEntry, CloudLedgerInsert> {
   constructor(getList: () => LedgerEntry[], getMap: () => Map<number, LedgerEntry>) {
     super("ledger_entries", "ledgerEntries", getList, getMap);
+  }
+
+  /** 独立入账行（无 activity FK）暂不上传，待 v2 收尾 */
+  protected isUploadable(local: LedgerEntry): boolean {
+    return local.sourceActivityId !== STANDALONE_LEDGER_ACTIVITY_ID;
   }
 
   /** 本地 → 云端（仅非冗余字段；与 todoSync / taskSync 一致只存 activity_id） */
@@ -21,7 +26,7 @@ export class LedgerSyncService extends BaseSyncService<LedgerEntry, CloudLedgerI
       currency: local.currency,
       memo: local.memo ?? null,
       category_tag_ids: (local.categoryTagIds ?? []) as CloudLedgerInsert["category_tag_ids"],
-      raw_segment: local.rawSegment,
+      raw_segment: local.rawSegment ?? "",
       segment_index: local.segmentIndex,
       activity_id: local.sourceActivityId,
       deleted: local.deleted ?? false,
