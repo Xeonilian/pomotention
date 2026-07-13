@@ -9,20 +9,18 @@
 
 | 项 | 内容 |
 |---|---|
-| **主题** | ledger v2 · Supabase `ledger_entries` + LedgerSyncService |
-| **来自** | [blueprint/ledger.md §10](./blueprint/ledger.md) · [roadmap #1](../../guide/intro/roadmap.md) |
+| **主题** | ledger v3 · 收支统计明细编辑 |
+| **来自** | [blueprint/ledger.md §11](./blueprint/ledger.md) |
 | **蓝图** | [`blueprint/ledger.md`](./blueprint/ledger.md) |
-| **规模** | migration + 前端同步接入 |
-| **存储** | **仍 localStorage 主存**；云为增量备份 / 多端 |
-| **分支** | `dev`（feat ledger-v2-supabase） |
-| **更新** | 2026-07-03 |
-| **停在哪** | 步 1：Supabase 跑 migration → regen `Database.ts` → 冒烟同步 |
+| **分支** | `dev` |
+| **更新** | 2026-07-13 |
+| **停在哪** | 步 5：分批 commit → 一个 PR |
 
 ---
 
 ## 这一关要干嘛（一句话）
 
-把已有 **本地 `LedgerEntry`** 接到 Supabase（表 + LedgerSyncService），**云表不存 JOIN 冗余**；下载直查表（同 tags）。
+在 **收支统计弹窗** 明细表支持 **改 / 删 / 追加**；统计追加经 **ledger-stub 日桶** 可云同步。
 
 ---
 
@@ -30,61 +28,36 @@
 
 | 步 | 内容 | 产出 |
 |---|---|---|
-| **0** | blueprint §10 + 本文件 | 已对齐 |
-| **1** | Supabase 跑 migration | `ledger_entries` 表（无 RPC） |
-| **2** | regen 类型 | `Database.ts` |
-| **3** | 同步服务 | `ledgerSync.ts` + `initSyncServices` + `_ledgerById` |
-| **4** | 冒烟 | 登录 → 入账 → 同步 → 另一端可见；软删增量 |
-| **5** | 测试 + 文档 | `ledgerSync.test.ts`；`sync-mechanism.md` |
-| **6** | PR 合并 | — |
-| **7** | 收关 | roadmap/blueprint 状态；归档本文件 |
+| **0** | 归档 v2 + blueprint §11 | 已对齐 |
+| **1** | service + stub + query | 已入仓 |
+| **2** | Aggregate UI | 已入仓 |
+| **3** | Tag rank + 解析/图表 | 已入仓 |
+| **4** | 测试 + 手测 + 云同步 | 已通过 |
+| **5** | 分批 commit + 一个 PR | 进行中 |
+| **6** | 收关 | — |
 
 ---
 
 ## 验收标准（3 条）
 
-1. migration 远程可应用；RLS 仅本人可读写 `ledger_entries`
-2. 登录后：本地新建/软删 ledger 行能 upsert；直查表增量下载含 `deleted=true`；行为与 tags 一致
-3. `pnpm build:fast` 通过；`ledgerSync` 单测覆盖 map 往返
-
----
-
-## 风险评估
-
-- **[S1]** — 仅数据层 + 同步；UI 不变
-- **FK：** ledger 依赖 activity 已上传（Activities 先上传，与 tasks 同）
-- **最小证据：**
-  - [ ] 测试：`ledgerSync.test.ts`
-  - [ ] `sync-mechanism.md` 补 ledger 一行
-  - [ ] contract / ui-checks：**本关不需要**
-
----
-
-## 不做
-
-- 改 title 解析规则（§4）、TagPicker、Gift / Aggregate UI
-- IndexedDB 迁移
-- 入账行 **改**（产品设计：删 + 重录）
+1. 统计弹窗编辑 → 可改/删/追加；排序/帮助/趋势点日
+2. title 来源行改金额后 activity title 括号更新
+3. 统计追加日桶 stub 同步；清本地重登数据可见
 
 ---
 
 ## 进度
 
-- [x] **0.** blueprint §10 + current 对齐
-- [x] **1.** migration SQL 入仓
-- [ ] **2.** Supabase 跑 SQL + regen `Database.ts`
-- [x] **3.** LedgerSyncService 接入
-- [x] **5.** ledgerSync 单测 + sync-mechanism（冒烟待步 4）
-- [ ] **6.** PR 合并
-- [ ] **7.** 收关归档
+- [x] **0.–4.** 开发与手测
+- [ ] **5.** PR
+- [ ] **6.** 收关
 
 ---
 
 ## 备注
 
-- v1 归档：[`current-archive/2026-06-ledger-v1.md`](./current-archive/2026-06-ledger-v1.md)
-- SQL 文件：[`supabase/migrations/20250703120000_ledger_entries.sql`](../../supabase/migrations/20250703120000_ledger_entries.sql)
-- 与 AI 开聊：「先读 `current.md` 和 `blueprint/ledger.md` §10，告诉我下一步。」
+- v3 归档草稿：[`current-archive/2026-07-ledger-v3.md`](./current-archive/2026-07-ledger-v3.md)
+- v2 归档：[`current-archive/2026-07-ledger-v2.md`](./current-archive/2026-07-ledger-v2.md)
 
 ---
 
