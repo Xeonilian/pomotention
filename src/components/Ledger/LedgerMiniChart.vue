@@ -95,13 +95,25 @@ function buildPieOption(): EChartsOption {
   }
 
   return {
-    tooltip: { trigger: "item", formatter: "{b}: {c} ({d}%)" },
+    tooltip: {
+      trigger: "item",
+      formatter: (params: unknown) => {
+        const p = params as { name: string; value: number; percent: number };
+        return `${p.name}: ${Number(p.value).toFixed(1)} (${Number(p.percent).toFixed(1)}%)`;
+      },
+    },
     series: [
       {
         type: "pie",
         radius: ["42%", "68%"],
         avoidLabelOverlap: true,
-        label: { fontSize: 11 },
+        label: {
+          fontSize: 11,
+          formatter: (params: unknown) => {
+            const p = params as { name: string; value: number; percent: number };
+            return `${p.name}\n${Number(p.value).toFixed(1)} (${Number(p.percent).toFixed(1)}%)`;
+          },
+        },
         data: props.pieSlices.map((s) => ({ name: s.name, value: s.value })),
       },
     ],
