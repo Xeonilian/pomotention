@@ -20,7 +20,7 @@
   - [ ] 推送提交到远程仓库: `git push`
   - [ ] 创建并推送新的 Git Tag: `git tag v0.6.0` -> `git push origin v0.6.0`
   - [ ] 利用 commit 确定 changelog： `git log vOld.Tag..vNew.Tag --oneline`
-  - [ ] 编写更新日志： [`docs/dev-log/CHANGELOG.md`](../CHANGELOG.md)；可选更新 [roadmap「最近在推进」](../../guide/intro/roadmap.md)
+  - [ ] 编写更新日志： [`docs/dev-log/history/CHANGELOG.md`](../history/CHANGELOG.md)；可选更新 [roadmap「最近在推进」](../../guide/intro/roadmap.md)
 
 ## 阶段二：Windows 平台构建
 
@@ -77,7 +77,7 @@
 
 - [ ] **2. 编写更新说明：**
 
-  - [ ] 从 [`docs/dev-log/CHANGELOG.md`](../CHANGELOG.md) 复制对应版本条目，粘贴到描述框中。
+  - [ ] 从 [`docs/dev-log/history/CHANGELOG.md`](../history/CHANGELOG.md) 复制对应版本条目，粘贴到描述框中。
   - [ ] 格式化内容，使其清晰易读（例如使用标题、列表）。
 
 - [ ] **3. 上传所有附件：**

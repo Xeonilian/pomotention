@@ -1,6 +1,6 @@
 # 身份边界与工作纪律
 
-> 个人备忘。与 [ai-collaboration-harness-loop.md](./ai-collaboration-harness-loop.md)、[开发地图](../../guide/intro/roadmap.md) 并列阅读。
+> 个人备忘。与 [AI 协作备忘](../../../.cursor/docs/ai-collaboration-harness-loop.md)、[开发地图](../../guide/intro/roadmap.md) 并列阅读。
 
 ---
 
@@ -106,7 +106,7 @@
 
 不靠意志力，靠 **外部记忆 + 切刀**：
 
-1. 打开 [`current.md`](../../current.md) 或 [roadmap 队列](../../guide/intro/roadmap.md)
+1. 打开 [`current.md`](../current.md) 或 [roadmap 队列](../../guide/intro/roadmap.md)
 2. 写 **今天只做 X**
 3. 写 **停的标准**（1～2 条）
 4. 开干
@@ -121,7 +121,7 @@
 昨天停在哪：（一行）
 ```
 
-与 AI 协作时，可把「停的标准」直接当 [Harness / 小 Loop](./ai-collaboration-harness-loop.md) 的验收条。
+与 AI 协作时，可把「停的标准」直接当 [Harness / 小 Loop](../../../.cursor/docs/ai-collaboration-harness-loop.md) 的验收条。
 
 ---
 
@@ -138,7 +138,7 @@
 
 ## 和 Pomotention 产品顺序的衔接
 
-见 [开发地图 · 执行顺序](../../guide/intro/roadmap.md) 与 [current.md](../../current.md)。
+见 [开发地图 · 执行顺序](../../guide/intro/roadmap.md) 与 [current.md](../current.md)。
 
 **论文**在本行那条河里，排在 **IndexedDB 之后**；不占下午主题，除非 deliberately 把某周上午让给写作。
 

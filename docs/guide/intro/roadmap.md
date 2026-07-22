@@ -10,8 +10,8 @@ description: Pomotention 方向与开发队列（短）；细节见 current、CH
 
 ## 最近在推进
 
-- **ledger v2** — Supabase `ledger_entries` + LedgerSyncService（[这一关](../../dev-log/current.md) · [蓝图 §10](../../dev-log/blueprint/ledger.md)）
-- 完整交付记录见 [更新日志](../../dev-log/CHANGELOG.md)
+- **ledger v2** — Supabase `ledger_entries` + LedgerSyncService（[这一关](../../dev-log/current.md) · [蓝图 §10](../../dev-log/blueprint/5-ledger.md)）
+- 完整交付记录见 [更新日志](../../dev-log/history/CHANGELOG.md)
 
 ## 长期方向
 
@@ -21,7 +21,7 @@ description: Pomotention 方向与开发队列（短）；细节见 current、CH
 | **记录与导出** | 结构化书写、ledger 兼容、给 Kimi/Claude 等的上下文包 |
 | **同步与多端** | 云同步、PWA/桌面；数据层 eventual IndexedDB          |
 
-更长的产品构想见 [`dev-log/meta/notes/vision.md`](../../dev-log/meta/notes/vision.md)
+更长的产品构想见 [`dev-log/blueprint/0-vision.md`](../../dev-log/blueprint/0-vision.md)
 
 ---
 
@@ -33,7 +33,7 @@ description: Pomotention 方向与开发队列（短）；细节见 current、CH
 2. **收费 + 推广底座**
 3. **结构化指标 schema** → chart 改版、A 上下文出口
 4. **IndexedDB 迁移**（大项，与 3 设计并行，不挡 2）
-5. 其余见 [vision.md](../../dev-log/meta/notes/vision.md) 再排进本列表
+5. 其余见 [0-vision.md](../../dev-log/blueprint/0-vision.md) 再排进本列表
 
 **维护习惯：** 通关一关 → 从本列表 **删掉或下移** 该行 → `current.md` 开下一关。不在此维护 ✅ 细表。
 
@@ -41,4 +41,4 @@ description: Pomotention 方向与开发队列（短）；细节见 current、CH
 
 ## 已经交付
 
-见 [更新日志](../../dev-log/CHANGELOG.md)。
+见 [更新日志](../../dev-log/history/CHANGELOG.md)。

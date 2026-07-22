@@ -6,7 +6,7 @@ alwaysApply: true
 # dev-log
 
 1. **`docs/dev-log/current.md`** — always first  
-2. Coding → `docs/dev-log/blueprint/architecture-layering.md`  
+2. Coding → `docs/dev-log/blueprint/1-architecture-layering.md`  
 3. Lost → `docs/dev-log/README.md`  
 4. **`roadmap.md`** — only for next level or queue/direction questions  
 

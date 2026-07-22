@@ -16,7 +16,7 @@ gh pr merge <num> --squash --delete-branch
 - **必须** `--squash`，**禁止** `--merge`（除非用户当次明确要求保留多 commit 历史）。
 - **必须** `--delete-branch`，合并后托管端删除该 PR 分支（通常 `dev`）。
 
-细节与模板：[`docs/dev-log/SOP/PR.md`](docs/dev-log/SOP/PR.md) §5。
+细节与模板：[`docs/dev-log/ship/PR.md`](docs/dev-log/ship/PR.md) §5。
 
 ## PR 收工结尾（合并之后必做）
 

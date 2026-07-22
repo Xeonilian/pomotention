@@ -18,7 +18,7 @@ description: 安装包下载、系统要求与安装排错。账号、同步与 
 **版本 v0.6.4** · 2026 年 4 月 2 日
 :::
 
-- [完整更新日志](../../dev-log/CHANGELOG.md)
+- [完整更新日志](../../dev-log/history/CHANGELOG.md)
 
 ## Windows
 

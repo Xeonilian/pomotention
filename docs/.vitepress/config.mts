@@ -143,7 +143,7 @@ export default withMermaid(
           items: [
             { text: "关于项目", link: "/guide/intro/about" },
             { text: "开发地图", link: "/guide/intro/roadmap" },
-            { text: "更新日志", link: "/dev-log/CHANGELOG" },
+            { text: "更新日志", link: "/dev-log/history/CHANGELOG" },
           ],
         },
       ],

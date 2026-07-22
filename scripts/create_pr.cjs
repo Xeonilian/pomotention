@@ -61,7 +61,6 @@ function analyzeChanges(commits) {
   let hasTest = false;
   let hasUI = false;
   let hasData = false;
-  let hasContract = false;
   let complexity = 1;
 
   commits.forEach((commit) => {
@@ -70,7 +69,6 @@ function analyzeChanges(commits) {
     if (parsed.type === "test") hasTest = true;
     if (parsed.scope.includes("ui") || parsed.scope.includes("style")) hasUI = true;
     if (parsed.scope.includes("api") || parsed.scope.includes("data") || parsed.scope.includes("store")) hasData = true;
-    if (commit.subject.includes("contract")) hasContract = true;
 
     // 根据 commit 数量和类型判断复杂度
     if (parsed.type === "feat" || parsed.type === "refactor") complexity++;
@@ -78,14 +76,14 @@ function analyzeChanges(commits) {
 
   // 判断 S (Scope)
   let S = 1;
-  if (hasData || hasContract) S = 3;
+  if (hasData) S = 3;
   else if (complexity > 2 || commits.length > 3) S = 2;
 
   // 判断 C (Confidence)
   let C = hasTest ? 1 : 2;
 
   // 判断 UV (User Visible)
-  let UV = hasUI || hasContract || hasData ? 1 : 0;
+  let UV = hasUI || hasData ? 1 : 0;
 
   return { S, C, UV };
 }
@@ -146,14 +144,13 @@ function generateReasoning(analysis, commits) {
 // 生成 Mitigation 部分
 function generateMitigation(commits, analysis) {
   const hasTest = commits.some((c) => parseCommitType(c.subject).type === "test");
-  const hasContract = commits.some((c) => c.subject.includes("contract"));
   const hasScreenshot = commits.some((c) => c.subject.includes("ui-checks") || c.subject.includes("screenshot"));
 
   const testType = hasTest ? "unit/integration/smoke" : "none";
-  const docs = hasContract ? "contracts.md" : hasScreenshot ? "screenshots" : "none";
+  const docs = hasScreenshot ? "ui-checks" : "none";
 
   return `- [${hasTest ? "x" : " "}] Tests: ${testType}
-- [${hasContract || hasScreenshot ? "x" : " "}] Docs: ${docs}
+- [${hasScreenshot ? "x" : " "}] Docs: ${docs}
 - [ ] Manual verification: <待填写验证步骤>`;
 }
 

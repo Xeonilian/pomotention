@@ -1,7 +1,7 @@
 # Ledger · 蓝图
 
 > **ledger 开发的唯一核心参考** — 边界、语法、tag 归属、数据模型、分关路线。  
-> 进度与验收见 [`current.md`](../current.md)；代码分层见 [`architecture-layering.md`](./architecture-layering.md)。
+> 进度与验收见 [`current.md`](../current.md)；代码分层见 [`1-architecture-layering.md`](./1-architecture-layering.md)。
 
 ---
 

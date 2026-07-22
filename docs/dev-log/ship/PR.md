@@ -27,15 +27,14 @@
 - \(S1 \land C1\)（小改动、把握高）
   - 必做：
     - 直接修改与小步提交（原子化 commit）。
-    - 在 `docs/dev-log/ui-checks.md` 追加一行"视觉验收项"描述预期。
   - 选做：
-    - `docs/dev-log/ui-checks/<日期>-before.png/after.png` 截图对照。
+    - 大改时在 `docs/dev-log/history/ui-checks/ui-checks.md` 留一行预期或截图对照。
   - Commit 前缀：`fix(ui): <一句话说明>`
 
 - \(S2 \lor C2\)（跨组件/条件复杂 或 把握低）
   - 二选一（至少其一）：
     - 在 `__tests__/ui-smoke.spec.ts` 添加最小烟雾测试。
-    - 在 `docs/dev-log/ui-checks/` 固定"前/后"截图作为回归对照。
+    - 或 PR Manual verification +（可选）`ui-checks/` 截图。
   - Commit 前缀：
     - `test(ui): smoke for <topic>` 或
     - `chore(docs): ui checks`
@@ -49,11 +48,10 @@
 
 - \(UV1\)（用户明显可感知，覆盖层，需叠加上述规则）
   - 必做：
-    - 在 `docs/dev-log/contracts.md` 写 Given/When/Then 的契约描述。
-    - 添加回归测试或固定截图对照：
-      - `__tests__/ui-regression.spec.ts` 或
-      - `docs/dev-log/ui-checks/` 截图对照。
-  - Commit 前缀：`fix(contract #X): <topic> + test(contract #X)`（Contract 正文见 skill-contract）
+    - PR Manual verification 写清手测步骤；或单测/烟雾测试能覆盖则勾 Tests。
+  - 选做：
+    - 大改视觉对照：`docs/dev-log/history/ui-checks/`（skill-ui-checks）
+  - Commit 前缀：按变更类型 `feat` / `fix(ui)` 等
 
 ---
 
@@ -101,16 +99,14 @@ git commit -m "feat(api): create supabaseClient instance"
 | 评估结果                        | 最小行动       | 执行命令        |
 | :------------------------------ | :------------- | :-------------- |
 | **`S1` (简单 UI 修改)**         | 结构化 commit  | 无              |
-| **`S2` 或 `C2` (复杂或不确定)** | 烟雾测试或截图 | `pnpm sshot`    |
+| **`S2` 或 `C2` (复杂或不确定)** | 烟雾测试或手测 | `pnpm sshot`（可选） |
 | **`S3` (核心逻辑/数据)**        | 单元/集成测试  |                 |
-| **`UV1` (用户能感知)**          | 编写契约文档   | skill-contract 或 `pnpm new:ctt` |
+| **`UV1` (用户能感知)**          | PR 手测清单    | 大改可选 ui-checks |
 
-- 视觉验收项：`docs/dev-log/ui-checks.md`
-- 截图对照：`docs/dev-log/ui-checks/<date>-before.png/after.png`
+- 视觉归档（可选）：`docs/dev-log/history/ui-checks/`
 - 烟雾测试：`__tests__/ui-smoke.spec.ts`
 - 单元/集成测试：`__tests__/<feature>.spec.ts`
 - 回归测试：`__tests__/ui-regression.spec.ts`
-- 契约文档：`docs/dev-log/contracts.md`
 
 ---
 
@@ -192,8 +188,7 @@ git branch -d <branch-name>
 | 当前这一关       | 编辑 `docs/dev-log/current.md`               |
 | 创建分支         | `pnpm new:branch <type> <topic>`             |
 | 救援 main 上改动 | `pnpm rescue`                                |
-| 截图             | `pnpm sshot "<desc>"`                        |
-| 创建契约         | skill-contract 或 `pnpm new:ctt`             |
+| 截图（可选）     | `pnpm sshot "<desc>"`                        |
 | 创建 PR          | `pnpm new:pr` (推荐) 或 `gh pr create`       |
 | 合并 PR          | `gh pr merge <num> --squash --delete-branch` |
 | 紧急修复分支     | `pnpm new:branch hotfix <issue-id>`          |

@@ -157,7 +157,7 @@ pnpm docs:deploy:github
 
 ## 11. 相关文件
 
-- **`docs/dev-log/SOP/help-docs-cloudflare.md`**：帮助跳转与 Cloudflare（`VITE_HELP_DOCS_URL` 等）SOP。
+- **`docs/dev-log/ship/help-docs-cloudflare.md`**：帮助跳转与 Cloudflare（`VITE_HELP_DOCS_URL` 等）SOP。
 - 根目录 **`package.json`**：`dev`、`dev:app`、`build:with-docs`、`docs:*` 脚本。
 - **`scripts/run-docs-for-app.mjs`**、**`scripts/sync-docs-app.mjs`**：嵌入应用的 base 与同步。
 - **`vite.config.ts`**：`docs-app` 代理、子路径下误访问 `/docs-app` 的跳转、文档 dev 子进程逻辑。
@@ -168,4 +168,4 @@ pnpm docs:deploy:github
 - **`src/views/SettingView.vue`**：若存在对 GitHub Pages 文档站的连通性检测等，常量如 `NET_DOCS` 需与真实 Pages 地址一致。
 - **`src-tauri/tauri.conf.json`**：`beforeDevCommand`（`pnpm dev`）、`beforeBuildCommand`（`pnpm build:with-docs`）。
 - **`.gitignore`**：`public/docs-app`、`public/**/docs-app`（构建生成，一般不入库）。
-- **`docs/dev-log/SOP/release.md`**：桌面端发布流程（若存在）。
+- **`docs/dev-log/ship/release.md`**：桌面端发布流程（若存在）。

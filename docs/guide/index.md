@@ -39,4 +39,4 @@
 
 - [关于项目](intro/about.md)
 - [开发地图](intro/roadmap.md)
-- [更新日志](../dev-log/CHANGELOG.md)
+- [更新日志](../dev-log/history/CHANGELOG.md)
