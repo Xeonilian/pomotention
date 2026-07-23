@@ -69,6 +69,17 @@ function resolveEmptyLabelColor(): string {
   return resolveChartColor("--color-text-secondary", EMPTY_TEXT_FALLBACK);
 }
 
+/** tooltip 固定在图中央，避免手机上贴边/出屏 */
+function tooltipCenterPosition(
+  _point: number[],
+  _params: unknown,
+  _dom: HTMLElement | null,
+  _rect: unknown,
+  size: { contentSize: number[]; viewSize: number[] },
+): number[] {
+  return [(size.viewSize[0] - size.contentSize[0]) / 2, (size.viewSize[1] - size.contentSize[1]) / 2];
+}
+
 function buildPieOption(): EChartsOption {
   const hasData = props.pieSlices.length > 0;
   if (!hasData) {
@@ -101,6 +112,8 @@ function buildPieOption(): EChartsOption {
   return {
     tooltip: {
       trigger: "item",
+      confine: true,
+      position: tooltipCenterPosition,
       formatter: (params: unknown) => {
         const p = params as { name: string; value: number; percent: number };
         return `${p.name}: ${Number(p.value).toFixed(1)} (${Number(p.percent).toFixed(1)}%)`;
@@ -110,14 +123,8 @@ function buildPieOption(): EChartsOption {
       {
         type: "pie",
         radius: ["42%", "68%"],
-        avoidLabelOverlap: true,
-        label: {
-          fontSize: 11,
-          formatter: (params: unknown) => {
-            const p = params as { name: string; value: number; percent: number };
-            return `${p.name}\n${Number(p.value).toFixed(1)} (${Number(p.percent).toFixed(1)}%)`;
-          },
-        },
+        label: { show: false },
+        labelLine: { show: false },
         data: props.pieSlices.map((s) => ({ name: s.name, value: s.value })),
       },
     ],
@@ -131,7 +138,7 @@ function buildTrendOption(): EChartsOption {
   const highlightAxisColor = resolveChartColor("--color-blue", HIGHLIGHT_AXIS_FALLBACK);
   const highlightDayStart = props.highlightDayStart ?? null;
   return {
-    tooltip: { trigger: "axis" },
+    tooltip: { trigger: "axis", confine: true, position: tooltipCenterPosition },
     legend: { top: 0, right: 0, itemWidth: 10, itemHeight: 10, textStyle: { fontSize: 11 } },
     grid: { left: 24, right: 12, top: 28, bottom: 12 },
     xAxis: {
