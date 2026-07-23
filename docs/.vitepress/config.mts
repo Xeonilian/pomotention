@@ -124,6 +124,7 @@ export default withMermaid(
               collapsed: true,
               items: [
                 { text: "标签系统", link: "/guide/reference/tag" },
+                { text: "收支账本", link: "/guide/reference/ledger" },
                 { text: "数据查看", link: "/guide/reference/search" },
                 { text: "数据趋势", link: "/guide/reference/chart" },
               ],

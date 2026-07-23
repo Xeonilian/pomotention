@@ -27,6 +27,7 @@
 ### 数据管理
 
 - [标签系统](reference/tag.md)
+- [收支账本](reference/ledger.md)
 - [数据查看](reference/search.md)
 - [数据趋势](reference/chart.md)
 
