@@ -1,7 +1,7 @@
 {
   "name": "Pomotention",
   "private": true,
-  "version": "0.6.9",
+  "version": "0.6.10",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -14,7 +14,6 @@
     "docs:build:for-app": "node scripts/run-docs-for-app.mjs build",
     "docs:dev:app": "node scripts/run-docs-for-app.mjs dev",
     "build:with-docs": "pnpm docs:build:for-app && node scripts/sync-docs-app.mjs && pnpm build",
-    "new:ctt": "node scripts/new_contract.cjs",
     "new:branch": "node scripts/new_branch.cjs",
     "new:pr": "node scripts/create_pr.cjs",
     "rescue": "node scripts/rescue_changes.cjs",

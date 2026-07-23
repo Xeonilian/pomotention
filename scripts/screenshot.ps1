@@ -32,7 +32,7 @@ if ($null -ne $statusInput -and $statusMap.ContainsKey($statusInput)) {
 # --- Path and Filename Configuration ---
 # $PSScriptRoot is an automatic variable that contains the directory of the script.
 $devRoot = (Get-Item (Join-Path $PSScriptRoot "..")).FullName
-$screenshotDir = Join-Path -Path $devRoot -ChildPath "docs\dev-log\ui-checks"
+$screenshotDir = Join-Path -Path $devRoot -ChildPath "docs\dev-log\history\ui-checks"
 $dateStamp = Get-Date -Format "yyyyMMdd"
 $fileName = "$dateStamp-$topic-$status.png"
 $fullPath = Join-Path -Path $screenshotDir -ChildPath $fileName

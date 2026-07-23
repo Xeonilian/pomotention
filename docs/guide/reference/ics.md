@@ -31,7 +31,7 @@
   - 有开始和时长：按 `[开始时间, 开始时间 + 时长]`
   - 有开始无时长：按系统默认时长导出（不同系统可能出现重复起始或 +1h）
 
-<img src="/dev-log/ui-checks/20250912-qr-ics-full-after.png" alt="Export QR" width="500">
+<img src="/dev-log/history/ui-checks/20250912-qr-ics-full-after.png" alt="Export QR" width="500">
 
 ## 二维码导出单条任务
 
@@ -42,7 +42,7 @@
    - iOS：使用系统相机扫码
    - Android：建议使用系统扫码入口
 
-<img src="/dev-log/ui-checks/20250912-qr-ics-code-after.png" alt="Export QR" width="250">
+<img src="/dev-log/history/ui-checks/20250912-qr-ics-code-after.png" alt="Export QR" width="250">
 
 ## ICS 文件导出多条任务
 

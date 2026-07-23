@@ -1,7 +1,7 @@
 ---
 name: skill-changelog
 description: >-
-  Writes or edits docs/dev-log/CHANGELOG.md for Pomotention: Chinese headings
+  Writes or edits docs/dev-log/history/CHANGELOG.md for Pomotention: Chinese headings
   新增/优化/修复/其他 and English domain prefixes (timer, planner, schedule,
   task, activity, data, sync, ui, docs, timetable). Use for release notes or
   CHANGELOG updates.
@@ -11,7 +11,7 @@ description: >-
 
 ## 文件
 
-- 路径：`docs/dev-log/CHANGELOG.md`
+- 路径：`docs/dev-log/history/CHANGELOG.md`
 - 新版本块插在 `# 更新日志` 之后、上一版本 `## \`v…\`` 之前；块之间空一行。
 
 ## 标题

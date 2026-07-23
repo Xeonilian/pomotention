@@ -1,6 +1,6 @@
 # 产品构想笔记
 
-> 个人想法池；会改、会砍、会和 current 队列不一致。**做到哪了以 [`current.md`](../../current.md) 与 [`CHANGELOG`](../../CHANGELOG.md) 为准。**
+> 个人想法池；会改、会砍、会和 current 队列不一致。**做到哪了以 [`current.md`](../current.md) 与 [`CHANGELOG`](../history/CHANGELOG.md) 为准。**
 
 ---
 

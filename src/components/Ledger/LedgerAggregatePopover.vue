@@ -50,6 +50,7 @@
             kind="trend"
             :trend-buckets="aggregateData.trend"
             :trend-day-clickable="trendDayClickable"
+            :highlight-day-start="trendHighlightDayStart"
             :height="chartHeight"
             :fill="!isMobile"
             @trend-day-click="onTrendDayClick"
@@ -152,7 +153,7 @@
                     @update:show="(open) => (tagPickerShowByRow[row.id] = open)"
                     v-model:search-term="tagSearchTerm"
                     input-mode="internal"
-                    :rank-tags="rankLedgerTags"
+                    :rank-tags="rankLedgerTagsLimited"
                     placement="bottom-start"
                     :teleport-disabled="false"
                     internal-input-placeholder="筛选分类…"
@@ -192,13 +193,15 @@
                     </n-icon>
                   </button>
                 </td>
-                <td class="ledger-aggregate-table__col-date ledger-aggregate-table__append-date">{{ appendDateLabel }}</td>
+                <td class="ledger-aggregate-table__col-date ledger-aggregate-table__append-date ledger-aggregate-table__date--app-day">
+                  {{ appendDateLabel }}
+                </td>
                 <td class="ledger-aggregate-table__tags">
                   <TagPickerPopover
                     v-model:show="newRowTagPickerShow"
                     v-model:search-term="newRowTagSearch"
                     input-mode="internal"
-                    :rank-tags="rankLedgerTags"
+                    :rank-tags="rankLedgerTagsLimited"
                     placement="bottom-start"
                     internal-input-placeholder="筛选分类…"
                     @select-tag="onNewRowSelectTag"
@@ -251,6 +254,7 @@ import { useLedgerAggregateEdit } from "@/composables/ledger/useLedgerAggregateE
 import { useDataStore } from "@/stores/useDataStore";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useTagStore } from "@/stores/useTagStore";
+import { getDayStartTimestamp } from "@/core/utils";
 import type { LedgerTableRow, LedgerTableSort } from "@/services/ledger/ledgerQueryService";
 import { formatLedgerMoneyFixed } from "@/services/ledger/ledgerQueryService";
 import type { LedgerDirection } from "@/core/types/LedgerEntry";
@@ -262,6 +266,11 @@ const dataStore = useDataStore();
 const settingStore = useSettingStore();
 const tagStore = useTagStore();
 const { rankLedgerTags, deleteEntry, patchEntry, appendStandalone, resolveTagId } = useLedgerAggregateEdit();
+
+/** 账本分类浮层最多展示 5 个选项（创建项另算） */
+function rankLedgerTagsLimited(tags: Parameters<typeof rankLedgerTags>[0]) {
+  return rankLedgerTags(tags).slice(0, 5);
+}
 
 const showModal = ref(false);
 const showHelp = ref(false);
@@ -279,6 +288,13 @@ const newRowDraft = ref({ memo: "", amount: "" });
 const { aggregateData, scaleLabel, formatLedgerMoney, viewScale } = useLedgerAggregatePanel(computed(() => tableSort.value));
 
 const trendDayClickable = computed(() => viewScale.value === "day" || viewScale.value === "week");
+
+/** 日/周趋势轴高亮 APP 选中日；月及以上不传 */
+const appSelectedDayStart = computed(() => getDayStartTimestamp(appDateTimestamp()));
+
+const trendHighlightDayStart = computed(() =>
+  viewScale.value === "day" || viewScale.value === "week" ? appSelectedDayStart.value : null,
+);
 
 const chartHeight = computed(() => (isMobile.value ? 160 : 220));
 
@@ -631,6 +647,10 @@ watch(
   color: var(--color-text-secondary);
 }
 
+.ledger-aggregate-table__date--app-day {
+  color: var(--color-blue);
+}
+
 .ledger-aggregate-table__tags :deep(.tag-picker__trigger) {
   display: block;
   width: 100%;
@@ -638,10 +658,10 @@ watch(
 
 .ledger-aggregate-table__tag-btn {
   display: block;
-  width: calc(100% + 16px);
+  width: calc(100% + 12px);
   min-height: 1.5em;
-  margin: -5px -8px;
-  padding: 5px 8px;
+  margin: -5px -6px;
+  padding: 5px 6px;
   box-sizing: border-box;
   border: none;
   background: transparent;
@@ -694,7 +714,7 @@ watch(
 
 .ledger-aggregate-table th,
 .ledger-aggregate-table td {
-  padding: 5px 8px;
+  padding: 5px 6px;
   text-align: left;
   border-bottom: 1px solid var(--n-border-color);
   vertical-align: middle;
@@ -894,6 +914,15 @@ watch(
     flex: 1;
     min-height: 160px;
     background-color: var(--n-color-modal);
+  }
+
+  /* 明细表：压缩金额列，分类限宽，备注吃剩余 */
+  .ledger-aggregate-modal .ledger-aggregate-table col.ledger-aggregate-table__col-amount {
+    width: 4rem;
+  }
+
+  .ledger-aggregate-modal .ledger-aggregate-table col:nth-child(3) {
+    width: 24%;
   }
 }
 

@@ -9,12 +9,12 @@
 | 词                  | 一句话                                          | 我现在的位置                                     |
 | ------------------- | ----------------------------------------------- | ------------------------------------------------ |
 | **Prompt**          | 每轮跟 AI 说一句，人驱动下一轮                  | ✅ 主力方式                                      |
-| **Harness（马具）** | 规则、文档、Skill，让 AI **不用每次从零猜项目** | ✅ `dev-log/README` + `current.md` + SOP + Skill |
+| **Harness（马具）** | 规则、文档、Skill，让 AI **不用每次从零猜项目** | ✅ `dev-log/README` + `current.md` + ship + Skill |
 | **Loop**            | 定 **可验证的目标**，AI **自己转圈直到达标**    | 🔴 几乎还没用                                    |
 
 **要点：** 不是「别用 Cursor 聊天了」。**聊天适合探路**；**重复、能自动验收的事，交给 Loop**。
 
-我曾写的 [Timer 14 天备忘](../notes/timer-14d-anchor.md)（个人 note，非活跃文档）已是 Loop 思维示例：主指标 ≥5 次工作段、第 7 天砍 scope——**目标可验证**；现在同类信息应写在 [`current.md`](../current.md)。
+我曾写的 [Timer 14 天备忘](../../docs/dev-log/blueprint/4-timer-branch.md)（个人 note，非活跃文档）已是 Loop 思维示例：主指标 ≥5 次工作段、第 7 天砍 scope——**目标可验证**；现在同类信息应写在 [`current.md`](../../docs/dev-log/current.md)。
 
 ---
 
@@ -65,7 +65,7 @@ Loop 里常见的完成条件，例如 **「test 全绿 + lint 零错」**，就
 - **补 Harness：**
   - roadmap / current.md（已有）
   - Cursor rules（项目惯例）
-  - 重复流程进 SOP（release、supabase、docs deploy）
+  - 重复流程进 ship（release、supabase、docs deploy）
 
 **验收示例（收费票）：**
 
@@ -99,14 +99,14 @@ Loop 里常见的完成条件，例如 **「test 全绿 + lint 零错」**，就
 | ledger 第一版    | 聊天                      | 今明 2 天     |
 | 收费 + 推广      | 聊天 + 验收 3 条          | +2 周         |
 | 日常功能         | 聊天 + build/test 小 Loop | 之后持续      |
-| Harness 整理     | rules + SOP + roadmap     | 与收费并行    |
+| Harness 整理     | rules + ship + roadmap    | 与收费并行    |
 | 大 Loop / 自动化 | CI + Automations          | CI 稳定后再说 |
 
 ---
 
 ## 和 Pomotention 产品计划的衔接
 
-关间队列见 [开发地图](../../guide/intro/roadmap.md)；**当前这一关**见 [current.md](../current.md)。长构想见 [vision.md](./notes/vision.md)。
+关间队列见 [开发地图](../../docs/guide/intro/roadmap.md)；**当前这一关**见 [current.md](../../docs/dev-log/current.md)。长构想见 [0-vision.md](../../docs/dev-log/blueprint/0-vision.md)。
 
 **协作升级与产品顺序可并行：** ledger 用聊天；收费起开始练 **验收 3 条 + 小 Loop**。
 

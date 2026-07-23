@@ -1,6 +1,7 @@
 // Service Worker 版本号：变更策略时请递增，以便激活时清掉旧缓存
 // v4: /assets/ stale-while-revalidate 弱网先出缓存
-const CACHE_VERSION = "v4";
+// v5: navigate 改为 stale-while-revalidate，PWA 冷启动先出缓存 shell
+const CACHE_VERSION = "v5";
 const CACHE_NAME = `pomotention-cache-${CACHE_VERSION}`;
 
 // 需要缓存的静态资源（应用壳）
@@ -53,6 +54,31 @@ function putInCache(request, response) {
   }
   const clone = response.clone();
   return caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+}
+
+/** navigate：先缓存后后台更新，避免 PWA 冷启动等网络 index.html */
+function navigateStaleWhileRevalidate(request) {
+  return caches.match(request).then((cached) => {
+    const fetchPromise = fetch(request)
+      .then((response) => {
+        if (response.ok) putInCache(request, response);
+        return response;
+      })
+      .catch(() => null);
+
+    if (cached) {
+      fetchPromise.catch(() => {});
+      return cached;
+    }
+
+    return fetchPromise.then((response) => {
+      if (response) return response;
+      return caches
+        .match("/index.html")
+        .then((fallback) => fallback || caches.match("/"))
+        .then((fallback) => fallback || new Response("", { status: 503, statusText: "Offline" }));
+    });
+  });
 }
 
 /** /assets/：先缓存后后台更新 */
@@ -126,17 +152,7 @@ self.addEventListener("fetch", (event) => {
   }
 
   if (request.mode === "navigate") {
-    event.respondWith(
-      fetch(request)
-        .then((response) => {
-          if (response.ok) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-          }
-          return response;
-        })
-        .catch(() => caches.match(request).then((cached) => cached || caches.match("/index.html"))),
-    );
+    event.respondWith(navigateStaleWhileRevalidate(request));
     return;
   }
 

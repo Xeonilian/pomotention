@@ -2,7 +2,7 @@
   <n-popover
     v-model:show="show"
     trigger="manual"
-    :placement="placement"
+    :placement="effectivePlacement"
     :show-arrow="showArrow"
     :trap-focus="false"
     :to="teleportTo"
@@ -55,6 +55,11 @@
 // 统一标签浮层：内外部搜索、键盘、外部点击；列表仍用 TagSelector
 import { computed, nextTick, onUnmounted, ref, watch } from "vue";
 import type { InputInst, PopoverProps } from "naive-ui";
+import { useDevice } from "@/composables/platform/useDevice";
+import {
+  readObscuredBottomRawPx,
+  VISUAL_KEYBOARD_OVERLAP_MIN_PX,
+} from "@/composables/layout/useVisualViewportKeyboard";
 import TagSelector from "./TagSelector.vue";
 
 const show = defineModel<boolean>("show", { required: true });
@@ -96,6 +101,28 @@ const emit = defineEmits<{
 }>();
 
 const teleportTo = computed(() => (props.teleportDisabled ? false : undefined));
+
+const { isMobile } = useDevice();
+const obscuredBottomPx = ref(0);
+
+function syncKeyboardOverlap() {
+  obscuredBottomPx.value = readObscuredBottomRawPx();
+}
+
+const isKeyboardLikelyOpen = computed(
+  () => obscuredBottomPx.value >= VISUAL_KEYBOARD_OVERLAP_MIN_PX,
+);
+
+/** 手机：internal 预向上弹；external 在键盘遮挡视口底时把 bottom 翻成 top */
+const effectivePlacement = computed((): PopoverProps["placement"] => {
+  if (!isMobile.value) return props.placement;
+  const shouldFlipUp =
+    props.inputMode === "internal" || isKeyboardLikelyOpen.value;
+  if (!shouldFlipUp || !props.placement.startsWith("bottom")) {
+    return props.placement;
+  }
+  return props.placement.replace("bottom", "top") as PopoverProps["placement"];
+});
 
 const mergedPopoverStyle = computed(() => ({
   padding: 0,
@@ -148,9 +175,26 @@ defineExpose({
   handleHostKeydown,
 });
 
+function attachKeyboardOverlapListeners() {
+  syncKeyboardOverlap();
+  window.visualViewport?.addEventListener("resize", syncKeyboardOverlap);
+  window.visualViewport?.addEventListener("scroll", syncKeyboardOverlap);
+}
+
+function detachKeyboardOverlapListeners() {
+  window.visualViewport?.removeEventListener("resize", syncKeyboardOverlap);
+  window.visualViewport?.removeEventListener("scroll", syncKeyboardOverlap);
+}
+
 watch(show, (open) => {
-  if (open && props.inputMode === "internal") {
-    nextTick(() => filterInputRef.value?.focus());
+  if (open) {
+    attachKeyboardOverlapListeners();
+    if (props.inputMode === "internal") {
+      nextTick(() => filterInputRef.value?.focus());
+    }
+  } else {
+    detachKeyboardOverlapListeners();
+    obscuredBottomPx.value = 0;
   }
 });
 
@@ -178,6 +222,7 @@ watch(
 
 onUnmounted(() => {
   window.removeEventListener("pointerdown", handlePointerDownCapture, true);
+  detachKeyboardOverlapListeners();
 });
 </script>
 

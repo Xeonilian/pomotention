@@ -27,6 +27,7 @@
 ### 数据管理
 
 - [标签系统](reference/tag.md)
+- [收支账本](reference/ledger.md)
 - [数据查看](reference/search.md)
 - [数据趋势](reference/chart.md)
 
@@ -39,4 +40,4 @@
 
 - [关于项目](intro/about.md)
 - [开发地图](intro/roadmap.md)
-- [更新日志](../dev-log/CHANGELOG.md)
+- [更新日志](../dev-log/history/CHANGELOG.md)

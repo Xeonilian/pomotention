@@ -13,7 +13,7 @@
 ## Mitigation
 
 - [ ] Tests: <unit/integration/smoke/regression/none>
-- [ ] Docs: <contracts.md/screenshots/none>
+- [ ] Docs: <ui-checks/none>
 - [ ] Manual verification: <步骤描述>
 
 ## Risk

@@ -1,7 +1,7 @@
 # Ledger · 蓝图
 
 > **ledger 开发的唯一核心参考** — 边界、语法、tag 归属、数据模型、分关路线。  
-> 进度与验收见 [`current.md`](../current.md)；代码分层见 [`architecture-layering.md`](./architecture-layering.md)。
+> 进度与验收见 [`current.md`](../current.md)；代码分层见 [`1-architecture-layering.md`](./1-architecture-layering.md)。
 
 ---
 
@@ -49,7 +49,7 @@ Pomotention **不做**专业记账 App。目标：把日常消费等行为从 To
 | **记账段内**（` -/+金额` 触发符 → `￥`/`$` 结尾符，含未闭合） | 弹出选择器 | 把 `#query` **换成 `#tagName `**（**末尾带空格**）插入 title；**不**写 `activity.tagIds` |
 | **结尾符之后** 或 **段外**（含 title 开头） | 弹出选择器 | 现有 Activity TagPicker：写入 `activity.tagIds`，剥掉末尾 `#` |
 
-实现：[`getTitleTagPickerMode`](../../../src/core/ledger/parseLedgerSegments.ts) + [`DayTodo`](../../../src/components/DayPlanner/DayTodo.vue) `handleTagSelected` / `handleTagCreate`。
+实现：[`getTitleTagPickerMode`](https://github.com/Xeonilian/pomotention/blob/main/src/core/ledger/parseLedgerSegments.ts) + [`DayTodo`](https://github.com/Xeonilian/pomotention/blob/main/src/components/DayPlanner/DayTodo.vue) `handleTagSelected` / `handleTagCreate`。
 
 示例：
 
@@ -107,7 +107,7 @@ Pomotention **不做**专业记账 App。目标：把日常消费等行为从 To
 
 - **日记正文**：记账段前的 prefix + 各笔 memo + 段后 tail（剥掉 grammar）
 - **汇总括号**：整数、**仅非零项**，如 `（-55）`、`（+5000）`、`（-30 +5000）`
-- 再编辑前 [`stripLedgerSummarySuffix`](../../../src/core/ledger/parseLedgerSegments.ts) 剥掉文中任意位置的旧括号（含旧版 `（账：…）`）
+- 再编辑前 [`stripLedgerSummarySuffix`](https://github.com/Xeonilian/pomotention/blob/main/src/core/ledger/parseLedgerSegments.ts) 剥掉文中任意位置的旧括号（含旧版 `（账：…）`）
 - `strip` 用 `trimEnd()`，**不** `trim()` 开头，以免吃掉触发所需的前导空格
 
 ### 4.6 「买」
@@ -132,7 +132,7 @@ Pomotention **不做**专业记账 App。目标：把日常消费等行为从 To
 | `sourceTodoId` | 溯源 todo；聚合日期取 **`todo.id`**（与 `todosForCurrentView` 一致） |
 | `deleted` / `synced` / `lastModified` / `cloudModified` | 软删；v2 同步预留 |
 
-UI 按 **`todo.activityId`** 取 [`getActiveLedgerEntriesForActivity`](../../../src/services/ledger/ledgerService.ts)。
+UI 按 **`todo.activityId`** 取 [`getActiveLedgerEntriesForActivity`](https://github.com/Xeonilian/pomotention/blob/main/src/services/ledger/ledgerService.ts)。
 
 ### 5.2 `ParsedLedgerSegment`
 
@@ -157,7 +157,7 @@ UI 按 **`todo.activityId`** 取 [`getActiveLedgerEntriesForActivity`](../../../
 
 ### 6.2 删条目（Gift 弹窗）
 
-[`softDeleteLedgerEntryWithTitle`](../../../src/services/ledger/ledgerService.ts)：
+[`softDeleteLedgerEntryWithTitle`](https://github.com/Xeonilian/pomotention/blob/main/src/services/ledger/ledgerService.ts)：
 
 1. 软删 ledger 行
 2. 剥汇总括号后：若 title 仍含 `rawSegment` → 删掉；**否则**按 `entry.memo` 从日记正文去掉该词
@@ -176,18 +176,18 @@ UI 按 **`todo.activityId`** 取 [`getActiveLedgerEntriesForActivity`](../../../
 
 | 层 | 路径 |
 |----|------|
-| 类型 | [`src/core/types/LedgerEntry.ts`](../../../src/core/types/LedgerEntry.ts) |
-| 解析 | [`src/core/ledger/parseLedgerSegments.ts`](../../../src/core/ledger/parseLedgerSegments.ts) |
-| 业务 | [`src/services/ledger/ledgerService.ts`](../../../src/services/ledger/ledgerService.ts) |
-| 聚合 | [`src/services/ledger/ledgerQueryService.ts`](../../../src/services/ledger/ledgerQueryService.ts) |
-| 持久化 | [`localStorageService.ts`](../../../src/services/data/localStorageService.ts) · `ledgerEntries` |
-| Store | [`useDataStore.ts`](../../../src/stores/useDataStore.ts) |
-| 接入 | [`HomeView.vue`](../../../src/views/HomeView.vue) · `onTodoTitleSaved` |
-| Tag 互斥 | [`DayTodo.vue`](../../../src/components/DayPlanner/DayTodo.vue) + [`useActivityTagEditor`](../../../src/composables/activity/useActivityTagEditor.ts) |
-| UI | [`LedgerEntryPopover.vue`](../../../src/components/Ledger/LedgerEntryPopover.vue) · todo 行 Gift |
-| 聚合 UI | [`LedgerAggregatePopover.vue`](../../../src/components/Ledger/LedgerAggregatePopover.vue) · 头部 Gift |
-| 测试 | [`parseLedgerSegments.test.ts`](../../../src/__tests__/parseLedgerSegments.test.ts)、[`ledgerService.test.ts`](../../../src/__tests__/ledgerService.test.ts) |
-| 云同步 | [`ledgerSync.ts`](../../../src/services/sync/ledgerSync.ts) · v2 |
+| 类型 | [`src/core/types/LedgerEntry.ts`](https://github.com/Xeonilian/pomotention/blob/main/src/core/types/LedgerEntry.ts) |
+| 解析 | [`src/core/ledger/parseLedgerSegments.ts`](https://github.com/Xeonilian/pomotention/blob/main/src/core/ledger/parseLedgerSegments.ts) |
+| 业务 | [`src/services/ledger/ledgerService.ts`](https://github.com/Xeonilian/pomotention/blob/main/src/services/ledger/ledgerService.ts) |
+| 聚合 | [`src/services/ledger/ledgerQueryService.ts`](https://github.com/Xeonilian/pomotention/blob/main/src/services/ledger/ledgerQueryService.ts) |
+| 持久化 | [`localStorageService.ts`](https://github.com/Xeonilian/pomotention/blob/main/src/services/data/localStorageService.ts) · `ledgerEntries` |
+| Store | [`useDataStore.ts`](https://github.com/Xeonilian/pomotention/blob/main/src/stores/useDataStore.ts) |
+| 接入 | [`HomeView.vue`](https://github.com/Xeonilian/pomotention/blob/main/src/views/HomeView.vue) · `onTodoTitleSaved` |
+| Tag 互斥 | [`DayTodo.vue`](https://github.com/Xeonilian/pomotention/blob/main/src/components/DayPlanner/DayTodo.vue) + [`useActivityTagEditor`](https://github.com/Xeonilian/pomotention/blob/main/src/composables/activity/useActivityTagEditor.ts) |
+| UI | [`LedgerEntryPopover.vue`](https://github.com/Xeonilian/pomotention/blob/main/src/components/Ledger/LedgerEntryPopover.vue) · todo 行 Gift |
+| 聚合 UI | [`LedgerAggregatePopover.vue`](https://github.com/Xeonilian/pomotention/blob/main/src/components/Ledger/LedgerAggregatePopover.vue) · 头部 Gift |
+| 测试 | [`parseLedgerSegments.test.ts`](https://github.com/Xeonilian/pomotention/blob/main/src/__tests__/parseLedgerSegments.test.ts)、[`ledgerService.test.ts`](https://github.com/Xeonilian/pomotention/blob/main/src/__tests__/ledgerService.test.ts) |
+| 云同步 | [`ledgerSync.ts`](https://github.com/Xeonilian/pomotention/blob/main/src/services/sync/ledgerSync.ts) · v2 |
 | 云表 | Supabase `ledger_entries` · v2 |
 
 ---
@@ -255,7 +255,7 @@ UI 按 **`todo.activityId`** 取 [`getActiveLedgerEntriesForActivity`](../../../
 
 ### 11.1 目标
 
-用户反馈 title 内 `#` 分类太麻烦 → 在 [`LedgerAggregatePopover`](../../../src/components/Ledger/LedgerAggregatePopover.vue) 明细表 **改 / 删 / 追加**；分类点格子弹 TagSelector。
+用户反馈 title 内 `#` 分类太麻烦 → 在 [`LedgerAggregatePopover`](https://github.com/Xeonilian/pomotention/blob/main/src/components/Ledger/LedgerAggregatePopover.vue) 明细表 **改 / 删 / 追加**；分类点格子弹 TagSelector。
 
 ### 11.2 写入
 

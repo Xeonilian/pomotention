@@ -1,5 +1,8 @@
 # UI checks
 
+> **可选。** 仅大改且你想留视觉对照时追加；平时可跳过。截图与本文件同目录。Agent：skill-ui-checks。
+
+
 ## UI check #1 导出 ics QR 码
 
 ### Given
@@ -15,11 +18,11 @@
 
 - 高亮行,按钮变为蓝色
 
-![全界面](ui-checks/20250912-qr-ics-full-after.png)
+![全界面](./20250912-qr-ics-full-after.png)
 
 - 弹出二维码 20250912-qr-ics-code-after.png
 
-![二维码](ui-checks/20250912-qr-ics-code-after.png)
+![二维码](./20250912-qr-ics-code-after.png)
 
 ## UI check #2 导出 ics 文件
 
@@ -37,11 +40,11 @@
 
 - 黑色按钮
 
-  ![黑色按钮](ui-checks/20250912-qr-ics-after.png)
+  ![黑色按钮](./20250912-qr-ics-after.png)
 
 - 加入按钮前
 
-  ![加入按钮前](ui-checks/20250912-qr-ics-before.png)
+  ![加入按钮前](./20250912-qr-ics-before.png)
 
 ## UI check #3.1 登录功能
 
@@ -60,7 +63,7 @@
 - 如果邮箱或密码为空，弹出提示"邮箱和密码不能为空"
 - 如果填写完整，执行登录操作
 
-![登录页](ui-checks/20251110-supabase-login-after.png)
+![登录页](./20251110-supabase-login-after.png)
 
 ## UI check #3.2 注册功能
 
@@ -84,7 +87,7 @@
   - 注册按钮变为蓝色
   - 可以正常注册
 
-![用户协议](ui-checks/20251110-supabase-contract-after.png)
+![用户协议](./20251110-supabase-contract-after.png)
 
 ## UI check #3.3 忘记密码功能
 
@@ -105,4 +108,4 @@
 - 页面跳转到重置密码页
 - 输入邮箱后可发送重置链接
 
-![忘记密码](ui-checks/20251110-supabase-recover-password-after.png)
+![忘记密码](./20251110-supabase-recover-password-after.png)

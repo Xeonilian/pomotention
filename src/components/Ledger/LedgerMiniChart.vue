@@ -27,6 +27,8 @@ const props = withDefaults(
     pieSlices?: LedgerPieSlice[];
     trendBuckets?: LedgerTrendBucket[];
     trendDayClickable?: boolean;
+    /** APP 选中日 0 点；日/周趋势轴高亮用 */
+    highlightDayStart?: number | null;
     emptyLabel?: string;
     height?: number;
     fill?: boolean;
@@ -35,6 +37,7 @@ const props = withDefaults(
     pieSlices: () => [],
     trendBuckets: () => [],
     trendDayClickable: false,
+    highlightDayStart: null,
     emptyLabel: "暂无数据",
     height: 200,
     fill: false,
@@ -52,7 +55,8 @@ const chartInstance = shallowRef<echarts.ECharts>();
 
 const EMPTY_RING_FALLBACK = "var(--color-background-light, #e8e8e8)";
 const EMPTY_TEXT_FALLBACK = "var(--color-text-primary, #999)";
-const DEFAULT_AXIS_COLOR = "var(--color-text-secondary, #999)";
+const DEFAULT_AXIS_FALLBACK = "#999";
+const HIGHLIGHT_AXIS_FALLBACK = "#4098fc";
 
 function resolveChartColor(cssVar: string, fallback: string): string {
   const el = chartRef.value;
@@ -95,13 +99,25 @@ function buildPieOption(): EChartsOption {
   }
 
   return {
-    tooltip: { trigger: "item", formatter: "{b}: {c} ({d}%)" },
+    tooltip: {
+      trigger: "item",
+      formatter: (params: unknown) => {
+        const p = params as { name: string; value: number; percent: number };
+        return `${p.name}: ${Number(p.value).toFixed(1)} (${Number(p.percent).toFixed(1)}%)`;
+      },
+    },
     series: [
       {
         type: "pie",
         radius: ["42%", "68%"],
         avoidLabelOverlap: true,
-        label: { fontSize: 11 },
+        label: {
+          fontSize: 11,
+          formatter: (params: unknown) => {
+            const p = params as { name: string; value: number; percent: number };
+            return `${p.name}\n${Number(p.value).toFixed(1)} (${Number(p.percent).toFixed(1)}%)`;
+          },
+        },
         data: props.pieSlices.map((s) => ({ name: s.name, value: s.value })),
       },
     ],
@@ -111,6 +127,9 @@ function buildPieOption(): EChartsOption {
 function buildTrendOption(): EChartsOption {
   const buckets = props.trendBuckets;
   const hasData = buckets.some((b) => b.expense > 0 || b.income > 0);
+  const defaultAxisColor = resolveChartColor("--color-text-secondary", DEFAULT_AXIS_FALLBACK);
+  const highlightAxisColor = resolveChartColor("--color-blue", HIGHLIGHT_AXIS_FALLBACK);
+  const highlightDayStart = props.highlightDayStart ?? null;
   return {
     tooltip: { trigger: "axis" },
     legend: { top: 0, right: 0, itemWidth: 10, itemHeight: 10, textStyle: { fontSize: 11 } },
@@ -123,8 +142,11 @@ function buildTrendOption(): EChartsOption {
         fontSize: 10,
         interval: 0,
         rotate: buckets.length > 8 ? 35 : 0,
-        color: (_value?: string | number) => {
-          return DEFAULT_AXIS_COLOR;
+        color: (value?: string | number, index?: number) => {
+          if (highlightDayStart == null) return defaultAxisColor;
+          const bucket =
+            typeof index === "number" ? buckets[index] : buckets.find((b) => b.label === String(value ?? ""));
+          return bucket && bucket.start === highlightDayStart ? highlightAxisColor : defaultAxisColor;
         },
       },
     },
@@ -204,7 +226,14 @@ watch(
   () =>
     props.kind === "pie"
       ? [props.kind, pieSlicesKey(props.pieSlices), props.emptyLabel, props.fill, props.height]
-      : [props.kind, trendBucketsKey(props.trendBuckets), props.trendDayClickable, props.fill, props.height],
+      : [
+          props.kind,
+          trendBucketsKey(props.trendBuckets),
+          props.trendDayClickable,
+          props.highlightDayStart,
+          props.fill,
+          props.height,
+        ],
   () => {
     render();
     resize();

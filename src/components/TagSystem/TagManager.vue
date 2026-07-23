@@ -6,6 +6,7 @@
     align-center
     :style="modalStyle"
     :auto-focus="false"
+    :trap-focus="false"
     :mask-closable="true"
     :close-on-esc="true"
     :to="modalTo"

@@ -1,8 +1,8 @@
 # Pomotention Timer · 14 天锚定单
 
-> **个人备忘（历史）**，2026-05-25 落地前问卷整理。**不是** 活跃冲刺文档；**当前在做的关** 只看 [`current.md`](../../current.md)。
+> **个人备忘（历史）**，2026-05-25 落地前问卷整理。**不是** 活跃冲刺文档；**当前在做的关** 只看 [`current.md`](../current.md)。
 
-与 [RELEASE-dev](../../SOP/RELEASE-dev.md) 主站发布流程并行、互不替代——当时写给自己看的 scope 笔记，保留作参考。
+与 [RELEASE-dev](../ship/RELEASE-dev.md) 主站发布流程并行、互不替代——当时写给自己看的 scope 笔记，保留作参考。
 
 ---
 
@@ -145,7 +145,7 @@
 - 长期 `#list` 活动 + Task 内 `- [ ]` 可继续用；冲刺另开 **`Timer 14d`** 无日期活动，避免与百年待办混页。
 - Task 清单用 `[now]` / `[later]`；计划表 **今天** 只放 `[now]` 里 1～3 条。
 - 清单过长：优先 Task 内「收件箱 / 已完成」分区；主题或阶段变了再 **新开活动**，旧条 archive。
-- 操作说明见 [长期事项与待办库存](../guide/practices/long-horizon-inventory.md)。
+- 操作说明见 [长期事项与待办库存](../../guide/practices/long-horizon-inventory.md)。
 
 ---
 

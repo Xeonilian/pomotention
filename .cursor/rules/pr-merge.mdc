@@ -1,0 +1,44 @@
+---
+description: PR 合并必须用 squash；合并后重建 dev（删旧远端 dev）
+alwaysApply: true
+---
+
+# PR 合并与收工
+
+**触发：** 用户说「开 PR / 合并 / merge PR / 收工」或 Agent 执行 `gh pr merge` 前 **必须先读本节**。
+
+## 合并命令（禁止 merge commit）
+
+```bash
+gh pr merge <num> --squash --delete-branch
+```
+
+- **必须** `--squash`，**禁止** `--merge`（除非用户当次明确要求保留多 commit 历史）。
+- **必须** `--delete-branch`，合并后托管端删除该 PR 分支（通常 `dev`）。
+
+细节与模板：[`docs/dev-log/ship/PR.md`](docs/dev-log/ship/PR.md) §5。
+
+## PR 收工结尾（合并之后必做）
+
+合并 squash 进 `main` 且远端 PR 分支已删后，**以重建 `dev` 为结束**（本地 + 远端各一条与 `main` 同提交的 `dev`）：
+
+```bash
+git checkout main
+git pull --prune
+git fetch origin --prune
+git branch -f dev main || git branch dev main
+git checkout dev
+# 推送前：main 与 dev 必须为同一提交
+git rev-parse main
+git rev-parse dev
+git push -u origin dev
+```
+
+- 远端 `origin/dev` 若已被 `--delete-branch` 删掉：`push -u` 会 **新建** 与 `main` 对齐的 `dev`。
+- **不要** 对 `dev` 做 `--force` push。
+- 完整说明：skill [`dev-branch`](../../.cursor/skills/dev-branch/SKILL.md)。
+
+## 收工后（若本关完成）
+
+- 更新 [`docs/dev-log/current.md`](docs/dev-log/current.md)「停在哪」或清空模板。
+- 可选：CHANGELOG / archive（见 `current.md` 归档节）。

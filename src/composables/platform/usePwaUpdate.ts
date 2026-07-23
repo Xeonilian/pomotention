@@ -65,6 +65,18 @@ function bindWaitingDetection(reg: ServiceWorkerRegistration, notification: Noti
   });
 }
 
+/** 冷启动后再查 SW 更新，避免与首屏争抢网络 */
+const SW_UPDATE_DEFER_MS = 3000;
+
+function scheduleSwUpdate(reg: ServiceWorkerRegistration) {
+  const run = () => void reg.update();
+  if (typeof requestIdleCallback === "function") {
+    requestIdleCallback(() => run(), { timeout: SW_UPDATE_DEFER_MS });
+  } else {
+    setTimeout(run, SW_UPDATE_DEFER_MS);
+  }
+}
+
 /**
  * 生产环境 Web：注册 SW、检测 waiting 版本、提示用户刷新；与 Tauri 桌面版无关
  */
@@ -110,7 +122,7 @@ export function usePwaUpdate(notification: NotificationApi) {
       .register("/sw.js")
       .then((reg) => {
         bindWaitingDetection(reg, notification);
-        return reg.update();
+        scheduleSwUpdate(reg);
       })
       .catch((err) => {
         console.error("❌ Service Worker registration failed:", err);

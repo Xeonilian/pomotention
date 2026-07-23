@@ -16,7 +16,7 @@ function readInnerSize() {
   };
 }
 
-function readObscuredBottomRawPx(): number {
+export function readObscuredBottomRawPx(): number {
   if (typeof window === "undefined") return 0;
   const vv = window.visualViewport;
   if (!vv) return 0;
