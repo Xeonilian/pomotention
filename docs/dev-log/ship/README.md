@@ -11,4 +11,4 @@
 
 其余为工具链（Supabase、gh、docs deploy 等），按文件名找即可。
 
-**不放：** 当前关进度（→ [`../current.md`](../current.md)）、架构（→ [`../blueprint/`](../blueprint/)）。
+**不放：** 当前关进度（→ [`../current.md`](../current.md)）、架构（→ [`../blueprint/README`](../blueprint/README.md)）。

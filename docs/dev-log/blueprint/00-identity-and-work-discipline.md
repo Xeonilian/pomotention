@@ -1,6 +1,6 @@
 # 身份边界与工作纪律
 
-> 个人备忘。与 [AI 协作备忘](../../../.cursor/docs/ai-collaboration-harness-loop.md)、[开发地图](../../guide/intro/roadmap.md) 并列阅读。
+> 个人备忘。与 [AI 协作备忘](https://github.com/Xeonilian/pomotention/blob/main/.cursor/docs/ai-collaboration-harness-loop.md)、[开发地图](../../guide/intro/roadmap.md) 并列阅读。
 
 ---
 
@@ -121,7 +121,7 @@
 昨天停在哪：（一行）
 ```
 
-与 AI 协作时，可把「停的标准」直接当 [Harness / 小 Loop](../../../.cursor/docs/ai-collaboration-harness-loop.md) 的验收条。
+与 AI 协作时，可把「停的标准」直接当 [Harness / 小 Loop](https://github.com/Xeonilian/pomotention/blob/main/.cursor/docs/ai-collaboration-harness-loop.md) 的验收条。
 
 ---
 

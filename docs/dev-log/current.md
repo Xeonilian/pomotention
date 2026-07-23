@@ -1,7 +1,7 @@
 # 当前这一关
 
 > **搞不清要干嘛、干到哪了 → 只看这个文件。**  
-> 开新功能：填下面各节；收工：更新「停在哪」；做完：打勾后清空或归档到 [`history/archive/`](./history/archive/)。
+> 开新功能：填下面各节；收工：更新「停在哪」；做完：打勾后清空或归档到 [`history/archive/`](./history/archive/README.md)。
 
 ---
 

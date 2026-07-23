@@ -143,7 +143,7 @@ flowchart LR
 1. **一条 sprint 活动**（无日期），如 `Timer 14d`；Task 里列 `[now]` / `[later]`。
 2. **泛泛 `#list`** 继续收长期想法，不把 sprint 和百年待办混在同一页。
 3. 冲刺结束：**封存** sprint 活动；`[later]` 留在 list 或下一轮收件箱。
-4. 更完整的 **目标 / 不做清单 / 第 7 天砍 scope** 可写在 dev-log：活跃关用 [`current.md`](../../dev-log/current.md)，长一点的一次性备忘放 [`blueprint/`](../../dev-log/blueprint/)（示例：[`4-timer-branch.md`](../../dev-log/blueprint/4-timer-branch.md)），与软件内 backlog 互补。
+4. 更完整的 **目标 / 不做清单 / 第 7 天砍 scope** 可写在仓库 `docs/dev-log/`（活跃关 `current.md`，长备忘 `blueprint/`），与软件内 backlog 互补。
 
 ## 以后可能的产品方向
 
@@ -158,7 +158,7 @@ flowchart LR
 | **`activity.projectId` 项目字段** | 数据模型已有 `projectId`，界面与筛选未作为一等公民            | 未来或用于按「项目」聚合活动；现阶段用 **标签 + 一条库存活动标题** 代替     |
 | **数据查看页「文件夹 / 项目树」** | [数据查看](../reference/search.md) 以搜索、标签 AND、星标为主 | 未来或支持按项目/文件夹浏览；现阶段用 **标签筛选 + 多条 archive 活动** 代替 |
 
-若实现上述能力，会在 [更新日志](../../dev-log/history/CHANGELOG.md) 与 [开发地图](../intro/roadmap.md) 中说明；构想细节见 [`dev-log/blueprint/0-vision.md`](../../dev-log/blueprint/0-vision.md)。本文操作步骤 **仍以当前版本为准**。
+若实现上述能力，会在 [更新日志](../../dev-log/history/CHANGELOG.md) 与 [开发地图](../intro/roadmap.md) 中说明；更长构想只在仓库工程笔记里（不进帮助站）。本文操作步骤 **仍以当前版本为准**。
 
 ## 限制与说明
 

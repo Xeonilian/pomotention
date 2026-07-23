@@ -7,11 +7,11 @@
 | 层 | 问什么 | 去哪 |
 |----|--------|------|
 | **1 current** | 我现在干嘛？干到哪了？ | [`current.md`](./current.md) |
-| **2 ship** | 怎么分支 / PR / 发版？ | [`ship/`](./ship/)（入口 [`PR.md`](./ship/PR.md)） |
-| **3 design** | 系统约定、领域、构想？ | [`blueprint/`](./blueprint/) |
-| **4 history** | 发过什么？关票？视觉对照？ | [`history/`](./history/) |
+| **2 ship** | 怎么分支 / PR / 发版？ | [`ship/README`](./ship/README.md)（入口 [`PR.md`](./ship/PR.md)） |
+| **3 design** | 系统约定、领域、构想？ | [`blueprint/README`](./blueprint/README.md) |
+| **4 history** | 发过什么？关票？视觉对照？ | [`history/README`](./history/README.md) |
 
-与 AI 怎么协作 → [`.cursor/docs/ai-collaboration-harness-loop.md`](../../.cursor/docs/ai-collaboration-harness-loop.md)。
+与 AI 怎么协作 → 仓库 [`.cursor/docs/ai-collaboration-harness-loop.md`](https://github.com/Xeonilian/pomotention/blob/main/.cursor/docs/ai-collaboration-harness-loop.md)。
 
 ---
 
@@ -68,8 +68,8 @@ dev-log/
 
 | Skill | 用途 |
 |-------|------|
-| [skill-changelog](../../.cursor/skills/skill-changelog/SKILL.md) | CHANGELOG |
-| [skill-ui-checks](../../.cursor/skills/skill-ui-checks/SKILL.md) | 大改时追加 ui-checks |
-| [dev-branch](../../.cursor/skills/dev-branch/SKILL.md) | 合并后重建 `dev` |
+| [skill-changelog](https://github.com/Xeonilian/pomotention/blob/main/.cursor/skills/skill-changelog/SKILL.md) | CHANGELOG |
+| [skill-ui-checks](https://github.com/Xeonilian/pomotention/blob/main/.cursor/skills/skill-ui-checks/SKILL.md) | 大改时追加 ui-checks |
+| [dev-branch](https://github.com/Xeonilian/pomotention/blob/main/.cursor/skills/dev-branch/SKILL.md) | 合并后重建 `dev` |
 
-Agent 入口：[`AGENTS.md`](../../AGENTS.md)。
+Agent 入口：[AGENTS.md](https://github.com/Xeonilian/pomotention/blob/main/AGENTS.md)。

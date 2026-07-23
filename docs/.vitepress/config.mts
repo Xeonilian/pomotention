@@ -21,11 +21,20 @@ const devHost = process.env.TAURI_DEV_HOST;
 export default withMermaid(
   defineConfig({
     base,
-    // 草稿/实验目录不进静态站，避免内部链接被判死链导致 build 失败
-    srcExclude: ["**/scratchpad/**"],
+    // 不进帮助站：scratchpad + 工程内部 dev-log（仅保留 history/CHANGELOG 给侧栏「更新日志」）
+    srcExclude: [
+      "**/scratchpad/**",
+      "dev-log/README.md",
+      "dev-log/current.md",
+      "dev-log/ship/**",
+      "dev-log/blueprint/**",
+      "dev-log/history/README.md",
+      "dev-log/history/archive/**",
+      "dev-log/history/ui-checks/**",
+    ],
     title: "Pomotention",
     description: "🍅 基于番茄工作法与执行意图的自我照顾系统",
-    // dev-log 整树不参与默认主题 Local Search（与下方 _render 双保险）
+    // CHANGELOG 等仍在 dev-log 下的页面不进 Local Search
     transformPageData(pageData) {
       if (pageData.relativePath.startsWith("dev-log/")) {
         pageData.frontmatter.search = false;

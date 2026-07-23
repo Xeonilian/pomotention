@@ -12,4 +12,4 @@
 | [`4-timer-branch.md`](./4-timer-branch.md) | Timer 14d 历史备忘 |
 | [`5-ledger.md`](./5-ledger.md) | ledger 边界与语法 |
 
-与 AI 协作 → [`.cursor/docs/ai-collaboration-harness-loop.md`](../../../.cursor/docs/ai-collaboration-harness-loop.md)。
+与 AI 协作 → [`.cursor/docs/ai-collaboration-harness-loop.md`](https://github.com/Xeonilian/pomotention/blob/main/.cursor/docs/ai-collaboration-harness-loop.md)。
