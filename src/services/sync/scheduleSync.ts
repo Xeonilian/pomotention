@@ -28,8 +28,29 @@ interface FullScheduleFromCloud {
 }
 
 export class ScheduleSyncService extends BaseSyncService<Schedule, CloudScheduleInsert> {
-  constructor(getList: () => Schedule[], getMap: () => Map<number, Schedule>) {
+  private getActivityMap: () => Map<number, { deleted?: boolean }>;
+
+  constructor(
+    getList: () => Schedule[],
+    getMap: () => Map<number, Schedule>,
+    getActivityMap: () => Map<number, { deleted?: boolean }>,
+  ) {
     super("schedules", "todaySchedule", getList, getMap);
+    this.getActivityMap = getActivityMap;
+  }
+
+  /** 跳过引用已删除/不存在 activity 的 orphan schedule，避免外键冲突 */
+  protected isUploadable(item: Schedule): boolean {
+    const activity = this.getActivityMap().get(item.activityId);
+    if (!activity) {
+      console.warn(`[ScheduleSync] skip orphaned schedule id=${item.id}, activityId=${item.activityId} not found`);
+      return false;
+    }
+    if (activity.deleted) {
+      console.warn(`[ScheduleSync] skip orphaned schedule id=${item.id}, activityId=${item.activityId} is deleted`);
+      return false;
+    }
+    return true;
   }
 
   /**

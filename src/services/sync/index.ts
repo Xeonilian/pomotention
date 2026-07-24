@@ -64,11 +64,13 @@ export async function initSyncServices(dataStore: ReturnType<typeof useDataStore
   const todoSync = new TodoSyncService(
     () => dataStore.todoList,
     () => dataStore._todoById,
+    () => dataStore._activityById,
   );
 
   const scheduleSync = new ScheduleSyncService(
     () => dataStore.scheduleList,
     () => dataStore._scheduleById,
+    () => dataStore._activityById,
   );
 
   const taskSync = new TaskSyncService(
