@@ -96,6 +96,8 @@ if (supabaseUrl && supabaseAnonKey) {
       autoRefreshToken: true,
       persistSession: true,
       detectSessionInUrl: true,
+      // Edge/隐私模式下 LockManager 返回 null 时优雅降级，避免控制台报错
+      lock: { ifAvailable: true },
     },
     global: {
       fetch: async (input, init) => performFetchWithTimeout(input, init),
