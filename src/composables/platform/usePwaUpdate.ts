@@ -120,15 +120,24 @@ export function usePwaUpdate(notification: NotificationApi) {
 
     navigator.serviceWorker.addEventListener("controllerchange", onControllerChange);
 
-    void navigator.serviceWorker
-      .register("/sw.js")
-      .then((reg) => {
-        bindWaitingDetection(reg, notification);
-        scheduleSwUpdate(reg);
-      })
-      .catch((err) => {
-        console.error("❌ Service Worker registration failed:", err);
-      });
+    // 延迟到下一个 macrotask，避开页面 mount/reload 竞争期导致的 abort
+    window.setTimeout(() => {
+      void navigator.serviceWorker
+        .register("/sw.js")
+        .then((reg) => {
+          bindWaitingDetection(reg, notification);
+          scheduleSwUpdate(reg);
+        })
+        .catch((err) => {
+          const msg = err instanceof Error ? err.message : String(err);
+          // 刷新时旧页面 unload 会 abort 正在进行的 register，属于正常情况，不打 error
+          if (msg.includes("aborted") || (err as DOMException)?.name === "AbortError") {
+            console.log("[SW] registration aborted during page unload/reload");
+            return;
+          }
+          console.error("❌ Service Worker registration failed:", err);
+        });
+    }, 0);
   };
 
   const dispose = () => {
