@@ -4,7 +4,7 @@
 import { supabase } from "@/core/services/supabase";
 import { getCurrentUser } from "@/core/services/authService";
 import { useSettingStore } from "@/stores/useSettingStore";
-import type { Database } from "@/core/types/Database";
+import type { Database, Json } from "@/core/types/Database";
 
 const TABLE_NAME = "user_settings";
 
@@ -22,17 +22,48 @@ export class SettingsSyncService {
     }
 
     const settingStore = useSettingStore();
-    const now = new Date().toISOString();
-    const rows: CloudUserSettingInsert[] = [];
+    const candidates: { key: keyof typeof settingStore.settings; lastModified: number }[] = [];
 
     for (const key of settingStore.SYNCABLE_SETTING_KEYS) {
       const lastModified = settingStore.getSettingLastModified(key);
       if (lastModified <= 0) continue; // 从未标记过修改，不上传
+      candidates.push({ key, lastModified });
+    }
+
+    if (candidates.length === 0) {
+      return { success: true, uploaded: 0 };
+    }
+
+    // 先读云端 last_modified，避免 syncAll 先上传时用陈旧本地覆盖较新云端
+    const { data: cloudRows, error: fetchError } = await supabase
+      .from(TABLE_NAME)
+      .select("key,last_modified")
+      .eq("user_id", user.id)
+      .in(
+        "key",
+        candidates.map((c) => String(c.key)),
+      );
+
+    if (fetchError) {
+      console.error("[SettingsSync] upload fetch cloud failed:", fetchError);
+      return { success: false, error: fetchError.message, uploaded: 0 };
+    }
+
+    const cloudMap = new Map(
+      (cloudRows ?? []).map((row) => [row.key, new Date(row.last_modified).getTime()]),
+    );
+
+    const rows: CloudUserSettingInsert[] = [];
+    for (const { key, lastModified } of candidates) {
+      const cloudTime = cloudMap.get(String(key)) ?? 0;
+      if (lastModified <= cloudTime) continue; // 本地不新于云端，跳过
+
       rows.push({
         user_id: user.id,
         key: String(key),
-        value: settingStore.settings[key] as unknown,
-        last_modified: now,
+        value: settingStore.settings[key] as Json,
+        // 用本地修改时间，不用 now，避免人为抬高时间戳
+        last_modified: new Date(lastModified).toISOString(),
       });
     }
 
@@ -79,7 +110,8 @@ export class SettingsSyncService {
 
       // 云端更新才覆盖本地，以时间戳为准
       if (cloudTime > localTime) {
-        (settingStore.settings as any)[key] = row.value;
+        (settingStore.settings as Record<string, unknown>)[key as string] = row.value;
+        settingStore.setSettingLastModified(key, cloudTime);
         downloadedCount++;
       }
     }

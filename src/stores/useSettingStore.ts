@@ -254,6 +254,12 @@ export const useSettingStore = defineStore("setting", () => {
     return settingLastModified.value[key] ?? 0;
   }
 
+  /** 下载云端 setting 后对齐本地时间戳，避免下次误判为需上传 */
+  function setSettingLastModified(key: keyof GlobalSettings, timestamp: number) {
+    if (!SYNCABLE_SETTING_KEYS.has(key)) return;
+    settingLastModified.value[key] = timestamp;
+  }
+
   // 持久化各 setting 字段的修改时间戳
   watch(
     settingLastModified,
@@ -413,5 +419,6 @@ export const useSettingStore = defineStore("setting", () => {
     SYNCABLE_SETTING_KEYS,
     markSettingModified,
     getSettingLastModified,
+    setSettingLastModified,
   };
 });
