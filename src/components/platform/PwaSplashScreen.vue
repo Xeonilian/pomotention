@@ -3,7 +3,7 @@
     <div v-if="visible" class="pwa-splash" aria-hidden="true">
       <div class="pwa-splash__inner">
         <img src="/icon-192.png" alt="" class="pwa-splash__icon" width="96" height="96" />
-        <span class="pwa-splash__name">Pomotention</span>
+        <span class="pwa-splash__name">{{ isUpdating ? "Updating..." : "Pomotention" }}</span>
       </div>
     </div>
   </Transition>
@@ -20,15 +20,27 @@ function isStandalone(): boolean {
 }
 
 const visible = ref(false);
-const SPLASH_DURATION_MS = 1200;
+const isUpdating = ref(false);
+const SPLASH_DURATION_MS = 400;
 
 onMounted(() => {
   if (!isStandalone()) return;
   visible.value = true;
-  const t = setTimeout(() => {
+  let t = window.setTimeout(() => {
     visible.value = false;
   }, SPLASH_DURATION_MS);
-  return () => clearTimeout(t);
+
+  const onUpdating = () => {
+    isUpdating.value = true;
+    visible.value = true;
+    window.clearTimeout(t);
+  };
+  window.addEventListener("pwa-updating", onUpdating);
+
+  return () => {
+    window.clearTimeout(t);
+    window.removeEventListener("pwa-updating", onUpdating);
+  };
 });
 </script>
 

@@ -16,6 +16,11 @@ function removePendingVisibilityReload() {
 
 type NotificationApi = ReturnType<typeof import("naive-ui").useNotification>;
 
+function dispatchPwaUpdating() {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent("pwa-updating"));
+}
+
 function promptRefresh(reg: ServiceWorkerRegistration, notification: NotificationApi) {
   if (updatePromptShown || !reg.waiting) return;
   updatePromptShown = true;
@@ -37,6 +42,7 @@ function promptRefresh(reg: ServiceWorkerRegistration, notification: Notificatio
             type: "primary",
             size: "small",
             onClick: () => {
+              dispatchPwaUpdating();
               reg.waiting?.postMessage({ type: "SKIP_WAITING" });
             },
           },
@@ -90,6 +96,7 @@ export function usePwaUpdate(notification: NotificationApi) {
     if (document.visibilityState === "visible") {
       refreshing = true;
       removePendingVisibilityReload();
+      dispatchPwaUpdating();
       window.location.reload();
       return;
     }
@@ -101,22 +108,17 @@ export function usePwaUpdate(notification: NotificationApi) {
       if (refreshing) return;
       refreshing = true;
       removePendingVisibilityReload();
+      dispatchPwaUpdating();
       window.location.reload();
     };
     pendingVisibilityReloadHandler = handler;
     document.addEventListener("visibilitychange", handler);
   };
 
-  const onFocus = () => {
-    void navigator.serviceWorker.getRegistration().then((r) => r?.update());
-  };
-
   const init = () => {
     if (!import.meta.env.PROD || !("serviceWorker" in navigator)) return;
 
     navigator.serviceWorker.addEventListener("controllerchange", onControllerChange);
-
-    window.addEventListener("focus", onFocus);
 
     void navigator.serviceWorker
       .register("/sw.js")
@@ -131,7 +133,6 @@ export function usePwaUpdate(notification: NotificationApi) {
 
   const dispose = () => {
     navigator.serviceWorker.removeEventListener("controllerchange", onControllerChange);
-    window.removeEventListener("focus", onFocus);
     removePendingVisibilityReload();
   };
 
