@@ -73,7 +73,7 @@ function resolveEmptyLabelColor(): string {
 function tooltipCenterPosition(
   _point: number[],
   _params: unknown,
-  _dom: HTMLElement | null,
+  _dom: unknown,
   _rect: unknown,
   size: { contentSize: number[]; viewSize: number[] },
 ): number[] {
@@ -123,8 +123,8 @@ function buildPieOption(): EChartsOption {
       {
         type: "pie",
         radius: ["42%", "68%"],
-        label: { show: false },
-        labelLine: { show: false },
+        label: { show: true, formatter: "{b}" },
+        labelLine: { show: true },
         data: props.pieSlices.map((s) => ({ name: s.name, value: s.value })),
       },
     ],
