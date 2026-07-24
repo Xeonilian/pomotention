@@ -6,7 +6,7 @@ import type { Ref } from "vue";
 import { TodoSyncService } from "@/services/sync/todoSync";
 import { supabase } from "@/core/services/supabase";
 import type { Todo } from "@/core/types/Todo";
-import { createMockTodo, createMockFullTodoFromCloud, createUnsyncedTodo, createMockTodos } from "@/__tests__/mocks/testDbData";
+import { createMockTodo, createMockFullTodoFromCloud, createUnsyncedTodo, createMockTodos, mockPostgrestOk } from "@/__tests__/mocks/testDbData";
 
 // Mock localStorage
 const mockLocalStorage = (() => {
@@ -26,19 +26,32 @@ global.localStorage = mockLocalStorage as any;
 
 // Mock supabase
 const mockUpsert = vi.fn().mockResolvedValue({ error: null });
+const mockUploadVerifyIn = vi.fn();
 
 vi.mock("@/core/services/supabase", () => ({
   supabase: {
     from: vi.fn(() => ({
       upsert: mockUpsert,
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          in: mockUploadVerifyIn,
+        })),
+      })),
     })),
-    rpc: vi.fn().mockResolvedValue({ data: [], error: null, count: null, status: 200, statusText: "OK" }),
+    rpc: vi.fn().mockResolvedValue({
+      data: [],
+      error: null,
+      count: null,
+      status: 200,
+      statusText: "OK",
+      success: true,
+    }),
   },
 }));
 
 const supabaseClient = supabase as NonNullable<typeof supabase>;
 
-vi.mock("@/core/services/authServicve", () => ({
+vi.mock("@/core/services/authService", () => ({
   getCurrentUser: vi.fn().mockResolvedValue({ id: "test-user-id" }),
 }));
 
@@ -47,19 +60,23 @@ describe("TodoSyncService", () => {
   let service: TodoSyncService;
   let todoListRef: Ref<Todo[]>;
   let indexMap: Map<number, Todo>;
+  const activityMap = new Map<number, { deleted?: boolean }>([[9999, { deleted: false }]]);
 
   beforeEach(() => {
     vi.clearAllMocks();
     mockLocalStorage.clear();
+    mockUploadVerifyIn.mockImplementation((_col, ids: number[]) =>
+      Promise.resolve(
+        mockPostgrestOk(
+          ids.map((timestamp_id) => ({
+            timestamp_id,
+            last_modified: new Date().toISOString(),
+          })),
+        ),
+      ),
+    );
 
-    // 重置 rpc mock
-    vi.mocked(supabaseClient.rpc).mockResolvedValue({
-      data: [],
-      error: null,
-      count: null,
-      status: 200,
-      statusText: "OK",
-    });
+    vi.mocked(supabaseClient.rpc).mockResolvedValue(mockPostgrestOk([]));
 
     // 初始化测试数据容器
     todoListRef = ref<Todo[]>([]);
@@ -68,8 +85,9 @@ describe("TodoSyncService", () => {
     // ✅ 修复点：传递“函数”而不是“变量”
     // Service 内部会调用 getList() 和 getMap() 来获取最新值
     service = new TodoSyncService(
-      () => todoListRef.value, // 参数 1: 返回数组的函数
-      () => indexMap // 参数 2: 返回 Map 的函数
+      () => todoListRef.value,
+      () => indexMap,
+      () => activityMap,
     );
   });
 
@@ -163,19 +181,16 @@ describe("TodoSyncService", () => {
         }),
       ];
 
-      vi.mocked(supabaseClient.rpc).mockResolvedValueOnce({
-        data: mockRpcData,
-        error: null,
-        count: null,
-        status: 200,
-        statusText: "OK",
-      });
+      vi.mocked(supabaseClient.rpc).mockResolvedValueOnce(mockPostgrestOk(mockRpcData));
 
       const result = await service.download(0);
 
-      expect(supabaseClient.rpc).toHaveBeenCalledWith("get_full_todos", {
-        p_user_id: "test-user-id",
-      });
+      expect(supabaseClient.rpc).toHaveBeenCalledWith(
+        "get_full_todos",
+        expect.objectContaining({
+          p_user_id: "test-user-id",
+        }),
+      );
       expect(result.success).toBe(true);
       expect(result.downloaded).toBe(1);
     });
@@ -188,25 +203,20 @@ describe("TodoSyncService", () => {
       });
 
       todoListRef.value = [existingTodo];
+      indexMap.set(existingTodo.id, existingTodo);
       mockLocalStorage.setItem("todayTodo", JSON.stringify([existingTodo]));
 
       const cloudTodo = createMockFullTodoFromCloud({
         id: 1111111111111,
         activityTitle: "新标题",
+        last_modified: new Date(Date.now() + 60_000).toISOString(),
       });
 
-      vi.mocked(supabaseClient.rpc).mockResolvedValueOnce({
-        data: [cloudTodo],
-        error: null,
-        count: null,
-        status: 200,
-        statusText: "OK",
-      });
+      vi.mocked(supabaseClient.rpc).mockResolvedValueOnce(mockPostgrestOk([cloudTodo]));
 
       await service.download(0);
 
-      const saved = JSON.parse(mockLocalStorage.getItem("todayTodo")!);
-      expect(saved[0].activityTitle).toBe("新标题");
+      expect(todoListRef.value[0].activityTitle).toBe("新标题");
     });
 
     it("download: 保留本地未同步的修改", async () => {
@@ -225,13 +235,7 @@ describe("TodoSyncService", () => {
         activityTitle: "云端旧数据",
       });
 
-      vi.mocked(supabaseClient.rpc).mockResolvedValueOnce({
-        data: [cloudTodo],
-        error: null,
-        count: null,
-        status: 200,
-        statusText: "OK",
-      });
+      vi.mocked(supabaseClient.rpc).mockResolvedValueOnce(mockPostgrestOk([cloudTodo]));
 
       // 云端数据在本地修改之前
       await service.download(now - 10000);
@@ -272,8 +276,7 @@ describe("TodoSyncService", () => {
 
       await service.upload();
 
-      const saved = JSON.parse(mockLocalStorage.getItem("todayTodo")!);
-      expect(saved[0].synced).toBe(true);
+      expect(todoListRef.value[0].synced).toBe(true);
     });
 
     it("upload: 没有未同步数据时跳过上传", async () => {

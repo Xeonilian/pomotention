@@ -11,6 +11,7 @@ import {
   createMockFullScheduleFromCloud,
   createUnsyncedSchedule,
   createMockSchedules,
+  mockPostgrestOk,
 } from "@/__tests__/mocks/testDbData";
 
 // Mock localStorage
@@ -31,19 +32,32 @@ global.localStorage = mockLocalStorage as any;
 
 // Mock supabase
 const mockUpsert = vi.fn().mockResolvedValue({ error: null });
+const mockUploadVerifyIn = vi.fn();
 
 vi.mock("@/core/services/supabase", () => ({
   supabase: {
     from: vi.fn(() => ({
       upsert: mockUpsert,
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          in: mockUploadVerifyIn,
+        })),
+      })),
     })),
-    rpc: vi.fn().mockResolvedValue({ data: [], error: null, count: null, status: 200, statusText: "OK" }),
+    rpc: vi.fn().mockResolvedValue({
+      data: [],
+      error: null,
+      count: null,
+      status: 200,
+      statusText: "OK",
+      success: true,
+    }),
   },
 }));
 
 const supabaseClient = supabase as NonNullable<typeof supabase>;
 
-vi.mock("@/core/services/authServicve", () => ({
+vi.mock("@/core/services/authService", () => ({
   getCurrentUser: vi.fn().mockResolvedValue({ id: "test-user-id" }),
 }));
 
@@ -56,16 +70,26 @@ describe("ScheduleSyncService", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockLocalStorage.clear();
+    mockUploadVerifyIn.mockImplementation((_col, ids: number[]) =>
+      Promise.resolve(
+        mockPostgrestOk(
+          ids.map((timestamp_id) => ({
+            timestamp_id,
+            last_modified: new Date().toISOString(),
+          })),
+        ),
+      ),
+    );
 
-    vi.mocked(supabaseClient.rpc).mockResolvedValue({ data: [], error: null, count: null, status: 200, statusText: "OK" });
+    vi.mocked(supabaseClient.rpc).mockResolvedValue(mockPostgrestOk([]));
 
     scheduleListRef = ref<Schedule[]>([]);
     indexMap = new Map<number, Schedule>();
 
-    // ✅ 修复：改成传入函数
     service = new ScheduleSyncService(
       () => scheduleListRef.value,
-      () => indexMap
+      () => indexMap,
+      () => new Map<number, { deleted?: boolean }>([[9999, { deleted: false }]]),
     );
   });
   // ==================== 数据转换测试 ====================
@@ -142,19 +166,16 @@ describe("ScheduleSyncService", () => {
         }),
       ];
 
-      vi.mocked(supabaseClient.rpc).mockResolvedValueOnce({
-        data: mockRpcData,
-        error: null,
-        count: null,
-        status: 200,
-        statusText: "OK",
-      });
+      vi.mocked(supabaseClient.rpc).mockResolvedValueOnce(mockPostgrestOk(mockRpcData));
 
       const result = await service.download(0);
 
-      expect(supabaseClient.rpc).toHaveBeenCalledWith("get_full_schedules", {
-        p_user_id: "test-user-id",
-      });
+      expect(supabaseClient.rpc).toHaveBeenCalledWith(
+        "get_full_schedules",
+        expect.objectContaining({
+          p_user_id: "test-user-id",
+        }),
+      );
       expect(result.success).toBe(true);
       expect(result.downloaded).toBe(1);
     });
@@ -167,25 +188,20 @@ describe("ScheduleSyncService", () => {
       });
 
       scheduleListRef.value = [existingSchedule];
+      indexMap.set(existingSchedule.id, existingSchedule);
       mockLocalStorage.setItem("todaySchedule", JSON.stringify([existingSchedule]));
 
       const cloudSchedule = createMockFullScheduleFromCloud({
         id: 1111111111111,
         activityTitle: "新标题",
+        last_modified: new Date(Date.now() + 60_000).toISOString(),
       });
 
-      vi.mocked(supabaseClient.rpc).mockResolvedValueOnce({
-        data: [cloudSchedule],
-        error: null,
-        count: null,
-        status: 200,
-        statusText: "OK",
-      });
+      vi.mocked(supabaseClient.rpc).mockResolvedValueOnce(mockPostgrestOk([cloudSchedule]));
 
       await service.download(0);
 
-      const saved = JSON.parse(mockLocalStorage.getItem("todaySchedule")!);
-      expect(saved[0].activityTitle).toBe("新标题");
+      expect(scheduleListRef.value[0].activityTitle).toBe("新标题");
     });
 
     it("download: 保留本地未同步的修改", async () => {
@@ -204,13 +220,7 @@ describe("ScheduleSyncService", () => {
         activityTitle: "云端旧数据",
       });
 
-      vi.mocked(supabaseClient.rpc).mockResolvedValueOnce({
-        data: [cloudSchedule],
-        error: null,
-        count: null,
-        status: 200,
-        statusText: "OK",
-      });
+      vi.mocked(supabaseClient.rpc).mockResolvedValueOnce(mockPostgrestOk([cloudSchedule]));
 
       await service.download(now - 10000);
 
@@ -250,8 +260,7 @@ describe("ScheduleSyncService", () => {
 
       await service.upload();
 
-      const saved = JSON.parse(mockLocalStorage.getItem("todaySchedule")!);
-      expect(saved[0].synced).toBe(true);
+      expect(scheduleListRef.value[0].synced).toBe(true);
     });
 
     it("upload: 没有未同步数据时跳过上传", async () => {

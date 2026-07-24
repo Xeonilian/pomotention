@@ -3,7 +3,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { ref } from "vue"; // ✅ 添加 ref
 import { ActivitySyncService } from "@/services/sync/activitySync";
-import { createMockActivity } from "@/__tests__/mocks/testDbData";
+import { createMockActivity, mockPostgrestOk } from "@/__tests__/mocks/testDbData";
 import type { Activity } from "@/core/types/Activity";
 import type { Ref } from "vue"; // ✅ 添加类型
 
@@ -25,13 +25,14 @@ global.localStorage = mockLocalStorage as any;
 
 // Mock supabase
 const mockUpsert = vi.fn().mockResolvedValue({ error: null });
-const mockSelect = vi.fn().mockReturnValue({
-  eq: vi.fn().mockReturnValue({
-    eq: vi.fn().mockReturnValue({
-      gt: vi.fn().mockResolvedValue({ data: [], error: null }),
-    }),
-  }),
-});
+const mockUploadVerifyIn = vi.fn();
+const mockDownloadGt = vi.fn().mockResolvedValue(mockPostgrestOk([]));
+const mockSelect = vi.fn(() => ({
+  eq: vi.fn(() => ({
+    in: mockUploadVerifyIn,
+    gt: mockDownloadGt,
+  })),
+}));
 
 vi.mock("@/core/services/supabase", () => ({
   supabase: {
@@ -42,7 +43,7 @@ vi.mock("@/core/services/supabase", () => ({
   },
 }));
 
-vi.mock("@/core/services/authServicve", () => ({
+vi.mock("@/core/services/authService", () => ({
   getCurrentUser: vi.fn().mockResolvedValue({ id: "test-user-id" }),
 }));
 
@@ -54,6 +55,16 @@ describe("ActivitySyncService", () => {
   beforeEach(() => {
     mockLocalStorage.clear();
     vi.clearAllMocks();
+    mockUploadVerifyIn.mockImplementation((_col, ids: number[]) =>
+      Promise.resolve(
+        mockPostgrestOk(
+          ids.map((timestamp_id) => ({
+            timestamp_id,
+            last_modified: new Date().toISOString(),
+          })),
+        ),
+      ),
+    );
 
     // ✅ 创建响应式数据
     activityListRef = ref<Activity[]>([]);
