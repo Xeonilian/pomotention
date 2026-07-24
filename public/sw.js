@@ -126,7 +126,12 @@ self.addEventListener("fetch", (event) => {
           }
           return response;
         })
-        .catch(() => caches.match(request).then((cached) => cached || caches.match("/index.html"))),
+        .catch(() =>
+          caches
+            .match(request)
+            .then((cached) => cached || caches.match("/index.html"))
+            .then((cached) => cached || new Response("", { status: 503, statusText: "Offline" })),
+        ),
     );
     return;
   }

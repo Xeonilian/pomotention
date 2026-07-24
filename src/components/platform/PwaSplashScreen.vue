@@ -10,7 +10,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, onMounted, onUnmounted } from "vue";
 
 // 与 manifest 一致：仅在以 PWA 方式打开（主屏幕图标进入）时显示启动屏
 function isStandalone(): boolean {
@@ -23,24 +23,27 @@ const visible = ref(false);
 const isUpdating = ref(false);
 const SPLASH_DURATION_MS = 400;
 
+let splashTimer: number | undefined;
+let onUpdating: (() => void) | undefined;
+
 onMounted(() => {
   if (!isStandalone()) return;
   visible.value = true;
-  let t = window.setTimeout(() => {
+  splashTimer = window.setTimeout(() => {
     visible.value = false;
   }, SPLASH_DURATION_MS);
 
-  const onUpdating = () => {
+  onUpdating = () => {
     isUpdating.value = true;
     visible.value = true;
-    window.clearTimeout(t);
+    if (splashTimer !== undefined) window.clearTimeout(splashTimer);
   };
   window.addEventListener("pwa-updating", onUpdating);
+});
 
-  return () => {
-    window.clearTimeout(t);
-    window.removeEventListener("pwa-updating", onUpdating);
-  };
+onUnmounted(() => {
+  if (splashTimer !== undefined) window.clearTimeout(splashTimer);
+  if (onUpdating) window.removeEventListener("pwa-updating", onUpdating);
 });
 </script>
 
