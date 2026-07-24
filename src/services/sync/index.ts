@@ -77,6 +77,7 @@ export async function initSyncServices(dataStore: ReturnType<typeof useDataStore
   const taskSync = new TaskSyncService(
     () => dataStore.taskList,
     () => dataStore._taskById,
+    () => dataStore._activityById,
   );
 
   const tagSync = new TagSyncService(
@@ -92,6 +93,7 @@ export async function initSyncServices(dataStore: ReturnType<typeof useDataStore
   const ledgerSync = new LedgerSyncService(
     () => dataStore.ledgerList,
     () => dataStore._ledgerById,
+    () => dataStore._activityById,
   );
 
   settingsSync = new SettingsSyncService();

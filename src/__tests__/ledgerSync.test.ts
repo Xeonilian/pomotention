@@ -46,6 +46,7 @@ describe("LedgerSyncService", () => {
     service = new LedgerSyncService(
       () => ledgerListRef.value,
       () => indexMap,
+      () => new Map<number, { deleted?: boolean }>([[100, { deleted: false }]]),
     );
   });
 

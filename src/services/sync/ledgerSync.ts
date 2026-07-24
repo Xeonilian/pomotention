@@ -1,5 +1,5 @@
 import { BaseSyncService } from "./baseSyncService";
-import { STANDALONE_LEDGER_ACTIVITY_ID, type LedgerEntry, type LedgerDirection } from "@/core/types/LedgerEntry";
+import type { LedgerEntry, LedgerDirection } from "@/core/types/LedgerEntry";
 import type { Database } from "@/core/types/Database";
 import { convertISOToTimestamp } from "@/core/utils/convertTimestampToISO";
 
@@ -7,13 +7,37 @@ type CloudLedgerInsert = Database["public"]["Tables"]["ledger_entries"]["Insert"
 type CloudLedgerRow = Database["public"]["Tables"]["ledger_entries"]["Row"];
 
 export class LedgerSyncService extends BaseSyncService<LedgerEntry, CloudLedgerInsert> {
-  constructor(getList: () => LedgerEntry[], getMap: () => Map<number, LedgerEntry>) {
+  private getActivityMap: () => Map<number, { deleted?: boolean }>;
+
+  constructor(
+    getList: () => LedgerEntry[],
+    getMap: () => Map<number, LedgerEntry>,
+    getActivityMap: () => Map<number, { deleted?: boolean }>,
+  ) {
     super("ledger_entries", "ledgerEntries", getList, getMap);
+    this.getActivityMap = getActivityMap;
   }
 
-  /** 独立入账行（无 activity FK）暂不上传，待 v2 收尾 */
+  /**
+   * legacy sourceActivityId=0（无 FK）不上传；ledger-stub 日桶行照常上传；
+   * 跳过引用已删除/不存在 activity 的 orphan 行，避免外键冲突
+   */
   protected isUploadable(local: LedgerEntry): boolean {
-    return local.sourceActivityId !== STANDALONE_LEDGER_ACTIVITY_ID;
+    if (local.sourceActivityId === 0) return false;
+    const activity = this.getActivityMap().get(local.sourceActivityId);
+    if (!activity) {
+      console.warn(
+        `[LedgerSync] skip orphaned ledger id=${local.id}, sourceActivityId=${local.sourceActivityId} not found`,
+      );
+      return false;
+    }
+    if (activity.deleted) {
+      console.warn(
+        `[LedgerSync] skip orphaned ledger id=${local.id}, sourceActivityId=${local.sourceActivityId} is deleted`,
+      );
+      return false;
+    }
+    return true;
   }
 
   /** 本地 → 云端（仅非冗余字段；与 todoSync / taskSync 一致只存 activity_id） */
