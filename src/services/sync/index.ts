@@ -14,6 +14,8 @@ import { useSyncStore, runBeforeSyncHook } from "@/stores/useSyncStore";
 import { useDataStore } from "@/stores/useDataStore";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { isSupabaseEnabled } from "@/core/services/supabase";
+import { SettingsSyncService } from "./settingsSync";
+import { BaseSyncService } from "./baseSyncService";
 
 const shouldLogSyncDebug = ["1", "true"].includes(String(import.meta.env.VITE_SYNC_DEBUG_LOG ?? "").trim().toLowerCase());
 function syncDebugLog(...args: unknown[]) {
@@ -23,6 +25,7 @@ function syncDebugLog(...args: unknown[]) {
 
 // 私有变量：存储所有 sync 服务实例
 let syncServices: Array<{ name: string; service: any }> = [];
+let settingsSync: SettingsSyncService | null = null;
 let isInitialized = false;
 
 // ===================================================================================
@@ -62,16 +65,19 @@ export async function initSyncServices(dataStore: ReturnType<typeof useDataStore
   const todoSync = new TodoSyncService(
     () => dataStore.todoList,
     () => dataStore._todoById,
+    () => dataStore._activityById,
   );
 
   const scheduleSync = new ScheduleSyncService(
     () => dataStore.scheduleList,
     () => dataStore._scheduleById,
+    () => dataStore._activityById,
   );
 
   const taskSync = new TaskSyncService(
     () => dataStore.taskList,
     () => dataStore._taskById,
+    () => dataStore._activityById,
   );
 
   const tagSync = new TagSyncService(
@@ -87,7 +93,10 @@ export async function initSyncServices(dataStore: ReturnType<typeof useDataStore
   const ledgerSync = new LedgerSyncService(
     () => dataStore.ledgerList,
     () => dataStore._ledgerById,
+    () => dataStore._activityById,
   );
+
+  settingsSync = new SettingsSyncService();
 
   syncServices = [
     { name: "Activities", service: activitySync },
@@ -120,6 +129,7 @@ function ensureInitialized() {
 
 export function resetSyncServices() {
   syncServices = []; // 清空实例数组，断开引用，让 GC 回收旧实例
+  settingsSync = null;
   isInitialized = false; // 重置标志位
 
   // 如果你有 cleanup 逻辑，也可以在这里调用
@@ -138,10 +148,47 @@ interface SyncResult {
   details?: { name: string; fetched: number; downloaded: number; cloudDeleted?: number }[];
 }
 
+const CHILD_SERVICES_WITH_ACTIVITY_FK = new Set(["Todos", "Schedules", "Tasks", "Ledger"]);
+
+function isActivityFkErrorMessage(message: string): boolean {
+  return /fk_(todos|schedules|tasks|ledger_entries)_activity/.test(message);
+}
+
+/** 从待上传子表条目收集引用的 activity timestamp_id */
+function getActivityIdFromPendingChild(name: string, item: Record<string, unknown>): number | undefined {
+  if (name === "Tasks") return item.sourceId as number | undefined;
+  if (name === "Ledger") return item.sourceActivityId as number | undefined;
+  return item.activityId as number | undefined;
+}
+
+function collectPendingChildActivityIds(): number[] {
+  const ids = new Set<number>();
+  for (const { name, service } of syncServices) {
+    if (!CHILD_SERVICES_WITH_ACTIVITY_FK.has(name)) continue;
+    for (const item of service.getPendingUploadItems()) {
+      const activityId = getActivityIdFromPendingChild(name, item as Record<string, unknown>);
+      if (activityId != null) ids.add(activityId);
+    }
+  }
+  return [...ids];
+}
+
+/** 子表上传前：引用的 activity 若仍 unsynced，再传一次 */
+async function ensureActivitiesForPendingChildren(activityService: { service: BaseSyncService<any, any> }): Promise<void> {
+  const unsyncedRefIds = activityService.service.filterUnsyncedIds(collectPendingChildActivityIds());
+  if (unsyncedRefIds.length === 0) return;
+  await activityService.service.uploadItemsByIds(unsyncedRefIds);
+}
+
+function markActivitiesUnsynced(activityIds: number[]): void {
+  const activityService = syncServices.find((s) => s.name === "Activities");
+  activityService?.service.markUnsyncedByIds(activityIds);
+}
+
 /**
  * 内部上传逻辑
  */
-async function _internalUpload(): Promise<SyncResult> {
+async function _internalUpload(isRetry = false): Promise<SyncResult> {
   // 新增：10秒超时兜底
   const timeoutPromise = new Promise<SyncResult>((_, reject) => {
     setTimeout(() => reject(new Error("上传操作超时")), 10000);
@@ -167,6 +214,15 @@ async function _internalUpload(): Promise<SyncResult> {
         resolve({ errors, count: uploaded });
         return;
       }
+
+      // 1b. 子表待上传项引用的 activity 若仍 unsynced，补传一次
+      try {
+        await ensureActivitiesForPendingChildren(activityService);
+      } catch (e: any) {
+        errors.push(`Activities 依赖补传异常: ${e.message}`);
+        resolve({ errors, count: uploaded });
+        return;
+      }
     }
 
     // 2. 并行上传其他
@@ -185,11 +241,32 @@ async function _internalUpload(): Promise<SyncResult> {
       }
     });
 
+    // 最后上传 setting（依赖数据表先完成，但不影响核心数据）
+    if (settingsSync) {
+      try {
+        const res = await settingsSync.upload();
+        if (!res.success) errors.push(`Settings 上传失败: ${res.error}`);
+        else uploaded += res.uploaded;
+      } catch (e: any) {
+        errors.push(`Settings 上传异常: ${e.message}`);
+      }
+    }
+
     resolve({ errors, count: uploaded });
   });
 
   try {
-    return await Promise.race([uploadPromise, timeoutPromise]);
+    const result = await Promise.race([uploadPromise, timeoutPromise]);
+    if (!isRetry && result.errors.some(isActivityFkErrorMessage)) {
+      markActivitiesUnsynced(collectPendingChildActivityIds());
+      const activityService = syncServices.find((s) => s.name === "Activities");
+      if (activityService) {
+        await activityService.service.upload();
+        await ensureActivitiesForPendingChildren(activityService);
+      }
+      return _internalUpload(true);
+    }
+    return result;
   } catch (e: any) {
     return { errors: [e.message], count: 0 };
   }
@@ -227,6 +304,19 @@ async function _internalDownload(lastSyncTimestamp: number): Promise<SyncResult>
         errors.push(`下载异常: ${outcome.reason}`);
       }
     });
+
+    // 最后下载 setting
+    if (settingsSync) {
+      try {
+        const res = await settingsSync.download();
+        const applied = res.downloaded ?? 0;
+        details.push({ name: "Settings", fetched: applied, downloaded: applied, cloudDeleted: 0 });
+        if (!res.success) errors.push(`Settings 下载失败: ${res.error}`);
+        else downloaded += applied;
+      } catch (e: any) {
+        errors.push(`Settings 下载异常: ${e.message}`);
+      }
+    }
 
     resolve({ errors, count: downloaded, details });
   });

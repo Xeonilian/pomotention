@@ -8,6 +8,18 @@ import type { Schedule } from "@/core/types/Schedule";
 type CloudTodoInsert = Database["public"]["Tables"]["todos"]["Insert"];
 type CloudScheduleInsert = Database["public"]["Tables"]["schedules"]["Insert"];
 
+/** Supabase 2.110+ rpc/select 成功响应 mock */
+export function mockPostgrestOk<T>(data: T) {
+  return {
+    data,
+    error: null,
+    count: null,
+    status: 200,
+    statusText: "OK",
+    success: true as const,
+  };
+}
+
 /**
  * 创建测试用 Activity
  */
@@ -77,6 +89,8 @@ export function createMockFullTodoFromCloud(overrides?: Partial<any>): any {
     pomoType: "🍅",
     dueDate: 0,
     interruption: "I",
+    deleted: false,
+    last_modified: new Date(now).toISOString(),
 
     ...overrides,
   };
@@ -185,6 +199,8 @@ export function createMockFullScheduleFromCloud(overrides?: Partial<any>): any {
     isUntaetigkeit: false,
     interruption: "I",
     projectName: "Test Project",
+    deleted: false,
+    last_modified: new Date(now).toISOString(),
 
     ...overrides,
   };

@@ -195,6 +195,8 @@ function loadFromStorage<T extends Record<string, any>>(key: string, defaultValu
 
 const MAX_AUDIO_DEBUG_LINES = 200;
 
+const SETTING_LAST_MODIFIED_KEY = "settingLastModified";
+
 export const useSettingStore = defineStore("setting", () => {
   // 所有设置统一存于 settings
   const settings = ref<GlobalSettings>(loadFromStorage(STORAGE_KEYS.GLOBAL_SETTINGS, defaultSettings));
@@ -227,6 +229,48 @@ export const useSettingStore = defineStore("setting", () => {
       }
     },
     { deep: true }, // 深度监视
+  );
+
+  /** 需要同步到 Supabase user_settings 的字段白名单 */
+  const SYNCABLE_SETTING_KEYS = new Set<keyof GlobalSettings>([
+    "priorityCategoryTagIds",
+    "priorityCategoryShowInRank",
+  ]);
+
+  /** 各可同步字段的本地最后修改时间戳（用于和云端 last_modified 比较） */
+  const settingLastModified = ref<Partial<Record<keyof GlobalSettings, number>>>(
+    loadFromStorage(SETTING_LAST_MODIFIED_KEY, {}),
+  );
+
+  function markSettingModified(key: keyof GlobalSettings) {
+    if (!SYNCABLE_SETTING_KEYS.has(key)) {
+      console.warn(`markSettingModified: "${String(key)}" 不在同步白名单中`);
+      return;
+    }
+    settingLastModified.value[key] = Date.now();
+  }
+
+  function getSettingLastModified(key: keyof GlobalSettings): number {
+    return settingLastModified.value[key] ?? 0;
+  }
+
+  /** 下载云端 setting 后对齐本地时间戳，避免下次误判为需上传 */
+  function setSettingLastModified(key: keyof GlobalSettings, timestamp: number) {
+    if (!SYNCABLE_SETTING_KEYS.has(key)) return;
+    settingLastModified.value[key] = timestamp;
+  }
+
+  // 持久化各 setting 字段的修改时间戳
+  watch(
+    settingLastModified,
+    (newValue) => {
+      try {
+        localStorage.setItem(SETTING_LAST_MODIFIED_KEY, JSON.stringify(newValue));
+      } catch (error) {
+        console.error("Failed to save settingLastModified to localStorage:", error);
+      }
+    },
+    { deep: true },
   );
 
   // 重置全部设置为默认
@@ -372,5 +416,9 @@ export const useSettingStore = defineStore("setting", () => {
     enterKanbanQuadrantMode,
     exitKanbanQuadrantMode,
     toggleKanbanQuadrantMode,
+    SYNCABLE_SETTING_KEYS,
+    markSettingModified,
+    getSettingLastModified,
+    setSettingLastModified,
   };
 });

@@ -27,8 +27,29 @@ interface FullTaskFromCloud {
 }
 
 export class TaskSyncService extends BaseSyncService<Task, CloudTaskInsert> {
-  constructor(getList: () => Task[], getMap: () => Map<number, Task>) {
+  private getActivityMap: () => Map<number, { deleted?: boolean }>;
+
+  constructor(
+    getList: () => Task[],
+    getMap: () => Map<number, Task>,
+    getActivityMap: () => Map<number, { deleted?: boolean }>,
+  ) {
     super("tasks", "taskTrack", getList, getMap);
+    this.getActivityMap = getActivityMap;
+  }
+
+  /** 跳过引用已删除/不存在 activity 的 orphan task，避免外键冲突 */
+  protected isUploadable(item: Task): boolean {
+    const activity = this.getActivityMap().get(item.sourceId);
+    if (!activity) {
+      console.warn(`[TaskSync] skip orphaned task id=${item.id}, sourceId=${item.sourceId} not found`);
+      return false;
+    }
+    if (activity.deleted) {
+      console.warn(`[TaskSync] skip orphaned task id=${item.id}, sourceId=${item.sourceId} is deleted`);
+      return false;
+    }
+    return true;
   }
 
   /**

@@ -70,6 +70,41 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
     return true;
   }
 
+  /** 待上传条目（供 uploadAll 在子表上传前补传依赖 activity） */
+  getPendingUploadItems(): TLocal[] {
+    return this.getListArray().filter((item) => !item.synced && this.isUploadable(item));
+  }
+
+  /** 按 timestamp_id 上传指定条目（仅仍 unsynced 的） */
+  async uploadItemsByIds(ids: number[]): Promise<{ success: boolean; error?: string; uploaded: number }> {
+    if (!supabase) return { success: false, error: "云同步未启用", uploaded: 0 };
+    const user = await getCurrentUser();
+    if (!user) return { success: false, error: "用户未登录", uploaded: 0 };
+    const map = this.getMap();
+    const items = ids
+      .map((id) => map.get(id))
+      .filter((item): item is TLocal => !!item && !item.synced && this.isUploadable(item));
+    return this.uploadItems(items, user.id);
+  }
+
+  /** 将指定条目标回 unsynced（FK 重试兜底） */
+  markUnsyncedByIds(ids: number[]): void {
+    const map = this.getMap();
+    for (const id of ids) {
+      const item = map.get(id);
+      if (item) item.synced = false;
+    }
+  }
+
+  /** 从 id 列表中筛出仍待上传且可上传的条目 */
+  filterUnsyncedIds(ids: number[]): number[] {
+    const map = this.getMap();
+    return ids.filter((id) => {
+      const item = map.get(id);
+      return !!item && !item.synced && !item.deleted && this.isUploadable(item);
+    });
+  }
+
   /**
    * 安排一次延迟上传（用于本地编辑后的轻量自动同步）
    * 会在一段时间内合并多次修改，最终只触发一次 upload
@@ -108,94 +143,88 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
   async upload(): Promise<{ success: boolean; error?: string; uploaded: number }> {
     try {
       if (!supabase) {
-        // console.warn(`[${this.tableName}] Supabase 未启用，跳过上传`);
         return { success: false, error: "云同步未启用", uploaded: 0 };
       }
 
       const user = await getCurrentUser();
       if (!user) {
-        // console.log("用户未登录，跳过上传");
         return { success: false, error: "用户未登录", uploaded: 0 };
       }
       const list = this.getListArray();
-      if (!list.length) return { success: true, uploaded: 0 }; // 防御性编程（空数组也直接返回）
-      // 获取未同步的数据
-      const unsyncedItems = list.filter((item) => !item.synced && this.isUploadable(item));
+      if (!list.length) return { success: true, uploaded: 0 };
 
-      // console.log(`📤 [${this.tableName}] 准备上传 ${unsyncedItems.length} 条`);
-
+      const unsyncedItems = this.getPendingUploadItems();
       if (unsyncedItems.length === 0) {
         return { success: true, uploaded: 0 };
       }
 
-      // 映射数据并执行上传 (Upsert)
-      const cloudData = unsyncedItems.map((item) => this.mapLocalToCloud(item, user.id));
-
-      const { error } = await supabase.from(this.tableName).upsert(cloudData as any, {
-        onConflict: "user_id,timestamp_id",
-        ignoreDuplicates: false,
-      });
-
-      if (error) throw error;
-
-      // ✅ 修复核心：获取云端时间戳（防止 undefined 导致崩溃）
-
-      // 1. 提取 ID 并过滤掉无效值 (undefined/null/'')
-      // 这一步修复了 "invalid input syntax for type bigint" 错误
-      const uploadedIds = unsyncedItems.map((item) => this.getCloudId(item as any)).filter((id) => id !== undefined && id !== null);
-
-      let fetchError = null;
-      let cloudItems = null;
-
-      // 2. 只有存在有效 ID 时才向云端查询
-      if (uploadedIds.length > 0) {
-        const result = await supabase
-          .from(this.tableName)
-          .select("timestamp_id,last_modified") // 只查询必要字段
-          .eq("user_id", user.id)
-          .in("timestamp_id", uploadedIds);
-
-        cloudItems = result.data;
-        fetchError = result.error;
-      }
-
-      // 3. 处理回填逻辑
-      if (fetchError) {
-        console.warn(`⚠️ [${this.tableName}] 无法获取云端时间戳:`, fetchError.message);
-        // 降级方案：所有条目使用当前本地时间
-        const now = Date.now();
-        unsyncedItems.forEach((item) => {
-          item.synced = true;
-          item.cloudModified = now;
-        });
-      } else {
-        // 创建映射 Map: ID -> Timestamp
-        const cloudMap = cloudItems ? new Map(cloudItems.map((ci) => [ci.timestamp_id, new Date(ci.last_modified).getTime()])) : new Map();
-
-        unsyncedItems.forEach((item) => {
-          const cid = this.getCloudId(item as any);
-          // 尝试从云端返回的数据中找到时间
-          const cloudTimestamp = cid && cloudMap.has(cid) ? cloudMap.get(cid) : undefined;
-
-          if (cloudTimestamp) {
-            // 找到了精准的云端时间
-            item.synced = true;
-            item.cloudModified = cloudTimestamp;
-          } else {
-            // 没找到（可能是 ID 无效，或者云端没返回），使用当前时间兜底
-            // console.warn(`⚠️ [${this.tableName}] 未找到云端数据 ID=${cid}，使用本地时间`);
-            item.synced = true;
-            item.cloudModified = Date.now();
-          }
-        });
-      }
-
-      // console.log(`✅ [${this.tableName}] 上传成功 ${unsyncedItems.length} 条`);
-      return { success: true, uploaded: unsyncedItems.length };
+      return await this.uploadItems(unsyncedItems, user.id);
     } catch (error: any) {
       console.error(`❌ [${this.tableName}] 上传失败:`, error.message);
       return { success: false, error: error.message, uploaded: 0 };
     }
+  }
+
+  /** upsert 并在 verify 确认云端存在后才标记 synced */
+  protected async uploadItems(
+    unsyncedItems: TLocal[],
+    userId: string,
+  ): Promise<{ success: boolean; error?: string; uploaded: number }> {
+    if (unsyncedItems.length === 0) {
+      return { success: true, uploaded: 0 };
+    }
+
+    const cloudData = unsyncedItems.map((item) => this.mapLocalToCloud(item, userId));
+
+    const { error } = await supabase!.from(this.tableName).upsert(cloudData as any, {
+      onConflict: "user_id,timestamp_id",
+      ignoreDuplicates: false,
+    });
+
+    if (error) throw error;
+
+    const uploadedIds = unsyncedItems.map((item) => item.id);
+
+    let fetchError = null;
+    let cloudItems = null;
+
+    if (uploadedIds.length > 0) {
+      const result = await supabase!
+        .from(this.tableName)
+        .select("timestamp_id,last_modified")
+        .eq("user_id", userId)
+        .in("timestamp_id", uploadedIds);
+
+      cloudItems = result.data;
+      fetchError = result.error;
+    }
+
+    if (fetchError) {
+      console.warn(`⚠️ [${this.tableName}] 无法验证云端数据，保持 unsynced:`, fetchError.message);
+      return { success: false, error: fetchError.message, uploaded: 0 };
+    }
+
+    const cloudMap = cloudItems ? new Map(cloudItems.map((ci) => [ci.timestamp_id, new Date(ci.last_modified).getTime()])) : new Map();
+
+    let verifiedCount = 0;
+    unsyncedItems.forEach((item) => {
+      const cid = item.id;
+      const cloudTimestamp = cloudMap.has(cid) ? cloudMap.get(cid) : undefined;
+
+      if (cloudTimestamp) {
+        item.synced = true;
+        item.cloudModified = cloudTimestamp;
+        verifiedCount++;
+      } else {
+        console.warn(`⚠️ [${this.tableName}] 云端未找到 ID=${cid}，保持 unsynced`);
+      }
+    });
+
+    if (verifiedCount === 0) {
+      return { success: false, error: "上传后无法在云端验证", uploaded: 0 };
+    }
+
+    return { success: true, uploaded: verifiedCount };
   }
 
   // baseSyncService.ts 的 download 方法修改

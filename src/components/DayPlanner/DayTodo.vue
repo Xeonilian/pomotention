@@ -810,6 +810,7 @@ function savePriorityBinding() {
     if (typeof tagId === "number") ids[Number(p)] = tagId;
   });
   settingStore.settings.priorityCategoryTagIds = ids;
+  settingStore.markSettingModified("priorityCategoryTagIds");
   const show: Record<number, boolean> = {};
   const defShow = getDefaultPriorityCategoryShowInRank();
   for (const c of PRIORITY_CATEGORIES) {
@@ -817,6 +818,7 @@ function savePriorityBinding() {
     show[p] = priorityShowInRankDraft[p] !== undefined ? priorityShowInRankDraft[p]! : defShow[p]!;
   }
   settingStore.settings.priorityCategoryShowInRank = show;
+  settingStore.markSettingModified("priorityCategoryShowInRank");
 }
 
 // 定义 Emit

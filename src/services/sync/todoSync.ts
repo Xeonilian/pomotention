@@ -32,8 +32,29 @@ interface FullTodoFromCloud {
 }
 
 export class TodoSyncService extends BaseSyncService<Todo, CloudTodoInsert> {
-  constructor(getList: () => Todo[], getMap: () => Map<number, Todo>) {
+  private getActivityMap: () => Map<number, { deleted?: boolean }>;
+
+  constructor(
+    getList: () => Todo[],
+    getMap: () => Map<number, Todo>,
+    getActivityMap: () => Map<number, { deleted?: boolean }>,
+  ) {
     super("todos", "todayTodo", getList, getMap);
+    this.getActivityMap = getActivityMap;
+  }
+
+  /** 跳过引用已删除/不存在 activity 的 orphan todo，避免外键冲突 */
+  protected isUploadable(item: Todo): boolean {
+    const activity = this.getActivityMap().get(item.activityId);
+    if (!activity) {
+      console.warn(`[TodoSync] skip orphaned todo id=${item.id}, activityId=${item.activityId} not found`);
+      return false;
+    }
+    if (activity.deleted) {
+      console.warn(`[TodoSync] skip orphaned todo id=${item.id}, activityId=${item.activityId} is deleted`);
+      return false;
+    }
+    return true;
   }
 
   /**

@@ -16,6 +16,11 @@ function removePendingVisibilityReload() {
 
 type NotificationApi = ReturnType<typeof import("naive-ui").useNotification>;
 
+function dispatchPwaUpdating() {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent("pwa-updating"));
+}
+
 function promptRefresh(reg: ServiceWorkerRegistration, notification: NotificationApi) {
   if (updatePromptShown || !reg.waiting) return;
   updatePromptShown = true;
@@ -37,6 +42,7 @@ function promptRefresh(reg: ServiceWorkerRegistration, notification: Notificatio
             type: "primary",
             size: "small",
             onClick: () => {
+              dispatchPwaUpdating();
               reg.waiting?.postMessage({ type: "SKIP_WAITING" });
             },
           },
@@ -90,6 +96,7 @@ export function usePwaUpdate(notification: NotificationApi) {
     if (document.visibilityState === "visible") {
       refreshing = true;
       removePendingVisibilityReload();
+      dispatchPwaUpdating();
       window.location.reload();
       return;
     }
@@ -101,14 +108,11 @@ export function usePwaUpdate(notification: NotificationApi) {
       if (refreshing) return;
       refreshing = true;
       removePendingVisibilityReload();
+      dispatchPwaUpdating();
       window.location.reload();
     };
     pendingVisibilityReloadHandler = handler;
     document.addEventListener("visibilitychange", handler);
-  };
-
-  const onFocus = () => {
-    void navigator.serviceWorker.getRegistration().then((r) => r?.update());
   };
 
   const init = () => {
@@ -116,22 +120,28 @@ export function usePwaUpdate(notification: NotificationApi) {
 
     navigator.serviceWorker.addEventListener("controllerchange", onControllerChange);
 
-    window.addEventListener("focus", onFocus);
-
-    void navigator.serviceWorker
-      .register("/sw.js")
-      .then((reg) => {
-        bindWaitingDetection(reg, notification);
-        scheduleSwUpdate(reg);
-      })
-      .catch((err) => {
-        console.error("❌ Service Worker registration failed:", err);
-      });
+    // 延迟到下一个 macrotask，避开页面 mount/reload 竞争期导致的 abort
+    window.setTimeout(() => {
+      void navigator.serviceWorker
+        .register("/sw.js")
+        .then((reg) => {
+          bindWaitingDetection(reg, notification);
+          scheduleSwUpdate(reg);
+        })
+        .catch((err) => {
+          const msg = err instanceof Error ? err.message : String(err);
+          // 刷新时旧页面 unload 会 abort 正在进行的 register，属于正常情况，不打 error
+          if (msg.includes("aborted") || (err as DOMException)?.name === "AbortError") {
+            console.log("[SW] registration aborted during page unload/reload");
+            return;
+          }
+          console.error("❌ Service Worker registration failed:", err);
+        });
+    }, 0);
   };
 
   const dispose = () => {
     navigator.serviceWorker.removeEventListener("controllerchange", onControllerChange);
-    window.removeEventListener("focus", onFocus);
     removePendingVisibilityReload();
   };
 
