@@ -14,6 +14,7 @@ import { useSyncStore, runBeforeSyncHook } from "@/stores/useSyncStore";
 import { useDataStore } from "@/stores/useDataStore";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { isSupabaseEnabled } from "@/core/services/supabase";
+import { SettingsSyncService } from "./settingsSync";
 
 const shouldLogSyncDebug = ["1", "true"].includes(String(import.meta.env.VITE_SYNC_DEBUG_LOG ?? "").trim().toLowerCase());
 function syncDebugLog(...args: unknown[]) {
@@ -23,6 +24,7 @@ function syncDebugLog(...args: unknown[]) {
 
 // 私有变量：存储所有 sync 服务实例
 let syncServices: Array<{ name: string; service: any }> = [];
+let settingsSync: SettingsSyncService | null = null;
 let isInitialized = false;
 
 // ===================================================================================
@@ -89,6 +91,8 @@ export async function initSyncServices(dataStore: ReturnType<typeof useDataStore
     () => dataStore._ledgerById,
   );
 
+  settingsSync = new SettingsSyncService();
+
   syncServices = [
     { name: "Activities", service: activitySync },
     { name: "Todos", service: todoSync },
@@ -120,6 +124,7 @@ function ensureInitialized() {
 
 export function resetSyncServices() {
   syncServices = []; // 清空实例数组，断开引用，让 GC 回收旧实例
+  settingsSync = null;
   isInitialized = false; // 重置标志位
 
   // 如果你有 cleanup 逻辑，也可以在这里调用
@@ -185,6 +190,17 @@ async function _internalUpload(): Promise<SyncResult> {
       }
     });
 
+    // 最后上传 setting（依赖数据表先完成，但不影响核心数据）
+    if (settingsSync) {
+      try {
+        const res = await settingsSync.upload();
+        if (!res.success) errors.push(`Settings 上传失败: ${res.error}`);
+        else uploaded += res.uploaded;
+      } catch (e: any) {
+        errors.push(`Settings 上传异常: ${e.message}`);
+      }
+    }
+
     resolve({ errors, count: uploaded });
   });
 
@@ -227,6 +243,19 @@ async function _internalDownload(lastSyncTimestamp: number): Promise<SyncResult>
         errors.push(`下载异常: ${outcome.reason}`);
       }
     });
+
+    // 最后下载 setting
+    if (settingsSync) {
+      try {
+        const res = await settingsSync.download();
+        const applied = res.downloaded ?? 0;
+        details.push({ name: "Settings", fetched: applied, downloaded: applied, cloudDeleted: 0 });
+        if (!res.success) errors.push(`Settings 下载失败: ${res.error}`);
+        else downloaded += applied;
+      } catch (e: any) {
+        errors.push(`Settings 下载异常: ${e.message}`);
+      }
+    }
 
     resolve({ errors, count: downloaded, details });
   });
