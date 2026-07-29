@@ -107,53 +107,53 @@ const columns = createColumns();
 const data: RowData[] = [
   {
     score: "1分",
-    physical: "极度疲惫，难以行动",
-    mental: "思维断片，信息处理迟滞",
+    physical: "极度衰竭，难以自主行动",
+    mental: "思维空白，简单信息亦难处理",
   },
   {
     score: "2分",
-    physical: "身体沉重，动作困难",
-    mental: "情绪低落，极度困倦",
+    physical: "身体沉重，起身亦感费力",
+    mental: "反应迟缓，思绪如隔层雾",
   },
   {
     score: "3分",
-    physical: "乏力明显，动作迟缓",
-    mental: "注意力涣散，易犯困",
+    physical: "乏力明显，稍动即感疲惫",
+    mental: "注意易散，仅能勉强维持",
   },
   {
     score: "4分",
-    physical: "略显沉重，勉强维持",
-    mental: "思维迟缓，错误率高",
+    physical: "可勉强做事，节奏偏慢",
+    mental: "思路黏滞，需反复核对确认",
   },
   {
     score: "5分",
-    physical: "轻微疲惫，完成基础任务",
-    mental: "注意力一般，需要外部驱动力",
+    physical: "可维持日常，后段易现疲态",
+    mental: "能跟进任务，专注不稳易偏",
   },
   {
     score: "6分",
-    physical: "基本正常，偶有疲意",
-    mental: "思维清晰，专注一般",
+    physical: "身体基本正常，偶有沉滞",
+    mental: "思路清楚，专注尚可但难持久",
   },
   {
     score: "7分",
-    physical: "精力充沛，行动协调",
-    mental: "思维活跃，高度专注",
+    physical: "精力充沛，行动顺畅协调",
+    mental: "易于进入状态，专注较为稳定",
   },
   {
     score: "8分",
-    physical: "轻快有力，协调自如",
-    mental: "头脑敏捷，创意涌现",
+    physical: "精力旺盛，耐力充足",
+    mental: "反应敏捷，任务切换利落",
   },
   {
     score: "9分",
-    physical: "活力满满，反应敏捷",
-    mental: "思维清晰，洞察力强",
+    physical: "充沛敏捷，几乎不觉疲惫",
+    mental: "清晰锐利，抗干扰能力强",
   },
   {
     score: "10分",
-    physical: "高峰状态，能量爆棚",
-    mental: "清晰敏锐，专注兴奋",
+    physical: "高峰状态，能量充盈饱满",
+    mental: "极度清醒敏锐，进入心流",
   },
 ];
 // 修复 v-model 问题
