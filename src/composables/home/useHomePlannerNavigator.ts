@@ -1,6 +1,7 @@
 import { onMounted, onUnmounted, ref, type Ref } from "vue";
 import type { Schedule } from "@/core/types/Schedule";
 import type { Todo, TodoWithTaskRecords } from "@/core/types/Todo";
+import { sortTodosForDayDisplay } from "@/core/utils/sortTodosForDayDisplay";
 import { registerPlannerNavigatorApi } from "@/composables/keyboard/usePlannerKeyboardNavigator";
 import { useSettingStore } from "@/stores/useSettingStore";
 
@@ -53,7 +54,8 @@ export function useHomePlannerNavigator(options: UseHomePlannerNavigatorOptions)
 
   function getPlannerKeyboardRows(): PlannerKeyboardRow[] {
     const rows: PlannerKeyboardRow[] = [];
-    for (const todo of todosForCurrentViewWithTaskRecords.value ?? []) {
+    // todo 行序与 DayTodo 肉眼列表一致（按优先级），非添加序
+    for (const todo of sortTodosForDayDisplay(todosForCurrentViewWithTaskRecords.value ?? [])) {
       rows.push({ rowId: todo.id });
     }
     for (const schedule of schedulesForCurrentView.value ?? []) {

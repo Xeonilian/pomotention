@@ -506,6 +506,7 @@
 <script setup lang="ts">
 import type { Todo, TodoWithTaskRecords } from "@/core/types/Todo";
 import { timestampToTimeString } from "@/core/utils";
+import { sortTodosForDayDisplay } from "@/core/utils/sortTodosForDayDisplay";
 import {
   PRIORITY_CATEGORIES,
   SPECIAL_PRIORITIES,
@@ -846,54 +847,8 @@ watch([editingRowId, editingField, isMobile], () => {
   emit("mobile-inline-edit-active", active);
 });
 
-// 对待办事项按优先级降序排序（高优先级在前）
-// 增加规则：一旦done，特殊值（33/44/55/66/77/88/99）按 startTime 排序
-const sortedTodos = computed(() => {
-  const todos = [...todosForCurrentViewWithTaskRecords.value];
-  const specialPriorities = SPECIAL_PRIORITIES;
-
-  const normalTodos: TodoWithTaskRecords[] = [];
-  const specialTodosNotDone: TodoWithTaskRecords[] = [];
-  const specialTodosDone: TodoWithTaskRecords[] = [];
-
-  todos.forEach((todo) => {
-    if (specialPriorities.includes(todo.priority)) {
-      if (todo.status === "done") {
-        specialTodosDone.push(todo);
-      } else {
-        specialTodosNotDone.push(todo);
-      }
-    } else {
-      normalTodos.push(todo);
-    }
-  });
-
-  // 正常任务排序：0放最后，其余越小优先
-  normalTodos.sort((a, b) => {
-    if (a.priority === 0 && b.priority === 0) return 0;
-    if (a.priority === 0) return 1;
-    if (b.priority === 0) return -1;
-    return a.priority - b.priority;
-  });
-
-  // 未完成的特殊任务按特殊值顺序
-  specialTodosNotDone.sort((a, b) => {
-    const orderA = specialPriorities.indexOf(a.priority);
-    const orderB = specialPriorities.indexOf(b.priority);
-    return orderA - orderB;
-  });
-
-  // 已完成（done）的特殊任务按 startTime 升序（无 startTime 排后面）
-  specialTodosDone.sort((a, b) => {
-    if (!a.startTime && !b.startTime) return 0;
-    if (!a.startTime) return 1;
-    if (!b.startTime) return -1;
-    return String(a.startTime).localeCompare(String(b.startTime));
-  });
-
-  // 合并：正常 > 未完成特殊 > 已完成特殊
-  return [...normalTodos, ...specialTodosNotDone, ...specialTodosDone];
-});
+// 对待办事项按优先级排序（与键盘上下键共用同一套顺序）
+const sortedTodos = computed(() => sortTodosForDayDisplay(todosForCurrentViewWithTaskRecords.value));
 
 function openRankPopoverIfActive(todo: Todo) {
   handleRowClick(todo);
