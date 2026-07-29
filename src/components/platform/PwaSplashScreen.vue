@@ -21,7 +21,7 @@ function isStandalone(): boolean {
 
 const visible = ref(false);
 const isUpdating = ref(false);
-const SPLASH_DURATION_MS = 400;
+const SPLASH_DURATION_MS = 800;
 
 let splashTimer: number | undefined;
 let onUpdating: (() => void) | undefined;
