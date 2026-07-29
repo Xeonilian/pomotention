@@ -65,6 +65,34 @@ export const taskService = {
     return record;
   },
 
+  /** 从任务数组移除单条记录并标记待同步（覆盖云端 jsonb） */
+  removeEnergyRecord(taskId: number, recordId: number): boolean {
+    const task = this.getTask(taskId);
+    if (!task?.energyRecords?.length) return false;
+    const next = task.energyRecords.filter((r) => r.id !== recordId);
+    if (next.length === task.energyRecords.length) return false;
+    this.updateTask(taskId, { energyRecords: next, synced: false, lastModified: Date.now() });
+    return true;
+  },
+
+  removeRewardRecord(taskId: number, recordId: number): boolean {
+    const task = this.getTask(taskId);
+    if (!task?.rewardRecords?.length) return false;
+    const next = task.rewardRecords.filter((r) => r.id !== recordId);
+    if (next.length === task.rewardRecords.length) return false;
+    this.updateTask(taskId, { rewardRecords: next, synced: false, lastModified: Date.now() });
+    return true;
+  },
+
+  removeInterruptionRecord(taskId: number, recordId: number): boolean {
+    const task = this.getTask(taskId);
+    if (!task?.interruptionRecords?.length) return false;
+    const next = task.interruptionRecords.filter((r) => r.id !== recordId);
+    if (next.length === task.interruptionRecords.length) return false;
+    this.updateTask(taskId, { interruptionRecords: next, synced: false, lastModified: Date.now() });
+    return true;
+  },
+
   createTaskFromTodo(activityId: number, activityTitle: string, projectName?: string): Task {
     const task: Task = {
       id: Date.now(),
