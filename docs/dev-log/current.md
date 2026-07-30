@@ -9,18 +9,55 @@
 
 | 项 | 内容 |
 |---|---|
-| **主题** | 一句记（capture）— 打字 + LLM → ledger |
-| **来自** | AI 网关本关已验收（Worker 藏 key、登录配额、premium 人工开通）；复用网关做映射 |
+| **主题** | 一句记（capture）— 文字→写入操作；边界与防刷已对齐 |
+| **来自** | AI 网关已验收；产品要「口述代替鼠标写入」，低价月费别被刷爆 |
 | **蓝图** | [`7-capture.md`](./blueprint/7-capture.md)；底座 [`8-ai-gateway.md`](./blueprint/8-ai-gateway.md) |
 | **分支** | `dev` |
 | **更新** | 2026-07-30 |
-| **停在哪** | **上一关 ai-gateway 已 OK**（本地验通 + 自己账号 premium）。本关尚未编码：下一动收窄并实现「打字提交 → Worker `/capture/map` → 写入 ledger → Gift 可见」 |
+| **停在哪** | **今日力竭收工。** 网关已合入；目的/边界/入口形态已对齐（见下）。**明天：** 按本文件开写「记一句」专用面 + create todo（先不编码一问一答/闲聊）。可选先 `push` 若本地还有未推提交 |
 
 ---
 
 ## 这一关要干嘛（一句话）
 
-按 [`7-capture.md`](./blueprint/7-capture.md)：最外层输入一句 → 经已有 AI 网关 LLM 映射 → 写入 **ledger** → Gift/明细可见；映射失败不写。
+用户说一句自然语言 → 经已有 AI 网关映射 → **写入已有数据**（第一刀：`create todo`，日视图可见）；写错在原界面改。  
+**只记不聊**：入口可占原 AI 右栏位置，但是「记一句」专用面，不接通闲聊、不触发一问一答。
+
+---
+
+## 今日已对齐（备忘，明天勿重新绕）
+
+### 目的与边界
+
+- **卖的是：** 高频可口述的记录/创建（A 类）；不是遥控整个 App（切面板等 C 类不做）。
+- **不必先做 CLI**；CLI 与一句记共用下游 actions，后置。
+- **不要绑 ledger**；ledger 只是旧 current 临时假设。
+- **维护规则：** 新能力 = 新 Writer/kind；默认面永远是记一句，不开放通用聊天。
+
+### 防刷 / 9.9
+
+- 网关：藏 key、模型写死 `moonshot-v1-8k`、登录+已验证、月配额、限流；旧 key 已作废。
+- 产品面「只记不聊」= 软成本闸。
+- 付费也不要默认无限（收费关可给 premium 加月上限）；现用人工 `/admin/entitlement` 即可开卖试用。
+
+### 入口
+
+- 占原 `showAi` 右栏槽位；文案「记一句」；输入→提交→短成功/失败提示。
+- **不**复用旧 `useAiChat` 陪聊泡泡与 `guideQuestions`。
+
+### 用户数据（定额度时参考，勿当「一天点了多少次」）
+
+- 注册约 78；近月同步活跃约 19；从未同步约 16（其中已验证邮箱约 9、未验证约 7）。
+- **从未同步 ≠ 没人用**：有人只用本地版、不同云。
+- `rows_touched` = 近窗内 **当前** `last_modified` 落在窗口的**行数**（多表合计），不是操作次数；可因存量大同步被刷高；同秒大批 = 批量 upsert。定 AI 配额别直接拿这个当「一句记次数」。
+
+### 顺带核实
+
+- `user_settings` 云同步**有效**，但白名单只有 `priorityCategoryTagIds` / `priorityCategoryShowInRank`；整包 `globalSettings` 仍只在本机。数据少时容易误判未生效。
+
+### 已交付（上一关）
+
+- `worker/ai-gateway/` + 前端去硬编码 key + `VITE_AI_WORKER_URL`；`.wrangler` / `.dev.vars` 不入库。
 
 ---
 
@@ -28,35 +65,33 @@
 
 | 步 | 内容 | 产出 |
 |---|---|---|
-| **0** | （前置）AI 网关可用 | `worker/ai-gateway/` 已验收 |
-| **1** | 收窄交互：入口 UI + 只开放 ledger kind | 方案确认 / 小改蓝图若需要 |
-| **2** | AiMapper → Validator → Writer[ledger] 调网关 | `src/core/capture/` 等 |
-| **3** | 联调：典型记账句写入并可在原界面改删 | 可演示 |
+| **0** | AI 网关可用 + 本文件对齐 | 已完成 |
+| **1** | 右栏「记一句」专用面（无闲聊） | UI |
+| **2** | AiMapper → Worker → Zod → Writer create todo | `src/core/capture/` 等 |
+| **3** | 联调：典型句写入日视图；401/402/低置信不写有提示 | 可演示 |
 
-**本关不做：** 全 kind、真实支付渠道、身体记录。
+**本关不做：** 全 kind、改删、CLI、一问一答/模板触发 AI、自动收款渠道。
 
 ---
 
-## 验收标准（草案，编码前可再收窄）
+## 验收标准（草案）
 
-1. 一句记入口可打字提交  
-2. 典型记账句经 Worker 映射并写入 ledger  
-3. Gift/明细可见；可在原界面改删  
-4. schema / confidence / 网关 401·402·失败 → 不写，有提示  
+1. 右栏可提交一句；看起来不像聊天陪聊  
+2. 典型「明天下午…」类句子能 create todo 并在日视图看见  
+3. 映射失败 / 网关 401·402 → 不写，短提示  
+4. 未开通权益有升级提示（人工开通可用）  
 
 ---
 
 ## 进度
 
-- [x] **0.** AI 网关（藏 key、配额、entitlement）本地验收通过  
-- [ ] **1.** 收窄入口与 ledger-only  
-- [ ] **2.** capture 核心接线  
+- [x] **0.** 网关验收 + 今日产品对齐写入本文件  
+- [ ] **1.** 记一句专用面  
+- [ ] **2.** capture → todo Writer  
 - [ ] **3.** 联调演示  
 
 ---
 
 ## 归档
 
-上一关（ai-gateway）快照摘要：CF Worker + 前端去 key + 月配额 + admin premium；旧 Moonshot key 已作废；模型写死 `moonshot-v1-8k`。细节见 [`8-ai-gateway.md`](./blueprint/8-ai-gateway.md)。
-
-做完本关后把「快照 + 验收」复制到 CHANGELOG 或 PR，或移到 `history/archive/YYYY-MM-topic.md`。
+做完后把「快照 + 验收」复制到 CHANGELOG 或 PR，或移到 `history/archive/YYYY-MM-topic.md`。
