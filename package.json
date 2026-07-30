@@ -19,6 +19,8 @@
     "rescue": "node scripts/rescue_changes.cjs",
     "sshot": "powershell.exe -ExecutionPolicy Bypass -File scripts/screenshot.ps1",
     "test": "vitest",
+    "gateway:dev": "pnpm --filter pomotention-ai-gateway dev",
+    "gateway:install": "pnpm --filter pomotention-ai-gateway install",
     "test:ui": "vitest --ui",
     "bench:filter": "node scripts/bench-search-filter-hypothesis.mjs",
     "build:fast": "vite build",

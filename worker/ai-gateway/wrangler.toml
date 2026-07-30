@@ -1,0 +1,13 @@
+name = "pomotention-ai-gateway"
+main = "src/index.ts"
+compatibility_date = "2024-11-12"
+
+# 本地 wrangler dev 会模拟 KV；部署前用 `wrangler kv namespace create AI_KV` 替换真实 id
+[[kv_namespaces]]
+binding = "AI_KV"
+id = "00000000000000000000000000000001"
+preview_id = "00000000000000000000000000000001"
+
+[vars]
+MOONSHOT_BASE_URL = "https://api.moonshot.cn/v1"
+# 模型写死在代码里（moonshot-v1-8k），不放 vars，避免被改

@@ -1,0 +1,16 @@
+# 复制为同目录下的 .dev.vars 后填入真实值（.dev.vars 不入库）
+#   copy .dev.vars.example .dev.vars
+#
+# 取值说明：
+#   MOONSHOT_API_KEY     — 月之暗面新建的 key（仓库里曾经硬编码的旧 key 已在控制台作废，勿再用）
+#   SUPABASE_JWT_SECRET  — Supabase Dashboard → JWT Keys →「Legacy JWT Secret」
+#   ADMIN_TOKEN          — 自拟长随机串，用于 POST /admin/entitlement
+
+MOONSHOT_API_KEY=
+SUPABASE_JWT_SECRET=
+ADMIN_TOKEN=
+
+# 可选：试用月额度（默认 20；测 402 时可临时改成 1）
+# FREE_MONTHLY_QUOTA=20
+
+# 模型不在此配置：Worker 代码写死 moonshot-v1-8k，不接受客户端改 model

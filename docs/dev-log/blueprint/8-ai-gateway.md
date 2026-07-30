@@ -86,9 +86,11 @@ flowchart LR
 4. **仅 email / 第三方登录且已验证** 的账号可走配额与试用；Supabase **anon / 未验证** → 无额度（401 或业务码拒绝），防批量注册薅试用。
 5. 前端未登录时 **入口门闩拦截**，原则上不打到 Worker；Worker 仍独立校验，防绕过。
 
-### 4.4 转发、限流与错误体
+### 4.4 转发、限流、模型与错误体
 
 - 用真实 key 调 Moonshot；响应回传前端；**前端永远拿不到 key**。
+- **模型写死为 `moonshot-v1-8k`**：Worker 请求 Moonshot 时固定此 model；**忽略**客户端 body / query 里的 `model`（防被改成 k2.5 / 128k 等贵模型）。换模型属以后显式改 Worker 代码，不开放配置项。
+- 背景：曾出现「客户端配置 8k，账单却有 k2.5」——在 key 可被直接调用厂商 API 时，攻击者可任选模型；网关写死 + key 只留在 Worker，切断这条路径。
 - 每用户每分钟 N 次（防刷），KV sliding window；超限 → **429**，body 带 `code`（如 `RATE_LIMITED`）。
 - 配额用尽 → **402**，body 须带业务码，例如 `{ "code": "QUOTA_EXHAUSTED", "upgrade_url"?: "…" }`；前端以 `code` 为准，不单靠状态码。
 - 厂商超时/失败 → 原样或包装错误码回传；**不降级为规则路径**（对齐 [`7-capture.md`](./7-capture.md) §4.3）。
@@ -201,3 +203,5 @@ Capture 入口
 |------|------|
 | 2026-07-30 | 初稿：CF Worker + 登录配额 + entitlement seam；对齐过去 key 硬编码被盗刷的教训 |
 | 2026-07-30 | 补丁：业务错误码、已验证账号才发额度、KV 计数容差、本地联调、candidates 体积上限、网关不可达文案 |
+| 2026-07-30 | 模型写死 `moonshot-v1-8k`，忽略客户端 model（防账单被刷成 k2.5 等） |
+| 2026-07-30 | **旧 Moonshot API key 已在控制台删除作废**；仅用 `.dev.vars` / Worker secret 中的新 key。勿再追问旧 key、勿写回仓库 |

@@ -1,0 +1,2 @@
+# 复制到仓库根目录的 .env.development.local（已在 .gitignore 的 *.local）
+VITE_AI_WORKER_URL=http://127.0.0.1:8787

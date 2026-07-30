@@ -152,10 +152,11 @@ const defaultSettings: GlobalSettings = {
         name: "月之暗面",
         provider: "kimi",
         model: "moonshot-v1-8k",
-        endpoint: "https://api.moonshot.cn/v1/chat/completions",
+        // 经 AI Gateway 调用；真实 key 只在 Worker，前端不存
+        endpoint: "",
         timeoutMs: 30000,
         temperature: 0.7,
-        apiKey: "sk-xKpgU3UGba3JTYW5uMw0py1KcmlCByEdM5ax4Ngsc72CIsgJ",
+        apiKey: "",
       },
       // 你可以再加一个示例
       // openai: {
@@ -200,6 +201,15 @@ const SETTING_LAST_MODIFIED_KEY = "settingLastModified";
 export const useSettingStore = defineStore("setting", () => {
   // 所有设置统一存于 settings
   const settings = ref<GlobalSettings>(loadFromStorage(STORAGE_KEYS.GLOBAL_SETTINGS, defaultSettings));
+
+  // 网关时代：清掉本地残留的厂商 apiKey（含已作废的旧内置 key）
+  if (settings.value.ai?.profiles) {
+    for (const profile of Object.values(settings.value.ai.profiles)) {
+      if (profile && typeof profile === "object") {
+        profile.apiKey = "";
+      }
+    }
+  }
 
   /** 音频诊断日志（仅内存，不入 localStorage，供设置页排查 iOS/PWA 播放问题） */
   const audioDebugLogs = ref<string[]>([]);
