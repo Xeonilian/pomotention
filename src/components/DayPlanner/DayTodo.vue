@@ -304,7 +304,6 @@
                   :ref="(el: any) => (titleInputRef = el)"
                   v-model="editingValue"
                   @blur="handleTitleBlur(todo)"
-                  @keyup.enter="handleTitleEnter(todo, $event)"
                   @keyup.esc="cancelEdit"
                   @input="handleTitleInput(todo)"
                   @keydown="handleInputKeydown($event, todo)"
@@ -1770,16 +1769,6 @@ function isTagPickerKeyboardActive(todo: Todo): boolean {
   return popoverOpened || popoverMatchCurrentTodo || hasTriggerAtTail;
 }
 
-function handleTitleEnter(todo: Todo, event: KeyboardEvent) {
-  if (isTagPickerKeyboardActive(todo) && tagPickerRef.value) {
-    // popover 打开时，Enter 优先选中高亮项（默认第一项），不结束编辑
-    selectingTagViaEnter.value = true;
-    tagPickerRef.value.handleHostKeydown(event);
-    return;
-  }
-  saveEdit(todo);
-}
-
 function handleInputKeydown(event: KeyboardEvent, todo: Todo) {
   const isTagKey = event.key === "ArrowDown" || event.key === "ArrowUp" || event.key === "Enter" || event.key === "Escape";
   const hasTriggerAtTail = /[#@][\p{L}\p{N}_]*$/u.test(editingValue.value);
@@ -1795,6 +1784,13 @@ function handleInputKeydown(event: KeyboardEvent, todo: Todo) {
     event.preventDefault();
     event.stopPropagation();
     tagPickerRef.value.handleHostKeydown(event);
+    return;
+  }
+
+  // 用 keydown 保存：避免「全局 Enter 打开编辑 → focus → 同一次 keyup.enter 立刻保存」闪退
+  if (event.key === "Enter") {
+    event.preventDefault();
+    saveEdit(todo);
     return;
   }
 

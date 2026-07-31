@@ -230,7 +230,6 @@
                 :ref="(el: any) => (titleInputRef = el)"
                 v-model="editingValue"
                 @blur="handleTitleBlur(schedule)"
-                @keyup.enter="handleTitleEnter(schedule, $event)"
                 @keyup.esc="cancelEdit"
                 @input="handleTitleInput(schedule)"
                 @keydown="handleInputKeydown($event, schedule)"
@@ -728,16 +727,6 @@ function isTagPickerKeyboardActive(schedule: Schedule): boolean {
   return popoverOpened || popoverMatchCurrentRow || hasTriggerAtTail;
 }
 
-function handleTitleEnter(schedule: Schedule, event: KeyboardEvent) {
-  if (isTagPickerKeyboardActive(schedule) && tagPickerRef.value) {
-    // popover 打开时，Enter 优先选中高亮项（默认第一项），不结束编辑
-    selectingTagViaEnter.value = true;
-    tagPickerRef.value.handleHostKeydown(event);
-    return;
-  }
-  saveEdit(schedule);
-}
-
 function handleTitleBlur(schedule: Schedule) {
   if (isPickingTagFromSelector.value) {
     isPickingTagFromSelector.value = false;
@@ -762,6 +751,13 @@ function handleInputKeydown(event: KeyboardEvent, schedule: Schedule) {
     event.preventDefault();
     event.stopPropagation();
     tagPickerRef.value.handleHostKeydown(event);
+    return;
+  }
+
+  // 用 keydown 保存：避免「全局 Enter 打开编辑 → focus → 同一次 keyup.enter 立刻保存」闪退
+  if (event.key === "Enter") {
+    event.preventDefault();
+    saveEdit(schedule);
     return;
   }
 
