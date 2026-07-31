@@ -55,7 +55,7 @@ export function isPlannerNavigatorActive(): boolean {
   return plannerNavigatorApi?.isActive() ?? false;
 }
 
-/** 非 pn 模式：day 视图已选行时由 Space 触发勾选（由 HomeView 注册实现） */
+/** 非 pe 模式：day 视图已选行时由 Space 触发勾选（由 HomeView 注册实现） */
 type PlannerDaySpaceToggleCheckFn = () => boolean;
 let plannerDaySpaceToggleCheck: PlannerDaySpaceToggleCheckFn | null = null;
 
@@ -68,4 +68,19 @@ export function registerPlannerDaySpaceToggleCheck(fn: PlannerDaySpaceToggleChec
 
 export function tryPlannerDaySpaceToggleCheck(): boolean {
   return plannerDaySpaceToggleCheck?.() ?? false;
+}
+
+/** 非 pe 模式：day 视图已选行时 Enter 进入 title 编辑（由 HomeView 注册实现） */
+type PlannerDayEnterEditTitleFn = () => boolean;
+let plannerDayEnterEditTitle: PlannerDayEnterEditTitleFn | null = null;
+
+export function registerPlannerDayEnterEditTitle(fn: PlannerDayEnterEditTitleFn) {
+  plannerDayEnterEditTitle = fn;
+  return () => {
+    if (plannerDayEnterEditTitle === fn) plannerDayEnterEditTitle = null;
+  };
+}
+
+export function tryPlannerDayEnterEditTitle(): boolean {
+  return plannerDayEnterEditTitle?.() ?? false;
 }

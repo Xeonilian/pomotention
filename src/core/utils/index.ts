@@ -14,3 +14,6 @@ export { scheduleDebouncedCloudUpload } from "./scheduleDebouncedCloudUpload";
 export { formatMessage } from "./formatMessage";
 export { formatTime } from "./formatTime";
 export { convertTimestampToISO } from "./convertTimestampToISO";
+export { normalizeTimeInput } from "./normalizeTimeInput";
+export { parseTimesFromTitle } from "./parseTimesFromTitle";
+export type { ParsedTitleTimes } from "./parseTimesFromTitle";

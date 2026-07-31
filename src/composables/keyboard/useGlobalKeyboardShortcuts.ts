@@ -32,7 +32,7 @@ const sequencePrefixSet = (() => {
 
 const registeredHotkeys =
   Array.from(new Set(allSequences.join("").split(""))).join(",") + ",up,down,left,right,space,esc,enter,return,num_enter,1,2,3,4,5,6,7,8,9";
-const alwaysRouteToModeHandlerKeys = new Set(["up", "down", "left", "right", "space"]);
+const alwaysRouteToModeHandlerKeys = new Set(["up", "down", "left", "right", "space", "enter", "return", "num_enter"]);
 
 function normalizeKey(value: string | undefined): string {
   if (!value) return "";

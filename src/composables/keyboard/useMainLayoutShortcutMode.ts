@@ -24,6 +24,7 @@ import {
   navigatePlannerNavigatorSubSelection,
   pickPlannerRowByDigit,
   tryPlannerDaySpaceToggleCheck,
+  tryPlannerDayEnterEditTitle,
 } from "@/composables/keyboard/usePlannerKeyboardNavigator";
 import { isOverlayDirectionKeyTarget } from "@/composables/keyboard/keyboardOverlayTarget";
 
@@ -142,6 +143,9 @@ export function useMainLayoutShortcutMode(options: UseMainLayoutShortcutModeOpti
       return false;
     }
     if (key === "space" && tryPlannerDaySpaceToggleCheck()) return true;
+    if ((key === "enter" || key === "return" || key === "num_enter") && tryPlannerDayEnterEditTitle()) {
+      return true;
+    }
     if (key === "left") return dispatchKeyboardAction("planner.gotoPrev", "left");
     if (key === "right") return dispatchKeyboardAction("planner.gotoNext", "right");
     if (key === "up" || key === "down") {
@@ -154,9 +158,6 @@ export function useMainLayoutShortcutMode(options: UseMainLayoutShortcutModeOpti
         if (isActivityNavigatorActive()) return moveActivityNavigator(delta);
         return enterActivityNavigator();
       }
-    }
-    if (key === "enter" || key === "return") {
-      return false;
     }
     return false;
   }
