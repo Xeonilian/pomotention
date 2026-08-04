@@ -315,8 +315,7 @@
         />
       </div>
       <div v-if="settingStore.settings.showAi" class="right" :style="{ width: rightWidth + 'px' }">
-        <!-- AI 对话对话框 -->
-        <AIChatDialog />
+        <CapturePanel />
       </div>
     </div>
     <MobileHomeFab
@@ -423,7 +422,7 @@ const MonthPlanner = defineAsyncComponent(() => import("@/components/MonthPlanne
 const YearPlanner = defineAsyncComponent(() => import("@/components/YearPlanner/YearPlanner.vue"));
 const TaskTracker = defineAsyncComponent(() => import("@/components/TaskTracker/TaskTracker.vue"));
 const ActivitySheet = defineAsyncComponent(() => import("@/components/ActivitySheet/ActivitySheet.vue"));
-const AIChatDialog = defineAsyncComponent(() => import("@/components/AiChat/AiChatDialog.vue"));
+const CapturePanel = defineAsyncComponent(() => import("@/components/Capture/CapturePanel.vue"));
 const StateLogModal = defineAsyncComponent(() => import("@/components/TaskTracker/StateLogModal.vue"));
 // -- 基础UI状态
 const settingStore = useSettingStore();
