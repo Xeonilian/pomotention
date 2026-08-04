@@ -47,7 +47,13 @@
             @update:show="(next) => handleUpdateTimelinePopoverShow(record.id, next)"
           >
             <template #trigger>
-              <div class="timeline-point" :title="record.description" role="button" :aria-label="record.description || '查看说明'">
+              <div
+                class="timeline-point"
+                :title="(record.description || '') + '（双击删除）'"
+                role="button"
+                :aria-label="record.description || '查看说明，双击删除'"
+                @dblclick.stop="onTimelineRecordDblClick(record)"
+              >
                 <span class="point-icon">
                   {{ record.type === "energy" ? "⚡" : record.type === "reward" ? "🏵️" : record.interruptionType === "I" ? "💭" : "🗣️" }}
                 </span>
@@ -71,7 +77,14 @@
             </template>
             <p class="timeline-popover-text">{{ record.description }}</p>
           </NPopover>
-          <div v-else class="timeline-point" :title="record.description" role="button" :aria-label="'查看说明'">
+          <div
+            v-else
+            class="timeline-point"
+            title="双击删除"
+            role="button"
+            aria-label="双击删除"
+            @dblclick.stop="onTimelineRecordDblClick(record)"
+          >
             <span class="point-icon">
               {{ record.type === "energy" ? "⚡" : record.type === "reward" ? "🏵️" : record.interruptionType === "I" ? "💭" : "🗣️" }}
             </span>
@@ -175,7 +188,8 @@ const taskTrackerStore = useTaskTrackerStore();
 const dataStore = useDataStore();
 const { isMobile } = useDevice();
 const { selectedTaskId, selectedTask, selectedTagIds, isStarred } = storeToRefs(taskTrackerStore);
-const { updateTaskDescription, handleEnergyRecord, handleRewardRecord, handleInterruptionRecord, handleStar } = taskTrackerStore;
+const { updateTaskDescription, handleEnergyRecord, handleRewardRecord, handleInterruptionRecord, handleRemoveTaskRecord, handleStar } =
+  taskTrackerStore;
 
 const isTaskContainerFullscreen = ref(false);
 const isPseudoFullscreen = ref(false);
@@ -427,6 +441,12 @@ const checkWidth = () => {
 
 const activeTimelinePopoverRecordId = ref<number | null>(null);
 let timelinePopoverTimer: ReturnType<typeof window.setTimeout> | null = null;
+
+function onTimelineRecordDblClick(record: CombinedRecord) {
+  clearTimelinePopoverTimer();
+  activeTimelinePopoverRecordId.value = null;
+  handleRemoveTaskRecord(record.type, record.id);
+}
 
 const clearTimelinePopoverTimer = () => {
   if (timelinePopoverTimer != null) {

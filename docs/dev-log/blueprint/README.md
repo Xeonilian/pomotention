@@ -11,5 +11,6 @@
 | [`3-gesture-interaction-inventory.zh-CN.md`](./3-gesture-interaction-inventory.zh-CN.md) | 手势盘点 |
 | [`4-timer-branch.md`](./4-timer-branch.md) | Timer 14d 历史备忘 |
 | [`5-ledger.md`](./5-ledger.md) | ledger 边界与语法 |
+| [`6-body.md`](./6-body.md) | 身体管理壳与饮水分关 |
 
 与 AI 协作 → [`.cursor/docs/ai-collaboration-harness-loop.md`](https://github.com/Xeonilian/pomotention/blob/main/.cursor/docs/ai-collaboration-harness-loop.md)。

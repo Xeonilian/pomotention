@@ -88,6 +88,14 @@ export const useTaskTrackerStore = defineStore("taskTracker", () => {
     }
   }
 
+  /** 双击时间轴删除单条记录；打扰衍生的 activity 不联动 */
+  function handleRemoveTaskRecord(type: "energy" | "reward" | "interruption", recordId: number) {
+    if (!selectedTaskId.value) return;
+    if (type === "energy") taskService.removeEnergyRecord(selectedTaskId.value, recordId);
+    else if (type === "reward") taskService.removeRewardRecord(selectedTaskId.value, recordId);
+    else taskService.removeInterruptionRecord(selectedTaskId.value, recordId);
+  }
+
   return {
     // 暴露给组件的数据
     selectedTaskId,
@@ -99,6 +107,7 @@ export const useTaskTrackerStore = defineStore("taskTracker", () => {
     handleEnergyRecord,
     handleRewardRecord,
     handleInterruptionRecord,
+    handleRemoveTaskRecord,
     handleStar,
   };
 });

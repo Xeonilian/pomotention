@@ -39,7 +39,7 @@ export const SHORTCUT_DEFINITIONS: ShortcutDefinition[] = [
     mode: "single",
     category: "edit",
     action: "确认当前字段",
-    note: "确认当前字段动作；常用于提交当前编辑项",
+    note: "修改模式内确认字段/退出；非修改模式已选行时进入或退出内容编辑",
     displayOnly: true,
   },
   {

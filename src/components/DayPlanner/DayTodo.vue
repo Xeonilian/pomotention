@@ -304,7 +304,6 @@
                   :ref="(el: any) => (titleInputRef = el)"
                   v-model="editingValue"
                   @blur="handleTitleBlur(todo)"
-                  @keyup.enter="handleTitleEnter(todo, $event)"
                   @keyup.esc="cancelEdit"
                   @input="handleTitleInput(todo)"
                   @keydown="handleInputKeydown($event, todo)"
@@ -504,8 +503,9 @@
   </n-modal>
 </template>
 <script setup lang="ts">
-import type { Todo, TodoWithTaskRecords } from "@/core/types/Todo";
-import { timestampToTimeString } from "@/core/utils";
+import type { Todo } from "@/core/types/Todo";
+import { normalizeTimeInput, parseTimesFromTitle, timestampToTimeString } from "@/core/utils";
+import { sortTodosForDayDisplay } from "@/core/utils/sortTodosForDayDisplay";
 import {
   PRIORITY_CATEGORIES,
   SPECIAL_PRIORITIES,
@@ -846,54 +846,8 @@ watch([editingRowId, editingField, isMobile], () => {
   emit("mobile-inline-edit-active", active);
 });
 
-// 对待办事项按优先级降序排序（高优先级在前）
-// 增加规则：一旦done，特殊值（33/44/55/66/77/88/99）按 startTime 排序
-const sortedTodos = computed(() => {
-  const todos = [...todosForCurrentViewWithTaskRecords.value];
-  const specialPriorities = SPECIAL_PRIORITIES;
-
-  const normalTodos: TodoWithTaskRecords[] = [];
-  const specialTodosNotDone: TodoWithTaskRecords[] = [];
-  const specialTodosDone: TodoWithTaskRecords[] = [];
-
-  todos.forEach((todo) => {
-    if (specialPriorities.includes(todo.priority)) {
-      if (todo.status === "done") {
-        specialTodosDone.push(todo);
-      } else {
-        specialTodosNotDone.push(todo);
-      }
-    } else {
-      normalTodos.push(todo);
-    }
-  });
-
-  // 正常任务排序：0放最后，其余越小优先
-  normalTodos.sort((a, b) => {
-    if (a.priority === 0 && b.priority === 0) return 0;
-    if (a.priority === 0) return 1;
-    if (b.priority === 0) return -1;
-    return a.priority - b.priority;
-  });
-
-  // 未完成的特殊任务按特殊值顺序
-  specialTodosNotDone.sort((a, b) => {
-    const orderA = specialPriorities.indexOf(a.priority);
-    const orderB = specialPriorities.indexOf(b.priority);
-    return orderA - orderB;
-  });
-
-  // 已完成（done）的特殊任务按 startTime 升序（无 startTime 排后面）
-  specialTodosDone.sort((a, b) => {
-    if (!a.startTime && !b.startTime) return 0;
-    if (!a.startTime) return 1;
-    if (!b.startTime) return -1;
-    return String(a.startTime).localeCompare(String(b.startTime));
-  });
-
-  // 合并：正常 > 未完成特殊 > 已完成特殊
-  return [...normalTodos, ...specialTodosNotDone, ...specialTodosDone];
-});
+// 对待办事项按优先级排序（与键盘上下键共用同一套顺序）
+const sortedTodos = computed(() => sortTodosForDayDisplay(todosForCurrentViewWithTaskRecords.value));
 
 function openRankPopoverIfActive(todo: Todo) {
   handleRowClick(todo);
@@ -1717,8 +1671,16 @@ function saveEdit(todo: Todo) {
   }
 
   if (editingField.value === "title") {
-    if (editingValue.value.trim()) {
-      emit("edit-todo-title", todo.id, editingValue.value.trim());
+    const parsed = parseTimesFromTitle(editingValue.value);
+    if (parsed.startTime) {
+      emit("edit-todo-start", todo.id, parsed.startTime);
+    }
+    if (parsed.doneTime) {
+      emit("edit-todo-done", todo.id, parsed.doneTime);
+    }
+    // 解析出时间后必须写回截断后的 title（可为空），避免时间 token 留在标题里再次被解析
+    if (parsed.startTime || parsed.doneTime || parsed.title.trim()) {
+      emit("edit-todo-title", todo.id, parsed.title.trim());
     }
   }
 
@@ -1759,52 +1721,6 @@ function handleTitleBlur(todo: Todo) {
   }
   saveEdit(todo);
 }
-
-// 规范化时间输入，支持多种格式并返回 HH:mm
-function normalizeTimeInput(raw: string): string | "" | null {
-  const value = raw.trim();
-  if (!value) return "";
-
-  // 带冒号形式，如 7:3 / 07:11
-  const colonMatch = value.match(/^(\d{1,2}):(\d{1,2})$/);
-  if (colonMatch) {
-    let hours = parseInt(colonMatch[1], 10);
-    let minutes = parseInt(colonMatch[2], 10);
-    if (Number.isNaN(hours) || Number.isNaN(minutes)) return null;
-    if (hours < 0 || hours > 24 || minutes < 0 || minutes >= 60) return null;
-    const h = hours.toString().padStart(2, "0");
-    const m = minutes.toString().padStart(2, "0");
-    return `${h}:${m}`;
-  }
-
-  // 四位纯数字，如 0711 / 1234
-  if (/^\d{4}$/.test(value)) {
-    const hours = parseInt(value.slice(0, 2), 10);
-    const minutes = parseInt(value.slice(2), 10);
-    if (Number.isNaN(hours) || Number.isNaN(minutes)) return null;
-    if (hours < 0 || hours > 24 || minutes < 0 || minutes >= 60) return null;
-    const h = hours.toString().padStart(2, "0");
-    const m = minutes.toString().padStart(2, "0");
-    return `${h}:${m}`;
-  }
-
-  // 三位纯数字，前 1 位小时，后 2 位分钟，如 711 / 930 / 111
-  if (/^\d{3}$/.test(value)) {
-    const hours = parseInt(value.slice(0, 1), 10);
-    const minutes = parseInt(value.slice(1), 10);
-    if (Number.isNaN(hours) || Number.isNaN(minutes)) return null;
-    if (hours < 0 || hours > 24 || minutes < 0 || minutes >= 60) return null;
-    const h = hours.toString().padStart(2, "0");
-    const m = minutes.toString().padStart(2, "0");
-    return `${h}:${m}`;
-  }
-
-  return null;
-}
-
-// 保持旧 API 以兼容其他调用方（目前未使用，占位以防其他模块引用）
-// @ts-expect-error keep API for potential external usage
-const isValidTimeString: (str: string) => string | "" | null = normalizeTimeInput;
 
 // 撤销取消
 function handleUncancelTodo(id: number) {
@@ -1854,16 +1770,6 @@ function isTagPickerKeyboardActive(todo: Todo): boolean {
   return popoverOpened || popoverMatchCurrentTodo || hasTriggerAtTail;
 }
 
-function handleTitleEnter(todo: Todo, event: KeyboardEvent) {
-  if (isTagPickerKeyboardActive(todo) && tagPickerRef.value) {
-    // popover 打开时，Enter 优先选中高亮项（默认第一项），不结束编辑
-    selectingTagViaEnter.value = true;
-    tagPickerRef.value.handleHostKeydown(event);
-    return;
-  }
-  saveEdit(todo);
-}
-
 function handleInputKeydown(event: KeyboardEvent, todo: Todo) {
   const isTagKey = event.key === "ArrowDown" || event.key === "ArrowUp" || event.key === "Enter" || event.key === "Escape";
   const hasTriggerAtTail = /[#@][\p{L}\p{N}_]*$/u.test(editingValue.value);
@@ -1879,6 +1785,13 @@ function handleInputKeydown(event: KeyboardEvent, todo: Todo) {
     event.preventDefault();
     event.stopPropagation();
     tagPickerRef.value.handleHostKeydown(event);
+    return;
+  }
+
+  // 用 keydown 保存：避免「全局 Enter 打开编辑 → focus → 同一次 keyup.enter 立刻保存」闪退
+  if (event.key === "Enter") {
+    event.preventDefault();
+    saveEdit(todo);
     return;
   }
 

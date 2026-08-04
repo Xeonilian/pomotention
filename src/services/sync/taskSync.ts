@@ -40,6 +40,8 @@ export class TaskSyncService extends BaseSyncService<Task, CloudTaskInsert> {
 
   /** 跳过引用已删除/不存在 activity 的 orphan task，避免外键冲突 */
   protected isUploadable(item: Task): boolean {
+    // 删除态总要同步到云端：activity 由软删模型保留行，且 uploadAll 先传 activity 再传 task，FK 安全
+    if (item.deleted) return true;
     const activity = this.getActivityMap().get(item.sourceId);
     if (!activity) {
       console.warn(`[TaskSync] skip orphaned task id=${item.id}, sourceId=${item.sourceId} not found`);

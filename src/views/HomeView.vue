@@ -392,7 +392,10 @@ import { useDevice } from "@/composables/platform/useDevice";
 import { createTouchScheduledSingleAndDouble } from "@/composables/platform/useTouchScheduledSingleAndDouble";
 import { usePublicHolidays, plannerHolidayMapKey } from "@/composables/planner/usePublicHolidays";
 import { registerPlannerKeyboardCommandApi } from "@/composables/keyboard/usePlannerKeyboardCommands";
-import { registerPlannerDaySpaceToggleCheck } from "@/composables/keyboard/usePlannerKeyboardNavigator";
+import {
+  registerPlannerDayEnterEditTitle,
+  registerPlannerDaySpaceToggleCheck,
+} from "@/composables/keyboard/usePlannerKeyboardNavigator";
 import {
   useHomePlannerNavigator,
   type HomeDayPlannerKeyboardExpose,
@@ -443,6 +446,7 @@ const suppressMobilePlannerMotion = computed(() => isMobile.value && (mobileDayT
 const showStateLogModal = ref(false);
 let unregisterPlannerCommandApi: (() => void) | null = null;
 let unregisterPlannerDaySpaceToggleCheck: (() => void) | null = null;
+let unregisterPlannerDayEnterEditTitle: (() => void) | null = null;
 function setTaskRecordEditing(v: boolean) {
   taskRecordEditing.value = v;
 }
@@ -1610,6 +1614,13 @@ onMounted(() => {
     if (selectedRowId.value == null) return false;
     return dayPlannerRef.value?.toggleSelectedRowCheckKeyboard() ?? false;
   });
+  unregisterPlannerDayEnterEditTitle = registerPlannerDayEnterEditTitle(() => {
+    if (route.name !== "Home") return false;
+    if (settingStore.settings.viewSet !== "day") return false;
+    if (!settingStore.settings.showPlanner) return false;
+    if (selectedRowId.value == null) return false;
+    return plannerKeyboardEditField("title");
+  });
 });
 
 onUnmounted(() => {
@@ -1621,6 +1632,10 @@ onUnmounted(() => {
   if (unregisterPlannerDaySpaceToggleCheck) {
     unregisterPlannerDaySpaceToggleCheck();
     unregisterPlannerDaySpaceToggleCheck = null;
+  }
+  if (unregisterPlannerDayEnterEditTitle) {
+    unregisterPlannerDayEnterEditTitle();
+    unregisterPlannerDayEnterEditTitle = null;
   }
   autoSyncDebounced.flush(); //立即执行
   detachVisualViewportListeners();

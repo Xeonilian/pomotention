@@ -230,7 +230,6 @@
                 :ref="(el: any) => (titleInputRef = el)"
                 v-model="editingValue"
                 @blur="handleTitleBlur(schedule)"
-                @keyup.enter="handleTitleEnter(schedule, $event)"
                 @keyup.esc="cancelEdit"
                 @input="handleTitleInput(schedule)"
                 @keydown="handleInputKeydown($event, schedule)"
@@ -340,7 +339,7 @@
 
 <script setup lang="ts">
 import type { Schedule } from "@/core/types/Schedule";
-import { timestampToTimeString } from "@/core/utils";
+import { normalizeTimeInput, parseTimesFromTitle, timestampToTimeString } from "@/core/utils";
 import { NCheckbox, NButton, NIcon, NPopover } from "naive-ui";
 import {
   Add20Regular,
@@ -645,8 +644,16 @@ function saveEdit(schedule: Schedule) {
   }
 
   if (editingField.value === "title") {
-    if (editingValue.value.trim()) {
-      emit("edit-schedule-title", schedule.id, editingValue.value.trim());
+    const parsed = parseTimesFromTitle(editingValue.value);
+    if (parsed.startTime) {
+      emit("edit-schedule-start", schedule.id, parsed.startTime);
+    }
+    if (parsed.doneTime) {
+      emit("edit-schedule-done", schedule.id, parsed.doneTime);
+    }
+    // 解析出时间后必须写回截断后的 title（可为空），避免时间 token 留在标题里再次被解析
+    if (parsed.startTime || parsed.doneTime || parsed.title.trim()) {
+      emit("edit-schedule-title", schedule.id, parsed.title.trim());
     }
   }
 
@@ -696,48 +703,6 @@ function cancelEdit() {
   editingValue.value = "";
 }
 
-// 规范化时间输入，支持多种格式并返回 HH:mm
-function normalizeTimeInput(raw: string): string | "" | null {
-  const value = raw.trim();
-  if (!value) return "";
-
-  // 带冒号形式，如 7:3 / 07:11
-  const colonMatch = value.match(/^(\d{1,2}):(\d{1,2})$/);
-  if (colonMatch) {
-    let hours = parseInt(colonMatch[1], 10);
-    let minutes = parseInt(colonMatch[2], 10);
-    if (Number.isNaN(hours) || Number.isNaN(minutes)) return null;
-    if (hours < 0 || hours > 24 || minutes < 0 || minutes >= 60) return null;
-    const h = hours.toString().padStart(2, "0");
-    const m = minutes.toString().padStart(2, "0");
-    return `${h}:${m}`;
-  }
-
-  // 四位纯数字，如 0711 / 1234
-  if (/^\d{4}$/.test(value)) {
-    const hours = parseInt(value.slice(0, 2), 10);
-    const minutes = parseInt(value.slice(2), 10);
-    if (Number.isNaN(hours) || Number.isNaN(minutes)) return null;
-    if (hours < 0 || hours > 24 || minutes < 0 || minutes >= 60) return null;
-    const h = hours.toString().padStart(2, "0");
-    const m = minutes.toString().padStart(2, "0");
-    return `${h}:${m}`;
-  }
-
-  // 三位纯数字，前 1 位小时，后 2 位分钟，如 711 / 930 / 111
-  if (/^\d{3}$/.test(value)) {
-    const hours = parseInt(value.slice(0, 1), 10);
-    const minutes = parseInt(value.slice(1), 10);
-    if (Number.isNaN(hours) || Number.isNaN(minutes)) return null;
-    if (hours < 0 || hours > 24 || minutes < 0 || minutes >= 60) return null;
-    const h = hours.toString().padStart(2, "0");
-    const m = minutes.toString().padStart(2, "0");
-    return `${h}:${m}`;
-  }
-
-  return null;
-}
-
 // 表头按钮：取消当前选中的日程
 function handleCancelSelectedSchedule() {
   if (selectedRowId.value == null) return;
@@ -761,16 +726,6 @@ function isTagPickerKeyboardActive(schedule: Schedule): boolean {
   const popoverMatchCurrentRow = tagEditor.popoverTargetId.value === schedule.id;
   const hasTriggerAtTail = /[#@][\p{L}\p{N}_]*$/u.test(editingValue.value);
   return popoverOpened || popoverMatchCurrentRow || hasTriggerAtTail;
-}
-
-function handleTitleEnter(schedule: Schedule, event: KeyboardEvent) {
-  if (isTagPickerKeyboardActive(schedule) && tagPickerRef.value) {
-    // popover 打开时，Enter 优先选中高亮项（默认第一项），不结束编辑
-    selectingTagViaEnter.value = true;
-    tagPickerRef.value.handleHostKeydown(event);
-    return;
-  }
-  saveEdit(schedule);
 }
 
 function handleTitleBlur(schedule: Schedule) {
@@ -797,6 +752,13 @@ function handleInputKeydown(event: KeyboardEvent, schedule: Schedule) {
     event.preventDefault();
     event.stopPropagation();
     tagPickerRef.value.handleHostKeydown(event);
+    return;
+  }
+
+  // 用 keydown 保存：避免「全局 Enter 打开编辑 → focus → 同一次 keyup.enter 立刻保存」闪退
+  if (event.key === "Enter") {
+    event.preventDefault();
+    saveEdit(schedule);
     return;
   }
 

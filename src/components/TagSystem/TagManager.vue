@@ -8,13 +8,21 @@
     :auto-focus="false"
     :trap-focus="false"
     :mask-closable="true"
-    :close-on-esc="true"
+    :close-on-esc="false"
     :to="modalTo"
   >
     <div class="tag-manager-inner">
       <!-- 顶部搜索和新建区域 -->
       <div class="tag-search">
-        <n-input primary v-model:value="inputText" placeholder="搜索或新建标签" @keydown.enter="onSearchEnter" size="medium" clearable>
+        <n-input
+          ref="searchInputRef"
+          primary
+          v-model:value="inputText"
+          placeholder="搜索或新建标签"
+          @keydown.enter="onSearchEnter"
+          size="medium"
+          clearable
+        >
           <template #prefix>
             <n-icon color="var(--color-text)">
               <TagSearch20Filled />
@@ -136,9 +144,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick, watch } from "vue";
+import { ref, computed, nextTick, watch, onUnmounted } from "vue";
 import { useTagStore, type TagWithCount } from "@/stores/useTagStore";
-import { useDialog } from "naive-ui";
+import { useDialog, type InputInst } from "naive-ui";
 import {
   TagSearch20Filled,
   Add20Filled,
@@ -182,6 +190,7 @@ const emit = defineEmits<{
 const inputText = ref("");
 const editingId = ref<number | null>(null);
 const editValue = ref("");
+const searchInputRef = ref<InputInst | null>(null);
 const { isMobile } = useDevice();
 
 // 排序与分页
@@ -216,13 +225,42 @@ function resetModalState(): void {
   cancelEdit();
 }
 
+/** Esc：搜索框有焦点则失焦，否则关弹窗（标签名编辑中的 Esc 交给编辑框） */
+function handleEsc(e: KeyboardEvent): void {
+  if (e.key !== "Escape" || !showModal.value) return;
+  if (editingId.value !== null) return;
+
+  const el = searchInputRef.value?.inputElRef;
+  if (el && document.activeElement === el) {
+    e.preventDefault();
+    e.stopPropagation();
+    el.blur();
+    return;
+  }
+
+  e.preventDefault();
+  showModal.value = false;
+}
+
 watch(
   showModal,
   (visible) => {
-    if (visible) resetModalState();
+    if (visible) {
+      resetModalState();
+      window.addEventListener("keydown", handleEsc, true);
+      if (!isMobile.value) {
+        nextTick(() => searchInputRef.value?.focus());
+      }
+    } else {
+      window.removeEventListener("keydown", handleEsc, true);
+    }
   },
   { immediate: true },
 );
+
+onUnmounted(() => {
+  window.removeEventListener("keydown", handleEsc, true);
+});
 // ================================================================
 // Computed
 // ================================================================
@@ -316,6 +354,7 @@ function onClickTag(tag: TagWithCount): void {
   if (inputText.value.trim()) {
     inputText.value = "";
   }
+  if (!isMobile.value) nextTick(() => searchInputRef.value?.focus());
 }
 
 /**
@@ -332,6 +371,7 @@ function onSearchEnter(e: KeyboardEvent): void {
       emit("update:modelValue", [...props.modelValue, first.id]);
     }
     inputText.value = "";
+    if (!isMobile.value) nextTick(() => searchInputRef.value?.focus());
     return;
   }
 
@@ -359,6 +399,7 @@ function onAddTag(): void {
   }
 
   inputText.value = "";
+  if (!isMobile.value) nextTick(() => searchInputRef.value?.focus());
 }
 
 /**
