@@ -1678,7 +1678,8 @@ function saveEdit(todo: Todo) {
     if (parsed.doneTime) {
       emit("edit-todo-done", todo.id, parsed.doneTime);
     }
-    if (parsed.title.trim()) {
+    // 解析出时间后必须写回截断后的 title（可为空），避免时间 token 留在标题里再次被解析
+    if (parsed.startTime || parsed.doneTime || parsed.title.trim()) {
       emit("edit-todo-title", todo.id, parsed.title.trim());
     }
   }
