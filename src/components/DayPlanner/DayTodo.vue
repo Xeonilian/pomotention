@@ -101,46 +101,61 @@
             </template>
           </th>
           <th class="col-status">
-            <!-- 表头操作：对选中行执行取消/退回，仅对进行中(ongoing)任务生效 -->
-            <n-button
-              class="cancel-button"
-              v-if="
-                selectedTodo &&
-                selectedTodo.status !== 'done' &&
-                selectedTodo.status !== 'cancelled' &&
-                !hasAnyProgress(selectedTodo) &&
-                !isMobile
-              "
-              text
-              @click.stop="handleCancelSelectedTodo"
-              title="取消选中任务，不退回活动清单"
-            >
-              <template #icon>
-                <n-icon size="20">
-                  <DismissCircle20Regular />
-                </n-icon>
-              </template>
-            </n-button>
-            <n-button
-              class="suspend-button"
-              v-if="
-                selectedTodo &&
-                selectedTodo.status !== 'done' &&
-                selectedTodo.status !== 'cancelled' &&
-                !hasAnyProgress(selectedTodo) &&
-                !selectedTodo.startTime &&
-                !isMobile
-              "
-              text
-              @click.stop="handleSuspendSelectedTodo"
-              title="撤销选中任务，退回活动清单"
-            >
-              <template #icon>
-                <n-icon size="20">
-                  <ChevronCircleRight48Regular />
-                </n-icon>
-              </template>
-            </n-button>
+            <div class="col-status-header-actions">
+              <n-button
+                class="sort-button"
+                text
+                @click.stop="toggleDayTodoSortMode"
+                :title="dayTodoSortButtonTitle"
+              >
+                <template #icon>
+                  <n-icon size="20" class="header-icon">
+                    <ArrowCircleDown20Regular v-if="dayTodoSortMode === 'startTime'" />
+                    <ArrowCircleUp20Regular v-else />
+                  </n-icon>
+                </template>
+              </n-button>
+              <!-- 表头操作：对选中行执行取消/退回，仅对进行中(ongoing)任务生效 -->
+              <n-button
+                class="cancel-button"
+                v-if="
+                  selectedTodo &&
+                  selectedTodo.status !== 'done' &&
+                  selectedTodo.status !== 'cancelled' &&
+                  !hasAnyProgress(selectedTodo) &&
+                  !isMobile
+                "
+                text
+                @click.stop="handleCancelSelectedTodo"
+                title="取消选中任务，不退回活动清单"
+              >
+                <template #icon>
+                  <n-icon size="20">
+                    <DismissCircle20Regular />
+                  </n-icon>
+                </template>
+              </n-button>
+              <n-button
+                class="suspend-button"
+                v-if="
+                  selectedTodo &&
+                  selectedTodo.status !== 'done' &&
+                  selectedTodo.status !== 'cancelled' &&
+                  !hasAnyProgress(selectedTodo) &&
+                  !selectedTodo.startTime &&
+                  !isMobile
+                "
+                text
+                @click.stop="handleSuspendSelectedTodo"
+                title="撤销选中任务，退回活动清单"
+              >
+                <template #icon>
+                  <n-icon size="20">
+                    <ChevronCircleRight48Regular />
+                  </n-icon>
+                </template>
+              </n-button>
+            </div>
           </th>
         </tr>
       </thead>
@@ -497,7 +512,6 @@
           style="flex: 1; min-width: 120px"
           :render-label="renderTagOptionLabel"
         />
-        <n-button quaternary size="tiny" @click="clearPriorityBinding(cat.priority)">清空</n-button>
       </div>
     </div>
   </n-modal>
@@ -524,6 +538,8 @@ import {
   Play20Regular,
   RecordStop20Regular,
   FoodPizza20Regular,
+  ArrowCircleDown20Regular,
+  ArrowCircleUp20Regular,
 } from "@vicons/fluent";
 import { NCheckbox, NInputNumber, NPopover, NPopconfirm, NButton, NIcon, NModal, NSelect } from "naive-ui";
 import { ref, computed, nextTick, reactive, watch, onBeforeUnmount } from "vue";
@@ -801,9 +817,6 @@ function openPriorityBindingModal() {
   }
   showPriorityBindingModal.value = true;
 }
-function clearPriorityBinding(priority: number) {
-  delete priorityBindingDraft[priority];
-}
 function savePriorityBinding() {
   const ids: Record<number, number> = {};
   Object.entries(priorityBindingDraft).forEach(([p, tagId]) => {
@@ -846,8 +859,19 @@ watch([editingRowId, editingField, isMobile], () => {
   emit("mobile-inline-edit-active", active);
 });
 
-// 对待办事项按优先级排序（与键盘上下键共用同一套顺序）
-const sortedTodos = computed(() => sortTodosForDayDisplay(todosForCurrentViewWithTaskRecords.value));
+// 对待办事项排序（与键盘上下键共用同一套顺序；模式存全局设置）
+const dayTodoSortMode = computed(() => settingStore.settings.dayTodoSortMode ?? "priority");
+const dayTodoSortButtonTitle = computed(() =>
+  dayTodoSortMode.value === "startTime"
+    ? "当前：开始时间排序，点击改为优先级"
+    : "当前：优先级排序，点击改为开始时间",
+);
+function toggleDayTodoSortMode() {
+  settingStore.settings.dayTodoSortMode = dayTodoSortMode.value === "startTime" ? "priority" : "startTime";
+}
+const sortedTodos = computed(() =>
+  sortTodosForDayDisplay(todosForCurrentViewWithTaskRecords.value, dayTodoSortMode.value),
+);
 
 function openRankPopoverIfActive(todo: Todo) {
   handleRowClick(todo);
@@ -2100,10 +2124,22 @@ thead th {
   box-sizing: border-box;
 }
 
-/* 状态列表头不放省略号，保证取消/退回按钮完整显示 */
+/* 状态列表头不放省略号，保证排序/取消/退回按钮完整显示且居中 */
 th.col-status {
   overflow: visible;
   text-overflow: clip;
+}
+.col-status-header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  width: 100%;
+}
+.col-status-header-actions .sort-button,
+.col-status-header-actions .cancel-button,
+.col-status-header-actions .suspend-button {
+  flex-shrink: 0;
 }
 
 /* 开始/结束表头可点击，悬停为手型 */

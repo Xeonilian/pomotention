@@ -83,6 +83,8 @@ export interface GlobalSettings {
   defaultCurrency: string;
   /** 手机 Task 工具栏固定槽（最多 2 个动作 id） */
   taskToolbarMobilePinned?: TaskToolbarActionId[];
+  /** DayTodo 列表展示序：优先级（默认）| 开始时间 */
+  dayTodoSortMode: "priority" | "startTime";
   // 以后新增全局设置项就在这里补充
 }
 
@@ -142,6 +144,7 @@ const defaultSettings: GlobalSettings = {
   publicHolidayCountryCode: "CN",
   defaultCurrency: "CNY",
   taskToolbarMobilePinned: [...DEFAULT_TASK_TOOLBAR_MOBILE_PINNED],
+  dayTodoSortMode: "priority",
   ai: {
     activeId: 1,
     systemPrompt:
