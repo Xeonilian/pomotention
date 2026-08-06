@@ -242,6 +242,7 @@
               @update-todo-pomo="onUpdateTodoPomo"
               @batch-update-priorities="onUpdateTodoPriority"
               @edit-todo-title="handleEditTodoTitle"
+              @edit-todo-from-title="handleEditTodoFromTitle"
               @edit-todo-start="handleEditTodoStart"
               @edit-todo-done="handleEditTodoDone"
               @quick-add-todo="onQuickAddTodo"
@@ -1526,6 +1527,7 @@ const plannerKeyboard = useHomePlannerKeyboard({
 const {
   handleEditScheduleTitle,
   handleEditTodoTitle,
+  handleEditTodoFromTitle,
   handleEditScheduleStart,
   handleEditTodoStart,
   handleEditTodoDone,

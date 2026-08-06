@@ -16,6 +16,7 @@
         @batch-update-priorities="updateTodoPriority"
         @update-todo-est="updateTodoEst"
         @edit-todo-title="handleEditTodoTitle"
+        @edit-todo-from-title="handleEditTodoFromTitle"
         @edit-todo-start="handleEditTodoStart"
         @edit-todo-done="handleEditTodoDone"
         @quick-add-todo="handleQuickAddTodo"
@@ -90,6 +91,7 @@ const emit = defineEmits<{
   (e: "update-todo-priority", id: number, priority: number): void;
   (e: "batch-update-priorities", updates: Array<{ id: number; priority: number }>): void;
   (e: "edit-todo-title", id: number, newTitle: string): void;
+  (e: "edit-todo-from-title", id: number, payload: { title: string; startTime?: string; doneTime?: string }): void;
   (e: "edit-todo-start", id: number, newTs: string): void;
   (e: "edit-todo-done", id: number, newTs: string): void;
   (e: "edit-schedule-start", id: number, newTs: string): void;
@@ -151,6 +153,10 @@ function handleEditScheduleStart(scheduleId: number, newTs: string) {
 
 function handleEditTodoTitle(todoId: number, newTitle: string) {
   emit("edit-todo-title", todoId, newTitle);
+}
+
+function handleEditTodoFromTitle(todoId: number, payload: { title: string; startTime?: string; doneTime?: string }) {
+  emit("edit-todo-from-title", todoId, payload);
 }
 
 function handleEditTodoStart(todoId: number, newTs: string) {

@@ -845,6 +845,8 @@ const emit = defineEmits<{
   (e: "update-todo-pomo", id: number, realPomo: number[]): void;
   (e: "update-todo-est", id: number, estPomo: number[]): void;
   (e: "edit-todo-title", id: number, newTitle: string): void;
+  /** 标题 Enter 解析：title + 可选时间一次提交，避免多次 save */
+  (e: "edit-todo-from-title", id: number, payload: { title: string; startTime?: string; doneTime?: string }): void;
   (e: "edit-todo-start", id: number, newTs: string): void;
   (e: "edit-todo-done", id: number, newTs: string): void;
   (e: "quick-add-todo"): void;
@@ -1696,15 +1698,13 @@ function saveEdit(todo: Todo) {
 
   if (editingField.value === "title") {
     const parsed = parseTimesFromTitle(editingValue.value);
-    if (parsed.startTime) {
-      emit("edit-todo-start", todo.id, parsed.startTime);
-    }
-    if (parsed.doneTime) {
-      emit("edit-todo-done", todo.id, parsed.doneTime);
-    }
     // 解析出时间后必须写回截断后的 title（可为空），避免时间 token 留在标题里再次被解析
     if (parsed.startTime || parsed.doneTime || parsed.title.trim()) {
-      emit("edit-todo-title", todo.id, parsed.title.trim());
+      emit("edit-todo-from-title", todo.id, {
+        title: parsed.title.trim(),
+        ...(parsed.startTime ? { startTime: parsed.startTime } : {}),
+        ...(parsed.doneTime ? { doneTime: parsed.doneTime } : {}),
+      });
     }
   }
 
@@ -1795,6 +1795,11 @@ function isTagPickerKeyboardActive(todo: Todo): boolean {
 }
 
 function handleInputKeydown(event: KeyboardEvent, todo: Todo) {
+  // 输入法组字中：Enter/Esc 交给 IME，勿保存（否则需再按一次才确认）
+  if ((event.key === "Enter" || event.key === "Escape") && (event.isComposing || event.keyCode === 229)) {
+    return;
+  }
+
   const isTagKey = event.key === "ArrowDown" || event.key === "ArrowUp" || event.key === "Enter" || event.key === "Escape";
   const hasTriggerAtTail = /[#@][\p{L}\p{N}_]*$/u.test(editingValue.value);
 
