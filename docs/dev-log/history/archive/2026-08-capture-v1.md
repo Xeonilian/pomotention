@@ -1,13 +1,13 @@
 # 归档 · 一句记第一刀（2026-08）
 
-> 自 [`current.md`](../../current.md) 移出。底座见 [`../../blueprint/8-ai-gateway.md`](../../blueprint/8-ai-gateway.md)；能力见 [`../../blueprint/7-capture.md`](../../blueprint/7-capture.md)。
+> 自 [`current.md`](../../current.md) 移出。底座见 [`../../blueprint/8-ai-gateway.md`](../../blueprint/8-ai-gateway.md)；实现见 [`../../blueprint/7-capture.md`](../../blueprint/7-capture.md)；能力清单见 [`../../blueprint/7-capture-instances.md`](../../blueprint/7-capture-instances.md)。
 
 ## 快照（归档时）
 
 | 项 | 内容 |
 |---|---|
 | **主题** | 一句记（capture）— 文字→写入操作；第一刀 create todo |
-| **蓝图** | [`7-capture.md`](../../blueprint/7-capture.md)；底座 [`8-ai-gateway.md`](../../blueprint/8-ai-gateway.md) |
+| **蓝图** | [`7-capture.md`](../../blueprint/7-capture.md) + [`7-capture-instances.md`](../../blueprint/7-capture-instances.md)；底座 [`8-ai-gateway.md`](../../blueprint/8-ai-gateway.md) |
 | **分支** | `dev` |
 | **停在哪** | 本关完成：本地联调通过（`pnpm gateway:dev` + `pnpm dev`，记一句写入日视图） |
 

@@ -1,8 +1,10 @@
-# Capture · 一句记 · 蓝图
+# Capture · 一句记 · 怎么实现
 
-> **一句记要做成什么、怎么做成** — 最外层输入口、文字映射、AI 协助（含与收费关系）、写入已有记录。  
-> **本关做哪一段** 由 [`current.md`](../current.md) 定；本文件描述完整能力，不替代 current 的选型。  
-> 构想池 [`0-vision.md`](./0-vision.md)；分层 [`1-architecture-layering.md`](./1-architecture-layering.md)。
+> **一句记怎么做成** — 流水线、意图形状、LLM 映射、校验与写入、付费门闩、代码落点。  
+> **能映射哪些种类 / 字段** → [`7-capture-instances.md`](./7-capture-instances.md)。  
+> **本关做哪一段** → [`current.md`](../current.md)。  
+> **藏 key / 配额 / 鉴权** → [`8-ai-gateway.md`](./8-ai-gateway.md)。  
+> 分层 → [`1-architecture-layering.md`](./1-architecture-layering.md)。
 
 ---
 
@@ -12,25 +14,36 @@
 |----|------|
 | 用户向 | **一句记** |
 | 域名 / 代码 | `capture` |
-| 本文件 | `7-capture.md` |
+| 本文件 | `7-capture.md`（实现） |
+| 能力清单 | [`7-capture-instances.md`](./7-capture-instances.md) |
 
-> 用户在 **App 最外层** 提交一句自然语言，由 **LLM 映射** 成某类已有记录（含新建一条 todo）并写入；写错了在原界面改。**capture 是付费功能**。
+> 用户在 **App 最外层** 提交一句自然语言 → 经 **LLM**（大语言模型，外部服务）映射成结构化意图 → 校验通过后写入 **已有** 记录；写错了在原界面改。**capture 是付费功能**。
 
 ---
 
-## 2. 功能是什么
+## 2. 流水线（白话）
 
-一条流水线（**纯 LLM 映射，无规则路径、无兜底**）：
+用户打一句话 → 问云端 AI「要记成什么」→ AI 按我们规定的 JSON 字段回答 → 咱们代码检查格式 → 通过才写入 → 短提示成功/失败。  
+**纯 LLM 映射**：无词典/口令规则引擎；失败不降级为规则硬猜。
 
 ```text
-最外层输入口（得到一段文字）
-  → AiMapper：一次 LLM 调用（结构化输出 / Zod 校验）
-       一句可产出多条意图：每条 { op, kind, target, fields, confidence }
-  → Validator：schema 不过 / confidence 低 / target 锁不住 → 不写
-  → Writer[kind] 写入对应 type 的已有数据
-  → Reporter：成功/失败提示；原界面查看与改错
+输入口（得到一段文字）          ← App 功能（如 CapturePanel）
+  → AiMapper：调 LLM，拿到意图字符串  ← App 模块名；LLM = 外部服务
+  → Validator：对照说明书检查能否写   ← App 步骤；多用 Zod（外部库）
+  → Writer[kind]：写入已有 store     ← App 薄适配器
+  → Reporter：成功/失败提示          ← App（可就在面板上）
 ```
-（映射由 LLM 完成见 §4.3；新建 vs 修改见 §4.4；模块拆分见 §4.5；付费门闩见 §5。）
+
+| 名字 | 是什么 | 外部技术 or App 自拼 |
+|------|--------|----------------------|
+| **LLM** | 大语言模型（如 Kimi / Moonshot） | 外部服务 |
+| **结构化输出** | 要求 AI 只按固定 JSON 字段回答，不闲聊 | 做法：靠 **提示词** 约束 |
+| **Zod** | 检查「数据长得对不对」的 TS 库 | 外部 npm 包 |
+| **schema** | 允许的数据形状说明书 | App 约定（如 `schema.ts`） |
+| **AiMapper / Validator / Writer / Reporter** | 流水线四站的绰号 | App 自拼模块名 |
+| **kind / op / confidence / target** | 意图字段名 | App 约定，见 §4 |
+
+一句可产出 **多条** 意图；默认 **能写的写、失败的回报**（细节由 current 定）。
 
 ---
 
@@ -40,227 +53,142 @@
 
 | 输入方式 | 说明 |
 |----------|------|
-| **键盘打字** | 主路径；用户在一句记框里输入后提交 |
-| **系统输入法语音** | 手机/系统 IME 自带语音识别，把结果填进同一输入框。**本 App 不做自研语音识别**；做到框可聚焦、可接收 IME 结果即可（必要时引导系统语音键） |
+| **键盘打字** | 主路径 |
+| **系统输入法语音** | 手机/系统 IME 识别后填进同一框。**本 App 不做自研语音识别** |
 | **粘贴** | 剪贴板贴入同一框再提交 |
-| **程序化提交** | 同一套「提交一句文本」API（供测试、快捷指令、以后其它入口复用） |
+| **程序化提交** | 同一套「提交一句文本」API（测试、快捷指令等） |
 
-提交后一律变成 `string` → §4 映射。
+提交后一律变成 `string` → §5 映射。
 
 ---
 
-## 4. 文字映射（核心怎么实现）
+## 4. 意图形状（产物）
 
-### 4.1 产物
-
-映射成功时产出结构化意图，例如：
+映射成功时产出一条或多条结构化意图，例如：
 
 ```text
-{ op: "create" | "update" | "delete",   // 默认可视为 create
-  kind: "<下表 kind>",
-  target: null | { …如何锁定已有条目… },  // create 时为 null
+{ op: "create" | "update" | "delete",
+  kind: "<见 instances 清单>",
+  target: null | { …锁定已有条目… },   // create 时为 null
   fields: { …要写入或要改的字段… },
   confidence: "high" | "low" }
 ```
 
-- `confidence` 低或不识别 → **不写入**，提示改写或去原界面手记。  
-- **`op: update` / `delete` 时必须能解析出 `target`**；锁不住唯一条目 → 不写，提示说得更具体或去列表里改。  
-- 本关开放哪些 `kind` / 是否开改删：**只看 current**；下表按 [`src/core/types/`](../../src/core/types/) 与身体蓝图枚举能力。
+| 字段 | 含义 |
+|------|------|
+| `op` | 操作：新建 / 改 / 删 |
+| `kind` | 记哪一类；全集见 [`7-capture-instances.md`](./7-capture-instances.md) |
+| `fields` | 要写或要改的字段（update 只带补丁） |
+| `target` | 改删时「改哪一条」；create 为 null |
+| `confidence` | AI 自评把握；`low` → **不写** |
 
-### 4.2 可映射种类（能力清单）
+- schema 不过 / `confidence` 低 / `target` 锁不住 → **不写入**，提示改写或去原界面。  
+- 本关开放哪些 kind、是否开改删：**只看 current**。
 
-来源：`Todo` / `Schedule` / `Activity` / `Task` 子记录 / `LedgerEntry` / `Tag` / `Project` / `Template` / `Pomo`，以及 [`6-body.md`](./6-body.md) 身体字段意向。  
-**不同步、图表配置、AI 配置、Dialog 状态等**不作为一句记目标。
+---
 
-#### 计划与日程
+## 5. 映射怎么做（LLM + 校验）
 
-| kind | 对应类型（types） | 映射常落到的字段 | 改错界面 |
-|------|-------------------|------------------|----------|
-| `todo` | `Todo` + 常伴 `Activity`（class `T`） | `activityTitle` / title；`dueDate`；`estPomo`；`priority`；`pomoType`；`status`；`projectName` / projectId；tagIds | 日视图 |
-| `schedule` | `Schedule` + `Activity`（class `S`） | `activityTitle`；`activityDueRange`（开始 + 时长 min）；`location`；`status`；`isUntaetigkeit`；project / tags | 日/周日程 |
-| `activity` | `Activity` / `ActivityV2` | 当句意是「活动本身」而非已落到 T/S 行时：title、dueDate/dueRange、location、parentId、category/fourZone、repeatParams 等 | Activity 列表 |
-
-#### 任务追踪（挂在 Task 上）
-
-| kind | 对应类型 | 映射常落到的字段 | 改错界面 |
-|------|----------|------------------|----------|
-| `energy` | `EnergyRecord`（`Task.energyRecords`） | `value`（1–10）；`description`；`recordedAt`；需能关联到哪个 task/source | 任务追踪 / 精力录入 |
-| `reward` | `RewardRecord` | 同上结构，奖赏值 1–10 | 任务追踪 |
-| `interruption` | `InterruptionRecord` | `interruptionType`（`E`/`I`）；`description`；`recordedAt`；`activityType`（`T`/`S`） | 任务追踪 |
-
-#### 账本
-
-| kind | 对应类型 | 映射常落到的字段 | 改错界面 |
-|------|----------|------------------|----------|
-| `ledger` | `LedgerEntry` | `amount`；`direction`（income/expense）；`currency`；`memo`；`categoryTagIds` / 分类名 | Gift / 明细 |
-
-#### 标签与项目
-
-| kind | 对应类型 | 映射常落到的字段 | 改错界面 |
-|------|----------|------------------|----------|
-| `tag` | `Tag` | `name`；可选 `color` / `backgroundColor`（多与其它 kind 一并「打上某标签」） | 标签管理 |
-| `project` | `Project` | `title`；`description`；`status`；`dueDate` | 项目相关 UI |
-
-#### 模板与番茄片段
-
-| kind | 对应类型 | 映射常落到的字段 | 改错界面 |
-|------|----------|------------------|----------|
-| `template` | `Template` | `title`；`content`（「存成模板」类句子） | 模板列表 |
-| `pomo` | `Pomo` | `start` / `end`；`status`；`intention`（补记一段番茄时） | Timer / 相关记录 |
-
-#### 身体（类型尚未进 `core/types`，字段见 6-body）
-
-| kind | 意向实体 | 映射常落到的字段 | 改错界面 |
-|------|----------|------------------|----------|
-| `hydration` | `HydrationEntry`（蓝图） | `loggedAt`；`amountMl`；`beverage` | 日后 Body 水页 |
-| `sleep` | 睡眠记录 | 上床/起床/入睡/醒来；中途醒来；梦；醒来精力等 | 日后 Body |
-| `exercise` | 运动记录 | 种类；时间；时长；匹配计划 | 日后 Body |
-| `meal` | 进食记录 | 时间；餐次；描述；饥饿/饱足 | 日后 Body |
-| `bowel` | 排便记录 | 时间；状态；颜色 | 日后 Body |
-
-#### 图表指标名里已出现、尚无独立录入类型的（仅占位）
-
-`Chart` 的 `MetricName` 含 `weight`、`sleep` 等：一句记可预留 `weight` 等 kind，**待有正式 type/存储后再接写入**；不单独当本关实现依据。
-
-### 4.3 映射由 LLM 完成（不做规则路径）
-
-一句记的「文字 → 意图」**整体交给 LLM**，不自建词典/口令/抽取器/TargetResolver 等规则基础设施。
+「文字 → 意图」**整体交给 LLM**，不自建词典/口令/抽取器等规则基础设施。
 
 | 项 | 说明 |
 |----|------|
-| 输入 | 用户原句 + 当前允许的 kind/字段说明 + 候选条目摘要（改删时） |
-| 输出 | 一条或多条 `{ op, kind, target, fields, confidence }`，受 Zod schema 约束 |
-| 约束 | 提示词禁止瞎编 kind；`update/delete` 必须给 `target`；锁不住 → `confidence: low` |
-| 校验 | schema 不过 / `confidence` 低 / `target` 不唯一 → **不写**，提示改写或去原界面 |
-| 依赖 | 需网络；超时/失败 → 不写并明确报错（不降级为规则） |
+| 输入 | 用户原句 + 当前允许的 kind/字段说明（来自 instances / current）+ 改删时的候选摘要 |
+| 输出 | 一条或多条 §4 形状的意图；受 Zod schema 约束 |
+| 约束 | **提示词**禁止瞎编 kind；`update/delete` 必须给 `target`；锁不住 → `confidence: low` |
+| 校验 | schema 不过 / `confidence` 低 / `target` 不唯一 → **不写** |
+| 依赖 | 需网络；超时/失败 → 不写并明确报错（**不降级为规则**） |
 
-一句多条意图（「买菜 30，再记个明天开会」）由 LLM 一次切分产出多条；任一条不过校验可整批不写或只写成功的（策略由 current 定，默认 **能写的写、失败的回报**）。
+**为何 AI「知道」要结构化输出：** 不是 Zod 教的，是请求里的 **system / kindsHint 提示词** 要求「只输出合法 JSON」。Zod 是回答回来之后，**App 自己再检查**有没有胡说。
 
-**为何不做规则兜底：** capture 是云端付费功能，能调 LLM 的前提就是联网+付费；模型失败时「重试/改写/去原界面」比「规则硬猜」更安全。规则路径要为 12+ kind 各建词典/抽取器/TargetResolver，工作量远大于它解决的 0.x% 失败场景。免费尝鲜若需要，用「免费 LLM 额度」做，不另建规则引擎。
+**为何不做规则兜底：** capture 绑定联网+付费；失败时「重试/改写/去原界面」比硬猜更安全。规则路径要为大量 kind 各建抽取器，成本远高于它覆盖的失败率。免费尝鲜若需要，用「免费 LLM 额度」，不另建规则引擎。
 
-### 4.4 新建 vs 修改：语言如何指定「哪一条」
-
-新建相对直接：映射出 `kind` + `fields` → `create`。  
-**修改 / 删除**多一步：句子里要能让系统知道 **改的是已有的哪一条**，再改字段。
-
-#### 意图判别（语言线索）
-
-| 倾向 | 用户说法例 | 映射 |
-|------|------------|------|
-| 新建 | 「明天下午三点开会」「买菜花了 30」「喝了杯水」 | `op: create` |
-| 修改 | 「把开会改到四点」「刚才那笔买菜改成 35」「把明天开会取消」 | `op: update` / `delete` |
-| 含糊 | 「开会改到四点」但当天有多场会 | 候选 > 1 → **不写**，要求补指称或去原界面选 |
-
-改/删动词与「把…改成…」句式由 LLM 理解；指称复杂时 LLM 仍须产出可执行的 `target`，否则 `confidence: low` 不写。
-
-#### `target`：语言里常见的指定方式
-
-不必一次做全；蓝图先列齐，由 current 选做哪些解析策略。
-
-| 指定方式 | 语言例 | 解析时怎么用 |
-|----------|--------|--------------|
-| **标题 / 备注关键词** | 「把『开会』改到四点」 | 在对应 kind 里按 title/memo 模糊匹配 |
-| **时间锚** | 「今天下午那条」「刚才喝的那杯」 | 用 dueDate / loggedAt / recordedAt 收窄 |
-| **金额 / 数值锚** | 「那笔 30 块的」 | ledger 等按 amount 收窄 |
-| **种类 + 最近一条** | 「上一笔账改成 35」「刚记的精力改成 4」 | 该 kind 按时间倒序取最近，**仅当唯一合理** |
-| **显式 id**（少见） | 调试或复制出来的 id | 精确命中 |
-| **相对日程** | 「明天第一条 todo」 | 按日列表顺序（脆弱，慎用） |
-
-#### 匹配结果怎么处理
-
-| 结果 | 行为 |
-|------|------|
-| **恰好 1 条** | 执行 update/delete |
-| **0 条** | 不写；提示找不到，可改为新建或去列表找 |
-| **多条** | 不写；提示补充指称（或 LLM 列候选让用户确认——若做，属交互增强，current 定） |
-
-修改时 `fields` 只带 **要改的字段**（补丁），不是整行重写。
-
-#### 与「原界面改错」的分工
-
-- 一句记擅长：**说得出指称** 的快改（改时间、改金额、取消）。  
-- 列表里点选更擅长：指称不清、要看上下文再改。  
-两者并存；一句记锁不住就不抢着改。
-
-### 4.5 模块怎么拆
-
-加新核心 = **加 kind 的 Writer 适配**；映射层不变（始终是 LLM）。每一层只做一件事。
-
-```text
-[输入] rawText
-    → AiMapper        一次 LLM 调用 → 一条或多条 { op, kind, target, fields, confidence }
-    → Validator       Zod schema + confidence + target 唯一性；不过则本条不写
-    → Writer[kind]    create/update/delete → 现有 store/service（薄适配器）
-    → Reporter        成功/失败提示
-```
-
-| 模块 | 职责 | 加「新核心」时改什么 |
-|------|------|----------------------|
-| **AiMapper** | 文本 → 意图（一次 LLM 调用，schema 约束） | prompt 里加新 kind 的字段说明 |
-| **Validator** | Zod 校验 + `target` 唯一性 + `confidence` 阈值 | 新 kind 的 schema 分支 |
-| **Writer** | 调现有 API 改数据 | **薄适配器**：只转成 Todo/LedgerEntry/… 的写入调用 |
-| **Reporter** | 成功/失败提示 | 一般不改 |
-
-**一次一条或多条：** AiMapper 产出列表；Writer 按条执行；汇报按条汇总。
-
-**数据落点：** 最终一定是改 `Todo` / `LedgerEntry` / `EnergyRecord` 等已有结构；capture 不自建另一套「影子表」。
-
-**不做的：** Splitter / Classifier / TargetResolver / FieldExtractor / Normalizer 等规则模块——全部压进 AiMapper 一次 LLM 调用。也不引入 `tasknotes-nlp-core` / `chrono-node` / Costflow 等规则库（它们服务规则路径，本蓝图不采用）。
+调用与配额细节见 [`8-ai-gateway.md`](./8-ai-gateway.md)。第一刀落地代码：`src/core/capture/`、`src/components/Capture/`；关票摘要见 [`history/archive/2026-08-capture-v1.md`](../history/archive/2026-08-capture-v1.md)。
 
 ---
 
-## 5. 付费门闩（capture 是付费功能）
+## 6. 新建 vs 改删（实现规则）
 
-一句记整体是 **付费 / 会员功能**：映射由 LLM 完成，LLM 调用消耗额度，因此未付费不可用。
+- **新建：** 映射出 `kind` + `fields` → `op: create` → Writer。  
+- **改 / 删：** 还必须能解析出唯一 `target`；锁不住 → **不写**。  
+- 修改时 `fields` 只带 **要改的字段**（补丁），不是整行重写。
+
+| 匹配结果 | 行为 |
+|----------|------|
+| 恰好 1 条 | 执行 update/delete |
+| 0 条 | 不写；提示找不到 |
+| 多条 | 不写；提示补充指称（或以后做候选确认，current 定） |
+
+语言侧说法例、指称方式表 → [`7-capture-instances.md`](./7-capture-instances.md) §4。  
+一句记锁不住就不抢着改；列表点选仍可用。
+
+---
+
+## 7. 模块与代码落点
+
+加新核心 = **加 kind 的 Writer 适配** + instances 补行 + prompt/schema；映射层仍是一次 LLM。
+
+```text
+rawText
+  → AiMapper     一次 LLM → 意图列表
+  → Validator    Zod + confidence + target 唯一性
+  → Writer[kind] create/update/delete → 现有 store/service
+  → Reporter     成功/失败提示
+```
+
+| 模块 | 职责 | 加新 kind 时改什么 |
+|------|------|-------------------|
+| **AiMapper** | 文本 → 意图（调 LLM） | prompt 里加字段说明 |
+| **Validator** | 校验能否写 | 新 kind 的 schema 分支 |
+| **Writer** | 调现有 API 改数据 | 薄适配器 |
+| **Reporter** | 提示用户 | 一般不改 |
+
+| 层 | 落点 |
+|----|------|
+| UI | `src/components/Capture/` |
+| 映射与编排 | `src/core/capture/` |
+| kind 适配 | `src/core/capture/kinds/<kind>/`（或同级 Writer；按落地整理） |
+| 网关 | `worker/ai-gateway/` + `aiApiService`（见 8-ai-gateway） |
+
+**数据落点：** 只改已有 `Todo` / `LedgerEntry` 等；capture **不**自建影子表。  
+**不做：** Splitter / Classifier / TargetResolver 等规则模块；不引入 tasknotes-nlp / chrono-node / Costflow 规则库。
+
+---
+
+## 8. 付费门闩
+
+映射消耗 LLM 额度 → 未付费不可用；**不提供规则版替代**。
 
 | 状态 | 行为 |
 |------|------|
-| **未付费** | 一句记入口禁用，或提交时提示升级；不提供任何「规则版」替代 |
-| **付费 / 会员** | 可用；消耗额度或含在会员内 — 具体价与额度由收费关 / current 定 |
-| **免费尝鲜（可选）** | 若需，用「免费 LLM 额度」（如每月 N 条）实现，不另建规则引擎 |
+| 未付费 | 入口禁用或提交时提示升级 |
+| 付费 / 会员 | 可用；额度由收费关 / current 定 |
+| 免费尝鲜（可选） | 免费 LLM 次数，不另建规则引擎 |
 
-### 5.1 实现要点
+实现要点：
 
-1. 组装提示：用户原句、当前允许的种类与字段说明、要求结构化意图、禁止瞎编种类；改删时附候选条目摘要。
-2. 调用模型（厂商 API 或日后自选）；Zod 校验返回。
-3. 校验通过 → 走 Writer；失败 → 不写并提示「重试 / 改写 / 去原界面」。
-4. 需网络；超时/失败 → 明确报错，**不降级为规则**。
-5. 付费门闩在入口处拦截，不进入 LLM 调用。
+1. 组装提示（原句、允许 kind、要求 JSON；改删附候选）。  
+2. 经网关调模型；Zod 校验。  
+3. 通过 → Writer；失败 → 不写并提示。  
+4. 网络失败明确报错，不降级规则。  
+5. **入口先拦权益**，不进入 LLM。  
 
-蓝图约定：**capture 能力绑定付费权益**；价目表不写死在本文件。收费底座见 roadmap「收费 + 推广」。
-
----
-
-## 6. 写入与改错
-
-1. 按 `op` 调用现有 service：`create` / `update` / `delete`（update 须先解析 `target`）。  
-2. 成功后可轻提示「已新建 / 已改××」；用户到对应原界面核对。  
-3. 列表里的改删仍可用；一句记不另做全屏编辑器。
+价目表不写死本文件。网关配额 / entitlement → [`8-ai-gateway.md`](./8-ai-gateway.md)。
 
 ---
 
-## 7. 代码落点（与 §4.5 对应）
+## 9. 写入与改错
 
-| 层 | 意向 |
-|----|------|
-| UI | `src/components/Capture/` — 最外层输入、提交、逐条结果、付费门闩提示 |
-| 映射 | `src/core/capture/` — AiMapper（prompt + LLM 调用）、Validator（Zod）、编排 |
-| kind 适配 | `src/core/capture/kinds/<kind>/` — Writer 适配（调现有 service） |
-| 权益 | 会员状态门闩，入口处拦截 |
-
-遵守 [`1-architecture-layering.md`](./1-architecture-layering.md)。
+1. 按 `op` 调现有 service（update/delete 须已有唯一 `target`）。  
+2. 轻提示「已新建 / 已改××」；用户到原界面核对。  
+3. 列表改删仍可用；一句记不另做全屏编辑器。
 
 ---
 
-## 8. 修订
+## 10. 修订
 
 | 日期 | 备注 |
 |------|------|
-| 2026-07-29 | 初稿 |
-| 2026-07-29 | 重写：输入全表、规则/AI 映射、收费关系；语音=系统 IME；范围交给 current |
-| 2026-07-29 | 入口定为最外层；todo 与 ledger 同级可映射；去掉 title/ledger 语法纠缠 |
-| 2026-07-29 | §4.2 按 `src/core/types` + 6-body 展开能力清单 |
-| 2026-07-29 | §4.4 新建 vs 修改：语言指定 target；多候选不写 |
-| 2026-07-29 | §4.3 无 AI 多手段；§4.5 模块拆分（插件化 kind） |
-| 2026-07-29 | §4.6 可借库：tasknotes / chrono 怎么接；Costflow 只借思路；其余一句不采用 |
-| 2026-07-29 | 转向纯 LLM 路径：删 §4.3 规则手段 / §4.6 借库；§4.5 模块简化为 AiMapper+Validator+Writer+Reporter；§5 改付费门闩（无规则兜底、无免费规则层） |
+| 2026-07-29 | 初稿及多轮定稿（输入、纯 LLM、付费门闩、模块拆分） |
+| 2026-08-07 | 曾增运行时细讲节；同日删除（改由代码与 archive 承担） |
+| 2026-08-07 | 拆出 [`7-capture-instances.md`](./7-capture-instances.md)；本文件改为「怎么实现」；流水线补外部技术/App 自拼说明 |

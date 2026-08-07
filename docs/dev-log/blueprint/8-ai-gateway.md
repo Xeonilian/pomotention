@@ -2,7 +2,7 @@
 
 > **AI 接入、token 保护、试用配额、付费门闩** — 为 capture（一句记）及日后其它 LLM 能力提供统一底座。  
 > **本关做哪一段** 由 [`current.md`](../current.md) 定；本文件描述完整能力，不替代 current 的选型。  
-> 一句记能力见 [`7-capture.md`](./7-capture.md)；收费队列见 roadmap「收费 + 推广」。
+> 一句记实现见 [`7-capture.md`](./7-capture.md)，能力清单见 [`7-capture-instances.md`](./7-capture-instances.md)；收费队列见 roadmap「收费 + 推广」。
 
 ---
 
@@ -93,7 +93,7 @@ flowchart LR
 - 背景：曾出现「客户端配置 8k，账单却有 k2.5」——在 key 可被直接调用厂商 API 时，攻击者可任选模型；网关写死 + key 只留在 Worker，切断这条路径。
 - 每用户每分钟 N 次（防刷），KV sliding window；超限 → **429**，body 带 `code`（如 `RATE_LIMITED`）。
 - 配额用尽 → **402**，body 须带业务码，例如 `{ "code": "QUOTA_EXHAUSTED", "upgrade_url"?: "…" }`；前端以 `code` 为准，不单靠状态码。
-- 厂商超时/失败 → 原样或包装错误码回传；**不降级为规则路径**（对齐 [`7-capture.md`](./7-capture.md) §4.3）。
+- 厂商超时/失败 → 原样或包装错误码回传；**不降级为规则路径**（对齐 [`7-capture.md`](./7-capture.md) §5）。
 
 ---
 
@@ -136,7 +136,7 @@ KV key：`entitlement:{user_id}`
 - **预留**：日后 Stripe / LemonSqueezy / 国内支付 webhook → 同一 Admin 接口（或直接写 KV / 日后迁 Supabase 表）。
 - **价目表**：不写死在本文件；留给收费关（roadmap「收费 + 推广」）。
 
-前端入口处：检查登录态 +（可选）预检配额/权益；未通过则提示升级，**不进入 LLM 调用** — 对齐 [`7-capture.md`](./7-capture.md) §5.1 第 5 条。
+前端入口处：检查登录态 +（可选）预检配额/权益；未通过则提示升级，**不进入 LLM 调用** — 对齐 [`7-capture.md`](./7-capture.md) §8 第 5 条。
 
 ---
 
@@ -170,7 +170,7 @@ Capture 入口
 | 网关不可达 / 连接失败 | 不写；提示「暂不可用，稍后重试」 |
 | 超时 / 5xx / 厂商错 | 不写；提示重试 / 改写 / 去原界面 |
 
-**不做：** 失败时降级为规则引擎（见 [`7-capture.md`](./7-capture.md) §4.3）。
+**不做：** 失败时降级为规则引擎（见 [`7-capture.md`](./7-capture.md) §5）。
 
 ---
 
