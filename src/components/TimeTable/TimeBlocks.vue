@@ -159,7 +159,7 @@
     class="actual-time-range"
     :class="{ ongoing: range.ongoing }"
     :style="getActualTodoTimeRangeStyle(range)"
-    :title="range.ongoing ? `${range.title} - 进行中` : `${range.title} - 实际番茄执行时间`"
+    :title="formatActualRangeTitle(range)"
   ></div>
 
   <div
@@ -167,14 +167,14 @@
     :key="`actual-range-${range.id}`"
     class="actual-time-range"
     :style="getActualScheduleTimeRangeStyle(range)"
-    :title="`${range.title} - 实际预约执行时间`"
+    :title="formatActualRangeTitle(range)"
   ></div>
 </template>
 
 <script setup lang="ts">
 import { onUnmounted, ref } from "vue";
 import { timestampToTimeString } from "@/core/utils";
-import type { Block } from "@/core/types/Block";
+import type { ActualTimeRange, Block } from "@/core/types/Block";
 import { useTimeBlocks } from "@/composables/planner/useTimeBlocks";
 import { useDevice } from "@/composables/platform/useDevice";
 import { NPopover } from "naive-ui";
@@ -215,6 +215,13 @@ const {
 } = useTimeBlocks(props);
 
 const { isMobile } = useDevice();
+
+/** 第四列悬停：标题 + 取整分钟；时长 ≤0 不写分钟 */
+function formatActualRangeTitle(range: Pick<ActualTimeRange, "title" | "start" | "end">): string {
+  const mins = Math.round((range.end - range.start) / 60_000);
+  if (mins <= 0) return range.title;
+  return `${range.title} - ${mins}min`;
+}
 
 const activeEmojiPopoverTodoId = ref<number | null>(null);
 let emojiPopoverTimer: ReturnType<typeof window.setTimeout> | null = null;
