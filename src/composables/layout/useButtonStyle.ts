@@ -17,6 +17,7 @@ import {
   BrainCircuit24Regular,
 } from "@vicons/fluent";
 import { useDevice } from "@/composables/platform/useDevice";
+import { CAPTURE_UI_ENABLED } from "@/core/capture";
 
 type ViewKey = "ontop" | "pomodoro" | "timetable" | "task" | "planner" | "activity" | "ai";
 
@@ -24,6 +25,11 @@ export function useButtonStyle() {
   // const timerStore = useTimerStore();
   const settingStore = useSettingStore();
   const { isMobile, isLandscape } = useDevice();
+
+  // 入口关闭时清掉残留右栏，避免本地曾打开过 showAi 仍占布局
+  if (!CAPTURE_UI_ENABLED && settingStore.settings.showAi) {
+    settingStore.settings.showAi = false;
+  }
 
   const buttonStates = ref<Record<ViewKey, boolean>>({
     ontop: false,
@@ -61,7 +67,7 @@ export function useButtonStyle() {
     buttonStates.value.ai = settingStore.settings.showAi;
   };
 
-  // 视图控制配置
+  // 视图控制配置（记一句入口由 CAPTURE_UI_ENABLED 控制，上云前不进工具栏）
   const viewControls = computed(() => [
     { key: "ontop", icon: Pin24Regular, title: "番茄时钟置顶", show: isTauri() },
     { key: "pomodoro", icon: Timer24Regular, title: "切换番茄钟视图", show: settingStore.settings.showPomodoro },
@@ -69,7 +75,9 @@ export function useButtonStyle() {
     { key: "planner", icon: TasksApp20Regular, title: "切换计划视图", show: settingStore.settings.showPlanner },
     { key: "task", icon: CalligraphyPen20Regular, title: "切换执行视图", show: settingStore.settings.showTask },
     { key: "activity", icon: BookLetter20Regular, title: "切换活动视图", show: settingStore.settings.showActivity },
-    { key: "ai", icon: BrainCircuit24Regular, title: "切换记一句", show: settingStore.settings.showAi },
+    ...(CAPTURE_UI_ENABLED
+      ? [{ key: "ai" as const, icon: BrainCircuit24Regular, title: "切换记一句", show: settingStore.settings.showAi }]
+      : []),
   ]);
 
   // 切换设置面板显示状态

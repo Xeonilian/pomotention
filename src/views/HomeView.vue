@@ -315,7 +315,7 @@
           @repeat-activity="onRepeatActivity"
         />
       </div>
-      <div v-if="settingStore.settings.showAi" class="right" :style="{ width: rightWidth + 'px' }">
+      <div v-if="CAPTURE_UI_ENABLED && settingStore.settings.showAi" class="right" :style="{ width: rightWidth + 'px' }">
         <CapturePanel />
       </div>
     </div>
@@ -389,6 +389,7 @@ import { useSettingStore } from "@/stores/useSettingStore";
 import { useDataStore } from "@/stores/useDataStore";
 import { autoSyncDebounced, uploadAllDebounced } from "@/core/utils/autoSync";
 import { useDevice } from "@/composables/platform/useDevice";
+import { CAPTURE_UI_ENABLED } from "@/core/capture";
 import { createTouchScheduledSingleAndDouble } from "@/composables/platform/useTouchScheduledSingleAndDouble";
 import { usePublicHolidays, plannerHolidayMapKey } from "@/composables/planner/usePublicHolidays";
 import { registerPlannerKeyboardCommandApi } from "@/composables/keyboard/usePlannerKeyboardCommands";
