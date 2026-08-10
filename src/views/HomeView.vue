@@ -25,7 +25,7 @@
         ref="middleColumnEl"
         class="middle"
         :class="{
-          'middle-alone': !settingStore.settings.showTimetable && !settingStore.settings.showActivity && !settingStore.settings.showAi,
+          'middle-alone': !settingStore.settings.showTimetable && !settingStore.settings.showActivity && !showCaptureUi,
           'middle--landscape-fallback': isMobile && isLandscapeViewport,
           'middle--mobile-planner-height-anim': isMobile && settingStore.settings.showPlanner,
           'middle--suppress-planner-motion': suppressMobilePlannerMotion,
@@ -296,7 +296,7 @@
 
       <!-- 右侧面板调整大小手柄 -->
       <div
-        v-if="settingStore.settings.showActivity || settingStore.settings.showAi"
+        v-if="settingStore.settings.showActivity || showCaptureUi"
         class="resize-handle-horizontal"
         style="touch-action: none"
         @pointerdown="startRightResize"
@@ -315,7 +315,7 @@
           @repeat-activity="onRepeatActivity"
         />
       </div>
-      <div v-if="CAPTURE_UI_ENABLED && settingStore.settings.showAi" class="right" :style="{ width: rightWidth + 'px' }">
+      <div v-if="showCaptureUi" class="right" :style="{ width: rightWidth + 'px' }">
         <CapturePanel />
       </div>
     </div>
@@ -431,9 +431,12 @@ const settingStore = useSettingStore();
 const dataStore = useDataStore();
 const tagStore = useTagStore();
 
+/** 记一句右栏是否实际展示（入口关闭时忽略残留 showAi） */
+const showCaptureUi = computed(() => CAPTURE_UI_ENABLED && settingStore.settings.showAi);
+
 /** 窄屏仅活动：隐藏空 middle，避免与右栏双纵向滚、iOS 焦点滚冲突 */
 const activityOnlyMobile = computed(
-  () => isMobile.value && settingStore.settings.showActivity && !settingStore.settings.showPlanner && !settingStore.settings.showAi,
+  () => isMobile.value && settingStore.settings.showActivity && !settingStore.settings.showPlanner && !showCaptureUi.value,
 );
 
 const queryDate = ref<number | null>(null);
