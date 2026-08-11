@@ -94,6 +94,52 @@ export function useHomePlannerRowEdits(options: UseHomePlannerRowEditsOptions) {
     options.saveAllDebounced();
   };
 
+  /** 标题解析出的 title + 可选起止时间：一次落库，避免连续三次 save/重算 */
+  const handleEditTodoFromTitle = (
+    id: number,
+    payload: { title: string; startTime?: string; doneTime?: string },
+  ) => {
+    const todo = options.todoById.value.get(id);
+    if (!todo) return;
+
+    const now = Date.now();
+
+    if (payload.startTime) {
+      todo.startTime = getTimestampForTimeString(payload.startTime, options.appDateTimestamp.value);
+      todo.synced = false;
+      todo.lastModified = now;
+    }
+
+    if (payload.doneTime) {
+      todo.doneTime = getTimestampForTimeString(payload.doneTime, options.appDateTimestamp.value);
+      todo.synced = false;
+      todo.lastModified = now;
+    }
+
+    const normalizedTitle = options.onTodoTitleSaved?.(id, payload.title) ?? payload.title;
+    todo.activityTitle = normalizedTitle;
+
+    const activity = options.activityById.value.get(todo.activityId);
+    if (activity) {
+      activity.title = normalizedTitle;
+      activity.synced = false;
+      activity.lastModified = now;
+    }
+
+    const relatedTask = options.taskByActivityId.value.get(todo.activityId);
+    if (relatedTask) {
+      relatedTask.activityTitle = normalizedTitle;
+      // 与单独改 start 一致：description 恰为 "#" 时带上标题
+      if (payload.startTime && relatedTask.description?.trim() === "#") {
+        relatedTask.description = `# ${normalizedTitle}`;
+        relatedTask.synced = false;
+        relatedTask.lastModified = now;
+      }
+    }
+
+    options.saveAllDebounced();
+  };
+
   const handleEditScheduleStart = (id: number, newTm: string) => {
     const schedule = options.scheduleById.value.get(id);
     if (!schedule) return;
@@ -208,6 +254,7 @@ export function useHomePlannerRowEdits(options: UseHomePlannerRowEditsOptions) {
   return {
     handleEditScheduleTitle,
     handleEditTodoTitle,
+    handleEditTodoFromTitle,
     handleEditScheduleStart,
     handleEditTodoStart,
     handleEditTodoDone,

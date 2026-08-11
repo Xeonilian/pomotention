@@ -54,8 +54,9 @@ export function useHomePlannerNavigator(options: UseHomePlannerNavigatorOptions)
 
   function getPlannerKeyboardRows(): PlannerKeyboardRow[] {
     const rows: PlannerKeyboardRow[] = [];
-    // todo 行序与 DayTodo 肉眼列表一致（按优先级），非添加序
-    for (const todo of sortTodosForDayDisplay(todosForCurrentViewWithTaskRecords.value ?? [])) {
+    // todo 行序与 DayTodo 肉眼列表一致（读全局 dayTodoSortMode）
+    const mode = settingStore.settings.dayTodoSortMode ?? "priority";
+    for (const todo of sortTodosForDayDisplay(todosForCurrentViewWithTaskRecords.value ?? [], mode)) {
       rows.push({ rowId: todo.id });
     }
     for (const schedule of schedulesForCurrentView.value ?? []) {

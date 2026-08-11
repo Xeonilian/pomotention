@@ -19,6 +19,8 @@
     "rescue": "node scripts/rescue_changes.cjs",
     "sshot": "powershell.exe -ExecutionPolicy Bypass -File scripts/screenshot.ps1",
     "test": "vitest",
+    "gateway:dev": "pnpm --filter pomotention-ai-gateway dev",
+    "gateway:install": "pnpm --filter pomotention-ai-gateway install",
     "test:ui": "vitest --ui",
     "bench:filter": "node scripts/bench-search-filter-hypothesis.mjs",
     "build:fast": "vite build",
@@ -54,7 +56,8 @@
     "textarea-caret": "^3.1.0",
     "vue": "^3.5.13",
     "vue-router": "^4.5.0",
-    "webdav": "^5.8.0"
+    "webdav": "^5.8.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@postgrestools/postgrestools": "^0.17.2",

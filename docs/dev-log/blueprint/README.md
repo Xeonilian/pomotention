@@ -12,5 +12,8 @@
 | [`4-timer-branch.md`](./4-timer-branch.md) | Timer 14d 历史备忘 |
 | [`5-ledger.md`](./5-ledger.md) | ledger 边界与语法 |
 | [`6-body.md`](./6-body.md) | 身体管理壳与饮水分关 |
+| [`7-capture.md`](./7-capture.md) | 一句记：怎么实现（流水线、映射、付费、落点） |
+| [`7-capture-instances.md`](./7-capture-instances.md) | 一句记：可映射 kind / 字段 / 改删指称清单 |
+| [`8-ai-gateway.md`](./8-ai-gateway.md) | AI 网关：Worker 藏 key、登录配额、付费 seam |
 
 与 AI 协作 → [`.cursor/docs/ai-collaboration-harness-loop.md`](https://github.com/Xeonilian/pomotention/blob/main/.cursor/docs/ai-collaboration-harness-loop.md)。

@@ -25,7 +25,7 @@
         ref="middleColumnEl"
         class="middle"
         :class="{
-          'middle-alone': !settingStore.settings.showTimetable && !settingStore.settings.showActivity && !settingStore.settings.showAi,
+          'middle-alone': !settingStore.settings.showTimetable && !settingStore.settings.showActivity && !showCaptureUi,
           'middle--landscape-fallback': isMobile && isLandscapeViewport,
           'middle--mobile-planner-height-anim': isMobile && settingStore.settings.showPlanner,
           'middle--suppress-planner-motion': suppressMobilePlannerMotion,
@@ -242,6 +242,7 @@
               @update-todo-pomo="onUpdateTodoPomo"
               @batch-update-priorities="onUpdateTodoPriority"
               @edit-todo-title="handleEditTodoTitle"
+              @edit-todo-from-title="handleEditTodoFromTitle"
               @edit-todo-start="handleEditTodoStart"
               @edit-todo-done="handleEditTodoDone"
               @quick-add-todo="onQuickAddTodo"
@@ -295,7 +296,7 @@
 
       <!-- 右侧面板调整大小手柄 -->
       <div
-        v-if="settingStore.settings.showActivity || settingStore.settings.showAi"
+        v-if="settingStore.settings.showActivity || showCaptureUi"
         class="resize-handle-horizontal"
         style="touch-action: none"
         @pointerdown="startRightResize"
@@ -314,9 +315,8 @@
           @repeat-activity="onRepeatActivity"
         />
       </div>
-      <div v-if="settingStore.settings.showAi" class="right" :style="{ width: rightWidth + 'px' }">
-        <!-- AI 对话对话框 -->
-        <AIChatDialog />
+      <div v-if="showCaptureUi" class="right" :style="{ width: rightWidth + 'px' }">
+        <CapturePanel />
       </div>
     </div>
     <MobileHomeFab
@@ -389,6 +389,7 @@ import { useSettingStore } from "@/stores/useSettingStore";
 import { useDataStore } from "@/stores/useDataStore";
 import { autoSyncDebounced, uploadAllDebounced } from "@/core/utils/autoSync";
 import { useDevice } from "@/composables/platform/useDevice";
+import { CAPTURE_UI_ENABLED } from "@/core/capture";
 import { createTouchScheduledSingleAndDouble } from "@/composables/platform/useTouchScheduledSingleAndDouble";
 import { usePublicHolidays, plannerHolidayMapKey } from "@/composables/planner/usePublicHolidays";
 import { registerPlannerKeyboardCommandApi } from "@/composables/keyboard/usePlannerKeyboardCommands";
@@ -423,16 +424,19 @@ const MonthPlanner = defineAsyncComponent(() => import("@/components/MonthPlanne
 const YearPlanner = defineAsyncComponent(() => import("@/components/YearPlanner/YearPlanner.vue"));
 const TaskTracker = defineAsyncComponent(() => import("@/components/TaskTracker/TaskTracker.vue"));
 const ActivitySheet = defineAsyncComponent(() => import("@/components/ActivitySheet/ActivitySheet.vue"));
-const AIChatDialog = defineAsyncComponent(() => import("@/components/AiChat/AiChatDialog.vue"));
+const CapturePanel = defineAsyncComponent(() => import("@/components/Capture/CapturePanel.vue"));
 const StateLogModal = defineAsyncComponent(() => import("@/components/TaskTracker/StateLogModal.vue"));
 // -- 基础UI状态
 const settingStore = useSettingStore();
 const dataStore = useDataStore();
 const tagStore = useTagStore();
 
+/** 记一句右栏是否实际展示（入口关闭时忽略残留 showAi） */
+const showCaptureUi = computed(() => CAPTURE_UI_ENABLED && settingStore.settings.showAi);
+
 /** 窄屏仅活动：隐藏空 middle，避免与右栏双纵向滚、iOS 焦点滚冲突 */
 const activityOnlyMobile = computed(
-  () => isMobile.value && settingStore.settings.showActivity && !settingStore.settings.showPlanner && !settingStore.settings.showAi,
+  () => isMobile.value && settingStore.settings.showActivity && !settingStore.settings.showPlanner && !showCaptureUi.value,
 );
 
 const queryDate = ref<number | null>(null);
@@ -1527,6 +1531,7 @@ const plannerKeyboard = useHomePlannerKeyboard({
 const {
   handleEditScheduleTitle,
   handleEditTodoTitle,
+  handleEditTodoFromTitle,
   handleEditScheduleStart,
   handleEditTodoStart,
   handleEditTodoDone,
