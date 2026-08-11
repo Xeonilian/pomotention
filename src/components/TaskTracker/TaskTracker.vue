@@ -72,7 +72,9 @@
                 >
                   {{ formatRecordValue(record) }}
                 </span>
-                <div class="point-time">{{ formatTime(recordEventTime(record)) }}</div>
+                <div class="point-time" :title="formatRecordDateTitle(recordEventTime(record))">
+                  {{ formatTime(recordEventTime(record)) }}
+                </div>
               </div>
             </template>
             <p class="timeline-popover-text">{{ record.description }}</p>
@@ -103,7 +105,9 @@
             >
               {{ formatRecordValue(record) }}
             </span>
-            <div class="point-time">{{ formatTime(recordEventTime(record)) }}</div>
+            <div class="point-time" :title="formatRecordDateTitle(recordEventTime(record))">
+              {{ formatTime(recordEventTime(record)) }}
+            </div>
           </div>
         </template>
       </div>
@@ -366,22 +370,25 @@ const combinedRecords = computed<CombinedRecord[]>(() => {
   return [...energy, ...reward, ...interruption].sort((a, b) => recordEventTime(a) - recordEventTime(b));
 });
 
-// 时间轴标签：非当天则带月日，便于辨认补记记录
+/** 是否与今天同一天 */
+function isSameCalendarDay(date: Date, now = new Date()): boolean {
+  return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth() && date.getDate() === now.getDate();
+}
+
+// 时间轴标签：始终只显示时分
 const formatTime = (timestamp: number) => {
   if (!timestamp || !Number.isFinite(timestamp)) return "--:--";
   const date = new Date(timestamp);
   if (isNaN(date.getTime())) return "--:--";
-  const now = new Date();
-  const sameDay = date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth() && date.getDate() === now.getDate();
-  if (sameDay) {
-    return date.toLocaleString("zh-CN", { hour: "2-digit", minute: "2-digit" });
-  }
-  return date.toLocaleString("zh-CN", {
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return date.toLocaleString("zh-CN", { hour: "2-digit", minute: "2-digit" });
+};
+
+/** 非当天：hover 显示月日；当天不设 title */
+const formatRecordDateTitle = (timestamp: number) => {
+  if (!timestamp || !Number.isFinite(timestamp)) return undefined;
+  const date = new Date(timestamp);
+  if (isNaN(date.getTime()) || isSameCalendarDay(date)) return undefined;
+  return date.toLocaleString("zh-CN", { month: "2-digit", day: "2-digit" });
 };
 
 // 根据奖赏值获取颜色
