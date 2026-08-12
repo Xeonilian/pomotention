@@ -39,7 +39,7 @@ export const SHORTCUT_DEFINITIONS: ShortcutDefinition[] = [
     mode: "single",
     category: "edit",
     action: "确认当前字段",
-    note: "修改模式内确认字段/退出；非修改模式已选行时进入或退出内容编辑",
+    note: "修改模式内确认字段（pe 仅确认、不退出模式）；非修改模式已选行时进入或退出内容编辑",
     displayOnly: true,
   },
   {
@@ -48,7 +48,7 @@ export const SHORTCUT_DEFINITIONS: ShortcutDefinition[] = [
     mode: "single",
     category: "edit",
     action: "退出当前状态",
-    note: "退出当前编辑/选择状态；输入框内会先退出输入焦点",
+    note: "退出当前编辑/选择状态（含 pe）；输入框内会先退出输入焦点",
     displayOnly: true,
   },
   {
@@ -275,7 +275,7 @@ export const SHORTCUT_DEFINITIONS: ShortcutDefinition[] = [
     mode: "sequence",
     category: "planner",
     action: "进入 Planner 行选择模式",
-    note: "随后可用 ↑/↓ 移动，数字选中，Enter/Esc 退出",
+    note: "随后可用 ↑/↓ 移动，数字选中；Enter 确认字段，Esc 退出",
   },
   { sequence: "pgp", actionId: "planner.gotoPrev", mode: "sequence", category: "planner", action: "日期翻页", note: "上一周期" },
   { sequence: "pgn", actionId: "planner.gotoNext", mode: "sequence", category: "planner", action: "日期翻页", note: "下一周期" },
