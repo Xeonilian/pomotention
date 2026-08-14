@@ -4,7 +4,7 @@
 
 - [快速开始](https://xeonilian.github.io/pomotention/)
 
-### 🚀 主要功能
+## 🚀 主要功能
 
 - **日程管理** - 创建工作/娱乐模板，智能计算可用番茄时间
 - **活动管理** - 创建与筛选任务、待办、无所事事等多类型活动
@@ -22,3 +22,6 @@
 - [沉思的生活，或无所事事](https://book.douban.com/subject/36425441/) - Vita contemplativa oder von der Untätigkeit 为了自由
 
 _让每个番茄都是一次关于如何生活的选择 -ฅ(\*ΦωΦ)ฅ---- cognata ad sidera tendit..._
+
+## ☕ 支持开发
+- 已开通[爱发电](https://afdian.com/a/xeonilian)，欢迎支持，解锁AI服务
