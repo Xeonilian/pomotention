@@ -24,4 +24,5 @@
 _让每个番茄都是一次关于如何生活的选择 -ฅ(\*ΦωΦ)ฅ---- cognata ad sidera tendit..._
 
 ## ☕ 支持开发
-- 已开通[爱发电](https://afdian.com/a/xeonilian)，欢迎支持，解锁AI服务
+
+核心功能免费。[一句记订阅说明](https://xeonilian.github.io/pomotention/guide/intro/support)需登录：每月试用 20 次，[爱发电订阅 19 元/月](https://afdian.com/a/xeonilian)。打赏默认 9 元，不解锁额度；每月 top3 送手绘卡片。

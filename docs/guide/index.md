@@ -6,6 +6,7 @@
 - [选择安装方式](intro/install-overview.md)
   - [桌面客户端](intro/desktop-install.md) · [PWA 网页应用](intro/pwa-install.md)
 - [账号与数据](intro/account-and-data.md)（注册、登录、同步与数据备份合并）
+- [支持与订阅](intro/support.md)（一句记试用、19 元/月、打赏）
 - [轻松上手](intro/easy-onboarding.md)
 
 ## 功能参考

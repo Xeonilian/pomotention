@@ -1,2 +1,4 @@
 # 复制到仓库根目录的 .env.development.local（已在 .gitignore 的 *.local）
 VITE_AI_WORKER_URL=http://127.0.0.1:8787
+# 可选：爱发电订阅方案 id，未设则打开创作者主页
+# VITE_AFDIAN_PLAN_ID=

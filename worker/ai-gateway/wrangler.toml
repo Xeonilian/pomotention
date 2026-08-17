@@ -11,3 +11,5 @@ preview_id = "00000000000000000000000000000001"
 [vars]
 MOONSHOT_BASE_URL = "https://api.moonshot.cn/v1"
 # 模型写死在代码里（moonshot-v1-8k），不放 vars，避免被改
+# 可选：FREE_MONTHLY_QUOTA = "20"
+# 可选：PREMIUM_MONTHLY_QUOTA = "2000"

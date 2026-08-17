@@ -20,8 +20,15 @@ function failMessage(err: unknown): CaptureRunFail {
     if (err.code === "UNAUTHORIZED" || err.status === 401) {
       return { ok: false, message: "请先登录后再使用一句记", code: err.code };
     }
+    if (err.code === "PREMIUM_QUOTA_EXHAUSTED") {
+      return { ok: false, message: "本月一句记额度已用完，下月重置", code: err.code };
+    }
     if (err.code === "QUOTA_EXHAUSTED" || err.status === 402) {
-      return { ok: false, message: "试用额度已用完，请升级后继续", code: err.code };
+      return {
+        ok: false,
+        message: "试用额度已用完。订阅 19 元/月可继续使用一句记",
+        code: err.code ?? "QUOTA_EXHAUSTED",
+      };
     }
     if (err.code === "NO_WORKER_URL") {
       return { ok: false, message: "未配置 AI 网关地址（VITE_AI_WORKER_URL）", code: err.code };

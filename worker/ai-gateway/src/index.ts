@@ -3,10 +3,16 @@
  * 真实 Moonshot key 只在此；模型写死 moonshot-v1-8k。
  */
 import { jwtVerify } from "jose";
+import {
+  DEFAULT_FREE_MONTHLY_QUOTA,
+  DEFAULT_PREMIUM_MONTHLY_QUOTA,
+  monthlyQuotaLimit,
+  parsePositiveInt,
+  quotaExhaustedCode,
+} from "./quota";
 
 const HARDCODED_MODEL = "moonshot-v1-8k";
 const RATE_LIMIT_PER_MINUTE = 20;
-const DEFAULT_FREE_MONTHLY_QUOTA = 20;
 const CANDIDATES_MAX_CHARS = 8000;
 
 export interface Env {
@@ -16,6 +22,7 @@ export interface Env {
   ADMIN_TOKEN: string;
   MOONSHOT_BASE_URL?: string;
   FREE_MONTHLY_QUOTA?: string;
+  PREMIUM_MONTHLY_QUOTA?: string;
 }
 
 type JsonRecord = Record<string, unknown>;
@@ -133,11 +140,14 @@ async function getEntitlement(env: Env, userId: string): Promise<Entitlement> {
 }
 
 function freeQuota(env: Env): number {
-  const n = Number(env.FREE_MONTHLY_QUOTA);
-  return Number.isFinite(n) && n > 0 ? Math.floor(n) : DEFAULT_FREE_MONTHLY_QUOTA;
+  return parsePositiveInt(env.FREE_MONTHLY_QUOTA, DEFAULT_FREE_MONTHLY_QUOTA);
 }
 
-/** 限流 + 免费配额；premium 跳过月配额。失败返回 Response */
+function premiumQuota(env: Env): number {
+  return parsePositiveInt(env.PREMIUM_MONTHLY_QUOTA, DEFAULT_PREMIUM_MONTHLY_QUOTA);
+}
+
+/** 限流 + 月配额；premium 用高上限，仍计数。失败返回 Response */
 async function assertAllowed(env: Env, userId: string): Promise<Response | null> {
   const rateKey = `rate:${userId}:${minuteKey()}`;
   const rateRaw = await env.AI_KV.get(rateKey);
@@ -148,26 +158,21 @@ async function assertAllowed(env: Env, userId: string): Promise<Response | null>
   await env.AI_KV.put(rateKey, String(rateCount + 1), { expirationTtl: 120 });
 
   const ent = await getEntitlement(env, userId);
-  if (ent.plan === "premium") {
-    return null;
-  }
+  const isPremium = ent.plan === "premium";
+  const limit = monthlyQuotaLimit(isPremium, freeQuota(env), premiumQuota(env));
 
   const qKey = `quota:${userId}:${monthKey()}`;
   const qRaw = await env.AI_KV.get(qKey);
   const used = qRaw ? Number(qRaw) || 0 : 0;
-  if (used >= freeQuota(env)) {
-    return err(402, "QUOTA_EXHAUSTED", "Free monthly quota exhausted", {
-      used,
-      limit: freeQuota(env),
-    });
+  if (used >= limit) {
+    const code = quotaExhaustedCode(isPremium);
+    const message = isPremium ? "Premium monthly quota exhausted" : "Free monthly quota exhausted";
+    return err(402, code, message, { used, limit });
   }
   return null;
 }
 
 async function bumpQuota(env: Env, userId: string): Promise<void> {
-  const ent = await getEntitlement(env, userId);
-  if (ent.plan === "premium") return;
-
   const qKey = `quota:${userId}:${monthKey()}`;
   const qRaw = await env.AI_KV.get(qKey);
   const used = qRaw ? Number(qRaw) || 0 : 0;
