@@ -370,6 +370,36 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
       return { success: false, error: error.message, downloaded: 0, fetched: 0, cloudDeleted: 0 };
     }
   }
+
+  /** 本地未删除条数（软删不计入完整性探测） */
+  countLocalActive(): number {
+    return this.getListArray().filter((item) => !item.deleted).length;
+  }
+
+  /** 云端未删除条数；只取 count，不拉行 */
+  async countCloudActive(): Promise<{ success: boolean; count: number; error?: string }> {
+    try {
+      if (!supabase) {
+        return { success: false, count: 0, error: "云同步未启用" };
+      }
+      const user = await getCurrentUser();
+      if (!user) {
+        return { success: false, count: 0, error: "用户未登录" };
+      }
+      const { count, error } = await supabase
+        .from(this.tableName)
+        .select("timestamp_id", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .eq("deleted", false);
+      if (error) {
+        return { success: false, count: 0, error: error.message };
+      }
+      return { success: true, count: count ?? 0 };
+    } catch (error: any) {
+      return { success: false, count: 0, error: error.message };
+    }
+  }
+
   /**
    * 清理超过 30 天的已删除记录（云端）
    */

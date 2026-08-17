@@ -34,7 +34,7 @@
         <n-descriptions-item label="当前用户">{{ userEmail }}</n-descriptions-item>
         <n-descriptions-item label="同步状态">{{ syncStore.syncMessage }}</n-descriptions-item>
         <n-descriptions-item label="最近同步">{{ lastSyncDisplay }}</n-descriptions-item>
-        <n-descriptions-item label="仅本地模式">
+        <n-descriptions-item label="离线模式">
           {{ settingStore.settings.localOnlyMode ? "开启（不同步云端）" : "关闭" }}
           <span v-if="settingStore.settings.localOnlyMode && hasSupabaseClient" class="settings-localonly-hint">
             需关闭时请打开「调试与诊断」→「环境诊断」内按钮；或登录页成功登录后也会自动关闭。
@@ -56,6 +56,17 @@
           </template>
           确认退出当前账号吗？
         </n-popconfirm>
+        <n-button
+          v-if="supabaseEnabled && syncStore.isLoggedIn"
+          size="small"
+          type="info"
+          :loading="syncStore.isSyncing"
+          :disabled="syncStore.isSyncing"
+          title="先上传，再比对未删除条数；云端更多则全量下载"
+          @click="handleSyncDatabase"
+        >
+          同步数据库
+        </n-button>
         <n-popconfirm @positive-click="handleFactoryReset" positive-text="确认清空" negative-text="取消">
           <template #trigger>
             <n-button size="small" type="error">清空本地数据</n-button>
@@ -84,6 +95,7 @@ import { isTauri } from "@tauri-apps/api/core";
 import { getVersion } from "@tauri-apps/api/app";
 import { getCurrentUser, purgeSupabaseAuthStorage } from "@/core/services/authService";
 import { appHttpFetch } from "@/utils/appHttpFetch";
+import { syncDatabase } from "@/services/sync";
 
 const settingStore = useSettingStore();
 const dataStore = useDataStore();
@@ -329,6 +341,14 @@ async function refreshGeneral() {
       tauriRuntimeVersion.value = "";
     }
     await fetchGitHubLatestRelease();
+  }
+}
+
+async function handleSyncDatabase() {
+  try {
+    await syncDatabase();
+  } catch (error) {
+    console.error("[Setting] 同步数据库失败:", error);
   }
 }
 
