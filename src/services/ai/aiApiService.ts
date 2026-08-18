@@ -41,7 +41,7 @@ class AiApiService {
     const session = await getSession();
     const jwt = session?.access_token;
     if (!jwt) {
-      throw new AiGatewayError("请先登录后再使用 AI", 401, "UNAUTHORIZED");
+      throw new AiGatewayError("请先登录后再使用 AI", 401, "NO_SESSION");
     }
 
     const { getTemperature, getTimeoutMs } = useAiConfig();
@@ -108,7 +108,7 @@ class AiApiService {
     const session = await getSession();
     const jwt = session?.access_token;
     if (!jwt) {
-      throw new AiGatewayError("请先登录后再使用 AI", 401, "UNAUTHORIZED");
+      throw new AiGatewayError("请先登录后再使用 AI", 401, "NO_SESSION");
     }
 
     const res = await fetch(`${base}/capture/map`, {

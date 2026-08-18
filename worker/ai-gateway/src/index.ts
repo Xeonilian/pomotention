@@ -23,6 +23,9 @@ export interface Env {
   MOONSHOT_BASE_URL?: string;
   FREE_MONTHLY_QUOTA?: string;
   PREMIUM_MONTHLY_QUOTA?: string;
+  /** 问 Supabase 登录是否有效；与前端同一项目 */
+  SUPABASE_URL?: string;
+  SUPABASE_ANON_KEY?: string;
 }
 
 type JsonRecord = Record<string, unknown>;
@@ -65,7 +68,7 @@ interface AuthUser {
   email?: string;
 }
 
-/** 验 Supabase Legacy JWT（HS256）；拒绝 anon / 匿名登录 */
+/** 先问 Supabase 这张登录条是否有效；配不齐再退回本地钥匙核对 */
 async function authenticateUser(req: Request, env: Env): Promise<AuthUser | Response> {
   const header = req.headers.get("authorization") || req.headers.get("Authorization");
   if (!header?.startsWith("Bearer ")) {
@@ -75,6 +78,55 @@ async function authenticateUser(req: Request, env: Env): Promise<AuthUser | Resp
   if (!token) {
     return err(401, "UNAUTHORIZED", "Empty token");
   }
+
+  const supabaseUrl = env.SUPABASE_URL?.replace(/\/$/, "");
+  const anonKey = env.SUPABASE_ANON_KEY?.trim();
+  if (supabaseUrl && anonKey) {
+    return await authenticateViaSupabase(token, supabaseUrl, anonKey);
+  }
+
+  return await authenticateViaJwtSecret(token, env);
+}
+
+async function authenticateViaSupabase(token: string, supabaseUrl: string, anonKey: string): Promise<AuthUser | Response> {
+  let res: Response;
+  try {
+    res = await fetch(`${supabaseUrl}/auth/v1/user`, {
+      headers: {
+        authorization: `Bearer ${token}`,
+        apikey: anonKey,
+      },
+    });
+  } catch {
+    return err(401, "UNAUTHORIZED", "Auth check unreachable");
+  }
+
+  if (!res.ok) {
+    return err(401, "UNAUTHORIZED", "Invalid or expired JWT");
+  }
+
+  let user: JsonRecord;
+  try {
+    user = (await res.json()) as JsonRecord;
+  } catch {
+    return err(401, "UNAUTHORIZED", "Invalid auth response");
+  }
+
+  const userId = typeof user.id === "string" ? user.id : "";
+  if (!userId) {
+    return err(401, "UNAUTHORIZED", "JWT missing sub");
+  }
+  if (user.is_anonymous === true) {
+    return err(401, "UNVERIFIED", "Anonymous accounts have no AI quota");
+  }
+  const email = typeof user.email === "string" ? user.email : undefined;
+  if ("email_confirmed_at" in user && !user.email_confirmed_at && email) {
+    return err(401, "UNVERIFIED", "Email not confirmed");
+  }
+  return { userId, email };
+}
+
+async function authenticateViaJwtSecret(token: string, env: Env): Promise<AuthUser | Response> {
   if (!env.SUPABASE_JWT_SECRET) {
     return err(500, "MISCONFIGURED", "SUPABASE_JWT_SECRET not set");
   }
@@ -95,7 +147,6 @@ async function authenticateUser(req: Request, env: Env): Promise<AuthUser | Resp
       return err(401, "UNAUTHORIZED", "JWT role is not authenticated");
     }
 
-    // 匿名登录不可用试用额度
     const isAnonymous =
       payload.is_anonymous === true ||
       (payload.app_metadata &&
@@ -106,7 +157,6 @@ async function authenticateUser(req: Request, env: Env): Promise<AuthUser | Resp
     }
 
     const email = typeof payload.email === "string" ? payload.email : undefined;
-    // 有 email_confirmed_at 字段且为空 → 未验证
     if ("email_confirmed_at" in payload && !payload.email_confirmed_at && email) {
       return err(401, "UNVERIFIED", "Email not confirmed");
     }

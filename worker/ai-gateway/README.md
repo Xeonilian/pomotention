@@ -24,6 +24,7 @@ npx wrangler login
 npx wrangler kv namespace create AI_KV
 # 把返回的 id 写进 wrangler.toml 的 [[kv_namespaces]] id
 npx wrangler secret put MOONSHOT_API_KEY
+npx wrangler secret put SUPABASE_ANON_KEY
 npx wrangler secret put SUPABASE_JWT_SECRET
 npx wrangler secret put ADMIN_TOKEN
 npx wrangler deploy
