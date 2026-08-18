@@ -13,8 +13,8 @@
 | **来自** | 一句记第一刀已通；目的是「有 AI 的软件能被人购买」；roadmap「收费 + 推广」 |
 | **蓝图** | 底座 [`8-ai-gateway.md`](./blueprint/8-ai-gateway.md)；能力 [`7-capture.md`](./blueprint/7-capture.md) |
 | **分支** | `dev` |
-| **更新** | 2026-08-17 |
-| **停在哪** | 仓库 A 已改（文案/链接/402/premium=2000/记一句入口）。**你这边：** 等认证；爱发电建档；部署 Worker + 正式 `VITE_AI_WORKER_URL`；贴主页/小红书；手测付钱→开通。 |
+| **更新** | 2026-08-18 |
+| **停在哪** | **步 1 完成。** 生产 Worker `https://pomotention-ai-gateway.zhengws.workers.dev`，`GET /health` 通。**下一步：** 正式前端 `VITE_AI_WORKER_URL` 指到该地址并重发（步 2）。爱发电认证仍在等。 |
 
 ---
 
@@ -37,7 +37,7 @@
 
 ### 与上一关的关系
 
-- 本地 `pnpm gateway:dev` 已验通；本关把同一 Worker **部署到 Cloudflare**，前端正式环境指向生产 URL。
+- 本地 `pnpm gateway:dev` 已验通；生产 Worker 已部署：`https://pomotention-ai-gateway.zhengws.workers.dev`（`GET /health` 已通）。正式前端尚未改 `VITE_AI_WORKER_URL`。
 - 权益仍写 KV `entitlement:{user_id}`；开通仍走 `POST /admin/entitlement`（`ADMIN_TOKEN`）。
 
 ### 价目与额度（开写前先定死写在本文件）
@@ -110,10 +110,10 @@ Worker：`POST /webhooks/afdian` 验签；`POST /v1/redeem` 需 JWT。保留 adm
 ## 进度
 
 - [x] **0.** 价目 19/月、打赏非权益、爱发电重开，写入本文件
+- [x] **1.** Worker 部署上云 + secret；KV id 写入 wrangler.toml；`/health` 通
 - [x] **3.** 升级文案 + 设置支持开发 + 帮助/README + 开通 SOP（含 premium 2000）（仓库已改；爱发电档位说明需你粘贴）
-- [ ] **1.** Worker 部署上云 + secret（**你做**）
-- [ ] **2.** 正式环境指向生产 URL + 冒烟（**你做**，代码已开记一句入口）
-- [ ] **4.** 端到端「付钱→开通→能用」手测（**你做**）
+- [ ] **2.** 正式环境指向生产 URL + 冒烟（Cloudflare Pages 设 `VITE_AI_WORKER_URL` 后重 build）
+- [ ] **4.** 端到端「付钱→开通→能用」手测（**你做**；等认证）
 - （下一关 B）爱发电 webhook 自动开通
 
 ---
@@ -122,12 +122,13 @@ Worker：`POST /webhooks/afdian` 验签；`POST /v1/redeem` 需 JWT。保留 adm
 
 1. **等创作者认证通过**（webhook 等 B；本关人工开通不依赖认证，但爱发电收款页可能受限）。
 2. **爱发电后台建两档：** 19 元/月订阅（年付用平台打折）；打赏默认 9 元。把帮助页「买到什么 / 还在做的」贴到订阅说明。
-3. **部署 Worker**（步骤见 [`worker/ai-gateway/README.md`](../../worker/ai-gateway/README.md)）：建 KV、`wrangler secret put` Moonshot / JWT / Admin，记下生产 URL。
-4. **正式前端** 设 `VITE_AI_WORKER_URL` 为该 URL 后重新部署 Pages / 发桌面版。
+3. ~~部署 Worker~~ 已完成：`https://pomotention-ai-gateway.zhengws.workers.dev`
+4. **正式前端（下一步）：** Cloudflare Pages 生产环境变量 `VITE_AI_WORKER_URL=https://pomotention-ai-gateway.zhengws.workers.dev`（无末尾斜杠），然后 **重新构建并部署**。本地 dev 仍用 `http://127.0.0.1:8787`。
 5. **小红书 / 爱发电主页** 贴帮助页里的可复制段落。
 6. **手测：** 耗尽试用 → 点订阅 → 你按 SOP 开通 → 再记一句。
 
-开通 SOP 摘要：Supabase Dashboard → Authentication → 用登录邮箱查 User UID →
+开通 SOP 摘要：Supabase Dashboard → Authentication → 用登录邮箱查 User UID →  
+`WORKER_URL=https://pomotention-ai-gateway.zhengws.workers.dev`
 
 ```bash
 curl -X POST "$WORKER_URL/admin/entitlement" \
