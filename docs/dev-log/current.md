@@ -9,49 +9,50 @@
 
 | 项 | 内容 |
 |---|---|
-| **主题** | timetable 点击选中 task/行 + tag filter 下只渲染筛选后的块 |
-| **来自** | `feat` 从 `main` 挑了两颗无关收费的提交；本关做 timetable 与 task / tag filter 的互动 |
+| **主题** | timetable 第四列打扰刻度 + 第五列能量/奖励 emoji |
+| **来自** | 筛选与点选已进 `feat`；本关把 task 上已有记录钉到时间轴 |
 | **蓝图** | [`1-architecture-layering.md`](./blueprint/1-architecture-layering.md) |
 | **分支** | `feat` |
 | **更新** | 2026-08-21 |
-| **停在哪** | 关已收并提交 `feat`：筛选 + 点选。下一关拟做 timetable 上打扰线 + 能量/奖励 emoji，先对齐再写。收费仍在 `dev`。 |
+| **停在哪** | 记录标记已在 `feat`：同一列 emoji、同行错开、点击 3s popover。下一步可调手机左栏宽 / 中间 padding。收费仍在 `dev`。 |
 
 ---
 
-## 本分支已带（cherry-pick，本关不重做）
+## 本分支已带（本关不重做）
 
-1. **planner：** title 选 tag 后 Enter 不再要两下才退出；`pe` 无动作时 Enter 不退出，仅 Esc 退 pe。
-2. **sync：** 设置里「同步数据库」——先上传，再比对未删除条数，云端更多则全量下载，补上增量 `lastSync` 漏掉的记录。
+1. planner Enter / pe Esc
+2. 设置「同步数据库」
+3. timetable 跟 tag filter；点击各列选中 task / 可见行
 
-收费 / 网关仍在 `dev`，本文件不写。
+收费 / 网关仍在 `dev`。
 
 ---
 
 ## 这一关要干嘛（一句话）
 
-在 **现有选中与筛选** 上，让 timetable 能点选对应 task（日/周/月视图里可见的 todo / schedule / activity 一并选中），并在 tag filter 开启时 **只渲染筛选后的数据**。最小 diff。
+在 timetable **电脑端**把当日 task 的打扰画成第四列 4px 刻度，能量和奖励画在第五列 emoji；点击看详情并选中对应 task。不走 chart 按天聚合。
 
 ---
 
 ## 今日已对齐（备忘，明天勿重新绕）
 
-### 点选
+### 落点
 
-- 各列 hover 已有提示（title / popover）。本关加：**点击任一列 badge** → 选中对应 **task**（走现有 `selectedTaskId`，Tracker 会跟着 `pushTaskId`）。
-- 若当前是 **day / week / month** 视图：同一套现有选中（`selectedRowId` / `selectedActivityId`，与 DayTodo / DaySchedule / `onItemChange` 同口径）。
-- **仅当** 该 todo / schedule / activity **真的在当前可视范围**（当前视图日期窗 + 当前筛选列表里看得到）才选中行；看不见就只选 task、不硬选行。
-- 不新开选中通道、不改键盘命令。
+- 只扫当日筛后的 todo / schedule 所挂 task（节点数量可控）。
+- `recordedAt`（无则 `id`）**落在当天** → 用该时刻。
+- **晚于当天**（后补）→ 用当天这条 todo 的 `startTime`（schedule 用 `activityDueRange[0]`）；没有可用开始时刻则不画。
+- **早于当天** → 不画。
+- 时刻落到表外时夹进可见 `timeRange`，避免丢在画布外。
 
-### tag filter
+### 样子（电脑）
 
-- Planner 已用 `filterTagIds` + `matchesPlannerFilter`（加星筛同一套）。
-- Timetable 今日数据走 `todosForAppDate` / `schedulesForAppDate`，**尚未**过这套筛。
-- 本关：筛选开启时 timetable **只渲染筛后数据**；建议同一函数喂进去，沿用现有 `recalculateTodoAllocations`（格子会按筛后集合重排，不是原地藏块）。
-- 加星筛是否一并跟：与 planner 同一套（默认是）。
+- 打扰：第四列，内部 💭、外部 🗣️。同时刻上下错开。点击 popover 只出说明，不写「内部/外部打扰」。
+- 能量 + 奖励：第五列，用现成 `getEnergyScoreEmoji` / `getRewardScoreEmoji`。同时刻错开。
+- 点击：popover 说明（打扰类型+内容；能量/奖励：类型+分数+说明）+ 选中 task/行（复用上一关）。
 
 ### 不做
 
-- 收费、网关、改分配算法、新 store、year 视图点选行。
+- 手机窄列适配、chart 聚合、给打扰加时长、新 store。
 
 ---
 
@@ -59,28 +60,26 @@
 
 | 步 | 内容 | 产出 |
 |---|---|---|
-| **0** | 写进本文件（本步） | 范围钉死 |
-| **1** | tag filter：当日 timetable 数据与 planner 同一套筛 | 筛了就只见筛后块 |
-| **2** | 点击任一列 badge → `selectedTaskId`；日/周/月且可见则选中 todo/schedule/activity | 与列表点行观感一致 |
-| **3** | 手测：无筛/有筛、日周月、只有 task 面板、看不见的行 | 关可收 |
+| **0** | 写进本文件 | 范围钉死 |
+| **1** | 纯函数：落点 + 去重 + lane | 单测覆盖当天/后补/更早 |
+| **2** | 电脑端第四列刻度 + 第五列 emoji + 点击 | 可手测 |
 
 ---
 
 ## 验收标准（草案）
 
-1. 点 timetable 任一列 badge：Task Tracker 显示对应 task。
-2. day / week / month 且该条在当前列表可见：todo 或 schedule（及对应 activity）呈选中；不在可视范围则不选行。
-3. 有 tag filter（及加星，若跟 planner）：timetable 只出现筛后的 todo / schedule / 实际番茄块。
-4. 无筛选时 timetable 与改前一致；拖拽分配仍可用。
+1. 当天记录钉在 `recordedAt`；后补钉在 start；更早的不出现。
+2. 内部/外部打扰颜色可分；能量/奖励 emoji 对 1–10。
+3. 同时刻不重叠；点击有详情且选中 task。
+4. 无筛选时只多这些标记，原列不变。
 
 ---
 
 ## 进度
 
-- [x] **0.** 开票（含本分支已带的 planner / sync）
-- [x] **1.** timetable 跟 tag filter
-- [x] **2.** 点击 badge 选中
-- [x] **3.** 手测点选
+- [x] **0.** 开票
+- [x] **1.** 落点 service + 单测
+- [x] **2.** 电脑端渲染与点击
 
 ---
 

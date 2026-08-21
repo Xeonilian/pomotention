@@ -81,7 +81,11 @@
   <template v-for="scheduleSeg in scheduleSegmentsForSecondColumn" :key="`schedule-${scheduleSeg.scheduleId}`">
     <NPopover v-if="isMobile" trigger="click" placement="top" to="body" :show-arrow="true" :style="{ maxWidth: '280px' }">
       <template #trigger>
-        <div class="schedule-segment second-column" :style="getScheduleSegmentStyle(scheduleSeg)" @click="handleScheduleSelect(scheduleSeg.scheduleId)">
+        <div
+          class="schedule-segment second-column"
+          :style="getScheduleSegmentStyle(scheduleSeg)"
+          @click="handleScheduleSelect(scheduleSeg.scheduleId)"
+        >
           {{ getScheduleLabel(scheduleSeg) }}
         </div>
       </template>
@@ -112,14 +116,24 @@
       @update:show="(next) => handleUpdateEmojiPopoverShow(emoji.todoId, next)"
     >
       <template #trigger>
-        <div class="special-priority-emoji third-column" :style="getSpecialPriorityEmojiStyle(emoji)" @click="handleTodoSelect(emoji.todoId)">
+        <div
+          class="special-priority-emoji third-column"
+          :style="getSpecialPriorityEmojiStyle(emoji)"
+          @click="handleTodoSelect(emoji.todoId)"
+        >
           {{ emoji.emoji }}
         </div>
       </template>
       <p class="timetable-popover-text">{{ emoji.title }}</p>
     </NPopover>
 
-    <div v-else class="special-priority-emoji third-column" :style="getSpecialPriorityEmojiStyle(emoji)" :title="emoji.title" @click="handleTodoSelect(emoji.todoId)">
+    <div
+      v-else
+      class="special-priority-emoji third-column"
+      :style="getSpecialPriorityEmojiStyle(emoji)"
+      :title="emoji.title"
+      @click="handleTodoSelect(emoji.todoId)"
+    >
       {{ emoji.emoji }}
     </div>
   </template>
@@ -174,12 +188,40 @@
     :title="formatActualRangeTitle(range)"
     @click="handleScheduleSelect(range.id)"
   ></div>
+
+  <!-- ========== 第五列：打扰 / 能量 / 奖励 ========== -->
+  <template v-for="mark in recordMarks" :key="`mark-${mark.kind}-${mark.recordId}`">
+    <NPopover
+      v-if="mark.kind !== 'interruption' || mark.description?.trim()"
+      trigger="click"
+      placement="left"
+      to="body"
+      :show-arrow="true"
+      :style="{ maxWidth: '260px' }"
+      :show="activeRecordMarkPopoverKey === recordMarkKey(mark)"
+      @update:show="(next) => handleUpdateRecordMarkPopoverShow(recordMarkKey(mark), next)"
+    >
+      <template #trigger>
+        <div class="record-mark" :style="getRecordMarkStyle(mark)" @click="handleRecordMarkSelect(mark)">
+          {{ recordMarkEmoji(mark) }}
+        </div>
+      </template>
+      <p class="timetable-popover-text">
+        {{ mark.kind === "interruption" ? mark.description : formatRecordMarkText(mark) }}
+      </p>
+    </NPopover>
+    <div v-else class="record-mark" :style="getRecordMarkStyle(mark)" @click="handleRecordMarkSelect(mark)">
+      {{ recordMarkEmoji(mark) }}
+    </div>
+  </template>
 </template>
 
 <script setup lang="ts">
 import { onUnmounted, ref } from "vue";
 import { timestampToTimeString } from "@/core/utils";
 import type { ActualTimeRange, Block } from "@/core/types/Block";
+import type { TaskRecordMark } from "@/services/timetable/taskRecordMarks";
+import { getEnergyScoreEmoji, getRewardScoreEmoji } from "@/core/scoreEmojis";
 import { useTimeBlocks } from "@/composables/planner/useTimeBlocks";
 import { useDevice } from "@/composables/platform/useDevice";
 import { NPopover } from "naive-ui";
@@ -208,11 +250,13 @@ const {
   getActualSegmentStyle,
   getActualTodoTimeRangeStyle,
   getActualScheduleTimeRangeStyle,
+  getRecordMarkStyle,
   scheduleSegmentsForSecondColumn,
   specialPriorityEmojisForSecondColumn,
   actualSegments,
   actualTodoTimeRanges,
   actualScheduleTimeRanges,
+  recordMarks,
   firstNonDigitLetterWide,
   getScheduleTooltip,
   dragState,
@@ -220,6 +264,7 @@ const {
   handlePomoSegmentClick,
   handleTodoSelect,
   handleScheduleSelect,
+  handleRecordMarkSelect,
 } = useTimeBlocks(props);
 
 const { isMobile } = useDevice();
@@ -230,6 +275,55 @@ function formatActualRangeTitle(range: Pick<ActualTimeRange, "title" | "start" |
   if (mins <= 0) return range.title;
   return `${range.title} - ${mins}min`;
 }
+
+function recordMarkEmoji(mark: TaskRecordMark): string {
+  if (mark.kind === "interruption") return mark.interruptionType === "E" ? "🗣️" : "💭";
+  if (mark.kind === "reward") return getRewardScoreEmoji(mark.value ?? 1);
+  return getEnergyScoreEmoji(mark.value ?? 1);
+}
+
+function formatRecordMarkText(mark: TaskRecordMark): string {
+  const typeEmoji = mark.kind === "reward" ? "🏵️" : "⚡";
+  const score = mark.value === 10 ? "X" : String(mark.value ?? "-");
+  const desc = mark.description?.trim();
+  const head = `${typeEmoji}${score}`;
+  return desc ? `${head}：${desc}` : head;
+}
+
+function recordMarkKey(mark: TaskRecordMark): string {
+  return `${mark.kind}-${mark.recordId}`;
+}
+
+const activeRecordMarkPopoverKey = ref<string | null>(null);
+let recordMarkPopoverTimer: number | null = null;
+
+const clearRecordMarkPopoverTimer = () => {
+  if (recordMarkPopoverTimer != null) {
+    window.clearTimeout(recordMarkPopoverTimer);
+    recordMarkPopoverTimer = null;
+  }
+};
+
+const openRecordMarkPopoverFor3s = (key: string) => {
+  activeRecordMarkPopoverKey.value = key;
+  clearRecordMarkPopoverTimer();
+  recordMarkPopoverTimer = window.setTimeout(() => {
+    if (activeRecordMarkPopoverKey.value === key) {
+      activeRecordMarkPopoverKey.value = null;
+    }
+  }, 3000);
+};
+
+const handleUpdateRecordMarkPopoverShow = (key: string, nextShow: boolean) => {
+  if (nextShow) {
+    openRecordMarkPopoverFor3s(key);
+    return;
+  }
+  if (activeRecordMarkPopoverKey.value === key) {
+    activeRecordMarkPopoverKey.value = null;
+  }
+  clearRecordMarkPopoverTimer();
+};
 
 const activeEmojiPopoverTodoId = ref<number | null>(null);
 let emojiPopoverTimer: ReturnType<typeof window.setTimeout> | null = null;
@@ -306,6 +400,7 @@ const handleUpdateActualPopoverShow = (key: string, nextShow: boolean) => {
 onUnmounted(() => {
   clearEmojiPopoverTimer();
   clearActualPopoverTimer();
+  clearRecordMarkPopoverTimer();
 });
 
 // ======= Helper Functions =======
@@ -371,7 +466,8 @@ const getPriorityBadgeClasses = (seg: any) => [
 .todo-segment,
 .schedule-segment,
 .actual-segment,
-.actual-time-range {
+.actual-time-range,
+.record-mark {
   /* 禁用文本选择 */
   user-select: none;
   -webkit-user-select: none;
@@ -717,6 +813,10 @@ const getPriorityBadgeClasses = (seg: any) => [
 
 .emoji-range:hover .emoji-icon {
   transform: scale(1.3);
+}
+
+.record-mark {
+  pointer-events: auto;
 }
 
 @media (max-width: 430px) {

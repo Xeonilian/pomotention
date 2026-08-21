@@ -1,11 +1,12 @@
 // src/composables/useTimeBlocks.ts
 import { ref, computed, type ComputedRef, onMounted, onUnmounted, watch } from "vue";
 import type { CSSProperties } from "vue";
-import { getTimestampForTimeString } from "@/core/utils";
+import { getTimestampForTimeString, addDays } from "@/core/utils";
 import { CategoryColors, CategoryColorsDark, POMODORO_COLORS, POMODORO_COLORS_DARK } from "@/core/constants";
 import { SPECIAL_PRIORITIES, getEmojiForPriority } from "@/core/priorityCategories";
 import type { Block, PomodoroSegment, TodoSegment, ActualTimeRange } from "@/core/types/Block";
 import { generateActualTodoSegments, splitIndexPomoBlocksExSchedules } from "@/services/timer/pomoSegService";
+import { collectTaskRecordMarks, type TaskRecordMark } from "@/services/timetable/taskRecordMarks";
 import { useSegStore } from "@/stores/useSegStore";
 import { useTimeBlockDrag } from "./useTimeBlockDrag";
 import { storeToRefs } from "pinia";
@@ -65,6 +66,7 @@ interface UseTimeBlocksReturn {
   getActualSegmentStyle: (seg: TodoSegment) => CSSProperties; // 第三列：实际执行的番茄actualSegments
   getActualTodoTimeRangeStyle: (range: ActualTimeRange) => CSSProperties; // 第四列：实际执行时间范围todo
   getActualScheduleTimeRangeStyle: (range: ActualTimeRange) => CSSProperties; // 第四列：实际执行时间范围schedule
+  getRecordMarkStyle: (mark: TaskRecordMark) => CSSProperties;
 
   // 计算属性
   scheduleSegmentsForSecondColumn: ComputedRef<ScheduleSegmentForSecondColumn[]>;
@@ -72,6 +74,7 @@ interface UseTimeBlocksReturn {
   actualSegments: ComputedRef<TodoSegment[]>;
   actualTodoTimeRanges: ComputedRef<ActualTimeRange[]>;
   actualScheduleTimeRanges: ComputedRef<ActualTimeRange[]>;
+  recordMarks: ComputedRef<TaskRecordMark[]>;
 
   // 工具函数
   firstNonDigitLetterWide: (s: string) => string;
@@ -91,6 +94,7 @@ interface UseTimeBlocksReturn {
   handlePomoSegmentClick: (segment: PomodoroSegment) => void;
   handleTodoSelect: (todoId: number) => void;
   handleScheduleSelect: (scheduleId: number) => void;
+  handleRecordMarkSelect: (mark: TaskRecordMark) => void;
 }
 
 /**
@@ -110,6 +114,7 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
     todoById,
     scheduleById,
     activityById,
+    taskById,
     selectedTaskId,
     selectedRowId,
     selectedActivityId,
@@ -153,6 +158,12 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
     activeId.value = undefined;
     selectedRowId.value = schedule.id;
     selectedActivityId.value = schedule.activityId ?? null;
+  };
+
+  const handleRecordMarkSelect = (mark: TaskRecordMark) => {
+    if (mark.todoId != null) handleTodoSelect(mark.todoId);
+    else if (mark.scheduleId != null) handleScheduleSelect(mark.scheduleId);
+    else selectedTaskId.value = mark.taskId;
   };
 
   const { dragState, handlePointerDown, lastDragEndedAt } = useTimeBlockDrag(
@@ -445,6 +456,43 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
     };
   }
 
+  const dayEnd = computed(() => addDays(props.dayStart, 1));
+  const recordMarks = computed(() => {
+    const px = props.effectivePxPerMinute;
+    const markH = 10;
+    return collectTaskRecordMarks({
+      dayStart: props.dayStart,
+      dayEnd: dayEnd.value,
+      timeRange: props.timeRange,
+      todos: todosForAppDate.value,
+      schedules: schedulesForAppDate.value,
+      getTask: (id) => taskById.value.get(id),
+      // 垂直会碰到的算同一行；隔开超过约一个图标高则换行从左边再排
+      minGapMs: px > 0 ? ((markH * 0.6) / px) * 60_000 : 60_000,
+    });
+  });
+
+  function getRecordMarkStyle(mark: TaskRecordMark): CSSProperties {
+    const topPx = ((mark.time - props.timeRange.start) / 60000) * props.effectivePxPerMinute - 4;
+    const markW = 10;
+    const left = (isMobile.value ? 54 : 78) + mark.lane * markW * 1.2;
+    return {
+      position: "absolute",
+      left: `${left}px`,
+      top: `${topPx}px`,
+      width: `${markW}px`,
+      height: "10px",
+      fontSize: "10px",
+      lineHeight: "10px",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      zIndex: 13,
+      cursor: "pointer",
+      userSelect: "none",
+    };
+  }
+
   // ======= 计算属性 =======
   const actualSegments = computed(() => generateActualTodoSegments(todosForAppDate.value));
 
@@ -679,6 +727,7 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
     getActualSegmentStyle,
     getActualTodoTimeRangeStyle,
     getActualScheduleTimeRangeStyle,
+    getRecordMarkStyle,
 
     // 数据
     scheduleSegmentsForSecondColumn,
@@ -686,6 +735,7 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
     actualSegments,
     actualTodoTimeRanges,
     actualScheduleTimeRanges,
+    recordMarks,
 
     // 工具
     firstNonDigitLetterWide,
@@ -698,5 +748,6 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
     handlePomoSegmentClick,
     handleTodoSelect,
     handleScheduleSelect,
+    handleRecordMarkSelect,
   };
 }
