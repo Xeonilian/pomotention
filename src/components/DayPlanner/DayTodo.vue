@@ -1814,6 +1814,8 @@ function handleInputKeydown(event: KeyboardEvent, todo: Todo) {
     event.preventDefault();
     event.stopPropagation();
     tagPickerRef.value.handleHostKeydown(event);
+    // title 仅 keydown 保存，无 keyup 消费该标志；不清理会吞掉下一次「退出编辑」的 Enter
+    if (event.key === "Enter") selectingTagViaEnter.value = false;
     return;
   }
 
@@ -1842,6 +1844,7 @@ function handleTagSelected(tagId: number) {
   } else {
     editingValue.value = tagEditor.selectTagFromPopover(todo.activityId, tagId, editingValue.value);
   }
+  selectingTagViaEnter.value = false;
   isPickingTagFromSelector.value = false;
   nextTick(() => titleInputRef.value?.focus());
 }
@@ -1857,6 +1860,7 @@ function handleTagCreate(tagName: string) {
   } else {
     editingValue.value = tagEditor.createTagFromPopover(todo.activityId, tagName, editingValue.value);
   }
+  selectingTagViaEnter.value = false;
   isPickingTagFromSelector.value = false;
   nextTick(() => titleInputRef.value?.focus());
 }

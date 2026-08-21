@@ -135,9 +135,8 @@ export function useHomePlannerNavigator(options: UseHomePlannerNavigatorOptions)
   function confirmPlannerNavigatorFieldMode(): boolean {
     if (!plannerNavigatorActive.value) return false;
     if (settingStore.settings.viewSet !== "day") return false;
-    const handled = dayPlannerRef.value?.confirmPlannerKeyboardCellAction() ?? false;
-    if (handled) return true;
-    exitPlannerNavigatorMode();
+    // Enter 只做格内确认；无动作时吞掉按键，退出 pe 仅用 Esc
+    dayPlannerRef.value?.confirmPlannerKeyboardCellAction();
     return true;
   }
 

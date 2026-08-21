@@ -100,6 +100,21 @@ git commit -m "test: 添加回归用例"
 git push
 ```
 
+### Bugbot（PR 自动评审，不必开网页）
+
+开 PR 或再 push 后，checks 里会出现 `Cursor Bugbot`；**具体 findings 在行内评论**，不在 `gh pr view` 正文里。
+
+```powershell
+$PR=(gh pr view --json number | ConvertFrom-Json).number
+gh pr checks $PR
+gh api "repos/{owner}/{repo}/pulls/$PR/comments" --jq '.[] | {path, line, title: (.body | split("\n")[0])}'
+```
+
+- `gh pr checks`：`pending` / pass / `skipping`（多半已评过、这次没新结论）。
+- 第二条才是 findings。全量 JSON 肉眼读不动；jq 只要 `path`、`line`、`###` 那一行。
+- `issues/<num>/comments` 是对话区（如 Cloudflare 预览），**不是** Bugbot 行内评论。
+- 对话里让 Agent 把结果翻成表即可。Cursor 聊天 `/review-bugbot` 是本地再审，和 GitHub 那次不是同一份。
+
 ### 代码评审与评论
 
 ```bash
@@ -191,5 +206,6 @@ gh issue close 123
 gh pr create --fill --base main --head my-feature
 gh pr view 456
 gh pr checks 456
+gh api "repos/{owner}/{repo}/pulls/456/comments" --jq '.[] | {path, line, title: (.body | split("\n")[0])}'
 gh pr merge 456 --squash --delete-branch
 ```

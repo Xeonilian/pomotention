@@ -114,7 +114,7 @@ const defaultSettings: GlobalSettings = {
   showTask: true,
   showActivity: isMobile.value ? false : true,
   showAi: false,
-  leftWidth: isMobile.value ? 80 : 160, // 左栏默认宽度：手机保持 80，桌面端提高默认值
+  leftWidth: isMobile.value ? 84 : 160, // 左栏默认宽度：手机 84（多 4px 给记录 emoji），桌面端 160
   rightWidth: 300,
   topHeight: 300,
   searchWidth: 400, // 搜索页面title宽度

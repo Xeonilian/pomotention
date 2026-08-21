@@ -430,7 +430,11 @@ export const useDataStore = defineStore(
       const startOfDay = dateService.appDateTimestamp.value;
       const endOfDay = addDays(startOfDay, 1);
       if (!todoList.value) return [];
-      return activeTodos.value.filter((todo) => todo.id >= startOfDay && todo.id < endOfDay);
+      return activeTodos.value.filter((todo) => {
+        if (todo.id < startOfDay || todo.id >= endOfDay) return false;
+        const activity = todo.activityId != null ? activityById.value.get(todo.activityId) : undefined;
+        return matchesPlannerFilter(todo.activityId, activity?.tagIds);
+      });
     });
 
     const schedulesForAppDate = computed(() => {
@@ -439,8 +443,9 @@ export const useDataStore = defineStore(
       if (!scheduleList.value) return [];
       return activeSchedules.value.filter((schedule) => {
         const date = schedule.activityDueRange?.[0];
-        if (date == null) return false;
-        return date >= startOfDay && date < endOfDay;
+        if (date == null || date < startOfDay || date >= endOfDay) return false;
+        const activity = schedule.activityId != null ? activityById.value.get(schedule.activityId) : undefined;
+        return matchesPlannerFilter(schedule.activityId, activity?.tagIds);
       });
     });
 

@@ -176,7 +176,7 @@ export function useGlobalKeyboardShortcuts(options: UseGlobalKeyboardShortcutsOp
         if (originalFilter) return originalFilter(event);
         return true;
       }
-      // 行导航 + 输入焦点：Enter 需交给 onModeKey（先 blur/保存，再次 Enter 退出导航）
+      // 行导航 + 输入焦点：Enter 交给 onModeKey（确认/保存；pe 不因此退出，退出用 Esc）
       if (options.isModeActive?.() && isPlainEnterKey(event)) {
         if (originalFilter) return originalFilter(event);
         return true;

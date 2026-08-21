@@ -16,6 +16,7 @@ import { useSettingStore } from "@/stores/useSettingStore";
 import { isSupabaseEnabled } from "@/core/services/supabase";
 import { SettingsSyncService } from "./settingsSync";
 import { BaseSyncService } from "./baseSyncService";
+import { findActiveCountLeaks, type ActiveCountRow } from "./completenessProbe";
 
 const shouldLogSyncDebug = ["1", "true"].includes(String(import.meta.env.VITE_SYNC_DEBUG_LOG ?? "").trim().toLowerCase());
 function syncDebugLog(...args: unknown[]) {
@@ -445,6 +446,61 @@ export async function syncAll() {
       syncStore.downloadFailed = downRes.errors.length > 0;
       return { success: false, errors, details: { uploaded: upRes.count, downloaded: downRes.count } };
     }
+  });
+}
+
+/**
+ * 设置页「同步数据库」：先上传，再按未删除条数探测；云端更多则全量下载，否则仍增量。
+ * 手动触发，不受自动同步开关限制。不改双击账号按钮。
+ */
+export async function syncDatabase() {
+  return runSyncTask("同步数据库", async () => {
+    const syncStore = useSyncStore();
+    const dataStore = useDataStore();
+    const errors: string[] = [];
+
+    const upRes = await _internalUpload();
+    errors.push(...upRes.errors);
+    if (errors.length > 0) {
+      return { success: false, errors, details: { uploaded: upRes.count, downloaded: 0 } };
+    }
+
+    const countRows: ActiveCountRow[] = [];
+    for (const { name, service } of syncServices) {
+      const cloud = await service.countCloudActive();
+      if (!cloud.success) {
+        errors.push(`${name} 条数探测失败: ${cloud.error}`);
+        continue;
+      }
+      countRows.push({ name, cloud: cloud.count, local: service.countLocalActive() });
+    }
+    if (errors.length > 0) {
+      return { success: false, errors, details: { uploaded: upRes.count, downloaded: 0 } };
+    }
+
+    const leaks = findActiveCountLeaks(countRows);
+    const lastSync = leaks.length > 0 ? 0 : syncStore.lastSyncTimestamp;
+    if (leaks.length > 0) {
+      console.log(
+        "[Sync] 同步数据库：发现漏下，改全量下载",
+        leaks.map((row) => `${row.name} cloud=${row.cloud} local=${row.local}`).join("; "),
+      );
+    }
+
+    const downRes = await _internalDownload(lastSync);
+    errors.push(...downRes.errors);
+
+    await _internalCleanup();
+
+    if (errors.length === 0) {
+      syncStore.updateLastSyncTimestamp();
+      dataStore.saveAllAfterSync();
+      const message = leaks.length > 0 ? "已补全漏下数据" : "数据库已对齐";
+      syncStore.syncSuccess(message);
+      return { success: true, errors: [], details: { uploaded: upRes.count, downloaded: downRes.count, leaks } };
+    }
+    syncStore.downloadFailed = downRes.errors.length > 0;
+    return { success: false, errors, details: { uploaded: upRes.count, downloaded: downRes.count, leaks } };
   });
 }
 
