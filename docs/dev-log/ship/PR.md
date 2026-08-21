@@ -156,11 +156,21 @@ pnpm new:pr
     - **标题**: `[S?C?UV?]: title`
     - **正文**: 填写模板要求的变更内容、风险和缓解措施。
 
+### 开完 PR 后：看 Bugbot（不必开 GitHub 网页）
+
+每次创建 PR 或再 `push` 到已有 PR，Cursor Bugbot 会自动跑，把 findings 写成 **行内评论**（作者 `cursor[bot]`）。
+
+不必打开 GitHub：
+
+1. **对话里**：对 Agent 说「把 Bugbot 结果贴过来」（它会读 checks + 行内评论，翻成表）。
+2. **终端**：见 [`gh-cli-usage.md`](./gh-cli-usage.md)「Bugbot」。原始 `gh api …/comments` JSON 很长，有用的只有 `path`、`line`、`body` 里 `###` 标题和 Severity。
+3. **Cursor 聊天** `/review-bugbot`：对当前分支再审一遍，**不是** GitHub 上那次自动跑的结果。
+
 ---
 
 ## 5. 合并 PR
 
-1.  **审查与自检:** 在 GitHub PR 页面进行 Code Review。
+1.  **审查与自检:** Bugbot 用对话或终端即可（见上节）；合并前仍可在 GitHub 看一眼。
 2.  **合并命令（必须 squash）:**
     ```bash
     gh pr merge <PR_number> --squash --delete-branch
@@ -189,6 +199,7 @@ git branch -d <branch-name>
 | 创建分支         | `pnpm new:branch <type> <topic>`             |
 | 救援 main 上改动 | `pnpm rescue`                                |
 | 截图（可选）     | `pnpm sshot "<desc>"`                        |
+| 看 Bugbot        | 对话里问 Agent，或 [`gh-cli-usage.md`](./gh-cli-usage.md) |
 | 创建 PR          | `pnpm new:pr` (推荐) 或 `gh pr create`       |
 | 合并 PR          | `gh pr merge <num> --squash --delete-branch` |
 | 紧急修复分支     | `pnpm new:branch hotfix <issue-id>`          |
