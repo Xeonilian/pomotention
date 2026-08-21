@@ -14,7 +14,7 @@
 | **蓝图** | [`1-architecture-layering.md`](./blueprint/1-architecture-layering.md) |
 | **分支** | `feat` |
 | **更新** | 2026-08-21 |
-| **停在哪** | 记录标记已在 `feat`：同一列 emoji、同行错开、点击 3s popover。下一步可调手机左栏宽 / 中间 padding。收费仍在 `dev`。 |
+| **停在哪** | 手机左栏默认 +4px、中间 padding-left −4px 已改。请再看手机。收费仍在 `dev`。 |
 
 ---
 

@@ -393,10 +393,7 @@ import { CAPTURE_UI_ENABLED } from "@/core/capture";
 import { createTouchScheduledSingleAndDouble } from "@/composables/platform/useTouchScheduledSingleAndDouble";
 import { usePublicHolidays, plannerHolidayMapKey } from "@/composables/planner/usePublicHolidays";
 import { registerPlannerKeyboardCommandApi } from "@/composables/keyboard/usePlannerKeyboardCommands";
-import {
-  registerPlannerDayEnterEditTitle,
-  registerPlannerDaySpaceToggleCheck,
-} from "@/composables/keyboard/usePlannerKeyboardNavigator";
+import { registerPlannerDayEnterEditTitle, registerPlannerDaySpaceToggleCheck } from "@/composables/keyboard/usePlannerKeyboardNavigator";
 import {
   useHomePlannerNavigator,
   type HomeDayPlannerKeyboardExpose,
@@ -916,10 +913,18 @@ function onDeleteActivity(id: number | null | undefined) {
   // 根据 deleted 状态决定删除还是恢复
   if (activity.deleted) {
     // 恢复活动
-    const result = handleRestoreActivity(activityList.value, todoList.value, scheduleList.value, taskList.value, id, {
-      activityById: activityById.value,
-      childrenByParentId: childrenOfActivity.value,
-    }, ledgerList.value);
+    const result = handleRestoreActivity(
+      activityList.value,
+      todoList.value,
+      scheduleList.value,
+      taskList.value,
+      id,
+      {
+        activityById: activityById.value,
+        childrenByParentId: childrenOfActivity.value,
+      },
+      ledgerList.value,
+    );
 
     if (result) {
       activeId.value = null;
@@ -928,10 +933,18 @@ function onDeleteActivity(id: number | null | undefined) {
     }
   } else {
     // 删除活动
-    const result = handleDeleteActivity(activityList.value, todoList.value, scheduleList.value, taskList.value, id, {
-      activityById: activityById.value,
-      childrenByParentId: childrenOfActivity.value,
-    }, ledgerList.value);
+    const result = handleDeleteActivity(
+      activityList.value,
+      todoList.value,
+      scheduleList.value,
+      taskList.value,
+      id,
+      {
+        activityById: activityById.value,
+        childrenByParentId: childrenOfActivity.value,
+      },
+      ledgerList.value,
+    );
     if (!result) {
       showErrorPopover("请先清空子项目再删除！");
       return;
@@ -1654,7 +1667,11 @@ onBeforeRouteLeave(() => {
 // ======================== 9. 页面尺寸调整  ========================
 
 const leftWidth = computed({
-  get: () => settingStore.settings.leftWidth,
+  get: () => {
+    const w = settingStore.settings.leftWidth;
+    // 手机不能拖宽；旧默认 80 提到 84，多出来的 4px 给记录 emoji 跨过原边界
+    return isMobile.value ? Math.max(w, 84) : w;
+  },
   set: (v) => (settingStore.settings.leftWidth = v),
 });
 
@@ -2171,6 +2188,11 @@ const { startResize: startRightResize } = useResize(
 
   .left {
     padding: 5px 2px 0px 8px !important;
+  }
+
+  .middle-top,
+  .middle-bottom {
+    padding-left: 0;
   }
 
   .right {
