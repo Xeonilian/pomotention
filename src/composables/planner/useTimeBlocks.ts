@@ -467,27 +467,32 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
       todos: todosForAppDate.value,
       schedules: schedulesForAppDate.value,
       getTask: (id) => taskById.value.get(id),
-      // 垂直会碰到的算同一行；隔开超过约一个图标高则换行从左边再排
-      minGapMs: px > 0 ? ((markH * 0.6) / px) * 60_000 : 60_000,
+      // 手机：与最早一条相差 5 分钟内当同一时刻；电脑：约一个图标高
+      minGapMs: isMobile.value ? 5 * 60_000 : px > 0 ? ((markH * 0.6) / px) * 60_000 : 60_000,
     });
   });
 
   function getRecordMarkStyle(mark: TaskRecordMark): CSSProperties {
-    const topPx = ((mark.time - props.timeRange.start) / 60000) * props.effectivePxPerMinute - 4;
     const markW = 10;
-    const left = (isMobile.value ? 54 : 78) + mark.lane * markW * 1.2;
+    const markH = 10;
+    const topPx = ((mark.time - props.timeRange.start) / 60000) * props.effectivePxPerMinute - 4;
+    // 手机 2 列、步进半个图标（4 条即 2×2）；电脑仍按 lane 往右排
+    const col = isMobile.value ? mark.lane % 2 : mark.lane;
+    const row = isMobile.value ? Math.floor(mark.lane / 2) : 0;
+    const step = isMobile.value ? 1.1 : 1.2;
+    const left = (isMobile.value ? 54 : 78) + col * markW * step;
     return {
       position: "absolute",
       left: `${left}px`,
-      top: `${topPx}px`,
+      top: `${topPx + row * markH * 0.9}px`,
       width: `${markW}px`,
-      height: "10px",
+      height: `${markH}px`,
       fontSize: "10px",
       lineHeight: "10px",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      zIndex: 13,
+      zIndex: 13 + mark.lane,
       cursor: "pointer",
       userSelect: "none",
     };

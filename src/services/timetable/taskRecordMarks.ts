@@ -81,8 +81,9 @@ function assignLanes<T extends { time: number; recordId: number }>(
   };
 
   for (const mark of sorted) {
-    const prev = cluster[cluster.length - 1];
-    if (prev && mark.time - prev.time >= gap) flushCluster();
+    const first = cluster[0];
+    // 与簇内最早一条相差超过 gap 则换簇，避免「每隔几分钟一条」一直往右排
+    if (first && mark.time - first.time >= gap) flushCluster();
     cluster.push(mark);
   }
   flushCluster();

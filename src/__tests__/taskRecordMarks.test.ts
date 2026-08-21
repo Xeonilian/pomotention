@@ -116,7 +116,7 @@ describe("collectTaskRecordMarks", () => {
       todos: [todo],
       schedules: [],
       getTask,
-      minGapMs: 2 * 3600_000,
+      minGapMs: 3 * 3600_000,
     });
     const ten = close.filter((m) => m.time === DAY + 10 * 3600_000 || m.time === DAY + 11 * 3600_000);
     expect(ten.some((m) => m.kind === "interruption" && m.lane > 0)).toBe(true);
@@ -132,5 +132,33 @@ describe("collectTaskRecordMarks", () => {
     });
     const later = far.find((m) => m.kind === "interruption");
     expect(later?.lane).toBe(0);
+  });
+
+  it("5 分钟内四条编成 lane 0–3，隔开则从 0 再起", () => {
+    const t0 = DAY + 10 * 3600_000;
+    const marks = collectTaskRecordMarks({
+      dayStart: DAY,
+      dayEnd: DAY_END,
+      timeRange: { start: DAY, end: DAY_END },
+      todos: [{ id: 11, taskId: 101, startTime: t0 }],
+      schedules: [],
+      getTask: (id) =>
+        id === 101
+          ? taskWith({
+              id: 101,
+              energyRecords: [
+                { id: 21, value: 1, recordedAt: t0 },
+                { id: 22, value: 2, recordedAt: t0 + 60_000 },
+                { id: 23, value: 3, recordedAt: t0 + 2 * 60_000 },
+                { id: 24, value: 4, recordedAt: t0 + 4 * 60_000 },
+                { id: 25, value: 5, recordedAt: t0 + 6 * 60_000 },
+              ],
+            })
+          : undefined,
+      minGapMs: 5 * 60_000,
+    });
+    const cluster = marks.filter((m) => m.time <= t0 + 4 * 60_000);
+    expect(cluster.map((m) => m.lane).sort((a, b) => a - b)).toEqual([0, 1, 2, 3]);
+    expect(marks.find((m) => m.recordId === 25)?.lane).toBe(0);
   });
 });
