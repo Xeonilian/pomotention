@@ -10,6 +10,7 @@ import { useSegStore } from "@/stores/useSegStore";
 import { useTimeBlockDrag } from "./useTimeBlockDrag";
 import { storeToRefs } from "pinia";
 import { useDataStore } from "@/stores/useDataStore";
+import { useSettingStore } from "@/stores/useSettingStore";
 import { useDevice } from "@/composables/platform/useDevice";
 
 const { isMobile } = useDevice();
@@ -87,6 +88,9 @@ interface UseTimeBlocksReturn {
   handlePointerDown: (event: PointerEvent, seg: TodoSegment) => void;
   // 优化后的拖拽方法（移动端友好）
   enhancedHandlePointerDown: (event: PointerEvent, seg: TodoSegment) => void;
+  handlePomoSegmentClick: (segment: PomodoroSegment) => void;
+  handleTodoSelect: (todoId: number) => void;
+  handleScheduleSelect: (scheduleId: number) => void;
 }
 
 /**
@@ -97,7 +101,20 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
   // ======= Store相关 =======
   const segStore = useSegStore();
   const dataStore = useDataStore();
-  const { todosForAppDate, schedulesForAppDate } = storeToRefs(dataStore);
+  const settingStore = useSettingStore();
+  const {
+    todosForAppDate,
+    schedulesForAppDate,
+    todosForCurrentViewWithTaskRecords,
+    schedulesForCurrentView,
+    todoById,
+    scheduleById,
+    activityById,
+    selectedTaskId,
+    selectedRowId,
+    selectedActivityId,
+    activeId,
+  } = storeToRefs(dataStore);
   const pomodoroSegments = computed(() => segStore.pomodoroSegments);
   const todoSegments = computed(() => segStore.todoSegments);
   const occupiedIndices = computed(() => {
@@ -110,7 +127,49 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
     return map;
   });
 
-  const { dragState, handlePointerDown } = useTimeBlockDrag(todosForAppDate, props.dayStart, pomodoroSegments, occupiedIndices);
+  const isPlannerRowView = () => {
+    const viewSet = settingStore.settings.viewSet;
+    return viewSet === "day" || viewSet === "week" || viewSet === "month";
+  };
+
+  // 始终选 task；日/周/月且该行在当前列表里才选 todo/schedule/activity
+  const handleTodoSelect = (todoId: number) => {
+    const todo = todoById.value.get(todoId);
+    const activity = todo?.activityId != null ? activityById.value.get(todo.activityId) : undefined;
+    selectedTaskId.value = todo?.taskId ?? activity?.taskId ?? null;
+    if (!isPlannerRowView() || !todo) return;
+    if (!todosForCurrentViewWithTaskRecords.value.some((item) => item.id === todoId)) return;
+    activeId.value = undefined;
+    selectedRowId.value = todo.id;
+    selectedActivityId.value = todo.activityId ?? null;
+  };
+
+  const handleScheduleSelect = (scheduleId: number) => {
+    const schedule = scheduleById.value.get(scheduleId);
+    const activity = schedule?.activityId != null ? activityById.value.get(schedule.activityId) : undefined;
+    selectedTaskId.value = schedule?.taskId ?? activity?.taskId ?? null;
+    if (!isPlannerRowView() || !schedule) return;
+    if (!schedulesForCurrentView.value.some((item) => item.id === scheduleId)) return;
+    activeId.value = undefined;
+    selectedRowId.value = schedule.id;
+    selectedActivityId.value = schedule.activityId ?? null;
+  };
+
+  const { dragState, handlePointerDown, lastDragEndedAt } = useTimeBlockDrag(
+    todosForAppDate,
+    props.dayStart,
+    pomodoroSegments,
+    occupiedIndices,
+    (seg) => handleTodoSelect(seg.todoId),
+  );
+
+  const handlePomoSegmentClick = (segment: PomodoroSegment) => {
+    // 拖放到格子上会冒泡成 click，忽略刚结束的拖拽
+    if (Date.now() - lastDragEndedAt.value < 400) return;
+    if (segment.type !== "pomo" || typeof segment.globalIndex !== "number") return;
+    const occupying = occupiedIndices.value.get(segment.globalIndex);
+    if (occupying) handleTodoSelect(occupying.todoId);
+  };
 
   // ======= 优化：全局触摸事件拦截 =======
   let touchStartTime = 0;
@@ -339,6 +398,7 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
       top: `${topPx}px`,
       height: `${heightPx}px`,
       zIndex: range.ongoing ? 11 : 10,
+      cursor: "pointer",
     };
 
     if (range.ongoing) {
@@ -381,6 +441,7 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
       borderRadius: "4px",
       zIndex: 3,
       opacity: 0.7,
+      cursor: "pointer",
     };
   }
 
@@ -634,5 +695,8 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
     dragState,
     handlePointerDown,
     enhancedHandlePointerDown,
+    handlePomoSegmentClick,
+    handleTodoSelect,
+    handleScheduleSelect,
   };
 }

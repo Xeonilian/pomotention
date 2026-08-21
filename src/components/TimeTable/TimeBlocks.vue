@@ -34,6 +34,7 @@
     :data-global-index="segment.globalIndex"
     :class="getPomoSegmentClasses(segment)"
     :style="getPomodoroStyle(segment)"
+    @click="handlePomoSegmentClick(segment)"
   >
     <template v-if="segment.type === 'pomo' && segment.categoryIndex != null">
       {{ segment.categoryIndex }}
@@ -80,7 +81,7 @@
   <template v-for="scheduleSeg in scheduleSegmentsForSecondColumn" :key="`schedule-${scheduleSeg.scheduleId}`">
     <NPopover v-if="isMobile" trigger="click" placement="top" to="body" :show-arrow="true" :style="{ maxWidth: '280px' }">
       <template #trigger>
-        <div class="schedule-segment second-column" :style="getScheduleSegmentStyle(scheduleSeg)">
+        <div class="schedule-segment second-column" :style="getScheduleSegmentStyle(scheduleSeg)" @click="handleScheduleSelect(scheduleSeg.scheduleId)">
           {{ getScheduleLabel(scheduleSeg) }}
         </div>
       </template>
@@ -92,6 +93,7 @@
       class="schedule-segment second-column"
       :style="getScheduleSegmentStyle(scheduleSeg)"
       :title="getScheduleTooltip(scheduleSeg)"
+      @click="handleScheduleSelect(scheduleSeg.scheduleId)"
     >
       {{ getScheduleLabel(scheduleSeg) }}
     </div>
@@ -110,14 +112,14 @@
       @update:show="(next) => handleUpdateEmojiPopoverShow(emoji.todoId, next)"
     >
       <template #trigger>
-        <div class="special-priority-emoji third-column" :style="getSpecialPriorityEmojiStyle(emoji)">
+        <div class="special-priority-emoji third-column" :style="getSpecialPriorityEmojiStyle(emoji)" @click="handleTodoSelect(emoji.todoId)">
           {{ emoji.emoji }}
         </div>
       </template>
       <p class="timetable-popover-text">{{ emoji.title }}</p>
     </NPopover>
 
-    <div v-else class="special-priority-emoji third-column" :style="getSpecialPriorityEmojiStyle(emoji)" :title="emoji.title">
+    <div v-else class="special-priority-emoji third-column" :style="getSpecialPriorityEmojiStyle(emoji)" :title="emoji.title" @click="handleTodoSelect(emoji.todoId)">
       {{ emoji.emoji }}
     </div>
   </template>
@@ -135,7 +137,7 @@
       @update:show="(next) => handleUpdateActualPopoverShow(`${seg.todoId}-${seg.todoIndex}`, next)"
     >
       <template #trigger>
-        <div class="actual-segment" :style="getActualSegmentStyle(seg)">
+        <div class="actual-segment" :style="getActualSegmentStyle(seg)" @click="handleTodoSelect(seg.todoId)">
           {{ seg.pomoType }}
         </div>
       </template>
@@ -147,6 +149,7 @@
       class="actual-segment"
       :style="getActualSegmentStyle(seg)"
       :title="`${seg.pomoType}[${seg.priority}]-${seg.todoIndex} - ${seg.todoTitle}`"
+      @click="handleTodoSelect(seg.todoId)"
     >
       {{ seg.pomoType }}
     </div>
@@ -160,6 +163,7 @@
     :class="{ ongoing: range.ongoing }"
     :style="getActualTodoTimeRangeStyle(range)"
     :title="formatActualRangeTitle(range)"
+    @click="handleTodoSelect(range.id)"
   ></div>
 
   <div
@@ -168,6 +172,7 @@
     class="actual-time-range"
     :style="getActualScheduleTimeRangeStyle(range)"
     :title="formatActualRangeTitle(range)"
+    @click="handleScheduleSelect(range.id)"
   ></div>
 </template>
 
@@ -212,6 +217,9 @@ const {
   getScheduleTooltip,
   dragState,
   enhancedHandlePointerDown,
+  handlePomoSegmentClick,
+  handleTodoSelect,
+  handleScheduleSelect,
 } = useTimeBlocks(props);
 
 const { isMobile } = useDevice();

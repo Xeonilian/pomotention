@@ -9,48 +9,49 @@
 
 | 项 | 内容 |
 |---|---|
-| **主题** | 收费底座第一刀 — 线上网关 + 价目/升级提示 + 人工开通闭环（能卖试用） |
-| **来自** | 一句记第一刀已通；目的是「有 AI 的软件能被人购买」；roadmap「收费 + 推广」 |
-| **蓝图** | 底座 [`8-ai-gateway.md`](./blueprint/8-ai-gateway.md)；能力 [`7-capture.md`](./blueprint/7-capture.md) |
-| **分支** | `dev` |
-| **更新** | 2026-08-07 |
-| **停在哪** | 关已开票；下一步步 0：定价目/免费额度数字 + 确认付款渠道（现有表单或等价），再部署 Worker。 |
+| **主题** | timetable 点击选中 task/行 + tag filter 下只渲染筛选后的块 |
+| **来自** | `feat` 从 `main` 挑了两颗无关收费的提交；本关做 timetable 与 task / tag filter 的互动 |
+| **蓝图** | [`1-architecture-layering.md`](./blueprint/1-architecture-layering.md) |
+| **分支** | `feat` |
+| **更新** | 2026-08-21 |
+| **停在哪** | 关已收并提交 `feat`：筛选 + 点选。下一关拟做 timetable 上打扰线 + 能量/奖励 emoji，先对齐再写。收费仍在 `dev`。 |
+
+---
+
+## 本分支已带（cherry-pick，本关不重做）
+
+1. **planner：** title 选 tag 后 Enter 不再要两下才退出；`pe` 无动作时 Enter 不退出，仅 Esc 退 pe。
+2. **sync：** 设置里「同步数据库」——先上传，再比对未删除条数，云端更多则全量下载，补上增量 `lastSync` 漏掉的记录。
+
+收费 / 网关仍在 `dev`，本文件不写。
 
 ---
 
 ## 这一关要干嘛（一句话）
 
-让 **真用户** 能用上线上一句记，额度用尽时 **看得见怎么买**，你收款后 **人工开通立刻生效**。  
-目的 = 能卖试用；行动 = 上云 + 升级面 + admin 开通 SOP——**不做**自动支付、不扩 kind。
+在 **现有选中与筛选** 上，让 timetable 能点选对应 task（日/周/月视图里可见的 todo / schedule / activity 一并选中），并在 tag filter 开启时 **只渲染筛选后的数据**。最小 diff。
 
 ---
 
 ## 今日已对齐（备忘，明天勿重新绕）
 
-### 目的与边界
+### 点选
 
-- **卖的是：** 登录用户的 AI 一句记额度 / premium 权益（人工收款也可成交）。
-- **本关成功标准：** 「有人付钱 → 你开通 → 他能用」可演示；不是「支付 webhook 自动到账」。
-- **不绑：** 扩 capture kind、改删、CLI、大规模推广投放。
+- 各列 hover 已有提示（title / popover）。本关加：**点击任一列 badge** → 选中对应 **task**（走现有 `selectedTaskId`，Tracker 会跟着 `pushTaskId`）。
+- 若当前是 **day / week / month** 视图：同一套现有选中（`selectedRowId` / `selectedActivityId`，与 DayTodo / DaySchedule / `onItemChange` 同口径）。
+- **仅当** 该 todo / schedule / activity **真的在当前可视范围**（当前视图日期窗 + 当前筛选列表里看得到）才选中行；看不见就只选 task、不硬选行。
+- 不新开选中通道、不改键盘命令。
 
-### 与上一关的关系
+### tag filter
 
-- 本地 `pnpm gateway:dev` 已验通；本关把同一 Worker **部署到 Cloudflare**，前端正式环境指向生产 URL。
-- 权益仍写 KV `entitlement:{user_id}`；开通仍走 `POST /admin/entitlement`（`ADMIN_TOKEN`）。
+- Planner 已用 `filterTagIds` + `matchesPlannerFilter`（加星筛同一套）。
+- Timetable 今日数据走 `todosForAppDate` / `schedulesForAppDate`，**尚未**过这套筛。
+- 本关：筛选开启时 timetable **只渲染筛后数据**；建议同一函数喂进去，沿用现有 `recalculateTodoAllocations`（格子会按筛后集合重排，不是原地藏块）。
+- 加星筛是否一并跟：与 planner 同一套（默认是）。
 
-### 价目与额度（开写前先定死写在本文件）
+### 不做
 
-| 项 | 本关取值（待填） |
-|---|---|
-| 免费月额度 `FREE_MONTHLY_QUOTA` | （建议沿用 20，可改） |
-| 价目 / 时长（如 49 元 / 6 个月） | （沿用旧表单或新定） |
-| 付款入口 | （腾讯文档表单 URL 或你指定的收款说明） |
-| premium 是否仍「不限免费配额、仅限流」 | 是（与 gateway 蓝图一致；加 premium 月上限留给以后） |
-
-### 升级提示
-
-- 现文案仅有「试用额度已用完，请升级后继续」——本关要接到 **价 + 怎么付**（面板短提示或链到说明页/外链）。
-- 未登录 / 401 → 引导登录（已有方向，补齐文案即可）。
+- 收费、网关、改分配算法、新 store、year 视图点选行。
 
 ---
 
@@ -58,32 +59,28 @@
 
 | 步 | 内容 | 产出 |
 |---|---|---|
-| **0** | 定价目、免费额度、付款入口；写进本文件上表 | 数字与链接不再空 |
-| **1** | Cloudflare 部署 `ai-gateway`：secret（Moonshot / JWT / Admin）、KV；记下生产 URL | 线上 `/health` 通 |
-| **2** | 正式前端 `VITE_AI_WORKER_URL`（或等价配置）指向生产；冒烟：登录 → 记一句成功 | 真用户不依赖本机 8787 |
-| **3** | 升级面：402 / 未开通时展示价目 + 付款指引；写清 admin 开通 SOP（curl 或一页笔记） | 可卖演示剧本 |
-| **4** | 端到端手测：耗尽或新号 → 见升级 → 你开通 → 再记一句成功 | 关可收 |
-
-**本关不做：** Stripe/Lemon/国内自动支付、entitlement 迁 Supabase、扩 capture kind、改删、CLI、旧 AiChat 重开。
+| **0** | 写进本文件（本步） | 范围钉死 |
+| **1** | tag filter：当日 timetable 数据与 planner 同一套筛 | 筛了就只见筛后块 |
+| **2** | 点击任一列 badge → `selectedTaskId`；日/周/月且可见则选中 todo/schedule/activity | 与列表点行观感一致 |
+| **3** | 手测：无筛/有筛、日周月、只有 task 面板、看不见的行 | 关可收 |
 
 ---
 
 ## 验收标准（草案）
 
-1. 生产 Worker 可被正式前端调用；登录用户能完成至少一次一句记（不靠本地 wrangler）。  
-2. 额度用尽或需升级时：提示含 **价目 + 付款方式/链接**，不是空泛「请升级」。  
-3. 用 `ADMIN_TOKEN` 给指定 `user_id` 写 `premium` + `until` 后，该账号立刻可继续用（无需改客户端）。  
-4. 有一份可给未来自己用的开通步骤（命令或短文档），别人付款后你能在几分钟内开通。  
+1. 点 timetable 任一列 badge：Task Tracker 显示对应 task。
+2. day / week / month 且该条在当前列表可见：todo 或 schedule（及对应 activity）呈选中；不在可视范围则不选行。
+3. 有 tag filter（及加星，若跟 planner）：timetable 只出现筛后的 todo / schedule / 实际番茄块。
+4. 无筛选时 timetable 与改前一致；拖拽分配仍可用。
 
 ---
 
 ## 进度
 
-- [ ] **0.** 价目 / 额度 / 付款入口写入本文件  
-- [ ] **1.** Worker 部署上云 + secret  
-- [ ] **2.** 正式环境指向生产 URL + 冒烟  
-- [ ] **3.** 升级文案 + 开通 SOP  
-- [ ] **4.** 端到端「付钱→开通→能用」手测  
+- [x] **0.** 开票（含本分支已带的 planner / sync）
+- [x] **1.** timetable 跟 tag filter
+- [x] **2.** 点击 badge 选中
+- [x] **3.** 手测点选
 
 ---
 

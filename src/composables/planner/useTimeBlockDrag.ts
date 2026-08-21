@@ -18,10 +18,12 @@ export function useTimeBlockDrag(
   dayStart: number,
   pomodoroSegments: ComputedRef<PomodoroSegment[]>,
   occupiedIndices: ComputedRef<Map<number, TodoSegment>>,
+  onClick?: (seg: TodoSegment) => void,
 ) {
   const segStore = useSegStore();
   const DRAG_MOVE_THRESHOLD_PX = 6;
   const TOUCH_LONG_PRESS_MS = 120;
+  const lastDragEndedAt = ref(0);
 
   // UI 状态
   const dragState = ref({
@@ -170,15 +172,18 @@ export function useTimeBlockDrag(
    */
   function handlePointerUp(event: PointerEvent) {
     if (!dragState.value.isDragging) {
-      // 未激活拖拽则视为点击，清理监听即可
+      // 未激活拖拽则视为点击：先记下再清 pending，供选中
+      const clickedSeg = pendingSeg;
       document.removeEventListener("pointermove", handlePointerMove);
       document.removeEventListener("pointerup", handlePointerUp);
       document.removeEventListener("pointercancel", handlePointerUp);
       cleanupPendingState();
+      if (clickedSeg) onClick?.(clickedSeg);
       return;
     }
 
     event.preventDefault(); // ✅ 关键 1️⃣
+    lastDragEndedAt.value = Date.now();
     const targetGlobalIndex = dragState.value.dropTargetGlobalIndex;
 
     // 执行放置逻辑
@@ -243,5 +248,6 @@ export function useTimeBlockDrag(
   return {
     dragState,
     handlePointerDown,
+    lastDragEndedAt,
   };
 }
