@@ -6,6 +6,7 @@
 |------|------|
 | PR / S·C·UV / 证据 | [`PR.md`](./PR.md) |
 | 分支 | [`branch.md`](./branch.md) |
+| `dev` 拆 feat 再接回（A/B/C、冲突 `--theirs`） | [`rebase_sop.md`](./rebase_sop.md) 场景二 |
 | 发版 | [`release.md`](./release.md) |
 | 测试 | [`test.md`](./test.md) |
 

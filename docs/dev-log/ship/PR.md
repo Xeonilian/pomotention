@@ -176,7 +176,9 @@ pnpm new:pr
     gh pr merge <PR_number> --squash --delete-branch
     ```
     **禁止** 默认 `--merge`（多 commit 进 main），除非当次明确约定保留历史。
-3.  **收工结尾（必须）:** 合并后重建 **本地 + 远端** `dev`（与 `main` 同提交）。Agent 见 [`.cursor/rules/pr-merge.mdc`](https://github.com/Xeonilian/pomotention/blob/main/.cursor/rules/pr-merge.mdc) 与 skill `dev-branch`；人类可照抄该规则里的命令块。
+3.  **收工结尾（必须）:**
+    - **整支 `dev` 已合进 `main`、远端 `dev` 已删：** 重建本地 + 远端 `dev`（与 `main` 同提交）。见 [`.cursor/rules/pr-merge.mdc`](https://github.com/Xeonilian/pomotention/blob/main/.cursor/rules/pr-merge.mdc) 与 skill `dev-branch`。
+    - **`dev` 上还有先不合的提交（收费等）：** **不要** `git branch -f dev main`。从新建 `feat` 到合完把 A 接回、冲突时 `--theirs` / `git add` 含义：[`rebase_sop.md` 场景二](./rebase_sop.md)。
 4.  **文档:** 更新 `current.md`「停在哪」或收关模板。
 
 ---
@@ -200,6 +202,7 @@ git branch -d <branch-name>
 | 救援 main 上改动 | `pnpm rescue`                                |
 | 截图（可选）     | `pnpm sshot "<desc>"`                        |
 | 看 Bugbot        | 对话里问 Agent，或 [`gh-cli-usage.md`](./gh-cli-usage.md) |
+| 合完把 A 接回 `dev` | [`rebase_sop.md`](./rebase_sop.md) 场景二 |
 | 创建 PR          | `pnpm new:pr` (推荐) 或 `gh pr create`       |
 | 合并 PR          | `gh pr merge <num> --squash --delete-branch` |
 | 紧急修复分支     | `pnpm new:branch hotfix <issue-id>`          |

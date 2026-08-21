@@ -13,8 +13,8 @@
 | **来自** | 一句记第一刀已通；目的是「有 AI 的软件能被人购买」；roadmap「收费 + 推广」 |
 | **蓝图** | 底座 [`8-ai-gateway.md`](./blueprint/8-ai-gateway.md)；能力 [`7-capture.md`](./blueprint/7-capture.md) |
 | **分支** | `dev` |
-| **更新** | 2026-08-18 |
-| **停在哪** | **步 1 完成。** 生产 Worker `https://pomotention-ai-gateway.zhengws.workers.dev`，`GET /health` 通。**下一步：** 正式前端 `VITE_AI_WORKER_URL` 指到该地址并重发（步 2）。爱发电认证仍在等。 |
+| **更新** | 2026-08-21 |
+| **停在哪** | 爱发电认证过了；Cloudflare（Worker + Pages 变量）你说已完成。本关还没收：真付费开通你还没走通，软件里哪些按钮/帮助页对应什么也还没认路。Webhook 仍是下一关，现在不写。 |
 
 ---
 
@@ -37,8 +37,8 @@
 
 ### 与上一关的关系
 
-- 本地 `pnpm gateway:dev` 已验通；生产 Worker 已部署：`https://pomotention-ai-gateway.zhengws.workers.dev`（`GET /health` 已通）。正式前端尚未改 `VITE_AI_WORKER_URL`。
-- 权益仍写 KV `entitlement:{user_id}`；开通仍走 `POST /admin/entitlement`（`ADMIN_TOKEN`）。
+- 本地记一句已通（`localhost:1420` → `127.0.0.1:8787`）。生产 Worker：`https://pomotention-ai-gateway.zhengws.workers.dev`。
+- Cloudflare 你已完成（Worker + Pages 变量）。权益仍写 KV；开通仍走 `POST /admin/entitlement`。
 
 ### 价目与额度（开写前先定死写在本文件）
 
@@ -110,22 +110,35 @@ Worker：`POST /webhooks/afdian` 验签；`POST /v1/redeem` 需 JWT。保留 adm
 ## 进度
 
 - [x] **0.** 价目 19/月、打赏非权益、爱发电重开，写入本文件
-- [x] **1.** Worker 部署上云 + secret；KV id 写入 wrangler.toml；`/health` 通
-- [x] **3.** 升级文案 + 设置支持开发 + 帮助/README + 开通 SOP（含 premium 2000）（仓库已改；爱发电档位说明需你粘贴）
-- [ ] **2.** 正式环境指向生产 URL + 冒烟（Cloudflare Pages 设 `VITE_AI_WORKER_URL` 后重 build）
-- [ ] **4.** 端到端「付钱→开通→能用」手测（**你做**；等认证）
-- （下一关 B）爱发电 webhook 自动开通
+- [x] **1.** Worker 部署上云 + secret；KV；`/health` 通
+- [x] **2.** Cloudflare 完成（你确认）；预览站记一句若不熟，手测时顺带点一次
+- [x] **3.** 升级文案 + 设置支持开发 + 帮助/README + 开通 SOP（仓库已有）
+- [ ] **4.** 认路 + 端到端「付钱→你人工开通→能用」（认证已过；自动开通仍是下一关）
+- （下一关 B）爱发电 webhook — 认证过了可以开票，但本关先走通人工
 
 ---
 
-## 你要做的（仓库改不到的）
+## 现有页面（仓库已有，认路用，不是新做）
 
-1. **等创作者认证通过**（webhook 等 B；本关人工开通不依赖认证，但爱发电收款页可能受限）。
-2. **爱发电后台建两档：** 19 元/月订阅（年付用平台打折）；打赏默认 9 元。把帮助页「买到什么 / 还在做的」贴到订阅说明。
-3. ~~部署 Worker~~ 已完成：`https://pomotention-ai-gateway.zhengws.workers.dev`
-4. **正式前端（下一步）：** Cloudflare Pages 生产环境变量 `VITE_AI_WORKER_URL=https://pomotention-ai-gateway.zhengws.workers.dev`（无末尾斜杠），然后 **重新构建并部署**。本地 dev 仍用 `http://127.0.0.1:8787`。
-5. **小红书 / 爱发电主页** 贴帮助页里的可复制段落。
-6. **手测：** 耗尽试用 → 点订阅 → 你按 SOP 开通 → 再记一句。
+付钱之后软件不会自己变 premium。本关是：**用户去爱发电付 → 你按 SOP curl 开通 → 他再记一句。**
+
+| 用户看见 | 在哪 | 干什么 |
+|---|---|---|
+| 订阅 / 打赏 | 设置 → 支持开发 | 订阅带登录 uuid 去爱发电；打赏 **不** 开通额度 |
+| 升级 | 一句记额度用尽（402） | 只给 19 元/月订阅链接，不指向打赏 |
+| 说明 | 帮助 [`support.md`](../../guide/intro/support.md) | 买到什么、站外怎么对邮箱 |
+| 你开通 | 终端 `POST /admin/entitlement` | 下面 SOP；没有「后台点一下」的页面 |
+
+下一关才做：webhook 自动开通、设置里填订单号。本关不要开始写那些。
+
+---
+
+## 你要做的（手工，按顺序）
+
+1. **爱发电两档**（认证已过）：19 元/月订阅；打赏默认 9 元。帮助页「买到什么 / 还在做的」贴到订阅说明。
+2. **手测步 4：** 登录 → 耗尽试用（或自己打满）→ 见升级 → 点订阅 → 按 SOP 开通 → 再记一句成功。顺带点开设置「支持开发」和帮助页，对上表。
+3. 预览站 [https://dev.pomotention.pages.dev](https://dev.pomotention.pages.dev) 若还没点过记一句，手测时一起。
+4. 小红书 / 爱发电主页贴帮助页可复制段落（可手测后再贴）。
 
 开通 SOP 摘要：Supabase Dashboard → Authentication → 用登录邮箱查 User UID →  
 `WORKER_URL=https://pomotention-ai-gateway.zhengws.workers.dev`
