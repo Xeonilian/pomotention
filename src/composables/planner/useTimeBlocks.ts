@@ -442,7 +442,7 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
 
     return {
       position: "absolute",
-      left: isMobile.value ? "67px" : "61px",
+      left: isMobile.value ? "70px" : "61px",
       width: isMobile.value ? "3px" : "8px",
       top: `${topPx}px`,
       height: `${heightPx}px`,
