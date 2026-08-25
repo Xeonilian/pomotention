@@ -35,8 +35,10 @@ describe("afdian checkout URLs", () => {
     expect(url.searchParams.get("custom_order_id")).toBeNull();
   });
 
-  it("打赏链接带默认 9 元，不带 custom_order_id", () => {
+  it("打赏链接走下单页并带默认 9 元，不带 custom_order_id", () => {
     const url = new URL(buildAfdianTipUrl());
+    expect(url.origin + url.pathname).toBe("https://ifdian.net/order/create");
+    expect(url.searchParams.get("user_id")).toBe("9aa7fe64979311f196805254001e7c00");
     expect(url.searchParams.get("custom_price")).toBe("9");
     expect(url.searchParams.get("custom_order_id")).toBeNull();
   });

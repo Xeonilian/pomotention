@@ -127,9 +127,7 @@ const defaultExpandedNames = computed(() => groupedRows.value.map((group) => gro
 }
 
 .shortcut-table-wrap {
-  max-height: var(--setting-shortcut-wrap-max-height);
   overflow-x: auto;
-  overflow-y: auto;
   padding-bottom: 2px;
 }
 

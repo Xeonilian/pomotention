@@ -1,12 +1,9 @@
 .setting-tab-page {
-  --setting-scroll-max-height: calc(100vh - 170px);
-  --setting-shortcut-wrap-max-height: calc(100vh - 235px);
   padding-right: 2px;
 }
 
 .setting-tab-page--scroll {
-  max-height: var(--setting-scroll-max-height);
-  overflow-y: auto;
+  overflow: visible;
 }
 
 .setting-tab-card :deep(.n-card-header) {

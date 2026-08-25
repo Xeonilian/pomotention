@@ -1,6 +1,9 @@
 /** 爱发电创作者页；结账参数见爱发电开发者文档 */
 
 export const AFDIAN_CREATOR_URL = "https://afdian.com/a/xeonilian";
+/** 爱发电创作者 user_id；打赏走下单页，custom_price 加在主页上无效 */
+export const AFDIAN_CREATOR_USER_ID = "9aa7fe64979311f196805254001e7c00";
+const AFDIAN_ORDER_CREATE_URL = "https://ifdian.net/order/create";
 export const SUBSCRIBE_PRICE_YUAN = 19;
 export const TIP_DEFAULT_YUAN = 9;
 
@@ -27,9 +30,12 @@ export function buildAfdianSubscribeUrl(userId?: string | null): string {
   return withQuery(AFDIAN_CREATOR_URL, params);
 }
 
-/** 打赏（非权益）。默认金额 9 元，走自选金额参数。 */
+/** 打赏（非权益）。默认 9 元，必须用下单页才能带上 custom_price。 */
 export function buildAfdianTipUrl(): string {
-  return withQuery(AFDIAN_CREATOR_URL, { custom_price: String(TIP_DEFAULT_YUAN) });
+  return withQuery(AFDIAN_ORDER_CREATE_URL, {
+    user_id: AFDIAN_CREATOR_USER_ID,
+    custom_price: String(TIP_DEFAULT_YUAN),
+  });
 }
 
 export function openExternalUrl(url: string): void {

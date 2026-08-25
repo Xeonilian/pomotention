@@ -1,6 +1,6 @@
 <template>
-  <n-space vertical size="large" class="settings-entry-page">
-    <n-tabs v-model:value="tab" type="line" animated size="small">
+  <div class="settings-entry-page">
+    <n-tabs v-model:value="tab" type="line" animated size="small" class="settings-tabs">
       <n-tab-pane name="general" tab="通用信息">
         <SettingGeneralTab />
       </n-tab-pane>
@@ -14,12 +14,12 @@
         <SettingDebugTab />
       </n-tab-pane>
     </n-tabs>
-  </n-space>
+  </div>
 </template>
 
 <script setup lang="ts">
 import { ref } from "vue";
-import { NSpace, NTabs, NTabPane } from "naive-ui";
+import { NTabs, NTabPane } from "naive-ui";
 import SettingGeneralTab from "@/components/setting/SettingGeneralTab.vue";
 import SettingPomoTab from "@/components/setting/SettingPomoTab.vue";
 import SettingShortcutTab from "@/components/setting/SettingShortcutTab.vue";
@@ -30,10 +30,28 @@ const tab = ref("general");
 
 <style scoped>
 .settings-entry-page {
+  box-sizing: border-box;
   max-width: 900px;
   width: 92%;
   height: 100%;
-  margin: 10px auto;
+  min-height: 0;
+  margin: 0 auto;
   padding: 8px 10px 20px;
+  display: flex;
+  flex-direction: column;
+}
+.settings-tabs {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.settings-tabs :deep(.n-tabs-nav) {
+  flex-shrink: 0;
+}
+.settings-tabs :deep(.n-tabs-pane-wrapper) {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
 }
 </style>

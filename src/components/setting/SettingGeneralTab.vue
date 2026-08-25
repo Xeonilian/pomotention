@@ -1,12 +1,11 @@
 <template>
   <div class="setting-tab-page setting-tab-page--scroll">
     <n-card size="small" class="setting-tab-card">
-      <p class="support-lead">番茄、计划、任务等核心功能免费。一句记需要登录：每月试用 20 次，订阅后为高上限。</p>
+      <p class="support-lead">核心功能免费。订阅后解锁高级功能：登录使用一句记，每月试用 20 次，订阅为高上限。</p>
       <n-space class="setting-tab-actions">
-        <n-button size="small" type="primary" @click="openSubscribe">订阅 19 元/月</n-button>
-        <n-button size="small" @click="openTip">打赏 9 元</n-button>
+        <n-button size="small" type="primary" @click="openSubscribe">解锁高级功能 19 元/月</n-button>
       </n-space>
-      <p class="support-note">打赏不解锁额度；每月赞助 top3 会收到手绘卡片。说明见帮助「支持与订阅」。</p>
+      <p class="support-note">说明见帮助「支持与订阅」。</p>
     </n-card>
     <n-card size="small" class="setting-tab-card">
       <n-descriptions label-placement="left" :column="1" bordered size="small">
@@ -104,7 +103,7 @@ import { getVersion } from "@tauri-apps/api/app";
 import { getCurrentUser, purgeSupabaseAuthStorage } from "@/core/services/authService";
 import { appHttpFetch } from "@/utils/appHttpFetch";
 import { syncDatabase } from "@/services/sync";
-import { buildAfdianSubscribeUrl, buildAfdianTipUrl, openExternalUrl } from "@/core/billing/afdian";
+import { buildAfdianSubscribeUrl, openExternalUrl } from "@/core/billing/afdian";
 
 const settingStore = useSettingStore();
 const dataStore = useDataStore();
@@ -364,10 +363,6 @@ async function handleSyncDatabase() {
 async function openSubscribe() {
   const user = await getCurrentUser();
   openExternalUrl(buildAfdianSubscribeUrl(user?.id));
-}
-
-function openTip() {
-  openExternalUrl(buildAfdianTipUrl());
 }
 
 function handleFactoryReset() {
