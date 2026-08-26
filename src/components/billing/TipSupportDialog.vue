@@ -6,8 +6,8 @@
         <n-text strong type="error">爱发电</n-text>
         支持我继续开发。
       </n-text>
-      <n-text>每月按打赏金额 Top 3，寄出水彩卡片。</n-text>
-      <n-text>留意回复收件地址哟~</n-text>
+      <n-text>有机会收到我的手绘水彩卡片哟~</n-text>
+
       <n-button type="info" secondary @click="goTip">去爱发电打赏</n-button>
     </n-space>
   </n-modal>

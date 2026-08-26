@@ -1,6 +1,6 @@
 <template>
   <div class="setting-tab-page setting-tab-page--scroll">
-    <n-card size="small" class="setting-tab-card">
+    <n-card v-if="CAPTURE_UI_ENABLED" size="small" class="setting-tab-card">
       <p class="support-lead">核心功能免费。订阅后解锁高级功能：登录使用一句记，每月试用 20 次，订阅为高上限。</p>
       <n-space class="setting-tab-actions">
         <n-button size="small" type="primary" @click="openSubscribe">解锁高级功能 19 元/月</n-button>
@@ -104,6 +104,7 @@ import { getCurrentUser, purgeSupabaseAuthStorage } from "@/core/services/authSe
 import { appHttpFetch } from "@/utils/appHttpFetch";
 import { syncDatabase } from "@/services/sync";
 import { buildAfdianSubscribeUrl, openExternalUrl } from "@/core/billing/afdian";
+import { CAPTURE_UI_ENABLED } from "@/core/capture";
 
 const settingStore = useSettingStore();
 const dataStore = useDataStore();
