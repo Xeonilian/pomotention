@@ -69,3 +69,16 @@
   font-size: 13px;
   font-weight: 700;
 }
+
+/* 移动端：通用信息描述表第一列 padding 收紧，避免四字标签换行 */
+@media (max-width: 768px) {
+  .setting-tab-card :deep(.n-descriptions-table-header) {
+    padding-left: 6px;
+    padding-right: 6px;
+    white-space: nowrap;
+  }
+  .setting-tab-card :deep(.n-descriptions-table-content) {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+}

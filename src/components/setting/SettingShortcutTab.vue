@@ -158,15 +158,15 @@ const defaultExpandedNames = computed(() => groupedRows.value.map((group) => gro
 @media (max-width: 768px) {
   .setting-table.shortcut-table th,
   .setting-table.shortcut-table td {
-    padding: 8px 6px;
+    padding: 8px 2px 8px 6px;
   }
 
   .shortcut-col-sequence {
-    width: 56px;
+    width: 40px;
   }
 
   .shortcut-col-feature {
-    width: 120px;
+    width: 90px;
   }
 
   .shortcut-table td:last-child {
@@ -176,8 +176,6 @@ const defaultExpandedNames = computed(() => groupedRows.value.map((group) => gro
 
   .shortcut-feature-cell code {
     white-space: normal;
-    word-break: break-all;
-    overflow-wrap: anywhere;
   }
 }
 </style>
