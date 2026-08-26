@@ -14,23 +14,22 @@
     :title="modalTitle"
     :style="modalStyle"
     :content-style="modalContentStyle"
-    :segmented="{ content: true }"
     :mask-closable="true"
     @after-enter="onModalShown"
   >
     <div v-if="showModal" class="ledger-aggregate" :class="{ 'ledger-aggregate--desktop': !isMobile }">
       <section class="ledger-aggregate__stats">
-        <div class="ledger-stat">
-          <span class="ledger-stat__label">笔数</span>
-          <span class="ledger-stat__value">{{ aggregateData.stats.entryCount }}</span>
+        <div class="ledger-stat ledger-stat--income">
+          <span class="ledger-stat__label">收入</span>
+          <span class="ledger-stat__value">+{{ formatLedgerMoney(aggregateData.stats.totalIncome) }}</span>
         </div>
         <div class="ledger-stat ledger-stat--expense">
           <span class="ledger-stat__label">支出</span>
           <span class="ledger-stat__value">-{{ formatLedgerMoney(aggregateData.stats.totalExpense) }}</span>
         </div>
-        <div class="ledger-stat ledger-stat--income">
-          <span class="ledger-stat__label">收入</span>
-          <span class="ledger-stat__value">+{{ formatLedgerMoney(aggregateData.stats.totalIncome) }}</span>
+        <div class="ledger-stat">
+          <span class="ledger-stat__label">笔数</span>
+          <span class="ledger-stat__value">{{ aggregateData.stats.entryCount }}</span>
         </div>
         <div class="ledger-stat">
           <span class="ledger-stat__label">结余</span>
@@ -892,6 +891,9 @@ watch(
 
   .ledger-aggregate-modal .n-card-header {
     flex-shrink: 0;
+    position: sticky;
+    top: env(safe-area-inset-top, 0px);
+    z-index: 10;
     background-color: var(--n-color-modal) !important;
   }
 
