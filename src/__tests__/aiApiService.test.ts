@@ -59,7 +59,7 @@ describe("aiApiService.sendMessage (Worker)", () => {
     await expect(aiApiService.sendMessage(messages)).rejects.toMatchObject({
       name: "AiGatewayError",
       status: 401,
-      code: "UNAUTHORIZED",
+      code: "NO_SESSION",
     } satisfies Partial<AiGatewayError>);
   });
 

@@ -3,10 +3,16 @@
  * 真实 Moonshot key 只在此；模型写死 moonshot-v1-8k。
  */
 import { jwtVerify } from "jose";
+import {
+  DEFAULT_FREE_MONTHLY_QUOTA,
+  DEFAULT_PREMIUM_MONTHLY_QUOTA,
+  monthlyQuotaLimit,
+  parsePositiveInt,
+  quotaExhaustedCode,
+} from "./quota";
 
 const HARDCODED_MODEL = "moonshot-v1-8k";
 const RATE_LIMIT_PER_MINUTE = 20;
-const DEFAULT_FREE_MONTHLY_QUOTA = 20;
 const CANDIDATES_MAX_CHARS = 8000;
 
 export interface Env {
@@ -16,6 +22,10 @@ export interface Env {
   ADMIN_TOKEN: string;
   MOONSHOT_BASE_URL?: string;
   FREE_MONTHLY_QUOTA?: string;
+  PREMIUM_MONTHLY_QUOTA?: string;
+  /** 问 Supabase 登录是否有效；与前端同一项目 */
+  SUPABASE_URL?: string;
+  SUPABASE_ANON_KEY?: string;
 }
 
 type JsonRecord = Record<string, unknown>;
@@ -58,7 +68,7 @@ interface AuthUser {
   email?: string;
 }
 
-/** 验 Supabase Legacy JWT（HS256）；拒绝 anon / 匿名登录 */
+/** 先问 Supabase 这张登录条是否有效；配不齐再退回本地钥匙核对 */
 async function authenticateUser(req: Request, env: Env): Promise<AuthUser | Response> {
   const header = req.headers.get("authorization") || req.headers.get("Authorization");
   if (!header?.startsWith("Bearer ")) {
@@ -68,6 +78,55 @@ async function authenticateUser(req: Request, env: Env): Promise<AuthUser | Resp
   if (!token) {
     return err(401, "UNAUTHORIZED", "Empty token");
   }
+
+  const supabaseUrl = env.SUPABASE_URL?.replace(/\/$/, "");
+  const anonKey = env.SUPABASE_ANON_KEY?.trim();
+  if (supabaseUrl && anonKey) {
+    return await authenticateViaSupabase(token, supabaseUrl, anonKey);
+  }
+
+  return await authenticateViaJwtSecret(token, env);
+}
+
+async function authenticateViaSupabase(token: string, supabaseUrl: string, anonKey: string): Promise<AuthUser | Response> {
+  let res: Response;
+  try {
+    res = await fetch(`${supabaseUrl}/auth/v1/user`, {
+      headers: {
+        authorization: `Bearer ${token}`,
+        apikey: anonKey,
+      },
+    });
+  } catch {
+    return err(401, "UNAUTHORIZED", "Auth check unreachable");
+  }
+
+  if (!res.ok) {
+    return err(401, "UNAUTHORIZED", "Invalid or expired JWT");
+  }
+
+  let user: JsonRecord;
+  try {
+    user = (await res.json()) as JsonRecord;
+  } catch {
+    return err(401, "UNAUTHORIZED", "Invalid auth response");
+  }
+
+  const userId = typeof user.id === "string" ? user.id : "";
+  if (!userId) {
+    return err(401, "UNAUTHORIZED", "JWT missing sub");
+  }
+  if (user.is_anonymous === true) {
+    return err(401, "UNVERIFIED", "Anonymous accounts have no AI quota");
+  }
+  const email = typeof user.email === "string" ? user.email : undefined;
+  if ("email_confirmed_at" in user && !user.email_confirmed_at && email) {
+    return err(401, "UNVERIFIED", "Email not confirmed");
+  }
+  return { userId, email };
+}
+
+async function authenticateViaJwtSecret(token: string, env: Env): Promise<AuthUser | Response> {
   if (!env.SUPABASE_JWT_SECRET) {
     return err(500, "MISCONFIGURED", "SUPABASE_JWT_SECRET not set");
   }
@@ -88,7 +147,6 @@ async function authenticateUser(req: Request, env: Env): Promise<AuthUser | Resp
       return err(401, "UNAUTHORIZED", "JWT role is not authenticated");
     }
 
-    // 匿名登录不可用试用额度
     const isAnonymous =
       payload.is_anonymous === true ||
       (payload.app_metadata &&
@@ -99,7 +157,6 @@ async function authenticateUser(req: Request, env: Env): Promise<AuthUser | Resp
     }
 
     const email = typeof payload.email === "string" ? payload.email : undefined;
-    // 有 email_confirmed_at 字段且为空 → 未验证
     if ("email_confirmed_at" in payload && !payload.email_confirmed_at && email) {
       return err(401, "UNVERIFIED", "Email not confirmed");
     }
@@ -133,11 +190,14 @@ async function getEntitlement(env: Env, userId: string): Promise<Entitlement> {
 }
 
 function freeQuota(env: Env): number {
-  const n = Number(env.FREE_MONTHLY_QUOTA);
-  return Number.isFinite(n) && n > 0 ? Math.floor(n) : DEFAULT_FREE_MONTHLY_QUOTA;
+  return parsePositiveInt(env.FREE_MONTHLY_QUOTA, DEFAULT_FREE_MONTHLY_QUOTA);
 }
 
-/** 限流 + 免费配额；premium 跳过月配额。失败返回 Response */
+function premiumQuota(env: Env): number {
+  return parsePositiveInt(env.PREMIUM_MONTHLY_QUOTA, DEFAULT_PREMIUM_MONTHLY_QUOTA);
+}
+
+/** 限流 + 月配额；premium 用高上限，仍计数。失败返回 Response */
 async function assertAllowed(env: Env, userId: string): Promise<Response | null> {
   const rateKey = `rate:${userId}:${minuteKey()}`;
   const rateRaw = await env.AI_KV.get(rateKey);
@@ -148,26 +208,21 @@ async function assertAllowed(env: Env, userId: string): Promise<Response | null>
   await env.AI_KV.put(rateKey, String(rateCount + 1), { expirationTtl: 120 });
 
   const ent = await getEntitlement(env, userId);
-  if (ent.plan === "premium") {
-    return null;
-  }
+  const isPremium = ent.plan === "premium";
+  const limit = monthlyQuotaLimit(isPremium, freeQuota(env), premiumQuota(env));
 
   const qKey = `quota:${userId}:${monthKey()}`;
   const qRaw = await env.AI_KV.get(qKey);
   const used = qRaw ? Number(qRaw) || 0 : 0;
-  if (used >= freeQuota(env)) {
-    return err(402, "QUOTA_EXHAUSTED", "Free monthly quota exhausted", {
-      used,
-      limit: freeQuota(env),
-    });
+  if (used >= limit) {
+    const code = quotaExhaustedCode(isPremium);
+    const message = isPremium ? "Premium monthly quota exhausted" : "Free monthly quota exhausted";
+    return err(402, code, message, { used, limit });
   }
   return null;
 }
 
 async function bumpQuota(env: Env, userId: string): Promise<void> {
-  const ent = await getEntitlement(env, userId);
-  if (ent.plan === "premium") return;
-
   const qKey = `quota:${userId}:${monthKey()}`;
   const qRaw = await env.AI_KV.get(qKey);
   const used = qRaw ? Number(qRaw) || 0 : 0;

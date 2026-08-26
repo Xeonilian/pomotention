@@ -55,3 +55,11 @@ function resetStyle() {
 </script>
 
 <style scoped src="./settingShared.css"></style>
+<style scoped>
+@media (min-width: 768px) {
+  .setting-field-list {
+    grid-template-columns: 1fr 1fr;
+    column-gap: 16px;
+  }
+}
+</style>

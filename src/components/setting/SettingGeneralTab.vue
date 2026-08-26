@@ -1,5 +1,12 @@
 <template>
   <div class="setting-tab-page setting-tab-page--scroll">
+    <n-card v-if="CAPTURE_UI_ENABLED" size="small" class="setting-tab-card">
+      <p class="support-lead">核心功能免费。订阅后解锁高级功能：登录使用一句记，每月试用 20 次，订阅为高上限。</p>
+      <n-space class="setting-tab-actions">
+        <n-button size="small" type="primary" @click="openSubscribe">解锁高级功能 19 元/月</n-button>
+      </n-space>
+      <p class="support-note">说明见帮助「支持与订阅」。</p>
+    </n-card>
     <n-card size="small" class="setting-tab-card">
       <n-descriptions label-placement="left" :column="1" bordered size="small">
         <n-descriptions-item label="当前版本">{{ generalVersionDisplay }}</n-descriptions-item>
@@ -96,6 +103,8 @@ import { getVersion } from "@tauri-apps/api/app";
 import { getCurrentUser, purgeSupabaseAuthStorage } from "@/core/services/authService";
 import { appHttpFetch } from "@/utils/appHttpFetch";
 import { syncDatabase } from "@/services/sync";
+import { buildAfdianSubscribeUrl, openExternalUrl } from "@/core/billing/afdian";
+import { CAPTURE_UI_ENABLED } from "@/core/capture";
 
 const settingStore = useSettingStore();
 const dataStore = useDataStore();
@@ -352,6 +361,11 @@ async function handleSyncDatabase() {
   }
 }
 
+async function openSubscribe() {
+  const user = await getCurrentUser();
+  openExternalUrl(buildAfdianSubscribeUrl(user?.id));
+}
+
 function handleFactoryReset() {
   clearAllAppStorage();
   purgeSupabaseAuthStorage();
@@ -372,6 +386,24 @@ onMounted(() => {
   font-size: 12px;
   color: var(--n-text-color-3);
   line-height: 1.5;
+}
+
+.support-lead,
+.support-note {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--n-text-color-2);
+}
+
+.support-note {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--n-text-color-3);
+}
+
+.setting-tab-card + .setting-tab-card {
+  margin-top: 12px;
 }
 </style>
 

@@ -67,7 +67,7 @@ export function useButtonStyle() {
     buttonStates.value.ai = settingStore.settings.showAi;
   };
 
-  // 视图控制配置（记一句入口由 CAPTURE_UI_ENABLED 控制，上云前不进工具栏）
+  // 视图控制配置（记一句入口由 CAPTURE_UI_ENABLED 控制）
   const viewControls = computed(() => [
     { key: "ontop", icon: Pin24Regular, title: "番茄时钟置顶", show: isTauri() },
     { key: "pomodoro", icon: Timer24Regular, title: "切换番茄钟视图", show: settingStore.settings.showPomodoro },

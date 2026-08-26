@@ -18,33 +18,34 @@
           <n-icon><ChevronUpDown20Regular /></n-icon>
         </template>
       </n-button>
-      <div v-if="selectedTagIds && selectedTagIds.length > 0 && selectedTaskId" class="task-tag-render-container">
-        <TagRenderer
-          :tag-ids="selectedTagIds"
-          :is-closeable="!isMobile"
-          :displayLength="tagDisplayLength"
-          @tag-click="handleTagClick"
-          @remove-tag="handleRemoveTag"
-        />
-        <!-- 有筛选时在区域后单独按钮，一键清除全部筛选 -->
-        <!-- <n-button text v-if="dataStore.filterTagIds.length > 0" aria-label="清除全部标签筛选" @click="handleClearAllFilter">
-          <template #icon>
-            <n-icon><TagReset20Filled /></n-icon>
-          </template>
-        </n-button> -->
-      </div>
-      <!-- 合并能量/愉悦/打断 记录时间轴 -->
-      <div class="combined-timeline-container" v-if="combinedRecords.length">
+      <!-- 手机：中间层吃剩余宽度并横向滑；安卓用 width:0 + flex 认滚动，不写死 px -->
+      <div class="header-scroll-area" :class="{ 'is-mobile-scroll': isMobile }">
+        <div v-if="selectedTagIds && selectedTagIds.length > 0 && selectedTaskId" class="task-tag-render-container">
+          <TagRenderer
+            :tag-ids="selectedTagIds"
+            :is-closeable="!isMobile"
+            :displayLength="tagDisplayLength"
+            @tag-click="handleTagClick"
+            @remove-tag="handleRemoveTag"
+          />
+          <!-- 有筛选时在区域后单独按钮，一键清除全部筛选 -->
+          <!-- <n-button text v-if="dataStore.filterTagIds.length > 0" aria-label="清除全部标签筛选" @click="handleClearAllFilter">
+            <template #icon>
+              <n-icon><TagReset20Filled /></n-icon>
+            </template>
+          </n-button> -->
+        </div>
+        <!-- 合并能量/愉悦/打断 记录时间轴 -->
+        <div class="combined-timeline-container" v-if="combinedRecords.length">
         <template v-for="record in combinedRecords" :key="`${record.type}-${record.id}`">
           <NPopover
-            v-if="record.description?.trim()"
+            v-if="!isMobile && record.description?.trim()"
             trigger="click"
             placement="top"
             :to="timelinePopoverTo"
             :show-arrow="true"
-            :style="{ maxWidth: '240px' }"
-            :show="activeTimelinePopoverRecordId === record.id"
-            @update:show="(next) => handleUpdateTimelinePopoverShow(record.id, next)"
+            :style="{ maxWidth: 'calc(100vw - 80px)', boxSizing: 'border-box' }"
+            :content-style="{ maxWidth: '100%', boxSizing: 'border-box' }"
           >
             <template #trigger>
               <div
@@ -82,9 +83,10 @@
           <div
             v-else
             class="timeline-point"
-            title="双击删除"
+            :title="record.description ? (record.description + '（双击删除）') : '双击删除'"
             role="button"
-            aria-label="双击删除"
+            :aria-label="record.description || '查看说明，双击删除'"
+            @click="onTimelinePointClick($event, record)"
             @dblclick.stop="onTimelineRecordDblClick(record)"
           >
             <span class="point-icon">
@@ -110,6 +112,7 @@
             </div>
           </div>
         </template>
+        </div>
       </div>
 
       <TaskButtons
@@ -134,6 +137,19 @@
         @update:is-editing="onTaskRecordIsEditing"
       />
     </div>
+
+    <!-- 手机记录弹出：水平贴屏幕、不跟 trigger；垂直在 badge 上侧 -->
+    <Teleport to="body">
+      <div v-if="mobileTimelinePopover" class="mp-mask" @click="closeMobileTimelinePopover" />
+      <div
+        v-if="mobileTimelinePopover"
+        class="mp-panel"
+        :class="{ 'mp-panel--below': mobileTimelinePopover.placement === 'below' }"
+        :style="mobileTimelinePopover.placement === 'below' ? { top: `${mobileTimelinePopover.edge}px` } : { bottom: `${mobileTimelinePopover.edge}px` }"
+      >
+        <p class="timeline-popover-text">{{ mobileTimelinePopover.text }}</p>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -446,47 +462,35 @@ const checkWidth = () => {
   tagDisplayLength.value = isMobile.value && settingStore.settings.showTimetable ? 1 : containerWidth < TAG_COLLAPSE_BREAKPOINT ? 2 : null;
 };
 
-const activeTimelinePopoverRecordId = ref<number | null>(null);
-let timelinePopoverTimer: ReturnType<typeof window.setTimeout> | null = null;
+// 手机记录弹出：水平贴屏幕（不跟 trigger），垂直在 badge 上侧
+type MobileTimelinePopover = { text: string; placement: "above" | "below"; edge: number };
+const mobileTimelinePopover = ref<MobileTimelinePopover | null>(null);
+let mobileTimelinePopoverTimer: number | null = null;
+const TIMELINE_FLIP_TOP = 96;
+const TIMELINE_PANEL_GAP = 6;
 
-function onTimelineRecordDblClick(record: CombinedRecord) {
-  clearTimelinePopoverTimer();
-  activeTimelinePopoverRecordId.value = null;
-  handleRemoveTaskRecord(record.type, record.id);
+function closeMobileTimelinePopover() {
+  mobileTimelinePopover.value = null;
+  if (mobileTimelinePopoverTimer != null) {
+    window.clearTimeout(mobileTimelinePopoverTimer);
+    mobileTimelinePopoverTimer = null;
+  }
 }
 
-const clearTimelinePopoverTimer = () => {
-  if (timelinePopoverTimer != null) {
-    window.clearTimeout(timelinePopoverTimer);
-    timelinePopoverTimer = null;
-  }
-};
+function onTimelinePointClick(e: MouseEvent, record: CombinedRecord) {
+  if (!record.description?.trim()) return;
+  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+  const placement = rect.top < TIMELINE_FLIP_TOP ? "below" : "above";
+  const edge = placement === "below" ? rect.bottom + TIMELINE_PANEL_GAP : window.innerHeight - rect.top + TIMELINE_PANEL_GAP;
+  mobileTimelinePopover.value = { text: record.description, placement, edge };
+  if (mobileTimelinePopoverTimer != null) window.clearTimeout(mobileTimelinePopoverTimer);
+  mobileTimelinePopoverTimer = window.setTimeout(closeMobileTimelinePopover, 3000);
+}
 
-const openTimelinePopoverFor3s = (recordId: number) => {
-  activeTimelinePopoverRecordId.value = recordId;
-  clearTimelinePopoverTimer();
-  let timer: number | null = null;
-  timer = window.setTimeout(
-    () => {
-      if (activeTimelinePopoverRecordId.value === recordId) {
-        activeTimelinePopoverRecordId.value = null;
-      }
-    },
-    3000,
-    timer,
-  );
-};
-
-const handleUpdateTimelinePopoverShow = (recordId: number, nextShow: boolean) => {
-  if (nextShow) {
-    openTimelinePopoverFor3s(recordId);
-    return;
-  }
-  if (activeTimelinePopoverRecordId.value === recordId) {
-    activeTimelinePopoverRecordId.value = null;
-  }
-  clearTimelinePopoverTimer();
-};
+function onTimelineRecordDblClick(record: CombinedRecord) {
+  closeMobileTimelinePopover();
+  handleRemoveTaskRecord(record.type, record.id);
+}
 
 // 监听容器大小变化
 let resizeObserver: ResizeObserver | null = null;
@@ -504,7 +508,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-  clearTimelinePopoverTimer();
+  closeMobileTimelinePopover();
   document.removeEventListener("fullscreenchange", syncTaskContainerFullscreenState);
   if (resizeObserver) {
     resizeObserver.disconnect();
@@ -569,10 +573,52 @@ onUnmounted(() => {
   margin-right: 2px;
 }
 
+/* 中间层吃剩余空间；桌面 overflow visible，避免 tag hover scale 被裁 */
+.header-scroll-area {
+  display: flex;
+  align-items: center;
+  flex: 1 1 0%;
+  min-width: 0;
+  overflow: visible;
+}
+
+/* 手机：安卓 Chrome 要对 flex 子项给出确定占用宽度，overflow-x 才会滑 */
+.header-scroll-area.is-mobile-scroll {
+  width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x;
+  overscroll-behavior-x: contain;
+  /* overlay：不占顶栏高度（盖掉全局 6px 经典条） */
+  scrollbar-width: none;
+}
+
+.header-scroll-area.is-mobile-scroll::-webkit-scrollbar {
+  display: none;
+  height: 0;
+  width: 0;
+}
+
+.header-scroll-area.is-mobile-scroll .task-tag-render-container,
+.header-scroll-area.is-mobile-scroll .combined-timeline-container {
+  flex-shrink: 0;
+  min-width: max-content;
+  overflow: visible;
+}
+
+.header-scroll-area.is-mobile-scroll :deep(.tag-container) {
+  flex-wrap: nowrap;
+  max-width: none;
+  min-width: max-content;
+  overflow: visible;
+}
+
 /* 按钮区域优先显示 */
 .task-buttons-container {
   background-color: transparent;
   order: 999; /* 确保按钮在最后，但不会被压缩 */
+  flex-shrink: 0;
   flex-direction: row;
   margin: 5px;
   align-items: center;
@@ -603,7 +649,7 @@ onUnmounted(() => {
   gap: 4px;
 }
 
-/* 单行；整体 overflow visible，避免 hover scale 被裁（横向极长时可能与右侧按钮重叠，属取舍） */
+/* 单行；桌面 overflow visible 避免 hover scale 被裁；手机横向溢出由 header-scroll-area 处理 */
 .task-tag-render-container :deep(.tag-container) {
   flex-wrap: nowrap;
   overflow: visible;
@@ -671,8 +717,31 @@ onUnmounted(() => {
 .timeline-popover-text {
   margin: 0;
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
   word-break: break-word;
+  max-width: 100%;
+  box-sizing: border-box;
   color: var(--color-text-primary, #333);
+}
+
+/* 手机记录弹出：水平贴屏幕、垂直跟着 badge */
+.mp-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+}
+
+.mp-panel {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  z-index: 10001;
+  box-sizing: border-box;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: var(--color-bg-base, #fff);
+  color: var(--color-text-primary, #333);
+  box-shadow: 0 3px 14px rgba(0, 0, 0, 0.16);
 }
 
 @media (max-width: 430px) {

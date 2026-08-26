@@ -107,6 +107,7 @@ export default withMermaid(
               ],
             },
             { text: "账号与数据", link: "/guide/intro/account-and-data" },
+            { text: "支持与订阅", link: "/guide/intro/support" },
             { text: "轻松上手", link: "/guide/intro/easy-onboarding" },
           ],
         },

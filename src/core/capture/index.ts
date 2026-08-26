@@ -1,4 +1,4 @@
-/** 收费底座上云前暂不暴露工具栏入口；current 收工后改为 true */
+/** 记一句入口与设置「解锁高级功能」共用；未走通付费前先关 */
 export const CAPTURE_UI_ENABLED = false;
 
 export { runCapture, type CaptureRunResult } from "./runCapture";

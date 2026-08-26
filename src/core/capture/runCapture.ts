@@ -17,11 +17,28 @@ export type CaptureRunResult = CaptureRunOk | CaptureRunFail;
 
 function failMessage(err: unknown): CaptureRunFail {
   if (err instanceof AiGatewayError) {
-    if (err.code === "UNAUTHORIZED" || err.status === 401) {
+    if (err.code === "NO_SESSION") {
       return { ok: false, message: "请先登录后再使用一句记", code: err.code };
     }
+    if (err.code === "UNVERIFIED") {
+      return { ok: false, message: "请先到邮箱点开验证链接，再使用一句记", code: err.code };
+    }
+    if (err.code === "UNAUTHORIZED" || err.status === 401) {
+      return {
+        ok: false,
+        message: "你这边已经登录，但云端没核对上。请退出再登录后重试",
+        code: err.code,
+      };
+    }
+    if (err.code === "PREMIUM_QUOTA_EXHAUSTED") {
+      return { ok: false, message: "本月一句记额度已用完，下月重置", code: err.code };
+    }
     if (err.code === "QUOTA_EXHAUSTED" || err.status === 402) {
-      return { ok: false, message: "试用额度已用完，请升级后继续", code: err.code };
+      return {
+        ok: false,
+        message: "试用额度已用完。订阅 19 元/月可继续使用一句记",
+        code: err.code ?? "QUOTA_EXHAUSTED",
+      };
     }
     if (err.code === "NO_WORKER_URL") {
       return { ok: false, message: "未配置 AI 网关地址（VITE_AI_WORKER_URL）", code: err.code };

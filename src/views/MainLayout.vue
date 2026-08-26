@@ -47,6 +47,7 @@
                   <n-icon :component="control.icon" />
                 </template>
               </n-button>
+
               <n-button
                 v-if="!isMobile"
                 :size="isMobile ? 'large' : 'medium'"
@@ -112,13 +113,27 @@
                 </template>
                 <span>登出后本机数据仍保留；若要清空请前往设置 → 清空本地数据。确定登出？</span>
               </n-popconfirm>
+              <n-button
+                :size="isMobile ? 'large' : 'medium'"
+                title="请我喝杯咖啡"
+                text
+                color="#ffcc5c"
+                class="header-button"
+                @click="showTipDialog = true"
+              >
+                <template #icon>
+                  <n-icon>
+                    <DrinkCoffee24Filled />
+                  </n-icon>
+                </template>
+              </n-button>
             </div>
           </div>
         </n-layout-header>
 
         <!-- Content -->
         <n-layout-content class="app-layout__content" :class="{ 'app-layout__content--full-height': isMiniMode }">
-          <router-view v-if="!isMiniMode" />
+          <router-view v-if="!isMiniMode" class="app-layout__route" />
 
           <!-- 悬浮番茄钟容器 (正常模式) -->
           <div
@@ -221,6 +236,7 @@
         </n-layout-footer>
       </n-layout>
       <DatabaseTransferDialog v-model:show="showDatabaseDialog" />
+      <TipSupportDialog v-model:show="showTipDialog" />
     </n-config-provider>
   </div>
 </template>
@@ -272,9 +288,11 @@ import {
   Person20Regular,
   CloudSync20Regular,
   DatabasePerson20Regular,
+  DrinkCoffee24Filled,
 } from "@vicons/fluent";
 import PomotentionTimer from "@/components/PomotentionTimer/PomotentionTimer.vue";
 import DatabaseTransferDialog from "@/components/data/DatabaseTransferDialog.vue";
+import TipSupportDialog from "@/components/billing/TipSupportDialog.vue";
 
 hljs.registerLanguage("javascript", javascript);
 hljs.registerLanguage("typescript", typescript);
@@ -350,6 +368,7 @@ watch(
 );
 
 const showDatabaseDialog = ref(false);
+const showTipDialog = ref(false);
 const logoutConfirmVisible = ref(false);
 let logoutClickTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -686,6 +705,10 @@ async function handleManualDownload() {
   width: 100%;
   overflow: hidden;
 }
+.app-layout__route {
+  height: 100%;
+  min-height: 0;
+}
 .app-layout__content--full-height {
   display: flex;
   justify-content: center;
@@ -818,7 +841,19 @@ async function handleManualDownload() {
   z-index: 1000;
 }
 
-@media (max-width: 430px) {
+@media (max-width: 767px) {
+  .app-layout__header {
+    padding: 0 8px;
+  }
+
+  .app-layout__view-controls {
+    gap: 2px;
+  }
+  .header-button {
+    width: 26px;
+    min-width: 26px;
+    margin: 0;
+  }
   .header-button:hover {
     background-color: transparent !important;
   }

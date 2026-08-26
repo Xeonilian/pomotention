@@ -2,17 +2,22 @@
 import { ref } from "vue";
 import { NButton, NInput, NSpin } from "naive-ui";
 import { runCapture } from "@/core/capture";
+import { getCurrentUser } from "@/core/services/authService";
+import { buildAfdianSubscribeUrl, openExternalUrl } from "@/core/billing/afdian";
 
 const text = ref("");
 const loading = ref(false);
 const status = ref("");
 const statusTone = ref<"ok" | "err" | "">("");
+const showSubscribe = ref(false);
+const subscribeUrl = ref(buildAfdianSubscribeUrl());
 
 async function onSubmit() {
   if (loading.value) return;
   loading.value = true;
   status.value = "";
   statusTone.value = "";
+  showSubscribe.value = false;
   try {
     const result = await runCapture(text.value);
     if (result.ok) {
@@ -23,6 +28,11 @@ async function onSubmit() {
     } else {
       status.value = result.message;
       statusTone.value = "err";
+      if (result.code === "QUOTA_EXHAUSTED") {
+        const user = await getCurrentUser();
+        subscribeUrl.value = buildAfdianSubscribeUrl(user?.id);
+        showSubscribe.value = true;
+      }
     }
   } finally {
     loading.value = false;
@@ -50,6 +60,9 @@ async function onSubmit() {
         <n-button type="primary" :disabled="loading || !text.trim()" @click="onSubmit">提交</n-button>
       </div>
       <p v-if="status" class="capture-status" :class="statusTone">{{ status }}</p>
+      <div v-if="showSubscribe" class="capture-upgrade">
+        <n-button size="small" type="primary" @click="openExternalUrl(subscribeUrl)">去爱发电订阅（19 元/月）</n-button>
+      </div>
     </n-spin>
   </div>
 </template>
@@ -100,5 +113,9 @@ async function onSubmit() {
 
 .capture-status.err {
   color: var(--color-red, #d03050);
+}
+
+.capture-upgrade {
+  margin-top: 8px;
 }
 </style>

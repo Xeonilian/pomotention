@@ -106,6 +106,7 @@ git pull origin dev
 
 # 2. 基于 dev 新建本地分支
 git checkout -b feature/xxx
+# 若 dev 上有「先不合」的提交（收费等），不要从 dev 开 feat，见 rebase_sop.md 场景二
 
 # 3. 改代码，提交
 git add -A
