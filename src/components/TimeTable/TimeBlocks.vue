@@ -45,7 +45,15 @@
 
   <!-- ========== 第二列：估计分配的 Todo 段 ========== -->
   <template v-for="seg in todoSegments" :key="`todo-${seg.todoId}-${seg.todoIndex}`">
-    <NPopover v-if="isMobile" trigger="click" placement="top" to="body" :show-arrow="true" :style="{ maxWidth: '280px' }">
+    <NPopover
+      v-if="isMobile"
+      trigger="click"
+      placement="top"
+      to="body"
+      :show-arrow="true"
+      :style="popoverMaxStyle"
+      :content-style="popoverContentStyle"
+    >
       <template #trigger>
         <div
           :data-global-index="seg.globalIndex"
@@ -79,7 +87,15 @@
 
   <!-- ========== 第二列：Schedule 段 ========== -->
   <template v-for="scheduleSeg in scheduleSegmentsForSecondColumn" :key="`schedule-${scheduleSeg.scheduleId}`">
-    <NPopover v-if="isMobile" trigger="click" placement="top" to="body" :show-arrow="true" :style="{ maxWidth: '280px' }">
+    <NPopover
+      v-if="isMobile"
+      trigger="click"
+      placement="top"
+      to="body"
+      :show-arrow="true"
+      :style="popoverMaxStyle"
+      :content-style="popoverContentStyle"
+    >
       <template #trigger>
         <div
           class="schedule-segment second-column"
@@ -111,7 +127,8 @@
       placement="top"
       to="body"
       :show-arrow="true"
-      :style="{ maxWidth: '240px' }"
+      :style="popoverMaxStyle"
+      :content-style="popoverContentStyle"
       :show="activeEmojiPopoverTodoId === emoji.todoId"
       @update:show="(next) => handleUpdateEmojiPopoverShow(emoji.todoId, next)"
     >
@@ -146,7 +163,8 @@
       placement="top"
       to="body"
       :show-arrow="true"
-      :style="{ maxWidth: '240px' }"
+      :style="popoverMaxStyle"
+      :content-style="popoverContentStyle"
       :show="activeActualPopoverKey === `${seg.todoId}-${seg.todoIndex}`"
       @update:show="(next) => handleUpdateActualPopoverShow(`${seg.todoId}-${seg.todoIndex}`, next)"
     >
@@ -192,14 +210,13 @@
   <!-- ========== 第五列：打扰 / 能量 / 奖励 ========== -->
   <template v-for="mark in recordMarks" :key="`mark-${mark.kind}-${mark.recordId}`">
     <NPopover
-      v-if="mark.kind !== 'interruption' || mark.description?.trim()"
+      v-if="!isMobile && (mark.kind !== 'interruption' || mark.description?.trim())"
       trigger="click"
-      placement="left"
+      placement="top"
       to="body"
       :show-arrow="true"
-      :style="{ maxWidth: '260px' }"
-      :show="activeRecordMarkPopoverKey === recordMarkKey(mark)"
-      @update:show="(next) => handleUpdateRecordMarkPopoverShow(recordMarkKey(mark), next)"
+      :style="popoverMaxStyle"
+      :content-style="popoverContentStyle"
     >
       <template #trigger>
         <div class="record-mark" :style="getRecordMarkStyle(mark)" @click="handleRecordMarkSelect(mark)">
@@ -210,10 +227,28 @@
         {{ mark.kind === "interruption" ? mark.description : formatRecordMarkText(mark) }}
       </p>
     </NPopover>
-    <div v-else class="record-mark" :style="getRecordMarkStyle(mark)" @click="handleRecordMarkSelect(mark)">
+    <div
+      v-else
+      class="record-mark"
+      :style="getRecordMarkStyle(mark)"
+      @click="onRecordMarkClick($event, mark)"
+    >
       {{ recordMarkEmoji(mark) }}
     </div>
   </template>
+
+  <!-- 手机记录弹出：水平贴屏幕、不跟 trigger 走；垂直在 badge 上侧（顶部不够翻下侧） -->
+  <Teleport to="body">
+    <div v-if="mobilePopover" class="mp-mask" @click="closeMobilePopover" />
+    <div
+      v-if="mobilePopover"
+      class="mp-panel"
+      :class="{ 'mp-panel--below': mobilePopover.placement === 'below' }"
+      :style="mobilePopover.placement === 'below' ? { top: `${mobilePopover.edge}px` } : { bottom: `${mobilePopover.edge}px` }"
+    >
+      <p class="timetable-popover-text">{{ mobilePopover.text }}</p>
+    </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
@@ -269,6 +304,10 @@ const {
 
 const { isMobile } = useDevice();
 
+/** 朝上弹出，框用屏宽（列太窄不能左右飞） */
+const popoverMaxStyle = { maxWidth: "calc(100vw - 80px)", boxSizing: "border-box" } as const;
+const popoverContentStyle = { maxWidth: "100%", boxSizing: "border-box" } as const;
+
 /** 第四列悬停：标题 + 取整分钟；时长 ≤0 不写分钟 */
 function formatActualRangeTitle(range: Pick<ActualTimeRange, "title" | "start" | "end">): string {
   const mins = Math.round((range.end - range.start) / 60_000);
@@ -290,40 +329,33 @@ function formatRecordMarkText(mark: TaskRecordMark): string {
   return desc ? `${head}：${desc}` : head;
 }
 
-function recordMarkKey(mark: TaskRecordMark): string {
-  return `${mark.kind}-${mark.recordId}`;
+// 手机记录弹出：水平贴屏幕（不跟 trigger），垂直在 badge 上侧
+type MobilePopover = { text: string; placement: "above" | "below"; edge: number };
+const mobilePopover = ref<MobilePopover | null>(null);
+let mobilePopoverTimer: number | null = null;
+const FLIP_TOP = 96;
+const PANEL_GAP = 6;
+
+function closeMobilePopover() {
+  mobilePopover.value = null;
+  if (mobilePopoverTimer != null) {
+    window.clearTimeout(mobilePopoverTimer);
+    mobilePopoverTimer = null;
+  }
 }
 
-const activeRecordMarkPopoverKey = ref<string | null>(null);
-let recordMarkPopoverTimer: number | null = null;
-
-const clearRecordMarkPopoverTimer = () => {
-  if (recordMarkPopoverTimer != null) {
-    window.clearTimeout(recordMarkPopoverTimer);
-    recordMarkPopoverTimer = null;
-  }
-};
-
-const openRecordMarkPopoverFor3s = (key: string) => {
-  activeRecordMarkPopoverKey.value = key;
-  clearRecordMarkPopoverTimer();
-  recordMarkPopoverTimer = window.setTimeout(() => {
-    if (activeRecordMarkPopoverKey.value === key) {
-      activeRecordMarkPopoverKey.value = null;
-    }
-  }, 3000);
-};
-
-const handleUpdateRecordMarkPopoverShow = (key: string, nextShow: boolean) => {
-  if (nextShow) {
-    openRecordMarkPopoverFor3s(key);
-    return;
-  }
-  if (activeRecordMarkPopoverKey.value === key) {
-    activeRecordMarkPopoverKey.value = null;
-  }
-  clearRecordMarkPopoverTimer();
-};
+function onRecordMarkClick(e: MouseEvent, mark: TaskRecordMark) {
+  handleRecordMarkSelect(mark);
+  const hasText = mark.kind !== "interruption" || !!mark.description?.trim();
+  if (!hasText) return;
+  const text = mark.kind === "interruption" ? mark.description || "" : formatRecordMarkText(mark);
+  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+  const placement = rect.top < FLIP_TOP ? "below" : "above";
+  const edge = placement === "below" ? rect.bottom + PANEL_GAP : window.innerHeight - rect.top + PANEL_GAP;
+  mobilePopover.value = { text, placement, edge };
+  if (mobilePopoverTimer != null) window.clearTimeout(mobilePopoverTimer);
+  mobilePopoverTimer = window.setTimeout(closeMobilePopover, 3000);
+}
 
 const activeEmojiPopoverTodoId = ref<number | null>(null);
 let emojiPopoverTimer: ReturnType<typeof window.setTimeout> | null = null;
@@ -400,7 +432,7 @@ const handleUpdateActualPopoverShow = (key: string, nextShow: boolean) => {
 onUnmounted(() => {
   clearEmojiPopoverTimer();
   clearActualPopoverTimer();
-  clearRecordMarkPopoverTimer();
+  closeMobilePopover();
 });
 
 // ======= Helper Functions =======
@@ -759,8 +791,31 @@ const getPriorityBadgeClasses = (seg: any) => [
 .timetable-popover-text {
   margin: 0;
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
   word-break: break-word;
+  max-width: 100%;
+  box-sizing: border-box;
   color: var(--color-text-primary, #333);
+}
+
+/* 手机记录弹出：水平贴屏幕、垂直跟着 badge */
+.mp-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+}
+
+.mp-panel {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  z-index: 10001;
+  box-sizing: border-box;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: var(--color-bg-base, #fff);
+  color: var(--color-text-primary, #333);
+  box-shadow: 0 3px 14px rgba(0, 0, 0, 0.16);
 }
 
 /* ============================================
