@@ -1940,7 +1940,7 @@ const { startResize: startRightResize } = useResize(
 .planner-header-left {
   display: flex;
   align-items: center;
-  margin-left: 2px;
+  margin-left: 6px;
 }
 
 .marquee {
@@ -2178,7 +2178,9 @@ const { startResize: startRightResize } = useResize(
   .marquee-input {
     display: block;
   }
-
+  .middle-top {
+    padding-right: 0;
+  }
   .today-pomo,
   .total-pomo {
     font-size: 14px;
@@ -2212,6 +2214,11 @@ const { startResize: startRightResize } = useResize(
   }
   .planner-view-container {
     scrollbar-gutter: stable;
+    padding-left: 4px;
+  }
+  /* 显示左侧时刻表时，间距由 .left 右 padding 承担，避免双重间距 */
+  .left ~ .middle .planner-view-container {
+    padding-left: 0;
   }
 }
 
