@@ -6,6 +6,7 @@ import { useDataStore } from "@/stores/useDataStore";
 import { useSearchUiStore } from "@/stores/useSearchUiStore";
 import type { TabType } from "@/stores/useSearchUiStore";
 import { matchesActivityFilter } from "@/composables/filter/useActivityFilter";
+import { isLedgerDayStubActivity } from "@/core/ledger/ledgerDayStub";
 
 // 定义这个 composable 返回的行类型，这与 Search.vue 中的类型一致
 export type ActivityRow = {
@@ -37,9 +38,12 @@ export function useSearchFilter() {
 
     // 遍历所有原始活动
     for (const act of activeActivities.value) {
+      // 隐藏 ledger 日桶占位 Activity（统计追加行的挂载壳，非用户数据）
+      if (isLedgerDayStubActivity(act)) continue;
+
       // --- 筛选条件 1: 关键字搜索 (保持你原来的深入搜索逻辑) ---
       // ... 这部分逻辑完全不变 ...
-      const title = act.title || "（无标题）";
+      const title = act.title || "......";
       const relatedTask = taskByActivityId.value.get(act.id);
 
       let passedQuery = !q;

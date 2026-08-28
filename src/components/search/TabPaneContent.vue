@@ -188,15 +188,27 @@ const getDueDate = () => {
   flex-direction: row;
   flex-wrap: wrap;
   align-items: center;
+  align-content: flex-start;
   gap: 6px;
   width: 100%;
   min-width: 0;
+  /* 无 tag 时也占满 n-tag small 行高，星星上下居中位置与有 tag 时一致 */
+  min-height: 24px;
+}
+
+.meta-row-tags :deep(.tag-container) {
+  padding: 0;
+}
+
+.meta-row-tags :deep(.n-tag) {
+  --n-height: 24px;
 }
 
 /* 星标、标签管理按钮固定占位，不单独占满一行 */
 .meta-row-tags > .star-btn-placeholder,
 .meta-row-tags > .tag-manager-btn {
   flex: 0 0 auto;
+  height: 24px;
 }
 
 /* 根节点不设盒子：各 n-tag 与星标/按钮同属一层 flex，空间不够时只挤下多出来的 tag，不会整组换行 */
@@ -227,14 +239,14 @@ const getDueDate = () => {
 
 .star-btn-placeholder {
   width: 16px;
-  height: 16px;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .star-btn {
-  margin: 1px;
+  margin: 0;
 }
 
 .task-content {
