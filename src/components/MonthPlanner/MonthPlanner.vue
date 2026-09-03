@@ -49,9 +49,31 @@
               <div v-if="isMobile" class="day-stat day-stat--compact">
                 <span>🍅x{{ day.sumRealPomo }}</span>
                 <span>{{ formatWorkHoursCompact(day.sumWorkMs) }}</span>
+                <div class="day-life-icons">
+                  <n-icon
+                    v-for="icon in LIFE_STAT_ICONS"
+                    :key="icon.kind"
+                    :size="14"
+                    class="day-life-icon"
+                    :class="[`day-life-icon--${icon.kind}`, { 'day-life-icon--filled': day.lifePresent[icon.kind] }]"
+                  >
+                    <component :is="day.lifePresent[icon.kind] ? icon.filled : icon.regular" />
+                  </n-icon>
+                </div>
               </div>
               <div v-else class="day-stat day-stat--full">
                 <span>🍅 x {{ day.sumRealPomo }} | {{ formatWorkHours(day.sumWorkMs) }}</span>
+                <div class="day-life-icons">
+                  <n-icon
+                    v-for="icon in LIFE_STAT_ICONS"
+                    :key="icon.kind"
+                    :size="16"
+                    class="day-life-icon"
+                    :class="[`day-life-icon--${icon.kind}`, { 'day-life-icon--filled': day.lifePresent[icon.kind] }]"
+                  >
+                    <component :is="day.lifePresent[icon.kind] ? icon.filled : icon.regular" />
+                  </n-icon>
+                </div>
               </div>
             </template>
             <template v-else>
@@ -90,8 +112,8 @@
   </div>
 </template>
 <script setup lang="ts">
-import { computed, inject, ref } from "vue";
-import { NCard } from "naive-ui";
+import { computed, inject, ref, type Component } from "vue";
+import { NCard, NIcon } from "naive-ui";
 import type { Todo } from "@/core/types/Todo";
 import type { Schedule } from "@/core/types/Schedule";
 import TagRenderer from "../TagSystem/TagRenderer.vue";
@@ -106,16 +128,37 @@ import { calcTodoWorkMs, formatWorkHours, formatWorkHoursCompact } from "@/servi
 import { getDateKey } from "@/core/utils";
 import type { HolidayDisplay } from "@/services/planner/publicHolidays";
 import { plannerHolidayMapKey } from "@/composables/planner/usePublicHolidays";
+import { getPomoBadgeBgColor, getPomoColor, getStatsPomoBgColorHEX, mapPomoCountToColorRatio } from "@/core/utils/weekDays";
+import { getLifeRecordKind, type LifeRecordKind } from "@/core/lifeRecord";
 import {
-  getPomoBadgeBgColor,
-  getPomoColor,
-  getStatsPomoBgColorHEX,
-  mapPomoCountToColorRatio,
-} from "@/core/utils/weekDays";
+  Door20Filled,
+  Door20Regular,
+  Drop20Filled,
+  Drop20Regular,
+  FoodApple20Filled,
+  FoodApple20Regular,
+  WeatherMoon20Filled,
+  WeatherMoon20Regular,
+} from "@vicons/fluent";
 
 const settingStore = useSettingStore();
 const isTaskVisible = computed(() => settingStore.settings.showTask);
 const { isMobile } = useDevice();
+
+/** 统计格生活记录 icon：蓝/红/灰/黄 = 喝/吃/厕/睡 */
+const LIFE_STAT_ICONS: readonly {
+  kind: LifeRecordKind;
+  regular: Component;
+  filled: Component;
+}[] = [
+  { kind: "drink", regular: Drop20Regular, filled: Drop20Filled },
+  { kind: "eat", regular: FoodApple20Regular, filled: FoodApple20Filled },
+  { kind: "toilet", regular: Door20Regular, filled: Door20Filled },
+  { kind: "sleep", regular: WeatherMoon20Regular, filled: WeatherMoon20Filled },
+];
+
+type LifePresent = Record<LifeRecordKind, boolean>;
+const EMPTY_LIFE_PRESENT: LifePresent = { drink: false, eat: false, toilet: false, sleep: false };
 
 const emit = defineEmits<{
   "date-select": [timestamp: number];
@@ -159,7 +202,8 @@ type UnifiedItem = {
 };
 
 const dataStore = useDataStore();
-const { activeId, selectedRowId, todosForCurrentViewWithTags, schedulesForCurrentViewWithTags, selectedDate } = storeToRefs(dataStore);
+const { activeId, selectedRowId, todosForCurrentViewWithTags, schedulesForCurrentViewWithTags, selectedDate, todoList, activityById } =
+  storeToRefs(dataStore);
 const dateService = dataStore.dateService;
 
 const holidayMap = inject(plannerHolidayMapKey, ref<Record<string, HolidayDisplay>>({}));
@@ -182,6 +226,23 @@ const days = computed(() => {
   const calendarEnd = endOfWeek(monthEnd);
   // 计算日历天数
   const totalDays = Math.ceil((calendarEnd - calendarStart) / DAY_MS);
+
+  // 生活记录不在 todosForCurrentView* 里，单独按 todo.id 归属日扫一遍（统计格 icon 用）
+  const lifeByDay = new Map<number, LifePresent>();
+  for (const todo of todoList.value) {
+    if (todo.deleted) continue;
+    const kind = getLifeRecordKind(activityById.value.get(todo.activityId));
+    if (!kind) continue;
+    const dayStart = startOfDay(todo.id);
+    if (dayStart < calendarStart || dayStart > calendarEnd) continue;
+    let present = lifeByDay.get(dayStart);
+    if (!present) {
+      present = { ...EMPTY_LIFE_PRESENT };
+      lifeByDay.set(dayStart, present);
+    }
+    present[kind] = true;
+  }
+
   // 将 Todo 映射到统一结构
   const todoItems: UnifiedItem[] = (todosForCurrentViewWithTags.value || [])
     .map((t) => {
@@ -306,6 +367,7 @@ const days = computed(() => {
       pomoRatio: ratio,
       maxItems: maxItemsPerDay.value,
       holiday: holidayForTs(dayTs),
+      lifePresent: lifeByDay.get(dayTs) ?? EMPTY_LIFE_PRESENT,
     };
   });
   return result;
@@ -687,7 +749,7 @@ function getStatsBadgeBgColor(ratio: number): string {
   align-items: center;
   justify-content: center;
   flex: 1;
-  gap: 2px;
+  gap: 6px;
   font-size: 13px;
   line-height: 1.2;
   color: var(--color-text-primary);
@@ -698,16 +760,48 @@ function getStatsBadgeBgColor(ratio: number): string {
 .day-stat--compact {
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: center;
   flex: 1;
-  gap: 2px;
+  gap: 4px;
   font-size: 12px;
   line-height: 1.5;
   color: var(--color-text-primary);
   padding: 6px;
   white-space: nowrap;
   text-align: center;
+}
+
+.day-life-icons {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.day-life-icon {
+  color: var(--color-text-secondary);
+  opacity: 0.55;
+}
+
+.day-life-icon--filled {
+  opacity: 1;
+}
+
+.day-life-icon--drink.day-life-icon--filled {
+  color: var(--color-blue);
+}
+
+.day-life-icon--eat.day-life-icon--filled {
+  color: var(--color-red);
+}
+
+.day-life-icon--toilet.day-life-icon--filled {
+  color: var(--color-text-secondary);
+}
+
+.day-life-icon--sleep.day-life-icon--filled {
+  color: var(--color-yellow);
 }
 
 @media (max-width: 430px) {
