@@ -1456,8 +1456,6 @@ function onUpdateScheduleStatus(id: number, isChecked: boolean) {
     if (schedule.doneTime == undefined) {
       const now = new Date();
       doneTime = now.getTime();
-      schedule.synced = false;
-      schedule.lastModified = Date.now();
     }
   }
   updateScheduleStatus(id, doneTime, newStatus);
