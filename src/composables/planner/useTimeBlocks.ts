@@ -7,6 +7,11 @@ import { SPECIAL_PRIORITIES, getEmojiForPriority } from "@/core/priorityCategori
 import type { Block, PomodoroSegment, TodoSegment, ActualTimeRange } from "@/core/types/Block";
 import { generateActualTodoSegments, splitIndexPomoBlocksExSchedules } from "@/services/timer/pomoSegService";
 import { collectTaskRecordMarks, type TaskRecordMark } from "@/services/timetable/taskRecordMarks";
+import {
+  collectLifeRecordOverlays,
+  type LifePointMark,
+  type LifeSleepRange,
+} from "@/services/timetable/lifeRecordOverlays";
 import { useSegStore } from "@/stores/useSegStore";
 import { useTimeBlockDrag } from "./useTimeBlockDrag";
 import { storeToRefs } from "pinia";
@@ -67,6 +72,8 @@ interface UseTimeBlocksReturn {
   getActualTodoTimeRangeStyle: (range: ActualTimeRange) => CSSProperties; // 第四列：实际执行时间范围todo
   getActualScheduleTimeRangeStyle: (range: ActualTimeRange) => CSSProperties; // 第四列：实际执行时间范围schedule
   getRecordMarkStyle: (mark: TaskRecordMark) => CSSProperties;
+  getLifePointMarkStyle: (mark: LifePointMark) => CSSProperties;
+  getLifeSleepRangeStyle: (range: LifeSleepRange) => CSSProperties;
 
   // 计算属性
   scheduleSegmentsForSecondColumn: ComputedRef<ScheduleSegmentForSecondColumn[]>;
@@ -75,6 +82,8 @@ interface UseTimeBlocksReturn {
   actualTodoTimeRanges: ComputedRef<ActualTimeRange[]>;
   actualScheduleTimeRanges: ComputedRef<ActualTimeRange[]>;
   recordMarks: ComputedRef<TaskRecordMark[]>;
+  lifePointMarks: ComputedRef<LifePointMark[]>;
+  lifeSleepRanges: ComputedRef<LifeSleepRange[]>;
 
   // 工具函数
   firstNonDigitLetterWide: (s: string) => string;
@@ -111,6 +120,7 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
     schedulesForAppDate,
     todosForCurrentViewWithTaskRecords,
     schedulesForCurrentView,
+    todoList,
     todoById,
     scheduleById,
     activityById,
@@ -498,6 +508,91 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
     };
   }
 
+  // 生活记录 overlay：点事件第3列、睡眠第4列（不走 todosForAppDate，避免 tag 筛选漏掉）
+  const lifeRecordOverlays = computed(() => {
+    void now.value;
+    const px = props.effectivePxPerMinute;
+    const markH = 14;
+    return collectLifeRecordOverlays({
+      dayStart: props.dayStart,
+      dayEnd: dayEnd.value,
+      timeRange: props.timeRange,
+      todos: todoList.value,
+      getActivity: (id) => activityById.value.get(id),
+      getTask: (id) => taskById.value.get(id),
+      now: now.value,
+      minGapMs: isMobile.value ? 5 * 60_000 : px > 0 ? ((markH * 0.6) / px) * 60_000 : 60_000,
+    });
+  });
+  const lifePointMarks = computed(() => lifeRecordOverlays.value.points);
+  const lifeSleepRanges = computed(() => lifeRecordOverlays.value.sleeps);
+
+  function getLifePointMarkStyle(mark: LifePointMark): CSSProperties {
+    const markW = 14;
+    const markH = 14;
+    const topPx = ((mark.time - props.timeRange.start) / 60000) * props.effectivePxPerMinute - markH / 2;
+
+    let left: number;
+    let topExtra = 0;
+    if (isMobile.value) {
+      // 手机仍落在第3列，同刻 2 列换行
+      const col = mark.lane % 2;
+      const row = Math.floor(mark.lane / 2);
+      left = 40 + col * (markW + 1);
+      topExtra = row * (markH + 1);
+    } else {
+      // 桌面：第4列中心对齐（+1px 光学微调），同刻并排向右
+      const col4Left = 61;
+      const col4Width = 8;
+      const centerX = col4Left + col4Width / 2;
+      left = centerX - markW / 2 + 1 + mark.lane * (markW + 1);
+    }
+
+    return {
+      position: "absolute",
+      left: `${left}px`,
+      top: `${topPx + topExtra}px`,
+      width: `${markW}px`,
+      height: `${markH}px`,
+      color: mark.colorVar,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      zIndex: 14 + mark.lane,
+      cursor: "pointer",
+      userSelect: "none",
+    };
+  }
+
+  function getLifeSleepRangeStyle(range: LifeSleepRange): CSSProperties {
+    const startMinute = (range.start - props.timeRange.start) / 60000;
+    const endMinute = (range.end - props.timeRange.start) / 60000;
+    const topPx = startMinute * props.effectivePxPerMinute;
+    const heightPx = Math.max(2, (endMinute - startMinute) * props.effectivePxPerMinute);
+    const base: CSSProperties = {
+      position: "absolute",
+      left: isMobile.value ? "70px" : "61px",
+      width: isMobile.value ? "3px" : "8px",
+      top: `${topPx}px`,
+      height: `${heightPx}px`,
+      zIndex: range.ongoing ? 11 : 10,
+      cursor: "pointer",
+      borderRadius: range.ongoing ? "6px 6px 0 0" : "6px",
+      opacity: 0.55,
+      backgroundColor: "var(--color-background-dark)",
+      border: `${borderWidth}px solid var(--color-text-secondary)`,
+    };
+    if (range.ongoing) {
+      return {
+        ...base,
+        borderBottom: "none",
+        backgroundImage: "linear-gradient(to bottom, var(--color-background-dark), transparent)",
+        backgroundColor: "transparent",
+      };
+    }
+    return base;
+  }
+
   // ======= 计算属性 =======
   const actualSegments = computed(() => generateActualTodoSegments(todosForAppDate.value));
 
@@ -733,6 +828,8 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
     getActualTodoTimeRangeStyle,
     getActualScheduleTimeRangeStyle,
     getRecordMarkStyle,
+    getLifePointMarkStyle,
+    getLifeSleepRangeStyle,
 
     // 数据
     scheduleSegmentsForSecondColumn,
@@ -741,6 +838,8 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
     actualTodoTimeRanges,
     actualScheduleTimeRanges,
     recordMarks,
+    lifePointMarks,
+    lifeSleepRanges,
 
     // 工具
     firstNonDigitLetterWide,

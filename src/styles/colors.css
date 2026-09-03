@@ -12,6 +12,7 @@
   --color-red-light: #f5d2d9;
   --color-red-dark: #de576d;
   --color-red-transparent: rgba(214, 72, 100, 0.3);
+  --color-red-medium-transparent: rgba(214, 72, 100, 0.75);
   --color-red-light-transparent: rgba(245, 210, 217, 0.3);
   --color-red-dark-transparent: rgba(222, 87, 109, 0.3);
 
@@ -53,6 +54,8 @@
   --color-blue-medium: rgb(86, 158, 243);
   --color-blue-dark: #2080f0;
   --color-blue-transparent: rgba(64, 152, 252, 0.3);
+  --color-blue-soft-transparent: rgba(64, 152, 252, 0.15);
+  --color-blue-medium-transparent: rgba(64, 152, 252, 0.85);
   --color-blue-light-transparent: rgba(206, 227, 252, 0.3);
   --color-blue-dark-transparent: rgba(32, 128, 240, 0.3);
 
@@ -74,6 +77,7 @@
   --color-background-light-light: #f5f5f5;
   --color-text-primary-transparent: rgba(51, 54, 57, 0.3);
   --color-text-secondary-transparent: rgba(102, 102, 102, 0.3);
+  --color-text-secondary-medium-transparent: rgba(153, 153, 153, 0.85);
   --color-background-light-transparent: rgba(226, 226, 226, 0.2);
 
   /* 其他变量 */

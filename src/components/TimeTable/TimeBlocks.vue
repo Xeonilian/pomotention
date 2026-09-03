@@ -119,6 +119,18 @@
     </div>
   </template>
 
+  <!-- ========== 生活记录点事件（喝/吃/厕）：桌面第4列中心，手机第3列 ========== -->
+  <div
+    v-for="mark in lifePointMarks"
+    :key="`life-point-${mark.kind}-${mark.recordId}`"
+    class="life-point-mark"
+    :style="getLifePointMarkStyle(mark)"
+    :title="`${mark.title} ${timestampToTimeString(mark.time)}`"
+    @click="handleTodoSelect(mark.todoId)"
+  >
+    <n-icon :size="14" :component="lifePointIcon(mark.kind)" />
+  </div>
+
   <!-- ========== 第三列：特殊优先级 Emoji ========== -->
   <template v-for="emoji in specialPriorityEmojisForSecondColumn" :key="`special-emoji-${emoji.todoId}`">
     <NPopover
@@ -207,6 +219,17 @@
     @click="handleScheduleSelect(range.id)"
   ></div>
 
+  <!-- 第四列：睡眠生活记录浅灰条 -->
+  <div
+    v-for="range in lifeSleepRanges"
+    :key="`life-sleep-${range.recordId}`"
+    class="actual-time-range life-sleep-range"
+    :class="{ ongoing: range.ongoing }"
+    :style="getLifeSleepRangeStyle(range)"
+    :title="formatLifeSleepTitle(range)"
+    @click="handleTodoSelect(range.todoId)"
+  ></div>
+
   <!-- ========== 第五列：打扰 / 能量 / 奖励 ========== -->
   <template v-for="mark in recordMarks" :key="`mark-${mark.kind}-${mark.recordId}`">
     <NPopover
@@ -252,14 +275,16 @@
 </template>
 
 <script setup lang="ts">
-import { onUnmounted, ref } from "vue";
+import { onUnmounted, ref, type Component } from "vue";
 import { timestampToTimeString } from "@/core/utils";
 import type { ActualTimeRange, Block } from "@/core/types/Block";
 import type { TaskRecordMark } from "@/services/timetable/taskRecordMarks";
+import type { LifePointKind, LifeSleepRange } from "@/services/timetable/lifeRecordOverlays";
 import { getEnergyScoreEmoji, getRewardScoreEmoji } from "@/core/scoreEmojis";
 import { useTimeBlocks } from "@/composables/planner/useTimeBlocks";
 import { useDevice } from "@/composables/platform/useDevice";
-import { NPopover } from "naive-ui";
+import { NPopover, NIcon } from "naive-ui";
+import { Door20Filled, Drop20Filled, FoodApple20Filled } from "@vicons/fluent";
 
 // ======= Props =======
 const props = defineProps<{
@@ -286,12 +311,16 @@ const {
   getActualTodoTimeRangeStyle,
   getActualScheduleTimeRangeStyle,
   getRecordMarkStyle,
+  getLifePointMarkStyle,
+  getLifeSleepRangeStyle,
   scheduleSegmentsForSecondColumn,
   specialPriorityEmojisForSecondColumn,
   actualSegments,
   actualTodoTimeRanges,
   actualScheduleTimeRanges,
   recordMarks,
+  lifePointMarks,
+  lifeSleepRanges,
   firstNonDigitLetterWide,
   getScheduleTooltip,
   dragState,
@@ -304,6 +333,16 @@ const {
 
 const { isMobile } = useDevice();
 
+const LIFE_POINT_ICONS: Record<LifePointKind, Component> = {
+  drink: Drop20Filled,
+  eat: FoodApple20Filled,
+  toilet: Door20Filled,
+};
+
+function lifePointIcon(kind: LifePointKind): Component {
+  return LIFE_POINT_ICONS[kind];
+}
+
 /** 朝上弹出，框用屏宽（列太窄不能左右飞） */
 const popoverMaxStyle = { maxWidth: "calc(100vw - 80px)", boxSizing: "border-box" } as const;
 const popoverContentStyle = { maxWidth: "100%", boxSizing: "border-box" } as const;
@@ -313,6 +352,13 @@ function formatActualRangeTitle(range: Pick<ActualTimeRange, "title" | "start" |
   const mins = Math.round((range.end - range.start) / 60_000);
   if (mins <= 0) return range.title;
   return `${range.title} - ${mins}min`;
+}
+
+function formatLifeSleepTitle(range: LifeSleepRange): string {
+  const mins = Math.round((range.end - range.start) / 60_000);
+  const span = `${timestampToTimeString(range.start)}–${timestampToTimeString(range.end)}`;
+  if (mins <= 0) return `${range.title} ${span}`;
+  return `${range.title} ${span} · ${mins}min`;
 }
 
 function recordMarkEmoji(mark: TaskRecordMark): string {
