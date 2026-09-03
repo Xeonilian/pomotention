@@ -29,7 +29,7 @@ import {
 
 import { unifiedDateService } from "@/services/data/unifiedDateService";
 import { collectPomodoroData, collectTaskRecordData, aggregateByTime } from "@/services/chart/chartDataService";
-import { getLifeRecordDef, type LifeRecordKind } from "@/core/lifeRecord";
+import { getLifeRecordDef, isLifeRecordActivity, type LifeRecordKind } from "@/core/lifeRecord";
 import {
   appendLifeRecord,
   buildLifeRecordEntities,
@@ -365,6 +365,8 @@ export const useDataStore = defineStore(
         if (todo.deleted) continue;
         if (todo.id < start || todo.id >= end) continue;
         const activity = todo.activityId != null ? activityById.value.get(todo.activityId) : undefined;
+        // 生活记录不进 planner 常规行（day/week/month 共用此列表）
+        if (isLifeRecordActivity(activity)) continue;
         if (!matchesPlannerFilter(todo.activityId, activity?.tagIds)) continue;
         const relatedTask = todo.taskId != null ? taskById.value.get(todo.taskId) : undefined;
         out.push({
@@ -385,6 +387,8 @@ export const useDataStore = defineStore(
         if (todo.deleted) continue;
         if (todo.id < start || todo.id >= end) continue;
         const activity = todo.activityId != null ? activityById.value.get(todo.activityId) : undefined;
+        // 生活记录不进 planner 常规行（day/week/month 共用此列表）
+        if (isLifeRecordActivity(activity)) continue;
         if (!matchesPlannerFilter(todo.activityId, activity?.tagIds)) continue;
         out.push({
           ...todo,

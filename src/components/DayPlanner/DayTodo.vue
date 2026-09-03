@@ -895,12 +895,9 @@ const dayTodoSortButtonTitle = computed(() =>
 function toggleDayTodoSortMode() {
   settingStore.settings.dayTodoSortMode = dayTodoSortMode.value === "startTime" ? "priority" : "startTime";
 }
-// 生活记录行不进表格：按钮即录入入口、表单即管理页，行渲染无信息
+// 生活记录行已在 store 的 todosForCurrentView* 源头滤掉
 const sortedTodos = computed(() =>
-  sortTodosForDayDisplay(
-    todosForCurrentViewWithTaskRecords.value.filter((t) => !isLifeRecordActivity(dataStore.activityById.get(t.activityId))),
-    dayTodoSortMode.value,
-  ),
+  sortTodosForDayDisplay(todosForCurrentViewWithTaskRecords.value, dayTodoSortMode.value),
 );
 
 function openRankPopoverIfActive(todo: Todo) {
