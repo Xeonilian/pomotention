@@ -38,7 +38,11 @@
               </template>
             </n-button>
           </th>
-          <th class="col-start" :class="{ 'disabled-toggle': !selectedRowId }" :title="selectedRowId ? '点击填入当前时间' : '请先选中一行'">
+          <th
+            class="col-start"
+            :class="{ 'disabled-toggle': !selectedRowId || selectedIsLife }"
+            :title="!selectedRowId ? '请先选中一行' : selectedIsLife ? '生活记录在右侧表单改时间' : '点击填入当前时间'"
+          >
             <span v-if="selectedRowId && selectedTodoHasStartTime" class="header-time-pop-wrap" @click.stop>
               <n-popconfirm positive-text="确定" negative-text="取消" @positive-click="handleFillCurrentTimeStart">
                 <template #trigger>
@@ -57,7 +61,11 @@
               </n-icon>
             </span>
           </th>
-          <th class="col-end" :class="{ 'disabled-toggle': !selectedRowId }" :title="selectedRowId ? '点击填入当前时间' : '请先选中一行'">
+          <th
+            class="col-end"
+            :class="{ 'disabled-toggle': !selectedRowId || selectedIsLife }"
+            :title="!selectedRowId ? '请先选中一行' : selectedIsLife ? '生活记录在右侧表单改时间' : '点击填入当前时间'"
+          >
             <span v-if="selectedRowId && selectedTodoHasDoneTime" class="header-time-pop-wrap" @click.stop>
               <n-popconfirm positive-text="确定" negative-text="取消" @positive-click="handleFillCurrentTimeEnd">
                 <template #trigger>
@@ -266,7 +274,11 @@
                 :z-index="10001"
               >
                 <template #trigger>
-                  <span class="priority-badge" :class="'priority-' + todo.priority" @click.stop="openRankPopoverIfActive(todo)">
+                  <span
+                    class="priority-badge"
+                    :class="'priority-' + todo.priority"
+                    @click.stop="openRankPopoverIfActive(todo)"
+                  >
                     {{ getEmojiForPriority(todo.priority) || (todo.priority > 0 ? todo.priority : "") }}
                   </span>
                 </template>
@@ -554,6 +566,7 @@ import TagPickerPopover from "../TagSystem/TagPickerPopover.vue";
 import LedgerEntryPopover from "@/components/Ledger/LedgerEntryPopover.vue";
 import type { LedgerEntry } from "@/core/types/LedgerEntry";
 import { getTitleTagPickerMode, replaceTagTriggerWithCategory } from "@/core/ledger/parseLedgerSegments";
+import { isLifeRecordActivity } from "@/core/lifeRecord";
 import { softDeleteLedgerEntryWithTitle } from "@/services/ledger/ledgerService";
 import type { SelectOption } from "naive-ui";
 import { useDevice } from "@/composables/platform/useDevice";
@@ -608,6 +621,11 @@ function ledgerEntriesForTodo(todo: Todo): LedgerEntry[] {
   return ledgerEntriesByActivityId.value.get(todo.activityId) ?? [];
 }
 
+// 生活记录行不进表格，但激活表单时同步 watcher 会把 selectedRowId 指到它：表头快速录入需据此禁用
+function isLifeTodo(todo: Todo): boolean {
+  return isLifeRecordActivity(dataStore.activityById.get(todo.activityId));
+}
+
 function handleLedgerDelete(todo: Todo, entryId: number) {
   const currentTitle = todo.activityTitle ?? "";
   const { title } = softDeleteLedgerEntryWithTitle(ledgerList.value, entryId, currentTitle);
@@ -632,6 +650,12 @@ const selectedTodoHasDoneTime = computed(() => {
   const t = selectedTodo.value;
   if (!t) return false;
   return !!t.doneTime;
+});
+
+// 选中行是否生活记录：表头快速录入（起止时间/意图填充）对其禁用
+const selectedIsLife = computed(() => {
+  const t = selectedTodo.value;
+  return t ? isLifeTodo(t) : false;
 });
 
 // 判断果果是否可以切换（todo 不是 done 和 cancelled 状态）
@@ -871,8 +895,12 @@ const dayTodoSortButtonTitle = computed(() =>
 function toggleDayTodoSortMode() {
   settingStore.settings.dayTodoSortMode = dayTodoSortMode.value === "startTime" ? "priority" : "startTime";
 }
+// 生活记录行不进表格：按钮即录入入口、表单即管理页，行渲染无信息
 const sortedTodos = computed(() =>
-  sortTodosForDayDisplay(todosForCurrentViewWithTaskRecords.value, dayTodoSortMode.value),
+  sortTodosForDayDisplay(
+    todosForCurrentViewWithTaskRecords.value.filter((t) => !isLifeRecordActivity(dataStore.activityById.get(t.activityId))),
+    dayTodoSortMode.value,
+  ),
 );
 
 function openRankPopoverIfActive(todo: Todo) {
@@ -1458,7 +1486,7 @@ function startEditing(todoId: number, field: "title" | "start" | "done") {
 
 // 表头点击「开始」：给选中行填入当前时间（HH:mm）
 function handleFillCurrentTimeStart() {
-  if (!selectedRowId.value) return;
+  if (!selectedRowId.value || selectedIsLife.value) return;
   const now = new Date();
   const ts = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
   emit("edit-todo-start", selectedRowId.value, ts);
@@ -1620,7 +1648,7 @@ function tryInstantStartPomodoro(todo: Todo) {
 
 // 表头点击「结束」：给选中行填入当前时间（HH:mm）
 function handleFillCurrentTimeEnd() {
-  if (!selectedRowId.value) return;
+  if (!selectedRowId.value || selectedIsLife.value) return;
   const now = new Date();
   const ts = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
   emit("edit-todo-done", selectedRowId.value, ts);
@@ -1628,7 +1656,7 @@ function handleFillCurrentTimeEnd() {
 
 // 将当前选中待办的意图同步到任务备注
 function handleFillCurrentTitle() {
-  if (!selectedRowId.value) return;
+  if (!selectedRowId.value || selectedIsLife.value) return;
   const todo = todosForCurrentViewWithTaskRecords.value.find((t) => t.id === selectedRowId.value);
   if (!todo) return;
   const taskId = selectedTaskId.value;

@@ -5,6 +5,9 @@
     :class="{ 'is-pseudo-fullscreen': isTaskContainerFullscreen, 'is-ios-device': isIOSDevice }"
     ref="taskViewContainerRef"
   >
+    <!-- 生活记录行：整区替换为专用表单（隐藏 tags 时间轴 / 能量按钮 / markdown） -->
+    <LifeRecordForm v-if="lifeRecordKind && selectedTask" :task-id="selectedTask.id" :kind="lifeRecordKind" />
+    <template v-else>
     <div class="task-header-container" ref="headerContainerRef">
       <n-button
         v-if="isMobile"
@@ -137,6 +140,7 @@
         @update:is-editing="onTaskRecordIsEditing"
       />
     </div>
+    </template>
 
     <!-- 手机记录弹出：水平贴屏幕、不跟 trigger；垂直在 badge 上侧 -->
     <Teleport to="body">
@@ -159,6 +163,7 @@ import { storeToRefs } from "pinia";
 import type { Component } from "vue";
 import { NPopover } from "naive-ui";
 import type { EnergyRecord, RewardRecord, InterruptionRecord } from "@/core/types/Task";
+import { getLifeRecordKind } from "@/core/lifeRecord";
 import { useTaskTrackerStore } from "@/stores/useTaskTrackerStore";
 import { useDataStore } from "@/stores/useDataStore";
 import { useDevice } from "@/composables/platform/useDevice";
@@ -170,6 +175,7 @@ const settingStore = useSettingStore();
 const TaskButtons = defineAsyncComponent<Component>(() => import("@/components/TaskTracker/TaskButtons.vue"));
 const TaskRecord = defineAsyncComponent<Component>(() => import("@/components/TaskTracker/TaskRecord.vue"));
 const TagRenderer = defineAsyncComponent<Component>(() => import("@/components/TagSystem/TagRenderer.vue"));
+const LifeRecordForm = defineAsyncComponent<Component>(() => import("@/components/LifeRecord/LifeRecordForm.vue"));
 
 const emit = defineEmits<{
   (e: "taskRecordEditing", value: boolean): void;
@@ -210,6 +216,13 @@ const { isMobile } = useDevice();
 const { selectedTaskId, selectedTask, selectedTagIds, isStarred } = storeToRefs(taskTrackerStore);
 const { updateTaskDescription, handleEnergyRecord, handleRewardRecord, handleInterruptionRecord, handleRemoveTaskRecord, handleStar } =
   taskTrackerStore;
+
+// 生活记录行：selectedTask → 所属 activity 的系统 tag 判定 kind；命中则整区替换为表单
+const lifeRecordKind = computed(() => {
+  const t = selectedTask.value;
+  if (!t) return null;
+  return getLifeRecordKind(dataStore.activityById.get(t.sourceId));
+});
 
 const isTaskContainerFullscreen = ref(false);
 const isPseudoFullscreen = ref(false);

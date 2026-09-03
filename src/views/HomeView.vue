@@ -127,6 +127,7 @@
             <div class="button-group">
               <HomeTagFilterPopover />
               <LedgerAggregatePopover />
+              <LifeRecordButtons />
 
               <n-button
                 title="重复活动"
@@ -364,6 +365,7 @@ import { useVisualViewportKeyboard } from "@/composables/layout/useVisualViewpor
 import IcsExportModal from "@/components/DayPlanner/IcsExportModal.vue";
 import HomeTagFilterPopover from "@/components/TagSystem/HomeTagFilterPopover.vue";
 import LedgerAggregatePopover from "@/components/Ledger/LedgerAggregatePopover.vue";
+import LifeRecordButtons from "@/components/LifeRecord/LifeRecordButtons.vue";
 import MobileHomeFab from "@/components/platform/MobileHomeFab.vue";
 import { useTagStore } from "@/stores/useTagStore";
 import {

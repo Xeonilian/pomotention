@@ -123,6 +123,13 @@ export const useTagStore = defineStore("tagStore", () => {
     return newTag;
   }
 
+  /** 幂等确保固定 id 的系统 tag 存在（生活记录等专用 tag，缺则补建并待同步） */
+  function ensureSystemTag(tag: Tag) {
+    if (rawTags.value.some((t) => t.id === tag.id)) return;
+    rawTags.value.push({ ...tag, lastModified: Date.now(), synced: false });
+    scheduleDebouncedCloudUpload();
+  }
+
   /**
    * 更新一个 tag 的信息。
    * 所有更新都会自动将 `synced` 设为 false 并更新 `lastModified`。
@@ -274,6 +281,7 @@ export const useTagStore = defineStore("tagStore", () => {
     // Actions
     clearData,
     addTag,
+    ensureSystemTag,
     updateTagById,
     removeTag,
     loadInitialTags,

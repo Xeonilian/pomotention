@@ -29,6 +29,15 @@ import {
 
 import { unifiedDateService } from "@/services/data/unifiedDateService";
 import { collectPomodoroData, collectTaskRecordData, aggregateByTime } from "@/services/chart/chartDataService";
+import { getLifeRecordDef, type LifeRecordKind } from "@/core/lifeRecord";
+import {
+  appendLifeRecord,
+  buildLifeRecordEntities,
+  buildLifeRecordTask,
+  findLifeRecordTodoForDay,
+  removeLifeRecord,
+} from "@/services/lifeRecord/lifeRecordService";
+import { handleDeleteActivity } from "@/services/activity/activityService";
 import { useTagStore } from "./useTagStore";
 import { useTemplateStore } from "./useTemplateStore";
 import { useDisplayedTaskStore } from "./useDisplayedTaskStore";
@@ -701,6 +710,81 @@ export const useDataStore = defineStore(
       scheduleDebouncedCloudUpload();
     }
 
+    /**
+     * 生活记录 +1：当前显示日该 kind 无行则懒创建三件套（activity/todo/task），再追加一条记录。
+     * 归属日 = dateService 当前显示日；默认时刻 = 显示日 + 当前时分（补记昨天即昨天的这个点）。
+     */
+    function recordLifeRecord(kind: LifeRecordKind): void {
+      const def = getLifeRecordDef(kind);
+      tagStore.ensureSystemTag({
+        id: def.tagId,
+        name: def.title,
+        color: def.tagColor,
+        backgroundColor: def.tagBackgroundColor,
+        deleted: false,
+        synced: false,
+        lastModified: Date.now(),
+      });
+
+      const dayStart = dateService.appDateTimestamp.value;
+      const at = dateService.combineDateAndTime(dayStart, Date.now());
+
+      let task: Task | undefined;
+      const existingTodo = findLifeRecordTodoForDay(todoList.value, activityById.value, kind, dayStart);
+
+      if (existingTodo) {
+        task = taskByActivityId.value.get(existingTodo.activityId);
+        if (!task) {
+          // 行在但 task 缺失（旧数据/异常），补建
+          task = buildLifeRecordTask(existingTodo.activityId, existingTodo.activityTitle);
+          taskList.value = [...taskList.value, task];
+        }
+      } else {
+        const entities = buildLifeRecordEntities(kind, at);
+        activityList.value.push(entities.activity);
+        taskList.value = [...taskList.value, entities.task];
+        todoList.value.push(entities.todo);
+        task = entities.task;
+        saveActivities(activityList.value);
+        saveTodos(todoList.value);
+      }
+
+      // 每次点击：右侧激活记录表单（生活记录行不进 planner 表格，不碰选中态）
+      displayStore.pushTaskId(task.id);
+
+      // 追加记录（sleep 未闭合时本次视为「醒了」）；updateTaskById 内含 saveTasks + 云上传
+      const { next } = appendLifeRecord(task.lifeRecords, kind, at);
+      updateTaskById(task.id, { lifeRecords: next });
+      scheduleDebouncedCloudUpload();
+    }
+
+    /**
+     * 删除生活记录单条；删空时整行级联软删（activity/todo/task），并清掉选中与展示态
+     */
+    function removeLifeRecordAt(taskId: number, recordId: number): void {
+      const task = taskList.value.find((t) => t.id === taskId);
+      if (!task) return;
+      const next = removeLifeRecord(task.lifeRecords, recordId);
+      if (!next) return;
+      if (next.length > 0) {
+        updateTaskById(taskId, { lifeRecords: next });
+        return;
+      }
+      // 删空：复用活动删除的关联清理，整行软删
+      handleDeleteActivity(
+        activityList.value,
+        todoList.value,
+        scheduleList.value,
+        taskList.value,
+        task.sourceId,
+        { activityById: activityById.value, childrenByParentId: childrenOfActivity.value },
+        ledgerList.value,
+      );
+      cleanSelection();
+      displayStore.snapToEmptySlot();
+      saveAllNow();
+    }
+
     function setActiveId(id: number | null) {
       activeId.value = id;
     }
@@ -1156,6 +1240,8 @@ export const useDataStore = defineStore(
       hasStarredTaskForActivity,
       cleanSelection,
       addActivity,
+      recordLifeRecord,
+      removeLifeRecordAt,
       setActiveId,
       setSelectedDate,
       setTaskStar,
