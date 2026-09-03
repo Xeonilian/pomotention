@@ -12,12 +12,20 @@
  * 4. 否则（包含关系 / 轻微交叠）→ 最长条全宽作底；其余按开始时间排在右侧 1/3 区域叠放，叠放簇内最多 3 列
  * 5. schedule 且为底条（column 0）→ 渲染强制全宽
  */
-import { computed, unref, type MaybeRef } from "vue";
+import { computed, unref, type MaybeRef, type CSSProperties } from "vue";
 import type { WeekBlockItem } from "@/core/types/Week";
 import { useWeekData } from "@/composables/planner/useWeekData";
 import { getItemWeekRange, getHour, startOfDay } from "@/core/utils/weekDays";
 import { useDevice } from "@/composables/platform/useDevice";
+import { storeToRefs } from "pinia";
+import { useDataStore } from "@/stores/useDataStore";
+import {
+  collectLifeRecordOverlays,
+  type LifePointMark,
+  type LifeSleepRange,
+} from "@/services/timetable/lifeRecordOverlays";
 
+const DAY_MS = 24 * 60 * 60 * 1000;
 const BASE_PX_PER_HOUR = 40;
 /** 低于此交叠时长不计为重叠 */
 const MIN_OVERLAP_MS = 5 * 60 * 1000;
@@ -32,12 +40,41 @@ const MIN_OVERLAP_RATIO_FOR_COLUMNS = 0.2;
 
 export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targetHeight?: MaybeRef<number>) {
   const { isMobile } = useDevice();
+  const dataStore = useDataStore();
+  const { todoList, activityById, taskById } = storeToRefs(dataStore);
   /** 叠放区总宽：随 viewport / 设备形态更新，避免模块加载时定死 */
   const overlayWidthPct = computed(() => (isMobile.value ? OVERLAY_ZONE_PCT : 70));
+
+  /** 每天生活记录（未醒睡眠铺到入睡日日末）；先于时间轴范围计算，用于撑开下沿 */
+  const lifeOverlaysByDay = computed(() => {
+    const now = Date.now();
+    const map = new Map<number, { points: LifePointMark[]; sleeps: LifeSleepRange[] }>();
+    for (const day of days.value) {
+      const dayStart = day.startTs;
+      const dayEnd = dayStart + DAY_MS;
+      map.set(
+        day.index,
+        collectLifeRecordOverlays({
+          dayStart,
+          dayEnd,
+          timeRange: { start: dayStart, end: dayEnd },
+          todos: todoList.value,
+          getActivity: (id) => activityById.value.get(id),
+          getTask: (id) => taskById.value.get(id),
+          now,
+          minGapMs: 5 * 60_000,
+          openSleepEnd: "dayOfStart",
+        }),
+      );
+    }
+    return map;
+  });
 
   const unifiedTimeRange = computed(() => {
     let minHour = 24;
     let maxHour = 0;
+    /** 本周最早醒来的时间戳；无醒来则为 null，不改上沿 */
+    let earliestWakeTs: number | null = null;
 
     for (const day of days.value) {
       for (const item of day.items) {
@@ -61,6 +98,34 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targe
           if (maxHour < 24) maxHour = 24;
         }
       }
+
+      // 入睡撑开下沿；醒来决定上沿。跨日早晨段从 0 点起，绝不能把轴顶拉到 0
+      const life = lifeOverlaysByDay.value.get(day.index);
+      if (!life) continue;
+      for (const sleep of life.sleeps) {
+        // 当日真实入睡点（非日初跨日截）才参与下沿
+        if (sleep.start > day.startTs) {
+          const startH = getHour(sleep.start);
+          const startM = new Date(sleep.start).getMinutes();
+          const startCeil = startM > 0 ? startH + 1 : startH;
+          if (startCeil > maxHour) maxHour = startCeil;
+        }
+
+        if (sleep.end >= day.startTs + DAY_MS) {
+          maxHour = 24;
+        } else {
+          const endH = getHour(sleep.end);
+          const endM = new Date(sleep.end).getMinutes();
+          const endCeil = endM > 0 ? endH + 1 : endH;
+          if (endCeil > maxHour) maxHour = endCeil;
+          if (earliestWakeTs == null || sleep.end < earliestWakeTs) earliestWakeTs = sleep.end;
+        }
+      }
+      for (const point of life.points) {
+        // 点事件只参与下沿，不撑上沿（避免把「醒点上方 1 格」撑成两格）
+        const h = getHour(point.time);
+        if (h + 1 > maxHour) maxHour = Math.min(h + 1, 24);
+      }
     }
 
     if (minHour === 24 && maxHour === 0) {
@@ -71,8 +136,20 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targe
     minHour = Math.floor(minHour);
     maxHour = Math.min(Math.ceil(maxHour), 24);
 
+    let startHour: number;
+    if (earliestWakeTs != null) {
+      // 醒点向上取整到小时再 −1：5:30→5，整点 8:00→7（上方恰留 1 格）；不受默认 6 压制
+      const d = new Date(earliestWakeTs);
+      const wakeFrac = d.getHours() + d.getMinutes() / 60 + d.getSeconds() / 3600;
+      startHour = Math.max(0, Math.ceil(wakeFrac) - 1);
+      // 更早的普通活动仍可再往上抬
+      if (minHour < startHour) startHour = minHour;
+    } else {
+      startHour = minHour < 6 ? minHour : 6;
+    }
+
     return {
-      startHour: minHour < 6 ? minHour : 6,
+      startHour,
       endHour: maxHour > 22 ? maxHour : 22,
     };
   });
@@ -332,11 +409,61 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targe
     return relativeHour * pxPerHour.value;
   };
 
+  /** 时刻相对当日 0 点的小时数；日末（次日 0 点）记为 24 */
+  function hourOffsetInDay(ts: number, dayStartTs: number): number {
+    if (ts >= dayStartTs + DAY_MS) return 24;
+    if (ts <= dayStartTs) return 0;
+    const d = new Date(ts);
+    return d.getHours() + d.getMinutes() / 60 + d.getSeconds() / 3600;
+  }
+
+  function getLifeSleepBandStyle(sleep: LifeSleepRange, dayStartTs: number): CSSProperties {
+    const range = unifiedTimeRange.value;
+    const startH = hourOffsetInDay(sleep.start, dayStartTs);
+    const endH = hourOffsetInDay(sleep.end, dayStartTs);
+    const top = (startH - range.startHour) * pxPerHour.value;
+    const height = Math.max((endH - startH) * pxPerHour.value, 2);
+    return {
+      position: "absolute",
+      left: "0",
+      width: "100%",
+      top: `${top}px`,
+      height: `${height}px`,
+      backgroundColor: "var(--color-blue-soft-transparent)",
+      zIndex: 1,
+      cursor: "pointer",
+    };
+  }
+
+  function getLifePointStyle(mark: LifePointMark, dayStartTs: number): CSSProperties {
+    const range = unifiedTimeRange.value;
+    const h = hourOffsetInDay(mark.time, dayStartTs);
+    const top = (h - range.startHour) * pxPerHour.value - 7;
+    const left = 2 + mark.lane * 15;
+    return {
+      position: "absolute",
+      left: `${left}px`,
+      top: `${top}px`,
+      width: "14px",
+      height: "14px",
+      color: mark.colorVar,
+      zIndex: 5 + mark.lane,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      cursor: "pointer",
+      userSelect: "none",
+    };
+  }
+
   return {
     layoutedWeekBlocks,
     hourStamps,
     timeGridHeight,
     getItemBlockStyle,
     getHourTickTop,
+    lifeOverlaysByDay,
+    getLifeSleepBandStyle,
+    getLifePointStyle,
   };
 }

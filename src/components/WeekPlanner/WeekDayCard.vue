@@ -30,6 +30,16 @@
     <div class="items">
       <!-- 时间轴网格容器（始终显示） -->
       <div class="time-grid-container" :style="{ height: timeGridHeight + 'px' }">
+        <!-- 生活记录：睡眠蓝底（在块下方） -->
+        <div
+          v-for="sleep in lifeOverlay?.sleeps || []"
+          :key="`life-sleep-${sleep.recordId}`"
+          class="week-life-sleep"
+          :style="getLifeSleepBandStyle(sleep, day.startTs)"
+          :title="sleep.title"
+          @click.stop="emit('item-change', sleep.todoId, undefined, sleep.taskId)"
+        ></div>
+
         <!-- 小时刻度线（始终显示） -->
         <div class="hour-ticks">
           <div
@@ -61,6 +71,18 @@
             @item-change="handleItemChange"
           />
         </template>
+
+        <!-- 生活记录：喝/吃/厕点标 -->
+        <div
+          v-for="mark in lifeOverlay?.points || []"
+          :key="`life-point-${mark.kind}-${mark.recordId}`"
+          class="week-life-point"
+          :style="getLifePointStyle(mark, day.startTs)"
+          :title="mark.title"
+          @click.stop="emit('item-change', mark.todoId, undefined, mark.taskId)"
+        >
+          <n-icon :size="14" :component="lifePointIcon(mark.kind)" />
+        </div>
       </div>
 
       <!-- 统计信息（置于时间网格外，避免被 overflow:hidden 裁切） -->
@@ -79,8 +101,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, inject, ref } from "vue";
-import { NCard } from "naive-ui";
+import { computed, inject, ref, type Component, type CSSProperties } from "vue";
+import { NCard, NIcon } from "naive-ui";
 import type { DayItem } from "@/core/types/Week";
 import type { WeekBlockItem as WeekBlockItemType } from "@/core/types/Week";
 import WeekBlockItem from "./WeekBlockItem.vue";
@@ -92,11 +114,24 @@ import { useDataStore } from "@/stores/useDataStore";
 import { storeToRefs } from "pinia";
 import { useDevice } from "@/composables/platform/useDevice";
 import { createTouchScheduledSingleAndDouble } from "@/composables/platform/useTouchScheduledSingleAndDouble";
+import type { LifePointKind, LifePointMark, LifeSleepRange } from "@/services/timetable/lifeRecordOverlays";
+import { Door20Filled, Drop20Filled, FoodApple20Filled } from "@vicons/fluent";
+
 const { isMobile } = useDevice();
 const dataStore = useDataStore();
 const { selectedDate } = storeToRefs(dataStore);
 
 const holidayMap = inject(plannerHolidayMapKey, ref<Record<string, HolidayDisplay>>({}));
+
+const LIFE_POINT_ICONS: Record<LifePointKind, Component> = {
+  drink: Drop20Filled,
+  eat: FoodApple20Filled,
+  toilet: Door20Filled,
+};
+
+function lifePointIcon(kind: LifePointKind): Component {
+  return LIFE_POINT_ICONS[kind];
+}
 
 // 定义两种返回类型的联合类型
 type WeekBlockStyle =
@@ -117,9 +152,12 @@ const props = defineProps<{
   timeGridHeight: number;
   hourStamps: number[];
   layoutedWeekBlocks: Map<number, WeekBlockItemType[]>;
+  lifeOverlay?: { points: LifePointMark[]; sleeps: LifeSleepRange[] };
   MAX_PER_DAY: number;
   getHourTickTop: (hour: number) => number;
   getItemBlockStyle: (block: WeekBlockItemType, dayStartTs: number) => WeekBlockStyle;
+  getLifeSleepBandStyle: (sleep: LifeSleepRange, dayStartTs: number) => CSSProperties;
+  getLifePointStyle: (mark: LifePointMark, dayStartTs: number) => CSSProperties;
 }>();
 
 const holidayForDay = computed(() => holidayMap.value[getDateKey(props.day.startTs)] ?? null);
@@ -257,7 +295,7 @@ const handleItemChange = (id: number, _ts: number, activityId?: number, taskId?:
 
 .date:hover {
   cursor: pointer;
-  background-color: var(--color-blue-transparent);
+  background-color: var(--color-yellow-transparent);
   color: var(--color-blue);
 }
 
@@ -276,6 +314,15 @@ const handleItemChange = (id: number, _ts: number, activityId?: number, taskId?:
   width: 100%;
 
   overflow: hidden;
+}
+
+.week-life-sleep {
+  border-radius: 2px;
+  pointer-events: auto;
+}
+
+.week-life-point {
+  pointer-events: auto;
 }
 
 /* 小时刻度线 */

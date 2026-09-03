@@ -10,9 +10,12 @@
         :time-grid-height="timeGridHeight"
         :hour-stamps="hourStamps"
         :layouted-week-blocks="layoutedWeekBlocks"
+        :life-overlay="lifeOverlaysByDay.get(day.index)"
         :MAX_PER_DAY="MAX_PER_DAY"
         :get-hour-tick-top="getHourTickTop"
         :get-item-block-style="getItemBlockStyle"
+        :get-life-sleep-band-style="getLifeSleepBandStyle"
+        :get-life-point-style="getLifePointStyle"
         @date-select="handleDateSelect"
         @date-select-day-view="handleDateSelectDayView"
         @item-change="handleItemSelect"
@@ -74,7 +77,8 @@ onUnmounted(() => {
 
 // 2. 组合式函数调用（传递响应式的targetHeight ref）
 const { days, MAX_PER_DAY } = useWeekData();
-const { layoutedWeekBlocks, hourStamps, timeGridHeight, getItemBlockStyle, getHourTickTop } = useWeekBlock(days, targetHeight);
+const { layoutedWeekBlocks, hourStamps, timeGridHeight, getItemBlockStyle, getHourTickTop, lifeOverlaysByDay, getLifeSleepBandStyle, getLifePointStyle } =
+  useWeekBlock(days, targetHeight);
 
 // 3. 常量定义
 const dayNames = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
