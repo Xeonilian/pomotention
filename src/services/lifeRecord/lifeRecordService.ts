@@ -3,7 +3,8 @@
 import type { Activity } from "@/core/types/Activity";
 import type { Todo } from "@/core/types/Todo";
 import type { LifeRecord, Task } from "@/core/types/Task";
-import { getLifeRecordDef, getLifeRecordKind, type LifeRecordKind } from "@/core/lifeRecord";
+import { getDayStartTimestamp } from "@/core/utils";
+import { getLifeRecordDef, getLifeRecordKind, lifeRecordPlaceholderTitle, type LifeRecordKind } from "@/core/lifeRecord";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -46,11 +47,13 @@ export function buildLifeRecordTask(activityId: number, title: string): Task {
 /** 构造 lifeRecord 三件套；activity.id 与 todo.id 统一用记录时刻 at，保证落在显示日 */
 export function buildLifeRecordEntities(kind: LifeRecordKind, at: number): { activity: Activity; todo: Todo; task: Task } {
   const def = getLifeRecordDef(kind);
+  const dayStart = getDayStartTimestamp(at);
+  const placeholder = lifeRecordPlaceholderTitle(kind, dayStart);
 
-  // title 留空：行上靠排序列的 kind emoji 识别（中文名在 tag 与表单标题里）；创建即 done，不占活动列表
+  // activity / todo / task 标题统一 daily_<kind>_<日零点>；不进活动列表靠 status=done；不进 planner/Search 靠 tag + 标题规则
   const activity: Activity = {
     id: at,
-    title: "",
+    title: placeholder,
     class: "T",
     parentId: null,
     tagIds: [def.tagId],
@@ -60,13 +63,13 @@ export function buildLifeRecordEntities(kind: LifeRecordKind, at: number): { act
     lastModified: Date.now(),
   };
 
-  const task = buildLifeRecordTask(activity.id, "");
+  const task = buildLifeRecordTask(activity.id, placeholder);
   activity.taskId = task.id;
 
   const todo: Todo = {
     id: at,
     activityId: activity.id,
-    activityTitle: "",
+    activityTitle: placeholder,
     taskId: task.id,
     status: "done",
     priority: 0,

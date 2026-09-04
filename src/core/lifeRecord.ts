@@ -2,6 +2,7 @@
 // 生活记录（lifeRecord）领域常量与 tag 判定：core 层，无 Vue 依赖
 import type { Activity } from "@/core/types/Activity";
 import { TAG_ID_LIFE_DRINK, TAG_ID_LIFE_EAT, TAG_ID_LIFE_TOILET, TAG_ID_LIFE_SLEEP } from "@/core/constants";
+import { dailyPlaceholderTitle } from "@/core/dailyPlaceholder";
 
 export type LifeRecordKind = "drink" | "eat" | "toilet" | "sleep";
 
@@ -28,6 +29,11 @@ const KIND_BY_TAG_ID = new Map(LIFE_RECORD_DEFS.map((d) => [d.tagId, d.kind]));
 
 export function getLifeRecordDef(kind: LifeRecordKind): LifeRecordDef {
   return DEF_BY_KIND.get(kind)!;
+}
+
+/** task/todo/activity 占位：daily_eat_<当日零点>，便于裸数据辨认 */
+export function lifeRecordPlaceholderTitle(kind: LifeRecordKind, dayStartTs: number): string {
+  return dailyPlaceholderTitle(kind, dayStartTs);
 }
 
 /** 从 tagIds 判定生活记录 kind；非生活记录返回 null */

@@ -96,12 +96,13 @@ describe("buildLifeRecordEntities", () => {
     expect(todo.priority).toBe(0);
   });
 
-  it("创建即 done 且 title 留空（不占活动列表，识别靠排序列 emoji）", () => {
-    const { activity, todo } = buildLifeRecordEntities("drink", IN_DAY);
+  it("创建即 done；title / activityTitle 均为 daily_kind_日零点", () => {
+    const { activity, todo, task } = buildLifeRecordEntities("drink", IN_DAY);
     expect(activity.status).toBe("done");
     expect(todo.status).toBe("done");
-    expect(activity.title).toBe("");
-    expect(todo.activityTitle).toBe("");
+    expect(activity.title).toBe(`daily_drink_${DAY_START}`);
+    expect(todo.activityTitle).toBe(`daily_drink_${DAY_START}`);
+    expect(task.activityTitle).toBe(`daily_drink_${DAY_START}`);
   });
 
   it("buildLifeRecordTask 兜底补建", () => {
