@@ -165,7 +165,7 @@ const LIFE_STAT_ICONS: readonly {
   { kind: "sleep", regular: WeatherMoon20Regular, filled: WeatherMoon20Filled },
 ];
 
-/** 统计格 icon 可点开选中对应生活记录（仅 item-change，不改日） */
+/** 统计格 icon：可点开切日并选中对应生活记录 */
 type LifeIconRef = { todoId: number; activityId: number; taskId?: number };
 type LifeByKind = Partial<Record<LifeRecordKind, LifeIconRef>>;
 const EMPTY_LIFE_BY_KIND: LifeByKind = {};
