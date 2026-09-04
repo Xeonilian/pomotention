@@ -606,7 +606,7 @@ function getStatsBadgeBgColor(ratio: number): string {
   font-weight: 600;
   padding: 2px 2px 0 0;
   overflow: hidden;
-  text-overflow: ellipsis;
+
   white-space: nowrap;
   color: var(--color-red);
 }
