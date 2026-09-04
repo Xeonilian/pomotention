@@ -46,14 +46,14 @@
           </div>
           <div class="items">
             <template v-if="props.showStatsOnly">
-              <div v-if="isMobile" class="day-stat day-stat--compact">
-                <span>🍅x{{ day.sumRealPomo }}</span>
+              <div v-if="isMobile" class="day-stat--compact">
+                <span>🍅{{ day.sumRealPomo }}</span>
                 <span>{{ formatWorkHoursCompact(day.sumWorkMs) }}</span>
                 <div class="day-life-icons">
                   <n-icon
                     v-for="icon in LIFE_STAT_ICONS"
                     :key="icon.kind"
-                    :size="14"
+                    :size="11"
                     class="day-life-icon"
                     :class="[`day-life-icon--${icon.kind}`, { 'day-life-icon--filled': day.lifePresent[icon.kind] }]"
                   >
@@ -61,7 +61,7 @@
                   </n-icon>
                 </div>
               </div>
-              <div v-else class="day-stat day-stat--full">
+              <div v-else class="day-stat--full">
                 <span>🍅 x {{ day.sumRealPomo }} | {{ formatWorkHours(day.sumWorkMs) }}</span>
                 <div class="day-life-icons">
                   <n-icon
@@ -765,7 +765,7 @@ function getStatsBadgeBgColor(ratio: number): string {
   flex: 1;
   gap: 4px;
   font-size: 12px;
-  line-height: 1.5;
+  line-height: 1.2;
   color: var(--color-text-primary);
   padding: 6px;
   white-space: nowrap;
@@ -805,6 +805,9 @@ function getStatsBadgeBgColor(ratio: number): string {
 }
 
 @media (max-width: 430px) {
+  .day-life-icons {
+    gap: 0px;
+  }
   .header-card,
   .day-card {
     border: 0.5px solid var(--color-background-dark);
