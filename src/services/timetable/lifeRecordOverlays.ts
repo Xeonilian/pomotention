@@ -36,7 +36,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const POINT_COLOR: Record<LifePointKind, string> = {
   drink: "var(--color-blue-medium-transparent)",
   eat: "var(--color-red-medium-transparent)",
-  toilet: "var(--color-text-secondary)",
+  toilet: "var(--color-text-secondary-medium-transparent)",
 };
 
 function clampRange(start: number, end: number, rangeStart: number, rangeEnd: number): { start: number; end: number } | null {
@@ -113,17 +113,7 @@ export function collectLifeRecordOverlays(options: {
   minGapMs: number;
   openSleepEnd?: "now" | "dayOfStart";
 }): { points: LifePointMark[]; sleeps: LifeSleepRange[] } {
-  const {
-    dayStart,
-    dayEnd,
-    timeRange,
-    todos,
-    getActivity,
-    getTask,
-    now,
-    minGapMs,
-    openSleepEnd = "now",
-  } = options;
+  const { dayStart, dayEnd, timeRange, todos, getActivity, getTask, now, minGapMs, openSleepEnd = "now" } = options;
   const rawPoints: Omit<LifePointMark, "lane">[] = [];
   const sleeps: LifeSleepRange[] = [];
   const prevDayStart = dayStart - DAY_MS;

@@ -19,11 +19,7 @@ import { getItemWeekRange, getHour, startOfDay } from "@/core/utils/weekDays";
 import { useDevice } from "@/composables/platform/useDevice";
 import { storeToRefs } from "pinia";
 import { useDataStore } from "@/stores/useDataStore";
-import {
-  collectLifeRecordOverlays,
-  type LifePointMark,
-  type LifeSleepRange,
-} from "@/services/timetable/lifeRecordOverlays";
+import { collectLifeRecordOverlays, type LifePointMark, type LifeSleepRange } from "@/services/timetable/lifeRecordOverlays";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const BASE_PX_PER_HOUR = 40;
@@ -439,10 +435,11 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targe
     const range = unifiedTimeRange.value;
     const h = hourOffsetInDay(mark.time, dayStartTs);
     const top = (h - range.startHour) * pxPerHour.value - 7;
-    const left = 2 + mark.lane * 15;
+    // 从右往左叠 lane，避免贴左边时间块
+    const right = isMobile.value ? mark.lane * 15 : 12 + mark.lane * 15;
     return {
       position: "absolute",
-      left: `${left}px`,
+      right: `${right}px`,
       top: `${top}px`,
       width: "14px",
       height: "14px",

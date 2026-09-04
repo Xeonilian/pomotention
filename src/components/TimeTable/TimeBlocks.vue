@@ -128,7 +128,7 @@
     :title="`${mark.title} ${timestampToTimeString(mark.time)}`"
     @click="handleTodoSelect(mark.todoId)"
   >
-    <n-icon :size="14" :component="lifePointIcon(mark.kind)" />
+    <n-icon :size="16" :component="lifePointIcon(mark.kind)" />
   </div>
 
   <!-- ========== 第三列：特殊优先级 Emoji ========== -->
@@ -250,12 +250,7 @@
         {{ mark.kind === "interruption" ? mark.description : formatRecordMarkText(mark) }}
       </p>
     </NPopover>
-    <div
-      v-else
-      class="record-mark"
-      :style="getRecordMarkStyle(mark)"
-      @click="onRecordMarkClick($event, mark)"
-    >
+    <div v-else class="record-mark" :style="getRecordMarkStyle(mark)" @click="onRecordMarkClick($event, mark)">
       {{ recordMarkEmoji(mark) }}
     </div>
   </template>

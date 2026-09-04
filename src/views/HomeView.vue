@@ -2031,7 +2031,7 @@ const { startResize: startRightResize } = useResize(
   border-radius: 12px;
   font-family: Consolas, "Courier New", Courier, monospace;
   font-weight: 500;
-  margin-left: 16px;
+  margin-left: 12px;
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;

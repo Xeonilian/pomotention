@@ -7,11 +7,7 @@ import { SPECIAL_PRIORITIES, getEmojiForPriority } from "@/core/priorityCategori
 import type { Block, PomodoroSegment, TodoSegment, ActualTimeRange } from "@/core/types/Block";
 import { generateActualTodoSegments, splitIndexPomoBlocksExSchedules } from "@/services/timer/pomoSegService";
 import { collectTaskRecordMarks, type TaskRecordMark } from "@/services/timetable/taskRecordMarks";
-import {
-  collectLifeRecordOverlays,
-  type LifePointMark,
-  type LifeSleepRange,
-} from "@/services/timetable/lifeRecordOverlays";
+import { collectLifeRecordOverlays, type LifePointMark, type LifeSleepRange } from "@/services/timetable/lifeRecordOverlays";
 import { useSegStore } from "@/stores/useSegStore";
 import { useTimeBlockDrag } from "./useTimeBlockDrag";
 import { storeToRefs } from "pinia";
@@ -532,17 +528,18 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
     const markH = 14;
     const topPx = ((mark.time - props.timeRange.start) / 60000) * props.effectivePxPerMinute - markH / 2;
 
-    let left: number;
+    let left: number | undefined;
+    let right: number | undefined;
     let topExtra = 0;
     if (isMobile.value) {
-      // 手机仍落在第3列，同刻 2 列换行
+      // 手机：靠右两列，lane 从右往左，满 2 列换行
       const col = mark.lane % 2;
       const row = Math.floor(mark.lane / 2);
-      left = 40 + col * (markW + 1);
+      right = 2 + col * (markW + 1);
       topExtra = row * (markH + 1);
     } else {
       // 桌面：第4列中心对齐（+1px 光学微调），同刻并排向右
-      const col4Left = 61;
+      const col4Left = 75;
       const col4Width = 8;
       const centerX = col4Left + col4Width / 2;
       left = centerX - markW / 2 + 1 + mark.lane * (markW + 1);
@@ -550,7 +547,7 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
 
     return {
       position: "absolute",
-      left: `${left}px`,
+      ...(right !== undefined ? { right: `${right}px` } : { left: `${left}px` }),
       top: `${topPx + topExtra}px`,
       width: `${markW}px`,
       height: `${markH}px`,

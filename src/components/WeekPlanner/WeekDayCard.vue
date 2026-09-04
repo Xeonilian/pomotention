@@ -81,7 +81,7 @@
           :title="mark.title"
           @click.stop="emit('item-change', mark.todoId, undefined, mark.taskId)"
         >
-          <n-icon :size="14" :component="lifePointIcon(mark.kind)" />
+          <n-icon :size="isMobile ? 14 : 16" :component="lifePointIcon(mark.kind)" />
         </div>
       </div>
 
