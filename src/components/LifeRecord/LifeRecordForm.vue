@@ -6,6 +6,11 @@
       <span class="lr-title">{{ def.emoji }} {{ def.title }}</span>
       <span v-if="kind !== 'sleep'" class="lr-count">×{{ records.length }}</span>
       <n-button size="small" tertiary class="lr-append" @click="onAppend">{{ appendLabel }}</n-button>
+      <n-button size="small" tertiary class="lr-done" title="完成，取消选中" @click="onDeselect">
+        <template #icon>
+          <n-icon><Checkmark20Regular /></n-icon>
+        </template>
+      </n-button>
     </div>
 
     <div v-if="records.length === 0" class="lr-empty">还没有记录，点「{{ appendLabel }}」记一条</div>
@@ -52,15 +57,17 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { NButton, NIcon, NInput, NTimePicker } from "naive-ui";
-import { Delete20Regular } from "@vicons/fluent";
+import { Delete20Regular, Checkmark20Regular } from "@vicons/fluent";
 import type { LifeRecord } from "@/core/types/Task";
 import { getLifeRecordDef, type LifeRecordKind } from "@/core/lifeRecord";
 import { appendLifeRecord, updateLifeRecord } from "@/services/lifeRecord/lifeRecordService";
 import { useDataStore } from "@/stores/useDataStore";
+import { useDisplayedTaskStore } from "@/stores/useDisplayedTaskStore";
 
 const props = defineProps<{ taskId: number; kind: LifeRecordKind }>();
 
 const dataStore = useDataStore();
+const displayStore = useDisplayedTaskStore();
 const def = computed(() => getLifeRecordDef(props.kind));
 
 const task = computed(() => dataStore.taskList.find((t) => t.id === props.taskId) ?? null);
@@ -99,6 +106,12 @@ function onAppend() {
   const anchor = rowDayAnchor.value;
   const at = isToday(anchor) ? Date.now() : withTimePart(anchor, Date.now());
   writeRecords(appendLifeRecord(task.value?.lifeRecords, props.kind, at).next);
+}
+
+/** 打钩：退出当前生活记录 task，回到非选中空位 */
+function onDeselect() {
+  dataStore.cleanSelection();
+  displayStore.snapToEmptySlot();
 }
 
 function onChangeTime(record: LifeRecord, field: "recordedAt" | "endAt", ts: number | null) {
@@ -159,6 +172,9 @@ function formatDuration(record: LifeRecord): string {
 }
 .lr-append {
   margin-left: auto;
+}
+.lr-done {
+  flex-shrink: 0;
 }
 .lr-empty {
   color: var(--color-text-secondary);
