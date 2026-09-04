@@ -1,5 +1,5 @@
 // src/composables/useTimeBlocks.ts
-import { ref, computed, type ComputedRef, onMounted, onUnmounted, watch } from "vue";
+import { ref, computed, type ComputedRef, onMounted, onUnmounted, watch, toValue } from "vue";
 import type { CSSProperties } from "vue";
 import { getTimestampForTimeString, addDays } from "@/core/utils";
 import { CategoryColors, CategoryColorsDark, POMODORO_COLORS, POMODORO_COLORS_DARK } from "@/core/constants";
@@ -8,6 +8,7 @@ import type { Block, PomodoroSegment, TodoSegment, ActualTimeRange } from "@/cor
 import { generateActualTodoSegments, splitIndexPomoBlocksExSchedules } from "@/services/timer/pomoSegService";
 import { collectTaskRecordMarks, type TaskRecordMark } from "@/services/timetable/taskRecordMarks";
 import { collectLifeRecordOverlays, type LifePointMark, type LifeSleepRange } from "@/services/timetable/lifeRecordOverlays";
+import { findDayEnergyTask } from "@/services/task/dayEnergyService";
 import { useSegStore } from "@/stores/useSegStore";
 import { useTimeBlockDrag } from "./useTimeBlockDrag";
 import { storeToRefs } from "pinia";
@@ -121,6 +122,7 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
     scheduleById,
     activityById,
     taskById,
+    taskList,
     selectedTaskId,
     selectedRowId,
     selectedActivityId,
@@ -167,9 +169,10 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
   };
 
   const handleRecordMarkSelect = (mark: TaskRecordMark) => {
+    // day_energy 等无行宿主：点标不切入 Tracker，避免露出隐藏桶
+    if (mark.todoId == null && mark.scheduleId == null) return;
     if (mark.todoId != null) handleTodoSelect(mark.todoId);
     else if (mark.scheduleId != null) handleScheduleSelect(mark.scheduleId);
-    else selectedTaskId.value = mark.taskId;
   };
 
   const { dragState, handlePointerDown, lastDragEndedAt } = useTimeBlockDrag(
@@ -466,15 +469,22 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
   const recordMarks = computed(() => {
     const px = props.effectivePxPerMinute;
     const markH = 10;
+    const dayStart = toValue(props.dayStart as Parameters<typeof toValue>[0]);
+    const dayStartTs = typeof dayStart === "number" && !Number.isNaN(dayStart) ? dayStart : props.dayStart;
+    const dayEnergy = findDayEnergyTask(dayStartTs, taskList.value);
+    // 显式依赖记录条数，保证写入后时间轴立刻重算
+    void dayEnergy?.energyRecords?.length;
+    void dayEnergy?.lastModified;
     return collectTaskRecordMarks({
-      dayStart: props.dayStart,
-      dayEnd: dayEnd.value,
+      dayStart: dayStartTs,
+      dayEnd: typeof dayStartTs === "number" ? addDays(dayStartTs, 1) : dayEnd.value,
       timeRange: props.timeRange,
       todos: todosForAppDate.value,
       schedules: schedulesForAppDate.value,
       getTask: (id) => taskById.value.get(id),
       // 手机：与最早一条相差 5 分钟内当同一时刻；电脑：约一个图标高
       minGapMs: isMobile.value ? 5 * 60_000 : px > 0 ? ((markH * 0.6) / px) * 60_000 : 60_000,
+      orphanEnergyTasks: dayEnergy ? [dayEnergy] : undefined,
     });
   });
 

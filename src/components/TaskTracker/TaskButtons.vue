@@ -5,7 +5,7 @@
         v-for="actionId in desktopActionIds"
         :key="actionId"
         v-bind="desktopButtonProps(actionId)"
-        :disabled="!taskId"
+        :disabled="isActionDisabled(actionId)"
         :title="actionTitle(actionId)"
         @click="runToolbarAction(actionId)"
       >
@@ -25,7 +25,7 @@
         @update:show="onPopoverShowChange"
       >
         <template #trigger>
-          <n-button size="small" text :disabled="!taskId" title="更多操作">
+          <n-button size="small" text title="更多操作">
             <template #icon>
               <n-icon><ChevronDoubleLeft16Regular /></n-icon>
             </template>
@@ -42,7 +42,7 @@
               'toolbar-popover-action--selected': popoverEditMode && editSelection.includes(actionId),
               'toolbar-popover-action--muted': popoverEditMode && !editSelection.includes(actionId),
             }"
-            :disabled="!taskId"
+            :disabled="isActionDisabled(actionId)"
             :title="actionTitle(actionId)"
             @click.stop="handleOverflowActionClick(actionId)"
           >
@@ -70,7 +70,7 @@
         v-bind="mobilePinnedButtonProps(actionId)"
         class="toolbar-pinned-action"
         :class="{ 'toolbar-pinned-action--muted': popoverEditMode && showCollapsedPopover }"
-        :disabled="!taskId"
+        :disabled="isActionDisabled(actionId)"
         :title="actionTitle(actionId)"
         @click="runToolbarAction(actionId)"
       >
@@ -234,6 +234,12 @@ function actionTitle(actionId: TaskToolbarActionId): string {
   return TASK_TOOLBAR_ACTION_TITLES[actionId];
 }
 
+/** energy 允许无 task（写入 day_energy）；其余仍要选中 task */
+function isActionDisabled(actionId: TaskToolbarActionId): boolean {
+  if (actionId === "energy") return false;
+  return !props.taskId;
+}
+
 function desktopButtonProps(actionId: TaskToolbarActionId) {
   if (actionId === "star") return { type: "warning" as const, text: true };
   if (actionId === "tag") return { text: true };
@@ -288,7 +294,7 @@ function handleMoreClick() {
 }
 
 function runToolbarAction(actionId: TaskToolbarActionId) {
-  if (!props.taskId) return;
+  if (isActionDisabled(actionId)) return;
   switch (actionId) {
     case "star":
       starTrack();
@@ -316,9 +322,7 @@ function runToolbarAction(actionId: TaskToolbarActionId) {
 }
 
 function handleEnergyConfirm(val: { value: number; description?: string; recordedAt: number }) {
-  if (props.taskId) {
-    emit("energy-record", val);
-  }
+  emit("energy-record", val);
 }
 
 function handleRewardConfirm(val: { value: number; description?: string; recordedAt: number }) {
@@ -409,7 +413,6 @@ function keyboardOpenTagManager(): boolean {
 }
 
 function keyboardOpenEnergyDialog(): boolean {
-  if (!props.taskId) return false;
   showEnergyDialog.value = true;
   showCollapsedPopover.value = false;
   return true;

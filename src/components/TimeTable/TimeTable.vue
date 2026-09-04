@@ -11,7 +11,7 @@
         :blocks="viewBlocks"
         :timeRange="timeRange"
         :effectivePxPerMinute="effectivePxPerMinute"
-        :dayStart="dateService.appDateTimestamp"
+        :dayStart="appDayStart"
       />
       <n-button text class="timetable-enter-editor-icon" title="开始编辑" aria-label="开始编辑" @click="toggleDisplay">
         <n-icon>
@@ -23,7 +23,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch, computed } from "vue";
+import { ref, onMounted, onUnmounted, watch, computed, toValue } from "vue";
 import { NIcon } from "naive-ui";
 import { ChevronDoubleRight16Regular } from "@vicons/fluent";
 import TimeTableEditor from "@/components/TimeTable/TimeTableEditor.vue";
@@ -46,6 +46,12 @@ const currentType = ref<"work" | "entertainment">("work");
 let unregisterTimetableCommandApi: (() => void) | null = null;
 
 const viewBlocks = computed(() => timetableStore.getBlocksByType(currentType.value));
+
+/** 解包 app 日零点，避免把 ComputedRef 传给 TimeBlocks */
+const appDayStart = computed(() => {
+  const raw = toValue(dateService.appDateTimestamp as Parameters<typeof toValue>[0]);
+  return typeof raw === "number" && !Number.isNaN(raw) ? raw : 0;
+});
 
 function toggleDisplay() {
   showEditor.value = true;
@@ -116,8 +122,9 @@ watch(viewBlocks, updateHeight);
 const timeRange = computed(() => {
   const blocks = viewBlocks.value;
   if (blocks.length === 0) return { start: 0, end: 0 };
-  const start = Math.min(...blocks.map((b) => getTimestampForTimeString(b.start, dateService.appDateTimestamp)));
-  const end = Math.max(...blocks.map((b) => getTimestampForTimeString(b.end, dateService.appDateTimestamp)));
+  const day = appDayStart.value;
+  const start = Math.min(...blocks.map((b) => getTimestampForTimeString(b.start, day)));
+  const end = Math.max(...blocks.map((b) => getTimestampForTimeString(b.end, day)));
   return { start, end };
 });
 

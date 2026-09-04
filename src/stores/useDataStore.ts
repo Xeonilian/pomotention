@@ -29,7 +29,8 @@ import {
 
 import { unifiedDateService } from "@/services/data/unifiedDateService";
 import { collectPomodoroData, collectTaskRecordData, aggregateByTime } from "@/services/chart/chartDataService";
-import { getLifeRecordDef, isLifeRecordActivity, type LifeRecordKind } from "@/core/lifeRecord";
+import { getLifeRecordDef, isLifeRecordActivity, lifeRecordPlaceholderTitle, type LifeRecordKind } from "@/core/lifeRecord";
+import { isDayEnergyTask } from "@/core/dayEnergy";
 import {
   appendLifeRecord,
   buildLifeRecordEntities,
@@ -37,6 +38,7 @@ import {
   findLifeRecordTodoForDay,
   removeLifeRecord,
 } from "@/services/lifeRecord/lifeRecordService";
+import { buildDayEnergyTask, findDayEnergyTask } from "@/services/task/dayEnergyService";
 import { handleDeleteActivity } from "@/services/activity/activityService";
 import { useTagStore } from "./useTagStore";
 import { useTemplateStore } from "./useTemplateStore";
@@ -715,6 +717,18 @@ export const useDataStore = defineStore(
     }
 
     /**
+     * 查或建当日 day_energy 宿主（无 activity/todo，仅 energy 桶）
+     */
+    function ensureDayEnergyTask(dayStartTs: number): Task {
+      const existing = findDayEnergyTask(dayStartTs, taskList.value);
+      if (existing) return existing;
+      const task = buildDayEnergyTask(dayStartTs);
+      taskList.value = [...taskList.value, task];
+      saveTasks(taskList.value);
+      return task;
+    }
+
+    /**
      * 生活记录 +1：当前显示日该 kind 无行则懒创建三件套（activity/todo/task），再追加一条记录。
      * 归属日 = dateService 当前显示日；默认时刻 = 显示日 + 当前时分（补记昨天即昨天的这个点）。
      */
@@ -739,9 +753,15 @@ export const useDataStore = defineStore(
       if (existingTodo) {
         task = taskByActivityId.value.get(existingTodo.activityId);
         if (!task) {
-          // 行在但 task 缺失（旧数据/异常），补建
-          task = buildLifeRecordTask(existingTodo.activityId, existingTodo.activityTitle);
+          // 行在但 task 缺失（旧数据/异常），补建；title 优先已有占位，否则 kind_日零点
+          const title = existingTodo.activityTitle || lifeRecordPlaceholderTitle(kind, dayStart);
+          task = buildLifeRecordTask(existingTodo.activityId, title);
           taskList.value = [...taskList.value, task];
+        } else if (!task.activityTitle) {
+          updateTaskById(task.id, { activityTitle: lifeRecordPlaceholderTitle(kind, dayStart) });
+        }
+        if (!existingTodo.activityTitle) {
+          updateTodoById(existingTodo.id, { activityTitle: lifeRecordPlaceholderTitle(kind, dayStart) });
         }
       } else {
         const entities = buildLifeRecordEntities(kind, at);
@@ -1106,6 +1126,8 @@ export const useDataStore = defineStore(
           }
           return;
         }
+        // day_energy 不进 Tracker 历史，避免露出隐藏桶
+        if (isDayEnergyTask(taskById.value.get(id))) return;
         displayStore.pushTaskId(id);
       },
       { immediate: true },
@@ -1244,6 +1266,7 @@ export const useDataStore = defineStore(
       hasStarredTaskForActivity,
       cleanSelection,
       addActivity,
+      ensureDayEnergyTask,
       recordLifeRecord,
       removeLifeRecordAt,
       setActiveId,
