@@ -13,6 +13,8 @@ import { AiProfile } from "@/core/types/AiProfile";
 import { useDevice } from "@/composables/platform/useDevice";
 import type { TaskToolbarActionId } from "@/core/taskToolbarActions";
 import { DEFAULT_TASK_TOOLBAR_MOBILE_PINNED } from "@/core/taskToolbarActions";
+import type { HomeToolbarActionId } from "@/core/homeToolbarActions";
+import { DEFAULT_HOME_TOOLBAR_MOBILE_PINNED } from "@/core/homeToolbarActions";
 
 const { isMobile } = useDevice();
 
@@ -83,6 +85,8 @@ export interface GlobalSettings {
   defaultCurrency: string;
   /** 手机 Task 工具栏固定槽（最多 2 个动作 id） */
   taskToolbarMobilePinned?: TaskToolbarActionId[];
+  /** 手机 Home 顶栏工具固定槽（标签/记账/生活记录，最多 2 个） */
+  homeToolbarMobilePinned?: HomeToolbarActionId[];
   /** DayTodo 列表展示序：优先级（默认）| 开始时间 */
   dayTodoSortMode: "priority" | "startTime";
   // 以后新增全局设置项就在这里补充
@@ -144,6 +148,7 @@ const defaultSettings: GlobalSettings = {
   publicHolidayCountryCode: "CN",
   defaultCurrency: "CNY",
   taskToolbarMobilePinned: [...DEFAULT_TASK_TOOLBAR_MOBILE_PINNED],
+  homeToolbarMobilePinned: [...DEFAULT_HOME_TOOLBAR_MOBILE_PINNED],
   dayTodoSortMode: "priority",
   ai: {
     activeId: 1,

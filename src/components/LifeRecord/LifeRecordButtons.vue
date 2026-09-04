@@ -3,13 +3,13 @@
 <!-- 多根节点：直接作为 button-group 子项，与钱包/重复等同 gap，整排等距 -->
 <template>
   <n-button
-    v-for="def in LIFE_RECORD_DEFS"
+    v-for="def in visibleDefs"
     :key="def.kind"
     size="small"
     text
     class="life-record-button"
     :title="`记一次${def.title}`"
-    @click.stop="dataStore.recordLifeRecord(def.kind)"
+    @click.stop="onRecord(def.kind)"
   >
     <template #icon>
         <n-icon :size="18">
@@ -37,6 +37,14 @@ import { LIFE_RECORD_DEFS, type LifeRecordKind } from "@/core/lifeRecord";
 import { findLifeRecordTodoForDay } from "@/services/lifeRecord/lifeRecordService";
 import { useDataStore } from "@/stores/useDataStore";
 
+const props = withDefaults(
+  defineProps<{
+    /** 只渲染这些 kind；缺省为全部四种 */
+    kinds?: LifeRecordKind[];
+  }>(),
+  { kinds: undefined },
+);
+
 const ICONS: Record<LifeRecordKind, { regular: Component; filled: Component }> = {
   drink: { regular: Drop20Regular, filled: Drop20Filled },
   eat: { regular: FoodApple20Regular, filled: FoodApple20Filled },
@@ -47,6 +55,12 @@ const ICONS: Record<LifeRecordKind, { regular: Component; filled: Component }> =
 const dataStore = useDataStore();
 const { todoList, activityById } = storeToRefs(dataStore);
 const dateService = dataStore.dateService;
+
+const visibleDefs = computed(() => {
+  if (!props.kinds?.length) return LIFE_RECORD_DEFS;
+  const allow = new Set(props.kinds);
+  return LIFE_RECORD_DEFS.filter((d) => allow.has(d.kind));
+});
 
 // 删空会级联软删行，所以「当日存在该 kind 行」= 当天已有记录
 // Pinia reactive 会解包嵌套 ComputedRef，用 toValue 兼容 number / Ref（同 HomeView dayHolidayLabel）
@@ -65,6 +79,13 @@ const kindsWithRecordToday = computed(() => {
 
 function hasRecordToday(kind: LifeRecordKind): boolean {
   return kindsWithRecordToday.value.has(kind);
+}
+
+const emit = defineEmits<{ recorded: [kind: LifeRecordKind] }>();
+
+function onRecord(kind: LifeRecordKind) {
+  dataStore.recordLifeRecord(kind);
+  emit("recorded", kind);
 }
 </script>
 
