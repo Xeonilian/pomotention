@@ -55,9 +55,13 @@
                     :key="icon.kind"
                     :size="11"
                     class="day-life-icon"
-                    :class="[`day-life-icon--${icon.kind}`, { 'day-life-icon--filled': day.lifePresent[icon.kind] }]"
+                    :class="[
+                      `day-life-icon--${icon.kind}`,
+                      { 'day-life-icon--filled': !!day.lifeByKind[icon.kind] },
+                    ]"
+                    @click.stop="() => handleLifeIconSelect(day.startTs, day.lifeByKind[icon.kind])"
                   >
-                    <component :is="day.lifePresent[icon.kind] ? icon.filled : icon.regular" />
+                    <component :is="day.lifeByKind[icon.kind] ? icon.filled : icon.regular" />
                   </n-icon>
                 </div>
               </div>
@@ -69,9 +73,13 @@
                     :key="icon.kind"
                     :size="16"
                     class="day-life-icon"
-                    :class="[`day-life-icon--${icon.kind}`, { 'day-life-icon--filled': day.lifePresent[icon.kind] }]"
+                    :class="[
+                      `day-life-icon--${icon.kind}`,
+                      { 'day-life-icon--filled': !!day.lifeByKind[icon.kind] },
+                    ]"
+                    @click.stop="() => handleLifeIconSelect(day.startTs, day.lifeByKind[icon.kind])"
                   >
-                    <component :is="day.lifePresent[icon.kind] ? icon.filled : icon.regular" />
+                    <component :is="day.lifeByKind[icon.kind] ? icon.filled : icon.regular" />
                   </n-icon>
                 </div>
               </div>
@@ -157,8 +165,10 @@ const LIFE_STAT_ICONS: readonly {
   { kind: "sleep", regular: WeatherMoon20Regular, filled: WeatherMoon20Filled },
 ];
 
-type LifePresent = Record<LifeRecordKind, boolean>;
-const EMPTY_LIFE_PRESENT: LifePresent = { drink: false, eat: false, toilet: false, sleep: false };
+/** 统计格 icon 可点开选中对应生活记录（仅 item-change，不改日） */
+type LifeIconRef = { todoId: number; activityId: number; taskId?: number };
+type LifeByKind = Partial<Record<LifeRecordKind, LifeIconRef>>;
+const EMPTY_LIFE_BY_KIND: LifeByKind = {};
 
 const emit = defineEmits<{
   "date-select": [timestamp: number];
@@ -228,19 +238,25 @@ const days = computed(() => {
   const totalDays = Math.ceil((calendarEnd - calendarStart) / DAY_MS);
 
   // 生活记录不在 todosForCurrentView* 里，单独按 todo.id 归属日扫一遍（统计格 icon 用）
-  const lifeByDay = new Map<number, LifePresent>();
+  const lifeByDay = new Map<number, LifeByKind>();
   for (const todo of todoList.value) {
     if (todo.deleted) continue;
     const kind = getLifeRecordKind(activityById.value.get(todo.activityId));
     if (!kind) continue;
     const dayStart = startOfDay(todo.id);
     if (dayStart < calendarStart || dayStart > calendarEnd) continue;
-    let present = lifeByDay.get(dayStart);
-    if (!present) {
-      present = { ...EMPTY_LIFE_PRESENT };
-      lifeByDay.set(dayStart, present);
+    let byKind = lifeByDay.get(dayStart);
+    if (!byKind) {
+      byKind = {};
+      lifeByDay.set(dayStart, byKind);
     }
-    present[kind] = true;
+    // 同日同 kind 已有则保留首条
+    if (byKind[kind]) continue;
+    byKind[kind] = {
+      todoId: todo.id,
+      activityId: todo.activityId,
+      taskId: todo.taskId,
+    };
   }
 
   // 将 Todo 映射到统一结构
@@ -367,7 +383,7 @@ const days = computed(() => {
       pomoRatio: ratio,
       maxItems: maxItemsPerDay.value,
       holiday: holidayForTs(dayTs),
-      lifePresent: lifeByDay.get(dayTs) ?? EMPTY_LIFE_PRESENT,
+      lifeByKind: lifeByDay.get(dayTs) ?? EMPTY_LIFE_BY_KIND,
     };
   });
   return result;
@@ -459,6 +475,13 @@ function onMonthBadgeTouchCancel() {
 const handleItemSelect = (id: number, _ts: number, activityId?: number, taskId?: number) => {
   emit("item-change", id, activityId, taskId);
 };
+
+/** 统计格生活 icon：切日 + 选中对应记录（不进日视图） */
+function handleLifeIconSelect(dayStartTs: number, lifeRef: LifeIconRef | undefined) {
+  if (!lifeRef) return;
+  emit("date-select", dayStartTs);
+  emit("item-change", lifeRef.todoId, lifeRef.activityId, lifeRef.taskId);
+}
 
 // 颜色可视化番茄量
 function getDayCardStyle(ratio: number, isCurrentMonth: boolean): { backgroundColor: string } | undefined {
@@ -786,6 +809,7 @@ function getStatsBadgeBgColor(ratio: number): string {
 
 .day-life-icon--filled {
   opacity: 1;
+  cursor: pointer;
 }
 
 .day-life-icon--drink.day-life-icon--filled {
