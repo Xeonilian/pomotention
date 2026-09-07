@@ -154,3 +154,10 @@ export function updateLifeRecord(
 export function sumLifeRecordAmountMl(records: LifeRecord[] | undefined): number {
   return (records ?? []).reduce((sum, r) => sum + (Number(r.amountMl) || 0), 0);
 }
+
+/** 是否达到日目标（目标无效时视为未达标） */
+export function isDrinkGoalMet(drunkMl: number, goalMl: number | null | undefined): boolean {
+  const goal = Number(goalMl);
+  if (!Number.isFinite(goal) || goal <= 0) return false;
+  return drunkMl >= goal;
+}

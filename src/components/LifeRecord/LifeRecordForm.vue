@@ -25,6 +25,51 @@
       </n-button>
     </div>
 
+    <div v-if="kind === 'drink'" class="lr-drink-progress">
+      <div class="lr-drink-cup">
+        <n-icon class="lr-drink-cup__icon" :size="18" title="杯量（之后每次 +1）">
+          <DrinkToGo24Regular />
+        </n-icon>
+        <span class="lr-drink-cup__eq">=</span>
+        <n-input-number
+          class="lr-drink-cup__ml"
+          size="tiny"
+          :value="settingStore.settings.drinkCupMl"
+          :min="50"
+          :max="1000"
+          :step="50"
+          :precision="0"
+          :show-button="false"
+          @update:value="onChangeCupMl"
+        />
+        <span class="lr-drink-progress__unit">ml</span>
+      </div>
+      <div class="lr-drink-progress__row">
+        <span class="lr-drink-progress__sum">{{ drunkMl }}</span>
+        <span class="lr-drink-progress__sep">/</span>
+        <n-input-number
+          class="lr-drink-goal"
+          size="tiny"
+          :value="dayGoalMl"
+          :min="100"
+          :max="20000"
+          :step="100"
+          :precision="0"
+          :show-button="false"
+          placeholder="目标"
+          title="今日目标（仅本天）"
+          @update:value="onChangeDayGoal"
+        />
+        <span class="lr-drink-progress__unit">ml</span>
+        <span class="lr-drink-badge" :class="goalMet ? 'lr-drink-badge--met' : 'lr-drink-badge--short'">
+          {{ goalMet ? "达标" : "未达标" }}
+        </span>
+      </div>
+      <div class="lr-drink-bar" :title="`${drunkMl} / ${dayGoalMl || '—'} ml`">
+        <div class="lr-drink-bar__fill" :class="{ 'lr-drink-bar__fill--met': goalMet }" :style="{ width: progressPct + '%' }" />
+      </div>
+    </div>
+
     <div v-if="records.length === 0" class="lr-empty">还没有记录，点「{{ appendLabel }}」记一条</div>
 
     <div v-for="record in records" :key="record.id" class="lr-row">
@@ -69,11 +114,16 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
-import { NButton, NIcon, NInput, NTimePicker } from "naive-ui";
-import { Delete20Regular, Checkmark20Regular } from "@vicons/fluent";
+import { NButton, NIcon, NInput, NInputNumber, NTimePicker } from "naive-ui";
+import { Delete20Regular, Checkmark20Regular, DrinkToGo24Regular } from "@vicons/fluent";
 import type { LifeRecord } from "@/core/types/Task";
 import { getLifeRecordDef, type LifeRecordKind } from "@/core/lifeRecord";
-import { appendLifeRecord, updateLifeRecord } from "@/services/lifeRecord/lifeRecordService";
+import {
+  appendLifeRecord,
+  isDrinkGoalMet,
+  sumLifeRecordAmountMl,
+  updateLifeRecord,
+} from "@/services/lifeRecord/lifeRecordService";
 import { useDataStore } from "@/stores/useDataStore";
 import { useDisplayedTaskStore } from "@/stores/useDisplayedTaskStore";
 import { useSettingStore } from "@/stores/useSettingStore";
@@ -90,6 +140,15 @@ const records = computed<LifeRecord[]>(() => [...(task.value?.lifeRecords ?? [])
 
 const hasOpenSleep = computed(() => props.kind === "sleep" && records.value.some((r) => r.endAt == null));
 const appendLabel = computed(() => (props.kind === "sleep" ? (hasOpenSleep.value ? "醒了" : "睡了") : "+1"));
+
+const drunkMl = computed(() => sumLifeRecordAmountMl(records.value));
+const dayGoalMl = computed(() => task.value?.drinkGoalMl ?? settingStore.settings.drinkDailyGoalMl);
+const goalMet = computed(() => isDrinkGoalMet(drunkMl.value, dayGoalMl.value));
+const progressPct = computed(() => {
+  const goal = Number(dayGoalMl.value);
+  if (!Number.isFinite(goal) || goal <= 0) return 0;
+  return Math.min(100, Math.round((drunkMl.value / goal) * 100));
+});
 
 // 行归属日锚点：todo.id 落在当天；补记旧日时默认时刻 = 旧日 + 当前时分
 const rowDayAnchor = computed(() => {
@@ -122,6 +181,16 @@ function onAppend() {
   const at = isToday(anchor) ? Date.now() : withTimePart(anchor, Date.now());
   const amountMl = props.kind === "drink" ? settingStore.settings.drinkCupMl : undefined;
   writeRecords(appendLifeRecord(task.value?.lifeRecords, props.kind, at, { amountMl }).next);
+}
+
+function onChangeCupMl(v: number | null) {
+  if (v == null || !Number.isFinite(v) || v <= 0) return;
+  settingStore.settings.drinkCupMl = Math.min(1000, Math.max(50, Math.round(v)));
+}
+
+function onChangeDayGoal(v: number | null) {
+  if (v == null || !Number.isFinite(v) || v <= 0) return;
+  dataStore.updateTaskById(props.taskId, { drinkGoalMl: Math.round(v) });
 }
 
 /** 打钩：退出当前生活记录 task，回到非选中空位 */
@@ -197,6 +266,78 @@ function formatDuration(record: LifeRecord): string {
 .lr-discard,
 .lr-done {
   flex-shrink: 0;
+}
+.lr-drink-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 4px 0 2px;
+}
+.lr-drink-progress__row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.lr-drink-progress__sum {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-blue);
+}
+.lr-drink-progress__sep {
+  color: var(--color-text-secondary);
+}
+.lr-drink-goal {
+  width: 72px;
+}
+.lr-drink-progress__unit {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+.lr-drink-badge {
+  margin-left: 6px;
+  font-size: 12px;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+.lr-drink-badge--met {
+  color: var(--color-green-dark);
+  background: var(--color-green-light);
+}
+.lr-drink-badge--short {
+  color: var(--color-text-secondary);
+  background: var(--color-bg-secondary, #f0f0f0);
+}
+.lr-drink-bar {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--color-primary-light-transparent);
+  overflow: hidden;
+}
+.lr-drink-bar__fill {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--color-blue);
+  transition: width 0.15s ease;
+}
+.lr-drink-bar__fill--met {
+  background: var(--color-green);
+}
+.lr-drink-cup {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.lr-drink-cup__icon {
+  color: var(--color-blue);
+  flex-shrink: 0;
+}
+.lr-drink-cup__eq {
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+.lr-drink-cup__ml {
+  width: 64px;
 }
 .lr-empty {
   color: var(--color-text-secondary);

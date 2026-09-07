@@ -134,6 +134,14 @@ describe("appendLifeRecord", () => {
     expect(sumLifeRecordAmountMl([{ id: 1, recordedAt: 1 }])).toBe(0);
   });
 
+  it("isDrinkGoalMet", async () => {
+    const { isDrinkGoalMet } = await import("@/services/lifeRecord/lifeRecordService");
+    expect(isDrinkGoalMet(2000, 2000)).toBe(true);
+    expect(isDrinkGoalMet(1999, 2000)).toBe(false);
+    expect(isDrinkGoalMet(500, 0)).toBe(false);
+    expect(isDrinkGoalMet(500, undefined)).toBe(false);
+  });
+
   it("sleep：首次新开无 endAt，再次 +1 闭合，第三次再开新段", () => {
     const first = appendLifeRecord(undefined, "sleep", IN_DAY);
     expect(first.next[0].endAt).toBeUndefined();
