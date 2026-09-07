@@ -10,6 +10,8 @@ export interface Task {
   rewardRecords: RewardRecord[]; // 奖赏值记录数组
   interruptionRecords: InterruptionRecord[]; // 打扰记录数组
   lifeRecords?: LifeRecord[]; // 生活记录数组（仅系统 tag 标记的记录行使用）
+  /** 当日喝水目标 ml（仅 drink 日桶快照；建/打开时从 settings 默认写入） */
+  drinkGoalMl?: number;
   starred: boolean;
   deleted: boolean;
   synced: boolean;
@@ -53,4 +55,6 @@ export interface LifeRecord {
   /** 结束时刻（仅段记录，如睡觉的醒来时刻） */
   endAt?: number;
   description?: string;
+  /** 本口容量 ml（喝水快照；+1 时抄当时默认杯量） */
+  amountMl?: number;
 }

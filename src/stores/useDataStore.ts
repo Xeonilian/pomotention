@@ -32,7 +32,6 @@ import { collectPomodoroData, collectTaskRecordData, aggregateByTime } from "@/s
 import { getLifeRecordDef, isLifeRecordActivity, lifeRecordPlaceholderTitle, type LifeRecordKind } from "@/core/lifeRecord";
 import { isDayEnergyTask } from "@/core/dayEnergy";
 import {
-  appendLifeRecord,
   buildLifeRecordEntities,
   buildLifeRecordTask,
   findLifeRecordTodoForDay,
@@ -43,6 +42,7 @@ import { handleDeleteActivity } from "@/services/activity/activityService";
 import { useTagStore } from "./useTagStore";
 import { useTemplateStore } from "./useTemplateStore";
 import { useDisplayedTaskStore } from "./useDisplayedTaskStore";
+import { useSettingStore } from "./useSettingStore";
 
 export const useDataStore = defineStore(
   "data",
@@ -729,10 +729,13 @@ export const useDataStore = defineStore(
     }
 
     /**
-     * 生活记录 +1：当前显示日该 kind 无行则懒创建三件套（activity/todo/task），再追加一条记录。
-     * 归属日 = dateService 当前显示日；默认时刻 = 显示日 + 当前时分（补记昨天即昨天的这个点）。
+     * 打开生活记录日桶：无行则懒建空三件套（不 +1）；drink 写入/补齐日目标快照。
+     * 仅日视图生效；周月年由块 3 切 Planner 皮肤，此处先 no-op 避免误记。
      */
-    function recordLifeRecord(kind: LifeRecordKind): void {
+    function openLifeRecord(kind: LifeRecordKind): void {
+      const settingStore = useSettingStore();
+      if (settingStore.settings.viewSet !== "day") return;
+
       const def = getLifeRecordDef(kind);
       tagStore.ensureSystemTag({
         id: def.tagId,
@@ -746,6 +749,7 @@ export const useDataStore = defineStore(
 
       const dayStart = dateService.appDateTimestamp.value;
       const at = dateService.combineDateAndTime(dayStart, Date.now());
+      const drinkGoalMl = kind === "drink" ? settingStore.settings.drinkDailyGoalMl : undefined;
 
       let task: Task | undefined;
       const existingTodo = findLifeRecordTodoForDay(todoList.value, activityById.value, kind, dayStart);
@@ -753,33 +757,52 @@ export const useDataStore = defineStore(
       if (existingTodo) {
         task = taskByActivityId.value.get(existingTodo.activityId);
         if (!task) {
-          // 行在但 task 缺失（旧数据/异常），补建；title 优先已有占位，否则 kind_日零点
           const title = existingTodo.activityTitle || lifeRecordPlaceholderTitle(kind, dayStart);
-          task = buildLifeRecordTask(existingTodo.activityId, title);
+          task = buildLifeRecordTask(existingTodo.activityId, title, { drinkGoalMl });
           taskList.value = [...taskList.value, task];
-        } else if (!task.activityTitle) {
-          updateTaskById(task.id, { activityTitle: lifeRecordPlaceholderTitle(kind, dayStart) });
+          saveTasks(taskList.value);
+        } else {
+          const patch: Partial<Task> = {};
+          if (!task.activityTitle) patch.activityTitle = lifeRecordPlaceholderTitle(kind, dayStart);
+          if (kind === "drink" && task.drinkGoalMl == null && drinkGoalMl != null) patch.drinkGoalMl = drinkGoalMl;
+          if (Object.keys(patch).length) updateTaskById(task.id, patch);
         }
         if (!existingTodo.activityTitle) {
           updateTodoById(existingTodo.id, { activityTitle: lifeRecordPlaceholderTitle(kind, dayStart) });
         }
       } else {
-        const entities = buildLifeRecordEntities(kind, at);
+        const entities = buildLifeRecordEntities(kind, at, { drinkGoalMl });
         activityList.value.push(entities.activity);
         taskList.value = [...taskList.value, entities.task];
         todoList.value.push(entities.todo);
         task = entities.task;
         saveActivities(activityList.value);
         saveTodos(todoList.value);
+        saveTasks(taskList.value);
       }
 
-      // 每次点击：右侧激活记录表单（生活记录行不进 planner 表格，不碰选中态）
       displayStore.pushTaskId(task.id);
-
-      // 追加记录（sleep 未闭合时本次视为「醒了」）；updateTaskById 内含 saveTasks + 云上传
-      const { next } = appendLifeRecord(task.lifeRecords, kind, at);
-      updateTaskById(task.id, { lifeRecords: next });
       scheduleDebouncedCloudUpload();
+    }
+
+    /** @deprecated 使用 openLifeRecord；保留别名以免外部旧调用 */
+    function recordLifeRecord(kind: LifeRecordKind): void {
+      openLifeRecord(kind);
+    }
+
+    function softDeleteLifeRecordRow(task: Task): void {
+      handleDeleteActivity(
+        activityList.value,
+        todoList.value,
+        scheduleList.value,
+        taskList.value,
+        task.sourceId,
+        { activityById: activityById.value, childrenByParentId: childrenOfActivity.value },
+        ledgerList.value,
+      );
+      cleanSelection();
+      displayStore.snapToEmptySlot();
+      saveAllNow();
     }
 
     /**
@@ -794,19 +817,14 @@ export const useDataStore = defineStore(
         updateTaskById(taskId, { lifeRecords: next });
         return;
       }
-      // 删空：复用活动删除的关联清理，整行软删
-      handleDeleteActivity(
-        activityList.value,
-        todoList.value,
-        scheduleList.value,
-        taskList.value,
-        task.sourceId,
-        { activityById: activityById.value, childrenByParentId: childrenOfActivity.value },
-        ledgerList.value,
-      );
-      cleanSelection();
-      displayStore.snapToEmptySlot();
-      saveAllNow();
+      softDeleteLifeRecordRow(task);
+    }
+
+    /** 丢弃日桶（空表单删除；有记录时也可整行丢掉） */
+    function discardLifeRecordTask(taskId: number): void {
+      const task = taskList.value.find((t) => t.id === taskId);
+      if (!task || task.deleted) return;
+      softDeleteLifeRecordRow(task);
     }
 
     function setActiveId(id: number | null) {
@@ -1267,8 +1285,10 @@ export const useDataStore = defineStore(
       cleanSelection,
       addActivity,
       ensureDayEnergyTask,
+      openLifeRecord,
       recordLifeRecord,
       removeLifeRecordAt,
+      discardLifeRecordTask,
       setActiveId,
       setSelectedDate,
       setTaskStar,

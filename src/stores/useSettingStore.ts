@@ -89,6 +89,10 @@ export interface GlobalSettings {
   homeToolbarMobilePinned?: HomeToolbarActionId[];
   /** DayTodo 列表展示序：优先级（默认）| 开始时间 */
   dayTodoSortMode: "priority" | "startTime";
+  /** 喝水默认杯量 ml（+1 时写入笔快照） */
+  drinkCupMl: number;
+  /** 喝水默认日目标 ml（新建/打开日桶时写入 task 快照） */
+  drinkDailyGoalMl: number;
   // 以后新增全局设置项就在这里补充
 }
 
@@ -150,6 +154,8 @@ const defaultSettings: GlobalSettings = {
   taskToolbarMobilePinned: [...DEFAULT_TASK_TOOLBAR_MOBILE_PINNED],
   homeToolbarMobilePinned: [...DEFAULT_HOME_TOOLBAR_MOBILE_PINNED],
   dayTodoSortMode: "priority",
+  drinkCupMl: 250,
+  drinkDailyGoalMl: 2000,
   ai: {
     activeId: 1,
     systemPrompt:

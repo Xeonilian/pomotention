@@ -8,6 +8,16 @@ import { getLifeRecordDef, getLifeRecordKind, lifeRecordPlaceholderTitle, type L
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+export type BuildLifeRecordOptions = {
+  /** 仅 drink：写入当日目标快照 */
+  drinkGoalMl?: number;
+};
+
+export type AppendLifeRecordOptions = {
+  /** 喝水等点事件：本口 ml 快照 */
+  amountMl?: number;
+};
+
 /** 当前显示日该 kind 是否已有记录行（todo.id 决定归属日，与 todosForAppDate 同规则） */
 export function findLifeRecordTodoForDay(
   todoList: Todo[],
@@ -25,7 +35,7 @@ export function findLifeRecordTodoForDay(
 }
 
 /** 单独补建 lifeRecord 的 task（行在但 task 缺失的异常兜底） */
-export function buildLifeRecordTask(activityId: number, title: string): Task {
+export function buildLifeRecordTask(activityId: number, title: string, options?: BuildLifeRecordOptions): Task {
   const now = Date.now();
   return {
     id: now,
@@ -37,6 +47,7 @@ export function buildLifeRecordTask(activityId: number, title: string): Task {
     interruptionRecords: [],
     lifeRecords: [],
     description: "",
+    drinkGoalMl: options?.drinkGoalMl,
     starred: false,
     deleted: false,
     synced: false,
@@ -45,10 +56,15 @@ export function buildLifeRecordTask(activityId: number, title: string): Task {
 }
 
 /** 构造 lifeRecord 三件套；activity.id 与 todo.id 统一用记录时刻 at，保证落在显示日 */
-export function buildLifeRecordEntities(kind: LifeRecordKind, at: number): { activity: Activity; todo: Todo; task: Task } {
+export function buildLifeRecordEntities(
+  kind: LifeRecordKind,
+  at: number,
+  options?: BuildLifeRecordOptions,
+): { activity: Activity; todo: Todo; task: Task } {
   const def = getLifeRecordDef(kind);
   const dayStart = getDayStartTimestamp(at);
   const placeholder = lifeRecordPlaceholderTitle(kind, dayStart);
+  const drinkGoalMl = kind === "drink" ? options?.drinkGoalMl : undefined;
 
   // activity / todo / task 标题统一 daily_<kind>_<日零点>；不进活动列表靠 status=done；不进 planner/Search 靠 tag + 标题规则
   const activity: Activity = {
@@ -63,7 +79,7 @@ export function buildLifeRecordEntities(kind: LifeRecordKind, at: number): { act
     lastModified: Date.now(),
   };
 
-  const task = buildLifeRecordTask(activity.id, placeholder);
+  const task = buildLifeRecordTask(activity.id, placeholder, { drinkGoalMl });
   activity.taskId = task.id;
 
   const todo: Todo = {
@@ -89,6 +105,7 @@ export function appendLifeRecord(
   records: LifeRecord[] | undefined,
   kind: LifeRecordKind,
   at: number,
+  options?: AppendLifeRecordOptions,
 ): { next: LifeRecord[]; record: LifeRecord } {
   const list = records ?? [];
 
@@ -104,7 +121,11 @@ export function appendLifeRecord(
   // 同毫秒连点会撞 id（Date.now 粒度），递推保证唯一
   let id = Date.now();
   while (list.some((r) => r.id === id)) id++;
-  const record: LifeRecord = { id, recordedAt: at };
+  const record: LifeRecord = {
+    id,
+    recordedAt: at,
+    ...(options?.amountMl != null ? { amountMl: options.amountMl } : {}),
+  };
   return { next: [...list, record], record };
 }
 
@@ -119,7 +140,7 @@ export function removeLifeRecord(records: LifeRecord[] | undefined, recordId: nu
 export function updateLifeRecord(
   records: LifeRecord[] | undefined,
   recordId: number,
-  patch: Partial<Pick<LifeRecord, "recordedAt" | "endAt" | "description">>,
+  patch: Partial<Pick<LifeRecord, "recordedAt" | "endAt" | "description" | "amountMl">>,
 ): LifeRecord[] | null {
   const list = records ?? [];
   const index = list.findIndex((r) => r.id === recordId);
@@ -127,4 +148,9 @@ export function updateLifeRecord(
   const next = [...list];
   next[index] = { ...next[index], ...patch };
   return next;
+}
+
+/** 当日已喝合计 ml（缺 amountMl 的旧笔按 0） */
+export function sumLifeRecordAmountMl(records: LifeRecord[] | undefined): number {
+  return (records ?? []).reduce((sum, r) => sum + (Number(r.amountMl) || 0), 0);
 }

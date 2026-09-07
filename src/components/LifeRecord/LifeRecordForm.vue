@@ -6,6 +6,18 @@
       <span class="lr-title">{{ def.emoji }} {{ def.title }}</span>
       <span v-if="kind !== 'sleep'" class="lr-count">×{{ records.length }}</span>
       <n-button size="small" tertiary class="lr-append" @click="onAppend">{{ appendLabel }}</n-button>
+      <n-button
+        v-if="records.length === 0"
+        size="small"
+        tertiary
+        class="lr-discard"
+        title="删除空记录"
+        @click="onDiscard"
+      >
+        <template #icon>
+          <n-icon><Delete20Regular /></n-icon>
+        </template>
+      </n-button>
       <n-button size="small" tertiary class="lr-done" title="完成，取消选中" @click="onDeselect">
         <template #icon>
           <n-icon><Checkmark20Regular /></n-icon>
@@ -37,6 +49,7 @@
         />
         <span v-if="record.endAt != null" class="lr-duration">{{ formatDuration(record) }}</span>
       </template>
+      <span v-else-if="kind === 'drink' && record.amountMl != null" class="lr-ml">{{ record.amountMl }}ml</span>
       <n-input
         v-if="kind === 'eat'"
         class="lr-desc"
@@ -63,11 +76,13 @@ import { getLifeRecordDef, type LifeRecordKind } from "@/core/lifeRecord";
 import { appendLifeRecord, updateLifeRecord } from "@/services/lifeRecord/lifeRecordService";
 import { useDataStore } from "@/stores/useDataStore";
 import { useDisplayedTaskStore } from "@/stores/useDisplayedTaskStore";
+import { useSettingStore } from "@/stores/useSettingStore";
 
 const props = defineProps<{ taskId: number; kind: LifeRecordKind }>();
 
 const dataStore = useDataStore();
 const displayStore = useDisplayedTaskStore();
+const settingStore = useSettingStore();
 const def = computed(() => getLifeRecordDef(props.kind));
 
 const task = computed(() => dataStore.taskList.find((t) => t.id === props.taskId) ?? null);
@@ -105,13 +120,19 @@ function writeRecords(next: LifeRecord[] | null) {
 function onAppend() {
   const anchor = rowDayAnchor.value;
   const at = isToday(anchor) ? Date.now() : withTimePart(anchor, Date.now());
-  writeRecords(appendLifeRecord(task.value?.lifeRecords, props.kind, at).next);
+  const amountMl = props.kind === "drink" ? settingStore.settings.drinkCupMl : undefined;
+  writeRecords(appendLifeRecord(task.value?.lifeRecords, props.kind, at, { amountMl }).next);
 }
 
 /** 打钩：退出当前生活记录 task，回到非选中空位 */
 function onDeselect() {
   dataStore.cleanSelection();
   displayStore.snapToEmptySlot();
+}
+
+/** 空态丢掉日桶（无幽灵行） */
+function onDiscard() {
+  dataStore.discardLifeRecordTask(props.taskId);
 }
 
 function onChangeTime(record: LifeRecord, field: "recordedAt" | "endAt", ts: number | null) {
@@ -173,6 +194,7 @@ function formatDuration(record: LifeRecord): string {
 .lr-append {
   margin-left: auto;
 }
+.lr-discard,
 .lr-done {
   flex-shrink: 0;
 }
@@ -192,7 +214,8 @@ function formatDuration(record: LifeRecord): string {
 .lr-sep {
   color: var(--color-text-secondary);
 }
-.lr-duration {
+.lr-duration,
+.lr-ml {
   color: var(--color-text-secondary);
   font-size: 12px;
   white-space: nowrap;

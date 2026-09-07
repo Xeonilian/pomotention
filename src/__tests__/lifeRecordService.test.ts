@@ -12,6 +12,7 @@ import {
   appendLifeRecord,
   removeLifeRecord,
   updateLifeRecord,
+  sumLifeRecordAmountMl,
 } from "@/services/lifeRecord/lifeRecordService";
 
 const DAY_START = new Date(2026, 8, 2, 0, 0, 0, 0).getTime(); // 2026-09-02 00:00
@@ -76,7 +77,6 @@ describe("findLifeRecordTodoForDay", () => {
     expect(
       findLifeRecordTodoForDay([makeTodo({ id: IN_DAY, activityId: 100, deleted: true })], activityById, "drink", DAY_START),
     ).toBeUndefined();
-    // activity 已软删也不命中
     const deletedMap = new Map<number, Activity>([[100, { ...drinkActivity, deleted: true }]]);
     expect(findLifeRecordTodoForDay([makeTodo({ id: IN_DAY, activityId: 100 })], deletedMap, "drink", DAY_START)).toBeUndefined();
   });
@@ -84,7 +84,7 @@ describe("findLifeRecordTodoForDay", () => {
 
 describe("buildLifeRecordEntities", () => {
   it("三件套互相关联且落在记录时刻", () => {
-    const { activity, todo, task } = buildLifeRecordEntities("drink", IN_DAY);
+    const { activity, todo, task } = buildLifeRecordEntities("drink", IN_DAY, { drinkGoalMl: 2000 });
     expect(activity.id).toBe(IN_DAY);
     expect(activity.tagIds).toEqual([TAG_ID_LIFE_DRINK]);
     expect(todo.id).toBe(IN_DAY);
@@ -92,6 +92,7 @@ describe("buildLifeRecordEntities", () => {
     expect(todo.taskId).toBe(task.id);
     expect(task.sourceId).toBe(activity.id);
     expect(task.lifeRecords).toEqual([]);
+    expect(task.drinkGoalMl).toBe(2000);
     expect(activity.taskId).toBe(task.id);
     expect(todo.priority).toBe(0);
   });
@@ -105,20 +106,32 @@ describe("buildLifeRecordEntities", () => {
     expect(task.activityTitle).toBe(`daily_drink_${DAY_START}`);
   });
 
+  it("非 drink 不写 drinkGoalMl", () => {
+    const { task } = buildLifeRecordEntities("eat", IN_DAY, { drinkGoalMl: 2000 });
+    expect(task.drinkGoalMl).toBeUndefined();
+  });
+
   it("buildLifeRecordTask 兜底补建", () => {
-    const task: Task = buildLifeRecordTask(100, "喝水");
+    const task: Task = buildLifeRecordTask(100, "喝水", { drinkGoalMl: 1500 });
     expect(task.sourceId).toBe(100);
     expect(task.source).toBe("activity");
     expect(task.lifeRecords).toEqual([]);
+    expect(task.drinkGoalMl).toBe(1500);
   });
 });
 
 describe("appendLifeRecord", () => {
-  it("点事件直接追加，时刻为显示日时刻", () => {
-    const { next, record } = appendLifeRecord(undefined, "drink", IN_DAY);
+  it("点事件直接追加，可带 amountMl", () => {
+    const { next, record } = appendLifeRecord(undefined, "drink", IN_DAY, { amountMl: 250 });
     expect(next).toHaveLength(1);
     expect(record.recordedAt).toBe(IN_DAY);
+    expect(record.amountMl).toBe(250);
     expect(record.endAt).toBeUndefined();
+  });
+
+  it("sumLifeRecordAmountMl 合计", () => {
+    expect(sumLifeRecordAmountMl([{ id: 1, recordedAt: 1, amountMl: 250 }, { id: 2, recordedAt: 2, amountMl: 250 }])).toBe(500);
+    expect(sumLifeRecordAmountMl([{ id: 1, recordedAt: 1 }])).toBe(0);
   });
 
   it("sleep：首次新开无 endAt，再次 +1 闭合，第三次再开新段", () => {
@@ -157,7 +170,7 @@ describe("removeLifeRecord / updateLifeRecord", () => {
   });
 });
 
-// ========== store 级：懒创建与删空级联 ==========
+// ========== store 级：开门与删空级联 ==========
 vi.mock("@/services/data/localStorageService", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/services/data/localStorageService")>();
   return {
@@ -172,56 +185,105 @@ vi.mock("@/services/data/localStorageService", async (importOriginal) => {
   };
 });
 
-describe("recordLifeRecord / removeLifeRecordAt（store 级联）", () => {
+describe("openLifeRecord / discardLifeRecordTask（store）", () => {
   beforeEach(() => {
     setActivePinia(createPinia());
     localStorage.clear();
   });
 
-  it("首次 +1 懒建三件套并补建系统 tag，再次 +1 复用同一行", async () => {
+  it("日视图打开：懒建空桶+目标快照，不追加记录；再开复用", async () => {
     const { useDataStore } = await import("@/stores/useDataStore");
+    const { useSettingStore } = await import("@/stores/useSettingStore");
     const { useTagStore } = await import("@/stores/useTagStore");
     const ds = useDataStore();
+    const settings = useSettingStore();
+    settings.settings.viewSet = "day";
+    settings.settings.drinkDailyGoalMl = 2000;
+    settings.settings.drinkCupMl = 250;
 
-    ds.recordLifeRecord("drink");
+    ds.openLifeRecord("drink");
     expect(ds.activityList).toHaveLength(1);
     expect(ds.todoList).toHaveLength(1);
     expect(ds.taskList).toHaveLength(1);
     expect(ds.activityList[0].tagIds).toEqual([TAG_ID_LIFE_DRINK]);
-    expect(ds.taskList[0].lifeRecords).toHaveLength(1);
+    expect(ds.taskList[0].lifeRecords).toEqual([]);
+    expect(ds.taskList[0].drinkGoalMl).toBe(2000);
     expect(useTagStore().rawTags.some((t) => t.id === TAG_ID_LIFE_DRINK)).toBe(true);
 
-    // 每次点击都激活表单；选中态由 display→selection 同步 watcher 落到隐藏行上（表格不渲染，无视觉影响）
     const { useDisplayedTaskStore } = await import("@/stores/useDisplayedTaskStore");
     expect(useDisplayedTaskStore().displayedTaskId).toBe(ds.taskList[0].id);
-    expect(ds.selectedRowId).toBe(ds.todoList[0].id);
 
-    ds.recordLifeRecord("drink");
+    ds.openLifeRecord("drink");
     expect(ds.activityList).toHaveLength(1);
-    expect(ds.taskList[0].lifeRecords).toHaveLength(2);
-    expect(useDisplayedTaskStore().displayedTaskId).toBe(ds.taskList[0].id);
+    expect(ds.taskList[0].lifeRecords).toEqual([]);
   });
 
-  it("记录未删空时只更新数组，行保留", async () => {
+  it("表单路径 +1 写入 amountMl；改全局默认不影响已有快照", async () => {
     const { useDataStore } = await import("@/stores/useDataStore");
+    const { useSettingStore } = await import("@/stores/useSettingStore");
+    const { appendLifeRecord } = await import("@/services/lifeRecord/lifeRecordService");
     const ds = useDataStore();
-    ds.recordLifeRecord("drink");
-    ds.recordLifeRecord("drink");
-    const task = ds.taskList[0];
+    const settings = useSettingStore();
+    settings.settings.viewSet = "day";
+    settings.settings.drinkDailyGoalMl = 2000;
+    settings.settings.drinkCupMl = 250;
 
-    ds.removeLifeRecordAt(task.id, task.lifeRecords![0].id);
+    ds.openLifeRecord("drink");
+    const task = ds.taskList[0];
+    const { next } = appendLifeRecord(task.lifeRecords, "drink", IN_DAY, { amountMl: settings.settings.drinkCupMl });
+    ds.updateTaskById(task.id, { lifeRecords: next });
+    expect(ds.taskList[0].lifeRecords?.[0].amountMl).toBe(250);
+
+    settings.settings.drinkCupMl = 300;
+    settings.settings.drinkDailyGoalMl = 3000;
+    expect(ds.taskList[0].drinkGoalMl).toBe(2000);
+    expect(ds.taskList[0].lifeRecords?.[0].amountMl).toBe(250);
+
+    const again = appendLifeRecord(ds.taskList[0].lifeRecords, "drink", IN_DAY + 1, {
+      amountMl: settings.settings.drinkCupMl,
+    });
+    ds.updateTaskById(task.id, { lifeRecords: again.next });
+    expect(ds.taskList[0].lifeRecords?.[1].amountMl).toBe(300);
+  });
+
+  it("非日视图 open 为 no-op", async () => {
+    const { useDataStore } = await import("@/stores/useDataStore");
+    const { useSettingStore } = await import("@/stores/useSettingStore");
+    const ds = useDataStore();
+    useSettingStore().settings.viewSet = "month";
+    ds.openLifeRecord("drink");
+    expect(ds.taskList).toHaveLength(0);
+  });
+
+  it("discard 空桶级联软删", async () => {
+    const { useDataStore } = await import("@/stores/useDataStore");
+    const { useSettingStore } = await import("@/stores/useSettingStore");
+    const ds = useDataStore();
+    useSettingStore().settings.viewSet = "day";
+    ds.openLifeRecord("drink");
+    ds.discardLifeRecordTask(ds.taskList[0].id);
+    expect(ds.activityList[0].deleted).toBe(true);
+    expect(ds.todoList[0].deleted).toBe(true);
+    expect(ds.taskList[0].deleted).toBe(true);
+  });
+
+  it("有记录时 remove 未删空只更新数组；删空级联", async () => {
+    const { useDataStore } = await import("@/stores/useDataStore");
+    const { useSettingStore } = await import("@/stores/useSettingStore");
+    const { appendLifeRecord } = await import("@/services/lifeRecord/lifeRecordService");
+    const ds = useDataStore();
+    useSettingStore().settings.viewSet = "day";
+    ds.openLifeRecord("drink");
+    const taskId = ds.taskList[0].id;
+    let next = appendLifeRecord(undefined, "drink", IN_DAY, { amountMl: 250 }).next;
+    next = appendLifeRecord(next, "drink", IN_DAY + 1, { amountMl: 250 }).next;
+    ds.updateTaskById(taskId, { lifeRecords: next });
+
+    ds.removeLifeRecordAt(taskId, next[0].id);
     expect(ds.taskList[0].lifeRecords).toHaveLength(1);
     expect(ds.taskList[0].deleted).toBeFalsy();
-    expect(ds.todoList[0].deleted).toBeFalsy();
-  });
 
-  it("删空最后一条记录时级联软删 activity/todo/task", async () => {
-    const { useDataStore } = await import("@/stores/useDataStore");
-    const ds = useDataStore();
-    ds.recordLifeRecord("eat");
-    const task = ds.taskList[0];
-
-    ds.removeLifeRecordAt(task.id, task.lifeRecords![0].id);
+    ds.removeLifeRecordAt(taskId, ds.taskList[0].lifeRecords![0].id);
     expect(ds.activityList[0].deleted).toBe(true);
     expect(ds.todoList[0].deleted).toBe(true);
     expect(ds.taskList[0].deleted).toBe(true);

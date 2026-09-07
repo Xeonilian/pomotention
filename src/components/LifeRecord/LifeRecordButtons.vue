@@ -1,6 +1,5 @@
 <!-- LifeRecordButtons.vue -->
-<!-- day planner 按钮区的生活记录 +1 入口：Regular=当天无记录，Filled=当天已有 -->
-<!-- 多根节点：直接作为 button-group 子项，与钱包/重复等同 gap，整排等距 -->
+<!-- 日视图：打开生活记录日桶（不 +1）；周月年：块 3 前 no-op -->
 <template>
   <n-button
     v-for="def in visibleDefs"
@@ -8,8 +7,8 @@
     size="small"
     text
     class="life-record-button"
-    :title="`记一次${def.title}`"
-    @click.stop="onRecord(def.kind)"
+    :title="buttonTitle(def.title)"
+    @click.stop="onOpen(def.kind)"
   >
     <template #icon>
         <n-icon :size="18">
@@ -36,6 +35,7 @@ import {
 import { LIFE_RECORD_DEFS, type LifeRecordKind } from "@/core/lifeRecord";
 import { findLifeRecordTodoForDay } from "@/services/lifeRecord/lifeRecordService";
 import { useDataStore } from "@/stores/useDataStore";
+import { useSettingStore } from "@/stores/useSettingStore";
 
 const props = withDefaults(
   defineProps<{
@@ -53,8 +53,11 @@ const ICONS: Record<LifeRecordKind, { regular: Component; filled: Component }> =
 };
 
 const dataStore = useDataStore();
+const settingStore = useSettingStore();
 const { todoList, activityById } = storeToRefs(dataStore);
 const dateService = dataStore.dateService;
+
+const isDayView = computed(() => settingStore.settings.viewSet === "day");
 
 const visibleDefs = computed(() => {
   if (!props.kinds?.length) return LIFE_RECORD_DEFS;
@@ -63,7 +66,6 @@ const visibleDefs = computed(() => {
 });
 
 // 删空会级联软删行，所以「当日存在该 kind 行」= 当天已有记录
-// Pinia reactive 会解包嵌套 ComputedRef，用 toValue 兼容 number / Ref（同 HomeView dayHolidayLabel）
 const kindsWithRecordToday = computed(() => {
   const raw = toValue(dateService.appDateTimestamp as Parameters<typeof toValue>[0]);
   const dayStart = typeof raw === "number" && !Number.isNaN(raw) ? raw : null;
@@ -81,11 +83,15 @@ function hasRecordToday(kind: LifeRecordKind): boolean {
   return kindsWithRecordToday.value.has(kind);
 }
 
+function buttonTitle(title: string): string {
+  return isDayView.value ? `打开${title}` : `${title}统计（即将推出）`;
+}
+
 const emit = defineEmits<{ recorded: [kind: LifeRecordKind] }>();
 
-function onRecord(kind: LifeRecordKind) {
-  dataStore.recordLifeRecord(kind);
-  emit("recorded", kind);
+function onOpen(kind: LifeRecordKind) {
+  dataStore.openLifeRecord(kind);
+  if (isDayView.value) emit("recorded", kind);
 }
 </script>
 
@@ -99,8 +105,6 @@ function onRecord(kind: LifeRecordKind) {
 }
 
 .life-record-button :deep(.n-button__icon) {
-  margin: 0 !important;
-  width: 18px;
-  height: 18px;
+  margin: 0;
 }
 </style>
