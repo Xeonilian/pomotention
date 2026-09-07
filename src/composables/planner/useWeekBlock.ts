@@ -16,6 +16,7 @@ import { computed, unref, type MaybeRef, type CSSProperties } from "vue";
 import type { WeekBlockItem } from "@/core/types/Week";
 import { useWeekData } from "@/composables/planner/useWeekData";
 import { getItemWeekRange, getHour, startOfDay } from "@/core/utils/weekDays";
+import { resolveWeekAxisEndHour, resolveWeekAxisStartHour } from "@/core/utils/weekAxisRange";
 import { useDevice } from "@/composables/platform/useDevice";
 import { storeToRefs } from "pinia";
 import { useDataStore } from "@/stores/useDataStore";
@@ -132,21 +133,9 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targe
     minHour = Math.floor(minHour);
     maxHour = Math.min(Math.ceil(maxHour), 24);
 
-    let startHour: number;
-    if (earliestWakeTs != null) {
-      // 醒点向上取整到小时再 −1：5:30→5，整点 8:00→7（上方恰留 1 格）；不受默认 6 压制
-      const d = new Date(earliestWakeTs);
-      const wakeFrac = d.getHours() + d.getMinutes() / 60 + d.getSeconds() / 3600;
-      startHour = Math.max(0, Math.ceil(wakeFrac) - 1);
-      // 更早的普通活动仍可再往上抬
-      if (minHour < startHour) startHour = minHour;
-    } else {
-      startHour = minHour < 6 ? minHour : 6;
-    }
-
     return {
-      startHour,
-      endHour: maxHour > 22 ? maxHour : 22,
+      startHour: resolveWeekAxisStartHour(minHour, earliestWakeTs),
+      endHour: resolveWeekAxisEndHour(maxHour),
     };
   });
 
