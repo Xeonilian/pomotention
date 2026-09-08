@@ -258,6 +258,7 @@
             <MonthPlanner
               v-if="settingStore.settings.showPlanner && settingStore.settings.viewSet === 'month'"
               :show-stats-only="monthShowStatsOnly"
+              :drink-skin="drinkPlannerSkinActive"
               @item-change="onItemChange"
               @date-select="onDateSelect"
               @date-select-day-view="onDateSelectDayView"
@@ -385,6 +386,7 @@ import { taskService } from "@/services/task/taskService";
 
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useDataStore } from "@/stores/useDataStore";
+import { useDrinkPlannerSkinStore } from "@/stores/useDrinkPlannerSkinStore";
 import { autoSyncDebounced, uploadAllDebounced } from "@/core/utils/autoSync";
 import { useDevice } from "@/composables/platform/useDevice";
 import { CAPTURE_UI_ENABLED } from "@/core/capture";
@@ -510,6 +512,15 @@ const { currentDatePomoCount, periodPomoCount, globalRealPomo } = usePomodoroSta
 
 /** 月视图：header 🍅 区域双击/长按切换统计模式（会话级） */
 const monthShowStatsOnly = ref(false);
+const drinkPlannerSkinStore = useDrinkPlannerSkinStore();
+const { active: drinkPlannerSkinActive } = storeToRefs(drinkPlannerSkinStore);
+
+watch(
+  () => settingStore.settings.viewSet,
+  (view) => {
+    if (view === "day") drinkPlannerSkinStore.clear();
+  },
+);
 const GLOBAL_POMO_LONG_PRESS_MS = 500;
 let globalPomoLongPressTimer: ReturnType<typeof setTimeout> | null = null;
 let globalPomoSuppressClick = false;

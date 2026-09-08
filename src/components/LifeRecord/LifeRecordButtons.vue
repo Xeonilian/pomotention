@@ -1,5 +1,5 @@
 <!-- LifeRecordButtons.vue -->
-<!-- 日视图：打开生活记录日桶（不 +1）；周月年：块 3 前 no-op -->
+<!-- 日视图：打开生活记录日桶（不 +1）；非日·喝水：切换 Planner 喝水皮肤；其它 kind 非日暂 no-op -->
 <template>
   <n-button
     v-for="def in visibleDefs"
@@ -7,12 +7,13 @@
     size="small"
     text
     class="life-record-button"
-    :title="buttonTitle(def.title)"
+    :class="{ 'life-record-button--skin': def.kind === 'drink' && drinkSkinActive }"
+    :title="buttonTitle(def)"
     @click.stop="onOpen(def.kind)"
   >
     <template #icon>
         <n-icon :size="18">
-          <component :is="hasRecordToday(def.kind) ? ICONS[def.kind].filled : ICONS[def.kind].regular" />
+          <component :is="iconFor(def.kind)" />
         </n-icon>
     </template>
   </n-button>
@@ -36,6 +37,7 @@ import { LIFE_RECORD_DEFS, type LifeRecordKind } from "@/core/lifeRecord";
 import { findLifeRecordTodoForDay } from "@/services/lifeRecord/lifeRecordService";
 import { useDataStore } from "@/stores/useDataStore";
 import { useSettingStore } from "@/stores/useSettingStore";
+import { useDrinkPlannerSkinStore } from "@/stores/useDrinkPlannerSkinStore";
 
 const props = withDefaults(
   defineProps<{
@@ -54,7 +56,9 @@ const ICONS: Record<LifeRecordKind, { regular: Component; filled: Component }> =
 
 const dataStore = useDataStore();
 const settingStore = useSettingStore();
+const drinkSkinStore = useDrinkPlannerSkinStore();
 const { todoList, activityById } = storeToRefs(dataStore);
+const { active: drinkSkinActive } = storeToRefs(drinkSkinStore);
 const dateService = dataStore.dateService;
 
 const isDayView = computed(() => settingStore.settings.viewSet === "day");
@@ -65,7 +69,6 @@ const visibleDefs = computed(() => {
   return LIFE_RECORD_DEFS.filter((d) => allow.has(d.kind));
 });
 
-// 删空会级联软删行，所以「当日存在该 kind 行」= 当天已有记录
 const kindsWithRecordToday = computed(() => {
   const raw = toValue(dateService.appDateTimestamp as Parameters<typeof toValue>[0]);
   const dayStart = typeof raw === "number" && !Number.isNaN(raw) ? raw : null;
@@ -83,20 +86,33 @@ function hasRecordToday(kind: LifeRecordKind): boolean {
   return kindsWithRecordToday.value.has(kind);
 }
 
-function buttonTitle(title: string): string {
-  return isDayView.value ? `打开${title}` : `${title}统计（即将推出）`;
+function iconFor(kind: LifeRecordKind): Component {
+  const pair = ICONS[kind];
+  if (kind === "drink" && !isDayView.value && drinkSkinActive.value) return pair.filled;
+  return hasRecordToday(kind) ? pair.filled : pair.regular;
+}
+
+function buttonTitle(def: (typeof LIFE_RECORD_DEFS)[number]): string {
+  if (isDayView.value) return `打开${def.title}`;
+  if (def.kind === "drink") return drinkSkinActive.value ? "退出喝水统计" : "喝水统计";
+  return `${def.title}统计（即将推出）`;
 }
 
 const emit = defineEmits<{ recorded: [kind: LifeRecordKind] }>();
 
 function onOpen(kind: LifeRecordKind) {
-  dataStore.openLifeRecord(kind);
-  if (isDayView.value) emit("recorded", kind);
+  if (isDayView.value) {
+    dataStore.openLifeRecord(kind);
+    emit("recorded", kind);
+    return;
+  }
+  if (kind === "drink") {
+    drinkSkinStore.toggle();
+  }
 }
 </script>
 
 <style scoped>
-/* 与 button-group 前两个 icon（标签/钱包）同为 18×18 */
 .life-record-button {
   width: 18px;
   min-width: 18px;
@@ -106,5 +122,9 @@ function onOpen(kind: LifeRecordKind) {
 
 .life-record-button :deep(.n-button__icon) {
   margin: 0;
+}
+
+.life-record-button--skin {
+  color: var(--color-blue);
 }
 </style>
