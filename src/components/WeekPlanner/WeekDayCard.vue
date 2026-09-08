@@ -3,8 +3,8 @@
   <n-card
     size="small"
     class="day-card"
-    :class="[{ 'day-card--selected': selectedDate === day.startTs }]"
-    @click="() => handleDateSelect(day.startTs)"
+    :class="[{ 'day-card--selected': selectedDate === day.startTs }, { 'day-card--drink-layer': drinkLayer }]"
+    @click="() => onCardClick()"
   >
     <div class="day-header">
       <div class="dow" @click.stop="() => handleDateSelect(day.startTs)">
@@ -28,19 +28,20 @@
     </div>
 
     <div class="items">
-      <!-- 时间轴网格容器（始终显示） -->
       <div class="time-grid-container" :style="{ height: timeGridHeight + 'px' }">
-        <!-- 生活记录：睡眠蓝底（在块下方） -->
-        <div
-          v-for="sleep in lifeOverlay?.sleeps || []"
-          :key="`life-sleep-${sleep.recordId}`"
-          class="week-life-sleep"
-          :style="getLifeSleepBandStyle(sleep, day.startTs)"
-          :title="sleep.title"
-          @click.stop="emit('item-change', sleep.todoId, undefined, sleep.taskId)"
-        ></div>
+        <WeekDrinkWaterFill v-if="drinkLayer && drinkRatio > 0" :ratio="drinkRatio" :met="drinkMet" />
 
-        <!-- 小时刻度线（始终显示） -->
+        <template v-if="!hideScheduleBlocks">
+          <div
+            v-for="sleep in lifeOverlay?.sleeps || []"
+            :key="`life-sleep-${sleep.recordId}`"
+            class="week-life-sleep"
+            :style="getLifeSleepBandStyle(sleep, day.startTs)"
+            :title="sleep.title"
+            @click.stop="emit('item-change', sleep.todoId, undefined, sleep.taskId)"
+          ></div>
+        </template>
+
         <div class="hour-ticks">
           <div
             v-for="(hour, hourIdx) in hourStamps"
@@ -60,8 +61,7 @@
           </div>
         </div>
 
-        <!-- 时间块（仅在有数据时显示） -->
-        <template v-if="day.items.length > 0">
+        <template v-if="!hideScheduleBlocks && day.items.length > 0">
           <WeekBlockItem
             v-for="block in layoutedWeekBlocks.get(day.index) || getFallbackWeekBlocks(day.items, day.index)"
             :key="block.id"
@@ -72,21 +72,36 @@
           />
         </template>
 
-        <!-- 生活记录：喝/吃/厕点标 -->
-        <div
-          v-for="mark in lifeOverlay?.points || []"
-          :key="`life-point-${mark.kind}-${mark.recordId}`"
-          class="week-life-point"
-          :style="getLifePointStyle(mark, day.startTs)"
-          :title="mark.title"
-          @click.stop="emit('item-change', mark.todoId, undefined, mark.taskId)"
-        >
-          <n-icon :size="isMobile ? 14 : 16" :component="lifePointIcon(mark.kind)" />
-        </div>
+        <template v-if="drinkLayer">
+          <div
+            v-for="mark in drinkPoints"
+            :key="`drink-point-${mark.recordId}`"
+            class="week-life-point week-life-point--drink-layer"
+            :style="getDrinkPointStyle(mark)"
+            :title="mark.title"
+            @click.stop="onDrinkPointClick(mark)"
+          >
+            <n-icon :size="isMobile ? 18 : 22" :component="LIFE_POINT_ICONS.drink" />
+          </div>
+        </template>
+        <template v-else>
+          <div
+            v-for="mark in lifeOverlay?.points || []"
+            :key="`life-point-${mark.kind}-${mark.recordId}`"
+            class="week-life-point"
+            :style="getLifePointStyle(mark, day.startTs)"
+            :title="mark.title"
+            @click.stop="emit('item-change', mark.todoId, undefined, mark.taskId)"
+          >
+            <n-icon :size="isMobile ? 14 : 16" :component="lifePointIcon(mark.kind)" />
+          </div>
+        </template>
       </div>
 
-      <!-- 统计信息（置于时间网格外，避免被 overflow:hidden 裁切） -->
-      <div class="card-statistic">
+      <div v-if="drinkLayer" class="card-statistic card-statistic--drink">
+        <span class="drink-sum" :class="{ 'drink-sum--met': drinkMet }">{{ drinkTotalMl }} ml</span>
+      </div>
+      <div v-else-if="!hideScheduleBlocks" class="card-statistic">
         <span class="pom-sum">
           <template v-if="isMobile">🍅 {{ day.sumRealPomo }}</template>
           <template v-else>
@@ -106,20 +121,24 @@ import { NCard, NIcon } from "naive-ui";
 import type { DayItem } from "@/core/types/Week";
 import type { WeekBlockItem as WeekBlockItemType } from "@/core/types/Week";
 import WeekBlockItem from "./WeekBlockItem.vue";
+import WeekDrinkWaterFill from "@/components/WeekPlanner/WeekDrinkWaterFill.vue";
 import { formatMonthDay, getPomoColor, getFallbackWeekBlocks } from "@/core/utils/weekDays";
 import { getDateKey } from "@/core/utils";
 import type { HolidayDisplay } from "@/services/planner/publicHolidays";
 import { plannerHolidayMapKey } from "@/composables/planner/usePublicHolidays";
 import { useDataStore } from "@/stores/useDataStore";
+import { useSettingStore } from "@/stores/useSettingStore";
 import { storeToRefs } from "pinia";
 import { useDevice } from "@/composables/platform/useDevice";
 import { createTouchScheduledSingleAndDouble } from "@/composables/platform/useTouchScheduledSingleAndDouble";
 import type { LifePointKind, LifePointMark, LifeSleepRange } from "@/services/timetable/lifeRecordOverlays";
 import { Door20Filled, Drop20Filled, FoodApple20Filled } from "@vicons/fluent";
+import { findLifeRecordTodoForDay, isDrinkGoalMet, sumLifeRecordAmountMl } from "@/services/lifeRecord/lifeRecordService";
 
 const { isMobile } = useDevice();
 const dataStore = useDataStore();
-const { selectedDate } = storeToRefs(dataStore);
+const settingStore = useSettingStore();
+const { selectedDate, todoList, activityById, taskById, taskByActivityId } = storeToRefs(dataStore);
 
 const holidayMap = inject(plannerHolidayMapKey, ref<Record<string, HolidayDisplay>>({}));
 
@@ -133,11 +152,9 @@ function lifePointIcon(kind: LifePointKind): Component {
   return LIFE_POINT_ICONS[kind];
 }
 
-// 定义两种返回类型的联合类型
 type WeekBlockStyle =
-  | { display: string } // 只包含 display 的情况
+  | { display: string }
   | {
-      // 包含位置属性的情况
       position: string;
       top: string;
       left: string;
@@ -146,30 +163,58 @@ type WeekBlockStyle =
       zIndex: number;
     };
 
-const props = defineProps<{
-  day: DayItem;
-  dayNames: string[];
-  timeGridHeight: number;
-  hourStamps: number[];
-  layoutedWeekBlocks: Map<number, WeekBlockItemType[]>;
-  lifeOverlay?: { points: LifePointMark[]; sleeps: LifeSleepRange[] };
-  MAX_PER_DAY: number;
-  getHourTickTop: (hour: number) => number;
-  getItemBlockStyle: (block: WeekBlockItemType, dayStartTs: number) => WeekBlockStyle;
-  getLifeSleepBandStyle: (sleep: LifeSleepRange, dayStartTs: number) => CSSProperties;
-  getLifePointStyle: (mark: LifePointMark, dayStartTs: number) => CSSProperties;
-}>();
+const props = withDefaults(
+  defineProps<{
+    day: DayItem;
+    dayNames: string[];
+    timeGridHeight: number;
+    hourStamps: number[];
+    layoutedWeekBlocks: Map<number, WeekBlockItemType[]>;
+    lifeOverlay?: { points: LifePointMark[]; sleeps: LifeSleepRange[] };
+    MAX_PER_DAY: number;
+    getHourTickTop: (hour: number) => number;
+    getItemBlockStyle: (block: WeekBlockItemType, dayStartTs: number) => WeekBlockStyle;
+    getLifeSleepBandStyle: (sleep: LifeSleepRange, dayStartTs: number) => CSSProperties;
+    getLifePointStyle: (mark: LifePointMark, dayStartTs: number) => CSSProperties;
+    hideScheduleBlocks?: boolean;
+    drinkLayer?: boolean;
+  }>(),
+  { hideScheduleBlocks: false, drinkLayer: false },
+);
 
 const holidayForDay = computed(() => holidayMap.value[getDateKey(props.day.startTs)] ?? null);
 
-// 定义emit
+const drinkTodo = computed(() =>
+  props.drinkLayer ? findLifeRecordTodoForDay(todoList.value, activityById.value, "drink", props.day.startTs) : undefined,
+);
+
+const drinkTask = computed(() => {
+  const todo = drinkTodo.value;
+  if (!todo) return null;
+  return (todo.taskId != null ? taskById.value.get(todo.taskId) : undefined) ?? taskByActivityId.value.get(todo.activityId!) ?? null;
+});
+
+const drinkPoints = computed(() => (props.lifeOverlay?.points ?? []).filter((p) => p.kind === "drink"));
+
+const drinkTotalMl = computed(() => sumLifeRecordAmountMl(drinkTask.value?.lifeRecords ?? []));
+
+const drinkRatio = computed(() => {
+  if (drinkTotalMl.value <= 0) return 0;
+  const goal = Math.max(drinkTask.value?.drinkGoalMl ?? settingStore.settings.drinkDailyGoalMl, 1);
+  return Math.min(1, drinkTotalMl.value / goal);
+});
+
+const drinkMet = computed(() => {
+  const goal = drinkTask.value?.drinkGoalMl ?? settingStore.settings.drinkDailyGoalMl;
+  return isDrinkGoalMet(drinkTotalMl.value, goal);
+});
+
 const emit = defineEmits<{
   "date-select": [timestamp: number];
   "date-select-day-view": [timestamp: number];
   "item-change": [id: number, activityId?: number, taskId?: number];
 }>();
 
-// 事件处理
 const handleDateSelect = (ts: number) => {
   emit("date-select", ts);
 };
@@ -177,6 +222,50 @@ const handleDateSelect = (ts: number) => {
 const handleDateSelectDayView = (ts: number) => {
   emit("date-select-day-view", ts);
 };
+
+function onCardClick() {
+  handleDateSelect(props.day.startTs);
+  if (!props.drinkLayer) return;
+  const todo = drinkTodo.value;
+  const task = drinkTask.value;
+  if (todo && task?.id != null) {
+    emit("item-change", todo.id, todo.activityId, task.id);
+  }
+}
+
+function onDrinkPointClick(mark: LifePointMark) {
+  handleDateSelect(props.day.startTs);
+  emit("item-change", mark.todoId, undefined, mark.taskId);
+}
+
+/** 稳定伪随机 → 横向散落（淅沥），竖向仍由时刻决定 */
+function drinkScatterUnit(mark: LifePointMark): number {
+  const n = Math.sin(mark.recordId * 12.9898 + mark.time * 0.00017) * 43758.5453;
+  return n - Math.floor(n);
+}
+
+function getDrinkPointStyle(mark: LifePointMark): CSSProperties {
+  const base = props.getLifePointStyle(mark, props.day.startTs);
+  const size = isMobile.value ? 20 : 24;
+  // 落在列宽约 10%～90%
+  const u = drinkScatterUnit(mark);
+  const leftPct = 10 + u * 78;
+  const rest = { ...base } as CSSProperties;
+  delete rest.right;
+  delete rest.left;
+  delete rest.width;
+  delete rest.height;
+  return {
+    ...rest,
+    width: `${size}px`,
+    height: `${size}px`,
+    color: "var(--color-blue)",
+    zIndex: 8,
+    left: `calc(${leftPct.toFixed(2)}% - ${size / 2}px)`,
+    right: "auto",
+    transform: "translateX(0)",
+  };
+}
 
 const weekBadgeTouch = createTouchScheduledSingleAndDouble(
   (ts) => handleDateSelect(ts),
@@ -199,7 +288,6 @@ function onWeekBadgeTouchCancel() {
 }
 
 const handleItemChange = (id: number, _ts: number, activityId?: number, taskId?: number) => {
-  // emit("date-select", ts);
   emit("item-change", id, activityId, taskId);
 };
 </script>
@@ -258,7 +346,6 @@ const handleItemChange = (id: number, _ts: number, activityId?: number, taskId?:
   color: var(--color-red);
 }
 
-/* 左侧星期 */
 .dow {
   font-weight: 600;
   white-space: nowrap;
@@ -268,7 +355,6 @@ const handleItemChange = (id: number, _ts: number, activityId?: number, taskId?:
   justify-self: start;
 }
 
-/* 核心修改 .date：空间不足时自动隐藏 */
 .date {
   display: inline-flex;
   align-items: center;
@@ -308,11 +394,9 @@ const handleItemChange = (id: number, _ts: number, activityId?: number, taskId?:
   flex-direction: column;
 }
 
-/* 时间轴网格容器 */
 .time-grid-container {
   position: relative;
   width: 100%;
-
   overflow: hidden;
 }
 
@@ -325,7 +409,10 @@ const handleItemChange = (id: number, _ts: number, activityId?: number, taskId?:
   pointer-events: auto;
 }
 
-/* 小时刻度线 */
+.week-life-point--drink-layer {
+  opacity: 0.82;
+}
+
 .hour-ticks {
   position: absolute;
   left: 0;
@@ -376,6 +463,26 @@ const handleItemChange = (id: number, _ts: number, activityId?: number, taskId?:
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.card-statistic--drink {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  text-align: right;
+}
+
+.drink-sum {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0.85;
+}
+
+.drink-sum--met {
+  color: var(--color-blue);
+  opacity: 1;
+  font-weight: 600;
 }
 
 .pom-sum {

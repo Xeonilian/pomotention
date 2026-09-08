@@ -1,8 +1,7 @@
 <!--
   月格喝水水位 —— 轻快水彩：
-  - 三浪交错织带（不要嵌套成「大套小」），一眼能分出三条上沿
-  - 单罩极淡天蓝，叠满仍透、偏青蓝不发闷
-  - 达标：同色三罩铺满
+  - 三浪交错织带，振幅适合小格
+  - 单罩极淡天蓝；达标：同色三罩铺满
 -->
 <template>
   <div class="drink-water-fill" aria-hidden="true">
@@ -48,10 +47,6 @@ function hash(n: number): number {
   return fract(Math.sin(n * 12.9898) * 43758.5453);
 }
 
-/**
- * 三浪相位拉开、振幅接近 → 上沿织带交错，
- * 单层色带露白，看起来才是三层而不是「大套小」。
- */
 const BASE_LAYERS = [
   { phase: 0.3, ampScale: 1.1, yBias: 0 },
   { phase: 2.3, ampScale: 1.0, yBias: -0.8 },
@@ -61,7 +56,7 @@ const BASE_LAYERS = [
 const layers = computed(() => {
   const r = clamped.value;
   const seed = r * 19.17 + r * r * 7.3;
-  // 振幅略大，织带缝隙才看得见
+  // 月格：振幅略大，织带缝隙可见
   const ampBase = 3.4 + (1 - r) * 1.4;
   return BASE_LAYERS.map((L, i) => {
     const h0 = hash(seed + i * 1.7);
@@ -123,10 +118,6 @@ function bodyPath(layer: number): string {
   inset: 0;
 }
 
-/*
-  轻快天蓝：偏青、低 alpha。
-  三层满叠约 0.20，仍透格底；避免灰闷中蓝。
-*/
 .drink-water-fill__wash--a,
 .drink-water-fill__body--a {
   fill: rgba(160, 220, 250, 0.09);
@@ -157,7 +148,6 @@ function bodyPath(layer: number): string {
   stroke-linejoin: round;
 }
 
-/* 浪线也用天蓝水痕，不用深蓝描边 */
 .drink-water-fill__crest--a {
   stroke: rgba(54, 161, 207, 0.52);
   stroke-width: 0.85px;
@@ -168,7 +158,6 @@ function bodyPath(layer: number): string {
   stroke-width: 0.7px;
 }
 
-/* 最上层浪：偏灰蓝、不透明到看不见 */
 .drink-water-fill__crest--c {
   stroke: rgba(120, 150, 170, 0.65);
   stroke-width: 0.55px;

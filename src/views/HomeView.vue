@@ -251,6 +251,8 @@
             />
             <WeekPlanner
               v-if="settingStore.settings.showPlanner && settingStore.settings.viewSet === 'week'"
+              :hide-schedule-blocks="lifePlannerHasAnyLayer"
+              :drink-layer="lifePlannerHasDrink"
               @item-change="onItemChange"
               @date-select="onDateSelect"
               @date-select-day-view="onDateSelectDayView"
@@ -258,7 +260,7 @@
             <MonthPlanner
               v-if="settingStore.settings.showPlanner && settingStore.settings.viewSet === 'month'"
               :show-stats-only="monthShowStatsOnly"
-              :drink-skin="drinkPlannerSkinActive"
+              :drink-skin="lifePlannerHasDrink"
               @item-change="onItemChange"
               @date-select="onDateSelect"
               @date-select-day-view="onDateSelectDayView"
@@ -266,7 +268,7 @@
             <YearPlanner
               v-if="settingStore.settings.showPlanner && settingStore.settings.viewSet === 'year'"
               :key="dateService.displayYearInfo"
-              :drink-skin="drinkPlannerSkinActive"
+              :drink-skin="lifePlannerHasDrink"
               @date-select-day-view="onDateSelectDayView"
               @navigate-to-month="onYearNavigateToMonth"
               @navigate-to-week="onYearNavigateToWeek"
@@ -387,7 +389,7 @@ import { taskService } from "@/services/task/taskService";
 
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useDataStore } from "@/stores/useDataStore";
-import { useDrinkPlannerSkinStore } from "@/stores/useDrinkPlannerSkinStore";
+import { useLifePlannerLayerStore } from "@/stores/useLifePlannerLayerStore";
 import { autoSyncDebounced, uploadAllDebounced } from "@/core/utils/autoSync";
 import { useDevice } from "@/composables/platform/useDevice";
 import { CAPTURE_UI_ENABLED } from "@/core/capture";
@@ -513,13 +515,13 @@ const { currentDatePomoCount, periodPomoCount, globalRealPomo } = usePomodoroSta
 
 /** 月视图：header 🍅 区域双击/长按切换统计模式（会话级） */
 const monthShowStatsOnly = ref(false);
-const drinkPlannerSkinStore = useDrinkPlannerSkinStore();
-const { active: drinkPlannerSkinActive } = storeToRefs(drinkPlannerSkinStore);
+const lifePlannerLayerStore = useLifePlannerLayerStore();
+const { hasAny: lifePlannerHasAnyLayer, hasDrink: lifePlannerHasDrink } = storeToRefs(lifePlannerLayerStore);
 
 watch(
   () => settingStore.settings.viewSet,
   (view) => {
-    if (view === "day") drinkPlannerSkinStore.clear();
+    lifePlannerLayerStore.onViewSetChange(view);
   },
 );
 const GLOBAL_POMO_LONG_PRESS_MS = 500;

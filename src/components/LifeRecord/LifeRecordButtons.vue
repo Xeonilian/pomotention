@@ -1,5 +1,5 @@
 <!-- LifeRecordButtons.vue -->
-<!-- 日视图：打开生活记录日桶（不 +1）；非日·喝水：切换 Planner 喝水皮肤；其它 kind 非日暂 no-op -->
+<!-- 日视图：打开生活记录日桶；非日：toggle Planner 生活图层（周可叠，月/年互斥） -->
 <template>
   <n-button
     v-for="def in visibleDefs"
@@ -7,14 +7,14 @@
     size="small"
     text
     class="life-record-button"
-    :class="{ 'life-record-button--skin': def.kind === 'drink' && drinkSkinActive }"
+    :class="{ 'life-record-button--skin': layerStore.has(def.kind) }"
     :title="buttonTitle(def)"
     @click.stop="onOpen(def.kind)"
   >
     <template #icon>
-        <n-icon :size="18">
-          <component :is="iconFor(def.kind)" />
-        </n-icon>
+      <n-icon :size="18">
+        <component :is="iconFor(def.kind)" />
+      </n-icon>
     </template>
   </n-button>
 </template>
@@ -37,7 +37,7 @@ import { LIFE_RECORD_DEFS, type LifeRecordKind } from "@/core/lifeRecord";
 import { findLifeRecordTodoForDay } from "@/services/lifeRecord/lifeRecordService";
 import { useDataStore } from "@/stores/useDataStore";
 import { useSettingStore } from "@/stores/useSettingStore";
-import { useDrinkPlannerSkinStore } from "@/stores/useDrinkPlannerSkinStore";
+import { useLifePlannerLayerStore } from "@/stores/useLifePlannerLayerStore";
 
 const props = withDefaults(
   defineProps<{
@@ -56,12 +56,12 @@ const ICONS: Record<LifeRecordKind, { regular: Component; filled: Component }> =
 
 const dataStore = useDataStore();
 const settingStore = useSettingStore();
-const drinkSkinStore = useDrinkPlannerSkinStore();
+const layerStore = useLifePlannerLayerStore();
 const { todoList, activityById } = storeToRefs(dataStore);
-const { active: drinkSkinActive } = storeToRefs(drinkSkinStore);
 const dateService = dataStore.dateService;
 
 const isDayView = computed(() => settingStore.settings.viewSet === "day");
+const viewSet = computed(() => settingStore.settings.viewSet);
 
 const visibleDefs = computed(() => {
   if (!props.kinds?.length) return LIFE_RECORD_DEFS;
@@ -88,14 +88,14 @@ function hasRecordToday(kind: LifeRecordKind): boolean {
 
 function iconFor(kind: LifeRecordKind): Component {
   const pair = ICONS[kind];
-  if (kind === "drink" && !isDayView.value && drinkSkinActive.value) return pair.filled;
+  if (!isDayView.value && layerStore.has(kind)) return pair.filled;
   return hasRecordToday(kind) ? pair.filled : pair.regular;
 }
 
 function buttonTitle(def: (typeof LIFE_RECORD_DEFS)[number]): string {
   if (isDayView.value) return `打开${def.title}`;
-  if (def.kind === "drink") return drinkSkinActive.value ? "退出喝水统计" : "喝水统计";
-  return `${def.title}统计（即将推出）`;
+  if (def.kind === "drink") return layerStore.has("drink") ? "退出喝水图层" : "喝水图层";
+  return `${def.title}图层（即将推出）`;
 }
 
 const emit = defineEmits<{ recorded: [kind: LifeRecordKind] }>();
@@ -106,9 +106,10 @@ function onOpen(kind: LifeRecordKind) {
     emit("recorded", kind);
     return;
   }
-  if (kind === "drink") {
-    drinkSkinStore.toggle();
-  }
+  // 首版仅喝水图层有 UI；其它 kind 仍可进 store 占位，但暂不 toggle 以免空层
+  if (kind !== "drink") return;
+  const mode = viewSet.value === "week" ? "stack" : "exclusive";
+  layerStore.toggle(kind, mode);
 }
 </script>
 

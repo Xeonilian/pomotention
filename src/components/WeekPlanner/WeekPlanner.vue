@@ -1,6 +1,6 @@
 <!-- src/views/Home/WeekPlanner/WeekPlanner.vue -->
 <template>
-  <div class="week-planner">
+  <div class="week-planner" :class="{ 'week-planner--life-layer': hideScheduleBlocks }">
     <div class="grid" ref="gridRef">
       <WeekDayCard
         v-for="day in days"
@@ -16,6 +16,8 @@
         :get-item-block-style="getItemBlockStyle"
         :get-life-sleep-band-style="getLifeSleepBandStyle"
         :get-life-point-style="getLifePointStyle"
+        :hide-schedule-blocks="hideScheduleBlocks"
+        :drink-layer="drinkLayer"
         @date-select="handleDateSelect"
         @date-select-day-view="handleDateSelectDayView"
         @item-change="handleItemSelect"
@@ -30,34 +32,34 @@ import WeekDayCard from "./WeekDayCard.vue";
 import { useWeekData } from "@/composables/planner/useWeekData";
 import { useWeekBlock } from "@/composables/planner/useWeekBlock";
 
-// 1. 获取grid容器ref，用于计算实际高度
-const gridRef = ref<HTMLDivElement | null>(null);
-const targetHeight = ref(400); // 默认高度，后续会动态更新
+withDefaults(
+  defineProps<{
+    /** 任一生活图层开着 → 藏普通时间块 */
+    hideScheduleBlocks?: boolean;
+    /** 喝水图层 */
+    drinkLayer?: boolean;
+  }>(),
+  { hideScheduleBlocks: false, drinkLayer: false },
+);
 
-// 计算grid容器的实际高度（考虑card的padding和header高度）
+const gridRef = ref<HTMLDivElement | null>(null);
+const targetHeight = ref(400);
+
 const calcGridHeight = () => {
   if (gridRef.value) {
-    // 获取grid容器的可用高度
-    // 减去day-card的padding (24px) 和 header高度 (约32px)
-    const cardPadding = 24; // 上padding 6px + 下padding 6px
-    const headerHeight = 32; // day-header的高度
+    const cardPadding = 24;
+    const headerHeight = 32;
     const availableHeight = gridRef.value.clientHeight - cardPadding - headerHeight;
-    targetHeight.value = Math.max(availableHeight, 200); // 最小高度200px
+    targetHeight.value = Math.max(availableHeight, 200);
   }
 };
 
-// 使用 ResizeObserver 监听容器高度变化
 let resizeObserver: ResizeObserver | null = null;
 
 onMounted(() => {
-  // 初始计算
   nextTick(() => {
     calcGridHeight();
-
-    // 监听窗口大小变化
     window.addEventListener("resize", calcGridHeight);
-
-    // 使用 ResizeObserver 监听容器自身的大小变化
     if (gridRef.value) {
       resizeObserver = new ResizeObserver(() => {
         calcGridHeight();
@@ -75,31 +77,24 @@ onUnmounted(() => {
   }
 });
 
-// 2. 组合式函数调用（传递响应式的targetHeight ref）
 const { days, MAX_PER_DAY } = useWeekData();
 const { layoutedWeekBlocks, hourStamps, timeGridHeight, getItemBlockStyle, getHourTickTop, lifeOverlaysByDay, getLifeSleepBandStyle, getLifePointStyle } =
   useWeekBlock(days, targetHeight);
 
-// 3. 常量定义
 const dayNames = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 
-// 4. 事件派发
 const emit = defineEmits<{
   "date-select": [timestamp: number];
   "date-select-day-view": [timestamp: number];
   "item-change": [id: number, activityId?: number, taskId?: number];
 }>();
 
-// 5. 事件处理
-// 选择进入周视图的具体日期
 const handleDateSelect = (ts: number) => {
   emit("date-select", ts);
 };
-// 选择进入日视图的具体日期
 const handleDateSelectDayView = (ts: number) => {
   emit("date-select-day-view", ts);
 };
-// 选择进入具体事件
 const handleItemSelect = (id: number, activityId?: number, taskId?: number) => {
   emit("item-change", id, activityId, taskId);
 };
