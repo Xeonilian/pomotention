@@ -6,7 +6,7 @@
 
 | 层 | 问什么 | 去哪 |
 |----|--------|------|
-| **1 current** | 我现在干嘛？干到哪了？ | [`current.md`](./current.md) |
+| **1 current** | 我现在干嘛？干到哪了？ | [`current.md`](./current.md)（插入支线 → [`side.md`](./side.md)） |
 | **2 ship** | 怎么分支 / PR / 发版？ | [`ship/README`](./ship/README.md)（入口 [`PR.md`](./ship/PR.md)） |
 | **3 design** | 系统约定、领域、构想？ | [`blueprint/README`](./blueprint/README.md) |
 | **4 history** | 发过什么？关票？视觉对照？ | [`history/README`](./history/README.md) |

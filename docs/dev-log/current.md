@@ -13,8 +13,8 @@
 | **来自** | 一句记第一刀已通；目的是「有 AI 的软件能被人购买」；roadmap「收费 + 推广」 |
 | **蓝图** | 底座 [`8-ai-gateway.md`](./blueprint/8-ai-gateway.md)；能力 [`7-capture.md`](./blueprint/7-capture.md) |
 | **分支** | `dev` |
-| **更新** | 2026-08-26 |
-| **停在哪** | 爱发电认证过了；Cloudflare（Worker + Pages 变量）你说已完成。记一句 brain 按钮和设置「解锁高级功能」**先藏着**（`CAPTURE_UI_ENABLED=false`），打赏仍走顶栏咖啡。本关还没收：真付费开通你还没走通。Webhook 仍是下一关，现在不写。 |
+| **更新** | 2026-09-08 |
+| **停在哪** | **主线**收费步4（真付费开通）仍暂停。**支线**喝水 Planner 雏形已通、未发布 → 见 [`side.md`](./side.md)（polish：按钮联动 / 手机 / 表单）。Webhook 仍是下一关，现在不写。 |
 
 ---
 

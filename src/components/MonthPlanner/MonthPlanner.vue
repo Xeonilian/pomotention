@@ -51,7 +51,7 @@
             </div>
           </div>
           <div class="items">
-            <template v-if="props.drinkSkin">
+            <template v-if="props.drinkSkin && day.isCurrentMonth">
               <div class="day-drink-stat" :class="{ 'day-drink-stat--compact': isMobile }">
                 <span class="day-drink-stat__count">×{{ day.drinkStat.count }}</span>
                 <span class="day-drink-stat__ml">{{ day.drinkStat.totalMl }}ml</span>
