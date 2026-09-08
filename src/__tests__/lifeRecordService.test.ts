@@ -3,7 +3,7 @@ import { setActivePinia, createPinia } from "pinia";
 import type { Activity } from "@/core/types/Activity";
 import type { Todo } from "@/core/types/Todo";
 import type { LifeRecord, Task } from "@/core/types/Task";
-import { getLifeRecordKind, isLifeRecordActivity, getLifeRecordDef } from "@/core/lifeRecord";
+import { getLifeRecordKind, isLifeRecordActivity, getLifeRecordDef, isLifeRecordTagId, pickFirstNonLifeRecordTagId } from "@/core/lifeRecord";
 import { TAG_ID_LIFE_DRINK, TAG_ID_LIFE_SLEEP } from "@/core/constants";
 import {
   findLifeRecordTodoForDay,
@@ -59,6 +59,14 @@ describe("core/lifeRecord tag 判定", () => {
   it("每种 kind 的 def 都有标题与固定 tagId", () => {
     expect(getLifeRecordDef("drink").tagId).toBe(TAG_ID_LIFE_DRINK);
     expect(getLifeRecordDef("sleep").title).toBe("睡觉");
+  });
+
+  it("取色跳过生活系统 tag", () => {
+    expect(isLifeRecordTagId(TAG_ID_LIFE_DRINK)).toBe(true);
+    expect(isLifeRecordTagId(1)).toBe(false);
+    expect(pickFirstNonLifeRecordTagId([TAG_ID_LIFE_DRINK])).toBeUndefined();
+    expect(pickFirstNonLifeRecordTagId([TAG_ID_LIFE_DRINK, 1, 2])).toBe(1);
+    expect(pickFirstNonLifeRecordTagId([3, TAG_ID_LIFE_SLEEP])).toBe(3);
   });
 });
 

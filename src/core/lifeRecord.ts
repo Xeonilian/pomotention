@@ -46,6 +46,23 @@ export function getLifeRecordKindByTagIds(tagIds?: number[]): LifeRecordKind | n
   return null;
 }
 
+/** 是否生活记录系统 tag id */
+export function isLifeRecordTagId(tagId: number): boolean {
+  return KIND_BY_TAG_ID.has(tagId);
+}
+
+/**
+ * 取色/展示用：跳过生活系统 tag，返回第一个普通 tag。
+ * 全是生活 tag 或空 → undefined（视为无展示色）。
+ */
+export function pickFirstNonLifeRecordTagId(tagIds?: number[] | null): number | undefined {
+  if (!tagIds?.length) return undefined;
+  for (const id of tagIds) {
+    if (!isLifeRecordTagId(id)) return id;
+  }
+  return undefined;
+}
+
 /** activity 是否生活记录行——唯一收口判定，显示/统计都走这里 */
 export function getLifeRecordKind(activity: Pick<Activity, "tagIds"> | null | undefined): LifeRecordKind | null {
   return getLifeRecordKindByTagIds(activity?.tagIds);

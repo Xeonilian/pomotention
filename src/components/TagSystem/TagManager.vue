@@ -162,6 +162,7 @@ import {
 } from "@vicons/fluent";
 import { NInput, NButton, NPopover, NColorPicker, NIcon } from "naive-ui";
 import { useDevice } from "@/composables/platform/useDevice";
+import { isLifeRecordTagId } from "@/core/lifeRecord";
 
 // ================================================================
 // 初始化
@@ -275,7 +276,8 @@ const selectedIdSet = computed<Set<number>>(() => new Set(props.modelValue));
  */
 const sortedTags = computed<TagWithCount[]>(() => {
   const keyword = inputText.value.trim();
-  const baseList = keyword ? tagStore.findByName(keyword) : [...tagStore.allTags];
+  // 生活系统 tag 不进 Tag Manager（仍存库，仅隐藏管理入口）
+  const baseList = (keyword ? tagStore.findByName(keyword) : [...tagStore.allTags]).filter((t) => !isLifeRecordTagId(t.id));
 
   return baseList.sort((a, b) => {
     const aSelected = selectedIdSet.value.has(a.id) ? 1 : 0;

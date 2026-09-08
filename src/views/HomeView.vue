@@ -266,6 +266,7 @@
             <YearPlanner
               v-if="settingStore.settings.showPlanner && settingStore.settings.viewSet === 'year'"
               :key="dateService.displayYearInfo"
+              :drink-skin="drinkPlannerSkinActive"
               @date-select-day-view="onDateSelectDayView"
               @navigate-to-month="onYearNavigateToMonth"
               @navigate-to-week="onYearNavigateToWeek"

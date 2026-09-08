@@ -29,7 +29,7 @@ import {
 
 import { unifiedDateService } from "@/services/data/unifiedDateService";
 import { collectPomodoroData, collectTaskRecordData, aggregateByTime } from "@/services/chart/chartDataService";
-import { getLifeRecordDef, isLifeRecordActivity, lifeRecordPlaceholderTitle, type LifeRecordKind } from "@/core/lifeRecord";
+import { getLifeRecordDef, isLifeRecordActivity, lifeRecordPlaceholderTitle, pickFirstNonLifeRecordTagId, type LifeRecordKind } from "@/core/lifeRecord";
 import { isDayEnergyTask } from "@/core/dayEnergy";
 import {
   buildLifeRecordEntities,
@@ -552,6 +552,8 @@ export const useDataStore = defineStore(
             const ts = pickTodoTsForDay(t);
             if (ts == null || ts < dayStartTs || ts >= dayEnd) continue;
             const activity = t.activityId != null ? activityById.value.get(t.activityId) : undefined;
+            // 生活记录不参与年点取色
+            if (isLifeRecordActivity(activity)) continue;
             if (!matchesPlannerFilter(t.activityId, activity?.tagIds)) continue;
             candidates.push({ ts, activityTagIds: activity?.tagIds ?? [] });
           }
@@ -560,6 +562,7 @@ export const useDataStore = defineStore(
             const ts = pickScheduleTsForDay(s);
             if (ts == null || ts < dayStartTs || ts >= dayEnd) continue;
             const activity = s.activityId != null ? activityById.value.get(s.activityId) : undefined;
+            if (isLifeRecordActivity(activity)) continue;
             if (!matchesPlannerFilter(s.activityId, activity?.tagIds)) continue;
             candidates.push({ ts, activityTagIds: activity?.tagIds ?? [] });
           }
@@ -573,8 +576,9 @@ export const useDataStore = defineStore(
           const activityTagIds = candidates[0].activityTagIds ?? [];
           const displayTagId =
             filterTagIds.value.length > 0
-              ? (activityTagIds.find((id) => filterTagIds.value.includes(id)) ?? filterTagIds.value[0])
-              : activityTagIds[0];
+              ? (pickFirstNonLifeRecordTagId(activityTagIds.filter((id) => filterTagIds.value.includes(id))) ??
+                  pickFirstNonLifeRecordTagId(filterTagIds.value))
+              : pickFirstNonLifeRecordTagId(activityTagIds);
           const tag = displayTagId != null ? tagStore.getTag(displayTagId) : undefined;
 
           out.push({ dayStartTs, tagColor: tag?.backgroundColor ?? tag?.color ?? null, textColor: tag?.color ?? null });
@@ -588,8 +592,9 @@ export const useDataStore = defineStore(
           const ts = pickTodoTsForDay(t);
           if (ts == null || ts < dayStartTs || ts >= dayEnd) continue;
           const activity = t.activityId != null ? activityById.value.get(t.activityId) : undefined;
+          if (isLifeRecordActivity(activity)) continue;
           const activityTagIds = activity?.tagIds ?? [];
-          if (!activityTagIds.length) continue;
+          if (pickFirstNonLifeRecordTagId(activityTagIds) == null) continue;
           candidates.push({
             ts,
             priority: t.priority ?? 0,
@@ -601,8 +606,9 @@ export const useDataStore = defineStore(
           const ts = pickScheduleTsForDay(s);
           if (ts == null || ts < dayStartTs || ts >= dayEnd) continue;
           const activity = s.activityId != null ? activityById.value.get(s.activityId) : undefined;
+          if (isLifeRecordActivity(activity)) continue;
           const activityTagIds = activity?.tagIds ?? [];
-          if (!activityTagIds.length) continue;
+          if (pickFirstNonLifeRecordTagId(activityTagIds) == null) continue;
           // 日程本身没有优先级，视为 0，排在有优先级的 todo 后面、无优先级 todo 之前或之后可按需要调整
           candidates.push({
             ts,
@@ -631,7 +637,7 @@ export const useDataStore = defineStore(
         });
 
         const first = candidates[0];
-        const displayTagId = first.activityTagIds[0];
+        const displayTagId = pickFirstNonLifeRecordTagId(first.activityTagIds);
         const tag = displayTagId != null ? tagStore.getTag(displayTagId) : undefined;
         out.push({
           dayStartTs,
