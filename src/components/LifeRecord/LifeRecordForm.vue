@@ -1,13 +1,31 @@
 <!-- LifeRecordForm.vue -->
-<!-- 生活记录 task 的专用表单：点事件（喝/吃/厕）为时刻列表，sleep 为 入睡→醒来 段列表 -->
+<!-- 生活记录 task 表单壳：drink 日视图 → DrinkDayPanel；其它/窄槽 → compact；eat/sleep 行表单 -->
 <template>
-  <div v-if="task" class="life-record-form">
+  <!-- 变体 B：日视图喝水大面板 -->
+  <DrinkDayPanel v-if="task && kind === 'drink' && isDayView" :task-id="taskId" />
+
+  <!-- 变体 A：compact（周/月等窄槽）+ 非 drink 行表单 -->
+  <div v-else-if="task" class="life-record-form">
     <div class="lr-header" :class="{ 'lr-header--drink': kind === 'drink' }">
-      <span class="lr-title">{{ def.emoji }} {{ def.title }}</span>
-      <span v-if="kind !== 'sleep'" class="lr-count">×{{ records.length }}</span>
+      <!-- drink：水滴本身即 +1；其它 kind：图标即追加 -->
+      <n-button
+        text
+        size="small"
+        class="lr-icon-btn lr-append-icon"
+        :title="appendTitle"
+        @click="onAppend"
+      >
+        <template #icon>
+          <n-icon :size="18" :color="kind === 'drink' ? 'var(--color-blue)' : undefined">
+            <component :is="kindIcon" />
+          </n-icon>
+        </template>
+      </n-button>
+      <span v-if="kind !== 'sleep' && records.length > 0" class="lr-count">×{{ records.length }}</span>
+
       <template v-if="kind === 'drink'">
-        <div class="lr-drink-cup">
-          <n-icon class="lr-drink-cup__icon" :size="18" title="杯量（之后每次 +1）">
+        <div class="lr-drink-cup" title="杯量（之后每次 +1）">
+          <n-icon class="lr-drink-cup__icon" :size="16">
             <DrinkToGo24Regular />
           </n-icon>
           <span class="lr-drink-cup__eq">=</span>
@@ -24,7 +42,7 @@
           />
           <span class="lr-drink-unit">ml</span>
         </div>
-        <div class="lr-drink-totals">
+        <div class="lr-drink-totals" title="今日目标（仅本天）">
           <span class="lr-drink-sum">{{ drunkMl }}</span>
           <span class="lr-drink-sep">/</span>
           <n-input-number
@@ -36,30 +54,36 @@
             :step="100"
             :precision="0"
             :show-button="false"
-            placeholder="目标"
-            title="今日目标（仅本天）"
             @update:value="onChangeDayGoal"
           />
           <span class="lr-drink-unit">ml</span>
         </div>
       </template>
-      <n-button size="small" tertiary class="lr-append" @click="onAppend">{{ appendLabel }}</n-button>
-      <n-button v-if="records.length === 0" size="small" tertiary class="lr-discard" title="删除空记录" @click="onDiscard">
-        <template #icon>
-          <n-icon><Delete20Regular /></n-icon>
-        </template>
-      </n-button>
-      <n-button size="small" tertiary class="lr-done" title="完成，取消选中" @click="onDeselect">
-        <template #icon>
-          <n-icon><Checkmark20Regular /></n-icon>
-        </template>
-      </n-button>
+
+      <div class="lr-actions">
+        <n-button
+          v-if="records.length === 0"
+          text
+          size="small"
+          class="lr-icon-btn"
+          title="删除空记录"
+          @click="onDiscard"
+        >
+          <template #icon>
+            <n-icon :size="18"><Delete20Regular /></n-icon>
+          </template>
+        </n-button>
+        <n-button text size="small" class="lr-icon-btn" title="关闭" @click="onDeselect">
+          <template #icon>
+            <n-icon :size="18"><Dismiss20Regular /></n-icon>
+          </template>
+        </n-button>
+      </div>
     </div>
+
     <div v-if="kind === 'drink'" class="lr-drink-bar" :title="`${drunkMl} / ${dayGoalMl || '—'} ml`">
       <div class="lr-drink-bar__fill" :class="{ 'lr-drink-bar__fill--met': goalMet }" :style="{ width: progressPct + '%' }" />
     </div>
-
-    <div v-if="records.length === 0" class="lr-empty">还没有记录，点「{{ appendLabel }}」记一条</div>
 
     <div v-if="kind === 'drink' && records.length > 0" class="lr-drink-list">
       <DrinkSipTag
@@ -103,9 +127,9 @@
           placeholder="吃了什么（可选）"
           @update:value="(v: string) => onChangeDescription(record, v)"
         />
-        <n-button text size="small" class="lr-delete" title="删除这条" @click="onRemove(record)">
+        <n-button text size="small" class="lr-icon-btn lr-delete" title="删除这条" @click="onRemove(record)">
           <template #icon>
-            <n-icon><Delete20Regular /></n-icon>
+            <n-icon :size="16"><Delete20Regular /></n-icon>
           </template>
         </n-button>
       </div>
@@ -114,9 +138,19 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, type Component } from "vue";
 import { NButton, NIcon, NInput, NInputNumber, NTimePicker } from "naive-ui";
-import { Delete20Regular, Checkmark20Regular, DrinkToGo24Regular } from "@vicons/fluent";
+import {
+  Delete20Regular,
+  Dismiss20Regular,
+  DrinkToGo24Regular,
+  Drop20Filled,
+  Drop20Regular,
+  Door20Regular,
+  FoodApple20Regular,
+  WeatherMoon20Filled,
+  WeatherMoon20Regular,
+} from "@vicons/fluent";
 import type { LifeRecord } from "@/core/types/Task";
 import { getLifeRecordDef, type LifeRecordKind } from "@/core/lifeRecord";
 import { appendLifeRecord, isDrinkGoalMet, sumLifeRecordAmountMl, updateLifeRecord } from "@/services/lifeRecord/lifeRecordService";
@@ -124,19 +158,37 @@ import { useDataStore } from "@/stores/useDataStore";
 import { useDisplayedTaskStore } from "@/stores/useDisplayedTaskStore";
 import { useSettingStore } from "@/stores/useSettingStore";
 import DrinkSipTag from "@/components/LifeRecord/DrinkSipTag.vue";
+import DrinkDayPanel from "@/components/LifeRecord/DrinkDayPanel.vue";
 
 const props = defineProps<{ taskId: number; kind: LifeRecordKind }>();
+
+const KIND_ICONS: Record<LifeRecordKind, { idle: Component; active: Component }> = {
+  drink: { idle: Drop20Regular, active: Drop20Filled },
+  eat: { idle: FoodApple20Regular, active: FoodApple20Regular },
+  toilet: { idle: Door20Regular, active: Door20Regular },
+  sleep: { idle: WeatherMoon20Regular, active: WeatherMoon20Filled },
+};
 
 const dataStore = useDataStore();
 const displayStore = useDisplayedTaskStore();
 const settingStore = useSettingStore();
 const def = computed(() => getLifeRecordDef(props.kind));
+const isDayView = computed(() => settingStore.settings.viewSet === "day");
 
 const task = computed(() => dataStore.taskList.find((t) => t.id === props.taskId) ?? null);
 const records = computed<LifeRecord[]>(() => [...(task.value?.lifeRecords ?? [])].sort((a, b) => a.recordedAt - b.recordedAt));
 
 const hasOpenSleep = computed(() => props.kind === "sleep" && records.value.some((r) => r.endAt == null));
-const appendLabel = computed(() => (props.kind === "sleep" ? (hasOpenSleep.value ? "醒了" : "睡了") : "+1"));
+const kindIcon = computed(() => {
+  const pair = KIND_ICONS[props.kind];
+  if (props.kind === "sleep") return hasOpenSleep.value ? pair.active : pair.idle;
+  return records.value.length > 0 ? pair.active : pair.idle;
+});
+const appendTitle = computed(() => {
+  if (props.kind === "sleep") return hasOpenSleep.value ? "醒了" : "睡了";
+  if (props.kind === "drink") return "记一杯";
+  return `记一条${def.value.title}`;
+});
 
 const drunkMl = computed(() => sumLifeRecordAmountMl(records.value));
 const dayGoalMl = computed(() => task.value?.drinkGoalMl ?? settingStore.settings.drinkDailyGoalMl);
@@ -190,7 +242,7 @@ function onChangeDayGoal(v: number | null) {
   dataStore.updateTaskById(props.taskId, { drinkGoalMl: Math.round(v) });
 }
 
-/** 打钩：退出当前生活记录 task，回到非选中空位 */
+/** ×：退出当前生活记录 task，回到非选中空位 */
 function onDeselect() {
   dataStore.cleanSelection();
   displayStore.snapToEmptySlot();
@@ -248,27 +300,34 @@ function formatDuration(record: LifeRecord): string {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+  min-width: 0;
 }
 .lr-header--drink {
-  flex-wrap: nowrap;
-  gap: 10px;
-}
-.lr-title {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--color-text-primary);
-  flex-shrink: 0;
+  gap: 6px 10px;
 }
 .lr-count {
   color: var(--color-text-secondary);
   font-size: 13px;
   flex-shrink: 0;
 }
-.lr-append {
-  margin-left: auto;
+.lr-icon-btn {
+  width: 28px;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 !important;
+  flex-shrink: 0;
 }
-.lr-discard,
-.lr-done {
+.lr-icon-btn :deep(.n-button__icon) {
+  margin: 0;
+}
+.lr-append-icon {
+  margin-right: 0;
+}
+.lr-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: auto;
   flex-shrink: 0;
 }
 .lr-drink-cup,
@@ -277,6 +336,7 @@ function formatDuration(record: LifeRecord): string {
   align-items: center;
   gap: 4px;
   flex-shrink: 0;
+  min-width: 0;
 }
 .lr-drink-cup__icon {
   color: var(--color-blue);
@@ -289,10 +349,10 @@ function formatDuration(record: LifeRecord): string {
   font-size: 13px;
 }
 .lr-drink-cup__ml {
-  width: 56px;
+  width: 52px;
 }
 .lr-drink-goal {
-  width: 64px;
+  width: 60px;
 }
 .lr-drink-sum {
   font-size: 15px;
@@ -314,11 +374,6 @@ function formatDuration(record: LifeRecord): string {
 .lr-drink-bar__fill--met {
   background: var(--color-green);
 }
-.lr-empty {
-  color: var(--color-text-secondary);
-  font-size: 13px;
-  padding: 8px 0;
-}
 .lr-drink-list {
   display: flex;
   flex-wrap: wrap;
@@ -337,8 +392,7 @@ function formatDuration(record: LifeRecord): string {
 .lr-sep {
   color: var(--color-text-secondary);
 }
-.lr-duration,
-.lr-ml {
+.lr-duration {
   color: var(--color-text-secondary);
   font-size: 12px;
   white-space: nowrap;

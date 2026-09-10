@@ -36,9 +36,9 @@ function onTime(ts: number | null) {
 
 <style scoped>
 .drink-sip-tag {
-  --n-height: 30px;
-  /* 左右对称；关掉默认 closable 带来的右侧重 padding */
-  --n-padding: 0 6px !important;
+  /* 略抬高触控高度；左右对称，关掉 closable 默认右侧重 padding */
+  --n-height: 32px;
+  --n-padding: 0 8px !important;
   gap: 2px;
 }
 .drink-sip-tag :deep(.n-tag__content) {
@@ -53,11 +53,11 @@ function onTime(ts: number | null) {
   position: static;
 }
 .drink-sip-tag__time {
-  width: 36px;
+  width: 40px;
   flex: 0 0 auto;
 }
 .drink-sip-tag__time :deep(.n-input) {
-  --n-height: 22px !important;
+  --n-height: 24px !important;
   --n-padding-left: 0 !important;
   --n-padding-right: 0 !important;
   --n-border: none !important;

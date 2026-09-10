@@ -6,7 +6,12 @@
     ref="taskViewContainerRef"
   >
     <!-- 生活记录行：整区替换为专用表单（隐藏 tags 时间轴 / 能量按钮 / markdown） -->
-    <LifeRecordForm v-if="lifeRecordKind && selectedTask" :task-id="selectedTask.id" :kind="lifeRecordKind" />
+    <LifeRecordForm
+      v-if="lifeRecordKind && selectedTask"
+      class="life-record-form-root"
+      :task-id="selectedTask.id"
+      :kind="lifeRecordKind"
+    />
     <template v-else>
     <div class="task-header-container" ref="headerContainerRef">
       <n-button
@@ -541,6 +546,14 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   height: 100%;
+}
+
+/* 生活记录表单吃满任务区高度（与 task-record-container 同套路） */
+.life-record-form-root {
+  flex: 1 1 0%;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
 }
 
 /* 全屏时浏览器可能给出默认黑底，这里强制使用应用主题背景 */

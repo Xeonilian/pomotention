@@ -381,7 +381,7 @@ const handleItemChange = (id: number, _ts: number, activityId?: number, taskId?:
 
 .date:hover {
   cursor: pointer;
-  background-color: var(--color-yellow-transparent);
+  background-color: var(--color-blue-transparent);
   color: var(--color-blue);
 }
 
