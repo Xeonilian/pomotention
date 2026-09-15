@@ -57,7 +57,7 @@
                 <span class="day-drink-stat__ml">{{ day.drinkStat.totalMl }}ml</span>
               </div>
             </template>
-            <template v-else-if="props.showStatsOnly">
+            <template v-else-if="props.showStatsOnly && day.isCurrentMonth">
               <div v-if="isMobile" class="day-stat--compact">
                 <span>🍅{{ day.sumRealPomo }}</span>
                 <span>{{ formatWorkHoursCompact(day.sumWorkMs) }}</span>

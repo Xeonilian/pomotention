@@ -86,20 +86,14 @@
                 <span @click="onWeekJump" class="day-status">&nbsp;{{ dateService.displayMonthInfo }}</span>
                 <span
                   class="global-pomo"
-                  title="单击回到今天；双击或长按切换统计/日程"
-                  @click="onMonthGlobalPomoClick"
-                  @dblclick.stop="onMonthGlobalPomoDblClick"
-                  @contextmenu.prevent
-                  @selectstart.prevent
-                  @pointerdown="onMonthGlobalPomoPointerDown"
-                  @pointerup="onMonthGlobalPomoPointerUp"
-                  @pointerleave="onMonthGlobalPomoPointerUp"
-                  @pointercancel="onMonthGlobalPomoPointerUp"
-                  @touchstart.stop.prevent="onMonthGlobalPomoTouchStart"
-                  @touchend.stop="onMonthGlobalPomoTouchEnd"
-                  @touchcancel.stop="onMonthGlobalPomoTouchCancel"
+                  title="单击回到今天；点番茄切换统计/日程"
+                  @click="onDateSet('today')"
                 >
-                  <span class="today-pomo">🍅{{ periodPomoCount }}</span>
+                  <span
+                    class="today-pomo"
+                    title="切换统计/日程"
+                    @click.stop="toggleMonthShowStatsOnly"
+                  >🍅{{ periodPomoCount }}</span>
                   <span class="total-pomo">/{{ globalRealPomo }}</span>
                 </span>
               </div>
@@ -393,7 +387,6 @@ import { useLifePlannerLayerStore } from "@/stores/useLifePlannerLayerStore";
 import { autoSyncDebounced, uploadAllDebounced } from "@/core/utils/autoSync";
 import { useDevice } from "@/composables/platform/useDevice";
 import { CAPTURE_UI_ENABLED } from "@/core/capture";
-import { createTouchScheduledSingleAndDouble } from "@/composables/platform/useTouchScheduledSingleAndDouble";
 import { usePublicHolidays, plannerHolidayMapKey } from "@/composables/planner/usePublicHolidays";
 import { registerPlannerKeyboardCommandApi } from "@/composables/keyboard/usePlannerKeyboardCommands";
 import { registerPlannerDayEnterEditTitle, registerPlannerDaySpaceToggleCheck } from "@/composables/keyboard/usePlannerKeyboardNavigator";
@@ -513,7 +506,7 @@ import { usePomodoroStats } from "@/composables/planner/usePomodoroStats";
 // 新系统（测试用）
 const { currentDatePomoCount, periodPomoCount, globalRealPomo } = usePomodoroStats();
 
-/** 月视图：header 🍅 区域双击/长按切换统计模式（会话级） */
+/** 月视图：header 🍅 单击切换统计模式（会话级） */
 const monthShowStatsOnly = ref(false);
 const lifePlannerLayerStore = useLifePlannerLayerStore();
 const { hasAny: lifePlannerHasAnyLayer, hasDrink: lifePlannerHasDrink } = storeToRefs(lifePlannerLayerStore);
@@ -524,88 +517,8 @@ watch(
     lifePlannerLayerStore.onViewSetChange(view);
   },
 );
-const GLOBAL_POMO_LONG_PRESS_MS = 500;
-let globalPomoLongPressTimer: ReturnType<typeof setTimeout> | null = null;
-let globalPomoSuppressClick = false;
-let globalPomoDesktopClickTimer: ReturnType<typeof setTimeout> | null = null;
-
 function toggleMonthShowStatsOnly() {
   monthShowStatsOnly.value = !monthShowStatsOnly.value;
-}
-
-const monthGlobalPomoTouch = createTouchScheduledSingleAndDouble(
-  () => onDateSet("today"),
-  () => toggleMonthShowStatsOnly(),
-);
-
-function clearGlobalPomoLongPress() {
-  if (globalPomoLongPressTimer != null) {
-    clearTimeout(globalPomoLongPressTimer);
-    globalPomoLongPressTimer = null;
-  }
-}
-
-function clearGlobalPomoDesktopClickTimer() {
-  if (globalPomoDesktopClickTimer != null) {
-    clearTimeout(globalPomoDesktopClickTimer);
-    globalPomoDesktopClickTimer = null;
-  }
-}
-
-function onMonthGlobalPomoPointerDown(e?: PointerEvent) {
-  if (e && isMobile.value && e.pointerType === "touch") {
-    e.preventDefault();
-  }
-  clearGlobalPomoLongPress();
-  globalPomoSuppressClick = false;
-  globalPomoLongPressTimer = setTimeout(() => {
-    globalPomoLongPressTimer = null;
-    toggleMonthShowStatsOnly();
-    globalPomoSuppressClick = true;
-    clearGlobalPomoDesktopClickTimer();
-    monthGlobalPomoTouch.touchCancel();
-  }, GLOBAL_POMO_LONG_PRESS_MS);
-}
-
-function onMonthGlobalPomoPointerUp() {
-  clearGlobalPomoLongPress();
-}
-
-function onMonthGlobalPomoClick() {
-  if (globalPomoSuppressClick) {
-    globalPomoSuppressClick = false;
-    return;
-  }
-  if (isMobile.value) return;
-  clearGlobalPomoDesktopClickTimer();
-  globalPomoDesktopClickTimer = setTimeout(() => {
-    globalPomoDesktopClickTimer = null;
-    onDateSet("today");
-  }, 340);
-}
-
-function onMonthGlobalPomoDblClick(e: MouseEvent) {
-  e.preventDefault();
-  clearGlobalPomoDesktopClickTimer();
-  toggleMonthShowStatsOnly();
-}
-
-function onMonthGlobalPomoTouchStart(_e: TouchEvent) {
-  if (!isMobile.value) return;
-  onMonthGlobalPomoPointerDown();
-  monthGlobalPomoTouch.touchStart(_e);
-}
-
-function onMonthGlobalPomoTouchEnd() {
-  if (!isMobile.value) return;
-  onMonthGlobalPomoPointerUp();
-  monthGlobalPomoTouch.touchEnd(0);
-}
-
-function onMonthGlobalPomoTouchCancel() {
-  if (!isMobile.value) return;
-  clearGlobalPomoLongPress();
-  monthGlobalPomoTouch.touchCancel();
 }
 
 // 计算当前日期 不赋值在UI计算class就会失效，但是UI输出的值是正确的
