@@ -138,6 +138,8 @@ const emit = defineEmits<{ recorded: [kind: LifeRecordKind] }>();
 function onOpen(kind: LifeRecordKind) {
   if (!isLifeKindReady(kind)) {
     showComingSoon(kind);
+    // 手机 overflow 靠 recorded 关 popover；开发中也要关掉
+    emit("recorded", kind);
     return;
   }
   if (isDayView.value) {

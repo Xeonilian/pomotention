@@ -4,10 +4,16 @@
 import { supabase } from "@/core/services/supabase";
 import { getCurrentUser } from "@/core/services/authService";
 import { BaseSyncService } from "./baseSyncService";
+import { isLifeRecordActivity } from "@/core/lifeRecord";
+import { saveTasks } from "@/services/data/localStorageService";
+import type { Activity } from "@/core/types/Activity";
 import type { Task, EnergyRecord, RewardRecord, InterruptionRecord, LifeRecord } from "@/core/types/Task";
 import type { Database } from "@/core/types/Database";
 
 type CloudTaskInsert = Database["public"]["Tables"]["tasks"]["Insert"];
+
+/** 生活记录列上线后，一次性把已 synced 的生活桶标回 unsynced 以便补传 */
+const LIFE_RECORDS_BACKFILL_KEY = "pomotention_life_records_cloud_backfill_v1";
 
 /**
  * RPC 返回的完整格式（带冗余字段）
@@ -29,12 +35,12 @@ interface FullTaskFromCloud {
 }
 
 export class TaskSyncService extends BaseSyncService<Task, CloudTaskInsert> {
-  private getActivityMap: () => Map<number, { deleted?: boolean }>;
+  private getActivityMap: () => Map<number, Activity>;
 
   constructor(
     getList: () => Task[],
     getMap: () => Map<number, Task>,
-    getActivityMap: () => Map<number, { deleted?: boolean }>,
+    getActivityMap: () => Map<number, Activity>,
   ) {
     super("tasks", "taskTrack", getList, getMap);
     this.getActivityMap = getActivityMap;
@@ -54,6 +60,41 @@ export class TaskSyncService extends BaseSyncService<Task, CloudTaskInsert> {
       return false;
     }
     return true;
+  }
+
+  /**
+   * 列上线前已 synced 的生活桶不会进上传队列；首次上传前一次性标脏并落盘。
+   */
+  private ensureLifeRecordsBackfill(): void {
+    if (typeof localStorage === "undefined") return;
+    if (localStorage.getItem(LIFE_RECORDS_BACKFILL_KEY)) return;
+
+    const list = this.getListArray();
+    const activityById = this.getActivityMap();
+    let touched = false;
+    const now = Date.now();
+
+    for (const task of list) {
+      if (task.deleted) continue;
+      const activity = activityById.get(task.sourceId);
+      const isLife = activity ? isLifeRecordActivity(activity) : false;
+      const hasLifeData = (task.lifeRecords?.length ?? 0) > 0 || task.drinkGoalMl != null;
+      if (!isLife && !hasLifeData) continue;
+      if (!task.synced) continue;
+      task.synced = false;
+      task.lastModified = now;
+      touched = true;
+    }
+
+    localStorage.setItem(LIFE_RECORDS_BACKFILL_KEY, "1");
+    if (touched) {
+      saveTasks(list);
+    }
+  }
+
+  getPendingUploadItems(): Task[] {
+    this.ensureLifeRecordsBackfill();
+    return super.getPendingUploadItems();
   }
 
   /**
