@@ -89,14 +89,13 @@ export const useSyncStore = defineStore("sync", () => {
     syncError.value = null;
   }
 
-  // 同步成功
+  // 同步成功（只改 UI 状态，不推进下载游标。游标仅由 updateLastSyncTimestamp 在真正下载后更新）
   function syncSuccess(message: string = "同步完成") {
     downloadFailed.value = false;
     isSyncing.value = false;
     syncStatus.value = "idle";
     currentSyncMessage.value = message;
     syncError.value = null;
-    lastSyncTimestamp.value = Date.now();
   }
 
   // 同步失败
@@ -116,6 +115,7 @@ export const useSyncStore = defineStore("sync", () => {
     }
   }
 
+  /** 仅完整同步 / 下载成功后调用；只上传不得推进，否则会漏掉窗口内未拉取的云端写入 */
   function updateLastSyncTimestamp(timestamp?: number) {
     lastSyncTimestamp.value = timestamp ?? Date.now();
   }

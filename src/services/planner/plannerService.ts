@@ -21,6 +21,8 @@ export function updateScheduleStatus(id: number, doneTime: number | undefined, s
   if (schedule) {
     schedule.status = validStatus as "" | "done" | "delayed" | "ongoing" | "cancelled" | "suspended";
     schedule.doneTime = schedule.doneTime ? schedule.doneTime : doneTime;
+    schedule.synced = false;
+    schedule.lastModified = Date.now();
   }
 
   const activity = schedule?.activityId != null ? activityById.value.get(schedule.activityId) : undefined;

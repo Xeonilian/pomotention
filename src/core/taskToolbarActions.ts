@@ -1,4 +1,4 @@
-/** Task 工具栏可配置动作（手机端 2 槽 + popover） */
+/** Task 工具栏可配置动作（手机端 3 槽 + popover） */
 
 export type TaskToolbarActionId = "star" | "tag" | "energy" | "reward" | "interruption" | "template";
 
@@ -11,9 +11,9 @@ export const TASK_TOOLBAR_ACTION_IDS: TaskToolbarActionId[] = [
   "template",
 ];
 
-export const TASK_TOOLBAR_MOBILE_SLOT_COUNT = 2;
+export const TASK_TOOLBAR_MOBILE_SLOT_COUNT = 3;
 
-export const DEFAULT_TASK_TOOLBAR_MOBILE_PINNED: TaskToolbarActionId[] = ["star", "tag"];
+export const DEFAULT_TASK_TOOLBAR_MOBILE_PINNED: TaskToolbarActionId[] = ["star", "tag", "energy"];
 
 export const TASK_TOOLBAR_ACTION_TITLES: Record<TaskToolbarActionId, string> = {
   star: "星标",
@@ -30,7 +30,7 @@ export function isTaskToolbarActionId(id: unknown): id is TaskToolbarActionId {
   return typeof id === "string" && VALID_IDS.has(id as TaskToolbarActionId);
 }
 
-/** 校验并补齐为恰好 2 个固定槽 */
+/** 校验并补齐为恰好 3 个固定槽 */
 export function normalizeTaskToolbarMobilePinned(raw?: TaskToolbarActionId[] | null): TaskToolbarActionId[] {
   const seen = new Set<TaskToolbarActionId>();
   const result: TaskToolbarActionId[] = [];
@@ -58,7 +58,8 @@ export function getTaskToolbarOverflowIds(pinned: TaskToolbarActionId[]): TaskTo
 }
 
 /**
- * 松保存：0 个不变；2 个按选中顺序整批替换；1 个则保留左槽、替换右槽。
+ * 松保存：0 个不变；满槽按选中顺序整批替换；
+ * 不足则新项接到末尾，从最前面顶出对应个数。
  */
 export function mergeTaskToolbarMobilePinned(
   currentPinned: TaskToolbarActionId[],
@@ -74,21 +75,17 @@ export function mergeTaskToolbarMobilePinned(
   }
 
   const slots = [...normalizeTaskToolbarMobilePinned(currentPinned)];
-  const id = selection[0];
-  if (slots.includes(id)) {
+  const toPlace = selection.filter((id) => !slots.includes(id));
+  if (toPlace.length === 0) {
     return normalizeTaskToolbarMobilePinned(slots);
   }
 
-  if (slots.length >= TASK_TOOLBAR_MOBILE_SLOT_COUNT) {
-    slots[TASK_TOOLBAR_MOBILE_SLOT_COUNT - 1] = id;
-  } else {
-    slots.push(id);
-  }
-
-  return normalizeTaskToolbarMobilePinned(slots);
+  // 新项接末尾，左侧顶出
+  const next = [...slots, ...toPlace];
+  return normalizeTaskToolbarMobilePinned(next.slice(next.length - TASK_TOOLBAR_MOBILE_SLOT_COUNT));
 }
 
-/** 编辑态 FIFO 选中列表（最多 2） */
+/** 编辑态 FIFO 选中列表（最多 3） */
 export function toggleTaskToolbarEditSelection(
   current: TaskToolbarActionId[],
   id: TaskToolbarActionId,

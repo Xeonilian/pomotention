@@ -166,6 +166,15 @@ function formatDateLabelForDisplay(value: string, granularity: TimeGranularity):
 }
 
 /**
+ * hover 数值：整数原样，非整数保留 1 位小数（精力/奖赏日均）
+ */
+export function formatChartTooltipValue(value: unknown): string {
+  const n = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(n)) return String(value ?? "");
+  return Number.isInteger(n) ? String(n) : n.toFixed(1);
+}
+
+/**
  * 生成完整的 ECharts 配置
  */
 export function generateEChartsOption(config: ChartConfig, dataByMetric: Map<MetricName, Map<DateString, number>>): EChartsOption {
@@ -185,6 +194,7 @@ export function generateEChartsOption(config: ChartConfig, dataByMetric: Map<Met
       axisPointer: {
         type: config.type === "bar" ? "shadow" : "line",
       },
+      valueFormatter: (value) => formatChartTooltipValue(value),
     },
     legend: {
       show: config.showLegend,

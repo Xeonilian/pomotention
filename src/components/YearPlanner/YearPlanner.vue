@@ -1,6 +1,6 @@
 <!-- 年视图：4×3 月格，每天显示日期数字+点，每行开头周编号；点击月份/周编号跳转 -->
 <template>
-  <div class="year-planner">
+  <div class="year-planner" :class="{ 'year-planner--drink-skin': drinkSkin }">
     <div class="year-grid months-nxn">
       <div v-for="month in months" :key="month.monthIndex" class="month-cell">
         <div class="month-cell-title" title="点击进入月视图" @click="handleMonthTitleClick(month.monthStartTs)">
@@ -33,7 +33,11 @@
               @touchcancel.stop="onYearDayTouchCancel()"
             >
               <template v-if="day && day.isCurrentMonth">
-                <span class="day-dot" :class="yearHolidayDotClass(day.startTs)" :style="getDotBgStyle(day.startTs)">
+                <span
+                  class="day-dot"
+                  :class="[yearHolidayDotClass(day.startTs), drinkDotClass(day.startTs)]"
+                  :style="getDotBgStyle(day.startTs)"
+                >
                   <span class="day-num" :style="getDayNumStyle(day.startTs)">{{ day.dayOfMonth }}</span>
                 </span>
               </template>
@@ -55,10 +59,21 @@ import { computed, inject, ref } from "vue";
 import { storeToRefs } from "pinia";
 import { createTouchScheduledSingleAndDouble } from "@/composables/platform/useTouchScheduledSingleAndDouble";
 import { useDataStore } from "@/stores/useDataStore";
+import { useSettingStore } from "@/stores/useSettingStore";
 import { useDevice } from "@/composables/platform/useDevice";
 import { getDateKey } from "@/core/utils";
+import { getLifeRecordDef, getLifeRecordKind } from "@/core/lifeRecord";
+import { isDrinkGoalMet, sumLifeRecordAmountMl } from "@/services/lifeRecord/lifeRecordService";
 import type { HolidayDisplay } from "@/services/planner/publicHolidays";
 import { plannerHolidayMapKey } from "@/composables/planner/usePublicHolidays";
+
+const props = withDefaults(
+  defineProps<{
+    /** Planner 喝水统计皮肤：有记录的天用水色点，达标略深 */
+    drinkSkin?: boolean;
+  }>(),
+  { drinkSkin: false },
+);
 
 const holidayMap = inject(plannerHolidayMapKey, ref<Record<string, HolidayDisplay>>({}));
 
@@ -87,9 +102,20 @@ const monthNames = [
 ];
 
 const dataStore = useDataStore();
-const { selectedTaskId, firstTaggedTaskIdForAppDate, selectedDate } = storeToRefs(dataStore);
+const settingStore = useSettingStore();
+const { selectedTaskId, firstTaggedTaskIdForAppDate, selectedDate, activeTodos, activityById, taskById, taskByActivityId } =
+  storeToRefs(dataStore);
 const dateService = dataStore.dateService;
 const { isMobile } = useDevice();
+
+const drinkDef = getLifeRecordDef("drink");
+
+type DrinkYearDay = {
+  met: boolean;
+  todoId: number;
+  activityId: number;
+  taskId: number;
+};
 
 type MonthDay = { startTs: number; dayOfMonth: number; isCurrentMonth: boolean; isToday: boolean } | null;
 type MonthRow = { weekNum: number; weekStartTs: number; days: MonthDay[] };
@@ -99,6 +125,31 @@ function startOfDay(ts: number) {
   d.setHours(0, 0, 0, 0);
   return d.getTime();
 }
+
+/** 年喝水皮肤：仅有记录的天；key = 日零点 */
+const drinkDayByTs = computed(() => {
+  const map = new Map<number, DrinkYearDay>();
+  if (!props.drinkSkin) return map;
+  for (const todo of activeTodos.value) {
+    if (todo.activityId == null) continue;
+    const activity = activityById.value.get(todo.activityId);
+    if (getLifeRecordKind(activity) !== "drink") continue;
+    const dayStartTs = startOfDay(todo.id);
+    const task = (todo.taskId != null ? taskById.value.get(todo.taskId) : undefined) ?? taskByActivityId.value.get(todo.activityId);
+    const records = task?.lifeRecords ?? [];
+    if (records.length <= 0 || task?.id == null) continue;
+    const totalMl = sumLifeRecordAmountMl(records);
+    const goalMl = task.drinkGoalMl ?? settingStore.settings.drinkDailyGoalMl;
+    map.set(dayStartTs, {
+      met: isDrinkGoalMet(totalMl, goalMl),
+      todoId: todo.id,
+      activityId: todo.activityId,
+      taskId: task.id,
+    });
+  }
+  return map;
+});
+
 function endOfMonth(ts: number) {
   const d = new Date(ts);
   d.setMonth(d.getMonth() + 1, 0);
@@ -141,6 +192,15 @@ const yearStart = computed(() => {
 const todayStart = computed(() => startOfDay(Date.now()));
 
 function getDotStyle(dayStartTs: number): { backgroundColor?: string; color?: string } {
+  if (props.drinkSkin) {
+    const drink = drinkDayByTs.value.get(dayStartTs);
+    if (!drink) return {};
+    // 底色统一（浅水色）；达标 = tag 色字，未达标 = 白字（避开 today 整格实心蓝的混淆）
+    return {
+      backgroundColor: drinkDef.tagBackgroundColor,
+      color: drink.met ? drinkDef.tagColor : "var(--color-text-secondary)",
+    };
+  }
   const start = yearStart.value;
   const dots = dataStore.yearDayDots;
   // 没有 dots 时走 CSS 默认底色
@@ -174,13 +234,21 @@ function formatDayTitle(ts: number): string {
   return h ? `${base} · ${h.label}` : base;
 }
 
-/** 年视图格子：法定节假日浅红底，调休补班灰底，节气浅绿底 */
+/** 年视图格子：法定节假日浅红底，调休补班灰底，节气浅绿底；喝水皮肤有记录天不叠节假色 */
 function yearHolidayDotClass(ts: number): string {
+  if (props.drinkSkin && drinkDayByTs.value.has(ts)) return "";
   const h = holidayMap.value[getDateKey(ts)];
   if (!h) return "";
   if (h.kind === "transfer_workday") return "day-dot--holiday-transfer";
   if (h.kind === "solar_term") return "day-dot--holiday-solar";
   return "day-dot--holiday-public";
+}
+
+function drinkDotClass(ts: number): string {
+  if (!props.drinkSkin) return "";
+  const drink = drinkDayByTs.value.get(ts);
+  if (!drink) return "";
+  return drink.met ? "day-dot--drink-met" : "day-dot--drink";
 }
 
 const months = computed(() => {
@@ -235,6 +303,11 @@ function handleDayClick(dayStartTs: number) {
   // 使用 dataStore 直接更新当前选中日期，并让 TaskTracker 选中这一天对应的 task
   dateService.setAppDate(dayStartTs);
   dataStore.setSelectedDate(dayStartTs);
+  if (props.drinkSkin) {
+    // 喝水皮肤：打开当日喝水 Task（无记录则清空选中）
+    selectedTaskId.value = drinkDayByTs.value.get(dayStartTs)?.taskId ?? null;
+    return;
+  }
   selectedTaskId.value = firstTaggedTaskIdForAppDate.value ?? null;
 }
 

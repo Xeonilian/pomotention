@@ -123,16 +123,16 @@ export function unifiedDateService({ activityList, scheduleList, todoList }: Uni
     // const start = new Date(weekStartTs.value);
     const { weekNumber } = getISOWeekInfo(weekStartTs.value);
     // const monthName = start.toLocaleString("en-US", { month: "long" }); // August
-    return `Week ${weekNumber}`;
+    return isMobile.value ? `W${weekNumber}\u00A0` : `Week ${weekNumber}`;
   });
 
   const monthStartTs = computed(() => getStartOfMonth(dateState.app));
   const monthKey = computed(() => getMonthKey(dateState.app));
-  // Aug
+  // Aug（手机 short + 不换行空格，避免与🍅贴死；桌面 long）
   const displayMonthInfo = computed(() => {
     const d = new Date(monthStartTs.value);
-    const monthName = d.toLocaleString("en-US", { month: "long" }); // August
-    return `${monthName}`;
+    const monthName = d.toLocaleString("en-US", { month: isMobile.value ? "short" : "long" });
+    return isMobile.value ? `${monthName}\u00A0` : monthName;
   });
 
   const yearStartTs = computed(() => getStartOfYear(dateState.app));

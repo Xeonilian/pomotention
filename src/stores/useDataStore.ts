@@ -29,9 +29,20 @@ import {
 
 import { unifiedDateService } from "@/services/data/unifiedDateService";
 import { collectPomodoroData, collectTaskRecordData, aggregateByTime } from "@/services/chart/chartDataService";
+import { getLifeRecordDef, isLifeRecordActivity, lifeRecordPlaceholderTitle, pickFirstNonLifeRecordTagId, type LifeRecordKind } from "@/core/lifeRecord";
+import { isDayEnergyTask } from "@/core/dayEnergy";
+import {
+  buildLifeRecordEntities,
+  buildLifeRecordTask,
+  findLifeRecordTodoForDay,
+  removeLifeRecord,
+} from "@/services/lifeRecord/lifeRecordService";
+import { buildDayEnergyTask, findDayEnergyTask } from "@/services/task/dayEnergyService";
+import { handleDeleteActivity } from "@/services/activity/activityService";
 import { useTagStore } from "./useTagStore";
 import { useTemplateStore } from "./useTemplateStore";
 import { useDisplayedTaskStore } from "./useDisplayedTaskStore";
+import { useSettingStore } from "./useSettingStore";
 
 export const useDataStore = defineStore(
   "data",
@@ -356,6 +367,8 @@ export const useDataStore = defineStore(
         if (todo.deleted) continue;
         if (todo.id < start || todo.id >= end) continue;
         const activity = todo.activityId != null ? activityById.value.get(todo.activityId) : undefined;
+        // 生活记录不进 planner 常规行（day/week/month 共用此列表）
+        if (isLifeRecordActivity(activity)) continue;
         if (!matchesPlannerFilter(todo.activityId, activity?.tagIds)) continue;
         const relatedTask = todo.taskId != null ? taskById.value.get(todo.taskId) : undefined;
         out.push({
@@ -376,6 +389,8 @@ export const useDataStore = defineStore(
         if (todo.deleted) continue;
         if (todo.id < start || todo.id >= end) continue;
         const activity = todo.activityId != null ? activityById.value.get(todo.activityId) : undefined;
+        // 生活记录不进 planner 常规行（day/week/month 共用此列表）
+        if (isLifeRecordActivity(activity)) continue;
         if (!matchesPlannerFilter(todo.activityId, activity?.tagIds)) continue;
         out.push({
           ...todo,
@@ -537,6 +552,8 @@ export const useDataStore = defineStore(
             const ts = pickTodoTsForDay(t);
             if (ts == null || ts < dayStartTs || ts >= dayEnd) continue;
             const activity = t.activityId != null ? activityById.value.get(t.activityId) : undefined;
+            // 生活记录不参与年点取色
+            if (isLifeRecordActivity(activity)) continue;
             if (!matchesPlannerFilter(t.activityId, activity?.tagIds)) continue;
             candidates.push({ ts, activityTagIds: activity?.tagIds ?? [] });
           }
@@ -545,6 +562,7 @@ export const useDataStore = defineStore(
             const ts = pickScheduleTsForDay(s);
             if (ts == null || ts < dayStartTs || ts >= dayEnd) continue;
             const activity = s.activityId != null ? activityById.value.get(s.activityId) : undefined;
+            if (isLifeRecordActivity(activity)) continue;
             if (!matchesPlannerFilter(s.activityId, activity?.tagIds)) continue;
             candidates.push({ ts, activityTagIds: activity?.tagIds ?? [] });
           }
@@ -558,8 +576,9 @@ export const useDataStore = defineStore(
           const activityTagIds = candidates[0].activityTagIds ?? [];
           const displayTagId =
             filterTagIds.value.length > 0
-              ? (activityTagIds.find((id) => filterTagIds.value.includes(id)) ?? filterTagIds.value[0])
-              : activityTagIds[0];
+              ? (pickFirstNonLifeRecordTagId(activityTagIds.filter((id) => filterTagIds.value.includes(id))) ??
+                  pickFirstNonLifeRecordTagId(filterTagIds.value))
+              : pickFirstNonLifeRecordTagId(activityTagIds);
           const tag = displayTagId != null ? tagStore.getTag(displayTagId) : undefined;
 
           out.push({ dayStartTs, tagColor: tag?.backgroundColor ?? tag?.color ?? null, textColor: tag?.color ?? null });
@@ -573,8 +592,9 @@ export const useDataStore = defineStore(
           const ts = pickTodoTsForDay(t);
           if (ts == null || ts < dayStartTs || ts >= dayEnd) continue;
           const activity = t.activityId != null ? activityById.value.get(t.activityId) : undefined;
+          if (isLifeRecordActivity(activity)) continue;
           const activityTagIds = activity?.tagIds ?? [];
-          if (!activityTagIds.length) continue;
+          if (pickFirstNonLifeRecordTagId(activityTagIds) == null) continue;
           candidates.push({
             ts,
             priority: t.priority ?? 0,
@@ -586,8 +606,9 @@ export const useDataStore = defineStore(
           const ts = pickScheduleTsForDay(s);
           if (ts == null || ts < dayStartTs || ts >= dayEnd) continue;
           const activity = s.activityId != null ? activityById.value.get(s.activityId) : undefined;
+          if (isLifeRecordActivity(activity)) continue;
           const activityTagIds = activity?.tagIds ?? [];
-          if (!activityTagIds.length) continue;
+          if (pickFirstNonLifeRecordTagId(activityTagIds) == null) continue;
           // 日程本身没有优先级，视为 0，排在有优先级的 todo 后面、无优先级 todo 之前或之后可按需要调整
           candidates.push({
             ts,
@@ -616,7 +637,7 @@ export const useDataStore = defineStore(
         });
 
         const first = candidates[0];
-        const displayTagId = first.activityTagIds[0];
+        const displayTagId = pickFirstNonLifeRecordTagId(first.activityTagIds);
         const tag = displayTagId != null ? tagStore.getTag(displayTagId) : undefined;
         out.push({
           dayStartTs,
@@ -699,6 +720,117 @@ export const useDataStore = defineStore(
       activityList.value.push(newActivity);
       saveActivities(activityList.value);
       scheduleDebouncedCloudUpload();
+    }
+
+    /**
+     * 查或建当日 day_energy 宿主（无 activity/todo，仅 energy 桶）
+     */
+    function ensureDayEnergyTask(dayStartTs: number): Task {
+      const existing = findDayEnergyTask(dayStartTs, taskList.value);
+      if (existing) return existing;
+      const task = buildDayEnergyTask(dayStartTs);
+      taskList.value = [...taskList.value, task];
+      saveTasks(taskList.value);
+      return task;
+    }
+
+    /**
+     * 打开生活记录日桶：无行则懒建空三件套（不 +1）；drink 写入/补齐日目标快照。
+     * 仅日视图生效；周月年由块 3 切 Planner 皮肤，此处先 no-op 避免误记。
+     */
+    function openLifeRecord(kind: LifeRecordKind): void {
+      const settingStore = useSettingStore();
+      if (settingStore.settings.viewSet !== "day") return;
+
+      const def = getLifeRecordDef(kind);
+      tagStore.ensureSystemTag({
+        id: def.tagId,
+        name: def.title,
+        color: def.tagColor,
+        backgroundColor: def.tagBackgroundColor,
+        deleted: false,
+        synced: false,
+        lastModified: Date.now(),
+      });
+
+      const dayStart = dateService.appDateTimestamp.value;
+      const at = dateService.combineDateAndTime(dayStart, Date.now());
+      const drinkGoalMl = kind === "drink" ? settingStore.settings.drinkDailyGoalMl : undefined;
+
+      let task: Task | undefined;
+      const existingTodo = findLifeRecordTodoForDay(todoList.value, activityById.value, kind, dayStart);
+
+      if (existingTodo) {
+        task = taskByActivityId.value.get(existingTodo.activityId);
+        if (!task) {
+          const title = existingTodo.activityTitle || lifeRecordPlaceholderTitle(kind, dayStart);
+          task = buildLifeRecordTask(existingTodo.activityId, title, { drinkGoalMl });
+          taskList.value = [...taskList.value, task];
+          saveTasks(taskList.value);
+        } else {
+          const patch: Partial<Task> = {};
+          if (!task.activityTitle) patch.activityTitle = lifeRecordPlaceholderTitle(kind, dayStart);
+          if (kind === "drink" && task.drinkGoalMl == null && drinkGoalMl != null) patch.drinkGoalMl = drinkGoalMl;
+          if (Object.keys(patch).length) updateTaskById(task.id, patch);
+        }
+        if (!existingTodo.activityTitle) {
+          updateTodoById(existingTodo.id, { activityTitle: lifeRecordPlaceholderTitle(kind, dayStart) });
+        }
+      } else {
+        const entities = buildLifeRecordEntities(kind, at, { drinkGoalMl });
+        activityList.value.push(entities.activity);
+        taskList.value = [...taskList.value, entities.task];
+        todoList.value.push(entities.todo);
+        task = entities.task;
+        saveActivities(activityList.value);
+        saveTodos(todoList.value);
+        saveTasks(taskList.value);
+      }
+
+      displayStore.pushTaskId(task.id);
+      scheduleDebouncedCloudUpload();
+    }
+
+    /** @deprecated 使用 openLifeRecord；保留别名以免外部旧调用 */
+    function recordLifeRecord(kind: LifeRecordKind): void {
+      openLifeRecord(kind);
+    }
+
+    function softDeleteLifeRecordRow(task: Task): void {
+      handleDeleteActivity(
+        activityList.value,
+        todoList.value,
+        scheduleList.value,
+        taskList.value,
+        task.sourceId,
+        { activityById: activityById.value, childrenByParentId: childrenOfActivity.value },
+        ledgerList.value,
+      );
+      cleanSelection();
+      displayStore.snapToEmptySlot();
+      saveAllNow();
+    }
+
+    /**
+     * 删除生活记录单条；删空时整行级联软删（activity/todo/task），并清掉选中与展示态
+     */
+    function removeLifeRecordAt(taskId: number, recordId: number): void {
+      const task = taskList.value.find((t) => t.id === taskId);
+      if (!task) return;
+      const next = removeLifeRecord(task.lifeRecords, recordId);
+      if (!next) return;
+      if (next.length > 0) {
+        updateTaskById(taskId, { lifeRecords: next });
+        return;
+      }
+      softDeleteLifeRecordRow(task);
+    }
+
+    /** 丢弃日桶（空表单删除；有记录时也可整行丢掉） */
+    function discardLifeRecordTask(taskId: number): void {
+      const task = taskList.value.find((t) => t.id === taskId);
+      if (!task || task.deleted) return;
+      softDeleteLifeRecordRow(task);
     }
 
     function setActiveId(id: number | null) {
@@ -1018,6 +1150,8 @@ export const useDataStore = defineStore(
           }
           return;
         }
+        // day_energy 不进 Tracker 历史，避免露出隐藏桶
+        if (isDayEnergyTask(taskById.value.get(id))) return;
         displayStore.pushTaskId(id);
       },
       { immediate: true },
@@ -1156,6 +1290,11 @@ export const useDataStore = defineStore(
       hasStarredTaskForActivity,
       cleanSelection,
       addActivity,
+      ensureDayEnergyTask,
+      openLifeRecord,
+      recordLifeRecord,
+      removeLifeRecordAt,
+      discardLifeRecordTask,
       setActiveId,
       setSelectedDate,
       setTaskStar,

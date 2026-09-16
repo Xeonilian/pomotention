@@ -72,18 +72,9 @@
           title="先上传，再比对未删除条数；云端更多则全量下载"
           @click="handleSyncDatabase"
         >
-          同步数据库
+          同步数据
         </n-button>
-        <n-popconfirm @positive-click="handleFactoryReset" positive-text="确认清空" negative-text="取消">
-          <template #trigger>
-            <n-button size="small" type="error">清空本地数据</n-button>
-          </template>
-          将清空本机上的业务数据与登录会话。
-          <br />
-          云端数据不会被删除，重新登录后会同步至本地。
-          <br />
-          确认继续吗？
-        </n-popconfirm>
+        <n-button size="small" type="error" @click="confirmFactoryReset">清空数据</n-button>
       </n-space>
     </n-card>
   </div>
@@ -91,7 +82,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch, onMounted } from "vue";
-import { NCard, NDescriptions, NDescriptionsItem, NButton, NTag, NPopconfirm, NSpace, NSwitch } from "naive-ui";
+import { NCard, NDescriptions, NDescriptionsItem, NButton, NTag, NPopconfirm, NSpace, NSwitch, useDialog } from "naive-ui";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useDataStore } from "@/stores/useDataStore";
 import { useSyncStore } from "@/stores/useSyncStore";
@@ -109,6 +100,7 @@ import { CAPTURE_UI_ENABLED } from "@/core/capture";
 const settingStore = useSettingStore();
 const dataStore = useDataStore();
 const syncStore = useSyncStore();
+const dialog = useDialog();
 
 const userEmail = ref("-");
 const viteVersionRaw = import.meta.env.VITE_APP_VERSION || "";
@@ -364,6 +356,18 @@ async function handleSyncDatabase() {
 async function openSubscribe() {
   const user = await getCurrentUser();
   openExternalUrl(buildAfdianSubscribeUrl(user?.id));
+}
+
+function confirmFactoryReset() {
+  dialog.warning({
+    title: "清空数据",
+    content: "将清空本机上的业务数据与登录会话。云端数据不会被删除，重新登录后会同步至本地。确认继续吗？",
+    positiveText: "确认清空",
+    negativeText: "取消",
+    onPositiveClick: () => {
+      handleFactoryReset();
+    },
+  });
 }
 
 function handleFactoryReset() {

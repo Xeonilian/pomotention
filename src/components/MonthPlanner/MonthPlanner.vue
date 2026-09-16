@@ -14,18 +14,24 @@
           :class="[
             { 'day-card--selected': selectedDate === day.startTs },
             { 'day-card--other-month': !day.isCurrentMonth },
-            { 'day-card--stats': props.showStatsOnly },
+            { 'day-card--stats': props.showStatsOnly && !props.drinkSkin },
+            { 'day-card--drink-skin': props.drinkSkin },
           ]"
-          :style="getDayCardStyle(day.pomoRatio, day.isCurrentMonth)"
-          @click="() => handleDateSelect(day.startTs)"
+          :style="getDayCardStyle(day)"
+          @click="() => handleDayCardClick(day)"
         >
+          <DrinkDayWaterFill
+            v-if="props.drinkSkin && day.isCurrentMonth"
+            :ratio="drinkRatio(day.drinkStat)"
+            :met="day.drinkStat.met"
+          />
           <!-- 节名在左上角；日期徽章保持右上 -->
           <div class="month-day-top" :class="{ 'month-day-top--badge-only': !day.holiday }">
             <div
               v-if="day.holiday"
               class="month-holiday-left"
               :class="'month-holiday-left--' + day.holiday.kind"
-              @click.stop="() => handleDateSelect(day.startTs)"
+              @click.stop="() => handleDayCardClick(day)"
             >
               {{ isMobile ? day.holiday.label.slice(0, 2) : day.holiday.label }}
             </div>
@@ -33,25 +39,63 @@
               class="date-badge"
               :class="{
                 today: day.isToday,
-                'date-badge--stats': props.showStatsOnly && day.isCurrentMonth,
+                'date-badge--stats': props.showStatsOnly && !props.drinkSkin && day.isCurrentMonth,
               }"
               @click.stop="() => handleDateSelectDayView(day.startTs)"
               @touchstart.stop="onMonthBadgeTouchStart"
               @touchend.stop="() => onMonthBadgeTouchEnd(day.startTs)"
               @touchcancel.stop="onMonthBadgeTouchCancel"
-              :style="getBadgeStyle(day.pomoRatio, day.isCurrentMonth)"
+              :style="getBadgeStyle(day)"
             >
               {{ formatDay(day.startTs) }}
             </div>
           </div>
           <div class="items">
-            <template v-if="props.showStatsOnly">
-              <div v-if="isMobile" class="day-stat day-stat--compact">
-                <span>🍅x{{ day.sumRealPomo }}</span>
-                <span>{{ formatWorkHoursCompact(day.sumWorkMs) }}</span>
+            <template v-if="props.drinkSkin && day.isCurrentMonth">
+              <div class="day-drink-stat" :class="{ 'day-drink-stat--compact': isMobile }">
+                <span class="day-drink-stat__count">×{{ day.drinkStat.count }}</span>
+                <span class="day-drink-stat__ml" :title="`${day.drinkStat.totalMl} ml`">{{
+                  formatDrinkStatVolume(day.drinkStat.totalMl)
+                }}</span>
               </div>
-              <div v-else class="day-stat day-stat--full">
+            </template>
+            <template v-else-if="props.showStatsOnly && day.isCurrentMonth">
+              <div v-if="isMobile" class="day-stat--compact">
+                <span>🍅{{ day.sumRealPomo }}</span>
+                <span>{{ formatWorkHoursCompact(day.sumWorkMs) }}</span>
+                <div class="day-life-icons">
+                  <n-icon
+                    v-for="icon in LIFE_STAT_ICONS"
+                    :key="icon.kind"
+                    :size="11"
+                    class="day-life-icon"
+                    :class="[
+                      `day-life-icon--${icon.kind}`,
+                      { 'day-life-icon--filled': !!day.lifeByKind[icon.kind] },
+                    ]"
+                    @click.stop="() => handleLifeIconSelect(day.startTs, day.lifeByKind[icon.kind])"
+                  >
+                    <component :is="day.lifeByKind[icon.kind] ? icon.filled : icon.regular" />
+                  </n-icon>
+                </div>
+              </div>
+              <div v-else class="day-stat--full">
                 <span>🍅 x {{ day.sumRealPomo }} | {{ formatWorkHours(day.sumWorkMs) }}</span>
+                <div class="day-life-icons">
+                  <n-icon
+                    v-for="icon in LIFE_STAT_ICONS"
+                    :key="icon.kind"
+                    :size="16"
+                    class="day-life-icon"
+                    :class="[
+                      `day-life-icon--${icon.kind}`,
+                      { 'day-life-icon--filled': !!day.lifeByKind[icon.kind] },
+                    ]"
+                    @click.stop="() => handleLifeIconSelect(day.startTs, day.lifeByKind[icon.kind])"
+                  >
+                    <component :is="day.lifeByKind[icon.kind] ? icon.filled : icon.regular" />
+                  </n-icon>
+                </div>
               </div>
             </template>
             <template v-else>
@@ -90,11 +134,12 @@
   </div>
 </template>
 <script setup lang="ts">
-import { computed, inject, ref } from "vue";
-import { NCard } from "naive-ui";
+import { computed, inject, ref, type Component } from "vue";
+import { NCard, NIcon } from "naive-ui";
 import type { Todo } from "@/core/types/Todo";
 import type { Schedule } from "@/core/types/Schedule";
 import TagRenderer from "../TagSystem/TagRenderer.vue";
+import DrinkDayWaterFill from "./DrinkDayWaterFill.vue";
 import { timestampToTimeString } from "@/core/utils";
 import { useDataStore } from "@/stores/useDataStore";
 import { storeToRefs } from "pinia";
@@ -106,16 +151,54 @@ import { calcTodoWorkMs, formatWorkHours, formatWorkHoursCompact } from "@/servi
 import { getDateKey } from "@/core/utils";
 import type { HolidayDisplay } from "@/services/planner/publicHolidays";
 import { plannerHolidayMapKey } from "@/composables/planner/usePublicHolidays";
+import { getPomoBadgeBgColor, getPomoColor, getStatsPomoBgColorHEX, mapPomoCountToColorRatio } from "@/core/utils/weekDays";
+import { getLifeRecordKind, type LifeRecordKind } from "@/core/lifeRecord";
+import { isDrinkGoalMet, sumLifeRecordAmountMl } from "@/services/lifeRecord/lifeRecordService";
 import {
-  getPomoBadgeBgColor,
-  getPomoColor,
-  getStatsPomoBgColorHEX,
-  mapPomoCountToColorRatio,
-} from "@/core/utils/weekDays";
+  Door20Filled,
+  Door20Regular,
+  Drop20Filled,
+  Drop20Regular,
+  FoodApple20Filled,
+  FoodApple20Regular,
+  WeatherMoon20Filled,
+  WeatherMoon20Regular,
+} from "@vicons/fluent";
 
 const settingStore = useSettingStore();
 const isTaskVisible = computed(() => settingStore.settings.showTask);
 const { isMobile } = useDevice();
+
+/** 手机月格窄：升一位小数；桌面仍 ml */
+function formatDrinkStatVolume(totalMl: number): string {
+  return isMobile.value ? `${(totalMl / 1000).toFixed(1)} L` : `${totalMl}ml`;
+}
+
+/** 统计格生活记录 icon：蓝/红/灰/黄 = 喝/吃/厕/睡 */
+const LIFE_STAT_ICONS: readonly {
+  kind: LifeRecordKind;
+  regular: Component;
+  filled: Component;
+}[] = [
+  { kind: "drink", regular: Drop20Regular, filled: Drop20Filled },
+  { kind: "eat", regular: FoodApple20Regular, filled: FoodApple20Filled },
+  { kind: "toilet", regular: Door20Regular, filled: Door20Filled },
+  { kind: "sleep", regular: WeatherMoon20Regular, filled: WeatherMoon20Filled },
+];
+
+/** 统计格 icon：可点开切日并选中对应生活记录 */
+type LifeIconRef = { todoId: number; activityId: number; taskId?: number };
+type LifeByKind = Partial<Record<LifeRecordKind, LifeIconRef>>;
+const EMPTY_LIFE_BY_KIND: LifeByKind = {};
+
+type DrinkDayStat = {
+  count: number;
+  totalMl: number;
+  goalMl: number;
+  met: boolean;
+  lifeRef?: LifeIconRef;
+};
+const EMPTY_DRINK_STAT: DrinkDayStat = { count: 0, totalMl: 0, goalMl: 0, met: false };
 
 const emit = defineEmits<{
   "date-select": [timestamp: number];
@@ -126,8 +209,10 @@ const emit = defineEmits<{
 const props = withDefaults(
   defineProps<{
     showStatsOnly?: boolean;
+    /** Planner 喝水统计皮肤 */
+    drinkSkin?: boolean;
   }>(),
-  { showStatsOnly: false },
+  { showStatsOnly: false, drinkSkin: false },
 );
 
 const dayNames = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
@@ -159,7 +244,8 @@ type UnifiedItem = {
 };
 
 const dataStore = useDataStore();
-const { activeId, selectedRowId, todosForCurrentViewWithTags, schedulesForCurrentViewWithTags, selectedDate } = storeToRefs(dataStore);
+const { activeId, selectedRowId, todosForCurrentViewWithTags, schedulesForCurrentViewWithTags, selectedDate, todoList, activityById, taskById, taskByActivityId } =
+  storeToRefs(dataStore);
 const dateService = dataStore.dateService;
 
 const holidayMap = inject(plannerHolidayMapKey, ref<Record<string, HolidayDisplay>>({}));
@@ -182,6 +268,29 @@ const days = computed(() => {
   const calendarEnd = endOfWeek(monthEnd);
   // 计算日历天数
   const totalDays = Math.ceil((calendarEnd - calendarStart) / DAY_MS);
+
+  // 生活记录不在 todosForCurrentView* 里，单独按 todo.id 归属日扫一遍（统计格 icon 用）
+  const lifeByDay = new Map<number, LifeByKind>();
+  for (const todo of todoList.value) {
+    if (todo.deleted) continue;
+    const kind = getLifeRecordKind(activityById.value.get(todo.activityId));
+    if (!kind) continue;
+    const dayStart = startOfDay(todo.id);
+    if (dayStart < calendarStart || dayStart > calendarEnd) continue;
+    let byKind = lifeByDay.get(dayStart);
+    if (!byKind) {
+      byKind = {};
+      lifeByDay.set(dayStart, byKind);
+    }
+    // 同日同 kind 已有则保留首条
+    if (byKind[kind]) continue;
+    byKind[kind] = {
+      todoId: todo.id,
+      activityId: todo.activityId,
+      taskId: todo.taskId,
+    };
+  }
+
   // 将 Todo 映射到统一结构
   const todoItems: UnifiedItem[] = (todosForCurrentViewWithTags.value || [])
     .map((t) => {
@@ -293,6 +402,29 @@ const days = computed(() => {
 
     const ratio = mapPomoCountToColorRatio(sumRealPomo);
 
+    const drinkRef = lifeByDay.get(dayTs)?.drink;
+    let drinkStat: DrinkDayStat = EMPTY_DRINK_STAT;
+    if (drinkRef) {
+      const task =
+        (drinkRef.taskId != null ? taskById.value.get(drinkRef.taskId) : undefined) ??
+        taskByActivityId.value.get(drinkRef.activityId);
+      const records = task?.lifeRecords ?? [];
+      const totalMl = sumLifeRecordAmountMl(records);
+      const goalMl = task?.drinkGoalMl ?? settingStore.settings.drinkDailyGoalMl;
+      drinkStat = {
+        count: records.length,
+        totalMl,
+        goalMl,
+        met: isDrinkGoalMet(totalMl, goalMl),
+        lifeRef: drinkRef,
+      };
+    } else {
+      drinkStat = {
+        ...EMPTY_DRINK_STAT,
+        goalMl: settingStore.settings.drinkDailyGoalMl,
+      };
+    }
+
     return {
       index: idx,
       startTs: dayTs,
@@ -306,6 +438,8 @@ const days = computed(() => {
       pomoRatio: ratio,
       maxItems: maxItemsPerDay.value,
       holiday: holidayForTs(dayTs),
+      lifeByKind: lifeByDay.get(dayTs) ?? EMPTY_LIFE_BY_KIND,
+      drinkStat,
     };
   });
   return result;
@@ -398,21 +532,49 @@ const handleItemSelect = (id: number, _ts: number, activityId?: number, taskId?:
   emit("item-change", id, activityId, taskId);
 };
 
-// 颜色可视化番茄量
-function getDayCardStyle(ratio: number, isCurrentMonth: boolean): { backgroundColor: string } | undefined {
-  if (!props.showStatsOnly || !isCurrentMonth) return undefined;
-  return { backgroundColor: getStatsPomoBgColorHEX(ratio) };
+/** 统计格生活 icon：切日 + 选中对应记录（不进日视图） */
+function handleLifeIconSelect(dayStartTs: number, lifeRef: LifeIconRef | undefined) {
+  if (!lifeRef) return;
+  emit("date-select", dayStartTs);
+  emit("item-change", lifeRef.todoId, lifeRef.activityId, lifeRef.taskId);
 }
 
-function getBadgeStyle(ratio: number, isCurrentMonth: boolean): Record<string, string> {
-  if (props.showStatsOnly) {
-    if (!isCurrentMonth) return {};
+type MonthDayRow = { startTs: number; pomoRatio: number; isCurrentMonth: boolean; drinkStat: DrinkDayStat };
+
+/** 喝水皮肤：切日；有喝水行则打开日明细 Task（不快记） */
+function handleDayCardClick(day: MonthDayRow) {
+  if (props.drinkSkin) {
+    emit("date-select", day.startTs);
+    const ref = day.drinkStat.lifeRef;
+    if (ref) emit("item-change", ref.todoId, ref.activityId, ref.taskId);
+    return;
+  }
+  handleDateSelect(day.startTs);
+}
+
+function drinkRatio(stat: DrinkDayStat): number {
+  if (stat.count <= 0) return 0;
+  const goal = Math.max(stat.goalMl, 1);
+  return stat.totalMl / goal;
+}
+
+function getDayCardStyle(day: MonthDayRow): { backgroundColor: string } | undefined {
+  // 喝水皮肤用水位 SVG，不再铺整格纯色底
+  if (props.drinkSkin) return undefined;
+  if (!props.showStatsOnly || !day.isCurrentMonth) return undefined;
+  return { backgroundColor: getStatsPomoBgColorHEX(day.pomoRatio) };
+}
+
+function getBadgeStyle(day: MonthDayRow): Record<string, string> {
+  if (props.showStatsOnly && !props.drinkSkin) {
+    if (!day.isCurrentMonth) return {};
     return {
-      "--badge-pomo-color": getPomoColor(ratio),
-      "--badge-bg-color": getStatsBadgeBgColor(ratio),
+      "--badge-pomo-color": getPomoColor(day.pomoRatio),
+      "--badge-bg-color": getStatsBadgeBgColor(day.pomoRatio),
     };
   }
-  return { color: getPomoColor(ratio), backgroundColor: getPomoBadgeBgColor(ratio) };
+  // 普通月视图 / 喝水皮肤：同一套番茄灰红 badge
+  return { color: getPomoColor(day.pomoRatio), backgroundColor: getPomoBadgeBgColor(day.pomoRatio) };
 }
 
 /** 统计模式 badge 底：低番茄灰底，高番茄过渡到白 */
@@ -544,7 +706,7 @@ function getStatsBadgeBgColor(ratio: number): string {
   font-weight: 600;
   padding: 2px 2px 0 0;
   overflow: hidden;
-  text-overflow: ellipsis;
+
   white-space: nowrap;
   color: var(--color-red);
 }
@@ -687,7 +849,7 @@ function getStatsBadgeBgColor(ratio: number): string {
   align-items: center;
   justify-content: center;
   flex: 1;
-  gap: 2px;
+  gap: 6px;
   font-size: 13px;
   line-height: 1.2;
   color: var(--color-text-primary);
@@ -698,19 +860,101 @@ function getStatsBadgeBgColor(ratio: number): string {
 .day-stat--compact {
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: center;
   flex: 1;
-  gap: 2px;
+  gap: 4px;
   font-size: 12px;
-  line-height: 1.5;
+  line-height: 1.2;
   color: var(--color-text-primary);
   padding: 6px;
   white-space: nowrap;
   text-align: center;
 }
 
+.day-card--drink-skin {
+  cursor: pointer;
+}
+
+.day-card--drink-skin :deep(.n-card__content) {
+  isolation: isolate;
+}
+
+.day-card--drink-skin .month-day-top,
+.day-card--drink-skin .items {
+  position: relative;
+  z-index: 1;
+}
+
+.day-drink-stat {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  padding-bottom: 10px;
+  text-shadow: 0 0 3px rgba(255, 255, 255, 0.9);
+}
+
+.day-drink-stat--compact {
+  font-size: 12px;
+  padding: 6px;
+  gap: 2px;
+}
+
+.day-drink-stat__count {
+  color: var(--color-blue-dark);
+}
+
+.day-drink-stat__ml {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
+.day-life-icons {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.day-life-icon {
+  color: var(--color-text-secondary);
+  opacity: 0.55;
+}
+
+.day-life-icon--filled {
+  opacity: 1;
+  cursor: pointer;
+}
+
+.day-life-icon--drink.day-life-icon--filled {
+  color: var(--color-blue);
+}
+
+.day-life-icon--eat.day-life-icon--filled {
+  color: var(--color-red);
+}
+
+.day-life-icon--toilet.day-life-icon--filled {
+  color: var(--color-text-secondary);
+}
+
+.day-life-icon--sleep.day-life-icon--filled {
+  color: var(--color-yellow);
+}
+
 @media (max-width: 430px) {
+  .day-life-icons {
+    gap: 0px;
+  }
   .header-card,
   .day-card {
     border: 0.5px solid var(--color-background-dark);

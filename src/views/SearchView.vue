@@ -1,7 +1,15 @@
 <template>
-  <div class="search-container" ref="searchContainerRef">
+  <div
+    class="search-container"
+    ref="searchContainerRef"
+    :class="{
+      'is-mobile': isMobile,
+      'search-container--left-full': isMobile && mobilePaneMode === 'left-full',
+      'search-container--right-full': isMobile && mobilePaneMode === 'right-full',
+    }"
+  >
     <!-- 左侧：Activity 主列表 -->
-    <div class="left-pane" :class="{ 'left-pane--mobile-split': isMobile }" :style="{ width: searchWidth + 'px' }">
+    <div class="left-pane" :class="{ 'left-pane--mobile-split': isMobile }" :style="isMobile ? undefined : { width: searchWidth + 'px' }">
       <div class="search-tool">
         <div class="search-input-wrap">
           <n-input
@@ -64,9 +72,9 @@
           </template>
         </n-button>
       </div>
-      <div class="title-list">
+      <div class="title-list" @scroll.passive="onTitleListScroll">
         <div
-          v-for="row in filteredActivities"
+          v-for="row in visibleRows"
           :key="'act-' + row.activityId"
           class="title-item"
           :class="[{ active: activeTabKey === row.openKey }, row.class === 'T' ? 'todo' : 'schedule']"
@@ -76,7 +84,7 @@
           <span v-if="!isMobile" class="left-icon">
             {{ row.class === "T" ? "📝" : "📅" }}
           </span>
-          <span class="title-name">{{ row.title || "（无标题）" }}</span>
+          <span class="title-name">{{ row.title || "......" }}</span>
           <span class="right-info">
             <span class="right-info-left">
               <n-icon v-if="row.hasStarred" size="16" class="star-on"><Star20Filled /></n-icon>
@@ -101,7 +109,7 @@
     </div>
     <div v-if="!isMobile" class="resize-handle-horizontal" style="touch-action: none" @pointerdown="resizeSearch.startResize"></div>
     <!-- 右侧：Tabs -->
-    <div class="right-pane" :style="{ width: `calc(100% - ${searchWidth}px - 20px)` }">
+    <div class="right-pane" :style="isMobile ? undefined : { width: `calc(100% - ${searchWidth}px - 20px)` }">
       <n-tabs
         :value="activeTabKey"
         type="card"
@@ -121,7 +129,7 @@
           </n-button>
         </template>
         <template #suffix>
-          <n-button v-if="openedTabs.length > 0" text @click="closeAllTabs">
+          <n-button v-if="openedTabs.length > 0" text class="close-all-tabs-btn" @click="closeAllTabs">
             <template #icon>
               <n-icon><Dismiss12Regular /></n-icon>
             </template>
@@ -136,18 +144,12 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, ref, nextTick, onMounted, onUnmounted } from "vue";
+import { computed, ref, nextTick, onMounted, onUnmounted, watch } from "vue";
 import { storeToRefs } from "pinia";
 import { NInput } from "naive-ui";
 import type { Tag } from "@/core/types/Tag";
 import TabPaneContent from "@/components/search/TabPaneContent.vue";
-import {
-  Star20Filled,
-  Dismiss12Regular,
-  Search20Regular,
-  ChevronLeft20Regular,
-  ChevronRight20Regular,
-} from "@vicons/fluent";
+import { Star20Filled, Dismiss12Regular, Search20Regular, ChevronLeft20Regular, ChevronRight20Regular } from "@vicons/fluent";
 import TagPickerPopover from "@/components/TagSystem/TagPickerPopover.vue";
 import TagRenderer from "@/components/TagSystem/TagRenderer.vue";
 import StarFilterToggle from "@/components/TagSystem/StarFilterToggle.vue";
@@ -172,6 +174,30 @@ const { filteredActivities } = useSearchFilter();
 
 // 从 UI store 中解构出 UI 状态（使用 storeToRefs 保持响应性）
 const { searchQuery, filterStarredOnly, openedTabs, activeTabKey, filterTagIds } = storeToRefs(searchUiStore);
+
+// 渐进渲染：首屏只挂载前 ROW_CHUNK 行（每行含 TagRenderer/n-tag，全量挂载会卡首屏与取消筛选），滚动近底再追加
+const ROW_CHUNK = 50;
+const SCROLL_APPEND_THRESHOLD_PX = 200;
+const visibleCount = ref(ROW_CHUNK);
+const visibleRows = computed(() => filteredActivities.value.slice(0, visibleCount.value));
+
+function onTitleListScroll(e: Event) {
+  const el = e.currentTarget as HTMLElement;
+  if (el.scrollTop + el.clientHeight >= el.scrollHeight - SCROLL_APPEND_THRESHOLD_PX) {
+    if (visibleCount.value < filteredActivities.value.length) {
+      visibleCount.value += ROW_CHUNK;
+    }
+  }
+}
+
+// 筛选条件变化时回到首屏块，避免取消筛选时一次性全量挂载（filterTagIds 是原位 splice/push，需 deep）
+watch(
+  [searchQuery, filterStarredOnly, filterTagIds],
+  () => {
+    visibleCount.value = ROW_CHUNK;
+  },
+  { deep: true },
+);
 
 // 从 UI store 中解构出 actions，以便在 script 中调用
 const { toggleFilterStarred, closeTab, openRow, toggleFilterTagId, clearFilterTags } = searchUiStore;
@@ -213,9 +239,10 @@ onUnmounted(() => {
 
 // 左右拖动功能
 const { isMobile } = useDevice();
-if (isMobile.value) {
-  settingStore.settings.searchWidth = 100;
-}
+
+// 手机端分栏三态：隐藏/显示即可，不算 px；桌面端仍走 searchWidth 拖拽
+type MobilePaneMode = "split" | "left-full" | "right-full";
+const mobilePaneMode = ref<MobilePaneMode>("split");
 const searchWidth = computed({
   get: () => settingStore.settings.searchWidth,
   set: (v) => (settingStore.settings.searchWidth = v),
@@ -263,17 +290,27 @@ const atLeftFullWidth = computed(() => {
   return searchWidth.value >= target;
 });
 
-const leftPaneChevronIsLeft = computed(() => atLeftFullWidth.value);
-const leftPaneToggleTitle = computed(() => (atLeftFullWidth.value ? "恢复普通分栏" : "左栏全宽"));
+// 左栏全宽/右栏全宽的激活态：手机看模式，桌面看计算宽度
+const leftFullActive = computed(() => (isMobile.value ? mobilePaneMode.value === "left-full" : atLeftFullWidth.value));
+const rightFullActive = computed(() =>
+  isMobile.value ? mobilePaneMode.value === "right-full" : atSearchPaneMin.value || atLeftFullWidth.value,
+);
 
-const rightPaneChevronIsRight = computed(() => atSearchPaneMin.value || atLeftFullWidth.value);
-const rightPaneToggleTitle = computed(() => (atSearchPaneMin.value || atLeftFullWidth.value ? "恢复分栏宽度" : "展开右栏"));
+const leftPaneChevronIsLeft = computed(() => leftFullActive.value);
+const leftPaneToggleTitle = computed(() => (leftFullActive.value ? "恢复普通分栏" : "左栏全宽"));
+
+const rightPaneChevronIsRight = computed(() => rightFullActive.value);
+const rightPaneToggleTitle = computed(() => (rightFullActive.value ? "恢复分栏宽度" : "展开右栏"));
 
 function restoreSearchPaneWidth() {
   searchWidth.value = clampResizeRange(snapRestoreWidth.value ?? normalDefaultWidth());
 }
 
 function onLeftPaneToggle() {
+  if (isMobile.value) {
+    mobilePaneMode.value = mobilePaneMode.value === "left-full" ? "split" : "left-full";
+    return;
+  }
   if (atLeftFullWidth.value) {
     searchWidth.value = clampResizeRange(snapWidthBeforeLeftFull.value ?? normalDefaultWidth());
     return;
@@ -284,6 +321,10 @@ function onLeftPaneToggle() {
 }
 
 function onRightPaneToggle() {
+  if (isMobile.value) {
+    mobilePaneMode.value = mobilePaneMode.value === "right-full" ? "split" : "right-full";
+    return;
+  }
   if (atSearchPaneMin.value) {
     restoreSearchPaneWidth();
     return;
@@ -378,6 +419,18 @@ const formatMMDD = (ts?: number) => (ts ? new Date(ts).toLocaleDateString(undefi
   align-self: center;
 }
 
+/* 手机：关闭全部 tab 按钮左右只留 2px */
+.search-container.is-mobile :deep(.n-tabs-nav__suffix) {
+  padding-left: 2px;
+  padding-right: 2px;
+}
+
+.search-container.is-mobile .close-all-tabs-btn {
+  padding-left: 2px;
+  padding-right: 2px;
+  --n-padding: 0 2px;
+}
+
 /* 无已打开标签时 card 顶栏会塌缩；保留高度以免右侧（含 prefix 箭头）视觉上过扁 */
 .tab-container.tab-container--empty-tabs :deep(.n-tabs-nav) {
   min-height: 34px;
@@ -399,9 +452,35 @@ const formatMMDD = (ts?: number) => (ts ? new Date(ts).toLocaleDateString(undefi
   display: flex;
   flex-direction: row;
   min-height: 0;
-  margin-left: 10px;
+  min-width: 0;
+  /* padding 占位：width:100% + margin-left 会永远溢出 10px（margin 不进盒宽） */
+  padding-left: 10px;
   margin-bottom: 6px;
   width: 100%;
+  box-sizing: border-box;
+}
+
+/* 手机：分栏时左 40% / 右 60%（均分再减左 10%）；单栏时另一栏 display:none，留下的仍撑满 */
+.search-container.is-mobile .left-pane,
+.search-container.is-mobile .right-pane {
+  min-width: 0;
+  width: auto;
+}
+
+.search-container.is-mobile .left-pane {
+  flex: 4 1 0%;
+}
+
+.search-container.is-mobile .right-pane {
+  flex: 6 1 0%;
+}
+
+.search-container--left-full .right-pane {
+  display: none;
+}
+
+.search-container--right-full .left-pane {
+  display: none;
 }
 
 .resize-handle-horizontal {
@@ -513,7 +592,8 @@ const formatMMDD = (ts?: number) => (ts ? new Date(ts).toLocaleDateString(undefi
   padding: 2px 4px;
   margin-right: 4px;
   cursor: pointer;
-  min-height: 15px;
+  /* 与 tiny n-tag 同行：无 tag 也占这一高，有 tag 不再把标题/日期挤下去 */
+  min-height: 22px;
   margin-bottom: 4px;
 }
 
@@ -538,6 +618,12 @@ const formatMMDD = (ts?: number) => (ts ? new Date(ts).toLocaleDateString(undefi
   flex-wrap: nowrap;
   overflow: hidden;
   min-width: 0;
+  padding: 0;
+  align-items: center;
+}
+
+.tag-renderer-container :deep(.n-tag) {
+  --n-height: 18px;
 }
 
 .title-item .title-name {
@@ -641,14 +727,19 @@ const formatMMDD = (ts?: number) => (ts ? new Date(ts).toLocaleDateString(undefi
 }
 
 @media (max-width: 430px) {
-  .search-container {
-    width: 100%;
-  }
-
   .title-item {
     padding: 2px 2px;
   }
-
+  .search-tool {
+    gap: 0;
+  }
+  /* 搜索框与星星 4px；加在 input 侧，chevron 仍贴右 */
+  .search-tool .search-input-wrap {
+    margin-right: 4px;
+  }
+  .search-tool .star-btn {
+    left: 0;
+  }
   /* 手机端收紧搜索框前缀图标侧留白 */
   .search-tool :deep(.n-input-wrapper) {
     padding-left: 2px;

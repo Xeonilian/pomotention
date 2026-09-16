@@ -170,5 +170,20 @@ function getTagTitle(tag: TagWithCount): string {
 :deep(.n-tag) {
   --n-border: 1px solid transparent !important;
   overflow: visible;
+  /* 关闭钮默认跟文字色；hover 才红叉 + 不透明白圈 */
+  --n-close-icon-color-hover: var(--color-red);
+  --n-close-icon-color-pressed: var(--color-red);
+  --n-close-color-hover: #fff;
+  --n-close-color-pressed: #fff;
+}
+
+:deep(.n-tag .n-base-close:not(.n-base-close--disabled):hover),
+:deep(.n-tag .n-base-close:not(.n-base-close--disabled):active) {
+  color: var(--color-red) !important;
+}
+
+:deep(.n-tag .n-base-close:not(.n-base-close--disabled):hover::before),
+:deep(.n-tag .n-base-close:not(.n-base-close--disabled):active::before) {
+  background-color: #fff !important;
 }
 </style>

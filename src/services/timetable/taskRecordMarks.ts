@@ -178,8 +178,10 @@ export function collectTaskRecordMarks(options: {
   schedules: ScheduleMarkSource[];
   getTask: (taskId: number) => Task | undefined;
   minGapMs: number;
+  /** 无 todo/schedule 的 energy 宿主（如 day_energy），只注入 energy 点 */
+  orphanEnergyTasks?: Task[];
 }): TaskRecordMark[] {
-  const { dayStart, dayEnd, timeRange, todos, schedules, getTask, minGapMs } = options;
+  const { dayStart, dayEnd, timeRange, todos, schedules, getTask, minGapMs, orphanEnergyTasks } = options;
   const raw: UnlanedMark[] = [];
   const seen = new Set<string>();
 
@@ -200,6 +202,13 @@ export function collectTaskRecordMarks(options: {
     const fallback = schedule.activityDueRange[0];
     addInterruptionMarks(raw, seen, task, host, dayStart, dayEnd, fallback);
     pushEnergyMarks(raw, seen, task, host, dayStart, dayEnd, fallback);
+  }
+
+  for (const task of orphanEnergyTasks ?? []) {
+    if (task.deleted) continue;
+    for (const record of task.energyRecords ?? []) {
+      addMark(raw, seen, task.id, {}, "energy", record, dayStart, dayEnd, dayStart);
+    }
   }
 
   const clamped = raw.map((mark) => ({

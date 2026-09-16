@@ -134,6 +134,31 @@ describe("collectTaskRecordMarks", () => {
     expect(later?.lane).toBe(0);
   });
 
+  it("orphanEnergyTasks 注入无 todo 的 energy 点", () => {
+    const t0 = DAY + 9 * 3600_000;
+    const orphan = taskWith({
+      id: 900,
+      activityTitle: `daily_energy_${DAY}`,
+      sourceId: DAY,
+      energyRecords: [{ id: 91, value: 6, recordedAt: t0 }],
+      rewardRecords: [{ id: 92, value: 8, recordedAt: t0 }],
+    });
+    const marks = collectTaskRecordMarks({
+      dayStart: DAY,
+      dayEnd: DAY_END,
+      timeRange: { start: DAY, end: DAY_END },
+      todos: [],
+      schedules: [],
+      getTask: () => undefined,
+      minGapMs: 1,
+      orphanEnergyTasks: [orphan],
+    });
+    expect(marks).toHaveLength(1);
+    expect(marks[0]?.kind).toBe("energy");
+    expect(marks[0]?.taskId).toBe(900);
+    expect(marks[0]?.todoId).toBeUndefined();
+  });
+
   it("5 分钟内四条编成 lane 0–3，隔开则从 0 再起", () => {
     const t0 = DAY + 10 * 3600_000;
     const marks = collectTaskRecordMarks({

@@ -1,7 +1,7 @@
 // src/stores/useTaskTrackerStore.ts
 
-import { defineStore } from "pinia";
-import { computed } from "vue";
+import { defineStore, storeToRefs } from "pinia";
+import { computed, toValue } from "vue";
 import { useDataStore } from "./useDataStore";
 import { taskService } from "@/services/task/taskService";
 import { convertToSchedule } from "@/services/activity/activityService";
@@ -38,7 +38,14 @@ export const useTaskTrackerStore = defineStore("taskTracker", () => {
   function handleEnergyRecord(val: { value: number; description?: string; recordedAt: number }) {
     if (selectedTaskId.value) {
       taskService.addEnergyRecord(selectedTaskId.value, val.value, val.description, val.recordedAt);
+      return;
     }
+    // 无选中：挂到当前显示日的 day_energy；时刻对齐该日（与生活记录同规则）
+    const dayStart = toValue(dataStore.dateService.appDateTimestamp as Parameters<typeof toValue>[0]);
+    if (typeof dayStart !== "number" || Number.isNaN(dayStart)) return;
+    const at = dataStore.dateService.combineDateAndTime(dayStart, val.recordedAt);
+    const host = dataStore.ensureDayEnergyTask(dayStart);
+    taskService.addEnergyRecord(host.id, val.value, val.description, at);
   }
 
   function handleRewardRecord(payload: { value: number; description?: string; recordedAt: number }) {

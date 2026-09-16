@@ -86,20 +86,14 @@
                 <span @click="onWeekJump" class="day-status">&nbsp;{{ dateService.displayMonthInfo }}</span>
                 <span
                   class="global-pomo"
-                  title="单击回到今天；双击或长按切换统计/日程"
-                  @click="onMonthGlobalPomoClick"
-                  @dblclick.stop="onMonthGlobalPomoDblClick"
-                  @contextmenu.prevent
-                  @selectstart.prevent
-                  @pointerdown="onMonthGlobalPomoPointerDown"
-                  @pointerup="onMonthGlobalPomoPointerUp"
-                  @pointerleave="onMonthGlobalPomoPointerUp"
-                  @pointercancel="onMonthGlobalPomoPointerUp"
-                  @touchstart.stop.prevent="onMonthGlobalPomoTouchStart"
-                  @touchend.stop="onMonthGlobalPomoTouchEnd"
-                  @touchcancel.stop="onMonthGlobalPomoTouchCancel"
+                  title="单击回到今天；点番茄切换统计/日程"
+                  @click="onDateSet('today')"
                 >
-                  <span class="today-pomo">🍅{{ periodPomoCount }}</span>
+                  <span
+                    class="today-pomo"
+                    title="切换统计/日程"
+                    @click.stop="toggleMonthShowStatsOnly"
+                  >🍅{{ periodPomoCount }}</span>
                   <span class="total-pomo">/{{ globalRealPomo }}</span>
                 </span>
               </div>
@@ -125,8 +119,7 @@
               ref="inputRef"
             />
             <div class="button-group">
-              <HomeTagFilterPopover />
-              <LedgerAggregatePopover />
+              <HomeToolbarButtons />
 
               <n-button
                 title="重复活动"
@@ -252,6 +245,8 @@
             />
             <WeekPlanner
               v-if="settingStore.settings.showPlanner && settingStore.settings.viewSet === 'week'"
+              :hide-schedule-blocks="lifePlannerHasAnyLayer"
+              :drink-layer="lifePlannerHasDrink"
               @item-change="onItemChange"
               @date-select="onDateSelect"
               @date-select-day-view="onDateSelectDayView"
@@ -259,6 +254,7 @@
             <MonthPlanner
               v-if="settingStore.settings.showPlanner && settingStore.settings.viewSet === 'month'"
               :show-stats-only="monthShowStatsOnly"
+              :drink-skin="lifePlannerHasDrink"
               @item-change="onItemChange"
               @date-select="onDateSelect"
               @date-select-day-view="onDateSelectDayView"
@@ -266,6 +262,7 @@
             <YearPlanner
               v-if="settingStore.settings.showPlanner && settingStore.settings.viewSet === 'year'"
               :key="dateService.displayYearInfo"
+              :drink-skin="lifePlannerHasDrink"
               @date-select-day-view="onDateSelectDayView"
               @navigate-to-month="onYearNavigateToMonth"
               @navigate-to-week="onYearNavigateToWeek"
@@ -362,8 +359,7 @@ import { ViewType } from "@/core/constants";
 import { useResize } from "@/composables/layout/useResize";
 import { useVisualViewportKeyboard } from "@/composables/layout/useVisualViewportKeyboard";
 import IcsExportModal from "@/components/DayPlanner/IcsExportModal.vue";
-import HomeTagFilterPopover from "@/components/TagSystem/HomeTagFilterPopover.vue";
-import LedgerAggregatePopover from "@/components/Ledger/LedgerAggregatePopover.vue";
+import HomeToolbarButtons from "@/components/home/HomeToolbarButtons.vue";
 import MobileHomeFab from "@/components/platform/MobileHomeFab.vue";
 import { useTagStore } from "@/stores/useTagStore";
 import {
@@ -387,10 +383,10 @@ import { taskService } from "@/services/task/taskService";
 
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useDataStore } from "@/stores/useDataStore";
+import { useLifePlannerLayerStore } from "@/stores/useLifePlannerLayerStore";
 import { autoSyncDebounced, uploadAllDebounced } from "@/core/utils/autoSync";
 import { useDevice } from "@/composables/platform/useDevice";
 import { CAPTURE_UI_ENABLED } from "@/core/capture";
-import { createTouchScheduledSingleAndDouble } from "@/composables/platform/useTouchScheduledSingleAndDouble";
 import { usePublicHolidays, plannerHolidayMapKey } from "@/composables/planner/usePublicHolidays";
 import { registerPlannerKeyboardCommandApi } from "@/composables/keyboard/usePlannerKeyboardCommands";
 import { registerPlannerDayEnterEditTitle, registerPlannerDaySpaceToggleCheck } from "@/composables/keyboard/usePlannerKeyboardNavigator";
@@ -510,90 +506,19 @@ import { usePomodoroStats } from "@/composables/planner/usePomodoroStats";
 // 新系统（测试用）
 const { currentDatePomoCount, periodPomoCount, globalRealPomo } = usePomodoroStats();
 
-/** 月视图：header 🍅 区域双击/长按切换统计模式（会话级） */
+/** 月视图：header 🍅 单击切换统计模式（会话级） */
 const monthShowStatsOnly = ref(false);
-const GLOBAL_POMO_LONG_PRESS_MS = 500;
-let globalPomoLongPressTimer: ReturnType<typeof setTimeout> | null = null;
-let globalPomoSuppressClick = false;
-let globalPomoDesktopClickTimer: ReturnType<typeof setTimeout> | null = null;
+const lifePlannerLayerStore = useLifePlannerLayerStore();
+const { hasAny: lifePlannerHasAnyLayer, hasDrink: lifePlannerHasDrink } = storeToRefs(lifePlannerLayerStore);
 
+watch(
+  () => settingStore.settings.viewSet,
+  (view) => {
+    lifePlannerLayerStore.onViewSetChange(view);
+  },
+);
 function toggleMonthShowStatsOnly() {
   monthShowStatsOnly.value = !monthShowStatsOnly.value;
-}
-
-const monthGlobalPomoTouch = createTouchScheduledSingleAndDouble(
-  () => onDateSet("today"),
-  () => toggleMonthShowStatsOnly(),
-);
-
-function clearGlobalPomoLongPress() {
-  if (globalPomoLongPressTimer != null) {
-    clearTimeout(globalPomoLongPressTimer);
-    globalPomoLongPressTimer = null;
-  }
-}
-
-function clearGlobalPomoDesktopClickTimer() {
-  if (globalPomoDesktopClickTimer != null) {
-    clearTimeout(globalPomoDesktopClickTimer);
-    globalPomoDesktopClickTimer = null;
-  }
-}
-
-function onMonthGlobalPomoPointerDown(e?: PointerEvent) {
-  if (e && isMobile.value && e.pointerType === "touch") {
-    e.preventDefault();
-  }
-  clearGlobalPomoLongPress();
-  globalPomoSuppressClick = false;
-  globalPomoLongPressTimer = setTimeout(() => {
-    globalPomoLongPressTimer = null;
-    toggleMonthShowStatsOnly();
-    globalPomoSuppressClick = true;
-    clearGlobalPomoDesktopClickTimer();
-    monthGlobalPomoTouch.touchCancel();
-  }, GLOBAL_POMO_LONG_PRESS_MS);
-}
-
-function onMonthGlobalPomoPointerUp() {
-  clearGlobalPomoLongPress();
-}
-
-function onMonthGlobalPomoClick() {
-  if (globalPomoSuppressClick) {
-    globalPomoSuppressClick = false;
-    return;
-  }
-  if (isMobile.value) return;
-  clearGlobalPomoDesktopClickTimer();
-  globalPomoDesktopClickTimer = setTimeout(() => {
-    globalPomoDesktopClickTimer = null;
-    onDateSet("today");
-  }, 340);
-}
-
-function onMonthGlobalPomoDblClick(e: MouseEvent) {
-  e.preventDefault();
-  clearGlobalPomoDesktopClickTimer();
-  toggleMonthShowStatsOnly();
-}
-
-function onMonthGlobalPomoTouchStart(_e: TouchEvent) {
-  if (!isMobile.value) return;
-  onMonthGlobalPomoPointerDown();
-  monthGlobalPomoTouch.touchStart(_e);
-}
-
-function onMonthGlobalPomoTouchEnd() {
-  if (!isMobile.value) return;
-  onMonthGlobalPomoPointerUp();
-  monthGlobalPomoTouch.touchEnd(0);
-}
-
-function onMonthGlobalPomoTouchCancel() {
-  if (!isMobile.value) return;
-  clearGlobalPomoLongPress();
-  monthGlobalPomoTouch.touchCancel();
 }
 
 // 计算当前日期 不赋值在UI计算class就会失效，但是UI输出的值是正确的
@@ -1456,8 +1381,6 @@ function onUpdateScheduleStatus(id: number, isChecked: boolean) {
     if (schedule.doneTime == undefined) {
       const now = new Date();
       doneTime = now.getTime();
-      schedule.synced = false;
-      schedule.lastModified = Date.now();
     }
   }
   updateScheduleStatus(id, doneTime, newStatus);
@@ -1940,7 +1863,7 @@ const { startResize: startRightResize } = useResize(
 .planner-header-left {
   display: flex;
   align-items: center;
-  margin-left: 2px;
+  margin-left: 6px;
 }
 
 .marquee {
@@ -2035,7 +1958,7 @@ const { startResize: startRightResize } = useResize(
   border-radius: 12px;
   font-family: Consolas, "Courier New", Courier, monospace;
   font-weight: 500;
-  margin-left: 16px;
+  margin-left: 12px;
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;
@@ -2178,7 +2101,9 @@ const { startResize: startRightResize } = useResize(
   .marquee-input {
     display: block;
   }
-
+  .middle-top {
+    padding-right: 0;
+  }
   .today-pomo,
   .total-pomo {
     font-size: 14px;
@@ -2212,6 +2137,11 @@ const { startResize: startRightResize } = useResize(
   }
   .planner-view-container {
     scrollbar-gutter: stable;
+    padding-left: 4px;
+  }
+  /* 显示左侧时刻表时，间距由 .left 右 padding 承担，避免双重间距 */
+  .left ~ .middle .planner-view-container {
+    padding-left: 0;
   }
 }
 

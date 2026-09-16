@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { convertToChartData, filterByDateRange, generateHeatmapData } from "@/services/chart/chartWidgetService";
+import { convertToChartData, filterByDateRange, formatChartTooltipValue, generateHeatmapData } from "@/services/chart/chartWidgetService";
 import { METRICS } from "@/core/types/Metrics";
 import { createChartConfig, DateRangePresets } from "@/core/types/ChartConfig";
 
@@ -253,5 +253,11 @@ describe("chartViewService", () => {
     const last7DaysFiltered = filterByDateRange(data, DateRangePresets.last7Days());
     expect(last7DaysFiltered.has("2024-06-15")).toBe(true);
     expect(last7DaysFiltered.has("2024-06-14")).toBe(true);
+  });
+
+  it("hover 数值非整数只保留 1 位小数", () => {
+    expect(formatChartTooltipValue(6.666666666666667)).toBe("6.7");
+    expect(formatChartTooltipValue(8)).toBe("8");
+    expect(formatChartTooltipValue(0)).toBe("0");
   });
 });

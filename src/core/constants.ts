@@ -245,8 +245,22 @@ export const TAG_ID_IMPORTANT = 126;
 /** 含已录入收支的 Activity 系统标记（隐藏，同四象限 tag） */
 export const TAG_ID_LEDGER = 127;
 
+/** 生活记录（lifeRecord）系统 tag：固定 id 保证多端一致；徽章不渲染（行标题即语义） */
+export const TAG_ID_LIFE_DRINK = 128;
+export const TAG_ID_LIFE_EAT = 129;
+export const TAG_ID_LIFE_TOILET = 130;
+export const TAG_ID_LIFE_SLEEP = 131;
+
 /** 仅语义用途：列表不在 TagRenderer 展示（避免显示成数字） */
-export const TAG_IDS_HIDDEN_IN_TAG_RENDERER: readonly number[] = [TAG_ID_URGENT, TAG_ID_IMPORTANT, TAG_ID_LEDGER];
+export const TAG_IDS_HIDDEN_IN_TAG_RENDERER: readonly number[] = [
+  TAG_ID_URGENT,
+  TAG_ID_IMPORTANT,
+  TAG_ID_LEDGER,
+  TAG_ID_LIFE_DRINK,
+  TAG_ID_LIFE_EAT,
+  TAG_ID_LIFE_TOILET,
+  TAG_ID_LIFE_SLEEP,
+];
 
 /** 进入四象限时右侧栏宽度（约双列 250px + gap） */
 export const ACTIVITY_QUADRANT_PANEL_WIDTH_PX = 600;
