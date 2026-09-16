@@ -13,8 +13,8 @@
 | **来自** | 一句记第一刀已通；目的是「有 AI 的软件能被人购买」；roadmap「收费 + 推广」 |
 | **蓝图** | 底座 [`8-ai-gateway.md`](./blueprint/8-ai-gateway.md)；能力 [`7-capture.md`](./blueprint/7-capture.md) |
 | **分支** | `dev` |
-| **更新** | 2026-09-09 |
-| **停在哪** | **主线**收费步4仍暂停。**支线**见 [`side.md`](./side.md)：日喝水表单双变体（A compact / B day panel）雏形在，B 观感未过、明天按点精修。Webhook 仍是下一关，现在不写。 |
+| **更新** | 2026-09-16 |
+| **停在哪** | **主线**收费步4仍暂停。**支线**喝水/生活记录已 squash 进 `main`（[PR #135](https://github.com/Xeonilian/pomotention/pull/135)），`dev` 已按 main 重建。B 日面板观感可继续按点抠；Webhook 仍是下一关，现在不写。 |
 
 ---
 
