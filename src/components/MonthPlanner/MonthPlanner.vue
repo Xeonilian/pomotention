@@ -54,7 +54,9 @@
             <template v-if="props.drinkSkin && day.isCurrentMonth">
               <div class="day-drink-stat" :class="{ 'day-drink-stat--compact': isMobile }">
                 <span class="day-drink-stat__count">×{{ day.drinkStat.count }}</span>
-                <span class="day-drink-stat__ml">{{ day.drinkStat.totalMl }}ml</span>
+                <span class="day-drink-stat__ml" :title="`${day.drinkStat.totalMl} ml`">{{
+                  formatDrinkStatVolume(day.drinkStat.totalMl)
+                }}</span>
               </div>
             </template>
             <template v-else-if="props.showStatsOnly && day.isCurrentMonth">
@@ -166,6 +168,11 @@ import {
 const settingStore = useSettingStore();
 const isTaskVisible = computed(() => settingStore.settings.showTask);
 const { isMobile } = useDevice();
+
+/** 手机月格窄：升一位小数；桌面仍 ml */
+function formatDrinkStatVolume(totalMl: number): string {
+  return isMobile.value ? `${(totalMl / 1000).toFixed(1)} L` : `${totalMl}ml`;
+}
 
 /** 统计格生活记录 icon：蓝/红/灰/黄 = 喝/吃/厕/睡 */
 const LIFE_STAT_ICONS: readonly {

@@ -1,5 +1,5 @@
 <!-- LifeRecordButtons.vue -->
-<!-- 日视图：打开生活记录日桶；非日：toggle Planner 生活图层（周可叠，月/年互斥） -->
+<!-- 日：空=灰 filled / 有数据=黑 regular；非日：关=regular / 开层=对应色 filled -->
 <template>
   <n-button
     v-for="def in visibleDefs"
@@ -7,7 +7,7 @@
     size="small"
     text
     class="life-record-button"
-    :class="{ 'life-record-button--skin': layerStore.has(def.kind) }"
+    :class="buttonClass(def.kind)"
     :title="buttonTitle(def)"
     @click.stop="onOpen(def.kind)"
   >
@@ -88,8 +88,22 @@ function hasRecordToday(kind: LifeRecordKind): boolean {
 
 function iconFor(kind: LifeRecordKind): Component {
   const pair = ICONS[kind];
-  if (!isDayView.value && layerStore.has(kind)) return pair.filled;
-  return hasRecordToday(kind) ? pair.filled : pair.regular;
+  if (isDayView.value) {
+    // 日：空态 filled（灰），有数据 regular（默认黑）
+    return hasRecordToday(kind) ? pair.regular : pair.filled;
+  }
+  // 非日：仅图层开 → filled；不看当日有无数据
+  return layerStore.has(kind) ? pair.filled : pair.regular;
+}
+
+function buttonClass(kind: LifeRecordKind): Record<string, boolean> {
+  if (isDayView.value) {
+    return { "life-record-button--empty": !hasRecordToday(kind) };
+  }
+  return {
+    "life-record-button--layer": layerStore.has(kind),
+    [`life-record-button--${kind}`]: layerStore.has(kind),
+  };
 }
 
 function buttonTitle(def: (typeof LIFE_RECORD_DEFS)[number]): string {
@@ -125,7 +139,22 @@ function onOpen(kind: LifeRecordKind) {
   margin: 0;
 }
 
-.life-record-button--skin {
+/* 日视图：尚无数据（比 secondary 再浅一档） */
+.life-record-button--empty {
+  color: var(--color-background-dark-dark);
+}
+
+/* 非日：图层开 → kind 色 */
+.life-record-button--layer.life-record-button--drink {
   color: var(--color-blue);
+}
+.life-record-button--layer.life-record-button--eat {
+  color: var(--color-red);
+}
+.life-record-button--layer.life-record-button--toilet {
+  color: var(--color-text-secondary);
+}
+.life-record-button--layer.life-record-button--sleep {
+  color: var(--color-yellow-dark);
 }
 </style>

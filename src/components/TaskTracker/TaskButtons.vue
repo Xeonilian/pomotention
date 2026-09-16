@@ -490,17 +490,14 @@ onUnmounted(() => {
 }
 
 .toolbar-popover-action--muted {
-  filter: grayscale(1);
   opacity: 0.55;
 }
 
 .toolbar-popover-action--selected {
-  filter: none !important;
   opacity: 1 !important;
 }
 
 .toolbar-pinned-action--muted {
-  filter: grayscale(1);
   opacity: 0.55;
 }
 

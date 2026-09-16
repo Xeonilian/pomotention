@@ -7,68 +7,59 @@
   <!-- 变体 A：compact（周/月等窄槽）+ 非 drink 行表单 -->
   <div v-else-if="task" class="life-record-form">
     <div class="lr-header" :class="{ 'lr-header--drink': kind === 'drink' }">
-      <!-- drink：水滴本身即 +1；其它 kind：图标即追加 -->
-      <n-button
-        text
-        size="small"
-        class="lr-icon-btn lr-append-icon"
-        :title="appendTitle"
-        @click="onAppend"
-      >
-        <template #icon>
-          <n-icon :size="18" :color="kind === 'drink' ? 'var(--color-blue)' : undefined">
-            <component :is="kindIcon" />
-          </n-icon>
-        </template>
-      </n-button>
-      <span v-if="kind !== 'sleep' && records.length > 0" class="lr-count">×{{ records.length }}</span>
+      <div class="lr-header__lead">
+        <!-- drink：水滴本身即 +1；其它 kind：图标即追加 -->
+        <n-button text size="small" class="lr-icon-btn lr-append-icon" :title="appendTitle" @click="onAppend">
+          <template #icon>
+            <n-icon :size="20" :color="kind === 'drink' ? 'var(--color-blue)' : undefined">
+              <component :is="kindIcon" />
+            </n-icon>
+          </template>
+        </n-button>
+        <span v-if="kind !== 'sleep' && records.length > 0" class="lr-count">×{{ records.length }}</span>
+      </div>
 
       <template v-if="kind === 'drink'">
-        <div class="lr-drink-cup" title="杯量（之后每次 +1）">
-          <n-icon class="lr-drink-cup__icon" :size="16">
-            <DrinkToGo24Regular />
-          </n-icon>
-          <span class="lr-drink-cup__eq">=</span>
-          <n-input-number
-            class="lr-drink-cup__ml"
-            size="tiny"
-            :value="settingStore.settings.drinkCupMl"
-            :min="50"
-            :max="1000"
-            :step="50"
-            :precision="0"
-            :show-button="false"
-            @update:value="onChangeCupMl"
-          />
-          <span class="lr-drink-unit">ml</span>
-        </div>
-        <div class="lr-drink-totals" title="今日目标（仅本天）">
-          <span class="lr-drink-sum">{{ drunkMl }}</span>
-          <span class="lr-drink-sep">/</span>
-          <n-input-number
-            class="lr-drink-goal"
-            size="tiny"
-            :value="dayGoalMl"
-            :min="100"
-            :max="20000"
-            :step="100"
-            :precision="0"
-            :show-button="false"
-            @update:value="onChangeDayGoal"
-          />
-          <span class="lr-drink-unit">ml</span>
+        <div class="lr-header__drink-meta">
+          <div class="lr-drink-cup" title="杯量（之后每次 +1）">
+            <n-icon class="lr-drink-cup__icon" :size="16">
+              <DrinkToGo24Regular />
+            </n-icon>
+            <span class="lr-drink-cup__eq">=</span>
+            <n-input-number
+              class="lr-drink-cup__ml"
+              size="tiny"
+              :value="settingStore.settings.drinkCupMl"
+              :min="50"
+              :max="1000"
+              :step="50"
+              :precision="0"
+              :show-button="false"
+              @update:value="onChangeCupMl"
+            />
+            <span class="lr-drink-unit">ml</span>
+          </div>
+          <div class="lr-drink-totals" title="今日目标（仅本天）">
+            <span class="lr-drink-sum">{{ drunkMl }}</span>
+            <span class="lr-drink-sep">/</span>
+            <n-input-number
+              class="lr-drink-goal"
+              size="tiny"
+              :value="dayGoalMl"
+              :min="100"
+              :max="20000"
+              :step="100"
+              :precision="0"
+              :show-button="false"
+              @update:value="onChangeDayGoal"
+            />
+            <span class="lr-drink-unit">ml</span>
+          </div>
         </div>
       </template>
 
       <div class="lr-actions">
-        <n-button
-          v-if="records.length === 0"
-          text
-          size="small"
-          class="lr-icon-btn"
-          title="删除空记录"
-          @click="onDiscard"
-        >
+        <n-button v-if="records.length === 0" text size="small" class="lr-icon-btn" title="删除空记录" @click="onDiscard">
           <template #icon>
             <n-icon :size="18"><Delete20Regular /></n-icon>
           </template>
@@ -294,6 +285,18 @@ function formatDuration(record: LifeRecord): string {
   flex-direction: column;
   gap: 8px;
   padding: 4px 0;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+@media (max-width: 768px) {
+  .life-record-form {
+    padding: 4px 4px;
+    gap: 4px;
+  }
 }
 .lr-header {
   display: flex;
@@ -301,14 +304,33 @@ function formatDuration(record: LifeRecord): string {
   gap: 8px;
   flex-wrap: wrap;
   min-width: 0;
+  flex-shrink: 0;
 }
 .lr-header--drink {
-  gap: 6px 10px;
+  /* 行内更紧，避免合计到 4 位把关闭钮挤换行 */
+  gap: 6px 6px;
+  flex-wrap: nowrap;
+}
+/* 水滴 + ×N：几乎贴紧，给 4 位合计让位 */
+.lr-header__lead {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+.lr-header__drink-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 .lr-count {
   color: var(--color-text-secondary);
   font-size: 13px;
+  line-height: 1;
   flex-shrink: 0;
+  margin-left: -4px;
 }
 .lr-icon-btn {
   width: 28px;
@@ -320,8 +342,9 @@ function formatDuration(record: LifeRecord): string {
 .lr-icon-btn :deep(.n-button__icon) {
   margin: 0;
 }
-.lr-append-icon {
-  margin-right: 0;
+.lr-header--drink .lr-append-icon {
+  width: 20px;
+  min-width: 20px;
 }
 .lr-actions {
   display: flex;
@@ -334,8 +357,8 @@ function formatDuration(record: LifeRecord): string {
 .lr-drink-totals {
   display: flex;
   align-items: center;
-  gap: 4px;
-  flex-shrink: 0;
+  gap: 2px;
+  flex-shrink: 1;
   min-width: 0;
 }
 .lr-drink-cup__icon {
@@ -347,23 +370,33 @@ function formatDuration(record: LifeRecord): string {
 .lr-drink-unit {
   color: var(--color-text-secondary);
   font-size: 13px;
+  flex-shrink: 0;
 }
 .lr-drink-cup__ml {
-  width: 52px;
+  width: 48px;
 }
 .lr-drink-goal {
-  width: 60px;
+  width: 56px;
 }
 .lr-drink-sum {
   font-size: 15px;
   font-weight: 600;
   color: var(--color-blue);
+  font-variant-numeric: tabular-nums;
+  min-width: 3.2em;
+  text-align: right;
+  flex-shrink: 0;
 }
 .lr-drink-bar {
   height: 6px;
   border-radius: 3px;
   background: var(--color-primary-light-transparent);
   overflow: hidden;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  margin-bottom: 4px;
 }
 .lr-drink-bar__fill {
   height: 100%;
@@ -377,9 +410,17 @@ function formatDuration(record: LifeRecord): string {
 .lr-drink-list {
   display: flex;
   flex-wrap: wrap;
+  align-content: flex-start;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
   justify-content: flex-start;
+  flex: 1 1 0%;
+  min-width: 0;
+  min-height: 0;
+  max-width: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 .lr-row {
   display: flex;

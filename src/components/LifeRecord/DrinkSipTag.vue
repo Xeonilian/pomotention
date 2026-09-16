@@ -36,10 +36,13 @@ function onTime(ts: number | null) {
 
 <style scoped>
 .drink-sip-tag {
-  /* 略抬高触控高度；左右对称，关掉 closable 默认右侧重 padding */
+  /* 略抬高触控高度；收紧左右 padding，手机一行尽量排下 3 个 */
   --n-height: 32px;
-  --n-padding: 0 8px !important;
+  --n-padding: 0 4px !important;
   gap: 2px;
+  flex: 0 0 auto;
+  max-width: 100%;
+  white-space: nowrap;
 }
 .drink-sip-tag :deep(.n-tag__content) {
   display: inline-flex;
@@ -47,13 +50,16 @@ function onTime(ts: number | null) {
   gap: 4px;
   margin: 0;
   padding: 0;
+  min-width: 0;
+  white-space: nowrap;
 }
 .drink-sip-tag :deep(.n-base-close) {
-  margin: 0 0 0 4px !important;
+  margin: 0 0 0 2px !important;
   position: static;
+  flex-shrink: 0;
 }
 .drink-sip-tag__time {
-  width: 40px;
+  width: 36px;
   flex: 0 0 auto;
 }
 .drink-sip-tag__time :deep(.n-input) {

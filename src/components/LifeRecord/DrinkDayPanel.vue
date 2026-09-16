@@ -88,7 +88,12 @@
             <tbody>
               <tr v-for="record in records" :key="record.id">
                 <td class="drink-day-table__col-action">
-                  <button type="button" class="drink-day-table__cell-btn drink-day-table__cell-btn--danger" title="删除这条" @click="onRemove(record)">
+                  <button
+                    type="button"
+                    class="drink-day-table__cell-btn drink-day-table__cell-btn--danger"
+                    title="删除这条"
+                    @click="onRemove(record)"
+                  >
                     <n-icon :size="14"><Delete20Regular /></n-icon>
                   </button>
                 </td>
@@ -97,7 +102,7 @@
                     class="drink-day-table__time"
                     :value="record.recordedAt"
                     format="HH:mm"
-                    size="tiny"
+                    size="small"
                     :show-icon="false"
                     :bordered="false"
                     @update:value="(ts: number | null) => onChangeTime(record, ts)"

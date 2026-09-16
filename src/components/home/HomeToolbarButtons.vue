@@ -1,4 +1,4 @@
-<!-- Home 顶栏：标签筛选 / 记账 / 生活记录；手机 2 槽 + 更多，交互对齐 TaskButtons -->
+<!-- Home 顶栏：标签筛选 / 记账 / 生活记录；手机 3 槽 + 更多，交互对齐 TaskButtons -->
 <template>
   <div class="home-toolbar-buttons">
     <template v-if="!isMobile">
@@ -75,22 +75,17 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineComponent, h, ref, toValue, type Component, type PropType } from "vue";
+import { computed, defineComponent, h, ref, type Component, type PropType } from "vue";
 import { NButton, NIcon, NPopover } from "naive-ui";
 import {
   ChevronDoubleLeft16Regular,
-  Door20Filled,
   Door20Regular,
-  Drop20Filled,
   Drop20Regular,
-  FoodApple20Filled,
   FoodApple20Regular,
   TagSearch20Regular,
   Wallet20Regular,
-  WeatherMoon20Filled,
   WeatherMoon20Regular,
 } from "@vicons/fluent";
-import { storeToRefs } from "pinia";
 import HomeTagFilterPopover from "@/components/TagSystem/HomeTagFilterPopover.vue";
 import LedgerAggregatePopover from "@/components/Ledger/LedgerAggregatePopover.vue";
 import LifeRecordButtons from "@/components/LifeRecord/LifeRecordButtons.vue";
@@ -106,15 +101,10 @@ import {
   type HomeToolbarActionId,
 } from "@/core/homeToolbarActions";
 import type { LifeRecordKind } from "@/core/lifeRecord";
-import { findLifeRecordTodoForDay } from "@/services/lifeRecord/lifeRecordService";
-import { useDataStore } from "@/stores/useDataStore";
 import { useSettingStore } from "@/stores/useSettingStore";
 
 const { isMobile } = useDevice();
 const settingStore = useSettingStore();
-const dataStore = useDataStore();
-const { todoList, activityById } = storeToRefs(dataStore);
-const dateService = dataStore.dateService;
 
 const showCollapsedPopover = ref(false);
 const popoverEditMode = ref(false);
@@ -125,19 +115,13 @@ const mobilePinnedIds = computed(() => normalizeHomeToolbarMobilePinned(settingS
 const mobileOverflowIds = computed(() => getHomeToolbarOverflowIds(mobilePinnedIds.value));
 const moreButtonTitle = computed(() => (popoverEditMode.value ? "完成调整快捷按钮" : "调整快捷按钮"));
 
-const LIFE_ICONS: Record<LifeRecordKind, { regular: Component; filled: Component }> = {
-  drink: { regular: Drop20Regular, filled: Drop20Filled },
-  eat: { regular: FoodApple20Regular, filled: FoodApple20Filled },
-  toilet: { regular: Door20Regular, filled: Door20Filled },
-  sleep: { regular: WeatherMoon20Regular, filled: WeatherMoon20Filled },
+/** 编辑态预览用线框图标；真实态由 LifeRecordButtons 负责 */
+const LIFE_EDIT_ICONS: Record<LifeRecordKind, Component> = {
+  drink: Drop20Regular,
+  eat: FoodApple20Regular,
+  toilet: Door20Regular,
+  sleep: WeatherMoon20Regular,
 };
-
-function hasLifeRecordToday(kind: LifeRecordKind): boolean {
-  const raw = toValue(dateService.appDateTimestamp as Parameters<typeof toValue>[0]);
-  const dayStart = typeof raw === "number" && !Number.isNaN(raw) ? raw : null;
-  if (dayStart == null) return false;
-  return !!findLifeRecordTodoForDay(todoList.value, activityById.value, kind, dayStart);
-}
 
 function actionTitle(actionId: HomeToolbarActionId): string {
   return HOME_TOOLBAR_ACTION_TITLES[actionId];
@@ -146,8 +130,7 @@ function actionTitle(actionId: HomeToolbarActionId): string {
 function actionIcon(actionId: HomeToolbarActionId): Component {
   if (actionId === "tagFilter") return TagSearch20Regular;
   if (actionId === "ledger") return Wallet20Regular;
-  const pair = LIFE_ICONS[actionId];
-  return hasLifeRecordToday(actionId) ? pair.filled : pair.regular;
+  return LIFE_EDIT_ICONS[actionId];
 }
 
 function onPopoverShowChange(show: boolean) {
@@ -222,12 +205,10 @@ const HomeToolbarActionSlot = defineComponent({
 }
 
 .toolbar-popover-action--muted {
-  filter: grayscale(1);
   opacity: 0.55;
 }
 
 .toolbar-popover-action--selected {
-  filter: none !important;
   opacity: 1 !important;
 }
 
@@ -237,7 +218,6 @@ const HomeToolbarActionSlot = defineComponent({
 }
 
 .toolbar-pinned-action--muted {
-  filter: grayscale(1);
   opacity: 0.55;
 }
 

@@ -99,7 +99,9 @@
       </div>
 
       <div v-if="drinkLayer" class="card-statistic card-statistic--drink">
-        <span class="drink-sum" :class="{ 'drink-sum--met': drinkMet }">{{ drinkTotalMl }} ml</span>
+        <span class="drink-sum" :class="{ 'drink-sum--met': drinkMet }" :title="`${drinkTotalMl} ml`">{{
+          drinkSumLabel
+        }}</span>
       </div>
       <div v-else-if="!hideScheduleBlocks" class="card-statistic">
         <span class="pom-sum">
@@ -197,6 +199,10 @@ const drinkTask = computed(() => {
 const drinkPoints = computed(() => (props.lifeOverlay?.points ?? []).filter((p) => p.kind === "drink"));
 
 const drinkTotalMl = computed(() => sumLifeRecordAmountMl(drinkTask.value?.lifeRecords ?? []));
+/** 手机周列窄：用升一位小数，桌面仍 ml */
+const drinkSumLabel = computed(() =>
+  isMobile.value ? `${(drinkTotalMl.value / 1000).toFixed(1)} L` : `${drinkTotalMl.value} ml`,
+);
 
 const drinkRatio = computed(() => {
   if (drinkTotalMl.value <= 0) return 0;

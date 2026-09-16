@@ -1,4 +1,4 @@
-/** Home 顶栏工具：手机端 2 槽 + popover（标签筛选 / 记账 / 生活记录） */
+/** Home 顶栏工具：手机端 3 槽 + popover（标签筛选 / 记账 / 生活记录） */
 
 import type { LifeRecordKind } from "@/core/lifeRecord";
 
@@ -13,9 +13,9 @@ export const HOME_TOOLBAR_ACTION_IDS: HomeToolbarActionId[] = [
   "sleep",
 ];
 
-export const HOME_TOOLBAR_MOBILE_SLOT_COUNT = 2;
+export const HOME_TOOLBAR_MOBILE_SLOT_COUNT = 3;
 
-export const DEFAULT_HOME_TOOLBAR_MOBILE_PINNED: HomeToolbarActionId[] = ["tagFilter", "ledger"];
+export const DEFAULT_HOME_TOOLBAR_MOBILE_PINNED: HomeToolbarActionId[] = ["tagFilter", "ledger", "drink"];
 
 export const HOME_TOOLBAR_ACTION_TITLES: Record<HomeToolbarActionId, string> = {
   tagFilter: "标签筛选",
@@ -32,7 +32,7 @@ export function isHomeToolbarActionId(id: unknown): id is HomeToolbarActionId {
   return typeof id === "string" && VALID_IDS.has(id as HomeToolbarActionId);
 }
 
-/** 校验并补齐为恰好 2 个固定槽 */
+/** 校验并补齐为恰好 3 个固定槽 */
 export function normalizeHomeToolbarMobilePinned(raw?: HomeToolbarActionId[] | null): HomeToolbarActionId[] {
   const seen = new Set<HomeToolbarActionId>();
   const result: HomeToolbarActionId[] = [];
@@ -60,7 +60,8 @@ export function getHomeToolbarOverflowIds(pinned: HomeToolbarActionId[]): HomeTo
 }
 
 /**
- * 松保存：0 个不变；2 个按选中顺序整批替换；1 个则保留左槽、替换右槽。
+ * 松保存：0 个不变；满槽按选中顺序整批替换；
+ * 不足则新项接到末尾，从最前面顶出对应个数。
  */
 export function mergeHomeToolbarMobilePinned(
   currentPinned: HomeToolbarActionId[],
@@ -76,21 +77,17 @@ export function mergeHomeToolbarMobilePinned(
   }
 
   const slots = [...normalizeHomeToolbarMobilePinned(currentPinned)];
-  const id = selection[0];
-  if (slots.includes(id)) {
+  const toPlace = selection.filter((id) => !slots.includes(id));
+  if (toPlace.length === 0) {
     return normalizeHomeToolbarMobilePinned(slots);
   }
 
-  if (slots.length >= HOME_TOOLBAR_MOBILE_SLOT_COUNT) {
-    slots[HOME_TOOLBAR_MOBILE_SLOT_COUNT - 1] = id;
-  } else {
-    slots.push(id);
-  }
-
-  return normalizeHomeToolbarMobilePinned(slots);
+  // 新项接末尾，左侧顶出
+  const next = [...slots, ...toPlace];
+  return normalizeHomeToolbarMobilePinned(next.slice(next.length - HOME_TOOLBAR_MOBILE_SLOT_COUNT));
 }
 
-/** 编辑态 FIFO 选中列表（最多 2） */
+/** 编辑态 FIFO 选中列表（最多 3） */
 export function toggleHomeToolbarEditSelection(
   current: HomeToolbarActionId[],
   id: HomeToolbarActionId,
