@@ -1,5 +1,6 @@
 <!-- LifeRecordButtons.vue -->
 <!-- 日：空=灰 filled / 有数据=黑 regular；非日：关=regular / 开层=对应色 filled -->
+<!-- 未就绪 kind（吃/厕/睡）：保留按钮（手机可钉），点按居中 dialog「开发中」 -->
 <template>
   <n-button
     v-for="def in visibleDefs"
@@ -22,7 +23,7 @@
 <script setup lang="ts">
 import { computed, toValue, type Component } from "vue";
 import { storeToRefs } from "pinia";
-import { NButton, NIcon } from "naive-ui";
+import { NButton, NIcon, useDialog } from "naive-ui";
 import {
   Door20Filled,
   Door20Regular,
@@ -33,7 +34,7 @@ import {
   WeatherMoon20Filled,
   WeatherMoon20Regular,
 } from "@vicons/fluent";
-import { LIFE_RECORD_DEFS, type LifeRecordKind } from "@/core/lifeRecord";
+import { LIFE_RECORD_DEFS, getLifeRecordDef, type LifeRecordKind } from "@/core/lifeRecord";
 import { findLifeRecordTodoForDay } from "@/services/lifeRecord/lifeRecordService";
 import { useDataStore } from "@/stores/useDataStore";
 import { useSettingStore } from "@/stores/useSettingStore";
@@ -47,6 +48,9 @@ const props = withDefaults(
   { kinds: undefined },
 );
 
+/** 首版仅喝水可用；其余保留入口并提示开发中 */
+const READY_LIFE_KINDS = new Set<LifeRecordKind>(["drink"]);
+
 const ICONS: Record<LifeRecordKind, { regular: Component; filled: Component }> = {
   drink: { regular: Drop20Regular, filled: Drop20Filled },
   eat: { regular: FoodApple20Regular, filled: FoodApple20Filled },
@@ -54,6 +58,7 @@ const ICONS: Record<LifeRecordKind, { regular: Component; filled: Component }> =
   sleep: { regular: WeatherMoon20Regular, filled: WeatherMoon20Filled },
 };
 
+const dialog = useDialog();
 const dataStore = useDataStore();
 const settingStore = useSettingStore();
 const layerStore = useLifePlannerLayerStore();
@@ -86,6 +91,10 @@ function hasRecordToday(kind: LifeRecordKind): boolean {
   return kindsWithRecordToday.value.has(kind);
 }
 
+function isLifeKindReady(kind: LifeRecordKind): boolean {
+  return READY_LIFE_KINDS.has(kind);
+}
+
 function iconFor(kind: LifeRecordKind): Component {
   const pair = ICONS[kind];
   if (isDayView.value) {
@@ -107,21 +116,37 @@ function buttonClass(kind: LifeRecordKind): Record<string, boolean> {
 }
 
 function buttonTitle(def: (typeof LIFE_RECORD_DEFS)[number]): string {
+  if (!isLifeKindReady(def.kind)) return `${def.title}（开发中）`;
   if (isDayView.value) return `打开${def.title}`;
   if (def.kind === "drink") return layerStore.has("drink") ? "退出喝水图层" : "喝水图层";
-  return `${def.title}图层（即将推出）`;
+  return def.title;
+}
+
+function showComingSoon(kind: LifeRecordKind) {
+  const title = getLifeRecordDef(kind).title;
+  // 居中 dialog；宽度限屏，避免手机 popover 撑出屏外
+  dialog.info({
+    title: "开发中",
+    content: `「${title}」还在开发中，敬请期待。`,
+    positiveText: "知道了",
+    style: { width: "min(360px, 92vw)" },
+  });
 }
 
 const emit = defineEmits<{ recorded: [kind: LifeRecordKind] }>();
 
 function onOpen(kind: LifeRecordKind) {
+  if (!isLifeKindReady(kind)) {
+    showComingSoon(kind);
+    // 手机 overflow 靠 recorded 关 popover；开发中也要关掉
+    emit("recorded", kind);
+    return;
+  }
   if (isDayView.value) {
     dataStore.openLifeRecord(kind);
     emit("recorded", kind);
     return;
   }
-  // 首版仅喝水图层有 UI；其它 kind 仍可进 store 占位，但暂不 toggle 以免空层
-  if (kind !== "drink") return;
   const mode = viewSet.value === "week" ? "stack" : "exclusive";
   layerStore.toggle(kind, mode);
 }
