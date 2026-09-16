@@ -595,7 +595,7 @@ const { isMobile } = useDevice();
 const settingStore = useSettingStore();
 const timerStore = useTimerStore();
 const tagStore = useTagStore();
-const { activeId, selectedRowId, selectedActivityId, selectedTaskId, selectedTask, todosForCurrentViewWithTaskRecords, ledgerList } =
+const { activeId, selectedRowId, selectedActivityId, selectedTaskId, selectedTask, todosForCurrentViewWithTaskRecords, ledgerList, todoById } =
   storeToRefs(dataStore);
 const { allTags: allTagsFromStore } = storeToRefs(tagStore);
 
@@ -653,8 +653,10 @@ const selectedTodoHasDoneTime = computed(() => {
 });
 
 // 选中行是否生活记录：表头快速录入（起止时间/意图填充）对其禁用
+// 生活行不在 todosForCurrentViewWithTaskRecords 里，须用全量 todoById 判断
 const selectedIsLife = computed(() => {
-  const t = selectedTodo.value;
+  if (!selectedRowId.value) return false;
+  const t = todoById.value.get(selectedRowId.value);
   return t ? isLifeTodo(t) : false;
 });
 
