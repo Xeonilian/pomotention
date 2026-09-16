@@ -4,7 +4,7 @@
 import { supabase } from "@/core/services/supabase";
 import { getCurrentUser } from "@/core/services/authService";
 import { BaseSyncService } from "./baseSyncService";
-import type { Task, EnergyRecord, RewardRecord, InterruptionRecord } from "@/core/types/Task";
+import type { Task, EnergyRecord, RewardRecord, InterruptionRecord, LifeRecord } from "@/core/types/Task";
 import type { Database } from "@/core/types/Database";
 
 type CloudTaskInsert = Database["public"]["Tables"]["tasks"]["Insert"];
@@ -21,6 +21,8 @@ interface FullTaskFromCloud {
   energyRecords: EnergyRecord[];
   rewardRecords: RewardRecord[];
   interruptionRecords: InterruptionRecord[];
+  lifeRecords?: LifeRecord[] | null;
+  drinkGoalMl?: number | null;
   starred: boolean;
   deleted: boolean;
   last_modified: string;
@@ -66,9 +68,11 @@ export class TaskSyncService extends BaseSyncService<Task, CloudTaskInsert> {
       energy_records: local.energyRecords as any, // jsonb
       reward_records: local.rewardRecords as any, // jsonb
       interruption_records: local.interruptionRecords as any, // jsonb
+      life_records: (local.lifeRecords ?? []) as any, // jsonb
+      drink_goal_ml: local.drinkGoalMl ?? null,
       starred: local.starred ?? false,
       deleted: local.deleted ?? false,
-    };
+    } as CloudTaskInsert;
   }
 
   /**
@@ -85,6 +89,8 @@ export class TaskSyncService extends BaseSyncService<Task, CloudTaskInsert> {
       energyRecords: cloud.energyRecords || [],
       rewardRecords: cloud.rewardRecords || [],
       interruptionRecords: cloud.interruptionRecords || [],
+      lifeRecords: cloud.lifeRecords ?? [],
+      drinkGoalMl: cloud.drinkGoalMl ?? undefined,
       starred: cloud.starred,
 
       // 同步元数据（本地生成）
