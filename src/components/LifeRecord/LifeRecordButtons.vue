@@ -1,6 +1,6 @@
 <!-- LifeRecordButtons.vue -->
 <!-- 日：空=灰 filled / 有数据=黑 regular；非日：关=regular / 开层=对应色 filled -->
-<!-- 未就绪 kind（吃/厕/睡）：保留按钮（手机可钉），点按居中 dialog「开发中」 -->
+<!-- 未就绪 kind（吃/厕）：保留按钮（手机可钉），点按居中 dialog「开发中」 -->
 <template>
   <n-button
     v-for="def in visibleDefs"
@@ -39,6 +39,7 @@ import { findLifeRecordTodoForDay } from "@/services/lifeRecord/lifeRecordServic
 import { useDataStore } from "@/stores/useDataStore";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useLifePlannerLayerStore } from "@/stores/useLifePlannerLayerStore";
+import { useDevice } from "@/composables/platform/useDevice";
 
 const props = withDefaults(
   defineProps<{
@@ -48,8 +49,8 @@ const props = withDefaults(
   { kinds: undefined },
 );
 
-/** 首版仅喝水可用；其余保留入口并提示开发中 */
-const READY_LIFE_KINDS = new Set<LifeRecordKind>(["drink"]);
+/** 已开：喝水、睡觉；吃/厕仍提示开发中 */
+const READY_LIFE_KINDS = new Set<LifeRecordKind>(["drink", "sleep"]);
 
 const ICONS: Record<LifeRecordKind, { regular: Component; filled: Component }> = {
   drink: { regular: Drop20Regular, filled: Drop20Filled },
@@ -62,6 +63,7 @@ const dialog = useDialog();
 const dataStore = useDataStore();
 const settingStore = useSettingStore();
 const layerStore = useLifePlannerLayerStore();
+const { isMobile } = useDevice();
 const { todoList, activityById } = storeToRefs(dataStore);
 const dateService = dataStore.dateService;
 
@@ -143,6 +145,8 @@ function onOpen(kind: LifeRecordKind) {
     return;
   }
   if (isDayView.value) {
+    // 手机日视图进生活记录时保证任务区可见（上方 planner 由 HomeView 临时藏）
+    if (isMobile.value) settingStore.settings.showTask = true;
     dataStore.openLifeRecord(kind);
     emit("recorded", kind);
     return;

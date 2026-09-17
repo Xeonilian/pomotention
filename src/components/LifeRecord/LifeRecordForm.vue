@@ -1,8 +1,9 @@
 <!-- LifeRecordForm.vue -->
-<!-- 生活记录 task 表单壳：drink 日视图 → DrinkDayPanel；其它/窄槽 → compact；eat/sleep 行表单 -->
+<!-- 生活记录 task 表单壳：drink/sleep 日视图 → DayPanel；其它/窄槽 → compact -->
 <template>
-  <!-- 变体 B：日视图喝水大面板 -->
+  <!-- 变体 B：日视图大面板 -->
   <DrinkDayPanel v-if="task && kind === 'drink' && isDayView" :task-id="taskId" />
+  <SleepDayPanel v-else-if="task && kind === 'sleep' && isDayView" :task-id="taskId" />
 
   <!-- 变体 A：compact（周/月等窄槽）+ 非 drink 行表单 -->
   <div v-else-if="task" class="life-record-form">
@@ -16,7 +17,7 @@
             </n-icon>
           </template>
         </n-button>
-        <span v-if="kind !== 'sleep' && records.length > 0" class="lr-count">×{{ records.length }}</span>
+        <span v-if="records.length > 0" class="lr-count">×{{ records.length }}</span>
       </div>
 
       <template v-if="kind === 'drink'">
@@ -111,11 +112,11 @@
           <span v-if="record.endAt != null" class="lr-duration">{{ formatDuration(record) }}</span>
         </template>
         <n-input
-          v-if="kind === 'eat'"
+          v-if="kind === 'eat' || kind === 'sleep'"
           class="lr-desc"
           :value="record.description ?? ''"
           size="small"
-          placeholder="吃了什么（可选）"
+          :placeholder="kind === 'sleep' ? '梦（可选）' : '吃了什么（可选）'"
           @update:value="(v: string) => onChangeDescription(record, v)"
         />
         <n-button text size="small" class="lr-icon-btn lr-delete" title="删除这条" @click="onRemove(record)">
@@ -150,6 +151,7 @@ import { useDisplayedTaskStore } from "@/stores/useDisplayedTaskStore";
 import { useSettingStore } from "@/stores/useSettingStore";
 import DrinkSipTag from "@/components/LifeRecord/DrinkSipTag.vue";
 import DrinkDayPanel from "@/components/LifeRecord/DrinkDayPanel.vue";
+import SleepDayPanel from "@/components/LifeRecord/SleepDayPanel.vue";
 
 const props = defineProps<{ taskId: number; kind: LifeRecordKind }>();
 
@@ -425,6 +427,7 @@ function formatDuration(record: LifeRecord): string {
 .lr-row {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
 }
 .lr-time {

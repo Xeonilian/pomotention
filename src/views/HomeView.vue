@@ -27,12 +27,16 @@
         :class="{
           'middle-alone': !settingStore.settings.showTimetable && !settingStore.settings.showActivity && !showCaptureUi,
           'middle--landscape-fallback': isMobile && isLandscapeViewport,
-          'middle--mobile-planner-height-anim': isMobile && settingStore.settings.showPlanner,
+          'middle--mobile-planner-height-anim': isMobile && settingStore.settings.showPlanner && !mobileLifeRecordOpen,
           'middle--suppress-planner-motion': suppressMobilePlannerMotion,
         }"
       >
         <!-- 今日视图 -->
-        <div v-if="settingStore.settings.showPlanner" class="middle-top" :style="middleTopPlannerStyle">
+        <div
+          v-if="settingStore.settings.showPlanner && !mobileLifeRecordOpen"
+          class="middle-top"
+          :style="middleTopPlannerStyle"
+        >
           <!-- 计划表的头部和控件 -->
           <div class="planner-header" @click.stop="cleanSelection">
             <div class="planner-header-left">
@@ -271,7 +275,7 @@
         </div>
         <!-- 任务视图调整大小手柄 -->
         <div
-          v-if="taskPanelLayoutVisible && settingStore.settings.showPlanner"
+          v-if="taskPanelLayoutVisible && settingStore.settings.showPlanner && !mobileLifeRecordOpen"
           class="resize-handle"
           style="touch-action: none"
           @pointerdown="startVerticalResize"
@@ -387,6 +391,7 @@ import { useLifePlannerLayerStore } from "@/stores/useLifePlannerLayerStore";
 import { autoSyncDebounced, uploadAllDebounced } from "@/core/utils/autoSync";
 import { useDevice } from "@/composables/platform/useDevice";
 import { CAPTURE_UI_ENABLED } from "@/core/capture";
+import { getLifeRecordKind } from "@/core/lifeRecord";
 import { usePublicHolidays, plannerHolidayMapKey } from "@/composables/planner/usePublicHolidays";
 import { registerPlannerKeyboardCommandApi } from "@/composables/keyboard/usePlannerKeyboardCommands";
 import { registerPlannerDayEnterEditTitle, registerPlannerDaySpaceToggleCheck } from "@/composables/keyboard/usePlannerKeyboardNavigator";
@@ -438,8 +443,18 @@ const popoverMessage = ref("");
 const taskRecordEditing = ref(false);
 /** 日待办行内编辑（移动）：临时收起下方 Task 区，不改变 showTask 设置 */
 const mobileDayTodoInlineEditing = ref(false);
+/** 手机日视图打开生活记录（喝/吃/厕/睡）：临时藏 planner，关闭选中后恢复；不改 showPlanner 设置 */
+const mobileLifeRecordOpen = computed(() => {
+  if (!isMobile.value) return false;
+  if (settingStore.settings.viewSet !== "day") return false;
+  const task = dataStore.selectedTask;
+  if (!task || task.deleted) return false;
+  return getLifeRecordKind(dataStore.activityById.get(task.sourceId)) != null;
+});
 /** 系统键盘与 vv 连续变化时关掉 height/max-height 过渡，避免目标高度每帧变化导致跳动 */
-const suppressMobilePlannerMotion = computed(() => isMobile.value && (mobileDayTodoInlineEditing.value || isKeyboardOverlapApprox.value));
+const suppressMobilePlannerMotion = computed(
+  () => isMobile.value && (mobileDayTodoInlineEditing.value || mobileLifeRecordOpen.value || isKeyboardOverlapApprox.value),
+);
 const showStateLogModal = ref(false);
 let unregisterPlannerCommandApi: (() => void) | null = null;
 let unregisterPlannerDaySpaceToggleCheck: (() => void) | null = null;
