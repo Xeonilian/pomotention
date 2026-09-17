@@ -4,7 +4,6 @@
 import { supabase } from "@/core/services/supabase";
 import { getCurrentUser } from "@/core/services/authService";
 import { BaseSyncService } from "./baseSyncService";
-import { isLifeRecordActivity } from "@/core/lifeRecord";
 import { saveTasks } from "@/services/data/localStorageService";
 import type { Activity } from "@/core/types/Activity";
 import type { Task, EnergyRecord, RewardRecord, InterruptionRecord, LifeRecord } from "@/core/types/Task";
@@ -12,8 +11,8 @@ import type { Database } from "@/core/types/Database";
 
 type CloudTaskInsert = Database["public"]["Tables"]["tasks"]["Insert"];
 
-/** 生活记录列上线后，一次性把已 synced 的生活桶标回 unsynced 以便补传 */
-const LIFE_RECORDS_BACKFILL_KEY = "pomotention_life_records_cloud_backfill_v1";
+/** 生活记录列上线后，一次性把「本地已有杯子」的已 synced 桶标脏补传（v3：空壳不标，避免空数组盖云） */
+const LIFE_RECORDS_BACKFILL_KEY = "pomotention_life_records_cloud_backfill_v3";
 
 /**
  * RPC 返回的完整格式（带冗余字段）
@@ -63,23 +62,20 @@ export class TaskSyncService extends BaseSyncService<Task, CloudTaskInsert> {
   }
 
   /**
-   * 列上线前已 synced 的生活桶不会进上传队列；首次上传前一次性标脏并落盘。
+   * 列上线前「已记杯却仍 synced」不会进上传队列；仅对本地非空 lifeRecords 标脏补传。
+   * 空壳不标：首创上传走正常 create；补传空数组会盖掉云端已有杯子。
    */
   private ensureLifeRecordsBackfill(): void {
     if (typeof localStorage === "undefined") return;
     if (localStorage.getItem(LIFE_RECORDS_BACKFILL_KEY)) return;
 
     const list = this.getListArray();
-    const activityById = this.getActivityMap();
     let touched = false;
     const now = Date.now();
 
     for (const task of list) {
       if (task.deleted) continue;
-      const activity = activityById.get(task.sourceId);
-      const isLife = activity ? isLifeRecordActivity(activity) : false;
-      const hasLifeData = (task.lifeRecords?.length ?? 0) > 0 || task.drinkGoalMl != null;
-      if (!isLife && !hasLifeData) continue;
+      if ((task.lifeRecords?.length ?? 0) === 0) continue;
       if (!task.synced) continue;
       task.synced = false;
       task.lastModified = now;
@@ -260,6 +256,23 @@ export class TaskSyncService extends BaseSyncService<Task, CloudTaskInsert> {
 
         // 比较时间戳 (Server Wins 且只更新较新的版本)
         if (!localItem.cloudModified || cloudTimestamp > localItem.cloudModified) {
+          const localLife = localItem.lifeRecords ?? [];
+          const cloudLife = (cloudItem.lifeRecords as LifeRecord[] | null | undefined) ?? [];
+          // 本地有杯子、云端空：保留本地并标脏回传，避免空数组盖掉已有记录
+          if (localLife.length > 0 && cloudLife.length === 0) {
+            const keptGoal = localItem.drinkGoalMl;
+            const updatedItem = this.mapCloudToLocal(cloudItem);
+            Object.assign(localItem, updatedItem, {
+              lifeRecords: localLife,
+              drinkGoalMl: keptGoal ?? updatedItem.drinkGoalMl,
+              synced: false,
+              lastModified: Date.now(),
+              cloudModified: cloudTimestamp,
+            });
+            downloadedCount++;
+            continue;
+          }
+
           const updatedItem = this.mapCloudToLocal(cloudItem);
 
           // 使用 Object.assign 保持引用，触发 Vue 更新

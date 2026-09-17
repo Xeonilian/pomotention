@@ -448,6 +448,8 @@ export const useDataStore = defineStore(
       return activeTodos.value.filter((todo) => {
         if (todo.id < startOfDay || todo.id >= endOfDay) return false;
         const activity = todo.activityId != null ? activityById.value.get(todo.activityId) : undefined;
+        // 生活记录不进时间轴番茄分配（无 pomoType；overlay 另走 lifeRecordOverlays）
+        if (isLifeRecordActivity(activity)) return false;
         return matchesPlannerFilter(todo.activityId, activity?.tagIds);
       });
     });
@@ -903,11 +905,17 @@ export const useDataStore = defineStore(
 
     /**
      * 基于Id更新Task数据的指定字段
+     * 业务写入默认标 unsynced（与 taskService 精力/奖赏一致）；调用方可显式传 synced
      */
     function updateTaskById(id: number, updates: Partial<Task>) {
       const taskIndex = taskList.value.findIndex((t) => t.id === id);
       if (taskIndex !== -1) {
-        taskList.value[taskIndex] = { ...taskList.value[taskIndex], ...updates };
+        taskList.value[taskIndex] = {
+          ...taskList.value[taskIndex],
+          ...updates,
+          synced: updates.synced ?? false,
+          lastModified: updates.lastModified ?? Date.now(),
+        };
         saveTasks(taskList.value);
         scheduleDebouncedCloudUpload();
       } else {
