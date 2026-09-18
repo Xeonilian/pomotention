@@ -1,6 +1,6 @@
 <!--
   日视图睡觉大面板：左大月亮 + 右记录表；点「梦」激活下方长文编辑区
-  布局对齐 DrinkDayPanel；周/月仍走 LifeRecordForm compact
+  布局对齐 DrinkDayPanel；窄槽见 SleepCompact
 -->
 <template>
   <div

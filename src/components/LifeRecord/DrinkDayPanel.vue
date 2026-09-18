@@ -1,6 +1,6 @@
 <!--
   日视图喝水大面板：左圆水位 + 右三线表
-  表固定高度、表内纵滚；杯量在表头末列；compact 见 LifeRecordForm
+  表固定高度、表内纵滚；杯量在表头末列；窄槽见 DrinkCompact
 -->
 <template>
   <div v-if="task" class="drink-day-panel" :class="{ 'drink-day-panel--mobile': isMobile }">

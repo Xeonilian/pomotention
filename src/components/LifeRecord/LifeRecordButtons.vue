@@ -1,6 +1,6 @@
 <!-- LifeRecordButtons.vue -->
 <!-- 日：空=灰 filled / 有数据=黑 regular；非日：关=regular / 开层=对应色 filled -->
-<!-- 未就绪 kind（吃/厕）：保留按钮（手机可钉），点按居中 dialog「开发中」 -->
+<!-- 未进 READY_LIFE_KINDS 的 kind：点按居中 dialog「开发中」 -->
 <template>
   <n-button
     v-for="def in visibleDefs"
@@ -49,8 +49,8 @@ const props = withDefaults(
   { kinds: undefined },
 );
 
-/** 已开：喝水、睡觉；吃/厕仍提示开发中 */
-const READY_LIFE_KINDS = new Set<LifeRecordKind>(["drink", "sleep"]);
+/** 已开：四种都进表单（测试用；未列入的 kind 仍弹「开发中」） */
+const READY_LIFE_KINDS = new Set<LifeRecordKind>(["drink", "eat", "toilet", "sleep"]);
 
 const ICONS: Record<LifeRecordKind, { regular: Component; filled: Component }> = {
   drink: { regular: Drop20Regular, filled: Drop20Filled },
