@@ -122,98 +122,103 @@
               @blur="cancelEdit"
               ref="inputRef"
             />
-            <div class="button-group">
-              <HomeToolbarButtons />
+            <div class="button-group" :class="{ 'button-group--mobile': isMobile }">
+              <!-- 手机：工具栏限宽横滑，日期 < > 紧挨其后不挤出 -->
+              <div class="toolbar-scroll-area" :class="{ 'is-mobile-scroll': isMobile }">
+                <HomeToolbarButtons />
 
-              <n-button
-                title="重复活动"
-                v-if="!isMobile"
-                @click="onRepeatActivity(false)"
-                text
-                type="default"
-                size="small"
-                :disabled="selectedRowId === null"
-              >
-                <template #icon>
-                  <n-icon><ArrowRepeatAll20Regular /></n-icon>
-                </template>
-              </n-button>
-              <n-button
-                v-if="!isMobile"
-                type="default"
-                size="small"
-                text
-                @click="onIcsExport"
-                title="导出 ICS / 二维码"
-                :disabled="selectedRowId === null"
-              >
-                <template #icon>
-                  <n-icon>
-                    <QrCode20Regular />
-                  </n-icon>
-                </template>
-              </n-button>
-              <n-date-picker
-                v-if="!isMobile"
-                v-model:value="queryDate"
-                type="date"
-                placeholder="日期选择"
-                @update:value="onDateSet('query')"
-                class="search-date"
-                placement="bottom"
-                @click="onDateSet('today')"
-                title="输入示例：2026-01-01"
-              >
-                <template #date-icon></template>
-              </n-date-picker>
-              <n-button v-if="!isMobile" size="small" text @click.stop="onViewSet()" title="切换视图">
-                <template #icon>
-                  <n-icon color="var(--color-text-primary)">
-                    <CalendarSettings20Regular />
-                  </n-icon>
-                </template>
-              </n-button>
-              <n-button
-                size="small"
-                text
-                @click="onDateSet('prev')"
-                :title="
-                  settingStore.settings.viewSet === 'day'
-                    ? '上一天'
-                    : settingStore.settings.viewSet === 'week'
-                      ? '上一周'
-                      : settingStore.settings.viewSet === 'year'
-                        ? '上一年'
-                        : '上一月'
-                "
-              >
-                <template #icon>
-                  <n-icon>
-                    <ChevronLeft20Regular />
-                  </n-icon>
-                </template>
-              </n-button>
+                <n-button
+                  title="重复活动"
+                  v-if="!isMobile"
+                  @click="onRepeatActivity(false)"
+                  text
+                  type="default"
+                  size="small"
+                  :disabled="selectedRowId === null"
+                >
+                  <template #icon>
+                    <n-icon><ArrowRepeatAll20Regular /></n-icon>
+                  </template>
+                </n-button>
+                <n-button
+                  v-if="!isMobile"
+                  type="default"
+                  size="small"
+                  text
+                  @click="onIcsExport"
+                  title="导出 ICS / 二维码"
+                  :disabled="selectedRowId === null"
+                >
+                  <template #icon>
+                    <n-icon>
+                      <QrCode20Regular />
+                    </n-icon>
+                  </template>
+                </n-button>
+                <n-date-picker
+                  v-if="!isMobile"
+                  v-model:value="queryDate"
+                  type="date"
+                  placeholder="日期选择"
+                  @update:value="onDateSet('query')"
+                  class="search-date"
+                  placement="bottom"
+                  @click="onDateSet('today')"
+                  title="输入示例：2026-01-01"
+                >
+                  <template #date-icon></template>
+                </n-date-picker>
+                <n-button v-if="!isMobile" size="small" text @click.stop="onViewSet()" title="切换视图">
+                  <template #icon>
+                    <n-icon color="var(--color-text-primary)">
+                      <CalendarSettings20Regular />
+                    </n-icon>
+                  </template>
+                </n-button>
+              </div>
+              <div class="date-nav-buttons">
+                <n-button
+                  size="small"
+                  text
+                  @click="onDateSet('prev')"
+                  :title="
+                    settingStore.settings.viewSet === 'day'
+                      ? '上一天'
+                      : settingStore.settings.viewSet === 'week'
+                        ? '上一周'
+                        : settingStore.settings.viewSet === 'year'
+                          ? '上一年'
+                          : '上一月'
+                  "
+                >
+                  <template #icon>
+                    <n-icon>
+                      <ChevronLeft20Regular />
+                    </n-icon>
+                  </template>
+                </n-button>
 
-              <n-button
-                size="small"
-                text
-                @click="onDateSet('next')"
-                :title="
-                  settingStore.settings.viewSet === 'day'
-                    ? '下一天'
-                    : settingStore.settings.viewSet === 'week'
-                      ? '下一周'
-                      : settingStore.settings.viewSet === 'year'
-                        ? '下一年'
-                        : '下一月'
-                "
-              >
-                <template #icon>
-                  <n-icon>
-                    <ChevronRight20Regular />
-                  </n-icon>
-                </template>
-              </n-button>
+                <n-button
+                  size="small"
+                  text
+                  @click="onDateSet('next')"
+                  :title="
+                    settingStore.settings.viewSet === 'day'
+                      ? '下一天'
+                      : settingStore.settings.viewSet === 'week'
+                        ? '下一周'
+                        : settingStore.settings.viewSet === 'year'
+                          ? '下一年'
+                          : '下一月'
+                  "
+                >
+                  <template #icon>
+                    <n-icon>
+                      <ChevronRight20Regular />
+                    </n-icon>
+                  </template>
+                </n-button>
+              </div>
             </div>
           </div>
           <!-- 今日视图容器 -->
@@ -1919,6 +1924,48 @@ const { startResize: startRightResize } = useResize(
   order: 999;
 }
 
+/* 手机：整组仍靠右紧凑；只允许被挤时收缩，不拉满中间空隙 */
+.button-group--mobile {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.toolbar-scroll-area {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+/* 手机：限宽后溢出横滑；不用 width:0/flex:1，避免与 < > 被拉开贴边 */
+.toolbar-scroll-area.is-mobile-scroll {
+  max-width: min(46vw, 168px);
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+
+.toolbar-scroll-area.is-mobile-scroll::-webkit-scrollbar {
+  display: none;
+  height: 0;
+  width: 0;
+}
+
+.toolbar-scroll-area.is-mobile-scroll :deep(.home-toolbar-buttons) {
+  flex-shrink: 0;
+  min-width: max-content;
+}
+
+.date-nav-buttons {
+  display: flex;
+  flex-shrink: 0;
+  gap: 6px;
+  align-items: center;
+}
+
 @media (max-width: 430px) {
   .button-group {
     gap: 6px;
@@ -1952,6 +1999,14 @@ const { startResize: startRightResize } = useResize(
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+@media (max-width: 430px) {
+  /* 节日名略收，优先保住右侧日期切换 */
+  .planner-day-holiday-name {
+    max-width: 28vw;
+    flex-shrink: 1;
+  }
 }
 
 .day-status {
