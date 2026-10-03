@@ -41,9 +41,14 @@ curl -H "Authorization: Bearer YOUR_TOKEN_HERE" https://api.github.com/user
 ```
 
 - 使用 SSH 测试 GitHub 连接（需提前配置本机 SSH Key 并添加到 GitHub）：
+- 可以切换port 443 22
 
 ```bash
+git remote -v
+git remote set-url origin git@github.com:Xeonilian/pomotention.git
+git remote set-url origin https://github.com/Xeonilian/pomotention.git
 ssh -T git@github.com
+ssh -T -p 443 git@ssh.github.com
 ```
 
 ## 4. 将 Token 写入临时文件并使用 gh 登录
