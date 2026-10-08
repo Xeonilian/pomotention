@@ -31,16 +31,15 @@
       <div class="time-grid-container" :style="{ height: timeGridHeight + 'px' }">
         <WeekDrinkWaterFill v-if="drinkLayer && drinkRatio > 0" :ratio="drinkRatio" :met="drinkMet" />
 
-        <template v-if="!hideScheduleBlocks">
-          <div
-            v-for="sleep in lifeOverlay?.sleeps || []"
-            :key="`life-sleep-${sleep.recordId}`"
-            class="week-life-sleep"
-            :style="getLifeSleepBandStyle(sleep, day.startTs)"
-            :title="sleep.title"
-            @click.stop="emit('item-change', sleep.todoId, undefined, sleep.taskId)"
-          ></div>
-        </template>
+        <!-- 生活图层会藏 schedule，但 sleep 色带仍画（睡觉层 / 叠层都要看见） -->
+        <div
+          v-for="sleep in lifeOverlay?.sleeps || []"
+          :key="`life-sleep-${sleep.recordId}`"
+          class="week-life-sleep"
+          :style="getLifeSleepBandStyle(sleep, day.startTs)"
+          :title="sleep.title"
+          @click.stop="emit('item-change', sleep.todoId, undefined, sleep.taskId)"
+        ></div>
 
         <div class="hour-ticks">
           <div

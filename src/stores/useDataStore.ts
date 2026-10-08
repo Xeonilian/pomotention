@@ -1173,7 +1173,7 @@ export const useDataStore = defineStore(
           if (relatedSchedule) {
             relatedSchedule.activityTitle = activity.title;
             relatedSchedule.activityDueRange = activity.dueRange ? [activity.dueRange[0], activity.dueRange[1]] : [null, "0"];
-            relatedSchedule.status = activity.status || "";
+            // 不抄 status：勾选以 schedule/todo 自身为准，避免与 activity 分表同步时互相覆盖
             relatedSchedule.location = activity.location || "";
             relatedSchedule.taskId = activity.taskId;
           }
@@ -1191,7 +1191,7 @@ export const useDataStore = defineStore(
                 relatedTodo.estPomo[0] = parseInt(activity.estPomoI);
               }
             }
-            relatedTodo.status = activity.status || "";
+            // 不抄 status：同上，checkbox 只认 todo.status
             relatedTodo.pomoType = activity.pomoType;
             if (activity.dueDate) relatedTodo.dueDate = activity.dueDate;
           }

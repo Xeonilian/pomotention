@@ -150,6 +150,7 @@ export function useHomePlannerNavigator(options: UseHomePlannerNavigatorOptions)
     unregisterNavigatorApi = registerPlannerNavigatorApi({
       enter: enterPlannerNavigatorMode,
       move: movePlannerNavigatorMode,
+      hasRows: () => getPlannerKeyboardRows().length > 0,
       pickByDigit: pickPlannerRowByDigitMode,
       moveField: movePlannerNavigatorFieldMode,
       activateField: activatePlannerNavigatorFieldMode,

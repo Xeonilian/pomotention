@@ -6,6 +6,10 @@ import { loadVisiblePublicHolidays, type HolidayDisplay } from "@/services/plann
 
 export const plannerHolidayMapKey: InjectionKey<Ref<Record<string, HolidayDisplay>>> = Symbol("plannerHolidayMap");
 
+/** 当前假期表对应的可见区间；未覆盖的日期表示还在加载，头部先沿用上一帧文案 */
+export type HolidayLoadedRange = { start: number; end: number };
+export const plannerHolidayRangeKey: InjectionKey<Ref<HolidayLoadedRange | null>> = Symbol("plannerHolidayRange");
+
 /** 兼容 ComputedRef 与偶尔出现的 unwrap 时机问题 */
 function unwrapRefLike<T>(x: { value?: T } | T | undefined): T | undefined {
   if (x === undefined || x === null) return undefined;
@@ -23,6 +27,7 @@ export function usePublicHolidays() {
   const settingStore = useSettingStore();
   const dataStore = useDataStore();
   const holidayByDateKey = ref<Record<string, HolidayDisplay>>({});
+  const holidayLoadedRange = ref<HolidayLoadedRange | null>(null);
   let loadSeq = 0;
 
   /** 解析可见区间；缺失时用当日零点～次日作为兜底，避免 vr 未就绪时报错 */
@@ -41,19 +46,22 @@ export function usePublicHolidays() {
 
   async function refresh() {
     const seq = ++loadSeq;
+    const { start, end } = getVisibleRangeOrFallback();
     if (!settingStore.settings.showPublicHolidays) {
       holidayByDateKey.value = {};
+      holidayLoadedRange.value = { start, end };
       return;
     }
     const country = (settingStore.settings.publicHolidayCountryCode || "CN").trim().toUpperCase();
-    const { start, end } = getVisibleRangeOrFallback();
     try {
       const map = await loadVisiblePublicHolidays(start, end, country);
       if (seq !== loadSeq) return;
       holidayByDateKey.value = map;
+      holidayLoadedRange.value = { start, end };
     } catch {
       if (seq !== loadSeq) return;
       holidayByDateKey.value = {};
+      holidayLoadedRange.value = { start, end };
     }
   }
 
@@ -79,5 +87,5 @@ export function usePublicHolidays() {
   onMounted(() => document.addEventListener("visibilitychange", onVisibility));
   onUnmounted(() => document.removeEventListener("visibilitychange", onVisibility));
 
-  return { holidayByDateKey, refresh };
+  return { holidayByDateKey, holidayLoadedRange, refresh };
 }

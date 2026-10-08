@@ -224,57 +224,59 @@
               :title="editingRowId === schedule.id && editingField === 'title' ? '' : '单击编辑'"
             >
               <div class="title-cell-inner">
-              <input
-                class="title-input"
-                v-if="editingRowId === schedule.id && editingField === 'title'"
-                :ref="(el: any) => (titleInputRef = el)"
-                v-model="editingValue"
-                @blur="handleTitleBlur(schedule)"
-                @keyup.esc="cancelEdit"
-                @input="handleTitleInput(schedule)"
-                @keydown="handleInputKeydown($event, schedule)"
-                @click.stop
-                :data-schedule-id="schedule.id"
-              />
-              <TagPickerPopover
-                v-if="editingRowId === schedule.id && editingField === 'title'"
-                :ref="(el: any) => setTagPickerRef(el, schedule.id)"
-                :show="tagEditor.popoverTargetId.value === schedule.id"
-                @update:show="
-                  (open: boolean) => {
-                    if (!open) tagEditor.closePopover();
-                  }
-                "
-                v-model:search-term="tagSearchTermModel"
-                input-mode="external"
-                placement="bottom-end"
-                :z-index="10000"
-                :popover-style="{ marginRight: '0px' }"
-                :panel-pointer-guard="onScheduleTagPanelPointerGuard"
-                :on-enter-before-select="onScheduleTagEnterBeforeSelect"
-                @select-tag="(tagId: any) => handleTagSelected(tagId)"
-                @create-tag="(tagName: any) => handleTagCreate(tagName)"
-              >
-                <template #trigger>
-                  <span style="display: inline-block; width: 1px; height: 1px; pointer-events: none"></span>
-                </template>
-              </TagPickerPopover>
-              <span class="ellipsis" v-if="!(editingRowId === schedule.id && editingField === 'title')">{{ schedule.activityTitle ?? "-" }}</span>
-              <LedgerEntryPopover
-                v-if="ledgerEntriesForSchedule(schedule).length > 0"
-                :entries="ledgerEntriesForSchedule(schedule)"
-                @delete="(id) => handleLedgerDelete(schedule, id)"
-              />
+                <input
+                  class="title-input"
+                  v-if="editingRowId === schedule.id && editingField === 'title'"
+                  :ref="(el: any) => (titleInputRef = el)"
+                  v-model="editingValue"
+                  @blur="handleTitleBlur(schedule)"
+                  @keyup.esc="cancelEdit"
+                  @input="handleTitleInput(schedule)"
+                  @keydown="handleInputKeydown($event, schedule)"
+                  @click.stop
+                  :data-schedule-id="schedule.id"
+                />
+                <TagPickerPopover
+                  v-if="editingRowId === schedule.id && editingField === 'title'"
+                  :ref="(el: any) => setTagPickerRef(el, schedule.id)"
+                  :show="tagEditor.popoverTargetId.value === schedule.id"
+                  @update:show="
+                    (open: boolean) => {
+                      if (!open) tagEditor.closePopover();
+                    }
+                  "
+                  v-model:search-term="tagSearchTermModel"
+                  input-mode="external"
+                  placement="bottom-end"
+                  :z-index="10000"
+                  :popover-style="{ marginRight: '0px' }"
+                  :panel-pointer-guard="onScheduleTagPanelPointerGuard"
+                  :on-enter-before-select="onScheduleTagEnterBeforeSelect"
+                  @select-tag="(tagId: any) => handleTagSelected(tagId)"
+                  @create-tag="(tagName: any) => handleTagCreate(tagName)"
+                >
+                  <template #trigger>
+                    <span style="display: inline-block; width: 1px; height: 1px; pointer-events: none"></span>
+                  </template>
+                </TagPickerPopover>
+                <span class="ellipsis" v-if="!(editingRowId === schedule.id && editingField === 'title')">
+                  {{ schedule.activityTitle ?? "-" }}
+                </span>
+                <LedgerEntryPopover
+                  v-if="ledgerEntriesForSchedule(schedule).length > 0"
+                  :entries="ledgerEntriesForSchedule(schedule)"
+                  @delete="(id) => handleLedgerDelete(schedule, id)"
+                />
 
-              <!-- 云朵背景元素 - 只有当 isUntaetigkeit 为 true 时才显示 -->
-              <template v-if="schedule.isUntaetigkeit === true">
-                <div class="cloud cloud-1"></div>
-                <div class="cloud cloud-2"></div>
-                <div class="cloud cloud-3"></div>
-                <div class="cloud cloud-4"></div>
-                <div class="cloud cloud-5"></div>
-                <div class="cloud cloud-6"></div>
-              </template>
+                <!-- 云朵背景元素 - 只有当 isUntaetigkeit 为 true 时才显示 -->
+                <template v-if="schedule.isUntaetigkeit === true">
+                  <div class="cloud cloud-1"></div>
+                  <div class="cloud cloud-2"></div>
+                  <div class="cloud cloud-3"></div>
+                  <div class="cloud cloud-4"></div>
+                  <div class="cloud cloud-5"></div>
+                  <div class="cloud cloud-6"></div>
+                </template>
               </div>
             </td>
 
@@ -378,7 +380,8 @@ const props = withDefaults(
 const dataStore = useDataStore();
 const tagStore = useTagStore();
 const { isMobile } = useDevice();
-const { activeId, selectedRowId, selectedActivityId, selectedTaskId, selectedTask, schedulesForCurrentView, ledgerList } = storeToRefs(dataStore);
+const { activeId, selectedRowId, selectedActivityId, selectedTaskId, selectedTask, schedulesForCurrentView, ledgerList } =
+  storeToRefs(dataStore);
 
 const ledgerEntriesByActivityId = computed(() => {
   const map = new Map<number, LedgerEntry[]>();
@@ -1297,8 +1300,11 @@ td.col-intent .title-cell-inner .ellipsis {
     text-overflow: clip !important;
   }
 
-  td.col-intent .ellipsis {
+  td.col-intent .ellipsis,
+  td.col-location .ellipsis {
     text-overflow: ellipsis !important;
+    font-size: 12px;
+    line-height: 1.3;
   }
 
   .cancel-icon {
