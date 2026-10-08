@@ -217,7 +217,7 @@ import { autoSyncDebounced, uploadAllDebounced } from "@/core/utils/autoSync";
 import { useDevice } from "@/composables/platform/useDevice";
 import { CAPTURE_UI_ENABLED } from "@/core/capture";
 import { getLifeRecordKind } from "@/core/lifeRecord";
-import { usePublicHolidays, plannerHolidayMapKey } from "@/composables/planner/usePublicHolidays";
+import { usePublicHolidays, plannerHolidayMapKey, plannerHolidayRangeKey } from "@/composables/planner/usePublicHolidays";
 import { registerPlannerKeyboardCommandApi } from "@/composables/keyboard/usePlannerKeyboardCommands";
 import { registerPlannerDayEnterEditTitle, registerPlannerDaySpaceToggleCheck } from "@/composables/keyboard/usePlannerKeyboardNavigator";
 import {
@@ -334,8 +334,9 @@ const { plannerNavigatorActive } = useHomePlannerNavigator({
 
 const dateService = dataStore.dateService;
 
-const { holidayByDateKey } = usePublicHolidays();
+const { holidayByDateKey, holidayLoadedRange } = usePublicHolidays();
 provide(plannerHolidayMapKey, holidayByDateKey);
+provide(plannerHolidayRangeKey, holidayLoadedRange);
 
 const { saveAllDebounced, cleanSelection } = dataStore;
 // ======================== 0. UI 更新相关 ========================

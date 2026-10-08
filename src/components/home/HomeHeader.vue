@@ -31,11 +31,11 @@
         v-if="settingStore.settings.viewSet === 'day'"
         class="day-info"
         :class="{
-          'day-info--public-holiday': !!dayHolidayLabel,
+          'day-info--public-holiday': !!displayHolidayLabel,
         }"
       >
         <span @click="emit('weekJump')" class="day-status">{{ dateService.displayDateInfo }}</span>
-        <span v-if="dayHolidayLabel" class="planner-day-holiday-name">{{ dayHolidayLabel }}</span>
+        <span class="planner-day-holiday-name" :class="{ 'is-empty': !displayHolidayLabel }">{{ displayHolidayLabel }}</span>
         <span @click="emit('dateSet', 'today')" class="global-pomo">
           <span class="today-pomo">🍅{{ currentDatePomoCount }}</span>
           <span class="total-pomo">/{{ globalRealPomo }}</span>
@@ -156,7 +156,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, inject, nextTick, ref, toValue } from "vue";
+import { computed, inject, nextTick, ref, toValue, watch } from "vue";
 import {
   ArrowRepeatAll20Regular,
   CalendarSettings20Regular,
@@ -167,7 +167,7 @@ import {
 import HomeToolbarButtons from "@/components/home/HomeToolbarButtons.vue";
 import { useDevice } from "@/composables/platform/useDevice";
 import { usePomodoroStats } from "@/composables/planner/usePomodoroStats";
-import { plannerHolidayMapKey } from "@/composables/planner/usePublicHolidays";
+import { plannerHolidayMapKey, plannerHolidayRangeKey, type HolidayLoadedRange } from "@/composables/planner/usePublicHolidays";
 import { getDateKey } from "@/core/utils";
 import type { HolidayDisplay } from "@/services/planner/publicHolidays";
 import { useDataStore } from "@/stores/useDataStore";
@@ -198,15 +198,31 @@ const { isMobile } = useDevice();
 const { currentDatePomoCount, periodPomoCount, globalRealPomo } = usePomodoroStats();
 
 const holidayByDateKey = inject(plannerHolidayMapKey, ref<Record<string, HolidayDisplay>>({}));
+const holidayLoadedRange = inject(plannerHolidayRangeKey, ref<HolidayLoadedRange | null>(null));
 
-/** 日视图头部节假日文案（本地 JSON）；Pinia 内 ref 可能已解包，用 toValue */
-const dayHolidayLabel = computed(() => {
+/**
+ * 已覆盖当前日则给出节日名（可为空）；区间还是上一天时返回 null，先沿用上一帧。
+ * Pinia 内 ref 可能已解包，用 toValue。
+ */
+const settledHolidayLabel = computed<string | null>(() => {
   if (!settingStore.settings.showPublicHolidays) return "";
   const raw = toValue(dateService.appDateTimestamp as Parameters<typeof toValue>[0]);
   const ts = typeof raw === "number" && !Number.isNaN(raw) ? raw : undefined;
   if (ts == null) return "";
+  const range = holidayLoadedRange.value;
+  if (!range || ts < range.start || ts >= range.end) return null;
   return holidayByDateKey.value[getDateKey(ts)]?.label ?? "";
 });
+
+const displayHolidayLabel = ref("");
+watch(
+  settledHolidayLabel,
+  (label) => {
+    if (label == null) return;
+    displayHolidayLabel.value = label;
+  },
+  { immediate: true },
+);
 
 const prevTitle = computed(() => {
   const view = settingStore.settings.viewSet;
@@ -394,6 +410,15 @@ function cancelEdit() {
     max-width: 28vw;
     flex-shrink: 1;
   }
+}
+
+/* 非节日：节点留着，左右间距由日期和番茄承担 */
+.planner-day-holiday-name.is-empty {
+  margin-left: 0;
+  max-width: 0;
+  min-width: 0;
+  flex-shrink: 0;
+  overflow: hidden;
 }
 
 .day-status {
