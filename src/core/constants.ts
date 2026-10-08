@@ -13,6 +13,7 @@ export const TimerStyleDefaults = {
   barLength: "var(--bar-length)",
   redBarColor: "var(--color-red)",
   blueBarColor: "var(--color-blue)",
+  breakBarColor: "var(--color-green)",
 };
 
 export const CategoryColors = {
