@@ -202,7 +202,7 @@
         <n-button v-if="showBackToToday" quaternary circle type="info" size="large" @click="emit('reset-to-present')">
           <template #icon><n-icon size="24" :component="AnimalTurtle24Regular" /></template>
         </n-button>
-        <n-button v-else quaternary circle type="warning" size="large" @click="handleOpenStateLog">
+        <n-button v-else-if="showQuickStateLog" quaternary circle type="warning" size="large" @click="handleOpenStateLog">
           <template #icon>
             <n-icon size="24" :component="EmojiSmileSlight24Regular" />
           </template>
@@ -305,6 +305,8 @@ const effectiveActivityId = computed(() => {
 const showBackToToday = computed(() => !dateService.isViewDateToday);
 const showRowActions = computed(() => selectedRowId.value != null || activeId.value != null || selectedActivityId.value != null);
 const showActivityPanel = computed(() => settingStore.settings.showActivity);
+/** 状态快记先藏起来，入口还不对；回到当下仍显示 */
+const showQuickStateLog = false;
 const showPlannerPanel = computed(() => settingStore.settings.showPlanner);
 
 /** 活动清单走可见行循环，计划表走普通上下键循环；两边都没开则不可用 */
