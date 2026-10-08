@@ -37,190 +37,19 @@
           class="middle-top"
           :style="middleTopPlannerStyle"
         >
-          <!-- 计划表的头部和控件 -->
-          <div class="planner-header" @click.stop="cleanSelection">
-            <div class="planner-header-left">
-              <!-- 年入口：仅显示年份，点击进入年视图；在年视图时也只显示年份 -->
-              <div class="day-info">
-                <template v-if="settingStore.settings.viewSet !== 'year'">
-                  <span @click="onYearJump" class="day-status" title="进入年视图">
-                    {{
-                      settingStore.settings.showTimetable && isMobile
-                        ? ""
-                        : settingStore.settings.viewSet === "month" || settingStore.settings.viewSet === "week"
-                          ? dateService.displayYearInfo
-                          : isMobile
-                            ? dateService.displayYearInfo.slice(2) + "-"
-                            : dateService.displayYearInfo + "-"
-                    }}
-                  </span>
-                </template>
-                <template v-else>
-                  <span @click="onDayJump" class="day-status" title="进入日视图">
-                    {{ dateService.displayYearInfo }}
-                  </span>
-                  <span @click="onDateSet('today')" class="global-pomo">
-                    <span class="today-pomo">🍅{{ periodPomoCount }}</span>
-                    <span class="total-pomo">/{{ globalRealPomo }}</span>
-                  </span>
-                </template>
-              </div>
-              <div
-                v-if="settingStore.settings.viewSet === 'day'"
-                class="day-info"
-                :class="{
-                  'day-info--public-holiday': !!dayHolidayLabel,
-                }"
-              >
-                <span @click="onWeekJump" class="day-status">{{ dateService.displayDateInfo }}</span>
-                <span v-if="dayHolidayLabel" class="planner-day-holiday-name">{{ dayHolidayLabel }}</span>
-                <span @click="onDateSet('today')" class="global-pomo">
-                  <span class="today-pomo">🍅{{ currentDatePomoCount }}</span>
-                  <span class="total-pomo">/{{ globalRealPomo }}</span>
-                </span>
-              </div>
-              <div v-if="settingStore.settings.viewSet === 'week'" class="day-info">
-                <span @click="onMonthJump" class="day-status">&nbsp;{{ dateService.displayWeekInfo }}</span>
-                <span @click="onDateSet('today')" class="global-pomo">
-                  <span class="today-pomo">🍅{{ periodPomoCount }}</span>
-                  <span class="total-pomo">/{{ globalRealPomo }}</span>
-                </span>
-              </div>
-              <div v-if="settingStore.settings.viewSet === 'month'" class="day-info">
-                <span @click="onWeekJump" class="day-status">&nbsp;{{ dateService.displayMonthInfo }}</span>
-                <span
-                  class="global-pomo"
-                  title="单击回到今天；点番茄切换统计/日程"
-                  @click="onDateSet('today')"
-                >
-                  <span
-                    class="today-pomo"
-                    title="切换统计/日程"
-                    @click.stop="toggleMonthShowStatsOnly"
-                  >🍅{{ periodPomoCount }}</span>
-                  <span class="total-pomo">/{{ globalRealPomo }}</span>
-                </span>
-              </div>
-            </div>
-            <div
-              class="marquee"
-              :class="{ 'marquee-empty': settingStore.settings.marquee === '' }"
-              v-if="!isEditing"
-              @click="startEdit"
-              title="点击编辑跑马灯"
-            >
-              <n-marquee v-if="settingStore.settings.marquee !== ''" class="marquee__inner">
-                {{ settingStore.settings.marquee }}&nbsp;
-              </n-marquee>
-            </div>
-            <input
-              v-else
-              v-model="editValue"
-              class="marquee marquee-input"
-              @keydown.enter="saveEdit"
-              @keydown.esc="cancelEdit"
-              @blur="cancelEdit"
-              ref="inputRef"
-            />
-            <div class="button-group" :class="{ 'button-group--mobile': isMobile }">
-              <!-- 手机：工具栏限宽横滑，日期 < > 紧挨其后不挤出 -->
-              <div class="toolbar-scroll-area" :class="{ 'is-mobile-scroll': isMobile }">
-                <HomeToolbarButtons />
-
-                <n-button
-                  title="重复活动"
-                  v-if="!isMobile"
-                  @click="onRepeatActivity(false)"
-                  text
-                  type="default"
-                  size="small"
-                  :disabled="selectedRowId === null"
-                >
-                  <template #icon>
-                    <n-icon><ArrowRepeatAll20Regular /></n-icon>
-                  </template>
-                </n-button>
-                <n-button
-                  v-if="!isMobile"
-                  type="default"
-                  size="small"
-                  text
-                  @click="onIcsExport"
-                  title="导出 ICS / 二维码"
-                  :disabled="selectedRowId === null"
-                >
-                  <template #icon>
-                    <n-icon>
-                      <QrCode20Regular />
-                    </n-icon>
-                  </template>
-                </n-button>
-                <n-date-picker
-                  v-if="!isMobile"
-                  v-model:value="queryDate"
-                  type="date"
-                  placeholder="日期选择"
-                  @update:value="onDateSet('query')"
-                  class="search-date"
-                  placement="bottom"
-                  @click="onDateSet('today')"
-                  title="输入示例：2026-01-01"
-                >
-                  <template #date-icon></template>
-                </n-date-picker>
-                <n-button v-if="!isMobile" size="small" text @click.stop="onViewSet()" title="切换视图">
-                  <template #icon>
-                    <n-icon color="var(--color-text-primary)">
-                      <CalendarSettings20Regular />
-                    </n-icon>
-                  </template>
-                </n-button>
-              </div>
-              <div class="date-nav-buttons">
-                <n-button
-                  size="small"
-                  text
-                  @click="onDateSet('prev')"
-                  :title="
-                    settingStore.settings.viewSet === 'day'
-                      ? '上一天'
-                      : settingStore.settings.viewSet === 'week'
-                        ? '上一周'
-                        : settingStore.settings.viewSet === 'year'
-                          ? '上一年'
-                          : '上一月'
-                  "
-                >
-                  <template #icon>
-                    <n-icon>
-                      <ChevronLeft20Regular />
-                    </n-icon>
-                  </template>
-                </n-button>
-
-                <n-button
-                  size="small"
-                  text
-                  @click="onDateSet('next')"
-                  :title="
-                    settingStore.settings.viewSet === 'day'
-                      ? '下一天'
-                      : settingStore.settings.viewSet === 'week'
-                        ? '下一周'
-                        : settingStore.settings.viewSet === 'year'
-                          ? '下一年'
-                          : '下一月'
-                  "
-                >
-                  <template #icon>
-                    <n-icon>
-                      <ChevronRight20Regular />
-                    </n-icon>
-                  </template>
-                </n-button>
-              </div>
-            </div>
-          </div>
+          <HomeHeader
+            :selected-row-id="selectedRowId"
+            @clean-selection="cleanSelection"
+            @year-jump="onYearJump"
+            @day-jump="onDayJump"
+            @week-jump="onWeekJump"
+            @month-jump="onMonthJump"
+            @date-set="onDateSet"
+            @view-set="onViewSet"
+            @repeat-activity="onRepeatActivity(false)"
+            @ics-export="onIcsExport"
+            @toggle-month-stats="toggleMonthShowStatsOnly"
+          />
           <!-- 今日视图容器 -->
           <div class="planner-view-container">
             <DayPlanner
@@ -358,27 +187,18 @@
 
 <script setup lang="ts">
 // ------------------------ 导入依赖 ------------------------
-import { ref, onMounted, onUnmounted, computed, nextTick, defineAsyncComponent, provide, toValue, watch } from "vue";
+import { ref, onMounted, onUnmounted, computed, defineAsyncComponent, provide, watch } from "vue";
 import { storeToRefs } from "pinia";
 import { onBeforeRouteLeave, useRoute } from "vue-router";
 
 import type { Activity } from "@/core/types/Activity";
-import { getDateKey } from "@/core/utils";
 import { ViewType } from "@/core/constants";
 import { useResize } from "@/composables/layout/useResize";
 import { useVisualViewportKeyboard } from "@/composables/layout/useVisualViewportKeyboard";
 import IcsExportModal from "@/components/DayPlanner/IcsExportModal.vue";
-import HomeToolbarButtons from "@/components/home/HomeToolbarButtons.vue";
+import HomeHeader from "@/components/home/HomeHeader.vue";
 import MobileHomeFab from "@/components/platform/MobileHomeFab.vue";
 import { useTagStore } from "@/stores/useTagStore";
-import {
-  CalendarSettings20Regular,
-  QrCode20Regular,
-  ArrowRepeatAll20Regular,
-  ChevronLeft20Regular,
-  ChevronRight20Regular,
-} from "@vicons/fluent";
-
 import {
   handleAddActivity,
   handleDeleteActivity,
@@ -442,7 +262,6 @@ const activityOnlyMobile = computed(
   () => isMobile.value && settingStore.settings.showActivity && !settingStore.settings.showPlanner && !showCaptureUi.value,
 );
 
-const queryDate = ref<number | null>(null);
 const showPopover = ref(false);
 const popoverMessage = ref("");
 const taskRecordEditing = ref(false);
@@ -521,11 +340,6 @@ provide(plannerHolidayMapKey, holidayByDateKey);
 const { saveAllDebounced, cleanSelection } = dataStore;
 // ======================== 0. UI 更新相关 ========================
 
-import { usePomodoroStats } from "@/composables/planner/usePomodoroStats";
-
-// 新系统（测试用）
-const { currentDatePomoCount, periodPomoCount, globalRealPomo } = usePomodoroStats();
-
 /** 月视图：header 🍅 单击切换统计模式（会话级） */
 const monthShowStatsOnly = ref(false);
 const lifePlannerLayerStore = useLifePlannerLayerStore();
@@ -545,15 +359,6 @@ function toggleMonthShowStatsOnly() {
 const isViewDateToday = computed(() => dateService.isViewDateToday);
 
 const appDateTimestamp = computed(() => dateService.appDateTimestamp);
-
-/** 日视图头部节假日文案（本地 JSON）；Pinia 内 ref 可能已解包，用 toValue */
-const dayHolidayLabel = computed(() => {
-  if (!settingStore.settings.showPublicHolidays) return "";
-  const raw = toValue(dateService.appDateTimestamp as Parameters<typeof toValue>[0]);
-  const ts = typeof raw === "number" && !Number.isNaN(raw) ? raw : undefined;
-  if (ts == null) return "";
-  return holidayByDateKey.value[getDateKey(ts)]?.label ?? "";
-});
 
 // 进入年视图（点击头部年份）
 const onYearJump = () => {
@@ -653,28 +458,6 @@ function showErrorPopover(message: string) {
   setTimeout(() => {
     showPopover.value = false;
   }, 3000);
-}
-
-/**  marquee 功能*/
-const isEditing = ref(false);
-const editValue = ref("");
-const inputRef = ref();
-function startEdit() {
-  editValue.value = settingStore.settings.marquee;
-  isEditing.value = true;
-  // 输入框自动聚焦
-  nextTick(() => {
-    inputRef.value && inputRef.value.focus();
-  });
-}
-
-function saveEdit() {
-  settingStore.settings.marquee = editValue.value;
-  isEditing.value = false;
-}
-
-function cancelEdit() {
-  isEditing.value = false;
 }
 
 // ======================== 2. Activity 相关 ========================
@@ -1408,7 +1191,7 @@ function onUpdateScheduleStatus(id: number, isChecked: boolean) {
 }
 
 /** 修改日期切换按钮的处理函数 */
-function onDateSet(direction: "prev" | "next" | "today" | "query") {
+function onDateSet(direction: "prev" | "next" | "today" | "query", queryTs?: number | null) {
   let day: number;
   switch (direction) {
     case "prev":
@@ -1429,12 +1212,11 @@ function onDateSet(direction: "prev" | "next" | "today" | "query") {
       selectedRowId.value = null;
       break;
     case "query":
-      if (queryDate.value) {
-        day = dateService.navigateTo(new Date(queryDate.value));
+      if (queryTs) {
+        day = dateService.navigateTo(new Date(queryTs));
         dataStore.setSelectedDate(day);
         dateService.setAppDate(day);
       }
-      queryDate.value = null;
       break;
   }
   selectedTaskId.value = null;
@@ -1867,185 +1649,6 @@ const { startResize: startRightResize } = useResize(
   }
 }
 
-.planner-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  position: sticky;
-  margin: 8px 8px 4px 0px;
-  width: 100%;
-  white-space: nowrap;
-  /* visible：标签 TagRenderer hover scale 不被裁切；跑马灯等子项自行 overflow */
-  overflow: visible;
-  text-overflow: ellipsis;
-}
-
-.planner-header-left {
-  display: flex;
-  align-items: center;
-  margin-left: 6px;
-}
-
-.marquee {
-  flex: 1;
-  margin-left: 8px;
-  min-width: 0;
-  font-size: 16px;
-  color: var(--color-text);
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-weight: 500;
-  overflow: hidden;
-  white-space: nowrap;
-  cursor: pointer;
-  outline: none;
-}
-
-.marquee-input {
-  border: 1px solid var(--color-blue);
-  outline: none;
-}
-.marquee-empty:before {
-  content: "💡";
-}
-.search-date {
-  max-width: 100px !important;
-}
-
-/* 禁止随父级 flex 收缩，保持按钮组尺寸 */
-.button-group {
-  display: flex;
-  flex-shrink: 0;
-  gap: 6px;
-  align-items: center;
-  background-color: var(--color-background);
-  z-index: 5;
-  margin-right: 6px;
-  order: 999;
-}
-
-/* 手机：整组仍靠右紧凑；只允许被挤时收缩，不拉满中间空隙 */
-.button-group--mobile {
-  flex: 0 1 auto;
-  min-width: 0;
-}
-
-.toolbar-scroll-area {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-}
-
-/* 手机：限宽后溢出横滑；不用 width:0/flex:1，避免与 < > 被拉开贴边 */
-.toolbar-scroll-area.is-mobile-scroll {
-  max-width: min(46vw, 168px);
-  overflow-x: auto;
-  overflow-y: hidden;
-  -webkit-overflow-scrolling: touch;
-  touch-action: pan-x;
-  overscroll-behavior-x: contain;
-  scrollbar-width: none;
-}
-
-.toolbar-scroll-area.is-mobile-scroll::-webkit-scrollbar {
-  display: none;
-  height: 0;
-  width: 0;
-}
-
-.toolbar-scroll-area.is-mobile-scroll :deep(.home-toolbar-buttons) {
-  flex-shrink: 0;
-  min-width: max-content;
-}
-
-.date-nav-buttons {
-  display: flex;
-  flex-shrink: 0;
-  gap: 6px;
-  align-items: center;
-}
-
-@media (max-width: 430px) {
-  .button-group {
-    gap: 6px;
-  }
-  .global-pomo {
-    margin-left: 2px !important;
-  }
-}
-
-.day-info {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-  z-index: 2;
-  font-weight: 600;
-  background-color: var(--color-background);
-}
-
-/* 节假日当日：日视图日期整行（含番茄统计）用红色强调 */
-
-.day-info.day-info--public-holiday .planner-day-holiday-name {
-  color: var(--color-red);
-}
-
-.planner-day-holiday-name {
-  margin-left: 6px;
-  font-size: 14px;
-  font-weight: 600;
-  flex-shrink: 0;
-  max-width: 44vw;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-@media (max-width: 430px) {
-  /* 节日名略收，优先保住右侧日期切换 */
-  .planner-day-holiday-name {
-    max-width: 28vw;
-    flex-shrink: 1;
-  }
-}
-
-.day-status {
-  font-size: 18px;
-  font-family: Consolas, "Courier New", Courier, Monaco, "Liberation Mono", "Menlo", monospace;
-  color: var(--color-text);
-
-  cursor: pointer;
-  background-color: var(--color-background);
-}
-
-.global-pomo {
-  display: inline-flex;
-  align-items: center;
-  font-size: 16px;
-  color: var(--color-text);
-  background: var(--color-background-light-transparent);
-  padding: 2px 4px;
-  border-radius: 12px;
-  font-family: Consolas, "Courier New", Courier, monospace;
-  font-weight: 500;
-  margin-left: 12px;
-  user-select: none;
-  -webkit-user-select: none;
-  -webkit-touch-callout: none;
-  touch-action: manipulation;
-}
-
-.global-pomo * {
-  user-select: none;
-  -webkit-user-select: none;
-}
-
-.today-pomo {
-  color: var(--color-blue);
-  font-family: Consolas, "Courier New", Courier, monospace;
-  font-weight: 500;
-}
-
 .middle-bottom {
   flex: 1;
   min-height: 0;
@@ -2151,33 +1754,8 @@ const { startResize: startRightResize } = useResize(
   border-radius: 2px;
 } */
 
-.search-date :deep(.n-input) {
-  --n-height: 25px !important;
-  font-size: 12px;
-  padding-top: 1px;
-  padding-bottom: 1px;
-}
-
-.search-date :deep(.n-input-wrapper) {
-  padding-left: 6px;
-  padding-right: 6px;
-}
-
 @media (max-width: 650px) {
-  .marquee {
-    display: none;
-  }
-
-  .marquee-input {
-    display: block;
-  }
   .middle-top {
-    padding-right: 0;
-  }
-  .today-pomo,
-  .total-pomo {
-    font-size: 14px;
-    padding-left: 0;
     padding-right: 0;
   }
 
