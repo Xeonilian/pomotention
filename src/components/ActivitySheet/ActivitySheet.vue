@@ -196,7 +196,7 @@ import { useDataStore } from "@/stores/useDataStore";
 import { storeToRefs } from "pinia";
 import { timestampToDatetime } from "@/core/utils";
 import { useDevice } from "@/composables/platform/useDevice";
-import { registerActivityNavigatorApi } from "@/composables/keyboard/useActivityKeyboardNavigator";
+import { bumpActivityVisibleRowEpoch, registerActivityNavigatorApi } from "@/composables/keyboard/useActivityKeyboardNavigator";
 import { registerActivityKeyboardCommandApi } from "@/composables/keyboard/useActivityKeyboardCommands";
 import { activityNavigatorInjectKey } from "@/components/ActivitySheet/activityNavigatorInject";
 
@@ -420,6 +420,21 @@ watch(
   { immediate: true },
 );
 
+watch(
+  () => [
+    settingStore.settings.kanbanQuadrantMode,
+    settingStore.settings.kanbanSetting
+      .map((section) => `${section.id}:${section.show}:${section.filterKey}:${section.search}`)
+      .join("|"),
+    Object.keys(settingStore.settings.collapsedActivityIds).join(","),
+    activeActivities.value.map((activity) => `${activity.id}:${activity.status}:${activity.title}`).join(";"),
+  ],
+  () => {
+    nextTick(() => bumpActivityVisibleRowEpoch());
+  },
+  { immediate: true },
+);
+
 onMounted(() => {
   if (settingStore.settings.kanbanSetting.length !== 6) {
     // 版本切换校正一次
@@ -432,6 +447,7 @@ onMounted(() => {
     enter: enterNavigatorMode,
     move: moveNavigator,
     moveVisible: moveVisibleRowSelection,
+    hasVisibleRows: () => collectVisibleActivityRowIds().length > 0,
     pickByDigit: pickNavigatorDigit,
     moveField: moveNavigatorField,
     activateField: activateNavigatorField,
@@ -440,6 +456,7 @@ onMounted(() => {
     exit: exitNavigatorMode,
     isActive: () => navigatorActive.value,
   });
+  nextTick(() => bumpActivityVisibleRowEpoch());
   unregisterActivityCommandApi = registerActivityKeyboardCommandApi({
     pickActivity: keyboardPickActivity,
     deleteOrRecoverActivity: keyboardDeleteOrRecoverActivity,
@@ -560,9 +577,9 @@ function focusNavigatorIndex(nextIndex: number): boolean {
   return true;
 }
 
-function moveVisibleRowSelection(delta: 1 | -1): boolean {
-  const rowEls = Array.from(document.querySelectorAll<HTMLElement>(".activity-row[data-row-id]"));
-  if (!rowEls.length) return false;
+/** 页面上实际渲染的活动行，顺序与 a+↑/↓ 一致 */
+function collectVisibleActivityRowIds(): number[] {
+  const rowEls = document.querySelectorAll<HTMLElement>(".activity-row[data-row-id]");
   const ids: number[] = [];
   const seen = new Set<number>();
   for (const el of rowEls) {
@@ -573,6 +590,11 @@ function moveVisibleRowSelection(delta: 1 | -1): boolean {
     seen.add(id);
     ids.push(id);
   }
+  return ids;
+}
+
+function moveVisibleRowSelection(delta: 1 | -1): boolean {
+  const ids = collectVisibleActivityRowIds();
   if (!ids.length) return false;
   const currentId = sheetPrimaryActivityId.value;
   const currentIndex = currentId == null ? -1 : ids.indexOf(currentId);
