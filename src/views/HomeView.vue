@@ -319,6 +319,28 @@ const {
   todosForCurrentViewWithTaskRecords,
 } = storeToRefs(dataStore);
 
+/** 选中子活动时展开祖先，避免新建或点中子项后仍被收起挡住 */
+function expandAncestorsOf(activityId: number | null | undefined) {
+  if (activityId == null) return;
+  const collapsed = settingStore.settings.collapsedActivityIds;
+  const seen = new Set<number>();
+  let parentId = activityById.value.get(activityId)?.parentId ?? null;
+  while (parentId != null && !seen.has(parentId)) {
+    seen.add(parentId);
+    if (collapsed[parentId]) delete collapsed[parentId];
+    parentId = activityById.value.get(parentId)?.parentId ?? null;
+  }
+}
+
+watch(
+  [selectedActivityId, activeId],
+  ([selected, active]) => {
+    expandAncestorsOf(selected);
+    if (active != null && active !== selected) expandAncestorsOf(active);
+  },
+  { immediate: true },
+);
+
 const { plannerNavigatorActive } = useHomePlannerNavigator({
   settingStore,
   dayPlannerRef,

@@ -7,6 +7,7 @@
 
     <template v-else>
       <n-popover
+        v-if="mobileOverflowIds.length > 0"
         v-model:show="showCollapsedPopover"
         trigger="click"
         placement="bottom-start"
@@ -93,14 +94,13 @@ import { useDevice } from "@/composables/platform/useDevice";
 import {
   HOME_TOOLBAR_ACTION_IDS,
   HOME_TOOLBAR_ACTION_TITLES,
-  getHomeToolbarOverflowIds,
   isLifeRecordToolbarId,
   mergeHomeToolbarMobilePinned,
   normalizeHomeToolbarMobilePinned,
   toggleHomeToolbarEditSelection,
   type HomeToolbarActionId,
 } from "@/core/homeToolbarActions";
-import type { LifeRecordKind } from "@/core/lifeRecord";
+import { LIFE_RECORD_UI_ENABLED, type LifeRecordKind } from "@/core/lifeRecord";
 import { useSettingStore } from "@/stores/useSettingStore";
 
 const { isMobile } = useDevice();
@@ -110,9 +110,22 @@ const showCollapsedPopover = ref(false);
 const popoverEditMode = ref(false);
 const editSelection = ref<HomeToolbarActionId[]>([]);
 
-const desktopActionIds = HOME_TOOLBAR_ACTION_IDS;
-const mobilePinnedIds = computed(() => normalizeHomeToolbarMobilePinned(settingStore.settings.homeToolbarMobilePinned));
-const mobileOverflowIds = computed(() => getHomeToolbarOverflowIds(mobilePinnedIds.value));
+function withoutLifeRecordActions(ids: HomeToolbarActionId[]): HomeToolbarActionId[] {
+  if (LIFE_RECORD_UI_ENABLED) return ids;
+  return ids.filter((id) => !isLifeRecordToolbarId(id));
+}
+
+const visibleActionIds = computed(() => withoutLifeRecordActions(HOME_TOOLBAR_ACTION_IDS));
+const desktopActionIds = visibleActionIds;
+const mobilePinnedIds = computed(() => {
+  const visible = withoutLifeRecordActions(normalizeHomeToolbarMobilePinned(settingStore.settings.homeToolbarMobilePinned));
+  if (LIFE_RECORD_UI_ENABLED || visible.length > 0) return visible;
+  return visibleActionIds.value;
+});
+const mobileOverflowIds = computed(() => {
+  const pinned = new Set(mobilePinnedIds.value);
+  return visibleActionIds.value.filter((id) => !pinned.has(id));
+});
 const moreButtonTitle = computed(() => (popoverEditMode.value ? "完成调整快捷按钮" : "调整快捷按钮"));
 
 /** 编辑态预览用线框图标；真实态由 LifeRecordButtons 负责 */
