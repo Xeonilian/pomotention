@@ -45,6 +45,8 @@ curl -H "Authorization: Bearer YOUR_TOKEN_HERE" https://api.github.com/user
 
 ```bash
 git remote -v
+# 详细检查
+ssh -vT git@github.com
 git remote set-url origin git@github.com:Xeonilian/pomotention.git
 git remote set-url origin https://github.com/Xeonilian/pomotention.git
 ssh -T git@github.com
