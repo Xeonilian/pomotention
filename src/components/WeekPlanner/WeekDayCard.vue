@@ -179,8 +179,10 @@ const props = withDefaults(
     getLifePointStyle: (mark: LifePointMark, dayStartTs: number) => CSSProperties;
     hideScheduleBlocks?: boolean;
     drinkLayer?: boolean;
+    /** 生活可视化开着：大格子点击 = 选中这天 + 进整合 sheet */
+    lifeView?: boolean;
   }>(),
-  { hideScheduleBlocks: false, drinkLayer: false },
+  { hideScheduleBlocks: false, drinkLayer: false, lifeView: false },
 );
 
 const holidayForDay = computed(() => holidayMap.value[getDateKey(props.day.startTs)] ?? null);
@@ -218,6 +220,7 @@ const emit = defineEmits<{
   "date-select": [timestamp: number];
   "date-select-day-view": [timestamp: number];
   "item-change": [id: number, activityId?: number, taskId?: number];
+  "open-day-sheet": [dayStart: number];
 }>();
 
 const handleDateSelect = (ts: number) => {
@@ -230,6 +233,11 @@ const handleDateSelectDayView = (ts: number) => {
 
 function onCardClick() {
   handleDateSelect(props.day.startTs);
+  // 生活可视化开着：大格子点击 = 选中这天 + 进整合 sheet（无记录也由 openDaySheet 建桶）
+  if (props.lifeView) {
+    emit("open-day-sheet", props.day.startTs);
+    return;
+  }
   if (!props.drinkLayer) return;
   const todo = drinkTodo.value;
   const task = drinkTask.value;

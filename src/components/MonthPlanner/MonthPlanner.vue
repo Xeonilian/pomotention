@@ -151,6 +151,7 @@ const emit = defineEmits<{
   "date-select": [timestamp: number];
   "date-select-day-view": [timestamp: number];
   "item-change": [id: number, activityId?: number, taskId?: number];
+  "open-day-sheet": [dayStart: number];
 }>();
 
 const props = withDefaults(
@@ -158,8 +159,10 @@ const props = withDefaults(
     showStatsOnly?: boolean;
     /** Planner 喝水统计皮肤 */
     drinkSkin?: boolean;
+    /** 生活可视化开着：大格子点击进整合 sheet */
+    lifeView?: boolean;
   }>(),
-  { showStatsOnly: false, drinkSkin: false },
+  { showStatsOnly: false, drinkSkin: false, lifeView: false },
 );
 
 const dayNames = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
@@ -482,6 +485,12 @@ type MonthDayRow = { startTs: number; pomoRatio: number; isCurrentMonth: boolean
 
 /** 喝水皮肤：切日；有喝水行则打开日明细 Task（不快记） */
 function handleDayCardClick(day: MonthDayRow) {
+  if (props.lifeView) {
+    // 生活可视化开着：大格子点击 = 选中这天 + 进整合 sheet
+    emit("date-select", day.startTs);
+    emit("open-day-sheet", day.startTs);
+    return;
+  }
   if (props.drinkSkin) {
     emit("date-select", day.startTs);
     const ref = day.drinkStat.lifeRef;

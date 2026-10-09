@@ -85,17 +85,21 @@
               v-if="settingStore.settings.showPlanner && settingStore.settings.viewSet === 'week'"
               :hide-schedule-blocks="lifePlannerHasAnyLayer"
               :drink-layer="lifePlannerHasDrink"
+              :life-view="lifePlannerLifeView"
               @item-change="onItemChange"
               @date-select="onDateSelect"
               @date-select-day-view="onDateSelectDayView"
+              @open-day-sheet="onOpenDaySheetFromCell"
             />
             <MonthPlanner
               v-if="settingStore.settings.showPlanner && settingStore.settings.viewSet === 'month'"
               :show-stats-only="monthShowStatsOnly"
               :drink-skin="lifePlannerHasDrink"
+              :life-view="lifePlannerLifeView"
               @item-change="onItemChange"
               @date-select="onDateSelect"
               @date-select-day-view="onDateSelectDayView"
+              @open-day-sheet="onOpenDaySheetFromCell"
             />
             <YearPlanner
               v-if="settingStore.settings.showPlanner && settingStore.settings.viewSet === 'year'"
@@ -221,7 +225,8 @@ import { useLifePlannerLayerStore } from "@/stores/useLifePlannerLayerStore";
 import { autoSyncDebounced, uploadAllDebounced } from "@/core/utils/autoSync";
 import { useDevice } from "@/composables/platform/useDevice";
 import { CAPTURE_UI_ENABLED } from "@/core/capture";
-import { getLifeRecordKind } from "@/core/lifeRecord";
+import { getLifeRecordKind, LIFE_RECORD_DEFS } from "@/core/lifeRecord";
+import { findLifeRecordTodoForDay } from "@/services/lifeRecord/lifeRecordService";
 import { usePublicHolidays, plannerHolidayMapKey, plannerHolidayRangeKey } from "@/composables/planner/usePublicHolidays";
 import { registerPlannerKeyboardCommandApi } from "@/composables/keyboard/usePlannerKeyboardCommands";
 import { registerPlannerDayEnterEditTitle, registerPlannerDaySpaceToggleCheck } from "@/composables/keyboard/usePlannerKeyboardNavigator";
@@ -372,7 +377,7 @@ const { saveAllDebounced, cleanSelection } = dataStore;
 /** 月视图：header 🍅 单击切换统计模式（会话级） */
 const monthShowStatsOnly = ref(false);
 const lifePlannerLayerStore = useLifePlannerLayerStore();
-const { hasAny: lifePlannerHasAnyLayer, hasDrink: lifePlannerHasDrink, daySheetOpen, daySheetTaskIds } =
+const { hasAny: lifePlannerHasAnyLayer, hasDrink: lifePlannerHasDrink, lifeView: lifePlannerLifeView, daySheetOpen, daySheetTaskIds } =
   storeToRefs(lifePlannerLayerStore);
 
 /** 生活整合 sheet 激活：任意 view 进入都给全部 middle 空间 */
@@ -450,11 +455,33 @@ const onDateSelect = (day: number) => {
   // 不清除selectedRowId.value，因为周月视图里需要选中todo.id 或 schedule.id 用于重复
 };
 
+// 非day 生活可视化：大格子点击 → 选中这天 + 进整合 sheet
+// 前提：当天已有生活数据；无数据不建桶、不开 sheet（date-select 已选中这天）
+const onOpenDaySheetFromCell = (dayStart: number) => {
+  if (!hasLifeRecordDataForDay(dayStart)) return;
+  dateService.setAppDate(dayStart);
+  lifePlannerLayerStore.openDaySheet();
+};
+
+/** 当天 4 类任一有生活记录 → true */
+function hasLifeRecordDataForDay(dayStart: number): boolean {
+  for (const def of LIFE_RECORD_DEFS) {
+    const todo = findLifeRecordTodoForDay(todoList.value, activityById.value, def.kind, dayStart);
+    if (!todo || todo.activityId == null) continue;
+    const task = taskByActivityId.value.get(todo.activityId);
+    if (task && (task.lifeRecords?.length ?? 0) > 0) return true;
+  }
+  return false;
+}
+
 // week和month planner 引起选中的任务行
 const onItemChange = (id: number, activityId?: number, taskId?: number) => {
   // 生活记录行：进入整合 sheet（给全部 middle 空间），不再走 compact
-  if (activityId != null) {
-    const kind = getLifeRecordKind(dataStore.activityById.get(activityId));
+  // week 生活标记 emit 时 activityId 为 undefined，需从 todo 反查
+  const todo = todoById.value.get(id);
+  const actId = activityId ?? todo?.activityId;
+  if (actId != null) {
+    const kind = getLifeRecordKind(dataStore.activityById.get(actId));
     if (kind) {
       // life bucket 的 todo.id = 当天零点；先切到该天再建 4 桶开 sheet
       dateService.setAppDate(id);
