@@ -1,29 +1,21 @@
 /** Home 顶栏工具：手机端 3 槽 + popover（标签筛选 / 记账 / 生活记录） */
 
-import type { LifeRecordKind } from "@/core/lifeRecord";
-
-export type HomeToolbarActionId = "tagFilter" | "ledger" | LifeRecordKind;
+export type HomeToolbarActionId = "tagFilter" | "ledger" | "life";
 
 export const HOME_TOOLBAR_ACTION_IDS: HomeToolbarActionId[] = [
   "tagFilter",
   "ledger",
-  "drink",
-  "eat",
-  "toilet",
-  "sleep",
+  "life",
 ];
 
 export const HOME_TOOLBAR_MOBILE_SLOT_COUNT = 3;
 
-export const DEFAULT_HOME_TOOLBAR_MOBILE_PINNED: HomeToolbarActionId[] = ["tagFilter", "ledger", "drink"];
+export const DEFAULT_HOME_TOOLBAR_MOBILE_PINNED: HomeToolbarActionId[] = ["tagFilter", "ledger", "life"];
 
 export const HOME_TOOLBAR_ACTION_TITLES: Record<HomeToolbarActionId, string> = {
   tagFilter: "标签筛选",
   ledger: "收支统计",
-  drink: "记一次喝水",
-  eat: "记一次吃饭",
-  toilet: "记一次如厕",
-  sleep: "记一次睡觉",
+  life: "生活记录",
 };
 
 const VALID_IDS = new Set<HomeToolbarActionId>(HOME_TOOLBAR_ACTION_IDS);
@@ -102,6 +94,7 @@ export function toggleHomeToolbarEditSelection(
   return [...current, id];
 }
 
-export function isLifeRecordToolbarId(id: HomeToolbarActionId): id is LifeRecordKind {
-  return id === "drink" || id === "eat" || id === "toilet" || id === "sleep";
+/** 是否生活记录统一入口 */
+export function isLifeToolbarId(id: HomeToolbarActionId): id is "life" {
+  return id === "life";
 }

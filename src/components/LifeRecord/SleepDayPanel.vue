@@ -8,7 +8,7 @@
     class="sleep-day-panel"
     :class="{ 'sleep-day-panel--mobile': isMobile, 'sleep-day-panel--dreaming': dreamRecord != null }"
   >
-    <div class="sleep-day-panel__toolbar">
+    <div v-if="!embedded" class="sleep-day-panel__toolbar">
       <n-button v-if="records.length === 0" text size="small" class="sleep-day-panel__icon-btn" title="删除空记录" @click="onDiscard">
         <template #icon>
           <n-icon :size="18"><Delete20Regular /></n-icon>
@@ -193,7 +193,7 @@ import { useDataStore } from "@/stores/useDataStore";
 import { useDisplayedTaskStore } from "@/stores/useDisplayedTaskStore";
 import { useDevice } from "@/composables/platform/useDevice";
 
-const props = defineProps<{ taskId: number }>();
+const props = defineProps<{ taskId: number; embedded?: boolean }>();
 
 const dataStore = useDataStore();
 const displayStore = useDisplayedTaskStore();

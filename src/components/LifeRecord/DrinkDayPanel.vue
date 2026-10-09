@@ -4,7 +4,7 @@
 -->
 <template>
   <div v-if="task" class="drink-day-panel" :class="{ 'drink-day-panel--mobile': isMobile }">
-    <div class="drink-day-panel__toolbar">
+    <div v-if="!embedded" class="drink-day-panel__toolbar">
       <n-button v-if="records.length === 0" text size="small" class="drink-day-panel__icon-btn" title="删除空记录" @click="onDiscard">
         <template #icon>
           <n-icon :size="18"><Delete20Regular /></n-icon>
@@ -142,7 +142,7 @@ import { useSettingStore } from "@/stores/useSettingStore";
 import { useDevice } from "@/composables/platform/useDevice";
 import DrinkDayWaterFill from "@/components/MonthPlanner/DrinkDayWaterFill.vue";
 
-const props = defineProps<{ taskId: number }>();
+const props = defineProps<{ taskId: number; embedded?: boolean }>();
 
 const dataStore = useDataStore();
 const displayStore = useDisplayedTaskStore();

@@ -6,8 +6,8 @@ import { dailyPlaceholderTitle } from "@/core/dailyPlaceholder";
 
 export type LifeRecordKind = "drink" | "eat" | "toilet" | "sleep";
 
-/** 顶栏四个生活记录按钮。调试完成前先关，代码仍在。 */
-export const LIFE_RECORD_UI_ENABLED = false;
+/** 顶栏四个生活记录按钮。已开；进度见 docs/dev-log/side.md。 */
+export const LIFE_RECORD_UI_ENABLED = true;
 
 export interface LifeRecordDef {
   kind: LifeRecordKind;

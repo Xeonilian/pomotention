@@ -79,28 +79,25 @@
 import { computed, defineComponent, h, ref, type Component, type PropType } from "vue";
 import { NButton, NIcon, NPopover } from "naive-ui";
 import {
+  Apps20Filled,
   ChevronDoubleLeft16Regular,
-  Door20Regular,
-  Drop20Regular,
-  FoodApple20Regular,
   TagSearch20Regular,
   Wallet20Regular,
-  WeatherMoon20Regular,
 } from "@vicons/fluent";
 import HomeTagFilterPopover from "@/components/TagSystem/HomeTagFilterPopover.vue";
 import LedgerAggregatePopover from "@/components/Ledger/LedgerAggregatePopover.vue";
-import LifeRecordButtons from "@/components/LifeRecord/LifeRecordButtons.vue";
+import LifeRecordButton from "@/components/LifeRecord/LifeRecordButton.vue";
 import { useDevice } from "@/composables/platform/useDevice";
 import {
   HOME_TOOLBAR_ACTION_IDS,
   HOME_TOOLBAR_ACTION_TITLES,
-  isLifeRecordToolbarId,
+  isLifeToolbarId,
   mergeHomeToolbarMobilePinned,
   normalizeHomeToolbarMobilePinned,
   toggleHomeToolbarEditSelection,
   type HomeToolbarActionId,
 } from "@/core/homeToolbarActions";
-import { LIFE_RECORD_UI_ENABLED, type LifeRecordKind } from "@/core/lifeRecord";
+import { LIFE_RECORD_UI_ENABLED } from "@/core/lifeRecord";
 import { useSettingStore } from "@/stores/useSettingStore";
 
 const { isMobile } = useDevice();
@@ -110,15 +107,15 @@ const showCollapsedPopover = ref(false);
 const popoverEditMode = ref(false);
 const editSelection = ref<HomeToolbarActionId[]>([]);
 
-function withoutLifeRecordActions(ids: HomeToolbarActionId[]): HomeToolbarActionId[] {
+function withoutLifeActions(ids: HomeToolbarActionId[]): HomeToolbarActionId[] {
   if (LIFE_RECORD_UI_ENABLED) return ids;
-  return ids.filter((id) => !isLifeRecordToolbarId(id));
+  return ids.filter((id) => !isLifeToolbarId(id));
 }
 
-const visibleActionIds = computed(() => withoutLifeRecordActions(HOME_TOOLBAR_ACTION_IDS));
+const visibleActionIds = computed(() => withoutLifeActions(HOME_TOOLBAR_ACTION_IDS));
 const desktopActionIds = visibleActionIds;
 const mobilePinnedIds = computed(() => {
-  const visible = withoutLifeRecordActions(normalizeHomeToolbarMobilePinned(settingStore.settings.homeToolbarMobilePinned));
+  const visible = withoutLifeActions(normalizeHomeToolbarMobilePinned(settingStore.settings.homeToolbarMobilePinned));
   if (LIFE_RECORD_UI_ENABLED || visible.length > 0) return visible;
   return visibleActionIds.value;
 });
@@ -128,14 +125,6 @@ const mobileOverflowIds = computed(() => {
 });
 const moreButtonTitle = computed(() => (popoverEditMode.value ? "完成调整快捷按钮" : "调整快捷按钮"));
 
-/** 编辑态预览用线框图标；真实态由 LifeRecordButtons 负责 */
-const LIFE_EDIT_ICONS: Record<LifeRecordKind, Component> = {
-  drink: Drop20Regular,
-  eat: FoodApple20Regular,
-  toilet: Door20Regular,
-  sleep: WeatherMoon20Regular,
-};
-
 function actionTitle(actionId: HomeToolbarActionId): string {
   return HOME_TOOLBAR_ACTION_TITLES[actionId];
 }
@@ -143,7 +132,7 @@ function actionTitle(actionId: HomeToolbarActionId): string {
 function actionIcon(actionId: HomeToolbarActionId): Component {
   if (actionId === "tagFilter") return TagSearch20Regular;
   if (actionId === "ledger") return Wallet20Regular;
-  return LIFE_EDIT_ICONS[actionId];
+  return Apps20Filled;
 }
 
 function onPopoverShowChange(show: boolean) {
@@ -190,9 +179,8 @@ const HomeToolbarActionSlot = defineComponent({
       if (id === "ledger") {
         return h(LedgerAggregatePopover);
       }
-      if (isLifeRecordToolbarId(id)) {
-        return h(LifeRecordButtons, {
-          kinds: [id],
+      if (isLifeToolbarId(id)) {
+        return h(LifeRecordButton, {
           onRecorded: () => emit("lifeRecorded"),
         });
       }

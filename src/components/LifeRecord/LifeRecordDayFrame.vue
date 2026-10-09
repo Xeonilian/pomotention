@@ -3,7 +3,7 @@
 -->
 <template>
   <div class="lr-day" :class="{ 'lr-day--mobile': isMobile }">
-    <div class="lr-day__toolbar">
+    <div v-if="!embedded" class="lr-day__toolbar">
       <slot name="toolbar" />
     </div>
     <div class="lr-day__body">
@@ -20,6 +20,7 @@
 <script setup lang="ts">
 import { useDevice } from "@/composables/platform/useDevice";
 
+defineProps<{ embedded?: boolean }>();
 const { isMobile } = useDevice();
 </script>
 

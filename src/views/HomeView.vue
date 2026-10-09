@@ -33,7 +33,7 @@
       >
         <!-- 今日视图 -->
         <div
-          v-if="settingStore.settings.showPlanner && !mobileLifeRecordOpen"
+          v-if="settingStore.settings.showPlanner && !mobileLifeRecordOpen && !daySheetActive"
           class="middle-top"
           :style="middleTopPlannerStyle"
         >
@@ -109,7 +109,7 @@
         </div>
         <!-- 任务视图调整大小手柄 -->
         <div
-          v-if="taskPanelLayoutVisible && settingStore.settings.showPlanner && !mobileLifeRecordOpen"
+          v-if="taskPanelLayoutVisible && settingStore.settings.showPlanner && !mobileLifeRecordOpen && !daySheetActive"
           class="resize-handle"
           style="touch-action: none"
           @pointerdown="startVerticalResize"
@@ -124,7 +124,12 @@
           }"
         >
           <div class="task-container">
-            <TaskTracker ref="taskTrackerRef" @task-record-editing="setTaskRecordEditing" />
+            <LifeRecordDaySheet
+              v-if="daySheetActive"
+              :task-ids="daySheetTaskIds"
+              @close="lifePlannerLayerStore.closeDaySheet"
+            />
+            <TaskTracker v-else ref="taskTrackerRef" @task-record-editing="setTaskRecordEditing" />
           </div>
         </div>
       </div>
@@ -246,6 +251,7 @@ const WeekPlanner = defineAsyncComponent(() => import("@/components/WeekPlanner/
 const MonthPlanner = defineAsyncComponent(() => import("@/components/MonthPlanner/MonthPlanner.vue"));
 const YearPlanner = defineAsyncComponent(() => import("@/components/YearPlanner/YearPlanner.vue"));
 const TaskTracker = defineAsyncComponent(() => import("@/components/TaskTracker/TaskTracker.vue"));
+const LifeRecordDaySheet = defineAsyncComponent(() => import("@/components/LifeRecord/LifeRecordDaySheet.vue"));
 const ActivitySheet = defineAsyncComponent(() => import("@/components/ActivitySheet/ActivitySheet.vue"));
 const CapturePanel = defineAsyncComponent(() => import("@/components/Capture/CapturePanel.vue"));
 const StateLogModal = defineAsyncComponent(() => import("@/components/TaskTracker/StateLogModal.vue"));
@@ -366,7 +372,13 @@ const { saveAllDebounced, cleanSelection } = dataStore;
 /** 月视图：header 🍅 单击切换统计模式（会话级） */
 const monthShowStatsOnly = ref(false);
 const lifePlannerLayerStore = useLifePlannerLayerStore();
-const { hasAny: lifePlannerHasAnyLayer, hasDrink: lifePlannerHasDrink } = storeToRefs(lifePlannerLayerStore);
+const { hasAny: lifePlannerHasAnyLayer, hasDrink: lifePlannerHasDrink, daySheetOpen, daySheetTaskIds } =
+  storeToRefs(lifePlannerLayerStore);
+
+/** day 集中生活 sheet 激活：仅日视图且 daySheetOpen */
+const daySheetActive = computed(
+  () => settingStore.settings.viewSet === "day" && daySheetOpen.value,
+);
 
 watch(
   () => settingStore.settings.viewSet,

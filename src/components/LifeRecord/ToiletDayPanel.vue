@@ -2,7 +2,7 @@
   日视图上厕所：左展示 + 右表。展示内容先占位，尺寸走 LifeRecordDayFrame。
 -->
 <template>
-  <LifeRecordDayFrame v-if="task">
+  <LifeRecordDayFrame v-if="task" :embedded="embedded">
     <template #toolbar>
       <n-button v-if="records.length === 0" text size="small" class="lr-icon-btn" title="删除空记录" @click="discard">
         <template #icon>
@@ -75,7 +75,7 @@ import { Add20Regular, Delete20Regular, Dismiss20Regular, Door20Regular } from "
 import { useLifeRecordEditor } from "@/composables/lifeRecord/useLifeRecordEditor";
 import LifeRecordDayFrame from "@/components/LifeRecord/LifeRecordDayFrame.vue";
 
-const props = defineProps<{ taskId: number }>();
+const props = defineProps<{ taskId: number; embedded?: boolean }>();
 const { task, records, def, append, changeRecordedAt, remove, discard, deselect } = useLifeRecordEditor(() => props.taskId, "toilet");
 </script>
 
