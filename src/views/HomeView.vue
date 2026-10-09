@@ -375,10 +375,8 @@ const lifePlannerLayerStore = useLifePlannerLayerStore();
 const { hasAny: lifePlannerHasAnyLayer, hasDrink: lifePlannerHasDrink, daySheetOpen, daySheetTaskIds } =
   storeToRefs(lifePlannerLayerStore);
 
-/** day 集中生活 sheet 激活：仅日视图且 daySheetOpen */
-const daySheetActive = computed(
-  () => settingStore.settings.viewSet === "day" && daySheetOpen.value,
-);
+/** 生活整合 sheet 激活：任意 view 进入都给全部 middle 空间 */
+const daySheetActive = computed(() => daySheetOpen.value);
 
 watch(
   () => settingStore.settings.viewSet,
@@ -454,6 +452,16 @@ const onDateSelect = (day: number) => {
 
 // week和month planner 引起选中的任务行
 const onItemChange = (id: number, activityId?: number, taskId?: number) => {
+  // 生活记录行：进入整合 sheet（给全部 middle 空间），不再走 compact
+  if (activityId != null) {
+    const kind = getLifeRecordKind(dataStore.activityById.get(activityId));
+    if (kind) {
+      // life bucket 的 todo.id = 当天零点；先切到该天再建 4 桶开 sheet
+      dateService.setAppDate(id);
+      lifePlannerLayerStore.openDaySheet();
+      return;
+    }
+  }
   selectedRowId.value = null;
   activeId.value = undefined;
   selectedActivityId.value = null;
