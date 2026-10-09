@@ -2,7 +2,7 @@
   日视图吃饭：左展示 + 右表。展示内容先占位，尺寸走 LifeRecordDayFrame。
 -->
 <template>
-  <LifeRecordDayFrame v-if="task" :embedded="embedded">
+  <LifeRecordDayFrame v-if="task" :embedded="embedded" :view="view">
     <template #toolbar>
       <n-button v-if="records.length === 0" text size="small" class="lr-icon-btn" title="删除空记录" @click="discard">
         <template #icon>
@@ -81,7 +81,9 @@ import { Add20Regular, Delete20Regular, Dismiss20Regular, FoodApple20Regular } f
 import { useLifeRecordEditor } from "@/composables/lifeRecord/useLifeRecordEditor";
 import LifeRecordDayFrame from "@/components/LifeRecord/LifeRecordDayFrame.vue";
 
-const props = defineProps<{ taskId: number; embedded?: boolean }>();
+const props = withDefaults(defineProps<{ taskId: number; embedded?: boolean; view?: "chart" | "table" }>(), {
+  view: "chart",
+});
 const { task, records, def, append, changeRecordedAt, changeDescription, remove, discard, deselect } = useLifeRecordEditor(
   () => props.taskId,
   "eat",

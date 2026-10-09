@@ -19,7 +19,7 @@
 
     <div class="drink-day-panel__body">
       <!-- 左：圆水位；六元钉在 a/c/d/f 交点，调下方 CSS 变量即可 -->
-      <div class="drink-day-gauge" :title="`${drunkMl} / ${dayGoalMl || '—'} ml`">
+      <div v-if="view === 'chart'" class="drink-day-gauge" :title="`${drunkMl} / ${dayGoalMl || '—'} ml`">
         <DrinkDayWaterFill class="drink-day-gauge__fill" :ratio="progressRatio" :met="goalMet" />
         <!-- 上：o @ a∩d · × @ b∩d · N @ c∩d -->
         <button type="button" class="drink-day-gauge__el drink-day-gauge__drop" title="记一杯" @click="onAppend">
@@ -47,7 +47,7 @@
       </div>
 
       <!-- 右：固定高三线表（无顶线）；杯量在表头末列 -->
-      <div class="drink-day-table-wrap">
+      <div v-if="view === 'table'" class="drink-day-table-wrap">
         <div class="drink-day-table-scroll">
           <table class="drink-day-table">
             <colgroup>
@@ -142,7 +142,9 @@ import { useSettingStore } from "@/stores/useSettingStore";
 import { useDevice } from "@/composables/platform/useDevice";
 import DrinkDayWaterFill from "@/components/MonthPlanner/DrinkDayWaterFill.vue";
 
-const props = defineProps<{ taskId: number; embedded?: boolean }>();
+const props = withDefaults(defineProps<{ taskId: number; embedded?: boolean; view?: "chart" | "table" }>(), {
+  view: "chart",
+});
 
 const dataStore = useDataStore();
 const displayStore = useDisplayedTaskStore();
