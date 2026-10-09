@@ -63,39 +63,9 @@
               <div v-if="isMobile" class="day-stat--compact">
                 <span>🍅{{ day.sumRealPomo }}</span>
                 <span>{{ formatWorkHoursCompact(day.sumWorkMs) }}</span>
-                <div class="day-life-icons">
-                  <n-icon
-                    v-for="icon in LIFE_STAT_ICONS"
-                    :key="icon.kind"
-                    :size="11"
-                    class="day-life-icon"
-                    :class="[
-                      `day-life-icon--${icon.kind}`,
-                      { 'day-life-icon--filled': !!day.lifeByKind[icon.kind] },
-                    ]"
-                    @click.stop="() => handleLifeIconSelect(day.startTs, day.lifeByKind[icon.kind])"
-                  >
-                    <component :is="day.lifeByKind[icon.kind] ? icon.filled : icon.regular" />
-                  </n-icon>
-                </div>
               </div>
               <div v-else class="day-stat--full">
                 <span>🍅 x {{ day.sumRealPomo }} | {{ formatWorkHours(day.sumWorkMs) }}</span>
-                <div class="day-life-icons">
-                  <n-icon
-                    v-for="icon in LIFE_STAT_ICONS"
-                    :key="icon.kind"
-                    :size="16"
-                    class="day-life-icon"
-                    :class="[
-                      `day-life-icon--${icon.kind}`,
-                      { 'day-life-icon--filled': !!day.lifeByKind[icon.kind] },
-                    ]"
-                    @click.stop="() => handleLifeIconSelect(day.startTs, day.lifeByKind[icon.kind])"
-                  >
-                    <component :is="day.lifeByKind[icon.kind] ? icon.filled : icon.regular" />
-                  </n-icon>
-                </div>
               </div>
             </template>
             <template v-else>
@@ -134,8 +104,8 @@
   </div>
 </template>
 <script setup lang="ts">
-import { computed, inject, ref, type Component } from "vue";
-import { NCard, NIcon } from "naive-ui";
+import { computed, inject, ref } from "vue";
+import { NCard } from "naive-ui";
 import type { Todo } from "@/core/types/Todo";
 import type { Schedule } from "@/core/types/Schedule";
 import TagRenderer from "../TagSystem/TagRenderer.vue";
@@ -154,16 +124,6 @@ import { plannerHolidayMapKey } from "@/composables/planner/usePublicHolidays";
 import { getPomoBadgeBgColor, getPomoColor, getStatsPomoBgColorHEX, mapPomoCountToColorRatio } from "@/core/utils/weekDays";
 import { getLifeRecordKind, type LifeRecordKind } from "@/core/lifeRecord";
 import { isDrinkGoalMet, sumLifeRecordAmountMl } from "@/services/lifeRecord/lifeRecordService";
-import {
-  Door20Filled,
-  Door20Regular,
-  Drop20Filled,
-  Drop20Regular,
-  FoodApple20Filled,
-  FoodApple20Regular,
-  WeatherMoon20Filled,
-  WeatherMoon20Regular,
-} from "@vicons/fluent";
 
 const settingStore = useSettingStore();
 const isTaskVisible = computed(() => settingStore.settings.showTask);
@@ -174,22 +134,9 @@ function formatDrinkStatVolume(totalMl: number): string {
   return isMobile.value ? `${(totalMl / 1000).toFixed(1)} L` : `${totalMl}ml`;
 }
 
-/** 统计格生活记录 icon：蓝/红/灰/黄 = 喝/吃/厕/睡 */
-const LIFE_STAT_ICONS: readonly {
-  kind: LifeRecordKind;
-  regular: Component;
-  filled: Component;
-}[] = [
-  { kind: "drink", regular: Drop20Regular, filled: Drop20Filled },
-  { kind: "eat", regular: FoodApple20Regular, filled: FoodApple20Filled },
-  { kind: "toilet", regular: Door20Regular, filled: Door20Filled },
-  { kind: "sleep", regular: WeatherMoon20Regular, filled: WeatherMoon20Filled },
-];
-
 /** 统计格 icon：可点开切日并选中对应生活记录 */
 type LifeIconRef = { todoId: number; activityId: number; taskId?: number };
 type LifeByKind = Partial<Record<LifeRecordKind, LifeIconRef>>;
-const EMPTY_LIFE_BY_KIND: LifeByKind = {};
 
 type DrinkDayStat = {
   count: number;
@@ -438,7 +385,6 @@ const days = computed(() => {
       pomoRatio: ratio,
       maxItems: maxItemsPerDay.value,
       holiday: holidayForTs(dayTs),
-      lifeByKind: lifeByDay.get(dayTs) ?? EMPTY_LIFE_BY_KIND,
       drinkStat,
     };
   });
@@ -531,13 +477,6 @@ function onMonthBadgeTouchCancel() {
 const handleItemSelect = (id: number, _ts: number, activityId?: number, taskId?: number) => {
   emit("item-change", id, activityId, taskId);
 };
-
-/** 统计格生活 icon：切日 + 选中对应记录（不进日视图） */
-function handleLifeIconSelect(dayStartTs: number, lifeRef: LifeIconRef | undefined) {
-  if (!lifeRef) return;
-  emit("date-select", dayStartTs);
-  emit("item-change", lifeRef.todoId, lifeRef.activityId, lifeRef.taskId);
-}
 
 type MonthDayRow = { startTs: number; pomoRatio: number; isCurrentMonth: boolean; drinkStat: DrinkDayStat };
 
@@ -918,43 +857,7 @@ function getStatsBadgeBgColor(ratio: number): string {
   font-weight: 500;
 }
 
-.day-life-icons {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-}
-
-.day-life-icon {
-  color: var(--color-text-secondary);
-  opacity: 0.55;
-}
-
-.day-life-icon--filled {
-  opacity: 1;
-  cursor: pointer;
-}
-
-.day-life-icon--drink.day-life-icon--filled {
-  color: var(--color-blue);
-}
-
-.day-life-icon--eat.day-life-icon--filled {
-  color: var(--color-red);
-}
-
-.day-life-icon--toilet.day-life-icon--filled {
-  color: var(--color-text-secondary);
-}
-
-.day-life-icon--sleep.day-life-icon--filled {
-  color: var(--color-yellow);
-}
-
 @media (max-width: 430px) {
-  .day-life-icons {
-    gap: 0px;
-  }
   .header-card,
   .day-card {
     border: 0.5px solid var(--color-background-dark);
