@@ -122,10 +122,9 @@
           />
           <span>&nbsp;min</span>
         </template>
-        <span v-else class="hiit-insert-hint" title="T/(w+b) 总时长向上取整；🍅=工作时长；(w+b) 后接 x、X 或 * 表重复">
-          T/(w+b)
-          <br />
-          (w+b)*rep
+        <span v-else class="hiit-insert-hint" title="T=总时长；w=工作时长；b=休息时长；rep=重复轮数">
+          <span>T/(w+b)</span>
+          <span>(w+b)*rep</span>
         </span>
       </div>
     </div>
@@ -133,7 +132,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, onUnmounted, computed } from "vue";
+import { ref, watch, onMounted, onUnmounted, computed, nextTick } from "vue";
 import { NButton, NIcon, NInput, useDialog } from "naive-ui";
 import { useTimerStore } from "@/stores/useTimerStore";
 import { useSettingStore } from "@/stores/useSettingStore";
@@ -619,13 +618,86 @@ function stopPomodoro(playEndCue = true): void {
   if (progressContainer.value) {
     progressContainer.value.innerHTML = "";
   }
+  flushPendingSequenceDefaults();
+  flushPendingExternalSequence();
 }
+
+/** 设置页恢复默认后，把序列输入框拉回存档；进行中先挂起，避免改写正在跑的步骤 */
+let pendingSequenceDefaults = false;
+
+function applySequenceDefaultsFromSettings(): void {
+  const mode = settingStore.settings.pomoSeqInsertMode === "hiit" ? "hiit" : "pomo";
+  insertMode.value = mode;
+  hiitPreset.value = settingStore.settings.pomoSeqHiitPreset ?? "(40+20)x12";
+  const next = loadSequenceForMode(mode);
+  if (sequenceInput.value !== next) {
+    sequenceInput.value = next;
+  }
+}
+
+function flushPendingSequenceDefaults(): void {
+  if (!pendingSequenceDefaults || isRunning.value) return;
+  pendingSequenceDefaults = false;
+  applySequenceDefaultsFromSettings();
+}
+
+/** 设置页改了序列文本。进行中不改当前输入，停下来再套用，供下次开始使用 */
+let pendingExternalSequence = false;
+let echoSequenceWrite = false;
+
+function storedSequenceForMode(mode: "pomo" | "hiit"): string {
+  if (mode === "hiit") return settingStore.settings.pomoSeqHiitInput ?? "";
+  return settingStore.settings.pomoSequenceInput ?? "";
+}
+
+function applyExternalSequenceEdits(): void {
+  const hiit = settingStore.settings.pomoSeqHiitInput ?? "";
+  if (isValidHiitSequence(hiit)) saveHiitPresetFromSequence(hiit);
+  if (isRunning.value) {
+    pendingExternalSequence = true;
+    return;
+  }
+  pendingExternalSequence = false;
+  const next = storedSequenceForMode(insertMode.value);
+  if (next && sequenceInput.value !== next) {
+    sequenceInput.value = next;
+  }
+}
+
+function flushPendingExternalSequence(): void {
+  if (!pendingExternalSequence || isRunning.value) return;
+  applyExternalSequenceEdits();
+}
+
+watch(
+  () => [settingStore.settings.pomoSequenceInput, settingStore.settings.pomoSeqHiitInput],
+  () => {
+    if (echoSequenceWrite) return;
+    applyExternalSequenceEdits();
+  },
+);
+
+watch(
+  () => settingStore.pomodoroDefaultsNonce,
+  (nonce) => {
+    if (!nonce) return;
+    if (isRunning.value) {
+      pendingSequenceDefaults = true;
+      return;
+    }
+    applySequenceDefaultsFromSettings();
+  },
+);
 
 // 持久化序列输入到全局设置
 watch(
   sequenceInput,
   (val) => {
+    echoSequenceWrite = true;
     persistSequenceInputForMode(insertMode.value, val);
+    nextTick(() => {
+      echoSequenceWrite = false;
+    });
   },
   { immediate: true },
 );
@@ -853,6 +925,8 @@ function restoreRunningUIFromStore(): void {
         progressContainer.value.innerHTML = "";
       }
     }
+    flushPendingSequenceDefaults();
+    flushPendingExternalSequence();
     return;
   }
 
@@ -1076,18 +1150,29 @@ function resetWhiteNoise(sound: SoundType) {
 
 .pomo-duration-input-container {
   font-size: 10px;
+  height: 25px;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
 }
 .pomo-duration-input-container.hiit-hint-mode {
   flex: 1;
   min-width: 0;
+  min-height: 0;
+  max-height: 25px;
+  overflow: hidden;
   text-align: left;
   white-space: nowrap;
 }
 .hiit-insert-hint {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  height: 25px;
   font-size: 10px;
   color: var(--color-text-secondary);
   letter-spacing: -0.3px;
-  line-height: 1;
+  line-height: 1.05;
   margin-left: 2px;
 }
 .pomo-duration-input {

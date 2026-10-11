@@ -1,6 +1,9 @@
+import { ref } from "vue";
+
 type PlannerNavigatorApi = {
   enter: () => boolean;
   move: (delta: 1 | -1) => boolean;
+  hasRows: () => boolean;
   pickByDigit: (digit: number) => boolean;
   moveField: (delta: 1 | -1) => boolean;
   activateField: () => boolean;
@@ -12,10 +15,17 @@ type PlannerNavigatorApi = {
 
 let plannerNavigatorApi: PlannerNavigatorApi | null = null;
 
+/** 注册/注销后递增，让按钮在导航 API 挂上之后重新判断有没有行 */
+const plannerNavigatorEpoch = ref(0);
+
 export function registerPlannerNavigatorApi(api: PlannerNavigatorApi) {
   plannerNavigatorApi = api;
+  plannerNavigatorEpoch.value += 1;
   return () => {
-    if (plannerNavigatorApi === api) plannerNavigatorApi = null;
+    if (plannerNavigatorApi === api) {
+      plannerNavigatorApi = null;
+      plannerNavigatorEpoch.value += 1;
+    }
   };
 }
 
@@ -25,6 +35,12 @@ export function enterPlannerNavigator(): boolean {
 
 export function movePlannerNavigator(delta: 1 | -1): boolean {
   return plannerNavigatorApi?.move(delta) ?? false;
+}
+
+/** 当前计划视图里是否有可循环选中的行 */
+export function hasPlannerNavigatorRows(): boolean {
+  void plannerNavigatorEpoch.value;
+  return plannerNavigatorApi?.hasRows() ?? false;
 }
 
 export function pickPlannerRowByDigit(digit: number): boolean {

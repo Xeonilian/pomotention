@@ -61,7 +61,7 @@
 
     <!-- 4 休息进度条 -->
     <div v-if="timerStore.isBreaking && !isCompactMode" class="progress-container-break">
-      <n-progress :percentage="progressPercentage" :color="'var(--color-green)'" :show-indicator="false" :height="20" :border-radius="2" />
+      <n-progress :percentage="progressPercentage" :color="breakBarColor" :show-indicator="false" :height="20" :border-radius="2" />
       <!-- 休息模式无需显示分隔线和标签 -->
     </div>
 
@@ -137,6 +137,7 @@ const isCompactMode = computed(() => props.isCompactMode ?? false);
 const barLength = computed(() => settingStore.settings.style.barLength);
 const redBarColor = computed(() => settingStore.settings.style.redBarColor);
 const blueBarColor = computed(() => settingStore.settings.style.blueBarColor);
+const breakBarColor = computed(() => settingStore.settings.style.breakBarColor);
 const workDuration = computed(() => settingStore.settings.durations.workDuration);
 const breakDuration = computed(() => settingStore.settings.durations.breakDuration);
 

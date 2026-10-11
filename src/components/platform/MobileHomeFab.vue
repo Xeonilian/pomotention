@@ -35,6 +35,30 @@
           <span class="mobile-home-fab__ghost-trigger" aria-hidden="true" />
         </template>
         <div class="mobile-home-fab__left">
+          <n-button
+            size="large"
+            secondary
+            circle
+            title="选中上一行"
+            :disabled="!canMoveRowSelection"
+            @click.stop="moveFabRowSelection(-1)"
+          >
+            <template #icon>
+              <n-icon :component="ArrowUp20Regular" />
+            </template>
+          </n-button>
+          <n-button
+            size="large"
+            secondary
+            circle
+            title="选中下一行"
+            :disabled="!canMoveRowSelection"
+            @click.stop="moveFabRowSelection(1)"
+          >
+            <template #icon>
+              <n-icon :component="ArrowDown20Regular" />
+            </template>
+          </n-button>
           <n-button size="large" secondary circle type="info" @click="emit('quick-add-schedule', true)">
             <template #icon>
               <n-icon :component="CloudAdd20Regular" />
@@ -178,7 +202,7 @@
         <n-button v-if="showBackToToday" quaternary circle type="info" size="large" @click="emit('reset-to-present')">
           <template #icon><n-icon size="24" :component="AnimalTurtle24Regular" /></template>
         </n-button>
-        <n-button v-else quaternary circle type="warning" size="large" @click="handleOpenStateLog">
+        <n-button v-else-if="showQuickStateLog" quaternary circle type="warning" size="large" @click="handleOpenStateLog">
           <template #icon>
             <n-icon size="24" :component="EmojiSmileSlight24Regular" />
           </template>
@@ -195,7 +219,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch, onUnmounted, toRefs } from "vue";
+import { computed, ref, watch, onUnmounted, toRefs, nextTick } from "vue";
 import { storeToRefs } from "pinia";
 import { NButton, NIcon, NPopover } from "naive-ui";
 import {
@@ -214,7 +238,11 @@ import {
   TextGrammarArrowLeft24Regular,
   ArrowRepeatAll24Regular,
   DismissCircle20Regular,
+  ArrowUp20Regular,
+  ArrowDown20Regular,
 } from "@vicons/fluent";
+import { hasActivityVisibleRows, moveActivityVisibleSelection } from "@/composables/keyboard/useActivityKeyboardNavigator";
+import { hasPlannerNavigatorRows, movePlannerNavigator } from "@/composables/keyboard/usePlannerKeyboardNavigator";
 import type { Activity } from "@/core/types/Activity";
 import { timestampToDatetime } from "@/core/utils";
 import { hasAnyProgress } from "@/services/timer/realPomoState";
@@ -277,6 +305,59 @@ const effectiveActivityId = computed(() => {
 const showBackToToday = computed(() => !dateService.isViewDateToday);
 const showRowActions = computed(() => selectedRowId.value != null || activeId.value != null || selectedActivityId.value != null);
 const showActivityPanel = computed(() => settingStore.settings.showActivity);
+/** 状态快记先藏起来，入口还不对；回到当下仍显示 */
+const showQuickStateLog = false;
+const showPlannerPanel = computed(() => settingStore.settings.showPlanner);
+
+/** 活动清单走可见行循环，计划表走普通上下键循环；两边都没开则不可用 */
+const canMoveRowSelection = computed(() => {
+  if (showActivityPanel.value) return hasActivityVisibleRows();
+  if (showPlannerPanel.value) return hasPlannerNavigatorRows();
+  return false;
+});
+
+function moveFabRowSelection(delta: 1 | -1) {
+  const moved = showActivityPanel.value ? moveActivityVisibleSelection(delta) : movePlannerNavigator(delta);
+  if (!moved) return;
+  nextTick(() => scrollSelectedRowIntoViewIfNeeded());
+}
+
+function findSelectedRowElement(): HTMLElement | null {
+  if (showActivityPanel.value) {
+    const id = activeId.value ?? selectedActivityId.value;
+    if (id == null) return null;
+    return document.querySelector<HTMLElement>(`.activity-row[data-row-id="${id}"]`);
+  }
+  return document.querySelector<HTMLElement>("tr.selected-row, .item--selected");
+}
+
+/** 行与视口、以及中间滚动容器都没有交集时，才滚进可见区域 */
+function isRowOnScreen(el: HTMLElement): boolean {
+  const rect = el.getBoundingClientRect();
+  if (rect.width === 0 || rect.height === 0) return false;
+  if (rect.bottom <= 0 || rect.top >= window.innerHeight || rect.right <= 0 || rect.left >= window.innerWidth) {
+    return false;
+  }
+  let node = el.parentElement;
+  while (node && node !== document.body) {
+    const { overflowY, overflowX } = getComputedStyle(node);
+    const scrolls = overflowY === "auto" || overflowY === "scroll" || overflowX === "auto" || overflowX === "scroll";
+    if (scrolls) {
+      const bounds = node.getBoundingClientRect();
+      if (rect.bottom <= bounds.top || rect.top >= bounds.bottom || rect.right <= bounds.left || rect.left >= bounds.right) {
+        return false;
+      }
+    }
+    node = node.parentElement;
+  }
+  return true;
+}
+
+function scrollSelectedRowIntoViewIfNeeded() {
+  const el = findSelectedRowElement();
+  if (!el || isRowOnScreen(el)) return;
+  el.scrollIntoView({ block: "nearest", inline: "nearest" });
+}
 const noSelectedActivity = computed(() => selectedRowId.value == null && selectedActivityId.value == null && activeId.value == null);
 
 /** 与 DayTodo / DaySchedule 表头 cancel 一致 */

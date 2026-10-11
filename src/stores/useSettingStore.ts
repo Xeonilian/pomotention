@@ -216,6 +216,11 @@ export const useSettingStore = defineStore("setting", () => {
   // 所有设置统一存于 settings
   const settings = ref<GlobalSettings>(loadFromStorage(STORAGE_KEYS.GLOBAL_SETTINGS, defaultSettings));
 
+  // 旧存档的 style 没有休息条颜色，补上默认绿
+  if (!settings.value.style.breakBarColor) {
+    settings.value.style.breakBarColor = TimerStyleDefaults.breakBarColor;
+  }
+
   // 网关时代：清掉本地残留的厂商 apiKey（含已作废的旧内置 key）
   if (settings.value.ai?.profiles) {
     for (const profile of Object.values(settings.value.ai.profiles)) {
@@ -330,6 +335,23 @@ export const useSettingStore = defineStore("setting", () => {
     settings.value.style = JSON.parse(JSON.stringify(TimerStyleDefaults));
   }
 
+  /** 番茄设置页「恢复默认」：时长、样式、白噪音、序列。序列组件据此刷新输入框。 */
+  const pomodoroDefaultsNonce = ref(0);
+
+  function resetPomodoroSettings() {
+    resetSettings([
+      "durations",
+      "style",
+      "isWhiteNoiseEnabled",
+      "whiteNoiseSoundTrack",
+      "pomoSequenceInput",
+      "pomoSeqInsertMode",
+      "pomoSeqHiitPreset",
+      "pomoSeqHiitInput",
+    ]);
+    pomodoroDefaultsNonce.value += 1;
+  }
+
   // ai 操作
   // ai 操作（基于数字 ID）
   // 假设：
@@ -434,6 +456,8 @@ export const useSettingStore = defineStore("setting", () => {
     resetSettings,
     resetDurations,
     resetStyle,
+    pomodoroDefaultsNonce,
+    resetPomodoroSettings,
     setActiveAiProfile,
     upsertAiProfile,
     removeAiProfile,

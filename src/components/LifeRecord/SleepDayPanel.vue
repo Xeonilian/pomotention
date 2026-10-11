@@ -1,6 +1,6 @@
 <!--
   日视图睡觉大面板：左大月亮 + 右记录表；点「梦」激活下方长文编辑区
-  布局对齐 DrinkDayPanel；窄槽见 SleepCompact
+  布局对齐 DrinkDayPanel；窄槽已并入整合 sheet（见 LifeRecordDaySheet）
 -->
 <template>
   <div
@@ -8,7 +8,7 @@
     class="sleep-day-panel"
     :class="{ 'sleep-day-panel--mobile': isMobile, 'sleep-day-panel--dreaming': dreamRecord != null }"
   >
-    <div class="sleep-day-panel__toolbar">
+    <div v-if="!embedded" class="sleep-day-panel__toolbar">
       <n-button v-if="records.length === 0" text size="small" class="sleep-day-panel__icon-btn" title="删除空记录" @click="onDiscard">
         <template #icon>
           <n-icon :size="18"><Delete20Regular /></n-icon>
@@ -23,7 +23,7 @@
 
     <div class="sleep-day-panel__body">
       <!-- 左：大月亮；点 = 睡了/醒了（均打当前时刻） -->
-      <div class="sleep-day-gauge" :title="hasOpenSleep ? '醒了（当前时间）' : '睡了（当前时间）'">
+      <div v-if="view === 'chart'" class="sleep-day-gauge" :title="hasOpenSleep ? '醒了（当前时间）' : '睡了（当前时间）'">
         <div class="sleep-day-gauge__glow" aria-hidden="true" />
         <button
           type="button"
@@ -41,7 +41,7 @@
       </div>
 
       <!-- 右：表头 icon 对齐 DaySchedule（Play / Stop / 时长 / Thinking） -->
-      <div class="sleep-day-table-wrap">
+      <div v-if="view === 'table'" class="sleep-day-table-wrap">
         <div class="sleep-day-table-scroll">
           <table class="sleep-day-table">
             <colgroup>
@@ -147,8 +147,8 @@
       </div>
     </div>
 
-    <!-- 激活梦列后：下方长文编辑区 -->
-    <div v-if="dreamRecord" class="sleep-day-dream">
+    <!-- 激活梦列后：下方长文编辑区（只在表模式） -->
+    <div v-if="view === 'table' && dreamRecord" class="sleep-day-dream">
       <div class="sleep-day-dream__bar">
         <span class="sleep-day-dream__bar-title">
           梦 · {{ formatClock(dreamRecord.recordedAt) }}
@@ -193,7 +193,9 @@ import { useDataStore } from "@/stores/useDataStore";
 import { useDisplayedTaskStore } from "@/stores/useDisplayedTaskStore";
 import { useDevice } from "@/composables/platform/useDevice";
 
-const props = defineProps<{ taskId: number }>();
+const props = withDefaults(defineProps<{ taskId: number; embedded?: boolean; view?: "chart" | "table" }>(), {
+  view: "chart",
+});
 
 const dataStore = useDataStore();
 const displayStore = useDisplayedTaskStore();

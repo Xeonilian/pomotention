@@ -5,14 +5,6 @@
     :class="{ 'is-pseudo-fullscreen': isTaskContainerFullscreen, 'is-ios-device': isIOSDevice }"
     ref="taskViewContainerRef"
   >
-    <!-- 生活记录行：整区替换为专用表单（隐藏 tags 时间轴 / 能量按钮 / markdown） -->
-    <LifeRecordForm
-      v-if="lifeRecordKind && selectedTask"
-      class="life-record-form-root"
-      :task-id="selectedTask.id"
-      :kind="lifeRecordKind"
-    />
-    <template v-else>
     <div class="task-header-container" ref="headerContainerRef">
       <n-button
         v-if="isMobile"
@@ -145,7 +137,6 @@
         @update:is-editing="onTaskRecordIsEditing"
       />
     </div>
-    </template>
 
     <!-- 手机记录弹出：水平贴屏幕、不跟 trigger；垂直在 badge 上侧 -->
     <Teleport to="body">
@@ -168,7 +159,6 @@ import { storeToRefs } from "pinia";
 import type { Component } from "vue";
 import { NPopover } from "naive-ui";
 import type { EnergyRecord, RewardRecord, InterruptionRecord } from "@/core/types/Task";
-import { getLifeRecordKind } from "@/core/lifeRecord";
 import { useTaskTrackerStore } from "@/stores/useTaskTrackerStore";
 import { useDataStore } from "@/stores/useDataStore";
 import { useDevice } from "@/composables/platform/useDevice";
@@ -180,7 +170,6 @@ const settingStore = useSettingStore();
 const TaskButtons = defineAsyncComponent<Component>(() => import("@/components/TaskTracker/TaskButtons.vue"));
 const TaskRecord = defineAsyncComponent<Component>(() => import("@/components/TaskTracker/TaskRecord.vue"));
 const TagRenderer = defineAsyncComponent<Component>(() => import("@/components/TagSystem/TagRenderer.vue"));
-const LifeRecordForm = defineAsyncComponent<Component>(() => import("@/components/LifeRecord/LifeRecordForm.vue"));
 
 const emit = defineEmits<{
   (e: "taskRecordEditing", value: boolean): void;
@@ -222,12 +211,7 @@ const { selectedTaskId, selectedTask, selectedTagIds, isStarred } = storeToRefs(
 const { updateTaskDescription, handleEnergyRecord, handleRewardRecord, handleInterruptionRecord, handleRemoveTaskRecord, handleStar } =
   taskTrackerStore;
 
-// 生活记录行：selectedTask → 所属 activity 的系统 tag 判定 kind；命中则整区替换为表单
-const lifeRecordKind = computed(() => {
-  const t = selectedTask.value;
-  if (!t) return null;
-  return getLifeRecordKind(dataStore.activityById.get(t.sourceId));
-});
+// 生活记录不再在 TaskTracker 内切换：所有进入走 HomeView 的整合 sheet（openDaySheet）
 
 const isTaskContainerFullscreen = ref(false);
 const isPseudoFullscreen = ref(false);
@@ -546,14 +530,6 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   height: 100%;
-}
-
-/* 生活记录表单吃满任务区高度（与 task-record-container 同套路） */
-.life-record-form-root {
-  flex: 1 1 0%;
-  min-height: 0;
-  height: 100%;
-  overflow: hidden;
 }
 
 /* 全屏时浏览器可能给出默认黑底，这里强制使用应用主题背景 */

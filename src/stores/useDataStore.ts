@@ -798,6 +798,57 @@ export const useDataStore = defineStore(
       openLifeRecord(kind);
     }
 
+    /**
+     * 确保某天某类有日桶 task，返回其 taskId；不存在则建（不碰选中/display）。
+     * 供集中生活 sheet 4 类同框使用——区别于 openLifeRecord 会 pushTaskId 带偏选中。
+     */
+    function ensureLifeRecordTaskForDay(kind: LifeRecordKind, dayStart: number): number {
+      const settingStore = useSettingStore();
+      const def = getLifeRecordDef(kind);
+      tagStore.ensureSystemTag({
+        id: def.tagId,
+        name: def.title,
+        color: def.tagColor,
+        backgroundColor: def.tagBackgroundColor,
+        deleted: false,
+        synced: false,
+        lastModified: Date.now(),
+      });
+
+      const at = dateService.combineDateAndTime(dayStart, Date.now());
+      const drinkGoalMl = kind === "drink" ? settingStore.settings.drinkDailyGoalMl : undefined;
+
+      const existingTodo = findLifeRecordTodoForDay(todoList.value, activityById.value, kind, dayStart);
+      if (existingTodo) {
+        let task = taskByActivityId.value.get(existingTodo.activityId);
+        if (!task) {
+          const title = existingTodo.activityTitle || lifeRecordPlaceholderTitle(kind, dayStart);
+          task = buildLifeRecordTask(existingTodo.activityId, title, { drinkGoalMl });
+          taskList.value = [...taskList.value, task];
+          saveTasks(taskList.value);
+        } else {
+          const patch: Partial<Task> = {};
+          if (!task.activityTitle) patch.activityTitle = lifeRecordPlaceholderTitle(kind, dayStart);
+          if (kind === "drink" && task.drinkGoalMl == null && drinkGoalMl != null) patch.drinkGoalMl = drinkGoalMl;
+          if (Object.keys(patch).length) updateTaskById(task.id, patch);
+        }
+        if (!existingTodo.activityTitle) {
+          updateTodoById(existingTodo.id, { activityTitle: lifeRecordPlaceholderTitle(kind, dayStart) });
+        }
+        return task.id;
+      }
+
+      const entities = buildLifeRecordEntities(kind, at, { drinkGoalMl });
+      activityList.value.push(entities.activity);
+      taskList.value = [...taskList.value, entities.task];
+      todoList.value.push(entities.todo);
+      saveActivities(activityList.value);
+      saveTodos(todoList.value);
+      saveTasks(taskList.value);
+      scheduleDebouncedCloudUpload();
+      return entities.task.id;
+    }
+
     function softDeleteLifeRecordRow(task: Task): void {
       handleDeleteActivity(
         activityList.value,
@@ -1301,6 +1352,7 @@ export const useDataStore = defineStore(
       ensureDayEnergyTask,
       openLifeRecord,
       recordLifeRecord,
+      ensureLifeRecordTaskForDay,
       removeLifeRecordAt,
       discardLifeRecordTask,
       setActiveId,

@@ -35,6 +35,8 @@
         :class="{
           'force-hover': isHoveredRow,
           'child-activity': item.parentId,
+          'has-children': hasChildrenFlag,
+          'is-collapsed': isCollapsed,
           'navigator-cell-active': isNavigatorCurrent && navigatorCurrentField === 'title',
         }"
         class="input-focus-none activity-field-title"
@@ -798,24 +800,26 @@ function handlePomoInputTouchCancel() {
   background-color: var(--color-red-light);
 }
 
-.icon-drag-area.has-children::before {
-  content: "";
-  position: absolute;
-  left: -11px;
-  bottom: -14px;
-  width: 14px;
-  height: 14px;
-  border-radius: 2px;
-  transform: rotate(-135deg);
-  transform-origin: 50% 50%;
-  z-index: 1;
-  cursor: pointer;
-  background: var(--color-background-dark);
-  display: block;
+/* 三角画在输入框内，直角被输入框自己的圆角裁成和红框一样的弧 */
+.activity-field-title.has-children {
+  overflow: hidden;
+  position: relative;
 }
 
-.icon-drag-area.has-children.is-collapsed::before {
-  background: var(--color-background-dark-dark);
+.activity-field-title.has-children::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 16px;
+  height: 16px;
+  background: linear-gradient(to top right, var(--color-background-dark) 50%, transparent 50%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.activity-field-title.has-children.is-collapsed::after {
+  background: linear-gradient(to top right, var(--color-background-dark-dark) 50%, transparent 50%);
 }
 
 .icon-drag-area.has-children > * {

@@ -18,9 +18,11 @@
         :get-life-point-style="getLifePointStyle"
         :hide-schedule-blocks="hideScheduleBlocks"
         :drink-layer="drinkLayer"
+        :life-view="lifeView"
         @date-select="handleDateSelect"
         @date-select-day-view="handleDateSelectDayView"
         @item-change="handleItemSelect"
+        @open-day-sheet="handleOpenDaySheet"
       />
     </div>
   </div>
@@ -38,8 +40,10 @@ withDefaults(
     hideScheduleBlocks?: boolean;
     /** 喝水图层 */
     drinkLayer?: boolean;
+    /** 生活可视化开着：大格子点击进整合 sheet */
+    lifeView?: boolean;
   }>(),
-  { hideScheduleBlocks: false, drinkLayer: false },
+  { hideScheduleBlocks: false, drinkLayer: false, lifeView: false },
 );
 
 const gridRef = ref<HTMLDivElement | null>(null);
@@ -87,6 +91,7 @@ const emit = defineEmits<{
   "date-select": [timestamp: number];
   "date-select-day-view": [timestamp: number];
   "item-change": [id: number, activityId?: number, taskId?: number];
+  "open-day-sheet": [dayStart: number];
 }>();
 
 const handleDateSelect = (ts: number) => {
@@ -97,6 +102,9 @@ const handleDateSelectDayView = (ts: number) => {
 };
 const handleItemSelect = (id: number, activityId?: number, taskId?: number) => {
   emit("item-change", id, activityId, taskId);
+};
+const handleOpenDaySheet = (dayStart: number) => {
+  emit("open-day-sheet", dayStart);
 };
 </script>
 

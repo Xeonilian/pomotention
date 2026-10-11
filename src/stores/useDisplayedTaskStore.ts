@@ -2,6 +2,8 @@
 // 下标 -1 表示末尾「空位」：不展示 task、列表保留；仅能从当时正在看的那条通过置空进入，不能再往“更右”走
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
+import { getLifeRecordKind } from "@/core/lifeRecord";
+import { useDataStore } from "./useDataStore";
 
 const MAX_RECENT = 99;
 
@@ -23,11 +25,40 @@ export const useDisplayedTaskStore = defineStore(
       return list[idx] ?? null;
     });
 
+    /** 生活记录页没有左右切换，历史里碰到就跳过 */
+    function isLifeRecordTaskId(id: number): boolean {
+      const dataStore = useDataStore();
+      const task = dataStore.taskById.get(id);
+      if (!task) return false;
+      return getLifeRecordKind(dataStore.activityById.get(task.sourceId)) != null;
+    }
+
+    function findPrevIndex(from: number): number {
+      const list = taskIdsRecentList.value;
+      for (let i = from; i >= 0; i--) {
+        if (!isLifeRecordTaskId(list[i])) return i;
+      }
+      return -1;
+    }
+
+    function findNextIndex(from: number): number {
+      const list = taskIdsRecentList.value;
+      for (let i = from; i < list.length; i++) {
+        if (!isLifeRecordTaskId(list[i])) return i;
+      }
+      return -1;
+    }
+
     const hasPrev = computed(() => {
       const n = taskIdsRecentList.value.length;
       if (n === 0) return false;
       const idx = displayedTaskIndex.value;
-      return idx > 0 || idx === EMPTY_INDEX;
+      if (idx === EMPTY_INDEX) {
+        const back = emptySlotBackIndex.value;
+        const start = back != null && back >= 0 && back < n ? back : n - 1;
+        return findPrevIndex(start) >= 0;
+      }
+      return findPrevIndex(idx - 1) >= 0;
     });
 
     const hasNext = computed(() => {
@@ -35,7 +66,7 @@ export const useDisplayedTaskStore = defineStore(
       if (n === 0) return false;
       const idx = displayedTaskIndex.value;
       if (idx === EMPTY_INDEX) return false;
-      return idx < n - 1;
+      return findNextIndex(idx + 1) >= 0;
     });
 
     function pushTaskId(id: number) {
@@ -57,27 +88,20 @@ export const useDisplayedTaskStore = defineStore(
       const n = list.length;
       if (n === 0 || !hasPrev.value) return;
       const idx = displayedTaskIndex.value;
-      if (idx === EMPTY_INDEX) {
-        const back = emptySlotBackIndex.value;
-        if (back != null && back >= 0 && back < n) {
-          displayedTaskIndex.value = back;
-        } else {
-          displayedTaskIndex.value = n - 1;
-        }
-        emptySlotBackIndex.value = null;
-        return;
-      }
-      displayedTaskIndex.value--;
+      const back = emptySlotBackIndex.value;
+      const start = idx === EMPTY_INDEX ? (back != null && back >= 0 && back < n ? back : n - 1) : idx - 1;
+      const prev = findPrevIndex(start);
+      emptySlotBackIndex.value = null;
+      if (prev >= 0) displayedTaskIndex.value = prev;
     }
 
     function goNext() {
-      const list = taskIdsRecentList.value;
-      const n = list.length;
+      const n = taskIdsRecentList.value.length;
       if (n === 0 || !hasNext.value) return;
       const idx = displayedTaskIndex.value;
-      if (idx < n - 1) {
-        displayedTaskIndex.value++;
-      }
+      if (idx === EMPTY_INDEX) return;
+      const next = findNextIndex(idx + 1);
+      if (next >= 0) displayedTaskIndex.value = next;
     }
 
     /** Planner selectedTaskId 置空：落到末尾空位并记住当前条，便于只往回退到该条 */

@@ -1,10 +1,10 @@
 <!--
   日视图喝水大面板：左圆水位 + 右三线表
-  表固定高度、表内纵滚；杯量在表头末列；窄槽见 DrinkCompact
+  表固定高度、表内纵滚；杯量在表头末列；窄槽已并入整合 sheet（见 LifeRecordDaySheet）
 -->
 <template>
   <div v-if="task" class="drink-day-panel" :class="{ 'drink-day-panel--mobile': isMobile }">
-    <div class="drink-day-panel__toolbar">
+    <div v-if="!embedded" class="drink-day-panel__toolbar">
       <n-button v-if="records.length === 0" text size="small" class="drink-day-panel__icon-btn" title="删除空记录" @click="onDiscard">
         <template #icon>
           <n-icon :size="18"><Delete20Regular /></n-icon>
@@ -19,7 +19,7 @@
 
     <div class="drink-day-panel__body">
       <!-- 左：圆水位；六元钉在 a/c/d/f 交点，调下方 CSS 变量即可 -->
-      <div class="drink-day-gauge" :title="`${drunkMl} / ${dayGoalMl || '—'} ml`">
+      <div v-if="view === 'chart'" class="drink-day-gauge" :title="`${drunkMl} / ${dayGoalMl || '—'} ml`">
         <DrinkDayWaterFill class="drink-day-gauge__fill" :ratio="progressRatio" :met="goalMet" />
         <!-- 上：o @ a∩d · × @ b∩d · N @ c∩d -->
         <button type="button" class="drink-day-gauge__el drink-day-gauge__drop" title="记一杯" @click="onAppend">
@@ -47,7 +47,7 @@
       </div>
 
       <!-- 右：固定高三线表（无顶线）；杯量在表头末列 -->
-      <div class="drink-day-table-wrap">
+      <div v-if="view === 'table'" class="drink-day-table-wrap">
         <div class="drink-day-table-scroll">
           <table class="drink-day-table">
             <colgroup>
@@ -142,7 +142,9 @@ import { useSettingStore } from "@/stores/useSettingStore";
 import { useDevice } from "@/composables/platform/useDevice";
 import DrinkDayWaterFill from "@/components/MonthPlanner/DrinkDayWaterFill.vue";
 
-const props = defineProps<{ taskId: number }>();
+const props = withDefaults(defineProps<{ taskId: number; embedded?: boolean; view?: "chart" | "table" }>(), {
+  view: "chart",
+});
 
 const dataStore = useDataStore();
 const displayStore = useDisplayedTaskStore();

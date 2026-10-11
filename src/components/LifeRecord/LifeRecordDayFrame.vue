@@ -3,14 +3,14 @@
 -->
 <template>
   <div class="lr-day" :class="{ 'lr-day--mobile': isMobile }">
-    <div class="lr-day__toolbar">
+    <div v-if="!embedded" class="lr-day__toolbar">
       <slot name="toolbar" />
     </div>
     <div class="lr-day__body">
-      <div class="lr-day__display">
+      <div v-if="view === 'chart'" class="lr-day__display">
         <slot name="display" />
       </div>
-      <div class="lr-day__table">
+      <div v-if="view === 'table'" class="lr-day__table">
         <slot name="table" />
       </div>
     </div>
@@ -20,6 +20,9 @@
 <script setup lang="ts">
 import { useDevice } from "@/composables/platform/useDevice";
 
+withDefaults(defineProps<{ embedded?: boolean; view?: "chart" | "table" }>(), {
+  view: "chart",
+});
 const { isMobile } = useDevice();
 </script>
 

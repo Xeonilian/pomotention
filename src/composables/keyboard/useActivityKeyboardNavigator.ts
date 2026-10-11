@@ -1,7 +1,10 @@
+import { ref } from "vue";
+
 type NavigatorApi = {
   enter: () => boolean;
   move: (delta: 1 | -1) => boolean;
   moveVisible: (delta: 1 | -1) => boolean;
+  hasVisibleRows: () => boolean;
   pickByDigit: (digit: number) => boolean;
   moveField: (delta: 1 | -1) => boolean;
   activateField: () => boolean;
@@ -12,6 +15,13 @@ type NavigatorApi = {
 };
 
 let navigatorApi: NavigatorApi | null = null;
+
+/** 活动清单可见行增删后递增，供按钮禁用状态重新查 DOM */
+const activityVisibleRowEpoch = ref(0);
+
+export function bumpActivityVisibleRowEpoch() {
+  activityVisibleRowEpoch.value += 1;
+}
 
 export function registerActivityNavigatorApi(api: NavigatorApi) {
   navigatorApi = api;
@@ -30,6 +40,12 @@ export function moveActivityNavigator(delta: 1 | -1): boolean {
 
 export function moveActivityVisibleSelection(delta: 1 | -1): boolean {
   return navigatorApi?.moveVisible(delta) ?? false;
+}
+
+/** 当前活动清单里是否有可循环选中的可见行 */
+export function hasActivityVisibleRows(): boolean {
+  void activityVisibleRowEpoch.value;
+  return navigatorApi?.hasVisibleRows() ?? false;
 }
 
 export function pickActivityRowByDigit(digit: number): boolean {
