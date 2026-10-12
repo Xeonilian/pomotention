@@ -1,12 +1,12 @@
 <!--
-  日视图睡觉大面板：左大月亮 + 右记录表；点「梦」激活下方长文编辑区
+  日视图睡觉大面板：左大月亮 + 右记录表；点「梦」后输入框贴在最后一行下面
   布局对齐 DrinkDayPanel；窄槽已并入整合 sheet（见 LifeRecordDaySheet）
 -->
 <template>
   <div
     v-if="task"
     class="sleep-day-panel"
-    :class="{ 'sleep-day-panel--mobile': isMobile, 'sleep-day-panel--dreaming': dreamRecord != null }"
+    :class="{ 'sleep-day-panel--mobile': isMobile }"
   >
     <div v-if="!embedded" class="sleep-day-panel__toolbar">
       <n-button v-if="records.length === 0" text size="small" class="sleep-day-panel__icon-btn" title="删除空记录" @click="onDiscard">
@@ -22,22 +22,21 @@
     </div>
 
     <div class="sleep-day-panel__body">
-      <!-- 左：大月亮；点 = 睡了/醒了（均打当前时刻） -->
-      <div v-if="view === 'chart'" class="sleep-day-gauge" :title="hasOpenSleep ? '醒了（当前时间）' : '睡了（当前时间）'">
-        <div class="sleep-day-gauge__glow" aria-hidden="true" />
+      <!-- 左：与喝水同一方框。上排月亮 × 次数；合计只有一个数，水平居中、高度同喝水统计行 -->
+      <div v-if="view === 'chart'" class="lr-chart" :title="hasOpenSleep ? '醒了（当前时间）' : '睡了（当前时间）'">
         <button
           type="button"
-          class="sleep-day-gauge__el sleep-day-gauge__moon"
+          class="lr-chart__el lr-chart__icon"
           :title="hasOpenSleep ? '醒了（当前时间）' : '睡了（当前时间）'"
           @click="onAppend"
         >
-          <n-icon class="sleep-day-gauge__moon-icon" color="var(--color-yellow-dark)">
+          <n-icon class="lr-chart__icon-glyph" color="var(--color-yellow-dark)">
             <component :is="hasOpenSleep ? WeatherMoon20Filled : WeatherMoon20Regular" />
           </n-icon>
         </button>
-        <span class="sleep-day-gauge__el sleep-day-gauge__times" aria-hidden="true">×</span>
-        <span class="sleep-day-gauge__el sleep-day-gauge__count">{{ records.length }}</span>
-        <span class="sleep-day-gauge__el sleep-day-gauge__sum" :title="'合计 ' + totalDurationLabel">{{ totalDurationLabel }}</span>
+        <span class="lr-chart__el lr-chart__times" aria-hidden="true">×</span>
+        <span class="lr-chart__el lr-chart__count">{{ records.length }}</span>
+        <span class="lr-chart__el lr-chart__stat sleep-day-chart__sum" :title="'合计 ' + totalDurationLabel">{{ totalDurationLabel }}</span>
       </div>
 
       <!-- 右：表头 icon 对齐 DaySchedule（Play / Stop / 时长 / Thinking） -->
@@ -88,11 +87,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr
-                v-for="record in records"
-                :key="record.id"
-                :class="{ 'sleep-day-table__row--dream-active': dreamRecordId === record.id }"
-              >
+              <tr v-for="record in records" :key="record.id" :class="{ 'sleep-day-table__row--dream-active': dreamRecordId === record.id }">
                 <td class="sleep-day-table__col-action">
                   <button
                     type="button"
@@ -100,7 +95,7 @@
                     title="删除这条"
                     @click="onRemove(record)"
                   >
-                    <n-icon :size="14"><DismissCircle20Regular /></n-icon>
+                    <n-icon :size="14"><Delete20Regular /></n-icon>
                   </button>
                 </td>
                 <td class="sleep-day-table__col-time">
@@ -144,30 +139,16 @@
             </tbody>
           </table>
         </div>
+        <textarea
+          v-if="dreamRecord"
+          ref="dreamTextareaRef"
+          class="sleep-day-dream__editor"
+          :value="dreamRecord.description ?? ''"
+          placeholder="写下梦的内容…"
+          rows="6"
+          @input="onDreamInput"
+        />
       </div>
-    </div>
-
-    <!-- 激活梦列后：下方长文编辑区（只在表模式） -->
-    <div v-if="view === 'table' && dreamRecord" class="sleep-day-dream">
-      <div class="sleep-day-dream__bar">
-        <span class="sleep-day-dream__bar-title">
-          梦 · {{ formatClock(dreamRecord.recordedAt) }}
-          <template v-if="dreamRecord.endAt != null"> → {{ formatClock(dreamRecord.endAt) }}</template>
-        </span>
-        <n-button text size="small" class="sleep-day-panel__icon-btn" title="收起梦" @click="closeDream">
-          <template #icon>
-            <n-icon :size="18"><Dismiss20Regular /></n-icon>
-          </template>
-        </n-button>
-      </div>
-      <textarea
-        ref="dreamTextareaRef"
-        class="sleep-day-dream__editor"
-        :value="dreamRecord.description ?? ''"
-        placeholder="写下梦的内容…"
-        rows="6"
-        @input="onDreamInput"
-      />
     </div>
   </div>
 </template>
@@ -179,7 +160,6 @@ import {
   Add20Regular,
   Delete20Regular,
   Dismiss20Regular,
-  DismissCircle20Regular,
   Play20Regular,
   RecordStop20Regular,
   ShiftsActivity20Regular,
@@ -349,11 +329,6 @@ function formatDuration(record: LifeRecord): string {
   return h > 0 ? `${h}h${m > 0 ? `${m}m` : ""}` : `${m}m`;
 }
 
-function formatClock(ts: number): string {
-  const d = new Date(ts);
-  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-}
-
 function dreamChipLabel(record: LifeRecord): string {
   const t = (record.description ?? "").trim().replace(/\s+/g, " ");
   if (!t) return "…";
@@ -361,9 +336,10 @@ function dreamChipLabel(record: LifeRecord): string {
 }
 </script>
 
+<style src="./lifeRecordChart.css"></style>
 <style scoped>
 .sleep-day-panel {
-  --sleep-gauge-size: 300px;
+  --lr-chart-size: 300px;
   --sleep-table-w: 360px;
   --sleep-head-h: 28px;
   --sleep-row-h: 28px;
@@ -384,11 +360,10 @@ function dreamChipLabel(record: LifeRecord): string {
 }
 
 .sleep-day-panel--mobile {
-  --sleep-gauge-size: 78vw;
+  --lr-chart-size: 78vw;
   --sleep-table-w: 90vw;
-  overflow-x: hidden;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
+  height: auto;
+  overflow: visible;
 }
 
 .sleep-day-panel--mobile .sleep-day-panel__body {
@@ -406,23 +381,19 @@ function dreamChipLabel(record: LifeRecord): string {
 .sleep-day-panel--mobile .sleep-day-table-wrap {
   width: var(--sleep-table-w);
   max-width: 90vw;
+  height: auto;
+  max-height: none;
+  min-height: calc(var(--sleep-head-h) + 2 * var(--sleep-row-h));
+  overflow: visible;
 }
 
-/* 写梦时：上区收缩，下区吃满剩余高度 */
-.sleep-day-panel--dreaming .sleep-day-panel__body {
+.sleep-day-panel--mobile .sleep-day-table-scroll {
   flex: 0 0 auto;
-  min-height: 0;
-  align-content: flex-start;
-  overflow: hidden;
+  max-height: none;
+  overflow: visible;
 }
-.sleep-day-panel--dreaming {
-  --sleep-gauge-size: 160px;
-  --sleep-table-h: calc(var(--sleep-head-h) + 4 * var(--sleep-row-h));
-}
-.sleep-day-panel--dreaming.sleep-day-panel--mobile {
-  --sleep-gauge-size: 42vw;
-  overflow-y: hidden;
-}
+
+/* 写梦：输入框跟在最后一行后面，不另占一块高度 */
 
 .sleep-day-panel__toolbar {
   display: flex;
@@ -457,113 +428,16 @@ function dreamChipLabel(record: LifeRecord): string {
   overflow-y: hidden;
 }
 
-.sleep-day-gauge {
-  --a: 16%;
-  --c: 16%;
-  --d: 10%;
-  --f: 22%;
-  --moon-size: 56px;
-  --times-size: 35px;
-  --count-size: 30px;
-  --sum-size: 18px;
-
-  position: relative;
-  width: var(--sleep-gauge-size);
-  height: var(--sleep-gauge-size);
-  flex: 0 0 var(--sleep-gauge-size);
-  border-radius: 50%;
-  overflow: hidden;
-  background: var(--color-background-light);
-  box-shadow: none;
-  box-sizing: border-box;
-}
-
-.sleep-day-panel--dreaming .sleep-day-gauge {
-  --moon-size: 36px;
-  --times-size: 22px;
-  --count-size: 20px;
-  --sum-size: 14px;
-}
-
-.sleep-day-gauge__glow {
-  position: absolute;
-  inset: 18%;
-  border-radius: 50%;
-  background: radial-gradient(circle, var(--color-yellow-transparent) 0%, transparent 70%);
-  pointer-events: none;
-  z-index: 0;
-}
-
-.sleep-day-gauge__el {
-  position: absolute;
-  z-index: 1;
-  margin: 0;
-  padding: 0;
-  border: none;
-  background: transparent;
-  line-height: 1;
-  transform: translate(-50%, -50%);
-  box-sizing: border-box;
-  font-variant-numeric: tabular-nums;
-}
-
-.sleep-day-gauge__moon {
-  left: calc(50% - var(--a));
-  top: calc(50% - var(--d));
-  width: var(--moon-size);
-  height: var(--moon-size);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  color: inherit;
-}
-.sleep-day-gauge__moon:hover {
-  opacity: 0.85;
-}
-.sleep-day-gauge__moon-icon {
-  display: block;
-  width: var(--moon-size);
-  height: var(--moon-size);
-  font-size: var(--moon-size);
-  line-height: 0;
-}
-.sleep-day-gauge__moon-icon :deep(svg) {
-  width: 1em;
-  height: 1em;
-  display: block;
-}
-
-.sleep-day-gauge__times {
-  left: 50%;
-  top: calc(50% - var(--d));
-  font-size: var(--times-size);
-  font-weight: 400;
-  color: var(--color-text-secondary);
-}
-
-.sleep-day-gauge__count {
-  left: calc(50% + var(--c));
-  top: calc(50% - var(--d));
-  font-size: var(--count-size);
-  font-weight: 500;
-  color: var(--color-text-primary);
-}
-
-.sleep-day-gauge__sum {
-  left: 50%;
-  top: calc(50% + var(--f));
-  font-size: var(--sum-size);
-  font-weight: 500;
+.sleep-day-chart__sum {
   color: var(--color-yellow-dark);
-  white-space: nowrap;
 }
 
 .sleep-day-table-wrap {
   flex: 0 0 auto;
   width: var(--sleep-table-w);
   max-width: 100%;
-  height: var(--sleep-table-h);
+  height: auto;
+  max-height: 100%;
   min-height: 0;
   display: flex;
   flex-direction: column;
@@ -581,9 +455,9 @@ function dreamChipLabel(record: LifeRecord): string {
 }
 
 .sleep-day-table-scroll {
-  flex: 1 1 0%;
+  flex: 0 1 auto;
   min-height: 0;
-  height: 100%;
+  max-height: var(--sleep-table-h);
   overflow-x: hidden;
   overflow-y: auto;
   scrollbar-gutter: stable;
@@ -765,48 +639,14 @@ function dreamChipLabel(record: LifeRecord): string {
   font-weight: 600;
 }
 
-.sleep-day-dream {
-  flex: 1 1 0%;
-  min-height: 120px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin: 8px 4px 4px;
-  padding: 4px 0 0;
-  border: none;
-  border-radius: 0;
-  background: transparent;
-  box-sizing: border-box;
-  overflow: hidden;
-}
-
-.sleep-day-dream__bar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-.sleep-day-dream__bar-title {
-  flex: 1;
-  min-width: 0;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--color-text-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .sleep-day-dream__editor {
-  flex: 1 1 0%;
-  min-height: 96px;
+  display: block;
   width: 100%;
   margin: 0;
-  padding: 8px;
+  padding: 4px 8px;
   border: none;
-  border-radius: 6px;
-  background: var(--color-yellow-light-transparent);
+  border-radius: 0;
+  background: var(--color-background-light-transparent);
   color: var(--color-text-primary);
   font-size: 14px;
   line-height: 1.5;
@@ -816,7 +656,7 @@ function dreamChipLabel(record: LifeRecord): string {
   font-family: inherit;
 }
 .sleep-day-dream__editor:focus {
-  background: var(--color-yellow-light-transparent);
+  background: var(--color-background-light-transparent);
   box-shadow: none;
 }
 </style>

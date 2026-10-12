@@ -1,0 +1,93 @@
+/* 图示锚点与喝水同一套（DrinkDayPanel --a/--c/--d/--f 与字号）。
+   上排图标 × 次数一律钉在 d，有没有统计都同高。
+   统计钉在 f；只有一个数时水平居中。 */
+.lr-chart {
+  --a: 16%;
+  --c: 16%;
+  --d: 10%;
+  --f: 22%;
+  --icon-size: 50px;
+  --times-size: 35px;
+  --count-size: 30px;
+  --stat-size: 20px;
+
+  position: relative;
+  width: var(--lr-chart-size, 300px);
+  height: var(--lr-chart-size, 300px);
+  flex: 0 0 var(--lr-chart-size, 300px);
+  background: transparent;
+  box-sizing: border-box;
+}
+
+.lr-day__display > .lr-chart {
+  width: 100%;
+  height: 100%;
+  flex: 1 1 auto;
+}
+
+.lr-chart__el {
+  position: absolute;
+  z-index: 1;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  line-height: 1;
+  transform: translate(-50%, -50%);
+  box-sizing: border-box;
+  font-variant-numeric: tabular-nums;
+}
+
+.lr-chart__icon {
+  left: calc(50% - var(--a));
+  top: calc(50% - var(--d));
+  width: var(--icon-size);
+  height: var(--icon-size);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: inherit;
+}
+
+.lr-chart__icon:hover {
+  opacity: 0.85;
+}
+
+.lr-chart__icon-glyph {
+  display: block;
+  width: var(--icon-size);
+  height: var(--icon-size);
+  font-size: var(--icon-size);
+  line-height: 0;
+}
+
+.lr-chart__icon-glyph svg {
+  width: 1em;
+  height: 1em;
+  display: block;
+}
+
+.lr-chart__times {
+  left: 50%;
+  top: calc(50% - var(--d));
+  font-size: var(--times-size);
+  font-weight: 400;
+  color: var(--color-text-secondary);
+}
+
+.lr-chart__count {
+  left: calc(50% + var(--c));
+  top: calc(50% - var(--d));
+  font-size: var(--count-size);
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.lr-chart__stat {
+  left: 50%;
+  top: calc(50% + var(--f));
+  font-size: var(--stat-size);
+  font-weight: 500;
+  white-space: nowrap;
+}

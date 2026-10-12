@@ -99,7 +99,7 @@ export function buildLifeRecordEntities(
 
 /**
  * 追加一条记录（返回新数组，调用方负责写回 task 落盘）。
- * sleep 特殊：存在未闭合（无 endAt）的记录时，本次 +1 视为「醒了」，补 endAt。
+ * sleep / toilet：存在未闭合（无 endAt）的记录时，本次 +1 视为结束，补 endAt。
  */
 export function appendLifeRecord(
   records: LifeRecord[] | undefined,
@@ -109,7 +109,7 @@ export function appendLifeRecord(
 ): { next: LifeRecord[]; record: LifeRecord } {
   const list = records ?? [];
 
-  if (kind === "sleep") {
+  if (kind === "sleep" || kind === "toilet") {
     for (let i = list.length - 1; i >= 0; i--) {
       if (list[i].endAt == null) {
         const closed: LifeRecord = { ...list[i], endAt: at };

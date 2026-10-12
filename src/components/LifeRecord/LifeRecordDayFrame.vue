@@ -29,7 +29,7 @@ const { isMobile } = useDevice();
 <style scoped>
 .lr-day {
   --lr-day-display: 300px;
-  --lr-day-table-w: 200px;
+  --lr-day-table-w: 360px;
   --lr-day-head-h: 28px;
   --lr-day-row-h: 28px;
   --lr-day-table-h: calc(var(--lr-day-head-h) + 8 * var(--lr-day-row-h));
@@ -50,9 +50,8 @@ const { isMobile } = useDevice();
 .lr-day--mobile {
   --lr-day-display: 78vw;
   --lr-day-table-w: 90vw;
-  overflow-x: hidden;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
+  height: auto;
+  overflow: visible;
 }
 
 .lr-day__toolbar {
@@ -92,12 +91,8 @@ const { isMobile } = useDevice();
   width: var(--lr-day-display);
   height: var(--lr-day-display);
   flex: 0 0 var(--lr-day-display);
-  border-radius: 50%;
   box-sizing: border-box;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
   min-width: 0;
 }
 
@@ -114,6 +109,9 @@ const { isMobile } = useDevice();
 .lr-day--mobile .lr-day__table {
   width: var(--lr-day-table-w);
   max-width: 90vw;
+  height: auto;
+  min-height: calc(var(--lr-day-head-h) + 2 * var(--lr-day-row-h));
+  overflow: visible;
 }
 
 @container lr-day (max-width: 460px) {

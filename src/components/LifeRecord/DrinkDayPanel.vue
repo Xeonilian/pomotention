@@ -49,29 +49,32 @@
       <!-- 右：固定高三线表（无顶线）；杯量在表头末列 -->
       <div v-if="view === 'table'" class="drink-day-table-wrap">
         <div class="drink-day-table-scroll">
-          <table class="drink-day-table">
+          <table class="drink-day-table lr-day-table">
             <colgroup>
-              <col class="drink-day-table__col-action" />
-              <col class="drink-day-table__col-time" />
-              <col class="drink-day-table__col-volume" />
+              <col class="lr-day-table__col-action" />
+              <col class="lr-day-table__col-time" />
+              <col />
             </colgroup>
             <thead>
               <tr>
-                <th class="drink-day-table__col-action">
-                  <button type="button" class="drink-day-table__cell-btn" title="记一杯" @click="onAppend">
-                    <n-icon :size="14"><Add20Regular /></n-icon>
+                <th class="lr-day-table__col-action">
+                  <button type="button" class="lr-day-table__cell-btn" title="记一杯" @click="onAppend">
+                    <n-icon :size="18"><Add20Regular /></n-icon>
                   </button>
                 </th>
-                <th class="drink-day-table__col-time">time</th>
-                <th class="drink-day-table__col-volume">
+                <th class="lr-day-table__col-time" title="时间">
+                  <n-icon :size="18" class="lr-day-table__th-icon"><Clock20Regular /></n-icon>
+                </th>
+                <th class="lr-day-table__col-last">
                   <div class="drink-day-table__cup-head" title="杯量（之后每次 +1）">
-                    <n-icon class="drink-day-table__cup-head-icon" :size="14">
+                    <n-icon class="lr-day-table__th-icon" :size="18">
                       <DrinkToGo24Regular />
                     </n-icon>
                     <span class="drink-day-table__cup-head-eq">=</span>
                     <n-input-number
                       class="drink-day-table__cup-head-ml"
                       size="tiny"
+                      :bordered="false"
                       :value="settingStore.settings.drinkCupMl"
                       :min="50"
                       :max="1000"
@@ -87,19 +90,19 @@
             </thead>
             <tbody>
               <tr v-for="record in records" :key="record.id">
-                <td class="drink-day-table__col-action">
+                <td class="lr-day-table__col-action">
                   <button
                     type="button"
-                    class="drink-day-table__cell-btn drink-day-table__cell-btn--danger"
+                    class="lr-day-table__cell-btn lr-day-table__cell-btn--danger"
                     title="删除这条"
                     @click="onRemove(record)"
                   >
                     <n-icon :size="14"><Delete20Regular /></n-icon>
                   </button>
                 </td>
-                <td class="drink-day-table__col-time">
+                <td class="lr-day-table__col-time">
                   <n-time-picker
-                    class="drink-day-table__time"
+                    class="lr-day-table__time"
                     :value="record.recordedAt"
                     format="HH:mm"
                     size="small"
@@ -108,10 +111,11 @@
                     @update:value="(ts: number | null) => onChangeTime(record, ts)"
                   />
                 </td>
-                <td class="drink-day-table__col-volume">
+                <td class="lr-day-table__col-last">
                   <n-input-number
                     class="drink-day-table__ml"
                     size="tiny"
+                    :bordered="false"
                     :value="record.amountMl ?? null"
                     :min="10"
                     :max="2000"
@@ -133,7 +137,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { NButton, NIcon, NInputNumber, NTimePicker } from "naive-ui";
-import { Add20Regular, Delete20Regular, Dismiss20Regular, DrinkToGo24Regular, Drop20Filled } from "@vicons/fluent";
+import { Add20Regular, Clock20Regular, Delete20Regular, Dismiss20Regular, DrinkToGo24Regular, Drop20Filled } from "@vicons/fluent";
 import type { LifeRecord } from "@/core/types/Task";
 import { appendLifeRecord, isDrinkGoalMet, sumLifeRecordAmountMl, updateLifeRecord } from "@/services/lifeRecord/lifeRecordService";
 import { useDataStore } from "@/stores/useDataStore";
@@ -231,11 +235,12 @@ function onRemove(record: LifeRecord) {
 }
 </script>
 
+<style src="./lifeRecordTable.css"></style>
 <style scoped>
 /* 圆主导；表固定高内滚；宽区整组居中 */
 .drink-day-panel {
   --drink-gauge-size: 300px;
-  --drink-table-w: 200px;
+  --drink-table-w: 360px;
   /* 表头 1 行 + 正文最多 8 行；再多表内滚 */
   --drink-head-h: 28px;
   --drink-row-h: 28px;
@@ -256,13 +261,12 @@ function onRemove(record: LifeRecord) {
   container-name: drink-day;
 }
 
-/* 手机：圆 / 表宽跟屏；表仍固定高、内滚 */
+/* 手机：表不内滚，至少表头 + 2 行，多出来整页一起滚 */
 .drink-day-panel--mobile {
   --drink-gauge-size: 78vw;
   --drink-table-w: 90vw;
-  overflow-x: hidden;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
+  height: auto;
+  overflow: visible;
 }
 
 .drink-day-panel--mobile .drink-day-panel__body {
@@ -280,6 +284,15 @@ function onRemove(record: LifeRecord) {
 .drink-day-panel--mobile .drink-day-table-wrap {
   width: var(--drink-table-w);
   max-width: 90vw;
+  height: auto;
+  min-height: calc(var(--drink-head-h) + 2 * var(--drink-row-h));
+  overflow: visible;
+}
+
+.drink-day-panel--mobile .drink-day-table-scroll {
+  flex: 0 0 auto;
+  height: auto;
+  overflow: visible;
 }
 
 .drink-day-panel__toolbar {
@@ -523,112 +536,23 @@ function onRemove(record: LifeRecord) {
   scrollbar-gutter: stable;
 }
 
-.drink-day-table {
-  border-collapse: collapse;
-  font-size: 12px;
-  width: 100%;
-  table-layout: fixed;
-  border-top: none;
-  border-bottom: none;
-}
-
-.drink-day-table th,
-.drink-day-table td {
-  padding: 0 4px;
-  border: none;
-  vertical-align: middle;
-  overflow: hidden;
-  box-sizing: border-box;
-}
-
-.drink-day-table thead th {
-  height: var(--drink-head-h);
-  border-bottom: 1px solid var(--drink-line-mid);
-  color: var(--color-text-secondary);
-  font-weight: 500;
-  position: sticky;
-  top: 0;
-  background: var(--color-background);
-  z-index: 1;
-}
-
-.drink-day-table tbody td {
-  height: var(--drink-row-h);
-}
-
-.drink-day-table__col-action {
-  width: 28px;
-  padding-left: 0;
-  padding-right: 0;
-  text-align: center;
-}
-
-.drink-day-table__col-time {
-  width: 56px;
-  text-align: left;
-}
-
-.drink-day-table__col-volume {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
-
-.drink-day-table th.drink-day-table__col-volume,
-.drink-day-table td.drink-day-table__col-volume {
-  text-align: right;
-  padding-right: 6px;
-}
-
-/* + / 删：同尺寸同中心 */
-.drink-day-table__cell-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  margin: 0;
-  padding: 0;
-  border: none;
-  background: transparent;
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  line-height: 0;
-  vertical-align: middle;
-}
-.drink-day-table__cell-btn :deep(.n-icon) {
-  display: flex;
-  line-height: 0;
-}
-.drink-day-table__cell-btn--danger {
-  color: var(--color-red-dark);
-}
-.drink-day-table__cell-btn:hover {
-  opacity: 0.85;
-}
-
 .drink-day-table__cup-head {
   display: inline-flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 2px;
-  width: max-content;
   max-width: 100%;
-  margin-left: auto;
   line-height: 1;
-  color: var(--color-text-secondary);
-  font-weight: 500;
-}
-
-.drink-day-table__cup-head-icon {
-  color: var(--color-blue);
-  flex: 0 0 auto;
-  display: inline-flex;
-  line-height: 0;
+  color: var(--color-text-primary);
+  font-weight: 400;
 }
 
 .drink-day-table__cup-head-eq,
 .drink-day-table__cup-head-unit {
   flex: 0 0 auto;
   line-height: 1;
+  font-family: Consolas, "Courier New", Courier, monospace;
+  font-size: 12px;
 }
 
 .drink-day-table__cup-head-ml {
@@ -640,33 +564,6 @@ function onRemove(record: LifeRecord) {
 .drink-day-table__cup-head-ml :deep(.n-input) {
   width: 100% !important;
   min-width: 0 !important;
-  --n-height: 16px !important;
-  --n-padding-left: 0 !important;
-  --n-padding-right: 0 !important;
-  --n-border: none !important;
-  --n-border-hover: none !important;
-  --n-border-focus: none !important;
-  --n-box-shadow-focus: none !important;
-  --n-color: transparent !important;
-  background: transparent !important;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--color-text-secondary);
-  line-height: 1 !important;
-}
-.drink-day-table__cup-head-ml :deep(.n-input__input-el) {
-  text-align: left;
-  line-height: 1;
-  height: 16px;
-  padding: 0;
-}
-
-.drink-day-table__time {
-  width: 44px;
-  max-width: 100%;
-  vertical-align: middle;
-}
-.drink-day-table__time :deep(.n-input) {
   --n-height: 22px !important;
   --n-padding-left: 0 !important;
   --n-padding-right: 0 !important;
@@ -674,24 +571,29 @@ function onRemove(record: LifeRecord) {
   --n-border-hover: none !important;
   --n-border-focus: none !important;
   --n-box-shadow-focus: none !important;
+  --n-color: transparent !important;
   background: transparent !important;
-  font-weight: 600;
   font-size: 12px;
+  font-weight: 600;
+  font-family: Consolas, "Courier New", Courier, monospace;
+  color: var(--color-text-primary);
+  line-height: 1 !important;
 }
-.drink-day-table__time :deep(.n-base-suffix),
-.drink-day-table__time :deep(.n-input__suffix) {
-  display: none !important;
-  width: 0 !important;
+.drink-day-table__cup-head-ml :deep(.n-input__input-el) {
+  text-align: left;
+  line-height: 1;
+  height: 22px;
+  padding: 0;
 }
 
 .drink-day-table__ml {
-  width: 3em;
+  width: 4em;
   max-width: 100%;
   display: inline-block;
   vertical-align: middle;
 }
 .drink-day-table__ml :deep(.n-input) {
-  --n-height: 16px !important;
+  --n-height: 22px !important;
   --n-padding-left: 0 !important;
   --n-padding-right: 0 !important;
   --n-border: none !important;
@@ -700,14 +602,15 @@ function onRemove(record: LifeRecord) {
   --n-box-shadow-focus: none !important;
   --n-color: transparent !important;
   background: transparent !important;
-  text-align: right;
   font-size: 12px;
+  font-weight: 600;
+  font-family: Consolas, "Courier New", Courier, monospace;
   line-height: 1 !important;
 }
 .drink-day-table__ml :deep(.n-input__input-el) {
-  text-align: right;
+  text-align: left;
   line-height: 1;
-  height: 16px;
+  height: 22px;
   padding: 0;
 }
 </style>

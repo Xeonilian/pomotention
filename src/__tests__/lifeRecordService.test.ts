@@ -163,6 +163,14 @@ describe("appendLifeRecord", () => {
     expect(third.next).toHaveLength(2);
     expect(third.next[1].endAt).toBeUndefined();
   });
+
+  it("toilet：首次新开无 endAt，再次 +1 闭合", () => {
+    const first = appendLifeRecord(undefined, "toilet", IN_DAY);
+    expect(first.next[0].endAt).toBeUndefined();
+    const second = appendLifeRecord(first.next, "toilet", NEXT_DAY);
+    expect(second.next).toHaveLength(1);
+    expect(second.next[0].endAt).toBe(NEXT_DAY);
+  });
 });
 
 describe("removeLifeRecord / updateLifeRecord", () => {

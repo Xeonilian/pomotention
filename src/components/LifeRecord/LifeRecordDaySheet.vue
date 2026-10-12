@@ -5,7 +5,7 @@
   各面板按 kind 自己的当天桶 taskId 渲染，互不依赖全局选中。
 -->
 <template>
-  <div class="life-day-sheet">
+  <div class="life-day-sheet" :class="{ 'life-day-sheet--mobile': isMobile }">
     <div class="life-day-sheet__bar">
       <n-button
         text
@@ -50,10 +50,12 @@ import DrinkDayPanel from "@/components/LifeRecord/DrinkDayPanel.vue";
 import EatDayPanel from "@/components/LifeRecord/EatDayPanel.vue";
 import ToiletDayPanel from "@/components/LifeRecord/ToiletDayPanel.vue";
 import SleepDayPanel from "@/components/LifeRecord/SleepDayPanel.vue";
+import { useDevice } from "@/composables/platform/useDevice";
 import type { LifeRecordKind } from "@/core/lifeRecord";
 
 defineProps<{ taskIds: Record<LifeRecordKind, number | null> }>();
 const emit = defineEmits<{ close: [] }>();
+const { isMobile } = useDevice();
 
 const view = ref<"chart" | "table">("chart");
 
@@ -112,9 +114,19 @@ function toggleView() {
   overflow: hidden;
 }
 
-@media (max-width: 480px) {
-  .life-day-sheet__grid {
-    gap: 1px;
-  }
+/* 手机：一列四格。表不内滚，至少表头 + 2 行，变长后整页一起滚 */
+.life-day-sheet--mobile .life-day-sheet__grid {
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  gap: 8px;
+}
+
+.life-day-sheet--mobile .life-day-sheet__cell {
+  flex: 0 0 auto;
+  height: auto;
+  overflow: visible;
 }
 </style>

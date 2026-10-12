@@ -20,7 +20,9 @@ export function useLifeRecordEditor(taskId: MaybeRefOrGetter<number>, kind: Mayb
     [...(task.value?.lifeRecords ?? [])].sort((a, b) => a.recordedAt - b.recordedAt),
   );
   const def = computed(() => getLifeRecordDef(recordKind.value));
-  const hasOpenSleep = computed(() => recordKind.value === "sleep" && records.value.some((r) => r.endAt == null));
+  const hasOpenSpan = computed(
+    () => (recordKind.value === "sleep" || recordKind.value === "toilet") && records.value.some((r) => r.endAt == null),
+  );
 
   const rowDayAnchor = computed(() => {
     const t = task.value;
@@ -55,6 +57,18 @@ export function useLifeRecordEditor(taskId: MaybeRefOrGetter<number>, kind: Mayb
   function append() {
     const amountMl = recordKind.value === "drink" ? settingStore.settings.drinkCupMl : undefined;
     writeRecords(appendLifeRecord(task.value?.lifeRecords, recordKind.value, stampNow(), { amountMl }).next);
+  }
+
+  /** 只开一段（已有未结束则忽略） */
+  function stampStart() {
+    if (hasOpenSpan.value) return;
+    append();
+  }
+
+  /** 只结束（没有未结束则忽略） */
+  function stampEnd() {
+    if (!hasOpenSpan.value) return;
+    append();
   }
 
   function changeRecordedAt(record: LifeRecord, ts: number | null) {
@@ -94,8 +108,11 @@ export function useLifeRecordEditor(taskId: MaybeRefOrGetter<number>, kind: Mayb
     task,
     records,
     def,
-    hasOpenSleep,
+    hasOpenSleep: hasOpenSpan,
+    hasOpenSpan,
     append,
+    stampStart,
+    stampEnd,
     changeRecordedAt,
     changeEndAt,
     changeDescription,

@@ -17,49 +17,96 @@
     </template>
 
     <template #display>
-      <button type="button" class="toilet-day-display__append" :title="`记一条${def.title}`" @click="append">
-        <n-icon :size="48"><Door20Regular /></n-icon>
-      </button>
-      <span class="toilet-day-display__count">×{{ records.length }}</span>
+      <div class="lr-chart">
+        <button type="button" class="lr-chart__el lr-chart__icon" :title="`记一条${def.title}`" @click="append">
+          <n-icon class="lr-chart__icon-glyph"><Door20Regular /></n-icon>
+        </button>
+        <span class="lr-chart__el lr-chart__times" aria-hidden="true">×</span>
+        <span class="lr-chart__el lr-chart__count">{{ records.length }}</span>
+      </div>
     </template>
 
     <template #table>
-      <table class="toilet-day-table">
+      <table class="lr-day-table">
         <colgroup>
-          <col class="toilet-day-table__col-action" />
-          <col class="toilet-day-table__col-time" />
+          <col class="lr-day-table__col-action" />
+          <col class="lr-day-table__col-time" />
+          <col class="lr-day-table__col-time" />
+          <col class="lr-day-table__col-dur" />
+          <col />
         </colgroup>
         <thead>
           <tr>
-            <th class="toilet-day-table__col-action">
-              <button type="button" class="toilet-day-table__cell-btn" :title="`记一条${def.title}`" @click="append">
-                <n-icon :size="14"><Add20Regular /></n-icon>
+            <th class="lr-day-table__col-action">
+              <button type="button" class="lr-day-table__cell-btn" :title="hasOpenSpan ? '结束（当前时间）' : '开始（当前时间）'" @click="append">
+                <n-icon :size="18"><Add20Regular /></n-icon>
               </button>
             </th>
-            <th class="toilet-day-table__col-time">time</th>
+            <th
+              class="lr-day-table__col-time toilet-day-table__th-stamp"
+              :class="{ 'toilet-day-table__th-stamp--active': !hasOpenSpan }"
+              title="开始：填入当前时间"
+              @click="stampStart"
+            >
+              <n-icon :size="18" class="lr-day-table__th-icon"><Play20Regular /></n-icon>
+            </th>
+            <th
+              class="lr-day-table__col-time toilet-day-table__th-stamp"
+              :class="{ 'toilet-day-table__th-stamp--active': hasOpenSpan }"
+              title="结束：填入当前时间"
+              @click="stampEnd"
+            >
+              <n-icon :size="18" class="lr-day-table__th-icon"><RecordStop20Regular /></n-icon>
+            </th>
+            <th class="lr-day-table__col-dur" title="持续">
+              <n-icon :size="18" class="lr-day-table__th-icon"><ShiftsActivity20Regular /></n-icon>
+            </th>
+            <th class="lr-day-table__col-last" title="干什么">
+              <n-icon :size="18" class="lr-day-table__th-icon"><Door20Regular /></n-icon>
+            </th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="record in records" :key="record.id">
-            <td class="toilet-day-table__col-action">
-              <button
-                type="button"
-                class="toilet-day-table__cell-btn toilet-day-table__cell-btn--danger"
-                title="删除这条"
-                @click="remove(record)"
-              >
+            <td class="lr-day-table__col-action">
+              <button type="button" class="lr-day-table__cell-btn lr-day-table__cell-btn--danger" title="删除这条" @click="remove(record)">
                 <n-icon :size="14"><Delete20Regular /></n-icon>
               </button>
             </td>
-            <td class="toilet-day-table__col-time">
+            <td class="lr-day-table__col-time">
               <n-time-picker
-                class="toilet-day-table__time"
+                class="lr-day-table__time"
                 :value="record.recordedAt"
                 format="HH:mm"
                 size="small"
                 :show-icon="false"
                 :bordered="false"
                 @update:value="(ts: number | null) => changeRecordedAt(record, ts)"
+              />
+            </td>
+            <td class="lr-day-table__col-time">
+              <n-time-picker
+                class="lr-day-table__time"
+                :value="record.endAt ?? null"
+                format="HH:mm"
+                size="small"
+                placeholder="—"
+                :show-icon="false"
+                :bordered="false"
+                @update:value="(ts: number | null) => changeEndAt(record, ts)"
+              />
+            </td>
+            <td class="lr-day-table__col-dur">
+              <span class="lr-day-table__dur">{{ formatDuration(record) }}</span>
+            </td>
+            <td class="lr-day-table__col-last">
+              <n-input
+                class="lr-day-table__note"
+                size="tiny"
+                :bordered="false"
+                :value="record.description ?? ''"
+                placeholder="干什么"
+                @update:value="(v: string) => changeDescription(record, v)"
               />
             </td>
           </tr>
@@ -70,17 +117,37 @@
 </template>
 
 <script setup lang="ts">
-import { NButton, NIcon, NTimePicker } from "naive-ui";
-import { Add20Regular, Delete20Regular, Dismiss20Regular, Door20Regular } from "@vicons/fluent";
+import { NButton, NIcon, NInput, NTimePicker } from "naive-ui";
+import {
+  Add20Regular,
+  Delete20Regular,
+  Dismiss20Regular,
+  Door20Regular,
+  Play20Regular,
+  RecordStop20Regular,
+  ShiftsActivity20Regular,
+} from "@vicons/fluent";
+import type { LifeRecord } from "@/core/types/Task";
 import { useLifeRecordEditor } from "@/composables/lifeRecord/useLifeRecordEditor";
 import LifeRecordDayFrame from "@/components/LifeRecord/LifeRecordDayFrame.vue";
 
 const props = withDefaults(defineProps<{ taskId: number; embedded?: boolean; view?: "chart" | "table" }>(), {
   view: "chart",
 });
-const { task, records, def, append, changeRecordedAt, remove, discard, deselect } = useLifeRecordEditor(() => props.taskId, "toilet");
+const { task, records, def, hasOpenSpan, append, stampStart, stampEnd, changeRecordedAt, changeEndAt, changeDescription, remove, discard, deselect } =
+  useLifeRecordEditor(() => props.taskId, "toilet");
+
+function formatDuration(record: LifeRecord): string {
+  if (record.endAt == null) return "—";
+  const mins = Math.max(0, Math.round((record.endAt - record.recordedAt) / 60000));
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return h > 0 ? `${h}h${m > 0 ? `${m}m` : ""}` : `${m}m`;
+}
 </script>
 
+<style src="./lifeRecordChart.css"></style>
+<style src="./lifeRecordTable.css"></style>
 <style scoped>
 .lr-icon-btn {
   width: 28px;
@@ -91,95 +158,8 @@ const { task, records, def, append, changeRecordedAt, remove, discard, deselect 
 .lr-icon-btn :deep(.n-button__icon) {
   margin: 0;
 }
-.toilet-day-display__append {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0;
-  padding: 0;
-  border: none;
-  background: transparent;
+.toilet-day-table__th-stamp {
   cursor: pointer;
-  color: inherit;
-}
-.toilet-day-display__count {
-  font-size: 30px;
-  font-weight: 500;
-  line-height: 1;
-  color: var(--color-text-primary);
-  font-variant-numeric: tabular-nums;
-}
-.toilet-day-table {
-  border-collapse: collapse;
-  font-size: 12px;
-  width: 100%;
-  table-layout: fixed;
-}
-.toilet-day-table th,
-.toilet-day-table td {
-  padding: 0 4px;
-  border: none;
-  vertical-align: middle;
-  overflow: hidden;
-  box-sizing: border-box;
-  height: 28px;
-}
-.toilet-day-table thead th {
-  border-bottom: 1px solid var(--color-text-secondary-transparent);
-  color: var(--color-text-secondary);
-  font-weight: 500;
-  position: sticky;
-  top: 0;
-  background: var(--color-background);
-  z-index: 1;
-}
-.toilet-day-table__col-action {
-  width: 28px;
-  padding-left: 0;
-  padding-right: 0;
-  text-align: center;
-}
-.toilet-day-table__col-time {
-  width: 56px;
-  text-align: left;
-}
-.toilet-day-table__cell-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  margin: 0;
-  padding: 0;
-  border: none;
-  background: transparent;
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  line-height: 0;
-  vertical-align: middle;
-}
-.toilet-day-table__cell-btn--danger {
-  color: var(--color-red-dark);
-}
-.toilet-day-table__time {
-  width: 44px;
-  max-width: 100%;
-}
-.toilet-day-table__time :deep(.n-input) {
-  --n-height: 22px !important;
-  --n-padding-left: 0 !important;
-  --n-padding-right: 0 !important;
-  --n-border: none !important;
-  --n-border-hover: none !important;
-  --n-border-focus: none !important;
-  --n-box-shadow-focus: none !important;
-  background: transparent !important;
-  font-weight: 600;
-  font-size: 12px;
-}
-.toilet-day-table__time :deep(.n-base-suffix),
-.toilet-day-table__time :deep(.n-input__suffix) {
-  display: none !important;
-  width: 0 !important;
+  user-select: none;
 }
 </style>
