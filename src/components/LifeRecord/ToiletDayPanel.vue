@@ -15,17 +15,15 @@
         </template>
       </n-button>
     </template>
-
     <template #display>
       <div class="lr-chart">
         <button type="button" class="lr-chart__el lr-chart__icon" :title="`记一条${def.title}`" @click="append">
-          <n-icon class="lr-chart__icon-glyph"><Door20Regular /></n-icon>
+          <n-icon color="var(--color-text-secondary)" class="lr-chart__icon-glyph"><Door20Filled /></n-icon>
         </button>
         <span class="lr-chart__el lr-chart__times" aria-hidden="true">×</span>
         <span class="lr-chart__el lr-chart__count">{{ records.length }}</span>
       </div>
     </template>
-
     <template #table>
       <table class="lr-day-table">
         <colgroup>
@@ -38,7 +36,7 @@
         <thead>
           <tr>
             <th class="lr-day-table__col-action">
-              <button type="button" class="lr-day-table__cell-btn" :title="hasOpenSpan ? '结束（当前时间）' : '开始（当前时间）'" @click="append">
+              <button type="button" class="lr-day-table__cell-btn" title="加一行" @click="appendRow">
                 <n-icon :size="18"><Add20Regular /></n-icon>
               </button>
             </th>
@@ -61,8 +59,8 @@
             <th class="lr-day-table__col-dur" title="持续">
               <n-icon :size="18" class="lr-day-table__th-icon"><ShiftsActivity20Regular /></n-icon>
             </th>
-            <th class="lr-day-table__col-last" title="干什么">
-              <n-icon :size="18" class="lr-day-table__th-icon"><Door20Regular /></n-icon>
+            <th class="lr-day-table__col-last" title="做什么">
+              <n-icon :size="18" color="var(--color-text-secondary)" class="lr-day-table__th-icon"><Door20Filled /></n-icon>
             </th>
           </tr>
         </thead>
@@ -76,24 +74,24 @@
             <td class="lr-day-table__col-time">
               <n-time-picker
                 class="lr-day-table__time"
-                :value="record.recordedAt"
+                :value="pickerTs(record.recordedAt)"
                 format="HH:mm"
                 size="small"
                 :show-icon="false"
                 :bordered="false"
-                @update:value="(ts: number | null) => changeRecordedAt(record, ts)"
+                @update:value="(ts: number | null) => changeTime(record, 'recordedAt', ts)"
               />
             </td>
             <td class="lr-day-table__col-time">
               <n-time-picker
                 class="lr-day-table__time"
-                :value="record.endAt ?? null"
+                :value="pickerTs(record.endAt)"
                 format="HH:mm"
                 size="small"
                 placeholder="—"
                 :show-icon="false"
                 :bordered="false"
-                @update:value="(ts: number | null) => changeEndAt(record, ts)"
+                @update:value="(ts: number | null) => changeTime(record, 'endAt', ts)"
               />
             </td>
             <td class="lr-day-table__col-dur">
@@ -115,14 +113,13 @@
     </template>
   </LifeRecordDayFrame>
 </template>
-
 <script setup lang="ts">
 import { NButton, NIcon, NInput, NTimePicker } from "naive-ui";
 import {
   Add20Regular,
   Delete20Regular,
   Dismiss20Regular,
-  Door20Regular,
+  Door20Filled,
   Play20Regular,
   RecordStop20Regular,
   ShiftsActivity20Regular,
@@ -130,13 +127,25 @@ import {
 import type { LifeRecord } from "@/core/types/Task";
 import { useLifeRecordEditor } from "@/composables/lifeRecord/useLifeRecordEditor";
 import LifeRecordDayFrame from "@/components/LifeRecord/LifeRecordDayFrame.vue";
-
 const props = withDefaults(defineProps<{ taskId: number; embedded?: boolean; view?: "chart" | "table" }>(), {
   view: "chart",
 });
-const { task, records, def, hasOpenSpan, append, stampStart, stampEnd, changeRecordedAt, changeEndAt, changeDescription, remove, discard, deselect } =
-  useLifeRecordEditor(() => props.taskId, "toilet");
-
+const {
+  task,
+  records,
+  def,
+  hasOpenSpan,
+  append,
+  appendRow,
+  stampStart,
+  stampEnd,
+  pickerTs,
+  changeTime,
+  changeDescription,
+  remove,
+  discard,
+  deselect,
+} = useLifeRecordEditor(() => props.taskId, "toilet", { embedded: () => props.embedded });
 function formatDuration(record: LifeRecord): string {
   if (record.endAt == null) return "—";
   const mins = Math.max(0, Math.round((record.endAt - record.recordedAt) / 60000));
@@ -145,7 +154,6 @@ function formatDuration(record: LifeRecord): string {
   return h > 0 ? `${h}h${m > 0 ? `${m}m` : ""}` : `${m}m`;
 }
 </script>
-
 <style src="./lifeRecordChart.css"></style>
 <style src="./lifeRecordTable.css"></style>
 <style scoped>

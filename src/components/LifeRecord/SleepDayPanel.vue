@@ -6,7 +6,7 @@
   <div
     v-if="task"
     class="sleep-day-panel"
-    :class="{ 'sleep-day-panel--mobile': isMobile }"
+    :class="{ 'sleep-day-panel--mobile': isMobile, 'sleep-day-panel--embedded': embedded }"
   >
     <div v-if="!embedded" class="sleep-day-panel__toolbar">
       <n-button v-if="records.length === 0" text size="small" class="sleep-day-panel__icon-btn" title="删除空记录" @click="onDiscard">
@@ -20,7 +20,6 @@
         </template>
       </n-button>
     </div>
-
     <div class="sleep-day-panel__body">
       <!-- 左：与喝水同一方框。上排月亮 × 次数；合计只有一个数，水平居中、高度同喝水统计行 -->
       <div v-if="view === 'chart'" class="lr-chart" :title="hasOpenSleep ? '醒了（当前时间）' : '睡了（当前时间）'">
@@ -28,17 +27,16 @@
           type="button"
           class="lr-chart__el lr-chart__icon"
           :title="hasOpenSleep ? '醒了（当前时间）' : '睡了（当前时间）'"
-          @click="onAppend"
+          @click="append"
         >
           <n-icon class="lr-chart__icon-glyph" color="var(--color-yellow-dark)">
-            <component :is="hasOpenSleep ? WeatherMoon20Filled : WeatherMoon20Regular" />
+            <WeatherMoon20Filled />
           </n-icon>
         </button>
         <span class="lr-chart__el lr-chart__times" aria-hidden="true">×</span>
         <span class="lr-chart__el lr-chart__count">{{ records.length }}</span>
         <span class="lr-chart__el lr-chart__stat sleep-day-chart__sum" :title="'合计 ' + totalDurationLabel">{{ totalDurationLabel }}</span>
       </div>
-
       <!-- 右：表头 icon 对齐 DaySchedule（Play / Stop / 时长 / Thinking） -->
       <div v-if="view === 'table'" class="sleep-day-table-wrap">
         <div class="sleep-day-table-scroll">
@@ -53,12 +51,7 @@
             <thead>
               <tr>
                 <th class="sleep-day-table__col-action">
-                  <button
-                    type="button"
-                    class="sleep-day-table__cell-btn"
-                    :title="hasOpenSleep ? '醒了（当前时间）' : '睡了（当前时间）'"
-                    @click="onAppend"
-                  >
+                  <button type="button" class="sleep-day-table__cell-btn" title="加一行" @click="appendRow">
                     <n-icon :size="18"><Add20Regular /></n-icon>
                   </button>
                 </th>
@@ -66,7 +59,7 @@
                   class="sleep-day-table__col-time sleep-day-table__th-stamp"
                   :class="{ 'sleep-day-table__th-stamp--active': !hasOpenSleep }"
                   title="睡了：填入当前时间"
-                  @click="onStampSleep"
+                  @click="stampStart"
                 >
                   <n-icon :size="18" class="sleep-day-table__th-icon"><Play20Regular /></n-icon>
                 </th>
@@ -74,7 +67,7 @@
                   class="sleep-day-table__col-time sleep-day-table__th-stamp"
                   :class="{ 'sleep-day-table__th-stamp--active': hasOpenSleep }"
                   title="醒了：填入当前时间"
-                  @click="onStampWake"
+                  @click="stampEnd"
                 >
                   <n-icon :size="18" class="sleep-day-table__th-icon"><RecordStop20Regular /></n-icon>
                 </th>
@@ -82,7 +75,7 @@
                   <n-icon :size="18" class="sleep-day-table__th-icon"><ShiftsActivity20Regular /></n-icon>
                 </th>
                 <th class="sleep-day-table__col-dream" title="梦">
-                  <n-icon :size="18" class="sleep-day-table__th-icon"><Thinking20Regular /></n-icon>
+                  <n-icon :size="18" color="var(--color-yellow-dark)" class="sleep-day-table__th-icon"><WeatherMoon20Filled /></n-icon>
                 </th>
               </tr>
             </thead>
@@ -101,24 +94,24 @@
                 <td class="sleep-day-table__col-time">
                   <n-time-picker
                     class="sleep-day-table__time"
-                    :value="record.recordedAt"
+                    :value="pickerTs(record.recordedAt)"
                     format="HH:mm"
                     size="small"
                     :show-icon="false"
                     :bordered="false"
-                    @update:value="(ts: number | null) => onChangeTime(record, 'recordedAt', ts)"
+                    @update:value="(ts: number | null) => changeTime(record, 'recordedAt', ts)"
                   />
                 </td>
                 <td class="sleep-day-table__col-time">
                   <n-time-picker
                     class="sleep-day-table__time"
-                    :value="record.endAt ?? null"
+                    :value="pickerTs(record.endAt)"
                     format="HH:mm"
                     size="small"
                     placeholder="—"
                     :show-icon="false"
                     :bordered="false"
-                    @update:value="(ts: number | null) => onChangeTime(record, 'endAt', ts)"
+                    @update:value="(ts: number | null) => changeTime(record, 'endAt', ts)"
                   />
                 </td>
                 <td class="sleep-day-table__col-dur">
@@ -129,7 +122,7 @@
                     type="button"
                     class="sleep-day-table__dream-chip"
                     :class="{ 'sleep-day-table__dream-chip--active': dreamRecordId === record.id }"
-                    :title="record.description?.trim() ? record.description : '写梦'"
+                    :title="record.description?.trim() ? record.description : '记录梦'"
                     @click="onActivateDream(record)"
                   >
                     {{ dreamChipLabel(record) }}
@@ -144,7 +137,7 @@
           ref="dreamTextareaRef"
           class="sleep-day-dream__editor"
           :value="dreamRecord.description ?? ''"
-          placeholder="写下梦的内容…"
+          placeholder="梦什么"
           rows="6"
           @input="onDreamInput"
         />
@@ -152,7 +145,6 @@
     </div>
   </div>
 </template>
-
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from "vue";
 import { NButton, NIcon, NTimePicker } from "naive-ui";
@@ -163,28 +155,32 @@ import {
   Play20Regular,
   RecordStop20Regular,
   ShiftsActivity20Regular,
-  Thinking20Regular,
   WeatherMoon20Filled,
-  WeatherMoon20Regular,
 } from "@vicons/fluent";
 import type { LifeRecord } from "@/core/types/Task";
-import { appendLifeRecord, updateLifeRecord } from "@/services/lifeRecord/lifeRecordService";
+import { updateLifeRecord } from "@/services/lifeRecord/lifeRecordService";
 import { useDataStore } from "@/stores/useDataStore";
-import { useDisplayedTaskStore } from "@/stores/useDisplayedTaskStore";
 import { useDevice } from "@/composables/platform/useDevice";
-
+import { useLifeRecordEditor } from "@/composables/lifeRecord/useLifeRecordEditor";
 const props = withDefaults(defineProps<{ taskId: number; embedded?: boolean; view?: "chart" | "table" }>(), {
   view: "chart",
 });
-
 const dataStore = useDataStore();
-const displayStore = useDisplayedTaskStore();
 const { isMobile } = useDevice();
-
-const task = computed(() => dataStore.taskList.find((t) => t.id === props.taskId) ?? null);
-const records = computed<LifeRecord[]>(() => [...(task.value?.lifeRecords ?? [])].sort((a, b) => a.recordedAt - b.recordedAt));
-const hasOpenSleep = computed(() => records.value.some((r) => r.endAt == null));
-
+const {
+  task,
+  records,
+  hasOpenSleep,
+  append,
+  appendRow,
+  stampStart,
+  stampEnd,
+  pickerTs,
+  changeTime,
+  remove: removeRecord,
+  discard: discardTask,
+  deselect: deselectTask,
+} = useLifeRecordEditor(() => props.taskId, "sleep", { embedded: () => props.embedded });
 const dreamRecordId = ref<number | null>(null);
 const dreamTextareaRef = ref<HTMLTextAreaElement | null>(null);
 const dreamRecord = computed(() => {
@@ -192,7 +188,6 @@ const dreamRecord = computed(() => {
   if (id == null) return null;
   return records.value.find((r) => r.id === id) ?? null;
 });
-
 watch(dreamRecordId, async (id) => {
   if (id == null) return;
   await nextTick();
@@ -206,12 +201,10 @@ watch(dreamRecordId, async (id) => {
     /* ignore */
   }
 });
-
 watch(records, (list) => {
   const id = dreamRecordId.value;
   if (id != null && !list.some((r) => r.id === id)) dreamRecordId.value = null;
 });
-
 const totalDurationLabel = computed(() => {
   let mins = 0;
   for (const r of records.value) {
@@ -223,80 +216,18 @@ const totalDurationLabel = computed(() => {
   const m = mins % 60;
   return h > 0 ? `${h}h${m > 0 ? `${m}m` : ""}` : `${m}m`;
 });
-
-const rowDayAnchor = computed(() => {
-  const t = task.value;
-  if (!t) return Date.now();
-  return dataStore.todoByActivityId.get(t.sourceId)?.id ?? Date.now();
-});
-
-function isToday(ts: number): boolean {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  return ts >= d.getTime() && ts < d.getTime() + 86400000;
-}
-
-function withTimePart(dateTs: number, timeTs: number): number {
-  const d = new Date(dateTs);
-  const t = new Date(timeTs);
-  d.setHours(t.getHours(), t.getMinutes(), 0, 0);
-  return d.getTime();
-}
-
-/** 睡着/醒来：一律打「此刻」；补记旧日则把当前时分落到该日 */
-function stampNow(): number {
-  const anchor = rowDayAnchor.value;
-  return isToday(anchor) ? Date.now() : withTimePart(anchor, Date.now());
-}
-
 function writeRecords(next: LifeRecord[] | null) {
   if (!next) return;
   dataStore.updateTaskById(props.taskId, { lifeRecords: next });
 }
-
-/** 月亮 / +：未醒则醒了，否则睡了（均当前时间） */
-function onAppend() {
-  writeRecords(appendLifeRecord(task.value?.lifeRecords, "sleep", stampNow()).next);
-}
-
-/** 表头 Play：只开睡（已有未醒则忽略） */
-function onStampSleep() {
-  if (hasOpenSleep.value) return;
-  writeRecords(appendLifeRecord(task.value?.lifeRecords, "sleep", stampNow()).next);
-}
-
-/** 表头 Stop：只醒（无未醒则忽略） */
-function onStampWake() {
-  if (!hasOpenSleep.value) return;
-  writeRecords(appendLifeRecord(task.value?.lifeRecords, "sleep", stampNow()).next);
-}
-
 function onDeselect() {
   dreamRecordId.value = null;
-  dataStore.cleanSelection();
-  displayStore.snapToEmptySlot();
+  deselectTask();
 }
-
 function onDiscard() {
   dreamRecordId.value = null;
-  dataStore.discardLifeRecordTask(props.taskId);
+  discardTask();
 }
-
-function onChangeTime(record: LifeRecord, field: "recordedAt" | "endAt", ts: number | null) {
-  if (ts == null) {
-    if (field === "endAt") writeRecords(updateLifeRecord(records.value, record.id, { endAt: undefined }));
-    return;
-  }
-  if (field === "endAt") {
-    const base = record.endAt ?? record.recordedAt;
-    let nextTs = withTimePart(base, ts);
-    if (nextTs <= record.recordedAt) nextTs += 86400000;
-    writeRecords(updateLifeRecord(records.value, record.id, { endAt: nextTs }));
-    return;
-  }
-  writeRecords(updateLifeRecord(records.value, record.id, { recordedAt: withTimePart(record.recordedAt, ts) }));
-}
-
 function onActivateDream(record: LifeRecord) {
   if (dreamRecordId.value === record.id) {
     closeDream();
@@ -304,23 +235,19 @@ function onActivateDream(record: LifeRecord) {
   }
   dreamRecordId.value = record.id;
 }
-
 function closeDream() {
   dreamRecordId.value = null;
 }
-
 function onDreamInput(e: Event) {
   const id = dreamRecordId.value;
   if (id == null) return;
   const v = (e.target as HTMLTextAreaElement).value;
   writeRecords(updateLifeRecord(records.value, id, { description: v }));
 }
-
 function onRemove(record: LifeRecord) {
   if (dreamRecordId.value === record.id) dreamRecordId.value = null;
-  dataStore.removeLifeRecordAt(props.taskId, record.id);
+  removeRecord(record);
 }
-
 function formatDuration(record: LifeRecord): string {
   if (record.endAt == null) return "—";
   const mins = Math.max(0, Math.round((record.endAt - record.recordedAt) / 60000));
@@ -328,14 +255,12 @@ function formatDuration(record: LifeRecord): string {
   const m = mins % 60;
   return h > 0 ? `${h}h${m > 0 ? `${m}m` : ""}` : `${m}m`;
 }
-
 function dreamChipLabel(record: LifeRecord): string {
   const t = (record.description ?? "").trim().replace(/\s+/g, " ");
   if (!t) return "…";
   return t.length > 12 ? `${t.slice(0, 12)}…` : t;
 }
 </script>
-
 <style src="./lifeRecordChart.css"></style>
 <style scoped>
 .sleep-day-panel {
@@ -345,7 +270,6 @@ function dreamChipLabel(record: LifeRecord): string {
   --sleep-row-h: 28px;
   --sleep-table-h: calc(var(--sleep-head-h) + 8 * var(--sleep-row-h));
   --sleep-line-mid: var(--color-text-secondary-transparent);
-
   display: flex;
   flex-direction: column;
   gap: 0;
@@ -358,14 +282,43 @@ function dreamChipLabel(record: LifeRecord): string {
   container-type: inline-size;
   container-name: sleep-day;
 }
-
+.sleep-day-panel--embedded {
+  container-type: normal;
+}
+.sleep-day-panel--embedded .sleep-day-panel__body {
+  flex: 1 1 0%;
+  flex-wrap: nowrap;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  align-content: center;
+  gap: 0;
+}
+.sleep-day-panel--embedded .sleep-day-panel__body > .lr-chart {
+  flex: 0 0 auto;
+}
+.sleep-day-panel--embedded .sleep-day-table-wrap {
+  align-self: stretch;
+  flex: 1 1 0%;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  min-height: 0;
+  max-height: none;
+}
+.sleep-day-panel--embedded .sleep-day-table-scroll {
+  flex: 1 1 0%;
+  min-height: 0;
+  height: 100%;
+  max-height: none;
+  overflow-x: hidden;
+}
 .sleep-day-panel--mobile {
   --lr-chart-size: 78vw;
   --sleep-table-w: 90vw;
   height: auto;
   overflow: visible;
 }
-
 .sleep-day-panel--mobile .sleep-day-panel__body {
   flex: 0 0 auto;
   min-height: auto;
@@ -377,7 +330,6 @@ function dreamChipLabel(record: LifeRecord): string {
   align-content: flex-start;
   gap: 16px;
 }
-
 .sleep-day-panel--mobile .sleep-day-table-wrap {
   width: var(--sleep-table-w);
   max-width: 90vw;
@@ -386,15 +338,12 @@ function dreamChipLabel(record: LifeRecord): string {
   min-height: calc(var(--sleep-head-h) + 2 * var(--sleep-row-h));
   overflow: visible;
 }
-
 .sleep-day-panel--mobile .sleep-day-table-scroll {
   flex: 0 0 auto;
   max-height: none;
   overflow: visible;
 }
-
 /* 写梦：输入框跟在最后一行后面，不另占一块高度 */
-
 .sleep-day-panel__toolbar {
   display: flex;
   justify-content: flex-end;
@@ -402,18 +351,15 @@ function dreamChipLabel(record: LifeRecord): string {
   gap: 2px;
   flex-shrink: 0;
 }
-
 .sleep-day-panel__icon-btn {
   width: 28px;
   min-width: 28px;
   height: 28px;
   padding: 0 !important;
 }
-
 .sleep-day-panel__icon-btn :deep(.n-button__icon) {
   margin: 0;
 }
-
 .sleep-day-panel__body {
   flex: 1 1 0%;
   min-height: 0;
@@ -427,11 +373,9 @@ function dreamChipLabel(record: LifeRecord): string {
   overflow-x: hidden;
   overflow-y: hidden;
 }
-
 .sleep-day-chart__sum {
   color: var(--color-yellow-dark);
 }
-
 .sleep-day-table-wrap {
   flex: 0 0 auto;
   width: var(--sleep-table-w);
@@ -443,7 +387,6 @@ function dreamChipLabel(record: LifeRecord): string {
   flex-direction: column;
   overflow: hidden;
 }
-
 @container sleep-day (max-width: 560px) {
   .sleep-day-panel__body {
     flex-wrap: nowrap;
@@ -453,7 +396,6 @@ function dreamChipLabel(record: LifeRecord): string {
     align-content: flex-start;
   }
 }
-
 .sleep-day-table-scroll {
   flex: 0 1 auto;
   min-height: 0;
@@ -462,7 +404,6 @@ function dreamChipLabel(record: LifeRecord): string {
   overflow-y: auto;
   scrollbar-gutter: stable;
 }
-
 .sleep-day-table {
   border-collapse: collapse;
   font-size: 12px;
@@ -471,7 +412,6 @@ function dreamChipLabel(record: LifeRecord): string {
   border-top: none;
   border-bottom: none;
 }
-
 .sleep-day-table th,
 .sleep-day-table td {
   padding: 0 2px;
@@ -481,7 +421,6 @@ function dreamChipLabel(record: LifeRecord): string {
   box-sizing: border-box;
   white-space: nowrap;
 }
-
 .sleep-day-table thead th {
   height: var(--sleep-head-h);
   border-bottom: 1px solid var(--color-background-dark);
@@ -494,7 +433,6 @@ function dreamChipLabel(record: LifeRecord): string {
   text-align: center;
   line-height: 1;
 }
-
 .sleep-day-table__th-icon {
   display: inline-flex;
   align-items: center;
@@ -507,7 +445,6 @@ function dreamChipLabel(record: LifeRecord): string {
 .sleep-day-table__th-icon :deep(svg) {
   display: block;
 }
-
 .sleep-day-table__th-stamp {
   cursor: pointer;
   user-select: none;
@@ -516,43 +453,35 @@ function dreamChipLabel(record: LifeRecord): string {
 .sleep-day-table__th-stamp--active .sleep-day-table__th-icon {
   color: var(--color-text-primary);
 }
-
 .sleep-day-table tbody td {
   height: var(--sleep-row-h);
 }
-
 .sleep-day-table__row--dream-active {
   background: var(--color-yellow-light-transparent);
 }
-
 .sleep-day-table__col-action {
   width: 28px;
   padding-left: 0;
   padding-right: 0;
   text-align: center;
 }
-
 .sleep-day-table__col-time {
   width: 56px;
   text-align: center;
 }
-
 .sleep-day-table__col-dur {
   width: 44px;
   text-align: center;
   font-variant-numeric: tabular-nums;
   color: var(--color-text-primary);
 }
-
 .sleep-day-table__col-dream {
   text-align: left;
   min-width: 0;
 }
-
 .sleep-day-table thead th.sleep-day-table__col-dream {
   text-align: center;
 }
-
 .sleep-day-table__cell-btn {
   display: inline-flex;
   align-items: center;
@@ -578,7 +507,6 @@ function dreamChipLabel(record: LifeRecord): string {
 .sleep-day-table__cell-btn:hover {
   opacity: 0.85;
 }
-
 .sleep-day-table__time {
   width: 100%;
   max-width: 100%;
@@ -607,7 +535,6 @@ function dreamChipLabel(record: LifeRecord): string {
   display: none !important;
   width: 0 !important;
 }
-
 .sleep-day-table__dur {
   display: inline-block;
   width: 100%;
@@ -616,7 +543,6 @@ function dreamChipLabel(record: LifeRecord): string {
   white-space: nowrap;
   font-family: Consolas, "Courier New", Courier, monospace;
 }
-
 .sleep-day-table__dream-chip {
   display: block;
   width: 100%;
@@ -638,7 +564,6 @@ function dreamChipLabel(record: LifeRecord): string {
   color: var(--color-text-primary);
   font-weight: 600;
 }
-
 .sleep-day-dream__editor {
   display: block;
   width: 100%;

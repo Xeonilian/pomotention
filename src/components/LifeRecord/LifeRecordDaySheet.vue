@@ -5,7 +5,10 @@
   各面板按 kind 自己的当天桶 taskId 渲染，互不依赖全局选中。
 -->
 <template>
-  <div class="life-day-sheet" :class="{ 'life-day-sheet--mobile': isMobile }">
+  <div
+    class="life-day-sheet"
+    :class="{ 'life-day-sheet--mobile': isMobile, 'life-day-sheet--table': view === 'table' }"
+  >
     <div class="life-day-sheet__bar">
       <n-button
         text
@@ -41,7 +44,6 @@
     </div>
   </div>
 </template>
-
 <script setup lang="ts">
 import { ref } from "vue";
 import { NButton, NIcon } from "naive-ui";
@@ -52,18 +54,14 @@ import ToiletDayPanel from "@/components/LifeRecord/ToiletDayPanel.vue";
 import SleepDayPanel from "@/components/LifeRecord/SleepDayPanel.vue";
 import { useDevice } from "@/composables/platform/useDevice";
 import type { LifeRecordKind } from "@/core/lifeRecord";
-
 defineProps<{ taskIds: Record<LifeRecordKind, number | null> }>();
 const emit = defineEmits<{ close: [] }>();
 const { isMobile } = useDevice();
-
 const view = ref<"chart" | "table">("chart");
-
 function toggleView() {
   view.value = view.value === "chart" ? "table" : "chart";
 }
 </script>
-
 <style scoped>
 .life-day-sheet {
   display: flex;
@@ -72,8 +70,6 @@ function toggleView() {
   min-height: 0;
   gap: 2px;
 }
-
-/* 图/表切换在关闭 × 左边，无标题 */
 .life-day-sheet__bar {
   display: flex;
   align-items: center;
@@ -82,7 +78,6 @@ function toggleView() {
   height: 22px;
   gap: 2px;
 }
-
 .life-day-sheet__icon {
   width: 24px;
   min-width: 24px;
@@ -92,12 +87,14 @@ function toggleView() {
 .life-day-sheet__icon :deep(.n-button__icon) {
   margin: 0;
 }
-
-/* 表格态：按钮着色，便于看出当前在表 */
 .life-day-sheet__toggle--table {
   color: var(--color-blue);
 }
-
+/* 表格态：整体相对左侧多 6px（与左侧区域留白） */
+.life-day-sheet--table:not(.life-day-sheet--mobile) {
+  padding-left: 6px;
+}
+/* 桌面 2×2：两行等高，占满剩余高度 */
 .life-day-sheet__grid {
   flex: 1 1 auto;
   min-height: 0;
@@ -106,27 +103,29 @@ function toggleView() {
   grid-template-rows: 1fr 1fr;
   gap: 2px;
 }
-
-/* 整体一格：无边框、无自身滚动；内部面板自管布局 */
 .life-day-sheet__cell {
   min-height: 0;
   min-width: 0;
   overflow: hidden;
 }
-
-/* 手机：一列四格。表不内滚，至少表头 + 2 行，变长后整页一起滚 */
+.life-day-sheet__cell > * {
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+}
 .life-day-sheet--mobile .life-day-sheet__grid {
   display: flex;
   flex-direction: column;
+  grid-template-rows: none;
   overflow-x: hidden;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   gap: 8px;
 }
-
 .life-day-sheet--mobile .life-day-sheet__cell {
   flex: 0 0 auto;
   height: auto;
+  max-height: none;
   overflow: visible;
 }
 </style>

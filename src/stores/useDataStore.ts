@@ -793,11 +793,6 @@ export const useDataStore = defineStore(
       scheduleDebouncedCloudUpload();
     }
 
-    /** @deprecated 使用 openLifeRecord；保留别名以免外部旧调用 */
-    function recordLifeRecord(kind: LifeRecordKind): void {
-      openLifeRecord(kind);
-    }
-
     /**
      * 确保某天某类有日桶 task，返回其 taskId；不存在则建（不碰选中/display）。
      * 供集中生活 sheet 4 类同框使用——区别于 openLifeRecord 会 pushTaskId 带偏选中。
@@ -867,7 +862,11 @@ export const useDataStore = defineStore(
     /**
      * 删除生活记录单条；删空时整行级联软删（activity/todo/task），并清掉选中与展示态
      */
-    function removeLifeRecordAt(taskId: number, recordId: number): void {
+    function removeLifeRecordAt(
+      taskId: number,
+      recordId: number,
+      options?: { keepEmptyBucket?: boolean },
+    ): void {
       const task = taskList.value.find((t) => t.id === taskId);
       if (!task) return;
       const next = removeLifeRecord(task.lifeRecords, recordId);
@@ -876,6 +875,8 @@ export const useDataStore = defineStore(
         updateTaskById(taskId, { lifeRecords: next });
         return;
       }
+      updateTaskById(taskId, { lifeRecords: [] });
+      if (options?.keepEmptyBucket) return;
       softDeleteLifeRecordRow(task);
     }
 
@@ -1351,7 +1352,6 @@ export const useDataStore = defineStore(
       addActivity,
       ensureDayEnergyTask,
       openLifeRecord,
-      recordLifeRecord,
       ensureLifeRecordTaskForDay,
       removeLifeRecordAt,
       discardLifeRecordTask,
