@@ -1,20 +1,8 @@
 <!--
-  日视图吃饭：左展示 + 右表。展示内容先占位，尺寸走 LifeRecordDayFrame。
+  日视图吃饭：图/表尺寸走 LifeRecordDayFrame。
 -->
 <template>
-  <LifeRecordDayFrame v-if="task" :embedded="embedded" :view="view">
-    <template #toolbar>
-      <n-button v-if="records.length === 0" text size="small" class="lr-icon-btn" title="删除空记录" @click="discard">
-        <template #icon>
-          <n-icon :size="18"><Delete20Regular /></n-icon>
-        </template>
-      </n-button>
-      <n-button text size="small" class="lr-icon-btn" title="关闭" @click="deselect">
-        <template #icon>
-          <n-icon :size="18"><Dismiss20Regular /></n-icon>
-        </template>
-      </n-button>
-    </template>
+  <LifeRecordDayFrame v-if="task" :view="view">
     <template #display>
       <div class="lr-chart">
         <button type="button" class="lr-chart__el lr-chart__icon" :title="`记一条${def.title}`" @click="append">
@@ -98,12 +86,11 @@
   </LifeRecordDayFrame>
 </template>
 <script setup lang="ts">
-import { NButton, NIcon, NInput, NTimePicker } from "naive-ui";
+import { NIcon, NInput, NTimePicker } from "naive-ui";
 import {
   Add20Regular,
   Clock20Regular,
   Delete20Regular,
-  Dismiss20Regular,
   Food20Regular,
   FoodCake20Regular,
   FoodPizza20Regular,
@@ -114,30 +101,11 @@ import LifeRecordDayFrame from "@/components/LifeRecord/LifeRecordDayFrame.vue";
 const props = withDefaults(defineProps<{ taskId: number; embedded?: boolean; view?: "chart" | "table" }>(), {
   view: "chart",
 });
-const {
-  task,
-  records,
-  def,
-  append,
-  pickerTs,
-  toggleEatCourse,
-  changeRecordedAt,
-  changeDescription,
-  remove,
-  discard,
-  deselect,
-} = useLifeRecordEditor(() => props.taskId, "eat", { embedded: () => props.embedded });
+const { task, records, def, append, pickerTs, toggleEatCourse, changeRecordedAt, changeDescription, remove } = useLifeRecordEditor(
+  () => props.taskId,
+  "eat",
+  { embedded: () => props.embedded },
+);
 </script>
 <style src="./lifeRecordChart.css"></style>
 <style src="./lifeRecordTable.css"></style>
-<style scoped>
-.lr-icon-btn {
-  width: 28px;
-  min-width: 28px;
-  height: 28px;
-  padding: 0 !important;
-}
-.lr-icon-btn :deep(.n-button__icon) {
-  margin: 0;
-}
-</style>

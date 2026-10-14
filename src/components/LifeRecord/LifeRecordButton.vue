@@ -1,5 +1,5 @@
 <!-- LifeRecordButton.vue -->
-<!-- 单按钮：日=AppsAddIn20Regular/ChannelAdd20Regular(无数据/有数据)→进入集中 sheet；非日=Apps20Regular/Filled→生活可视化开关(Off=regular/On=filled) -->
+<!-- 单按钮：日=AppsAddIn→进入集中 sheet；非日=Apps20Regular/Filled→生活可视化开关（后续接入） -->
 <template>
   <!-- 日：直接进入集中生活 sheet（HomeView 藏 planner，task 区渲染 2×2） -->
   <n-button
@@ -12,7 +12,7 @@
     @click.stop="onOpenDaySheet"
   >
     <template #icon>
-      <n-icon :size="18"><component :is="layerStore.currentDayHasLifeRecord ? ChannelAdd20Regular : AppsAddIn20Regular" /></n-icon>
+      <n-icon :size="18"><AppsAddIn20Regular /></n-icon>
     </template>
   </n-button>
 
@@ -35,7 +35,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { NButton, NIcon } from "naive-ui";
-import { AppsAddIn20Regular, Apps20Regular, Apps20Filled, ChannelAdd20Regular } from "@vicons/fluent";
+import { AppsAddIn20Regular, Apps20Regular, Apps20Filled } from "@vicons/fluent";
 import type { LifeRecordKind } from "@/core/lifeRecord";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useLifePlannerLayerStore } from "@/stores/useLifePlannerLayerStore";

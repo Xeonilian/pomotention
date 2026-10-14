@@ -1,20 +1,8 @@
 <!--
-  日视图上厕所：左展示 + 右表。展示内容先占位，尺寸走 LifeRecordDayFrame。
+  日视图上厕所：图/表尺寸走 LifeRecordDayFrame。
 -->
 <template>
-  <LifeRecordDayFrame v-if="task" :embedded="embedded" :view="view">
-    <template #toolbar>
-      <n-button v-if="records.length === 0" text size="small" class="lr-icon-btn" title="删除空记录" @click="discard">
-        <template #icon>
-          <n-icon :size="18"><Delete20Regular /></n-icon>
-        </template>
-      </n-button>
-      <n-button text size="small" class="lr-icon-btn" title="关闭" @click="deselect">
-        <template #icon>
-          <n-icon :size="18"><Dismiss20Regular /></n-icon>
-        </template>
-      </n-button>
-    </template>
+  <LifeRecordDayFrame v-if="task" :view="view">
     <template #display>
       <div class="lr-chart">
         <button type="button" class="lr-chart__el lr-chart__icon" :title="`记一条${def.title}`" @click="append">
@@ -114,38 +102,16 @@
   </LifeRecordDayFrame>
 </template>
 <script setup lang="ts">
-import { NButton, NIcon, NInput, NTimePicker } from "naive-ui";
-import {
-  Add20Regular,
-  Delete20Regular,
-  Dismiss20Regular,
-  Door20Filled,
-  Play20Regular,
-  RecordStop20Regular,
-  ShiftsActivity20Regular,
-} from "@vicons/fluent";
+import { NIcon, NInput, NTimePicker } from "naive-ui";
+import { Add20Regular, Delete20Regular, Door20Filled, Play20Regular, RecordStop20Regular, ShiftsActivity20Regular } from "@vicons/fluent";
 import type { LifeRecord } from "@/core/types/Task";
 import { useLifeRecordEditor } from "@/composables/lifeRecord/useLifeRecordEditor";
 import LifeRecordDayFrame from "@/components/LifeRecord/LifeRecordDayFrame.vue";
 const props = withDefaults(defineProps<{ taskId: number; embedded?: boolean; view?: "chart" | "table" }>(), {
   view: "chart",
 });
-const {
-  task,
-  records,
-  def,
-  hasOpenSpan,
-  append,
-  appendRow,
-  stampStart,
-  stampEnd,
-  pickerTs,
-  changeTime,
-  changeDescription,
-  remove,
-  discard,
-  deselect,
-} = useLifeRecordEditor(() => props.taskId, "toilet", { embedded: () => props.embedded });
+const { task, records, def, hasOpenSpan, append, appendRow, stampStart, stampEnd, pickerTs, changeTime, changeDescription, remove } =
+  useLifeRecordEditor(() => props.taskId, "toilet", { embedded: () => props.embedded });
 function formatDuration(record: LifeRecord): string {
   if (record.endAt == null) return "—";
   const mins = Math.max(0, Math.round((record.endAt - record.recordedAt) / 60000));
@@ -157,15 +123,6 @@ function formatDuration(record: LifeRecord): string {
 <style src="./lifeRecordChart.css"></style>
 <style src="./lifeRecordTable.css"></style>
 <style scoped>
-.lr-icon-btn {
-  width: 28px;
-  min-width: 28px;
-  height: 28px;
-  padding: 0 !important;
-}
-.lr-icon-btn :deep(.n-button__icon) {
-  margin: 0;
-}
 .toilet-day-table__th-stamp {
   cursor: pointer;
   user-select: none;

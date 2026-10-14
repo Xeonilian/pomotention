@@ -1,28 +1,10 @@
 <!--
-  日视图睡觉大面板：左大月亮 + 右记录表；点「梦」后输入框贴在最后一行下面
-  布局对齐 DrinkDayPanel；窄槽已并入整合 sheet（见 LifeRecordDaySheet）
+  日视图睡觉：大月亮 + 记录表；点「梦」后输入框贴在表下面。尺寸走 LifeRecordDayFrame。
 -->
 <template>
-  <div
-    v-if="task"
-    class="sleep-day-panel"
-    :class="{ 'sleep-day-panel--mobile': isMobile, 'sleep-day-panel--embedded': embedded }"
-  >
-    <div v-if="!embedded" class="sleep-day-panel__toolbar">
-      <n-button v-if="records.length === 0" text size="small" class="sleep-day-panel__icon-btn" title="删除空记录" @click="onDiscard">
-        <template #icon>
-          <n-icon :size="18"><Delete20Regular /></n-icon>
-        </template>
-      </n-button>
-      <n-button text size="small" class="sleep-day-panel__icon-btn" title="关闭" @click="onDeselect">
-        <template #icon>
-          <n-icon :size="18"><Dismiss20Regular /></n-icon>
-        </template>
-      </n-button>
-    </div>
-    <div class="sleep-day-panel__body">
-      <!-- 左：与喝水同一方框。上排月亮 × 次数；合计只有一个数，水平居中、高度同喝水统计行 -->
-      <div v-if="view === 'chart'" class="lr-chart" :title="hasOpenSleep ? '醒了（当前时间）' : '睡了（当前时间）'">
+  <LifeRecordDayFrame v-if="task" :view="view">
+    <template #display>
+      <div class="lr-chart" :title="hasOpenSleep ? '醒了（当前时间）' : '睡了（当前时间）'">
         <button
           type="button"
           class="lr-chart__el lr-chart__icon"
@@ -37,121 +19,112 @@
         <span class="lr-chart__el lr-chart__count">{{ records.length }}</span>
         <span class="lr-chart__el lr-chart__stat sleep-day-chart__sum" :title="'合计 ' + totalDurationLabel">{{ totalDurationLabel }}</span>
       </div>
-      <!-- 右：表头 icon 对齐 DaySchedule（Play / Stop / 时长 / Thinking） -->
-      <div v-if="view === 'table'" class="sleep-day-table-wrap">
-        <div class="sleep-day-table-scroll">
-          <table class="sleep-day-table">
-            <colgroup>
-              <col class="sleep-day-table__col-action" />
-              <col class="sleep-day-table__col-time" />
-              <col class="sleep-day-table__col-time" />
-              <col class="sleep-day-table__col-dur" />
-              <col class="sleep-day-table__col-dream" />
-            </colgroup>
-            <thead>
-              <tr>
-                <th class="sleep-day-table__col-action">
-                  <button type="button" class="sleep-day-table__cell-btn" title="加一行" @click="appendRow">
-                    <n-icon :size="18"><Add20Regular /></n-icon>
-                  </button>
-                </th>
-                <th
-                  class="sleep-day-table__col-time sleep-day-table__th-stamp"
-                  :class="{ 'sleep-day-table__th-stamp--active': !hasOpenSleep }"
-                  title="睡了：填入当前时间"
-                  @click="stampStart"
-                >
-                  <n-icon :size="18" class="sleep-day-table__th-icon"><Play20Regular /></n-icon>
-                </th>
-                <th
-                  class="sleep-day-table__col-time sleep-day-table__th-stamp"
-                  :class="{ 'sleep-day-table__th-stamp--active': hasOpenSleep }"
-                  title="醒了：填入当前时间"
-                  @click="stampEnd"
-                >
-                  <n-icon :size="18" class="sleep-day-table__th-icon"><RecordStop20Regular /></n-icon>
-                </th>
-                <th class="sleep-day-table__col-dur" title="时长">
-                  <n-icon :size="18" class="sleep-day-table__th-icon"><ShiftsActivity20Regular /></n-icon>
-                </th>
-                <th class="sleep-day-table__col-dream" title="梦">
-                  <n-icon :size="18" color="var(--color-yellow-dark)" class="sleep-day-table__th-icon"><WeatherMoon20Filled /></n-icon>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="record in records" :key="record.id" :class="{ 'sleep-day-table__row--dream-active': dreamRecordId === record.id }">
-                <td class="sleep-day-table__col-action">
-                  <button
-                    type="button"
-                    class="sleep-day-table__cell-btn sleep-day-table__cell-btn--danger"
-                    title="删除这条"
-                    @click="onRemove(record)"
-                  >
-                    <n-icon :size="14"><Delete20Regular /></n-icon>
-                  </button>
-                </td>
-                <td class="sleep-day-table__col-time">
-                  <n-time-picker
-                    class="sleep-day-table__time"
-                    :value="pickerTs(record.recordedAt)"
-                    format="HH:mm"
-                    size="small"
-                    :show-icon="false"
-                    :bordered="false"
-                    @update:value="(ts: number | null) => changeTime(record, 'recordedAt', ts)"
-                  />
-                </td>
-                <td class="sleep-day-table__col-time">
-                  <n-time-picker
-                    class="sleep-day-table__time"
-                    :value="pickerTs(record.endAt)"
-                    format="HH:mm"
-                    size="small"
-                    placeholder="—"
-                    :show-icon="false"
-                    :bordered="false"
-                    @update:value="(ts: number | null) => changeTime(record, 'endAt', ts)"
-                  />
-                </td>
-                <td class="sleep-day-table__col-dur">
-                  <span class="sleep-day-table__dur">{{ formatDuration(record) }}</span>
-                </td>
-                <td class="sleep-day-table__col-dream">
-                  <button
-                    type="button"
-                    class="sleep-day-table__dream-chip"
-                    :class="{ 'sleep-day-table__dream-chip--active': dreamRecordId === record.id }"
-                    :title="record.description?.trim() ? record.description : '记录梦'"
-                    @click="onActivateDream(record)"
-                  >
-                    {{ dreamChipLabel(record) }}
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <textarea
-          v-if="dreamRecord"
-          ref="dreamTextareaRef"
-          class="sleep-day-dream__editor"
-          :value="dreamRecord.description ?? ''"
-          placeholder="梦什么"
-          rows="6"
-          @input="onDreamInput"
-        />
-      </div>
-    </div>
-  </div>
+    </template>
+    <template #table>
+      <table class="lr-day-table">
+        <colgroup>
+          <col class="lr-day-table__col-action" />
+          <col class="lr-day-table__col-time" />
+          <col class="lr-day-table__col-time" />
+          <col class="lr-day-table__col-dur" />
+          <col />
+        </colgroup>
+        <thead>
+          <tr>
+            <th class="lr-day-table__col-action">
+              <button type="button" class="lr-day-table__cell-btn" title="加一行" @click="appendRow">
+                <n-icon :size="18"><Add20Regular /></n-icon>
+              </button>
+            </th>
+            <th
+              class="lr-day-table__col-time sleep-day-table__th-stamp"
+              :class="{ 'sleep-day-table__th-stamp--active': !hasOpenSleep }"
+              title="睡了：填入当前时间"
+              @click="stampStart"
+            >
+              <n-icon :size="18" class="lr-day-table__th-icon"><Play20Regular /></n-icon>
+            </th>
+            <th
+              class="lr-day-table__col-time sleep-day-table__th-stamp"
+              :class="{ 'sleep-day-table__th-stamp--active': hasOpenSleep }"
+              title="醒了：填入当前时间"
+              @click="stampEnd"
+            >
+              <n-icon :size="18" class="lr-day-table__th-icon"><RecordStop20Regular /></n-icon>
+            </th>
+            <th class="lr-day-table__col-dur" title="时长">
+              <n-icon :size="18" class="lr-day-table__th-icon"><ShiftsActivity20Regular /></n-icon>
+            </th>
+            <th class="lr-day-table__col-last" title="梦">
+              <n-icon :size="18" color="var(--color-yellow-dark)" class="lr-day-table__th-icon"><WeatherMoon20Filled /></n-icon>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="record in records" :key="record.id" :class="{ 'sleep-day-table__row--dream-active': dreamRecordId === record.id }">
+            <td class="lr-day-table__col-action">
+              <button type="button" class="lr-day-table__cell-btn lr-day-table__cell-btn--danger" title="删除这条" @click="onRemove(record)">
+                <n-icon :size="14"><Delete20Regular /></n-icon>
+              </button>
+            </td>
+            <td class="lr-day-table__col-time">
+              <n-time-picker
+                class="lr-day-table__time"
+                :value="pickerTs(record.recordedAt)"
+                format="HH:mm"
+                size="small"
+                :show-icon="false"
+                :bordered="false"
+                @update:value="(ts: number | null) => changeTime(record, 'recordedAt', ts)"
+              />
+            </td>
+            <td class="lr-day-table__col-time">
+              <n-time-picker
+                class="lr-day-table__time"
+                :value="pickerTs(record.endAt)"
+                format="HH:mm"
+                size="small"
+                placeholder="—"
+                :show-icon="false"
+                :bordered="false"
+                @update:value="(ts: number | null) => changeTime(record, 'endAt', ts)"
+              />
+            </td>
+            <td class="lr-day-table__col-dur">
+              <span class="lr-day-table__dur">{{ formatDuration(record) }}</span>
+            </td>
+            <td class="lr-day-table__col-last">
+              <button
+                type="button"
+                class="sleep-day-table__dream-chip"
+                :class="{ 'sleep-day-table__dream-chip--active': dreamRecordId === record.id }"
+                :title="record.description?.trim() ? record.description : '记录梦'"
+                @click="onActivateDream(record)"
+              >
+                {{ dreamChipLabel(record) }}
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <textarea
+        v-if="dreamRecord"
+        ref="dreamTextareaRef"
+        class="sleep-day-dream__editor"
+        :value="dreamRecord.description ?? ''"
+        placeholder="梦什么"
+        rows="6"
+        @input="onDreamInput"
+      />
+    </template>
+  </LifeRecordDayFrame>
 </template>
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from "vue";
-import { NButton, NIcon, NTimePicker } from "naive-ui";
+import { NIcon, NTimePicker } from "naive-ui";
 import {
   Add20Regular,
   Delete20Regular,
-  Dismiss20Regular,
   Play20Regular,
   RecordStop20Regular,
   ShiftsActivity20Regular,
@@ -160,27 +133,14 @@ import {
 import type { LifeRecord } from "@/core/types/Task";
 import { updateLifeRecord } from "@/services/lifeRecord/lifeRecordService";
 import { useDataStore } from "@/stores/useDataStore";
-import { useDevice } from "@/composables/platform/useDevice";
 import { useLifeRecordEditor } from "@/composables/lifeRecord/useLifeRecordEditor";
+import LifeRecordDayFrame from "@/components/LifeRecord/LifeRecordDayFrame.vue";
 const props = withDefaults(defineProps<{ taskId: number; embedded?: boolean; view?: "chart" | "table" }>(), {
   view: "chart",
 });
 const dataStore = useDataStore();
-const { isMobile } = useDevice();
-const {
-  task,
-  records,
-  hasOpenSleep,
-  append,
-  appendRow,
-  stampStart,
-  stampEnd,
-  pickerTs,
-  changeTime,
-  remove: removeRecord,
-  discard: discardTask,
-  deselect: deselectTask,
-} = useLifeRecordEditor(() => props.taskId, "sleep", { embedded: () => props.embedded });
+const { task, records, hasOpenSleep, append, appendRow, stampStart, stampEnd, pickerTs, changeTime, remove: removeRecord } =
+  useLifeRecordEditor(() => props.taskId, "sleep", { embedded: () => props.embedded });
 const dreamRecordId = ref<number | null>(null);
 const dreamTextareaRef = ref<HTMLTextAreaElement | null>(null);
 const dreamRecord = computed(() => {
@@ -220,23 +180,12 @@ function writeRecords(next: LifeRecord[] | null) {
   if (!next) return;
   dataStore.updateTaskById(props.taskId, { lifeRecords: next });
 }
-function onDeselect() {
-  dreamRecordId.value = null;
-  deselectTask();
-}
-function onDiscard() {
-  dreamRecordId.value = null;
-  discardTask();
-}
 function onActivateDream(record: LifeRecord) {
   if (dreamRecordId.value === record.id) {
-    closeDream();
+    dreamRecordId.value = null;
     return;
   }
   dreamRecordId.value = record.id;
-}
-function closeDream() {
-  dreamRecordId.value = null;
 }
 function onDreamInput(e: Event) {
   const id = dreamRecordId.value;
@@ -257,291 +206,22 @@ function formatDuration(record: LifeRecord): string {
 }
 function dreamChipLabel(record: LifeRecord): string {
   const t = (record.description ?? "").trim().replace(/\s+/g, " ");
-  if (!t) return "…";
+  if (!t) return "梦什么";
   return t.length > 12 ? `${t.slice(0, 12)}…` : t;
 }
 </script>
 <style src="./lifeRecordChart.css"></style>
+<style src="./lifeRecordTable.css"></style>
 <style scoped>
-.sleep-day-panel {
-  --lr-chart-size: 300px;
-  --sleep-table-w: 360px;
-  --sleep-head-h: 28px;
-  --sleep-row-h: 28px;
-  --sleep-table-h: calc(var(--sleep-head-h) + 8 * var(--sleep-row-h));
-  --sleep-line-mid: var(--color-text-secondary-transparent);
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  padding: 2px 0 0;
-  height: 100%;
-  min-height: 0;
-  min-width: 0;
-  overflow: hidden;
-  box-sizing: border-box;
-  container-type: inline-size;
-  container-name: sleep-day;
-}
-.sleep-day-panel--embedded {
-  container-type: normal;
-}
-.sleep-day-panel--embedded .sleep-day-panel__body {
-  flex: 1 1 0%;
-  flex-wrap: nowrap;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  align-content: center;
-  gap: 0;
-}
-.sleep-day-panel--embedded .sleep-day-panel__body > .lr-chart {
-  flex: 0 0 auto;
-}
-.sleep-day-panel--embedded .sleep-day-table-wrap {
-  align-self: stretch;
-  flex: 1 1 0%;
-  width: 100%;
-  max-width: 100%;
-  height: auto;
-  min-height: 0;
-  max-height: none;
-}
-.sleep-day-panel--embedded .sleep-day-table-scroll {
-  flex: 1 1 0%;
-  min-height: 0;
-  height: 100%;
-  max-height: none;
-  overflow-x: hidden;
-}
-.sleep-day-panel--mobile {
-  --lr-chart-size: 78vw;
-  --sleep-table-w: 90vw;
-  height: auto;
-  overflow: visible;
-}
-.sleep-day-panel--mobile .sleep-day-panel__body {
-  flex: 0 0 auto;
-  min-height: auto;
-  overflow: visible;
-  flex-wrap: nowrap;
-  flex-direction: column;
-  justify-content: flex-start;
-  align-items: center;
-  align-content: flex-start;
-  gap: 16px;
-}
-.sleep-day-panel--mobile .sleep-day-table-wrap {
-  width: var(--sleep-table-w);
-  max-width: 90vw;
-  height: auto;
-  max-height: none;
-  min-height: calc(var(--sleep-head-h) + 2 * var(--sleep-row-h));
-  overflow: visible;
-}
-.sleep-day-panel--mobile .sleep-day-table-scroll {
-  flex: 0 0 auto;
-  max-height: none;
-  overflow: visible;
-}
-/* 写梦：输入框跟在最后一行后面，不另占一块高度 */
-.sleep-day-panel__toolbar {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 2px;
-  flex-shrink: 0;
-}
-.sleep-day-panel__icon-btn {
-  width: 28px;
-  min-width: 28px;
-  height: 28px;
-  padding: 0 !important;
-}
-.sleep-day-panel__icon-btn :deep(.n-button__icon) {
-  margin: 0;
-}
-.sleep-day-panel__body {
-  flex: 1 1 0%;
-  min-height: 0;
-  min-width: 0;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  align-items: center;
-  align-content: center;
-  gap: 24px 40px;
-  overflow-x: hidden;
-  overflow-y: hidden;
-}
 .sleep-day-chart__sum {
   color: var(--color-yellow-dark);
-}
-.sleep-day-table-wrap {
-  flex: 0 0 auto;
-  width: var(--sleep-table-w);
-  max-width: 100%;
-  height: auto;
-  max-height: 100%;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-@container sleep-day (max-width: 560px) {
-  .sleep-day-panel__body {
-    flex-wrap: nowrap;
-    flex-direction: column;
-    justify-content: flex-start;
-    align-items: center;
-    align-content: flex-start;
-  }
-}
-.sleep-day-table-scroll {
-  flex: 0 1 auto;
-  min-height: 0;
-  max-height: var(--sleep-table-h);
-  overflow-x: hidden;
-  overflow-y: auto;
-  scrollbar-gutter: stable;
-}
-.sleep-day-table {
-  border-collapse: collapse;
-  font-size: 12px;
-  width: 100%;
-  table-layout: fixed;
-  border-top: none;
-  border-bottom: none;
-}
-.sleep-day-table th,
-.sleep-day-table td {
-  padding: 0 2px;
-  border: none;
-  vertical-align: middle;
-  overflow: hidden;
-  box-sizing: border-box;
-  white-space: nowrap;
-}
-.sleep-day-table thead th {
-  height: var(--sleep-head-h);
-  border-bottom: 1px solid var(--color-background-dark);
-  color: var(--color-text-primary);
-  font-weight: 400;
-  position: sticky;
-  top: 0;
-  background: var(--color-background);
-  z-index: 1;
-  text-align: center;
-  line-height: 1;
-}
-.sleep-day-table__th-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  color: var(--color-text-primary);
-  opacity: 1;
-}
-.sleep-day-table__th-icon :deep(svg) {
-  display: block;
 }
 .sleep-day-table__th-stamp {
   cursor: pointer;
   user-select: none;
 }
-.sleep-day-table__th-stamp:hover .sleep-day-table__th-icon,
-.sleep-day-table__th-stamp--active .sleep-day-table__th-icon {
-  color: var(--color-text-primary);
-}
-.sleep-day-table tbody td {
-  height: var(--sleep-row-h);
-}
 .sleep-day-table__row--dream-active {
   background: var(--color-yellow-light-transparent);
-}
-.sleep-day-table__col-action {
-  width: 28px;
-  padding-left: 0;
-  padding-right: 0;
-  text-align: center;
-}
-.sleep-day-table__col-time {
-  width: 56px;
-  text-align: center;
-}
-.sleep-day-table__col-dur {
-  width: 44px;
-  text-align: center;
-  font-variant-numeric: tabular-nums;
-  color: var(--color-text-primary);
-}
-.sleep-day-table__col-dream {
-  text-align: left;
-  min-width: 0;
-}
-.sleep-day-table thead th.sleep-day-table__col-dream {
-  text-align: center;
-}
-.sleep-day-table__cell-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  margin: 0;
-  padding: 0;
-  border: none;
-  background: transparent;
-  color: var(--color-text-primary);
-  cursor: pointer;
-  line-height: 0;
-  vertical-align: middle;
-}
-.sleep-day-table__cell-btn :deep(.n-icon) {
-  display: flex;
-  line-height: 0;
-}
-.sleep-day-table__cell-btn--danger {
-  color: var(--color-red-dark);
-}
-.sleep-day-table__cell-btn:hover {
-  opacity: 0.85;
-}
-.sleep-day-table__time {
-  width: 100%;
-  max-width: 100%;
-  vertical-align: middle;
-}
-.sleep-day-table__time :deep(.n-input) {
-  --n-height: 22px !important;
-  --n-padding-left: 0 !important;
-  --n-padding-right: 0 !important;
-  --n-border: none !important;
-  --n-border-hover: none !important;
-  --n-border-focus: none !important;
-  --n-box-shadow-focus: none !important;
-  background: transparent !important;
-  font-weight: 600;
-  font-size: 12px;
-  font-family: Consolas, "Courier New", Courier, monospace;
-}
-.sleep-day-table__time :deep(.n-input__input-el) {
-  text-align: center;
-  padding: 0;
-}
-.sleep-day-table__time :deep(.n-base-suffix),
-.sleep-day-table__time :deep(.n-input__suffix),
-.sleep-day-table__time :deep(.n-base-clear) {
-  display: none !important;
-  width: 0 !important;
-}
-.sleep-day-table__dur {
-  display: inline-block;
-  width: 100%;
-  font-size: 12px;
-  text-align: center;
-  white-space: nowrap;
-  font-family: Consolas, "Courier New", Courier, monospace;
 }
 .sleep-day-table__dream-chip {
   display: block;
