@@ -41,14 +41,14 @@ export interface InterruptionRecord {
   recordedAt?: number;
 }
 /**
- * 生活记录单条。点事件（喝/吃）只有 recordedAt；段事件（睡觉、上厕所）另带 endAt。
+ * 生活记录单条。点事件（喝/吃）只有 recordedAt；段事件（睡觉、活动）另带 endAt。
  * kind 不由 record 携带，统一由所属 activity 的系统 tag 决定（见 core/lifeRecord.ts）
  */
 export interface LifeRecord {
   id: number; // 记录创建时间戳
   /** 事件发生时刻 */
   recordedAt: number;
-  /** 结束时刻（段记录：睡觉的醒来、上厕所的结束） */
+  /** 结束时刻（段记录：睡觉的醒来、活动的结束） */
   endAt?: number;
   description?: string;
   /** 本口容量 ml（喝水快照；+1 时抄当时默认杯量） */

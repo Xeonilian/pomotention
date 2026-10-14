@@ -7,7 +7,7 @@
       <!-- 圆水位；六元钉在 a/c/d/f 交点 -->
       <div class="drink-day-gauge" :title="`${drunkMl} / ${dayGoalMl || '—'} ml`">
         <DrinkDayWaterFill class="drink-day-gauge__fill" :ratio="progressRatio" :met="goalMet" />
-        <button type="button" class="drink-day-gauge__el drink-day-gauge__drop" title="记一杯" @click="append">
+        <button type="button" class="drink-day-gauge__el drink-day-gauge__drop" title="喝水" @click="append">
           <n-icon class="drink-day-gauge__drop-icon" color="var(--color-blue-drop)">
             <Drop20Filled />
           </n-icon>

@@ -23,7 +23,7 @@ export interface LifeRecordDef {
 export const LIFE_RECORD_DEFS: readonly LifeRecordDef[] = [
   { kind: "drink", tagId: TAG_ID_LIFE_DRINK, title: "喝水", emoji: "💧", tagColor: "#2080f0", tagBackgroundColor: "rgba(206, 227, 252, 0.5)" },
   { kind: "eat", tagId: TAG_ID_LIFE_EAT, title: "吃饭", emoji: "🍚", tagColor: "#d07050", tagBackgroundColor: "rgba(252, 234, 206, 0.5)" },
-  { kind: "toilet", tagId: TAG_ID_LIFE_TOILET, title: "上厕所", emoji: "🚽", tagColor: "#8040f0", tagBackgroundColor: "rgba(232, 206, 252, 0.4)" },
+  { kind: "toilet", tagId: TAG_ID_LIFE_TOILET, title: "活动", emoji: "🚪", tagColor: "#8040f0", tagBackgroundColor: "rgba(232, 206, 252, 0.4)" },
   { kind: "sleep", tagId: TAG_ID_LIFE_SLEEP, title: "睡觉", emoji: "😴", tagColor: "#8e44ad", tagBackgroundColor: "rgba(232, 222, 252, 0.5)" },
 ];
 

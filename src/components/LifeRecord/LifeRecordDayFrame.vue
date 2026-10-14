@@ -2,7 +2,7 @@
   日面板骨架：sheet 单格。图/表互斥，尺寸由本组件统一。
 -->
 <template>
-  <div class="lr-day" :class="{ 'lr-day--mobile': isMobile }">
+  <div class="lr-day" :class="{ 'lr-day--mobile': isMobile, 'lr-day--compact': compact, 'lr-day--note-open': noteOpen }">
     <div class="lr-day__body">
       <div v-if="view === 'chart'" class="lr-day__display">
         <slot name="display" />
@@ -15,15 +15,17 @@
 </template>
 <script setup lang="ts">
 import { useDevice } from "@/composables/platform/useDevice";
-withDefaults(defineProps<{ view?: "chart" | "table" }>(), {
+withDefaults(defineProps<{ view?: "chart" | "table"; compact?: boolean; noteOpen?: boolean }>(), {
   view: "chart",
+  compact: false,
+  noteOpen: false,
 });
 const { isMobile } = useDevice();
 </script>
 <style scoped>
 .lr-day {
-  --lr-day-display: 350px;
-  --lr-day-table-w: 350px;
+  --lr-day-display: 400px;
+  --lr-day-table-w: 400px;
   display: flex;
   flex-direction: column;
   gap: 0;
@@ -79,6 +81,28 @@ const { isMobile } = useDevice();
 .lr-day--mobile .lr-day__display {
   width: var(--lr-day-display);
   height: var(--lr-day-display);
+}
+/* 手机裁掉上下空白；内部仍按正方形算锚点，两行间距不变 */
+.lr-day--mobile.lr-day--compact {
+  --lr-day-compact-h: 176px;
+}
+.lr-day--mobile.lr-day--compact .lr-day__display {
+  height: var(--lr-day-compact-h);
+  overflow: hidden;
+  position: relative;
+}
+/* 打开备注时框高不变，只把输入露到下方，避免居中重算把上方顶出空白 */
+.lr-day--mobile.lr-day--compact.lr-day--note-open .lr-day__display {
+  overflow: visible;
+}
+.lr-day--mobile.lr-day--compact .lr-day__display :deep(.lr-chart) {
+  position: absolute;
+  left: 0;
+  top: calc(var(--lr-day-compact-h) / 2);
+  width: var(--lr-day-display);
+  height: var(--lr-day-display);
+  transform: translateY(-50%);
+  flex: none;
 }
 .lr-day--mobile .lr-day__table {
   width: var(--lr-day-table-w);

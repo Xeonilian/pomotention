@@ -1,23 +1,63 @@
 <!--
-  日视图睡觉：大月亮 + 记录表；点「梦」后输入框贴在表下面。尺寸走 LifeRecordDayFrame。
+  日视图睡觉：图=月亮开段 + 最后一条（开始时间/停/云朵记梦）；表保持完整编辑。
 -->
 <template>
-  <LifeRecordDayFrame v-if="task" :view="view">
+  <LifeRecordDayFrame v-if="task" :view="view" compact :note-open="chartDreamOpen">
     <template #display>
-      <div class="lr-chart" :title="hasOpenSleep ? '醒了（当前时间）' : '睡了（当前时间）'">
-        <button
-          type="button"
-          class="lr-chart__el lr-chart__icon"
-          :title="hasOpenSleep ? '醒了（当前时间）' : '睡了（当前时间）'"
-          @click="append"
-        >
-          <n-icon class="lr-chart__icon-glyph" color="var(--color-yellow-dark)">
-            <WeatherMoon20Filled />
-          </n-icon>
-        </button>
+      <div class="lr-chart">
+        <div class="lr-chart__el lr-chart__icon">
+          <n-popconfirm
+            v-model:show="askEndOpen"
+            trigger="manual"
+            to="body"
+            :z-index="10000"
+            positive-text="是"
+            negative-text="否"
+            @positive-click="onConfirmLastEnded"
+            @negative-click="askEndOpen = false"
+          >
+            <template #trigger>
+              <button type="button" class="sleep-day-chart__moon" title="睡觉" @click="onMoonClick">
+                <n-icon class="lr-chart__icon-glyph" color="var(--color-yellow-dark)">
+                  <WeatherMoon20Filled />
+                </n-icon>
+              </button>
+            </template>
+            上次睡觉结束了吗？
+          </n-popconfirm>
+        </div>
         <span class="lr-chart__el lr-chart__times" aria-hidden="true">×</span>
         <span class="lr-chart__el lr-chart__count">{{ records.length }}</span>
-        <span class="lr-chart__el lr-chart__stat sleep-day-chart__sum" :title="'合计 ' + totalDurationLabel">{{ totalDurationLabel }}</span>
+        <span v-if="lastRecord" class="lr-chart__el sleep-day-chart__start" :title="'开始 ' + lastStartLabel">{{ lastStartLabel }}</span>
+        <button
+          v-if="lastRecord && lastRecord.endAt == null"
+          type="button"
+          class="lr-chart__el sleep-day-chart__stop"
+          title="醒了（当前时间）"
+          @click="stampEnd"
+        >
+          <n-icon class="sleep-day-chart__ctrl-icon"><RecordStop20Regular /></n-icon>
+        </button>
+        <span v-else-if="lastRecord" class="lr-chart__el sleep-day-chart__end" :title="'结束 ' + lastEndLabel">{{ lastEndLabel }}</span>
+        <button
+          v-if="lastRecord"
+          type="button"
+          class="lr-chart__el sleep-day-chart__cloud"
+          title="梦什么"
+          @pointerdown="chartDreamOpen && $event.preventDefault()"
+          @click="onCloudClick"
+        >
+          <n-icon class="sleep-day-chart__ctrl-icon"><WeatherCloudy20Regular /></n-icon>
+        </button>
+        <input
+          v-if="chartDreamOpen && lastRecord"
+          ref="chartDreamRef"
+          class="lr-chart__el sleep-day-chart__dream"
+          :value="chartDreamDraft"
+          placeholder="梦什么"
+          @input="onChartDreamInput"
+          @blur="onChartDreamBlur"
+        />
       </div>
     </template>
     <template #table>
@@ -63,7 +103,12 @@
         <tbody>
           <tr v-for="record in records" :key="record.id" :class="{ 'sleep-day-table__row--dream-active': dreamRecordId === record.id }">
             <td class="lr-day-table__col-action">
-              <button type="button" class="lr-day-table__cell-btn lr-day-table__cell-btn--danger" title="删除这条" @click="onRemove(record)">
+              <button
+                type="button"
+                class="lr-day-table__cell-btn lr-day-table__cell-btn--danger"
+                title="删除这条"
+                @click="onRemove(record)"
+              >
                 <n-icon :size="14"><Delete20Regular /></n-icon>
               </button>
             </td>
@@ -121,16 +166,18 @@
 </template>
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from "vue";
-import { NIcon, NTimePicker } from "naive-ui";
+import { NIcon, NPopconfirm, NTimePicker } from "naive-ui";
 import {
   Add20Regular,
   Delete20Regular,
   Play20Regular,
   RecordStop20Regular,
   ShiftsActivity20Regular,
+  WeatherCloudy20Regular,
   WeatherMoon20Filled,
 } from "@vicons/fluent";
 import type { LifeRecord } from "@/core/types/Task";
+import { timestampToTimeString } from "@/core/utils";
 import { updateLifeRecord } from "@/services/lifeRecord/lifeRecordService";
 import { useDataStore } from "@/stores/useDataStore";
 import { useLifeRecordEditor } from "@/composables/lifeRecord/useLifeRecordEditor";
@@ -139,8 +186,25 @@ const props = withDefaults(defineProps<{ taskId: number; embedded?: boolean; vie
   view: "chart",
 });
 const dataStore = useDataStore();
-const { task, records, hasOpenSleep, append, appendRow, stampStart, stampEnd, pickerTs, changeTime, remove: removeRecord } =
-  useLifeRecordEditor(() => props.taskId, "sleep", { embedded: () => props.embedded });
+const {
+  task,
+  records,
+  hasOpenSleep,
+  appendRow,
+  stampStart,
+  stampEnd,
+  pickerTs,
+  changeTime,
+  changeDescription,
+  remove: removeRecord,
+} = useLifeRecordEditor(() => props.taskId, "sleep", { embedded: () => props.embedded });
+const lastRecord = computed(() => records.value[records.value.length - 1] ?? null);
+const lastStartLabel = computed(() => (lastRecord.value ? timestampToTimeString(lastRecord.value.recordedAt) : ""));
+const lastEndLabel = computed(() => (lastRecord.value?.endAt != null ? timestampToTimeString(lastRecord.value.endAt) : ""));
+const askEndOpen = ref(false);
+const chartDreamOpen = ref(false);
+const chartDreamDraft = ref("");
+const chartDreamRef = ref<HTMLInputElement | null>(null);
 const dreamRecordId = ref<number | null>(null);
 const dreamTextareaRef = ref<HTMLTextAreaElement | null>(null);
 const dreamRecord = computed(() => {
@@ -165,17 +229,56 @@ watch(records, (list) => {
   const id = dreamRecordId.value;
   if (id != null && !list.some((r) => r.id === id)) dreamRecordId.value = null;
 });
-const totalDurationLabel = computed(() => {
-  let mins = 0;
-  for (const r of records.value) {
-    if (r.endAt == null) continue;
-    mins += Math.max(0, Math.round((r.endAt - r.recordedAt) / 60000));
-  }
-  if (mins <= 0) return "—";
-  const h = Math.floor(mins / 60);
-  const m = mins % 60;
-  return h > 0 ? `${h}h${m > 0 ? `${m}m` : ""}` : `${m}m`;
+watch(
+  () => lastRecord.value?.id,
+  () => {
+    chartDreamOpen.value = false;
+  },
+);
+watch(chartDreamOpen, async (open) => {
+  if (!open) return;
+  await nextTick();
+  chartDreamRef.value?.focus();
 });
+function onMoonClick() {
+  if (chartDreamOpen.value) {
+    commitChartDream();
+    chartDreamOpen.value = false;
+  }
+  if (hasOpenSleep.value) {
+    askEndOpen.value = true;
+    return;
+  }
+  appendRow();
+}
+function onConfirmLastEnded() {
+  askEndOpen.value = false;
+  stampEnd();
+  appendRow();
+}
+function commitChartDream() {
+  const last = lastRecord.value;
+  if (!last) return;
+  changeDescription(last, chartDreamDraft.value);
+}
+function onCloudClick() {
+  const last = lastRecord.value;
+  if (!last) return;
+  if (chartDreamOpen.value) {
+    commitChartDream();
+    chartDreamOpen.value = false;
+    return;
+  }
+  chartDreamDraft.value = last.description ?? "";
+  chartDreamOpen.value = true;
+}
+function onChartDreamInput(e: Event) {
+  chartDreamDraft.value = (e.target as HTMLInputElement).value;
+}
+function onChartDreamBlur() {
+  commitChartDream();
+  chartDreamOpen.value = false;
+}
 function writeRecords(next: LifeRecord[] | null) {
   if (!next) return;
   dataStore.updateTaskById(props.taskId, { lifeRecords: next });
@@ -213,8 +316,99 @@ function dreamChipLabel(record: LifeRecord): string {
 <style src="./lifeRecordChart.css"></style>
 <style src="./lifeRecordTable.css"></style>
 <style scoped>
-.sleep-day-chart__sum {
-  color: var(--color-yellow-dark);
+.sleep-day-chart__moon {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+}
+.lr-chart__icon :deep(.n-popover-trigger),
+.lr-chart__icon :deep(.n-popconfirm) {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+/* 下排与喝水 sum / slash / goal 同锚：a、中、c × f */
+.sleep-day-chart__start {
+  left: calc(50% - var(--a) - 30px);
+  top: calc(50% + var(--f) - 20px);
+  font-size: 22px;
+  font-weight: 500;
+  font-family: Consolas, "Courier New", Courier, monospace;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+}
+.sleep-day-chart__stop,
+.sleep-day-chart__end {
+  left: 50%;
+  top: calc(50% + var(--f) - 20px);
+  color: var(--color-text-primary);
+}
+.sleep-day-chart__stop {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.sleep-day-chart__end {
+  font-size: 22px;
+  font-weight: 500;
+  font-family: Consolas, "Courier New", Courier, monospace;
+  white-space: nowrap;
+}
+.sleep-day-chart__cloud {
+  left: calc(50% + var(--c) + 15px);
+  top: calc(50% + var(--f) - 20px);
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+.sleep-day-chart__stop:hover,
+.sleep-day-chart__cloud:hover {
+  opacity: 0.85;
+}
+.sleep-day-chart__ctrl-icon {
+  display: block;
+  width: 28px;
+  height: 28px;
+  font-size: 28px;
+  line-height: 0;
+  color: inherit;
+}
+.sleep-day-chart__ctrl-icon :deep(svg) {
+  width: 1em;
+  height: 1em;
+  display: block;
+}
+.sleep-day-chart__dream {
+  left: 50%;
+  top: calc(50% + var(--f) + 22px);
+  /* 与上排月亮～次数同宽，水平居中 */
+  width: calc(var(--a) + var(--c) + var(--icon-size));
+  transform: translate(-50%, 0);
+  padding: 2px 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: var(--color-text-primary);
+  font-size: 16px;
+  line-height: 1.4;
+  text-align: center;
+  outline: none;
+  font-family: inherit;
+  box-sizing: border-box;
 }
 .sleep-day-table__th-stamp {
   cursor: pointer;
