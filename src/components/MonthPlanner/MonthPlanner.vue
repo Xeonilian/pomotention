@@ -14,14 +14,15 @@
           :class="[
             { 'day-card--selected': selectedDate === day.startTs },
             { 'day-card--other-month': !day.isCurrentMonth },
-            { 'day-card--stats': props.showStatsOnly && !props.drinkSkin },
-            { 'day-card--drink-skin': props.drinkSkin },
+            { 'day-card--stats': props.showStatsOnly && !props.drinkSkin && !props.lifeView },
+            { 'day-card--drink-skin': props.drinkSkin && !props.lifeView },
+            { 'day-card--life-view': props.lifeView },
           ]"
           :style="getDayCardStyle(day)"
           @click="() => handleDayCardClick(day)"
         >
           <DrinkDayWaterFill
-            v-if="props.drinkSkin && day.isCurrentMonth"
+            v-if="props.drinkSkin && !props.lifeView && day.isCurrentMonth"
             :ratio="drinkRatio(day.drinkStat)"
             :met="day.drinkStat.met"
           />
@@ -39,7 +40,7 @@
               class="date-badge"
               :class="{
                 today: day.isToday,
-                'date-badge--stats': props.showStatsOnly && !props.drinkSkin && day.isCurrentMonth,
+                'date-badge--stats': props.showStatsOnly && !props.drinkSkin && !props.lifeView && day.isCurrentMonth,
               }"
               @click.stop="() => onDateBadgeMouseClick(day.startTs)"
               @dblclick.stop="() => onDateBadgeDblClick(day.startTs)"
@@ -51,8 +52,11 @@
               {{ formatDay(day.startTs) }}
             </div>
           </div>
-          <div class="items">
-            <template v-if="props.drinkSkin && day.isCurrentMonth">
+          <div class="items" :class="{ 'items--life-bars': props.lifeView }">
+            <template v-if="props.lifeView && day.isCurrentMonth">
+              <MonthLifeBars :bars="day.lifeBars" />
+            </template>
+            <template v-else-if="props.drinkSkin && day.isCurrentMonth">
               <div class="day-drink-stat" :class="{ 'day-drink-stat--compact': isMobile }">
                 <span class="day-drink-stat__count">×{{ day.drinkStat.count }}</span>
                 <span class="day-drink-stat__ml" :title="`${day.drinkStat.totalMl} ml`">{{
@@ -111,6 +115,7 @@ import type { Todo } from "@/core/types/Todo";
 import type { Schedule } from "@/core/types/Schedule";
 import TagRenderer from "../TagSystem/TagRenderer.vue";
 import DrinkDayWaterFill from "./DrinkDayWaterFill.vue";
+import MonthLifeBars from "./MonthLifeBars.vue";
 import { timestampToTimeString } from "@/core/utils";
 import { useDataStore } from "@/stores/useDataStore";
 import { storeToRefs } from "pinia";
@@ -125,6 +130,15 @@ import { plannerHolidayMapKey } from "@/composables/planner/usePublicHolidays";
 import { getPomoBadgeBgColor, getPomoColor, getStatsPomoBgColorHEX, mapPomoCountToColorRatio } from "@/core/utils/weekDays";
 import { getLifeRecordKind, type LifeRecordKind } from "@/core/lifeRecord";
 import { isDrinkGoalMet, sumLifeRecordAmountMl } from "@/services/lifeRecord/lifeRecordService";
+import type { LifeRecord } from "@/core/types/Task";
+import {
+  clipDaySpans,
+  eatCourseCounts,
+  EMPTY_MONTH_LIFE_BARS,
+  MONTH_ACTIVITY_BAR_MIN_MS,
+  MONTH_EAT_BAR_MIN,
+  toMonthLifeBarView,
+} from "@/services/lifeRecord/monthLifeBars";
 
 const settingStore = useSettingStore();
 const isTaskVisible = computed(() => settingStore.settings.showTask);
@@ -227,7 +241,8 @@ const days = computed(() => {
     const kind = getLifeRecordKind(activityById.value.get(todo.activityId));
     if (!kind) continue;
     const dayStart = startOfDay(todo.id);
-    if (dayStart < calendarStart || dayStart > calendarEnd) continue;
+    // 含日历首日前一天：跨夜睡眠可截进格
+    if (dayStart < calendarStart - DAY_MS || dayStart > calendarEnd) continue;
     let byKind = lifeByDay.get(dayStart);
     if (!byKind) {
       byKind = {};
@@ -390,9 +405,53 @@ const days = computed(() => {
       maxItems: maxItemsPerDay.value,
       holiday: holidayForTs(dayTs),
       drinkStat,
+      lifeBars: EMPTY_MONTH_LIFE_BARS,
     };
   });
-  return result;
+
+  if (!props.lifeView) return result;
+
+  const recordsOf = (kind: LifeRecordKind, dayTs: number): LifeRecord[] => {
+    const ref = lifeByDay.get(dayTs)?.[kind];
+    if (!ref) return [];
+    const task =
+      (ref.taskId != null ? taskById.value.get(ref.taskId) : undefined) ?? taskByActivityId.value.get(ref.activityId);
+    return task?.lifeRecords ?? [];
+  };
+
+  const now = Date.now();
+  const lifeRaws = result.map((d) => {
+    if (!d.isCurrentMonth) return null;
+    const eat = eatCourseCounts(recordsOf("eat", d.startTs));
+    const sleepSpans = [
+      ...clipDaySpans(recordsOf("sleep", d.startTs), d.startTs, d.endTs, now),
+      ...clipDaySpans(recordsOf("sleep", d.startTs - DAY_MS), d.startTs, d.endTs, now),
+    ];
+    const actSpans = clipDaySpans(recordsOf("toilet", d.startTs), d.startTs, d.endTs, now);
+    return {
+      drinkRatio: drinkRatio(d.drinkStat),
+      drinkMet: d.drinkStat.met,
+      drinkCount: d.drinkStat.count,
+      sleepSpans,
+      eat,
+      activitySpans: actSpans,
+    };
+  });
+  let eatScale = MONTH_EAT_BAR_MIN;
+  let activityScale = MONTH_ACTIVITY_BAR_MIN_MS;
+  for (const raw of lifeRaws) {
+    if (!raw) continue;
+    eatScale = Math.max(eatScale, raw.eat.meal + raw.eat.dessert + raw.eat.apple);
+    const actMs = raw.activitySpans.reduce((sum, s) => sum + s.ms, 0);
+    activityScale = Math.max(activityScale, actMs);
+  }
+  return result.map((d, i) => {
+    const raw = lifeRaws[i];
+    return {
+      ...d,
+      lifeBars: raw ? toMonthLifeBarView({ ...raw, eatScale, activityScale }) : EMPTY_MONTH_LIFE_BARS,
+    };
+  });
 });
 
 function normalizeTagIds(ids?: number[] | null): number[] {
@@ -552,14 +611,14 @@ function drinkRatio(stat: DrinkDayStat): number {
 }
 
 function getDayCardStyle(day: MonthDayRow): { backgroundColor: string } | undefined {
-  // 喝水皮肤用水位 SVG，不再铺整格纯色底
-  if (props.drinkSkin) return undefined;
+  // 喝水皮肤用水位 SVG；生活可视化用竖 bar，不再铺整格纯色底
+  if (props.lifeView || props.drinkSkin) return undefined;
   if (!props.showStatsOnly || !day.isCurrentMonth) return undefined;
   return { backgroundColor: getStatsPomoBgColorHEX(day.pomoRatio) };
 }
 
 function getBadgeStyle(day: MonthDayRow): Record<string, string> {
-  if (props.showStatsOnly && !props.drinkSkin) {
+  if (props.showStatsOnly && !props.drinkSkin && !props.lifeView) {
     if (!day.isCurrentMonth) return {};
     return {
       "--badge-pomo-color": getPomoColor(day.pomoRatio),
@@ -865,8 +924,15 @@ function getStatsBadgeBgColor(ratio: number): string {
   text-align: center;
 }
 
-.day-card--drink-skin {
+.day-card--drink-skin,
+.day-card--life-view {
   cursor: pointer;
+}
+
+.items--life-bars {
+  padding: 0;
+  overflow: hidden;
+  min-height: 0;
 }
 
 .day-card--drink-skin :deep(.n-card__content) {

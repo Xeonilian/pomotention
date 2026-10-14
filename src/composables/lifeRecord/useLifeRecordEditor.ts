@@ -1,6 +1,6 @@
 // 生活记录日表/窄槽共用：打点时刻、追加行、段事件开闭、时间列编辑
 import { computed, toValue, type MaybeRefOrGetter } from "vue";
-import type { LifeRecord } from "@/core/types/Task";
+import type { EatCourse, LifeRecord } from "@/core/types/Task";
 import { getLifeRecordDef, type LifeRecordKind } from "@/core/lifeRecord";
 import { getDayStartTimestamp } from "@/core/utils";
 import { appendLifeRecord, updateLifeRecord } from "@/services/lifeRecord/lifeRecordService";
@@ -76,8 +76,10 @@ export function useLifeRecordEditor(
   function appendRow() {
     writeAppend(true);
   }
+  const EAT_COURSE_CYCLE: EatCourse[] = ["meal", "dessert", "apple"];
   function toggleEatCourse(record: LifeRecord) {
-    const eatCourse = record.eatCourse === "dessert" ? "meal" : "dessert";
+    const cur = record.eatCourse === "dessert" || record.eatCourse === "apple" ? record.eatCourse : "meal";
+    const eatCourse = EAT_COURSE_CYCLE[(EAT_COURSE_CYCLE.indexOf(cur) + 1) % EAT_COURSE_CYCLE.length];
     writeRecords(updateLifeRecord(records.value, record.id, { eatCourse }));
   }
   function stampStart() {

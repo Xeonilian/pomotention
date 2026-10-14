@@ -162,6 +162,10 @@ describe("appendLifeRecord", () => {
     expect(record.eatCourse).toBe("meal");
     expect(record.amountMl).toBeUndefined();
   });
+  it("吃饭可写水果 eatCourse", () => {
+    const { record } = appendLifeRecord(undefined, "eat", IN_DAY, { eatCourse: "apple" });
+    expect(record.eatCourse).toBe("apple");
+  });
   it("sumLifeRecordAmountMl 合计", () => {
     expect(sumLifeRecordAmountMl([{ id: 1, recordedAt: 1, amountMl: 250 }, { id: 2, recordedAt: 2, amountMl: 250 }])).toBe(500);
     expect(sumLifeRecordAmountMl([{ id: 1, recordedAt: 1 }])).toBe(0);

@@ -2,7 +2,7 @@
 // 生活记录纯函数：当日行查找、三件套构造、记录增删改（不碰存储与 store） 
 import type { Activity } from "@/core/types/Activity";
 import type { Todo } from "@/core/types/Todo";
-import type { LifeRecord, Task } from "@/core/types/Task";
+import type { EatCourse, LifeRecord, Task } from "@/core/types/Task";
 import { getDayStartTimestamp } from "@/core/utils";
 import { getLifeRecordDef, getLifeRecordKind, lifeRecordPlaceholderTitle, LIFE_RECORD_DEFS, type LifeRecordKind } from "@/core/lifeRecord";
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -26,8 +26,8 @@ export function nextFreeTimestampId(start: number, occupied?: Iterable<number>):
 export type AppendLifeRecordOptions = {
   /** 喝水等点事件：本口 ml 快照 */
   amountMl?: number;
-  /** 吃饭：正餐 / 甜点；新记录默认 meal */
-  eatCourse?: "meal" | "dessert";
+  /** 吃饭：正餐 / 甜点 / 水果；新记录默认 meal */
+  eatCourse?: EatCourse;
   /** 只新增一行，不把未闭合段写成结束时间 */
   alwaysNew?: boolean;
 };

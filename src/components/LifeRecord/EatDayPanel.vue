@@ -1,5 +1,5 @@
 <!--
-  日视图吃饭：图=加一条 + 最后一条（时间/正餐甜点/刀叉记吃什么）；表保持完整编辑。
+  日视图吃饭：图=加一条 + 最后一条（时间/正餐甜点水果/刀叉记吃什么）；表保持完整编辑。
 -->
 <template>
   <LifeRecordDayFrame v-if="task" :view="view" compact :note-open="chartFoodOpen">
@@ -14,12 +14,11 @@
         <button
           type="button"
           class="lr-chart__el eat-day-chart__course"
-          :title="lastIsDessert ? '甜点' : '正餐'"
+          :title="eatCourseTitle(lastRecord?.eatCourse)"
           @click="lastRecord && toggleEatCourse(lastRecord)"
         >
           <n-icon class="eat-day-chart__ctrl-icon">
-            <FoodCake20Regular v-if="lastIsDessert" />
-            <FoodPizza20Regular v-else />
+            <component :is="eatCourseIcon(lastRecord?.eatCourse)" />
           </n-icon>
         </button>
         <button
@@ -60,7 +59,7 @@
             <th class="lr-day-table__col-time" title="时间">
               <n-icon :size="18" class="lr-day-table__th-icon"><Clock20Regular /></n-icon>
             </th>
-            <th class="lr-day-table__col-time" title="正餐或甜点">
+            <th class="lr-day-table__col-time" title="正餐 / 甜点 / 水果">
               <n-icon :size="18" class="lr-day-table__th-icon"><Food20Regular /></n-icon>
             </th>
             <th class="lr-day-table__col-last" title="吃了什么">
@@ -90,12 +89,11 @@
               <button
                 type="button"
                 class="lr-day-table__cell-btn"
-                :title="record.eatCourse === 'dessert' ? '甜点' : '正餐'"
+                :title="eatCourseTitle(record.eatCourse)"
                 @click="toggleEatCourse(record)"
               >
                 <n-icon :size="18">
-                  <FoodCake20Regular v-if="record.eatCourse === 'dessert'" />
-                  <FoodPizza20Regular v-else />
+                  <component :is="eatCourseIcon(record.eatCourse)" />
                 </n-icon>
               </button>
             </td>
@@ -116,7 +114,7 @@
   </LifeRecordDayFrame>
 </template>
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from "vue";
+import { computed, nextTick, ref, watch, type Component } from "vue";
 import { NIcon, NInput, NTimePicker } from "naive-ui";
 import {
   Add20Regular,
@@ -124,9 +122,11 @@ import {
   Delete20Regular,
   Food20Regular,
   FoodApple20Filled,
+  FoodApple20Regular,
   FoodCake20Regular,
   FoodPizza20Regular,
 } from "@vicons/fluent";
+import type { EatCourse } from "@/core/types/Task";
 import { timestampToTimeString } from "@/core/utils";
 import { useLifeRecordEditor } from "@/composables/lifeRecord/useLifeRecordEditor";
 import LifeRecordDayFrame from "@/components/LifeRecord/LifeRecordDayFrame.vue";
@@ -140,7 +140,16 @@ const { task, records, def, append, pickerTs, toggleEatCourse, changeRecordedAt,
 );
 const lastRecord = computed(() => records.value[records.value.length - 1] ?? null);
 const lastStartLabel = computed(() => (lastRecord.value ? timestampToTimeString(lastRecord.value.recordedAt) : "—"));
-const lastIsDessert = computed(() => lastRecord.value?.eatCourse === "dessert");
+function eatCourseTitle(course?: EatCourse): string {
+  if (course === "dessert") return "甜点";
+  if (course === "apple") return "水果";
+  return "正餐";
+}
+function eatCourseIcon(course?: EatCourse): Component {
+  if (course === "dessert") return FoodCake20Regular;
+  if (course === "apple") return FoodApple20Regular;
+  return FoodPizza20Regular;
+}
 const chartFoodOpen = ref(false);
 const chartFoodDraft = ref("");
 const chartFoodRef = ref<HTMLInputElement | null>(null);
