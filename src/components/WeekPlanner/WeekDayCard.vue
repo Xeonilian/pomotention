@@ -18,7 +18,8 @@
       <div
         class="date"
         :class="{ today: day.isToday }"
-        @click.stop="() => onDateBadgeClick(day.startTs)"
+        @click.stop="onDateBadgeMouseClick"
+        @dblclick.stop="onDateBadgeDblClick"
         @touchstart.stop="onWeekBadgeTouchStart"
         @touchend.stop="() => onWeekBadgeTouchEnd(day.startTs)"
         @touchcancel.stop="onWeekBadgeTouchCancel"
@@ -289,6 +290,36 @@ function onDateBadgeClick(ts: number) {
     return;
   }
   handleDateSelectDayView(ts);
+}
+
+/** 与 MainLayout 退出按钮一致：220ms 区分单击 / 双击 */
+const BADGE_CLICK_DELAY_MS = 220;
+let badgeClickTimer: ReturnType<typeof setTimeout> | null = null;
+
+function clearBadgeClickTimer() {
+  if (badgeClickTimer) {
+    clearTimeout(badgeClickTimer);
+    badgeClickTimer = null;
+  }
+}
+
+function onDateBadgeMouseClick() {
+  if (isMobile.value) return;
+  if (!props.lifeView) {
+    handleDateSelectDayView(props.day.startTs);
+    return;
+  }
+  clearBadgeClickTimer();
+  badgeClickTimer = setTimeout(() => {
+    badgeClickTimer = null;
+    onDateBadgeClick(props.day.startTs);
+  }, BADGE_CLICK_DELAY_MS);
+}
+
+function onDateBadgeDblClick() {
+  if (isMobile.value) return;
+  clearBadgeClickTimer();
+  handleDateSelectDayView(props.day.startTs);
 }
 
 function onCardClick() {

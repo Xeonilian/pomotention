@@ -41,7 +41,8 @@
                 today: day.isToday,
                 'date-badge--stats': props.showStatsOnly && !props.drinkSkin && day.isCurrentMonth,
               }"
-              @click.stop="() => onDateBadgeClick(day.startTs)"
+              @click.stop="() => onDateBadgeMouseClick(day.startTs)"
+              @dblclick.stop="() => onDateBadgeDblClick(day.startTs)"
               @touchstart.stop="onMonthBadgeTouchStart"
               @touchend.stop="() => onMonthBadgeTouchEnd(day.startTs)"
               @touchcancel.stop="onMonthBadgeTouchCancel"
@@ -464,6 +465,36 @@ function onDateBadgeClick(ts: number) {
     emit("open-day-sheet", ts);
     return;
   }
+  handleDateSelectDayView(ts);
+}
+
+/** 与 MainLayout 退出按钮一致：220ms 区分单击 / 双击 */
+const BADGE_CLICK_DELAY_MS = 220;
+let badgeClickTimer: ReturnType<typeof setTimeout> | null = null;
+
+function clearBadgeClickTimer() {
+  if (badgeClickTimer) {
+    clearTimeout(badgeClickTimer);
+    badgeClickTimer = null;
+  }
+}
+
+function onDateBadgeMouseClick(ts: number) {
+  if (isMobile.value) return;
+  if (!props.lifeView) {
+    handleDateSelectDayView(ts);
+    return;
+  }
+  clearBadgeClickTimer();
+  badgeClickTimer = setTimeout(() => {
+    badgeClickTimer = null;
+    onDateBadgeClick(ts);
+  }, BADGE_CLICK_DELAY_MS);
+}
+
+function onDateBadgeDblClick(ts: number) {
+  if (isMobile.value) return;
+  clearBadgeClickTimer();
   handleDateSelectDayView(ts);
 }
 

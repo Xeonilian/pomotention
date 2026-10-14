@@ -381,14 +381,34 @@ function attachYearTouchPanGuard(e: TouchEvent) {
   document.addEventListener("touchcancel", teardown);
 }
 
+/** 与 MainLayout 退出按钮一致：220ms 区分单击 / 双击，避免预览单击进 sheet 把双击吃掉 */
+const LIFE_VIEW_CLICK_DELAY_MS = 220;
+let lifeViewClickTimer: ReturnType<typeof setTimeout> | null = null;
+
+function clearLifeViewClickTimer() {
+  if (lifeViewClickTimer) {
+    clearTimeout(lifeViewClickTimer);
+    lifeViewClickTimer = null;
+  }
+}
+
 function onYearDayClick(day: MonthDay | null) {
   if (!day?.isCurrentMonth || isMobile.value) return;
+  if (props.lifeView) {
+    clearLifeViewClickTimer();
+    lifeViewClickTimer = setTimeout(() => {
+      lifeViewClickTimer = null;
+      handleDayClick(day.startTs);
+    }, LIFE_VIEW_CLICK_DELAY_MS);
+    return;
+  }
   handleDayClick(day.startTs);
 }
 
 function onYearDayDblClick(day: MonthDay | null, e: MouseEvent) {
   if (!day?.isCurrentMonth || isMobile.value) return;
   e.preventDefault();
+  clearLifeViewClickTimer();
   handleDayDblClick(day.startTs);
 }
 
