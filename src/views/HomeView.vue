@@ -105,9 +105,11 @@
               v-if="settingStore.settings.showPlanner && settingStore.settings.viewSet === 'year'"
               :key="dateService.displayYearInfo"
               :drink-skin="lifePlannerHasDrink"
+              :life-view="lifePlannerLifeView"
               @date-select-day-view="onDateSelectDayView"
               @navigate-to-month="onYearNavigateToMonth"
               @navigate-to-week="onYearNavigateToWeek"
+              @open-day-sheet="onOpenDaySheetFromCell"
             />
           </div>
         </div>
@@ -131,6 +133,7 @@
             <LifeRecordDaySheet
               v-if="daySheetActive"
               :task-ids="daySheetTaskIds"
+              :initial-view="lifePlannerLifeView ? 'table' : 'chart'"
               @close="lifePlannerLayerStore.closeDaySheet"
             />
             <TaskTracker v-else ref="taskTrackerRef" @task-record-editing="setTaskRecordEditing" />
@@ -455,7 +458,7 @@ const onDateSelect = (day: number) => {
   // 不清除selectedRowId.value，因为周月视图里需要选中todo.id 或 schedule.id 用于重复
 };
 
-// 非day 生活可视化：大格子点击 → 选中这天 + 进整合 sheet
+// 非day 生活可视化：点日期 badge → 进整合 sheet
 // 前提：当天已有生活数据；无数据不建桶、不开 sheet（date-select 已选中这天）
 const onOpenDaySheetFromCell = (dayStart: number) => {
   if (!hasLifeRecordDataForDay(dayStart)) return;

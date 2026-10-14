@@ -1,6 +1,6 @@
 <!-- 年视图：4×3 月格，每天显示日期数字+点，每行开头周编号；点击月份/周编号跳转 -->
 <template>
-  <div class="year-planner" :class="{ 'year-planner--drink-skin': drinkSkin }">
+  <div class="year-planner" :class="{ 'year-planner--drink-skin': drinkSkin && !lifeView, 'year-planner--life-view': lifeView }">
     <div class="year-grid months-nxn">
       <div v-for="month in months" :key="month.monthIndex" class="month-cell">
         <div class="month-cell-title" title="点击进入月视图" @click="handleMonthTitleClick(month.monthStartTs)">
@@ -35,7 +35,7 @@
               <template v-if="day && day.isCurrentMonth">
                 <span
                   class="day-dot"
-                  :class="[yearHolidayDotClass(day.startTs), drinkDotClass(day.startTs)]"
+                  :class="[yearHolidayDotClass(day.startTs), drinkDotClass(day.startTs), lifeDotClass(day.startTs)]"
                   :style="getDotBgStyle(day.startTs)"
                 >
                   <span class="day-num" :style="getDayNumStyle(day.startTs)">{{ day.dayOfMonth }}</span>
@@ -71,8 +71,10 @@ const props = withDefaults(
   defineProps<{
     /** Planner 喝水统计皮肤：有记录的天用水色点，达标略深 */
     drinkSkin?: boolean;
+    /** 生活可视化：有任一生活记录的天用紫点，点击进整合 sheet */
+    lifeView?: boolean;
   }>(),
-  { drinkSkin: false },
+  { drinkSkin: false, lifeView: false },
 );
 
 const holidayMap = inject(plannerHolidayMapKey, ref<Record<string, HolidayDisplay>>({}));
@@ -81,6 +83,7 @@ const emit = defineEmits<{
   "date-select-day-view": [timestamp: number];
   "navigate-to-month": [monthStartTs: number];
   "navigate-to-week": [weekStartTs: number];
+  "open-day-sheet": [dayStart: number];
 }>();
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -129,7 +132,7 @@ function startOfDay(ts: number) {
 /** 年喝水皮肤：仅有记录的天；key = 日零点 */
 const drinkDayByTs = computed(() => {
   const map = new Map<number, DrinkYearDay>();
-  if (!props.drinkSkin) return map;
+  if (!props.drinkSkin || props.lifeView) return map;
   for (const todo of activeTodos.value) {
     if (todo.activityId == null) continue;
     const activity = activityById.value.get(todo.activityId);
@@ -148,6 +151,21 @@ const drinkDayByTs = computed(() => {
     });
   }
   return map;
+});
+
+/** 生活可视化：当天 4 类任一已有记录（空桶不算） */
+const lifeDayByTs = computed(() => {
+  const set = new Set<number>();
+  if (!props.lifeView) return set;
+  for (const todo of activeTodos.value) {
+    if (todo.activityId == null) continue;
+    const activity = activityById.value.get(todo.activityId);
+    if (!getLifeRecordKind(activity)) continue;
+    const task = (todo.taskId != null ? taskById.value.get(todo.taskId) : undefined) ?? taskByActivityId.value.get(todo.activityId);
+    if (!task || task.deleted || (task.lifeRecords?.length ?? 0) <= 0) continue;
+    set.add(startOfDay(todo.id));
+  }
+  return set;
 });
 
 function endOfMonth(ts: number) {
@@ -192,6 +210,8 @@ const yearStart = computed(() => {
 const todayStart = computed(() => startOfDay(Date.now()));
 
 function getDotStyle(dayStartTs: number): { backgroundColor?: string; color?: string } {
+  // 生活可视化：有数据的天走 CSS 紫点，其余保持默认空点
+  if (props.lifeView) return {};
   if (props.drinkSkin) {
     const drink = drinkDayByTs.value.get(dayStartTs);
     if (!drink) return {};
@@ -234,8 +254,9 @@ function formatDayTitle(ts: number): string {
   return h ? `${base} · ${h.label}` : base;
 }
 
-/** 年视图格子：法定节假日浅红底，调休补班灰底，节气浅绿底；喝水皮肤有记录天不叠节假色 */
+/** 年视图格子：法定节假日浅红底，调休补班灰底，节气浅绿底；生活/喝水有记录天不叠节假色 */
 function yearHolidayDotClass(ts: number): string {
+  if (props.lifeView && lifeDayByTs.value.has(ts)) return "";
   if (props.drinkSkin && drinkDayByTs.value.has(ts)) return "";
   const h = holidayMap.value[getDateKey(ts)];
   if (!h) return "";
@@ -245,10 +266,15 @@ function yearHolidayDotClass(ts: number): string {
 }
 
 function drinkDotClass(ts: number): string {
-  if (!props.drinkSkin) return "";
+  if (props.lifeView || !props.drinkSkin) return "";
   const drink = drinkDayByTs.value.get(ts);
   if (!drink) return "";
   return drink.met ? "day-dot--drink-met" : "day-dot--drink";
+}
+
+function lifeDotClass(ts: number): string {
+  if (!props.lifeView) return "";
+  return lifeDayByTs.value.has(ts) ? "day-dot--life" : "";
 }
 
 const months = computed(() => {
@@ -303,6 +329,12 @@ function handleDayClick(dayStartTs: number) {
   // 使用 dataStore 直接更新当前选中日期，并让 TaskTracker 选中这一天对应的 task
   dateService.setAppDate(dayStartTs);
   dataStore.setSelectedDate(dayStartTs);
+  if (props.lifeView) {
+    // 有数据才开 sheet（HomeView 再拦一遍空桶）
+    selectedTaskId.value = null;
+    emit("open-day-sheet", dayStartTs);
+    return;
+  }
   if (props.drinkSkin) {
     // 喝水皮肤：打开当日喝水 Task（无记录则清空选中）
     selectedTaskId.value = drinkDayByTs.value.get(dayStartTs)?.taskId ?? null;
@@ -574,6 +606,15 @@ function handleWeekClick(weekStartTs: number) {
 
 .day-dot.day-dot--holiday-solar .day-num {
   color: var(--color-green) !important;
+}
+
+/* 生活可视化：当天有喝水/吃饭/活动/睡觉记录 → 紫点 */
+.day-dot.day-dot--life {
+  background-color: var(--color-purple) !important;
+}
+
+.day-dot.day-dot--life .day-num {
+  color: #fff !important;
 }
 
 .day-num {

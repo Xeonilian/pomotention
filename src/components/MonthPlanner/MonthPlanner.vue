@@ -41,7 +41,7 @@
                 today: day.isToday,
                 'date-badge--stats': props.showStatsOnly && !props.drinkSkin && day.isCurrentMonth,
               }"
-              @click.stop="() => handleDateSelectDayView(day.startTs)"
+              @click.stop="() => onDateBadgeClick(day.startTs)"
               @touchstart.stop="onMonthBadgeTouchStart"
               @touchend.stop="() => onMonthBadgeTouchEnd(day.startTs)"
               @touchcancel.stop="onMonthBadgeTouchCancel"
@@ -457,8 +457,24 @@ const handleDateSelectDayView = (day: number) => {
   emit("date-select-day-view", day);
 };
 
+/** 可视化：只有日期 badge 进 sheet */
+function onDateBadgeClick(ts: number) {
+  if (props.lifeView) {
+    emit("date-select", ts);
+    emit("open-day-sheet", ts);
+    return;
+  }
+  handleDateSelectDayView(ts);
+}
+
 const monthBadgeTouch = createTouchScheduledSingleAndDouble(
-  (ts) => handleDateSelect(ts),
+  (ts) => {
+    if (props.lifeView) {
+      onDateBadgeClick(ts);
+      return;
+    }
+    handleDateSelect(ts);
+  },
   (ts) => handleDateSelectDayView(ts),
 );
 
@@ -486,9 +502,7 @@ type MonthDayRow = { startTs: number; pomoRatio: number; isCurrentMonth: boolean
 /** 喝水皮肤：切日；有喝水行则打开日明细 Task（不快记） */
 function handleDayCardClick(day: MonthDayRow) {
   if (props.lifeView) {
-    // 生活可视化开着：大格子点击 = 选中这天 + 进整合 sheet
     emit("date-select", day.startTs);
-    emit("open-day-sheet", day.startTs);
     return;
   }
   if (props.drinkSkin) {

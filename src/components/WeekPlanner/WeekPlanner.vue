@@ -23,8 +23,20 @@
         @date-select-day-view="handleDateSelectDayView"
         @item-change="handleItemSelect"
         @open-day-sheet="handleOpenDaySheet"
+        @life-note-tap="onLifeNoteTap"
       />
     </div>
+    <Teleport to="body">
+      <div
+        v-if="mobileLifeNote"
+        class="wl-panel"
+        :class="{ 'wl-panel--below': mobileLifeNote.placement === 'below' }"
+        :style="mobileLifeNote.placement === 'below' ? { top: `${mobileLifeNote.edge}px` } : { bottom: `${mobileLifeNote.edge}px` }"
+        @click.stop
+      >
+        <p class="wl-note">{{ mobileLifeNote.text }}</p>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -61,6 +73,7 @@ const calcGridHeight = () => {
 let resizeObserver: ResizeObserver | null = null;
 
 onMounted(() => {
+  document.addEventListener("click", onDocClickCapture, true);
   nextTick(() => {
     calcGridHeight();
     window.addEventListener("resize", calcGridHeight);
@@ -74,6 +87,8 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  closeMobileLifeNote();
+  document.removeEventListener("click", onDocClickCapture, true);
   window.removeEventListener("resize", calcGridHeight);
   if (resizeObserver && gridRef.value) {
     resizeObserver.unobserve(gridRef.value);
@@ -104,8 +119,38 @@ const handleItemSelect = (id: number, activityId?: number, taskId?: number) => {
   emit("item-change", id, activityId, taskId);
 };
 const handleOpenDaySheet = (dayStart: number) => {
+  closeMobileLifeNote();
   emit("open-day-sheet", dayStart);
 };
+
+type MobileLifeNote = { key: string; text: string; placement: "above" | "below"; edge: number };
+const mobileLifeNote = ref<MobileLifeNote | null>(null);
+const LIFE_NOTE_FLIP_TOP = 96;
+const LIFE_NOTE_PANEL_GAP = 6;
+
+function closeMobileLifeNote() {
+  mobileLifeNote.value = null;
+}
+
+function onLifeNoteTap(payload: { key: string; text: string; top: number; bottom: number }) {
+  if (mobileLifeNote.value?.key === payload.key) {
+    closeMobileLifeNote();
+    return;
+  }
+  const placement = payload.top < LIFE_NOTE_FLIP_TOP ? "below" : "above";
+  const edge =
+    placement === "below" ? payload.bottom + LIFE_NOTE_PANEL_GAP : window.innerHeight - payload.top + LIFE_NOTE_PANEL_GAP;
+  mobileLifeNote.value = { key: payload.key, text: payload.text, placement, edge };
+}
+
+function onDocClickCapture(e: Event) {
+  if (!mobileLifeNote.value) return;
+  const el = e.target as HTMLElement | null;
+  if (!el) return;
+  if (el.closest(".wl-panel")) return;
+  if (el.closest("[data-life-note-key]")) return;
+  closeMobileLifeNote();
+}
 </script>
 
 <style scoped>
@@ -132,5 +177,30 @@ const handleOpenDaySheet = (dayStart: number) => {
   .grid {
     gap: 1px;
   }
+}
+</style>
+
+<style>
+/* 手机生活备注：水平贴屏幕，垂直跟着图标（与 Task 时间轴同策略） */
+.wl-panel {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  z-index: 10001;
+  box-sizing: border-box;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: var(--color-bg-base, #fff);
+  color: var(--color-text-primary, #333);
+  box-shadow: 0 3px 14px rgba(0, 0, 0, 0.16);
+}
+
+.wl-note {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 </style>

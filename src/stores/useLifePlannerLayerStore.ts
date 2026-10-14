@@ -4,12 +4,14 @@
 // - 任一图层开着 → 周视图藏普通时间块；全关恢复
 import { defineStore } from "pinia";
 import { computed, ref, toValue } from "vue";
-import type { LifeRecordKind } from "@/core/lifeRecord";
+import { LIFE_RECORD_DEFS, type LifeRecordKind } from "@/core/lifeRecord";
+import { findLifeRecordTodoForDay } from "@/services/lifeRecord/lifeRecordService";
 import { useDataStore } from "@/stores/useDataStore";
 
 export type PlannerLayerMode = "stack" | "exclusive";
 
 export const useLifePlannerLayerStore = defineStore("lifePlannerLayer", () => {
+  const dataStore = useDataStore();
   const layers = ref<Set<LifeRecordKind>>(new Set());
   /** 月/年互斥时记住最后一层，周叠多层切到月/年时折叠用 */
   const lastKind = ref<LifeRecordKind | null>(null);
@@ -17,13 +19,35 @@ export const useLifePlannerLayerStore = defineStore("lifePlannerLayer", () => {
   const hasAny = computed(() => layers.value.size > 0);
   const hasDrink = computed(() => layers.value.has("drink"));
 
+  /** 当天 4 类任一已有生活记录（空桶不算）→ 日按钮 ChannelAdd */
+  const currentDayHasLifeRecord = computed(() => {
+    const raw = dataStore.dateService.appDateTimestamp as Parameters<typeof toValue>[0];
+    const dayStart = toValue(raw);
+    if (!Number.isFinite(dayStart)) return false;
+    for (const def of LIFE_RECORD_DEFS) {
+      const todo = findLifeRecordTodoForDay(dataStore.todoList, dataStore.activityById, def.kind, dayStart as number);
+      if (!todo) continue;
+      const task = dataStore.taskByActivityId.get(todo.activityId);
+      if (task && !task.deleted && (task.lifeRecords?.length ?? 0) > 0) return true;
+    }
+    return false;
+  });
+
   /**
-   * 非 day 统一生活视图开关：一次性集合全部数据的接口。
-   * 可视化后续接入；当前仅作 hook，按下不渲染。
+   * 非 day 统一生活视图：复用已有喝水皮肤（藏时间块 / 水位）。
+   * 吃睡活动叠层观感后续再调。
    */
   const lifeView = ref(false);
   function toggleLifeView() {
-    lifeView.value = !lifeView.value;
+    const next = !lifeView.value;
+    lifeView.value = next;
+    if (next) {
+      layers.value = new Set(["drink"]);
+      lastKind.value = "drink";
+      return;
+    }
+    layers.value = new Set();
+    lastKind.value = null;
   }
 
   /**
@@ -39,7 +63,6 @@ export const useLifePlannerLayerStore = defineStore("lifePlannerLayer", () => {
   });
 
   function openDaySheet() {
-    const dataStore = useDataStore();
     // Pinia 对嵌套 computed 会拆包成 number，不能再取 .value（否则 undefined → id NaN → JSON null）
     const raw = dataStore.dateService.appDateTimestamp as Parameters<typeof toValue>[0];
     const dayStart = toValue(raw);
@@ -100,6 +123,7 @@ export const useLifePlannerLayerStore = defineStore("lifePlannerLayer", () => {
     lastKind,
     hasAny,
     hasDrink,
+    currentDayHasLifeRecord,
     has,
     toggle,
     clear,

@@ -14,12 +14,13 @@
         text
         size="small"
         class="life-day-sheet__icon"
-        :class="{ 'life-day-sheet__toggle--table': view === 'table' }"
         :title="view === 'table' ? '显示图' : '显示表格'"
         @click="toggleView"
       >
         <template #icon>
-          <n-icon :size="18"><TableEdit20Regular /></n-icon>
+          <n-icon :size="18">
+            <component :is="view === 'table' ? DataPie20Regular : TableSimple20Regular" />
+          </n-icon>
         </template>
       </n-button>
       <n-button text size="small" class="life-day-sheet__icon" title="关闭" @click="emit('close')">
@@ -47,17 +48,24 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { NButton, NIcon } from "naive-ui";
-import { Dismiss20Regular, TableEdit20Regular } from "@vicons/fluent";
+import { DataPie20Regular, Dismiss20Regular, TableSimple20Regular } from "@vicons/fluent";
 import DrinkDayPanel from "@/components/LifeRecord/DrinkDayPanel.vue";
 import EatDayPanel from "@/components/LifeRecord/EatDayPanel.vue";
 import ToiletDayPanel from "@/components/LifeRecord/ToiletDayPanel.vue";
 import SleepDayPanel from "@/components/LifeRecord/SleepDayPanel.vue";
 import { useDevice } from "@/composables/platform/useDevice";
 import type { LifeRecordKind } from "@/core/lifeRecord";
-defineProps<{ taskIds: Record<LifeRecordKind, number | null> }>();
+const props = withDefaults(
+  defineProps<{
+    taskIds: Record<LifeRecordKind, number | null>;
+    /** 预览点进默认表；日按钮进默认图 */
+    initialView?: "chart" | "table";
+  }>(),
+  { initialView: "chart" },
+);
 const emit = defineEmits<{ close: [] }>();
 const { isMobile } = useDevice();
-const view = ref<"chart" | "table">("chart");
+const view = ref<"chart" | "table">(props.initialView);
 function toggleView() {
   view.value = view.value === "chart" ? "table" : "chart";
 }
@@ -86,9 +94,6 @@ function toggleView() {
 }
 .life-day-sheet__icon :deep(.n-button__icon) {
   margin: 0;
-}
-.life-day-sheet__toggle--table {
-  color: var(--color-blue);
 }
 /* 表格态：整体相对左侧多 6px（与左侧区域留白） */
 .life-day-sheet--table:not(.life-day-sheet--mobile) {

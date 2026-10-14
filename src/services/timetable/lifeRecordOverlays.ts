@@ -18,6 +18,8 @@ export interface LifePointMark {
   time: number;
   lane: number;
   title: string;
+  /** 表格最后一列（喝什么 / 吃什么 / 去干嘛）；无则空串 */
+  note: string;
 }
 
 export interface LifeSleepRange {
@@ -25,8 +27,12 @@ export interface LifeSleepRange {
   taskId: number;
   todoId: number;
   title: string;
+  /** 表格最后一列（梦什么）；无则空串 */
+  note: string;
   start: number;
   end: number;
+  /** 真实醒来时刻；仅当醒来落在本段内才有（周视图月亮锚点） */
+  wakeAt?: number;
   /** 未闭合睡眠：到当前时刻的开放条 */
   ongoing?: boolean;
 }
@@ -86,13 +92,17 @@ function pushSleepClip(
   if (!dayClip) return;
   const viewClip = clampRange(dayClip.start, dayClip.end, timeRange.start, timeRange.end);
   if (!viewClip) return;
+  const wakeAt =
+    record.endAt != null && record.endAt >= viewClip.start && record.endAt <= viewClip.end ? record.endAt : undefined;
   sleeps.push({
     recordId: record.id,
     taskId,
     todoId,
     title,
+    note: (record.description ?? "").trim(),
     start: viewClip.start,
     end: viewClip.end,
+    wakeAt,
     ongoing: record.endAt == null,
   });
 }
@@ -161,6 +171,7 @@ export function collectLifeRecordOverlays(options: {
         colorVar: POINT_COLOR[kind],
         time,
         title: def.title,
+        note: (record.description ?? "").trim(),
       });
     }
   }

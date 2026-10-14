@@ -1,5 +1,5 @@
 <!-- LifeRecordButton.vue -->
-<!-- 单按钮：日=AppsAddIn→进入集中 sheet；非日=Apps20Regular/Filled→生活可视化开关（后续接入） -->
+<!-- 单按钮：日=AppsAddIn/ChannelAdd（无记录/有记录）→进入集中 sheet；非日=Apps20Regular/Filled→生活可视化开关 -->
 <template>
   <!-- 日：直接进入集中生活 sheet（HomeView 藏 planner，task 区渲染 2×2） -->
   <n-button
@@ -12,11 +12,11 @@
     @click.stop="onOpenDaySheet"
   >
     <template #icon>
-      <n-icon :size="18"><AppsAddIn20Regular /></n-icon>
+      <n-icon :size="18"><component :is="layerStore.currentDayHasLifeRecord ? ChannelAdd20Regular : AppsAddIn20Regular" /></n-icon>
     </template>
   </n-button>
 
-  <!-- 非日：一次性集合全部数据接口；可视化后续接入 -->
+  <!-- 非日：切到生活可视化（复用喝水图层）；再按关 -->
   <n-button
     v-else
     size="small"
@@ -35,7 +35,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { NButton, NIcon } from "naive-ui";
-import { AppsAddIn20Regular, Apps20Regular, Apps20Filled } from "@vicons/fluent";
+import { AppsAddIn20Regular, Apps20Regular, Apps20Filled, ChannelAdd20Regular } from "@vicons/fluent";
 import type { LifeRecordKind } from "@/core/lifeRecord";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useLifePlannerLayerStore } from "@/stores/useLifePlannerLayerStore";
@@ -55,7 +55,7 @@ function onOpenDaySheet() {
   emit("recorded", "drink");
 }
 
-/** 非日：一次性集合全部数据接口；当前仅切 lifeView 开关，可视化后续接入 */
+/** 非日：开/关生活可视化（周藏块+水位，月/年喝水皮肤） */
 function onAggregateAll() {
   layerStore.toggleLifeView();
   emit("recorded", "drink");
