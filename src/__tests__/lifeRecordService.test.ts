@@ -88,6 +88,7 @@ describe("buildLifeRecordEntities", () => {
     expect(todo.id).toBe(IN_DAY);
     expect(todo.activityId).toBe(activity.id);
     expect(todo.taskId).toBe(task.id);
+    expect(task.id).toBe(IN_DAY);
     expect(task.sourceId).toBe(activity.id);
     expect(task.lifeRecords).toEqual([]);
     expect(task.drinkGoalMl).toBe(2000);
@@ -106,8 +107,42 @@ describe("buildLifeRecordEntities", () => {
     const { task } = buildLifeRecordEntities("eat", IN_DAY, { drinkGoalMl: 2000 });
     expect(task.drinkGoalMl).toBeUndefined();
   });
+  it("at 非法时仍写出有限 id，不会变成 NaN", () => {
+    const { activity, todo, task } = buildLifeRecordEntities("drink", Number.NaN);
+    expect(Number.isFinite(activity.id)).toBe(true);
+    expect(Number.isFinite(todo.id)).toBe(true);
+    expect(Number.isFinite(task.id)).toBe(true);
+    expect(activity.id).toBe(todo.id);
+    expect(task.id).toBe(activity.id);
+  });
+  it("occupiedIds 避免同刻撞号：三类同号，kind 之间 +1", () => {
+    const first = buildLifeRecordEntities("drink", IN_DAY);
+    const second = buildLifeRecordEntities("eat", IN_DAY, {
+      occupiedIds: [first.activity.id],
+    });
+    expect(first.activity.id).toBe(first.todo.id);
+    expect(first.task.id).toBe(first.activity.id);
+    expect(second.activity.id).toBe(IN_DAY + 1);
+    expect(second.todo.id).toBe(IN_DAY + 1);
+    expect(second.task.id).toBe(IN_DAY + 1);
+  });
+  it("四类同刻：三件套同号，kind 连续 +1 不是 +2", () => {
+    const occupied: number[] = [];
+    const kinds = ["drink", "eat", "toilet", "sleep"] as const;
+    const built = kinds.map((kind) => {
+      const e = buildLifeRecordEntities(kind, IN_DAY, { occupiedIds: occupied });
+      occupied.push(e.activity.id);
+      return e;
+    });
+    expect(built.map((e) => e.activity.id)).toEqual([IN_DAY, IN_DAY + 1, IN_DAY + 2, IN_DAY + 3]);
+    for (const e of built) {
+      expect(e.todo.id).toBe(e.activity.id);
+      expect(e.task.id).toBe(e.activity.id);
+    }
+  });
   it("buildLifeRecordTask 兜底补建", () => {
     const task: Task = buildLifeRecordTask(100, "喝水", { drinkGoalMl: 1500 });
+    expect(task.id).toBe(100);
     expect(task.sourceId).toBe(100);
     expect(task.source).toBe("activity");
     expect(task.lifeRecords).toEqual([]);
@@ -256,6 +291,27 @@ describe("openLifeRecord / discardLifeRecordTask（store）", () => {
     useSettingStore().settings.viewSet = "month";
     ds.openLifeRecord("drink");
     expect(ds.taskList).toHaveLength(0);
+  });
+  it("ensure 一日 4 类：activity/todo id 有限且互不撞", async () => {
+    const { useDataStore } = await import("@/stores/useDataStore");
+    const ds = useDataStore();
+    ds.ensureAllLifeRecordTasksForDay(DAY_START);
+    expect(ds.activityList).toHaveLength(4);
+    expect(ds.todoList).toHaveLength(4);
+    const ids = ds.activityList.map((a) => a.id).sort((a, b) => a - b);
+    expect(ids[1]).toBe(ids[0] + 1);
+    expect(ids[2]).toBe(ids[0] + 2);
+    expect(ids[3]).toBe(ids[0] + 3);
+    for (const todo of ds.todoList) {
+      expect(todo.id).toBeGreaterThanOrEqual(DAY_START);
+      expect(todo.id).toBeLessThan(DAY_START + 86400000);
+      expect(todo.activityId).toBe(todo.id);
+      expect(todo.taskId).toBe(todo.id);
+      const activity = ds.activityList.find((a) => a.id === todo.id);
+      const task = ds.taskList.find((t) => t.id === todo.id);
+      expect(activity).toBeTruthy();
+      expect(task).toBeTruthy();
+    }
   });
   it("discard 空桶级联软删", async () => {
     const { useDataStore } = await import("@/stores/useDataStore");

@@ -2,11 +2,10 @@
 // - 周：可叠多层（Set）
 // - 月/年：互斥单层（toggle 时只留一个）
 // - 任一图层开着 → 周视图藏普通时间块；全关恢复
-import { defineStore, storeToRefs } from "pinia";
-import { computed, ref } from "vue";
-import { LIFE_RECORD_DEFS, type LifeRecordKind } from "@/core/lifeRecord";
+import { defineStore } from "pinia";
+import { computed, ref, toValue } from "vue";
+import type { LifeRecordKind } from "@/core/lifeRecord";
 import { useDataStore } from "@/stores/useDataStore";
-import { findLifeRecordTodoForDay } from "@/services/lifeRecord/lifeRecordService";
 
 export type PlannerLayerMode = "stack" | "exclusive";
 
@@ -17,24 +16,6 @@ export const useLifePlannerLayerStore = defineStore("lifePlannerLayer", () => {
 
   const hasAny = computed(() => layers.value.size > 0);
   const hasDrink = computed(() => layers.value.has("drink"));
-
-  /** 当天 4 类任一已有生活记录 → true（day 按钮图标态：有数据→ChannelAdd，无→AppsAddIn） */
-  const currentDayHasLifeRecord = computed(() => {
-    const dataStore = useDataStore();
-    const { todoList, activityById, taskByActivityId } = storeToRefs(dataStore);
-    // dataStore.dateService 经 Pinia 代理后 appDateTimestamp 可能被自动解包成数字，兼容两种形态
-    const rawDay = dataStore.dateService.appDateTimestamp;
-    const dayStart = typeof rawDay === "number" ? rawDay : (rawDay as { value?: number })?.value;
-    if (!Number.isFinite(dayStart)) return false;
-    for (const def of LIFE_RECORD_DEFS) {
-      const todo = findLifeRecordTodoForDay(todoList.value, activityById.value, def.kind, dayStart);
-      if (todo && todo.activityId != null) {
-        const task = taskByActivityId.value.get(todo.activityId);
-        if (task && (task.lifeRecords?.length ?? 0) > 0) return true;
-      }
-    }
-    return false;
-  });
 
   /**
    * 非 day 统一生活视图开关：一次性集合全部数据的接口。
@@ -47,7 +28,7 @@ export const useLifePlannerLayerStore = defineStore("lifePlannerLayer", () => {
 
   /**
    * day 集中生活 sheet：4 类同框 2×2。
-   * openDaySheet 一次性建/取 4 类当天桶 taskId；closeDaySheet 丢弃空桶并复位。
+   * openDaySheet 一次性建/取 4 类当天桶 taskId；close 只关界面，空桶保留。
    */
   const daySheetOpen = ref(false);
   const daySheetTaskIds = ref<Record<LifeRecordKind, number | null>>({
@@ -59,26 +40,14 @@ export const useLifePlannerLayerStore = defineStore("lifePlannerLayer", () => {
 
   function openDaySheet() {
     const dataStore = useDataStore();
-    const dayStart = dataStore.dateService.appDateTimestamp.value;
-    const ids = {} as Record<LifeRecordKind, number>;
-    for (const def of LIFE_RECORD_DEFS) {
-      ids[def.kind] = dataStore.ensureLifeRecordTaskForDay(def.kind, dayStart);
-    }
-    daySheetTaskIds.value = ids;
+    // Pinia 对嵌套 computed 会拆包成 number，不能再取 .value（否则 undefined → id NaN → JSON null）
+    const raw = dataStore.dateService.appDateTimestamp as Parameters<typeof toValue>[0];
+    const dayStart = toValue(raw);
+    daySheetTaskIds.value = dataStore.ensureAllLifeRecordTasksForDay(dayStart);
     daySheetOpen.value = true;
   }
 
   function closeDaySheet() {
-    const dataStore = useDataStore();
-    for (const def of LIFE_RECORD_DEFS) {
-      const id = daySheetTaskIds.value[def.kind];
-      if (id == null) continue;
-      const task = dataStore.taskList.find((t) => t.id === id);
-      // 退出时清空桶：无记录的整行软删，避免垃圾
-      if (task && !task.deleted && (!task.lifeRecords || task.lifeRecords.length === 0)) {
-        dataStore.discardLifeRecordTask(id);
-      }
-    }
     daySheetTaskIds.value = { drink: null, eat: null, toilet: null, sleep: null };
     daySheetOpen.value = false;
   }
@@ -131,7 +100,6 @@ export const useLifePlannerLayerStore = defineStore("lifePlannerLayer", () => {
     lastKind,
     hasAny,
     hasDrink,
-    currentDayHasLifeRecord,
     has,
     toggle,
     clear,

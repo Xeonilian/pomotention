@@ -1,15 +1,28 @@
 // src/services/lifeRecord/lifeRecordService.ts
-// 生活记录纯函数：当日行查找、三件套构造、记录增删改（不碰存储与 store）
+// 生活记录纯函数：当日行查找、三件套构造、记录增删改（不碰存储与 store） 
 import type { Activity } from "@/core/types/Activity";
 import type { Todo } from "@/core/types/Todo";
 import type { LifeRecord, Task } from "@/core/types/Task";
 import { getDayStartTimestamp } from "@/core/utils";
-import { getLifeRecordDef, getLifeRecordKind, lifeRecordPlaceholderTitle, type LifeRecordKind } from "@/core/lifeRecord";
+import { getLifeRecordDef, getLifeRecordKind, lifeRecordPlaceholderTitle, LIFE_RECORD_DEFS, type LifeRecordKind } from "@/core/lifeRecord";
 const DAY_MS = 24 * 60 * 60 * 1000;
+/** 一日 4 类相对基准时刻的固定偏移：drink+0 … sleep+3 */
+const KIND_ID_OFFSET = Object.fromEntries(LIFE_RECORD_DEFS.map((d, i) => [d.kind, i])) as Record<LifeRecordKind, number>;
 export type BuildLifeRecordOptions = {
   /** 仅 drink：写入当日目标快照 */
   drinkGoalMl?: number;
+  /** 已占用的 activity/todo/task id，避免同毫秒连建撞号 */
+  occupiedIds?: Iterable<number>;
+  /** 指定 task.id；不传则与 activityId 对齐 */
+  id?: number;
 };
+/** 从 start 起找一个未占用的有限时间戳 id */
+export function nextFreeTimestampId(start: number, occupied?: Iterable<number>): number {
+  let id = Number.isFinite(start) ? start : Date.now();
+  const taken = occupied instanceof Set ? occupied : new Set(occupied);
+  while (taken.has(id)) id++;
+  return id;
+}
 export type AppendLifeRecordOptions = {
   /** 喝水等点事件：本口 ml 快照 */
   amountMl?: number;
@@ -36,8 +49,9 @@ export function findLifeRecordTodoForDay(
 /** 单独补建 lifeRecord 的 task（行在但 task 缺失的异常兜底） */
 export function buildLifeRecordTask(activityId: number, title: string, options?: BuildLifeRecordOptions): Task {
   const now = Date.now();
+  const id = options?.id ?? activityId;
   return {
-    id: now,
+    id,
     activityTitle: title,
     source: "activity",
     sourceId: activityId,
@@ -53,19 +67,22 @@ export function buildLifeRecordTask(activityId: number, title: string, options?:
     lastModified: now,
   };
 }
-/** 构造 lifeRecord 三件套；activity.id 与 todo.id 统一用记录时刻 at，保证落在显示日 */
+/** 构造 lifeRecord 三件套。同一类 activity/todo/task 共用一个 id；四类按 kind +0…+3。 */
 export function buildLifeRecordEntities(
   kind: LifeRecordKind,
   at: number,
   options?: BuildLifeRecordOptions,
 ): { activity: Activity; todo: Todo; task: Task } {
   const def = getLifeRecordDef(kind);
-  const dayStart = getDayStartTimestamp(at);
+  const occupied = new Set(options?.occupiedIds);
+  const base = Number.isFinite(at) ? at : Date.now();
+  const stamp = nextFreeTimestampId(base + KIND_ID_OFFSET[kind], occupied);
+  const dayStart = getDayStartTimestamp(Number.isFinite(at) ? at : stamp);
   const placeholder = lifeRecordPlaceholderTitle(kind, dayStart);
   const drinkGoalMl = kind === "drink" ? options?.drinkGoalMl : undefined;
-  // activity / todo / task 标题统一 daily_<kind>_<日零点>；不进活动列表靠 status=done；不进 planner/Search 靠 tag + 标题规则
+  // 标题统一 daily_<kind>_<日零点>；不进活动列表靠 status=done；不进 planner/Search 靠 tag + 标题规则
   const activity: Activity = {
-    id: at,
+    id: stamp,
     title: placeholder,
     class: "T",
     parentId: null,
@@ -75,13 +92,14 @@ export function buildLifeRecordEntities(
     synced: false,
     lastModified: Date.now(),
   };
-  const task = buildLifeRecordTask(activity.id, placeholder, { drinkGoalMl });
-  activity.taskId = task.id;
+  // 三类同号；不要再走 nextFree，否则 occupied 已含 stamp 时 task 会变成 stamp+1
+  const task = buildLifeRecordTask(stamp, placeholder, { drinkGoalMl, id: stamp });
+  activity.taskId = stamp;
   const todo: Todo = {
-    id: at,
-    activityId: activity.id,
+    id: stamp,
+    activityId: stamp,
     activityTitle: placeholder,
-    taskId: task.id,
+    taskId: stamp,
     status: "done",
     priority: 0,
     deleted: false,
