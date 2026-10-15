@@ -67,7 +67,7 @@ import { plannerHolidayMapKey } from "@/composables/planner/usePublicHolidays";
 
 const props = withDefaults(
   defineProps<{
-    /** 生活可视化：有任一生活记录的天用紫点，点击进整合 sheet */
+    /** 生活可视化：有任一生活记录的天用黄点，点击进整合 sheet */
     lifeView?: boolean;
   }>(),
   { lifeView: false },
@@ -172,7 +172,7 @@ const yearStart = computed(() => {
 const todayStart = computed(() => startOfDay(Date.now()));
 
 function getDotStyle(dayStartTs: number): { backgroundColor?: string; color?: string } {
-  // 生活可视化：有数据的天走 CSS 紫点，其余保持默认空点
+  // 生活可视化：有数据的天走 CSS 黄点，其余保持默认空点
   if (props.lifeView) return {};
   const start = yearStart.value;
   const dots = dataStore.yearDayDots;
@@ -568,9 +568,9 @@ function handleWeekClick(weekStartTs: number) {
   color: var(--color-green) !important;
 }
 
-/* 生活可视化：当天有喝水/吃饭/活动/睡觉记录 → 紫点 */
+/* 生活可视化：当天有喝水/吃饭/活动/睡觉记录 → 黄点 */
 .day-dot.day-dot--life {
-  background-color: var(--color-purple) !important;
+  background-color: var(--color-yellow) !important;
 }
 
 .day-dot.day-dot--life .day-num {

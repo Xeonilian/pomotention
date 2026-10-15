@@ -58,9 +58,9 @@ function clipMs(start: number, end: number, dayStart: number, dayEnd: number): n
   return Math.max(0, e - s);
 }
 
-/** 与显示日相交的段；未闭合用 now（今日）或日末 */
+/** 与显示日相交的段；未闭合：历史日铺到日末，当日铺到 now，不渗未来日 */
 export function clipDaySpans(records: LifeRecord[], dayStart: number, dayEnd: number, now: number): { ms: number; startAt: number }[] {
-  const openEnd = dayStart <= now && now < dayEnd ? now : dayEnd;
+  const openEnd = Math.min(now, dayEnd);
   const out: { ms: number; startAt: number }[] = [];
   for (const r of records) {
     const end = r.endAt ?? openEnd;

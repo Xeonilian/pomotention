@@ -42,6 +42,23 @@ describe("clipDaySpans", () => {
     const parts = clipDaySpans([rec({ id: start, recordedAt: start })], dayStart, dayEnd, dayEnd + DAY);
     expect(parts[0].ms).toBe(3600_000);
   });
+
+  it("未闭合段在当日只铺到 now", () => {
+    const start = dayStart + 15 * 3600_000;
+    const now = start + 2 * 60_000;
+    const parts = clipDaySpans([rec({ id: start, recordedAt: start })], dayStart, dayEnd, now);
+    expect(parts).toHaveLength(1);
+    expect(parts[0].ms).toBe(2 * 60_000);
+  });
+
+  it("未闭合段不渗到未来日", () => {
+    const start = dayStart + 15 * 3600_000 + 49 * 60_000;
+    const now = start + 2 * 60_000;
+    const nextStart = dayEnd;
+    const nextEnd = nextStart + DAY;
+    const parts = clipDaySpans([rec({ id: start, recordedAt: start })], nextStart, nextEnd, now);
+    expect(parts).toEqual([]);
+  });
 });
 
 describe("eatEventsChronological", () => {
