@@ -184,7 +184,7 @@ watch(
 watch(chartNoteOpen, async (open) => {
   if (!open) return;
   await nextTick();
-  chartNoteRef.value?.focus();
+  chartNoteRef.value?.focus({ preventScroll: true });
 });
 function onDoorClick() {
   if (chartNoteOpen.value) {

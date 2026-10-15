@@ -4,14 +4,18 @@
 // - 任一图层开着 → 周视图藏普通时间块；全关恢复
 import { defineStore } from "pinia";
 import { computed, ref, toValue } from "vue";
+import { useDevice } from "@/composables/platform/useDevice";
 import { LIFE_RECORD_DEFS, type LifeRecordKind } from "@/core/lifeRecord";
 import { findLifeRecordTodoForDay } from "@/services/lifeRecord/lifeRecordService";
 import { useDataStore } from "@/stores/useDataStore";
+import { useSettingStore } from "@/stores/useSettingStore";
 
 export type PlannerLayerMode = "stack" | "exclusive";
 
 export const useLifePlannerLayerStore = defineStore("lifePlannerLayer", () => {
   const dataStore = useDataStore();
+  const settingStore = useSettingStore();
+  const { isMobile } = useDevice();
   const layers = ref<Set<LifeRecordKind>>(new Set());
   /** 月/年互斥时记住最后一层，周叠多层切到月/年时折叠用 */
   const lastKind = ref<LifeRecordKind | null>(null);
@@ -75,6 +79,11 @@ export const useLifePlannerLayerStore = defineStore("lifePlannerLayer", () => {
     daySheetOpen.value = false;
   }
 
+  /** 手机非日生活预览：临时铺满规划区（不改设置）；顶栏 timetable/task 外观跟实际可见性走 */
+  const mobilePreviewSolo = computed(
+    () => isMobile.value && settingStore.settings.viewSet !== "day" && lifeView.value && !daySheetOpen.value,
+  );
+
   function has(kind: LifeRecordKind): boolean {
     return layers.value.has(kind);
   }
@@ -134,6 +143,7 @@ export const useLifePlannerLayerStore = defineStore("lifePlannerLayer", () => {
     daySheetTaskIds,
     openDaySheet,
     closeDaySheet,
+    mobilePreviewSolo,
   };
 });
 

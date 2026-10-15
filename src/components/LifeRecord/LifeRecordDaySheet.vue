@@ -6,6 +6,7 @@
 -->
 <template>
   <div
+    ref="sheetRef"
     class="life-day-sheet"
     :class="{ 'life-day-sheet--mobile': isMobile, 'life-day-sheet--table': view === 'table' }"
   >
@@ -54,6 +55,7 @@ import EatDayPanel from "@/components/LifeRecord/EatDayPanel.vue";
 import ToiletDayPanel from "@/components/LifeRecord/ToiletDayPanel.vue";
 import SleepDayPanel from "@/components/LifeRecord/SleepDayPanel.vue";
 import { useDevice } from "@/composables/platform/useDevice";
+import { useMobileInputScroll } from "@/composables/lifeRecord/useMobileInputScroll";
 import type { LifeRecordKind } from "@/core/lifeRecord";
 const props = withDefaults(
   defineProps<{
@@ -65,6 +67,8 @@ const props = withDefaults(
 );
 const emit = defineEmits<{ close: [] }>();
 const { isMobile } = useDevice();
+const sheetRef = ref<HTMLElement | null>(null);
+useMobileInputScroll(sheetRef);
 const view = ref<"chart" | "table">(props.initialView);
 function toggleView() {
   view.value = view.value === "chart" ? "table" : "chart";

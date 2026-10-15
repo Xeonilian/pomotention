@@ -217,7 +217,7 @@ watch(dreamRecordId, async (id) => {
   await nextTick();
   const ta = dreamTextareaRef.value;
   if (!ta) return;
-  ta.focus();
+  ta.focus({ preventScroll: true });
   const len = ta.value.length;
   try {
     ta.setSelectionRange(len, len);
@@ -238,7 +238,7 @@ watch(
 watch(chartDreamOpen, async (open) => {
   if (!open) return;
   await nextTick();
-  chartDreamRef.value?.focus();
+  chartDreamRef.value?.focus({ preventScroll: true });
 });
 function onMoonClick() {
   if (chartDreamOpen.value) {

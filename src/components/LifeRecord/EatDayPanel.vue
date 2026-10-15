@@ -10,35 +10,37 @@
         </button>
         <span class="lr-chart__el lr-chart__times" aria-hidden="true">×</span>
         <span class="lr-chart__el lr-chart__count">{{ records.length }}</span>
-        <span class="lr-chart__el eat-day-chart__start" :title="lastRecord ? '时间 ' + lastStartLabel : ''">{{ lastStartLabel }}</span>
-        <button
-          type="button"
-          class="lr-chart__el eat-day-chart__course"
-          :title="eatCourseTitle(lastRecord?.eatCourse)"
-          @click="lastRecord && toggleEatCourse(lastRecord)"
-        >
-          <n-icon class="eat-day-chart__ctrl-icon">
-            <component :is="eatCourseIcon(lastRecord?.eatCourse)" />
-          </n-icon>
-        </button>
-        <button
-          type="button"
-          class="lr-chart__el eat-day-chart__food"
-          title="吃什么"
-          @pointerdown="chartFoodOpen && $event.preventDefault()"
-          @click="onFoodClick"
-        >
-          <n-icon class="eat-day-chart__ctrl-icon"><Food20Regular /></n-icon>
-        </button>
-        <input
-          v-if="chartFoodOpen && lastRecord"
-          ref="chartFoodRef"
-          class="lr-chart__el eat-day-chart__input"
-          :value="chartFoodDraft"
-          placeholder="吃什么"
-          @input="onChartFoodInput"
-          @blur="onChartFoodBlur"
-        />
+        <template v-if="lastRecord">
+          <span class="lr-chart__el eat-day-chart__start" :title="'时间 ' + lastStartLabel">{{ lastStartLabel }}</span>
+          <button
+            type="button"
+            class="lr-chart__el eat-day-chart__course"
+            :title="eatCourseTitle(lastRecord.eatCourse)"
+            @click="toggleEatCourse(lastRecord)"
+          >
+            <n-icon class="eat-day-chart__ctrl-icon">
+              <component :is="eatCourseIcon(lastRecord.eatCourse)" />
+            </n-icon>
+          </button>
+          <button
+            type="button"
+            class="lr-chart__el eat-day-chart__food"
+            title="吃什么"
+            @pointerdown="chartFoodOpen && $event.preventDefault()"
+            @click="onFoodClick"
+          >
+            <n-icon class="eat-day-chart__ctrl-icon"><Food20Regular /></n-icon>
+          </button>
+          <input
+            v-if="chartFoodOpen"
+            ref="chartFoodRef"
+            class="lr-chart__el eat-day-chart__input"
+            :value="chartFoodDraft"
+            placeholder="吃什么"
+            @input="onChartFoodInput"
+            @blur="onChartFoodBlur"
+          />
+        </template>
       </div>
     </template>
     <template #table>
@@ -162,7 +164,7 @@ watch(
 watch(chartFoodOpen, async (open) => {
   if (!open) return;
   await nextTick();
-  chartFoodRef.value?.focus();
+  chartFoodRef.value?.focus({ preventScroll: true });
 });
 function commitChartFood() {
   const last = lastRecord.value;

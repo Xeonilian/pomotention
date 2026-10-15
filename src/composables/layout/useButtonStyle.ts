@@ -18,6 +18,7 @@ import {
 } from "@vicons/fluent";
 import { useDevice } from "@/composables/platform/useDevice";
 import { CAPTURE_UI_ENABLED } from "@/core/capture";
+import { useLifePlannerLayerStore } from "@/stores/useLifePlannerLayerStore";
 
 type ViewKey = "ontop" | "pomodoro" | "timetable" | "task" | "planner" | "activity" | "ai";
 
@@ -25,6 +26,7 @@ export function useButtonStyle() {
   // const timerStore = useTimerStore();
   const settingStore = useSettingStore();
   const { isMobile, isLandscape } = useDevice();
+  const lifePlannerLayerStore = useLifePlannerLayerStore();
 
   // 入口关闭时清掉残留右栏，避免本地曾打开过 showAi 仍占布局
   if (!CAPTURE_UI_ENABLED && settingStore.settings.showAi) {
@@ -59,10 +61,11 @@ export function useButtonStyle() {
   };
 
   const updateButtonStates = () => {
+    const previewSolo = lifePlannerLayerStore.mobilePreviewSolo;
     buttonStates.value.pomodoro = settingStore.settings.showPomodoro;
-    buttonStates.value.timetable = settingStore.settings.showTimetable;
+    buttonStates.value.timetable = settingStore.settings.showTimetable && !previewSolo;
     buttonStates.value.planner = settingStore.settings.showPlanner;
-    buttonStates.value.task = settingStore.settings.showTask;
+    buttonStates.value.task = settingStore.settings.showTask && !previewSolo;
     buttonStates.value.activity = settingStore.settings.showActivity;
     buttonStates.value.ai = settingStore.settings.showAi;
   };
@@ -71,9 +74,9 @@ export function useButtonStyle() {
   const viewControls = computed(() => [
     { key: "ontop", icon: Pin24Regular, title: "番茄时钟置顶", show: isTauri() },
     { key: "pomodoro", icon: Timer24Regular, title: "切换番茄钟视图", show: settingStore.settings.showPomodoro },
-    { key: "timetable", icon: Timeline20Regular, title: "切换日程视图", show: settingStore.settings.showTimetable },
+    { key: "timetable", icon: Timeline20Regular, title: "切换日程视图", show: settingStore.settings.showTimetable && !lifePlannerLayerStore.mobilePreviewSolo },
     { key: "planner", icon: TasksApp20Regular, title: "切换计划视图", show: settingStore.settings.showPlanner },
-    { key: "task", icon: CalligraphyPen20Regular, title: "切换执行视图", show: settingStore.settings.showTask },
+    { key: "task", icon: CalligraphyPen20Regular, title: "切换执行视图", show: settingStore.settings.showTask && !lifePlannerLayerStore.mobilePreviewSolo },
     { key: "activity", icon: BookLetter20Regular, title: "切换活动视图", show: settingStore.settings.showActivity },
     ...(CAPTURE_UI_ENABLED
       ? [{ key: "ai" as const, icon: BrainCircuit24Regular, title: "切换记一句", show: settingStore.settings.showAi }]
@@ -84,6 +87,14 @@ export function useButtonStyle() {
   function toggleSettingPanel(panel: "timetable" | "activity" | "task" | "today" | "pomodoro" | "planner" | "ai") {
     const toKey = (p: string) => ("show" + p.charAt(0).toUpperCase() + p.slice(1)) as keyof typeof settingStore.settings;
     const key = toKey(panel);
+
+    // 预览藏区时按钮显示为关；点击视为打开该区并退出预览（不把藏区写进设置）
+    if (lifePlannerLayerStore.mobilePreviewSolo && (panel === "timetable" || panel === "task")) {
+      lifePlannerLayerStore.toggleLifeView();
+      // @ts-ignore
+      settingStore.settings[key] = true;
+      return;
+    }
 
     // 横屏手机与桌面一致：点哪个开关哪个，不强制 activity 与其它互斥
     const desktopLikePanels = !isMobile.value || isLandscape.value;
@@ -158,6 +169,7 @@ export function useButtonStyle() {
       settingStore.settings.showActivity,
       settingStore.settings.showPomodoro,
       settingStore.settings.showAi,
+      lifePlannerLayerStore.mobilePreviewSolo,
     ],
     () => updateButtonStates(),
     { immediate: true },

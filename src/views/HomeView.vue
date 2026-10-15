@@ -8,13 +8,13 @@
   <div class="home-root" :class="{ 'home-root--activity-only-mobile': activityOnlyMobile }" :style="rootCssVars">
     <div class="home-content">
       <!-- 左侧面板 (日程表) -->
-      <div v-if="settingStore.settings.showTimetable" class="left" :style="{ width: leftWidth + 'px' }">
+      <div v-if="timetableLayoutVisible" class="left" :style="{ width: leftWidth + 'px' }">
         <TimeTable @timetable-edit="onTimetableEdit" />
       </div>
 
       <!-- 左侧面板调整大小手柄 -->
       <div
-        v-if="settingStore.settings.showTimetable"
+        v-if="timetableLayoutVisible"
         class="resize-handle-horizontal"
         style="touch-action: none"
         @pointerdown="startLeftResize"
@@ -25,7 +25,7 @@
         ref="middleColumnEl"
         class="middle"
         :class="{
-          'middle-alone': !settingStore.settings.showTimetable && !settingStore.settings.showActivity && !showCaptureUi,
+          'middle-alone': !timetableLayoutVisible && !settingStore.settings.showActivity && !showCaptureUi,
           'middle--landscape-fallback': isMobile && isLandscapeViewport,
           'middle--mobile-planner-height-anim': isMobile && settingStore.settings.showPlanner && !mobileLifeRecordOpen,
           'middle--suppress-planner-motion': suppressMobilePlannerMotion,
@@ -122,7 +122,7 @@
         ></div>
         <!-- 任务视图：showTask 时常驻 DOM，移动端待办编辑时折叠过渡，避免 v-if 瞬时插入导致布局抖 -->
         <div
-          v-if="settingStore.settings.showTask"
+          v-if="taskAreaVisible"
           class="middle-bottom"
           :class="{
             'middle-bottom--collapsed': isMobile && mobileDayTodoInlineEditing,
@@ -167,7 +167,7 @@
       </div>
     </div>
     <MobileHomeFab
-      v-if="isMobile"
+      v-if="isMobile && !daySheetActive && !lifePlannerLifeView"
       :task-record-editing="taskRecordEditing"
       @notify="showErrorPopover"
       @update-active-id="onUpdateActiveId"
@@ -380,11 +380,14 @@ const { saveAllDebounced, cleanSelection } = dataStore;
 /** 月视图：header 🍅 单击切换统计模式（会话级） */
 const monthShowStatsOnly = ref(false);
 const lifePlannerLayerStore = useLifePlannerLayerStore();
-const { hasAny: lifePlannerHasAnyLayer, hasDrink: lifePlannerHasDrink, lifeView: lifePlannerLifeView, daySheetOpen, daySheetTaskIds } =
+const { hasAny: lifePlannerHasAnyLayer, hasDrink: lifePlannerHasDrink, lifeView: lifePlannerLifeView, daySheetOpen, daySheetTaskIds, mobilePreviewSolo } =
   storeToRefs(lifePlannerLayerStore);
 
 /** 生活整合 sheet 激活：任意 view 进入都给全部 middle 空间 */
 const daySheetActive = computed(() => daySheetOpen.value);
+
+const timetableLayoutVisible = computed(() => settingStore.settings.showTimetable && !mobilePreviewSolo.value);
+const taskAreaVisible = computed(() => daySheetActive.value || (settingStore.settings.showTask && !mobilePreviewSolo.value));
 
 watch(
   () => settingStore.settings.viewSet,
@@ -1574,11 +1577,13 @@ const plannerMiddleAvailPx = computed(() => {
 const isLandscapeViewport = computed(() => viewportInnerW.value > viewportInnerH.value);
 
 /** 任务区是否与计划表分栏显示（尊重设置；移动端待办编辑时临时不占位） */
-const taskPanelLayoutVisible = computed(() => settingStore.settings.showTask && !mobileDayTodoInlineEditing.value);
+const taskPanelLayoutVisible = computed(
+  () => settingStore.settings.showTask && !mobileDayTodoInlineEditing.value && !mobilePreviewSolo.value,
+);
 
 /** 移动端横屏或总高度不足时限制 middle-top，避免任务区被挤没；桌面端仅在极端矮窗时收缩 */
 const effectiveMiddleTopHeightPx = computed(() => {
-  if (!settingStore.settings.showPlanner || !settingStore.settings.showTask || mobileDayTodoInlineEditing.value) return topHeight.value;
+  if (!settingStore.settings.showPlanner || !settingStore.settings.showTask || mobileDayTodoInlineEditing.value || mobilePreviewSolo.value) return topHeight.value;
   const avail = plannerMiddleAvailPx.value;
   const minTask = 100;
   const maxTop = Math.max(120, avail - minTask);
