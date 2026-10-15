@@ -70,6 +70,30 @@ export function clipDaySpans(records: LifeRecord[], dayStart: number, dayEnd: nu
   return out;
 }
 
+/**
+ * 入睡落在该日的各段里，取整段最长一次的 recordedAt（与记录口径一致：入睡写在当天桶，endAt 可跨日）。
+ * 跨夜醒来那天、以及昨夜渗进来的条，不写数字。时长并列时取更晚的那次入睡。
+ */
+export function longestSleepStartOnDay(
+  records: LifeRecord[],
+  dayStart: number,
+  dayEnd: number,
+  now: number,
+): number | null {
+  let bestStart: number | null = null;
+  let bestMs = -1;
+  for (const r of records) {
+    if (!Number.isFinite(r.recordedAt) || r.recordedAt < dayStart || r.recordedAt >= dayEnd) continue;
+    const end = r.endAt ?? now;
+    const ms = Math.max(0, end - r.recordedAt);
+    if (bestStart == null || ms > bestMs || (ms === bestMs && r.recordedAt > bestStart)) {
+      bestMs = ms;
+      bestStart = r.recordedAt;
+    }
+  }
+  return bestStart;
+}
+
 function eatCourseOf(record: LifeRecord): EatCourse {
   if (record.eatCourse === "dessert" || record.eatCourse === "apple") return record.eatCourse;
   return "meal";
@@ -94,6 +118,8 @@ export function toMonthLifeBarView(input: {
   drinkAmounts: number[];
   drinkGoalMl: number;
   sleepSpans: { ms: number; startAt: number }[];
+  /** 入睡落在当天、整段最长那次的 recordedAt；跨夜醒来日不传 */
+  sleepBedStartAt?: number | null;
   eatEvents: { recordedAt: number; course: EatCourse }[];
   activitySpans: { ms: number; startAt: number }[];
   eatScale: number;
@@ -102,10 +128,6 @@ export function toMonthLifeBarView(input: {
   const sleepScale = MONTH_SLEEP_BAR_MS;
   const sleepSpans = sortSpans(input.sleepSpans);
   const sleepParts = sleepSpans.map((s) => s.ms / sleepScale);
-  let longest: { ms: number; startAt: number } | null = null;
-  for (const s of sleepSpans) {
-    if (!longest || s.ms > longest.ms) longest = s;
-  }
   const eatScale = Math.max(MONTH_EAT_BAR_MIN, input.eatScale, 1);
   const actScale = activityBarScaleMs(input.activityScale);
   const eatEvents = [...input.eatEvents].sort((a, b) => a.recordedAt - b.recordedAt);
@@ -116,12 +138,13 @@ export function toMonthLifeBarView(input: {
   const activityParts = activitySpans.map((s) => s.ms / actScale);
   const drinkParts = input.drinkAmounts.filter((ml) => ml > 0).map((ml) => ml / MONTH_DRINK_BAR_ML);
   const drinkMl = input.drinkAmounts.reduce((sum, ml) => sum + Math.max(0, ml), 0);
+  const bedAt = input.sleepBedStartAt;
   return {
     drinkParts,
     drinkLitersLabel: drinkMl > 0 ? `${(drinkMl / 1000).toFixed(1)} L` : null,
     drinkGoalRatio: Math.max(0, input.drinkGoalMl) / MONTH_DRINK_BAR_ML,
     sleepParts,
-    sleepBedLabel: longest ? timestampToTimeString(longest.startAt) : null,
+    sleepBedLabel: bedAt != null && Number.isFinite(bedAt) ? timestampToTimeString(bedAt) : null,
     eatParts,
     eatCount,
     eatSpanLabel:

@@ -120,6 +120,7 @@ import {
   clipDaySpans,
   eatEventsChronological,
   EMPTY_MONTH_LIFE_BARS,
+  longestSleepStartOnDay,
   MONTH_EAT_BAR_MIN,
   toMonthLifeBarView,
 } from "@/services/lifeRecord/monthLifeBars";
@@ -379,10 +380,12 @@ const days = computed(() => {
   const lifeRaws = result.map((d) => {
     if (!d.isCurrentMonth) return null;
     const eatEvents = eatEventsChronological(recordsOf("eat", d.startTs));
+    const sleepDayRecords = recordsOf("sleep", d.startTs);
     const sleepSpans = [
-      ...clipDaySpans(recordsOf("sleep", d.startTs), d.startTs, d.endTs, now),
+      ...clipDaySpans(sleepDayRecords, d.startTs, d.endTs, now),
       ...clipDaySpans(recordsOf("sleep", d.startTs - DAY_MS), d.startTs, d.endTs, now),
     ];
+    const sleepBedStartAt = longestSleepStartOnDay(sleepDayRecords, d.startTs, d.endTs, now);
     const actSpans = clipDaySpans(recordsOf("toilet", d.startTs), d.startTs, d.endTs, now);
     const cupFallback = settingStore.settings.drinkCupMl;
     const drinkAmounts = recordsOf("drink", d.startTs).map((r) => {
@@ -393,6 +396,7 @@ const days = computed(() => {
       drinkAmounts,
       drinkGoalMl: d.drinkStat.goalMl,
       sleepSpans,
+      sleepBedStartAt,
       eatEvents,
       activitySpans: actSpans,
     };

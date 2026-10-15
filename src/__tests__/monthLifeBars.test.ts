@@ -6,6 +6,7 @@ import {
   eatEventsChronological,
   EMPTY_MONTH_LIFE_BARS,
   hasMonthLifeBarData,
+  longestSleepStartOnDay,
   MONTH_ACTIVITY_BAR_MIN_MS,
   MONTH_DRINK_BAR_ML,
   MONTH_EAT_BAR_MIN,
@@ -61,6 +62,36 @@ describe("clipDaySpans", () => {
   });
 });
 
+describe("longestSleepStartOnDay", () => {
+  it("入睡日取整段最长那次；醒来日不写（记录在入睡桶）", () => {
+    const bed = dayStart + 23 * 3600_000;
+    const wake = dayEnd + 7 * 3600_000;
+    const recs = [rec({ id: bed, recordedAt: bed, endAt: wake })];
+    expect(longestSleepStartOnDay(recs, dayStart, dayEnd, wake + 1)).toBe(bed);
+    expect(longestSleepStartOnDay(recs, dayEnd, dayEnd + DAY, wake + 1)).toBeNull();
+  });
+
+  it("夜班同日：长睡盖过傍晚小睡", () => {
+    const main = dayStart + 8 * 3600_000;
+    const nap = dayStart + 20 * 3600_000;
+    const recs = [
+      rec({ id: main, recordedAt: main, endAt: main + 8 * 3600_000 }),
+      rec({ id: nap, recordedAt: nap, endAt: nap + 3600_000 }),
+    ];
+    expect(longestSleepStartOnDay(recs, dayStart, dayEnd, dayEnd + 1)).toBe(main);
+  });
+
+  it("午睡短、晚睡整段更长：即使当日只切到 1h 仍取晚睡", () => {
+    const nap = dayStart + 14 * 3600_000;
+    const bed = dayStart + 23 * 3600_000;
+    const recs = [
+      rec({ id: nap, recordedAt: nap, endAt: nap + 3600_000 }),
+      rec({ id: bed, recordedAt: bed, endAt: dayEnd + 7 * 3600_000 }),
+    ];
+    expect(longestSleepStartOnDay(recs, dayStart, dayEnd, dayEnd + 8 * 3600_000)).toBe(bed);
+  });
+});
+
 describe("eatEventsChronological", () => {
   it("按时间升序，缺省 course 算正餐", () => {
     expect(
@@ -84,6 +115,7 @@ describe("toMonthLifeBarView", () => {
       drinkAmounts: [250, 250, 250, 250],
       drinkGoalMl: 2000,
       sleepSpans: [{ ms: 7 * 3600_000, startAt: sleepStart }],
+      sleepBedStartAt: sleepStart,
       eatEvents: [
         { recordedAt: 10, course: "meal" },
         { recordedAt: 20, course: "dessert" },
