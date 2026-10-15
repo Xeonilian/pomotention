@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { LifeRecord } from "@/core/types/Task";
 import {
+  activityBarScaleMs,
   clipDaySpans,
-  eatCourseCounts,
+  eatEventsChronological,
   EMPTY_MONTH_LIFE_BARS,
   hasMonthLifeBarData,
   MONTH_ACTIVITY_BAR_MIN_MS,
+  MONTH_DRINK_BAR_ML,
   MONTH_EAT_BAR_MIN,
   MONTH_SLEEP_BAR_MS,
   toMonthLifeBarView,
@@ -42,27 +44,34 @@ describe("clipDaySpans", () => {
   });
 });
 
-describe("eatCourseCounts", () => {
-  it("缺省 eatCourse 算正餐", () => {
+describe("eatEventsChronological", () => {
+  it("按时间升序，缺省 course 算正餐", () => {
     expect(
-      eatCourseCounts([
-        rec({ id: 1, recordedAt: 1 }),
-        rec({ id: 2, recordedAt: 2, eatCourse: "dessert" }),
-        rec({ id: 3, recordedAt: 3, eatCourse: "apple" }),
+      eatEventsChronological([
+        rec({ id: 3, recordedAt: 30, eatCourse: "apple" }),
+        rec({ id: 1, recordedAt: 10 }),
+        rec({ id: 2, recordedAt: 20, eatCourse: "dessert" }),
       ]),
-    ).toEqual({ meal: 1, dessert: 1, apple: 1 });
+    ).toEqual([
+      { recordedAt: 10, course: "meal" },
+      { recordedAt: 20, course: "dessert" },
+      { recordedAt: 30, course: "apple" },
+    ]);
   });
 });
 
 describe("toMonthLifeBarView", () => {
-  it("喝水按目标比；睡觉堆叠相对 8h；吃按月尺度；活动按段堆叠+累计分钟", () => {
+  it("喝水按杯相对 2L 堆叠，目标框按 goal；睡觉 8h；吃按月尺度；活动段+分钟", () => {
     const sleepStart = prevStart + 22.5 * 3600_000;
     const view = toMonthLifeBarView({
-      drinkRatio: 0.75,
-      drinkMet: false,
-      drinkCount: 5,
+      drinkAmounts: [250, 250, 250, 250],
+      drinkGoalMl: 2000,
       sleepSpans: [{ ms: 7 * 3600_000, startAt: sleepStart }],
-      eat: { meal: 2, dessert: 1, apple: 0 },
+      eatEvents: [
+        { recordedAt: 10, course: "meal" },
+        { recordedAt: 20, course: "dessert" },
+        { recordedAt: 30, course: "meal" },
+      ],
       activitySpans: [
         { ms: 45 * 60_000, startAt: 1 },
         { ms: 75 * 60_000, startAt: 2 },
@@ -70,38 +79,119 @@ describe("toMonthLifeBarView", () => {
       eatScale: MONTH_EAT_BAR_MIN,
       activityScale: MONTH_ACTIVITY_BAR_MIN_MS,
     });
-    expect(view.drinkRatio).toBe(0.75);
-    expect(view.drinkMet).toBe(false);
-    expect(view.drinkCount).toBe(5);
+    expect(view.drinkParts).toHaveLength(4);
+    expect(view.drinkParts[0]).toBeCloseTo(250 / MONTH_DRINK_BAR_ML);
+    expect(view.drinkLitersLabel).toBe("1.0 L");
+    expect(view.drinkGoalRatio).toBe(1);
     expect(view.sleepParts[0]).toBeCloseTo((7 * 3600_000) / MONTH_SLEEP_BAR_MS);
     expect(view.sleepBedLabel).toBe("22:30");
-    expect(view.eatMeal).toBeCloseTo(2 / 6);
-    expect(view.eatDessert).toBeCloseTo(1 / 6);
-    expect(view.eatApple).toBe(0);
+    expect(view.eatParts.map((p) => p.course)).toEqual(["meal", "dessert", "meal"]);
+    expect(view.eatParts[0].ratio).toBeCloseTo(1 / 6);
     expect(view.eatCount).toBe(3);
     expect(view.activityParts).toHaveLength(2);
     expect(view.activityParts[0]).toBeCloseTo((45 * 60_000) / MONTH_ACTIVITY_BAR_MIN_MS);
     expect(view.activityMinutes).toBe(120);
   });
 
-  it("吃/活动尺度跟月内峰值走，不低于下限", () => {
+  it("喝水超过 2L 不截断，目标框可高于基准", () => {
     const view = toMonthLifeBarView({
-      drinkRatio: 2,
-      drinkMet: true,
-      drinkCount: 8,
+      drinkAmounts: [250, 250, 250, 250, 250, 250, 250, 250, 250],
+      drinkGoalMl: 2500,
       sleepSpans: [],
-      eat: { meal: 8, dessert: 2, apple: 0 },
+      eatEvents: [],
+      activitySpans: [],
+      eatScale: MONTH_EAT_BAR_MIN,
+      activityScale: MONTH_ACTIVITY_BAR_MIN_MS,
+    });
+    const sum = view.drinkParts.reduce((s, p) => s + p, 0);
+    expect(sum).toBeCloseTo(2250 / MONTH_DRINK_BAR_ML);
+    expect(sum).toBeGreaterThan(1);
+    expect(view.drinkLitersLabel).toBe("2.3 L");
+    expect(view.drinkGoalRatio).toBeCloseTo(1.25);
+  });
+
+  it("吃/活动尺度跟月内峰值走，活动峰值向下取整小时且不低于 2h", () => {
+    const view = toMonthLifeBarView({
+      drinkAmounts: [],
+      drinkGoalMl: 2000,
+      sleepSpans: [],
+      eatEvents: Array.from({ length: 8 }, (_, i) => ({ recordedAt: i, course: "meal" as const })).concat(
+        Array.from({ length: 2 }, (_, i) => ({ recordedAt: 100 + i, course: "dessert" as const })),
+      ),
       activitySpans: [{ ms: 6 * 3600_000, startAt: 1 }],
       eatScale: 10,
       activityScale: 6 * 3600_000,
     });
-    expect(view.drinkRatio).toBe(1);
-    expect(view.drinkCount).toBe(8);
-    expect(view.eatMeal).toBeCloseTo(0.8);
-    expect(view.eatDessert).toBeCloseTo(0.2);
+    expect(view.eatParts).toHaveLength(10);
+    expect(view.eatParts[0].ratio).toBeCloseTo(0.1);
+    expect(view.eatParts[8].course).toBe("dessert");
     expect(view.eatCount).toBe(10);
     expect(view.activityParts[0]).toBe(1);
     expect(view.activityMinutes).toBe(360);
+  });
+
+  it("活动默认 2h；峰值 2.5h 仍用 2h 可溢出；≥3h 才抬整点", () => {
+    expect(activityBarScaleMs(30 * 60_000)).toBe(MONTH_ACTIVITY_BAR_MIN_MS);
+    expect(activityBarScaleMs(2.5 * 3600_000)).toBe(2 * 3600_000);
+    expect(activityBarScaleMs(3 * 3600_000)).toBe(3 * 3600_000);
+    expect(activityBarScaleMs(3.7 * 3600_000)).toBe(3 * 3600_000);
+    const overflow = toMonthLifeBarView({
+      drinkAmounts: [],
+      drinkGoalMl: 0,
+      sleepSpans: [],
+      eatEvents: [],
+      activitySpans: [{ ms: 2.5 * 3600_000, startAt: 1 }],
+      eatScale: MONTH_EAT_BAR_MIN,
+      activityScale: 2.5 * 3600_000,
+    });
+    expect(overflow.activityParts[0]).toBeCloseTo(1.25);
+  });
+
+  it("吃饭条下标是最早到最晚的小时", () => {
+    const t7 = new Date(2026, 9, 14, 7, 30).getTime();
+    const t12 = new Date(2026, 9, 14, 12, 10).getTime();
+    const view = toMonthLifeBarView({
+      drinkAmounts: [],
+      drinkGoalMl: 0,
+      sleepSpans: [],
+      eatEvents: [
+        { recordedAt: t12, course: "apple" },
+        { recordedAt: t7, course: "meal" },
+      ],
+      activitySpans: [],
+      eatScale: MONTH_EAT_BAR_MIN,
+      activityScale: MONTH_ACTIVITY_BAR_MIN_MS,
+    });
+    expect(view.eatSpanLabel).toBe("07-12");
+  });
+
+  it("睡觉、活动按 startAt 早→晚", () => {
+    const view = toMonthLifeBarView({
+      drinkAmounts: [],
+      drinkGoalMl: 0,
+      sleepSpans: [
+        { ms: 2 * 3600_000, startAt: 200 },
+        { ms: 6 * 3600_000, startAt: 50 },
+      ],
+      eatEvents: [
+        { recordedAt: 90, course: "apple" },
+        { recordedAt: 10, course: "dessert" },
+      ],
+      activitySpans: [
+        { ms: 10 * 60_000, startAt: 80 },
+        { ms: 20 * 60_000, startAt: 20 },
+      ],
+      eatScale: MONTH_EAT_BAR_MIN,
+      activityScale: MONTH_ACTIVITY_BAR_MIN_MS,
+    });
+    expect(view.sleepParts[0]).toBeCloseTo((6 * 3600_000) / MONTH_SLEEP_BAR_MS);
+    expect(view.sleepParts[1]).toBeCloseTo((2 * 3600_000) / MONTH_SLEEP_BAR_MS);
+    expect(view.eatParts.map((p) => p.course)).toEqual(["dessert", "apple"]);
+    expect(view.eatSpanLabel).toBe(
+      `${new Date(10).getHours().toString().padStart(2, "0")}-${new Date(90).getHours().toString().padStart(2, "0")}`,
+    );
+    expect(view.activityParts[0]).toBeCloseTo((20 * 60_000) / MONTH_ACTIVITY_BAR_MIN_MS);
+    expect(view.activityParts[1]).toBeCloseTo((10 * 60_000) / MONTH_ACTIVITY_BAR_MIN_MS);
   });
 });
 
@@ -111,7 +201,7 @@ describe("hasMonthLifeBarData", () => {
   });
 
   it("任一计数或睡段即有数据", () => {
-    expect(hasMonthLifeBarData({ ...EMPTY_MONTH_LIFE_BARS, drinkCount: 1 })).toBe(true);
+    expect(hasMonthLifeBarData({ ...EMPTY_MONTH_LIFE_BARS, drinkParts: [0.1] })).toBe(true);
     expect(hasMonthLifeBarData({ ...EMPTY_MONTH_LIFE_BARS, eatCount: 1 })).toBe(true);
     expect(hasMonthLifeBarData({ ...EMPTY_MONTH_LIFE_BARS, activityMinutes: 12 })).toBe(true);
     expect(hasMonthLifeBarData({ ...EMPTY_MONTH_LIFE_BARS, sleepParts: [0.2] })).toBe(true);

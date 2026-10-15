@@ -132,10 +132,10 @@ import { getLifeRecordKind, type LifeRecordKind } from "@/core/lifeRecord";
 import { isDrinkGoalMet, sumLifeRecordAmountMl } from "@/services/lifeRecord/lifeRecordService";
 import type { LifeRecord } from "@/core/types/Task";
 import {
+  activityBarScaleMs,
   clipDaySpans,
-  eatCourseCounts,
+  eatEventsChronological,
   EMPTY_MONTH_LIFE_BARS,
-  MONTH_ACTIVITY_BAR_MIN_MS,
   MONTH_EAT_BAR_MIN,
   toMonthLifeBarView,
 } from "@/services/lifeRecord/monthLifeBars";
@@ -422,29 +422,34 @@ const days = computed(() => {
   const now = Date.now();
   const lifeRaws = result.map((d) => {
     if (!d.isCurrentMonth) return null;
-    const eat = eatCourseCounts(recordsOf("eat", d.startTs));
+    const eatEvents = eatEventsChronological(recordsOf("eat", d.startTs));
     const sleepSpans = [
       ...clipDaySpans(recordsOf("sleep", d.startTs), d.startTs, d.endTs, now),
       ...clipDaySpans(recordsOf("sleep", d.startTs - DAY_MS), d.startTs, d.endTs, now),
     ];
     const actSpans = clipDaySpans(recordsOf("toilet", d.startTs), d.startTs, d.endTs, now);
+    const cupFallback = settingStore.settings.drinkCupMl;
+    const drinkAmounts = recordsOf("drink", d.startTs).map((r) => {
+      const n = Number(r.amountMl);
+      return n > 0 ? n : cupFallback;
+    });
     return {
-      drinkRatio: drinkRatio(d.drinkStat),
-      drinkMet: d.drinkStat.met,
-      drinkCount: d.drinkStat.count,
+      drinkAmounts,
+      drinkGoalMl: d.drinkStat.goalMl,
       sleepSpans,
-      eat,
+      eatEvents,
       activitySpans: actSpans,
     };
   });
   let eatScale = MONTH_EAT_BAR_MIN;
-  let activityScale = MONTH_ACTIVITY_BAR_MIN_MS;
+  let maxActivityMs = 0;
   for (const raw of lifeRaws) {
     if (!raw) continue;
-    eatScale = Math.max(eatScale, raw.eat.meal + raw.eat.dessert + raw.eat.apple);
+    eatScale = Math.max(eatScale, raw.eatEvents.length);
     const actMs = raw.activitySpans.reduce((sum, s) => sum + s.ms, 0);
-    activityScale = Math.max(activityScale, actMs);
+    maxActivityMs = Math.max(maxActivityMs, actMs);
   }
+  const activityScale = activityBarScaleMs(maxActivityMs);
   return result.map((d, i) => {
     const raw = lifeRaws[i];
     return {
@@ -931,8 +936,11 @@ function getStatsBadgeBgColor(ratio: number): string {
 
 .items--life-bars {
   padding: 0;
-  overflow: hidden;
+  overflow: visible;
   min-height: 0;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0%;
 }
 
 .day-card--drink-skin :deep(.n-card__content) {
