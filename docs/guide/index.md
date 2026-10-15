@@ -15,7 +15,6 @@
 
 - [软件界面](reference/interface.md)
 - [模块联动](reference/workflow.md)
-- [长期事项与待办库存](practices/long-horizon-inventory.md)（周期长、目标可能变时的轻量 backlog）
 
 ### 模块功能
 
@@ -25,10 +24,17 @@
 - [任务追踪](reference/task.md)
 - [番茄时钟计时](reference/timer.md)
 
+### 高级功能
+
+叠在现有模块上的用法，不是新面板。
+
+- [收支账本](reference/ledger.md)（活动标题里顺手记账）
+- [生活记录](reference/life.md)（计划表 + 任务区 + 时间表记身体节律）
+- [长期事项与待办库存](practices/long-horizon-inventory.md)（周期长、目标可能变时的轻量 backlog）
+
 ### 数据管理
 
 - [标签系统](reference/tag.md)
-- [收支账本](reference/ledger.md)
 - [数据查看](reference/search.md)
 - [数据趋势](reference/chart.md)
 
