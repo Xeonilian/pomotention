@@ -22,6 +22,7 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
+import { useDevice } from "@/composables/platform/useDevice";
 
 const props = withDefaults(
   defineProps<{
@@ -30,6 +31,8 @@ const props = withDefaults(
   }>(),
   { met: false },
 );
+
+const { isMobile } = useDevice();
 
 const clamped = computed(() => Math.min(1, Math.max(0, Number(props.ratio) || 0)));
 
@@ -53,10 +56,14 @@ const BASE_LAYERS = [
   { phase: 4.0, ampScale: 0.8, yBias: 0.35 },
 ] as const;
 
+/** 手机列被拉高后，viewBox 的 y 缝会被放大；只收层间距，波长不动 */
+const mobileSpread = 0.32;
+
 const layers = computed(() => {
   const r = clamped.value;
   const seed = r * 11.3 + r * r * 5.1;
-  const ampBase = 1.2 + (1 - r) * 0.45;
+  const spread = isMobile.value ? mobileSpread : 1;
+  const ampBase = (1.2 + (1 - r) * 0.45) * spread;
   return BASE_LAYERS.map((L, i) => {
     const h0 = hash(seed + i * 1.7);
     const h1 = hash(seed + i * 2.3 + 4);
@@ -65,7 +72,7 @@ const layers = computed(() => {
     return {
       phase: L.phase + h0 * 0.55,
       ampScale: L.ampScale * (0.95 + h1 * 0.1),
-      yBias: L.yBias + (h2 - 0.5) * 0.4,
+      yBias: (L.yBias + (h2 - 0.5) * 0.4) * spread,
       freq2: 1.8 + h3 * 0.9,
       ampBase,
     };

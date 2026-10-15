@@ -1,6 +1,6 @@
 <!-- 年视图：4×3 月格，每天显示日期数字+点，每行开头周编号；点击月份/周编号跳转 -->
 <template>
-  <div class="year-planner" :class="{ 'year-planner--drink-skin': drinkSkin }">
+  <div class="year-planner" :class="{ 'year-planner--life-view': lifeView }">
     <div class="year-grid months-nxn">
       <div v-for="month in months" :key="month.monthIndex" class="month-cell">
         <div class="month-cell-title" title="点击进入月视图" @click="handleMonthTitleClick(month.monthStartTs)">
@@ -35,7 +35,7 @@
               <template v-if="day && day.isCurrentMonth">
                 <span
                   class="day-dot"
-                  :class="[yearHolidayDotClass(day.startTs), drinkDotClass(day.startTs)]"
+                  :class="[yearHolidayDotClass(day.startTs), lifeDotClass(day.startTs)]"
                   :style="getDotBgStyle(day.startTs)"
                 >
                   <span class="day-num" :style="getDayNumStyle(day.startTs)">{{ day.dayOfMonth }}</span>
@@ -59,20 +59,18 @@ import { computed, inject, ref } from "vue";
 import { storeToRefs } from "pinia";
 import { createTouchScheduledSingleAndDouble } from "@/composables/platform/useTouchScheduledSingleAndDouble";
 import { useDataStore } from "@/stores/useDataStore";
-import { useSettingStore } from "@/stores/useSettingStore";
 import { useDevice } from "@/composables/platform/useDevice";
 import { getDateKey } from "@/core/utils";
-import { getLifeRecordDef, getLifeRecordKind } from "@/core/lifeRecord";
-import { isDrinkGoalMet, sumLifeRecordAmountMl } from "@/services/lifeRecord/lifeRecordService";
+import { getLifeRecordKind } from "@/core/lifeRecord";
 import type { HolidayDisplay } from "@/services/planner/publicHolidays";
 import { plannerHolidayMapKey } from "@/composables/planner/usePublicHolidays";
 
 const props = withDefaults(
   defineProps<{
-    /** Planner 喝水统计皮肤：有记录的天用水色点，达标略深 */
-    drinkSkin?: boolean;
+    /** 生活可视化：有任一生活记录的天用黄点，点击进整合 sheet */
+    lifeView?: boolean;
   }>(),
-  { drinkSkin: false },
+  { lifeView: false },
 );
 
 const holidayMap = inject(plannerHolidayMapKey, ref<Record<string, HolidayDisplay>>({}));
@@ -81,6 +79,7 @@ const emit = defineEmits<{
   "date-select-day-view": [timestamp: number];
   "navigate-to-month": [monthStartTs: number];
   "navigate-to-week": [weekStartTs: number];
+  "open-day-sheet": [dayStart: number];
 }>();
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -102,20 +101,10 @@ const monthNames = [
 ];
 
 const dataStore = useDataStore();
-const settingStore = useSettingStore();
 const { selectedTaskId, firstTaggedTaskIdForAppDate, selectedDate, activeTodos, activityById, taskById, taskByActivityId } =
   storeToRefs(dataStore);
 const dateService = dataStore.dateService;
 const { isMobile } = useDevice();
-
-const drinkDef = getLifeRecordDef("drink");
-
-type DrinkYearDay = {
-  met: boolean;
-  todoId: number;
-  activityId: number;
-  taskId: number;
-};
 
 type MonthDay = { startTs: number; dayOfMonth: number; isCurrentMonth: boolean; isToday: boolean } | null;
 type MonthRow = { weekNum: number; weekStartTs: number; days: MonthDay[] };
@@ -126,28 +115,19 @@ function startOfDay(ts: number) {
   return d.getTime();
 }
 
-/** 年喝水皮肤：仅有记录的天；key = 日零点 */
-const drinkDayByTs = computed(() => {
-  const map = new Map<number, DrinkYearDay>();
-  if (!props.drinkSkin) return map;
+/** 生活可视化：当天 4 类任一已有记录（空桶不算） */
+const lifeDayByTs = computed(() => {
+  const set = new Set<number>();
+  if (!props.lifeView) return set;
   for (const todo of activeTodos.value) {
     if (todo.activityId == null) continue;
     const activity = activityById.value.get(todo.activityId);
-    if (getLifeRecordKind(activity) !== "drink") continue;
-    const dayStartTs = startOfDay(todo.id);
+    if (!getLifeRecordKind(activity)) continue;
     const task = (todo.taskId != null ? taskById.value.get(todo.taskId) : undefined) ?? taskByActivityId.value.get(todo.activityId);
-    const records = task?.lifeRecords ?? [];
-    if (records.length <= 0 || task?.id == null) continue;
-    const totalMl = sumLifeRecordAmountMl(records);
-    const goalMl = task.drinkGoalMl ?? settingStore.settings.drinkDailyGoalMl;
-    map.set(dayStartTs, {
-      met: isDrinkGoalMet(totalMl, goalMl),
-      todoId: todo.id,
-      activityId: todo.activityId,
-      taskId: task.id,
-    });
+    if (!task || task.deleted || (task.lifeRecords?.length ?? 0) <= 0) continue;
+    set.add(startOfDay(todo.id));
   }
-  return map;
+  return set;
 });
 
 function endOfMonth(ts: number) {
@@ -192,15 +172,8 @@ const yearStart = computed(() => {
 const todayStart = computed(() => startOfDay(Date.now()));
 
 function getDotStyle(dayStartTs: number): { backgroundColor?: string; color?: string } {
-  if (props.drinkSkin) {
-    const drink = drinkDayByTs.value.get(dayStartTs);
-    if (!drink) return {};
-    // 底色统一（浅水色）；达标 = tag 色字，未达标 = 白字（避开 today 整格实心蓝的混淆）
-    return {
-      backgroundColor: drinkDef.tagBackgroundColor,
-      color: drink.met ? drinkDef.tagColor : "var(--color-text-secondary)",
-    };
-  }
+  // 生活可视化：有数据的天走 CSS 黄点，其余保持默认空点
+  if (props.lifeView) return {};
   const start = yearStart.value;
   const dots = dataStore.yearDayDots;
   // 没有 dots 时走 CSS 默认底色
@@ -234,9 +207,9 @@ function formatDayTitle(ts: number): string {
   return h ? `${base} · ${h.label}` : base;
 }
 
-/** 年视图格子：法定节假日浅红底，调休补班灰底，节气浅绿底；喝水皮肤有记录天不叠节假色 */
+/** 年视图格子：法定节假日浅红底，调休补班灰底，节气浅绿底；生活/喝水有记录天不叠节假色 */
 function yearHolidayDotClass(ts: number): string {
-  if (props.drinkSkin && drinkDayByTs.value.has(ts)) return "";
+  if (props.lifeView && lifeDayByTs.value.has(ts)) return "";
   const h = holidayMap.value[getDateKey(ts)];
   if (!h) return "";
   if (h.kind === "transfer_workday") return "day-dot--holiday-transfer";
@@ -244,11 +217,9 @@ function yearHolidayDotClass(ts: number): string {
   return "day-dot--holiday-public";
 }
 
-function drinkDotClass(ts: number): string {
-  if (!props.drinkSkin) return "";
-  const drink = drinkDayByTs.value.get(ts);
-  if (!drink) return "";
-  return drink.met ? "day-dot--drink-met" : "day-dot--drink";
+function lifeDotClass(ts: number): string {
+  if (!props.lifeView) return "";
+  return lifeDayByTs.value.has(ts) ? "day-dot--life" : "";
 }
 
 const months = computed(() => {
@@ -303,9 +274,10 @@ function handleDayClick(dayStartTs: number) {
   // 使用 dataStore 直接更新当前选中日期，并让 TaskTracker 选中这一天对应的 task
   dateService.setAppDate(dayStartTs);
   dataStore.setSelectedDate(dayStartTs);
-  if (props.drinkSkin) {
-    // 喝水皮肤：打开当日喝水 Task（无记录则清空选中）
-    selectedTaskId.value = drinkDayByTs.value.get(dayStartTs)?.taskId ?? null;
+  if (props.lifeView) {
+    // 有数据才开 sheet（HomeView 再拦一遍空桶）
+    selectedTaskId.value = null;
+    emit("open-day-sheet", dayStartTs);
     return;
   }
   selectedTaskId.value = firstTaggedTaskIdForAppDate.value ?? null;
@@ -349,14 +321,34 @@ function attachYearTouchPanGuard(e: TouchEvent) {
   document.addEventListener("touchcancel", teardown);
 }
 
+/** 与 MainLayout 退出按钮一致：220ms 区分单击 / 双击，避免预览单击进 sheet 把双击吃掉 */
+const LIFE_VIEW_CLICK_DELAY_MS = 220;
+let lifeViewClickTimer: ReturnType<typeof setTimeout> | null = null;
+
+function clearLifeViewClickTimer() {
+  if (lifeViewClickTimer) {
+    clearTimeout(lifeViewClickTimer);
+    lifeViewClickTimer = null;
+  }
+}
+
 function onYearDayClick(day: MonthDay | null) {
   if (!day?.isCurrentMonth || isMobile.value) return;
+  if (props.lifeView) {
+    clearLifeViewClickTimer();
+    lifeViewClickTimer = setTimeout(() => {
+      lifeViewClickTimer = null;
+      handleDayClick(day.startTs);
+    }, LIFE_VIEW_CLICK_DELAY_MS);
+    return;
+  }
   handleDayClick(day.startTs);
 }
 
 function onYearDayDblClick(day: MonthDay | null, e: MouseEvent) {
   if (!day?.isCurrentMonth || isMobile.value) return;
   e.preventDefault();
+  clearLifeViewClickTimer();
   handleDayDblClick(day.startTs);
 }
 
@@ -574,6 +566,15 @@ function handleWeekClick(weekStartTs: number) {
 
 .day-dot.day-dot--holiday-solar .day-num {
   color: var(--color-green) !important;
+}
+
+/* 生活可视化：当天有喝水/吃饭/活动/睡觉记录 → 黄点 */
+.day-dot.day-dot--life {
+  background-color: var(--color-yellow) !important;
+}
+
+.day-dot.day-dot--life .day-num {
+  color: #fff !important;
 }
 
 .day-num {

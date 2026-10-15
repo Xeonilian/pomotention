@@ -414,7 +414,7 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targe
       width: "100%",
       top: `${top}px`,
       height: `${height}px`,
-      backgroundColor: "var(--color-blue-soft-transparent)",
+      backgroundColor: "rgba(153, 153, 153, 0.12)",
       zIndex: 1,
       cursor: "pointer",
     };

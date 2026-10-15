@@ -6,9 +6,6 @@ import { dailyPlaceholderTitle } from "@/core/dailyPlaceholder";
 
 export type LifeRecordKind = "drink" | "eat" | "toilet" | "sleep";
 
-/** 顶栏四个生活记录按钮。调试完成前先关，代码仍在。 */
-export const LIFE_RECORD_UI_ENABLED = false;
-
 export interface LifeRecordDef {
   kind: LifeRecordKind;
   /** 固定系统 tag id（多端一致，见 constants.ts） */
@@ -23,7 +20,7 @@ export interface LifeRecordDef {
 export const LIFE_RECORD_DEFS: readonly LifeRecordDef[] = [
   { kind: "drink", tagId: TAG_ID_LIFE_DRINK, title: "喝水", emoji: "💧", tagColor: "#2080f0", tagBackgroundColor: "rgba(206, 227, 252, 0.5)" },
   { kind: "eat", tagId: TAG_ID_LIFE_EAT, title: "吃饭", emoji: "🍚", tagColor: "#d07050", tagBackgroundColor: "rgba(252, 234, 206, 0.5)" },
-  { kind: "toilet", tagId: TAG_ID_LIFE_TOILET, title: "上厕所", emoji: "🚽", tagColor: "#8040f0", tagBackgroundColor: "rgba(232, 206, 252, 0.4)" },
+  { kind: "toilet", tagId: TAG_ID_LIFE_TOILET, title: "活动", emoji: "🚪", tagColor: "#8040f0", tagBackgroundColor: "rgba(232, 206, 252, 0.4)" },
   { kind: "sleep", tagId: TAG_ID_LIFE_SLEEP, title: "睡觉", emoji: "😴", tagColor: "#8e44ad", tagBackgroundColor: "rgba(232, 222, 252, 0.5)" },
 ];
 

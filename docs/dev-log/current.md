@@ -13,8 +13,8 @@
 | **来自** | 一句记第一刀已通；目的是「有 AI 的软件能被人购买」；roadmap「收费 + 推广」 |
 | **蓝图** | 底座 [`8-ai-gateway.md`](./blueprint/8-ai-gateway.md)；能力 [`7-capture.md`](./blueprint/7-capture.md) |
 | **分支** | `dev` |
-| **更新** | 2026-09-16 |
-| **停在哪** | **主线**收费步4仍暂停。**支线**睡觉：日视图 SleepDayPanel（大月亮+表）已接；周/月仍 compact。Webhook 仍下一关。 |
+| **更新** | 2026-10-15 |
+| **停在哪** | **主线**收费步4仍暂停。生活记录支线已归档（[`history/archive/2026-10-life-record.md`](./history/archive/2026-10-life-record.md)，CHANGELOG `v0.6.12`）。Webhook 仍下一关。 |
 
 ---
 

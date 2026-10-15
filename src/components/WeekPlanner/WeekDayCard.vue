@@ -18,7 +18,8 @@
       <div
         class="date"
         :class="{ today: day.isToday }"
-        @click.stop="() => handleDateSelectDayView(day.startTs)"
+        @click.stop="onDateBadgeMouseClick"
+        @dblclick.stop="onDateBadgeDblClick"
         @touchstart.stop="onWeekBadgeTouchStart"
         @touchend.stop="() => onWeekBadgeTouchEnd(day.startTs)"
         @touchcancel.stop="onWeekBadgeTouchCancel"
@@ -31,15 +32,43 @@
       <div class="time-grid-container" :style="{ height: timeGridHeight + 'px' }">
         <WeekDrinkWaterFill v-if="drinkLayer && drinkRatio > 0" :ratio="drinkRatio" :met="drinkMet" />
 
-        <!-- 生活图层会藏 schedule，但 sleep 色带仍画（睡觉层 / 叠层都要看见） -->
+        <!-- 生活图层会藏 schedule，但 sleep 色带仍画；月亮钉在醒来那一行 -->
         <div
           v-for="sleep in lifeOverlay?.sleeps || []"
           :key="`life-sleep-${sleep.recordId}`"
           class="week-life-sleep"
           :style="getLifeSleepBandStyle(sleep, day.startTs)"
-          :title="sleep.title"
-          @click.stop="emit('item-change', sleep.todoId, undefined, sleep.taskId)"
-        ></div>
+        >
+          <div v-if="sleep.wakeAt" class="week-life-sleep-moon" :style="{ width: pointIconSize + 'px', height: pointIconSize + 'px' }">
+            <NPopover
+              v-if="!isMobile && sleep.note"
+              trigger="hover"
+              placement="top"
+              to="body"
+              :show-arrow="true"
+              :style="lifeNotePopoverStyle"
+              :content-style="lifeNoteContentStyle"
+            >
+              <template #trigger>
+                <div class="week-life-point__hit" @click.stop>
+                  <n-icon :size="pointIconSize" :component="WeatherMoon20Filled" />
+                </div>
+              </template>
+              <p class="week-life-note">{{ sleep.note }}</p>
+            </NPopover>
+            <div
+              v-else-if="isMobile && sleep.note"
+              class="week-life-point__hit"
+              :data-life-note-key="`sleep-${sleep.recordId}`"
+              @click.stop="onMobileLifeNoteTap($event, `sleep-${sleep.recordId}`, sleep.note)"
+            >
+              <n-icon :size="pointIconSize" :component="WeatherMoon20Filled" />
+            </div>
+            <div v-else class="week-life-point__hit" @click.stop="onSleepBandClick(sleep)">
+              <n-icon :size="pointIconSize" :component="WeatherMoon20Filled" />
+            </div>
+          </div>
+        </div>
 
         <div class="hour-ticks">
           <div
@@ -71,36 +100,45 @@
           />
         </template>
 
-        <template v-if="drinkLayer">
-          <div
-            v-for="mark in drinkPoints"
-            :key="`drink-point-${mark.recordId}`"
-            class="week-life-point week-life-point--drink-layer"
-            :style="getDrinkPointStyle(mark)"
-            :title="mark.title"
-            @click.stop="onDrinkPointClick(mark)"
+        <div
+          v-for="mark in lifeOverlay?.points || []"
+          :key="`life-point-${mark.kind}-${mark.recordId}`"
+          class="week-life-point"
+          :class="{ 'week-life-point--drink-layer': drinkLayer }"
+          :style="drinkLayer ? getLayerPointStyle(mark) : getLifePointStyle(mark, day.startTs)"
+        >
+          <NPopover
+            v-if="!isMobile && mark.note"
+            trigger="hover"
+            placement="top"
+            to="body"
+            :show-arrow="true"
+            :style="lifeNotePopoverStyle"
+            :content-style="lifeNoteContentStyle"
           >
-            <n-icon :size="isMobile ? 18 : 22" :component="LIFE_POINT_ICONS.drink" />
-          </div>
-        </template>
-        <template v-else>
+            <template #trigger>
+              <div class="week-life-point__hit" @click.stop>
+                <n-icon :size="pointIconSize" :component="lifePointIcon(mark.kind)" />
+              </div>
+            </template>
+            <p class="week-life-note">{{ mark.note }}</p>
+          </NPopover>
           <div
-            v-for="mark in lifeOverlay?.points || []"
-            :key="`life-point-${mark.kind}-${mark.recordId}`"
-            class="week-life-point"
-            :style="getLifePointStyle(mark, day.startTs)"
-            :title="mark.title"
-            @click.stop="emit('item-change', mark.todoId, undefined, mark.taskId)"
+            v-else-if="isMobile && mark.note"
+            class="week-life-point__hit"
+            :data-life-note-key="`point-${mark.kind}-${mark.recordId}`"
+            @click.stop="onMobileLifeNoteTap($event, `point-${mark.kind}-${mark.recordId}`, mark.note)"
           >
-            <n-icon :size="isMobile ? 14 : 16" :component="lifePointIcon(mark.kind)" />
+            <n-icon :size="pointIconSize" :component="lifePointIcon(mark.kind)" />
           </div>
-        </template>
+          <div v-else class="week-life-point__hit" @click.stop="onLifePointClick(mark)">
+            <n-icon :size="pointIconSize" :component="lifePointIcon(mark.kind)" />
+          </div>
+        </div>
       </div>
 
       <div v-if="drinkLayer" class="card-statistic card-statistic--drink">
-        <span class="drink-sum" :class="{ 'drink-sum--met': drinkMet }" :title="`${drinkTotalMl} ml`">{{
-          drinkSumLabel
-        }}</span>
+        <span class="drink-sum" :class="{ 'drink-sum--met': drinkMet }" :title="`${drinkTotalMl} ml`">{{ drinkSumLabel }}</span>
       </div>
       <div v-else-if="!hideScheduleBlocks" class="card-statistic">
         <span class="pom-sum">
@@ -118,7 +156,7 @@
 
 <script setup lang="ts">
 import { computed, inject, ref, type Component, type CSSProperties } from "vue";
-import { NCard, NIcon } from "naive-ui";
+import { NCard, NIcon, NPopover } from "naive-ui";
 import type { DayItem } from "@/core/types/Week";
 import type { WeekBlockItem as WeekBlockItemType } from "@/core/types/Week";
 import WeekBlockItem from "./WeekBlockItem.vue";
@@ -133,7 +171,7 @@ import { storeToRefs } from "pinia";
 import { useDevice } from "@/composables/platform/useDevice";
 import { createTouchScheduledSingleAndDouble } from "@/composables/platform/useTouchScheduledSingleAndDouble";
 import type { LifePointKind, LifePointMark, LifeSleepRange } from "@/services/timetable/lifeRecordOverlays";
-import { Door20Filled, Drop20Filled, FoodApple20Filled } from "@vicons/fluent";
+import { Door20Filled, Drop20Filled, FoodApple20Filled, WeatherMoon20Filled } from "@vicons/fluent";
 import { findLifeRecordTodoForDay, isDrinkGoalMet, sumLifeRecordAmountMl } from "@/services/lifeRecord/lifeRecordService";
 
 const { isMobile } = useDevice();
@@ -179,8 +217,10 @@ const props = withDefaults(
     getLifePointStyle: (mark: LifePointMark, dayStartTs: number) => CSSProperties;
     hideScheduleBlocks?: boolean;
     drinkLayer?: boolean;
+    /** 生活可视化：日期 badge 进 sheet；格子只选中 */
+    lifeView?: boolean;
   }>(),
-  { hideScheduleBlocks: false, drinkLayer: false },
+  { hideScheduleBlocks: false, drinkLayer: false, lifeView: false },
 );
 
 const holidayForDay = computed(() => holidayMap.value[getDateKey(props.day.startTs)] ?? null);
@@ -195,13 +235,9 @@ const drinkTask = computed(() => {
   return (todo.taskId != null ? taskById.value.get(todo.taskId) : undefined) ?? taskByActivityId.value.get(todo.activityId!) ?? null;
 });
 
-const drinkPoints = computed(() => (props.lifeOverlay?.points ?? []).filter((p) => p.kind === "drink"));
-
 const drinkTotalMl = computed(() => sumLifeRecordAmountMl(drinkTask.value?.lifeRecords ?? []));
 /** 手机周列窄：用升一位小数，桌面仍 ml */
-const drinkSumLabel = computed(() =>
-  isMobile.value ? `${(drinkTotalMl.value / 1000).toFixed(1)} L` : `${drinkTotalMl.value} ml`,
-);
+const drinkSumLabel = computed(() => (isMobile.value ? `${(drinkTotalMl.value / 1000).toFixed(1)} L` : `${drinkTotalMl.value} ml`));
 
 const drinkRatio = computed(() => {
   if (drinkTotalMl.value <= 0) return 0;
@@ -218,6 +254,8 @@ const emit = defineEmits<{
   "date-select": [timestamp: number];
   "date-select-day-view": [timestamp: number];
   "item-change": [id: number, activityId?: number, taskId?: number];
+  "open-day-sheet": [dayStart: number];
+  "life-note-tap": [payload: { key: string; text: string; top: number; bottom: number }];
 }>();
 
 const handleDateSelect = (ts: number) => {
@@ -228,8 +266,49 @@ const handleDateSelectDayView = (ts: number) => {
   emit("date-select-day-view", ts);
 };
 
+/** 可视化：只有日期 badge 进 sheet；格子只选中这天 */
+function onDateBadgeClick(ts: number) {
+  if (props.lifeView) {
+    handleDateSelect(ts);
+    emit("open-day-sheet", ts);
+    return;
+  }
+  handleDateSelectDayView(ts);
+}
+
+/** 与 MainLayout 退出按钮一致：220ms 区分单击 / 双击 */
+const BADGE_CLICK_DELAY_MS = 220;
+let badgeClickTimer: ReturnType<typeof setTimeout> | null = null;
+
+function clearBadgeClickTimer() {
+  if (badgeClickTimer) {
+    clearTimeout(badgeClickTimer);
+    badgeClickTimer = null;
+  }
+}
+
+function onDateBadgeMouseClick() {
+  if (isMobile.value) return;
+  if (!props.lifeView) {
+    handleDateSelectDayView(props.day.startTs);
+    return;
+  }
+  clearBadgeClickTimer();
+  badgeClickTimer = setTimeout(() => {
+    badgeClickTimer = null;
+    onDateBadgeClick(props.day.startTs);
+  }, BADGE_CLICK_DELAY_MS);
+}
+
+function onDateBadgeDblClick() {
+  if (isMobile.value) return;
+  clearBadgeClickTimer();
+  handleDateSelectDayView(props.day.startTs);
+}
+
 function onCardClick() {
   handleDateSelect(props.day.startTs);
+  if (props.lifeView) return;
   if (!props.drinkLayer) return;
   const todo = drinkTodo.value;
   const task = drinkTask.value;
@@ -238,9 +317,38 @@ function onCardClick() {
   }
 }
 
-function onDrinkPointClick(mark: LifePointMark) {
+const pointIconSize = computed(() => {
+  if (props.drinkLayer) return isMobile.value ? 18 : 22;
+  return isMobile.value ? 14 : 16;
+});
+
+/** 与 TaskTracker 时间轴 popover 同策略：挂 body，避免周列 overflow 裁切 */
+const lifeNotePopoverStyle = { maxWidth: "calc(100vw - 80px)", boxSizing: "border-box" } as const;
+const lifeNoteContentStyle = { maxWidth: "100%", boxSizing: "border-box" } as const;
+
+function onLifePointClick(mark: LifePointMark) {
   handleDateSelect(props.day.startTs);
+  if (props.lifeView) return;
   emit("item-change", mark.todoId, undefined, mark.taskId);
+}
+
+function onSleepBandClick(sleep: LifeSleepRange) {
+  handleDateSelect(props.day.startTs);
+  if (props.lifeView) return;
+  emit("item-change", sleep.todoId, undefined, sleep.taskId);
+}
+
+function onMobileLifeNoteTap(e: MouseEvent, key: string, text: string) {
+  const el = e.currentTarget as HTMLElement | null;
+  if (!el || !text) return;
+  const rect = el.getBoundingClientRect();
+  emit("life-note-tap", { key, text, top: rect.top, bottom: rect.bottom });
+}
+
+function layerPointColor(kind: LifePointKind): string {
+  if (kind === "drink") return "var(--color-blue)";
+  if (kind === "eat") return "var(--color-red)";
+  return "var(--color-text-secondary)";
 }
 
 /** 稳定伪随机 → 横向散落（淅沥），竖向仍由时刻决定 */
@@ -249,7 +357,7 @@ function drinkScatterUnit(mark: LifePointMark): number {
   return n - Math.floor(n);
 }
 
-function getDrinkPointStyle(mark: LifePointMark): CSSProperties {
+function getLayerPointStyle(mark: LifePointMark): CSSProperties {
   const base = props.getLifePointStyle(mark, props.day.startTs);
   const size = isMobile.value ? 20 : 24;
   // 落在列宽约 10%～90%
@@ -264,7 +372,7 @@ function getDrinkPointStyle(mark: LifePointMark): CSSProperties {
     ...rest,
     width: `${size}px`,
     height: `${size}px`,
-    color: "var(--color-blue)",
+    color: layerPointColor(mark.kind),
     zIndex: 8,
     left: `calc(${leftPct.toFixed(2)}% - ${size / 2}px)`,
     right: "auto",
@@ -273,7 +381,13 @@ function getDrinkPointStyle(mark: LifePointMark): CSSProperties {
 }
 
 const weekBadgeTouch = createTouchScheduledSingleAndDouble(
-  (ts) => handleDateSelect(ts),
+  (ts) => {
+    if (props.lifeView) {
+      onDateBadgeClick(ts);
+      return;
+    }
+    handleDateSelect(ts);
+  },
   (ts) => handleDateSelectDayView(ts),
 );
 
@@ -407,11 +521,47 @@ const handleItemChange = (id: number, _ts: number, activityId?: number, taskId?:
 
 .week-life-sleep {
   border-radius: 2px;
+  pointer-events: none;
+}
+
+.week-life-sleep-moon {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  z-index: 8;
+  color: var(--color-yellow-dark);
   pointer-events: auto;
+  transform: translate(-50%, 50%);
 }
 
 .week-life-point {
   pointer-events: auto;
+}
+
+.week-life-sleep :deep(.n-popover-trigger),
+.week-life-point :deep(.n-popover-trigger) {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.week-life-point__hit {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.week-life-note {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  max-width: 100%;
+  box-sizing: border-box;
+  color: var(--color-text-primary, #333);
 }
 
 .week-life-point--drink-layer {
@@ -480,14 +630,14 @@ const handleItemChange = (id: number, _ts: number, activityId?: number, taskId?:
 .drink-sum {
   color: var(--color-text-secondary);
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 500;
   opacity: 0.85;
 }
 
 .drink-sum--met {
   color: var(--color-blue);
   opacity: 1;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .pom-sum {

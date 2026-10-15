@@ -33,3 +33,4 @@ description: 无固定步骤；按习惯选一条容易的上手方式，细节�
 - [日程构建](../reference/timetable.md)
 - [任务追踪](../reference/task.md)
 - [番茄时钟](../reference/timer.md)
+- 高级功能：[收支账本](../reference/ledger.md) · [生活记录](../reference/life.md) · [长期事项与待办库存](../practices/long-horizon-inventory.md)

@@ -11,7 +11,7 @@ import type { Template } from "@/core/types/Template";
 import type { LedgerEntry } from "@/core/types/LedgerEntry";
 import type { DataPoint, MetricName, AggregationType, TimeGranularity } from "@/core/types/Chart";
 
-import { addDays, debounce, scheduleDebouncedCloudUpload } from "@/core/utils";
+import { addDays, debounce, getDayStartTimestamp, scheduleDebouncedCloudUpload } from "@/core/utils";
 import { matchesActivityFilter } from "@/composables/filter/useActivityFilter";
 
 import {
@@ -29,7 +29,7 @@ import {
 
 import { unifiedDateService } from "@/services/data/unifiedDateService";
 import { collectPomodoroData, collectTaskRecordData, aggregateByTime } from "@/services/chart/chartDataService";
-import { getLifeRecordDef, isLifeRecordActivity, lifeRecordPlaceholderTitle, pickFirstNonLifeRecordTagId, type LifeRecordKind } from "@/core/lifeRecord";
+import { getLifeRecordDef, isLifeRecordActivity, lifeRecordPlaceholderTitle, pickFirstNonLifeRecordTagId, LIFE_RECORD_DEFS, type LifeRecordKind } from "@/core/lifeRecord";
 import { isDayEnergyTask } from "@/core/dayEnergy";
 import {
   buildLifeRecordEntities,
@@ -736,6 +736,25 @@ export const useDataStore = defineStore(
       return task;
     }
 
+    /** Pinia 可能把 appDateTimestamp 拆成 number，不能无脑 .value */
+    function resolveLifeRecordDayStart(dayStart?: number): number {
+      if (Number.isFinite(dayStart)) return getDayStartTimestamp(dayStart as number);
+      const raw = dateService.appDateTimestamp as number | { value?: number };
+      const n = typeof raw === "number" ? raw : raw?.value;
+      return Number.isFinite(n) ? (n as number) : getDayStartTimestamp(Date.now());
+    }
+    function occupiedLifeRecordIds(): number[] {
+      return [
+        ...activityList.value.map((a) => a.id),
+        ...todoList.value.map((t) => t.id),
+        ...taskList.value.map((t) => t.id),
+      ].filter((id) => Number.isFinite(id));
+    }
+    function lifeRecordStampForDay(dayStart: number): number {
+      const at = dateService.combineDateAndTime(dayStart, Date.now());
+      return Number.isFinite(at) ? at : dayStart;
+    }
+
     /**
      * 打开生活记录日桶：无行则懒建空三件套（不 +1）；drink 写入/补齐日目标快照。
      * 仅日视图生效；周月年由块 3 切 Planner 皮肤，此处先 no-op 避免误记。
@@ -755,8 +774,8 @@ export const useDataStore = defineStore(
         lastModified: Date.now(),
       });
 
-      const dayStart = dateService.appDateTimestamp.value;
-      const at = dateService.combineDateAndTime(dayStart, Date.now());
+      const dayStart = resolveLifeRecordDayStart();
+      const at = lifeRecordStampForDay(dayStart);
       const drinkGoalMl = kind === "drink" ? settingStore.settings.drinkDailyGoalMl : undefined;
 
       let task: Task | undefined;
@@ -779,7 +798,7 @@ export const useDataStore = defineStore(
           updateTodoById(existingTodo.id, { activityTitle: lifeRecordPlaceholderTitle(kind, dayStart) });
         }
       } else {
-        const entities = buildLifeRecordEntities(kind, at, { drinkGoalMl });
+        const entities = buildLifeRecordEntities(kind, at, { drinkGoalMl, occupiedIds: occupiedLifeRecordIds() });
         activityList.value.push(entities.activity);
         taskList.value = [...taskList.value, entities.task];
         todoList.value.push(entities.todo);
@@ -793,9 +812,81 @@ export const useDataStore = defineStore(
       scheduleDebouncedCloudUpload();
     }
 
-    /** @deprecated 使用 openLifeRecord；保留别名以免外部旧调用 */
-    function recordLifeRecord(kind: LifeRecordKind): void {
-      openLifeRecord(kind);
+    /**
+     * 确保某天某类有日桶 task，返回其 taskId；不存在则建（不碰选中/display）。
+     * 供集中生活 sheet 4 类同框使用——区别于 openLifeRecord 会 pushTaskId 带偏选中。
+     */
+    function persistLifeRecordLists(): void {
+      saveActivities(activityList.value);
+      saveTodos(todoList.value);
+      saveTasks(taskList.value);
+      scheduleDebouncedCloudUpload();
+    }
+
+    function ensureLifeRecordTaskForDay(
+      kind: LifeRecordKind,
+      dayStart: number,
+      options?: { occupied?: Set<number>; persist?: boolean; at?: number },
+    ): number {
+      const settingStore = useSettingStore();
+      const def = getLifeRecordDef(kind);
+      tagStore.ensureSystemTag({
+        id: def.tagId,
+        name: def.title,
+        color: def.tagColor,
+        backgroundColor: def.tagBackgroundColor,
+        deleted: false,
+        synced: false,
+        lastModified: Date.now(),
+      });
+
+      const safeDay = resolveLifeRecordDayStart(dayStart);
+      // 四类连建必须共用 at，否则 Date.now 跨毫秒会让 +0…+3 错位成缺口
+      const at = Number.isFinite(options?.at) ? (options?.at as number) : lifeRecordStampForDay(safeDay);
+      const drinkGoalMl = kind === "drink" ? settingStore.settings.drinkDailyGoalMl : undefined;
+      const taken = options?.occupied ?? new Set(occupiedLifeRecordIds());
+      const persist = options?.persist !== false;
+
+      const existingTodo = findLifeRecordTodoForDay(todoList.value, activityById.value, kind, safeDay);
+      if (existingTodo) {
+        let task = taskByActivityId.value.get(existingTodo.activityId);
+        if (!task) {
+          const title = existingTodo.activityTitle || lifeRecordPlaceholderTitle(kind, safeDay);
+          task = buildLifeRecordTask(existingTodo.activityId, title, { drinkGoalMl, id: existingTodo.activityId });
+          taskList.value = [...taskList.value, task];
+          if (persist) saveTasks(taskList.value);
+        } else {
+          const patch: Partial<Task> = {};
+          if (!task.activityTitle) patch.activityTitle = lifeRecordPlaceholderTitle(kind, safeDay);
+          if (kind === "drink" && task.drinkGoalMl == null && drinkGoalMl != null) patch.drinkGoalMl = drinkGoalMl;
+          if (Object.keys(patch).length) updateTaskById(task.id, patch);
+        }
+        if (!existingTodo.activityTitle) {
+          updateTodoById(existingTodo.id, { activityTitle: lifeRecordPlaceholderTitle(kind, safeDay) });
+        }
+        taken.add(existingTodo.id);
+        return task.id;
+      }
+
+      const entities = buildLifeRecordEntities(kind, at, { drinkGoalMl, occupiedIds: taken });
+      taken.add(entities.activity.id);
+      activityList.value.push(entities.activity);
+      taskList.value = [...taskList.value, entities.task];
+      todoList.value.push(entities.todo);
+      if (persist) persistLifeRecordLists();
+      return entities.task.id;
+    }
+
+    /** 一日 4 类一次建完、各落盘一次（避免开 sheet 连写 12 次） */
+    function ensureAllLifeRecordTasksForDay(dayStart: number): Record<LifeRecordKind, number> {
+      const occupied = new Set(occupiedLifeRecordIds());
+      const at = lifeRecordStampForDay(resolveLifeRecordDayStart(dayStart));
+      const ids = {} as Record<LifeRecordKind, number>;
+      for (const def of LIFE_RECORD_DEFS) {
+        ids[def.kind] = ensureLifeRecordTaskForDay(def.kind, dayStart, { occupied, persist: false, at });
+      }
+      persistLifeRecordLists();
+      return ids;
     }
 
     function softDeleteLifeRecordRow(task: Task): void {
@@ -816,7 +907,11 @@ export const useDataStore = defineStore(
     /**
      * 删除生活记录单条；删空时整行级联软删（activity/todo/task），并清掉选中与展示态
      */
-    function removeLifeRecordAt(taskId: number, recordId: number): void {
+    function removeLifeRecordAt(
+      taskId: number,
+      recordId: number,
+      options?: { keepEmptyBucket?: boolean },
+    ): void {
       const task = taskList.value.find((t) => t.id === taskId);
       if (!task) return;
       const next = removeLifeRecord(task.lifeRecords, recordId);
@@ -825,6 +920,8 @@ export const useDataStore = defineStore(
         updateTaskById(taskId, { lifeRecords: next });
         return;
       }
+      updateTaskById(taskId, { lifeRecords: [] });
+      if (options?.keepEmptyBucket) return;
       softDeleteLifeRecordRow(task);
     }
 
@@ -1300,7 +1397,8 @@ export const useDataStore = defineStore(
       addActivity,
       ensureDayEnergyTask,
       openLifeRecord,
-      recordLifeRecord,
+      ensureLifeRecordTaskForDay,
+      ensureAllLifeRecordTasksForDay,
       removeLifeRecordAt,
       discardLifeRecordTask,
       setActiveId,

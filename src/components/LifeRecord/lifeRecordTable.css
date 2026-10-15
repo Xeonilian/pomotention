@@ -1,0 +1,161 @@
+/* 四张日表同一套列宽与时间字体，对齐睡觉表。
+   + 列、时间列、时长列固定；多余宽度给最后一列。
+   表头图标同睡觉：主文字色。 */
+.lr-day-table {
+  border-collapse: collapse;
+  font-size: 12px;
+  width: 100%;
+  table-layout: fixed;
+  border-top: none;
+  border-bottom: none;
+}
+.lr-day-table th,
+.lr-day-table td {
+  padding: 0 2px;
+  border: none;
+  vertical-align: middle;
+  overflow: hidden;
+  box-sizing: border-box;
+  white-space: nowrap;
+  height: 28px;
+}
+.lr-day-table thead th {
+  border-bottom: 1px solid var(--color-background-dark);
+  color: var(--color-text-primary);
+  font-weight: 400;
+  position: sticky;
+  top: 0;
+  background: var(--color-background);
+  z-index: 1;
+  text-align: center;
+  line-height: 1;
+}
+.lr-day-table__col-action {
+  width: 28px;
+  padding-left: 0;
+  padding-right: 0;
+  text-align: center;
+}
+.lr-day-table__col-time {
+  width: 56px;
+  text-align: center;
+}
+.lr-day-table__col-dur {
+  width: 44px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-primary);
+}
+/* 四列表没有时长列，最后一列更宽。表头图标仍对齐五列表最后一列的中心：差半个时长列。 */
+.lr-day-table--cols-4 thead th.lr-day-table__col-last .lr-day-table__th-icon {
+  transform: translateX(22px);
+}
+.lr-day-table__col-last {
+  text-align: left;
+  min-width: 0;
+}
+.lr-day-table thead th.lr-day-table__col-last {
+  text-align: center;
+}
+.lr-day-table__th-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  color: var(--color-text-primary);
+  line-height: 1;
+}
+.lr-day-table__th-icon svg {
+  display: block;
+}
+.lr-day-table__cell-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  line-height: 0;
+  vertical-align: middle;
+}
+.lr-day-table__cell-btn .n-icon {
+  display: flex;
+  line-height: 0;
+}
+.lr-day-table__cell-btn--danger {
+  color: var(--color-red-dark);
+}
+.lr-day-table__cell-btn:hover {
+  opacity: 0.85;
+}
+.lr-day-table__time {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  vertical-align: middle;
+}
+.lr-day-table__time :deep(.n-input) {
+  min-width: 0 !important;
+}
+.lr-day-table .n-input,
+.lr-day-table__note.n-input {
+  --n-border: none !important;
+  --n-border-hover: none !important;
+  --n-border-focus: none !important;
+  --n-border-disabled: none !important;
+  --n-box-shadow-focus: none !important;
+  --n-color: transparent !important;
+  --n-color-focus: transparent !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.lr-day-table .n-input__border,
+.lr-day-table .n-input__state-border,
+.lr-day-table__note.n-input .n-input__border,
+.lr-day-table__note.n-input .n-input__state-border {
+  border: none !important;
+  box-shadow: none !important;
+}
+.lr-day-table__time .n-input {
+  --n-height: 22px !important;
+  --n-padding-left: 0 !important;
+  --n-padding-right: 0 !important;
+  font-weight: 600;
+  font-size: 12px;
+  font-family: Consolas, "Courier New", Courier, monospace;
+}
+.lr-day-table__time .n-input__input-el {
+  text-align: center;
+  padding: 0;
+}
+.lr-day-table__time .n-base-suffix,
+.lr-day-table__time .n-input__suffix,
+.lr-day-table__time .n-base-clear {
+  display: none !important;
+  width: 0 !important;
+}
+.lr-day-table__dur {
+  display: inline-block;
+  width: 100%;
+  font-size: 12px;
+  text-align: center;
+  white-space: nowrap;
+  font-family: Consolas, "Courier New", Courier, monospace;
+}
+.lr-day-table__note.n-input,
+.lr-day-table__note .n-input {
+  --n-height: 22px !important;
+  --n-padding-left: 0 !important;
+  --n-padding-right: 0 !important;
+  font-size: 12px;
+}
+.lr-day-table__note .n-input__input-el,
+.lr-day-table__note.n-input .n-input__input-el {
+  padding: 0;
+}

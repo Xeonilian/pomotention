@@ -1,57 +1,85 @@
 <!--
-  日视图吃饭：左展示 + 右表。展示内容先占位，尺寸走 LifeRecordDayFrame。
+  日视图吃饭：图=加一条 + 最后一条（时间/正餐甜点水果/刀叉记吃什么）；表保持完整编辑。
 -->
 <template>
-  <LifeRecordDayFrame v-if="task">
-    <template #toolbar>
-      <n-button v-if="records.length === 0" text size="small" class="lr-icon-btn" title="删除空记录" @click="discard">
-        <template #icon>
-          <n-icon :size="18"><Delete20Regular /></n-icon>
-        </template>
-      </n-button>
-      <n-button text size="small" class="lr-icon-btn" title="关闭" @click="deselect">
-        <template #icon>
-          <n-icon :size="18"><Dismiss20Regular /></n-icon>
-        </template>
-      </n-button>
-    </template>
-
+  <LifeRecordDayFrame v-if="task" :view="view" compact :note-open="chartFoodOpen">
     <template #display>
-      <button type="button" class="eat-day-display__append" :title="`记一条${def.title}`" @click="append">
-        <n-icon :size="48"><FoodApple20Regular /></n-icon>
-      </button>
-      <span class="eat-day-display__count">×{{ records.length }}</span>
+      <div class="lr-chart">
+        <button type="button" class="lr-chart__el lr-chart__icon" title="吃饭" @click="onAppleClick">
+          <n-icon class="lr-chart__icon-glyph" color="var(--color-red)"><FoodApple20Filled /></n-icon>
+        </button>
+        <span class="lr-chart__el lr-chart__times" aria-hidden="true">×</span>
+        <span class="lr-chart__el lr-chart__count">{{ records.length }}</span>
+        <template v-if="lastRecord">
+          <span class="lr-chart__el eat-day-chart__start" :title="'时间 ' + lastStartLabel">{{ lastStartLabel }}</span>
+          <button
+            type="button"
+            class="lr-chart__el eat-day-chart__course"
+            :title="eatCourseTitle(lastRecord.eatCourse)"
+            @click="toggleEatCourse(lastRecord)"
+          >
+            <n-icon class="eat-day-chart__ctrl-icon">
+              <component :is="eatCourseIcon(lastRecord.eatCourse)" />
+            </n-icon>
+          </button>
+          <button
+            type="button"
+            class="lr-chart__el eat-day-chart__food"
+            title="吃什么"
+            @pointerdown="chartFoodOpen && $event.preventDefault()"
+            @click="onFoodClick"
+          >
+            <n-icon class="eat-day-chart__ctrl-icon"><Food20Regular /></n-icon>
+          </button>
+          <input
+            v-if="chartFoodOpen"
+            ref="chartFoodRef"
+            class="lr-chart__el eat-day-chart__input"
+            :value="chartFoodDraft"
+            placeholder="吃什么"
+            @input="onChartFoodInput"
+            @blur="onChartFoodBlur"
+          />
+        </template>
+      </div>
     </template>
-
     <template #table>
-      <table class="eat-day-table">
+      <table class="lr-day-table lr-day-table--cols-4">
         <colgroup>
-          <col class="eat-day-table__col-action" />
-          <col class="eat-day-table__col-time" />
+          <col class="lr-day-table__col-action" />
+          <col class="lr-day-table__col-time" />
+          <col class="lr-day-table__col-time" />
           <col />
         </colgroup>
         <thead>
           <tr>
-            <th class="eat-day-table__col-action">
-              <button type="button" class="eat-day-table__cell-btn" :title="`记一条${def.title}`" @click="append">
-                <n-icon :size="14"><Add20Regular /></n-icon>
+            <th class="lr-day-table__col-action">
+              <button type="button" class="lr-day-table__cell-btn" :title="`记一条${def.title}`" @click="append">
+                <n-icon :size="18"><Add20Regular /></n-icon>
               </button>
             </th>
-            <th class="eat-day-table__col-time">time</th>
-            <th>吃了什么</th>
+            <th class="lr-day-table__col-time" title="时间">
+              <n-icon :size="18" class="lr-day-table__th-icon"><Clock20Regular /></n-icon>
+            </th>
+            <th class="lr-day-table__col-time" title="正餐 / 甜点 / 水果">
+              <n-icon :size="18" class="lr-day-table__th-icon"><Food20Regular /></n-icon>
+            </th>
+            <th class="lr-day-table__col-last" title="吃了什么">
+              <n-icon :size="18" color="var(--color-red)" class="lr-day-table__th-icon"><FoodApple20Filled /></n-icon>
+            </th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="record in records" :key="record.id">
-            <td class="eat-day-table__col-action">
-              <button type="button" class="eat-day-table__cell-btn eat-day-table__cell-btn--danger" title="删除这条" @click="remove(record)">
+            <td class="lr-day-table__col-action">
+              <button type="button" class="lr-day-table__cell-btn lr-day-table__cell-btn--danger" title="删除这条" @click="remove(record)">
                 <n-icon :size="14"><Delete20Regular /></n-icon>
               </button>
             </td>
-            <td class="eat-day-table__col-time">
+            <td class="lr-day-table__col-time">
               <n-time-picker
-                class="eat-day-table__time"
-                :value="record.recordedAt"
+                class="lr-day-table__time"
+                :value="pickerTs(record.recordedAt)"
                 format="HH:mm"
                 size="small"
                 :show-icon="false"
@@ -59,12 +87,25 @@
                 @update:value="(ts: number | null) => changeRecordedAt(record, ts)"
               />
             </td>
-            <td>
+            <td class="lr-day-table__col-time">
+              <button
+                type="button"
+                class="lr-day-table__cell-btn"
+                :title="eatCourseTitle(record.eatCourse)"
+                @click="toggleEatCourse(record)"
+              >
+                <n-icon :size="18">
+                  <component :is="eatCourseIcon(record.eatCourse)" />
+                </n-icon>
+              </button>
+            </td>
+            <td class="lr-day-table__col-last">
               <n-input
-                class="eat-day-table__desc"
+                class="lr-day-table__note"
                 size="tiny"
+                :bordered="false"
                 :value="record.description ?? ''"
-                placeholder="可选"
+                placeholder="吃什么"
                 @update:value="(v: string) => changeDescription(record, v)"
               />
             </td>
@@ -74,133 +115,155 @@
     </template>
   </LifeRecordDayFrame>
 </template>
-
 <script setup lang="ts">
-import { NButton, NIcon, NInput, NTimePicker } from "naive-ui";
-import { Add20Regular, Delete20Regular, Dismiss20Regular, FoodApple20Regular } from "@vicons/fluent";
+import { computed, nextTick, ref, watch, type Component } from "vue";
+import { NIcon, NInput, NTimePicker } from "naive-ui";
+import {
+  Add20Regular,
+  Clock20Regular,
+  Delete20Regular,
+  Food20Regular,
+  FoodApple20Filled,
+  FoodApple20Regular,
+  FoodCake20Regular,
+  FoodPizza20Regular,
+} from "@vicons/fluent";
+import type { EatCourse } from "@/core/types/Task";
+import { timestampToTimeString } from "@/core/utils";
 import { useLifeRecordEditor } from "@/composables/lifeRecord/useLifeRecordEditor";
 import LifeRecordDayFrame from "@/components/LifeRecord/LifeRecordDayFrame.vue";
-
-const props = defineProps<{ taskId: number }>();
-const { task, records, def, append, changeRecordedAt, changeDescription, remove, discard, deselect } = useLifeRecordEditor(
+const props = withDefaults(defineProps<{ taskId: number; embedded?: boolean; view?: "chart" | "table" }>(), {
+  view: "chart",
+});
+const { task, records, def, append, pickerTs, toggleEatCourse, changeRecordedAt, changeDescription, remove } = useLifeRecordEditor(
   () => props.taskId,
   "eat",
+  { embedded: () => props.embedded },
 );
+const lastRecord = computed(() => records.value[records.value.length - 1] ?? null);
+const lastStartLabel = computed(() => (lastRecord.value ? timestampToTimeString(lastRecord.value.recordedAt) : "—"));
+function eatCourseTitle(course?: EatCourse): string {
+  if (course === "dessert") return "甜点";
+  if (course === "apple") return "水果";
+  return "正餐";
+}
+function eatCourseIcon(course?: EatCourse): Component {
+  if (course === "dessert") return FoodCake20Regular;
+  if (course === "apple") return FoodApple20Regular;
+  return FoodPizza20Regular;
+}
+const chartFoodOpen = ref(false);
+const chartFoodDraft = ref("");
+const chartFoodRef = ref<HTMLInputElement | null>(null);
+watch(
+  () => lastRecord.value?.id,
+  () => {
+    chartFoodOpen.value = false;
+  },
+);
+watch(chartFoodOpen, async (open) => {
+  if (!open) return;
+  await nextTick();
+  chartFoodRef.value?.focus({ preventScroll: true });
+});
+function commitChartFood() {
+  const last = lastRecord.value;
+  if (!last) return;
+  changeDescription(last, chartFoodDraft.value);
+}
+function onAppleClick() {
+  if (chartFoodOpen.value) {
+    commitChartFood();
+    chartFoodOpen.value = false;
+  }
+  append();
+}
+function onFoodClick() {
+  const last = lastRecord.value;
+  if (!last) return;
+  if (chartFoodOpen.value) {
+    commitChartFood();
+    chartFoodOpen.value = false;
+    return;
+  }
+  chartFoodDraft.value = last.description ?? "";
+  chartFoodOpen.value = true;
+}
+function onChartFoodInput(e: Event) {
+  chartFoodDraft.value = (e.target as HTMLInputElement).value;
+}
+function onChartFoodBlur() {
+  commitChartFood();
+  chartFoodOpen.value = false;
+}
 </script>
-
+<style src="./lifeRecordChart.css"></style>
+<style src="./lifeRecordTable.css"></style>
 <style scoped>
-.lr-icon-btn {
+/* 下排锚点跟睡觉图 */
+.eat-day-chart__start {
+  left: calc(50% - var(--a) - 30px);
+  top: calc(50% + var(--f) - 20px);
+  font-size: 22px;
+  font-weight: 500;
+  font-family: Consolas, "Courier New", Courier, monospace;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+}
+.eat-day-chart__course {
+  left: 50%;
+  top: calc(50% + var(--f) - 20px);
   width: 28px;
-  min-width: 28px;
   height: 28px;
-  padding: 0 !important;
-}
-.lr-icon-btn :deep(.n-button__icon) {
-  margin: 0;
-}
-.eat-day-display__append {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  margin: 0;
-  padding: 0;
-  border: none;
-  background: transparent;
+  color: var(--color-text-primary);
   cursor: pointer;
+}
+.eat-day-chart__food {
+  left: calc(50% + var(--c) + 15px);
+  top: calc(50% + var(--f) - 20px);
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+.eat-day-chart__course:hover,
+.eat-day-chart__food:hover {
+  opacity: 0.85;
+}
+.eat-day-chart__ctrl-icon {
+  display: block;
+  width: 28px;
+  height: 28px;
+  font-size: 28px;
+  line-height: 0;
   color: inherit;
 }
-.eat-day-display__count {
-  font-size: 30px;
-  font-weight: 500;
-  line-height: 1;
-  color: var(--color-text-primary);
-  font-variant-numeric: tabular-nums;
+.eat-day-chart__ctrl-icon :deep(svg) {
+  width: 1em;
+  height: 1em;
+  display: block;
 }
-.eat-day-table {
-  border-collapse: collapse;
-  font-size: 12px;
-  width: 100%;
-  table-layout: fixed;
-}
-.eat-day-table th,
-.eat-day-table td {
-  padding: 0 4px;
+.eat-day-chart__input {
+  left: 50%;
+  top: calc(50% + var(--f) + 22px);
+  width: calc(var(--a) + var(--c) + var(--icon-size));
+  transform: translate(-50%, 0);
+  padding: 2px 0;
   border: none;
-  vertical-align: middle;
-  overflow: hidden;
-  box-sizing: border-box;
-  height: 28px;
-}
-.eat-day-table thead th {
-  border-bottom: 1px solid var(--color-text-secondary-transparent);
-  color: var(--color-text-secondary);
-  font-weight: 500;
-  position: sticky;
-  top: 0;
-  background: var(--color-background);
-  z-index: 1;
-}
-.eat-day-table__col-action {
-  width: 28px;
-  padding-left: 0;
-  padding-right: 0;
-  text-align: center;
-}
-.eat-day-table__col-time {
-  width: 56px;
-  text-align: left;
-}
-.eat-day-table__cell-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  margin: 0;
-  padding: 0;
-  border: none;
+  border-radius: 0;
   background: transparent;
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  line-height: 0;
-  vertical-align: middle;
-}
-.eat-day-table__cell-btn--danger {
-  color: var(--color-red-dark);
-}
-.eat-day-table__time {
-  width: 44px;
-  max-width: 100%;
-}
-.eat-day-table__time :deep(.n-input) {
-  --n-height: 22px !important;
-  --n-padding-left: 0 !important;
-  --n-padding-right: 0 !important;
-  --n-border: none !important;
-  --n-border-hover: none !important;
-  --n-border-focus: none !important;
-  --n-box-shadow-focus: none !important;
-  background: transparent !important;
-  font-weight: 600;
-  font-size: 12px;
-}
-.eat-day-table__time :deep(.n-base-suffix),
-.eat-day-table__time :deep(.n-input__suffix) {
-  display: none !important;
-  width: 0 !important;
-}
-.eat-day-table__desc :deep(.n-input) {
-  --n-height: 22px !important;
-  --n-padding-left: 0 !important;
-  --n-padding-right: 0 !important;
-  --n-border: none !important;
-  --n-border-hover: none !important;
-  --n-border-focus: none !important;
-  --n-box-shadow-focus: none !important;
-  background: transparent !important;
-  font-size: 12px;
-}
-.eat-day-table__desc :deep(.n-input__input-el) {
-  padding: 0;
+  color: var(--color-text-primary);
+  font-size: 16px;
+  line-height: 1.4;
+  text-align: center;
+  outline: none;
+  font-family: inherit;
+  box-sizing: border-box;
 }
 </style>

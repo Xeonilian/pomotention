@@ -88,6 +88,7 @@ describe("collectLifeRecordOverlays 跨天睡眠", () => {
     expect(sleeps).toHaveLength(1);
     expect(sleeps[0].start).toBe(dayStart + 5 * 3600_000); // 裁到视口 05:00
     expect(sleeps[0].end).toBe(sleepEnd);
+    expect(sleeps[0].wakeAt).toBe(sleepEnd);
     expect(sleeps[0].ongoing).toBe(false);
   });
 
@@ -120,6 +121,7 @@ describe("collectLifeRecordOverlays 跨天睡眠", () => {
     expect(sleeps).toHaveLength(1);
     expect(sleeps[0].start).toBe(sleepStart);
     expect(sleeps[0].end).toBe(dayEnd);
+    expect(sleeps[0].wakeAt).toBeUndefined();
   });
 
   it("前一日的喝水不投射到次日点标", () => {
@@ -173,6 +175,7 @@ describe("collectLifeRecordOverlays 跨天睡眠", () => {
     expect(onStartDay.sleeps).toHaveLength(1);
     expect(onStartDay.sleeps[0].start).toBe(sleepStart);
     expect(onStartDay.sleeps[0].end).toBe(dayEnd);
+    expect(onStartDay.sleeps[0].wakeAt).toBeUndefined();
     expect(onStartDay.sleeps[0].ongoing).toBe(true);
 
     const nextStart = dayEnd;

@@ -10,6 +10,7 @@ description: 首页各面板之间的数据流与一条工作从清单到记录�
 - 模块分区与顶栏入口见 [软件界面](./interface.md)
 - 术语见 [附录：术语对照表](../appendix/glossary.md)
 - 周期长、目标可能变化时如何用活动清单 + 任务清单当 backlog，见 [长期事项与待办库存](../practices/long-horizon-inventory.md)
+- 喝水 / 吃饭 / 睡觉等身体节律不走这条活动→计划链路，见 [生活记录](./life.md)
   :::
 
 ## 快速导航

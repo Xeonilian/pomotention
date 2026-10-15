@@ -1,36 +1,31 @@
 <!--
-  日面板骨架：展示区与表并排，窄屏或手机改为上下。喝水/睡觉日面板未接入。
+  日面板骨架：sheet 单格。图/表互斥，尺寸由本组件统一。
 -->
 <template>
-  <div class="lr-day" :class="{ 'lr-day--mobile': isMobile }">
-    <div class="lr-day__toolbar">
-      <slot name="toolbar" />
-    </div>
+  <div class="lr-day" :class="{ 'lr-day--mobile': isMobile, 'lr-day--compact': compact, 'lr-day--note-open': noteOpen }">
     <div class="lr-day__body">
-      <div class="lr-day__display">
+      <div v-if="view === 'chart'" class="lr-day__display">
         <slot name="display" />
       </div>
-      <div class="lr-day__table">
+      <div v-if="view === 'table'" class="lr-day__table">
         <slot name="table" />
       </div>
     </div>
   </div>
 </template>
-
 <script setup lang="ts">
 import { useDevice } from "@/composables/platform/useDevice";
-
+withDefaults(defineProps<{ view?: "chart" | "table"; compact?: boolean; noteOpen?: boolean }>(), {
+  view: "chart",
+  compact: false,
+  noteOpen: false,
+});
 const { isMobile } = useDevice();
 </script>
-
 <style scoped>
 .lr-day {
-  --lr-day-display: 300px;
-  --lr-day-table-w: 200px;
-  --lr-day-head-h: 28px;
-  --lr-day-row-h: 28px;
-  --lr-day-table-h: calc(var(--lr-day-head-h) + 8 * var(--lr-day-row-h));
-
+  --lr-day-display: 400px;
+  --lr-day-table-w: 400px;
   display: flex;
   flex-direction: column;
   gap: 0;
@@ -40,86 +35,80 @@ const { isMobile } = useDevice();
   min-width: 0;
   overflow: hidden;
   box-sizing: border-box;
-  container-type: inline-size;
-  container-name: lr-day;
 }
-
-.lr-day--mobile {
-  --lr-day-display: 78vw;
-  --lr-day-table-w: 90vw;
-  overflow-x: hidden;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-.lr-day__toolbar {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 2px;
-  flex-shrink: 0;
-}
-
 .lr-day__body {
   flex: 1 1 0%;
   min-height: 0;
   min-width: 0;
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
-  align-content: center;
-  gap: 24px 40px;
+  gap: 0;
   overflow: hidden;
+  container-type: size;
 }
-
+.lr-day__display {
+  /* 格内最大正方形，避免 2×2 压扁后百分比锚点散掉 */
+  width: min(var(--lr-day-display), 100cqw, 100cqh);
+  height: min(var(--lr-day-display), 100cqw, 100cqh);
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  display: flex;
+}
+.lr-day__table {
+  width: var(--lr-day-table-w);
+  max-width: 100%;
+  align-self: center;
+  flex: 1 1 0%;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+.lr-day--mobile {
+  --lr-day-display: 78vw;
+  height: auto;
+  overflow: visible;
+}
 .lr-day--mobile .lr-day__body {
   flex: 0 0 auto;
   min-height: auto;
   overflow: visible;
-  flex-wrap: nowrap;
-  flex-direction: column;
   justify-content: flex-start;
-  align-items: center;
-  align-content: flex-start;
-  gap: 16px;
+  container-type: normal;
 }
-
-.lr-day__display {
+.lr-day--mobile .lr-day__display {
   width: var(--lr-day-display);
   height: var(--lr-day-display);
-  flex: 0 0 var(--lr-day-display);
-  border-radius: 50%;
-  box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-width: 0;
 }
-
-.lr-day__table {
-  flex: 0 0 auto;
-  width: var(--lr-day-table-w);
-  max-width: 100%;
-  height: var(--lr-day-table-h);
-  min-height: 0;
-  overflow: auto;
-  scrollbar-gutter: stable;
+/* 手机裁掉上下空白；内部仍按正方形算锚点，两行间距不变 */
+.lr-day--mobile.lr-day--compact {
+  --lr-day-compact-h: 176px;
 }
-
+.lr-day--mobile.lr-day--compact .lr-day__display {
+  height: var(--lr-day-compact-h);
+  overflow: hidden;
+  position: relative;
+}
+/* 打开备注时框高不变，只把输入露到下方，避免居中重算把上方顶出空白 */
+.lr-day--mobile.lr-day--compact.lr-day--note-open .lr-day__display {
+  overflow: visible;
+}
+.lr-day--mobile.lr-day--compact .lr-day__display :deep(.lr-chart) {
+  position: absolute;
+  left: 0;
+  top: calc(var(--lr-day-compact-h) / 2);
+  width: var(--lr-day-display);
+  height: var(--lr-day-display);
+  transform: translateY(-50%);
+  flex: none;
+}
 .lr-day--mobile .lr-day__table {
   width: var(--lr-day-table-w);
-  max-width: 90vw;
-}
-
-@container lr-day (max-width: 460px) {
-  .lr-day__body {
-    flex-wrap: nowrap;
-    flex-direction: column;
-    justify-content: flex-start;
-    align-items: center;
-    align-content: flex-start;
-  }
+  max-width: 100%;
+  height: auto;
+  min-height: calc(28px + 2 * 28px);
+  overflow: visible;
 }
 </style>

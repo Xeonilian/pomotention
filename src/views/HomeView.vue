@@ -8,13 +8,13 @@
   <div class="home-root" :class="{ 'home-root--activity-only-mobile': activityOnlyMobile }" :style="rootCssVars">
     <div class="home-content">
       <!-- 左侧面板 (日程表) -->
-      <div v-if="settingStore.settings.showTimetable" class="left" :style="{ width: leftWidth + 'px' }">
+      <div v-if="timetableLayoutVisible" class="left" :style="{ width: leftWidth + 'px' }">
         <TimeTable @timetable-edit="onTimetableEdit" />
       </div>
 
       <!-- 左侧面板调整大小手柄 -->
       <div
-        v-if="settingStore.settings.showTimetable"
+        v-if="timetableLayoutVisible"
         class="resize-handle-horizontal"
         style="touch-action: none"
         @pointerdown="startLeftResize"
@@ -25,7 +25,7 @@
         ref="middleColumnEl"
         class="middle"
         :class="{
-          'middle-alone': !settingStore.settings.showTimetable && !settingStore.settings.showActivity && !showCaptureUi,
+          'middle-alone': !timetableLayoutVisible && !settingStore.settings.showActivity && !showCaptureUi,
           'middle--landscape-fallback': isMobile && isLandscapeViewport,
           'middle--mobile-planner-height-anim': isMobile && settingStore.settings.showPlanner && !mobileLifeRecordOpen,
           'middle--suppress-planner-motion': suppressMobilePlannerMotion,
@@ -33,7 +33,7 @@
       >
         <!-- 今日视图 -->
         <div
-          v-if="settingStore.settings.showPlanner && !mobileLifeRecordOpen"
+          v-if="settingStore.settings.showPlanner && !mobileLifeRecordOpen && !daySheetActive"
           class="middle-top"
           :style="middleTopPlannerStyle"
         >
@@ -83,40 +83,44 @@
             />
             <WeekPlanner
               v-if="settingStore.settings.showPlanner && settingStore.settings.viewSet === 'week'"
-              :hide-schedule-blocks="lifePlannerHasAnyLayer"
-              :drink-layer="lifePlannerHasDrink"
+              :hide-schedule-blocks="lifePlannerLifeView"
+              :drink-layer="lifePlannerLifeView"
+              :life-view="lifePlannerLifeView"
               @item-change="onItemChange"
               @date-select="onDateSelect"
               @date-select-day-view="onDateSelectDayView"
+              @open-day-sheet="onOpenDaySheetFromCell"
             />
             <MonthPlanner
               v-if="settingStore.settings.showPlanner && settingStore.settings.viewSet === 'month'"
               :show-stats-only="monthShowStatsOnly"
-              :drink-skin="lifePlannerHasDrink"
+              :life-view="lifePlannerLifeView"
               @item-change="onItemChange"
               @date-select="onDateSelect"
               @date-select-day-view="onDateSelectDayView"
+              @open-day-sheet="onOpenDaySheetFromCell"
             />
             <YearPlanner
               v-if="settingStore.settings.showPlanner && settingStore.settings.viewSet === 'year'"
               :key="dateService.displayYearInfo"
-              :drink-skin="lifePlannerHasDrink"
+              :life-view="lifePlannerLifeView"
               @date-select-day-view="onDateSelectDayView"
               @navigate-to-month="onYearNavigateToMonth"
               @navigate-to-week="onYearNavigateToWeek"
+              @open-day-sheet="onOpenDaySheetFromCell"
             />
           </div>
         </div>
         <!-- 任务视图调整大小手柄 -->
         <div
-          v-if="taskPanelLayoutVisible && settingStore.settings.showPlanner && !mobileLifeRecordOpen"
+          v-if="taskPanelLayoutVisible && settingStore.settings.showPlanner && !mobileLifeRecordOpen && !daySheetActive"
           class="resize-handle"
           style="touch-action: none"
           @pointerdown="startVerticalResize"
         ></div>
         <!-- 任务视图：showTask 时常驻 DOM，移动端待办编辑时折叠过渡，避免 v-if 瞬时插入导致布局抖 -->
         <div
-          v-if="settingStore.settings.showTask"
+          v-if="taskAreaVisible"
           class="middle-bottom"
           :class="{
             'middle-bottom--collapsed': isMobile && mobileDayTodoInlineEditing,
@@ -124,7 +128,13 @@
           }"
         >
           <div class="task-container">
-            <TaskTracker ref="taskTrackerRef" @task-record-editing="setTaskRecordEditing" />
+            <LifeRecordDaySheet
+              v-if="daySheetActive"
+              :task-ids="daySheetTaskIds"
+              :initial-view="lifePlannerLifeView ? 'table' : 'chart'"
+              @close="lifePlannerLayerStore.closeDaySheet"
+            />
+            <TaskTracker v-else ref="taskTrackerRef" @task-record-editing="setTaskRecordEditing" />
           </div>
         </div>
       </div>
@@ -155,7 +165,7 @@
       </div>
     </div>
     <MobileHomeFab
-      v-if="isMobile"
+      v-if="isMobile && !daySheetActive && !lifePlannerLifeView"
       :task-record-editing="taskRecordEditing"
       @notify="showErrorPopover"
       @update-active-id="onUpdateActiveId"
@@ -216,7 +226,8 @@ import { useLifePlannerLayerStore } from "@/stores/useLifePlannerLayerStore";
 import { autoSyncDebounced, uploadAllDebounced } from "@/core/utils/autoSync";
 import { useDevice } from "@/composables/platform/useDevice";
 import { CAPTURE_UI_ENABLED } from "@/core/capture";
-import { getLifeRecordKind } from "@/core/lifeRecord";
+import { getLifeRecordKind, LIFE_RECORD_DEFS } from "@/core/lifeRecord";
+import { findLifeRecordTodoForDay } from "@/services/lifeRecord/lifeRecordService";
 import { usePublicHolidays, plannerHolidayMapKey, plannerHolidayRangeKey } from "@/composables/planner/usePublicHolidays";
 import { registerPlannerKeyboardCommandApi } from "@/composables/keyboard/usePlannerKeyboardCommands";
 import { registerPlannerDayEnterEditTitle, registerPlannerDaySpaceToggleCheck } from "@/composables/keyboard/usePlannerKeyboardNavigator";
@@ -246,6 +257,7 @@ const WeekPlanner = defineAsyncComponent(() => import("@/components/WeekPlanner/
 const MonthPlanner = defineAsyncComponent(() => import("@/components/MonthPlanner/MonthPlanner.vue"));
 const YearPlanner = defineAsyncComponent(() => import("@/components/YearPlanner/YearPlanner.vue"));
 const TaskTracker = defineAsyncComponent(() => import("@/components/TaskTracker/TaskTracker.vue"));
+const LifeRecordDaySheet = defineAsyncComponent(() => import("@/components/LifeRecord/LifeRecordDaySheet.vue"));
 const ActivitySheet = defineAsyncComponent(() => import("@/components/ActivitySheet/ActivitySheet.vue"));
 const CapturePanel = defineAsyncComponent(() => import("@/components/Capture/CapturePanel.vue"));
 const StateLogModal = defineAsyncComponent(() => import("@/components/TaskTracker/StateLogModal.vue"));
@@ -366,7 +378,14 @@ const { saveAllDebounced, cleanSelection } = dataStore;
 /** 月视图：header 🍅 单击切换统计模式（会话级） */
 const monthShowStatsOnly = ref(false);
 const lifePlannerLayerStore = useLifePlannerLayerStore();
-const { hasAny: lifePlannerHasAnyLayer, hasDrink: lifePlannerHasDrink } = storeToRefs(lifePlannerLayerStore);
+const { lifeView: lifePlannerLifeView, daySheetOpen, daySheetTaskIds, mobilePreviewSolo } =
+  storeToRefs(lifePlannerLayerStore);
+
+/** 生活整合 sheet 激活：任意 view 进入都给全部 middle 空间 */
+const daySheetActive = computed(() => daySheetOpen.value);
+
+const timetableLayoutVisible = computed(() => settingStore.settings.showTimetable && !mobilePreviewSolo.value);
+const taskAreaVisible = computed(() => daySheetActive.value || (settingStore.settings.showTask && !mobilePreviewSolo.value));
 
 watch(
   () => settingStore.settings.viewSet,
@@ -440,8 +459,40 @@ const onDateSelect = (day: number) => {
   // 不清除selectedRowId.value，因为周月视图里需要选中todo.id 或 schedule.id 用于重复
 };
 
+// 非day 生活可视化：点日期 badge → 进整合 sheet
+// 前提：当天已有生活数据；无数据不建桶、不开 sheet（date-select 已选中这天）
+const onOpenDaySheetFromCell = (dayStart: number) => {
+  if (!hasLifeRecordDataForDay(dayStart)) return;
+  dateService.setAppDate(dayStart);
+  lifePlannerLayerStore.openDaySheet();
+};
+
+/** 当天 4 类任一有生活记录 → true */
+function hasLifeRecordDataForDay(dayStart: number): boolean {
+  for (const def of LIFE_RECORD_DEFS) {
+    const todo = findLifeRecordTodoForDay(todoList.value, activityById.value, def.kind, dayStart);
+    if (!todo || todo.activityId == null) continue;
+    const task = taskByActivityId.value.get(todo.activityId);
+    if (task && (task.lifeRecords?.length ?? 0) > 0) return true;
+  }
+  return false;
+}
+
 // week和month planner 引起选中的任务行
 const onItemChange = (id: number, activityId?: number, taskId?: number) => {
+  // 生活记录行：进入整合 sheet（给全部 middle 空间），不再走 compact
+  // week 生活标记 emit 时 activityId 为 undefined，需从 todo 反查
+  const todo = todoById.value.get(id);
+  const actId = activityId ?? todo?.activityId;
+  if (actId != null) {
+    const kind = getLifeRecordKind(dataStore.activityById.get(actId));
+    if (kind) {
+      // life bucket 的 todo.id = 当天零点；先切到该天再建 4 桶开 sheet
+      dateService.setAppDate(id);
+      lifePlannerLayerStore.openDaySheet();
+      return;
+    }
+  }
   selectedRowId.value = null;
   activeId.value = undefined;
   selectedActivityId.value = null;
@@ -1524,11 +1575,13 @@ const plannerMiddleAvailPx = computed(() => {
 const isLandscapeViewport = computed(() => viewportInnerW.value > viewportInnerH.value);
 
 /** 任务区是否与计划表分栏显示（尊重设置；移动端待办编辑时临时不占位） */
-const taskPanelLayoutVisible = computed(() => settingStore.settings.showTask && !mobileDayTodoInlineEditing.value);
+const taskPanelLayoutVisible = computed(
+  () => settingStore.settings.showTask && !mobileDayTodoInlineEditing.value && !mobilePreviewSolo.value,
+);
 
 /** 移动端横屏或总高度不足时限制 middle-top，避免任务区被挤没；桌面端仅在极端矮窗时收缩 */
 const effectiveMiddleTopHeightPx = computed(() => {
-  if (!settingStore.settings.showPlanner || !settingStore.settings.showTask || mobileDayTodoInlineEditing.value) return topHeight.value;
+  if (!settingStore.settings.showPlanner || !settingStore.settings.showTask || mobileDayTodoInlineEditing.value || mobilePreviewSolo.value) return topHeight.value;
   const avail = plannerMiddleAvailPx.value;
   const minTask = 100;
   const maxTop = Math.max(120, avail - minTask);

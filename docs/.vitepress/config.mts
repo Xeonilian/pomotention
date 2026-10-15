@@ -117,7 +117,6 @@ export default withMermaid(
           items: [
             { text: "软件界面", link: "/guide/reference/interface" },
             { text: "模块联动", link: "/guide/reference/workflow" },
-            { text: "长期事项与待办库存", link: "/guide/practices/long-horizon-inventory" },
             {
               text: "模块功能",
               collapsed: true,
@@ -130,11 +129,19 @@ export default withMermaid(
               ],
             },
             {
+              text: "高级功能",
+              collapsed: true,
+              items: [
+                { text: "收支账本", link: "/guide/reference/ledger" },
+                { text: "生活记录", link: "/guide/reference/life" },
+                { text: "长期事项与待办库存", link: "/guide/practices/long-horizon-inventory" },
+              ],
+            },
+            {
               text: "数据管理",
               collapsed: true,
               items: [
                 { text: "标签系统", link: "/guide/reference/tag" },
-                { text: "收支账本", link: "/guide/reference/ledger" },
                 { text: "数据查看", link: "/guide/reference/search" },
                 { text: "数据趋势", link: "/guide/reference/chart" },
               ],
