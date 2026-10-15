@@ -1,7 +1,4 @@
-// Planner 生活图层（会话态，不落盘）
-// - 周：可叠多层（Set）
-// - 月/年：互斥单层（toggle 时只留一个）
-// - 任一图层开着 → 周视图藏普通时间块；全关恢复
+// Planner 生活可视化（会话态，不落盘）：非日 = 图层开关；日 = 集中 sheet
 import { defineStore } from "pinia";
 import { computed, ref, toValue } from "vue";
 import { useDevice } from "@/composables/platform/useDevice";
@@ -10,18 +7,10 @@ import { findLifeRecordTodoForDay } from "@/services/lifeRecord/lifeRecordServic
 import { useDataStore } from "@/stores/useDataStore";
 import { useSettingStore } from "@/stores/useSettingStore";
 
-export type PlannerLayerMode = "stack" | "exclusive";
-
 export const useLifePlannerLayerStore = defineStore("lifePlannerLayer", () => {
   const dataStore = useDataStore();
   const settingStore = useSettingStore();
   const { isMobile } = useDevice();
-  const layers = ref<Set<LifeRecordKind>>(new Set());
-  /** 月/年互斥时记住最后一层，周叠多层切到月/年时折叠用 */
-  const lastKind = ref<LifeRecordKind | null>(null);
-
-  const hasAny = computed(() => layers.value.size > 0);
-  const hasDrink = computed(() => layers.value.has("drink"));
 
   /** 当天 4 类任一已有生活记录（空桶不算）→ 日按钮 ChannelAdd */
   const currentDayHasLifeRecord = computed(() => {
@@ -37,21 +26,9 @@ export const useLifePlannerLayerStore = defineStore("lifePlannerLayer", () => {
     return false;
   });
 
-  /**
-   * 非 day 统一生活视图：复用已有喝水皮肤（藏时间块 / 水位）。
-   * 吃睡活动叠层观感后续再调。
-   */
   const lifeView = ref(false);
   function toggleLifeView() {
-    const next = !lifeView.value;
-    lifeView.value = next;
-    if (next) {
-      layers.value = new Set(["drink"]);
-      lastKind.value = "drink";
-      return;
-    }
-    layers.value = new Set();
-    lastKind.value = null;
+    lifeView.value = !lifeView.value;
   }
 
   /**
@@ -84,57 +61,17 @@ export const useLifePlannerLayerStore = defineStore("lifePlannerLayer", () => {
     () => isMobile.value && settingStore.settings.viewSet !== "day" && lifeView.value && !daySheetOpen.value,
   );
 
-  function has(kind: LifeRecordKind): boolean {
-    return layers.value.has(kind);
-  }
-
-  function toggle(kind: LifeRecordKind, mode: PlannerLayerMode) {
-    if (mode === "exclusive") {
-      if (layers.value.has(kind) && layers.value.size === 1) {
-        layers.value = new Set();
-        lastKind.value = null;
-        return;
-      }
-      layers.value = new Set([kind]);
-      lastKind.value = kind;
-      return;
-    }
-    const next = new Set(layers.value);
-    if (next.has(kind)) next.delete(kind);
-    else next.add(kind);
-    layers.value = next;
-    lastKind.value = next.has(kind) ? kind : (next.values().next().value ?? null);
-  }
-
   function clear() {
-    layers.value = new Set();
-    lastKind.value = null;
     lifeView.value = false;
   }
 
-  /** 切视图：日清空；进月/年若多层则折成单层 */
+  /** 切到日视图时关掉图层 */
   function onViewSetChange(viewSet: string) {
-    if (viewSet === "day") {
-      clear();
-      return;
-    }
-    if ((viewSet === "month" || viewSet === "year") && layers.value.size > 1) {
-      const keep =
-        (lastKind.value && layers.value.has(lastKind.value) ? lastKind.value : null) ??
-        (layers.value.has("drink") ? "drink" : [...layers.value][0]!);
-      layers.value = new Set([keep]);
-      lastKind.value = keep;
-    }
+    if (viewSet === "day") clear();
   }
 
   return {
-    layers,
-    lastKind,
-    hasAny,
-    hasDrink,
     currentDayHasLifeRecord,
-    has,
-    toggle,
     clear,
     onViewSetChange,
     lifeView,
@@ -146,6 +83,3 @@ export const useLifePlannerLayerStore = defineStore("lifePlannerLayer", () => {
     mobilePreviewSolo,
   };
 });
-
-/** @deprecated 兼容旧名：请改用 useLifePlannerLayerStore */
-export const useDrinkPlannerSkinStore = useLifePlannerLayerStore;

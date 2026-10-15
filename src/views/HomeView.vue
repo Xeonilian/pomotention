@@ -83,8 +83,8 @@
             />
             <WeekPlanner
               v-if="settingStore.settings.showPlanner && settingStore.settings.viewSet === 'week'"
-              :hide-schedule-blocks="lifePlannerHasAnyLayer"
-              :drink-layer="lifePlannerHasDrink"
+              :hide-schedule-blocks="lifePlannerLifeView"
+              :drink-layer="lifePlannerLifeView"
               :life-view="lifePlannerLifeView"
               @item-change="onItemChange"
               @date-select="onDateSelect"
@@ -94,7 +94,6 @@
             <MonthPlanner
               v-if="settingStore.settings.showPlanner && settingStore.settings.viewSet === 'month'"
               :show-stats-only="monthShowStatsOnly"
-              :drink-skin="lifePlannerHasDrink"
               :life-view="lifePlannerLifeView"
               @item-change="onItemChange"
               @date-select="onDateSelect"
@@ -104,7 +103,6 @@
             <YearPlanner
               v-if="settingStore.settings.showPlanner && settingStore.settings.viewSet === 'year'"
               :key="dateService.displayYearInfo"
-              :drink-skin="lifePlannerHasDrink"
               :life-view="lifePlannerLifeView"
               @date-select-day-view="onDateSelectDayView"
               @navigate-to-month="onYearNavigateToMonth"
@@ -380,7 +378,7 @@ const { saveAllDebounced, cleanSelection } = dataStore;
 /** 月视图：header 🍅 单击切换统计模式（会话级） */
 const monthShowStatsOnly = ref(false);
 const lifePlannerLayerStore = useLifePlannerLayerStore();
-const { hasAny: lifePlannerHasAnyLayer, hasDrink: lifePlannerHasDrink, lifeView: lifePlannerLifeView, daySheetOpen, daySheetTaskIds, mobilePreviewSolo } =
+const { lifeView: lifePlannerLifeView, daySheetOpen, daySheetTaskIds, mobilePreviewSolo } =
   storeToRefs(lifePlannerLayerStore);
 
 /** 生活整合 sheet 激活：任意 view 进入都给全部 middle 空间 */

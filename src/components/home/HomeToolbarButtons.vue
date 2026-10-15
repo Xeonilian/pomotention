@@ -97,7 +97,6 @@ import {
   toggleHomeToolbarEditSelection,
   type HomeToolbarActionId,
 } from "@/core/homeToolbarActions";
-import { LIFE_RECORD_UI_ENABLED } from "@/core/lifeRecord";
 import { useSettingStore } from "@/stores/useSettingStore";
 
 const { isMobile } = useDevice();
@@ -107,21 +106,13 @@ const showCollapsedPopover = ref(false);
 const popoverEditMode = ref(false);
 const editSelection = ref<HomeToolbarActionId[]>([]);
 
-function withoutLifeActions(ids: HomeToolbarActionId[]): HomeToolbarActionId[] {
-  if (LIFE_RECORD_UI_ENABLED) return ids;
-  return ids.filter((id) => !isLifeToolbarId(id));
-}
-
-const visibleActionIds = computed(() => withoutLifeActions(HOME_TOOLBAR_ACTION_IDS));
-const desktopActionIds = visibleActionIds;
-const mobilePinnedIds = computed(() => {
-  const visible = withoutLifeActions(normalizeHomeToolbarMobilePinned(settingStore.settings.homeToolbarMobilePinned));
-  if (LIFE_RECORD_UI_ENABLED || visible.length > 0) return visible;
-  return visibleActionIds.value;
-});
+const desktopActionIds = HOME_TOOLBAR_ACTION_IDS;
+const mobilePinnedIds = computed(() =>
+  normalizeHomeToolbarMobilePinned(settingStore.settings.homeToolbarMobilePinned),
+);
 const mobileOverflowIds = computed(() => {
   const pinned = new Set(mobilePinnedIds.value);
-  return visibleActionIds.value.filter((id) => !pinned.has(id));
+  return HOME_TOOLBAR_ACTION_IDS.filter((id) => !pinned.has(id));
 });
 const moreButtonTitle = computed(() => (popoverEditMode.value ? "完成调整快捷按钮" : "调整快捷按钮"));
 

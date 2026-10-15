@@ -14,18 +14,12 @@
           :class="[
             { 'day-card--selected': selectedDate === day.startTs },
             { 'day-card--other-month': !day.isCurrentMonth },
-            { 'day-card--stats': props.showStatsOnly && !props.drinkSkin && !props.lifeView },
-            { 'day-card--drink-skin': props.drinkSkin && !props.lifeView },
+            { 'day-card--stats': props.showStatsOnly && !props.lifeView },
             { 'day-card--life-view': props.lifeView },
           ]"
           :style="getDayCardStyle(day)"
           @click="() => handleDayCardClick(day)"
         >
-          <DrinkDayWaterFill
-            v-if="props.drinkSkin && !props.lifeView && day.isCurrentMonth"
-            :ratio="drinkRatio(day.drinkStat)"
-            :met="day.drinkStat.met"
-          />
           <!-- 节名在左上角；日期徽章保持右上 -->
           <div class="month-day-top" :class="{ 'month-day-top--badge-only': !day.holiday }">
             <div
@@ -40,7 +34,7 @@
               class="date-badge"
               :class="{
                 today: day.isToday,
-                'date-badge--stats': props.showStatsOnly && !props.drinkSkin && !props.lifeView && day.isCurrentMonth,
+                'date-badge--stats': props.showStatsOnly && !props.lifeView && day.isCurrentMonth,
               }"
               @click.stop="() => onDateBadgeMouseClick(day.startTs)"
               @dblclick.stop="() => onDateBadgeDblClick(day.startTs)"
@@ -55,14 +49,6 @@
           <div class="items" :class="{ 'items--life-bars': props.lifeView }">
             <template v-if="props.lifeView && day.isCurrentMonth">
               <MonthLifeBars :bars="day.lifeBars" />
-            </template>
-            <template v-else-if="props.drinkSkin && day.isCurrentMonth">
-              <div class="day-drink-stat" :class="{ 'day-drink-stat--compact': isMobile }">
-                <span class="day-drink-stat__count">×{{ day.drinkStat.count }}</span>
-                <span class="day-drink-stat__ml" :title="`${day.drinkStat.totalMl} ml`">{{
-                  formatDrinkStatVolume(day.drinkStat.totalMl)
-                }}</span>
-              </div>
             </template>
             <template v-else-if="props.showStatsOnly && day.isCurrentMonth">
               <div v-if="isMobile" class="day-stat--compact">
@@ -114,7 +100,6 @@ import { NCard } from "naive-ui";
 import type { Todo } from "@/core/types/Todo";
 import type { Schedule } from "@/core/types/Schedule";
 import TagRenderer from "../TagSystem/TagRenderer.vue";
-import DrinkDayWaterFill from "./DrinkDayWaterFill.vue";
 import MonthLifeBars from "./MonthLifeBars.vue";
 import { timestampToTimeString } from "@/core/utils";
 import { useDataStore } from "@/stores/useDataStore";
@@ -129,7 +114,6 @@ import type { HolidayDisplay } from "@/services/planner/publicHolidays";
 import { plannerHolidayMapKey } from "@/composables/planner/usePublicHolidays";
 import { getPomoBadgeBgColor, getPomoColor, getStatsPomoBgColorHEX, mapPomoCountToColorRatio } from "@/core/utils/weekDays";
 import { getLifeRecordKind, type LifeRecordKind } from "@/core/lifeRecord";
-import { isDrinkGoalMet, sumLifeRecordAmountMl } from "@/services/lifeRecord/lifeRecordService";
 import type { LifeRecord } from "@/core/types/Task";
 import {
   activityBarScaleMs,
@@ -144,23 +128,11 @@ const settingStore = useSettingStore();
 const isTaskVisible = computed(() => settingStore.settings.showTask);
 const { isMobile } = useDevice();
 
-/** 手机月格窄：升一位小数；桌面仍 ml */
-function formatDrinkStatVolume(totalMl: number): string {
-  return isMobile.value ? `${(totalMl / 1000).toFixed(1)} L` : `${totalMl}ml`;
-}
-
 /** 统计格 icon：可点开切日并选中对应生活记录 */
 type LifeIconRef = { todoId: number; activityId: number; taskId?: number };
 type LifeByKind = Partial<Record<LifeRecordKind, LifeIconRef>>;
 
-type DrinkDayStat = {
-  count: number;
-  totalMl: number;
-  goalMl: number;
-  met: boolean;
-  lifeRef?: LifeIconRef;
-};
-const EMPTY_DRINK_STAT: DrinkDayStat = { count: 0, totalMl: 0, goalMl: 0, met: false };
+type DrinkDayStat = { goalMl: number };
 
 const emit = defineEmits<{
   "date-select": [timestamp: number];
@@ -172,12 +144,10 @@ const emit = defineEmits<{
 const props = withDefaults(
   defineProps<{
     showStatsOnly?: boolean;
-    /** Planner 喝水统计皮肤 */
-    drinkSkin?: boolean;
     /** 生活可视化开着：大格子点击进整合 sheet */
     lifeView?: boolean;
   }>(),
-  { showStatsOnly: false, drinkSkin: false, lifeView: false },
+  { showStatsOnly: false, lifeView: false },
 );
 
 const dayNames = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
@@ -369,27 +339,13 @@ const days = computed(() => {
     const ratio = mapPomoCountToColorRatio(sumRealPomo);
 
     const drinkRef = lifeByDay.get(dayTs)?.drink;
-    let drinkStat: DrinkDayStat = EMPTY_DRINK_STAT;
-    if (drinkRef) {
-      const task =
-        (drinkRef.taskId != null ? taskById.value.get(drinkRef.taskId) : undefined) ??
-        taskByActivityId.value.get(drinkRef.activityId);
-      const records = task?.lifeRecords ?? [];
-      const totalMl = sumLifeRecordAmountMl(records);
-      const goalMl = task?.drinkGoalMl ?? settingStore.settings.drinkDailyGoalMl;
-      drinkStat = {
-        count: records.length,
-        totalMl,
-        goalMl,
-        met: isDrinkGoalMet(totalMl, goalMl),
-        lifeRef: drinkRef,
-      };
-    } else {
-      drinkStat = {
-        ...EMPTY_DRINK_STAT,
-        goalMl: settingStore.settings.drinkDailyGoalMl,
-      };
-    }
+    const drinkTask = drinkRef
+      ? ((drinkRef.taskId != null ? taskById.value.get(drinkRef.taskId) : undefined) ??
+        taskByActivityId.value.get(drinkRef.activityId))
+      : undefined;
+    const drinkStat: DrinkDayStat = {
+      goalMl: drinkTask?.drinkGoalMl ?? settingStore.settings.drinkDailyGoalMl,
+    };
 
     return {
       index: idx,
@@ -600,30 +556,18 @@ function handleDayCardClick(day: MonthDayRow) {
     emit("date-select", day.startTs);
     return;
   }
-  if (props.drinkSkin) {
-    emit("date-select", day.startTs);
-    const ref = day.drinkStat.lifeRef;
-    if (ref) emit("item-change", ref.todoId, ref.activityId, ref.taskId);
-    return;
-  }
   handleDateSelect(day.startTs);
 }
 
-function drinkRatio(stat: DrinkDayStat): number {
-  if (stat.count <= 0) return 0;
-  const goal = Math.max(stat.goalMl, 1);
-  return stat.totalMl / goal;
-}
-
 function getDayCardStyle(day: MonthDayRow): { backgroundColor: string } | undefined {
-  // 喝水皮肤用水位 SVG；生活可视化用竖 bar，不再铺整格纯色底
-  if (props.lifeView || props.drinkSkin) return undefined;
+  // 生活可视化用竖 bar，不再铺整格纯色底
+  if (props.lifeView) return undefined;
   if (!props.showStatsOnly || !day.isCurrentMonth) return undefined;
   return { backgroundColor: getStatsPomoBgColorHEX(day.pomoRatio) };
 }
 
 function getBadgeStyle(day: MonthDayRow): Record<string, string> {
-  if (props.showStatsOnly && !props.drinkSkin && !props.lifeView) {
+  if (props.showStatsOnly && !props.lifeView) {
     if (!day.isCurrentMonth) return {};
     return {
       "--badge-pomo-color": getPomoColor(day.pomoRatio),
@@ -929,7 +873,6 @@ function getStatsBadgeBgColor(ratio: number): string {
   text-align: center;
 }
 
-.day-card--drink-skin,
 .day-card--life-view {
   cursor: pointer;
 }
@@ -941,48 +884,6 @@ function getStatsBadgeBgColor(ratio: number): string {
   display: flex;
   flex-direction: column;
   flex: 1 1 0%;
-}
-
-.day-card--drink-skin :deep(.n-card__content) {
-  isolation: isolate;
-}
-
-.day-card--drink-skin .month-day-top,
-.day-card--drink-skin .items {
-  position: relative;
-  z-index: 1;
-}
-
-.day-drink-stat {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  flex: 1;
-  gap: 4px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--color-text-primary);
-  padding-bottom: 10px;
-  text-shadow: 0 0 3px rgba(255, 255, 255, 0.9);
-}
-
-.day-drink-stat--compact {
-  font-size: 12px;
-  padding: 6px;
-  gap: 2px;
-}
-
-.day-drink-stat__count {
-  color: var(--color-blue-dark);
-}
-
-.day-drink-stat__ml {
-  font-size: 12px;
-  color: var(--color-text-secondary);
-  font-weight: 500;
 }
 
 @media (max-width: 430px) {

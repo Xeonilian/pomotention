@@ -39,11 +39,7 @@
           class="week-life-sleep"
           :style="getLifeSleepBandStyle(sleep, day.startTs)"
         >
-          <div
-            v-if="sleep.wakeAt"
-            class="week-life-sleep-moon"
-            :style="{ width: pointIconSize + 'px', height: pointIconSize + 'px' }"
-          >
+          <div v-if="sleep.wakeAt" class="week-life-sleep-moon" :style="{ width: pointIconSize + 'px', height: pointIconSize + 'px' }">
             <NPopover
               v-if="!isMobile && sleep.note"
               trigger="hover"
@@ -68,11 +64,7 @@
             >
               <n-icon :size="pointIconSize" :component="WeatherMoon20Filled" />
             </div>
-            <div
-              v-else
-              class="week-life-point__hit"
-              @click.stop="onSleepBandClick(sleep)"
-            >
+            <div v-else class="week-life-point__hit" @click.stop="onSleepBandClick(sleep)">
               <n-icon :size="pointIconSize" :component="WeatherMoon20Filled" />
             </div>
           </div>
@@ -139,20 +131,14 @@
           >
             <n-icon :size="pointIconSize" :component="lifePointIcon(mark.kind)" />
           </div>
-          <div
-            v-else
-            class="week-life-point__hit"
-            @click.stop="onLifePointClick(mark)"
-          >
+          <div v-else class="week-life-point__hit" @click.stop="onLifePointClick(mark)">
             <n-icon :size="pointIconSize" :component="lifePointIcon(mark.kind)" />
           </div>
         </div>
       </div>
 
       <div v-if="drinkLayer" class="card-statistic card-statistic--drink">
-        <span class="drink-sum" :class="{ 'drink-sum--met': drinkMet }" :title="`${drinkTotalMl} ml`">{{
-          drinkSumLabel
-        }}</span>
+        <span class="drink-sum" :class="{ 'drink-sum--met': drinkMet }" :title="`${drinkTotalMl} ml`">{{ drinkSumLabel }}</span>
       </div>
       <div v-else-if="!hideScheduleBlocks" class="card-statistic">
         <span class="pom-sum">
@@ -251,9 +237,7 @@ const drinkTask = computed(() => {
 
 const drinkTotalMl = computed(() => sumLifeRecordAmountMl(drinkTask.value?.lifeRecords ?? []));
 /** 手机周列窄：用升一位小数，桌面仍 ml */
-const drinkSumLabel = computed(() =>
-  isMobile.value ? `${(drinkTotalMl.value / 1000).toFixed(1)} L` : `${drinkTotalMl.value} ml`,
-);
+const drinkSumLabel = computed(() => (isMobile.value ? `${(drinkTotalMl.value / 1000).toFixed(1)} L` : `${drinkTotalMl.value} ml`));
 
 const drinkRatio = computed(() => {
   if (drinkTotalMl.value <= 0) return 0;
@@ -646,14 +630,14 @@ const handleItemChange = (id: number, _ts: number, activityId?: number, taskId?:
 .drink-sum {
   color: var(--color-text-secondary);
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 500;
   opacity: 0.85;
 }
 
 .drink-sum--met {
   color: var(--color-blue);
   opacity: 1;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .pom-sum {

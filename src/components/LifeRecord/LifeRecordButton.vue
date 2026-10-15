@@ -16,7 +16,7 @@
     </template>
   </n-button>
 
-  <!-- 非日：切到生活可视化（复用喝水图层）；再按关 -->
+  <!-- 非日：切到生活可视化；再按关 -->
   <n-button
     v-else
     size="small"
@@ -55,7 +55,7 @@ function onOpenDaySheet() {
   emit("recorded", "drink");
 }
 
-/** 非日：开/关生活可视化（周藏块+水位，月/年喝水皮肤） */
+/** 非日：开/关生活可视化 */
 function onAggregateAll() {
   layerStore.toggleLifeView();
   emit("recorded", "drink");
