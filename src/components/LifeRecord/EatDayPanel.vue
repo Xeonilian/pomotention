@@ -34,11 +34,23 @@
               <component :is="eatCourseIcon(lastRecord.eatCourse)" />
             </n-icon>
           </button>
-          <button type="button" class="lr-chart__el eat-day-chart__food" title="吃什么" @click="noteBarRef?.focus()">
-            <n-icon class="eat-day-chart__ctrl-icon"><Food20Regular /></n-icon>
-          </button>
+          <div class="lr-chart__el eat-day-chart__feel eat-day-chart__hunger">
+            <LifeRecordScorePop
+              :model-value="lastRecord.hunger"
+              title="饥饿感"
+              :icon="Storage24Regular"
+              @update:model-value="(v) => changeHunger(lastRecord, v)"
+            />
+          </div>
+          <div class="lr-chart__el eat-day-chart__feel eat-day-chart__satiety">
+            <LifeRecordScorePop
+              :model-value="lastRecord.satiety"
+              title="饱足"
+              :icon="Savings20Regular"
+              @update:model-value="(v) => changeSatiety(lastRecord, v)"
+            />
+          </div>
           <LifeRecordChartNoteBar
-            ref="noteBarRef"
             tone="eat"
             :model-value="lastRecord.description ?? ''"
             placeholder="food..."
@@ -48,11 +60,13 @@
       </div>
     </template>
     <template #table>
-      <table class="lr-day-table lr-day-table--cols-4">
+      <table class="lr-day-table">
         <colgroup>
           <col class="lr-day-table__col-action" />
           <col class="lr-day-table__col-time" />
           <col class="lr-day-table__col-time" />
+          <col class="lr-day-table__col-score" />
+          <col class="lr-day-table__col-score" />
           <col />
         </colgroup>
         <thead>
@@ -67,6 +81,12 @@
             </th>
             <th class="lr-day-table__col-time" title="正餐 / 甜点 / 水果 / 补剂">
               <n-icon :size="18" class="lr-day-table__th-icon"><Food20Regular /></n-icon>
+            </th>
+            <th class="lr-day-table__col-score" title="饥饿感">
+              <n-icon :size="18" class="lr-day-table__th-icon"><Storage24Regular /></n-icon>
+            </th>
+            <th class="lr-day-table__col-score" title="饱足">
+              <n-icon :size="18" class="lr-day-table__th-icon"><Savings20Regular /></n-icon>
             </th>
             <th class="lr-day-table__col-last" title="吃了什么">
               <n-icon :size="18" color="var(--color-red)" class="lr-day-table__th-icon"><FoodApple20Filled /></n-icon>
@@ -103,6 +123,22 @@
                 </n-icon>
               </button>
             </td>
+            <td class="lr-day-table__col-score">
+              <LifeRecordScorePop
+                :model-value="record.hunger"
+                title="饥饿感"
+                placement="bottom"
+                @update:model-value="(v) => changeHunger(record, v)"
+              />
+            </td>
+            <td class="lr-day-table__col-score">
+              <LifeRecordScorePop
+                :model-value="record.satiety"
+                title="饱足"
+                placement="bottom"
+                @update:model-value="(v) => changeSatiety(record, v)"
+              />
+            </td>
             <td class="lr-day-table__col-last">
               <n-input
                 class="lr-day-table__note"
@@ -120,7 +156,7 @@
   </LifeRecordDayFrame>
 </template>
 <script setup lang="ts">
-import { computed, ref, type Component } from "vue";
+import { computed, type Component } from "vue";
 import { NIcon, NInput, NTimePicker } from "naive-ui";
 import {
   Add20Regular,
@@ -131,21 +167,21 @@ import {
   FoodApple20Regular,
   FoodCake20Regular,
   FoodPizza20Regular,
+  Savings20Regular,
+  Storage24Regular,
 } from "@vicons/fluent";
 import type { EatCourse } from "@/core/types/Task";
 import { eatCourseLabel } from "@/core/lifeRecord";
 import BriefcaseMedical20Regular from "@/components/LifeRecord/BriefcaseMedical20Regular.vue";
 import LifeRecordChartNoteBar from "@/components/LifeRecord/LifeRecordChartNoteBar.vue";
+import LifeRecordScorePop from "@/components/LifeRecord/LifeRecordScorePop.vue";
 import { useLifeRecordEditor } from "@/composables/lifeRecord/useLifeRecordEditor";
 import LifeRecordDayFrame from "@/components/LifeRecord/LifeRecordDayFrame.vue";
 const props = withDefaults(defineProps<{ taskId: number; embedded?: boolean; view?: "chart" | "table" }>(), {
   view: "chart",
 });
-const { task, records, def, append, pickerTs, toggleEatCourse, changeRecordedAt, changeDescription, remove } = useLifeRecordEditor(
-  () => props.taskId,
-  "eat",
-  { embedded: () => props.embedded },
-);
+const { task, records, def, append, pickerTs, toggleEatCourse, changeRecordedAt, changeDescription, changeHunger, changeSatiety, remove } =
+  useLifeRecordEditor(() => props.taskId, "eat", { embedded: () => props.embedded });
 const lastRecord = computed(() => records.value[records.value.length - 1] ?? null);
 function eatCourseTitle(course?: EatCourse): string {
   return eatCourseLabel(course);
@@ -156,7 +192,6 @@ function eatCourseIcon(course?: EatCourse): Component {
   if (course === "supplement") return BriefcaseMedical20Regular;
   return FoodPizza20Regular;
 }
-const noteBarRef = ref<{ focus: () => void } | null>(null);
 function onAppleClick() {
   append();
 }
@@ -184,19 +219,23 @@ function onNoteBarInput(v: string) {
   color: var(--color-text-primary);
   cursor: pointer;
 }
-.eat-day-chart__food {
-  left: calc(50% + var(--c) + 15px);
-  top: calc(50% + var(--f) - 20px);
+.eat-day-chart__feel {
   width: 28px;
   height: 28px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-text-primary);
-  cursor: pointer;
+  top: calc(50% + var(--f) - 20px);
 }
-.eat-day-chart__course:hover,
-.eat-day-chart__food:hover {
+.eat-day-chart__feel :deep(.n-popover-trigger) {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.eat-day-chart__hunger {
+  left: calc(50% + (var(--a) + 50px) / 2);
+}
+.eat-day-chart__satiety {
+  left: calc(50% + var(--a) + 50px);
+}
+.eat-day-chart__course:hover {
   opacity: 0.85;
 }
 .eat-day-chart__ctrl-icon {

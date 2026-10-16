@@ -2,7 +2,7 @@
 // 生活记录纯函数：当日行查找、三件套构造、记录增删改（不碰存储与 store） 
 import type { Activity } from "@/core/types/Activity";
 import type { Todo } from "@/core/types/Todo";
-import type { EatCourse, LifeRecord, Task } from "@/core/types/Task";
+import type { DrinkKind, EatCourse, LifeRecord, Task } from "@/core/types/Task";
 import { getDayStartTimestamp } from "@/core/utils";
 import { getLifeRecordDef, getLifeRecordKind, lifeRecordPlaceholderTitle, LIFE_RECORD_DEFS, type LifeRecordKind } from "@/core/lifeRecord";
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -28,7 +28,8 @@ export type AppendLifeRecordOptions = {
   amountMl?: number;
   /** 吃饭：正餐 / 甜点 / 水果 / 补剂；新记录默认 meal */
   eatCourse?: EatCourse;
-  /** 喝水：饮品 / 水 / 咖啡 / 酒；新记录默认水 */
+  /** 喝水种类；不写则按水 */
+  drinkKind?: DrinkKind;
   description?: string;
   /** 只新增一行，不把未闭合段写成结束时间 */
   alwaysNew?: boolean;
@@ -138,6 +139,7 @@ export function appendLifeRecord(
     recordedAt: at,
     ...(options?.amountMl != null ? { amountMl: options.amountMl } : {}),
     ...(options?.eatCourse != null ? { eatCourse: options.eatCourse } : {}),
+    ...(options?.drinkKind != null ? { drinkKind: options.drinkKind } : {}),
     ...(options?.description != null ? { description: options.description } : {}),
   };
   return { next: [...list, record], record };
@@ -152,7 +154,12 @@ export function removeLifeRecord(records: LifeRecord[] | undefined, recordId: nu
 export function updateLifeRecord(
   records: LifeRecord[] | undefined,
   recordId: number,
-  patch: Partial<Pick<LifeRecord, "recordedAt" | "endAt" | "description" | "amountMl" | "eatCourse">>,
+  patch: Partial<
+    Pick<
+      LifeRecord,
+      "recordedAt" | "endAt" | "description" | "amountMl" | "eatCourse" | "drinkKind" | "hunger" | "satiety" | "energy" | "energyRecordId"
+    >
+  >,
 ): LifeRecord[] | null {
   const list = records ?? [];
   const index = list.findIndex((r) => r.id === recordId);

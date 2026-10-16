@@ -1,9 +1,11 @@
 // 生活记录日表/窄槽共用：打点时刻、追加行、段事件开闭、时间列编辑
 import { computed, toValue, type MaybeRefOrGetter } from "vue";
-import type { LifeRecord } from "@/core/types/Task";
-import { getLifeRecordDef, nextEatCourse, type LifeRecordKind } from "@/core/lifeRecord";
+import type { DrinkKind, LifeRecord } from "@/core/types/Task";
+import { drinkKindOf, getLifeRecordDef, nextDrinkKind, nextEatCourse, type LifeRecordKind } from "@/core/lifeRecord";
 import { getDayStartTimestamp } from "@/core/utils";
 import { appendLifeRecord, updateLifeRecord } from "@/services/lifeRecord/lifeRecordService";
+import { clampLifeScore, dropDayEnergyFromLife, lifeEnergyAt, upsertDayEnergyFromLife } from "@/services/lifeRecord/lifeEnergySync";
+import { findDayEnergyTask } from "@/services/task/dayEnergyService";
 import { useDataStore } from "@/stores/useDataStore";
 import { useDisplayedTaskStore } from "@/stores/useDisplayedTaskStore";
 import { useSettingStore } from "@/stores/useSettingStore";
@@ -61,12 +63,10 @@ export function useLifeRecordEditor(
   function writeAppend(alwaysNew = false) {
     const amountMl = recordKind.value === "drink" ? settingStore.settings.drinkCupMl : undefined;
     const eatCourse = recordKind.value === "eat" ? ("meal" as const) : undefined;
-    const description = recordKind.value === "drink" ? "水" : undefined;
     writeRecords(
       appendLifeRecord(task.value?.lifeRecords, recordKind.value, stampNow(), {
         amountMl,
         eatCourse,
-        description,
         alwaysNew,
       }).next,
     );
@@ -80,6 +80,12 @@ export function useLifeRecordEditor(
   }
   function toggleEatCourse(record: LifeRecord) {
     writeRecords(updateLifeRecord(records.value, record.id, { eatCourse: nextEatCourse(record.eatCourse) }));
+  }
+  function changeDrinkKind(record: LifeRecord, kind: DrinkKind) {
+    writeRecords(updateLifeRecord(records.value, record.id, { drinkKind: kind }));
+  }
+  function toggleDrinkKind(record: LifeRecord) {
+    writeRecords(updateLifeRecord(records.value, record.id, { drinkKind: nextDrinkKind(drinkKindOf(record)) }));
   }
   function stampStart() {
     if (hasOpenSpan.value) return;
@@ -109,6 +115,9 @@ export function useLifeRecordEditor(
     let nextTs = withTimePart(base, ts);
     if (nextTs <= record.recordedAt) nextTs += 86400000;
     writeRecords(updateLifeRecord(records.value, record.id, { endAt: nextTs }));
+    if (record.energyRecordId != null) {
+      syncLinkedEnergy({ ...record, endAt: nextTs }, record.energy);
+    }
   }
   function changeTime(record: LifeRecord, field: "recordedAt" | "endAt", ts: number | null) {
     if (field === "endAt") changeEndAt(record, ts);
@@ -116,8 +125,68 @@ export function useLifeRecordEditor(
   }
   function changeDescription(record: LifeRecord, text: string) {
     writeRecords(updateLifeRecord(records.value, record.id, { description: text }));
+    if (record.energyRecordId != null) {
+      syncLinkedEnergy({ ...record, description: text }, record.energy);
+    }
+  }
+  function changeEatFeel(record: LifeRecord, field: "hunger" | "satiety", value: number | null) {
+    if (value == null) {
+      writeRecords(
+        records.value.map((r) => {
+          if (r.id !== record.id) return r;
+          const next = { ...r };
+          delete next[field];
+          return next;
+        }),
+      );
+      return;
+    }
+    writeRecords(updateLifeRecord(records.value, record.id, { [field]: clampLifeScore(value) }));
+  }
+  function changeHunger(record: LifeRecord, value: number | null) {
+    changeEatFeel(record, "hunger", value);
+  }
+  function changeSatiety(record: LifeRecord, value: number | null) {
+    changeEatFeel(record, "satiety", value);
+  }
+  function hostEnergyTask() {
+    return dataStore.ensureDayEnergyTask(displayDayStart.value);
+  }
+  function syncLinkedEnergy(record: LifeRecord, value: number | undefined) {
+    if (value == null || record.energyRecordId == null) return;
+    const host = findDayEnergyTask(displayDayStart.value, dataStore.taskList);
+    if (!host) return;
+    const { next } = upsertDayEnergyFromLife(host.energyRecords, record, value, lifeEnergyAt(record));
+    dataStore.updateTaskById(host.id, { energyRecords: next });
+  }
+  function changeEnergy(record: LifeRecord, value: number | null) {
+    if (value == null) {
+      unlinkEnergy(record);
+      writeRecords(
+        records.value.map((r) => {
+          if (r.id !== record.id) return r;
+          const next = { ...r };
+          delete next.energy;
+          delete next.energyRecordId;
+          return next;
+        }),
+      );
+      return;
+    }
+    const v = clampLifeScore(value);
+    const host = hostEnergyTask();
+    const { next, energyRecord } = upsertDayEnergyFromLife(host.energyRecords, record, v, lifeEnergyAt(record));
+    dataStore.updateTaskById(host.id, { energyRecords: next });
+    writeRecords(updateLifeRecord(records.value, record.id, { energy: v, energyRecordId: energyRecord.id }));
+  }
+  function unlinkEnergy(record: LifeRecord) {
+    const host = findDayEnergyTask(displayDayStart.value, dataStore.taskList);
+    if (!host) return;
+    const next = dropDayEnergyFromLife(host.energyRecords, record.energyRecordId);
+    if (next) dataStore.updateTaskById(host.id, { energyRecords: next });
   }
   function remove(record: LifeRecord) {
+    unlinkEnergy(record);
     dataStore.removeLifeRecordAt(id.value, record.id, { keepEmptyBucket: embedded.value });
   }
   function discard() {
@@ -136,12 +205,17 @@ export function useLifeRecordEditor(
     append,
     appendRow,
     toggleEatCourse,
+    changeDrinkKind,
+    toggleDrinkKind,
     stampStart,
     stampEnd,
     changeRecordedAt,
     changeEndAt,
     changeTime,
     changeDescription,
+    changeHunger,
+    changeSatiety,
+    changeEnergy,
     remove,
     discard,
     deselect,

@@ -41,7 +41,7 @@
         >
           <div v-if="sleep.wakeAt" class="week-life-sleep-moon" :style="{ width: pointIconSize + 'px', height: pointIconSize + 'px' }">
             <NPopover
-              v-if="!isMobile && sleep.note"
+              v-if="!isMobile"
               trigger="hover"
               placement="top"
               to="body"
@@ -54,13 +54,13 @@
                   <n-icon :size="pointIconSize" :component="WeatherMoon20Filled" />
                 </div>
               </template>
-              <p class="week-life-note">{{ sleep.note }}</p>
+              <p class="week-life-note">{{ formatLifeSleepCaption(sleep) }}</p>
             </NPopover>
             <div
-              v-else-if="isMobile && sleep.note"
+              v-else-if="isMobile"
               class="week-life-point__hit"
               :data-life-note-key="`sleep-${sleep.recordId}`"
-              @click.stop="onMobileLifeNoteTap($event, `sleep-${sleep.recordId}`, sleep.note)"
+              @click.stop="onMobileLifeNoteTap($event, `sleep-${sleep.recordId}`, formatLifeSleepCaption(sleep))"
             >
               <n-icon :size="pointIconSize" :component="WeatherMoon20Filled" />
             </div>
@@ -108,7 +108,7 @@
           :style="drinkLayer ? getLayerPointStyle(mark) : getLifePointStyle(mark, day.startTs)"
         >
           <NPopover
-            v-if="!isMobile && mark.note"
+            v-if="!isMobile"
             trigger="hover"
             placement="top"
             to="body"
@@ -118,21 +118,24 @@
           >
             <template #trigger>
               <div class="week-life-point__hit" @click.stop>
-                <n-icon :size="pointIconSize" :component="lifePointIcon(mark.kind)" />
+                <span v-if="mark.kind === 'energy'" class="week-life-energy">{{ energyEmoji(mark) }}</span>
+                <n-icon v-else :size="pointIconSize" :component="lifePointIcon(mark.kind)" />
               </div>
             </template>
-            <p class="week-life-note">{{ mark.note }}</p>
+            <p class="week-life-note">{{ formatLifePointCaption(mark) }}</p>
           </NPopover>
           <div
-            v-else-if="isMobile && mark.note"
+            v-else-if="isMobile"
             class="week-life-point__hit"
             :data-life-note-key="`point-${mark.kind}-${mark.recordId}`"
-            @click.stop="onMobileLifeNoteTap($event, `point-${mark.kind}-${mark.recordId}`, mark.note)"
+            @click.stop="onMobileLifeNoteTap($event, `point-${mark.kind}-${mark.recordId}`, formatLifePointCaption(mark))"
           >
-            <n-icon :size="pointIconSize" :component="lifePointIcon(mark.kind)" />
+            <span v-if="mark.kind === 'energy'" class="week-life-energy">{{ energyEmoji(mark) }}</span>
+            <n-icon v-else :size="pointIconSize" :component="lifePointIcon(mark.kind)" />
           </div>
           <div v-else class="week-life-point__hit" @click.stop="onLifePointClick(mark)">
-            <n-icon :size="pointIconSize" :component="lifePointIcon(mark.kind)" />
+            <span v-if="mark.kind === 'energy'" class="week-life-energy">{{ energyEmoji(mark) }}</span>
+            <n-icon v-else :size="pointIconSize" :component="lifePointIcon(mark.kind)" />
           </div>
         </div>
       </div>
@@ -171,6 +174,8 @@ import { storeToRefs } from "pinia";
 import { useDevice } from "@/composables/platform/useDevice";
 import { createTouchScheduledSingleAndDouble } from "@/composables/platform/useTouchScheduledSingleAndDouble";
 import type { LifePointKind, LifePointMark, LifeSleepRange } from "@/services/timetable/lifeRecordOverlays";
+import { formatLifePointCaption, formatLifeSleepCaption } from "@/services/timetable/lifeRecordOverlays";
+import { getEnergyScoreEmoji } from "@/core/scoreEmojis";
 import { Door20Filled, Drop20Filled, FoodApple20Filled, WeatherMoon20Filled } from "@vicons/fluent";
 import { findLifeRecordTodoForDay, isDrinkGoalMet, sumLifeRecordAmountMl } from "@/services/lifeRecord/lifeRecordService";
 
@@ -181,14 +186,18 @@ const { selectedDate, todoList, activityById, taskById, taskByActivityId } = sto
 
 const holidayMap = inject(plannerHolidayMapKey, ref<Record<string, HolidayDisplay>>({}));
 
-const LIFE_POINT_ICONS: Record<LifePointKind, Component> = {
+const LIFE_POINT_ICONS: Record<Exclude<LifePointKind, "energy">, Component> = {
   drink: Drop20Filled,
   eat: FoodApple20Filled,
   toilet: Door20Filled,
 };
 
 function lifePointIcon(kind: LifePointKind): Component {
+  if (kind === "energy") return Drop20Filled;
   return LIFE_POINT_ICONS[kind];
+}
+function energyEmoji(mark: LifePointMark): string {
+  return getEnergyScoreEmoji(mark.energy ?? 1);
 }
 
 type WeekBlockStyle =
@@ -329,6 +338,7 @@ const lifeNoteContentStyle = { maxWidth: "100%", boxSizing: "border-box" } as co
 function onLifePointClick(mark: LifePointMark) {
   handleDateSelect(props.day.startTs);
   if (props.lifeView) return;
+  if (mark.kind === "energy") return;
   emit("item-change", mark.todoId, undefined, mark.taskId);
 }
 
@@ -348,6 +358,7 @@ function onMobileLifeNoteTap(e: MouseEvent, key: string, text: string) {
 function layerPointColor(kind: LifePointKind): string {
   if (kind === "drink") return "var(--color-blue)";
   if (kind === "eat") return "var(--color-red)";
+  if (kind === "energy") return "var(--color-text-primary)";
   return "var(--color-text-secondary)";
 }
 
@@ -358,6 +369,7 @@ function drinkScatterUnit(mark: LifePointMark): number {
 }
 
 function getLayerPointStyle(mark: LifePointMark): CSSProperties {
+  if (mark.kind === "energy") return props.getLifePointStyle(mark, props.day.startTs);
   const base = props.getLifePointStyle(mark, props.day.startTs);
   const size = isMobile.value ? 20 : 24;
   // 落在列宽约 10%～90%
@@ -552,6 +564,11 @@ const handleItemChange = (id: number, _ts: number, activityId?: number, taskId?:
   align-items: center;
   justify-content: center;
   cursor: pointer;
+}
+.week-life-energy {
+  font-size: 12px;
+  line-height: 1;
+  user-select: none;
 }
 
 .week-life-note {

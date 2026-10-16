@@ -21,6 +21,7 @@ import { useDevice } from "@/composables/platform/useDevice";
 import { storeToRefs } from "pinia";
 import { useDataStore } from "@/stores/useDataStore";
 import { collectLifeRecordOverlays, type LifePointMark, type LifeSleepRange } from "@/services/timetable/lifeRecordOverlays";
+import { findDayEnergyTask } from "@/services/task/dayEnergyService";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const BASE_PX_PER_HOUR = 40;
@@ -38,7 +39,7 @@ const MIN_OVERLAP_RATIO_FOR_COLUMNS = 0.2;
 export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targetHeight?: MaybeRef<number>) {
   const { isMobile } = useDevice();
   const dataStore = useDataStore();
-  const { todoList, activityById, taskById } = storeToRefs(dataStore);
+  const { todoList, activityById, taskById, taskList } = storeToRefs(dataStore);
   /** 叠放区总宽：随 viewport / 设备形态更新，避免模块加载时定死 */
   const overlayWidthPct = computed(() => (isMobile.value ? OVERLAY_ZONE_PCT : 70));
 
@@ -58,6 +59,7 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targe
           todos: todoList.value,
           getActivity: (id) => activityById.value.get(id),
           getTask: (id) => taskById.value.get(id),
+          getDayEnergyTask: (start) => findDayEnergyTask(start, taskList.value),
           now,
           minGapMs: 5 * 60_000,
           openSleepEnd: "dayOfStart",

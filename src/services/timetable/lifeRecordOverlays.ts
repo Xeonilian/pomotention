@@ -1,13 +1,13 @@
 // src/services/timetable/lifeRecordOverlays.ts
 // 生活记录投射到 TimeTable：点事件 → 第3列；睡眠段 → 第4列（纯函数，不碰 store）
 import type { Activity } from "@/core/types/Activity";
-import type { EatCourse, LifeRecord, Task } from "@/core/types/Task";
+import type { DrinkKind, EatCourse, LifeRecord, Task } from "@/core/types/Task";
 import type { Todo } from "@/core/types/Todo";
-import { eatCourseLabel, getLifeRecordDef, getLifeRecordKind, type LifeRecordKind } from "@/core/lifeRecord";
+import { drinkKindLabel, drinkKindOf, eatCourseLabel, getLifeRecordDef, getLifeRecordKind, type LifeRecordKind } from "@/core/lifeRecord";
 import { timestampToTimeString } from "@/core/utils";
 import { resolveRecordTime } from "@/services/timetable/taskRecordMarks";
 
-export type LifePointKind = Exclude<LifeRecordKind, "sleep">;
+export type LifePointKind = Exclude<LifeRecordKind, "sleep"> | "energy";
 
 export interface LifePointMark {
   recordId: number;
@@ -23,7 +23,12 @@ export interface LifePointMark {
   note: string;
   amountMl?: number;
   eatCourse?: EatCourse;
+  drinkKind?: DrinkKind;
+  hunger?: number;
+  satiety?: number;
   endAt?: number;
+  /** 精力分 1–10（精力点 / 活动结束） */
+  energy?: number;
 }
 
 export interface LifeSleepRange {
@@ -39,6 +44,7 @@ export interface LifeSleepRange {
   wakeAt?: number;
   /** 未闭合睡眠：到当前时刻的开放条 */
   ongoing?: boolean;
+  energy?: number;
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -47,29 +53,39 @@ const POINT_COLOR: Record<LifePointKind, string> = {
   drink: "var(--color-blue-medium-transparent)",
   eat: "var(--color-red-medium-transparent)",
   toilet: "var(--color-text-secondary-medium-transparent)",
+  energy: "var(--color-text-primary)",
 };
 
-/** 时间表点击文案：喝水 15:30 250 ml；吃饭 12:00 正餐 面条 */
+/** 时间表/周图层：标题 + 时刻 + 种类/分数/量 + 备注 */
 export function formatLifePointCaption(mark: LifePointMark): string {
   const t = timestampToTimeString(mark.time);
-  let body: string;
+  const parts: string[] = [mark.title];
   if (mark.kind === "drink") {
-    const ml = mark.amountMl != null ? ` ${mark.amountMl} ml` : "";
-    body = `${mark.title} ${t}${ml}`;
+    parts.push(t, drinkKindLabel(mark.drinkKind ?? "water"));
+    if (mark.amountMl != null) parts.push(`${mark.amountMl} ml`);
   } else if (mark.kind === "eat") {
-    body = `${mark.title} ${t} ${eatCourseLabel(mark.eatCourse)}`;
+    parts.push(t, eatCourseLabel(mark.eatCourse));
+    if (mark.hunger != null) parts.push(`饥饿${mark.hunger}`);
+    if (mark.satiety != null) parts.push(`饱足${mark.satiety}`);
+  } else if (mark.kind === "energy") {
+    parts.push(t);
+    if (mark.energy != null) parts.push(String(mark.energy));
   } else {
-    const end = mark.endAt != null ? `–${timestampToTimeString(mark.endAt)}` : "";
-    body = `${mark.title} ${t}${end}`;
+    const span = mark.endAt != null ? `${t}–${timestampToTimeString(mark.endAt)}` : t;
+    parts.push(span);
+    if (mark.energy != null) parts.push(`精力${mark.energy}`);
   }
-  return mark.note ? `${body} ${mark.note}` : body;
+  if (mark.note) parts.push(mark.note);
+  return parts.join(" ");
 }
 
-/** 时间表睡觉条点击文案：睡觉 23:00–07:00 梦 */
+/** 睡觉：时段 + 精力 + 梦 */
 export function formatLifeSleepCaption(range: LifeSleepRange): string {
   const span = `${timestampToTimeString(range.start)}–${timestampToTimeString(range.end)}`;
-  const body = `${range.title} ${span}`;
-  return range.note ? `${body} ${range.note}` : body;
+  const parts = [range.title, span];
+  if (range.energy != null) parts.push(`精力${range.energy}`);
+  if (range.note) parts.push(range.note);
+  return parts.join(" ");
 }
 
 function clampRange(start: number, end: number, rangeStart: number, rangeEnd: number): { start: number; end: number } | null {
@@ -131,6 +147,7 @@ function pushSleepClip(
     end: viewClip.end,
     wakeAt,
     ongoing: record.endAt == null,
+    ...(record.energy != null ? { energy: record.energy } : {}),
   });
 }
 
@@ -149,8 +166,10 @@ export function collectLifeRecordOverlays(options: {
   now: number;
   minGapMs: number;
   openSleepEnd?: "now" | "dayOfStart";
+  /** 当日 energy 桶；有则把精力点画进周/课表生活图层 */
+  getDayEnergyTask?: (dayStart: number) => Task | undefined;
 }): { points: LifePointMark[]; sleeps: LifeSleepRange[] } {
-  const { dayStart, dayEnd, timeRange, todos, getActivity, getTask, now, minGapMs, openSleepEnd = "now" } = options;
+  const { dayStart, dayEnd, timeRange, todos, getActivity, getTask, now, minGapMs, openSleepEnd = "now", getDayEnergyTask } = options;
   const rawPoints: Omit<LifePointMark, "lane">[] = [];
   const sleeps: LifeSleepRange[] = [];
   const prevDayStart = dayStart - DAY_MS;
@@ -199,9 +218,46 @@ export function collectLifeRecordOverlays(options: {
         time,
         title: def.title,
         note: (record.description ?? "").trim(),
-        ...(kind === "drink" && record.amountMl != null ? { amountMl: record.amountMl } : {}),
-        ...(kind === "eat" ? { eatCourse: record.eatCourse } : {}),
-        ...(kind === "toilet" && record.endAt != null ? { endAt: record.endAt } : {}),
+        ...(kind === "drink"
+          ? {
+              drinkKind: drinkKindOf(record),
+              ...(record.amountMl != null ? { amountMl: record.amountMl } : {}),
+            }
+          : {}),
+        ...(kind === "eat"
+          ? {
+              eatCourse: record.eatCourse,
+              ...(record.hunger != null ? { hunger: record.hunger } : {}),
+              ...(record.satiety != null ? { satiety: record.satiety } : {}),
+            }
+          : {}),
+        ...(kind === "toilet"
+          ? {
+              ...(record.endAt != null ? { endAt: record.endAt } : {}),
+              ...(record.energy != null ? { energy: record.energy } : {}),
+            }
+          : {}),
+      });
+    }
+  }
+
+  const energyTask = getDayEnergyTask?.(dayStart);
+  if (energyTask && !energyTask.deleted) {
+    for (const record of energyTask.energyRecords ?? []) {
+      const at = record.recordedAt ?? record.id;
+      const resolved = resolveRecordTime(at, dayStart, dayEnd, null);
+      if (resolved == null) continue;
+      const time = resolved < timeRange.start ? timeRange.start : resolved >= timeRange.end ? timeRange.end - 1 : resolved;
+      rawPoints.push({
+        recordId: record.id,
+        taskId: energyTask.id,
+        todoId: 0,
+        kind: "energy",
+        colorVar: POINT_COLOR.energy,
+        time,
+        title: "精力",
+        note: (record.description ?? "").trim(),
+        energy: record.value,
       });
     }
   }

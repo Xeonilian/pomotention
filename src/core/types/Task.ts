@@ -41,6 +41,7 @@ export interface InterruptionRecord {
   recordedAt?: number;
 }
 export type EatCourse = "meal" | "dessert" | "apple" | "supplement";
+export type DrinkKind = "beverage" | "water" | "coffee" | "wine";
 
 /**
  * 生活记录单条。点事件（喝/吃）只有 recordedAt；段事件（睡觉、活动）另带 endAt。
@@ -57,4 +58,14 @@ export interface LifeRecord {
   amountMl?: number;
   /** 吃饭：正餐 meal（默认，披萨）/ 甜点 dessert（蛋糕）/ 水果 apple / 补剂 supplement */
   eatCourse?: EatCourse;
+  /** 喝水：饮品 beverage / 水 water（默认）/ 咖啡 coffee / 酒 wine；与备注分开 */
+  drinkKind?: DrinkKind;
+  /** 吃饭：开吃前饥饿 1–10 */
+  hunger?: number;
+  /** 吃饭：吃完饱足 1–10 */
+  satiety?: number;
+  /** 活动结束 / 醒来精力 1–10；与当日 energy 桶双写 */
+  energy?: number;
+  /** 反写到 daily_energy 的 EnergyRecord.id */
+  energyRecordId?: number;
 }

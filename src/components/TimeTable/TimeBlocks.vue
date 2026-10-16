@@ -364,13 +364,14 @@ const {
 
 const { isMobile } = useDevice();
 
-const LIFE_POINT_ICONS: Record<LifePointKind, Component> = {
+const LIFE_POINT_ICONS: Record<Exclude<LifePointKind, "energy">, Component> = {
   drink: Drop20Filled,
   eat: FoodApple20Filled,
   toilet: Door20Filled,
 };
 
 function lifePointIcon(kind: LifePointKind): Component {
+  if (kind === "energy") return Door20Filled;
   return LIFE_POINT_ICONS[kind];
 }
 

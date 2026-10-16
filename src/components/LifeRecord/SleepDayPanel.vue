@@ -65,12 +65,16 @@
           title="醒了"
           @update:value="(ts: number | null) => changeTime(lastRecord, 'endAt', ts)"
         />
-        <button v-if="lastRecord" type="button" class="lr-chart__el sleep-day-chart__cloud" title="梦什么" @click="noteBarRef?.focus()">
-          <n-icon class="sleep-day-chart__ctrl-icon"><WeatherCloudy20Regular /></n-icon>
-        </button>
+        <div v-if="lastRecord" class="lr-chart__el lr-chart__score sleep-day-chart__energy">
+          <LifeRecordScorePop
+            :model-value="lastRecord.energy"
+            title="精力值"
+            :icon="BatterySaver20Regular"
+            @update:model-value="(v) => changeEnergy(lastRecord, v)"
+          />
+        </div>
         <LifeRecordChartNoteBar
           v-if="lastRecord"
-          ref="noteBarRef"
           tone="sleep"
           expandable
           :model-value="lastRecord.description ?? ''"
@@ -88,6 +92,7 @@
           <col class="lr-day-table__col-time" />
           <col class="lr-day-table__col-time" />
           <col class="lr-day-table__col-dur" />
+          <col class="lr-day-table__col-score" />
           <col />
         </colgroup>
         <thead>
@@ -115,6 +120,9 @@
             </th>
             <th class="lr-day-table__col-dur" title="时长">
               <n-icon :size="18" class="lr-day-table__th-icon"><ShiftsActivity20Regular /></n-icon>
+            </th>
+            <th class="lr-day-table__col-score" title="精力值">
+              <n-icon :size="18" class="lr-day-table__th-icon"><BatterySaver20Regular /></n-icon>
             </th>
             <th class="lr-day-table__col-last" title="梦">
               <n-icon :size="18" color="var(--color-yellow-dark)" class="lr-day-table__th-icon"><WeatherMoon20Filled /></n-icon>
@@ -159,6 +167,14 @@
             <td class="lr-day-table__col-dur">
               <span class="lr-day-table__dur">{{ formatDuration(record) }}</span>
             </td>
+            <td class="lr-day-table__col-score">
+              <LifeRecordScorePop
+                :model-value="record.energy"
+                title="精力值"
+                placement="bottom"
+                @update:model-value="(v) => changeEnergy(record, v)"
+              />
+            </td>
             <td class="lr-day-table__col-last">
               <button
                 type="button"
@@ -190,11 +206,11 @@ import { computed, nextTick, ref, watch } from "vue";
 import { NIcon, NPopconfirm, NTimePicker } from "naive-ui";
 import {
   Add20Regular,
+  BatterySaver20Regular,
   Delete20Regular,
   Play20Regular,
   RecordStop20Regular,
   ShiftsActivity20Regular,
-  WeatherCloudy20Regular,
   WeatherMoon20Filled,
 } from "@vicons/fluent";
 import type { LifeRecord } from "@/core/types/Task";
@@ -202,6 +218,7 @@ import { updateLifeRecord } from "@/services/lifeRecord/lifeRecordService";
 import { useDataStore } from "@/stores/useDataStore";
 import { useLifeRecordEditor } from "@/composables/lifeRecord/useLifeRecordEditor";
 import LifeRecordChartNoteBar from "@/components/LifeRecord/LifeRecordChartNoteBar.vue";
+import LifeRecordScorePop from "@/components/LifeRecord/LifeRecordScorePop.vue";
 import LifeRecordDayFrame from "@/components/LifeRecord/LifeRecordDayFrame.vue";
 const props = withDefaults(defineProps<{ taskId: number; embedded?: boolean; view?: "chart" | "table" }>(), {
   view: "chart",
@@ -217,12 +234,12 @@ const {
   pickerTs,
   changeTime,
   changeDescription,
+  changeEnergy,
   remove: removeRecord,
 } = useLifeRecordEditor(() => props.taskId, "sleep", { embedded: () => props.embedded });
 const lastRecord = computed(() => records.value[records.value.length - 1] ?? null);
 const askEndOpen = ref(false);
 const chartDreamOpen = ref(false);
-const noteBarRef = ref<{ focus: () => void } | null>(null);
 const dreamRecordId = ref<number | null>(null);
 const dreamTextareaRef = ref<HTMLTextAreaElement | null>(null);
 const dreamRecord = computed(() => {
@@ -340,19 +357,10 @@ function dreamChipLabel(record: LifeRecord): string {
 .sleep-day-chart__end {
   width: 72px;
 }
-.sleep-day-chart__cloud {
-  left: calc(50% + var(--c) + 15px);
-  top: calc(50% + var(--f) - 20px);
-  width: 28px;
-  height: 28px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-text-primary);
-  cursor: pointer;
+.sleep-day-chart__energy {
+  left: calc(50% + var(--c) + 25px);
 }
-.sleep-day-chart__stop:hover,
-.sleep-day-chart__cloud:hover {
+.sleep-day-chart__stop:hover {
   opacity: 0.85;
 }
 .sleep-day-chart__ctrl-icon {

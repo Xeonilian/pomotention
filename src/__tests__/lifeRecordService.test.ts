@@ -3,7 +3,7 @@ import { setActivePinia, createPinia } from "pinia";
 import type { Activity } from "@/core/types/Activity";
 import type { Todo } from "@/core/types/Todo";
 import type { LifeRecord, Task } from "@/core/types/Task";
-import { getLifeRecordKind, isLifeRecordActivity, getLifeRecordDef, isLifeRecordTagId, pickFirstNonLifeRecordTagId, nextEatCourse, drinkKindFromDescription } from "@/core/lifeRecord";
+import { getLifeRecordKind, isLifeRecordActivity, getLifeRecordDef, isLifeRecordTagId, pickFirstNonLifeRecordTagId, nextEatCourse, drinkKindFromDescription, drinkKindOf, nextDrinkKind } from "@/core/lifeRecord";
 import { TAG_ID_LIFE_DRINK, TAG_ID_LIFE_SLEEP } from "@/core/constants";
 import {
   findLifeRecordTodoForDay,
@@ -157,13 +157,26 @@ describe("appendLifeRecord", () => {
     expect(record.amountMl).toBe(250);
     expect(record.endAt).toBeUndefined();
   });
-  it("喝水可写 description，空备注当成水", () => {
-    const { record } = appendLifeRecord(undefined, "drink", IN_DAY, { amountMl: 250, description: "水" });
-    expect(record.description).toBe("水");
+  it("喝水新记录不写 description / drinkKind，种类默认水", () => {
+    const { record } = appendLifeRecord(undefined, "drink", IN_DAY, { amountMl: 250 });
+    expect(record.description).toBeUndefined();
+    expect(record.drinkKind).toBeUndefined();
+    expect(drinkKindOf(record)).toBe("water");
     expect(drinkKindFromDescription(undefined)).toBe("water");
     expect(drinkKindFromDescription("饮品")).toBe("beverage");
     expect(drinkKindFromDescription("酒")).toBe("wine");
     expect(drinkKindFromDescription("咖啡")).toBe("coffee");
+  });
+  it("喝水种类字段优先于旧备注标签", () => {
+    expect(drinkKindOf({ description: "酒" })).toBe("wine");
+    expect(drinkKindOf({ drinkKind: "coffee", description: "酒" })).toBe("coffee");
+  });
+  it("喝水类型饮品→水→咖啡→酒→饮品", () => {
+    expect(nextDrinkKind("beverage")).toBe("water");
+    expect(nextDrinkKind("water")).toBe("coffee");
+    expect(nextDrinkKind("coffee")).toBe("wine");
+    expect(nextDrinkKind("wine")).toBe("beverage");
+    expect(nextDrinkKind(undefined)).toBe("coffee");
   });
   it("吃饭新记录默认 eatCourse 为正餐", () => {
     const { record } = appendLifeRecord(undefined, "eat", IN_DAY, { eatCourse: "meal" });

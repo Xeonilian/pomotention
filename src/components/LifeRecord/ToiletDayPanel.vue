@@ -63,12 +63,16 @@
           title="结束"
           @update:value="(ts: number | null) => changeTime(lastRecord, 'endAt', ts)"
         />
-        <button v-if="lastRecord" type="button" class="lr-chart__el toilet-day-chart__note" title="去干嘛" @click="noteBarRef?.focus()">
-          <n-icon class="toilet-day-chart__ctrl-icon"><CommentNote20Regular /></n-icon>
-        </button>
+        <div v-if="lastRecord" class="lr-chart__el lr-chart__score toilet-day-chart__energy">
+          <LifeRecordScorePop
+            :model-value="lastRecord.energy"
+            title="精力值"
+            :icon="BatterySaver20Regular"
+            @update:model-value="(v) => changeEnergy(lastRecord, v)"
+          />
+        </div>
         <LifeRecordChartNoteBar
           v-if="lastRecord"
-          ref="noteBarRef"
           tone="toilet"
           :model-value="lastRecord.description ?? ''"
           placeholder="activity..."
@@ -83,6 +87,7 @@
           <col class="lr-day-table__col-time" />
           <col class="lr-day-table__col-time" />
           <col class="lr-day-table__col-dur" />
+          <col class="lr-day-table__col-score" />
           <col />
         </colgroup>
         <thead>
@@ -110,6 +115,9 @@
             </th>
             <th class="lr-day-table__col-dur" title="持续">
               <n-icon :size="18" class="lr-day-table__th-icon"><ShiftsActivity20Regular /></n-icon>
+            </th>
+            <th class="lr-day-table__col-score" title="精力值">
+              <n-icon :size="18" class="lr-day-table__th-icon"><BatterySaver20Regular /></n-icon>
             </th>
             <th class="lr-day-table__col-last" title="去干嘛">
               <n-icon :size="18" color="var(--color-text-secondary)" class="lr-day-table__th-icon"><Door20Filled /></n-icon>
@@ -149,6 +157,14 @@
             <td class="lr-day-table__col-dur">
               <span class="lr-day-table__dur">{{ formatDuration(record) }}</span>
             </td>
+            <td class="lr-day-table__col-score">
+              <LifeRecordScorePop
+                :model-value="record.energy"
+                title="精力值"
+                placement="bottom"
+                @update:model-value="(v) => changeEnergy(record, v)"
+              />
+            </td>
             <td class="lr-day-table__col-last">
               <n-input
                 class="lr-day-table__note"
@@ -170,7 +186,7 @@ import { computed, ref } from "vue";
 import { NIcon, NInput, NPopconfirm, NTimePicker } from "naive-ui";
 import {
   Add20Regular,
-  CommentNote20Regular,
+  BatterySaver20Regular,
   Delete20Regular,
   Door20Filled,
   Play20Regular,
@@ -180,15 +196,15 @@ import {
 import type { LifeRecord } from "@/core/types/Task";
 import { useLifeRecordEditor } from "@/composables/lifeRecord/useLifeRecordEditor";
 import LifeRecordChartNoteBar from "@/components/LifeRecord/LifeRecordChartNoteBar.vue";
+import LifeRecordScorePop from "@/components/LifeRecord/LifeRecordScorePop.vue";
 import LifeRecordDayFrame from "@/components/LifeRecord/LifeRecordDayFrame.vue";
 const props = withDefaults(defineProps<{ taskId: number; embedded?: boolean; view?: "chart" | "table" }>(), {
   view: "chart",
 });
-const { task, records, hasOpenSpan, appendRow, stampStart, stampEnd, pickerTs, changeTime, changeDescription, remove } =
+const { task, records, hasOpenSpan, appendRow, stampStart, stampEnd, pickerTs, changeTime, changeDescription, changeEnergy, remove } =
   useLifeRecordEditor(() => props.taskId, "toilet", { embedded: () => props.embedded });
 const lastRecord = computed(() => records.value[records.value.length - 1] ?? null);
 const askEndOpen = ref(false);
-const noteBarRef = ref<{ focus: () => void } | null>(null);
 function onDoorClick() {
   if (hasOpenSpan.value) {
     askEndOpen.value = true;
@@ -256,19 +272,10 @@ function formatDuration(record: LifeRecord): string {
 .toilet-day-chart__end {
   width: 72px;
 }
-.toilet-day-chart__note {
-  left: calc(50% + var(--c) + 15px);
-  top: calc(50% + var(--f) - 20px);
-  width: 28px;
-  height: 28px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-text-primary);
-  cursor: pointer;
+.toilet-day-chart__energy {
+  left: calc(50% + var(--c) + 25px);
 }
-.toilet-day-chart__stop:hover,
-.toilet-day-chart__note:hover {
+.toilet-day-chart__stop:hover {
   opacity: 0.85;
 }
 .toilet-day-chart__ctrl-icon {

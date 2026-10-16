@@ -34,21 +34,22 @@
             :key="opt.kind"
             type="button"
             class="drink-day-gauge__kind"
-            :class="{ 'drink-day-gauge__kind--on': drinkKindFromDescription(lastRecord.description) === opt.kind }"
+            :class="{ 'drink-day-gauge__kind--on': drinkKindOf(lastRecord) === opt.kind }"
             :title="opt.label"
-            @click="changeDescription(lastRecord, opt.label)"
+            @click="changeDrinkKind(lastRecord, opt.kind)"
           >
             <n-icon class="drink-day-gauge__kind-icon">
-              <component :is="drinkKindIcon(opt.kind, drinkKindFromDescription(lastRecord.description) === opt.kind)" />
+              <component :is="drinkKindIcon(opt.kind, drinkKindOf(lastRecord) === opt.kind)" />
             </n-icon>
           </button>
         </div>
       </div>
     </template>
     <template #table>
-      <table class="lr-day-table lr-day-table--cols-4">
+      <table class="lr-day-table lr-day-table--cols-5">
         <colgroup>
           <col class="lr-day-table__col-action" />
+          <col class="lr-day-table__col-time" />
           <col class="lr-day-table__col-time" />
           <col class="lr-day-table__col-time" />
           <col />
@@ -62,6 +63,9 @@
             </th>
             <th class="lr-day-table__col-time" title="时间">
               <n-icon :size="18" class="lr-day-table__th-icon"><Clock20Regular /></n-icon>
+            </th>
+            <th class="lr-day-table__col-time" title="饮品 / 水 / 咖啡 / 酒">
+              <n-icon :size="18" class="lr-day-table__th-icon"><DrinkToGo24Regular /></n-icon>
             </th>
             <th class="lr-day-table__col-time">
               <div class="drink-day-table__cup-head" title="杯量（之后每次 +1）">
@@ -102,6 +106,18 @@
                 :bordered="false"
                 @update:value="(ts: number | null) => changeRecordedAt(record, ts)"
               />
+            </td>
+            <td class="lr-day-table__col-time">
+              <button
+                type="button"
+                class="lr-day-table__cell-btn"
+                :title="drinkKindLabel(drinkKindOf(record))"
+                @click="toggleDrinkKind(record)"
+              >
+                <n-icon :size="18">
+                  <component :is="drinkKindIcon(drinkKindOf(record), false)" />
+                </n-icon>
+              </button>
             </td>
             <td class="lr-day-table__col-time">
               <n-input-number
@@ -151,7 +167,7 @@ import {
   Drop20Filled,
 } from "@vicons/fluent";
 import type { LifeRecord } from "@/core/types/Task";
-import { DRINK_KIND_DEFS, drinkKindFromDescription, type DrinkKind } from "@/core/lifeRecord";
+import { DRINK_KIND_DEFS, drinkKindLabel, drinkKindOf, type DrinkKind } from "@/core/lifeRecord";
 import { isDrinkGoalMet, sumLifeRecordAmountMl, updateLifeRecord } from "@/services/lifeRecord/lifeRecordService";
 import { useDataStore } from "@/stores/useDataStore";
 import { useSettingStore } from "@/stores/useSettingStore";
@@ -163,11 +179,8 @@ const props = withDefaults(defineProps<{ taskId: number; embedded?: boolean; vie
 });
 const dataStore = useDataStore();
 const settingStore = useSettingStore();
-const { task, records, append, pickerTs, changeRecordedAt, changeDescription, remove } = useLifeRecordEditor(
-  () => props.taskId,
-  "drink",
-  { embedded: () => props.embedded },
-);
+const { task, records, append, pickerTs, changeRecordedAt, changeDescription, changeDrinkKind, toggleDrinkKind, remove } =
+  useLifeRecordEditor(() => props.taskId, "drink", { embedded: () => props.embedded });
 const lastRecord = computed(() => records.value[records.value.length - 1] ?? null);
 const drinkKindOptions = DRINK_KIND_DEFS;
 function drinkKindIcon(kind: DrinkKind, on: boolean): Component {
