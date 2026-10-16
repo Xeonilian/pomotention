@@ -61,10 +61,12 @@ export function useLifeRecordEditor(
   function writeAppend(alwaysNew = false) {
     const amountMl = recordKind.value === "drink" ? settingStore.settings.drinkCupMl : undefined;
     const eatCourse = recordKind.value === "eat" ? ("meal" as const) : undefined;
+    const description = recordKind.value === "drink" ? "水" : undefined;
     writeRecords(
       appendLifeRecord(task.value?.lifeRecords, recordKind.value, stampNow(), {
         amountMl,
         eatCourse,
+        description,
         alwaysNew,
       }).next,
     );

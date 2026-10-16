@@ -98,3 +98,25 @@ export function nextEatCourse(course?: EatCourse | null): EatCourse {
   const i = EAT_COURSE_CYCLE.indexOf(cur);
   return EAT_COURSE_CYCLE[(i + 1) % EAT_COURSE_CYCLE.length];
 }
+
+export type DrinkKind = "beverage" | "water" | "coffee" | "wine";
+
+export const DRINK_KIND_DEFS: readonly { kind: DrinkKind; label: string }[] = [
+  { kind: "beverage", label: "饮品" },
+  { kind: "water", label: "水" },
+  { kind: "coffee", label: "咖啡" },
+  { kind: "wine", label: "酒" },
+];
+
+export function drinkKindLabel(kind: DrinkKind): string {
+  return DRINK_KIND_DEFS.find((d) => d.kind === kind)?.label ?? "水";
+}
+
+/** 空或未识别按外带杯（水） */
+export function drinkKindFromDescription(text?: string | null): DrinkKind {
+  const t = (text ?? "").trim();
+  if (t === "饮品") return "beverage";
+  if (t === "咖啡") return "coffee";
+  if (t === "酒") return "wine";
+  return "water";
+}

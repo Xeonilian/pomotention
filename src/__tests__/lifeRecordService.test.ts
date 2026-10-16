@@ -3,7 +3,7 @@ import { setActivePinia, createPinia } from "pinia";
 import type { Activity } from "@/core/types/Activity";
 import type { Todo } from "@/core/types/Todo";
 import type { LifeRecord, Task } from "@/core/types/Task";
-import { getLifeRecordKind, isLifeRecordActivity, getLifeRecordDef, isLifeRecordTagId, pickFirstNonLifeRecordTagId, nextEatCourse } from "@/core/lifeRecord";
+import { getLifeRecordKind, isLifeRecordActivity, getLifeRecordDef, isLifeRecordTagId, pickFirstNonLifeRecordTagId, nextEatCourse, drinkKindFromDescription } from "@/core/lifeRecord";
 import { TAG_ID_LIFE_DRINK, TAG_ID_LIFE_SLEEP } from "@/core/constants";
 import {
   findLifeRecordTodoForDay,
@@ -156,6 +156,14 @@ describe("appendLifeRecord", () => {
     expect(record.recordedAt).toBe(IN_DAY);
     expect(record.amountMl).toBe(250);
     expect(record.endAt).toBeUndefined();
+  });
+  it("喝水可写 description，空备注当成水", () => {
+    const { record } = appendLifeRecord(undefined, "drink", IN_DAY, { amountMl: 250, description: "水" });
+    expect(record.description).toBe("水");
+    expect(drinkKindFromDescription(undefined)).toBe("water");
+    expect(drinkKindFromDescription("饮品")).toBe("beverage");
+    expect(drinkKindFromDescription("酒")).toBe("wine");
+    expect(drinkKindFromDescription("咖啡")).toBe("coffee");
   });
   it("吃饭新记录默认 eatCourse 为正餐", () => {
     const { record } = appendLifeRecord(undefined, "eat", IN_DAY, { eatCourse: "meal" });

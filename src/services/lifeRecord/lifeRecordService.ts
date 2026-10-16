@@ -28,6 +28,8 @@ export type AppendLifeRecordOptions = {
   amountMl?: number;
   /** 吃饭：正餐 / 甜点 / 水果 / 补剂；新记录默认 meal */
   eatCourse?: EatCourse;
+  /** 喝水：饮品 / 水 / 咖啡 / 酒；新记录默认水 */
+  description?: string;
   /** 只新增一行，不把未闭合段写成结束时间 */
   alwaysNew?: boolean;
 };
@@ -136,6 +138,7 @@ export function appendLifeRecord(
     recordedAt: at,
     ...(options?.amountMl != null ? { amountMl: options.amountMl } : {}),
     ...(options?.eatCourse != null ? { eatCourse: options.eatCourse } : {}),
+    ...(options?.description != null ? { description: options.description } : {}),
   };
   return { next: [...list, record], record };
 }

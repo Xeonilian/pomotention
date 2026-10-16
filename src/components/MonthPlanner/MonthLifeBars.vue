@@ -171,8 +171,9 @@ function grow(v: number) {
 .mlb__fill--eat {
   min-height: 2px;
   box-sizing: border-box;
-  outline: 1px solid oklch(0.32 0.04 22 / 0.45);
-  outline-offset: -1px;
+}
+.mlb__fill--eat:not(:last-child) {
+  border-top: 1px solid oklch(0.32 0.04 22 / 0.45);
 }
 .mlb__fill--meal {
   background: rgba(214, 72, 100, 0.8);

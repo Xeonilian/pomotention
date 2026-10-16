@@ -28,6 +28,21 @@
           title="今日目标（仅本天）"
           @update:value="onChangeDayGoal"
         />
+        <div v-if="lastRecord" class="drink-day-gauge__el drink-day-gauge__kinds">
+          <button
+            v-for="opt in drinkKindOptions"
+            :key="opt.kind"
+            type="button"
+            class="drink-day-gauge__kind"
+            :class="{ 'drink-day-gauge__kind--on': drinkKindFromDescription(lastRecord.description) === opt.kind }"
+            :title="opt.label"
+            @click="changeDescription(lastRecord, opt.label)"
+          >
+            <n-icon class="drink-day-gauge__kind-icon">
+              <component :is="drinkKindIcon(opt.kind, drinkKindFromDescription(lastRecord.description) === opt.kind)" />
+            </n-icon>
+          </button>
+        </div>
       </div>
     </template>
     <template #table>
@@ -119,10 +134,24 @@
   </LifeRecordDayFrame>
 </template>
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, type Component } from "vue";
 import { NIcon, NInput, NInputNumber, NTimePicker } from "naive-ui";
-import { Add20Regular, Clock20Regular, Delete20Regular, Drop20Filled } from "@vicons/fluent";
+import {
+  Add20Regular,
+  Clock20Regular,
+  Delete20Regular,
+  DrinkBeer20Filled,
+  DrinkBeer20Regular,
+  DrinkCoffee20Filled,
+  DrinkCoffee20Regular,
+  DrinkToGo24Filled,
+  DrinkToGo24Regular,
+  DrinkWine20Filled,
+  DrinkWine20Regular,
+  Drop20Filled,
+} from "@vicons/fluent";
 import type { LifeRecord } from "@/core/types/Task";
+import { DRINK_KIND_DEFS, drinkKindFromDescription, type DrinkKind } from "@/core/lifeRecord";
 import { isDrinkGoalMet, sumLifeRecordAmountMl, updateLifeRecord } from "@/services/lifeRecord/lifeRecordService";
 import { useDataStore } from "@/stores/useDataStore";
 import { useSettingStore } from "@/stores/useSettingStore";
@@ -139,6 +168,14 @@ const { task, records, append, pickerTs, changeRecordedAt, changeDescription, re
   "drink",
   { embedded: () => props.embedded },
 );
+const lastRecord = computed(() => records.value[records.value.length - 1] ?? null);
+const drinkKindOptions = DRINK_KIND_DEFS;
+function drinkKindIcon(kind: DrinkKind, on: boolean): Component {
+  if (kind === "beverage") return on ? DrinkBeer20Filled : DrinkBeer20Regular;
+  if (kind === "coffee") return on ? DrinkCoffee20Filled : DrinkCoffee20Regular;
+  if (kind === "wine") return on ? DrinkWine20Filled : DrinkWine20Regular;
+  return on ? DrinkToGo24Filled : DrinkToGo24Regular;
+}
 const drunkMl = computed(() => sumLifeRecordAmountMl(records.value));
 const dayGoalMl = computed(() => task.value?.drinkGoalMl ?? settingStore.settings.drinkDailyGoalMl);
 const goalMet = computed(() => isDrinkGoalMet(drunkMl.value, dayGoalMl.value));
@@ -310,6 +347,48 @@ function onChangeAmount(record: LifeRecord, v: number | null) {
   line-height: 1;
   height: var(--goal-size);
   color: var(--color-text-primary);
+}
+.drink-day-gauge__kinds {
+  left: 50%;
+  top: calc(50% + var(--f) + 28px);
+  width: calc(var(--a) + var(--c) + var(--drop-size));
+  height: 28px;
+  transform: translate(-50%, 0);
+  display: flex;
+  justify-content: space-evenly;
+  align-items: center;
+}
+.drink-day-gauge__kind {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+.drink-day-gauge__kind--on {
+  color: var(--color-blue);
+}
+.drink-day-gauge__kind:hover {
+  opacity: 0.85;
+}
+.drink-day-gauge__kind-icon {
+  display: block;
+  width: 22px;
+  height: 22px;
+  font-size: 22px;
+  line-height: 0;
+  color: inherit;
+}
+.drink-day-gauge__kind-icon :deep(svg) {
+  width: 1em;
+  height: 1em;
+  display: block;
 }
 .drink-day-table__cup-head {
   display: inline-flex;
