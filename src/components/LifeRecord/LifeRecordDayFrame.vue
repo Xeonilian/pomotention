@@ -84,16 +84,13 @@ const { isMobile } = useDevice();
 }
 /* 手机裁掉上下空白；内部仍按正方形算锚点，两行间距不变 */
 .lr-day--mobile.lr-day--compact {
-  --lr-day-compact-h: 176px;
+  --lr-day-compact-h: 210px;
 }
 .lr-day--mobile.lr-day--compact .lr-day__display {
   height: var(--lr-day-compact-h);
-  overflow: hidden;
-  position: relative;
-}
-/* 打开备注时框高不变，只把输入露到下方，避免居中重算把上方顶出空白 */
-.lr-day--mobile.lr-day--compact.lr-day--note-open .lr-day__display {
+  /* 备注条常驻，超出高度往下露，不裁掉 */
   overflow: visible;
+  position: relative;
 }
 .lr-day--mobile.lr-day--compact .lr-day__display :deep(.lr-chart) {
   position: absolute;

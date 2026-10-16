@@ -40,7 +40,7 @@ export interface InterruptionRecord {
   /** 用户指定的记录时刻；缺省时展示与排序回退 id */
   recordedAt?: number;
 }
-export type EatCourse = "meal" | "dessert" | "apple";
+export type EatCourse = "meal" | "dessert" | "apple" | "supplement";
 
 /**
  * 生活记录单条。点事件（喝/吃）只有 recordedAt；段事件（睡觉、活动）另带 endAt。
@@ -55,6 +55,6 @@ export interface LifeRecord {
   description?: string;
   /** 本口容量 ml（喝水快照；+1 时抄当时默认杯量） */
   amountMl?: number;
-  /** 吃饭：正餐 meal（默认，披萨）/ 甜点 dessert（蛋糕）/ 水果 apple */
+  /** 吃饭：正餐 meal（默认，披萨）/ 甜点 dessert（蛋糕）/ 水果 apple / 补剂 supplement */
   eatCourse?: EatCourse;
 }

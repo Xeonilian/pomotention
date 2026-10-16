@@ -24,8 +24,7 @@ export default withMermaid(
     // 不进帮助站：scratchpad + 工程内部 dev-log（仅保留 history/CHANGELOG 给侧栏「更新日志」）
     srcExclude: [
       "**/scratchpad/**",
-      "dev-log/README.md",
-      "dev-log/current.md",
+      "dev-log/*.md",
       "dev-log/ship/**",
       "dev-log/blueprint/**",
       "dev-log/history/README.md",

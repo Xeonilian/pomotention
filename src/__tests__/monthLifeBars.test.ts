@@ -99,11 +99,13 @@ describe("eatEventsChronological", () => {
         rec({ id: 3, recordedAt: 30, eatCourse: "apple" }),
         rec({ id: 1, recordedAt: 10 }),
         rec({ id: 2, recordedAt: 20, eatCourse: "dessert" }),
+        rec({ id: 4, recordedAt: 40, eatCourse: "supplement" }),
       ]),
     ).toEqual([
       { recordedAt: 10, course: "meal" },
       { recordedAt: 20, course: "dessert" },
       { recordedAt: 30, course: "apple" },
+      { recordedAt: 40, course: "supplement" },
     ]);
   });
 });

@@ -1,9 +1,10 @@
 // src/services/timetable/lifeRecordOverlays.ts
 // 生活记录投射到 TimeTable：点事件 → 第3列；睡眠段 → 第4列（纯函数，不碰 store）
 import type { Activity } from "@/core/types/Activity";
-import type { LifeRecord, Task } from "@/core/types/Task";
+import type { EatCourse, LifeRecord, Task } from "@/core/types/Task";
 import type { Todo } from "@/core/types/Todo";
-import { getLifeRecordDef, getLifeRecordKind, type LifeRecordKind } from "@/core/lifeRecord";
+import { eatCourseLabel, getLifeRecordDef, getLifeRecordKind, type LifeRecordKind } from "@/core/lifeRecord";
+import { timestampToTimeString } from "@/core/utils";
 import { resolveRecordTime } from "@/services/timetable/taskRecordMarks";
 
 export type LifePointKind = Exclude<LifeRecordKind, "sleep">;
@@ -20,6 +21,9 @@ export interface LifePointMark {
   title: string;
   /** 表格最后一列（喝什么 / 吃什么 / 去干嘛）；无则空串 */
   note: string;
+  amountMl?: number;
+  eatCourse?: EatCourse;
+  endAt?: number;
 }
 
 export interface LifeSleepRange {
@@ -44,6 +48,29 @@ const POINT_COLOR: Record<LifePointKind, string> = {
   eat: "var(--color-red-medium-transparent)",
   toilet: "var(--color-text-secondary-medium-transparent)",
 };
+
+/** 时间表点击文案：喝水 15:30 250 ml；吃饭 12:00 正餐 面条 */
+export function formatLifePointCaption(mark: LifePointMark): string {
+  const t = timestampToTimeString(mark.time);
+  let body: string;
+  if (mark.kind === "drink") {
+    const ml = mark.amountMl != null ? ` ${mark.amountMl} ml` : "";
+    body = `${mark.title} ${t}${ml}`;
+  } else if (mark.kind === "eat") {
+    body = `${mark.title} ${t} ${eatCourseLabel(mark.eatCourse)}`;
+  } else {
+    const end = mark.endAt != null ? `–${timestampToTimeString(mark.endAt)}` : "";
+    body = `${mark.title} ${t}${end}`;
+  }
+  return mark.note ? `${body} ${mark.note}` : body;
+}
+
+/** 时间表睡觉条点击文案：睡觉 23:00–07:00 梦 */
+export function formatLifeSleepCaption(range: LifeSleepRange): string {
+  const span = `${timestampToTimeString(range.start)}–${timestampToTimeString(range.end)}`;
+  const body = `${range.title} ${span}`;
+  return range.note ? `${body} ${range.note}` : body;
+}
 
 function clampRange(start: number, end: number, rangeStart: number, rangeEnd: number): { start: number; end: number } | null {
   const s = Math.max(start, rangeStart);
@@ -172,6 +199,9 @@ export function collectLifeRecordOverlays(options: {
         time,
         title: def.title,
         note: (record.description ?? "").trim(),
+        ...(kind === "drink" && record.amountMl != null ? { amountMl: record.amountMl } : {}),
+        ...(kind === "eat" ? { eatCourse: record.eatCourse } : {}),
+        ...(kind === "toilet" && record.endAt != null ? { endAt: record.endAt } : {}),
       });
     }
   }

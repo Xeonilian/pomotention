@@ -3,7 +3,7 @@ import { setActivePinia, createPinia } from "pinia";
 import type { Activity } from "@/core/types/Activity";
 import type { Todo } from "@/core/types/Todo";
 import type { LifeRecord, Task } from "@/core/types/Task";
-import { getLifeRecordKind, isLifeRecordActivity, getLifeRecordDef, isLifeRecordTagId, pickFirstNonLifeRecordTagId } from "@/core/lifeRecord";
+import { getLifeRecordKind, isLifeRecordActivity, getLifeRecordDef, isLifeRecordTagId, pickFirstNonLifeRecordTagId, nextEatCourse } from "@/core/lifeRecord";
 import { TAG_ID_LIFE_DRINK, TAG_ID_LIFE_SLEEP } from "@/core/constants";
 import {
   findLifeRecordTodoForDay,
@@ -165,6 +165,16 @@ describe("appendLifeRecord", () => {
   it("吃饭可写水果 eatCourse", () => {
     const { record } = appendLifeRecord(undefined, "eat", IN_DAY, { eatCourse: "apple" });
     expect(record.eatCourse).toBe("apple");
+  });
+  it("吃饭可写补剂 eatCourse", () => {
+    const { record } = appendLifeRecord(undefined, "eat", IN_DAY, { eatCourse: "supplement" });
+    expect(record.eatCourse).toBe("supplement");
+  });
+  it("吃饭类型正餐→甜点→水果→补剂→正餐", () => {
+    expect(nextEatCourse("meal")).toBe("dessert");
+    expect(nextEatCourse("dessert")).toBe("apple");
+    expect(nextEatCourse("apple")).toBe("supplement");
+    expect(nextEatCourse("supplement")).toBe("meal");
   });
   it("sumLifeRecordAmountMl 合计", () => {
     expect(sumLifeRecordAmountMl([{ id: 1, recordedAt: 1, amountMl: 250 }, { id: 2, recordedAt: 2, amountMl: 250 }])).toBe(500);

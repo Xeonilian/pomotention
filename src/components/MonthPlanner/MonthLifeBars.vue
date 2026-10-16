@@ -26,7 +26,7 @@
         <div
           v-for="(p, i) in bars.eatParts"
           :key="i"
-          class="mlb__fill"
+          class="mlb__fill mlb__fill--eat"
           :class="`mlb__fill--${p.course}`"
           :style="grow(p.ratio)"
         />
@@ -168,10 +168,11 @@ function grow(v: number) {
   background: rgba(160, 160, 160, 0.52);
   background: oklch(0.86 0 0 / 0.52);
 }
-.mlb__fill--meal,
-.mlb__fill--dessert,
-.mlb__fill--apple {
+.mlb__fill--eat {
   min-height: 2px;
+  box-sizing: border-box;
+  outline: 1px solid oklch(0.32 0.04 22 / 0.45);
+  outline-offset: -1px;
 }
 .mlb__fill--meal {
   background: rgba(214, 72, 100, 0.8);
@@ -184,6 +185,10 @@ function grow(v: number) {
 .mlb__fill--dessert {
   background: rgba(240, 160, 160, 0.62);
   background: oklch(0.92 0.16 22 / 0.62);
+}
+.mlb__fill--supplement {
+  background: rgba(120, 96, 180, 0.72);
+  background: oklch(0.72 0.14 300 / 0.72);
 }
 .mlb__fill--act {
   min-height: 2px;

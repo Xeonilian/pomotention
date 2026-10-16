@@ -26,7 +26,7 @@ export function nextFreeTimestampId(start: number, occupied?: Iterable<number>):
 export type AppendLifeRecordOptions = {
   /** 喝水等点事件：本口 ml 快照 */
   amountMl?: number;
-  /** 吃饭：正餐 / 甜点 / 水果；新记录默认 meal */
+  /** 吃饭：正餐 / 甜点 / 水果 / 补剂；新记录默认 meal */
   eatCourse?: EatCourse;
   /** 只新增一行，不把未闭合段写成结束时间 */
   alwaysNew?: boolean;

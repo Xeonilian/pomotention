@@ -1,6 +1,7 @@
 // src/core/lifeRecord.ts
 // 生活记录（lifeRecord）领域常量与 tag 判定：core 层，无 Vue 依赖
 import type { Activity } from "@/core/types/Activity";
+import type { EatCourse } from "@/core/types/Task";
 import { TAG_ID_LIFE_DRINK, TAG_ID_LIFE_EAT, TAG_ID_LIFE_TOILET, TAG_ID_LIFE_SLEEP } from "@/core/constants";
 import { dailyPlaceholderTitle } from "@/core/dailyPlaceholder";
 
@@ -70,4 +71,30 @@ export function getLifeRecordKind(activity: Pick<Activity, "tagIds"> | null | un
 
 export function isLifeRecordActivity(activity: Pick<Activity, "tagIds"> | null | undefined): boolean {
   return getLifeRecordKind(activity) !== null;
+}
+
+export const EAT_COURSE_CYCLE: readonly EatCourse[] = ["meal", "dessert", "apple", "supplement"];
+
+export function normalizeEatCourse(course?: EatCourse | null): EatCourse {
+  if (course === "dessert" || course === "apple" || course === "supplement") return course;
+  return "meal";
+}
+
+export function eatCourseLabel(course?: EatCourse | null): string {
+  switch (normalizeEatCourse(course)) {
+    case "dessert":
+      return "甜点";
+    case "apple":
+      return "水果";
+    case "supplement":
+      return "补剂";
+    default:
+      return "正餐";
+  }
+}
+
+export function nextEatCourse(course?: EatCourse | null): EatCourse {
+  const cur = normalizeEatCourse(course);
+  const i = EAT_COURSE_CYCLE.indexOf(cur);
+  return EAT_COURSE_CYCLE[(i + 1) % EAT_COURSE_CYCLE.length];
 }

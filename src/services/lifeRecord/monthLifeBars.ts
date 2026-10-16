@@ -1,5 +1,6 @@
 // 月格生活可视化：把一日 4 类收成竖 bar 用的比例（纯函数）
 import type { EatCourse, LifeRecord } from "@/core/types/Task";
+import { normalizeEatCourse } from "@/core/lifeRecord";
 import { timestampToTimeString } from "@/core/utils";
 
 export const MONTH_SLEEP_BAR_MS = 8 * 3600_000;
@@ -95,8 +96,7 @@ export function longestSleepStartOnDay(
 }
 
 function eatCourseOf(record: LifeRecord): EatCourse {
-  if (record.eatCourse === "dessert" || record.eatCourse === "apple") return record.eatCourse;
-  return "meal";
+  return normalizeEatCourse(record.eatCourse);
 }
 
 /** 吃饭按 recordedAt 升序；缺省 course 算正餐 */

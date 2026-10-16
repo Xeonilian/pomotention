@@ -274,20 +274,20 @@ function onChangeAmount(record: LifeRecord, v: number | null) {
 }
 .drink-day-gauge__sum {
   left: calc(50% - var(--a));
-  top: calc(50% + var(--f));
+  top: calc(50% + var(--f) - 20px);
   font-size: var(--sum-size);
   font-weight: 500;
   color: var(--color-blue);
 }
 .drink-day-gauge__slash {
   left: 50%;
-  top: calc(50% + var(--f));
+  top: calc(50% + var(--f) - 20px);
   font-size: var(--slash-size);
   color: var(--color-text-secondary);
 }
 .drink-day-gauge__goal {
   left: calc(50% + var(--c));
-  top: calc(50% + var(--f));
+  top: calc(50% + var(--f) - 20px);
   width: 4.2em;
 }
 .drink-day-gauge__goal :deep(.n-input) {

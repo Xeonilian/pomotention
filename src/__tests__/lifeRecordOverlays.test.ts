@@ -4,7 +4,14 @@ import { TAG_ID_LIFE_DRINK, TAG_ID_LIFE_SLEEP } from "@/core/constants";
 import type { Activity } from "@/core/types/Activity";
 import type { Task } from "@/core/types/Task";
 import type { Todo } from "@/core/types/Todo";
-import { collectLifeRecordOverlays } from "@/services/timetable/lifeRecordOverlays";
+import { timestampToTimeString } from "@/core/utils";
+import {
+  collectLifeRecordOverlays,
+  formatLifePointCaption,
+  formatLifeSleepCaption,
+  type LifePointMark,
+  type LifeSleepRange,
+} from "@/services/timetable/lifeRecordOverlays";
 
 const DAY = 24 * 60 * 60 * 1000;
 const dayStart = Date.UTC(2026, 8, 3); // 2026-09-03 UTC midnight as day key stand-in
@@ -192,5 +199,60 @@ describe("collectLifeRecordOverlays 跨天睡眠", () => {
       openSleepEnd: "dayOfStart",
     });
     expect(onNextDay.sleeps).toHaveLength(0);
+  });
+});
+
+describe("formatLifePointCaption / formatLifeSleepCaption", () => {
+  const at = new Date(2026, 9, 15, 15, 30).getTime();
+  const time = timestampToTimeString(at);
+
+  function point(partial: Partial<LifePointMark> & Pick<LifePointMark, "kind" | "title">): LifePointMark {
+    return {
+      recordId: at,
+      taskId: 1,
+      todoId: 1,
+      colorVar: "",
+      time: at,
+      lane: 0,
+      note: "",
+      ...partial,
+    };
+  }
+
+  it("喝水带时刻和毫升", () => {
+    expect(formatLifePointCaption(point({ kind: "drink", title: "喝水", amountMl: 250 }))).toBe(`喝水 ${time} 250 ml`);
+  });
+
+  it("吃饭带正餐和备注", () => {
+    expect(
+      formatLifePointCaption(point({ kind: "eat", title: "吃饭", eatCourse: "meal", note: "面条" })),
+    ).toBe(`吃饭 ${time} 正餐 面条`);
+  });
+
+  it("吃饭补剂", () => {
+    expect(formatLifePointCaption(point({ kind: "eat", title: "吃饭", eatCourse: "supplement" }))).toBe(
+      `吃饭 ${time} 补剂`,
+    );
+  });
+
+  it("活动带开始结束", () => {
+    const endAt = new Date(2026, 9, 15, 16, 0).getTime();
+    expect(formatLifePointCaption(point({ kind: "toilet", title: "活动", endAt }))).toBe(
+      `活动 ${time}–${timestampToTimeString(endAt)}`,
+    );
+  });
+
+  it("睡觉带时段和梦", () => {
+    const end = new Date(2026, 9, 16, 7, 0).getTime();
+    const range: LifeSleepRange = {
+      recordId: at,
+      taskId: 1,
+      todoId: 1,
+      title: "睡觉",
+      note: "下雨",
+      start: at,
+      end,
+    };
+    expect(formatLifeSleepCaption(range)).toBe(`睡觉 ${time}–${timestampToTimeString(end)} 下雨`);
   });
 });

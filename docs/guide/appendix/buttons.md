@@ -73,5 +73,6 @@ description: 各区域主要按钮与控件的集中速查；细节仍以对应�
 |     <img src="/icons/Apps20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(255, 255, 255);border-radius: 6px;">      | 打开生活记录（日=录入，其它=图层） |
 |      <img src="/icons/Apps20Filled.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(193, 226, 255);border-radius: 6px;">      | 图层已开，再点关闭               |
 |      <img src="/icons/Drop20Filled.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(193, 226, 255);border-radius: 6px;">       | 喝水：图上点水滴加一口           |
-|     <img src="/icons/FoodPizza20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(224, 224, 224);border-radius: 6px;">     | 吃饭类型：正餐（还可切甜点 / 水果） |
+|     <img src="/icons/FoodPizza20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(224, 224, 224);border-radius: 6px;">     | 吃饭类型：正餐（还可切甜点 / 水果 / 补剂） |
+|     <img src="/icons/BriefcaseMedical20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(224, 224, 224);border-radius: 6px;">     | 吃饭类型：补剂 |
 |    <img src="/icons/RecordStop20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(224, 224, 224);border-radius: 6px;"> | 活动 / 睡觉：结束当前这一段      |
