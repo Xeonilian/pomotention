@@ -85,7 +85,7 @@ defineExpose({
 <style scoped>
 .lr-note-bar {
   left: 50%;
-  top: calc(50% + var(--f) + 28px);
+  top: calc(50% + var(--f) + var(--row3-shift, 7%));
   width: calc(var(--a) + var(--c) + var(--icon-size));
   min-height: 28px;
   transform: translate(-50%, 0);

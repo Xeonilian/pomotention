@@ -33,7 +33,7 @@
       >
         <!-- 今日视图 -->
         <div
-          v-if="settingStore.settings.showPlanner && !mobileLifeRecordOpen && !daySheetActive"
+          v-if="settingStore.settings.showPlanner && !mobileLifeRecordOpen && !daySheetHidesPlanner"
           class="middle-top"
           :style="middleTopPlannerStyle"
         >
@@ -113,7 +113,7 @@
         </div>
         <!-- 任务视图调整大小手柄 -->
         <div
-          v-if="taskPanelLayoutVisible && settingStore.settings.showPlanner && !mobileLifeRecordOpen && !daySheetActive"
+          v-if="taskPanelLayoutVisible && settingStore.settings.showPlanner && !mobileLifeRecordOpen && !daySheetHidesPlanner"
           class="resize-handle"
           style="touch-action: none"
           @pointerdown="startVerticalResize"
@@ -131,8 +131,9 @@
             <LifeRecordDaySheet
               v-if="daySheetActive"
               :task-ids="daySheetTaskIds"
-              :initial-view="lifePlannerLifeView ? 'table' : 'chart'"
+              :initial-view="daySheetInitialView"
               @close="lifePlannerLayerStore.closeDaySheet"
+              @view-change="daySheetView = $event"
             />
             <TaskTracker v-else ref="taskTrackerRef" @task-record-editing="setTaskRecordEditing" />
           </div>
@@ -381,8 +382,22 @@ const lifePlannerLayerStore = useLifePlannerLayerStore();
 const { lifeView: lifePlannerLifeView, daySheetOpen, daySheetTaskIds, mobilePreviewSolo } =
   storeToRefs(lifePlannerLayerStore);
 
-/** 生活整合 sheet 激活：任意 view 进入都给全部 middle 空间 */
+const isViewDateToday = computed(() => dateService.isViewDateToday);
+
+/** 生活整合 sheet 激活 */
 const daySheetActive = computed(() => daySheetOpen.value);
+const daySheetView = ref<"chart" | "table">("chart");
+/** 日视图 sheet 只占 task 区（今日图 / 过往表），不藏 planner；周月点进仍占满 middle */
+const daySheetHidesPlanner = computed(() => {
+  if (!daySheetActive.value) return false;
+  if (settingStore.settings.viewSet === "day") return false;
+  return true;
+});
+const daySheetInitialView = computed(() => {
+  if (lifePlannerLifeView.value) return "table";
+  if (settingStore.settings.viewSet === "day" && !isViewDateToday.value) return "table";
+  return "chart";
+});
 
 const timetableLayoutVisible = computed(() => settingStore.settings.showTimetable && !mobilePreviewSolo.value);
 const taskAreaVisible = computed(() => daySheetActive.value || (settingStore.settings.showTask && !mobilePreviewSolo.value));
@@ -396,9 +411,6 @@ watch(
 function toggleMonthShowStatsOnly() {
   monthShowStatsOnly.value = !monthShowStatsOnly.value;
 }
-
-// 计算当前日期 不赋值在UI计算class就会失效，但是UI输出的值是正确的
-const isViewDateToday = computed(() => dateService.isViewDateToday);
 
 const appDateTimestamp = computed(() => dateService.appDateTimestamp);
 
@@ -1586,11 +1598,23 @@ const effectiveMiddleTopHeightPx = computed(() => {
   const minTask = 100;
   const maxTop = Math.max(120, avail - minTask);
   if (!isMobile.value) {
-    return topHeight.value + minTask > avail ? Math.min(topHeight.value, maxTop) : topHeight.value;
+    let top = topHeight.value + minTask > avail ? Math.min(topHeight.value, maxTop) : topHeight.value;
+    // 桌面图态：任务区至少 450px，避免 2×2 被压扁
+    if (daySheetActive.value && daySheetView.value === "chart") {
+      const minChartTask = 450;
+      top = Math.min(top, Math.max(120, avail - minChartTask));
+    }
+    return top;
   }
   const needCap = isLandscapeViewport.value || topHeight.value + minTask > avail;
-  if (!needCap) return topHeight.value;
-  return Math.min(topHeight.value, maxTop);
+  let top = needCap ? Math.min(topHeight.value, maxTop) : topHeight.value;
+  // 手机图态：任务区约 1.5 倍当前剩余高度（压 planner，不改设置里的 topHeight）
+  if (daySheetActive.value && daySheetView.value === "chart") {
+    const rest = Math.max(0, avail - top);
+    const wantTask = rest * 1.5;
+    top = Math.max(120, Math.min(top, avail - wantTask));
+  }
+  return top;
 });
 
 /** 计划表顶区行内样式：分屏与「收起任务」两端尽量共用 plannerMiddleAvailPx，便于 height transition 对齐 */

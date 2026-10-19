@@ -206,11 +206,11 @@ function onNoteBarInput(v: string) {
 /* 下排锚点跟睡觉图 */
 .eat-day-chart__start {
   left: calc(50% - var(--a) - 30px);
-  top: calc(50% + var(--f) - 20px);
+  top: calc(50% + var(--f) - var(--row2-shift));
 }
 .eat-day-chart__course {
   left: 50%;
-  top: calc(50% + var(--f) - 20px);
+  top: calc(50% + var(--f) - var(--row2-shift));
   width: 28px;
   height: 28px;
   display: inline-flex;
@@ -222,7 +222,7 @@ function onNoteBarInput(v: string) {
 .eat-day-chart__feel {
   width: 28px;
   height: 28px;
-  top: calc(50% + var(--f) - 20px);
+  top: calc(50% + var(--f) - var(--row2-shift));
 }
 .eat-day-chart__feel :deep(.n-popover-trigger) {
   display: block;

@@ -253,12 +253,12 @@ function formatDuration(record: LifeRecord): string {
 /* 下排锚点跟睡觉图（用户调过的值） */
 .toilet-day-chart__start {
   left: calc(50% - var(--a) - 30px);
-  top: calc(50% + var(--f) - 20px);
+  top: calc(50% + var(--f) - var(--row2-shift));
 }
 .toilet-day-chart__stop,
 .toilet-day-chart__end {
   left: 50%;
-  top: calc(50% + var(--f) - 20px);
+  top: calc(50% + var(--f) - var(--row2-shift));
   color: var(--color-text-primary);
 }
 .toilet-day-chart__stop {

@@ -327,7 +327,7 @@ function onCardClick() {
 }
 
 const pointIconSize = computed(() => {
-  if (props.drinkLayer) return isMobile.value ? 18 : 22;
+  if (props.drinkLayer) return isMobile.value ? 14 : 22;
   return isMobile.value ? 14 : 16;
 });
 
@@ -362,31 +362,109 @@ function layerPointColor(kind: LifePointKind): string {
   return "var(--color-text-secondary)";
 }
 
-/** 稳定伪随机 → 横向散落（淅沥），竖向仍由时刻决定 */
-function drinkScatterUnit(mark: LifePointMark): number {
-  const n = Math.sin(mark.recordId * 12.9898 + mark.time * 0.00017) * 43758.5453;
+/** 桌面生活图层：喝 / 吃 / 活动 / 精力 四槽 */
+const LAYER_SLOT: Record<LifePointKind, number> = {
+  drink: 0,
+  eat: 1,
+  toilet: 2,
+  energy: 3,
+};
+const LAYER_SLOT_COUNT = 4;
+
+/** 手机生活图层：左右留边的三列；水滴散列时避开邻近占用 */
+const MOBILE_LAYER_COLS = 3;
+const MOBILE_LAYER_INSET_PX = 1;
+const DRINK_NEAR_MS = 32 * 60 * 1000;
+
+function hashUnit(recordId: number, time: number): number {
+  const n = Math.sin(recordId * 12.9898 + time * 0.00017) * 43758.5453;
   return n - Math.floor(n);
 }
 
+function assignMobileLayerCols(points: LifePointMark[]): { drink: Map<number, number>; energy: Map<number, number> } {
+  const energy = new Map<number, number>();
+  for (const e of points.filter((p) => p.kind === "energy")) {
+    const nearToilet = points.some((p) => p.kind === "toilet" && Math.abs(p.time - e.time) <= DRINK_NEAR_MS);
+    if (!nearToilet) {
+      energy.set(e.recordId, 2);
+      continue;
+    }
+    const nearEat = points.some((p) => p.kind === "eat" && Math.abs(p.time - e.time) <= DRINK_NEAR_MS);
+    energy.set(e.recordId, nearEat ? 0 : 1);
+  }
+  const drinks = points.filter((p) => p.kind === "drink").sort((a, b) => a.time - b.time || a.recordId - b.recordId);
+  const placed: { time: number; col: number }[] = [];
+  const drink = new Map<number, number>();
+  for (const d of drinks) {
+    const taken = new Set<number>();
+    for (const p of points) {
+      if (Math.abs(p.time - d.time) > DRINK_NEAR_MS) continue;
+      if (p.kind === "eat") taken.add(1);
+      else if (p.kind === "toilet") taken.add(2);
+      else if (p.kind === "energy") taken.add(energy.get(p.recordId) ?? 2);
+    }
+    for (const p of placed) {
+      if (Math.abs(p.time - d.time) <= DRINK_NEAR_MS) taken.add(p.col);
+    }
+    const prefer = Math.floor(hashUnit(d.recordId, d.time) * MOBILE_LAYER_COLS) % MOBILE_LAYER_COLS;
+    let col = prefer;
+    for (let i = 0; i < MOBILE_LAYER_COLS; i++) {
+      const c = (prefer + i) % MOBILE_LAYER_COLS;
+      if (!taken.has(c)) {
+        col = c;
+        break;
+      }
+    }
+    placed.push({ time: d.time, col });
+    drink.set(d.recordId, col);
+  }
+  return { drink, energy };
+}
+
+const mobileLayerCols = computed(() => assignMobileLayerCols(props.lifeOverlay?.points ?? []));
+
+function mobileLayerCol(mark: LifePointMark): number {
+  if (mark.kind === "eat") return 1;
+  if (mark.kind === "toilet") return 2;
+  if (mark.kind === "energy") return mobileLayerCols.value.energy.get(mark.recordId) ?? 2;
+  return mobileLayerCols.value.drink.get(mark.recordId) ?? 0;
+}
+
+function mobileLayerLeft(col: number, size: number): string {
+  const inset = MOBILE_LAYER_INSET_PX;
+  return `calc(${inset}px + ${col + 0.5} * (100% - ${inset * 2}px) / ${MOBILE_LAYER_COLS} - ${size / 2}px)`;
+}
+
 function getLayerPointStyle(mark: LifePointMark): CSSProperties {
-  if (mark.kind === "energy") return props.getLifePointStyle(mark, props.day.startTs);
   const base = props.getLifePointStyle(mark, props.day.startTs);
-  const size = isMobile.value ? 20 : 24;
-  // 落在列宽约 10%～90%
-  const u = drinkScatterUnit(mark);
-  const leftPct = 10 + u * 78;
   const rest = { ...base } as CSSProperties;
   delete rest.right;
   delete rest.left;
   delete rest.width;
   delete rest.height;
+  if (!isMobile.value) {
+    const size = 24;
+    const slot = LAYER_SLOT[mark.kind] ?? 2;
+    return {
+      ...rest,
+      width: `${size}px`,
+      height: `${size}px`,
+      color: layerPointColor(mark.kind),
+      zIndex: 8,
+      left: `calc(${((slot + 0.5) / LAYER_SLOT_COUNT) * 100}% - ${size / 2}px)`,
+      right: "auto",
+      transform: "translateX(0)",
+    };
+  }
+  const size = 14;
+  const zIndex = mark.kind === "energy" ? 14 : mark.kind === "toilet" ? 10 : 8;
   return {
     ...rest,
     width: `${size}px`,
     height: `${size}px`,
     color: layerPointColor(mark.kind),
-    zIndex: 8,
-    left: `calc(${leftPct.toFixed(2)}% - ${size / 2}px)`,
+    zIndex,
+    left: mobileLayerLeft(mobileLayerCol(mark), size),
     right: "auto",
     transform: "translateX(0)",
   };
@@ -439,6 +517,14 @@ const handleItemChange = (id: number, _ts: number, activityId?: number, taskId?:
 
 .day-card :deep(.n-card__content) {
   padding: 6px 6px;
+}
+
+/* 生活图层：月亮钉在醒来线，允许探出时间格（不裁半个） */
+.day-card--drink-layer {
+  overflow: visible;
+}
+.day-card--drink-layer :deep(.n-card__content) {
+  overflow: visible;
 }
 
 .day-header {
@@ -530,10 +616,14 @@ const handleItemChange = (id: number, _ts: number, activityId?: number, taskId?:
   width: 100%;
   overflow: hidden;
 }
+.day-card--drink-layer .time-grid-container {
+  overflow: visible;
+}
 
 .week-life-sleep {
   border-radius: 2px;
   pointer-events: none;
+  overflow: visible;
 }
 
 .week-life-sleep-moon {

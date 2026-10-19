@@ -4,6 +4,10 @@ import { normalizeEatCourse } from "@/core/lifeRecord";
 import { timestampToTimeString } from "@/core/utils";
 
 export const MONTH_SLEEP_BAR_MS = 8 * 3600_000;
+/** 过了午夜才睡、且够长：当作昨晚；零碎短睡不挪 */
+const LONG_SLEEP_MS = 3 * 3600_000;
+const LATE_BED_HOUR = 3;
+const DAY_MS = 24 * 3600_000;
 export const MONTH_EAT_BAR_MIN = 6;
 /** 日常活动竖 bar 高度基准（30min + 零碎够用；超出按峰值向下取整小时） */
 export const MONTH_ACTIVITY_BAR_MIN_MS = 2 * 3600_000;
@@ -59,6 +63,44 @@ function clipMs(start: number, end: number, dayStart: number, dayEnd: number): n
   return Math.max(0, e - s);
 }
 
+function calendarDayStart(ts: number): number {
+  const d = new Date(ts);
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+}
+
+function sleepDurationMs(record: LifeRecord, now: number): number {
+  const end = record.endAt ?? now;
+  return Math.max(0, end - record.recordedAt);
+}
+
+/** 3 点前才睡的长觉算前晚；3 点及以后算当天；短睡不挪 */
+export function sleepOwnerDayStart(record: LifeRecord, _records: LifeRecord[], now: number): number {
+  const cal = calendarDayStart(record.recordedAt);
+  if (!Number.isFinite(record.recordedAt)) return cal;
+  const d = new Date(record.recordedAt);
+  const hour = d.getHours() + d.getMinutes() / 60;
+  if (sleepDurationMs(record, now) >= LONG_SLEEP_MS && hour < LATE_BED_HOUR) return cal - DAY_MS;
+  return cal;
+}
+
+/** 睡觉竖 bar：整段落在归属日；凌晨才睡的长觉记到前一天 */
+export function sleepSpansOnStartDay(
+  records: LifeRecord[],
+  dayStart: number,
+  _dayEnd: number,
+  now: number,
+): { ms: number; startAt: number }[] {
+  const out: { ms: number; startAt: number }[] = [];
+  for (const r of records) {
+    if (!Number.isFinite(r.recordedAt)) continue;
+    if (sleepOwnerDayStart(r, records, now) !== dayStart) continue;
+    const ms = sleepDurationMs(r, now);
+    if (ms > 0) out.push({ ms, startAt: r.recordedAt });
+  }
+  return out;
+}
+
 /** 与显示日相交的段；未闭合：历史日铺到日末，当日铺到 now，不渗未来日 */
 export function clipDaySpans(records: LifeRecord[], dayStart: number, dayEnd: number, now: number): { ms: number; startAt: number }[] {
   const openEnd = Math.min(now, dayEnd);
@@ -72,21 +114,21 @@ export function clipDaySpans(records: LifeRecord[], dayStart: number, dayEnd: nu
 }
 
 /**
- * 入睡落在该日的各段里，取「落在当天的截段」最长一次的 recordedAt。
- * 跨夜醒来那天、以及昨夜渗进来的条，不写数字。当日截段并列时取更晚的那次入睡。
+ * 归属该日的各段里，取整段最长一次的 recordedAt。
+ * 凌晨才睡的长觉已记到前一天，当天不写它的数字。
  */
 export function longestSleepStartOnDay(
   records: LifeRecord[],
   dayStart: number,
-  dayEnd: number,
+  _dayEnd: number,
   now: number,
 ): number | null {
   let bestStart: number | null = null;
   let bestMs = -1;
   for (const r of records) {
-    if (!Number.isFinite(r.recordedAt) || r.recordedAt < dayStart || r.recordedAt >= dayEnd) continue;
-    const end = r.endAt ?? now;
-    const ms = clipMs(r.recordedAt, end, dayStart, dayEnd);
+    if (!Number.isFinite(r.recordedAt)) continue;
+    if (sleepOwnerDayStart(r, records, now) !== dayStart) continue;
+    const ms = sleepDurationMs(r, now);
     if (ms <= 0) continue;
     if (bestStart == null || ms > bestMs || (ms === bestMs && r.recordedAt > bestStart)) {
       bestMs = ms;

@@ -9,6 +9,20 @@ const ICON_TOP_EXTRA_PX = 25;
 const ROW_MARGIN_PX = 12;
 const RETRY_MS = [50, 180, 360, 560];
 
+/** 手机：时间格只开转盘，不拉输入法；备注列仍可打字 */
+function lockTimePickerIme(root: HTMLElement | null, on: boolean) {
+  if (!root) return;
+  root.querySelectorAll<HTMLInputElement>(".n-time-picker input").forEach((el) => {
+    el.readOnly = on;
+    if (on) el.setAttribute("inputmode", "none");
+    else el.removeAttribute("inputmode");
+  });
+}
+
+function isTimePickerField(el: EventTarget | null): boolean {
+  return el instanceof HTMLElement && !!el.closest(".n-time-picker");
+}
+
 function isTextField(el: EventTarget | null): el is HTMLElement {
   if (!(el instanceof HTMLElement)) return false;
   if (el.isContentEditable) return true;
@@ -90,6 +104,7 @@ export function useMobileInputScroll(rootRef: Ref<HTMLElement | null>) {
   let focused: HTMLElement | null = null;
   let timers: number[] = [];
   let blurTimer = 0;
+  let imeObserver: MutationObserver | null = null;
 
   function clearTimers() {
     for (const t of timers) window.clearTimeout(t);
@@ -116,6 +131,7 @@ export function useMobileInputScroll(rootRef: Ref<HTMLElement | null>) {
 
   function onFocusIn(e: FocusEvent) {
     if (!isMobile.value) return;
+    if (isTimePickerField(e.target)) return;
     if (!isTextField(e.target)) return;
     window.clearTimeout(blurTimer);
     focused = e.target;
@@ -145,7 +161,14 @@ export function useMobileInputScroll(rootRef: Ref<HTMLElement | null>) {
     prev?.removeEventListener("focusin", onFocusIn);
     prev?.removeEventListener("focusout", onFocusOut);
     window.visualViewport?.removeEventListener("resize", onVvChange);
+    imeObserver?.disconnect();
+    imeObserver = null;
     if (!root) return;
+    lockTimePickerIme(root, isMobile.value);
+    if (isMobile.value) {
+      imeObserver = new MutationObserver(() => lockTimePickerIme(root, true));
+      imeObserver.observe(root, { childList: true, subtree: true });
+    }
     root.addEventListener("focusin", onFocusIn);
     root.addEventListener("focusout", onFocusOut);
     window.visualViewport?.addEventListener("resize", onVvChange);

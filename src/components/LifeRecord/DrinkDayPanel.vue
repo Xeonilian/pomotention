@@ -221,6 +221,8 @@ function onChangeAmount(record: LifeRecord, v: number | null) {
   --c: 16%;
   --d: 10%;
   --f: 22%;
+  --row2-shift: 5%;
+  --row3-shift: 7%;
   --drop-size: 50px;
   --times-size: 35px;
   --count-size: 30px;
@@ -324,20 +326,20 @@ function onChangeAmount(record: LifeRecord, v: number | null) {
 }
 .drink-day-gauge__sum {
   left: calc(50% - var(--a));
-  top: calc(50% + var(--f) - 20px);
+  top: calc(50% + var(--f) - var(--row2-shift));
   font-size: var(--sum-size);
   font-weight: 500;
   color: var(--color-blue);
 }
 .drink-day-gauge__slash {
   left: 50%;
-  top: calc(50% + var(--f) - 20px);
+  top: calc(50% + var(--f) - var(--row2-shift));
   font-size: var(--slash-size);
   color: var(--color-text-secondary);
 }
 .drink-day-gauge__goal {
   left: calc(50% + var(--c));
-  top: calc(50% + var(--f) - 20px);
+  top: calc(50% + var(--f) - var(--row2-shift));
   width: 4.2em;
 }
 .drink-day-gauge__goal :deep(.n-input) {
@@ -363,7 +365,7 @@ function onChangeAmount(record: LifeRecord, v: number | null) {
 }
 .drink-day-gauge__kinds {
   left: 50%;
-  top: calc(50% + var(--f) + 28px);
+  top: calc(50% + var(--f) + var(--row3-shift));
   width: calc(var(--a) + var(--c) + var(--drop-size));
   height: 28px;
   transform: translate(-50%, 0);

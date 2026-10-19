@@ -6,6 +6,9 @@
   --c: 16%;
   --d: 10%;
   --f: 22%;
+  /* 400px 格上 5%/7% = 20px/28px；随格子缩，最小约 1:1:1，避免 2–3 被固定 px 拉开 */
+  --row2-shift: 5%;
+  --row3-shift: 7%;
   --icon-size: 50px;
   --times-size: 35px;
   --count-size: 30px;
@@ -83,7 +86,7 @@
 .lr-chart__score {
   width: 28px;
   height: 28px;
-  top: calc(50% + var(--f) - 20px);
+  top: calc(50% + var(--f) - var(--row2-shift));
 }
 .lr-chart__score :deep(.n-popover-trigger) {
   display: block;

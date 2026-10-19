@@ -408,15 +408,20 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targe
     const range = unifiedTimeRange.value;
     const startH = hourOffsetInDay(sleep.start, dayStartTs);
     const endH = hourOffsetInDay(sleep.end, dayStartTs);
-    const top = (startH - range.startHour) * pxPerHour.value;
-    const height = Math.max((endH - startH) * pxPerHour.value, 2);
+    const px = pxPerHour.value;
+    const gridH = (range.endHour - range.startHour) * px;
+    const rawTop = (startH - range.startHour) * px;
+    const rawBottom = (endH - range.startHour) * px;
+    // 上沿贴时间格顶，不画进日期；下沿仍可到醒来
+    const top = Math.max(0, rawTop);
+    const bottom = Math.min(gridH, Math.max(top, rawBottom));
     return {
       position: "absolute",
       left: "0",
       width: "100%",
       top: `${top}px`,
-      height: `${height}px`,
-      backgroundColor: "rgba(153, 153, 153, 0.12)",
+      height: `${Math.max(bottom - top, 2)}px`,
+      backgroundColor: "rgba(28, 72, 168, 0.22)",
       zIndex: 1,
       cursor: "pointer",
     };
@@ -425,15 +430,13 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targe
   function getLifePointStyle(mark: LifePointMark, dayStartTs: number): CSSProperties {
     const range = unifiedTimeRange.value;
     const h = hourOffsetInDay(mark.time, dayStartTs);
-    const top = (h - range.startHour) * pxPerHour.value - 7;
-    // 从右往左叠 lane，避免贴左边时间块
-    const right = isMobile.value ? mark.lane * 15 : 12 + mark.lane * 15;
-    return {
+    const size = 14;
+    const top = (h - range.startHour) * pxPerHour.value - size / 2;
+    const base: CSSProperties = {
       position: "absolute",
-      right: `${right}px`,
       top: `${top}px`,
-      width: "14px",
-      height: "14px",
+      width: `${size}px`,
+      height: `${size}px`,
       color: mark.colorVar,
       zIndex: 5 + mark.lane,
       display: "flex",
@@ -442,6 +445,16 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targe
       cursor: "pointer",
       userSelect: "none",
     };
+    if (isMobile.value) {
+      // 非可视化：icon 落在待办三列上；左 +1px 对色条，右再留 1px 不贴框
+      const col = Math.min(mark.lane, 2);
+      return {
+        ...base,
+        left: `calc(1px + ${col} * (100% - 2px) / 3)`,
+        right: "auto",
+      };
+    }
+    return { ...base, right: `${12 + mark.lane * 15}px` };
   }
 
   return {

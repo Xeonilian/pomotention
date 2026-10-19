@@ -1,6 +1,6 @@
 // Planner 生活可视化（会话态，不落盘）：非日 = 图层开关；日 = 集中 sheet
 import { defineStore } from "pinia";
-import { computed, ref, toValue } from "vue";
+import { computed, ref, toValue, watch } from "vue";
 import { useDevice } from "@/composables/platform/useDevice";
 import { LIFE_RECORD_DEFS, type LifeRecordKind } from "@/core/lifeRecord";
 import { findLifeRecordTodoForDay } from "@/services/lifeRecord/lifeRecordService";
@@ -43,11 +43,16 @@ export const useLifePlannerLayerStore = defineStore("lifePlannerLayer", () => {
     sleep: null,
   });
 
-  function openDaySheet() {
+  function syncSheetTaskIds() {
     // Pinia 对嵌套 computed 会拆包成 number，不能再取 .value（否则 undefined → id NaN → JSON null）
     const raw = dataStore.dateService.appDateTimestamp as Parameters<typeof toValue>[0];
     const dayStart = toValue(raw);
+    if (!Number.isFinite(dayStart)) return;
     daySheetTaskIds.value = dataStore.ensureAllLifeRecordTasksForDay(dayStart);
+  }
+
+  function openDaySheet() {
+    syncSheetTaskIds();
     daySheetOpen.value = true;
   }
 
@@ -55,6 +60,13 @@ export const useLifePlannerLayerStore = defineStore("lifePlannerLayer", () => {
     daySheetTaskIds.value = { drink: null, eat: null, toilet: null, sleep: null };
     daySheetOpen.value = false;
   }
+
+  watch(
+    () => toValue(dataStore.dateService.appDateTimestamp as Parameters<typeof toValue>[0]),
+    () => {
+      if (daySheetOpen.value) syncSheetTaskIds();
+    },
+  );
 
   /** 手机非日生活预览：临时铺满规划区（不改设置）；顶栏 timetable/task 外观跟实际可见性走 */
   const mobilePreviewSolo = computed(

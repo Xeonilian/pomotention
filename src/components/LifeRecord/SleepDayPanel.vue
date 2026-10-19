@@ -338,12 +338,12 @@ function dreamChipLabel(record: LifeRecord): string {
 /* 下排与喝水 sum / slash / goal 同锚：a、中、c × f */
 .sleep-day-chart__start {
   left: calc(50% - var(--a) - 30px);
-  top: calc(50% + var(--f) - 20px);
+  top: calc(50% + var(--f) - var(--row2-shift));
 }
 .sleep-day-chart__stop,
 .sleep-day-chart__end {
   left: 50%;
-  top: calc(50% + var(--f) - 20px);
+  top: calc(50% + var(--f) - var(--row2-shift));
   color: var(--color-text-primary);
 }
 .sleep-day-chart__stop {

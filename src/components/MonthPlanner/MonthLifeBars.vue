@@ -1,73 +1,105 @@
 <!-- 月格四条竖 bar：喝水 / 吃饭 / 活动 / 睡觉；吃/活动/睡从底到顶按时间早→晚 -->
 <template>
-  <div v-if="hasData" class="mlb" aria-hidden="true">
-    <div class="mlb__col">
+  <div v-if="hasData" class="mlb" :class="{ 'mlb--focus': !!focusKind }" @click.stop="onPadClick">
+    <div v-show="showCol('drink')" class="mlb__col" title="喝水" @click.stop="onColClick('drink')">
       <div class="mlb__track mlb__track--drink">
         <div
-          v-if="bars.drinkGoalRatio > 0"
+          v-if="showFills('drink') && bars.drinkGoalRatio > 0"
           class="mlb__goal"
           :style="{ transform: `scaleY(${Math.max(0, bars.drinkGoalRatio)})` }"
         />
-        <div
-          v-for="(p, i) in bars.drinkParts"
-          :key="i"
-          class="mlb__fill mlb__fill--drink"
-          :class="`mlb__fill--drink-${i % 4}`"
-          :style="grow(p)"
-        />
+        <template v-if="showFills('drink')">
+          <div
+            v-for="(p, i) in bars.drinkParts"
+            :key="i"
+            class="mlb__fill mlb__fill--drink"
+            :class="`mlb__fill--drink-${i % 4}`"
+            :style="grow(p)"
+          />
+        </template>
         <div v-if="drinkRest > 0" class="mlb__spacer" :style="grow(drinkRest)" />
       </div>
       <span class="mlb__cap">
-        <span class="mlb__cap-text">{{ bars.drinkLitersLabel || "\u00a0" }}</span>
+        <span class="mlb__cap-text">{{ showFills("drink") ? bars.drinkLitersLabel || "\u00a0" : "\u00a0" }}</span>
       </span>
     </div>
-    <div class="mlb__col">
+    <div v-show="showCol('eat')" class="mlb__col" title="吃饭" @click.stop="onColClick('eat')">
       <div class="mlb__track mlb__track--stack">
-        <div
-          v-for="(p, i) in bars.eatParts"
-          :key="i"
-          class="mlb__fill mlb__fill--eat"
-          :class="`mlb__fill--${p.course}`"
-          :style="grow(p.ratio)"
-        />
+        <template v-if="showFills('eat')">
+          <div
+            v-for="(p, i) in bars.eatParts"
+            :key="i"
+            class="mlb__fill mlb__fill--eat"
+            :class="`mlb__fill--${p.course}`"
+            :style="grow(p.ratio)"
+          />
+        </template>
         <div v-if="eatRest > 0" class="mlb__spacer" :style="grow(eatRest)" />
       </div>
       <span class="mlb__cap">
-        <span class="mlb__cap-text">{{ bars.eatSpanLabel || "\u00a0" }}</span>
+        <span class="mlb__cap-text">{{ showFills("eat") ? bars.eatSpanLabel || "\u00a0" : "\u00a0" }}</span>
       </span>
     </div>
-    <div class="mlb__col">
+    <div v-show="showCol('toilet')" class="mlb__col" title="活动" @click.stop="onColClick('toilet')">
       <div class="mlb__track mlb__track--stack">
-        <div
-          v-for="(p, i) in bars.activityParts"
-          :key="i"
-          class="mlb__fill mlb__fill--act"
-          :class="`mlb__fill--act-${i % 4}`"
-          :style="grow(p)"
-        />
+        <template v-if="showFills('toilet')">
+          <div
+            v-for="(p, i) in bars.activityParts"
+            :key="i"
+            class="mlb__fill mlb__fill--act"
+            :class="`mlb__fill--act-${i % 4}`"
+            :style="grow(p)"
+          />
+        </template>
         <div v-if="actRest > 0" class="mlb__spacer" :style="grow(actRest)" />
       </div>
       <span class="mlb__cap">
-        <span class="mlb__cap-text">{{ bars.activityMinutes > 0 ? `${bars.activityMinutes}'` : "\u00a0" }}</span>
+        <span class="mlb__cap-text">{{ showFills("toilet") && bars.activityMinutes > 0 ? `${bars.activityMinutes}'` : "\u00a0" }}</span>
       </span>
     </div>
-    <div class="mlb__col">
+    <div v-show="showCol('sleep')" class="mlb__col" title="睡觉" @click.stop="onColClick('sleep')">
       <div class="mlb__track mlb__track--stack">
-        <div v-for="(p, i) in bars.sleepParts" :key="i" class="mlb__fill mlb__fill--sleep" :style="grow(p)" />
+        <template v-if="showFills('sleep')">
+          <div v-for="(p, i) in bars.sleepParts" :key="i" class="mlb__fill mlb__fill--sleep" :style="grow(p)" />
+        </template>
         <div v-if="sleepRest > 0" class="mlb__spacer" :style="grow(sleepRest)" />
       </div>
       <span class="mlb__cap">
-        <span class="mlb__cap-text">{{ bars.sleepBedLabel || "\u00a0" }}</span>
+        <span class="mlb__cap-text">{{ showFills("sleep") ? bars.sleepBedLabel || "\u00a0" : "\u00a0" }}</span>
       </span>
     </div>
   </div>
 </template>
 <script setup lang="ts">
 import { computed } from "vue";
+import type { LifeRecordKind } from "@/core/lifeRecord";
 import { hasMonthLifeBarData, type MonthLifeBarView } from "@/services/lifeRecord/monthLifeBars";
 
-const props = defineProps<{ bars: MonthLifeBarView }>();
-const hasData = computed(() => hasMonthLifeBarData(props.bars));
+const props = defineProps<{ bars: MonthLifeBarView; focusKind?: LifeRecordKind | null }>();
+const emit = defineEmits<{ "select-kind": [kind: LifeRecordKind] }>();
+function hasKind(kind: LifeRecordKind): boolean {
+  if (kind === "drink") return props.bars.drinkParts.length > 0;
+  if (kind === "eat") return props.bars.eatCount > 0;
+  if (kind === "toilet") return props.bars.activityMinutes > 0;
+  return props.bars.sleepParts.length > 0;
+}
+const hasData = computed(() => {
+  if (props.focusKind) return hasKind(props.focusKind);
+  return hasMonthLifeBarData(props.bars);
+});
+function showCol(kind: LifeRecordKind): boolean {
+  return !props.focusKind || props.focusKind === kind;
+}
+function showFills(kind: LifeRecordKind): boolean {
+  if (props.focusKind && props.focusKind !== kind) return false;
+  return hasKind(kind);
+}
+function onColClick(kind: LifeRecordKind) {
+  emit("select-kind", kind);
+}
+function onPadClick() {
+  if (props.focusKind) emit("select-kind", props.focusKind);
+}
 const drinkRest = computed(() => restOf(props.bars.drinkParts));
 const eatRest = computed(() => restOf(props.bars.eatParts.map((p) => p.ratio)));
 const actRest = computed(() => restOf(props.bars.activityParts));
@@ -103,6 +135,7 @@ function grow(v: number) {
   display: flex;
   flex-direction: column;
   align-items: center;
+  cursor: pointer;
 }
 .mlb__track {
   position: relative;
@@ -165,15 +198,16 @@ function grow(v: number) {
   background: oklch(0.93 0.14 250 / 0.58);
 }
 .mlb__fill--sleep {
-  background: rgba(160, 160, 160, 0.52);
-  background: oklch(0.86 0 0 / 0.52);
+  background: rgba(28, 72, 168, 0.28);
+  background: oklch(0.45 0.12 264 / 0.28);
 }
 .mlb__fill--eat {
   min-height: 2px;
   box-sizing: border-box;
 }
 .mlb__fill--eat:not(:last-child) {
-  border-top: 1px solid oklch(0.32 0.04 22 / 0.45);
+  border-top: 1px solid rgba(236, 168, 184, 0.9);
+  border-top: 1px solid oklch(0.84 0.12 22 / 0.85);
 }
 .mlb__fill--meal {
   background: rgba(214, 72, 100, 0.8);
@@ -243,6 +277,17 @@ function grow(v: number) {
     transform: rotate(180deg);
     transform-origin: center center;
     line-height: 1;
+  }
+  .mlb--focus {
+    max-width: none;
+  }
+  .mlb--focus .mlb__cap {
+    height: auto;
+  }
+  .mlb--focus .mlb__cap-text {
+    writing-mode: horizontal-tb;
+    text-orientation: mixed;
+    transform: none;
   }
 }
 </style>

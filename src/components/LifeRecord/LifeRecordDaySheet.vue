@@ -47,7 +47,7 @@
   </div>
 </template>
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, watch } from "vue";
 import { NButton, NIcon } from "naive-ui";
 import { DataPie20Regular, Dismiss20Regular, TableSimple20Regular } from "@vicons/fluent";
 import DrinkDayPanel from "@/components/LifeRecord/DrinkDayPanel.vue";
@@ -65,11 +65,12 @@ const props = withDefaults(
   }>(),
   { initialView: "chart" },
 );
-const emit = defineEmits<{ close: [] }>();
+const emit = defineEmits<{ close: []; "view-change": [view: "chart" | "table"] }>();
 const { isMobile } = useDevice();
 const sheetRef = ref<HTMLElement | null>(null);
 useMobileInputScroll(sheetRef);
 const view = ref<"chart" | "table">(props.initialView);
+watch(view, (v) => emit("view-change", v), { immediate: true });
 function toggleView() {
   view.value = view.value === "chart" ? "table" : "chart";
 }
@@ -128,6 +129,7 @@ function toggleView() {
   grid-template-rows: none;
   overflow-x: hidden;
   overflow-y: auto;
+  scrollbar-gutter: stable both-edges;
   -webkit-overflow-scrolling: touch;
   gap: 8px;
 }
