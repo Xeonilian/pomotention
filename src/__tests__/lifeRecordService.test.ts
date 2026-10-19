@@ -13,6 +13,7 @@ import {
   removeLifeRecord,
   updateLifeRecord,
   sumLifeRecordAmountMl,
+  resolveLifeSpanEndAt,
 } from "@/services/lifeRecord/lifeRecordService";
 const DAY_START = new Date(2026, 8, 2, 0, 0, 0, 0).getTime(); // 2026-09-02 00:00
 const IN_DAY = new Date(2026, 8, 2, 10, 30, 0, 0).getTime();
@@ -208,6 +209,33 @@ describe("appendLifeRecord", () => {
     expect(isDrinkGoalMet(500, 0)).toBe(false);
     expect(isDrinkGoalMet(500, undefined)).toBe(false);
   });
+});
+describe("resolveLifeSpanEndAt", () => {
+  it("结束钟点晚于开始：落在开始当天", () => {
+    const start = new Date(2026, 9, 18, 6, 0).getTime();
+    const pick = new Date(2026, 9, 18, 7, 5).getTime();
+    expect(resolveLifeSpanEndAt(start, pick)).toBe(new Date(2026, 9, 18, 7, 5).getTime());
+  });
+  it("已有次日 endAt 再改钟点：不叠出 25h，仍相对开始日", () => {
+    const start = new Date(2026, 9, 18, 6, 0).getTime();
+    const existingNextDay = new Date(2026, 9, 19, 7, 5).getTime();
+    expect(resolveLifeSpanEndAt(start, existingNextDay)).toBe(new Date(2026, 9, 18, 7, 5).getTime());
+  });
+  it("结束钟点早于开始：跨到次日；同一分钟保持 0", () => {
+    const start = new Date(2026, 9, 18, 23, 0).getTime();
+    const wake = new Date(2026, 9, 18, 6, 10).getTime();
+    expect(resolveLifeSpanEndAt(start, wake)).toBe(new Date(2026, 9, 19, 6, 10).getTime());
+    const same = new Date(2026, 9, 18, 6, 0).getTime();
+    expect(resolveLifeSpanEndAt(same, same)).toBe(same);
+  });
+  it("闭合未结束段：开始已改到晚上、打点在早晨，补到次日", () => {
+    const start = new Date(2026, 9, 18, 23, 0).getTime();
+    const first = appendLifeRecord(undefined, "sleep", start);
+    const closed = appendLifeRecord(first.next, "sleep", new Date(2026, 9, 18, 6, 10).getTime());
+    expect(closed.next[0].endAt).toBe(new Date(2026, 9, 19, 6, 10).getTime());
+  });
+});
+describe("appendLifeRecord span", () => {
   it("sleep：首次新开无 endAt，再次 +1 闭合，第三次再开新段", () => {
     const first = appendLifeRecord(undefined, "sleep", IN_DAY);
     expect(first.next[0].endAt).toBeUndefined();

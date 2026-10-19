@@ -3,6 +3,7 @@ import type { LifeRecord } from "@/core/types/Task";
 import {
   activityBarScaleMs,
   clipDaySpans,
+  mergeLifeRecordsById,
   eatEventsChronological,
   EMPTY_MONTH_LIFE_BARS,
   hasMonthLifeBarData,
@@ -81,7 +82,7 @@ describe("longestSleepStartOnDay", () => {
     expect(longestSleepStartOnDay(recs, dayStart, dayEnd, dayEnd + 1)).toBe(main);
   });
 
-  it("午睡短、晚睡整段更长：即使当日只切到 1h 仍取晚睡", () => {
+  it("午睡短、晚睡整段更长：当日截段同样长时取更晚入睡", () => {
     const nap = dayStart + 14 * 3600_000;
     const bed = dayStart + 23 * 3600_000;
     const recs = [
@@ -89,6 +90,25 @@ describe("longestSleepStartOnDay", () => {
       rec({ id: bed, recordedAt: bed, endAt: dayEnd + 7 * 3600_000 }),
     ];
     expect(longestSleepStartOnDay(recs, dayStart, dayEnd, dayEnd + 8 * 3600_000)).toBe(bed);
+  });
+
+  it("凌晨一觉占当天大半、晚睡只切到日末：标凌晨入睡，不标 22:00", () => {
+    const afterMidnight = dayStart + 0.5 * 3600_000;
+    const evening = dayStart + 22 * 3600_000;
+    const recs = [
+      rec({ id: afterMidnight, recordedAt: afterMidnight, endAt: dayStart + 8 * 3600_000 }),
+      rec({ id: evening, recordedAt: evening, endAt: dayEnd + 7 * 3600_000 }),
+    ];
+    expect(longestSleepStartOnDay(recs, dayStart, dayEnd, dayEnd + 8 * 3600_000)).toBe(afterMidnight);
+  });
+
+  it("记录写在次日桶、入睡时刻仍在当天：截进当天并标入睡点", () => {
+    const bed = dayStart + 0.5 * 3600_000;
+    const wake = dayStart + 8 * 3600_000;
+    const fromNextBucket = [rec({ id: bed, recordedAt: bed, endAt: wake })];
+    const nearby = mergeLifeRecordsById([], fromNextBucket);
+    expect(clipDaySpans(nearby, dayStart, dayEnd, wake + 1)[0]?.ms).toBe(wake - bed);
+    expect(longestSleepStartOnDay(nearby, dayStart, dayEnd, wake + 1)).toBe(bed);
   });
 });
 

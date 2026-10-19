@@ -72,8 +72,8 @@ export function clipDaySpans(records: LifeRecord[], dayStart: number, dayEnd: nu
 }
 
 /**
- * 入睡落在该日的各段里，取整段最长一次的 recordedAt（与记录口径一致：入睡写在当天桶，endAt 可跨日）。
- * 跨夜醒来那天、以及昨夜渗进来的条，不写数字。时长并列时取更晚的那次入睡。
+ * 入睡落在该日的各段里，取「落在当天的截段」最长一次的 recordedAt。
+ * 跨夜醒来那天、以及昨夜渗进来的条，不写数字。当日截段并列时取更晚的那次入睡。
  */
 export function longestSleepStartOnDay(
   records: LifeRecord[],
@@ -86,13 +86,25 @@ export function longestSleepStartOnDay(
   for (const r of records) {
     if (!Number.isFinite(r.recordedAt) || r.recordedAt < dayStart || r.recordedAt >= dayEnd) continue;
     const end = r.endAt ?? now;
-    const ms = Math.max(0, end - r.recordedAt);
+    const ms = clipMs(r.recordedAt, end, dayStart, dayEnd);
+    if (ms <= 0) continue;
     if (bestStart == null || ms > bestMs || (ms === bestMs && r.recordedAt > bestStart)) {
       bestMs = ms;
       bestStart = r.recordedAt;
     }
   }
   return bestStart;
+}
+
+/** 相邻桶去重后合并（同 id 只留一条） */
+export function mergeLifeRecordsById(...groups: LifeRecord[][]): LifeRecord[] {
+  const byId = new Map<number, LifeRecord>();
+  for (const group of groups) {
+    for (const r of group) {
+      if (!byId.has(r.id)) byId.set(r.id, r);
+    }
+  }
+  return [...byId.values()];
 }
 
 function eatCourseOf(record: LifeRecord): EatCourse {

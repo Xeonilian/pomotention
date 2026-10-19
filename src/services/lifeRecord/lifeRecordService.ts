@@ -6,6 +6,27 @@ import type { DrinkKind, EatCourse, LifeRecord, Task } from "@/core/types/Task";
 import { getDayStartTimestamp } from "@/core/utils";
 import { getLifeRecordDef, getLifeRecordKind, lifeRecordPlaceholderTitle, LIFE_RECORD_DEFS, type LifeRecordKind } from "@/core/lifeRecord";
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** 用 time 的时分替换 date 的时分（编辑只动时刻、不动日期） */
+export function withTimePart(dateTs: number, timeTs: number): number {
+  const d = new Date(dateTs);
+  const t = new Date(timeTs);
+  d.setHours(t.getHours(), t.getMinutes(), 0, 0);
+  return d.getTime();
+}
+
+/**
+ * 段事件结束时刻：钟点先落到开始当天；仅当早于开始（会得到负数）才改到次日。
+ * 同一分钟保持 0，当作录入中间态；系统没有超过 24h 的段。
+ */
+export function resolveLifeSpanEndAt(recordedAt: number, timeTs: number): number {
+  if (!Number.isFinite(recordedAt) || !Number.isFinite(timeTs)) return timeTs;
+  const startMin = withTimePart(recordedAt, recordedAt);
+  let nextTs = withTimePart(recordedAt, timeTs);
+  if (nextTs < startMin) nextTs += DAY_MS;
+  return nextTs;
+}
+
 /** 一日 4 类相对基准时刻的固定偏移：drink+0 … sleep+3 */
 const KIND_ID_OFFSET = Object.fromEntries(LIFE_RECORD_DEFS.map((d, i) => [d.kind, i])) as Record<LifeRecordKind, number>;
 export type BuildLifeRecordOptions = {
@@ -126,7 +147,7 @@ export function appendLifeRecord(
   if ((kind === "sleep" || kind === "toilet") && !options?.alwaysNew) {
     for (let i = list.length - 1; i >= 0; i--) {
       if (list[i].endAt == null) {
-        const closed: LifeRecord = { ...list[i], endAt: at };
+        const closed: LifeRecord = { ...list[i], endAt: resolveLifeSpanEndAt(list[i].recordedAt, at) };
         return { next: [...list.slice(0, i), closed, ...list.slice(i + 1)], record: closed };
       }
     }

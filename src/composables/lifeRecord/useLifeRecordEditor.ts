@@ -3,20 +3,12 @@ import { computed, toValue, type MaybeRefOrGetter } from "vue";
 import type { DrinkKind, LifeRecord } from "@/core/types/Task";
 import { drinkKindOf, getLifeRecordDef, nextDrinkKind, nextEatCourse, type LifeRecordKind } from "@/core/lifeRecord";
 import { getDayStartTimestamp } from "@/core/utils";
-import { appendLifeRecord, updateLifeRecord } from "@/services/lifeRecord/lifeRecordService";
+import { appendLifeRecord, resolveLifeSpanEndAt, updateLifeRecord, withTimePart } from "@/services/lifeRecord/lifeRecordService";
 import { clampLifeScore, dropDayEnergyFromLife, lifeEnergyAt, upsertDayEnergyFromLife } from "@/services/lifeRecord/lifeEnergySync";
 import { findDayEnergyTask } from "@/services/task/dayEnergyService";
 import { useDataStore } from "@/stores/useDataStore";
 import { useDisplayedTaskStore } from "@/stores/useDisplayedTaskStore";
 import { useSettingStore } from "@/stores/useSettingStore";
-
-/** 用 time 的时分替换 date 的时分（编辑只动时刻、不动日期） */
-function withTimePart(dateTs: number, timeTs: number): number {
-  const d = new Date(dateTs);
-  const t = new Date(timeTs);
-  d.setHours(t.getHours(), t.getMinutes(), 0, 0);
-  return d.getTime();
-}
 
 export function useLifeRecordEditor(
   taskId: MaybeRefOrGetter<number>,
@@ -104,16 +96,18 @@ export function useLifeRecordEditor(
   function changeRecordedAt(record: LifeRecord, ts: number | null) {
     if (ts == null) return;
     const base = Number.isFinite(record.recordedAt) ? record.recordedAt : displayDayStart.value;
-    writeRecords(updateLifeRecord(records.value, record.id, { recordedAt: withTimePart(base, ts) }));
+    const recordedAt = withTimePart(base, ts);
+    const patch: { recordedAt: number; endAt?: number } = { recordedAt };
+    if (record.endAt != null) patch.endAt = resolveLifeSpanEndAt(recordedAt, record.endAt);
+    writeRecords(updateLifeRecord(records.value, record.id, patch));
+    if (record.energyRecordId != null) {
+      syncLinkedEnergy({ ...record, ...patch }, record.energy);
+    }
   }
   function changeEndAt(record: LifeRecord, ts: number | null) {
-    if (ts == null) {
-      writeRecords(updateLifeRecord(records.value, record.id, { endAt: undefined }));
-      return;
-    }
-    const base = record.endAt ?? record.recordedAt;
-    let nextTs = withTimePart(base, ts);
-    if (nextTs <= record.recordedAt) nextTs += 86400000;
+    // 时间选择器偶发 null：不当成清空，否则会丢掉已有结束、表上没有 duration
+    if (ts == null) return;
+    const nextTs = resolveLifeSpanEndAt(record.recordedAt, ts);
     writeRecords(updateLifeRecord(records.value, record.id, { endAt: nextTs }));
     if (record.energyRecordId != null) {
       syncLinkedEnergy({ ...record, endAt: nextTs }, record.energy);

@@ -118,6 +118,7 @@ import type { LifeRecord } from "@/core/types/Task";
 import {
   activityBarScaleMs,
   clipDaySpans,
+  mergeLifeRecordsById,
   eatEventsChronological,
   EMPTY_MONTH_LIFE_BARS,
   longestSleepStartOnDay,
@@ -380,12 +381,13 @@ const days = computed(() => {
   const lifeRaws = result.map((d) => {
     if (!d.isCurrentMonth) return null;
     const eatEvents = eatEventsChronological(recordsOf("eat", d.startTs));
-    const sleepDayRecords = recordsOf("sleep", d.startTs);
-    const sleepSpans = [
-      ...clipDaySpans(sleepDayRecords, d.startTs, d.endTs, now),
-      ...clipDaySpans(recordsOf("sleep", d.startTs - DAY_MS), d.startTs, d.endTs, now),
-    ];
-    const sleepBedStartAt = longestSleepStartOnDay(sleepDayRecords, d.startTs, d.endTs, now);
+    const sleepNearby = mergeLifeRecordsById(
+      recordsOf("sleep", d.startTs - DAY_MS),
+      recordsOf("sleep", d.startTs),
+      recordsOf("sleep", d.startTs + DAY_MS),
+    );
+    const sleepSpans = clipDaySpans(sleepNearby, d.startTs, d.endTs, now);
+    const sleepBedStartAt = longestSleepStartOnDay(sleepNearby, d.startTs, d.endTs, now);
     const actSpans = clipDaySpans(recordsOf("toilet", d.startTs), d.startTs, d.endTs, now);
     const cupFallback = settingStore.settings.drinkCupMl;
     const drinkAmounts = recordsOf("drink", d.startTs).map((r) => {
