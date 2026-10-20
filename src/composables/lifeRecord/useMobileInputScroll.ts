@@ -99,12 +99,30 @@ function clearPad(scroller: HTMLElement | null) {
   scroller.style.paddingBottom = "";
 }
 
-export function useMobileInputScroll(rootRef: Ref<HTMLElement | null>) {
+export function useMobileInputScroll(rootRef: Ref<HTMLElement | null>, onEditing?: (active: boolean) => void) {
   const { isMobile } = useDevice();
   let focused: HTMLElement | null = null;
   let timers: number[] = [];
   let blurTimer = 0;
   let imeObserver: MutationObserver | null = null;
+  let editing = false;
+
+  function setEditing(active: boolean) {
+    if (editing === active) return;
+    editing = active;
+    onEditing?.(active);
+  }
+
+  function isSheetField(el: EventTarget | null): el is HTMLElement {
+    return isTimePickerField(el) || isTextField(el);
+  }
+
+  function stillEditing(root: HTMLElement | null): boolean {
+    const ae = document.activeElement;
+    if (root && isSheetField(ae) && root.contains(ae)) return true;
+    if (ae instanceof HTMLElement && ae.closest(".n-time-picker-panel, .n-input-number")) return true;
+    return false;
+  }
 
   function clearTimers() {
     for (const t of timers) window.clearTimeout(t);
@@ -131,9 +149,10 @@ export function useMobileInputScroll(rootRef: Ref<HTMLElement | null>) {
 
   function onFocusIn(e: FocusEvent) {
     if (!isMobile.value) return;
-    if (isTimePickerField(e.target)) return;
-    if (!isTextField(e.target)) return;
+    if (!isSheetField(e.target)) return;
     window.clearTimeout(blurTimer);
+    setEditing(true);
+    if (isTimePickerField(e.target)) return;
     focused = e.target;
     schedule(focused);
   }
@@ -142,11 +161,12 @@ export function useMobileInputScroll(rootRef: Ref<HTMLElement | null>) {
     window.clearTimeout(blurTimer);
     blurTimer = window.setTimeout(() => {
       const root = rootRef.value;
-      if (root && isTextField(document.activeElement) && root.contains(document.activeElement)) return;
+      if (stillEditing(root)) return;
       focused = null;
+      setEditing(false);
       clearTimers();
       clearPad(scrollerOf(root));
-    }, 0);
+    }, 50);
   }
 
   function onVvChange() {
@@ -161,6 +181,7 @@ export function useMobileInputScroll(rootRef: Ref<HTMLElement | null>) {
     prev?.removeEventListener("focusin", onFocusIn);
     prev?.removeEventListener("focusout", onFocusOut);
     window.visualViewport?.removeEventListener("resize", onVvChange);
+    window.visualViewport?.removeEventListener("scroll", onVvChange);
     imeObserver?.disconnect();
     imeObserver = null;
     if (!root) return;
@@ -172,6 +193,7 @@ export function useMobileInputScroll(rootRef: Ref<HTMLElement | null>) {
     root.addEventListener("focusin", onFocusIn);
     root.addEventListener("focusout", onFocusOut);
     window.visualViewport?.addEventListener("resize", onVvChange);
+    window.visualViewport?.addEventListener("scroll", onVvChange);
   }
 
   watch(rootRef, (el, prev) => bind(el, prev ?? null), { immediate: true });
@@ -179,6 +201,7 @@ export function useMobileInputScroll(rootRef: Ref<HTMLElement | null>) {
   onUnmounted(() => {
     clearTimers();
     window.clearTimeout(blurTimer);
+    setEditing(false);
     bind(null, rootRef.value);
     clearPad(scrollerOf(rootRef.value));
   });

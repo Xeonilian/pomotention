@@ -113,7 +113,7 @@
         </div>
         <!-- 任务视图调整大小手柄 -->
         <div
-          v-if="taskPanelLayoutVisible && settingStore.settings.showPlanner && !mobileLifeRecordOpen && !daySheetHidesPlanner"
+          v-if="taskPanelLayoutVisible && settingStore.settings.showPlanner && !mobileLifeRecordOpen && !daySheetHidesPlanner && !sheetInputActive"
           class="resize-handle"
           style="touch-action: none"
           @pointerdown="startVerticalResize"
@@ -133,6 +133,7 @@
               :task-ids="daySheetTaskIds"
               :initial-view="daySheetInitialView"
               @close="lifePlannerLayerStore.closeDaySheet"
+              @input-active="onSheetInputActive"
             />
             <TaskTracker v-else ref="taskTrackerRef" @task-record-editing="setTaskRecordEditing" />
           </div>
@@ -279,6 +280,11 @@ const popoverMessage = ref("");
 const taskRecordEditing = ref(false);
 /** 日待办行内编辑（移动）：临时收起下方 Task 区，不改变 showTask 设置 */
 const mobileDayTodoInlineEditing = ref(false);
+/** 生活 sheet 里输入聚焦：临时收起 middle-top，失焦恢复；不改 showPlanner */
+const sheetInputActive = ref(false);
+function onSheetInputActive(active: boolean) {
+  sheetInputActive.value = active;
+}
 /** 手机日视图打开生活记录（喝/吃/厕/睡）：临时藏 planner，关闭选中后恢复；不改 showPlanner 设置 */
 const mobileLifeRecordOpen = computed(() => {
   if (!isMobile.value) return false;
@@ -289,7 +295,9 @@ const mobileLifeRecordOpen = computed(() => {
 });
 /** 系统键盘与 vv 连续变化时关掉 height/max-height 过渡，避免目标高度每帧变化导致跳动 */
 const suppressMobilePlannerMotion = computed(
-  () => isMobile.value && (mobileDayTodoInlineEditing.value || mobileLifeRecordOpen.value || isKeyboardOverlapApprox.value),
+  () =>
+    isMobile.value &&
+    (mobileDayTodoInlineEditing.value || mobileLifeRecordOpen.value || isKeyboardOverlapApprox.value || sheetInputActive.value),
 );
 const showStateLogModal = ref(false);
 let unregisterPlannerCommandApi: (() => void) | null = null;
@@ -414,6 +422,10 @@ const daySheetInitialView = computed(() => {
 
 const timetableLayoutVisible = computed(() => settingStore.settings.showTimetable && !mobilePreviewSolo.value);
 const taskAreaVisible = computed(() => daySheetActive.value || (settingStore.settings.showTask && !mobilePreviewSolo.value));
+
+watch(daySheetActive, (active) => {
+  if (!active) sheetInputActive.value = false;
+});
 
 watch(
   () => settingStore.settings.viewSet,
@@ -1632,6 +1644,9 @@ const effectiveMiddleTopHeightPx = computed(() => {
 /** 计划表顶区行内样式：分屏与「收起任务」两端尽量共用 plannerMiddleAvailPx，便于 height transition 对齐 */
 const middleTopPlannerStyle = computed(() => {
   if (!settingStore.settings.showPlanner) return {};
+  if (sheetInputActive.value) {
+    return { height: "0px", minHeight: "0px", overflow: "hidden", padding: "0px" };
+  }
   if (taskPanelLayoutVisible.value) {
     return { height: `${effectiveMiddleTopHeightPx.value}px` };
   }

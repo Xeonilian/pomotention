@@ -55,10 +55,10 @@ const props = withDefaults(
   }>(),
   { initialView: "chart" },
 );
-const emit = defineEmits<{ close: []; "view-change": [view: "chart" | "table"] }>();
+const emit = defineEmits<{ close: []; "view-change": [view: "chart" | "table"]; "input-active": [active: boolean] }>();
 const { isMobile } = useDevice();
 const sheetRef = ref<HTMLElement | null>(null);
-useMobileInputScroll(sheetRef);
+useMobileInputScroll(sheetRef, (active) => emit("input-active", active));
 const view = ref<"chart" | "table">(props.initialView);
 watch(view, (v) => emit("view-change", v), { immediate: true });
 function toggleView() {

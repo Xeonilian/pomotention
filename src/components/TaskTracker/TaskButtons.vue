@@ -187,8 +187,6 @@ const displayStore = useDisplayedTaskStore();
 const settingStore = useSettingStore();
 const { isMobile } = useDevice();
 
-const fullscreenContainerRef = inject<{ value: HTMLElement | null }>("taskTrackerFullscreenContainerRef", { value: null });
-const isTaskTrackerFullscreen = inject<{ value: boolean }>("isTaskTrackerFullscreen", { value: false });
 const startTaskRecordEditing = inject<() => boolean>("taskTrackerStartRecordEditing", () => false);
 
 const props = defineProps<{
@@ -367,10 +365,7 @@ function starTrack() {
 }
 
 const showTagManager = ref(false);
-const tagManagerModalTo = computed<string | HTMLElement>(() => {
-  if (!isTaskTrackerFullscreen.value) return "body";
-  return fullscreenContainerRef.value ?? "body";
-});
+const tagManagerModalTo = "body";
 
 const tagIdsProxy = computed({
   get: () => tagEditor.tempTagIds.value,
