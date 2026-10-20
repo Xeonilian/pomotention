@@ -135,8 +135,7 @@ function pushSleepClip(
   if (!dayClip) return;
   const viewClip = clampRange(dayClip.start, dayClip.end, timeRange.start, timeRange.end);
   if (!viewClip) return;
-  const wakeAt =
-    record.endAt != null && record.endAt >= viewClip.start && record.endAt <= viewClip.end ? record.endAt : undefined;
+  const wakeAt = record.endAt != null && record.endAt >= viewClip.start && record.endAt <= viewClip.end ? record.endAt : undefined;
   sleeps.push({
     recordId: record.id,
     taskId,

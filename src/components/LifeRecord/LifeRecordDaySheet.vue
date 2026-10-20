@@ -5,19 +5,9 @@
   各面板按 kind 自己的当天桶 taskId 渲染，互不依赖全局选中。
 -->
 <template>
-  <div
-    ref="sheetRef"
-    class="life-day-sheet"
-    :class="{ 'life-day-sheet--mobile': isMobile, 'life-day-sheet--table': view === 'table' }"
-  >
+  <div ref="sheetRef" class="life-day-sheet" :class="{ 'life-day-sheet--mobile': isMobile, 'life-day-sheet--table': view === 'table' }">
     <div class="life-day-sheet__bar">
-      <n-button
-        text
-        size="small"
-        class="life-day-sheet__icon"
-        :title="view === 'table' ? '显示图' : '显示表格'"
-        @click="toggleView"
-      >
+      <n-button text size="small" class="life-day-sheet__icon" :title="view === 'table' ? '显示图' : '显示表格'" @click="toggleView">
         <template #icon>
           <n-icon :size="18">
             <component :is="view === 'table' ? DataPie20Regular : TableSimple20Regular" />
@@ -124,6 +114,7 @@ function toggleView() {
   min-width: 0;
 }
 .life-day-sheet--mobile .life-day-sheet__grid {
+  --lr-sheet-compact-stack-gap: 20px;
   display: flex;
   flex-direction: column;
   grid-template-rows: none;
@@ -131,12 +122,16 @@ function toggleView() {
   overflow-y: auto;
   scrollbar-gutter: stable both-edges;
   -webkit-overflow-scrolling: touch;
-  gap: 8px;
+  gap: 4px;
 }
 .life-day-sheet--mobile .life-day-sheet__cell {
   flex: 0 0 auto;
   height: auto;
   max-height: none;
   overflow: visible;
+}
+/* 无圆圈的吃/活动/睡：格距单独加一截，不影响圆圈到苹果 */
+.life-day-sheet--mobile .life-day-sheet__cell:nth-child(n + 3) {
+  margin-top: var(--lr-sheet-compact-stack-gap);
 }
 </style>

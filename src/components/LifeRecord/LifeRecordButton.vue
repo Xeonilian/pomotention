@@ -38,9 +38,11 @@ import { NButton, NIcon } from "naive-ui";
 import { AppsAddIn20Regular, Apps20Regular, Apps20Filled, ChannelAdd20Regular } from "@vicons/fluent";
 import type { LifeRecordKind } from "@/core/lifeRecord";
 import { useSettingStore } from "@/stores/useSettingStore";
+import { useDataStore } from "@/stores/useDataStore";
 import { useLifePlannerLayerStore } from "@/stores/useLifePlannerLayerStore";
 
 const settingStore = useSettingStore();
+const dataStore = useDataStore();
 const layerStore = useLifePlannerLayerStore();
 
 const isDayView = computed(() => settingStore.settings.viewSet === "day");
@@ -51,6 +53,8 @@ const emit = defineEmits<{ recorded: [kind: LifeRecordKind] }>();
 function onOpenDaySheet() {
   // 集中 sheet 即 task 区内容，确保 task 区可见
   settingStore.settings.showTask = true;
+  // 选中普通待办/日程时 sheet 会让位给任务预览；按钮进 sheet 需先清行选中
+  dataStore.selectedRowId = null;
   layerStore.openDaySheet();
   emit("recorded", "drink");
 }

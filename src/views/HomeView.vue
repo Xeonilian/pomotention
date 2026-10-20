@@ -133,7 +133,6 @@
               :task-ids="daySheetTaskIds"
               :initial-view="daySheetInitialView"
               @close="lifePlannerLayerStore.closeDaySheet"
-              @view-change="daySheetView = $event"
             />
             <TaskTracker v-else ref="taskTrackerRef" @task-record-editing="setTaskRecordEditing" />
           </div>
@@ -384,9 +383,23 @@ const { lifeView: lifePlannerLifeView, daySheetOpen, daySheetTaskIds, mobilePrev
 
 const isViewDateToday = computed(() => dateService.isViewDateToday);
 
-/** 生活整合 sheet 激活 */
-const daySheetActive = computed(() => daySheetOpen.value);
-const daySheetView = ref<"chart" | "table">("chart");
+/** 选中的是普通 planner 行（非生活记录），task 区应切任务预览 */
+const hasPlannerRowSelected = computed(() => {
+  const id = selectedRowId.value;
+  if (id == null) return false;
+  const todo = todoById.value.get(id);
+  if (todo && !todo.deleted) {
+    if (getLifeRecordKind(activityById.value.get(todo.activityId)) == null) return true;
+  }
+  const schedule = scheduleById.value.get(id);
+  if (schedule && !schedule.deleted) {
+    if (getLifeRecordKind(activityById.value.get(schedule.activityId)) == null) return true;
+  }
+  return false;
+});
+
+/** 生活整合 sheet 激活：有普通待办/日程选中时让位给 TaskTracker */
+const daySheetActive = computed(() => daySheetOpen.value && !hasPlannerRowSelected.value);
 /** 日视图 sheet 只占 task 区（今日图 / 过往表），不藏 planner；周月点进仍占满 middle */
 const daySheetHidesPlanner = computed(() => {
   if (!daySheetActive.value) return false;
@@ -404,9 +417,21 @@ const taskAreaVisible = computed(() => daySheetActive.value || (settingStore.set
 
 watch(
   () => settingStore.settings.viewSet,
-  (view) => {
+  (view, prev) => {
     lifePlannerLayerStore.onViewSetChange(view);
+    if (!isMobile.value) return;
+    // 手机日布局默认打开 sheet；离开日视图不要把 sheet 带到周/月
+    if (view === "day") lifePlannerLayerStore.openDaySheet();
+    else if (prev === "day") lifePlannerLayerStore.closeDaySheet();
   },
+);
+
+watch(
+  () => isMobile.value && settingStore.settings.viewSet === "day",
+  (mobileDay) => {
+    if (mobileDay) lifePlannerLayerStore.openDaySheet();
+  },
+  { immediate: true },
 );
 function toggleMonthShowStatsOnly() {
   monthShowStatsOnly.value = !monthShowStatsOnly.value;
@@ -1598,23 +1623,10 @@ const effectiveMiddleTopHeightPx = computed(() => {
   const minTask = 100;
   const maxTop = Math.max(120, avail - minTask);
   if (!isMobile.value) {
-    let top = topHeight.value + minTask > avail ? Math.min(topHeight.value, maxTop) : topHeight.value;
-    // 桌面图态：任务区至少 450px，避免 2×2 被压扁
-    if (daySheetActive.value && daySheetView.value === "chart") {
-      const minChartTask = 450;
-      top = Math.min(top, Math.max(120, avail - minChartTask));
-    }
-    return top;
+    return topHeight.value + minTask > avail ? Math.min(topHeight.value, maxTop) : topHeight.value;
   }
   const needCap = isLandscapeViewport.value || topHeight.value + minTask > avail;
-  let top = needCap ? Math.min(topHeight.value, maxTop) : topHeight.value;
-  // 手机图态：任务区约 1.5 倍当前剩余高度（压 planner，不改设置里的 topHeight）
-  if (daySheetActive.value && daySheetView.value === "chart") {
-    const rest = Math.max(0, avail - top);
-    const wantTask = rest * 1.5;
-    top = Math.max(120, Math.min(top, avail - wantTask));
-  }
-  return top;
+  return needCap ? Math.min(topHeight.value, maxTop) : topHeight.value;
 });
 
 /** 计划表顶区行内样式：分屏与「收起任务」两端尽量共用 plannerMiddleAvailPx，便于 height transition 对齐 */

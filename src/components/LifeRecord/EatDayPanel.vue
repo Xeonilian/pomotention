@@ -45,7 +45,7 @@
           <div class="lr-chart__el eat-day-chart__feel eat-day-chart__satiety">
             <LifeRecordScorePop
               :model-value="lastRecord.satiety"
-              title="饱足"
+              title="饱足感"
               :icon="Savings20Regular"
               @update:model-value="(v) => changeSatiety(lastRecord, v)"
             />
@@ -134,7 +134,7 @@
             <td class="lr-day-table__col-score">
               <LifeRecordScorePop
                 :model-value="record.satiety"
-                title="饱足"
+                title="饱足感"
                 placement="bottom"
                 @update:model-value="(v) => changeSatiety(record, v)"
               />

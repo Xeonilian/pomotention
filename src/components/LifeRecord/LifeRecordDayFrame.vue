@@ -67,7 +67,7 @@ const { isMobile } = useDevice();
   scrollbar-gutter: stable;
 }
 .lr-day--mobile {
-  --lr-day-display: 78vw;
+  --lr-day-display: 60vw;
   height: auto;
   overflow: visible;
 }
@@ -82,9 +82,9 @@ const { isMobile } = useDevice();
   width: var(--lr-day-display);
   height: var(--lr-day-display);
 }
-/* 手机裁掉上下空白；内部仍按正方形算锚点，两行间距不变 */
+/* 手机裁掉上下空白；图标贴上沿、备注贴下沿，格距不再被正方形中心裁切开大 */
 .lr-day--mobile.lr-day--compact {
-  --lr-day-compact-h: 210px;
+  --lr-day-compact-h: calc(0.4 * var(--lr-day-display) + 56px);
 }
 .lr-day--mobile.lr-day--compact .lr-day__display {
   height: var(--lr-day-compact-h);
@@ -95,10 +95,10 @@ const { isMobile } = useDevice();
 .lr-day--mobile.lr-day--compact .lr-day__display :deep(.lr-chart) {
   position: absolute;
   left: 0;
-  top: calc(var(--lr-day-compact-h) / 2);
+  top: calc(25px - 0.28 * var(--lr-day-display));
   width: var(--lr-day-display);
   height: var(--lr-day-display);
-  transform: translateY(-50%);
+  transform: none;
   flex: none;
 }
 .lr-day--mobile .lr-day__table {

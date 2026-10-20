@@ -19,7 +19,7 @@
       ></span>
       <n-input
         :ref="setTitleInputRef"
-        :value="item.title"
+        :value="titleDraft"
         type="text"
         :readonly="isMobile && !titleEditAllowed"
         :placeholder="item.isUntaetigkeit ? '无所事事' : '任务描述'"
@@ -148,6 +148,7 @@
         placement="bottom-end"
         :teleport-disabled="true"
         :popover-style="{ '--n-space': '0px' }"
+        :panel-pointer-guard="onTagPanelPointerGuard"
         @select-tag="handleTagSelected"
         @create-tag="handleTagCreate"
       >
@@ -304,7 +305,7 @@ export const activitySectionRowInjectKey: InjectionKey<ActivitySectionRowInject>
 </script>
 
 <script setup lang="ts">
-import { computed, inject, nextTick, onMounted, onUnmounted, ref } from "vue";
+import { computed, inject, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import { NInput, NDatePicker, NIcon } from "naive-ui";
 import {
   VideoPersonCall24Regular,
@@ -358,6 +359,10 @@ const pomoInputRef = ref<InputInst | null>(null);
 const tagPickerRef = ref<InstanceType<typeof TagPickerPopover> | null>(null);
 
 const titleEditAllowed = ref(false);
+/** 与 DayTodo 相同：标题先改草稿，失焦再写 item，避免每键牵动整表 */
+const titleDraft = ref(props.item.title ?? "");
+const titleFocused = ref(false);
+const isPickingTagFromSelector = ref(false);
 
 // 触摸移动检测状态（防止拖拽时误触激活输入框）
 const titleTouchState = ref<{
@@ -414,7 +419,17 @@ onMounted(() => {
     else inst.inputElRef?.blur?.();
   });
 });
-onUnmounted(() => unregisterTitleBlur?.());
+onUnmounted(() => {
+  unregisterTitleBlur?.();
+  commitTitleDraft();
+});
+
+watch(
+  () => props.item.title,
+  (t) => {
+    if (!titleFocused.value) titleDraft.value = t ?? "";
+  },
+);
 
 function focusTitleInput() {
   nextTick(() => {
@@ -439,8 +454,18 @@ function focusTitleInput() {
 }
 
 function onTitleValueUpdate(v: string) {
-  props.item.title = v;
+  titleDraft.value = v;
   tagEditor.handleTitleInput(props.item.id, String(v ?? ""));
+}
+
+function commitTitleDraft() {
+  if ((titleDraft.value.includes("#") || titleDraft.value.includes("@")) && tagEditor.popoverTargetId.value === props.item.id) {
+    titleDraft.value = tagEditor.clearTagTriggerText(titleDraft.value);
+    tagEditor.closePopover();
+  }
+  const next = titleDraft.value;
+  if (next === (props.item.title ?? "")) return;
+  props.item.title = next;
   props.item.synced = false;
   props.item.lastModified = Date.now();
 }
@@ -455,6 +480,8 @@ function handleTitleInputFocus() {
     });
     return;
   }
+  titleDraft.value = props.item.title ?? "";
+  titleFocused.value = true;
   notifyRowFocused(props.item.id);
   if (isMobile.value && titleEditAllowed.value) {
     ctx.scrollTitleRowIntoView(props.item.id);
@@ -462,8 +489,19 @@ function handleTitleInputFocus() {
 }
 
 function handleTitleBlur() {
+  if (isPickingTagFromSelector.value) {
+    isPickingTagFromSelector.value = false;
+    nextTick(() => focusTitleInput());
+    return;
+  }
+  titleFocused.value = false;
+  commitTitleDraft();
   if (isMobile.value) titleEditAllowed.value = false;
   onSectionFieldBlur();
+}
+
+function onTagPanelPointerGuard() {
+  isPickingTagFromSelector.value = true;
 }
 
 function handleTitleTouchStart(e: TouchEvent) {
@@ -568,17 +606,18 @@ function handleTagIconClick() {
 }
 
 function handleTagSelected(tagId: number) {
-  const cleanedTitle = tagEditor.selectTagFromPopover(props.item.id, tagId, props.item.title);
-  props.item.title = cleanedTitle;
-  props.item.synced = false;
-  props.item.lastModified = Date.now();
+  titleDraft.value = tagEditor.selectTagFromPopover(props.item.id, tagId, titleDraft.value);
+  isPickingTagFromSelector.value = false;
+  // Activity 没有「编辑中」外观，选 tag 当作一次保存，避免用户不点别处就离开
+  commitTitleDraft();
+  nextTick(() => focusTitleInput());
 }
 
 function handleTagCreate(tagName: string) {
-  const cleanedTitle = tagEditor.createTagFromPopover(props.item.id, tagName, props.item.title);
-  props.item.title = cleanedTitle;
-  props.item.synced = false;
-  props.item.lastModified = Date.now();
+  titleDraft.value = tagEditor.createTagFromPopover(props.item.id, tagName, titleDraft.value);
+  isPickingTagFromSelector.value = false;
+  commitTitleDraft();
+  nextTick(() => focusTitleInput());
 }
 
 function handleRemoveTag(tagId: number) {
