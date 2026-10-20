@@ -7,9 +7,21 @@ export function dayEnergyPlaceholderTitle(dayStartTs: number): string {
   return dailyPlaceholderTitle("energy", dayStartTs);
 }
 
+export function isDayEnergyActivityTitle(title?: string | null): boolean {
+  if (!title) return false;
+  return title === "day_energy" || /^(?:daily_)?energy_\d+$/.test(title);
+}
+
+/** 日键在标题里；旧 day_energy 没有数字，退回 sourceId */
+export function dayEnergyDayOf(task: Pick<Task, "activityTitle" | "sourceId">): number | null {
+  const title = task.activityTitle ?? "";
+  const matched = /^(?:daily_)?energy_(\d+)$/.exec(title);
+  if (matched) return Number(matched[1]);
+  if (title === "day_energy" && Number.isFinite(task.sourceId)) return task.sourceId;
+  return null;
+}
+
 export function isDayEnergyTask(task: Pick<Task, "activityTitle" | "deleted"> | null | undefined): boolean {
   if (!task || task.deleted) return false;
-  const t = task.activityTitle ?? "";
-  // 新格式 + 旧 day_energy / energy_<ts>
-  return t === "day_energy" || /^energy_\d+$/.test(t) || /^daily_energy_\d+$/.test(t);
+  return isDayEnergyActivityTitle(task.activityTitle);
 }

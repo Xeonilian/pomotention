@@ -37,7 +37,7 @@ import {
   findLifeRecordTodoForDay,
   removeLifeRecord,
 } from "@/services/lifeRecord/lifeRecordService";
-import { buildDayEnergyTask, findDayEnergyTask } from "@/services/task/dayEnergyService";
+import { buildDayEnergyTask, findDayEnergyTask, reconcileDayEnergyTasks } from "@/services/task/dayEnergyService";
 import { handleDeleteActivity } from "@/services/activity/activityService";
 import { useTagStore } from "./useTagStore";
 import { useTemplateStore } from "./useTemplateStore";
@@ -106,6 +106,14 @@ export const useDataStore = defineStore(
       scheduleList.value = loadSchedules();
       taskList.value = loadTasks();
       ledgerList.value = loadLedgerEntries();
+      // 旧桶 sourceId 是日键、没有活动，上传会被外键丢掉；补上活动后下次同步能把未同步标记清掉
+      const healed = reconcileDayEnergyTasks(taskList.value, activityList.value);
+      if (healed.created.length) activityList.value.push(...healed.created);
+      if (healed.changed) {
+        saveActivities(activityList.value);
+        saveTasks(taskList.value);
+        scheduleDebouncedCloudUpload();
+      }
 
       isDataLoaded.value = true;
     }
@@ -725,15 +733,20 @@ export const useDataStore = defineStore(
     }
 
     /**
-     * 查或建当日 day_energy 宿主（无 activity/todo，仅 energy 桶）
+     * 查或建当日精力桶。task 挂到隐藏 activity 上，未同步标记才能被上传清掉。
      */
     function ensureDayEnergyTask(dayStartTs: number): Task {
-      const existing = findDayEnergyTask(dayStartTs, taskList.value);
-      if (existing) return existing;
-      const task = buildDayEnergyTask(dayStartTs);
-      taskList.value = [...taskList.value, task];
-      saveTasks(taskList.value);
-      return task;
+      if (!findDayEnergyTask(dayStartTs, taskList.value)) {
+        taskList.value = [...taskList.value, buildDayEnergyTask(dayStartTs)];
+      }
+      const healed = reconcileDayEnergyTasks(taskList.value, activityList.value);
+      if (healed.created.length) activityList.value.push(...healed.created);
+      if (healed.changed) {
+        saveActivities(activityList.value);
+        saveTasks(taskList.value);
+        scheduleDebouncedCloudUpload();
+      }
+      return findDayEnergyTask(dayStartTs, taskList.value)!;
     }
 
     /** Pinia 可能把 appDateTimestamp 拆成 number，不能无脑 .value */

@@ -55,7 +55,13 @@ export type AppendLifeRecordOptions = {
   /** 只新增一行，不把未闭合段写成结束时间 */
   alwaysNew?: boolean;
 };
-/** 当前显示日该 kind 是否已有记录行（todo.id 决定归属日，与 todosForAppDate 同规则） */
+/**
+ * 当天该 kind 的隐藏待办。
+ * 日视图不画「喝水 / 睡觉」行（useDataStore 里 isLifeRecordActivity 已滤掉）。
+ * 待办还在，是因为这里和 lifeRecordOverlays 仍用 todo.id 落在哪一天来找记录。
+ * 日子已经在标题 daily_<kind>_<日零点> 里，精力桶就是按标题找、没有待办。
+ * 下次若去掉生活记录待办：这些查找改成按标题取日，不要再从计划表行反推。
+ */
 export function findLifeRecordTodoForDay(
   todoList: Todo[],
   activityById: Map<number, Activity>,
