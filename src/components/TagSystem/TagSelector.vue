@@ -26,9 +26,9 @@
       <span>"{{ searchTerm.trim() }}"</span>
     </div>
 
-    <!-- 无匹配且不允许创建时的提示 -->
-    <div v-if="searchTerm.trim() && filteredTags.length === 0 && (!allowCreate || !searchTerm.trim() || tagExists)" class="no-results">
-      无标签
+    <!-- 除去系统 tag 后列表为空：撑开一行，提示怎么建自定义 tag -->
+    <div v-if="showEmptyHint" class="tag-option no-results">
+      {{ emptyHintText }}
     </div>
   </div>
 </template>
@@ -36,6 +36,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from "vue";
 import { useTagStore, type TagWithCount } from "@/stores/useTagStore";
+import { TAG_IDS_HIDDEN_IN_TAG_RENDERER } from "@/core/constants";
 import { NIcon } from "naive-ui";
 import { Add20Filled } from "@vicons/fluent";
 
@@ -61,6 +62,7 @@ const emit = defineEmits<{
 // --- State ---
 const tagStore = useTagStore();
 const highlightedIndex = ref(0); // 追踪高亮项的索引
+const HIDDEN_SYSTEM_TAG_IDS = new Set(TAG_IDS_HIDDEN_IN_TAG_RENDERER);
 
 // --- Computed ---
 const filteredTags = computed<TagWithCount[]>(() => {
@@ -84,19 +86,34 @@ const filteredTags = computed<TagWithCount[]>(() => {
     return a.name.localeCompare(b.name);
   };
 
+  // 系统 tag（四象限 / 收支 / 生活记录）不进选择器
+  const hideSystem = (tags: TagWithCount[]) => tags.filter((t) => !HIDDEN_SYSTEM_TAG_IDS.has(t.id));
+
   if (!searchTerm || searchTerm === "#" || searchTerm === "@") {
-    const all = [...tagStore.allTags];
+    const all = hideSystem([...tagStore.allTags]);
     const sorted = all.sort((a, b) => sortByUsageAndCount(a, b, false));
     return props.rankTags ? props.rankTags(sorted) : sorted;
   }
 
-  const found = [...tagStore.findByName(props.searchTerm)];
+  const found = hideSystem([...tagStore.findByName(props.searchTerm)]);
   const sorted = found.sort((a, b) => sortByUsageAndCount(a, b, true));
   return props.rankTags ? props.rankTags(sorted) : sorted;
 });
 
 const tagExists = computed(() => {
-  return filteredTags.value.some((t) => t.name.toLowerCase() === props.searchTerm.trim().toLowerCase());
+  const needle = props.searchTerm.trim().toLowerCase();
+  if (!needle) return false;
+  // 用全量名单：隐藏的生活 tag 仍算已存在，避免再建同名「吃饭」
+  return tagStore.allTags.some((t) => t.name.toLowerCase() === needle);
+});
+
+const showingCreate = computed(() => props.allowCreate && !!props.searchTerm.trim() && !tagExists.value);
+
+const showEmptyHint = computed(() => filteredTags.value.length === 0 && !showingCreate.value);
+
+const emptyHintText = computed(() => {
+  if (props.allowCreate && !props.searchTerm.trim()) return "输入自定义tag，回车";
+  return "无标签";
 });
 
 // 计算选项总数，包括“创建”选项
@@ -233,9 +250,11 @@ defineExpose({
 }
 
 .no-results {
-  padding: 12px;
-  text-align: center;
+  min-height: 22px;
+  justify-content: center;
+  cursor: default;
   color: var(--n-text-color-disabled);
+  font-weight: normal;
 }
 
 .tag-option.highlighted {
