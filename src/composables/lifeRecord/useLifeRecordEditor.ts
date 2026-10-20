@@ -1,8 +1,8 @@
 // 生活记录日表/窄槽共用：打点时刻、追加行、段事件开闭、时间列编辑
-import { computed, toValue, type MaybeRefOrGetter } from "vue";
+import { computed, onUnmounted, ref, toValue, type MaybeRefOrGetter } from "vue";
 import type { DrinkKind, LifeRecord } from "@/core/types/Task";
 import { drinkKindOf, getLifeRecordDef, nextDrinkKind, nextEatCourse, type LifeRecordKind } from "@/core/lifeRecord";
-import { getDayStartTimestamp } from "@/core/utils";
+import { debounce, getDayStartTimestamp } from "@/core/utils";
 import { appendLifeRecord, resolveLifeSpanEndAt, updateLifeRecord, withTimePart } from "@/services/lifeRecord/lifeRecordService";
 import { clampLifeScore, dropDayEnergyFromLife, lifeEnergyAt, upsertDayEnergyFromLife } from "@/services/lifeRecord/lifeEnergySync";
 import { findDayEnergyTask } from "@/services/task/dayEnergyService";
@@ -22,9 +22,19 @@ export function useLifeRecordEditor(
   const recordKind = computed(() => toValue(kind));
   const embedded = computed(() => toValue(options?.embedded ?? false));
   const task = computed(() => dataStore.taskList.find((t) => t.id === id.value) ?? null);
-  const records = computed<LifeRecord[]>(() =>
-    [...(task.value?.lifeRecords ?? [])].sort((a, b) => a.recordedAt - b.recordedAt),
-  );
+  /** 备注草稿：画面马上跟上，停笔后再写库 */
+  const descDrafts = new Map<number, { taskId: number; text: string; dayStart: number }>();
+  const descDraftTick = ref(0);
+  const records = computed<LifeRecord[]>(() => {
+    descDraftTick.value;
+    const list = [...(task.value?.lifeRecords ?? [])].sort((a, b) => a.recordedAt - b.recordedAt);
+    if (descDrafts.size === 0) return list;
+    const taskId = id.value;
+    return list.map((r) => {
+      const d = descDrafts.get(r.id);
+      return d != null && d.taskId === taskId ? { ...r, description: d.text } : r;
+    });
+  });
   const def = computed(() => getLifeRecordDef(recordKind.value));
   const hasOpenSpan = computed(
     () => (recordKind.value === "sleep" || recordKind.value === "toilet") && records.value.some((r) => r.endAt == null),
@@ -43,9 +53,37 @@ export function useLifeRecordEditor(
     return dataStore.todoByActivityId.get(t.sourceId)?.id ?? fallback();
   });
   const displayDayStart = computed(() => getDayStartTimestamp(rowDayAnchor.value));
+  function persistDescDrafts() {
+    if (descDrafts.size === 0) return;
+    const pending = [...descDrafts.entries()];
+    descDrafts.clear();
+    descDraftTick.value++;
+    for (const [recordId, { taskId, text, dayStart }] of pending) {
+      const list = dataStore.taskList.find((t) => t.id === taskId)?.lifeRecords ?? [];
+      const next = updateLifeRecord(list, recordId, { description: text });
+      if (!next) continue;
+      dataStore.updateTaskById(taskId, { lifeRecords: next });
+      const rec = next.find((r) => r.id === recordId);
+      if (rec?.energyRecordId != null) {
+        syncLinkedEnergy({ ...rec, description: text }, rec.energy, dayStart);
+      }
+    }
+  }
+  const flushDescDrafts = debounce(persistDescDrafts, 400);
   function writeRecords(next: LifeRecord[] | null) {
     if (!next) return;
-    dataStore.updateTaskById(id.value, { lifeRecords: next });
+    let merged = next;
+    if (descDrafts.size > 0) {
+      const taskId = id.value;
+      for (const [recordId, d] of [...descDrafts]) {
+        if (d.taskId !== taskId) continue;
+        merged = updateLifeRecord(merged, recordId, { description: d.text }) ?? merged;
+        descDrafts.delete(recordId);
+      }
+      if (descDrafts.size === 0) flushDescDrafts.cancel();
+      descDraftTick.value++;
+    }
+    dataStore.updateTaskById(id.value, { lifeRecords: merged });
   }
   /** + / 表头打点：当前时分落在显示日（四表一致） */
   function stampNow(): number {
@@ -118,10 +156,9 @@ export function useLifeRecordEditor(
     else changeRecordedAt(record, ts);
   }
   function changeDescription(record: LifeRecord, text: string) {
-    writeRecords(updateLifeRecord(records.value, record.id, { description: text }));
-    if (record.energyRecordId != null) {
-      syncLinkedEnergy({ ...record, description: text }, record.energy);
-    }
+    descDrafts.set(record.id, { taskId: id.value, text, dayStart: displayDayStart.value });
+    descDraftTick.value++;
+    flushDescDrafts();
   }
   function changeEatFeel(record: LifeRecord, field: "hunger" | "satiety", value: number | null) {
     if (value == null) {
@@ -146,9 +183,9 @@ export function useLifeRecordEditor(
   function hostEnergyTask() {
     return dataStore.ensureDayEnergyTask(displayDayStart.value);
   }
-  function syncLinkedEnergy(record: LifeRecord, value: number | undefined) {
+  function syncLinkedEnergy(record: LifeRecord, value: number | undefined, dayStart = displayDayStart.value) {
     if (value == null || record.energyRecordId == null) return;
-    const host = findDayEnergyTask(displayDayStart.value, dataStore.taskList);
+    const host = findDayEnergyTask(dayStart, dataStore.taskList);
     if (!host) return;
     const { next } = upsertDayEnergyFromLife(host.energyRecords, record, value, lifeEnergyAt(record));
     dataStore.updateTaskById(host.id, { energyRecords: next });
@@ -180,16 +217,22 @@ export function useLifeRecordEditor(
     if (next) dataStore.updateTaskById(host.id, { energyRecords: next });
   }
   function remove(record: LifeRecord) {
+    descDrafts.delete(record.id);
     unlinkEnergy(record);
     dataStore.removeLifeRecordAt(id.value, record.id, { keepEmptyBucket: embedded.value });
   }
   function discard() {
+    descDrafts.clear();
+    flushDescDrafts.cancel();
     dataStore.discardLifeRecordTask(id.value);
   }
   function deselect() {
     dataStore.cleanSelection();
     displayStore.snapToEmptySlot();
   }
+  onUnmounted(() => {
+    flushDescDrafts.flush();
+  });
   return {
     task,
     records,

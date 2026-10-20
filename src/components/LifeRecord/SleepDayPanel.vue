@@ -214,8 +214,6 @@ import {
   WeatherMoon20Filled,
 } from "@vicons/fluent";
 import type { LifeRecord } from "@/core/types/Task";
-import { updateLifeRecord } from "@/services/lifeRecord/lifeRecordService";
-import { useDataStore } from "@/stores/useDataStore";
 import { useLifeRecordEditor } from "@/composables/lifeRecord/useLifeRecordEditor";
 import LifeRecordChartNoteBar from "@/components/LifeRecord/LifeRecordChartNoteBar.vue";
 import LifeRecordScorePop from "@/components/LifeRecord/LifeRecordScorePop.vue";
@@ -223,7 +221,6 @@ import LifeRecordDayFrame from "@/components/LifeRecord/LifeRecordDayFrame.vue";
 const props = withDefaults(defineProps<{ taskId: number; embedded?: boolean; view?: "chart" | "table" }>(), {
   view: "chart",
 });
-const dataStore = useDataStore();
 const {
   task,
   records,
@@ -280,10 +277,6 @@ function onNoteBarInput(v: string) {
   const last = lastRecord.value;
   if (last) changeDescription(last, v);
 }
-function writeRecords(next: LifeRecord[] | null) {
-  if (!next) return;
-  dataStore.updateTaskById(props.taskId, { lifeRecords: next });
-}
 function onActivateDream(record: LifeRecord) {
   if (dreamRecordId.value === record.id) {
     dreamRecordId.value = null;
@@ -292,10 +285,9 @@ function onActivateDream(record: LifeRecord) {
   dreamRecordId.value = record.id;
 }
 function onDreamInput(e: Event) {
-  const id = dreamRecordId.value;
-  if (id == null) return;
-  const v = (e.target as HTMLTextAreaElement).value;
-  writeRecords(updateLifeRecord(records.value, id, { description: v }));
+  const rec = dreamRecord.value;
+  if (!rec) return;
+  changeDescription(rec, (e.target as HTMLTextAreaElement).value);
 }
 function onRemove(record: LifeRecord) {
   if (dreamRecordId.value === record.id) dreamRecordId.value = null;

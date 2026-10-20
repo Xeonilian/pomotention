@@ -585,15 +585,14 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
       zIndex: range.ongoing ? 11 : 10,
       cursor: "pointer",
       borderRadius: range.ongoing ? "6px 6px 0 0" : "6px",
-      opacity: 0.55,
-      backgroundColor: "var(--color-background-dark)",
-      border: `${borderWidth}px solid var(--color-text-secondary)`,
+      backgroundColor: "rgba(190, 204, 233, 0.55)",
+      border: `${borderWidth}px solid rgba(129, 163, 238, 0.75)`,
     };
     if (range.ongoing) {
       return {
         ...base,
         borderBottom: "none",
-        backgroundImage: "linear-gradient(to bottom, var(--color-background-dark), transparent)",
+        backgroundImage: "linear-gradient(to bottom, rgba(28, 72, 168, 0.55), transparent)",
         backgroundColor: "transparent",
       };
     }

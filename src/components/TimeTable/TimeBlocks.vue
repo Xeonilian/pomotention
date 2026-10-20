@@ -235,7 +235,7 @@
     @click="handleScheduleSelect(range.id)"
   ></div>
 
-  <!-- 第四列：睡眠生活记录浅灰条；点击看该条，不进空桶 -->
+  <!-- 第四列：睡眠生活记录群青条；点击看该条，不进空桶 -->
   <div
     v-for="range in lifeSleepRanges"
     :key="`life-sleep-${range.recordId}`"
