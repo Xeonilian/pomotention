@@ -19,19 +19,30 @@ function isStandalone(): boolean {
   return !!nav.standalone || window.matchMedia("(display-mode: standalone)").matches;
 }
 
-const visible = ref(false);
+const visible = ref(isStandalone());
 const isUpdating = ref(false);
-const SPLASH_DURATION_MS = 800;
+/** 壳未就绪时的上限，避免一直挡住 */
+const SPLASH_FALLBACK_MS = 2500;
 
 let splashTimer: number | undefined;
 let onUpdating: (() => void) | undefined;
+let onShellReady: (() => void) | undefined;
+
+function hideSplash() {
+  visible.value = false;
+  if (splashTimer !== undefined) {
+    window.clearTimeout(splashTimer);
+    splashTimer = undefined;
+  }
+}
 
 onMounted(() => {
   if (!isStandalone()) return;
   visible.value = true;
-  splashTimer = window.setTimeout(() => {
-    visible.value = false;
-  }, SPLASH_DURATION_MS);
+  splashTimer = window.setTimeout(hideSplash, SPLASH_FALLBACK_MS);
+
+  onShellReady = () => hideSplash();
+  window.addEventListener("pwa-shell-ready", onShellReady);
 
   onUpdating = () => {
     isUpdating.value = true;
@@ -44,6 +55,7 @@ onMounted(() => {
 onUnmounted(() => {
   if (splashTimer !== undefined) window.clearTimeout(splashTimer);
   if (onUpdating) window.removeEventListener("pwa-updating", onUpdating);
+  if (onShellReady) window.removeEventListener("pwa-shell-ready", onShellReady);
 });
 </script>
 

@@ -67,6 +67,9 @@ onMounted(async () => {
     // 1. 初始化本地数据
     await dataStore.loadAllData();
     bootMark("app-data-loaded");
+    requestAnimationFrame(() => {
+      window.dispatchEvent(new CustomEvent("pwa-shell-ready"));
+    });
 
     // 3. 本地模式直接跳转（Auth 监听因 isSupabaseEnabled 为 false 不会挂载；登录成功后在 LoginView 补挂）
     if (settingStore.settings.localOnlyMode) {
@@ -106,6 +109,7 @@ onMounted(async () => {
     subscribeAuthStateChanges();
   } catch (error) {
     console.error("❌ 应用初始化失败:", error);
+    window.dispatchEvent(new CustomEvent("pwa-shell-ready"));
     // 初始化失败仍跳转Home，保证基础功能可用
     router.push({ name: "Home" });
   }

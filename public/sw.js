@@ -1,7 +1,8 @@
 // Service Worker 版本号：变更策略时请递增，以便激活时清掉旧缓存
 // v4: /assets/ stale-while-revalidate 弱网先出缓存
-// v6: navigate 恢复 network-first，避免旧 index.html 与新 JS 版本冲突
-const CACHE_VERSION = "v6";
+// v6: navigate 曾改回 network-first（防旧 html 配新 JS）
+// v7: 重复打开 navigate 也 SWR——有网等 html 会在开机图淡出后露出白屏
+const CACHE_VERSION = "v7";
 const CACHE_NAME = `pomotention-cache-${CACHE_VERSION}`;
 
 // 声音文件独立缓存版本：仅在声音文件本身有更新时才递增，避免每次 SW 更新都重新下载
@@ -118,20 +119,10 @@ self.addEventListener("fetch", (event) => {
 
   if (request.mode === "navigate") {
     event.respondWith(
-      fetch(request)
-        .then((response) => {
-          if (response.ok) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-          }
-          return response;
-        })
-        .catch(() =>
-          caches
-            .match(request)
-            .then((cached) => cached || caches.match("/index.html"))
-            .then((cached) => cached || new Response("", { status: 503, statusText: "Offline" })),
-        ),
+      assetsStaleWhileRevalidate(request).then((response) => {
+        if (response && response.status !== 503) return response;
+        return caches.match("/index.html").then((cached) => cached || response);
+      }),
     );
     return;
   }
