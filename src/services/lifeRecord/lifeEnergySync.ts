@@ -1,5 +1,6 @@
 // 生活条精力分 ↔ 当日 energy 桶：纯函数，不碰 store
 import type { EnergyRecord, LifeRecord } from "@/core/types/Task";
+import { getDayStartTimestamp } from "@/core/utils";
 
 export function clampLifeScore(value: number): number {
   return Math.min(10, Math.max(1, Math.round(value)));
@@ -8,6 +9,11 @@ export function clampLifeScore(value: number): number {
 /** 段事件用结束时刻；未结束用开始 */
 export function lifeEnergyAt(record: Pick<LifeRecord, "recordedAt" | "endAt">): number {
   return record.endAt ?? record.recordedAt;
+}
+
+/** 精力进哪一天的桶：跟 lifeEnergyAt 同一天 */
+export function lifeEnergyDayStart(record: Pick<LifeRecord, "recordedAt" | "endAt">): number {
+  return getDayStartTimestamp(lifeEnergyAt(record));
 }
 
 function withLifeDescription(record: EnergyRecord, life: Pick<LifeRecord, "description">): EnergyRecord {

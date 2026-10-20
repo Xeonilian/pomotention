@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { EnergyRecord, LifeRecord } from "@/core/types/Task";
+import { getDayStartTimestamp } from "@/core/utils";
 import {
   clampLifeScore,
   dropDayEnergyFromLife,
   lifeEnergyAt,
+  lifeEnergyDayStart,
   upsertDayEnergyFromLife,
 } from "@/services/lifeRecord/lifeEnergySync";
 
@@ -16,6 +18,12 @@ describe("clampLifeScore / lifeEnergyAt", () => {
   it("有 endAt 用结束，否则用开始", () => {
     expect(lifeEnergyAt({ recordedAt: 10, endAt: 20 })).toBe(20);
     expect(lifeEnergyAt({ recordedAt: 10 })).toBe(10);
+  });
+  it("跨夜结束进醒来那天的桶", () => {
+    const start = new Date(2026, 9, 19, 23, 0).getTime();
+    const end = new Date(2026, 9, 20, 7, 0).getTime();
+    expect(lifeEnergyDayStart({ recordedAt: start, endAt: end })).toBe(getDayStartTimestamp(end));
+    expect(lifeEnergyDayStart({ recordedAt: start })).toBe(getDayStartTimestamp(start));
   });
 });
 

@@ -480,7 +480,8 @@ function handleTitleInputFocus() {
     });
     return;
   }
-  titleDraft.value = props.item.title ?? "";
+  // 已在编辑时不要用库里的旧标题盖草稿（选标签会 blur 再 focus）
+  if (!titleFocused.value) titleDraft.value = props.item.title ?? "";
   titleFocused.value = true;
   notifyRowFocused(props.item.id);
   if (isMobile.value && titleEditAllowed.value) {

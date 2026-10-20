@@ -42,7 +42,7 @@
 |    <img src="/icons/FoodApple20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;">     | 水果                             |
 | <img src="/icons/BriefcaseMedical20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;"> | 补剂                             |
 
-- **日视图**：点顶栏打开录入（无记录是加号宫格，有记录是频道加号）。关掉用表单上的关闭，不是再点顶栏。手机进入日视图会默认打开图。
+- **日视图**：点顶栏打开录入（无记录是加号宫格，有记录是频道加号）。关掉用表单上的关闭，不是再点顶栏。当天还没新建过时任务区只留关闭和新建提示；点加号宫格才出现图/表。手机进入日视图同样先打开录入区。
 - **选中待办或预约**：任务区改回任务预览；再点顶栏会清掉选中并回到生活记录。
 
 - 从周 / 月 / 年点某天的 **日期数字**：打开该日的表预览。电脑上 **双击** 日期、手机上 **连点两下** 日期，进入该日的日视图。

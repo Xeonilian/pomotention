@@ -1,13 +1,13 @@
 <!--
   LifeRecordDaySheet.vue
   day 集中生活 sheet：4 类日面板 2×2 同框，作为一个整体。
-  无标题/无格边框/无内部 × 与单独删除；顶栏仅「图/表」切换与一个退出 ×。
+  无标题/无格边框/无内部 × 与单独删除；顶栏「图/表」与退出 ×。无桶时只留 × 和新建提示。
   各面板按 kind 自己的当天桶 taskId 渲染，互不依赖全局选中。
 -->
 <template>
   <div ref="sheetRef" class="life-day-sheet" :class="{ 'life-day-sheet--mobile': isMobile, 'life-day-sheet--table': view === 'table' }">
     <div class="life-day-sheet__bar">
-      <n-button text size="small" class="life-day-sheet__icon" :title="view === 'table' ? '显示图' : '显示表格'" @click="toggleView">
+      <n-button v-if="!isEmpty" text size="small" class="life-day-sheet__icon" :title="view === 'table' ? '显示图' : '显示表格'" @click="toggleView">
         <template #icon>
           <n-icon :size="18">
             <component :is="view === 'table' ? DataPie20Regular : TableSimple20Regular" />
@@ -20,7 +20,15 @@
         </template>
       </n-button>
     </div>
-    <div class="life-day-sheet__grid">
+    <div v-if="isEmpty" class="life-day-sheet__empty">
+      <n-button text class="life-day-sheet__hint" title="新建生活记录" @click="emit('create')">
+        <template #icon>
+          <n-icon :size="20"><AppsAddIn20Regular /></n-icon>
+        </template>
+        新建生活记录
+      </n-button>
+    </div>
+    <div v-else class="life-day-sheet__grid">
       <div class="life-day-sheet__cell">
         <DrinkDayPanel v-if="taskIds.drink != null" :task-id="taskIds.drink" :view="view" embedded />
       </div>
@@ -37,9 +45,9 @@
   </div>
 </template>
 <script setup lang="ts">
-import { ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 import { NButton, NIcon } from "naive-ui";
-import { DataPie20Regular, Dismiss20Regular, TableSimple20Regular } from "@vicons/fluent";
+import { AppsAddIn20Regular, DataPie20Regular, Dismiss20Regular, TableSimple20Regular } from "@vicons/fluent";
 import DrinkDayPanel from "@/components/LifeRecord/DrinkDayPanel.vue";
 import EatDayPanel from "@/components/LifeRecord/EatDayPanel.vue";
 import ToiletDayPanel from "@/components/LifeRecord/ToiletDayPanel.vue";
@@ -55,7 +63,10 @@ const props = withDefaults(
   }>(),
   { initialView: "chart" },
 );
-const emit = defineEmits<{ close: []; "view-change": [view: "chart" | "table"]; "input-active": [active: boolean] }>();
+const emit = defineEmits<{ close: []; create: []; "view-change": [view: "chart" | "table"]; "input-active": [active: boolean] }>();
+const isEmpty = computed(
+  () => props.taskIds.drink == null && props.taskIds.eat == null && props.taskIds.toilet == null && props.taskIds.sleep == null,
+);
 const { isMobile } = useDevice();
 const sheetRef = ref<HTMLElement | null>(null);
 useMobileInputScroll(sheetRef, (active) => emit("input-active", active));
@@ -89,6 +100,17 @@ function toggleView() {
 }
 .life-day-sheet__icon :deep(.n-button__icon) {
   margin: 0;
+}
+.life-day-sheet__empty {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.life-day-sheet__hint {
+  color: var(--color-text-secondary);
+  gap: 6px;
 }
 /* 表格态：整体相对左侧多 6px（与左侧区域留白） */
 .life-day-sheet--table:not(.life-day-sheet--mobile) {

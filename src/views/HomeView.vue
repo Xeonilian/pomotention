@@ -133,6 +133,7 @@
               :task-ids="daySheetTaskIds"
               :initial-view="daySheetInitialView"
               @close="lifePlannerLayerStore.closeDaySheet"
+              @create="lifePlannerLayerStore.openDaySheet"
               @input-active="onSheetInputActive"
             />
             <TaskTracker v-else ref="taskTrackerRef" @task-record-editing="setTaskRecordEditing" />
@@ -433,15 +434,15 @@ watch(
     lifePlannerLayerStore.onViewSetChange(view);
     if (!isMobile.value) return;
     // 手机日布局默认打开 sheet；离开日视图不要把 sheet 带到周/月
-    if (view === "day") lifePlannerLayerStore.openDaySheet();
+    if (view === "day") lifePlannerLayerStore.enterDaySheet();
     else if (prev === "day") lifePlannerLayerStore.closeDaySheet();
   },
 );
 
 watch(
-  () => isMobile.value && settingStore.settings.viewSet === "day",
-  (mobileDay) => {
-    if (mobileDay) lifePlannerLayerStore.openDaySheet();
+  () => dataStore.isDataLoaded && isMobile.value && settingStore.settings.viewSet === "day",
+  (ready) => {
+    if (ready) lifePlannerLayerStore.enterDaySheet();
   },
   { immediate: true },
 );

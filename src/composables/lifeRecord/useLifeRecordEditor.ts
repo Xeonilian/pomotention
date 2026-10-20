@@ -4,7 +4,13 @@ import type { DrinkKind, LifeRecord } from "@/core/types/Task";
 import { drinkKindOf, getLifeRecordDef, nextDrinkKind, nextEatCourse, type LifeRecordKind } from "@/core/lifeRecord";
 import { debounce, getDayStartTimestamp } from "@/core/utils";
 import { appendLifeRecord, resolveLifeSpanEndAt, updateLifeRecord, withTimePart } from "@/services/lifeRecord/lifeRecordService";
-import { clampLifeScore, dropDayEnergyFromLife, lifeEnergyAt, upsertDayEnergyFromLife } from "@/services/lifeRecord/lifeEnergySync";
+import {
+  clampLifeScore,
+  dropDayEnergyFromLife,
+  lifeEnergyAt,
+  lifeEnergyDayStart,
+  upsertDayEnergyFromLife,
+} from "@/services/lifeRecord/lifeEnergySync";
 import { findDayEnergyTask } from "@/services/task/dayEnergyService";
 import { useDataStore } from "@/stores/useDataStore";
 import { useDisplayedTaskStore } from "@/stores/useDisplayedTaskStore";
@@ -58,14 +64,14 @@ export function useLifeRecordEditor(
     const pending = [...descDrafts.entries()];
     descDrafts.clear();
     descDraftTick.value++;
-    for (const [recordId, { taskId, text, dayStart }] of pending) {
+    for (const [recordId, { taskId, text }] of pending) {
       const list = dataStore.taskList.find((t) => t.id === taskId)?.lifeRecords ?? [];
       const next = updateLifeRecord(list, recordId, { description: text });
       if (!next) continue;
       dataStore.updateTaskById(taskId, { lifeRecords: next });
       const rec = next.find((r) => r.id === recordId);
       if (rec?.energyRecordId != null) {
-        syncLinkedEnergy({ ...rec, description: text }, rec.energy, dayStart);
+        syncLinkedEnergy({ ...rec, description: text }, rec.energy);
       }
     }
   }
@@ -180,15 +186,25 @@ export function useLifeRecordEditor(
   function changeSatiety(record: LifeRecord, value: number | null) {
     changeEatFeel(record, "satiety", value);
   }
-  function hostEnergyTask() {
-    return dataStore.ensureDayEnergyTask(displayDayStart.value);
-  }
-  function syncLinkedEnergy(record: LifeRecord, value: number | undefined, dayStart = displayDayStart.value) {
-    if (value == null || record.energyRecordId == null) return;
+  function dropEnergyFromDay(dayStart: number, energyRecordId: number | undefined) {
     const host = findDayEnergyTask(dayStart, dataStore.taskList);
     if (!host) return;
-    const { next } = upsertDayEnergyFromLife(host.energyRecords, record, value, lifeEnergyAt(record));
+    const next = dropDayEnergyFromLife(host.energyRecords, energyRecordId);
+    if (next) dataStore.updateTaskById(host.id, { energyRecords: next });
+  }
+  function hostEnergyTask(record: Pick<LifeRecord, "recordedAt" | "endAt">) {
+    return dataStore.ensureDayEnergyTask(lifeEnergyDayStart(record));
+  }
+  function syncLinkedEnergy(record: LifeRecord, value: number | undefined) {
+    if (value == null || record.energyRecordId == null) return;
+    const targetDay = lifeEnergyDayStart(record);
+    if (displayDayStart.value !== targetDay) dropEnergyFromDay(displayDayStart.value, record.energyRecordId);
+    const host = dataStore.ensureDayEnergyTask(targetDay);
+    const { next, energyRecord } = upsertDayEnergyFromLife(host.energyRecords, record, value, lifeEnergyAt(record));
     dataStore.updateTaskById(host.id, { energyRecords: next });
+    if (energyRecord.id !== record.energyRecordId) {
+      writeRecords(updateLifeRecord(records.value, record.id, { energyRecordId: energyRecord.id }));
+    }
   }
   function changeEnergy(record: LifeRecord, value: number | null) {
     if (value == null) {
@@ -205,16 +221,16 @@ export function useLifeRecordEditor(
       return;
     }
     const v = clampLifeScore(value);
-    const host = hostEnergyTask();
+    const targetDay = lifeEnergyDayStart(record);
+    if (displayDayStart.value !== targetDay) dropEnergyFromDay(displayDayStart.value, record.energyRecordId);
+    const host = hostEnergyTask(record);
     const { next, energyRecord } = upsertDayEnergyFromLife(host.energyRecords, record, v, lifeEnergyAt(record));
     dataStore.updateTaskById(host.id, { energyRecords: next });
     writeRecords(updateLifeRecord(records.value, record.id, { energy: v, energyRecordId: energyRecord.id }));
   }
   function unlinkEnergy(record: LifeRecord) {
-    const host = findDayEnergyTask(displayDayStart.value, dataStore.taskList);
-    if (!host) return;
-    const next = dropDayEnergyFromLife(host.energyRecords, record.energyRecordId);
-    if (next) dataStore.updateTaskById(host.id, { energyRecords: next });
+    const days = new Set([displayDayStart.value, lifeEnergyDayStart(record)]);
+    for (const day of days) dropEnergyFromDay(day, record.energyRecordId);
   }
   function remove(record: LifeRecord) {
     descDrafts.delete(record.id);
