@@ -1,13 +1,17 @@
-/* 四张日表同一套列宽与时间字体，对齐睡觉表。
-   + 列、时间列、时长列固定；多余宽度给最后一列。
-   表头图标同睡觉：主文字色。 */
+/* 三种列宽：第一列 / 非描述列 / 描述列（剩余）。
+   喝水少一列非描述，描述列多占一格；表头图标右偏半格，与另外三张描述列图标对齐。 */
 .lr-day-table {
+  --lr-col-first: 28px;
+  --lr-col-mid: 56px;
   border-collapse: collapse;
   font-size: 12px;
   width: 100%;
   table-layout: fixed;
   border-top: none;
   border-bottom: none;
+}
+.lr-day--mobile .lr-day-table {
+  --lr-col-mid: 48px;
 }
 .lr-day-table th,
 .lr-day-table td {
@@ -31,24 +35,36 @@
   line-height: 1;
 }
 .lr-day-table__col-action {
-  width: 28px;
+  width: var(--lr-col-first);
   padding-left: 0;
   padding-right: 0;
   text-align: center;
 }
 .lr-day-table__col-time {
-  width: 56px;
+  width: var(--lr-col-mid);
   text-align: center;
 }
+.lr-day-table__col-score {
+  width: var(--lr-col-mid);
+  padding-left: 0;
+  padding-right: 0;
+  text-align: center;
+  overflow: visible;
+}
+.lr-day-table__col-score :deep(.n-popover-trigger) {
+  display: inline-flex;
+  width: 100%;
+  height: 22px;
+  vertical-align: middle;
+}
 .lr-day-table__col-dur {
-  width: 44px;
+  width: var(--lr-col-mid);
   text-align: center;
   font-variant-numeric: tabular-nums;
   color: var(--color-text-primary);
 }
-/* 四列表没有时长列，最后一列更宽。表头图标仍对齐五列表最后一列的中心：差半个时长列。 */
-.lr-day-table--cols-4 thead th.lr-day-table__col-last .lr-day-table__th-icon {
-  transform: translateX(22px);
+.lr-day-table--cols-5 thead th.lr-day-table__col-last .lr-day-table__th-icon {
+  transform: translateX(calc(var(--lr-col-mid) / 2));
 }
 .lr-day-table__col-last {
   text-align: left;
@@ -158,4 +174,49 @@
 .lr-day-table__note .n-input__input-el,
 .lr-day-table__note.n-input .n-input__input-el {
   padding: 0;
+}
+
+/* 手机：最后一列描述过长可横滑，不露滚动条；纵向仍交给外层 sheet */
+.lr-day--mobile .lr-day-table td.lr-day-table__col-last {
+  overflow-x: auto;
+  overflow-y: hidden;
+  touch-action: pan-x pan-y;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  -webkit-overflow-scrolling: touch;
+}
+.lr-day--mobile .lr-day-table td.lr-day-table__col-last::-webkit-scrollbar {
+  display: none;
+  height: 0;
+}
+.lr-day--mobile .lr-day-table td.lr-day-table__col-last .lr-day-table__note.n-input,
+.lr-day--mobile .lr-day-table td.lr-day-table__col-last .n-input-wrapper,
+.lr-day--mobile .lr-day-table td.lr-day-table__col-last .n-input__input {
+  width: max-content;
+  min-width: 100%;
+}
+.lr-day--mobile .lr-day-table td.lr-day-table__col-last .n-input__input-el {
+  field-sizing: content;
+  width: auto;
+  min-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  text-overflow: clip;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.lr-day--mobile .lr-day-table td.lr-day-table__col-last .n-input__input-el::-webkit-scrollbar {
+  display: none;
+  height: 0;
+}
+.lr-day--mobile .lr-day-table td.lr-day-table__col-last .sleep-day-table__dream-chip {
+  width: max-content;
+  min-width: 100%;
+  max-width: none;
+  overflow: visible;
+  text-overflow: clip;
+}
+.lr-day--mobile .lr-day-table td.lr-day-table__col-last .sleep-day-table__dream-chip::-webkit-scrollbar {
+  display: none;
+  height: 0;
 }

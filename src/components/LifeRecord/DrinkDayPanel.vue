@@ -28,12 +28,28 @@
           title="今日目标（仅本天）"
           @update:value="onChangeDayGoal"
         />
+        <div v-if="lastRecord" class="drink-day-gauge__el drink-day-gauge__kinds">
+          <button
+            v-for="opt in drinkKindOptions"
+            :key="opt.kind"
+            type="button"
+            class="drink-day-gauge__kind"
+            :class="{ 'drink-day-gauge__kind--on': drinkKindOf(lastRecord) === opt.kind }"
+            :title="opt.label"
+            @click="changeDrinkKind(lastRecord, opt.kind)"
+          >
+            <n-icon class="drink-day-gauge__kind-icon">
+              <component :is="drinkKindIcon(opt.kind, drinkKindOf(lastRecord) === opt.kind)" />
+            </n-icon>
+          </button>
+        </div>
       </div>
     </template>
     <template #table>
-      <table class="lr-day-table lr-day-table--cols-4">
+      <table class="lr-day-table lr-day-table--cols-5">
         <colgroup>
           <col class="lr-day-table__col-action" />
+          <col class="lr-day-table__col-time" />
           <col class="lr-day-table__col-time" />
           <col class="lr-day-table__col-time" />
           <col />
@@ -47,6 +63,9 @@
             </th>
             <th class="lr-day-table__col-time" title="时间">
               <n-icon :size="18" class="lr-day-table__th-icon"><Clock20Regular /></n-icon>
+            </th>
+            <th class="lr-day-table__col-time" title="饮品 / 水 / 咖啡 / 酒">
+              <n-icon :size="18" class="lr-day-table__th-icon"><DrinkToGo24Regular /></n-icon>
             </th>
             <th class="lr-day-table__col-time">
               <div class="drink-day-table__cup-head" title="杯量（之后每次 +1）">
@@ -89,6 +108,18 @@
               />
             </td>
             <td class="lr-day-table__col-time">
+              <button
+                type="button"
+                class="lr-day-table__cell-btn"
+                :title="drinkKindLabel(drinkKindOf(record))"
+                @click="toggleDrinkKind(record)"
+              >
+                <n-icon :size="18">
+                  <component :is="drinkKindIcon(drinkKindOf(record), false)" />
+                </n-icon>
+              </button>
+            </td>
+            <td class="lr-day-table__col-time">
               <n-input-number
                 class="drink-day-table__ml"
                 size="tiny"
@@ -119,10 +150,24 @@
   </LifeRecordDayFrame>
 </template>
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, type Component } from "vue";
 import { NIcon, NInput, NInputNumber, NTimePicker } from "naive-ui";
-import { Add20Regular, Clock20Regular, Delete20Regular, Drop20Filled } from "@vicons/fluent";
+import {
+  Add20Regular,
+  Clock20Regular,
+  Delete20Regular,
+  DrinkBeer20Filled,
+  DrinkBeer20Regular,
+  DrinkCoffee20Filled,
+  DrinkCoffee20Regular,
+  DrinkToGo24Filled,
+  DrinkToGo24Regular,
+  DrinkWine20Filled,
+  DrinkWine20Regular,
+  Drop20Filled,
+} from "@vicons/fluent";
 import type { LifeRecord } from "@/core/types/Task";
+import { DRINK_KIND_DEFS, drinkKindLabel, drinkKindOf, type DrinkKind } from "@/core/lifeRecord";
 import { isDrinkGoalMet, sumLifeRecordAmountMl, updateLifeRecord } from "@/services/lifeRecord/lifeRecordService";
 import { useDataStore } from "@/stores/useDataStore";
 import { useSettingStore } from "@/stores/useSettingStore";
@@ -134,11 +179,16 @@ const props = withDefaults(defineProps<{ taskId: number; embedded?: boolean; vie
 });
 const dataStore = useDataStore();
 const settingStore = useSettingStore();
-const { task, records, append, pickerTs, changeRecordedAt, changeDescription, remove } = useLifeRecordEditor(
-  () => props.taskId,
-  "drink",
-  { embedded: () => props.embedded },
-);
+const { task, records, append, pickerTs, changeRecordedAt, changeDescription, changeDrinkKind, toggleDrinkKind, remove } =
+  useLifeRecordEditor(() => props.taskId, "drink", { embedded: () => props.embedded });
+const lastRecord = computed(() => records.value[records.value.length - 1] ?? null);
+const drinkKindOptions = DRINK_KIND_DEFS;
+function drinkKindIcon(kind: DrinkKind, on: boolean): Component {
+  if (kind === "beverage") return on ? DrinkBeer20Filled : DrinkBeer20Regular;
+  if (kind === "coffee") return on ? DrinkCoffee20Filled : DrinkCoffee20Regular;
+  if (kind === "wine") return on ? DrinkWine20Filled : DrinkWine20Regular;
+  return on ? DrinkToGo24Filled : DrinkToGo24Regular;
+}
 const drunkMl = computed(() => sumLifeRecordAmountMl(records.value));
 const dayGoalMl = computed(() => task.value?.drinkGoalMl ?? settingStore.settings.drinkDailyGoalMl);
 const goalMet = computed(() => isDrinkGoalMet(drunkMl.value, dayGoalMl.value));
@@ -171,6 +221,8 @@ function onChangeAmount(record: LifeRecord, v: number | null) {
   --c: 16%;
   --d: 10%;
   --f: 22%;
+  --row2-shift: 5%;
+  --row3-shift: 7%;
   --drop-size: 50px;
   --times-size: 35px;
   --count-size: 30px;
@@ -274,20 +326,20 @@ function onChangeAmount(record: LifeRecord, v: number | null) {
 }
 .drink-day-gauge__sum {
   left: calc(50% - var(--a));
-  top: calc(50% + var(--f));
+  top: calc(50% + var(--f) - var(--row2-shift));
   font-size: var(--sum-size);
   font-weight: 500;
   color: var(--color-blue);
 }
 .drink-day-gauge__slash {
   left: 50%;
-  top: calc(50% + var(--f));
+  top: calc(50% + var(--f) - var(--row2-shift));
   font-size: var(--slash-size);
   color: var(--color-text-secondary);
 }
 .drink-day-gauge__goal {
   left: calc(50% + var(--c));
-  top: calc(50% + var(--f));
+  top: calc(50% + var(--f) - var(--row2-shift));
   width: 4.2em;
 }
 .drink-day-gauge__goal :deep(.n-input) {
@@ -310,6 +362,48 @@ function onChangeAmount(record: LifeRecord, v: number | null) {
   line-height: 1;
   height: var(--goal-size);
   color: var(--color-text-primary);
+}
+.drink-day-gauge__kinds {
+  left: 50%;
+  top: calc(50% + var(--f) + var(--row3-shift));
+  width: calc(var(--a) + var(--c) + var(--drop-size));
+  height: 28px;
+  transform: translate(-50%, 0);
+  display: flex;
+  justify-content: space-evenly;
+  align-items: center;
+}
+.drink-day-gauge__kind {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+.drink-day-gauge__kind--on {
+  color: var(--color-blue);
+}
+.drink-day-gauge__kind:hover {
+  opacity: 0.85;
+}
+.drink-day-gauge__kind-icon {
+  display: block;
+  width: 22px;
+  height: 22px;
+  font-size: 22px;
+  line-height: 0;
+  color: inherit;
+}
+.drink-day-gauge__kind-icon :deep(svg) {
+  width: 1em;
+  height: 1em;
+  display: block;
 }
 .drink-day-table__cup-head {
   display: inline-flex;

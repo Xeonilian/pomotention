@@ -2,10 +2,31 @@
 // 生活记录纯函数：当日行查找、三件套构造、记录增删改（不碰存储与 store） 
 import type { Activity } from "@/core/types/Activity";
 import type { Todo } from "@/core/types/Todo";
-import type { EatCourse, LifeRecord, Task } from "@/core/types/Task";
+import type { DrinkKind, EatCourse, LifeRecord, Task } from "@/core/types/Task";
 import { getDayStartTimestamp } from "@/core/utils";
 import { getLifeRecordDef, getLifeRecordKind, lifeRecordPlaceholderTitle, LIFE_RECORD_DEFS, type LifeRecordKind } from "@/core/lifeRecord";
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** 用 time 的时分替换 date 的时分（编辑只动时刻、不动日期） */
+export function withTimePart(dateTs: number, timeTs: number): number {
+  const d = new Date(dateTs);
+  const t = new Date(timeTs);
+  d.setHours(t.getHours(), t.getMinutes(), 0, 0);
+  return d.getTime();
+}
+
+/**
+ * 段事件结束时刻：钟点先落到开始当天；仅当早于开始（会得到负数）才改到次日。
+ * 同一分钟保持 0，当作录入中间态；系统没有超过 24h 的段。
+ */
+export function resolveLifeSpanEndAt(recordedAt: number, timeTs: number): number {
+  if (!Number.isFinite(recordedAt) || !Number.isFinite(timeTs)) return timeTs;
+  const startMin = withTimePart(recordedAt, recordedAt);
+  let nextTs = withTimePart(recordedAt, timeTs);
+  if (nextTs < startMin) nextTs += DAY_MS;
+  return nextTs;
+}
+
 /** 一日 4 类相对基准时刻的固定偏移：drink+0 … sleep+3 */
 const KIND_ID_OFFSET = Object.fromEntries(LIFE_RECORD_DEFS.map((d, i) => [d.kind, i])) as Record<LifeRecordKind, number>;
 export type BuildLifeRecordOptions = {
@@ -26,8 +47,11 @@ export function nextFreeTimestampId(start: number, occupied?: Iterable<number>):
 export type AppendLifeRecordOptions = {
   /** 喝水等点事件：本口 ml 快照 */
   amountMl?: number;
-  /** 吃饭：正餐 / 甜点 / 水果；新记录默认 meal */
+  /** 吃饭：正餐 / 甜点 / 水果 / 补剂；新记录默认 meal */
   eatCourse?: EatCourse;
+  /** 喝水种类；不写则按水 */
+  drinkKind?: DrinkKind;
+  description?: string;
   /** 只新增一行，不把未闭合段写成结束时间 */
   alwaysNew?: boolean;
 };
@@ -123,7 +147,7 @@ export function appendLifeRecord(
   if ((kind === "sleep" || kind === "toilet") && !options?.alwaysNew) {
     for (let i = list.length - 1; i >= 0; i--) {
       if (list[i].endAt == null) {
-        const closed: LifeRecord = { ...list[i], endAt: at };
+        const closed: LifeRecord = { ...list[i], endAt: resolveLifeSpanEndAt(list[i].recordedAt, at) };
         return { next: [...list.slice(0, i), closed, ...list.slice(i + 1)], record: closed };
       }
     }
@@ -136,6 +160,8 @@ export function appendLifeRecord(
     recordedAt: at,
     ...(options?.amountMl != null ? { amountMl: options.amountMl } : {}),
     ...(options?.eatCourse != null ? { eatCourse: options.eatCourse } : {}),
+    ...(options?.drinkKind != null ? { drinkKind: options.drinkKind } : {}),
+    ...(options?.description != null ? { description: options.description } : {}),
   };
   return { next: [...list, record], record };
 }
@@ -149,7 +175,12 @@ export function removeLifeRecord(records: LifeRecord[] | undefined, recordId: nu
 export function updateLifeRecord(
   records: LifeRecord[] | undefined,
   recordId: number,
-  patch: Partial<Pick<LifeRecord, "recordedAt" | "endAt" | "description" | "amountMl" | "eatCourse">>,
+  patch: Partial<
+    Pick<
+      LifeRecord,
+      "recordedAt" | "endAt" | "description" | "amountMl" | "eatCourse" | "drinkKind" | "hunger" | "satiety" | "energy" | "energyRecordId"
+    >
+  >,
 ): LifeRecord[] | null {
   const list = records ?? [];
   const index = list.findIndex((r) => r.id === recordId);

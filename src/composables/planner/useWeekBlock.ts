@@ -21,6 +21,7 @@ import { useDevice } from "@/composables/platform/useDevice";
 import { storeToRefs } from "pinia";
 import { useDataStore } from "@/stores/useDataStore";
 import { collectLifeRecordOverlays, type LifePointMark, type LifeSleepRange } from "@/services/timetable/lifeRecordOverlays";
+import { findDayEnergyTask } from "@/services/task/dayEnergyService";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const BASE_PX_PER_HOUR = 40;
@@ -38,7 +39,7 @@ const MIN_OVERLAP_RATIO_FOR_COLUMNS = 0.2;
 export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targetHeight?: MaybeRef<number>) {
   const { isMobile } = useDevice();
   const dataStore = useDataStore();
-  const { todoList, activityById, taskById } = storeToRefs(dataStore);
+  const { todoList, activityById, taskById, taskList } = storeToRefs(dataStore);
   /** 叠放区总宽：随 viewport / 设备形态更新，避免模块加载时定死 */
   const overlayWidthPct = computed(() => (isMobile.value ? OVERLAY_ZONE_PCT : 70));
 
@@ -58,6 +59,7 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targe
           todos: todoList.value,
           getActivity: (id) => activityById.value.get(id),
           getTask: (id) => taskById.value.get(id),
+          getDayEnergyTask: (start) => findDayEnergyTask(start, taskList.value),
           now,
           minGapMs: 5 * 60_000,
           openSleepEnd: "dayOfStart",
@@ -406,15 +408,20 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targe
     const range = unifiedTimeRange.value;
     const startH = hourOffsetInDay(sleep.start, dayStartTs);
     const endH = hourOffsetInDay(sleep.end, dayStartTs);
-    const top = (startH - range.startHour) * pxPerHour.value;
-    const height = Math.max((endH - startH) * pxPerHour.value, 2);
+    const px = pxPerHour.value;
+    const gridH = (range.endHour - range.startHour) * px;
+    const rawTop = (startH - range.startHour) * px;
+    const rawBottom = (endH - range.startHour) * px;
+    // 上沿贴时间格顶，不画进日期；下沿仍可到醒来
+    const top = Math.max(0, rawTop);
+    const bottom = Math.min(gridH, Math.max(top, rawBottom));
     return {
       position: "absolute",
       left: "0",
       width: "100%",
       top: `${top}px`,
-      height: `${height}px`,
-      backgroundColor: "rgba(153, 153, 153, 0.12)",
+      height: `${Math.max(bottom - top, 2)}px`,
+      backgroundColor: "rgba(28, 72, 168, 0.22)",
       zIndex: 1,
       cursor: "pointer",
     };
@@ -423,15 +430,13 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targe
   function getLifePointStyle(mark: LifePointMark, dayStartTs: number): CSSProperties {
     const range = unifiedTimeRange.value;
     const h = hourOffsetInDay(mark.time, dayStartTs);
-    const top = (h - range.startHour) * pxPerHour.value - 7;
-    // 从右往左叠 lane，避免贴左边时间块
-    const right = isMobile.value ? mark.lane * 15 : 12 + mark.lane * 15;
-    return {
+    const size = 14;
+    const top = (h - range.startHour) * pxPerHour.value - size / 2;
+    const base: CSSProperties = {
       position: "absolute",
-      right: `${right}px`,
       top: `${top}px`,
-      width: "14px",
-      height: "14px",
+      width: `${size}px`,
+      height: `${size}px`,
       color: mark.colorVar,
       zIndex: 5 + mark.lane,
       display: "flex",
@@ -440,6 +445,16 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targe
       cursor: "pointer",
       userSelect: "none",
     };
+    if (isMobile.value) {
+      // 非可视化：icon 落在待办三列上；左 +1px 对色条，右再留 1px 不贴框
+      const col = Math.min(mark.lane, 2);
+      return {
+        ...base,
+        left: `calc(1px + ${col} * (100% - 2px) / 3)`,
+        right: "auto",
+      };
+    }
+    return { ...base, right: `${12 + mark.lane * 15}px` };
   }
 
   return {

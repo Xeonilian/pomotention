@@ -48,7 +48,7 @@
           </div>
           <div class="items" :class="{ 'items--life-bars': props.lifeView }">
             <template v-if="props.lifeView && day.isCurrentMonth">
-              <MonthLifeBars :bars="day.lifeBars" />
+              <MonthLifeBars :bars="day.lifeBars" :focus-kind="lifeBarFocus" @select-kind="onLifeBarSelectKind" />
             </template>
             <template v-else-if="props.showStatsOnly && day.isCurrentMonth">
               <div v-if="isMobile" class="day-stat--compact">
@@ -118,9 +118,11 @@ import type { LifeRecord } from "@/core/types/Task";
 import {
   activityBarScaleMs,
   clipDaySpans,
+  mergeLifeRecordsById,
   eatEventsChronological,
   EMPTY_MONTH_LIFE_BARS,
   longestSleepStartOnDay,
+  sleepSpansOnStartDay,
   MONTH_EAT_BAR_MIN,
   toMonthLifeBarView,
 } from "@/services/lifeRecord/monthLifeBars";
@@ -128,6 +130,11 @@ import {
 const settingStore = useSettingStore();
 const isTaskVisible = computed(() => settingStore.settings.showTask);
 const { isMobile } = useDevice();
+/** 月生活 bar：单击一类只看这类，再点同一类取消 */
+const lifeBarFocus = ref<LifeRecordKind | null>(null);
+function onLifeBarSelectKind(kind: LifeRecordKind) {
+  lifeBarFocus.value = lifeBarFocus.value === kind ? null : kind;
+}
 
 /** 统计格 icon：可点开切日并选中对应生活记录 */
 type LifeIconRef = { todoId: number; activityId: number; taskId?: number };
@@ -380,12 +387,13 @@ const days = computed(() => {
   const lifeRaws = result.map((d) => {
     if (!d.isCurrentMonth) return null;
     const eatEvents = eatEventsChronological(recordsOf("eat", d.startTs));
-    const sleepDayRecords = recordsOf("sleep", d.startTs);
-    const sleepSpans = [
-      ...clipDaySpans(sleepDayRecords, d.startTs, d.endTs, now),
-      ...clipDaySpans(recordsOf("sleep", d.startTs - DAY_MS), d.startTs, d.endTs, now),
-    ];
-    const sleepBedStartAt = longestSleepStartOnDay(sleepDayRecords, d.startTs, d.endTs, now);
+    const sleepNearby = mergeLifeRecordsById(
+      recordsOf("sleep", d.startTs - DAY_MS),
+      recordsOf("sleep", d.startTs),
+      recordsOf("sleep", d.startTs + DAY_MS),
+    );
+    const sleepSpans = sleepSpansOnStartDay(sleepNearby, d.startTs, d.endTs, now);
+    const sleepBedStartAt = longestSleepStartOnDay(sleepNearby, d.startTs, d.endTs, now);
     const actSpans = clipDaySpans(recordsOf("toilet", d.startTs), d.startTs, d.endTs, now);
     const cupFallback = settingStore.settings.drinkCupMl;
     const drinkAmounts = recordsOf("drink", d.startTs).map((r) => {

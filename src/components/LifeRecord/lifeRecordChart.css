@@ -6,6 +6,9 @@
   --c: 16%;
   --d: 10%;
   --f: 22%;
+  /* 400px 格上 5%/7% = 20px/28px；随格子缩，最小约 1:1:1，避免 2–3 被固定 px 拉开 */
+  --row2-shift: 5%;
+  --row3-shift: 7%;
   --icon-size: 50px;
   --times-size: 35px;
   --count-size: 30px;
@@ -80,10 +83,60 @@
   color: var(--color-text-primary);
 }
 
+.lr-chart__score {
+  width: 28px;
+  height: 28px;
+  top: calc(50% + var(--f) - var(--row2-shift));
+}
+.lr-chart__score :deep(.n-popover-trigger) {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
 .lr-chart__stat {
   left: 50%;
   top: calc(50% + var(--f));
   font-size: var(--stat-size);
   font-weight: 500;
   white-space: nowrap;
+}
+
+/* 图上 HH:mm，点开改时刻，外观跟原来的字一样 */
+.lr-chart__time {
+  width: 72px;
+  cursor: pointer;
+}
+.lr-chart__time.n-time-picker,
+.lr-chart__time .n-input {
+  min-width: 0 !important;
+  width: 72px;
+}
+.lr-chart__time .n-input {
+  --n-height: 28px !important;
+  --n-padding-left: 0 !important;
+  --n-padding-right: 0 !important;
+  --n-border: none !important;
+  --n-border-hover: none !important;
+  --n-border-focus: none !important;
+  --n-box-shadow-focus: none !important;
+  --n-color: transparent !important;
+  --n-color-focus: transparent !important;
+  background: transparent !important;
+  font-size: 22px;
+  font-weight: 500;
+  font-family: Consolas, "Courier New", Courier, monospace;
+  color: var(--color-text-primary);
+}
+.lr-chart__time .n-input__input-el {
+  text-align: center;
+  padding: 0;
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+}
+.lr-chart__time .n-base-suffix,
+.lr-chart__time .n-input__suffix,
+.lr-chart__time .n-base-clear {
+  display: none !important;
+  width: 0 !important;
 }

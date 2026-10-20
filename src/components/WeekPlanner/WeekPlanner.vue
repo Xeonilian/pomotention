@@ -177,6 +177,12 @@ function onDocClickCapture(e: Event) {
   .grid {
     gap: 1px;
   }
+
+  /* 手机生活图层铺满 middle 时，下沿离弧形屏多留 8px */
+  .week-planner--life-layer {
+    box-sizing: border-box;
+    padding-bottom: 8px;
+  }
 }
 </style>
 

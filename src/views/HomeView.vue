@@ -33,7 +33,7 @@
       >
         <!-- 今日视图 -->
         <div
-          v-if="settingStore.settings.showPlanner && !mobileLifeRecordOpen && !daySheetActive"
+          v-if="settingStore.settings.showPlanner && !mobileLifeRecordOpen && !daySheetHidesPlanner"
           class="middle-top"
           :style="middleTopPlannerStyle"
         >
@@ -113,7 +113,7 @@
         </div>
         <!-- 任务视图调整大小手柄 -->
         <div
-          v-if="taskPanelLayoutVisible && settingStore.settings.showPlanner && !mobileLifeRecordOpen && !daySheetActive"
+          v-if="taskPanelLayoutVisible && settingStore.settings.showPlanner && !mobileLifeRecordOpen && !daySheetHidesPlanner && !sheetInputActive"
           class="resize-handle"
           style="touch-action: none"
           @pointerdown="startVerticalResize"
@@ -131,8 +131,10 @@
             <LifeRecordDaySheet
               v-if="daySheetActive"
               :task-ids="daySheetTaskIds"
-              :initial-view="lifePlannerLifeView ? 'table' : 'chart'"
+              :initial-view="daySheetInitialView"
               @close="lifePlannerLayerStore.closeDaySheet"
+              @create="lifePlannerLayerStore.openDaySheet"
+              @input-active="onSheetInputActive"
             />
             <TaskTracker v-else ref="taskTrackerRef" @task-record-editing="setTaskRecordEditing" />
           </div>
@@ -279,6 +281,11 @@ const popoverMessage = ref("");
 const taskRecordEditing = ref(false);
 /** 日待办行内编辑（移动）：临时收起下方 Task 区，不改变 showTask 设置 */
 const mobileDayTodoInlineEditing = ref(false);
+/** 生活 sheet 里输入聚焦：临时收起 middle-top，失焦恢复；不改 showPlanner */
+const sheetInputActive = ref(false);
+function onSheetInputActive(active: boolean) {
+  sheetInputActive.value = active;
+}
 /** 手机日视图打开生活记录（喝/吃/厕/睡）：临时藏 planner，关闭选中后恢复；不改 showPlanner 设置 */
 const mobileLifeRecordOpen = computed(() => {
   if (!isMobile.value) return false;
@@ -289,7 +296,9 @@ const mobileLifeRecordOpen = computed(() => {
 });
 /** 系统键盘与 vv 连续变化时关掉 height/max-height 过渡，避免目标高度每帧变化导致跳动 */
 const suppressMobilePlannerMotion = computed(
-  () => isMobile.value && (mobileDayTodoInlineEditing.value || mobileLifeRecordOpen.value || isKeyboardOverlapApprox.value),
+  () =>
+    isMobile.value &&
+    (mobileDayTodoInlineEditing.value || mobileLifeRecordOpen.value || isKeyboardOverlapApprox.value || sheetInputActive.value),
 );
 const showStateLogModal = ref(false);
 let unregisterPlannerCommandApi: (() => void) | null = null;
@@ -381,24 +390,65 @@ const lifePlannerLayerStore = useLifePlannerLayerStore();
 const { lifeView: lifePlannerLifeView, daySheetOpen, daySheetTaskIds, mobilePreviewSolo } =
   storeToRefs(lifePlannerLayerStore);
 
-/** 生活整合 sheet 激活：任意 view 进入都给全部 middle 空间 */
-const daySheetActive = computed(() => daySheetOpen.value);
+const isViewDateToday = computed(() => dateService.isViewDateToday);
+
+/** 选中的是普通 planner 行（非生活记录），task 区应切任务预览 */
+const hasPlannerRowSelected = computed(() => {
+  const id = selectedRowId.value;
+  if (id == null) return false;
+  const todo = todoById.value.get(id);
+  if (todo && !todo.deleted) {
+    if (getLifeRecordKind(activityById.value.get(todo.activityId)) == null) return true;
+  }
+  const schedule = scheduleById.value.get(id);
+  if (schedule && !schedule.deleted) {
+    if (getLifeRecordKind(activityById.value.get(schedule.activityId)) == null) return true;
+  }
+  return false;
+});
+
+/** 生活整合 sheet 激活：有普通待办/日程选中时让位给 TaskTracker */
+const daySheetActive = computed(() => daySheetOpen.value && !hasPlannerRowSelected.value);
+/** 日视图 sheet 只占 task 区（今日图 / 过往表），不藏 planner；周月点进仍占满 middle */
+const daySheetHidesPlanner = computed(() => {
+  if (!daySheetActive.value) return false;
+  if (settingStore.settings.viewSet === "day") return false;
+  return true;
+});
+const daySheetInitialView = computed(() => {
+  if (lifePlannerLifeView.value) return "table";
+  if (settingStore.settings.viewSet === "day" && !isViewDateToday.value) return "table";
+  return "chart";
+});
 
 const timetableLayoutVisible = computed(() => settingStore.settings.showTimetable && !mobilePreviewSolo.value);
 const taskAreaVisible = computed(() => daySheetActive.value || (settingStore.settings.showTask && !mobilePreviewSolo.value));
 
+watch(daySheetActive, (active) => {
+  if (!active) sheetInputActive.value = false;
+});
+
 watch(
   () => settingStore.settings.viewSet,
-  (view) => {
+  (view, prev) => {
     lifePlannerLayerStore.onViewSetChange(view);
+    if (!isMobile.value) return;
+    // 手机日布局默认打开 sheet；离开日视图不要把 sheet 带到周/月
+    if (view === "day") lifePlannerLayerStore.enterDaySheet();
+    else if (prev === "day") lifePlannerLayerStore.closeDaySheet();
   },
+);
+
+watch(
+  () => dataStore.isDataLoaded && isMobile.value && settingStore.settings.viewSet === "day",
+  (ready) => {
+    if (ready) lifePlannerLayerStore.enterDaySheet();
+  },
+  { immediate: true },
 );
 function toggleMonthShowStatsOnly() {
   monthShowStatsOnly.value = !monthShowStatsOnly.value;
 }
-
-// 计算当前日期 不赋值在UI计算class就会失效，但是UI输出的值是正确的
-const isViewDateToday = computed(() => dateService.isViewDateToday);
 
 const appDateTimestamp = computed(() => dateService.appDateTimestamp);
 
@@ -1589,13 +1639,15 @@ const effectiveMiddleTopHeightPx = computed(() => {
     return topHeight.value + minTask > avail ? Math.min(topHeight.value, maxTop) : topHeight.value;
   }
   const needCap = isLandscapeViewport.value || topHeight.value + minTask > avail;
-  if (!needCap) return topHeight.value;
-  return Math.min(topHeight.value, maxTop);
+  return needCap ? Math.min(topHeight.value, maxTop) : topHeight.value;
 });
 
 /** 计划表顶区行内样式：分屏与「收起任务」两端尽量共用 plannerMiddleAvailPx，便于 height transition 对齐 */
 const middleTopPlannerStyle = computed(() => {
   if (!settingStore.settings.showPlanner) return {};
+  if (sheetInputActive.value) {
+    return { height: "0px", minHeight: "0px", overflow: "hidden", padding: "0px" };
+  }
   if (taskPanelLayoutVisible.value) {
     return { height: `${effectiveMiddleTopHeightPx.value}px` };
   }

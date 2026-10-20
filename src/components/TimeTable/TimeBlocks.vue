@@ -119,16 +119,32 @@
     </div>
   </template>
 
-  <!-- ========== 生活记录点事件（喝/吃/厕）：桌面第4列中心，手机第3列 ========== -->
+  <!-- ========== 生活记录点事件（喝/吃/厕）：桌面第4列中心，手机第3列；点击看该条，不进空桶 ========== -->
   <div
     v-for="mark in lifePointMarks"
     :key="`life-point-${mark.kind}-${mark.recordId}`"
     class="life-point-mark"
     :style="getLifePointMarkStyle(mark)"
-    :title="`${mark.title} ${timestampToTimeString(mark.time)}`"
-    @click="handleTodoSelect(mark.todoId)"
   >
-    <n-icon :size="16" :component="lifePointIcon(mark.kind)" />
+    <NPopover
+      v-if="!isMobile"
+      trigger="click"
+      placement="top"
+      to="body"
+      :show-arrow="true"
+      :style="popoverMaxStyle"
+      :content-style="popoverContentStyle"
+    >
+      <template #trigger>
+        <div class="life-point-mark__hit">
+          <n-icon :size="16" :component="lifePointIcon(mark.kind)" />
+        </div>
+      </template>
+      <p class="timetable-popover-text">{{ formatLifePointCaption(mark) }}</p>
+    </NPopover>
+    <div v-else class="life-point-mark__hit" @click="onLifePointClick($event, mark)">
+      <n-icon :size="16" :component="lifePointIcon(mark.kind)" />
+    </div>
   </div>
 
   <!-- ========== 第三列：特殊优先级 Emoji ========== -->
@@ -219,16 +235,30 @@
     @click="handleScheduleSelect(range.id)"
   ></div>
 
-  <!-- 第四列：睡眠生活记录浅灰条 -->
+  <!-- 第四列：睡眠生活记录群青条；点击看该条，不进空桶 -->
   <div
     v-for="range in lifeSleepRanges"
     :key="`life-sleep-${range.recordId}`"
     class="actual-time-range life-sleep-range"
     :class="{ ongoing: range.ongoing }"
     :style="getLifeSleepRangeStyle(range)"
-    :title="formatLifeSleepTitle(range)"
-    @click="handleTodoSelect(range.todoId)"
-  ></div>
+  >
+    <NPopover
+      v-if="!isMobile"
+      trigger="click"
+      placement="top"
+      to="body"
+      :show-arrow="true"
+      :style="popoverMaxStyle"
+      :content-style="popoverContentStyle"
+    >
+      <template #trigger>
+        <div class="life-sleep-range__hit"></div>
+      </template>
+      <p class="timetable-popover-text">{{ formatLifeSleepCaption(range) }}</p>
+    </NPopover>
+    <div v-else class="life-sleep-range__hit" @click="onLifeSleepClick($event, range)"></div>
+  </div>
 
   <!-- ========== 第五列：打扰 / 能量 / 奖励 ========== -->
   <template v-for="mark in recordMarks" :key="`mark-${mark.kind}-${mark.recordId}`">
@@ -274,7 +304,13 @@ import { onUnmounted, ref, type Component } from "vue";
 import { timestampToTimeString } from "@/core/utils";
 import type { ActualTimeRange, Block } from "@/core/types/Block";
 import type { TaskRecordMark } from "@/services/timetable/taskRecordMarks";
-import type { LifePointKind, LifeSleepRange } from "@/services/timetable/lifeRecordOverlays";
+import {
+  formatLifePointCaption,
+  formatLifeSleepCaption,
+  type LifePointKind,
+  type LifePointMark,
+  type LifeSleepRange,
+} from "@/services/timetable/lifeRecordOverlays";
 import { getEnergyScoreEmoji, getRewardScoreEmoji } from "@/core/scoreEmojis";
 import { useTimeBlocks } from "@/composables/planner/useTimeBlocks";
 import { useDevice } from "@/composables/platform/useDevice";
@@ -328,13 +364,14 @@ const {
 
 const { isMobile } = useDevice();
 
-const LIFE_POINT_ICONS: Record<LifePointKind, Component> = {
+const LIFE_POINT_ICONS: Record<Exclude<LifePointKind, "energy">, Component> = {
   drink: Drop20Filled,
   eat: FoodApple20Filled,
   toilet: Door20Filled,
 };
 
 function lifePointIcon(kind: LifePointKind): Component {
+  if (kind === "energy") return Door20Filled;
   return LIFE_POINT_ICONS[kind];
 }
 
@@ -347,13 +384,6 @@ function formatActualRangeTitle(range: Pick<ActualTimeRange, "title" | "start" |
   const mins = Math.round((range.end - range.start) / 60_000);
   if (mins <= 0) return range.title;
   return `${range.title} - ${mins}min`;
-}
-
-function formatLifeSleepTitle(range: LifeSleepRange): string {
-  const mins = Math.round((range.end - range.start) / 60_000);
-  const span = `${timestampToTimeString(range.start)}–${timestampToTimeString(range.end)}`;
-  if (mins <= 0) return `${range.title} ${span}`;
-  return `${range.title} ${span} · ${mins}min`;
 }
 
 function recordMarkEmoji(mark: TaskRecordMark): string {
@@ -385,17 +415,29 @@ function closeMobilePopover() {
   }
 }
 
-function onRecordMarkClick(e: MouseEvent, mark: TaskRecordMark) {
-  handleRecordMarkSelect(mark);
-  const hasText = mark.kind !== "interruption" || !!mark.description?.trim();
-  if (!hasText) return;
-  const text = mark.kind === "interruption" ? mark.description || "" : formatRecordMarkText(mark);
+function showMobilePopover(e: MouseEvent, text: string) {
   const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
   const placement = rect.top < FLIP_TOP ? "below" : "above";
   const edge = placement === "below" ? rect.bottom + PANEL_GAP : window.innerHeight - rect.top + PANEL_GAP;
   mobilePopover.value = { text, placement, edge };
   if (mobilePopoverTimer != null) window.clearTimeout(mobilePopoverTimer);
   mobilePopoverTimer = window.setTimeout(closeMobilePopover, 3000);
+}
+
+function onRecordMarkClick(e: MouseEvent, mark: TaskRecordMark) {
+  handleRecordMarkSelect(mark);
+  const hasText = mark.kind !== "interruption" || !!mark.description?.trim();
+  if (!hasText) return;
+  const text = mark.kind === "interruption" ? mark.description || "" : formatRecordMarkText(mark);
+  showMobilePopover(e, text);
+}
+
+function onLifePointClick(e: MouseEvent, mark: LifePointMark) {
+  showMobilePopover(e, formatLifePointCaption(mark));
+}
+
+function onLifeSleepClick(e: MouseEvent, range: LifeSleepRange) {
+  showMobilePopover(e, formatLifeSleepCaption(range));
 }
 
 const activeEmojiPopoverTodoId = ref<number | null>(null);
@@ -911,8 +953,30 @@ const getPriorityBadgeClasses = (seg: any) => [
   transform: scale(1.3);
 }
 
-.record-mark {
+.record-mark,
+.life-point-mark {
   pointer-events: auto;
+}
+
+.record-mark {
+  z-index: 20 !important;
+}
+
+.life-point-mark :deep(.n-popover-trigger),
+.life-sleep-range :deep(.n-popover-trigger) {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.life-point-mark__hit,
+.life-sleep-range__hit {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
 }
 
 @media (max-width: 430px) {

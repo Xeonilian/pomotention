@@ -2,7 +2,7 @@
   日视图活动（开门去干嘛）：图=门开段 + 最后一条（开始时间/停/备注）；表保持完整编辑。
 -->
 <template>
-  <LifeRecordDayFrame v-if="task" :view="view" compact :note-open="chartNoteOpen">
+  <LifeRecordDayFrame v-if="task" :view="view" compact>
     <template #display>
       <div class="lr-chart">
         <div class="lr-chart__el lr-chart__icon">
@@ -26,7 +26,20 @@
         </div>
         <span class="lr-chart__el lr-chart__times" aria-hidden="true">×</span>
         <span class="lr-chart__el lr-chart__count">{{ records.length }}</span>
-        <span v-if="lastRecord" class="lr-chart__el toilet-day-chart__start" :title="'开始 ' + lastStartLabel">{{ lastStartLabel }}</span>
+        <n-time-picker
+          v-if="lastRecord"
+          class="lr-chart__el lr-chart__time toilet-day-chart__start"
+          :value="pickerTs(lastRecord.recordedAt)"
+          format="HH:mm"
+          size="small"
+          :show-icon="false"
+          :bordered="false"
+          :clearable="false"
+          to="body"
+          :z-index="10000"
+          title="开始"
+          @update:value="(ts: number | null) => changeTime(lastRecord, 'recordedAt', ts)"
+        />
         <button
           v-if="lastRecord && lastRecord.endAt == null"
           type="button"
@@ -36,25 +49,34 @@
         >
           <n-icon class="toilet-day-chart__ctrl-icon"><RecordStop20Regular /></n-icon>
         </button>
-        <span v-else-if="lastRecord" class="lr-chart__el toilet-day-chart__end" :title="'结束 ' + lastEndLabel">{{ lastEndLabel }}</span>
-        <button
+        <n-time-picker
+          v-else-if="lastRecord"
+          class="lr-chart__el lr-chart__time toilet-day-chart__end"
+          :value="pickerTs(lastRecord.endAt)"
+          format="HH:mm"
+          size="small"
+          :show-icon="false"
+          :bordered="false"
+          :clearable="false"
+          to="body"
+          :z-index="10000"
+          title="结束"
+          @update:value="(ts: number | null) => changeTime(lastRecord, 'endAt', ts)"
+        />
+        <div v-if="lastRecord" class="lr-chart__el lr-chart__score toilet-day-chart__energy">
+          <LifeRecordScorePop
+            :model-value="lastRecord.energy"
+            title="精力值"
+            :icon="BatterySaver20Regular"
+            @update:model-value="(v) => changeEnergy(lastRecord, v)"
+          />
+        </div>
+        <LifeRecordChartNoteBar
           v-if="lastRecord"
-          type="button"
-          class="lr-chart__el toilet-day-chart__note"
-          title="去干嘛"
-          @pointerdown="chartNoteOpen && $event.preventDefault()"
-          @click="onNoteClick"
-        >
-          <n-icon class="toilet-day-chart__ctrl-icon"><CommentNote20Regular /></n-icon>
-        </button>
-        <input
-          v-if="chartNoteOpen && lastRecord"
-          ref="chartNoteRef"
-          class="lr-chart__el toilet-day-chart__input"
-          :value="chartNoteDraft"
-          placeholder="去干嘛"
-          @input="onChartNoteInput"
-          @blur="onChartNoteBlur"
+          tone="toilet"
+          :model-value="lastRecord.description ?? ''"
+          placeholder="activity..."
+          @update:model-value="onNoteBarInput"
         />
       </div>
     </template>
@@ -65,6 +87,7 @@
           <col class="lr-day-table__col-time" />
           <col class="lr-day-table__col-time" />
           <col class="lr-day-table__col-dur" />
+          <col class="lr-day-table__col-score" />
           <col />
         </colgroup>
         <thead>
@@ -92,6 +115,9 @@
             </th>
             <th class="lr-day-table__col-dur" title="持续">
               <n-icon :size="18" class="lr-day-table__th-icon"><ShiftsActivity20Regular /></n-icon>
+            </th>
+            <th class="lr-day-table__col-score" title="精力值">
+              <n-icon :size="18" class="lr-day-table__th-icon"><BatterySaver20Regular /></n-icon>
             </th>
             <th class="lr-day-table__col-last" title="去干嘛">
               <n-icon :size="18" color="var(--color-text-secondary)" class="lr-day-table__th-icon"><Door20Filled /></n-icon>
@@ -131,6 +157,14 @@
             <td class="lr-day-table__col-dur">
               <span class="lr-day-table__dur">{{ formatDuration(record) }}</span>
             </td>
+            <td class="lr-day-table__col-score">
+              <LifeRecordScorePop
+                :model-value="record.energy"
+                title="精力值"
+                placement="bottom"
+                @update:model-value="(v) => changeEnergy(record, v)"
+              />
+            </td>
             <td class="lr-day-table__col-last">
               <n-input
                 class="lr-day-table__note"
@@ -148,11 +182,11 @@
   </LifeRecordDayFrame>
 </template>
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from "vue";
+import { computed, ref } from "vue";
 import { NIcon, NInput, NPopconfirm, NTimePicker } from "naive-ui";
 import {
   Add20Regular,
-  CommentNote20Regular,
+  BatterySaver20Regular,
   Delete20Regular,
   Door20Filled,
   Play20Regular,
@@ -160,37 +194,18 @@ import {
   ShiftsActivity20Regular,
 } from "@vicons/fluent";
 import type { LifeRecord } from "@/core/types/Task";
-import { timestampToTimeString } from "@/core/utils";
 import { useLifeRecordEditor } from "@/composables/lifeRecord/useLifeRecordEditor";
+import LifeRecordChartNoteBar from "@/components/LifeRecord/LifeRecordChartNoteBar.vue";
+import LifeRecordScorePop from "@/components/LifeRecord/LifeRecordScorePop.vue";
 import LifeRecordDayFrame from "@/components/LifeRecord/LifeRecordDayFrame.vue";
 const props = withDefaults(defineProps<{ taskId: number; embedded?: boolean; view?: "chart" | "table" }>(), {
   view: "chart",
 });
-const { task, records, hasOpenSpan, appendRow, stampStart, stampEnd, pickerTs, changeTime, changeDescription, remove } =
+const { task, records, hasOpenSpan, appendRow, stampStart, stampEnd, pickerTs, changeTime, changeDescription, changeEnergy, remove } =
   useLifeRecordEditor(() => props.taskId, "toilet", { embedded: () => props.embedded });
 const lastRecord = computed(() => records.value[records.value.length - 1] ?? null);
-const lastStartLabel = computed(() => (lastRecord.value ? timestampToTimeString(lastRecord.value.recordedAt) : ""));
-const lastEndLabel = computed(() => (lastRecord.value?.endAt != null ? timestampToTimeString(lastRecord.value.endAt) : ""));
 const askEndOpen = ref(false);
-const chartNoteOpen = ref(false);
-const chartNoteDraft = ref("");
-const chartNoteRef = ref<HTMLInputElement | null>(null);
-watch(
-  () => lastRecord.value?.id,
-  () => {
-    chartNoteOpen.value = false;
-  },
-);
-watch(chartNoteOpen, async (open) => {
-  if (!open) return;
-  await nextTick();
-  chartNoteRef.value?.focus({ preventScroll: true });
-});
 function onDoorClick() {
-  if (chartNoteOpen.value) {
-    commitChartNote();
-    chartNoteOpen.value = false;
-  }
   if (hasOpenSpan.value) {
     askEndOpen.value = true;
     return;
@@ -202,28 +217,9 @@ function onConfirmLastEnded() {
   stampEnd();
   appendRow();
 }
-function commitChartNote() {
+function onNoteBarInput(v: string) {
   const last = lastRecord.value;
-  if (!last) return;
-  changeDescription(last, chartNoteDraft.value);
-}
-function onNoteClick() {
-  const last = lastRecord.value;
-  if (!last) return;
-  if (chartNoteOpen.value) {
-    commitChartNote();
-    chartNoteOpen.value = false;
-    return;
-  }
-  chartNoteDraft.value = last.description ?? "";
-  chartNoteOpen.value = true;
-}
-function onChartNoteInput(e: Event) {
-  chartNoteDraft.value = (e.target as HTMLInputElement).value;
-}
-function onChartNoteBlur() {
-  commitChartNote();
-  chartNoteOpen.value = false;
+  if (last) changeDescription(last, v);
 }
 function formatDuration(record: LifeRecord): string {
   if (record.endAt == null) return "—";
@@ -257,17 +253,12 @@ function formatDuration(record: LifeRecord): string {
 /* 下排锚点跟睡觉图（用户调过的值） */
 .toilet-day-chart__start {
   left: calc(50% - var(--a) - 30px);
-  top: calc(50% + var(--f) - 20px);
-  font-size: 22px;
-  font-weight: 500;
-  font-family: Consolas, "Courier New", Courier, monospace;
-  color: var(--color-text-primary);
-  white-space: nowrap;
+  top: calc(50% + var(--f) - var(--row2-shift));
 }
 .toilet-day-chart__stop,
 .toilet-day-chart__end {
   left: 50%;
-  top: calc(50% + var(--f) - 20px);
+  top: calc(50% + var(--f) - var(--row2-shift));
   color: var(--color-text-primary);
 }
 .toilet-day-chart__stop {
@@ -279,24 +270,12 @@ function formatDuration(record: LifeRecord): string {
   cursor: pointer;
 }
 .toilet-day-chart__end {
-  font-size: 22px;
-  font-weight: 500;
-  font-family: Consolas, "Courier New", Courier, monospace;
-  white-space: nowrap;
+  width: 72px;
 }
-.toilet-day-chart__note {
-  left: calc(50% + var(--c) + 15px);
-  top: calc(50% + var(--f) - 20px);
-  width: 28px;
-  height: 28px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-text-primary);
-  cursor: pointer;
+.toilet-day-chart__energy {
+  left: calc(50% + var(--c) + 25px);
 }
-.toilet-day-chart__stop:hover,
-.toilet-day-chart__note:hover {
+.toilet-day-chart__stop:hover {
   opacity: 0.85;
 }
 .toilet-day-chart__ctrl-icon {
@@ -311,23 +290,6 @@ function formatDuration(record: LifeRecord): string {
   width: 1em;
   height: 1em;
   display: block;
-}
-.toilet-day-chart__input {
-  left: 50%;
-  top: calc(50% + var(--f) + 22px);
-  width: calc(var(--a) + var(--c) + var(--icon-size));
-  transform: translate(-50%, 0);
-  padding: 2px 0;
-  border: none;
-  border-radius: 0;
-  background: transparent;
-  color: var(--color-text-primary);
-  font-size: 16px;
-  line-height: 1.4;
-  text-align: center;
-  outline: none;
-  font-family: inherit;
-  box-sizing: border-box;
 }
 .toilet-day-table__th-stamp {
   cursor: pointer;

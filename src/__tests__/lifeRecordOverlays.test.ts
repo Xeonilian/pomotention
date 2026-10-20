@@ -4,7 +4,14 @@ import { TAG_ID_LIFE_DRINK, TAG_ID_LIFE_SLEEP } from "@/core/constants";
 import type { Activity } from "@/core/types/Activity";
 import type { Task } from "@/core/types/Task";
 import type { Todo } from "@/core/types/Todo";
-import { collectLifeRecordOverlays } from "@/services/timetable/lifeRecordOverlays";
+import { timestampToTimeString } from "@/core/utils";
+import {
+  collectLifeRecordOverlays,
+  formatLifePointCaption,
+  formatLifeSleepCaption,
+  type LifePointMark,
+  type LifeSleepRange,
+} from "@/services/timetable/lifeRecordOverlays";
 
 const DAY = 24 * 60 * 60 * 1000;
 const dayStart = Date.UTC(2026, 8, 3); // 2026-09-03 UTC midnight as day key stand-in
@@ -192,5 +199,118 @@ describe("collectLifeRecordOverlays 跨天睡眠", () => {
       openSleepEnd: "dayOfStart",
     });
     expect(onNextDay.sleeps).toHaveLength(0);
+  });
+});
+
+describe("formatLifePointCaption / formatLifeSleepCaption", () => {
+  const at = new Date(2026, 9, 15, 15, 30).getTime();
+  const time = timestampToTimeString(at);
+
+  function point(partial: Partial<LifePointMark> & Pick<LifePointMark, "kind" | "title">): LifePointMark {
+    return {
+      recordId: at,
+      taskId: 1,
+      todoId: 1,
+      colorVar: "",
+      time: at,
+      lane: 0,
+      note: "",
+      ...partial,
+    };
+  }
+
+  it("喝水带种类时刻和毫升", () => {
+    expect(formatLifePointCaption(point({ kind: "drink", title: "喝水", amountMl: 250 }))).toBe(`喝水 ${time} 水 250 ml`);
+  });
+
+  it("吃饭带正餐饥饿饱足和备注", () => {
+    expect(
+      formatLifePointCaption(
+        point({ kind: "eat", title: "吃饭", eatCourse: "meal", hunger: 4, satiety: 8, note: "面条" }),
+      ),
+    ).toBe(`吃饭 ${time} 正餐 饥饿4 饱足8 面条`);
+  });
+
+  it("吃饭补剂", () => {
+    expect(formatLifePointCaption(point({ kind: "eat", title: "吃饭", eatCourse: "supplement" }))).toBe(
+      `吃饭 ${time} 补剂`,
+    );
+  });
+
+  it("精力带时刻和分数", () => {
+    expect(formatLifePointCaption(point({ kind: "energy", title: "精力", energy: 7, note: "跑步" }))).toBe(
+      `精力 ${time} 7 跑步`,
+    );
+  });
+
+  it("活动带开始结束和精力", () => {
+    const endAt = new Date(2026, 9, 15, 16, 0).getTime();
+    expect(formatLifePointCaption(point({ kind: "toilet", title: "活动", endAt, energy: 6 }))).toBe(
+      `活动 ${time}–${timestampToTimeString(endAt)} 精力6`,
+    );
+  });
+
+  it("睡觉带时段和梦", () => {
+    const end = new Date(2026, 9, 16, 7, 0).getTime();
+    const range: LifeSleepRange = {
+      recordId: at,
+      taskId: 1,
+      todoId: 1,
+      title: "睡觉",
+      note: "下雨",
+      start: at,
+      end,
+    };
+    expect(formatLifeSleepCaption(range)).toBe(`睡觉 ${time}–${timestampToTimeString(end)} 下雨`);
+  });
+
+  it("睡觉带精力", () => {
+    const end = new Date(2026, 9, 16, 7, 0).getTime();
+    const range: LifeSleepRange = {
+      recordId: at,
+      taskId: 1,
+      todoId: 1,
+      title: "睡觉",
+      note: "下雨",
+      start: at,
+      end,
+      energy: 6,
+    };
+    expect(formatLifeSleepCaption(range)).toBe(`睡觉 ${time}–${timestampToTimeString(end)} 精力6 下雨`);
+  });
+});
+
+describe("collectLifeRecordOverlays 精力点", () => {
+  it("从当日 energy 桶收集", () => {
+    const at = dayStart + 10 * 3600_000;
+    const energyTask: Task = {
+      id: 99,
+      activityTitle: `daily_energy_${dayStart}`,
+      sourceId: dayStart,
+      energyRecords: [{ id: 1, value: 8, recordedAt: at, description: "醒" }],
+      rewardRecords: [],
+      interruptionRecords: [],
+      description: "",
+      starred: false,
+      deleted: false,
+      synced: false,
+      lastModified: 1,
+    };
+    const { points } = collectLifeRecordOverlays({
+      dayStart,
+      dayEnd,
+      timeRange: { start: dayStart, end: dayEnd },
+      todos: [],
+      getActivity: () => undefined,
+      getTask: () => undefined,
+      getDayEnergyTask: () => energyTask,
+      now: at,
+      minGapMs: 60_000,
+    });
+    expect(points).toHaveLength(1);
+    expect(points[0]?.kind).toBe("energy");
+    expect(points[0]?.energy).toBe(8);
+    expect(points[0]?.note).toBe("醒");
+    expect(points[0]?.time).toBe(at);
   });
 });

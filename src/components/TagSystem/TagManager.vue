@@ -162,13 +162,14 @@ import {
 } from "@vicons/fluent";
 import { NInput, NButton, NPopover, NColorPicker, NIcon } from "naive-ui";
 import { useDevice } from "@/composables/platform/useDevice";
-import { isLifeRecordTagId } from "@/core/lifeRecord";
+import { TAG_IDS_HIDDEN_IN_TAG_RENDERER } from "@/core/constants";
 
 // ================================================================
 // 初始化
 // ================================================================
 const tagStore = useTagStore();
 const dialog = useDialog();
+const HIDDEN_SYSTEM_TAG_IDS = new Set(TAG_IDS_HIDDEN_IN_TAG_RENDERER);
 
 // ================================================================
 // Props & Emits
@@ -276,8 +277,8 @@ const selectedIdSet = computed<Set<number>>(() => new Set(props.modelValue));
  */
 const sortedTags = computed<TagWithCount[]>(() => {
   const keyword = inputText.value.trim();
-  // 生活系统 tag 不进 Tag Manager（仍存库，仅隐藏管理入口）
-  const baseList = (keyword ? tagStore.findByName(keyword) : [...tagStore.allTags]).filter((t) => !isLifeRecordTagId(t.id));
+  // 系统 tag（四象限 / 收支 / 生活记录）不进 Tag Manager
+  const baseList = (keyword ? tagStore.findByName(keyword) : [...tagStore.allTags]).filter((t) => !HIDDEN_SYSTEM_TAG_IDS.has(t.id));
 
   return baseList.sort((a, b) => {
     const aSelected = selectedIdSet.value.has(a.id) ? 1 : 0;

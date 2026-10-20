@@ -1,7 +1,7 @@
 <!-- LifeRecordButton.vue -->
 <!-- 单按钮：日=AppsAddIn/ChannelAdd（无记录/有记录）→进入集中 sheet；非日=Apps20Regular/Filled→生活可视化开关 -->
 <template>
-  <!-- 日：直接进入集中生活 sheet（HomeView 藏 planner，task 区渲染 2×2） -->
+  <!-- 日：进入集中生活 sheet，只换 task 区（今日图 / 过往表） -->
   <n-button
     v-if="isDayView"
     size="small"
@@ -38,19 +38,23 @@ import { NButton, NIcon } from "naive-ui";
 import { AppsAddIn20Regular, Apps20Regular, Apps20Filled, ChannelAdd20Regular } from "@vicons/fluent";
 import type { LifeRecordKind } from "@/core/lifeRecord";
 import { useSettingStore } from "@/stores/useSettingStore";
+import { useDataStore } from "@/stores/useDataStore";
 import { useLifePlannerLayerStore } from "@/stores/useLifePlannerLayerStore";
 
 const settingStore = useSettingStore();
+const dataStore = useDataStore();
 const layerStore = useLifePlannerLayerStore();
 
 const isDayView = computed(() => settingStore.settings.viewSet === "day");
 
 const emit = defineEmits<{ recorded: [kind: LifeRecordKind] }>();
 
-/** 日：进入集中生活 sheet——一次性建/取 4 类当天桶，HomeView 藏 planner 渲染 2×2 */
+/** 日：进入集中生活 sheet——一次性建/取 4 类当天桶 */
 function onOpenDaySheet() {
   // 集中 sheet 即 task 区内容，确保 task 区可见
   settingStore.settings.showTask = true;
+  // 选中普通待办/日程时 sheet 会让位给任务预览；按钮进 sheet 需先清行选中
+  dataStore.selectedRowId = null;
   layerStore.openDaySheet();
   emit("recorded", "drink");
 }

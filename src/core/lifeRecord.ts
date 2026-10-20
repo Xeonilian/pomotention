@@ -1,6 +1,7 @@
 // src/core/lifeRecord.ts
 // 生活记录（lifeRecord）领域常量与 tag 判定：core 层，无 Vue 依赖
 import type { Activity } from "@/core/types/Activity";
+import type { DrinkKind, EatCourse } from "@/core/types/Task";
 import { TAG_ID_LIFE_DRINK, TAG_ID_LIFE_EAT, TAG_ID_LIFE_TOILET, TAG_ID_LIFE_SLEEP } from "@/core/constants";
 import { dailyPlaceholderTitle } from "@/core/dailyPlaceholder";
 
@@ -70,4 +71,71 @@ export function getLifeRecordKind(activity: Pick<Activity, "tagIds"> | null | un
 
 export function isLifeRecordActivity(activity: Pick<Activity, "tagIds"> | null | undefined): boolean {
   return getLifeRecordKind(activity) !== null;
+}
+
+export const EAT_COURSE_CYCLE: readonly EatCourse[] = ["meal", "dessert", "apple", "supplement"];
+
+export function normalizeEatCourse(course?: EatCourse | null): EatCourse {
+  if (course === "dessert" || course === "apple" || course === "supplement") return course;
+  return "meal";
+}
+
+export function eatCourseLabel(course?: EatCourse | null): string {
+  switch (normalizeEatCourse(course)) {
+    case "dessert":
+      return "甜点";
+    case "apple":
+      return "水果";
+    case "supplement":
+      return "补剂";
+    default:
+      return "正餐";
+  }
+}
+
+export function nextEatCourse(course?: EatCourse | null): EatCourse {
+  const cur = normalizeEatCourse(course);
+  const i = EAT_COURSE_CYCLE.indexOf(cur);
+  return EAT_COURSE_CYCLE[(i + 1) % EAT_COURSE_CYCLE.length];
+}
+
+export type { DrinkKind };
+
+export const DRINK_KIND_DEFS: readonly { kind: DrinkKind; label: string }[] = [
+  { kind: "beverage", label: "饮品" },
+  { kind: "water", label: "水" },
+  { kind: "coffee", label: "咖啡" },
+  { kind: "wine", label: "酒" },
+];
+
+const DRINK_KIND_CYCLE: readonly DrinkKind[] = DRINK_KIND_DEFS.map((d) => d.kind);
+
+export function drinkKindLabel(kind: DrinkKind): string {
+  return DRINK_KIND_DEFS.find((d) => d.kind === kind)?.label ?? "水";
+}
+
+export function normalizeDrinkKind(kind?: DrinkKind | null): DrinkKind {
+  if (kind === "beverage" || kind === "coffee" || kind === "wine") return kind;
+  return "water";
+}
+
+/** 空或未识别按外带杯（水）；旧数据曾把种类写在 description */
+export function drinkKindFromDescription(text?: string | null): DrinkKind {
+  const t = (text ?? "").trim();
+  if (t === "饮品") return "beverage";
+  if (t === "咖啡") return "coffee";
+  if (t === "酒") return "wine";
+  return "water";
+}
+
+/** 有 drinkKind 用字段；否则认旧备注标签 */
+export function drinkKindOf(record: { drinkKind?: DrinkKind | null; description?: string | null }): DrinkKind {
+  if (record.drinkKind != null) return normalizeDrinkKind(record.drinkKind);
+  return drinkKindFromDescription(record.description);
+}
+
+export function nextDrinkKind(kind?: DrinkKind | null): DrinkKind {
+  const cur = normalizeDrinkKind(kind);
+  const i = DRINK_KIND_CYCLE.indexOf(cur);
+  return DRINK_KIND_CYCLE[(i + 1) % DRINK_KIND_CYCLE.length];
 }
