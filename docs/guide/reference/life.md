@@ -1,8 +1,10 @@
 # 生活记录使用方法
 
 ::: tip
-生活记录用来顺手记下 **喝水、吃饭、活动、睡觉**。日视图写明细；周 / 月 / 年打开图层看趋势。数据挂在当天对应任务上，登录后随任务一起云同步。
-:::
+
+- 生活记录用来顺手记下 **喝水、吃饭、活动、睡觉**。
+- 日视图写明细；周 / 月 / 年打开图层看趋势。
+  :::
 
 ## 快速导航
 
@@ -15,31 +17,46 @@
 
 ## 入口与按钮
 
-入口在计划表顶栏，和 [收支账本](ledger.md) 的钱包按钮同一排。
+入口在计划表顶栏，和 [收支账本](ledger.md) 的钱包按钮同一排。图标文件名与软件内 Fluent 组件同名。
 
-|                                                                                按钮图标                                                                                 | 功能说明                                                                 |
-| :---------------------------------------------------------------------------------------------------------------------------------------------------------------------: | :----------------------------------------------------------------------- |
-|     <img src="/icons/Apps20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(255, 255, 255);border-radius: 6px;">      | **周 / 月 / 年**：打开生活可视化图层；**日视图**：打开当天四类录入面板（当天还没有记录时，图标会带加号） |
-|      <img src="/icons/Apps20Filled.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(193, 226, 255);border-radius: 6px;">      | **周 / 月 / 年**：图层已开，再点一次关闭                                                                 |
-|      <img src="/icons/Add16Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(193, 226, 255);border-radius: 6px;">      | 表视图表头：给当前类加一行                                                                               |
-|        <img src="/icons/Delete24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(224, 224, 224);border-radius: 6px;"> | 表视图行内：删除这一条                                                   |
-|    <img src="/icons/RecordStop20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(224, 224, 224);border-radius: 6px;"> | 活动 / 睡觉图视图：把未结束的一段标成当前时间结束                        |
+|                                                         按钮图标                                                         | 功能说明                         |
+| :----------------------------------------------------------------------------------------------------------------------: | :------------------------------- |
+|    <img src="/icons/AppsAddIn20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;">     | 日视图、当天还没有记录：打开录入 |
+|    <img src="/icons/ChannelAdd20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;">    | 日视图、当天已有记录：打开录入   |
+|   <img src="/icons/TableSimple20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;">    | 切到表模式                       |
+|     <img src="/icons/DataPie20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;">      | 切到图模式                       |
+|     <img src="/icons/Dismiss20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;">      | 关闭录入表单                     |
+|       <img src="/icons/Add20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;">        | 表头：加一行                     |
+|      <img src="/icons/Delete20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;">      | 表内：删除这一条                 |
+|       <img src="/icons/Play20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;">       | 活动 / 睡觉：开始（当前时间）    |
+|    <img src="/icons/RecordStop20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;">    | 活动 / 睡觉：结束（当前时间）    |
+|   <img src="/icons/BatterySaver20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;">   | 精力值                           |
+|     <img src="/icons/Storage24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;">      | 饥饿感                           |
+|     <img src="/icons/Savings20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;">      | 饱足感                           |
+|    <img src="/icons/DrinkBeer20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;">     | 饮品                             |
+|    <img src="/icons/DrinkToGo24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;">     | 水                               |
+|   <img src="/icons/DrinkCoffee20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;">    | 咖啡                             |
+|    <img src="/icons/DrinkWine20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;">     | 酒                               |
+|    <img src="/icons/FoodPizza20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;">     | 正餐                             |
+|     <img src="/icons/FoodCake20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;">     | 甜点                             |
+|    <img src="/icons/FoodApple20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;">     | 水果                             |
+| <img src="/icons/BriefcaseMedical20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;"> | 补剂                             |
 
-- **日视图**：点顶栏生活按钮，任务区换成四类录入（计划表仍在上面）。再点一次或点面板上的 × 关闭，回到普通任务追踪。手机进入日视图会默认打开录入图。
-- **选中待办或预约**：任务区改回任务预览；再点顶栏宫格会清掉选中并回到生活记录。
-- **周 / 月 / 年**：点顶栏宫格开关图层。开着时，计划表里的普通时间块会让位给生活图层。
-- 从周 / 月 / 年点某天的 **日期数字**：打开该日的表视图预览（只看 / 改这一天）。电脑上 **双击** 日期、手机上 **连点两下** 日期，会进入该日的日视图。
+- **日视图**：点顶栏打开录入（无记录是加号宫格，有记录是频道加号）。关掉用表单上的关闭，不是再点顶栏。手机进入日视图会默认打开图。
+- **选中待办或预约**：任务区改回任务预览；再点顶栏会清掉选中并回到生活记录。
+
+- 从周 / 月 / 年点某天的 **日期数字**：打开该日的表预览。电脑上 **双击** 日期、手机上 **连点两下** 日期，进入该日的日视图。
 
 ## 四类记录
 
 界面上的「活动」是出门办事、如厕一类的时间段，图标是门，不是活动清单里的 Activity。
 
-| 类     | 图标 | 记什么                                                                                          |
-| ------ | ---- | ----------------------------------------------------------------------------------------------- |
-| 喝水   | 💧   | 每一口的时间和毫升。点水滴图标按当前杯量加一口（默认水）；图上点啤酒杯 / 外带杯 / 咖啡杯 / 酒杯改种类；表里点同类图标轮换。种类不写进备注。当日目标可在图上改。 |
-| 吃饭   | 🍚   | 时间、类型（正餐 / 甜点 / 水果 / 补剂）、饥饿感 / 饱足感（1–10）、吃了什么。点苹果图标加一条；点披萨 / 蛋糕 / 苹果 / 药箱在四种类型间切换。点仓库 / 存钱罐打饥饿感和饱足感。 |
-| 活动   | 🚪   | 开始、结束、精力（1–10）、去干嘛。点门开始一段；未结束时点停止按钮记下结束时间。点电池图标打精力（写入当天精力记录）；改去干嘛会同步到那条精力备注。 |
-| 睡觉   | 😴   | 入睡、醒来、精力（1–10）、梦什么。点月亮开始一段；未醒时点停止记下醒来时间。点电池图标打精力（写入当天精力记录）；改梦备注会同步到那条精力备注。 |
+| 类   |                                                       大图标                                                       | 记什么                                                                                                         |
+| ---- | :----------------------------------------------------------------------------------------------------------------: | -------------------------------------------------------------------------------------------------------------- |
+| 喝水 |    <img src="/icons/Drop20Filled.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;">     | 每一口的时间和毫升。点大水滴按当前杯量加一口（默认水）；点四种杯子改种类。种类不写进备注。当日目标可在图上改。 |
+| 吃饭 |  <img src="/icons/FoodApple20Filled.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;">  | 时间、正餐 / 甜点 / 水果 / 补剂、饥饿感 / 饱足感（1–10）、吃了什么。点大苹果加一条；点四种食物图标切换类型。   |
+| 活动 |    <img src="/icons/Door20Filled.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;">     | 开始、结束、精力（1–10）、去干嘛。点门开一段；未结束时点结束记下当前时间。点精力图标打分。                     |
+| 睡觉 | <img src="/icons/WeatherMoon20Filled.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;"> | 入睡、醒来、精力（1–10）、梦什么。点月亮开一段；未醒时点结束记下醒来。点精力图标打分。                         |
 
 喝水默认杯量 **250 ml**（可改 50–1000），默认日目标 **2000 ml**。改杯量只影响之后新加的一口，已经记下的量不会跟着变。
 
@@ -75,10 +92,8 @@
 
 在周 / 月 / 年打开生活图层时：
 
-- 时间表和任务追踪区域会先藏起来，方便看计划表；**不会改你平时的显示设置**，关掉图层后还原。
+- 时间表和任务追踪区域会先藏起来，方便看计划表；关掉图层后还原。
 - 顶栏里用来显示 / 隐藏这两块的按钮会跟着变成「当前看不见」的样子。再点它们：先退出预览，再打开对应区域。
-- 打开生活录入面板或可视化时，右下角 FAB 会隐藏，避免挡住输入。
-- 弹出键盘编辑时，页面会把当前输入滚到中上段，并尽量让该类的大图标仍在屏幕里。
 
 ## 限制与说明
 

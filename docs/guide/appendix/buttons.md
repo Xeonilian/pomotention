@@ -66,13 +66,11 @@ description: 各区域主要按钮与控件的集中速查；细节仍以对应�
 
 ## 生活记录 {#生活记录}
 
-计划表顶栏宫格按钮；日视图打开录入面板（手机进入日视图即打开），周 / 月 / 年打开可视化图层。细节见 [生活记录](../reference/life.md)。
+计划表顶栏宫格；日视图打开录入（关掉用表单关闭，不是再点顶栏），周 / 月 / 年打开图层。完整对照见 [生活记录](../reference/life.md)。
 
-|                                                                                按钮图标                                                                                 | 功能说明                         |
-| :---------------------------------------------------------------------------------------------------------------------------------------------------------------------: | :------------------------------- |
-|     <img src="/icons/Apps20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(255, 255, 255);border-radius: 6px;">      | 打开生活记录（日=录入，其它=图层） |
-|      <img src="/icons/Apps20Filled.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(193, 226, 255);border-radius: 6px;">      | 图层已开，再点关闭               |
-|      <img src="/icons/Drop20Filled.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(193, 226, 255);border-radius: 6px;">       | 喝水：图上点水滴加一口           |
-|     <img src="/icons/FoodPizza20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(224, 224, 224);border-radius: 6px;">     | 吃饭类型：正餐（还可切甜点 / 水果 / 补剂） |
-|     <img src="/icons/BriefcaseMedical20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(224, 224, 224);border-radius: 6px;">     | 吃饭类型：补剂 |
-|    <img src="/icons/RecordStop20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(224, 224, 224);border-radius: 6px;"> | 活动 / 睡觉：结束当前这一段      |
+| 按钮图标 | 功能说明 |
+| :---: | :--- |
+| <img src="/icons/AppsAddIn20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;"> | 日视图、无记录：打开录入 |
+| <img src="/icons/ChannelAdd20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;"> | 日视图、有记录：打开录入 |
+| <img src="/icons/Apps20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;"> | 周 / 月 / 年：打开图层 |
+| <img src="/icons/Apps20Filled.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;"> | 周 / 月 / 年：图层已开 |
