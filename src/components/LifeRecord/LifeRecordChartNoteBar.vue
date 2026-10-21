@@ -17,6 +17,7 @@
       :value="modelValue"
       :placeholder="placeholder"
       rows="4"
+      cols="1"
       @focus="onFocus"
       @input="onInput"
       @blur="onBlur"
@@ -93,6 +94,9 @@ defineExpose({
   box-sizing: border-box;
   overflow: hidden;
 }
+.lr-note-bar:not(.lr-note-bar--empty) {
+  width: 100%;
+}
 .lr-note-bar--expanded {
   min-height: 88px;
 }
@@ -108,6 +112,7 @@ defineExpose({
 .lr-note-bar__field {
   display: block;
   width: 100%;
+  min-width: 0;
   height: 28px;
   margin: 0;
   padding: 4px 8px;

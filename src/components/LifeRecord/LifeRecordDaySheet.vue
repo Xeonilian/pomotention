@@ -149,7 +149,7 @@ function toggleView() {
   min-width: 0;
 }
 .life-day-sheet--mobile .life-day-sheet__grid {
-  --lr-sheet-compact-stack-gap: 20px;
+  --lr-sheet-compact-stack-gap: 8px;
   display: flex;
   flex-direction: column;
   grid-template-rows: none;

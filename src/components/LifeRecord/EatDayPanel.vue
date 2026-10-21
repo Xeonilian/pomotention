@@ -12,6 +12,7 @@
         <span class="lr-chart__el lr-chart__count">{{ records.length }}</span>
         <template v-if="lastRecord">
           <div class="lr-chart__merge">
+          <div class="lr-chart__row2">
           <LifeRecordTimePicker
             class="lr-chart__el lr-chart__time eat-day-chart__start"
             :value="pickerTs(lastRecord.recordedAt)"
@@ -50,6 +51,7 @@
               :icon="Savings20Regular"
               @update:model-value="(v) => changeSatiety(lastRecord, v)"
             />
+          </div>
           </div>
           <LifeRecordChartNoteBar
             tone="eat"

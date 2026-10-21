@@ -144,22 +144,30 @@
   width: 0 !important;
 }
 
-/* 桌面仍按锚点散开；手机把第二行和第三行收成一行，四个图从同一左缘起 */
+/* 桌面：行2 和备注分两行。空备注保持窄，有字拉到与行2同宽。
+   手机仍把第二行和第三行收成一行，四个图从同一左缘起。 */
 .lr-chart__merge {
-  display: contents;
-}
-.lr-day--mobile .lr-chart__merge {
   position: absolute;
   z-index: 2;
-  left: calc(50% - var(--a) - 70px);
-  right: 4px;
+  left: 50%;
   top: calc(50% + var(--f) - var(--row2-shift) - 14px);
+  transform: translateX(-50%);
   display: flex;
-  align-items: flex-start;
-  gap: 4px;
-  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 72%;
+  min-width: max-content;
+  max-width: 94%;
 }
-.lr-day--mobile .lr-chart__merge > .lr-chart__el {
+.lr-chart__row2 {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+}
+.lr-chart__merge .lr-chart__el {
   position: relative !important;
   left: auto !important;
   top: auto !important;
@@ -167,19 +175,57 @@
   transform: none !important;
   flex: 0 0 auto;
 }
-.lr-day--mobile .lr-chart__merge > .lr-note-bar {
+.lr-chart__merge > .lr-note-bar {
+  width: 100% !important;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 28px;
+  align-self: stretch;
+}
+.lr-chart__merge > .lr-note-bar--empty {
+  width: calc(var(--a) + var(--c) + var(--icon-size)) !important;
+  max-width: calc(var(--a) + var(--c) + var(--icon-size));
+  align-self: center;
+}
+.lr-day--mobile .lr-chart__merge {
+  /* 方格是 60vw 居中：时间起点拉到整格左侧，行宽 90vw */
+  left: calc(50% - 45vw);
+  right: auto;
+  top: calc(50% + var(--f) - var(--row2-shift) - 14px);
+  transform: none;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 4px;
+  width: 90vw;
+  min-width: 0;
+  max-width: 90vw;
+}
+.lr-day--mobile .lr-chart__row2 {
+  display: contents;
+}
+.lr-day--mobile .lr-chart__merge > .lr-note-bar,
+.lr-day--mobile .lr-chart__merge > .lr-note-bar--empty {
   flex: 1 1 auto;
   width: auto !important;
   min-width: 0;
-  min-height: 28px;
+  max-width: none;
+  align-self: auto;
 }
 .lr-day--mobile .lr-chart__merge .lr-note-bar__field {
   text-align: left;
 }
 .lr-day--mobile .lr-chart__merge .lr-chart__time,
 .lr-day--mobile .lr-chart__merge .lr-chart__time.n-time-picker,
-.lr-day--mobile .lr-chart__merge .lr-chart__time .n-input {
+.lr-day--mobile .lr-chart__merge .lr-chart__time .n-input,
+.lr-day--mobile .lr-chart__merge .sleep-day-chart__stop,
+.lr-day--mobile .lr-chart__merge .toilet-day-chart__stop {
   width: 64px;
+}
+.lr-day--mobile .lr-chart__merge .sleep-day-chart__stop,
+.lr-day--mobile .lr-chart__merge .toilet-day-chart__stop {
+  flex: 0 0 64px;
 }
 .lr-day--mobile .lr-chart__merge .lr-chart__time .n-input__input-el {
   text-align: left;

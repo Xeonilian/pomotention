@@ -29,60 +29,62 @@
         <span class="lr-chart__el lr-chart__times" aria-hidden="true">×</span>
         <span class="lr-chart__el lr-chart__count">{{ closedCount }}</span>
         <div v-if="lastRecord" class="lr-chart__merge">
-        <LifeRecordTimePicker
-          class="lr-chart__el lr-chart__time sleep-day-chart__start"
-          :value="pickerTs(lastRecord.recordedAt)"
-          format="HH:mm"
-          size="small"
-          :show-icon="false"
-          :bordered="false"
-          :clearable="false"
-          to="body"
-          :z-index="10000"
-          title="开始"
-          @update:value="(ts: number | null) => changeTime(lastRecord, 'recordedAt', ts)"
-        />
-        <button
-          v-if="lastRecord && lastRecord.endAt == null"
-          type="button"
-          class="lr-chart__el sleep-day-chart__stop"
-          title="醒了（当前时间）"
-          @click="stampEnd"
-        >
-          <n-icon class="sleep-day-chart__ctrl-icon"><RecordStop20Regular /></n-icon>
-        </button>
-        <LifeRecordTimePicker
-          v-else-if="lastRecord"
-          class="lr-chart__el lr-chart__time sleep-day-chart__end"
-          :value="pickerTs(lastRecord.endAt)"
-          format="HH:mm"
-          size="small"
-          :show-icon="false"
-          :bordered="false"
-          :clearable="false"
-          to="body"
-          :z-index="10000"
-          title="醒了"
-          @update:value="(ts: number | null) => changeTime(lastRecord, 'endAt', ts)"
-        />
-        <div v-if="lastRecord" class="lr-chart__el lr-chart__score sleep-day-chart__energy">
-          <LifeRecordScorePop
-            :model-value="lastRecord.energy"
-            title="精力值"
-            :icon="BatterySaver20Regular"
-            @update:model-value="(v) => changeEnergy(lastRecord, v)"
+          <div class="lr-chart__row2">
+            <LifeRecordTimePicker
+              class="lr-chart__el lr-chart__time sleep-day-chart__start"
+              :value="pickerTs(lastRecord.recordedAt)"
+              format="HH:mm"
+              size="small"
+              :show-icon="false"
+              :bordered="false"
+              :clearable="false"
+              to="body"
+              :z-index="10000"
+              title="开始"
+              @update:value="(ts: number | null) => changeTime(lastRecord, 'recordedAt', ts)"
+            />
+            <button
+              v-if="lastRecord && lastRecord.endAt == null"
+              type="button"
+              class="lr-chart__el sleep-day-chart__stop"
+              title="醒了（当前时间）"
+              @click="stampEnd"
+            >
+              <n-icon class="sleep-day-chart__ctrl-icon"><RecordStop20Regular /></n-icon>
+            </button>
+            <LifeRecordTimePicker
+              v-else-if="lastRecord"
+              class="lr-chart__el lr-chart__time sleep-day-chart__end"
+              :value="pickerTs(lastRecord.endAt)"
+              format="HH:mm"
+              size="small"
+              :show-icon="false"
+              :bordered="false"
+              :clearable="false"
+              to="body"
+              :z-index="10000"
+              title="醒了"
+              @update:value="(ts: number | null) => changeTime(lastRecord, 'endAt', ts)"
+            />
+            <div v-if="lastRecord" class="lr-chart__el lr-chart__score sleep-day-chart__energy">
+              <LifeRecordScorePop
+                :model-value="lastRecord.energy"
+                title="精力值"
+                :icon="BatterySaver20Regular"
+                @update:model-value="(v) => changeEnergy(lastRecord, v)"
+              />
+            </div>
+          </div>
+          <LifeRecordChartNoteBar
+            v-if="lastRecord"
+            tone="sleep"
+            expandable
+            :model-value="lastRecord.description ?? ''"
+            placeholder="dream..."
+            @update:model-value="onNoteBarInput"
+            @expand="chartDreamOpen = true"
+            @collapse="onChartDreamClose"
           />
-        </div>
-        <LifeRecordChartNoteBar
-          v-if="lastRecord"
-          tone="sleep"
-          expandable
-          :model-value="lastRecord.description ?? ''"
-          placeholder="dream..."
-          @update:model-value="onNoteBarInput"
-          @expand="chartDreamOpen = true"
-          @collapse="onChartDreamClose"
-        />
         </div>
       </div>
     </template>
@@ -367,7 +369,7 @@ function dreamChipLabel(record: LifeRecord): string {
   color: var(--color-text-primary);
 }
 .sleep-day-chart__stop {
-  width: 28px;
+  width: 60px;
   height: 28px;
   display: inline-flex;
   align-items: center;
