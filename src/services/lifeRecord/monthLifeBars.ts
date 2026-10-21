@@ -1,6 +1,6 @@
 // 月格生活可视化：把一日 4 类收成竖 bar 用的比例（纯函数）
 import type { EatCourse, LifeRecord } from "@/core/types/Task";
-import { normalizeEatCourse } from "@/core/lifeRecord";
+import { isClosedLifeSpan, normalizeEatCourse } from "@/core/lifeRecord";
 import { timestampToTimeString } from "@/core/utils";
 
 export const MONTH_SLEEP_BAR_MS = 8 * 3600_000;
@@ -69,9 +69,9 @@ function calendarDayStart(ts: number): number {
   return d.getTime();
 }
 
-function sleepDurationMs(record: LifeRecord, now: number): number {
-  const end = record.endAt ?? now;
-  return Math.max(0, end - record.recordedAt);
+function sleepDurationMs(record: LifeRecord, _now: number): number {
+  if (!isClosedLifeSpan(record) || record.endAt == null) return 0;
+  return Math.max(0, record.endAt - record.recordedAt);
 }
 
 /** 3 点前才睡的长觉算前晚；3 点及以后算当天；短睡不挪 */
@@ -101,13 +101,12 @@ export function sleepSpansOnStartDay(
   return out;
 }
 
-/** 与显示日相交的段；未闭合：历史日铺到日末，当日铺到 now，不渗未来日 */
-export function clipDaySpans(records: LifeRecord[], dayStart: number, dayEnd: number, now: number): { ms: number; startAt: number }[] {
-  const openEnd = Math.min(now, dayEnd);
+/** 与显示日相交的已闭合段；只有开始、没有结束的不计入 */
+export function clipDaySpans(records: LifeRecord[], dayStart: number, dayEnd: number, _now: number): { ms: number; startAt: number }[] {
   const out: { ms: number; startAt: number }[] = [];
   for (const r of records) {
-    const end = r.endAt ?? openEnd;
-    const ms = clipMs(r.recordedAt, end, dayStart, dayEnd);
+    if (!isClosedLifeSpan(r) || r.endAt == null) continue;
+    const ms = clipMs(r.recordedAt, r.endAt, dayStart, dayEnd);
     if (ms > 0) out.push({ ms, startAt: r.recordedAt });
   }
   return out;

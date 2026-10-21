@@ -25,11 +25,11 @@ export const useLifePlannerLayerStore = defineStore("lifePlannerLayer", () => {
     return Number.isFinite(dayStart) ? (dayStart as number) : null;
   }
 
-  /** 当天 4 类任一已有生活记录（空桶不算）→ 日按钮 ChannelAdd */
+  /** 当天已有日桶（空桶也算）→ 日按钮 ChannelAdd；和 sheet 出表同一条件 */
   function dayHasRecords(dayStart: number): boolean {
     for (const def of LIFE_RECORD_DEFS) {
       const task = findLifeRecordTaskForDay(dataStore.taskList, def.kind, dayStart, dataStore.activityById);
-      if (task && !task.deleted && (task.lifeRecords?.length ?? 0) > 0) return true;
+      if (task && !task.deleted) return true;
     }
     return false;
   }

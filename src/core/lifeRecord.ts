@@ -88,6 +88,11 @@ export function getLifeRecordKind(activity: Pick<Activity, "tagIds"> | null | un
   return getLifeRecordKindByTagIds(activity?.tagIds);
 }
 
+/** 睡觉、活动写了结束才进统计和图层；只有开始的行留在录入表里 */
+export function isClosedLifeSpan(record: { endAt?: number | null }): boolean {
+  return typeof record.endAt === "number" && Number.isFinite(record.endAt);
+}
+
 export function isLifeRecordActivity(activity: Pick<Activity, "tagIds"> | null | undefined): boolean {
   return getLifeRecordKind(activity) !== null;
 }

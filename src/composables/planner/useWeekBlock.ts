@@ -426,18 +426,10 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targe
     };
   }
 
-  /** 这一时刻第一列已经有待办/日程色条 */
-  function mobileFirstColHasBar(dayStartTs: number, time: number): boolean {
-    const day = days.value.find((d) => d.startTs === dayStartTs);
-    if (!day) return false;
-    const blocks = layoutedWeekBlocks.value.get(day.index) ?? [];
-    return blocks.some((b) => (b.column ?? 0) === 0 && time >= b.start && time < b.end);
-  }
-
   function getLifePointStyle(mark: LifePointMark, dayStartTs: number): CSSProperties {
     const range = unifiedTimeRange.value;
     const h = hourOffsetInDay(mark.time, dayStartTs);
-    const size = 14;
+    const size = isMobile.value ? 11 : 14;
     const top = (h - range.startHour) * pxPerHour.value - size / 2;
     const base: CSSProperties = {
       position: "absolute",
@@ -445,7 +437,7 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targe
       width: `${size}px`,
       height: `${size}px`,
       color: mark.colorVar,
-      zIndex: 5 + mark.lane,
+      zIndex: mark.kind === "energy" || mark.kind === "reward" ? 3 : 5 + mark.lane,
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
@@ -453,14 +445,8 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targe
       userSelect: "none",
     };
     if (isMobile.value) {
-      // 非可视化：icon 落在待办三列上。这一行第一列已有色条时，图标不占第一列
-      let col = Math.min(mark.lane, 2);
-      if (mobileFirstColHasBar(dayStartTs, mark.time)) col = Math.min(col + 1, 2);
-      return {
-        ...base,
-        left: `calc(1px + ${col} * (100% - 2px) / 3)`,
-        right: "auto",
-      };
+      // 第 3 列离右 2px，第 2 列再隔 4px（11 + 4）
+      return { ...base, right: mark.lane === 0 ? "1px" : "15px" };
     }
     return { ...base, right: `${12 + mark.lane * 15}px` };
   }

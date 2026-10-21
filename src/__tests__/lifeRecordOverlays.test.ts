@@ -136,7 +136,7 @@ describe("collectLifeRecordOverlays 跨天睡眠", () => {
     expect(sleeps).toHaveLength(0);
   });
 
-  it("openSleepEnd=dayOfStart：未醒铺到入睡日日末，不渗到次日", () => {
+  it("只有开始、没有结束的睡眠不画色带", () => {
     const sleepStart = dayStart + 23 * 3600_000;
     const activityId = dayStart + 1;
     const taskId = dayStart + 2;
@@ -156,11 +156,7 @@ describe("collectLifeRecordOverlays 跨天睡眠", () => {
       minGapMs: 60_000,
       openSleepEnd: "dayOfStart",
     });
-    expect(onStartDay.sleeps).toHaveLength(1);
-    expect(onStartDay.sleeps[0].start).toBe(sleepStart);
-    expect(onStartDay.sleeps[0].end).toBe(dayEnd);
-    expect(onStartDay.sleeps[0].wakeAt).toBeUndefined();
-    expect(onStartDay.sleeps[0].ongoing).toBe(true);
+    expect(onStartDay.sleeps).toHaveLength(0);
 
     const nextStart = dayEnd;
     const nextEnd = nextStart + DAY;
@@ -214,6 +210,12 @@ describe("formatLifePointCaption / formatLifeSleepCaption", () => {
   it("精力带时刻和分数", () => {
     expect(formatLifePointCaption(point({ kind: "energy", title: "精力", energy: 7, note: "跑步" }))).toBe(
       `${time} 7 跑步`,
+    );
+  });
+
+  it("奖赏带时刻和分数", () => {
+    expect(formatLifePointCaption(point({ kind: "reward", title: "奖赏", reward: 9, note: "完成" }))).toBe(
+      `${time} 9 完成`,
     );
   });
 
@@ -285,6 +287,55 @@ describe("collectLifeRecordOverlays 精力点", () => {
     expect(points[0]?.energy).toBe(8);
     expect(points[0]?.note).toBe("醒");
     expect(points[0]?.time).toBe(at);
+  });
+
+  it("从当日桶和普通任务收集奖赏，精力列3、奖赏列2", () => {
+    const at = dayStart + 10 * 3600_000;
+    const energyTask: Task = {
+      id: 99,
+      activityTitle: `daily_energy_${dayStart}`,
+      sourceId: dayStart,
+      energyRecords: [{ id: 1, value: 8, recordedAt: at }],
+      rewardRecords: [{ id: 2, value: 6, recordedAt: at }],
+      interruptionRecords: [],
+      description: "",
+      starred: false,
+      deleted: false,
+      synced: false,
+      lastModified: 1,
+    };
+    const other: Task = {
+      id: 100,
+      activityTitle: "写",
+      sourceId: 1,
+      energyRecords: [],
+      rewardRecords: [{ id: 3, value: 9, recordedAt: at + 1000, description: "完" }],
+      interruptionRecords: [],
+      description: "",
+      starred: false,
+      deleted: false,
+      synced: false,
+      lastModified: 1,
+    };
+    const { points } = collectLifeRecordOverlays({
+      dayStart,
+      dayEnd,
+      timeRange: { start: dayStart, end: dayEnd },
+      tasks: [other],
+      getActivity: () => undefined,
+      getDayEnergyTask: () => energyTask,
+      now: at,
+      minGapMs: 60_000,
+    });
+    const energy = points.find((p) => p.kind === "energy");
+    const bucketReward = points.find((p) => p.kind === "reward" && p.recordId === 2);
+    const todoReward = points.find((p) => p.kind === "reward" && p.recordId === 3);
+    expect(energy?.lane).toBe(0);
+    expect(bucketReward?.reward).toBe(6);
+    expect(bucketReward?.lane).toBe(1);
+    expect(todoReward?.reward).toBe(9);
+    expect(todoReward?.note).toBe("完");
+    expect(todoReward?.lane).toBe(1);
   });
 
   it("按标题取日：sourceId 不在当天也能画", () => {

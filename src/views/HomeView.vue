@@ -430,10 +430,10 @@ watch(
   () => settingStore.settings.viewSet,
   (view, prev) => {
     lifePlannerLayerStore.onViewSetChange(view);
-    if (!isMobile.value) return;
-    // 手机日布局默认打开 sheet；离开日视图不要把 sheet 带到周/月
-    if (view === "day") lifePlannerLayerStore.enterDaySheet();
-    else if (prev === "day") lifePlannerLayerStore.closeDaySheet();
+    // 日视图的录入区只占下方任务区；离开日视图先关掉，避免切到周/月后铺满中间
+    if (prev === "day" && view !== "day") lifePlannerLayerStore.closeDaySheet();
+    // 手机进入日视图默认打开录入
+    if (isMobile.value && view === "day") lifePlannerLayerStore.enterDaySheet();
   },
 );
 

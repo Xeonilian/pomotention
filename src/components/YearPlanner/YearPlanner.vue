@@ -61,7 +61,7 @@ import { createTouchScheduledSingleAndDouble } from "@/composables/platform/useT
 import { useDataStore } from "@/stores/useDataStore";
 import { useDevice } from "@/composables/platform/useDevice";
 import { getDateKey } from "@/core/utils";
-import { getLifeRecordKind, parseLifeRecordPlaceholder } from "@/core/lifeRecord";
+import { getLifeRecordKind, isClosedLifeSpan, parseLifeRecordPlaceholder } from "@/core/lifeRecord";
 import type { HolidayDisplay } from "@/services/planner/publicHolidays";
 import { plannerHolidayMapKey } from "@/composables/planner/usePublicHolidays";
 
@@ -115,7 +115,7 @@ function startOfDay(ts: number) {
   return d.getTime();
 }
 
-/** 生活可视化：当天 4 类任一已有记录（空桶不算） */
+/** 生活可视化：喝水/吃饭有记录，或睡觉/活动有已结束的段（空桶、只有开始的段不算） */
 const lifeDayByTs = computed(() => {
   const set = new Set<number>();
   if (!props.lifeView) return set;
@@ -123,7 +123,9 @@ const lifeDayByTs = computed(() => {
     if (task.deleted || (task.lifeRecords?.length ?? 0) <= 0) continue;
     const activity = activityById.value.get(task.sourceId);
     const parsed = parseLifeRecordPlaceholder(task.activityTitle ?? activity?.title);
-    if (!parsed && !getLifeRecordKind(activity)) continue;
+    const kind = parsed?.kind ?? getLifeRecordKind(activity);
+    if (!kind) continue;
+    if ((kind === "sleep" || kind === "toilet") && !(task.lifeRecords ?? []).some(isClosedLifeSpan)) continue;
     set.add(parsed?.dayStart ?? startOfDay(task.sourceId));
   }
   return set;

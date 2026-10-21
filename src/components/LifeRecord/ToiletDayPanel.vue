@@ -25,7 +25,7 @@
           </n-popconfirm>
         </div>
         <span class="lr-chart__el lr-chart__times" aria-hidden="true">×</span>
-        <span class="lr-chart__el lr-chart__count">{{ records.length }}</span>
+        <span class="lr-chart__el lr-chart__count">{{ closedCount }}</span>
         <div v-if="lastRecord" class="lr-chart__merge">
         <LifeRecordTimePicker
           class="lr-chart__el lr-chart__time toilet-day-chart__start"
@@ -194,6 +194,7 @@ import {
   RecordStop20Regular,
   ShiftsActivity20Regular,
 } from "@vicons/fluent";
+import { isClosedLifeSpan } from "@/core/lifeRecord";
 import type { LifeRecord } from "@/core/types/Task";
 import { useLifeRecordEditor } from "@/composables/lifeRecord/useLifeRecordEditor";
 import LifeRecordChartNoteBar from "@/components/LifeRecord/LifeRecordChartNoteBar.vue";
@@ -206,6 +207,7 @@ const props = withDefaults(defineProps<{ taskId: number; embedded?: boolean; vie
 const { task, records, hasOpenSpan, appendRow, stampStart, stampEnd, pickerTs, changeTime, changeDescription, changeEnergy, remove } =
   useLifeRecordEditor(() => props.taskId, "toilet", { embedded: () => props.embedded });
 const lastRecord = computed(() => records.value[records.value.length - 1] ?? null);
+const closedCount = computed(() => records.value.filter(isClosedLifeSpan).length);
 const askEndOpen = ref(false);
 function onDoorClick() {
   if (hasOpenSpan.value) {
