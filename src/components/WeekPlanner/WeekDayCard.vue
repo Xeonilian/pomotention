@@ -31,15 +31,23 @@
     <div class="items">
       <div class="time-grid-container" :style="{ height: timeGridHeight + 'px' }">
         <WeekDrinkWaterFill v-if="drinkLayer && drinkRatio > 0" :ratio="drinkRatio" :met="drinkMet" />
+        <WeekScoreChart
+          v-if="drinkLayer || lifeView"
+          :points="lifeOverlay?.points || []"
+          :sleeps="lifeOverlay?.sleeps || []"
+          :height="timeGridHeight"
+          :day-start-ts="day.startTs"
+          :get-hour-tick-top="getHourTickTop"
+        />
 
         <!-- 生活图层会藏 schedule，但 sleep 色带仍画；月亮钉在醒来那一行 -->
         <div
           v-for="sleep in lifeOverlay?.sleeps || []"
           :key="`life-sleep-${sleep.recordId}`"
           class="week-life-sleep"
-          :style="getLifeSleepBandStyle(sleep, day.startTs)"
+          :style="sleepBandStyle(sleep)"
         >
-          <div v-if="sleep.wakeAt" class="week-life-sleep-moon" :style="{ width: pointIconSize + 'px', height: pointIconSize + 'px' }">
+          <div v-if="!isVizLayer() && sleep.wakeAt" class="week-life-sleep-moon" :style="{ width: pointIconSize + 'px', height: pointIconSize + 'px' }">
             <NPopover
               v-if="!isMobile"
               trigger="hover"
@@ -101,7 +109,7 @@
         </template>
 
         <div
-          v-for="mark in lifeOverlay?.points || []"
+          v-for="mark in visibleLifePoints"
           :key="`life-point-${mark.kind}-${mark.recordId}`"
           class="week-life-point"
           :class="{ 'week-life-point--drink-layer': drinkLayer }"
@@ -118,7 +126,7 @@
           >
             <template #trigger>
               <div class="week-life-point__hit" @click.stop>
-                <span v-if="mark.kind === 'energy'" class="week-life-energy">{{ energyEmoji(mark) }}</span>
+                <span v-if="isScoreMark(mark)" class="week-life-energy" :style="{ fontSize: pointIconSize + 'px' }">{{ scoreEmoji(mark) }}</span>
                 <n-icon v-else :size="pointIconSize" :component="lifePointIcon(mark.kind)" />
               </div>
             </template>
@@ -130,11 +138,11 @@
             :data-life-note-key="`point-${mark.kind}-${mark.recordId}`"
             @click.stop="onMobileLifeNoteTap($event, `point-${mark.kind}-${mark.recordId}`, formatLifePointCaption(mark))"
           >
-            <span v-if="mark.kind === 'energy'" class="week-life-energy">{{ energyEmoji(mark) }}</span>
+            <span v-if="isScoreMark(mark)" class="week-life-energy" :style="{ fontSize: pointIconSize + 'px' }">{{ scoreEmoji(mark) }}</span>
             <n-icon v-else :size="pointIconSize" :component="lifePointIcon(mark.kind)" />
           </div>
           <div v-else class="week-life-point__hit" @click.stop="onLifePointClick(mark)">
-            <span v-if="mark.kind === 'energy'" class="week-life-energy">{{ energyEmoji(mark) }}</span>
+            <span v-if="isScoreMark(mark)" class="week-life-energy" :style="{ fontSize: pointIconSize + 'px' }">{{ scoreEmoji(mark) }}</span>
             <n-icon v-else :size="pointIconSize" :component="lifePointIcon(mark.kind)" />
           </div>
         </div>
@@ -164,6 +172,7 @@ import type { DayItem } from "@/core/types/Week";
 import type { WeekBlockItem as WeekBlockItemType } from "@/core/types/Week";
 import WeekBlockItem from "./WeekBlockItem.vue";
 import WeekDrinkWaterFill from "@/components/WeekPlanner/WeekDrinkWaterFill.vue";
+import WeekScoreChart from "@/components/WeekPlanner/WeekScoreChart.vue";
 import { formatMonthDay, getPomoColor, getFallbackWeekBlocks } from "@/core/utils/weekDays";
 import { getDateKey } from "@/core/utils";
 import type { HolidayDisplay } from "@/services/planner/publicHolidays";
@@ -175,28 +184,32 @@ import { useDevice } from "@/composables/platform/useDevice";
 import { createTouchScheduledSingleAndDouble } from "@/composables/platform/useTouchScheduledSingleAndDouble";
 import type { LifePointKind, LifePointMark, LifeSleepRange } from "@/services/timetable/lifeRecordOverlays";
 import { formatLifePointCaption, formatLifeSleepCaption } from "@/services/timetable/lifeRecordOverlays";
-import { getEnergyScoreEmoji } from "@/core/scoreEmojis";
+import { getEnergyScoreEmoji, getRewardScoreEmoji } from "@/core/scoreEmojis";
 import { Door20Filled, Drop20Filled, FoodApple20Filled, WeatherMoon20Filled } from "@vicons/fluent";
-import { findLifeRecordTodoForDay, isDrinkGoalMet, sumLifeRecordAmountMl } from "@/services/lifeRecord/lifeRecordService";
+import { findLifeRecordTaskForDay, isDrinkGoalMet, sumLifeRecordAmountMl } from "@/services/lifeRecord/lifeRecordService";
 
 const { isMobile } = useDevice();
 const dataStore = useDataStore();
 const settingStore = useSettingStore();
-const { selectedDate, todoList, activityById, taskById, taskByActivityId } = storeToRefs(dataStore);
+const { selectedDate, activityById, taskList } = storeToRefs(dataStore);
 
 const holidayMap = inject(plannerHolidayMapKey, ref<Record<string, HolidayDisplay>>({}));
 
-const LIFE_POINT_ICONS: Record<Exclude<LifePointKind, "energy">, Component> = {
+const LIFE_POINT_ICONS: Record<Exclude<LifePointKind, "energy" | "reward">, Component> = {
   drink: Drop20Filled,
   eat: FoodApple20Filled,
   toilet: Door20Filled,
 };
 
 function lifePointIcon(kind: LifePointKind): Component {
-  if (kind === "energy") return Drop20Filled;
+  if (kind === "energy" || kind === "reward") return Drop20Filled;
   return LIFE_POINT_ICONS[kind];
 }
-function energyEmoji(mark: LifePointMark): string {
+function isScoreMark(mark: LifePointMark): boolean {
+  return mark.kind === "energy" || mark.kind === "reward";
+}
+function scoreEmoji(mark: LifePointMark): string {
+  if (mark.kind === "reward") return getRewardScoreEmoji(mark.reward ?? 1);
   return getEnergyScoreEmoji(mark.energy ?? 1);
 }
 
@@ -234,15 +247,9 @@ const props = withDefaults(
 
 const holidayForDay = computed(() => holidayMap.value[getDateKey(props.day.startTs)] ?? null);
 
-const drinkTodo = computed(() =>
-  props.drinkLayer ? findLifeRecordTodoForDay(todoList.value, activityById.value, "drink", props.day.startTs) : undefined,
+const drinkTask = computed(() =>
+  props.drinkLayer ? (findLifeRecordTaskForDay(taskList.value, "drink", props.day.startTs, activityById.value) ?? null) : null,
 );
-
-const drinkTask = computed(() => {
-  const todo = drinkTodo.value;
-  if (!todo) return null;
-  return (todo.taskId != null ? taskById.value.get(todo.taskId) : undefined) ?? taskByActivityId.value.get(todo.activityId!) ?? null;
-});
 
 const drinkTotalMl = computed(() => sumLifeRecordAmountMl(drinkTask.value?.lifeRecords ?? []));
 /** 手机周列窄：用升一位小数，桌面仍 ml */
@@ -319,17 +326,29 @@ function onCardClick() {
   handleDateSelect(props.day.startTs);
   if (props.lifeView) return;
   if (!props.drinkLayer) return;
-  const todo = drinkTodo.value;
   const task = drinkTask.value;
-  if (todo && task?.id != null) {
-    emit("item-change", todo.id, todo.activityId, task.id);
+  if (task?.id != null) {
+    emit("item-change", props.day.startTs, task.sourceId, task.id);
   }
 }
 
 const pointIconSize = computed(() => {
   if (props.drinkLayer) return isMobile.value ? 14 : 22;
-  return isMobile.value ? 14 : 16;
+  return isMobile.value ? 11 : 16;
 });
+
+function isVizLayer(): boolean {
+  return !!(props.drinkLayer || props.lifeView);
+}
+
+const visibleLifePoints = computed(() => (isVizLayer() ? [] : (props.lifeOverlay?.points ?? [])));
+
+function sleepBandStyle(sleep: LifeSleepRange): CSSProperties {
+  const style = { ...props.getLifeSleepBandStyle(sleep, props.day.startTs) };
+  // 非可视化只留月亮；可视化用底色，不画 icon
+  if (!isVizLayer()) style.backgroundColor = "transparent";
+  return style;
+}
 
 /** 与 TaskTracker 时间轴 popover 同策略：挂 body，避免周列 overflow 裁切 */
 const lifeNotePopoverStyle = { maxWidth: "calc(100vw - 80px)", boxSizing: "border-box" } as const;
@@ -338,14 +357,14 @@ const lifeNoteContentStyle = { maxWidth: "100%", boxSizing: "border-box" } as co
 function onLifePointClick(mark: LifePointMark) {
   handleDateSelect(props.day.startTs);
   if (props.lifeView) return;
-  if (mark.kind === "energy") return;
-  emit("item-change", mark.todoId, undefined, mark.taskId);
+  if (mark.kind === "energy" || mark.kind === "reward") return;
+  emit("item-change", props.day.startTs, undefined, mark.taskId);
 }
 
 function onSleepBandClick(sleep: LifeSleepRange) {
   handleDateSelect(props.day.startTs);
   if (props.lifeView) return;
-  emit("item-change", sleep.todoId, undefined, sleep.taskId);
+  emit("item-change", props.day.startTs, undefined, sleep.taskId);
 }
 
 function onMobileLifeNoteTap(e: MouseEvent, key: string, text: string) {
@@ -358,15 +377,16 @@ function onMobileLifeNoteTap(e: MouseEvent, key: string, text: string) {
 function layerPointColor(kind: LifePointKind): string {
   if (kind === "drink") return "var(--color-blue)";
   if (kind === "eat") return "var(--color-red)";
-  if (kind === "energy") return "var(--color-text-primary)";
+  if (kind === "energy" || kind === "reward") return "var(--color-text-primary)";
   return "var(--color-text-secondary)";
 }
 
-/** 桌面生活图层：喝 / 吃 / 活动 / 精力 四槽 */
+/** 桌面生活图层：喝 / 吃 / 活动+奖赏 / 精力 */
 const LAYER_SLOT: Record<LifePointKind, number> = {
   drink: 0,
   eat: 1,
   toilet: 2,
+  reward: 2,
   energy: 3,
 };
 const LAYER_SLOT_COUNT = 4;
@@ -381,17 +401,7 @@ function hashUnit(recordId: number, time: number): number {
   return n - Math.floor(n);
 }
 
-function assignMobileLayerCols(points: LifePointMark[]): { drink: Map<number, number>; energy: Map<number, number> } {
-  const energy = new Map<number, number>();
-  for (const e of points.filter((p) => p.kind === "energy")) {
-    const nearToilet = points.some((p) => p.kind === "toilet" && Math.abs(p.time - e.time) <= DRINK_NEAR_MS);
-    if (!nearToilet) {
-      energy.set(e.recordId, 2);
-      continue;
-    }
-    const nearEat = points.some((p) => p.kind === "eat" && Math.abs(p.time - e.time) <= DRINK_NEAR_MS);
-    energy.set(e.recordId, nearEat ? 0 : 1);
-  }
+function assignMobileLayerCols(points: LifePointMark[]): { drink: Map<number, number> } {
   const drinks = points.filter((p) => p.kind === "drink").sort((a, b) => a.time - b.time || a.recordId - b.recordId);
   const placed: { time: number; col: number }[] = [];
   const drink = new Map<number, number>();
@@ -401,7 +411,6 @@ function assignMobileLayerCols(points: LifePointMark[]): { drink: Map<number, nu
       if (Math.abs(p.time - d.time) > DRINK_NEAR_MS) continue;
       if (p.kind === "eat") taken.add(1);
       else if (p.kind === "toilet") taken.add(2);
-      else if (p.kind === "energy") taken.add(energy.get(p.recordId) ?? 2);
     }
     for (const p of placed) {
       if (Math.abs(p.time - d.time) <= DRINK_NEAR_MS) taken.add(p.col);
@@ -418,15 +427,14 @@ function assignMobileLayerCols(points: LifePointMark[]): { drink: Map<number, nu
     placed.push({ time: d.time, col });
     drink.set(d.recordId, col);
   }
-  return { drink, energy };
+  return { drink };
 }
 
 const mobileLayerCols = computed(() => assignMobileLayerCols(props.lifeOverlay?.points ?? []));
 
 function mobileLayerCol(mark: LifePointMark): number {
-  if (mark.kind === "eat") return 1;
-  if (mark.kind === "toilet") return 2;
-  if (mark.kind === "energy") return mobileLayerCols.value.energy.get(mark.recordId) ?? 2;
+  if (mark.kind === "eat" || mark.kind === "reward") return 1;
+  if (mark.kind === "toilet" || mark.kind === "energy") return 2;
   return mobileLayerCols.value.drink.get(mark.recordId) ?? 0;
 }
 
@@ -450,14 +458,14 @@ function getLayerPointStyle(mark: LifePointMark): CSSProperties {
       width: `${size}px`,
       height: `${size}px`,
       color: layerPointColor(mark.kind),
-      zIndex: 8,
+      zIndex: isScoreMark(mark) ? 4 : 8,
       left: `calc(${((slot + 0.5) / LAYER_SLOT_COUNT) * 100}% - ${size / 2}px)`,
       right: "auto",
       transform: "translateX(0)",
     };
   }
   const size = 14;
-  const zIndex = mark.kind === "energy" ? 14 : mark.kind === "toilet" ? 10 : 8;
+  const zIndex = isScoreMark(mark) ? 5 : mark.kind === "toilet" ? 10 : 8;
   return {
     ...rest,
     width: `${size}px`,
@@ -656,7 +664,6 @@ const handleItemChange = (id: number, _ts: number, activityId?: number, taskId?:
   cursor: pointer;
 }
 .week-life-energy {
-  font-size: 12px;
   line-height: 1;
   user-select: none;
 }

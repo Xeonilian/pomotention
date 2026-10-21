@@ -32,9 +32,28 @@ export function getLifeRecordDef(kind: LifeRecordKind): LifeRecordDef {
   return DEF_BY_KIND.get(kind)!;
 }
 
-/** task/todo/activity 占位：daily_eat_<当日零点>，便于裸数据辨认 */
+/** task/activity 占位：daily_eat_<当日零点>，便于裸数据辨认 */
 export function lifeRecordPlaceholderTitle(kind: LifeRecordKind, dayStartTs: number): string {
   return dailyPlaceholderTitle(kind, dayStartTs);
+}
+
+const LIFE_PLACEHOLDER_RE = /^(?:daily_)?(drink|eat|toilet|sleep)_(\d+)$/i;
+
+/** 从 daily_<kind>_<日零点> 取日键；对不上返回 null */
+export function parseLifeRecordPlaceholder(title?: string | null): { kind: LifeRecordKind; dayStart: number } | null {
+  if (!title) return null;
+  const matched = LIFE_PLACEHOLDER_RE.exec(title);
+  if (!matched) return null;
+  const kind = matched[1].toLowerCase() as LifeRecordKind;
+  if (!DEF_BY_KIND.has(kind)) return null;
+  const dayStart = Number(matched[2]);
+  if (!Number.isFinite(dayStart)) return null;
+  return { kind, dayStart };
+}
+
+/** 日键在标题里，和精力桶 dayEnergyDayOf 同一套路 */
+export function lifeRecordDayOf(task: Pick<{ activityTitle?: string | null }, "activityTitle">): number | null {
+  return parseLifeRecordPlaceholder(task.activityTitle)?.dayStart ?? null;
 }
 
 /** 从 tagIds 判定生活记录 kind；非生活记录返回 null */
@@ -67,6 +86,11 @@ export function pickFirstNonLifeRecordTagId(tagIds?: number[] | null): number | 
 /** activity 是否生活记录行——唯一收口判定，显示/统计都走这里 */
 export function getLifeRecordKind(activity: Pick<Activity, "tagIds"> | null | undefined): LifeRecordKind | null {
   return getLifeRecordKindByTagIds(activity?.tagIds);
+}
+
+/** 睡觉、活动写了结束才进统计和图层；只有开始的行留在录入表里 */
+export function isClosedLifeSpan(record: { endAt?: number | null }): boolean {
+  return typeof record.endAt === "number" && Number.isFinite(record.endAt);
 }
 
 export function isLifeRecordActivity(activity: Pick<Activity, "tagIds"> | null | undefined): boolean {

@@ -131,6 +131,7 @@
             <LifeRecordDaySheet
               v-if="daySheetActive"
               :task-ids="daySheetTaskIds"
+              :day-start="appDateTimestamp"
               :initial-view="daySheetInitialView"
               @close="lifePlannerLayerStore.closeDaySheet"
               @create="lifePlannerLayerStore.openDaySheet"
@@ -228,8 +229,8 @@ import { useLifePlannerLayerStore } from "@/stores/useLifePlannerLayerStore";
 import { autoSyncDebounced, uploadAllDebounced } from "@/core/utils/autoSync";
 import { useDevice } from "@/composables/platform/useDevice";
 import { CAPTURE_UI_ENABLED } from "@/core/capture";
-import { getLifeRecordKind, LIFE_RECORD_DEFS } from "@/core/lifeRecord";
-import { findLifeRecordTodoForDay } from "@/services/lifeRecord/lifeRecordService";
+import { getLifeRecordKind, LIFE_RECORD_DEFS, lifeRecordDayOf } from "@/core/lifeRecord";
+import { findLifeRecordTaskForDay } from "@/services/lifeRecord/lifeRecordService";
 import { usePublicHolidays, plannerHolidayMapKey, plannerHolidayRangeKey } from "@/composables/planner/usePublicHolidays";
 import { registerPlannerKeyboardCommandApi } from "@/composables/keyboard/usePlannerKeyboardCommands";
 import { registerPlannerDayEnterEditTitle, registerPlannerDaySpaceToggleCheck } from "@/composables/keyboard/usePlannerKeyboardNavigator";
@@ -415,11 +416,8 @@ const daySheetHidesPlanner = computed(() => {
   if (settingStore.settings.viewSet === "day") return false;
   return true;
 });
-const daySheetInitialView = computed(() => {
-  if (lifePlannerLifeView.value) return "table";
-  if (settingStore.settings.viewSet === "day" && !isViewDateToday.value) return "table";
-  return "chart";
-});
+/** 换天只定一次：当天图，其余表。不跟生活图层来回切 */
+const daySheetInitialView = computed(() => (isViewDateToday.value ? "chart" : "table"));
 
 const timetableLayoutVisible = computed(() => settingStore.settings.showTimetable && !mobilePreviewSolo.value);
 const taskAreaVisible = computed(() => daySheetActive.value || (settingStore.settings.showTask && !mobilePreviewSolo.value));
@@ -432,10 +430,10 @@ watch(
   () => settingStore.settings.viewSet,
   (view, prev) => {
     lifePlannerLayerStore.onViewSetChange(view);
-    if (!isMobile.value) return;
-    // 手机日布局默认打开 sheet；离开日视图不要把 sheet 带到周/月
-    if (view === "day") lifePlannerLayerStore.enterDaySheet();
-    else if (prev === "day") lifePlannerLayerStore.closeDaySheet();
+    // 日视图的录入区只占下方任务区；离开日视图先关掉，避免切到周/月后铺满中间
+    if (prev === "day" && view !== "day") lifePlannerLayerStore.closeDaySheet();
+    // 手机进入日视图默认打开录入
+    if (isMobile.value && view === "day") lifePlannerLayerStore.enterDaySheet();
   },
 );
 
@@ -520,9 +518,7 @@ const onOpenDaySheetFromCell = (dayStart: number) => {
 /** 当天 4 类任一有生活记录 → true */
 function hasLifeRecordDataForDay(dayStart: number): boolean {
   for (const def of LIFE_RECORD_DEFS) {
-    const todo = findLifeRecordTodoForDay(todoList.value, activityById.value, def.kind, dayStart);
-    if (!todo || todo.activityId == null) continue;
-    const task = taskByActivityId.value.get(todo.activityId);
+    const task = findLifeRecordTaskForDay(taskList.value, def.kind, dayStart, activityById.value);
     if (task && (task.lifeRecords?.length ?? 0) > 0) return true;
   }
   return false;
@@ -530,15 +526,13 @@ function hasLifeRecordDataForDay(dayStart: number): boolean {
 
 // week和month planner 引起选中的任务行
 const onItemChange = (id: number, activityId?: number, taskId?: number) => {
-  // 生活记录行：进入整合 sheet（给全部 middle 空间），不再走 compact
-  // week 生活标记 emit 时 activityId 为 undefined，需从 todo 反查
-  const todo = todoById.value.get(id);
-  const actId = activityId ?? todo?.activityId;
+  // 生活记录：进入整合 sheet。日键看标题，不从待办 id 反推
+  const task = taskId != null ? taskList.value.find((t) => t.id === taskId) : undefined;
+  const actId = activityId ?? task?.sourceId ?? todoById.value.get(id)?.activityId;
   if (actId != null) {
     const kind = getLifeRecordKind(dataStore.activityById.get(actId));
     if (kind) {
-      // life bucket 的 todo.id = 当天零点；先切到该天再建 4 桶开 sheet
-      dateService.setAppDate(id);
+      dateService.setAppDate(task ? (lifeRecordDayOf(task) ?? id) : id);
       lifePlannerLayerStore.openDaySheet();
       return;
     }

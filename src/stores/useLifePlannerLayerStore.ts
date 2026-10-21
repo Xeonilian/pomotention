@@ -3,7 +3,7 @@ import { defineStore } from "pinia";
 import { computed, ref, toValue, watch } from "vue";
 import { useDevice } from "@/composables/platform/useDevice";
 import { LIFE_RECORD_DEFS, type LifeRecordKind } from "@/core/lifeRecord";
-import { findLifeRecordTodoForDay } from "@/services/lifeRecord/lifeRecordService";
+import { findLifeRecordTaskForDay } from "@/services/lifeRecord/lifeRecordService";
 import { useDataStore } from "@/stores/useDataStore";
 import { useSettingStore } from "@/stores/useSettingStore";
 
@@ -25,13 +25,11 @@ export const useLifePlannerLayerStore = defineStore("lifePlannerLayer", () => {
     return Number.isFinite(dayStart) ? (dayStart as number) : null;
   }
 
-  /** 当天 4 类任一已有生活记录（空桶不算）→ 日按钮 ChannelAdd；换日也按这个决定出图/表还是提示 */
+  /** 当天已有日桶（空桶也算）→ 日按钮 ChannelAdd；和 sheet 出表同一条件 */
   function dayHasRecords(dayStart: number): boolean {
     for (const def of LIFE_RECORD_DEFS) {
-      const todo = findLifeRecordTodoForDay(dataStore.todoList, dataStore.activityById, def.kind, dayStart);
-      if (!todo) continue;
-      const task = dataStore.taskByActivityId.get(todo.activityId);
-      if (task && !task.deleted && (task.lifeRecords?.length ?? 0) > 0) return true;
+      const task = findLifeRecordTaskForDay(dataStore.taskList, def.kind, dayStart, dataStore.activityById);
+      if (task && !task.deleted) return true;
     }
     return false;
   }
@@ -48,21 +46,33 @@ export const useLifePlannerLayerStore = defineStore("lifePlannerLayer", () => {
 
   /**
    * day 集中生活 sheet：4 类同框 2×2。
-   * openDaySheet 建/取当天桶并出图/表；enterDaySheet / 换日无记录只留提示（空桶不算）。
+   * openDaySheet 才建缺的桶；enterDaySheet / 换日只绑已有桶，没有的不新建。
    * close 只关界面，空桶保留。
    */
   const daySheetOpen = ref(false);
   const daySheetTaskIds = ref<Record<LifeRecordKind, number | null>>(emptySheetTaskIds());
 
+  /** 只取当天已有桶，不落盘、不补建 */
+  function existingSheetTaskIds(dayStart: number): Record<LifeRecordKind, number | null> {
+    const ids = emptySheetTaskIds();
+    for (const def of LIFE_RECORD_DEFS) {
+      const task = findLifeRecordTaskForDay(dataStore.taskList, def.kind, dayStart, dataStore.activityById);
+      if (!task || task.deleted) continue;
+      ids[def.kind] = task.id;
+    }
+    return ids;
+  }
+
   function bindSheetTaskIds(create: boolean) {
     // Pinia 对嵌套 computed 会拆包成 number，不能再取 .value（否则 undefined → id NaN → JSON null）
     const dayStart = plannerDayStart();
     if (dayStart == null) return;
-    if (create || dayHasRecords(dayStart)) {
+    if (create) {
       daySheetTaskIds.value = dataStore.ensureAllLifeRecordTasksForDay(dayStart);
-    } else {
-      daySheetTaskIds.value = emptySheetTaskIds();
+      return;
     }
+    // 已有空桶也要绑上；四类都没有才是空提示。不在这里补建。
+    daySheetTaskIds.value = existingSheetTaskIds(dayStart);
   }
 
   function openDaySheet() {
@@ -72,7 +82,7 @@ export const useLifePlannerLayerStore = defineStore("lifePlannerLayer", () => {
     daySheetOpen.value = true;
   }
 
-  /** 进入录入区：无记录只留提示；有记录才绑 4 类 */
+  /** 进入录入区：只绑已有桶（含空桶）；四类都没有才留新建提示 */
   function enterDaySheet() {
     if (!dataStore.isDataLoaded) return;
     bindSheetTaskIds(false);

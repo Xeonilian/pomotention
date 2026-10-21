@@ -39,7 +39,7 @@ const MIN_OVERLAP_RATIO_FOR_COLUMNS = 0.2;
 export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targetHeight?: MaybeRef<number>) {
   const { isMobile } = useDevice();
   const dataStore = useDataStore();
-  const { todoList, activityById, taskById, taskList } = storeToRefs(dataStore);
+  const { activityById, taskList } = storeToRefs(dataStore);
   /** 叠放区总宽：随 viewport / 设备形态更新，避免模块加载时定死 */
   const overlayWidthPct = computed(() => (isMobile.value ? OVERLAY_ZONE_PCT : 70));
 
@@ -56,9 +56,8 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targe
           dayStart,
           dayEnd,
           timeRange: { start: dayStart, end: dayEnd },
-          todos: todoList.value,
+          tasks: taskList.value,
           getActivity: (id) => activityById.value.get(id),
-          getTask: (id) => taskById.value.get(id),
           getDayEnergyTask: (start) => findDayEnergyTask(start, taskList.value),
           now,
           minGapMs: 5 * 60_000,
@@ -430,7 +429,7 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targe
   function getLifePointStyle(mark: LifePointMark, dayStartTs: number): CSSProperties {
     const range = unifiedTimeRange.value;
     const h = hourOffsetInDay(mark.time, dayStartTs);
-    const size = 14;
+    const size = isMobile.value ? 11 : 14;
     const top = (h - range.startHour) * pxPerHour.value - size / 2;
     const base: CSSProperties = {
       position: "absolute",
@@ -438,7 +437,7 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targe
       width: `${size}px`,
       height: `${size}px`,
       color: mark.colorVar,
-      zIndex: 5 + mark.lane,
+      zIndex: mark.kind === "energy" || mark.kind === "reward" ? 3 : 5 + mark.lane,
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
@@ -446,13 +445,8 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targe
       userSelect: "none",
     };
     if (isMobile.value) {
-      // 非可视化：icon 落在待办三列上；左 +1px 对色条，右再留 1px 不贴框
-      const col = Math.min(mark.lane, 2);
-      return {
-        ...base,
-        left: `calc(1px + ${col} * (100% - 2px) / 3)`,
-        right: "auto",
-      };
+      // 第 3 列离右 2px，第 2 列再隔 4px（11 + 4）
+      return { ...base, right: mark.lane === 0 ? "1px" : "15px" };
     }
     return { ...base, right: `${12 + mark.lane * 15}px` };
   }

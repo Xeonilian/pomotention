@@ -97,7 +97,7 @@
               </button>
             </td>
             <td class="lr-day-table__col-time">
-              <n-time-picker
+              <LifeRecordTimePicker
                 class="lr-day-table__time"
                 :value="pickerTs(record.recordedAt)"
                 format="HH:mm"
@@ -151,7 +151,7 @@
 </template>
 <script setup lang="ts">
 import { computed, type Component } from "vue";
-import { NIcon, NInput, NInputNumber, NTimePicker } from "naive-ui";
+import { NIcon, NInput, NInputNumber } from "naive-ui";
 import {
   Add20Regular,
   Clock20Regular,
@@ -174,6 +174,7 @@ import { useSettingStore } from "@/stores/useSettingStore";
 import { useLifeRecordEditor } from "@/composables/lifeRecord/useLifeRecordEditor";
 import DrinkDayWaterFill from "@/components/MonthPlanner/DrinkDayWaterFill.vue";
 import LifeRecordDayFrame from "@/components/LifeRecord/LifeRecordDayFrame.vue";
+import LifeRecordTimePicker from "@/components/LifeRecord/LifeRecordTimePicker.vue";
 const props = withDefaults(defineProps<{ taskId: number; embedded?: boolean; view?: "chart" | "table" }>(), {
   view: "chart",
 });
@@ -323,6 +324,14 @@ function onChangeAmount(record: LifeRecord, v: number | null) {
   font-size: var(--count-size);
   font-weight: 500;
   color: var(--color-text-primary);
+}
+.lr-day--mobile .drink-day-gauge {
+  --sum-size: 18px;
+  --slash-size: 23px;
+  --goal-size: 18px;
+}
+.lr-day--mobile .drink-day-gauge__sum {
+  left: calc(50% - var(--a) - 4px);
 }
 .drink-day-gauge__sum {
   left: calc(50% - var(--a));

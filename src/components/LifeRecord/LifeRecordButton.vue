@@ -1,5 +1,5 @@
 <!-- LifeRecordButton.vue -->
-<!-- 单按钮：日=AppsAddIn/ChannelAdd（无记录/有记录）→进入集中 sheet；非日=Apps20Regular/Filled→生活可视化开关 -->
+<!-- 单按钮：日=AppsAddIn/ChannelAdd（无桶/已有桶）→进入集中 sheet；非日=Apps20Regular/Filled→生活可视化开关 -->
 <template>
   <!-- 日：进入集中生活 sheet，只换 task 区（今日图 / 过往表） -->
   <n-button

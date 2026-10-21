@@ -84,7 +84,7 @@ const { isMobile } = useDevice();
 }
 /* 手机裁掉上下空白；图标贴上沿、备注贴下沿，格距不再被正方形中心裁切开大 */
 .lr-day--mobile.lr-day--compact {
-  --lr-day-compact-h: calc(0.4 * var(--lr-day-display) + 56px);
+  --lr-day-compact-h: calc(0.4 * var(--lr-day-display) + 40px);
 }
 .lr-day--mobile.lr-day--compact .lr-day__display {
   height: var(--lr-day-compact-h);

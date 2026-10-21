@@ -11,7 +11,9 @@
         <span class="lr-chart__el lr-chart__times" aria-hidden="true">×</span>
         <span class="lr-chart__el lr-chart__count">{{ records.length }}</span>
         <template v-if="lastRecord">
-          <n-time-picker
+          <div class="lr-chart__merge">
+          <div class="lr-chart__row2">
+          <LifeRecordTimePicker
             class="lr-chart__el lr-chart__time eat-day-chart__start"
             :value="pickerTs(lastRecord.recordedAt)"
             format="HH:mm"
@@ -50,12 +52,14 @@
               @update:model-value="(v) => changeSatiety(lastRecord, v)"
             />
           </div>
+          </div>
           <LifeRecordChartNoteBar
             tone="eat"
             :model-value="lastRecord.description ?? ''"
             placeholder="food..."
             @update:model-value="onNoteBarInput"
           />
+          </div>
         </template>
       </div>
     </template>
@@ -101,7 +105,7 @@
               </button>
             </td>
             <td class="lr-day-table__col-time">
-              <n-time-picker
+              <LifeRecordTimePicker
                 class="lr-day-table__time"
                 :value="pickerTs(record.recordedAt)"
                 format="HH:mm"
@@ -157,7 +161,7 @@
 </template>
 <script setup lang="ts">
 import { computed, type Component } from "vue";
-import { NIcon, NInput, NTimePicker } from "naive-ui";
+import { NIcon, NInput } from "naive-ui";
 import {
   Add20Regular,
   Clock20Regular,
@@ -177,6 +181,7 @@ import LifeRecordChartNoteBar from "@/components/LifeRecord/LifeRecordChartNoteB
 import LifeRecordScorePop from "@/components/LifeRecord/LifeRecordScorePop.vue";
 import { useLifeRecordEditor } from "@/composables/lifeRecord/useLifeRecordEditor";
 import LifeRecordDayFrame from "@/components/LifeRecord/LifeRecordDayFrame.vue";
+import LifeRecordTimePicker from "@/components/LifeRecord/LifeRecordTimePicker.vue";
 const props = withDefaults(defineProps<{ taskId: number; embedded?: boolean; view?: "chart" | "table" }>(), {
   view: "chart",
 });
@@ -207,6 +212,9 @@ function onNoteBarInput(v: string) {
 .eat-day-chart__start {
   left: calc(50% - var(--a) - 30px);
   top: calc(50% + var(--f) - var(--row2-shift));
+}
+.lr-day--mobile .eat-day-chart__start {
+  left: calc(50% - var(--a) - 40px);
 }
 .eat-day-chart__course {
   left: 50%;

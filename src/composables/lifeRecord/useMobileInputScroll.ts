@@ -9,10 +9,11 @@ const ICON_TOP_EXTRA_PX = 25;
 const ROW_MARGIN_PX = 12;
 const RETRY_MS = [50, 180, 360, 560];
 
-/** 手机：时间格只开转盘，不拉输入法；备注列仍可打字 */
+/** 手机：时间格默认只开转盘；双击录入中的格子（data-lr-time-ime）除外 */
 function lockTimePickerIme(root: HTMLElement | null, on: boolean) {
   if (!root) return;
   root.querySelectorAll<HTMLInputElement>(".n-time-picker input").forEach((el) => {
+    if (el.hasAttribute("data-lr-time-ime")) return;
     el.readOnly = on;
     if (on) el.setAttribute("inputmode", "none");
     else el.removeAttribute("inputmode");

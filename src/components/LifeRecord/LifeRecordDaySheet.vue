@@ -29,17 +29,17 @@
       </n-button>
     </div>
     <div v-else class="life-day-sheet__grid">
-      <div class="life-day-sheet__cell">
-        <DrinkDayPanel v-if="taskIds.drink != null" :task-id="taskIds.drink" :view="view" embedded />
+      <div v-if="taskIds.drink != null" class="life-day-sheet__cell">
+        <DrinkDayPanel :task-id="taskIds.drink" :view="view" embedded />
       </div>
-      <div class="life-day-sheet__cell">
-        <EatDayPanel v-if="taskIds.eat != null" :task-id="taskIds.eat" :view="view" embedded />
+      <div v-if="taskIds.eat != null" class="life-day-sheet__cell">
+        <EatDayPanel :task-id="taskIds.eat" :view="view" embedded />
       </div>
-      <div class="life-day-sheet__cell">
-        <ToiletDayPanel v-if="taskIds.toilet != null" :task-id="taskIds.toilet" :view="view" embedded />
+      <div v-if="taskIds.toilet != null" class="life-day-sheet__cell life-day-sheet__cell--gap">
+        <ToiletDayPanel :task-id="taskIds.toilet" :view="view" embedded />
       </div>
-      <div class="life-day-sheet__cell">
-        <SleepDayPanel v-if="taskIds.sleep != null" :task-id="taskIds.sleep" :view="view" embedded />
+      <div v-if="taskIds.sleep != null" class="life-day-sheet__cell life-day-sheet__cell--gap">
+        <SleepDayPanel :task-id="taskIds.sleep" :view="view" embedded />
       </div>
     </div>
   </div>
@@ -58,7 +58,9 @@ import type { LifeRecordKind } from "@/core/lifeRecord";
 const props = withDefaults(
   defineProps<{
     taskIds: Record<LifeRecordKind, number | null>;
-    /** 预览点进默认表；日按钮进默认图 */
+    /** 换天时用来把图/表定回当天规则，避免沿用上一天 */
+    dayStart?: number;
+    /** 当天图，其余表 */
     initialView?: "chart" | "table";
   }>(),
   { initialView: "chart" },
@@ -72,6 +74,17 @@ const sheetRef = ref<HTMLElement | null>(null);
 useMobileInputScroll(sheetRef, (active) => emit("input-active", active));
 const view = ref<"chart" | "table">(props.initialView);
 watch(view, (v) => emit("view-change", v), { immediate: true });
+/** 换天才改模式：当天图、过去表，并回到顶部，避免手机上停在上一天的滚动位置 */
+watch(
+  () => props.dayStart,
+  () => {
+    view.value = props.initialView;
+    const grid = sheetRef.value?.querySelector<HTMLElement>(".life-day-sheet__grid");
+    if (!grid) return;
+    grid.scrollTop = 0;
+    grid.style.paddingBottom = "";
+  },
+);
 function toggleView() {
   view.value = view.value === "chart" ? "table" : "chart";
 }
@@ -136,7 +149,7 @@ function toggleView() {
   min-width: 0;
 }
 .life-day-sheet--mobile .life-day-sheet__grid {
-  --lr-sheet-compact-stack-gap: 20px;
+  --lr-sheet-compact-stack-gap: 8px;
   display: flex;
   flex-direction: column;
   grid-template-rows: none;
@@ -152,8 +165,8 @@ function toggleView() {
   max-height: none;
   overflow: visible;
 }
-/* 无圆圈的吃/活动/睡：格距单独加一截，不影响圆圈到苹果 */
-.life-day-sheet--mobile .life-day-sheet__cell:nth-child(n + 3) {
+/* 无圆圈的活动/睡：前面已有格子时才加距，缺类不留空档 */
+.life-day-sheet--mobile .life-day-sheet__cell--gap:not(:first-child) {
   margin-top: var(--lr-sheet-compact-stack-gap);
 }
 </style>

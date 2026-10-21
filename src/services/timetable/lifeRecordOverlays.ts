@@ -2,12 +2,11 @@
 // 生活记录投射到 TimeTable：点事件 → 第3列；睡眠段 → 第4列（纯函数，不碰 store）
 import type { Activity } from "@/core/types/Activity";
 import type { DrinkKind, EatCourse, LifeRecord, Task } from "@/core/types/Task";
-import type { Todo } from "@/core/types/Todo";
-import { drinkKindLabel, drinkKindOf, eatCourseLabel, getLifeRecordDef, getLifeRecordKind, type LifeRecordKind } from "@/core/lifeRecord";
+import { drinkKindLabel, drinkKindOf, eatCourseLabel, getLifeRecordDef, getLifeRecordKind, isClosedLifeSpan, parseLifeRecordPlaceholder, type LifeRecordKind } from "@/core/lifeRecord";
 import { timestampToTimeString } from "@/core/utils";
 import { resolveRecordTime } from "@/services/timetable/taskRecordMarks";
 
-export type LifePointKind = Exclude<LifeRecordKind, "sleep"> | "energy";
+export type LifePointKind = Exclude<LifeRecordKind, "sleep"> | "energy" | "reward";
 
 export interface LifePointMark {
   recordId: number;
@@ -29,6 +28,8 @@ export interface LifePointMark {
   endAt?: number;
   /** 精力分 1–10（精力点 / 活动结束） */
   energy?: number;
+  /** 奖赏分 1–10 */
+  reward?: number;
 }
 
 export interface LifeSleepRange {
@@ -54,12 +55,13 @@ const POINT_COLOR: Record<LifePointKind, string> = {
   eat: "var(--color-red-medium-transparent)",
   toilet: "var(--color-text-secondary-medium-transparent)",
   energy: "var(--color-text-primary)",
+  reward: "var(--color-text-primary)",
 };
 
-/** 时间表/周图层：标题 + 时刻 + 种类/分数/量 + 备注 */
+/** 时间表/周图层：时刻 + 种类/分数/量 + 备注，不带「喝水」这类标题 */
 export function formatLifePointCaption(mark: LifePointMark): string {
   const t = timestampToTimeString(mark.time);
-  const parts: string[] = [mark.title];
+  const parts: string[] = [];
   if (mark.kind === "drink") {
     parts.push(t, drinkKindLabel(mark.drinkKind ?? "water"));
     if (mark.amountMl != null) parts.push(`${mark.amountMl} ml`);
@@ -70,6 +72,9 @@ export function formatLifePointCaption(mark: LifePointMark): string {
   } else if (mark.kind === "energy") {
     parts.push(t);
     if (mark.energy != null) parts.push(String(mark.energy));
+  } else if (mark.kind === "reward") {
+    parts.push(t);
+    if (mark.reward != null) parts.push(String(mark.reward));
   } else {
     const span = mark.endAt != null ? `${t}–${timestampToTimeString(mark.endAt)}` : t;
     parts.push(span);
@@ -79,10 +84,10 @@ export function formatLifePointCaption(mark: LifePointMark): string {
   return parts.join(" ");
 }
 
-/** 睡觉：时段 + 精力 + 梦 */
+/** 睡觉：时段 + 精力 + 梦，不带「睡觉」标题 */
 export function formatLifeSleepCaption(range: LifeSleepRange): string {
   const span = `${timestampToTimeString(range.start)}–${timestampToTimeString(range.end)}`;
-  const parts = [range.title, span];
+  const parts = [span];
   if (range.energy != null) parts.push(`精力${range.energy}`);
   if (range.note) parts.push(range.note);
   return parts.join(" ");
@@ -113,7 +118,11 @@ function assignLanes(marks: Omit<LifePointMark, "lane">[], minGapMs: number): Li
     cluster.push(mark);
   }
   flush();
-  return out;
+  // 精力贴第 3 列、奖赏贴第 2 列；生活点仍按簇分 lane，叠在上层
+  return out.map((mark) => ({
+    ...mark,
+    lane: mark.kind === "energy" ? 0 : mark.kind === "reward" ? 1 : mark.lane,
+  }));
 }
 
 /** 把一条睡眠裁到「显示日 ∩ 可见 timeRange」后写入 sleeps */
@@ -123,13 +132,14 @@ function pushSleepClip(
   taskId: number,
   todoId: number,
   title: string,
-  openEnd: number,
+  _openEnd: number,
   viewDayStart: number,
   viewDayEnd: number,
   timeRange: { start: number; end: number },
 ): void {
+  if (!isClosedLifeSpan(record) || record.endAt == null) return; // 未闭合走占位，不在这里铺带
   const start = record.recordedAt;
-  const end = record.endAt ?? openEnd;
+  const end = record.endAt;
   if (end <= start) return;
   const dayClip = clampRange(start, end, viewDayStart, viewDayEnd);
   if (!dayClip) return;
@@ -150,40 +160,51 @@ function pushSleepClip(
   });
 }
 
+/** 日桶归属日：标题优先；旧数据用 sourceId 落在显示日或前一日的窗口 */
+function lifeRecordOwnerDay(task: Task, activity: Activity | undefined, viewDayStart: number): number | null {
+  const parsed = parseLifeRecordPlaceholder(task.activityTitle ?? activity?.title);
+  if (parsed) return parsed.dayStart;
+  if (!getLifeRecordKind(activity)) return null;
+  const id = Number.isFinite(task.sourceId) ? task.sourceId : task.id;
+  if (id >= viewDayStart && id < viewDayStart + DAY_MS) return viewDayStart;
+  if (id >= viewDayStart - DAY_MS && id < viewDayStart) return viewDayStart - DAY_MS;
+  return null;
+}
+
 /**
- * 从 todo 列表收集生活记录 overlay。
- * 点事件：仅显示日 todo；睡眠：显示日 + 前一日（跨午夜醒来画在次日早晨）。
- * openSleepEnd：未醒时终点 — now=当前时刻（TimeTable）；dayOfStart=入睡日日末（Week）。
+ * 从 task 列表收集生活记录 overlay（按标题取日，不扫待办）。
+ * 点事件：仅显示日桶；已结束的睡眠：显示日 + 前一日（跨午夜醒来画在次日早晨）。
+ * 只有开始、没有结束的睡觉/活动不收集。openSleepEnd 仍传入，未闭合段不再铺到 now 或日末。
  */
 export function collectLifeRecordOverlays(options: {
   dayStart: number;
   dayEnd: number;
   timeRange: { start: number; end: number };
-  todos: Todo[];
+  tasks: Task[];
   getActivity: (activityId: number) => Activity | undefined;
-  getTask: (taskId: number) => Task | undefined;
   now: number;
   minGapMs: number;
   openSleepEnd?: "now" | "dayOfStart";
-  /** 当日 energy 桶；有则把精力点画进周/课表生活图层 */
+  /** 传入则收集当日精力/奖赏点（周视图）；日课表不传，避免和 taskRecordMarks 重复 */
   getDayEnergyTask?: (dayStart: number) => Task | undefined;
 }): { points: LifePointMark[]; sleeps: LifeSleepRange[] } {
-  const { dayStart, dayEnd, timeRange, todos, getActivity, getTask, now, minGapMs, openSleepEnd = "now", getDayEnergyTask } = options;
+  const { dayStart, dayEnd, timeRange, tasks, getActivity, now, minGapMs, openSleepEnd = "now", getDayEnergyTask } = options;
   const rawPoints: Omit<LifePointMark, "lane">[] = [];
   const sleeps: LifeSleepRange[] = [];
   const prevDayStart = dayStart - DAY_MS;
   const sleepTitle = getLifeRecordDef("sleep").title;
 
-  for (const todo of todos) {
-    if (todo.deleted) continue;
-    const onViewDay = todo.id >= dayStart && todo.id < dayEnd;
-    const onPrevDay = todo.id >= prevDayStart && todo.id < dayStart;
+  for (const task of tasks) {
+    if (task.deleted || !task.lifeRecords?.length) continue;
+    const activity = getActivity(task.sourceId);
+    const ownerDay = lifeRecordOwnerDay(task, activity, dayStart);
+    if (ownerDay == null) continue;
+    const onViewDay = ownerDay === dayStart;
+    const onPrevDay = ownerDay === prevDayStart;
     if (!onViewDay && !onPrevDay) continue;
 
-    const kind = getLifeRecordKind(getActivity(todo.activityId));
+    const kind = parseLifeRecordPlaceholder(task.activityTitle ?? activity?.title)?.kind ?? getLifeRecordKind(activity);
     if (!kind) continue;
-    const task = todo.taskId != null ? getTask(todo.taskId) : undefined;
-    if (!task?.lifeRecords?.length) continue;
 
     // 未醒终点：Week 用该行所属日的日末；TimeTable 用 now
     const rowDayStart = onPrevDay ? prevDayStart : dayStart;
@@ -193,7 +214,7 @@ export function collectLifeRecordOverlays(options: {
       if (kind !== "sleep") continue;
       for (const record of task.lifeRecords) {
         // 未醒只铺到入睡日日末 → 与次日无交，次日早晨不出现开放睡眠（醒来后有 endAt 才画跨日截）
-        pushSleepClip(sleeps, record, task.id, todo.id, sleepTitle, rowOpenEnd, dayStart, dayEnd, timeRange);
+        pushSleepClip(sleeps, record, task.id, dayStart, sleepTitle, rowOpenEnd, dayStart, dayEnd, timeRange);
       }
       continue;
     }
@@ -201,9 +222,10 @@ export function collectLifeRecordOverlays(options: {
     const def = getLifeRecordDef(kind);
     for (const record of task.lifeRecords) {
       if (kind === "sleep") {
-        pushSleepClip(sleeps, record, task.id, todo.id, def.title, rowOpenEnd, dayStart, dayEnd, timeRange);
+        pushSleepClip(sleeps, record, task.id, dayStart, def.title, rowOpenEnd, dayStart, dayEnd, timeRange);
         continue;
       }
+      if (kind === "toilet" && !isClosedLifeSpan(record)) continue;
 
       const resolved = resolveRecordTime(record.recordedAt, dayStart, dayEnd, null);
       if (resolved == null) continue;
@@ -211,7 +233,7 @@ export function collectLifeRecordOverlays(options: {
       rawPoints.push({
         recordId: record.id,
         taskId: task.id,
-        todoId: todo.id,
+        todoId: dayStart,
         kind,
         colorVar: POINT_COLOR[kind],
         time,
@@ -240,24 +262,37 @@ export function collectLifeRecordOverlays(options: {
     }
   }
 
-  const energyTask = getDayEnergyTask?.(dayStart);
-  if (energyTask && !energyTask.deleted) {
-    for (const record of energyTask.energyRecords ?? []) {
+  if (getDayEnergyTask) {
+    const seenScore = new Set<string>();
+    const pushScore = (task: Task, kind: "energy" | "reward", record: { id: number; value: number; recordedAt?: number; description?: string }) => {
+      const key = `${kind}:${record.id}`;
+      if (seenScore.has(key)) return;
       const at = record.recordedAt ?? record.id;
       const resolved = resolveRecordTime(at, dayStart, dayEnd, null);
-      if (resolved == null) continue;
+      if (resolved == null) return;
+      seenScore.add(key);
       const time = resolved < timeRange.start ? timeRange.start : resolved >= timeRange.end ? timeRange.end - 1 : resolved;
       rawPoints.push({
         recordId: record.id,
-        taskId: energyTask.id,
-        todoId: 0,
-        kind: "energy",
-        colorVar: POINT_COLOR.energy,
+        taskId: task.id,
+        todoId: dayStart,
+        kind,
+        colorVar: POINT_COLOR[kind],
         time,
-        title: "精力",
+        title: kind === "energy" ? "精力" : "奖赏",
         note: (record.description ?? "").trim(),
-        energy: record.value,
+        ...(kind === "energy" ? { energy: record.value } : { reward: record.value }),
       });
+    };
+
+    const energyTask = getDayEnergyTask(dayStart);
+    if (energyTask && !energyTask.deleted) {
+      for (const record of energyTask.energyRecords ?? []) pushScore(energyTask, "energy", record);
+      for (const record of energyTask.rewardRecords ?? []) pushScore(energyTask, "reward", record);
+    }
+    for (const task of tasks) {
+      if (task.deleted) continue;
+      for (const record of task.rewardRecords ?? []) pushScore(task, "reward", record);
     }
   }
 

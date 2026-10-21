@@ -33,11 +33,10 @@ import { getLifeRecordDef, isLifeRecordActivity, lifeRecordPlaceholderTitle, pic
 import { isDayEnergyTask } from "@/core/dayEnergy";
 import {
   buildLifeRecordEntities,
-  buildLifeRecordTask,
-  findLifeRecordTodoForDay,
+  findLifeRecordTaskForDay,
   removeLifeRecord,
 } from "@/services/lifeRecord/lifeRecordService";
-import { buildDayEnergyTask, findDayEnergyTask } from "@/services/task/dayEnergyService";
+import { buildDayEnergyTask, findDayEnergyTask, reconcileDayEnergyTasks } from "@/services/task/dayEnergyService";
 import { handleDeleteActivity } from "@/services/activity/activityService";
 import { useTagStore } from "./useTagStore";
 import { useTemplateStore } from "./useTemplateStore";
@@ -106,6 +105,14 @@ export const useDataStore = defineStore(
       scheduleList.value = loadSchedules();
       taskList.value = loadTasks();
       ledgerList.value = loadLedgerEntries();
+      // 旧桶 sourceId 是日键、没有活动，上传会被外键丢掉；补上活动后下次同步能把未同步标记清掉
+      const healed = reconcileDayEnergyTasks(taskList.value, activityList.value);
+      if (healed.created.length) activityList.value.push(...healed.created);
+      if (healed.changed) {
+        saveActivities(activityList.value);
+        saveTasks(taskList.value);
+        scheduleDebouncedCloudUpload();
+      }
 
       isDataLoaded.value = true;
     }
@@ -725,15 +732,20 @@ export const useDataStore = defineStore(
     }
 
     /**
-     * 查或建当日 day_energy 宿主（无 activity/todo，仅 energy 桶）
+     * 查或建当日精力桶。task 挂到隐藏 activity 上，未同步标记才能被上传清掉。
      */
     function ensureDayEnergyTask(dayStartTs: number): Task {
-      const existing = findDayEnergyTask(dayStartTs, taskList.value);
-      if (existing) return existing;
-      const task = buildDayEnergyTask(dayStartTs);
-      taskList.value = [...taskList.value, task];
-      saveTasks(taskList.value);
-      return task;
+      if (!findDayEnergyTask(dayStartTs, taskList.value)) {
+        taskList.value = [...taskList.value, buildDayEnergyTask(dayStartTs)];
+      }
+      const healed = reconcileDayEnergyTasks(taskList.value, activityList.value);
+      if (healed.created.length) activityList.value.push(...healed.created);
+      if (healed.changed) {
+        saveActivities(activityList.value);
+        saveTasks(taskList.value);
+        scheduleDebouncedCloudUpload();
+      }
+      return findDayEnergyTask(dayStartTs, taskList.value)!;
     }
 
     /** Pinia 可能把 appDateTimestamp 拆成 number，不能无脑 .value */
@@ -756,59 +768,16 @@ export const useDataStore = defineStore(
     }
 
     /**
-     * 打开生活记录日桶：无行则懒建空三件套（不 +1）；drink 写入/补齐日目标快照。
+     * 打开生活记录日桶：无行则懒建 activity+task（不 +1）；drink 写入/补齐日目标快照。
      * 仅日视图生效；周月年由块 3 切 Planner 皮肤，此处先 no-op 避免误记。
      */
     function openLifeRecord(kind: LifeRecordKind): void {
       const settingStore = useSettingStore();
       if (settingStore.settings.viewSet !== "day") return;
-
-      const def = getLifeRecordDef(kind);
-      tagStore.ensureSystemTag({
-        id: def.tagId,
-        name: def.title,
-        color: def.tagColor,
-        backgroundColor: def.tagBackgroundColor,
-        deleted: false,
-        synced: false,
-        lastModified: Date.now(),
-      });
-
       const dayStart = resolveLifeRecordDayStart();
       const at = lifeRecordStampForDay(dayStart);
-      const drinkGoalMl = kind === "drink" ? settingStore.settings.drinkDailyGoalMl : undefined;
-
-      let task: Task | undefined;
-      const existingTodo = findLifeRecordTodoForDay(todoList.value, activityById.value, kind, dayStart);
-
-      if (existingTodo) {
-        task = taskByActivityId.value.get(existingTodo.activityId);
-        if (!task) {
-          const title = existingTodo.activityTitle || lifeRecordPlaceholderTitle(kind, dayStart);
-          task = buildLifeRecordTask(existingTodo.activityId, title, { drinkGoalMl });
-          taskList.value = [...taskList.value, task];
-          saveTasks(taskList.value);
-        } else {
-          const patch: Partial<Task> = {};
-          if (!task.activityTitle) patch.activityTitle = lifeRecordPlaceholderTitle(kind, dayStart);
-          if (kind === "drink" && task.drinkGoalMl == null && drinkGoalMl != null) patch.drinkGoalMl = drinkGoalMl;
-          if (Object.keys(patch).length) updateTaskById(task.id, patch);
-        }
-        if (!existingTodo.activityTitle) {
-          updateTodoById(existingTodo.id, { activityTitle: lifeRecordPlaceholderTitle(kind, dayStart) });
-        }
-      } else {
-        const entities = buildLifeRecordEntities(kind, at, { drinkGoalMl, occupiedIds: occupiedLifeRecordIds() });
-        activityList.value.push(entities.activity);
-        taskList.value = [...taskList.value, entities.task];
-        todoList.value.push(entities.todo);
-        task = entities.task;
-        saveActivities(activityList.value);
-        saveTodos(todoList.value);
-        saveTasks(taskList.value);
-      }
-
-      displayStore.pushTaskId(task.id);
+      const task = ensureLifeRecordTaskForDay(kind, dayStart, { at });
+      displayStore.pushTaskId(task);
       scheduleDebouncedCloudUpload();
     }
 
@@ -818,7 +787,6 @@ export const useDataStore = defineStore(
      */
     function persistLifeRecordLists(): void {
       saveActivities(activityList.value);
-      saveTodos(todoList.value);
       saveTasks(taskList.value);
       scheduleDebouncedCloudUpload();
     }
@@ -846,33 +814,27 @@ export const useDataStore = defineStore(
       const drinkGoalMl = kind === "drink" ? settingStore.settings.drinkDailyGoalMl : undefined;
       const taken = options?.occupied ?? new Set(occupiedLifeRecordIds());
       const persist = options?.persist !== false;
+      const placeholder = lifeRecordPlaceholderTitle(kind, safeDay);
 
-      const existingTodo = findLifeRecordTodoForDay(todoList.value, activityById.value, kind, safeDay);
-      if (existingTodo) {
-        let task = taskByActivityId.value.get(existingTodo.activityId);
-        if (!task) {
-          const title = existingTodo.activityTitle || lifeRecordPlaceholderTitle(kind, safeDay);
-          task = buildLifeRecordTask(existingTodo.activityId, title, { drinkGoalMl, id: existingTodo.activityId });
-          taskList.value = [...taskList.value, task];
-          if (persist) saveTasks(taskList.value);
-        } else {
-          const patch: Partial<Task> = {};
-          if (!task.activityTitle) patch.activityTitle = lifeRecordPlaceholderTitle(kind, safeDay);
-          if (kind === "drink" && task.drinkGoalMl == null && drinkGoalMl != null) patch.drinkGoalMl = drinkGoalMl;
-          if (Object.keys(patch).length) updateTaskById(task.id, patch);
+      const existing = findLifeRecordTaskForDay(taskList.value, kind, safeDay, activityById.value);
+      if (existing) {
+        const patch: Partial<Task> = {};
+        if (!existing.activityTitle) patch.activityTitle = placeholder;
+        if (kind === "drink" && existing.drinkGoalMl == null && drinkGoalMl != null) patch.drinkGoalMl = drinkGoalMl;
+        if (Object.keys(patch).length) updateTaskById(existing.id, patch);
+        const host = activityById.value.get(existing.sourceId);
+        if (host && !host.title) {
+          updateActivityById(host.id, { title: placeholder });
         }
-        if (!existingTodo.activityTitle) {
-          updateTodoById(existingTodo.id, { activityTitle: lifeRecordPlaceholderTitle(kind, safeDay) });
-        }
-        taken.add(existingTodo.id);
-        return task.id;
+        taken.add(existing.id);
+        taken.add(existing.sourceId);
+        return existing.id;
       }
 
       const entities = buildLifeRecordEntities(kind, at, { drinkGoalMl, occupiedIds: taken });
       taken.add(entities.activity.id);
       activityList.value.push(entities.activity);
       taskList.value = [...taskList.value, entities.task];
-      todoList.value.push(entities.todo);
       if (persist) persistLifeRecordLists();
       return entities.task.id;
     }

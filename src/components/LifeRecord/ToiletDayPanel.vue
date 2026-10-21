@@ -25,59 +25,62 @@
           </n-popconfirm>
         </div>
         <span class="lr-chart__el lr-chart__times" aria-hidden="true">×</span>
-        <span class="lr-chart__el lr-chart__count">{{ records.length }}</span>
-        <n-time-picker
-          v-if="lastRecord"
-          class="lr-chart__el lr-chart__time toilet-day-chart__start"
-          :value="pickerTs(lastRecord.recordedAt)"
-          format="HH:mm"
-          size="small"
-          :show-icon="false"
-          :bordered="false"
-          :clearable="false"
-          to="body"
-          :z-index="10000"
-          title="开始"
-          @update:value="(ts: number | null) => changeTime(lastRecord, 'recordedAt', ts)"
-        />
-        <button
-          v-if="lastRecord && lastRecord.endAt == null"
-          type="button"
-          class="lr-chart__el toilet-day-chart__stop"
-          title="结束（当前时间）"
-          @click="stampEnd"
-        >
-          <n-icon class="toilet-day-chart__ctrl-icon"><RecordStop20Regular /></n-icon>
-        </button>
-        <n-time-picker
-          v-else-if="lastRecord"
-          class="lr-chart__el lr-chart__time toilet-day-chart__end"
-          :value="pickerTs(lastRecord.endAt)"
-          format="HH:mm"
-          size="small"
-          :show-icon="false"
-          :bordered="false"
-          :clearable="false"
-          to="body"
-          :z-index="10000"
-          title="结束"
-          @update:value="(ts: number | null) => changeTime(lastRecord, 'endAt', ts)"
-        />
-        <div v-if="lastRecord" class="lr-chart__el lr-chart__score toilet-day-chart__energy">
-          <LifeRecordScorePop
-            :model-value="lastRecord.energy"
-            title="精力值"
-            :icon="BatterySaver20Regular"
-            @update:model-value="(v) => changeEnergy(lastRecord, v)"
+        <span class="lr-chart__el lr-chart__count">{{ closedCount }}</span>
+        <div v-if="lastRecord" class="lr-chart__merge">
+          <div class="lr-chart__row2">
+            <LifeRecordTimePicker
+              class="lr-chart__el lr-chart__time toilet-day-chart__start"
+              :value="pickerTs(lastRecord.recordedAt)"
+              format="HH:mm"
+              size="small"
+              :show-icon="false"
+              :bordered="false"
+              :clearable="false"
+              to="body"
+              :z-index="10000"
+              title="开始"
+              @update:value="(ts: number | null) => changeTime(lastRecord, 'recordedAt', ts)"
+            />
+            <button
+              v-if="lastRecord && lastRecord.endAt == null"
+              type="button"
+              class="lr-chart__el toilet-day-chart__stop"
+              title="结束（当前时间）"
+              @click="stampEnd"
+            >
+              <n-icon class="toilet-day-chart__ctrl-icon"><RecordStop20Regular /></n-icon>
+            </button>
+            <LifeRecordTimePicker
+              v-else-if="lastRecord"
+              class="lr-chart__el lr-chart__time toilet-day-chart__end"
+              :value="pickerTs(lastRecord.endAt)"
+              format="HH:mm"
+              size="small"
+              :show-icon="false"
+              :bordered="false"
+              :clearable="false"
+              to="body"
+              :z-index="10000"
+              title="结束"
+              @update:value="(ts: number | null) => changeTime(lastRecord, 'endAt', ts)"
+            />
+            <div v-if="lastRecord" class="lr-chart__el lr-chart__score toilet-day-chart__energy">
+              <LifeRecordScorePop
+                :model-value="lastRecord.energy"
+                title="精力值"
+                :icon="BatterySaver20Regular"
+                @update:model-value="(v) => changeEnergy(lastRecord, v)"
+              />
+            </div>
+          </div>
+          <LifeRecordChartNoteBar
+            v-if="lastRecord"
+            tone="toilet"
+            :model-value="lastRecord.description ?? ''"
+            placeholder="activity..."
+            @update:model-value="onNoteBarInput"
           />
         </div>
-        <LifeRecordChartNoteBar
-          v-if="lastRecord"
-          tone="toilet"
-          :model-value="lastRecord.description ?? ''"
-          placeholder="activity..."
-          @update:model-value="onNoteBarInput"
-        />
       </div>
     </template>
     <template #table>
@@ -132,7 +135,7 @@
               </button>
             </td>
             <td class="lr-day-table__col-time">
-              <n-time-picker
+              <LifeRecordTimePicker
                 class="lr-day-table__time"
                 :value="pickerTs(record.recordedAt)"
                 format="HH:mm"
@@ -143,7 +146,7 @@
               />
             </td>
             <td class="lr-day-table__col-time">
-              <n-time-picker
+              <LifeRecordTimePicker
                 class="lr-day-table__time"
                 :value="pickerTs(record.endAt)"
                 format="HH:mm"
@@ -183,7 +186,7 @@
 </template>
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import { NIcon, NInput, NPopconfirm, NTimePicker } from "naive-ui";
+import { NIcon, NInput, NPopconfirm } from "naive-ui";
 import {
   Add20Regular,
   BatterySaver20Regular,
@@ -193,17 +196,20 @@ import {
   RecordStop20Regular,
   ShiftsActivity20Regular,
 } from "@vicons/fluent";
+import { isClosedLifeSpan } from "@/core/lifeRecord";
 import type { LifeRecord } from "@/core/types/Task";
 import { useLifeRecordEditor } from "@/composables/lifeRecord/useLifeRecordEditor";
 import LifeRecordChartNoteBar from "@/components/LifeRecord/LifeRecordChartNoteBar.vue";
 import LifeRecordScorePop from "@/components/LifeRecord/LifeRecordScorePop.vue";
 import LifeRecordDayFrame from "@/components/LifeRecord/LifeRecordDayFrame.vue";
+import LifeRecordTimePicker from "@/components/LifeRecord/LifeRecordTimePicker.vue";
 const props = withDefaults(defineProps<{ taskId: number; embedded?: boolean; view?: "chart" | "table" }>(), {
   view: "chart",
 });
 const { task, records, hasOpenSpan, appendRow, stampStart, stampEnd, pickerTs, changeTime, changeDescription, changeEnergy, remove } =
   useLifeRecordEditor(() => props.taskId, "toilet", { embedded: () => props.embedded });
 const lastRecord = computed(() => records.value[records.value.length - 1] ?? null);
+const closedCount = computed(() => records.value.filter(isClosedLifeSpan).length);
 const askEndOpen = ref(false);
 function onDoorClick() {
   if (hasOpenSpan.value) {
@@ -255,6 +261,9 @@ function formatDuration(record: LifeRecord): string {
   left: calc(50% - var(--a) - 30px);
   top: calc(50% + var(--f) - var(--row2-shift));
 }
+.lr-day--mobile .toilet-day-chart__start {
+  left: calc(50% - var(--a) - 40px);
+}
 .toilet-day-chart__stop,
 .toilet-day-chart__end {
   left: 50%;
@@ -262,7 +271,7 @@ function formatDuration(record: LifeRecord): string {
   color: var(--color-text-primary);
 }
 .toilet-day-chart__stop {
-  width: 28px;
+  width: 60px;
   height: 28px;
   display: inline-flex;
   align-items: center;
@@ -274,6 +283,9 @@ function formatDuration(record: LifeRecord): string {
 }
 .toilet-day-chart__energy {
   left: calc(50% + var(--c) + 25px);
+}
+.lr-day--mobile .toilet-day-chart__energy {
+  left: calc(50% + var(--c) + 33px);
 }
 .toilet-day-chart__stop:hover {
   opacity: 0.85;

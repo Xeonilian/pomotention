@@ -113,7 +113,7 @@ import { getDateKey } from "@/core/utils";
 import type { HolidayDisplay } from "@/services/planner/publicHolidays";
 import { plannerHolidayMapKey } from "@/composables/planner/usePublicHolidays";
 import { getPomoBadgeBgColor, getPomoColor, getStatsPomoBgColorHEX, mapPomoCountToColorRatio } from "@/core/utils/weekDays";
-import { getLifeRecordKind, type LifeRecordKind } from "@/core/lifeRecord";
+import { getLifeRecordKind, parseLifeRecordPlaceholder, type LifeRecordKind } from "@/core/lifeRecord";
 import type { LifeRecord } from "@/core/types/Task";
 import {
   activityBarScaleMs,
@@ -137,7 +137,7 @@ function onLifeBarSelectKind(kind: LifeRecordKind) {
 }
 
 /** 统计格 icon：可点开切日并选中对应生活记录 */
-type LifeIconRef = { todoId: number; activityId: number; taskId?: number };
+type LifeIconRef = { activityId: number; taskId: number };
 type LifeByKind = Partial<Record<LifeRecordKind, LifeIconRef>>;
 
 type DrinkDayStat = { goalMl: number };
@@ -187,7 +187,7 @@ type UnifiedItem = {
 };
 
 const dataStore = useDataStore();
-const { activeId, selectedRowId, todosForCurrentViewWithTags, schedulesForCurrentViewWithTags, selectedDate, todoList, activityById, taskById, taskByActivityId } =
+const { activeId, selectedRowId, todosForCurrentViewWithTags, schedulesForCurrentViewWithTags, selectedDate, taskList, activityById, taskById, taskByActivityId } =
   storeToRefs(dataStore);
 const dateService = dataStore.dateService;
 
@@ -212,13 +212,15 @@ const days = computed(() => {
   // 计算日历天数
   const totalDays = Math.ceil((calendarEnd - calendarStart) / DAY_MS);
 
-  // 生活记录不在 todosForCurrentView* 里，单独按 todo.id 归属日扫一遍（统计格 icon 用）
+  // 生活记录不在 todosForCurrentView* 里，按标题日键扫 task（统计格 icon 用）
   const lifeByDay = new Map<number, LifeByKind>();
-  for (const todo of todoList.value) {
-    if (todo.deleted) continue;
-    const kind = getLifeRecordKind(activityById.value.get(todo.activityId));
+  for (const task of taskList.value) {
+    if (task.deleted) continue;
+    const activity = activityById.value.get(task.sourceId);
+    const parsed = parseLifeRecordPlaceholder(task.activityTitle ?? activity?.title);
+    const kind = parsed?.kind ?? getLifeRecordKind(activity);
     if (!kind) continue;
-    const dayStart = startOfDay(todo.id);
+    const dayStart = parsed?.dayStart ?? startOfDay(task.sourceId);
     // 含日历首日前一天：跨夜睡眠可截进格
     if (dayStart < calendarStart - DAY_MS || dayStart > calendarEnd) continue;
     let byKind = lifeByDay.get(dayStart);
@@ -229,9 +231,8 @@ const days = computed(() => {
     // 同日同 kind 已有则保留首条
     if (byKind[kind]) continue;
     byKind[kind] = {
-      todoId: todo.id,
-      activityId: todo.activityId,
-      taskId: todo.taskId,
+      activityId: task.sourceId,
+      taskId: task.id,
     };
   }
 
