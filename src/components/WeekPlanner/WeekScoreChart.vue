@@ -1,7 +1,7 @@
 <!-- 周可视化 bar：基线在左，饥浅饱和深红 -->
 <template>
   <div ref="wrapRef" class="week-score-chart">
-    <svg v-if="width > 0" :viewBox="`0 0 ${width} ${height}`">
+    <svg v-if="width > 0" :viewBox="`0 0 ${width} ${height}`" overflow="visible">
       <line
         v-for="i in gridTicks"
         :key="`g-${i}`"
@@ -138,6 +138,7 @@ const scoreLines = computed(() => {
   display: block;
   width: 100%;
   height: 100%;
+  overflow: visible;
 }
 
 .week-score-chart__grid {
