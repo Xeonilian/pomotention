@@ -25,7 +25,7 @@ export const useLifePlannerLayerStore = defineStore("lifePlannerLayer", () => {
     return Number.isFinite(dayStart) ? (dayStart as number) : null;
   }
 
-  /** 当天 4 类任一已有生活记录（空桶不算）→ 日按钮 ChannelAdd；换日也按这个决定出图/表还是提示 */
+  /** 当天 4 类任一已有生活记录（空桶不算）→ 日按钮 ChannelAdd */
   function dayHasRecords(dayStart: number): boolean {
     for (const def of LIFE_RECORD_DEFS) {
       const todo = findLifeRecordTodoForDay(dataStore.todoList, dataStore.activityById, def.kind, dayStart);
@@ -48,21 +48,35 @@ export const useLifePlannerLayerStore = defineStore("lifePlannerLayer", () => {
 
   /**
    * day 集中生活 sheet：4 类同框 2×2。
-   * openDaySheet 建/取当天桶并出图/表；enterDaySheet / 换日无记录只留提示（空桶不算）。
+   * openDaySheet 才建缺的桶；enterDaySheet / 换日只绑已有桶，没有的不新建。
    * close 只关界面，空桶保留。
    */
   const daySheetOpen = ref(false);
   const daySheetTaskIds = ref<Record<LifeRecordKind, number | null>>(emptySheetTaskIds());
 
+  /** 只取当天已有桶，不落盘、不补建 */
+  function existingSheetTaskIds(dayStart: number): Record<LifeRecordKind, number | null> {
+    const ids = emptySheetTaskIds();
+    for (const def of LIFE_RECORD_DEFS) {
+      const todo = findLifeRecordTodoForDay(dataStore.todoList, dataStore.activityById, def.kind, dayStart);
+      if (!todo) continue;
+      const task = dataStore.taskByActivityId.get(todo.activityId);
+      if (!task || task.deleted) continue;
+      ids[def.kind] = task.id;
+    }
+    return ids;
+  }
+
   function bindSheetTaskIds(create: boolean) {
     // Pinia 对嵌套 computed 会拆包成 number，不能再取 .value（否则 undefined → id NaN → JSON null）
     const dayStart = plannerDayStart();
     if (dayStart == null) return;
-    if (create || dayHasRecords(dayStart)) {
+    if (create) {
       daySheetTaskIds.value = dataStore.ensureAllLifeRecordTasksForDay(dayStart);
-    } else {
-      daySheetTaskIds.value = emptySheetTaskIds();
+      return;
     }
+    // 已有空桶也要绑上；四类都没有才是空提示。不在这里补建。
+    daySheetTaskIds.value = existingSheetTaskIds(dayStart);
   }
 
   function openDaySheet() {
@@ -72,7 +86,7 @@ export const useLifePlannerLayerStore = defineStore("lifePlannerLayer", () => {
     daySheetOpen.value = true;
   }
 
-  /** 进入录入区：无记录只留提示；有记录才绑 4 类 */
+  /** 进入录入区：只绑已有桶（含空桶）；四类都没有才留新建提示 */
   function enterDaySheet() {
     if (!dataStore.isDataLoaded) return;
     bindSheetTaskIds(false);

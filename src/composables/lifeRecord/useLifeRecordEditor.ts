@@ -266,6 +266,8 @@ export function useLifeRecordEditor(
     changeEndAt,
     changeTime,
     changeDescription,
+    /** 退出输入时立刻把备注草稿写入，不等停笔防抖 */
+    flushDescriptions: () => flushDescDrafts.flush(),
     changeHunger,
     changeSatiety,
     changeEnergy,

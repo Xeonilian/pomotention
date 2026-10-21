@@ -28,8 +28,8 @@
         </div>
         <span class="lr-chart__el lr-chart__times" aria-hidden="true">×</span>
         <span class="lr-chart__el lr-chart__count">{{ records.length }}</span>
-        <n-time-picker
-          v-if="lastRecord"
+        <div v-if="lastRecord" class="lr-chart__merge">
+        <LifeRecordTimePicker
           class="lr-chart__el lr-chart__time sleep-day-chart__start"
           :value="pickerTs(lastRecord.recordedAt)"
           format="HH:mm"
@@ -51,7 +51,7 @@
         >
           <n-icon class="sleep-day-chart__ctrl-icon"><RecordStop20Regular /></n-icon>
         </button>
-        <n-time-picker
+        <LifeRecordTimePicker
           v-else-if="lastRecord"
           class="lr-chart__el lr-chart__time sleep-day-chart__end"
           :value="pickerTs(lastRecord.endAt)"
@@ -81,8 +81,9 @@
           placeholder="dream..."
           @update:model-value="onNoteBarInput"
           @expand="chartDreamOpen = true"
-          @collapse="chartDreamOpen = false"
+          @collapse="onChartDreamClose"
         />
+        </div>
       </div>
     </template>
     <template #table>
@@ -142,7 +143,7 @@
               </button>
             </td>
             <td class="lr-day-table__col-time">
-              <n-time-picker
+              <LifeRecordTimePicker
                 class="lr-day-table__time"
                 :value="pickerTs(record.recordedAt)"
                 format="HH:mm"
@@ -153,7 +154,7 @@
               />
             </td>
             <td class="lr-day-table__col-time">
-              <n-time-picker
+              <LifeRecordTimePicker
                 class="lr-day-table__time"
                 :value="pickerTs(record.endAt)"
                 format="HH:mm"
@@ -179,7 +180,10 @@
               <button
                 type="button"
                 class="sleep-day-table__dream-chip"
-                :class="{ 'sleep-day-table__dream-chip--active': dreamRecordId === record.id }"
+                :class="{
+                  'sleep-day-table__dream-chip--filled': !!record.description?.trim(),
+                  'sleep-day-table__dream-chip--active': dreamRecordId === record.id,
+                }"
                 :title="record.description?.trim() ? record.description : '记录梦'"
                 @click="onActivateDream(record)"
               >
@@ -189,25 +193,30 @@
           </tr>
         </tbody>
       </table>
-      <textarea
-        v-if="dreamRecord"
-        ref="dreamTextareaRef"
-        class="sleep-day-dream__editor"
-        :value="dreamRecord.description ?? ''"
-        placeholder="梦什么"
-        rows="6"
-        @input="onDreamInput"
-      />
+      <div v-if="dreamRecord" class="sleep-day-dream">
+        <button type="button" class="sleep-day-dream__close" title="关闭" @pointerdown.prevent="closeDream">
+          <n-icon :size="16"><Dismiss20Regular /></n-icon>
+        </button>
+        <textarea
+          ref="dreamTextareaRef"
+          class="sleep-day-dream__editor"
+          :value="dreamRecord.description ?? ''"
+          placeholder="梦什么"
+          rows="6"
+          @input="onDreamInput"
+        />
+      </div>
     </template>
   </LifeRecordDayFrame>
 </template>
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from "vue";
-import { NIcon, NPopconfirm, NTimePicker } from "naive-ui";
+import { NIcon, NPopconfirm } from "naive-ui";
 import {
   Add20Regular,
   BatterySaver20Regular,
   Delete20Regular,
+  Dismiss20Regular,
   Play20Regular,
   RecordStop20Regular,
   ShiftsActivity20Regular,
@@ -218,6 +227,7 @@ import { useLifeRecordEditor } from "@/composables/lifeRecord/useLifeRecordEdito
 import LifeRecordChartNoteBar from "@/components/LifeRecord/LifeRecordChartNoteBar.vue";
 import LifeRecordScorePop from "@/components/LifeRecord/LifeRecordScorePop.vue";
 import LifeRecordDayFrame from "@/components/LifeRecord/LifeRecordDayFrame.vue";
+import LifeRecordTimePicker from "@/components/LifeRecord/LifeRecordTimePicker.vue";
 const props = withDefaults(defineProps<{ taskId: number; embedded?: boolean; view?: "chart" | "table" }>(), {
   view: "chart",
 });
@@ -231,6 +241,7 @@ const {
   pickerTs,
   changeTime,
   changeDescription,
+  flushDescriptions,
   changeEnergy,
   remove: removeRecord,
 } = useLifeRecordEditor(() => props.taskId, "sleep", { embedded: () => props.embedded });
@@ -277,9 +288,13 @@ function onNoteBarInput(v: string) {
   const last = lastRecord.value;
   if (last) changeDescription(last, v);
 }
+function onChartDreamClose() {
+  chartDreamOpen.value = false;
+  flushDescriptions();
+}
 function onActivateDream(record: LifeRecord) {
   if (dreamRecordId.value === record.id) {
-    dreamRecordId.value = null;
+    closeDream();
     return;
   }
   dreamRecordId.value = record.id;
@@ -288,6 +303,14 @@ function onDreamInput(e: Event) {
   const rec = dreamRecord.value;
   if (!rec) return;
   changeDescription(rec, (e.target as HTMLTextAreaElement).value);
+}
+function closeDream() {
+  const ta = dreamTextareaRef.value;
+  ta?.blur();
+  const rec = dreamRecord.value;
+  if (rec && ta) changeDescription(rec, ta.value);
+  flushDescriptions();
+  dreamRecordId.value = null;
 }
 function onRemove(record: LifeRecord) {
   if (dreamRecordId.value === record.id) dreamRecordId.value = null;
@@ -332,6 +355,9 @@ function dreamChipLabel(record: LifeRecord): string {
   left: calc(50% - var(--a) - 30px);
   top: calc(50% + var(--f) - var(--row2-shift));
 }
+.lr-day--mobile .sleep-day-chart__start {
+  left: calc(50% - var(--a) - 40px);
+}
 .sleep-day-chart__stop,
 .sleep-day-chart__end {
   left: 50%;
@@ -351,6 +377,9 @@ function dreamChipLabel(record: LifeRecord): string {
 }
 .sleep-day-chart__energy {
   left: calc(50% + var(--c) + 25px);
+}
+.lr-day--mobile .sleep-day-chart__energy {
+  left: calc(50% + var(--c) + 33px);
 }
 .sleep-day-chart__stop:hover {
   opacity: 0.85;
@@ -392,15 +421,38 @@ function dreamChipLabel(record: LifeRecord): string {
   white-space: nowrap;
   cursor: pointer;
 }
+.sleep-day-table__dream-chip--filled {
+  color: var(--color-text-primary);
+}
 .sleep-day-table__dream-chip--active {
   color: var(--color-text-primary);
   font-weight: 600;
+}
+.sleep-day-dream {
+  position: relative;
+}
+.sleep-day-dream__close {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
 }
 .sleep-day-dream__editor {
   display: block;
   width: 100%;
   margin: 0;
-  padding: 4px 8px;
+  padding: 4px 26px 4px 8px;
   border: none;
   border-radius: 0;
   background: var(--color-background-light-transparent);

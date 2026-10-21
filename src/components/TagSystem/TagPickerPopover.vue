@@ -113,11 +113,10 @@ const isKeyboardLikelyOpen = computed(
   () => obscuredBottomPx.value >= VISUAL_KEYBOARD_OVERLAP_MIN_PX,
 );
 
-/** 手机：internal 预向上弹；external 在键盘遮挡视口底时把 bottom 翻成 top */
+/** 手机：键盘挡住视口底时把 bottom 翻成 top（点开不预翻，避免没输入法也往上弹） */
 const effectivePlacement = computed((): PopoverProps["placement"] => {
   if (!isMobile.value) return props.placement;
-  const shouldFlipUp =
-    props.inputMode === "internal" || isKeyboardLikelyOpen.value;
+  const shouldFlipUp = isKeyboardLikelyOpen.value;
   if (!shouldFlipUp || !props.placement.startsWith("bottom")) {
     return props.placement;
   }
@@ -189,7 +188,8 @@ function detachKeyboardOverlapListeners() {
 watch(show, (open) => {
   if (open) {
     attachKeyboardOverlapListeners();
-    if (props.inputMode === "internal") {
+    // 手机点开不抢焦点，避免输入法弹出；自己点搜索框才聚焦。桌面仍自动聚焦。
+    if (props.inputMode === "internal" && !isMobile.value) {
       nextTick(() => filterInputRef.value?.focus());
     }
   } else {

@@ -131,6 +131,7 @@
             <LifeRecordDaySheet
               v-if="daySheetActive"
               :task-ids="daySheetTaskIds"
+              :day-start="appDateTimestamp"
               :initial-view="daySheetInitialView"
               @close="lifePlannerLayerStore.closeDaySheet"
               @create="lifePlannerLayerStore.openDaySheet"
@@ -415,11 +416,8 @@ const daySheetHidesPlanner = computed(() => {
   if (settingStore.settings.viewSet === "day") return false;
   return true;
 });
-const daySheetInitialView = computed(() => {
-  if (lifePlannerLifeView.value) return "table";
-  if (settingStore.settings.viewSet === "day" && !isViewDateToday.value) return "table";
-  return "chart";
-});
+/** 换天只定一次：当天图，其余表。不跟生活图层来回切 */
+const daySheetInitialView = computed(() => (isViewDateToday.value ? "chart" : "table"));
 
 const timetableLayoutVisible = computed(() => settingStore.settings.showTimetable && !mobilePreviewSolo.value);
 const taskAreaVisible = computed(() => daySheetActive.value || (settingStore.settings.showTask && !mobilePreviewSolo.value));

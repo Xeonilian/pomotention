@@ -112,6 +112,9 @@
   min-width: 0 !important;
   width: 72px;
 }
+.lr-day--mobile .lr-chart__time .n-input {
+  font-size: 20px;
+}
 .lr-chart__time .n-input {
   --n-height: 28px !important;
   --n-padding-left: 0 !important;
@@ -139,4 +142,45 @@
 .lr-chart__time .n-base-clear {
   display: none !important;
   width: 0 !important;
+}
+
+/* 桌面仍按锚点散开；手机把第二行和第三行收成一行，四个图从同一左缘起 */
+.lr-chart__merge {
+  display: contents;
+}
+.lr-day--mobile .lr-chart__merge {
+  position: absolute;
+  z-index: 2;
+  left: calc(50% - var(--a) - 70px);
+  right: 4px;
+  top: calc(50% + var(--f) - var(--row2-shift) - 14px);
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 0;
+}
+.lr-day--mobile .lr-chart__merge > .lr-chart__el {
+  position: relative !important;
+  left: auto !important;
+  top: auto !important;
+  right: auto !important;
+  transform: none !important;
+  flex: 0 0 auto;
+}
+.lr-day--mobile .lr-chart__merge > .lr-note-bar {
+  flex: 1 1 auto;
+  width: auto !important;
+  min-width: 0;
+  min-height: 28px;
+}
+.lr-day--mobile .lr-chart__merge .lr-note-bar__field {
+  text-align: left;
+}
+.lr-day--mobile .lr-chart__merge .lr-chart__time,
+.lr-day--mobile .lr-chart__merge .lr-chart__time.n-time-picker,
+.lr-day--mobile .lr-chart__merge .lr-chart__time .n-input {
+  width: 64px;
+}
+.lr-day--mobile .lr-chart__merge .lr-chart__time .n-input__input-el {
+  text-align: left;
 }

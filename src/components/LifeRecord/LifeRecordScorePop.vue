@@ -17,7 +17,7 @@
     <n-modal v-model:show="open" :auto-focus="false" :trap-focus="false" :z-index="10000">
       <div class="lr-score-pop lr-score-pop--modal" @pointerdown.stop>
         <span class="lr-score-pop__label">{{ title }}</span>
-        <n-slider :value="draft" :min="1" :max="10" :step="1" @update:value="onSlide" />
+        <n-slider v-model:value="draft" :min="1" :max="10" :step="1" @dragend="commit" />
         <button type="button" class="lr-score-pop__clear" title="取消" @click="clear">
           <n-icon :size="16"><Dismiss20Regular /></n-icon>
         </button>
@@ -41,7 +41,7 @@
     </template>
     <div class="lr-score-pop" @pointerdown.stop>
       <span class="lr-score-pop__label">{{ title }}</span>
-      <n-slider :value="draft" :min="1" :max="10" :step="1" @update:value="onSlide" />
+      <n-slider v-model:value="draft" :min="1" :max="10" :step="1" @dragend="commit" />
       <button type="button" class="lr-score-pop__clear" title="取消" @click="clear">
         <n-icon :size="16"><Dismiss20Regular /></n-icon>
       </button>
@@ -71,22 +71,31 @@ const useCenteredPanel = computed(() => isMobile.value || width.value < 768);
 const open = ref(false);
 const scored = computed(() => props.modelValue != null && Number.isFinite(props.modelValue));
 const draft = ref(5);
+let skipCommit = false;
 watch(open, (show) => {
-  if (!show) return;
-  if (scored.value) {
-    draft.value = Number(props.modelValue);
+  if (show) {
+    if (scored.value) {
+      draft.value = Number(props.modelValue);
+      return;
+    }
+    draft.value = 5;
+    emit("update:modelValue", 5);
     return;
   }
-  draft.value = 5;
-  emit("update:modelValue", 5);
+  commit();
 });
-function onSlide(v: number) {
-  draft.value = v;
+/** 拖动只改本地；松手或关掉再写入，避免每格都重算整天 */
+function commit() {
+  if (skipCommit) return;
+  const v = draft.value;
+  if (v === props.modelValue) return;
   emit("update:modelValue", v);
 }
 function clear() {
+  skipCommit = true;
   emit("update:modelValue", null);
   open.value = false;
+  skipCommit = false;
 }
 </script>
 <style scoped>

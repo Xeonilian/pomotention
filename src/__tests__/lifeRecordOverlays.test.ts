@@ -220,7 +220,7 @@ describe("formatLifePointCaption / formatLifeSleepCaption", () => {
   }
 
   it("喝水带种类时刻和毫升", () => {
-    expect(formatLifePointCaption(point({ kind: "drink", title: "喝水", amountMl: 250 }))).toBe(`喝水 ${time} 水 250 ml`);
+    expect(formatLifePointCaption(point({ kind: "drink", title: "喝水", amountMl: 250 }))).toBe(`${time} 水 250 ml`);
   });
 
   it("吃饭带正餐饥饿饱足和备注", () => {
@@ -228,25 +228,23 @@ describe("formatLifePointCaption / formatLifeSleepCaption", () => {
       formatLifePointCaption(
         point({ kind: "eat", title: "吃饭", eatCourse: "meal", hunger: 4, satiety: 8, note: "面条" }),
       ),
-    ).toBe(`吃饭 ${time} 正餐 饥饿4 饱足8 面条`);
+    ).toBe(`${time} 正餐 饥饿4 饱足8 面条`);
   });
 
   it("吃饭补剂", () => {
-    expect(formatLifePointCaption(point({ kind: "eat", title: "吃饭", eatCourse: "supplement" }))).toBe(
-      `吃饭 ${time} 补剂`,
-    );
+    expect(formatLifePointCaption(point({ kind: "eat", title: "吃饭", eatCourse: "supplement" }))).toBe(`${time} 补剂`);
   });
 
   it("精力带时刻和分数", () => {
     expect(formatLifePointCaption(point({ kind: "energy", title: "精力", energy: 7, note: "跑步" }))).toBe(
-      `精力 ${time} 7 跑步`,
+      `${time} 7 跑步`,
     );
   });
 
   it("活动带开始结束和精力", () => {
     const endAt = new Date(2026, 9, 15, 16, 0).getTime();
     expect(formatLifePointCaption(point({ kind: "toilet", title: "活动", endAt, energy: 6 }))).toBe(
-      `活动 ${time}–${timestampToTimeString(endAt)} 精力6`,
+      `${time}–${timestampToTimeString(endAt)} 精力6`,
     );
   });
 
@@ -261,7 +259,7 @@ describe("formatLifePointCaption / formatLifeSleepCaption", () => {
       start: at,
       end,
     };
-    expect(formatLifeSleepCaption(range)).toBe(`睡觉 ${time}–${timestampToTimeString(end)} 下雨`);
+    expect(formatLifeSleepCaption(range)).toBe(`${time}–${timestampToTimeString(end)} 下雨`);
   });
 
   it("睡觉带精力", () => {
@@ -276,7 +274,7 @@ describe("formatLifePointCaption / formatLifeSleepCaption", () => {
       end,
       energy: 6,
     };
-    expect(formatLifeSleepCaption(range)).toBe(`睡觉 ${time}–${timestampToTimeString(end)} 精力6 下雨`);
+    expect(formatLifeSleepCaption(range)).toBe(`${time}–${timestampToTimeString(end)} 精力6 下雨`);
   });
 });
 

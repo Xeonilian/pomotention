@@ -427,6 +427,14 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targe
     };
   }
 
+  /** 这一时刻第一列已经有待办/日程色条 */
+  function mobileFirstColHasBar(dayStartTs: number, time: number): boolean {
+    const day = days.value.find((d) => d.startTs === dayStartTs);
+    if (!day) return false;
+    const blocks = layoutedWeekBlocks.value.get(day.index) ?? [];
+    return blocks.some((b) => (b.column ?? 0) === 0 && time >= b.start && time < b.end);
+  }
+
   function getLifePointStyle(mark: LifePointMark, dayStartTs: number): CSSProperties {
     const range = unifiedTimeRange.value;
     const h = hourOffsetInDay(mark.time, dayStartTs);
@@ -446,8 +454,9 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targe
       userSelect: "none",
     };
     if (isMobile.value) {
-      // 非可视化：icon 落在待办三列上；左 +1px 对色条，右再留 1px 不贴框
-      const col = Math.min(mark.lane, 2);
+      // 非可视化：icon 落在待办三列上。这一行第一列已有色条时，图标不占第一列
+      let col = Math.min(mark.lane, 2);
+      if (mobileFirstColHasBar(dayStartTs, mark.time)) col = Math.min(col + 1, 2);
       return {
         ...base,
         left: `calc(1px + ${col} * (100% - 2px) / 3)`,

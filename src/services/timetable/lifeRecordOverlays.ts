@@ -56,10 +56,10 @@ const POINT_COLOR: Record<LifePointKind, string> = {
   energy: "var(--color-text-primary)",
 };
 
-/** 时间表/周图层：标题 + 时刻 + 种类/分数/量 + 备注 */
+/** 时间表/周图层：时刻 + 种类/分数/量 + 备注，不带「喝水」这类标题 */
 export function formatLifePointCaption(mark: LifePointMark): string {
   const t = timestampToTimeString(mark.time);
-  const parts: string[] = [mark.title];
+  const parts: string[] = [];
   if (mark.kind === "drink") {
     parts.push(t, drinkKindLabel(mark.drinkKind ?? "water"));
     if (mark.amountMl != null) parts.push(`${mark.amountMl} ml`);
@@ -79,10 +79,10 @@ export function formatLifePointCaption(mark: LifePointMark): string {
   return parts.join(" ");
 }
 
-/** 睡觉：时段 + 精力 + 梦 */
+/** 睡觉：时段 + 精力 + 梦，不带「睡觉」标题 */
 export function formatLifeSleepCaption(range: LifeSleepRange): string {
   const span = `${timestampToTimeString(range.start)}–${timestampToTimeString(range.end)}`;
-  const parts = [range.title, span];
+  const parts = [span];
   if (range.energy != null) parts.push(`精力${range.energy}`);
   if (range.note) parts.push(range.note);
   return parts.join(" ");

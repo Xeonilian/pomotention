@@ -26,8 +26,8 @@
         </div>
         <span class="lr-chart__el lr-chart__times" aria-hidden="true">×</span>
         <span class="lr-chart__el lr-chart__count">{{ records.length }}</span>
-        <n-time-picker
-          v-if="lastRecord"
+        <div v-if="lastRecord" class="lr-chart__merge">
+        <LifeRecordTimePicker
           class="lr-chart__el lr-chart__time toilet-day-chart__start"
           :value="pickerTs(lastRecord.recordedAt)"
           format="HH:mm"
@@ -49,7 +49,7 @@
         >
           <n-icon class="toilet-day-chart__ctrl-icon"><RecordStop20Regular /></n-icon>
         </button>
-        <n-time-picker
+        <LifeRecordTimePicker
           v-else-if="lastRecord"
           class="lr-chart__el lr-chart__time toilet-day-chart__end"
           :value="pickerTs(lastRecord.endAt)"
@@ -78,6 +78,7 @@
           placeholder="activity..."
           @update:model-value="onNoteBarInput"
         />
+        </div>
       </div>
     </template>
     <template #table>
@@ -132,7 +133,7 @@
               </button>
             </td>
             <td class="lr-day-table__col-time">
-              <n-time-picker
+              <LifeRecordTimePicker
                 class="lr-day-table__time"
                 :value="pickerTs(record.recordedAt)"
                 format="HH:mm"
@@ -143,7 +144,7 @@
               />
             </td>
             <td class="lr-day-table__col-time">
-              <n-time-picker
+              <LifeRecordTimePicker
                 class="lr-day-table__time"
                 :value="pickerTs(record.endAt)"
                 format="HH:mm"
@@ -183,7 +184,7 @@
 </template>
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import { NIcon, NInput, NPopconfirm, NTimePicker } from "naive-ui";
+import { NIcon, NInput, NPopconfirm } from "naive-ui";
 import {
   Add20Regular,
   BatterySaver20Regular,
@@ -198,6 +199,7 @@ import { useLifeRecordEditor } from "@/composables/lifeRecord/useLifeRecordEdito
 import LifeRecordChartNoteBar from "@/components/LifeRecord/LifeRecordChartNoteBar.vue";
 import LifeRecordScorePop from "@/components/LifeRecord/LifeRecordScorePop.vue";
 import LifeRecordDayFrame from "@/components/LifeRecord/LifeRecordDayFrame.vue";
+import LifeRecordTimePicker from "@/components/LifeRecord/LifeRecordTimePicker.vue";
 const props = withDefaults(defineProps<{ taskId: number; embedded?: boolean; view?: "chart" | "table" }>(), {
   view: "chart",
 });
@@ -255,6 +257,9 @@ function formatDuration(record: LifeRecord): string {
   left: calc(50% - var(--a) - 30px);
   top: calc(50% + var(--f) - var(--row2-shift));
 }
+.lr-day--mobile .toilet-day-chart__start {
+  left: calc(50% - var(--a) - 40px);
+}
 .toilet-day-chart__stop,
 .toilet-day-chart__end {
   left: 50%;
@@ -274,6 +279,9 @@ function formatDuration(record: LifeRecord): string {
 }
 .toilet-day-chart__energy {
   left: calc(50% + var(--c) + 25px);
+}
+.lr-day--mobile .toilet-day-chart__energy {
+  left: calc(50% + var(--c) + 33px);
 }
 .toilet-day-chart__stop:hover {
   opacity: 0.85;
