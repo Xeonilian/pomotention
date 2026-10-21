@@ -177,12 +177,12 @@ import type { LifePointKind, LifePointMark, LifeSleepRange } from "@/services/ti
 import { formatLifePointCaption, formatLifeSleepCaption } from "@/services/timetable/lifeRecordOverlays";
 import { getEnergyScoreEmoji } from "@/core/scoreEmojis";
 import { Door20Filled, Drop20Filled, FoodApple20Filled, WeatherMoon20Filled } from "@vicons/fluent";
-import { findLifeRecordTodoForDay, isDrinkGoalMet, sumLifeRecordAmountMl } from "@/services/lifeRecord/lifeRecordService";
+import { findLifeRecordTaskForDay, isDrinkGoalMet, sumLifeRecordAmountMl } from "@/services/lifeRecord/lifeRecordService";
 
 const { isMobile } = useDevice();
 const dataStore = useDataStore();
 const settingStore = useSettingStore();
-const { selectedDate, todoList, activityById, taskById, taskByActivityId } = storeToRefs(dataStore);
+const { selectedDate, activityById, taskList } = storeToRefs(dataStore);
 
 const holidayMap = inject(plannerHolidayMapKey, ref<Record<string, HolidayDisplay>>({}));
 
@@ -234,15 +234,9 @@ const props = withDefaults(
 
 const holidayForDay = computed(() => holidayMap.value[getDateKey(props.day.startTs)] ?? null);
 
-const drinkTodo = computed(() =>
-  props.drinkLayer ? findLifeRecordTodoForDay(todoList.value, activityById.value, "drink", props.day.startTs) : undefined,
+const drinkTask = computed(() =>
+  props.drinkLayer ? (findLifeRecordTaskForDay(taskList.value, "drink", props.day.startTs, activityById.value) ?? null) : null,
 );
-
-const drinkTask = computed(() => {
-  const todo = drinkTodo.value;
-  if (!todo) return null;
-  return (todo.taskId != null ? taskById.value.get(todo.taskId) : undefined) ?? taskByActivityId.value.get(todo.activityId!) ?? null;
-});
 
 const drinkTotalMl = computed(() => sumLifeRecordAmountMl(drinkTask.value?.lifeRecords ?? []));
 /** 手机周列窄：用升一位小数，桌面仍 ml */
@@ -319,10 +313,9 @@ function onCardClick() {
   handleDateSelect(props.day.startTs);
   if (props.lifeView) return;
   if (!props.drinkLayer) return;
-  const todo = drinkTodo.value;
   const task = drinkTask.value;
-  if (todo && task?.id != null) {
-    emit("item-change", todo.id, todo.activityId, task.id);
+  if (task?.id != null) {
+    emit("item-change", props.day.startTs, task.sourceId, task.id);
   }
 }
 
@@ -339,13 +332,13 @@ function onLifePointClick(mark: LifePointMark) {
   handleDateSelect(props.day.startTs);
   if (props.lifeView) return;
   if (mark.kind === "energy") return;
-  emit("item-change", mark.todoId, undefined, mark.taskId);
+  emit("item-change", props.day.startTs, undefined, mark.taskId);
 }
 
 function onSleepBandClick(sleep: LifeSleepRange) {
   handleDateSelect(props.day.startTs);
   if (props.lifeView) return;
-  emit("item-change", sleep.todoId, undefined, sleep.taskId);
+  emit("item-change", props.day.startTs, undefined, sleep.taskId);
 }
 
 function onMobileLifeNoteTap(e: MouseEvent, key: string, text: string) {

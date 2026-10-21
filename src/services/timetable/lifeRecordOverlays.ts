@@ -2,8 +2,7 @@
 // 生活记录投射到 TimeTable：点事件 → 第3列；睡眠段 → 第4列（纯函数，不碰 store）
 import type { Activity } from "@/core/types/Activity";
 import type { DrinkKind, EatCourse, LifeRecord, Task } from "@/core/types/Task";
-import type { Todo } from "@/core/types/Todo";
-import { drinkKindLabel, drinkKindOf, eatCourseLabel, getLifeRecordDef, getLifeRecordKind, type LifeRecordKind } from "@/core/lifeRecord";
+import { drinkKindLabel, drinkKindOf, eatCourseLabel, getLifeRecordDef, getLifeRecordKind, parseLifeRecordPlaceholder, type LifeRecordKind } from "@/core/lifeRecord";
 import { timestampToTimeString } from "@/core/utils";
 import { resolveRecordTime } from "@/services/timetable/taskRecordMarks";
 
@@ -150,40 +149,51 @@ function pushSleepClip(
   });
 }
 
+/** 日桶归属日：标题优先；旧数据用 sourceId 落在显示日或前一日的窗口 */
+function lifeRecordOwnerDay(task: Task, activity: Activity | undefined, viewDayStart: number): number | null {
+  const parsed = parseLifeRecordPlaceholder(task.activityTitle ?? activity?.title);
+  if (parsed) return parsed.dayStart;
+  if (!getLifeRecordKind(activity)) return null;
+  const id = Number.isFinite(task.sourceId) ? task.sourceId : task.id;
+  if (id >= viewDayStart && id < viewDayStart + DAY_MS) return viewDayStart;
+  if (id >= viewDayStart - DAY_MS && id < viewDayStart) return viewDayStart - DAY_MS;
+  return null;
+}
+
 /**
- * 从 todo 列表收集生活记录 overlay。
- * 点事件：仅显示日 todo；睡眠：显示日 + 前一日（跨午夜醒来画在次日早晨）。
+ * 从 task 列表收集生活记录 overlay（按标题取日，不扫待办）。
+ * 点事件：仅显示日桶；睡眠：显示日 + 前一日（跨午夜醒来画在次日早晨）。
  * openSleepEnd：未醒时终点 — now=当前时刻（TimeTable）；dayOfStart=入睡日日末（Week）。
  */
 export function collectLifeRecordOverlays(options: {
   dayStart: number;
   dayEnd: number;
   timeRange: { start: number; end: number };
-  todos: Todo[];
+  tasks: Task[];
   getActivity: (activityId: number) => Activity | undefined;
-  getTask: (taskId: number) => Task | undefined;
   now: number;
   minGapMs: number;
   openSleepEnd?: "now" | "dayOfStart";
   /** 当日 energy 桶；有则把精力点画进周/课表生活图层 */
   getDayEnergyTask?: (dayStart: number) => Task | undefined;
 }): { points: LifePointMark[]; sleeps: LifeSleepRange[] } {
-  const { dayStart, dayEnd, timeRange, todos, getActivity, getTask, now, minGapMs, openSleepEnd = "now", getDayEnergyTask } = options;
+  const { dayStart, dayEnd, timeRange, tasks, getActivity, now, minGapMs, openSleepEnd = "now", getDayEnergyTask } = options;
   const rawPoints: Omit<LifePointMark, "lane">[] = [];
   const sleeps: LifeSleepRange[] = [];
   const prevDayStart = dayStart - DAY_MS;
   const sleepTitle = getLifeRecordDef("sleep").title;
 
-  for (const todo of todos) {
-    if (todo.deleted) continue;
-    const onViewDay = todo.id >= dayStart && todo.id < dayEnd;
-    const onPrevDay = todo.id >= prevDayStart && todo.id < dayStart;
+  for (const task of tasks) {
+    if (task.deleted || !task.lifeRecords?.length) continue;
+    const activity = getActivity(task.sourceId);
+    const ownerDay = lifeRecordOwnerDay(task, activity, dayStart);
+    if (ownerDay == null) continue;
+    const onViewDay = ownerDay === dayStart;
+    const onPrevDay = ownerDay === prevDayStart;
     if (!onViewDay && !onPrevDay) continue;
 
-    const kind = getLifeRecordKind(getActivity(todo.activityId));
+    const kind = parseLifeRecordPlaceholder(task.activityTitle ?? activity?.title)?.kind ?? getLifeRecordKind(activity);
     if (!kind) continue;
-    const task = todo.taskId != null ? getTask(todo.taskId) : undefined;
-    if (!task?.lifeRecords?.length) continue;
 
     // 未醒终点：Week 用该行所属日的日末；TimeTable 用 now
     const rowDayStart = onPrevDay ? prevDayStart : dayStart;
@@ -193,7 +203,7 @@ export function collectLifeRecordOverlays(options: {
       if (kind !== "sleep") continue;
       for (const record of task.lifeRecords) {
         // 未醒只铺到入睡日日末 → 与次日无交，次日早晨不出现开放睡眠（醒来后有 endAt 才画跨日截）
-        pushSleepClip(sleeps, record, task.id, todo.id, sleepTitle, rowOpenEnd, dayStart, dayEnd, timeRange);
+        pushSleepClip(sleeps, record, task.id, dayStart, sleepTitle, rowOpenEnd, dayStart, dayEnd, timeRange);
       }
       continue;
     }
@@ -201,7 +211,7 @@ export function collectLifeRecordOverlays(options: {
     const def = getLifeRecordDef(kind);
     for (const record of task.lifeRecords) {
       if (kind === "sleep") {
-        pushSleepClip(sleeps, record, task.id, todo.id, def.title, rowOpenEnd, dayStart, dayEnd, timeRange);
+        pushSleepClip(sleeps, record, task.id, dayStart, def.title, rowOpenEnd, dayStart, dayEnd, timeRange);
         continue;
       }
 
@@ -211,7 +221,7 @@ export function collectLifeRecordOverlays(options: {
       rawPoints.push({
         recordId: record.id,
         taskId: task.id,
-        todoId: todo.id,
+        todoId: dayStart,
         kind,
         colorVar: POINT_COLOR[kind],
         time,
@@ -250,7 +260,7 @@ export function collectLifeRecordOverlays(options: {
       rawPoints.push({
         recordId: record.id,
         taskId: energyTask.id,
-        todoId: 0,
+        todoId: dayStart,
         kind: "energy",
         colorVar: POINT_COLOR.energy,
         time,

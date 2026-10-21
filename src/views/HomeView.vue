@@ -229,8 +229,8 @@ import { useLifePlannerLayerStore } from "@/stores/useLifePlannerLayerStore";
 import { autoSyncDebounced, uploadAllDebounced } from "@/core/utils/autoSync";
 import { useDevice } from "@/composables/platform/useDevice";
 import { CAPTURE_UI_ENABLED } from "@/core/capture";
-import { getLifeRecordKind, LIFE_RECORD_DEFS } from "@/core/lifeRecord";
-import { findLifeRecordTodoForDay } from "@/services/lifeRecord/lifeRecordService";
+import { getLifeRecordKind, LIFE_RECORD_DEFS, lifeRecordDayOf } from "@/core/lifeRecord";
+import { findLifeRecordTaskForDay } from "@/services/lifeRecord/lifeRecordService";
 import { usePublicHolidays, plannerHolidayMapKey, plannerHolidayRangeKey } from "@/composables/planner/usePublicHolidays";
 import { registerPlannerKeyboardCommandApi } from "@/composables/keyboard/usePlannerKeyboardCommands";
 import { registerPlannerDayEnterEditTitle, registerPlannerDaySpaceToggleCheck } from "@/composables/keyboard/usePlannerKeyboardNavigator";
@@ -518,9 +518,7 @@ const onOpenDaySheetFromCell = (dayStart: number) => {
 /** 当天 4 类任一有生活记录 → true */
 function hasLifeRecordDataForDay(dayStart: number): boolean {
   for (const def of LIFE_RECORD_DEFS) {
-    const todo = findLifeRecordTodoForDay(todoList.value, activityById.value, def.kind, dayStart);
-    if (!todo || todo.activityId == null) continue;
-    const task = taskByActivityId.value.get(todo.activityId);
+    const task = findLifeRecordTaskForDay(taskList.value, def.kind, dayStart, activityById.value);
     if (task && (task.lifeRecords?.length ?? 0) > 0) return true;
   }
   return false;
@@ -528,15 +526,13 @@ function hasLifeRecordDataForDay(dayStart: number): boolean {
 
 // week和month planner 引起选中的任务行
 const onItemChange = (id: number, activityId?: number, taskId?: number) => {
-  // 生活记录行：进入整合 sheet（给全部 middle 空间），不再走 compact
-  // week 生活标记 emit 时 activityId 为 undefined，需从 todo 反查
-  const todo = todoById.value.get(id);
-  const actId = activityId ?? todo?.activityId;
+  // 生活记录：进入整合 sheet。日键看标题，不从待办 id 反推
+  const task = taskId != null ? taskList.value.find((t) => t.id === taskId) : undefined;
+  const actId = activityId ?? task?.sourceId ?? todoById.value.get(id)?.activityId;
   if (actId != null) {
     const kind = getLifeRecordKind(dataStore.activityById.get(actId));
     if (kind) {
-      // life bucket 的 todo.id = 当天零点；先切到该天再建 4 桶开 sheet
-      dateService.setAppDate(id);
+      dateService.setAppDate(task ? (lifeRecordDayOf(task) ?? id) : id);
       lifePlannerLayerStore.openDaySheet();
       return;
     }

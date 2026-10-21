@@ -61,7 +61,7 @@ import { createTouchScheduledSingleAndDouble } from "@/composables/platform/useT
 import { useDataStore } from "@/stores/useDataStore";
 import { useDevice } from "@/composables/platform/useDevice";
 import { getDateKey } from "@/core/utils";
-import { getLifeRecordKind } from "@/core/lifeRecord";
+import { getLifeRecordKind, parseLifeRecordPlaceholder } from "@/core/lifeRecord";
 import type { HolidayDisplay } from "@/services/planner/publicHolidays";
 import { plannerHolidayMapKey } from "@/composables/planner/usePublicHolidays";
 
@@ -101,7 +101,7 @@ const monthNames = [
 ];
 
 const dataStore = useDataStore();
-const { selectedTaskId, firstTaggedTaskIdForAppDate, selectedDate, activeTodos, activityById, taskById, taskByActivityId } =
+const { selectedTaskId, firstTaggedTaskIdForAppDate, selectedDate, taskList, activityById } =
   storeToRefs(dataStore);
 const dateService = dataStore.dateService;
 const { isMobile } = useDevice();
@@ -119,13 +119,12 @@ function startOfDay(ts: number) {
 const lifeDayByTs = computed(() => {
   const set = new Set<number>();
   if (!props.lifeView) return set;
-  for (const todo of activeTodos.value) {
-    if (todo.activityId == null) continue;
-    const activity = activityById.value.get(todo.activityId);
-    if (!getLifeRecordKind(activity)) continue;
-    const task = (todo.taskId != null ? taskById.value.get(todo.taskId) : undefined) ?? taskByActivityId.value.get(todo.activityId);
-    if (!task || task.deleted || (task.lifeRecords?.length ?? 0) <= 0) continue;
-    set.add(startOfDay(todo.id));
+  for (const task of taskList.value) {
+    if (task.deleted || (task.lifeRecords?.length ?? 0) <= 0) continue;
+    const activity = activityById.value.get(task.sourceId);
+    const parsed = parseLifeRecordPlaceholder(task.activityTitle ?? activity?.title);
+    if (!parsed && !getLifeRecordKind(activity)) continue;
+    set.add(parsed?.dayStart ?? startOfDay(task.sourceId));
   }
   return set;
 });

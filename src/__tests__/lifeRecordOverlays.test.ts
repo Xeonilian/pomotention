@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import { TAG_ID_LIFE_DRINK, TAG_ID_LIFE_SLEEP } from "@/core/constants";
 import type { Activity } from "@/core/types/Activity";
 import type { Task } from "@/core/types/Task";
-import type { Todo } from "@/core/types/Todo";
 import { timestampToTimeString } from "@/core/utils";
 import {
   collectLifeRecordOverlays,
@@ -26,20 +25,6 @@ function act(id: number, tagId: number): Activity {
     parentId: null,
     tagIds: [tagId],
     status: "done",
-    deleted: false,
-    synced: false,
-    lastModified: id,
-  };
-}
-
-function todo(id: number, activityId: number, taskId: number): Todo {
-  return {
-    id,
-    activityId,
-    activityTitle: "",
-    taskId,
-    status: "done",
-    priority: 0,
     deleted: false,
     synced: false,
     lastModified: id,
@@ -70,7 +55,6 @@ describe("collectLifeRecordOverlays 跨天睡眠", () => {
     const sleepEnd = dayStart + 7 * 3600_000; // 当日 07:00
     const activityId = prevStart + 1;
     const taskId = prevStart + 2;
-    const todoId = prevStart + 100;
 
     const activities = new Map([[activityId, act(activityId, TAG_ID_LIFE_SLEEP)]]);
     const tasks = new Map([
@@ -84,9 +68,8 @@ describe("collectLifeRecordOverlays 跨天睡眠", () => {
       dayStart,
       dayEnd,
       timeRange: { start: dayStart + 5 * 3600_000, end: dayEnd }, // 05:00–24:00
-      todos: [todo(todoId, activityId, taskId)],
+      tasks: [...tasks.values()],
       getActivity: (id) => activities.get(id),
-      getTask: (id) => tasks.get(id),
       now: dayStart + 12 * 3600_000,
       minGapMs: 60_000,
     });
@@ -104,7 +87,6 @@ describe("collectLifeRecordOverlays 跨天睡眠", () => {
     const sleepEnd = dayEnd + 7 * 3600_000;
     const activityId = dayStart + 1;
     const taskId = dayStart + 2;
-    const todoId = dayStart + 100;
 
     const activities = new Map([[activityId, act(activityId, TAG_ID_LIFE_SLEEP)]]);
     const tasks = new Map([
@@ -118,9 +100,8 @@ describe("collectLifeRecordOverlays 跨天睡眠", () => {
       dayStart,
       dayEnd,
       timeRange: { start: dayStart + 5 * 3600_000, end: dayEnd },
-      todos: [todo(todoId, activityId, taskId)],
+      tasks: [...tasks.values()],
       getActivity: (id) => activities.get(id),
-      getTask: (id) => tasks.get(id),
       now: dayEnd + 12 * 3600_000,
       minGapMs: 60_000,
     });
@@ -135,7 +116,6 @@ describe("collectLifeRecordOverlays 跨天睡眠", () => {
     const drinkAt = prevStart + 20 * 3600_000;
     const activityId = prevStart + 3;
     const taskId = prevStart + 4;
-    const todoId = prevStart + 200;
 
     const activities = new Map([[activityId, act(activityId, TAG_ID_LIFE_DRINK)]]);
     const tasks = new Map([
@@ -146,9 +126,8 @@ describe("collectLifeRecordOverlays 跨天睡眠", () => {
       dayStart,
       dayEnd,
       timeRange: { start: dayStart, end: dayEnd },
-      todos: [todo(todoId, activityId, taskId)],
+      tasks: [...tasks.values()],
       getActivity: (id) => activities.get(id),
-      getTask: (id) => tasks.get(id),
       now: dayStart + 12 * 3600_000,
       minGapMs: 60_000,
     });
@@ -161,7 +140,6 @@ describe("collectLifeRecordOverlays 跨天睡眠", () => {
     const sleepStart = dayStart + 23 * 3600_000;
     const activityId = dayStart + 1;
     const taskId = dayStart + 2;
-    const todoId = dayStart + 100;
 
     const activities = new Map([[activityId, act(activityId, TAG_ID_LIFE_SLEEP)]]);
     const tasks = new Map([
@@ -172,9 +150,8 @@ describe("collectLifeRecordOverlays 跨天睡眠", () => {
       dayStart,
       dayEnd,
       timeRange: { start: dayStart, end: dayEnd },
-      todos: [todo(todoId, activityId, taskId)],
+      tasks: [...tasks.values()],
       getActivity: (id) => activities.get(id),
-      getTask: (id) => tasks.get(id),
       now: dayEnd + 10 * 3600_000,
       minGapMs: 60_000,
       openSleepEnd: "dayOfStart",
@@ -191,9 +168,8 @@ describe("collectLifeRecordOverlays 跨天睡眠", () => {
       dayStart: nextStart,
       dayEnd: nextEnd,
       timeRange: { start: nextStart, end: nextEnd },
-      todos: [todo(todoId, activityId, taskId)],
+      tasks: [...tasks.values()],
       getActivity: (id) => activities.get(id),
-      getTask: (id) => tasks.get(id),
       now: nextStart + 10 * 3600_000,
       minGapMs: 60_000,
       openSleepEnd: "dayOfStart",
@@ -298,9 +274,8 @@ describe("collectLifeRecordOverlays 精力点", () => {
       dayStart,
       dayEnd,
       timeRange: { start: dayStart, end: dayEnd },
-      todos: [],
+      tasks: [],
       getActivity: () => undefined,
-      getTask: () => undefined,
       getDayEnergyTask: () => energyTask,
       now: at,
       minGapMs: 60_000,
@@ -310,5 +285,26 @@ describe("collectLifeRecordOverlays 精力点", () => {
     expect(points[0]?.energy).toBe(8);
     expect(points[0]?.note).toBe("醒");
     expect(points[0]?.time).toBe(at);
+  });
+
+  it("按标题取日：sourceId 不在当天也能画", () => {
+    const at = dayStart + 10 * 3600_000;
+    const activityId = prevStart + 9;
+    const host = act(activityId, TAG_ID_LIFE_DRINK);
+    host.title = `daily_drink_${dayStart}`;
+    const drinkTask = task(activityId, activityId, [{ id: at, recordedAt: at, amountMl: 250 }]);
+    drinkTask.activityTitle = `daily_drink_${dayStart}`;
+    const { points } = collectLifeRecordOverlays({
+      dayStart,
+      dayEnd,
+      timeRange: { start: dayStart, end: dayEnd },
+      tasks: [drinkTask],
+      getActivity: (id) => (id === activityId ? host : undefined),
+      now: at,
+      minGapMs: 60_000,
+    });
+    expect(points).toHaveLength(1);
+    expect(points[0]?.kind).toBe("drink");
+    expect(points[0]?.amountMl).toBe(250);
   });
 });

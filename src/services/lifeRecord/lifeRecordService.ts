@@ -1,10 +1,16 @@
 // src/services/lifeRecord/lifeRecordService.ts
-// 生活记录纯函数：当日行查找、三件套构造、记录增删改（不碰存储与 store） 
+// 生活记录纯函数：当日桶查找、activity+task 构造、记录增删改（不碰存储与 store）
 import type { Activity } from "@/core/types/Activity";
-import type { Todo } from "@/core/types/Todo";
 import type { DrinkKind, EatCourse, LifeRecord, Task } from "@/core/types/Task";
 import { getDayStartTimestamp } from "@/core/utils";
-import { getLifeRecordDef, getLifeRecordKind, lifeRecordPlaceholderTitle, LIFE_RECORD_DEFS, type LifeRecordKind } from "@/core/lifeRecord";
+import {
+  getLifeRecordDef,
+  getLifeRecordKind,
+  lifeRecordPlaceholderTitle,
+  parseLifeRecordPlaceholder,
+  LIFE_RECORD_DEFS,
+  type LifeRecordKind,
+} from "@/core/lifeRecord";
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** 用 time 的时分替换 date 的时分（编辑只动时刻、不动日期） */
@@ -32,7 +38,7 @@ const KIND_ID_OFFSET = Object.fromEntries(LIFE_RECORD_DEFS.map((d, i) => [d.kind
 export type BuildLifeRecordOptions = {
   /** 仅 drink：写入当日目标快照 */
   drinkGoalMl?: number;
-  /** 已占用的 activity/todo/task id，避免同毫秒连建撞号 */
+  /** 已占用的 activity/task id，避免同毫秒连建撞号 */
   occupiedIds?: Iterable<number>;
   /** 指定 task.id；不传则与 activityId 对齐 */
   id?: number;
@@ -56,24 +62,30 @@ export type AppendLifeRecordOptions = {
   alwaysNew?: boolean;
 };
 /**
- * 当天该 kind 的隐藏待办。
- * 日视图不画「喝水 / 睡觉」行（useDataStore 里 isLifeRecordActivity 已滤掉）。
- * 待办还在，是因为这里和 lifeRecordOverlays 仍用 todo.id 落在哪一天来找记录。
- * 日子已经在标题 daily_<kind>_<日零点> 里，精力桶就是按标题找、没有待办。
- * 下次若去掉生活记录待办：这些查找改成按标题取日，不要再从计划表行反推。
+ * 当天该 kind 的日桶 task。按标题 daily_<kind>_<日零点> 取日，和精力桶一样。
+ * 旧数据没有占位标题时，才用 activity tag + sourceId 落在哪一天兜底。
  */
-export function findLifeRecordTodoForDay(
-  todoList: Todo[],
-  activityById: Map<number, Activity>,
+export function findLifeRecordTaskForDay(
+  tasks: Task[],
   kind: LifeRecordKind,
   dayStart: number,
-): Todo | undefined {
-  return todoList.find((todo) => {
-    if (todo.deleted) return false;
-    if (todo.id < dayStart || todo.id >= dayStart + DAY_MS) return false;
-    const activity = activityById.get(todo.activityId);
+  activityById?: Map<number, Activity>,
+): Task | undefined {
+  const placeholder = lifeRecordPlaceholderTitle(kind, dayStart);
+  const byTitle = tasks.find((task) => {
+    if (task.deleted) return false;
+    if (task.activityTitle === placeholder) return true;
+    return activityById?.get(task.sourceId)?.title === placeholder;
+  });
+  if (byTitle) return byTitle;
+  if (!activityById) return undefined;
+  return tasks.find((task) => {
+    if (task.deleted) return false;
+    const activity = activityById.get(task.sourceId);
     if (!activity || activity.deleted) return false;
-    return getLifeRecordKind(activity) === kind;
+    if (parseLifeRecordPlaceholder(task.activityTitle ?? activity.title)) return false;
+    if (getLifeRecordKind(activity) !== kind) return false;
+    return task.sourceId >= dayStart && task.sourceId < dayStart + DAY_MS;
   });
 }
 /** 单独补建 lifeRecord 的 task（行在但 task 缺失的异常兜底） */
@@ -97,12 +109,12 @@ export function buildLifeRecordTask(activityId: number, title: string, options?:
     lastModified: now,
   };
 }
-/** 构造 lifeRecord 三件套。同一类 activity/todo/task 共用一个 id；四类按 kind +0…+3。 */
+/** 构造 lifeRecord 日桶。同一类 activity/task 共用一个 id；四类按 kind +0…+3。不建待办。 */
 export function buildLifeRecordEntities(
   kind: LifeRecordKind,
   at: number,
   options?: BuildLifeRecordOptions,
-): { activity: Activity; todo: Todo; task: Task } {
+): { activity: Activity; task: Task } {
   const def = getLifeRecordDef(kind);
   const occupied = new Set(options?.occupiedIds);
   const base = Number.isFinite(at) ? at : Date.now();
@@ -122,21 +134,10 @@ export function buildLifeRecordEntities(
     synced: false,
     lastModified: Date.now(),
   };
-  // 三类同号；不要再走 nextFree，否则 occupied 已含 stamp 时 task 会变成 stamp+1
+  // 两类同号；不要再走 nextFree，否则 occupied 已含 stamp 时 task 会变成 stamp+1
   const task = buildLifeRecordTask(stamp, placeholder, { drinkGoalMl, id: stamp });
   activity.taskId = stamp;
-  const todo: Todo = {
-    id: stamp,
-    activityId: stamp,
-    activityTitle: placeholder,
-    taskId: stamp,
-    status: "done",
-    priority: 0,
-    deleted: false,
-    lastModified: Date.now(),
-    synced: false,
-  };
-  return { activity, todo, task };
+  return { activity, task };
 }
 /**
  * 追加一条记录（返回新数组，调用方负责写回 task 落盘）。

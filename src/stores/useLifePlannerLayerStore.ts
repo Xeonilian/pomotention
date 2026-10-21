@@ -3,7 +3,7 @@ import { defineStore } from "pinia";
 import { computed, ref, toValue, watch } from "vue";
 import { useDevice } from "@/composables/platform/useDevice";
 import { LIFE_RECORD_DEFS, type LifeRecordKind } from "@/core/lifeRecord";
-import { findLifeRecordTodoForDay } from "@/services/lifeRecord/lifeRecordService";
+import { findLifeRecordTaskForDay } from "@/services/lifeRecord/lifeRecordService";
 import { useDataStore } from "@/stores/useDataStore";
 import { useSettingStore } from "@/stores/useSettingStore";
 
@@ -28,9 +28,7 @@ export const useLifePlannerLayerStore = defineStore("lifePlannerLayer", () => {
   /** 当天 4 类任一已有生活记录（空桶不算）→ 日按钮 ChannelAdd */
   function dayHasRecords(dayStart: number): boolean {
     for (const def of LIFE_RECORD_DEFS) {
-      const todo = findLifeRecordTodoForDay(dataStore.todoList, dataStore.activityById, def.kind, dayStart);
-      if (!todo) continue;
-      const task = dataStore.taskByActivityId.get(todo.activityId);
+      const task = findLifeRecordTaskForDay(dataStore.taskList, def.kind, dayStart, dataStore.activityById);
       if (task && !task.deleted && (task.lifeRecords?.length ?? 0) > 0) return true;
     }
     return false;
@@ -58,9 +56,7 @@ export const useLifePlannerLayerStore = defineStore("lifePlannerLayer", () => {
   function existingSheetTaskIds(dayStart: number): Record<LifeRecordKind, number | null> {
     const ids = emptySheetTaskIds();
     for (const def of LIFE_RECORD_DEFS) {
-      const todo = findLifeRecordTodoForDay(dataStore.todoList, dataStore.activityById, def.kind, dayStart);
-      if (!todo) continue;
-      const task = dataStore.taskByActivityId.get(todo.activityId);
+      const task = findLifeRecordTaskForDay(dataStore.taskList, def.kind, dayStart, dataStore.activityById);
       if (!task || task.deleted) continue;
       ids[def.kind] = task.id;
     }

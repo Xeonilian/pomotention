@@ -117,7 +117,6 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
     schedulesForAppDate,
     todosForCurrentViewWithTaskRecords,
     schedulesForCurrentView,
-    todoList,
     todoById,
     scheduleById,
     activityById,
@@ -523,9 +522,8 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
       dayStart: props.dayStart,
       dayEnd: dayEnd.value,
       timeRange: props.timeRange,
-      todos: todoList.value,
+      tasks: taskList.value,
       getActivity: (id) => activityById.value.get(id),
-      getTask: (id) => taskById.value.get(id),
       now: now.value,
       minGapMs: isMobile.value ? 5 * 60_000 : px > 0 ? ((markH * 0.6) / px) * 60_000 : 60_000,
     });
