@@ -30,6 +30,27 @@ function getMarkdownHeadingEnterSuffix(lineText: string): string | null {
   return null;
 }
 
+/**
+ * 正文之前的列表/标题标记长度（含缩进与标记后的空格）。
+ * 光标列小于该长度时视为在符号区；空标记行返回 null，仍走删除。
+ */
+function getMarkdownSymbolPrefixLength(lineText: string): number | null {
+  const line = lineText.replace(/\r$/, "");
+  if (/^\s*---/.test(line)) return null;
+  if (isEmptyMarkdownListLine(line) || isEmptyMarkdownHeadingLine(line)) return null;
+
+  const task = line.match(/^(\s*-\s*\[\s*[xX ]\s*\]\s*)(\S[\s\S]*)$/);
+  if (task) return task[1].length;
+
+  const bullet = line.match(/^(\s*-\s+)(\S[\s\S]*)$/);
+  if (bullet) return bullet[1].length;
+
+  const heading = line.match(/^(\s*#{1,}\s+)(\S[\s\S]*)$/);
+  if (heading) return heading[1].length;
+
+  return null;
+}
+
 /** 无序/任务列表行：回车后下一行接续相同前缀（含缩进空格）；与 --- 分隔线区分；空列表行不续写 */
 function getMarkdownListContinuationSuffix(lineText: string): string | null {
   const line = lineText.replace(/\r$/, "");
@@ -48,6 +69,17 @@ function getMarkdownListContinuationSuffix(lineText: string): string | null {
     return `${bareDash[1]}- `;
   }
   return null;
+}
+
+/**
+ * 两行交换后，上面那行必须自带换行。
+ * 文末最后一行往往没有换行，直接拼接会和另一行粘成一行。
+ */
+function separateSwappedLines(upper: string, lower: string): { upper: string; lower: string } {
+  if (upper.endsWith("\n") || !lower.endsWith("\n")) {
+    return { upper, lower };
+  }
+  return { upper: upper + "\n", lower: lower.slice(0, -1) };
 }
 
 interface TaskRecordShortcutsOptions {
@@ -125,6 +157,27 @@ export function useTaskRecordShortcuts({ content, textarea, stopEditing }: TaskR
           }
         });
         return;
+      }
+
+      // 光标在标记内：整行下移，上面新开一条标记，光标停在新标记的书写位
+      const column = start - lineStart;
+      const symbolPrefixLength = getMarkdownSymbolPrefixLength(lineText);
+      if (symbolPrefixLength !== null && column < symbolPrefixLength) {
+        const suffix = getMarkdownListContinuationSuffix(lineText) ?? getMarkdownHeadingEnterSuffix(lineText);
+        if (suffix !== null) {
+          event.preventDefault();
+          const insert = suffix + "\n";
+          content.value = originalContent.substring(0, lineStart) + insert + originalContent.substring(lineStart);
+          nextTick(() => {
+            const pos = lineStart + suffix.length;
+            if (textarea.value) {
+              textarea.value.selectionStart = pos;
+              textarea.value.selectionEnd = pos;
+              textarea.value.focus();
+            }
+          });
+          return;
+        }
       }
 
       const headingSuffix = getMarkdownHeadingEnterSuffix(lineText);
@@ -213,16 +266,17 @@ export function useTaskRecordShortcuts({ content, textarea, stopEditing }: TaskR
         nextLineEnd = originalContent.length;
       }
 
-      // 4. 重组内容
+      // 4. 重组内容（下一行若是无换行的文末行，交换后补上分隔）
       const partBefore = originalContent.substring(0, lineStart);
       const nextLineContent = originalContent.substring(lineEnd + 1, nextLineEnd + 1);
       const partAfter = originalContent.substring(nextLineEnd + 1);
+      const swapped = separateSwappedLines(nextLineContent, lineWithNewline);
 
-      content.value = partBefore + nextLineContent + lineWithNewline + partAfter;
+      content.value = partBefore + swapped.upper + swapped.lower + partAfter;
 
       // 5. 更新光标位置
       nextTick(() => {
-        const newCursorPos = start + nextLineContent.length;
+        const newCursorPos = start + swapped.upper.length;
         if (textarea.value) {
           textarea.value.selectionStart = newCursorPos;
           textarea.value.selectionEnd = newCursorPos;
@@ -254,16 +308,17 @@ export function useTaskRecordShortcuts({ content, textarea, stopEditing }: TaskR
       // 3. 定位上一行
       const prevLineStart = originalContent.lastIndexOf("\n", lineStart - 2) + 1;
 
-      // 4. 重组内容
+      // 4. 重组内容（当前行若是无换行的文末行，交换后补上分隔，避免两行粘连）
       const partBefore = originalContent.substring(0, prevLineStart);
       const prevLineContent = originalContent.substring(prevLineStart, lineStart);
       const partAfter = originalContent.substring(lineEnd + 1);
+      const swapped = separateSwappedLines(currentLineContent, prevLineContent);
 
-      content.value = partBefore + currentLineContent + prevLineContent + partAfter;
+      content.value = partBefore + swapped.upper + swapped.lower + partAfter;
 
-      // 5. 更新光标位置
+      // 5. 更新光标位置（用行内偏移，不依赖被剥掉的换行长度）
       nextTick(() => {
-        const newCursorPos = start - prevLineContent.length;
+        const newCursorPos = prevLineStart + (start - lineStart);
         if (textarea.value) {
           textarea.value.selectionStart = newCursorPos;
           textarea.value.selectionEnd = newCursorPos;
