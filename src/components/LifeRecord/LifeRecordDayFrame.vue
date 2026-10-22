@@ -7,6 +7,9 @@
       <div v-if="view === 'chart'" class="lr-day__display">
         <slot name="display" />
       </div>
+      <div v-if="view === 'chart'" class="lr-day__after-chart">
+        <slot name="after-chart" />
+      </div>
       <div v-if="view === 'table'" class="lr-day__table">
         <slot name="table" />
       </div>
@@ -81,6 +84,13 @@ const { isMobile } = useDevice();
 .lr-day--mobile .lr-day__display {
   width: var(--lr-day-display);
   height: var(--lr-day-display);
+}
+.lr-day__after-chart:empty {
+  display: none;
+}
+.lr-day--mobile .lr-day__after-chart {
+  align-self: stretch;
+  width: 100%;
 }
 /* 手机裁掉上下空白；图标贴上沿、备注贴下沿，格距不再被正方形中心裁切开大 */
 .lr-day--mobile.lr-day--compact {

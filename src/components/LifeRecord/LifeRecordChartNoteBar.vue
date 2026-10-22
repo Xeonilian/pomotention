@@ -10,8 +10,16 @@
       },
     ]"
   >
+    <button
+      v-if="expandable && launchOnly"
+      type="button"
+      class="lr-note-bar__field lr-note-bar__launch"
+      @click="emit('expand', $event)"
+    >
+      {{ hasText ? modelValue : placeholder }}
+    </button>
     <textarea
-      v-if="expandable"
+      v-else-if="expandable"
       ref="fieldRef"
       class="lr-note-bar__field"
       :value="modelValue"
@@ -42,13 +50,15 @@ const props = withDefaults(
     placeholder: string;
     tone: "eat" | "toilet" | "sleep";
     expandable?: boolean;
+    /** 手机：不在本格拉高，点一下在正下方多出录入 */
+    launchOnly?: boolean;
   }>(),
-  { expandable: false },
+  { expandable: false, launchOnly: false },
 );
 const emit = defineEmits<{
   "update:modelValue": [value: string];
   activate: [];
-  expand: [];
+  expand: [event?: Event];
   collapse: [];
 }>();
 
@@ -135,6 +145,14 @@ defineExpose({
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.lr-note-bar__launch {
+  cursor: pointer;
+  text-align: left;
+  appearance: none;
+}
+.lr-note-bar--empty .lr-note-bar__launch {
+  color: var(--color-text-secondary);
 }
 .lr-note-bar--expanded .lr-note-bar__field {
   height: 88px;

@@ -34,7 +34,7 @@ function isTextField(el: EventTarget | null): el is HTMLElement {
 }
 
 function isTableField(from: HTMLElement): boolean {
-  return !!from.closest(".lr-day-table, .lr-day__table, .lr-note-bar");
+  return !!from.closest(".lr-day-table, .lr-day__table, .lr-note-bar, .sleep-day-dream");
 }
 
 function kindIconOf(from: HTMLElement): HTMLElement {

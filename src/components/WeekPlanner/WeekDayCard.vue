@@ -78,6 +78,15 @@
           </div>
         </div>
 
+        <template v-if="lifeView">
+          <div
+            v-for="mark in activityBands"
+            :key="`life-act-${mark.recordId}`"
+            class="week-life-activity"
+            :style="activityBandStyle(mark)"
+          />
+        </template>
+
         <div class="hour-ticks">
           <div
             v-for="(hour, hourIdx) in hourStamps"
@@ -342,6 +351,28 @@ function isVizLayer(): boolean {
 }
 
 const visibleLifePoints = computed(() => (isVizLayer() ? [] : (props.lifeOverlay?.points ?? [])));
+
+const activityBands = computed(() =>
+  (props.lifeOverlay?.points ?? []).filter((mark) => mark.kind === "toilet" && mark.endAt != null && mark.endAt > mark.time),
+);
+
+function activityBandStyle(mark: LifePointMark): CSSProperties {
+  const endAt = mark.endAt;
+  if (endAt == null) return { display: "none" };
+  const style = props.getLifeSleepBandStyle(
+    {
+      recordId: mark.recordId,
+      taskId: mark.taskId,
+      todoId: mark.todoId,
+      title: mark.title,
+      note: mark.note,
+      start: mark.time,
+      end: endAt,
+    },
+    props.day.startTs,
+  );
+  return { ...style, backgroundColor: "var(--color-yellow-light)" };
+}
 
 function sleepBandStyle(sleep: LifeSleepRange): CSSProperties {
   const style = { ...props.getLifeSleepBandStyle(sleep, props.day.startTs) };
@@ -632,6 +663,11 @@ const handleItemChange = (id: number, _ts: number, activityId?: number, taskId?:
   border-radius: 2px;
   pointer-events: none;
   overflow: visible;
+}
+
+.week-life-activity {
+  border-radius: 2px;
+  pointer-events: none;
 }
 
 .week-life-sleep-moon {

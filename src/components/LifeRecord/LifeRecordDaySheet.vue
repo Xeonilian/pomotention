@@ -5,7 +5,7 @@
   各面板按 kind 自己的当天桶 taskId 渲染，互不依赖全局选中。
 -->
 <template>
-  <div ref="sheetRef" class="life-day-sheet" :class="{ 'life-day-sheet--mobile': isMobile, 'life-day-sheet--table': view === 'table' }">
+  <div ref="sheetRef" class="life-day-sheet" :class="{ 'life-day-sheet--mobile': isMobile, 'life-day-sheet--table': view === 'table', 'life-day-sheet--chart': view === 'chart' }">
     <div class="life-day-sheet__bar">
       <n-button v-if="!isEmpty" text size="small" class="life-day-sheet__icon" :title="view === 'table' ? '显示图' : '显示表格'" @click="toggleView">
         <template #icon>
@@ -29,16 +29,16 @@
       </n-button>
     </div>
     <div v-else class="life-day-sheet__grid">
-      <div v-if="taskIds.drink != null" class="life-day-sheet__cell">
+      <div v-if="taskIds.drink != null" class="life-day-sheet__cell life-day-sheet__cell--drink">
         <DrinkDayPanel :task-id="taskIds.drink" :view="view" embedded />
       </div>
-      <div v-if="taskIds.eat != null" class="life-day-sheet__cell">
+      <div v-if="taskIds.eat != null" class="life-day-sheet__cell life-day-sheet__cell--eat">
         <EatDayPanel :task-id="taskIds.eat" :view="view" embedded />
       </div>
-      <div v-if="taskIds.toilet != null" class="life-day-sheet__cell life-day-sheet__cell--gap">
+      <div v-if="taskIds.toilet != null" class="life-day-sheet__cell life-day-sheet__cell--gap life-day-sheet__cell--toilet">
         <ToiletDayPanel :task-id="taskIds.toilet" :view="view" embedded />
       </div>
-      <div v-if="taskIds.sleep != null" class="life-day-sheet__cell life-day-sheet__cell--gap">
+      <div v-if="taskIds.sleep != null" class="life-day-sheet__cell life-day-sheet__cell--gap life-day-sheet__cell--sleep">
         <SleepDayPanel :task-id="taskIds.sleep" :view="view" embedded />
       </div>
     </div>
@@ -91,6 +91,7 @@ function toggleView() {
 </script>
 <style scoped>
 .life-day-sheet {
+  position: relative;
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -168,5 +169,18 @@ function toggleView() {
 /* 无圆圈的活动/睡：前面已有格子时才加距，缺类不留空档 */
 .life-day-sheet--mobile .life-day-sheet__cell--gap:not(:first-child) {
   margin-top: var(--lr-sheet-compact-stack-gap);
+}
+/* 手机图：喝水、运动、吃饭、睡觉。表和桌面 2×2 仍按原顺序 */
+.life-day-sheet--mobile.life-day-sheet--chart .life-day-sheet__cell--drink {
+  order: 1;
+}
+.life-day-sheet--mobile.life-day-sheet--chart .life-day-sheet__cell--toilet {
+  order: 2;
+}
+.life-day-sheet--mobile.life-day-sheet--chart .life-day-sheet__cell--eat {
+  order: 3;
+}
+.life-day-sheet--mobile.life-day-sheet--chart .life-day-sheet__cell--sleep {
+  order: 4;
 }
 </style>

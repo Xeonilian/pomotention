@@ -1,4 +1,4 @@
-<!-- 月格四条竖 bar：喝水 / 吃饭 / 活动 / 睡觉；吃/活动/睡从底到顶按时间早→晚 -->
+<!-- 月格四条竖 bar：喝水 / 活动 / 吃饭 / 睡觉；吃/活动/睡从底到顶按时间早→晚 -->
 <template>
   <div v-if="hasData" class="mlb" :class="{ 'mlb--focus': !!focusKind }" @click.stop="onPadClick">
     <div v-show="showCol('drink')" class="mlb__col" title="喝水" @click.stop="onColClick('drink')">
@@ -23,23 +23,6 @@
         <span class="mlb__cap-text">{{ showFills("drink") ? bars.drinkLitersLabel || "\u00a0" : "\u00a0" }}</span>
       </span>
     </div>
-    <div v-show="showCol('eat')" class="mlb__col" title="吃饭" @click.stop="onColClick('eat')">
-      <div class="mlb__track mlb__track--stack">
-        <template v-if="showFills('eat')">
-          <div
-            v-for="(p, i) in bars.eatParts"
-            :key="i"
-            class="mlb__fill mlb__fill--eat"
-            :class="`mlb__fill--${p.course}`"
-            :style="grow(p.ratio)"
-          />
-        </template>
-        <div v-if="eatRest > 0" class="mlb__spacer" :style="grow(eatRest)" />
-      </div>
-      <span class="mlb__cap">
-        <span class="mlb__cap-text">{{ showFills("eat") ? bars.eatSpanLabel || "\u00a0" : "\u00a0" }}</span>
-      </span>
-    </div>
     <div v-show="showCol('toilet')" class="mlb__col" title="活动" @click.stop="onColClick('toilet')">
       <div class="mlb__track mlb__track--stack">
         <template v-if="showFills('toilet')">
@@ -47,7 +30,7 @@
             v-for="(p, i) in bars.activityParts"
             :key="i"
             class="mlb__fill mlb__fill--act"
-            :class="`mlb__fill--act-${i % 4}`"
+            :class="[`mlb__fill--act-${i % 4}`, { 'mlb__fill--end': i === bars.activityParts.length - 1 }]"
             :style="grow(p)"
           />
         </template>
@@ -57,10 +40,33 @@
         <span class="mlb__cap-text">{{ showFills("toilet") && bars.activityMinutes > 0 ? `${bars.activityMinutes}'` : "\u00a0" }}</span>
       </span>
     </div>
+    <div v-show="showCol('eat')" class="mlb__col" title="吃饭" @click.stop="onColClick('eat')">
+      <div class="mlb__track mlb__track--stack">
+        <template v-if="showFills('eat')">
+          <div
+            v-for="(p, i) in bars.eatParts"
+            :key="i"
+            class="mlb__fill mlb__fill--eat"
+            :class="[`mlb__fill--${p.course}`, i === bars.eatParts.length - 1 ? 'mlb__fill--end' : 'mlb__fill--split']"
+            :style="grow(p.ratio)"
+          />
+        </template>
+        <div v-if="eatRest > 0" class="mlb__spacer" :style="grow(eatRest)" />
+      </div>
+      <span class="mlb__cap">
+        <span class="mlb__cap-text">{{ showFills("eat") ? bars.eatSpanLabel || "\u00a0" : "\u00a0" }}</span>
+      </span>
+    </div>
     <div v-show="showCol('sleep')" class="mlb__col" title="睡觉" @click.stop="onColClick('sleep')">
       <div class="mlb__track mlb__track--stack">
         <template v-if="showFills('sleep')">
-          <div v-for="(p, i) in bars.sleepParts" :key="i" class="mlb__fill mlb__fill--sleep" :style="grow(p)" />
+          <div
+            v-for="(p, i) in bars.sleepParts"
+            :key="i"
+            class="mlb__fill mlb__fill--sleep"
+            :class="{ 'mlb__fill--sleep-split': i !== bars.sleepParts.length - 1 }"
+            :style="grow(p)"
+          />
         </template>
         <div v-if="sleepRest > 0" class="mlb__spacer" :style="grow(sleepRest)" />
       </div>
@@ -201,13 +207,20 @@ function grow(v: number) {
   background: rgba(28, 72, 168, 0.28);
   background: oklch(0.45 0.12 264 / 0.28);
 }
+.mlb__fill--sleep-split {
+  border-top: 1px solid var(--color-yellow-light);
+}
+.mlb__fill--end {
+  border-top-left-radius: 2px;
+  border-top-right-radius: 2px;
+}
 .mlb__fill--eat {
   min-height: 2px;
   box-sizing: border-box;
 }
-.mlb__fill--eat:not(:last-child) {
-  border-top: 1px solid rgba(236, 168, 184, 0.9);
-  border-top: 1px solid oklch(0.84 0.12 22 / 0.85);
+.mlb__fill--split {
+  border-top: 1px solid rgba(106, 13, 13, 0.9);
+  border-top: 1px solid oklch(46.799% 0.16872 26.747 / 0.718);
 }
 .mlb__fill--meal {
   background: rgba(214, 72, 100, 0.8);

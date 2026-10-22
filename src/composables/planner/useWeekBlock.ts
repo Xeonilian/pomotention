@@ -445,8 +445,12 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targe
       userSelect: "none",
     };
     if (isMobile.value) {
-      // 第 3 列离右 2px，第 2 列再隔 4px（11 + 4）
-      return { ...base, right: mark.lane === 0 ? "1px" : "15px" };
+      // 非可视化：奖赏盖在同一时刻的其它点上面
+      return {
+        ...base,
+        zIndex: mark.kind === "reward" ? 40 : base.zIndex,
+        right: mark.lane === 0 ? "1px" : "15px",
+      };
     }
     return { ...base, right: `${12 + mark.lane * 15}px` };
   }
