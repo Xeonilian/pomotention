@@ -100,7 +100,7 @@
           :value="lastRecord.description ?? ''"
           placeholder="梦什么"
           rows="6"
-          @input="onNoteBarInput"
+          @input="onChartDreamInput"
         />
       </div>
     </template>
@@ -310,6 +310,9 @@ function onConfirmLastEnded() {
 function onNoteBarInput(v: string) {
   const last = lastRecord.value;
   if (last) changeDescription(last, v);
+}
+function onChartDreamInput(e: Event) {
+  onNoteBarInput((e.target as HTMLTextAreaElement).value);
 }
 function onChartDreamExpand() {
   chartDreamOpen.value = true;
