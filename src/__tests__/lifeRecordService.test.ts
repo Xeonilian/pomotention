@@ -6,6 +6,9 @@ import { getLifeRecordKind, isLifeRecordActivity, getLifeRecordDef, isLifeRecord
 import { TAG_ID_LIFE_DRINK, TAG_ID_LIFE_SLEEP } from "@/core/constants";
 import {
   findLifeRecordTaskForDay,
+  findLifeRecordTasksForDay,
+  mergeBucketLifeRecords,
+  lifeRecordOwnerTaskId,
   buildLifeRecordEntities,
   buildLifeRecordTask,
   appendLifeRecord,
@@ -73,6 +76,22 @@ describe("parseLifeRecordPlaceholder / findLifeRecordTaskForDay", () => {
   it("已删除不命中", () => {
     const task = { ...buildLifeRecordTask(IN_DAY, `daily_drink_${DAY_START}`), deleted: true };
     expect(findLifeRecordTaskForDay([task], "drink", DAY_START)).toBeUndefined();
+  });
+  it("同日同 kind 多桶都返回，find 仍取列表里的第一只", () => {
+    const first = buildLifeRecordTask(IN_DAY, `daily_drink_${DAY_START}`);
+    const second = buildLifeRecordTask(IN_DAY + 1, `daily_drink_${DAY_START}`);
+    first.lifeRecords = [{ id: 1, recordedAt: IN_DAY + 2 }];
+    second.lifeRecords = [
+      { id: 1, recordedAt: IN_DAY },
+      { id: 2, recordedAt: IN_DAY + 1 },
+    ];
+    const tasks = [first, second];
+    expect(findLifeRecordTasksForDay(tasks, "drink", DAY_START).map((task) => task.id)).toEqual([first.id, second.id]);
+    expect(findLifeRecordTaskForDay(tasks, "drink", DAY_START)?.id).toBe(first.id);
+    expect(mergeBucketLifeRecords(tasks).map((record) => record.id)).toEqual([2, 1]);
+    expect(lifeRecordOwnerTaskId(tasks, 2, first.id)).toBe(second.id);
+    expect(lifeRecordOwnerTaskId(tasks, 1, first.id)).toBe(first.id);
+    expect(lifeRecordOwnerTaskId(tasks, 9, first.id)).toBe(first.id);
   });
 });
 describe("buildLifeRecordEntities", () => {

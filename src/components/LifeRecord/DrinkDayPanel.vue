@@ -168,7 +168,7 @@ import {
 } from "@vicons/fluent";
 import type { LifeRecord } from "@/core/types/Task";
 import { DRINK_KIND_DEFS, drinkKindLabel, drinkKindOf, type DrinkKind } from "@/core/lifeRecord";
-import { isDrinkGoalMet, sumLifeRecordAmountMl, updateLifeRecord } from "@/services/lifeRecord/lifeRecordService";
+import { isDrinkGoalMet, sumLifeRecordAmountMl } from "@/services/lifeRecord/lifeRecordService";
 import { useDataStore } from "@/stores/useDataStore";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useLifeRecordEditor } from "@/composables/lifeRecord/useLifeRecordEditor";
@@ -180,7 +180,7 @@ const props = withDefaults(defineProps<{ taskId: number; embedded?: boolean; vie
 });
 const dataStore = useDataStore();
 const settingStore = useSettingStore();
-const { task, records, append, pickerTs, changeRecordedAt, changeDescription, changeDrinkKind, toggleDrinkKind, remove } =
+const { task, records, append, pickerTs, changeRecordedAt, changeDescription, changeDrinkKind, toggleDrinkKind, remove, patchRecord } =
   useLifeRecordEditor(() => props.taskId, "drink", { embedded: () => props.embedded });
 const lastRecord = computed(() => records.value[records.value.length - 1] ?? null);
 const drinkKindOptions = DRINK_KIND_DEFS;
@@ -198,10 +198,6 @@ const progressRatio = computed(() => {
   if (!Number.isFinite(goal) || goal <= 0) return 0;
   return Math.min(1, drunkMl.value / goal);
 });
-function writeRecords(next: LifeRecord[] | null) {
-  if (!next) return;
-  dataStore.updateTaskById(props.taskId, { lifeRecords: next });
-}
 function onChangeCupMl(v: number | null) {
   if (v == null || !Number.isFinite(v) || v <= 0) return;
   settingStore.settings.drinkCupMl = Math.min(1000, Math.max(50, Math.round(v)));
@@ -212,7 +208,7 @@ function onChangeDayGoal(v: number | null) {
 }
 function onChangeAmount(record: LifeRecord, v: number | null) {
   if (v == null || !Number.isFinite(v) || v <= 0) return;
-  writeRecords(updateLifeRecord(records.value, record.id, { amountMl: Math.round(v) }));
+  patchRecord(record.id, { amountMl: Math.round(v) });
 }
 </script>
 <style src="./lifeRecordTable.css"></style>
