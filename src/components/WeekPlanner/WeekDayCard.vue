@@ -47,7 +47,11 @@
           class="week-life-sleep"
           :style="sleepBandStyle(sleep)"
         >
-          <div v-if="!isVizLayer() && sleep.wakeAt" class="week-life-sleep-moon" :style="{ width: pointIconSize + 'px', height: pointIconSize + 'px' }">
+          <div
+            v-if="!isVizLayer() && sleep.wakeAt"
+            class="week-life-sleep-moon"
+            :style="{ width: pointIconSize + 'px', height: pointIconSize + 'px' }"
+          >
             <NPopover
               v-if="!isMobile"
               trigger="hover"
@@ -135,7 +139,9 @@
           >
             <template #trigger>
               <div class="week-life-point__hit" @click.stop>
-                <span v-if="isScoreMark(mark)" class="week-life-energy" :style="{ fontSize: pointIconSize + 'px' }">{{ scoreEmoji(mark) }}</span>
+                <span v-if="isScoreMark(mark)" class="week-life-energy" :style="{ fontSize: pointIconSize + 'px' }">
+                  {{ scoreEmoji(mark) }}
+                </span>
                 <n-icon v-else :size="pointIconSize" :component="lifePointIcon(mark.kind)" />
               </div>
             </template>
@@ -147,11 +153,15 @@
             :data-life-note-key="`point-${mark.kind}-${mark.recordId}`"
             @click.stop="onMobileLifeNoteTap($event, `point-${mark.kind}-${mark.recordId}`, formatLifePointCaption(mark))"
           >
-            <span v-if="isScoreMark(mark)" class="week-life-energy" :style="{ fontSize: pointIconSize + 'px' }">{{ scoreEmoji(mark) }}</span>
+            <span v-if="isScoreMark(mark)" class="week-life-energy" :style="{ fontSize: pointIconSize + 'px' }">
+              {{ scoreEmoji(mark) }}
+            </span>
             <n-icon v-else :size="pointIconSize" :component="lifePointIcon(mark.kind)" />
           </div>
           <div v-else class="week-life-point__hit" @click.stop="onLifePointClick(mark)">
-            <span v-if="isScoreMark(mark)" class="week-life-energy" :style="{ fontSize: pointIconSize + 'px' }">{{ scoreEmoji(mark) }}</span>
+            <span v-if="isScoreMark(mark)" class="week-life-energy" :style="{ fontSize: pointIconSize + 'px' }">
+              {{ scoreEmoji(mark) }}
+            </span>
             <n-icon v-else :size="pointIconSize" :component="lifePointIcon(mark.kind)" />
           </div>
         </div>
@@ -195,7 +205,9 @@ import type { LifePointKind, LifePointMark, LifeSleepRange } from "@/services/ti
 import { formatLifePointCaption, formatLifeSleepCaption } from "@/services/timetable/lifeRecordOverlays";
 import { getEnergyScoreEmoji, getRewardScoreEmoji } from "@/core/scoreEmojis";
 import { Door20Filled, Drop20Filled, FoodApple20Filled, WeatherMoon20Filled } from "@vicons/fluent";
+import type { DrinkKind } from "@/core/types/Task";
 import { findLifeRecordTaskForDay, isDrinkGoalMet, sumLifeRecordAmountMl } from "@/services/lifeRecord/lifeRecordService";
+import { collectWeekScoreSeries } from "@/services/timetable/weekScoreChart";
 
 const { isMobile } = useDevice();
 const dataStore = useDataStore();
@@ -342,7 +354,7 @@ function onCardClick() {
 }
 
 const pointIconSize = computed(() => {
-  if (props.drinkLayer) return isMobile.value ? 14 : 22;
+  if (props.drinkLayer) return isMobile.value ? 9 : 11;
   return isMobile.value ? 11 : 16;
 });
 
@@ -350,7 +362,12 @@ function isVizLayer(): boolean {
   return !!(props.drinkLayer || props.lifeView);
 }
 
-const visibleLifePoints = computed(() => (isVizLayer() ? [] : (props.lifeOverlay?.points ?? [])));
+/** 普通周：不画水滴和活动门（做什么从精力点开）。生活图层只补水滴 */
+const visibleLifePoints = computed(() => {
+  const points = props.lifeOverlay?.points ?? [];
+  if (isVizLayer()) return points.filter((mark) => mark.kind === "drink");
+  return points.filter((mark) => mark.kind === "eat" || mark.kind === "energy" || mark.kind === "reward");
+});
 
 const activityBands = computed(() =>
   (props.lifeOverlay?.points ?? []).filter((mark) => mark.kind === "toilet" && mark.endAt != null && mark.endAt > mark.time),
@@ -405,73 +422,74 @@ function onMobileLifeNoteTap(e: MouseEvent, key: string, text: string) {
   emit("life-note-tap", { key, text, top: rect.top, bottom: rect.bottom });
 }
 
-function layerPointColor(kind: LifePointKind): string {
-  if (kind === "drink") return "var(--color-blue)";
-  if (kind === "eat") return "var(--color-red)";
-  if (kind === "energy" || kind === "reward") return "var(--color-text-primary)";
-  return "var(--color-text-secondary)";
-}
-
-/** 桌面生活图层：喝 / 吃 / 活动+奖赏 / 精力 */
-const LAYER_SLOT: Record<LifePointKind, number> = {
-  drink: 0,
-  eat: 1,
-  toilet: 2,
-  reward: 2,
-  energy: 3,
+/** 生活图层水滴：水蓝、咖啡褐、饮品淡橙、酒淡红 */
+const DRINK_DROP_COLOR: Record<DrinkKind, string> = {
+  water: "rgba(64, 152, 252, 0.722)",
+  coffee: "rgba(123, 79, 25, 0.8)",
+  beverage: "rgba(255, 197, 110, 1)",
+  wine: "rgba(196, 12, 49, 0.822)",
 };
-const LAYER_SLOT_COUNT = 4;
 
-/** 手机生活图层：左右留边的三列；水滴散列时避开邻近占用 */
-const MOBILE_LAYER_COLS = 3;
-const MOBILE_LAYER_INSET_PX = 1;
-const DRINK_NEAR_MS = 32 * 60 * 1000;
+const DRINK_NEAR_MS = 20 * 60 * 1000;
+const DRINK_X_MARGIN = 0.1;
+const DRINK_X_GAP = 0.14;
 
 function hashUnit(recordId: number, time: number): number {
   const n = Math.sin(recordId * 12.9898 + time * 0.00017) * 43758.5453;
   return n - Math.floor(n);
 }
 
-function assignMobileLayerCols(points: LifePointMark[]): { drink: Map<number, number> } {
+/** 这一时刻精力 / 奖赏折线所在的横向比例（0–1），含水滴不该压住的点 */
+function blockedScoreFractions(points: LifePointMark[], sleeps: LifeSleepRange[], time: number): number[] {
+  const blocked: number[] = [];
+  const series = collectWeekScoreSeries(points, sleeps).filter((s) => s.kind === "energy" || s.kind === "reward");
+  for (const row of series) {
+    for (const dot of row.points) {
+      if (Math.abs(dot.time - time) <= DRINK_NEAR_MS) blocked.push(dot.value / 10);
+    }
+    for (let i = 0; i < row.points.length - 1; i++) {
+      const a = row.points[i];
+      const b = row.points[i + 1];
+      if (a == null || b == null || b.time === a.time || time < a.time || time > b.time) continue;
+      const t = (time - a.time) / (b.time - a.time);
+      blocked.push((a.value + (b.value - a.value) * t) / 10);
+    }
+  }
+  return blocked;
+}
+
+/** 水滴横向比例。左右有散列，但躲开同一时刻的精力 / 奖赏 */
+function placeDrinkFractions(points: LifePointMark[], sleeps: LifeSleepRange[]): Map<number, number> {
   const drinks = points.filter((p) => p.kind === "drink").sort((a, b) => a.time - b.time || a.recordId - b.recordId);
-  const placed: { time: number; col: number }[] = [];
-  const drink = new Map<number, number>();
-  for (const d of drinks) {
-    const taken = new Set<number>();
-    for (const p of points) {
-      if (Math.abs(p.time - d.time) > DRINK_NEAR_MS) continue;
-      if (p.kind === "eat") taken.add(1);
-      else if (p.kind === "toilet") taken.add(2);
+  const placed: { time: number; x: number }[] = [];
+  const out = new Map<number, number>();
+  const span = 1 - DRINK_X_MARGIN * 2;
+  for (const drink of drinks) {
+    const blocked = blockedScoreFractions(points, sleeps, drink.time);
+    for (const prev of placed) {
+      if (Math.abs(prev.time - drink.time) <= DRINK_NEAR_MS) blocked.push(prev.x);
     }
-    for (const p of placed) {
-      if (Math.abs(p.time - d.time) <= DRINK_NEAR_MS) taken.add(p.col);
-    }
-    const prefer = Math.floor(hashUnit(d.recordId, d.time) * MOBILE_LAYER_COLS) % MOBILE_LAYER_COLS;
-    let col = prefer;
-    for (let i = 0; i < MOBILE_LAYER_COLS; i++) {
-      const c = (prefer + i) % MOBILE_LAYER_COLS;
-      if (!taken.has(c)) {
-        col = c;
-        break;
+    let best = DRINK_X_MARGIN + hashUnit(drink.recordId, drink.time) * span;
+    let bestDist = blocked.length === 0 ? 1 : Math.min(...blocked.map((b) => Math.abs(b - best)));
+    for (let i = 1; i < 8 && bestDist < DRINK_X_GAP; i++) {
+      const x = DRINK_X_MARGIN + hashUnit(drink.recordId, drink.time + i * 997) * span;
+      const dist = Math.min(...blocked.map((b) => Math.abs(b - x)));
+      if (dist > bestDist) {
+        best = x;
+        bestDist = dist;
       }
     }
-    placed.push({ time: d.time, col });
-    drink.set(d.recordId, col);
+    placed.push({ time: drink.time, x: best });
+    out.set(drink.recordId, best);
   }
-  return { drink };
+  return out;
 }
 
-const mobileLayerCols = computed(() => assignMobileLayerCols(props.lifeOverlay?.points ?? []));
+const drinkFractions = computed(() => placeDrinkFractions(props.lifeOverlay?.points ?? [], props.lifeOverlay?.sleeps ?? []));
 
-function mobileLayerCol(mark: LifePointMark): number {
-  if (mark.kind === "eat" || mark.kind === "reward") return 1;
-  if (mark.kind === "toilet" || mark.kind === "energy") return 2;
-  return mobileLayerCols.value.drink.get(mark.recordId) ?? 0;
-}
-
-function mobileLayerLeft(col: number, size: number): string {
-  const inset = MOBILE_LAYER_INSET_PX;
-  return `calc(${inset}px + ${col + 0.5} * (100% - ${inset * 2}px) / ${MOBILE_LAYER_COLS} - ${size / 2}px)`;
+function drinkDropColor(mark: LifePointMark): string {
+  const kind = mark.drinkKind ?? "water";
+  return DRINK_DROP_COLOR[kind] ?? DRINK_DROP_COLOR.water;
 }
 
 function getLayerPointStyle(mark: LifePointMark): CSSProperties {
@@ -479,31 +497,16 @@ function getLayerPointStyle(mark: LifePointMark): CSSProperties {
   const rest = { ...base } as CSSProperties;
   delete rest.right;
   delete rest.left;
-  delete rest.width;
-  delete rest.height;
-  if (!isMobile.value) {
-    const size = 24;
-    const slot = LAYER_SLOT[mark.kind] ?? 2;
-    return {
-      ...rest,
-      width: `${size}px`,
-      height: `${size}px`,
-      color: layerPointColor(mark.kind),
-      zIndex: isScoreMark(mark) ? 4 : 8,
-      left: `calc(${((slot + 0.5) / LAYER_SLOT_COUNT) * 100}% - ${size / 2}px)`,
-      right: "auto",
-      transform: "translateX(0)",
-    };
-  }
-  const size = 14;
-  const zIndex = isScoreMark(mark) ? 5 : mark.kind === "toilet" ? 10 : 8;
+  delete rest.transform;
+  const size = pointIconSize.value;
+  const x = drinkFractions.value.get(mark.recordId) ?? 0.5;
   return {
     ...rest,
     width: `${size}px`,
     height: `${size}px`,
-    color: layerPointColor(mark.kind),
-    zIndex,
-    left: mobileLayerLeft(mobileLayerCol(mark), size),
+    color: drinkDropColor(mark),
+    zIndex: 8,
+    left: `calc(${x * 100}% - ${size / 2}px)`,
     right: "auto",
     transform: "translateX(0)",
   };
@@ -715,7 +718,7 @@ const handleItemChange = (id: number, _ts: number, activityId?: number, taskId?:
 }
 
 .week-life-point--drink-layer {
-  opacity: 0.82;
+  opacity: 1;
 }
 
 .hour-ticks {

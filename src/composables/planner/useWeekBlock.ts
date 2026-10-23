@@ -437,22 +437,22 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targe
       width: `${size}px`,
       height: `${size}px`,
       color: mark.colorVar,
-      zIndex: mark.kind === "energy" || mark.kind === "reward" ? 3 : 5 + mark.lane,
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
       cursor: "pointer",
       userSelect: "none",
     };
-    if (isMobile.value) {
-      // 非可视化：奖赏盖在同一时刻的其它点上面
-      return {
-        ...base,
-        zIndex: mark.kind === "reward" ? 40 : base.zIndex,
-        right: mark.lane === 0 ? "1px" : "15px",
-      };
+    // 周普通视图两列：右边精力 / 苹果（吃饭时通常不记精力奖赏）；中间奖赏，月亮也在这条线上
+    if (mark.kind === "energy" || mark.kind === "eat") {
+      return { ...base, right: isMobile.value ? "1px" : "4px", zIndex: mark.kind === "energy" ? 12 : 13 };
     }
-    return { ...base, right: `${12 + mark.lane * 15}px` };
+    return {
+      ...base,
+      left: "50%",
+      transform: "translateX(-50%)",
+      zIndex: mark.kind === "reward" ? 14 : 13,
+    };
   }
 
   return {
