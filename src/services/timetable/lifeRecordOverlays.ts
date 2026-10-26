@@ -290,8 +290,10 @@ export function collectLifeRecordOverlays(options: {
       for (const record of energyTask.energyRecords ?? []) pushScore(energyTask, "energy", record);
       for (const record of energyTask.rewardRecords ?? []) pushScore(energyTask, "reward", record);
     }
+    // 单条 todo/schedule 的精力与奖赏都进周视图；日桶已写入的靠 seenScore 去重
     for (const task of tasks) {
       if (task.deleted) continue;
+      for (const record of task.energyRecords ?? []) pushScore(task, "energy", record);
       for (const record of task.rewardRecords ?? []) pushScore(task, "reward", record);
     }
   }

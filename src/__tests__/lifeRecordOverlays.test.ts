@@ -289,7 +289,7 @@ describe("collectLifeRecordOverlays 精力点", () => {
     expect(points[0]?.time).toBe(at);
   });
 
-  it("从当日桶和普通任务收集奖赏，精力列3、奖赏列2", () => {
+  it("从当日桶和普通任务收集精力与奖赏，精力列3、奖赏列2", () => {
     const at = dayStart + 10 * 3600_000;
     const energyTask: Task = {
       id: 99,
@@ -308,7 +308,7 @@ describe("collectLifeRecordOverlays 精力点", () => {
       id: 100,
       activityTitle: "写",
       sourceId: 1,
-      energyRecords: [],
+      energyRecords: [{ id: 4, value: 7, recordedAt: at + 2000, description: "做" }],
       rewardRecords: [{ id: 3, value: 9, recordedAt: at + 1000, description: "完" }],
       interruptionRecords: [],
       description: "",
@@ -321,16 +321,22 @@ describe("collectLifeRecordOverlays 精力点", () => {
       dayStart,
       dayEnd,
       timeRange: { start: dayStart, end: dayEnd },
-      tasks: [other],
+      tasks: [energyTask, other],
       getActivity: () => undefined,
       getDayEnergyTask: () => energyTask,
       now: at,
       minGapMs: 60_000,
     });
-    const energy = points.find((p) => p.kind === "energy");
+    const bucketEnergy = points.filter((p) => p.kind === "energy" && p.recordId === 1);
+    const todoEnergy = points.find((p) => p.kind === "energy" && p.recordId === 4);
     const bucketReward = points.find((p) => p.kind === "reward" && p.recordId === 2);
     const todoReward = points.find((p) => p.kind === "reward" && p.recordId === 3);
-    expect(energy?.lane).toBe(0);
+    expect(bucketEnergy).toHaveLength(1);
+    expect(bucketEnergy[0]?.lane).toBe(0);
+    expect(todoEnergy?.energy).toBe(7);
+    expect(todoEnergy?.note).toBe("做");
+    expect(todoEnergy?.taskId).toBe(100);
+    expect(todoEnergy?.lane).toBe(0);
     expect(bucketReward?.reward).toBe(6);
     expect(bucketReward?.lane).toBe(1);
     expect(todoReward?.reward).toBe(9);
