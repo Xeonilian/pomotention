@@ -4,15 +4,11 @@ import { supabase } from "@/core/services/supabase";
 import { getCurrentUser } from "@/core/services/authService";
 import { BaseSyncService } from "./baseSyncService";
 import type { SyncSkip } from "./plannerFieldMerge";
-import { saveTasks } from "@/services/data/localStorageService";
 import type { Activity } from "@/core/types/Activity";
 import type { Task, EnergyRecord, RewardRecord, InterruptionRecord, LifeRecord } from "@/core/types/Task";
 import type { Database } from "@/core/types/Database";
 
 type CloudTaskInsert = Database["public"]["Tables"]["tasks"]["Insert"];
-
-/** 生活记录列上线后，一次性把「本地已有杯子」的已 synced 桶标脏补传（v3：空壳不标，避免空数组盖云） */
-const LIFE_RECORDS_BACKFILL_KEY = "pomotention_life_records_cloud_backfill_v3";
 
 /**
  * RPC 返回的完整格式（带冗余字段）
@@ -59,38 +55,6 @@ export class TaskSyncService extends BaseSyncService<Task, CloudTaskInsert> {
       return false;
     }
     return true;
-  }
-
-  /**
-   * 列上线前「已记杯却仍 synced」不会进上传队列；仅对本地非空 lifeRecords 标脏补传。
-   * 空壳不标：首创上传走正常 create；补传空数组会盖掉云端已有杯子。
-   */
-  private ensureLifeRecordsBackfill(): void {
-    if (typeof localStorage === "undefined") return;
-    if (localStorage.getItem(LIFE_RECORDS_BACKFILL_KEY)) return;
-
-    const list = this.getListArray();
-    let touched = false;
-    const now = Date.now();
-
-    for (const task of list) {
-      if (task.deleted) continue;
-      if ((task.lifeRecords?.length ?? 0) === 0) continue;
-      if (!task.synced) continue;
-      task.synced = false;
-      task.lastModified = now;
-      touched = true;
-    }
-
-    localStorage.setItem(LIFE_RECORDS_BACKFILL_KEY, "1");
-    if (touched) {
-      saveTasks(list);
-    }
-  }
-
-  getPendingUploadItems(): Task[] {
-    this.ensureLifeRecordsBackfill();
-    return super.getPendingUploadItems();
   }
 
   /**
