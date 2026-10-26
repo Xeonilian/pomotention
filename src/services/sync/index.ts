@@ -14,6 +14,7 @@ import { useSyncStore, runBeforeSyncHook } from "@/stores/useSyncStore";
 import { useDataStore } from "@/stores/useDataStore";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { isSupabaseEnabled } from "@/core/services/supabase";
+import { getSyncEntitlement } from "@/core/billing/entitlement";
 import { SettingsSyncService } from "./settingsSync";
 import { BaseSyncService } from "./baseSyncService";
 import { findActiveCountLeaks, type ActiveCountRow } from "./completenessProbe";
@@ -367,6 +368,15 @@ async function runSyncTask(actionName: string, taskFn: () => Promise<{ success: 
   // 进行中：跳过而非失败，避免自动同步误报红字
   if (syncStore.isSyncing) return { success: true, skipped: true, errors: [] };
 
+  // 同步权益：试用到期且未付费则拦，不报红字、不删本机数据
+  const ent = await getSyncEntitlement();
+  if (!ent.allowed) {
+    syncStore.syncNeedsSubscription =
+      ent.denyReason === "no-session" ? "云同步需登录" : "云同步试用到期，订购后继续";
+    return { success: false, errors: [], denied: true };
+  }
+  syncStore.syncNeedsSubscription = null;
+
   // 同步前先执行钩子（如 TaskRecord 正在编辑则先保存到本地再同步，避免被覆盖）
   await runBeforeSyncHook();
 
@@ -523,6 +533,15 @@ export async function uploadAll() {
     return { success: true, skipped: true, errors: [], uploaded: 0 };
   }
 
+  // 同步权益：试用到期且未付费则拦，不报红字、不删本机数据
+  const ent = await getSyncEntitlement();
+  if (!ent.allowed) {
+    syncStore.syncNeedsSubscription =
+      ent.denyReason === "no-session" ? "云同步需登录" : "云同步试用到期，订购后继续";
+    return { success: false, errors: [], denied: true, uploaded: 0 };
+  }
+  syncStore.syncNeedsSubscription = null;
+
   await runBeforeSyncHook();
   syncStore.startUpload();
 
@@ -573,6 +592,7 @@ export async function downloadAllWithDiagnostics(
   downloaded: number;
   details: { name: string; fetched: number; downloaded: number; cloudDeleted?: number }[];
   skipped?: boolean;
+  denied?: boolean;
 }> {
   if (!ensureInitialized()) {
     return { success: false, errors: ["未初始化"], downloaded: 0, details: [] };
@@ -584,6 +604,15 @@ export async function downloadAllWithDiagnostics(
   if (syncStore.isSyncing) {
     return { success: true, skipped: true, errors: [], downloaded: 0, details: [] };
   }
+
+  // 同步权益：试用到期且未付费则拦，不报红字、不删本机数据
+  const ent = await getSyncEntitlement();
+  if (!ent.allowed) {
+    syncStore.syncNeedsSubscription =
+      ent.denyReason === "no-session" ? "云同步需登录" : "云同步试用到期，订购后继续";
+    return { success: false, errors: [], downloaded: 0, details: [], denied: true };
+  }
+  syncStore.syncNeedsSubscription = null;
 
   await runBeforeSyncHook();
   syncStore.startDownload();

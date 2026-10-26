@@ -38,6 +38,22 @@ export function buildAfdianTipUrl(): string {
   });
 }
 
+/** 云同步订阅：月付 9 元/月档，或年付 49 元/首年档（回馈老用户，限时）。已登录带 custom_order_id。 */
+export function buildAfdianSyncSubscribeUrl(
+  userId?: string | null,
+  period: "month" | "year" = "year",
+): string {
+  const planId = period === "year"
+    ? import.meta.env.VITE_AFDIAN_SYNC_PLAN_YEAR?.trim()
+    : import.meta.env.VITE_AFDIAN_SYNC_PLAN_MONTH?.trim();
+  return withQuery(AFDIAN_ORDER_CREATE_URL, {
+    plan_id: planId ?? "",
+    product_type: "0",
+    month: period === "year" ? "12" : "1",
+    custom_order_id: isPomUserId(userId) ? userId.trim() : "",
+  });
+}
+
 export function openExternalUrl(url: string): void {
   window.open(url, "_blank", "noopener,noreferrer");
 }

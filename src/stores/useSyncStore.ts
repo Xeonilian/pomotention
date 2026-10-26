@@ -43,6 +43,9 @@ export const useSyncStore = defineStore("sync", () => {
 
   const downloadFailed = ref(false);
 
+  // 同步需订购：试用到期且未付费时置位，UI 据此提示订购（非错误，不进 syncError）
+  const syncNeedsSubscription = ref<string | null>(null);
+
   // 时间戳
   const lastSyncTimestamp = computed({
     get: () => {
@@ -96,6 +99,7 @@ export const useSyncStore = defineStore("sync", () => {
     syncStatus.value = "idle";
     currentSyncMessage.value = message;
     syncError.value = null;
+    syncNeedsSubscription.value = null;
   }
 
   // 同步失败
@@ -147,6 +151,7 @@ export const useSyncStore = defineStore("sync", () => {
     syncInitialized.value = false;
     syncGateReason.value = null;
     hasRecentImport.value = false;
+    syncNeedsSubscription.value = null;
   }
 
   function resetSyncState() {
@@ -256,6 +261,7 @@ export const useSyncStore = defineStore("sync", () => {
     hasRecentImport,
     isSyncGateActive,
     downloadFailed,
+    syncNeedsSubscription,
 
     // 登录状态
     isLoggedIn,

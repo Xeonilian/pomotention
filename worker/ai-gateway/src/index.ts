@@ -189,6 +189,44 @@ async function getEntitlement(env: Env, userId: string): Promise<Entitlement> {
   }
 }
 
+/** 同步权益：只有到期日，没有 plan；不复用一句记的 premium */
+interface SyncEntitlement {
+  until?: string;
+}
+
+async function getSyncEntitlement(env: Env, userId: string): Promise<SyncEntitlement> {
+  const raw = await env.AI_KV.get(`entitlement:sync:${userId}`);
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(raw) as SyncEntitlement;
+    if (parsed.until && new Date(parsed.until).getTime() > Date.now()) {
+      return { until: parsed.until };
+    }
+    return {};
+  } catch {
+    return {};
+  }
+}
+
+/** 同步试用天数：从首次查权益起算 */
+const SYNC_TRIAL_DAYS = 14;
+
+/**
+ * 同步试用：首次查时在 KV 写入起点（幂等），返回试用到期日 = 起点 + 14 天。
+ * 老用户也能拿满 14 天；起点存服务端，清客户端缓存改不了。
+ */
+async function ensureSyncTrial(env: Env, userId: string): Promise<string> {
+  const key = `entitlement:sync:trial:${userId}`;
+  let start = await env.AI_KV.get(key);
+  if (!start) {
+    start = new Date().toISOString();
+    await env.AI_KV.put(key, start);
+  }
+  const end = new Date(start);
+  end.setUTCDate(end.getUTCDate() + SYNC_TRIAL_DAYS);
+  return end.toISOString();
+}
+
 function freeQuota(env: Env): number {
   return parsePositiveInt(env.FREE_MONTHLY_QUOTA, DEFAULT_FREE_MONTHLY_QUOTA);
 }
@@ -349,10 +387,32 @@ async function handleAdminEntitlement(req: Request, env: Env): Promise<Response>
   }
 
   const userId = typeof body.user_id === "string" ? body.user_id : "";
+  if (!userId) {
+    return err(400, "BAD_REQUEST", "user_id required");
+  }
+
+  const scope = body.scope === "sync" ? "sync" : "ai";
+
+  // 同步权益：只有到期日；给 until 写入，不给 until 清除（退款/到期）
+  if (scope === "sync") {
+    const until = typeof body.until === "string" ? body.until.trim() : "";
+    if (until) {
+      if (Number.isNaN(Date.parse(until))) {
+        return err(400, "BAD_REQUEST", "until must be ISO8601");
+      }
+      const record: SyncEntitlement = { until };
+      await env.AI_KV.put(`entitlement:sync:${userId}`, JSON.stringify(record));
+      return json({ ok: true, scope, user_id: userId, entitlement: record });
+    }
+    await env.AI_KV.delete(`entitlement:sync:${userId}`);
+    return json({ ok: true, scope, user_id: userId, entitlement: {} });
+  }
+
+  // 一句记权益：plan + until
   const plan = body.plan === "premium" || body.plan === "free" ? body.plan : null;
   const until = typeof body.until === "string" ? body.until : undefined;
-  if (!userId || !plan) {
-    return err(400, "BAD_REQUEST", "user_id and plan (free|premium) required");
+  if (!plan) {
+    return err(400, "BAD_REQUEST", "plan (free|premium) required for ai scope");
   }
   if (plan === "premium" && until && Number.isNaN(Date.parse(until))) {
     return err(400, "BAD_REQUEST", "until must be ISO8601");
@@ -360,7 +420,19 @@ async function handleAdminEntitlement(req: Request, env: Env): Promise<Response>
 
   const record: Entitlement = plan === "premium" ? { plan, until } : { plan: "free" };
   await env.AI_KV.put(`entitlement:${userId}`, JSON.stringify(record));
-  return json({ ok: true, user_id: userId, entitlement: record });
+  return json({ ok: true, scope, user_id: userId, entitlement: record });
+}
+
+/** 前端查自己的权益：一句记 + 同步（同步含试用到期日，未付费时服务端首次写入起点） */
+async function handleGetEntitlement(req: Request, env: Env): Promise<Response> {
+  const auth = await authenticateUser(req, env);
+  if (auth instanceof Response) return auth;
+
+  const ai = await getEntitlement(env, auth.userId);
+  const sync = await getSyncEntitlement(env, auth.userId);
+  // 未付费时，确保试用起点已写入并返回试用到期日；已付费则不返回试用
+  const trialUntil = sync.until ? undefined : await ensureSyncTrial(env, auth.userId);
+  return json({ user_id: auth.userId, ai, sync: { until: sync.until, trialUntil } });
 }
 
 export default {
@@ -381,6 +453,9 @@ export default {
       }
       if (req.method === "POST" && path === "/capture/map") {
         return await handleCaptureMap(req, env);
+      }
+      if (req.method === "GET" && path === "/v1/entitlement") {
+        return await handleGetEntitlement(req, env);
       }
       if (req.method === "POST" && path === "/admin/entitlement") {
         return await handleAdminEntitlement(req, env);

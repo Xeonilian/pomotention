@@ -8,6 +8,14 @@
       </n-space>
     </div>
 
+    <!-- 云同步有效期倒计时 -->
+    <div v-if="countdown.label" class="sync-countdown">
+      <n-text depth="3" style="font-size: 12px">⏳ {{ countdown.label }}</n-text>
+    </div>
+    <div v-else-if="countdown.expired" class="sync-countdown">
+      <n-text depth="3" style="font-size: 12px">⚠️ 云同步已到期，点顶栏咖啡杯续费</n-text>
+    </div>
+
     <!-- 设备信息 -->
     <div class="device-info">
       <n-text>设备ID: {{ deviceId }}</n-text>
@@ -68,6 +76,7 @@ import { performSync, getRemoteSyncMetadata, isFirstTimeSync, uploadToCloud, dow
 import type { SyncResult } from "@/core/types/Sync";
 import { SyncStatus } from "@/core/types/Sync";
 import { handleFileImport, type ImportReport } from "@/services/data/mergeService";
+import { useSyncCountdown } from "@/composables/billing/useSyncCountdown";
 import { open } from "@tauri-apps/plugin-dialog";
 import { writeTextFile, readDir } from "@tauri-apps/plugin-fs";
 import { join } from "@tauri-apps/api/path";
@@ -82,6 +91,7 @@ const isFirstTime = ref(true);
 const isLoaded = ref(false);
 const importReport = ref<ImportReport | null>(null);
 const syncResult = ref<SyncResult | null>(null);
+const countdown = useSyncCountdown();
 
 // 计算属性
 const showAutoSync = computed(() => isLoaded.value && isFirstTime.value);
@@ -298,6 +308,10 @@ onUnmounted(() => {
   padding: 12px;
   border-radius: 6px;
   font-family: "Courier New", monospace;
+}
+
+.sync-countdown {
+  padding: 0 12px;
 }
 
 .device-info {

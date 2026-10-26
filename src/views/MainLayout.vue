@@ -119,7 +119,7 @@
                 text
                 color="#ffcc5c"
                 class="header-button"
-                @click="showTipDialog = true"
+                @click="showSupportDialog = true"
               >
                 <template #icon>
                   <n-icon>
@@ -236,7 +236,7 @@
         </n-layout-footer>
       </n-layout>
       <DatabaseTransferDialog v-model:show="showDatabaseDialog" />
-      <TipSupportDialog v-model:show="showTipDialog" />
+      <SupportDialog v-model:show="showSupportDialog" />
     </n-config-provider>
   </div>
 </template>
@@ -292,7 +292,8 @@ import {
 } from "@vicons/fluent";
 import PomotentionTimer from "@/components/PomotentionTimer/PomotentionTimer.vue";
 import DatabaseTransferDialog from "@/components/data/DatabaseTransferDialog.vue";
-import TipSupportDialog from "@/components/billing/TipSupportDialog.vue";
+import SupportDialog from "@/components/billing/SupportDialog.vue";
+import { checkSupportPromptDue, advanceSupportPrompt } from "@/core/billing/supportPrompt";
 
 hljs.registerLanguage("javascript", javascript);
 hljs.registerLanguage("typescript", typescript);
@@ -368,7 +369,7 @@ watch(
 );
 
 const showDatabaseDialog = ref(false);
-const showTipDialog = ref(false);
+const showSupportDialog = ref(false);
 const logoutConfirmVisible = ref(false);
 let logoutClickTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -626,6 +627,12 @@ onMounted(async () => {
     // 必须等待 nextTick，确保 v-if 已经把 DOM 渲染出来了
     await nextTick();
     await updateDraggableContainerVisibility(true);
+  }
+
+  // 每月一次的订购/打赏提示：到期则展示并推进下一次
+  if (checkSupportPromptDue()) {
+    showSupportDialog.value = true;
+    advanceSupportPrompt();
   }
 });
 
