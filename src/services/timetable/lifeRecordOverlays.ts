@@ -2,8 +2,10 @@
 // 生活记录投射到 TimeTable：点事件 → 第3列；睡眠段 → 第4列（纯函数，不碰 store）
 import type { Activity } from "@/core/types/Activity";
 import type { DrinkKind, EatCourse, LifeRecord, Task } from "@/core/types/Task";
+import { dayEnergyDayOf, isDayEnergyTask } from "@/core/dayEnergy";
 import { drinkKindLabel, drinkKindOf, eatCourseLabel, getLifeRecordDef, getLifeRecordKind, isClosedLifeSpan, parseLifeRecordPlaceholder, type LifeRecordKind } from "@/core/lifeRecord";
 import { timestampToTimeString } from "@/core/utils";
+import { startOfDay } from "@/core/utils/weekDays";
 import { resolveRecordTime } from "@/services/timetable/taskRecordMarks";
 
 export type LifePointKind = Exclude<LifeRecordKind, "sleep"> | "energy" | "reward";
@@ -158,6 +160,66 @@ function pushSleepClip(
     ongoing: record.endAt == null,
     ...(record.energy != null ? { energy: record.energy } : {}),
   });
+}
+
+export interface OverlayDayIndex {
+  /** 这一天收集 overlay 时需要看的 task（生活桶 + 落在这天的精力/奖赏） */
+  tasksByDay: Map<number, Task[]>;
+  energyTaskByDay: Map<number, Task>;
+}
+
+function calendarDayOf(ts: number): number | null {
+  if (typeof ts !== "number" || !Number.isFinite(ts)) return null;
+  return startOfDay(ts);
+}
+
+/**
+ * 一周的生活 overlay 只扫一遍 taskList。
+ * dayStarts 须是日历零点。生活桶归到所属日，并带进次日（跨夜睡眠）；精力/奖赏按记录时刻归日。
+ */
+export function indexOverlayTasks(
+  tasks: Task[],
+  dayStarts: number[],
+  getActivity: (activityId: number) => Activity | undefined,
+): OverlayDayIndex {
+  const daySet = new Set(dayStarts);
+  const tasksByDay = new Map<number, Task[]>();
+  for (const day of dayStarts) tasksByDay.set(day, []);
+  const energyTaskByDay = new Map<number, Task>();
+
+  for (const task of tasks) {
+    if (task.deleted) continue;
+    if (isDayEnergyTask(task)) {
+      const energyDay = dayEnergyDayOf(task);
+      if (energyDay != null && daySet.has(energyDay) && !energyTaskByDay.has(energyDay)) {
+        energyTaskByDay.set(energyDay, task);
+      }
+    }
+
+    const hitDays = new Set<number>();
+    if (task.lifeRecords?.length) {
+      const activity = getActivity(task.sourceId);
+      const parsed = parseLifeRecordPlaceholder(task.activityTitle ?? activity?.title);
+      const kind = parsed?.kind ?? getLifeRecordKind(activity);
+      const owner =
+        parsed?.dayStart ??
+        (kind ? calendarDayOf(Number.isFinite(task.sourceId) ? task.sourceId : task.id) : null);
+      if (owner != null && daySet.has(owner)) hitDays.add(owner);
+      // 只有睡眠会画到次日早晨
+      if (owner != null && kind === "sleep") {
+        const nextDay = owner + DAY_MS;
+        if (daySet.has(nextDay)) hitDays.add(nextDay);
+      }
+    }
+    const scoreRecords = [...(task.energyRecords ?? []), ...(task.rewardRecords ?? [])];
+    for (const record of scoreRecords) {
+      const day = calendarDayOf(record.recordedAt ?? record.id);
+      if (day != null && daySet.has(day)) hitDays.add(day);
+    }
+    for (const day of hitDays) tasksByDay.get(day)?.push(task);
+  }
+
+  return { tasksByDay, energyTaskByDay };
 }
 
 /** 日桶归属日：标题优先；旧数据用 sourceId 落在显示日或前一日的窗口 */

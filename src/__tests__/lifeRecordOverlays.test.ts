@@ -4,10 +4,14 @@ import { TAG_ID_LIFE_DRINK, TAG_ID_LIFE_SLEEP } from "@/core/constants";
 import type { Activity } from "@/core/types/Activity";
 import type { Task } from "@/core/types/Task";
 import { timestampToTimeString } from "@/core/utils";
+import { lifeRecordPlaceholderTitle } from "@/core/lifeRecord";
+import { dayEnergyPlaceholderTitle } from "@/core/dayEnergy";
+import { startOfDay } from "@/core/utils/weekDays";
 import {
   collectLifeRecordOverlays,
   formatLifePointCaption,
   formatLifeSleepCaption,
+  indexOverlayTasks,
   type LifePointMark,
   type LifeSleepRange,
 } from "@/services/timetable/lifeRecordOverlays";
@@ -363,5 +367,73 @@ describe("collectLifeRecordOverlays 精力点", () => {
     expect(points).toHaveLength(1);
     expect(points[0]?.kind).toBe("drink");
     expect(points[0]?.amountMl).toBe(250);
+  });
+});
+
+describe("indexOverlayTasks", () => {
+  it("按日分组后的收集结果与整表扫描一致", () => {
+    const d0 = startOfDay(new Date(2026, 9, 16).getTime());
+    const d1 = d0 + DAY;
+    const days = [d0, d1];
+    const sleepStart = d0 + 22.5 * 3600_000;
+    const sleepEnd = d1 + 7 * 3600_000;
+    const sleepHost = act(d0 + 1, TAG_ID_LIFE_SLEEP);
+    const sleepTask = task(d0 + 2, sleepHost.id, [{ id: sleepStart, recordedAt: sleepStart, endAt: sleepEnd }]);
+    sleepTask.activityTitle = lifeRecordPlaceholderTitle("sleep", d0);
+    const drinkAt = d0 + 15 * 3600_000;
+    const drinkHost = act(d0 + 3, TAG_ID_LIFE_DRINK);
+    const drinkTask = task(d0 + 4, drinkHost.id, [{ id: drinkAt, recordedAt: drinkAt, amountMl: 200 }]);
+    drinkTask.activityTitle = lifeRecordPlaceholderTitle("drink", d0);
+    const todo: Task = {
+      ...task(d1 + 5, d1 + 6, []),
+      energyRecords: [{ id: 4, value: 7, recordedAt: d1 + 10 * 3600_000, description: "做" }],
+      rewardRecords: [{ id: 5, value: 9, recordedAt: d0 + 11 * 3600_000 }],
+    };
+    const energyHost: Task = {
+      ...task(d1 + 8, d1 + 9, []),
+      activityTitle: dayEnergyPlaceholderTitle(d1),
+      energyRecords: [{ id: 6, value: 8, recordedAt: d1 + 8 * 3600_000 }],
+      rewardRecords: [],
+    };
+    const tasks = [sleepTask, drinkTask, todo, energyHost];
+    const activities = new Map([
+      [sleepHost.id, sleepHost],
+      [drinkHost.id, drinkHost],
+    ]);
+    const getActivity = (id: number) => activities.get(id);
+    const indexed = indexOverlayTasks(tasks, days, getActivity);
+
+    expect(indexed.energyTaskByDay.get(d1)?.id).toBe(energyHost.id);
+
+    for (const day of days) {
+      const full = collectLifeRecordOverlays({
+        dayStart: day,
+        dayEnd: day + DAY,
+        timeRange: { start: day, end: day + DAY },
+        tasks,
+        getActivity,
+        getDayEnergyTask: (start) => tasks.find((t) => t.activityTitle === dayEnergyPlaceholderTitle(start)),
+        now: d1 + 12 * 3600_000,
+        minGapMs: 60_000,
+        openSleepEnd: "dayOfStart",
+      });
+      const grouped = collectLifeRecordOverlays({
+        dayStart: day,
+        dayEnd: day + DAY,
+        timeRange: { start: day, end: day + DAY },
+        tasks: indexed.tasksByDay.get(day) ?? [],
+        getActivity,
+        getDayEnergyTask: (start) => indexed.energyTaskByDay.get(start),
+        now: d1 + 12 * 3600_000,
+        minGapMs: 60_000,
+        openSleepEnd: "dayOfStart",
+      });
+      const stamp = (points: LifePointMark[], sleeps: LifeSleepRange[]) =>
+        [
+          ...points.map((p) => `${p.kind}:${p.recordId}:${p.time}:${p.energy ?? ""}:${p.reward ?? ""}`),
+          ...sleeps.map((s) => `sleep:${s.recordId}:${s.start}:${s.end}`),
+        ].sort();
+      expect(stamp(grouped.points, grouped.sleeps)).toEqual(stamp(full.points, full.sleeps));
+    }
   });
 });
