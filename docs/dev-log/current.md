@@ -14,7 +14,7 @@
 | **蓝图** | 底座 [`8-ai-gateway.md`](./blueprint/8-ai-gateway.md)；能力 [`7-capture.md`](./blueprint/7-capture.md) |
 | **分支** | `dev` |
 | **更新** | 2026-10-26 |
-| **停在哪** | **云同步收费底座已合并进 main**（`e1e4d0cb`，PR #142 squash）。剩**部署前手工**：填生产 env（`VITE_AFDIAN_SYNC_PLAN_MONTH`/`YEAR`）、部署 Worker、演练人工开通；**2026-11** 年付方案改回 99 元/年 + 改 `SupportDialog` 文案。Webhook 自动开通仍下一关。 |
+| **停在哪** | **云同步收费底座已合并进 main**（`e1e4d0cb`，PR #142 squash）。Worker 已部署（`pomotention-ai-gateway.zhengws.workers.dev`，Version `a31453d3`）。**已知问题**：workers.dev 在中国网络不通 → 前端查权益 fail-open → **付费墙对连不上的用户永久免费（不是 14 天）**。决定：**先上线**，在"真有付费用户"前补 reachability（给 Worker 绑 Cloudflare 自定义域名，或把权益挪到 Supabase）。剩**部署前手工**：填生产 env（`VITE_AFDIAN_SYNC_PLAN_MONTH`/`YEAR`）、演练人工开通（本地 `pnpm gateway:dev`）。**2026-11** 年付方案改回 99 元/年 + 改 `SupportDialog` 文案。Webhook 自动开通仍下一关。 |
 
 ---
 
