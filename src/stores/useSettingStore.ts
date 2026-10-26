@@ -93,6 +93,12 @@ export interface GlobalSettings {
   drinkCupMl: number;
   /** 喝水默认日目标 ml（新建/打开日桶时写入 task 快照） */
   drinkDailyGoalMl: number;
+  /** iOS「添加到主屏幕」横幅已关闭 */
+  pwaIosInstallDismissed: boolean;
+  /** 支持提示的首次使用日（ISO）；空串表示还没记过 */
+  supportFirstUseDate: string;
+  /** 支持提示的下次弹出日（ISO）；空串表示还没排期 */
+  supportNextPromptDate: string;
   // 以后新增全局设置项就在这里补充
 }
 
@@ -156,6 +162,9 @@ const defaultSettings: GlobalSettings = {
   dayTodoSortMode: "priority",
   drinkCupMl: 250,
   drinkDailyGoalMl: 2000,
+  pwaIosInstallDismissed: false,
+  supportFirstUseDate: "",
+  supportNextPromptDate: "",
   ai: {
     activeId: 1,
     systemPrompt:
@@ -212,9 +221,49 @@ const MAX_AUDIO_DEBUG_LINES = 200;
 
 const SETTING_LAST_MODIFIED_KEY = "settingLastModified";
 
+/** 曾经单独放在 localStorage 的键；抄进 settings 后删掉，避免再散落一条 */
+const LEGACY_PWA_IOS_DISMISSED_KEY = "pwa-ios-install-dismissed";
+const LEGACY_SUPPORT_FIRST_USE_KEY = "pomotention.support.firstUseDate";
+const LEGACY_SUPPORT_NEXT_PROMPT_KEY = "pomotention.support.nextPromptDate";
+
+function absorbLegacyClientFlags(target: GlobalSettings): void {
+  if (typeof localStorage === "undefined") return;
+  try {
+    let copied = false;
+    if (!target.pwaIosInstallDismissed && localStorage.getItem(LEGACY_PWA_IOS_DISMISSED_KEY) === "1") {
+      target.pwaIosInstallDismissed = true;
+      copied = true;
+    }
+    if (!target.supportFirstUseDate) {
+      const first = localStorage.getItem(LEGACY_SUPPORT_FIRST_USE_KEY);
+      if (first) {
+        target.supportFirstUseDate = first;
+        copied = true;
+      }
+    }
+    if (!target.supportNextPromptDate) {
+      const next = localStorage.getItem(LEGACY_SUPPORT_NEXT_PROMPT_KEY);
+      if (next) {
+        target.supportNextPromptDate = next;
+        copied = true;
+      }
+    }
+    localStorage.removeItem(LEGACY_PWA_IOS_DISMISSED_KEY);
+    localStorage.removeItem(LEGACY_SUPPORT_FIRST_USE_KEY);
+    localStorage.removeItem(LEGACY_SUPPORT_NEXT_PROMPT_KEY);
+    if (copied) {
+      localStorage.setItem(STORAGE_KEYS.GLOBAL_SETTINGS, JSON.stringify(target));
+    }
+  } catch {
+    // 读不到旧键就保持 settings 里的值
+  }
+}
+
 export const useSettingStore = defineStore("setting", () => {
   // 所有设置统一存于 settings
-  const settings = ref<GlobalSettings>(loadFromStorage(STORAGE_KEYS.GLOBAL_SETTINGS, defaultSettings));
+  const loadedSettings = loadFromStorage(STORAGE_KEYS.GLOBAL_SETTINGS, defaultSettings);
+  absorbLegacyClientFlags(loadedSettings);
+  const settings = ref<GlobalSettings>(loadedSettings);
 
   // 旧存档的 style 没有休息条颜色，补上默认绿
   if (!settings.value.style.breakBarColor) {
@@ -307,8 +356,14 @@ export const useSettingStore = defineStore("setting", () => {
 
   function resetSettings(keys?: SettingsKey | SettingsKey[]) {
     if (!keys) {
-      // 重置全部
-      settings.value = JSON.parse(JSON.stringify(defaultSettings));
+      // 重置全部。横幅关闭和支持提示日期不是界面设置，留在原值
+      const { pwaIosInstallDismissed, supportFirstUseDate, supportNextPromptDate } = settings.value;
+      settings.value = {
+        ...JSON.parse(JSON.stringify(defaultSettings)),
+        pwaIosInstallDismissed,
+        supportFirstUseDate,
+        supportNextPromptDate,
+      };
       return;
     }
 

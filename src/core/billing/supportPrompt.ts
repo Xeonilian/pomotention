@@ -1,7 +1,7 @@
 // src/core/billing/supportPrompt.ts
-// 每月一次的订购/打赏提示。锚在首次提示那天，不随打开日滑动。
-const STORAGE_KEY = "pomotention.support.nextPromptDate";
-const FIRST_USE_KEY = "pomotention.support.firstUseDate";
+// 每月一次的订购/打赏提示。锚在首次提示那天，不随打开日滑动。日期记在 globalSettings。
+import { useSettingStore } from "@/stores/useSettingStore";
+
 /** 首次提示：用满 7 天（一周）后弹，之后每月一次 */
 const FIRST_PROMPT_DELAY_DAYS = 7;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -20,20 +20,20 @@ function addMonthsClamped(d: Date, months: number): Date {
 
 /** 是否到了提示日。首次调用会写入 firstUseDate 与 nextPromptDate（首用 +7 天） */
 export function checkSupportPromptDue(): boolean {
-  if (typeof localStorage === "undefined") return false;
+  const settings = useSettingStore().settings;
   const now = Date.now();
 
-  let nextStr = localStorage.getItem(STORAGE_KEY);
+  let nextStr = settings.supportNextPromptDate;
   if (!nextStr) {
-    let firstStr = localStorage.getItem(FIRST_USE_KEY);
+    let firstStr = settings.supportFirstUseDate;
     if (!firstStr) {
       firstStr = new Date(now).toISOString();
-      localStorage.setItem(FIRST_USE_KEY, firstStr);
+      settings.supportFirstUseDate = firstStr;
     }
     const firstTs = Date.parse(firstStr);
     const baseTs = Number.isNaN(firstTs) ? now : firstTs;
     nextStr = new Date(baseTs + FIRST_PROMPT_DELAY_DAYS * DAY_MS).toISOString();
-    localStorage.setItem(STORAGE_KEY, nextStr);
+    settings.supportNextPromptDate = nextStr;
   }
 
   const nextTs = Date.parse(nextStr);
@@ -43,8 +43,8 @@ export function checkSupportPromptDue(): boolean {
 
 /** 提示已展示后推进下一次。锚不变：从当前 nextPromptDate +1 日历月，过期多月则逐月推到未来 */
 export function advanceSupportPrompt(): void {
-  if (typeof localStorage === "undefined") return;
-  const nextStr = localStorage.getItem(STORAGE_KEY);
+  const settings = useSettingStore().settings;
+  const nextStr = settings.supportNextPromptDate;
   if (!nextStr) return;
   const next = new Date(nextStr);
   if (Number.isNaN(next.getTime())) return;
@@ -52,5 +52,5 @@ export function advanceSupportPrompt(): void {
   while (target.getTime() <= Date.now()) {
     target = addMonthsClamped(target, 1);
   }
-  localStorage.setItem(STORAGE_KEY, target.toISOString());
+  settings.supportNextPromptDate = target.toISOString();
 }
