@@ -1,18 +1,14 @@
 // src/services/sync/taskSync.ts
-// src/services/sync/taskSync.ts
 
 import { supabase } from "@/core/services/supabase";
 import { getCurrentUser } from "@/core/services/authService";
 import { BaseSyncService } from "./baseSyncService";
-import { saveTasks } from "@/services/data/localStorageService";
+import type { SyncSkip } from "./plannerFieldMerge";
 import type { Activity } from "@/core/types/Activity";
 import type { Task, EnergyRecord, RewardRecord, InterruptionRecord, LifeRecord } from "@/core/types/Task";
 import type { Database } from "@/core/types/Database";
 
 type CloudTaskInsert = Database["public"]["Tables"]["tasks"]["Insert"];
-
-/** 生活记录列上线后，一次性把「本地已有杯子」的已 synced 桶标脏补传（v3：空壳不标，避免空数组盖云） */
-const LIFE_RECORDS_BACKFILL_KEY = "pomotention_life_records_cloud_backfill_v3";
 
 /**
  * RPC 返回的完整格式（带冗余字段）
@@ -59,38 +55,6 @@ export class TaskSyncService extends BaseSyncService<Task, CloudTaskInsert> {
       return false;
     }
     return true;
-  }
-
-  /**
-   * 列上线前「已记杯却仍 synced」不会进上传队列；仅对本地非空 lifeRecords 标脏补传。
-   * 空壳不标：首创上传走正常 create；补传空数组会盖掉云端已有杯子。
-   */
-  private ensureLifeRecordsBackfill(): void {
-    if (typeof localStorage === "undefined") return;
-    if (localStorage.getItem(LIFE_RECORDS_BACKFILL_KEY)) return;
-
-    const list = this.getListArray();
-    let touched = false;
-    const now = Date.now();
-
-    for (const task of list) {
-      if (task.deleted) continue;
-      if ((task.lifeRecords?.length ?? 0) === 0) continue;
-      if (!task.synced) continue;
-      task.synced = false;
-      task.lastModified = now;
-      touched = true;
-    }
-
-    localStorage.setItem(LIFE_RECORDS_BACKFILL_KEY, "1");
-    if (touched) {
-      saveTasks(list);
-    }
-  }
-
-  getPendingUploadItems(): Task[] {
-    this.ensureLifeRecordsBackfill();
-    return super.getPendingUploadItems();
   }
 
   /**
@@ -147,6 +111,7 @@ export class TaskSyncService extends BaseSyncService<Task, CloudTaskInsert> {
     downloaded: number;
     fetched?: number;
     cloudDeleted?: number;
+    skipped?: SyncSkip[];
   }> {
     try {
       if (!supabase) {
@@ -208,13 +173,14 @@ export class TaskSyncService extends BaseSyncService<Task, CloudTaskInsert> {
       const fetched = data.length;
       const cloudDeleted = data.filter((i: any) => i.deleted).length;
       if (data.length === 0) {
-        return { success: true, downloaded: 0, fetched, cloudDeleted };
+        return { success: true, downloaded: 0, fetched, cloudDeleted, skipped: [] };
       }
 
       // 3. 直接操作 BaseSyncService 的响应式列表（解包 ref 得到数组）
       const localItems = this.getListArray();
       const localMap = this.getMap();
       let downloadedCount = 0;
+      const skipped: SyncSkip[] = [];
 
       for (const cloudItem of data) {
         // RPC 返回 id 为 bigint(number)
@@ -250,7 +216,7 @@ export class TaskSyncService extends BaseSyncService<Task, CloudTaskInsert> {
 
         // --- C. 本地存在：更新 ---
         if (!localItem.synced) {
-          // console.log(`🔒 [tasks] ID=${cloudId} 本地有未同步修改，跳过下载`);
+          skipped.push({ id: cloudId, reason: "unsynced", detail: "本地未同步" });
           continue;
         }
 
@@ -279,11 +245,12 @@ export class TaskSyncService extends BaseSyncService<Task, CloudTaskInsert> {
           Object.assign(localItem, updatedItem);
 
           downloadedCount++;
-          // console.log(`🔄 [tasks] 更新 ID=${cloudId}`);
+        } else {
+          skipped.push({ id: cloudId, reason: "not-newer", detail: "云端不比本地新" });
         }
       }
 
-      return { success: true, downloaded: downloadedCount, fetched, cloudDeleted };
+      return { success: true, downloaded: downloadedCount, fetched, cloudDeleted, skipped };
     } catch (error: any) {
       console.error("下载 tasks 失败:", error);
       return { success: false, error: error.message, downloaded: 0, fetched: 0, cloudDeleted: 0 };

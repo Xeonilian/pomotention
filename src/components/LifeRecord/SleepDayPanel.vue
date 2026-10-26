@@ -79,13 +79,29 @@
             v-if="lastRecord"
             tone="sleep"
             expandable
+            :launch-only="isMobile"
             :model-value="lastRecord.description ?? ''"
             placeholder="dream..."
             @update:model-value="onNoteBarInput"
-            @expand="chartDreamOpen = true"
+            @expand="onChartDreamExpand"
             @collapse="onChartDreamClose"
           />
         </div>
+      </div>
+    </template>
+    <template #after-chart>
+      <div v-if="isMobile && chartDreamOpen && lastRecord" class="sleep-day-dream">
+        <button type="button" class="sleep-day-dream__close" title="关闭" @pointerdown.prevent="onChartDreamClose">
+          <n-icon :size="16"><Dismiss20Regular /></n-icon>
+        </button>
+        <textarea
+          ref="chartDreamTextareaRef"
+          class="sleep-day-dream__editor"
+          :value="lastRecord.description ?? ''"
+          placeholder="梦什么"
+          rows="6"
+          @input="onChartDreamInput"
+        />
       </div>
     </template>
     <template #table>
@@ -226,6 +242,7 @@ import {
 } from "@vicons/fluent";
 import { isClosedLifeSpan } from "@/core/lifeRecord";
 import type { LifeRecord } from "@/core/types/Task";
+import { useDevice } from "@/composables/platform/useDevice";
 import { useLifeRecordEditor } from "@/composables/lifeRecord/useLifeRecordEditor";
 import LifeRecordChartNoteBar from "@/components/LifeRecord/LifeRecordChartNoteBar.vue";
 import LifeRecordScorePop from "@/components/LifeRecord/LifeRecordScorePop.vue";
@@ -248,10 +265,12 @@ const {
   changeEnergy,
   remove: removeRecord,
 } = useLifeRecordEditor(() => props.taskId, "sleep", { embedded: () => props.embedded });
+const { isMobile } = useDevice();
 const lastRecord = computed(() => records.value[records.value.length - 1] ?? null);
 const closedCount = computed(() => records.value.filter(isClosedLifeSpan).length);
 const askEndOpen = ref(false);
 const chartDreamOpen = ref(false);
+const chartDreamTextareaRef = ref<HTMLTextAreaElement | null>(null);
 const dreamRecordId = ref<number | null>(null);
 const dreamTextareaRef = ref<HTMLTextAreaElement | null>(null);
 const dreamRecord = computed(() => {
@@ -292,10 +311,24 @@ function onNoteBarInput(v: string) {
   const last = lastRecord.value;
   if (last) changeDescription(last, v);
 }
+function onChartDreamInput(e: Event) {
+  onNoteBarInput((e.target as HTMLTextAreaElement).value);
+}
+function onChartDreamExpand() {
+  chartDreamOpen.value = true;
+}
 function onChartDreamClose() {
   chartDreamOpen.value = false;
   flushDescriptions();
 }
+watch(chartDreamOpen, async (open) => {
+  if (!open || !isMobile.value) return;
+  await nextTick();
+  chartDreamTextareaRef.value?.focus({ preventScroll: true });
+});
+watch(lastRecord, (rec) => {
+  if (!rec && chartDreamOpen.value) onChartDreamClose();
+});
 function onActivateDream(record: LifeRecord) {
   if (dreamRecordId.value === record.id) {
     closeDream();

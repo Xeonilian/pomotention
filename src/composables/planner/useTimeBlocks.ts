@@ -355,7 +355,7 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
     const heightPx = (endMinute - startMinute) * props.effectivePxPerMinute;
     return {
       position: "absolute",
-      left: isMobile.value ? "22px" : "22px",
+      left: isMobile.value ? "20px" : "22px",
       top: `${topPx}px`,
       width: isMobile.value ? "11px" : "13px",
       height: `${heightPx}px`,
@@ -375,7 +375,7 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
 
     return {
       position: "absolute",
-      left: isMobile.value ? "40px" : "42px",
+      left: isMobile.value ? "37px" : "42px",
       width: "13px",
       top: `${topPx}px`,
       height: `${heightPx}px`,
@@ -495,7 +495,7 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
     const col = isMobile.value ? mark.lane % 2 : mark.lane;
     const row = isMobile.value ? Math.floor(mark.lane / 2) : 0;
     const step = isMobile.value ? 1.1 : 1.2;
-    const left = (isMobile.value ? 54 : 78) + col * markW * step;
+    const left = (isMobile.value ? 52 : 78) + col * markW * step;
     return {
       position: "absolute",
       left: `${left}px`,
@@ -532,38 +532,25 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
   const lifeSleepRanges = computed(() => lifeRecordOverlays.value.sleeps);
 
   function getLifePointMarkStyle(mark: LifePointMark): CSSProperties {
-    const markW = 14;
-    const markH = 14;
+    const markW = 16;
+    const markH = 16;
     const topPx = ((mark.time - props.timeRange.start) / 60000) * props.effectivePxPerMinute - markH / 2;
-
-    let left: number | undefined;
-    let right: number | undefined;
-    let topExtra = 0;
-    if (isMobile.value) {
-      // 手机：靠右两列，lane 从右往左，满 2 列换行
-      const col = mark.lane % 2;
-      const row = Math.floor(mark.lane / 2);
-      right = 2 + col * (markW + 1);
-      topExtra = row * (markH + 1);
-    } else {
-      // 桌面：第4列中心对齐（+1px 光学微调），同刻并排向右
-      const col4Left = 75;
-      const col4Width = 8;
-      const centerX = col4Left + col4Width / 2;
-      left = centerX - markW / 2 + 1 + mark.lane * (markW + 1);
-    }
+    // 喝 / 吃 / 活动钉在第三列中线（特殊标记，left 40/42、宽 13），不按 lane 横移
+    const colLeft = isMobile.value ? 37 : 42;
+    const colWidth = 13;
+    const left = colLeft + colWidth / 2 - markW / 2;
 
     return {
       position: "absolute",
-      ...(right !== undefined ? { right: `${right}px` } : { left: `${left}px` }),
-      top: `${topPx + topExtra}px`,
+      left: `${left}px`,
+      top: `${topPx}px`,
       width: `${markW}px`,
       height: `${markH}px`,
       color: mark.colorVar,
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      zIndex: 14 + mark.lane,
+      zIndex: 36,
       cursor: "pointer",
       userSelect: "none",
     };
@@ -647,7 +634,7 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
 
     return {
       position: "absolute",
-      left: isMobile.value ? "22px" : "22px",
+      left: isMobile.value ? "20px" : "22px",
       top: `${topPx}px`,
       width: isMobile.value ? "11px" : "13px",
       height: `${heightPx}px`,
@@ -704,7 +691,7 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
 
     return {
       position: "absolute",
-      left: isMobile.value ? "40px" : "42px", // 第三列，top 计算不变
+      left: isMobile.value ? "37px" : "42px", // 第三列，top 计算不变
       width: isMobile.value ? "13px" : "13px",
       top: `${centerTopPx - 6}px`, // emoji中心对齐到计算的时间位置
       height: isMobile.value ? "12px" : "12px",

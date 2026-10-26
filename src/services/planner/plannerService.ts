@@ -20,6 +20,7 @@ export function updateScheduleStatus(id: number, doneTime: number | undefined, s
   const schedule = scheduleById.value.get(id);
   if (schedule) {
     schedule.status = validStatus as "" | "done" | "delayed" | "ongoing" | "cancelled" | "suspended";
+    schedule.statusCleared = validStatus === "";
     schedule.doneTime = schedule.doneTime ? schedule.doneTime : doneTime;
     schedule.synced = false;
     schedule.lastModified = Date.now();
@@ -48,6 +49,7 @@ export function updateTodoStatus(id: number, doneTime: number | undefined, statu
   const todo = todoById.value.get(id);
   if (todo) {
     todo.status = validStatus as "" | "done" | "delayed" | "ongoing" | "cancelled" | "suspended";
+    todo.statusCleared = validStatus === "";
     todo.doneTime = todo.doneTime ? todo.doneTime : doneTime;
     todo.synced = false;
     todo.lastModified = Date.now();

@@ -8,9 +8,13 @@ export interface Schedule {
   activityDueRange: [number | null, string]; // 第一个是开始时间戳，第二个是持续min
   taskId?: number; // 只需1个task
   status?: "" | "delayed" | "ongoing" | "cancelled" | "done" | "suspended";
+  /** 用户主动取消勾选，上传时写成 cleared */
+  statusCleared?: boolean;
   projectName?: string;
   location?: string;
   doneTime?: number;
+  /** 用户主动清空完成时间，上传时写成 -1 */
+  doneTimeCleared?: boolean;
   isUntaetigkeit?: boolean;
   interruption?: "I" | "E";
   deleted: boolean;

@@ -28,7 +28,7 @@
           v-if="line.path"
           :points="line.path"
           fill="none"
-          stroke="var(--color-text-primary)"
+          :stroke="line.kind === 'energy' ? 'var(--color-text-secondary)' : 'var(--color-text-primary)'"
           stroke-width="0.8"
           stroke-linejoin="round"
           stroke-linecap="round"

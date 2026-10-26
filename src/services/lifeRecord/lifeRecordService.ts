@@ -61,25 +61,32 @@ export type AppendLifeRecordOptions = {
   /** 只新增一行，不把未闭合段写成结束时间 */
   alwaysNew?: boolean;
 };
+function isTitledLifeRecordTask(
+  task: Task,
+  placeholder: string,
+  activityById?: Map<number, Activity>,
+): boolean {
+  if (task.deleted) return false;
+  if (task.activityTitle === placeholder) return true;
+  return activityById?.get(task.sourceId)?.title === placeholder;
+}
+
 /**
- * 当天该 kind 的日桶 task。按标题 daily_<kind>_<日零点> 取日，和精力桶一样。
- * 旧数据没有占位标题时，才用 activity tag + sourceId 落在哪一天兜底。
+ * 当天该 kind 的全部日桶。未同步时各端会各建一只，标题相同、id 不同，同步后都留着。
+ * 按标题 daily_<kind>_<日零点> 取日；没有标题命中时，才用 activity tag + sourceId 落在哪一天兜底。
+ * 顺序与 task 列表一致。
  */
-export function findLifeRecordTaskForDay(
+export function findLifeRecordTasksForDay(
   tasks: Task[],
   kind: LifeRecordKind,
   dayStart: number,
   activityById?: Map<number, Activity>,
-): Task | undefined {
+): Task[] {
   const placeholder = lifeRecordPlaceholderTitle(kind, dayStart);
-  const byTitle = tasks.find((task) => {
-    if (task.deleted) return false;
-    if (task.activityTitle === placeholder) return true;
-    return activityById?.get(task.sourceId)?.title === placeholder;
-  });
-  if (byTitle) return byTitle;
-  if (!activityById) return undefined;
-  return tasks.find((task) => {
+  const byTitle = tasks.filter((task) => isTitledLifeRecordTask(task, placeholder, activityById));
+  if (byTitle.length > 0) return byTitle;
+  if (!activityById) return [];
+  return tasks.filter((task) => {
     if (task.deleted) return false;
     const activity = activityById.get(task.sourceId);
     if (!activity || activity.deleted) return false;
@@ -87,6 +94,35 @@ export function findLifeRecordTaskForDay(
     if (getLifeRecordKind(activity) !== kind) return false;
     return task.sourceId >= dayStart && task.sourceId < dayStart + DAY_MS;
   });
+}
+
+/** 当天该 kind 的第一只日桶。建桶去重用；展示要合并全部桶。 */
+export function findLifeRecordTaskForDay(
+  tasks: Task[],
+  kind: LifeRecordKind,
+  dayStart: number,
+  activityById?: Map<number, Activity>,
+): Task | undefined {
+  return findLifeRecordTasksForDay(tasks, kind, dayStart, activityById)[0];
+}
+
+/** 多桶记录按 id 去重（先出现的保留），再按 recordedAt 排序。不写回任何一只桶。 */
+export function mergeBucketLifeRecords(tasks: readonly Task[]): LifeRecord[] {
+  const byId = new Map<number, LifeRecord>();
+  for (const task of tasks) {
+    for (const record of task.lifeRecords ?? []) {
+      if (!byId.has(record.id)) byId.set(record.id, record);
+    }
+  }
+  return [...byId.values()].sort((a, b) => a.recordedAt - b.recordedAt || a.id - b.id);
+}
+
+/** 记录落在哪一只桶上；找不到时用 fallback（追加目标） */
+export function lifeRecordOwnerTaskId(tasks: readonly Task[], recordId: number, fallback: number): number {
+  for (const task of tasks) {
+    if (task.lifeRecords?.some((record) => record.id === recordId)) return task.id;
+  }
+  return fallback;
 }
 /** 单独补建 lifeRecord 的 task（行在但 task 缺失的异常兜底） */
 export function buildLifeRecordTask(activityId: number, title: string, options?: BuildLifeRecordOptions): Task {

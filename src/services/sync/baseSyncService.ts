@@ -2,6 +2,7 @@
 
 import { supabase } from "@/core/services/supabase";
 import { getCurrentUser } from "@/core/services/authService";
+import type { SyncSkip } from "./plannerFieldMerge";
 
 /**
  * 可同步的实体接口（本地数据必须有这些字段）
@@ -235,6 +236,7 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
     fetched?: number;
     /** 云端返回中 deleted=true 的条数，用于诊断验证「未 applied 是否全是已删除」 */
     cloudDeleted?: number;
+    skipped?: SyncSkip[];
   }> {
     try {
       if (!supabase) {
@@ -295,13 +297,14 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
       const fetched = data.length;
       const cloudDeleted = data.filter((i: any) => i.deleted).length;
       if (data.length === 0) {
-        return { success: true, downloaded: 0, fetched, cloudDeleted };
+        return { success: true, downloaded: 0, fetched, cloudDeleted, skipped: [] };
       }
 
       const isFullDownload = lastSyncTimestamp === 0;
       const localItems = this.getListArray();
       const localMap = this.getMap();
       let downloadedCount = 0;
+      const skipped: SyncSkip[] = [];
 
       for (const cloudItem of data) {
         const cloudId = this.getCloudId(cloudItem as TCloud);
@@ -343,7 +346,7 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
 
         // 3. 本地存在：增量时如有未同步修改则跳过；全量时直接放行
         if (!isFullDownload && !localItem.synced) {
-          // console.log(`🔒 [${this.tableName}] ID=${cloudId} 本地有未同步修改，跳过下载`);
+          skipped.push({ id: cloudId, reason: "unsynced", detail: "本地未同步" });
           continue;
         }
 
@@ -359,12 +362,12 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
           downloadedCount++;
           // console.log(`🔄 [${this.tableName}] 更新 ID=${cloudId}`);
         } else {
-          // console.log(`⏭️ [${this.tableName}] ID=${cloudId} 云端无变化，跳过`);
+          skipped.push({ id: cloudId, reason: "not-newer", detail: "云端不比本地新" });
         }
       }
 
       // console.log(`✅ [${this.tableName}] 下载完成，更新 ${downloadedCount} 条数据`);
-      return { success: true, downloaded: downloadedCount, fetched, cloudDeleted };
+      return { success: true, downloaded: downloadedCount, fetched, cloudDeleted, skipped };
     } catch (error: any) {
       console.error(`❌ [${this.tableName}] 下载失败:`, error);
       return { success: false, error: error.message, downloaded: 0, fetched: 0, cloudDeleted: 0 };

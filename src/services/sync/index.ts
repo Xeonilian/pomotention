@@ -14,9 +14,11 @@ import { useSyncStore, runBeforeSyncHook } from "@/stores/useSyncStore";
 import { useDataStore } from "@/stores/useDataStore";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { isSupabaseEnabled } from "@/core/services/supabase";
+import { getSyncEntitlement } from "@/core/billing/entitlement";
 import { SettingsSyncService } from "./settingsSync";
 import { BaseSyncService } from "./baseSyncService";
 import { findActiveCountLeaks, type ActiveCountRow } from "./completenessProbe";
+import { formatDownloadDetails, isTimeoutMessage, type SyncSkip } from "./plannerFieldMerge";
 
 const shouldLogSyncDebug = ["1", "true"].includes(String(import.meta.env.VITE_SYNC_DEBUG_LOG ?? "").trim().toLowerCase());
 function syncDebugLog(...args: unknown[]) {
@@ -146,7 +148,7 @@ interface SyncResult {
   errors: string[];
   count: number;
   /** 各实体：从 DB 拉取条数 / 实际写入条数 / 云端 deleted 条数（诊断用） */
-  details?: { name: string; fetched: number; downloaded: number; cloudDeleted?: number }[];
+  details?: { name: string; fetched: number; downloaded: number; cloudDeleted?: number; skipped?: SyncSkip[] }[];
 }
 
 const CHILD_SERVICES_WITH_ACTIVITY_FK = new Set(["Todos", "Schedules", "Tasks", "Ledger"]);
@@ -190,11 +192,6 @@ function markActivitiesUnsynced(activityIds: number[]): void {
  * 内部上传逻辑
  */
 async function _internalUpload(isRetry = false): Promise<SyncResult> {
-  // 新增：10秒超时兜底
-  const timeoutPromise = new Promise<SyncResult>((_, reject) => {
-    setTimeout(() => reject(new Error("上传操作超时")), 10000);
-  });
-
   const uploadPromise = new Promise<SyncResult>(async (resolve) => {
     const errors: string[] = [];
     let uploaded = 0;
@@ -257,7 +254,7 @@ async function _internalUpload(isRetry = false): Promise<SyncResult> {
   });
 
   try {
-    const result = await Promise.race([uploadPromise, timeoutPromise]);
+    const result = await uploadPromise;
     if (!isRetry && result.errors.some(isActivityFkErrorMessage)) {
       markActivitiesUnsynced(collectPendingChildActivityIds());
       const activityService = syncServices.find((s) => s.name === "Activities");
@@ -276,12 +273,7 @@ async function _internalUpload(isRetry = false): Promise<SyncResult> {
 /**
  * 内部下载逻辑（返回各实体 fetched/downloaded 供诊断）
  */
-async function _internalDownload(lastSyncTimestamp: number): Promise<SyncResult> {
-  // 新增：10秒超时兜底
-  const timeoutPromise = new Promise<SyncResult>((_, reject) => {
-    setTimeout(() => reject(new Error("下载操作超时")), 10000);
-  });
-
+async function _internalDownload(lastSyncTimestamp: number, opts?: { reconcilePlanner?: boolean }): Promise<SyncResult> {
   const downloadPromise = new Promise<SyncResult>(async (resolve) => {
     const errors: string[] = [];
     let downloaded = 0;
@@ -289,7 +281,10 @@ async function _internalDownload(lastSyncTimestamp: number): Promise<SyncResult>
 
     // 并行下载所有表
     const results = await Promise.allSettled(
-      syncServices.map(({ name, service }) => service.download(lastSyncTimestamp).then((res: any) => ({ name, res }))),
+      syncServices.map(({ name, service }) => {
+        const reconcile = Boolean(opts?.reconcilePlanner && (name === "Todos" || name === "Schedules"));
+        return service.download(reconcile ? 0 : lastSyncTimestamp, reconcile ? { reconcile: true } : undefined).then((res: any) => ({ name, res }));
+      }),
     );
 
     results.forEach((outcome) => {
@@ -298,7 +293,7 @@ async function _internalDownload(lastSyncTimestamp: number): Promise<SyncResult>
         const fetched = res.fetched ?? 0;
         const applied = res.downloaded ?? 0;
         const cloudDeleted = res.cloudDeleted ?? 0;
-        details.push({ name, fetched, downloaded: applied, cloudDeleted });
+        details.push({ name, fetched, downloaded: applied, cloudDeleted, skipped: res.skipped ?? [] });
         if (!res.success) errors.push(`${name} 下载失败: ${res.error}`);
         else downloaded += applied;
       } else {
@@ -323,7 +318,7 @@ async function _internalDownload(lastSyncTimestamp: number): Promise<SyncResult>
   });
 
   try {
-    return await Promise.race([downloadPromise, timeoutPromise]);
+    return await downloadPromise;
   } catch (e: any) {
     return { errors: [e.message], count: 0, details: [] };
   }
@@ -366,6 +361,15 @@ async function runSyncTask(actionName: string, taskFn: () => Promise<{ success: 
   if (syncStore.isSyncGateActive) return { success: false, errors: ["导入后正在人工核对，已暂停同步"] };
   // 进行中：跳过而非失败，避免自动同步误报红字
   if (syncStore.isSyncing) return { success: true, skipped: true, errors: [] };
+
+  // 同步权益：试用到期且未付费则拦，不报红字、不删本机数据
+  const ent = await getSyncEntitlement();
+  if (!ent.allowed) {
+    syncStore.syncNeedsSubscription =
+      ent.denyReason === "no-session" ? "云同步需登录" : "云同步试用到期，订购后继续";
+    return { success: false, errors: [], denied: true };
+  }
+  syncStore.syncNeedsSubscription = null;
 
   // 同步前先执行钩子（如 TaskRecord 正在编辑则先保存到本地再同步，避免被覆盖）
   await runBeforeSyncHook();
@@ -420,6 +424,10 @@ export async function syncAll() {
     // 1. 上传
     const upRes = await _internalUpload();
     errors.push(...upRes.errors);
+    // 上传超时后这一轮不再下载，避免半截结果接着写内存
+    if (upRes.errors.some(isTimeoutMessage)) {
+      return { success: false, errors, details: { uploaded: upRes.count, downloaded: 0 } };
+    }
 
     // 2. 下载
     // 决定是否全量：如果是 0，或者上次同步距今太久(可选)，则全量
@@ -444,6 +452,8 @@ export async function syncAll() {
       return { success: true, errors: [], details: { uploaded: upRes.count, downloaded: downRes.count } };
     } else {
       syncStore.downloadFailed = downRes.errors.length > 0;
+      const report = formatDownloadDetails(downRes.details ?? []);
+      if (report) errors.push(report);
       return { success: false, errors, details: { uploaded: upRes.count, downloaded: downRes.count } };
     }
   });
@@ -487,7 +497,7 @@ export async function syncDatabase() {
       );
     }
 
-    const downRes = await _internalDownload(lastSync);
+    const downRes = await _internalDownload(lastSync, { reconcilePlanner: true });
     errors.push(...downRes.errors);
 
     await _internalCleanup();
@@ -500,6 +510,8 @@ export async function syncDatabase() {
       return { success: true, errors: [], details: { uploaded: upRes.count, downloaded: downRes.count, leaks } };
     }
     syncStore.downloadFailed = downRes.errors.length > 0;
+    const report = formatDownloadDetails(downRes.details ?? []);
+    if (report) errors.push(report);
     return { success: false, errors, details: { uploaded: upRes.count, downloaded: downRes.count, leaks } };
   });
 }
@@ -522,6 +534,15 @@ export async function uploadAll() {
   if (syncStore.isSyncing) {
     return { success: true, skipped: true, errors: [], uploaded: 0 };
   }
+
+  // 同步权益：试用到期且未付费则拦，不报红字、不删本机数据
+  const ent = await getSyncEntitlement();
+  if (!ent.allowed) {
+    syncStore.syncNeedsSubscription =
+      ent.denyReason === "no-session" ? "云同步需登录" : "云同步试用到期，订购后继续";
+    return { success: false, errors: [], denied: true, uploaded: 0 };
+  }
+  syncStore.syncNeedsSubscription = null;
 
   await runBeforeSyncHook();
   syncStore.startUpload();
@@ -558,7 +579,7 @@ export async function uploadAll() {
  */
 export async function downloadAll(lastSync: number) {
   const out = await downloadAllWithDiagnostics(lastSync, { updateTimestamp: true });
-  return { success: out.success, errors: out.errors, downloaded: out.downloaded };
+  return { success: out.success, errors: out.errors, downloaded: out.downloaded, denied: out.denied };
 }
 
 /**
@@ -571,8 +592,9 @@ export async function downloadAllWithDiagnostics(
   success: boolean;
   errors: string[];
   downloaded: number;
-  details: { name: string; fetched: number; downloaded: number; cloudDeleted?: number }[];
+  details: { name: string; fetched: number; downloaded: number; cloudDeleted?: number; skipped?: SyncSkip[] }[];
   skipped?: boolean;
+  denied?: boolean;
 }> {
   if (!ensureInitialized()) {
     return { success: false, errors: ["未初始化"], downloaded: 0, details: [] };
@@ -584,6 +606,15 @@ export async function downloadAllWithDiagnostics(
   if (syncStore.isSyncing) {
     return { success: true, skipped: true, errors: [], downloaded: 0, details: [] };
   }
+
+  // 同步权益：试用到期且未付费则拦，不报红字、不删本机数据
+  const ent = await getSyncEntitlement();
+  if (!ent.allowed) {
+    syncStore.syncNeedsSubscription =
+      ent.denyReason === "no-session" ? "云同步需登录" : "云同步试用到期，订购后继续";
+    return { success: false, errors: [], downloaded: 0, details: [], denied: true };
+  }
+  syncStore.syncNeedsSubscription = null;
 
   await runBeforeSyncHook();
   syncStore.startDownload();
@@ -602,7 +633,8 @@ export async function downloadAllWithDiagnostics(
       return { success: true, errors: [], downloaded: count, details };
     } else {
       syncStore.downloadFailed = true;
-      syncStore.syncFailed(errors.join("; "));
+      const report = formatDownloadDetails(details);
+      syncStore.syncFailed([errors.join("; "), report].filter(Boolean).join("\n"));
       return { success: false, errors, downloaded: count, details };
     }
   } catch (e: any) {

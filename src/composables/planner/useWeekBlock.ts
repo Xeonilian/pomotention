@@ -20,8 +20,7 @@ import { resolveWeekAxisEndHour, resolveWeekAxisStartHour } from "@/core/utils/w
 import { useDevice } from "@/composables/platform/useDevice";
 import { storeToRefs } from "pinia";
 import { useDataStore } from "@/stores/useDataStore";
-import { collectLifeRecordOverlays, type LifePointMark, type LifeSleepRange } from "@/services/timetable/lifeRecordOverlays";
-import { findDayEnergyTask } from "@/services/task/dayEnergyService";
+import { collectLifeRecordOverlays, indexOverlayTasks, type LifePointMark, type LifeSleepRange } from "@/services/timetable/lifeRecordOverlays";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const BASE_PX_PER_HOUR = 40;
@@ -46,8 +45,15 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targe
   /** 每天生活记录（未醒睡眠铺到入睡日日末）；先于时间轴范围计算，用于撑开下沿 */
   const lifeOverlaysByDay = computed(() => {
     const now = Date.now();
+    const weekDays = days.value;
+    const getActivity = (id: number) => activityById.value.get(id);
+    const indexed = indexOverlayTasks(
+      taskList.value,
+      weekDays.map((day) => day.startTs),
+      getActivity,
+    );
     const map = new Map<number, { points: LifePointMark[]; sleeps: LifeSleepRange[] }>();
-    for (const day of days.value) {
+    for (const day of weekDays) {
       const dayStart = day.startTs;
       const dayEnd = dayStart + DAY_MS;
       map.set(
@@ -56,9 +62,9 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targe
           dayStart,
           dayEnd,
           timeRange: { start: dayStart, end: dayEnd },
-          tasks: taskList.value,
-          getActivity: (id) => activityById.value.get(id),
-          getDayEnergyTask: (start) => findDayEnergyTask(start, taskList.value),
+          tasks: indexed.tasksByDay.get(dayStart) ?? [],
+          getActivity,
+          getDayEnergyTask: (start) => indexed.energyTaskByDay.get(start),
           now,
           minGapMs: 5 * 60_000,
           openSleepEnd: "dayOfStart",
@@ -437,18 +443,22 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targe
       width: `${size}px`,
       height: `${size}px`,
       color: mark.colorVar,
-      zIndex: mark.kind === "energy" || mark.kind === "reward" ? 3 : 5 + mark.lane,
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
       cursor: "pointer",
       userSelect: "none",
     };
-    if (isMobile.value) {
-      // 第 3 列离右 2px，第 2 列再隔 4px（11 + 4）
-      return { ...base, right: mark.lane === 0 ? "1px" : "15px" };
+    // 周普通视图两列：右边精力 / 苹果（吃饭时通常不记精力奖赏）；中间奖赏，月亮也在这条线上
+    if (mark.kind === "energy" || mark.kind === "eat") {
+      return { ...base, right: isMobile.value ? "1px" : "4px", zIndex: mark.kind === "energy" ? 12 : 13 };
     }
-    return { ...base, right: `${12 + mark.lane * 15}px` };
+    return {
+      ...base,
+      left: "50%",
+      transform: "translateX(-50%)",
+      zIndex: mark.kind === "reward" ? 14 : 13,
+    };
   }
 
   return {

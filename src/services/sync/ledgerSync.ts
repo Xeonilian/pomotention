@@ -20,10 +20,12 @@ export class LedgerSyncService extends BaseSyncService<LedgerEntry, CloudLedgerI
 
   /**
    * legacy sourceActivityId=0（无 FK）不上传；ledger-stub 日桶行照常上传；
-   * 跳过引用已删除/不存在 activity 的 orphan 行，避免外键冲突
+   * 删除态总要同步到云端：activity 软删仍留行，且 uploadAll 先传 activity 再传 ledger，FK 安全；
+   * 未删行若引用已删除/不存在 activity 则跳过，避免外键冲突
    */
   protected isUploadable(local: LedgerEntry): boolean {
     if (local.sourceActivityId === 0) return false;
+    if (local.deleted) return true;
     const activity = this.getActivityMap().get(local.sourceActivityId);
     if (!activity) {
       console.warn(

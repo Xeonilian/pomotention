@@ -566,6 +566,7 @@ import TagPickerPopover from "../TagSystem/TagPickerPopover.vue";
 import LedgerEntryPopover from "@/components/Ledger/LedgerEntryPopover.vue";
 import type { LedgerEntry } from "@/core/types/LedgerEntry";
 import { getTitleTagPickerMode, replaceTagTriggerWithCategory } from "@/core/ledger/parseLedgerSegments";
+import { TAG_IDS_HIDDEN_IN_TAG_RENDERER } from "@/core/constants";
 import { isLifeRecordActivity } from "@/core/lifeRecord";
 import { softDeleteLedgerEntryWithTitle } from "@/services/ledger/ledgerService";
 import type { SelectOption } from "naive-ui";
@@ -791,9 +792,10 @@ const priorityShowInRankDraft = reactive<Record<number, boolean>>({});
 const rankHeaderTitle = computed(
   () => "Emoji：" + PRIORITY_CATEGORIES.map((c) => `${c.priority}=${c.emoji}`).join(" ") + "；单击打开绑定标签",
 );
+const hiddenSystemTagIds = new Set(TAG_IDS_HIDDEN_IN_TAG_RENDERER);
 const tagOptionsForBinding = computed<SelectOption[]>(() =>
   [...allTagsFromStore.value]
-    .slice()
+    .filter((t) => !hiddenSystemTagIds.has(t.id))
     .sort((a, b) => a.name.localeCompare(b.name))
     .map((t) => ({ label: t.name, value: t.id })),
 );

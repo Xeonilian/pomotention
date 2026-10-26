@@ -106,12 +106,14 @@ export function useHomePlannerRowEdits(options: UseHomePlannerRowEditsOptions) {
 
     if (payload.startTime) {
       todo.startTime = getTimestampForTimeString(payload.startTime, options.appDateTimestamp.value);
+      todo.startTimeCleared = false;
       todo.synced = false;
       todo.lastModified = now;
     }
 
     if (payload.doneTime) {
       todo.doneTime = getTimestampForTimeString(payload.doneTime, options.appDateTimestamp.value);
+      todo.doneTimeCleared = false;
       todo.synced = false;
       todo.lastModified = now;
     }
@@ -184,6 +186,7 @@ export function useHomePlannerRowEdits(options: UseHomePlannerRowEditsOptions) {
     if (!todo) return;
 
     todo.startTime = getTimestampForTimeString(newTm, options.appDateTimestamp.value);
+    todo.startTimeCleared = false;
     todo.synced = false;
     todo.lastModified = Date.now();
 
@@ -201,6 +204,7 @@ export function useHomePlannerRowEdits(options: UseHomePlannerRowEditsOptions) {
     const todo = options.todoById.value.get(id);
     if (!todo) return;
     todo.doneTime = newTm === "" ? undefined : getTimestampForTimeString(newTm, options.appDateTimestamp.value);
+    todo.doneTimeCleared = newTm === "";
     todo.synced = false;
     todo.lastModified = Date.now();
     options.saveAllDebounced();
@@ -210,6 +214,9 @@ export function useHomePlannerRowEdits(options: UseHomePlannerRowEditsOptions) {
     const schedule = options.scheduleById.value.get(id);
     if (!schedule) return;
     schedule.doneTime = newTm === "" ? undefined : getTimestampForTimeString(newTm, options.appDateTimestamp.value);
+    schedule.doneTimeCleared = newTm === "";
+    schedule.synced = false;
+    schedule.lastModified = Date.now();
     options.saveAllDebounced();
   };
 

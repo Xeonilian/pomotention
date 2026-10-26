@@ -119,7 +119,7 @@
                 text
                 color="#ffcc5c"
                 class="header-button"
-                @click="showTipDialog = true"
+                @click="showSupportDialog = true"
               >
                 <template #icon>
                   <n-icon>
@@ -236,7 +236,7 @@
         </n-layout-footer>
       </n-layout>
       <DatabaseTransferDialog v-model:show="showDatabaseDialog" />
-      <TipSupportDialog v-model:show="showTipDialog" />
+      <SupportDialog v-model:show="showSupportDialog" />
     </n-config-provider>
   </div>
 </template>
@@ -292,7 +292,8 @@ import {
 } from "@vicons/fluent";
 import PomotentionTimer from "@/components/PomotentionTimer/PomotentionTimer.vue";
 import DatabaseTransferDialog from "@/components/data/DatabaseTransferDialog.vue";
-import TipSupportDialog from "@/components/billing/TipSupportDialog.vue";
+import SupportDialog from "@/components/billing/SupportDialog.vue";
+import { checkSupportPromptDue, advanceSupportPrompt } from "@/core/billing/supportPrompt";
 
 hljs.registerLanguage("javascript", javascript);
 hljs.registerLanguage("typescript", typescript);
@@ -361,14 +362,14 @@ watch(
       notification.warning({
         title: "云端下载未成功",
         content: syncStore.syncError,
-        duration: 6000,
+        duration: 12000,
       });
     }
   },
 );
 
 const showDatabaseDialog = ref(false);
-const showTipDialog = ref(false);
+const showSupportDialog = ref(false);
 const logoutConfirmVisible = ref(false);
 let logoutClickTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -627,6 +628,12 @@ onMounted(async () => {
     await nextTick();
     await updateDraggableContainerVisibility(true);
   }
+
+  // 每月一次的订购/打赏提示：到期则展示并推进下一次
+  if (checkSupportPromptDue()) {
+    showSupportDialog.value = true;
+    advanceSupportPrompt();
+  }
 });
 
 // === 5. 手动同步操作 ===
@@ -761,11 +768,13 @@ async function handleManualDownload() {
   bottom: 0;
   left: 0;
   right: 0;
-  height: 20px;
-  padding: 0px 10px;
+  height: auto;
+  max-height: 140px;
+  padding: 4px 10px;
   z-index: 1000;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
+  overflow: auto;
 }
 
 .footer-content {
@@ -829,9 +838,9 @@ async function handleManualDownload() {
   flex: 1;
   color: #d03050;
   font-size: 11px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: pre-wrap;
+  max-height: 120px;
+  overflow: auto;
 }
 .footer-actions {
   display: flex;

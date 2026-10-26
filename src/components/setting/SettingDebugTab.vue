@@ -316,6 +316,7 @@ import { useSyncStore } from "@/stores/useSyncStore";
 import { clearAllAppStorage } from "@/services/data/localStorageService";
 import { clearLocalData } from "@/services/data/downloadService";
 import { downloadAllWithDiagnostics } from "@/services/sync";
+import { formatDownloadDetails } from "@/services/sync/plannerFieldMerge";
 import { isSupabaseEnabled, supabase } from "@/core/services/supabase";
 import { getAppHttpFetchSnapshot } from "@/utils/appHttpFetch";
 import { xhrFetch } from "@/utils/xhrFetch";
@@ -1015,11 +1016,7 @@ async function runDownloadTest() {
       `before: lastSync=${before.lastSyncTimestamp} | activities=${before.activities} tasks=${before.tasks} todos=${before.todos} schedules=${before.schedules}`,
       `after:  lastSync=${after.lastSyncTimestamp} | activities=${after.activities} tasks=${after.tasks} todos=${after.todos} schedules=${after.schedules}`,
       `success=${out.success} errors=${out.errors.join("; ") || "-"}`,
-      "details (fetched / applied / cloudDeleted，若 applied+cloudDeleted=fetched 则未写入的全是云端已删除):",
-      ...(out.details || []).map(
-        (d) =>
-          `  ${d.name}: fetched=${d.fetched} applied=${d.downloaded} cloudDeleted=${d.cloudDeleted ?? "-"}  ${d.fetched === d.downloaded + (d.cloudDeleted ?? 0) ? "✓" : "?"}`,
-      ),
+      formatDownloadDetails(out.details || []),
     ];
     diagnosticResult.value = lines.join("\n");
   } catch (e: any) {
@@ -1046,11 +1043,7 @@ async function runClearThenDownloadTest() {
       `afterClear (本底): lastSync=${afterClear.lastSyncTimestamp} | activities=${afterClear.activities} tasks=${afterClear.tasks} todos=${afterClear.todos} schedules=${afterClear.schedules}`,
       `after download: lastSync=${after.lastSyncTimestamp} | activities=${after.activities} tasks=${after.tasks} todos=${after.todos} schedules=${after.schedules}`,
       `success=${out.success} errors=${out.errors.join("; ") || "-"}`,
-      "details (fetched / applied / cloudDeleted，若 applied+cloudDeleted=fetched 则未写入的全是云端已删除):",
-      ...(out.details || []).map(
-        (d) =>
-          `  ${d.name}: fetched=${d.fetched} applied=${d.downloaded} cloudDeleted=${d.cloudDeleted ?? "-"}  ${d.fetched === d.downloaded + (d.cloudDeleted ?? 0) ? "✓" : "?"}`,
-      ),
+      formatDownloadDetails(out.details || []),
     ];
     diagnosticResult.value = lines.join("\n");
   } catch (e: any) {

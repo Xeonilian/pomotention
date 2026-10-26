@@ -72,6 +72,11 @@ async function performSync() {
   console.log("触发自动同步...");
   const result = await syncAll();
 
+  if ((result as { denied?: boolean }).denied) {
+    // 试用到期/未付费：不重试、不报错
+    return;
+  }
+
   if ((result as { skipped?: boolean }).skipped) {
     armPendingSync();
     return;
@@ -108,6 +113,10 @@ async function performUpload() {
 
   console.log("触发自动上传...");
   const result = await uploadAll();
+
+  if ((result as { denied?: boolean }).denied) {
+    return;
+  }
 
   if ((result as { skipped?: boolean }).skipped) {
     armPendingUpload();

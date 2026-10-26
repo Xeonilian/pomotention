@@ -10,16 +10,29 @@ export async function xhrFetch(input: RequestInfo | URL, init?: RequestInit): Pr
   const body = init?.body;
 
   return new Promise<Response>((resolve, reject) => {
+    if (init?.signal?.aborted) {
+      reject(new DOMException("Aborted", "AbortError"));
+      return;
+    }
     const xhr = new XMLHttpRequest();
+    const onAbort = () => {
+      xhr.abort();
+      reject(new DOMException("Aborted", "AbortError"));
+    };
+    init?.signal?.addEventListener("abort", onAbort);
     xhr.open(method, requestUrl, true);
     xhr.responseType = "text";
 
     headers.forEach((value, key) => xhr.setRequestHeader(key, value));
 
-    xhr.onerror = () => reject(new Error("XHR_NETWORK_ERROR"));
+    xhr.onerror = () => {
+      init?.signal?.removeEventListener("abort", onAbort);
+      reject(new Error("XHR_NETWORK_ERROR"));
+    };
     xhr.ontimeout = () => reject(new Error("XHR_TIMEOUT"));
 
     xhr.onload = () => {
+      init?.signal?.removeEventListener("abort", onAbort);
       const rawHeaders = xhr.getAllResponseHeaders();
       const responseHeaders = new Headers();
 

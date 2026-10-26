@@ -1,9 +1,17 @@
 // 生活记录日表/窄槽共用：打点时刻、追加行、段事件开闭、时间列编辑
 import { computed, onUnmounted, ref, toValue, type MaybeRefOrGetter } from "vue";
 import type { DrinkKind, LifeRecord } from "@/core/types/Task";
-import { drinkKindOf, getLifeRecordDef, nextDrinkKind, nextEatCourse, type LifeRecordKind } from "@/core/lifeRecord";
+import { drinkKindOf, getLifeRecordDef, nextDrinkKind, nextEatCourse, parseLifeRecordPlaceholder, type LifeRecordKind } from "@/core/lifeRecord";
 import { debounce, getDayStartTimestamp } from "@/core/utils";
-import { appendLifeRecord, resolveLifeSpanEndAt, updateLifeRecord, withTimePart } from "@/services/lifeRecord/lifeRecordService";
+import {
+  appendLifeRecord,
+  findLifeRecordTasksForDay,
+  lifeRecordOwnerTaskId,
+  mergeBucketLifeRecords,
+  resolveLifeSpanEndAt,
+  updateLifeRecord,
+  withTimePart,
+} from "@/services/lifeRecord/lifeRecordService";
 import {
   clampLifeScore,
   dropDayEnergyFromLife,
@@ -28,17 +36,27 @@ export function useLifeRecordEditor(
   const recordKind = computed(() => toValue(kind));
   const embedded = computed(() => toValue(options?.embedded ?? false));
   const task = computed(() => dataStore.taskList.find((t) => t.id === id.value) ?? null);
-  /** 备注草稿：画面马上跟上，停笔后再写库 */
+  /** 同一天同一类的全部日桶。绑定的是列表里第一只，其余是别的设备建的。 */
+  const bucketTasks = computed(() => {
+    const bound = task.value;
+    if (!bound) return [];
+    const activity = dataStore.activityById.get(bound.sourceId);
+    const titledDay = parseLifeRecordPlaceholder(bound.activityTitle ?? activity?.title)?.dayStart;
+    const dayStart = titledDay ?? plannerDayStart();
+    const all = findLifeRecordTasksForDay(dataStore.taskList, recordKind.value, dayStart, dataStore.activityById);
+    return all.length > 0 ? all : [bound];
+  });
+  /** 备注草稿：画面马上跟上，停笔后再写库。taskId 是这条记录所在的桶，不是面板绑定的那只。 */
   const descDrafts = new Map<number, { taskId: number; text: string; dayStart: number }>();
   const descDraftTick = ref(0);
   const records = computed<LifeRecord[]>(() => {
     descDraftTick.value;
-    const list = [...(task.value?.lifeRecords ?? [])].sort((a, b) => a.recordedAt - b.recordedAt);
+    const list = mergeBucketLifeRecords(bucketTasks.value);
     if (descDrafts.size === 0) return list;
-    const taskId = id.value;
     return list.map((r) => {
       const d = descDrafts.get(r.id);
-      return d != null && d.taskId === taskId ? { ...r, description: d.text } : r;
+      const ownerId = lifeRecordOwnerTaskId(bucketTasks.value, r.id, id.value);
+      return d != null && d.taskId === ownerId ? { ...r, description: d.text } : r;
     });
   });
   const def = computed(() => getLifeRecordDef(recordKind.value));
@@ -76,11 +94,13 @@ export function useLifeRecordEditor(
     }
   }
   const flushDescDrafts = debounce(persistDescDrafts, 400);
-  function writeRecords(next: LifeRecord[] | null) {
-    if (!next) return;
+  function ownerTaskId(recordId: number): number {
+    return lifeRecordOwnerTaskId(bucketTasks.value, recordId, id.value);
+  }
+  /** 只改这一只桶自己的数组。合并结果不能写回去，否则另一只桶还在，图层会算两遍。 */
+  function replaceTaskRecords(taskId: number, next: LifeRecord[]) {
     let merged = next;
     if (descDrafts.size > 0) {
-      const taskId = id.value;
       for (const [recordId, d] of [...descDrafts]) {
         if (d.taskId !== taskId) continue;
         merged = updateLifeRecord(merged, recordId, { description: d.text }) ?? merged;
@@ -89,23 +109,63 @@ export function useLifeRecordEditor(
       if (descDrafts.size === 0) flushDescDrafts.cancel();
       descDraftTick.value++;
     }
-    dataStore.updateTaskById(id.value, { lifeRecords: merged });
+    dataStore.updateTaskById(taskId, { lifeRecords: merged });
+  }
+  function patchOnOwner(recordId: number, produce: (list: LifeRecord[]) => LifeRecord[] | null) {
+    const taskId = ownerTaskId(recordId);
+    const list = dataStore.taskList.find((t) => t.id === taskId)?.lifeRecords ?? [];
+    const next = produce(list);
+    if (!next) return;
+    replaceTaskRecords(taskId, next);
+  }
+  function patchRecord(
+    recordId: number,
+    patch: Parameters<typeof updateLifeRecord>[2],
+  ) {
+    patchOnOwner(recordId, (list) => updateLifeRecord(list, recordId, patch));
   }
   /** + / 表头打点：当前时分落在显示日（四表一致） */
   function stampNow(): number {
     const at = dataStore.dateService.combineDateAndTime(displayDayStart.value, Date.now());
     return Number.isFinite(at) ? at : Date.now();
   }
+  /** 新行只追加到面板绑定的那只桶。未闭合段若在别的桶上，就地补结束时间。 */
   function writeAppend(alwaysNew = false) {
     const amountMl = recordKind.value === "drink" ? settingStore.settings.drinkCupMl : undefined;
     const eatCourse = recordKind.value === "eat" ? ("meal" as const) : undefined;
-    writeRecords(
-      appendLifeRecord(task.value?.lifeRecords, recordKind.value, stampNow(), {
-        amountMl,
-        eatCourse,
-        alwaysNew,
-      }).next,
-    );
+    const kind = recordKind.value;
+    const primaryList = task.value?.lifeRecords;
+    if (!alwaysNew && (kind === "sleep" || kind === "toilet")) {
+      const primaryOpen = [...(primaryList ?? [])].reverse().find((record) => record.endAt == null);
+      if (!primaryOpen) {
+        let open: LifeRecord | undefined;
+        for (const bucket of bucketTasks.value) {
+          if (bucket.id === id.value) continue;
+          for (let i = (bucket.lifeRecords?.length ?? 0) - 1; i >= 0; i--) {
+            const record = bucket.lifeRecords![i];
+            if (record.endAt != null) continue;
+            if (!open || record.recordedAt >= open.recordedAt) open = record;
+          }
+        }
+        if (open) {
+          patchRecord(open.id, { endAt: resolveLifeSpanEndAt(open.recordedAt, stampNow()) });
+          return;
+        }
+      }
+    }
+    let { next, record } = appendLifeRecord(primaryList, kind, stampNow(), { amountMl, eatCourse, alwaysNew });
+    const taken = new Set<number>();
+    for (const bucket of bucketTasks.value) {
+      if (bucket.id === id.value) continue;
+      for (const row of bucket.lifeRecords ?? []) taken.add(row.id);
+    }
+    if (taken.has(record.id)) {
+      let nid = record.id + 1;
+      const ids = new Set(next.map((row) => row.id));
+      while (taken.has(nid) || ids.has(nid)) nid++;
+      next = next.map((row) => (row.id === record.id ? { ...row, id: nid } : row));
+    }
+    replaceTaskRecords(id.value, next);
   }
   function append() {
     writeAppend(false);
@@ -115,13 +175,13 @@ export function useLifeRecordEditor(
     writeAppend(true);
   }
   function toggleEatCourse(record: LifeRecord) {
-    writeRecords(updateLifeRecord(records.value, record.id, { eatCourse: nextEatCourse(record.eatCourse) }));
+    patchRecord(record.id, { eatCourse: nextEatCourse(record.eatCourse) });
   }
   function changeDrinkKind(record: LifeRecord, kind: DrinkKind) {
-    writeRecords(updateLifeRecord(records.value, record.id, { drinkKind: kind }));
+    patchRecord(record.id, { drinkKind: kind });
   }
   function toggleDrinkKind(record: LifeRecord) {
-    writeRecords(updateLifeRecord(records.value, record.id, { drinkKind: nextDrinkKind(drinkKindOf(record)) }));
+    patchRecord(record.id, { drinkKind: nextDrinkKind(drinkKindOf(record)) });
   }
   function stampStart() {
     if (hasOpenSpan.value) return;
@@ -143,7 +203,7 @@ export function useLifeRecordEditor(
     const recordedAt = withTimePart(base, ts);
     const patch: { recordedAt: number; endAt?: number } = { recordedAt };
     if (record.endAt != null) patch.endAt = resolveLifeSpanEndAt(recordedAt, record.endAt);
-    writeRecords(updateLifeRecord(records.value, record.id, patch));
+    patchRecord(record.id, patch);
     if (record.energyRecordId != null) {
       syncLinkedEnergy({ ...record, ...patch }, record.energy);
     }
@@ -152,7 +212,7 @@ export function useLifeRecordEditor(
     // 时间选择器偶发 null：不当成清空，否则会丢掉已有结束、表上没有 duration
     if (ts == null) return;
     const nextTs = resolveLifeSpanEndAt(record.recordedAt, ts);
-    writeRecords(updateLifeRecord(records.value, record.id, { endAt: nextTs }));
+    patchRecord(record.id, { endAt: nextTs });
     if (record.energyRecordId != null) {
       syncLinkedEnergy({ ...record, endAt: nextTs }, record.energy);
     }
@@ -162,14 +222,14 @@ export function useLifeRecordEditor(
     else changeRecordedAt(record, ts);
   }
   function changeDescription(record: LifeRecord, text: string) {
-    descDrafts.set(record.id, { taskId: id.value, text, dayStart: displayDayStart.value });
+    descDrafts.set(record.id, { taskId: ownerTaskId(record.id), text, dayStart: displayDayStart.value });
     descDraftTick.value++;
     flushDescDrafts();
   }
   function changeEatFeel(record: LifeRecord, field: "hunger" | "satiety", value: number | null) {
     if (value == null) {
-      writeRecords(
-        records.value.map((r) => {
+      patchOnOwner(record.id, (list) =>
+        list.map((r) => {
           if (r.id !== record.id) return r;
           const next = { ...r };
           delete next[field];
@@ -178,7 +238,7 @@ export function useLifeRecordEditor(
       );
       return;
     }
-    writeRecords(updateLifeRecord(records.value, record.id, { [field]: clampLifeScore(value) }));
+    patchRecord(record.id, { [field]: clampLifeScore(value) });
   }
   function changeHunger(record: LifeRecord, value: number | null) {
     changeEatFeel(record, "hunger", value);
@@ -203,14 +263,14 @@ export function useLifeRecordEditor(
     const { next, energyRecord } = upsertDayEnergyFromLife(host.energyRecords, record, value, lifeEnergyAt(record));
     dataStore.updateTaskById(host.id, { energyRecords: next });
     if (energyRecord.id !== record.energyRecordId) {
-      writeRecords(updateLifeRecord(records.value, record.id, { energyRecordId: energyRecord.id }));
+      patchRecord(record.id, { energyRecordId: energyRecord.id });
     }
   }
   function changeEnergy(record: LifeRecord, value: number | null) {
     if (value == null) {
       unlinkEnergy(record);
-      writeRecords(
-        records.value.map((r) => {
+      patchOnOwner(record.id, (list) =>
+        list.map((r) => {
           if (r.id !== record.id) return r;
           const next = { ...r };
           delete next.energy;
@@ -226,7 +286,7 @@ export function useLifeRecordEditor(
     const host = hostEnergyTask(record);
     const { next, energyRecord } = upsertDayEnergyFromLife(host.energyRecords, record, v, lifeEnergyAt(record));
     dataStore.updateTaskById(host.id, { energyRecords: next });
-    writeRecords(updateLifeRecord(records.value, record.id, { energy: v, energyRecordId: energyRecord.id }));
+    patchRecord(record.id, { energy: v, energyRecordId: energyRecord.id });
   }
   function unlinkEnergy(record: LifeRecord) {
     const days = new Set([displayDayStart.value, lifeEnergyDayStart(record)]);
@@ -235,7 +295,7 @@ export function useLifeRecordEditor(
   function remove(record: LifeRecord) {
     descDrafts.delete(record.id);
     unlinkEnergy(record);
-    dataStore.removeLifeRecordAt(id.value, record.id, { keepEmptyBucket: embedded.value });
+    dataStore.removeLifeRecordAt(ownerTaskId(record.id), record.id, { keepEmptyBucket: embedded.value });
   }
   function discard() {
     descDrafts.clear();
@@ -252,6 +312,7 @@ export function useLifeRecordEditor(
   return {
     task,
     records,
+    patchRecord,
     def,
     hasOpenSleep: hasOpenSpan,
     hasOpenSpan,

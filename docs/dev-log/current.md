@@ -14,7 +14,51 @@
 | **蓝图** | 底座 [`8-ai-gateway.md`](./blueprint/8-ai-gateway.md)；能力 [`7-capture.md`](./blueprint/7-capture.md) |
 | **分支** | `dev` |
 | **更新** | 2026-10-15 |
-| **停在哪** | **主线**收费步4仍暂停。生活记录支线已归档（[`history/archive/2026-10-life-record.md`](./history/archive/2026-10-life-record.md)，CHANGELOG `v0.6.12`）。Webhook 仍下一关。 |
+| **停在哪** | **今日新增云同步收费**：5 块代码已写、类型检查过、**未 commit**。明天接法见下方「云同步收费」节。主线收费步4仍暂停。Webhook 仍下一关。 |
+
+---
+
+## 云同步收费（今日新增 · 未 commit）— 明天怎么接
+
+> 卖**云同步**：2 个链接——月付 9 元/月档 + 年付 49 元/首年档（**回馈老用户**，限时至 **2026-11**；到期在爱发电方案侧改回原价 99 元/年并改 `SupportDialog` 文案）。代码不按新老用户 gate，"回馈老用户"只是文案 framing。**本机功能一直免费**。**试用 = 首次查权益起 14 天（起点存服务端 KV，幂等；老用户也拿满 14 天，清客户端缓存改不了）**，到期不付停同步、本机照常（不登出）。退款 7 天内不问原因。一句记（AI 记待办）是另一档，本次不卖。
+
+### 已完成 5 块（类型检查过，未 commit）
+
+1. **Worker** [`worker/ai-gateway/src/index.ts`](../../worker/ai-gateway/src/index.ts)：`POST /admin/entitlement` 加 `scope`（`ai`|`sync`，默认 `ai`）；sync 写/删 `entitlement:sync:<userId>`；新增 `GET /v1/entitlement`（JWT）返 `{ai,sync:{until,trialUntil}}`；新增 `getSyncEntitlement`、`SyncEntitlement`、`ensureSyncTrial`（未付费时首次查写入 `entitlement:sync:trial:<userId>` = now，返 now+14 天，幂等）。
+2. **同步开关**：[`src/core/billing/entitlement.ts`](../../src/core/billing/entitlement.ts)（新）查权益 60s 缓存、**始终打网关**拿服务端 `trialUntil`/`paidUntil`（不再本地 created_at+14）、fail-open；[`src/services/sync/index.ts`](../../src/services/sync/index.ts) **三条同步入口都查权益**——`syncAll`/`syncDatabase`（走 `runSyncTask`）+ `uploadAll` + `downloadAllWithDiagnostics`，未放行设 `syncNeedsSubscription` 返 `{denied:true}`（不报红字、不登出、不删本机）；[`src/stores/useSyncStore.ts`](../../src/stores/useSyncStore.ts) 加该 ref；[`src/core/utils/autoSync.ts`](../../src/core/utils/autoSync.ts) denied 时静默跳过。
+3. **订购链接**：[`src/core/billing/afdian.ts`](../../src/core/billing/afdian.ts) 一个 `buildAfdianSyncSubscribeUrl(userId, period)`（`period`=`month`→`month=1`、`year`→`month=12`）；[`src/vite-env.d.ts`](../../src/vite-env.d.ts) 两个 env `VITE_AFDIAN_SYNC_PLAN_MONTH`、`VITE_AFDIAN_SYNC_PLAN_YEAR`。下单走 `order/create`（带 `plan_id`/`product_type=0`/`month`/`custom_order_id`）。
+4. **每月提示**：[`src/core/billing/supportPrompt.ts`](../../src/core/billing/supportPrompt.ts)（新）**首次第 7 天**（不是 14）、之后每月、锚不变；接进 [`src/views/MainLayout.vue`](../../src/views/MainLayout.vue) onMounted。
+5. **帮助页** [`docs/guide/intro/support.md`](../guide/intro/support.md) 改成云同步为主。
+6. **有效期倒计时**：[`src/composables/billing/useSyncCountdown.ts`](../../src/composables/billing/useSyncCountdown.ts)（新）付费优先否则试用，返 "试用/会员剩余 N 天"；接进 [`src/components/sync/SyncPanel.vue`](../../src/components/sync/SyncPanel.vue)（状态行下）+ [`src/components/billing/SupportDialog.vue`](../../src/components/billing/SupportDialog.vue)（价目下，开弹窗时刷新）。
+
+**UI 合并**：顶栏只留原咖啡杯图标 → 点开合并后的 [`src/components/billing/SupportDialog.vue`](../../src/components/billing/SupportDialog.vue)（未登录/已登录/打赏三段流式，emoji 结尾无句号）；已登录两按钮"年付 49 元"（主）+ "月付 9 元"（次），附小字"回馈老用户：年付 49 元/首年 ✨"；删了 `TipSupportDialog.vue`、`SubscribeSyncDialog.vue`、`SupportPromptDialog.vue`。
+
+### 明天怎么接（按顺序）
+
+1. 读本节（这行往下）。
+2. `git diff` 过一遍上面 6 块 + `SupportDialog.vue` + `SyncPanel.vue`。
+3. `pnpm vue-tsc --noEmit` —— 已知 3 个**预存**测试报错（`ledgerSync.test.ts`、`monthLifeBars.test.ts`、`parseLedgerSegments.test.ts`），与本次无关，忽略。Worker：`pnpm --filter pomotention-ai-gateway exec tsc --noEmit` 应 0 错。
+4. 手测第 7 天提示（浏览器控制台）：
+   ```js
+   localStorage.setItem('pomotention.support.firstUseDate', new Date(Date.now()-8*864e5).toISOString());
+   localStorage.removeItem('pomotention.support.nextPromptDate');
+   location.reload()
+   ```
+   → 应自动弹 `SupportDialog`。
+5. 手测倒计时/试用：起本地 Worker（`pnpm gateway:dev`）+ 登录 → 打开同步设置面板，状态行下应见 `⏳ 试用剩余 14 天`；SupportDialog 价目下也有一行。试用起点写进 KV `entitlement:sync:trial:<userId>`（首次查时），清浏览器缓存不会重置。
+6. 决定 commit：diff 过完、手测过就 commit（**不 push 不 merge**，除非你说）。
+
+### 部署前手工（你做，非明天必须）
+
+- **爱发电建 2 档**拿 plan_id：①月付 9 元/月档；②年付 49 元/首年档（回馈老用户，限时至 **2026-11**；到期在方案侧改回原价 99 元/年并改 `SupportDialog` 文案）。
+- **填 `.env`**（2 个）：`VITE_AFDIAN_SYNC_PLAN_MONTH`、`VITE_AFDIAN_SYNC_PLAN_YEAR`。（creator URL 写死，无 `VITE_AFDIAN_USER`。）
+- **部署 Worker**：`pnpm --filter pomotention-ai-gateway deploy`（新 `/v1/entitlement` + `scope` + 试用 KV）。
+- 给自己开 sync 权益测一下。
+
+### 关键文件
+
+- **改**：`worker/ai-gateway/src/index.ts`、`src/core/billing/afdian.ts`、`src/core/billing/entitlement.ts`、`src/services/sync/index.ts`、`src/stores/useSyncStore.ts`、`src/core/utils/autoSync.ts`、`src/views/MainLayout.vue`、`src/vite-env.d.ts`、`src/components/sync/SyncPanel.vue`、`docs/guide/intro/support.md`
+- **新**：`src/core/billing/entitlement.ts`、`src/core/billing/supportPrompt.ts`、`src/components/billing/SupportDialog.vue`、`src/composables/billing/useSyncCountdown.ts`
 
 ---
 

@@ -50,6 +50,42 @@ describe("LedgerSyncService", () => {
     );
   });
 
+  describe("isUploadable", () => {
+    it("删除态即使 activity 已删也上传", () => {
+      const deletedStub = new LedgerSyncService(
+        () => ledgerListRef.value,
+        () => indexMap,
+        () => new Map([[100, { deleted: true }]]),
+      );
+      expect(deletedStub["isUploadable"](createMockLedgerEntry({ deleted: true }))).toBe(true);
+    });
+
+    it("删除态 activity 不存在也上传", () => {
+      const missingActivity = new LedgerSyncService(
+        () => ledgerListRef.value,
+        () => indexMap,
+        () => new Map(),
+      );
+      expect(missingActivity["isUploadable"](createMockLedgerEntry({ deleted: true }))).toBe(true);
+    });
+
+    it("未删账本挂在已删 activity 上仍跳过", () => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const deletedStub = new LedgerSyncService(
+        () => ledgerListRef.value,
+        () => indexMap,
+        () => new Map([[100, { deleted: true }]]),
+      );
+      expect(deletedStub["isUploadable"](createMockLedgerEntry({ deleted: false }))).toBe(false);
+      expect(warn).toHaveBeenCalled();
+      warn.mockRestore();
+    });
+
+    it("legacy sourceActivityId=0 即使已删也不上传", () => {
+      expect(service["isUploadable"](createMockLedgerEntry({ sourceActivityId: 0, deleted: true }))).toBe(false);
+    });
+  });
+
   describe("mapLocalToCloud", () => {
     it("maps LedgerEntry fields to snake_case cloud row", () => {
       const entry = createMockLedgerEntry();
