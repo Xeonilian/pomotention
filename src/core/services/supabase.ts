@@ -63,31 +63,33 @@ if (supabaseUrl && supabaseAnonKey) {
       });
     }
 
-    const doFetch = appHttpFetch(input, init);
-
     const timeoutMs = 10000;
-    let timeoutId: number | undefined;
-    const timeoutPromise = new Promise<Response>((_, reject) => {
-      timeoutId = window.setTimeout(() => {
-        supabaseLog("fetch timeout", { transport, timeoutMs, url });
-        reject(new Error(`SUPABASE_FETCH_TIMEOUT_${timeoutMs}MS`));
-      }, timeoutMs);
-    });
+    const controller = new AbortController();
+    const onCallerAbort = () => controller.abort();
+    init?.signal?.addEventListener("abort", onCallerAbort);
+    const timeoutId = window.setTimeout(() => {
+      supabaseLog("fetch timeout", { transport, timeoutMs, url });
+      controller.abort();
+    }, timeoutMs);
 
     try {
-      const resp = (await Promise.race([doFetch, timeoutPromise])) as Response;
-      if (timeoutId !== undefined) window.clearTimeout(timeoutId);
+      const resp = await appHttpFetch(input, { ...init, signal: controller.signal });
       if (verboseFetchLog) {
         supabaseLog("fetch done", { transport, status: resp.status, ok: resp.ok });
       }
       return resp;
     } catch (error) {
-      if (timeoutId !== undefined) window.clearTimeout(timeoutId);
       supabaseLog("fetch failed", {
         transport,
         error: error instanceof Error ? error.message : String(error),
       });
+      if (controller.signal.aborted && !init?.signal?.aborted) {
+        throw new Error(`SUPABASE_FETCH_TIMEOUT_${timeoutMs}MS`);
+      }
       throw error;
+    } finally {
+      window.clearTimeout(timeoutId);
+      init?.signal?.removeEventListener("abort", onCallerAbort);
     }
   };
 
