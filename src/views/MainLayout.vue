@@ -362,7 +362,7 @@ watch(
       notification.warning({
         title: "云端下载未成功",
         content: syncStore.syncError,
-        duration: 6000,
+        duration: 12000,
       });
     }
   },
@@ -768,11 +768,13 @@ async function handleManualDownload() {
   bottom: 0;
   left: 0;
   right: 0;
-  height: 20px;
-  padding: 0px 10px;
+  height: auto;
+  max-height: 140px;
+  padding: 4px 10px;
   z-index: 1000;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
+  overflow: auto;
 }
 
 .footer-content {
@@ -836,9 +838,9 @@ async function handleManualDownload() {
   flex: 1;
   color: #d03050;
   font-size: 11px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: pre-wrap;
+  max-height: 120px;
+  overflow: auto;
 }
 .footer-actions {
   display: flex;

@@ -1,9 +1,9 @@
 // src/services/sync/taskSync.ts
-// src/services/sync/taskSync.ts
 
 import { supabase } from "@/core/services/supabase";
 import { getCurrentUser } from "@/core/services/authService";
 import { BaseSyncService } from "./baseSyncService";
+import type { SyncSkip } from "./plannerFieldMerge";
 import { saveTasks } from "@/services/data/localStorageService";
 import type { Activity } from "@/core/types/Activity";
 import type { Task, EnergyRecord, RewardRecord, InterruptionRecord, LifeRecord } from "@/core/types/Task";
@@ -147,6 +147,7 @@ export class TaskSyncService extends BaseSyncService<Task, CloudTaskInsert> {
     downloaded: number;
     fetched?: number;
     cloudDeleted?: number;
+    skipped?: SyncSkip[];
   }> {
     try {
       if (!supabase) {
@@ -208,13 +209,14 @@ export class TaskSyncService extends BaseSyncService<Task, CloudTaskInsert> {
       const fetched = data.length;
       const cloudDeleted = data.filter((i: any) => i.deleted).length;
       if (data.length === 0) {
-        return { success: true, downloaded: 0, fetched, cloudDeleted };
+        return { success: true, downloaded: 0, fetched, cloudDeleted, skipped: [] };
       }
 
       // 3. 直接操作 BaseSyncService 的响应式列表（解包 ref 得到数组）
       const localItems = this.getListArray();
       const localMap = this.getMap();
       let downloadedCount = 0;
+      const skipped: SyncSkip[] = [];
 
       for (const cloudItem of data) {
         // RPC 返回 id 为 bigint(number)
@@ -250,7 +252,7 @@ export class TaskSyncService extends BaseSyncService<Task, CloudTaskInsert> {
 
         // --- C. 本地存在：更新 ---
         if (!localItem.synced) {
-          // console.log(`🔒 [tasks] ID=${cloudId} 本地有未同步修改，跳过下载`);
+          skipped.push({ id: cloudId, reason: "unsynced", detail: "本地未同步" });
           continue;
         }
 
@@ -279,11 +281,12 @@ export class TaskSyncService extends BaseSyncService<Task, CloudTaskInsert> {
           Object.assign(localItem, updatedItem);
 
           downloadedCount++;
-          // console.log(`🔄 [tasks] 更新 ID=${cloudId}`);
+        } else {
+          skipped.push({ id: cloudId, reason: "not-newer", detail: "云端不比本地新" });
         }
       }
 
-      return { success: true, downloaded: downloadedCount, fetched, cloudDeleted };
+      return { success: true, downloaded: downloadedCount, fetched, cloudDeleted, skipped };
     } catch (error: any) {
       console.error("下载 tasks 失败:", error);
       return { success: false, error: error.message, downloaded: 0, fetched: 0, cloudDeleted: 0 };
