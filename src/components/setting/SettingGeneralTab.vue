@@ -82,7 +82,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch, onMounted } from "vue";
-import { NCard, NDescriptions, NDescriptionsItem, NButton, NTag, NPopconfirm, NSpace, NSwitch, useDialog } from "naive-ui";
+import { NCard, NDescriptions, NDescriptionsItem, NButton, NTag, NPopconfirm, NSpace, NSwitch, useDialog, useNotification } from "naive-ui";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useDataStore } from "@/stores/useDataStore";
 import { useSyncStore } from "@/stores/useSyncStore";
@@ -101,6 +101,7 @@ const settingStore = useSettingStore();
 const dataStore = useDataStore();
 const syncStore = useSyncStore();
 const dialog = useDialog();
+const notification = useNotification();
 
 const userEmail = ref("-");
 const viteVersionRaw = import.meta.env.VITE_APP_VERSION || "";
@@ -347,7 +348,16 @@ async function refreshGeneral() {
 
 async function handleSyncDatabase() {
   try {
-    await syncDatabase();
+    const result = await syncDatabase();
+    // 试用到期/未登录被拦：弹通知，避免"同步数据库"按钮像没反应
+    if ((result as { denied?: boolean }).denied && syncStore.syncNeedsSubscription) {
+      notification.warning({
+        title: "云同步未执行",
+        content: syncStore.syncNeedsSubscription,
+        duration: 5000,
+        keepAliveOnHover: true,
+      });
+    }
   } catch (error) {
     console.error("[Setting] 同步数据库失败:", error);
   }

@@ -25,6 +25,7 @@ export interface SyncEntitlementResult {
 }
 
 interface CacheEntry {
+  userId: string;
   result: SyncEntitlementResult;
   ts: number;
 }
@@ -49,10 +50,6 @@ function workerBaseUrl(): string {
  * - 否则：拒绝（expired）
  */
 export async function getSyncEntitlement(): Promise<SyncEntitlementResult> {
-  if (cache && Date.now() - cache.ts < CACHE_TTL_MS) {
-    return cache.result;
-  }
-
   const base = workerBaseUrl();
   // 未配置网关：不拦（兼容本地模式 / 未启用同步）
   if (!base) {
@@ -63,6 +60,12 @@ export async function getSyncEntitlement(): Promise<SyncEntitlementResult> {
   const jwt = session?.access_token;
   if (!jwt) {
     return { allowed: false, denyReason: "no-session", trialUntil: null, paidUntil: null };
+  }
+
+  // 缓存按 userId 隔离：换号（A 登出后 B 登入）不会在 60s 内拿到 A 的权益结果
+  const userId = session.user?.id ?? "";
+  if (cache && cache.userId === userId && Date.now() - cache.ts < CACHE_TTL_MS) {
+    return cache.result;
   }
 
   let paidUntil: string | null = null;
@@ -93,7 +96,7 @@ export async function getSyncEntitlement(): Promise<SyncEntitlementResult> {
     trialUntil,
     paidUntil,
   };
-  cache = { result, ts: now };
+  cache = { userId, result, ts: now };
   return result;
 }
 

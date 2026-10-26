@@ -27,9 +27,10 @@ export function useSyncCountdown() {
       return;
     }
     expired.value = false;
-    const days = Math.ceil((new Date(end).getTime() - now) / DAY_MS);
+    // 剩余不足 1 天 → 今天到期；否则向上取整为 N 天（避免 Math.ceil 把 0.5 天也显示成"剩余 1 天"）
+    const remainingMs = new Date(end).getTime() - now;
     const kind = paidEnd ? "会员" : "试用";
-    label.value = days > 0 ? `${kind}剩余 ${days} 天` : `${kind}今天到期`;
+    label.value = remainingMs < DAY_MS ? `${kind}今天到期` : `${kind}剩余 ${Math.ceil(remainingMs / DAY_MS)} 天`;
   }
 
   onMounted(refresh);

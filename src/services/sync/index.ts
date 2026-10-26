@@ -579,7 +579,7 @@ export async function uploadAll() {
  */
 export async function downloadAll(lastSync: number) {
   const out = await downloadAllWithDiagnostics(lastSync, { updateTimestamp: true });
-  return { success: out.success, errors: out.errors, downloaded: out.downloaded };
+  return { success: out.success, errors: out.errors, downloaded: out.downloaded, denied: out.denied };
 }
 
 /**
