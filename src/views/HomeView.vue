@@ -1184,6 +1184,7 @@ function onUncancelTodo(id: number) {
   if (todo.status !== "cancelled") return;
 
   todo.status = "";
+  todo.statusCleared = true;
   todo.synced = false;
   todo.lastModified = Date.now();
 
@@ -1268,6 +1269,7 @@ function onUncancelSchedule(id: number) {
   if (schedule.status !== "cancelled") return;
 
   schedule.status = "";
+  schedule.statusCleared = true;
   schedule.synced = false;
   schedule.lastModified = Date.now();
 

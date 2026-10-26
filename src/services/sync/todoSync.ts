@@ -5,6 +5,13 @@ import { getCurrentUser } from "@/core/services/authService";
 import { BaseSyncService } from "./baseSyncService";
 import type { Todo } from "@/core/types/Todo";
 import type { Database } from "@/core/types/Database";
+import {
+  CLEARED_STATUS,
+  CLEARED_TIME,
+  mergePlannerFields,
+  plannerSkipDetail,
+  type SyncSkip,
+} from "./plannerFieldMerge";
 
 type CloudTodoInsert = Database["public"]["Tables"]["todos"]["Insert"];
 
@@ -69,10 +76,10 @@ export class TodoSyncService extends BaseSyncService<Todo, CloudTodoInsert> {
       activity_id: local.activityId,
       est_pomo: local.estPomo,
       real_pomo: local.realPomo,
-      status: local.status as Todo["status"],
+      status: local.statusCleared ? CLEARED_STATUS : ((local.status as Todo["status"]) ?? null),
       priority: local.priority,
-      done_time: local.doneTime ?? null,
-      start_time: local.startTime ?? null,
+      done_time: local.doneTimeCleared ? CLEARED_TIME : (local.doneTime ?? null),
+      start_time: local.startTimeCleared ? CLEARED_TIME : (local.startTime ?? null),
       global_index: local.globalIndex ?? null,
       // 旧本地数据可能缺 deleted，避免 upsert 写入 NULL 违反 DB NOT NULL
       deleted: local.deleted ?? false,
@@ -91,12 +98,12 @@ export class TodoSyncService extends BaseSyncService<Todo, CloudTodoInsert> {
       taskId: cloud.taskId,
       estPomo: cloud.estPomo,
       realPomo: cloud.realPomo,
-      status: cloud.status as Todo["status"],
+      status: (cloud.status === CLEARED_STATUS ? "" : cloud.status) as Todo["status"],
       priority: cloud.priority,
       pomoType: cloud.pomoType as "🍅" | "🍇" | "🍒",
       dueDate: cloud.dueDate,
-      doneTime: cloud.doneTime,
-      startTime: cloud.startTime,
+      doneTime: cloud.doneTime === CLEARED_TIME ? undefined : cloud.doneTime,
+      startTime: cloud.startTime === CLEARED_TIME ? undefined : cloud.startTime,
       interruption: cloud.interruption as "I" | "E",
       globalIndex: cloud.globalIndex,
 
@@ -114,12 +121,16 @@ export class TodoSyncService extends BaseSyncService<Todo, CloudTodoInsert> {
    * 覆盖 download 方法：使用 RPC 获取增量数据
    * 逻辑完全匹配 BaseSyncService 的响应式设计
    */
-  async download(lastSyncTimestamp: number): Promise<{
+  async download(
+    lastSyncTimestamp: number,
+    opts?: { reconcile?: boolean },
+  ): Promise<{
     success: boolean;
     error?: string;
     downloaded: number;
     fetched?: number;
     cloudDeleted?: number;
+    skipped?: SyncSkip[];
   }> {
     try {
       if (!supabase) {
@@ -179,14 +190,15 @@ export class TodoSyncService extends BaseSyncService<Todo, CloudTodoInsert> {
 
       const fetched = data.length;
       const cloudDeleted = data.filter((i: any) => i.deleted).length;
-      if (data.length === 0) {
-        return { success: true, downloaded: 0, fetched, cloudDeleted };
+        if (data.length === 0) {
+        return { success: true, downloaded: 0, fetched, cloudDeleted, skipped: [] };
       }
 
       // 3. 直接使用 BaseSyncService 中的响应式引用和索引 Map
       const localItems = this.getListArray();
       const localMap = this.getMap();
       let downloadedCount = 0;
+      const skipped: SyncSkip[] = [];
 
       for (const cloudItem of data) {
         // RPC 返回的 id 也是 bigint (number)
@@ -229,29 +241,59 @@ export class TodoSyncService extends BaseSyncService<Todo, CloudTodoInsert> {
         }
 
         // --- C. 本地存在：更新 ---
+        const cloudFields = {
+          status: cloudItem.status as string | null,
+          startTime: cloudItem.startTime as number | null,
+          doneTime: cloudItem.doneTime as number | null,
+        };
+        const detail = plannerSkipDetail(localItem, cloudFields);
         if (!localItem.synced) {
-          // console.log(`🔒 [todos] ID=${cloudId} 本地有未同步修改，跳过下载`);
+          skipped.push({ id: cloudId, reason: "unsynced", detail });
           continue;
         }
 
-        // 比较时间戳：如果云端比本地记录的“云端时间”新，或者本地没有记录云端时间
-        // 注意：这里比较的是 cloudModified，而不是 lastModified，因为我们要判断的是“服务器是否有新版本”
-        if (!localItem.cloudModified || cloudTimestamp > localItem.cloudModified) {
-          const updatedItem = this.mapCloudToLocal(cloudItem);
-
-          // 利用 Object.assign 保持引用不变，触发 Vue 响应式更新
-          Object.assign(localItem, updatedItem);
-
-          downloadedCount++;
-          // console.log(`🔄 [todos] 更新 ID=${cloudId}`);
-        } else {
-          // console.log(`⏭️ [todos] ID=${cloudId} 云端无变化，跳过`);
+        const cloudWins = !localItem.cloudModified || cloudTimestamp > localItem.cloudModified;
+        if (!cloudWins && !opts?.reconcile) {
+          skipped.push({ id: cloudId, reason: "not-newer", detail });
+          continue;
         }
+
+        if (!cloudWins) {
+          const merged = mergePlannerFields(localItem, cloudFields, "fill-only");
+          if (!merged.changed && !merged.reupload) {
+            skipped.push({ id: cloudId, reason: "not-newer", detail });
+            continue;
+          }
+          Object.assign(localItem, {
+            status: merged.status,
+            startTime: merged.startTime,
+            doneTime: merged.doneTime,
+            statusCleared: merged.statusCleared,
+            startTimeCleared: merged.startTimeCleared,
+            doneTimeCleared: merged.doneTimeCleared,
+            synced: merged.reupload ? false : localItem.synced,
+            lastModified: merged.reupload ? Date.now() : localItem.lastModified,
+          });
+          downloadedCount++;
+          continue;
+        }
+
+        const updatedItem = this.mapCloudToLocal(cloudItem);
+        const merged = mergePlannerFields(localItem, cloudFields, "cloud-wins");
+        Object.assign(localItem, updatedItem, {
+          status: merged.status,
+          startTime: merged.startTime,
+          doneTime: merged.doneTime,
+          statusCleared: merged.statusCleared,
+          startTimeCleared: merged.startTimeCleared,
+          doneTimeCleared: merged.doneTimeCleared,
+          synced: merged.reupload ? false : true,
+          lastModified: merged.reupload ? Date.now() : updatedItem.lastModified,
+        });
+        downloadedCount++;
       }
 
-      // 不需要 saveLocal，因为 reactiveList 是响应式的，变更会自动被外部 watcher 捕获并持久化
-
-      return { success: true, downloaded: downloadedCount, fetched, cloudDeleted };
+      return { success: true, downloaded: downloadedCount, fetched, cloudDeleted, skipped };
     } catch (error: any) {
       console.error("下载 todos 失败:", error);
       return { success: false, error: error.message, downloaded: 0, fetched: 0, cloudDeleted: 0 };

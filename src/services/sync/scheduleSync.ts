@@ -5,6 +5,13 @@ import { getCurrentUser } from "@/core/services/authService";
 import { BaseSyncService } from "./baseSyncService";
 import type { Schedule } from "@/core/types/Schedule";
 import type { Database } from "@/core/types/Database";
+import {
+  CLEARED_STATUS,
+  CLEARED_TIME,
+  mergePlannerFields,
+  plannerSkipDetail,
+  type SyncSkip,
+} from "./plannerFieldMerge";
 
 type CloudScheduleInsert = Database["public"]["Tables"]["schedules"]["Insert"];
 
@@ -61,8 +68,8 @@ export class ScheduleSyncService extends BaseSyncService<Schedule, CloudSchedule
       user_id: userId,
       timestamp_id: local.id,
       activity_id: local.activityId,
-      status: local.status ?? null,
-      done_time: local.doneTime ?? null,
+      status: local.statusCleared ? CLEARED_STATUS : (local.status ?? null),
+      done_time: local.doneTimeCleared ? CLEARED_TIME : (local.doneTime ?? null),
       deleted: local.deleted ?? false,
     };
   }
@@ -77,9 +84,9 @@ export class ScheduleSyncService extends BaseSyncService<Schedule, CloudSchedule
       activityTitle: cloud.activityTitle,
       activityDueRange: cloud.activityDueRange,
       taskId: cloud.taskId,
-      status: cloud.status as Schedule["status"],
+      status: (cloud.status === CLEARED_STATUS ? "" : cloud.status) as Schedule["status"],
       location: cloud.location,
-      doneTime: cloud.doneTime,
+      doneTime: cloud.doneTime === CLEARED_TIME ? undefined : cloud.doneTime,
       isUntaetigkeit: cloud.isUntaetigkeit,
       interruption: cloud.interruption as "I" | "E",
       projectName: cloud.projectName ?? undefined,
@@ -95,12 +102,16 @@ export class ScheduleSyncService extends BaseSyncService<Schedule, CloudSchedule
    * 覆盖 download 方法：使用 RPC 获取增量 Schedule 数据
    * 完全匹配 BaseSyncService 的响应式设计
    */
-  async download(lastSyncTimestamp: number): Promise<{
+  async download(
+    lastSyncTimestamp: number,
+    opts?: { reconcile?: boolean },
+  ): Promise<{
     success: boolean;
     error?: string;
     downloaded: number;
     fetched?: number;
     cloudDeleted?: number;
+    skipped?: SyncSkip[];
   }> {
     try {
       if (!supabase) {
@@ -162,13 +173,14 @@ export class ScheduleSyncService extends BaseSyncService<Schedule, CloudSchedule
       const fetched = data.length;
       const cloudDeleted = data.filter((i: any) => i.deleted).length;
       if (data.length === 0) {
-        return { success: true, downloaded: 0, fetched, cloudDeleted };
+        return { success: true, downloaded: 0, fetched, cloudDeleted, skipped: [] };
       }
 
       // 3. 直接操作 BaseSyncService 的响应式列表（解包 ref 得到数组）
       const localItems = this.getListArray();
       const localMap = this.getMap();
       let downloadedCount = 0;
+      const skipped: SyncSkip[] = [];
 
       for (const cloudItem of data) {
         // RPC 返回的 id 是 bigint (number)
@@ -211,24 +223,54 @@ export class ScheduleSyncService extends BaseSyncService<Schedule, CloudSchedule
         }
 
         // --- C. 本地存在：更新 ---
+        const cloudFields = {
+          status: cloudItem.status as string | null,
+          doneTime: cloudItem.doneTime as number | null,
+        };
+        const detail = plannerSkipDetail(localItem, cloudFields);
         if (!localItem.synced) {
-          // console.log(`🔒 [schedules] ID=${cloudId} 本地有未同步修改，跳过下载`);
+          skipped.push({ id: cloudId, reason: "unsynced", detail });
           continue;
         }
 
-        // 比较时间戳 (Server Wins)
-        if (!localItem.cloudModified || cloudTimestamp > localItem.cloudModified) {
-          const updatedItem = this.mapCloudToLocal(cloudItem);
-
-          // 使用 Object.assign 保持引用，触发 Vue 更新
-          Object.assign(localItem, updatedItem);
-
-          downloadedCount++;
-          // console.log(`🔄 [schedules] 更新 ID=${cloudId}`);
+        const cloudWins = !localItem.cloudModified || cloudTimestamp > localItem.cloudModified;
+        if (!cloudWins && !opts?.reconcile) {
+          skipped.push({ id: cloudId, reason: "not-newer", detail });
+          continue;
         }
+
+        if (!cloudWins) {
+          const merged = mergePlannerFields(localItem, cloudFields, "fill-only");
+          if (!merged.changed && !merged.reupload) {
+            skipped.push({ id: cloudId, reason: "not-newer", detail });
+            continue;
+          }
+          Object.assign(localItem, {
+            status: merged.status,
+            doneTime: merged.doneTime,
+            statusCleared: merged.statusCleared,
+            doneTimeCleared: merged.doneTimeCleared,
+            synced: merged.reupload ? false : localItem.synced,
+            lastModified: merged.reupload ? Date.now() : localItem.lastModified,
+          });
+          downloadedCount++;
+          continue;
+        }
+
+        const updatedItem = this.mapCloudToLocal(cloudItem);
+        const merged = mergePlannerFields(localItem, cloudFields, "cloud-wins");
+        Object.assign(localItem, updatedItem, {
+          status: merged.status,
+          doneTime: merged.doneTime,
+          statusCleared: merged.statusCleared,
+          doneTimeCleared: merged.doneTimeCleared,
+          synced: merged.reupload ? false : true,
+          lastModified: merged.reupload ? Date.now() : updatedItem.lastModified,
+        });
+        downloadedCount++;
       }
 
-      return { success: true, downloaded: downloadedCount, fetched, cloudDeleted };
+      return { success: true, downloaded: downloadedCount, fetched, cloudDeleted, skipped };
     } catch (error: any) {
       console.error("下载 schedules 失败:", error);
       return { success: false, error: error.message, downloaded: 0, fetched: 0, cloudDeleted: 0 };
