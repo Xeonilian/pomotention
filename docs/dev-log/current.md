@@ -13,8 +13,8 @@
 | **来自** | 一句记第一刀已通；目的是「有 AI 的软件能被人购买」；roadmap「收费 + 推广」 |
 | **蓝图** | 底座 [`8-ai-gateway.md`](./blueprint/8-ai-gateway.md)；能力 [`7-capture.md`](./blueprint/7-capture.md) |
 | **分支** | `dev` |
-| **更新** | 2026-10-15 |
-| **停在哪** | **今日新增云同步收费**：5 块代码已写、类型检查过、**未 commit**。明天接法见下方「云同步收费」节。主线收费步4仍暂停。Webhook 仍下一关。 |
+| **更新** | 2026-10-26 |
+| **停在哪** | **云同步收费底座已合并进 main**（`e1e4d0cb`，PR #142 squash）。剩**部署前手工**：填生产 env（`VITE_AFDIAN_SYNC_PLAN_MONTH`/`YEAR`）、部署 Worker、演练人工开通；**2026-11** 年付方案改回 99 元/年 + 改 `SupportDialog` 文案。Webhook 自动开通仍下一关。 |
 
 ---
 
