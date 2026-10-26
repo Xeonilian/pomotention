@@ -1,11 +1,9 @@
 // src/composables/useActivityTagEditor.ts
 
 import { ref, computed } from "vue";
-import { useTagStore } from "@/stores/useTagStore";
 import { useDataStore } from "@/stores/useDataStore";
 
 export function useActivityTagEditor() {
-  const tagStore = useTagStore();
   const dataStore = useDataStore();
 
   // ======================== 标签管理器状态 ========================
@@ -22,12 +20,6 @@ export function useActivityTagEditor() {
   // ======================== Popover 状态 ========================
   const tagSearchTerm = ref("");
   const popoverTargetId = ref<number | string | null>(null);
-
-  // 过滤后的标签列表
-  const filteredTags = computed(() => {
-    if (!tagSearchTerm.value) return tagStore.allTags;
-    return tagStore.findByName(tagSearchTerm.value);
-  });
 
   // ======================== 标签管理器操作 ========================
 
@@ -210,7 +202,6 @@ export function useActivityTagEditor() {
     tempTagIds,
     tagSearchTerm,
     popoverTargetId,
-    filteredTags,
 
     // ========== 标签管理器 ==========
     openTagManager,
