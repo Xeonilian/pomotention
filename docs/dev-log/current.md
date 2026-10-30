@@ -13,8 +13,8 @@
 | **来自** | 一句记第一刀已通；目的是「有 AI 的软件能被人购买」；roadmap「收费 + 推广」 |
 | **蓝图** | 底座 [`8-ai-gateway.md`](./blueprint/8-ai-gateway.md)；能力 [`7-capture.md`](./blueprint/7-capture.md) |
 | **分支** | `dev` |
-| **更新** | 2026-10-26 |
-| **停在哪** | **云同步收费底座已合并进 main**（`e1e4d0cb`，PR #142 squash）。Worker 已部署（`pomotention-ai-gateway.zhengws.workers.dev`，Version `a31453d3`）。**已知问题**：workers.dev 在中国网络不通 → 前端查权益 fail-open → **付费墙对连不上的用户永久免费（不是 14 天）**。决定：**先上线**，在"真有付费用户"前补 reachability（给 Worker 绑 Cloudflare 自定义域名，或把权益挪到 Supabase）。剩**部署前手工**：填生产 env（`VITE_AFDIAN_SYNC_PLAN_MONTH`/`YEAR`）、演练人工开通（本地 `pnpm gateway:dev`）。**2026-11** 年付方案改回 99 元/年 + 改 `SupportDialog` 文案。Webhook 自动开通仍下一关。 |
+| **更新** | 2026-10-30 |
+| **停在哪** | **云同步收费底座已合并进 main**（`e1e4d0cb`，PR #142 squash）。Worker：`pomotention-ai-gateway.zhengws.workers.dev`。**reachability：** 已购 `pomotention.com`（阿里云）；仓库外留门牌已换成 `.com` / `gateway.` / `docs.`。**卡住：** 等阿里云实名 → CF 改 NS → 绑 `gateway`/`apex`/`docs`/`dev` → 生产 `VITE_AI_WORKER_URL=https://gateway.pomotention.com` 并重部署 → 国内测 `/health`。旧 pages.dev/workers.dev 技术保留、不做 301。剩**部署前手工**：爱发电 plan env、人工开通演练。**2026-11** 年付改回 99 + SupportDialog。Webhook 仍下一关。 |
 
 ---
 
@@ -81,7 +81,7 @@
 
 ### 与上一关的关系
 
-- 本地记一句已通（`localhost:1420` → `127.0.0.1:8787`）。生产 Worker：`https://pomotention-ai-gateway.zhengws.workers.dev`。
+- 本地记一句已通（`localhost:1420` → `127.0.0.1:8787`）。生产 Worker 目标：`https://gateway.pomotention.com`（绑域前仍可用 `pomotention-ai-gateway.zhengws.workers.dev`）。
 - Cloudflare 你已完成（Worker + Pages 变量）。权益仍写 KV；开通仍走 `POST /admin/entitlement`。
 
 ### 价目与额度（开写前先定死写在本文件）
@@ -184,11 +184,11 @@ Worker：`POST /webhooks/afdian` 验签；`POST /v1/redeem` 需 JWT。保留 adm
 
 1. **爱发电两档**（认证已过）：19 元/月订阅；打赏默认 9 元。帮助页「买到什么 / 还在做的」贴到订阅说明。
 2. **手测步 4：** 要测记一句/订阅时先把 `CAPTURE_UI_ENABLED` 设回 `true`。登录 → 耗尽试用（或自己打满）→ 见升级 → 点订阅 → 按 SOP 开通 → 再记一句成功。顺带点开顶栏咖啡和帮助页，对上表。
-3. 预览站 [https://dev.pomotention.pages.dev](https://dev.pomotention.pages.dev) 若还没点过记一句，手测时一起。
+3. 预览站目标 [https://dev.pomotention.com](https://dev.pomotention.com)（绑域前可用 `dev.pomotention.pages.dev`）若还没点过记一句，手测时一起。
 4. 小红书 / 爱发电主页贴帮助页可复制段落（可手测后再贴）。
 
 开通 SOP 摘要：Supabase Dashboard → Authentication → 用登录邮箱查 User UID →  
-`WORKER_URL=https://pomotention-ai-gateway.zhengws.workers.dev`
+`WORKER_URL=https://gateway.pomotention.com`
 
 ```bash
 curl -X POST "$WORKER_URL/admin/entitlement" \

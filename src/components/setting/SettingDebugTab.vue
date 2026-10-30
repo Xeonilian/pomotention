@@ -359,8 +359,8 @@ const pomoSequenceDiagResult = ref("");
 const pomoSequenceCopyLoading = ref(false);
 const audioDebugCopyLoading = ref(false);
 
-const NET_APP = "https://pomotention.pages.dev/";
-const NET_DOCS = "https://pomotention-docs.pages.dev/";
+const NET_APP = "https://pomotention.com/";
+const NET_DOCS = "https://docs.pomotention.com/";
 const NET_SUPA = "https://supabase.com/";
 const NET_BAIDU = "https://www.baidu.com/";
 const NET_GITHUB = "https://github.com/";

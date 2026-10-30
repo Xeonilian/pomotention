@@ -33,7 +33,7 @@ function appRootFromLocation(): string {
 function resolveExitHref(): string {
   if (typeof window === "undefined") return "/";
   if (isTauri() || isLocalHost()) return appRootFromLocation();
-  return "https://pomotention.pages.dev/";
+  return "https://pomotention.com/";
 }
 
 /** 纠正 Logo 链：须带 vp-raw，否则 VitePress 会把同源出站也当成站内 router.go()（快捷键后退不受影响） */

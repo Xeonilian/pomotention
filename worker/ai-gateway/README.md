@@ -30,9 +30,9 @@ npx wrangler secret put ADMIN_TOKEN
 npx wrangler deploy
 ```
 
-记下生产 URL（形如 `https://pomotention-ai-gateway.<account>.workers.dev`）。浏览器打开 `GET /health` 应返回 `ok`。
+生产自定义域：`https://gateway.pomotention.com`（Worker Custom Domain；旧 `*.workers.dev` 可留作回退）。浏览器打开 `GET /health` 应返回 `ok`。
 
-正式前端根目录环境变量：`VITE_AI_WORKER_URL=<该 URL>`（无末尾斜杠），然后重新部署 Pages / 打桌面包。
+正式前端：`VITE_AI_WORKER_URL=https://gateway.pomotention.com`（无末尾斜杠），然后重新部署 Pages / 打桌面包。
 
 可选 vars（`wrangler.toml` `[vars]`）：`FREE_MONTHLY_QUOTA`（默认 20）、`PREMIUM_MONTHLY_QUOTA`（默认 2000）。
 
