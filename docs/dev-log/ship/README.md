@@ -10,6 +10,11 @@
 | 发版 | [`release.md`](./release.md) |
 | 测试 | [`test.md`](./test.md) |
 
-其余为工具链（Supabase、gh、docs deploy 等），按文件名找即可。
+其余为工具链（Supabase、gh、docs deploy 等），按文件名找即可。常用：
+
+| 主题 | 路径 |
+|------|------|
+| Cloudflare 域名 / Worker 门牌 / 国内测通 | [`cloudflare-domain.md`](./cloudflare-domain.md) |
+| 帮助页跳转与 Cloudflare | [`help-docs-cloudflare.md`](./help-docs-cloudflare.md) |
 
 **不放：** 当前关进度（→ [`../current.md`](../current.md)）、架构（→ [`../blueprint/README`](../blueprint/README.md)）。
