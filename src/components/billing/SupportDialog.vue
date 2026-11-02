@@ -15,7 +15,10 @@
       </template>
       <template v-else>
         <n-text>登录起 14 天免费同步，之后 9 元/月 ☁️</n-text>
-        <n-text v-if="countdownLabel" depth="3" style="font-size: 12px">⏳ {{ countdownLabel }}</n-text>
+        <n-space align="center" :size="8">
+          <n-text v-if="countdownLabel" depth="3" style="font-size: 12px">⏳ {{ countdownLabel }}</n-text>
+          <n-button size="tiny" quaternary @click="copyUserId">{{ copyHint }}</n-button>
+        </n-space>
         <n-text depth="3" style="font-size: 12px">回馈老用户：年付 49 元/首年 ✨</n-text>
         <n-space>
           <n-button size="small" type="primary" @click="goSubscribe('year')">年付 49 元</n-button>
@@ -35,6 +38,7 @@ import { useRouter } from "vue-router";
 import { getCurrentUser } from "@/core/services/authService";
 import { buildAfdianSyncSubscribeUrl, buildAfdianTipUrl, openExternalUrl } from "@/core/billing/afdian";
 import { useSyncCountdown } from "@/composables/billing/useSyncCountdown";
+import { copyTextToClipboard } from "@/utils/clipboard";
 
 const props = defineProps<{
   show: boolean;
@@ -53,6 +57,7 @@ const visible = computed({
 
 const loading = ref(false);
 const userId = ref<string | null>(null);
+const copyHint = ref("复制账号");
 // 须解构到顶层：嵌套 ref 在模板里不解包，v-if 会把 Ref 对象当 truthy，只剩 ⏳ 看不到文案
 const { label: countdownLabel, refresh: refreshCountdown } = useSyncCountdown();
 
@@ -68,10 +73,20 @@ async function loadUser() {
 
 watch(visible, (v) => {
   if (v) {
+    copyHint.value = "复制账号";
     void loadUser();
     void refreshCountdown();
   }
 });
+
+async function copyUserId() {
+  if (!userId.value) return;
+  const ok = await copyTextToClipboard(userId.value);
+  copyHint.value = ok ? "已复制" : "复制失败";
+  window.setTimeout(() => {
+    copyHint.value = "复制账号";
+  }, 2000);
+}
 
 function goSubscribe(period: "month" | "year") {
   openExternalUrl(buildAfdianSyncSubscribeUrl(userId.value, period));

@@ -10,6 +10,7 @@ import {
   parsePositiveInt,
   quotaExhaustedCode,
 } from "./quota";
+import { handleAfdianWebhook } from "./afdianWebhook";
 
 const HARDCODED_MODEL = "moonshot-v1-8k";
 const RATE_LIMIT_PER_MINUTE = 20;
@@ -26,6 +27,11 @@ export interface Env {
   /** 问 Supabase 登录是否有效；与前端同一项目 */
   SUPABASE_URL?: string;
   SUPABASE_ANON_KEY?: string;
+  /** 爱发电 webhook：?k= 校验；plan_id 见 wrangler vars / secret */
+  AFDIAN_WEBHOOK_TOKEN?: string;
+  AFDIAN_SYNC_PLAN_MONTH?: string;
+  AFDIAN_SYNC_PLAN_YEAR?: string;
+  AFDIAN_TIP_PLAN_IDS?: string;
 }
 
 type JsonRecord = Record<string, unknown>;
@@ -459,6 +465,9 @@ export default {
       }
       if (req.method === "POST" && path === "/admin/entitlement") {
         return await handleAdminEntitlement(req, env);
+      }
+      if (req.method === "POST" && path === "/webhooks/afdian") {
+        return await handleAfdianWebhook(req, env);
       }
       return err(404, "NOT_FOUND", `No route ${req.method} ${path}`);
     } catch (e) {

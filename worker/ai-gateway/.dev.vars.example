@@ -12,6 +12,14 @@ SUPABASE_ANON_KEY=
 SUPABASE_JWT_SECRET=
 ADMIN_TOKEN=
 
+# 爱发电 webhook（本地测：POST /webhooks/afdian?k=下面这个值）
+AFDIAN_WEBHOOK_TOKEN=
+# 与爱发电方案 id、前端 VITE_AFDIAN_SYNC_PLAN_* 一致（也可只放 wrangler [vars]）
+AFDIAN_SYNC_PLAN_MONTH=
+AFDIAN_SYNC_PLAN_YEAR=
+# 打赏等忽略的 plan_id，逗号分隔
+# AFDIAN_TIP_PLAN_IDS=
+
 # 可选：试用月额度（默认 20；测 402 时可临时改成 1）
 # FREE_MONTHLY_QUOTA=20
 

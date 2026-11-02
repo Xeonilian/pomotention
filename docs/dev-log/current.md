@@ -14,7 +14,7 @@
 | **蓝图** | 底座 [`8-ai-gateway.md`](./blueprint/8-ai-gateway.md)；能力 [`7-capture.md`](./blueprint/7-capture.md) |
 | **分支** | `dev` |
 | **更新** | 2026-10-30 |
-| **停在哪** | **云同步收费底座已合并进 main**。**reachability 已通：** `pomotention.com`（阿里云+CF NS）；主站/docs/gateway 自定义域已绑；生产 `VITE_AI_WORKER_URL=https://gateway.pomotention.com` 已重部署；登录后 `/v1/entitlement` → `gateway.pomotention.com` **200**。旧 pages.dev/workers.dev 保留、不做 301。可选未做：`www` 跳转、`dev.pomotention.com`、`VITE_HELP_DOCS_URL`。剩**部署前手工**：爱发电 plan env、人工开通演练。**2026-11** 年付改回 99。Webhook 仍下一关。 |
+| **停在哪** | **reachability 已通**。**Webhook 已 deploy**（`POST /webhooks/afdian` + secret/plan_id）；本地 curl 冒烟 ok。卡在爱发电后台填通知 URL 提示「功能维护中」——恢复后填 `https://gateway.pomotention.com/webhooks/afdian?k=…`。真单暂人工开通。未做：`/v1/redeem`。可选：`www`/`dev.`/`VITE_HELP_DOCS_URL`。**2026-11** 年付改回 99。 |
 
 ---
 

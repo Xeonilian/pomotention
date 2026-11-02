@@ -27,6 +27,7 @@ npx wrangler secret put MOONSHOT_API_KEY
 npx wrangler secret put SUPABASE_ANON_KEY
 npx wrangler secret put SUPABASE_JWT_SECRET
 npx wrangler secret put ADMIN_TOKEN
+npx wrangler secret put AFDIAN_WEBHOOK_TOKEN
 npx wrangler deploy
 ```
 
@@ -34,7 +35,7 @@ npx wrangler deploy
 
 正式前端：`VITE_AI_WORKER_URL=https://gateway.pomotention.com`（无末尾斜杠），然后重新部署 Pages / 打桌面包。
 
-可选 vars（`wrangler.toml` `[vars]`）：`FREE_MONTHLY_QUOTA`（默认 20）、`PREMIUM_MONTHLY_QUOTA`（默认 2000）。
+可选 vars（`wrangler.toml` `[vars]`）：`FREE_MONTHLY_QUOTA`、`PREMIUM_MONTHLY_QUOTA`、`AFDIAN_SYNC_PLAN_MONTH`、`AFDIAN_SYNC_PLAN_YEAR`、`AFDIAN_TIP_PLAN_IDS`。
 
 ## 路由
 
@@ -42,8 +43,26 @@ npx wrangler deploy
 |------|------|------|
 | POST | `/v1/chat/completions` | Supabase JWT |
 | POST | `/capture/map` | Supabase JWT（本关透传 chat，供以后 AiMapper） |
+| GET | `/v1/entitlement` | Supabase JWT |
 | POST | `/admin/entitlement` | `Authorization: Bearer <ADMIN_TOKEN>` |
+| POST | `/webhooks/afdian?k=...` | 查询参数 `k` = `AFDIAN_WEBHOOK_TOKEN` |
 | GET | `/health` | 无 |
+
+### 爱发电 Webhook
+
+1. 部署 Worker，并配置 `AFDIAN_WEBHOOK_TOKEN` + 同步 `plan_id` vars（与前端一致）。
+2. 爱发电开发者后台通知地址填：  
+   `https://gateway.pomotention.com/webhooks/afdian?k=<你的 token>`
+3. 软件内下单（带 `custom_order_id`）→ 回调写 `entitlement:sync:<uuid>`；打赏 plan 仅记单不开通。
+4. 本地冒烟：
+
+```bash
+curl -s -X POST "http://127.0.0.1:8787/webhooks/afdian?k=$AFDIAN_WEBHOOK_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{\"ec\":200,\"em\":\"ok\",\"data\":{\"type\":\"order\",\"order\":{\"out_trade_no\":\"test-1\",\"custom_order_id\":\"<uuid>\",\"plan_id\":\"<同步plan>\",\"month\":1,\"status\":2,\"total_amount\":\"9.00\"}}}"
+```
+
+应返回 `{"ec":200,"em":"ok"}`（或 `duplicate`）。
 
 模型固定 `moonshot-v1-8k`，忽略请求里的 `model`。  
 月配额：免费 20；premium 2000。超限 402，`QUOTA_EXHAUSTED` 或 `PREMIUM_QUOTA_EXHAUSTED`。
