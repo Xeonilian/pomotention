@@ -119,33 +119,7 @@
     </div>
   </template>
 
-  <!-- ========== 生活记录点（喝/吃/活动）：钉在第三列中线；点击看该条，不进空桶 ========== -->
-  <div
-    v-for="mark in lifePointMarks"
-    :key="`life-point-${mark.kind}-${mark.recordId}`"
-    class="life-point-mark"
-    :style="getLifePointMarkStyle(mark)"
-  >
-    <NPopover
-      v-if="!isMobile"
-      trigger="click"
-      placement="top"
-      to="body"
-      :show-arrow="true"
-      :style="popoverMaxStyle"
-      :content-style="popoverContentStyle"
-    >
-      <template #trigger>
-        <div class="life-point-mark__hit">
-          <n-icon :size="16" :component="lifePointIcon(mark.kind)" />
-        </div>
-      </template>
-      <p class="timetable-popover-text">{{ formatLifePointCaption(mark) }}</p>
-    </NPopover>
-    <div v-else class="life-point-mark__hit" @click="onLifePointClick($event, mark)">
-      <n-icon :size="16" :component="lifePointIcon(mark.kind)" />
-    </div>
-  </div>
+  <!-- 喝/吃/活动点 icon 日课表不画（周视图已有）；睡眠条仍在第4列 -->
 
   <!-- ========== 第三列：特殊优先级 Emoji ========== -->
   <template v-for="emoji in specialPriorityEmojisForSecondColumn" :key="`special-emoji-${emoji.todoId}`">
@@ -300,22 +274,15 @@
 </template>
 
 <script setup lang="ts">
-import { onUnmounted, ref, type Component } from "vue";
+import { onUnmounted, ref } from "vue";
 import { timestampToTimeString } from "@/core/utils";
 import type { ActualTimeRange, Block } from "@/core/types/Block";
 import type { TaskRecordMark } from "@/services/timetable/taskRecordMarks";
-import {
-  formatLifePointCaption,
-  formatLifeSleepCaption,
-  type LifePointKind,
-  type LifePointMark,
-  type LifeSleepRange,
-} from "@/services/timetable/lifeRecordOverlays";
+import { formatLifeSleepCaption, type LifeSleepRange } from "@/services/timetable/lifeRecordOverlays";
 import { getEnergyScoreEmoji, getRewardScoreEmoji } from "@/core/scoreEmojis";
 import { useTimeBlocks } from "@/composables/planner/useTimeBlocks";
 import { useDevice } from "@/composables/platform/useDevice";
-import { NPopover, NIcon } from "naive-ui";
-import { Door20Filled, Drop20Filled, FoodApple20Filled } from "@vicons/fluent";
+import { NPopover } from "naive-ui";
 
 // ======= Props =======
 const props = defineProps<{
@@ -342,7 +309,6 @@ const {
   getActualTodoTimeRangeStyle,
   getActualScheduleTimeRangeStyle,
   getRecordMarkStyle,
-  getLifePointMarkStyle,
   getLifeSleepRangeStyle,
   scheduleSegmentsForSecondColumn,
   specialPriorityEmojisForSecondColumn,
@@ -350,7 +316,6 @@ const {
   actualTodoTimeRanges,
   actualScheduleTimeRanges,
   recordMarks,
-  lifePointMarks,
   lifeSleepRanges,
   firstNonDigitLetterWide,
   getScheduleTooltip,
@@ -363,17 +328,6 @@ const {
 } = useTimeBlocks(props);
 
 const { isMobile } = useDevice();
-
-const LIFE_POINT_ICONS: Record<Exclude<LifePointKind, "energy" | "reward">, Component> = {
-  drink: Drop20Filled,
-  eat: FoodApple20Filled,
-  toilet: Door20Filled,
-};
-
-function lifePointIcon(kind: LifePointKind): Component {
-  if (kind === "energy" || kind === "reward") return Door20Filled;
-  return LIFE_POINT_ICONS[kind];
-}
 
 /** 朝上弹出，框用屏宽（列太窄不能左右飞） */
 const popoverMaxStyle = { maxWidth: "calc(100vw - 80px)", boxSizing: "border-box" } as const;
@@ -430,10 +384,6 @@ function onRecordMarkClick(e: MouseEvent, mark: TaskRecordMark) {
   if (!hasText) return;
   const text = mark.kind === "interruption" ? mark.description || "" : formatRecordMarkText(mark);
   showMobilePopover(e, text);
-}
-
-function onLifePointClick(e: MouseEvent, mark: LifePointMark) {
-  showMobilePopover(e, formatLifePointCaption(mark));
 }
 
 function onLifeSleepClick(e: MouseEvent, range: LifeSleepRange) {
@@ -953,23 +903,17 @@ const getPriorityBadgeClasses = (seg: any) => [
   transform: scale(1.3);
 }
 
-.record-mark,
-.life-point-mark {
-  pointer-events: auto;
-}
-
 .record-mark {
+  pointer-events: auto;
   z-index: 20 !important;
 }
 
-.life-point-mark :deep(.n-popover-trigger),
 .life-sleep-range :deep(.n-popover-trigger) {
   display: block;
   width: 100%;
   height: 100%;
 }
 
-.life-point-mark__hit,
 .life-sleep-range__hit {
   width: 100%;
   height: 100%;
