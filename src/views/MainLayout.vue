@@ -100,9 +100,9 @@
                     class="header-button"
                     @click="handleLogoutButtonClick"
                     @dblclick.prevent="handleLogoutButtonDoubleClick"
-                    @touchstart.stop="onLogoutButtonTouchStart"
+                    @touchstart.stop.passive="onLogoutButtonTouchStart"
                     @touchend.stop="onLogoutButtonTouchEnd"
-                    @touchcancel.stop="onLogoutButtonTouchCancel"
+                    @touchcancel.stop.passive="onLogoutButtonTouchCancel"
                   >
                     <template #icon>
                       <n-icon>

@@ -20,7 +20,7 @@
             @select="(key) => $emit('filter', key)"
             @update:show="(show: boolean) => show && $emit('focus-search')"
           >
-            <n-button text type="default" title="筛选活动" @pointerdown.stop @mousedown.prevent.stop @touchstart.stop>
+            <n-button text type="default" title="筛选活动" @pointerdown.stop @mousedown.prevent.stop @touchstart.stop.passive>
               <template #icon>
                 <n-icon><DocumentTableSearch24Regular /></n-icon>
               </template>
@@ -34,7 +34,7 @@
             @select="onSortSelect"
             @update:show="(show: boolean) => show && $emit('focus-search')"
           >
-            <n-button text type="default" title="排序方式" @pointerdown.stop @mousedown.prevent.stop @touchstart.stop>
+            <n-button text type="default" title="排序方式" @pointerdown.stop @mousedown.prevent.stop @touchstart.stop.passive>
               <template #icon>
                 <n-icon><ArrowSortDownLines24Regular /></n-icon>
               </template>

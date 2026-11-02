@@ -29,9 +29,9 @@
         @focus="handleTitleInputFocus"
         @blur="handleTitleBlur"
         @touchstart.stop="handleTitleTouchStart"
-        @touchmove.stop="handleTitleTouchMove"
+        @touchmove.stop.passive="handleTitleTouchMove"
         @touchend.stop="handleTitleTouchEnd"
-        @touchcancel.stop="handleTitleTouchCancel"
+        @touchcancel.stop.passive="handleTitleTouchCancel"
         :class="{
           'force-hover': isHoveredRow,
           'child-activity': item.parentId,
@@ -48,7 +48,7 @@
             style="touch-action: none; cursor: grab"
             @pointerdown.prevent.stop="$emit('drag-start', $event)"
             @mousedown.prevent.stop
-            @touchstart.stop
+            @touchstart.stop.passive
             :title="dragAreaTitle"
           >
             <n-icon v-if="item.isUntaetigkeit" :color="'var(--color-blue)'"><Cloud24Regular /></n-icon>
@@ -127,9 +127,9 @@
             @click.stop="handleTagIconClick"
             @pointerdown.stop
             @mousedown.prevent.stop
-            @touchstart.stop
-            @touchend.stop
-            @touchcancel.stop
+            @touchstart.stop.passive
+            @touchend.stop.passive
+            @touchcancel.stop.passive
           >
             <Tag16Regular />
           </n-icon>
@@ -193,7 +193,7 @@
         @mousedown.stop="handlePomoInputMouseDown"
         @touchstart.stop="handlePomoInputTouchStart"
         @touchend.stop="handlePomoInputTouchEnd"
-        @touchcancel.stop="handlePomoInputTouchCancel"
+        @touchcancel.stop.passive="handlePomoInputTouchCancel"
         :class="{
           'pomo-red': item.pomoType === '🍅',
           'pomo-purple': item.pomoType === '🍇',
