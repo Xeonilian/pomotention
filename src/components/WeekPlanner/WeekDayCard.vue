@@ -20,9 +20,9 @@
         :class="{ today: day.isToday }"
         @click.stop="onDateBadgeMouseClick"
         @dblclick.stop="onDateBadgeDblClick"
-        @touchstart.stop="onWeekBadgeTouchStart"
+        @touchstart.stop.passive="onWeekBadgeTouchStart"
         @touchend.stop="() => onWeekBadgeTouchEnd(day.startTs)"
-        @touchcancel.stop="onWeekBadgeTouchCancel"
+        @touchcancel.stop.passive="onWeekBadgeTouchCancel"
       >
         {{ formatMonthDay(day.startTs) }}
       </div>

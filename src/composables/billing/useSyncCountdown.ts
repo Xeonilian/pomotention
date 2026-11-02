@@ -34,5 +34,6 @@ export function useSyncCountdown() {
   }
 
   onMounted(refresh);
+  // 调用方须解构到 setup 顶层再用（模板对嵌套 ref 不解包）
   return { label, until, expired, refresh };
 }

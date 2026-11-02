@@ -10,6 +10,11 @@ import {
   parsePositiveInt,
   quotaExhaustedCode,
 } from "./quota";
+import {
+  getAfdianOrderByTradeNo,
+  handleAfdianWebhook,
+  listAfdianOrdersForUser,
+} from "./afdianWebhook";
 
 const HARDCODED_MODEL = "moonshot-v1-8k";
 const RATE_LIMIT_PER_MINUTE = 20;
@@ -26,6 +31,11 @@ export interface Env {
   /** 问 Supabase 登录是否有效；与前端同一项目 */
   SUPABASE_URL?: string;
   SUPABASE_ANON_KEY?: string;
+  /** 爱发电 webhook：?k= 校验；plan_id 见 wrangler vars / secret */
+  AFDIAN_WEBHOOK_TOKEN?: string;
+  AFDIAN_SYNC_PLAN_MONTH?: string;
+  AFDIAN_SYNC_PLAN_YEAR?: string;
+  AFDIAN_TIP_PLAN_IDS?: string;
 }
 
 type JsonRecord = Record<string, unknown>;
@@ -423,6 +433,53 @@ async function handleAdminEntitlement(req: Request, env: Env): Promise<Response>
   return json({ ok: true, scope, user_id: userId, entitlement: record });
 }
 
+/** 只读查爱发电留痕：?out_trade_no= 或 ?user_id=（Bearer ADMIN_TOKEN） */
+async function handleAdminAfdianOrder(req: Request, env: Env): Promise<Response> {
+  const header = req.headers.get("authorization") || "";
+  const token = header.startsWith("Bearer ") ? header.slice(7).trim() : "";
+  if (!env.ADMIN_TOKEN || token !== env.ADMIN_TOKEN) {
+    return err(401, "UNAUTHORIZED", "Invalid admin token");
+  }
+
+  const url = new URL(req.url);
+  const outTradeNo = (url.searchParams.get("out_trade_no") || "").trim();
+  const userId = (url.searchParams.get("user_id") || "").trim();
+  if (!outTradeNo && !userId) {
+    return err(400, "BAD_REQUEST", "out_trade_no or user_id required");
+  }
+
+  if (outTradeNo) {
+    const order = await getAfdianOrderByTradeNo(env, outTradeNo);
+    if (!order) {
+      return err(404, "NOT_FOUND", "order record not found");
+    }
+    let sync: { until?: string } = {};
+    if (order.userId) {
+      const raw = await env.AI_KV.get(`entitlement:sync:${order.userId}`);
+      if (raw) {
+        try {
+          sync = JSON.parse(raw) as { until?: string };
+        } catch {
+          sync = {};
+        }
+      }
+    }
+    return json({ ok: true, orders: [order], sync_entitlement: sync });
+  }
+
+  const orders = await listAfdianOrdersForUser(env, userId);
+  const raw = await env.AI_KV.get(`entitlement:sync:${userId}`);
+  let sync: { until?: string } = {};
+  if (raw) {
+    try {
+      sync = JSON.parse(raw) as { until?: string };
+    } catch {
+      sync = {};
+    }
+  }
+  return json({ ok: true, user_id: userId, orders, sync_entitlement: sync });
+}
+
 /** 前端查自己的权益：一句记 + 同步（同步含试用到期日，未付费时服务端首次写入起点） */
 async function handleGetEntitlement(req: Request, env: Env): Promise<Response> {
   const auth = await authenticateUser(req, env);
@@ -459,6 +516,12 @@ export default {
       }
       if (req.method === "POST" && path === "/admin/entitlement") {
         return await handleAdminEntitlement(req, env);
+      }
+      if (req.method === "GET" && path === "/admin/afdian-order") {
+        return await handleAdminAfdianOrder(req, env);
+      }
+      if (req.method === "POST" && path === "/webhooks/afdian") {
+        return await handleAfdianWebhook(req, env);
       }
       return err(404, "NOT_FOUND", `No route ${req.method} ${path}`);
     } catch (e) {

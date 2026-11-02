@@ -20,7 +20,7 @@
 
 | 方案 | 何时用 | 主应用要做什么 | 文档站要做什么 |
 | --- | --- | --- | --- |
-| **A. 外链文档站** | 文档单独 Pages 项目（如 `*.pages.dev`） | 构建时设 `VITE_HELP_DOCS_URL` | `VITEPRESS_BASE=/`（子域根） |
+| **A. 外链文档站** | 文档单独 Pages（`docs.pomotention.com`） | 构建时设 `VITE_HELP_DOCS_URL` | `VITEPRESS_BASE=/`（子域根） |
 | **B. 同源 docs-app** | 帮助与主站同域 | `pnpm build:with-docs` 部署完整 `dist` | 由 `run-docs-for-app` + sync 进主站，不需单独对外文档 URL |
 
 ## 4. SOP-A：Web 跳到独立文档站
@@ -29,9 +29,9 @@
 
 | 步骤 | 操作 | 通过条件 |
 | --- | --- | --- |
-| A1 | 打开 **主应用** Cloudflare Pages 项目 | 对应主站域名（如 `pomotention.pages.dev`） |
+| A1 | 打开 **主应用** Cloudflare Pages 项目 | 对应主站域名（`pomotention.com`） |
 | A2 | Settings → Environment variables | Production（及需要的 Preview） |
-| A3 | 新增：`VITE_HELP_DOCS_URL` = `https://<文档域>/` | 值与浏览器能打开的文档首页一致 |
+| A3 | 新增：`VITE_HELP_DOCS_URL` = `https://docs.pomotention.com/` | 值与浏览器能打开的文档首页一致 |
 | A4 | 触发 **重新构建并部署** | 仅改变量不重 build 无效 |
 | A5 | 打开主站 → 点「帮助」 | 地址栏变为文档域，且文档页正常（非白屏） |
 | A6 | （可选）仓库根 `.env.development` 写同一变量 | 本地 dev 行为与线上一致 |

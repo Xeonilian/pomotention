@@ -28,9 +28,9 @@
               :title="day ? formatDayTitle(day.startTs) : ''"
               @click="onYearDayClick(day)"
               @dblclick.stop="onYearDayDblClick(day, $event)"
-              @touchstart.stop="onYearDayTouchStart(day, $event)"
+              @touchstart.stop.passive="onYearDayTouchStart(day, $event)"
               @touchend.stop="onYearDayTouchEnd(day, $event)"
-              @touchcancel.stop="onYearDayTouchCancel()"
+              @touchcancel.stop.passive="onYearDayTouchCancel()"
             >
               <template v-if="day && day.isCurrentMonth">
                 <span

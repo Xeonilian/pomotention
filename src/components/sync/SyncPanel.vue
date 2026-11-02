@@ -8,11 +8,11 @@
       </n-space>
     </div>
 
-    <!-- 云同步有效期倒计时 -->
-    <div v-if="countdown.label" class="sync-countdown">
-      <n-text depth="3" style="font-size: 12px">⏳ {{ countdown.label }}</n-text>
+    <!-- 云同步有效期倒计时（须用顶层 ref，嵌套 ref 模板不解包） -->
+    <div v-if="countdownLabel" class="sync-countdown">
+      <n-text depth="3" style="font-size: 12px">⏳ {{ countdownLabel }}</n-text>
     </div>
-    <div v-else-if="countdown.expired" class="sync-countdown">
+    <div v-else-if="countdownExpired" class="sync-countdown">
       <n-text depth="3" style="font-size: 12px">⚠️ 云同步已到期，点顶栏咖啡杯续费</n-text>
     </div>
 
@@ -91,7 +91,7 @@ const isFirstTime = ref(true);
 const isLoaded = ref(false);
 const importReport = ref<ImportReport | null>(null);
 const syncResult = ref<SyncResult | null>(null);
-const countdown = useSyncCountdown();
+const { label: countdownLabel, expired: countdownExpired } = useSyncCountdown();
 
 // 计算属性
 const showAutoSync = computed(() => isLoaded.value && isFirstTime.value);

@@ -38,9 +38,9 @@
               }"
               @click.stop="() => onDateBadgeMouseClick(day.startTs)"
               @dblclick.stop="() => onDateBadgeDblClick(day.startTs)"
-              @touchstart.stop="onMonthBadgeTouchStart"
+              @touchstart.stop.passive="onMonthBadgeTouchStart"
               @touchend.stop="() => onMonthBadgeTouchEnd(day.startTs)"
-              @touchcancel.stop="onMonthBadgeTouchCancel"
+              @touchcancel.stop.passive="onMonthBadgeTouchCancel"
               :style="getBadgeStyle(day)"
             >
               {{ formatDay(day.startTs) }}

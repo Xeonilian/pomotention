@@ -14,3 +14,8 @@ SUPABASE_URL = "https://dskjqiekwujocbkngyrt.supabase.co"
 # 模型写死在代码里（moonshot-v1-8k），不放 vars，避免被改
 # 可选：FREE_MONTHLY_QUOTA = "20"
 # 可选：PREMIUM_MONTHLY_QUOTA = "2000"
+# 爱发电：同步 plan_id（与前端 VITE_AFDIAN_SYNC_PLAN_* 相同）；打赏 plan 填 AFDIAN_TIP_PLAN_IDS 以免误开通
+# AFDIAN_SYNC_PLAN_MONTH = ""
+# AFDIAN_SYNC_PLAN_YEAR = ""
+# AFDIAN_TIP_PLAN_IDS = ""
+# AFDIAN_WEBHOOK_TOKEN 用 wrangler secret put，勿写进本文件
