@@ -244,7 +244,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
-import { NMenu, NButton, NIcon, NLayoutFooter, NTag, NPopconfirm, NDropdown, NConfigProvider, useNotification } from "naive-ui";
+import { NMenu, NButton, NIcon, NLayoutFooter, NTag, NPopconfirm, NDropdown, NConfigProvider } from "naive-ui";
 import { storeToRefs } from "pinia";
 import hljs from "highlight.js/lib/core";
 import javascript from "highlight.js/lib/languages/javascript";
@@ -330,7 +330,6 @@ const syncStore = useSyncStore();
 const { syncIcon, handleUpload, handleDownload } = useSyncWidget(); //relativeTime,
 const { isLoggedIn } = storeToRefs(syncStore);
 const { isMobile } = useDevice();
-const notification = useNotification();
 const pomotentionTimerRef = ref<{
   canStartWorkShortcut: () => boolean;
   triggerWorkStartShortcut: () => boolean;
@@ -354,19 +353,6 @@ const accountLogoutBtnTitle = computed(() => {
   if (dataStore.hasUnsyncedData) return "本地有未上传数据";
   return "退出登录";
 });
-
-watch(
-  () => syncStore.downloadFailed,
-  (failed, wasFailed) => {
-    if (failed && wasFailed === false && syncStore.syncError) {
-      notification.warning({
-        title: "云端下载未成功",
-        content: syncStore.syncError,
-        duration: 12000,
-      });
-    }
-  },
-);
 
 const showDatabaseDialog = ref(false);
 const showSupportDialog = ref(false);
