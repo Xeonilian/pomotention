@@ -7,8 +7,9 @@ import { SPECIAL_PRIORITIES, getEmojiForPriority } from "@/core/priorityCategori
 import type { Block, PomodoroSegment, TodoSegment, ActualTimeRange } from "@/core/types/Block";
 import { generateActualTodoSegments, splitIndexPomoBlocksExSchedules } from "@/services/timer/pomoSegService";
 import { collectTaskRecordMarks, type TaskRecordMark } from "@/services/timetable/taskRecordMarks";
-import { collectLifeRecordOverlays, type LifeSleepRange } from "@/services/timetable/lifeRecordOverlays";
+import { collectLifeRecordOverlays, type LifePointMark, type LifeSleepRange } from "@/services/timetable/lifeRecordOverlays";
 import { findDayEnergyTask } from "@/services/task/dayEnergyService";
+import { getLifeRecordKind, parseLifeRecordPlaceholder } from "@/core/lifeRecord";
 import { useSegStore } from "@/stores/useSegStore";
 import { useTimeBlockDrag } from "./useTimeBlockDrag";
 import { storeToRefs } from "pinia";
@@ -19,6 +20,25 @@ import { useDevice } from "@/composables/platform/useDevice";
 const { isMobile } = useDevice();
 const borderWidth = isMobile.value ? 0.5 : 1;
 const mobileFontSize = isMobile.value ? 9 : 11;
+
+/** 日课表第4列活动浅灰条（仅 Timetable 用，不进 overlays） */
+export interface LifeActivityRange {
+  recordId: number;
+  start: number;
+  end: number;
+  note: string;
+  energy?: number;
+}
+
+/** 单端点：只有开始 → 向下 +5min；只有结束 → 向上 +5min */
+const ACTIVITY_PAD_MS = 5 * 60_000;
+
+function clampActivityRange(start: number, end: number, rangeStart: number, rangeEnd: number): { start: number; end: number } | null {
+  const s = Math.max(start, rangeStart);
+  const e = Math.min(end, rangeEnd);
+  if (e <= s) return null;
+  return { start: s, end: e };
+}
 
 // 第二列显示的schedule segment接口
 export interface ScheduleSegmentForSecondColumn {
@@ -69,6 +89,8 @@ interface UseTimeBlocksReturn {
   getActualTodoTimeRangeStyle: (range: ActualTimeRange) => CSSProperties; // 第四列：实际执行时间范围todo
   getActualScheduleTimeRangeStyle: (range: ActualTimeRange) => CSSProperties; // 第四列：实际执行时间范围schedule
   getRecordMarkStyle: (mark: TaskRecordMark) => CSSProperties;
+  getLifePointMarkStyle: (mark: LifePointMark) => CSSProperties;
+  getLifeActivityRangeStyle: (range: LifeActivityRange) => CSSProperties;
   getLifeSleepRangeStyle: (range: LifeSleepRange) => CSSProperties;
 
   // 计算属性
@@ -78,6 +100,10 @@ interface UseTimeBlocksReturn {
   actualTodoTimeRanges: ComputedRef<ActualTimeRange[]>;
   actualScheduleTimeRanges: ComputedRef<ActualTimeRange[]>;
   recordMarks: ComputedRef<TaskRecordMark[]>;
+  /** 日课表点标：吃饭→第3列、喝水→第5列（不含活动） */
+  lifePointMarks: ComputedRef<LifePointMark[]>;
+  /** 日课表第4列：活动浅灰条 */
+  lifeActivityRanges: ComputedRef<LifeActivityRange[]>;
   lifeSleepRanges: ComputedRef<LifeSleepRange[]>;
 
   // 工具函数
@@ -511,8 +537,8 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
     };
   }
 
-  // 生活记录 overlay：日课表只画睡眠条；喝/吃/活动点留给周视图（不走 todosForAppDate）
-  const lifeSleepRanges = computed(() => {
+  // 生活记录 overlay：吃→3列、活动条→4列、喝→5列最下层、睡眠条→4列（不走 todosForAppDate）
+  const lifeRecordOverlays = computed(() => {
     void now.value;
     const px = props.effectivePxPerMinute;
     const markH = 14;
@@ -524,8 +550,107 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
       getActivity: (id) => activityById.value.get(id),
       now: now.value,
       minGapMs: isMobile.value ? 5 * 60_000 : px > 0 ? ((markH * 0.6) / px) * 60_000 : 60_000,
-    }).sleeps;
+    });
   });
+  const lifePointMarks = computed(() => lifeRecordOverlays.value.points.filter((mark) => mark.kind === "eat" || mark.kind === "drink"));
+  // 活动条在日课表本地拼：overlays 仍给周视图 toilet 点标，这里不改 overlays
+  const lifeActivityRanges = computed((): LifeActivityRange[] => {
+    const out: LifeActivityRange[] = [];
+    const viewStart = props.dayStart;
+    const viewEnd = dayEnd.value;
+    const tr = props.timeRange;
+
+    for (const task of taskList.value) {
+      if (task.deleted || !task.lifeRecords?.length) continue;
+      const activity = activityById.value.get(task.sourceId);
+      const parsed = parseLifeRecordPlaceholder(task.activityTitle ?? activity?.title);
+      const kind = parsed?.kind ?? getLifeRecordKind(activity);
+      if (kind !== "toilet") continue;
+      const ownerDay = parsed?.dayStart;
+      if (ownerDay != null && ownerDay !== viewStart) continue;
+      if (ownerDay == null) {
+        // 旧数据：sourceId 落在显示日才收
+        const id = Number.isFinite(task.sourceId) ? task.sourceId : task.id;
+        if (id < viewStart || id >= viewEnd) continue;
+      }
+
+      for (const record of task.lifeRecords) {
+        const hasStart = typeof record.recordedAt === "number" && Number.isFinite(record.recordedAt);
+        const hasEnd = typeof record.endAt === "number" && Number.isFinite(record.endAt);
+        if (!hasStart && !hasEnd) continue;
+
+        let start = hasStart ? record.recordedAt : (record.endAt as number) - ACTIVITY_PAD_MS;
+        let end = hasEnd ? (record.endAt as number) : record.recordedAt + ACTIVITY_PAD_MS;
+        if (end <= start) {
+          if (hasStart && !hasEnd) end = start + ACTIVITY_PAD_MS;
+          else if (!hasStart && hasEnd) start = end - ACTIVITY_PAD_MS;
+          else end = start + ACTIVITY_PAD_MS;
+        }
+
+        const dayClip = clampActivityRange(start, end, viewStart, viewEnd);
+        if (!dayClip) continue;
+        const viewClip = clampActivityRange(dayClip.start, dayClip.end, tr.start, tr.end);
+        if (!viewClip) continue;
+
+        out.push({
+          recordId: record.id,
+          start: viewClip.start,
+          end: viewClip.end,
+          note: (record.description ?? "").trim(),
+          ...(record.energy != null ? { energy: record.energy } : {}),
+        });
+      }
+    }
+    return out;
+  });
+  const lifeSleepRanges = computed(() => lifeRecordOverlays.value.sleeps);
+
+  function getLifePointMarkStyle(mark: LifePointMark): CSSProperties {
+    const isDrink = mark.kind === "drink";
+    // 喝水比原先 16 小 1px；吃饭仍 16
+    const markW = isDrink ? 15 : 16;
+    const markH = isDrink ? 15 : 16;
+    const topPx = ((mark.time - props.timeRange.start) / 60000) * props.effectivePxPerMinute - markH / 2;
+    // 吃饭钉第3列中线；喝水钉第5列起点（与 recordMarks 同区），不按 lane 横移
+    const colLeft = isDrink ? (isMobile.value ? 52 : 78) : isMobile.value ? 37 : 42;
+    const colWidth = isDrink ? markW : 13;
+    const left = isDrink ? colLeft : colLeft + colWidth / 2 - markW / 2;
+
+    return {
+      position: "absolute",
+      left: `${left}px`,
+      top: `${topPx}px`,
+      width: `${markW}px`,
+      height: `${markH}px`,
+      color: mark.colorVar,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      // 喝水在第5列最下层，低于打扰/精力/奖赏（13+ / css 20）
+      zIndex: isDrink ? 8 : 36,
+      cursor: "pointer",
+      userSelect: "none",
+    };
+  }
+
+  function getLifeActivityRangeStyle(range: LifeActivityRange): CSSProperties {
+    const startMinute = (range.start - props.timeRange.start) / 60000;
+    const endMinute = (range.end - props.timeRange.start) / 60000;
+    const topPx = startMinute * props.effectivePxPerMinute;
+    const heightPx = Math.max(2, (endMinute - startMinute) * props.effectivePxPerMinute);
+    return {
+      position: "absolute",
+      left: isMobile.value ? "70px" : "61px",
+      width: isMobile.value ? "3px" : "8px",
+      top: `${topPx}px`,
+      height: `${heightPx}px`,
+      zIndex: 9,
+      cursor: "pointer",
+      borderRadius: "6px",
+      backgroundColor: "rgba(243, 246, 64, 0.28)",
+      border: `${borderWidth}px solid rgba(245, 241, 22, 0.94)`,
+    };
+  }
 
   function getLifeSleepRangeStyle(range: LifeSleepRange): CSSProperties {
     const startMinute = (range.start - props.timeRange.start) / 60000;
@@ -790,6 +915,8 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
     getActualTodoTimeRangeStyle,
     getActualScheduleTimeRangeStyle,
     getRecordMarkStyle,
+    getLifePointMarkStyle,
+    getLifeActivityRangeStyle,
     getLifeSleepRangeStyle,
 
     // 数据
@@ -799,6 +926,8 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
     actualTodoTimeRanges,
     actualScheduleTimeRanges,
     recordMarks,
+    lifePointMarks,
+    lifeActivityRanges,
     lifeSleepRanges,
 
     // 工具

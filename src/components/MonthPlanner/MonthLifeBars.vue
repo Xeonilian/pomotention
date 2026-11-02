@@ -219,8 +219,8 @@ function grow(v: number) {
   box-sizing: border-box;
 }
 .mlb__fill--split {
-  border-top: 1px solid rgba(106, 13, 13, 0.9);
-  border-top: 1px solid oklch(46.799% 0.16872 26.747 / 0.718);
+  border-top: 1px solid rgba(160, 30, 30, 0.9);
+  border-top: 1px solid oklch(57.466% 0.17359 24.4 / 0.718);
 }
 .mlb__fill--meal {
   background: rgba(214, 72, 100, 0.8);
