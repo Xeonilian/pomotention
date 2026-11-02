@@ -1,6 +1,9 @@
 /**
  * 爱发电 Webhook：订阅订单自动写同步权益；打赏 plan 忽略。
  * 通知 URL 形如：https://gateway.../webhooks/afdian?k=<AFDIAN_WEBHOOK_TOKEN>
+ *
+ * 留痕：afdian:order:<out_trade_no>；用户索引 afdian:user-orders:<uuid>
+ * 幂等：先写订单键（固定 until）再写权益；重试只 ensure ≥ until，不叠月
  */
 
 export interface AfdianWebhookEnv {
@@ -16,6 +19,25 @@ export interface AfdianWebhookEnv {
 }
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export type AfdianOrderAction =
+  | "sync_granted"
+  | "tip_skip"
+  | "unknown_plan_skip"
+  | "need_redeem";
+
+/** KV 留痕记录 */
+export interface AfdianOrderRecord {
+  action: AfdianOrderAction;
+  outTradeNo: string;
+  userId?: string;
+  planId?: string;
+  months?: number;
+  until?: string;
+  totalAmount?: string;
+  at: string;
+  updatedAt?: string;
+}
 
 /** 爱发电要求的成功应答（非 200 会重试） */
 function afdianOk(em = ""): Response {
@@ -61,6 +83,25 @@ function planIdSet(raw: string | undefined): Set<string> {
   );
 }
 
+function orderKvKey(outTradeNo: string): string {
+  return `afdian:order:${outTradeNo}`;
+}
+
+function userOrdersKvKey(userId: string): string {
+  return `afdian:user-orders:${userId}`;
+}
+
+export function parseAfdianOrderRecord(raw: string | null): AfdianOrderRecord | null {
+  if (!raw) return null;
+  try {
+    const o = JSON.parse(raw) as AfdianOrderRecord;
+    if (!o || typeof o !== "object" || typeof o.action !== "string") return null;
+    return o;
+  } catch {
+    return null;
+  }
+}
+
 /** 从 base 起加 calendar months（UTC 日） */
 export function addCalendarMonths(base: Date, months: number): Date {
   const d = new Date(base.getTime());
@@ -68,7 +109,41 @@ export function addCalendarMonths(base: Date, months: number): Date {
   return d;
 }
 
-async function grantSyncMonths(env: AfdianWebhookEnv, userId: string, months: number): Promise<string> {
+/** 权益至少到 targetUntil（不叠月；已有更高则保留） */
+export async function ensureSyncUntil(
+  env: AfdianWebhookEnv,
+  userId: string,
+  targetUntil: string,
+): Promise<string> {
+  const key = `entitlement:sync:${userId}`;
+  const targetMs = Date.parse(targetUntil);
+  if (Number.isNaN(targetMs)) {
+    throw new Error("invalid targetUntil");
+  }
+  let finalMs = targetMs;
+  const raw = await env.AI_KV.get(key);
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw) as { until?: string };
+      if (parsed.until) {
+        const prev = Date.parse(parsed.until);
+        if (!Number.isNaN(prev) && prev > finalMs) finalMs = prev;
+      }
+    } catch {
+      /* 坏数据则用 target */
+    }
+  }
+  const until = new Date(finalMs).toISOString();
+  await env.AI_KV.put(key, JSON.stringify({ until }));
+  return until;
+}
+
+/** 只算 until，不写权益 */
+async function computeGrantUntil(
+  env: AfdianWebhookEnv,
+  userId: string,
+  months: number,
+): Promise<string> {
   const key = `entitlement:sync:${userId}`;
   const now = Date.now();
   let startMs = now;
@@ -77,16 +152,73 @@ async function grantSyncMonths(env: AfdianWebhookEnv, userId: string, months: nu
     try {
       const parsed = JSON.parse(raw) as { until?: string };
       if (parsed.until) {
-        const prev = new Date(parsed.until).getTime();
+        const prev = Date.parse(parsed.until);
         if (!Number.isNaN(prev) && prev > startMs) startMs = prev;
       }
     } catch {
       /* 坏数据则从 now 起算 */
     }
   }
-  const until = addCalendarMonths(new Date(startMs), months).toISOString();
-  await env.AI_KV.put(key, JSON.stringify({ until }));
-  return until;
+  return addCalendarMonths(new Date(startMs), months).toISOString();
+}
+
+async function putOrderRecord(env: AfdianWebhookEnv, record: AfdianOrderRecord): Promise<void> {
+  await env.AI_KV.put(orderKvKey(record.outTradeNo), JSON.stringify(record));
+}
+
+/** 用户侧订单号索引，便于按 uuid 查留痕 */
+async function appendUserOrderIndex(
+  env: AfdianWebhookEnv,
+  userId: string,
+  outTradeNo: string,
+): Promise<void> {
+  const key = userOrdersKvKey(userId);
+  let list: string[] = [];
+  const raw = await env.AI_KV.get(key);
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw) as unknown;
+      if (Array.isArray(parsed)) {
+        list = parsed.filter((x): x is string => typeof x === "string");
+      }
+    } catch {
+      list = [];
+    }
+  }
+  if (!list.includes(outTradeNo)) {
+    list.push(outTradeNo);
+    await env.AI_KV.put(key, JSON.stringify(list));
+  }
+}
+
+export async function getAfdianOrderByTradeNo(
+  env: AfdianWebhookEnv,
+  outTradeNo: string,
+): Promise<AfdianOrderRecord | null> {
+  return parseAfdianOrderRecord(await env.AI_KV.get(orderKvKey(outTradeNo)));
+}
+
+export async function listAfdianOrdersForUser(
+  env: AfdianWebhookEnv,
+  userId: string,
+): Promise<AfdianOrderRecord[]> {
+  const raw = await env.AI_KV.get(userOrdersKvKey(userId));
+  if (!raw) return [];
+  let nos: string[] = [];
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (Array.isArray(parsed)) {
+      nos = parsed.filter((x): x is string => typeof x === "string");
+    }
+  } catch {
+    return [];
+  }
+  const out: AfdianOrderRecord[] = [];
+  for (const no of nos) {
+    const rec = await getAfdianOrderByTradeNo(env, no);
+    if (rec) out.push(rec);
+  }
+  return out;
 }
 
 /**
@@ -121,10 +253,17 @@ export async function handleAfdianWebhook(req: Request, env: AfdianWebhookEnv): 
     return afdianOk("ignored: no out_trade_no");
   }
 
-  // 幂等：已处理过直接成功
-  const orderKey = `afdian:order:${outTradeNo}`;
-  const prior = await env.AI_KV.get(orderKey);
+  const totalAmount = typeof order.total_amount === "string" ? order.total_amount : undefined;
+  const nowIso = new Date().toISOString();
+
+  // 已留痕：只补齐权益，绝不叠月
+  const prior = await getAfdianOrderByTradeNo(env, outTradeNo);
   if (prior) {
+    if (prior.action === "sync_granted" && prior.userId && prior.until) {
+      await ensureSyncUntil(env, prior.userId, prior.until);
+      await putOrderRecord(env, { ...prior, updatedAt: nowIso });
+      return afdianOk("duplicate");
+    }
     return afdianOk("duplicate");
   }
 
@@ -136,39 +275,62 @@ export async function handleAfdianWebhook(req: Request, env: AfdianWebhookEnv): 
   ]);
 
   if (planId && tipPlans.has(planId)) {
-    await env.AI_KV.put(orderKey, JSON.stringify({ action: "tip_skip", at: new Date().toISOString() }));
+    await putOrderRecord(env, {
+      action: "tip_skip",
+      outTradeNo,
+      planId,
+      totalAmount,
+      at: nowIso,
+    });
     return afdianOk("tip skipped");
   }
 
   if (!planId || !syncPlans.has(planId)) {
-    await env.AI_KV.put(orderKey, JSON.stringify({ action: "unknown_plan_skip", planId, at: new Date().toISOString() }));
+    await putOrderRecord(env, {
+      action: "unknown_plan_skip",
+      outTradeNo,
+      planId: planId || undefined,
+      totalAmount,
+      at: nowIso,
+    });
     return afdianOk("ignored: plan");
   }
 
   const customId = typeof order.custom_order_id === "string" ? order.custom_order_id.trim() : "";
   if (!UUID_RE.test(customId)) {
     // 站外付款无 uuid：本关不自动开，等认领；仍 200 + 记单避免重试刷屏
-    await env.AI_KV.put(
-      orderKey,
-      JSON.stringify({ action: "need_redeem", planId, at: new Date().toISOString() }),
-    );
+    await putOrderRecord(env, {
+      action: "need_redeem",
+      outTradeNo,
+      planId,
+      totalAmount,
+      at: nowIso,
+    });
     return afdianOk("ignored: no custom_order_id");
   }
 
   const months = typeof order.month === "number" && order.month > 0 ? Math.floor(order.month) : 1;
-  const until = await grantSyncMonths(env, customId, months);
+  const until = await computeGrantUntil(env, customId, months);
 
-  await env.AI_KV.put(
-    orderKey,
-    JSON.stringify({
-      action: "sync_granted",
-      userId: customId,
-      months,
-      until,
-      planId,
-      at: new Date().toISOString(),
-    }),
-  );
+  // 先写订单键（这笔付款 = 这个 until），再写权益
+  const record: AfdianOrderRecord = {
+    action: "sync_granted",
+    outTradeNo,
+    userId: customId,
+    planId,
+    months,
+    until,
+    totalAmount,
+    at: nowIso,
+  };
+  await putOrderRecord(env, record);
+  await appendUserOrderIndex(env, customId, outTradeNo);
+
+  // 以 KV 中确认的记录为准（极端并发下取留痕里的 until）
+  const confirmed = (await getAfdianOrderByTradeNo(env, outTradeNo)) ?? record;
+  const finalUntil = confirmed.until ?? until;
+  const finalUser = confirmed.userId ?? customId;
+  await ensureSyncUntil(env, finalUser, finalUntil);
 
   return afdianOk("ok");
 }

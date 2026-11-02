@@ -45,6 +45,7 @@ npx wrangler deploy
 | POST | `/capture/map` | Supabase JWT（本关透传 chat，供以后 AiMapper） |
 | GET | `/v1/entitlement` | Supabase JWT |
 | POST | `/admin/entitlement` | `Authorization: Bearer <ADMIN_TOKEN>` |
+| GET | `/admin/afdian-order` | `Authorization: Bearer <ADMIN_TOKEN>`；`?out_trade_no=` 或 `?user_id=` |
 | POST | `/webhooks/afdian?k=...` | 查询参数 `k` = `AFDIAN_WEBHOOK_TOKEN` |
 | GET | `/health` | 无 |
 
@@ -53,7 +54,7 @@ npx wrangler deploy
 1. 部署 Worker，并配置 `AFDIAN_WEBHOOK_TOKEN` + 同步 `plan_id` vars（与前端一致）。
 2. 爱发电开发者后台通知地址填：  
    `https://gateway.pomotention.com/webhooks/afdian?k=<你的 token>`
-3. 软件内下单（带 `custom_order_id`）→ 回调写 `entitlement:sync:<uuid>`；打赏 plan 仅记单不开通。
+3. 软件内下单（带 `custom_order_id`）→ 先写 KV 留痕 `afdian:order:<订单号>`（固定 `until`）再写 `entitlement:sync:<uuid>`；重试只补齐不叠月。打赏 plan 仅记单不开通。
 4. 本地冒烟：
 
 ```bash
@@ -63,6 +64,15 @@ curl -s -X POST "http://127.0.0.1:8787/webhooks/afdian?k=$AFDIAN_WEBHOOK_TOKEN" 
 ```
 
 应返回 `{"ec":200,"em":"ok"}`（或 `duplicate`）。
+
+查留痕（按订单号或用户 uuid）：
+
+```bash
+curl -s "$WORKER_URL/admin/afdian-order?out_trade_no=test-1" \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+curl -s "$WORKER_URL/admin/afdian-order?user_id=<uuid>" \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+```
 
 模型固定 `moonshot-v1-8k`，忽略请求里的 `model`。  
 月配额：免费 20；premium 2000。超限 402，`QUOTA_EXHAUSTED` 或 `PREMIUM_QUOTA_EXHAUSTED`。
