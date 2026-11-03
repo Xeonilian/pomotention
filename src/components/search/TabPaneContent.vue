@@ -51,17 +51,19 @@
         </template>
       </div>
     </div>
-    <!-- 任务内容区 -->
-    <div class="content">
-      <div
-        v-if="detailTitle"
-        class="detail-title"
-        v-html="highlightSearchInText(detailTitle, searchQuery)"
-      ></div>
-      <template v-if="content.task.value">
-        <div class="task-content" v-html="renderedTaskHtml"></div>
-      </template>
-      <div v-else class="empty">暂无任务</div>
+    <!-- 任务内容区：左正文 + 右目录（篇幅变量挂在 content，电脑上正文列限宽，目录贴列右） -->
+    <div class="content" :style="markdownReaderStyle">
+      <div ref="contentMainRef" class="content-main">
+        <template v-if="content.task.value">
+          <div
+            class="task-content md-reader"
+            :class="`md-theme-${settingStore.settings.markdownReaderTheme || 'classic'}`"
+            v-html="renderedTaskHtml"
+          ></div>
+        </template>
+        <div v-else class="empty">暂无任务</div>
+      </div>
+      <MarkdownTocNav :items="tocItems" @select="scrollToHeading" />
     </div>
 
     <!-- 标签管理器 Modal -->
@@ -79,7 +81,6 @@
 import { ref, computed, toRef } from "vue";
 import { storeToRefs } from "pinia";
 import { NButton, NIcon } from "naive-ui";
-import { marked } from "marked";
 import { Star20Filled, Star20Regular, Tag16Regular } from "@vicons/fluent";
 
 // 导入核心工具
@@ -87,11 +88,15 @@ import { useSearchTab } from "@/composables/search/useSearchTab";
 import { useActivityTagEditor } from "@/composables/activity/useActivityTagEditor";
 import { useDataStore } from "@/stores/useDataStore";
 import { useSearchUiStore } from "@/stores/useSearchUiStore";
+import { useSettingStore } from "@/stores/useSettingStore";
 import type { TabItem } from "@/stores/useSearchUiStore";
-import { highlightSearchInText, highlightSearchInHtml } from "@/core/utils/highlightSearchQuery";
+import { highlightSearchInHtml } from "@/core/utils/highlightSearchQuery";
+import { markdownReaderCssVars } from "@/core/utils/markdownReaderStyle";
+import { parseMarkdownWithToc, type MarkdownTocItem } from "@/core/utils/markdownToc";
 // 导入子组件
 import TagRenderer from "@/components/TagSystem/TagRenderer.vue";
 import TagManager from "@/components/TagSystem/TagManager.vue";
+import MarkdownTocNav from "@/components/search/MarkdownTocNav.vue";
 
 // 1. 定义 props
 const props = defineProps<{
@@ -101,8 +106,16 @@ const props = defineProps<{
 // 2. 实例化需要的 stores 和 composables
 const dataStore = useDataStore();
 const searchUiStore = useSearchUiStore();
+const settingStore = useSettingStore();
 const { searchQuery } = storeToRefs(searchUiStore);
 const tagEditor = useActivityTagEditor();
+const markdownReaderStyle = computed(() =>
+  markdownReaderCssVars({
+    fontSize: settingStore.settings.markdownReaderFontSize,
+    lineHeight: settingStore.settings.markdownReaderLineHeight,
+    maxWidthRem: settingStore.settings.markdownReaderMaxWidthRem,
+  }),
+);
 
 const { toggleFilterTagId } = searchUiStore;
 
@@ -161,14 +174,24 @@ const formatDateOnly = (ts?: number) => {
   return `${year}/${month}/${day}`;
 };
 
-const convertMarkdown = (md?: string) => (md ? marked(md) : "无");
+const contentMainRef = ref<HTMLElement | null>(null);
 
-const detailTitle = computed(() => content.activity.value?.title || props.tab.title || "");
-
-const renderedTaskHtml = computed(() => {
-  const html = String(convertMarkdown(content.task.value?.description) ?? "");
-  return highlightSearchInHtml(html, searchQuery.value);
+const parsedTask = computed(() => {
+  const md = content.task.value?.description;
+  if (!md) return { html: "无", toc: [] as MarkdownTocItem[] };
+  return parseMarkdownWithToc(md);
 });
+
+const tocItems = computed(() => parsedTask.value.toc);
+
+const renderedTaskHtml = computed(() => highlightSearchInHtml(parsedTask.value.html, searchQuery.value));
+
+function scrollToHeading(id: string) {
+  const root = contentMainRef.value;
+  if (!root) return;
+  const el = root.querySelector(`#${CSS.escape(id)}`);
+  el?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
 
 const getDueDate = () => {
   const todoItem = dataStore.todoById.get(props.tab.id);
@@ -182,13 +205,19 @@ const getDueDate = () => {
 <style scoped>
 .tab-pane-container {
   height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .meta-row {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  /* 纵向保持原先紧凑行距；横向才拉开 */
+  row-gap: 2px;
+  column-gap: 8px;
   padding-top: 0px;
   padding-bottom: 0px;
   background-color: var(--color-background);
@@ -205,7 +234,7 @@ const getDueDate = () => {
   align-items: center;
   align-content: flex-start;
   gap: 6px;
-  width: 100%;
+  flex: 0 1 auto;
   min-width: 0;
   /* 无 tag 时也占满 n-tag small 行高，星星上下居中位置与有 tag 时一致 */
   min-height: 24px;
@@ -233,23 +262,56 @@ const getDueDate = () => {
 
 .meta-row-content {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  row-gap: 2px;
+  column-gap: 10px;
+  flex: 0 1 auto;
+  min-width: 0;
 }
 
 .meta-time {
   white-space: nowrap;
-  display: flex;
-  margin-top: 2px;
+  display: inline-flex;
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary, #666);
 }
 
 .content {
   flex: 1 1 auto;
   min-height: 0;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  overflow: hidden;
+  width: 100%;
+}
+
+@media (min-width: 431px) {
+  .content {
+    margin-left: 8px;
+    width: calc(100% - 8px);
+  }
+
+  /* 设置的页面宽度作用在正文列；目录跟在列右侧，不贴窗口右缘 */
+  .content-main {
+    flex: 1 1 auto;
+    max-width: var(--md-max-width, none);
+  }
+
+  .content-main .md-reader {
+    max-width: none;
+  }
+}
+
+.content-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
-
-  width: 100%;
 }
 
 .star-btn-placeholder {
@@ -265,41 +327,48 @@ const getDueDate = () => {
 }
 
 .task-content {
-  margin-top: 8px;
+  margin-top: 0;
+  padding-top: 10px; /* 与上方 meta 拉开一点 */
   overflow-y: auto;
 }
 
-:deep(.task-content) {
-  line-height: 1.5;
+/* 首标题不再额外顶 margin，间距由 padding-top 统一控 */
+.task-content.md-reader :deep(> :first-child) {
+  margin-top: 0;
 }
 
-:deep(.task-content h1),
-:deep(.task-content h2),
-:deep(.task-content h3),
-:deep(.task-content h4),
-:deep(.task-content h5),
-:deep(.task-content h6) {
+/* 经典 = 原数据页阅读样式；其它主题走全局 markdown-reader-themes.css */
+.task-content.md-theme-classic {
+  line-height: var(--md-line-height, 1.5);
+}
+
+.task-content.md-theme-classic :deep(h1),
+.task-content.md-theme-classic :deep(h2),
+.task-content.md-theme-classic :deep(h3),
+.task-content.md-theme-classic :deep(h4),
+.task-content.md-theme-classic :deep(h5),
+.task-content.md-theme-classic :deep(h6) {
   margin-top: 0.1em;
   margin-bottom: 0.2em;
 }
 
-:deep(.task-content h1) {
+.task-content.md-theme-classic :deep(h1) {
   font-size: 2em;
   line-height: 1;
 }
 
-:deep(.task-content p) {
+.task-content.md-theme-classic :deep(p) {
   margin: 2px;
 }
 
-:deep(.task-content pre) {
+.task-content.md-theme-classic :deep(pre) {
   margin: 2px;
   border-radius: 8px;
   padding: 8px;
   font-family: "Consolas", "Monaco", "Courier New", monospace;
 }
 
-:deep(.task-content code) {
+.task-content.md-theme-classic :deep(code) {
   background-color: var(--color-blue-light);
   font-family: "Consolas", "Monaco", "Courier New", monospace;
   border-radius: 4px;
@@ -308,30 +377,32 @@ const getDueDate = () => {
   line-height: inherit;
 }
 
-:deep(.task-content pre code) {
+.task-content.md-theme-classic :deep(pre code) {
   background-color: var(--color-background-light-transparent);
   font-family: "Consolas", "Monaco", "Courier New", monospace;
   padding: 8px;
 }
 
-:deep(.task-content blockquote) {
+.task-content.md-theme-classic :deep(blockquote) {
   background-color: var(--color-background-light-transparent);
   border-radius: 4px;
   margin: 2px;
   padding: 2px;
 }
 
-:deep(.task-content ul),
-:deep(.task-content ol) {
+.task-content.md-theme-classic :deep(ul),
+.task-content.md-theme-classic :deep(ol) {
   padding-left: 2em;
   margin: 0.5em 0;
 }
 
-:deep(.markdown-checkbox) {
+:deep(.markdown-checkbox),
+:deep(li input[type="checkbox"]) {
   margin-right: 4px;
   width: 16px;
   height: 16px;
-  vertical-align: middle;
+  /* middle 会偏上，略下移与文字对齐 */
+  vertical-align: -0.35em;
   pointer-events: none;
   cursor: not-allowed;
   appearance: none;
@@ -366,14 +437,6 @@ const getDueDate = () => {
   margin: 2px;
   padding: 2px;
   line-height: inherit;
-}
-
-.detail-title {
-  font-size: 1.1rem;
-  font-weight: 600;
-  margin: 0 0 8px;
-  line-height: 1.4;
-  word-break: break-word;
 }
 
 :deep(mark.search-hit) {

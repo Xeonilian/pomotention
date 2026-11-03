@@ -1,15 +1,10 @@
 <template>
   <div class="setting-tab-page setting-tab-page--scroll">
-    <n-card size="small" class="setting-tab-card">
+    <SettingSectionCard title="番茄时钟设置" @reset="resetPomodoro">
       <div class="setting-field-list">
         <div class="setting-field-item">
           <div class="setting-field-label">工作时长（分钟）</div>
-          <n-input-number
-            v-model:value="settingStore.settings.durations.workDuration"
-            @update:value="(val) => console.log('workDuration 更新为:', val)"
-            :min="1"
-            :max="60"
-          />
+          <n-input-number v-model:value="settingStore.settings.durations.workDuration" :min="1" :max="60" />
         </div>
         <div class="setting-field-item">
           <div class="setting-field-label">休息时长（分钟）</div>
@@ -58,19 +53,80 @@
           />
         </div>
       </div>
-      <n-space class="setting-tab-actions">
-        <n-button @click="resetPomodoro" type="error">恢复默认</n-button>
-      </n-space>
-    </n-card>
+    </SettingSectionCard>
+
+    <SettingSectionCard title="Markdown 阅读" @reset="resetReading">
+      <div class="setting-field-list">
+        <div class="setting-field-item">
+          <div class="setting-field-label">阅读主题</div>
+          <n-select
+            class="setting-control"
+            :value="settingStore.settings.markdownReaderTheme"
+            :options="themeSelectOptions"
+            @update:value="onTheme"
+          />
+        </div>
+        <div class="setting-field-item">
+          <div class="setting-field-label">基准字体大小（px）</div>
+          <n-input-number
+            class="setting-control"
+            v-model:value="settingStore.settings.markdownReaderFontSize"
+            :min="12"
+            :max="24"
+            :step="1"
+            placeholder="请输入 12–24"
+          />
+        </div>
+        <div class="setting-field-item">
+          <div class="setting-field-label">行距</div>
+          <n-input-number
+            class="setting-control"
+            v-model:value="settingStore.settings.markdownReaderLineHeight"
+            :min="1.2"
+            :max="2.4"
+            :step="0.1"
+            :precision="1"
+            placeholder="请输入 1.2–2.4"
+          />
+        </div>
+        <div class="setting-field-item">
+          <div class="setting-field-label">页面篇幅（rem，0=不限制）</div>
+          <n-input-number
+            class="setting-control"
+            v-model:value="settingStore.settings.markdownReaderMaxWidthRem"
+            :min="0"
+            :max="80"
+            :step="2"
+            placeholder="请输入 0–80"
+          />
+        </div>
+        <div class="setting-field-item setting-field-item--full">
+          <div class="setting-field-label">预览</div>
+          <div
+            class="md-reader theme-preview"
+            :class="`md-theme-${settingStore.settings.markdownReaderTheme}`"
+            :style="readerVars"
+            v-html="previewHtml"
+          ></div>
+        </div>
+      </div>
+    </SettingSectionCard>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from "vue";
-import { NCard, NInputNumber, NButton, NColorPicker, NSelect, NSpace, NCheckbox, NInput } from "naive-ui";
+import { computed, ref, watch } from "vue";
+import { NInputNumber, NColorPicker, NSelect, NCheckbox, NInput } from "naive-ui";
+import { marked } from "marked";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useTimerStore } from "@/stores/useTimerStore";
 import { SoundType, startWhiteNoise, stopWhiteNoise, toggleWhiteNoise } from "@/core/sounds";
+import SettingSectionCard from "@/components/setting/SettingSectionCard.vue";
+import {
+  MARKDOWN_READER_THEME_OPTIONS,
+  type MarkdownReaderTheme,
+} from "@/core/types/MarkdownReaderTheme";
+import { markdownReaderCssVars } from "@/core/utils/markdownReaderStyle";
 
 const settingStore = useSettingStore();
 const timerStore = useTimerStore();
@@ -157,11 +213,45 @@ function resetPomodoro() {
   }
   restartWhiteNoiseIfWorking();
 }
+
+const themeSelectOptions = MARKDOWN_READER_THEME_OPTIONS.map((o) => ({
+  label: o.label,
+  value: o.value,
+}));
+
+const readerVars = computed(() =>
+  markdownReaderCssVars({
+    fontSize: settingStore.settings.markdownReaderFontSize,
+    lineHeight: settingStore.settings.markdownReaderLineHeight,
+    maxWidthRem: settingStore.settings.markdownReaderMaxWidthRem,
+  }),
+);
+
+const previewHtml = computed(() =>
+  String(
+    marked(
+      "## 标题示例\n\n一段**正文**与 `行内代码`。\n\n> 引用块预览\n\n- 列表一项\n- 另一项\n\n```ts\nconst ok = true;\n```\n",
+    ),
+  ),
+);
+
+function onTheme(value: MarkdownReaderTheme) {
+  settingStore.settings.markdownReaderTheme = value;
+}
+
+function resetReading() {
+  settingStore.resetMarkdownReaderSettings();
+}
 </script>
 
 <style scoped src="./settingShared.css"></style>
 <style scoped>
-/* 未编辑时超出省略；聚焦后交给输入框按光标滚动 */
+.setting-tab-page {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
 .sequence-default-input :deep(.n-input__input-el) {
   text-overflow: ellipsis;
 }
@@ -170,10 +260,27 @@ function resetPomodoro() {
   text-overflow: clip;
 }
 
+.setting-control {
+  width: 100%;
+}
+
 @media (min-width: 768px) {
   .setting-field-list {
     grid-template-columns: 1fr 1fr;
     column-gap: 16px;
+    align-items: start;
   }
+  .setting-field-item--full {
+    grid-column: 1 / -1;
+  }
+}
+
+.theme-preview {
+  max-height: 240px;
+  overflow: auto;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--color-background);
+  border: 1px solid var(--n-border-color);
 }
 </style>

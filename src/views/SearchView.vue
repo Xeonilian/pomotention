@@ -487,6 +487,11 @@ const formatMMDD = (ts?: number) => (ts ? new Date(ts).toLocaleDateString(undefi
   display: none;
 }
 
+/* 手机仅右栏全屏时：左边空位再收 4px（相对 split 的 4px padding） */
+.search-container--right-full .right-pane {
+  padding-left: 0;
+}
+
 .resize-handle-horizontal {
   width: 1px;
   background: var(--color-background-light-light);
