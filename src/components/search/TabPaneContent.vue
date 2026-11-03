@@ -53,8 +53,13 @@
     </div>
     <!-- 任务内容区 -->
     <div class="content">
+      <div
+        v-if="detailTitle"
+        class="detail-title"
+        v-html="highlightSearchInText(detailTitle, searchQuery)"
+      ></div>
       <template v-if="content.task.value">
-        <div class="task-content" v-html="convertMarkdown(content.task.value!.description)"></div>
+        <div class="task-content" v-html="renderedTaskHtml"></div>
       </template>
       <div v-else class="empty">暂无任务</div>
     </div>
@@ -72,6 +77,7 @@
 
 <script setup lang="ts">
 import { ref, computed, toRef } from "vue";
+import { storeToRefs } from "pinia";
 import { NButton, NIcon } from "naive-ui";
 import { marked } from "marked";
 import { Star20Filled, Star20Regular, Tag16Regular } from "@vicons/fluent";
@@ -82,6 +88,7 @@ import { useActivityTagEditor } from "@/composables/activity/useActivityTagEdito
 import { useDataStore } from "@/stores/useDataStore";
 import { useSearchUiStore } from "@/stores/useSearchUiStore";
 import type { TabItem } from "@/stores/useSearchUiStore";
+import { highlightSearchInText, highlightSearchInHtml } from "@/core/utils/highlightSearchQuery";
 // 导入子组件
 import TagRenderer from "@/components/TagSystem/TagRenderer.vue";
 import TagManager from "@/components/TagSystem/TagManager.vue";
@@ -94,6 +101,7 @@ const props = defineProps<{
 // 2. 实例化需要的 stores 和 composables
 const dataStore = useDataStore();
 const searchUiStore = useSearchUiStore();
+const { searchQuery } = storeToRefs(searchUiStore);
 const tagEditor = useActivityTagEditor();
 
 const { toggleFilterTagId } = searchUiStore;
@@ -154,6 +162,13 @@ const formatDateOnly = (ts?: number) => {
 };
 
 const convertMarkdown = (md?: string) => (md ? marked(md) : "无");
+
+const detailTitle = computed(() => content.activity.value?.title || props.tab.title || "");
+
+const renderedTaskHtml = computed(() => {
+  const html = String(convertMarkdown(content.task.value?.description) ?? "");
+  return highlightSearchInHtml(html, searchQuery.value);
+});
 
 const getDueDate = () => {
   const todoItem = dataStore.todoById.get(props.tab.id);
@@ -351,5 +366,20 @@ const getDueDate = () => {
   margin: 2px;
   padding: 2px;
   line-height: inherit;
+}
+
+.detail-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0 0 8px;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+:deep(mark.search-hit) {
+  background-color: var(--color-yellow-light, #ffe066);
+  color: inherit;
+  border-radius: 2px;
+  padding: 0 1px;
 }
 </style>

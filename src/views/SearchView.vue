@@ -84,7 +84,7 @@
           <span v-if="!isMobile" class="left-icon">
             {{ row.class === "T" ? "📝" : "📅" }}
           </span>
-          <span class="title-name">{{ row.title || "......" }}</span>
+          <span class="title-name" v-html="highlightSearchInText(row.title || '......', searchQuery)"></span>
           <span class="right-info">
             <span class="right-info-left">
               <n-icon v-if="row.hasStarred" size="16" class="star-on"><Star20Filled /></n-icon>
@@ -135,7 +135,10 @@
             </template>
           </n-button>
         </template>
-        <n-tab-pane v-for="tab in openedTabs" :key="tab.key" :name="tab.key" :tab="tab.title" class="tab-container">
+        <n-tab-pane v-for="tab in openedTabs" :key="tab.key" :name="tab.key" class="tab-container">
+          <template #tab>
+            <span class="tab-title-hit" v-html="highlightSearchInText(tab.title, searchQuery)"></span>
+          </template>
           <TabPaneContent :tab="tab" class="tab-container" />
         </n-tab-pane>
       </n-tabs>
@@ -164,6 +167,7 @@ import { useTagStore } from "@/stores/useTagStore";
 import { useResize } from "@/composables/layout/useResize";
 import { useSearchFilter } from "@/composables/search/useSearchFilter";
 import { useDevice } from "@/composables/platform/useDevice";
+import { highlightSearchInText } from "@/core/utils/highlightSearchQuery";
 
 // 实例化所有需要的 stores
 const searchUiStore = useSearchUiStore();
@@ -634,6 +638,15 @@ const formatMMDD = (ts?: number) => (ts ? new Date(ts).toLocaleDateString(undefi
   min-width: 0;
   margin-left: 2px;
   flex-shrink: 10;
+}
+
+.title-item .title-name :deep(mark.search-hit),
+.tab-title-hit :deep(mark.search-hit),
+:deep(mark.search-hit) {
+  background-color: var(--color-yellow-light, #ffe066);
+  color: inherit;
+  border-radius: 2px;
+  padding: 0 1px;
 }
 
 .title-item .right-info {
