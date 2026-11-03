@@ -6,6 +6,7 @@ let TodoSyncService: any;
 let ScheduleSyncService: any;
 let TaskSyncService: any;
 let TagSyncService: any;
+// ProjectSyncService：单机测过后再挂；见 current.md（Studio 建表后接线）
 let TemplateSyncService: any;
 let LedgerSyncService: any;
 // let TimetableSyncService: any;
@@ -277,7 +278,7 @@ async function _internalDownload(lastSyncTimestamp: number, opts?: { reconcilePl
   const downloadPromise = new Promise<SyncResult>(async (resolve) => {
     const errors: string[] = [];
     let downloaded = 0;
-    const details: { name: string; fetched: number; downloaded: number; cloudDeleted?: number }[] = [];
+    const details: { name: string; fetched: number; downloaded: number; cloudDeleted?: number; skipped?: SyncSkip[] }[] = [];
 
     // 并行下载所有表
     const results = await Promise.allSettled(

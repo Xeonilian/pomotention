@@ -39,6 +39,7 @@ import {
 import { buildDayEnergyTask, findDayEnergyTask, reconcileDayEnergyTasks } from "@/services/task/dayEnergyService";
 import { handleDeleteActivity } from "@/services/activity/activityService";
 import { useTagStore } from "./useTagStore";
+import { useProjectStore } from "./useProjectStore";
 import { useTemplateStore } from "./useTemplateStore";
 import { useDisplayedTaskStore } from "./useDisplayedTaskStore";
 import { useSettingStore } from "./useSettingStore";
@@ -47,6 +48,7 @@ export const useDataStore = defineStore(
   "data",
   () => {
     const tagStore = useTagStore();
+    const projectStore = useProjectStore();
     const templateStore = useTemplateStore();
 
     // ======================== 1. 核心状态 (State) ========================
@@ -89,6 +91,7 @@ export const useDataStore = defineStore(
       ledgerList.value.length = 0;
 
       tagStore.clearData();
+      projectStore.clearData();
       templateStore.clearData();
       isDataLoaded.value = false;
     }
@@ -130,6 +133,7 @@ export const useDataStore = defineStore(
         taskList.value.some((item) => !item.synced) ||
         ledgerList.value.some((item) => !item.synced) ||
         tagStore.rawTags?.some((item: Tag) => !item.synced) ||
+        // Project 单机阶段未挂 SyncService，不计入未同步（建表接线后再加回）
         templateStore.rawTemplates?.some((item: Template) => !item.synced)
       );
     });
@@ -717,6 +721,7 @@ export const useDataStore = defineStore(
         saveTasks(taskList.value);
         saveLedgerEntries(ledgerList.value);
         tagStore.saveTags(tagStore.rawTags);
+        projectStore.saveProjects(projectStore.rawProjects);
         templateStore.saveTemplates(templateStore.rawTemplates);
 
         // console.log("💾 [DataStore] saveAllNow 完成");
@@ -1042,6 +1047,25 @@ export const useDataStore = defineStore(
       return true;
     }
 
+    /** Project 软删后：清掉 Activity.projectId（不删 Activity） */
+    function stripProjectIdFromReferences(projectIds: number[]): void {
+      if (!projectIds.length) return;
+      const idSet = new Set(projectIds);
+      const now = Date.now();
+      let changed = false;
+      for (const activity of activityList.value) {
+        if (activity.projectId == null || !idSet.has(activity.projectId)) continue;
+        activity.projectId = undefined;
+        activity.lastModified = now;
+        activity.synced = false;
+        changed = true;
+      }
+      if (changed) {
+        saveActivities(activityList.value);
+        scheduleDebouncedCloudUpload();
+      }
+    }
+
     /** 软删 tag 时：从所有 activity / ledger 引用中移除该 id */
     function stripTagIdFromReferences(tagId: number): void {
       const now = Date.now();
@@ -1316,6 +1340,9 @@ export const useDataStore = defineStore(
       tagList: tagStore.rawTags,
       tagById: tagStore.tagById,
       _tagById: tagStore._tagById,
+      projectList: projectStore.rawProjects,
+      projectById: projectStore.projectById,
+      _projectById: projectStore._projectById,
       templateList: templateStore.rawTemplates,
       templateById: templateStore.templateById,
       _templateById: templateStore._templateById,
@@ -1380,6 +1407,7 @@ export const useDataStore = defineStore(
       createAndAddTagToActivity,
       getActivityTags,
       stripTagIdFromReferences,
+      stripProjectIdFromReferences,
 
       // Tag filter (day/week/month)
       toggleFilterTagId,

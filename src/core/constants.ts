@@ -42,6 +42,7 @@ export const STORAGE_KEYS = {
   WRITING_TEMPLATE: "writingTemplate",
   GLOBAL_SETTINGS: "globalSettings",
   TAG: "tag",
+  PROJECT: "project",
   SYNC_STATUS: "syncStatus",
   TIMETABLE_BLOCKS: "timeTableBlocks",
   LEDGER: "ledgerEntries",

@@ -15,14 +15,31 @@
 | **来自** | 收费关已收；搜索范式不重做；life / ledger 属生活底色，另线（更像仪表盘），不进本关 |
 | **蓝图** | 类型 [`Project.ts`](../../src/core/types/Project.ts)；分层 [`1-architecture-layering.md`](./blueprint/1-architecture-layering.md) |
 | **分支** | `dev` |
-| **更新** | 2026-11-02 |
-| **停在哪** | 体验已对齐如下；尚未写代码 |
+| **分级** | `[S3 C2 UV1]` |
+| **更新** | 2026-11-03 |
+| **停在哪** | 本地层已落地；**Sync 暂未挂**（先单机 UI/CRUD）；Studio 建表 + 接线放单机测过后 |
 
 ---
 
 ## 这一关要干嘛（一句话）
 
 **大头做 Project 文件夹**；搜索仍是「先 tag → 再文字」+ Project 范围。计划侧筛选结果可导出（Markdown / JSON）。
+
+---
+
+## 数据契约（已定）
+
+- **实体**：`Project` 本地一等 + 云表 `projects` + SyncService（**镜像 Tag**；上云 ≠ 迁库）。  
+- **字段**：见 [`Project.ts`](../../src/core/types/Project.ts) — `parentId` 嵌套；可选 `tagId`；`memberIds?` 预留口（本关不读写）；同步元数据同 Tag。  
+- **归属**：`Activity.projectId` 多对一（一 activity 只进一处）；Task 不单独挂。  
+- **跨堆主题靠 tag，Project 不承担多归属**（例：反思主堆在「反思」Project，打「咨询」tag；筛咨询 tag 即可带上，无需双挂）。  
+- **删除（v1 策略）**：Project 树软删；Activity **只清 `projectId`**，不删 Activity。  
+- **冲突**：复用现有 LWW / 未同步本地优先；不另做 CRDT。  
+- **智能（混合，非纯 tag 派生）**：  
+  1. 手动进 / 出永远有效；`projectId` 是归属真相。  
+  2. 无 `projectId` 时加 tag：按 `tagIds` 顺序，第一个命中某 Project.`tagId` → 写入。  
+  3. 已有 `projectId` → 智能不再改（删 tag 不自动踢出 / 换堆）。  
+  4. 另提供一次性「收纳」；建议同一 `tagId` 全局最多绑一个智能 Project。
 
 ---
 
@@ -33,7 +50,7 @@
 1. 数据页可增 / 删 / 改 Project；可将实体（a-t-t / a-s-t 等）放进 Project。  
 2. Project 可展开 / 收起；展开再加载（懒加载）。  
 3. Project 内 **可选按月分组**（长项目好翻）；不是时间窗筛选。  
-4. 智能文件夹：同一标签的条目可收进对应 Project。  
+4. 智能文件夹（混合）：未归类时可按 `tagId` 自动收入；可一次性收纳；已归属不被智能覆盖。  
 5. 按 tag 搜时：没有该 tag 的 Project 不显示；有的显示并带匹配条数；仍可展开收起。  
 
 ### 提取与导出（仅计划侧）
@@ -43,6 +60,17 @@
 8. 筛选结果处可导出当前命中集（非 Sync 全量备份）；模式至少：**Markdown**、**JSON**；带范围信息（Project / tag / 关键字等）。
 
 ---
+
+## 落点（步 0）
+
+| 点 | 路径 |
+|---|---|
+| 类型 | [`Project.ts`](../../src/core/types/Project.ts) |
+| 本地 | [`useProjectStore`](../../src/stores/useProjectStore.ts)；key `project`（[`STORAGE_KEYS.PROJECT`](../../src/core/constants.ts)） |
+| 云表 SQL（Studio 粘贴） | [`supabase/migrations/20261103120000_projects.sql`](../../supabase/migrations/20261103120000_projects.sql)；建表后 **gen 刷新** [`Database.ts`](../../src/core/types/Database.ts)（勿手改） |
+| 同步 | [`projectSync.ts`](../../src/services/sync/projectSync.ts) 已写好（云类型暂手写）；**尚未挂** sync/index（单机测过 → Studio SQL → gen → 接线） |
+| 归属 | 已有 `Activity.projectId` + `activities.project_id` |
+| 全量备份 | `collectLocalData` / 导入含 `project.json`；与筛选结果导出勿混 |
 
 ## 分步（按顺序）
 
@@ -63,7 +91,7 @@
 
 ## 进度
 
-- [ ] **0.** 认路
+- [x] **0.** 认路（契约 + 落点 + 本地 store/SQL/sync 源码；Sync 未挂、表未建）
 - [ ] **1.** Project 文件夹
 - [ ] **2.** 按月分组 + tag 显隐 / 智能归堆
 - [ ] **3.** Project 范围提取（计划侧）

@@ -8,6 +8,7 @@ import type { Block } from "@/core/types/Block";
 import type { Task } from "@/core/types/Task";
 import type { Template } from "@/core/types/Template";
 import type { Tag } from "@/core/types/Tag";
+import type { Project } from "@/core/types/Project";
 import type { SyncDataV2, LocalSyncStatus } from "@/core/types/Sync";
 import type { LedgerEntry } from "@/core/types/LedgerEntry";
 
@@ -131,6 +132,20 @@ export function removeTagsStorage(): void {
   localStorage.removeItem(STORAGE_KEYS.TAG);
 }
 
+// =================== 项目文件夹相关 ===================
+
+export function loadProjects(): Project[] {
+  return loadData<Project[]>(STORAGE_KEYS.PROJECT, []);
+}
+
+export function saveProjects(projects: Project[]): void {
+  saveData(STORAGE_KEYS.PROJECT, projects);
+}
+
+export function removeProjectsStorage(): void {
+  localStorage.removeItem(STORAGE_KEYS.PROJECT);
+}
+
 // =================== 同步状态相关 ===================
 
 export function loadSyncStatus(): LocalSyncStatus | null {
@@ -194,6 +209,7 @@ export function collectLocalData(): SyncDataV2["data"] {
     taskTrack: loadTasks(),
     globalSettings: loadGlobalSettings(),
     tag: loadTags(),
+    project: loadProjects(),
     writingTemplate: loadTemplates(),
     timeTableBlocks: loadTimetableBlocks(),
   };

@@ -67,6 +67,11 @@ export const MERGE_KEYS = {
     idField: "id",
     dedupeBy: "name",
   },
+  [STORAGE_KEYS.PROJECT]: {
+    strategy: MERGE_STRATEGIES.ARRAY_MERGE_DEDUP,
+    idField: "id",
+    dedupeBy: "title",
+  },
 
   // 策略3：时间戳ID数组合并（ID冲突则跳过）
   [STORAGE_KEYS.ACTIVITY]: {
@@ -99,6 +104,7 @@ const FILE_TO_KEY_MAP: Record<string, string> = {
   "todayTodo.json": STORAGE_KEYS.TODO,
   "writingTemplate.json": STORAGE_KEYS.WRITING_TEMPLATE,
   "tag.json": STORAGE_KEYS.TAG,
+  "project.json": STORAGE_KEYS.PROJECT,
   "globalSettings.json": STORAGE_KEYS.GLOBAL_SETTINGS,
   "timeTableBlocks.json": STORAGE_KEYS.TIMETABLE_BLOCKS,
 };

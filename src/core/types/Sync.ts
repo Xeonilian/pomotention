@@ -4,6 +4,7 @@ import type { Todo } from "@/core/types/Todo";
 import type { Schedule } from "@/core/types/Schedule";
 import type { Task } from "@/core/types/Task";
 import type { Tag } from "@/core/types/Tag";
+import type { Project } from "@/core/types/Project";
 import type { GlobalSettings } from "@/stores/useSettingStore";
 import { Template } from "./Template";
 import type { Block } from "./Block";
@@ -63,6 +64,7 @@ export interface SyncDataV2 extends SyncData {
     taskTrack: Task[];
     globalSettings: GlobalSettings;
     tag: Tag[];
+    project: Project[];
     writingTemplate: Template[];
     timeTableBlocks: Block[];
   };
