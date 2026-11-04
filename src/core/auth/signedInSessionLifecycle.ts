@@ -8,6 +8,7 @@ import { useSyncStore } from "@/stores/useSyncStore";
 import { STORAGE_KEYS } from "@/core/constants";
 import { initSyncServices, syncAll, resetSyncServices } from "@/services/sync";
 import { initAppCloseHandler, cancelPendingSyncTasks } from "@/services/platform/appCloseHandler";
+import { recordAuthLifecycleEvent } from "@/core/auth/authLifecycleDiag";
 
 const shouldLogAppDebug = ["1", "true"].includes(
   String(import.meta.env.VITE_APP_DEBUG_LOG ?? "")
@@ -21,6 +22,7 @@ function appDebugLog(...args: unknown[]) {
 
 let appCloseCleanup: (() => void) | null = null;
 let authUnsubscribe: (() => void) | null = null;
+let visibilityRefreshHandler: (() => void) | null = null;
 let lifecycleBootInProgress = false;
 /** 递增以使进行中的后台 initSyncLifecycle 在 await 间隙失效（登出/切账号与后台同步并发） */
 let backgroundSyncLifecycleToken = 0;
@@ -166,6 +168,10 @@ async function applySignedInSessionImpl(session: any, opts?: { backgroundSync?: 
 
   if (userSwitched) {
     appDebugLog("⚠️ 检测到用户切换，执行本地清理");
+    recordAuthLifecycleEvent(
+      "user_switch_clear_local",
+      `from=${lastUserId?.slice(0, 8)}… to=${currentUserId.slice(0, 8)}…`,
+    );
     clearAllUserState(false, false, true);
     await initSyncLifecycle({ background: opts?.backgroundSync });
   } else if (isSameUser && syncStore.syncInitialized) {
@@ -196,26 +202,27 @@ function hasSupabaseAuthStorage(): boolean {
 /** 用户点击退出登录：先 signOut，再断会话；本机业务数据与同步游标保留 */
 export async function performIntentionalSignOut(signOutFn: () => Promise<void>): Promise<void> {
   intentionalSignOutInProgress = true;
+  recordAuthLifecycleEvent("intentional_sign_out");
   try {
     await signOutFn();
-    await applySignedOut();
+    await applySignedOut("intentional");
   } finally {
     intentionalSignOutInProgress = false;
   }
 }
 
-/** 登出：断 Auth 会话与同步生命周期；保留 localStorage 业务数据、lastSync、lastLoggedInUserId */
-export async function applySignedOut(): Promise<void> {
+/** 登出：断 Auth 会话与同步生命周期；保留本机业务数据（内存 + localStorage）与 lastLoggedInUserId */
+export async function applySignedOut(reason: string = "unknown"): Promise<void> {
   const settingStore = useSettingStore();
-  const dataStore = useDataStore();
   const syncStore = useSyncStore();
 
+  recordAuthLifecycleEvent("apply_signed_out", reason);
   appDebugLog("👋 用户已登出，保留本机数据");
   syncStore.isLoggedIn = false;
 
   cleanupSyncLifecycle();
 
-  dataStore.clearData();
+  // 勿 clearData：tag/project/template 有落盘 watch，清空内存会把 [] 写回 localStorage
   if (typeof localStorage !== "undefined") {
     for (const key of Object.keys(localStorage)) {
       if (key.startsWith("sb-")) {
@@ -226,8 +233,6 @@ export async function applySignedOut(): Promise<void> {
 
   syncStore.resetSyncState();
   settingStore.settings.wasLocalModeBeforeLogin = false;
-
-  await dataStore.loadAllData();
 }
 
 async function recoverSessionFromStorage(event: string): Promise<import("@supabase/supabase-js").Session | null> {
@@ -244,10 +249,35 @@ async function recoverSessionFromStorage(event: string): Promise<import("@supaba
   return session;
 }
 
+/** 手机后台挂起后回前台：恢复自动刷新并主动 refresh，降低假登出 */
+function bindVisibilitySessionRefresh(): void {
+  if (visibilityRefreshHandler || typeof document === "undefined") return;
+
+  visibilityRefreshHandler = () => {
+    if (document.visibilityState !== "visible" || !supabase) return;
+    void supabase.auth.startAutoRefresh();
+    void supabase.auth.refreshSession().then(({ error }) => {
+      if (error) {
+        appDebugLog("⚠️ 回前台 refreshSession 失败", error.message);
+        recordAuthLifecycleEvent("visibility_refresh_fail", error.message);
+      }
+    });
+  };
+  document.addEventListener("visibilitychange", visibilityRefreshHandler);
+}
+
+function unbindVisibilitySessionRefresh(): void {
+  if (!visibilityRefreshHandler) return;
+  document.removeEventListener("visibilitychange", visibilityRefreshHandler);
+  visibilityRefreshHandler = null;
+}
+
 /** 挂载 Auth 监听；若启动时为仅本地则此处未订阅，登录成功后可再次调用以补挂 */
 export function subscribeAuthStateChanges(): void {
   if (!isSupabaseEnabled() || !supabase) return;
   if (authUnsubscribe) return;
+
+  bindVisibilitySessionRefresh();
 
   const {
     data: { subscription },
@@ -256,8 +286,10 @@ export function subscribeAuthStateChanges(): void {
     appDebugLog(`🔔 Auth 事件: ${event}, syncInitialized=${syncStore.syncInitialized}`);
 
     if (event === "SIGNED_IN") {
+      recordAuthLifecycleEvent("auth_SIGNED_IN");
       await applySignedInSession(session);
     } else if (event === "SIGNED_OUT") {
+      recordAuthLifecycleEvent("auth_SIGNED_OUT", intentionalSignOutInProgress ? "during_intentional" : "unexpected");
       if (intentionalSignOutInProgress) {
         appDebugLog("⏭️ 主动登出中，清理由 performIntentionalSignOut 串行执行");
         return;
@@ -265,16 +297,19 @@ export function subscribeAuthStateChanges(): void {
       const recovered = await recoverSessionFromStorage(event);
       if (recovered) {
         appDebugLog("♻️ SIGNED_OUT 后 session 仍可恢复，跳过登出清理");
+        recordAuthLifecycleEvent("signed_out_recovered");
         await applySignedInSession(recovered, { backgroundSync: true });
         return;
       }
-      await applySignedOut();
+      await applySignedOut("signed_out_no_session");
     } else if (event === "INITIAL_SESSION") {
       const activeSession = session ?? (await recoverSessionFromStorage(event));
       if (activeSession) {
+        recordAuthLifecycleEvent("auth_INITIAL_SESSION", "has_session");
         await applySignedInSession(activeSession, { backgroundSync: true });
       } else {
         appDebugLog("⏭️ INITIAL_SESSION 无 session，跳过");
+        recordAuthLifecycleEvent("auth_INITIAL_SESSION", "no_session");
       }
     }
   });
@@ -282,9 +317,11 @@ export function subscribeAuthStateChanges(): void {
   authUnsubscribe = () => {
     subscription.unsubscribe();
     authUnsubscribe = null;
+    unbindVisibilitySessionRefresh();
   };
 }
 
 export function teardownAuthSubscription(): void {
   authUnsubscribe?.();
+  unbindVisibilitySessionRefresh();
 }

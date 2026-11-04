@@ -117,6 +117,28 @@
           />
         </n-collapse-item>
 
+        <n-collapse-item title="本机状态（登出 / 本地数据）" name="local-state">
+          <p class="audio-dbg-hint">
+            检查
+            <strong>业务数据键是否还在</strong>
+            、条目大概数量，以及
+            <strong>登出/换号/假登出事件日志</strong>
+            。用于手机排查「登出后数据没了」，与上面网络诊断分开。
+          </p>
+          <n-space style="margin-bottom: 8px">
+            <n-button size="small" :loading="localStateLoading" @click="runLocalStateDiag">刷新本机状态</n-button>
+            <n-button size="small" :loading="localStateCopyLoading" @click="copyLocalStateDiag">复制结果</n-button>
+          </n-space>
+          <n-input
+            type="textarea"
+            readonly
+            :value="localStateText"
+            :autosize="{ minRows: 10, maxRows: 24 }"
+            class="audio-dbg-textarea"
+            placeholder="暂无结果，点击「刷新本机状态」"
+          />
+        </n-collapse-item>
+
         <n-collapse-item title="音频诊断（iOS / PWA）" name="audio">
           <p class="audio-dbg-hint">
             记录提示音与白噪音的关键事件。白噪音为 HTML 双轨 crossfade；iOS 在 AudioContext 已 running 时定时提示音多走 Web Audio，否则仍以
@@ -329,6 +351,8 @@ import { dbgSwStatus } from "@/core/sounds/debug";
 import { isTauri } from "@tauri-apps/api/core";
 import { getSession } from "@/core/services/authService";
 import { applySignedInSession, subscribeAuthStateChanges } from "@/core/auth/signedInSessionLifecycle";
+import { formatAuthLifecycleEventLines, formatLocalDataSnapshotLines } from "@/core/auth/authLifecycleDiag";
+import { STORAGE_KEYS } from "@/core/constants";
 
 const settingStore = useSettingStore();
 const timerStore = useTimerStore();
@@ -352,6 +376,10 @@ const envText = ref("");
 const envLoading = ref(false);
 const envCopyLoading = ref(false);
 const envMaskCopyLoading = ref(false);
+
+const localStateText = ref("");
+const localStateLoading = ref(false);
+const localStateCopyLoading = ref(false);
 
 const diagnosticLoading = ref(false);
 const diagnosticResult = ref("");
@@ -948,6 +976,74 @@ async function copyEnvDiag() {
     }
   } finally {
     envCopyLoading.value = false;
+  }
+}
+
+function formatUserIdHint(uid: string | undefined | null): string {
+  if (!uid) return "(none)";
+  return uid.length > 12 ? `${uid.slice(0, 8)}…${uid.slice(-4)}` : "[short]";
+}
+
+async function runLocalStateDiag() {
+  localStateLoading.value = true;
+  try {
+    const lines: string[] = [
+      "=== Pomotention 本机状态 ===",
+      `time: ${new Date().toISOString()}`,
+      `syncStore.isLoggedIn: ${syncStore.isLoggedIn}`,
+      `last_logged_user_id: ${formatUserIdHint(settingStore.settings.lastLoggedInUserId)}`,
+      `sb_localStorage_keys: ${countSbStorageKeys()}`,
+    ];
+
+    if (!supabase) {
+      lines.push("current_session: (no supabase client)");
+    } else {
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        if (error) {
+          lines.push(`current_session_error: ${error.message}`);
+        } else {
+          const sess = data.session;
+          lines.push(`current_session_present: ${!!sess}`);
+          lines.push(`current_user_id: ${formatUserIdHint(sess?.user?.id)}`);
+          if (sess?.expires_at) {
+            const expMs = sess.expires_at * 1000;
+            const remainSec = Math.round((expMs - Date.now()) / 1000);
+            lines.push(`session_expires_at_utc: ${new Date(expMs).toISOString()}`);
+            lines.push(`session_expires_in_sec: ${remainSec}`);
+          } else {
+            lines.push("session_expires_at_utc: (none)");
+          }
+          lines.push(`ui_vs_session_mismatch: ${!!sess !== syncStore.isLoggedIn ? "YES" : "no"}`);
+        }
+      } catch (e: unknown) {
+        lines.push(`current_session_exception: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    }
+
+    lines.push("");
+    lines.push(...formatLocalDataSnapshotLines(STORAGE_KEYS));
+    lines.push("");
+    lines.push(...formatAuthLifecycleEventLines());
+
+    localStateText.value = lines.join("\n");
+  } finally {
+    localStateLoading.value = false;
+  }
+}
+
+async function copyLocalStateDiag() {
+  localStateCopyLoading.value = true;
+  try {
+    if (!localStateText.value) await runLocalStateDiag();
+    const ok = await copyTextToClipboard(localStateText.value || "暂无本机状态结果");
+    if (ok) {
+      notification.success({ title: "已复制", content: "本机状态已复制，可发给开发者。", duration: 2800 });
+    } else {
+      notification.warning({ title: "复制失败", content: "请手动全选下方文本复制。", duration: 4000 });
+    }
+  } finally {
+    localStateCopyLoading.value = false;
   }
 }
 
