@@ -47,6 +47,20 @@
         </div>
         <StarFilterToggle :active="filterStarredOnly" @toggle="toggleFilterStarred" />
         <n-button
+          text
+          size="small"
+          class="new-project-btn"
+          :title="selectedProjectId != null ? '在选中文件夹下新建' : '新建文件夹'"
+          @click="createRootProject"
+        >
+          <template #icon>
+            <n-icon size="18">
+              <FolderArrowRight20Regular v-if="selectedProjectId != null" />
+              <Folder20Regular v-else />
+            </n-icon>
+          </template>
+        </n-button>
+        <n-button
           v-if="isMobile"
           text
           size="small"
@@ -73,39 +87,50 @@
         </n-button>
       </div>
       <div class="title-list" @scroll.passive="onTitleListScroll">
-        <div
+        <SearchProjectRows
+          :rows="projectTreeRows"
+          :selected-id="selectedProjectId"
+          :active-tab-key="activeTabKey ?? null"
+          :editing-id="editingProjectId"
+          :editing-title="editingTitle"
+          :bind-tag-project-id="bindTagProjectId"
+          :tag-picker-show="tagPickerShow"
+          :tag-search-term="tagSearchTerm"
+          :search-query="searchQuery"
+          :is-mobile="isMobile"
+          @select="selectProject"
+          @toggle="toggleExpand"
+          @start-rename="startRename"
+          @update:editing-title="setEditingTitle"
+          @commit-rename="commitRename"
+          @cancel-rename="cancelRename"
+          @promote="promoteProject"
+          @collapse-tree="collapseSubtree"
+          @remove="removeProjectById"
+          @toggle-month="toggleMonthGroup"
+          @bind-tag="openBindTag"
+          @clear-tag="clearProjectTag"
+          @tag-selected="onBindTagSelected"
+          @update:tag-picker-show="setTagPickerShow"
+          @update:tag-search-term="setTagSearchTerm"
+          @open-activity="onOpenNestedActivity"
+          @tag-click="handleTagClick"
+        />
+        <SearchActivityRow
           v-for="row in visibleRows"
           :key="'act-' + row.activityId"
-          class="title-item"
-          :class="[{ active: activeTabKey === row.openKey }, row.class === 'T' ? 'todo' : 'schedule']"
-          @click="openRow(row)"
-          :title="row.title"
-        >
-          <span v-if="!isMobile" class="left-icon">
-            {{ row.class === "T" ? "📝" : "📅" }}
-          </span>
-          <span class="title-name" v-html="highlightSearchInText(row.title || '......', searchQuery)"></span>
-          <span class="right-info">
-            <span class="right-info-left">
-              <n-icon v-if="row.hasStarred" size="16" class="star-on"><Star20Filled /></n-icon>
-              <span class="tag-renderer-container">
-                <TagRenderer
-                  :tag-ids="row.tagIds ?? []"
-                  :isCloseable="false"
-                  size="tiny"
-                  :displayLength="isMobile ? Number(1) : Number(3)"
-                  :showIdx="isMobile ? Number(1) : Number(2)"
-                  @tag-click="handleTagClick"
-                />
-              </span>
-            </span>
-
-            <span class="date">{{ formatMMDD(row.primaryTime) }}</span>
-          </span>
-        </div>
+          :row="row"
+          :active="activeTabKey === row.openKey"
+          :search-query="searchQuery"
+          :is-mobile="isMobile"
+          @open="onOpenNestedActivity"
+          @tag-click="handleTagClick"
+        />
       </div>
 
-      <div v-if="filteredActivities.length === 0" class="empty">{{ isMobile ? "" : "暂无结果" }}</div>
+      <div v-if="orphanActivities.length === 0 && projectTreeRows.length === 0" class="empty">
+        {{ isMobile ? "" : "暂无结果" }}
+      </div>
     </div>
     <div v-if="!isMobile" class="resize-handle-horizontal" style="touch-action: none" @pointerdown="resizeSearch.startResize"></div>
     <!-- 右侧：Tabs -->
@@ -152,10 +177,19 @@ import { storeToRefs } from "pinia";
 import { NInput } from "naive-ui";
 import type { Tag } from "@/core/types/Tag";
 import TabPaneContent from "@/components/search/TabPaneContent.vue";
-import { Star20Filled, Dismiss12Regular, Search20Regular, ChevronLeft20Regular, ChevronRight20Regular } from "@vicons/fluent";
+import {
+  Dismiss12Regular,
+  Search20Regular,
+  ChevronLeft20Regular,
+  ChevronRight20Regular,
+  Folder20Regular,
+  FolderArrowRight20Regular,
+} from "@vicons/fluent";
 import TagPickerPopover from "@/components/TagSystem/TagPickerPopover.vue";
 import TagRenderer from "@/components/TagSystem/TagRenderer.vue";
 import StarFilterToggle from "@/components/TagSystem/StarFilterToggle.vue";
+import SearchProjectRows from "@/components/search/SearchProjectRows.vue";
+import SearchActivityRow from "@/components/search/SearchActivityRow.vue";
 
 // 引入 stores 和类型
 import { useActivityTagEditor } from "@/composables/activity/useActivityTagEditor";
@@ -165,7 +199,8 @@ import { useTagStore } from "@/stores/useTagStore";
 
 // 引入业务类型和组合式函数
 import { useResize } from "@/composables/layout/useResize";
-import { useSearchFilter } from "@/composables/search/useSearchFilter";
+import { useSearchFilter, type ActivityRow } from "@/composables/search/useSearchFilter";
+import { useSearchProjects } from "@/composables/search/useSearchProjects";
 import { useDevice } from "@/composables/platform/useDevice";
 import { highlightSearchInText } from "@/core/utils/highlightSearchQuery";
 
@@ -175,20 +210,43 @@ const settingStore = useSettingStore();
 const tagStore = useTagStore();
 
 const { filteredActivities } = useSearchFilter();
+const {
+  selectedProjectId,
+  projectTreeRows,
+  orphanActivities,
+  editingProjectId,
+  editingTitle,
+  bindTagProjectId,
+  tagPickerShow,
+  tagSearchTerm,
+  selectProject,
+  toggleExpand,
+  createRootProject,
+  promoteProject,
+  collapseSubtree,
+  removeProjectById,
+  startRename,
+  commitRename,
+  cancelRename,
+  toggleMonthGroup,
+  openBindTag,
+  onBindTagSelected,
+  clearProjectTag,
+} = useSearchProjects(filteredActivities);
 
 // 从 UI store 中解构出 UI 状态（使用 storeToRefs 保持响应性）
 const { searchQuery, filterStarredOnly, openedTabs, activeTabKey, filterTagIds } = storeToRefs(searchUiStore);
 
-// 渐进渲染：首屏只挂载前 ROW_CHUNK 行（每行含 TagRenderer/n-tag，全量挂载会卡首屏与取消筛选），滚动近底再追加
+// 渐进渲染：仅对未归入 Project 的平铺列表分块
 const ROW_CHUNK = 50;
 const SCROLL_APPEND_THRESHOLD_PX = 200;
 const visibleCount = ref(ROW_CHUNK);
-const visibleRows = computed(() => filteredActivities.value.slice(0, visibleCount.value));
+const visibleRows = computed(() => orphanActivities.value.slice(0, visibleCount.value));
 
 function onTitleListScroll(e: Event) {
   const el = e.currentTarget as HTMLElement;
   if (el.scrollTop + el.clientHeight >= el.scrollHeight - SCROLL_APPEND_THRESHOLD_PX) {
-    if (visibleCount.value < filteredActivities.value.length) {
+    if (visibleCount.value < orphanActivities.value.length) {
       visibleCount.value += ROW_CHUNK;
     }
   }
@@ -206,6 +264,22 @@ watch(
 // 从 UI store 中解构出 actions，以便在 script 中调用
 const { toggleFilterStarred, closeTab, openRow, toggleFilterTagId, clearFilterTags } = searchUiStore;
 const closeAllTabs = searchUiStore.closeAllTabs.bind(searchUiStore);
+
+/** 打开文件夹内条目：清掉 P 选中，避免一直亮着 folder */
+function onOpenNestedActivity(row: ActivityRow) {
+  selectedProjectId.value = null;
+  openRow(row);
+}
+
+function setEditingTitle(v: string) {
+  editingTitle.value = v;
+}
+function setTagPickerShow(v: boolean) {
+  tagPickerShow.value = v;
+}
+function setTagSearchTerm(v: string) {
+  tagSearchTerm.value = v;
+}
 
 // 标签筛选浮层（#/@）
 const tagEditor = useActivityTagEditor();
@@ -394,7 +468,6 @@ function handleTagClick(tagId: number) {
   toggleFilterTagId(tagId);
 }
 
-const formatMMDD = (ts?: number) => (ts ? new Date(ts).toLocaleDateString(undefined, { month: "2-digit", day: "2-digit" }) : "—");
 </script>
 
 <style scoped>
@@ -606,13 +679,17 @@ const formatMMDD = (ts?: number) => (ts ? new Date(ts).toLocaleDateString(undefi
   margin-bottom: 4px;
 }
 
-.title-item .left-icon {
-  display: flex;
-  gap: 2px;
-  align-items: center;
-  overflow: hidden;
-  z-index: 1000;
+.type-icon {
   flex-shrink: 0;
+  margin-right: 2px;
+}
+
+.title-item.todo .type-icon {
+  color: var(--color-blue);
+}
+
+.title-item.schedule .type-icon {
+  color: var(--color-red);
 }
 
 /* 空间不足时：标题先省略 → 标签区再裁 → 日期最后才消失（避免整行 overflow 从右侧先裁掉日期） */
@@ -689,12 +766,16 @@ const formatMMDD = (ts?: number) => (ts ? new Date(ts).toLocaleDateString(undefi
   font-weight: 600;
 }
 
-.title-item.schedule {
-  border-left: 4px solid var(--color-red);
+.new-project-btn {
+  flex-shrink: 0;
+  margin-left: -8px;
+  margin-right: 2px;
+  padding: 0 2px;
+  color: var(--color-text-secondary, #666);
 }
 
-.title-item.todo {
-  border-left: 4px solid var(--color-blue);
+.new-project-btn:hover {
+  color: var(--color-text, #222);
 }
 
 .star-on {

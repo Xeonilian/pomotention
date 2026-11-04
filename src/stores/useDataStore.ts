@@ -43,6 +43,7 @@ import { useProjectStore } from "./useProjectStore";
 import { useTemplateStore } from "./useTemplateStore";
 import { useDisplayedTaskStore } from "./useDisplayedTaskStore";
 import { useSettingStore } from "./useSettingStore";
+import { isGatherableActivity, pickSmartProjectId } from "@/services/project/smartGather";
 
 export const useDataStore = defineStore(
   "data",
@@ -1044,25 +1045,64 @@ export const useDataStore = defineStore(
       // 标签被实际应用到 Activity 时，更新本地 tag 的 lastUsed（不单独 saveTags；activity 已标记 unsynced 并由上方防抖上传覆盖）
       tagStore.touchTagsLastUsed(newTagIds);
 
+      // 无归属时：加/改 tag 触发一次智能归堆（已有 projectId 不动）
+      trySmartAssignActivity(activityId);
+
       return true;
     }
 
-    /** Project 软删后：清掉 Activity.projectId（不删 Activity） */
+    function projectDepth(projectId: number): number {
+      const byId = projectStore.projectById;
+      let d = 0;
+      let cur = byId.get(projectId);
+      const guard = new Set<number>();
+      while (cur?.parentId != null && !guard.has(cur.parentId)) {
+        guard.add(cur.parentId);
+        d++;
+        cur = byId.get(cur.parentId);
+      }
+      return d;
+    }
+
+    /** 仅当尚无 projectId：按绑了 tag 的 Project 更深优先写入 */
+    function trySmartAssignActivity(activityId: number) {
+      const activity = activityById.value.get(activityId);
+      if (!activity || activity.projectId != null) return;
+      if (!isGatherableActivity(activity)) return;
+      const smartProjects = projectStore.allProjects.filter((p) => p.tagId != null);
+      if (!smartProjects.length) return;
+      const pid = pickSmartProjectId(activity.tagIds, smartProjects, projectDepth);
+      if (pid == null) return;
+      // 必须整项替换，否则仅改字段时搜索列表可能不刷新
+      updateActivityById(activityId, {
+        projectId: pid,
+        lastModified: Date.now(),
+        synced: false,
+      });
+    }
+
+    /**
+     * Project 软删后：清掉 Activity.projectId（不删 Activity），
+     * 再对这批条目跑智能归堆——若仍满足父 P（或其它存活智能 P）的 tag，会写回里面。
+     */
     function stripProjectIdFromReferences(projectIds: number[]): void {
       if (!projectIds.length) return;
       const idSet = new Set(projectIds);
       const now = Date.now();
-      let changed = false;
+      const clearedIds: number[] = [];
       for (const activity of activityList.value) {
         if (activity.projectId == null || !idSet.has(activity.projectId)) continue;
         activity.projectId = undefined;
         activity.lastModified = now;
         activity.synced = false;
-        changed = true;
+        clearedIds.push(activity.id);
       }
-      if (changed) {
-        saveActivities(activityList.value);
-        scheduleDebouncedCloudUpload();
+      if (!clearedIds.length) return;
+      saveActivities(activityList.value);
+      scheduleDebouncedCloudUpload();
+      // 已删的 P 不在 allProjects 里；更深优先会落到仍存活的父/兄弟智能堆
+      for (const id of clearedIds) {
+        trySmartAssignActivity(id);
       }
     }
 

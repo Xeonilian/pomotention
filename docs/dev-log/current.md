@@ -16,8 +16,8 @@
 | **蓝图** | 类型 [`Project.ts`](../../src/core/types/Project.ts)；分层 [`1-architecture-layering.md`](./blueprint/1-architecture-layering.md) |
 | **分支** | `dev` |
 | **分级** | `[S3 C2 UV1]` |
-| **更新** | 2026-11-03 |
-| **停在哪** | 搜索高亮 / 阅读主题已做；数据页 markdown 可收缩目录已做；下一步 Project CRUD UI；Sync 仍未挂 |
+| **更新** | 2026-11-04 |
+| **停在哪** | Project：**除拖拽外** UI 已接（树/改名/子P/升层/删/收子树/绑清 tag/按月视图/命中数；3in1 去 bar/emoji）；**拖拽待做**；Sync 仍未挂 |
 
 ---
 
@@ -33,13 +33,41 @@
 - **字段**：见 [`Project.ts`](../../src/core/types/Project.ts) — `parentId` 嵌套；可选 `tagId`；`memberIds?` 预留口（本关不读写）；同步元数据同 Tag。  
 - **归属**：`Activity.projectId` 多对一（一 activity 只进一处）；Task 不单独挂。  
 - **跨堆主题靠 tag，Project 不承担多归属**（例：反思主堆在「反思」Project，打「咨询」tag；筛咨询 tag 即可带上，无需双挂）。  
-- **删除（v1 策略）**：Project 树软删；Activity **只清 `projectId`**，不删 Activity。  
+- **删除（v1 策略）**：Project 树软删；Activity **先清 `projectId`（不删实体）**，再对这批跑一次智能归堆——tag 仍命中父/其它存活智能 P 则留在里面。  
 - **冲突**：复用现有 LWW / 未同步本地优先；不另做 CRDT。  
 - **智能（混合，非纯 tag 派生）**：  
   1. 手动进 / 出永远有效；`projectId` 是归属真相。  
-  2. 无 `projectId` 时加 tag：按 `tagIds` 顺序，第一个命中某 Project.`tagId` → 写入。  
-  3. 已有 `projectId` → 智能不再改（删 tag 不自动踢出 / 换堆）。  
-  4. 另提供一次性「收纳」；建议同一 `tagId` 全局最多绑一个智能 Project。
+  2. **仅当无 `projectId`** 时智能才写：加/改 tag 后，或一次性「收纳」。  
+  3. 候选 = 其 `tagId ∈ activity.tagIds` 的 Project；**多个 → 树更深优先**；同深再按 `tagIds` 更靠前。  
+  4. 已有 `projectId` → 智能不再改（删 tag 不自动踢出 / 换堆）。  
+  5. **拖 P / 升层 / 拖 3in1 不重跑智能**；深度变化只影响以后新归堆。  
+  6. 同一 `tagId` 全局最多绑一个 Project；不做路径 AND。  
+  7. 按月 = **纯视图桶**（不建真子 P）；**仅当该 P 无子 P** 时提供开关。
+
+### UI / 交互（已锁 · 2026-11-04）
+
+- **列表**：P 行浅紫；chevron 开合（下=开，转右=合）+ 缩进层级；选中浅灰；右侧操作；末尾数字 = 当前筛选下可见 3in1 命中数（含子树合计）。  
+- **3in1 行**：去掉最左类型 bar 与 emoji；todo / schedule 用右侧（或类型）icon 区分，**拖它们**进 P / 拖到根（或列表空隙）移出。  
+- **改名**：双击 P 标题。  
+- **P 层级**：**可拖 P 进/出另一 P**（改 `parentId`）；**不另做「移入」功能按钮**（找不到合适 icon / 易懵）。`FolderArrowUp` 作快捷：每次升一层直至 `null`。同层字母数字自然序。  
+- **建 P**：搜索星旁 `Folder` = 根（有选中 P 时也可约定建子）；行内 `FolderArrowRight` = 在选中/该 P 下建子。  
+- **本关不做**：P 内「加 todo」（写作复盘入口）→ 候补；「移入选中 P」类按钮。
+
+### Icon（Fluent · 已确认）
+
+| 槽 | Icon |
+|---|---|
+| 新建根 P | `Folder20Regular` |
+| 新建子 P | `FolderArrowRight20Regular` |
+| 升一层 | `FolderArrowUp20Regular` |
+| 行开合 | `ChevronDown20Regular`（转 Right） |
+| 收起子树 | `ArrowCollapseAll20Regular` |
+| 删除 | `Delete20Regular` |
+| 绑 tag | `TagSearch20Regular` |
+| 清绑 | `TagReset20Regular` |
+| 按月开关 | `CalendarLtr20Regular` |
+| schedule 拖 | `CalendarEmpty20Regular` |
+| todo 拖 | `TaskListSquareRtl20Regular` |
 
 ---
 
@@ -47,10 +75,10 @@
 
 ### Project（本关主要工作量）
 
-1. 数据页可增 / 删 / 改 Project；可将实体（a-t-t / a-s-t 等）放进 Project。  
-2. Project 可展开 / 收起；展开再加载（懒加载）。  
-3. Project 内 **可选按月分组**（长项目好翻）；不是时间窗筛选。  
-4. 智能文件夹（混合）：未归类时可按 `tagId` 自动收入；可一次性收纳；已归属不被智能覆盖。  
+1. 数据页可增 / 删 / 改 Project；可将实体（a-t-t / a-s-t 等）放进 Project（拖 3in1）。  
+2. Project 可展开 / 收起；展开再加载（懒加载）；可收起整棵子树；可拖进/出改层级；可升一层至根。  
+3. Project 内 **可选按月分组（视图桶）**；无子 P 时才有；不是时间窗筛选、不建真子 P。  
+4. 智能文件夹（混合）：无归属时按 tag **更深优先**收入；可一次性收纳；已归属不被智能覆盖；拖拽不重算。  
 5. 按 tag 搜时：没有该 tag 的 Project 不显示；有的显示并带匹配条数；仍可展开收起。  
 
 ### 提取与导出（仅计划侧）
@@ -82,8 +110,8 @@
 | 步 | 内容 | 产出 |
 |---|---|---|
 | **0** | 认路：Project、`projectId`、数据页、现有搜索；全量导出入口（勿混） | 落点清单 |
-| **1** | Project CRUD + 归入 + 展开收起 + 懒加载 | 文件夹可用 |
-| **2** | 可选按月分组；tag 下 Project 显隐与数量；智能归 tag | 长列表可翻、归堆可用 |
+| **1** | Project 行 UI + CRUD（建根/子、双击改名、删 cascade、开合懒加载、升一层、收子树）+ 拖 3in1 进/出 | 文件夹可用 |
+| **2** | 视图按月；绑/清 tag；更深优先智能 + 收纳；tag 下显隐与命中数 | 长列表可翻、归堆可用 |
 | **3** | 计划侧 Project 范围提取；文字按 activity title / task 内容；**搜索词高亮**（列表/tab/详情；清空即消） | 范围提取 + 命中高亮 |
 | **4** | 筛选结果导出（Markdown / JSON） | 导出可用 |
 | **5** | 手测验收上表 | 关可收 |
@@ -116,6 +144,7 @@
 - **筛选后分析写作面**：检索结果上的成文/归纳舞台（本关仅导出材料出门；应用内写作另开）
 - **Task markdown · note 块**：正文可抽取 note（倾向 `:::note` … `:::`）；首页与数据/筛选侧均**单独成区**渲染；在 note 区修改只回写 note，不搅源正文
 - **Task markdown · 多色后批高亮**：现有 `== ==` 黄为原笔；另增颜色标后画批注（与 note 区可分开做）
+- **Project 内加 todo**（素材复盘书写入口）；「移入选中 P」类按钮（v1 用拖拽代替）
 
 ---
 

@@ -5,9 +5,9 @@
  * - id：本地 timestamp 数字（云表 timestamp_id）；云行另有 uuid，不同步进本类型
  * - parentId：嵌套子文件夹，语义对齐 Activity.parentId
  * - tagId：可选智能助手（混合模型，非纯 tag 派生）
- *   - 仅当 Activity 尚无 projectId 时，按 tagIds 顺序第一个命中写入
- *   - 已有 projectId 后智能不再改（删 tag 不自动踢出/换堆）
- *   - 另可「一次性收纳」；手动进/出永远有效
+ *   - 仅当 Activity 尚无 projectId 时写入：候选里树更深优先，同深再按 tagIds 更靠前
+ *   - 已有 projectId 后智能不再改；拖拽/升层不重跑智能
+ *   - 另可「一次性收纳」；手动进/出永远有效；同一 tagId 全局最多绑一个 Project
  * - 归属真相在 Activity.projectId（多对一）
  * - memberIds：预留口，本关不读写；日后成员/协作再用
  */
