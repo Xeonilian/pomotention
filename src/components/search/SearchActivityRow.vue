@@ -1,14 +1,30 @@
 <template>
   <div
     class="title-item"
-    :class="[{ active }, row.class === 'T' ? 'todo' : 'schedule', indentClass]"
+    :class="[
+      { active, 'is-dragging-source': isDraggingSource, 'drop-hover': isDropHover },
+      row.class === 'T' ? 'todo' : 'schedule',
+      indentClass,
+    ]"
     :title="row.title"
+    :data-drop-kind="dropKind"
+    :data-drop-id="dropKind === 'project' ? dropProjectId : undefined"
     @click="emit('open', row)"
   >
-    <n-icon size="16" class="type-icon">
-      <CheckboxChecked20Regular v-if="row.class === 'T'" />
-      <CalendarEmpty20Regular v-else />
-    </n-icon>
+    <span
+      class="drag-handle type-icon"
+      style="touch-action: none; cursor: grab"
+      title="拖动归入文件夹"
+      @pointerdown.prevent.stop="onDragHandle"
+      @mousedown.prevent.stop
+      @touchstart.stop.passive
+      @click.stop
+    >
+      <n-icon size="16">
+        <CheckboxChecked20Regular v-if="row.class === 'T'" />
+        <CalendarEmpty20Regular v-else />
+      </n-icon>
+    </span>
     <span class="title-name" v-html="highlightSearchInText(row.title || '......', searchQuery)"></span>
     <span class="right-info">
       <span class="right-info-left">
@@ -45,16 +61,27 @@ const props = withDefaults(
     isMobile: boolean;
     /** 缩进层级；0 = 与列表根行对齐 */
     depth?: number;
+    /** 嵌在某 P 下时可作为落点；未传 = 根列表（移出） */
+    dropProjectId?: number | null;
+    isDraggingSource?: boolean;
+    isDropHover?: boolean;
   }>(),
-  { active: false, depth: 0 },
+  { active: false, depth: 0, dropProjectId: null, isDraggingSource: false, isDropHover: false },
 );
 
 const emit = defineEmits<{
   open: [row: ActivityRow];
   "tag-click": [tagId: number];
+  "drag-start": [event: PointerEvent, activityId: number];
 }>();
 
 const indentClass = computed(() => (props.depth > 0 ? `indent-${Math.min(props.depth, 8)}` : undefined));
+
+const dropKind = computed(() => (props.dropProjectId != null ? "project" : "root"));
+
+function onDragHandle(e: PointerEvent) {
+  emit("drag-start", e, props.row.activityId);
+}
 
 function formatMMDD(ts?: number) {
   return ts ? new Date(ts).toLocaleDateString(undefined, { month: "2-digit", day: "2-digit" }) : "—";
@@ -78,6 +105,30 @@ function formatMMDD(ts?: number) {
 .title-item.active {
   background: var(--color-background-light, #eee);
   font-weight: 600;
+}
+
+.title-item.drop-hover {
+  outline: 1px dashed var(--color-blue, #5b8def);
+  outline-offset: -1px;
+}
+
+.title-item.is-dragging-source {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.drag-handle {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  margin: -2px 0;
+  border-radius: 3px;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
 }
 
 .type-icon {

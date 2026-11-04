@@ -4,7 +4,16 @@
     <div
       v-if="item.kind === 'project'"
       class="title-item title-item--project"
-      :class="[{ selected: selectedId === item.project.id }, `indent-${Math.min(item.depth, 8)}`]"
+      :class="[
+        {
+          selected: !isDragging && selectedId === item.project.id,
+          'is-dragging-source': isProjectDragging(item.project.id),
+          'drop-hover': isProjectDropHover(item.project.id),
+        },
+        `indent-${Math.min(item.depth, 8)}`,
+      ]"
+      :data-drop-kind="'project'"
+      :data-drop-id="item.project.id"
       @click="emit('select', item.project.id)"
     >
       <button type="button" class="chevron-btn" title="展开/收起" @click.stop="emit('toggle', item.project.id)">
@@ -24,7 +33,16 @@
         @keydown.esc.prevent="emit('cancel-rename')"
         @blur="emit('commit-rename')"
       />
-      <span v-else class="title-name" @dblclick.stop="emit('start-rename', item.project.id)">{{ item.project.title }}</span>
+      <span
+        v-else
+        class="title-name drag-handle"
+        style="touch-action: none; cursor: grab"
+        title="拖动调整层级；双击改名"
+        @pointerdown.stop="onProjectTitlePointerDown($event, item.project.id)"
+        @touchstart.stop.passive
+        @click.stop
+        @dblclick.stop="emit('start-rename', item.project.id)"
+      >{{ item.project.title }}</span>
 
       <!-- 有才渲染，不占空位；tag 单槽两态 -->
       <span class="row-actions" @click.stop>
@@ -100,6 +118,8 @@
       v-else-if="item.kind === 'month'"
       class="title-item title-item--month"
       :class="`indent-${Math.min(item.depth, 8)}`"
+      :data-drop-kind="'project'"
+      :data-drop-id="item.projectId"
     >
       <span class="title-name month-label">{{ item.label }}</span>
     </div>
@@ -107,12 +127,15 @@
     <SearchActivityRow
       v-else-if="item.kind === 'activity'"
       :row="item.row"
-      :active="activeTabKey === item.row.openKey"
+      :active="!isDragging && activeTabKey === item.row.openKey"
       :search-query="searchQuery"
       :is-mobile="isMobile"
       :depth="item.depth"
+      :drop-project-id="activityDropProjectId(item.row.activityId)"
+      :is-dragging-source="isActivityDragging(item.row.activityId)"
       @open="emit('open-activity', $event)"
       @tag-click="emit('tag-click', $event)"
+      @drag-start="onActivityDragStart"
     />
   </template>
 </template>
@@ -134,6 +157,7 @@ import TagPickerPopover from "@/components/TagSystem/TagPickerPopover.vue";
 import SearchActivityRow from "@/components/search/SearchActivityRow.vue";
 import type { ProjectTreeRow } from "@/composables/search/useSearchProjects";
 import type { ActivityRow } from "@/composables/search/useSearchFilter";
+import type { SearchDragSource, SearchDropTarget } from "@/composables/search/useSearchProjectDrag";
 
 const props = defineProps<{
   rows: ProjectTreeRow[];
@@ -147,6 +171,11 @@ const props = defineProps<{
   tagSearchTerm: string;
   searchQuery: string;
   isMobile: boolean;
+  isDragging: boolean;
+  dragSource: SearchDragSource | null;
+  hoverTarget: SearchDropTarget | null;
+  /** activityId → 所属 projectId（用于落点） */
+  activityProjectIdOf: (activityId: number) => number | null | undefined;
 }>();
 
 const emit = defineEmits<{
@@ -167,11 +196,103 @@ const emit = defineEmits<{
   "update:tagSearchTerm": [v: string];
   "open-activity": [row: ActivityRow];
   "tag-click": [tagId: number];
+  "drag-start": [event: PointerEvent, source: SearchDragSource];
 }>();
 
 function onTagPickerShow(projectId: number, open: boolean) {
   if (open) emit("bind-tag", projectId);
   else emit("update:tagPickerShow", false);
+}
+
+/** 标题：阈值内松手=选中，超过则拖（对齐 Activity 有子项时点/拖分流） */
+const PROJECT_DRAG_THRESHOLD = 5;
+let titlePress: {
+  projectId: number;
+  startX: number;
+  startY: number;
+  target: HTMLElement;
+  pointerId: number;
+  originalEvent: PointerEvent;
+} | null = null;
+
+function clearTitlePressListeners() {
+  const s = titlePress;
+  if (!s) return;
+  s.target.removeEventListener("pointermove", onTitlePressMove);
+  s.target.removeEventListener("pointerup", onTitlePressUp);
+  s.target.removeEventListener("pointercancel", onTitlePressUp);
+  try {
+    s.target.releasePointerCapture(s.pointerId);
+  } catch {
+    /* ignore */
+  }
+  titlePress = null;
+}
+
+function onProjectTitlePointerDown(e: PointerEvent, projectId: number) {
+  if (e.button !== 0 && e.pointerType === "mouse") return;
+  const target = e.currentTarget as HTMLElement;
+  titlePress = {
+    projectId,
+    startX: e.clientX,
+    startY: e.clientY,
+    target,
+    pointerId: e.pointerId,
+    originalEvent: e,
+  };
+  target.setPointerCapture(e.pointerId);
+  target.addEventListener("pointermove", onTitlePressMove);
+  target.addEventListener("pointerup", onTitlePressUp);
+  target.addEventListener("pointercancel", onTitlePressUp);
+}
+
+function onTitlePressMove(e: PointerEvent) {
+  if (!titlePress) return;
+  const dx = e.clientX - titlePress.startX;
+  const dy = e.clientY - titlePress.startY;
+  if (Math.hypot(dx, dy) <= PROJECT_DRAG_THRESHOLD) return;
+  e.preventDefault();
+  const { originalEvent, projectId, target, pointerId } = titlePress;
+  titlePress = null;
+  target.removeEventListener("pointermove", onTitlePressMove);
+  target.removeEventListener("pointerup", onTitlePressUp);
+  target.removeEventListener("pointercancel", onTitlePressUp);
+  try {
+    target.releasePointerCapture(pointerId);
+  } catch {
+    /* ignore */
+  }
+  emit("drag-start", originalEvent, { kind: "project", id: projectId });
+}
+
+function onTitlePressUp() {
+  if (!titlePress) return;
+  const { projectId } = titlePress;
+  clearTitlePressListeners();
+  emit("select", projectId);
+}
+
+function onActivityDragStart(e: PointerEvent, activityId: number) {
+  emit("drag-start", e, { kind: "activity", id: activityId });
+}
+
+function isProjectDragging(id: number) {
+  const s = props.dragSource;
+  return s?.kind === "project" && s.id === id;
+}
+
+function isActivityDragging(id: number) {
+  const s = props.dragSource;
+  return s?.kind === "activity" && s.id === id;
+}
+
+function isProjectDropHover(id: number) {
+  const t = props.hoverTarget;
+  return t?.kind === "project" && t.id === id;
+}
+
+function activityDropProjectId(activityId: number) {
+  return props.activityProjectIdOf(activityId) ?? null;
 }
 
 watch(
@@ -209,6 +330,16 @@ watch(
   font-weight: 600;
 }
 
+.title-item.drop-hover {
+  outline: 1px dashed var(--color-blue, #5b8def);
+  outline-offset: -1px;
+}
+
+.title-item.is-dragging-source {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
 .title-item--month {
   cursor: default;
   opacity: 0.85;
@@ -232,6 +363,10 @@ watch(
   text-overflow: ellipsis;
   flex: 1 1 0%;
   min-width: 0;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
 }
 
 .month-label {

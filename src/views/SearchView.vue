@@ -86,7 +86,12 @@
           </template>
         </n-button>
       </div>
-      <div class="title-list" @scroll.passive="onTitleListScroll">
+      <div
+        class="title-list"
+        :class="{ 'drop-hover-root': isRootDropHover }"
+        data-drop-kind="root"
+        @scroll.passive="onTitleListScroll"
+      >
         <SearchProjectRows
           :rows="projectTreeRows"
           :selected-id="selectedProjectId"
@@ -98,6 +103,10 @@
           :tag-search-term="tagSearchTerm"
           :search-query="searchQuery"
           :is-mobile="isMobile"
+          :is-dragging="isDragging"
+          :drag-source="dragSource"
+          :hover-target="hoverTarget"
+          :activity-project-id-of="activityProjectIdOf"
           @select="selectProject"
           @toggle="toggleExpand"
           @start-rename="startRename"
@@ -115,16 +124,19 @@
           @update:tag-search-term="setTagSearchTerm"
           @open-activity="onOpenNestedActivity"
           @tag-click="handleTagClick"
+          @drag-start="onSearchDragStart"
         />
         <SearchActivityRow
           v-for="row in visibleRows"
           :key="'act-' + row.activityId"
           :row="row"
-          :active="activeTabKey === row.openKey"
+          :active="!isDragging && activeTabKey === row.openKey"
           :search-query="searchQuery"
           :is-mobile="isMobile"
+          :is-dragging-source="dragSource?.kind === 'activity' && dragSource.id === row.activityId"
           @open="onOpenNestedActivity"
           @tag-click="handleTagClick"
+          @drag-start="onActivityOrphanDragStart"
         />
       </div>
 
@@ -201,6 +213,7 @@ import { useTagStore } from "@/stores/useTagStore";
 import { useResize } from "@/composables/layout/useResize";
 import { useSearchFilter, type ActivityRow } from "@/composables/search/useSearchFilter";
 import { useSearchProjects } from "@/composables/search/useSearchProjects";
+import type { SearchDragSource } from "@/composables/search/useSearchProjectDrag";
 import { useDevice } from "@/composables/platform/useDevice";
 import { highlightSearchInText } from "@/core/utils/highlightSearchQuery";
 
@@ -232,7 +245,25 @@ const {
   openBindTag,
   onBindTagSelected,
   clearProjectTag,
+  isDragging,
+  dragSource,
+  hoverTarget,
+  startProjectDrag,
+  activityProjectIdOf,
 } = useSearchProjects(filteredActivities);
+
+/** 根区虚线：仅拖 P 时提示；拖 3in1 只高亮 Project 行 */
+const isRootDropHover = computed(
+  () => dragSource.value?.kind === "project" && hoverTarget.value?.kind === "root",
+);
+
+function onSearchDragStart(e: PointerEvent, source: SearchDragSource) {
+  startProjectDrag(e, source);
+}
+
+function onActivityOrphanDragStart(e: PointerEvent, activityId: number) {
+  startProjectDrag(e, { kind: "activity", id: activityId });
+}
 
 // 从 UI store 中解构出 UI 状态（使用 storeToRefs 保持响应性）
 const { searchQuery, filterStarredOnly, openedTabs, activeTabKey, filterTagIds } = storeToRefs(searchUiStore);
@@ -664,6 +695,13 @@ function handleTagClick(tagId: number) {
 .title-list {
   overflow: auto;
   margin-top: 6px;
+  min-height: 4rem;
+  border-radius: 4px;
+}
+
+.title-list.drop-hover-root {
+  outline: 1px dashed var(--color-blue, #5b8def);
+  outline-offset: -1px;
 }
 
 .title-item {

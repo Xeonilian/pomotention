@@ -5,6 +5,11 @@ import { useDataStore } from "@/stores/useDataStore";
 import type { Project } from "@/core/types/Project";
 import type { ActivityRow } from "@/composables/search/useSearchFilter";
 import { gatherUnassignedBySmartTags } from "@/services/project/smartGather";
+import {
+  useSearchProjectDrag,
+  type SearchDragSource,
+  type SearchDropTarget,
+} from "@/composables/search/useSearchProjectDrag";
 
 export type ProjectTreeRow =
   | {
@@ -44,8 +49,7 @@ function monthKeyFromTs(ts?: number): string {
 }
 
 /**
- * 数据页 Project 树：开合 / 改名 / 建子 / 升层 / 删 / 收子树 / 绑 tag / 按月视图 / 命中数。
- * 拖拽另片再加。
+ * 数据页 Project 树：开合 / 改名 / 建子 / 升层 / 删 / 收子树 / 绑 tag / 按月视图 / 命中数 / 拖拽归堆。
  */
 export function useSearchProjects(filteredActivities: Ref<ActivityRow[]>) {
   const projectStore = useProjectStore();
@@ -361,6 +365,76 @@ export function useSearchProjects(filteredActivities: Ref<ActivityRow[]>) {
     projectStore.updateProjectById(id, { tagId: undefined });
   }
 
+  function ensureExpanded(id: number) {
+    if (expandedIds.value.has(id)) return;
+    const next = new Set(expandedIds.value);
+    next.add(id);
+    expandedIds.value = next;
+  }
+
+  /** 手动拖入/拖出：写 projectId，不跑智能 */
+  function moveActivityToProject(activityId: number, projectId: number | null) {
+    const cur = activityProjectIds.value.get(activityId);
+    const next = projectId ?? undefined;
+    if (cur === next || (cur == null && next == null)) return;
+    dataStore.updateActivityById(activityId, {
+      projectId: next,
+      lastModified: Date.now(),
+      synced: false,
+    });
+    if (projectId != null) ensureExpanded(projectId);
+  }
+
+  /** 拖 P 改 parentId；禁落到自己的子孙 */
+  function moveProjectUnder(projectId: number, parentId: number | null) {
+    const p = projectById.value.get(projectId);
+    if (!p) return;
+    if (parentId != null) {
+      if (parentId === projectId) return;
+      if (descendantIds(projectId).includes(parentId)) return;
+      if (!projectById.value.has(parentId)) return;
+    }
+    if ((p.parentId ?? null) === parentId) return;
+    projectStore.updateProjectById(projectId, { parentId });
+    if (parentId != null) {
+      ensureExpanded(parentId);
+      // 有子 P 时关掉按月
+      if (monthGroupIds.value.has(parentId)) {
+        const m = new Set(monthGroupIds.value);
+        m.delete(parentId);
+        monthGroupIds.value = m;
+      }
+    }
+  }
+
+  function applyDragDrop(source: SearchDragSource, target: SearchDropTarget) {
+    if (source.kind === "activity") {
+      moveActivityToProject(source.id, target.kind === "root" ? null : target.id);
+      return;
+    }
+    moveProjectUnder(source.id, target.kind === "root" ? null : target.id);
+  }
+
+  const {
+    isDragging,
+    dragSource,
+    hoverTarget,
+    startDrag,
+  } = useSearchProjectDrag({
+    onDrop: applyDragDrop,
+    isInvalidProjectDrop: (dragId, targetId) => descendantIds(dragId).includes(targetId),
+  });
+
+  /** 一进入拖拽就清掉其它选中（P 高亮等），避免和落点提示抢视觉 */
+  function startProjectDrag(event: PointerEvent, source: SearchDragSource) {
+    selectedProjectId.value = null;
+    startDrag(event, source);
+  }
+
+  function activityProjectIdOf(activityId: number): number | null {
+    return activityProjectIds.value.get(activityId) ?? null;
+  }
+
   return {
     selectedProjectId,
     projectTreeRows,
@@ -385,5 +459,10 @@ export function useSearchProjects(filteredActivities: Ref<ActivityRow[]>) {
     onBindTagSelected,
     clearProjectTag,
     depthOf,
+    isDragging,
+    dragSource,
+    hoverTarget,
+    startProjectDrag,
+    activityProjectIdOf,
   };
 }
