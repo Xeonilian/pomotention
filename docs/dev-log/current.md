@@ -17,7 +17,7 @@
 | **分支** | `dev` |
 | **分级** | `[S3 C2 UV1]` |
 | **更新** | 2026-11-05 |
-| **停在哪** | Project 本地侧大致齐（UI/CRUD/拖拽/智能归堆/高亮等；另有移动竖栏 polish）；**下一步补 Sync**：Studio 建 `projects` → gen `Database.ts` → 挂 `projectSync` → 联调测效果。旁路已做：权益延期叠试用剩余（admin `extend_*` + webhook；已 deploy；进 main 见 PR #144） |
+| **停在哪** | 步 4 筛选导出已接（JSON / MD 复盘报告 / CSV；看效果可再调）。下一步：手测导出 + **Project Sync**（Studio → gen → 挂线）。旁路权益延期见 PR #144 |
 
 ---
 
@@ -128,8 +128,8 @@
 - [x] **1.** Project 文件夹（含拖拽 Pointer；细节手测可继续）
 - [x] **2.** 按月分组 + tag 显隐 / 智能归堆
 - [x] **3.** Project 范围提取 + 搜索词高亮（计划侧）
-- [ ] **4.** 筛选结果导出（Markdown / JSON）— 若已齐可勾；否则收关前补
-- [ ] **5.** 手测收关（含 **Project Sync 接线与效果** ← 下一步主线）
+- [x] **4.** 筛选结果导出（Markdown 复盘报告 / JSON / CSV；轻预览；Tauri 与 PWA 落盘分支）
+- [ ] **5.** 手测收关（导出效果微调 + **Project Sync** 接线）
 
 ### 旁路（本关外已落地，勿丢）
 

@@ -211,6 +211,13 @@ export function useSearchProjects(filteredActivities: Ref<ActivityRow[]>) {
     });
   });
 
+  /** 导出用：选中 P 则该堆（含子树）命中，否则当前筛选全集 */
+  const exportableActivities = computed(() => {
+    const sel = selectedProjectId.value;
+    if (sel != null) return activitiesForProjectTree(sel);
+    return filteredActivities.value;
+  });
+
   function selectProject(id: number) {
     // 再点同一行取消选中 → 工具条 Folder 回到「建根」
     selectedProjectId.value = selectedProjectId.value === id ? null : id;
@@ -439,6 +446,7 @@ export function useSearchProjects(filteredActivities: Ref<ActivityRow[]>) {
     selectedProjectId,
     projectTreeRows,
     orphanActivities,
+    exportableActivities,
     editingProjectId,
     editingTitle,
     bindTagProjectId,

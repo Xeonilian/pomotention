@@ -66,21 +66,35 @@
             </template>
           </TagPickerPopover>
         </div>
-        <StarFilterToggle :active="filterStarredOnly" @toggle="toggleFilterStarred" />
-        <n-button
-          text
-          size="small"
-          class="new-project-btn"
-          :title="selectedProjectId != null ? '在选中文件夹下新建' : '新建文件夹'"
-          @click="createRootProject"
-        >
-          <template #icon>
-            <n-icon size="18">
-              <FolderArrowRight20Regular v-if="selectedProjectId != null" />
-              <Folder20Regular v-else />
-            </n-icon>
-          </template>
-        </n-button>
+        <div class="search-tool-actions">
+          <StarFilterToggle :active="filterStarredOnly" @toggle="toggleFilterStarred" />
+          <n-button
+            text
+            size="small"
+            class="tool-action-btn new-project-btn"
+            :title="selectedProjectId != null ? '在选中文件夹下新建' : '新建文件夹'"
+            @click="createRootProject"
+          >
+            <template #icon>
+              <n-icon size="18">
+                <FolderArrowRight20Regular v-if="selectedProjectId != null" />
+                <Folder20Regular v-else />
+              </n-icon>
+            </template>
+          </n-button>
+          <n-button
+            text
+            size="small"
+            class="tool-action-btn export-hits-btn"
+            title="导出当前筛选命中"
+            :disabled="exportableActivities.length === 0"
+            @click="showExportDialog = true"
+          >
+            <template #icon>
+              <n-icon size="18"><ArrowDownload20Regular /></n-icon>
+            </template>
+          </n-button>
+        </div>
       </div>
       <div v-if="showProjectList && currentFilterTags.length > 0" class="filter-status-bar">
         <TagRenderer class="filter-tags" :tag-ids="filterTagIds" :isCloseable="false" @remove-tag="toggleFilterTagId" size="small" />
@@ -181,6 +195,11 @@
         </n-tab-pane>
       </n-tabs>
     </div>
+    <ExportHitsDialog
+      v-model:show="showExportDialog"
+      :hits="exportableActivities ?? []"
+      :scope="exportScope"
+    />
   </div>
 </template>
 
@@ -197,12 +216,16 @@ import {
   ChevronUpDown20Regular,
   Folder20Regular,
   FolderArrowRight20Regular,
+  ArrowDownload20Regular,
 } from "@vicons/fluent";
 import TagPickerPopover from "@/components/TagSystem/TagPickerPopover.vue";
 import TagRenderer from "@/components/TagSystem/TagRenderer.vue";
 import StarFilterToggle from "@/components/TagSystem/StarFilterToggle.vue";
 import SearchProjectRows from "@/components/search/SearchProjectRows.vue";
 import SearchActivityRow from "@/components/search/SearchActivityRow.vue";
+import ExportHitsDialog from "@/components/search/ExportHitsDialog.vue";
+import type { ExportScopeMeta } from "@/services/search/exportFilteredHits";
+import { useProjectStore } from "@/stores/useProjectStore";
 
 // 引入 stores 和类型
 import { useActivityTagEditor } from "@/composables/activity/useActivityTagEditor";
@@ -223,12 +246,14 @@ import { highlightSearchInText } from "@/core/utils/highlightSearchQuery";
 const searchUiStore = useSearchUiStore();
 const settingStore = useSettingStore();
 const tagStore = useTagStore();
+const projectStore = useProjectStore();
 
 const { filteredActivities } = useSearchFilter();
 const {
   selectedProjectId,
   projectTreeRows,
   orphanActivities,
+  exportableActivities,
   editingProjectId,
   editingTitle,
   bindTagProjectId,
@@ -267,6 +292,24 @@ function onActivityOrphanDragStart(e: PointerEvent, activityId: number) {
 
 // 从 UI store 中解构出 UI 状态（使用 storeToRefs 保持响应性）
 const { searchQuery, filterStarredOnly, filterActivityClass, openedTabs, activeTabKey, filterTagIds } = storeToRefs(searchUiStore);
+
+const showExportDialog = ref(false);
+const exportScope = computed<ExportScopeMeta>(() => {
+  const sel = selectedProjectId.value;
+  const projectLabel =
+    sel != null ? projectStore.getProject(sel)?.title?.trim() || `Project #${sel}` : "全库（当前筛选）";
+  const tagsLabel = tagStore
+    .getTagsByIds(filterTagIds.value)
+    .map((t) => t.name)
+    .join("; ");
+  return {
+    projectLabel,
+    tagsLabel,
+    query: searchQuery.value.trim(),
+    starredOnly: filterStarredOnly.value,
+    activityClass: filterActivityClass.value,
+  };
+});
 
 // 渐进渲染：仅对未归入 Project 的平铺列表分块
 const ROW_CHUNK = 50;
@@ -764,16 +807,31 @@ function handleTagClick(tagId: number) {
   font-weight: 600;
 }
 
-.new-project-btn {
+/* 星标 / 新建 / 导出：等距一组，靠工具条末尾 */
+.search-tool-actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
   flex-shrink: 0;
-  margin-left: -8px;
+  gap: 4px;
+  margin-left: 2px;
   margin-right: 2px;
+}
+
+.tool-action-btn {
+  flex-shrink: 0;
+  margin: 0;
   padding: 0 2px;
   color: var(--color-text-secondary, #666);
 }
 
-.new-project-btn:hover {
+.tool-action-btn:hover {
   color: var(--color-text, #222);
+}
+
+.search-tool-actions :deep(.star-btn) {
+  margin: 0;
+  padding: 0 2px;
 }
 
 .star-on {
@@ -839,13 +897,13 @@ function handleTagClick(tagId: number) {
   .search-tool .search-input-wrap {
     margin-right: 0;
   }
-  .search-tool .star-btn {
-    left: 0;
-    padding: 0;
+  .search-tool-actions {
+    gap: 4px;
+    margin-right: 4px;
   }
-  .search-tool .new-project-btn {
-    margin-left: 4px;
-    margin-right: 8px;
+  .search-tool-actions :deep(.star-btn),
+  .search-tool .tool-action-btn {
+    margin: 0;
     padding: 0;
   }
   /* 手机端收紧搜索框前缀图标侧留白 */
