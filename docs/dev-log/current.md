@@ -16,8 +16,8 @@
 | **蓝图** | 类型 [`Project.ts`](../../src/core/types/Project.ts)；分层 [`1-architecture-layering.md`](./blueprint/1-architecture-layering.md) |
 | **分支** | `dev` |
 | **分级** | `[S3 C2 UV1]` |
-| **更新** | 2026-11-04 |
-| **停在哪** | Project：拖拽已接（Pointer 范式；3in1↔P/根、P↔P/根）；手测验收中；Sync 仍未挂 |
+| **更新** | 2026-11-05 |
+| **停在哪** | Project 本地侧大致齐（UI/CRUD/拖拽/智能归堆/高亮等；另有移动竖栏 polish）；**下一步补 Sync**：Studio 建 `projects` → gen `Database.ts` → 挂 `projectSync` → 联调测效果。旁路已做：权益延期叠试用剩余（admin `extend_*` + webhook；已 deploy；进 main 见 PR #144） |
 
 ---
 
@@ -101,7 +101,7 @@
 | 类型 | [`Project.ts`](../../src/core/types/Project.ts) |
 | 本地 | [`useProjectStore`](../../src/stores/useProjectStore.ts)；key `project`（[`STORAGE_KEYS.PROJECT`](../../src/core/constants.ts)） |
 | 云表 SQL（Studio 粘贴） | [`supabase/migrations/20261103120000_projects.sql`](../../supabase/migrations/20261103120000_projects.sql)；建表后 **gen 刷新** [`Database.ts`](../../src/core/types/Database.ts)（勿手改） |
-| 同步 | [`projectSync.ts`](../../src/services/sync/projectSync.ts) 已写好（云类型暂手写）；**尚未挂** sync/index（单机测过 → Studio SQL → gen → 接线） |
+| 同步 | [`projectSync.ts`](../../src/services/sync/projectSync.ts) 已写好（云类型暂手写）；**尚未挂** sync/index → **下一步**：Studio SQL → gen → 接线 → 测效果 |
 | 归属 | 已有 `Activity.projectId` + `activities.project_id` |
 | 全量备份 | `collectLocalData` / 导入含 `project.json`；与筛选结果导出勿混 |
 
@@ -125,11 +125,15 @@
 ## 进度
 
 - [x] **0.** 认路（契约 + 落点 + 本地 store/SQL/sync 源码；Sync 未挂、表未建）
-- [ ] **1.** Project 文件夹
-- [ ] **2.** 按月分组 + tag 显隐 / 智能归堆
-- [ ] **3.** Project 范围提取 + 搜索词高亮（计划侧）
-- [ ] **4.** 筛选结果导出（Markdown / JSON）
-- [ ] **5.** 手测收关
+- [x] **1.** Project 文件夹（含拖拽 Pointer；细节手测可继续）
+- [x] **2.** 按月分组 + tag 显隐 / 智能归堆
+- [x] **3.** Project 范围提取 + 搜索词高亮（计划侧）
+- [ ] **4.** 筛选结果导出（Markdown / JSON）— 若已齐可勾；否则收关前补
+- [ ] **5.** 手测收关（含 **Project Sync 接线与效果** ← 下一步主线）
+
+### 旁路（本关外已落地，勿丢）
+
+- [x] 同步付费人工/webhook：**从试用真实终点叠期**（非再送满 14 天）；admin `extend_days` / `extend_months`；查询带回 `trial_until`；绝对 `until` 仅纠错。见 `worker/ai-gateway` README SOP；生产已部署。
 
 ---
 
