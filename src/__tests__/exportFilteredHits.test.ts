@@ -3,6 +3,7 @@ import {
   buildExportHits,
   toMarkdownReport,
   toTodoCsv,
+  toExportJson,
   type BuildExportHitsDeps,
 } from "@/services/search/exportFilteredHits";
 import type { Activity } from "@/core/types/Activity";
@@ -37,10 +38,10 @@ describe("exportFilteredHits", () => {
     id: 3,
     activityTitle: "边界感",
     sourceId: 1,
-    description: "正文",
-    energyRecords: [],
-    rewardRecords: [],
-    interruptionRecords: [],
+    description: "会谈中谈到边界与请求。",
+    energyRecords: [{ id: 100, value: 6, description: "会后" }],
+    rewardRecords: [{ id: 101, value: 8 }],
+    interruptionRecords: [{ id: 102, interruptionType: "E", description: "手机响" }],
     starred: true,
     deleted: false,
     synced: false,
@@ -56,23 +57,38 @@ describe("exportFilteredHits", () => {
     getProjectTitle: () => "咨询",
   };
 
-  it("builds todo hit and markdown punch card", () => {
+  it("builds markdown + slim JSON times", () => {
     const bundle = buildExportHits([1], deps, {
-      projectLabel: "全库",
+      projectLabel: "",
       tagsLabel: "周复盘",
       query: "",
       starredOnly: false,
       activityClass: null,
     });
     expect(bundle.todos).toHaveLength(1);
-    expect(bundle.todos[0]!.tags).toBe("周复盘");
-    expect(bundle.todos[0]!.startDay).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+
     const md = toMarkdownReport(bundle);
-    expect(md).toContain("日 × Tag 打卡");
-    expect(md).toContain("周复盘");
-    expect(md).toContain("复盘支架（ORID）");
+    expect(md).toMatch(/^日期：\d{4}-\d{2}-\d{2}/m);
+    expect(md).toContain("- `周复盘` 1");
+    expect(md).toContain("[1](#n-1)");
+    expect(md).toContain("边界感");
+    expect(md).toContain("```markdown");
+
     const csv = toTodoCsv(bundle);
     expect(csv.startsWith("\uFEFF")).toBe(true);
-    expect(csv).toContain("activityId");
+
+    const json = JSON.parse(toExportJson(bundle));
+    expect(json.meta.summary.energyN).toBe(1);
+    expect(json.todos[0].start).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    expect(json.todos[0].due).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    expect(json.todos[0].done).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    expect(json.todos[0]).not.toHaveProperty("startText");
+    expect(json.todos[0]).not.toHaveProperty("startDay");
+    expect(json.todos[0]).not.toHaveProperty("startTime");
+    expect(json.todos[0]).not.toHaveProperty("dueDay");
+    expect(json.todos[0]).not.toHaveProperty("dueAt");
+    expect(json.todos[0].tags).toEqual(["周复盘"]);
+    expect(json.todos[0].energy[0]).toEqual(expect.objectContaining({ at: expect.any(String), value: 6 }));
+    expect(json.todos[0].energy[0]).not.toHaveProperty("atDay");
   });
 });

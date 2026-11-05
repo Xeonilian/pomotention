@@ -25,7 +25,7 @@
 
       <input
         v-if="editingId === item.project.id"
-        ref="renameInputRef"
+        :ref="(el) => bindRenameInput(el, item.project.id)"
         class="rename-input"
         :value="editingTitle"
         @click.stop
@@ -367,10 +367,19 @@ function activityDropProjectId(activityId: number) {
 
 const renameInputRef = ref<HTMLInputElement | null>(null);
 
+/** v-for 内 string ref 会变成数组，外点 contains/focus 全失效；按 id 绑单个 input */
+function bindRenameInput(el: unknown, projectId: number) {
+  if (props.editingId !== projectId) return;
+  renameInputRef.value = el instanceof HTMLInputElement ? el : null;
+}
+
 /** 点到不可聚焦区域时部分环境不发 blur，捕获阶段外点也提交 */
 function onOutsideRenamePointerDown(e: PointerEvent) {
   const el = renameInputRef.value;
-  if (!el) return;
+  if (!el) {
+    emit("commit-rename");
+    return;
+  }
   if (e.target instanceof Node && el.contains(e.target)) return;
   emit("commit-rename");
 }
@@ -383,7 +392,10 @@ watch(
   () => props.editingId,
   async (id) => {
     detachOutsideRename();
-    if (id == null) return;
+    if (id == null) {
+      renameInputRef.value = null;
+      return;
+    }
     await nextTick();
     renameInputRef.value?.focus();
     renameInputRef.value?.select();

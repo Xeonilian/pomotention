@@ -26,6 +26,16 @@ export function formatExportDay(ms: number): string {
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 }
 
+const WEEKDAY_ZH = ["日", "一", "二", "三", "四", "五", "六"];
+
+/** 由 YYYY-MM-DD 得「周一」；解析失败返回空 */
+export function formatExportWeekdayZh(day: string): string {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return "";
+  const d = new Date(`${day}T12:00:00`);
+  if (Number.isNaN(d.getTime())) return "";
+  return `周${WEEKDAY_ZH[d.getDay()]}`;
+}
+
 export function formatExportClock(ms: number): string {
   const d = new Date(ms);
   if (Number.isNaN(d.getTime())) return "";

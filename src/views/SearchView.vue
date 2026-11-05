@@ -296,8 +296,9 @@ const { searchQuery, filterStarredOnly, filterActivityClass, openedTabs, activeT
 const showExportDialog = ref(false);
 const exportScope = computed<ExportScopeMeta>(() => {
   const sel = selectedProjectId.value;
+  // 未选文件夹 ≠ 全库：仅表示未限 P；标签/关键字/星标另列
   const projectLabel =
-    sel != null ? projectStore.getProject(sel)?.title?.trim() || `Project #${sel}` : "全库（当前筛选）";
+    sel != null ? projectStore.getProject(sel)?.title?.trim() || `Project #${sel}` : "";
   const tagsLabel = tagStore
     .getTagsByIds(filterTagIds.value)
     .map((t) => t.name)

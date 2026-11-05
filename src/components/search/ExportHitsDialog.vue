@@ -9,17 +9,15 @@
   >
     <div class="export-hits">
       <p class="export-hits__scope">{{ scopeSummary }}</p>
-      <p v-if="hitCount > 0" class="export-hits__count">
-        命中 {{ hitCount }} 条（Todo / Schedule 按类型分列）
-      </p>
+      <p v-if="hitCount > 0" class="export-hits__count">共计 {{ hitCount }} 条</p>
       <p v-else class="export-hits__empty">当前无命中，无法导出。</p>
 
       <div class="export-hits__format">
-        <span class="export-hits__label">格式</span>
+        <span class="export-hits__label">导出格式</span>
         <n-radio-group v-model:value="format" :disabled="busy || hitCount === 0">
-          <n-radio value="markdown">Markdown 复盘报告</n-radio>
+          <n-radio value="markdown">Markdown</n-radio>
           <n-radio value="json">JSON</n-radio>
-          <n-radio value="csv">CSV（Todo / Schedule 分文件）</n-radio>
+          <n-radio value="csv">CSV</n-radio>
         </n-radio-group>
       </div>
     </div>
@@ -27,12 +25,8 @@
     <template #footer>
       <div class="export-hits__footer">
         <n-button :disabled="busy" @click="close">取消</n-button>
-        <n-button :disabled="busy || hitCount === 0" @click="openMarkdownPreview">
-          预览 Markdown
-        </n-button>
-        <n-button type="primary" :loading="busy" :disabled="hitCount === 0" @click="runExport">
-          导出
-        </n-button>
+        <n-button :disabled="busy || hitCount === 0 || format !== 'markdown'" @click="openMarkdownPreview">预览</n-button>
+        <n-button type="primary" :loading="busy" :disabled="hitCount === 0" @click="runExport">导出</n-button>
       </div>
     </template>
   </n-modal>
@@ -66,7 +60,7 @@ const props = withDefaults(
   {
     hits: () => [],
     scope: () => ({
-      projectLabel: "全库（当前筛选）",
+      projectLabel: "",
       tagsLabel: "",
       query: "",
       starredOnly: false,
@@ -103,7 +97,7 @@ const scopeSummary = computed(() => {
   const s = props.scope;
   if (!s) return "";
   const bits = [
-    `范围：${s.projectLabel}`,
+    s.projectLabel ? `文件夹：${s.projectLabel}` : "文件夹：不限",
     s.tagsLabel ? `标签：${s.tagsLabel}` : null,
     s.query ? `关键字：${s.query}` : null,
     s.starredOnly ? "仅星标" : null,
@@ -129,7 +123,7 @@ function close() {
 function buildBundle() {
   const ids = safeHits.value.map((h) => h.activityId);
   const scope = props.scope ?? {
-    projectLabel: "全库（当前筛选）",
+    projectLabel: "",
     tagsLabel: "",
     query: "",
     starredOnly: false,
@@ -152,12 +146,17 @@ function buildBundle() {
   );
 }
 
+function reviewActivityTitle(): string {
+  const d = new Date();
+  const pad = (n: number) => (n < 10 ? `0${n}` : String(n));
+  return `Review ${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}`;
+}
+
 function openMarkdownPreview() {
   if (hitCount.value === 0) return;
   try {
     const md = toMarkdownReport(buildBundle());
-    const label = props.scope?.projectLabel?.trim() || "筛选";
-    openExportMarkdownPreview(md, `导出 · ${label}`);
+    openExportMarkdownPreview(md, reviewActivityTitle());
     emit("update:show", false);
   } catch (e) {
     notifyError(e instanceof Error ? e.message : String(e));
@@ -244,9 +243,9 @@ async function runExport() {
   color: var(--n-text-color-2, #666);
 }
 .export-hits__label {
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
-  margin-bottom: 4px;
+  margin: 4px 0;
 }
 .export-hits__empty {
   color: var(--n-text-color-3, #999);

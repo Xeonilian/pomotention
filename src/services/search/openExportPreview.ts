@@ -6,7 +6,7 @@ import { useSearchUiStore } from "@/stores/useSearchUiStore";
 /**
  * 按默认 onAddActivity 路径：无日期的 T 类 Activity → createTaskFromActivity → 写正文 → 打开 activity Tab。
  */
-export function openExportMarkdownPreview(markdown: string, tabTitle = "导出预览"): void {
+export function openExportMarkdownPreview(markdown: string, tabTitle = "Review"): void {
   const dataStore = useDataStore();
   const searchUi = useSearchUiStore();
 
