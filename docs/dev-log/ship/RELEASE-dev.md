@@ -1,27 +1,27 @@
-# 发布与日常流程
+# 发布与日常流程（一人 + 少量用户）
 
-## 日常流程
+默认：**单线 `dev` + 偶发 `hotfix`**。不设正式 staging；Preview / 自用狗粮代替。
 
-1. **开发分支**
-   - 从最新 `dev` 开分支：`pnpm new:branch feat my-topic`（脚本会自动：更新 `dev` → 基于 `dev` 创建 `feat/my-topic`）。
-   - 开发完成后，推到远程：`git push -u origin feat/my-topic`。
+## 日常
 
-2. **合并到 dev（通过 PR）**
-   - 创建 PR：`gh pr create --base dev --head feat/my-topic`。
-   - 在 GitHub 上或命令行确认无误后合并：`gh pr merge --squash` 或 `gh pr merge --merge`。
-   - 删除远程分支：`git push origin --delete feat/my-topic`（可选）。
+1. **本关只在 `dev` 上做**（大功能不必再拆 `feat/…`，除非一次要并行两路）。
+2. **自测约 2 天**（本地或 Cloudflare 对 `dev` 的 Preview），愿意给那几位生产用户碰上了，再开 **`dev → main` 发布 PR**。
+3. **生产上的无关 bug** → 从最新 `main` 开 `hotfix/…`，尽快小 PR 合 `main`；**不要**揉进还没发完的本关。
+4. **hotfix 合完、本关还在 `dev`：** 把 `main` **接回** `dev`（rebase / cherry-pick 本关提交），继续测。  
+   **禁止**此时把 `dev` 指空成「等于 main」——会冲掉未发功能。详见 skill `dev-branch`「何时不要重建」。
+5. **整关都进 `main`、发布 PR 分支已删：** 才按收工 **重建** 干净 `dev`（与 `main` 同提交）。见 [`.cursor/rules/pr-merge.mdc`](../../../.cursor/rules/pr-merge.mdc)。
 
-3. **测试**
-   - `dev` 被合并更新后，Cloudflare 会自动为 `dev` 部署 Preview。
-   - 在 Preview 站自用约 3 天，走完整一天的真实流程。
+## 不用单开分支的事
 
-4. **上线（dev → main，通过 PR）**
-   - 创建发布 PR：`gh pr create --base main --head dev`。
-   - 确认 changelog / 差异后，通过 `gh pr merge` 合并。
-   - 合并后 `main` 会触发生产站部署，Cloudflare 上线新版本。
+- **写/改 ship SOP、skill、本关 docs 顺手整理**：跟当前线（`dev` 或当次 `hotfix`）一起交，**不必**为文档单独开分支。
+- **开 PR 前整理 docs / CHANGELOG / `current.md`**：同一发布 PR（或本关 `dev`）里带上即可。
 
-## 仅 dev 才有的功能
+## Debug
 
-- 在 Cloudflare Pages 的 **Preview** 环境变量里增加：`VITE_APP_DEV` = `true`（Production 不配置）。
-- 代码里用 `import.meta.env.VITE_APP_DEV` 判断，为真时显示「开发工具」等入口（例如设置页的「清除本地数据」）。
-- 正式站不设该变量，这些功能不会出现。
+- Preview 可开 `VITE_APP_DEV=true`（Production 不配）。诊断入口挂这里，**不要**为了慌而揉进功能提交。
+- 正式站不设该变量，这些入口不出现。
+
+## 仅 Preview 才有的功能（补充）
+
+- Cloudflare Pages **Preview** 环境变量：`VITE_APP_DEV` = `true`（Production 不配置）。
+- 代码：`import.meta.env.VITE_APP_DEV` 为真时显示开发工具等（例如设置页清除本地数据）。

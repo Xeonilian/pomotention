@@ -7,6 +7,7 @@
 | PR / S·C·UV / 证据 | [`PR.md`](./PR.md) |
 | 分支 | [`branch.md`](./branch.md) |
 | `dev` 拆 feat 再接回（A/B/C、冲突 `--theirs`） | [`rebase_sop.md`](./rebase_sop.md) 场景二 |
+| 日常 / `dev`+hotfix / 狗粮约 2 天再上 main | [`RELEASE-dev.md`](./RELEASE-dev.md) |
 | 发版 | [`release.md`](./release.md) |
 | 测试 | [`test.md`](./test.md) |
 
