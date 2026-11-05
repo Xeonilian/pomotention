@@ -168,7 +168,7 @@
       </div>
     </div>
     <MobileHomeFab
-      v-if="isMobile && !daySheetActive && !lifePlannerLifeView"
+      v-if="isMobile && !lifePlannerLifeView"
       :task-record-editing="taskRecordEditing"
       @notify="showErrorPopover"
       @update-active-id="onUpdateActiveId"
