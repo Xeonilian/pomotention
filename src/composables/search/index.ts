@@ -3,3 +3,4 @@ export { useSearchFilter } from "@/composables/search/useSearchFilter";
 export { useSearchTab } from "@/composables/search/useSearchTab";
 export { useSearchProjects } from "@/composables/search/useSearchProjects";
 export { useSearchProjectDrag } from "@/composables/search/useSearchProjectDrag";
+export { useSearchMobilePanes } from "@/composables/search/useSearchMobilePanes";

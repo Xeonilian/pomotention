@@ -9,25 +9,30 @@
     :title="row.title"
     :data-drop-kind="dropKind"
     :data-drop-id="dropKind === 'project' ? dropProjectId : undefined"
-    @click="emit('open', row)"
+    @pointerdown="onRowPointerDown"
   >
-    <span
-      class="drag-handle type-icon"
-      style="touch-action: none; cursor: grab"
-      title="拖动归入文件夹"
-      @pointerdown.prevent.stop="onDragHandle"
-      @mousedown.prevent.stop
-      @touchstart.stop.passive
-      @click.stop
+    <button
+      type="button"
+      class="type-icon type-filter-btn"
+      :class="{ 'is-on': typeFilterOn }"
+      :title="typeFilterTitle"
+      @pointerdown.stop
+      @click.stop="emit('filter-class', row.class)"
     >
       <n-icon size="16">
-        <CheckboxChecked20Regular v-if="row.class === 'T'" />
-        <CalendarEmpty20Regular v-else />
+        <template v-if="row.class === 'T'">
+          <CheckboxChecked20Filled v-if="typeFilterOn" />
+          <CheckboxChecked20Regular v-else />
+        </template>
+        <template v-else>
+          <CalendarEmpty20Filled v-if="typeFilterOn" />
+          <CalendarEmpty20Regular v-else />
+        </template>
       </n-icon>
-    </span>
+    </button>
     <span class="title-name" v-html="highlightSearchInText(row.title || '......', searchQuery)"></span>
     <span class="right-info">
-      <span class="right-info-left">
+      <span class="right-info-left" @pointerdown.stop @click.stop>
         <n-icon v-if="row.hasStarred" size="16" class="star-on"><Star20Filled /></n-icon>
         <span class="tag-renderer-container">
           <TagRenderer
@@ -48,7 +53,13 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { NIcon } from "naive-ui";
-import { Star20Filled, CalendarEmpty20Regular, CheckboxChecked20Regular } from "@vicons/fluent";
+import {
+  Star20Filled,
+  CalendarEmpty20Regular,
+  CalendarEmpty20Filled,
+  CheckboxChecked20Regular,
+  CheckboxChecked20Filled,
+} from "@vicons/fluent";
 import TagRenderer from "@/components/TagSystem/TagRenderer.vue";
 import type { ActivityRow } from "@/composables/search/useSearchFilter";
 import { highlightSearchInText } from "@/core/utils/highlightSearchQuery";
@@ -59,6 +70,8 @@ const props = withDefaults(
     active?: boolean;
     searchQuery: string;
     isMobile: boolean;
+    /** 当前类型筛（与行首 icon 高亮对齐） */
+    filterActivityClass?: "T" | "S" | null;
     /** 缩进层级；0 = 与列表根行对齐 */
     depth?: number;
     /** 嵌在某 P 下时可作为落点；未传 = 根列表（移出） */
@@ -66,12 +79,20 @@ const props = withDefaults(
     isDraggingSource?: boolean;
     isDropHover?: boolean;
   }>(),
-  { active: false, depth: 0, dropProjectId: null, isDraggingSource: false, isDropHover: false },
+  {
+    active: false,
+    filterActivityClass: null,
+    depth: 0,
+    dropProjectId: null,
+    isDraggingSource: false,
+    isDropHover: false,
+  },
 );
 
 const emit = defineEmits<{
   open: [row: ActivityRow];
   "tag-click": [tagId: number];
+  "filter-class": [cls: "T" | "S"];
   "drag-start": [event: PointerEvent, activityId: number];
 }>();
 
@@ -79,8 +100,75 @@ const indentClass = computed(() => (props.depth > 0 ? `indent-${Math.min(props.d
 
 const dropKind = computed(() => (props.dropProjectId != null ? "project" : "root"));
 
-function onDragHandle(e: PointerEvent) {
-  emit("drag-start", e, props.row.activityId);
+const typeFilterOn = computed(() => props.filterActivityClass === props.row.class);
+
+const typeFilterTitle = computed(() => {
+  if (props.row.class === "T") {
+    return typeFilterOn.value ? "仅看待办：开（再点关闭）" : "仅看待办";
+  }
+  return typeFilterOn.value ? "仅看日程：开（再点关闭）" : "仅看日程";
+});
+
+/** 整行：轻点打开；横滑拖；竖滑交给列表（勿过早 capture） */
+const DRAG_THRESHOLD = 8;
+let rowPress: {
+  startX: number;
+  startY: number;
+  pointerId: number;
+  originalEvent: PointerEvent;
+  /** 触摸 / 手机：竖滑优先滚动 */
+  preferScroll: boolean;
+} | null = null;
+
+function clearRowPressListeners() {
+  if (!rowPress) return;
+  window.removeEventListener("pointermove", onRowPressMove);
+  window.removeEventListener("pointerup", onRowPressUp);
+  window.removeEventListener("pointercancel", onRowPressCancel);
+  rowPress = null;
+}
+
+function onRowPointerDown(e: PointerEvent) {
+  if (e.button !== 0 && e.pointerType === "mouse") return;
+  rowPress = {
+    startX: e.clientX,
+    startY: e.clientY,
+    pointerId: e.pointerId,
+    originalEvent: e,
+    preferScroll: e.pointerType === "touch" || props.isMobile,
+  };
+  window.addEventListener("pointermove", onRowPressMove);
+  window.addEventListener("pointerup", onRowPressUp);
+  window.addEventListener("pointercancel", onRowPressCancel);
+}
+
+function onRowPressMove(e: PointerEvent) {
+  if (!rowPress || e.pointerId !== rowPress.pointerId) return;
+  const dx = e.clientX - rowPress.startX;
+  const dy = e.clientY - rowPress.startY;
+  if (Math.hypot(dx, dy) <= DRAG_THRESHOLD) return;
+
+  // 手机竖滑：放弃拖，让 title-list 滚动
+  if (rowPress.preferScroll && Math.abs(dy) >= Math.abs(dx)) {
+    clearRowPressListeners();
+    return;
+  }
+
+  e.preventDefault();
+  const { originalEvent } = rowPress;
+  clearRowPressListeners();
+  emit("drag-start", originalEvent, props.row.activityId);
+}
+
+function onRowPressUp(e: PointerEvent) {
+  if (!rowPress || e.pointerId !== rowPress.pointerId) return;
+  clearRowPressListeners();
+  emit("open", props.row);
+}
+
+function onRowPressCancel(e: PointerEvent) {
+  if (rowPress && e.pointerId !== rowPress.pointerId) return;
+  clearRowPressListeners();
 }
 
 function formatMMDD(ts?: number) {
@@ -96,10 +184,18 @@ function formatMMDD(ts?: number) {
   overflow: hidden;
   padding: 2px 4px;
   margin-right: 4px;
-  cursor: pointer;
+  cursor: grab;
   min-height: 22px;
   margin-bottom: 4px;
   gap: 2px;
+  user-select: none;
+  -webkit-user-select: none;
+  /* 竖向交给列表滚动；横滑再进拖拽判定 */
+  touch-action: pan-y;
+}
+
+.title-item:active {
+  cursor: grabbing;
 }
 
 .title-item.active {
@@ -117,22 +213,25 @@ function formatMMDD(ts?: number) {
   pointer-events: none;
 }
 
-.drag-handle {
+.type-icon {
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   padding: 2px;
   margin: -2px 0;
+}
+
+.type-filter-btn {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  line-height: 1;
   border-radius: 3px;
 }
 
-.drag-handle:active {
-  cursor: grabbing;
-}
-
-.type-icon {
-  flex-shrink: 0;
+.type-filter-btn:hover {
+  background: var(--color-background-light-transparent, rgba(0, 0, 0, 0.04));
 }
 
 .title-item.todo .type-icon {
@@ -141,6 +240,10 @@ function formatMMDD(ts?: number) {
 
 .title-item.schedule .type-icon {
   color: var(--color-red);
+}
+
+.type-filter-btn.is-on {
+  filter: drop-shadow(0 0 0.4px currentColor);
 }
 
 .title-name {
@@ -168,6 +271,20 @@ function formatMMDD(ts?: number) {
   flex: 1 1 0%;
 }
 
+.date {
+  margin-left: 4px;
+  color: var(--color-text-secondary, #666);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.star-on {
+  color: var(--color-orange, #f5a623);
+  flex-shrink: 0;
+}
+
 .tag-renderer-container {
   display: flex;
   margin-left: 4px;
@@ -183,25 +300,6 @@ function formatMMDD(ts?: number) {
   align-items: center;
 }
 
-.tag-renderer-container :deep(.n-tag) {
-  --n-height: 18px;
-}
-
-.date {
-  margin-left: 4px;
-  color: var(--color-text-secondary);
-  font-variant-numeric: tabular-nums;
-  flex-shrink: 0;
-  white-space: nowrap;
-  font-size: 12px;
-}
-
-.star-on {
-  color: var(--color-orange);
-  flex-shrink: 0;
-}
-
-/* 文件夹内缩进：depth * 14px */
 .indent-1 {
   padding-left: 18px;
 }

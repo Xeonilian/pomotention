@@ -15,6 +15,8 @@ export const useSearchUiStore = defineStore("searchUi", {
   state: () => ({
     searchQuery: "",
     filterStarredOnly: false,
+    /** 类型筛：null=全部；T=仅 todo；S=仅 schedule */
+    filterActivityClass: null as "T" | "S" | null,
     filterTagIds: [] as number[], // 当前过滤的 tag ids
     openedTabs: [] as TabItem[],
     activeTabKey: undefined as string | undefined,
@@ -39,6 +41,11 @@ export const useSearchUiStore = defineStore("searchUi", {
 
     toggleFilterStarred() {
       this.filterStarredOnly = !this.filterStarredOnly;
+    },
+
+    /** 点行首类型 icon：同类型再点取消，不同类型则切换 */
+    toggleFilterActivityClass(cls: "T" | "S") {
+      this.filterActivityClass = this.filterActivityClass === cls ? null : cls;
     },
 
     /**

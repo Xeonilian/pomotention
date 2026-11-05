@@ -1,28 +1,49 @@
 <template>
-  <div
-    class="search-container"
-    ref="searchContainerRef"
-    :class="{
-      'is-mobile': isMobile,
-      'search-container--left-full': isMobile && mobilePaneMode === 'left-full',
-      'search-container--right-full': isMobile && mobilePaneMode === 'right-full',
-    }"
-  >
+  <div class="search-container" :class="[{ 'is-mobile': isMobile }, mobilePaneClass]">
     <!-- 左侧：Activity 主列表 -->
     <div class="left-pane" :class="{ 'left-pane--mobile-split': isMobile }" :style="isMobile ? undefined : { width: searchWidth + 'px' }">
       <div class="search-tool">
+        <!-- 手机：input 前切换 Project 列表；始终留 tab 条 + search 行 -->
+        <n-button
+          v-if="isMobile"
+          text
+          size="small"
+          class="pane-chevron-btn search-tool-chevron"
+          @click="toggleMobilePanes"
+          :title="mobilePaneToggleTitle"
+        >
+          <template #icon>
+            <n-icon size="18"><ChevronUpDown20Regular /></n-icon>
+          </template>
+        </n-button>
         <div class="search-input-wrap">
           <n-input
             ref="searchInputRef"
             :value="searchQuery"
-            placeholder="文字/#标签..."
-            clearable
+            placeholder="#tag..."
             class="search-input-el"
+            :class="{ 'search-input-el--has-query': !!searchQuery.trim() }"
             @update:value="handleSearchInput"
             @keydown="(e: KeyboardEvent) => tagPickerRef?.handleHostKeydown(e)"
           >
             <template #prefix>
               <n-icon><Search20Regular /></n-icon>
+            </template>
+            <!-- Naive clearable 仅 focus/hover 才 show；有字时自绘常显清空 -->
+            <template v-if="searchQuery.trim()" #suffix>
+              <n-button
+                text
+                size="tiny"
+                class="search-clear-btn"
+                title="清空搜索"
+                @mousedown.prevent.stop
+                @pointerdown.prevent.stop
+                @click.stop="clearSearchQuery"
+              >
+                <template #icon>
+                  <n-icon><DismissCircle16Filled /></n-icon>
+                </template>
+              </n-button>
             </template>
           </n-input>
           <TagPickerPopover
@@ -60,23 +81,8 @@
             </n-icon>
           </template>
         </n-button>
-        <n-button
-          v-if="isMobile"
-          text
-          size="small"
-          class="pane-chevron-btn search-tool-chevron"
-          @click="onLeftPaneToggle"
-          :title="leftPaneToggleTitle"
-        >
-          <template #icon>
-            <n-icon size="18">
-              <ChevronLeft20Regular v-if="leftPaneChevronIsLeft" />
-              <ChevronRight20Regular v-else />
-            </n-icon>
-          </template>
-        </n-button>
       </div>
-      <div v-if="currentFilterTags.length > 0" class="filter-status-bar">
+      <div v-if="showProjectList && currentFilterTags.length > 0" class="filter-status-bar">
         <TagRenderer class="filter-tags" :tag-ids="filterTagIds" :isCloseable="false" @remove-tag="toggleFilterTagId" size="small" />
 
         <!-- 清除所有筛选的按钮 -->
@@ -87,6 +93,7 @@
         </n-button>
       </div>
       <div
+        v-show="showProjectList"
         class="title-list"
         :class="{ 'drop-hover-root': isRootDropHover }"
         data-drop-kind="root"
@@ -107,6 +114,7 @@
           :drag-source="dragSource"
           :hover-target="hoverTarget"
           :activity-project-id-of="activityProjectIdOf"
+          :filter-activity-class="filterActivityClass"
           @select="selectProject"
           @toggle="toggleExpand"
           @start-rename="startRename"
@@ -124,6 +132,7 @@
           @update:tag-search-term="setTagSearchTerm"
           @open-activity="onOpenNestedActivity"
           @tag-click="handleTagClick"
+          @filter-class="toggleFilterActivityClass"
           @drag-start="onSearchDragStart"
         />
         <SearchActivityRow
@@ -133,14 +142,16 @@
           :active="!isDragging && activeTabKey === row.openKey"
           :search-query="searchQuery"
           :is-mobile="isMobile"
+          :filter-activity-class="filterActivityClass"
           :is-dragging-source="dragSource?.kind === 'activity' && dragSource.id === row.activityId"
           @open="onOpenNestedActivity"
           @tag-click="handleTagClick"
+          @filter-class="toggleFilterActivityClass"
           @drag-start="onActivityOrphanDragStart"
         />
       </div>
 
-      <div v-if="orphanActivities.length === 0 && projectTreeRows.length === 0" class="empty">
+      <div v-if="showProjectList && orphanActivities.length === 0 && projectTreeRows.length === 0" class="empty">
         {{ isMobile ? "" : "暂无结果" }}
       </div>
     </div>
@@ -155,16 +166,6 @@
         @update:value="searchUiStore.activeTabKey = $event"
         :class="['tab-container', { 'tab-container--empty-tabs': openedTabs.length === 0 }]"
       >
-        <template v-if="isMobile" #prefix>
-          <n-button text size="small" class="pane-chevron-btn tabs-nav-chevron" @click="onRightPaneToggle" :title="rightPaneToggleTitle">
-            <template #icon>
-              <n-icon size="18">
-                <ChevronRight20Regular v-if="rightPaneChevronIsRight" />
-                <ChevronLeft20Regular v-else />
-              </n-icon>
-            </template>
-          </n-button>
-        </template>
         <template #suffix>
           <n-button v-if="openedTabs.length > 0" text class="close-all-tabs-btn" @click="closeAllTabs">
             <template #icon>
@@ -184,16 +185,16 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, ref, nextTick, onMounted, onUnmounted, watch } from "vue";
+import { computed, ref, nextTick, watch } from "vue";
 import { storeToRefs } from "pinia";
 import { NInput } from "naive-ui";
 import type { Tag } from "@/core/types/Tag";
 import TabPaneContent from "@/components/search/TabPaneContent.vue";
 import {
   Dismiss12Regular,
+  DismissCircle16Filled,
   Search20Regular,
-  ChevronLeft20Regular,
-  ChevronRight20Regular,
+  ChevronUpDown20Regular,
   Folder20Regular,
   FolderArrowRight20Regular,
 } from "@vicons/fluent";
@@ -213,6 +214,7 @@ import { useTagStore } from "@/stores/useTagStore";
 import { useResize } from "@/composables/layout/useResize";
 import { useSearchFilter, type ActivityRow } from "@/composables/search/useSearchFilter";
 import { useSearchProjects } from "@/composables/search/useSearchProjects";
+import { useSearchMobilePanes } from "@/composables/search/useSearchMobilePanes";
 import type { SearchDragSource } from "@/composables/search/useSearchProjectDrag";
 import { useDevice } from "@/composables/platform/useDevice";
 import { highlightSearchInText } from "@/core/utils/highlightSearchQuery";
@@ -253,9 +255,7 @@ const {
 } = useSearchProjects(filteredActivities);
 
 /** 根区虚线：仅拖 P 时提示；拖 3in1 只高亮 Project 行 */
-const isRootDropHover = computed(
-  () => dragSource.value?.kind === "project" && hoverTarget.value?.kind === "root",
-);
+const isRootDropHover = computed(() => dragSource.value?.kind === "project" && hoverTarget.value?.kind === "root");
 
 function onSearchDragStart(e: PointerEvent, source: SearchDragSource) {
   startProjectDrag(e, source);
@@ -266,7 +266,7 @@ function onActivityOrphanDragStart(e: PointerEvent, activityId: number) {
 }
 
 // 从 UI store 中解构出 UI 状态（使用 storeToRefs 保持响应性）
-const { searchQuery, filterStarredOnly, openedTabs, activeTabKey, filterTagIds } = storeToRefs(searchUiStore);
+const { searchQuery, filterStarredOnly, filterActivityClass, openedTabs, activeTabKey, filterTagIds } = storeToRefs(searchUiStore);
 
 // 渐进渲染：仅对未归入 Project 的平铺列表分块
 const ROW_CHUNK = 50;
@@ -285,7 +285,7 @@ function onTitleListScroll(e: Event) {
 
 // 筛选条件变化时回到首屏块，避免取消筛选时一次性全量挂载（filterTagIds 是原位 splice/push，需 deep）
 watch(
-  [searchQuery, filterStarredOnly, filterTagIds],
+  [searchQuery, filterStarredOnly, filterActivityClass, filterTagIds],
   () => {
     visibleCount.value = ROW_CHUNK;
   },
@@ -293,7 +293,7 @@ watch(
 );
 
 // 从 UI store 中解构出 actions，以便在 script 中调用
-const { toggleFilterStarred, closeTab, openRow, toggleFilterTagId, clearFilterTags } = searchUiStore;
+const { toggleFilterStarred, toggleFilterActivityClass, closeTab, openRow, toggleFilterTagId, clearFilterTags } = searchUiStore;
 const closeAllTabs = searchUiStore.closeAllTabs.bind(searchUiStore);
 
 /** 打开文件夹内条目：清掉 P 选中，避免一直亮着 folder */
@@ -323,128 +323,22 @@ const tagSearchTermModel = computed({
 const POPOVER_ID = "search-input";
 const searchInputRef = ref<InstanceType<typeof NInput> | null>(null);
 const tagPickerRef = ref<InstanceType<typeof TagPickerPopover> | null>(null);
-const searchContainerRef = ref<HTMLElement | null>(null);
-/** 搜索区分栏容器宽度，用于左栏「全宽」像素目标 */
-const searchLayoutWidth = ref(0);
 
-function updateSearchLayoutWidth() {
-  const el = searchContainerRef.value;
-  searchLayoutWidth.value = el?.clientWidth ?? 0;
-}
-
-let searchLayoutRo: ResizeObserver | null = null;
-onMounted(() => {
-  updateSearchLayoutWidth();
-  const el = searchContainerRef.value;
-  if (el && typeof ResizeObserver !== "undefined") {
-    searchLayoutRo = new ResizeObserver(() => updateSearchLayoutWidth());
-    searchLayoutRo.observe(el);
-  }
-});
-onUnmounted(() => {
-  searchLayoutRo?.disconnect();
-  searchLayoutRo = null;
-});
-
-// 左右拖动功能
+// 桌面左右拖宽；手机列表显隐见 useSearchMobilePanes（须解构，嵌套 ref 模板不解包）
 const { isMobile } = useDevice();
+const {
+  toggle: toggleMobilePanes,
+  containerClass: mobilePaneClass,
+  toggleTitle: mobilePaneToggleTitle,
+  showProjectList,
+} = useSearchMobilePanes(isMobile, () => openedTabs.value.length);
 
-// 手机端分栏三态：隐藏/显示即可，不算 px；桌面端仍走 searchWidth 拖拽
-type MobilePaneMode = "split" | "left-full" | "right-full";
-const mobilePaneMode = ref<MobilePaneMode>("split");
 const searchWidth = computed({
   get: () => settingStore.settings.searchWidth,
   set: (v) => (settingStore.settings.searchWidth = v),
 });
 
 const resizeSearch = useResize(searchWidth, "horizontal", 10, 600, false);
-
-// 与 useResize 一致；右键收到最窄用 MIN，左键全宽用布局宽度算目标
-const SEARCH_PANE_MIN = 0;
-const RESIZE_MAX = 600;
-/** 与右侧 .right-pane 的 calc(100% - x - 20px) 中常数对齐 */
-const SEARCH_PANE_LAYOUT_FUDGE = 20;
-const SEARCH_PANE_HANDLE_RESERVE = 4;
-
-/** 右键把左栏收到最窄前的宽度，用于恢复普通分栏 */
-const snapRestoreWidth = ref<number | null>(null);
-/** 左键展开全宽前的宽度，用于恢复普通分栏 */
-const snapWidthBeforeLeftFull = ref<number | null>(null);
-
-function clampResizeRange(w: number) {
-  return Math.max(SEARCH_PANE_MIN, Math.min(RESIZE_MAX, Math.round(w)));
-}
-
-function normalDefaultWidth() {
-  return isMobile.value ? 100 : 400;
-}
-
-/** 左栏尽可能占满：总宽 − 拖拽条 − 与 calc 对齐的留白 − 右栏最小保留 */
-function leftFullWidthTargetPx(): number {
-  let total = searchLayoutWidth.value;
-  if (total < 80) {
-    total = searchContainerRef.value?.clientWidth ?? (typeof document !== "undefined" ? document.documentElement.clientWidth : 0);
-  }
-  if (total < 80) return RESIZE_MAX;
-  const rightMin = isMobile.value ? 48 : 140;
-  const w = total - SEARCH_PANE_HANDLE_RESERVE - SEARCH_PANE_LAYOUT_FUDGE - rightMin;
-  return clampResizeRange(w);
-}
-
-const atSearchPaneMin = computed(() => searchWidth.value <= SEARCH_PANE_MIN + 40);
-
-const atLeftFullWidth = computed(() => {
-  const target = leftFullWidthTargetPx();
-  if (target < SEARCH_PANE_MIN + 20) return false;
-  return searchWidth.value >= target;
-});
-
-// 左栏全宽/右栏全宽的激活态：手机看模式，桌面看计算宽度
-const leftFullActive = computed(() => (isMobile.value ? mobilePaneMode.value === "left-full" : atLeftFullWidth.value));
-const rightFullActive = computed(() =>
-  isMobile.value ? mobilePaneMode.value === "right-full" : atSearchPaneMin.value || atLeftFullWidth.value,
-);
-
-const leftPaneChevronIsLeft = computed(() => leftFullActive.value);
-const leftPaneToggleTitle = computed(() => (leftFullActive.value ? "恢复普通分栏" : "左栏全宽"));
-
-const rightPaneChevronIsRight = computed(() => rightFullActive.value);
-const rightPaneToggleTitle = computed(() => (rightFullActive.value ? "恢复分栏宽度" : "展开右栏"));
-
-function restoreSearchPaneWidth() {
-  searchWidth.value = clampResizeRange(snapRestoreWidth.value ?? normalDefaultWidth());
-}
-
-function onLeftPaneToggle() {
-  if (isMobile.value) {
-    mobilePaneMode.value = mobilePaneMode.value === "left-full" ? "split" : "left-full";
-    return;
-  }
-  if (atLeftFullWidth.value) {
-    searchWidth.value = clampResizeRange(snapWidthBeforeLeftFull.value ?? normalDefaultWidth());
-    return;
-  }
-  updateSearchLayoutWidth();
-  snapWidthBeforeLeftFull.value = searchWidth.value;
-  searchWidth.value = leftFullWidthTargetPx();
-}
-
-function onRightPaneToggle() {
-  if (isMobile.value) {
-    mobilePaneMode.value = mobilePaneMode.value === "right-full" ? "split" : "right-full";
-    return;
-  }
-  if (atSearchPaneMin.value) {
-    restoreSearchPaneWidth();
-    return;
-  }
-  if (atLeftFullWidth.value) {
-    searchWidth.value = clampResizeRange(snapWidthBeforeLeftFull.value ?? normalDefaultWidth());
-    return;
-  }
-  snapRestoreWidth.value = searchWidth.value;
-  searchWidth.value = SEARCH_PANE_MIN;
-}
 
 // 搜索防抖
 let searchDebounceTimer: number | null = null;
@@ -466,6 +360,16 @@ function handleSearchInput(value: string) {
       searchUiStore.setSearchQuery(searchQuery.value);
     }, 300); // 300ms 延迟
   }
+}
+
+function clearSearchQuery() {
+  if (searchDebounceTimer) {
+    window.clearTimeout(searchDebounceTimer);
+    searchDebounceTimer = null;
+  }
+  searchQuery.value = "";
+  searchUiStore.setSearchQuery("");
+  tagEditor.closePopover();
 }
 
 // 当从弹出的 TagSelector 中选择一个标签时触发
@@ -498,7 +402,6 @@ const currentFilterTags = computed(() => {
 function handleTagClick(tagId: number) {
   toggleFilterTagId(tagId);
 }
-
 </script>
 
 <style scoped>
@@ -508,23 +411,11 @@ function handleTagClick(tagId: number) {
 }
 
 .search-tool-chevron {
-  margin-left: -2px;
+  margin-right: 0;
 }
+
 .tab-container {
   width: 100%;
-}
-
-/* 标签栏 prefix：与 card tab 同一行、贴最左 */
-.tab-container :deep(.n-tabs-nav__prefix) {
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-  padding-right: 2px;
-  --n-tab-border-color: var(--color-background) !important;
-}
-
-.tabs-nav-chevron {
-  align-self: center;
 }
 
 /* 手机：关闭全部 tab 按钮左右只留 2px */
@@ -539,7 +430,7 @@ function handleTagClick(tagId: number) {
   --n-padding: 0 2px;
 }
 
-/* 无已打开标签时 card 顶栏会塌缩；保留高度以免右侧（含 prefix 箭头）视觉上过扁 */
+/* 无已打开标签时保留 tab 条高度（正文不占纵向） */
 .tab-container.tab-container--empty-tabs :deep(.n-tabs-nav) {
   min-height: 34px;
   align-items: center;
@@ -568,32 +459,82 @@ function handleTagClick(tagId: number) {
   box-sizing: border-box;
 }
 
-/* 手机：分栏时左 40% / 右 60%（均分再减左 10%）；单栏时另一栏 display:none，留下的仍撑满 */
+/* 手机：上下分栏；上=正文(right) 3/5，下=列表(left) 2/5 */
+.search-container.is-mobile {
+  flex-direction: column;
+  padding-left: 4px;
+}
+
 .search-container.is-mobile .left-pane,
 .search-container.is-mobile .right-pane {
   min-width: 0;
-  width: auto;
-}
-
-.search-container.is-mobile .left-pane {
-  flex: 4 1 0%;
+  width: 100%;
 }
 
 .search-container.is-mobile .right-pane {
-  flex: 6 1 0%;
+  order: 1;
+  flex: 3 1 0%;
+  min-height: 0;
+  padding: 4px 4px 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
-.search-container--left-full .right-pane {
+.search-container.is-mobile .right-pane > .tab-container {
+  flex: 1 1 0%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.search-container.is-mobile .right-pane :deep(.n-tabs) {
+  flex: 1 1 0%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.search-container.is-mobile .right-pane :deep(.n-tabs-pane-wrapper) {
+  flex: 1 1 0%;
+  min-height: 0;
+  overflow: auto;
+}
+
+.search-container.is-mobile .left-pane {
+  order: 2;
+  flex: 2 1 0%;
+  min-height: 0;
+}
+
+/* 无 tab：上区只留 tab 条，下列表吃满剩余 */
+.search-container.is-mobile.search-container--no-tabs .right-pane {
+  flex: 0 0 auto;
+}
+
+.search-container.is-mobile.search-container--no-tabs .left-pane {
+  flex: 1 1 0%;
+}
+
+.search-container.is-mobile.search-container--no-tabs :deep(.n-tabs-pane-wrapper),
+.search-container.is-mobile.search-container--no-tabs :deep(.n-tab-pane) {
   display: none;
 }
 
-.search-container--right-full .left-pane {
+/* 只有上面：藏列表，仍留 input 行（+ tab 条在上） */
+.search-container.is-mobile.search-container--top-full .left-pane {
+  flex: 0 0 auto;
+  overflow: hidden;
+}
+
+.search-container.is-mobile.search-container--top-full .left-pane .title-list,
+.search-container.is-mobile.search-container--top-full .left-pane .filter-status-bar,
+.search-container.is-mobile.search-container--top-full .left-pane .empty {
   display: none;
 }
 
-/* 手机仅右栏全屏时：左边空位再收 4px（相对 split 的 4px padding） */
-.search-container--right-full .right-pane {
-  padding-left: 0;
+.search-container.is-mobile.search-container--top-full .right-pane {
+  flex: 1 1 0%;
 }
 
 .resize-handle-horizontal {
@@ -657,6 +598,20 @@ function handleTagClick(tagId: number) {
   width: 100%;
 }
 
+/* 有搜索词且未聚焦：红字提醒仍在筛选态 */
+.search-input-el--has-query:not(:focus-within) :deep(.n-input__input-el) {
+  color: var(--color-red);
+}
+
+.search-clear-btn {
+  color: var(--color-text-secondary, #666);
+  padding: 0 2px;
+}
+
+.search-clear-btn:hover {
+  color: var(--color-red);
+}
+
 .search-tag-picker-popover {
   position: absolute;
   inset: 0;
@@ -671,6 +626,11 @@ function handleTagClick(tagId: number) {
 
 :deep(.n-input-wrapper) {
   padding-left: 8px;
+}
+
+/* 搜索框焦点：只要边框，不要最外圈灰环 */
+.search-tool :deep(.n-input) {
+  --n-box-shadow-focus: none !important;
 }
 
 .star-btn {
@@ -841,6 +801,11 @@ function handleTagClick(tagId: number) {
   border-top-right-radius: 10px !important;
 }
 
+/* 手机：单个 tab 比桌面窄 12px */
+.search-container.is-mobile :deep(.n-tabs-tab) {
+  width: 90px;
+}
+
 :deep(.n-tabs .n-tabs-tab .n-tabs-tab__label) {
   display: block;
   width: 100%;
@@ -867,15 +832,21 @@ function handleTagClick(tagId: number) {
   .title-item {
     padding: 2px 2px;
   }
+  /* 手机：略收拢图标给搜索框，负 margin 只留一点（-8 会叠） */
   .search-tool {
-    gap: 0;
+    gap: 3px;
   }
-  /* 搜索框与星星 4px；加在 input 侧，chevron 仍贴右 */
   .search-tool .search-input-wrap {
-    margin-right: 4px;
+    margin-right: 0;
   }
   .search-tool .star-btn {
     left: 0;
+    padding: 0;
+  }
+  .search-tool .new-project-btn {
+    margin-left: 4px;
+    margin-right: 8px;
+    padding: 0;
   }
   /* 手机端收紧搜索框前缀图标侧留白 */
   .search-tool :deep(.n-input-wrapper) {

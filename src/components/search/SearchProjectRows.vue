@@ -25,9 +25,11 @@
 
       <input
         v-if="editingId === item.project.id"
+        ref="renameInputRef"
         class="rename-input"
         :value="editingTitle"
         @click.stop
+        @pointerdown.stop
         @input="emit('update:editingTitle', ($event.target as HTMLInputElement).value)"
         @keydown.enter.prevent="emit('commit-rename')"
         @keydown.esc.prevent="emit('cancel-rename')"
@@ -36,16 +38,14 @@
       <span
         v-else
         class="title-name drag-handle"
-        style="touch-action: none; cursor: grab"
-        title="拖动调整层级；双击改名"
+        :title="isMobile ? '拖动调整层级；连点两下改名' : '拖动调整层级；双击改名'"
         @pointerdown.stop="onProjectTitlePointerDown($event, item.project.id)"
-        @touchstart.stop.passive
         @click.stop
         @dblclick.stop="emit('start-rename', item.project.id)"
       >{{ item.project.title }}</span>
 
-      <!-- 有才渲染，不占空位；tag 单槽两态 -->
-      <span class="row-actions" @click.stop>
+      <!-- 手机改名不藏 fn；桌面改名仍藏以免挤输入框 -->
+      <span v-if="isMobile || editingId !== item.project.id" class="row-actions" @click.stop>
         <n-button v-if="item.project.parentId != null" text size="tiny" title="升一层" @click="emit('promote', item.project.id)">
           <template #icon>
             <n-icon size="16"><FolderArrowUp20Regular /></n-icon>
@@ -92,7 +92,9 @@
             </n-button>
           </template>
         </TagPickerPopover>
+        <!-- 桌面锚按钮；手机/窄屏走下方居中 Modal（centeredPanel） -->
         <n-popconfirm
+          v-if="!centeredPanel"
           positive-text="删除"
           negative-text="取消"
           placement="bottom-end"
@@ -109,6 +111,11 @@
           </template>
           删除「{{ item.project.title }}」及子文件夹？条目只会移出，不会删掉。
         </n-popconfirm>
+        <n-button v-else text size="tiny" title="删除" @click.stop="openRemoveConfirm(item.project.id, item.project.title)">
+          <template #icon>
+            <n-icon size="16"><Delete20Regular /></n-icon>
+          </template>
+        </n-button>
       </span>
 
       <span class="hit-count" :title="'当前筛选命中 ' + item.hitCount">{{ item.hitCount }}</span>
@@ -130,19 +137,35 @@
       :active="!isDragging && activeTabKey === item.row.openKey"
       :search-query="searchQuery"
       :is-mobile="isMobile"
+      :filter-activity-class="filterActivityClass"
       :depth="item.depth"
       :drop-project-id="activityDropProjectId(item.row.activityId)"
       :is-dragging-source="isActivityDragging(item.row.activityId)"
       @open="emit('open-activity', $event)"
       @tag-click="emit('tag-click', $event)"
+      @filter-class="emit('filter-class', $event)"
       @drag-start="onActivityDragStart"
     />
   </template>
+
+  <n-modal
+    v-model:show="removeModalShow"
+    preset="dialog"
+    title="删除文件夹"
+    positive-text="删除"
+    negative-text="取消"
+    :z-index="1200"
+    @positive-click="confirmRemove"
+    @negative-click="closeRemoveConfirm"
+    @close="closeRemoveConfirm"
+  >
+    删除「{{ removeModalTitle }}」及子文件夹？条目只会移出，不会删掉。
+  </n-modal>
 </template>
 
 <script setup lang="ts">
-import { nextTick, watch } from "vue";
-import { NButton, NIcon, NPopconfirm } from "naive-ui";
+import { nextTick, onBeforeUnmount, ref, watch } from "vue";
+import { NButton, NIcon, NModal, NPopconfirm } from "naive-ui";
 import {
   ChevronDown20Regular,
   ChevronRight20Regular,
@@ -155,6 +178,8 @@ import {
 } from "@vicons/fluent";
 import TagPickerPopover from "@/components/TagSystem/TagPickerPopover.vue";
 import SearchActivityRow from "@/components/search/SearchActivityRow.vue";
+import { createTouchScheduledSingleAndDouble } from "@/composables/platform/useTouchScheduledSingleAndDouble";
+import { useCenteredPanel } from "@/composables/ui/useCenteredPanel";
 import type { ProjectTreeRow } from "@/composables/search/useSearchProjects";
 import type { ActivityRow } from "@/composables/search/useSearchFilter";
 import type { SearchDragSource, SearchDropTarget } from "@/composables/search/useSearchProjectDrag";
@@ -171,6 +196,7 @@ const props = defineProps<{
   tagSearchTerm: string;
   searchQuery: string;
   isMobile: boolean;
+  filterActivityClass?: "T" | "S" | null;
   isDragging: boolean;
   dragSource: SearchDragSource | null;
   hoverTarget: SearchDropTarget | null;
@@ -196,80 +222,112 @@ const emit = defineEmits<{
   "update:tagSearchTerm": [v: string];
   "open-activity": [row: ActivityRow];
   "tag-click": [tagId: number];
+  "filter-class": [cls: "T" | "S"];
   "drag-start": [event: PointerEvent, source: SearchDragSource];
 }>();
+
+const centeredPanel = useCenteredPanel();
+
+const removeModalShow = ref(false);
+const removeModalId = ref<number | null>(null);
+const removeModalTitle = ref("");
+
+function openRemoveConfirm(id: number, title: string) {
+  removeModalId.value = id;
+  removeModalTitle.value = title;
+  removeModalShow.value = true;
+}
+
+function closeRemoveConfirm() {
+  removeModalShow.value = false;
+  removeModalId.value = null;
+  removeModalTitle.value = "";
+}
+
+function confirmRemove() {
+  const id = removeModalId.value;
+  closeRemoveConfirm();
+  if (id != null) emit("remove", id);
+}
 
 function onTagPickerShow(projectId: number, open: boolean) {
   if (open) emit("bind-tag", projectId);
   else emit("update:tagPickerShow", false);
 }
 
-/** 标题：阈值内松手=选中，超过则拖（对齐 Activity 有子项时点/拖分流） */
-const PROJECT_DRAG_THRESHOLD = 5;
+/** 标题：轻点选中/双触改名；横滑拖；竖滑交给列表（对齐 SearchActivityRow） */
+const PROJECT_DRAG_THRESHOLD = 8;
 let titlePress: {
   projectId: number;
   startX: number;
   startY: number;
-  target: HTMLElement;
   pointerId: number;
   originalEvent: PointerEvent;
+  preferScroll: boolean;
 } | null = null;
 
+const titleTap = createTouchScheduledSingleAndDouble<number>(
+  (id) => emit("select", id),
+  (id) => emit("start-rename", id),
+);
+
 function clearTitlePressListeners() {
-  const s = titlePress;
-  if (!s) return;
-  s.target.removeEventListener("pointermove", onTitlePressMove);
-  s.target.removeEventListener("pointerup", onTitlePressUp);
-  s.target.removeEventListener("pointercancel", onTitlePressUp);
-  try {
-    s.target.releasePointerCapture(s.pointerId);
-  } catch {
-    /* ignore */
-  }
+  if (!titlePress) return;
+  window.removeEventListener("pointermove", onTitlePressMove);
+  window.removeEventListener("pointerup", onTitlePressUp);
+  window.removeEventListener("pointercancel", onTitlePressCancel);
   titlePress = null;
 }
 
 function onProjectTitlePointerDown(e: PointerEvent, projectId: number) {
   if (e.button !== 0 && e.pointerType === "mouse") return;
-  const target = e.currentTarget as HTMLElement;
   titlePress = {
     projectId,
     startX: e.clientX,
     startY: e.clientY,
-    target,
     pointerId: e.pointerId,
     originalEvent: e,
+    preferScroll: e.pointerType === "touch" || props.isMobile,
   };
-  target.setPointerCapture(e.pointerId);
-  target.addEventListener("pointermove", onTitlePressMove);
-  target.addEventListener("pointerup", onTitlePressUp);
-  target.addEventListener("pointercancel", onTitlePressUp);
+  window.addEventListener("pointermove", onTitlePressMove);
+  window.addEventListener("pointerup", onTitlePressUp);
+  window.addEventListener("pointercancel", onTitlePressCancel);
 }
 
 function onTitlePressMove(e: PointerEvent) {
-  if (!titlePress) return;
+  if (!titlePress || e.pointerId !== titlePress.pointerId) return;
   const dx = e.clientX - titlePress.startX;
   const dy = e.clientY - titlePress.startY;
   if (Math.hypot(dx, dy) <= PROJECT_DRAG_THRESHOLD) return;
-  e.preventDefault();
-  const { originalEvent, projectId, target, pointerId } = titlePress;
-  titlePress = null;
-  target.removeEventListener("pointermove", onTitlePressMove);
-  target.removeEventListener("pointerup", onTitlePressUp);
-  target.removeEventListener("pointercancel", onTitlePressUp);
-  try {
-    target.releasePointerCapture(pointerId);
-  } catch {
-    /* ignore */
+
+  if (titlePress.preferScroll && Math.abs(dy) >= Math.abs(dx)) {
+    clearTitlePressListeners();
+    titleTap.touchCancel();
+    return;
   }
+
+  e.preventDefault();
+  const { originalEvent, projectId } = titlePress;
+  clearTitlePressListeners();
+  titleTap.touchCancel();
   emit("drag-start", originalEvent, { kind: "project", id: projectId });
 }
 
-function onTitlePressUp() {
-  if (!titlePress) return;
+function onTitlePressUp(e: PointerEvent) {
+  if (!titlePress || e.pointerId !== titlePress.pointerId) return;
   const { projectId } = titlePress;
   clearTitlePressListeners();
+  if (props.isMobile || e.pointerType === "touch") {
+    titleTap.touchEnd(projectId);
+    return;
+  }
   emit("select", projectId);
+}
+
+function onTitlePressCancel(e: PointerEvent) {
+  if (titlePress && e.pointerId !== titlePress.pointerId) return;
+  clearTitlePressListeners();
+  titleTap.touchCancel();
 }
 
 function onActivityDragStart(e: PointerEvent, activityId: number) {
@@ -295,16 +353,33 @@ function activityDropProjectId(activityId: number) {
   return props.activityProjectIdOf(activityId) ?? null;
 }
 
+const renameInputRef = ref<HTMLInputElement | null>(null);
+
+/** 点到不可聚焦区域时部分环境不发 blur，捕获阶段外点也提交 */
+function onOutsideRenamePointerDown(e: PointerEvent) {
+  const el = renameInputRef.value;
+  if (!el) return;
+  if (e.target instanceof Node && el.contains(e.target)) return;
+  emit("commit-rename");
+}
+
+function detachOutsideRename() {
+  document.removeEventListener("pointerdown", onOutsideRenamePointerDown, true);
+}
+
 watch(
   () => props.editingId,
   async (id) => {
+    detachOutsideRename();
     if (id == null) return;
     await nextTick();
-    const el = document.querySelector(".title-item--project .rename-input") as HTMLInputElement | null;
-    el?.focus();
-    el?.select();
+    renameInputRef.value?.focus();
+    renameInputRef.value?.select();
+    document.addEventListener("pointerdown", onOutsideRenamePointerDown, true);
   },
 );
+
+onBeforeUnmount(detachOutsideRename);
 </script>
 
 <style scoped>
@@ -323,6 +398,9 @@ watch(
 
 .title-item--project {
   background: color-mix(in srgb, var(--color-blue, #5b8def) 10%, var(--color-background, #fff));
+  /* 防误触复制；改名 input 单独放开 */
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .title-item--project.selected {
@@ -365,6 +443,11 @@ watch(
   min-width: 0;
 }
 
+.drag-handle {
+  cursor: grab;
+  touch-action: pan-y;
+}
+
 .drag-handle:active {
   cursor: grabbing;
 }
@@ -375,14 +458,25 @@ watch(
   font-weight: 600;
 }
 
+/* 对齐搜索框：只要细描边，不要外圈灰环 */
 .rename-input {
   flex: 1 1 0%;
   min-width: 0;
   height: 20px;
-  border: 1px solid var(--color-blue, #5b8def);
+  border: 1px solid var(--color-text, #333);
   border-radius: 3px;
   padding: 0 4px;
   font: inherit;
+  outline: none;
+  background: var(--color-background, #fff);
+  box-shadow: none;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.rename-input:focus {
+  border-color: var(--color-text, #333);
+  box-shadow: none;
 }
 
 .row-actions {
@@ -392,9 +486,15 @@ watch(
   gap: 0;
 }
 
-.title-item--project:hover .row-actions,
+/* 选中才出 fn；hover 仅真鼠标，避免手机点 chevron 触控假 hover 闪一下 */
 .title-item--project.selected .row-actions {
   display: inline-flex;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .title-item--project:hover .row-actions {
+    display: inline-flex;
+  }
 }
 
 .row-actions :deep(.n-button) {

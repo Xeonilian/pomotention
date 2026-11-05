@@ -29,7 +29,7 @@ export function useSearchFilter() {
 
   // 2. 解构，保持不变
   const { activeActivities, todoByActivityId, scheduleByActivityId, taskByActivityId } = storeToRefs(dataStore);
-  const { searchQuery, filterStarredOnly, filterTagIds } = storeToRefs(searchUiStore);
+  const { searchQuery, filterStarredOnly, filterTagIds, filterActivityClass } = storeToRefs(searchUiStore);
 
   const norm = (s?: string) => (s ?? "").toLowerCase();
 
@@ -70,6 +70,11 @@ export function useSearchFilter() {
         hasStarredTaskForActivity: dataStore.hasStarredTaskForActivity,
       });
       if (!passedActivityFilter) {
+        continue;
+      }
+
+      // --- 类型筛：仅 todo / 仅 schedule ---
+      if (filterActivityClass.value && act.class !== filterActivityClass.value) {
         continue;
       }
 

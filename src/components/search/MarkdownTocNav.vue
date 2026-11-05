@@ -80,10 +80,10 @@ watch(collapsed, (v) => {
 
 .md-toc-toggle {
   position: absolute;
-  top: 50%;
+  /* 勿用 % + translateY(-50%)：会顶出 .content 的 overflow:hidden，看起来像被 meta-row 挡住，z-index 无效 */
+  top: 10px;
   left: 0;
-  z-index: 1;
-  transform: translateY(-50%);
+  z-index: 2;
   padding: 2px;
   border: none;
   background: transparent;
@@ -93,10 +93,15 @@ watch(collapsed, (v) => {
   border-radius: 4px;
 }
 
+/* 手机：目录开合钮离屏幕侧边多 8px */
+@media (max-width: 430px) {
+  .md-toc {
+    margin-right: 8px;
+  }
+}
+
 .md-toc-toggle-icon {
   display: block;
-  /* 略加重描边感，减少发虚 */
-  filter: drop-shadow(0 0 0.35px currentColor);
 }
 
 .md-toc-toggle:hover {
