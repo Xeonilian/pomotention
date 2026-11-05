@@ -11,9 +11,14 @@ import {
   quotaExhaustedCode,
 } from "./quota";
 import {
+  extendSyncEntitlement,
   getAfdianOrderByTradeNo,
   handleAfdianWebhook,
   listAfdianOrdersForUser,
+  readSyncTrialUntilMs,
+  SYNC_TRIAL_DAYS,
+  syncEntitlementKvKey,
+  syncTrialKvKey,
 } from "./afdianWebhook";
 
 const HARDCODED_MODEL = "moonshot-v1-8k";
@@ -205,7 +210,7 @@ interface SyncEntitlement {
 }
 
 async function getSyncEntitlement(env: Env, userId: string): Promise<SyncEntitlement> {
-  const raw = await env.AI_KV.get(`entitlement:sync:${userId}`);
+  const raw = await env.AI_KV.get(syncEntitlementKvKey(userId));
   if (!raw) return {};
   try {
     const parsed = JSON.parse(raw) as SyncEntitlement;
@@ -218,15 +223,12 @@ async function getSyncEntitlement(env: Env, userId: string): Promise<SyncEntitle
   }
 }
 
-/** 同步试用天数：从首次查权益起算 */
-const SYNC_TRIAL_DAYS = 14;
-
 /**
- * 同步试用：首次查时在 KV 写入起点（幂等），返回试用到期日 = 起点 + 14 天。
- * 老用户也能拿满 14 天；起点存服务端，清客户端缓存改不了。
+ * 同步试用：首次查时在 KV 写入起点（幂等），返回试用到期日 = 起点 + SYNC_TRIAL_DAYS。
+ * 老用户也能拿满试用；起点存服务端，清客户端缓存改不了。
  */
 async function ensureSyncTrial(env: Env, userId: string): Promise<string> {
-  const key = `entitlement:sync:trial:${userId}`;
+  const key = syncTrialKvKey(userId);
   let start = await env.AI_KV.get(key);
   if (!start) {
     start = new Date().toISOString();
@@ -403,19 +405,58 @@ async function handleAdminEntitlement(req: Request, env: Env): Promise<Response>
 
   const scope = body.scope === "sync" ? "sync" : "ai";
 
-  // 同步权益：只有到期日；给 until 写入，不给 until 清除（退款/到期）
+  // 同步权益：相对延期（叠试用/已有付费）优先；绝对 until 仅纠错；都不给则清除
   if (scope === "sync") {
     const until = typeof body.until === "string" ? body.until.trim() : "";
+    const extendDaysRaw = body.extend_days;
+    const extendMonthsRaw = body.extend_months;
+    const hasExtendDays = extendDaysRaw !== undefined && extendDaysRaw !== null && extendDaysRaw !== "";
+    const hasExtendMonths =
+      extendMonthsRaw !== undefined && extendMonthsRaw !== null && extendMonthsRaw !== "";
+
+    if ((hasExtendDays || hasExtendMonths) && until) {
+      return err(400, "BAD_REQUEST", "use either extend_* or until, not both");
+    }
+    if (hasExtendDays && hasExtendMonths) {
+      return err(400, "BAD_REQUEST", "extend_days and extend_months are mutually exclusive");
+    }
+
+    if (hasExtendDays || hasExtendMonths) {
+      const days = hasExtendDays ? Number(extendDaysRaw) : undefined;
+      const months = hasExtendMonths ? Number(extendMonthsRaw) : undefined;
+      try {
+        const result = await extendSyncEntitlement(env, userId, { days, months });
+        return json({
+          ok: true,
+          scope,
+          user_id: userId,
+          mode: result.mode,
+          base: result.base,
+          from: { paid_until: result.paidUntil ?? null, trial_until: result.trialUntil ?? null },
+          entitlement: { until: result.until },
+        });
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "invalid extend";
+        return err(400, "BAD_REQUEST", msg);
+      }
+    }
+
     if (until) {
       if (Number.isNaN(Date.parse(until))) {
         return err(400, "BAD_REQUEST", "until must be ISO8601");
       }
       const record: SyncEntitlement = { until };
-      await env.AI_KV.put(`entitlement:sync:${userId}`, JSON.stringify(record));
-      return json({ ok: true, scope, user_id: userId, entitlement: record });
+      await env.AI_KV.put(syncEntitlementKvKey(userId), JSON.stringify(record));
+      return json({
+        ok: true,
+        scope,
+        user_id: userId,
+        mode: "absolute",
+        entitlement: record,
+      });
     }
-    await env.AI_KV.delete(`entitlement:sync:${userId}`);
-    return json({ ok: true, scope, user_id: userId, entitlement: {} });
+    await env.AI_KV.delete(syncEntitlementKvKey(userId));
+    return json({ ok: true, scope, user_id: userId, mode: "clear", entitlement: {} });
   }
 
   // 一句记权益：plan + until
@@ -453,23 +494,22 @@ async function handleAdminAfdianOrder(req: Request, env: Env): Promise<Response>
     if (!order) {
       return err(404, "NOT_FOUND", "order record not found");
     }
-    let sync: { until?: string } = {};
-    if (order.userId) {
-      const raw = await env.AI_KV.get(`entitlement:sync:${order.userId}`);
-      if (raw) {
-        try {
-          sync = JSON.parse(raw) as { until?: string };
-        } catch {
-          sync = {};
-        }
-      }
-    }
-    return json({ ok: true, orders: [order], sync_entitlement: sync });
+    const sync = order.userId ? await loadAdminSyncSnapshot(env, order.userId) : { sync_entitlement: {}, trial_until: null };
+    return json({ ok: true, orders: [order], ...sync });
   }
 
   const orders = await listAfdianOrdersForUser(env, userId);
-  const raw = await env.AI_KV.get(`entitlement:sync:${userId}`);
+  const sync = await loadAdminSyncSnapshot(env, userId);
+  return json({ ok: true, user_id: userId, orders, ...sync });
+}
+
+/** admin 查询用：付费 until + 试用终点（只读，不创建试用） */
+async function loadAdminSyncSnapshot(
+  env: Env,
+  userId: string,
+): Promise<{ sync_entitlement: { until?: string }; trial_until: string | null }> {
   let sync: { until?: string } = {};
+  const raw = await env.AI_KV.get(syncEntitlementKvKey(userId));
   if (raw) {
     try {
       sync = JSON.parse(raw) as { until?: string };
@@ -477,7 +517,11 @@ async function handleAdminAfdianOrder(req: Request, env: Env): Promise<Response>
       sync = {};
     }
   }
-  return json({ ok: true, user_id: userId, orders, sync_entitlement: sync });
+  const trialMs = await readSyncTrialUntilMs(env, userId);
+  return {
+    sync_entitlement: sync,
+    trial_until: trialMs != null ? new Date(trialMs).toISOString() : null,
+  };
 }
 
 /** 前端查自己的权益：一句记 + 同步（同步含试用到期日，未付费时服务端首次写入起点） */

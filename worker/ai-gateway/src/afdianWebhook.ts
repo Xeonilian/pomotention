@@ -3,7 +3,8 @@
  * 通知 URL 形如：https://gateway.../webhooks/afdian?k=<AFDIAN_WEBHOOK_TOKEN>
  *
  * 留痕：afdian:order:<out_trade_no>；用户索引 afdian:user-orders:<uuid>
- * 幂等：先写订单键（固定 until）再写权益；重试只 ensure ≥ until，不叠月
+ * 幂等：先写订单键（固定 until）再写权益；重试只 ensure ≥ until，不叠月。
+ * until 起点 = max(现在, 已有付费, 试用终点)，不吞试用剩余。
  */
 
 export interface AfdianWebhookEnv {
@@ -102,11 +103,88 @@ export function parseAfdianOrderRecord(raw: string | null): AfdianOrderRecord | 
   }
 }
 
+/** 同步试用天数（与 GET /v1/entitlement 一致） */
+export const SYNC_TRIAL_DAYS = 14;
+
+export function syncEntitlementKvKey(userId: string): string {
+  return `entitlement:sync:${userId}`;
+}
+
+export function syncTrialKvKey(userId: string): string {
+  return `entitlement:sync:trial:${userId}`;
+}
+
 /** 从 base 起加 calendar months（UTC 日） */
 export function addCalendarMonths(base: Date, months: number): Date {
   const d = new Date(base.getTime());
   d.setUTCMonth(d.getUTCMonth() + months);
   return d;
+}
+
+/** 从 base 起加 UTC 日 */
+export function addUtcDays(base: Date, days: number): Date {
+  const d = new Date(base.getTime());
+  d.setUTCDate(d.getUTCDate() + days);
+  return d;
+}
+
+/**
+ * 只读试用终点；无起点则 null（不创建试用，避免 admin/webhook 误开计时）。
+ */
+export async function readSyncTrialUntilMs(
+  env: AfdianWebhookEnv,
+  userId: string,
+): Promise<number | null> {
+  const start = await env.AI_KV.get(syncTrialKvKey(userId));
+  if (!start) return null;
+  const t = Date.parse(start);
+  if (Number.isNaN(t)) return null;
+  return addUtcDays(new Date(t), SYNC_TRIAL_DAYS).getTime();
+}
+
+export interface SyncExtendBase {
+  /** max(now, 付费 until, 试用终点) */
+  baseMs: number;
+  paidUntil?: string;
+  trialUntil?: string;
+}
+
+/**
+ * 延期起点：现在 / 未过期付费 / 未过期试用 取最晚。
+ * 付费开通与人工相对延期共用，避免吞掉试用剩余天数。
+ */
+export async function getSyncExtendBase(
+  env: AfdianWebhookEnv,
+  userId: string,
+): Promise<SyncExtendBase> {
+  const now = Date.now();
+  let baseMs = now;
+  let paidUntil: string | undefined;
+  let trialUntil: string | undefined;
+
+  const raw = await env.AI_KV.get(syncEntitlementKvKey(userId));
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw) as { until?: string };
+      if (parsed.until) {
+        const prev = Date.parse(parsed.until);
+        if (!Number.isNaN(prev)) {
+          paidUntil = new Date(prev).toISOString();
+          if (prev > baseMs) baseMs = prev;
+        }
+      }
+    } catch {
+      /* 坏数据忽略 */
+    }
+  }
+
+  const trialMs = await readSyncTrialUntilMs(env, userId);
+  if (trialMs != null) {
+    trialUntil = new Date(trialMs).toISOString();
+    if (trialMs > baseMs) baseMs = trialMs;
+  }
+
+  return { baseMs, paidUntil, trialUntil };
 }
 
 /** 权益至少到 targetUntil（不叠月；已有更高则保留） */
@@ -115,7 +193,7 @@ export async function ensureSyncUntil(
   userId: string,
   targetUntil: string,
 ): Promise<string> {
-  const key = `entitlement:sync:${userId}`;
+  const key = syncEntitlementKvKey(userId);
   const targetMs = Date.parse(targetUntil);
   if (Number.isNaN(targetMs)) {
     throw new Error("invalid targetUntil");
@@ -138,28 +216,57 @@ export async function ensureSyncUntil(
   return until;
 }
 
-/** 只算 until，不写权益 */
+/** 只算 until，不写权益；起点含试用剩余 */
 async function computeGrantUntil(
   env: AfdianWebhookEnv,
   userId: string,
   months: number,
 ): Promise<string> {
-  const key = `entitlement:sync:${userId}`;
-  const now = Date.now();
-  let startMs = now;
-  const raw = await env.AI_KV.get(key);
-  if (raw) {
-    try {
-      const parsed = JSON.parse(raw) as { until?: string };
-      if (parsed.until) {
-        const prev = Date.parse(parsed.until);
-        if (!Number.isNaN(prev) && prev > startMs) startMs = prev;
-      }
-    } catch {
-      /* 坏数据则从 now 起算 */
-    }
+  const { baseMs } = await getSyncExtendBase(env, userId);
+  return addCalendarMonths(new Date(baseMs), months).toISOString();
+}
+
+/** 相对延期并写入付费 sync 权益；返回新旧与起点信息 */
+export async function extendSyncEntitlement(
+  env: AfdianWebhookEnv,
+  userId: string,
+  opts: { days?: number; months?: number },
+): Promise<{
+  until: string;
+  base: string;
+  paidUntil?: string;
+  trialUntil?: string;
+  mode: "extend_days" | "extend_months";
+}> {
+  const days = opts.days;
+  const months = opts.months;
+  if (days != null && months != null) {
+    throw new Error("days and months are mutually exclusive");
   }
-  return addCalendarMonths(new Date(startMs), months).toISOString();
+  if (days == null && months == null) {
+    throw new Error("days or months required");
+  }
+  if (days != null && (!Number.isFinite(days) || days <= 0 || !Number.isInteger(days))) {
+    throw new Error("days must be a positive integer");
+  }
+  if (months != null && (!Number.isFinite(months) || months <= 0 || !Number.isInteger(months))) {
+    throw new Error("months must be a positive integer");
+  }
+
+  const { baseMs, paidUntil, trialUntil } = await getSyncExtendBase(env, userId);
+  const untilDate =
+    days != null
+      ? addUtcDays(new Date(baseMs), days)
+      : addCalendarMonths(new Date(baseMs), months!);
+  const until = untilDate.toISOString();
+  await env.AI_KV.put(syncEntitlementKvKey(userId), JSON.stringify({ until }));
+  return {
+    until,
+    base: new Date(baseMs).toISOString(),
+    paidUntil,
+    trialUntil,
+    mode: days != null ? "extend_days" : "extend_months",
+  };
 }
 
 async function putOrderRecord(env: AfdianWebhookEnv, record: AfdianOrderRecord): Promise<void> {
