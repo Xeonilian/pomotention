@@ -46,6 +46,17 @@
 
       <!-- 手机改名不藏 fn；桌面改名仍藏以免挤输入框 -->
       <span v-if="isMobile || editingId !== item.project.id" class="row-actions" @click.stop>
+        <!-- 选中时在按钮群前显示绑定 tag：电脑全名，手机前 3 字 -->
+        <TagRenderer
+          v-if="selectedId === item.project.id && item.project.tagId != null"
+          class="project-bound-tag"
+          :tag-ids="[item.project.tagId]"
+          :isCloseable="false"
+          :display-length="isMobile ? 3 : null"
+          size="tiny"
+          title="当前文件夹绑定的智能标签"
+          @tag-click="emit('tag-click', $event)"
+        />
         <n-button v-if="item.project.parentId != null" text size="tiny" title="升一层" @click="emit('promote', item.project.id)">
           <template #icon>
             <n-icon size="16"><FolderArrowUp20Regular /></n-icon>
@@ -177,6 +188,7 @@ import {
   CalendarLtr20Regular,
 } from "@vicons/fluent";
 import TagPickerPopover from "@/components/TagSystem/TagPickerPopover.vue";
+import TagRenderer from "@/components/TagSystem/TagRenderer.vue";
 import SearchActivityRow from "@/components/search/SearchActivityRow.vue";
 import { createTouchScheduledSingleAndDouble } from "@/composables/platform/useTouchScheduledSingleAndDouble";
 import { useCenteredPanel } from "@/composables/ui/useCenteredPanel";
@@ -484,6 +496,33 @@ onBeforeUnmount(detachOutsideRename);
   flex: 0 0 auto;
   align-items: center;
   gap: 0;
+}
+
+.project-bound-tag {
+  flex-shrink: 0;
+  margin-right: 2px;
+  line-height: 1;
+}
+
+/* 压到行高内，避免选中后把 title-item 撑高 */
+.project-bound-tag :deep(.tag-container) {
+  padding: 0;
+  gap: 0;
+  flex-wrap: nowrap;
+  max-height: 18px;
+  overflow: hidden;
+}
+
+.project-bound-tag :deep(.n-tag) {
+  height: 18px;
+  max-height: 18px;
+  padding: 0 4px;
+  font-size: 11px;
+  line-height: 18px;
+}
+
+.project-bound-tag :deep(.tag-item:hover) {
+  transform: none;
 }
 
 /* 选中才出 fn；hover 仅真鼠标，避免手机点 chevron 触控假 hover 闪一下 */

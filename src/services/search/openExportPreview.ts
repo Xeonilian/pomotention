@@ -1,49 +1,39 @@
 import type { Activity } from "@/core/types/Activity";
-import type { Task } from "@/core/types/Task";
+import { taskService } from "@/services/task/taskService";
 import { useDataStore } from "@/stores/useDataStore";
 import { useSearchUiStore } from "@/stores/useSearchUiStore";
-import { saveActivities, saveTasks } from "@/services/data/localStorageService";
 
-/** 建普通 Activity + Task（正文 = Markdown），打开右侧 Tab */
+/**
+ * 按默认 onAddActivity 路径：无日期的 T 类 Activity → createTaskFromActivity → 写正文 → 打开 activity Tab。
+ */
 export function openExportMarkdownPreview(markdown: string, tabTitle = "导出预览"): void {
   const dataStore = useDataStore();
   const searchUi = useSearchUiStore();
 
-  const now = Date.now();
-  const activityId = now;
-  const taskId = now + 1;
-
-  const activity: Activity = {
-    id: activityId,
-    title: tabTitle,
+  const newActivity: Activity = {
+    id: Date.now(),
     class: "T",
+    title: tabTitle,
+    estPomoI: "",
+    pomoType: "🍅",
+    status: "ongoing",
+    // 不写 dueDate：尚未入日
     parentId: null,
-    taskId,
-    status: "",
-    deleted: false,
     synced: false,
-    lastModified: now,
+    deleted: false,
+    lastModified: Date.now(),
   };
 
-  const task: Task = {
-    id: taskId,
-    activityTitle: tabTitle,
-    source: "activity",
-    sourceId: activityId,
-    description: markdown,
-    energyRecords: [],
-    rewardRecords: [],
-    interruptionRecords: [],
-    starred: false,
-    deleted: false,
-    synced: false,
-    lastModified: now,
-  };
+  dataStore.activityList.push(newActivity);
 
-  dataStore.activityList = [...dataStore.activityList, activity];
+  const task = taskService.createTaskFromActivity(newActivity.id, newActivity.title);
+  task.description = markdown;
   dataStore.taskList = [...dataStore.taskList, task];
-  saveActivities(dataStore.activityList);
-  saveTasks(dataStore.taskList);
 
-  searchUi.openTab("activity", activityId, tabTitle);
+  newActivity.taskId = task.id;
+  newActivity.synced = false;
+  newActivity.lastModified = Date.now();
+
+  dataStore.saveAllDebounced();
+  searchUi.openTab("activity", newActivity.id, tabTitle);
 }

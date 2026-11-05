@@ -76,9 +76,14 @@ export const useSearchUiStore = defineStore("searchUi", {
 
     // 点击左侧列表项时，调用 store action 打开一个 tab
     openRow(row: ActivityRow) {
+      // 与列表 openKey 对齐（裸 T/S 无实体时是 activity-*）
+      const m = /^(todo|sch|activity)-(\d+)$/.exec(row.openKey);
+      if (m) {
+        this.openTab(m[1] as TabType, Number(m[2]), row.title);
+        return;
+      }
       const type: TabType = row.class === "T" ? "todo" : row.class === "S" ? "sch" : "activity";
-      const todoOrSchId = row.currentId ?? row.activityId;
-      this.openTab(type, todoOrSchId, row.title); // 调用 action，逻辑全部在 store 中处理
+      this.openTab(type, row.currentId ?? row.activityId, row.title);
     },
 
     /**

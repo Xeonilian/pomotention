@@ -90,8 +90,10 @@ export function useSearchFilter() {
         return act.id;
       };
 
-      const type: TabType = act.class === "T" ? "todo" : act.class === "S" ? "sch" : "activity";
-      const entityId = isTodo ? td?.id : isSch ? sch?.id : act.id;
+      // 有 T/S 实体才开 todo/sch tab；裸 activity（如导出预览）走 activity-*
+      const type: TabType =
+        isTodo && td != null ? "todo" : isSch && sch != null ? "sch" : "activity";
+      const entityId = type === "todo" ? td!.id : type === "sch" ? sch!.id : act.id;
 
       rows.push({
         activityId: act.id,

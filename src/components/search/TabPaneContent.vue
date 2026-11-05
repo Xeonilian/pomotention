@@ -215,6 +215,7 @@ const getDueDate = () => {
   flex-direction: row;
   flex-wrap: wrap;
   align-items: center;
+  flex-shrink: 0; /* 长正文时勿被 content 压扁 */
   /* 纵向保持原先紧凑行距；横向才拉开 */
   row-gap: 2px;
   column-gap: 8px;
