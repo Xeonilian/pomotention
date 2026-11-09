@@ -18,7 +18,10 @@ export function pickSmartProjectId(
   candidates.sort((a, b) => {
     const byDepth = depthOf(b.id) - depthOf(a.id);
     if (byDepth !== 0) return byDepth;
-    return tagIds.indexOf(a.tagId!) - tagIds.indexOf(b.tagId!);
+    // 同深：activity.tagIds 更靠前的绑 tag 优先；同 tag 脏数据再按 id 稳定决胜
+    const byTagOrder = tagIds.indexOf(a.tagId!) - tagIds.indexOf(b.tagId!);
+    if (byTagOrder !== 0) return byTagOrder;
+    return a.id - b.id;
   });
   return candidates[0]!.id;
 }

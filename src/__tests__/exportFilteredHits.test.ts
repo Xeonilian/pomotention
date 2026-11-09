@@ -91,4 +91,58 @@ describe("exportFilteredHits", () => {
     expect(json.todos[0].energy[0]).toEqual(expect.objectContaining({ at: expect.any(String), value: 6 }));
     expect(json.todos[0].energy[0]).not.toHaveProperty("atDay");
   });
+
+  it("prefers Activity over Todo for shared fields", () => {
+    const act: Activity = {
+      ...activity,
+      title: "来自 Activity",
+      status: "ongoing",
+      pomoType: "🍇",
+      interruption: "I",
+      dueDate: Date.parse("2026-11-01T00:00:00+08:00"),
+      estPomoI: "1", // 实为数组首项，不能盖住完整 estPomo
+    };
+    const td: Todo = {
+      ...todo,
+      activityTitle: "来自 Todo",
+      status: "done",
+      pomoType: "🍅",
+      interruption: "E",
+      dueDate: Date.parse("2026-11-09T00:00:00+08:00"),
+      estPomo: [1, 2],
+    };
+    const bundle = buildExportHits(
+      [1],
+      {
+        ...deps,
+        getActivity: () => act,
+        getTodo: () => td,
+      },
+      {
+        projectLabel: "",
+        tagsLabel: "",
+        query: "",
+        starredOnly: false,
+        activityClass: null,
+      },
+    );
+    const hit = bundle.todos[0]!;
+    expect(hit.title).toBe("来自 Activity");
+    expect(hit.status).toBe("ongoing");
+    expect(hit.pomoType).toBe("🍇");
+    expect(hit.interruption).toBe("I");
+    expect(hit.estPomo).toBe("1+2");
+    expect(hit.dueDay).toBe("2026-11-01");
+  });
+
+  it("falls back to estPomoI when todo.estPomo empty", () => {
+    const act: Activity = { ...activity, estPomoI: "4" };
+    const td: Todo = { ...todo, estPomo: [] };
+    const hit = buildExportHits(
+      [1],
+      { ...deps, getActivity: () => act, getTodo: () => td },
+      { projectLabel: "", tagsLabel: "", query: "", starredOnly: false, activityClass: null },
+    ).todos[0]!;
+    expect(hit.estPomo).toBe("4");
+  });
 });

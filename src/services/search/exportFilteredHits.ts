@@ -304,6 +304,17 @@ function buildSummary(todos: ExportTodoHit[], schedules: ExportScheduleHit[]): E
   };
 }
 
+/**
+ * Activity 与 Todo/Schedule 共有字段：优先 Activity（undefined 才回退）。
+ * 共有：title、status、pomoType、dueDate、interruption、location、isUntaetigkeit、dueRange；
+ * estPomo：有 todo.estPomo 数组用数组（estPomoI 实为数组首项，不能盖住整段）；
+ * 仅无 A.estPomoI 时才退回该字符串。project 只认 Activity.projectId。
+ * 仅 Todo/Schedule：startTime、doneTime、realPomo、priority、activityDueRange（无 A.dueRange 时）。
+ */
+function preferAct<T>(actVal: T | undefined, fallback: T | undefined): T | undefined {
+  return actVal !== undefined ? actVal : fallback;
+}
+
 export function buildExportHits(activityIds: number[], deps: BuildExportHitsDeps, scope: ExportScopeMeta): ExportBundle {
   const todos: ExportTodoHit[] = [];
   const schedules: ExportScheduleHit[] = [];
@@ -324,22 +335,26 @@ export function buildExportHits(activityIds: number[], deps: BuildExportHitsDeps
 
     if (act.class === "T") {
       const todo = deps.getTodo(id);
-      const dueMs = msOrNull(todo?.dueDate);
+      const dueMs = msOrNull(preferAct(act.dueDate, todo?.dueDate));
       const startMs = msOrNull(todo?.startTime);
       const doneMs = msOrNull(todo?.doneTime);
+      // estPomoI ≈ 数组首项；两边都有时用完整 estPomo，否则才退 estPomoI
+      const estPomo =
+        todo?.estPomo?.length ? formatEstPomo(todo.estPomo) : act.estPomoI?.trim() || "";
       todos.push({
         activityId: id,
-        title: act.title || "",
+        // title：有 Activity 文案用 A，否则回退 todo.activityTitle
+        title: act.title || todo?.activityTitle || "",
         projectName,
         tags,
         tagIds: [...tagIds],
         tagNames: [...tagNames],
         starred,
         description,
-        status: todo?.status ?? "",
+        status: preferAct(act.status, todo?.status) ?? "",
         priority: todo?.priority ?? "",
-        pomoType: todo?.pomoType ?? "",
-        estPomo: formatEstPomo(todo?.estPomo),
+        pomoType: preferAct(act.pomoType, todo?.pomoType) ?? "",
+        estPomo,
         realPomo: formatRealPomo(todo?.realPomo),
         dueAt: dueMs != null ? formatExportDateTime(dueMs) : "",
         dueDay: dueMs != null ? formatExportDay(dueMs) : "",
@@ -348,29 +363,31 @@ export function buildExportHits(activityIds: number[], deps: BuildExportHitsDeps
         startTime: startMs != null ? formatExportClock(startMs) : "",
         startText: startMs != null ? formatExportStartText(startMs) : "",
         doneAt: doneMs != null ? formatExportDateTime(doneMs) : "",
-        interruption: todo?.interruption ?? "",
+        interruption: preferAct(act.interruption, todo?.interruption) ?? "",
         energyRecords,
         rewardRecords,
         interruptionRecords,
       });
     } else {
       const sch = deps.getSchedule(id);
-      const startMs = msOrNull(sch?.activityDueRange?.[0] ?? undefined);
-      const durRaw = sch?.activityDueRange?.[1];
+      const range = preferAct(act.dueRange, sch?.activityDueRange);
+      const startMs = msOrNull(range?.[0] ?? undefined);
+      const durRaw = range?.[1];
       const durationMin = durRaw != null && durRaw !== "" ? String(durRaw) : "";
       const durNum = durationMin ? Number(durationMin) : NaN;
       const endMs = startMs != null && !Number.isNaN(durNum) ? startMs + Math.round(durNum * 60_000) : null;
       const doneMs = msOrNull(sch?.doneTime);
+      const isUnt = preferAct(act.isUntaetigkeit, sch?.isUntaetigkeit) === true;
       schedules.push({
         activityId: id,
-        title: act.title || "",
+        title: act.title || sch?.activityTitle || "",
         projectName,
         tags,
         tagIds: [...tagIds],
         tagNames: [...tagNames],
         starred,
         description,
-        status: sch?.status ?? "",
+        status: preferAct(act.status, sch?.status) ?? "",
         startAt: startMs != null ? formatExportDateTime(startMs) : "",
         whenDay: startMs != null ? formatExportDay(startMs) : "",
         whenTime: startMs != null ? formatExportClock(startMs) : "",
@@ -379,10 +396,10 @@ export function buildExportHits(activityIds: number[], deps: BuildExportHitsDeps
         endAt: endMs != null ? formatExportDateTime(endMs) : "",
         endDay: endMs != null ? formatExportDay(endMs) : "",
         endTime: endMs != null ? formatExportClock(endMs) : "",
-        location: sch?.location ?? "",
+        location: preferAct(act.location, sch?.location) ?? "",
         doneAt: doneMs != null ? formatExportDateTime(doneMs) : "",
-        interruption: sch?.interruption ?? "",
-        isUntaetigkeit: sch?.isUntaetigkeit ? "true" : "false",
+        interruption: preferAct(act.interruption, sch?.interruption) ?? "",
+        isUntaetigkeit: isUnt ? "true" : "false",
         energyRecords,
         rewardRecords,
         interruptionRecords,
@@ -804,5 +821,5 @@ export function toMarkdownReport(bundle: ExportBundle): string {
 export function defaultExportBasename(): string {
   const d = new Date();
   const pad = (n: number) => (n < 10 ? `0${n}` : String(n));
-  return `pomotention-export-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}`;
+  return `pomotention-export-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}`;
 }

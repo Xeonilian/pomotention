@@ -46,17 +46,17 @@
 
       <!-- 手机改名不藏 fn；桌面改名仍藏以免挤输入框 -->
       <span v-if="isMobile || editingId !== item.project.id" class="row-actions" @click.stop>
-        <!-- 选中时在按钮群前显示绑定 tag：电脑全名，手机前 3 字 -->
-        <TagRenderer
+        <!-- 选中时在按钮群前显示绑定 tag（自绘芯片，避免 n-tag 撑高行） -->
+        <button
           v-if="selectedId === item.project.id && item.project.tagId != null"
+          type="button"
           class="project-bound-tag"
-          :tag-ids="[item.project.tagId]"
-          :isCloseable="false"
-          :display-length="isMobile ? 3 : null"
-          size="tiny"
-          title="当前文件夹绑定的智能标签"
-          @tag-click="emit('tag-click', $event)"
-        />
+          :style="boundTagChipStyle(item.project.tagId)"
+          :title="boundTagFullName(item.project.tagId)"
+          @click="emit('tag-click', item.project.tagId!)"
+        >
+          {{ boundTagLabel(item.project.tagId) }}
+        </button>
         <n-button v-if="item.project.parentId != null" text size="tiny" title="升一层" @click="emit('promote', item.project.id)">
           <template #icon>
             <n-icon size="16"><FolderArrowUp20Regular /></n-icon>
@@ -188,13 +188,14 @@ import {
   CalendarLtr20Regular,
 } from "@vicons/fluent";
 import TagPickerPopover from "@/components/TagSystem/TagPickerPopover.vue";
-import TagRenderer from "@/components/TagSystem/TagRenderer.vue";
 import SearchActivityRow from "@/components/search/SearchActivityRow.vue";
 import { createTouchScheduledSingleAndDouble } from "@/composables/platform/useTouchScheduledSingleAndDouble";
 import { useCenteredPanel } from "@/composables/ui/useCenteredPanel";
+import { useTagStore } from "@/stores/useTagStore";
 import type { ProjectTreeRow } from "@/composables/search/useSearchProjects";
 import type { ActivityRow } from "@/composables/search/useSearchFilter";
 import type { SearchDragSource, SearchDropTarget } from "@/composables/search/useSearchProjectDrag";
+import type { CSSProperties } from "vue";
 
 const props = defineProps<{
   rows: ProjectTreeRow[];
@@ -239,6 +240,26 @@ const emit = defineEmits<{
 }>();
 
 const centeredPanel = useCenteredPanel();
+const tagStore = useTagStore();
+
+function boundTagFullName(tagId: number): string {
+  return tagStore.tagById.get(tagId)?.name ?? `Tag #${tagId}`;
+}
+
+/** 电脑全名，手机前 3 字 */
+function boundTagLabel(tagId: number): string {
+  const name = boundTagFullName(tagId);
+  if (props.isMobile) return name.slice(0, 3);
+  return name;
+}
+
+function boundTagChipStyle(tagId: number): CSSProperties {
+  const tag = tagStore.tagById.get(tagId);
+  return {
+    color: tag?.color || "var(--color-text-secondary, #666)",
+    backgroundColor: tag?.backgroundColor || "var(--color-background-light, #eee)",
+  };
+}
 
 const removeModalShow = ref(false);
 const removeModalId = ref<number | null>(null);
@@ -511,30 +532,20 @@ onBeforeUnmount(detachOutsideRename);
 }
 
 .project-bound-tag {
-  flex-shrink: 0;
-  margin-right: 2px;
-  line-height: 1;
-}
-
-/* 压到行高内，避免选中后把 title-item 撑高 */
-.project-bound-tag :deep(.tag-container) {
-  padding: 0;
-  gap: 0;
-  flex-wrap: nowrap;
-  max-height: 18px;
-  overflow: hidden;
-}
-
-.project-bound-tag :deep(.n-tag) {
-  height: 18px;
-  max-height: 18px;
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  height: 16px;
+  max-height: 16px;
+  margin: 0 2px 0 0;
   padding: 0 4px;
-  font-size: 11px;
-  line-height: 18px;
-}
-
-.project-bound-tag :deep(.tag-item:hover) {
-  transform: none;
+  border: none;
+  border-radius: 8px;
+  font: 11px/16px Consolas, monospace;
+  white-space: nowrap;
+  max-width: 7em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
 }
 
 /* 选中才出 fn；hover 仅真鼠标，避免手机点 chevron 触控假 hover 闪一下 */

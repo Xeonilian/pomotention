@@ -27,4 +27,11 @@ describe("pickSmartProjectId", () => {
     expect(pickSmartProjectId([30, 10], projects, d)).toBe(3);
     expect(pickSmartProjectId([10, 30], projects, d)).toBe(1);
   });
+
+  it("same tagId on two projects: deeper wins; same depth smaller id", () => {
+    const deep = [p({ id: 1, tagId: 10, parentId: null }), p({ id: 2, tagId: 10, parentId: 1 })];
+    expect(pickSmartProjectId([10], deep, depth)).toBe(2);
+    const flat = [p({ id: 5, tagId: 10 }), p({ id: 3, tagId: 10 })];
+    expect(pickSmartProjectId([10], flat, () => 0)).toBe(3);
+  });
 });
