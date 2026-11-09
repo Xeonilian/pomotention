@@ -10,6 +10,8 @@
     :data-drop-kind="dropKind"
     :data-drop-id="dropKind === 'project' ? dropProjectId : undefined"
     @pointerdown="onRowPointerDown"
+    @contextmenu.prevent
+    @selectstart.prevent
   >
     <button
       type="button"
@@ -93,7 +95,7 @@ const emit = defineEmits<{
   open: [row: ActivityRow];
   "tag-click": [tagId: number];
   "filter-class": [cls: "T" | "S"];
-  "drag-start": [event: PointerEvent, activityId: number];
+  "drag-start": [event: PointerEvent, activityId: number, captureRoot: HTMLElement];
 }>();
 
 const indentClass = computed(() => (props.depth > 0 ? `indent-${Math.min(props.depth, 8)}` : undefined));
@@ -109,18 +111,29 @@ const typeFilterTitle = computed(() => {
   return typeFilterOn.value ? "仅看日程：开（再点关闭）" : "仅看日程";
 });
 
-/** 整行：轻点打开；横滑拖；竖滑交给列表（勿过早 capture） */
+/** 整行：轻点打开；横滑拖；竖滑交给列表；手机长按进拖（压过安卓选字） */
 const DRAG_THRESHOLD = 8;
+/** 略短于系统长按选字，先抢到手势 */
+const LONG_PRESS_DRAG_MS = 320;
 let rowPress: {
   startX: number;
   startY: number;
   pointerId: number;
-  originalEvent: PointerEvent;
+  lastEvent: PointerEvent;
+  captureRoot: HTMLElement;
   /** 触摸 / 手机：竖滑优先滚动 */
   preferScroll: boolean;
 } | null = null;
+let longPressTimer: ReturnType<typeof setTimeout> | null = null;
+
+function clearLongPressTimer() {
+  if (longPressTimer == null) return;
+  clearTimeout(longPressTimer);
+  longPressTimer = null;
+}
 
 function clearRowPressListeners() {
+  clearLongPressTimer();
   if (!rowPress) return;
   window.removeEventListener("pointermove", onRowPressMove);
   window.removeEventListener("pointerup", onRowPressUp);
@@ -128,22 +141,42 @@ function clearRowPressListeners() {
   rowPress = null;
 }
 
+function beginDragFromPress() {
+  if (!rowPress) return;
+  const { lastEvent, captureRoot } = rowPress;
+  clearRowPressListeners();
+  emit("drag-start", lastEvent, props.row.activityId, captureRoot);
+}
+
 function onRowPointerDown(e: PointerEvent) {
   if (e.button !== 0 && e.pointerType === "mouse") return;
+  const captureRoot = e.currentTarget as HTMLElement | null;
+  if (!captureRoot) return;
   rowPress = {
     startX: e.clientX,
     startY: e.clientY,
     pointerId: e.pointerId,
-    originalEvent: e,
+    lastEvent: e,
+    captureRoot,
     preferScroll: e.pointerType === "touch" || props.isMobile,
   };
   window.addEventListener("pointermove", onRowPressMove);
   window.addEventListener("pointerup", onRowPressUp);
   window.addEventListener("pointercancel", onRowPressCancel);
+
+  // 手机：长按开始拖，避免安卓长按进复制/选字
+  if (rowPress.preferScroll) {
+    clearLongPressTimer();
+    longPressTimer = setTimeout(() => {
+      longPressTimer = null;
+      beginDragFromPress();
+    }, LONG_PRESS_DRAG_MS);
+  }
 }
 
 function onRowPressMove(e: PointerEvent) {
   if (!rowPress || e.pointerId !== rowPress.pointerId) return;
+  rowPress.lastEvent = e;
   const dx = e.clientX - rowPress.startX;
   const dy = e.clientY - rowPress.startY;
   if (Math.hypot(dx, dy) <= DRAG_THRESHOLD) return;
@@ -155,9 +188,7 @@ function onRowPressMove(e: PointerEvent) {
   }
 
   e.preventDefault();
-  const { originalEvent } = rowPress;
-  clearRowPressListeners();
-  emit("drag-start", originalEvent, props.row.activityId);
+  beginDragFromPress();
 }
 
 function onRowPressUp(e: PointerEvent) {
@@ -190,8 +221,15 @@ function formatMMDD(ts?: number) {
   gap: 2px;
   user-select: none;
   -webkit-user-select: none;
-  /* 竖向交给列表滚动；横滑再进拖拽判定 */
+  -webkit-touch-callout: none;
+  /* 竖向交给列表滚动；横滑 / 长按再进拖拽判定 */
   touch-action: pan-y;
+}
+
+.title-item :deep(*) {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .title-item:active {

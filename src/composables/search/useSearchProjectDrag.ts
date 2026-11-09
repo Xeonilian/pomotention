@@ -56,12 +56,12 @@ export function useSearchProjectDrag(options: SearchProjectDragOptions) {
     return raw;
   }
 
-  function startDrag(event: PointerEvent, source: SearchDragSource) {
+  function startDrag(event: PointerEvent, source: SearchDragSource, captureRoot?: HTMLElement | null) {
     event.preventDefault();
     if (event.button !== 0 && event.pointerType === "mouse") return;
 
-    // 与 useActivityDrag 一致用 target（阈值分流后 originalEvent.currentTarget 已空）
-    const el = event.target as HTMLElement | null;
+    // 长按延时后 originalEvent.currentTarget 已空；优先用按下时记下的行根
+    const el = captureRoot ?? (event.currentTarget as HTMLElement | null) ?? (event.target as HTMLElement | null);
     if (!el) return;
 
     isDragging.value = true;
@@ -69,7 +69,15 @@ export function useSearchProjectDrag(options: SearchProjectDragOptions) {
     hoverTarget.value = resolveHover(event.clientX, event.clientY);
     captureEl = el;
 
-    el.setPointerCapture(event.pointerId);
+    try {
+      el.setPointerCapture(event.pointerId);
+    } catch {
+      isDragging.value = false;
+      dragSource.value = null;
+      hoverTarget.value = null;
+      captureEl = null;
+      return;
+    }
     el.addEventListener("pointermove", handleDragMove);
     el.addEventListener("pointerup", handleDragEnd);
     el.addEventListener("pointercancel", handleDragEnd);

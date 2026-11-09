@@ -282,12 +282,12 @@ const {
 /** 根区虚线：仅拖 P 时提示；拖 3in1 只高亮 Project 行 */
 const isRootDropHover = computed(() => dragSource.value?.kind === "project" && hoverTarget.value?.kind === "root");
 
-function onSearchDragStart(e: PointerEvent, source: SearchDragSource) {
-  startProjectDrag(e, source);
+function onSearchDragStart(e: PointerEvent, source: SearchDragSource, captureRoot?: HTMLElement) {
+  startProjectDrag(e, source, captureRoot);
 }
 
-function onActivityOrphanDragStart(e: PointerEvent, activityId: number) {
-  startProjectDrag(e, { kind: "activity", id: activityId });
+function onActivityOrphanDragStart(e: PointerEvent, activityId: number, captureRoot: HTMLElement) {
+  startProjectDrag(e, { kind: "activity", id: activityId }, captureRoot);
 }
 
 // 从 UI store 中解构出 UI 状态（使用 storeToRefs 保持响应性）

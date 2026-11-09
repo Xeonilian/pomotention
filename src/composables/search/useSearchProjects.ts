@@ -439,9 +439,9 @@ export function useSearchProjects(filteredActivities: Ref<ActivityRow[]>) {
   });
 
   /** 一进入拖拽就清掉其它选中（P 高亮等），避免和落点提示抢视觉 */
-  function startProjectDrag(event: PointerEvent, source: SearchDragSource) {
+  function startProjectDrag(event: PointerEvent, source: SearchDragSource, captureRoot?: HTMLElement | null) {
     selectedProjectId.value = null;
-    startDrag(event, source);
+    startDrag(event, source, captureRoot);
   }
 
   function activityProjectIdOf(activityId: number): number | null {

@@ -236,7 +236,7 @@ const emit = defineEmits<{
   "open-activity": [row: ActivityRow];
   "tag-click": [tagId: number];
   "filter-class": [cls: "T" | "S"];
-  "drag-start": [event: PointerEvent, source: SearchDragSource];
+  "drag-start": [event: PointerEvent, source: SearchDragSource, captureRoot?: HTMLElement];
 }>();
 
 const centeredPanel = useCenteredPanel();
@@ -363,8 +363,8 @@ function onTitlePressCancel(e: PointerEvent) {
   titleTap.touchCancel();
 }
 
-function onActivityDragStart(e: PointerEvent, activityId: number) {
-  emit("drag-start", e, { kind: "activity", id: activityId });
+function onActivityDragStart(e: PointerEvent, activityId: number, captureRoot: HTMLElement) {
+  emit("drag-start", e, { kind: "activity", id: activityId }, captureRoot);
 }
 
 function isProjectDragging(id: number) {
