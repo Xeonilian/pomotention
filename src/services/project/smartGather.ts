@@ -27,6 +27,7 @@ export function pickSmartProjectId(
 }
 
 export function isGatherableActivity(act: Activity): boolean {
+  if (act.deleted) return false;
   if (isLedgerDayStubActivity(act)) return false;
   if (isLifeRecordActivity(act)) return false;
   if (isDailyPlaceholderTitle(act.title)) return false;
@@ -48,7 +49,6 @@ export function gatherUnassignedBySmartTags(opts: {
 
   let n = 0;
   for (const act of opts.activities) {
-    if (act.deleted) continue;
     if (act.projectId != null) continue;
     if (!isGatherableActivity(act)) continue;
     const pid = pickSmartProjectId(act.tagIds, smartProjects, opts.depthOf);

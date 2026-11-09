@@ -26,21 +26,32 @@ function downloadBlob(contents: string, filename: string, mime: string): void {
   URL.revokeObjectURL(url);
 }
 
-async function tryShareFile(contents: string, filename: string, mime: string): Promise<boolean> {
+type ShareAttempt = "shared" | "unavailable" | "cancelled";
+
+function isShareAbort(e: unknown): boolean {
+  if (!e || typeof e !== "object") return false;
+  const name = "name" in e ? String((e as { name: unknown }).name) : "";
+  // 用户关掉分享面板：AbortError；部分 WebView 用 CancellationError
+  return name === "AbortError" || name === "CancellationError";
+}
+
+async function tryShareFile(contents: string, filename: string, mime: string): Promise<ShareAttempt> {
   try {
-    if (typeof navigator === "undefined" || typeof navigator.share !== "function") return false;
+    if (typeof navigator === "undefined" || typeof navigator.share !== "function") return "unavailable";
     const file = new File([contents], filename, { type: mime });
     const data: ShareData = { files: [file], title: filename };
-    if (typeof navigator.canShare === "function" && !navigator.canShare(data)) return false;
+    if (typeof navigator.canShare === "function" && !navigator.canShare(data)) return "unavailable";
     await navigator.share(data);
-    return true;
-  } catch {
-    return false;
+    return "shared";
+  } catch (e) {
+    if (isShareAbort(e)) return "cancelled";
+    return "unavailable";
   }
 }
 
 /**
  * 文本落盘：Tauri 用另存为；非 Tauri 优先 Web Share（可），否则 Blob 下载。
+ * 用户取消分享 → cancelled，不再兜底下载。
  */
 export async function saveTextFile(input: SaveTextFileInput): Promise<SaveTextResult> {
   const mime = input.mime ?? "text/plain;charset=utf-8";
@@ -56,9 +67,9 @@ export async function saveTextFile(input: SaveTextFileInput): Promise<SaveTextRe
       return { ok: true, mode: "tauri", path };
     }
 
-    if (await tryShareFile(input.contents, input.filename, mime)) {
-      return { ok: true, mode: "share" };
-    }
+    const share = await tryShareFile(input.contents, input.filename, mime);
+    if (share === "shared") return { ok: true, mode: "share" };
+    if (share === "cancelled") return { ok: false, reason: "cancelled" };
     downloadBlob(input.contents, input.filename, mime);
     return { ok: true, mode: "download" };
   } catch (e) {
