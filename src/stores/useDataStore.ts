@@ -134,7 +134,7 @@ export const useDataStore = defineStore(
         taskList.value.some((item) => !item.synced) ||
         ledgerList.value.some((item) => !item.synced) ||
         tagStore.rawTags?.some((item: Tag) => !item.synced) ||
-        // Project 单机阶段未挂 SyncService，不计入未同步（建表接线后再加回）
+        projectStore.rawProjects?.some((item) => !item.synced) ||
         templateStore.rawTemplates?.some((item: Template) => !item.synced)
       );
     });
@@ -147,6 +147,7 @@ export const useDataStore = defineStore(
         tasks: taskList.value.filter((item) => !item.synced).length,
         ledger: ledgerList.value.filter((item) => !item.synced).length,
         tags: tagStore.rawTags?.filter((item: Tag) => !item.synced).length ?? 0,
+        projects: projectStore.rawProjects?.filter((item) => !item.synced).length ?? 0,
         templates: templateStore.rawTemplates?.filter((item: Template) => !item.synced).length ?? 0,
       };
     });

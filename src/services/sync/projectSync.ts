@@ -1,40 +1,12 @@
 // src/services/sync/projectSync.ts
-// 云类型手写：等 Studio 建表后用 supabase gen 刷新 Database.ts，再可改回生成类型
 
 import { BaseSyncService } from "@/services/sync/baseSyncService";
 import type { Project } from "@/core/types/Project";
+import type { Database } from "@/core/types/Database";
 import { convertISOToTimestamp } from "@/core/utils/convertTimestampToISO";
 
-/** 与 supabase/migrations/20261103120000_projects.sql 对齐；未进 Database.ts 前暂用 */
-type CloudProject = {
-  id: string;
-  user_id: string;
-  timestamp_id: number;
-  title: string;
-  description: string | null;
-  status: string | null;
-  due_date: number | null;
-  parent_id: number | null;
-  tag_id: number | null;
-  member_ids: unknown;
-  deleted: boolean;
-  last_modified: string;
-};
-
-type CloudProjectInsert = {
-  user_id: string;
-  timestamp_id: number;
-  title: string;
-  description?: string | null;
-  status?: string | null;
-  due_date?: number | null;
-  parent_id?: number | null;
-  tag_id?: number | null;
-  member_ids?: unknown;
-  deleted?: boolean;
-  last_modified?: string;
-  id?: string;
-};
+type CloudProject = Database["public"]["Tables"]["projects"]["Row"];
+type CloudProjectInsert = Database["public"]["Tables"]["projects"]["Insert"];
 
 export class ProjectSyncService extends BaseSyncService<Project, CloudProjectInsert> {
   constructor(getList: () => Project[], getMap: () => Map<number, Project>) {

@@ -6,7 +6,7 @@ let TodoSyncService: any;
 let ScheduleSyncService: any;
 let TaskSyncService: any;
 let TagSyncService: any;
-// ProjectSyncService：单机测过后再挂；见 current.md（Studio 建表后接线）
+let ProjectSyncService: any;
 let TemplateSyncService: any;
 let LedgerSyncService: any;
 // let TimetableSyncService: any;
@@ -53,6 +53,7 @@ export async function initSyncServices(dataStore: ReturnType<typeof useDataStore
     ScheduleSyncService = (await import("./scheduleSync")).ScheduleSyncService;
     TaskSyncService = (await import("./taskSync")).TaskSyncService;
     TagSyncService = (await import("./tagSync")).TagSyncService;
+    ProjectSyncService = (await import("./projectSync")).ProjectSyncService;
     TemplateSyncService = (await import("./templateSync")).TemplateSyncService;
     LedgerSyncService = (await import("./ledgerSync")).LedgerSyncService;
   } catch (error) {
@@ -89,6 +90,11 @@ export async function initSyncServices(dataStore: ReturnType<typeof useDataStore
     () => dataStore._tagById,
   );
 
+  const projectSync = new ProjectSyncService(
+    () => dataStore.projectList,
+    () => dataStore._projectById,
+  );
+
   const templateSync = new TemplateSyncService(
     () => dataStore.templateList,
     () => dataStore._templateById,
@@ -108,6 +114,7 @@ export async function initSyncServices(dataStore: ReturnType<typeof useDataStore
     { name: "Schedules", service: scheduleSync },
     { name: "Tasks", service: taskSync },
     { name: "Tags", service: tagSync },
+    { name: "Projects", service: projectSync },
     { name: "Templates", service: templateSync },
     { name: "Ledger", service: ledgerSync },
   ];

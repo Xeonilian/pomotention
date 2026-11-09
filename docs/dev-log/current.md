@@ -17,7 +17,7 @@
 | **分支** | `dev` |
 | **分级** | `[S3 C2 UV1]` |
 | **更新** | 2026-11-05 |
-| **停在哪** | 步 4 筛选导出已接（JSON / MD 复盘报告 / CSV；看效果可再调）。下一步：手测导出 + **Project Sync**（Studio → gen → 挂线）。旁路权益延期见 PR #144 |
+| **停在哪** | 导出手测 A–E 通过；`projects` 表已建、gen 已刷、`projectSync` 已挂。下一步：手测上下传 / 双端。旁路权益延期见 PR #144 |
 
 ---
 
@@ -101,7 +101,7 @@
 | 类型 | [`Project.ts`](../../src/core/types/Project.ts) |
 | 本地 | [`useProjectStore`](../../src/stores/useProjectStore.ts)；key `project`（[`STORAGE_KEYS.PROJECT`](../../src/core/constants.ts)） |
 | 云表 SQL（Studio 粘贴） | [`supabase/migrations/20261103120000_projects.sql`](../../supabase/migrations/20261103120000_projects.sql)；建表后 **gen 刷新** [`Database.ts`](../../src/core/types/Database.ts)（勿手改） |
-| 同步 | [`projectSync.ts`](../../src/services/sync/projectSync.ts) 已写好（云类型暂手写）；**尚未挂** sync/index → **下一步**：Studio SQL → gen → 接线 → 测效果 |
+| 同步 | [`projectSync.ts`](../../src/services/sync/projectSync.ts) 已挂 sync/index；用 gen `Database.ts` 类型 |
 | 归属 | 已有 `Activity.projectId` + `activities.project_id` |
 | 全量备份 | `collectLocalData` / 导入含 `project.json`；与筛选结果导出勿混 |
 

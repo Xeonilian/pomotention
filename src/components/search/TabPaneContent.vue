@@ -331,6 +331,9 @@ const getDueDate = () => {
   margin-top: 0;
   padding-top: 10px; /* 与上方 meta 拉开一点 */
   overflow-y: auto;
+  /* 盖过 MainLayout .app-layout 的 user-select:none，允许划选复制 */
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 /* 首标题不再额外顶 margin，间距由 padding-top 统一控 */
