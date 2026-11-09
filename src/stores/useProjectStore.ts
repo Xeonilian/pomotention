@@ -2,6 +2,12 @@ import { ref, computed, watch } from "vue";
 import { defineStore } from "pinia";
 import { loadProjects, saveProjects } from "@/services/data/localStorageService";
 import { scheduleDebouncedCloudUpload } from "@/core/utils";
+import {
+  collectLiveDescendantIds,
+  countActivitiesOnDeadProjects,
+  findOrphanForestRoots,
+  type ProjectCleanupReport,
+} from "@/services/project/cleanupOrphanProjects";
 import { useDataStore } from "./useDataStore";
 import type { Project } from "@/core/types/Project";
 
@@ -115,6 +121,48 @@ export const useProjectStore = defineStore("projectStore", () => {
     scheduleDebouncedCloudUpload();
   }
 
+  /**
+   * 本地数据清理（仅手动触发）：父已删/缺失的孤儿子树软删并解放条目；
+   * 另清仍指向已死 Project 的 Activity.projectId。
+   */
+  function cleanupOrphanProjects(): ProjectCleanupReport {
+    const dataStore = useDataStore();
+    const roots = findOrphanForestRoots(rawProjects.value);
+    const removedProjectIds: number[] = [];
+    const willRemove = new Set<number>();
+    for (const rootId of roots) {
+      const live = rawProjects.value.find((p) => p.id === rootId && !p.deleted);
+      if (!live) continue;
+      for (const id of collectLiveDescendantIds(rawProjects.value, rootId)) willRemove.add(id);
+    }
+
+    // 清理前统计：挂在将删孤儿树上的 + 已指向死 P 的
+    const alreadyDead = countActivitiesOnDeadProjects(dataStore.activityList, rawProjects.value);
+    let onOrphanTree = 0;
+    for (const act of dataStore.activityList) {
+      if (act.projectId != null && willRemove.has(act.projectId)) onOrphanTree++;
+    }
+    const danglingActivityCount = onOrphanTree + alreadyDead.count;
+
+    for (const rootId of roots) {
+      const live = rawProjects.value.find((p) => p.id === rootId && !p.deleted);
+      if (!live) continue;
+      const ids = collectLiveDescendantIds(rawProjects.value, rootId);
+      removeProject(rootId);
+      removedProjectIds.push(...ids);
+    }
+
+    if (alreadyDead.deadProjectIds.length) {
+      dataStore.stripProjectIdFromReferences(alreadyDead.deadProjectIds);
+    }
+
+    return {
+      removedProjectCount: removedProjectIds.length,
+      removedProjectIds,
+      danglingActivityCount,
+    };
+  }
+
   function getProject(id: number): Project | undefined {
     return allProjects.value.find((p) => p.id === id);
   }
@@ -141,6 +189,7 @@ export const useProjectStore = defineStore("projectStore", () => {
     addProject,
     updateProjectById,
     removeProject,
+    cleanupOrphanProjects,
     getProject,
     clearData,
     updateSyncedStatus,

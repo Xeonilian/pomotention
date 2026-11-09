@@ -6,6 +6,7 @@
       <n-space>
         <n-button v-if="isTauriRuntime" type="info" secondary :loading="isLoading" @click="handleExport">数据导出（文件夹）</n-button>
         <n-button type="success" secondary :loading="isLoading" @click="handlePreviewImport">{{ importButtonLabel }}</n-button>
+        <n-button tertiary :loading="isLoading" @click="handleCleanupLocalData">数据整理</n-button>
         <n-button v-if="canRestoreImportSnapshot" tertiary :loading="isLoading" @click="handleRestoreBeforeImport">恢复导入前状态</n-button>
       </n-space>
 
@@ -77,6 +78,7 @@ import {
   type ImportFileMap,
   type ImportReport,
 } from "@/services/data/mergeService";
+import { useProjectStore } from "@/stores/useProjectStore";
 import { useSyncStore } from "@/stores/useSyncStore";
 
 /** 跳过类行用灰色（depth 3），其余正常色 */
@@ -109,6 +111,7 @@ const { exportData, message: exportMessage } = useDataExport();
 const isTauriRuntime = isTauri();
 const importButtonLabel = computed(() => (isTauriRuntime ? "预览导入（文件夹）" : "预览导入（文件夹）"));
 const syncStore = useSyncStore();
+const projectStore = useProjectStore();
 
 const canRestoreImportSnapshot = ref(hasImportRollbackSnapshot());
 
@@ -308,6 +311,23 @@ async function handleRestoreBeforeImport() {
     shouldReloadOnClose.value = true;
   } catch (error: any) {
     message.value = `恢复失败：${error?.message || String(error)}`;
+    messageType.value = "error";
+  } finally {
+    isLoading.value = false;
+  }
+}
+
+/** 仅此处手动触发；以后新增清理项也挂这里，不弹说明 */
+function handleCleanupLocalData() {
+  try {
+    isLoading.value = true;
+    previewReport.value = null;
+    const report = projectStore.cleanupOrphanProjects();
+    if (report.removedProjectCount > 0 || report.danglingActivityCount > 0) {
+      shouldReloadOnClose.value = true;
+    }
+  } catch (error: any) {
+    message.value = `整理失败：${error?.message || String(error)}`;
     messageType.value = "error";
   } finally {
     isLoading.value = false;

@@ -67,13 +67,13 @@ export const MERGE_KEYS = {
     idField: "id",
     dedupeBy: "name",
   },
-  [STORAGE_KEYS.PROJECT]: {
-    strategy: MERGE_STRATEGIES.ARRAY_MERGE_DEDUP,
-    idField: "id",
-    dedupeBy: "title",
-  },
 
   // 策略3：时间戳ID数组合并（ID冲突则跳过）
+  // Project：标题可重复（未命名 / 嵌套同名），禁止按 title 去重，只按 id
+  [STORAGE_KEYS.PROJECT]: {
+    strategy: MERGE_STRATEGIES.ARRAY_WITH_ID,
+    idField: "id",
+  },
   [STORAGE_KEYS.ACTIVITY]: {
     strategy: MERGE_STRATEGIES.ARRAY_WITH_ID,
     idField: "id",
