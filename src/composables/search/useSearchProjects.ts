@@ -2,6 +2,7 @@ import { computed, ref, type Ref } from "vue";
 import { storeToRefs } from "pinia";
 import { useProjectStore } from "@/stores/useProjectStore";
 import { useDataStore } from "@/stores/useDataStore";
+import { useSearchUiStore } from "@/stores/useSearchUiStore";
 import type { Project } from "@/core/types/Project";
 import type { ActivityRow } from "@/composables/search/useSearchFilter";
 import { gatherUnassignedBySmartTags } from "@/services/project/smartGather";
@@ -54,7 +55,9 @@ function monthKeyFromTs(ts?: number): string {
 export function useSearchProjects(filteredActivities: Ref<ActivityRow[]>) {
   const projectStore = useProjectStore();
   const dataStore = useDataStore();
+  const searchUiStore = useSearchUiStore();
   const { allProjects } = storeToRefs(projectStore);
+  const { filterTagIds } = storeToRefs(searchUiStore);
 
   const selectedProjectId = ref<number | null>(null);
   const expandedIds = ref<Set<number>>(new Set());
@@ -141,6 +144,9 @@ export function useSearchProjects(filteredActivities: Ref<ActivityRow[]>) {
       const hasChildProjects = childProjects.length > 0;
       const expanded = expandedIds.value.has(p.id);
       const monthGrouped = monthGroupIds.value.has(p.id) && !hasChildProjects;
+      const hitCount = activitiesForProjectTree(p.id).length;
+      // 有 tag 筛选时：命中为 0 的文件夹不显示（含子树合计；父有命中仍会画出）
+      if (filterTagIds.value.length > 0 && hitCount === 0) return;
       out.push({
         kind: "project",
         key: `proj-${p.id}`,
@@ -148,7 +154,7 @@ export function useSearchProjects(filteredActivities: Ref<ActivityRow[]>) {
         depth,
         expanded,
         hasChildProjects,
-        hitCount: activitiesForProjectTree(p.id).length,
+        hitCount,
         monthGrouped,
       });
 

@@ -548,12 +548,16 @@ onBeforeUnmount(detachOutsideRename);
   cursor: pointer;
 }
 
-/* 选中才出 fn；hover 仅真鼠标，避免手机点 chevron 触控假 hover 闪一下 */
+/* 触控：选中才出操作钮 */
 .title-item--project.selected .row-actions {
   display: inline-flex;
 }
 
+/* 电脑：仅悬停显示；避免选中后 tag/文件夹钮一直占着 */
 @media (hover: hover) and (pointer: fine) {
+  .title-item--project.selected .row-actions {
+    display: none;
+  }
   .title-item--project:hover .row-actions {
     display: inline-flex;
   }
