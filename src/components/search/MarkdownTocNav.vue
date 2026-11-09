@@ -1,10 +1,15 @@
 <template>
-  <aside v-if="items.length" class="md-toc" :class="{ 'is-collapsed': collapsed }">
-    <button type="button" class="md-toc-toggle" :title="collapsed ? '展开目录' : '收起目录'" @click="toggle">
+  <aside v-if="items.length" class="md-toc" :class="[`md-toc--${layout}`, { 'is-collapsed': collapsed }]">
+    <button v-if="showToggle" type="button" class="md-toc-toggle" :title="collapsed ? '展开目录' : '收起目录'" @click="toggle">
       <n-icon size="20" class="md-toc-toggle-icon">
-        <!-- 右侧栏：Filled 更粗更清晰 -->
-        <ChevronLeft20Filled v-if="collapsed" />
-        <ChevronRight20Filled v-else />
+        <template v-if="layout === 'stack'">
+          <ChevronDown20Filled v-if="collapsed" />
+          <ChevronUp20Filled v-else />
+        </template>
+        <template v-else>
+          <ChevronLeft20Filled v-if="collapsed" />
+          <ChevronRight20Filled v-else />
+        </template>
       </n-icon>
     </button>
     <nav v-show="!collapsed" class="md-toc-nav" aria-label="目录">
@@ -13,7 +18,7 @@
         :key="item.id"
         type="button"
         class="md-toc-item"
-        :style="{ paddingLeft: `${0.35 + (item.level - 1) * 0.7}rem` }"
+        :style="{ paddingLeft: tocItemPad(item.level) }"
         :title="item.text"
         @click="emit('select', item.id)"
       >
@@ -24,22 +29,38 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from "vue";
+import { watch } from "vue";
 import { NIcon } from "naive-ui";
-import { ChevronLeft20Filled, ChevronRight20Filled } from "@vicons/fluent";
+import { ChevronLeft20Filled, ChevronRight20Filled, ChevronDown20Filled, ChevronUp20Filled } from "@vicons/fluent";
 import type { MarkdownTocItem } from "@/core/utils/markdownToc";
 
 const TOC_COLLAPSED_KEY = "pomotention.md-toc-collapsed";
 
-defineProps<{
-  items: MarkdownTocItem[];
-}>();
+const props = withDefaults(
+  defineProps<{
+    items: MarkdownTocItem[];
+    /** side：右侧左右开合；stack：meta 与正文之间上下开合 */
+    layout?: "side" | "stack";
+    /** false 时由外层渲染开合钮（手机 meta 行） */
+    showToggle?: boolean;
+  }>(),
+  {
+    layout: "side",
+    showToggle: true,
+  },
+);
 
 const emit = defineEmits<{
   select: [id: string];
 }>();
 
-const collapsed = ref(sessionStorage.getItem(TOC_COLLAPSED_KEY) === "1");
+const collapsed = defineModel<boolean>("collapsed", { required: true });
+
+/** stack 贴左；side 略缩进给开合钮 */
+function tocItemPad(level: number) {
+  if (props.layout === "stack") return `${(level - 1) * 0.55}rem`;
+  return `${0.35 + (level - 1) * 0.7}rem`;
+}
 
 function toggle() {
   collapsed.value = !collapsed.value;
@@ -54,36 +75,97 @@ watch(collapsed, (v) => {
 .md-toc {
   position: relative;
   flex: 0 0 auto;
+  background: transparent;
+}
+
+/* ---------- 侧栏（电脑） ---------- */
+.md-toc--side {
   display: flex;
   flex-direction: row;
   align-items: stretch;
-  /* 展开：手机固定上限 5rem */
   width: auto;
   min-width: 5rem;
   max-width: 10rem;
   align-self: stretch;
-  background: transparent;
 }
 
 @media (min-width: 431px) {
-  .md-toc:not(.is-collapsed) {
+  .md-toc--side:not(.is-collapsed) {
     min-width: 10rem;
-    max-width: 22rem; /* 电脑端上限加倍 */
+    max-width: 22rem;
   }
 }
 
-.md-toc.is-collapsed {
+.md-toc--side.is-collapsed {
   min-width: 0;
   max-width: none;
   width: 1.25rem;
 }
 
-.md-toc-toggle {
+.md-toc--side .md-toc-toggle {
   position: absolute;
-  /* 勿用 % + translateY(-50%)：会顶出 .content 的 overflow:hidden，看起来像被 meta-row 挡住，z-index 无效 */
   top: 10px;
   left: 0;
   z-index: 2;
+}
+
+.md-toc--side .md-toc-nav {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 10px 4px 8px 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+@media (max-width: 430px) {
+  .md-toc--side {
+    margin-right: 8px;
+  }
+}
+
+/* ---------- 上下叠（手机：插在 meta 与正文之间） ---------- */
+.md-toc--stack {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  flex-shrink: 0;
+}
+
+.md-toc--stack .md-toc-nav {
+  /* 目录过长时限高，区内上下滚 */
+  max-height: min(20vh, 9rem);
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  /* 手机系统条几乎看不见，单独加一截可辨认的细条 */
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--color-text-secondary, #666) 55%, transparent) transparent;
+  padding: 2px 4px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.md-toc--stack .md-toc-nav::-webkit-scrollbar {
+  width: 5px;
+}
+
+.md-toc--stack .md-toc-nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.md-toc--stack .md-toc-nav::-webkit-scrollbar-thumb {
+  background-color: color-mix(in srgb, var(--color-text-secondary, #666) 50%, transparent);
+  border-radius: 3px;
+}
+
+.md-toc-toggle {
   padding: 2px;
   border: none;
   background: transparent;
@@ -93,13 +175,6 @@ watch(collapsed, (v) => {
   border-radius: 4px;
 }
 
-/* 手机：目录开合钮离屏幕侧边多 8px */
-@media (max-width: 430px) {
-  .md-toc {
-    margin-right: 8px;
-  }
-}
-
 .md-toc-toggle-icon {
   display: block;
 }
@@ -107,19 +182,6 @@ watch(collapsed, (v) => {
 .md-toc-toggle:hover {
   color: #000;
   background: var(--color-background-light-transparent, rgba(0, 0, 0, 0.04));
-}
-
-.md-toc-nav {
-  flex: 1 1 auto;
-  min-width: 0;
-  max-height: 100%;
-  overflow-x: hidden;
-  overflow-y: auto;
-  /* 内侧留给展开按钮；顶距与正文 padding-top 对齐 */
-  padding: 10px 4px 8px 1.25rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
 }
 
 .md-toc-item {

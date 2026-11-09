@@ -195,11 +195,7 @@
         </n-tab-pane>
       </n-tabs>
     </div>
-    <ExportHitsDialog
-      v-model:show="showExportDialog"
-      :hits="exportableActivities ?? []"
-      :scope="exportScope"
-    />
+    <ExportHitsDialog v-model:show="showExportDialog" :hits="exportableActivities ?? []" :scope="exportScope" />
   </div>
 </template>
 
@@ -297,8 +293,7 @@ const showExportDialog = ref(false);
 const exportScope = computed<ExportScopeMeta>(() => {
   const sel = selectedProjectId.value;
   // 未选文件夹 ≠ 全库：仅表示未限 P；标签/关键字/星标另列
-  const projectLabel =
-    sel != null ? projectStore.getProject(sel)?.title?.trim() || `Project #${sel}` : "";
+  const projectLabel = sel != null ? projectStore.getProject(sel)?.title?.trim() || `Project #${sel}` : "";
   const tagsLabel = tagStore
     .getTagsByIds(filterTagIds.value)
     .map((t) => t.name)
@@ -465,7 +460,7 @@ function handleTagClick(tagId: number) {
 /* 手机：关闭全部 tab 按钮左右只留 2px */
 .search-container.is-mobile :deep(.n-tabs-nav__suffix) {
   padding-left: 2px;
-  padding-right: 2px;
+  padding-right: 4px;
 }
 
 .search-container.is-mobile .close-all-tabs-btn {
