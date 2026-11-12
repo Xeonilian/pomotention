@@ -77,6 +77,13 @@
         <n-button size="small" title="软删无 activity（含已删）的 todo / schedule / task / ledger" @click="confirmPurgeOrphans">
           清理数据
         </n-button>
+        <n-button
+          size="small"
+          title="activity 已 done、下游未 done：只回填 todo/schedule.status，不写 doneTime"
+          @click="confirmBackfillPlannerDone"
+        >
+          回填完成态
+        </n-button>
         <n-button size="small" type="error" @click="confirmFactoryReset">清空数据</n-button>
       </n-space>
     </n-card>
@@ -98,6 +105,10 @@ import { getCurrentUser, purgeSupabaseAuthStorage } from "@/core/services/authSe
 import { appHttpFetch } from "@/utils/appHttpFetch";
 import { syncDatabase } from "@/services/sync";
 import { orphanPurgeTotal, purgeOrphanPlannerRows } from "@/services/activity/purgeOrphanPlannerRows";
+import {
+  backfillPlannerDoneFromActivity,
+  doneBackfillTotal,
+} from "@/services/activity/backfillPlannerDoneFromActivity";
 import { buildAfdianSubscribeUrl, openExternalUrl } from "@/core/billing/afdian";
 import { CAPTURE_UI_ENABLED } from "@/core/capture";
 
@@ -399,6 +410,42 @@ function confirmPurgeOrphans() {
       notification.success({
         title: "已清理孤儿数据",
         content: `todo ${counts.todos}、schedule ${counts.schedules}、task ${counts.tasks}、ledger ${counts.ledger}`,
+        duration: 4000,
+      });
+    },
+  });
+}
+
+function doneBackfillInput() {
+  return {
+    activityById: dataStore.activityById,
+    todoList: dataStore.todoList,
+    scheduleList: dataStore.scheduleList,
+  };
+}
+
+function confirmBackfillPlannerDone() {
+  const preview = backfillPlannerDoneFromActivity(doneBackfillInput(), { dryRun: true });
+  const total = doneBackfillTotal(preview);
+  if (total === 0) {
+    notification.info({
+      title: "回填完成态",
+      content: "没有发现 activity=done 但下游未 done 的不一致。已被改成 ongoing 的需手动勾选。",
+      duration: 4000,
+    });
+    return;
+  }
+  dialog.warning({
+    title: "回填完成态",
+    content: `将把下游标为 done（不写 doneTime）：todo ${preview.todos}、schedule ${preview.schedules}。下次上传推到云端。确认继续吗？`,
+    positiveText: "确认回填",
+    negativeText: "取消",
+    onPositiveClick: () => {
+      const counts = backfillPlannerDoneFromActivity(doneBackfillInput());
+      dataStore.saveAllAfterSync();
+      notification.success({
+        title: "已回填完成态",
+        content: `todo ${counts.todos}、schedule ${counts.schedules}`,
         duration: 4000,
       });
     },
