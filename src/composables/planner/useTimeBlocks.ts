@@ -10,6 +10,7 @@ import { collectTaskRecordMarks, type TaskRecordMark } from "@/services/timetabl
 import { collectLifeRecordOverlays, type LifePointMark, type LifeSleepRange } from "@/services/timetable/lifeRecordOverlays";
 import { findDayEnergyTask } from "@/services/task/dayEnergyService";
 import { getLifeRecordKind, parseLifeRecordPlaceholder } from "@/core/lifeRecord";
+import { resolveActivityTitle } from "@/services/activity/resolveActivityTitle";
 import { useSegStore } from "@/stores/useSegStore";
 import { useTimeBlockDrag } from "./useTimeBlockDrag";
 import { storeToRefs } from "pinia";
@@ -563,7 +564,7 @@ export function useTimeBlocks(props: UseTimeBlocksProps): UseTimeBlocksReturn {
     for (const task of taskList.value) {
       if (task.deleted || !task.lifeRecords?.length) continue;
       const activity = activityById.value.get(task.sourceId);
-      const parsed = parseLifeRecordPlaceholder(task.activityTitle ?? activity?.title);
+      const parsed = parseLifeRecordPlaceholder(resolveActivityTitle(activity, task.activityTitle));
       const kind = parsed?.kind ?? getLifeRecordKind(activity);
       if (kind !== "toilet") continue;
       const ownerDay = parsed?.dayStart;

@@ -62,6 +62,7 @@ import { useDataStore } from "@/stores/useDataStore";
 import { useDevice } from "@/composables/platform/useDevice";
 import { getDateKey } from "@/core/utils";
 import { getLifeRecordKind, isClosedLifeSpan, parseLifeRecordPlaceholder } from "@/core/lifeRecord";
+import { resolveActivityTitle } from "@/services/activity/resolveActivityTitle";
 import type { HolidayDisplay } from "@/services/planner/publicHolidays";
 import { plannerHolidayMapKey } from "@/composables/planner/usePublicHolidays";
 
@@ -122,7 +123,7 @@ const lifeDayByTs = computed(() => {
   for (const task of taskList.value) {
     if (task.deleted || (task.lifeRecords?.length ?? 0) <= 0) continue;
     const activity = activityById.value.get(task.sourceId);
-    const parsed = parseLifeRecordPlaceholder(task.activityTitle ?? activity?.title);
+    const parsed = parseLifeRecordPlaceholder(resolveActivityTitle(activity, task.activityTitle));
     const kind = parsed?.kind ?? getLifeRecordKind(activity);
     if (!kind) continue;
     if ((kind === "sleep" || kind === "toilet") && !(task.lifeRecords ?? []).some(isClosedLifeSpan)) continue;

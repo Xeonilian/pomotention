@@ -196,6 +196,7 @@ import { useSettingStore } from "@/stores/useSettingStore";
 import { useDataStore } from "@/stores/useDataStore";
 import { storeToRefs } from "pinia";
 import { timestampToDatetime } from "@/core/utils";
+import { isActivityDone } from "@/services/activity/isActivityDone";
 import { useDevice } from "@/composables/platform/useDevice";
 import { bumpActivityVisibleRowEpoch, registerActivityNavigatorApi } from "@/composables/keyboard/useActivityKeyboardNavigator";
 import { registerActivityKeyboardCommandApi } from "@/composables/keyboard/useActivityKeyboardCommands";
@@ -519,7 +520,10 @@ const keyboardRowCandidates = computed(() => {
 
   const appendItems = (items: Activity[]) => {
     for (const item of items) {
-      if (item.status === "done") continue;
+      if (isActivityDone(item, {
+        getTodoByActivityId: (id) => todoByActivityId.value.get(id),
+        getScheduleByActivityId: (id) => scheduleByActivityId.value.get(id),
+      })) continue;
       if (seen.has(item.id)) continue;
       seen.add(item.id);
       list.push(item);

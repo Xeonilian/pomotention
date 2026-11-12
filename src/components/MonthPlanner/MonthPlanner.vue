@@ -114,6 +114,7 @@ import type { HolidayDisplay } from "@/services/planner/publicHolidays";
 import { plannerHolidayMapKey } from "@/composables/planner/usePublicHolidays";
 import { getPomoBadgeBgColor, getPomoColor, getStatsPomoBgColorHEX, mapPomoCountToColorRatio } from "@/core/utils/weekDays";
 import { getLifeRecordKind, parseLifeRecordPlaceholder, type LifeRecordKind } from "@/core/lifeRecord";
+import { resolveActivityTitle } from "@/services/activity/resolveActivityTitle";
 import type { LifeRecord } from "@/core/types/Task";
 import {
   activityBarScaleMs,
@@ -217,7 +218,7 @@ const days = computed(() => {
   for (const task of taskList.value) {
     if (task.deleted) continue;
     const activity = activityById.value.get(task.sourceId);
-    const parsed = parseLifeRecordPlaceholder(task.activityTitle ?? activity?.title);
+    const parsed = parseLifeRecordPlaceholder(resolveActivityTitle(activity, task.activityTitle));
     const kind = parsed?.kind ?? getLifeRecordKind(activity);
     if (!kind) continue;
     const dayStart = parsed?.dayStart ?? startOfDay(task.sourceId);
