@@ -583,15 +583,15 @@ onMounted(async () => {
     await updateDraggableContainerVisibility(true);
   }
 
-  // 每月一次的订购/打赏提示：到期则展示并推进下一次；已付费跳过（试用中仍弹）
+  // 每月一次的订购/打赏提示：到期则推进下一次；已付费跳过展示（试用中仍弹）
   if (checkSupportPromptDue()) {
     const ent = await getSyncEntitlement();
     const paidActive =
       !!ent.paidUntil && new Date(ent.paidUntil).getTime() > Date.now();
     if (!paidActive) {
       showSupportDialog.value = true;
-      advanceSupportPrompt();
     }
+    advanceSupportPrompt();
   }
 });
 
