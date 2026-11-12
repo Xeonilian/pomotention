@@ -80,39 +80,27 @@
                 </template>
               </n-button>
 
-              <!-- 已登录时显示退出登录按钮 -->
-              <n-popconfirm
+              <!-- 已登录：账号弹窗（同步 / 登出） -->
+              <n-button
                 v-if="isLoggedIn"
-                v-model:show="logoutConfirmVisible"
-                trigger="manual"
-                :on-clickoutside="handleLogoutPopconfirmClickOutside"
-                @positive-click="handleLogoutConfirm"
-                negative-text="取消"
-                positive-text="登出"
+                :size="isMobile ? 'large' : 'medium'"
+                :type="accountLogoutBtnType"
+                tertiary
+                :loading="syncStore.loggingOut"
+                :title="accountLogoutBtnTitle"
+                class="header-button"
+                @click="handleLogoutButtonClick"
+                @dblclick.prevent="handleLogoutButtonDoubleClick"
+                @touchstart.stop.passive="onLogoutButtonTouchStart"
+                @touchend.stop="onLogoutButtonTouchEnd"
+                @touchcancel.stop.passive="onLogoutButtonTouchCancel"
               >
-                <template #trigger>
-                  <n-button
-                    :size="isMobile ? 'large' : 'medium'"
-                    :type="accountLogoutBtnType"
-                    tertiary
-                    :loading="syncStore.loggingOut"
-                    :title="accountLogoutBtnTitle"
-                    class="header-button"
-                    @click="handleLogoutButtonClick"
-                    @dblclick.prevent="handleLogoutButtonDoubleClick"
-                    @touchstart.stop.passive="onLogoutButtonTouchStart"
-                    @touchend.stop="onLogoutButtonTouchEnd"
-                    @touchcancel.stop.passive="onLogoutButtonTouchCancel"
-                  >
-                    <template #icon>
-                      <n-icon>
-                        <component :is="syncStore.isSyncing ? CloudSync20Regular : Person20Regular" />
-                      </n-icon>
-                    </template>
-                  </n-button>
+                <template #icon>
+                  <n-icon>
+                    <component :is="syncStore.isSyncing ? CloudSync20Regular : Person20Regular" />
+                  </n-icon>
                 </template>
-                <span>登出后本机数据仍保留；若要清空请前往设置 → 清空本地数据。确定登出？</span>
-              </n-popconfirm>
+              </n-button>
               <n-button
                 :size="isMobile ? 'large' : 'medium'"
                 title="请我喝杯咖啡"
@@ -237,6 +225,7 @@
       </n-layout>
       <DatabaseTransferDialog v-model:show="showDatabaseDialog" />
       <SupportDialog v-model:show="showSupportDialog" />
+      <AccountDialog v-model:show="showAccountDialog" />
     </n-config-provider>
   </div>
 </template>
@@ -244,7 +233,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
-import { NMenu, NButton, NIcon, NLayoutFooter, NTag, NPopconfirm, NDropdown, NConfigProvider } from "naive-ui";
+import { NMenu, NButton, NIcon, NLayoutFooter, NTag, NDropdown, NConfigProvider } from "naive-ui";
 import { storeToRefs } from "pinia";
 import hljs from "highlight.js/lib/core";
 import javascript from "highlight.js/lib/languages/javascript";
@@ -293,6 +282,7 @@ import {
 import PomotentionTimer from "@/components/PomotentionTimer/PomotentionTimer.vue";
 import DatabaseTransferDialog from "@/components/data/DatabaseTransferDialog.vue";
 import SupportDialog from "@/components/billing/SupportDialog.vue";
+import AccountDialog from "@/components/sync/AccountDialog.vue";
 import { checkSupportPromptDue, advanceSupportPrompt } from "@/core/billing/supportPrompt";
 import { getSyncEntitlement } from "@/core/billing/entitlement";
 
@@ -352,19 +342,19 @@ const accountLogoutBtnTitle = computed(() => {
   if (syncStore.isSyncing) return "正在同步";
   if (syncStore.downloadFailed) return "云端下载未成功";
   if (dataStore.hasUnsyncedData) return "本地有未上传数据";
-  return "退出登录";
+  return "账号与同步";
 });
 
 const showDatabaseDialog = ref(false);
 const showSupportDialog = ref(false);
-const logoutConfirmVisible = ref(false);
+const showAccountDialog = ref(false);
 let logoutClickTimer: ReturnType<typeof setTimeout> | null = null;
 
 /** 与 YearPlanner 一致：移动端无 dblclick，用双触窗口识别 */
 const LOGOUT_TOUCH_KEY = 0;
 const logoutButtonTouch = createTouchScheduledSingleAndDouble(
   () => {
-    logoutConfirmVisible.value = true;
+    showAccountDialog.value = true;
   },
   () => {
     void syncOnLogoutDoubleClick();
@@ -385,16 +375,6 @@ function onLogoutButtonTouchEnd(e: TouchEvent) {
 function onLogoutButtonTouchCancel() {
   if (!isMobile.value) return;
   logoutButtonTouch.touchCancel();
-}
-
-/** manual 触发时 Naive 不会自动关层，需 onClickoutside 里关 v-model:show */
-function handleLogoutPopconfirmClickOutside() {
-  if (logoutClickTimer) {
-    clearTimeout(logoutClickTimer);
-    logoutClickTimer = null;
-  }
-  logoutButtonTouch.touchCancel();
-  logoutConfirmVisible.value = false;
 }
 
 // 移动端用 visualViewport 高度驱动外壳，减轻横竖屏与 Safari 工具栏导致的 100vh 误差
@@ -439,19 +419,6 @@ onUnmounted(() => {
 // 底部同步条：非 mini、非移动端，且正在同步或存在同步错误时显示
 const showSyncFooter = computed(() => !isMiniMode.value && !isMobile.value && Boolean(syncStore.syncError));
 
-// 处理退出登录确认
-async function handleLogoutConfirm() {
-  // 已登录时，退出前总是先执行一次完整同步；同步失败不阻断登出流程
-  if (syncStore.isLoggedIn) {
-    try {
-      await syncAll();
-    } catch (error) {
-      console.warn("[MainLayout] syncAll before logout failed:", error);
-    }
-  }
-  await syncStore.handleLogout();
-}
-
 // 桌面：短延迟区分单击 / 双击；移动端单击由 touch composable 延迟触发，此处忽略 click 避免与合成 click 重复
 function handleLogoutButtonClick() {
   if (isMobile.value) return;
@@ -461,18 +428,18 @@ function handleLogoutButtonClick() {
   }
   // 通过短延迟区分单击与双击：若随后触发 dblclick，则该单击不会生效
   logoutClickTimer = setTimeout(() => {
-    logoutConfirmVisible.value = true;
+    showAccountDialog.value = true;
     logoutClickTimer = null;
   }, 220);
 }
 
-// 双击退出按钮时，执行一次完整同步（不触发单击弹窗）；移动端对应 composable 双触
+// 双击账号按钮时，执行一次完整同步（不触发单击弹窗）；移动端对应 composable 双触
 async function syncOnLogoutDoubleClick() {
   if (logoutClickTimer) {
     clearTimeout(logoutClickTimer);
     logoutClickTimer = null;
   }
-  logoutConfirmVisible.value = false;
+  showAccountDialog.value = false;
   if (!syncStore.isLoggedIn) return;
   try {
     await syncAll();
