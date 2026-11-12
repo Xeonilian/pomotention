@@ -34,7 +34,23 @@
         :style="mobileLifeNote.placement === 'below' ? { top: `${mobileLifeNote.edge}px` } : { bottom: `${mobileLifeNote.edge}px` }"
         @click.stop
       >
-        <p class="wl-note">{{ mobileLifeNote.text }}</p>
+        <div class="wl-note-row">
+          <n-icon
+            v-if="mobileLifeNote.key.startsWith('sleep-')"
+            class="wl-note-icon"
+            :size="16"
+            :component="WeatherMoon20Filled"
+            color="var(--color-yellow-dark)"
+          />
+          <n-icon
+            v-else-if="mobileLifeNote.key.startsWith('point-eat-')"
+            class="wl-note-icon"
+            :size="16"
+            :component="FoodApple20Filled"
+            color="var(--color-red)"
+          />
+          <p class="wl-note">{{ mobileLifeNote.text }}</p>
+        </div>
       </div>
     </Teleport>
   </div>
@@ -42,6 +58,8 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, nextTick } from "vue";
+import { NIcon } from "naive-ui";
+import { FoodApple20Filled, WeatherMoon20Filled } from "@vicons/fluent";
 import WeekDayCard from "./WeekDayCard.vue";
 import { useWeekData } from "@/composables/planner/useWeekData";
 import { useWeekBlock } from "@/composables/planner/useWeekBlock";
@@ -201,8 +219,24 @@ function onDocClickCapture(e: Event) {
   box-shadow: 0 3px 14px rgba(0, 0, 0, 0.16);
 }
 
+.wl-note-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.wl-note-icon {
+  flex: 0 0 auto;
+  margin-top: 1px;
+  line-height: 0;
+}
+
 .wl-note {
   margin: 0;
+  flex: 1 1 auto;
+  min-width: 0;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   word-break: break-word;

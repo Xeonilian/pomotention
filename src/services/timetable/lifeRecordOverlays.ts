@@ -7,6 +7,7 @@ import { drinkKindLabel, drinkKindOf, eatCourseLabel, getLifeRecordDef, getLifeR
 import { timestampToTimeString } from "@/core/utils";
 import { startOfDay } from "@/core/utils/weekDays";
 import { resolveRecordTime } from "@/services/timetable/taskRecordMarks";
+import { resolveActivityTitle } from "@/services/activity/resolveActivityTitle";
 
 export type LifePointKind = Exclude<LifeRecordKind, "sleep"> | "energy" | "reward";
 
@@ -199,7 +200,7 @@ export function indexOverlayTasks(
     const hitDays = new Set<number>();
     if (task.lifeRecords?.length) {
       const activity = getActivity(task.sourceId);
-      const parsed = parseLifeRecordPlaceholder(task.activityTitle ?? activity?.title);
+      const parsed = parseLifeRecordPlaceholder(resolveActivityTitle(activity, task.activityTitle));
       const kind = parsed?.kind ?? getLifeRecordKind(activity);
       const owner =
         parsed?.dayStart ??
@@ -224,7 +225,7 @@ export function indexOverlayTasks(
 
 /** 日桶归属日：标题优先；旧数据用 sourceId 落在显示日或前一日的窗口 */
 function lifeRecordOwnerDay(task: Task, activity: Activity | undefined, viewDayStart: number): number | null {
-  const parsed = parseLifeRecordPlaceholder(task.activityTitle ?? activity?.title);
+  const parsed = parseLifeRecordPlaceholder(resolveActivityTitle(activity, task.activityTitle));
   if (parsed) return parsed.dayStart;
   if (!getLifeRecordKind(activity)) return null;
   const id = Number.isFinite(task.sourceId) ? task.sourceId : task.id;
@@ -265,7 +266,7 @@ export function collectLifeRecordOverlays(options: {
     const onPrevDay = ownerDay === prevDayStart;
     if (!onViewDay && !onPrevDay) continue;
 
-    const kind = parseLifeRecordPlaceholder(task.activityTitle ?? activity?.title)?.kind ?? getLifeRecordKind(activity);
+    const kind = parseLifeRecordPlaceholder(resolveActivityTitle(activity, task.activityTitle))?.kind ?? getLifeRecordKind(activity);
     if (!kind) continue;
 
     // 未醒终点：Week 用该行所属日的日末；TimeTable 用 now

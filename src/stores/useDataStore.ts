@@ -38,6 +38,7 @@ import {
 } from "@/services/lifeRecord/lifeRecordService";
 import { buildDayEnergyTask, findDayEnergyTask, reconcileDayEnergyTasks } from "@/services/task/dayEnergyService";
 import { handleDeleteActivity } from "@/services/activity/activityService";
+import { isActivityDone } from "@/services/activity/isActivityDone";
 import { useTagStore } from "./useTagStore";
 import { useTemplateStore } from "./useTemplateStore";
 import { useDisplayedTaskStore } from "./useDisplayedTaskStore";
@@ -1227,12 +1228,13 @@ export const useDataStore = defineStore(
     watch(
       activityList,
       (newVal) => {
+        // title / location / due*：以 activity 为准下推副本；status 不抄（勾选真相在 todo/schedule）
+        // estPomo：todo 数组为源，这里只把 estPomoI（首槽）投影进去，不能反客为主
         newVal.forEach((activity) => {
           const relatedSchedule = scheduleByActivityId.value.get(activity.id);
           if (relatedSchedule) {
             relatedSchedule.activityTitle = activity.title;
             relatedSchedule.activityDueRange = activity.dueRange ? [activity.dueRange[0], activity.dueRange[1]] : [null, "0"];
-            // 不抄 status：勾选以 schedule/todo 自身为准，避免与 activity 分表同步时互相覆盖
             relatedSchedule.location = activity.location || "";
             relatedSchedule.taskId = activity.taskId;
           }
@@ -1250,9 +1252,14 @@ export const useDataStore = defineStore(
                 relatedTodo.estPomo[0] = parseInt(activity.estPomoI);
               }
             }
-            // 不抄 status：同上，checkbox 只认 todo.status
             relatedTodo.pomoType = activity.pomoType;
             if (activity.dueDate) relatedTodo.dueDate = activity.dueDate;
+          }
+          const relatedTask = taskByActivityId.value.get(activity.id);
+          if (relatedTask && relatedTask.activityTitle !== activity.title) {
+            relatedTask.activityTitle = activity.title;
+            relatedTask.synced = false;
+            relatedTask.lastModified = Date.now();
           }
         });
       },
@@ -1269,8 +1276,16 @@ export const useDataStore = defineStore(
 
         activityList.value.forEach((activity) => {
           if (!activity.dueRange || !activity.dueRange[0]) return;
-          // 已取消或已完成的活动，不再被自动状态机覆盖
-          if (activity.status === "done" || activity.status === "cancelled") return;
+          // 已取消或已完成：完成认下游 todo/schedule，避免复写 activity 被自动机冲掉后又脏数据
+          if (activity.status === "cancelled") return;
+          if (
+            isActivityDone(activity, {
+              getTodoByActivityId: (id) => todoByActivityId.value.get(id),
+              getScheduleByActivityId: (id) => scheduleByActivityId.value.get(id),
+            })
+          ) {
+            return;
+          }
           const dueMs = typeof activity.dueRange[0] === "string" ? Date.parse(activity.dueRange[0]) : Number(activity.dueRange[0]);
 
           if (dueMs >= startOfDay && dueMs <= endOfDay) {

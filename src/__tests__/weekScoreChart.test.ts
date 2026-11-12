@@ -30,10 +30,12 @@ describe("collectWeekScoreSeries", () => {
     const byKind = Object.fromEntries(series.map((s) => [s.kind, s]));
     expect(byKind.energy?.shape).toBe("line");
     expect(byKind.reward?.shape).toBe("line");
-    expect(byKind.hunger?.points).toEqual([{ time: 10, value: 3 }]);
+    expect(byKind.hunger?.points).toEqual([{ time: 10, value: 3, recordId: 10, refKind: "eat" }]);
     expect(byKind.satiety?.fill).toBe("solid");
     expect(byKind.satiety?.points.map((p) => p.value)).toEqual([8, 5]);
+    expect(byKind.satiety?.points.every((p) => p.refKind === "eat")).toBe(true);
     expect(byKind.energy?.points.map((p) => p.value)).toEqual([7, 4, 6]);
+    expect(byKind.energy?.points.map((p) => p.refKind)).toEqual(["energy", "toilet", "sleep"]);
     expect(byKind.reward?.points[0]?.value).toBe(9);
     expect(byKind.drink).toBeUndefined();
   });

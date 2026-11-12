@@ -20,6 +20,7 @@ import {
   upsertDayEnergyFromLife,
 } from "@/services/lifeRecord/lifeEnergySync";
 import { findDayEnergyTask } from "@/services/task/dayEnergyService";
+import { resolveActivityTitle } from "@/services/activity/resolveActivityTitle";
 import { useDataStore } from "@/stores/useDataStore";
 import { useDisplayedTaskStore } from "@/stores/useDisplayedTaskStore";
 import { useSettingStore } from "@/stores/useSettingStore";
@@ -41,7 +42,7 @@ export function useLifeRecordEditor(
     const bound = task.value;
     if (!bound) return [];
     const activity = dataStore.activityById.get(bound.sourceId);
-    const titledDay = parseLifeRecordPlaceholder(bound.activityTitle ?? activity?.title)?.dayStart;
+    const titledDay = parseLifeRecordPlaceholder(resolveActivityTitle(activity, bound.activityTitle))?.dayStart;
     const dayStart = titledDay ?? plannerDayStart();
     const all = findLifeRecordTasksForDay(dataStore.taskList, recordKind.value, dayStart, dataStore.activityById);
     return all.length > 0 ? all : [bound];

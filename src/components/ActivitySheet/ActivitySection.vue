@@ -104,7 +104,7 @@
     <div v-if="!headerOnly" ref="sectionScrollEl" class="section-content-container">
       <div v-for="item in sortedDisplaySheet" :key="item.id">
         <ActivityRow
-          v-if="item.status !== 'done' && shouldShowItem(item)"
+          v-if="!activityIsDone(item) && shouldShowItem(item)"
           :item="item"
           :activity-id="activityId"
           :active-id="activeId"
@@ -142,6 +142,9 @@ import {
 import type { Activity } from "@/core/types/Activity";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useTagStore } from "@/stores/useTagStore";
+import { useDataStore } from "@/stores/useDataStore";
+import { storeToRefs } from "pinia";
+import { isActivityDone } from "@/services/activity/isActivityDone";
 import { useActivityTagEditor } from "@/composables/activity/useActivityTagEditor";
 import { useActivityDrag } from "@/composables/activity/useActivityDrag";
 import {
@@ -203,7 +206,17 @@ function onExitQuadrantSoloClick() {
   quadrantSolo?.exitSolo();
 }
 const tagStore = useTagStore();
+const dataStore = useDataStore();
+const { todoByActivityId, scheduleByActivityId } = storeToRefs(dataStore);
 const tagEditor = useActivityTagEditor();
+
+/** 完成态认下游 todo/schedule；无实例才回退 activity.status */
+function activityIsDone(activity: Activity): boolean {
+  return isActivityDone(activity, {
+    getTodoByActivityId: (id) => todoByActivityId.value.get(id),
+    getScheduleByActivityId: (id) => scheduleByActivityId.value.get(id),
+  });
+}
 
 // ======================== 列头：搜索框失焦、排序下拉、占位过滤文案 ========================
 /** 失焦筛选框（移动端标题单击仅 emit focus-row 时 DOM 焦点常仍在筛选框，需单独处理） */
@@ -314,7 +327,7 @@ function firstTagSortLabel(act: Activity): string {
 }
 
 const sortedDisplaySheet = computed(() => {
-  const activities = props.displaySheet.filter((activity: Activity) => activity.status !== "done").slice();
+  const activities = props.displaySheet.filter((activity: Activity) => !activityIsDone(activity)).slice();
 
   const activityMap = new Map<number, Activity[]>();
   const rootActivities: Activity[] = [];
@@ -412,7 +425,7 @@ const activityById = computed(() => {
 });
 
 function hasChildren(activityId: number): boolean {
-  return props.displaySheet.some((activity) => activity.parentId === activityId && activity.status !== "done");
+  return props.displaySheet.some((activity) => activity.parentId === activityId && !activityIsDone(activity));
 }
 
 /** 子行是否因祖先折叠而不可见 */

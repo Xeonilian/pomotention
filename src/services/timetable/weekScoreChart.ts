@@ -3,9 +3,14 @@ import type { LifePointMark, LifeSleepRange } from "@/services/timetable/lifeRec
 
 export type WeekScoreKind = "hunger" | "satiety" | "energy" | "reward";
 
+/** 分数点来源，点击时回查原记录 */
+export type WeekScoreRefKind = "eat" | "toilet" | "energy" | "reward" | "sleep";
+
 export interface WeekScoreDot {
   time: number;
   value: number;
+  recordId: number;
+  refKind: WeekScoreRefKind;
 }
 
 export interface WeekScoreSeries {
@@ -28,10 +33,10 @@ function scoreOf(n: number | undefined): number | null {
   return Math.min(10, Math.max(1, Math.round(n)));
 }
 
-function pushDot(out: WeekScoreDot[], time: number, raw: number | undefined): void {
+function pushDot(out: WeekScoreDot[], time: number, raw: number | undefined, recordId: number, refKind: WeekScoreRefKind): void {
   const value = scoreOf(raw);
   if (value == null) return;
-  out.push({ time, value });
+  out.push({ time, value, recordId, refKind });
 }
 
 /** 从生活点汇总序列；没数字的点不进图。活动/睡觉上的精力并进折线 */
@@ -44,19 +49,19 @@ export function collectWeekScoreSeries(points: LifePointMark[], sleeps: LifeSlee
   };
   for (const mark of points) {
     if (mark.kind === "eat") {
-      pushDot(buckets.hunger, mark.time, mark.hunger);
-      pushDot(buckets.satiety, mark.time, mark.satiety);
+      pushDot(buckets.hunger, mark.time, mark.hunger, mark.recordId, "eat");
+      pushDot(buckets.satiety, mark.time, mark.satiety, mark.recordId, "eat");
     } else if (mark.kind === "toilet") {
-      pushDot(buckets.energy, mark.endAt ?? mark.time, mark.energy);
+      pushDot(buckets.energy, mark.endAt ?? mark.time, mark.energy, mark.recordId, "toilet");
     } else if (mark.kind === "energy") {
-      pushDot(buckets.energy, mark.time, mark.energy);
+      pushDot(buckets.energy, mark.time, mark.energy, mark.recordId, "energy");
     } else if (mark.kind === "reward") {
-      pushDot(buckets.reward, mark.time, mark.reward);
+      pushDot(buckets.reward, mark.time, mark.reward, mark.recordId, "reward");
     }
   }
   for (const sleep of sleeps) {
     const t = sleep.wakeAt ?? sleep.end ?? sleep.start;
-    pushDot(buckets.energy, t, sleep.energy);
+    pushDot(buckets.energy, t, sleep.energy, sleep.recordId, "sleep");
   }
   return WEEK_SCORE_SERIES_META.map((meta) => ({
     ...meta,
@@ -78,7 +83,10 @@ export interface WeekScorePlacedBar {
   fill: "empty" | "solid";
   time: number;
   value: number;
+  recordId: number;
+  refKind: WeekScoreRefKind;
   y: number;
+  w: number;
 }
 
 const KIND_ORDER: Record<WeekScoreKind, number> = {
@@ -97,12 +105,21 @@ export function placeWeekScoreBars(
   barH = WEEK_SCORE_BAR_H,
   gap = WEEK_SCORE_BAR_GAP,
   maxY = Number.POSITIVE_INFINITY,
+  chartWidth = 0,
 ): WeekScorePlacedBar[] {
-  const flat: Omit<WeekScorePlacedBar, "y">[] = [];
+  const flat: Omit<WeekScorePlacedBar, "y" | "w">[] = [];
   for (const s of series) {
     if (s.shape === "line") continue;
     for (const p of s.points) {
-      flat.push({ kind: s.kind, color: s.color, fill: s.fill, time: p.time, value: p.value });
+      flat.push({
+        kind: s.kind,
+        color: s.color,
+        fill: s.fill,
+        time: p.time,
+        value: p.value,
+        recordId: p.recordId,
+        refKind: p.refKind,
+      });
     }
   }
   flat.sort((a, b) => a.time - b.time || KIND_ORDER[a.kind] - KIND_ORDER[b.kind]);
@@ -112,7 +129,11 @@ export function placeWeekScoreBars(
   for (const item of flat) {
     const preferred = timeToY(item.time) - barH / 2;
     const y = Math.min(Math.max(preferred, lastBottom + gap, 0), Math.max(0, maxY - barH));
-    out.push({ ...item, y });
+    out.push({
+      ...item,
+      y,
+      w: chartWidth > 0 ? Math.max(scoreBarWidth(item.value, chartWidth), 2) : 0,
+    });
     lastBottom = y + barH;
   }
   return out;
