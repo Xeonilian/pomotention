@@ -294,6 +294,7 @@ import PomotentionTimer from "@/components/PomotentionTimer/PomotentionTimer.vue
 import DatabaseTransferDialog from "@/components/data/DatabaseTransferDialog.vue";
 import SupportDialog from "@/components/billing/SupportDialog.vue";
 import { checkSupportPromptDue, advanceSupportPrompt } from "@/core/billing/supportPrompt";
+import { getSyncEntitlement } from "@/core/billing/entitlement";
 
 hljs.registerLanguage("javascript", javascript);
 hljs.registerLanguage("typescript", typescript);
@@ -615,10 +616,15 @@ onMounted(async () => {
     await updateDraggableContainerVisibility(true);
   }
 
-  // 每月一次的订购/打赏提示：到期则展示并推进下一次
+  // 每月一次的订购/打赏提示：到期则展示并推进下一次；已付费跳过（试用中仍弹）
   if (checkSupportPromptDue()) {
-    showSupportDialog.value = true;
-    advanceSupportPrompt();
+    const ent = await getSyncEntitlement();
+    const paidActive =
+      !!ent.paidUntil && new Date(ent.paidUntil).getTime() > Date.now();
+    if (!paidActive) {
+      showSupportDialog.value = true;
+      advanceSupportPrompt();
+    }
   }
 });
 
