@@ -280,7 +280,10 @@
       <template #trigger>
         <div class="life-sleep-range__hit"></div>
       </template>
-      <p class="timetable-popover-text">{{ formatLifeSleepCaption(range) }}</p>
+      <div class="timetable-popover-row">
+        <n-icon class="timetable-popover-icon" :size="16" :component="WeatherMoon20Filled" color="var(--color-yellow-dark)" />
+        <p class="timetable-popover-text">{{ formatLifeSleepCaption(range) }}</p>
+      </div>
     </NPopover>
     <div v-else class="life-sleep-range__hit" @click="onLifeSleepClick($event, range)"></div>
   </div>
@@ -319,7 +322,16 @@
       :class="{ 'mp-panel--below': mobilePopover.placement === 'below' }"
       :style="mobilePopover.placement === 'below' ? { top: `${mobilePopover.edge}px` } : { bottom: `${mobilePopover.edge}px` }"
     >
-      <p class="timetable-popover-text">{{ mobilePopover.text }}</p>
+      <div class="timetable-popover-row">
+        <n-icon
+          v-if="mobilePopover.showMoon"
+          class="timetable-popover-icon"
+          :size="16"
+          :component="WeatherMoon20Filled"
+          color="var(--color-yellow-dark)"
+        />
+        <p class="timetable-popover-text">{{ mobilePopover.text }}</p>
+      </div>
     </div>
   </Teleport>
 </template>
@@ -340,7 +352,7 @@ import { getEnergyScoreEmoji, getRewardScoreEmoji } from "@/core/scoreEmojis";
 import { useTimeBlocks, type LifeActivityRange } from "@/composables/planner/useTimeBlocks";
 import { useDevice } from "@/composables/platform/useDevice";
 import { NPopover, NIcon } from "naive-ui";
-import { Drop20Filled, FoodApple20Filled } from "@vicons/fluent";
+import { Drop20Filled, FoodApple20Filled, WeatherMoon20Filled } from "@vicons/fluent";
 
 // ======= Props =======
 const props = defineProps<{
@@ -401,8 +413,8 @@ function lifePointIcon(kind: LifePointKind): Component {
   return FoodApple20Filled;
 }
 
-/** 朝上弹出，框用屏宽（列太窄不能左右飞） */
-const popoverMaxStyle = { maxWidth: "calc(100vw - 80px)", boxSizing: "border-box" } as const;
+/** 朝上弹出：桌面可读上限，窄屏仍受屏宽约束 */
+const popoverMaxStyle = { maxWidth: "min(320px, calc(100vw - 80px))", boxSizing: "border-box" } as const;
 const popoverContentStyle = { maxWidth: "100%", boxSizing: "border-box" } as const;
 
 /** 第四列悬停：标题 + 取整分钟；时长 ≤0 不写分钟 */
@@ -427,7 +439,7 @@ function formatRecordMarkText(mark: TaskRecordMark): string {
 }
 
 // 手机记录弹出：水平贴屏幕（不跟 trigger），垂直在 badge 上侧
-type MobilePopover = { text: string; placement: "above" | "below"; edge: number };
+type MobilePopover = { text: string; placement: "above" | "below"; edge: number; showMoon?: boolean };
 const mobilePopover = ref<MobilePopover | null>(null);
 let mobilePopoverTimer: number | null = null;
 const FLIP_TOP = 96;
@@ -441,11 +453,11 @@ function closeMobilePopover() {
   }
 }
 
-function showMobilePopover(e: MouseEvent, text: string) {
+function showMobilePopover(e: MouseEvent, text: string, opts?: { showMoon?: boolean }) {
   const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
   const placement = rect.top < FLIP_TOP ? "below" : "above";
   const edge = placement === "below" ? rect.bottom + PANEL_GAP : window.innerHeight - rect.top + PANEL_GAP;
-  mobilePopover.value = { text, placement, edge };
+  mobilePopover.value = { text, placement, edge, showMoon: opts?.showMoon === true };
   if (mobilePopoverTimer != null) window.clearTimeout(mobilePopoverTimer);
   mobilePopoverTimer = window.setTimeout(closeMobilePopover, 3000);
 }
@@ -475,7 +487,7 @@ function onLifeActivityClick(e: MouseEvent, range: LifeActivityRange) {
 }
 
 function onLifeSleepClick(e: MouseEvent, range: LifeSleepRange) {
-  showMobilePopover(e, formatLifeSleepCaption(range));
+  showMobilePopover(e, formatLifeSleepCaption(range), { showMoon: true });
 }
 
 const activeEmojiPopoverTodoId = ref<number | null>(null);
@@ -909,8 +921,24 @@ const getPriorityBadgeClasses = (seg: any) => [
   font-size: 12px;
 }
 
+.timetable-popover-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.timetable-popover-icon {
+  flex: 0 0 auto;
+  margin-top: 1px;
+  line-height: 0;
+}
+
 .timetable-popover-text {
   margin: 0;
+  flex: 1 1 auto;
+  min-width: 0;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   word-break: break-word;

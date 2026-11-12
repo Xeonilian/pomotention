@@ -38,56 +38,30 @@
           :height="timeGridHeight"
           :day-start-ts="day.startTs"
           :get-hour-tick-top="getHourTickTop"
+          :interactive="lifeView"
+          @score-tap="onScoreTap"
         />
 
-        <!-- 生活图层会藏 schedule，但 sleep 色带仍画；月亮钉在醒来那一行 -->
+        <!-- 底：睡眠色带（生活层可点；普通周不钉月亮） -->
         <div
           v-for="sleep in lifeOverlay?.sleeps || []"
           :key="`life-sleep-${sleep.recordId}`"
           class="week-life-sleep"
+          :class="{ 'week-life-sleep--interactive': lifeView }"
           :style="sleepBandStyle(sleep)"
-        >
-          <div
-            v-if="!isVizLayer() && sleep.wakeAt"
-            class="week-life-sleep-moon"
-            :style="{ width: pointIconSize + 'px', height: pointIconSize + 'px' }"
-          >
-            <NPopover
-              v-if="!isMobile"
-              trigger="hover"
-              placement="top"
-              to="body"
-              :show-arrow="true"
-              :style="lifeNotePopoverStyle"
-              :content-style="lifeNoteContentStyle"
-            >
-              <template #trigger>
-                <div class="week-life-point__hit" @click.stop>
-                  <n-icon :size="pointIconSize" :component="WeatherMoon20Filled" />
-                </div>
-              </template>
-              <p class="week-life-note">{{ formatLifeSleepCaption(sleep) }}</p>
-            </NPopover>
-            <div
-              v-else-if="isMobile"
-              class="week-life-point__hit"
-              :data-life-note-key="`sleep-${sleep.recordId}`"
-              @click.stop="onMobileLifeNoteTap($event, `sleep-${sleep.recordId}`, formatLifeSleepCaption(sleep))"
-            >
-              <n-icon :size="pointIconSize" :component="WeatherMoon20Filled" />
-            </div>
-            <div v-else class="week-life-point__hit" @click.stop="onSleepBandClick(sleep)">
-              <n-icon :size="pointIconSize" :component="WeatherMoon20Filled" />
-            </div>
-          </div>
-        </div>
+          :data-life-note-key="lifeView ? `sleep-${sleep.recordId}` : undefined"
+          @click.stop="lifeView ? onSleepNoteTap($event, sleep) : undefined"
+        />
 
+        <!-- 中：活动 bar（toilet） -->
         <template v-if="lifeView">
           <div
             v-for="mark in activityBands"
             :key="`life-act-${mark.recordId}`"
-            class="week-life-activity"
+            class="week-life-activity week-life-activity--interactive"
             :style="activityBandStyle(mark)"
+            :data-life-note-key="`toilet-${mark.recordId}`"
+            @click.stop="onActivityNoteTap($event, mark)"
           />
         </template>
 
@@ -125,11 +99,20 @@
           v-for="mark in visibleLifePoints"
           :key="`life-point-${mark.kind}-${mark.recordId}`"
           class="week-life-point"
-          :class="{ 'week-life-point--drink-layer': drinkLayer }"
+          :class="{ 'week-life-point--drink-layer': drinkLayer, 'week-life-point--top': lifeView }"
           :style="drinkLayer ? getLayerPointStyle(mark) : getLifePointStyle(mark, day.startTs)"
         >
+          <!-- 生活层：无评分苹果 / 喝水层水滴 → 点击出内容 -->
+          <div
+            v-if="lifeView || drinkLayer"
+            class="week-life-point__hit"
+            :data-life-note-key="`point-${mark.kind}-${mark.recordId}`"
+            @click.stop="onPointNoteTap($event, mark)"
+          >
+            <n-icon :size="pointIconSize" :component="lifePointIcon(mark.kind)" />
+          </div>
           <NPopover
-            v-if="!isMobile"
+            v-else-if="!isMobile"
             trigger="hover"
             placement="top"
             to="body"
@@ -148,17 +131,11 @@
             <p class="week-life-note">{{ formatLifePointCaption(mark) }}</p>
           </NPopover>
           <div
-            v-else-if="isMobile"
+            v-else
             class="week-life-point__hit"
             :data-life-note-key="`point-${mark.kind}-${mark.recordId}`"
-            @click.stop="onMobileLifeNoteTap($event, `point-${mark.kind}-${mark.recordId}`, formatLifePointCaption(mark))"
+            @click.stop="onPointNoteTap($event, mark)"
           >
-            <span v-if="isScoreMark(mark)" class="week-life-energy" :style="{ fontSize: pointIconSize + 'px' }">
-              {{ scoreEmoji(mark) }}
-            </span>
-            <n-icon v-else :size="pointIconSize" :component="lifePointIcon(mark.kind)" />
-          </div>
-          <div v-else class="week-life-point__hit" @click.stop="onLifePointClick(mark)">
             <span v-if="isScoreMark(mark)" class="week-life-energy" :style="{ fontSize: pointIconSize + 'px' }">
               {{ scoreEmoji(mark) }}
             </span>
@@ -204,10 +181,10 @@ import { createTouchScheduledSingleAndDouble } from "@/composables/platform/useT
 import type { LifePointKind, LifePointMark, LifeSleepRange } from "@/services/timetable/lifeRecordOverlays";
 import { formatLifePointCaption, formatLifeSleepCaption } from "@/services/timetable/lifeRecordOverlays";
 import { getEnergyScoreEmoji, getRewardScoreEmoji } from "@/core/scoreEmojis";
-import { Door20Filled, Drop20Filled, FoodApple20Filled, WeatherMoon20Filled } from "@vicons/fluent";
+import { Door20Filled, Drop20Filled, FoodApple20Filled } from "@vicons/fluent";
 import type { DrinkKind } from "@/core/types/Task";
 import { findLifeRecordTaskForDay, isDrinkGoalMet, sumLifeRecordAmountMl } from "@/services/lifeRecord/lifeRecordService";
-import { collectWeekScoreSeries } from "@/services/timetable/weekScoreChart";
+import { collectWeekScoreSeries, type WeekScoreKind, type WeekScoreRefKind } from "@/services/timetable/weekScoreChart";
 
 const { isMobile } = useDevice();
 const dataStore = useDataStore();
@@ -358,15 +335,14 @@ const pointIconSize = computed(() => {
   return isMobile.value ? 11 : 16;
 });
 
-function isVizLayer(): boolean {
-  return !!(props.drinkLayer || props.lifeView);
-}
-
-/** 普通周：不画水滴和活动门（做什么从精力点开）。生活图层只补水滴 */
+/** 普通周只留精力/奖赏 icon；生活层无饥饱评分才落苹果；喝水层画水滴 */
 const visibleLifePoints = computed(() => {
   const points = props.lifeOverlay?.points ?? [];
-  if (isVizLayer()) return points.filter((mark) => mark.kind === "drink");
-  return points.filter((mark) => mark.kind === "eat" || mark.kind === "energy" || mark.kind === "reward");
+  if (props.drinkLayer) return points.filter((mark) => mark.kind === "drink");
+  if (props.lifeView) {
+    return points.filter((mark) => mark.kind === "eat" && mark.hunger == null && mark.satiety == null);
+  }
+  return points.filter((mark) => mark.kind === "energy" || mark.kind === "reward");
 });
 
 const activityBands = computed(() =>
@@ -393,33 +369,62 @@ function activityBandStyle(mark: LifePointMark): CSSProperties {
 
 function sleepBandStyle(sleep: LifeSleepRange): CSSProperties {
   const style = { ...props.getLifeSleepBandStyle(sleep, props.day.startTs) };
-  // 非可视化只留月亮；可视化用底色，不画 icon
-  if (!isVizLayer()) style.backgroundColor = "transparent";
+  // 普通周不画睡眠色带；生活层用底色可点
+  if (!props.lifeView) style.backgroundColor = "transparent";
   return style;
 }
 
-/** 与 TaskTracker 时间轴 popover 同策略：挂 body，避免周列 overflow 裁切 */
-const lifeNotePopoverStyle = { maxWidth: "calc(100vw - 80px)", boxSizing: "border-box" } as const;
+/** 与 TaskTracker 时间轴 popover 同策略：挂 body；桌面可读上限，窄屏仍受屏宽约束 */
+const lifeNotePopoverStyle = { maxWidth: "min(320px, calc(100vw - 80px))", boxSizing: "border-box" } as const;
 const lifeNoteContentStyle = { maxWidth: "100%", boxSizing: "border-box" } as const;
 
-function onLifePointClick(mark: LifePointMark) {
-  handleDateSelect(props.day.startTs);
-  if (props.lifeView) return;
-  if (mark.kind === "energy" || mark.kind === "reward") return;
-  emit("item-change", props.day.startTs, undefined, mark.taskId);
+function emitLifeNote(key: string, text: string, top: number, bottom: number) {
+  if (!text) return;
+  emit("life-note-tap", { key, text, top, bottom });
 }
 
-function onSleepBandClick(sleep: LifeSleepRange) {
-  handleDateSelect(props.day.startTs);
-  if (props.lifeView) return;
-  emit("item-change", props.day.startTs, undefined, sleep.taskId);
-}
-
-function onMobileLifeNoteTap(e: MouseEvent, key: string, text: string) {
+function onLifeNoteTap(e: MouseEvent, key: string, text: string) {
   const el = e.currentTarget as HTMLElement | null;
-  if (!el || !text) return;
+  if (!el) return;
   const rect = el.getBoundingClientRect();
-  emit("life-note-tap", { key, text, top: rect.top, bottom: rect.bottom });
+  emitLifeNote(key, text, rect.top, rect.bottom);
+}
+
+function onSleepNoteTap(e: MouseEvent, sleep: LifeSleepRange) {
+  onLifeNoteTap(e, `sleep-${sleep.recordId}`, formatLifeSleepCaption(sleep));
+}
+
+function onActivityNoteTap(e: MouseEvent, mark: LifePointMark) {
+  onLifeNoteTap(e, `toilet-${mark.recordId}`, formatLifePointCaption(mark));
+}
+
+function onPointNoteTap(e: MouseEvent, mark: LifePointMark) {
+  onLifeNoteTap(e, `point-${mark.kind}-${mark.recordId}`, formatLifePointCaption(mark));
+}
+
+function resolveScoreNote(recordId: number, refKind: WeekScoreRefKind): { key: string; text: string } | null {
+  if (refKind === "sleep") {
+    const sleep = props.lifeOverlay?.sleeps?.find((s) => s.recordId === recordId);
+    if (!sleep) return null;
+    return { key: `sleep-${recordId}`, text: formatLifeSleepCaption(sleep) };
+  }
+  const wantKind = refKind === "eat" ? "eat" : refKind === "toilet" ? "toilet" : refKind;
+  const mark = props.lifeOverlay?.points?.find((p) => p.recordId === recordId && p.kind === wantKind);
+  if (!mark) return null;
+  return { key: `point-${mark.kind}-${mark.recordId}`, text: formatLifePointCaption(mark) };
+}
+
+function onScoreTap(payload: {
+  key: string;
+  recordId: number;
+  refKind: WeekScoreRefKind;
+  scoreKind: WeekScoreKind;
+  top: number;
+  bottom: number;
+}) {
+  const resolved = resolveScoreNote(payload.recordId, payload.refKind);
+  if (!resolved) return;
+  emitLifeNote(resolved.key, resolved.text, payload.top, payload.bottom);
 }
 
 /** 生活图层水滴：水蓝、咖啡褐、饮品淡橙、酒淡红 */
@@ -663,31 +668,37 @@ const handleItemChange = (id: number, _ts: number, activityId?: number, taskId?:
 }
 
 .week-life-sleep {
+  z-index: 1;
   border-radius: 2px;
   pointer-events: none;
   overflow: visible;
 }
 
+.week-life-sleep--interactive {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
 .week-life-activity {
+  z-index: 2;
   border-radius: 2px;
   pointer-events: none;
 }
 
-.week-life-sleep-moon {
-  position: absolute;
-  left: 50%;
-  bottom: 0;
-  z-index: 8;
-  color: var(--color-yellow-dark);
+.week-life-activity--interactive {
   pointer-events: auto;
-  transform: translate(-50%, 50%);
+  cursor: pointer;
 }
 
 .week-life-point {
+  z-index: 4;
   pointer-events: auto;
 }
 
-.week-life-sleep :deep(.n-popover-trigger),
+.week-life-point--top {
+  z-index: 5;
+}
+
 .week-life-point :deep(.n-popover-trigger) {
   display: block;
   width: 100%;
@@ -707,8 +718,24 @@ const handleItemChange = (id: number, _ts: number, activityId?: number, taskId?:
   user-select: none;
 }
 
+.week-life-note-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.week-life-note-icon {
+  flex: 0 0 auto;
+  margin-top: 1px;
+  line-height: 0;
+}
+
 .week-life-note {
   margin: 0;
+  flex: 1 1 auto;
+  min-width: 0;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   word-break: break-word;
