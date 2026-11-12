@@ -9,12 +9,13 @@
           selected: !isDragging && selectedId === item.project.id,
           'is-dragging-source': isProjectDragging(item.project.id),
           'drop-hover': isProjectDropHover(item.project.id),
+          'arrange-touch': !selectOnTap && isMobile,
         },
         `indent-${Math.min(item.depth, 8)}`,
       ]"
       :data-drop-kind="'project'"
       :data-drop-id="item.project.id"
-      @click="emit('select', item.project.id)"
+      @click="onProjectRowClick(item.project.id)"
     >
       <button type="button" class="chevron-btn" title="展开/收起" @click.stop="emit('toggle', item.project.id)">
         <n-icon size="16">
@@ -41,7 +42,7 @@
         :title="isMobile ? '拖动调整层级；连点两下改名' : '拖动调整层级；双击改名'"
         @pointerdown.stop="onProjectTitlePointerDown($event, item.project.id)"
         @click.stop
-        @dblclick.stop="emit('start-rename', item.project.id)"
+        @dblclick.stop="onProjectTitleDblClick(item.project.id)"
       >{{ item.project.title }}</span>
 
       <!-- 手机改名不藏 fn；桌面改名仍藏以免挤输入框 -->
@@ -152,6 +153,7 @@
       :depth="item.depth"
       :drop-project-id="activityDropProjectId(item.row.activityId)"
       :is-dragging-source="isActivityDragging(item.row.activityId)"
+      :open-on-tap="selectOnTap"
       @open="emit('open-activity', $event)"
       @tag-click="emit('tag-click', $event)"
       @filter-class="emit('filter-class', $event)"
@@ -175,7 +177,7 @@
 </template>
 
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, ref, watch } from "vue";
+import { computed, nextTick, onBeforeUnmount, ref, watch } from "vue";
 import { NButton, NIcon, NModal, NPopconfirm } from "naive-ui";
 import {
   ChevronDown20Regular,
@@ -215,7 +217,11 @@ const props = defineProps<{
   hoverTarget: SearchDropTarget | null;
   /** activityId → 所属 projectId（用于落点） */
   activityProjectIdOf: (activityId: number) => number | null | undefined;
+  /** false=列表整理态：不选中/不改名/不打开，只滚+拖 */
+  selectOnTap?: boolean;
 }>();
+
+const selectOnTap = computed(() => props.selectOnTap !== false);
 
 const emit = defineEmits<{
   select: [id: number];
@@ -290,21 +296,36 @@ function onTagPickerShow(projectId: number, open: boolean) {
 
 /** 标题：轻点选中/双触改名；横滑拖；竖滑交给列表（对齐 SearchActivityRow） */
 const PROJECT_DRAG_THRESHOLD = 8;
+const PROJECT_ARRANGE_THRESHOLD = 24;
+const PROJECT_LONG_PRESS_DRAG_MS = 320;
+const PROJECT_ARRANGE_LONG_PRESS_MS = 180;
 let titlePress: {
   projectId: number;
   startX: number;
   startY: number;
+  lastY: number;
   pointerId: number;
   originalEvent: PointerEvent;
+  captureRoot: HTMLElement;
   preferScroll: boolean;
+  arrangeMode: boolean;
+  scrollingList: boolean;
 } | null = null;
+let titleLongPressTimer: ReturnType<typeof setTimeout> | null = null;
 
 const titleTap = createTouchScheduledSingleAndDouble<number>(
   (id) => emit("select", id),
   (id) => emit("start-rename", id),
 );
 
+function clearTitleLongPressTimer() {
+  if (titleLongPressTimer == null) return;
+  clearTimeout(titleLongPressTimer);
+  titleLongPressTimer = null;
+}
+
 function clearTitlePressListeners() {
+  clearTitleLongPressTimer();
   if (!titlePress) return;
   window.removeEventListener("pointermove", onTitlePressMove);
   window.removeEventListener("pointerup", onTitlePressUp);
@@ -312,44 +333,101 @@ function clearTitlePressListeners() {
   titlePress = null;
 }
 
+function onProjectRowClick(projectId: number) {
+  if (!selectOnTap.value) return;
+  emit("select", projectId);
+}
+
+function onProjectTitleDblClick(projectId: number) {
+  if (!selectOnTap.value) return;
+  emit("start-rename", projectId);
+}
+
+function findTitleList(el: HTMLElement | null): HTMLElement | null {
+  return el?.closest(".title-list") as HTMLElement | null;
+}
+
+function beginProjectDragFromPress() {
+  if (!titlePress || titlePress.scrollingList) return;
+  const { originalEvent, projectId, captureRoot } = titlePress;
+  clearTitlePressListeners();
+  titleTap.touchCancel();
+  emit("drag-start", originalEvent, { kind: "project", id: projectId }, captureRoot);
+}
+
 function onProjectTitlePointerDown(e: PointerEvent, projectId: number) {
   if (e.button !== 0 && e.pointerType === "mouse") return;
+  const handle = e.currentTarget as HTMLElement | null;
+  const captureRoot = (handle?.closest(".title-item") as HTMLElement | null) ?? handle;
+  if (!captureRoot) return;
+  const preferScroll = e.pointerType === "touch" || props.isMobile;
+  const arrangeMode = preferScroll && !selectOnTap.value;
+  // 触摸立刻压默认：否则安卓先选字；竖滑仍靠 touch-action: pan-y（整理态见 arrange-touch）
+  if (preferScroll) e.preventDefault();
   titlePress = {
     projectId,
     startX: e.clientX,
     startY: e.clientY,
+    lastY: e.clientY,
     pointerId: e.pointerId,
     originalEvent: e,
-    preferScroll: e.pointerType === "touch" || props.isMobile,
+    captureRoot,
+    preferScroll,
+    arrangeMode,
+    scrollingList: false,
   };
   window.addEventListener("pointermove", onTitlePressMove);
   window.addEventListener("pointerup", onTitlePressUp);
   window.addEventListener("pointercancel", onTitlePressCancel);
+
+  if (preferScroll) {
+    clearTitleLongPressTimer();
+    titleLongPressTimer = setTimeout(() => {
+      titleLongPressTimer = null;
+      beginProjectDragFromPress();
+    }, arrangeMode ? PROJECT_ARRANGE_LONG_PRESS_MS : PROJECT_LONG_PRESS_DRAG_MS);
+  }
 }
 
 function onTitlePressMove(e: PointerEvent) {
   if (!titlePress || e.pointerId !== titlePress.pointerId) return;
+
+  if (titlePress.scrollingList) {
+    const list = findTitleList(titlePress.captureRoot);
+    if (list) list.scrollTop += titlePress.lastY - e.clientY;
+    titlePress.lastY = e.clientY;
+    return;
+  }
+
   const dx = e.clientX - titlePress.startX;
   const dy = e.clientY - titlePress.startY;
-  if (Math.hypot(dx, dy) <= PROJECT_DRAG_THRESHOLD) return;
+  const threshold = titlePress.arrangeMode ? PROJECT_ARRANGE_THRESHOLD : PROJECT_DRAG_THRESHOLD;
+  if (Math.hypot(dx, dy) <= threshold) return;
 
   if (titlePress.preferScroll && Math.abs(dy) >= Math.abs(dx)) {
+    if (titlePress.arrangeMode) {
+      clearTitleLongPressTimer();
+      titlePress.scrollingList = true;
+      titleTap.touchCancel();
+      const list = findTitleList(titlePress.captureRoot);
+      if (list) list.scrollTop += titlePress.lastY - e.clientY;
+      titlePress.lastY = e.clientY;
+      return;
+    }
     clearTitlePressListeners();
     titleTap.touchCancel();
     return;
   }
 
   e.preventDefault();
-  const { originalEvent, projectId } = titlePress;
-  clearTitlePressListeners();
-  titleTap.touchCancel();
-  emit("drag-start", originalEvent, { kind: "project", id: projectId });
+  beginProjectDragFromPress();
 }
 
 function onTitlePressUp(e: PointerEvent) {
   if (!titlePress || e.pointerId !== titlePress.pointerId) return;
-  const { projectId } = titlePress;
+  const { projectId, scrollingList } = titlePress;
   clearTitlePressListeners();
+  if (scrollingList || !selectOnTap.value) return;
   if (props.isMobile || e.pointerType === "touch") {
     titleTap.touchEnd(projectId);
     return;
@@ -460,7 +538,11 @@ onBeforeUnmount(detachOutsideRename);
 
 .title-item.is-dragging-source {
   opacity: 0.45;
-  pointer-events: none;
+  /* 勿 pointer-events:none：安卓会立刻 pointercancel */
+}
+
+.title-item.arrange-touch .drag-handle {
+  touch-action: none;
 }
 
 .title-item--month {

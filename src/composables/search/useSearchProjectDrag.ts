@@ -15,24 +15,25 @@ export type SearchProjectDragOptions = {
 };
 
 /**
- * 数据页 Project / 3in1 拖拽：对齐 useActivityDrag
- * Pointer + setPointerCapture + elementsFromPoint（data-drop-kind），非 HTML5 DnD。
+ * 数据页 Project / 3in1 拖拽：Pointer + window 监听 + elementsFromPoint。
+ * 不用 setPointerCapture：源行一加 pointer-events:none / 重绘时安卓会立刻 pointercancel。
  */
 export function useSearchProjectDrag(options: SearchProjectDragOptions) {
   const isDragging = ref(false);
   const dragSource = ref<SearchDragSource | null>(null);
   const hoverTarget = ref<SearchDropTarget | null>(null);
 
-  let captureEl: HTMLElement | null = null;
-
   function findDropTarget(x: number, y: number): SearchDropTarget | null {
     for (const el of document.elementsFromPoint(x, y)) {
-      const node = (el as HTMLElement).closest?.("[data-drop-kind]") as HTMLElement | null;
-      if (!node) continue;
-      const kind = node.dataset.dropKind;
+      const node = el as HTMLElement;
+      // 跳过拖源（源行可继续接事件，避免 pointercancel）
+      if (node.closest?.(".is-dragging-source")) continue;
+      const drop = node.closest?.("[data-drop-kind]") as HTMLElement | null;
+      if (!drop || drop.classList.contains("is-dragging-source")) continue;
+      const kind = drop.dataset.dropKind;
       if (kind === "root") return { kind: "root" };
       if (kind === "project") {
-        const id = Number(node.dataset.dropId);
+        const id = Number(drop.dataset.dropId);
         if (Number.isFinite(id)) return { kind: "project", id };
       }
     }
@@ -56,35 +57,41 @@ export function useSearchProjectDrag(options: SearchProjectDragOptions) {
     return raw;
   }
 
-  function startDrag(event: PointerEvent, source: SearchDragSource, captureRoot?: HTMLElement | null) {
+  /** 拖中禁止页面/列表跟手滚动 */
+  function suppressScroll(event: Event) {
     event.preventDefault();
-    if (event.button !== 0 && event.pointerType === "mouse") return;
+  }
 
-    // 长按延时后 originalEvent.currentTarget 已空；优先用按下时记下的行根
-    const el = captureRoot ?? (event.currentTarget as HTMLElement | null) ?? (event.target as HTMLElement | null);
-    if (!el) return;
+  function startDrag(event: PointerEvent, source: SearchDragSource, _captureRoot?: HTMLElement | null) {
+    event.preventDefault();
+    if (event.pointerType === "mouse" && event.button > 0) return;
+
+    try {
+      window.getSelection()?.removeAllRanges();
+    } catch {
+      /* ignore */
+    }
 
     isDragging.value = true;
     dragSource.value = source;
     hoverTarget.value = resolveHover(event.clientX, event.clientY);
-    captureEl = el;
+
+    window.addEventListener("pointermove", handleDragMove);
+    window.addEventListener("pointerup", handleDragEnd);
+    window.addEventListener("pointercancel", handleDragEnd);
+    // 非 passive：否则安卓拖时仍滚列表并吞手势
+    window.addEventListener("touchmove", suppressScroll, { passive: false });
 
     try {
-      el.setPointerCapture(event.pointerId);
+      navigator.vibrate?.(12);
     } catch {
-      isDragging.value = false;
-      dragSource.value = null;
-      hoverTarget.value = null;
-      captureEl = null;
-      return;
+      /* ignore */
     }
-    el.addEventListener("pointermove", handleDragMove);
-    el.addEventListener("pointerup", handleDragEnd);
-    el.addEventListener("pointercancel", handleDragEnd);
   }
 
   function handleDragMove(event: PointerEvent) {
     if (!isDragging.value || !dragSource.value) return;
+    event.preventDefault();
     hoverTarget.value = resolveHover(event.clientX, event.clientY);
   }
 
@@ -100,18 +107,10 @@ export function useSearchProjectDrag(options: SearchProjectDragOptions) {
     dragSource.value = null;
     hoverTarget.value = null;
 
-    const el = captureEl ?? (event.currentTarget as HTMLElement | null);
-    captureEl = null;
-    if (el) {
-      try {
-        el.releasePointerCapture(event.pointerId);
-      } catch {
-        /* 已释放则忽略 */
-      }
-      el.removeEventListener("pointermove", handleDragMove);
-      el.removeEventListener("pointerup", handleDragEnd);
-      el.removeEventListener("pointercancel", handleDragEnd);
-    }
+    window.removeEventListener("pointermove", handleDragMove);
+    window.removeEventListener("pointerup", handleDragEnd);
+    window.removeEventListener("pointercancel", handleDragEnd);
+    window.removeEventListener("touchmove", suppressScroll);
   }
 
   return {

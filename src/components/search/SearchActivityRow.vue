@@ -2,7 +2,12 @@
   <div
     class="title-item"
     :class="[
-      { active, 'is-dragging-source': isDraggingSource, 'drop-hover': isDropHover },
+      {
+        active,
+        'is-dragging-source': isDraggingSource,
+        'drop-hover': isDropHover,
+        'arrange-touch': !openOnTap && isMobile,
+      },
       row.class === 'T' ? 'todo' : 'schedule',
       indentClass,
     ]"
@@ -80,6 +85,8 @@ const props = withDefaults(
     dropProjectId?: number | null;
     isDraggingSource?: boolean;
     isDropHover?: boolean;
+    /** false=列表整理态：轻点不打开，只滚/拖 */
+    openOnTap?: boolean;
   }>(),
   {
     active: false,
@@ -88,6 +95,7 @@ const props = withDefaults(
     dropProjectId: null,
     isDraggingSource: false,
     isDropHover: false,
+    openOnTap: true,
   },
 );
 
@@ -113,16 +121,24 @@ const typeFilterTitle = computed(() => {
 
 /** 整行：轻点打开；横滑拖；竖滑交给列表；手机长按进拖（压过安卓选字） */
 const DRAG_THRESHOLD = 8;
+/** 整理态允许多抖一点再取消长按 */
+const ARRANGE_DRAG_THRESHOLD = 24;
 /** 略短于系统长按选字，先抢到手势 */
 const LONG_PRESS_DRAG_MS = 320;
+const ARRANGE_LONG_PRESS_MS = 180;
 let rowPress: {
   startX: number;
   startY: number;
+  lastY: number;
   pointerId: number;
-  lastEvent: PointerEvent;
+  /** 始终用 pointerdown：桌面 move 的 button 不可靠 */
+  originalEvent: PointerEvent;
   captureRoot: HTMLElement;
   /** 触摸 / 手机：竖滑优先滚动 */
   preferScroll: boolean;
+  /** 整理态：竖滑改手动滚列表，避免 touch-action 与长按互抢 */
+  arrangeMode: boolean;
+  scrollingList: boolean;
 } | null = null;
 let longPressTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -142,47 +158,76 @@ function clearRowPressListeners() {
 }
 
 function beginDragFromPress() {
-  if (!rowPress) return;
-  const { lastEvent, captureRoot } = rowPress;
+  if (!rowPress || rowPress.scrollingList) return;
+  const { originalEvent, captureRoot } = rowPress;
   clearRowPressListeners();
-  emit("drag-start", lastEvent, props.row.activityId, captureRoot);
+  emit("drag-start", originalEvent, props.row.activityId, captureRoot);
+}
+
+function findTitleList(el: HTMLElement | null): HTMLElement | null {
+  return el?.closest(".title-list") as HTMLElement | null;
 }
 
 function onRowPointerDown(e: PointerEvent) {
-  if (e.button !== 0 && e.pointerType === "mouse") return;
+  if (e.pointerType === "mouse" && e.button > 0) return;
   const captureRoot = e.currentTarget as HTMLElement | null;
   if (!captureRoot) return;
+  const preferScroll = e.pointerType === "touch" || props.isMobile;
+  const arrangeMode = preferScroll && !props.openOnTap;
+  // 触摸立刻压默认：否则安卓先进入选字/复制；竖滑仍靠 touch-action: pan-y（整理态见下）
+  if (preferScroll) e.preventDefault();
   rowPress = {
     startX: e.clientX,
     startY: e.clientY,
+    lastY: e.clientY,
     pointerId: e.pointerId,
-    lastEvent: e,
+    originalEvent: e,
     captureRoot,
-    preferScroll: e.pointerType === "touch" || props.isMobile,
+    preferScroll,
+    arrangeMode,
+    scrollingList: false,
   };
   window.addEventListener("pointermove", onRowPressMove);
   window.addEventListener("pointerup", onRowPressUp);
   window.addEventListener("pointercancel", onRowPressCancel);
 
-  // 手机：长按开始拖，避免安卓长按进复制/选字
-  if (rowPress.preferScroll) {
+  // 手机：长按开始拖（整理态更短，更容易进拖）
+  if (preferScroll) {
     clearLongPressTimer();
     longPressTimer = setTimeout(() => {
       longPressTimer = null;
       beginDragFromPress();
-    }, LONG_PRESS_DRAG_MS);
+    }, arrangeMode ? ARRANGE_LONG_PRESS_MS : LONG_PRESS_DRAG_MS);
   }
 }
 
 function onRowPressMove(e: PointerEvent) {
   if (!rowPress || e.pointerId !== rowPress.pointerId) return;
-  rowPress.lastEvent = e;
+
+  // 整理态已改手动滚：跟手滚列表
+  if (rowPress.scrollingList) {
+    const list = findTitleList(rowPress.captureRoot);
+    if (list) list.scrollTop += rowPress.lastY - e.clientY;
+    rowPress.lastY = e.clientY;
+    return;
+  }
+
   const dx = e.clientX - rowPress.startX;
   const dy = e.clientY - rowPress.startY;
-  if (Math.hypot(dx, dy) <= DRAG_THRESHOLD) return;
+  const threshold = rowPress.arrangeMode ? ARRANGE_DRAG_THRESHOLD : DRAG_THRESHOLD;
+  if (Math.hypot(dx, dy) <= threshold) return;
 
   // 手机竖滑：放弃拖，让 title-list 滚动
   if (rowPress.preferScroll && Math.abs(dy) >= Math.abs(dx)) {
+    if (rowPress.arrangeMode) {
+      // touch-action:none 时浏览器不滚；改手动滚，并取消长按
+      clearLongPressTimer();
+      rowPress.scrollingList = true;
+      const list = findTitleList(rowPress.captureRoot);
+      if (list) list.scrollTop += rowPress.lastY - e.clientY;
+      rowPress.lastY = e.clientY;
+      return;
+    }
     clearRowPressListeners();
     return;
   }
@@ -193,7 +238,9 @@ function onRowPressMove(e: PointerEvent) {
 
 function onRowPressUp(e: PointerEvent) {
   if (!rowPress || e.pointerId !== rowPress.pointerId) return;
+  const wasScroll = rowPress.scrollingList;
   clearRowPressListeners();
+  if (wasScroll || !props.openOnTap) return;
   emit("open", props.row);
 }
 
@@ -226,6 +273,11 @@ function formatMMDD(ts?: number) {
   touch-action: pan-y;
 }
 
+/* 整理态：禁止浏览器抢手势；竖滑改脚本滚，长按进拖 */
+.title-item.arrange-touch {
+  touch-action: none;
+}
+
 .title-item :deep(*) {
   user-select: none;
   -webkit-user-select: none;
@@ -248,7 +300,7 @@ function formatMMDD(ts?: number) {
 
 .title-item.is-dragging-source {
   opacity: 0.45;
-  pointer-events: none;
+  /* 勿 pointer-events:none：与 capture/重绘叠在一起安卓会立刻 cancel */
 }
 
 .type-icon {

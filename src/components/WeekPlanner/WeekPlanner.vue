@@ -205,7 +205,7 @@ function onDocClickCapture(e: Event) {
 </style>
 
 <style>
-/* 手机生活备注：水平贴屏幕，垂直跟着图标（与 Task 时间轴同策略） */
+/* 生活备注：垂直跟着图标；手机水平贴屏，桌面约 1/3 宽居中 */
 .wl-panel {
   position: fixed;
   left: 12px;
@@ -217,6 +217,15 @@ function onDocClickCapture(e: Event) {
   background: var(--color-bg-base, #fff);
   color: var(--color-text-primary, #333);
   box-shadow: 0 3px 14px rgba(0, 0, 0, 0.16);
+}
+
+@media (min-width: 431px) {
+  .wl-panel {
+    left: 50%;
+    right: auto;
+    width: min(33vw, 360px);
+    transform: translateX(-50%);
+  }
 }
 
 .wl-note-row {

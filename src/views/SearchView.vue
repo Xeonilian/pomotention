@@ -3,7 +3,7 @@
     <!-- 左侧：Activity 主列表 -->
     <div class="left-pane" :class="{ 'left-pane--mobile-split': isMobile }" :style="isMobile ? undefined : { width: searchWidth + 'px' }">
       <div class="search-tool">
-        <!-- 手机：input 前切换 Project 列表；始终留 tab 条 + search 行 -->
+        <!-- 手机：三态 列表满/分屏/上满；search 行始终保留 -->
         <n-button
           v-if="isMobile"
           text
@@ -109,7 +109,7 @@
       <div
         v-show="showProjectList"
         class="title-list"
-        :class="{ 'drop-hover-root': isRootDropHover }"
+        :class="{ 'drop-hover-root': isRootDropHover, 'is-dragging': isDragging }"
         data-drop-kind="root"
         @scroll.passive="onTitleListScroll"
       >
@@ -129,6 +129,7 @@
           :hover-target="hoverTarget"
           :activity-project-id-of="activityProjectIdOf"
           :filter-activity-class="filterActivityClass"
+          :select-on-tap="!isArrangeMode"
           @select="selectProject"
           @toggle="toggleExpand"
           @start-rename="startRename"
@@ -158,6 +159,7 @@
           :is-mobile="isMobile"
           :filter-activity-class="filterActivityClass"
           :is-dragging-source="dragSource?.kind === 'activity' && dragSource.id === row.activityId"
+          :open-on-tap="!isArrangeMode"
           @open="onOpenNestedActivity"
           @tag-click="handleTagClick"
           @filter-class="toggleFilterActivityClass"
@@ -370,7 +372,13 @@ const {
   containerClass: mobilePaneClass,
   toggleTitle: mobilePaneToggleTitle,
   showProjectList,
-} = useSearchMobilePanes(isMobile, () => openedTabs.value.length);
+  isArrangeMode,
+} = useSearchMobilePanes(isMobile);
+
+// 进整理态清掉选中，避免残留高亮/操作钮和拖抢手势
+watch(isArrangeMode, (on) => {
+  if (on) selectedProjectId.value = null;
+});
 
 const searchWidth = computed({
   get: () => settingStore.settings.searchWidth,
@@ -546,21 +554,16 @@ function handleTagClick(tagId: number) {
   min-height: 0;
 }
 
-/* 无 tab：上区只留 tab 条，下列表吃满剩余 */
-.search-container.is-mobile.search-container--no-tabs .right-pane {
-  flex: 0 0 auto;
-}
-
-.search-container.is-mobile.search-container--no-tabs .left-pane {
-  flex: 1 1 0%;
-}
-
-.search-container.is-mobile.search-container--no-tabs :deep(.n-tabs-pane-wrapper),
-.search-container.is-mobile.search-container--no-tabs :deep(.n-tab-pane) {
+/* 列表整理：上区整块去掉，下列表吃满；search 行仍在 */
+.search-container.is-mobile.search-container--list-full .right-pane {
   display: none;
 }
 
-/* 只有上面：藏列表，仍留 input 行（+ tab 条在上） */
+.search-container.is-mobile.search-container--list-full .left-pane {
+  flex: 1 1 0%;
+}
+
+/* 只有上面：藏列表，仍留 input 行（切换钮不丢） */
 .search-container.is-mobile.search-container--top-full .left-pane {
   flex: 0 0 auto;
   overflow: hidden;
@@ -701,6 +704,11 @@ function handleTagClick(tagId: number) {
 .title-list.drop-hover-root {
   outline: 1px dashed var(--color-blue, #5b8def);
   outline-offset: -1px;
+}
+
+.title-list.is-dragging {
+  touch-action: none;
+  overflow: hidden;
 }
 
 .title-item {
