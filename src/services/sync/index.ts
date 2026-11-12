@@ -19,6 +19,7 @@ import { SettingsSyncService } from "./settingsSync";
 import { BaseSyncService } from "./baseSyncService";
 import { findActiveCountLeaks, type ActiveCountRow } from "./completenessProbe";
 import { formatDownloadDetails, isTimeoutMessage, type SyncSkip } from "./plannerFieldMerge";
+import { orphanPurgeTotal, purgeOrphanPlannerRows } from "@/services/activity/purgeOrphanPlannerRows";
 
 const shouldLogSyncDebug = ["1", "true"].includes(String(import.meta.env.VITE_SYNC_DEBUG_LOG ?? "").trim().toLowerCase());
 function syncDebugLog(...args: unknown[]) {
@@ -325,6 +326,26 @@ async function _internalDownload(lastSyncTimestamp: number, opts?: { reconcilePl
 }
 
 /**
+ * 下载后：activity 已删/缺失时，提前软删本地 orphan 子表（不等待云端子表 delete）。
+ * 标 synced=false，留给下次上传；本轮不重入同步。
+ */
+function purgeOrphansAfterDownload(dataStore: ReturnType<typeof useDataStore>): void {
+  const counts = purgeOrphanPlannerRows({
+    activityById: dataStore._activityById,
+    todoList: dataStore.todoList,
+    scheduleList: dataStore.scheduleList,
+    taskList: dataStore.taskList,
+    ledgerList: dataStore.ledgerList,
+  });
+  const total = orphanPurgeTotal(counts);
+  if (total > 0) {
+    syncDebugLog(
+      `[Sync] orphan purge: todo=${counts.todos} schedule=${counts.schedules} task=${counts.tasks} ledger=${counts.ledger}`,
+    );
+  }
+}
+
+/**
  * 内部清理逻辑
  */
 async function _internalCleanup(): Promise<boolean> {
@@ -439,6 +460,11 @@ export async function syncAll() {
     const downRes = await _internalDownload(lastSync);
     errors.push(...downRes.errors);
 
+    // 2b. activity 云端已删时，本地提前级联软删 orphan 子表
+    if (downRes.errors.length === 0) {
+      purgeOrphansAfterDownload(dataStore);
+    }
+
     // 3. 清理 (不阻塞主流程，失败也不报错给用户)
     await _internalCleanup();
 
@@ -499,6 +525,10 @@ export async function syncDatabase() {
 
     const downRes = await _internalDownload(lastSync, { reconcilePlanner: true });
     errors.push(...downRes.errors);
+
+    if (downRes.errors.length === 0) {
+      purgeOrphansAfterDownload(dataStore);
+    }
 
     await _internalCleanup();
 
