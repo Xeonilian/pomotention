@@ -74,6 +74,9 @@
         >
           同步数据
         </n-button>
+        <n-button size="small" title="软删无 activity（含已删）的 todo / schedule / task / ledger" @click="confirmPurgeOrphans">
+          清理数据
+        </n-button>
         <n-button size="small" type="error" @click="confirmFactoryReset">清空数据</n-button>
       </n-space>
     </n-card>
@@ -94,6 +97,7 @@ import { getVersion } from "@tauri-apps/api/app";
 import { getCurrentUser, purgeSupabaseAuthStorage } from "@/core/services/authService";
 import { appHttpFetch } from "@/utils/appHttpFetch";
 import { syncDatabase } from "@/services/sync";
+import { orphanPurgeTotal, purgeOrphanPlannerRows } from "@/services/activity/purgeOrphanPlannerRows";
 import { buildAfdianSubscribeUrl, openExternalUrl } from "@/core/billing/afdian";
 import { CAPTURE_UI_ENABLED } from "@/core/capture";
 
@@ -361,6 +365,44 @@ async function handleSyncDatabase() {
   } catch (error) {
     console.error("[Setting] 同步数据库失败:", error);
   }
+}
+
+function orphanPurgeInput() {
+  return {
+    activityById: dataStore.activityById,
+    todoList: dataStore.todoList,
+    scheduleList: dataStore.scheduleList,
+    taskList: dataStore.taskList,
+    ledgerList: dataStore.ledgerList,
+  };
+}
+
+function confirmPurgeOrphans() {
+  const preview = purgeOrphanPlannerRows(orphanPurgeInput(), { dryRun: true });
+  const total = orphanPurgeTotal(preview);
+  if (total === 0) {
+    notification.info({
+      title: "清理孤儿数据",
+      content: "没有发现需要清理的孤儿数据。",
+      duration: 3000,
+    });
+    return;
+  }
+  dialog.warning({
+    title: "清理孤儿数据",
+    content: `将软删无 activity（含已删）的关联数据：todo ${preview.todos}、schedule ${preview.schedules}、task ${preview.tasks}、ledger ${preview.ledger}。不会立刻同步，下次上传时推到云端。确认继续吗？`,
+    positiveText: "确认清理",
+    negativeText: "取消",
+    onPositiveClick: () => {
+      const counts = purgeOrphanPlannerRows(orphanPurgeInput());
+      dataStore.saveAllAfterSync();
+      notification.success({
+        title: "已清理孤儿数据",
+        content: `todo ${counts.todos}、schedule ${counts.schedules}、task ${counts.tasks}、ledger ${counts.ledger}`,
+        duration: 4000,
+      });
+    },
+  });
 }
 
 async function openSubscribe() {

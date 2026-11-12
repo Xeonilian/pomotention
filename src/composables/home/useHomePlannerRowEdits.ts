@@ -7,6 +7,8 @@ type TodoItem = {
   activityTitle?: string;
   startTime?: number;
   doneTime?: number;
+  startTimeCleared?: boolean;
+  doneTimeCleared?: boolean;
   synced?: boolean;
   lastModified?: number;
 };
@@ -17,6 +19,7 @@ type ScheduleItem = {
   activityTitle?: string;
   activityDueRange: [number | null, string];
   doneTime?: number;
+  doneTimeCleared?: boolean;
   location?: string;
   synced?: boolean;
   lastModified?: number;
@@ -55,21 +58,26 @@ interface UseHomePlannerRowEditsOptions {
 }
 
 export function useHomePlannerRowEdits(options: UseHomePlannerRowEditsOptions) {
+  /** title 以 activity 为准：先写 activity，再下推 todo/schedule/task 副本 */
   const handleEditScheduleTitle = (id: number, newTitle: string) => {
     const schedule = options.scheduleById.value.get(id);
     if (!schedule) return;
 
     const normalizedTitle = options.onScheduleTitleSaved?.(id, newTitle) ?? newTitle;
-    schedule.activityTitle = normalizedTitle;
     const activity = options.activityById.value.get(schedule.activityId);
-    if (!activity) return;
+    if (!activity) {
+      schedule.activityTitle = normalizedTitle;
+      options.saveAllDebounced();
+      return;
+    }
     activity.title = normalizedTitle;
     activity.synced = false;
     activity.lastModified = Date.now();
+    schedule.activityTitle = activity.title;
 
     const relatedTask = options.taskByActivityId.value.get(schedule.activityId);
     if (relatedTask) {
-      relatedTask.activityTitle = normalizedTitle;
+      relatedTask.activityTitle = activity.title;
     }
     options.saveAllDebounced();
   };
@@ -79,17 +87,20 @@ export function useHomePlannerRowEdits(options: UseHomePlannerRowEditsOptions) {
     if (!todo) return;
 
     const normalizedTitle = options.onTodoTitleSaved?.(id, newTitle) ?? newTitle;
-    todo.activityTitle = normalizedTitle;
-
     const activity = options.activityById.value.get(todo.activityId);
-    if (!activity) return;
+    if (!activity) {
+      todo.activityTitle = normalizedTitle;
+      options.saveAllDebounced();
+      return;
+    }
     activity.title = normalizedTitle;
     activity.synced = false;
     activity.lastModified = Date.now();
+    todo.activityTitle = activity.title;
 
     const relatedTask = options.taskByActivityId.value.get(todo.activityId);
     if (relatedTask) {
-      relatedTask.activityTitle = normalizedTitle;
+      relatedTask.activityTitle = activity.title;
     }
     options.saveAllDebounced();
   };
@@ -119,21 +130,22 @@ export function useHomePlannerRowEdits(options: UseHomePlannerRowEditsOptions) {
     }
 
     const normalizedTitle = options.onTodoTitleSaved?.(id, payload.title) ?? payload.title;
-    todo.activityTitle = normalizedTitle;
-
     const activity = options.activityById.value.get(todo.activityId);
     if (activity) {
       activity.title = normalizedTitle;
       activity.synced = false;
       activity.lastModified = now;
+      todo.activityTitle = activity.title;
+    } else {
+      todo.activityTitle = normalizedTitle;
     }
 
     const relatedTask = options.taskByActivityId.value.get(todo.activityId);
     if (relatedTask) {
-      relatedTask.activityTitle = normalizedTitle;
+      relatedTask.activityTitle = activity?.title ?? normalizedTitle;
       // 与单独改 start 一致：description 恰为 "#" 时带上标题
       if (payload.startTime && relatedTask.description?.trim() === "#") {
-        relatedTask.description = `# ${normalizedTitle}`;
+        relatedTask.description = `# ${relatedTask.activityTitle}`;
         relatedTask.synced = false;
         relatedTask.lastModified = now;
       }

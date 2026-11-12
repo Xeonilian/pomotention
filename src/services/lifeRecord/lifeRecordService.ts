@@ -11,6 +11,7 @@ import {
   LIFE_RECORD_DEFS,
   type LifeRecordKind,
 } from "@/core/lifeRecord";
+import { resolveActivityTitle } from "@/services/activity/resolveActivityTitle";
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** 用 time 的时分替换 date 的时分（编辑只动时刻、不动日期） */
@@ -90,7 +91,7 @@ export function findLifeRecordTasksForDay(
     if (task.deleted) return false;
     const activity = activityById.get(task.sourceId);
     if (!activity || activity.deleted) return false;
-    if (parseLifeRecordPlaceholder(task.activityTitle ?? activity.title)) return false;
+    if (parseLifeRecordPlaceholder(resolveActivityTitle(activity, task.activityTitle))) return false;
     if (getLifeRecordKind(activity) !== kind) return false;
     return task.sourceId >= dayStart && task.sourceId < dayStart + DAY_MS;
   });
