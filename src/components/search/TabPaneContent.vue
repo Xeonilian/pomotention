@@ -549,7 +549,7 @@ function scrollToHeading(id: string) {
 
 @media (max-width: 430px) {
   .task-content {
-    padding-top: 2px;
+    padding-top: 8px;
   }
 }
 </style>

@@ -194,10 +194,13 @@ function onRowPointerDown(e: PointerEvent) {
   // 手机：长按开始拖（整理态更短，更容易进拖）
   if (preferScroll) {
     clearLongPressTimer();
-    longPressTimer = setTimeout(() => {
-      longPressTimer = null;
-      beginDragFromPress();
-    }, arrangeMode ? ARRANGE_LONG_PRESS_MS : LONG_PRESS_DRAG_MS);
+    longPressTimer = setTimeout(
+      () => {
+        longPressTimer = null;
+        beginDragFromPress();
+      },
+      arrangeMode ? ARRANGE_LONG_PRESS_MS : LONG_PRESS_DRAG_MS,
+    );
   }
 }
 
@@ -362,7 +365,7 @@ function formatMMDD(ts?: number) {
 }
 
 .date {
-  margin-left: 4px;
+  margin: 0 4px;
   color: var(--color-text-secondary, #666);
   font-variant-numeric: tabular-nums;
   flex-shrink: 0;

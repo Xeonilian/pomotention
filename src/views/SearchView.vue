@@ -557,7 +557,7 @@ function handleTagClick(tagId: number) {
 /* 仅右侧给滚动条留位，避免弹出时挤内容（勿加左边缝） */
 .search-container.is-mobile .title-list {
   scrollbar-gutter: stable;
-  padding-right: 4px;
+  padding-right: 2px;
   padding-left: 2px;
   box-sizing: border-box;
 }
@@ -599,18 +599,6 @@ function handleTagClick(tagId: number) {
   background: var(--color-blue);
   width: 4px;
 }
-
-/* .resize-handle-horizontal::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  width: 4px;
-  height: 30px;
-  background: var(--color-background-dark);
-  border-radius: 2px;
-} */
 
 .left-pane {
   display: flex;
@@ -901,10 +889,6 @@ function handleTagClick(tagId: number) {
 @media (max-width: 430px) {
   .title-item {
     padding: 2px 0px;
-  }
-  /* 手机：略收拢图标给搜索框，负 margin 只留一点（-8 会叠） */
-  .search-tool {
-    gap: 4px;
   }
 
   .search-tool-actions {
