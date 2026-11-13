@@ -5,6 +5,8 @@ import { getSession } from "@/core/services/authService";
 
 /** 短缓存，避免自动同步频繁打网关 */
 const CACHE_TTL_MS = 60_000;
+/** 网关不可达时尽快 fail-open，避免登出/同步干等浏览器超时 */
+const FETCH_TIMEOUT_MS = 5_000;
 
 interface EntitlementResponse {
   ai: { plan: "free" | "premium"; until?: string };
@@ -70,9 +72,12 @@ export async function getSyncEntitlement(): Promise<SyncEntitlementResult> {
 
   let paidUntil: string | null = null;
   let trialUntil: string | null = null;
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
     const res = await fetch(`${base}/v1/entitlement`, {
       headers: { Authorization: `Bearer ${jwt}` },
+      signal: controller.signal,
     });
     if (!res.ok) {
       // 网关出错：fail-open，不缓存
@@ -82,8 +87,10 @@ export async function getSyncEntitlement(): Promise<SyncEntitlementResult> {
     paidUntil = data.sync?.until ?? null;
     trialUntil = data.sync?.trialUntil ?? null;
   } catch {
-    // 网关不可达：fail-open，不缓存
+    // 超时 / 不可达：fail-open，不缓存（workers.dev 国内常挂）
     return { allowed: true, denyReason: null, trialUntil: null, paidUntil: null };
+  } finally {
+    window.clearTimeout(timeoutId);
   }
 
   const now = Date.now();

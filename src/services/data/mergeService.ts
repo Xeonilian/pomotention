@@ -69,6 +69,11 @@ export const MERGE_KEYS = {
   },
 
   // 策略3：时间戳ID数组合并（ID冲突则跳过）
+  // Project：标题可重复（未命名 / 嵌套同名），禁止按 title 去重，只按 id
+  [STORAGE_KEYS.PROJECT]: {
+    strategy: MERGE_STRATEGIES.ARRAY_WITH_ID,
+    idField: "id",
+  },
   [STORAGE_KEYS.ACTIVITY]: {
     strategy: MERGE_STRATEGIES.ARRAY_WITH_ID,
     idField: "id",
@@ -99,6 +104,7 @@ const FILE_TO_KEY_MAP: Record<string, string> = {
   "todayTodo.json": STORAGE_KEYS.TODO,
   "writingTemplate.json": STORAGE_KEYS.WRITING_TEMPLATE,
   "tag.json": STORAGE_KEYS.TAG,
+  "project.json": STORAGE_KEYS.PROJECT,
   "globalSettings.json": STORAGE_KEYS.GLOBAL_SETTINGS,
   "timeTableBlocks.json": STORAGE_KEYS.TIMETABLE_BLOCKS,
 };

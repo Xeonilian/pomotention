@@ -23,6 +23,9 @@ UNION ALL
 SELECT 'public.tags',
        (SELECT COUNT(*)::bigint FROM public.tags t, u WHERE t.user_id = u.user_id)
 UNION ALL
+SELECT 'public.projects',
+       (SELECT COUNT(*)::bigint FROM public.projects t, u WHERE t.user_id = u.user_id)
+UNION ALL
 SELECT 'public.templates',
        (SELECT COUNT(*)::bigint FROM public.templates t, u WHERE t.user_id = u.user_id)
 ORDER BY entity;

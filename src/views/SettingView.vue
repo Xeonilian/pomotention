@@ -4,8 +4,8 @@
       <n-tab-pane name="general" tab="通用信息">
         <SettingGeneralTab />
       </n-tab-pane>
-      <n-tab-pane name="pomo" tab="番茄时钟参数">
-        <SettingPomoTab />
+      <n-tab-pane name="prefs" tab="软件设置">
+        <SettingPrefsTab />
       </n-tab-pane>
       <n-tab-pane name="shortcuts" tab="快捷键映射">
         <SettingShortcutTab />
@@ -21,7 +21,7 @@
 import { ref } from "vue";
 import { NTabs, NTabPane } from "naive-ui";
 import SettingGeneralTab from "@/components/setting/SettingGeneralTab.vue";
-import SettingPomoTab from "@/components/setting/SettingPomoTab.vue";
+import SettingPrefsTab from "@/components/setting/SettingPrefsTab.vue";
 import SettingShortcutTab from "@/components/setting/SettingShortcutTab.vue";
 import SettingDebugTab from "@/components/setting/SettingDebugTab.vue";
 

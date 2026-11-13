@@ -6,6 +6,7 @@ let TodoSyncService: any;
 let ScheduleSyncService: any;
 let TaskSyncService: any;
 let TagSyncService: any;
+let ProjectSyncService: any;
 let TemplateSyncService: any;
 let LedgerSyncService: any;
 // let TimetableSyncService: any;
@@ -53,6 +54,7 @@ export async function initSyncServices(dataStore: ReturnType<typeof useDataStore
     ScheduleSyncService = (await import("./scheduleSync")).ScheduleSyncService;
     TaskSyncService = (await import("./taskSync")).TaskSyncService;
     TagSyncService = (await import("./tagSync")).TagSyncService;
+    ProjectSyncService = (await import("./projectSync")).ProjectSyncService;
     TemplateSyncService = (await import("./templateSync")).TemplateSyncService;
     LedgerSyncService = (await import("./ledgerSync")).LedgerSyncService;
   } catch (error) {
@@ -89,6 +91,11 @@ export async function initSyncServices(dataStore: ReturnType<typeof useDataStore
     () => dataStore._tagById,
   );
 
+  const projectSync = new ProjectSyncService(
+    () => dataStore.projectList,
+    () => dataStore._projectById,
+  );
+
   const templateSync = new TemplateSyncService(
     () => dataStore.templateList,
     () => dataStore._templateById,
@@ -108,6 +115,7 @@ export async function initSyncServices(dataStore: ReturnType<typeof useDataStore
     { name: "Schedules", service: scheduleSync },
     { name: "Tasks", service: taskSync },
     { name: "Tags", service: tagSync },
+    { name: "Projects", service: projectSync },
     { name: "Templates", service: templateSync },
     { name: "Ledger", service: ledgerSync },
   ];
@@ -278,7 +286,7 @@ async function _internalDownload(lastSyncTimestamp: number, opts?: { reconcilePl
   const downloadPromise = new Promise<SyncResult>(async (resolve) => {
     const errors: string[] = [];
     let downloaded = 0;
-    const details: { name: string; fetched: number; downloaded: number; cloudDeleted?: number }[] = [];
+    const details: { name: string; fetched: number; downloaded: number; cloudDeleted?: number; skipped?: SyncSkip[] }[] = [];
 
     // 并行下载所有表
     const results = await Promise.allSettled(

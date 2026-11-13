@@ -45,7 +45,7 @@
 import { computed, ref } from "vue";
 import { NButton, NIcon, NModal, NPopover } from "naive-ui";
 import { Wallet20Regular } from "@vicons/fluent";
-import { useDevice } from "@/composables/platform/useDevice";
+import { useCenteredPanel as createCenteredPanel } from "@/composables/ui/useCenteredPanel";
 import type { LedgerEntry } from "@/core/types/LedgerEntry";
 import LedgerEntryPanel from "@/components/Ledger/LedgerEntryPanel.vue";
 
@@ -57,11 +57,10 @@ const emit = defineEmits<{
   delete: [entryId: number];
 }>();
 
-const { isMobile, width } = useDevice();
 const showPanel = ref(false);
 
 /** 手机真机 + 窄屏预览：居中 modal，避免表格滚动区内 popover 偏移 */
-const useCenteredPanel = computed(() => isMobile.value || width.value < 768);
+const useCenteredPanel = createCenteredPanel();
 
 const triggerTitle = computed(() => `已录入 ${props.entries.length} 笔收支，点击查看`);
 

@@ -1,21 +1,28 @@
 ---
 name: dev-branch
 description: >-
-  Recreates `dev` from latest `main` after merge-delete: verify with
-  `git fetch origin --prune`, confirm `origin/dev` gone or merged into main,
-  checkout main, pull --prune, force-move local `dev` to `main` (`branch -f`),
-  fetch --prune, checkout dev, verify main===dev, push -u. No force-push.
-  Use for dev-branch / 重建 dev.
+  Recreates `dev` from latest `main` ONLY after a full gate/release merge-delete
+  (dev tip fully in main). Never wipe mid-gate after hotfix — reconnect main into
+  existing dev instead. Verify with fetch --prune; branch -f local dev to main;
+  push -u; no force-push. Use for 重建 dev / after 收工. Solo flow: RELEASE-dev.md.
 ---
 
 # 重建并发布 `dev` 分支
+
+## 何时不要重建（先读）
+
+日常是 **单线 `dev` + hotfix**（见 [`docs/dev-log/ship/RELEASE-dev.md`](../../docs/dev-log/ship/RELEASE-dev.md)）。
+
+- **`hotfix` 刚进 `main`，本关还在 `dev`：** **禁止**执行下文「把 `dev` 指到 `main`」。应把新 `main` **接回**现有 `dev`（rebase 或 cherry-pick 本关提交）。指空 = 冲掉未发功能。
+- **只有**「本关整支已 squash 进 `main`、发布分支已删、用户收工」时，才走下文重建干净 `dev`。
+- 用户不必手敲重建命令；由 Agent 在收工时执行。
 
 ## 前提（本流程默认成立）
 
 - 上一支 **`dev` 已通过 PR 合并进 `main`**，且托管平台已开启 **合并后删除分支**，因此 **远端不再有 `origin/dev`**（或等价地：`origin/dev` 上的提交已全部在 `origin/main` 中）。
 - 本地只是在 `main` 最新基础上 **新建同名 `dev` 并首次推送**，**不需要、也不使用强推**。
 
-若远端仍残留 **独立提交** 的 `dev`（未进 `main`），应先 **合并 PR** 或在托管端处理后再继续；**勿**对 `dev` 做 `--force`。
+若远端仍残留 **独立提交** 的 `dev`（未进 `main`），应先 **合并 PR** 或在托管端处理后再继续；**勿**对 `dev` 做 `--force`。也 **勿**在本关未发完时用本 skill 覆盖远端 `dev`。
 
 ## 为何不用「删分支再 `checkout -b`」（重要）
 

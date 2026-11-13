@@ -287,7 +287,8 @@ export function subscribeAuthStateChanges(): void {
 
     if (event === "SIGNED_IN") {
       recordAuthLifecycleEvent("auth_SIGNED_IN");
-      await applySignedInSession(session);
+      // 后台同步：勿阻塞登录页 / Auth 回调等到整轮 syncAll 结束
+      await applySignedInSession(session, { backgroundSync: true });
     } else if (event === "SIGNED_OUT") {
       recordAuthLifecycleEvent("auth_SIGNED_OUT", intentionalSignOutInProgress ? "during_intentional" : "unexpected");
       if (intentionalSignOutInProgress) {

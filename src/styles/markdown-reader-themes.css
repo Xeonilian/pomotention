@@ -1,0 +1,214 @@
+/* Markdown 阅读主题：挂在 .md-reader.md-theme-* 上（Task 只读区 / 数据页详情） */
+
+.md-reader {
+  /* 字号 / 行距 / 篇幅由设置写入；经典排版仍在组件 scoped 里，避免互相覆盖 */
+  font-size: var(--md-font-size, 14px);
+  line-height: var(--md-line-height, 1.6);
+  max-width: var(--md-max-width, none);
+  word-break: break-word;
+}
+
+/* classic：不在此文件定义，用 TaskRecord / TabPaneContent 原样式 */
+
+/* ---------- github：常见 GH README 阅读感 ---------- */
+.md-reader.md-theme-github h1,
+.md-reader.md-theme-github h2 {
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-text-secondary) 35%, transparent);
+  margin: 1.1em 0 0.6em;
+  font-weight: 650;
+}
+.md-reader.md-theme-github h1 {
+  font-size: 1.75em;
+}
+.md-reader.md-theme-github h2 {
+  font-size: 1.35em;
+}
+.md-reader.md-theme-github h3 {
+  font-size: 1.15em;
+  margin: 1em 0 0.45em;
+}
+.md-reader.md-theme-github p {
+  margin: 0 0 0.85em;
+}
+.md-reader.md-theme-github a {
+  color: var(--color-blue);
+  text-decoration: none;
+}
+.md-reader.md-theme-github a:hover {
+  text-decoration: underline;
+}
+.md-reader.md-theme-github code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.9em;
+  background: color-mix(in srgb, var(--color-background-dark) 55%, transparent);
+  padding: 0.15em 0.4em;
+  border-radius: 6px;
+}
+.md-reader.md-theme-github pre {
+  background: color-mix(in srgb, var(--color-background-dark) 45%, var(--color-background));
+  border-radius: 8px;
+  padding: 12px 14px;
+  overflow: auto;
+  margin: 0 0 1em;
+}
+.md-reader.md-theme-github pre code {
+  background: transparent;
+  padding: 0;
+  font-size: 0.88em;
+}
+.md-reader.md-theme-github blockquote {
+  margin: 0 0 1em;
+  padding: 0 1em;
+  color: var(--color-text-secondary);
+  border-left: 0.25em solid color-mix(in srgb, var(--color-text-secondary) 45%, transparent);
+  background: transparent;
+}
+.md-reader.md-theme-github ul,
+.md-reader.md-theme-github ol {
+  padding-left: 1.8em;
+  margin: 0 0 1em;
+}
+.md-reader.md-theme-github li + li {
+  margin-top: 0.25em;
+}
+.md-reader.md-theme-github table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0 0 1em;
+}
+.md-reader.md-theme-github th,
+.md-reader.md-theme-github td {
+  border: 1px solid color-mix(in srgb, var(--color-text-secondary) 35%, transparent);
+  padding: 6px 11px;
+}
+.md-reader.md-theme-github th {
+  background: color-mix(in srgb, var(--color-background-dark) 40%, transparent);
+  font-weight: 600;
+}
+
+/* ---------- spacious：疏朗 ---------- */
+.md-reader.md-theme-spacious {
+  letter-spacing: 0.01em;
+}
+.md-reader.md-theme-spacious h1,
+.md-reader.md-theme-spacious h2,
+.md-reader.md-theme-spacious h3 {
+  margin: 1.35em 0 0.55em;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+.md-reader.md-theme-spacious h1 {
+  font-size: 1.7em;
+}
+.md-reader.md-theme-spacious h2 {
+  font-size: 1.35em;
+}
+.md-reader.md-theme-spacious h3 {
+  font-size: 1.15em;
+}
+.md-reader.md-theme-spacious p {
+  margin: 0 0 1.05em;
+}
+.md-reader.md-theme-spacious ul,
+.md-reader.md-theme-spacious ol {
+  padding-left: 1.6em;
+  margin: 0 0 1.05em;
+}
+.md-reader.md-theme-spacious li {
+  margin: 0.35em 0;
+}
+.md-reader.md-theme-spacious code {
+  background: var(--color-background-light);
+  border-radius: 4px;
+  padding: 0.12em 0.35em;
+  font-family: Consolas, Monaco, monospace;
+}
+.md-reader.md-theme-spacious pre {
+  background: var(--color-background-light);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin: 0 0 1.1em;
+}
+.md-reader.md-theme-spacious pre code {
+  background: transparent;
+  padding: 0;
+}
+.md-reader.md-theme-spacious blockquote {
+  margin: 0 0 1.1em;
+  padding: 0.4em 0 0.4em 1em;
+  border-left: 3px solid var(--color-blue);
+  background: color-mix(in srgb, var(--color-blue) 8%, transparent);
+  border-radius: 0 8px 8px 0;
+}
+
+/* ---------- ink：长文墨水感 ---------- */
+.md-reader.md-theme-ink {
+  font-family: "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", serif;
+}
+.md-reader.md-theme-ink h1,
+.md-reader.md-theme-ink h2,
+.md-reader.md-theme-ink h3 {
+  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-weight: 700;
+  margin: 1.4em 0 0.55em;
+  letter-spacing: 0.02em;
+}
+.md-reader.md-theme-ink h1 {
+  font-size: 1.65em;
+  text-align: left;
+}
+.md-reader.md-theme-ink h2 {
+  font-size: 1.3em;
+  border-bottom: 1px dashed color-mix(in srgb, var(--color-text-secondary) 40%, transparent);
+  padding-bottom: 0.25em;
+}
+.md-reader.md-theme-ink p {
+  margin: 0 0 1em;
+  text-align: justify;
+}
+.md-reader.md-theme-ink blockquote {
+  margin: 0 0 1em;
+  padding: 0.5em 1em;
+  background: transparent;
+  border-left: none;
+  font-style: italic;
+  color: var(--color-text-secondary);
+}
+.md-reader.md-theme-ink code,
+.md-reader.md-theme-ink pre {
+  font-family: Consolas, Monaco, monospace;
+  font-style: normal;
+}
+.md-reader.md-theme-ink code {
+  background: var(--color-background-light);
+  padding: 0.1em 0.35em;
+  border-radius: 3px;
+}
+.md-reader.md-theme-ink pre {
+  background: var(--color-background-light);
+  padding: 12px;
+  border-radius: 6px;
+  margin: 0 0 1em;
+  overflow: auto;
+}
+.md-reader.md-theme-ink pre code {
+  background: transparent;
+  padding: 0;
+}
+.md-reader.md-theme-ink ul,
+.md-reader.md-theme-ink ol {
+  padding-left: 1.5em;
+  margin: 0 0 1em;
+}
+
+/* 压过各主题 h* 的 margin，避免首行标题上方空一大截 */
+.md-reader[class*="md-theme-"] > :first-child {
+  margin-top: 0;
+}
+
+/* 各主题任务列表勾选框：相对文字略下移 */
+.md-reader li input[type="checkbox"],
+.md-reader .markdown-checkbox {
+  vertical-align: -0.3em;
+}

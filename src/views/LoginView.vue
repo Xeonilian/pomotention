@@ -312,7 +312,8 @@ async function performSignIn() {
     session = await getSession();
   }
   if (session) {
-    await applySignedInSession(session);
+    // 与冷启动 INITIAL_SESSION 一致：先进首页，同步后台跑，避免真机干等 syncAll
+    await applySignedInSession(session, { backgroundSync: true });
   }
   subscribeAuthStateChanges();
   router.push({ name: "Home" });

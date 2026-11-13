@@ -1,7 +1,7 @@
 <template>
   <n-modal v-model:show="visible" preset="dialog" title="支持 Pomotention" style="width: 420px; max-width: 92vw">
     <n-space vertical>
-      <n-text>谢谢你用到现在 🙏</n-text>
+      <n-text>感谢你用到现在 🙏</n-text>
       <template v-if="loading">
         <n-text>读取账号中…</n-text>
       </template>
@@ -14,9 +14,10 @@
         <n-button size="small" type="primary" @click="goLogin">去登录</n-button>
       </template>
       <template v-else>
-        <n-text>登录起 14 天免费同步，之后 9 元/月 ☁️</n-text>
+        <n-text>首次同步免费14天，费用 9 元/月 ☁️</n-text>
         <n-space align="center" :size="8">
           <n-text v-if="countdownLabel" depth="3" style="font-size: 12px">⏳ {{ countdownLabel }}</n-text>
+          <n-text v-else-if="countdownExpired" depth="3" style="font-size: 12px">⚠️ 云同步已到期</n-text>
           <n-button size="tiny" quaternary @click="copyUserId">{{ copyHint }}</n-button>
         </n-space>
         <n-text depth="3" style="font-size: 12px">回馈老用户：年付 49 元/首年 ✨</n-text>
@@ -59,7 +60,7 @@ const loading = ref(false);
 const userId = ref<string | null>(null);
 const copyHint = ref("复制账号");
 // 须解构到顶层：嵌套 ref 在模板里不解包，v-if 会把 Ref 对象当 truthy，只剩 ⏳ 看不到文案
-const { label: countdownLabel, refresh: refreshCountdown } = useSyncCountdown();
+const { label: countdownLabel, expired: countdownExpired, refresh: refreshCountdown } = useSyncCountdown();
 
 async function loadUser() {
   loading.value = true;

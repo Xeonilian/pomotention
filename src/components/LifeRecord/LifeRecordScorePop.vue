@@ -53,7 +53,7 @@ import type { Component } from "vue";
 import { computed, ref, watch } from "vue";
 import { Dismiss20Regular } from "@vicons/fluent";
 import { NIcon, NModal, NPopover, NSlider } from "naive-ui";
-import { useDevice } from "@/composables/platform/useDevice";
+import { useCenteredPanel as createCenteredPanel } from "@/composables/ui/useCenteredPanel";
 
 const props = withDefaults(
   defineProps<{
@@ -65,9 +65,8 @@ const props = withDefaults(
   { placement: "top" },
 );
 const emit = defineEmits<{ "update:modelValue": [value: number | null] }>();
-const { isMobile, width } = useDevice();
 /** 与账本弹出同一套：真机手机 + 窄屏预览居中，避免跟 trigger 歪出屏幕 */
-const useCenteredPanel = computed(() => isMobile.value || width.value < 768);
+const useCenteredPanel = createCenteredPanel();
 const open = ref(false);
 const scored = computed(() => props.modelValue != null && Number.isFinite(props.modelValue));
 const draft = ref(5);

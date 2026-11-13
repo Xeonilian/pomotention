@@ -18,9 +18,16 @@ gh pr merge <num> --squash --delete-branch
 
 细节与模板：[`docs/dev-log/ship/PR.md`](docs/dev-log/ship/PR.md) §5。
 
-## PR 收工结尾（合并之后必做）
+## PR 收工结尾（合并之后）
 
-合并 squash 进 `main` 且远端 PR 分支已删后，**以重建 `dev` 为结束**（本地 + 远端各一条与 `main` 同提交的 `dev`）：
+### 先判断：能不能重建空 `dev`
+
+| 刚合进 `main` 的是… | 做完后 |
+|---|---|
+| **整关 / 发布 PR**（`dev` 上本关已全部进 `main`，远端 PR 分支已删） | **重建** 干净 `dev`（与 `main` 同提交）→ 下节命令 |
+| **`hotfix`**，而 `dev` 上 **还有未发的本关** | **接回**：把新 `main` 并进现有 `dev`，**禁止**把 `dev` 指空成 main（会冲掉未发功能）。日常约定见 [`RELEASE-dev.md`](docs/dev-log/ship/RELEASE-dev.md) |
+
+### 仅「整关已进 main」时：重建 `dev`
 
 ```bash
 git checkout main
@@ -37,6 +44,7 @@ git push -u origin dev
 - 远端 `origin/dev` 若已被 `--delete-branch` 删掉：`push -u` 会 **新建** 与 `main` 对齐的 `dev`。
 - **不要** 对 `dev` 做 `--force` push。
 - 完整说明：skill [`dev-branch`](../../.cursor/skills/dev-branch/SKILL.md)。
+- **用户不需要也不必手敲** `branch -f`；收工时由 Agent 执行。
 
 ## 收工后（若本关完成）
 

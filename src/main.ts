@@ -60,6 +60,7 @@ const app = createApp({
 //配色
 import "./styles/colors.css";
 import "./styles/global.css";
+import "./styles/markdown-reader-themes.css";
 
 app.use(pinia);
 app.use(router);

@@ -1,7 +1,14 @@
 <!-- TaskRecord.vue -->
 <template>
   <div class="task-record">
-    <div v-if="!isEditing" class="markdown-content" @click="handleClick" :title="isEditing ? '单击启动编辑' : ''">
+    <div
+      v-if="!isEditing"
+      class="markdown-content md-reader"
+      :class="`md-theme-${settingStore.settings.markdownReaderTheme || 'classic'}`"
+      :style="markdownReaderStyle"
+      @click="handleClick"
+      :title="isEditing ? '单击启动编辑' : ''"
+    >
       <div v-if="!hasContent && selectedTaskId" class="placeholder">
         <n-icon size="20" color="var(--color-orange)"><Wand20Filled /></n-icon>
         <span>追踪执行意图...</span>
@@ -31,6 +38,7 @@ import { useDevice } from "@/composables/platform/useDevice";
 import { useTaskRecordShortcuts } from "@/composables/task/useTaskRecordShortcuts";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useSyncStore } from "@/stores/useSyncStore";
+import { markdownReaderCssVars } from "@/core/utils/markdownReaderStyle";
 import "highlight.js/styles/github.css";
 import { Wand20Filled } from "@vicons/fluent";
 import { useDataStore } from "@/stores/useDataStore";
@@ -41,6 +49,13 @@ const settingStore = useSettingStore();
 const syncStore = useSyncStore();
 const savedTopHeight = ref(settingStore.settings.topHeight);
 const { selectedTaskId } = storeToRefs(dataStore);
+const markdownReaderStyle = computed(() =>
+  markdownReaderCssVars({
+    fontSize: settingStore.settings.markdownReaderFontSize,
+    lineHeight: settingStore.settings.markdownReaderLineHeight,
+    maxWidthRem: settingStore.settings.markdownReaderMaxWidthRem,
+  }),
+);
 
 const markdownLoaded = ref(false);
 let markedInstance: (typeof import("marked"))["marked"] | null = null;
@@ -342,47 +357,48 @@ defineExpose({
   border: none;
 }
 
-:deep(.markdown-content) {
-  line-height: 1.6;
+/* 经典主题 = 你原来的阅读区样式；其它主题见 markdown-reader-themes.css */
+.markdown-content.md-theme-classic {
+  line-height: var(--md-line-height, 1.6);
 }
 
-:deep(.markdown-content h1) {
+.markdown-content.md-theme-classic :deep(h1) {
   font-size: 22px;
   margin-top: 0.3em;
   margin-bottom: 0.1em;
 }
 
-:deep(.markdown-content h2) {
+.markdown-content.md-theme-classic :deep(h2) {
   font-size: 18px;
   margin-top: 0.3em;
   margin-bottom: 0.1em;
 }
 
-:deep(.markdown-content h3) {
+.markdown-content.md-theme-classic :deep(h3) {
   font-size: 16px;
   margin-top: 0.1em;
   margin-bottom: 0.1em;
 }
 
-:deep(.markdown-content h4),
-:deep(.markdown-content h5),
-:deep(.markdown-content h6) {
+.markdown-content.md-theme-classic :deep(h4),
+.markdown-content.md-theme-classic :deep(h5),
+.markdown-content.md-theme-classic :deep(h6) {
   margin-top: 0.1em;
   margin-bottom: 0.1em;
 }
 
-:deep(.markdown-content p) {
+.markdown-content.md-theme-classic :deep(p) {
   margin: 2px;
 }
 
-:deep(.markdown-content pre) {
+.markdown-content.md-theme-classic :deep(pre) {
   margin: 2px;
   border-radius: 8px;
   padding: 8px;
   font-family: "Consolas", "Monaco", "Courier New", monospace;
 }
 
-:deep(.markdown-content code) {
+.markdown-content.md-theme-classic :deep(code) {
   background-color: var(--color-blue-light);
   font-family: "Consolas", "Monaco", "Courier New", monospace;
   border-radius: 4px;
@@ -391,20 +407,20 @@ defineExpose({
   line-height: inherit;
 }
 
-:deep(.markdown-content pre code) {
+.markdown-content.md-theme-classic :deep(pre code) {
   background-color: var(--color-background-light-transparent);
   font-family: "Consolas", "Monaco", "Courier New", monospace;
   padding: 8px;
 }
 
-:deep(.markdown-content blockquote) {
+.markdown-content.md-theme-classic :deep(blockquote) {
   background-color: var(--color-background-light-transparent);
   border-radius: 4px;
   margin: 2px;
   padding: 2px;
 }
 
-:deep(.markdown-content table) {
+.markdown-content.md-theme-classic :deep(table) {
   border-collapse: collapse;
   width: 100%;
   margin: 0.5em 0;
@@ -413,7 +429,7 @@ defineExpose({
   overflow: hidden;
 }
 
-:deep(.markdown-content th) {
+.markdown-content.md-theme-classic :deep(th) {
   background-color: var(--color-background-light);
   padding: 4px 8px;
   text-align: left;
@@ -421,18 +437,18 @@ defineExpose({
   border: 1px solid var(--color-background-dark);
 }
 
-:deep(.markdown-content td) {
+.markdown-content.md-theme-classic :deep(td) {
   padding: 4px 8px;
   border: 1px solid var(--color-background-dark);
   background-color: var(--color-background);
 }
 
-:deep(.markdown-content tr:nth-child(even) td) {
+.markdown-content.md-theme-classic :deep(tr:nth-child(even) td) {
   background-color: var(--color-background-light-light);
 }
 
-:deep(.markdown-content ul),
-:deep(.markdown-content ol) {
+.markdown-content.md-theme-classic :deep(ul),
+.markdown-content.md-theme-classic :deep(ol) {
   padding-left: 2em;
   margin: 0.5em 0;
 }

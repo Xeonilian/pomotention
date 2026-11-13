@@ -29,7 +29,7 @@ export function useSearchFilter() {
 
   // 2. 解构，保持不变
   const { activeActivities, todoByActivityId, scheduleByActivityId, taskByActivityId } = storeToRefs(dataStore);
-  const { searchQuery, filterStarredOnly, filterTagIds } = storeToRefs(searchUiStore);
+  const { searchQuery, filterStarredOnly, filterTagIds, filterActivityClass } = storeToRefs(searchUiStore);
 
   const norm = (s?: string) => (s ?? "").toLowerCase();
 
@@ -73,6 +73,11 @@ export function useSearchFilter() {
         continue;
       }
 
+      // --- 类型筛：仅 todo / 仅 schedule ---
+      if (filterActivityClass.value && act.class !== filterActivityClass.value) {
+        continue;
+      }
+
       // --- 行数据构造和排序  ---
       const isTodo = act.class === "T";
       const isSch = act.class === "S";
@@ -85,8 +90,10 @@ export function useSearchFilter() {
         return act.id;
       };
 
-      const type: TabType = act.class === "T" ? "todo" : act.class === "S" ? "sch" : "activity";
-      const entityId = isTodo ? td?.id : isSch ? sch?.id : act.id;
+      // 有 T/S 实体才开 todo/sch tab；裸 activity（如导出预览）走 activity-*
+      const type: TabType =
+        isTodo && td != null ? "todo" : isSch && sch != null ? "sch" : "activity";
+      const entityId = type === "todo" ? td!.id : type === "sch" ? sch!.id : act.id;
 
       rows.push({
         activityId: act.id,

@@ -15,6 +15,8 @@ import type { TaskToolbarActionId } from "@/core/taskToolbarActions";
 import { DEFAULT_TASK_TOOLBAR_MOBILE_PINNED } from "@/core/taskToolbarActions";
 import type { HomeToolbarActionId } from "@/core/homeToolbarActions";
 import { DEFAULT_HOME_TOOLBAR_MOBILE_PINNED } from "@/core/homeToolbarActions";
+import type { MarkdownReaderTheme } from "@/core/types/MarkdownReaderTheme";
+import { DEFAULT_MARKDOWN_READER_THEME } from "@/core/types/MarkdownReaderTheme";
 
 const { isMobile } = useDevice();
 
@@ -99,6 +101,14 @@ export interface GlobalSettings {
   supportFirstUseDate: string;
   /** 支持提示的下次弹出日（ISO）；空串表示还没排期 */
   supportNextPromptDate: string;
+  /** Task / 数据页 Markdown 只读区外观主题 */
+  markdownReaderTheme: MarkdownReaderTheme;
+  /** 阅读区基准字号 px */
+  markdownReaderFontSize: number;
+  /** 阅读区行距 */
+  markdownReaderLineHeight: number;
+  /** 阅读区最大宽度 rem；0 = 不限制 */
+  markdownReaderMaxWidthRem: number;
   // 以后新增全局设置项就在这里补充
 }
 
@@ -165,6 +175,10 @@ const defaultSettings: GlobalSettings = {
   pwaIosInstallDismissed: false,
   supportFirstUseDate: "",
   supportNextPromptDate: "",
+  markdownReaderTheme: DEFAULT_MARKDOWN_READER_THEME,
+  markdownReaderFontSize: 14,
+  markdownReaderLineHeight: 1.6,
+  markdownReaderMaxWidthRem: 0,
   ai: {
     activeId: 1,
     systemPrompt:
@@ -268,6 +282,19 @@ export const useSettingStore = defineStore("setting", () => {
   // 旧存档的 style 没有休息条颜色，补上默认绿
   if (!settings.value.style.breakBarColor) {
     settings.value.style.breakBarColor = TimerStyleDefaults.breakBarColor;
+  }
+
+  if (!settings.value.markdownReaderTheme) {
+    settings.value.markdownReaderTheme = DEFAULT_MARKDOWN_READER_THEME;
+  }
+  if (!(settings.value.markdownReaderFontSize > 0)) {
+    settings.value.markdownReaderFontSize = 14;
+  }
+  if (!(settings.value.markdownReaderLineHeight > 0)) {
+    settings.value.markdownReaderLineHeight = 1.6;
+  }
+  if (typeof settings.value.markdownReaderMaxWidthRem !== "number" || settings.value.markdownReaderMaxWidthRem < 0) {
+    settings.value.markdownReaderMaxWidthRem = 0;
   }
 
   // 网关时代：清掉本地残留的厂商 apiKey（含已作废的旧内置 key）
@@ -407,6 +434,15 @@ export const useSettingStore = defineStore("setting", () => {
     pomodoroDefaultsNonce.value += 1;
   }
 
+  function resetMarkdownReaderSettings() {
+    resetSettings([
+      "markdownReaderTheme",
+      "markdownReaderFontSize",
+      "markdownReaderLineHeight",
+      "markdownReaderMaxWidthRem",
+    ]);
+  }
+
   // ai 操作
   // ai 操作（基于数字 ID）
   // 假设：
@@ -513,6 +549,7 @@ export const useSettingStore = defineStore("setting", () => {
     resetStyle,
     pomodoroDefaultsNonce,
     resetPomodoroSettings,
+    resetMarkdownReaderSettings,
     setActiveAiProfile,
     upsertAiProfile,
     removeAiProfile,
