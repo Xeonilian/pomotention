@@ -956,6 +956,32 @@ export const useDataStore = defineStore(
       }
     }
 
+    /** 批量写 projectId：只 save / 调度上传一次（智能收纳用） */
+    function batchAssignActivityProjects(assigns: Array<{ activityId: number; projectId: number }>) {
+      if (!assigns.length) return;
+      const indexById = new Map<number, number>();
+      for (let i = 0; i < activityList.value.length; i++) {
+        indexById.set(activityList.value[i]!.id, i);
+      }
+      const now = Date.now();
+      let changed = false;
+      for (const { activityId, projectId } of assigns) {
+        const idx = indexById.get(activityId);
+        if (idx == null) continue;
+        const cur = activityList.value[idx]!;
+        activityList.value[idx] = {
+          ...cur,
+          projectId,
+          lastModified: now,
+          synced: false,
+        };
+        changed = true;
+      }
+      if (!changed) return;
+      saveActivities(activityList.value);
+      scheduleDebouncedCloudUpload();
+    }
+
     /**
      * 基于Id更新Schedule数据的指定字段
      */
@@ -1451,6 +1477,7 @@ export const useDataStore = defineStore(
       setTaskStar,
       toggleTaskStar,
       updateActivityById,
+      batchAssignActivityProjects,
       updateTodoById,
       updateTaskById,
       updateScheduleById,
