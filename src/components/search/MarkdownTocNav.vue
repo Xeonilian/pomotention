@@ -193,9 +193,8 @@ watch(collapsed, (v) => {
   font-size: 0.85rem;
   line-height: 1.35;
   color: var(--color-text, #222);
-  padding-top: 3px;
-  padding-bottom: 3px;
-  padding-right: 4px;
+  padding-left: 4px;
+  margin-left: 2px;
   border-radius: 4px;
   cursor: pointer;
   white-space: nowrap;

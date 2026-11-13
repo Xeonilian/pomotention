@@ -44,11 +44,7 @@
             <n-icon size="16" class="meta-clock-icon"><Clock20Regular /></n-icon>
             {{ metaClockText }}
           </span>
-          <span
-            v-if="props.tab.type === 'sch' && scheduleLocation"
-            class="meta-time meta-time--loc"
-            :title="scheduleLocation"
-          >
+          <span v-if="props.tab.type === 'sch' && scheduleLocation" class="meta-time meta-time--loc" :title="scheduleLocation">
             <n-icon size="16" class="meta-clock-icon"><Location20Regular /></n-icon>
             {{ scheduleLocation }}
           </span>
@@ -89,13 +85,7 @@
         </template>
         <div v-else class="empty">暂无任务</div>
       </div>
-      <MarkdownTocNav
-        v-if="!isMobile"
-        v-model:collapsed="tocCollapsed"
-        layout="side"
-        :items="tocItems"
-        @select="scrollToHeading"
-      />
+      <MarkdownTocNav v-if="!isMobile" v-model:collapsed="tocCollapsed" layout="side" :items="tocItems" @select="scrollToHeading" />
     </div>
 
     <!-- 标签管理器 Modal -->
@@ -219,8 +209,8 @@ const metaClock = computed(() => {
     if (start == null) return null;
     const mins = actualDurationMin(start, todo?.doneTime);
     return {
-      text: mins != null ? `${formatDate(start)} · ${mins}min` : formatDate(start),
-      title: mins != null ? "开始时间 · 实际耗时" : "开始时间",
+      text: mins != null ? `${formatDate(start)}  ${mins}min` : formatDate(start),
+      title: mins != null ? "开始时间  实际耗时" : "开始时间",
     };
   }
   if (props.tab.type === "sch") {
@@ -230,8 +220,8 @@ const metaClock = computed(() => {
     // 不用 activityDueRange[1] 估计时长，只用 doneTime - start
     const mins = actualDurationMin(start, sch?.doneTime);
     return {
-      text: mins != null ? `${formatDate(start)} · ${mins}min` : formatDate(start),
-      title: mins != null ? "开始时间 · 实际耗时" : "开始时间",
+      text: mins != null ? `${formatDate(start)}  ${mins}min` : formatDate(start),
+      title: mins != null ? "开始时间  实际耗时" : "开始时间",
     };
   }
   return null;
@@ -555,5 +545,11 @@ function scrollToHeading(id: string) {
   color: inherit;
   border-radius: 2px;
   padding: 0 1px;
+}
+
+@media (max-width: 430px) {
+  .task-content {
+    padding-top: 2px;
+  }
 }
 </style>

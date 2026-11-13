@@ -554,6 +554,14 @@ function handleTagClick(tagId: number) {
   min-height: 0;
 }
 
+/* 仅右侧给滚动条留位，避免弹出时挤内容（勿加左边缝） */
+.search-container.is-mobile .title-list {
+  scrollbar-gutter: stable;
+  padding-right: 4px;
+  padding-left: 2px;
+  box-sizing: border-box;
+}
+
 /* 列表整理：上区整块去掉，下列表吃满；search 行仍在 */
 .search-container.is-mobile.search-container--list-full .right-pane {
   display: none;
@@ -618,7 +626,7 @@ function handleTagClick(tagId: number) {
 .left-pane--mobile-split {
   min-width: 0px;
   overflow-x: hidden;
-  padding: 6px 0px;
+  padding: 6px 0;
 }
 
 .search-tool {
@@ -892,28 +900,22 @@ function handleTagClick(tagId: number) {
 
 @media (max-width: 430px) {
   .title-item {
-    padding: 2px 2px;
+    padding: 2px 0px;
   }
   /* 手机：略收拢图标给搜索框，负 margin 只留一点（-8 会叠） */
   .search-tool {
-    gap: 3px;
-  }
-  .search-tool .search-input-wrap {
-    margin-right: 0;
-  }
-  .search-tool-actions {
     gap: 4px;
-    margin-right: 4px;
   }
-  .search-tool-actions :deep(.star-btn),
-  .search-tool .tool-action-btn {
-    margin: 0;
-    padding: 0;
+
+  .search-tool-actions {
+    margin: 6px;
+    gap: 2px;
   }
+
   /* 手机端收紧搜索框前缀图标侧留白 */
   .search-tool :deep(.n-input-wrapper) {
-    padding-left: 2px;
-    padding-right: 2px;
+    padding-left: 4px;
+    padding-right: 4px;
   }
 
   .search-tool :deep(.n-input .n-input__prefix),
