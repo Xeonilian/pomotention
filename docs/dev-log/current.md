@@ -16,8 +16,8 @@
 | **蓝图**   | 类型 [`Project.ts`](../../src/core/types/Project.ts)；分层 [`1-architecture-layering.md`](./blueprint/1-architecture-layering.md) |
 | **分支**   | `dev`                                                                                                                             |
 | **分级**   | `[S3 C2 UV1]`                                                                                                                     |
-| **更新**   | 2026-11-05                                                                                                                        |
-| **停在哪** | 导出手测 A–E 通过；Sync 已挂。手机 Search：**三态**（列表整理 / 分屏 / 上满，手动切；整理态不点开不选中）+ 长按拖已通。下一步：手测上下传 / 双端；三态图标等可再拧。 |
+| **更新**   | 2026-11-13                                                                                                                        |
+| **停在哪** | **本关已合**：PR #145 squash → `main`，`v0.7.0`；帮助 `search.md` 已补；干净 `dev` 已从 `main` 重建。下一关另开票。 |
 
 ---
 
