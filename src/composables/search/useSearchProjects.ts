@@ -1,5 +1,6 @@
-import { computed, ref, type Ref } from "vue";
+import { computed, nextTick, ref, type Ref } from "vue";
 import { storeToRefs } from "pinia";
+import { useNotification } from "naive-ui";
 import { useProjectStore } from "@/stores/useProjectStore";
 import { useDataStore } from "@/stores/useDataStore";
 import { useSearchUiStore } from "@/stores/useSearchUiStore";
@@ -11,6 +12,12 @@ import {
   type SearchDragSource,
   type SearchDropTarget,
 } from "@/composables/search/useSearchProjectDrag";
+
+function paintFrame(): Promise<void> {
+  return new Promise((resolve) => {
+    requestAnimationFrame(() => resolve());
+  });
+}
 
 export type ProjectTreeRow =
   | {
@@ -338,39 +345,73 @@ export function useSearchProjects(filteredActivities: Ref<ActivityRow[]>) {
     selectedProjectId.value = id;
   }
 
-  /** 按当前全部智能绑定向无归属条目做一次收纳 */
+  const notification = useNotification();
+  const gatherBusy = ref(false);
+
+  /** 按当前全部智能绑定向无归属条目做一次收纳（批量写 store） */
   function runSmartGatherOnce(): number {
-    return gatherUnassignedBySmartTags({
+    const assigns: Array<{ activityId: number; projectId: number }> = [];
+    gatherUnassignedBySmartTags({
       activities: dataStore.activityList,
       projects: allProjects.value,
       depthOf,
       assign: (activityId, projectId) => {
-        dataStore.updateActivityById(activityId, {
-          projectId,
-          lastModified: Date.now(),
-          synced: false,
-        });
+        assigns.push({ activityId, projectId });
       },
     });
+    dataStore.batchAssignActivityProjects(assigns);
+    return assigns.length;
   }
 
-  function onBindTagSelected(tagId: number) {
+  /**
+   * 选 tag：先关选择器 →「正在归入」→ 批量收纳 → 完成提示（中间无需再点）
+   */
+  async function onBindTagSelected(tagId: number) {
     const pid = bindTagProjectId.value;
-    if (pid == null) return;
-    // 同一 tag 全局最多绑一个：清掉其它占用
-    for (const p of allProjects.value) {
-      if (p.tagId === tagId && p.id !== pid) {
-        projectStore.updateProjectById(p.id, { tagId: undefined });
-      }
-    }
-    projectStore.updateProjectById(pid, { tagId });
-    // 绑定 = 对现有无归属数据跑一次智能收纳（更深优先）
-    runSmartGatherOnce();
-    const next = new Set(expandedIds.value);
-    next.add(pid);
-    expandedIds.value = next;
+    if (pid == null || gatherBusy.value) return;
+
+    // 1. 先收起选择器，让出一帧再提示
     tagPickerShow.value = false;
     bindTagProjectId.value = null;
+    await nextTick();
+    await paintFrame();
+
+    gatherBusy.value = true;
+    const loading = notification.info({
+      content: "正在归入…",
+      duration: 0,
+      closable: false,
+    });
+    await nextTick();
+    await paintFrame();
+
+    try {
+      // 同一 tag 全局最多绑一个：清掉其它占用
+      for (const p of allProjects.value) {
+        if (p.tagId === tagId && p.id !== pid) {
+          projectStore.updateProjectById(p.id, { tagId: undefined });
+        }
+      }
+      projectStore.updateProjectById(pid, { tagId });
+      const n = runSmartGatherOnce();
+      const next = new Set(expandedIds.value);
+      next.add(pid);
+      expandedIds.value = next;
+
+      loading.destroy();
+      notification.success({
+        content: n > 0 ? `已归入 ${n} 条` : "已绑定标签",
+        duration: 2500,
+      });
+    } catch (e) {
+      loading.destroy();
+      notification.error({
+        content: e instanceof Error ? e.message : "归入失败",
+        duration: 4000,
+      });
+    } finally {
+      gatherBusy.value = false;
+    }
   }
 
   function clearProjectTag(id: number) {
@@ -471,6 +512,7 @@ export function useSearchProjects(filteredActivities: Ref<ActivityRow[]>) {
     toggleMonthGroup,
     openBindTag,
     onBindTagSelected,
+    gatherBusy,
     clearProjectTag,
     depthOf,
     isDragging,
