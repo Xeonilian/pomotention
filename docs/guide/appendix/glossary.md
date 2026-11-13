@@ -55,6 +55,7 @@ description: Activity、活动清单、Todo、Task 等中英文与层级关系�
 | External Interruption | 外部打扰 | 例如：来自他人来电、信息等的事项。                                                                                                                            |
 | Internal Interruption | 内部打扰 | 例如：来自个人情绪、想法和感受等的事项。                                                                                                                      |
 | Planner               | 计划表   | 首页中上区域：按日/周/月查看，把待办、预约等排进具体日期，管理执行与完成状态。                                                                                |
+| Project               | 文件夹   | 数据页里的归堆容器：可嵌套；Activity 多对一挂 `projectId`。跨主题仍靠标签。操作见 [数据查看](../reference/search.md#project-文件夹)。                          |
 | Reward                | 奖赏值   | 任务追踪里记录的当下情绪与满意程度（1–10 分），时间轴上用 🏵️ 显示；仪表盘中的「平均奖赏值」也来自此类记录。                                                   |
 | Schedule              | 预约     | 与他人约定具体时间、地点和时长的事项。                                                                                                                        |
 | Task                  | 任务     | 任务追踪里当前这一轮执行的记录：描述、精力、奖赏、打扰等都记在这里；通常从活动清单里某条活动点「追踪」后产生。与日常说的「任务」或 GTD 里的任务不是同一概念。 |
@@ -69,3 +70,4 @@ description: Activity、活动清单、Todo、Task 等中英文与层级关系�
 - [模块联动](../reference/workflow.md)（数据流与生命周期）
 - [附录：按钮一览](./buttons.md)（工具栏图标与英文标签速查）
 - [生活记录](../reference/life.md)（喝水 / 吃饭 / 活动 / 睡觉）
+- [数据查看](../reference/search.md)（搜索、Project 文件夹、筛选导出）
