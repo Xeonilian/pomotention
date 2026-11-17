@@ -18,7 +18,8 @@
         <n-space align="center" :size="8">
           <n-text v-if="countdownLabel" depth="3" style="font-size: 12px">⏳ {{ countdownLabel }}</n-text>
           <n-text v-else-if="countdownExpired" depth="3" style="font-size: 12px">⚠️ 云同步已到期</n-text>
-          <n-button size="tiny" quaternary @click="copyUserId">{{ copyHint }}</n-button>
+          <n-button size="tiny" type="info" @click="copyUserId">{{ copyHint }}</n-button>
+          <n-text type="error" style="font-size: 12px">❗粘贴到【爱发电留言】，开通同步</n-text>
         </n-space>
         <n-text depth="3" style="font-size: 12px">回馈老用户：年付 49 元/首年 ✨</n-text>
         <n-space>
