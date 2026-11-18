@@ -1,4 +1,7 @@
 // src/services/taskRecordService.ts
+import { wrapWithHighlightMarkup, type PostHighlightColor } from "@/core/utils/taskMarkdown";
+import { joinTaskDescription, partitionTaskDescription } from "@/services/task/taskNoteBlocks";
+
 /**
  * 提取点击上下文的“文本片段”
  */
@@ -53,4 +56,92 @@ export function findFragmentSequenceInSource(
     currIdx = foundIdx + frag.length;
   }
   return currIdx;
+}
+
+/** 按 DOM 中第 N 个任务勾选框，回写 markdown 源中对应 `- [ ]` / `- [x]` */
+export function toggleTaskCheckboxInMarkdown(
+  content: string,
+  checkboxIndex: number,
+  checked: boolean
+): string {
+  const lines = content.split("\n");
+  let taskItemCount = 0;
+  const newStatus = checked ? "x" : " ";
+
+  return lines
+    .map((line) => {
+      const taskMatch = line.match(/^(\s*)(\d+\.\s+|-)\s*\[([ xX])\]\s+(.*)$/);
+      if (!taskMatch) return line;
+
+      const [, indent, prefix, , taskText] = taskMatch;
+      if (taskItemCount === checkboxIndex) {
+        taskItemCount++;
+        return `${indent}${prefix} [${newStatus}] ${taskText}`;
+      }
+      taskItemCount++;
+      return line;
+    })
+    .join("\n");
+}
+
+/**
+ * 主阅读区勾选：只计 note fence 之外的任务项（与 split 后 body 渲染下标一致）。
+ */
+export function toggleBodyCheckboxInDescription(
+  source: string,
+  checkboxIndex: number,
+  checked: boolean
+): string {
+  const segments = partitionTaskDescription(source);
+  let remaining = checkboxIndex;
+  const newStatus = checked ? "x" : " ";
+
+  for (const seg of segments) {
+    if (seg.kind !== "body") continue;
+    const lines = seg.text.split("\n");
+    let hit = false;
+    const nextLines = lines.map((line) => {
+      const taskMatch = line.match(/^(\s*)(\d+\.\s+|-)\s*\[([ xX])\]\s+(.*)$/);
+      if (!taskMatch) return line;
+      if (remaining === 0) {
+        remaining = -1;
+        hit = true;
+        const [, indent, prefix, , taskText] = taskMatch;
+        return `${indent}${prefix} [${newStatus}] ${taskText}`;
+      }
+      remaining -= 1;
+      return line;
+    });
+    if (hit) {
+      seg.text = nextLines.join("\n");
+      return joinTaskDescription(segments);
+    }
+  }
+  return source;
+}
+
+export type ApplyHighlightResult =
+  | { ok: true; next: string }
+  | { ok: false; reason: "empty" | "not_found" | "ambiguous" };
+
+/**
+ * 将选中纯文本包成后批/原笔标记写入 source。
+ * 仅当选区文本在源中唯一出现时写入，避免错位腐坏。
+ */
+export function applyHighlightMarkupInSource(
+  source: string,
+  selectedText: string,
+  color: PostHighlightColor | null
+): ApplyHighlightResult {
+  const needle = selectedText.trim();
+  if (!needle) return { ok: false, reason: "empty" };
+
+  const first = source.indexOf(needle);
+  if (first === -1) return { ok: false, reason: "not_found" };
+  const second = source.indexOf(needle, first + needle.length);
+  if (second !== -1) return { ok: false, reason: "ambiguous" };
+
+  const wrapped = wrapWithHighlightMarkup(needle, color);
+  const next = source.slice(0, first) + wrapped + source.slice(first + needle.length);
+  return { ok: true, next };
 }

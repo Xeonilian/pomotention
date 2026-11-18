@@ -48,6 +48,44 @@
             <n-icon size="16" class="meta-clock-icon"><Location20Regular /></n-icon>
             {{ scheduleLocation }}
           </span>
+          <!-- 批注：note 模式 / 后批划选 -->
+          <span v-if="content.task.value" class="anno-toolbar">
+            <n-button
+              text
+              size="tiny"
+              class="anno-btn"
+              :type="anno.mode === 'note' ? 'primary' : 'default'"
+              title="Note 编辑模式"
+              @click="anno.toggleNoteMode"
+            >
+              <template #icon>
+                <n-icon><Note20Regular /></n-icon>
+              </template>
+            </n-button>
+            <n-button
+              text
+              size="tiny"
+              class="anno-btn"
+              :type="anno.mode === 'highlight' ? 'primary' : 'default'"
+              title="后批高亮模式"
+              @click="anno.toggleHighlightMode"
+            >
+              <template #icon>
+                <n-icon><Highlight20Regular /></n-icon>
+              </template>
+            </n-button>
+            <span v-if="anno.mode === 'highlight'" class="anno-swatches">
+              <button
+                v-for="c in anno.postColors"
+                :key="c"
+                type="button"
+                class="anno-swatch"
+                :class="[`anno-swatch--${c}`, { 'anno-swatch--active': anno.highlightColor === c }]"
+                :title="`后批色 ${c}`"
+                @click="anno.setHighlightColor(c)"
+              />
+            </span>
+          </span>
         </div>
       </div>
       <!-- 手机：固定右栏，不随 tag/时间换行漂移，也不被 overflow 裁掉 -->
@@ -73,15 +111,29 @@
       :items="tocItems"
       @select="scrollToHeading"
     />
+    <p v-if="anno.paintHint" class="anno-hint">{{ anno.paintHint }}</p>
     <!-- 任务内容区：左正文 + 右目录（电脑）；篇幅变量挂在 content -->
     <div class="content" :style="markdownReaderStyle">
       <div ref="contentMainRef" class="content-main">
         <template v-if="content.task.value">
           <div
             class="task-content md-reader"
-            :class="`md-theme-${settingStore.settings.markdownReaderTheme || 'classic'}`"
+            :class="[
+              `md-theme-${settingStore.settings.markdownReaderTheme || 'classic'}`,
+              { 'task-content--paint': anno.mode === 'highlight' },
+            ]"
             v-html="renderedTaskHtml"
+            @mouseup="onBodyMouseUp"
           ></div>
+          <TaskNoteRegion
+            :notes="anno.notes"
+            :editable="true"
+            :force-editing="anno.mode === 'note'"
+            :theme-class="`md-theme-${settingStore.settings.markdownReaderTheme || 'classic'}`"
+            :reader-style="markdownReaderStyle"
+            :render-note="renderNoteHtml"
+            @commit="anno.commitNote"
+          />
         </template>
         <div v-else class="empty">暂无任务</div>
       </div>
@@ -100,7 +152,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, toRef } from "vue";
+import { ref, computed, toRef, reactive } from "vue";
 import { storeToRefs } from "pinia";
 import { NButton, NIcon } from "naive-ui";
 import {
@@ -111,12 +163,15 @@ import {
   ChevronUp20Filled,
   Clock20Regular,
   Location20Regular,
+  Note20Regular,
+  Highlight20Regular,
 } from "@vicons/fluent";
 
 // 导入核心工具
 import { useSearchTab } from "@/composables/search/useSearchTab";
 import { useActivityTagEditor } from "@/composables/activity/useActivityTagEditor";
 import { useDevice } from "@/composables/platform/useDevice";
+import { useTaskAnnotationModes } from "@/composables/task/useTaskAnnotationModes";
 import { useDataStore } from "@/stores/useDataStore";
 import { useSearchUiStore } from "@/stores/useSearchUiStore";
 import { useSettingStore } from "@/stores/useSettingStore";
@@ -124,10 +179,12 @@ import type { TabItem } from "@/stores/useSearchUiStore";
 import { highlightSearchInHtml } from "@/core/utils/highlightSearchQuery";
 import { markdownReaderCssVars } from "@/core/utils/markdownReaderStyle";
 import { parseMarkdownWithToc, type MarkdownTocItem } from "@/core/utils/markdownToc";
+import { createTaskMarkdown } from "@/core/utils/taskMarkdown";
 // 导入子组件
 import TagRenderer from "@/components/TagSystem/TagRenderer.vue";
 import TagManager from "@/components/TagSystem/TagManager.vue";
 import MarkdownTocNav from "@/components/search/MarkdownTocNav.vue";
+import TaskNoteRegion from "@/components/task/TaskNoteRegion.vue";
 
 const TOC_COLLAPSED_KEY = "pomotention.md-toc-collapsed";
 
@@ -238,15 +295,30 @@ const scheduleLocation = computed(() => {
 
 const contentMainRef = ref<HTMLElement | null>(null);
 
+const taskIdRef = computed(() => content.task.value?.id ?? null);
+// reactive 包一层，模板里可直接 anno.mode 而不用手写 .value
+const anno = reactive(useTaskAnnotationModes(taskIdRef, () => content.task.value?.description ?? ""));
+
+const notePreviewEngine = createTaskMarkdown({ interactiveCheckboxes: false });
+
 const parsedTask = computed(() => {
-  const md = content.task.value?.description;
-  if (!md) return { html: "无", toc: [] as MarkdownTocItem[] };
+  const md = anno.bodyMarkdown;
+  if (!md?.trim() && !content.task.value?.description) return { html: "无", toc: [] as MarkdownTocItem[] };
+  if (!md?.trim()) return { html: "", toc: [] as MarkdownTocItem[] };
   return parseMarkdownWithToc(md);
 });
 
 const tocItems = computed(() => parsedTask.value.toc);
 
 const renderedTaskHtml = computed(() => highlightSearchInHtml(parsedTask.value.html, searchQuery.value));
+
+function renderNoteHtml(inner: string): string {
+  return highlightSearchInHtml(String(notePreviewEngine.parse(inner || "")), searchQuery.value);
+}
+
+function onBodyMouseUp() {
+  anno.paintSelectionFromWindow(contentMainRef.value);
+}
 
 function scrollToHeading(id: string) {
   const root = contentMainRef.value;
@@ -540,11 +612,72 @@ function scrollToHeading(id: string) {
   line-height: inherit;
 }
 
+:deep(.highlight-post.highlight-r) {
+  background-color: color-mix(in srgb, var(--color-red) 35%, transparent);
+}
+
+:deep(.highlight-post.highlight-g) {
+  background-color: color-mix(in srgb, var(--color-green) 40%, transparent);
+}
+
+:deep(.highlight-post.highlight-b) {
+  background-color: color-mix(in srgb, var(--color-blue) 35%, transparent);
+}
+
 :deep(mark.search-hit) {
   background-color: var(--color-yellow-light, #ffe066);
   color: inherit;
   border-radius: 2px;
   padding: 0 1px;
+}
+
+.anno-toolbar {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 4px;
+}
+
+.anno-swatches {
+  display: inline-flex;
+  gap: 4px;
+  margin-left: 4px;
+}
+
+.anno-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  border: 1px solid var(--color-background-dark);
+  cursor: pointer;
+  padding: 0;
+}
+
+.anno-swatch--r {
+  background: color-mix(in srgb, var(--color-red) 45%, white);
+}
+.anno-swatch--g {
+  background: color-mix(in srgb, var(--color-green) 45%, white);
+}
+.anno-swatch--b {
+  background: color-mix(in srgb, var(--color-blue) 45%, white);
+}
+.anno-swatch--active {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+.anno-hint {
+  margin: 0;
+  padding: 2px 8px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+}
+
+.task-content--paint {
+  cursor: text;
+  user-select: text;
 }
 
 @media (max-width: 430px) {

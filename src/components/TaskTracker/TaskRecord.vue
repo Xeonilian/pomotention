@@ -3,17 +3,29 @@
   <div class="task-record">
     <div
       v-if="!isEditing"
-      class="markdown-content md-reader"
-      :class="`md-theme-${settingStore.settings.markdownReaderTheme || 'classic'}`"
-      :style="markdownReaderStyle"
-      @click="handleClick"
-      :title="isEditing ? '单击启动编辑' : ''"
+      class="task-record-preview"
     >
-      <div v-if="!hasContent && selectedTaskId" class="placeholder">
-        <n-icon size="20" color="var(--color-orange)"><Wand20Filled /></n-icon>
-        <span>追踪执行意图...</span>
+      <div
+        class="markdown-content md-reader"
+        :class="`md-theme-${settingStore.settings.markdownReaderTheme || 'classic'}`"
+        :style="markdownReaderStyle"
+        @click="handleClick"
+        title="单击启动编辑"
+      >
+        <div v-if="!hasContent && selectedTaskId" class="placeholder">
+          <n-icon size="20" color="var(--color-orange)"><Wand20Filled /></n-icon>
+          <span>追踪执行意图...</span>
+        </div>
+        <div v-else v-html="renderedBodyHtml"></div>
       </div>
-      <div v-else v-html="renderedMarkdown"></div>
+      <TaskNoteRegion
+        :notes="noteBlocks"
+        :editable="true"
+        :theme-class="`md-theme-${settingStore.settings.markdownReaderTheme || 'classic'}`"
+        :reader-style="markdownReaderStyle"
+        :render-note="parseMarkdown"
+        @commit="onNoteCommit"
+      />
     </div>
     <div v-else style="position: relative; width: 100%; height: 100%">
       <textarea
@@ -32,16 +44,25 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from "vue";
-import { getClickContextFragments, findFragmentSequenceInSource } from "@/services/task/taskRecordService";
+import { storeToRefs } from "pinia";
+import {
+  getClickContextFragments,
+  findFragmentSequenceInSource,
+  toggleBodyCheckboxInDescription,
+} from "@/services/task/taskRecordService";
+import { replaceNoteInner, splitTaskNotes } from "@/services/task/taskNoteBlocks";
 import { useCaretFlash } from "@/composables/task/useCaretFlash";
 import { useDevice } from "@/composables/platform/useDevice";
 import { useTaskRecordShortcuts } from "@/composables/task/useTaskRecordShortcuts";
+import { useTaskRecordMarkdown } from "@/composables/task/useTaskRecordMarkdown";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useSyncStore } from "@/stores/useSyncStore";
 import { markdownReaderCssVars } from "@/core/utils/markdownReaderStyle";
 import "highlight.js/styles/github.css";
 import { Wand20Filled } from "@vicons/fluent";
 import { useDataStore } from "@/stores/useDataStore";
+import TaskNoteRegion from "@/components/task/TaskNoteRegion.vue";
+
 const dataStore = useDataStore();
 const { showCaretFlash, caretFlashStyle, flashCaretFlash } = useCaretFlash();
 const { isMobile } = useDevice();
@@ -49,6 +70,8 @@ const settingStore = useSettingStore();
 const syncStore = useSyncStore();
 const savedTopHeight = ref(settingStore.settings.topHeight);
 const { selectedTaskId } = storeToRefs(dataStore);
+const { ensureMarkdownEngine, parseMarkdown, markdownLoaded } = useTaskRecordMarkdown();
+
 const markdownReaderStyle = computed(() =>
   markdownReaderCssVars({
     fontSize: settingStore.settings.markdownReaderFontSize,
@@ -56,62 +79,6 @@ const markdownReaderStyle = computed(() =>
     maxWidthRem: settingStore.settings.markdownReaderMaxWidthRem,
   }),
 );
-
-const markdownLoaded = ref(false);
-let markedInstance: (typeof import("marked"))["marked"] | null = null;
-
-async function ensureMarkdownEngine() {
-  if (markedInstance) {
-    return markedInstance;
-  }
-
-  const [{ marked }, { default: hljs }] = await Promise.all([import("marked"), import("highlight.js")]);
-  const renderer = new marked.Renderer();
-
-  renderer.checkbox = function ({ checked }: { checked: boolean }) {
-    return `<input type="checkbox" class="markdown-checkbox" ${checked ? "checked" : ""}>`;
-  };
-
-  renderer.code = function ({ text, lang }: { text: string; lang?: string; escaped?: boolean }): string {
-    const language = lang && hljs.getLanguage(lang) ? lang : "plaintext";
-    const highlighted = hljs.highlight(text, { language }).value;
-    return `<pre><code class="hljs language-${language}">${highlighted}</code></pre>`;
-  };
-
-  const textHighlightRule = {
-    name: "textHighlight",
-    level: "inline" as const,
-    start(src: string) {
-      return src.indexOf("==");
-    },
-    tokenizer(src: string) {
-      const rule = /^==([^=]+)==/;
-      const match = rule.exec(src);
-      if (match) {
-        return {
-          type: "textHighlight",
-          raw: match[0],
-          text: match[1].trim(),
-        };
-      }
-      return undefined;
-    },
-    renderer(token: any) {
-      return `<span class="highlight-text">${token.text}</span>`;
-    },
-  };
-
-  marked.use({
-    extensions: [textHighlightRule],
-    renderer,
-    breaks: true,
-    gfm: true,
-  });
-
-  markedInstance = marked;
-  markdownLoaded.value = true;
-  return markedInstance;
-}
 
 const props = defineProps<{
   taskId: number | null;
@@ -135,6 +102,17 @@ const textarea = ref<HTMLTextAreaElement | null>(null);
 // 进入编辑瞬间的文案快照：无改动则 blur / 同步钩子不写 store、不标 unsynced
 const editSessionBaseline = ref("");
 
+const splitNotes = computed(() => splitTaskNotes(content.value || ""));
+const noteBlocks = computed(() => splitNotes.value.notes);
+
+const renderedBodyHtml = computed(() => {
+  // 依赖 markdownLoaded，引擎就绪后重算
+  void markdownLoaded.value;
+  const body = splitNotes.value.body;
+  if (!body.trim() && noteBlocks.value.length > 0) return "";
+  return parseMarkdown(body || content.value);
+});
+
 function contentIsDirty(): boolean {
   return content.value !== editSessionBaseline.value;
 }
@@ -145,14 +123,6 @@ function flushDescriptionIfDirty() {
   emit("update:content", content.value);
   editSessionBaseline.value = content.value;
 }
-
-const renderedMarkdown = computed(() => {
-  const text = content.value;
-  if (markdownLoaded.value && markedInstance) {
-    return markedInstance.parse(text);
-  }
-  return text.replace(/\n/g, "<br />");
-});
 
 watch(
   () => props.initialContent,
@@ -223,6 +193,11 @@ function commitIfEditing() {
   }
 }
 
+function onNoteCommit(payload: { index: number; inner: string }) {
+  content.value = replaceNoteInner(content.value, payload.index, payload.inner);
+  emit("update:content", content.value);
+}
+
 onMounted(() => {
   ensureMarkdownEngine();
   syncStore.registerBeforeSync(commitIfEditing);
@@ -251,41 +226,14 @@ const handleClick = (event: MouseEvent) => {
 
     // 使用 setTimeout 确保 checkbox 状态已经更新
     setTimeout(() => {
-      // 找到当前组件内所有的 checkbox（限制在当前组件内）
       const markdownContent = checkbox.closest(".markdown-content");
       if (!markdownContent) return;
 
       const allCheckboxes = markdownContent.querySelectorAll(".markdown-checkbox");
       const checkboxIndex = Array.from(allCheckboxes).indexOf(checkbox);
-
       if (checkboxIndex === -1) return;
 
-      // 分割内容为行数组
-      const lines = content.value.split("\n");
-      let taskItemCount = 0;
-
-      // 查找并更新对应的行
-      const updatedLines = lines.map((line) => {
-        // 匹配任务列表项的正则表达式
-        const taskMatch = line.match(/^(\s*)(\d+\.\s+|-)\s*\[([ xX])\]\s+(.*)$/);
-
-        if (taskMatch) {
-          const [, indent, prefix, _status, taskText] = taskMatch; // 没有用的status不能删除，要占位现在表示未使用变量
-
-          // 如果这是第 checkboxIndex 个任务项
-          if (taskItemCount === checkboxIndex) {
-            const newStatus = checkbox.checked ? "x" : " ";
-            const newLine = `${indent}${prefix} [${newStatus}] ${taskText}`;
-            taskItemCount++;
-            return newLine;
-          }
-          taskItemCount++;
-        }
-        return line;
-      });
-
-      // 更新内容
-      content.value = updatedLines.join("\n");
+      content.value = toggleBodyCheckboxInDescription(content.value, checkboxIndex, checkbox.checked);
       emit("update:content", content.value);
     }, 0);
 
@@ -294,7 +242,6 @@ const handleClick = (event: MouseEvent) => {
   if (props.taskId) {
     emit("activetaskId", props.taskId);
     const container = event.currentTarget as HTMLElement;
-    // 调用service代替原本逻辑
     const fragments = getClickContextFragments(target, container);
     if (fragments.length === 0) {
       startEditing();
@@ -325,15 +272,23 @@ defineExpose({
 .task-record {
   width: 100%;
   height: 100%;
-  overflow: hidden; /* 防止出现滚动条 */
+  overflow: auto;
+}
+
+.task-record-preview {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  padding-bottom: 8px;
+  box-sizing: border-box;
 }
 
 .markdown-content {
   padding: 0px 10px;
-  height: 100%;
   cursor: text;
   box-sizing: border-box;
   font-weight: normal; /* 确保字体不会变粗 */
+  flex: 1 1 auto;
 }
 
 .task-textarea {
@@ -504,6 +459,18 @@ defineExpose({
   margin: 2px;
   padding: 2px;
   line-height: inherit;
+}
+
+:deep(.highlight-post.highlight-r) {
+  background-color: color-mix(in srgb, var(--color-red, #e57373) 35%, transparent);
+}
+
+:deep(.highlight-post.highlight-g) {
+  background-color: color-mix(in srgb, var(--color-green, #81c784) 40%, transparent);
+}
+
+:deep(.highlight-post.highlight-b) {
+  background-color: color-mix(in srgb, var(--color-blue) 35%, transparent);
 }
 
 .placeholder {
