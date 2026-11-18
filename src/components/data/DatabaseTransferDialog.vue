@@ -1,10 +1,10 @@
 <template>
   <n-modal v-model:show="visible" preset="dialog" title="数据库导入导出" style="width: 560px">
     <n-space vertical>
-      <n-alert v-if="isTauriRuntime" type="warning">请妥善保存导出数据。导入前请先预览结果，确认后再执行。</n-alert>
+      <n-alert type="warning">请妥善保存导出数据。导入前请先预览结果，确认后再执行。</n-alert>
 
       <n-space>
-        <n-button v-if="isTauriRuntime" type="info" secondary :loading="isLoading" @click="handleExport">数据导出（文件夹）</n-button>
+        <n-button type="info" secondary :loading="isLoading" @click="handleExport">{{ exportButtonLabel }}</n-button>
         <n-button type="success" secondary :loading="isLoading" @click="handlePreviewImport">{{ importButtonLabel }}</n-button>
         <n-button tertiary :loading="isLoading" @click="handleCleanupLocalData">数据整理</n-button>
         <n-button v-if="canRestoreImportSnapshot" tertiary :loading="isLoading" @click="handleRestoreBeforeImport">恢复导入前状态</n-button>
@@ -59,7 +59,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import { NModal, NSpace, NButton, NAlert, NText, NRadioGroup, NRadio } from "naive-ui";
+import { NModal, NSpace, NButton, NAlert, NText, NRadioGroup, NRadio, useDialog } from "naive-ui";
 import { open } from "@tauri-apps/plugin-dialog";
 import { readDir } from "@tauri-apps/plugin-fs";
 import { join } from "@tauri-apps/api/path";
@@ -78,6 +78,10 @@ import {
   type ImportFileMap,
   type ImportReport,
 } from "@/services/data/mergeService";
+import { previewOrphanProjectCleanup } from "@/services/project/cleanupOrphanProjects";
+import { orphanPurgeTotal, purgeOrphanPlannerRows } from "@/services/activity/purgeOrphanPlannerRows";
+import { backfillPlannerDoneFromActivity, doneBackfillTotal } from "@/services/activity/backfillPlannerDoneFromActivity";
+import { useDataStore } from "@/stores/useDataStore";
 import { useProjectStore } from "@/stores/useProjectStore";
 import { useSyncStore } from "@/stores/useSyncStore";
 
@@ -109,9 +113,12 @@ const pendingSourceType = ref<"path" | "content" | null>(null);
 const shouldReloadOnClose = ref(false);
 const { exportData, message: exportMessage } = useDataExport();
 const isTauriRuntime = isTauri();
+const exportButtonLabel = computed(() => (isTauriRuntime ? "数据导出（文件夹）" : "数据导出"));
 const importButtonLabel = computed(() => (isTauriRuntime ? "预览导入（文件夹）" : "预览导入（文件夹）"));
 const syncStore = useSyncStore();
 const projectStore = useProjectStore();
+const dataStore = useDataStore();
+const dialog = useDialog();
 
 const canRestoreImportSnapshot = ref(hasImportRollbackSnapshot());
 
@@ -175,6 +182,14 @@ async function pickJsonFolder(): Promise<ImportFileMap | null> {
 
 function pickJsonFolderForWeb(): Promise<ImportFileMap | null> {
   return new Promise((resolve) => {
+    let settled = false;
+    const finish = (value: ImportFileMap | null) => {
+      if (settled) return;
+      settled = true;
+      window.removeEventListener("focus", onWindowFocus);
+      resolve(value);
+    };
+
     const input = document.createElement("input");
     input.type = "file";
     input.accept = ".json,application/json";
@@ -183,10 +198,12 @@ function pickJsonFolderForWeb(): Promise<ImportFileMap | null> {
     (input as HTMLInputElement & { webkitdirectory?: boolean; directory?: boolean }).webkitdirectory = true;
     (input as HTMLInputElement & { webkitdirectory?: boolean; directory?: boolean }).directory = true;
 
+    input.addEventListener("cancel", () => finish(null));
+
     input.onchange = async () => {
       const files = Array.from(input.files ?? []);
       if (files.length === 0) {
-        resolve(null);
+        finish(null);
         return;
       }
 
@@ -203,8 +220,18 @@ function pickJsonFolderForWeb(): Promise<ImportFileMap | null> {
         }),
       );
 
-      resolve(Object.keys(fileMap).length > 0 ? fileMap : null);
+      finish(Object.keys(fileMap).length > 0 ? fileMap : null);
     };
+
+    // 部分浏览器取消不触发 cancel/change：回焦点后若仍无选中文件则视为取消
+    function onWindowFocus() {
+      window.setTimeout(() => {
+        if (settled) return;
+        if (input.files && input.files.length > 0) return;
+        finish(null);
+      }, 400);
+    }
+    window.addEventListener("focus", onWindowFocus, { once: true });
 
     input.click();
   });
@@ -214,8 +241,13 @@ async function handleExport() {
   try {
     isLoading.value = true;
     await exportData();
-    message.value = exportMessage.value || "导出完成。请妥善保存数据。";
-    messageType.value = "success";
+    const text = exportMessage.value;
+    if (!text) {
+      // 用户取消分享/选目录：不提示成功
+      return;
+    }
+    message.value = text;
+    messageType.value = text.startsWith("⚠️") ? "error" : "success";
   } catch (error: any) {
     message.value = `导出失败：${error?.message || String(error)}`;
     messageType.value = "error";
@@ -226,32 +258,28 @@ async function handleExport() {
 
 async function handlePreviewImport() {
   try {
-    isLoading.value = true;
     message.value = "";
     previewReport.value = null;
-
-    // 导入预览前必须先退出登录，避免带登录态做导入引发同步覆盖风险
-    if (syncStore.isLoggedIn) {
-      await syncStore.handleLogout();
-      if (syncStore.isLoggedIn) {
-        message.value = "请先退出登录后再进行导入预览。";
-        messageType.value = "error";
-        return;
-      }
-      message.value = "已自动退出登录，请继续选择导入目录进行预览。";
-      messageType.value = "warning";
-    }
+    // 选目录期间不转圈：取消选夹时部分浏览器不触发 change，避免 loading 永久卡住
+    isLoading.value = false;
 
     pendingFileMap.value = isTauriRuntime ? await pickJsonFolder() : await pickJsonFolderForWeb();
-    if (!pendingFileMap.value) return;
+    if (!pendingFileMap.value) {
+      message.value = "已取消选择导入目录。";
+      messageType.value = "info";
+      return;
+    }
     pendingSourceType.value = isTauriRuntime ? "path" : "content";
 
+    isLoading.value = true;
     previewReport.value =
       pendingSourceType.value === "path"
         ? await previewFileImport(pendingFileMap.value, { idConflictPolicy: idPolicy.value })
         : await previewFileImportFromContents(pendingFileMap.value, { idConflictPolicy: idPolicy.value });
     if (previewReport.value.shouldReload) {
-      message.value = "预览完成，请确认变更后再导入。";
+      message.value = syncStore.isLoggedIn
+        ? "预览完成，请确认变更后再导入。确认导入后将暂停云同步，便于核对。"
+        : "预览完成，请确认变更后再导入。";
       messageType.value = "warning";
     } else {
       message.value = "预览完成：没有检测到可导入的增量。";
@@ -317,20 +345,130 @@ async function handleRestoreBeforeImport() {
   }
 }
 
-/** 仅此处手动触发；以后新增清理项也挂这里，不弹说明 */
+/** 格式化扫描/结果行：以后新增 bug 数据类型也挂这里，始终列出类型与数量（可为 0） */
+function formatDataCleanupLines(counts: {
+  orphanProjects: number;
+  danglingActivityProjectIds: number;
+  orphanTodos: number;
+  orphanSchedules: number;
+  orphanTasks: number;
+  orphanLedger: number;
+  backfillDoneTodos: number;
+  backfillDoneSchedules: number;
+}): string[] {
+  return [
+    `孤儿 Project（软删）：${counts.orphanProjects}`,
+    `死 Project 上的 Activity（清 projectId）：${counts.danglingActivityProjectIds}`,
+    `孤儿 todo（软删）：${counts.orphanTodos}`,
+    `孤儿 schedule（软删）：${counts.orphanSchedules}`,
+    `孤儿 task（软删）：${counts.orphanTasks}`,
+    `孤儿 ledger（软删）：${counts.orphanLedger}`,
+    `完成态回填 todo（与activity状态不一致）：${counts.backfillDoneTodos}`,
+    `完成态回填 schedule（与activity状态不一致）：${counts.backfillDoneSchedules}`,
+  ];
+}
+
+/** 无效数据整理唯一入口：先扫描各类型，确认后再删改 */
 function handleCleanupLocalData() {
   try {
-    isLoading.value = true;
     previewReport.value = null;
-    const report = projectStore.cleanupOrphanProjects();
-    if (report.removedProjectCount > 0 || report.danglingActivityCount > 0) {
-      shouldReloadOnClose.value = true;
-    }
+    const projectPreview = previewOrphanProjectCleanup(projectStore.rawProjects, dataStore.activityList);
+    const plannerPreview = purgeOrphanPlannerRows(
+      {
+        activityById: dataStore.activityById,
+        todoList: dataStore.todoList,
+        scheduleList: dataStore.scheduleList,
+        taskList: dataStore.taskList,
+        ledgerList: dataStore.ledgerList,
+      },
+      { dryRun: true },
+    );
+    const donePreview = backfillPlannerDoneFromActivity(
+      {
+        activityById: dataStore.activityById,
+        todoList: dataStore.todoList,
+        scheduleList: dataStore.scheduleList,
+      },
+      { dryRun: true },
+    );
+
+    const scanCounts = {
+      orphanProjects: projectPreview.removedProjectCount,
+      danglingActivityProjectIds: projectPreview.danglingActivityCount,
+      orphanTodos: plannerPreview.todos,
+      orphanSchedules: plannerPreview.schedules,
+      orphanTasks: plannerPreview.tasks,
+      orphanLedger: plannerPreview.ledger,
+      backfillDoneTodos: donePreview.todos,
+      backfillDoneSchedules: donePreview.schedules,
+    };
+    const total =
+      scanCounts.orphanProjects + scanCounts.danglingActivityProjectIds + orphanPurgeTotal(plannerPreview) + doneBackfillTotal(donePreview);
+
+    const lines = [
+      ...formatDataCleanupLines(scanCounts),
+      "",
+      total > 0 ? "确认后执行；软删/改动会标未同步，下次上传推到云端。" : "当前均为 0，无需整理。",
+    ];
+
+    dialog.warning({
+      title: "数据整理（扫描结果）",
+      content: lines.join("\n"),
+      positiveText: total > 0 ? "确认整理" : "关闭",
+      negativeText: total > 0 ? "取消" : undefined,
+      style: { whiteSpace: "pre-wrap" },
+      onPositiveClick: () => {
+        if (total === 0) return;
+        try {
+          isLoading.value = true;
+          const projectReport = projectStore.cleanupOrphanProjects();
+          const plannerCounts = purgeOrphanPlannerRows({
+            activityById: dataStore.activityById,
+            todoList: dataStore.todoList,
+            scheduleList: dataStore.scheduleList,
+            taskList: dataStore.taskList,
+            ledgerList: dataStore.ledgerList,
+          });
+          const doneCounts = backfillPlannerDoneFromActivity({
+            activityById: dataStore.activityById,
+            todoList: dataStore.todoList,
+            scheduleList: dataStore.scheduleList,
+          });
+          dataStore.saveAllAfterSync();
+
+          const resultCounts = {
+            orphanProjects: projectReport.removedProjectCount,
+            danglingActivityProjectIds: projectReport.danglingActivityCount,
+            orphanTodos: plannerCounts.todos,
+            orphanSchedules: plannerCounts.schedules,
+            orphanTasks: plannerCounts.tasks,
+            orphanLedger: plannerCounts.ledger,
+            backfillDoneTodos: doneCounts.todos,
+            backfillDoneSchedules: doneCounts.schedules,
+          };
+          if (
+            resultCounts.orphanProjects +
+              resultCounts.danglingActivityProjectIds +
+              orphanPurgeTotal(plannerCounts) +
+              doneBackfillTotal(doneCounts) >
+            0
+          ) {
+            shouldReloadOnClose.value = true;
+          }
+
+          message.value = ["已整理：", ...formatDataCleanupLines(resultCounts)].join("\n");
+          messageType.value = "success";
+        } catch (error: any) {
+          message.value = `整理失败：${error?.message || String(error)}`;
+          messageType.value = "error";
+        } finally {
+          isLoading.value = false;
+        }
+      },
+    });
   } catch (error: any) {
-    message.value = `整理失败：${error?.message || String(error)}`;
+    message.value = `扫描失败：${error?.message || String(error)}`;
     messageType.value = "error";
-  } finally {
-    isLoading.value = false;
   }
 }
 </script>

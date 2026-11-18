@@ -60,13 +60,13 @@ describe("LedgerSyncService", () => {
       expect(deletedStub["isUploadable"](createMockLedgerEntry({ deleted: true }))).toBe(true);
     });
 
-    it("删除态 activity 不存在也上传", () => {
+    it("删除态且 activity 本机不存在则不进批次（FK 必拒，不再反复撞墙）", () => {
       const missingActivity = new LedgerSyncService(
         () => ledgerListRef.value,
         () => indexMap,
         () => new Map(),
       );
-      expect(missingActivity["isUploadable"](createMockLedgerEntry({ deleted: true }))).toBe(true);
+      expect(missingActivity["isUploadable"](createMockLedgerEntry({ deleted: true }))).toBe(false);
     });
 
     it("未删账本挂在已删 activity 上仍跳过", () => {

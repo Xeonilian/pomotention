@@ -56,3 +56,31 @@ export function countActivitiesOnDeadProjects(
   }
   return { count, deadProjectIds: [...dead] };
 }
+
+/** 只扫描、不改写：与 cleanupOrphanProjects 影响范围一致 */
+export function previewOrphanProjectCleanup(
+  projects: Project[],
+  activities: { projectId?: number | null }[],
+): ProjectCleanupReport {
+  const roots = findOrphanForestRoots(projects);
+  const removedProjectIds: number[] = [];
+  const willRemove = new Set<number>();
+  for (const rootId of roots) {
+    const live = projects.find((p) => p.id === rootId && !p.deleted);
+    if (!live) continue;
+    for (const id of collectLiveDescendantIds(projects, rootId)) {
+      willRemove.add(id);
+      removedProjectIds.push(id);
+    }
+  }
+  const alreadyDead = countActivitiesOnDeadProjects(activities, projects);
+  let onOrphanTree = 0;
+  for (const act of activities) {
+    if (act.projectId != null && willRemove.has(act.projectId)) onOrphanTree++;
+  }
+  return {
+    removedProjectCount: removedProjectIds.length,
+    removedProjectIds,
+    danglingActivityCount: onOrphanTree + alreadyDead.count,
+  };
+}

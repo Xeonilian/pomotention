@@ -3,6 +3,7 @@ import {
   collectLiveDescendantIds,
   countActivitiesOnDeadProjects,
   findOrphanForestRoots,
+  previewOrphanProjectCleanup,
 } from "@/services/project/cleanupOrphanProjects";
 import type { Project } from "@/core/types/Project";
 
@@ -36,5 +37,19 @@ describe("cleanupOrphanProjects helpers", () => {
     );
     expect(count).toBe(2);
     expect(deadProjectIds).toEqual([1]);
+  });
+
+  it("previewOrphanProjectCleanup matches orphan forest + dangling refs", () => {
+    const projects = [
+      p({ id: 1, title: "dead", parentId: null, deleted: true }),
+      p({ id: 2, title: "orphan", parentId: 1 }),
+      p({ id: 3, title: "child", parentId: 2 }),
+      p({ id: 4, title: "root", parentId: null }),
+    ];
+    const report = previewOrphanProjectCleanup(projects, [{ projectId: 1 }, { projectId: 2 }, { projectId: 4 }]);
+    expect(report.removedProjectCount).toBe(2);
+    expect(report.removedProjectIds.sort((a, b) => a - b)).toEqual([2, 3]);
+    // 挂死 P(1) 一条 + 将删孤儿树(2) 一条
+    expect(report.danglingActivityCount).toBe(2);
   });
 });
