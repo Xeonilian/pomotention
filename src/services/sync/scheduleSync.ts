@@ -46,15 +46,17 @@ export class ScheduleSyncService extends BaseSyncService<Schedule, CloudSchedule
     this.getActivityMap = getActivityMap;
   }
 
-  /** 跳过引用已删除/不存在 activity 的 orphan schedule，避免外键冲突 */
+  /**
+   * 父 activity 本机不存在 → 一律不进上传批次（云端 FK 必拒，删除态也不能撞）；
+   * 父行还在（含软删墓碑）时删除态照传：uploadAll 先传 activity 再传 schedule，FK 安全
+   */
   protected isUploadable(item: Schedule): boolean {
-    // 删除态总要同步到云端：activity 由软删模型保留行，且 uploadAll 先传 activity 再传 schedule，FK 安全
-    if (item.deleted) return true;
     const activity = this.getActivityMap().get(item.activityId);
     if (!activity) {
       console.warn(`[ScheduleSync] skip orphaned schedule id=${item.id}, activityId=${item.activityId} not found`);
       return false;
     }
+    if (item.deleted) return true;
     if (activity.deleted) {
       console.warn(`[ScheduleSync] skip orphaned schedule id=${item.id}, activityId=${item.activityId} is deleted`);
       return false;
