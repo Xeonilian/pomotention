@@ -49,6 +49,10 @@
 ## 通用操作
 
 - **复制**：在周或月视图中选中日期，并选中一条预约或待办，点击 <img src="/icons/ArrowRepeatAll24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;border-radius: 6px;">，可将该事项复制到选中的日期。日视图中可在当日完成复制。
+- **周视图拖拽**：
+  - **横拖**到其他日：按源日复制一条到目标日（时段相对关系保持）。
+  - **纵拖**：在当日改开始 / 结束时间（不会越过日界）。
+  - 手机请先 **长按** 再拖，避免和滚动抢手势。
 - **导出日程**：选择一条预约或待办，点击 <img src="/icons/QrCode24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;border-radius: 6px;">，弹出二维码；用手机扫描可将该条活动导入手机。
 
 ## 待办 Todo 专属操作
