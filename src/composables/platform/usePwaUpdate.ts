@@ -1,15 +1,17 @@
-import { h } from "vue";
-import { NButton } from "naive-ui";
 import { markPwaUpdating } from "@/composables/platform/chunkReloadGuard";
 
-/** 避免同一标签页重复弹出多条「有更新」通知 */
-let updatePromptShown = false;
 /** 避免重复弹出「下载失败」 */
 let installFailPromptShown = false;
-/** 首页 shell 就绪后才允许前台弹更新提示 */
+/** 首页 shell 就绪后才允许处理 waiting */
 let shellReady = false;
-/** shell 就绪前发现的 waiting 注册，延后提示 */
-let pendingPromptReg: ServiceWorkerRegistration | null = null;
+/** shell 就绪前发现的 waiting 注册，延后处理 */
+let pendingWaitingReg: ServiceWorkerRegistration | null = null;
+
+/** 页面加载时是否已有 controller：无则表示首次接管，不要整页刷新 */
+const hadControllerOnLoad =
+  typeof navigator !== "undefined" && "serviceWorker" in navigator
+    ? !!navigator.serviceWorker.controller
+    : false;
 
 /** controllerchange 在后台触发时挂起的 visibility 监听，dispose 时移除 */
 let pendingVisibilityReloadHandler: (() => void) | null = null;
@@ -24,7 +26,6 @@ function removePendingVisibilityReload() {
 type NotificationApi = ReturnType<typeof import("naive-ui").useNotification>;
 
 function markUpdatingAndReload() {
-  // 与 index.html 内联脚本共用，避免 activate + controllerchange 连刷两次
   try {
     if (sessionStorage.getItem("sw-act-reload")) return;
     sessionStorage.setItem("sw-act-reload", "1");
@@ -32,7 +33,6 @@ function markUpdatingAndReload() {
     /* 隐私模式等 */
   }
   markPwaUpdating();
-  // iOS PWA 上 replace 比 reload 更稳
   try {
     window.location.replace(window.location.href);
   } catch {
@@ -45,49 +45,14 @@ function applyWaitingWorker(reg: ServiceWorkerRegistration) {
   reg.waiting?.postMessage({ type: "SKIP_WAITING" });
 }
 
-function promptRefresh(reg: ServiceWorkerRegistration, notification: NotificationApi) {
-  if (updatePromptShown || !reg.waiting) return;
-
-  // 前台：等 shell 就绪后再弹，避免开机即打断
+/** 新 SW 已在 waiting：直接应用（不再弹「网站已更新」） */
+function applyWhenReady(reg: ServiceWorkerRegistration) {
+  if (!reg.waiting) return;
   if (!shellReady) {
-    pendingPromptReg = reg;
+    pendingWaitingReg = reg;
     return;
   }
-
-  // 后台：直接应用，回前台由 controllerchange 触发 reload
-  if (document.visibilityState !== "visible") {
-    updatePromptShown = true;
-    applyWaitingWorker(reg);
-    return;
-  }
-
-  updatePromptShown = true;
-  const version = import.meta.env.VITE_APP_VERSION ?? "";
-
-  notification.info({
-    title: "网站已更新",
-    content: () =>
-      h("div", { class: "pwa-update-prompt" }, [
-        h(
-          "p",
-          { style: "margin: 0 0 10px 0; line-height: 1.5;" },
-          version ? `你正在使用 v${version}。新版本已就绪，点下方按钮刷新即可生效。` : "新版本已就绪，点下方按钮刷新即可生效。",
-        ),
-        h(
-          NButton,
-          {
-            type: "primary",
-            size: "small",
-            onClick: () => {
-              applyWaitingWorker(reg);
-            },
-          },
-          { default: () => "立即刷新" },
-        ),
-      ]),
-    duration: 0,
-    closable: true,
-  });
+  applyWaitingWorker(reg);
 }
 
 function promptInstallFailed(notification: NotificationApi) {
@@ -103,7 +68,7 @@ function promptInstallFailed(notification: NotificationApi) {
 
 function bindWaitingDetection(reg: ServiceWorkerRegistration, notification: NotificationApi) {
   if (reg.waiting) {
-    promptRefresh(reg, notification);
+    applyWhenReady(reg);
   }
 
   reg.addEventListener("updatefound", () => {
@@ -111,8 +76,9 @@ function bindWaitingDetection(reg: ServiceWorkerRegistration, notification: Noti
     if (!installing) return;
 
     installing.addEventListener("statechange", () => {
+      // installed 且已有旧 controller = 真正的版本升级
       if (installing.state === "installed" && navigator.serviceWorker.controller) {
-        promptRefresh(reg, notification);
+        applyWhenReady(reg);
       }
       if (installing.state === "redundant") {
         promptInstallFailed(notification);
@@ -134,24 +100,25 @@ function scheduleSwUpdate(reg: ServiceWorkerRegistration) {
 }
 
 /**
- * 生产环境 Web：注册 SW、检测 waiting 版本、提示用户刷新；与 Tauri 桌面版无关
+ * 生产环境 Web：注册 SW、自动应用 waiting 版本；与 Tauri 桌面版无关
  */
 export function usePwaUpdate(notification: NotificationApi) {
   let refreshing = false;
 
   const onShellReady = () => {
     shellReady = true;
-    if (pendingPromptReg) {
-      const reg = pendingPromptReg;
-      pendingPromptReg = null;
-      promptRefresh(reg, notification);
+    if (pendingWaitingReg) {
+      const reg = pendingWaitingReg;
+      pendingWaitingReg = null;
+      applyWhenReady(reg);
     }
   };
 
   const onControllerChange = () => {
+    // 首次被 SW 接管（主屏幕第一次开常见）：页面本身已是新文档，勿再刷成「正在更新…」
+    if (!hadControllerOnLoad) return;
     if (refreshing) return;
 
-    // 后台/隐藏时立刻 reload 常被节流；回到前台再刷新
     if (document.visibilityState === "visible") {
       refreshing = true;
       removePendingVisibilityReload();
@@ -176,11 +143,10 @@ export function usePwaUpdate(notification: NotificationApi) {
     if (!import.meta.env.PROD || !("serviceWorker" in navigator)) return;
 
     shellReady = false;
-    pendingPromptReg = null;
+    pendingWaitingReg = null;
     window.addEventListener("pwa-shell-ready", onShellReady);
     navigator.serviceWorker.addEventListener("controllerchange", onControllerChange);
 
-    // 延迟到下一个 macrotask，避开页面 mount/reload 竞争期导致的 abort
     window.setTimeout(() => {
       void navigator.serviceWorker
         .register("/sw.js")
@@ -190,7 +156,6 @@ export function usePwaUpdate(notification: NotificationApi) {
         })
         .catch((err) => {
           const msg = err instanceof Error ? err.message : String(err);
-          // 刷新时旧页面 unload 会 abort 正在进行的 register，属于正常情况，不打 error
           if (msg.includes("aborted") || (err as DOMException)?.name === "AbortError") {
             console.log("[SW] registration aborted during page unload/reload");
             return;

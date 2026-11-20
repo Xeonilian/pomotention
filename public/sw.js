@@ -1,7 +1,7 @@
 // Service Worker 版本号：变更策略时请递增，以便激活时清掉旧缓存
-// v10: install 入口包仍可能在 iPhone 上拖很久，刷新后停在「正在更新…」
 // v11: install 只缓存壳即 skipWaiting；资源后台补；单文件超时
-const CACHE_VERSION = "v11";
+// v12: navigate 网络等待加长；清 SW 重试；activate 不再强制刷客户端（避免主屏幕首次开「正在更新」）
+const CACHE_VERSION = "v12";
 const CACHE_NAME = `pomotention-cache-${CACHE_VERSION}`;
 
 const SOUND_CACHE_VERSION = "v1";
@@ -14,7 +14,7 @@ self.__PRECACHE_MANIFEST = [];
 
 const PRECACHE_CONCURRENCY = 3;
 const FILE_TIMEOUT_MS = 15000;
-const NAVIGATE_NETWORK_MS = 2500;
+const NAVIGATE_NETWORK_MS = 8000;
 /** activate 里后台预缓存最多等多久，避免一直占住 waitUntil */
 const ACTIVATE_PRECACHE_BUDGET_MS = 45000;
 
@@ -109,17 +109,9 @@ self.addEventListener("activate", (event) => {
         }),
       );
       await self.clients.claim();
-
-      const clients = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
-      await Promise.all(
-        clients.map((client) => {
-          client.postMessage({ type: "SW_ACTIVATED_RELOAD" });
-          if ("navigate" in client && typeof client.navigate === "function" && client.url) {
-            return client.navigate(client.url).catch(() => undefined);
-          }
-          return undefined;
-        }),
-      );
+      // 不在此处强制 client.navigate / SW_ACTIVATED_RELOAD：
+      // 主屏幕第一次打开常会首次 activate，强制刷新会误显示「正在更新…」。
+      // 真正的版本升级由页面侧 controllerchange（且加载时已有旧 controller）处理。
 
       const manifest = Array.isArray(self.__PRECACHE_MANIFEST) ? self.__PRECACHE_MANIFEST : [];
       if (manifest.length === 0) return;
