@@ -548,7 +548,8 @@ function handleTagClick(tagId: number) {
 .search-container.is-mobile .right-pane :deep(.n-tabs-pane-wrapper) {
   flex: 1 1 0%;
   min-height: 0;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .search-container.is-mobile .left-pane {

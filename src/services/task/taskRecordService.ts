@@ -145,3 +145,24 @@ export function applyHighlightMarkupInSource(
   const next = source.slice(0, first) + wrapped + source.slice(first + needle.length);
   return { ok: true, next };
 }
+
+/**
+ * 去掉源中唯一的一处后批/原笔标记，保留纯文本。
+ */
+export function removeHighlightMarkupInSource(
+  source: string,
+  selectedText: string,
+  color: PostHighlightColor | null
+): ApplyHighlightResult {
+  const needle = selectedText.trim();
+  if (!needle) return { ok: false, reason: "empty" };
+
+  const wrapped = wrapWithHighlightMarkup(needle, color);
+  const first = source.indexOf(wrapped);
+  if (first === -1) return { ok: false, reason: "not_found" };
+  const second = source.indexOf(wrapped, first + wrapped.length);
+  if (second !== -1) return { ok: false, reason: "ambiguous" };
+
+  const next = source.slice(0, first) + needle + source.slice(first + wrapped.length);
+  return { ok: true, next };
+}

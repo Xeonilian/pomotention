@@ -52,7 +52,7 @@
           <span v-if="content.task.value" class="anno-toolbar">
             <n-button
               text
-              size="tiny"
+              size="small"
               class="anno-btn"
               :type="anno.mode === 'note' ? 'primary' : 'default'"
               title="Note 编辑模式"
@@ -64,10 +64,10 @@
             </n-button>
             <n-button
               text
-              size="tiny"
+              size="small"
               class="anno-btn"
               :type="anno.mode === 'highlight' ? 'primary' : 'default'"
-              title="后批高亮模式"
+              title="批注模式"
               @click="anno.toggleHighlightMode"
             >
               <template #icon>
@@ -80,9 +80,14 @@
                 :key="c"
                 type="button"
                 class="anno-swatch"
-                :class="[`anno-swatch--${c}`, { 'anno-swatch--active': anno.highlightColor === c }]"
-                :title="`后批色 ${c}`"
-                @click="anno.setHighlightColor(c)"
+                :class="[`anno-swatch--${c}`, { 'anno-swatch--active': anno.highlightTool === c }]"
+                @click="anno.setHighlightTool(c)"
+              />
+              <button
+                type="button"
+                class="anno-swatch anno-erase"
+                :class="{ 'anno-swatch--active': anno.highlightTool === 'erase' }"
+                @click="anno.setHighlightTool('erase')"
               />
             </span>
           </span>
@@ -120,10 +125,16 @@
             class="task-content md-reader"
             :class="[
               `md-theme-${settingStore.settings.markdownReaderTheme || 'classic'}`,
-              { 'task-content--paint': anno.mode === 'highlight' },
+              {
+                'task-content--paint': anno.mode === 'highlight' && !anno.isErasePen,
+                'task-content--erase': anno.isErasePen,
+              },
             ]"
             v-html="renderedTaskHtml"
+            @pointerdown="onBodyPointerDown"
             @mouseup="onBodyMouseUp"
+            @click="onBodyClick"
+            @contextmenu="onBodyContextMenu"
           ></div>
           <TaskNoteRegion
             :notes="anno.notes"
@@ -316,8 +327,24 @@ function renderNoteHtml(inner: string): string {
   return highlightSearchInHtml(String(notePreviewEngine.parse(inner || "")), searchQuery.value);
 }
 
+function onBodyPointerDown(ev: PointerEvent) {
+  anno.paintPointerDown(ev, contentMainRef.value);
+}
+
 function onBodyMouseUp() {
+  // 触摸划选由 pointer 会话 onEnd 写入；此处仅桌面鼠标
+  if (anno.isPaintDragging) return;
   anno.paintSelectionFromWindow(contentMainRef.value);
+}
+
+function onBodyClick(ev: MouseEvent) {
+  anno.eraseHighlightFromEvent(ev, contentMainRef.value);
+}
+
+function onBodyContextMenu(ev: Event) {
+  if (anno.mode === "highlight" && !anno.isErasePen) {
+    ev.preventDefault();
+  }
 }
 
 function scrollToHeading(id: string) {
@@ -482,6 +509,8 @@ function scrollToHeading(id: string) {
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
+  padding-right: 6px; /* 正文右缘留缝，各主题都勿贴边 */
+  box-sizing: border-box;
 }
 
 .star-btn-placeholder {
@@ -499,7 +528,10 @@ function scrollToHeading(id: string) {
 .task-content {
   margin-top: 0;
   padding-top: 10px; /* 与上方 meta 拉开一点 */
-  overflow-y: auto;
+  /* 纵向滚动交给 .content-main；勿只设 overflow-y（会把 overflow-x 算成 auto → 底栏横滑） */
+  overflow-x: hidden;
+  max-width: 100%;
+  box-sizing: border-box;
   /* 盖过 MainLayout .app-layout 的 user-select:none，允许划选复制 */
   user-select: text;
   -webkit-user-select: text;
@@ -531,21 +563,24 @@ function scrollToHeading(id: string) {
 }
 
 .task-content.md-theme-classic :deep(p) {
-  margin: 2px;
+  margin: 2px 0; /* 勿左右 margin，避免窄屏多出几 px 横溢 */
 }
 
 .task-content.md-theme-classic :deep(pre) {
-  margin: 2px;
+  margin: 2px 0;
   border-radius: 8px;
   padding: 8px;
   font-family: "Consolas", "Monaco", "Courier New", monospace;
+  max-width: 100%;
+  overflow-x: auto;
+  box-sizing: border-box;
 }
 
 .task-content.md-theme-classic :deep(code) {
   background-color: var(--color-blue-light);
   font-family: "Consolas", "Monaco", "Courier New", monospace;
   border-radius: 4px;
-  margin: 2px;
+  margin: 0 2px;
   padding: 2px;
   line-height: inherit;
 }
@@ -559,8 +594,9 @@ function scrollToHeading(id: string) {
 .task-content.md-theme-classic :deep(blockquote) {
   background-color: var(--color-background-light-transparent);
   border-radius: 4px;
-  margin: 2px;
+  margin: 2px 0;
   padding: 2px;
+  box-sizing: border-box;
 }
 
 .task-content.md-theme-classic :deep(ul),
@@ -607,8 +643,7 @@ function scrollToHeading(id: string) {
 :deep(.highlight-text) {
   background-color: var(--color-yellow-light);
   border-radius: 4px;
-  margin: 2px;
-  padding: 2px;
+  padding: 2px 0;
   line-height: inherit;
 }
 
@@ -634,14 +669,12 @@ function scrollToHeading(id: string) {
 .anno-toolbar {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
-  margin-left: 4px;
+  gap: 6px; /* 与 .meta-row-content column-gap 同疏密 */
 }
 
 .anno-swatches {
   display: inline-flex;
   gap: 4px;
-  margin-left: 4px;
 }
 
 .anno-swatch {
@@ -663,8 +696,24 @@ function scrollToHeading(id: string) {
   background: color-mix(in srgb, var(--color-blue) 45%, white);
 }
 .anno-swatch--active {
-  outline: 2px solid var(--color-primary);
+  outline: 1px solid var(--color-text-secondary, #666);
   outline-offset: 1px;
+}
+
+/* 白底斜杠：擦除笔，与色块同组 */
+.anno-erase {
+  position: relative;
+  background: #fff;
+}
+.anno-erase::after {
+  content: "";
+  position: absolute;
+  left: 1px;
+  right: 1px;
+  top: 50%;
+  height: 1px;
+  background: var(--color-text-secondary, #666);
+  transform: rotate(-45deg);
 }
 
 .anno-hint {
@@ -678,11 +727,19 @@ function scrollToHeading(id: string) {
 .task-content--paint {
   cursor: text;
   user-select: text;
+  -webkit-user-select: text;
+  -webkit-touch-callout: none; /* 上色笔时勿出系统复制菜单 */
+}
+
+.task-content--erase :deep(.highlight-text) {
+  cursor: pointer;
 }
 
 @media (max-width: 430px) {
   .task-content {
     padding-top: 8px;
+    /* 手机勿用设置里的 rem 篇幅撑破视口 */
+    max-width: 100%;
   }
 }
 </style>

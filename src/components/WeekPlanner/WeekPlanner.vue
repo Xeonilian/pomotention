@@ -22,6 +22,7 @@
         :on-block-pointer-down="hideScheduleBlocks ? undefined : handleBlockPointerDown"
         :should-suppress-block-click="shouldSuppressClick"
         :drag-hover-day-start="dragUi?.hoverDayStart ?? null"
+        :drag-source-item-id="dragUi?.sourceItemId ?? null"
         @date-select="handleDateSelect"
         @date-select-day-view="handleDateSelectDayView"
         @item-change="handleItemSelect"
@@ -29,8 +30,6 @@
         @life-note-tap="onLifeNoteTap"
       />
     </div>
-    <!-- 纵拖出下沿：下周提示 -->
-    <div v-if="dragUi?.edgeNextWeek" class="week-drag-next-hint">下周同日</div>
     <Teleport to="body">
       <div
         v-if="mobileLifeNote"
@@ -200,22 +199,6 @@ function onDocClickCapture(e: Event) {
   gap: 8px;
   height: 100%;
   overflow: hidden;
-}
-
-.week-drag-next-hint {
-  position: absolute;
-  left: 50%;
-  bottom: 6px;
-  transform: translateX(-50%);
-  z-index: 20;
-  padding: 2px 10px;
-  border-radius: 4px;
-  font-size: 12px;
-  line-height: 1.4;
-  color: var(--text-color);
-  background: color-mix(in srgb, var(--primary-color, #409eff) 18%, var(--card-color, #fff));
-  border: 1px dashed color-mix(in srgb, var(--primary-color, #409eff) 70%, transparent);
-  pointer-events: none;
 }
 
 .grid {

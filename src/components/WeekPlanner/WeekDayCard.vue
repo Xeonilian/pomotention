@@ -98,6 +98,7 @@
             :get-item-block-style="getItemBlockStyle"
             :on-block-pointer-down="onBlockPointerDown"
             :should-suppress-click="shouldSuppressBlockClick"
+            :drag-source-item-id="dragSourceItemId"
             @item-change="handleItemChange"
           />
         </template>
@@ -249,6 +250,8 @@ const props = withDefaults(
     onBlockPointerDown?: (event: PointerEvent, block: WeekBlockItemType) => void;
     shouldSuppressBlockClick?: () => boolean;
     dragHoverDayStart?: number | null;
+    /** 长按拖中的 todo/schedule id */
+    dragSourceItemId?: number | null;
   }>(),
   {
     hideScheduleBlocks: false,
@@ -257,6 +260,7 @@ const props = withDefaults(
     onBlockPointerDown: undefined,
     shouldSuppressBlockClick: undefined,
     dragHoverDayStart: null,
+    dragSourceItemId: null,
   },
 );
 
@@ -571,9 +575,10 @@ const handleItemChange = (id: number, _ts: number, activityId?: number, taskId?:
   box-shadow: 0 2px 8px rgba(64, 158, 255, 0.3);
 }
 
+/* 拖落点：与选中同形态细边框，改红色 */
 .day-card--drag-hover {
-  outline: 2px solid color-mix(in srgb, var(--primary-color, #409eff) 55%, transparent);
-  outline-offset: -2px;
+  border-color: var(--color-red) !important;
+  box-shadow: none;
 }
 
 .day-card {

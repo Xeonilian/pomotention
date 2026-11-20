@@ -18,6 +18,15 @@ gh pr merge <num> --squash --delete-branch
 
 细节与模板：[`docs/dev-log/ship/PR.md`](docs/dev-log/ship/PR.md) §5。
 
+## Bugbot（人工激活）
+
+Bugbot **不自动跑**；需要时在 PR 评论里手动触发：
+
+- `@cursor review`
+- 或 `bugbot run`
+
+Agent **不要**在开 PR / 收工流程里默认调用 Bugbot；仅当用户明确要求时再触发。
+
 ## PR 收工结尾（合并之后）
 
 ### 先判断：能不能重建空 `dev`

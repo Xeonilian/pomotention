@@ -4,7 +4,10 @@ import {
   replaceNoteInner,
   splitTaskNotes,
 } from "@/services/task/taskNoteBlocks";
-import { applyHighlightMarkupInSource } from "@/services/task/taskRecordService";
+import {
+  applyHighlightMarkupInSource,
+  removeHighlightMarkupInSource,
+} from "@/services/task/taskRecordService";
 import { createTaskMarkdown } from "@/core/utils/taskMarkdown";
 
 describe("taskNoteBlocks", () => {
@@ -41,6 +44,23 @@ describe("post highlight markup", () => {
 
   it("rejects ambiguous selection", () => {
     const r = applyHighlightMarkupInSource("xx yy xx", "xx", "g");
+    expect(r.ok).toBe(false);
+  });
+
+  it("unwraps unique post highlight", () => {
+    const r = removeHighlightMarkupInSource("alpha ==r:beta== gamma", "beta", "r");
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.next).toBe("alpha beta gamma");
+  });
+
+  it("unwraps plain yellow highlight", () => {
+    const r = removeHighlightMarkupInSource("a ==plain== b", "plain", null);
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.next).toBe("a plain b");
+  });
+
+  it("rejects ambiguous unwrap", () => {
+    const r = removeHighlightMarkupInSource("==r:x== y ==r:x==", "x", "r");
     expect(r.ok).toBe(false);
   });
 

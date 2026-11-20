@@ -4,7 +4,7 @@
     class="item time-block"
     :class="[
       { 'item--selected': selectedRowId === block.item.id },
-      { 'activity--selected': activeId === block.item.activityId },
+      { 'item--drag-active': dragSourceItemId === block.item.id },
       { 'item--bar-only': isMobile },
       `time-block--${block.type}`,
     ]"
@@ -41,7 +41,6 @@
         <template #trigger>
           <span
             class="title title--popover-trigger"
-            :class="{ 'activity--selected': !isMobile && activeId === block.item.activityId }"
             :title="isMobile ? undefined : block.item.title"
             role="button"
             :aria-label="trimmedBlockTitle"
@@ -69,7 +68,7 @@ import { useDevice } from "@/composables/platform/useDevice";
 
 const dataStore = useDataStore();
 const tagStore = useTagStore();
-const { activeId, selectedRowId } = storeToRefs(dataStore);
+const { selectedRowId } = storeToRefs(dataStore);
 const { isMobile } = useDevice();
 
 const props = defineProps<{
@@ -78,6 +77,8 @@ const props = defineProps<{
   getItemBlockStyle: (block: WeekBlockItemType, dayStartTs: number) => Record<string, string | number>;
   onBlockPointerDown?: (event: PointerEvent, block: WeekBlockItemType) => void;
   shouldSuppressClick?: () => boolean;
+  /** 长按拖中的条目 id；命中则淡红背景 */
+  dragSourceItemId?: number | null;
 }>();
 
 const blockTagIds = computed(() => props.block.item.tagIds ?? []);
@@ -228,9 +229,10 @@ const handleClick = () => {
   z-index: 10;
 }
 
-.item.time-block.activity--selected {
+/* 长按拖激活：淡红（压过单击黄） */
+.item.time-block.item--drag-active {
   background-color: var(--color-red-light) !important;
-  z-index: 10;
+  z-index: 11;
 }
 
 .time-block {
@@ -328,7 +330,7 @@ const handleClick = () => {
   background-color: var(--color-yellow-light) !important;
 }
 
-.item.item--bar-only.time-block.activity--selected {
+.item.item--bar-only.time-block.item--drag-active {
   background-color: var(--color-red-light) !important;
 }
 

@@ -41,11 +41,7 @@ export function formatSourceDayIso(ts: number): string {
 }
 
 /** Todo→dueDate 日；Schedule→dueRange[0] 日 */
-export function resolveRepeatSourceDayTs(
-  activity: Activity,
-  sourceTodo?: Todo | null,
-  sourceSchedule?: Schedule | null,
-): number {
+export function resolveRepeatSourceDayTs(activity: Activity, sourceTodo?: Todo | null, sourceSchedule?: Schedule | null): number {
   if (sourceTodo?.dueDate != null) return startOfDay(sourceTodo.dueDate);
   const schStart = sourceSchedule?.activityDueRange?.[0];
   if (schStart != null) return startOfDay(schStart);
@@ -55,7 +51,7 @@ export function resolveRepeatSourceDayTs(
 }
 
 export function buildRepeatTaskDescription(title: string, sourceDayIso: string): string {
-  return `# ${title}\n>来自${sourceDayIso}`;
+  return `# ${title}\n>From ${sourceDayIso}`;
 }
 
 /** 源 realPomo 完成格合计，上限 5；无 Todo 则 0 */
@@ -153,11 +149,7 @@ export function repeatActivityToDay(input: RepeatActivityToDayInput): RepeatActi
 }
 
 /** 纵向拖：钳制区间不越过日末 */
-export function clampRangeToDay(
-  start: number,
-  end: number,
-  dayStart: number,
-): { start: number; end: number } {
+export function clampRangeToDay(start: number, end: number, dayStart: number): { start: number; end: number } {
   const dayEnd = dayStart + DAY_MS;
   let s = start;
   let e = end;

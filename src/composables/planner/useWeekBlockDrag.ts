@@ -57,6 +57,7 @@ export function useWeekBlockDrag(options: UseWeekBlockDragOptions) {
   const dragUi = ref<{
     mode: AxisMode;
     sourceDayStart: number;
+    sourceItemId: number;
     hoverDayStart: number | null;
     /** 纵拖出下沿 → 下周同源日 */
     edgeNextWeek: boolean;
@@ -195,7 +196,8 @@ export function useWeekBlockDrag(options: UseWeekBlockDragOptions) {
       dragUi.value = {
         mode: "pending",
         sourceDayStart: sourceDay,
-        hoverDayStart: sourceDay,
+        sourceItemId: ctx.payload.item.id,
+        hoverDayStart: null,
         edgeNextWeek: false,
       };
     },
@@ -218,11 +220,11 @@ export function useWeekBlockDrag(options: UseWeekBlockDragOptions) {
         return;
       }
 
-      // vertical：下沿外 = 下周；格内 = 改时预览（同源日高亮）
+      // vertical：下沿外 = 下周（源日红线）；格内改时不标天
       const bottomNext = isBottomNextWeekEdge(event.clientY);
       if (dragUi.value) {
         dragUi.value.edgeNextWeek = bottomNext;
-        dragUi.value.hoverDayStart = bottomNext ? null : startOfDay(originVisualStart);
+        dragUi.value.hoverDayStart = bottomNext ? startOfDay(originVisualStart) : null;
       }
     },
     onEnd: (event, ctx) => {

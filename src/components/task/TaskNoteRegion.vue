@@ -1,7 +1,6 @@
 <!-- 批注 note 区：首页/数据页共用；编辑只回写 fence 内文 -->
 <template>
   <div v-if="notes.length > 0" class="task-note-region">
-    <div class="task-note-region__label">Note</div>
     <div
       v-for="note in notes"
       :key="note.index"
@@ -106,16 +105,9 @@ defineExpose({ startEdit, commitEdit });
 
 <style scoped>
 .task-note-region {
-  margin-top: 10px;
-  padding-top: 8px;
-  border-top: 1px dashed color-mix(in srgb, var(--color-text-secondary) 35%, transparent);
-}
-
-.task-note-region__label {
-  font-size: 12px;
-  color: var(--color-text-secondary);
-  margin-bottom: 4px;
-  letter-spacing: 0.02em;
+  margin-top: 8px;
+  padding: 0 10px;
+  box-sizing: border-box;
 }
 
 .task-note-block {
@@ -126,7 +118,8 @@ defineExpose({ startEdit, commitEdit });
   cursor: text;
   padding: 6px 8px;
   border-radius: 8px;
-  background: color-mix(in srgb, var(--color-blue-light) 55%, transparent);
+  background: var(--color-yellow-light);
+  min-height: 36px;
 }
 
 .task-note-textarea {
@@ -135,12 +128,12 @@ defineExpose({ startEdit, commitEdit });
   box-sizing: border-box;
   padding: 6px 8px;
   border-radius: 8px;
-  border: 1px solid var(--color-blue);
+  border: none;
   font-family: inherit;
   font-size: 14px;
   line-height: 1.6;
   resize: vertical;
   outline: none;
-  background: var(--color-background);
+  background: var(--color-yellow-light);
 }
 </style>
