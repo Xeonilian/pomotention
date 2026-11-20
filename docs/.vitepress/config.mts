@@ -33,6 +33,11 @@ export default withMermaid(
     ],
     title: "Pomotention",
     description: "🍅 基于番茄工作法与执行意图的自我照顾系统",
+    // 有图页才真正用到；勿对全站 modulepreload mermaid（无图页冷启动会白下 ~600KB）
+    shouldPreload(link) {
+      if (/mermaid|cytoscape|katex|Diagram-|wardley|cose-bilkent/i.test(link)) return false;
+      return true;
+    },
     // CHANGELOG 等仍在 dev-log 下的页面不进 Local Search
     transformPageData(pageData) {
       if (pageData.relativePath.startsWith("dev-log/")) {
@@ -60,6 +65,11 @@ export default withMermaid(
         // 只替换裸导入，避免 shim 内引用 .../dist/index.js 时再指回 shim
         alias: [
           {
+            // 有图页才动态 import('mermaid')，无图页不付主包体积
+            find: "vitepress-plugin-mermaid/Mermaid.vue",
+            replacement: resolve(vitepressDir, "theme/MermaidLazy.vue"),
+          },
+          {
             find: /^@braintree\/sanitize-url$/,
             replacement: resolve(vitepressDir, "shims/braintree-sanitize-url.mjs"),
           },
@@ -70,7 +80,8 @@ export default withMermaid(
         ],
       },
       optimizeDeps: {
-        include: ["@braintree/sanitize-url", "mermaid", "@tauri-apps/api"],
+        // mermaid 勿进首屏 prebundle；由 MermaidLazy 按需拉
+        include: ["@braintree/sanitize-url", "@tauri-apps/api"],
       },
     },
 
