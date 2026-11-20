@@ -13,6 +13,7 @@
 - 我想导出当前命中：见 [导出筛选结果](#导出筛选结果)
 - 我想在手机上切布局：见 [手机布局三态](#手机布局三态)
 - 我想在结果里继续编辑：见 [结果查看与编辑](#结果查看与编辑)
+- 我想在详情里批注：见 [详情批注](#详情批注)
 - 我想确认边界：见 [限制与说明](#限制与说明)
 
 ## 常用按钮
@@ -38,6 +39,8 @@
 | <img src="/icons/Delete20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;"> | 删除文件夹（软删子树；条目只移出不删） |
 | <img src="/icons/TaskListSquareRtl20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;"> | 列表行：待办类型标记（可拖进 / 出文件夹） |
 | <img src="/icons/CalendarEmpty20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;"> | 列表行：预约类型标记（可拖进 / 出文件夹） |
+| <img src="/icons/Note20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;"> | 详情：Note 编辑模式 |
+| <img src="/icons/Highlight20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;"> | 详情：后批高亮笔（色块 + 擦除） |
 
 ## 基础搜索与高亮
 
@@ -135,6 +138,16 @@
 - 详情支持 Markdown 阅读主题与 **目录（TOC）**（设置里可调阅读相关项）；手机上目录叠在元信息与正文之间，可收起。
 - 右上角可批量关闭已打开标签页。
 - 详情区可：切换星标、增删标签（见 [标签系统](./tag.md)）。
+
+## 详情批注
+
+数据页是后批划选的主入口（首页只渲染 / 可改 note，不做划选）。语法与边界见 [批注与高亮](./task.md#批注与高亮)。
+
+- <img src="/icons/Note20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;"> 进入 Note 模式，编辑正文下方的 note 区。
+- <img src="/icons/Highlight20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;"> 打开高亮笔：选 r / g / b 后划选上色；白底斜杠为擦除笔，点已有高亮去掉标记。
+- **电脑**：划选后松开即可写入。
+- **手机**：长按再拖出选区，松手上色（避免与系统复制菜单抢手势）。
+- 数据页 **没有** 全文编辑框；改源文里的 `==…==` / `:::note` 仍可回首页任务区。
 
 ## 限制与说明
 

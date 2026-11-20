@@ -294,10 +294,9 @@ function onTagPickerShow(projectId: number, open: boolean) {
   else emit("update:tagPickerShow", false);
 }
 
-/** 标题：轻点选中/双触改名；横滑拖；竖滑交给列表（对齐 SearchActivityRow） */
+/** 标题：轻点选中/双触改名；横滑拖；竖滑交给列表；手机仅整理态长按进拖 */
 const PROJECT_DRAG_THRESHOLD = 8;
 const PROJECT_ARRANGE_THRESHOLD = 24;
-const PROJECT_LONG_PRESS_DRAG_MS = 320;
 const PROJECT_ARRANGE_LONG_PRESS_MS = 180;
 let titlePress: {
   projectId: number;
@@ -380,12 +379,13 @@ function onProjectTitlePointerDown(e: PointerEvent, projectId: number) {
   window.addEventListener("pointerup", onTitlePressUp);
   window.addEventListener("pointercancel", onTitlePressCancel);
 
-  if (preferScroll) {
+  // 手机：仅列表整理态长按进拖；分屏半屏不激活拖拽反馈
+  if (preferScroll && arrangeMode) {
     clearTitleLongPressTimer();
     titleLongPressTimer = setTimeout(() => {
       titleLongPressTimer = null;
       beginProjectDragFromPress();
-    }, arrangeMode ? PROJECT_ARRANGE_LONG_PRESS_MS : PROJECT_LONG_PRESS_DRAG_MS);
+    }, PROJECT_ARRANGE_LONG_PRESS_MS);
   }
 }
 
@@ -414,6 +414,13 @@ function onTitlePressMove(e: PointerEvent) {
       titlePress.lastY = e.clientY;
       return;
     }
+    clearTitlePressListeners();
+    titleTap.touchCancel();
+    return;
+  }
+
+  // 手机分屏：不允许拖，不进入 is-dragging 样式
+  if (titlePress.preferScroll && !titlePress.arrangeMode) {
     clearTitlePressListeners();
     titleTap.touchCancel();
     return;

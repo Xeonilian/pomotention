@@ -1,4 +1,5 @@
-import { marked, Renderer } from "marked";
+import { Renderer } from "marked";
+import { createTaskMarkdown } from "@/core/utils/taskMarkdown";
 
 export type MarkdownTocItem = {
   id: string;
@@ -38,7 +39,7 @@ function htmlToPlain(html: string): string {
 
 /**
  * 渲染 markdown，并为 h1–h6 写入稳定 id；同步产出目录项。
- * 每次调用独立 Renderer，不污染全局 marked。
+ * 每次调用独立 Marked（含原笔/后批高亮），不污染全局 marked。
  */
 export function parseMarkdownWithToc(md: string): { html: string; toc: MarkdownTocItem[] } {
   if (!md?.trim()) return { html: "", toc: [] };
@@ -55,10 +56,11 @@ export function parseMarkdownWithToc(md: string): { html: string; toc: MarkdownT
     return `<h${depth} id="${id}">${inner}</h${depth}>\n`;
   };
 
-  // 只读勾选框，与 TaskRecord 共用 .markdown-checkbox 样式
-  renderer.checkbox = ({ checked }) =>
-    `<input type="checkbox" class="markdown-checkbox" disabled ${checked ? "checked" : ""}>`;
+  const engine = createTaskMarkdown({
+    interactiveCheckboxes: false,
+    renderer,
+  });
 
-  const html = String(marked.parse(md, { renderer }));
+  const html = String(engine.parse(md));
   return { html, toc };
 }

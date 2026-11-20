@@ -1,4 +1,5 @@
 import { ref } from "vue";
+import { usePointerDragSession } from "@/composables/gesture/usePointerDragSession";
 
 /** 拖源：3in1 或 Project 行 */
 export type SearchDragSource =
@@ -15,11 +16,11 @@ export type SearchProjectDragOptions = {
 };
 
 /**
- * 数据页 Project / 3in1 拖拽：Pointer + window 监听 + elementsFromPoint。
- * 不用 setPointerCapture：源行一加 pointer-events:none / 重绘时安卓会立刻 pointercancel。
+ * 数据页 Project / 3in1 拖拽：落点语义在此；会话走 usePointerDragSession。
+ * useCapture:false — 源行 pointer-events:none / 重绘时安卓会立刻 pointercancel。
+ * 长按与竖滑分流仍在行组件；此处 beginDrag = 已决定开拖。
  */
 export function useSearchProjectDrag(options: SearchProjectDragOptions) {
-  const isDragging = ref(false);
   const dragSource = ref<SearchDragSource | null>(null);
   const hoverTarget = ref<SearchDropTarget | null>(null);
 
@@ -49,20 +50,41 @@ export function useSearchProjectDrag(options: SearchProjectDragOptions) {
     return !options.isInvalidProjectDrop?.(source.id, target.id);
   }
 
-  function resolveHover(x: number, y: number): SearchDropTarget | null {
-    const source = dragSource.value;
+  function resolveHover(source: SearchDragSource | null, x: number, y: number): SearchDropTarget | null {
     if (!source) return null;
     const raw = findDropTarget(x, y);
     if (!raw || !isValidTarget(source, raw)) return null;
     return raw;
   }
 
-  /** 拖中禁止页面/列表跟手滚动 */
-  function suppressScroll(event: Event) {
-    event.preventDefault();
-  }
+  const { isDragging, beginDrag } = usePointerDragSession<SearchDragSource>({
+    useCapture: false,
+    lockBodyScrollOnTouch: false,
+    suppressWindowTouchMove: true,
+    touchLongPressMs: 0,
+    onActivate: (ctx) => {
+      dragSource.value = ctx.payload;
+      hoverTarget.value = resolveHover(ctx.payload, ctx.startClientX, ctx.startClientY);
+      try {
+        navigator.vibrate?.(12);
+      } catch {
+        /* ignore */
+      }
+    },
+    onMove: (event, ctx) => {
+      hoverTarget.value = resolveHover(ctx.payload, event.clientX, event.clientY);
+    },
+    onEnd: (event, ctx) => {
+      const target = resolveHover(ctx.payload, event.clientX, event.clientY);
+      if (target) {
+        options.onDrop(ctx.payload, target);
+      }
+      dragSource.value = null;
+      hoverTarget.value = null;
+    },
+  });
 
-  function startDrag(event: PointerEvent, source: SearchDragSource, _captureRoot?: HTMLElement | null) {
+  function startDrag(event: PointerEvent, source: SearchDragSource, captureRoot?: HTMLElement | null) {
     event.preventDefault();
     if (event.pointerType === "mouse" && event.button > 0) return;
 
@@ -72,45 +94,13 @@ export function useSearchProjectDrag(options: SearchProjectDragOptions) {
       /* ignore */
     }
 
-    isDragging.value = true;
-    dragSource.value = source;
-    hoverTarget.value = resolveHover(event.clientX, event.clientY);
+    const el =
+      captureRoot ??
+      (event.currentTarget as HTMLElement | null) ??
+      (event.target as HTMLElement | null);
+    if (!el) return;
 
-    window.addEventListener("pointermove", handleDragMove);
-    window.addEventListener("pointerup", handleDragEnd);
-    window.addEventListener("pointercancel", handleDragEnd);
-    // 非 passive：否则安卓拖时仍滚列表并吞手势
-    window.addEventListener("touchmove", suppressScroll, { passive: false });
-
-    try {
-      navigator.vibrate?.(12);
-    } catch {
-      /* ignore */
-    }
-  }
-
-  function handleDragMove(event: PointerEvent) {
-    if (!isDragging.value || !dragSource.value) return;
-    event.preventDefault();
-    hoverTarget.value = resolveHover(event.clientX, event.clientY);
-  }
-
-  function handleDragEnd(event: PointerEvent) {
-    const source = dragSource.value;
-    const target = resolveHover(event.clientX, event.clientY);
-
-    if (source && target) {
-      options.onDrop(source, target);
-    }
-
-    isDragging.value = false;
-    dragSource.value = null;
-    hoverTarget.value = null;
-
-    window.removeEventListener("pointermove", handleDragMove);
-    window.removeEventListener("pointerup", handleDragEnd);
-    window.removeEventListener("pointercancel", handleDragEnd);
-    window.removeEventListener("touchmove", suppressScroll);
+    beginDrag(event, el, source);
   }
 
   return {

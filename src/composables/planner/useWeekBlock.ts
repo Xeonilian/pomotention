@@ -461,6 +461,16 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targe
     };
   }
 
+  /** 供周块拖拽：Y 位移换算 */
+  const axisMetrics = computed(() => {
+    const range = unifiedTimeRange.value;
+    return {
+      startHour: range.startHour,
+      endHour: range.endHour,
+      pxPerHour: pxPerHour.value,
+    };
+  });
+
   return {
     layoutedWeekBlocks,
     hourStamps,
@@ -470,5 +480,6 @@ export function useWeekBlock(days: ReturnType<typeof useWeekData>["days"], targe
     lifeOverlaysByDay,
     getLifeSleepBandStyle,
     getLifePointStyle,
+    axisMetrics,
   };
 }

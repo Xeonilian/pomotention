@@ -19,6 +19,10 @@
         :hide-schedule-blocks="hideScheduleBlocks"
         :drink-layer="drinkLayer"
         :life-view="lifeView"
+        :on-block-pointer-down="hideScheduleBlocks ? undefined : handleBlockPointerDown"
+        :should-suppress-block-click="shouldSuppressClick"
+        :drag-hover-day-start="dragUi?.hoverDayStart ?? null"
+        :drag-source-item-id="dragUi?.sourceItemId ?? null"
         @date-select="handleDateSelect"
         @date-select-day-view="handleDateSelectDayView"
         @item-change="handleItemSelect"
@@ -63,6 +67,7 @@ import { FoodApple20Filled, WeatherMoon20Filled } from "@vicons/fluent";
 import WeekDayCard from "./WeekDayCard.vue";
 import { useWeekData } from "@/composables/planner/useWeekData";
 import { useWeekBlock } from "@/composables/planner/useWeekBlock";
+import { useWeekBlockDrag } from "@/composables/planner/useWeekBlockDrag";
 
 withDefaults(
   defineProps<{
@@ -115,17 +120,32 @@ onUnmounted(() => {
 });
 
 const { days, MAX_PER_DAY } = useWeekData();
-const { layoutedWeekBlocks, hourStamps, timeGridHeight, getItemBlockStyle, getHourTickTop, lifeOverlaysByDay, getLifeSleepBandStyle, getLifePointStyle } =
-  useWeekBlock(days, targetHeight);
-
-const dayNames = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
+const {
+  layoutedWeekBlocks,
+  hourStamps,
+  timeGridHeight,
+  getItemBlockStyle,
+  getHourTickTop,
+  lifeOverlaysByDay,
+  getLifeSleepBandStyle,
+  getLifePointStyle,
+  axisMetrics,
+} = useWeekBlock(days, targetHeight);
 
 const emit = defineEmits<{
   "date-select": [timestamp: number];
   "date-select-day-view": [timestamp: number];
   "item-change": [id: number, activityId?: number, taskId?: number];
   "open-day-sheet": [dayStart: number];
+  "week-drag-navigate": [dayStartTs: number];
 }>();
+
+const { dragUi, handleBlockPointerDown, shouldSuppressClick } = useWeekBlockDrag({
+  getAxis: () => axisMetrics.value,
+  onNavigateToDay: (dayStartTs) => emit("week-drag-navigate", dayStartTs),
+});
+
+const dayNames = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 
 const handleDateSelect = (ts: number) => {
   emit("date-select", ts);
@@ -173,6 +193,7 @@ function onDocClickCapture(e: Event) {
 
 <style scoped>
 .week-planner {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 8px;

@@ -14,17 +14,12 @@ description: 选对使用方式（桌面 / PWA / 网页），并厘清注册同�
 
 ## 怎么选
 
-```mermaid
-flowchart TD
-  classDef brLineHeight line-height:1.65
-  A[你在哪用？] -->|电脑 Windows macOS| B{功能齐全 vs <br>更新便捷}
-  B -->|置顶、数据导出| D[桌面客户端]
-  B -->|刷新即更新| C
-  A -->|手机平板| C{ 浏览器<br>支持添加桌面?}
-  C -->|是| E[PWA]
-  C -->|否| F[网页]
-  class B,C brLineHeight
-```
+1. **电脑（Windows / macOS）**
+   - 要置顶、本机导入导出 → [桌面客户端](./desktop-install.md)
+   - 更在意刷新即更新 → 看下一步（同手机：浏览器能否「添加到桌面」）
+2. **手机 / 平板**（或电脑上不想装安装包）
+   - 浏览器支持「安装 / 添加到主屏幕」→ [PWA](./pwa-install.md)
+   - 否则 → 直接用 [网页](https://pomotention.com)
 
 ## 入口
 
@@ -36,20 +31,9 @@ flowchart TD
 
 ## 数据与同步
 
-```mermaid
-flowchart LR
-  subgraph L[本地]
-    P[PWA]
-    W[网页/浏览器]
-    C[桌面端]
-  end
-  subgraph Cloud[登录后]
-    S[账号同步]
-  end
-  P --> S
-  W --> S
-  C --> S
-```
+- **本地**：PWA、网页、桌面端各自先把数据存在本机。
+- **登录后**：同一账号下，三端都可走云同步对齐。
+- **不登录**：数据不自动同步；PWA 与网页的本地库也**互不相通**。
 
 ::: warning
 

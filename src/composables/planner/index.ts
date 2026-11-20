@@ -4,4 +4,5 @@ export { useTimeBlocks } from "@/composables/planner/useTimeBlocks";
 export { useTimeBlockDrag } from "@/composables/planner/useTimeBlockDrag";
 export { useWeekData } from "@/composables/planner/useWeekData";
 export { useWeekBlock } from "@/composables/planner/useWeekBlock";
+export { useWeekBlockDrag } from "@/composables/planner/useWeekBlockDrag";
 export { usePomodoroStats } from "@/composables/planner/usePomodoroStats";

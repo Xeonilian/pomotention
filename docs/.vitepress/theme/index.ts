@@ -1,6 +1,8 @@
+/// <reference types="vite/client" />
 import { h } from "vue";
 import { isTauri } from "@tauri-apps/api/core";
-import DefaultTheme from "vitepress/theme";
+/** 不打包 Inter：用系统字体栈（见 custom.css --vp-font-family-*） */
+import DefaultTheme from "vitepress/theme-without-fonts";
 import type { EnhanceAppContext } from "vitepress";
 import "./custom.css";
 

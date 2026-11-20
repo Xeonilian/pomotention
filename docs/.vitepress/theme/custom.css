@@ -1,3 +1,11 @@
+/* 系统字体：配合 theme-without-fonts，避免下 Inter 多子集 woff2 */
+:root {
+  --vp-font-family-base: system-ui, -apple-system, "Segoe UI", Roboto, "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif, "Apple Color Emoji",
+    "Segoe UI Emoji";
+  --vp-font-family-mono: ui-monospace, "Cascadia Code", "SF Mono", Menlo, Consolas, monospace;
+}
+
 /* ===== 全局间距调整 ===== */
 
 /* 减少段落间距 */
@@ -98,22 +106,6 @@
 /* 调整整体行高 */
 .vp-doc {
   line-height: 1.5; /* 默认 1.7 */
-}
-
-/* PWA 白屏排查流程图：固定宽度（窄屏仍可压缩），避免 Mermaid 默认撑满栏宽 */
-.vp-doc .doc-mermaid-wrap--pwa-blank-flow {
-  width: 420px;
-  max-width: 100%;
-  margin-inline: auto;
-  box-sizing: border-box;
-}
-.vp-doc .doc-mermaid-wrap--pwa-blank-flow .mermaid {
-  display: flex;
-  justify-content: center;
-}
-.vp-doc .doc-mermaid-wrap--pwa-blank-flow .mermaid svg {
-  max-width: 100%;
-  height: auto;
 }
 
 /* 首页特殊调整 */

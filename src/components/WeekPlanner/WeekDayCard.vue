@@ -3,7 +3,12 @@
   <n-card
     size="small"
     class="day-card"
-    :class="[{ 'day-card--selected': selectedDate === day.startTs }, { 'day-card--drink-layer': drinkLayer }]"
+    :class="[
+      { 'day-card--selected': selectedDate === day.startTs },
+      { 'day-card--drink-layer': drinkLayer },
+      { 'day-card--drag-hover': dragHoverDayStart === day.startTs },
+    ]"
+    :data-day-start-ts="day.startTs"
     @click="() => onCardClick()"
   >
     <div class="day-header">
@@ -91,6 +96,9 @@
             :block="block"
             :day-start-ts="day.startTs"
             :get-item-block-style="getItemBlockStyle"
+            :on-block-pointer-down="onBlockPointerDown"
+            :should-suppress-click="shouldSuppressBlockClick"
+            :drag-source-item-id="dragSourceItemId"
             @item-change="handleItemChange"
           />
         </template>
@@ -239,8 +247,21 @@ const props = withDefaults(
     drinkLayer?: boolean;
     /** 生活可视化：日期 badge 进 sheet；格子只选中 */
     lifeView?: boolean;
+    onBlockPointerDown?: (event: PointerEvent, block: WeekBlockItemType) => void;
+    shouldSuppressBlockClick?: () => boolean;
+    dragHoverDayStart?: number | null;
+    /** 长按拖中的 todo/schedule id */
+    dragSourceItemId?: number | null;
   }>(),
-  { hideScheduleBlocks: false, drinkLayer: false, lifeView: false },
+  {
+    hideScheduleBlocks: false,
+    drinkLayer: false,
+    lifeView: false,
+    onBlockPointerDown: undefined,
+    shouldSuppressBlockClick: undefined,
+    dragHoverDayStart: null,
+    dragSourceItemId: null,
+  },
 );
 
 const holidayForDay = computed(() => holidayMap.value[getDateKey(props.day.startTs)] ?? null);
@@ -552,6 +573,12 @@ const handleItemChange = (id: number, _ts: number, activityId?: number, taskId?:
 .day-card--selected {
   border-color: var(--primary-color, #409eff) !important;
   box-shadow: 0 2px 8px rgba(64, 158, 255, 0.3);
+}
+
+/* 拖落点：与选中同形态细边框，改红色 */
+.day-card--drag-hover {
+  border-color: var(--color-red) !important;
+  box-shadow: none;
 }
 
 .day-card {
