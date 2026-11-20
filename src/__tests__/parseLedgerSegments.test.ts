@@ -6,7 +6,6 @@ import {
   composeLedgerTitle,
   getTitleTagPickerMode,
   replaceTagTriggerWithCategory,
-  isInLedgerInputZone,
 } from "@/core/ledger/parseLedgerSegments";
 
 describe("parseLedgerFromTitle v1", () => {

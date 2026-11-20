@@ -114,6 +114,8 @@ describe("LedgerSyncService", () => {
   describe("mapCloudToLocal", () => {
     it("maps table row (snake_case) back to LedgerEntry with sync metadata", () => {
       const local = service["mapCloudToLocal"]({
+        id: "ledger-row-1",
+        user_id: "user-abc",
         timestamp_id: 1700000000000,
         amount: 30,
         direction: "expense",
