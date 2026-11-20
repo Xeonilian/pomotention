@@ -2,8 +2,9 @@
 // v4: /assets/ stale-while-revalidate 弱网先出缓存
 // v6: navigate 曾改回 network-first（防旧 html 配新 JS）
 // v7: 重复打开 navigate 也 SWR——有网等 html 会在开机图淡出后露出白屏
-// v8: install 全量预缓存（构建期清单）；navigate 只读本版本缓存不回写
-const CACHE_VERSION = "v8";
+// v8: install 全量预缓存；navigate 只读不回写
+// v9: 预缓存成功后自动 skipWaiting（白屏时 Vue 发不出 SKIP_WAITING）；navigate 网络优先不回写；activate 强制刷新客户端
+const CACHE_VERSION = "v9";
 const CACHE_NAME = `pomotention-cache-${CACHE_VERSION}`;
 
 // 声音文件独立缓存版本：仅在声音文件本身有更新时才递增，避免每次 SW 更新都重新下载
@@ -15,6 +16,9 @@ const APP_SHELL = ["/", "/index.html", "/manifest.webmanifest", "/icon-128.png",
 
 // 构建期由 vite 插件替换为真实资产列表；开发源文件保持空数组
 self.__PRECACHE_MANIFEST = [];
+
+const PRECACHE_CONCURRENCY = 6;
+const NAVIGATE_NETWORK_MS = 2500;
 
 function notifyProgress(loaded, total) {
   self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
@@ -35,7 +39,7 @@ function precacheShell(cache) {
   );
 }
 
-/** JS/CSS 严格模式：任一失败则整个 install 失败 */
+/** JS/CSS 严格模式：限并发，任一失败则整个 install 失败 */
 async function precacheManifest(cache) {
   const manifest = Array.isArray(self.__PRECACHE_MANIFEST) ? self.__PRECACHE_MANIFEST : [];
   const total = manifest.length;
@@ -45,13 +49,21 @@ async function precacheManifest(cache) {
     return;
   }
   notifyProgress(0, total);
-  await Promise.all(
-    manifest.map(async (url) => {
+
+  let nextIndex = 0;
+  async function worker() {
+    while (nextIndex < manifest.length) {
+      const index = nextIndex;
+      nextIndex += 1;
+      const url = manifest[index];
       await cache.add(url);
       loaded += 1;
       notifyProgress(loaded, total);
-    }),
-  );
+    }
+  }
+
+  const workers = Array.from({ length: Math.min(PRECACHE_CONCURRENCY, total) }, () => worker());
+  await Promise.all(workers);
 }
 
 self.addEventListener("install", (event) => {
@@ -60,12 +72,13 @@ self.addEventListener("install", (event) => {
     caches.open(CACHE_NAME).then(async (cache) => {
       await precacheShell(cache);
       await precacheManifest(cache);
+      // 预缓存成功后立即接管：白屏时页面 Vue 起不来，发不出 SKIP_WAITING
+      await self.skipWaiting();
     }),
   );
-  // 不在此处 skipWaiting：有旧页面在跑时新 SW 进入 waiting，由前端发 SKIP_WAITING 后再激活
 });
 
-// 用户确认刷新后跳过等待，立即接管
+// 兼容旧前端仍发 SKIP_WAITING
 self.addEventListener("message", (event) => {
   if (event.data && event.data.type === "SKIP_WAITING") {
     self.skipWaiting();
@@ -74,8 +87,9 @@ self.addEventListener("message", (event) => {
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
+    (async () => {
+      const cacheNames = await caches.keys();
+      await Promise.all(
         cacheNames.map((cacheName) => {
           if (cacheName !== CACHE_NAME && cacheName !== SOUND_CACHE_NAME) {
             console.log("[Service Worker] Deleting old cache:", cacheName);
@@ -83,9 +97,21 @@ self.addEventListener("activate", (event) => {
           }
         }),
       );
-    }),
+      await self.clients.claim();
+
+      // 不依赖页面监听：强制让旧白屏客户端加载新文档
+      const clients = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+      await Promise.all(
+        clients.map((client) => {
+          client.postMessage({ type: "SW_ACTIVATED_RELOAD" });
+          if ("navigate" in client && typeof client.navigate === "function" && client.url) {
+            return client.navigate(client.url).catch(() => undefined);
+          }
+          return undefined;
+        }),
+      );
+    })(),
   );
-  return self.clients.claim();
 });
 
 /**
@@ -117,15 +143,23 @@ function assetsStaleWhileRevalidate(request) {
   });
 }
 
-/** navigate：只读本版本缓存，不后台回写（避免旧 SW 缓存被灌进新 HTML） */
-function navigateCacheOnly(request) {
-  return caches.match(request).then((cached) => {
-    if (cached) return cached;
-    return caches.match("/index.html").then((fallback) => {
-      if (fallback) return fallback;
-      return fetch(request).catch(() => new Response("", { status: 503, statusText: "Offline" }));
-    });
-  });
+/**
+ * navigate：网络优先（短超时），失败再读本版本缓存；成功响应不回写
+ * —— 避免旧 SW 把新 HTML 灌进旧缓存；部署后尽快拿到带启动屏的新文档
+ */
+async function navigateNetworkFirst(request) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), NAVIGATE_NETWORK_MS);
+  try {
+    const response = await fetch(request, { signal: controller.signal });
+    clearTimeout(timer);
+    if (response && response.ok) return response;
+  } catch {
+    clearTimeout(timer);
+  }
+  const cached = (await caches.match(request)) || (await caches.match("/index.html"));
+  if (cached) return cached;
+  return new Response("", { status: 503, statusText: "Offline" });
 }
 
 /** /sounds/：缓存优先，不后台更新；仅在 SOUND_CACHE_VERSION 递增时由 activate 清缓存后重新下载 */
@@ -167,7 +201,7 @@ self.addEventListener("fetch", (event) => {
   }
 
   if (request.mode === "navigate") {
-    event.respondWith(navigateCacheOnly(request));
+    event.respondWith(navigateNetworkFirst(request));
     return;
   }
 

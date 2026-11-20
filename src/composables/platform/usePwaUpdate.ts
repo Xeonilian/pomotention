@@ -24,6 +24,13 @@ function removePendingVisibilityReload() {
 type NotificationApi = ReturnType<typeof import("naive-ui").useNotification>;
 
 function markUpdatingAndReload() {
+  // 与 index.html 内联脚本共用，避免 activate + controllerchange 连刷两次
+  try {
+    if (sessionStorage.getItem("sw-act-reload")) return;
+    sessionStorage.setItem("sw-act-reload", "1");
+  } catch {
+    /* 隐私模式等 */
+  }
   markPwaUpdating();
   window.location.reload();
 }

@@ -70,6 +70,7 @@
         font-size: 14px;
         color: #666666;
         letter-spacing: -0.01em;
+        min-height: 1.2em;
       }
     </style>
   </head>
@@ -99,14 +100,15 @@
           updating = !!localStorage.getItem("pwa-updating");
         } catch (e) {}
 
-        if (isStandalone()) {
+        // 主屏幕 / 更新中都显示，避免「纯白屏无字」
+        if (isStandalone() || updating) {
           boot.classList.add("is-visible");
           statusEl.textContent = updating ? "正在更新…" : "正在启动…";
         }
 
         function setStatus(text) {
           statusEl.textContent = text;
-          if (!boot.classList.contains("is-visible") && isStandalone()) {
+          if (!boot.classList.contains("is-visible")) {
             boot.classList.add("is-visible");
           }
         }
@@ -118,17 +120,40 @@
             boot.classList.remove("is-visible", "is-hiding");
             boot.setAttribute("aria-hidden", "true");
           }, 360);
+          try {
+            sessionStorage.removeItem("sw-act-reload");
+          } catch (e) {}
         }
 
         window.addEventListener("pwa-shell-ready", hideBoot);
+        window.setTimeout(hideBoot, 15000);
 
-        // 兜底：JS 卡死时避免永久遮挡
-        window.setTimeout(hideBoot, 10000);
+        function markUpdating() {
+          try {
+            localStorage.setItem("pwa-updating", "1");
+          } catch (e) {}
+        }
+
+        function reloadOnceForSw() {
+          try {
+            if (sessionStorage.getItem("sw-act-reload")) return;
+            sessionStorage.setItem("sw-act-reload", "1");
+          } catch (e) {}
+          markUpdating();
+          setStatus("正在更新…");
+          window.location.reload();
+        }
 
         if ("serviceWorker" in navigator) {
+          // 不依赖 Vue：进度、激活后刷新、注册更新
           navigator.serviceWorker.addEventListener("message", function (event) {
             var data = event.data;
-            if (!data || data.type !== "SW_PRECACHE_PROGRESS") return;
+            if (!data) return;
+            if (data.type === "SW_ACTIVATED_RELOAD") {
+              reloadOnceForSw();
+              return;
+            }
+            if (data.type !== "SW_PRECACHE_PROGRESS") return;
             var loaded = Number(data.loaded) || 0;
             var total = Number(data.total) || 0;
             if (total <= 0) {
@@ -139,6 +164,24 @@
             if (pct > 100) pct = 100;
             setStatus("正在下载更新 " + pct + "%");
           });
+
+          var refreshing = false;
+          navigator.serviceWorker.addEventListener("controllerchange", function () {
+            if (refreshing) return;
+            refreshing = true;
+            reloadOnceForSw();
+          });
+
+          window.setTimeout(function () {
+            navigator.serviceWorker.register("/sw.js").then(function (reg) {
+              if (reg.waiting) {
+                reg.waiting.postMessage({ type: "SKIP_WAITING" });
+              }
+              try {
+                reg.update();
+              } catch (e) {}
+            }).catch(function () {});
+          }, 0);
         }
       })();
     </script>
