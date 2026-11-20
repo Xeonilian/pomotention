@@ -29,10 +29,119 @@
     <meta name="format-detection" content="telephone=no" />
     <meta name="msapplication-TileColor" content="#ffffff" />
     <meta name="msapplication-config" content="/browserconfig.xml" />
+    <style id="pwa-boot-style">
+      #pwa-boot {
+        position: fixed;
+        inset: 0;
+        z-index: 10000;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        background: #ffffff;
+        padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+      }
+      #pwa-boot.is-visible {
+        display: flex;
+      }
+      #pwa-boot.is-hiding {
+        opacity: 0;
+        transition: opacity 0.35s ease;
+        pointer-events: none;
+      }
+      .pwa-boot__inner {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 16px;
+      }
+      .pwa-boot__icon {
+        width: 96px;
+        height: 96px;
+        border-radius: 22px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      }
+      .pwa-boot__name {
+        font-size: 20px;
+        font-weight: 600;
+        color: #1a1a1a;
+        letter-spacing: -0.02em;
+      }
+      .pwa-boot__status {
+        font-size: 14px;
+        color: #666666;
+        letter-spacing: -0.01em;
+      }
+    </style>
   </head>
 
   <body>
+    <div id="pwa-boot" aria-hidden="true">
+      <div class="pwa-boot__inner">
+        <img src="/icon-192.png" alt="" class="pwa-boot__icon" width="96" height="96" />
+        <span class="pwa-boot__name">Pomotention</span>
+        <span id="pwa-boot-status" class="pwa-boot__status">正在启动…</span>
+      </div>
+    </div>
     <div id="app" style="height: 100%"></div>
+    <script>
+      (function () {
+        var boot = document.getElementById("pwa-boot");
+        var statusEl = document.getElementById("pwa-boot-status");
+        if (!boot || !statusEl) return;
+
+        function isStandalone() {
+          var nav = navigator;
+          return !!(nav.standalone || window.matchMedia("(display-mode: standalone)").matches);
+        }
+
+        var updating = false;
+        try {
+          updating = !!localStorage.getItem("pwa-updating");
+        } catch (e) {}
+
+        if (isStandalone()) {
+          boot.classList.add("is-visible");
+          statusEl.textContent = updating ? "正在更新…" : "正在启动…";
+        }
+
+        function setStatus(text) {
+          statusEl.textContent = text;
+          if (!boot.classList.contains("is-visible") && isStandalone()) {
+            boot.classList.add("is-visible");
+          }
+        }
+
+        function hideBoot() {
+          if (!boot.classList.contains("is-visible")) return;
+          boot.classList.add("is-hiding");
+          window.setTimeout(function () {
+            boot.classList.remove("is-visible", "is-hiding");
+            boot.setAttribute("aria-hidden", "true");
+          }, 360);
+        }
+
+        window.addEventListener("pwa-shell-ready", hideBoot);
+
+        // 兜底：JS 卡死时避免永久遮挡
+        window.setTimeout(hideBoot, 10000);
+
+        if ("serviceWorker" in navigator) {
+          navigator.serviceWorker.addEventListener("message", function (event) {
+            var data = event.data;
+            if (!data || data.type !== "SW_PRECACHE_PROGRESS") return;
+            var loaded = Number(data.loaded) || 0;
+            var total = Number(data.total) || 0;
+            if (total <= 0) {
+              setStatus("正在下载更新…");
+              return;
+            }
+            var pct = Math.floor((loaded / total) * 100);
+            if (pct > 100) pct = 100;
+            setStatus("正在下载更新 " + pct + "%");
+          });
+        }
+      })();
+    </script>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

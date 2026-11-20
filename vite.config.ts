@@ -3,7 +3,8 @@ import vue from "@vitejs/plugin-vue";
 import { spawn, type ChildProcess } from "node:child_process";
 import { createConnection } from "node:net";
 import http from "node:http";
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { join } from "node:path";
 import { fileURLToPath, URL } from "node:url";
 
 const pkg = JSON.parse(
@@ -83,6 +84,45 @@ function spawnDocsDevAfterListen(): Plugin {
     },
   };
 }
+
+/** 构建期收集全部 JS/CSS，注入 self.__PRECACHE_MANIFEST 到 dist/sw.js */
+function injectSwPrecacheManifest(basePath: string): Plugin {
+  const assetUrls = new Set<string>();
+  const normalizeBase = basePath.endsWith("/") ? basePath : `${basePath}/`;
+
+  return {
+    name: "inject-sw-precache-manifest",
+    apply: "build",
+    generateBundle(_options, bundle) {
+      for (const fileName of Object.keys(bundle)) {
+        if (fileName.endsWith(".map")) continue;
+        if (fileName === "stats.html") continue;
+        if (!/\.(js|css)$/i.test(fileName)) continue;
+        const url = `${normalizeBase}${fileName}`.replace(/\/{2,}/g, "/");
+        assetUrls.add(url);
+      }
+    },
+    writeBundle(outputOptions) {
+      const outDir = outputOptions.dir ?? join(projectRoot, "dist");
+      const swPath = join(outDir, "sw.js");
+      if (!existsSync(swPath)) {
+        this.warn(`[inject-sw-precache-manifest] missing ${swPath}`);
+        return;
+      }
+      const list = [...assetUrls].sort();
+      const replacement = `self.__PRECACHE_MANIFEST = ${JSON.stringify(list)};`;
+      let source = readFileSync(swPath, "utf-8");
+      if (!source.includes("self.__PRECACHE_MANIFEST")) {
+        this.warn("[inject-sw-precache-manifest] placeholder not found in sw.js");
+        return;
+      }
+      source = source.replace(/self\.__PRECACHE_MANIFEST\s*=\s*\[[\s\S]*?\];/, replacement);
+      writeFileSync(swPath, source, "utf-8");
+      console.log(`[inject-sw-precache-manifest] injected ${list.length} assets into sw.js`);
+    },
+  };
+}
+
 // 用法
 // 仅分析：ANALYZE=true pnpm build
 // 仅生成 d.ts：GENERATE_DTS=true pnpm build
@@ -106,6 +146,7 @@ export default defineConfig(({ mode, command }) => {
     plugins: [
       ...(command === "serve" && mode === "development" ? [spawnDocsDevAfterListen()] : []),
       vue(),
+      injectSwPrecacheManifest(base),
 
       // 主站带子路径时，误访问 /docs-app/ 会失败并出现 chrome-error；统一跳到 /{base}/docs-app/
       {

@@ -1,7 +1,6 @@
 <template>
   <n-notification-provider>
     <n-dialog-provider>
-      <PwaSplashScreen />
       <router-view />
       <UpdateManager />
       <PwaUpdateNotifier />
@@ -21,11 +20,11 @@ import { cleanupSyncLifecycle, subscribeAuthStateChanges, teardownAuthSubscripti
 
 import UpdateManager from "./components/platform/UpdateManager.vue";
 import PwaInstallBanner from "./components/platform/PwaInstallBanner.vue";
-import PwaSplashScreen from "./components/platform/PwaSplashScreen.vue";
 import PwaUpdateNotifier from "./components/platform/PwaUpdateNotifier.vue";
 import { useTimerStore } from "@/stores/useTimerStore";
 import { resumeSharedAudioAfterForegroundAsync, prefetchSoundAssets, prefetchWhiteNoiseForSelection } from "@/core/sounds";
 import { bootMark } from "@/bootTiming";
+import { clearBootRecoveryFlags } from "@/composables/platform/chunkReloadGuard";
 
 const shouldLogAppDebug = ["1", "true"].includes(
   String(import.meta.env.VITE_APP_DEBUG_LOG ?? "")
@@ -52,6 +51,19 @@ watch(
   },
 );
 
+/** 首页实际渲染后再撤启动屏，并清更新/chunk 恢复标记 */
+function signalShellReady() {
+  clearBootRecoveryFlags();
+  requestAnimationFrame(() => {
+    window.dispatchEvent(new CustomEvent("pwa-shell-ready"));
+  });
+}
+
+async function goHomeAndSignalReady() {
+  await router.push({ name: "Home" });
+  signalShellReady();
+}
+
 // ========== 生命周期钩子 ==========
 onMounted(async () => {
   try {
@@ -67,14 +79,11 @@ onMounted(async () => {
     // 1. 初始化本地数据
     await dataStore.loadAllData();
     bootMark("app-data-loaded");
-    requestAnimationFrame(() => {
-      window.dispatchEvent(new CustomEvent("pwa-shell-ready"));
-    });
 
     // 3. 本地模式直接跳转（Auth 监听因 isSupabaseEnabled 为 false 不会挂载；登录成功后在 LoginView 补挂）
     if (settingStore.settings.localOnlyMode) {
       appDebugLog("✅ 本地模式，跳过登录检查，直接进入Home");
-      router.push({ name: "Home" });
+      await goHomeAndSignalReady();
       subscribeAuthStateChanges();
       return;
     }
@@ -103,15 +112,19 @@ onMounted(async () => {
     if (window.location.hash) {
       window.history.replaceState(null, "", window.location.pathname);
     }
-    router.push({ name: "Home" });
+    await goHomeAndSignalReady();
 
     // 6. 初始化Auth状态监听
     subscribeAuthStateChanges();
   } catch (error) {
     console.error("❌ 应用初始化失败:", error);
-    window.dispatchEvent(new CustomEvent("pwa-shell-ready"));
     // 初始化失败仍跳转Home，保证基础功能可用
-    router.push({ name: "Home" });
+    try {
+      await router.push({ name: "Home" });
+    } catch {
+      /* ignore */
+    }
+    signalShellReady();
   }
 });
 

@@ -4,6 +4,7 @@ import { defineComponent } from "vue";
 import { createRouter, createWebHistory, RouteRecordRaw } from "vue-router";
 import { isSupabaseEnabled } from "@/core/services/supabase";
 import { navigateToBuiltDocs } from "@/composables/platform/useDocsUrl";
+import { dispatchAppNavError, tryReloadOnceForStaleChunk } from "@/composables/platform/chunkReloadGuard";
 
 // --- 视图组件 ---
 const MainLayout = () => import("@/views/MainLayout.vue");
@@ -67,6 +68,24 @@ const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes,
 });
+
+// 懒加载 chunk 失败：先自动刷新一次；守卫已用过则提示，不静默、不死循环
+if (import.meta.env.PROD) {
+  router.onError((error) => {
+    const msg = error instanceof Error ? error.message : String(error);
+    const isChunkFail =
+      /Failed to fetch dynamically imported module|Importing a module script failed|error loading dynamically imported module|Loading chunk [\w-]+ failed/i.test(
+        msg,
+      );
+    if (!isChunkFail) {
+      console.error("[router] navigation error:", error);
+      return;
+    }
+    if (!tryReloadOnceForStaleChunk()) {
+      dispatchAppNavError();
+    }
+  });
+}
 
 // --- 全局前置导航守卫 ---
 router.beforeEach(async (to, _from, next) => {

@@ -1,8 +1,15 @@
 import { h } from "vue";
 import { NButton } from "naive-ui";
+import { markPwaUpdating } from "@/composables/platform/chunkReloadGuard";
 
 /** 避免同一标签页重复弹出多条「有更新」通知 */
 let updatePromptShown = false;
+/** 避免重复弹出「下载失败」 */
+let installFailPromptShown = false;
+/** 首页 shell 就绪后才允许前台弹更新提示 */
+let shellReady = false;
+/** shell 就绪前发现的 waiting 注册，延后提示 */
+let pendingPromptReg: ServiceWorkerRegistration | null = null;
 
 /** controllerchange 在后台触发时挂起的 visibility 监听，dispose 时移除 */
 let pendingVisibilityReloadHandler: (() => void) | null = null;
@@ -16,15 +23,33 @@ function removePendingVisibilityReload() {
 
 type NotificationApi = ReturnType<typeof import("naive-ui").useNotification>;
 
-function dispatchPwaUpdating() {
-  if (typeof window === "undefined") return;
-  window.dispatchEvent(new CustomEvent("pwa-updating"));
+function markUpdatingAndReload() {
+  markPwaUpdating();
+  window.location.reload();
+}
+
+function applyWaitingWorker(reg: ServiceWorkerRegistration) {
+  markPwaUpdating();
+  reg.waiting?.postMessage({ type: "SKIP_WAITING" });
 }
 
 function promptRefresh(reg: ServiceWorkerRegistration, notification: NotificationApi) {
   if (updatePromptShown || !reg.waiting) return;
-  updatePromptShown = true;
 
+  // 前台：等 shell 就绪后再弹，避免开机即打断
+  if (!shellReady) {
+    pendingPromptReg = reg;
+    return;
+  }
+
+  // 后台：直接应用，回前台由 controllerchange 触发 reload
+  if (document.visibilityState !== "visible") {
+    updatePromptShown = true;
+    applyWaitingWorker(reg);
+    return;
+  }
+
+  updatePromptShown = true;
   const version = import.meta.env.VITE_APP_VERSION ?? "";
 
   notification.info({
@@ -34,7 +59,7 @@ function promptRefresh(reg: ServiceWorkerRegistration, notification: Notificatio
         h(
           "p",
           { style: "margin: 0 0 10px 0; line-height: 1.5;" },
-          version ? `你正在使用 v${version}。新版本已下载，点下方按钮刷新即可生效。` : "新版本已下载，点下方按钮刷新即可生效。",
+          version ? `你正在使用 v${version}。新版本已就绪，点下方按钮刷新即可生效。` : "新版本已就绪，点下方按钮刷新即可生效。",
         ),
         h(
           NButton,
@@ -42,14 +67,24 @@ function promptRefresh(reg: ServiceWorkerRegistration, notification: Notificatio
             type: "primary",
             size: "small",
             onClick: () => {
-              dispatchPwaUpdating();
-              reg.waiting?.postMessage({ type: "SKIP_WAITING" });
+              applyWaitingWorker(reg);
             },
           },
           { default: () => "立即刷新" },
         ),
       ]),
     duration: 0,
+    closable: true,
+  });
+}
+
+function promptInstallFailed(notification: NotificationApi) {
+  if (installFailPromptShown) return;
+  installFailPromptShown = true;
+  notification.warning({
+    title: "更新下载失败",
+    content: "将保持当前版本，下次启动会自动重试。",
+    duration: 8000,
     closable: true,
   });
 }
@@ -66,6 +101,9 @@ function bindWaitingDetection(reg: ServiceWorkerRegistration, notification: Noti
     installing.addEventListener("statechange", () => {
       if (installing.state === "installed" && navigator.serviceWorker.controller) {
         promptRefresh(reg, notification);
+      }
+      if (installing.state === "redundant") {
+        promptInstallFailed(notification);
       }
     });
   });
@@ -89,15 +127,23 @@ function scheduleSwUpdate(reg: ServiceWorkerRegistration) {
 export function usePwaUpdate(notification: NotificationApi) {
   let refreshing = false;
 
+  const onShellReady = () => {
+    shellReady = true;
+    if (pendingPromptReg) {
+      const reg = pendingPromptReg;
+      pendingPromptReg = null;
+      promptRefresh(reg, notification);
+    }
+  };
+
   const onControllerChange = () => {
     if (refreshing) return;
 
-    // 后台/隐藏时立刻 reload 常被节流或未完整执行，旧 JS 与新 SW 并存会导致缓存音效等仍用旧内存状态；回到前台再刷新
+    // 后台/隐藏时立刻 reload 常被节流；回到前台再刷新
     if (document.visibilityState === "visible") {
       refreshing = true;
       removePendingVisibilityReload();
-      dispatchPwaUpdating();
-      window.location.reload();
+      markUpdatingAndReload();
       return;
     }
 
@@ -108,8 +154,7 @@ export function usePwaUpdate(notification: NotificationApi) {
       if (refreshing) return;
       refreshing = true;
       removePendingVisibilityReload();
-      dispatchPwaUpdating();
-      window.location.reload();
+      markUpdatingAndReload();
     };
     pendingVisibilityReloadHandler = handler;
     document.addEventListener("visibilitychange", handler);
@@ -118,6 +163,9 @@ export function usePwaUpdate(notification: NotificationApi) {
   const init = () => {
     if (!import.meta.env.PROD || !("serviceWorker" in navigator)) return;
 
+    shellReady = false;
+    pendingPromptReg = null;
+    window.addEventListener("pwa-shell-ready", onShellReady);
     navigator.serviceWorker.addEventListener("controllerchange", onControllerChange);
 
     // 延迟到下一个 macrotask，避开页面 mount/reload 竞争期导致的 abort
@@ -141,6 +189,7 @@ export function usePwaUpdate(notification: NotificationApi) {
   };
 
   const dispose = () => {
+    window.removeEventListener("pwa-shell-ready", onShellReady);
     navigator.serviceWorker.removeEventListener("controllerchange", onControllerChange);
     removePendingVisibilityReload();
   };
