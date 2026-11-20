@@ -28,7 +28,7 @@
 | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------: | :-------------------- |
 |                                <img src="/icons/Star20Filled.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0; ">                                | 添加/取消星标         |
 |   <img src="/icons/BatterySaver20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(193, 226, 255);border-radius: 6px;">    | 记录能量（1-10）      |
-|       <img src="/icons/Emoji24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(193, 226, 255);border-radius: 6px;">       | 记录愉悦（1-10）      |
+| <img src="/icons/Trophy20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;"> | 记录奖赏（1-10） |
 | <img src="/icons/CalendarAssistant20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(193, 226, 255);border-radius: 6px;"> | 记录打扰（内部/外部） |
 |  <img src="/icons/CalligraphyPen20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(224, 224, 224);border-radius: 6px;">   | 打开书写模板          |
 
@@ -46,10 +46,10 @@
 
 ### 奖赏记录
 
-- 点击 <img src="/icons/Emoji24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(193, 226, 255);border-radius: 6px;"> 按钮：
+- 点击 <img src="/icons/Trophy20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;"> 按钮：
   - 快速录入：`←→` 选择奖赏值，回车确认。
   - 详细录入：选择奖赏值，输入描述后确认。
-  - 点击内部 <img src="/icons/Beach24Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;border-radius: 6px;"> 可查看愉悦定义。
+  - 点击内部图标可查看奖赏定义。
     <img src="/task-happy.png" alt="Happy Record" width="450">
 
 ### 打扰记录
