@@ -12,6 +12,8 @@
       ...itemBlockStyle,
       borderLeftColor: firstTagBackgroundColor || getDefaultBorderColor(),
     }"
+    style="touch-action: none"
+    @pointerdown="onPointerDown"
     @click.stop="handleClick"
   >
     <TagRenderer
@@ -74,6 +76,8 @@ const props = defineProps<{
   block: WeekBlockItemType;
   dayStartTs: number;
   getItemBlockStyle: (block: WeekBlockItemType, dayStartTs: number) => Record<string, string | number>;
+  onBlockPointerDown?: (event: PointerEvent, block: WeekBlockItemType) => void;
+  shouldSuppressClick?: () => boolean;
 }>();
 
 const blockTagIds = computed(() => props.block.item.tagIds ?? []);
@@ -168,7 +172,12 @@ const getDefaultBorderColor = () => {
   return props.block.type === "todo" ? "var(--color-red)" : "var(--color-blue)";
 };
 
+function onPointerDown(event: PointerEvent) {
+  props.onBlockPointerDown?.(event, props.block);
+}
+
 const handleClick = () => {
+  if (props.shouldSuppressClick?.()) return;
   if (isMobile.value && trimmedBlockTitle.value) {
     openTitlePopoverFor3s();
   }

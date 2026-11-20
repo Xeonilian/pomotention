@@ -19,6 +19,9 @@
         :hide-schedule-blocks="hideScheduleBlocks"
         :drink-layer="drinkLayer"
         :life-view="lifeView"
+        :on-block-pointer-down="hideScheduleBlocks ? undefined : handleBlockPointerDown"
+        :should-suppress-block-click="shouldSuppressClick"
+        :drag-hover-day-start="dragUi?.hoverDayStart ?? null"
         @date-select="handleDateSelect"
         @date-select-day-view="handleDateSelectDayView"
         @item-change="handleItemSelect"
@@ -26,6 +29,8 @@
         @life-note-tap="onLifeNoteTap"
       />
     </div>
+    <!-- 纵拖出下沿：下周提示 -->
+    <div v-if="dragUi?.edgeNextWeek" class="week-drag-next-hint">下周同日</div>
     <Teleport to="body">
       <div
         v-if="mobileLifeNote"
@@ -63,6 +68,7 @@ import { FoodApple20Filled, WeatherMoon20Filled } from "@vicons/fluent";
 import WeekDayCard from "./WeekDayCard.vue";
 import { useWeekData } from "@/composables/planner/useWeekData";
 import { useWeekBlock } from "@/composables/planner/useWeekBlock";
+import { useWeekBlockDrag } from "@/composables/planner/useWeekBlockDrag";
 
 withDefaults(
   defineProps<{
@@ -115,17 +121,32 @@ onUnmounted(() => {
 });
 
 const { days, MAX_PER_DAY } = useWeekData();
-const { layoutedWeekBlocks, hourStamps, timeGridHeight, getItemBlockStyle, getHourTickTop, lifeOverlaysByDay, getLifeSleepBandStyle, getLifePointStyle } =
-  useWeekBlock(days, targetHeight);
-
-const dayNames = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
+const {
+  layoutedWeekBlocks,
+  hourStamps,
+  timeGridHeight,
+  getItemBlockStyle,
+  getHourTickTop,
+  lifeOverlaysByDay,
+  getLifeSleepBandStyle,
+  getLifePointStyle,
+  axisMetrics,
+} = useWeekBlock(days, targetHeight);
 
 const emit = defineEmits<{
   "date-select": [timestamp: number];
   "date-select-day-view": [timestamp: number];
   "item-change": [id: number, activityId?: number, taskId?: number];
   "open-day-sheet": [dayStart: number];
+  "week-drag-navigate": [dayStartTs: number];
 }>();
+
+const { dragUi, handleBlockPointerDown, shouldSuppressClick } = useWeekBlockDrag({
+  getAxis: () => axisMetrics.value,
+  onNavigateToDay: (dayStartTs) => emit("week-drag-navigate", dayStartTs),
+});
+
+const dayNames = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 
 const handleDateSelect = (ts: number) => {
   emit("date-select", ts);
@@ -173,11 +194,28 @@ function onDocClickCapture(e: Event) {
 
 <style scoped>
 .week-planner {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 8px;
   height: 100%;
   overflow: hidden;
+}
+
+.week-drag-next-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 6px;
+  transform: translateX(-50%);
+  z-index: 20;
+  padding: 2px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-color);
+  background: color-mix(in srgb, var(--primary-color, #409eff) 18%, var(--card-color, #fff));
+  border: 1px dashed color-mix(in srgb, var(--primary-color, #409eff) 70%, transparent);
+  pointer-events: none;
 }
 
 .grid {

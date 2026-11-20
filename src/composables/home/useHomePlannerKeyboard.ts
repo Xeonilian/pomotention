@@ -2,6 +2,7 @@ import type { Ref } from "vue";
 import { nextTick } from "vue";
 import { activatePlannerNavigatorField, enterPlannerNavigator } from "@/composables/keyboard/usePlannerKeyboardNavigator";
 import type { Activity } from "@/core/types/Activity";
+import { repeatActivityToDay } from "@/services/activity/repeatActivityToDay";
 
 type PlannerViewType = "day" | "week" | "month" | "year";
 
@@ -138,34 +139,18 @@ export function useHomePlannerKeyboard(options: UseHomePlannerKeyboardOptions) {
     const sourceActivity = getRepeatSourceActivity();
     if (!sourceActivity) return false;
 
-    const repeatedActivity: Activity = {
-      ...sourceActivity,
-      id: Date.now(),
-      title: `${sourceActivity.title} re`,
-      taskId: undefined,
-      synced: false,
-      deleted: false,
-      lastModified: Date.now(),
-    };
-
-    if (sourceActivity.class === "T") {
-      repeatedActivity.status = "ongoing";
-      repeatedActivity.dueDate = options.appDateTimestamp.value;
-    } else if (sourceActivity.class === "S" && sourceActivity.dueRange) {
-      repeatedActivity.dueRange = [
-        options.dateService.combineDateAndTime(options.appDateTimestamp.value, sourceActivity.dueRange[0]),
-        sourceActivity.dueRange[1],
-      ];
-    }
-
-    options.activityList.value.push(repeatedActivity);
-    const task = options.createTaskFromActivity(repeatedActivity.id, repeatedActivity.title);
-    options.taskList.value = [...options.taskList.value, task];
-    repeatedActivity.taskId = task.id;
-    repeatedActivity.lastModified = Date.now();
-    options.activeId.value = repeatedActivity.id;
-    options.selectedActivityId.value = repeatedActivity.id;
-    options.selectedTaskId.value = task.id;
+    const result = repeatActivityToDay({
+      sourceActivity,
+      targetDayStart: options.appDateTimestamp.value,
+      isTargetDayToday: true,
+      activityOnly: true,
+      combineDateAndTime: options.dateService.combineDateAndTime,
+    });
+    options.activityList.value.push(result.activity);
+    options.taskList.value = [...options.taskList.value, result.task];
+    options.activeId.value = result.activity.id;
+    options.selectedActivityId.value = result.activity.id;
+    options.selectedTaskId.value = result.task.id;
     options.selectedRowId.value = null;
     options.saveAllDebounced();
     return true;
