@@ -32,7 +32,12 @@ function markUpdatingAndReload() {
     /* 隐私模式等 */
   }
   markPwaUpdating();
-  window.location.reload();
+  // iOS PWA 上 replace 比 reload 更稳
+  try {
+    window.location.replace(window.location.href);
+  } catch {
+    window.location.reload();
+  }
 }
 
 function applyWaitingWorker(reg: ServiceWorkerRegistration) {

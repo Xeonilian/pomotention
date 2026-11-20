@@ -1,7 +1,7 @@
 // Service Worker 版本号：变更策略时请递增，以便激活时清掉旧缓存
-// v8/v9: 全量预缓存才 skipWaiting —— 手机易卡在 1%（大文件 cache.add 无超时）
-// v10: install 只缓存壳+入口；其余 activate 后台补；单文件超时，失败不卡死
-const CACHE_VERSION = "v10";
+// v10: install 入口包仍可能在 iPhone 上拖很久，刷新后停在「正在更新…」
+// v11: install 只缓存壳即 skipWaiting；资源后台补；单文件超时
+const CACHE_VERSION = "v11";
 const CACHE_NAME = `pomotention-cache-${CACHE_VERSION}`;
 
 const SOUND_CACHE_VERSION = "v1";
@@ -12,14 +12,11 @@ const APP_SHELL = ["/", "/index.html", "/manifest.webmanifest", "/icon-128.png",
 // 构建期由 vite 插件替换为真实资产列表；开发源文件保持空数组
 self.__PRECACHE_MANIFEST = [];
 
-const PRECACHE_CONCURRENCY = 4;
-const FILE_TIMEOUT_MS = 20000;
+const PRECACHE_CONCURRENCY = 3;
+const FILE_TIMEOUT_MS = 15000;
 const NAVIGATE_NETWORK_MS = 2500;
-
-/** 入口/首页相关：装完这些就可以 skipWaiting，让手机先能进 */
-function isCriticalAsset(url) {
-  return /\/assets\/(index|MainLayout|HomeView)-[^/]+\.(js|css)$/i.test(url);
-}
+/** activate 里后台预缓存最多等多久，避免一直占住 waitUntil */
+const ACTIVATE_PRECACHE_BUDGET_MS = 45000;
 
 function notifyProgress(loaded, total) {
   self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
@@ -31,9 +28,7 @@ function notifyProgress(loaded, total) {
 
 function addWithTimeout(cache, url, timeoutMs) {
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => {
-      reject(new Error(`[SW] precache timeout: ${url}`));
-    }, timeoutMs);
+    const timer = setTimeout(() => reject(new Error(`[SW] precache timeout: ${url}`)), timeoutMs);
     cache
       .add(url)
       .then(() => {
@@ -60,8 +55,13 @@ async function mapPool(urls, concurrency, worker) {
   await Promise.all(Array.from({ length: n }, () => run()));
 }
 
-async function precacheUrls(cache, urls, progress) {
+async function precacheUrls(cache, urls, progress, deadline) {
   await mapPool(urls, PRECACHE_CONCURRENCY, async (url) => {
+    if (deadline && Date.now() > deadline) {
+      progress.loaded += 1;
+      notifyProgress(progress.loaded, progress.total);
+      return;
+    }
     try {
       await addWithTimeout(cache, url, FILE_TIMEOUT_MS);
     } catch (err) {
@@ -72,27 +72,12 @@ async function precacheUrls(cache, urls, progress) {
   });
 }
 
-function splitManifest() {
-  const manifest = Array.isArray(self.__PRECACHE_MANIFEST) ? self.__PRECACHE_MANIFEST : [];
-  const critical = [];
-  const rest = [];
-  for (const url of manifest) {
-    if (isCriticalAsset(url)) critical.push(url);
-    else rest.push(url);
-  }
-  return { critical, rest, total: manifest.length };
-}
-
 self.addEventListener("install", (event) => {
   console.log("[Service Worker] Installing...", CACHE_VERSION);
   event.waitUntil(
     (async () => {
       const cache = await caches.open(CACHE_NAME);
-      const { critical, total } = splitManifest();
-      const progress = { loaded: 0, total: Math.max(total, 1) };
-      notifyProgress(0, progress.total);
-
-      // 壳：容错
+      // 只缓存壳：尽快接管。JS 走网络 / 随后后台补，避免 iPhone 卡在更新中
       await mapPool(APP_SHELL, PRECACHE_CONCURRENCY, async (url) => {
         try {
           await addWithTimeout(cache, url, FILE_TIMEOUT_MS);
@@ -100,11 +85,6 @@ self.addEventListener("install", (event) => {
           console.warn("[Service Worker] shell precache skipped:", url, err);
         }
       });
-
-      // 入口关键包：也容错，尽量装，不因单个失败卡死整个 install
-      await precacheUrls(cache, critical, progress);
-
-      // 不等待其余 100+ 文件：先接管，避免手机卡在 1%
       await self.skipWaiting();
     })(),
   );
@@ -141,17 +121,15 @@ self.addEventListener("activate", (event) => {
         }),
       );
 
-      // 后台补齐其余资产（失败跳过，运行时 SWR/网络仍可拉）
-      try {
-        const cache = await caches.open(CACHE_NAME);
-        const { critical, rest, total } = splitManifest();
-        const progress = { loaded: critical.length, total: Math.max(total, 1) };
-        notifyProgress(progress.loaded, progress.total);
-        await precacheUrls(cache, rest, progress);
-        notifyProgress(progress.total, progress.total);
-      } catch (err) {
-        console.warn("[Service Worker] background precache ended:", err);
-      }
+      const manifest = Array.isArray(self.__PRECACHE_MANIFEST) ? self.__PRECACHE_MANIFEST : [];
+      if (manifest.length === 0) return;
+
+      const cache = await caches.open(CACHE_NAME);
+      const progress = { loaded: 0, total: manifest.length };
+      notifyProgress(0, progress.total);
+      const deadline = Date.now() + ACTIVATE_PRECACHE_BUDGET_MS;
+      await precacheUrls(cache, manifest, progress, deadline);
+      notifyProgress(progress.total, progress.total);
     })(),
   );
 });
@@ -181,7 +159,6 @@ function assetsStaleWhileRevalidate(request) {
   });
 }
 
-/** navigate：网络优先（短超时），失败再读缓存；成功响应不回写 */
 async function navigateNetworkFirst(request) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), NAVIGATE_NETWORK_MS);

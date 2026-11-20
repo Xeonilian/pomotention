@@ -71,6 +71,21 @@
         color: #666666;
         letter-spacing: -0.01em;
         min-height: 1.2em;
+        text-align: center;
+        padding: 0 24px;
+      }
+      .pwa-boot__retry {
+        display: none;
+        margin-top: 4px;
+        border: 1px solid #1a1a1a;
+        background: #1a1a1a;
+        color: #ffffff;
+        font-size: 14px;
+        padding: 10px 18px;
+        border-radius: 8px;
+      }
+      .pwa-boot__retry.is-visible {
+        display: inline-block;
       }
     </style>
   </head>
@@ -81,6 +96,7 @@
         <img src="/icon-192.png" alt="" class="pwa-boot__icon" width="96" height="96" />
         <span class="pwa-boot__name">Pomotention</span>
         <span id="pwa-boot-status" class="pwa-boot__status">正在启动…</span>
+        <button id="pwa-boot-retry" type="button" class="pwa-boot__retry">重试加载</button>
       </div>
     </div>
     <div id="app" style="height: 100%"></div>
@@ -88,6 +104,7 @@
       (function () {
         var boot = document.getElementById("pwa-boot");
         var statusEl = document.getElementById("pwa-boot-status");
+        var retryBtn = document.getElementById("pwa-boot-retry");
         if (!boot || !statusEl) return;
 
         function isStandalone() {
@@ -100,11 +117,12 @@
           updating = !!localStorage.getItem("pwa-updating");
         } catch (e) {}
 
-        // 主屏幕 / 更新中都显示，避免「纯白屏无字」
         if (isStandalone() || updating) {
           boot.classList.add("is-visible");
           statusEl.textContent = updating ? "正在更新…" : "正在启动…";
         }
+
+        var shellReady = false;
 
         function setStatus(text) {
           statusEl.textContent = text;
@@ -114,6 +132,8 @@
         }
 
         function hideBoot() {
+          shellReady = true;
+          if (retryBtn) retryBtn.classList.remove("is-visible");
           if (!boot.classList.contains("is-visible")) return;
           boot.classList.add("is-hiding");
           window.setTimeout(function () {
@@ -122,11 +142,22 @@
           }, 360);
           try {
             sessionStorage.removeItem("sw-act-reload");
+            localStorage.removeItem("pwa-updating");
           } catch (e) {}
         }
 
         window.addEventListener("pwa-shell-ready", hideBoot);
-        window.setTimeout(hideBoot, 15000);
+
+        // 卡住「正在更新…」时给可操作出口，而不是干等
+        window.setTimeout(function () {
+          if (shellReady) return;
+          setStatus("加载较慢，仍在尝试…");
+        }, 8000);
+        window.setTimeout(function () {
+          if (shellReady) return;
+          setStatus("还没加载完，可点下方重试");
+          if (retryBtn) retryBtn.classList.add("is-visible");
+        }, 14000);
 
         function markUpdating() {
           try {
@@ -134,18 +165,36 @@
           } catch (e) {}
         }
 
+        function hardReload() {
+          markUpdating();
+          setStatus("正在更新…");
+          // iOS PWA 上 replace 比 reload 更稳
+          try {
+            window.location.replace(window.location.href);
+          } catch (e) {
+            window.location.reload();
+          }
+        }
+
         function reloadOnceForSw() {
           try {
             if (sessionStorage.getItem("sw-act-reload")) return;
             sessionStorage.setItem("sw-act-reload", "1");
           } catch (e) {}
-          markUpdating();
-          setStatus("正在更新…");
-          window.location.reload();
+          hardReload();
+        }
+
+        if (retryBtn) {
+          retryBtn.addEventListener("click", function () {
+            try {
+              sessionStorage.removeItem("sw-act-reload");
+              localStorage.removeItem("pwa-updating");
+            } catch (e) {}
+            hardReload();
+          });
         }
 
         if ("serviceWorker" in navigator) {
-          // 不依赖 Vue：进度、激活后刷新、注册更新
           navigator.serviceWorker.addEventListener("message", function (event) {
             var data = event.data;
             if (!data) return;
@@ -154,6 +203,8 @@
               return;
             }
             if (data.type !== "SW_PRECACHE_PROGRESS") return;
+            // 已进入页面后的后台补缓存不再改启动文案，避免又盖成「下载中」
+            if (shellReady) return;
             var loaded = Number(data.loaded) || 0;
             var total = Number(data.total) || 0;
             if (total <= 0) {
