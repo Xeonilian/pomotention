@@ -119,12 +119,10 @@ const typeFilterTitle = computed(() => {
   return typeFilterOn.value ? "仅看日程：开（再点关闭）" : "仅看日程";
 });
 
-/** 整行：轻点打开；横滑拖；竖滑交给列表；手机长按进拖（压过安卓选字） */
+/** 整行：轻点打开；横滑拖；竖滑交给列表；手机仅整理态长按进拖 */
 const DRAG_THRESHOLD = 8;
 /** 整理态允许多抖一点再取消长按 */
 const ARRANGE_DRAG_THRESHOLD = 24;
-/** 略短于系统长按选字，先抢到手势 */
-const LONG_PRESS_DRAG_MS = 320;
 const ARRANGE_LONG_PRESS_MS = 180;
 let rowPress: {
   startX: number;
@@ -191,16 +189,13 @@ function onRowPointerDown(e: PointerEvent) {
   window.addEventListener("pointerup", onRowPressUp);
   window.addEventListener("pointercancel", onRowPressCancel);
 
-  // 手机：长按开始拖（整理态更短，更容易进拖）
-  if (preferScroll) {
+  // 手机：仅列表整理态长按进拖；分屏半屏不激活拖拽反馈
+  if (preferScroll && arrangeMode) {
     clearLongPressTimer();
-    longPressTimer = setTimeout(
-      () => {
-        longPressTimer = null;
-        beginDragFromPress();
-      },
-      arrangeMode ? ARRANGE_LONG_PRESS_MS : LONG_PRESS_DRAG_MS,
-    );
+    longPressTimer = setTimeout(() => {
+      longPressTimer = null;
+      beginDragFromPress();
+    }, ARRANGE_LONG_PRESS_MS);
   }
 }
 
@@ -231,6 +226,12 @@ function onRowPressMove(e: PointerEvent) {
       rowPress.lastY = e.clientY;
       return;
     }
+    clearRowPressListeners();
+    return;
+  }
+
+  // 手机分屏：不允许拖，不进入 is-dragging 样式
+  if (rowPress.preferScroll && !rowPress.arrangeMode) {
     clearRowPressListeners();
     return;
   }
