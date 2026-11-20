@@ -81,6 +81,7 @@
 - **改名**：电脑 **双击** 标题；手机 **连点两下**。
 - **改层级**：拖文件夹进 / 出另一个文件夹；或用 <img src="/icons/FolderArrowUp20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;"> **升一层**（直到根）。
 - **开合**：行左侧 chevron；可用 <img src="/icons/ArrowCollapseAll20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;"> **收起整棵子树**。
+- 行上操作钮（升层 / 按月 / 智能标签 / 删除等）**常显**，整理态也能点。
 - 行末数字 = 在 **当前筛选** 下，该文件夹（含子树）可见命中条数。
 
 ### 把条目放进 / 移出
@@ -126,7 +127,7 @@
 
 | 状态 | 作用 |
 | --- | --- |
-| **列表整理** | 列表占满；点行 **不打开详情、不选中**，方便滚动与长按拖拽归堆 |
+| **列表整理** | 列表占满；点行 **不打开详情、不选中**（文件夹行操作钮仍可点），方便滚动与长按拖拽归堆 |
 | **分屏** | 上列表、下详情（默认） |
 | **上满** | 藏列表，详情占满；搜索行仍保留，可再切回 |
 
@@ -146,7 +147,7 @@
 - <img src="/icons/Note20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;"> 进入 Note 模式，编辑正文下方的 note 区。
 - <img src="/icons/Highlight20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;"> 打开高亮笔：选 r / g / b 后划选上色；白底斜杠为擦除笔，点已有高亮去掉标记。
 - **电脑**：划选后松开即可写入。
-- **手机**：长按再拖出选区，松手上色（避免与系统复制菜单抢手势）。
+- **手机**：长按再拖出选区，松手上色；上色笔开启时正文禁用系统选字/复制，避免只涂到一字。
 - 数据页 **没有** 全文编辑框；改源文里的 `==…==` / `:::note` 仍可回首页任务区。
 
 ## 限制与说明

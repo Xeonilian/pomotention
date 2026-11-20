@@ -198,6 +198,8 @@ export function useTaskAnnotationModes(taskId: Ref<number | null | undefined>, g
     if (mode.value !== "highlight" || highlightTool.value === "erase") return;
     if (event.pointerType !== "touch") return;
     if (!root) return;
+    // 立刻压默认：否则长按窗口内安卓/iOS 先出复制选区，只能涂到一字
+    event.preventDefault();
     pointerDown(event, root, { root });
   }
 

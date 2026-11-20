@@ -3,7 +3,7 @@
 > **搞不清要干嘛、干到哪了 → 只看这个文件。**  
 > 开新功能：填下面各节；收工：更新「停在哪」；做完：打勾后清空或归档到 [`history/archive/`](./history/archive/README.md)。
 
-上一关已归档：[`history/archive/2026-11-task-annotation.md`](./history/archive/2026-11-task-annotation.md)（批注 note · 后批高亮；`v0.7.1` PR）。更早：[`2026-11-project-folder.md`](./history/archive/2026-11-project-folder.md)（`v0.7.0`）。
+上一关已归档：[`history/archive/2026-11-data-page-polish.md`](./history/archive/2026-11-data-page-polish.md)（Project 操作钮常显 · 手机上色压复制）。更早：[`2026-11-task-annotation.md`](./history/archive/2026-11-task-annotation.md)（`v0.7.1`）、[`2026-11-project-folder.md`](./history/archive/2026-11-project-folder.md)（`v0.7.0`）。
 
 ---
 
@@ -14,7 +14,7 @@
 | **主题**   | （空关 · 等下一票） |
 | **分支**   | `dev` |
 | **更新**   | 2026-11-20 |
-| **停在哪** | `v0.7.1` 已合 `main`（PR #148）；空 `dev` 已重建。等下一票。 |
+| **停在哪** | 数据页小修已归档并推 `dev`；等下一票。 |
 
 ---
 
@@ -35,6 +35,7 @@
 - **筛选后分析写作面**：检索结果上的成文/归纳舞台
 - **Project 内加 todo**（素材复盘书写入口）；「移入选中 P」类按钮（v1 用拖拽代替）
 - 首页后批划选模式；后批任意色 / 颜色选择器
+- 数据页小修发版说明（并入下一票 CHANGELOG 或单独补丁）
 
 ---
 

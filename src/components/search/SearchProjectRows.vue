@@ -613,8 +613,9 @@ onBeforeUnmount(detachOutsideRename);
   box-shadow: none;
 }
 
+/* 手机/电脑都常显：整理态也要点升层、按月、删等 */
 .row-actions {
-  display: none;
+  display: inline-flex;
   flex: 0 0 auto;
   align-items: center;
   gap: 0;
@@ -635,21 +636,6 @@ onBeforeUnmount(detachOutsideRename);
   overflow: hidden;
   text-overflow: ellipsis;
   cursor: pointer;
-}
-
-/* 触控：选中才出操作钮 */
-.title-item--project.selected .row-actions {
-  display: inline-flex;
-}
-
-/* 电脑：仅悬停显示；避免选中后 tag/文件夹钮一直占着 */
-@media (hover: hover) and (pointer: fine) {
-  .title-item--project.selected .row-actions {
-    display: none;
-  }
-  .title-item--project:hover .row-actions {
-    display: inline-flex;
-  }
 }
 
 .row-actions :deep(.n-button) {

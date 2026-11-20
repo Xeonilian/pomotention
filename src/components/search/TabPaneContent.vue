@@ -726,9 +726,10 @@ function scrollToHeading(id: string) {
 
 .task-content--paint {
   cursor: text;
-  user-select: text;
-  -webkit-user-select: text;
-  -webkit-touch-callout: none; /* 上色笔时勿出系统复制菜单 */
+  /* 上色笔：禁系统选字/复制，划选改由 pointer 会话 + Selection API */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .task-content--erase :deep(.highlight-text) {
