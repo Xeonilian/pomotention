@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 import { h } from "vue";
 import { isTauri } from "@tauri-apps/api/core";
 /** 不打包 Inter：用系统字体栈（见 custom.css --vp-font-family-*） */
