@@ -10,6 +10,7 @@
     <n-card size="small" class="setting-tab-card">
       <n-descriptions label-placement="left" :column="1" bordered size="small">
         <n-descriptions-item label="当前版本">{{ generalVersionDisplay }}</n-descriptions-item>
+        <n-descriptions-item label="SW 版本">{{ swVersionDisplay }}</n-descriptions-item>
         <n-descriptions-item v-if="isTauri()" label="线上最新">
           <template v-if="remoteReleaseOk">
             <n-tag type="default" size="small" round>{{ remoteReleaseVersion }}</n-tag>
@@ -112,6 +113,8 @@ const remoteReleaseOk = ref(false);
 const remoteReleaseError = ref("");
 const generalSystemLine = ref("-");
 const generalBrowserLine = ref("-");
+/** 来自 sw.js 的 CACHE_VERSION（当前控制页的脚本） */
+const swVersionDisplay = ref("…");
 
 const { isStandalone } = usePwaInstall();
 
@@ -327,8 +330,31 @@ function refreshGeneralEnvDisplay() {
     .catch(() => {});
 }
 
+async function refreshSwVersion() {
+  if (isTauri() || typeof navigator === "undefined" || !("serviceWorker" in navigator)) {
+    swVersionDisplay.value = "无";
+    return;
+  }
+  try {
+    const reg = await navigator.serviceWorker.getRegistration();
+    const scriptUrl =
+      reg?.active?.scriptURL || reg?.waiting?.scriptURL || reg?.installing?.scriptURL || `${window.location.origin}/sw.js`;
+    const res = await fetch(scriptUrl, { cache: "no-cache" });
+    if (!res.ok) {
+      swVersionDisplay.value = "读取失败";
+      return;
+    }
+    const text = await res.text();
+    const m = /CACHE_VERSION\s*=\s*["']([^"']+)["']/.exec(text);
+    swVersionDisplay.value = m?.[1] ? m[1] : "未知";
+  } catch {
+    swVersionDisplay.value = "读取失败";
+  }
+}
+
 async function refreshGeneral() {
   refreshGeneralEnvDisplay();
+  void refreshSwVersion();
   await syncStore.checkLoginStatus();
   try {
     const user = await getCurrentUser();

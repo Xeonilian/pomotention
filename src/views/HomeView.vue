@@ -101,15 +101,18 @@
               @date-select-day-view="onDateSelectDayView"
               @open-day-sheet="onOpenDaySheetFromCell"
             />
-            <YearPlanner
-              v-if="settingStore.settings.showPlanner && settingStore.settings.viewSet === 'year'"
-              :key="dateService.displayYearInfo"
-              :life-view="lifePlannerLifeView"
-              @date-select-day-view="onDateSelectDayView"
-              @navigate-to-month="onYearNavigateToMonth"
-              @navigate-to-week="onYearNavigateToWeek"
-              @open-day-sheet="onOpenDaySheetFromCell"
-            />
+            <!-- KeepAlive：日↔年切换不销毁，避免 iPhone 重挂后空白、重复算月格 -->
+            <KeepAlive>
+              <YearPlanner
+                v-if="settingStore.settings.showPlanner && settingStore.settings.viewSet === 'year'"
+                :key="`year-${dateService.displayYearInfo}`"
+                :life-view="lifePlannerLifeView"
+                @date-select-day-view="onDateSelectDayView"
+                @navigate-to-month="onYearNavigateToMonth"
+                @navigate-to-week="onYearNavigateToWeek"
+                @open-day-sheet="onOpenDaySheetFromCell"
+              />
+            </KeepAlive>
           </div>
         </div>
         <!-- 任务视图调整大小手柄 -->

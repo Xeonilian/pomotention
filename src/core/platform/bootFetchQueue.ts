@@ -20,6 +20,7 @@ const HOME_CHUNK_LOADERS: ReadonlyArray<() => Promise<unknown>> = [
   () => import("@/components/ActivitySheet/ActivitySheet.vue"),
   () => import("@/components/Capture/CapturePanel.vue"),
   () => import("@/components/TaskTracker/StateLogModal.vue"),
+  () => import("@/views/SettingView.vue"),
   () => import("@/views/SearchView.vue"),
   () => import("@/views/ChartView.vue"),
   () => import("@/components/chart/ChartWidget.vue"),

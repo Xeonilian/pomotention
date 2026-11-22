@@ -83,9 +83,15 @@
         font-size: 14px;
         padding: 10px 18px;
         border-radius: 8px;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
       }
       .pwa-boot__retry.is-visible {
         display: inline-block;
+      }
+      .pwa-boot__retry:disabled {
+        opacity: 0.55;
+        cursor: default;
       }
     </style>
   </head>
@@ -123,6 +129,7 @@
 
         // 浏览器 / PWA 一律先盖启动屏，避免主包未到时纯白；shell-ready 后再撤
         boot.classList.add("is-visible");
+        boot.setAttribute("aria-hidden", "false");
         statusEl.textContent = updating ? "正在更新…" : "正在启动…";
 
         var shellReady = false;
@@ -193,17 +200,28 @@
           hardReload();
         }
 
-        // 普通刷新（等同 F5）：不删 Cache、不卸 SW
+        // 普通刷新（等同 F5）：不删 Cache、不卸 SW；先改文案再 reload，避免像没点到
         function softReload() {
-          try {
-            window.location.reload();
-          } catch (e) {
-            window.location.href = window.location.href;
+          setStatus("正在刷新…");
+          if (retryBtn) {
+            retryBtn.disabled = true;
+            retryBtn.textContent = "正在刷新…";
           }
+          window.setTimeout(function () {
+            try {
+              window.location.reload();
+            } catch (e) {
+              try {
+                window.location.href = window.location.href.split("#")[0];
+              } catch (e2) {}
+            }
+          }, 50);
         }
 
         if (retryBtn) {
-          retryBtn.addEventListener("click", function () {
+          retryBtn.addEventListener("click", function (ev) {
+            ev.preventDefault();
+            if (retryBtn.disabled) return;
             softReload();
           });
         }
