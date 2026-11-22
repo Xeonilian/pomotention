@@ -92,6 +92,31 @@ function bindWaitingDetection(reg: ServiceWorkerRegistration, notification: Noti
 }
 
 const SW_UPDATE_DEFER_MS = 3000;
+const WARM_ROUTES_IDLE_MS = 4000;
+
+let secondaryRoutesWarmStarted = false;
+
+/** 首页+SW 之后一波预热二级页，避免点菜单才现拉 chunk 失败 */
+function warmSecondaryRoutes(): void {
+  if (secondaryRoutesWarmStarted) return;
+  secondaryRoutesWarmStarted = true;
+  void Promise.all([
+    import("@/views/SearchView.vue"),
+    import("@/views/ChartView.vue"),
+    import("@/views/SettingView.vue"),
+  ]).catch(() => {
+    /* 热身失败不打扰；用户点击时仍走原 chunk 守卫 */
+  });
+}
+
+function scheduleWarmSecondaryRoutes(): void {
+  const run = () => warmSecondaryRoutes();
+  if (typeof requestIdleCallback === "function") {
+    requestIdleCallback(() => run(), { timeout: WARM_ROUTES_IDLE_MS });
+  } else {
+    setTimeout(run, 500);
+  }
+}
 
 function scheduleSwUpdate(reg: ServiceWorkerRegistration) {
   const run = () => void reg.update();
@@ -111,6 +136,7 @@ function registerServiceWorker(notification: NotificationApi) {
     .then((reg) => {
       bindWaitingDetection(reg, notification);
       scheduleSwUpdate(reg);
+      scheduleWarmSecondaryRoutes();
     })
     .catch((err) => {
       swRegisterStarted = false;
@@ -120,6 +146,8 @@ function registerServiceWorker(notification: NotificationApi) {
         return;
       }
       console.error("❌ Service Worker registration failed:", err);
+      // 注册失败仍热身，避免二级页完全依赖「点了才下」
+      scheduleWarmSecondaryRoutes();
     });
 }
 
