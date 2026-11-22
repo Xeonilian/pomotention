@@ -14,10 +14,9 @@ function onAppNavError() {
   navErrorPromptShown = true;
 
   notification.warning({
-    title: "页面资源未就绪",
-    content:
-      "该页面模块还没加载完（慢网下可能正被后台声音下载占满带宽）。请稍后再点一次进入即可；不必刷新，声音会继续在后台下。",
-    duration: 8000,
+    title: "页面未就绪",
+    content: "该页还在后台加载，稍后再点一次即可，无需刷新。",
+    duration: 5000,
     closable: true,
     onClose: () => {
       navErrorPromptShown = false;

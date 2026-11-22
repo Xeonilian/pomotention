@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -10,21 +10,21 @@
 
     <!-- 移动端 Web App 支持 -->
     <meta name="mobile-web-app-capable" content="yes" />
-    
+
     <!-- Apple iOS 配置 -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Pomotention" />
-    
+
     <!-- Apple Touch Icons - 多尺寸支持 -->
     <link rel="apple-touch-icon" href="/icon-192.png" />
     <link rel="apple-touch-icon" sizes="128x128" href="/icon-128.png" />
     <link rel="apple-touch-icon" sizes="192x192" href="/icon-192.png" />
     <link rel="apple-touch-icon" sizes="512x512" href="/icon-512.png" />
-    
+
     <!-- Apple 启动画面 - 针对不同设备尺寸 -->
     <link rel="apple-touch-startup-image" href="/icon-512.png" />
-    
+
     <!-- 移动端优化标签 -->
     <meta name="format-detection" content="telephone=no" />
     <meta name="msapplication-TileColor" content="#ffffff" />
@@ -96,7 +96,7 @@
         <img src="/icon-192.png" alt="" class="pwa-boot__icon" width="96" height="96" />
         <span class="pwa-boot__name">Pomotention</span>
         <span id="pwa-boot-status" class="pwa-boot__status">正在启动…</span>
-        <button id="pwa-boot-retry" type="button" class="pwa-boot__retry">重试加载</button>
+        <button id="pwa-boot-retry" type="button" class="pwa-boot__retry">刷新页面</button>
       </div>
     </div>
     <div id="app" style="height: 100%"></div>
@@ -132,8 +132,7 @@
         }
 
         var shellReady = false;
-        var hadControllerOnLoad =
-          "serviceWorker" in navigator && !!navigator.serviceWorker.controller;
+        var hadControllerOnLoad = "serviceWorker" in navigator && !!navigator.serviceWorker.controller;
 
         function setStatus(text) {
           statusEl.textContent = text;
@@ -161,13 +160,17 @@
 
         window.setTimeout(function () {
           if (shellReady) return;
-          setStatus("加载较慢，仍在尝试…");
-        }, 8000);
+          setStatus("努力加载中…");
+        }, 12000);
         window.setTimeout(function () {
           if (shellReady) return;
-          setStatus("还没加载完，可点下方重试");
+          setStatus("仍在努力加载中…");
+        }, 24000);
+        window.setTimeout(function () {
+          if (shellReady) return;
+          setStatus("加载时间较长，可刷新页面再试");
           if (retryBtn) retryBtn.classList.add("is-visible");
-        }, 14000);
+        }, 48000);
 
         function markUpdating() {
           try {
@@ -196,37 +199,18 @@
           hardReload();
         }
 
-        function recoverLikeBrowser() {
-          setStatus("正在清除缓存并重试…");
+        // 普通刷新（等同 F5）：不删 Cache、不卸 SW
+        function softReload() {
           try {
-            sessionStorage.removeItem("sw-act-reload");
-            localStorage.removeItem("pwa-updating");
-          } catch (e) {}
-
-          var clearing = Promise.resolve();
-          if ("caches" in window) {
-            clearing = caches.keys().then(function (keys) {
-              return Promise.all(keys.map(function (k) { return caches.delete(k); }));
-            }).catch(function () {});
+            window.location.reload();
+          } catch (e) {
+            window.location.href = window.location.href;
           }
-
-          var unregistering = Promise.resolve();
-          if ("serviceWorker" in navigator) {
-            unregistering = navigator.serviceWorker.getRegistrations().then(function (regs) {
-              return Promise.all(regs.map(function (r) { return r.unregister(); }));
-            }).catch(function () {});
-          }
-
-          Promise.all([clearing, unregistering]).then(function () {
-            hardReload();
-          }).catch(function () {
-            hardReload();
-          });
         }
 
         if (retryBtn) {
           retryBtn.addEventListener("click", function () {
-            recoverLikeBrowser();
+            softReload();
           });
         }
 

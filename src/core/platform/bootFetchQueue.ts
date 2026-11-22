@@ -7,12 +7,15 @@ const HOME_CHUNK_LOADERS: ReadonlyArray<() => Promise<unknown>> = [
   () => import("@/views/LoginView.vue"),
   () => import("@/views/AuthCallbackView.vue"),
   () => import("@/views/ResetPasswordView.vue"),
+  // Task 区 markdown：hljs 引擎尽早就绪，避免长时间 raw
+  () =>
+    import("@/composables/task/useTaskRecordMarkdown").then((m) => m.prefetchTaskMarkdownEngine()),
+  () => import("@/components/TaskTracker/TaskTracker.vue"),
   () => import("@/components/TimeTable/TimeTable.vue"),
   () => import("@/components/DayPlanner/DayPlanner.vue"),
   () => import("@/components/WeekPlanner/WeekPlanner.vue"),
   () => import("@/components/MonthPlanner/MonthPlanner.vue"),
   () => import("@/components/YearPlanner/YearPlanner.vue"),
-  () => import("@/components/TaskTracker/TaskTracker.vue"),
   () => import("@/components/LifeRecord/LifeRecordDaySheet.vue"),
   () => import("@/components/ActivitySheet/ActivitySheet.vue"),
   () => import("@/components/Capture/CapturePanel.vue"),
