@@ -23,7 +23,7 @@ const HOME_CHUNK_LOADERS: ReadonlyArray<() => Promise<unknown>> = [
   () => import("@/components/chart/HeatmapChart.vue"),
 ];
 
-const PHASE1_CONCURRENCY = 2;
+const PHASE1_CONCURRENCY = 6;
 
 let phase1Promise: Promise<void> | null = null;
 let phase1Done = false;
