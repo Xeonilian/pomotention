@@ -27,8 +27,7 @@ const HOME_CHUNK_LOADERS: ReadonlyArray<() => Promise<unknown>> = [
   () => import("@/components/chart/HeatmapChart.vue"),
 ];
 
-/** iPhone/WebKit 连接紧，过高并发易拖死主包；3 足够暖页又不致堵死 */
-const PHASE1_CONCURRENCY = 3;
+const PHASE1_CONCURRENCY = 6;
 
 let phase1Promise: Promise<void> | null = null;
 let phase1Done = false;
