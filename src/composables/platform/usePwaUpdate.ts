@@ -2,10 +2,10 @@ import { markPwaUpdating } from "@/composables/platform/chunkReloadGuard";
 
 /** 避免重复弹出「下载失败」 */
 let installFailPromptShown = false;
-/** 首页 shell 就绪后才允许处理 waiting */
+/** 首页 shell 就绪后才注册 SW / 处理 waiting */
 let shellReady = false;
-/** shell 就绪前发现的 waiting 注册，延后处理 */
 let pendingWaitingReg: ServiceWorkerRegistration | null = null;
+let swRegisterStarted = false;
 
 /** 页面加载时是否已有 controller：无则表示首次接管，不要整页刷新 */
 const hadControllerOnLoad =
@@ -13,7 +13,6 @@ const hadControllerOnLoad =
     ? !!navigator.serviceWorker.controller
     : false;
 
-/** controllerchange 在后台触发时挂起的 visibility 监听，dispose 时移除 */
 let pendingVisibilityReloadHandler: (() => void) | null = null;
 
 function removePendingVisibilityReload() {
@@ -24,6 +23,13 @@ function removePendingVisibilityReload() {
 }
 
 type NotificationApi = ReturnType<typeof import("naive-ui").useNotification>;
+
+declare global {
+  interface Window {
+    /** App 进首页后置位，避免 SW 注册晚于 shell-ready 事件 */
+    __POMO_SHELL_READY__?: boolean;
+  }
+}
 
 function markUpdatingAndReload() {
   try {
@@ -45,7 +51,6 @@ function applyWaitingWorker(reg: ServiceWorkerRegistration) {
   reg.waiting?.postMessage({ type: "SKIP_WAITING" });
 }
 
-/** 新 SW 已在 waiting：直接应用（不再弹「网站已更新」） */
 function applyWhenReady(reg: ServiceWorkerRegistration) {
   if (!reg.waiting) return;
   if (!shellReady) {
@@ -76,7 +81,6 @@ function bindWaitingDetection(reg: ServiceWorkerRegistration, notification: Noti
     if (!installing) return;
 
     installing.addEventListener("statechange", () => {
-      // installed 且已有旧 controller = 真正的版本升级
       if (installing.state === "installed" && navigator.serviceWorker.controller) {
         applyWhenReady(reg);
       }
@@ -87,7 +91,6 @@ function bindWaitingDetection(reg: ServiceWorkerRegistration, notification: Noti
   });
 }
 
-/** 冷启动后再查 SW 更新，避免与首屏争抢网络 */
 const SW_UPDATE_DEFER_MS = 3000;
 
 function scheduleSwUpdate(reg: ServiceWorkerRegistration) {
@@ -99,8 +102,29 @@ function scheduleSwUpdate(reg: ServiceWorkerRegistration) {
   }
 }
 
+function registerServiceWorker(notification: NotificationApi) {
+  if (swRegisterStarted) return;
+  swRegisterStarted = true;
+
+  void navigator.serviceWorker
+    .register("/sw.js")
+    .then((reg) => {
+      bindWaitingDetection(reg, notification);
+      scheduleSwUpdate(reg);
+    })
+    .catch((err) => {
+      swRegisterStarted = false;
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("aborted") || (err as DOMException)?.name === "AbortError") {
+        console.log("[SW] registration aborted during page unload/reload");
+        return;
+      }
+      console.error("❌ Service Worker registration failed:", err);
+    });
+}
+
 /**
- * 生产环境 Web：注册 SW、自动应用 waiting 版本；与 Tauri 桌面版无关
+ * 生产环境 Web：等首页就绪后再注册 SW，避免与首次加载抢带宽
  */
 export function usePwaUpdate(notification: NotificationApi) {
   let refreshing = false;
@@ -112,10 +136,10 @@ export function usePwaUpdate(notification: NotificationApi) {
       pendingWaitingReg = null;
       applyWhenReady(reg);
     }
+    registerServiceWorker(notification);
   };
 
   const onControllerChange = () => {
-    // 首次被 SW 接管（主屏幕第一次开常见）：页面本身已是新文档，勿再刷成「正在更新…」
     if (!hadControllerOnLoad) return;
     if (refreshing) return;
 
@@ -147,22 +171,10 @@ export function usePwaUpdate(notification: NotificationApi) {
     window.addEventListener("pwa-shell-ready", onShellReady);
     navigator.serviceWorker.addEventListener("controllerchange", onControllerChange);
 
-    window.setTimeout(() => {
-      void navigator.serviceWorker
-        .register("/sw.js")
-        .then((reg) => {
-          bindWaitingDetection(reg, notification);
-          scheduleSwUpdate(reg);
-        })
-        .catch((err) => {
-          const msg = err instanceof Error ? err.message : String(err);
-          if (msg.includes("aborted") || (err as DOMException)?.name === "AbortError") {
-            console.log("[SW] registration aborted during page unload/reload");
-            return;
-          }
-          console.error("❌ Service Worker registration failed:", err);
-        });
-    }, 0);
+    // 若 shell-ready 已发生（监听挂晚了），立刻补注册
+    if (window.__POMO_SHELL_READY__) {
+      onShellReady();
+    }
   };
 
   const dispose = () => {

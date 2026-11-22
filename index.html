@@ -112,8 +112,7 @@
           return !!(nav.standalone || window.matchMedia("(display-mode: standalone)").matches);
         }
 
-        // 仅当本会话刚为升级而刷新时才显示「正在更新…」；
-        // Safari 残留的 pwa-updating 会污染主屏幕首次打开。
+        // 仅「本会话故意为升级刷新」才显示正在更新；其余首次/冷启动统一「正在启动…」
         var intentionalUpdate = false;
         try {
           intentionalUpdate = !!sessionStorage.getItem("sw-act-reload");
@@ -133,7 +132,6 @@
         }
 
         var shellReady = false;
-        // 加载时还没有 controller = 首次被 SW 接管，不要整页刷新
         var hadControllerOnLoad =
           "serviceWorker" in navigator && !!navigator.serviceWorker.controller;
 
@@ -161,7 +159,6 @@
 
         window.addEventListener("pwa-shell-ready", hideBoot);
 
-        // 卡住「正在更新…」时给可操作出口，而不是干等
         window.setTimeout(function () {
           if (shellReady) return;
           setStatus("加载较慢，仍在尝试…");
@@ -181,7 +178,6 @@
         function hardReload() {
           markUpdating();
           setStatus("正在更新…");
-          // iOS PWA 上 replace 比 reload 更稳；带 recover 参数尽量绕过中间缓存
           var url = window.location.href.split("#")[0];
           url = url.replace(/([?&])pwa_recover=\d+/g, "$1").replace(/[?&]$/, "");
           url += (url.indexOf("?") >= 0 ? "&" : "?") + "pwa_recover=" + Date.now();
@@ -200,7 +196,6 @@
           hardReload();
         }
 
-        /** 主屏幕 PWA 与 Safari 网页不是同一套缓存；重试时清掉 SW，接近「用网页打开」 */
         function recoverLikeBrowser() {
           setStatus("正在清除缓存并重试…");
           try {
@@ -235,30 +230,8 @@
           });
         }
 
+        // 不在此处 register SW：等首页就绪后由 usePwaUpdate 注册，避免与首次加载抢网
         if ("serviceWorker" in navigator) {
-          navigator.serviceWorker.addEventListener("message", function (event) {
-            var data = event.data;
-            if (!data) return;
-            if (data.type === "SW_ACTIVATED_RELOAD") {
-              // 兼容旧 SW；首次接管不刷
-              if (!hadControllerOnLoad) return;
-              reloadOnceForSw();
-              return;
-            }
-            if (data.type !== "SW_PRECACHE_PROGRESS") return;
-            // 已进入页面后的后台补缓存不再改启动文案，避免又盖成「下载中」
-            if (shellReady) return;
-            var loaded = Number(data.loaded) || 0;
-            var total = Number(data.total) || 0;
-            if (total <= 0) {
-              setStatus("正在下载更新…");
-              return;
-            }
-            var pct = Math.floor((loaded / total) * 100);
-            if (pct > 100) pct = 100;
-            setStatus("正在下载更新 " + pct + "%");
-          });
-
           var refreshing = false;
           navigator.serviceWorker.addEventListener("controllerchange", function () {
             if (!hadControllerOnLoad) return;
@@ -266,17 +239,6 @@
             refreshing = true;
             reloadOnceForSw();
           });
-
-          window.setTimeout(function () {
-            navigator.serviceWorker.register("/sw.js").then(function (reg) {
-              if (reg.waiting) {
-                reg.waiting.postMessage({ type: "SKIP_WAITING" });
-              }
-              try {
-                reg.update();
-              } catch (e) {}
-            }).catch(function () {});
-          }, 0);
         }
       })();
     </script>

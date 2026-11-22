@@ -54,6 +54,8 @@ watch(
 /** 首页实际渲染后再撤启动屏，并清更新/chunk 恢复标记 */
 function signalShellReady() {
   clearBootRecoveryFlags();
+  // 供晚挂载的 SW 注册逻辑得知首屏已完成（避免错过事件）
+  window.__POMO_SHELL_READY__ = true;
   requestAnimationFrame(() => {
     window.dispatchEvent(new CustomEvent("pwa-shell-ready"));
   });
