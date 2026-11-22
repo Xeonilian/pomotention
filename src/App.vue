@@ -55,8 +55,25 @@ function signalShellReady() {
   });
 }
 
+/** 首页日视图 + 任务区就绪后再撤启动屏，避免「正在启动」后长时间纯白 */
+async function warmHomeCoreBeforeSplashHide(): Promise<void> {
+  await Promise.all([
+    import("@/components/DayPlanner/DayPlanner.vue"),
+    import("@/components/TaskTracker/TaskTracker.vue"),
+    import("@/composables/task/useTaskRecordMarkdown").then((m) => m.prefetchTaskMarkdownEngine()),
+  ]);
+}
+
 async function goHomeAndSignalReady() {
   await router.push({ name: "Home" });
+  try {
+    await warmHomeCoreBeforeSplashHide();
+  } catch {
+    /* 预热失败仍放行，避免永久卡在启动屏 */
+  }
+  await new Promise<void>((resolve) => {
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+  });
   signalShellReady();
 }
 

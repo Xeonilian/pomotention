@@ -107,11 +107,6 @@
         var retryBtn = document.getElementById("pwa-boot-retry");
         if (!boot || !statusEl) return;
 
-        function isStandalone() {
-          var nav = navigator;
-          return !!(nav.standalone || window.matchMedia("(display-mode: standalone)").matches);
-        }
-
         // 仅「本会话故意为升级刷新」才显示正在更新；其余首次/冷启动统一「正在启动…」
         var intentionalUpdate = false;
         try {
@@ -126,10 +121,9 @@
           }
         } catch (e) {}
 
-        if (isStandalone() || updating) {
-          boot.classList.add("is-visible");
-          statusEl.textContent = updating ? "正在更新…" : "正在启动…";
-        }
+        // 浏览器 / PWA 一律先盖启动屏，避免主包未到时纯白；shell-ready 后再撤
+        boot.classList.add("is-visible");
+        statusEl.textContent = updating ? "正在更新…" : "正在启动…";
 
         var shellReady = false;
         var hadControllerOnLoad = "serviceWorker" in navigator && !!navigator.serviceWorker.controller;
