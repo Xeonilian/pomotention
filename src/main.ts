@@ -9,17 +9,15 @@ import { useTimerStore } from "./stores/useTimerStore";
 import router from "./router";
 import { NConfigProvider } from "naive-ui";
 import { zhCN, dateZhCN } from "naive-ui";
-import { dispatchAppNavError, tryReloadOnceForStaleChunk } from "@/composables/platform/chunkReloadGuard";
+import { dispatchAppNavError } from "@/composables/platform/chunkReloadGuard";
 
 bootMark("main-entry");
 
-// 部署后旧主包仍引用已删 chunk 时自动刷新一次；守卫已置位则只提示、不无限 reload
+// 预加载 chunk 失败：只提示，不自动 refresh（与 router.onError 一致）
 if (import.meta.env.PROD) {
   window.addEventListener("vite:preloadError", (event) => {
     event.preventDefault();
-    if (!tryReloadOnceForStaleChunk()) {
-      dispatchAppNavError();
-    }
+    dispatchAppNavError();
   });
 }
 

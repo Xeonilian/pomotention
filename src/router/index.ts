@@ -4,7 +4,11 @@ import { defineComponent } from "vue";
 import { createRouter, createWebHistory, RouteRecordRaw } from "vue-router";
 import { isSupabaseEnabled } from "@/core/services/supabase";
 import { navigateToBuiltDocs } from "@/composables/platform/useDocsUrl";
-import { dispatchAppNavError, tryReloadOnceForStaleChunk } from "@/composables/platform/chunkReloadGuard";
+import { dispatchAppNavError } from "@/composables/platform/chunkReloadGuard";
+import {
+  holdQuietAudioPrefetchForNavigation,
+  releaseQuietAudioPrefetchAfterNavigation,
+} from "@/core/sounds/prefetch";
 
 // --- 视图组件 ---
 const MainLayout = () => import("@/views/MainLayout.vue");
@@ -69,7 +73,7 @@ const router = createRouter({
   routes,
 });
 
-// 懒加载 chunk 失败：先自动刷新一次；守卫已用过则提示，不静默、不死循环
+// 懒加载 chunk 失败：只提示稍后重试，不自动整页刷新（慢网/预载中用户等一等即可）
 if (import.meta.env.PROD) {
   router.onError((error) => {
     const msg = error instanceof Error ? error.message : String(error);
@@ -81,11 +85,18 @@ if (import.meta.env.PROD) {
       console.error("[router] navigation error:", error);
       return;
     }
-    if (!tryReloadOnceForStaleChunk()) {
-      dispatchAppNavError();
-    }
+    dispatchAppNavError();
   });
 }
+
+router.beforeEach((_to, _from, next) => {
+  holdQuietAudioPrefetchForNavigation();
+  next();
+});
+
+router.afterEach(() => {
+  releaseQuietAudioPrefetchAfterNavigation();
+});
 
 // --- 全局前置导航守卫 ---
 router.beforeEach(async (to, _from, next) => {

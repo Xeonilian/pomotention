@@ -25,6 +25,7 @@ import { useTimerStore } from "@/stores/useTimerStore";
 import { resumeSharedAudioAfterForegroundAsync } from "@/core/sounds";
 import { bootMark } from "@/bootTiming";
 import { clearBootRecoveryFlags } from "@/composables/platform/chunkReloadGuard";
+import { beginBootNonAudioPhase } from "@/core/platform/bootFetchQueue";
 
 const shouldLogAppDebug = ["1", "true"].includes(
   String(import.meta.env.VITE_APP_DEBUG_LOG ?? "")
@@ -46,6 +47,7 @@ const timerStore = useTimerStore();
 /** 首页实际渲染后再撤启动屏，并清更新/chunk 恢复标记 */
 function signalShellReady() {
   clearBootRecoveryFlags();
+  beginBootNonAudioPhase();
   // 供晚挂载的 SW 注册逻辑得知首屏已完成（避免错过事件）
   window.__POMO_SHELL_READY__ = true;
   requestAnimationFrame(() => {

@@ -413,8 +413,8 @@ export const useTimerStore = defineStore(
       isGray.value = false;
       isFromSequence.value = !!onFinish;
 
-      startWhiteNoise();
-      playSound(SoundType.WORK_START);
+      void startWhiteNoise();
+      void playSound(SoundType.WORK_START);
 
       timerInterval.value = window.setInterval(phaseTick, 1000);
     }
@@ -440,7 +440,7 @@ export const useTimerStore = defineStore(
       isGray.value = false;
       isFromSequence.value = !!onFinish;
 
-      startSilentWhiteNoiseHold();
+      void startSilentWhiteNoiseHold();
       playSound(SoundType.BREAK_START);
 
       timerInterval.value = window.setInterval(phaseTick, 1000);

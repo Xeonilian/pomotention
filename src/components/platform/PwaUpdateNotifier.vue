@@ -1,12 +1,8 @@
 <script setup lang="ts">
-import { h, onMounted, onUnmounted } from "vue";
-import { NButton, useNotification } from "naive-ui";
+import { onMounted, onUnmounted } from "vue";
+import { useNotification } from "naive-ui";
 import { isTauri } from "@tauri-apps/api/core";
 import { usePwaUpdate } from "@/composables/platform/usePwaUpdate";
-import {
-  clearChunkReloadFlag,
-  markPwaUpdating,
-} from "@/composables/platform/chunkReloadGuard";
 
 const notification = useNotification();
 const { init, dispose } = usePwaUpdate(notification);
@@ -19,28 +15,9 @@ function onAppNavError() {
 
   notification.warning({
     title: "页面资源未就绪",
-    content: () =>
-      h("div", [
-        h(
-          "p",
-          { style: "margin: 0 0 10px 0; line-height: 1.5;" },
-          "页面资源还没下载完成（可能正在更新或网络不佳），请稍后重试。",
-        ),
-        h(
-          NButton,
-          {
-            type: "primary",
-            size: "small",
-            onClick: () => {
-              clearChunkReloadFlag();
-              markPwaUpdating();
-              window.location.reload();
-            },
-          },
-          { default: () => "重试刷新" },
-        ),
-      ]),
-    duration: 0,
+    content:
+      "该页面模块还没加载完（慢网下可能正被后台声音下载占满带宽）。请稍后再点一次进入即可；不必刷新，声音会继续在后台下。",
+    duration: 8000,
     closable: true,
     onClose: () => {
       navErrorPromptShown = false;

@@ -1,7 +1,8 @@
 // Service Worker 版本号：变更策略时请递增，以便激活时清掉旧缓存
 // v12: activate 仍全量预缓存，抢首次带宽
 // v13: 首次优先——activate 只删旧缓存；全量预缓存去掉；壳仍在 install 缓存（供 PWA）
-const CACHE_VERSION = "v13";
+// v14: /sounds/ Range 从整文件缓存切片，避免媒体双轨分段重复上网
+const CACHE_VERSION = "v14";
 const CACHE_NAME = `pomotention-cache-${CACHE_VERSION}`;
 
 const SOUND_CACHE_VERSION = "v1";
@@ -109,14 +110,70 @@ async function navigateNetworkFirst(request) {
   return new Response("", { status: 503, statusText: "Offline" });
 }
 
+function soundBareRequest(request) {
+  const url = new URL(request.url);
+  return new Request(`${url.origin}${url.pathname}`, { method: "GET" });
+}
+
+async function getOrFetchFullSound(bareRequest) {
+  const cache = await caches.open(SOUND_CACHE_NAME);
+  const cached = await cache.match(bareRequest);
+  if (cached) return cached;
+  const response = await fetch(bareRequest);
+  if (response.ok) {
+    await cache.put(bareRequest, response.clone());
+  }
+  return response;
+}
+
+function parseByteRange(rangeHeader, size) {
+  const match = /^bytes=(\d*)-(\d*)$/.exec(rangeHeader);
+  if (!match) return null;
+  let start = match[1] === "" ? 0 : parseInt(match[1], 10);
+  let end = match[2] === "" ? size - 1 : parseInt(match[2], 10);
+  if (Number.isNaN(start) || Number.isNaN(end) || start > end || start >= size) return null;
+  if (end >= size) end = size - 1;
+  return { start, end };
+}
+
+async function soundRangeFromCache(request) {
+  try {
+    const bare = soundBareRequest(request);
+    const full = await getOrFetchFullSound(bare);
+    if (!full.ok) return fetch(request);
+    const buf = await full.arrayBuffer();
+    const size = buf.byteLength;
+    const rangeHeader = request.headers.get("range");
+    if (!rangeHeader) return new Response(buf, { headers: { "Content-Type": full.headers.get("Content-Type") || "audio/wav" } });
+    const parsed = parseByteRange(rangeHeader, size);
+    if (!parsed) return new Response(buf, { headers: full.headers });
+    const { start, end } = parsed;
+    const slice = buf.slice(start, end + 1);
+    return new Response(slice, {
+      status: 206,
+      statusText: "Partial Content",
+      headers: {
+        "Content-Type": full.headers.get("Content-Type") || "audio/wav",
+        "Content-Range": `bytes ${start}-${end}/${size}`,
+        "Content-Length": String(slice.byteLength),
+        "Accept-Ranges": "bytes",
+      },
+    });
+  } catch (err) {
+    console.error("[SW] sound range failed:", err);
+    return fetch(request).catch(() => new Response("", { status: 503, statusText: "Offline" }));
+  }
+}
+
 function soundCacheFirst(request) {
   return caches.open(SOUND_CACHE_NAME).then((cache) => {
-    return cache.match(request).then((cached) => {
+    const bare = soundBareRequest(request);
+    return cache.match(bare).then((cached) => {
       if (cached) return cached;
-      return fetch(request)
+      return fetch(bare)
         .then((response) => {
           if (response.ok) {
-            cache.put(request, response.clone());
+            cache.put(bare, response.clone());
           }
           return response;
         })
@@ -140,11 +197,6 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  if (request.headers.has("range")) {
-    event.respondWith(fetch(request).catch(() => new Response("", { status: 503, statusText: "Offline" })));
-    return;
-  }
-
   if (request.mode === "navigate") {
     event.respondWith(navigateNetworkFirst(request));
     return;
@@ -156,7 +208,16 @@ self.addEventListener("fetch", (event) => {
     return;
   }
   if (path.startsWith("/sounds/")) {
+    if (request.headers.has("range")) {
+      event.respondWith(soundRangeFromCache(request));
+      return;
+    }
     event.respondWith(soundCacheFirst(request));
+    return;
+  }
+
+  if (request.headers.has("range")) {
+    event.respondWith(fetch(request).catch(() => new Response("", { status: 503, statusText: "Offline" })));
     return;
   }
 
