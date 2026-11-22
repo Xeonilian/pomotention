@@ -1,33 +1,52 @@
 // Service Worker 版本号：变更策略时请递增，以便激活时清掉旧缓存
-// v4: /assets/ stale-while-revalidate 弱网先出缓存
-// v6: navigate 曾改回 network-first（防旧 html 配新 JS）
-// v7: 重复打开 navigate 也 SWR——有网等 html 会在开机图淡出后露出白屏
-const CACHE_VERSION = "v7";
+// v12: activate 仍全量预缓存，抢首次带宽
+// v13: 首次优先——activate 只删旧缓存；全量预缓存去掉；壳仍在 install 缓存（供 PWA）
+// v14: /sounds/ Range 从整文件缓存切片，避免媒体双轨分段重复上网
+const CACHE_VERSION = "v14";
 const CACHE_NAME = `pomotention-cache-${CACHE_VERSION}`;
 
-// 声音文件独立缓存版本：仅在声音文件本身有更新时才递增，避免每次 SW 更新都重新下载
 const SOUND_CACHE_VERSION = "v1";
 const SOUND_CACHE_NAME = `pomotention-sounds-${SOUND_CACHE_VERSION}`;
 
-// 需要缓存的静态资源（应用壳）
 const APP_SHELL = ["/", "/index.html", "/manifest.webmanifest", "/icon-128.png", "/icon-192.png", "/icon-512.png", "/favicon.ico"];
+
+const FILE_TIMEOUT_MS = 15000;
+const NAVIGATE_NETWORK_MS = 8000;
+
+function addWithTimeout(cache, url, timeoutMs) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`[SW] precache timeout: ${url}`)), timeoutMs);
+    cache
+      .add(url)
+      .then(() => {
+        clearTimeout(timer);
+        resolve();
+      })
+      .catch((err) => {
+        clearTimeout(timer);
+        reject(err);
+      });
+  });
+}
 
 self.addEventListener("install", (event) => {
   console.log("[Service Worker] Installing...", CACHE_VERSION);
   event.waitUntil(
-    caches
-      .open(CACHE_NAME)
-      .then((cache) => {
-        return cache.addAll(APP_SHELL);
-      })
-      .catch((error) => {
-        console.error("[Service Worker] Cache failed:", error);
-      }),
+    (async () => {
+      const cache = await caches.open(CACHE_NAME);
+      // 只缓存壳，失败跳过；不在此拉取 /assets 清单
+      await Promise.all(
+        APP_SHELL.map((url) =>
+          addWithTimeout(cache, url, FILE_TIMEOUT_MS).catch((err) => {
+            console.warn("[Service Worker] shell precache skipped:", url, err);
+          }),
+        ),
+      );
+      await self.skipWaiting();
+    })(),
   );
-  // 不在此处 skipWaiting：有旧页面在跑时新 SW 进入 waiting，由前端发 SKIP_WAITING 后再激活，便于提示用户刷新
 });
 
-// 用户确认刷新后跳过等待，立即接管
 self.addEventListener("message", (event) => {
   if (event.data && event.data.type === "SKIP_WAITING") {
     self.skipWaiting();
@@ -36,8 +55,9 @@ self.addEventListener("message", (event) => {
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
+    (async () => {
+      const cacheNames = await caches.keys();
+      await Promise.all(
         cacheNames.map((cacheName) => {
           if (cacheName !== CACHE_NAME && cacheName !== SOUND_CACHE_NAME) {
             console.log("[Service Worker] Deleting old cache:", cacheName);
@@ -45,14 +65,11 @@ self.addEventListener("activate", (event) => {
           }
         }),
       );
-    }),
+      await self.clients.claim();
+    })(),
   );
-  return self.clients.claim();
 });
 
-/**
- * 仅缓存「完整」同源成功响应，避免把 206 等写入 cache 引发后续异常
- */
 function putInCache(request, response) {
   if (!response || response.status !== 200 || response.type !== "basic") {
     return;
@@ -61,7 +78,6 @@ function putInCache(request, response) {
   return caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
 }
 
-/** /assets/：先缓存后后台更新 */
 function assetsStaleWhileRevalidate(request) {
   return caches.match(request).then((cached) => {
     const fetchPromise = fetch(request)
@@ -79,15 +95,85 @@ function assetsStaleWhileRevalidate(request) {
   });
 }
 
-/** /sounds/：缓存优先，不后台更新；仅在 SOUND_CACHE_VERSION 递增时由 activate 清缓存后重新下载 */
+async function navigateNetworkFirst(request) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), NAVIGATE_NETWORK_MS);
+  try {
+    const response = await fetch(request, { signal: controller.signal });
+    clearTimeout(timer);
+    if (response && response.ok) return response;
+  } catch {
+    clearTimeout(timer);
+  }
+  const cached = (await caches.match(request)) || (await caches.match("/index.html"));
+  if (cached) return cached;
+  return new Response("", { status: 503, statusText: "Offline" });
+}
+
+function soundBareRequest(request) {
+  const url = new URL(request.url);
+  return new Request(`${url.origin}${url.pathname}`, { method: "GET" });
+}
+
+async function getOrFetchFullSound(bareRequest) {
+  const cache = await caches.open(SOUND_CACHE_NAME);
+  const cached = await cache.match(bareRequest);
+  if (cached) return cached;
+  const response = await fetch(bareRequest);
+  if (response.ok) {
+    await cache.put(bareRequest, response.clone());
+  }
+  return response;
+}
+
+function parseByteRange(rangeHeader, size) {
+  const match = /^bytes=(\d*)-(\d*)$/.exec(rangeHeader);
+  if (!match) return null;
+  let start = match[1] === "" ? 0 : parseInt(match[1], 10);
+  let end = match[2] === "" ? size - 1 : parseInt(match[2], 10);
+  if (Number.isNaN(start) || Number.isNaN(end) || start > end || start >= size) return null;
+  if (end >= size) end = size - 1;
+  return { start, end };
+}
+
+async function soundRangeFromCache(request) {
+  try {
+    const bare = soundBareRequest(request);
+    const full = await getOrFetchFullSound(bare);
+    if (!full.ok) return fetch(request);
+    const buf = await full.arrayBuffer();
+    const size = buf.byteLength;
+    const rangeHeader = request.headers.get("range");
+    if (!rangeHeader) return new Response(buf, { headers: { "Content-Type": full.headers.get("Content-Type") || "audio/wav" } });
+    const parsed = parseByteRange(rangeHeader, size);
+    if (!parsed) return new Response(buf, { headers: full.headers });
+    const { start, end } = parsed;
+    const slice = buf.slice(start, end + 1);
+    return new Response(slice, {
+      status: 206,
+      statusText: "Partial Content",
+      headers: {
+        "Content-Type": full.headers.get("Content-Type") || "audio/wav",
+        "Content-Range": `bytes ${start}-${end}/${size}`,
+        "Content-Length": String(slice.byteLength),
+        "Accept-Ranges": "bytes",
+      },
+    });
+  } catch (err) {
+    console.error("[SW] sound range failed:", err);
+    return fetch(request).catch(() => new Response("", { status: 503, statusText: "Offline" }));
+  }
+}
+
 function soundCacheFirst(request) {
   return caches.open(SOUND_CACHE_NAME).then((cache) => {
-    return cache.match(request).then((cached) => {
+    const bare = soundBareRequest(request);
+    return cache.match(bare).then((cached) => {
       if (cached) return cached;
-      return fetch(request)
+      return fetch(bare)
         .then((response) => {
           if (response.ok) {
-            cache.put(request, response.clone());
+            cache.put(bare, response.clone());
           }
           return response;
         })
@@ -111,19 +197,8 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // 音频/视频常见 Range 请求，与 Cache 里存的完整响应容易不兼容，直接走网络并兜底错误
-  if (request.headers.has("range")) {
-    event.respondWith(fetch(request).catch(() => new Response("", { status: 503, statusText: "Offline" })));
-    return;
-  }
-
   if (request.mode === "navigate") {
-    event.respondWith(
-      assetsStaleWhileRevalidate(request).then((response) => {
-        if (response && response.status !== 503) return response;
-        return caches.match("/index.html").then((cached) => cached || response);
-      }),
-    );
+    event.respondWith(navigateNetworkFirst(request));
     return;
   }
 
@@ -133,11 +208,19 @@ self.addEventListener("fetch", (event) => {
     return;
   }
   if (path.startsWith("/sounds/")) {
+    if (request.headers.has("range")) {
+      event.respondWith(soundRangeFromCache(request));
+      return;
+    }
     event.respondWith(soundCacheFirst(request));
     return;
   }
 
-  // 其余同源静态资源：缓存优先，但 fetch 失败时必须 resolve，避免 respondWith 收到 rejected
+  if (request.headers.has("range")) {
+    event.respondWith(fetch(request).catch(() => new Response("", { status: 503, statusText: "Offline" })));
+    return;
+  }
+
   event.respondWith(
     caches.match(request).then((cachedResponse) => {
       if (cachedResponse) {

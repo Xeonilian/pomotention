@@ -9,30 +9,16 @@ import { useTimerStore } from "./stores/useTimerStore";
 import router from "./router";
 import { NConfigProvider } from "naive-ui";
 import { zhCN, dateZhCN } from "naive-ui";
+import { dispatchAppNavError } from "@/composables/platform/chunkReloadGuard";
 
 bootMark("main-entry");
 
-// 部署后旧主包仍引用已删 chunk 时自动刷新一次（等同用户手动 F5）
+// 预加载 chunk 失败：只提示，不自动 refresh（与 router.onError 一致）
 if (import.meta.env.PROD) {
-  const CHUNK_RELOAD_FLAG = "chunk-reload";
-  const reloadOnceForStaleChunks = () => {
-    try {
-      if (sessionStorage.getItem(CHUNK_RELOAD_FLAG)) return;
-      sessionStorage.setItem(CHUNK_RELOAD_FLAG, "1");
-    } catch {
-      /* 隐私模式等 */
-    }
-    window.location.reload();
-  };
   window.addEventListener("vite:preloadError", (event) => {
     event.preventDefault();
-    reloadOnceForStaleChunks();
+    dispatchAppNavError();
   });
-  try {
-    sessionStorage.removeItem(CHUNK_RELOAD_FLAG);
-  } catch {
-    /* 隐私模式等 */
-  }
 }
 
 // 创建Pinia实例

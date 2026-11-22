@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { LifeRecord } from "@/core/types/Task";
+import type { EatCourse, LifeRecord } from "@/core/types/Task";
 import {
   activityBarScaleMs,
   clipDaySpans,
@@ -217,8 +217,10 @@ describe("toMonthLifeBarView", () => {
       drinkAmounts: [],
       drinkGoalMl: 2000,
       sleepSpans: [],
-      eatEvents: Array.from({ length: 8 }, (_, i) => ({ recordedAt: i, course: "meal" as const })).concat(
-        Array.from({ length: 2 }, (_, i) => ({ recordedAt: 100 + i, course: "dessert" as const })),
+      eatEvents: (
+        Array.from({ length: 8 }, (_, i) => ({ recordedAt: i, course: "meal" as EatCourse })).concat(
+          Array.from({ length: 2 }, (_, i) => ({ recordedAt: 100 + i, course: "dessert" as EatCourse })),
+        )
       ),
       activitySpans: [{ ms: 6 * 3600_000, startAt: 1 }],
       eatScale: 10,

@@ -4,6 +4,8 @@ import { isAppleTouchWebKitDevice, preferHtmlAudioCueFirst } from "./platform";
 import { SoundType, soundPaths } from "./types";
 import { getOrDecodeCueBuffer } from "./cueBuffers";
 import { duckHtmlWhiteNoiseForCuePlayback } from "./whiteNoiseHtml";
+import { whenNonAudioIdle } from "@/core/platform/bootFetchQueue";
+import { loadCueBlobUrl } from "./prefetch";
 
 /** 桌面 Web Audio 提示音输出增益；与 HTML 白噪音同时播时需压低，避免听感上「提示:白噪音≈5:1」 */
 const CUE_WEB_AUDIO_GAIN = 0.42;
@@ -15,19 +17,28 @@ function applyHtmlAudioPlaysInline(el: HTMLAudioElement) {
   (el as unknown as { playsInline?: boolean }).playsInline = true;
 }
 
-function getSound(type: SoundType): HTMLAudioElement {
-  if (!soundCache.has(type)) {
-    const audio = new Audio(soundPaths[type]);
+function getSound(type: SoundType, src: string): HTMLAudioElement {
+  let audio = soundCache.get(type);
+  if (!audio) {
+    audio = new Audio(src);
     audio.preload = "auto";
     applyHtmlAudioPlaysInline(audio);
     soundCache.set(type, audio);
+  } else {
+    const resolved = new URL(src, typeof location !== "undefined" ? location.href : "http://localhost").href;
+    if (audio.src !== resolved) {
+      audio.src = src;
+    }
   }
-  return soundCache.get(type)!;
+  return audio;
 }
 
 /** iOS/Android：提示音用 HTMLAudio，与白噪音同属「元素 play」链，避免仅 Web Audio 在后台挂起 */
-export function playCueHtml(type: SoundType): Promise<void> {
-  const el = getSound(type);
+export async function playCueHtml(type: SoundType): Promise<void> {
+  await whenNonAudioIdle();
+  const blobUrl = await loadCueBlobUrl(type);
+  const src = blobUrl ?? soundPaths[type];
+  const el = getSound(type, src);
   el.volume = 1;
   el.currentTime = 0;
   return el.play();
@@ -111,6 +122,7 @@ function dbgCueOk(type: SoundType, path: "web" | "html", note?: string) {
 }
 
 async function playSoundAsync(type: SoundType): Promise<void> {
+  await whenNonAudioIdle();
   const webFirstIos = preferWebAudioCueFirstOnIos(type);
 
   if (webFirstIos) {

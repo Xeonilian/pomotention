@@ -83,7 +83,8 @@ function spawnDocsDevAfterListen(): Plugin {
     },
   };
 }
-// 用法
+
+// 全量 SW precache 清单注入已移除（v13：首次进入优先，activate 不再预下载资产）
 // 仅分析：ANALYZE=true pnpm build
 // 仅生成 d.ts：GENERATE_DTS=true pnpm build
 // 两者都要：ANALYZE=true GENERATE_DTS=true pnpm build

@@ -3,7 +3,7 @@
 > **搞不清要干嘛、干到哪了 → 只看这个文件。**  
 > 开新功能：填下面各节；收工：更新「停在哪」；做完：打勾后清空或归档到 [`history/archive/`](./history/archive/README.md)。
 
-上一关已归档：[`history/archive/2026-11-task-annotation.md`](./history/archive/2026-11-task-annotation.md)（批注 note · 后批高亮；`v0.7.1` PR）。更早：[`2026-11-project-folder.md`](./history/archive/2026-11-project-folder.md)（`v0.7.0`）。
+上一关已归档：[`history/archive/2026-11-data-page-polish.md`](./history/archive/2026-11-data-page-polish.md)（Project 操作钮常显 · 手机上色压复制）。更早：[`2026-11-task-annotation.md`](./history/archive/2026-11-task-annotation.md)（`v0.7.1`）、[`2026-11-project-folder.md`](./history/archive/2026-11-project-folder.md)（`v0.7.0`）。
 
 ---
 
@@ -11,16 +11,16 @@
 
 | 项         | 内容 |
 | ---------- | ---- |
-| **主题**   | （空关 · 等下一票） |
+| **主题**   | PWA：先做好「完全首次进入」（旧换新后做） |
 | **分支**   | `dev` |
-| **更新**   | 2026-11-20 |
-| **停在哪** | `v0.7.1` 批注关文档与版本已齐，开 PR 合 `main`；合完按 `pr-merge` 重建空 `dev`。 |
+| **更新**   | 2026-11-22 |
+| **停在哪** | 首次进：阶段1（并发6、登录优先）+ 声音后拉；chunk 失败只短提示、不自动刷；启动屏文案待推（15/30/60、普通刷新）。加载可收口，旧换新另开。 |
 
 ---
 
 ## 这一关要干嘛（一句话）
 
-（开新关时填写。）
+首次进入快进首页 + SW 安静装上；二级页一波热身；更新下载同关收干净（分轮推 dev 验收）。
 
 ---
 
@@ -35,6 +35,7 @@
 - **筛选后分析写作面**：检索结果上的成文/归纳舞台
 - **Project 内加 todo**（素材复盘书写入口）；「移入选中 P」类按钮（v1 用拖拽代替）
 - 首页后批划选模式；后批任意色 / 颜色选择器
+- 数据页小修发版说明（并入下一票 CHANGELOG 或单独补丁）
 
 ---
 

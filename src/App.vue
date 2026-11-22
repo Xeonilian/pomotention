@@ -1,7 +1,6 @@
 <template>
   <n-notification-provider>
     <n-dialog-provider>
-      <PwaSplashScreen />
       <router-view />
       <UpdateManager />
       <PwaUpdateNotifier />
@@ -11,7 +10,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, onErrorCaptured, watch } from "vue";
+import { onMounted, onUnmounted, onErrorCaptured } from "vue";
 import { useRouter } from "vue-router";
 import { supabase, isSupabaseEnabled } from "@/core/services/supabase";
 import { useDataStore } from "@/stores/useDataStore";
@@ -21,11 +20,12 @@ import { cleanupSyncLifecycle, subscribeAuthStateChanges, teardownAuthSubscripti
 
 import UpdateManager from "./components/platform/UpdateManager.vue";
 import PwaInstallBanner from "./components/platform/PwaInstallBanner.vue";
-import PwaSplashScreen from "./components/platform/PwaSplashScreen.vue";
 import PwaUpdateNotifier from "./components/platform/PwaUpdateNotifier.vue";
 import { useTimerStore } from "@/stores/useTimerStore";
-import { resumeSharedAudioAfterForegroundAsync, prefetchSoundAssets, prefetchWhiteNoiseForSelection } from "@/core/sounds";
+import { resumeSharedAudioAfterForegroundAsync } from "@/core/sounds";
 import { bootMark } from "@/bootTiming";
+import { clearBootRecoveryFlags } from "@/composables/platform/chunkReloadGuard";
+import { beginBootNonAudioPhase } from "@/core/platform/bootFetchQueue";
 
 const shouldLogAppDebug = ["1", "true"].includes(
   String(import.meta.env.VITE_APP_DEBUG_LOG ?? "")
@@ -44,13 +44,38 @@ const dataStore = useDataStore();
 const syncStore = useSyncStore();
 const timerStore = useTimerStore();
 
-watch(
-  () => settingStore.settings.whiteNoiseSoundTrack,
-  (track, prevTrack) => {
-    if (track === prevTrack) return;
-    prefetchWhiteNoiseForSelection(track);
-  },
-);
+/** 首页实际渲染后再撤启动屏，并清更新/chunk 恢复标记 */
+function signalShellReady() {
+  clearBootRecoveryFlags();
+  beginBootNonAudioPhase();
+  // 供晚挂载的 SW 注册逻辑得知首屏已完成（避免错过事件）
+  window.__POMO_SHELL_READY__ = true;
+  requestAnimationFrame(() => {
+    window.dispatchEvent(new CustomEvent("pwa-shell-ready"));
+  });
+}
+
+/** 首页日视图 + 任务区就绪后再撤启动屏，避免「正在启动」后长时间纯白 */
+async function warmHomeCoreBeforeSplashHide(): Promise<void> {
+  await Promise.all([
+    import("@/components/DayPlanner/DayPlanner.vue"),
+    import("@/components/TaskTracker/TaskTracker.vue"),
+    import("@/composables/task/useTaskRecordMarkdown").then((m) => m.prefetchTaskMarkdownEngine()),
+  ]);
+}
+
+async function goHomeAndSignalReady() {
+  await router.push({ name: "Home" });
+  try {
+    await warmHomeCoreBeforeSplashHide();
+  } catch {
+    /* 预热失败仍放行，避免永久卡在启动屏 */
+  }
+  await new Promise<void>((resolve) => {
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+  });
+  signalShellReady();
+}
 
 // ========== 生命周期钩子 ==========
 onMounted(async () => {
@@ -61,20 +86,15 @@ onMounted(async () => {
     });
     bootMark("app-after-paint");
 
-    // v3: 确保prefetch在PWA reload后完成，避免timer在sounds未就绪时启动 (iPhone sound fix)
-    appDebugLog("[App] Starting prefetchSoundAssets for timer sounds");
-    prefetchSoundAssets(settingStore.settings.whiteNoiseSoundTrack);
+    // 音频不在启动预取：先非音频壳 → shell-ready 后 SW；音效/白噪音用到再拉
     // 1. 初始化本地数据
     await dataStore.loadAllData();
     bootMark("app-data-loaded");
-    requestAnimationFrame(() => {
-      window.dispatchEvent(new CustomEvent("pwa-shell-ready"));
-    });
 
     // 3. 本地模式直接跳转（Auth 监听因 isSupabaseEnabled 为 false 不会挂载；登录成功后在 LoginView 补挂）
     if (settingStore.settings.localOnlyMode) {
       appDebugLog("✅ 本地模式，跳过登录检查，直接进入Home");
-      router.push({ name: "Home" });
+      await goHomeAndSignalReady();
       subscribeAuthStateChanges();
       return;
     }
@@ -103,15 +123,19 @@ onMounted(async () => {
     if (window.location.hash) {
       window.history.replaceState(null, "", window.location.pathname);
     }
-    router.push({ name: "Home" });
+    await goHomeAndSignalReady();
 
     // 6. 初始化Auth状态监听
     subscribeAuthStateChanges();
   } catch (error) {
     console.error("❌ 应用初始化失败:", error);
-    window.dispatchEvent(new CustomEvent("pwa-shell-ready"));
     // 初始化失败仍跳转Home，保证基础功能可用
-    router.push({ name: "Home" });
+    try {
+      await router.push({ name: "Home" });
+    } catch {
+      /* ignore */
+    }
+    signalShellReady();
   }
 });
 

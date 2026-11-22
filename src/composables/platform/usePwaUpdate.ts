@@ -1,10 +1,18 @@
-import { h } from "vue";
-import { NButton } from "naive-ui";
+import { markPwaUpdating } from "@/composables/platform/chunkReloadGuard";
 
-/** 避免同一标签页重复弹出多条「有更新」通知 */
-let updatePromptShown = false;
+/** 避免重复弹出「下载失败」 */
+let installFailPromptShown = false;
+/** 首页 shell 就绪后才注册 SW / 处理 waiting */
+let shellReady = false;
+let pendingWaitingReg: ServiceWorkerRegistration | null = null;
+let swRegisterStarted = false;
 
-/** controllerchange 在后台触发时挂起的 visibility 监听，dispose 时移除 */
+/** 页面加载时是否已有 controller：无则表示首次接管，不要整页刷新 */
+const hadControllerOnLoad =
+  typeof navigator !== "undefined" && "serviceWorker" in navigator
+    ? !!navigator.serviceWorker.controller
+    : false;
+
 let pendingVisibilityReloadHandler: (() => void) | null = null;
 
 function removePendingVisibilityReload() {
@@ -16,47 +24,56 @@ function removePendingVisibilityReload() {
 
 type NotificationApi = ReturnType<typeof import("naive-ui").useNotification>;
 
-function dispatchPwaUpdating() {
-  if (typeof window === "undefined") return;
-  window.dispatchEvent(new CustomEvent("pwa-updating"));
+declare global {
+  interface Window {
+    /** App 进首页后置位，避免 SW 注册晚于 shell-ready 事件 */
+    __POMO_SHELL_READY__?: boolean;
+  }
 }
 
-function promptRefresh(reg: ServiceWorkerRegistration, notification: NotificationApi) {
-  if (updatePromptShown || !reg.waiting) return;
-  updatePromptShown = true;
+function markUpdatingAndReload() {
+  try {
+    if (sessionStorage.getItem("sw-act-reload")) return;
+    sessionStorage.setItem("sw-act-reload", "1");
+  } catch {
+    /* 隐私模式等 */
+  }
+  markPwaUpdating();
+  try {
+    window.location.replace(window.location.href);
+  } catch {
+    window.location.reload();
+  }
+}
 
-  const version = import.meta.env.VITE_APP_VERSION ?? "";
+function applyWaitingWorker(reg: ServiceWorkerRegistration) {
+  markPwaUpdating();
+  reg.waiting?.postMessage({ type: "SKIP_WAITING" });
+}
 
-  notification.info({
-    title: "网站已更新",
-    content: () =>
-      h("div", { class: "pwa-update-prompt" }, [
-        h(
-          "p",
-          { style: "margin: 0 0 10px 0; line-height: 1.5;" },
-          version ? `你正在使用 v${version}。新版本已下载，点下方按钮刷新即可生效。` : "新版本已下载，点下方按钮刷新即可生效。",
-        ),
-        h(
-          NButton,
-          {
-            type: "primary",
-            size: "small",
-            onClick: () => {
-              dispatchPwaUpdating();
-              reg.waiting?.postMessage({ type: "SKIP_WAITING" });
-            },
-          },
-          { default: () => "立即刷新" },
-        ),
-      ]),
-    duration: 0,
+function applyWhenReady(reg: ServiceWorkerRegistration) {
+  if (!reg.waiting) return;
+  if (!shellReady) {
+    pendingWaitingReg = reg;
+    return;
+  }
+  applyWaitingWorker(reg);
+}
+
+function promptInstallFailed(notification: NotificationApi) {
+  if (installFailPromptShown) return;
+  installFailPromptShown = true;
+  notification.warning({
+    title: "更新下载失败",
+    content: "将保持当前版本，下次启动会自动重试。",
+    duration: 8000,
     closable: true,
   });
 }
 
 function bindWaitingDetection(reg: ServiceWorkerRegistration, notification: NotificationApi) {
   if (reg.waiting) {
-    promptRefresh(reg, notification);
+    applyWhenReady(reg);
   }
 
   reg.addEventListener("updatefound", () => {
@@ -65,13 +82,15 @@ function bindWaitingDetection(reg: ServiceWorkerRegistration, notification: Noti
 
     installing.addEventListener("statechange", () => {
       if (installing.state === "installed" && navigator.serviceWorker.controller) {
-        promptRefresh(reg, notification);
+        applyWhenReady(reg);
+      }
+      if (installing.state === "redundant") {
+        promptInstallFailed(notification);
       }
     });
   });
 }
 
-/** 冷启动后再查 SW 更新，避免与首屏争抢网络 */
 const SW_UPDATE_DEFER_MS = 3000;
 
 function scheduleSwUpdate(reg: ServiceWorkerRegistration) {
@@ -83,21 +102,51 @@ function scheduleSwUpdate(reg: ServiceWorkerRegistration) {
   }
 }
 
+function registerServiceWorker(notification: NotificationApi) {
+  if (swRegisterStarted) return;
+  swRegisterStarted = true;
+
+  void navigator.serviceWorker
+    .register("/sw.js")
+    .then((reg) => {
+      bindWaitingDetection(reg, notification);
+      scheduleSwUpdate(reg);
+    })
+    .catch((err) => {
+      swRegisterStarted = false;
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("aborted") || (err as DOMException)?.name === "AbortError") {
+        console.log("[SW] registration aborted during page unload/reload");
+        return;
+      }
+      console.error("❌ Service Worker registration failed:", err);
+    });
+}
+
 /**
- * 生产环境 Web：注册 SW、检测 waiting 版本、提示用户刷新；与 Tauri 桌面版无关
+ * 生产环境 Web：等首页就绪后再注册 SW，避免与首次加载抢带宽
  */
 export function usePwaUpdate(notification: NotificationApi) {
   let refreshing = false;
 
+  const onShellReady = () => {
+    shellReady = true;
+    if (pendingWaitingReg) {
+      const reg = pendingWaitingReg;
+      pendingWaitingReg = null;
+      applyWhenReady(reg);
+    }
+    registerServiceWorker(notification);
+  };
+
   const onControllerChange = () => {
+    if (!hadControllerOnLoad) return;
     if (refreshing) return;
 
-    // 后台/隐藏时立刻 reload 常被节流或未完整执行，旧 JS 与新 SW 并存会导致缓存音效等仍用旧内存状态；回到前台再刷新
     if (document.visibilityState === "visible") {
       refreshing = true;
       removePendingVisibilityReload();
-      dispatchPwaUpdating();
-      window.location.reload();
+      markUpdatingAndReload();
       return;
     }
 
@@ -108,8 +157,7 @@ export function usePwaUpdate(notification: NotificationApi) {
       if (refreshing) return;
       refreshing = true;
       removePendingVisibilityReload();
-      dispatchPwaUpdating();
-      window.location.reload();
+      markUpdatingAndReload();
     };
     pendingVisibilityReloadHandler = handler;
     document.addEventListener("visibilitychange", handler);
@@ -118,29 +166,19 @@ export function usePwaUpdate(notification: NotificationApi) {
   const init = () => {
     if (!import.meta.env.PROD || !("serviceWorker" in navigator)) return;
 
+    shellReady = false;
+    pendingWaitingReg = null;
+    window.addEventListener("pwa-shell-ready", onShellReady);
     navigator.serviceWorker.addEventListener("controllerchange", onControllerChange);
 
-    // 延迟到下一个 macrotask，避开页面 mount/reload 竞争期导致的 abort
-    window.setTimeout(() => {
-      void navigator.serviceWorker
-        .register("/sw.js")
-        .then((reg) => {
-          bindWaitingDetection(reg, notification);
-          scheduleSwUpdate(reg);
-        })
-        .catch((err) => {
-          const msg = err instanceof Error ? err.message : String(err);
-          // 刷新时旧页面 unload 会 abort 正在进行的 register，属于正常情况，不打 error
-          if (msg.includes("aborted") || (err as DOMException)?.name === "AbortError") {
-            console.log("[SW] registration aborted during page unload/reload");
-            return;
-          }
-          console.error("❌ Service Worker registration failed:", err);
-        });
-    }, 0);
+    // 若 shell-ready 已发生（监听挂晚了），立刻补注册
+    if (window.__POMO_SHELL_READY__) {
+      onShellReady();
+    }
   };
 
   const dispose = () => {
+    window.removeEventListener("pwa-shell-ready", onShellReady);
     navigator.serviceWorker.removeEventListener("controllerchange", onControllerChange);
     removePendingVisibilityReload();
   };

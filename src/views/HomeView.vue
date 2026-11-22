@@ -101,15 +101,18 @@
               @date-select-day-view="onDateSelectDayView"
               @open-day-sheet="onOpenDaySheetFromCell"
             />
-            <YearPlanner
-              v-if="settingStore.settings.showPlanner && settingStore.settings.viewSet === 'year'"
-              :key="dateService.displayYearInfo"
-              :life-view="lifePlannerLifeView"
-              @date-select-day-view="onDateSelectDayView"
-              @navigate-to-month="onYearNavigateToMonth"
-              @navigate-to-week="onYearNavigateToWeek"
-              @open-day-sheet="onOpenDaySheetFromCell"
-            />
+            <!-- KeepAlive：日↔年切换不销毁，避免 iPhone 重挂后空白、重复算月格 -->
+            <KeepAlive>
+              <YearPlanner
+                v-if="settingStore.settings.showPlanner && settingStore.settings.viewSet === 'year'"
+                :key="`year-${dateService.displayYearInfo}`"
+                :life-view="lifePlannerLifeView"
+                @date-select-day-view="onDateSelectDayView"
+                @navigate-to-month="onYearNavigateToMonth"
+                @navigate-to-week="onYearNavigateToWeek"
+                @open-day-sheet="onOpenDaySheetFromCell"
+              />
+            </KeepAlive>
           </div>
         </div>
         <!-- 任务视图调整大小手柄 -->
@@ -267,19 +270,6 @@ const ActivitySheet = defineAsyncComponent(() => import("@/components/ActivitySh
 const CapturePanel = defineAsyncComponent(() => import("@/components/Capture/CapturePanel.vue"));
 const StateLogModal = defineAsyncComponent(() => import("@/components/TaskTracker/StateLogModal.vue"));
 
-/** 周/月不常用。数据就绪后的空闲时间预加载，避免一切换就干等模块 */
-function prefetchWeekAndMonthPlanners(): void {
-  const run = () => {
-    void import("@/components/WeekPlanner/WeekPlanner.vue");
-    void import("@/components/MonthPlanner/MonthPlanner.vue");
-  };
-  const g = window as Window & { requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number };
-  if (typeof g.requestIdleCallback === "function") {
-    g.requestIdleCallback(run, { timeout: 2500 });
-    return;
-  }
-  window.setTimeout(run, 1200);
-}
 // -- 基础UI状态
 const settingStore = useSettingStore();
 const dataStore = useDataStore();
@@ -1448,7 +1438,6 @@ function plannerKeyboardEditField(field: "title" | "start" | "done" | "duration"
 onMounted(() => {
   // console.log("HomeView mounted");
   dateService.navigateByView("today");
-  prefetchWeekAndMonthPlanners();
   attachVisualViewportListeners();
   unregisterPlannerCommandApi = registerPlannerKeyboardCommandApi(plannerKeyboard.plannerCommandApi);
   unregisterPlannerDaySpaceToggleCheck = registerPlannerDaySpaceToggleCheck(() => {

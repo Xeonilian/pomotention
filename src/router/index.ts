@@ -4,6 +4,11 @@ import { defineComponent } from "vue";
 import { createRouter, createWebHistory, RouteRecordRaw } from "vue-router";
 import { isSupabaseEnabled } from "@/core/services/supabase";
 import { navigateToBuiltDocs } from "@/composables/platform/useDocsUrl";
+import { dispatchAppNavError } from "@/composables/platform/chunkReloadGuard";
+import {
+  holdQuietAudioPrefetchForNavigation,
+  releaseQuietAudioPrefetchAfterNavigation,
+} from "@/core/sounds/prefetch";
 
 // --- 视图组件 ---
 const MainLayout = () => import("@/views/MainLayout.vue");
@@ -66,6 +71,31 @@ const routes: Array<RouteRecordRaw> = [
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes,
+});
+
+// 懒加载 chunk 失败：只提示稍后重试，不自动整页刷新（慢网/预载中用户等一等即可）
+if (import.meta.env.PROD) {
+  router.onError((error) => {
+    const msg = error instanceof Error ? error.message : String(error);
+    const isChunkFail =
+      /Failed to fetch dynamically imported module|Importing a module script failed|error loading dynamically imported module|Loading chunk [\w-]+ failed/i.test(
+        msg,
+      );
+    if (!isChunkFail) {
+      console.error("[router] navigation error:", error);
+      return;
+    }
+    dispatchAppNavError();
+  });
+}
+
+router.beforeEach((_to, _from, next) => {
+  holdQuietAudioPrefetchForNavigation();
+  next();
+});
+
+router.afterEach(() => {
+  releaseQuietAudioPrefetchAfterNavigation();
 });
 
 // --- 全局前置导航守卫 ---

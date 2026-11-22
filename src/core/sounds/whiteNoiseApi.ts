@@ -9,6 +9,8 @@ import {
   tryRetargetHtmlWhiteNoiseTrack,
 } from "./whiteNoiseHtml";
 import { SoundType, soundPaths } from "./types";
+import { whenNonAudioIdle } from "@/core/platform/bootFetchQueue";
+import { loadCueBlobUrl } from "./prefetch";
 
 /** 雨声/鸟鸣等非滴答轨的基础音量（0–1）；与 Web Audio 提示音混音时不宜过低，否则听感像「提示远大于白噪音」 */
 const WHITE_NOISE_AMBIENT_VOLUME = 0.98;
@@ -18,18 +20,22 @@ function whiteNoiseReferenceVolume(track: SoundType): number {
 }
 
 /** 全平台白噪音：仅 HTML 双轨 crossfade（可调接缝，不依赖 Web Audio loop） */
-export function startWhiteNoise(): void {
+export async function startWhiteNoise(): Promise<void> {
   const settingStore = useSettingStore();
   if (!settingStore.settings.isWhiteNoiseEnabled) return;
 
   const track = settingStore.settings.whiteNoiseSoundTrack;
-  const src = soundPaths[track];
   const vol = whiteNoiseReferenceVolume(track);
-  if (!src) {
+  const path = soundPaths[track];
+  if (!path) {
     dbgAudio("[WN] whiteNoiseSoundTrack 无映射，已改存 work_tick，请再切换/开始一次", { track });
     settingStore.settings.whiteNoiseSoundTrack = SoundType.WORK_TICK;
     return;
   }
+
+  await whenNonAudioIdle();
+  const blobUrl = await loadCueBlobUrl(track);
+  const src = blobUrl ?? path;
 
   if (tryRetargetHtmlWhiteNoiseTrack(src, vol)) return;
 
@@ -38,15 +44,20 @@ export function startWhiteNoise(): void {
 }
 
 /** 休息段：专用近静音循环素材 white_noise_break.wav，增益与环境白噪音一致（见 whiteNoiseHtml） */
-export function startSilentWhiteNoiseHold(): void {
+export async function startSilentWhiteNoiseHold(): Promise<void> {
   const settingStore = useSettingStore();
   if (!settingStore.settings.isWhiteNoiseEnabled) return;
 
-  const src = soundPaths[SoundType.WHITE_NOISE_BREAK];
-  if (!src) {
+  const track = SoundType.WHITE_NOISE_BREAK;
+  const path = soundPaths[track];
+  if (!path) {
     dbgAudio("[WN] white_noise_break 无路径映射");
     return;
   }
+
+  await whenNonAudioIdle();
+  const blobUrl = await loadCueBlobUrl(track);
+  const src = blobUrl ?? path;
 
   if (tryRetargetHtmlWhiteNoiseTrack(src, WHITE_NOISE_AMBIENT_VOLUME)) return;
 
@@ -74,8 +85,8 @@ export function toggleWhiteNoise(): void {
       if (!useSettingStore().settings.isWhiteNoiseEnabled) return;
       const ts = useTimerStore();
       if (!ts.isActive) return;
-      if (ts.isWorking) startWhiteNoise();
-      else if (ts.isBreaking) startSilentWhiteNoiseHold();
+      if (ts.isWorking) void startWhiteNoise();
+      else if (ts.isBreaking) void startSilentWhiteNoiseHold();
     })
     .catch(() => {
       /* Pinia 未就绪等 */
@@ -92,10 +103,10 @@ function tryRestartWhiteNoiseIfNeeded(): void {
         const ts = useTimerStore();
         if (!ts.isActive) return;
         if (ts.isWorking) {
-          startWhiteNoise();
+          void startWhiteNoise();
           dbgAudio("[WN] 前台恢复补白噪音");
         } else if (ts.isBreaking) {
-          startSilentWhiteNoiseHold();
+          void startSilentWhiteNoiseHold();
           dbgAudio("[WN] 前台恢复补休息静音轨");
         }
       })

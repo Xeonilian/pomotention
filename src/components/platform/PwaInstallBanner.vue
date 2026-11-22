@@ -2,9 +2,21 @@
   <Transition name="pwa-banner">
     <div v-if="showIosInstallBanner" class="pwa-install-banner">
       <span class="pwa-install-banner__text">
-        添加到主屏幕使用更流畅：点击 Safari 底部分享按钮
-        <span class="pwa-install-banner__arrow">→</span>
-        选择「添加到主屏幕」
+        <template v-if="bannerKind === 'ios'">
+          添加到主屏幕使用更流畅：点击 Safari 底部分享
+          <span class="pwa-install-banner__arrow">→</span>
+          「添加到主屏幕」
+        </template>
+        <template v-else-if="bannerKind === 'android'">
+          安装到主屏幕更流畅：打开浏览器菜单
+          <span class="pwa-install-banner__arrow">→</span>
+          「安装应用」或「添加到主屏幕」
+        </template>
+        <template v-else>
+          安装为应用使用更流畅：看地址栏或浏览器菜单里的
+          <span class="pwa-install-banner__arrow">→</span>
+          「安装」/「安装应用」
+        </template>
       </span>
       <button type="button" class="pwa-install-banner__close" aria-label="关闭" @click="dismiss">×</button>
     </div>
@@ -14,7 +26,7 @@
 <script setup lang="ts">
 import { usePwaInstall } from "@/composables/platform/usePwaInstall";
 
-const { showIosInstallBanner, dismiss } = usePwaInstall();
+const { showIosInstallBanner, bannerKind, dismiss } = usePwaInstall();
 </script>
 
 <style scoped>
@@ -29,7 +41,7 @@ const { showIosInstallBanner, dismiss } = usePwaInstall();
   justify-content: space-between;
   gap: 8px;
   padding: 10px 12px 10px 14px;
-  background: var(--color-blue-light);
+  background: var(--color-blue-dark);
   color: #fff;
   font-size: 13px;
   line-height: 1.4;

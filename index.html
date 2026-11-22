@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -10,29 +10,234 @@
 
     <!-- 移动端 Web App 支持 -->
     <meta name="mobile-web-app-capable" content="yes" />
-    
+
     <!-- Apple iOS 配置 -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Pomotention" />
-    
+
     <!-- Apple Touch Icons - 多尺寸支持 -->
     <link rel="apple-touch-icon" href="/icon-192.png" />
     <link rel="apple-touch-icon" sizes="128x128" href="/icon-128.png" />
     <link rel="apple-touch-icon" sizes="192x192" href="/icon-192.png" />
     <link rel="apple-touch-icon" sizes="512x512" href="/icon-512.png" />
-    
+
     <!-- Apple 启动画面 - 针对不同设备尺寸 -->
     <link rel="apple-touch-startup-image" href="/icon-512.png" />
-    
+
     <!-- 移动端优化标签 -->
     <meta name="format-detection" content="telephone=no" />
     <meta name="msapplication-TileColor" content="#ffffff" />
     <meta name="msapplication-config" content="/browserconfig.xml" />
+    <style id="pwa-boot-style">
+      #pwa-boot {
+        position: fixed;
+        inset: 0;
+        z-index: 10000;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        background: #ffffff;
+        padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+      }
+      #pwa-boot.is-visible {
+        display: flex;
+      }
+      #pwa-boot.is-hiding {
+        opacity: 0;
+        transition: opacity 0.35s ease;
+        pointer-events: none;
+      }
+      .pwa-boot__inner {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 16px;
+      }
+      .pwa-boot__icon {
+        width: 96px;
+        height: 96px;
+        border-radius: 22px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      }
+      .pwa-boot__name {
+        font-size: 20px;
+        font-weight: 600;
+        color: #1a1a1a;
+        letter-spacing: -0.02em;
+      }
+      .pwa-boot__status {
+        font-size: 14px;
+        color: #666666;
+        letter-spacing: -0.01em;
+        min-height: 1.2em;
+        text-align: center;
+        padding: 0 24px;
+      }
+      .pwa-boot__retry {
+        display: none;
+        margin-top: 4px;
+        border: 1px solid #1a1a1a;
+        background: #1a1a1a;
+        color: #ffffff;
+        font-size: 14px;
+        padding: 10px 18px;
+        border-radius: 8px;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+      }
+      .pwa-boot__retry.is-visible {
+        display: inline-block;
+      }
+      .pwa-boot__retry:disabled {
+        opacity: 0.55;
+        cursor: default;
+      }
+    </style>
   </head>
 
   <body>
+    <div id="pwa-boot" aria-hidden="true">
+      <div class="pwa-boot__inner">
+        <img src="/icon-192.png" alt="" class="pwa-boot__icon" width="96" height="96" />
+        <span class="pwa-boot__name">Pomotention</span>
+        <span id="pwa-boot-status" class="pwa-boot__status">正在启动…</span>
+        <button id="pwa-boot-retry" type="button" class="pwa-boot__retry">刷新页面</button>
+      </div>
+    </div>
     <div id="app" style="height: 100%"></div>
+    <script>
+      (function () {
+        var boot = document.getElementById("pwa-boot");
+        var statusEl = document.getElementById("pwa-boot-status");
+        var retryBtn = document.getElementById("pwa-boot-retry");
+        if (!boot || !statusEl) return;
+
+        // 仅「本会话故意为升级刷新」才显示正在更新；其余首次/冷启动统一「正在启动…」
+        var intentionalUpdate = false;
+        try {
+          intentionalUpdate = !!sessionStorage.getItem("sw-act-reload");
+        } catch (e) {}
+        var updating = false;
+        try {
+          if (intentionalUpdate) {
+            updating = !!localStorage.getItem("pwa-updating");
+          } else {
+            localStorage.removeItem("pwa-updating");
+          }
+        } catch (e) {}
+
+        // 浏览器 / PWA 一律先盖启动屏，避免主包未到时纯白；shell-ready 后再撤
+        boot.classList.add("is-visible");
+        boot.setAttribute("aria-hidden", "false");
+        statusEl.textContent = updating ? "正在更新…" : "正在启动…";
+
+        var shellReady = false;
+        var hadControllerOnLoad = "serviceWorker" in navigator && !!navigator.serviceWorker.controller;
+
+        function setStatus(text) {
+          statusEl.textContent = text;
+          if (!boot.classList.contains("is-visible")) {
+            boot.classList.add("is-visible");
+          }
+        }
+
+        function hideBoot() {
+          shellReady = true;
+          if (retryBtn) retryBtn.classList.remove("is-visible");
+          if (!boot.classList.contains("is-visible")) return;
+          boot.classList.add("is-hiding");
+          window.setTimeout(function () {
+            boot.classList.remove("is-visible", "is-hiding");
+            boot.setAttribute("aria-hidden", "true");
+          }, 360);
+          try {
+            sessionStorage.removeItem("sw-act-reload");
+            localStorage.removeItem("pwa-updating");
+          } catch (e) {}
+        }
+
+        window.addEventListener("pwa-shell-ready", hideBoot);
+
+        window.setTimeout(function () {
+          if (shellReady) return;
+          setStatus("努力加载中…");
+        }, 12000);
+        window.setTimeout(function () {
+          if (shellReady) return;
+          setStatus("仍在努力加载中…");
+        }, 24000);
+        window.setTimeout(function () {
+          if (shellReady) return;
+          setStatus("加载时间较长，可刷新页面再试");
+          if (retryBtn) retryBtn.classList.add("is-visible");
+        }, 48000);
+
+        function markUpdating() {
+          try {
+            localStorage.setItem("pwa-updating", "1");
+          } catch (e) {}
+        }
+
+        function hardReload() {
+          markUpdating();
+          setStatus("正在更新…");
+          var url = window.location.href.split("#")[0];
+          url = url.replace(/([?&])pwa_recover=\d+/g, "$1").replace(/[?&]$/, "");
+          url += (url.indexOf("?") >= 0 ? "&" : "?") + "pwa_recover=" + Date.now();
+          try {
+            window.location.replace(url);
+          } catch (e) {
+            window.location.reload();
+          }
+        }
+
+        function reloadOnceForSw() {
+          try {
+            if (sessionStorage.getItem("sw-act-reload")) return;
+            sessionStorage.setItem("sw-act-reload", "1");
+          } catch (e) {}
+          hardReload();
+        }
+
+        // 普通刷新（等同 F5）：不删 Cache、不卸 SW；先改文案再 reload，避免像没点到
+        function softReload() {
+          setStatus("正在刷新…");
+          if (retryBtn) {
+            retryBtn.disabled = true;
+            retryBtn.textContent = "正在刷新…";
+          }
+          window.setTimeout(function () {
+            try {
+              window.location.reload();
+            } catch (e) {
+              try {
+                window.location.href = window.location.href.split("#")[0];
+              } catch (e2) {}
+            }
+          }, 50);
+        }
+
+        if (retryBtn) {
+          retryBtn.addEventListener("click", function (ev) {
+            ev.preventDefault();
+            if (retryBtn.disabled) return;
+            softReload();
+          });
+        }
+
+        // 不在此处 register SW：等首页就绪后由 usePwaUpdate 注册，避免与首次加载抢网
+        if ("serviceWorker" in navigator) {
+          var refreshing = false;
+          navigator.serviceWorker.addEventListener("controllerchange", function () {
+            if (!hadControllerOnLoad) return;
+            if (refreshing) return;
+            refreshing = true;
+            reloadOnceForSw();
+          });
+        }
+      })();
+    </script>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

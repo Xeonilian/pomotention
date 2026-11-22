@@ -32,26 +32,13 @@ function markFullNavToHelpForNextPagehide(): void {
   }
 }
 
-/** 离开 SPA，进入帮助文档站 */
+/** 离开 SPA，进入帮助文档站（当前页跳转，不另开标签/弹层） */
 export function navigateToBuiltDocs(): void {
+  markFullNavToHelpForNextPagehide();
   if (isTauri()) {
-    markFullNavToHelpForNextPagehide();
     const path = getDocsStaticPath();
     window.location.assign(new URL(path, window.location.origin).href);
     return;
   }
-  const url = getWebDocsUrl();
-  // 新标签打开主应用不卸载，计时器与白噪音逻辑保持连续
-  const child = window.open(url, "_blank", "noopener,noreferrer");
-  if (child) {
-    try {
-      child.focus();
-    } catch {
-      /* noop */
-    }
-    return;
-  }
-  // 弹窗被拦截时仍整页跳转，配合 timerStore 对此次 pagehide 跳过 intentional-exit
-  markFullNavToHelpForNextPagehide();
-  window.location.assign(url);
+  window.location.assign(getWebDocsUrl());
 }

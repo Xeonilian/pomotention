@@ -1,5 +1,5 @@
 <template>
-  <div class="search-container" :class="[{ 'is-mobile': isMobile }, mobilePaneClass]">
+  <div class="search-container" :class="[{ 'is-mobile': isMobile, 'is-ios': isIOS }, mobilePaneClass]">
     <!-- 左侧：Activity 主列表 -->
     <div class="left-pane" :class="{ 'left-pane--mobile-split': isMobile }" :style="isMobile ? undefined : { width: searchWidth + 'px' }">
       <div class="search-tool">
@@ -369,7 +369,7 @@ const searchInputRef = ref<InstanceType<typeof NInput> | null>(null);
 const tagPickerRef = ref<InstanceType<typeof TagPickerPopover> | null>(null);
 
 // 桌面左右拖宽；手机列表显隐见 useSearchMobilePanes（须解构，嵌套 ref 模板不解包）
-const { isMobile } = useDevice();
+const { isMobile, isIOS } = useDevice();
 const {
   toggle: toggleMobilePanes,
   containerClass: mobilePaneClass,
@@ -513,6 +513,18 @@ function handleTagClick(tagId: number) {
 .search-container.is-mobile {
   flex-direction: column;
   padding-left: 4px;
+  /* 桌面的 margin-bottom 会让 height:100% 溢出，iPhone 底栏/input 被裁切 */
+  margin-bottom: 0;
+  max-height: 100%;
+  overflow: hidden;
+  /* 安卓：少留白（勿叠大块 safe-area，否则会太空） */
+  padding-bottom: 4px;
+  box-sizing: border-box;
+}
+
+/* iPhone：#app 竖屏未垫底，按 Home 同款把弧形/Home 条抬开 */
+.search-container.is-mobile.is-ios {
+  padding-bottom: max(12px, calc(env(safe-area-inset-bottom, 0px) * 1.5));
 }
 
 .search-container.is-mobile .left-pane,
@@ -556,10 +568,25 @@ function handleTagClick(tagId: number) {
   order: 2;
   flex: 2 1 0%;
   min-height: 0;
+  /* 整栏滚会把 sticky input 滚丢；改为只滚列表 */
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  /* 相对桌面再收一点底内边，视觉上整块上移 */
+  padding-top: 4px;
+  padding-bottom: 2px;
 }
 
-/* 仅右侧给滚动条留位，避免弹出时挤内容（勿加左边缝） */
+.search-container.is-mobile .search-tool,
+.search-container.is-mobile .filter-status-bar {
+  flex-shrink: 0;
+}
+
+/* 仅列表区滚动；取消桌面 min-height:4rem，避免矮屏把 input 挤出 */
 .search-container.is-mobile .title-list {
+  flex: 1 1 0%;
+  min-height: 0;
+  overflow: auto;
   scrollbar-gutter: stable;
   padding-right: 2px;
   padding-left: 2px;
@@ -579,6 +606,11 @@ function handleTagClick(tagId: number) {
 .search-container.is-mobile.search-container--top-full .left-pane {
   flex: 0 0 auto;
   overflow: hidden;
+  padding-bottom: 2px;
+}
+
+.search-container.is-mobile.is-ios.search-container--top-full .left-pane {
+  padding-bottom: 4px;
 }
 
 .search-container.is-mobile.search-container--top-full .left-pane .title-list,
@@ -589,6 +621,7 @@ function handleTagClick(tagId: number) {
 
 .search-container.is-mobile.search-container--top-full .right-pane {
   flex: 1 1 0%;
+  min-height: 0;
 }
 
 .resize-handle-horizontal {

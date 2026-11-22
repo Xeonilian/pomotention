@@ -41,7 +41,7 @@ describe("exportFilteredHits", () => {
     description: "会谈中谈到边界与请求。",
     energyRecords: [{ id: 100, value: 6, description: "会后" }],
     rewardRecords: [{ id: 101, value: 8 }],
-    interruptionRecords: [{ id: 102, interruptionType: "E", description: "手机响" }],
+    interruptionRecords: [{ id: 102, interruptionType: "E", description: "手机响", activityType: null }],
     starred: true,
     deleted: false,
     synced: false,

@@ -7,18 +7,18 @@ description: 注册、登录、云端同步与 数据导入导出；桌面与 PW
 
 ::: tip
 
-- 各端 **注册、登录、合并与退出** 的界面流程一致；差异主要在 **本地存储形态** 与 **JSON 导入是否开放**（见下表）。全量导出各端均支持，落盘方式不同。
+- 各端 **注册、登录、合并与退出** 的界面流程一致；差异主要在 **本地存储形态** 与 **数据迁移**。
 - **安装与卸载** 见 [安装方式总览](./install-overview.md)；[桌面客户端说明](./desktop-install.md)；[PWA渐进式网页应用说明](./pwa-install.md)。
 
 :::
 
 ## 各端能力对照 {#capabilities}
 
-| 能力                 | 桌面客户端 | 桌面 PWA / 网页 | 手机 PWA /网页 |
-| -------------------- | ---------- | --------------- | -------------- |
-| 注册、登录、云端同步 | 支持       | 支持            | 支持           |
-| 全量 JSON **导出**   | 支持（选文件夹） | 支持（下载/分享） | 支持（下载/分享） |
-| JSON **导入**        | 支持       | 支持            | 不支持         |
+| 能力                 | 桌面客户端       | 桌面 PWA / 网页   | 手机 PWA /网页 |
+| -------------------- | ---------------- | ----------------- | -------------- |
+| 注册、登录、云端同步 | 支持             | 支持              | 支持           |
+| 全量 JSON **导出**   | 支持（选文件夹） | 支持（下载/分享） | 不支持         |
+| JSON **导入**        | 支持             | 支持              | 不支持         |
 
 ## 按钮与状态
 
@@ -28,7 +28,7 @@ description: 注册、登录、云端同步与 数据导入导出；桌面与 PW
 |     <img src="/icons/Person20Filled.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(255, 255, 255);border-radius: 6px;">      | 未登录，跳转登录页面                 |
 |     <img src="/icons/Person20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(255, 255, 255);border-radius: 6px;">     | 已登录，跳转登录页面                 |
 |     <img src="/icons/Person20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(193, 226, 255);border-radius: 6px;">     | 已登录，本地数据未同步，跳转登录页面 |
-|     <img src="/icons/Person20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(248, 179, 167);border-radius: 6px;">     | 已登录，云端数据未同步，跳转登录页面 |
+|  <img src="/icons/Person20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgba(236, 134, 32, 0.91);border-radius: 6px;">  | 已登录，云端数据未同步，跳转登录页面 |
 |   <img src="/icons/CloudSync20Regular.svg" width="20" style="display:inline-block;vertical-align:middle;margin:0;background:rgb(193, 226, 255);border-radius: 6px;">    | 数据正在同步                         |
 
 ### 顶栏「退出」旁的语义 {#sync-status-menu}
@@ -37,7 +37,7 @@ description: 注册、登录、云端同步与 数据导入导出；桌面与 PW
 
 - **云同步图标**：正在与云端同步（上传/下载进行中）。
 - **人物图标 + 蓝色（info）**：当前无同步进行中，但本地有尚未上传的变更。
-- **人物图标 + 琥珀色（warning）**：最近一次同步里**云端下载未成功**；可能仍显示具体错误文案；可稍后重试同步或使用底栏/设置中的上传下载。
+- **人物图标 + 橙黄色（warning）**：最近一次同步里**云端下载未成功**；可能仍显示具体错误文案；可稍后重试同步或使用底栏/设置中的上传下载。
 - **人物图标 + 默认色**：无上述状态。
 
 同步失败时可能弹出简短通知（尤其移动端无底栏错误区时）。
@@ -89,11 +89,11 @@ description: 注册、登录、云端同步与 数据导入导出；桌面与 PW
 - 在 **v0.4.4** 中打开 **帮助页**；通过 **数据同步** 执行**全量数据导出**（当时以桌面为主）。
 - 导出的 JSON 可用于迁移至当前版本客户端。
 
-## 数据导入 {#json-import}
+## 数据导入与清理 {#json-import}
 
 ::: tip
 
-- **手机PWA / 网页**：不提供该功能。
+- **手机PWA**：不提供该功能。
 
 :::
 
@@ -107,5 +107,5 @@ description: 注册、登录、云端同步与 数据导入导出；桌面与 PW
 - 导入会按对话框中的**预览结果**与**覆盖策略**写入本地库；确认前请看清将要合并或替换的范围，误操作可能导致本地数据被覆盖且难以恢复。
 - 导入前建议先做 **[数据全量导出](#json-export-desktop)**，或确认重要内容已随当前账号**同步至云端**。
 - 请选择**同一次导出所生成**、且目录结构与官方导出一致的文件夹；勿随意指定无关目录、勿把多份备份混在一个导入流程里胡乱合并，否则可能预览失败、导入失败或出现数据错乱。
-
-:::
+- 同步失败并提示外键约束失败，选择**数据清理**删除孤儿条目（本机删除关系混乱的数据）
+  :::
