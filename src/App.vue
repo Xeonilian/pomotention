@@ -10,7 +10,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, onErrorCaptured, watch } from "vue";
+import { onMounted, onUnmounted, onErrorCaptured } from "vue";
 import { useRouter } from "vue-router";
 import { supabase, isSupabaseEnabled } from "@/core/services/supabase";
 import { useDataStore } from "@/stores/useDataStore";
@@ -22,7 +22,7 @@ import UpdateManager from "./components/platform/UpdateManager.vue";
 import PwaInstallBanner from "./components/platform/PwaInstallBanner.vue";
 import PwaUpdateNotifier from "./components/platform/PwaUpdateNotifier.vue";
 import { useTimerStore } from "@/stores/useTimerStore";
-import { resumeSharedAudioAfterForegroundAsync, prefetchSoundAssets, prefetchWhiteNoiseForSelection } from "@/core/sounds";
+import { resumeSharedAudioAfterForegroundAsync } from "@/core/sounds";
 import { bootMark } from "@/bootTiming";
 import { clearBootRecoveryFlags } from "@/composables/platform/chunkReloadGuard";
 
@@ -42,14 +42,6 @@ const settingStore = useSettingStore();
 const dataStore = useDataStore();
 const syncStore = useSyncStore();
 const timerStore = useTimerStore();
-
-watch(
-  () => settingStore.settings.whiteNoiseSoundTrack,
-  (track, prevTrack) => {
-    if (track === prevTrack) return;
-    prefetchWhiteNoiseForSelection(track);
-  },
-);
 
 /** 首页实际渲染后再撤启动屏，并清更新/chunk 恢复标记 */
 function signalShellReady() {
@@ -75,9 +67,7 @@ onMounted(async () => {
     });
     bootMark("app-after-paint");
 
-    // v3: 确保prefetch在PWA reload后完成，避免timer在sounds未就绪时启动 (iPhone sound fix)
-    appDebugLog("[App] Starting prefetchSoundAssets for timer sounds");
-    prefetchSoundAssets(settingStore.settings.whiteNoiseSoundTrack);
+    // 音频不在启动预取：先非音频壳 → shell-ready 后 SW；音效/白噪音用到再拉
     // 1. 初始化本地数据
     await dataStore.loadAllData();
     bootMark("app-data-loaded");
