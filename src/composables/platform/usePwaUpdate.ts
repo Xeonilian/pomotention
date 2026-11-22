@@ -1,11 +1,5 @@
 import { markPwaUpdating } from "@/composables/platform/chunkReloadGuard";
 
-/**
- * A/B 对照：关 SW（不 register，并卸掉已有 registration）。
- * true = 关；确认对照结束后改回 false。
- */
-const DISABLE_SERVICE_WORKER = true;
-
 /** 避免重复弹出「下载失败」 */
 let installFailPromptShown = false;
 /** 首页 shell 就绪后才注册 SW / 处理 waiting */
@@ -109,10 +103,6 @@ function scheduleSwUpdate(reg: ServiceWorkerRegistration) {
 }
 
 function registerServiceWorker(notification: NotificationApi) {
-  if (DISABLE_SERVICE_WORKER) {
-    console.info("[SW] DISABLED: skip register(/sw.js)");
-    return;
-  }
   if (swRegisterStarted) return;
   swRegisterStarted = true;
 
@@ -131,35 +121,6 @@ function registerServiceWorker(notification: NotificationApi) {
       }
       console.error("❌ Service Worker registration failed:", err);
     });
-}
-
-/** 卸掉已有 SW；本页若仍被接管则刷一次，下次才真正无 controller */
-function tearDownServiceWorkers() {
-  void navigator.serviceWorker.getRegistrations().then(async (regs) => {
-    const hadController = !!navigator.serviceWorker.controller;
-    await Promise.all(regs.map((r) => r.unregister()));
-    console.info(
-      "[SW] DISABLED: unregistered",
-      regs.length,
-      "registration(s); hadController=",
-      hadController
-    );
-    if (!hadController) {
-      try {
-        sessionStorage.removeItem("sw-disable-reload");
-      } catch {
-        /* ignore */
-      }
-      return;
-    }
-    try {
-      if (sessionStorage.getItem("sw-disable-reload")) return;
-      sessionStorage.setItem("sw-disable-reload", "1");
-    } catch {
-      /* ignore */
-    }
-    window.location.reload();
-  });
 }
 
 /**
@@ -204,12 +165,6 @@ export function usePwaUpdate(notification: NotificationApi) {
 
   const init = () => {
     if (!import.meta.env.PROD || !("serviceWorker" in navigator)) return;
-
-    // A/B：关 SW — 不挂监听、不注册，并卸掉已有
-    if (DISABLE_SERVICE_WORKER) {
-      tearDownServiceWorkers();
-      return;
-    }
 
     shellReady = false;
     pendingWaitingReg = null;
