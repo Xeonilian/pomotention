@@ -2,8 +2,7 @@
 // v12: activate 仍全量预缓存，抢首次带宽
 // v13: 首次优先——activate 只删旧缓存；全量预缓存去掉；壳仍在 install 缓存（供 PWA）
 // v14: /sounds/ Range 从整文件缓存切片，避免媒体双轨分段重复上网
-// v15: Navigation Preload（冷启动与拉 HTML 并行）；/assets 改 Cache First（有 hash，免 SWR 抢连接）
-const CACHE_VERSION = "v15";
+const CACHE_VERSION = "v14";
 const CACHE_NAME = `pomotention-cache-${CACHE_VERSION}`;
 
 const SOUND_CACHE_VERSION = "v1";
@@ -66,14 +65,6 @@ self.addEventListener("activate", (event) => {
           }
         }),
       );
-      // 冷启动：导航请求与 Worker 启动并行（Safari 15.4+ / Chromium）
-      if (self.registration.navigationPreload) {
-        try {
-          await self.registration.navigationPreload.enable();
-        } catch (err) {
-          console.warn("[Service Worker] navigationPreload.enable failed:", err);
-        }
-      }
       await self.clients.claim();
     })(),
   );
@@ -87,28 +78,24 @@ function putInCache(request, response) {
   return caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
 }
 
-/** 带 hash 的构建产物：有缓存直接回，不再后台 SWR 抢连接 */
-function assetsCacheFirst(request) {
+function assetsStaleWhileRevalidate(request) {
   return caches.match(request).then((cached) => {
-    if (cached) return cached;
-    return fetch(request)
+    const fetchPromise = fetch(request)
       .then((response) => {
         if (response.ok) putInCache(request, response);
         return response;
       })
-      .catch(() => new Response("", { status: 503, statusText: "Offline" }));
+      .catch(() => null);
+
+    if (cached) {
+      fetchPromise.catch(() => {});
+      return cached;
+    }
+    return fetchPromise.then((response) => response || new Response("", { status: 503, statusText: "Offline" }));
   });
 }
 
-/** Network First + 优先使用 Navigation Preload（与 Worker 冷启动重叠） */
-async function navigateNetworkFirst(event) {
-  const request = event.request;
-  try {
-    const preload = await event.preloadResponse;
-    if (preload && preload.ok) return preload;
-  } catch {
-    /* 未启用或不支持 preload */
-  }
+async function navigateNetworkFirst(request) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), NAVIGATE_NETWORK_MS);
   try {
@@ -211,13 +198,13 @@ self.addEventListener("fetch", (event) => {
   }
 
   if (request.mode === "navigate") {
-    event.respondWith(navigateNetworkFirst(event));
+    event.respondWith(navigateNetworkFirst(request));
     return;
   }
 
   const path = url.pathname;
   if (path.startsWith("/assets/")) {
-    event.respondWith(assetsCacheFirst(request));
+    event.respondWith(assetsStaleWhileRevalidate(request));
     return;
   }
   if (path.startsWith("/sounds/")) {
