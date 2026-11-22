@@ -3,30 +3,54 @@
     <n-card size="small" class="setting-tab-card settings-diagnostics-card" :bordered="true">
       <n-collapse :default-expanded-names="[]" display-directive="show">
         <n-collapse-item title="设备检测测试" name="device">
-          <n-code :code="uaString" language="text" word-wrap style="font-size: 12px; max-height: 60px; overflow: auto" />
-          <n-descriptions label-placement="left" :column="1" bordered style="margin-top: 12px">
-            <n-descriptions-item label="useDevice.isMobile">{{ device.isMobile }}</n-descriptions-item>
-            <n-descriptions-item label="useDevice.isTablet">{{ device.isTablet }}</n-descriptions-item>
-            <n-descriptions-item label="useDevice.isDesktop">{{ device.isDesktop }}</n-descriptions-item>
-            <n-descriptions-item label="useDevice.isTouchSupported">{{ device.isTouchSupported }}</n-descriptions-item>
-            <n-descriptions-item label="useDevice.width">{{ device.width }}</n-descriptions-item>
-            <n-descriptions-item label="useDevice.isIOSDevice (仅 iPad)">
-              {{ device.isIOSDevice }}
-              <span class="detection-hint">仅匹配 iPad</span>
-            </n-descriptions-item>
-            <n-descriptions-item label="useDevice.isIOS">
-              {{ device.isIOS }}
-              <span class="detection-hint">当前逻辑：仅 iPhone</span>
-            </n-descriptions-item>
-            <n-descriptions-item label="usePwaInstall.isIOS">
-              {{ pwaIsIOS }}
-              <span class="detection-hint">iPhone | iPad | iPod</span>
-            </n-descriptions-item>
-            <n-descriptions-item label="原始 /iphone/.test(ua)">{{ raw.iphone }}</n-descriptions-item>
-            <n-descriptions-item label="原始 /ipad/.test(ua)">{{ raw.ipad }}</n-descriptions-item>
-            <n-descriptions-item label="原始 /ipod/.test(ua)">{{ raw.ipod }}</n-descriptions-item>
-            <n-descriptions-item label="原始 /iphone|ipad|ipod/.test(ua)">{{ raw.anyIos }}</n-descriptions-item>
-          </n-descriptions>
+          <div class="device-detect-block">
+            <n-code class="device-detect-ua" :code="uaString" language="text" word-wrap />
+            <n-descriptions
+              class="device-detect-desc"
+              label-placement="left"
+              :column="1"
+              bordered
+              size="small"
+            >
+              <n-descriptions-item label="isMobile">
+                {{ device.isMobile }}
+                <span class="detection-hint">useDevice</span>
+              </n-descriptions-item>
+              <n-descriptions-item label="isTablet">
+                {{ device.isTablet }}
+                <span class="detection-hint">useDevice</span>
+              </n-descriptions-item>
+              <n-descriptions-item label="isDesktop">
+                {{ device.isDesktop }}
+                <span class="detection-hint">useDevice</span>
+              </n-descriptions-item>
+              <n-descriptions-item label="touch">
+                {{ device.isTouchSupported }}
+                <span class="detection-hint">isTouchSupported</span>
+              </n-descriptions-item>
+              <n-descriptions-item label="width">{{ device.width }}</n-descriptions-item>
+              <n-descriptions-item label="isIOSDevice">
+                {{ device.isIOSDevice }}
+                <span class="detection-hint">useDevice · 仅 iPad UA</span>
+              </n-descriptions-item>
+              <n-descriptions-item label="isIOS">
+                {{ device.isIOS }}
+                <span class="detection-hint">useDevice · 仅 iPhone UA</span>
+              </n-descriptions-item>
+              <n-descriptions-item label="pwa.isIOS">
+                {{ pwaIsIOS }}
+                <span class="detection-hint">文案分支 · isAppleTouchWebKit</span>
+              </n-descriptions-item>
+              <n-descriptions-item label="横幅">
+                {{ showIosInstallBanner }}
+                <span class="detection-hint">非 Tauri / 非 standalone / 未关闭 → 都弹</span>
+              </n-descriptions-item>
+              <n-descriptions-item label="ua iphone">{{ raw.iphone }}</n-descriptions-item>
+              <n-descriptions-item label="ua ipad">{{ raw.ipad }}</n-descriptions-item>
+              <n-descriptions-item label="ua ipod">{{ raw.ipod }}</n-descriptions-item>
+              <n-descriptions-item label="ua anyIos">{{ raw.anyIos }}</n-descriptions-item>
+            </n-descriptions>
+          </div>
         </n-collapse-item>
 
         <n-collapse-item title="视口与 safe-area（布局调试）" name="viewport">
@@ -361,7 +385,7 @@ const syncStore = useSyncStore();
 const notification = useNotification();
 
 const device = useDevice();
-const { isIOS: pwaIsIOS, isStandalone } = usePwaInstall();
+const { isIOS: pwaIsIOS, isStandalone, showIosInstallBanner } = usePwaInstall();
 const uaString = ref("");
 const raw = ref({ iphone: false, ipad: false, ipod: false, anyIos: false });
 
@@ -1175,10 +1199,74 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.detection-hint {
-  margin-left: 8px;
-  color: var(--n-text-color-3);
+.device-detect-block {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
+}
+
+.device-detect-ua {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  font-size: 11px;
+  max-height: 72px;
+  overflow: auto;
+}
+
+.device-detect-ua :deep(pre),
+.device-detect-ua :deep(code) {
+  white-space: pre-wrap !important;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.device-detect-desc {
+  margin-top: 12px;
+  width: 100%;
+  max-width: 100%;
+}
+
+/* 覆盖 settingShared 的 nowrap：长标签不得撑爆第一列 */
+.device-detect-desc :deep(.n-descriptions-table) {
+  table-layout: fixed;
+  width: 100%;
+}
+
+.device-detect-desc :deep(.n-descriptions-table-wrapper) {
+  overflow-x: hidden;
+}
+
+.device-detect-desc :deep(.n-descriptions-table-header) {
+  width: 34%;
+  max-width: 34%;
+  white-space: normal !important;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  vertical-align: top;
   font-size: 12px;
+  line-height: 1.35;
+}
+
+.device-detect-desc :deep(.n-descriptions-table-content) {
+  width: 66%;
+  min-width: 0;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  vertical-align: top;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.detection-hint {
+  display: inline-block;
+  margin-left: 6px;
+  color: var(--n-text-color-3);
+  font-size: 11px;
+  line-height: 1.35;
+  word-break: break-word;
 }
 
 .diagnostic-log {

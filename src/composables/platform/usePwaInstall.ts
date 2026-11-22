@@ -1,11 +1,16 @@
-// PWA 安装状态：iOS 无系统弹窗，需应用内引导；Android 由系统/浏览器弹窗
+// PWA 安装引导：未装成独立窗口时提示；已 standalone / Tauri 不提示
 import { ref, computed, onMounted } from "vue";
+import { isTauri } from "@tauri-apps/api/core";
 import { useSettingStore } from "@/stores/useSettingStore";
+import { isAppleTouchWebKitDevice, isAndroidTouchDevice } from "@/core/sounds/platform";
 
+/** Apple 触控（含桌面站 Macintosh UA）；与 standalone 无关 */
 function getIsIOS(): boolean {
-  if (typeof navigator === "undefined") return false;
-  const ua = navigator.userAgent.toLowerCase();
-  return /iphone|ipad|ipod/.test(ua) || (navigator as Navigator & { standalone?: boolean }).standalone === true;
+  return isAppleTouchWebKitDevice();
+}
+
+function getIsAndroid(): boolean {
+  return isAndroidTouchDevice();
 }
 
 function getIsStandalone(): boolean {
@@ -14,14 +19,27 @@ function getIsStandalone(): boolean {
   return !!nav.standalone || window.matchMedia("(display-mode: standalone)").matches;
 }
 
+export type PwaInstallBannerKind = "ios" | "android" | "desktop";
+
 export function usePwaInstall() {
   const settingStore = useSettingStore();
-  const isIOS = ref(false);
-  const isStandalone = ref(false);
+  const isIOS = ref(typeof window !== "undefined" ? getIsIOS() : false);
+  const isAndroid = ref(typeof window !== "undefined" ? getIsAndroid() : false);
+  const isStandalone = ref(typeof window !== "undefined" ? getIsStandalone() : false);
 
+  /** 浏览器标签页内：电脑 / 手机 / 平板都提示；独立窗口与桌面客户端不提示 */
   const showIosInstallBanner = computed(
-    () => isIOS.value && !isStandalone.value && !settingStore.settings.pwaIosInstallDismissed,
+    () =>
+      !isTauri() &&
+      !isStandalone.value &&
+      !settingStore.settings.pwaIosInstallDismissed,
   );
+
+  const bannerKind = computed<PwaInstallBannerKind>(() => {
+    if (isIOS.value) return "ios";
+    if (isAndroid.value) return "android";
+    return "desktop";
+  });
 
   const dismiss = () => {
     settingStore.settings.pwaIosInstallDismissed = true;
@@ -29,12 +47,15 @@ export function usePwaInstall() {
 
   onMounted(() => {
     isIOS.value = getIsIOS();
+    isAndroid.value = getIsAndroid();
     isStandalone.value = getIsStandalone();
   });
 
   return {
     isIOS,
+    isAndroid,
     isStandalone,
+    bannerKind,
     showIosInstallBanner,
     dismiss,
   };
