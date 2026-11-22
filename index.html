@@ -29,6 +29,59 @@
     <meta name="format-detection" content="telephone=no" />
     <meta name="msapplication-TileColor" content="#ffffff" />
     <meta name="msapplication-config" content="/browserconfig.xml" />
+    <!-- A/B：关 SW。必须在 head 最先跑——旧 SW Cache First 会挡住 Vue 里的开关 -->
+    <script>
+      (function () {
+        var DISABLE_SW = true;
+        if (!DISABLE_SW || !("serviceWorker" in navigator)) return;
+        console.info("[SW] DISABLED: kill switch in index.html");
+        // 先 update 拉到 v16-disable（自杀 SW），再 unregister + 清 Cache Storage
+        navigator.serviceWorker
+          .getRegistration()
+          .then(function (reg) {
+            return reg ? reg.update().catch(function () {}) : null;
+          })
+          .then(function () {
+            return navigator.serviceWorker.getRegistrations();
+          })
+          .then(function (regs) {
+            return Promise.all(
+              regs.map(function (r) {
+                return r.unregister();
+              })
+            ).then(function () {
+              return regs.length;
+            });
+          })
+          .then(function (n) {
+            return caches.keys().then(function (keys) {
+              return Promise.all(
+                keys.map(function (k) {
+                  return caches.delete(k);
+                })
+              ).then(function () {
+                console.info("[SW] DISABLED: unregistered", n, "; deleted caches", keys.length);
+              });
+            });
+          })
+          .then(function () {
+            if (!navigator.serviceWorker.controller) {
+              try {
+                sessionStorage.removeItem("sw-kill-reload");
+              } catch (e) {}
+              return;
+            }
+            try {
+              if (sessionStorage.getItem("sw-kill-reload")) return;
+              sessionStorage.setItem("sw-kill-reload", "1");
+            } catch (e) {}
+            location.reload();
+          })
+          .catch(function (err) {
+            console.warn("[SW] DISABLED: tear-down failed", err);
+          });
+      })();
+    </script>
     <style id="pwa-boot-style">
       #pwa-boot {
         position: fixed;

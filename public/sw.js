@@ -3,7 +3,9 @@
 // v13: 首次优先——activate 只删旧缓存；全量预缓存去掉；壳仍在 install 缓存（供 PWA）
 // v14: /sounds/ Range 从整文件缓存切片，避免媒体双轨分段重复上网
 // v15: Navigation Preload（冷启动与拉 HTML 并行）；/assets 改 Cache First（有 hash，免 SWR 抢连接）
-const CACHE_VERSION = "v15";
+// v16-disable: A/B 关 SW——激活后自卸 + 清缓存；fetch 直通网络
+const DISABLE_SERVICE_WORKER = true;
+const CACHE_VERSION = DISABLE_SERVICE_WORKER ? "v16-disable" : "v15";
 const CACHE_NAME = `pomotention-cache-${CACHE_VERSION}`;
 
 const SOUND_CACHE_VERSION = "v1";
@@ -32,6 +34,10 @@ function addWithTimeout(cache, url, timeoutMs) {
 
 self.addEventListener("install", (event) => {
   console.log("[Service Worker] Installing...", CACHE_VERSION);
+  if (DISABLE_SERVICE_WORKER) {
+    event.waitUntil(self.skipWaiting());
+    return;
+  }
   event.waitUntil(
     (async () => {
       const cache = await caches.open(CACHE_NAME);
@@ -57,6 +63,13 @@ self.addEventListener("message", (event) => {
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     (async () => {
+      if (DISABLE_SERVICE_WORKER) {
+        const cacheNames = await caches.keys();
+        await Promise.all(cacheNames.map((name) => caches.delete(name)));
+        await self.registration.unregister();
+        console.log("[Service Worker] DISABLE: caches cleared + unregistered");
+        return;
+      }
       const cacheNames = await caches.keys();
       await Promise.all(
         cacheNames.map((cacheName) => {
@@ -199,6 +212,11 @@ function soundCacheFirst(request) {
 }
 
 self.addEventListener("fetch", (event) => {
+  // A/B：关 SW 期间不拦、不读缓存
+  if (DISABLE_SERVICE_WORKER) {
+    return;
+  }
+
   const { request } = event;
 
   if (request.method !== "GET") {
