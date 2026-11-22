@@ -44,33 +44,22 @@ const dataStore = useDataStore();
 const syncStore = useSyncStore();
 const timerStore = useTimerStore();
 
-/** 首页实际渲染后再撤启动屏，并清更新/chunk 恢复标记 */
+/** 进 Home 后撤启动屏；阶段 1 延后，避免与首屏抢连接（iPhone HTTP/2 易挂） */
 function signalShellReady() {
   clearBootRecoveryFlags();
-  beginBootNonAudioPhase();
   // 供晚挂载的 SW 注册逻辑得知首屏已完成（避免错过事件）
   window.__POMO_SHELL_READY__ = true;
   requestAnimationFrame(() => {
     window.dispatchEvent(new CustomEvent("pwa-shell-ready"));
+    window.setTimeout(() => {
+      beginBootNonAudioPhase();
+    }, 800);
   });
-}
-
-/** 首页日视图 + 任务区就绪后再撤启动屏，避免「正在启动」后长时间纯白 */
-async function warmHomeCoreBeforeSplashHide(): Promise<void> {
-  await Promise.all([
-    import("@/components/DayPlanner/DayPlanner.vue"),
-    import("@/components/TaskTracker/TaskTracker.vue"),
-    import("@/composables/task/useTaskRecordMarkdown").then((m) => m.prefetchTaskMarkdownEngine()),
-  ]);
 }
 
 async function goHomeAndSignalReady() {
   await router.push({ name: "Home" });
-  try {
-    await warmHomeCoreBeforeSplashHide();
-  } catch {
-    /* 预热失败仍放行，避免永久卡在启动屏 */
-  }
+  // 不再 await 日/任务预热：iPhone 上 import 挂起会导致永远进不了主屏
   await new Promise<void>((resolve) => {
     requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
   });
