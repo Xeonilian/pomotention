@@ -16,7 +16,12 @@ import { supabase, isSupabaseEnabled } from "@/core/services/supabase";
 import { useDataStore } from "@/stores/useDataStore";
 import { useSettingStore } from "@/stores/useSettingStore";
 import { useSyncStore } from "@/stores/useSyncStore";
-import { cleanupSyncLifecycle, subscribeAuthStateChanges, teardownAuthSubscription } from "@/core/auth/signedInSessionLifecycle";
+import {
+  applySignedInSession,
+  cleanupSyncLifecycle,
+  subscribeAuthStateChanges,
+  teardownAuthSubscription,
+} from "@/core/auth/signedInSessionLifecycle";
 
 import UpdateManager from "./components/platform/UpdateManager.vue";
 import PwaInstallBanner from "./components/platform/PwaInstallBanner.vue";
@@ -91,15 +96,15 @@ onMounted(async () => {
     await dataStore.loadAllData();
     bootMark("app-data-loaded");
 
-    // 3. 本地模式直接跳转（Auth 监听因 isSupabaseEnabled 为 false 不会挂载；登录成功后在 LoginView 补挂）
+    // 3. 本地模式：进 Home 前先挂 Auth（Login 成功后可补挂）；勿等预热后再订，避免首页弹窗误成「未登录」
     if (settingStore.settings.localOnlyMode) {
       appDebugLog("✅ 本地模式，跳过登录检查，直接进入Home");
-      await goHomeAndSignalReady();
       subscribeAuthStateChanges();
+      await goHomeAndSignalReady();
       return;
     }
 
-    // 4. Supabase登录状态检查
+    // 4. Supabase：先恢复会话并订阅，再进 Home / 预热（预热很慢，订晚了会误弹「去登录」）
     if (isSupabaseEnabled() && supabase) {
       settingStore.settings.autoSupabaseSync = true;
 
@@ -108,7 +113,9 @@ onMounted(async () => {
         if (error) throw error;
 
         const session = data?.session ?? null;
-        if (!session) {
+        if (session) {
+          await applySignedInSession(session, { backgroundSync: true });
+        } else {
           appDebugLog("ℹ️ 用户未登录，继续使用本地功能");
           syncStore.isLoggedIn = false;
         }
@@ -119,18 +126,18 @@ onMounted(async () => {
       appDebugLog("ℹ️ Supabase未启用，使用本地模式");
     }
 
-    // 5. 清理URL并跳转Home
+    subscribeAuthStateChanges();
+
+    // 5. 清理URL并跳转Home（Auth 已就绪）
     if (window.location.hash) {
       window.history.replaceState(null, "", window.location.pathname);
     }
     await goHomeAndSignalReady();
-
-    // 6. 初始化Auth状态监听
-    subscribeAuthStateChanges();
   } catch (error) {
     console.error("❌ 应用初始化失败:", error);
     // 初始化失败仍跳转Home，保证基础功能可用
     try {
+      subscribeAuthStateChanges();
       await router.push({ name: "Home" });
     } catch {
       /* ignore */
