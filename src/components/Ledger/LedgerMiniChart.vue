@@ -131,6 +131,14 @@ function buildPieOption(): EChartsOption {
   };
 }
 
+/** 日/周/月/年共用。只改数字，布局仍用 ECharts 默认（数值 float:right） */
+function formatTrendHoverValue(value: unknown): string {
+  const raw = Array.isArray(value) ? value[0] : value;
+  const n = typeof raw === "number" ? raw : Number(raw);
+  if (!Number.isFinite(n)) return "";
+  return n.toFixed(1);
+}
+
 function buildTrendOption(): EChartsOption {
   const buckets = props.trendBuckets;
   const hasData = buckets.some((b) => b.expense > 0 || b.income > 0);
@@ -138,7 +146,12 @@ function buildTrendOption(): EChartsOption {
   const highlightAxisColor = resolveChartColor("--color-blue", HIGHLIGHT_AXIS_FALLBACK);
   const highlightDayStart = props.highlightDayStart ?? null;
   return {
-    tooltip: { trigger: "axis", confine: true, position: tooltipCenterPosition },
+    tooltip: {
+      trigger: "axis",
+      confine: true,
+      position: tooltipCenterPosition,
+      valueFormatter: (value) => formatTrendHoverValue(value),
+    },
     legend: { top: 0, right: 0, itemWidth: 10, itemHeight: 10, textStyle: { fontSize: 11 } },
     grid: { left: 24, right: 12, top: 28, bottom: 12 },
     xAxis: {

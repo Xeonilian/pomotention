@@ -1,5 +1,6 @@
 import type { Ref } from "vue";
 import { getTimestampForTimeString } from "@/core/utils";
+import { fillEmptyTaskHeading, replaceTaskHeadingFromActivity } from "@/services/task/taskHeadingTitle";
 
 type TodoItem = {
   id: number;
@@ -57,6 +58,18 @@ interface UseHomePlannerRowEditsOptions {
   onScheduleTitleSaved?: (scheduleId: number, rawTitle: string) => string;
 }
 
+/** activity.title 已改：同步 task 副本，并把已有 `#` 行改成同一标题 */
+function mirrorTaskHeading(task: TaskItem, title: string, now = Date.now()) {
+  const prev = task.description ?? "";
+  const next = replaceTaskHeadingFromActivity(prev, title);
+  if (next !== prev) {
+    task.description = next;
+    task.synced = false;
+    task.lastModified = now;
+  }
+  task.activityTitle = title;
+}
+
 export function useHomePlannerRowEdits(options: UseHomePlannerRowEditsOptions) {
   /** title 以 activity 为准：先写 activity，再下推 todo/schedule/task 副本 */
   const handleEditScheduleTitle = (id: number, newTitle: string) => {
@@ -76,9 +89,7 @@ export function useHomePlannerRowEdits(options: UseHomePlannerRowEditsOptions) {
     schedule.activityTitle = activity.title;
 
     const relatedTask = options.taskByActivityId.value.get(schedule.activityId);
-    if (relatedTask) {
-      relatedTask.activityTitle = activity.title;
-    }
+    if (relatedTask) mirrorTaskHeading(relatedTask, activity.title);
     options.saveAllDebounced();
   };
 
@@ -99,9 +110,7 @@ export function useHomePlannerRowEdits(options: UseHomePlannerRowEditsOptions) {
     todo.activityTitle = activity.title;
 
     const relatedTask = options.taskByActivityId.value.get(todo.activityId);
-    if (relatedTask) {
-      relatedTask.activityTitle = activity.title;
-    }
+    if (relatedTask) mirrorTaskHeading(relatedTask, activity.title);
     options.saveAllDebounced();
   };
 
@@ -142,12 +151,17 @@ export function useHomePlannerRowEdits(options: UseHomePlannerRowEditsOptions) {
 
     const relatedTask = options.taskByActivityId.value.get(todo.activityId);
     if (relatedTask) {
-      relatedTask.activityTitle = activity?.title ?? normalizedTitle;
-      // 与单独改 start 一致：description 恰为 "#" 时带上标题
-      if (payload.startTime && relatedTask.description?.trim() === "#") {
-        relatedTask.description = `# ${relatedTask.activityTitle}`;
-        relatedTask.synced = false;
-        relatedTask.lastModified = now;
+      const title = activity?.title ?? normalizedTitle;
+      mirrorTaskHeading(relatedTask, title, now);
+      // 与单独改 start 一致：空 `#` 行（含下面已有正文）补上标题
+      if (payload.startTime) {
+        const prev = relatedTask.description ?? "";
+        const next = fillEmptyTaskHeading(prev, title);
+        if (next !== prev) {
+          relatedTask.description = next;
+          relatedTask.synced = false;
+          relatedTask.lastModified = now;
+        }
       }
     }
 
@@ -203,10 +217,14 @@ export function useHomePlannerRowEdits(options: UseHomePlannerRowEditsOptions) {
     todo.lastModified = Date.now();
 
     const task = options.taskByActivityId.value.get(todo.activityId);
-    if (task && task.description?.trim() === "#") {
-      task.description = `# ${todo.activityTitle ?? ""}`;
-      task.synced = false;
-      task.lastModified = Date.now();
+    if (task) {
+      const prev = task.description ?? "";
+      const next = fillEmptyTaskHeading(prev, todo.activityTitle ?? "");
+      if (next !== prev) {
+        task.description = next;
+        task.synced = false;
+        task.lastModified = Date.now();
+      }
     }
 
     options.saveAllDebounced();
