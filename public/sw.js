@@ -2,7 +2,8 @@
 // v12: activate 仍全量预缓存，抢首次带宽
 // v13: 首次优先——activate 只删旧缓存；全量预缓存去掉；壳仍在 install 缓存（供 PWA）
 // v14: /sounds/ Range 从整文件缓存切片，避免媒体双轨分段重复上网
-const CACHE_VERSION = "v14";
+// v15: /assets/ 禁 HTML 入缓存；命中缓存时拒 text/html，保留 SWR（弱网仍用旧包）
+const CACHE_VERSION = "v15";
 const CACHE_NAME = `pomotention-cache-${CACHE_VERSION}`;
 
 const SOUND_CACHE_VERSION = "v1";
@@ -70,8 +71,55 @@ self.addEventListener("activate", (event) => {
   );
 });
 
-function putInCache(request, response) {
+function responseLooksLikeHtml(response) {
+  const ct = (response.headers.get("content-type") || "").toLowerCase();
+  return ct.includes("text/html");
+}
+
+/** 半通/回退页不能把 HTML 写进 /assets/，避免 MIME 与 chunk 长期冲突 */
+function isCacheableForRequest(request, response) {
   if (!response || response.status !== 200 || response.type !== "basic") {
+    return false;
+  }
+  const path = new URL(request.url).pathname;
+  if (!path.startsWith("/assets/")) {
+    return true;
+  }
+  if (responseLooksLikeHtml(response)) {
+    return false;
+  }
+  const ct = (response.headers.get("content-type") || "").toLowerCase();
+  if (/\.m?js$/i.test(path)) {
+    if (ct && !ct.includes("javascript") && !ct.includes("ecmascript") && !ct.includes("wasm")) {
+      return false;
+    }
+  }
+  if (/\.css$/i.test(path)) {
+    if (ct && !ct.includes("css")) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function usableCachedAsset(cached, request) {
+  if (!cached) return null;
+  const path = new URL(request.url).pathname;
+  if (!path.startsWith("/assets/")) {
+    return cached;
+  }
+  if (responseLooksLikeHtml(cached)) {
+    return null;
+  }
+  const ct = (cached.headers.get("content-type") || "").toLowerCase();
+  if (/\.m?js$/i.test(path) && ct && !ct.includes("javascript") && !ct.includes("ecmascript") && !ct.includes("wasm")) {
+    return null;
+  }
+  return cached;
+}
+
+function putInCache(request, response) {
+  if (!isCacheableForRequest(request, response)) {
     return;
   }
   const clone = response.clone();
@@ -80,6 +128,7 @@ function putInCache(request, response) {
 
 function assetsStaleWhileRevalidate(request) {
   return caches.match(request).then((cached) => {
+    const safeCached = usableCachedAsset(cached, request);
     const fetchPromise = fetch(request)
       .then((response) => {
         if (response.ok) putInCache(request, response);
@@ -87,9 +136,9 @@ function assetsStaleWhileRevalidate(request) {
       })
       .catch(() => null);
 
-    if (cached) {
+    if (safeCached) {
       fetchPromise.catch(() => {});
-      return cached;
+      return safeCached;
     }
     return fetchPromise.then((response) => response || new Response("", { status: 503, statusText: "Offline" }));
   });
