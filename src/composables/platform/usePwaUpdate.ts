@@ -47,6 +47,12 @@ function markUpdatingAndReload() {
 }
 
 function applyWaitingWorker(reg: ServiceWorkerRegistration) {
+  // 本会话已为升级刷过一次：不再催 waiting 激活，避免回滚/抖动连环 controllerchange
+  try {
+    if (sessionStorage.getItem("sw-act-reload")) return;
+  } catch {
+    /* 隐私模式等 */
+  }
   markPwaUpdating();
   reg.waiting?.postMessage({ type: "SKIP_WAITING" });
 }
@@ -94,6 +100,12 @@ function bindWaitingDetection(reg: ServiceWorkerRegistration, notification: Noti
 const SW_UPDATE_DEFER_MS = 3000;
 
 function scheduleSwUpdate(reg: ServiceWorkerRegistration) {
+  // 刚为 SW 升级刷进来的会话：勿立刻再 update，防止 CDN/回滚字节抖动时反复激活闪屏
+  try {
+    if (sessionStorage.getItem("sw-act-reload")) return;
+  } catch {
+    /* 隐私模式等 */
+  }
   const run = () => void reg.update();
   if (typeof requestIdleCallback === "function") {
     requestIdleCallback(() => run(), { timeout: SW_UPDATE_DEFER_MS });

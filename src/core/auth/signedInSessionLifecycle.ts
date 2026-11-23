@@ -205,25 +205,35 @@ export async function performIntentionalSignOut(signOutFn: () => Promise<void>):
   recordAuthLifecycleEvent("intentional_sign_out");
   try {
     await signOutFn();
-    await applySignedOut("intentional");
+    await applySignedOut("intentional", { purgeAuthStorage: true });
   } finally {
     intentionalSignOutInProgress = false;
   }
 }
 
-/** 登出：断 Auth 会话与同步生命周期；保留本机业务数据（内存 + localStorage）与 lastLoggedInUserId */
-export async function applySignedOut(reason: string = "unknown"): Promise<void> {
+type ApplySignedOutOptions = {
+  /** 是否删除 localStorage 里 sb-*；仅主动退出应为 true */
+  purgeAuthStorage?: boolean;
+};
+
+/** 登出：断同步生命周期；保留本机业务数据。清 sb-* 仅主动退出时做。 */
+export async function applySignedOut(
+  reason: string = "unknown",
+  opts?: ApplySignedOutOptions,
+): Promise<void> {
   const settingStore = useSettingStore();
   const syncStore = useSyncStore();
+  const purgeAuthStorage = opts?.purgeAuthStorage !== false;
 
-  recordAuthLifecycleEvent("apply_signed_out", reason);
-  appDebugLog("👋 用户已登出，保留本机数据");
+  recordAuthLifecycleEvent("apply_signed_out", `${reason};purge=${purgeAuthStorage ? "1" : "0"}`);
+  appDebugLog("👋 用户已登出，保留本机数据", { reason, purgeAuthStorage });
   syncStore.isLoggedIn = false;
 
   cleanupSyncLifecycle();
 
   // 勿 clearData：tag/project/template 有落盘 watch，清空内存会把 [] 写回 localStorage
-  if (typeof localStorage !== "undefined") {
+  // 非主动退出勿 purge：弱网刷新令牌失败时误清会导致登录态永久丢失
+  if (purgeAuthStorage && typeof localStorage !== "undefined") {
     for (const key of Object.keys(localStorage)) {
       if (key.startsWith("sb-")) {
         localStorage.removeItem(key);
@@ -247,6 +257,33 @@ async function recoverSessionFromStorage(event: string): Promise<import("@supaba
   const session = data.session ?? null;
   appDebugLog(`🔍 [${event}] session=${session ? "有" : "无"}, sb-keys=${hasSupabaseAuthStorage()}`);
   return session;
+}
+
+/** 意外 SIGNED_OUT：短等 + getSession + refresh，尽量找回；仍失败也不清 sb-* */
+async function recoverAfterUnexpectedSignedOut(): Promise<import("@supabase/supabase-js").Session | null> {
+  if (!supabase) return null;
+
+  await new Promise<void>((resolve) => {
+    window.setTimeout(() => resolve(), 400);
+  });
+
+  const fromGet = await recoverSessionFromStorage("SIGNED_OUT_retry");
+  if (fromGet) return fromGet;
+
+  try {
+    const { data, error } = await supabase.auth.refreshSession();
+    if (error) {
+      appDebugLog("⚠️ SIGNED_OUT 后 refreshSession 失败", error.message);
+      recordAuthLifecycleEvent("signed_out_refresh_fail", error.message);
+      return null;
+    }
+    return data.session ?? null;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    appDebugLog("⚠️ SIGNED_OUT 后 refreshSession 异常", msg);
+    recordAuthLifecycleEvent("signed_out_refresh_throw", msg);
+    return null;
+  }
 }
 
 /** 手机后台挂起后回前台：恢复自动刷新并主动 refresh，降低假登出 */
@@ -295,14 +332,15 @@ export function subscribeAuthStateChanges(): void {
         appDebugLog("⏭️ 主动登出中，清理由 performIntentionalSignOut 串行执行");
         return;
       }
-      const recovered = await recoverSessionFromStorage(event);
+      const recovered = await recoverAfterUnexpectedSignedOut();
       if (recovered) {
-        appDebugLog("♻️ SIGNED_OUT 后 session 仍可恢复，跳过登出清理");
+        appDebugLog("♻️ SIGNED_OUT 后 session 已恢复，跳过登出清理");
         recordAuthLifecycleEvent("signed_out_recovered");
         await applySignedInSession(recovered, { backgroundSync: true });
         return;
       }
-      await applySignedOut("signed_out_no_session");
+      // 弱网误报：只断同步 UI，不清 sb-*，下次冷启动仍可从本地票恢复
+      await applySignedOut("signed_out_no_session", { purgeAuthStorage: false });
     } else if (event === "INITIAL_SESSION") {
       const activeSession = session ?? (await recoverSessionFromStorage(event));
       if (activeSession) {

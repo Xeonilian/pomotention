@@ -39,11 +39,11 @@
               </n-descriptions-item>
               <n-descriptions-item label="pwa.isIOS">
                 {{ pwaIsIOS }}
-                <span class="detection-hint">文案分支 · isAppleTouchWebKit</span>
+                <span class="detection-hint">iphone|ipad|ipod 或 standalone</span>
               </n-descriptions-item>
               <n-descriptions-item label="横幅">
                 {{ showIosInstallBanner }}
-                <span class="detection-hint">非 Tauri / 非 standalone / 未关闭 → 都弹</span>
+                <span class="detection-hint">仅 iOS 标签页；安卓走系统安装提示</span>
               </n-descriptions-item>
               <n-descriptions-item label="ua iphone">{{ raw.iphone }}</n-descriptions-item>
               <n-descriptions-item label="ua ipad">{{ raw.ipad }}</n-descriptions-item>
