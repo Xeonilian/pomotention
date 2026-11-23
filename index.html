@@ -151,8 +151,8 @@
             boot.classList.remove("is-visible", "is-hiding");
             boot.setAttribute("aria-hidden", "true");
           }, 360);
+          // 只清 UI 标记；保留 sw-act-reload，避免 shell-ready 后再次 update→激活→整页刷死循环
           try {
-            sessionStorage.removeItem("sw-act-reload");
             localStorage.removeItem("pwa-updating");
           } catch (e) {}
         }
